@@ -1,48 +1,50 @@
 ### Analysis.StrongDerivative
 
-Strong (Fréchet-style) differentiability for maps between topological modules over a near-skew-field, defined via continuous difference-quotient functions.
+Strong (Carathéodory-style) derivatives of maps between topological modules over a near skew field, defined via continuous difference-quotient functions.
 
-#### Difference-Quotient Predicate
+The module formalizes differentiation by requiring a continuous "difference quotient" `f'` such that `h *c f' (x, h, a) = f (x + h *c a) - f x` on an open subset `U` of a topological module `X`. A function has a derivative when such a continuous quotient exists, and the quotient is then unique on the appropriate domain. The derivative at a point is recovered by evaluating the quotient at `h = 0`, yielding a linear map `X -> Y`. A "total" variant (`HasTDeriv`, `tderiv`) specializes to functions defined on all of `X`. Standard calculus rules — linearity, scalar multiplication, constants, linear maps, and the bilinear (Leibniz) rule — are established at the level of difference quotients.
 
-- **`IsDerivQuot`**: Predicate stating that `f' : DerivDom U -> Y` is a difference quotient for `f`, i.e. `h *c f'((x, (h, a)), _) = f(x + h *c a) - f(x)` for all `x, h, a` with `x, x + h*c a ∈ U`.
-- **`IsDerivQuot.DerivDom`**: The topological subspace of `X × (R × X)` consisting of triples `(x, (h, a))` such that both `x` and `x + h *c a` lie in `U`.
-- **`IsDerivQuot.unique`**: Two continuous difference quotients for the same `f` on an open set agree pointwise.
-- **`IsDerivQuot.isDeriv`**: Connects the difference quotient at `h = 0` to the derivative: `deriv f (x, Ux) a = f'((x, (0, a)), _)`.
+#### Difference Quotient Predicate
 
-#### Existence and Continuity of the Derivative
+- **`IsDerivQuot`**: Predicate stating that `f' : DerivDom U -> Y` is a difference quotient for `f`: for all `x, h, a` with `x, x + h *c a ∈ U`, `h *c f' ((x, (h, a)), _) = f (x + h *c a) - f (x)`.
+- **`IsDerivQuot.DerivDom`**: The domain of difference quotients — pairs `(x, (h, a))` in `X ⨯ (R ⨯ X)` such that both `x` and `x + h *c a` lie in `U`, equipped with the subspace topology.
+- **`IsDerivQuot.unique`**: Uniqueness — any two continuous difference quotients for the same `f` agree on `DerivDom U`.
+- **`IsDerivQuot.isDeriv`**: Identifies the directional derivative `deriv Uo f d (x, Ux) a` with the value `f' ((x, (0, a)), _)` of any continuous difference quotient at `h = 0`.
 
-- **`HasDeriv`**: Propositional truncation asserting that `f : Set.Total U -> Y` admits a continuous difference-quotient function on `DerivDom U`.
-- **`HasDeriv-cont`**: A function with a strong derivative on an open set is itself continuous.
-- **`deriv-quot`**: Extracts the canonical continuous difference-quotient function from `HasDeriv` proof; well-defined by uniqueness.
-- **`deriv-quot.deriv-tuple`**: Lifts `HasDeriv` (a `\Prop`) to the underlying contractible Σ-type of (continuous quotient, IsDerivQuot proof) pairs.
-- **`deriv-isQuot`**: The extracted `deriv-quot` indeed satisfies `IsDerivQuot`.
-- **`deriv-quot-cont`**: Composition continuity: pulling back `deriv-quot` along continuous maps `gx, gh, ga : R -> X/R/X` yields a continuous map `R -> Y` (under appropriate domain conditions).
+#### Existence and Extraction
+
+- **`HasDeriv`**: Propositional truncation asserting the existence of a continuous difference quotient `f' : ContMap (DerivDom U) Y` for `f`.
+- **`HasDeriv-cont`**: Differentiability implies continuity of `f` on `U`.
+- **`deriv-quot`**: The (unique) continuous difference quotient extracted from `HasDeriv`, evaluated on `DerivDom U`.
+- **`deriv-quot.deriv-tuple`**: Internal extraction of the `(f', IsDerivQuot)` pair as a `\level`-truncated sigma, justified by `IsDerivQuot.unique`.
+- **`deriv-isQuot`**: Confirms that `deriv-quot Uo f d` actually satisfies `IsDerivQuot f`.
+- **`deriv-quot-cont`**: Continuity transport — given continuous `gx, gh, ga : ContMap R _` and a domain witness, the composite `h ↦ deriv-quot Uo f d (gx h, (gh h, ga h))` is continuous.
 
 #### The Derivative as a Linear Map
 
-- **`deriv`**: The strong derivative `deriv Uo f d (x, Ux) : LinearMap X Y`, defined by `a ↦ deriv-quot Uo f d ((x, (0, a)), _)`, with proofs of additivity (`func-+`) and `R`-scalar homogeneity (`func-*c`) derived from uniqueness of `deriv-quot`.
+- **`deriv`**: The derivative at `x ∈ U` as a `LinearMap X Y`, defined by `a ↦ deriv-quot Uo f d ((x, (0, a)), atZero)`, with `func-+` and `func-*c` proofs of additivity and scalar-homogeneity.
 - **`deriv.atZero`**: Witness that `(x, (0, a))` lies in `DerivDom U` whenever `x ∈ U` (since `x + 0 *c a = x`).
 
-#### Total Derivatives (Domain `U = X`)
+#### Total Derivatives (on all of X)
 
-- **`HasTDeriv`**: Specialization of `HasDeriv` to the whole space (`U = open-top`), the "total" derivative case.
-- **`HasTDeriv.make`**: Constructs `HasTDeriv f` from a continuous map `f' : X × (R × X) -> Y` satisfying `IsTDerivQuot`.
-- **`tderiv-quot`**: Difference quotient `(x, h, a) ↦ Y` for total derivatives, evaluating `deriv-quot` at the trivial domain witness.
-- **`IsTDerivQuot`**: Total-space version of `IsDerivQuot`: `h *c f'(x, (h, a)) = f(x + h *c a) - f(x)` for all arguments.
-- **`IsTDerivQuot.isTDeriv`**: Identifies the total derivative `tderiv f d x a` with `f'(x, (0, a))` for any continuous quotient `f'`.
-- **`tderiv-isQuot`**: `tderiv-quot` is a total difference quotient: `h *c tderiv-quot f d x h a = f(x + h *c a) - f x`.
-- **`tderiv-quot-cont`**: Continuity of `tderiv-quot` precomposed with continuous maps `gx, gh, ga : R -> X/R/X`.
-- **`tderiv`**: The total strong derivative `tderiv f d x : LinearMap X Y`.
+- **`HasTDeriv`**: Specialization of `HasDeriv` to `U = open-top` (the whole space), for `f : X -> Y`.
+- **`HasTDeriv.make`**: Builder — produces `HasTDeriv f` from a continuous `f' : ContMap (X ⨯ (R ⨯ X)) Y` satisfying `IsTDerivQuot`.
+- **`tderiv-quot`**: Total difference quotient `(x, h, a) ↦ Y`, obtained from `deriv-quot` on the trivial subspace.
+- **`IsTDerivQuot`**: Total version of `IsDerivQuot`: `h *c f' (x, (h, a)) = f (x + h *c a) - f x` for all `x, h, a`.
+- **`IsTDerivQuot.isTDeriv`**: Recovers `tderiv f d x a = f' (x, (0, a))` from any continuous total difference quotient.
+- **`tderiv-isQuot`**: `tderiv-quot` satisfies the difference-quotient identity.
+- **`tderiv-quot-cont`**: Continuity of `h ↦ tderiv-quot f d (gx h) (gh h) (ga h)` along continuous parameter curves.
+- **`tderiv`**: Total derivative at `x` as a `LinearMap X Y`, defined via `deriv` on the full space.
 
 #### Calculus Rules
 
-- **`deriv_linear`**: A continuous linear map is its own total derivative: `tderiv f x a = f a`.
-  - **`deriv_linear.deriv-quot_linear`**: The trivial difference quotient `(x, h, a) ↦ f a` works for linear `f`.
+- **`deriv_linear`**: The derivative of a continuous linear map `f` is `f` itself: `tderiv f _ x a = f a`.
+  - **`deriv_linear.deriv-quot_linear`**: The trivial quotient `(x, (h, a)) ↦ f a` works.
   - **`deriv_linear.has_deriv`**: Continuous linear maps have a total derivative.
-- **`deriv_const`**: The derivative of a constant function is `0`.
-  - **`deriv_const.deriv-quot_const`** / **`has_deriv`**: Difference quotient and existence proof for constants.
-- **`deriv_+`**: Sum rule: `deriv (f + g) = deriv f + deriv g` on an open set.
-  - **`deriv_+.deriv-quot_+`**, **`isCont`**, **`has_deriv`**: Componentwise difference quotient, its continuity, and existence of the derivative for `f + g`.
-- **`deriv_*c`**: Scalar multiplication rule: `deriv (c *c f) = c *c deriv f` (requires `R : NearField`, i.e. commutative).
-  - **`deriv_*c.deriv-quot_*c`**, **`isCont`**, **`has_deriv`**: Quotient, continuity, existence for `c *c f`.
-- **`deriv-quot_bilinear`**: Leibniz/product rule for a bilinear map `b : X1 → X2 → Y`: the difference quotient of `x ↦ b (f x) (g x)` is `b (Df s) (g(x + h*c a)) + b (f x) (Dg s)`.
+- **`deriv_const`**: Constants have zero derivative: `tderiv (λ _ => y) _ x a = 0`.
+  - **`deriv_const.deriv-quot_const`**, **`deriv_const.has_deriv`**: Quotient and existence witnesses.
+- **`deriv_+`**: Additivity: `deriv (f + g) (x, Ux) a = deriv f (x, Ux) a + deriv g (x, Ux) a`.
+  - **`deriv_+.deriv-quot_+`**, **`deriv_+.isCont`**, **`deriv_+.has_deriv`**: Quotient sum, continuity, and existence.
+- **`deriv_*c`**: Scalar homogeneity (over a `NearField`): `deriv (c *c f) (x, Ux) a = c *c deriv f (x, Ux) a`.
+  - **`deriv_*c.deriv-quot_*c`**, **`deriv_*c.isCont`**, **`deriv_*c.has_deriv`**: Quotient, continuity, and existence.
+- **`deriv-quot_bilinear`**: Leibniz rule at the quotient level — for a bilinear `b : BilinearMap X1 X2 Y`, `(x ↦ b (f x) (g x))` has difference quotient `b (Df) (g shifted) + b (f) (Dg)`.

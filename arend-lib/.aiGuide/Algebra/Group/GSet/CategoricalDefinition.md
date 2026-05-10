@@ -1,16 +1,18 @@
 ### Algebra.Group.GSet.CategoricalDefinition
 
-Categorical formulation of monoid actions as functors from the one-object delooping category, establishing the equivalence between monoid actions and functors out of `BM`.
+Categorical reformulation of monoid actions as functors out of a one-object delooping category.
 
-#### Categorical Action Structure
+A monoid action on an object `c` of a precategory `C` is equivalent to a functor from the delooping `BM` (the one-object precategory whose endomorphisms form `M`) into `C` sending the unique object to `c`. This module makes that classical equivalence precise: it defines `MonoidCatAction` as a monoid homomorphism `M → End c`, constructs the delooping `DeloopM M` as a `Precat`, and proves the two presentations are equivalent. This bridges the algebraic notion of action used in `Algebra.Group.GSet` with the categorical notion used in `Category.Functor`.
 
-- **`MonoidCatAction`**: Class packaging a monoid action in a category: a precategory `C`, a monoid `M`, an object `c : C`, and a monoid homomorphism `act : MonoidHom M (End c)` into the endomorphism monoid of `c`.
+#### Categorical Action
 
-#### Delooping Construction
+- **`MonoidCatAction`**: Class for an action of a monoid `M` on an object `c : C` in a precategory, packaged as a `MonoidHom M (End c)` into the endomorphism monoid. Provides `functor`, the corresponding functor out of the delooping.
 
-- **`DeloopM`**: The one-object precategory `BM` associated to a monoid `M`, with a single trivial object, hom-set equal to `M`, identity given by `M.ide`, and composition given by monoid multiplication. Instance of `Precat`.
+#### Delooping
 
-#### Action–Functor Correspondence
+- **`DeloopM`**: Instance making a monoid `M` into a one-object `Precat`: the unique object is `()`, hom-sets are `M`, identity is `M.ide`, composition is monoid multiplication.
 
-- **`functor->action`**: Converts a functor `f : Functor (DeloopM M) C` into a `MonoidCatAction M`, taking the action's object to `f ()` and using the functor's action on morphisms (`Func`, `Func-id`, `Func-o`) as the underlying monoid homomorphism.
-- **`Action<->Functor`**: Equivalence `MonoidCatAction M ≃ Functor (DeloopM M) C` showing that monoid actions in `C` on a chosen object correspond bijectively to functors from `BM` to `C`. Provides both directions together with the round-trip identities.
+#### Equivalence with Functors
+
+- **`functor->action`**: Inverse direction: given a functor `f : Functor (DeloopM M) C`, recovers a `MonoidCatAction M` with object `f ()` and action `Func` as a monoid homomorphism (using `Func-id` and `Func-o`).
+- **`Action<->Functor`**: The `Equiv` between `MonoidCatAction M` and `Functor (DeloopM M) C`, witnessing that monoid actions in `C` are exactly functors from the delooping into `C`.

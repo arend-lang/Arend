@@ -1,5 +1,7 @@
-### Function Directory Overview
+### Function
 
-Utilities for working with functions.
+This directory formalizes operations on functions, currently centered on iterated application of an endofunction.
 
-- **`Iterate.md`**: Iteration of endofunctions — `iterl`, `iterr`, induction principles (`iterr-ind`, `iterr-index-ind`), and `iterr_inj` (injectivity lemma for iterated functions).
+#### Iteration
+
+- **`Iterate.md`** — N-fold composition of an endofunction in left- and right-associated forms, with induction principles and an injectivity-based cycle lemma.

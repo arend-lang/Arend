@@ -1,57 +1,81 @@
 ### Algebra.Solver.BooleanRing
 
-A `SolverModel` instance for `BooleanRing`, normalizing boolean ring expressions into sums of monomials (with duplicate cancellation reflecting `x + x = 0`) to decide equality.
+A reflective decision procedure for equalities in Boolean rings.
 
-#### Main Instance
+This module instantiates the generic `SolverModel` interface for `BooleanRing`, providing a normalization-based solver. Terms are represented as a syntactic algebra (`Term`), normalized to disjunctive-style normal forms (`NF`) — lists of monomials, where each monomial is a Boolean array picking out which variables appear in the product. Because Boolean rings are idempotent (`x * x = x`) and characteristic 2 (`x + x = 0`), monomials reduce to subsets of variables and pairs of equal monomials cancel: this is exploited by sorting and `collapse`-ing the list of monomials. The `terms-equality` lemma reduces an equation `t = s` to checking that the normal form of `t + s` collapses to zero.
 
-- **`BooleanRingSolverModel`**: `SolverModel` instance for any `BooleanRing B`, wiring up `Term`, `NF`, `normalize`, `interpret`, and the consistency proof.
+#### Solver Model
 
-#### Syntax
+- **`BooleanRingSolverModel`**: The `SolverModel` instance for a `BooleanRing B`, packaging together the term language, normal forms, normalization, interpretation, and the consistency proof linking them.
 
-- **`Term`**: AST of boolean ring expressions over `n` variables, with constructors `var`, `:zro`, `:negative`, `:+`, `:*`.
-- **`NF`**: Normal form — `List (Array Bool n)`, representing a sum of monomials where each `Array Bool n` marks which of the `n` variables occur in that monomial.
+#### Syntactic Terms and Normal Forms
+
+- **`Term`**: Inductive datatype of ring terms over `n` variables, with constructors `var`, `:zro`, `:negative`, `:+` (sum), and `:*` (product).
+- **`NF`**: Normal form type — `List (Array Bool n)`. Each `Array Bool n` is a monomial encoded as a characteristic vector over the `n` variables; the outer list is a sum of such monomials.
+- **`BoolOpPoset`**: `LinearOrder.Dec` instance on `Bool` (the opposite of `BoolPoset`), used to lexicographically sort monomials.
 
 #### Normalization
 
-- **`normalize`**: Converts a `Term n` to `NF n`. Variables become singleton monomials via `singleAt`, sums concatenate, products call `multiply`, and `:negative` is identity (since `-x = x` in a boolean ring).
-- **`multiply`**: Multiplies two normal forms; returns `lnil` if the right operand is empty.
-- **`multiply'`**: Tail-recursive helper for `multiply`, accumulating the result; combines monomials by `or`-ing their bool arrays componentwise (since `x*x = x`).
-- **`collapse`**: Cancels adjacent duplicate monomials in a sorted `NF` (encoding `m + m = 0`); pairs of equal monomials are dropped, distinct ones are kept.
+- **`normalize`**: Converts a `Term n` to an `NF n`. Variables become singleton monomials, `:zro` becomes the empty sum, negation is the identity (since `-x = x` in a Boolean ring), `:+` concatenates, and `:*` multiplies.
+- **`multiply'`**: Tail-recursive helper that multiplies two normal forms accumulating into `acc`. For each monomial `a` in `l1`, distributes it over `l2` by taking the pointwise `or` (union of variable supports) of `a` with each monomial in `l2`.
+- **`multiply`**: Top-level multiplication of normal forms via `multiply'` with empty accumulator.
+- **`collapse`**: Removes adjacent equal monomials from a (sorted) `NF` — implementing cancellation `x + x = 0`.
 
 #### Interpretation
 
-- **`interpret`**: `(env : Array B) -> Term env.len -> B`. Evaluates a `Term` in the boolean ring under an environment.
-- **`toArray`**: Selects elements of `env` according to a bool array, producing the list of variables present in a monomial.
-- **`sBigProd`**: Product of a non-empty list (returns `B.zro` on empty).
-- **`interpretMonomial`**: Interprets a single monomial as `sBigProd (toArray l env)`.
-- **`interpretNF'`**: Interprets an `NF` as the sum of its monomials' interpretations.
-- **`interpretNF`**: Public interpretation — sorts and collapses the `NF` first, then calls `interpretNF'`.
+- **`interpret`**: Evaluates a `Term env.len` in a `BooleanRing` `B` under an environment `env : Array B`.
+- **`toArray`**: Selects from `env` the entries whose corresponding `Bool` flag is `true`, producing the list of variables present in a monomial.
+- **`sBigProd`**: Product of a list of ring elements, returning `B.zro` for the empty list (so an empty monomial — no variables selected — interprets as zero, not one).
+- **`interpretMonomial`**: Interprets a single monomial `Array Bool n` as the product `sBigProd (toArray l env)`.
+- **`interpretNF'`**: Sum interpretation of a normal form, summing `interpretMonomial` over the list.
+- **`interpretNF`**: Public interpretation: sorts the normal form (using `Sort.RedBlack.sort`), collapses duplicates, then evaluates via `interpretNF'`.
 
-#### Auxiliary Predicates
+#### Non-Emptiness Predicates
 
-- **`NonEmpty`**: A bool array contains at least one `true` index.
-- **`AllNonEmpty`**: Every monomial in an `NF` is `NonEmpty`.
-- **`nonEmpty-dec`**: Decidability of `NonEmpty`.
-- **`BoolOpPoset`**: `LinearOrder.Dec` instance on `Bool` (opposite order), used for sorting.
+- **`NonEmpty`**: A monomial is non-empty if at least one variable flag is `true` — needed because `sBigProd nil = zro`, so empty monomials would evaluate incorrectly.
+- **`AllNonEmpty`**: All monomials in an `NF` are non-empty; an invariant maintained by `normalize`.
 
-#### Correctness Lemmas
+#### Auxiliary Lemmas on `toArray` and `sBigProd`
 
-- **`interpretNF'-consistent`**: `interpretNF' env (normalize t) = interpret env t` — normalization preserves semantics.
-- **`interpretNF=interpretNF'`**: Sorting and collapsing don't change the interpretation.
-- **`collapse-consistent`**, **`perm-consistent`**, **`sort-consistent`**: Each phase of `interpretNF` preserves the interpretation.
-- **`interpretNF_++`**: Interpretation distributes over list concatenation.
-- **`interpretNF_multiply`**, **`interpretNF_multiply'`**, **`interpretNF_map`**: Multiplication of NFs corresponds to ring multiplication (under `AllNonEmpty`).
-- **`interpretMonomial_or`**: Componentwise `or` of bool arrays corresponds to product of monomials.
-- **`toArray_or`**, **`sBigProd_Big`**, **`toArray<=env`**, **`toArray/=nil`**, **`toArray_replicate`**, **`toArray_singleAt`**: Properties of `toArray`/`sBigProd` relating products to `BigJoin`/`Big ∧`.
+- **`toArray_replicate`**: `toArray` of an all-`false` array yields the empty list.
+- **`toArray_singleAt`**: `toArray` of a singleton-`true` array selects exactly that one variable.
+- **`toArray_or`**: `Big ∧` on the union (pointwise `or`) of two flag arrays factors as the product of the individual `Big ∧`s.
+- **`sBigProd_Big`**: For a non-empty array bounded above by `x0`, `sBigProd` agrees with the meet-with-`x0` big-product.
+- **`toArray<=env`**: Each entry of `toArray l env` is bounded by `B.BigJoin env`.
+- **`toArray/=nil`**: If a monomial is `NonEmpty`, its `toArray` is non-empty.
 
-#### Non-Emptiness Preservation
+#### Consistency Lemmas for Operations
 
-- **`normalize-nonEmpty`**: `AllNonEmpty (normalize t)`.
-- **`multiply-nonEmpty`**, **`multiply'-nonEmpty`**, **`or-nonEmpty`**, **`all-++`**: `AllNonEmpty` is preserved by the normalization operations.
+- **`interpretNF_++`**: Interpretation distributes over list concatenation as ring addition.
+- **`interpretMonomial_or`**: Interpretation of a `or`-merged monomial equals the product of interpretations (when both are non-empty).
+- **`interpretNF_map`**: Interpretation of `map (or a) l` factors as `interpretMonomial env a * interpretNF' env l`.
+- **`interpretNF_multiply'`**, **`interpretNF_multiply`**: `multiply'` and `multiply` correctly compute the product of two normal-form interpretations.
+- **`interpretNF'.cons`**: Cons case for `interpretNF'`.
 
-#### Solver Entry Points
+#### Preservation of `AllNonEmpty`
 
-- **`terms-equality`**: From `interpretNF env (normalize (t :+ s)) = B.zro` derive `interpret env t = interpret env s`.
-- **`terms-equality-conv`**: Converse direction.
-- **`apply-axioms`**: Applies a list of provided axioms (witnessed equalities) by multiplying each by a coefficient `NF` and summing into an accumulator `add`, leaving `interpretNF env add` unchanged.
-- **`interpretNF_Big_++`**, **`interpretNF_map_zro`**, **`interpretNF_multiply_zro`**, **`interpretNF_multiply'_zro`**: Supporting lemmas for `apply-axioms`, propagating zero through multiplications.
+- **`all-++`**: `AllNonEmpty` is preserved by concatenation.
+- **`or-nonEmpty`**: Mapping `or a` over a list yields an `AllNonEmpty` list when `a` is non-empty.
+- **`multiply'-nonEmpty`**, **`multiply-nonEmpty`**: Multiplication preserves `AllNonEmpty`.
+- **`normalize-nonEmpty`**: All monomials produced by `normalize` are non-empty.
+
+#### Sorting, Collapsing, and Final Consistency
+
+- **`interpretNF'-consistent`**: `interpretNF' env (normalize t) = interpret env t`.
+- **`collapse-consistent`**: `collapse` preserves the interpretation (relies on `x + x = 0`).
+- **`perm-consistent`**: Permutations of `NF` preserve the interpretation (sum is commutative).
+- **`sort-consistent`**: Sorting preserves interpretation.
+- **`interpretNF=interpretNF'`**: `interpretNF` and `interpretNF'` agree on `AllNonEmpty` inputs after sort+collapse.
+
+#### Top-Level Solver Lemmas
+
+- **`terms-equality`**: If the normal form of `t :+ s` interprets to zero, then `t` and `s` are equal in `B` — the core soundness statement used by the solver.
+- **`terms-equality-conv`**: The converse direction of `terms-equality`.
+
+#### Axiom-Application Support
+
+- **`nonEmpty-dec`**: Decidability of `NonEmpty` for a Boolean array.
+- **`interpretNF_Big_++`**: Distributes interpretation over a `Big ++`-folded list of normal forms plus an extra summand.
+- **`interpretNF_map_zro`**: If `interpretNF' env l = 0`, then mapping `or a` over `l` still gives `0`.
+- **`interpretNF_multiply'_zro`**, **`interpretNF_multiply_zro`**: If one factor's interpretation is `0`, the product's is too.
+- **`apply-axioms`**: Given a list of axioms `t = s` (each scaled by some monomial-list `s.1`), reduces the interpretation of the combined sum to the interpretation of `add` alone — used by the solver to apply user-supplied ring equalities during normalization.

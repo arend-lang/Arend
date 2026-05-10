@@ -1,98 +1,103 @@
 ### Category.Limit
 
-Cones, limits, and standard limit shapes (products, equalizers, pullbacks, terminal objects) for categories, plus completeness classes.
+Limits, colimits, and finite-limit structures (products, equalizers, pullbacks, terminal objects) for precategories, plus their universal mapping properties.
+
+This module formalizes limits via the `Cone`/`Limit` pattern: a cone over a diagram `G : Functor J D` is an apex with compatible projection maps, and a limit is a cone such that pulling back along any morphism into the apex is an equivalence with the cone space. Concrete shapes (products, equalizers, pullbacks, terminals) are presented both as standalone universal records and as instances of `Limit` over specific shape categories, with mutual conversions (`fromLimit`/`toLimit`) so users can mix styles. Diagrams over arbitrary graphs are handled via `Diagram`/`DiagramCone`, which freely generates a small category from a graph. Completeness is layered: `PrecatWithPullbacks` ⊂ `CartesianPrecat` ⊂ `FinCompletePrecat` ⊂ `CompletePrecat` ⊂ `CompleteCat`, with `Colimit`/`Cocomplete*` defined dually via `op`. The classical reduction "products + equalizers ⇒ all limits" appears as `limits<=pr+eq`.
 
 #### Cones
 
-- **`Cone`**: A cone over a functor `G : J -> D` with given `apex`, projections `coneMap j : Hom apex (G j)`, and naturality `coneCoh`.
-- **`Cone.map`**: Pushes a cone through a functor `F : C -> D` to a cone over `Comp F G`.
-- **`Cone.premap`**: Reindexes a cone along a functor `F : J -> J'`.
-- **`Cone.mapEquiv`**: For a fully faithful `F`, cones over `G` at `X` are equivalent to cones over `Comp F G` at `F X`.
-- **`conePullback`**: Precomposes a cone's projections with `f : Hom z apex` to produce a cone with apex `z`.
+- **`Cone`**: A cone over `G : Functor J D` with apex `apex : D`: maps `coneMap j : Hom apex (G j)` satisfying naturality `G.Func h ∘ coneMap j = coneMap j'`.
+- **`Cone.map`**: Push a cone forward along a functor `F : C -> D`, yielding a cone over `Comp F G`.
+- **`Cone.premap`**: Reindex a cone along a functor `F : J -> J'`, yielding a cone over `Comp c.G F`.
+- **`Cone.mapEquiv`**: For a fully faithful `F`, the map `c ↦ map F c` is an equivalence between cones in `C` and cones in `D`.
+- **`conePullback`**: Precompose a cone with `f : Hom z apex` to get a cone with apex `z`.
 
 #### Limits
 
-- **`Limit`**: A `Cone` whose `conePullback` is an equivalence; equivalently provides `limMap`, `limBeta`, and `limUnique`. Includes default implementations relating these formulations.
-- **`Limit.levelProp`**: Limits over the same data form a proposition.
-- **`Limit.iso_lim`**: Transports a limit structure across an iso `L.limMap c : L -> c`.
-- **`Limit.lim_iso`**: The mediating map between two limits is an iso.
-- **`Limit.transFuncMap`**: Mediating morphism between limits induced by a functor `H : L.J -> L'.J` and a natural transformation `Comp L'.G H => L.G`.
-- **`Colimit`**: Defined as a limit in the opposite category.
+- **`Limit`**: Extends `Cone`. A limit cone: `conePullback` is an equivalence at every `z`. Provides `limMap`, `limBeta`, `limUnique` as defaults derived from `isLimit`, plus `limUniqueBeta`.
+- **`Limit.levelProp`**: Being a limit (with fixed cone data) is a proposition.
+- **`Limit.iso_lim`**: A cone whose comparison map into a known limit is an isomorphism is itself a limit.
+- **`Limit.lim_iso`**: Any two limits of the same diagram are canonically isomorphic.
+- **`Limit.transFuncMap`**: Map between limits induced by a functor `H : L.J -> L'.J` and a natural transformation `Comp L'.G H ⇒ L.G`.
+- **`Colimit`**: Macro defining colimits as limits in the opposite category.
 
-#### Diagrams
+#### Diagrams (Graph-indexed)
 
-- **`Diagram`**: A graph `G` together with vertex/edge data `F`, `Func` into a precategory `D` (free-cat-style diagram).
-- **`DiagramCone`**: Extends `Diagram` and `Cone`, using `G.FreeCat` as the indexing precategory; coherence reduces to per-edge `diagramCoh`.
-- **`DiagramCone.coneCoh-lem`**: Extends edge-wise coherence to morphisms in the free category.
-- **`DiagramCone.pullback`**: Precomposition of a diagram cone with `f : Hom z apex`.
-- **`DiagramCone.equiv`**: Equivalence between `DiagramCone`s and `Cone`s over the corresponding functor.
-- **`LimitDiagram`**: A `DiagramCone` that is also a `Limit`, characterized by `isLimitDiagram`.
+- **`Diagram`**: A graph `G : Graph` mapped to `D` with edge images; carries a derived `functor : Functor G.FreeCat D`.
+- **`DiagramCone`**: Extends `Diagram` and `Cone`. A cone whose coherence is checked only on graph edges (`diagramCoh`); full functorial coherence is reconstructed via `coneCoh-lem`.
+- **`DiagramCone.pullback`**: Diagram-cone version of `conePullback`.
+- **`DiagramCone.equiv`**: Equivalence between `DiagramCone`s and `Cone`s over the freely generated functor.
+- **`LimitDiagram`**: Extends `DiagramCone` and `Limit`; specifying limit-ness on the graph-cone formulation suffices.
 
 #### Products
 
-- **`Product`**: An apex with projections `proj j` satisfying `tupleMap`/`tupleBeta`/`tupleEq` (universal property of a product over a type `J`).
-- **`Product.functor`**: Turns a family `G : J -> D` into a functor from `DiscretePrecat J`.
-- **`Product.fromLimit`**: Coercion: a limit over a discrete diagram is a product.
-- **`terminal-obj`**: Defined as `Product` of the empty family.
-- **`terminal-obj-iso`**: Any two terminal objects are isomorphic.
-- **`terminalMap'`**: Canonical map into a terminal object.
-- **`isTerminal`**: Builds a `terminal-obj` from contractibility of `Hom b a` for all `b`.
-- **`terminal-unique'`**: Maps into a terminal object are unique.
-- **`terminal-prop`**: In a (univalent) `Cat`, terminal objects form a proposition.
+- **`Product`**: A `J`-indexed product with projections `proj`, tupling `tupleMap`, `tupleBeta`, and uniqueness `tupleEq`.
+- **`Product.isProduct`**: Hom-set bijection: `Hom Z apex ≃ ∏ j, Hom Z (G j)`.
+- **`Product.tupleMapComp`**: `tupleMap f ∘ h = tupleMap (λ j, f j ∘ h)`.
+- **`Product.tupleEta`**: η-rule: `tupleMap (proj j ∘ f) = f`.
+- **`Product.toLimit`**: A product is a limit over `DiscretePrecat J`.
+- **`Product.functor`**: Builds the discrete functor `DiscretePrecat J -> D` from a family `J -> D`.
+- **`Product.fromLimit`**: Coercion from limit over a discrete category back to a `Product`.
 
 #### Equalizers
 
-- **`Equalizer`**: Apex with `eql : Hom apex X` equalizing `f, g : Hom X Y`, characterized by an `Equiv` to `\Sigma h, f ∘ h = g ∘ h`.
-- **`Equalizer.Arrows`** / **`Shape`** / **`map`** / **`functor`**: The walking-parallel-pair shape and its functor into `D`.
-- **`Equalizer.fromLimit`**: Coercion: a limit over the parallel-pair functor is an equalizer.
-- **`Equalizer.unique`**: Canonical iso between two equalizers of the same parallel pair.
-- **`Equalizer.unique-map`**: Compatibility of `unique` with the equalizing arrow.
-- **`Equalizer.mono=>equalizer`**: A mono `eql` with the universal factorization property is an equalizer.
+- **`Equalizer`**: Apex with `eql : Hom apex X` satisfying `f ∘ eql = g ∘ eql`, classified by an equivalence `Hom Z apex ≃ Σ (h : Hom Z X) (f ∘ h = g ∘ h)`.
+- **`Equalizer.eqMap`**, **`eqBeta`**, **`eqMono`**: Universal map, computation rule, and uniqueness (mono property of `eql`).
+- **`Equalizer.toLimit`**: Equalizer as a limit over the parallel-arrows shape.
+- **`Equalizer.Arrows` / `Shape` / `functor`**: Two-object shape category `{false, true}` with two parallel arrows, used to encode equalizer diagrams.
+- **`Equalizer.fromLimit`**: Coercion from a limit over `functor f g` to an `Equalizer`.
+- **`Equalizer.unique`**, **`unique-map`**: Canonical iso between any two equalizers, compatible with `eql`.
+- **`Equalizer.mono=>equalizer`**: A mono with the universal "fills any factorization" property is an equalizer.
 - **`Equalizer.id-equalizer`**: `id X` is an equalizer of `f, f`.
-- **`Equalizer.equalizer-iso`**: An equalizer of `f, f` is iso to `X` via `eql`.
+- **`Equalizer.equalizer-iso`**: Any equalizer of `f` with itself is iso to `X` via `eql`.
 
 #### Pullbacks
 
-- **`Pullback`**: Apex over `f : Hom x z`, `g : Hom y z` with projections, coherence `pbCoh`, mediating map `pbMap`, betas, and uniqueness `pbEta`.
-- **`Pullback.Shape`** / **`diagram`**: The walking cospan graph and its diagram in `D`.
-- **`Pullback.fromLimit`**: Coercion: a limit over a cospan diagram is a pullback.
-- **`Pullback.fromIso`**: Transports a pullback along an iso of apexes.
-- **`Pullback.unique`** (with `p-map`, `p-beta1`, `p-beta2`, `hinv'`): Canonical iso between two pullbacks of the same cospan.
-- **`Pullback.pullback-of-mono`** / **`pullback-of-mono'`**: Pullback of a mono is a mono (on either leg).
-- **`pullback-lemma`**: Pasting lemma — composing two pullback squares yields a pullback of the composite.
-- **`pullback-lemma-conv`**: Converse pasting — given the outer and right squares as pullbacks, the left square is a pullback.
+- **`Pullback`**: Square `f ∘ pbProj1 = g ∘ pbProj2` with universal `pbMap`, `pbBeta1`, `pbBeta2`, `pbEta`.
+- **`Pullback.pbMap-comp`**: Compatibility of `pbMap` with precomposition.
+- **`Pullback.flip`**: Swap the two legs of a pullback.
+- **`Pullback.toLimit`**: Pullback as a `LimitDiagram` over the cospan shape.
+- **`Pullback.Shape` / `diagram`**: Cospan graph (3 vertices, two edges into the apex) and its diagram in `D`.
+- **`Pullback.fromLimit`**: Coercion: limit over a cospan gives a `Pullback`.
+- **`Pullback.fromIso`**: Transfer a pullback structure along an iso into the apex.
+- **`Pullback.unique`**, **`p-map`**, **`p-beta1/2`**, **`hinv'`**: Canonical iso between any two pullbacks of the same cospan.
+- **`Pullback.pullback-of-mono`**, **`pullback-of-mono'`**: Monos are stable under pullback (on either leg).
 
-#### Constructing Limits from Products and Equalizers
+#### Limits from Products + Equalizers
 
-- **`limits<=pr+eq`**: Builds an arbitrary small limit from products of objects, products of arrows, and equalizers.
+- **`limits<=pr+eq`**: Construct limits of arbitrary small diagrams from arbitrary products and binary equalizers via the standard equalizer-of-two-products formula.
 
-#### Pullback and Slice Functoriality
+#### Categories with Specific Limits
 
-- **`PrecatWithPullbacks`**: Precategory equipped with a chosen `pullback` for every cospan.
-- **`pullbackFunctor`**: Pullback along `f : Hom x y` as a functor `SlicePrecat y -> SlicePrecat x`.
-
-#### Completeness Classes
-
-- **`PrecatWithTerminal`**: Precategory with a chosen terminal object.
-- **`PrecatWithBprod`**: Precategory with binary products via `Bprod`.
-- **`CartesianPrecat`**: Combines `PrecatWithTerminal` and `PrecatWithBprod`.
-- **`FinCompletePrecat`**: Finitely complete: extends `PrecatWithPullbacks` and `CartesianPrecat`, deriving `Bprod` from pullbacks over the terminal.
-- **`CompletePrecat`**: Has a `limit` for every functor from a small `J`; derives pullbacks, terminal, and binary products from limits.
-- **`CompletePrecat.applyEquiv`**: Transports completeness across a categorical equivalence.
-- **`CompleteCat`**: A complete `Cat`.
-- **`CocompletePrecat`** / **`CocompletePrecat.applyEquiv`**: Cocomplete dual; transport via dualizing.
-- **`CocompleteCat`**, **`BicompleteCat`**: Cocomplete (resp. both complete and cocomplete) `Cat`.
+- **`PrecatWithPullbacks`**: A `Precat` with a chosen pullback for every cospan.
+- **`pullbackFunctor`**: For `f : Hom x y` in a `PrecatWithPullbacks`, the base-change functor `SlicePrecat y -> SlicePrecat x`.
+- **`terminal-obj`**: Macro: `Product` over the empty type, i.e. a terminal object.
+- **`terminal-obj-iso`**: Any two terminal objects are canonically iso.
+- **`terminalMap'`**, **`terminal-unique'`**: Unique morphism into a terminal and its uniqueness.
+- **`isTerminal`**: Build a terminal object from contractibility of each `Hom b a`.
+- **`terminal-prop`**: In a (univalent) `Cat`, terminal objects form a proposition.
+- **`PrecatWithTerminal`**: Class with a chosen terminal and `terminalMap`, `terminal-unique`, plus `global-section` (a global element is a split mono).
+- **`PrecatWithBprod`**: Class with binary products `Bprod x y`. Exposes `proj1`, `proj2`, `pair`, `prodMap`, `diagonal`, `associator`, `change` (symmetry), and the bifunctor `bprodBiFunctor`, plus algebraic lemmas (`prodMap-comp`, `prod-id`, `pair-comp`, `pair-proj`, `associator-iso`, `change-inv`, `change-prod`, `bprod-comm`, `associtor-prod`).
+- **`PrecatWithBprod.bprodFunctorRight`**: Endofunctor `_ × Y` for fixed `Y`.
+- **`CartesianPrecat`**: Extends `PrecatWithTerminal` and `PrecatWithBprod`; provides `terminal-prod-left` (`X ≅ 1 × X`).
+- **`FinCompletePrecat`**: Extends `PrecatWithPullbacks` and `CartesianPrecat`; binary products are derived from terminals and pullbacks.
+- **`CompletePrecat`**: Extends `FinCompletePrecat`; `limit G` for every functor from a small category. Derives pullback, terminal, binary product, arbitrary `product`, and `equalizer`. Has dual `op : CocompletePrecat`.
+- **`CompletePrecat.applyEquiv`**: Transport completeness along a categorical equivalence.
+- **`CompleteCat`**: `CompletePrecat` that is a (univalent) `Cat`.
+- **`CocompletePrecat`**, **`CocompleteCat`**, **`BicompleteCat`**: Duals and combination.
 
 #### Preservation, Reflection, Creation
 
-- **`PreservesLimit`**: `G : C -> D` sends every limit of `F` to a limit of `Comp G F`.
-- **`ReflectsLimit`**: A cone is a limit if its image under `G` is.
-- **`CreatesLimit`**: From a limit of `Comp G F`, produces a limit of `F` together with preservation and reflection.
+- **`PreservesLimit`**: `G` preserves limits of `F` if `Cone.map G L` is again a limit.
+- **`ReflectsLimit`**: `G` reflects limits if a cone whose image is a limit is itself a limit.
+- **`CreatesLimit`**: A limit of `Comp G F` lifts to a limit of `F` together with preservation and reflection by `G`.
 
-#### Regular Mono/Epi
+#### Regular Monos/Epis and Pullback Pasting
 
-- **`isRegularMono`**: Truncated existence of an equalizer presentation of `f`.
+- **`isRegularMono`**: `f` is a regular mono iff it occurs as some equalizer.
 - **`regularMono_Mono`**: Regular monos are monos.
 - **`regularMono_pullback`**: Regular monos are stable under pullback.
 - **`splitMono_regular`**: Split monos are regular.
-- **`isRegularEpi`**: Regular epi defined as regular mono in the opposite category.
+- **`isRegularEpi`**: Defined dually as a regular mono in the opposite category.
+- **`pullback-lemma`**: Pasting lemma — composing two pullback squares horizontally gives a pullback.
+- **`pullback-lemma-conv`**: Converse pasting — if the outer and right squares are pullbacks, so is the left.

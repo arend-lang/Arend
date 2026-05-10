@@ -1,8 +1,10 @@
 ### Homotopy.Space
 
-Basic type classes for spaces (types) with optional inhabitation witnesses.
+Defines the basic notion of a space as a type, with a refinement for inhabited (non-empty) spaces.
 
-#### Classes
+This module provides the foundational abstractions used throughout homotopy-theoretic constructions: a `BaseSpace` is just a type packaged as a class so it can be extended with structure, and an `InhSpace` adds a propositional truncation witnessing inhabitation. The use of `TruncP` (rather than a chosen point) keeps inhabitation as a mere proposition, suitable for HoTT-style reasoning where the existence of a point should not carry additional data.
 
-- **`BaseSpace`**: A class wrapping an underlying type `E : \Type`. Used as the base for spaces that need additional structure layered on top.
-- **`InhSpace`**: Extends `BaseSpace` with an inhabitation witness `isInh : TruncP E`, representing a propositionally non-empty space.
+#### Space Classes
+
+- **`BaseSpace`**: A class wrapping a carrier type `E : \Type`. Serves as the base for layering additional homotopical or geometric structure on a space.
+- **`InhSpace`**: Extends `BaseSpace` with a proof `isInh : TruncP E` that the carrier is merely inhabited. Used wherever non-emptiness is needed as a propositional assumption rather than a chosen basepoint.

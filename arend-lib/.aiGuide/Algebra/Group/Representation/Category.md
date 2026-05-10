@@ -1,37 +1,36 @@
 ### Algebra.Group.Representation.Category
 
-The category of linear representations of a group over a ring, with intertwining maps as morphisms, including kernel/image constructions and the module structure on hom-sets.
+The category of linear representations of a group `G` over a ring `R`, with intertwining maps as morphisms.
 
-#### Morphisms
+This module assembles the categorical structure on `LinRepres R G`: morphisms are `R`-linear maps that commute with the `G`-action (intertwiners), and the category inherits identity and composition from `LinearMap`. Kernels and images of intertwining maps carry induced representation structures, lifting the corresponding `LModule`-level constructions to the equivariant setting. When `R` is commutative, the hom-sets `InterwiningMap A B` themselves form an `R`-module, giving the category an enriched structure suitable for representation-theoretic calculations.
 
-- **`InterwiningMap`**: Class extending `LinearMap` between two linear representations `Dom Cod : LinRepres R G` of the same group, equipped with the equivariance condition `func-**`: `func (g ** e) = g ** func e`.
+#### Morphisms and Category
 
-#### The Category
-
-- **`RepresentationCat`**: Instance `Cat (LinRepres R G)` whose hom-sets are `InterwiningMap`s, with identity, composition (preserving equivariance via `rewrite` on `func-**`), and `univalence` proven by `sip`.
-- **`RepresentationCat.id-interwining`**: Identity intertwining map on a representation, built from `LinearMap.id`.
+- **`InterwiningMap`**: Record extending `LinearMap` with the equivariance condition `func (g ** e) = g ** func e`; the morphisms of the representation category. Domain and codomain are overridden to be `LinRepres R G`.
+- **`RepresentationCat`**: Instance of `Cat (LinRepres R G)` with `InterwiningMap` as homs, identity `id-interwining`, and composition built from `LinearMap` composition extended with the equivariance proof.
+- **`id-interwining`**: The identity intertwining map on a representation `X`, built from `LinearMap.id`.
 
 #### Isomorphisms
 
-- **`repr+module-iso=>repr-iso`**: Promotes an iso `f` in `LModuleCat R` to an iso in `RepresentationCat`, showing that a module-level isomorphism between representations is automatically an intertwining isomorphism.
-- **`repr+module-iso=>repr-iso.inverseMap`**: The inverse intertwining map, with equivariance derived from that of `f`.
-- **`repr+module-iso=>repr-iso.aux`**, **`aux-2`**: Pointwise reformulations of `f_hinv` and `hinv_f` from the underlying module iso.
+- **`repr+module-iso=>repr-iso`**: Promotes a module-level isomorphism `Iso {LModuleCat R} f` to an isomorphism in the representation category, showing that the inverse linear map automatically intertwines the `G`-action.
+- **`inverseMap`** (in `\where`): Constructs the inverse intertwiner from the module-level inverse, deriving equivariance by transporting the equivariance of `f` across the iso witnesses.
+- **`aux`**, **`aux-2`**: Pointwise extraction of the iso identities `f ∘ p.hinv = id` and `p.hinv ∘ f = id`.
 
-#### Kernel
+#### Kernels
 
-- **`KerLRepres`**: Kernel of an intertwining map `f : A -> B` as a representation; underlying `LModule` is `KerLModule f`, with `G`-action inherited from `A` (preservation uses `f.func-**` and `B.g**-zro`).
-- **`KerLRepresHom`**: The canonical inclusion `KerLRepres f -> A` as an intertwining map.
+- **`KerLRepres`**: The kernel of an intertwining map `f : A → B` as a representation; underlying module is `KerLModule f`, and the `G`-action restricts because `f` is equivariant and the action preserves zero.
+- **`KerLRepresHom`**: The canonical inclusion `KerLRepres f → A` as an intertwining map.
 
-#### Image
+#### Images
 
-- **`ImageLRepres`**: Image of `f : A -> B` as a representation; underlying `LModule` is `ImageLModule f`, with `G`-action inherited from `B` and the existence witness transported through `f.func-**`.
-- **`ImageLRepresRightHom`**: The canonical intertwining map `ImageLRepres f -> Cod f`.
-- **`ImageLRepresLeftHom`**: The canonical surjection `Dom f -> ImageLRepres f` as an intertwining map.
+- **`ImageLRepres`**: The image of an intertwining map `f : A → B` as a representation; underlying module is `ImageLModule f`, and the `G`-action on `B` preserves the image because preimages can be transported by the equivariance of `f`.
+- **`ImageLRepresRightHom`**: The canonical inclusion `ImageLRepres f → Cod f` as an intertwining map.
+- **`ImageLRepresLeftHom`**: The canonical surjection `Dom f → ImageLRepres f` as an intertwining map.
 
-#### Module Structure on Hom-sets
+#### Module Structure on Hom-Sets
 
-- **`InterwiningMapLModule`**: For a commutative ring `R`, the `R`-module structure on `InterwiningMap A B`, with all axioms reduced pointwise to those of `B`.
-- **`InterwiningMapLModule.zeroInterwining`**: Zero intertwining map; equivariance from `B.g**-zro`.
-- **`InterwiningMapLModule.addInterwining`**: Pointwise sum of intertwining maps; equivariance from `B.**-ldistr`.
-- **`InterwiningMapLModule.negativeInterwining`**: Pointwise negation; equivariance from `B.g**-negative`.
-- **`InterwiningMapLModule.mulconstInterwining`**: Scalar multiplication by `c : R`; equivariance from `B.**-*c`.
+- **`InterwiningMapLModule`**: For commutative `R`, equips `InterwiningMap A B` with an `R`-module structure (zero, addition, negation, scalar multiplication), making the representation category `R`-linear.
+- **`zeroInterwining`**: The zero intertwiner, built from the zero linear map.
+- **`addInterwining`**: Pointwise sum of two intertwiners.
+- **`negativeInterwining`**: Pointwise negation of an intertwiner.
+- **`mulconstInterwining`**: Scalar multiplication of an intertwiner by `c : R`.

@@ -1,23 +1,25 @@
 ### Algebra.Module.Trace
 
-Defines the trace of a square matrix as a linear map and proves its standard properties (cyclicity, transpose-invariance, and value on diagonal/identity matrices).
+The trace of a square matrix as a linear map, with its core algebraic properties.
 
-#### Trace Definition
+This module defines the matrix trace as a composition of two linear maps: extracting the diagonal of an `n × n` matrix into an array, then summing the array via the ring's big sum. Packaging trace as a `LinearMap` between module structures (`MatrixModule R n n` to `RingLModule R`) makes its additivity and scalar-compatibility part of its type, so they can be reused without re-proving. The remaining lemmas establish the standard trace identities — invariance under transposition, cyclicity on products, conjugation invariance, behavior on diagonal matrices, and the value on the identity matrix.
 
-- **`Trace`**: Linear map `MatrixModule R n n -> RingLModule R` sending a matrix to the sum of its diagonal entries; preserves addition and scalar multiplication.
-- **`Trace.diag`**: Linear map extracting the diagonal of a matrix as an array `i => M i i`.
-- **`Trace.BigSumHom`**: Linear map summing an array of ring elements via `R.BigSum`.
+#### Trace as a Linear Map
 
-#### Trace Properties
+- **`Trace`**: The trace `LinearMap (MatrixModule R n n) (RingLModule R)`, sending a matrix `M` to `BigSum (diag M)`.
+- **`Trace.diag`**: The diagonal-extraction `LinearMap (MatrixModule R n n) (ArrayLModule n (RingLModule R))`, mapping `M` to the array `i ↦ M i i`.
+- **`Trace.BigSumHom`**: The summation `LinearMap (ArrayLModule n (RingLModule R)) (RingLModule R)`, given by `R.BigSum`.
 
-- **`Trace-transpose`**: `Trace M = Trace (transpose M)`; trace is invariant under transposition.
-- **`Trace-prod`**: Cyclicity over a commutative ring: `Trace (A product B) = Trace (B product A)` for `A : Matrix R n m`, `B : Matrix R m n`.
-- **`Trace-prod.help`**: Lemma swapping the order of double sums `BigSum_j BigSum_k (A k j * B j k) = BigSum_i BigSum_j (B i j * A j i)`.
-- **`Trace-prod.Trace-prod-unfold`**: Expands `Trace (X product Y)` to the explicit double sum `BigSum_i BigSum_j (X i j * Y j i)`.
-- **`Trace-conjugation`**: Conjugation invariance over a commutative ring: `Trace (B⁻¹ * A * B) = Trace A` when `B` is invertible.
+#### Transpose and Cyclicity
 
-#### Trace on Special Matrices
+- **`Trace-transpose`**: `Trace M = Trace (transpose M)` — the trace is invariant under transposition.
+- **`Trace-prod`**: For a commutative ring `R`, `Trace (A product B) = Trace (B product A)` for `A : Matrix R n m` and `B : Matrix R m n` — the cyclic property of the trace.
+- **`Trace-prod.Trace-prod-unfold`**: Unfolds `Trace (X product Y)` to the double sum `∑ᵢ ∑ⱼ X i j * Y j i`.
+- **`Trace-prod.help`**: The double-sum swap `∑ⱼ ∑ₖ A k j * B j k = ∑ᵢ ∑ⱼ B i j * A j i`, the core combinatorial step behind cyclicity (uses commutativity of `R`).
+- **`Trace-conjugation`**: `Trace (B⁻¹ product A product B) = Trace A` — conjugation invariance, derived from cyclicity.
 
-- **`Trace-diagonal`**: `Trace (diagonal l) = R.BigSum l`; the trace of a diagonal matrix is the sum of its entries.
-- **`Trace-diagonal.diag-diagonal`**: `Trace.diag (diagonal l) = l`; extracting the diagonal of `diagonal l` recovers `l`.
-- **`Trace-ide`**: `Trace (Ring.ide) = R.natCoef n`; the trace of the `n×n` identity matrix equals the natural-number coefficient `n` in `R`.
+#### Trace on Distinguished Matrices
+
+- **`Trace-diagonal`**: `Trace (diagonal l) = R.BigSum l` — trace of a diagonal matrix is the sum of its diagonal entries.
+- **`Trace-diagonal.diag-diagonal`**: Auxiliary identity `Trace.diag (diagonal l) = l`.
+- **`Trace-ide`**: `Trace (Ring.ide {MatrixRing R n}) = R.natCoef n` — the trace of the `n × n` identity matrix is the natural-number coefficient `n` in `R`.

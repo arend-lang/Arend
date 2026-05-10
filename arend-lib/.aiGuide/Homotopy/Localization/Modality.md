@@ -1,11 +1,13 @@
 ### Homotopy.Localization.Modality
 
-Defines modalities as reflective universes closed under dependent sums, providing the dependent elimination principle characteristic of modal type theory.
+Defines modalities as a strengthening of reflective subuniverses where local types are closed under dependent sums.
 
-#### Classes
+A `Modality` extends `ReflUniverse` with the requirement that for any local type `A` and family `B` of local types over `A`, the total space `\Sigma (a : A) (B a)` is again local. This Σ-closure is what distinguishes modalities from arbitrary reflective subuniverses, and it is equivalent to the localization having a dependent elimination principle (rather than just a non-dependent universal property). The module records this characterization as `modality-elim`, which exhibits the dependent eliminator as an equivalence of function spaces.
 
-- **`Modality`**: Extends `ReflUniverse` with the closure condition `isModality`, requiring that for any local type `A` and family of local types `B : A -> Local`, the dependent sum `\Sigma (a : A) (B a)` is again local. This is the defining property distinguishing a modality from a mere reflective subuniverse.
+#### Main Definitions
 
-#### Elimination
+- **`Modality`**: Class extending `ReflUniverse` with the field `isModality`, asserting that the subuniverse of local types is closed under dependent sums: given `A : Local` and `B : A -> Local`, the type `\Sigma (a : A) (B a)` is itself local.
 
-- **`modality-elim`**: Dependent elimination for modalities. Given a family `B : LType A -> Local` of local types over the localization of `A`, restriction along the unit `lEta : A -> LType A` yields an equivalence `(\Pi (x : LType A) -> B x) ≃ (\Pi (a : A) -> B (lEta a))`. This is the universal property: every dependent map out of `A` into a local family extends uniquely to the localization.
+#### Dependent Elimination
+
+- **`modality-elim`**: For any modality `U` and family `B : LType A -> Local` of local types over the localization `LType A`, precomposition with the unit `lEta : A -> LType A` is an equivalence `(\Pi (x : LType A) -> B x) -> (\Pi (a : A) -> B (lEta a))`. This is the dependent universal property of localization that holds precisely when the reflective subuniverse is a modality.

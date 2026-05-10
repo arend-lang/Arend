@@ -1,42 +1,45 @@
 ### Arith.Prime
 
-This module provides primality definitions, characterizations, a decision procedure, and related lemmas for natural numbers.
+Primality for natural numbers, connecting the abstract `Prime` predicate from monoid theory to a concrete decidable test.
 
-#### Primality Characterizations
+This module bridges three views of primality on `Nat`: the algebraic notion `Prime` (irreducibility in a monoid), divisibility-based characterizations (no proper divisors other than 1), and a computable boolean test `isPrime` based on trial division by odd numbers up to the square root. The equivalences between these views are packaged so that primality on `Nat` becomes decidable, with `prime-isDec` as the user-facing result. The trial-division algorithm only checks odd divisors `j` while `j * j <= n`, which is the source of the `isOdd`-based bookkeeping lemmas.
 
-- **`nat_irr-isPrime`**: An irreducible natural number is prime: `Irr n` implies `Prime n`.
-- **`prime-div`**: Characterization of `Prime n` as: `n ≠ 1` and every divisor `k` of `n` satisfies `k = n` or `k = 1`.
-  - **`dir`**: Forward direction: `Irr n` and `LDiv k n` imply `k = n || k = 1`.
-  - **`conv`**: Converse: the divisor condition implies `Prime n`.
-- **`prime-less`**: Characterization of `Prime n` as: `n > 1` and every `k < n` dividing `n` satisfies `k = 1`.
-  - **`dir`**: Forward direction.
-  - **`conv`**: Converse.
+#### Abstract Characterizations
 
-#### Primality Testing (`isPrime`)
+- **`nat_irr-isPrime`**: An irreducible element of `NatSemiring` is `Prime` (with itself as the witness of non-invertibility).
+- **`prime-div`**: Equivalence `Prime n = (n /= 1) ∧ (∀ k, LDiv k n -> k = n ∨ k = 1)` — primality as "only divisors are 1 and `n`".
+  - **`prime-div.dir`**, **`prime-div.conv`**: The two directions of the equivalence.
+- **`prime-less`**: Equivalence `Prime n = (n > 1) ∧ (∀ k, k < n -> LDiv k n -> k = 1)` — primality as "no nontrivial divisor below `n`".
+  - **`prime-less.dir`**, **`prime-less.conv`**: The two directions.
 
-- **`isPrime`**: Boolean primality test for `Nat`. Returns `false` for `0` and `1`, `true` for `2`, and for `n >= 3` checks oddness and trial division up to `√n`.
-  - **`isPositive`**: Helper returning `false` for `0`, `true` otherwise.
-  - **`<`** (boolean): Boolean less-than via integer subtraction.
-  - **`rec`**: Recursive trial division: checks divisibility by odd numbers starting from `j`, bounded by counter `c`.
+#### Decidable Test
 
-#### Correctness of `isPrime`
+- **`isPrime`**: Boolean primality test on `Nat`. Returns `false` for 0 and 1, `true` for 2, and otherwise checks that `n` is odd and has no odd divisor `j` with `j * j <= n`.
+  - **`isPrime.isPositive`**: `Bool` predicate testing `n /= 0`, used to read off `n mod k /= 0`.
+  - **`isPrime.<`**: Boolean less-than on `Nat` via `Int` subtraction.
+  - **`isPrime.rec`**: Recursive trial-division loop: for fuel `c` starting at `j`, returns true once `n < j * j`, otherwise requires `j ∤ n` and recurses with `j + 2`.
 
-- **`isPrime=>prime`**: `isPrime n = true` implies `Prime n`.
-  - **`mod_div-lem`**: `isPositive (n mod k) = true` implies `Not (LDiv k n)`.
-  - **`isOdd`**: Predicate for odd natural numbers (defined recursively).
-  - **`square_<=-lem`**: `k <= k * k`.
-  - **`odd_suc-lem`**: `isOdd j` and `isOdd (suc j)` is contradictory.
-  - **`odd-lem`**: Two distinct odd numbers with `j <= k` satisfy `suc (suc j) <= k`.
-  - **`rec-lem`**: Main inductive lemma: if `rec` returns `true`, no odd divisor in range divides `n`.
-  - **`oddOrEven`**: Every natural number is odd or divisible by `2`.
-  - **`prime-lem`**: If `n > 1`, not divisible by `2`, and no odd `k >= 3` with `k² <= n` divides `n`, then `Prime n`.
-  - **`prime-lem2`**: If `n > 1` and every `j` with `j² <= n` dividing `n` equals `1`, then `Prime n`.
-- **`prime=>isPrime`**: `Prime n` implies `isPrime n = true`.
-  - **`mod-lem`**: If `n` is prime and `k < n` with `k ≠ 1`, then `isPositive (n mod k) = true`.
-  - **`<-lem`**: `n < m` implies `n isPrime.< m = true`.
-  - **`square_<-lem`**: `j > 1` implies `suc j < j * j`.
-  - **`rec-lem`**: If `n` is prime and `j > 1`, then `rec n c j = true`.
+#### Soundness: Boolean Test Implies `Prime`
+
+- **`isPrime=>prime`**: If `isPrime n = true`, then `Prime n`.
+- **`isPrime=>prime.mod_div-lem`**: If `n mod k` is positive then `k` does not divide `n`.
+- **`isPrime=>prime.isOdd`**: Propositional predicate "`n` is odd", defined by recursion on `suc (suc n)`.
+- **`isPrime=>prime.square_<=-lem`**: `k <= k * k`.
+- **`isPrime=>prime.odd_suc-lem`**: `n` and `n + 1` cannot both be odd.
+- **`isPrime=>prime.odd-lem`**: Two distinct odd numbers `j <= k` differ by at least 2: `suc (suc j) <= k`.
+- **`isPrime=>prime.rec-lem`**: Core invariant of the trial-division loop: if `rec n c j = true` and `k` is an odd divisor of `n` with `j <= k` and `k * k <= n`, derive a contradiction.
+- **`isPrime=>prime.oddOrEven`**: Every natural is either odd or divisible by 2.
+- **`isPrime=>prime.prime-lem`**: Reduces primality to: `n > 1`, `2 ∤ n`, and no odd `k >= 3` with `k * k <= n` divides `n`.
+- **`isPrime=>prime.prime-lem2`**: Reduces primality to: `n > 1` and every divisor `j` with `j * j <= n` equals 1.
+
+#### Completeness: `Prime` Implies Boolean Test
+
+- **`prime=>isPrime`**: If `Prime n`, then `isPrime n = true`.
+- **`prime=>isPrime.mod-lem`**: For prime `n`, any `k < n` with `k /= 1` satisfies `n mod k > 0`.
+- **`prime=>isPrime.<-lem`**: Reflects the propositional `<` on `Nat` into the boolean `isPrime.<`.
+- **`prime=>isPrime.square_<-lem`**: For `j > 1`, `suc j < j * j` (used to terminate the loop).
+- **`prime=>isPrime.rec-lem`**: For prime `n` and any `j > 1`, the trial-division loop returns `true`.
 
 #### Decidability
 
-- **`prime-isDec`**: Decidable primality: `Dec (Prime n)`, using `isPrime` and the correctness lemmas.
+- **`prime-isDec`**: `Prime n` is decidable on `Nat`, by case analysis on `isPrime n` and the two directions above.

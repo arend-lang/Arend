@@ -1,64 +1,89 @@
 ### Topology.TopSpace
 
-Foundational definitions of topological spaces, continuous maps, density, Hausdorff conditions, and subspace/transfer topologies.
+Foundational definitions for topological spaces, continuous maps, limits, density, and Hausdorff conditions.
 
-#### Core Classes
+This module sets up topology in the open-set style: a `TopSpace` extends `BaseSet` with an `isOpen` predicate satisfying the standard axioms (top, finite intersection, arbitrary union). On top of this, it builds the surrounding apparatus — continuous maps as a record `ContMap`, neighborhood filters, limits along directed sets and filters, closed sets via limit points, and dense/weakly-dense subsets. Hausdorff and strongly-Hausdorff variants give the uniqueness machinery used throughout: continuous maps agreeing on a dense subset must agree everywhere, with weakly-dense versions requiring the stronger separation condition. The `TopTransfer` construction (initial topology along a map) provides subspaces and is the engine for `TopSub` and for lifting maps into subspaces.
 
-- **`TopSpace`**: Topological space, extending `BaseSet`. Provides a predicate `isOpen` on subsets satisfying: the total set is open (`open-top`), open sets are closed under binary intersection (`open-inter`) and arbitrary union (`open-Union`).
-- **`HausdorffTopSpace`**: Topological space satisfying the standard T₂ separation axiom (`isHausdorff`): if every pair of open neighborhoods of `x` and `y` meets, then `x = y`.
-- **`StronglyHausdorffTopSpace`**: Extends `HausdorffTopSpace` and `SeparatedSet` with the constructive double-negation form (`isStronglyHausdorff`): equality follows when meeting cannot fail.
+#### The TopSpace Class
 
-#### Basic Constructions
+- **`TopSpace`**: Extends `BaseSet`. A topology specified by `isOpen : Set E -> \Prop`, with axioms `open-top`, `open-inter` (binary intersection), and `open-Union` (arbitrary unions of open sets indexed by a subset of opens).
+- **`cover-open`**: A set is open if it can be locally covered by open subsets at every point.
+- **`open-IUnion`**: Arbitrary indexed union of opens (over any `\hType`) is open.
+- **`open-bottom`**: The empty set is open.
+- **`open-union`**: Binary union of opens is open.
 
-- **`DiscreteTopSpace`**: Discrete topology on any set `X` — every subset is open.
-- **`TopTransfer`**: Initial topology induced by a map `f : X -> Y` into a topological space; opens are preimages of opens.
-- **`TopSub`**: Subspace topology on `Set.Total S` for `S : Set X`, defined via `TopTransfer` along the first projection.
-- **`NFilter`**: Neighborhood filter at a point `x : X`, as a `ProperFilter` whose elements are sets containing some open neighborhood of `x`.
+#### Refinement, Regularity, and Limits
+
+- **`<=<T`**: The "well-inside" relation `V <=<T U`: locally around every point there is an open `W` such that if `V ∧ W` is inhabited then `W ⊆ U`.
+- **`IsRegular`**: Every open neighborhood of a point contains a smaller open neighborhood that is well-inside it.
+- **`IsLimit`**: A net `f : I -> E` over a `DirectedSet` converges to `l` if every open neighborhood of `l` is eventually entered.
+- **`IsFilterLimit`**: A `SetFilter` converges to `l` if it contains every open neighborhood of `l`.
+- **`IsLimitPoint`**: `x` is a limit point of `U` if every open neighborhood of `x` meets `U`.
+- **`IsClosed`**: A set containing all its limit points.
+- **`closed-limit`**, **`closed-limit0`**: Limits of nets eventually (resp. always) in a closed set lie in the set.
+- **`closed-inter`**: Intersection of two closed sets is closed.
+
+#### Discrete Topology and Neighborhood Filter
+
+- **`DiscreteTopSpace`**: The discrete topology on a `\Set` X (every subset is open).
+- **`NFilter`**: The neighborhood filter at `x`, as a `ProperFilter`: sets containing some open neighborhood of `x`.
 
 #### Density
 
-- **`IsDenseSet`**: A subset `S` is dense if every open neighborhood of any point meets `S`.
-- **`IsWeaklyDenseSet`**: Constructive weakening: no open set is inhabited if it has no point of `S`.
-- **`denseSet->weaklyDense`**: Every dense set is weakly dense.
+- **`IsWeaklyDenseSet`**: For every open `U`, if no point of `S` lies in `U` then `U` is empty.
+- **`IsDenseSet`**: Every open neighborhood of every point contains a point of `S`.
+- **`denseSet->weaklyDense`**: Dense implies weakly dense.
 
 #### Continuous Maps
 
-- **`ContMap`**: Continuous map between topological spaces, extending `SetHom`. Carries `func-cont`: preimages of opens are open.
+- **`ContMap`**: Extends `SetHom` between `TopSpace`s with `func-cont`: preimage of open is open.
+- **`ContMap.IsWeaklyDense`**, **`ContMap.IsDense`**: Density of the image.
+- **`ContMap.dense->weaklyDense`**: Image-dense implies image-weakly-dense.
+- **`ContMap.IsTopEmbedding`**: Every open in the domain is the preimage of some open in the codomain.
+- **`ContMap.topEmbedding-char`**: Local characterization of topological embeddings.
+- **`ContMap.IsDenseTopEmbedding`**: Combined dense embedding property.
 - **`ContMap.id`**: Identity continuous map.
-- **`ContMap.compose`** (`∘`): Composition of continuous maps.
-- **`ContMap.const`**: Constant map as a continuous map.
-- **`IsCont`**: Predicate form: `f : X -> Y` is continuous (i.e., extends to a `ContMap`).
-- **`IsContAt`**: Pointwise continuity at `x`: every open neighborhood of `f x` has an open preimage neighborhood at `x`.
-- **`cont-char`**: Global continuity is equivalent to continuity at every point.
-- **`contAt-comp`**: Composition preserves pointwise continuity.
-- **`contAt-left`**, **`contAt-right`**: Pre/post-composition with a continuous map preserves pointwise continuity.
+- **`ContMap.compose` / `∘`**: Composition of continuous maps.
+- **`ContMap.const`**: Constant map is continuous.
 
-#### Limits
+#### Limits and Continuity Lemmas
 
-- **`limit-transport`**: Limits are invariant under pointwise equal sequences.
-- **`const-limit`**: Constant nets converge to their value.
-- **`cont-limit`**: Continuous maps preserve limits of directed nets.
-- **`contAt-limit`**: Pointwise continuity at the limit point suffices to preserve a limit.
-- **`cont-limit-point`**: Continuous maps reflect limit points along preimages.
-- **`cont-closed`**: Preimages of closed sets under continuous maps are closed.
+- **`limit-transport`**: Limits transfer along pointwise-equal nets.
+- **`const-limit`**: Constant net converges to its value.
+- **`cont-limit`**: Continuous maps preserve limits of nets.
+- **`IsCont`**: Predicate form of continuity (`ContMap X Y f`).
+- **`IsContAt`**: Pointwise continuity at `x`: preimages of opens around `f x` contain opens around `x`.
+- **`cont-char`**: A function is continuous iff it is continuous at every point.
+- **`contAt-comp`**, **`contAt-left`**, **`contAt-right`**: Composition lemmas for pointwise continuity.
+- **`contAt-limit`**: Pointwise continuity at the limit suffices to preserve net convergence.
+- **`cont-limit-point`**: Continuous maps send limit points of preimages to limit points.
+- **`cont-closed`**: Preimage of a closed set under a continuous map is closed.
 
-#### Lifting Uniqueness on Dense Subsets
+#### Hausdorff Conditions
 
-- **`denseSet-lift-unique`**: Two continuous maps into a Hausdorff space agreeing on a dense subset are equal everywhere.
-- **`dense-lift-unique`**: Same as above but stated for maps with dense image (`f.IsDense`) instead of a dense subset.
-- **`weaklyDenseSet-lift-unique`**: Variant of `denseSet-lift-unique` for weakly dense subsets, requiring a strongly Hausdorff codomain.
-- **`weaklyDense-lift-unique`**: Maps-with-weakly-dense-image variant for strongly Hausdorff codomain.
+- **`HausdorffTopSpace`**: Extends `TopSpace` with `isHausdorff`: distinct-but-inseparable-by-opens points must be equal.
+- **`HausdorffTopSpace.limit-unique`**: Limits of nets are unique in Hausdorff spaces.
+- **`StronglyHausdorffTopSpace`**: Extends `HausdorffTopSpace` and `SeparatedSet` with `isStronglyHausdorff`, where the separation hypothesis uses double-negation; supplies `isHausdorff` and `separatedEq` automatically.
 
-#### Relative Hausdorffness
+#### Dense Lift Uniqueness
 
-- **`IsRelativelyHausdorff`**: A map `f : X -> Y` is relatively Hausdorff if points with `f x = f x'` whose neighborhoods always meet are equal.
-- **`denseSet-relative-lift-unique`**: Lift-uniqueness on a dense subset where the codomain is only relatively Hausdorff via an auxiliary map `p`, given that `p ∘ f = p ∘ g`.
-- **`dense-relative-lift-unique`**: Same uniqueness using a continuous map with dense image instead of a dense subset.
+- **`denseSet-lift-unique`**: Two continuous maps into a Hausdorff space agreeing on a dense subset agree everywhere.
+- **`dense-lift-unique`**: Variant where density comes from a dense continuous map `f : X -> Y`.
+- **`weaklyDenseSet-lift-unique`**: Same as `denseSet-lift-unique` but for weakly dense subsets into a strongly Hausdorff codomain.
+- **`weaklyDense-lift-unique`**: Map-form of weakly-dense lift uniqueness.
 
-#### Subspace and Transfer Lemmas
+#### Initial Topologies and Subspaces
 
-- **`TopTransfer-map`**: The defining map `f : X -> Y` is continuous from `TopTransfer f` to `Y`.
-- **`TopTransfer-lift`**: Universal property: a continuous map `f : X -> Y` factoring through `U ⊆ Y` lifts to `TopTransfer` on `Set.Total U`.
-- **`TopSub-func`**: A continuous map `f : X -> Y` mapping `U` into `V` restricts to a continuous map between subspaces.
-- **`TopSub-inc`**: Inclusion of subspaces `TopSub U -> TopSub V` for `U ⊆ V` is continuous.
-- **`TopSub-limit`**: Limits in a subspace are detected componentwise via the inclusion into the ambient space.
+- **`TopTransfer`**: Initial topology on `X` along `f : X -> Y`: opens are preimages of opens in `Y`.
+- **`TopTransfer-map`**: The transfer map itself is continuous.
+- **`TopTransfer-lift`**: Lift a continuous map to a transferred subspace given a pointwise-membership witness.
+- **`TopSub`**: Subspace topology on `Set.Total S` via `TopTransfer` along the projection.
+- **`TopSub-func`**: A continuous map restricts to subspaces when it sends `U` into `V`.
+- **`TopSub-inc`**: Inclusion of nested subspaces is continuous.
+- **`TopSub-limit`**: Net convergence in a subspace reduces to convergence of underlying points.
+
+#### Relative Hausdorff Lifts
+
+- **`IsRelativelyHausdorff`**: A map `f : X -> Y` is relatively Hausdorff if Hausdorff-style separation in `X` plus `f x = f x'` forces `x = x'`.
+- **`denseSet-relative-lift-unique`**: Lift uniqueness on dense subsets when the codomain is only relatively Hausdorff via some `p : Y -> Z`.
+- **`dense-relative-lift-unique`**: Map-form of the relative dense-lift uniqueness lemma.

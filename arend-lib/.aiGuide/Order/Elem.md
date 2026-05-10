@@ -1,10 +1,12 @@
 ### Order.Elem
 
-Lifts order structures from a type `X` to its subset `Elem U`, inheriting strict, partial, biordered, and linear order instances componentwise.
+Order structures inherited by subsets via the underlying carrier's order.
 
-#### Order Instances on Subsets
+This module lifts standard order classes from a type `X` to `Elem U`, the type of elements of a subset `U : Set X`. Each instance defines the order on pairs by projecting to the first component (`.1`), so the subset inherits the ambient order pointwise. This provides a uniform way to view any subset of an ordered structure as an ordered structure in its own right, which is useful when restricting attention to a sub-collection while preserving order-theoretic reasoning.
 
-- **`ElemStrictPoset`**: Strict poset structure on `Elem U` for `U : Set X` with `X : StrictPoset`, defined by `x < y := x.1 < y.1`; inherits irreflexivity and transitivity from `X`.
-- **`ElemPoset`**: Poset structure on `Elem U` for `U : Set X` with `X : Poset`, defined by `x <= y := x.1 <= y.1`; antisymmetry uses `ext` to lift equality of underlying elements to equality in `Elem U`.
-- **`ElemBiordered`**: `BiorderedSet` instance on `Elem U` combining `ElemStrictPoset` and `ElemPoset`, with cross-relation lemmas `<∘r`, `<∘l`, and `<=-less` lifted pointwise.
-- **`ElemLinearOrder`**: `LinearOrder` instance on `Elem U` for `X : LinearOrder`, providing `<-comparison` (comparability against a third element) and `<-connectedness` (lifted via `ext`) on top of `ElemStrictPoset`.
+#### Inherited Order Instances
+
+- **`ElemStrictPoset`**: Strict poset structure on `Elem U` for `U : Set X` with `X : StrictPoset`. Defines `x < y` as `x.1 < y.1` and inherits irreflexivity and transitivity from `X`.
+- **`ElemPoset`**: Poset structure on `Elem U` for `U : Set X` with `X : Poset`. Defines `x <= y` as `x.1 <= y.1` and inherits reflexivity, transitivity, and antisymmetry from `X`.
+- **`ElemBiordered`**: `BiorderedSet` structure on `Elem U` combining `ElemStrictPoset` and `ElemPoset`. Inherits the compatibility axioms (`<-transitive-right`, `<-transitive-left`, `<=-less`) tying `<` and `<=` together from the ambient biordered set.
+- **`ElemLinearOrder`**: Linear order structure on `Elem U` for `U : Set X` with `X : LinearOrder`. Built on `ElemStrictPoset`, inheriting comparison and connectedness from `X`.

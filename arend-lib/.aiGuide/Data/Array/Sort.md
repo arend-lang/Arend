@@ -1,29 +1,35 @@
 ### Data.Array.Sort
 
-This module provides sorting for arrays with a decidable linear order, along with sorted-ness predicates and uniqueness results.
+Sorting for arrays over decidable linear orders, with permutation and sortedness specifications.
 
-#### Sort Function
+This module lifts list-based insertion sort (from `Data.List`) to length-indexed arrays by routing through `toList`/`fromList` conversions. The main `sort` function preserves length via transport, and the surrounding lemmas establish the two characteristic properties of any sorting routine: the output is sorted (`sort-sorted`) and a permutation of the input (`sort-perm`). A uniqueness lemma (`perm_=`) shows that any two sorted permutations are equal, making sorted-permutation a complete specification.
 
-- **`sort`**: Sorts an `Array A` (for `LinearOrder.Dec A`) into an `Array A l.len`.
+#### Main Function
 
-#### IsSorted Predicate
+- **`sort`**: Sorts an `Array A l.len` over a decidable linear order, returning an array of the same length. Implemented by converting to a list, applying `Sort.Insertion.sort`, converting back to an array, and transporting along the length-preservation proof.
 
-- **`IsSorted`**: A predicate on arrays: `l i <= l j` whenever `i < j`.
-- **`sorted_transport`**: `IsSorted` is preserved under transport of array length.
+#### Sortedness Predicate
 
-#### Conversions with List Sorted
+- **`IsSorted`**: Predicate on an array stating that `l i <= l j` whenever `i < j` as natural numbers. Defined for any `Preorder`.
+- **`sorted_transport`**: Transporting an array along an equality of lengths preserves `IsSorted`.
 
-- **`list_sorted`**: `Sort.Sorted` on a list implies `IsSorted` on the corresponding `fromList` array.
-  - **`headDef_fromList`**: Helper: head of a sorted list is `<=` all elements.
-- **`sorted_list`**: `IsSorted` on an array implies `Sort.Sorted` on `toList`.
+#### Conversion Between List and Array Sortedness
 
-#### Sort Correctness
+- **`list_sorted`**: If a `List` is `Sort.Sorted`, then `fromList l` satisfies `IsSorted`.
+- **`list_sorted.headDef_fromList`**: Helper lemma: when `l` is sorted, `headDef a l <= fromList l j` for any index `j`.
+- **`sorted_list`**: Conversely, if an array satisfies `IsSorted`, then `toList l` is `Sort.Sorted`.
 
-- **`sort-sorted`**: `sort l` is `IsSorted`.
-  - **`list_perm`**: List `Perm` implies array `EPerm` (via `fromList`).
-  - **`sort-eperm`**: `EPerm l (fromList (Insertion.sort (toList l)))`.
+#### Correctness of `sort`
 
-#### Perm and Uniqueness
+- **`sort-sorted`**: The result of `sort l` is `IsSorted`.
+- **`sort-perm`**: The result of `sort l` is a `Perm`utation of `l` (defined via `EPerm`-to-`Perm` transport).
 
-- **`perm_list`**: Fixed-length `Perm` implies list `Sort.Perm` (via `toList`).
-- **`perm_=`**: If two same-length arrays are both `IsSorted` and related by `Perm`, they are equal.
+#### Permutation Conversion
+
+- **`sort-perm.list_perm`**: Lifts a `Sort.Perm` between lists to an `EPerm` between their `fromList` arrays, by case analysis on the list permutation constructors (`perm-nil`, `perm-::`, `perm-swap`, `perm-trans`).
+- **`sort-perm.sort-eperm`**: The original array `l` is `EPerm`-equivalent to `fromList (Sort.Insertion.sort (toList l))`.
+- **`perm_list`**: Lifts a `Perm` between equal-length arrays to a `Sort.Perm` between their `toList` representations, by case analysis on array permutation constructors.
+
+#### Uniqueness
+
+- **`perm_=`**: Two sorted arrays of the same length that are permutations of each other are equal. This makes `IsSorted` + `Perm` a complete specification of `sort`'s output.

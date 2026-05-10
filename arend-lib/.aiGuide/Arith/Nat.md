@@ -1,116 +1,100 @@
 ### Arith.Nat
 
-This module provides arithmetic operations, ordering, and properties for natural numbers (`Nat`).
+Arithmetic, order, and divisibility infrastructure for the natural numbers.
 
-#### Basic Functions
+This module equips `Nat` with the algebraic and order-theoretic structure needed throughout the library: it defines truncated subtraction `-'` and predecessor `pred`, packages the strict order via the inductive `NatOrder.<`, and assembles the canonical instances `NatSemiring : LinearlyOrderedCSemiring.Dec` and `NatBSemilattice : BottomJoinSemilattice`. A second focus is the interplay between `Nat` and `Fin n`, providing conversions `toFin`, `toFin'`, `mod_Fin` along with their characterization lemmas. The remainder of the file develops the basic theory of `div`/`mod`, divisibility (`LDiv`), and modular arithmetic congruences used elsewhere in the library.
 
-- **`-'` (truncated subtraction)**: `n -' m` returns `n - m` if `n >= m`, otherwise `0`.
-- **`pred`**: Predecessor function; `pred 0 = 0`, `pred (suc x) = x`.
-- **`suc/=0`**: Proves `suc n ≠ 0` (eliminates into `Empty`).
-- **`toFin`**: Converts a `Nat` less than `n` into `Fin n`.
-- **`toFin'`**: Alternative conversion from `Nat` to `Fin n` via `mod`.
-- **`mod_Fin`**: Converts a `Nat` to `Fin n` using modular reduction.
-- **`mod_div`**: Constructs an `LDiv m n` proof from `n mod m = 0`.
+#### Truncated Subtraction and Predecessor
 
-#### Lemmas on `pred` and `suc`
-
-- **`suc_pred`**: `suc (pred n) = n` when `n ≠ 0`.
-
-#### Lemmas on Truncated Subtraction (`-'`)
-
+- **`-'`**: Truncated subtraction on `Nat`: `0 -' m = 0`, `suc n -' suc m = n -' m`.
+- **`pred`**: Predecessor: `pred 0 = 0`, `pred (suc x) = x`.
+- **`suc_pred`**: `suc (pred n) = n` when `n /= 0`.
 - **`-'0`**: `n -' 0 = n`.
-- **`-'+`**: `n + m -' m = n`.
+- **`-'+`**: `(n + m) -' m = n`.
 - **`-'id`**: `n -' n = 0`.
 - **`-'-'`**: `a -' b -' c = a -' (b + c)`.
+- **`suc/=0`**: `suc n = 0` is impossible.
+
+#### Strict Order on Nat
+
+- **`NatOrder.<`**: Inductive strict order: `0 < suc _` and `suc n < suc m` from `n < m`.
+- **`NatOrder.unsuc<`**: Inverts `suc<suc`: `suc n < suc m -> n < m`.
 - **`-'_<`**: `0 < n -' m` implies `m < n`.
 - **`<_-'`**: `m < n` implies `0 < n -' m`.
-- **`-'<=id`**: `n -' m <= n`.
-- **`-'+-comm`**: `n + k -' m = n -' m + k` when `m <= n`.
-- **`-'-monotone-left`**: `n -' k <= m -' k` when `n <= m`.
-- **`-'-monotone-right`**: `k -' n <= k -' m` when `m <= n`.
-- **`-'_<=`**: `n -' m = 0` implies `n <= m`.
-
-#### NatOrder Module
-
-- **`<` (strict order on `Nat`)**: Inductively defined with constructors `zero<suc` and `suc<suc`.
-- **`unsuc<`**: `suc n < suc m` implies `n < m`.
-
-#### Ordering Lemmas
-
 - **`id<suc`**: `n < suc n`.
-- **`id/=suc`**: `n ≠ suc n`.
-- **`nonZero>0`**: `n ≠ 0` implies `0 < n`.
-- **`fin_<`**: Any `x : Fin n` satisfies `x < n`.
-- **`zero<=_`**: `0 <= x` for all `x`.
-- **`suc<=suc`**: `x <= y` implies `suc x <= suc y`; with `conv` for the converse.
-- **`<=_exists`**: `n <= m` implies `n + (m -' n) = m`.
-- **`suc_<_<=`**: `n < m` implies `suc n <= m`.
-- **`<_suc_<=`**: `n < suc m` implies `n <= m`.
-- **`suc_<=_<`**: `suc n <= m` implies `n < m`.
-- **`<=_<_suc`**: `n <= m` implies `n < suc m`.
-- **`id<=suc`**: `n <= suc n`.
-- **`<=_*`**: Monotonicity of multiplication: `n <= m` and `k <= l` imply `n * k <= m * l`.
-- **`monotone-diagonal`**: If `suc (f n) <= f (suc n)` for all `n`, then `n <= f n`.
-- **`sequence-monotone`**: A monotone sequence preserves `<=` across indices.
-- **`sequence-anti-monotone`**: An anti-monotone sequence reverses `<=` across indices.
+- **`id/=suc`**: `n /= suc n`.
+- **`nonZero>0`**: `n /= 0` implies `0 < n`.
 
-#### Fin Lemmas
+#### Conversion between Nat and Fin
 
-- **`toFin=id`**: `toFin k p` equals `k` as a `Nat`.
-- **`toFin=fin`**: `toFin k (fin_< k) = k` in `Fin n`.
-- **`toFin'=id`**: `toFin' p` equals `k` as a `Nat`.
-- **`fin_nat-inj`**: Equality of `Fin n` elements as `Nat` implies equality in `Fin n`.
-- **`fin_nat-ineq`**: Inequality in `Fin n` implies inequality as `Nat`.
-- **`mod_Fin=mod`**: `mod_Fin k p` equals `k mod n` as a `Nat`.
-- **`mod_Fin_<`**: `mod_Fin k p` equals `k` as `Nat` when `k < n`.
-- **`mod_Fin=id`**: `mod_Fin k p = k` in `Fin n` when `k : Fin n`.
+- **`fin_<`**: A `Fin n` is bounded by `n`.
+- **`toFin`**: Lifts `k : Nat` with `k < n` to `Fin n` by structural recursion.
+- **`toFin=id`**: `toFin k p = k` as naturals.
+- **`toFin=fin`**: `toFin` is a left inverse on `Fin n`.
+- **`toFin'`**: Alternative lift via `mod`: `k mod suc n : Fin (suc n)`.
+- **`mod_Fin`**: Convert `k : Nat` to `Fin n` using modular reduction, given `0 < n`.
+- **`mod_Fin=mod`**: `mod_Fin k p = k mod n` as naturals.
+- **`fin_nat-inj`**: Equality on `Nat` lifts to equality on `Fin n`.
+- **`fin_nat-ineq`**: Disequality on `Fin n` lifts to disequality on `Nat`.
+- **`toFin'=id`**: `toFin' p = k` as naturals when `k < n`.
+- **`mod_Fin_<`**: `mod_Fin k p = k` as naturals when `k < n`.
+- **`mod_Fin=id`**: `mod_Fin k p = k` for `k : Fin n`.
 - **`fin_mod_id`**: `x mod suc n = x` for `x : Fin (suc n)`.
 
-#### NatSemiring Instance
+#### Algebraic and Order Instances
 
-- **`NatSemiring`**: Instance of `LinearlyOrderedCSemiring.Dec` for `Nat`, providing `+`, `*`, `<`, `zro`, `ide`, commutativity, associativity, distributivity, and decidable trichotomy.
-  - **`triEquals`**: `n - m = 0` implies `n = m`.
-  - **`triGreater`**: `n - m = suc d` implies `m < n`.
-  - **`triLess`**: `n - m = neg (suc d)` implies `n < m`.
-  - **`cancel-right`**: `n + k = m + k` implies `n = m`.
-  - **`cancel-left`**: `n + m = n + k` implies `m = k`.
-  - **`cancel_*-left`**: `k * n = k * m` with `k ≠ 0` implies `n = m`.
-  - **`cancel_*-right`**: `n * k = m * k` with `k ≠ 0` implies `n = m`.
+- **`NatSemiring`**: Decidable linearly ordered commutative semiring instance on `Nat` with the usual `+`, `*`, `<`, `0`, `1`.
+- **`NatSemiring.triEquals`**, **`triGreater`**, **`triLess`**: Read off equality / strict comparison from the sign of `n - m` (in `Int`).
+- **`NatSemiring.cancel-left`**, **`cancel-right`**: Additive cancellation.
+- **`NatSemiring.cancel_*-left`**, **`cancel_*-right`**: Multiplicative cancellation by a nonzero factor.
+- **`NatBSemilattice`**: Bottom join-semilattice on `Nat` with `bottom = 0`, joining the semiring's lattice structure.
+- **`NatBSemilattice.<=_cancel-left`**, **`<=_cancel-right`**: Additive cancellation under `<=`.
+- **`NatBSemilattice.ldistr0`**, **`rdistr0`**: `x ∧ 0 = 0` and `0 ∧ x = 0`.
 
-#### NatBSemilattice Instance
+#### Order Lemmas
 
-- **`NatBSemilattice`**: Instance of `BottomJoinSemilattice` for `Nat` with bottom element `0`.
-  - **`<=_cancel-left`**: `n + m <= n + k` implies `m <= k`.
-  - **`<=_cancel-right`**: `m + n <= k + n` implies `m <= k`.
-  - **`ldistr0`**: `x ∧ 0 = 0`.
-  - **`rdistr0`**: `0 ∧ x = 0`.
+- **`zero<=_`**: `0 <= x`.
+- **`suc<=suc`**: Monotonicity of `suc` w.r.t. `<=`, with converse `suc<=suc.conv`.
+- **`<=_exists`**: `n <= m` witnesses `n + (m -' n) = m`.
+- **`-'<=id`**: `n -' m <= n`.
+- **`-'+-comm`**: Distributes `-'` over `+` when subtrahend is bounded.
+- **`-'-monotone-left`**, **`-'-monotone-right`**: Monotonicity of `-'` in each argument (right is anti-monotone).
+- **`-'_<=`**: `n -' m = 0` implies `n <= m`.
+- **`<=_*`**: Multiplication is monotone in both arguments.
+- **`monotone-diagonal`**: A strictly increasing `f : Nat -> Nat` satisfies `n <= f n`.
+- **`sequence-monotone`**, **`sequence-anti-monotone`**: Iterated step inequalities promote to general `<=`-comparisons; `sequence-monotone.induction` is the additive form.
+- **`suc_<_<=`**, **`<_suc_<=`**, **`suc_<=_<`**, **`<=_<_suc`**: Conversions between `<` and `<=` shifted by `suc`.
+- **`id<=suc`**: `n <= suc n`.
 
-#### Division and Modular Arithmetic
+#### Division and Modulo
 
-- **`n*_+_<n`**: `n * q + r < n` implies `q = 0`.
-- **`mod-unique`**: Uniqueness of remainder in division.
-- **`div-unique`**: Uniqueness of quotient in division.
+- **`n*_+_<n`**: `n * q + r < n` forces `q = 0`.
+- **`mod-unique`**, **`div-unique`**: Uniqueness of remainder and quotient in the Euclidean decomposition.
 - **`mod<=left`**: `n mod m <= n`.
-- **`mod<right`**: `n mod m < m` when `m ≠ 0`.
-- **`div_<`**: `n < m` implies `n div m = 0`.
-- **`mod_<`**: `n < m` implies `n mod m = n`.
-- **`div_mod`**: `LDiv m n` implies `n mod m = 0`.
+- **`mod<right`**: `n mod m < m` when `m /= 0`.
+- **`div_<`**, **`mod_<`**: When `n < m`, division yields `0` and `mod` yields `n`.
+- **`natUnit`**: `n * m = 1` forces `m = 1` (units in `Nat` are trivial).
+
+#### Divisibility
+
+- **`natAssociates-areEqual`**: Mutually divisible naturals are equal.
+- **`ldiv_<=`**: `n | m` with `m /= 0` implies `n <= m`.
+- **`mod_div`**: `n mod m = 0` produces an `LDiv m n`.
+- **`div_mod`**: `m | n` implies `n mod m = 0`.
 - **`id_mod`**: `n mod n = 0`.
-- **`div_*<=id`**: `n div m * m <= n`.
-- **`n*_+_mod_n`**: `(n * q + r) mod n = r` when `r < n`.
-- **`n*_+_mod_n=mod`**: `(suc n * q + r) mod suc n = r mod suc n`; with `nat` variant for general `n`.
-- **`mod_+-left`**: `(a mod suc n + b) mod suc n = (a + b) mod suc n`.
-- **`mod_+-right`**: `(a + b mod suc n) mod suc n = (a + b) mod suc n`.
-- **`mod_*-left`**: `(a mod suc n * b) mod suc n = (a * b) mod suc n`.
-- **`mod_*-right`**: `(a * b mod suc n) mod suc n = (a * b) mod suc n`.
-- **`mod_+-cong-left`**: Congruence of `mod` under addition on the left.
-- **`mod_+-cong-right`**: Congruence of `mod` under addition on the right.
+- **`div_*<=id`**: `(n div m) * m <= n`.
 
-#### Miscellaneous
+#### Boolean Decision Procedures
 
-- **`natUnit`**: `n * m = 1` implies `m = 1`.
-- **`natAssociates-areEqual`**: Mutual divisibility of naturals implies equality.
-- **`ldiv_<=`**: `LDiv n m` with `m ≠ 0` implies `n <= m`.
-- **`nat_<=-dec`**: Decidable `<=` via boolean check `n -' m == 0`.
-- **`nat_<-dec`**: Decidable `<` via boolean check.
+- **`nat_<=-dec`**: Reflects the boolean test `nat_<=_Bool n m := (n -' m == 0)` into `n <= m`.
+- **`nat_<=-dec.nat_<=_Bool`**: The underlying boolean comparison.
+- **`nat_<-dec`**: Boolean form of strict comparison `n < m`.
+
+#### Powers and Modular Congruences
+
 - **`id<pow2`**: `n < 2^n`.
+- **`n*_+_mod_n`**: `(n * q + r) mod n = r` when `r < n`.
+- **`n*_+_mod_n=mod`**: `(suc n * q + r) mod suc n = r mod suc n`; `.nat` is the variant for general `n`.
+- **`mod_+-left`**, **`mod_+-right`**: Reducing one summand modulo `suc n` does not change the sum's residue.
+- **`mod_*-left`**, **`mod_*-right`**: Same for multiplication.
+- **`mod_+-cong-left`**, **`mod_+-cong-right`**: Congruence of `mod` under addition: equal residues remain equal after adding a common term.

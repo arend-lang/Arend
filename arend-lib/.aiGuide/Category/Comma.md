@@ -1,17 +1,19 @@
 ### Category.Comma
 
-Construction of comma categories from a pair of functors with common codomain.
+Construction of comma categories from a pair of functors with a common codomain.
 
-#### Comma Precategory
+Given functors `F : C → E` and `G : D → E`, the comma category `(F ↓ G)` has objects `(x, y, a : F x → G y)` and morphisms given by commuting squares between such triangles. This module builds the precategory structure with explicit composition proofs threaded through the functoriality of `F` and `G`, then upgrades to a univalent category when `C` and `D` are univalent. Auxiliary constructions provide the canonical forgetful functors to the source categories and a covariant action turning natural transformations between the defining functors into functors between comma categories.
 
-- **`commaPrecat`**: Given functors `F : C -> E` and `G : D -> E`, builds the comma precategory `(F ↓ G)`. Objects are triples `(x : C, y : D, F x -> G y)`; morphisms are pairs `(f, g)` making the obvious naturality square commute. Identities, composition, and the category axioms are derived from those of `C`, `D`, and `E`.
+#### Main Constructions
 
-#### Forgetful Functors and Functoriality
+- **`commaPrecat`**: The comma precategory `(F ↓ G)` for `F : Functor C E`, `G : Functor D E`. Objects are triples `(x : C, y : D, a : Hom (F x) (G y))`; morphisms `(x,y,a) → (x',y',a')` are pairs `(f : x → x', g : y → y')` together with a commutation proof `a' ∘ F f = G g ∘ a`. Identity and composition are inherited componentwise, with the square-commutation proof rebuilt using `Func-id`, `Func-o`, and associativity.
+- **`commaCat`**: Upgrades `commaPrecat F G` to a univalent `Cat` whenever the source categories `C` and `D` are univalent (`E` may remain a mere `Precat`).
 
-- **`commaPrecat.leftForget`**: Projection functor `(F ↓ G) -> C` taking `(x, y, a)` to `x`.
-- **`commaPrecat.rightForget`**: Projection functor `(F ↓ G) -> D` taking `(x, y, a)` to `y`.
-- **`commaPrecat.functor`**: Functoriality of the comma construction in its functor arguments. Given natural transformations `a : F' => F` and `b : G => G'`, produces a functor `(F ↓ G) -> (F' ↓ G')` by whiskering each object morphism `s : F x -> G y` to `b y ∘ s ∘ a x`.
+#### Forgetful Functors
 
-#### Comma Category (Univalent)
+- **`commaPrecat.leftForget`**: The projection functor `(F ↓ G) → C` sending `(x, y, a) ↦ x` and `(f, g, _) ↦ f`.
+- **`commaPrecat.rightForget`**: The projection functor `(F ↓ G) → D` sending `(x, y, a) ↦ y` and `(f, g, _) ↦ g`.
 
-- **`commaCat`**: When `C` and `D` are univalent categories (and `E` is any precategory), the comma precategory `commaPrecat F G` is also a univalent category. Univalence is established via `Cat.makeUnivalence`, transporting an iso in the comma category to a path componentwise using the isotoid maps of `C` and `D` together with `Functor.transport_Hom_iso`.
+#### Functoriality in the Defining Functors
+
+- **`commaPrecat.functor`**: Given natural transformations `a : F' ⇒ F` and `b : G ⇒ G'`, produces a functor `(F ↓ G) → (F' ↓ G')` by conjugating the connecting morphism: `(x, y, s) ↦ (x, y, b y ∘ s ∘ a x)`. Functoriality of the morphism component uses naturality of `a` and `b` together with the original square-commutation.

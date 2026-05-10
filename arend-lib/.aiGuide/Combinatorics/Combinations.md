@@ -1,48 +1,52 @@
 ### Combinatorics.Combinations
 
-Combinations of `k` elements from `n` realized as strictly monotone maps `Fin k → Fin n`, with finiteness witnesses and a counting equivalence with `Fin (binom n k)`.
+Defines $k$-combinations of an $n$-element set as strictly monotone maps $\mathrm{Fin}\ k \to \mathrm{Fin}\ n$, and proves their cardinality equals the binomial coefficient $\binom{n}{k}$.
+
+A combination is encoded as a `StrictPosetHom` between linear finite orders, giving a canonical "sorted" representation that avoids quotienting by permutations. Finiteness is established by exhibiting combinations as the decidable subset of strictly sorted arrays inside `Array (Fin n) k`. The counting equivalence `Fin (binom n k) ≃ Combinations n k` is proved by induction on $n, k$ using Pascal's recurrence: a combination of size $k+1$ from $n+1$ elements either contains the maximum (and so reduces to a size-$k$ combination of $n$) or omits it (a size-$(k+1)$ combination of $n$), matching the recursive structure of `binom`.
 
 #### Array Finiteness
 
-- **`array-equiv`**: `QEquiv` between `Array A n` and `Fin n → A`, identifying arrays with their indexing functions.
+- **`array-equiv`**: Equivalence between `Array A n` and `Fin n -> A`.
 - **`ArrayFin`**: `FinSet` instance for `Array A n` over a finite `A`, with cardinality `A.finCard ^ n`.
 
-#### Combinations and Sortedness
+#### Core Definition
 
-- **`Combinations`**: `Combinations n k` is defined as `StrictPosetHom (FinOrder k) (FinOrder n)`, i.e. strictly increasing maps `Fin k → Fin n`.
-- **`IsStrictlySorted`**: Predicate on `Array (Fin n) k` asserting `i < j → arr i < arr j`.
-- **`IsStrictlySorted-dec`**: Decidability instance for `IsStrictlySorted` via finite case analysis with trichotomy on `Fin k`.
-- **`CombinationsFin`**: `FinSet` instance for `Combinations n k`, obtained as the decidable subset of strictly sorted arrays inside `ArrayFin (FinFin n) k`.
-  - **`equiv-arr-hom`**: Equivalence between `Σ (arr : Array (Fin n) k), IsStrictlySorted arr` and `Combinations n k`, packaging an array with its sortedness proof as a strict poset homomorphism.
+- **`Combinations n k`**: A $k$-combination of `Fin n`, defined as `StrictPosetHom (FinOrder k) (FinOrder n)` — a strictly increasing map.
+- **`IsStrictlySorted`**: Predicate on arrays `Array (Fin n) k` asserting `arr i < arr j` whenever `i < j`.
+- **`IsStrictlySorted-dec`**: Decidability of strict sortedness via finite trichotomy and decidable order on `FinOrder n`.
+- **`CombinationsFin`**: `FinSet` instance for `Combinations n k`, obtained by viewing combinations as the decidable subset of strictly sorted arrays.
+  - **`equiv-arr-hom`**: Equivalence between strictly sorted arrays and strict poset homomorphisms.
 
-#### Fin Helpers
+#### Fin Restriction Helpers
 
-- **`finRestrict`**: Given `a : Fin (suc n)` with `a < n`, restricts to `Fin n`.
-- **`finRestrict-nat`**: `finRestrict a p` and `a` agree as natural numbers.
-- **`finRestrict-<`**: `finRestrict` preserves strict order.
-- **`finLast-nat`**: `finLast k` equals `k` as a natural number.
-- **`fin-last-or`**: For `i : Fin (suc k)`, either `i < k` or `i = finLast k`.
-- **`lt-suc-neq`**: From `a < suc b` and `a ≠ b` derive `a < b`.
+- **`finRestrict`**: Restricts `a : Fin (suc n)` to `Fin n` given a proof `a < n`.
+- **`finRestrict-nat`**: Restriction preserves the underlying natural number.
+- **`finRestrict-<`**: Restriction preserves the strict order.
+- **`finLast-nat`**: `finLast k` has natural-number value `k`.
 - **`binom0`**: `binom n 0 = 1`.
+- **`fin-last-or`**: Trichotomy: any `i : Fin (suc k)` is either `< k` or equals `finLast k`.
+- **`lt-suc-neq`**: From `a < suc b` and `a ≠ b`, conclude `a < b`.
 
-#### Extending and Splitting Combinations
+#### Tail and Extension
 
-- **`gTail`**: Drops the first element of a `Combinations n (suc k)` to get a `Combinations n k` indexed by `j ↦ g (suc j)`.
-- **`extendFunc`**: From `g : Combinations n k`, build `Fin (suc k) → Fin (suc n)` that maps the last index to `finLast n` and otherwise reuses `g`; recursive in `k`.
-- **`extendFunc-gt-head`**: `g 0 < extendFunc (gTail g) j` — head stays below the tail extension.
+- **`gTail`**: Drops the first element of a combination of size `suc k`, yielding a combination of size `k`.
+- **`extendFunc`**: Extends a combination `g : Combinations n k` to `Fin (suc k) -> Fin (suc n)` by appending `finLast n` at the end (used to encode "the maximum element is in the combination").
+- **`extendFunc-gt-head`**: The head `g 0` is strictly less than any value of `extendFunc (gTail g)`.
 - **`extendFunc-mono`**: `extendFunc g` is strictly monotone.
-- **`extendFunc-last`**: `extendFunc g (finLast k) = finLast n`.
-- **`extendFunc-notlast`**: For `i : Fin k`, `extendFunc g (i : Fin (suc k)) = g i`.
-- **`extendFunc-last-nat`**: `extendFunc g (finLast k) = n` as a natural number.
+- **`extendFunc-last`**, **`extendFunc-last-nat`**: `extendFunc g` sends `finLast k` to `finLast n` (value `n`).
+- **`extendFunc-notlast`**: On non-last indices, `extendFunc g` agrees with `g`.
 
-#### The Pascal Splitting Equivalence
+#### Pascal Splitting
 
-- **`Combinations-split-f`**: Splits `h : Combinations (suc n) (suc k)` based on whether `h (finLast k) = n`: yields a `Combinations n k` (last hits `n`) or a `Combinations n (suc k)` (last stays below `n`), via `finRestrict`.
-- **`Combinations-split-ret`**: Inverse direction — embeds `Combinations n k` into `Combinations (suc n) (suc k)` by `extendFunc` (appending `finLast`), or includes `Combinations n (suc k)` directly.
-- **`Combinations-split`**: `QEquiv` between `Combinations (suc n) (suc k)` and `Or (Combinations n k) (Combinations n (suc k))`, the combinatorial Pascal identity at the level of types.
+- **`Combinations-split-f`**: Splits a combination `h : Combinations (suc n) (suc k)` based on whether `h (finLast k) = n`: if yes, the maximum is included and the rest restricts to `Combinations n k`; if no, all values fit in `Fin n`, giving `Combinations n (suc k)`.
+- **`Combinations-split-ret`**: Inverse — embeds either case back into `Combinations (suc n) (suc k)` via `extendFunc` or direct inclusion.
+- **`Combinations-split`**: `QEquiv` between `Combinations (suc n) (suc k)` and `Or (Combinations n k) (Combinations n (suc k))`, the combinatorial Pascal identity.
 
-#### Base Cases and Counting
+#### Base Cases
 
-- **`Combinations-base0`**: `QEquiv` between `Fin 1` and `Combinations n 0` (the unique empty selection).
-- **`Combinations-base-empty`**: `QEquiv` between `Fin 0` and `Combinations 0 (suc k)` (no nonempty selection from the empty set).
-- **`Combinations-binom`**: Main result — `Equiv {Fin (binom n k)} {Combinations n k}`, proved by induction on `n, k` using the base cases and `Combinations-split` together with `OrFin.aux`, witnessing that combinations are counted by the binomial coefficient.
+- **`Combinations-base0`**: `Fin 1 ≃ Combinations n 0` — there is exactly one empty combination.
+- **`Combinations-base-empty`**: `Fin 0 ≃ Combinations 0 (suc k)` — no nonempty combinations from the empty set.
+
+#### Main Counting Theorem
+
+- **`Combinations-binom`**: `Equiv {Fin (binom n k)} {Combinations n k}`, proved by induction on `n, k` combining `Combinations-split`, `OrFin.aux`, and the base cases. Witnesses that combinations are counted by the binomial coefficient.

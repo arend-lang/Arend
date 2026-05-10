@@ -1,28 +1,27 @@
 ### Algebra.Monoid.MonoidLocalization
 
-Constructs the localization of a (commutative or abelian) monoid at a submonoid, yielding a quotient of pairs `(numerator, denominator)`, and uses it to build the Grothendieck group of an abelian monoid.
+Localization of commutative monoids at a submonoid, with an additive variant and the Grothendieck group construction.
+
+This module constructs the localization `S⁻¹M` of a commutative monoid `M` at a submonoid `S` of "denominators" by quotienting pairs `(x, y)` with `y ∈ S` under the equivalence `(x, y) ~ (x', y') ⟺ x · y' = x' · y`. The construction is given twice — once multiplicatively for `CMonoid` and once additively for `AbMonoid` — using `Quotient` to form the underlying type and lifting the monoid operation pointwise on representatives. As a key application, localizing an `AbMonoid` at the maximal submonoid (everything) yields the **Grothendieck group**, freely completing an additive monoid into an abelian group by formally adjoining negatives.
 
 #### Multiplicative Localization
 
-- **`LocType`**: Localization of a commutative monoid `M` at a submonoid `S`, defined as the quotient of pairs `\Sigma (x y : M) (S y)` by the relation `a ~ b` iff `a.1 * b.2 = b.1 * a.2`.
-- **`LocType.SType`**: The underlying type of pairs `(x, y, p : S y)` representing fractions `x/y`.
-- **`LocType.~`**: Equivalence relation on `SType` capturing fraction equality: `a.1 * b.2 = b.1 * a.2`.
-- **`LocType.inl~`**: Canonical map from `SType S` into `LocType S`.
-- **`LocType.~-lequiv`**: Lifts the relation `a ~ b` to an equality `inl~ a = inl~ b` in the quotient.
-- **`LocType.~-lequiv-right`**: Variant of `~-lequiv` allowing cancellation by an extra element `c ∈ S`: from `a.1 * b.2 * c = b.1 * a.2 * c` deduces `inl~ a = inl~ b`.
-- **`LocMonoid`**: Instance making `LocType S` a `CMonoid` with unit `1/1`, multiplication of fractions, and the standard commutative-monoid laws proved via the equation tactic.
+- **`LocType`**: The carrier type of the localization `S⁻¹M`, defined as the quotient of `SType S` by the equivalence relation `~`.
+- **`LocType.SType`**: Pairs `(x, y, Sy)` representing fractions `x/y` with denominator `y ∈ S`.
+- **`LocType.~`**: The cross-multiplication equivalence on fractions: `(a₁, a₂) ~ (b₁, b₂) ⟺ a₁ · b₂ = b₁ · a₂`.
+- **`LocType.inl~`**: Coerces a representative pair into the quotient.
+- **`LocType.~-lequiv`**: Equivalent representatives give equal elements of `LocType S`.
+- **`LocType.~-lequiv-right`**: Variant allowing equality after multiplying by some `c ∈ S`, useful when the submonoid contains zero divisors.
+- **`LocMonoid`**: Commutative monoid instance on `LocType S` with `1 = 1/1` and `(x/y) · (x'/y') = (x·x')/(y·y')`.
 
 #### Additive Localization
 
-- **`LocAbType`**: Additive analogue of `LocType` for an abelian monoid `M` and an additive submonoid `S`, with relation `a.1 + b.2 = b.1 + a.2`.
-- **`LocAbType.SType`**: Underlying pair type `\Sigma (x y : M) (S y)`.
-- **`LocAbType.~`**: Additive fraction-equivalence relation.
-- **`LocAbType.inl~`**: Canonical inclusion of `SType S` into `LocAbType S`.
-- **`LocAbType.~-lequiv`**: Lifts `a ~ b` to equality in the quotient.
-- **`LocAbType.~-lequiv-right`**: Cancellation-by-`c` variant for the additive setting.
-- **`LocAbMonoid`**: Instance making `LocAbType S` an `AbMonoid` with zero `0/0`, addition of fractions, and the abelian-monoid laws.
+- **`LocAbType`**: Additive analogue of `LocType` for an `AbMonoid` and a `SubAddMonoid`, quotienting pairs `(x, y)` by `a₁ + b₂ = b₁ + a₂`.
+- **`LocAbType.SType`**, **`LocAbType.~`**, **`LocAbType.inl~`**: Additive counterparts of the multiplicative versions.
+- **`LocAbType.~-lequiv`**, **`LocAbType.~-lequiv-right`**: Additive equivalence-respecting lemmas.
+- **`LocAbMonoid`**: Abelian monoid instance on `LocAbType S` with `0 = (0, 0)` and `(x, y) + (x', y') = (x + x', y + y')`.
 
 #### Grothendieck Group
 
-- **`MaxLocAbType`**: Localization of an abelian monoid `M` at the maximal submonoid (containing every element), i.e. all pairs of elements are admitted as fractions.
-- **`GrothendieckAbGroup`**: Instance exhibiting `MaxLocAbType M` as an `AbGroup`, extending `LocAbMonoid SubAddMonoid.max` with negation defined componentwise; this is the standard Grothendieck group construction turning an abelian monoid into an abelian group.
+- **`MaxLocAbType`**: The localization of `M` at the maximal submonoid `SubAddMonoid.max` (i.e., every element is a denominator).
+- **`GrothendieckAbGroup`**: Abelian group structure on `MaxLocAbType M`, extending `LocAbMonoid SubAddMonoid.max`. The negation `-(x, y) = (y, x)` swaps numerator and denominator, exhibiting the Grothendieck group as the universal group completion of `M`.

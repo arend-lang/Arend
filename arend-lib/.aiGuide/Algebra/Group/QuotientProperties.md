@@ -1,24 +1,47 @@
 ### Algebra.Group.QuotientProperties
 
-Universal properties and isomorphism theorems for group quotients by normal subgroups.
+Universal property of group quotients and the First Isomorphism Theorem.
 
-#### Quotient Notation
+This module formalizes the standard package of results connecting normal subgroups, quotient groups, and homomorphisms. The central abstraction `UniversalGroupQuotient` packages a homomorphism `f : G → H` together with a normal subgroup `N ⊆ ker f`, and constructs the induced morphism `G/N → H` factoring `f` through the quotient. This is then specialized to `FirstIsomorphismTheorem`, where taking `N = ker f` and assuming surjectivity yields an isomorphism `G/ker f ≅ H`. Auxiliary classes like `GroupTriangle` capture the commutative-triangle data used in the 2-out-of-3 surjectivity argument, and the corollaries transport the result along an equality `N = ker f` for cases where the kernel is presented indirectly.
 
-- **`//`**: Infix notation for the quotient group `G // H` where `H` is a normal subgroup of `G`, defined as `H.quotient`.
+#### Notation
 
-#### Diagram Structures
+- **`//`**: Infix notation for the quotient group `G // H = H.quotient`, where `H : NormalSubGroup G`.
 
-- **`GroupTriangle`**: A commutative triangle of group homomorphisms, with groups `X, Y, Z`, maps `f : X -> Y`, `g : Y -> Z`, `h : X -> Z`, and a proof `comm : h = g ∘ f`.
-- **`UniversalGroupQuotient`**: Data for the universal property of a quotient: a homomorphism `f : G -> H` and a normal subgroup `N` of `G` contained in the kernel of `f` (`p : N <= f.Kernel`).
-- **`FirstIsomorphismTheorem`**: Bundles the data `G`, `H`, and a homomorphism `f : G -> H` for stating the first isomorphism theorem.
+#### Commutative Triangles
 
-#### First Isomorphism Theorem Corollaries
+- **`GroupTriangle`**: Class bundling three groups `X, Y, Z` and homomorphisms `f : X → Y`, `g : Y → Z`, `h : X → Z` with a commutativity witness `h = g ∘ f`.
+  - **`surjectivity-2-out-3`**: If `h` and `f` are surjective, so is `g`.
+  - **`surjectivity-2-out-3-pw`**: Pointwise version: every `z : Z` has a preimage under `g`.
 
-- **`GroupFirstIsoCorollary-setwise`**: Given `f : G -> H` with `N = f.Kernel` and `f` surjective, produces a homomorphism `G // N -> H` together with a proof that it is an isomorphism (set-theoretic version).
-- **`GroupFirstIsoCorollary`**: Same as above, but packages the result as an `Iso` in the category `GroupCat`, using `GroupCat.Iso<->Inj+Surj` to convert between the two notions of isomorphism.
+#### Universal Property of Group Quotients
 
-#### Helper Constructions
+- **`UniversalGroupQuotient`**: Class capturing the universal property data: a homomorphism `f : G → H` and a normal subgroup `N ⊆ ker f`. Provides the factorization of `f` through `G/N`.
+  - **`universalQuotientMorphismSetwise`**: The set-level map `G/N → H` defined on representatives by `[g] ↦ f g`, with the well-definedness proof using `N ⊆ ker f`.
+  - **`uqms`**: Short alias for `universalQuotientMorphismSetwise`.
+  - **`universalQuotientMorphismMultiplicative`**: Shows `uqms` preserves multiplication.
+  - **`universalQuotientMorph`**: The induced group homomorphism `G // N → H`.
+  - **`universalQuotientProperty`**: Commutativity equation `universalQuotientMorph ∘ quotient-map = f`.
 
-- **`GroupFirstIsoCorollary-setwise.GroupFirstIsoCorollary-2`**: Constructs the canonical homomorphism `G // f.Kernel -> H` via the universal property from `FirstIsomorphismTheorem.univ`.
-- **`GroupFirstIsoCorollary-setwise.GroupFirstIsoCorollary-24`**: Pairs the canonical map `G // f.Kernel -> H` with a proof that it is an isomorphism when `f` is surjective.
-- **`GroupFirstIsoCorollary-setwise.GroupFirstIsoCorollary-3`**: Transports the canonical map along an equality `N = f.Kernel` to obtain a homomorphism `G // N -> H`.
+#### First Isomorphism Theorem
+
+- **`FirstIsomorphismTheorem`**: Class wrapping a homomorphism `f : G → H` and providing the canonical isomorphism `G/ker f ≅ im f` (an isomorphism onto `H` when `f` is surjective).
+  - **`UniversalProperties`**: Specialization of `UniversalGroupQuotient` to `N = ker f`.
+  - **`Triangle`**: The commutative triangle `f = univ ∘ quot` packaged as a `GroupTriangle`.
+  - **`univ`**: The induced homomorphism `G/ker f → H`.
+  - **`quot`**: The canonical quotient projection `G → G/ker f`.
+  - **`universalKerProp`**: Commutativity `univ ∘ quot = f`.
+  - **`universalQuotientKernel`**: If `univ g = ide` then `g` is the identity coset; established via the representative-level helper `helper-1`.
+  - **`evidTrivKer`**: `univ` has trivial kernel.
+  - **`universalQuotientKernel'`**: Element-level kernel lemma: if `univ [a] = ide` then `a ∈ ker f`, using `technical-helper` showing `univ [a] = f a`.
+  - **`univKer-mono`**: `univ` is injective.
+  - **`univKer-epi`**: If `f` is surjective, so is `univ` (via the 2-out-of-3 lemma).
+  - **`FirstIsoTheorem`**: For surjective `f`, `univ` is a group isomorphism.
+
+#### Corollaries
+
+- **`GroupFirstIsoCorollary-setwise`**: For any `N` with `N = ker f` and `f` surjective, produces a homomorphism `G/N → H` together with a proof it is an isomorphism, by transporting along `inv p`.
+  - **`GroupFirstIsoCorollary-2`**: Bare construction of `univ : G/ker f → H` from `f`.
+  - **`GroupFirstIsoCorollary-24`**: Pairs `GroupFirstIsoCorollary-2` with the isomorphism proof under surjectivity.
+  - **`GroupFirstIsoCorollary-3`**: Transports `univ` along `N = ker f` to get a homomorphism `G/N → H` (without the isomorphism witness).
+- **`GroupFirstIsoCorollary`**: Categorical version returning a homomorphism `G/N → H` together with an `Iso` in `GroupCat`, by post-composing with `GroupCat.Iso<->Inj+Surj`.

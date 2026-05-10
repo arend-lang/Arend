@@ -1,56 +1,89 @@
 ### Algebra.Monoid.GCD
 
-Greatest common divisors, GCD monoids, the divisibility quotient, and coprimality in commutative monoids.
+Greatest common divisors, coprimality, and the divisibility quotient for commutative monoids.
 
-#### GCD Structure
+This module develops GCDs as a structure (witness plus universal property) rather than as an operation, then layers progressively stronger algebraic settings on top: `GCDMonoid` requires existence of GCDs and left-distributivity over multiplication; `CancelGCDMonoid` adds cancellativity (which makes distributivity automatic); `UnitlessMonoid` collapses the unit group, making GCDs literally unique; and `UnitlessGCDMonoid` combines both so that `gcd` becomes a genuine binary function and divisibility is a join-semilattice. The `DivQuotient` construction quotients a `CMonoid` by the associate relation (mutual divisibility), producing a canonical unitless monoid where each equivalence class of associates becomes a single element — this transports GCD theory between an arbitrary `CancelGCDMonoid` and its unitless quotient. Coprimality is defined directly via the universal property (any common divisor is invertible) and shown equivalent to having `1` as a GCD.
 
-- **`GCD`**: Class of a GCD `res` for two elements `val1 val2 : M` in a `CMonoid`, with divisibility witnesses `res|val1`, `res|val2` and the universal property `res-univ` that any common divisor divides `res`.
-- **`GCD.~-stable`**: Transports a GCD along mutual divisibility `z|z'`/`z'|z` to produce a GCD with replaced `res`.
+#### GCD Record
 
-#### GCD Monoids
+- **`GCD`**: A record on `{M : CMonoid}` carrying values `val1`, `val2` and a witness `res` together with `LDiv` proofs that `res` divides both, plus `res-univ` expressing the universal property. Coerces to its `res` field.
+- **`GCD.swap`**: Symmetry: a `GCD val1 val2` gives a `GCD val2 val1`.
+- **`GCD.reduce`**: Given regularity of `res`, the cofactors `val1/res` and `val2/res` are coprime (have GCD `1`).
+- **`GCD.~-stable`**: GCDs are stable under replacing `res` with any associate (mutually dividing element).
 
-- **`GCDMonoid`**: Extends `CMonoid` with `isGCD` (existence of a GCD for any pair, truncated) and `gcd-ldistr` (left-distributivity: multiplying by `c` preserves GCDs).
-- **`GCDMonoid.gcd-ldistr_cancel`**: Constructive proof that for a regular element `c`, multiplying a GCD by `c` yields a GCD of the products (used to derive `gcd-ldistr` in cancellative settings).
-- **`CancelGCDMonoid`**: Extends `GCDMonoid` and `CancelCMonoid`; `gcd-ldistr` is derived automatically from cancellation.
+#### GCDMonoid Class
+
+- **`GCDMonoid`**: Extends `CMonoid` with `isGCD` (truncated existence of a GCD for any pair) and `gcd-ldistr` (left-distributivity of GCDs over multiplication, up to existence).
+- **`gcd-rdistr`**: Right version of distributivity, derived from `gcd-ldistr` and commutativity.
+- **`gcd_*-comm`**: `gcd a (gcd a b * c) = gcd a (b * c)` up to truncated existence.
+- **`gcd_*_div`**: If `a | b*c` and `gcd a b` exists, then `a | gcd(a,b) * c`.
+- **`coprime_*_div`**: If `a | b*c` and `a, b` are coprime, then `a | c` (Euclid's lemma).
+- **`gcd_pow_div`**: If `a | b^n` and `a, b` are coprime, then `a | b`.
+- **`IsCoprime_*-right` / `IsCoprime_*-left`**: Coprimality is preserved under products.
+- **`IsCoprime_pow-left` / `IsCoprime_pow-right`**: Coprimality is preserved under powers.
+- **`IsCoprime_BigProd-right` / `IsCoprime_BigProd-left`**: Coprimality with a finite product reduces to coprimality with each factor.
+- **`coprime_*_div-left`**: If `d, e` are coprime and both divide `a`, then `d * e | a`.
+- **`coprime_BigProd_div-left`**: Pairwise-coprime divisors of `a` jointly multiply to a divisor of `a`.
+- **`split-equiv`**: Any divisor of a product `b*c` factors (up to associates) as `a1 * a2` with `a1 | b`, `a2 | c`.
+- **`split-regular`**: For a regular `a | b*c`, the splitting is an actual equality `a = a1 * a2`.
+- **`gcd-ldistr_cancel`**: Helper showing that if `c` is regular, `c * z` is a GCD of `c*x, c*y` whenever `z` is a GCD of `x, y`.
+
+#### CancelGCDMonoid Class
+
+- **`CancelGCDMonoid`**: Extends `GCDMonoid` and `CancelCMonoid`; `gcd-ldistr` is automatic via `gcd-ldistr_cancel`.
+- **`gcd_*_div`**, **`coprime_*_div`**, **`gcd_pow_div`**: Cancellative versions returning honest `LDiv` rather than `TruncP`.
+- **`div_unit`**: Decidability of divisibility is equivalent to decidability of invertibility.
+
+#### UnitlessMonoid Class
+
 - **`UnitlessMonoid`**: Extends `CancelCMonoid` with `uniqueUnit`: every invertible element equals `ide`.
-- **`UnitlessGCDMonoid`**: Extends `UnitlessMonoid` and `CancelGCDMonoid`.
+- **`div-eq`**: Mutual divisibility implies equality (associates collapse).
+- **`GCD-isProp`**: `GCD x y` is a proposition.
+- **`gcd-isUnique`**: Any two GCDs of the same pair have equal `res`.
 
-#### Divisibility Quotient
+#### UnitlessGCDMonoid Class
 
-- **`DivQuotient`**: The quotient `M / ~` of a `CMonoid` by the associates equivalence (mutual divisibility).
-- **`DivQuotient.DivPreoder`**: The preorder on `M` with `x <= y` iff `y | x` (divisibility, reversed).
-- **`~`**: Associates relation derived from the divisibility preorder.
-- **`inD`**: Quotient embedding `M -> DivQuotient M`.
-- **`make~`**: Reflects equality in `DivQuotient` back to the `~` relation.
-- **`regular_equivalent-associates`**: For a regular `x`, mutual divisibility with `y` produces an explicit `associates` (invertible witness).
-- **`equivalent-associates`**: In a `CancelCMonoid`, `x ~ y` implies `associates x y`.
-- **`DivQuotientMonoid`**: Instance making `DivQuotient M` an `OrderedCMonoid` with multiplication `*'` lifted from `M`.
-- **`inDHom`**: The monoid homomorphism `M -> DivQuotientMonoid M`.
+- **`UnitlessGCDMonoid`**: Extends `UnitlessMonoid` and `CancelGCDMonoid`; here `gcd` becomes a function.
+- **`gcdC`**: Untruncated `GCD x y` (using its propositionality).
+- **`gcd`**: The GCD as a binary operation `E -> E -> E`.
+- **`gcd_~`**: Any GCD witness equals the canonical `gcd x y`.
+- **`gcd_*-left` / `gcd_*-right`**: `c * gcd a b = gcd (c*a) (c*b)` and the right-multiplied version.
+- **`DivLattice`**: The divisibility join-semilattice on `E` with `x <= y := LDiv y x` and join `gcd`.
+- **`gcd_*-comm`**: `gcd a (b * c) = gcd a (gcd a b * c)`.
+
+#### DivQuotient
+
+- **`DivQuotient`**: The set quotient of a `CMonoid` by the associate relation, defined as `PreorderC` of the divisibility preorder.
+- **`DivPreoder`**: The preorder where `x <= y` means `y | x` (truncated).
+- **`~`**: The associate relation (mutual divisibility).
+- **`inD`**: Embedding `M -> DivQuotient M`.
+- **`make~`**: Equality `inD x = inD y` implies `x ~ y`.
+- **`regular_equivalent-associates`**: For regular `x`, mutual divisibility upgrades to genuine associate (invertible factor).
+- **`equivalent-associates`**: In a `CancelCMonoid`, `~` coincides with being associates.
+- **`DivQuotientMonoid`**: The quotient is an `OrderedCMonoid` with multiplication lifted from `M`.
+- **`*'`**: The lifted multiplication on `DivQuotient M`.
+- **`inDHom`**: `inD : M -> DivQuotientMonoid M` as a `MonoidHom`.
 - **`inv~ide`**: Every invertible element is associate to `ide`.
-- **`div-to~`**: Lifts an `LDiv x y` in `M` to an `LDiv (inD x) (inD y)`.
-- **`div-from~'`**: Reflects an `LDiv` in the quotient back to a truncated `LDiv` in `M`.
-- **`div-from~`**: Reflects an `LDiv` in the quotient back to an `LDiv` in `M` (for cancellative `M`).
-- **`DivQuotientCancelMonoid`**: For `CancelCMonoid M`, the quotient is a `UnitlessMonoid`.
-- **`map`**: Functorial action of a `MonoidHom` on divisibility quotients.
-- **`DivQuotientGCDMonoid`**: For `CancelGCDMonoid M`, the quotient is a `UnitlessGCDMonoid`.
-- **`gcd-to~`**: Lifts a GCD in `M` to a GCD in `DivQuotient M`.
-- **`gcd-from~`**: Reflects a GCD in `DivQuotient M` back to a GCD in `M`.
-- **`elemDivChain`**: Transfers the divisibility-chain (DCC) property from the quotient back to `M`.
+- **`div-to~` / `div-from~'` / `div-from~`**: Divisibility transfers between `M` and its quotient (the cancellative version is untruncated).
+- **`DivQuotientCancelMonoid`**: For cancellative `M`, the quotient is a `UnitlessMonoid`.
+- **`map`**: A `MonoidHom M -> N` lifts to a hom of quotients.
+- **`DivQuotientGCDMonoid`**: For a `CancelGCDMonoid`, the quotient is a `UnitlessGCDMonoid`.
+- **`gcd-to~` / `gcd-from~`**: GCDs transfer between `M` and its quotient.
+- **`elemDivChain`**: Divisibility chains in the quotient lift to divisibility chains in `M`.
 
-#### GCD Lemmas
+#### Standalone Lemmas
 
-- **`div_gcd`**: When `a | b`, `a` itself is a GCD of `a` and `b`.
-- **`gcd_reduced=1`**: Dividing a GCD's two values by the GCD yields coprime quotients (GCD equal to `1`).
-- **`gcd-isUnique`**: Any two GCDs of the same pair are associates (in a `CancelCMonoid`).
+- **`div_gcd`**: If `a | b`, then `a` is itself the GCD of `a` and `b`.
+- **`gcd_reduced=1`**: In a `CancelCMonoid`, the cofactors of any GCD are coprime.
+- **`gcd-isUnique`**: In a `CancelCMonoid`, any two GCDs of the same pair are associates.
 
 #### Coprimality
 
-- **`IsCoprime`**: `x` and `y` are coprime when every common divisor is invertible.
-- **`IsCoprime.=>gcd`**: Coprimality implies `ide` is a GCD of `x` and `y`.
-- **`IsCoprime.<=gcdInv`**: If a GCD of `x`, `y` is invertible, then `x` and `y` are coprime.
-- **`IsCoprime.<=gcd`**: If `ide` is a GCD of `x` and `y`, they are coprime.
-- **`IsCoprime.factor-left`**: Coprimality with `z` is preserved when replacing `y` with a divisor `x | y`.
-- **`IsCoprime.factor-right`**: Coprimality with `x` is preserved when replacing `z` with a divisor `y | z`.
+- **`IsCoprime`**: `IsCoprime x y` means every common divisor of `x` and `y` is invertible.
+- **`IsCoprime.=>gcd`**: Coprimality implies `1` is a GCD.
+- **`IsCoprime.<=gcdInv`**: An invertible GCD witnesses coprimality.
+- **`IsCoprime.<=gcd`**: Having `1` as GCD implies coprimality.
+- **`IsCoprime.factor-left` / `factor-right`**: Coprimality descends along divisibility on either side.
 - **`IsCoprime.swap`**: Symmetry of coprimality.
-- **`IsCoprime.IsCoprime_ide-left`**, **`IsCoprime.IsCoprime_ide-right`**: `1` is coprime to every element.
-- **`IsCoprimeArray`**: Generalization of coprimality to a finite array of elements: every common divisor of all entries is invertible.
+- **`IsCoprime.IsCoprime_ide-left` / `IsCoprime_ide-right`**: `1` is coprime to everything.
+- **`IsCoprimeArray`**: Pairwise-style coprimality of an element with a whole array, via the universal property over `DArray` of divisors.

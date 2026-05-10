@@ -1,26 +1,39 @@
 ### Category.Coreflection
 
-Coreflections (universal arrows from a functor `L : D → C` to an object `B : C`) and their equivalence with right adjoints expressed pointwise.
+Coreflections (object-wise right adjoints) along a functor and their packaging as full right adjoints.
 
-#### Comma Category Abbreviations
+A coreflection of an object `B : C` along `L : D → C` is an object `Coreflected : D` together with a counit map `L Coreflected → B` that is universal: every map `L Z → B` factors uniquely through it. The module characterizes coreflections equivalently as terminal objects in the comma category `(L ↓ B)`, which makes propositionality automatic when `D` is a category. When a coreflection exists for every `B`, the assignment assembles into a functor `C → D` that is a genuine right adjoint to `L`, and this packaging (`RightAdjointCoreflection`) is shown to be equivalent to the standard counit-based formulation (`RightAdjointCounit`).
 
-- **`comma-precat`**: The comma precategory `(L ↓ b)` for a functor `L : D → C` and an object `b : C`, built as `commaPrecat L (Const b)` over the trivial category.
-- **`comma-cat`**: Same as `comma-precat` but for `D : Cat`, yielding a category structure.
+#### Comma Category Helpers
 
-#### Coreflection
+- **`comma-precat`**: The comma precategory `(L ↓ B)` for a functor `L : D → C` and object `B : C`, defined as `commaPrecat L (Const B)` over the trivial category.
+- **`comma-cat`**: The comma category version when `D` is a `Cat`, giving a category structure on `(L ↓ B)`.
 
-- **`Coreflection`**: A class capturing a coreflection of `B : C` along `L : D → C`. Provides an object `Coreflected : D` and a counit-like map `corefl-map : Hom (L Coreflected) B` such that precomposition `corefl-map ∘ L.Func -` gives an equivalence `Hom Z Coreflected ≃ Hom (L Z) B` (the `isCoreflection` property).
+#### Coreflection Class
 
-#### Correspondence with Terminal Objects in the Comma Category
+- **`Coreflection`**: A class parameterized by `L : Functor D C` and `B : C` providing:
+  - `Coreflected : D` — the coreflected object,
+  - `corefl-map : Hom (L Coreflected) B` — the counit at `B`,
+  - `isCoreflection` — for every `Z : D`, the map `Hom Z Coreflected → Hom (L Z) B` sending `x ↦ corefl-map ∘ L.Func x` is an equivalence.
+- **`to-comma`**: Packages a coreflection as an object `(Coreflected, *, corefl-map)` of `comma-precat L B`.
+- **`coreflection-map`**: For any object `(x, s, d)` of the comma precategory, constructs the unique morphism into `to-comma` using the inverse of `isCoreflection` applied to `d`.
+- **`to-comma-terminal`**: Exhibits `to-comma` as a terminal object of `comma-precat L B`, with uniqueness following from `Equiv.adjoint`.
 
-- **`from-comma-terminal`**: Constructs a `Coreflection L b` from a terminal object of `comma-precat L b`, using the universal map of the comma category as the inverse of `corefl-map ∘ L.Func -`.
-- **`terminal-in-comma`**: Establishes a `Section` from `Coreflection L B` to `terminal-obj (comma-precat L B)`, packaging `to-comma-terminal` as `f` and `from-comma-terminal` as its retraction.
-- **`to-comma-isInj`**: Injectivity of `to-comma-terminal`: if two coreflections produce equal terminal-object data in the comma category, they are equal.
-- **`isProp`** (for `Coreflection`): When `D` is a category, `Coreflection L B` is a proposition, since terminal objects in `comma-cat L B` are unique.
+#### Equivalence with Comma Terminals
 
-#### Right Adjoints via Coreflections
+- **`from-comma-terminal`**: Inverse construction — converts a terminal object of `comma-precat L b` into a `Coreflection L b`, using the universal `terminalMap'` to invert `corefl-map ∘ L.Func -`.
+- **`terminal-in-comma`**: Builds a `Section {Coreflection L B} {terminal-obj (comma-precat L B)}`, witnessing that coreflections embed into (and retract from) terminal comma objects.
+- **`terminal-in-comma.to-comma-isInj`**: Injectivity of `to-comma-terminal`: if two coreflections induce equal terminals, they are equal.
+- **`isProp`**: When `D` is a category, `Coreflection L B` is propositional — derived from propositionality of terminal objects via `to-comma-isInj`.
 
-- **`RightAdjointCoreflection`**: A class extending `Functor` packaging a right adjoint of `L : D → C` as a pointwise family of coreflections `coreflection : (Z : C) → Coreflection L Z`. The action on objects is given by `Coreflected`, and on morphisms by transporting via the coreflection equivalence.
-- **`toAdjoint`**: Coercion `RightAdjointCoreflection → RightAdjointCounit`, exposing the coreflection data as a counit-based adjunction.
-- **`fromAdjoint`**: Coercion `RightAdjoint → RightAdjointCoreflection`, packaging a right adjoint's counit `epsilon` and the unit/counit equivalence as a coreflection at every object.
-- **`isProp`** (for `RightAdjointCoreflection`): When `D` is a category, any two `RightAdjointCoreflection`s for the same `L` are equal, by pointwise propositionality of coreflections.
+#### Right Adjoint Packaging
+
+- **`RightAdjointCoreflection`**: A class extending `Functor D ← C` (the right adjoint direction) consisting of an underlying `L : Functor D C` and an object-wise `coreflection : (Z : C) → Coreflection L Z`. Its functorial action `Func`, identity, and composition laws are derived from the universal property via `Equiv.ret` and `Equiv.adjoint`.
+  - **`eval-trans`**: The counit natural transformation `Comp L \this ⇒ Id`, with components `corefl-map` at each object.
+  - **`is-adjoint-counit`**: Confirms that `eval-trans Y ∘ L.Func -` is an equivalence, i.e., the data forms a counit of an adjunction.
+
+#### Conversion to/from Standard Adjoints
+
+- **`toAdjoint`**: Coercion `RightAdjointCoreflection → RightAdjointCounit`, using `eval-trans` as the counit `epsilon`.
+- **`fromAdjoint`**: Coercion `RightAdjoint → RightAdjointCoreflection`, building per-object coreflections from `F.epsilon` and the unit/counit equivalence `F.eta_epsilon-equiv`.
+- **`isProp`**: When `D` is a category, `RightAdjointCoreflection C D L` is propositional, reduced pointwise to `Coreflection.isProp`.

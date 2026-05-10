@@ -1,39 +1,38 @@
 ### Algebra.Ring.FormalSeries
 
-Formal power series over a ring, represented as functions `Nat -> R`, with ring/algebra/domain structure and a homomorphism from polynomials.
+Formal power series over a ring, represented as functions `Nat -> R` indexed by their coefficients.
+
+A formal series is encoded as `FSeries R := Nat -> R`, mapping each natural number `n` to the coefficient of `x^n`. Multiplication is the Cauchy convolution computed via a finite sum over index pairs `(i, j)` with `i + j = n`. The module lifts the ring/algebra/domain structure of `R` pointwise to `FSeries R`, and connects polynomials to formal series by exhibiting the coefficient map `polyCoef` as a ring homomorphism `PolyRing R -> FSeriesRing R`.
 
 #### Core Type
 
-- **`FSeries`**: Formal power series over a set `R`, defined as `Nat -> R` (the `n`-th value is the coefficient of `x^n`).
-- **`fseries-apply`**: Pointwise extraction from an equality of series: `x = y -> x n = y n`.
+- **`FSeries`**: `FSeries R := Nat -> R`, the type of formal power series over a set `R`, indexed by coefficient position.
+- **`fseries-apply`**: Pointwise extraction from a path of series: `x = y -> x n = y n`.
 
 #### Ring Structure
 
-- **`FSeriesRing`**: `Ring` instance on `FSeries R` for a ring `R`. Zero is the constant-zero series, addition is pointwise, and multiplication is the Cauchy product `(f * g) n = Σ_{i+j=n} f i * g j` via `R.FinSum` over `PairsFinSet n`. Identity is `coef 1` (the series `1, 0, 0, ...`).
-- **`FSeriesRing.coef`**: Embeds a scalar `a : R` as the constant series `a, 0, 0, ...` (value `a` at `0`, `0` elsewhere).
-- **`FSeriesRing.coef_/=0`**: `coef a n = 0` whenever `n /= 0`.
-- **`FSeriesRing.PairsFinSet`**: Finite set of triples `(i, j, i + j = n)` of cardinality `suc n`, used to index the Cauchy convolution sum.
-- **`FSeriesRing.PairsFinSet-ext1`**, **`FSeriesRing.PairsFinSet-ext2`**: Extensionality lemmas for nested `PairsFinSet` pairs (used for associativity of multiplication).
-- **`FSeriesRing.Pairs_zero`**: `FinSum` over `PairsFinSet 0` reduces to the single term `f (0, 0, idp)`.
-- **`FSeriesRing.Pairs_suc-left`**: Recurrence splitting `FinSum` over `PairsFinSet (suc n)` into the `(0, suc n)` term plus a sum over `PairsFinSet n` shifted by `suc`.
+- **`FSeriesRing`**: Ring instance on `FSeries R` for any `Ring R`. Addition is pointwise; the unit `ide` is `coef 1`; multiplication is the Cauchy product `(f * g) n = Σ_{i+j=n} f i * g j` via `R.FinSum` over `PairsFinSet n`.
+- **`FSeriesRing.coef`**: Embeds a constant `a : R` as the series with `coef a 0 = a` and `coef a (suc _) = 0`.
+- **`FSeriesRing.coef_/=0`**: For `n /= 0`, `coef a n = 0`.
+- **`FSeriesRing.PairsFinSet`**: The finite set `{(i, j) | i + j = n}` of cardinality `suc n`, indexing the convolution sum.
+- **`FSeriesRing.PairsFinSet-ext1`**, **`FSeriesRing.PairsFinSet-ext2`**: Extensionality lemmas for nested pairs in iterated convolutions, used in associativity proofs.
+- **`FSeriesRing.Pairs_zero`**: Reduction of the convolution sum at `n = 0`: `FinSum f = f (0, 0, idp)`.
+- **`FSeriesRing.Pairs_suc-left`**: Recursive splitting of the convolution at `suc n`, separating the `(0, suc n)` term from the rest.
 
 #### Algebra Structure
 
-- **`FSeriesAlgebra`**: `CAlgebra R` instance over a commutative ring `R`. Scalar multiplication acts pointwise (`(c *c x) n = c * x n`), `coefMap` is the constant-series embedding, and multiplication is commutative when `R` is.
+- **`FSeriesAlgebra`**: `CAlgebra R` instance on `FSeries R` for a commutative ring `R`. Scalar multiplication is pointwise: `(c *c x) n = c * x n`; the coefficient map sends `a` to `coef a`.
 
-#### Apartness and Domains
+#### Apartness and Domain Structure
 
-- **`FSeriesRingWith#`**: `Ring.With#` instance: a series is apart from zero iff some coefficient is apart from zero (`x #0 := ∃ n, x n #0`).
-- **`FSeriesCRingWith#`**: Commutative version of `FSeriesRingWith#`.
-- **`FSeriesDomain`**: `Domain` instance on `FSeries R` for a domain `R`. Apartness of a product is established via `aux`, which finds an index where `(x * y) k` is apart from zero given that some `x n` and `y m` are.
-- **`FSeriesDomain.aux`**: Inductive helper bounding the search index by `n + m < k`, producing some `k` with `#0 ((x * y) k)`.
-- **`FSeriesIntegralDomain`**: `IntegralDomain` instance, combining `FSeriesDomain` with commutativity from `FSeriesAlgebra`.
+- **`FSeriesRingWith#`**: `Ring.With#` instance lifting an apartness relation: `x #0` iff there exists some index `n` with `x n #0` in `R`.
+- **`FSeriesCRingWith#`**: Commutative version of `FSeriesRingWith#` for `CRing.With#`.
+- **`FSeriesDomain`**: `Domain` instance on `FSeries R` for a domain `R`. The auxiliary lemma `aux` proves that if `x n #0` and `y m #0`, then some coefficient of `x * y` is apart from `0`, establishing `#0-*` for the convolution product.
+- **`FSeriesDomain.aux`**: Existence of a nonzero coefficient in the product, given nonzero coefficients in each factor at indices summing below a bound.
+- **`FSeriesIntegralDomain`**: `IntegralDomain` instance on `FSeries R` for an integral domain `R`.
 
-#### Polynomial Embedding
+#### Polynomial-to-Series Embedding
 
-- **`poly-FSeries`**: `RingHom` from `PolyRing R` to `FSeriesRing R` sending a polynomial to its coefficient sequence (`polyCoef`). Preserves addition, identity, and multiplication.
-- **`poly-FSeries.*-lem`**: Compatibility of `polyCoef` with multiplication: `polyCoef (p * q) n = (polyCoef p * polyCoef q) n` in `FSeriesRing R`.
-
-#### Geometric Series
-
-- **`geometric-FSeries`**: The constant-one series `\lam _ => 1` is a multiplicative inverse (in `FSeriesRing R`) of the polynomial coefficients of `1 - x` (i.e. `padd (padd pzero -1) 1`), giving the formal identity `1 / (1 - x) = 1 + x + x^2 + ...`.
+- **`poly-FSeries`**: Ring homomorphism `PolyRing R -> FSeriesRing R` given by the coefficient extraction map `polyCoef`. Witnesses that polynomials sit inside formal series as those with finitely many nonzero coefficients.
+- **`poly-FSeries.*-lem`**: Compatibility of `polyCoef` with multiplication: `polyCoef (p * q) n` equals the Cauchy product of the coefficient series.
+- **`geometric-FSeries`**: The constant series `1, 1, 1, …` is invertible in `FSeriesRing R`, with inverse the image of the polynomial `1 - x` (i.e. `padd (padd pzero -1) 1`). Encodes the geometric series identity `(1 - x) · Σ x^n = 1`.

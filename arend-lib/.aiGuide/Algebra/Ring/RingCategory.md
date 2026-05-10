@@ -1,40 +1,42 @@
 ### Algebra.Ring.RingCategory
 
-Categorical structure on rings and commutative rings, including their categories, forgetful functors, isomorphism characterizations, and a presentation of `CRing` as models of an algebraic theory.
+Category-theoretic structure on rings and commutative rings, with forgetful functors and a model-theoretic presentation.
+
+This module assembles `Ring` and `CRing` into categories, equips them with the standard forgetful functors (to abelian groups, monoids, and sets), and characterizes isomorphisms in terms of bijectivity. The commutative case is presented twice: directly as a subcategory of `RingCat`, and as the category of models of an algebraic theory with five operation symbols (`0`, `1`, `+`, `*`, `negative`). The latter equivalence (`catEquiv`) transfers (co)completeness from `ModelCat` to `CRingCat`, yielding `BicompleteCat` for free, and shows that the forgetful functor to `Set` creates limits.
 
 #### Ring Category
 
-- **`RingCat`**: The category of rings with `RingHom` as morphisms. Establishes identity, composition, and proves univalence via the structure identity principle.
-- **`RingCat.natCoefUnique`**: For a ring homomorphism that is the identity on the underlying set, the natural number coefficients agree: `R.natCoef n = S.natCoef n`. Used in the univalence proof.
+- **`RingCat`**: The category of rings with `RingHom` morphisms.
+- **`RingCat.natCoefUnique`**: For ring homomorphisms equal to the identity on the underlying set, the natural-number coefficient maps agree.
 
 #### Forgetful Functors from `RingCat`
 
-- **`RingCat.forgetToAbGroup`**: Forgetful functor `RingCat -> AbGroupCat` discarding multiplication.
-- **`RingCat.forgetToMonoid`**: Forgetful functor `RingCat -> MonoidCat` discarding addition.
-- **`RingCat.forget`**: Forgetful functor `RingCat -> SetCat` to underlying sets.
+- **`RingCat.forgetToAbGroup`**: Functor `RingCat -> AbGroupCat` discarding multiplicative structure.
+- **`RingCat.forgetToMonoid`**: Functor `RingCat -> MonoidCat` discarding additive structure.
+- **`RingCat.forget`**: Functor `RingCat -> SetCat` to underlying sets.
 
-#### Ring Isomorphisms
+#### Isomorphisms in `RingCat`
 
-- **`RingCat.Group-Iso->Ring-Iso`**: A ring homomorphism whose underlying additive group homomorphism is an iso in `GroupCat` is an iso in `RingCat`.
-- **`RingCat.Iso<->Inj+Surj`**: Characterizes ring isomorphisms as injective-and-surjective ring homomorphisms.
-- **`RingCat.image-iso`**: For a surjective ring homomorphism `f`, the image ring `f.Image.IRing` is isomorphic to the codomain `f.Cod`.
-- **`RingCat.Image=Cod`**: For a surjective `f : RingHom R S`, the image ring equals `S` as rings (via univalence).
+- **`RingCat.Group-Iso->Ring-Iso`**: A ring homomorphism whose underlying group homomorphism is an iso in `GroupCat` is itself an iso in `RingCat`.
+- **`RingCat.Iso<->Inj+Surj`**: A ring homomorphism is an iso iff it is injective and surjective.
+- **`RingCat.image-iso`**: For a surjective `f : RingHom`, the image ring is iso to the codomain.
+- **`RingCat.Image=Cod`**: For surjective `f`, `(ringHomImage f).IRing = S` via univalence.
 
 #### Commutative Ring Category
 
-- **`CRingCat`**: The category of commutative rings, constructed as a full subcategory of `RingCat` via `subCat` (commutativity is a proposition, so the embedding is a retraction).
-- **`CRingCat.forgetToRing`**: Forgetful functor `CRingCat -> RingCat`.
-- **`CRingCat.forget`**: Forgetful functor `CRingCat -> SetCat`, with submodules `reflectsLimit` and `preservesLimit` deriving these properties from `createsLimits`.
-- **`CRingCat.Image=Cod`**: For a surjective ring homomorphism into a commutative ring, the commutative-ring image equals the codomain as commutative rings.
+- **`CRingCat`**: The category of commutative rings, built as a `subCat` of `RingCat` via the embedding that forgets `*-comm` (using `prop-dpi` to handle the propositional commutativity field).
+- **`CRingCat.forgetToRing`**: Functor `CRingCat -> RingCat`.
+- **`CRingCat.forget`**: Functor `CRingCat -> SetCat`.
+  - **`CRingCat.forget.reflectsLimit`**: The forgetful functor reflects limits, derived from `CRingBicat.createsLimits`.
+  - **`CRingCat.forget.preservesLimit`**: The forgetful functor preserves limits.
+- **`CRingCat.Image=Cod`**: For surjective `f : RingHom R S` with `S` commutative, the commutative-ring image equals `S`.
 
-#### Bicompleteness of `CRingCat`
+#### Bicomplete Structure via Algebraic Theories
 
-- **`CRingBicat`**: Witnesses that `CRingCat` is bicomplete (has all small limits and colimits), transported from the model category of the algebraic theory of commutative rings via `catEquiv`.
-
-#### Algebraic Theory of Commutative Rings
-
-- **`CRingBicat.theory`**: First-order algebraic theory with a single sort, five operation symbols (zero, one, addition, multiplication, negation) and the eight commutative-ring axioms (additive associativity/identity/commutativity, multiplicative associativity/identity/commutativity, additive inverse, left distributivity).
-- **`CRingBicat.modToRing`**: Converts a model `M` of `theory` into a `CRing` on `M ()`, interpreting the operation symbols and deriving the ring axioms from `M.isModel`.
-- **`CRingBicat.ringtoMod`**: Converts a `CRing` into a model of `theory`, with submodule `functor` packaging this as a functor `CRingCat -> ModelCat theory`.
-- **`CRingBicat.catEquiv`**: Categorical equivalence `ModelCat theory ≃ CRingCat` between the model category of the theory and `CRingCat`, with `modToRing` as the underlying object map and `ringtoMod.functor` as the left adjoint.
-- **`CRingBicat.createsLimits`**: The forgetful functor `CRingCat -> SetCat` creates limits for any small diagram.
+- **`CRingBicat`**: `CRingCat` as a `BicompleteCat`; (co)limits are transported from `ModelCat theory` along `catEquiv`.
+- **`CRingBicat.theory`**: The single-sorted algebraic theory of commutative rings, with five operation symbols (`0` arity 0, `1` arity 0, `+` arity 2, `*` arity 2, `negative` arity 1) and the standard ring axioms (associativity, commutativity, units, inverse, distributivity).
+- **`CRingBicat.modToRing`**: Builds a `CRing` from a model of `theory` by interpreting each operation symbol.
+- **`CRingBicat.ringtoMod`**: Builds a model of `theory` from a `CRing` by reading off `0`, `1`, `+`, `*`, `negative`.
+  - **`CRingBicat.ringtoMod.functor`**: Promotes `ringtoMod` to a functor `CRingCat -> ModelCat theory`.
+- **`CRingBicat.catEquiv`**: A categorical equivalence `ModelCat theory ≃ CRingCat` with `modToRing` as the underlying object map and `ringtoMod.functor` as the left adjoint; both unit and counit are identity-on-carriers.
+- **`CRingBicat.createsLimits`**: For any small diagram `F : J -> CRingCat`, the forgetful functor to `Set` creates the limit, transported through the equivalence with `ModelCat theory`.

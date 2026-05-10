@@ -1,91 +1,103 @@
 ### Topology.CoverSpace
 
-Cover spaces and precover spaces: topological structures defined via Cauchy covers (families of subsets that "cover" the space), with notions of refinement, regularity, and the rather-below relation.
+Cover spaces and precover spaces: a uniform-style approach to topology based on Cauchy families of covers.
+
+A `PrecoverSpace` axiomatizes a set together with a predicate `isCauchy` selecting which families of subsets count as "uniform covers" (closed under refinement, gluing, and containing the singleton top cover). The induced topology declares `S` open iff every `x ∈ S` admits a Cauchy cover whose members containing `x` lie inside `S`. A `CoverSpace` strengthens this with a regularity axiom: every Cauchy cover can be refined by one whose members are "really inside" (`<=<`) members of the original, with stronger variants (strongly, ω-, completely regular) controlling how members shrink. The `Closure` machinery generates a precover space from a generating family of covers, providing a flexible way to define cover structures by closure under the precover axioms, and supports universal/embedding lemmas for maps out of such spaces.
 
 #### Core Classes
 
-- **`PrecoverSpace`**: Extends `TopSpace` with a predicate `isCauchy : Set (Set E) -> \Prop` selecting Cauchy covers. Required axioms: `cauchy-cover` (every Cauchy cover hits each point), `cauchy-top` (the singleton `{top}` is Cauchy), `cauchy-refine` (closure under refinement), `cauchy-glue` (closure under intersection-gluing), and `cauchy-open` (open sets characterized via Cauchy covers). The induced topology is built from the Cauchy structure.
-- **`CoverSpace`**: Extends `PrecoverSpace` with `isRegular`: every Cauchy cover can be refined to one whose elements are rather-below (`<=<`) members of the original.
-- **`StronglyRegularCoverSpace`**: `CoverSpace` with `isStronglyRegular` using the strong rather-below `s<=<`.
-- **`OmegaRegularCoverSpace`**: `CoverSpace` regular with respect to the iterated rather-below `<=<o`.
-- **`CompletelyRegularCoverSpace`**: Extends `OmegaRegularCoverSpace` with `isCompletelyRegular` using `<=<c` (continuous-scale rather-below).
+- **`PrecoverSpace`**: Extends `TopSpace`. A set with a predicate `isCauchy : Set (Set E) -> \Prop` satisfying covering (`cauchy-cover`), top-cover (`cauchy-top`), refinement-closure (`cauchy-refine`), and gluing (`cauchy-glue`). The associated topology is given by `cauchy-open`.
+- **`CoverSpace`**: Extends `PrecoverSpace` with `isRegular`: every Cauchy cover refines to one whose members satisfy `V <=< U` for some original member.
+- **`StronglyRegularCoverSpace`**: Strengthens regularity using `s<=<` (strong rather-below).
+- **`OmegaRegularCoverSpace`**: Uses the ω-iterated rather-below `<=<o`.
+- **`CompletelyRegularCoverSpace`**: Extends `OmegaRegularCoverSpace`; uses the continuous-scale rather-below `<=<c`.
 - **`CompletelyStronglyRegularCoverSpace`**: Combines strong and complete regularity.
-- **`PrecoverMap`**: Extends `ContMap` between precover spaces; requires `func-cover` (Cauchy covers pull back to Cauchy covers up to refinement). Continuity is derived.
 
-#### Basic Cauchy Cover Lemmas
+#### Maps
 
-- **`cauchy-subset`**: A superset of a Cauchy cover (pointwise on members) is Cauchy.
-- **`top-cauchy`**: Any cover containing `top` is Cauchy.
-- **`cauchy-inter`**: Pairwise intersections of two Cauchy covers form a Cauchy cover.
-- **`cauchy-array-inter`**: Generalizes `cauchy-inter` to an array of Cauchy covers; intersections indexed by selections from each.
-- **`PrecoverSpace.PrecoverSpace-ext`**: Extensionality — two precover structures with the same `isCauchy` are equal.
-- **`CoverSpace.CoverSpace-ext`**: Extensionality for cover spaces.
+- **`PrecoverMap`**: Extends `ContMap`; a function whose preimage pulls Cauchy covers back to Cauchy covers (`func-cover`). Continuity is automatic.
+- **`PrecoverMap.IsEmbedding`**: The cover structure on the domain is the pullback — every domain Cauchy cover is refined by preimages of a codomain cover.
+- **`PrecoverMap.IsWeaklyDenseEmbedding`**, **`PrecoverMap.IsDenseEmbedding`**: Embeddings that are additionally (weakly) dense.
+- **`PrecoverMap.embedding-char`**: TFAE characterization of embeddings, including equality with the precover transfer structure.
+- **`PrecoverMap.id`**, **`compose` / `∘`**, **`const`**: Identity, composition, and constant precover maps.
+- **`id-denseEmbedding`**: The identity is a dense embedding.
+- **`embedding-left`**: If `g ∘ f` is an embedding, so is `f`.
 
-#### PrecoverMap Operations
+#### Rather-Below Relations
 
-- **`PrecoverMap.id`**: Identity precover map.
-- **`PrecoverMap.compose` (`∘`)**: Composition of precover maps.
-- **`PrecoverMap.const`**: Constant precover map at a point.
-- **`PrecoverMap.id-denseEmbedding`**: The identity is a dense embedding.
-- **`PrecoverMap.embedding-left`**: If `g ∘ f` is an embedding, so is `f`.
+- **`<=<`**: `V <=< U` means there is a Cauchy cover such that every member meeting `V` lies in `U` — the basic "really inside" relation.
+- **`s<=<`**: Strong variant using a two-element cover by `Compl V` and `U`.
+- **`<=<_single`**: Characterization of `single x <=< U`.
+- **`<=<_<=`**, **`s<=<_<=`**: Both relations imply ordinary inclusion.
+- **`<=<_^-1`**, **`s<=<_^-1`**: Preserved by precover-map preimages.
+- **`<=<-cont`**: A continuous map from a precover space to a cover space pulls back `<=<` at points.
+- **`s<=<_<=<`**: `s<=<` refines `<=<`.
+- **`s<=<_bottom`**: `bottom s<=< U` always holds.
+- **`RegularRatherBelow`**, **`StronglyRatherBelow`**: `RatherBelow` instances on `SetLattice X` for `<=<` and `s<=<`.
 
-#### The Rather-Below Relations
+#### Cauchy Cover Lemmas
 
-- **`<=<`**: `V <=< U` means `isCauchy` of `{W | V ∧ W ≠ ∅ ⇒ W ⊆ U}` — `V` is rather-below `U`.
-- **`<=<_single`**: Characterization of `single x <=< U` via Cauchy covers refining around `x`.
-- **`<=<_<=`**: `V <=< U` implies `V ⊆ U`.
-- **`<=<_^-1`**: Rather-below is preserved by precover map preimages.
-- **`<=<-cont`**: For continuous `f` into a cover space, `single (f x) <=< U` lifts to `single x <=< f^-1 U`.
-- **`s<=<`**: Strong rather-below: `isCauchy` of `{W | W = Compl V ∨ W = U}`.
-- **`s<=<_<=<`**: Strong implies ordinary rather-below.
-- **`s<=<_<=`**, **`s<=<_bottom`**, **`s<=<_^-1`**: Basic properties of `s<=<`.
-- **`RegularRatherBelow`**: Instance making `<=<` a `RatherBelow` on `SetLattice X`.
-- **`StronglyRatherBelow`**: Instance making `s<=<` a `RatherBelow`.
+- **`cauchy-subset`**: Cauchy covers are upward-closed under member-wise implication.
+- **`top-cauchy`**: Any family containing `top` is Cauchy.
+- **`cauchy-inter`**: Pairwise meet of two Cauchy covers is Cauchy.
+- **`cauchy-array-inter`**: Generalizes `cauchy-inter` to a finite array of Cauchy covers.
+- **`PrecoverSpace.cauchy-trans-dep`**: Dependent gluing variant of `cauchy-glue`.
+- **`PrecoverSpace.open-char`**: An open set is one where every point is `<=<`-inside it.
 
-#### Density and Interpolation
+#### Density Predicates
 
-- **`<=<-inter`**: Interpolation: `single x <=< U` factors through some intermediate `V`.
-- **`s<=<-inter`**: Strong interpolation in a strongly regular cover space.
-- **`denseSet-char`**: TFAE characterization of dense subsets via point-rather-below membership and Cauchy refinements.
-- **`dense-char`**: A precover map into a cover space is dense iff every `single y <=< U` has a preimage point landing in `U`.
+- **`PrecoverSpace.HasWeaklyDensePoints`**: Cauchy covers can drop empty members.
+- **`PrecoverSpace.HasDensePoints`**: Every Cauchy cover refines to one whose members are inhabited.
+- **`hasDensePoints_hasWeaklyDensePoints`**: The strong version implies the weak.
+- **`<=<-inter`** (CoverSpace): Interpolation: `single x <=< U` factors through some `V`.
+- **`s<=<-inter`** (StronglyRegularCoverSpace): Strong interpolation.
+- **`denseSet-char`**: TFAE characterization of dense subsets in a cover space.
+- **`dense-char`**: A precover map into a cover space is dense iff every neighborhood `<=<` of a codomain point hits the image.
 
-#### Concrete Cover Spaces
+#### Cover-Space Lemmas
 
-- **`AntiDiscreteCover`**: The indiscrete cover space — only covers containing `top` are Cauchy. Completely strongly regular.
-- **`DiscreteCover`**: The discrete cover space — every pointwise cover is Cauchy. Completely regular, with discrete topology.
-- **`PrecoverTransfer`**: Initial precover structure on `X` induced by `f : X -> Y` from a precover space `Y`.
-- **`PrecoverTransfer.makeCauchy`**: Pulls a Cauchy cover of `Y` to a Cauchy cover on the transferred space.
-- **`PrecoverTransfer-map`**: The transfer map `PrecoverTransfer f -> Y` is a precover map.
-- **`PrecoverTransfer-char`**: Characterizes Cauchy covers on the transferred space when `f` is itself a precover map.
-- **`PrecoverTransfer-univ`**: Universal property — maps factor through the transfer.
-- **`CoverTransfer`**: Cover-space version of `PrecoverTransfer`.
-- **`CoverSub`**: Subspace cover structure on a subset `S ⊆ X` via inclusion.
+- **`CoverSpace.cauchy-regular-cover`**: Every point lies in some `single x <=< U` with `U` in the cover.
+- **`CoverSpace.interior`**: The interior `\lam x => single x <=< U` is open.
+- **`CoverSpace.cauchy-open-cover`**: Every Cauchy cover refines to one consisting of interiors.
+
+#### Extensionality
+
+- **`PrecoverSpace.PrecoverSpace-ext`**: Two precover structures with the same Cauchy predicate are equal.
+- **`CoverSpace.CoverSpace-ext`**: Same for cover spaces.
+
+#### Constructions
+
+- **`AntiDiscreteCover`**: The antidiscrete (indiscrete) cover space — only families containing `top` are Cauchy. Completely strongly regular.
+- **`DiscreteCover`**: The discrete cover space — every pointwise cover is Cauchy. Completely regular.
+- **`PrecoverTransfer`**: Pullback precover structure along `f : X -> Y`; `C` is Cauchy iff its preimage-refinement is Cauchy in `Y`.
+  - **`PrecoverTransfer.makeCauchy`**: Cauchy covers of `Y` pull back to Cauchy covers under transfer.
+- **`PrecoverTransfer-map`**: The transfer map is a precover map.
+- **`PrecoverTransfer-char`**: Characterizes Cauchy covers under embedding by transfer.
+- **`PrecoverTransfer-univ`**: Universal property: factoring through `PrecoverTransfer g`.
+- **`CoverTransfer`**: Cover-space version of `PrecoverTransfer` (regularity is preserved).
+- **`CoverSub`**: Subspace cover structure: `Set.Total S` with the transfer along the first projection.
 
 #### Closure Construction
 
-- **`ClosurePrecoverSpace`**: Builds a precover space from a generator predicate `A` on covers; `isCauchy` is the closure of `A` under top, refinement, and glue.
-- **`Closure`**: Inductive type generating Cauchy covers from a seed `A` via constructors `closure`, `closure-top`, `closure-refine`, `closure-trans`.
+- **`ClosurePrecoverSpace`**: Builds a `PrecoverSpace` by closing a generating family `A` under the precover axioms.
+- **`ClosurePrecoverSpace.Closure`**: Inductive predicate generating `isCauchy` from `A` via top, refinement, and transitive gluing.
 - **`closure-inter`**: Closure is closed under pairwise intersection.
-- **`closure-subset`**: Closure is monotone in the cover.
-- **`closure-filter`**: Any set filter compatible with `A` meets every closure cover.
-- **`closure-cauchy`**: If `A`-covers are Cauchy in `S`, so are all closure covers.
-- **`closure-univ-cover`**: Closure-universal lifting of preimage Cauchy property.
-- **`closure-univ`**: Builds a precover map into `S` from preimage-Cauchy data on `A`.
-- **`closure-univ-closure`**, **`closure-univ-closure-id`**: Transfer between two closures.
-- **`closure-map`**: Functorial closure — push covers along a set map preserving top, monotonicity, and intersections.
-- **`closure-embedding`**: Sufficient condition for a precover map to be an embedding.
-- **`ClosureCoverSpace`**: Builds a cover space from a generator with a regularity-style hypothesis.
-- **`ClosureCoverSpace.closure-regular`**: Regularity transfers through closure for any `RatherBelow`.
-- **`ClosureCoverSpace.closure-pred`**: Pushes a meet-stable predicate `P` through closure.
-- **`ClosureRegularCoverSpace`**: Builds a `CompletelyRegularCoverSpace` from an interpolation-style generator.
+- **`closure-subset`**: Closure is upward-closed under set-of-sets inclusion.
+- **`closure-filter`**: A `SetFilter` meeting every generating cover meets every closure cover.
+- **`closure-cauchy`**: Closure under `A` lies inside any precover space recognizing `A`.
+- **`closure-univ-cover`**, **`closure-univ`**: Universal mapping: a function pulling back generating covers extends to a precover map out of the closure.
+- **`closure-univ-closure`**, **`closure-univ-closure-id`**: Closure-to-closure transport along a function or identity.
+- **`closure-map`**: Pushforward of closures under a monotone meet-preserving set map.
+- **`closure-embedding`** (with **`aux`**): Embedding criterion for closure-defined precover spaces.
+- **`ClosureCoverSpace`**: Promotes a closure precover space to a `CoverSpace` given a regularity-style closure condition on `A`.
+  - **`closure-regular`**: Lifts a `RatherBelow`-witnessed regularity from generators to the whole closure.
+  - **`closure-pred`**: Refines closure covers by ones whose members satisfy a meet-stable predicate.
+- **`ClosureRegularCoverSpace`**: Builds a `CompletelyRegularCoverSpace` from a closure family with a strong interpolation property `AI`.
 
-#### Lattices of (Pre)Cover Structures
+#### Lattice Structure
 
-- **`PrecoverLattice`**: `CompleteLattice` instance on `PrecoverSpace X`. Order is "more covers are Cauchy"; top is `DiscreteCover`; joins via `ClosurePrecoverSpace` over the union of generators.
-- **`CoverLattice`**: `CompleteLattice` instance on `CoverSpace X`, with binary `join` and arbitrary `Join` constructed by closing the precover join under regularity.
-
-#### Regularization
-
-- **`RegPrecoverSpace`**: The largest cover-space refinement below a given precover space — supremum of all cover spaces coarser than `X`.
-- **`regPrecoverSpace`**: Canonical precover map `X -> RegPrecoverSpace X`.
-- **`regPrecoverSpace-extend`**: Universal property — any precover map from `X` to a cover space `Y` factors through `RegPrecoverSpace X`.
+- **`PrecoverLattice`**: `CompleteLattice` instance on `PrecoverSpace X`. Order is "more Cauchy covers ≤ fewer", `top` is `DiscreteCover`, joins are built by closure under the family of generators from each member.
+- **`CoverLattice`**: `CompleteLattice` on `CoverSpace X`, with joins constructed via `closure-regular` to preserve regularity; binary `join` likewise.
+- **`RegPrecoverSpace`**: The largest cover space below a given precover space — supremum (in `CoverLattice`) of all cover structures dominated by `X`.
+- **`regPrecoverSpace`**: Identity precover map `X -> RegPrecoverSpace X`.
+- **`regPrecoverSpace-extend`**: Universal property: any precover map from `X` to a cover space `Y` factors through `RegPrecoverSpace X`.

@@ -1,87 +1,116 @@
 ### Algebra.Linear.Matrix
 
-Matrices over rings: construction, block operations, the matrix ring/algebra structure, determinants, adjugates, and triangular/diagonal classifications.
+Matrices over a ring, their algebraic structure, and the theory of determinants.
+
+This module defines `Matrix R n m` as nested arrays and equips square matrices with the full ring/algebra structure: matrices over an abelian group form an abelian group, matrices over a ring form an `LModule`, square matrices form a `Ring`, and over a commutative ring they form an `AAlgebra`. The determinant is built via the symmetric group `Sym n` and a sign, with an equivalent cofactor-expansion form `determinantN` proven multilinear and alternating; key results include multiplicativity, transpose invariance, the adjugate identities `adj(M) * M = det(M) · 1`, and the equivalence `Inv M ↔ Inv (det M)`. Block matrices, triangular/diagonal predicates, and minors are provided to support inductive arguments and reasoning about decomposed systems.
 
 #### Core Type and Constructors
 
-- **`Matrix`**: Type of `n × m` matrices over `R`, defined as `Array (Array R m) n`.
-- **`mkMatrix`**: Build a matrix from a function `Fin n -> Fin m -> R`.
-- **`makeMatrix`**: Coerce a nested array into a `Matrix`.
-- **`mkColumn`**: Turn an array into a column matrix (`l.len × 1`).
-- **`mkRow`**: Turn an array into a row matrix (`1 × l.len`).
-- **`addColumn`**: Prepend a column vector to a matrix.
-- **`addRow`**: Prepend a row vector to a matrix.
-- **`matrix-map`**: Apply `f : A -> B` entrywise.
-- **`transpose`**: The transpose of a matrix; `transpose.isInv` shows transpose preserves invertibility.
+- **`Matrix`**: `Array (Array R m) n` — a matrix as `n` rows of length `m`.
+- **`mkMatrix`**: Builds a matrix from a function `Fin n -> Fin m -> R`.
+- **`makeMatrix`**: Coerces a nested array to `Matrix`.
+- **`mkColumn`**: A length-`n` array as an `n × 1` column matrix.
+- **`mkRow`**: A length-`n` array as a `1 × n` row matrix.
+- **`addColumn`**: Prepends a column to a matrix.
+- **`addRow`**: Prepends a row to a matrix.
+- **`matrixExt`**, **`matrixExt'`**: Extensionality — equality of matrices from pointwise equality.
+- **`matrix-map`**: Apply a function `A -> B` to every entry.
 
-#### Extensionality
+#### Block Matrix Constructions
 
-- **`matrixExt`**: Pointwise equality of entries gives matrix equality.
-- **`matrixExt'`**: Equality at the underlying nested-array level lifts to matrix equality.
+- **`blockMatrix`**: Block-diagonal `[[A,0],[0,B]]` of size `(n+n') × (m+m')`.
+- **`blockMatrix.elem00/elem10/elem01/elem11`**: Entry lemmas for the four block regions.
+- **`block21Matrix`**: Vertical stacking `[[A],[B]]` (same column count).
+- **`block12Matrix`**: Horizontal concatenation `[A | B]` (same row count).
+- **`blockMatrix_minor`**: Taking the `(fin-inc i, fin-inc j)` minor commutes with stacking with `B`.
+- **`blockMatrix_*`**, **`blockMatrix_*-left`**, **`blockMatrix_*-right`**: Multiplication interacts blockwise with `blockMatrix`/`block12`/`block21`.
+- **`block12_21_*`**: `block12 A B · block21 C D = A·C + B·D`.
 
-#### Block Matrices
+#### Algebraic Instances
 
-- **`blockMatrix`**: Diagonal block `[[A,0],[0,B]]` of size `(n+n') × (m+m')`; submodule `elem00`/`elem01`/`elem10`/`elem11` characterize its entries.
-- **`blockMatrix_minor`**: Minor of a block matrix at indices in the `A`-block reduces to block of the minor.
-- **`blockMatrix_*`**: Multiplication of block-diagonal matrices is blockwise.
-- **`block21Matrix`**: Vertical stacking `[A; B]` (sizes `(n+m) × k`).
-- **`block12Matrix`**: Horizontal stacking `[A | B]` (sizes `k × (n+m)`).
-- **`blockMatrix_*-left`**, **`blockMatrix_*-right`**: Mixed products of `blockMatrix` with vertical/horizontal blocks.
-- **`block12_21_*`**: `[A|B] · [C;D] = A·C + B·D`.
+- **`MatrixAbGroup`**: `Matrix A n m` is an `AbGroup` over an `AbGroup` `A` (pointwise `+`, `zro`, `negative`).
+- **`MatrixModule`**: `Matrix R n m` is an `LModule` over a ring `R` with pointwise scalar multiplication.
+- **`MatrixModule.*c-gen`**: Scalar multiplication generalised to matrices over an arbitrary `LModule`.
+- **`MatrixRing`**: Square matrices `Matrix R n n` form a `Ring`; `ide` is the identity diagonal, `*` is `product`.
+- **`MatrixRing.product`**: Standard matrix multiplication via `BigSum`.
+- **`MatrixRing.product-gen`**: Generalised product `Matrix R n m × Matrix L m k -> Matrix L n k` with values in an `LModule`.
+- **`MatrixRing.product_ide-left/right`**, **`product_zro-left/right`**: Identity and zero behaviour of the product.
+- **`MatrixRing.product-assoc`**, **`product-gen-assoc`**: Associativity (also for the generalised version).
+- **`MatrixRing.product-ldistr/rdistr`**, **`product-gen-ldistr/rdistr`**: Distributivity over `+`.
+- **`MatrixRing.product_negative-left/right`**, **`product-gen_negative-*`**: Compatibility with `negative`.
+- **`MatrixRing.ide_generates`**: The identity matrix generates the array `LModule`.
+- **`MatrixRing.ide'`**, **`ide=ide'`**: Recursive presentation of the identity matrix and its agreement with `ide`.
+- **`MatrixAlgebra`**: For a `CRing` `R`, `Matrix R n n` is an `R`-algebra (`AAlgebra`).
+- **`MatrixAlgebra.product_*c-comm-left/right`**: Scalar multiplication commutes with matrix multiplication.
 
-#### Algebraic Structures
+#### Diagonal Construction
 
-- **`MatrixAbGroup`**: `AbGroup` instance on `Matrix A n m` with entrywise `+`, `zro`, `negative`.
-- **`MatrixModule`**: `LModule R` instance on `Matrix R n m` via entrywise scalar multiplication; `*c-gen` is the same operation parametrized by an arbitrary `LModule`.
-- **`MatrixRing`**: `Ring` instance on `Matrix R n n`. Contains the multiplication operator `product`, the generalized `product-gen` (right-acting on a module), identity/zero/distributivity/associativity/negation lemmas (`product_ide-left`, `product_ide-right`, `product_zro-left`, `product_zro-right`, `product-assoc`, `product-ldistr`, `product-rdistr`, `product_negative-left`, `product_negative-right`, …), the alternative identity matrix definition `ide'` with `ide=ide'`, and `ide_generates`.
-- **`MatrixAlgebra`**: `AAlgebra` instance over a commutative ring `R` combining `MatrixRing` and `MatrixModule`; lemmas `product_*c-comm-left`/`product_*c-comm-right` show scalar action commutes with multiplication.
+- **`diagonal`**: Diagonal matrix of size `len(l) × len(l)` from an array `l`.
 
-#### Diagonal Matrices
+#### Determinant
 
-- **`diagonal`**: Diagonal matrix from an array `l`.
-- **`diagonal-isDiagonal`**: `diagonal l` satisfies `IsDiagonal`.
+- **`determinant`**: `det M = Σ_{e ∈ Sym n} sign(e) · ∏_j M(e j, j)`.
+- **`determinant.minor`**: Submatrix obtained by removing row `i0` and column `j0`.
+- **`determinant.minorExt`**: Two matrices agreeing off row `i`/column `j` have equal `(i,j)`-minors.
+- **`determinant.minor'`**, **`minor=minor'`**: Alternative minor (skip rows after columns) and equivalence proof.
+- **`determinant.skip_transpose`**: Skipping commutes with transposition.
+- **`determinant.minor_transpose`**: `minor (transpose M) i j = transpose (minor M j i)`.
+- **`determinant.multilinear`**, **`determinant.alternating`**, **`determinant.alternatingT`**: Multilinearity and alternation in rows (and after transposition).
+- **`determinant.minor00`**: Concrete formula for `minor M 0 0`.
+- **`determinantN`**: Cofactor (Laplace) expansion along column `k`.
+- **`determinantN.minor_insert`**, **`aux/=`**, **`minor_replace`**: Compatibility of `minor` with `insert`/`replace` operations on rows.
+- **`determinantN.multilinear`**, **`determinantN.alternating`**: Multilinearity and alternation of `determinantN`; the `alternating` proof builds permutations of rows and bounds their inversions.
+- **`determinantN.determinantN_ide`**: `determinantN k ide = 1`.
+- **`determinantN.=determinant`**: `determinantN k M = determinant M` — Laplace expansion equals the symmetric-group definition.
+- **`determinantN.determinant=determinant0`**: Particular case at `k = 0` for `suc n`.
 
-#### Determinants
+#### Determinant: Small Cases and Identities
 
-- **`determinant`**: Permutation-sum definition `Σ_{e ∈ Sym n} sign(e) · ∏_j M (e j) j`.
-- **`determinant.minor`**: `(n) × (m)` minor obtained by removing row `i0` and column `j0` from a `(suc n) × (suc m)` matrix.
-- **`determinant.minorExt`**: Minors agree if entries off the removed row/column agree.
-- **`determinant.minor'`**, **`determinant.minor=minor'`**: Alternative minor definition (skip rows after column-skip) and proof of equivalence.
-- **`determinant.skip_transpose`**, **`determinant.minor_transpose`**: Compatibility of `skip`/`minor` with transpose.
-- **`determinant.multilinear`**, **`determinant.alternating`**, **`determinant.alternatingT`**: Multilinearity and alternating properties (in rows, and in rows of the transpose).
-- **`determinant.minor00`**: Explicit form of the `(0,0)`-minor.
-- **`determinantN`**: Cofactor expansion along column `k`: `Σ_i M i k · (-1)^{i+k} · det (minor M i k)`. The `\where` block contains key lemmas (`minor_insert`, `minor_replace`, `multilinear`, `alternating`) and `=determinant` showing it agrees with `determinant`.
-- **`determinant=determinant0`**: Defining-formula determinant equals expansion along column 0.
-- **`determinant00`**, **`determinant11`**, **`determinant22`**: Closed forms for `0×0`, `1×1`, `2×2` cases.
-- **`determinant_ide`**: `det 1 = 1`.
-- **`determinant_*`**: `det (M · N) = det M · det N`.
-- **`determinant_transpose`**: `det Mᵀ = det M`.
-- **`determinant_map`**: Ring homomorphisms commute with `determinant`.
+- **`determinant00`**: `det A = 1` for `0 × 0`.
+- **`determinant11`**: `det A = A 0 0` for `1 × 1`.
+- **`determinant22`**: Standard `ad - bc` formula.
+- **`determinant_ide`**: `det(ide) = 1`.
+- **`determinant_*`**: Multiplicativity: `det (M · N) = det M · det N`.
+- **`determinant_transpose`**: `det (transpose M) = det M`.
+- **`determinant_map`**: A ring homomorphism commutes with `determinant`.
 - **`determinant_block`**: `det (blockMatrix A B) = det A · det B`.
-- **`equations-determinant`**: If `A · U = 0`, then `det(A) · U = 0` (Cramer-style consequence).
 
-#### Adjugate and Invertibility
+#### Transpose
 
-- **`adjugate`**: Adjugate (classical adjoint) matrix; entry `(i,j)` is `(-1)^{j+i} · det(minor M j i)`.
-- **`adjugate_transpose`**: `adj(Mᵀ) = (adj M)ᵀ`.
-- **`adjugate-left`** / **`adjugate-right`**: `adj(M)·M = det(M)·1` and `M·adj(M) = det(M)·1`; auxiliary lemmas `determinant_adjugate_=`, `determinant_adjugate_/=`, `adjugate-lem`, `adjugateExt`.
-- **`transpose_*`**: `(M·M')ᵀ = M'ᵀ · Mᵀ`; `transpose_*.product` is the non-square version.
-- **`determinant-inv`**: `M` invertible `iff` `det(M)` invertible.
-- **`matirx-inv`**: One-sided inverse `A·B = 1` makes `B` invertible (matrix monoid).
+- **`transpose`**: Transpose of a matrix.
+- **`transpose.isInv`**: Invertibility transports along transposition.
+- **`transpose_*`**: `transpose (M · M') = transpose M' · transpose M`; `.product` is the non-square version.
+
+#### Adjugate and Inversion
+
+- **`adjugate`**: Classical adjugate (cofactor) matrix; `adj(M)_{ij} = (-1)^{j+i} · det (minor M j i)`.
+- **`adjugate_transpose`**: `adjugate` commutes with `transpose`.
+- **`adjugate-left`**, **`adjugate-right`**: Cramer-style identities `adj(M) · M = det M ·c 1` and `M · adj(M) = det M ·c 1`.
+- **`adjugate-left.determinant_adjugate_=`**: Diagonal sum of adjugate-times-matrix is `det M`.
+- **`adjugate-left.adjugate-lem`**, **`adjugateExt`**, **`determinant_adjugate_/=`**: Auxiliary identities used to prove the Cramer relations.
+- **`determinant-inv`**: `Inv M ↔ Inv (det M)` — invertibility iff the determinant is a unit.
+- **`matirx-inv`**: A right inverse to `A` is itself invertible (when `A * B = 1`).
 - **`determinant1_Inv`**: `det A = 1` implies `A` is invertible.
-- **`blockMatrix_Inv`**: `blockMatrix A B` is invertible `iff` both `A` and `B` are.
+- **`blockMatrix_Inv`**: `Inv (blockMatrix A B) ↔ Inv A × Inv B`.
 
 #### Triangular and Diagonal Predicates
 
-- **`IsDiagonal`**: Predicate: off-diagonal entries are zero. Submodule includes `transposed`, `=>upperTriangular`, `=>lowerTriangular`.
-- **`IsUpperTriangular`**: Below-diagonal entries (`j < i`) are zero.
-- **`IsLowerTriangular`**: Above-diagonal entries (`i < j`) are zero.
-- **`*c_IsDiagonal`**: Scalar multiplication preserves diagonality.
+- **`IsDiagonal`**: Off-diagonal entries are zero.
+- **`IsDiagonal.transposed`**, **`=>upperTriangular`**, **`=>lowerTriangular`**: Diagonal implies triangular (both ways) and is preserved under transposition.
+- **`IsUpperTriangular`**: Entries below the diagonal vanish.
+- **`IsLowerTriangular`**: Entries above the diagonal vanish.
+- **`*c_IsDiagonal`**: Scalar multiples preserve diagonality.
+- **`diagonal-isDiagonal`**: `diagonal l` is diagonal.
 - **`determinant_IsUpperTriangular`**, **`determinant_IsLowerTriangular`**, **`determinant_IsDiagonal`**: Determinant of a triangular/diagonal matrix is the product of diagonal entries.
 - **`determinant_diagonal`**: `det (diagonal l) = ∏ l`.
 
-#### Rank-Style Lemmas
+#### Non-Square Products and Rank
 
-- **`determinant-nonSquare`**: For `m < n`, the determinant of `A · B` (with `A : n×m`, `B : m×n`) is zero; helpers `determinant-nonSquare_+` and `determinant_block12`.
-- **`matrix-split-trivial`**: If a "wide·tall" product equals identity with `m < n`, then `0 = 1` in `R`.
-- **`matrix-split_<=`**: Over a non-zero commutative ring, `A · B = 1` forces `n ≤ m`.
+- **`determinant-nonSquare`**: For `m < n`, any product `A · B` of an `n × m` and an `m × n` matrix has zero determinant.
+- **`determinant-nonSquare_+`**, **`determinant_block12`**: Auxiliary forms for sizes `k + n` and for `block12Matrix 0 A`.
+- **`matrix-split-trivial`**: `A · B = ide` with `m < n` forces `0 = 1` in `R`.
+- **`matrix-split_<=`**: Over a non-trivial `CRing`, `A · B = ide` forces `n ≤ m` (rank/dimension lower bound).
+
+#### Linear System Solving
+
+- **`equations-determinant`**: If `A · U = 0` (with `U` valued in any `R`-module), then `det A ·c U = 0` — Cramer-style consequence used for solving systems.

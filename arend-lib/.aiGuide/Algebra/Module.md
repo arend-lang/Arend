@@ -1,62 +1,106 @@
 ### Algebra.Module
 
-Defines left modules over a ring, basic constructions (products, ring-as-module, function spaces, pullback along a ring homomorphism), and the formal infrastructure for linear combinations and zero-sum relations used to develop bases and generation.
+Defines left modules over a ring and develops the linear-algebra machinery of independence, generation, and bases.
 
-#### Core Class
+This module introduces `LModule R` as an abelian group equipped with a scalar multiplication `*c : R -> E -> E` satisfying the usual axioms. The bulk of the file develops two parallel formulations of linear (in)dependence and generation: an indexed array-based version (`IsIndependent`, `IsGenerated`, `IsBasis`) suited to finite presentations, and a set-based version (`IsIndependentSet`, `IsGeneratingSet`, `IsBasisSet`) parameterized by an arbitrary indexing set, with equivalences between the two formulations. The set-based independence uses an auxiliary equivalence relation `Z~` on formal sums (arrays of `(R, J)` pairs) modulo zero-sums, capturing when two formal linear combinations represent the same element. Standard module constructions are also provided: products, the regular module `R` over itself, function modules `Array M n`, and pullback/composition of modules along ring homomorphisms.
 
-- **`LModule`**: A left module over a ring `R`, extending `AbGroup`. Carries a scalar multiplication `*c : R -> E -> E` satisfying associativity (`*c-assoc`), left distributivity over module addition (`*c-ldistr`), right distributivity over ring addition (`*c-rdistr`), and unitality (`ide_*c`).
+#### Main Class
 
-#### Linear Combinations and Counting
+- **`LModule`**: Left module over a `Ring R`, extending `AbGroup`. Provides scalar multiplication `*c : R -> E -> E` with associativity (`*c-assoc`), left and right distributivity (`*c-ldistr`, `*c-rdistr`), and unit law (`ide_*c`).
 
-- **`count`**: For a list `l : Array (\Sigma R J)` of coefficient/index pairs and a decidable index `j : J`, sums the coefficients whose index equals `j`.
-- **`count_zro`**: If `j` does not appear among the indices of `l`, then `count l j = 0`.
-- **`count-unique`**: For an injective indexing `l` and coefficients `c`, the count at `l k` recovers `c k`.
+#### Basic Module Lemmas
 
-#### Zero-Sum Relations
+- **`cancel`**: Cancellation by an invertible scalar: if `r` is invertible and `r *c a = r *c b`, then `a = b`.
+- **`*c_zro-left`**, **`*c_zro-right`**: Scalar/vector zero annihilates: `0 *c a = 0` and `r *c 0 = 0`.
+- **`*c_negative-left`**, **`*c_negative-right`**: Negation commutes with scalar multiplication on either side.
+- **`*c-ldistr_-`**, **`*c-rdistr_-`**: Distributivity over subtraction on either side.
+- **`neg_ide_*c`**: `-1 *c a = negative a`.
+- **`natCoef_*c`**: `natCoef n *c a = n *n a` (compatibility with the natural-number coefficient action).
+- **`*c_BigSum-rdistr`**, **`*c_BigSum-ldistr`**: Distributivity of `*c` over `BigSum` on either argument.
+- **`*c_FinSum-rdistr`**, **`*c_FinSum-ldistr`**: Same as above for `FinSum` indexed by a `FinSet`.
 
-- **`IsZeroSum`**: Proposition that a coefficient/index list `l` represents the zero linear combination, witnessed by partitioning `l` (up to `EPerm`) into groups per index whose coefficient sums vanish.
-- **`IsZeroSum.aux`**: Removes empty groups in a zero-sum decomposition, giving a normalized form.
-- **`IsZeroSum.nonEmpty`**: Refines a zero-sum witness so that every group has a nonzero number of coefficients.
-- **`Z~`**: Equivalence relation on coefficient lists: `l1 Z~ l2` iff `(-l2) ++ l1` is a zero sum, i.e. `l1` and `l2` represent the same linear combination.
-- **`count_IsZeroSum`**: A list is a zero sum if the count at each distinct index vanishes.
-- **`IsZeroSum_count`**: Conversely, in a zero-sum list every index's count is `0`.
-- **`IsZeroSum_count.count_EPerm`**: `count` is invariant under `EPerm`.
-- **`IsZeroSum_count.count_++`**: `count` distributes over list concatenation.
-- **`IsZeroSum_count.count_Big++`**: `count` of a flattened list of lists is the sum of per-list counts.
+#### Linear Independence and Generation (Array-Based)
 
-#### Basis Transfer
+- **`IsDependent`**: A list `l` admits a nontrivial linear combination summing to zero.
+- **`IsIndependent`**: Every linear combination summing to zero has all coefficients zero.
+- **`IsGenerated`**: Every element is a linear combination of `l`.
+- **`IsBasis`**: Conjunction of `IsIndependent` and `IsGenerated`.
+- **`independent-subset`**: A prefix of an independent list is independent.
+- **`independent-nonZero`**: If a basis element equals zero, then `0 = 1` in `R` (so `R` is trivial).
 
-- **`basisSet-split`**: Given a basis `u : J -> U` of `U` and any map `v : J -> V`, produces for each `x : U` a corresponding `y : V` realized by the same coefficient list, exhibiting the universal property of a basis on the level of sets.
+#### Linear Independence and Generation (Set-Based)
 
-#### Pullback Along Ring Homomorphisms
+- **`IsIndependentSet`**: For `g : J -> E`, every formal sum (an `Array (\Sigma R J)`) summing to zero is a `IsZeroSum`. Has a `\where`-block of helpers for working with formal sums.
+  - **`IsIndependentSet.sum`**: Evaluate a formal sum `Array (\Sigma R J)` against `g`.
+  - **`sum-ldistr`**, **`sum_++`**, **`sum_Big++`**, **`sum_negative`**, **`sum_EPerm`**: Algebraic properties of `sum` (scalar distribution, concatenation, flattening, negation, permutation invariance).
+  - **`=_~`**: Independence implies that equal sums are `Z~`-related.
+  - **`IsZeroSum_=`**, **`~_=`**: Zero-sums evaluate to `0`; `Z~`-related sums evaluate equally.
+- **`IsIndependentSet-right-inj`**: Pulling back an independent set along an injection stays independent.
+- **`IsIndependentDec`**: Variant of independence that quantifies over injective `Array J` indexings.
+- **`IsIndependentSet<->IsIndependentDec`**: Equivalence of `IsIndependentSet` and `IsIndependentDec` for decidable `J`.
+- **`IsIndependent<->IsIndependentSet`**: Array independence agrees with set independence (over `Fin l.len`).
+- **`IsIndependentSet-fin`**: For finite `J`, set independence reduces to coefficient-wise vanishing of `FinSum`.
+- **`IsGeneratingSet`**: Every element is in the image of `sum g` for some formal sum.
+- **`IsGeneratingSet-fin`**: Equivalent characterization in terms of `FinSum` over arbitrary finite index sets.
+- **`IsGeneratingSet-surj`**: Pushing forward a generating set along a surjection stays generating.
+- **`IsBasisSet`**: Conjunction of `IsIndependentSet` and `IsGeneratingSet`.
+- **`IsBasisSet-equiv`**: Bases transport along equivalences of index sets.
+- **`IsGenerated<->IsGeneratingSet`**, **`IsBasis<->IsBasisSet`**: Equivalences with the array-based notions.
 
-- **`pullback`**: Given `f : RingHom` and an `f.Cod`-module `M`, produces an `f.Dom`-module on the same abelian group with scalar multiplication `a *c x := f a *c x`.
-- **`generated-fin-comp`**: If `f.Cod` is finitely generated (as a module via `f`) by `a` and `M` by `b`, then `pullback f M` is generated by the products `a p.2 *c b p.1`.
-- **`generated-pullback`**: Finite generation is preserved by pullback along a ring homomorphism when both `f` (as a module via `homLModule`) and `M` are finitely generated.
-- **`generated-comp`**: Finite generation composes along ring homomorphisms: if `f : R -> S` and `g : S -> T` give finitely generated module structures, so does `g ∘ f`.
+#### Basis Decomposition
+
+- **`independent-split-unique`**: Two combinations equal as sums must agree coefficient-wise on an independent list.
+- **`basis-split-pair`**: For a basis `l` and element `x`, returns the unique coefficient array witnessing `x = BigSum (c j *c l j)`, packaged as a propositionally unique pair.
+  - **`basis-split-unique`** (inner): The decomposition is propositionally unique.
+- **`basis-split`**: The coefficient array projecting `x` onto the basis `l`.
+- **`basis-split-char`**: `x = BigSum (basis-split lb x j *c l j)`.
+- **`basis-split-unique`** (outer): Any decomposition coincides with `basis-split`.
+- **`basis_split_basis`**, **`basis_split_=`**, **`basis_split_/=`**: `basis-split` of a basis vector is the Kronecker delta.
+
+#### Finite Generation
+
+- **`IsGeneratedFin`**: Every element is a `FinSum` over a `FinSet`.
+- **`IsFinitelyGenerated`**: Existence of a finite generating array.
+- **`basisSet_basis`**: From a basis indexed by a `FinSet`, extract a basis array of length `J.finCard`.
+- **`free-char`**: Free-module characterization: array bases ↔ basis sets indexed by some `FinSet`.
+- **`generated-array-fin`**, **`generated-fin-array`**: Conversions between `IsGenerated` (array) and `IsGeneratedFin` / `IsFinitelyGenerated`.
+- **`IsFaithful`**: The action is faithful: only `r = 0` annihilates every element.
+
+#### Counting and Zero-Sums (in `\where` of `LModule`)
+
+- **`count`**: For `l : Array (\Sigma R J)` and `j : J`, sums the coefficients tagged with `j`.
+- **`count_zro`**: `count l j = 0` when `j` doesn't appear in `l`.
+- **`count-unique`**: For an injective indexing, `count` recovers the original coefficient.
+- **`IsZeroSum`**: A formal sum is a zero-sum if (up to permutation) it groups into per-index blocks each summing to zero.
+  - **`IsZeroSum.aux`**: Normalizes by removing empty coefficient blocks.
+  - **`IsZeroSum.nonEmpty`**: Witness with all blocks nonempty.
+- **`Z~`**: Equivalence of formal sums: `l1 Z~ l2` iff `negate(l2) ++ l1` is a zero-sum.
+- **`count_IsZeroSum`**: If every distinct index has zero count, the sum is a zero-sum.
+- **`IsZeroSum_count`**: Conversely, zero-sums have zero count at every index. Includes `count_EPerm`, `count_++`, `count_Big++` lemmas.
+- **`basisSet-split`**: Given a basis `u : J -> U` and a parallel target `v : J -> V`, transports `x : U` to a unique `y : V` along the same coefficients (well-defined by `Z~`).
+
+#### Module Constructions (in `\where` of `LModule`)
+
+- **`pullback`**: Given `f : RingHom` and an `f.Cod`-module `M`, produces an `f.Dom`-module on the same underlying group via `r *c x := f r *c x`.
+- **`generated-fin-comp`**: If `f.Cod` is finitely generated over `f.Dom` and `M` is finitely generated over `f.Cod`, then `M` (as `f.Dom`-module) is generated by the product family.
+- **`generated-pullback`**: Pullback preserves finite generation under composition.
+- **`generated-comp`**: Finite generation composes along ring homomorphisms.
 
 #### Product Modules
 
-- **`ProductLModule`**: The direct product `A × B` of two `R`-modules, extending `ProductAbGroup` with componentwise scalar multiplication.
-- **`ProductLModule.in1`** / **`ProductLModule.in2`**: Linear inclusions `A -> A × B` and `B -> A × B` as `(a, 0)` and `(0, b)`.
-- **`ProductLModule.proj1`** / **`ProductLModule.proj2`**: Linear projections `A × B -> A` and `A × B -> B`.
-- **`ProductLModule.coprod-map`**: From linear maps `i : A -> C` and `j : B -> C`, builds the linear map `A × B -> C`, `(a, b) ↦ i a + j b` (coproduct universal property in the additive setting).
-- **`ProductLModule.prod-map`**: From `a : C -> A` and `b : C -> B`, builds the pairing `C -> A × B` (product universal property).
+- **`ProductLModule`**: The product `A × B` of `R`-modules with componentwise scalar action.
+- **`ProductLModule.in1`**, **`ProductLModule.in2`**: Coproduct injections as `LinearMap`s into the product.
+- **`ProductLModule.proj1`**, **`ProductLModule.proj2`**: Product projections as `LinearMap`s.
+- **`ProductLModule.coprod-map`**: From `i : A -> C` and `j : B -> C`, builds the cotuple `A × B -> C`.
+- **`ProductLModule.prod-map`**: From `a : C -> A` and `b : C -> B`, builds the pairing `C -> A × B`.
 
-#### Ring as a Module Over Itself
+#### Other Module Instances
 
-- **`RingLModule`**: Any ring `R` as a left module over itself, with `*c := *`.
-- **`RingLModule.*_hom-left`**: For a commutative ring, left multiplication by a fixed `x` is a linear endomorphism of `R`.
-- **`RingLModule.*_hom-right`**: Right multiplication by `x` is a linear endomorphism of `R` (without commutativity).
-- **`RingLModule.basis`**: The singleton list `(1 :: nil)` is a basis of `R` as a module over itself.
-
-#### Function/Array Modules
-
-- **`ArrayLModule`**: The module of length-`n` arrays valued in an `R`-module `M`, with pointwise operations.
-- **`ArrayLModule.skip_*c`**: `skip` (drop one index) commutes with scalar multiplication.
-- **`ArrayLModule.skip_+`**: `skip` commutes with module addition.
-- **`ArrayLModule.BigSum-index`**: Indexing the sum of an array of arrays equals the sum of indexed entries: `(BigSum l) i = BigSum (map (__ i) l)`.
-
-#### Restriction of Scalars (Codomain View)
-
-- **`homLModule`**: Given `f : RingHom`, views the codomain ring `f.Cod` as an `f.Dom`-module via `x *c y := f x * y`. Used together with `pullback` to express how modules behave under change of base ring.
+- **`RingLModule`**: The ring `R` as a left module over itself, with `*c := *`.
+  - **`*_hom-left`**: Left multiplication by `x` as a linear map (commutative case).
+  - **`*_hom-right`**: Right multiplication by `x` as a linear map.
+  - **`basis`**: `(1 :: nil)` is a basis of `R` over itself.
+- **`ArrayLModule`**: Length-`n` arrays over a module `M` form an `R`-module under pointwise operations.
+  - **`skip_*c`**, **`skip_+`**: Compatibility of `skip` (drop-index) with scalar multiplication and addition.
+  - **`BigSum-index`**: `BigSum` of arrays evaluated at index `i` equals the `BigSum` of pointwise evaluations.
+- **`homLModule`**: Given `f : RingHom`, makes `f.Cod` into an `f.Dom`-module via `x *c y := f x * y`.

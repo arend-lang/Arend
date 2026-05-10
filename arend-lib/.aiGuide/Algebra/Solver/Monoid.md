@@ -1,28 +1,30 @@
 ### Algebra.Solver.Monoid
 
-A reflective solver for monoid equalities, providing a `SubstSolverModel` that normalizes monoid terms into flat lists of variables.
+A reflection-based solver model for proving equalities in monoids and additive monoids.
+
+This module provides a `SubstSolverModel` instance that decides equalities of monoid expressions by normalizing them to lists of variables (flat words). The `Term` syntax mirrors the monoid signature (variables, identity, multiplication), and normalization uses an accumulator-based traversal to flatten nested products into a single list, exploiting associativity and the unit laws. The `>>=` operation provides substitution (list monad bind) needed by the substitution-based solver framework, allowing variables to be replaced by sub-normal-forms. An additive variant is obtained by reusing the multiplicative model via `AddMonoid.toMonoid`.
 
 #### Solver Models
 
-- **`MonoidSolverModel`**: Builds a `SubstSolverModel` for a `Monoid M`, using `Term` as the syntax of monoid expressions and `List (Fin n)` as the normal form (a flat sequence of variables). Wires up `normalize`, `interpret`, `interpretNF`, and substitution into the generic solver framework.
-- **`AddMonoidSolverModel`**: Adapts `MonoidSolverModel` to an `AddMonoid` by converting it to its multiplicative form via `AddMonoid.toMonoid`.
+- **`MonoidSolverModel`**: The main `SubstSolverModel M` instance for a `Monoid M`. Reifies monoid expressions into `Term`, normalizes to `List (Fin n)`, and interprets normal forms back into `M`.
+- **`AddMonoidSolverModel`**: The corresponding solver model for an `AddMonoid`, obtained by transporting `MonoidSolverModel` through `AddMonoid.toMonoid`.
 
 #### Term Syntax
 
-- **`Term`**: Inductive datatype of monoid expressions over `n` variables, with constructors `var (Fin n)`, `:ide` (the identity), and `:*` (multiplication, `\infixl 7`).
+- **`Term`**: Inductive type of monoid expressions over `n` variables, with constructors `var (Fin n)`, `:ide` (identity), and `:* (infixl 7)` (multiplication).
 
 #### Normalization
 
-- **`normalize-aux`**: Accumulator-based flattening of a `Term n` into a `List (Fin n)`; appends `var v` entries to `acc`, drops `:ide`, and recurses on products right-to-left so the resulting list represents the term as a left-to-right sequence of variables.
+- **`normalize-aux`**: Accumulator-passing flattening of a `Term n` into a `List (Fin n)`. Variables are consed onto the accumulator, the identity is dropped, and products recurse right-then-left so the resulting list reads left-to-right.
 
-#### Interpretation
+#### Normal Form Interpretation
 
-- **`interpretNF`**: Evaluates a list of variables in environment `env : V -> M` as a monoid product, using `M.ide` for `nil` and avoiding a trailing `* ide` for singleton lists.
-- **`interpretNF_::`**: `interpretNF env (x :: l) = env x * interpretNF env l`, the cons-evaluation lemma (handles the singleton special case).
-- **`interpretNF_++`**: `interpretNF env (t ++ s) = interpretNF env t * interpretNF env s`, showing list concatenation corresponds to monoid multiplication.
-- **`interpretNF-consistent-aux`**: Soundness of `normalize-aux`: `interpretNF env (normalize-aux t acc) = interpret env t * interpretNF env acc`, the key lemma proving normalization preserves meaning.
+- **`interpretNF`**: Interprets a list of variables as a left-associated product in `M`, with `nil` mapped to `M.ide` and a singleton mapped without a trailing identity (avoiding a redundant `* ide`).
+- **`interpretNF_::`**: Cons lemma: `interpretNF env (x :: l) = env x * interpretNF env l`, used to bridge the singleton special case and the general case.
+- **`interpretNF_++`**: Concatenation lemma: `interpretNF env (t ++ s) = interpretNF env t * interpretNF env s`, the key homomorphism property of normal-form interpretation.
+- **`interpretNF-consistent-aux`**: Soundness of `normalize-aux`: `interpretNF env (normalize-aux t acc) = interpret env t * interpretNF env acc`. Drives the solver's correctness proof.
 
 #### Substitution
 
-- **`>>=`**: List monadic bind (`\infixl 2`), substituting each element of `l : List U` with `k u : List V` and concatenating the results — used for substituting normal forms into normal forms.
-- **`>>=-consistent`**: Compatibility of `>>=` with interpretation: `interpretNF env (l >>= k) = interpretNF (\lam u => interpretNF env (k u)) l`, justifying substitution at the normal-form level.
+- **`>>=`**: List monad bind, used as the substitution operation for the `SubstSolverModel`. Concatenates the results of applying `k` to each element of `l`.
+- **`>>=-consistent`**: States that interpreting a substituted normal form equals interpreting the outer list under the environment that interprets each substituted sub-list — the homomorphism law making substitution compatible with interpretation.

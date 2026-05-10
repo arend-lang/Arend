@@ -1,38 +1,41 @@
 ### Topology.CStarAlgebra.UnitCStarAlgebra
 
-Construction of the unitization of a non-unital C*-algebra (StoneC*PseudoAlgebra) into a unital C*-algebra, together with the Riesz space structure induced by absolute values on C*-algebras.
+Construction of the unitization of a (possibly non-unital) Stone C*-algebra and the induced Riesz space structure on Stone C*-algebras.
+
+This module shows that any `StoneC*PseudoAlgebra` `A` can be embedded into a unital Stone C*-algebra `\Sigma Real A`, where the real component supplies a unit and the norm is defined operator-theoretically as a supremum over unit-ball multiplications. It then derives a canonical Riesz space (lattice ordered abelian group) structure on every Stone C*-algebra by constructing an absolute value `|a|` as the unique positive square root of `a * a`, built via the functional calculus `sqrt` from `RealBanachAlgebra`. The pseudo-algebra case is handled by transferring the Riesz structure through the unitization, using the order pulled back along the unit embedding.
 
 #### Unitization
 
-- **`UnitC*Algebra`**: Given a `StoneC*PseudoAlgebra A`, builds the unital C*-algebra structure on `\Sigma Real A` (the standard adjunction of a unit). Extends `StoneC*Algebra`, with ring structure from `UnitAlgebra RealField A.toRealAlgebra` and norm inherited from the product. Provides commutativity, divisibility, all norm axioms (`norm_zro`, `norm_negative`, `norm_+`, `norm-double`, `norm-bounded`, `norm_*_<=`, `norm_ide_<=`, `norm-ext`), metric completeness, and the C*-identities `c*-sum` and `c*-square`.
-- **`UnitC*Algebra.inhabitted`**: Witnesses that there exists `y : A` with `A.norm y <= 1`, used to bootstrap the unitization construction.
+- **`UnitC*Algebra`**: Instance constructing a `StoneC*Algebra` on `\Sigma Real A` for any `StoneC*PseudoAlgebra` `A`, using the unital algebra `UnitAlgebra RealField A.toRealAlgebra`. The norm is `|x.1| ∨ sup { |x.1 *r s + x.2 * s| : s ∈ A, |s| ≤ 1 }`, the standard operator norm on the unitization.
+- **`UnitC*Algebra.inhabitted`**: Existence lemma `∃ (y : A) (|y| ≤ 1)`, needed to ensure the join in the norm is over an inhabited family.
 
-#### Riesz Space Structure on C*-Algebras
+#### Riesz Space on Stone C*-Algebras
 
-- **`StoneC*AlgebraRieszSpace`**: Equips a unital `StoneC*Algebra A` with a `RieszSpace` structure, derived via `RieszSpace.fromAbs` from the absolute value built out of the square-root functional calculus.
-- **`StoneC*AlgebraRieszSpace.StoneC*AlgebraTopPoset`**: Auxiliary `HausdorffTopPosetAbGroup` instance on `A`, combining its topological abelian group structure with the order on self-adjoint elements (closedness of the positive cone).
-- **`StoneC*AlgebraRieszSpace.abs-aux`**: Existence of an absolute value: for every `a : A` there exists `b : A` with `b * b = a * a`, `a <= b`, `-a <= b`, and `b` is the least such upper bound. This is the universal property defining `|a|`.
-- **`StoneC*AlgebraRieszSpace.abs-square`**: Identity `|a| * |a| = a * a`, characterizing the absolute value via the square-root of `a²`.
+- **`StoneC*AlgebraRieszSpace`**: Equips any `StoneC*Algebra A` with a `RieszSpace` structure, using `RieszSpace.fromAbs` together with the absolute value produced by `abs-aux`.
+- **`StoneC*AlgebraRieszSpace.StoneC*AlgebraTopPoset`**: The underlying `HausdorffTopPosetAbGroup` on `A`, combining its topological abelian group and poset structure with closedness of the positive cone.
+- **`StoneC*AlgebraRieszSpace.abs-aux`**: Existence of an absolute value: for every `a : A`, there is `b` with `b * b = a * a`, `a ≤ b`, `-a ≤ b`, and `b` is the least such upper bound.
+- **`StoneC*AlgebraRieszSpace.abs-square`**: `|a| * |a| = a * a`, characterizing the absolute value.
 
-#### Absolute Value via Square Root (`c*abs`)
+#### Functional Calculus Absolute Value
 
-- **`c*abs`**: For `a : A` with `a <= 1` and `-a <= 1`, defines `|a| := sqrt(a * a)` using the convergent functional-calculus series for square roots in a Banach algebra (`sqrt-t`).
-- **`c*abs.yfunc>=0`**: Nonnegativity of the auxiliary sequence `yfunc n x` used in the sqrt power-series expansion.
-- **`c*abs.square-norm`**: `norm (1 - a * a) <= 1`, ensuring `a * a` lies in the unit ball where the sqrt series converges.
-- **`c*abs.c*abs>=id`** / **`c*abs.c*abs>=neg`**: `x <= c*abs x` and `-x <= c*abs x`, with inductive proof on partial sums (`induction`).
-- **`c*abs.zfunc_pow>0`**, **`c*abs.zfunc_pow`**, **`c*abs.zfunc_pow'`**: Compute the sqrt-functional-calculus limit on squares: `zfunc-lim (w * w, _) = w` under norm constraints.
-- **`c*abs.yfunc-step`**: Monotonicity of `yfunc` in `n` (`yfunc n x <= yfunc (suc n) x`).
-- **`c*abs.zfunc-lim-meet`**: Identifies `zfunc-lim s` as the meet of the sequence `zfunc __ s.1`.
-- **`c*abs.yfunc-mono`**: Antitone behaviour of `yfunc n` in its argument.
-- **`c*abs.c*abs-univ-bounded`**: Universal property in the bounded regime: any `w` dominating both `x` and `-x` (with `w, 1 - w` in the unit ball) dominates `c*abs x`.
-- **`c*abs.sqrt-t`**: Wrapper applying `sqrt` to a unit-ball element.
-- **`c*abs.square-inj`**: Injectivity of squaring on `[0,1]`: `x * x = y * y` and `0 <= x, y <= 1` imply `x = y`.
-- **`c*abs.elem>=0`**: If `a <= x` and `-a <= x` then `0 <= x`.
-- **`c*abs.c*abs>=0`**, **`c*abs.c*abs<=1`**: `c*abs x` is in the positive part of the unit ball.
-- **`c*abs.c*abs_*q`**: Compatibility with rational scalar multiplication: `q *q c*abs x = c*abs (q *q x)` for `0 <= q <= 1`.
-- **`c*abs.c*abs-univ`**: Full universal property: `c*abs a` is the least element dominating both `a` and `-a`.
+- **`c*abs`**: For `a : A` with `a ≤ 1` and `-a ≤ 1`, defines `|a| := sqrt(a * a)` using the square-root functional calculus from `RealBanachAlgebra`.
+- **`c*abs.yfunc>=0`**: Positivity of the `n`th approximant `yfunc n x` used in the sqrt iteration.
+- **`c*abs.square-norm`**: `|1 - a * a| ≤ 1`, the bound enabling the sqrt power series to converge on `a * a`.
+- **`c*abs.c*abs>=id`**, **`c*abs.c*abs>=neg`**: `x ≤ |x|` and `-x ≤ |x|`; the absolute value dominates `x` and `-x`.
+- **`c*abs.c*abs>=id.induction`**: Inductive step `x ≤ 1 - yfunc n (x * x)` driving `c*abs>=id`.
+- **`c*abs.zfunc_pow>0`**, **`c*abs.zfunc_pow`**, **`c*abs.zfunc_pow'`**: Identities `zfunc-lim (w * w) = w` under positivity/norm hypotheses, expressing that sqrt inverts squaring on positive elements.
+- **`c*abs.zfunc_pow>0.square-norm`**: Auxiliary norm bound `|1 - w * w| ≤ 1` from `|1 - w| ≤ 1`.
+- **`c*abs.yfunc-step`**, **`c*abs.yfunc-mono`**: Monotonicity of the sqrt approximants in the index and in the argument.
+- **`c*abs.zfunc-lim-meet`**: `zfunc-lim s` is a meet of the approximants `zfunc n s.1`.
+- **`c*abs.c*abs-univ-bounded`**: Universal property in the unit ball: any `w` with `w ≤ 1`, `|1 - w| ≤ 1`, `x ≤ w`, `-x ≤ w` dominates `c*abs x`.
+- **`c*abs.sqrt-t`**: Wrapper `sqrt s.1 s.2` for elements of the unit ball.
+- **`c*abs.square-inj`**: Injectivity of squaring on positive elements bounded by 1: `x * x = y * y ⇒ x = y`.
+- **`c*abs.elem>=0`**: Any element bounding both `a` and `-a` is non-negative.
+- **`c*abs.c*abs>=0`**, **`c*abs.c*abs<=1`**: `0 ≤ |a| ≤ 1`.
+- **`c*abs.c*abs_*q`**: Compatibility with rational scaling: `q · |x| = |q · x|` for `0 ≤ q ≤ 1`.
+- **`c*abs.c*abs-univ`**: Full universal property: `|a| ≤ w` whenever `a ≤ w` and `-a ≤ w`, certifying `c*abs` as the least absolute value.
 
-#### Riesz Space on the Non-Unital Case
+#### Riesz Space on Pseudo-Algebras
 
-- **`StoneC*PseudoAlgebraRieszSpace`**: Transports the Riesz structure to a non-unital `StoneC*PseudoAlgebra A` by passing through its unitization `UnitC*Algebra A`, then projecting back. The absolute value is constructed by lifting `(0, a)` to the unitization, computing `|·|` there via `abs-aux`, and showing the result has zero scalar component.
-- **`StoneC*PseudoAlgebraRieszSpace.StoneC*PseudoAlgebaPoset`**: `PosetQModule` instance on `A` whose order is pulled back along `unit-algebra : A -> UnitC*Algebra A` from the order on the unitization. Provides `<=-refl`, `<=-transitive`, `<=-antisymmetric`, additivity (`<=_+`), and compatibility with rational scalar division (`<=_*n-div`).
+- **`StoneC*PseudoAlgebraRieszSpace`**: Riesz space structure on a `StoneC*PseudoAlgebra A`, obtained by embedding `a ↦ (0, a)` into `UnitC*Algebra A` and pulling back the absolute value, observing that the resulting `b` lives in the `A`-component since `b.1 * b.1 = 0`.
+- **`StoneC*PseudoAlgebraRieszSpace.StoneC*PseudoAlgebaPoset`**: `PosetQModule` on `A` whose order is `a ≤ b ⟺ unit-algebra a ≤ unit-algebra b`, transported from the unitization.
