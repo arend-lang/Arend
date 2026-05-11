@@ -1,43 +1,45 @@
 ### Algebra.Solver.CGroup
 
-A reflective solver for equalities in commutative groups and abelian groups, using integer-coefficient vectors as normal forms.
+Reflective decision procedure for equalities in commutative groups and abelian groups.
+
+This module specializes the generic group solver to the commutative case, where the normal form of a term collapses from a free word (used for general groups) to an integer-coefficient vector indexed by variables — i.e., an element of `Z^n`. Normalization simply tallies signed exponents per variable, so equality of two terms reduces to coefficient-wise equality of their difference with zero. The `AbGroupSolverModel` is obtained by reusing `CGroupSolverModel` through the `AbGroup.toCGroup` coercion, and a separate `apply-axioms` interface lets the solver discharge goals using user-supplied equational hypotheses scaled by integer coefficients.
 
 #### Solver Models
 
-- **`CGroupSolverModel`**: Builds a `SolverModel` for any commutative group `G`, with `Term` as the syntactic term type, normal forms as `Array Int n` (integer exponent vectors indexed by variables), and `normalize`/`interpret`/`interpretNF` glued by `interpretNF-consistent`.
-- **`AbGroupSolverModel`**: Specializes `CGroupSolverModel` to an abelian group `A` by routing through `AbGroup.toCGroup`.
+- **`CGroupSolverModel`**: Instance of `SolverModel` for a commutative group `G`. Uses `Term` (from `GroupSolverModel`) for syntax, `Array Int n` as the normal form (one integer exponent per variable), and provides `normalize`, `interpret`, and `interpretNF` together with the consistency proof.
+- **`AbGroupSolverModel`**: Instance of `SolverModel` for an abelian group `A`, defined by composing `CGroupSolverModel` with `AbGroup.toCGroup`.
 
-#### Normal-Form Interpretation
+#### Normal Form Interpretation
 
-- **`toArray`**: Expands an integer coefficient vector `cs : Array Int` against an environment `env : Array G` into a flat list of group elements (positive coefficients duplicate, negative coefficients duplicate the inverse).
-- **`sBigProd`**: Right-associated big product over a list of group elements, returning `ide` on the empty list and avoiding a trailing `* ide`.
-- **`sBigProd_::`**: `sBigProd (a :: l) = a * sBigProd l`, the cons rewrite for `sBigProd`.
-- **`interpretNF`**: Interprets a normal form `l : Array Int n` under `env : Fin n -> G` via `sBigProd ∘ toArray`.
-- **`interpretNF'`**: Alternative interpretation as `BigProd (\j => ipow (env j) (l j))` — exponent-vector semantics using integer powers.
-- **`interpretNF-correct`**: `sBigProd (toArray cs env) = interpretNF' cs env`, identifying the two interpretations.
+- **`toArray`**: Expands a coefficient vector `cs : Array Int` against an environment into the explicit list of group elements `[g_i^{c_i}]`, recursing on the magnitude of each integer and emitting `inverse` for negative coefficients.
+- **`sBigProd`**: Right-folded product of an array of group elements, returning `ide` on the empty list (a non-padded variant of `BigProd`).
+- **`sBigProd_::`**: `sBigProd (a :: l) = a * sBigProd l`, the cons-step rewrite for `sBigProd`.
+- **`interpretNF`**: Interprets a normal form `l : Array Int n` in environment `env` as `sBigProd (toArray l env)`.
+- **`interpretNF'`**: Alternative interpretation via `BigProd (\lam j => ipow (env j) (l j))`, used for algebraic manipulation.
+- **`interpretNF-correct`**: Bridges the two interpretations: `sBigProd (toArray cs env) = interpretNF' cs env`.
 
 #### Normalization
 
-- **`normalize`**: Reduces a `Term n` to its `Array Int n` exponent vector — `var v` becomes the unit basis vector, `:ide` the zero vector, `:inverse` negates entrywise, and `:*` adds entrywise (using commutativity).
-- **`interpretNF-consistent'`**: `interpretNF' (normalize t) env = interpret env t` — soundness of normalization for the `interpretNF'` semantics.
-- **`interpretNF-consistent`**: Same soundness statement for `interpretNF`, the form required by `SolverModel`.
+- **`normalize`**: Recursively converts a `Term n` into its `Array Int n` exponent vector — `var v` becomes a unit basis vector at `v`, `:ide` becomes the zero vector, `:inverse t` negates entrywise, and `t :* s` adds entrywise.
+- **`interpretNF-consistent`**: `interpretNF env (normalize t) = interpret env t`, the soundness of the normal form via `interpretNF`.
+- **`interpretNF-consistent'`**: Same statement via the auxiliary `interpretNF'`.
 
-#### Equality Decision
+#### Equality Discharge
 
-- **`terms-equality`**: From `interpretNF env (normalize (t :* :inverse s)) = ide` derive `interpret env t = interpret env s` — the forward direction used by the solver to discharge group equalities.
-- **`terms-equality-conv`**: The converse, turning a semantic equality back into a normal-form identity.
+- **`terms-equality`**: Forward direction: if the normal form of `t :* :inverse s` is the identity, then `interpret env t = interpret env s`. This is the lemma the solver tactic uses to close a goal.
+- **`terms-equality-conv`**: Converse: an equality of interpretations yields the identity normal form for `t :* :inverse s`.
 
 #### Axiom Application
 
-- **`apply-axioms'`**: Given a list of hypotheses `(cᵢ, tᵢ, sᵢ, tᵢ = sᵢ)`, the integer combination `∑ᵢ cᵢ · (normalize tᵢ − normalize sᵢ)` interprets to `ide` under `interpretNF'`.
-- **`apply-axioms'.interpretNF_+`**: `interpretNF'` distributes over entrywise addition as group multiplication.
-- **`apply-axioms'.interpretNF_negative`**: `interpretNF'` of the negated vector is the inverse.
-- **`apply-axioms'.interpretNF-coef`**: Scaling a coefficient vector by `c` corresponds to taking the integer `c`-th power.
-- **`apply-axioms'.interpretNF_BigSum`**: `interpretNF'` of a column-wise integer sum equals the group big-product of the per-row interpretations.
-- **`apply-axioms`**: User-facing variant that adds a `right`-hand vector and shows the combined normal form interprets equally with or without the axiom-derived combination — the workhorse used by `Algebra.Meta` to rewrite by hypotheses.
+- **`apply-axioms'`**: Given a list of hypotheses `(c_i, t_i, s_i, p_i : ⟦t_i⟧ = ⟦s_i⟧)`, proves that the integer-linear combination `Σ_i c_i · (normalize t_i − normalize s_i)` interprets (via `interpretNF'`) to `ide`. Lets the solver scale and combine user-provided equations.
+- **`apply-axioms'.interpretNF_+`**: `interpretNF'` distributes addition of coefficient vectors into the group product.
+- **`apply-axioms'.interpretNF_negative`**: `interpretNF'` takes coefficient negation to group inversion.
+- **`apply-axioms'.interpretNF-coef`**: `interpretNF'` takes scalar multiplication of coefficients by `c` to integer power `ipow _ c`.
+- **`apply-axioms'.interpretNF_BigSum`**: `interpretNF'` of a column-wise integer sum equals the group `BigProd` of the row interpretations.
+- **`apply-axioms`**: User-facing variant: shows that adding the axiom-derived combination to a `right` vector leaves `interpretNF env right` unchanged, allowing axiom-based rewriting of one side of a goal.
 
-#### Abelian Group Specializations
+#### Abelian Group Wrappers
 
-- **`AbGroupSolverModel.terms-equality`**: `terms-equality` re-exposed for an `AbGroup` via the `toCGroup` view.
-- **`AbGroupSolverModel.terms-equality-conv`**: Converse direction for the abelian case.
-- **`AbGroupSolverModel.apply-axioms`**: `apply-axioms` re-exposed for an `AbGroup`.
+- **`AbGroupSolverModel.terms-equality`**: Forward axiom-discharge lemma reformulated for abelian groups via `AbGroup.toCGroup`.
+- **`AbGroupSolverModel.terms-equality-conv`**: Converse direction for the abelian wrapper.
+- **`AbGroupSolverModel.apply-axioms`**: `apply-axioms` lifted to abelian groups, used by the abelian-group solver tactic.

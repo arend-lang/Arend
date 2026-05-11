@@ -1,11 +1,13 @@
 ### Topology.CoverSpace.TopSpace
 
-Constructs a cover space structure on a regular topological space, exhibiting topological spaces as cover spaces.
+Construction of a cover space from a regular topological space.
 
-#### Cover Space from Topology
+This module bridges classical point-set topology and the cover space framework: every regular topological space carries a canonical cover space structure where a family is "Cauchy" iff every point has an open neighborhood contained in some member of the family. Regularity is required to ensure the resulting cover space itself satisfies the regularity axiom (covers can be refined by covers whose closures still refine). The companion lemma exhibits the identity map as continuous from the topology to the induced cover space, witnessing that this construction is a left adjoint / unit on points.
 
-- **`TopCover`**: Given a regular topological space `X`, produces a `CoverSpace` on `X` whose Cauchy covers are families `C` such that every point `x` has some `U ∈ C` containing an open neighborhood `V` of `x` with `V ⊆ U`. Establishes that regular topological spaces canonically carry a cover space structure.
+#### Constructions
+
+- **`TopCover`**: Given a regular topological space `X` (`Xr : X.IsRegular`), produces a `CoverSpace` on the same underlying set whose Cauchy families are those covers `C` such that for every point `x` there exist `U ∈ C` and an open `V` with `x ∈ V ⊆ U`. Implements the cover space axioms (`cauchy-cover`, `cauchy-top`, `cauchy-refine`, `cauchy-glue`, `isRegular`) using the open-neighborhood basis and regularity of `X`.
 
 #### Continuity
 
-- **`top-cover-unit`**: The identity map `X → TopCover Xr` is continuous (`ContMap`), witnessing that the cover space topology induced by `TopCover` is compatible with the original topology on the regular space `X`.
+- **`top-cover-unit`**: The identity function `\lam x => x` is a continuous map `ContMap X (TopCover Xr) ...` from the original topological space to its induced cover space, exhibiting `TopCover` as a canonical lift from topological spaces into cover spaces.

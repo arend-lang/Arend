@@ -1,7 +1,9 @@
 ### Set.SetHom
 
-A bare function between two sets, packaging domain, codomain, and the underlying map.
+Maps between bare sets, packaged as a coercible record.
 
-#### Class
+This module provides the most basic notion of a morphism between `BaseSet`s: a record bundling a domain, codomain, and an underlying function. The `\coerce` annotation on `func` allows `SetHom` instances to be applied directly as functions, making them ergonomic to use as the underlying carrier for richer algebraic homomorphism structures (group, ring, module homs, etc.) that extend `SetHom`.
 
-- **`SetHom`**: Class representing a function between `BaseSet`s, with fields `Dom : BaseSet`, `Cod : BaseSet`, and `func : Dom -> Cod`. Used as a minimal homomorphism structure when no algebraic compatibility is required.
+#### Records
+
+- **`SetHom`**: A homomorphism of bare sets, parameterized by domain `Dom : BaseSet` and codomain `Cod : BaseSet`. Contains a single field `func : Dom -> Cod` declared `\coerce`, so a `SetHom` value can be applied like a function. Serves as the common base record extended by typed morphisms throughout the algebra hierarchy.

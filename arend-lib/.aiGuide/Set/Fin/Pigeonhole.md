@@ -1,18 +1,29 @@
 ### Set.Fin.Pigeonhole
 
-The pigeonhole principle for finite sets: any function from a larger to a smaller cardinality has a collision.
+Pigeonhole principle for finite and bounded-pigeonhole sets.
 
-#### Pigeonhole Classes
+This module formalizes the pigeonhole principle as a class-based abstraction: a set is a `PigeonholeSet` when every `Nat`-indexed sequence in it has a repeated value, and a `BoundedPigeonholeSet` when the bound `finCard` makes any function out of `Fin (suc finCard)` collide. The bounded version implies the unbounded one by precomposing with the inclusion `Fin → Nat`. The module also derives that injective endofunctions on bounded-pigeonhole sets are equivalences, and provides the classical pigeonhole result for functions `Fin m → Fin n` with `n < m` via decidable search.
 
-- **`PigeonholeSet`**: Extends `BaseSet`. A set `E` such that any function `Nat -> E` has two distinct inputs mapping to the same value (i.e., `E` is "finite enough" to force collisions on `Nat`).
-- **`BoundedPigeonholeSet`**: Extends `PigeonholeSet`. Strengthens the principle to a concrete bound `finCard : Nat`: any function `Fin (suc finCard) -> E` has two distinct inputs with equal images. Derives the unbounded `pigeonhole` from `boundedPigeonhole` by restriction.
+#### Classes
 
-#### Transfer Lemmas
+- **`PigeonholeSet`**: Extends `BaseSet`. A set such that any sequence `f : Nat -> E` has two distinct indices mapping to the same value.
+- **`BoundedPigeonholeSet`**: Extends `PigeonholeSet` with a bound `finCard : Nat` such that `boundedPigeonhole` provides the collision for any `f : Fin (suc finCard) -> E`; the unbounded `pigeonhole` is derived by restriction.
 
-- **`pigeonhole-surj`**: Surjective image of a `BoundedPigeonholeSet` is again a `BoundedPigeonholeSet` with the same `finCard`. Used to transport the pigeonhole bound along surjections.
+#### Field/Method Names
 
-#### Finite Pigeonhole
+- **`pigeonhole`**: Field of `PigeonholeSet`: any `f : Nat -> E` has indices `i /= j` with `f i = f j`.
+- **`pigeonhole<`**: Strengthened form ensuring the witnesses satisfy `i < j`.
+- **`isEquiv`**: An injective self-map `f : E -> E` on a `PigeonholeSet` is an `Equiv`.
+- **`finCard`**: Field of `BoundedPigeonholeSet`: the cardinality bound (the actual size is `suc finCard`).
+- **`boundedPigeonhole`**: Field giving the collision witness for `f : Fin (suc finCard) -> E`.
+- **`boundedPigeonhole<`**: Ordered version of `boundedPigeonhole` with `i < j`.
 
-- **`pigeonhole-fin`**: The classical statement: for `f : Fin m -> Fin n` with `n < m`, there exist distinct `i j : Fin m` with `f i = f j`.
-- **`pigeonhole-fin.search-pair`**: For a function `f : Fin n -> A` into a decidable set, decides whether a colliding pair exists. Provides the constructive search underlying the pigeonhole proof.
-- **`pigeonhole-fin.aux`**: From non-injectivity (`Not (IsInj f)`) of `f : Fin n -> A` into a decidable set, extracts a witnessing pair `i /= j` with `f i = f j`.
+#### Top-Level Lemmas
+
+- **`pigeonhole-surj`**: A surjection `f : A -> B` from a `BoundedPigeonholeSet A` transports the pigeonhole structure to `B` with the same `finCard`.
+- **`pigeonhole-fin`**: Classical pigeonhole: any `f : Fin m -> Fin n` with `n < m` has two distinct inputs with the same image.
+
+#### Helpers (in `pigeonhole-fin.\where`)
+
+- **`search-pair`**: For `f : Fin n -> A` over a `DecSet`, decides whether a colliding pair `(i, j)` exists.
+- **`aux`**: If `f : Fin n -> A` is not injective (with `A` a `DecSet`), produces an explicit colliding pair.

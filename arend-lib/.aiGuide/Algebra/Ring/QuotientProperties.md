@@ -1,13 +1,15 @@
 ### Algebra.Ring.QuotientProperties
 
-Establishes the first isomorphism theorem for commutative rings: the quotient of a ring by the kernel of a homomorphism is isomorphic to its image.
+The first isomorphism theorem for commutative rings: every ring homomorphism factors as a quotient by its kernel followed by inclusion of its image.
 
-#### Kernel-Image Homomorphism
+This module constructs the canonical isomorphism `R / ker(f) ≃ im(f)` induced by a commutative ring homomorphism `f : R → S`. The construction descends `f` to the factor ring of its kernel and lands in the image subring, then proves this descent is both injective and surjective, yielding an isomorphism in `CRingCat`. This formalizes the standard universal-algebraic fact that homomorphisms decompose through quotients via their kernels.
 
-- **`ringKerImageHom`**: Given a ring homomorphism `f : RingHom R S` between commutative rings, constructs the induced ring homomorphism `FactorRing (KernelC f) -> Image f` sending each equivalence class `[x]` to `f x` in the image subring. Verifies preservation of `+`, `*`, and the unit by lifting through the quotient.
-  - **`isSurj`**: The induced map is surjective onto the image subring.
-  - **`isInj`**: The induced map is injective (well-defined modulo the kernel).
+#### Induced Homomorphism
 
-#### First Isomorphism Theorem
+- **`ringKerImageHom`**: For `f : RingHom R S` between commutative rings, the induced ring homomorphism `FactorRing (RingHom.KernelC f) → f.Image.IRing` sending the class of `a` to `(f a, inP (a, idp))`. Well-definedness on equivalence classes uses that `x - y ∈ ker f` implies `f x = f y`.
+  - **`ringKerImageHom.isSurj`**: The induced map is surjective onto the image subring.
+  - **`ringKerImageHom.isInj`**: The induced map is injective (its kernel is trivial in the factor ring).
 
-- **`ringKerImageHom-iso`**: The canonical map `ringKerImageHom f` is an isomorphism in the category `CRingCat` of commutative rings, witnessing `R / ker f ≅ im f`.
+#### Isomorphism
+
+- **`ringKerImageHom-iso`**: First isomorphism theorem: `ringKerImageHom f` is an isomorphism in `CRingCat` between `FactorRing (RingHom.KernelC f)` and `(RingHom.ImageC f).ICRing`, assembled from the surjectivity and injectivity lemmas above.

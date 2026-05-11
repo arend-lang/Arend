@@ -1,25 +1,29 @@
 ### Category.Displayed
 
-Displayed categories over a base category, providing fibered structure where objects and morphisms live "above" those of a base.
+Displayed categories over a base category, providing a framework for fibered/indexed structures.
 
-#### Displayed Precategory
+A displayed category over `C` consists of a family of "displayed objects" `DOb : C -> \hType` together with displayed morphisms `DHom f x y` lying over each base morphism `f : Hom a b`. Composition and identity laws are stated up to `transport` along the corresponding base equalities, since the displayed hom-set depends on the underlying morphism. The total category packages base and displayed data into ordinary `\Sigma`-types, and the projection to `C` is a functor; univalence is similarly displayed, ensuring identity types of displayed objects correspond to displayed isos over `idIso`.
 
-- **`DPrecat`**: Class of displayed precategories over a base `C : Precat`. Provides `DOb : C -> \hType` (objects displayed over base objects), `DHom` (morphisms displayed over base morphisms), displayed identity `id^`, displayed composition `∘^`, and the displayed versions of the category laws (`id^-left`, `id^-right`, `o^-assoc`) stated up to transport along the corresponding base equation.
+#### Displayed Precategories
+
+- **`DPrecat`**: Class of displayed precategories over a base `Precat C`. Carries `DOb : C -> \hType`, displayed homs `DHom f x y` indexed by `f : Hom a b`, displayed identity `id^`, displayed composition `∘^`, and the unitality and associativity laws expressed as transports along the corresponding base equalities (`id-left`, `id-right`, `o-assoc`).
+- **`o^`** / **`∘^`**: Displayed composition; given `g^ : DHom g y z` and `f^ : DHom f x y`, produces `DHom (g ∘ f) x z`.
+- **`id^-left`**, **`id^-right`**, **`o^-assoc`**: Coherence laws for displayed composition, modulo `transport` along the base category's laws.
 
 #### Displayed Isomorphisms
 
-- **`DIso`**: Class of displayed isomorphisms over a base iso `e : Iso`. Carries displayed objects `dom`, `cod`, a displayed map `f : DHom e.f dom cod`, a displayed inverse `inv^`, and the displayed inverse laws `inv^-left`, `inv^-right` (modulo transport along `e.hinv_f` / `e.f_hinv`).
-- **`idIso^`**: The identity displayed isomorphism over `idIso`, built from `id^ x` on both sides.
+- **`DIso`**: Record of a displayed isomorphism over a base `Iso e`, packaging a displayed morphism `f : DHom e.f dom cod`, its displayed inverse `inv^`, and the two roundtrip laws (`inv^-left`, `inv^-right`) stated via transport along `e.hinv_f` and `e.f_hinv`.
+- **`idIso^`**: The identity displayed iso over `idIso`, with both forward and inverse components given by `id^ x`.
 
-#### Total Category Construction
+#### Total Category
 
-- **`totalPrecat`**: The total precategory `\Sigma (a : C) (DOb a)` of a displayed precategory, with hom-sets pairs of base and displayed morphisms.
-- **`totalPrecat.proj`**: The projection functor `totalPrecat D -> C` sending `(a, x)` to `a` and forgetting the displayed component.
+- **`totalPrecat`**: Builds the Grothendieck-style total precategory of a displayed precategory `D`, with objects `\Sigma (a : C) (D a)` and morphisms pairing a base morphism with a displayed one.
+- **`totalPrecat.proj`**: The forgetful functor `totalPrecat D -> C` projecting onto the base component.
 
-#### Univalent Displayed Categories
+#### Displayed Univalence
 
-- **`DCat`**: Extends `DPrecat` with a displayed univalence axiom: for fixed base object `a`, the canonical map `idtoiso^ : x = y -> DIso idIso {x} {y}` is an equivalence.
-- **`DCat.idtoiso^`**: Sends an equality of displayed objects (over the same base) to a displayed iso over `idIso`, by path induction.
-- **`DCat.totalCat`**: Builds a univalent total category `Cat` from a `DCat` and a univalence proof for the base, by composing equivalences through `sigmaEquiv`, `eq-over`, and `total-iso`.
-- **`DCat.total-iso`**: Equivalence between pairs `(e : Iso, DIso e)` and isomorphisms in the total precategory `totalPrecat D`.
-- **`DCat.eq-over`**: For `p : a = b` in the base, an equivalence between dependent equalities `transport D p x = y` and displayed isos over `idtoiso p`; reduces to `univalence^` when `p = idp`.
+- **`DCat`**: Extends `DPrecat` with a displayed univalence axiom: for each base object `a` and displayed objects `x y : DOb a`, the canonical map `idtoiso^ : x = y -> DIso idIso {x} {y}` is an equivalence.
+- **`DCat.idtoiso^`**: The canonical map sending a path between displayed objects (over the same base) to a displayed iso over `idIso`, defined by path induction.
+- **`DCat.totalCat`**: Promotes the total precategory to a univalent `Cat`, given that the base precategory `C` is itself univalent.
+- **`DCat.total-iso`**: Equivalence between pairs `(e : Iso, DIso e)` and isos in the total category, used to assemble/decompose total isos.
+- **`DCat.eq-over`**: For a base path `p : a = b`, an equivalence between `transport D p x = y` and displayed isos `DIso (idtoiso p) {x} {y}` — the dependent generalization of univalence over a non-trivial base path.

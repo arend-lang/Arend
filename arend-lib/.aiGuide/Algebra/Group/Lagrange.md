@@ -2,11 +2,13 @@
 
 Lagrange's theorem: the order of a subgroup divides the order of the finite group containing it.
 
-#### Coset Decomposition
+This module formalizes the classical Lagrange theorem by exhibiting a bijection between the ambient group and the product of its coset space with the subgroup. The general version `lagrange-gen` produces a (truncated) equivalence `H.S ≃ Cosets × H` assuming choice on cosets, while `lagrange` specializes this to finite subgroups, packaging the result as a left-divisibility witness `LDiv` between cardinalities. Finiteness of the coset space is established separately via `Cosets-fin`, which uses decidability of the subgroup and a Kuratowski-finite cover of the carrier.
 
-- **`lagrange-gen`**: For a subgroup `H` with choice on its coset set, produces (truncated) an equivalence `H.S ≃ Σ (Cosets) (IGroup)`, decomposing the group as the disjoint union of cosets indexed by the underlying group structure of `H`.
+#### Main Theorems
 
-#### Lagrange's Theorem
+- **`lagrange-gen`**: Given a `SubGroup` `H` and a choice principle `Choice H.Cosets`, produces a truncated quasi-equivalence `H.S ≃ Σ H.Cosets H.IGroup` between the ambient group's carrier and the dependent sum of cosets paired with elements of `H`.
+- **`lagrange`**: For a `FinSubGroup` `H`, produces an `LDiv (finCard {H.IFinGroup}) (finCard {H.S})` witnessing that `|H|` divides `|G|`. The quotient is realized as the cardinality of the coset space.
 
-- **`lagrange`**: For a finite subgroup `H` of a finite group, constructs an `LDiv (finCard H.IFinGroup) (finCard H.S)`, witnessing that `|H|` divides `|G|`. The quotient is the cardinality of the coset set, obtained via `Cosets-fin`.
-- **`lagrange.Cosets-fin`**: For a decidable subgroup `H` of a Kuratowski-finite set, the coset set `H.Cosets` is finite. Used to enumerate cosets and obtain the index `[G : H]`.
+#### Auxiliary Constructions
+
+- **`lagrange.Cosets-fin`**: For a `DecSubGroup` `H` whose underlying carrier is Kuratowski-finite (`KFinSet H.S`), establishes that the coset set `H.Cosets` is a `FinSet`. Used to compute `finCard` of the coset space in `lagrange`.

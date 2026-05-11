@@ -1,18 +1,20 @@
 ### Topology.Partial
 
-Topology on the type of partial elements `Partial Y`, making partial values into a topological space and lifting continuous maps along partiality.
+Topological structure on partial elements of a space, where a partial value is either undefined or a defined point.
 
-#### Topology on Partial Elements
+This module endows `Partial Y` with a topology in which an open set must, at every point it contains, either be the entire set of partial values or arise from an open subset of `Y` together with the definedness witness. The `totalOpen` lemma shows the subset of defined values is open, while `makeOpen` lifts open sets of `Y` to open sets of `Partial Y`. The continuity characterization and the `plift`/`plift2` lemmas ensure that partiality interacts well with continuous maps, so that lifting functions to partial inputs preserves continuity.
 
-- **`PartialTopSpace`**: Instance making `Partial Y` a `TopSpace` for any `TopSpace Y`. A subset `U` of `Partial Y` is open iff for every `y ∈ U`, either `U` is the whole space, or there exists an open `U' ⊆ Y` containing the underlying value of `y` such that all defined elements coming from `U'` lie in `U`.
+#### Topology Instance
 
-#### Canonical Open Sets
+- **`PartialTopSpace`**: `TopSpace` instance on `Partial Y` for a topological space `Y`. A set `U` is open iff for every `y ∈ U`, either `U` is the entire space or there exist an open `U' ⊆ Y`, a definedness witness for `y` with `y` mapping into `U'`, such that every defined point coming from `U'` lies in `U`.
 
-- **`PartialTopSpace.totalOpen`**: The subset of defined partial elements `{s : Partial Y | isDefined s}` is open in `PartialTopSpace Y`.
-- **`PartialTopSpace.makeOpen`**: Lifts an open set `U ⊆ Y` to the open set `{s : Partial Y | ∃ p, U (s p)}` in `PartialTopSpace Y`.
+#### Open Sets on Partial Spaces
 
-#### Continuity Characterization and Lifting
+- **`PartialTopSpace.totalOpen`**: The set of defined partial elements `\lam s => isDefined {s}` is open in `PartialTopSpace Y`.
+- **`PartialTopSpace.makeOpen`**: Lifts an open set `U` of `Y` to the open set `\lam s => Σ (p : isDefined {s}) (U (s p))` in `PartialTopSpace Y`.
 
-- **`PartialTopSpace-char`**: A map `f : X -> Partial Y` is continuous iff its domain of definition `{x | isDefined (f x)}` is open in `X` and the restriction to this open subset (with the subspace topology) is a continuous map into `Y`.
-- **`plift-cont`**: The partial lift `plift f : Partial X -> Partial Y` of a continuous map `f : X -> Y` is continuous between the corresponding partial topological spaces.
-- **`plift2-cont`**: The binary partial lift of a continuous map `f : X ⨯ Y -> Z` yields a continuous map `PartialTopSpace X ⨯ PartialTopSpace Y -> PartialTopSpace Z`.
+#### Continuity Lemmas
+
+- **`PartialTopSpace-char`**: Characterizes continuity of `f : X -> Partial Y`: it is continuous iff the definedness predicate `\lam x => isDefined {f x}` is open in `X` and the restriction `\lam x => f x.1 x.2` on the total subspace is continuous into `Y`.
+- **`plift-cont`**: Continuity is preserved by `plift`: a continuous `f : X -> Y` lifts to a continuous map `PartialTopSpace X -> PartialTopSpace Y`.
+- **`plift2-cont`**: Two-argument version: a continuous `f : X ⨯ Y -> Z` lifts to a continuous map on `PartialTopSpace X ⨯ PartialTopSpace Y` into `PartialTopSpace Z` via `plift2`.

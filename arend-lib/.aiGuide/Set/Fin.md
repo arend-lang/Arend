@@ -1,67 +1,61 @@
 ### Set.Fin
 
-Finite sets as types equipped with a cardinality and a merely-existing equivalence with `Fin n`, together with constructions of common finite sets and search/decidability lemmas.
+Finite sets presented as types equipped with a bijection to a standard `Fin n`.
 
-#### Core Class
+This module defines the `FinSet` class, which augments `KFinSet` (Kuratowski-finite) with a chosen cardinality and a propositionally-truncated equivalence to `Fin finCard`. Because the cardinality is fixed and the equivalence merely exists, `FinSet` automatically yields decidable equality, choice, and apartness via transport from the standard finite ordinals. The module also provides search/decision procedures lifted from `Fin n`, face/skip combinatorics for working with finite ordinals, and concrete `FinSet` instances (`Empty`, unit, `Bool`, `Fin n`, decidable propositions, disjoint sums).
 
-- **`FinSet`**: Class of finite sets, extending `KFinSet`, `Choice`, and `DecSet`. Carries `finCard : Nat` and `finEq : TruncP (Equiv {Fin finCard} {E})`. Derives surjectivity, choice, decidable equality, and an apartness relation (`#`) given by `/=`.
-- **`FinSet.levelProp`**: `FinSet` structure on a `\Set` is a proposition — any two `FinSet` instances on the same set are equal (uses `FinCardBij`).
-- **`finSet`**: Identity coercion `{A : FinSet} => A`, used to introduce a `FinSet` instance into scope.
+#### Main Class
 
-#### Choice and Search Principles
+- **`FinSet`**: Class extending `KFinSet`, `Choice`, and `DecSet`. Adds `finEq : TruncP (Equiv (Fin finCard) E)` and derives `finSurj`, `choice`, `decideEq`, and the apartness structure (`#` defined as `/=`) from this equivalence. The class is a proposition over its underlying `\Set`.
+- **`finSet`**: Coercion `\func finSet {A : FinSet} => A` to recover the underlying type.
 
-- **`||-finiteAC`**: Finite version of choice for `||`: from `\Pi (i : Fin n) -> A || B i` extract `A || (\Pi i -> B i)`.
-- **`finiteAC`**: Finite axiom of choice: a family of inhabited propositions over `Fin n` has an inhabited product.
-- **`searchFin`**: Decidable search over `Fin n`: returns either a least witness with proof of minimality, or a proof that `A` holds nowhere.
-- **`searchFin-equiv`**: Decidable search transported across an equivalence `Fin n ≃ B`.
-- **`searchFin-unique`**: The least witness produced by `searchFin` is unique (`Contr`).
+#### Choice and Search
+
+- **`||-finiteAC`**: Disjunctive form of finite choice: from `\Pi (i : Fin n) -> A || B i` derive `A || (\Pi i -> B i)`.
+- **`finiteAC`**: Finite axiom of choice for `TruncP`-valued families over `Fin n`.
+- **`searchFin`**: Bounded search on `Fin n` returning the least witness of a decidable predicate, or a proof of universal negation.
+- **`searchFin-equiv`**: Lifts `searchFin` along an equivalence `Fin n ≃ B`.
+- **`searchFin-unique`**: The least-witness triple is contractible when a witness exists.
 
 #### Cardinality Lemmas
 
-- **`FinCardBij`**: `Fin n ≃ Fin m` implies `n = m`.
-- **`FinCardInj`**: An injection `Fin n -> Fin m` implies `n <= m`.
-- **`finCard_Equiv`**: An equivalence between two `FinSet`s yields equal cardinalities.
-- **`finCard_inj`**: An injection between two `FinSet`s yields `A.finCard <= B.finCard`.
+- **`FinCardBij`**: Equivalence `Fin n ≃ Fin m` forces `n = m`.
+- **`FinCardInj`**: Injection `Fin n -> Fin m` forces `n <= m`.
+- **`finCard_Equiv`**: Equivalent `FinSet`s have equal cardinality.
+- **`finCard_inj`**: Injection between `FinSet`s gives `<=` on cardinalities.
+- **`fromArray`**: Builds a `FinSet A l.len` from an array `l` whose entries are surjective and injective onto `A`.
 
-#### Operations on `Fin`
+#### `Fin n` Combinatorics
 
-- **`pred`**: Predecessor `Fin (suc (suc n)) -> Fin (suc n)`, sending `0` to `0`.
-- **`suc-isInj`**: `suc` is injective on `Fin n`.
-- **`skip`**: Removes `x0` from `Fin (suc n)`: given `x0 /= x`, returns the corresponding element of `Fin n`.
-- **`skip-isInj`**: `skip x0` is injective in its second argument.
-- **`skip_<` / **`<_skip`**: `skip x0` is order-preserving and order-reflecting.
-- **`skip-left`**, **`skip-right`**: Numerical characterization of `skip` for `x < x0` (yields `x`) and `x0 < x` (yields `pred' x`).
-- **`sface`**: Face map `Fin (suc n)` from `Fin n` skipping a given index `k` (the simplicial face inclusion).
-- **`sface-skip`**: `sface k i /= k` — the face map avoids its index.
-- **`sface-inj`**: `sface k` is injective.
+- **`pred`**: Predecessor on `Fin (suc (suc n))`, sending `0 ↦ 0`.
+- **`suc-isInj`**: Injectivity of `fsuc` on `Fin n`.
+- **`skip`**: `skip x0 x d : Fin n` removes the value `x0` from `Fin (suc n)`, given `x0 /= x`.
+- **`skip-isInj`**: `skip x0 _ _` is injective in its second argument.
+- **`sface`**: `sface k i : Fin (suc n)` — the `k`-th face inclusion `Fin n -> Fin (suc n)` skipping `k`.
 - **`sface_skip`**, **`skip_sface`**: `sface` and `skip` are mutually inverse on the appropriate domains.
+- **`sface-skip`**: `sface k i /= k`.
+- **`sface-inj`**: `sface k` is injective.
+- **`skip_<`**, **`<_skip`**: Order-preservation/reflection of `skip`.
+- **`skip-left`**, **`skip-right`**: Numerical formula for `skip` below/above the removed point.
 
-#### Inclusions Between `Fin` Types
+#### Inclusions and Raises
 
-- **`fin-inc_<=`**: Inclusion `Fin n -> Fin m` from a proof `n <= m`.
-- **`fin-inc`**: Includes `Fin n` into `Fin (n + m)` on the left.
-- **`fin-inc.char`**, **`fin-inc.char_nat`**: `fin-inc` preserves the underlying natural number.
-- **`fin-inc-right`**: Includes `Fin m` into `Fin (n + m)` on the right (via `fin-inc_<=`).
-- **`fin-inc-right.char_nat`**: Numerical characterization of `fin-inc-right`.
-- **`fin-raise`**: Shifts `Fin n` into `Fin (k + n)` by adding `k` to the index.
+- **`fin-inc_<=`**: Inclusion `Fin n -> Fin m` from `n <= m`.
+- **`fin-inc`**: Left inclusion `Fin n -> Fin (n + m)` preserving the underlying natural number (with lemma `char`/`char_nat`).
+- **`fin-inc-right`**: Right inclusion `Fin m -> Fin (n + m)`.
+- **`fin-raise`**: Shift `Fin n -> Fin (k + n)` by adding `k` on the left.
 
-#### Transport Lemmas for `Fin`
+#### Transport on `Fin`
 
-- **`transport_zero`**: Transport of `0 : Fin (suc n)` along `pmap suc p` is `0`.
-- **`transport_suc`**: Transport commutes with `suc` along `pmap suc p`.
+- **`transport_zero`**, **`transport_suc`**: Compute `transport Fin (pmap suc p)` on `0` and `suc x`.
 - **`fin_transport`**: Transport along `n = m` preserves the underlying natural number.
 
-#### Concrete `FinSet` Instances
+#### Instances
 
-- **`EmptyFin`**: `Empty` is finite with cardinality `0`.
-- **`UnitFin`**: `\Sigma` (the unit type) is finite with cardinality `1`.
-- **`BoolFin`**: `Bool` is finite with cardinality `2`; explicit equivalence `Fin 2 ≃ Bool` provided in `BoolFin.equiv`.
-- **`FinFin`**: `Fin n` is itself a `FinSet` with cardinality `n`.
-- **`DecFin`**: A decidable proposition `P` is a `FinSet` with cardinality `1` or `0` according to its decidability.
-- **`OrFin`**: The disjoint union `Or S T` of two `FinSet`s is finite with cardinality `S.finCard + T.finCard`. Helper `OrFin.aux` provides the explicit equivalence `Fin (n + m) ≃ Or (Fin n) (Fin m)`, with naturality lemmas `ret_inl-lem` and `ret_inr-lem`.
-- **`fromArray`**: Constructs a `FinSet A l.len` from an array `l : Array A` together with surjectivity and injectivity hypotheses.
-
-#### Decidability of Finite Products
-
-- **`FinDec`**: For a `FinSet A` and decidable family `B : A -> Decide`, the dependent product `\Pi (a : A) -> B a` is decidable.
-- **`FinDec.fin-dec`**: The underlying `Fin n` version: `Dec (\Pi (j : Fin n) -> B j)` from pointwise decidability.
+- **`EmptyFin`**: `FinSet Empty` with cardinality `0`.
+- **`UnitFin`**: `FinSet (\Sigma)` with cardinality `1`.
+- **`BoolFin`**: `FinSet Bool` with cardinality `2`; the equivalence `Fin 2 ≃ Bool` is given by `equiv`.
+- **`FinFin`**: `FinSet (Fin n)` with cardinality `n`.
+- **`DecFin`**: Turns a decidable proposition `P` into a `FinSet P` of cardinality `1` or `0`.
+- **`FinDec`**: Pointwise decidability over a `FinSet` lifts to decidability of `\Pi (a : A) -> B a` (with helper `fin-dec` for `Fin n`).
+- **`OrFin`**: `FinSet (Or S T)` with cardinality `S.finCard + T.finCard`; the underlying equivalence `aux : Fin (n + m) ≃ Or (Fin n) (Fin m)` is supported by `ret_inl-lem` and `ret_inr-lem`.

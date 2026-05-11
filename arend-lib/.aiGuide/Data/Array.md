@@ -1,204 +1,141 @@
 ### Data.Array
 
-This module provides operations, transformations, and lemmas for `Array` (length-indexed sequences).
+Operations and lemmas for finite arrays (length-indexed sequences).
 
-#### Array Construction and Destructors
+This module develops the basic theory of `Array A` (length-indexed vectors) and its dependent variant `DArray`. It provides constructors and destructors (`mkArray`, `tail`, `::`, `nil`), two flavors of concatenation (`++` for arrays of arbitrary length and `++'` when the right length is statically known), and a suite of structural operations: `map`, `filter`/`filterMap`, decidable `keep`/`remove`, `nub`, `insert`/`skip`/`replace`, `take`, `replicate`, and indexed access. The design centers on indexing by `Fin`, with many lemmas characterizing how operations behave on indices (e.g. `++_index-left`, `skip-index`, `insert-index`) so that array equalities can be reduced to pointwise equalities via `arrayExt`.
 
-- **`mkArray`**: Wraps a function `Fin n -> A` into an `Array A n`.
-- **`arrayExt`**: Extensionality for arrays: pointwise equality implies array equality.
-- **`tail`**: Returns the tail of an array (drops the first element); `nil` for empty.
-- **`taild`**: Tail for dependent arrays (`DArray`).
-- **`array-unext`**: Extracts pointwise equality from an array equality proof.
-- **`len=0`**: If `l.len = 0`, then `l = nil`.
-- **`unhead`**: From `a :: l = a' :: l'`, extracts `a = a'`.
-- **`untail`**: From `a :: l = a' :: l'`, extracts `l = l'`.
+#### Construction and Extensionality
 
-#### Mapping
+- **`mkArray`**: Build an `Array A n` from a function `Fin n -> A`.
+- **`arrayExt`**: Extensionality: pointwise equal arrays are equal.
+- **`array-unext`**: Inverse of extensionality, extracts pointwise equality from a path.
+- **`replicate`**: Constant array of length `n` with value `a`.
+- **`replicate_+`**: `replicate (n+m) a = replicate n a ++ replicate m a`.
+- **`singleAt`**: Array that takes value `value` at index `j` and `def` elsewhere; `alt` is an inductive alternative form, `char` proves they agree.
 
-- **`map`**: Applies `f : A -> B` to each element of an array.
+#### Head/Tail Destructors
+
+- **`tail`**: Drops the first element of an array.
+- **`taild`**: Tail for dependent arrays.
+- **`unhead`**: From `a :: l = a' :: l'` extract `a = a'` (uses helper `headDef`).
+- **`untail`**: From `a :: l = a' :: l'` extract `l = l'` (uses helper `tailDef`).
+- **`len=0`**: An array of length 0 equals `nil`.
+- **`cong_::`**: Congruence for `::`.
+
+#### Map
+
+- **`map`**: Apply `f : A -> B` pointwise.
 - **`map_::`**: `map f (a :: l) = f a :: map f l`.
-- **`cong_::`**: Congruence for `::`: `a = a'` and `l = l'` imply `a :: l = a' :: l'`.
+- **`map_++`**, **`map_++'`**, **`map2_++'`**: `map` distributes over both concatenations.
+- **`map_replace`**, **`map_insert`**, **`skip_map`**, **`fit_map`**: `map` commutes with `replace`, `insert`, `skip`, `fit`.
 
-#### Concatenation (`++'` and `++`)
+#### Concatenation
 
-- **`++'` (length-indexed)**: Concatenation preserving the sum of lengths in the type.
-  - **`++'_index-left`**: Indexing into the left part of `l ++' m`.
-  - **`++'_index-right`**: Indexing into the right part of `l ++' m`.
-  - **`split-index`**: Every index into `l ++' m` comes from either the left or right part.
-- **`++'-split`**: Any array of length `n + m` splits into a concatenation of two parts.
-- **`map_++'`**: `map f (l ++' l') = map f l ++' map f l'`.
-- **`map2_++'`**: Pointwise application distributes over `++'`.
-- **`++` (length-erased)**: Concatenation for arrays with erased lengths.
-  - **`index-left`** / **`++_index-left`**: Index embedding and indexing for the left part.
-  - **`index-right`** / **`++_index-right`**: Index embedding and indexing for the right part.
-  - **`index-left-nat`** / **`index-right-nat`**: The index embeddings preserve `Nat` values.
-  - **`index-left-inj`** / **`index-right-inj`**: The index embeddings are injective.
-  - **`index-left/=right`**: Left and right index embeddings produce distinct indices.
-  - **`split-index`**: Every index into `l ++ m` comes from either the left or right part.
-  - **`++-all`**: If a property holds for all elements of `l` and `l'`, it holds for `l ++ l'`.
-  - **`index-big`** / **`Big++-index`**: Indexing into `Big ++ nil ls` via a pair `(i, j)`.
-- **`++_++'`**: `l ++ l' = l ++' l'`.
-- **`map_++`**: `map f (l ++ l') = map f l ++ map f l'`.
+- **`++'`**: Concatenation when the right length is statically known; preserves `xs.len + n`.
+- **`++'_index-left`**, **`++'_index-right`**: Indexing `++'` via `fin-inc`/`fin-raise`.
+- **`++'.split-index`**: Decompose a `Fin (n+m)` as left or right.
+- **`++'-split`**: Any array of length `n+m` is a `++'` of its halves.
+- **`++`**: Concatenation of arrays of arbitrary length.
+- **`++_++'`**: The two concatenations agree.
+- **`++.index-left`**, **`++.index-right`**, **`++_index-left`**, **`++_index-right`**: Embed indices into the concatenation and characterize lookup.
+- **`++.index-left-nat`**, **`++.index-right-nat`**, **`++.index-left-inj`**, **`++.index-right-inj`**, **`++.index-left/=right`**: Numerical and injectivity properties of the index embeddings.
+- **`++.split-index`**: Every index of `l ++ m` comes from `l` or `m`.
+- **`++.++-all`**: Lift a pointwise predicate from `l` and `l'` to `l ++ l'`.
+- **`++.index-big`**, **`++.Big++-index`**: Indexing into a flattened array of arrays.
 - **`++_nil`**: `l ++ nil = l`.
-- **`len_++`**: `(l ++ l').len = l.len + l'.len`.
-- **`++-cancel-left`**: `l ++ l1 = l ++ l2` implies `l1 = l2`.
-- **`++-cancel-right`**: `l1 ++ l = l2 ++ l` implies `l1 = l2`.
-- **`++-assoc`**: `(xs ++ ys) ++ zs = xs ++ (ys ++ zs)`.
-- **`replicate_+`**: `replicate (n + m) a = replicate n a ++ replicate m a`.
+- **`++-assoc`**: Associativity.
+- **`++-cancel-left`**, **`++-cancel-right`**: Cancellation laws.
+- **`len_++`**: Length is additive.
+- **`Big`**: Generic right-fold over an array.
+- **`Big++_map`**, **`Big++-split`**: Interaction of flattening (`Big ++ nil`) with `map` and the singleton embedding.
 
-#### Index Type and Membership
+#### Membership
 
-- **`Index`**: `Index x l` is a pair of an index `i` and a proof `l i = x`.
-- **`index-left`** (for `Index`): Embeds `Index x l` into `Index x (l ++ l')`.
-- **`index-right`** (for `Index`): Embeds `Index x l'` into `Index x (l ++ l')`.
-- **`index-dec`**: Decidable membership: given a `DecSet`, decides whether `a` occurs in `l`.
+- **`Index`**: `\Sigma (i : Fin l.len) (l i = x)` — proof that `x` occurs in `l`.
+- **`index-left`**, **`index-right`**: Lift a membership witness across `++`.
+- **`index-dec`**: Decide membership in an array over a `DecSet`.
+- **`find`**: Search for the first index satisfying a decidable predicate, returning either the minimal witness with proof of minimality, or a proof of universal failure.
+- **`repeats-dec`**: Decide whether an array has a repeated element, returning either the colliding indices or `IsInj l`.
 
-#### Filtering
+#### Filtering and Removal
 
-- **`filter`**: Filters an array by a boolean predicate.
+- **`filter`**: Keep elements satisfying a `Bool`-valued predicate.
 - **`filter-sat`**: Every element of `filter p l` satisfies `p`.
-- **`filter_true`**: If all elements satisfy `p`, then `filter p l = l`.
-- **`filter_false`**: If no elements satisfy `p`, then `filter p l = nil`.
-- **`filter-index`**: If `p (l i) = true`, then `l i` appears in `filter p l`.
+- **`filter_true`**, **`filter_false`**: Filtering by an always-true/false predicate.
+- **`filter-index`**: A satisfying element appears in `filter p l`.
+- **`filterMap`**: Apply a partial map `A -> Maybe B` and collect the `just` results.
+- **`filterMap-index`**: A `just`-mapped element appears in the result.
+- **`keep`**: Decidable analogue of `filter` over a propositional predicate `P : A -> \Prop`.
+- **`keep.satisfies`**, **`keep.element`**, **`keep.preimage`**, **`keep.no-repeats`**: Pointwise witness, surjectivity, preimage, and injectivity-preservation properties of `keep`.
+- **`keep_++`**, **`keep-all`**, **`keep-none`**, **`keep-unique`**: Distributivity over `++` and degenerate cases.
+- **`remove`**: Dual of `keep` — drops elements satisfying `P`.
+- **`remove.no-element`**, **`remove.element`**, **`remove.preimage`**, **`remove.no-repeats`**, **`remove.equals`**: Analogous properties of `remove`, plus extensionality up to predicate equivalence.
+- **`remove-none`**, **`remove_map`**, **`remove_remove`**, **`remove-swap`**: Degenerate cases, commutation with `map`, and double-`remove` identities.
+- **`keep=remove`**, **`remove=keep`**: `keep` and `remove` are dual via `NotDec`.
+- **`keep_remove=keep`**: When `P` and `Q` are disjoint, `keep DP` is unaffected by `remove DQ`.
+- **`remove<=`**: `remove` does not increase length.
+- **`removeElem`**: Remove all occurrences of a specific element.
+- **`remove1`**: Remove (at most) one occurrence of `a` from a non-empty array, lowering the length by one.
+- **`remove1-surj`**, **`remove1/=`**, **`remove1-inj`**: Surjectivity onto the original indices, non-occurrence of `a`, and injectivity preservation.
 
-#### Big Fold
+#### Counting
 
-- **`Big`**: Right fold: `Big op b (a :: l) = op a (Big op b l)`.
-- **`Big++_map`**: `Big ++ nil (map (map f) ls) = map f (Big ++ nil ls)`.
-- **`Big++-split`**: `l = Big ++ nil (map (:: nil) l)`.
+- **`count`**: Count occurrences of `a` in an array over a `DecSet`.
+- **`count<=`**: `count l a <= l.len`.
+- **`count_++`**, **`count_Big++`**: Additivity over `++` and over flattening.
+- **`count-all`**, **`count-none`**: Saturated and empty counts.
+- **`keep_count`**: `keep (decideEq a) l = replicate (count l a) a`.
+- **`count_remove_yes`**, **`count_remove_no`**, **`count_remove`**: Effect of `remove` on counts.
 
-#### FilterMap
+#### Deduplication
 
-- **`filterMap`**: Maps with `A -> Maybe B`, keeping only `just` results.
-- **`filterMap-index`**: If `f (l j) = just b`, then `b` appears in `filterMap f l`.
+- **`nub`**: Remove duplicate elements (left-to-right) over a `DecSet`.
+- **`nub-isSurj`**: Every element of `l` appears in `nub l`; uses helper `nub.remove-isSurj`.
+- **`nub-preimage`**: Every entry of `nub l` comes from `l`.
+- **`nub-isInj`**: `nub l` is injective.
+- **`nub_id`**: `nub` is the identity on injective arrays.
 
-#### Indexed
+#### Insert / Skip / Replace
 
-- **`indexed`**: Pairs each element with its index (dependent array version).
-- **`indexed'`**: Pairs each element with its index (non-dependent array version).
-
-#### Replicate
-
-- **`replicate`**: Creates an array of `n` copies of `a`.
-
-#### Keep and Remove
-
-- **`keep`**: Keeps elements satisfying a decidable predicate `P`.
-  - **`satisfies`**: Every element of `keep D l` satisfies `P`.
-  - **`element`**: If `P (l j)`, then `l j` appears in `keep D l`.
-  - **`preimage`**: Every element of `keep D l` comes from `l`.
-  - **`no-repeats`**: If `l` is injective, so is `keep D l`.
-- **`keep_++`**: `keep D (l ++ l') = keep D l ++ keep D l'`.
-- **`keep-all`**: If all elements satisfy `P`, then `keep D l = l`.
-- **`keep-none`**: If no elements satisfy `P`, then `keep D l = nil`.
-- **`keep-unique`**: If exactly one element satisfies `P`, `keep` returns a singleton.
-- **`remove`**: Removes elements satisfying a decidable predicate `P`.
-  - **`no-element`**: No element of `remove D l` satisfies `P`.
-  - **`element`**: If `¬ P (l j)`, then `l j` appears in `remove D l`.
-  - **`preimage`**: Every element of `remove D l` comes from `l`.
-  - **`no-repeats`**: If `l` is injective, so is `remove D l`.
-  - **`equals`**: If `P` and `Q` are equivalent, `remove DP l = remove DQ l`.
-- **`remove-none`**: If no elements satisfy `P`, then `remove D l = l`.
-- **`remove_map`**: `remove D (map f l) = map f (remove (D ∘ f) l)`.
-- **`keep=remove`**: `keep D l = remove (NotDec ∘ D) l`.
-- **`remove=keep`**: `remove D l = keep (NotDec ∘ D) l`.
-- **`remove_remove`**: Double removal equals removal by disjunction.
-- **`remove-swap`**: Order of two removals can be swapped.
-- **`keep_remove=keep`**: `keep DP (remove DQ l) = keep DP l` when `P` and `Q` are disjoint.
-- **`remove<=`**: `(remove D l).len <= l.len`.
-- **`count_remove_yes`** / **`count_remove_no`** / **`count_remove`**: Count lemmas for `remove`.
-
-#### RemoveElem, Remove1, Nub
-
-- **`removeElem`**: Removes all occurrences of a specific element (via `DecSet`).
-- **`remove1`**: Removes the first occurrence of an element from a `suc n`-length array, returning an `n`-length array.
-- **`remove1-surj`**: Every index of `remove1 a l` maps to some index of `l`.
-- **`remove1/=`**: Elements of `remove1 a l` are not equal to `a` (when `l` is injective).
-- **`remove1-inj`**: `remove1 a l` is injective when `l` is injective.
-- **`nub`**: Removes duplicates from an array.
-- **`nub-isSurj`**: Every element of `l` appears in `nub l`.
-- **`nub-preimage`**: Every element of `nub l` comes from `l`.
-- **`nub-isInj`**: `nub l` is injective (no duplicates).
-- **`nub_id`**: If `l` is already injective, `nub l = l`.
-
-#### Insert
-
-- **`insert`**: Inserts element `a` at position `j` in an array.
-- **`insert_zro`**: `insert a l 0 = a :: l`.
-- **`insert-index`**: `insert a l j` at index `j` equals `a`.
+- **`insert`**: Insert `a` at position `j`, increasing length by one.
+- **`insert_zro`**, **`insert-index`**: Inserting at `0` and the value at the inserted index.
+- **`skip`**: Drop the element at position `k`, decreasing length by one.
+- **`skip.newIndex`**: Reindex a `Fin (suc n)` distinct from `k` into `Fin n`.
+- **`skip.newIndex_<`**: `newIndex` preserves order.
+- **`skip_++'`**, **`skipExt`**, **`skip_0`**: `skip` distributes over `++'`, is determined pointwise, and behaves trivially at index 0.
+- **`skip_replicate`**: `skip` on a `replicate` yields a shorter `replicate`.
+- **`skip-index`**: Looking up `skip l k` at `newIndex p` recovers `l j`.
+- **`replace`**: Update the element at index `i`.
+- **`replace-index`**, **`replace-notIndex`**: Lookup at the replaced and unaffected indices.
+- **`replace_insert`**: Replacing immediately after inserting.
+- **`skip_replace_=`**, **`skip_replace_/=`**: Skipping a replaced array (same vs. different index).
 - **`insert_skip`**: `insert a (skip l k) k = replace l k a`.
 - **`skip_insert_=`**: `skip (insert a l j) j = l`.
-- **`map_insert`**: `map f (insert a l j) = insert (f a) (map f l) j`.
 
-#### Skip (Element Removal by Index)
+#### Bool-Valued Quantification
 
-- **`skip`**: Removes the element at index `k` from a `suc n`-length array.
-  - **`newIndex`**: Reindexes `i` after skipping `j` (for `i ≠ j`).
-  - **`newIndex_<`**: `newIndex` preserves strict order.
-- **`skip_++'`**: `skip` distributes over `++'` on the left part.
-- **`skipExt`**: Extensionality: if arrays agree away from `k`, their skips agree.
-- **`skip_0`**: `skip l 0` at `j` equals `l (suc j)`.
-- **`skip_map`**: `map f (skip l k) = skip (map f l) k`.
-- **`skip_replicate`**: `skip (replicate (suc n) a) k = replicate n a`.
+- **`forall`**: Boolean conjunction of `p` over the array.
+- **`forall-char`**: Reflects `forall p l = true` into pointwise truth.
 
-#### Replace
+#### Length Adjustment
 
-- **`replace`**: Replaces the element at index `i` with `a`.
-- **`replace-index`**: `replace l i a` at `i` equals `a`.
-- **`replace-notIndex`**: `replace l i a` at `j ≠ i` equals `l j`.
-- **`replace_insert`**: `replace (insert a l i) i b = insert b l i`.
-- **`skip_replace_=`**: `skip (replace l i a) i = skip l i`.
-- **`skip_replace_/=`**: `skip (replace l j a) i = replace (skip l i) (newIndex ...) a` when `j ≠ i`.
-- **`skip-index`**: `skip l i` at `newIndex p` equals `l j`.
-- **`map_replace`**: `map f (replace l i a) = replace (map f l) i (f a)`.
+- **`fit`**: Coerce/pad an array to length `n`, using `a` as the default for missing positions.
+- **`fit_<`**, **`fit_<'`**, **`fit_>=`**: Behavior of `fit` below and at/above the original length.
+- **`take`**: Prefix of length `n` of an array of length at least `n`.
+- **`take-index`**: Lookup in `take` is lookup in the original via `fin-inc_<=`.
 
-#### Count
+#### Decidable (In)equality
 
-- **`count`**: Counts occurrences of `a` in `l` (requires `DecSet`).
-- **`count<=`**: `count l a <= l.len`.
-- **`count_++`**: `count (l ++ l') a = count l a + count l' a`.
-- **`count_Big++`**: Count distributes over `Big ++`.
-- **`count-all`**: If all elements equal `a`, then `count l a = l.len`.
-- **`count-none`**: If no elements equal `a`, then `count l a = 0`.
-- **`keep_count`**: `keep (decideEq a) l = replicate (count l a) a`.
+- **`array/=`**: From `l /= l'` over a `DecSet`, produce a witness index where they differ.
 
-#### Find and Decidability
+#### Indexing With Index
 
-- **`find`**: Finds the first element satisfying a decidable predicate, or proves none exists.
-- **`index-dec`**: Decidable membership for `DecSet`.
-- **`repeats-dec`**: Decides whether an array has repeated elements, returning either a witness pair or an injectivity proof.
-
-#### Forall
-
-- **`forall`**: Boolean "for all" check: `forall p l` returns `true` iff `p` holds for every element.
-- **`forall-char`**: If `forall p l = true`, then `p (l j) = true` for all `j`.
-
-#### Fit
-
-- **`fit`**: Adjusts an array to length `n`, padding with `a` if too short, truncating if too long.
-- **`fit_<`**: For indices within the original length, `fit` preserves values.
-- **`fit_>=`**: For indices beyond the original length, `fit` returns the padding value.
-- **`fit_<'`**: Variant of `fit_<` with different index direction.
-- **`fit_map`**: `map f (fit a l) = fit (f a) (map f l)`.
-
-#### Array Inequality
-
-- **`array/=`**: If two same-length arrays over a `DecSet` are unequal, there exists a differing index.
+- **`indexed`**: Pair each element with its index (dependent).
+- **`indexed'`**: Same, returning a non-dependent array of pairs.
 
 #### List Conversion
 
-- **`toList`**: Converts an `Array` to a `List`.
+- **`toList`**: Convert an `Array` to a `Data.List` `List`.
 - **`toList_length`**: `length (toList l) = l.len`.
-- **`fromList`**: Converts a `List` to an `Array`.
-- **`fromList_toList`**: `fromList (toList l) = l`.
-
-#### Take
-
-- **`take`**: Takes the first `n` elements of an array (requires `n <= l.len`).
-- **`take-index`**: `take n l p` at `j` equals `l (fin-inc_<= p j)`.
-
-#### SingleAt
-
-- **`singleAt`**: Creates an array that is `value` at index `j` and `def` everywhere else.
-  - **`alt`**: Alternative recursive definition of `singleAt`.
-  - **`char`**: `singleAt j value def = alt j value def`.
+- **`fromList`**: Convert a `List` to a length-indexed `Array`.
+- **`fromList_toList`**: Round-trip identity `fromList ∘ toList = id`.

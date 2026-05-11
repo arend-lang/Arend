@@ -1,56 +1,68 @@
 ### Order.LinearOrder
 
-Total and linear orders, including decidable, dense, and unbounded variants, with associated lattice structure.
+Total and linear orders, with constructive variants based on a strict order plus comparison and connectedness.
 
-#### Total Orders
+This module formalizes orders where any two elements are comparable. `TotalOrder` extends `DistributiveLattice` and derives meets/joins from a `totality` axiom by selecting one of the two compared elements. `LinearOrder` is the constructive presentation built on a strict order `<` with `<-comparison` (a strict counterpart of trichotomy that locates a third point) and `<-connectedness` (no element strictly differs in either direction implies equality); from these, the non-strict order is defined as `Not (a' < a)`. The decidable variant `LinearOrder.Dec` provides a full `Tri` trichotomy that yields decidable equality, lattice operations by case analysis, and constructive minimum/maximum search over arrays. Density and unboundedness refinements are layered on top.
 
-- **`TotalOrder`**: Class extending `DistributiveLattice` with a `totality` axiom asserting `x <= y || y <= x`. Meet and join are inherited from the lattice; distributivity is derived from totality.
-- **`TotalOrder.tmeet`**: Constructs the meet of `x, y` in any `Poset` given `x <= y || y <= x` — picks the smaller element.
-- **`TotalOrder.tjoin`**: Constructs the join of `x, y` in any `Poset` given `x <= y || y <= x` — picks the larger element.
+#### Total Order
 
-#### Linear Orders
+- **`TotalOrder`**: Class extending `DistributiveLattice` with `totality : x <= y || y <= x`. Default meet/join, lattice laws, and the distributivity inequality `ldistr>=` are derived from `totality` via the `tmeet`/`tjoin` helpers.
+- **`tmeet`**, **`tjoin`** (in `\where`): Build the meet/join of two elements from a proof `x <= y || y <= x` by selecting the smaller/larger one and proving the universal property.
+- **`meet-isMin`**: For any `x y`, `x ∧ y = x` or `x ∧ y = y`.
+- **`meet-prop`**: A property `P` closed under both `x` and `y` holds at `x ∧ y` (since meet picks one).
+- **`Big01_meet-isMin`**: For arrays, `Big ∧ x l` equals either some `l j` or the seed `x`.
+- **`Big_meet-isMin`**: For nonempty arrays, `Big_∧ l = l j` for some index `j`.
+- **`join-isMax`**, **`join-prop`**, **`Big01_join-isMax`**, **`Big_join-isMax`**: Dual statements for joins.
 
-- **`LinearOrder`**: Class extending `BiorderedSet` with `<-comparison` (for any `y`, `x < z` implies `x < y || y < z`) and `<-connectedness` (`Not (x < y) -> Not (y < x) -> x = y`). Derives `<=`, reflexivity, transitivity, antisymmetry, and the relationship between `<` and `<=`.
-- **`LinearOrder.With#`**: Class extending `LinearOrder` and `Set#`, defining apartness `x # y` as `x < y || y < x` and proving its irreflexivity, symmetry, comparison, and tightness.
-- **`LinearOrder.<=`**: Definition of `<=` from a `StrictPoset`: `Not (a' < a)`.
-- **`LinearOrder.<_<=`**: `a < a'` implies `a <= a'`.
-- **`LinearOrder.notLess`**: Contradiction from `a <= a'` and `a' < a`.
+#### Linear Order (Strict-Based)
 
-#### Decidable Linear Orders
+- **`LinearOrder`**: Class extending `BiorderedSet`, axiomatized by `<-comparison y : x < z -> x < y || y < z` and `<-connectedness : Not (x < y) -> Not (y < x) -> x = y`. The non-strict order, reflexivity, transitivity, antisymmetry, and the bidirectional `<-transitive-*` laws are all derived.
+- **`LinearOrder.op`**: The opposite linear order, swapping `<`.
+- **`<=` (in `\where`)**: Defined as `Not (a' < a)` for any strict poset.
+- **`<_<=`**: A strict inequality implies the non-strict one.
+- **`notLess`**: `a <= a'` and `a' < a` are contradictory.
 
-- **`LinearOrder.Dec`**: Class extending `LinearLattice`, `DecSet`, and `TotalOrder`, axiomatized by a `trichotomy` field returning `Tri x y` (less, equals, or greater). Derives `<-comparison`, `<-connectedness`, `totality`, and `decideEq`.
-- **`LinearOrder.<-dec`**: Decidability of `a < a'`.
-- **`LinearOrder.<=_/=`**: `a <= a'` and `a /= a'` imply `a < a'`.
-- **`LinearOrder.<=-dec`**: From `a <= a'` produces either `a < a'` or `a = a'`.
-- **`LinearOrder.dec<_<=`**: For any `a, a'` produces either `a < a'` or `a' <= a`.
-- **`LinearOrder.dec<_reduce`**, **`LinearOrder.dec<=_reduce`**: Reduction lemmas characterizing the output of `dec<_<=` on the two cases.
-- **`LinearOrder.trichotomy<_reduce`**, **`LinearOrder.trichotomy=_reduce`**, **`LinearOrder.trichotomy>_reduce`**: Reduction lemmas characterizing the output of `trichotomy` given a witness in each case.
-- **`LinearOrder.dec<=`**: Decidability of `a <= a'`.
+#### Tight Apartness Variant
 
-#### Lattice Operations under Linearity
+- **`LinearOrder.With#`**: Linear order with the apartness relation `x # y := x < y || y < x`, providing irreflexivity, symmetry, comparison, and tightness, so it extends `Set#`.
 
-- **`LinearOrder.meet/=left`**: If `a ∧ b /= a` then `a ∧ b = b`.
-- **`LinearOrder.meet/=right`**: If `a ∧ b /= b` then `a ∧ b = a`.
-- **`LinearOrder.join/=left`**: If `a /= a ∨ b` then `a ∨ b = b`.
-- **`LinearOrder.join/=right`**: If `b /= a ∨ b` then `a ∨ b = a`.
-- **`LinearLattice`**: Class extending `LinearOrder` and `BiorderedLattice`, deriving the strict universal properties `<_meet-univ` and `<_join-univ` from comparison.
+#### Decidable Linear Order
 
-#### Min/Max on Arrays
+- **`LinearOrder.Dec`**: Class extending `LinearLattice`, `DecSet`, and `TotalOrder`, axiomatized by trichotomy `Tri x y`. Derives `<-comparison`, `<-connectedness`, `totality`, `decideEq`, and lattice operations by case-splitting on `trichotomy`.
+- **`LinearOrder.Dec.op`**: Opposite decidable linear order.
+- **`<-dec`**: Decidability of `a < a'`.
+- **`<=_/=`**: From `a <= a'` and `a /= a'`, derive `a < a'`.
+- **`<=-dec`**: A non-strict `a <= a'` resolves to either `a < a'` or `a = a'`.
+- **`dec<_<=`**: Decides between `a < a'` and `a' <= a`.
+- **`dec<_reduce`**, **`dec<=_reduce`**: Compute `dec<_<=` to its expected branch given the witness.
+- **`dec<=`**: Decidability of `a <= a'`.
+- **`trichotomy<_reduce`**, **`trichotomy=_reduce`**, **`trichotomy>_reduce`**: Force `trichotomy` to the appropriate constructor when the relevant proof is in hand.
 
-- **`LinearOrder.findMin`**: For a non-empty array `l : Array A (suc n)` over a `Dec` linear order, returns an index `j` such that `Big_∧ l = l j` (the position of the minimum).
-- **`LinearOrder.findMax`**: For a non-empty array, returns the index of the maximum, with `Big_∨ l = l j`.
+#### Lattice Interaction Lemmas
 
-#### Monotone Functions
+- **`meet/=left`**: If `a ∧ b /= a`, then `a ∧ b = b`.
+- **`meet/=right`**: If `a ∧ b /= b`, then `a ∧ b = a`.
+- **`join/=left`**: If `a /= a ∨ b`, then `a ∨ b = b`.
+- **`join/=right`**: If `b /= a ∨ b`, then `a ∨ b = a`.
 
-- **`monotone-injective`**: A strictly monotone function `f : X -> Y` from a `LinearOrder` to a `StrictPoset` is injective.
+#### Min/Max Search
 
-#### Dense and Unbounded Orders
+- **`findMin`**: For a nonempty array over a `Dec` linear order, returns an index `j` with `Big_∧ l = l j`.
+- **`findMax`**: Dual: returns an index witnessing `Big_∨ l = l j`.
 
-- **`DenseLinearOrder`**: Class extending `LinearOrder` with `isDense`: between any `x < z` there exists `y` with `x < y < z`.
-- **`DenseLinearOrder.Dec`**: Class extending `DenseLinearOrder` and `LinearOrder.Dec` — decidable dense linear orders.
-- **`UnboundedDenseLinearOrder`**: Class extending `DenseLinearOrder` with `withoutUpperBound` and `withoutLowerBound`, asserting the absence of maximal and minimal elements.
-- **`UnboundedDenseLinearOrder.Dec`**: Class extending `UnboundedDenseLinearOrder` and `DenseLinearOrder.Dec` — decidable unbounded dense linear orders (e.g. the rationals).
+#### Monotonicity
 
-#### Trichotomy
+- **`monotone-injective`**: A strictly monotone map from a linear order to a strict poset is injective.
 
-- **`Tri`**: Three-way comparison data type over a `StrictPoset`, with constructors `less (a < a')`, `equals (a = a')`, `greater (a > a')`. Proven to be a proposition via `levelProp`.
+#### Linear Lattice
+
+- **`LinearLattice`**: Class extending `LinearOrder` and `BiorderedLattice`, supplying `<_meet-univ` and `<_join-univ` (strict universal properties of meet/join) by case analysis on `<-comparison`.
+
+#### Density and Unboundedness
+
+- **`DenseLinearOrder`**: Linear order with `isDense : x < z -> ∃ y, x < y < z`. Has a decidable subclass `DenseLinearOrder.Dec`.
+- **`UnboundedDenseLinearOrder`**: Adds `withoutUpperBound` and `withoutLowerBound`. Has a decidable subclass `UnboundedDenseLinearOrder.Dec`.
+
+#### Trichotomy Datatype
+
+- **`Tri`**: Three-way comparison data `less (a < a') | equals (a = a') | greater (a > a')`, with a `\use \level` instance making it a proposition (since the three cases are mutually exclusive in a strict poset).

@@ -1,16 +1,16 @@
-### Combinatorics Directory Overview
+### Combinatorics
 
-Combinatorial functions, counting arguments, and bijective proofs over finite types.
+This directory formalizes elementary combinatorial structures over natural numbers and finite sets: factorials, binomial coefficients, combinations, and (weak) compositions, together with their counting equivalences.
 
-#### Basic Combinatorial Functions
+#### Basic Functions
 
-- **`Factorial.md`**: Factorial function (`fac`) with positivity lemma.
-- **`Binom.md`**: Binomial coefficients (`binom`) with Pascal's rule, boundary cases, and the binomial theorem for commutative rings.
+- **`Factorial.md`** — The factorial function on `Nat` with its strict positivity lemma.
+- **`Binom.md`** — Binomial coefficients defined by Pascal's recurrence, with boundary lemmas and the binomial theorem `(x + y)^n` in a commutative ring.
 
 #### Combinations
 
-- **`Combinations.md`**: Combinations of `k` elements from `n` realized as strictly monotone maps `Fin k → Fin n`. Includes finiteness instances for arrays and combinations, a Pascal splitting equivalence (`Combinations (suc n) (suc k) ≃ Or (Combinations n k) (Combinations n (suc k))`), and the main counting result `Fin (binom n k) ≃ Combinations n k`.
+- **`Combinations.md`** — `k`-combinations of `Fin n` as strictly monotone maps `Fin k -> Fin n`, with a `FinSet` instance and the counting equivalence `Fin (binom n k) ≃ Combinations n k` via Pascal splitting.
 
 #### Compositions
 
-- **`Compositions.md`**: Compositions and weak compositions of `n` into `k` parts. Provides finiteness instances, partial-sum machinery, and a stars-and-bars bijection `WeakCompositions n (suc k) ≃ Combinations (n + k) k`, yielding `weakCompositions-binom : finCard (WeakCompositions n (suc k)) = binom (n + k) k`.
+- **`Compositions.md`** — Compositions and weak compositions of `n` into `k` parts as arrays with sum and positivity constraints, with `FinSet` instances and the partial-sum bijection to combinations giving the "stars and bars" count `binom (n + k) k`.

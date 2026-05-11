@@ -1,37 +1,42 @@
 ### Topology.NormedAbGroup.Real
 
-Normed abelian group structures on the rationals and reals, plus tools for lifting cover maps from rationals to reals via density.
+Normed abelian group structures on the rationals and reals, with tools for lifting maps from rationals to reals via density.
+
+The real numbers are presented as the strong completion of the rational normed group, packaging both `RatNormed` and `RealNormed` as normed abelian groups using absolute value as norm. The embedding `rat_real : Q → R` is shown to be a dense isometric cover embedding, which is the key fact powering the lifting machinery: any uniformly continuous map out of the rationals (or pairs of rationals) extends uniquely to the reals. The module also provides characterization lemmas that translate `<=<` (rather-below) relations on the reals into rational interval data, making it possible to reason about lifted functions through their rational approximations.
 
 #### Normed Group Instances
 
-- **`RatNormed`**: `NormedAbGroup` instance on `RatField` with norm given by absolute value.
-- **`RealNormed`**: `CompleteNormedAbGroup` instance on the reals, extending `RealNormedAbGroup` with strong completeness.
-- **`RealNormed.RealNormedAbGroup`**: The underlying `NormedAbGroup` on `RealAbGroup` with norm `abs`.
+- **`RatNormed`**: Normed abelian group instance for `RatField` with norm `abs`.
+- **`RealNormed`**: Complete normed abelian group on `Real` (extends `CompleteNormedAbGroup`); strong completeness witnessed by `fromCF` reconstructing a real from a strongly regular Cauchy filter on `RatNormed`.
+- **`RealNormed.RealNormedAbGroup`**: The underlying `NormedAbGroup` on `RealAbGroup` with norm `abs`, before adding completeness.
+- **`RealNormed.fromCF`**: Builds a `Real` from a `StronglyRegularCauchyFilter RatNormed` by defining its lower/upper Dedekind cuts via rational open balls in the filter.
 
 #### Rational-to-Real Embedding
 
-- **`rat_real`**: The `NormedIsometricMap` from `RatNormed` to `RealNormedAbGroup` given by `Real.fromRat`, embedding rationals isometrically into the reals.
-- **`rat_real.dense`**: The rational embedding has dense image in the reals.
-- **`rat_real.dense-coverEmbedding`**: The rational embedding is a dense cover embedding, enabling lifting of cover maps along it.
-
-#### Cauchy Completion
-
-- **`RealNormed.fromCF`**: Constructs a `Real` from a `StronglyRegularCauchyFilter` on `RatNormed`, defining its lower/upper rational cuts via small open balls in the filter; witnesses strong completeness of the reals.
+- **`rat_real`**: The canonical embedding `Real.fromRat` packaged as a `NormedIsometricMap RatNormed RealNormedAbGroup`.
+- **`rat_real.dense`**: The image of `rat_real` is dense in the reals.
+- **`rat_real.dense-coverEmbedding`**: `rat_real` is a dense embedding of cover spaces (`CoverMap.IsDenseEmbedding`), enabling unique extension of cover maps from `RatNormed` to `RealNormed`.
 
 #### Open Rational Intervals
 
-- **`open-rat-int`**: The open interval `(a, b)` as a `Set Real`, defined by `x.L a` (lower cut contains `a`) and `x.U b` (upper cut contains `b`).
-- **`<=<-open-int`**: If `single x <=< U` (the singleton is rather-below `U`), then `U` contains an open rational interval around `x`.
+- **`open-rat-int`**: For rationals `a b`, the set `{x : Real | x.L a ∧ x.U b}` — the open interval `(a, b)` as a subset of `Real`.
 
-#### Lifting Cover Maps from Rationals to Reals
+#### Density-Based Lifting Characterization
 
-- **`dense-lift-real-char`**: Characterizes when a lifted cover map `cauchy-lift f fd g y` lands in an open rational interval `(a, b)`, in terms of preimages of slightly larger intervals along the dense embedding.
-- **`dense-lift-real-char.makeRealCover`**: For any `eps > 0`, the family of open rational intervals of width `eps` forms a Cauchy cover of the reals.
-- **`dense-lift-real-char.<=<_open-rat-int`**: Strict containment of open rational intervals: `(a', b') <=< (a, b)` whenever `a < a'` and `b' < b`.
-- **`dense-lift-real-char.point_<=<`**: A point `x` with `x.L a` and `x.U b` satisfies `single x <=< open-rat-int a b`.
-- **`real-lift2`**: Lifts a cover map `RatNormed ⨯ RatNormed -> X` (with `X` complete) to `RealNormed ⨯ RealNormed -> X` via density of rationals in reals.
-- **`real-lift2-char`**: Characterizes the value of `real-lift2 f (x, y)` lying in an open rational interval, in terms of rational approximations of `x` and `y` and the behavior of `f` on rational pairs.
+- **`dense-lift-real-char`**: Characterizes when `cauchy-lift f fd g y` lies in `open-rat-int a b`: there must exist a slightly tighter interval `(a', b')` and a neighborhood `V` of `y` whose `f`-preimage maps into `g^{-1}(a', b')`. Used to compute values of lifted maps to the reals.
+- **`dense-lift-real-char.makeRealCover`**: For `eps > 0`, the family `{open-rat-int a (a+eps) | a : Rat}` is a Cauchy cover of `RealNormed`.
+- **`dense-lift-real-char.<=<_open-rat-int`**: Strict shrinking of rational intervals gives a rather-below relation: `(a', b') <=< (a, b)` when `a < a'` and `b' < b`.
+- **`dense-lift-real-char.point_<=<`**: A real `x` with `x.L a` and `x.U b` satisfies `single x <=< open-rat-int a b`.
 
-#### Real Distance
+#### Neighborhoods of Reals
 
-- **`real-dist>0`**: If the lattice distance `ldist x y` between two reals is positive, then `x < y` or `y < x` (positive distance implies strict order in some direction).
+- **`<=<-open-int`**: Any neighborhood `U` of a point `x : Real` (in the `<=<` sense) contains an open rational interval around `x`: there exist `a, b` with `x.L a`, `x.U b` such that every `y` strictly between `a` and `b` lies in `U`.
+
+#### Binary Lifting on Reals
+
+- **`real-lift2`**: Lifts a cover map `f : RatNormed × RatNormed → X` (for any `CompleteCoverSpace` `X`) to a cover map `RealNormed × RealNormed → X`, using density of `rat_real` on each factor.
+- **`real-lift2-char`**: Characterizes when `real-lift2 f (x, y)` lands in `open-rat-int a b` in terms of rational intervals around `x` and `y` and the behavior of `f` on those rational rectangles.
+
+#### Real Distance and Order
+
+- **`real-dist>0`**: If `ldist x y > 0` then `x < y` or `y < x` — strict positivity of the distance forces a strict order between two reals.

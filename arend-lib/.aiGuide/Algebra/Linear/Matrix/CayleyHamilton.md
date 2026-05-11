@@ -1,12 +1,14 @@
 ### Algebra.Linear.Matrix.CayleyHamilton
 
-The Cayley-Hamilton theorem: every square matrix over a commutative ring satisfies its own characteristic polynomial.
+The Cayley-Hamilton theorem: every square matrix satisfies its own characteristic polynomial.
+
+This module formalizes the classical theorem that for a matrix `A` over a commutative ring, evaluating the characteristic polynomial `charPoly A` at `A` itself yields the zero matrix. The proof bridges the matrix algebra `MatrixAlgebra R n` with the module-theoretic view of matrices as linear maps on `ArrayFinModule n`, using `polyMapEval` to interpret polynomials over `R` as polynomials over the matrix algebra. The key reduction translates polynomial-in-matrix evaluation to action on standard basis vectors via `polyModule.poly_func`, allowing the result to follow from properties of the linear map associated with `A`.
 
 #### Main Theorem
 
-- **`cayley-hamilton`**: For a square matrix `A : Matrix R n n` over a commutative ring `R`, evaluating the characteristic polynomial `charPoly A` at `A` (via the coefficient embedding into the matrix algebra) yields the zero matrix: `polyMapEval (coefHom) (charPoly A) A = 0`.
+- **`cayley-hamilton`**: For a commutative ring `R` and an `n × n` matrix `A`, `polyMapEval (CAlgebra.coefHom {MatrixAlgebra R n}) (charPoly A) A = 0`. States that `A` annihilates its own characteristic polynomial when the polynomial is lifted to the matrix algebra and evaluated at `A`.
 
 #### Supporting Constructions
 
-- **`toLinearMap`**: Converts a matrix `A : Matrix R n m` into a `LinearMap` between free finite modules `ArrayFinModule n -> ArrayFinModule m`, acting by the standard matrix-vector product `u |-> \j. \sum_i A i j * u i`. Includes proofs of additivity (`func-+`) and scalar compatibility (`func-*c`).
-- **`poly_func_matrix`**: Compatibility lemma relating polynomial evaluation in the matrix algebra to polynomial evaluation as a module endomorphism: the `(i,j)` entry of `polyMapEval (coefHom) p A` equals the `j`-th coordinate of `polyModule.poly_func p (toLinearMap A)` applied to the `i`-th standard basis vector. Bridges the matrix-algebra and linear-map formulations needed in the Cayley-Hamilton proof.
+- **`toLinearMap`**: Converts a matrix `A : Matrix R n m` into a `LinearMap (ArrayFinModule n) (ArrayFinModule m)` by the standard rule `u ↦ (j ↦ ∑ᵢ A i j * u i)`. Provides the bridge between matrix algebra and the module-theoretic formulation needed for the proof.
+- **`poly_func_matrix`**: Equates the `(i, j)` entry of `polyMapEval (CAlgebra.coefHom) p A` with `polyModule.poly_func p (toLinearMap A) (MatrixRing.ide i) j`, reducing polynomial evaluation on a matrix to polynomial action on the `i`-th standard basis vector via the associated linear map. Key technical lemma reducing the matrix-polynomial identity to a module-level statement.

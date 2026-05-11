@@ -1,35 +1,37 @@
 ### Logic.Unique
 
-Propositionality, contractibility, and set-level truncation.
+Propositions, sets, and contractible types — the basic h-levels of homotopy type theory.
 
-#### isProp
+This module formalizes the fundamental truncation levels: `isProp` (any two elements are equal), `isSet` (any two parallel paths are equal), and `Contr` (a center together with a contraction to every point). It establishes that being a proposition is itself a proposition, that propositions are sets, and that propositions and contractible types are equivalent (given a witness). These predicates are the foundation for working with mere propositions, set-level mathematics, and uniqueness proofs throughout the library.
 
-- **`isProp`**: `\Pi (a a' : A) -> a = a'` — `A` has at most one element.
-  - **`=>isSet`**: `isProp A` implies `isSet A` (propositions are sets).
-  - **`levelProp`**: `isProp A` is itself a proposition.
+#### Propositions
 
-#### isSet
+- **`isProp`**: A type `A` is a proposition iff `\Pi (a a' : A) -> a = a'`.
+- **`isProp.=>isSet`**: Every proposition is a set; produced via `\use \sfunc` so propositions automatically have decidable path equality at the next level.
+- **`isProp.levelProp`**: `isProp A` is itself a proposition (registered as a level instance).
+- **`pi-isProp`**: A dependent product `\Pi (a : A) -> B a` is a proposition whenever each `B a` is.
 
-- **`isSet`**: `\Pi (a a' : A) (p q : a = a') -> p = q` — `A` has unique identity proofs.
-  - **`levelProp`**: `isSet A` is a proposition.
+#### Sets
 
-#### Contr
+- **`isSet`**: A type `A` is a set iff any two parallel paths are equal: `\Pi (a a' : A) (p q : a = a') -> p = q`.
+- **`isSet.levelProp`**: `isSet A` is a proposition (registered as a level instance).
 
-- **`Contr`**: Class with `A`, `center : A`, `contraction : \Pi (a') -> center = a'`.
-  - **`make`**: Constructor from data.
-  - **`levelProp`**: `Contr A` is a proposition.
+#### Contractible Types
 
-#### Conversions
+- **`Contr`**: Class of contractible types — packages `center : A` with `contraction : \Pi (a' : A) -> center = a'`.
+- **`Contr.make`**: Convenience constructor building a `Contr` from a center and contraction function.
+- **`Contr.levelProp`**: Being contractible is itself a proposition.
+- **`contr-equiv`**: Any function between contractible types is an equivalence.
 
-- **`contr-equiv`**: Two contractible types have an equivalence between them.
-- **`isContr=>isProp`**: Contractible implies proposition.
-- **`isContr'=>isProp`**: `(A -> Contr A) -> isProp A`.
-- **`isProp=>isContr`**: Proposition with an element is contractible.
-- **`isProp'=>isContr`**: Proposition with truncated element is contractible.
-- **`isProp=>PathContr`**: In a proposition, path types are contractible.
+#### Conversions Between Levels
 
-#### Pi and Sigma
+- **`isContr=>isProp`**: A contractible type is a proposition (paths via the center: `inv (c a) *> c a'`).
+- **`isContr'=>isProp`**: If `A -> Contr A`, then `A` is a proposition.
+- **`isProp=>isContr`**: A proposition with a witness is contractible.
+- **`isProp'=>isContr`**: A proposition with a propositionally-truncated witness (`TruncP A`) is contractible.
+- **`isProp=>PathContr`**: Path spaces in a proposition are contractible: `Contr (a = a')`.
 
-- **`pi-isProp`**: Dependent product of propositions is a proposition.
-- **`pi-Contr`**: Dependent product of contractible types is contractible.
-- **`sigma-Contr`**: Sigma of contractible base and fibers is contractible.
+#### Closure Properties
+
+- **`pi-Contr`**: Dependent products of contractible types are contractible.
+- **`sigma-Contr`**: A `\Sigma`-type is contractible when the base and each fiber are contractible.

@@ -1,58 +1,60 @@
+Now I have enough context to write the README. The example provided actually matches the structure I need to produce.
+
 ### arend-lib AI Guide Overview
 
-This guide documents the Arend standard library (`arend-lib`), a formalized mathematics library built on homotopy type theory. Each top-level module is described below; directories have their own `README.md` with detailed per-file descriptions.
+This guide documents the Arend standard library (`arend-lib`), a formalized mathematics library built on homotopy type theory.
 
 #### Foundation
 
-- **`Paths.md`**: Core path (identity type) operations and lemmas.
-- **`Equiv.md`**: Core equivalence types — sections, retractions, equivalences, embeddings, surjections.
-- **`Equiv/`**: Theory of type equivalences in HoTT style — univalence, sigma/pi equivalences, and closure properties.
-- **`Function.md`**: Basic function combinators and properties.
-- **`Function/`**: Utilities for working with functions.
-- **`Logic.md`**: Core logical types and propositions.
-- **`Logic/`**: Classical logic principles, propositional utilities, first-order logic, and rewriting theory.
-- **`Operations.md`**: Type-level product and coproduct operations.
+- **`Paths.md`**: Core path (identity type) operations, transport, J-eliminators, and equational reasoning.
+- **`Equiv.md`**: Equivalence types — sections, retractions, equivalences, embeddings, and surjections.
+- **`Equiv/`**: Theory of type equivalences in HoTT style — fiber characterizations, half-adjoint coherence, and univalence.
+- **`Function.md`**: Identity, composition, injectivity, surjectivity, and images.
+- **`Function/`**: Iteration of endofunctions and related utilities.
+- **`Logic.md`**: The empty type, propositional truncation, disjunction, propositional extensionality, and classical hooks.
+- **`Logic/`**: Classical axioms, h-levels, TFAE infrastructure, first-order logic, and rewriting systems.
+- **`Operations.md`**: Type-class abstractions for binary product (`⨯`) and coproduct (`⨿`) operations.
 
 #### Data Types
 
-- **`Data/`**: Core data types (`Bool`, `Maybe`, `Or`, `Sigma`, `Fin`), collections (`Array`, `List`, `SubList`), and sequential colimits.
+- **`Data/`**: Booleans, optionals, sums, sigma pairs, finite indices, lists, length-indexed arrays, sublists, and sequential colimits.
 
 #### Sets and Relations
 
-- **`Set.md`**: Decidability, set-level structures, and decidable sets.
-- **`Set/`**: Set-level types, finiteness notions, filters, subsets, and categorical structure for sets.
-- **`Relation/`**: Theory of relations, equivalence relations, quotients, and closures.
+- **`Set.md`**: Decidable propositions, base sets, subsets, separated sets, apartness, decidable equality, and set truncation.
+- **`Set/`**: Hedberg's theorem, set-category structure, subsets and powerset locales, finite/countable sets, filters, and partial elements.
+- **`Relation/`**: `\Prop`-valued binary relations, closures, equivalence relations, and set-quotients.
 
 #### Order Theory
 
-- **`Order/`**: Preorders, partial orders, strict orders, linear orders, lattices, and their interactions.
+- **`Order/`**: Preorders, partial/strict/linear orders, lattices, Heyting and Boolean algebras, lexicographic orders, directed sets, and the categorical view.
 
 #### Algebra
 
-- **`Algebra/`**: Pointed sets, monoids, groups, semirings, rings, domains, fields, modules, linear algebra, ordered structures, and equation solvers.
+- **`Algebra/`**: Pointed sets, monoids, groups, semirings, rings, domains, fields, modules, linear algebra, ordered structures, colimits, and equation solvers.
 
 #### Arithmetic
 
-- **`Arith/`**: Formalized arithmetic for standard number types (`Nat`, `Int`, `Rat`, `Real`) and related algebraic structures.
+- **`Arith/`**: Formalized arithmetic for `Bool`, `Nat`, `Int`, `Rat`, `Real`, `Complex`, `Fin`, primes, and exponentials.
 
 #### Category Theory
 
-- **`Category.md`**: Core category theory definitions.
-- **`Category/`**: Precategories, functors, natural transformations, limits, adjunctions, and topos theory.
+- **`Category.md`**: Precategories, univalent categories, morphism classes, the structure identity principle, and free categories on graphs.
+- **`Category/`**: Functors, natural transformations, limits, adjunctions, Kan extensions, comma/slice categories, toposes, and additive categories.
 
 #### Homotopy Theory
 
-- **`Homotopy/`**: Homotopy type theory — h-levels, truncations, loop spaces, suspensions, spheres, pushouts, fibrations, the Hopf construction, Eilenberg–MacLane spaces, the torus, localization (modalities, Blakers–Massey, accessible/separated/connected types), and pointed types.
+- **`Homotopy/`**: Pointed types, h-levels, truncations, fibers, suspensions, spheres, joins, loop spaces, pushouts, the Hopf fibration, Eilenberg–MacLane spaces, the torus, and modal/localization theory.
 
 #### Topology and Analysis
 
-- **`Topology/`**: Point-free and point-set topology, uniform and metric structures, normed algebraic structures (Banach spaces, C*-algebras), and functional-analytic constructions.
-- **`Analysis/`**: Limits, derivatives (classical and synthetic), series, power series, and measure theory.
+- **`Topology/`**: Topological, cover, uniform, and metric spaces; topological algebra; normed/Banach/C*-algebraic structures; and locales (pointfree topology).
+- **`Analysis/`**: Limits and convergence, infinite series, power series, derivatives (classical, strong, and synthetic), and measure theory.
 
 #### Algebraic Geometry
 
-- **`AG/`**: Algebraic geometry in the locale-theoretic setting.
+- **`AG/`**: Affine and projective schemes formalized as locally ringed locales via Zariski-topology frame presentations.
 
 #### Combinatorics
 
-- **`Combinatorics/`**: Combinatorial functions, counting arguments, and bijective proofs over finite types.
+- **`Combinatorics/`**: Factorials, binomial coefficients, combinations, and (weak) compositions with their counting equivalences.

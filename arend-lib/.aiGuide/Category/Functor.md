@@ -1,42 +1,52 @@
 ### Category.Functor
 
-Functors between precategories, natural transformations, functor categories, and special classes of functors (faithful, full, fully faithful).
+Functors between precategories, natural transformations, and the functor category construction.
+
+A `Functor` is a map between precategories preserving identities and composition; this module bundles the structure as a class so that functors can be composed, restricted to opposite categories, and lifted to isomorphisms. Natural transformations are recorded as the `NatTrans` record with a naturality square, and together they yield the functor (pre)category `FunctorPrecat` / `FunctorCat`, whose univalence is established when the target is a category. The module also provides the diagonal family precategory `FamPrecat` and refinements of functors by faithfulness/fullness, where `FullyFaithfulFunctor` exposes a two-sided inverse on hom-sets that respects identities and composition.
 
 #### Functors
 
-- **`Functor`**: Class of functors between precategories `C` and `D`. Bundles object map `F : C -> D`, morphism map `Func`, and the laws `Func-id` and `Func-o` (preservation of identities and composition).
-- **`Functor.transport_Hom`**: For functors `F, G` into `E`, computes `coe` of a hom in `Hom (F x1) (G x2)` along paths `p1, p2` in the source categories, given a naturality-style square.
-- **`Functor.transport_Hom-right`**: `transport (Hom z) (pmap F p) g = F.Func (transport (Hom x) p (id x)) ∘ g`; transports a hom along the image of a path under `F`.
-- **`Functor.transport_Hom_iso-right`**: Same as above but where the path comes from `isotoid` of an iso `e`; reduces to composing with `F.Func e.f`.
-- **`Functor.transport_Hom_iso`**: Two-sided version using `isotoid` on both sides; transports a hom across isos in `C` and `D` via their images under `F` and `G`.
+- **`Functor`**: Class of functors between precategories `C` and `D` with object map `F : C -> D`, morphism map `Func`, and the laws `Func-id` and `Func-o`.
+- **`Functor.op`**: The induced functor `C.op -> D.op`.
+- **`Functor.Func-iso`**: Functors send isomorphisms to isomorphisms.
+- **`Id`**: Identity functor on a precategory.
+- **`Comp`**: Composition of functors `G ∘ F`.
+- **`Const`**: Constant functor sending every object to a fixed `d : D` and every morphism to `id d`.
+- **`Const.natTrans`**: A morphism `f : d -> d'` lifted to a natural transformation between constant functors.
 
-#### Standard Functors
+#### Transport Lemmas for Functors
 
-- **`Id`**: The identity functor `C -> C`.
-- **`Comp`**: Composition of functors: `Comp G F` applies `F` then `G`.
-- **`Const`**: The constant functor `C -> D` at an object `d : D`, sending every morphism to `id d`.
-- **`Const.natTrans`**: A morphism `f : d -> d'` in `D` induces a natural transformation `Const d => Const d'`.
+- **`transport_Hom`**: Computes `coe` along simultaneous paths in source objects of `F` and `G` in terms of a naturality-style square.
+- **`transport_Hom-right`**: Transport in `Hom z (F -)` along a path in `C` equals composition with `F` applied to the transported identity.
+- **`transport_Hom_iso-right`**: When `C` is a category, the transport along `isotoid e` reduces to post-composition with `F.Func e.f`.
+- **`transport_Hom_iso`**: Two-sided version: transport along isomorphism-induced paths in both `C` and `D` reduces to a naturality equation.
 
 #### Natural Transformations
 
-- **`NatTrans`**: Class of natural transformations between functors `F, G : C -> D`. Provides component map `trans` and the naturality square `natural`.
-- **`NatTrans.Comp-left`**: Whiskering on the left: precompose a natural transformation with a functor `H : C -> D`.
-- **`NatTrans.Comp-right`**: Whiskering on the right: postcompose a natural transformation with a functor `H : D -> E`.
+- **`NatTrans`**: Record of natural transformations `F => G` between functors `C -> D`, with components `trans` and the naturality square `natural`.
+- **`NatTrans.op`**: The opposite natural transformation `G.op => F.op`.
+- **`NatTrans.iso`**: A componentwise-iso natural transformation has an inverse natural transformation `G => F`.
+- **`NatTrans.Comp-left`**: Whiskering a natural transformation `α : F => G` on the right by a functor `H : C -> D`, yielding `Comp F H => Comp G H`.
+- **`NatTrans.Comp-right`**: Whiskering on the left by a functor `H : D -> E`, yielding `Comp H F => Comp H G`.
 
 #### Functor Categories
 
-- **`FunctorPrecat`**: The precategory of functors `C -> D` and natural transformations between them, for small `C, D`. Identity and composition are defined componentwise.
-- **`FunctorCat`**: Promotes `FunctorPrecat` to a category when `D` is a (univalent) small category, by lifting pointwise isos to a functor isomorphism via `mapIso`.
-- **`FunctorCat.mapIso`**: Extracts a pointwise iso in `D` from an iso of functors in `FunctorPrecat`.
+- **`FunctorPrecat`**: Precategory of functors `C -> D` between small precategories, with natural transformations as morphisms and pointwise composition.
+- **`FunctorCat`**: Upgrade of `FunctorPrecat` to a category when `D` is a (small) category, providing univalence.
+- **`FunctorCat.mapIso`**: Extracts the pointwise iso in `D` from an iso of functors in the functor category.
 
 #### Family (Discrete-Indexed) Categories
 
-- **`FamPrecat`**: The precategory `J -> D` of `J`-indexed families in `D`, with morphisms given by families of morphisms.
-- **`FamCat`**: The corresponding category structure when `D` is a category, via pointwise univalence.
-- **`FamCat.mapIso`**: Extracts a pointwise iso in `D` from an iso in `FamPrecat`.
+- **`FamPrecat`**: Precategory of `J`-indexed families `J -> D` with pointwise morphisms and composition.
+- **`FamCat`**: Categorical refinement of `FamPrecat` when `D` is a category, with pointwise univalence.
+- **`FamCat.mapIso`**: Extracts the pointwise iso in `D` from an iso in the family category.
 
-#### Special Functor Classes
+#### Faithful, Full, and Fully Faithful Functors
 
-- **`FaithfulFunctor`**: Extends `Functor` with `isFaithful`: `Func` is injective on hom-sets.
-- **`FullFunctor`**: Extends `Functor` with `isFull`: every morphism `Hom (F X) (F Y)` is merely the image of some morphism in `C`.
-- **`FullyFaithfulFunctor`**: Extends both `FullFunctor` and `FaithfulFunctor`; characterized by `isFullyFaithful`, asserting that `Func` is an equivalence on hom-sets, from which fullness and faithfulness are derived.
+- **`FaithfulFunctor`**: Extends `Functor` with `isFaithful`: injectivity of `Func` on hom-sets.
+- **`FullFunctor`**: Extends `Functor` with `isFull`: surjectivity (up to truncation) of `Func` on hom-sets.
+- **`FullyFaithfulFunctor`**: Extends both `FullFunctor` and `FaithfulFunctor` by requiring `Func` to be an `Equiv`, with derived `isFull` and `isFaithful`.
+- **`FullyFaithfulFunctor.inverse`**: The two-sided inverse `Hom (F X) (F Y) -> Hom X Y` from the equivalence.
+- **`FullyFaithfulFunctor.inverse-left`** / **`inverse-right`**: Round-trip equations between `Func` and `inverse`.
+- **`FullyFaithfulFunctor.inverse-id`**: The inverse sends identity to identity.
+- **`FullyFaithfulFunctor.inverse-o`**: The inverse preserves composition.

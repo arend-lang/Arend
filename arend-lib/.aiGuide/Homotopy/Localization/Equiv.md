@@ -1,20 +1,22 @@
 ### Homotopy.Localization.Equiv
 
-Characterizes local equivalences with respect to a universe of local types — maps that induce equivalences on function spaces into local types.
+Characterizes the maps that become equivalences after localization at a universe of local types.
+
+A map `f : A -> B` is a *local equivalence* when precomposition with `f` induces an equivalence on function spaces into every local type `Z`. This module establishes the basic theory: every connected map (with respect to the universe) is a local equivalence, between local types this notion coincides with ordinary equivalence, and over a reflective universe local equivalences are exactly the maps inverted by the localization functor `lmap`. The `Extension` submodule reformulates the equivalence condition as a unique-extension property, the standard orthogonality-style description of localizations.
 
 #### Core Definition
 
-- **`isLocalEquiv`**: A map `f : A -> B` is a local equivalence (relative to a universe `U`) when precomposition `(-o f) : (B -> Z) -> (A -> Z)` is an equivalence for every local type `Z`.
+- **`isLocalEquiv`**: A map `f : A -> B` is a local equivalence (with respect to a `Universe` of local types) if for every `Z : Local`, precomposition `-o f : (B -> Z) -> (A -> Z)` is an `Equiv`.
 
-#### Extension Module
+#### Extension Submodule
 
-- **`Extension.ext`**: The fiber of precomposition `(-o f)` at `g`, i.e. extensions of `g : A -> C` along `f : A -> B`.
-- **`Extension.ext-equiv`**: Equivalence between extensions of `g` along `f` and the dependent type `\Pi (b : B) -> \Sigma (c : C) (\Pi (a : A) -> f a = b -> g a = c)`, exhibiting an extension as a pointwise choice of value with compatibility data.
-- **`Extension.contr-equiv`**: If for every `g : A -> C` and `b : B` the type of pointwise extensions is contractible, then `(-o f) : (B -> C) -> (A -> C)` is an equivalence.
+- **`Extension.ext`**: The fiber `Fib (-o f) g` of precomposition by `f` over a map `g : A -> C` — i.e., the type of extensions of `g` along `f`.
+- **`Extension.ext-equiv`**: A `QEquiv` repackaging `ext f g` as `\Pi (b : B) -> \Sigma (c : C) (\Pi (a : A) -> f a = b -> g a = c)`, presenting an extension as a pointwise choice of value together with coherence over the fibers of `f`.
+- **`Extension.contr-equiv`**: If for every `g : A -> C` and every `b : B` the type of pointwise extensions is contractible, then `-o f : (B -> C) -> (A -> C)` is an `Equiv`. This is the orthogonality criterion used to prove maps are local equivalences.
 
-#### Local Equivalence Lemmas
+#### Main Lemmas
 
-- **`connected_isLocalEquiv`**: Every connected map (with respect to the universe `U`) is a local equivalence.
-- **`localTypesEquiv`**: Between local types, being a local equivalence is the same as being an equivalence: `isLocalEquiv f = Equiv f`.
-- **`localTypesEquiv.dir`**: Forward direction — a local equivalence between local types is an equivalence.
-- **`localEquivMap`**: For a reflective universe, `f` is a local equivalence iff its localization `lmap f` is an equivalence: `isLocalEquiv f = Equiv (lmap f)`.
+- **`connected_isLocalEquiv`**: Every connected map (in the sense of `isConnectedMap` for the universe `U`) is a local equivalence — connectivity implies orthogonality to all local types.
+- **`localTypesEquiv`**: For maps `f : A -> B` between local types, `isLocalEquiv f = Equiv f`. Local equivalence reduces to ordinary equivalence on the local subuniverse.
+  - **`localTypesEquiv.dir`**: The forward direction: a local equivalence between local types is an `Equiv`.
+- **`localEquivMap`**: Over a `ReflUniverse` (a universe with a localization functor `lmap`), `isLocalEquiv f = Equiv (lmap f)`. A map is a local equivalence exactly when its localization is an equivalence, justifying the name.

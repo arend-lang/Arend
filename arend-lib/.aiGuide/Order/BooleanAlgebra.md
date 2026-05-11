@@ -1,21 +1,27 @@
 ### Order.BooleanAlgebra
 
-Boolean algebras as bounded distributive lattices with a complement operation, plus the construction exhibiting negated elements of a Heyting algebra as a Boolean algebra.
+Boolean algebras as bounded distributive lattices with complementation, plus the construction of a Boolean algebra from the negated elements of any Heyting algebra.
+
+A Boolean algebra is presented here as a `BoundedDistributiveLattice` together with a complement operation `compl` satisfying the two characteristic laws `a ∧ ¬a ≤ ⊥` and `⊤ ≤ a ∨ ¬a`. The class also extends `HeytingAlgebra` by deriving the implication `a → b` as `¬a ∨ b`, so every Boolean algebra is automatically Heyting. The double-negation construction `HeytingBooleanAlgebra` shows that the regular (i.e. doubly-negated) elements of any Heyting algebra form a Boolean algebra: meets are inherited, joins are obtained by double-negating the underlying join, and complement is `neg`.
 
 #### Boolean Algebra Class
 
-- **`BooleanAlgebra`**: Extends `BoundedDistributiveLattice` and `HeytingAlebra`. Adds a complement operation `compl : E -> E` satisfying `a ∧ compl a <= bottom` (`compl-meet`) and `top <= a ∨ compl a` (`compl-join`). Implication is derived as `implies a b := compl a ∨ b`, with `exponent-left` and `exponent-right` proven from the complement laws via distributivity.
+- **`BooleanAlgebra`**: Class extending `BoundedDistributiveLattice` and `HeytingAlebra`. Adds a complement `compl : E -> E` with axioms `compl-meet : a ∧ compl a <= bottom` and `compl-join : top <= a ∨ compl a`. Implication is defined as `compl a ∨ b`, with `exponent-left`/`exponent-right` derived from distributivity and the complement laws.
 
-#### Negated Elements
+#### Complement Lemmas
 
-- **`NegatedElem`**: `\type` of elements `a : R` of a Heyting algebra together with a proof `R.IsNegated a` that `a` is in the image of negation (equivalently, double-negation stable).
+- **`compl-adj`**: Adjunction characterization: `a ∧ b <= bottom -> a <= compl b`.
+- **`compl-mono`**: Complement is order-reversing: `a <= b -> compl b <= compl a`.
+- **`compl_meet`**: De Morgan law: `compl (a ∧ b) = compl a ∨ compl b`.
+- **`compl_join`**: De Morgan law: `compl (a ∨ b) = compl a ∧ compl b`.
+- **`compl-inv`**: Double complement is identity: `compl (compl a) = a`.
+
+#### Symmetric Difference
+
+- **`symm-diff`**: Symmetric difference: `a ∧ compl b ∨ b ∧ compl a`.
+- **`compl_symm-diff`**: Complement of symmetric difference: `compl (symm-diff a b) = a ∧ b ∨ compl a ∧ compl b`, i.e. the biconditional.
 
 #### Boolean Algebra of Negated Elements
 
-- **`HeytingBooleanAlgebra`**: For any Heyting algebra `R`, exhibits `NegatedElem R` as a `BooleanAlgebra`.
-  - **Order**: Inherited from `R` on the underlying elements.
-  - **Meet**: Componentwise via `meet-negated` (negated elements are closed under meet).
-  - **Join**: Defined as `neg (neg (a ∨ b))` (double-negation closure) since negated elements are not generally closed under join; uses `id<=neg_neg` for the inclusions.
-  - **Top/Bottom**: `R.top` (with `top-univ` witnessing negation) and `R.bottom` (via `bottom-negated`).
-  - **Distributivity (`ldistr>=`)**: Proven by rewriting joins through `neg_join` and applying `exponent-left`, `eval`, and `modus-ponens` in the underlying Heyting algebra.
-  - **Complement**: `compl a := neg a.1`, with `compl-meet` from `modus-ponens` and `compl-join` from a chain through `neg_join` and `modus-ponens`.
+- **`NegatedElem`**: The subtype of a Heyting algebra `R` consisting of elements satisfying `IsNegated` (i.e. regular / doubly-negated elements).
+- **`HeytingBooleanAlgebra`**: Instance making `NegatedElem R` into a `BooleanAlgebra` for any Heyting algebra `R`. Order is inherited; meet is the underlying meet (closed under negated-ness); join is `neg (neg (a ∨ b))`; top and bottom come from `R`; complement is `neg`. This realizes the standard fact that the regular elements of a Heyting algebra form a Boolean algebra.

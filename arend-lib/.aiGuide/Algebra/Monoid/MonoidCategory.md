@@ -1,38 +1,33 @@
 ### Algebra.Monoid.MonoidCategory
 
-The categories of monoids and additive monoids, their bicompleteness via algebraic theories, and kernel/image constructions.
+The category of monoids and its bicompleteness, plus kernel/image constructions for monoid homomorphisms.
 
-#### Monoid Category
+This module assembles `MonoidCat` (and the additive analogue `AddMonoidCat`) as categories whose morphisms are monoid homomorphisms, and upgrades `MonoidCat` to a bicomplete category by exhibiting it as equivalent to the category of models of the algebraic theory of monoids (one nullary operation for the unit, one binary operation for multiplication, with unit and associativity axioms). Limits and colimits are then transported from `ModelCat` via this equivalence, giving completeness and cocompleteness for free. The remaining constructions package the kernel and image of a (additive) monoid homomorphism as monoid objects in their own right, together with the canonical inclusion/projection homs, with abelian variants when the codomain is commutative.
 
-- **`MonoidCat`**: The category `Cat Monoid` with `MonoidHom` as morphisms, identity and composition of monoid homomorphisms, and univalence via `sip`.
-- **`MonoidCat.forget`**: The forgetful functor `MonoidCat -> SetCat` taking a monoid to its underlying set.
+#### Categories of Monoids
 
-#### Bicomplete Structure on Monoids
+- **`MonoidCat`**: The category `Cat Monoid` whose homs are `MonoidHom`, with composition lifted through pointwise application. Includes a forgetful functor `MonoidCat.forget : Functor MonoidCat SetCat`.
+- **`AddMonoidCat`**: The additive analogue: `Cat AddMonoid` with `AddMonoidHom` morphisms and a forgetful functor `AddMonoidCat.forget : Functor AddMonoidCat SetCat`.
 
-- **`MonoidBicat`**: Instance of `BicompleteCat` on `MonoidCat`, obtaining limits and colimits by transporting along an equivalence with the category of models of the monoid theory.
-- **`MonoidBicat.theory`**: The algebraic `Theory` of monoids: a single sort, two operation symbols (unit of arity 0 and multiplication of arity 2), no predicates, and axioms for left/right unit laws and associativity.
-- **`MonoidBicat.catEquiv`**: Categorical equivalence `CatEquiv (ModelCat theory) MonoidCat` along `modToMonoid`, with unit, counit, and isomorphism witnesses provided as identities.
-- **`MonoidBicat.modToMonoid`**: Converts a `Model theory` into a `Monoid` on its underlying set, deriving the monoid laws from `M.isModel` applied to the theory's axioms.
-- **`MonoidBicat.monoidToMod`**: Converts a `Monoid` into a `Model theory`, interpreting symbol 0 as `ide` and symbol 1 as `*`.
-- **`MonoidBicat.monoidToMod.functor`**: Functor `MonoidCat -> ModelCat theory` lifting `monoidToMod` to morphisms via `MonoidHom`'s `func-ide` and `func-*`.
+#### Bicompleteness via Algebraic Theory
 
-#### Additive Monoid Category
+- **`MonoidBicat`**: Promotes `MonoidCat` to a `BicompleteCat` by transporting limits and colimits from `ModelCat theory` along `catEquiv`.
+- **`MonoidBicat.theory`**: The single-sorted algebraic `Theory` of monoids: function symbols `Fin 2` (arities 0 and 2), no predicates, axioms expressing left/right unit and associativity.
+- **`MonoidBicat.catEquiv`**: A `CatEquiv` between `ModelCat theory` and `MonoidCat`, with left adjoint `monoidToMod.functor`, unit `id`, and counit interpreting a monoid model as a monoid.
+- **`MonoidBicat.modToMonoid`**: Converts a `Model theory` to a `Monoid` by reading `ide` from the nullary operation and `*` from the binary operation.
+- **`MonoidBicat.monoidToMod`**: Converts a `Monoid` into a `Model` of the theory; its `\where`-functor `monoidToMod.functor : Functor MonoidCat (ModelCat theory)` provides the inverse direction of the equivalence.
 
-- **`AddMonoidCat`**: The category `Cat AddMonoid` with `AddMonoidHom` morphisms; analogous structure to `MonoidCat` for additive monoids, with univalence via `sip`.
-- **`AddMonoidCat.forget`**: Forgetful functor `AddMonoidCat -> SetCat`.
+#### Kernels of Additive Monoid Homomorphisms
 
-#### Kernels
+- **`KerAddMonoid`**: The kernel of `f : AddMonoidHom` as an `AddMonoid`, extending `KerAddPointed f` with componentwise addition that preserves the kernel condition.
+- **`KerMonoidHom`**: The canonical inclusion `AddMonoidHom (KerAddMonoid f) f.Dom`, extending `KerPointedHom`.
+- **`KerAbMonoid`**: When the domain is an `AbMonoid`, upgrades `KerAddMonoid f` to an abelian additive monoid.
 
-- **`KerAddMonoid`**: The kernel of an `AddMonoidHom f` as an `AddMonoid`, extending `KerAddPointed f` with pointwise addition restricted to elements mapping to zero.
-- **`KerMonoidHom`**: The canonical inclusion `AddMonoidHom (KerAddMonoid f) f.Dom`.
-- **`KerAbMonoid`**: The kernel of a homomorphism into an `AbMonoid` as an `AbMonoid`, extending `KerAddMonoid` with commutativity inherited from the codomain.
+#### Images of (Additive) Monoid Homomorphisms
 
-#### Images
-
-- **`ImageAddMonoid`**: The image of an `AddMonoidHom` as an `AddMonoid`, extending `ImageAddPointed` with pointwise addition and a witness combining preimages via `func-+`.
-- **`ImageMonoid`**: The image of a `MonoidHom` as a `Monoid`, extending `ImagePointed` with pointwise multiplication and preimage witnesses via `func-*`.
-- **`ImageMonoidLeftHom`**: The surjection `f.Dom -> ImageMonoid f` extending `ImagePointedLeftHom`.
-- **`ImageMonoidRightHom`**: The injection `ImageMonoid f -> f.Cod` extending `ImagePointedRightHom`.
-- **`ImageAddMonoidLeftHom`**: Additive analogue of `ImageMonoidLeftHom`.
-- **`ImageAddMonoidRightHom`**: Additive analogue of `ImageMonoidRightHom`.
-- **`ImageAbMonoid`**: The image of an `AddMonoidHom` into an `AbMonoid` as an `AbMonoid`, inheriting commutativity from the codomain.
+- **`ImageAddMonoid`**: The image of `f : AddMonoidHom` as an `AddMonoid`, with addition built from preimages via the propositional truncation.
+- **`ImageMonoid`**: The multiplicative analogue: image of `f : MonoidHom` as a `Monoid`.
+- **`ImageMonoidLeftHom`**: The corestriction `MonoidHom f.Dom (ImageMonoid f)` onto the image.
+- **`ImageMonoidRightHom`**: The inclusion `MonoidHom (ImageMonoid f) f.Cod` of the image into the codomain.
+- **`ImageAddMonoidLeftHom`**, **`ImageAddMonoidRightHom`**: The additive analogues of the corestriction and inclusion homs.
+- **`ImageAbMonoid`**: When the codomain is an `AbMonoid`, the image inherits abelianness, giving an `AbMonoid` structure on `ImageAddMonoid f`.

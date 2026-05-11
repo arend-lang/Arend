@@ -1,24 +1,31 @@
 ### Algebra.Ring.Sub
 
-Subrings of (pseudo) rings: predicates closed under ring operations, with constructions for commutative variants and ring homomorphism images.
+Subrings of (pseudo) rings, packaged as predicates closed under the ring operations, together with the induced ring structure on the carrier.
+
+A `SubPseudoRing` is the predicate-style subobject of a `PseudoRing`, obtained by combining `SubPseudoSemiring` with `SubAddGroup` so that closure under addition, multiplication, and negation is required. `SubRing` adds closure under the multiplicative identity. The induced ring structure is built by reusing the `SubAddGroup` abelian-group structure for `+` and the `SubSemiring` data for `*`, and the commutative variants (`cStruct`, `CSubRing`) lift commutativity from the ambient ring. Ring homomorphisms factor through subrings via `corestrict`/`embed`, and `ringHomImage` exhibits the image of a `RingHom` as a subring of the codomain.
 
 #### Subring Classes
 
-- **`SubPseudoRing`**: Subset of a `PseudoRing` closed under addition, negation, and multiplication. Extends `SubPseudoSemiring` and `SubAddGroup`.
-- **`SubRing`**: Subset of a `Ring` (with unit) closed under all ring operations, including `1`. Extends `SubPseudoRing` and `SubSemiring`.
-- **`CSubRing`**: Subring of a commutative ring `CRing`. Extends `SubRing`.
+- **`SubPseudoRing`**: Subobject of a `PseudoRing`, extending `SubPseudoSemiring` and `SubAddGroup`. Overrides `S` to a `PseudoRing` and packages the closure conditions for `0`, `+`, `*`, and negation.
+- **`SubPseudoRing.IPseudoRing`**: The induced `PseudoRing` on the carrier subset, combining `IPseudoSemiring` with the abelian-group structure from `SubAddGroup.abStruct`.
+- **`SubPseudoRing.cStruct`**: Given a `SubPseudoRing` of a `PseudoCRing`, produces a `PseudoCRing` on the carrier by transferring `*-comm` from the ambient ring.
+- **`SubRing`**: Subobject of a `Ring`, extending `SubPseudoRing` and `SubSemiring`. Overrides `S` to a `Ring`, additionally requiring closure under the multiplicative identity.
+- **`SubRing.IRing`**: The induced `Ring` structure on the carrier, combining `ISemiring` with `SubAddGroup.abStruct`.
+- **`CSubRing`**: A `SubRing` of a `CRing`, exposing the induced commutative ring `ICRing` on the carrier with `*-comm` lifted from `S`.
+- **`CSubRing.ICRing`**: The induced commutative ring on a `CSubRing`'s carrier.
 
-#### Commutative Structure Promotion
+#### Homomorphisms To and From Subrings
 
-- **`SubPseudoRing.cStruct`**: Promotes a `SubPseudoRing` of a `PseudoCRing` to a `PseudoCRing` structure on the induced subring, transporting `*-comm`.
-- **`SubRing.cStruct`**: Promotes a `SubRing` of a `CRing` to a `CRing` structure, layering on `SubPseudoRing.cStruct`.
+- **`SubRing.corestrict`**: Given `f : RingHom R S` whose image lies in the subring (`\Pi (x : R) -> contains (f x)`), produces the corestricted `RingHom R IRing`.
+- **`SubRing.embed`**: The canonical inclusion `RingHom IRing S` sending `(x, _)` to `x`.
 
-#### Constructions
+#### Constructions on `SubRing`
 
-- **`SubRing.max`**: The maximal subring of a ring `R` (containing all elements), built from `SubSemiring.max` and `SubAddGroup.max`.
-- **`ringHomImage`**: The image of a ring homomorphism `f : RingHom` as a `SubRing` of `f.Cod`, with membership defined as `∃ (x : f.Dom) (f x = y)` and closure proofs from the homomorphism laws (`func-zro`, `func-+`, `func-ide`, `func-*`, `func-negative`).
+- **`SubRing.cStruct`**: Given a `SubRing` of a `CRing`, produces a `CRing` on the carrier by combining `IRing` with `SubPseudoRing.cStruct`.
+- **`SubRing.max`**: The maximal subring of a `Ring R`, containing every element; built from `SubSemiring.max` and `SubAddGroup.max`.
+- **`SubRing.isContr`**: If the ambient ring `R` is contractible, so is the induced ring `S.IRing` of any subring.
+- **`SubRing.comm-isContr`**: Commutative analogue: if `R : CRing` is contractible, so is the induced commutative ring `cStruct S`.
 
-#### Contractibility Lemmas
+#### Image of a Ring Homomorphism
 
-- **`SubRing.isContr`**: If the ambient ring `R` is contractible, then the induced ring `S.IRing` of any subring is contractible.
-- **`SubRing.comm-isContr`**: Commutative analogue: contractibility of `R : CRing` transfers to `cStruct S`.
+- **`ringHomImage`**: For `f : RingHom`, the image of `f` packaged as a `SubRing f.Cod`, with `contains y := ∃ (x : f.Dom) (f x = y)` and closure under `0`, `+`, `1`, `*`, and negation derived from `f` being a ring homomorphism.

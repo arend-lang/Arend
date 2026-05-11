@@ -1,14 +1,16 @@
 ### Algebra.Group.GSet.ExampleActions
 
-Concrete examples of group actions: left translation, action on subsets, conjugation, and the trivial action.
+Concrete examples of group actions used throughout the library.
 
-#### Group Actions
+This module collects standard constructions of `GroupAction` instances that appear repeatedly in group theory: a group acting on itself by left translation, on its subsets, and on itself by conjugation, plus the trivial action. These examples serve as the canonical building blocks for proofs about transitive actions, orbits, stabilizers, and conjugacy classes, instantiating the abstract `GroupAction`/`TransitiveGroupAction` interfaces with the most common concrete cases.
 
-- **`TranslationAction`**: The left-translation action of a group `G` on itself, given by `g ** v = g * v`. Constructed as a `TransitiveGroupAction` since for any `v, v'` the element `v' * inverse v` sends `v` to `v'`.
-- **`TranslationActionOnSubsets`**: The induced action of `G` on `SubSet G`, where `g ** p` is the subset `{ h | inverse g * h ∈ p }` (i.e. left-translation of subsets).
-- **`conjAction`**: The conjugation action of `G` on itself: `g ** h = conjugate g h`. Reuses the group's own `**-assoc` and `id-action` proofs.
-- **`trivialAction`**: The trivial action of `G` on any `BaseSet E`, where every group element acts as the identity (`g ** e = e`).
+#### Standard Actions
+
+- **`TranslationAction`**: Left translation action of a group `G` on itself, where `g ** h = g * h`. Constructs a `TransitiveGroupAction G` since any element can be sent to any other via left multiplication.
+- **`TranslationActionOnSubsets`**: Action of `G` on `SubSet G` defined by `(g ** p).contains h = p.contains (g⁻¹ * h)`, i.e., translating a subset by `g`. Yields a `GroupAction G`.
+- **`conjAction`**: Action of `G` on itself by conjugation: `g ** e = conjugate g e = g * e * g⁻¹`. Yields a `GroupAction G` whose orbits are conjugacy classes.
+- **`trivialAction`**: Trivial action of `G` on any `BaseSet E`, where every group element acts as the identity. Useful as a default instance and for constructing fixed-point sets.
 
 #### Subset Operations
 
-- **`conjugate-subset`**: Given `g : G` and `S : SubSet G`, produces the conjugated subset `{ h | conjugate (inverse g) h ∈ S }`.
+- **`conjugate-subset`**: Conjugation of a subset `S : SubSet G` by `g : G`, defined by `h ∈ conjugate-subset g S` iff `g⁻¹ * h * g ∈ S`. Used in normalizer/centralizer constructions and reasoning about conjugacy of subgroups.

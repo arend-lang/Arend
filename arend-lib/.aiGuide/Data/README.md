@@ -1,24 +1,28 @@
-### Data Directory Overview
+### Data
 
-This directory provides core data types, collections, and their properties.
+This directory formalizes basic data types and their algebraic, structural, and propositional properties: booleans, finite indices, optionals, sums, pairs, lists, length-indexed arrays, sublists, and sequential colimits.
 
-#### Core Data Types
+#### Atomic Types
 
-- **`Bool.md`**: `Bool` type with `false`/`true`, `So` (boolean-to-proposition), boolean operations (`not`, `and`, `or`, `xor`, `if`), and associated lemmas (`not-isInv`, `true/=false`, `toSigma`/`fromSigma`, `toOr`/`fromOr`).
-- **`Maybe.md`**: `Maybe` type with `nothing`/`just`, `map`, `maybe` eliminator, `unjust` extractor, and `just-injective`.
-- **`Or.md`**: `Or` (coproduct) type with `inl`/`inr`, `levelProp`, `map`, `rec` eliminator, and `Or_Equiv`.
-- **`Sigma.md`**: Tuple mapping utilities (`tupleMap`, `tupleMapLeft`, `tupleMapRight` with projection lemmas) and `unit-isContr` (contractibility of `\Sigma`).
+- **`Bool.md`** — The two-element boolean type with `not`/`and`/`or`/`xor`, the `So` reflection into propositions, and the bridges between boolean equations and their propositional counterparts.
+- **`Maybe.md`** — The optional type `Maybe A` with constructors `nothing`/`just`, the non-dependent eliminator `maybe`, functorial `map`, and `just`-injectivity.
+- **`Or.md`** — The disjoint sum `Or A B` with `inl`/`inr`, recursor, functorial action, propositionality for disjoint props, and equivalence preservation.
+- **`Sigma.md`** — Componentwise `tupleMap` on non-dependent pairs with projection lemmas, plus contractibility of the empty tuple type.
 
-#### Finite Types
+#### Finite Indices
 
-- **`Fin.md`**: `Fin` utilities — constructors (`fzero`, `fsuc`), destructors (`fpred`, `fpredP`, `fcase`), equality/inequality lemmas (`unfsuc`, `fsuc/=`, `fsuc/=0`, `nat_fin_=`, `fin_nat_/=`), predecessor round-trips, and `finLast`.
+- **`Fin.md`** — Finite types `Fin n` with constructors `fzero`/`fsuc`, case analysis, predecessors, and injectivity/disequality lemmas relating `Fin` to `Nat`.
 
-#### Collections
+#### Lists
 
-- **`Array.md`** / **`Array/`**: Length-indexed arrays — construction (`mkArray`, `arrayExt`), mapping (`map`), concatenation (`++'`, `++` with index embeddings and splitting), filtering (`filter`, `keep`, `remove`), `Big` fold, `filterMap`, `insert`/`skip`/`replace`, `count`, `find`, `nub`, `replicate`, `forall`, `fit`, `singleAt`, list conversion, `take`, and many associated lemmas. Subdirectory contains `EPerm.md` (extensional permutations), `Pairs.md` (Cartesian product combinations), `Perm.md` (fixed-length permutations with sign), `Sort.md` (sorting with correctness), `Split.md` (`nub-split`).
-- **`List.md`**: Linked lists — `List` type, `length`, `!!`, `headDef`, `tail`, `++`, `replicate`, `map`, `ListMonoid`, `splitAt`/`take`/`drop`, `replace`/`slice`, predicates (`All`, `All2`, `AllC`), `count`, `group`, sorting (`Sort` module with `Perm`, `Sorted`, insertion sort, red-black tree sort), membership (`contains`, `InList`, `~`), and set operations (`union`).
-- **`SubList.md`**: `SubList` inductive relation with constructors, composition (transitivity), contractibility/impossibility lemmas, invariance lemmas, and transport lemmas.
+- **`List.md`** — Inductive `List A` with concatenation, indexing by `Fin`, splitting, predicates (`All`/`All2`/`AllC`/`InList`), permutations and sortedness, insertion sort and red-black tree sort, and `count`/`group` over decidable sets.
+- **`SubList.md`** — Order-preserving sublist relation `SubList l r` with identity, composition, extension/naturality lemmas, and contractibility/uniqueness results plus `Transports` coherences for list-equality transports.
 
-#### Homotopy / Colimits
+#### Length-Indexed Arrays
 
-- **`SeqColimit`**: Sequential colimits — `Seq` class (sequential diagram), `SeqColimit` HIT with `inSC`/`quotSC`, `flattening` (descent/total space equivalence), `seqColimit-surj` (surjectivity from level 0), and `constantMaps` (contractibility for constant sequences).
+- **`Array.md`** — Length-indexed arrays `Array A n` with concatenation, `map`, `filter`/`keep`/`remove`, deduplication, `insert`/`skip`/`replace`, counting, membership, search, and conversion to/from `List`.
+- **`Array/`** — Further theory of arrays: permutations, sorting, splittings, and pair-indexed structures.
+
+#### Sequential Colimits
+
+- **`SeqColimit.md`** — Higher inductive sequential colimit of a `Nat`-indexed type sequence, with the flattening lemma identifying total spaces as colimits, plus surjectivity and contractibility corollaries.

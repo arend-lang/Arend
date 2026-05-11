@@ -1,38 +1,85 @@
 ### Algebra.Group.Solver
 
-A reflection-based solver for equalities in groups, providing a syntactic term representation and normalization procedure that simplifies group expressions by canceling matching variables and their inverses.
+Reflective decision procedure for proving group and commutative-group equalities by normalizing syntactic `GroupTerm` expressions.
 
-#### Term Representation
+The module defines a free syntax `GroupTerm V` over variables `V` together with an `interpret` function into a target group `G`. Solvers are organized as classes (`GroupData`, `NatData`, `CGroupData`) that bundle the carrier group with a variable assignment and provide a `simplify` operation paired with a `simplify-correct` lemma showing `interpret t = interpret (simplify t)`. For general groups (`NatData`), simplification proceeds by repeatedly locating adjacent inverse pairs of leaves and removing them, preserving normal form (no nested non-variable inverses). For commutative groups (`CGroupData`), terms are flattened to a list of (variable, sign) leaves, sorted, grouped, and cancelled bulk via `removeVar`/`removeVars`, exploiting commutativity to collect like terms.
 
-- **`GroupTerm`**: Inductive type of syntactic group expressions over a variable set `V`, with constructors `var` (variable), `:ide` (identity), `:inv` (inverse), and `:*` (multiplication).
+#### Term Syntax and Interpretation
 
-#### Solver Data Classes
+- **`GroupTerm`**: Inductive syntax of group expressions over variables `V`, with constructors `var`, `:ide`, `:inv`, and `:*`.
+- **`GroupData`**: Class bundling a `Group G`, a variable set `V : \Set`, and an assignment `f : V -> G`. Provides:
+  - **`interpret`**: Evaluates a `GroupTerm V` in `G` by mapping `var` via `f`, `:ide` to `ide`, `:inv` to `inverse`, and `:*` to `*`.
 
-- **`GroupData`**: Bundles a group `G : Group`, a variable set `V : \Set`, and an interpretation `f : V -> G` mapping syntactic variables to group elements.
-- **`NatData`**: Specialization of `GroupData` fixing `V` to `Nat`, suitable for de Bruijn-style variable indexing.
-- **`CGroupData`**: Specialization of `NatData` requiring the underlying group to be commutative (`CGroup`).
+#### Non-commutative Solver (NatData)
 
-#### Variable Manipulation
+- **`NatData`**: Extends `GroupData` with `V => Nat`. Implements the inverse-pair cancellation strategy.
 
-- **`removeVar`**: Removes up to `n` occurrences of variable `v` (with given inversion flag `withInv`) from a term, returning the simplified term and the remaining count budget.
-- **`countVars`**: Given a sorted list of `((var, sign), count)` triples, pairs up matching `(v, false)` / `(v, true)` entries and returns `(var, min count)` pairs indicating how many cancellations are possible per variable.
-- **`removeVars`**: Iteratively removes pairs of matched positive/negative occurrences of each variable in the cancellation list from the term.
+##### Normal Form
 
-#### Term Flattening
+- **`isInNF`**: Predicate stating that a term is in normal form — no `:inv` is applied to a non-variable subterm.
+- **`isInNF-dec`**: Decision procedure returning `Maybe (isInNF t)`.
 
-- **`toList`**: Flattens a `GroupTerm Nat` into a list of `(variable, sign)` pairs by recursing through `:*` and toggling signs through `:inv`.
-- **`countVar`**: Counts occurrences of variable `v` with sign `withInv` directly on a `GroupTerm Nat`.
+##### Leaves
 
-#### Normalization
+- **`Leaf`**: Inductive type with `var-leaf v` and `inv-var-leaf v`, representing positive/negative variable occurrences.
+  - **`leaf-to-term`**, **`isInv`**, **`val`**: Conversion to a term, sign indicator, and underlying variable.
+  - **`toLeaf`**: Recognizes a term as a leaf if it is `var v` or `:inv (var v)`.
+  - **`toLeafToTerm-isInv`**: Round-trip soundness lemma for `toLeaf`.
+- **`count-leaves`**: Counts leaf occurrences in a term (variables and inv-of-variables count 1; non-variable inverses count 0).
+- **`get-leaf`**: Retrieves the `n`-th leaf of a term, or `:ide` if out of range.
+- **`get-rightmost-leaf`**: The last leaf of a term.
+- **`get-leaf-less-lemma`**: When `ind < count-leaves l + 1`, the `ind`-th leaf of `l :* r` lives in `l`.
+- **`get-leaf-zro-leaves-lemma`**: A normal-form term with zero leaves interprets to `ide`.
 
-- **`simplify`**: Main entry point — converts a term to a list, sorts it (red-black), groups equal entries, computes cancellation counts, and removes the cancelable variable pairs from the original term to produce a normalized `GroupTerm Nat`.
+##### Pair Removal
 
-#### Correctness Lemmas
+- **`remove-pair`**: Given a term and an index, removes the leaf at that index together with its right neighbour; returns the rewritten term and a flag indicating whether the removal collapsed to `:ide`.
+  - **`processLeaf`**: Helper deciding leaf-level removal at indices 1 or 2.
+- **`rp-preserves-nf`**: Pair removal preserves normal form.
+- **`rp-count-leaves-lemma`**: Pair removal does not increase leaf count.
+- **`rp-correctness-both-inside`**: Soundness when both removed leaves are in the interior — interpretation is preserved given the inverse-pair hypothesis.
+- **`rp-correctness-one-inside-left`**, **`rp-correctness-one-inside-right`**: Soundness for boundary cases (factoring out the first/last leaf).
+- **`rp-returns-true-lemma`**, **`rp-returns-true-lemma-left`**, **`rp-returns-true-lemma-right`**, **`rp-returns-true-lemma'`**, **`rp-returns-true-lemma''`**, **`rp-returns-true-lemma'''`**: Structural lemmas characterizing when `remove-pair` reports success — the term must be a product of two leaves at the appropriate index.
 
-- **`count-remove-lem`**: Removing occurrences of `v'` with one sign does not change the count of `v` with the opposite-tagged sign.
-- **`toList-correct`**: The multiplicity of `(v, s)` in `toList t b` matches `countVar t v` with sign appropriately flipped by `b`.
-- **`group-correct`**: After sorting and grouping, each `((v, s), n)` entry has `n <= countVar t v s`.
-- **`countVars-correct`**: After pairing positive/negative groups, each resulting `(v, n)` satisfies `n <= countVar t v false` and `n <= countVar t v true`, justifying that `n` cancellations are sound.
-- **`countVars-ineq`**: If `x` differs from every variable in the input list, it differs from every variable in `countVars` of that list.
-- **`countVars-diff`**: Pairwise distinctness of variables is preserved by `countVars` under the sign-ordering invariant.
-- **`sort-correct-lem`**, **`sort-correct`**: After sorting, adjacent equal-variable entries always appear in `(false, true)` order — the key invariant making `countVars` sound.
+##### Search and Top-level Simplification
+
+- **`find-fstLeafToRemoveInd`**: Searches the term for an index of a leaf whose interpretation is the inverse of the next leaf's, returning the index together with the required side conditions and bounds.
+  - **`find-fstLeafToRemoveInd-rec`**: Bounded recursion driving the search.
+  - **`leaf-isInv-lemma`**: Two leaves with opposite signs and equal variable interpret as inverses of each other.
+- **`find-pair-to-remove`**: Alternative left-to-right scan threading the last visited leaf, returning the cancellation index.
+- **`simplify`**: Applies one round of pair removal at a found cancellation site, when the term is in normal form.
+- **`simplify-correct`**: `interpret t = interpret (simplify t)`.
+
+#### Commutative Solver (CGroupData)
+
+- **`CGroupData`**: Extends `NatData` with `G : CGroup`. Overrides `simplify` with a multiset-based normalization exploiting commutativity.
+
+##### Bulk Variable Removal
+
+- **`removeVar`** (in `\where`): Removes up to `n` occurrences of variable `v` (with chosen sign `withInv`) from a term, returning the rewritten term and the residual count not yet consumed.
+- **`removeVar-lem`**: Core correctness — for any `n`, `interpret (removeVar n t v b).1 * pow (±f v) (n ∧ countVar t v b) = interpret t`, with the residual count equal to `n -' countVar t v b`.
+  - **`pow-lem`**: Powers of `f v` versus `inverse (f v)` are inverses of each other.
+  - **`sum-lem`**: Distribution lemma `a ∧ (b + c) = a ∧ b + (a -' b) ∧ c` used to split counts across `:*`.
+- **`removeVar_<=-lem`**: When `n <= countVar t v b`, the meet simplifies and we get the cleaner equation `interpret (removeVar ...).1 * pow ... n = interpret t`.
+- **`removeVar-correct`**: Removing `n` occurrences of `v` with both signs successively preserves the interpretation, so `n` cancellations are valid.
+
+##### Listing, Sorting, Grouping
+
+- **`countVar`** (in `\where`): Counts signed occurrences of variable `v` in a term.
+- **`toList`** (in `\where`): Flattens a term into a list of `(variable, sign)` pairs, with the outer `withInv` toggling signs through `:inv`.
+- **`countVars`** (in `\where`): Walks a sorted list of `((var, sign), count)` triples and pairs adjacent entries with equal variable but opposite signs into a single `(var, min count)` cancellation entry.
+- **`removeVars`** (in `\where`): Iterates `removeVar` over a list of `(var, count)` pairs, each removing both positive and negative occurrences.
+- **`simplify`** (in `\where`): The CGroup pipeline — `toList` ⟶ red-black `sort` ⟶ `group` ⟶ `countVars` ⟶ `removeVars`.
+
+##### Correctness Pipeline
+
+- **`removeVars-correct`**: `interpret (removeVars t l) = interpret t` when each entry's count is bounded by both signed counts and the variables are pairwise distinct.
+  - **`count-removeVar-lem`**: Removing variable `v` does not change counts of any other variable `u`.
+  - **`count-removeVars-lem`**: Removing a list of variables disjoint from `v` does not change `v`'s count.
+- **`toList-correct`**: `count (toList t b) p` equals `countVar t p.1` with the appropriate sign flip.
+- **`group-correct`**: Each grouped count is bounded by the corresponding signed variable count in `t`.
+- **`countVars-correct`**: After `countVars`, each entry's count is bounded by both the positive and negative counts of its variable.
+- **`countVars-ineq`**, **`countVars-diff`**: `countVars` preserves variable distinctness conditions.
+- **`sort-correct-lem`**, **`sort-correct`**: Sorting yields adjacent entries with the same variable in `(false, true)` sign order, ensuring `countVars` finds genuine cancellation pairs.
+- **`count-remove-lem`**: Removing `(v', not withInv)` does not change `(v, withInv)`-counts.
+- **`simplify-correct`**: `interpret t = interpret (simplify t)` for the commutative pipeline.

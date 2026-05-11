@@ -1,52 +1,54 @@
-### Topology Directory Overview
+### Topology
 
-This directory provides point-free and point-set topology, uniform and metric structures, normed algebraic structures, and functional-analytic constructions.
+This directory formalizes topology in multiple complementary styles — open sets, Cauchy covers, uniformities, metrics, norms, and locales — together with their interactions with algebraic structures (groups, rings, modules, lattices, Banach and C*-algebras).
 
-#### Foundational Structures
+#### Foundational Spaces
 
-- **`TopSpace.md`**: Topological spaces, continuous maps, density, Hausdorff conditions, and subspace/transfer topologies.
-- **`TopSpace/`**: Subdirectory contains `Category.md` (category of topological spaces) and `Product.md` (product topology with projections, pairing, and density lemmas).
-- **`CoverSpace.md`**: Cover spaces and precover spaces defined via Cauchy covers, with refinement, regularity, and the rather-below relation.
-- **`CoverSpace/`**: Subdirectory contains `Category.md` (category instances), `Complete.md` (Cauchy filters and completions), `CompletionTools.md` (lifting maps on completions), `Directed.md` (cover spaces on directed sets), `Locale.md` (adjunction between precover spaces and locales), `Product.md` (product cover spaces), `RelativelyComplete.md` (relative completion), `StronglyComplete.md` (strong completion via strongly regular Cauchy filters), `Subspace.md` (open/closed subspace cover structures), `TopSpace.md` (cover space structure on regular topological spaces).
-- **`UniformSpace.md`**: Uniform spaces and morphisms via uniform covers, star refinements, and regularity.
-- **`UniformSpace/`**: Subdirectory contains `Complete.md` (uniform completion), `InfReal.md` (uniform structure on extended non-negative reals), `Product.md` (product uniform spaces), `StronglyComplete.md` (strong uniform completion).
-- **`Locale.md`**: Locales as complete distributive lattices, frame homomorphisms, nuclei, frame presentations, and categories of locales.
-- **`Locale/`**: Subdirectory contains `Points.md` (adjunction between locales and topological spaces via completely prime filters), `Real.md` (locale of real numbers via rational intervals), `Uniform.md` (uniform locales with completion).
+- **`TopSpace.md`** — Topological spaces in the open-set style: continuous maps, neighborhood filters, density, Hausdorff conditions, and initial-topology subspaces.
+- **`CoverSpace.md`** — Cover and precover spaces axiomatized by Cauchy families of covers, with regularity, rather-below relations `<=<`/`s<=<`, embeddings, the closure construction, and the lattice of (pre)cover structures.
+- **`UniformSpace.md`** — Uniform and preuniform spaces presented via uniform covers, with star-refinement axioms, regularity variants, and uniform/locally-uniform maps.
+- **`RatherBelow.md`** — Abstract "well-inside" relations on topological meet-semilattices, with derived one-step (`<=<o`) and fully interpolative (`<=<c`) refinements.
 
-#### Metric Spaces
+#### Compactness and Metrics
 
-- **`MetricSpace.md`**: Metric and pseudometric spaces on extended upper reals, with uniform structures, open balls, continuity, and completeness.
-- **`MetricSpace/`**: Subdirectory contains `Compact.md` (total boundedness of Manhattan product balls), `Complete.md` (pseudometric completion), `ExComplete.md` (extended metric completion), `ManhattanProduct.md` (L¹ product distance), `Nat.md` (metric on natural numbers), `UpperReal.md` (complete extended metric on upper reals).
+- **`Compact.md`** — Total boundedness, compactness, and local uniformity, including the upgrade of Cauchy covers to uniform covers under proper regularity.
+- **`MetricSpace.md`** — Pseudo-metric and metric spaces with extended-upper-real or real distances, ball geometry, completeness, and the metric-map hierarchy (locally uniform, uniform, non-expanding, isometric).
 
 #### Topological Algebra
 
-- **`TopAbGroup.md`**: Topological abelian groups with continuous addition/negation and induced uniform structure.
-- **`TopAbGroup/`**: Subdirectory contains `Complete.md` (completion of topological abelian groups) and `Product.md` (product construction and continuity lemmas).
-- **`TopPoset.md`**: Hausdorff topological partially ordered sets with closed order relation.
-- **`TopModule.md`**: Topological left modules over a topological ring with continuous scalar multiplication.
-- **`TopRing.md`**: Topological rings/monoids with continuity, including near-fields with dense invertible elements.
-- **`TopRing/`**: Subdirectory contains `Real.md` (real numbers as a topological near-field).
-- **`TopRieszSpace.md`**: Topological Riesz spaces with continuous lattice operations and solid neighborhoods of zero.
+- **`TopRing.md`** — Topological semigroups, monoids, rings, and near-(skew)fields, with rigidity lemmas for continuous maps into Hausdorff modules.
+- **`TopAbGroup.md`** — Topological abelian groups with translation-invariant uniformity from `0`-neighborhoods, the `<=<ta` shrinking relation, and Hausdorff/morphism variants.
+- **`TopModule.md`** — Topological left modules over a topological ring, with Hausdorff/complete variants and product instances.
+- **`TopRieszSpace.md`** — Topological Riesz (vector lattice) spaces, with solid neighborhood bases making lattice operations and absolute value uniformly continuous.
+- **`TopPoset.md`** — Hausdorff topological posets where `<=` is closed in the product topology, with monotone-net limits as joins/meets.
 
-#### Normed Structures
+#### Normed and Banach Structures
 
-- **`NormedAbGroup.md`**: Normed abelian groups with norm-compatible (pseudo)metric structure, including extended-real-valued, bounded, complete, and uniform variants.
-- **`NormedAbGroup/`**: Subdirectory contains `ExComplete.md` (completion of extended pseudo-normed abelian groups), `Real.md` (normed structures on rationals/reals with density lifting).
-- **`NormedAbGroup/Real/`**: Subdirectory contains `Compact.md` (total boundedness of bounded real intervals) and `Functions.md` (continuity/uniform-continuity of fundamental real-valued operations).
-- **`NormedRing.md`**: Normed and valued (pseudo) rings with submultiplicative norms, completeness, and canonical instances on `Rat`/`Real`.
-- **`BanachSpace.md`**: Banach spaces (complete normed abelian groups with scalar multiplication) and bounded linear maps.
-- **`BanachAlgebra.md`**: Banach algebras (complete normed algebras) with real instances and a completion functor.
-- **`BanachLattice.md`**: Banach lattices (Banach spaces with compatible Riesz structure), including L-space and M-space variants.
+- **`NormedAbGroup.md`** — Normed abelian groups in extended/real, pseudo/separated, bounded/unbounded variants, with norm-based maps and bilinear local uniformity.
+- **`NormedRing.md`** — Normed and valued (pseudo-)rings with submultiplicative or multiplicative norms, including `RatValuedRing` and `RealValuedRing`.
+- **`BanachSpace.md`** — (Pre-)Banach spaces over rationals or reals, with bounded linear maps and the Banach completion of a pre-Banach space.
+- **`BanachAlgebra.md`** — Banach algebras with a constructive Newton-iteration square root for elements near the identity and a Banach-algebra completion.
+- **`BanachLattice.md`** — Banach lattices (normed Riesz spaces with completeness), specializing to abstract L-spaces and M-spaces.
+- **`StoneCStarAlgebra.md`** — Commutative real C*-algebras characterized equivalently by order or by the C*-norm identity, with `Real` as the canonical instance.
 
-#### C*-Algebras
+#### Specialized Constructions
 
-- **`StoneCStarAlgebra.md`**: C*-algebras over the reals with Stone-style square-sum and square-norm laws.
-- **`CStarAlgebra/`**: Subdirectory contains `CompleteStoneCStarAlgebra.md` (homomorphisms and completion of ordered C*-algebras into Stone C*-algebras) and `UnitCStarAlgebra.md` (unitization of non-unital C*-algebras with Riesz space structure).
+- **`Elem.md`** — Subspace structures on `Elem S`: induced topological, cover, uniform, and metric structures via transfer along inclusion.
+- **`Partial.md`** — Topology on `Partial Y`, characterizing continuous maps into partial values and lifting continuity through `plift` and `plift2`.
+- **`ContGerm.md`** — Continuous germs at a point as quotients of locally-defined continuous maps, with pointwise algebraic structure inherited from the codomain.
 
-#### Utilities
+#### Pointfree Topology
 
-- **`Compact.md`**: Total boundedness, compactness, and local uniformity for cover spaces via uniform/Cauchy covers and metric balls.
-- **`RatherBelow.md`**: The "rather below" relation on topological meet-semilattices, axiomatizing the way-below/well-inside relation.
-- **`Elem.md`**: Subspace structures on `Elem S` (elements of a subset) for various topological structures, obtained by transfer along inclusion.
-- **`Partial.md`**: Topology on partial elements `Partial Y`, lifting continuous maps along partiality.
-- **`ContGerm.md`**: Continuous germs at a point (equivalence classes of maps on open neighborhoods) with inherited algebraic structure.
+- **`Locale.md`** — Locales (point-free spaces) as frames satisfying the infinite distributive law, with nuclei, presentations, way-below/rather-below, Hausdorff conditions, and the bicomplete category `LocaleCat`.
+
+#### Subdirectories
+
+- **`TopSpace/`** — Further constructions on topological spaces (products, sums, etc.).
+- **`CoverSpace/`** — Extended cover-space constructions (completions, products, sums).
+- **`UniformSpace/`** — Extended uniform-space constructions and completions.
+- **`MetricSpace/`** — Concrete metric spaces, completions, and metric-specific constructions.
+- **`TopAbGroup/`** — Further topological abelian group constructions (products, completions, quotients).
+- **`TopRing/`** — Topological ring constructions and instances.
+- **`NormedAbGroup/`** — Concrete normed abelian groups and reflection/completion constructions.
+- **`CStarAlgebra/`** — C*-algebra-specific constructions and theorems.
+- **`Locale/`** — Specific locales and locale-theoretic constructions.

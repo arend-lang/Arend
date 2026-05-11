@@ -1,40 +1,39 @@
 ### Algebra.Solver.Group
 
-A normalization-based solver for equations in groups (and additive groups), reducing group expressions to reduced word lists over signed variables.
+A reflective decision procedure for equalities in groups, instantiating the generic substitution-based solver framework with a group-specific term language and normal form.
 
-#### Solver Models
+This module implements `SubstSolverModel` for groups by representing terms as a small AST (variable, identity, inverse, multiplication) and normal forms as lists of signed variables `(Bool, Fin n)`, where the boolean tag indicates whether the variable appears or its inverse appears. Normalization flattens products and pushes inverses to the leaves via `inverseNF`, then `reduce` cancels adjacent inverse pairs. The monadic bind `>>=` lifts variable substitutions through signed-list normal forms, dualizing them with `inverseNF` whenever a negative occurrence is substituted, which is what makes the model compatible with the generic substitution-based solver.
 
-- **`GroupSolverModel`**: Constructs a `SubstSolverModel` for any `Group G`, supplying term syntax, normalization to signed-variable lists, interpretation, and consistency proofs needed by the generic solver framework.
-- **`AddGroupSolverModel`**: Constructs a `SubstSolverModel` for any `AddGroup A` by reusing `GroupSolverModel` on its multiplicative form `AddGroup.toGroup A`.
+#### Term Language
 
-#### Term Syntax
+- **`Term`**: AST of group expressions over `Fin n` variables: `var`, `:ide`, `:inverse`, and `:*` (left-associative product).
 
-- **`Term`**: Inductive type of group terms over `n` variables with constructors `var (Fin n)`, `:ide` (identity), `:inverse` (group inverse), and `:*` (multiplication, infixl 7).
+#### Normalization
 
-#### Normal Forms and Reduction
-
-- **`normalize`**: Flattens a `Term n` into its normal form `List (\Sigma Bool (Fin n))`, where each entry pairs a sign bit (true = variable, false = its inverse) with a variable index.
-- **`inverseNF`**: Computes the formal inverse of a normal form by reversing the list and flipping every sign, accumulating into `acc`.
-- **`reduce`**: Cancels adjacent inverse pairs (`(b, v) :: (not b, v) :: ...`) in a normal form list to obtain a freely reduced word.
+- **`inverseNF`**: Reverses a signed-variable list while flipping every sign, producing the normal form of the inverse of a product; uses an accumulator.
+- **`normalize`**: Converts a `Term n` into a `List (\Sigma Bool (Fin n))`: variables become a single positive entry, identity becomes `nil`, inverses recurse through `inverseNF`, and products concatenate.
+- **`reduce`**: Cancels adjacent entries with the same variable but opposite signs in a normal form, called once after normalization.
 
 #### Interpretation
 
-- **`interpretNF'`**: Evaluates a normal form `List (\Sigma Bool V)` in a group via an environment `env : V -> G`, multiplying `env x.2` or `inverse (env x.2)` according to the sign.
-- **`interpretNF'.simple`**: A uniform variant of `interpretNF'` that always appends a trailing `G.ide`, used as a convenient form for inductive proofs.
+- **`interpretNF'`**: Evaluates a signed-variable list in a group, mapping `(true, v)` to `env v` and `(false, v)` to `inverse (env v)`, multiplying components.
+- **`interpretNF'.simple`**: Variant that always emits a final `* G.ide`, simplifying inductive proofs.
 - **`interpretNF'.=simple`**: Equates `interpretNF'` with its `simple` counterpart.
 
-#### Substitution Monad
+#### Algebraic Lemmas on `interpretNF'`
 
-- **`>>=`**: Bind operation on normal forms (infixl 2): substitutes each signed variable in `List (\Sigma Bool U)` by a normal form from `k : U -> List (\Sigma Bool V)`, applying `inverseNF` for negative entries.
+- **`interpretNF'_::`**: Cons unfolds as `if-then-else * tail`.
+- **`interpretNF'_reduce`**: `reduce` preserves interpretation (with helper `simple_reduce`).
+- **`interpretNF'_++`**: Concatenation of normal forms corresponds to group multiplication (with `_simple` helper).
+- **`interpretNF'_inverseNF`**: `inverseNF l acc` interprets as `inverse (⟦l⟧) * ⟦acc⟧` (with `_simple` helper).
+- **`interpretNF'-consistent`**: `interpretNF' env (normalize t) = interpret env t`, the soundness of normalization.
 
-#### Consistency Lemmas
+#### Substitution
 
-- **`interpretNF'_::`**: Cons step: `interpretNF' env (x :: l) = if x.1 (env x.2) (inverse (env x.2)) * interpretNF' env l`.
-- **`interpretNF'_reduce`**: `reduce` preserves interpretation: `interpretNF' env (reduce l) = interpretNF' env l`.
-- **`interpretNF'_reduce.simple_reduce`**: Same property stated for `interpretNF'.simple`.
-- **`interpretNF'_++`**: Interpretation distributes over list concatenation: `interpretNF' env (l ++ l') = interpretNF' env l * interpretNF' env l'`.
-- **`interpretNF'_++._simple`**: Concatenation distributivity for the `simple` form.
-- **`interpretNF'_inverseNF`**: `interpretNF' env (inverseNF l acc) = inverse (interpretNF' env l) * interpretNF' env acc`.
-- **`interpretNF'_inverseNF._simple`**: Same identity for the `simple` form.
-- **`interpretNF'-consistent`**: Normalization preserves meaning: `interpretNF' env (normalize t) = interpret env t`.
-- **`interpretNF'_>>=`**: Substitution compatibility: interpreting `l >>= k` equals interpreting `l` in the environment that maps each variable to the interpretation of `k v`.
+- **`>>=`**: Monadic bind over signed-variable lists; substitutes each variable with its assigned normal form, applying `inverseNF` to negatively-signed occurrences, and concatenates the results.
+- **`interpretNF'_>>=`**: Substitution commutes with interpretation: interpreting a bind equals interpreting the outer list under the environment that interprets each substituted normal form.
+
+#### Solver Models
+
+- **`GroupSolverModel`**: The `SubstSolverModel G` instance for a `Group G`, packaging the term language, normalization, signed-list NF, `nfVar` (positive singleton), and the `>>=` substitution with its consistency proofs.
+- **`AddGroupSolverModel`**: The `SubstSolverModel` instance for an `AddGroup A`, obtained by reusing `GroupSolverModel` on `AddGroup.toGroup A`.

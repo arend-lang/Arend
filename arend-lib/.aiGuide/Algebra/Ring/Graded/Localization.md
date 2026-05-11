@@ -1,16 +1,18 @@
 ### Algebra.Ring.Graded.Localization
 
-Constructs the homogeneous localization of a graded commutative ring at a submonoid, consisting of fractions where numerator and denominator share the same grading degree.
+Localization of a graded commutative ring at a multiplicative subset, restricted to homogeneous fractions of equal degree.
 
-#### Homogeneous Localization
+This module constructs the homogeneous localization `HomogenLocRing S`, the subring of `LocRing S` consisting of fractions `a/b` where the numerator and denominator are homogeneous of the same degree. This construction is fundamental in algebraic geometry — it underlies the definition of `Proj` and the structure sheaf on projective schemes, where one needs to extract degree-zero pieces from localizations of graded rings. The module packages the subring data as a `CRing` via `SubRing.cStruct` and provides a constructor `fromSType` that builds elements from raw homogeneity witnesses.
 
-- **`HomogenLocRing`**: Given a graded commutative ring `R : GradedCRing` and a submonoid `S : SubMonoid R`, builds the commutative ring of homogeneous fractions as a subring of `LocRing S`. Returns a `CRing` via `SubRing.cStruct`.
+#### Main Construction
 
-#### Subring Structure
+- **`HomogenLocRing`**: Given a graded commutative ring `R : GradedCRing` and a submonoid `S : SubMonoid R`, the commutative ring of homogeneous fractions in `LocRing S` — pairs `(a, b)` with `b ∈ S` where both `a` and `b` are homogeneous of the same degree `n`. Built as `SubRing.cStruct subRing`.
 
-- **`HomogenLocRing.subRing`**: The underlying `SubRing (LocRing S)` whose elements are localization classes `inl~ y` for which numerator `y.1` and denominator `y.2` are both homogeneous of the same degree `n`. Provides closure proofs for `0`, `1`, addition, multiplication, and negation, computing the appropriate combined degrees (e.g., degree `n + m` for sums and products).
+#### Subring Definition
+
+- **`subRing`**: The `SubRing (LocRing S)` whose carrier predicate asserts that an element `x` admits a representative `y : LocRing.SType S` together with a common degree `n` such that both `y.1` (numerator) and `y.2` (denominator) are homogeneous of degree `n`. Closure under zero, addition, identity, multiplication, and negation makes this a subring.
 
 #### Constructors
 
-- **`fromSType`**: Builds an element of `HomogenLocRing S` from a localization pair `y : LocRing.SType S` together with witnesses `y1h : isHomogen y.1 n` and `y2h : isHomogen y.2 n` that both components are homogeneous of degree `n`.
-- **`fromSType.equality`**: Lemma showing that `fromSType y y1h y2h` equals the pair `(x, ...)` whenever `x = inl~ y` in the localization, used to rewrite homogeneous-localization elements in terms of their representing fractions.
+- **`fromSType`**: Builds an element of `HomogenLocRing S` directly from a representative `y : LocRing.SType S` together with proofs `y1h : isHomogen y.1 n` and `y2h : isHomogen y.2 n`. Returns the pair `(inl~ y, witness)` where the witness packages the homogeneity data.
+- **`fromSType.equality`**: Lemma showing that for any `x : LocRing S` with `x = inl~ y`, the element `fromSType y y1h y2h` equals the explicit pair `(x, inP (y, x=[y], n, y1h, y2h))`. Used to rewrite `fromSType`-built elements in terms of arbitrary equal representatives.

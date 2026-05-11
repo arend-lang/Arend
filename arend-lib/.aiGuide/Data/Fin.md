@@ -1,32 +1,34 @@
 ### Data.Fin
 
-This module provides basic constructors, destructors, and utility lemmas for `Fin n` (the type of natural numbers less than `n`).
+Basic operations and lemmas for finite types `Fin n`.
+
+This module provides the elementary toolkit for working with `Fin n`, the type of natural numbers strictly less than `n`. It defines the standard constructors `fzero`/`fsuc` along with case analysis (`fcase`), predecessor operations (`fpred`, `fpredP`), and a collection of injectivity and disequality lemmas relating `Fin` to its underlying `Nat` representation. The design treats `Fin (suc n)` as the disjoint union of zero and successor cases, mirroring `Nat`, so most lemmas are simple transport/inversion results that let later modules manipulate finite indices without unfolding to `Nat`.
 
 #### Constructors
 
-- **`fzero`**: The zero element of `Fin (suc n)`.
-- **`fsuc`**: Successor embedding: given `x : Fin n`, produces `suc x : Fin (suc n)`.
+- **`fzero`**: The zero element of `Fin (suc n)`, defined as `0`.
+- **`fsuc`**: The successor function `Fin n -> Fin (suc n)`, defined as `suc`.
 
-#### Destructors
+#### Case Analysis and Predecessor
 
-- **`fpred`**: Predecessor with a default: `fpred def 0 = def`, `fpred def (suc x) = x`.
-- **`fpredP`**: Predecessor with a proof that the argument is nonzero (avoids the default).
-- **`fcase`**: Case analysis on `Fin (suc n)`: returns `a` for `0` and `f j` for `suc j`.
+- **`fpred`**: Predecessor with a default value: given `def : Fin n` and `x : Fin (suc n)`, returns `def` if `x = 0` and the underlying value otherwise.
+- **`fcase`**: Eliminator for `Fin (suc n)` into a type `A`: takes a value `a : A` for the zero case and a function `f : Fin n -> A` for the successor case.
+- **`fpredP`**: Predecessor with a proof of nonzero-ness: given `j : Fin (suc n)` and `j /= 0`, produces `Fin n`, using the proof to discharge the zero case via `absurd`.
+- **`finLast`**: The largest element of `Fin (suc n)`, defined recursively as `suc (finLast n)`.
 
-#### Equality and Inequality Lemmas
+#### Injectivity and Disequality
 
-- **`unfsuc`**: `suc x = suc y` implies `x = y` (injectivity of `fsuc`).
-- **`fsuc/=`**: `x /= y` implies `fsuc x /= fsuc y`.
-- **`fsuc/=0`**: `fsuc x /= 0` for any `x`.
-- **`fsuc/=-conv`**: `fsuc x /= fsuc y` implies `x /= y`.
-- **`nat_fin_=`**: Equality as `Nat` implies equality in `Fin n`.
-- **`fin_nat_/=`**: Inequality in `Fin n` implies inequality as `Nat`.
+- **`unfsuc`**: Injectivity of `fsuc`: `suc x = suc y` implies `x = y`.
+- **`fsuc/=`**: `fsuc` preserves disequality: `x /= y` implies `fsuc x /= fsuc y`.
+- **`fsuc/=0`**: `fsuc x` is never equal to `0`.
+- **`fsuc/=-conv`**: Converse of `fsuc/=`: `fsuc x /= fsuc y` implies `x /= y`.
 
-#### Predecessor–Successor Round-Trip
+#### Conversion to/from Nat
 
-- **`fsuc_fpred`**: `fsuc (fpred d x) = x` when `x /= 0`.
-- **`fsuc_fpredP`**: `fsuc (fpredP x p) = x` when `x /= 0`.
+- **`nat_fin_=`**: Equality in `Nat` lifts to equality in `Fin n`.
+- **`fin_nat_/=`**: Disequality in `Fin n` descends to disequality of the underlying naturals.
 
-#### Last Element
+#### Predecessor/Successor Roundtrips
 
-- **`finLast`**: The largest element of `Fin (suc n)`, defined recursively: `finLast 0 = 0`, `finLast (suc n) = suc (finLast n)`.
+- **`fsuc_fpred`**: For `x : Fin (suc n)` with `x /= 0` and any default `d`, `fsuc (fpred d x) = x`.
+- **`fsuc_fpredP`**: Variant for `fpredP`: `fsuc (fpredP x p) = x` when `p : x /= 0`.

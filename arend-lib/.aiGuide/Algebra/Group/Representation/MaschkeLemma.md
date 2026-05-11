@@ -1,43 +1,32 @@
 ### Algebra.Group.Representation.MaschkeLemma
 
-Maschke's lemma: in characteristic coprime to `|G|`, every subrepresentation of a finite-group linear representation is a direct summand, proved via averaging over the group.
+Maschke's lemma: over a commutative ring where the group order is invertible, every short exact sequence of finite-group representations splits.
 
-#### Setup
+The module formalizes the classical averaging argument: given a `LModule`-level retraction `p` of a subrepresentation inclusion, one averages `p` over the finite group `G` (dividing by `|G|`) to produce a `G`-equivariant retraction. The construction is built in two layers — `SumOverGroup` packages the unweighted sum `Σ_g g·f(g⁻¹·-)` as an intertwining map between any two linear representations, and `Maschke'sLemma` then scales it by `|G|⁻¹` and verifies the retraction property. The hypothesis `q : natCoef |G| * |G|⁻¹ = 1` makes `|G|` formally invertible in `R`, replacing the usual characteristic-coprime-to-`|G|` condition.
 
-- **`Maschke'sLemma`**: Class bundling the hypotheses of Maschke's lemma — a commutative ring `R`, a finite group `G`, an inverse `|G|^-1` of the order of `G` in `R` witnessed by `q : natCoef |G| * |G|^-1 = 1`, a linear representation `E` over `R[G]`, and a subrepresentation `S` of `E`.
+#### Main Class
 
-#### Averaging Construction
+- **`Maschke'sLemma`**: Parameterized by a commutative ring `R`, a finite group `G`, an inverse `|G|^-1 : R` of the group order (witnessed by `q`), a representation `E`, and a subrepresentation `S`. Provides the splitting of `S ↪ E` in the representation category whenever it splits as `R`-modules.
+  - **`mean_func`**: Averaging operator on linear maps: scales `SumOverGroup f` by `|G|^-1` to produce an intertwining map `E → W`. This is the core symmetrization that turns a module map into an equivariant one.
+  - **`retracts`**: Upgrades a `LModuleCat`-level split monomorphism `p : SplitMono S.in` to a split monomorphism in `RepresentationCat R G`, with `mean_func p.hinv` as the equivariant retraction.
+  - **`mean-func-preserve`**: Key lemma — if `f` already retracts `S.in` at the module level (i.e. `f (S.in s) = s`), then `mean_func f` also retracts it on `S`. The proof reduces averaging to summing `t` over `G` and then multiplying by `natCoef |G| * |G|^-1 = 1`.
 
-- **`SumOverGroup`**: Given a linear map `f : A -> B` between linear `G`-representations over a commutative ring `R`, builds the `G`-equivariant interwining map `(1/|G|) Σ_{g ∈ G} g · f(g^{-1} · -)` (here without the normalization factor — just the sum). The resulting map satisfies `func-**` proving equivariance with respect to the `G`-action.
+#### SumOverGroup Construction
 
-#### Components of `SumOverGroup`
+- **`SumOverGroup`**: Given `f : LinearMap A B` between two linear representations, builds the intertwining map `Σ_{g∈G} g · f(g⁻¹ · -)`. The averaged sum is automatically `G`-equivariant even though `f` need not be.
+  - **`Ab`**: The abelian group of `R`-linear maps `A → B`, obtained from the pre-additive structure on `LModule R`. Hosts the finite sum used to define `int`.
+  - **`adjust`**: The `g`-th conjugated map `a ↦ g · f(g⁻¹ · a) : LinearMap A B`.
+  - **`adjust'`**: Family `g ↦ adjust g f` viewed as a function `G → LinearMap A B`.
+  - **`int`**: The underlying linear map of `SumOverGroup`, defined as `Ab.FinSum (adjust g f)`.
+  - **`group_prop`**: `adjust g f (h · a) = h · adjust (h⁻¹ * g) f a`. Encodes how conjugation interacts with the action and is the algebraic core of equivariance.
+  - **`bring_h_out`**: Pulls a `G`-action out of `int`: `int (h · a) = h · int a` after re-indexing the sum. This is what makes `int` an intertwining map.
 
-- **`Ab`**: The abelian group of linear maps `A -> B`, obtained from the pre-additive structure on `R`-modules.
-- **`adjust`**: Conjugates a linear map by `g`: `adjust g f := a ↦ g · f(g^{-1} · a)`. Inherits linearity from `f` and the module structure.
-- **`adjust'`**: The function `g ↦ adjust g f` viewed as a map `G -> LinearMap A B`.
-- **`int`**: The averaged map `Σ_{g ∈ G} adjust g f`, computed as a finite sum in `Ab`.
-- **`group_prop`**: Key identity `adjust g f (h · a) = h · adjust (h^{-1} g) f a`, used to commute the action past the averaging.
+#### Sum Manipulation Lemmas
 
-#### Equivariance and Sum Lemmas
-
-- **`FinSum-equivariance`**: The `G`-action commutes with finite sums in a representation: `h · Σ x = Σ (h · x)`.
-  - **`act_array`**, **`BigSum-equivariance`**: Helpers extending equivariance to `BigSum` over arrays by induction.
-- **`FinSumEquality`**: Two finite sums agree pointwise implies they are equal in any abelian monoid.
-  - **`BigSumEquality`**, **`ArrayEquality`**: Underlying array-level equalities used to derive `FinSumEquality`.
-- **`FinSumRewrite`**: Evaluation commutes with finite sums of linear maps: `(Σ x) a = Σ (x_g a)`.
-  - **`Ab_Helper`**, **`ap_BigSum_el_wise`**, **`BigSumRewrite`**: Pointwise evaluation lemmas for sums in the linear-map abelian group.
-- **`PermutationInvariance`**: Finite sums are invariant under permutation of the index set: `Σ x = Σ (x ∘ p)` for any equivalence `p`.
-
-#### Equivariance of the Averaged Map
-
-- **`rearrange`**: Reindexing identity `int = Σ_g adjust (h^{-1} g) f` for any `h ∈ G`, exploiting that left multiplication by `h^{-1}` permutes `G`.
-- **`ap-rearrange`**: Pointwise version of `rearrange` evaluated at `a ∈ A`.
-- **`bring_h_out`**: Core equivariance computation `int (h · a) = h · (Σ_g adjust (h^{-1} g) f) a`, the heart of the proof that `int` is `G`-equivariant.
-  - **`zero-2-step`**: Pushes evaluation at `a` inside the `FinSum`.
-  - **`step-4`**: Rewrites the summand `h · adjust (h^{-1} g) f a` into the canonical form `g · f(g^{-1} · (h · a))`.
-  - **`helper`**: Per-summand identity used by `step-4`, derived from associativity and inverse cancellation in `G`.
-
-#### Scalar Multiplication of Constant Sums
-
-- **`FinSumEqual-multiply`**: Sum of a constant element `e` over a finite set `A` equals `natCoef(|A|) *c e`. This is what enables division by `|G|` once `|G|^-1 ∈ R`, completing Maschke's averaging argument.
-  - **`BigSumEqual`**: Inductive version of `FinSumEqual-multiply` for `BigSum` over a length-`n` constant array.
+- **`FinSum-equivariance`**: A `G`-action commutes with `FinSum` in the target module: `h · Σ x_i = Σ (h · x_i)`. Reduces to `BigSum-equivariance` via the `FinSum_char` characterization.
+  - **`BigSum-equivariance`**: The same statement at the level of finite arrays, proved by induction on the array.
+- **`FinSumEquality`**: Pointwise equal families have equal `FinSum`s. Shows up whenever the summand is rewritten under the sum.
+- **`FinSumRewrite`**: Evaluation commutes with summation in `Ab`: `(Σ_g x_g) a = Σ_g (x_g a)`. Lets one move from sums of linear maps to sums of vectors.
+- **`PermutationInvariance`**: `FinSum` is invariant under permutation of the index set. Used to reindex the sum over `G` by `g ↦ h⁻¹ * g`.
+- **`rearrange`**, **`ap-rearrange`**: Apply `PermutationInvariance` with the permutation `g ↦ h⁻¹ * g` to rewrite `int` (resp. `int a`) in the form needed by `bring_h_out`.
+- **`FinSumEqual-multiply`**: Sum of a constant family `(_ : A) ↦ e` in an `R`-module equals `natCoef |A| *c e`. The numerical identity that, combined with `q`, collapses the average back to the original element in `mean-func-preserve`.

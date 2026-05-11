@@ -1,38 +1,41 @@
 ### Set.Partial
 
-Partial elements of a set: values defined on a propositional domain, supporting extensionality, lifting of functions, and a partial-monoid structure.
+Partial elements of a set, represented as values defined on a propositional condition.
 
-#### Core Definition
+A `Partial X` packages a proposition `isDefined` together with a function from a proof of that proposition to a value in `X`. This encodes the "maybe defined" pattern in a propositionally-truncated style: equality of partial elements is determined by logical equivalence of their definedness propositions plus agreement of their values where defined. The module provides constructors for total and never-defined partial elements, extensionality lemmas for proving equalities, functorial lifts of ordinary functions, and an `AddMonoid` instance that lifts addition pointwise (with the identity always defined).
 
-- **`Partial`**: A class representing a partial element of a set `E`, consisting of a proposition `isDefined` and a value function `value : isDefined -> E`.
-- **`Partial.make`**: Constructor `(P : \Prop) (f : P -> X) -> Partial X` building a partial element from a proposition and a value function.
+#### Core Record
+
+- **`Partial`**: A record over `E : \Set` with a propositional definedness `isDefined : \Prop` and a coercion `value : isDefined -> E` extracting the value from a definedness witness.
+- **`Partial.HasValue`**: Predicate `\Sigma (P : isDefined) (value P = a)` asserting the partial element is defined and equals `a`.
+- **`Partial.make`**: Builder constructing a `Partial X` from a proposition `P` and a function `P -> X`.
 
 #### Constructors
 
-- **`defined`**: The total partial element `defined x : Partial X` with `isDefined = \Sigma` (always defined) returning `x`.
-- **`undefined`**: The empty partial element `undefined : Partial X` with `isDefined = Empty` (never defined).
+- **`defined`**: The always-defined partial element with `isDefined = \Sigma` (unit) and constant value `x`.
+- **`undefined`**: The never-defined partial element with `isDefined = Empty`.
 
 #### Extensionality
 
-- **`partial-ext`**: Two partials are equal given a logical equivalence of their definedness and pointwise equality of values on any witnesses.
-- **`partial-ext-left`**: Variant of `partial-ext` quantifying over witnesses of `u.isDefined`.
-- **`partial-ext-right`**: Variant of `partial-ext` quantifying over witnesses of `v.isDefined`.
-- **`defined-ext`**: If `u` is defined with value `x`, then `u = defined x`.
-  - **`defined-ext.isDefined`**: From `u = defined x`, extracts a proof that `u.isDefined`.
-  - **`defined-ext.value`**: From `u = defined x`, extracts the equality `u d = x` on the induced witness.
+- **`partial-ext`**: Equality of partial elements from a logical equivalence of definedness propositions and pointwise agreement of values on both witnesses.
+- **`partial-ext-left`**: Variant of `partial-ext` requiring agreement only over witnesses of `u.isDefined`.
+- **`partial-ext-right`**: Variant of `partial-ext` requiring agreement only over witnesses of `v.isDefined`.
+- **`defined-ext`**: If `u` is defined and its value equals `x`, then `u = defined x`.
+  - **`defined-ext.isDefined`**: Recovers `u.isDefined` from `u = defined x`.
+  - **`defined-ext.value`**: Recovers the value equation `u d = x` from `u = defined x`.
 - **`undefined-ext`**: If `u.isDefined` is uninhabited, then `u = undefined`.
 
 #### Equality Consequences
 
-- **`partial-defined`**: From `u = v` derives `u.isDefined <-> v.isDefined`.
-- **`partial-value`**: From `u = v` derives equality of values `u d = v e` on any witnesses.
-- **`defined-inj`**: Injectivity of `defined`: `defined x = defined y -> x = y`.
+- **`partial-defined`**: Equality of partials gives a logical equivalence of their definedness propositions.
+- **`partial-value`**: Equality of partials gives equality of their values on any witnesses of definedness.
+- **`defined-inj`**: Injectivity of `defined`: from `defined x = defined y` derive `x = y`.
 
-#### Lifting
+#### Functorial Lifts
 
-- **`plift`**: Lifts `f : X -> Y` to `Partial X -> Partial Y`, preserving definedness.
-- **`plift2`**: Lifts a binary `f : X -> Y -> Z` to `Partial X -> Partial Y -> Partial Z`, defined when both arguments are.
+- **`plift`**: Lift a function `f : X -> Y` to `Partial X -> Partial Y`, preserving the underlying definedness.
+- **`plift2`**: Lift a binary function `f : X -> Y -> Z` to `Partial X -> Partial Y -> Partial Z`, with combined definedness `\Sigma p.isDefined q.isDefined`.
 
 #### Algebraic Structure
 
-- **`PartialAddMonoid`**: Instance making `Partial X` an `AddMonoid` whenever `X` is, with `zro = defined X.zro` and `+ = plift2 (+)`.
+- **`PartialAddMonoid`**: `AddMonoid` instance on `Partial X` for an `AddMonoid X`, with `zro = defined X.zro` and `+` given by `plift2 (+)`.
