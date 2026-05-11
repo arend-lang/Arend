@@ -86,10 +86,21 @@ public class ConsoleMain {
 
       PATTERN
         Foo                literal substring match (case-insensitive by
-                           default). NOTHING is interpreted as a metacharacter
-                           because Arend identifiers freely use *, ^, $, ?,
-                           etc. (e.g. *-comm, ^-1, <*). To search for a name
-                           containing '*-comm', just type '*-comm'.
+                           default). Isolated punctuation is treated as a
+                           normal name char, since Arend identifiers freely
+                           use *, ^, $, ?, |, etc. (e.g. *-comm, ^-1, <*).
+                           To search for a name containing '*-comm', just
+                           type '*-comm'.
+                           EXCEPTIONS: a plain pattern containing a regex
+                           SEQUENCE (.* / .+ / .? / (?...) is rejected with
+                           a fix-it suggestion -- these almost never appear
+                           in real names. A plain pattern containing '|' is
+                           matched literally (since '|' is a valid identifier
+                           char) but emits a soft warning, in case OR was
+                           intended.
+        lit:<text>         literal substring, bypassing the regex-look
+                           check. Use when a real name happens to look like
+                           a regex (e.g. 'lit:foo.*bar').
         eq:<text>          exact full-name match
         glob:<pat>         '*' = any chars, '?' = any one char.
                            Use '\\*' / '\\?' for literal stars / question
@@ -103,7 +114,15 @@ public class ConsoleMain {
       MULTIPLE PATTERNS
         Pass several patterns to OR them: a name matches if it satisfies any.
           arend -ss Cauchy -ss Mertens
-        mixes freely with prefixes (e.g. -ss 'glob:abs_*' -ss 'hb:cAss').
+        Whitespace inside a SINGLE -ss argument is also a separator, so:
+          arend -ss "Cauchy Mertens"           # same as -ss Cauchy -ss Mertens
+        Prefixed tokens mix freely:
+          arend -ss "glob:abs_* hb:cAss" -ss re:^foo.*bar$
+
+      QUERY ECHO
+        Each run prints the parsed query before searching so you can see at
+        a glance how each token was interpreted ('literal', 'exact', 'glob',
+        'regex', 'humpback'). Glob / humpback also show the compiled regex.
 
       EXTRA TOKENS  (each passed as a separate -ss argument)
         case-sensitive     match name case exactly (default: case-insensitive)
@@ -132,14 +151,16 @@ public class ConsoleMain {
           <signature on a single line>
 
       EXAMPLES
-        arend -L libs my-lib -ss 'Monoid'                  (substring)
-        arend -L libs my-lib -ss '*-comm'                  (literal '*-comm')
+        arend -L libs my-lib -ss 'Monoid'                   (substring)
+        arend -L libs my-lib -ss '*-comm'                   (literal '*-comm')
+        arend -L libs my-lib -ss 'BigSum_1 BigSum_+ BigSum-ext'  (OR via spaces)
+        arend -L libs my-lib -ss Cauchy -ss Mertens         (OR via multi-flag)
         arend -L libs my-lib -ss 'eq:pmap' -ss kind=func,lemma
         arend -L libs my-lib -ss 'glob:abs_*' -ss limit=20
         arend -L libs my-lib -ss 're:^abs.*\\+.*$'
+        arend -L libs my-lib -ss 'lit:foo.*bar'             (forced literal)
         arend -L libs my-lib -ss 'hb:isProp' -ss case-sensitive
         arend -L libs my-lib -ss only=self -ss 'shared-name'
-        arend -L libs my-lib -ss Cauchy -ss Mertens         (OR)
         arend -L libs my-lib -ss Monoid -ss contains=comm   (Monoid* AND *comm*)
 
       See also: `-rx` / `--reindex` to refresh the index without searching.
