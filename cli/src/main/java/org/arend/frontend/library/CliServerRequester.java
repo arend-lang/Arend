@@ -131,6 +131,7 @@ public class CliServerRequester implements ArendServerRequester {
     int loaded = 0;
     int failed = 0;
     int incomplete = 0;
+    List<PendingBinaryLoad> loadedLoads = new ArrayList<>();
     for (PendingBinaryLoad load : phase2b) {
       ConcreteGroup group = server.getRawGroup(load.module);
       try {
@@ -148,6 +149,7 @@ public class CliServerRequester implements ArendServerRequester {
         } else {
           loaded++;
           myBinaryCacheLoaded.add(load.module);
+          loadedLoads.add(load);
         }
       } catch (Exception e) {
         failed++;
@@ -156,6 +158,40 @@ public class CliServerRequester implements ArendServerRequester {
         }
       }
     }
+
+    // Phase 2c: a module that fillInDefinition partway through leaves later
+    // definitions in NEEDS_TYPE_CHECKING state with null result type.  Modules
+    // that already captured those shell objects (via getCallTarget during their
+    // own fillInDefinition — order matters because circular imports like
+    // Algebra.StrictlyOrdered ↔ Arith.Nat prevent topological processing) keep
+    // holding them.  Likewise, when a module is later cleared, its filled
+    // definitions stay reachable through other modules' expression trees but
+    // its TCDefReferables now resolve to a freshly re-typechecked replacement,
+    // breaking object-identity invariants.
+    //
+    // Iteratively walk each loaded module's expressions and drop any whose
+    // captured Definition references are stale (a shell, or pointing at an
+    // object that no longer matches its TCDefReferable's current typechecked).
+    int promotedToIncomplete = 0;
+    while (true) {
+      List<PendingBinaryLoad> toClear = new ArrayList<>();
+      for (PendingBinaryLoad load : loadedLoads) {
+        ConcreteGroup group = server.getRawGroup(load.module);
+        if (group != null && hasOrphanShellReference(group)) {
+          toClear.add(load);
+        }
+      }
+      if (toClear.isEmpty()) break;
+      for (PendingBinaryLoad load : toClear) {
+        ConcreteGroup group = server.getRawGroup(load.module);
+        if (group != null) clearTypechecked(group);
+        myBinaryCacheLoaded.remove(load.module);
+      }
+      loadedLoads.removeAll(toClear);
+      promotedToIncomplete += toClear.size();
+    }
+    loaded -= promotedToIncomplete;
+    incomplete += promotedToIncomplete;
     if (loaded > 0 || failed > 0 || incomplete > 0) {
       System.out.println("[INFO] Binary cache: " + loaded + " loaded"
           + (incomplete > 0 ? ", " + incomplete + " incomplete" : "")
@@ -185,6 +221,43 @@ public class CliServerRequester implements ArendServerRequester {
       if (hasMissingTypechecked(dynGroup)) return true;
     }
     return false;
+  }
+
+  /**
+   * Returns true if any typecheckable definition in the group has an expression
+   * (parameter type, result type, body) that references another {@link Definition}
+   * still stuck in {@link Definition.TypeCheckingStatus#NEEDS_TYPE_CHECKING} — i.e.
+   * an orphan shell left behind when its owning module's phase-2b failed partway
+   * through fillInDefinition.
+   */
+  private static boolean hasOrphanShellReference(ConcreteGroup group) {
+    OrphanShellFinder finder = new OrphanShellFinder();
+    walkDefinitions(group, def -> {
+      finder.scan(def);
+      return finder.found;
+    });
+    return finder.found;
+  }
+
+  /** Walks {@code group} and feeds each typecheckable {@link Definition} to {@code visit}; stops on true. */
+  private static void walkDefinitions(ConcreteGroup group, java.util.function.Predicate<Definition> visit) {
+    LocatedReferable ref = group.referable();
+    if (ref instanceof TCDefReferable tcRef && tcRef.getKind().isTypecheckable()) {
+      Definition def = tcRef.getTypechecked();
+      if (def != null && visit.test(def)) return;
+    }
+    for (InternalReferable internalRef : group.getInternalReferables()) {
+      if (internalRef instanceof TCDefReferable tcRef && tcRef.getKind().isTypecheckable()) {
+        Definition def = tcRef.getTypechecked();
+        if (def != null && visit.test(def)) return;
+      }
+    }
+    for (ConcreteStatement statement : group.statements()) {
+      if (statement.group() != null) walkDefinitions(statement.group(), visit);
+    }
+    for (ConcreteGroup dynGroup : group.dynamicGroups()) {
+      walkDefinitions(dynGroup, visit);
+    }
   }
 
   private static void clearTypechecked(ConcreteGroup group) {
