@@ -100,10 +100,17 @@ public class ConsoleMain {
                            e.g. 'hb:PMA' on 'PosetAddMonoid', 'hb:p-iP' on
                            'pi-isProp'. Use `case-sensitive` for strict camel.
 
+      MULTIPLE PATTERNS
+        Pass several patterns to OR them: a name matches if it satisfies any.
+          arend -ss Cauchy -ss Mertens
+        mixes freely with prefixes (e.g. -ss 'glob:abs_*' -ss 'hb:cAss').
+
       EXTRA TOKENS  (each passed as a separate -ss argument)
         case-sensitive     match name case exactly (default: case-insensitive)
         no-cache           bypass the on-disk index, re-parse everything
         limit=N            cap printed matches at N (0 = unlimited; default 200)
+        contains=<text>    extra AND substring filter on the short name; can be
+                           repeated. Replaces post-pipe `| grep`.
         kind=k1,k2,...     keep only these kinds. Recognised:
                            func, sfunc, lemma, type, axiom, instance, coclause,
                            coerce, level, data, cons|constructor, class, record,
@@ -116,6 +123,10 @@ public class ConsoleMain {
                            comma-separated (e.g. only=arend-lib,liba).
 
       OUTPUT
+        Line-oriented; safe to post-filter with `| head`, `| tail`, `| grep`
+        if that is what your fingers reach for. `limit=N` and `contains=`
+        do the same job inside the tool.
+
         <abs-path>:<line>:<col>           or  <library:module> for generated
         <library>::<long-name>  [<KIND>]
           <signature on a single line>
@@ -128,6 +139,26 @@ public class ConsoleMain {
         arend -L libs my-lib -ss 're:^abs.*\\+.*$'
         arend -L libs my-lib -ss 'hb:isProp' -ss case-sensitive
         arend -L libs my-lib -ss only=self -ss 'shared-name'
+        arend -L libs my-lib -ss Cauchy -ss Mertens         (OR)
+        arend -L libs my-lib -ss Monoid -ss contains=comm   (Monoid* AND *comm*)
+
+      See also: `-rx` / `--reindex` to refresh the index without searching.
+      """;
+
+  private final static String REINDEX_HELP = """
+      arend -rx [only=name,...]
+
+      Build (or refresh) the on-disk symbol index for every library in scope,
+      then exit. Use this after creating/renaming modules so subsequent
+      `-ss`, `-nr`, `-rr`, `-fu`, `-ch`, `-sc` runs see the new definitions.
+
+      EXTRA TOKENS  (each as a separate -rx argument)
+        only=name|self    restrict scope. Same semantics as the -ss
+                          only= token (default: every loaded library).
+
+      EXAMPLES
+        arend -L libs my-lib -rx
+        arend -L libs my-lib -rx only=self
       """;
 
   private final static String PROOF_SEARCH_HELP = """
@@ -342,6 +373,8 @@ public class ConsoleMain {
           .desc("search by signature shape (parameters/codomain). Pass `-ps help` for the full grammar.").build());
       cmdOptions.addOption(Option.builder("ss").longOpt("symbol-search").hasArgs().argName("pattern")
           .desc("search by short name (uses an mtime-cached on-disk index). Pass `-ss help` for the full grammar.").build());
+      cmdOptions.addOption(Option.builder("rx").longOpt("reindex").hasArgs().optionalArg(true).argName("only=lib,...")
+          .desc("build/refresh the on-disk symbol index for every library in scope, then exit. Optional `only=name,...` token. Pass `-rx help` for full grammar.").build());
       cmdOptions.addOption(Option.builder("fu").longOpt("find-usages").hasArgs().argName("MODULE:DEF")
           .desc("find every usage of a definition. Pass `-fu help` for full grammar.").build());
       cmdOptions.addOption(Option.builder("ch").longOpt("class-hierarchy").hasArgs().argName("CLASS")
@@ -392,6 +425,11 @@ public class ConsoleMain {
 
       if (cmdLine.hasOption("sc") && containsHelpToken(cmdLine.getOptionValues("sc"))) {
         System.out.println(SCOPE_HELP);
+        return null;
+      }
+
+      if (cmdLine.hasOption("rx") && containsHelpToken(cmdLine.getOptionValues("rx"))) {
+        System.out.println(REINDEX_HELP);
         return null;
       }
 
@@ -740,8 +778,25 @@ public class ConsoleMain {
       org.arend.frontend.symbol.SymbolSearch.Parsed parsed =
           org.arend.frontend.symbol.SymbolSearch.parseArgs(cmdLine.getOptionValues("ss"), mySystemErrErrorReporter);
       if (parsed == null) return false;
-      org.arend.frontend.symbol.SymbolSearch.run(parsed.pattern(), parsed.options(),
+      org.arend.frontend.symbol.SymbolSearch.run(parsed.patterns(), parsed.options(),
           requestedLibraries, libraryManager, server, mySystemErrErrorReporter);
+      return true;
+    }
+
+    if (cmdLine.hasOption("rx")) {
+      java.util.Set<String> only = null;
+      for (String arg : cmdLine.getOptionValues("rx") == null ? new String[0] : cmdLine.getOptionValues("rx")) {
+        if (arg.startsWith("only=")) {
+          if (only == null) only = new java.util.HashSet<>();
+          for (String s : arg.substring("only=".length()).split(",")) {
+            if (!s.isEmpty()) only.add(s.trim());
+          }
+        } else {
+          System.err.println("[ERROR] Unknown -rx token: " + arg);
+          return false;
+        }
+      }
+      org.arend.frontend.symbol.SymbolSearch.reindex(requestedLibraries, libraryManager, server, only);
       return true;
     }
 

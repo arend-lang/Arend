@@ -23,6 +23,8 @@ public final class SymbolSearch {
     public final EnumSet<SymbolIndex.Kind> kinds = EnumSet.allOf(SymbolIndex.Kind.class);
     /** {@code null} = all loaded libraries; otherwise the explicit allow-list. */
     public @Nullable Set<String> onlyLibraries = null;
+    /** Extra AND substring filters applied after the pattern matches. */
+    public final List<String> containsFilters = new ArrayList<>();
   }
 
   /**
@@ -30,18 +32,24 @@ public final class SymbolSearch {
    *                           the seed for the search scope (and to compute
    *                           {@code only=self}).
    */
-  public static int run(@NotNull String pattern,
+  public static int run(@NotNull List<String> patterns,
                         @NotNull Options options,
                         @NotNull List<SourceLibrary> requestedLibraries,
                         @NotNull LibraryManager libraryManager,
                         @NotNull ArendServer server,
                         @NotNull ErrorReporter errorReporter) {
-    SymbolPattern compiled;
-    try {
-      compiled = SymbolPattern.compile(pattern, options.caseSensitive);
-    } catch (IllegalArgumentException e) {
-      System.err.println("[ERROR] Bad -ss pattern: " + e.getMessage());
+    if (patterns.isEmpty()) {
+      System.err.println("[ERROR] -ss requires at least one pattern");
       return 0;
+    }
+    List<SymbolPattern> compiled = new ArrayList<>(patterns.size());
+    for (String p : patterns) {
+      try {
+        compiled.add(SymbolPattern.compile(p, options.caseSensitive));
+      } catch (IllegalArgumentException e) {
+        System.err.println("[ERROR] Bad -ss pattern '" + p + "': " + e.getMessage());
+        return 0;
+      }
     }
 
     List<SourceLibrary> libsInScope = librariesInScope(requestedLibraries, libraryManager, options);
@@ -71,7 +79,8 @@ public final class SymbolSearch {
 
       for (SymbolIndex.Entry e : idx.allEntries()) {
         if (!options.kinds.contains(e.kind())) continue;
-        if (!compiled.matches(e.shortName())) continue;
+        if (!matchesAny(compiled, e.shortName())) continue;
+        if (!matchesAllContains(options, e.shortName())) continue;
         total++;
         if (options.limit > 0 && printed >= options.limit) {
           truncated = true;
@@ -91,6 +100,52 @@ public final class SymbolSearch {
           + (truncated ? " (showing " + printed + "; pass `limit=0` for all)" : ""));
     }
     return total;
+  }
+
+  /**
+   * Build (or refresh) the on-disk symbol index for every library in scope and
+   * exit. Replaces the older "no-op {@code -ss zzznevermatch >/dev/null}" idiom.
+   */
+  public static void reindex(@NotNull List<SourceLibrary> requestedLibraries,
+                             @NotNull LibraryManager libraryManager,
+                             @NotNull ArendServer server,
+                             @Nullable Set<String> onlyLibraries) {
+    Options opts = new Options();
+    opts.onlyLibraries = onlyLibraries;
+    List<SourceLibrary> libsInScope = librariesInScope(requestedLibraries, libraryManager, opts);
+    if (libsInScope.isEmpty()) {
+      System.out.println("No libraries to index.");
+      return;
+    }
+    for (SourceLibrary lib : libsInScope) {
+      SymbolIndex idx = SymbolIndex.loadOrCreate(lib);
+      int rebuilt = 0;
+      for (ModulePath mp : lib.findModules(false)) {
+        if (idx.isStale(lib, mp)) {
+          server.findModule(mp, lib.getLibraryName(), false, false);
+          rebuilt++;
+        }
+      }
+      idx.refresh(lib, server, false);
+      idx.save();
+      System.out.println(lib.getLibraryName() + ": indexed (" + rebuilt
+          + " stale module" + (rebuilt == 1 ? "" : "s") + " re-parsed).");
+    }
+  }
+
+  private static boolean matchesAny(List<SymbolPattern> patterns, String shortName) {
+    for (SymbolPattern p : patterns) if (p.matches(shortName)) return true;
+    return false;
+  }
+
+  private static boolean matchesAllContains(Options opts, String shortName) {
+    if (opts.containsFilters.isEmpty()) return true;
+    String hay = opts.caseSensitive ? shortName : shortName.toLowerCase(Locale.ROOT);
+    for (String needle : opts.containsFilters) {
+      String n = opts.caseSensitive ? needle : needle.toLowerCase(Locale.ROOT);
+      if (!hay.contains(n)) return false;
+    }
+    return true;
   }
 
   private static void appendEntry(StringBuilder out, String libName, SymbolIndex.Entry e) {
@@ -138,11 +193,12 @@ public final class SymbolSearch {
   /**
    * Parses sub-tokens passed alongside {@code -ss}, e.g.
    * {@code -ss Monoid case-sensitive limit=50 only=arend-lib kind=class,instance}.
-   * The first token that doesn't look like an option is treated as the pattern.
+   * Any token that doesn't look like an option is treated as a pattern; multiple
+   * patterns are OR-ed at match time.
    */
   public static @Nullable Parsed parseArgs(String[] args, ErrorReporter errorReporter) {
     Options opts = new Options();
-    String pattern = null;
+    List<String> patterns = new ArrayList<>();
     for (String arg : args) {
       if (arg.equals("case-sensitive")) opts.caseSensitive = true;
       else if (arg.equals("no-cache")) opts.noCache = true;
@@ -152,6 +208,9 @@ public final class SymbolSearch {
           System.err.println("[ERROR] Bad -ss limit: " + arg);
           return null;
         }
+      } else if (arg.startsWith("contains=")) {
+        String v = arg.substring("contains=".length());
+        if (!v.isEmpty()) opts.containsFilters.add(v);
       } else if (arg.startsWith("kind=")) {
         EnumSet<SymbolIndex.Kind> ks = EnumSet.noneOf(SymbolIndex.Kind.class);
         for (String name : arg.substring("kind=".length()).split(",")) {
@@ -168,21 +227,18 @@ public final class SymbolSearch {
         for (String s : arg.substring("only=".length()).split(",")) {
           if (!s.isEmpty()) opts.onlyLibraries.add(s.trim());
         }
-      } else if (pattern == null) {
-        pattern = arg;
       } else {
-        System.err.println("[ERROR] Multiple -ss patterns: '" + pattern + "' and '" + arg + "'. Use quotes.");
-        return null;
+        patterns.add(arg);
       }
     }
-    if (pattern == null) {
-      System.err.println("[ERROR] -ss requires a pattern");
+    if (patterns.isEmpty()) {
+      System.err.println("[ERROR] -ss requires at least one pattern");
       return null;
     }
-    return new Parsed(pattern, opts);
+    return new Parsed(patterns, opts);
   }
 
-  public record Parsed(String pattern, Options options) {}
+  public record Parsed(List<String> patterns, Options options) {}
 
   private static @Nullable SymbolIndex.Kind parseKind(String s) {
     return switch (s.toLowerCase(Locale.ROOT)) {
