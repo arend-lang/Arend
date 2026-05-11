@@ -48,6 +48,7 @@ public final class ReferenceResolveAutoFix {
       @NotNull List<String> suggestionBlocks,
       @NotNull List<String> infoMessages,
       @NotNull List<Path> modifiedFiles,
+      @NotNull Set<ModuleLocation> modifiedModules,
       @NotNull List<String> warnings
   ) {}
 
@@ -133,7 +134,8 @@ public final class ReferenceResolveAutoFix {
 
       if (candidates.size() == 1) {
         Candidate only = candidates.getFirst();
-        FileFixes ff = perFile.computeIfAbsent(filePath, FileFixes::new);
+        final ModuleLocation moduleForFix = module;
+        FileFixes ff = perFile.computeIfAbsent(filePath, k -> new FileFixes(k, moduleForFix));
         ff.replacements.add(new Replacement(position.line, position.column, nse.name.length(), only.calculatedName));
         for (RawImportAdder imp : only.imports) ff.imports.add(imp);
         infoMessages.add(formatInfoMessage(filePath, position, nse.name, only));
@@ -149,15 +151,19 @@ public final class ReferenceResolveAutoFix {
 
     // 5. Apply the per-file fixes.
     List<Path> modified = new ArrayList<>();
+    Set<ModuleLocation> modifiedMods = new LinkedHashSet<>();
     for (FileFixes ff : perFile.values()) {
-      if (applyFixes(ff)) modified.add(ff.path);
+      if (applyFixes(ff)) {
+        modified.add(ff.path);
+        if (ff.module != null) modifiedMods.add(ff.module);
+      }
     }
 
     // 6. Surface non-core warnings: imports that bring in a data type but
     //    leave its constructors out of scope (the silent-variable-pattern bug).
     List<String> warnings = findMissingConstructorImports(server, manager, requestedLibraries);
 
-    return new Result(errorsToPrint, suggestionBlocks, infoMessages, modified, warnings);
+    return new Result(errorsToPrint, suggestionBlocks, infoMessages, modified, modifiedMods, warnings);
   }
 
   // ---- missing-constructor-import warning -------------------------------
@@ -476,9 +482,10 @@ public final class ReferenceResolveAutoFix {
 
   private static final class FileFixes {
     final Path path;
+    final ModuleLocation module;
     final List<Replacement> replacements = new ArrayList<>();
     final Set<RawImportAdder> imports = new LinkedHashSet<>();
-    FileFixes(Path path) { this.path = path; }
+    FileFixes(Path path, ModuleLocation module) { this.path = path; this.module = module; }
   }
 
   private static boolean applyFixes(FileFixes ff) {

@@ -12,7 +12,9 @@ import org.arend.ext.prettyprinting.PrettyPrinterFlag;
 import org.arend.ext.util.Pair;
 import org.arend.frontend.library.*;
 import org.arend.frontend.repl.PlainCliRepl;
+import org.arend.frontend.symbol.ReferenceResolveAutoFix;
 import org.arend.frontend.symbol.SignatureFileWriter;
+import org.arend.frontend.symbol.SymbolSearch;
 import org.arend.frontend.repl.jline.JLineCliRepl;
 import org.arend.frontend.source.PreludeResourceSource;
 import org.arend.library.classLoader.FileClassLoaderDelegate;
@@ -63,6 +65,8 @@ import static org.arend.proof.Utils.getSignatures;
 public class ConsoleMain {
   private boolean myExitWithError;
   private final Map<ModuleLocation, GeneralError.Level> myModuleResults = new LinkedHashMap<>();
+  /** Definitions that picked up an ERROR-level diagnostic (used to filter .sig). */
+  private final Set<TCDefReferable> myFailedDefinitions = new HashSet<>();
 
   private final static String SHOW_TIMES = "show-times";
   private final static String SHOW_SIZES = "show-sizes";
@@ -166,12 +170,52 @@ public class ConsoleMain {
       See also: `-rx` / `--reindex` to refresh the index without searching.
       """;
 
+  private final static String AI_HELP = """
+      arend -ai [MODULE | MODULE:DEF]
+
+      Agent-oriented all-in-one mode. Runs in sequence:
+
+        1. Name resolution with auto-fix
+           For each unresolved short name, looks candidates up in the
+           binary symbol index. If exactly one candidate exists, rewrites
+           the source file to use the qualified name and adds the
+           required import. If multiple candidates exist, lists them so
+           you can pick one and re-run.
+        2. Typecheck
+           Standard typecheck pass on the in-scope modules. Auto-fixed
+           sources are reloaded automatically (no re-run required).
+        3. Signature mirror
+           Writes signature-only views of every typechecked module to
+           <library>/.sig/<module>.ard. Function/lemma/instance bodies
+           and class-field implementations are replaced with `{?}`; data
+           constructors, field declarations, namespace commands, and
+           \\where structure are preserved. Definitions with typecheck
+           errors are replaced with `-- skipped: <name> (typecheck
+           errors)` so the .sig pool only contains verified declarations.
+        4. Symbol index refresh
+           Rebuilds the on-disk symbol index used by -ss / -fu / -ch /
+           -sc.
+
+      GRANULARITY (positional args)
+        no args        every requested library, end-to-end
+        MODULE         that module + its transitive raw-import closure
+        MODULE:DEF     same plus an existence check for DEF
+
+      EXAMPLES
+        arend -L libs my-lib -ai
+        arend -L libs my-lib -ai Algebra.Group
+        arend -L libs my-lib -ai Algebra.Group:comm-Group
+        arend -L libs my-lib -ai -r           # full recompile + AI mode
+
+      Replaces the older -nr / -rr / -sig flags.
+      """;
+
   private final static String REINDEX_HELP = """
       arend -rx [only=name,...]
 
       Build (or refresh) the on-disk symbol index for every library in scope,
       then exit. Use this after creating/renaming modules so subsequent
-      `-ss`, `-nr`, `-rr`, `-fu`, `-ch`, `-sc` runs see the new definitions.
+      `-ss`, `-ai`, `-fu`, `-ch`, `-sc` runs see the new definitions.
 
       EXTRA TOKENS  (each as a separate -rx argument)
         only=name|self    restrict scope. Same semantics as the -ss
@@ -402,9 +446,7 @@ public class ConsoleMain {
           .desc("print super/sub-class trees plus \\new and \\instance sites. Accepts MODULE:CLASS or a bare class name (resolved via the symbol index). Pass `-ch help` for full grammar.").build());
       cmdOptions.addOption(Option.builder("sc").longOpt("scope").hasArgs().argName("REFERABLE")
           .desc("dump the ambient scope at a referable's position; debug aid for reference-resolution issues. Accepts MODULE:PATH or a bare short name, plus an optional -ss-style pattern to filter results. Pass `-sc help` for full grammar.").build());
-      cmdOptions.addOption("sig", "write-signatures", false, "in addition to the chosen mode (default typecheck, -nr, or -rr), emit a signature-only mirror of every processed module to <library>/.sig/<module>.ard. Function/lemma/instance/meta bodies and class-field implementations are replaced with the goal `{?}`; data constructors, class field declarations, namespace commands, and \\where structure are preserved. Honors positional-arg granularity. Off by default.");
-      cmdOptions.addOption("nr", "name-resolve", false, "only run name resolution; do not typecheck or load binary caches. Honors granularity from positional args: no args = each requested library; MODULE = that module + its transitive raw-import closure; MODULE:DEF = same plus an existence check for DEF. Requires complete binary symbol indices (build via -ss).");
-      cmdOptions.addOption("rr", "reference-resolve", false, "name-resolution + auto-fix: for each unresolved reference, look candidates up in the binary symbol indices, rewrite source files when the candidate is unique, and list alternatives otherwise. Same granularity rules as -nr. Requires complete binary symbol indices (build via -ss).");
+      cmdOptions.addOption(Option.builder("ai").longOpt("ai-pipeline").desc("agent-oriented all-in-one mode: (1) name-resolve with auto-fix (rewrites unique candidates, lists alternatives otherwise), (2) typecheck, (3) emit signature-only mirrors to <library>/.sig/<module>.ard for verified definitions only (failed defs replaced with `-- skipped:` comments), (4) refresh the binary symbol index used by -ss/-fu/-ch/-sc. Honors positional-arg granularity (no args = library; MODULE; MODULE:DEF). Pass `-ai help` for full grammar.").build());
       cmdOptions.addOption("r", "recompile", false, "recompile all modules from source, ignoring binary caches (.arc files)");
       cmdOptions.addOption("t", "test", false, "run tests");
       cmdOptions.addOption("v", "version", false, "print language version");
@@ -493,6 +535,9 @@ public class ConsoleMain {
       error.forAffectedDefinitions((referable, err) -> {
         if (referable instanceof LocatedReferable) {
           updateSourceResult(((LocatedReferable) referable).getLocation(), err.level);
+        }
+        if (err.level == GeneralError.Level.ERROR && referable instanceof TCDefReferable tcd) {
+          myFailedDefinitions.add(tcd);
         }
       });
 
@@ -848,17 +893,7 @@ public class ConsoleMain {
       return true;
     }
 
-    boolean writeSignatures = cmdLine.hasOption("sig");
-
-    if (cmdLine.hasOption("nr")) {
-      if (!verifyBinaryIndices(requestedLibraries)) return false;
-      return runNameResolveOnly(server, requestedLibraries, requestedModules, writeSignatures);
-    }
-
-    if (cmdLine.hasOption("rr")) {
-      if (!verifyBinaryIndices(requestedLibraries)) return false;
-      return runReferenceResolveOnly(server, requestedLibraries, requestedModules, libraryManager, writeSignatures);
-    }
+    boolean aiMode = cmdLine.hasOption("ai");
 
     if (cmdLine.hasOption("ps")) {
       String[] psArgs = cmdLine.getOptionValues("ps");
@@ -884,6 +919,10 @@ public class ConsoleMain {
 
     TimedProgressReporter timedProgressReporter = cmdLine.hasOption(SHOW_TIMES) ? new TimedProgressReporter() : null;
     ProgressReporter<List<? extends Concrete.ResolvableDefinition>> progressReporter = timedProgressReporter != null ? timedProgressReporter : ProgressReporter.empty();
+
+    if (aiMode) {
+      runAiAutoFix(server, requestedLibraries, requestedModules, libraryManager);
+    }
 
     // Pre-load binary caches (unless --recompile is set)
     if (!recompile) {
@@ -996,8 +1035,6 @@ public class ConsoleMain {
         }
 
         persistLibrary(library, server, requester.getBinaryCacheLoaded());
-
-        if (writeSignatures) emitSignaturesFor(server, library, null);
       }
     } else {
       for (Pair<ModulePath, LongName> requested : requestedModules) {
@@ -1046,12 +1083,10 @@ public class ConsoleMain {
       for (SourceLibrary library : requestedLibraries) {
         persistLibrary(library, server, requester.getBinaryCacheLoaded());
       }
-      if (writeSignatures) {
-        Set<ModulePath> only = collectModulePaths(requestedModules);
-        for (SourceLibrary library : requestedLibraries) {
-          emitSignaturesFor(server, library, only);
-        }
-      }
+    }
+
+    if (aiMode) {
+      finalizeAi(server, requestedLibraries, requestedModules, libraryManager);
     }
 
     printDefinitions(server, cmdLine.getOptionValue("p"));
@@ -1240,194 +1275,101 @@ public class ConsoleMain {
     }
   }
 
-  private boolean verifyBinaryIndices(List<SourceLibrary> libraries) {
-    boolean ok = true;
-    for (SourceLibrary library : libraries) {
-      if (!(library instanceof org.arend.frontend.library.FileSourceLibrary fl)) continue;
-      if (fl.getBinaryBasePath() == null) continue;
-      org.arend.frontend.symbol.SymbolIndex idx = org.arend.frontend.symbol.SymbolIndex.loadOrCreate(library);
-      List<ModulePath> stale = new ArrayList<>();
-      for (ModulePath mp : library.findModules(false)) {
-        if (idx.isStale(library, mp)) stale.add(mp);
-      }
-      if (!stale.isEmpty()) {
-        ok = false;
-        System.err.println("[ERROR] Binary symbol index for library '" + library.getLibraryName()
-            + "' is missing or stale (" + stale.size() + " module(s)).");
-        int shown = 0;
-        for (ModulePath mp : stale) {
-          if (shown++ >= 5) { System.err.println("        ... and " + (stale.size() - shown + 1) + " more"); break; }
-          System.err.println("        " + mp);
-        }
-      }
-    }
-    if (!ok) {
-      System.err.println("        Build the indices first by running '-ss <pattern>' on each affected library.");
-      myExitWithError = true;
-    }
-    return ok;
-  }
-
-  private boolean runReferenceResolveOnly(ArendServer server, List<SourceLibrary> requestedLibraries, Set<Pair<ModulePath, LongName>> requestedModules, LibraryManager libraryManager, boolean writeSignatures) {
+  /**
+   * Step 1 of the -ai pipeline: resolve every module in scope, buffer the
+   * resulting name-resolution errors, hand them to {@link
+   * ReferenceResolveAutoFix} to rewrite unique-candidate references and list
+   * alternatives for ambiguous ones, then invalidate any rewritten module so
+   * the subsequent typecheck phase reads fresh sources.
+   */
+  private void runAiAutoFix(ArendServer server, List<SourceLibrary> requestedLibraries,
+                            Set<Pair<ModulePath, LongName>> requestedModules, LibraryManager libraryManager) {
+    System.out.println();
+    System.out.println("--- AI: resolve + auto-fix ---");
+    long t = System.currentTimeMillis();
     myBufferErrors = true;
     myBufferedErrors.clear();
     try {
-      runResolveAllForRRArgs(server, requestedLibraries, requestedModules);
+      if (requestedModules.isEmpty()) {
+        for (SourceLibrary lib : requestedLibraries) {
+          List<ModuleLocation> mods = lib.findModules(false).stream()
+              .map(mp -> new ModuleLocation(lib.getLibraryName(), ModuleLocation.LocationKind.SOURCE, mp))
+              .toList();
+          if (!mods.isEmpty()) {
+            server.getCheckerFor(mods).resolveAll(UnstoppableCancellationIndicator.INSTANCE, ProgressReporter.empty());
+          }
+        }
+      } else {
+        for (Pair<ModulePath, LongName> requested : requestedModules) {
+          ModuleLocation module = server.findModule(requested.proj1, null, true, false);
+          if (module == null) {
+            mySystemErrErrorReporter.report(new ModuleNotFoundError(requested.proj1));
+            continue;
+          }
+          server.getCheckerFor(Collections.singletonList(module)).resolveAll(UnstoppableCancellationIndicator.INSTANCE, ProgressReporter.empty());
+        }
+      }
     } finally {
       myBufferErrors = false;
     }
 
-    org.arend.frontend.symbol.ReferenceResolveAutoFix.Result result =
-        org.arend.frontend.symbol.ReferenceResolveAutoFix.process(server, libraryManager, myBufferedErrors, requestedLibraries);
+    ReferenceResolveAutoFix.Result result =
+        ReferenceResolveAutoFix.process(server, libraryManager, myBufferedErrors, requestedLibraries);
 
-    // Print non-fixable errors (with candidate suggestions when present).
-    for (GeneralError error : result.errorsToPrint()) {
-      printError(error);
-    }
-    // Print suggestion blocks for ambiguous errors.
-    for (String block : result.suggestionBlocks()) {
-      System.out.println(block);
-      System.out.flush();
-    }
-    // Print INFO lines for fixed references.
-    for (String info : result.infoMessages()) {
-      System.out.println(info);
-      System.out.flush();
-    }
-    // Print non-core warnings (e.g. selective imports that miss a data type's constructors).
-    for (String warning : result.warnings()) {
-      System.out.println(warning);
-      System.out.flush();
-    }
+    for (GeneralError error : result.errorsToPrint()) printError(error);
+    for (String block : result.suggestionBlocks()) { System.out.println(block); System.out.flush(); }
+    for (String info : result.infoMessages()) { System.out.println(info); System.out.flush(); }
+    for (String warning : result.warnings()) { System.out.println(warning); System.out.flush(); }
 
     if (!result.modifiedFiles().isEmpty()) {
       System.out.println();
-      System.out.println("[INFO] Modified " + result.modifiedFiles().size() + " file(s):");
+      System.out.println("[INFO] Auto-fix rewrote " + result.modifiedFiles().size() + " file(s):");
       for (Path p : result.modifiedFiles()) System.out.println("        " + p);
-      System.out.println("[INFO] Re-run the CLI to pick up the rewritten sources.");
+      for (ModuleLocation loc : result.modifiedModules()) server.removeModule(loc);
+      System.out.println("[INFO] Modified modules invalidated; proceeding with typecheck on fresh sources.");
     }
 
-    if (writeSignatures) {
-      Set<ModulePath> only = collectModulePaths(requestedModules);
-      for (SourceLibrary library : requestedLibraries) {
-        emitSignaturesFor(server, library, only);
-      }
-    }
-
-    return !myExitWithError;
+    // Fixable resolve errors polluted myFailedDefinitions; reset so the
+    // typecheck phase tracks only real failures. Unfixable refs will resurface
+    // as typecheck errors and be re-recorded.
+    myFailedDefinitions.clear();
+    myBufferedErrors.clear();
+    System.out.println("--- Done (" + TimedProgressReporter.timeToString(System.currentTimeMillis() - t) + ") ---");
   }
 
-  private void runResolveAllForRRArgs(ArendServer server, List<SourceLibrary> requestedLibraries, Set<Pair<ModulePath, LongName>> requestedModules) {
-    if (requestedModules.isEmpty()) {
-      for (SourceLibrary library : requestedLibraries) {
-        System.out.println();
-        System.out.println("--- Resolving " + library.getLibraryName() + " ---");
-        long time = System.currentTimeMillis();
-        List<ModuleLocation> modules = library.findModules(false).stream()
-            .map(mp -> new ModuleLocation(library.getLibraryName(), ModuleLocation.LocationKind.SOURCE, mp))
-            .toList();
-        if (!modules.isEmpty()) {
-          server.getCheckerFor(modules).resolveAll(UnstoppableCancellationIndicator.INSTANCE, ProgressReporter.empty());
-        }
-        System.out.println("--- Done (" + TimedProgressReporter.timeToString(System.currentTimeMillis() - time) + ") ---");
+  /**
+   * Steps 3-4 of the -ai pipeline: write the .sig mirror for verified
+   * definitions only (per-def filter via {@link #myFailedDefinitions}) and
+   * refresh the binary symbol index used by -ss / -fu / -ch / -sc.
+   */
+  private void finalizeAi(ArendServer server, List<SourceLibrary> requestedLibraries,
+                          Set<Pair<ModulePath, LongName>> requestedModules, LibraryManager libraryManager) {
+    Set<ModulePath> only = requestedModules.isEmpty() ? null : collectModulePaths(requestedModules);
+    System.out.println();
+    System.out.println("--- AI: .sig + reindex ---");
+    for (SourceLibrary library : requestedLibraries) {
+      SignatureFileWriter.Result r =
+          SignatureFileWriter.writeFiltered(server, library, only, myFailedDefinitions);
+      for (String err : r.errors()) System.err.println(err);
+      StringBuilder line = new StringBuilder("[INFO] .sig: wrote ")
+          .append(r.written()).append(" file(s) for ").append(library.getLibraryName());
+      if (r.skippedDefinitions() > 0) {
+        line.append("; skipped ").append(r.skippedDefinitions())
+            .append(" def").append(r.skippedDefinitions() == 1 ? "" : "s").append(" with errors");
       }
-      return;
+      if (r.skipped() > 0) {
+        line.append("; skipped ").append(r.skipped())
+            .append(" module").append(r.skipped() == 1 ? "" : "s").append(" (out of scope)");
+      }
+      System.out.println(line);
     }
-
-    for (Pair<ModulePath, LongName> requested : requestedModules) {
-      ModulePath modulePath = requested.proj1;
-      LongName definitionName = requested.proj2;
-      ModuleLocation module = server.findModule(modulePath, null, true, false);
-      if (module == null) {
-        mySystemErrErrorReporter.report(new ModuleNotFoundError(modulePath));
-        continue;
-      }
-      System.out.println();
-      System.out.println("--- Resolving " + module + " ---");
-      long time = System.currentTimeMillis();
-      server.getCheckerFor(Collections.singletonList(module)).resolveAll(UnstoppableCancellationIndicator.INSTANCE, ProgressReporter.empty());
-      System.out.println("--- Done (" + TimedProgressReporter.timeToString(System.currentTimeMillis() - time) + ") ---");
-
-      if (definitionName != null) {
-        boolean found = false;
-        for (DefinitionData data : server.getResolvedDefinitions(module)) {
-          if (data.definition().getData().getRefLongName().equals(definitionName)) {
-            found = true;
-            break;
-          }
-        }
-        if (!found) {
-          mySystemErrErrorReporter.report(new DefinitionNotFoundError(new FullName(module, definitionName)));
-        }
-      }
-    }
-  }
-
-  private boolean runNameResolveOnly(ArendServer server, List<SourceLibrary> requestedLibraries, Set<Pair<ModulePath, LongName>> requestedModules, boolean writeSignatures) {
-    if (requestedModules.isEmpty()) {
-      for (SourceLibrary library : requestedLibraries) {
-        System.out.println();
-        System.out.println("--- Resolving " + library.getLibraryName() + " ---");
-        long time = System.currentTimeMillis();
-        List<ModuleLocation> modules = library.findModules(false).stream()
-            .map(mp -> new ModuleLocation(library.getLibraryName(), ModuleLocation.LocationKind.SOURCE, mp))
-            .toList();
-        if (!modules.isEmpty()) {
-          server.getCheckerFor(modules).resolveAll(UnstoppableCancellationIndicator.INSTANCE, ProgressReporter.empty());
-        }
-        System.out.println("--- Done (" + TimedProgressReporter.timeToString(System.currentTimeMillis() - time) + ") ---");
-        if (writeSignatures) emitSignaturesFor(server, library, null);
-      }
-      return !myExitWithError;
-    }
-
-    for (Pair<ModulePath, LongName> requested : requestedModules) {
-      ModulePath modulePath = requested.proj1;
-      LongName definitionName = requested.proj2;
-      ModuleLocation module = server.findModule(modulePath, null, true, false);
-      if (module == null) {
-        mySystemErrErrorReporter.report(new ModuleNotFoundError(modulePath));
-        continue;
-      }
-      System.out.println();
-      System.out.println("--- Resolving " + module + " ---");
-      long time = System.currentTimeMillis();
-      server.getCheckerFor(Collections.singletonList(module)).resolveAll(UnstoppableCancellationIndicator.INSTANCE, ProgressReporter.empty());
-      System.out.println("--- Done (" + TimedProgressReporter.timeToString(System.currentTimeMillis() - time) + ") ---");
-
-      if (definitionName != null) {
-        boolean found = false;
-        for (DefinitionData data : server.getResolvedDefinitions(module)) {
-          if (data.definition().getData().getRefLongName().equals(definitionName)) {
-            found = true;
-            break;
-          }
-        }
-        if (!found) {
-          mySystemErrErrorReporter.report(new DefinitionNotFoundError(new FullName(module, definitionName)));
-        }
-      }
-    }
-    if (writeSignatures) {
-      Set<ModulePath> only = collectModulePaths(requestedModules);
-      for (SourceLibrary library : requestedLibraries) {
-        emitSignaturesFor(server, library, only);
-      }
-    }
-    return !myExitWithError;
+    SymbolSearch.reindex(requestedLibraries, libraryManager, server, null);
   }
 
   private static Set<ModulePath> collectModulePaths(Set<Pair<ModulePath, LongName>> requestedModules) {
     Set<ModulePath> result = new HashSet<>();
     for (Pair<ModulePath, LongName> p : requestedModules) result.add(p.proj1);
     return result;
-  }
-
-  private void emitSignaturesFor(ArendServer server, SourceLibrary library, Set<ModulePath> only) {
-    SignatureFileWriter.Result r = SignatureFileWriter.writeFiltered(server, library, only);
-    for (String err : r.errors()) System.err.println(err);
-    System.out.println("[INFO] -sig wrote " + r.written() + " signature file(s) for "
-        + library.getLibraryName() + (r.skipped() > 0 ? " (skipped " + r.skipped() + ")" : ""));
   }
 
   private boolean matchAndPrint(ArendServer server, LibraryManager libraryManager, List<SourceLibrary> requestedLibraries, String pattern, boolean printFull) {
