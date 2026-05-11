@@ -1,7 +1,9 @@
 ### Arith.Fin.Order
 
-This module provides a linear order instance for `Fin n`.
+Linear order instance on the finite types `Fin n`.
 
-#### FinOrder Instance
+This module equips each `Fin n` with the structure of a decidable linear order by inheriting the strict order from `Nat`. The comparison `i < j` on `Fin n` is defined directly as the underlying natural number comparison via `NatSemiring.<`, with irreflexivity, transitivity, and trichotomy lifted from the corresponding properties on `Nat`. This makes `Fin n` immediately usable wherever a `LinearOrder.Dec` is required, such as in sorting, indexing, and finite combinatorial arguments.
 
-- **`FinOrder`**: Instance of `LinearOrder.Dec` for `Fin n`, with `<` inherited from `NatSemiring.<`, irreflexivity and transitivity from `NatSemiring`, and decidable trichotomy via `fin_nat-inj`.
+#### Order Instance
+
+- **`FinOrder`**: `\instance FinOrder (n : Nat) : LinearOrder.Dec (Fin n)` — registers `Fin n` as a decidable linear order with `<` given by the natural-number strict order, so any `Fin n` can be used in contexts requiring a decidable linear order.

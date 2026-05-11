@@ -1,21 +1,26 @@
 ### Topology.TopAbGroup.Product
 
-Product construction for topological abelian groups and continuity/uniformity lemmas for the standard group operations.
+Product structure and continuity of arithmetic operations for topological abelian groups.
+
+This module equips the cartesian product of two topological abelian groups with its componentwise abelian group structure and the product uniformity, yielding a topological abelian group. It also packages the standard arithmetic operations (negation, addition, subtraction, integer scaling, finite sums) as uniform/cover maps, which are the core tools needed when reasoning about continuity in additive topological settings. The `HasProduct` instance integrates this construction with the generic categorical product machinery so products of topological abelian groups can be formed in a uniform way.
 
 #### Product Structure
 
-- **`ProductTopAbGroup`**: The product `\Sigma X Y` of two topological abelian groups, equipped with the product uniform space structure and componentwise zero, addition, and negation.
-- **`TopAbGroupHasProduct`**: `HasProduct` instance for `TopAbGroup`, witnessing that the category of topological abelian groups has binary products via `ProductTopAbGroup`.
+- **`ProductTopAbGroup`**: The cartesian product `\Sigma X Y` of two topological abelian groups, with componentwise zero, addition, and negation, and the product uniform space structure. Verifies that addition and negation are continuous, and that the uniform-cover topology agrees with neighborhoods.
+- **`TopAbGroupHasProduct`**: `HasProduct` instance registering `ProductTopAbGroup` as the categorical product on `TopAbGroup`.
 
-#### Uniform Continuity of Group Operations
+#### Uniformity of Group Operations
 
-- **`negative-uniform`**: Negation `negative : X -> X` is a uniformly continuous topological abelian group map.
-- **`+-uniform`**: Addition `\lam s => s.1 + s.2 : X ⨯ X -> X` is a uniformly continuous topological abelian group map.
-- **`subtract-uniform`**: Subtraction `\lam s => s.1 - s.2 : X ⨯ X -> X` is a uniformly continuous topological abelian group map.
-- **`*n-uniform`**: Multiplication by a natural number `n X.*n : X -> X` is uniformly continuous.
-  - **`*n-uniform.*n-cont`**: The same map as a `ContMap` (continuous, without uniform structure).
-- **`*i-uniform`**: Multiplication by an integer `n X.*i : X -> X` is uniformly continuous.
+- **`negative-uniform`**: Negation `negative : X -> X` is a uniform map of topological abelian groups (`TopAbGroupMap X X`).
+- **`+-uniform`**: Addition `(s.1 + s.2) : X ⨯ X -> X` is a uniform map of topological abelian groups.
+- **`subtract-uniform`**: Subtraction `(s.1 - s.2) : X ⨯ X -> X` is a uniform map of topological abelian groups.
 
-#### Sums of Cover Maps
+#### Integer Scaling
 
-- **`BigSum-cover`**: Given an array `fs` of cover maps `X -> Y` into a topological abelian group, the pointwise big sum `\lam x => Y.BigSum (\lam j => fs j x)` is itself a cover map.
+- **`*n-uniform`**: Multiplication by a fixed natural number `n`, viewed as `n X.*n : X -> X`, is a uniform map.
+  - **`*n-cont`**: The same map is continuous (`ContMap X X`), used as a building block for the uniform version.
+- **`*i-uniform`**: Multiplication by a fixed integer `n`, viewed as `n X.*i : X -> X`, is a uniform map.
+
+#### Finite Sums
+
+- **`BigSum-cover`**: Given an array `fs : Array (CoverMap X Y)` of cover maps from a cover space `X` into a topological abelian group `Y`, the pointwise sum `\lam x => Y.BigSum (\lam j => fs j x)` is itself a cover map. Used to lift continuity of finite sums of cover-continuous functions.

@@ -1,49 +1,48 @@
 ### Topology.Compact
 
-Total boundedness, compactness, and local uniformity for cover spaces, with characterizations via uniform/Cauchy covers and metric balls.
+Total boundedness, compactness, and local uniformity for cover spaces and (pre)uniform spaces.
+
+This module defines total boundedness as a Cauchy-cover condition expressible via finite refinements, and identifies compactness with total boundedness on a complete cover space. It then leverages regularity/proper-uniformity assumptions to upgrade Cauchy covers to uniform covers, turning cover maps out of totally bounded spaces into uniform maps. The local-uniformity layer captures spaces where every Cauchy cover refines a uniform one relative to a fixed uniform partition, with the canonical example being metric spaces whose balls are totally bounded.
 
 #### Total Boundedness
 
-- **`IsTotallyBounded`**: A cover space is totally bounded if every Cauchy cover admits a finite subcover (every Cauchy `C` has a finite array `U` whose elements still cover and refine into `C`).
-- **`IsTotallyBounded.IsCover`**: `C` covers `X` if every `x : X` lies in some `U : C`.
-- **`IsTotallyBounded.Cond`**: Generic condition asserting that every `P`-cover has a finite refinement satisfying `Q`.
+- **`IsTotallyBounded`**: A cover space `X` is totally bounded iff every Cauchy cover admits a finite subarray that still covers `X`.
+- **`IsTotallyBounded.IsCover`**: Predicate stating that a family `C : Set (Set X)` covers `X` (every point lies in some member).
+- **`IsTotallyBounded.Cond`**: General refinement condition `Cond P Q`: from any `P`-family pick a finite subfamily whose enumerated set lies in `Q`.
+
+#### Upgrading Cauchy to Uniform
+
+- **`totallyBounded-uniform`**: On a regular preuniform space with proper uniformity, total boundedness lets every Cauchy cover be refined to a uniform finite cover.
+- **`totallyBounded-cauchy-uniform`**: Direct corollary: any Cauchy cover of a totally bounded proper regular preuniform space is uniform.
+- **`totallyBounded-strong-uniform`**: Strong-regular variant requiring only weakly proper uniformity.
+- **`totallyBounded-cauchy-strong-uniform`**: Cauchy implies uniform under strong regularity and weak properness.
+- **`totallyBounded-uniform-char`**: Characterization: it suffices to verify the finite-refinement property on uniform covers (rather than Cauchy ones) to conclude total boundedness.
+- **`totallyBounded-uniform-char.totallyBounded-closure`**: Auxiliary lemma propagating the finite-refinement property through the closure of the uniform covers.
+
+#### Compactness
+
 - **`IsCompact`**: A complete cover space is compact iff it is totally bounded.
-
-#### Uniform Refinements of Cauchy Covers
-
-- **`totallyBounded-uniform`**: For a regular proper-uniform totally bounded space, every Cauchy cover admits a finite uniform refinement.
-- **`totallyBounded-cauchy-uniform`**: Under the same hypotheses, any Cauchy cover is itself uniform.
-- **`totallyBounded-strong-uniform`**: Strongly-regular weakly-proper-uniform variant of `totallyBounded-uniform`.
-- **`totallyBounded-cauchy-strong-uniform`**: Strongly-regular weakly-proper-uniform variant of `totallyBounded-cauchy-uniform`.
-- **`totallyBounded-uniform-char`**: Characterization: total boundedness follows from the finite-refinement condition restricted to uniform covers.
-- **`totallyBounded-uniform-char.totallyBounded-closure`**: Auxiliary closure lemma extending the uniform-cover refinement to the closure under `isUniform`.
-
-#### Maps from Totally Bounded Spaces
-
-- **`makeUniformMapTB`**: A `CoverMap` out of a regular proper-uniform totally bounded space is automatically a `UniformMap`.
-- **`makeUniformMapSTB`**: Strongly-regular weakly-proper-uniform analogue of `makeUniformMapTB`.
+- **`makeUniformMapTB`**: Cover maps out of a totally bounded proper regular preuniform space are automatically uniform.
+- **`makeUniformMapSTB`**: Same upgrade under strong-regular uniformity and weak properness.
 
 #### Totally Bounded Subsets
 
-- **`IsTotallyBoundedSet`**: A subset `U ⊆ X` is totally bounded if the subspace `\Sigma (x : X) (U x)` (with the cover-transferred structure) is totally bounded.
-- **`totallyBoundedSet-char`**: `U` is totally bounded iff every Cauchy cover of `X` has a finite subarray covering `U`.
-- **`totallyBoundedSet-subset`**: Total boundedness is closed under taking subsets: `V ⊆ U` and `U` totally bounded implies `V` totally bounded.
-- **`totallyBoundedSet-uniform-char`**: Same characterization as `totallyBoundedSet-char` but using uniform covers, in a regular preuniform space.
-- **`totallyBoundedSet-metric-char`**: Metric characterization: in an extended pseudometric space, `S` is totally bounded iff for every `eps > 0` there is a finite `eps`-net covering `S`.
+- **`IsTotallyBoundedSet`**: A subset `U ⊆ X` is totally bounded if its subspace (via `CoverTransfer` on the projection) is totally bounded.
+- **`totallyBoundedSet-char`**: Equivalent to: every Cauchy cover of `X` admits a finite array hitting every point of `U`.
+- **`totallyBoundedSet-subset`**: Total boundedness is downward-closed under subset inclusion.
+- **`totallyBoundedSet-uniform-char`**: On regular preuniform spaces, the finite-array condition only needs to be checked against uniform covers.
+- **`totallyBoundedSet-metric-char`**: Metric characterization: `S` is totally bounded iff for every `ε > 0` there is a finite array of `ε`-centers covering `S`.
 
 #### Local Uniformity
 
-- **`IsLocallyUniform`**: Relation `C` is locally uniform with respect to `E` if for every `U : C` the family of intersections `U ∧ V` (for `V` ranging in a uniform cover) refines into `E`.
-- **`IsLocallyUniformSpace`**: A preuniform space is locally uniform if there exists a uniform `C` that is locally uniform with respect to every Cauchy cover.
-- **`locallyUniform-cauchy`**: If `C` is Cauchy and `E` is locally uniform over `C`, then `E` is Cauchy.
-- **`locallyUniform-cover-char`**: In a strongly regular uniform space, if every member of `C` is totally bounded and inhabited, then `C` is locally uniform with respect to any Cauchy cover.
-- **`locallyTotallyBounded-locallyUniform`**: A strongly regular proper-uniform space whose uniform covers consist of totally bounded sets is locally uniform.
+- **`IsLocallyUniform`**: Relation between covers `C` and `E`: every `U ∈ C` admits a uniform cover whose pieces, intersected with `U`, refine some `W ∈ E`.
+- **`IsLocallyUniformSpace`**: Existence of a uniform cover `C` such that every Cauchy cover `E` is locally uniform with respect to `C`.
+- **`locallyUniform-cauchy`**: If `C` is Cauchy and `E` is locally uniform over `C`, then `E` is itself Cauchy.
+- **`locallyUniform-cover-char`**: On strongly regular uniform spaces with `C` consisting of inhabited totally bounded sets, every Cauchy `E` is automatically locally uniform over `C`.
+- **`locallyTotallyBounded-locallyUniform`**: A strongly regular uniform space whose uniformity is generated by totally bounded sets (and is properly uniform) is locally uniform.
 
-#### Metric Local Uniformity
+#### Metric Case
 
-- **`BallsTotallyBounded`**: Property of a metric space asserting that every open ball `OBall eps x` is totally bounded.
+- **`BallsTotallyBounded`**: Property of an extended pseudometric space asserting every open ball `OBall ε x` is totally bounded.
 - **`metric-locallyUniform`**: A pseudometric space with totally bounded balls is locally uniform.
-
-#### Maps from Locally Uniform Spaces
-
-- **`locallyUniformMapFromCover`**: A `CoverMap` out of a locally uniform regular preuniform space is automatically a `LocallyUniformMap`.
+- **`locallyUniformMapFromCover`**: Cover maps from a locally uniform regular preuniform space to a regular preuniform space lift to locally uniform maps.

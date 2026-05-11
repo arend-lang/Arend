@@ -1,33 +1,38 @@
 ### Homotopy.Sphere.Circle
 
-Defines the circle as a higher inductive type and proves its loop space is the integers.
+The circle `S¹` as a higher inductive type and the computation of its loop space `Ω(S¹) = ℤ`.
 
-#### Circle Definition
+This module presents the circle directly as a HIT `Sphere1` with one point `base1` and one loop, and proves it equivalent to the suspension-based `Sphere 1`. The fundamental group calculation follows the standard HoTT encode-decode method: a universal cover `code : Sphere1 -> Set` defined by transporting along the integer successor equivalence, with `encode`/`decode` providing mutually inverse maps between paths `base1 = x` and elements of `code x`. The end result `Loop_S1 : OmegaS1 = Int` exhibits `Ω(S¹)` as the integers.
 
-- **`Sphere1`**: HIT for the circle with point constructor `base1` and path constructor `loop : base1 = base1`.
-- **`Sphere1.ploop`**: `loop` packaged as a path: `path loop`.
-- **`OmegaS1`**: The loop space of the circle, `base1 = base1`.
+#### Circle as a Higher Inductive Type
 
-#### Equivalence with Suspension Definition
+- **`Sphere1`**: The circle as a HIT with constructors `base1` and `loop : base1 = base1`.
+- **`Sphere1.ploop`**: The loop packaged as a path: `path loop`.
+- **`OmegaS1`**: The loop space `base1 = base1`.
 
-- **`Sphere1-equiv`**: `QEquiv` between `Sphere1` and `Sphere 1` (the suspension-based sphere).
-- **`Sphere1-equiv.CircleSusp`**: Maps `Sphere1` to `Sphere 1`, sending `loop` to `pmerid north *> inv (pmerid south)`.
-- **`Sphere1-equiv.SuspCircle`**: Inverse map from `Sphere 1` to `Sphere1`.
-- **`Sphere1-equiv.CircleSuspCircle`**: Round-trip identity `SuspCircle ∘ CircleSusp ~ id`.
-- **`Sphere1-equiv.SuspCircleSusp`**: Round-trip identity `CircleSusp ∘ SuspCircle ~ id`, using `Cube2.map` to fill the necessary square.
+#### Equivalence with the Suspension Sphere
 
-#### Universal Cover
+- **`Sphere1-equiv`**: A `QEquiv` between `Sphere1` and `Sphere 1` (the suspension-based 1-sphere).
+- **`Sphere1-equiv.CircleSusp`**: Maps `Sphere1 -> Sphere 1`, sending `base1` to `north` and `loop` to `pmerid north *> inv (pmerid south)`.
+- **`Sphere1-equiv.SuspCircle`**: Maps `Sphere 1 -> Sphere1`, collapsing the suspension by sending both poles to `base1` and using `loop` for one meridian.
+- **`Sphere1-equiv.CircleSuspCircle`**: The retraction `SuspCircle ∘ CircleSusp ~ id` on `Sphere1`, established via path algebra on the loop case.
+- **`Sphere1-equiv.SuspCircleSusp`**: The section `CircleSusp ∘ SuspCircle ~ id` on `Sphere 1`, using `Cube2.map` to fill the required 2-cell.
 
-- **`code`**: The universal cover `Sphere1 -> \Set0`, defined as `Int` at `base1` with the loop acting by the `isuc`/`ipred` isomorphism.
-- **`encode`**: `(p : base1 = x) -> code x`, transporting `0 : Int` along `p`.
-- **`wind`**: `Int -> OmegaS1`, sending `n` to the `n`-fold concatenation of `loop` (with inverses for negatives).
-- **`decode`**: `(x : Sphere1) -> code x -> base1 = x`, extending `wind` over the loop via a dependent path.
-- **`decode.wind_loop`**: `wind n *> path loop = wind (isuc n)`.
-- **`decode.decode_loop`**: Naturality used to define `decode` over the loop constructor.
+#### The Universal Cover
 
-#### Loop Space Theorem
+- **`code`**: The fibration `Sphere1 -> Set0` with `code base1 = Int` and the loop acting by the integer successor isomorphism `iso isuc ipred ...`.
+- **`encode`**: For `p : base1 = x`, returns `transport code p 0` — the winding number of a path.
+- **`wind`**: Builds a path `OmegaS1` from an integer by iterating `path loop` (or its inverse for negatives).
 
-- **`encode_decode`**: `decode x (encode x p) = p` for any `p : base1 = x`.
-- **`encode_wind`**: `encode base1 (wind x) = x`, by induction on the integer.
-- **`decode_encode`**: `encode x (decode x c) = c`, the other half of the equivalence.
-- **`Loop_S1`**: The fundamental theorem `OmegaS1 = Int`, witnessing that the loop space of the circle is the integers.
+#### Decoding and Inverse Properties
+
+- **`decode`**: Section `(x : Sphere1) -> code x -> base1 = x`; equals `wind` on `base1`, with the loop case handled via a dependent path.
+- **`decode.wind_loop`**: Key lemma `wind n *> path loop = wind (isuc n)` — appending the loop is the successor.
+- **`decode.decode_loop`**: Coherence showing `decode` is well-defined across the loop, proved using `simp_coe` and `wind_loop`.
+- **`encode_decode`**: `decode x (encode x p) = p` for any path `p`, by path induction.
+- **`encode_wind`**: `encode base1 (wind x) = x`, by induction on the integer using `transport_*>` and `transport_inv_func`.
+- **`decode_encode`**: `encode x (decode x c) = c`, reduced to `encode_wind` at `base1`.
+
+#### Main Theorem
+
+- **`Loop_S1`**: The equality `OmegaS1 = Int`, exhibited via the iso `(encode base1, wind, encode_decode, encode_wind)`.

@@ -1,50 +1,56 @@
 ### Topology.Locale.Real
 
-The locale of real numbers, constructed as a presented frame on intervals over the rationals, with rational points and closed-interval compactness.
+The locale of real numbers, presented as a frame of rational intervals.
 
-#### Interval Order Structure
+This module constructs the real-line locale `RealLocale` as the frame presentation `RealPres` over rational intervals `(p, q)`, using two basic cover relations: a "subdivision" cover splitting an interval `(p, s)` into overlapping pieces `(p, q) ∪ (r, s)` whenever `p < r < q < s`, and a "shrinking" cover expressing `(p, q)` as the union of all strictly interior subintervals `(r, s)`. Conjunction of intervals is given by the meet `(p ∨ p', q ∧ q')` in the interval lattice. The module proves the resulting locale is locally compact, regular, and has enough (strongly dense) points — including a canonical `ratPoint` for each rational — and builds derived constructions like closed intervals as nuclei and the embedding of the discrete rationals.
 
-- **`Interval`**: An interval `\Sigma Q Q` over a poset `Q`, representing a pair `(a, b)`.
-- **`IntervalPoset`**: Poset structure on `Interval Q` where `x <= y` iff `y.1 <= x.1` and `x.2 <= y.2` (containment of intervals).
-- **`IntervalPoset.<=`**: The interval containment order.
-- **`IntervalBiordered`**: Biordered structure on `Interval Q` with strict containment `<` (both endpoints strictly inside).
-- **`IntervalBiordered.<`**: Strict interval containment.
-- **`IntervalSemilattice`**: Meet-semilattice on `Interval Q` for a lattice `Q`, with `meet (a,b) = (a.1 ∨ b.1, a.2 ∧ b.2)` (intersection of intervals).
+#### Interval Order Structures
 
-#### Frame Presentation
+- **`Interval`**: An interval over a poset `Q` is a pair `\Sigma Q Q`, intended as endpoints `(p, q)`.
+- **`IntervalPoset`**: Poset structure on `Interval Q` where `x <= y` iff `y.1 <= x.1` and `x.2 <= y.2` (containment of open intervals).
+- **`IntervalPoset.<=`**: The underlying inclusion order on intervals.
+- **`IntervalBiordered`**: Biordered (strict + non-strict) structure on intervals over a `BiorderedSet`, with `x < y` iff `y.1 < x.1` and `x.2 < y.2` (strict containment).
+- **`IntervalBiordered.<`**: The strict "well-inside" order on intervals.
+- **`IntervalSemilattice`**: Meet-semilattice structure on intervals over a lattice; `meet (a, b) = (a.1 ∨ b.1, a.2 ∧ b.2)` (intersection of intervals).
 
-- **`RealPres`**: The frame presentation of the real-number locale on intervals over a decidable linear order `Q`. Uses interval intersection as conjunction and a basic cover indexed by two cases: subdivision of `(p,s)` into `(p,q)` and `(r,s)` when `p<r<q<s`, and refinement of `(p,q)` by all sub-intervals `(r,s)` strictly inside.
+#### Frame Presentation of the Reals
 
-#### Cover Lemmas for `RealPres`
+- **`RealPres`**: The frame presentation of the real line over a decidable linear order `Q`. Generators are intervals `Interval Q`, conjunction is interval meet, and basic covers consist of (1) two-piece subdivisions of `(p, s)` via points `r < q` strictly inside, and (2) covers of `(p, q)` by all interior subintervals `(r, s)` with `p < r < s < q`.
+- **`RealPres.<=-cover`**: Inclusion of intervals yields a single-element cover `Cover1 x y`.
+- **`RealPres.cover-empty`**: A degenerate interval (with `x.2 <= x.1`) is covered by the empty family — i.e., it represents the bottom of the frame.
+- **`RealPres.cover-pair`**: For any `z1 < z2`, the interval `x` is covered by the two-element family `{(x.1, z2), (z1, x.2)}`.
+- **`RealPres.point`**: Embeds a point `x : Q` as the degenerate interval `(x, x)`, used to represent points abstractly.
 
-- **`RealPres.<=-cover`**: Interval containment implies a one-element cover (`Cover1 x y` from `x <= y`).
-- **`RealPres.cover-empty`**: A degenerate interval (`x.2 <= x.1`) is covered by anything.
-- **`RealPres.cover-pair`**: Two-element subdivision cover: `x` is covered by `(x.1, z2)` and `(z1, x.2)` whenever `z1 < z2`.
-- **`RealPres.point`**: Embeds a point `x : Q` as the degenerate interval `(x, x)`.
-- **`RealPres.toPointwiseCover`**: A frame cover of `a` yields, for each point strictly inside `a`, an index `j` with that point strictly inside `g j`.
-- **`RealPres.cover-factor-left`**, **`RealPres.cover-factor-right`**: Technical helpers used to decompose pointwise covers by removing one element from the cover and finding a slightly smaller interval still covered by the remainder.
-- **`RealPres.fromPointwiseCover`**: Converse of `toPointwiseCover` for dense decidable linear orders: pointwise coverage by points strictly inside implies a frame cover.
-- **`RealPres.wayBelow`**: Strict interval containment `x < y` implies the way-below relation `x << y` in the frame presentation.
-- **`RealPres.locallyCompact`**: The presentation is locally compact (over a dense decidable linear order).
+#### Pointwise Cover Characterization
 
-#### Real Locale
+- **`RealPres.toPointwiseCover`**: Over a dense decidable linear order, any cover of `a` by `g` implies that for every point `x` strictly inside `a`, some `g j` strictly contains `x`.
+- **`RealPres.cover-factor-left`**: Technical decomposition lemma: given a cover by `z :: l` where `z` overlaps `a` on the left, extracts a strict bound `b > z.1` and a pointwise cover of `(a.1, b)` by `l` alone.
+- **`RealPres.cover-factor-right`**: Symmetric counterpart of `cover-factor-left`, factoring out an interval that overlaps on the right (proved by duality through `Q.op`).
+- **`RealPres.fromPointwiseCover`**: Converse to `toPointwiseCover`: a family `l` that covers every point strictly inside `a` is in fact a cover of `a` in the frame presentation.
 
-- **`RealLocale`**: The locale of reals, defined as `PresentedFrame (RealPres RatField)`.
+#### Compactness Properties
+
+- **`RealPres.wayBelow`**: If `x < y` (strict interval inclusion), then `x` is way-below `y` in the frame presentation.
+- **`RealPres.locallyCompact`**: The presentation `RealPres Q` is locally compact whenever `Q` is a dense decidable linear order.
+
+#### The Real Locale
+
+- **`RealLocale`**: The locale of real numbers, defined as the presented frame `PresentedFrame (RealPres RatField)`.
 - **`RealLocale.locallyCompact`**: `RealLocale` is locally compact.
-- **`RealLocale.wellInside`**: Strict interval containment `x < y` implies the well-inside relation `embed x <=< embed y`.
+- **`RealLocale.wellInside`**: Strict interval inclusion `x < y` yields a well-inside relation `embed x <=< embed y` on the embedded generators.
 - **`RealLocale.regular`**: `RealLocale` is a regular locale.
-- **`RealLocale.ratPoint`**: A rational `x : Rat` as a point (complete filter) of `RealLocale`, given by intervals `(a, b)` with `a < x < b`.
-- **`RealLocale.hasStronglyDensePoints`**: `RealLocale` has strongly dense points (the rational points suffice).
+- **`RealLocale.ratPoint`**: For each rational `x`, the canonical point of `RealLocale` whose membership in `(a, b)` is `a < x < b`. Built via `framePres-point` from the interval covering rules and density of the rationals.
+- **`RealLocale.hasStronglyDensePoints`**: `RealLocale` has strongly dense points — the rational points are enough to detect frame elements.
 
-#### Half-Lines and Closed Intervals
+#### Derived Constructions
 
-- **`lowerHalf`**: The lower half-line `(-∞, x]` as a sublocale, defined as the join of all `embed (a, b)` with `b <= x`.
-- **`upperHalf`**: The upper half-line `[x, +∞)` as the join of all `embed (a, b)` with `x <= a`.
-- **`closedInterval`**: The closed interval `[x, y]` as the locale obtained from the closed nucleus on `lowerHalf x ∨ upperHalf y`.
-- **`closedInterval.nucleus`**: The closed nucleus defining `closedInterval x y`.
-- **`closedInterval.compact`**: Closed intervals are compact.
-- **`closedInterval.compact.generalized`**: Generalized form: the nucleus locale for any `a < x`, `y < b` is compact.
+- **`lowerHalf`**: The open lower half-line `(-∞, x)` for a rational `x`, formed as the join of all `embed (a, b)` with `b <= x`.
+- **`upperHalf`**: The open upper half-line `(x, +∞)` for a rational `x`, dual to `lowerHalf`.
+- **`closedInterval`**: The closed interval `[x, y]` realized as the locale `Nucleus.locale {nucleus x y}` — the closed sublocale complementary to `lowerHalf x ∨ upperHalf y`.
+- **`closedInterval.nucleus`**: The closed nucleus carving `[x, y]` out of `RealLocale` as the complement of the open exterior `lowerHalf x ∨ upperHalf y`.
+- **`closedInterval.compact`**: Heine–Borel: every closed interval `[x, y]` is compact.
+- **`closedInterval.compact.generalized`**: Strengthened form: for any rationals `a < x` and `y < b`, the corresponding closed sublocale (cut out by the same nucleus) is compact.
 
-#### Rational Inclusion
+#### Embedding the Rationals
 
-- **`rat_real`**: Locale homomorphism `Hom (discrete Rat) RealLocale` from the discrete locale of rationals to `RealLocale`, sending an interval `p` to the predicate "`x` lies strictly between `p.1` and `p.2`".
+- **`rat_real`**: The locale homomorphism `Hom (discrete Rat) RealLocale` embedding the discrete rational locale into the reals. Constructed via `FrameReflectiveSubcat.adjointMap` from the frame-presentation map sending an interval `(p, q)` to the predicate `p < x < q` on rationals, with conjunction, basic-cover, and image conditions verified using lattice properties and density of `Rat`.

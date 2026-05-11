@@ -1,11 +1,13 @@
 ### Algebra.Module.PowerLModule
 
-Power modules: the `LModule` structure on function spaces `J -> M` indexed by an arbitrary set, together with the contravariant functor sending an index set to its power module over the base ring.
+The power (function space) construction of left modules, exhibiting `J -> M` as an `R`-module pointwise.
 
-#### Power Module Instance
+Given an indexing set `J` and an `R`-module `M`, the function type `J -> M` inherits a module structure where all operations are defined componentwise (zero, addition, negation, and scalar multiplication). This is the categorical product of `J` copies of `M` in the category of `R`-modules. The construction is contravariantly functorial in `J`: a function `f : I -> J` of sets induces a linear map `(J -> M) -> (I -> M)` by precomposition, giving a functor from `Set^op` to `LModuleCat R`.
 
-- **`PowerLModule`**: Given a ring `R`, an index set `J`, and an `R`-module `M`, the function space `J -> M` is itself an `R`-module with pointwise zero, addition, negation, and scalar multiplication. All module axioms (associativity, commutativity, distributivity, identity) are verified pointwise via `ext`.
+#### Module Structure
 
-#### Functorial Structure
+- **`PowerLModule`**: For a ring `R`, set `J`, and `R`-module `M`, the `R`-module `J -> M` with all operations defined pointwise. Acts as the `J`-indexed product in `LModuleCat R`.
 
-- **`FunctorPowerLMod`**: A contravariant functor `SetCat.op -> LModuleCat R` sending an index set `I` to the power module `PowerLModule I (RingLModule R)` (functions `I -> R` with pointwise `R`-module structure). On morphisms, a function `f : J -> I` is sent to the linear precomposition map `r |-> r o f`, which is automatically additive and scalar-linear.
+#### Functoriality
+
+- **`FunctorPowerLMod`**: Contravariant functor `Set^op -> LModuleCat R` sending a set `I` to `PowerLModule I (RingLModule R)` (the free module of functions `I -> R`) and a function `f : I -> J` to the linear map given by precomposition `r |-> r ∘ f`.

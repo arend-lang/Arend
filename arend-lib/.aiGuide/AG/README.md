@@ -1,6 +1,11 @@
-### AG Directory Overview
+### AG
 
-This directory provides formalized algebraic geometry in the locale-theoretic setting.
+This directory formalizes algebraic geometry: affine and projective schemes built as locally ringed locales via frame presentations of the Zariski topology.
 
-- **`Scheme.md`**: Zariski spectrum (`SpecPres`, `Spec`), ringed locales (`RingedLocale`, `RingedLocaleHom`, `RingedLocalePrecat`), locally ringed locales (`LocallyRingedLocale`), affine ringed locales (`affineRingedPres`, `affineRingedLocale`), schemes (`Scheme`), and affine schemes (`affineScheme`).
-- **`Projective.md`**: Projective spectrum (`ProjPres`, `Proj`) for graded commutative rings, with the projective scheme (`projRingedPres`) and homogeneous localization functors.
+#### Affine Schemes and General Schemes
+
+- **`Scheme.md`** — Spectrum of a commutative ring as a presented locale `SpecPres`, locally ringed locales and their morphisms, and schemes as locally ringed locales locally isomorphic to affine ones.
+
+#### Projective Schemes
+
+- **`Projective.md`** — Proj construction of a graded commutative ring as a presented locale with structure sheaf glued from degree-zero parts of localizations at homogeneous elements, exhibited as a scheme via affine charts.

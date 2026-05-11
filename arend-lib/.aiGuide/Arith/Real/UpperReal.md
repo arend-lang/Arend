@@ -1,81 +1,88 @@
 ### Arith.Real.UpperReal
 
-This module defines upper Dedekind reals (right cuts) and their algebraic structure, including multiplication.
+Upper Dedekind cuts of the rationals, providing a constructive representation of (possibly infinite) upper reals and ordinary upper reals.
 
-#### ExUpperReal
+An `ExUpperReal` is presented by a rounded, upward-closed predicate `U : Rat -> \Prop` — the set of rational strict upper bounds of the represented value; allowing `U` to be empty admits `+∞`. The ordinary `UpperReal` extends this with an inhabitedness condition `U-inh`, ensuring the value is finite. Arithmetic and order operations are defined on the level of upper-cut predicates: addition, multiplication, meet, and join are characterized by existence of rational witnesses below the target rational, and `<=` is contravariant predicate inclusion. Multiplication restricts to positive witnesses, so distributivity and identity laws typically require non-negativity hypotheses; boundedness `IsBounded` (witnessed by a rational lower bound, equivalently `∃ U`-style content) is needed for cancellation and for `0 * x = 0`. The structure assembles into a biordered lattice ordered abelian monoid for `+` and a commutative semigroup for `*`, with `fromRat` an additive monoid homomorphism. A separate `IsLocated` predicate captures decidable comparison up to arbitrary rational precision.
 
-- **`ExUpperReal`**: Class with fields `U : Rat -> \Prop`, `U-closed` (upward closed), `U-rounded` (no minimum). May be empty.
-  - **`fromRat`**: Coercion from `Rat`; `U q = (x < q)`.
-  - **`fromRat-inj`**: `fromRat` is injective.
-  - **`+`**: Addition; `U a = ∃ (b : x.U) (c : y.U) (b + c < a)`.
-  - **`+_U`** / **`+_U_<=`**: Characterizations of `(x + y).U a` (strict and non-strict).
-  - **`+-rat`**: `fromRat x + fromRat y = fromRat (x + y)`.
-  - **`<=`**: `x <= y` iff `∀ {b : y.U} (x.U b)`.
-  - **`<=_+-char`**: If `x <= y + z` and `y.U a` and `z.U b`, then `x.U (a + b)`.
-  - **`<=-rat`**: `a <= b` as `Rat` iff `a <= b` as `ExUpperReal`.
-  - **`<_<=`**: `x.U q` implies `x <= q`.
-  - **`meet`** / **`meet_U`**: Meet; `U a = x.U a || y.U a`.
-  - **`join`** / **`join_U`**: Join; `U a = (x.U a, y.U a)`.
-  - **`join-bounded`**: Join of bounded upper reals is bounded.
-  - **`*`**: Multiplication (for non-negative upper reals); `U a = ∃ (b : x.U) (0 < b) (c : y.U) (0 < c) (b * c < a)`.
-  - **`*_U`** / **`*_U_<=`** / **`*_U_<`**: Characterizations of `(x * y).U a`.
-  - **`*-rat`**: `fromRat x * fromRat y = fromRat (x * y)` when `x >= 0`, `y >= 0`.
+#### Core Record
 
-#### ExUpperRealPointed
+- **`ExUpperReal`**: Record with field `U : Rat -> \Prop` together with `U-closed` (upward closed under `<`) and `U-rounded` (every member has a smaller member in `U`). Represents a (possibly `+∞`) upper real.
+- **`ExUpperReal.U_<=`**: Upward closure under non-strict `<=`, derived from `U-closed` + `U-rounded`.
+- **`ExUpperReal.IsBounded`**: `∃ U`, i.e. there exists a rational strict upper bound (the upper real is finite).
+- **`ExUpperReal.fromRat`**: Coercion `Rat -> ExUpperReal` sending `x` to the predicate `x <`.
+- **`ExUpperReal.fromRat-inj`**: Injectivity of `fromRat`.
 
-- **`ExUpperRealPointed`**: `Pointed ExUpperReal` with `ide = fromRat 1`.
+#### Arithmetic on `ExUpperReal`
 
-#### real_meet_U
+- **`ExUpperReal.+`**: Addition, with `U` defined as `∃ (b : x.U) (c : y.U) (b + c < a)`.
+- **`ExUpperReal.+_U`**, **`+_U_<=`**: Membership characterizations of `(x + y).U` with strict and non-strict witnesses.
+- **`ExUpperReal.+-rat`**: `fromRat x + fromRat y = fromRat (x + y)`.
+- **`ExUpperReal.*`**: Multiplication via positive rational witnesses: `∃ (b : x.U) (b > 0) (c : y.U) (c > 0) (b * c < a)`.
+- **`ExUpperReal.*_U`**, **`*_U_<=`**, **`*_U_<`**: Three equivalent membership characterizations of `(x * y).U`, including a non-negative-rational-bound form.
+- **`ExUpperReal.*-rat`**: `fromRat x * fromRat y = fromRat (x * y)` for non-negative `x, y`.
 
-- **`real_meet_U`**: `x.U a` and `x.U b` imply `x.U (a ∧ b)`.
+#### Order and Lattice on `ExUpperReal`
 
-#### ExUpperRealAbMonoid Instance
+- **`ExUpperReal.<=`**: Defined as `∀ {b : y.U} (x.U b)` — predicate inclusion, contravariant in `U`.
+- **`ExUpperReal.<=-rat`**, **`<_<=`**: Compatibility of `<=` with rational order and with rational membership in `U`.
+- **`ExUpperReal.<=_+-char`**: Distributing a bound `x <= y + z` over rational witnesses for `y` and `z`.
+- **`ExUpperReal.meet`**: Pointwise `||` of upper-cut predicates (the smaller real).
+- **`ExUpperReal.join`**: Pointwise `\Sigma` (intersection) of upper-cut predicates (the larger real).
+- **`ExUpperReal.meet_U`**, **`join_U`**: Membership characterizations.
+- **`ExUpperReal.join-bounded`**: `join` preserves `IsBounded`.
+- **`real_meet_U`**: From `x.U a` and `x.U b` deduce `x.U (a ∧ b)`.
 
-- **`ExUpperRealAbMonoid`**: Instance of `BiorderedLatticeAbMonoid` for `ExUpperReal`.
-  - **`<`**: `x < y` iff `∃ (q : x.U) (q <= y)`.
-  - **`<-rat`**: `x < y` (as `Rat`) iff `x.U y`.
-  - **`zro<ide`**: `0 < 1`.
-  - **`<_+`** / **`<_+-left`** / **`<_+-right`**: Strict ordering is compatible with addition.
-  - **`<=_+-cancel-left`** / **`<=_+-cancel-right`**: Cancellation of bounded upper reals in `<=` under addition.
-  - **`*n_U`**: `(n *n x).U q` iff `∃ (r : x.U) (n * r <= q)`.
-  - **`*n_finv`**: `(n *n x).U q` iff `x.U (finv n * q)`.
+#### Algebraic Instances
 
-#### rat-upperReal
+- **`ExUpperRealPointed`**: `Pointed` instance with `ide = fromRat 1`.
+- **`ExUpperRealAbMonoid`**: `BiorderedLatticeAbMonoid` instance: zero `fromRat 0`, addition, lattice operations, and the strict order `<` (defined via `∃ (q : x.U) (q <= y)`).
+- **`ExUpperRealAbMonoid.<`**: Strict order: there is a rational upper bound of `x` that is `<= y`.
+- **`ExUpperRealAbMonoid.<-rat`**: `x < y ↔ x.U y` for rational `y`.
+- **`ExUpperRealAbMonoid.zro<ide`**: `0 < 1`.
+- **`ExUpperRealAbMonoid.<_+`**, **`<_+-left`**, **`<_+-right`**: Strict monotonicity of `+`.
+- **`ExUpperRealAbMonoid.<=_+-cancel-left`**, **`<=_+-cancel-right`**: Additive cancellation for `<=`, requiring boundedness and a positive rational lower bound on the cancelled side; uses internal `step`/`steps` lemmas to iterate an `eps`-shift argument.
+- **`ExUpperRealAbMonoid.*n_U`**, **`*n_finv`**: Membership in the `n`-fold sum `n *n x` characterized via `x.U` and rational scaling/inverse-scaling.
+- **`rat-upperReal`**: `AddMonoidHom RatField ExUpperRealAbMonoid` given by `fromRat`.
+- **`ExUpperRealSemigroup`**: `CSemigroup` instance with the multiplication above.
 
-- **`rat-upperReal`**: `AddMonoidHom` from `RatField` to `ExUpperRealAbMonoid` via `fromRat`.
+#### Multiplicative Lemmas
 
-#### ExUpperRealSemigroup Instance
+- **`ExUpperRealSemigroup.ide-left_<=`**, **`ide-left`**, **`ide-right`**: Identity for `*` (the equalities require `0 <= x`).
+- **`ExUpperRealSemigroup.<=_*`**, **`<_*`**: Monotonicity and strict monotonicity of `*` (the strict version requires `x, y >= 0`).
+- **`ExUpperRealSemigroup.*_join`**: `x * y = (x ∨ 0) * (y ∨ 0)` — multiplication ignores the negative part of upper reals.
+- **`ExUpperRealSemigroup.<_*_U-left`**, **`<_*_U-right`**: Membership of products `(x * z).U (y * z)` from `x.U y` and positive rational scalars.
+- **`ExUpperRealSemigroup.<_*-left`**, **`<_*-right`**, **`<_*-left'`**, **`<_*-right'`**: Strict monotonicity of multiplication by a positive rational, in primed and unprimed forms differing in `> 0` vs `>= 0` hypotheses.
+- **`ExUpperRealSemigroup.*_>=0`**: Products are non-negative.
+- **`ExUpperRealSemigroup.ldistr_<=`**, **`rdistr_<=`**: Sub-distributivity (always holds).
+- **`ExUpperRealSemigroup.ldistr`**, **`rdistr`**: Full distributivity, given non-negativity of the relevant arguments.
+- **`ExUpperRealSemigroup.zro_*-left`**, **`zro_*-right`**: `0 * x = 0` and `x * 0 = 0`, requiring `x.IsBounded`.
+- **`ExUpperRealSemigroup.*n_*_<=`**, **`*n_*`**: Relating natural-number scaling `n *n x` and the product `n * x`; equality requires boundedness.
+- **`ExUpperRealSemigroup.<_*-positive`**: `0 < x` and `0 < y` implies `0 < x * y`.
 
-- **`ExUpperRealSemigroup`**: Instance of `CSemigroup` for `ExUpperReal` (multiplication).
-  - **`ide-left`** / **`ide-right`**: `1 * x = x` and `x * 1 = x` when `x >= 0`.
-  - **`ide-left_<=`**: `x <= 1 * x` (unconditional).
-  - **`<=_*`**: Monotonicity of `*` w.r.t. `<=`.
-  - **`*_join`**: `x * y = join x 0 * join y 0`.
-  - **`<_*`** / **`<_*-left`** / **`<_*-right`** and primed variants: Strict monotonicity of `*`.
-  - **`<_*_U-left`** / **`<_*_U-right`**: Upper bound propagation through `*`.
-  - **`*_>=0`**: `0 <= x * y`.
-  - **`ldistr`** / **`rdistr`**: Distributivity when arguments are `>= 0`.
-  - **`ldistr_<=`** / **`rdistr_<=`**: Distributivity as `<=` (unconditional).
-  - **`zro_*-left`** / **`zro_*-right`**: `0 * x = 0` when `x` is bounded.
-  - **`*n_*_<=`** / **`*n_*`**: Relating `*n` (iterated addition) to `*`.
-  - **`<_*-positive`**: `0 < x` and `0 < y` imply `0 < x * y`.
-  - **`div-lb-rat`**: Given `a > 0` and `b > 0`, there exists `c > 0` with `a * c <= b`.
-  - **`finv_<=-rotate-right`** / **`finv_<-rotate-right`** / **`finv_<-rotate-left`**: Rotation lemmas for `finv` and `*`.
-  - **`pow`**: Power function for `ExUpperReal`.
-  - **`rat-pow`**: `pow x n = fromRat (pow x n)` for rational `x >= 0`.
-  - **`pow_<=`**: Monotonicity of `pow`.
-  - **`pow_>=0`**: `0 <= pow x n`.
-  - **`square_<=`** / **`square<=1`**: Square root–like bounds from `x * x <= q * q`.
-  - **`square-bound-div`**: If `x * x <= q * x` and `x` is bounded, then `x <= q`.
-  - **`*n-bounded`**: `n *n x` is bounded when `x` is bounded.
+#### Division and Inverse Rotation
 
-#### UpperReal
+- **`ExUpperRealSemigroup.div-lb`**: For positive rational `a` and positive `b`, returns a positive `c` with `a * c <= b` (constructed as `finv a * b`).
+- **`ExUpperRealSemigroup.div-lb-rat`**: Existence of a rational `c > 0` with `a * c <= b`.
+- **`ExUpperRealSemigroup.finv_<=-rotate-right`**, **`finv_<-rotate-right`**, **`finv_<-rotate-left`**: Rotations of inequalities through multiplication by `finv a` / `a`.
 
-- **`UpperReal`**: Extends `ExUpperReal` with `U-inh` (inhabitedness of `U`).
-  - **`ex-ext`**: Equality as `ExUpperReal` implies equality as `UpperReal`.
+#### Powers and Square Bounds
 
-#### UpperRealSemigroup Instance
+- **`ExUpperRealSemigroup.pow`**: Natural-number powers.
+- **`ExUpperRealSemigroup.rat-pow`**: `pow (fromRat x) n = fromRat (x^n)` for `x >= 0`.
+- **`ExUpperRealSemigroup.pow_<=`**, **`pow_>=0`**: Monotonicity and non-negativity of `pow`.
+- **`ExUpperRealSemigroup.square_<=`**, **`square<=1`**: From `x * x <= q * q` (with `q >= 0`) deduce `x <= q`; specialization to `q = 1`.
+- **`ExUpperRealSemigroup.square-bound-div`**: From `x * x <= q * x` deduce `x <= q`, via a halving-step iteration (`step`, `aux`).
+- **`ExUpperRealSemigroup.*n-bounded`**: Boundedness propagates through `*n`.
 
-- **`UpperRealSemigroup`**: Instance of `CSemigroup` for `UpperReal` (multiplication).
-  - **`*_U`**: Characterization of `(x * y).U a` for `UpperReal`.
-  - **`*-ex`**: `x * y = x ExUpperReal.* y`.
+#### `UpperReal` (Inhabited Case)
+
+- **`UpperReal`**: Extends `ExUpperReal` with `U-inh : ∃ U`, i.e. the upper real is finite.
+- **`UpperReal.natBounded`**: There is a natural number bounding the real from above.
+- **`UpperReal.U-inh_>0`**: There is a positive rational upper bound.
+- **`UpperReal.IsLocated`**: For all rationals `a < b`, either `a < c` for some `c : U` or `U b` holds — constructive locatedness.
+- **`UpperReal.fromRat`**: Coercion `Rat -> UpperReal`, lifting `ExUpperReal.fromRat`.
+- **`UpperReal.ex-ext`**: Extensionality reducing equality of `UpperReal`s to equality of underlying `ExUpperReal`s.
+- **`UpperRealSemigroup`**: `CSemigroup` instance on `UpperReal` whose multiplication restricts the `ExUpperReal` product to inhabited cuts.
+- **`UpperRealSemigroup.*`**: Multiplication on `UpperReal`, lifting `ExUpperReal.*` and supplying `U-inh`.
+- **`UpperRealSemigroup.*_U`**: Membership characterization of the product.
+- **`UpperRealSemigroup.*-ex`**: The `UpperReal` product agrees with the `ExUpperReal` product after coercion.

@@ -1,63 +1,64 @@
 ### Algebra.Ring.Localization
 
-Construction of the localization of a commutative ring at a multiplicative subset, including the universal property and the field of fractions of an integral domain.
+Localization of commutative rings at a multiplicative subset, including the universal property and the field of fractions construction.
 
-#### Order on Subsets
+This module formalizes ring localization both abstractly (via a universal property) and concretely (as a quotient of pairs `(numerator, denominator)`). The `Localization` class characterizes any ring `R'` together with a map `R → R'` that inverts a designated subset `S` and is universal among such maps. The concrete construction `LocRing` builds the localization explicitly as `R × S` modulo the standard equivalence `r/s ~ r'/s'` iff `r·s' = r'·s` (up to multiplication by an element of `S`, to handle non-cancellative rings). Specializing to an integral domain with decidable equality and `S = R \ {0}` yields the field of fractions.
 
-- **`SubsetPoset`**: `Poset` instance on `SubSet M` for a monoid `M`, ordered by pointwise inclusion.
+#### Subset Order
 
-#### Universal Property
+- **`SubsetPoset`**: Poset structure on `SubSet M` of a monoid, ordered by pointwise inclusion.
 
-- **`Localization`**: Class capturing the universal property of localization. Bundles a ring `R`, subset `S`, ring `R'`, homomorphism `inL : RingHom R R'` inverting `S`, and a uniqueness clause `local-univ` stating that any ring map sending `S` to invertibles factors uniquely through `inL`.
+#### Abstract Localization
 
-#### Localization Ring
+- **`Localization`**: Class capturing the universal property of localization. Given `R : CRing` and `S : SubSet R`, a localization is a ring `R'` with a homomorphism `inL : R → R'` such that every element of `S` becomes invertible, and any such homomorphism into another ring factors uniquely through `inL`.
+  - **`lift`**: Universal extension of `f : R → R''` (sending `S` to invertibles) to `R' → R''`.
+  - **`lift-prop`**, **`lift-prop-func`**: The lift extends the original map: `lift f l ∘ inL = f`.
+  - **`remove_inL`**: Two homomorphisms out of `R'` agreeing on the image of `inL` are equal (epicness of `inL`).
 
-- **`LocRing`**: `CRing` instance for the localization `R[S⁻¹]` of a commutative ring `R` at a submonoid `S`. Elements are equivalence classes of pairs `(r, s, S s)` under the standard localization relation.
-- **`LocRing.SType`**: The carrier `\Sigma (x y : R) (S y)` of fraction representatives.
-- **`LocRing.Type`**: Quotient of `SType` by `a.1 * b.2 = b.1 * a.2`.
-- **`LocRing.neg`**, **`LocRing.++`**, **`LocRing.**`**: Negation, addition, and multiplication on fractions, defined on representatives and shown to respect the equivalence.
-- **`LocRing.inl-surj`**: The canonical map from `SType` to `LocRing` is surjective.
-- **`LocRing.equals-lem`**, **`LocRing.equals1`**: Sufficient conditions to identify two fractions: existence of a witness `c ∈ S` with `a.1 * b.2 * c = b.1 * a.2 * c`, or directly `a.1 * b.2 = b.1 * a.2`.
-- **`LocRing.unequals`**: Converse — equal fractions admit such a witness `c`.
-- **`LocRing.equality`**: Equality of fractions is equivalent to existence of the witnessing `c ∈ S`.
-- **`LocRing.swap`**: `(r1 * r2) * (s1 * s2) = (r1 * s1) * (r2 * s2)` rearrangement helper.
-- **`LocRing.trivial`**: If `S` contains a nilpotent element, then `LocRing S` is contractible (the zero ring).
+#### Concrete Construction
 
-#### Canonical Map and Construction
+- **`LocRing`**: Concrete `CRing` instance built as the quotient of pairs `(r, s, p : S s)` by the relation `r/s ~ r'/s'`. Defines all ring operations on equivalence classes.
+  - **`SType`**: Underlying set of triples `(numerator, denominator, proof denominator ∈ S)`.
+  - **`Type`**: The quotient by the localization equivalence relation.
+  - **`inl-surj`**: Surjectivity of the canonical map from `SType` into `LocRing`.
+  - **`equals-lem`**, **`equals1`**: Sufficient conditions for two fractions to be equal in the quotient (with or without an auxiliary multiplier from `S`).
+  - **`unequals`**, **`equality`**: Equality in `LocRing` is equivalent to existence of a witness `c ∈ S` with `a₁·b₂·c = b₁·a₂·c` (necessary form for non-cancellative rings).
+  - **`swap`**: Auxiliary commutativity rearrangement `(r₁·r₂)·(s₁·s₂) = (r₁·s₁)·(r₂·s₂)`.
+  - **`neg`**, **`++`**, **`**`**: Negation, addition, and multiplication of fractions, defined by representatives with the standard formulas.
+  - **`trivial`**: If a nilpotent element of `R` lies in `S`, then `LocRing S` is contractible (the localization collapses).
+- **`inl~`**: Constructor injecting an `SType` element into `LocRing` as an equivalence class.
+- **`loc_unequals_domain`**: Over an integral domain with `0 ∉ S`, the equivalence reduces to plain cross-multiplication: `a₁·b₂ = b₁·a₂`.
 
-- **`inl~`**: Wraps a representative `(x, y, S y)` as an element of `LocRing.Type`.
-- **`locMap`**: Canonical ring homomorphism `R -> LocRing S` sending `x` to `in~ (x, 1, _)`.
-- **`locMap-inj`**: `locMap` is injective when `S` consists of cancellable elements (`x * a = y * a -> x = y` for `a ∈ S`).
-- **`loc_unequals_domain`**: Over an integral domain with `S` not containing `0`, equal fractions satisfy `a.1 * b.2 = b.1 * a.2` directly (no witness needed).
-- **`localization`**: Provides the `Localization` instance for `LocRing S`, bundling `locMap`, the proof `elem-inv` that elements of `S` become invertible, and the universal property via `liftHom`.
+#### Canonical Map
 
-#### Lift / Universal Map
+- **`locMap`**: The canonical ring homomorphism `R → LocRing S` sending `x` to `x/1`.
+- **`locMap-inj`**: Injectivity of `locMap` when multiplication by elements of `S` is cancellative.
 
-- **`localization.elem-inv`**: For `s ∈ S`, constructs the explicit inverse of `locMap s` in `LocRing S` as `in~ (1, s, _)`.
-- **`localization.locMap-epiMap`**: Two ring maps out of `LocRing S` agreeing on the image of `locMap` are equal (`locMap` is epi).
-- **`localization.lift`**: Given `f : RingHom R R'` inverting `S`, defines the underlying function `LocRing S -> R'` by `(r, s) |-> f r * Inv.inv (f s)`.
-- **`localization.liftHom`**: Packages `lift` into a `RingHom (LocRing S) R'`, with `func-inv` showing `Inv.inv` distributes over products.
-- **`localization.liftHom-loc`**: `liftHom f l ∘ locMap = f`, the factorization equation of the universal property.
+#### Universal Property Realization
 
-#### Localization at Powers
+- **`localization`**: Witnesses that `LocRing S` together with `locMap` satisfies the abstract `Localization` interface.
+  - **`elem-inv`**: For `s ∈ S`, constructs the explicit inverse `1/s` of `locMap s` in `LocRing S`.
+  - **`locMap-epiMap`**: Two ring homomorphisms out of `LocRing S` agreeing on the image of `locMap` are equal pointwise.
+  - **`lift`**, **`liftHom`**: Underlying function and ring homomorphism extending `f : R → R'` (which inverts `S`) to `LocRing S → R'`, defined by `f(r) · (f s)⁻¹`.
+  - **`liftHom.func-inv`**: The lift respects the multiplicative structure of inverses: `(s₁·s₂)⁻¹ = s₂⁻¹ · s₁⁻¹`.
+  - **`liftHom-loc`**: The lift recovers `f` on the image of `locMap`.
 
-- **`localization.pow-map`**: Ring homomorphism `LocRing (powers (b^n)) -> LocRing (powers b)` induced by inclusion of multiplicative subsets.
-- **`localization.pow-map_loc`**: `pow-map b n ∘ locMap = locMap`.
-- **`localization.div-map`**: For `a | b`, ring homomorphism `LocRing (powers a) -> LocRing (powers b)` (since powers of `a` divide powers of `b`).
-- **`localization.div-map_loc`**: `div-map a|b ∘ locMap = locMap`.
-- **`localization.div-map.aux`**, **`localization.div-map.aux-func`**: Internal helpers constructing the underlying function and its well-definedness witness.
+#### Localizations at Powers
 
-#### General Lemmas on Maps Out of Localizations
+- **`pow-map`**: For `b ∈ R` and `n : Nat`, the natural homomorphism `LocRing(powers (bⁿ)) → LocRing(powers b)` (every `bⁿᵏ` is also a power of `b`).
+- **`pow-map_loc`**: `pow-map` commutes with `locMap`.
+- **`div-map`**: For `a | b`, the homomorphism `LocRing(powers a) → LocRing(powers b)` induced by divisibility (powers of `a` divide powers of `b`).
+  - **`aux`**, **`aux-func`**: Helpers constructing the underlying function on representatives.
+- **`div-map_loc`**: `div-map` commutes with `locMap`.
+- **`map-lemma`**: Decomposition lemma: any `f(x/y)` factors as `f(x/1) · (f(y/1))⁻¹` whenever `f(y/1)` is invertible.
+- **`powers-inv`**: If `f a` is invertible in `S`, then `f x` is invertible for every `x` in the multiplicative submonoid generated by `a`.
 
-- **`localization.map-lemma`**: For `f : RingHom (LocRing M) S` and `x = (r, s)`, expresses `f (inl~ x)` as `f (inl~ (r, 1, _)) * (f (inl~ (s, 1, _)))⁻¹`.
-- **`localization.powers-inv`**: If `f a` is invertible in `S`, then `f x` is invertible for every `x` in the multiplicative submonoid generated by `a`.
-- **`div_loc`**: For `b | a` with `Sb : S b`, the fraction `inl~ (a, b, Sb)` equals `locMap a|b.inv` (the quotient `a/b` is the image of the divisor).
+#### Divisibility and Change of Base
 
-#### Change of Base
-
-- **`loc_change-of-base1`**: For `f : RingHom R S` and `a : R`, the induced ring map `LocRing (powers a) -> LocRing (powers (f a))`.
-- **`loc_change-of-base1-loc`**: Compatibility: `loc_change-of-base1 f ∘ locMap = locMap ∘ f`.
+- **`div_loc`**: Identifies `a/b` in `LocRing` with `locMap` applied to the divisor inverse: `inl~ (a, b, _) = locMap a|b.inv`.
+- **`loc_change-of-base1`**: For a ring homomorphism `f : R → S`, the induced homomorphism `LocRing(powers a) → LocRing(powers (f a))`.
+- **`loc_change-of-base1-loc`**: Compatibility of change-of-base with the canonical localization maps.
 
 #### Field of Fractions
 
-- **`FieldOfQuotients`**: `DiscreteField` instance on `LocRing D.subMonoid` for a decidable integral domain `D`. Establishes `0 ≠ 1` via `unequals` and provides the dichotomy "zero or invertible" by case-splitting on `decideEq x.1 0`, producing the explicit inverse `(s, r)` when the numerator is nonzero.
+- **`FieldOfQuotients`**: For a decidable integral domain `D`, the localization at `D \ {0}` is a `DiscreteField`. Provides the standard field-of-fractions construction with decidable equality and explicit inverses for nonzero elements.

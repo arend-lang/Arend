@@ -1,28 +1,33 @@
 ### Algebra.Module.FinModule
 
-Finitely generated (free) modules over a ring, equipped with a finite basis, along with dimension theory and lifting/splitting properties.
+Finitely generated free modules over a ring, equipped with a basis, and their dimension theory.
 
-#### Main Class
+A `FinModule` is an `LModule` together with a (truth-valued) witness that some finite array of elements forms a basis. The module develops the standard linear-algebra consequences: surjections from finite modules can be lifted/split, any two bases have the same length (over a non-zero commutative ring), giving a well-defined `dimension`, and surjective endomorphisms between equidimensional finite modules are isomorphisms. The standard example `R^n` is shown to be a `FinModule` with basis the columns of the identity matrix.
 
-- **`FinModule`**: Extends `LModule` with the property `isFinModule` asserting the merely existence of a finite array of elements forming a basis.
+#### Core Class
 
-#### Lifting and Splitting Lemmas
+- **`FinModule`**: Extends `LModule` with the propositional witness `isFinModule : ∃ (l : Array E) (IsBasis l)` — a module that admits some finite basis.
 
-- **`surj-lift`**: Given a finite module `F`, any linear map `f : F -> V` lifts through a surjective linear map `g : U -> V`, yielding `h : F -> U` with `g ∘ h = f`.
-- **`surj-split`**: Any surjection `g : U -> V` onto a finite module `V` admits a linear section `h : V -> U` with `g ∘ h = id`.
+#### Lifting and Splitting Surjections
+
+- **`surj-lift`**: For a `FinModule` `F` over a ring `R`, any linear map `f : F → V` factors through any surjection `g : U ↠ V`; produces `h : F → U` with `g ∘ h = f`.
+- **`surj-split`**: A surjection `g : U ↠ V` onto a `FinModule` `V` admits a linear section `h : V → U` with `g ∘ h = id`.
 
 #### Dimension Theory (over `NonZeroCRing`)
 
-- **`basis<=generating`**: Any basis is no larger than any generating set: `l.len <= l'.len` when `l` is a basis and `l'` generates.
-- **`dimension-pair`**: The dimension paired with a proof of basis existence, packaged at `\level` to make it a proposition (any two such pairs are equal via the antisymmetry of the basis-vs-generating bound).
-- **`dimension`**: The dimension of a finite module as a `Nat`, extracted from `dimension-pair`.
-- **`dimension-char`**: There merely exists a basis of length `dimension U`.
-- **`dimension-unique`**: Any basis of `U` has length equal to `dimension U`.
-- **`dimension=0`**: A finite module has dimension `0` iff it is trivial (every element equals `0`).
-- **`surj-iso`**: A surjective linear map between finite modules of equal dimension is an isomorphism in `LModuleCat R`.
-  - **`basis-surj-iso`**: Helper showing that a surjection between modules with bases of the same length `n` is an isomorphism (over a commutative ring).
+- **`basis<=generating`**: If `l` is a basis and `l'` generates `U`, then `l.len <= l'.len`. The Steinitz-style exchange bound underlying invariance of dimension.
+- **`dimension-pair`**: Packages the dimension together with a basis-existence proof as a proposition (any two such pairs are equal), making the natural number well-defined.
+- **`dimension`**: The dimension of a `FinModule` over a non-zero commutative ring, extracted from `dimension-pair`.
+- **`dimension-char`**: Existence of a basis of length exactly `dimension U`.
+- **`dimension-unique`**: Any basis `l` of `U` has length equal to `dimension U`.
+- **`dimension=0`**: Characterizes zero-dimensional modules as the trivial modules: `dimension U = 0 ↔ ∀ a, a = 0`.
 
-#### Standard Examples
+#### Isomorphism Criteria
 
-- **`ArrayFinModule`**: The free module `R^n = Array R n` as a `FinModule R`, extending `ArrayLModule` with the standard basis.
-  - **`basis`**: The rows of the identity matrix `MatrixRing.ide` form a basis of `Array R n`.
+- **`surj-iso`**: A surjective linear map between `FinModule`s of equal dimension is an isomorphism in `LModuleCat R`.
+- **`surj-iso.basis-surj-iso`**: Helper showing that over a `CRing`, a surjection between modules with bases of equal length `n` is an isomorphism — the matrix-level core of `surj-iso`.
+
+#### Standard Example
+
+- **`ArrayFinModule`**: Instance making `Array R n` a `FinModule R` via the `ArrayLModule` structure on the regular module `RingLModule R`.
+- **`ArrayFinModule.basis`**: The rows/columns of the identity matrix `MatrixRing.ide` form a basis of `R^n`.

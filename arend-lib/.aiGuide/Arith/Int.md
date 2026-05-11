@@ -1,93 +1,76 @@
 ### Arith.Int
 
-This module provides arithmetic operations, ordering, and properties for integers (`Int`).
+Integer arithmetic, ordering, and basic number-theoretic operations on the `Int` type.
+
+This module equips `Int` (the inductive type with `pos n` and `neg n` constructors) with the structure of a decidable ordered commutative ring (`IntRing`), implemented by case-splitting addition and multiplication on the sign of operands. The module also defines successor/predecessor, sign, and absolute-value functions, and supplies the lemmas needed to translate between integer-level statements and their natural-number counterparts (via `pos`/`neg` injections and `iabs`). Many auxiliary distributivity lemmas inside `IntRing`'s `\where`-block exist to make the case-split definitions usable in proofs without unfolding them everywhere.
 
 #### Successor and Predecessor
 
-- **`isuc`**: Integer successor; `isuc (pos n) = pos (suc n)`, `isuc (neg (suc n)) = neg n`.
-- **`ipred`**: Integer predecessor; `ipred (pos 0) = neg 1`, `ipred (pos (suc n)) = pos n`, `ipred (neg n) = neg (suc n)`.
+- **`isuc`**: Integer successor: `pos n ↦ pos (suc n)`, `neg (suc n) ↦ neg n`.
+- **`ipred`**: Integer predecessor: `pos 0 ↦ neg 1`, `pos (suc n) ↦ pos n`, `neg n ↦ neg (suc n)`.
 - **`ipred_isuc`**: `ipred (isuc x) = x`.
 - **`isuc_ipred`**: `isuc (ipred x) = x`.
+- **`id<isuc`**: `x < isuc x`.
 
-#### Signum
+#### Sign Function
 
-- **`signum`**: Returns `0`, `1`, or `-1` depending on the sign of the integer.
-  - **`*-comm`**: `signum (x * y) = signum x * signum y`.
-  - **`signum_pos`**: `signum n = 1` when `n ≠ 0` (for `Nat`).
-  - **`signum_neg`**: `signum (neg n) = -1` when `n ≠ 0`.
-  - **`signum_neg/=1`**: `signum (neg n) = 1` is impossible.
-  - **`signum_-`**: `signum (x - y) = negative (signum (y - x))`.
+- **`signum`**: Sign of an integer, returning `0`, `1`, or `-1` as an `Int`.
+- **`signum.*-comm`**: `signum (x * y) = signum x * signum y`.
+- **`signum.signum_pos`**, **`signum.signum_neg`**: Sign of a nonzero positive/negative natural.
+- **`signum.signum_neg/=1`**: `signum (neg n) ≠ 1`.
+- **`signum.signum_-`**: `signum (x - y) = -(signum (y - x))`.
 
-#### IntRing Instance
+#### Ring Structure
 
-- **`IntRing`**: Instance of `OrderedCRing.Dec` for `Int`, providing `+`, `*`, `negative`, `zro`, `ide`, commutativity, associativity, distributivity, positivity predicate (`isPos` via `signum`), and decidable trichotomy.
-  - **`lldistr`**: `(n + m) - k = pos n + (m - k)`.
-  - **`lrdistr`**: `(n + m) - k = (n - k) + pos m`.
-  - **`rldistr`**: `n - (m + k) = neg m + (n - k)`.
-  - **`rrdistr`**: `n - (m + k) = (n - m) + neg k`.
-  - **`minus+pos`**: `(n - m) + pos k = pos n + (k - m)`.
-  - **`minus+neg`**: `(n - m) + neg k = neg m + (n - k)`.
-  - **`minus__`**: `n - n = 0`.
-  - **`suc-left`**: `pos (suc n) + x = isuc (pos n + x)`.
-  - **`suc-right`**: `x + pos (suc n) = isuc (x + pos n)`.
-  - **`pred-left`**: `neg (suc n) + x = ipred (neg n + x)`.
-  - **`pred-right`**: `x + neg (suc n) = ipred (x + neg n)`.
-  - **`neg*pos`**: `neg n * pos m = neg (n * m)`.
-  - **`neg*neg`**: `neg n * neg m = pos (n * m)`.
-  - **`pos_neg_+`**: `pos (n + k) + neg (m + k) = pos n + neg m`.
-  - **`pos_minus-ldistr`**: `pos n * (m - k) = pos (n * m) + neg (n * k)`.
-  - **`neg_minus-ldistr`**: `neg n * (m - k) = neg (n * m) + pos (n * k)`.
-  - **`neg<=0`**: `neg n <= 0`.
-  - **`pos>=0`**: `0 <= pos n`.
+- **`IntRing`**: Instance of `OrderedCRing.Dec` on `Int`. Defines `+`, `*`, `negative`, `0`, `1` by case-splitting on signs of operands, with positivity given by `signum x = 1`. Includes the `natCoef` embedding `pos : Nat → Int`.
 
-#### Absolute Value (`iabs`)
+#### Ring-Level Helper Lemmas (inside `IntRing`)
 
-- **`iabs`**: Returns the natural number absolute value of an integer.
-  - **`signum_/=0`**: `iabs (signum x) = 1` when `x ≠ 0`.
-  - **`signum_*`**: `pos (iabs x) = x * signum x`.
-  - **`*_signum`**: `pos (iabs x) * signum x = x`.
-  - **`negative-comm`**: `iabs (negative x) = iabs x`.
-  - **`equals0`**: `iabs x = 0` implies `x = 0`.
-  - **`ofPos`**: `pos (iabs x) = x` when `0 <= x`.
-  - **`ofNeg`**: `pos (iabs x) = negative x` when `x <= 0`.
-- **`iabs=abs`**: `pos (iabs x) = IntRing.abs x`.
+- **`lldistr`**, **`lrdistr`**, **`rldistr`**, **`rrdistr`**: Distribute `pos`/`neg` summands across `Nat` subtraction `n - m : Int`.
+- **`minus+pos`**, **`minus+neg`**: Rearrange `(n - m) + pos k` and `(n - m) + neg k`.
+- **`minus__`**: `n - n = 0`.
+- **`suc-left`**, **`suc-right`**: Pull `pos (suc n)` out of an integer sum as `isuc`.
+- **`pred-left`**, **`pred-right`**: Pull `neg (suc n)` out of an integer sum as `ipred`.
+- **`neg*pos`**, **`neg*neg`**: Sign rules for products of `neg`/`pos` naturals.
+- **`pos_neg_+`**: Cancel a common `k` from `pos (n+k) + neg (m+k)`.
+- **`pos_minus-ldistr`**, **`neg_minus-ldistr`**: Distribute `pos n *` / `neg n *` over `Nat`-subtraction.
+- **`neg<=0`**, **`pos>=0`**: Sign-based ordering bounds.
+
+#### Absolute Value
+
+- **`iabs`**: Absolute value as a `Nat`: `pos n ↦ n`, `neg n ↦ n`.
+- **`iabs.signum_/=0`**: `iabs (signum x) = 1` for nonzero `x`.
+- **`iabs.signum_*`**, **`iabs.*_signum`**: Recover `x` (or `pos (iabs x)`) from `iabs` and `signum`.
+- **`iabs.negative-comm`**: `iabs (-x) = iabs x`.
+- **`iabs.equals0`**: `iabs x = 0 ⇒ x = 0`.
+- **`iabs.ofPos`**, **`iabs.ofNeg`**: `pos (iabs x) = x` (or `-x`) when `x ≥ 0` (or `x ≤ 0`).
+- **`iabs=abs`**: Agreement of `iabs` with the ring-theoretic `abs`.
 - **`iabs_*`**: `iabs (x * y) = iabs x * iabs y`.
 
-#### Ordering Lemmas
+#### Divisibility and Units
 
-- **`<_+1_<=`**: `x < y + 1` implies `x <= y`.
-- **`id<isuc`**: `x < isuc x`.
-- **`pos<pos`**: `n < m` (as `Nat`) implies `pos n < pos m`; with `conv` for the converse.
-- **`neg<neg`**: `n < m` (as `Nat`) implies `neg m < neg n`; with `conv` for the converse.
-- **`pos<=pos`**: `n <= m` implies `pos n <= pos m`; with `conv` for the converse.
-- **`neg<=pos`**: `neg n <= pos m`.
-- **`pos/<=neg`**: `pos n <= neg m` implies `m = 0`.
-- **`neg<=neg`**: `n <= m` implies `neg m <= neg n`; with `conv` for the converse.
+- **`ldiv_iabs`**: A divisibility witness `LDiv x y` transfers to `LDiv (iabs x) (iabs y)`.
+- **`iabs_ldiv`**: Conversely, an `iabs`-level divisibility lifts to `LDiv x y` by case analysis on signs.
+- **`intUnits`**: If `x * y = 1` then `y = 1` or `y = -1`.
 
-#### Divisibility
+#### Order and Sign Reflection
 
-- **`ldiv_iabs`**: `LDiv x y` implies `LDiv (iabs x) (iabs y) (iabs d.inv)`.
-- **`iabs_ldiv`**: `LDiv (iabs x) (iabs y)` implies `LDiv x y`.
+- **`<_+1_<=`**: `x < y + 1 ⇒ x ≤ y`.
+- **`pos_iabs`**, **`neg_iabs`**: Express `pos`/`neg` of `iabs (x -ℕ y) : Int` directly as the integer subtraction.
+- **`iabs_-_suc`**: `iabs (suc n -ℕ i) = suc (iabs (n -ℕ i))` when `i ≤ n`.
+- **`zro-id=neg`**: `0 -ℕ n = neg n` as integers.
+- **`-'=-`**: Truncated `Nat` subtraction `-'` agrees with integer subtraction when no underflow.
+- **`unpos`**: Injectivity of `pos`.
+- **`pos<pos`**, **`pos<pos.conv`**: Strict order on `Nat` corresponds to strict order on `pos n`.
+- **`neg<neg`**, **`neg<neg.conv`**: Order-reversing correspondence on negatives.
+- **`pos<=pos`**, **`pos<=pos.conv`**: Non-strict version.
+- **`neg<=pos`**: Every `neg n` is `≤` every `pos m`.
+- **`pos/<=neg`**: `pos n ≤ neg m` forces `m = 0`.
+- **`neg<=neg`**, **`neg<=neg.conv`**: Order-reversing non-strict version.
+- **`signum_iabs_eq`**: Two integers are equal iff their signs and absolute values agree.
 
-#### Nat–Int Interaction
+#### Decidable Order via Booleans
 
-- **`pos_iabs`**: `pos (iabs (x - y)) = x - y` when `y <= x`.
-- **`neg_iabs`**: `neg (iabs (x - y)) = x - y` when `x <= y`.
-- **`iabs_-_suc`**: `iabs (suc n - i) = suc (iabs (n - i))` when `i <= n`.
-- **`zro-id=neg`**: `0 - n = neg n`.
-- **`-'=-`**: `pos (n -' m) = n - m` when `m <= n`.
-- **`unpos`**: `pos n = pos m` implies `n = m`.
-
-#### Sign and Absolute Value Identity
-
-- **`signum_iabs_eq`**: If `signum x = signum y` and `iabs x = iabs y`, then `x = y`.
-
-#### Units
-
-- **`intUnits`**: `x * y = 1` implies `y = 1` or `y = -1`.
-
-#### Decidable Ordering
-
-- **`int_<=-dec`**: Decidable `<=` for integers via boolean check `int_<=_Bool`.
-  - **`int_<=_Bool`**: Boolean comparison function for integers.
-- **`int_<-dec`**: Decidable `<` for integers via `int_<=_Bool (isuc x) y`.
+- **`int_<=-dec`**: Reflects the boolean `int_<=_Bool x y` into `x <= y` via a `So` proof.
+- **`int_<=-dec.int_<=_Bool`**: Boolean comparison on `Int` by sign/case analysis.
+- **`int_<-dec`**: Strict variant: `So (int_<=_Bool (isuc x) y)` reflects to `x < y`.

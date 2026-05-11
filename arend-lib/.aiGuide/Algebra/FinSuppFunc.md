@@ -1,31 +1,21 @@
 ### Algebra.FinSuppFunc
 
-Functions with finite support from a set into a pointed additive structure, equipped with pointwise algebraic operations.
+Functions with finite support from a set into an additively-pointed structure, equipped with pointwise algebraic operations.
 
-#### Core Class
+A `FinSuppFunc` packages a set homomorphism whose values are zero outside some finite list of inputs (the support is given existentially as an array `s` together with a proof that any input not occurring in `s` maps to `0`). Because the support is recorded as a truncated existential rather than a precise finite set, operations like addition use list concatenation to combine supports, and the zero-outside-support condition is preserved by reasoning about indices via `++.index-left` / `++.index-right`. This module then lifts the pointwise additive structure of the codomain (pointed, monoid, abelian monoid, group, abelian group) onto `FinSuppFunc`, giving a uniform construction of finitely-supported function spaces over any additive algebraic structure.
 
-- **`FinSuppFunc`**: Extends `SetHom` with `Cod : AddPointed`. A set-theoretic function `Dom -> Cod` together with a proof `fSupp` that there exists a finite array `s` such that `func i = 0` for every `i` not appearing in `s`. Models finitely supported functions.
+#### Core Record
 
-#### Decidable Equality
+- **`FinSuppFunc`**: Extends `SetHom` with codomain restricted to `AddPointed`, plus a field `fSupp` asserting the existence of an array `s : Array Dom` such that for every `i` not equal to any `s j`, `func i = 0`. Models finitely-supported maps without committing to a canonical support set.
 
-- **`FinSuppFuncDec`**: Instance providing `DecSet (FinSuppFunc M R)` when `M` is a `DecSet` and `R` is an `AddPointed` with decidable equality. Decides `f = g` by searching the (combined) supports for a witness of disagreement, and otherwise uses `exts` together with the support property to conclude pointwise equality.
+#### Decidability
 
-#### Pointed Structure
+- **`FinSuppFuncDec`**: For a `DecSet` domain `M` and an `AddPointed` codomain `R` with decidable equality, equips `FinSuppFunc M R` with decidable equality.
 
-- **`FinSuppFuncAddPointed`**: Instance making `FinSuppFunc A B` an `AddPointed` whenever `B` is. The zero is the constantly-`0` function with empty support `nil`.
+#### Additive Structure Instances
 
-#### Additive Monoid Structure
-
-- **`FinSuppFuncAddMonoid`**: Instance making `FinSuppFunc A B` an `AddMonoid` when `B : AddMonoid`. Pointwise addition `(f + g) a = f a + g a`; the support of a sum is witnessed by the concatenation `s ++ s'` of the two supports, using `++.++_index-left`/`++.index-right` lemmas to relate indices, and pointwise unit/associativity laws lifted via `exts`.
-
-#### Abelian Monoid Structure
-
-- **`FinSuppFuncAbMonoid`**: Instance making `FinSuppFunc A B` an `AbMonoid` when `B : AbMonoid`, with commutativity inherited pointwise.
-
-#### Additive Group Structure
-
-- **`FinSuppFuncAddGroup`**: Instance making `FinSuppFunc A B` an `AddGroup` when `B : AddGroup`. Negation is pointwise, with support preserved via `TruncP.map` and `B.negative_zro`; inverse laws are pointwise.
-
-#### Abelian Group Structure
-
-- **`FinSuppFuncAbGroup`**: Instance making `FinSuppFunc A B` an `AbGroup` when `B : AbGroup`, combining `FinSuppFuncAddGroup` with the commutativity from `FinSuppFuncAbMonoid`.
+- **`FinSuppFuncAddPointed`**: `AddPointed` instance — the zero function (with empty support `nil`).
+- **`FinSuppFuncAddMonoid`**: `AddMonoid` instance lifting an `AddMonoid` codomain pointwise; addition combines supports via `++` and uses `++.index-left` / `++.index-right` to show the sum vanishes off the concatenated support.
+- **`FinSuppFuncAbMonoid`**: `AbMonoid` instance, inheriting commutativity from the codomain.
+- **`FinSuppFuncAddGroup`**: `AddGroup` instance; the negation reuses the support of `f` and uses `B.negative_zro` to verify that `negative 0 = 0` off-support.
+- **`FinSuppFuncAbGroup`**: `AbGroup` instance combining `FinSuppFuncAddGroup` with pointwise commutativity.

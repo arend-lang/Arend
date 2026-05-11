@@ -1,54 +1,54 @@
-## Category
+### Category
 
-Category theory library: precategories, functors, natural transformations, limits, adjunctions, and topos theory.
+This directory formalizes category theory: precategories and (univalent) categories, functors and natural transformations, limits/colimits, adjunctions, and a range of derived structures (toposes, additive categories, presheaf categories).
 
-### Core Categorical Structures
+#### Functors and Natural Transformations
 
-- **Functor.md** — Functors between precategories, natural transformations, functor categories, and special classes (faithful, full, fully faithful).
-- **Product.md** — Product of precategories with componentwise objects and morphisms.
-- **Displayed.md** — Displayed categories over a base category, providing fibered structure where objects and morphisms live above those of a base.
-- **Simplex.md** — The simplex category Δ, whose objects are natural numbers and morphisms are monotone maps between finite linear orders.
-- **Solver.md** — Reflection-based solver for equations in a precategory, normalizing expressions built from variables, identities, and compositions.
+- **`Functor.md`** — Functors, natural transformations, functor (pre)categories, and faithful/full/fully faithful refinements.
+- **`Yoneda.md`** — The Yoneda embedding, Yoneda lemma, category of elements, density theorem, and presheaf categories as free cocompletions.
 
-### Limits and Colimits
+#### Limits and Colimits
 
-- **Limit.md** — Cones, limits, and standard limit shapes (products, equalizers, pullbacks, terminal objects), plus completeness classes.
+- **`Limit.md`** — Cones, limits, colimits, and concrete shapes (products, equalizers, pullbacks, terminal objects), plus the layered hierarchy of (co)complete (pre)categories.
+- **`KanExtension.md`** — Pointwise left and right Kan extensions of functors, and the Fubini-style relationship between iterated limits and Kan extensions.
+- **`Factorization.md`** — Weak and orthogonal factorization systems, with lifts characterized by hom-set equivalences.
 
-### Adjunctions and Kan Extensions
+#### Adjunctions
 
-- **Adjoint.md** — Adjoint functors and categorical equivalences, expressed via unit/counit and via hom-set bijections.
-- **Coreflection.md** — Coreflections (universal arrows from a functor to an object) and their equivalence with right adjoints expressed pointwise.
-- **KanExtension.md** — Left and right Kan extensions of functors along a functor between small categories, computed pointwise via (co)limits over comma categories.
+- **`Adjoint.md`** — Adjoint functors via unit/counit and triangle identities, hom-set adjunction equivalences, and categorical equivalences.
+- **`Coreflection.md`** — Object-wise right adjoints (coreflections), their characterization as terminal objects in comma categories, and packaging as full right adjoints.
 
-### Subcategories and Subobjects
+#### Derived Categories
 
-- **Subcat.md** — Subcategories, full subcategories on predicates, and reflective subcategories with their interaction with limits.
-- **Subobj.md** — Subobjects and regular subobjects of an object, ordered by factorization through monomorphisms.
-- **SubobjectPoset.md** — The poset of subobjects of an object, equipped with meet/join semilattice structure when pullbacks/pushouts exist.
+- **`Comma.md`** — The comma category `(F ↓ G)` of two functors with a common codomain, with forgetful functors and covariant action on natural transformations.
+- **`Slice.md`** — The slice category `C/x` of objects over a fixed object, with a faithful forgetful functor.
+- **`Product.md`** — The product `C × D` of two (pre)categories, with iso decomposition into component isos.
+- **`Subcat.md`** — Subcategories presented by an indexing map, full subcategories from predicates, and reflective subcategories (with limit inheritance).
+- **`Displayed.md`** — Displayed categories over a base, total Grothendieck-style categories, and displayed univalence.
 
-### Comma and Slice Categories
+#### Subobjects
 
-- **Comma.md** — Comma categories constructed from a pair of functors with common codomain.
-- **Slice.md** — The slice category C/x of objects equipped with a morphism into a fixed object x.
+- **`Subobj.md`** — Subobjects and regular subobjects as preorders under factorization, with pullbacks computing meets of regular subobjects.
+- **`SubobjectPoset.md`** — The poset of subobjects of an object, with meet-semilattice (and dual join-semilattice) structure from pullbacks.
 
-### Yoneda and Presheaves
+#### Cartesian and Closed Structure
 
-- **Yoneda.md** — The Yoneda embedding, category of elements, colimit-of-representables decomposition, and universal extension along Yoneda into a cocomplete category.
+- **`CartesianClosed.md`** — Cartesian closed precategories with exponential objects, currying, evaluation, internal hom, and the `Set` instance.
+- **`Topos.md`** — Elementary toposes: subobject classifier, power objects, internal equality, image factorization, and exponentials via power objects; `Set` as a topos.
 
-### Cartesian Closed Categories and Factorization
+#### Internal and Enriched Structures
 
-- **CartesianClosed.md** — Cartesian closed precategories: categories with finite products where the product functor has a right adjoint (the exponential).
-- **Factorization.md** — Weak and orthogonal factorization systems on a precategory, providing factorizations into a left class followed by a right class with a lifting property.
+- **`Algebra.md`** — Internal algebraic structures (commutative monoids, abelian groups, commutative rings) inside an arbitrary cartesian category.
+- **`PreAdditive.md`** — Pre-additive and additive precategories (enrichment in abelian groups), with rings identified as one-object pre-additive categories.
 
-### Enriched and Additive Categories
+#### Specific Categories
 
-- **PreAdditive.md** — Pre-additive and additive categories: categories enriched over abelian groups, with the equivalence between rings and one-object pre-additive categories.
-- **Algebra.md** — Internal algebraic structures (commutative monoids, abelian groups, commutative rings) defined as objects in a cartesian category.
+- **`Simplex.md`** — The simplex category Δ of finite linear orders and monotone maps, shown univalent via rigidity of monotone isomorphisms.
 
-### Topos Theory
+#### Automation
 
-- **Topos.md** — Elementary toposes as finitely complete cartesian closed precategories with a subobject classifier; instantiation on the category of sets.
-- **Topos/** — Subdirectory containing presheaf and sheaf theory:
-  - **Presheaf.md** — Presheaf categories and their properties.
-  - **Sheaf.md** — Sheaves and sheafification.
-  - **Sheaf/** — Further sheaf-theoretic constructions.
+- **`Solver.md`** — A reflection-based solver normalizing composition expressions to right-associated form for proving categorical equalities.
+
+#### Subdirectories
+
+- **`Topos/`** — Further developments in topos theory building on the topos axioms in `Topos.md`.

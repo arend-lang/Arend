@@ -1,51 +1,67 @@
-### Logic (root file)
+### Logic
 
-Core logical types and propositions.
+Foundational propositional logic primitives: the empty type, propositional truncation, disjunction, and basic prop-level reasoning utilities.
 
-#### Empty and Negation
+This module sets up the proof-relevant logical scaffolding used throughout the library. `Empty` and `Not` give negation; `TruncP` is the propositional truncation that turns any type into a proposition while still allowing recursion into propositions/sets; `||` is the prop-valued disjunction (distinct from the constructive `Or` in `Data.Or`). The `propExt`, `prop-pi`, and `set-pi` lemmas exploit Arend's universe-level system (`\Prop`, `\Set`) to obtain proof irrelevance and propositional extensionality. `NegatedProp` axiomatizes propositions for which double-negation elimination holds, providing a hook for classical reasoning over specific types.
 
-- **`Empty`**: The empty type (no constructors).
-- **`absurd`**: Elimination from `Empty` to any type.
-- **`Not`**: `A -> Empty`.
-- **`/=`**: `Not (a = a')`.
+#### Empty Type and Negation
+
+- **`Empty`**: The empty type (false proposition).
+- **`absurd`**: Ex falso: `Empty -> A` for any `A`.
+- **`Not`**: Negation: `A -> Empty`.
+- **`/=`**: Disequality: `Not (a = a')`.
 - **`/=-sym`**: Symmetry of disequality.
 
 #### Propositional Truncation
 
-- **`TruncP`**: Propositional truncation with `inP` constructor and `truncP` path constructor.
-  - **`levelProp`**: `TruncP A` is a proposition.
-  - **`remove`**: Extracts from `TruncP A` when `A` is a proposition.
-  - **`remove'`**: Variant for `A : \Prop`.
-  - **`rec`**: Recursor into propositions.
-  - **`rec-eval`**: `rec` computes on `inP`.
-  - **`rec-set`**: Recursor into sets with proof-irrelevant output.
-  - **`map`**: Functorial action.
+- **`TruncP`**: Propositional truncation of a type, with constructor `inP` and identification path `truncP`.
+- **`TruncP.levelProp`**: Witness that `TruncP A` is a proposition.
+- **`TruncP.remove`**: Eliminate `TruncP A` when `A` is already a proposition.
+- **`TruncP.remove'`**: `remove` specialized for `A : \Prop`.
+- **`TruncP.rec`**: Recursion into a proposition: factor `A -> B` through `TruncP A`.
+- **`TruncP.rec-eval`**: Computation rule: `rec p (inP a) f = f a`.
+- **`TruncP.rec-set`**: Recursion into a set, returning the unique image together with its witness.
+- **`TruncP.map`**: Functorial action: `(A -> B) -> TruncP A -> TruncP B`.
 
-#### Proposition Helpers
+#### Propositional Equality and Extensionality
 
-- **`prop-pi`**: Any two elements of a `\Prop` are equal.
-- **`prop-isProp`**: A `\Prop` satisfies `isProp`.
-- **`set-pi`**: Any two proofs of equality in a `\Set` are equal.
-- **`prop-dpi`**: Dependent path in a family of propositions.
+- **`prop-pi`**: Proof irrelevance: any two elements of a `\Prop` are equal.
+- **`prop-isProp`**: Every `\Prop` satisfies `isProp`.
+- **`set-pi`**: UIP for `\Set`: any two paths between equal points are equal.
+- **`prop-dpi`**: Dependent proof irrelevance over a path of propositions.
+- **`propExt`**: Propositional extensionality: bi-implication of `\Prop`s yields equality.
+- **`propExt.dir`**, **`propExt.conv`**: Forward/backward transport along a `\Prop` equality.
 
-#### ToProp
+#### ToProp Wrapper
 
-- **`ToProp`**: Wraps `A` with an `isProp` proof into a proposition. Has `fromProp`, `levelProp`.
+- **`ToProp`**: Wraps a type `A` together with `isProp A` to produce something that is propositionally `A`.
+- **`ToProp.fromProp`**: Extract the underlying `A`.
+- **`ToProp.levelProp`**: Witness that `ToProp A p` is a proposition.
 
-#### Truncated Disjunction
+#### Disjunction
 
-- **`||`**: Propositional disjunction with `byLeft`, `byRight`. Has `rec`, `rec'`, `map`, `fromOr`, `toOr`, `flip`.
+- **`||`**: Prop-valued disjunction with constructors `byLeft` and `byRight`.
+- **`||.rec`**: Recursion into a proposition `C` from `A -> C` and `B -> C`.
+- **`||.rec'`**: Variant where the target `C` is itself a `\Prop`.
+- **`||.map`**: Functorial action on both summands.
+- **`||.fromOr`**: Convert a constructive `Or A B` into `A || B`.
+- **`||.toOr`**: Convert `A || B` into `TruncP (Or A B)`.
+- **`||.flip`**: Swap the disjuncts.
 
-#### Biconditional and Propositional Extensionality
+#### Bi-implication
 
-- **`<->`**: `\Sigma (P -> Q) (Q -> P)` for propositions.
-- **`<->_=`**, **`<->refl`**, **`<->trans`**, **`<->sym`**: Biconditional lemmas.
-- **`propExt`**: Propositional extensionality: mutual implication implies equality. Has `dir`, `conv`.
+- **`<->`**: Logical equivalence of propositions: `\Sigma (P -> Q) (Q -> P)`.
+- **`<->_=`**: `(P <-> Q) <-> (P = Q)` via propositional extensionality.
+- **`<->refl`**, **`<->trans`**, **`<->sym`**: Reflexivity, transitivity, symmetry of `<->`.
 
-#### Miscellaneous
+#### Quantification over Arrays
 
-- **`OneOf`**: `∃ (P : l) P` — at least one proposition in an array holds.
-- **`ElemOf`**: `Given (P : l) P` — a chosen witness from an array.
-- **`arraySubset`**: `∃ (y : l) (y = x)` — membership in an array.
-- **`NegatedProp`**: Class for propositions satisfying double negation elimination.
-- **`EmptyNegated`**: `Empty` is a `NegatedProp`.
+- **`OneOf`**: Truncated existence: some predicate in an array of types is inhabited.
+- **`ElemOf`**: Untruncated `Given` form of `OneOf`.
+- **`arraySubset`**: `x` belongs to the array `l`: `∃ (y : l) (y = x)`.
+
+#### Classical Hooks
+
+- **`isProp-prover`**: Meta tactic discharging propositional equalities by `prop-pi` or contradiction.
+- **`NegatedProp`**: Class of propositions admitting double-negation elimination, with field `isNegated : Not (Not P) -> P`.
+- **`EmptyNegated`**: Instance witnessing that `Empty` is a `NegatedProp`.

@@ -1,75 +1,76 @@
 ### Topology.Locale.Uniform
 
-Uniform locales: locales equipped with a system of uniform covers, the strong-neighbourhood relation `<=u`, and the completion construction making every uniform locale a reflective subcategory of complete uniform locales.
+Pointfree theory of uniform locales: locales equipped with a system of uniform covers, generalizing uniform spaces.
 
-#### Star Operations
+A `PreuniformLocale` enriches a locale with a predicate `isUniform` on families of opens (closed under refinement, intersection, and the star operation), where `star x U` denotes the union of `U`-elements positively meeting `x`. The "uniformly way-below" relation `a <=u b` (witnessed by some uniform `U` with `star a U <= b`) plays the role of strong inclusion, making every uniform locale weakly regular. A `UniformLocale` additionally satisfies admissibility — every element is the join of opens uniformly below it — and the module constructs a completion functor as a left adjoint along a coreflective embedding `Completion L -> L`, presented via `CompletionPres` using basic covers for top, positivity, uniform refinement, and `<=u`-decomposition.
 
-- **`star`**: For `x : L` and a predicate `U : L -> \Prop`, the join `⋁ { y | U y ∧ IsPositive (x ∧ y) }` — the union of `U`-elements that meet `x` positively. The fundamental construction underlying uniform covers.
-- **`star.star_<=`**: Monotonicity of `star` in its first argument: `x <= y` implies `star x U <= star y U`.
-- **`star.star-refl`**: For a uniform cover `U`, every point sits below its star: `x <= star x U`.
-- **`nucleus-star`**: Variant of `star` taking a nucleus `j` instead of an element, joining over `U`-elements positive in the localized frame `j.locale`.
-- **`nucleus-star.star_open`**: Compatibility with the open nucleus: `nucleus-star (open a) U = star a U`.
+#### Star Operation
+
+- **`star`**: `star x U = ⋁ { y | U y ∧ IsPositive (x ∧ y) }` — the union of `U`-members that positively meet `x`.
+- **`star.star_<=`**: Monotonicity of `star` in its first argument.
+- **`star.star-refl`**: `x <= star x U` whenever `U` is uniform.
+- **`nucleus-star`**: Variant of `star` along a nucleus `j`, taking joins of `U y` positive in the sublocale.
+- **`nucleus-star.star_open`**: For an open nucleus `open a`, `nucleus-star (open a) U = star a U`.
 
 #### Preuniform Locales
 
-- **`PreuniformLocale`**: Class extending `Locale` with overtness and a predicate `isUniform` on covers, satisfying covering, downward-closure, top, binary intersection, monotonicity, and the star-refinement axiom (every uniform cover has a uniform refinement `V` with `V x ⇒ U (star x V)`).
-- **`PreuniformLocale.dClosure`**: Helper for proving downset-closure of images: if some `z : L` with `U z` lies below `f z` from above `y`, the same holds for any `x <= y`.
+- **`PreuniformLocale`**: Class extending `Locale` with `isUniform : (E -> \Prop) -> \Prop` plus axioms: each uniform family covers, is downward closed, intersections of uniform families are uniform, refinement preserves uniformity, and every uniform `U` admits a star-refinement.
+- **`PreuniformLocale.dClosure`**: Helper showing the downset closure of `∃ z, U z ∧ y <= f z` is preserved under `<=`.
 
 #### Uniform Morphisms
 
-- **`UniformHom`**: Class extending `FrameHom` between preuniform locales, requiring that the downset-closure of the image of a uniform cover is uniform (`func-uniform`).
-- **`UniformEmbedding`**: Class extending `UniformHom` with surjectivity (`isEmbedding`) and the property that every uniform cover of the codomain is refined by the image of a uniform cover of the domain.
+- **`UniformHom`**: Record extending `FrameHom` between preuniform locales, requiring that the downset closure of the direct image of any uniform family is uniform.
+- **`UniformEmbedding`**: Extension of `UniformHom` whose underlying frame map is surjective and which reflects uniformity (`isUniformEmbedding`).
+- **`UniformEmbedding.direct-uniform`**: For an embedding, `\lam x. ∃ y, U y ∧ x <= direct y` is uniform.
 - **`UniformEmbedding.comp`**: Composition of uniform embeddings.
 
-#### The Strong-Neighbourhood Relation
+#### Uniformly Way-Below Relation
 
-- **`<=u`**: The "really inside" relation `a <=u b ⇔ ∃ U uniform, star a U <= b`. The auxiliary order driving completion and admissibility.
-- **`<=u.func-<=u`**: Uniform morphisms preserve `<=u`.
-- **`<=u.adjoint`**: Adjoint form: `a <=u f.direct b` implies `f a <=u b`.
-- **`<=u.dense`**: Density/interpolation: `a <=u c` factors as `a <=u b <=u c`.
-- **`<=u.dense.meet_star-comm`**: Symmetry of star-meets in overt locales: `IsPositive (a ∧ star b U) ⇒ IsPositive (b ∧ star a U)`.
-- **`<=u.uniform-refine`**: The cover `{ b | ∃ a, U a ∧ b <=u a }` is uniform when `U` is.
-- **`<=u-trans-left`**, **`<=u-trans-right`**: Transitivity of `<=u` against `<=` on either side.
+- **`<=u`**: `a <=u b` iff there exists a uniform `U` with `star a U <= b`.
+- **`<=u.func-<=u`**: Uniform homomorphisms preserve `<=u`.
+- **`<=u.adjoint`**: `a <=u f.direct b` implies `f a <=u b` along a uniform homomorphism.
+- **`<=u.dense`**: Interpolation: `a <=u c` factors as `a <=u b <=u c`.
+- **`<=u.dense.meet_star-comm`**: Symmetry of positivity for `meet ∧ star` under overtness.
+- **`<=u.uniform-refine`**: The `<=u`-refinement of a uniform family is uniform.
+- **`<=u-trans-left`**, **`<=u-trans-right`**: Composition of `<=u` with `<=` on either side.
 - **`<=u_meet`**: `<=u` is preserved by binary meets.
-- **`<=u_<=`**: `<=u` refines `<=`: `a <=u b` implies `a <= b`.
+- **`<=u_<=`**: `a <=u b` implies `a <= b`.
 
 #### Uniform Locales
 
-- **`UniformLocale`**: Class extending `PreuniformLocale` with admissibility — every element is the join of its `<=u`-predecessors.
-- **`UniformLocale.star_wclosure`**: `nucleus-star` is invariant under taking the weakly closed image of the nucleus map.
-- **`UniformLocale.top>=star`**: For overt nuclei, `open (nucleus-star j U) <= j` whenever `U` is uniform.
-- **`UniformLocale.wclosure>=nucleus-star`**, **`UniformLocale.wclosure>=star`**: The weakly-closed image dominates the (nucleus-)star of a uniform cover.
+- **`UniformLocale`**: Class extending `PreuniformLocale` with admissibility: `b <= ⋁ { a | a <=u b }`. Provides `isComplete` as being an iso to its completion.
+- **`UniformLocale.star_wclosure`**: `nucleus-star j.map.wclosed-image U = nucleus-star j U` for a uniform cover.
+- **`UniformLocale.top>=star`**: Under overtness, `open (nucleus-star j U) <= j`.
+- **`UniformLocale.wclosure>=nucleus-star`**: Sharpening to the weak-closure image.
+- **`UniformLocale.wclosure>=star`**: For an open nucleus, `open (star a U) <= wclosed-image (open a)`.
 - **`uniform=>wregular`**: Every uniform locale is weakly regular.
 
-#### Categorical Structure
+#### Categories
 
-- **`PreuniformCat`**: The category of preuniform locales and uniform morphisms.
-- **`PreuniformCat.uniform-lem`**: Reduces uniformity of a downward-closed `U` to uniformity of its upward-closure.
-- **`UniformCat`**: The full subcategory of `PreuniformCat` on uniform locales.
+- **`PreuniformCat`**: Category of preuniform locales with uniform homomorphisms.
+- **`PreuniformCat.uniform-lem`**: A downward-closed `U` is uniform whenever its `<=`-closure is.
+- **`UniformCat`**: Subcategory of `PreuniformCat` on uniform locales (uses `subCat`).
 
-#### Completion: Frame Presentation
+#### Completion
 
-- **`CompletionPres`**: The frame presentation underlying the completion of a uniform locale `L`: generators `L`, conjunction = meet, with four families of basic covers (top, positivity, uniform-cover joins, and `<=u`-decomposition).
-- **`CompletionPres.<=_cover`**: `a <= b` lifts to a basic cover `Cover1 a b`.
-- **`CompletionLocale`**: The frame presented by `CompletionPres L` — the underlying locale of the completion.
-- **`completionLocale`**: The canonical frame map `L -> CompletionLocale L` from the reflective adjunction; the underlying morphism of the completion embedding.
-- **`completionLocale.presentation`**: The `FramePresHom` from `CompletionPres L` to `L` exhibiting `completionLocale` via the universal property.
-- **`completionLocale.sdense`**: `completionLocale` is strongly dense.
-- **`completionLocale.completion_embed`**: `completionLocale (embed a) = a` — the embedding splits the projection on generators.
-
-#### Completion: Uniform Locale Structure
-
-- **`Completion`**: The completion of a uniform locale `L` as a uniform locale, with uniform covers, admissibility, and overtness inherited from `L`.
-- **`Completion.make-covering`**: Builds a uniform cover `V` of `Completion L` from a uniform cover `U` of `L` such that `star (embed a) V <= embed (star a U)` — the key compatibility for uniformity transport.
-- **`completion`**: The canonical uniform embedding `Completion L -> L`.
-- **`completion.isMono`**: `completion` is a monomorphism: post-composition with it cancels.
+- **`CompletionPres`**: Frame presentation of the completion of `L`, with basic covers indexed by four cases (top, positivity, uniform refinement, `<=u`-decomposition).
+- **`CompletionPres.<=_cover`**: Order in `L` lifts to a single cover in the presentation.
+- **`CompletionLocale`**: The completion as a `PresentedFrame`.
+- **`completionLocale`**: The frame map `L -> CompletionLocale L` as the adjoint of the canonical presentation.
+- **`completionLocale.presentation`**: The presenting `FramePresHom` from `CompletionPres L` to `L`.
+- **`completionLocale.sdense`**: The completion map is strongly dense.
+- **`completionLocale.completion_embed`**: `completionLocale (embed a) = a`.
+- **`Completion`**: The uniform locale structure on `CompletionLocale L`, with uniform families generated from uniform families on `L` via `embed`.
+- **`Completion.make-covering`**: Constructs a uniform `V` on the completion such that `star (embed a) V <= embed (star a U)`.
+- **`completion`**: The canonical `UniformEmbedding (Completion L) L`.
+- **`completion.isMono`**: `completion` is a monomorphism in `UniformCat`.
 
 #### Universal Property
 
-- **`completion-factor`**: Universal factorization: any strongly-dense uniform embedding `f : M -> L` factors through `completion : Completion L -> L` via a unique `g : Completion L -> M` with `f ∘ g = completion`.
-- **`completion-factor.presentation`**: The `FramePresHom` realizing the factoring map via direct images.
-- **`completion-isComplete`**: `Completion L` is itself complete — completion is idempotent.
-- **`completion-functor`**: Functoriality of completion on morphisms: lifts `f : M -> L` to `Completion M -> Completion L`.
-- **`completion-functor.presentation`**: The presentation map sending each generator `a` to the closure of `{ f b | b <=u a }`.
-- **`completion-natural`**: Naturality square: `completion ∘ completion-functor f = f ∘ completion`.
-- **`completion-isReflector`**: Reflection theorem: for complete `M`, post-composition with `completion` is an equivalence `UniformHom M (Completion L) ≃ UniformHom M L`, exhibiting complete uniform locales as a reflective subcategory.
+- **`completion-factor`**: Any strongly dense uniform embedding `f : M -> L` factors uniquely through `completion`, yielding `g : Completion L -> M` with `f ∘ g = completion`.
+- **`completion-factor.presentation`**: The presenting `FramePresHom` driving the factorization.
+- **`completion-isComplete`**: `Completion L` is complete (iso to its own completion).
+- **`completion-functor`**: Functorial action: a uniform map `f : M -> L` lifts to `Completion M -> Completion L`.
+- **`completion-functor.presentation`**: Presents the lifted map via `closure` of `f` on `<=u`-pairs.
+- **`completion-natural`**: Naturality square `completion ∘ completion-functor f = f ∘ completion`.
+- **`completion-isReflector`**: For complete `M`, precomposition with `completion` is an equivalence `Hom(M, Completion L) ≃ Hom(M, L)` — completion is a reflector of `UniformCat` onto its complete objects.

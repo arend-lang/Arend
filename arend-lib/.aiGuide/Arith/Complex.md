@@ -1,18 +1,21 @@
 ### Arith.Complex
 
-This module defines the complex numbers over the reals and provides a field instance.
+Complex numbers built on top of the real numbers as pairs of reals, equipped with their field structure.
 
-#### Complex Class
+A `Complex` number is a record of two `Real` components (real and imaginary parts), and the module assembles the standard field operations on `Complex` from the underlying real arithmetic. Addition is pointwise, multiplication uses the usual `(re*re - im*im, re*im + im*re)` formula, and the field instance is built up via an intermediate commutative monoid for multiplication. Invertibility is characterized in terms of invertibility of the components, reflecting that a complex number is nonzero (and hence invertible in the field) precisely when at least one of its real or imaginary parts is.
 
-- **`Complex`**: A class with two fields `re : Real` and `im : Real`, representing the real and imaginary parts of a complex number.
+#### Core Type
 
-#### ComplexField Instance
+- **`Complex`**: Record of a complex number with fields `re : Real` and `im : Real`.
 
-- **`ComplexField`**: Instance of `Field` for `Complex`, with:
-  - `zro` = `(0, 0)`, `negative (a, b)` = `(-a, -b)`, addition componentwise.
-  - Multiplication: `(a, b) * (c, d) = (a*c - b*d, a*d + b*c)`.
-  - `zro/=ide`: `0 ≠ 1` via the real part.
-  - `locality`: Derived from locality of the real part.
-  - `#0-tight`: Tightness of apartness from zero.
-  - **`ComplexMonoid`**: Instance of `CMonoid` for `Complex` with `ide = (1, 0)` and standard complex multiplication. Provides `ide-left`, `*-assoc`, `*-comm`.
-  - **`inv-char`**: `Inv x <-> Inv x.re || Inv x.im` — a complex number is invertible iff its real or imaginary part is invertible.
+#### Field Structure
+
+- **`ComplexField`**: `Field Complex` instance. Provides zero `(0,0)`, pointwise addition, componentwise negation, multiplicative structure inherited from `ComplexMonoid`, distributivity, the field axioms `zro/=ide`, locality, and `#0`-tightness.
+
+#### Multiplicative Structure
+
+- **`ComplexMonoid`**: `CMonoid Complex` instance defining the multiplicative monoid. Identity is `(1,0)` and product is `(x.re*y.re - x.im*y.im, x.re*y.im + x.im*y.re)`.
+
+#### Invertibility
+
+- **`inv-char`**: Characterization of invertibility: `Inv x <-> Inv x.re || Inv x.im`, i.e. a complex number is invertible iff its real or imaginary part is invertible as a real number.

@@ -1,16 +1,38 @@
 ### Topology.RatherBelow
 
-The "rather below" relation on a topological meet-semilattice, an abstract axiomatization of the way-below/well-inside relation used in formal topology and locale theory.
+Abstract "rather below" relations on topological meet-semilattices, capturing the idea of one open being well-inside another.
 
-#### Main Class
+A `RatherBelow` is a binary relation `R` on a `TopMeetSemilattice` that is monotone on both sides, has `top` as a universal upper bound, and is preserved by binary meets. From any such relation, two derived strengthenings are constructed: `<=<o` (Omega), the largest sub-relation that interpolates a single step, and `<=<c` (Interpolative), the largest sub-relation that interpolates within itself — yielding a dense/way-below-style refinement. These derived relations again form `RatherBelow` instances, so the construction iterates and `<=<c` provides the interpolative core used in pointfree topology and frame-theoretic constructions.
 
-- **`RatherBelow`**: Structure on a `TopMeetSemilattice` `A` carrying a binary relation `R : A -> A -> \Prop` satisfying:
-  - **`<=<-left`**: `R U V -> V <= W -> R U W` (upward closed on the right).
-  - **`<=<-right`**: `U <= V -> R V W -> R U W` (downward closed on the left).
-  - **`<=<_top`**: `R V top` — every element is rather below the top.
-  - **`<=<_meet`**: `R U V -> R U' V' -> R (U ∧ U') (V ∧ V')` — compatibility with binary meets.
+#### Class Definition
 
-#### Lemmas
+- **`RatherBelow`**: Class over `{A : TopMeetSemilattice}` with a relation `R : A -> A -> \Prop` satisfying:
+  - **`<=<-left`**: Right-monotonicity in the codomain: `R U V -> V <= W -> R U W`.
+  - **`<=<-right`**: Left-monotonicity in the domain: `U <= V -> R V W -> R U W`.
+  - **`<=<_top`**: Everything is rather-below `top`.
+  - **`<=<_meet`**: Compatibility with binary meets: `R U V -> R U' V' -> R (U ∧ U') (V ∧ V')`.
 
-- **`<=<c_bottom`**: On a `CompleteLattice`, if `bottom` is rather below every element via `R`, then `bottom` is also below every `U` under the closure relation `R.<=<c`.
-- **`<=<c_^-1`**: Preimages preserve the closure relation: given a function `f : X -> Y` and rather-below structures on `SetLattice X` and `SetLattice Y` such that `RY U V` implies `RX (f ^-1 U) (f ^-1 V)`, then `U RY.<=<c V` implies `f ^-1 U RX.<=<c f ^-1 V`.
+#### Derived Lemmas
+
+- **`<=<_meet-same`**: From `R U V` and `R U V'` derive `R U (V ∧ V')` (single-domain meet).
+
+#### Omega: One-Step Interpolative Refinement
+
+- **`<=<o`**: `V <=<o U` holds iff there exists a sub-relation `R' ⊆ R` containing `(V, U)` such that any `R'`-pair admits a one-step `R`-interpolant. The largest "interpolative once" subrelation of `R`.
+- **`<=<o_<=<`**: `<=<o` implies `R`.
+- **`<=<o-inter`**: One-step interpolation: `V <=<o U` yields some `W` with `V <=<o W` and `R W U`.
+- **`Omega`**: The `RatherBelow` instance built from `<=<o`.
+
+#### Interpolative: Fully Interpolative Refinement
+
+- **`<=<c`**: `V <=<c U` holds iff there exists a sub-relation `R' ⊆ R` containing `(V, U)` that interpolates within itself. The largest "fully interpolative" subrelation of `R`.
+- **`<=<c_<=<o`**: `<=<c` implies `<=<o`.
+- **`<=<c_<=<`**: `<=<c` implies `R`.
+- **`<=<c-inter`**: Self-interpolation: `V <=<c U` yields some `W` with `V <=<c W` and `W <=<c U`.
+- **`<=<c-func`**: Functoriality: a relation morphism `R -> R2` lifts to `<=<c -> R2.<=<c`.
+- **`Interpolative`**: The `RatherBelow` instance built from `<=<c`.
+
+#### Auxiliary Lemmas
+
+- **`<=<c_bottom`**: In a `CompleteLattice`, if `R bottom U` holds for all `U`, then `bottom R.<=<c U`.
+- **`<=<c_^-1`**: Preimage compatibility: a function preserving `R` between set-lattices also preserves `<=<c`, i.e. `U RY.<=<c V` implies `f ^-1 U RX.<=<c f ^-1 V`.

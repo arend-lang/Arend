@@ -1,18 +1,18 @@
 ### Topology.BanachLattice
 
-Banach lattices: Banach spaces equipped with a compatible Riesz (vector lattice) structure where the norm respects the order, including the L-space and M-space variants.
+Banach lattices: complete normed Riesz spaces where the norm interacts with the lattice structure.
+
+This module combines the order-theoretic structure of Riesz spaces (vector lattices) with the metric/normed structure of Banach spaces. The central abstraction is `ExPseudoNormedRieszSpace`, which requires the norm to be monotone with respect to the absolute value `abs`, automatically yielding a solid neighborhood basis (open balls are absorbing under `|·| ≤ |·|`). Specializations `RieszLSpace` (L-space, additive norm on the positive cone) and `RieszMSpace` (M-space, sublinear norm on joins) capture the two classical extremes of Banach lattice geometry.
 
 #### Normed Riesz Spaces
 
-- **`ExPseudoNormedRieszSpace`**: Extends `ExPseudoNormedAbGroup` and `TopRieszSpace`. A topological Riesz space with an extended pseudo-norm that is solid (monotone with respect to absolute value).
-  - **`norm_<=`**: Solidity of the norm: `abs x <= abs y -> norm x <= norm y`.
-  - **`solid-neighborhood`**: Derives the solid-neighborhood property of the Riesz topology from the norm balls.
+- **`ExPseudoNormedRieszSpace`**: Class extending `ExPseudoNormedAbGroup` and `TopRieszSpace`. Adds the axiom `norm_<=` requiring `abs x <= abs y -> norm x <= norm y` (monotonicity of norm with respect to absolute value). Provides a default implementation of `solid-neighborhood` derived from this monotonicity, building solid open balls around 0 from the metric ball structure.
 
 #### Banach Lattices
 
-- **`BanachLattice`**: Extends `ExPseudoNormedRieszSpace` and `RealBanachSpace`. A real Banach space whose norm is solid with respect to the lattice order — i.e., a complete normed Riesz space.
+- **`BanachLattice`**: Class extending `ExPseudoNormedRieszSpace` and `RealBanachSpace`. A Riesz space that is simultaneously a real Banach space and whose norm is monotone with respect to the lattice's absolute value — the standard setting for Banach lattice theory.
 
-#### L-spaces and M-spaces
+#### L- and M-Spaces
 
-- **`RieszLSpace`**: Extends `BanachLattice`. An L-space: the norm is additive on the positive cone via `norm_+_>=`: `norm x + norm y <= norm (x + y)` (combined with the triangle inequality this gives equality on disjoint/positive elements).
-- **`RieszMSpace`**: Extends `BanachLattice`. An M-space: the norm satisfies `norm_join`: `norm (x ∨ y) <= norm x ∨ norm y`, so the norm of a join is bounded by the join of the norms.
+- **`RieszLSpace`**: Class extending `BanachLattice` with the axiom `norm_+_>=`: `norm x + norm y <= norm (x + y)` (in `ExUpperReal`). Together with the triangle inequality this forces additivity of the norm on the positive cone, characterizing abstract L-spaces (e.g. `L¹` spaces).
+- **`RieszMSpace`**: Class extending `BanachLattice` with the axiom `norm_join`: `norm (x ∨ y) <= norm x ∨ norm y` (the right-hand `∨` taken in `ExUpperRealLattice`). Captures abstract M-spaces (e.g. `L∞` and `C(K)` spaces) where the norm is sublinear on joins.

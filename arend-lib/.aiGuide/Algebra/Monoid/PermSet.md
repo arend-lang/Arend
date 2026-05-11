@@ -1,39 +1,44 @@
 ### Algebra.Monoid.PermSet
 
-The free commutative monoid on a set, defined as arrays quotiented by permutation equivalence (`EPerm`).
+The free commutative monoid on a set, constructed as arrays quotiented by permutation equivalence.
 
-#### Core Type and Constructors
+This module realizes `PermSet A` as the quotient of `Array A` by `EPerm` (extensional permutation), giving the free commutative monoid on `A` with concatenation as multiplication and the empty array as identity. Because the underlying carrier is a quotient of lists, definitions on `PermSet` are typically built by `\elim`-ing on `in~` and discharging the `~-equiv` case via permutation-invariance lemmas (e.g., `EPerm.eperm-++-left/right`, `EPerm.EPerm_map`, `BigProd_EPerm`). The universal property is captured by `permSet-univ`, which sends any function `A -> B` into a commutative monoid `B` by mapping pointwise and taking the big product, making `PermSet` the left adjoint to the forgetful functor from `CMonoid` to `\Set`.
 
-- **`PermSet`**: `\Set -> \Set` defined as `Quotient {Array A} EPerm` — multisets of `A` represented as permutation-equivalence classes of arrays.
-- **`PermSet.inPS`**: Constructor embedding `Array A` into `PermSet A`.
-- **`PermSet.inPS~`**: Variant landing in the raw `Quotient EPerm`.
-- **`PermSet.unext`**: From an equality of quotient classes, extract a truncated `EPerm` witness between the underlying arrays.
-- **`PermSet.~-psequiv`**: Lifts an `EPerm l l'` to `inPS l = inPS l'`.
-- **`permSet-ext`**: Equality in `Quotient EPerm` transfers to equality in `PermSet A`.
+#### Core Type and Quotient Helpers
 
-#### Instances
+- **`PermSet`**: The free commutative monoid on `A : \Set`, defined as `Quotient {Array A} EPerm`.
+- **`inPS~`**: Embeds an array into `Quotient EPerm` via `in~`.
+- **`inPS`**: Embeds an array into `PermSet A` via `in~`.
+- **`unext`**: From an equality of quotient classes, extracts a truncated permutation `TruncP (EPerm l l')`.
+- **`~-psequiv`**: Lifts an `EPerm l l'` to an equality `inPS l = inPS l'` in `PermSet A`.
+- **`permSet-ext`**: Transports equalities from the underlying quotient `Quotient EPerm` to equalities in `PermSet A`.
 
-- **`PermSetDec`**: `DecSet` instance for `PermSet A` when `A : DecSet`, decided by `EPerm.EPermDec`.
-- **`PermSetMonoid`**: `CMonoid` instance on `PermSet A` with unit `in~ nil`, multiplication via array concatenation, and commutativity proved by `EPerm.eperm-++-comm`.
+#### Algebraic Structure
+
+- **`PermSetDec`**: `DecSet` instance for `PermSet A` whenever `A : DecSet`.
+- **`PermSetMonoid`**: Commutative monoid (`CMonoid`) instance with identity `in~ nil` and multiplication given by list concatenation, well-defined up to permutation via `EPerm.eperm-++-left/right`.
 
 #### Functorial Action
 
-- **`permSet-map`**: `(A -> B) -> PermSet A -> PermSet B`, the functorial action mapping pointwise on representatives.
+- **`permSet-map`**: Functorial action `(A -> B) -> PermSet A -> PermSet B`, defined by mapping over the underlying array.
 - **`permSet-map-comp`**: Functoriality: `permSet-map g ∘ permSet-map f = permSet-map (g ∘ f)`.
-- **`permSet-hom`**: Packages `permSet-map f` as a `MonoidHom (PermSetMonoid A) (PermSetMonoid B)`.
-- **`permSet-map_+`**: `permSet-map f (x * y) = permSet-map f x * permSet-map f y` (multiplicativity of the action).
+- **`permSet-hom`**: Packages `permSet-map f` as a `MonoidHom` between `PermSetMonoid A` and `PermSetMonoid B`.
+- **`permSet-map_+`**: `permSet-map f` distributes over the monoid operation `*`.
 
-#### Sum / Universal Property
+#### Universal Property and Big Product
 
-- **`permSet-sum`**: For a `CMonoid A`, folds a `PermSet A` to `A` via `BigProd`; well-defined by `BigProd_EPerm`.
-- **`permSet-sum-natural`**: A monoid homomorphism commutes with `permSet-sum` after applying `permSet-map`.
-- **`permSet-sum_+`**: `permSet-sum (x * y) = permSet-sum x * permSet-sum y`.
-- **`permSet-univ`**: Universal property — any `f : A -> B` into a `CMonoid B` extends uniquely to `MonoidHom (PermSetMonoid A) B` via `permSet-sum ∘ permSet-map f`.
-- **`permSet-univ-natural`**: Naturality of the universal extension along monoid homomorphisms.
+- **`permSet-sum`**: For `A : CMonoid`, sends `PermSet A` to `A` by taking the big product `BigProd` of the underlying list; well-defined since `BigProd` is permutation-invariant.
+- **`permSet-sum-natural`**: Naturality of `permSet-sum` along a monoid homomorphism `f : A -> B`.
+- **`permSet-sum_+`**: `permSet-sum` is a monoid homomorphism: it sends `x * y` to `permSet-sum x * permSet-sum y`.
+- **`permSet-univ`**: Universal property: any `f : A -> B` into a commutative monoid extends uniquely to a `MonoidHom (PermSetMonoid A) B` via `permSet-sum ∘ permSet-map f`.
+- **`permSet-univ-natural`**: Naturality statement matching `permSet-sum-natural`, packaged for the universal map.
 
-#### Decision and Decomposition
+#### Decidability and Length
 
-- **`permSet-zro-dec`**: Decides whether a `PermSet A` equals the identity (i.e., is empty).
-- **`permSet-split`**: Any `inPS l` decomposes as the product of its singleton elements: `BigProd (map (\lam a => inPS (a :: nil)) l) = inPS l`.
-- **`permSet-pow`**: `pow (inPS (a :: nil)) n = inPS (replicate n a)` — powers of singletons are repeated copies.
-- **`permSet-length`**: `PermSet A -> Nat`, the cardinality (well-defined since `EPerm` preserves length).
+- **`permSet-zro-dec`**: Decides whether an element of `PermSet A` is the identity, using `unext` and `EPerm.EPerm_len` to handle the non-empty case.
+- **`permSet-length`**: Sends `p : PermSet A` to its length as a `Nat`, well-defined since permutations preserve length (`EPerm.EPerm_len`).
+
+#### Generators and Powers
+
+- **`permSet-split`**: Decomposes `inPS l` as the big product of singleton `PermSet`s `inPS (a :: nil)` over the elements of `l`.
+- **`permSet-pow`**: The `n`-th monoid power of a singleton `inPS (a :: nil)` equals `inPS (replicate n a)`.

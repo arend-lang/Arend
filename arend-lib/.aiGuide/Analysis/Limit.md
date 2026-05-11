@@ -1,48 +1,51 @@
 ### Analysis.Limit
 
-Limits of nets (functions from directed sets) in cover spaces, with characterizations in uniform, topological-group, and metric settings.
+Convergence and limits of nets indexed by directed sets in cover spaces, with specializations to topological abelian groups and metric spaces.
+
+The module defines convergence as a `CoverMap` from the directed cover space of an index set, unifying nets, sequences, and limits along filter bases. In a `CompleteCoverSpace`, every convergent net has a canonical `limit` (a partial function), constructed via the universal property of the completion applied to the eventuality filter on the index set. The Cauchy-style characterizations specialize the abstract definition to uniform spaces, topological abelian groups (where convergence reduces to differences entering neighborhoods of zero), and metric spaces (with rational and real `eps` formulations). The auxiliary `SubPointDirectedSet` and `InvDirectedSet` constructions provide directed-set indexing for limits at a point of a topological space, supporting limits of partial functions and pointwise limits at zero in near-skew-fields.
 
 #### Convergence
 
-- **`IsConvergent`**: A net `f : I -> X` from a directed set `I` to a cover space `X` is convergent iff it lifts to a `CoverMap` from the directed cover space of `I` into `X`.
-- **`convergent-char`**: Characterizes convergence: for every Cauchy cover `C` of `X`, eventually `f n` lies in some `U : C`. The inner `conv` lemma gives the converse direction.
-- **`limit-conv`**: If `f` has a limit `l` in `X`, then `f` is convergent.
-- **`convergent-compose`**: Convergence is preserved by composition with a `CoverMap`.
+- **`IsConvergent`**: A net `f : I -> X` is convergent iff it is a `CoverMap` from `DirectedCoverSpace I` to `X`.
+- **`convergent-char`**: Cauchy-style characterization: `f` is convergent iff for every cauchy cover `C`, some element `U : C` eventually contains `f n`.
+  - **`convergent-char.conv`**: The reverse implication, extracting the eventual-membership property from convergence.
+- **`limit-conv`**: A net with a limit (`X.IsLimit f l`) is convergent.
+- **`convergent-compose`**: Convergence is preserved under composition with a `CoverMap`.
 
 #### The Limit Operation
 
-- **`limit`**: The limit of a net `f : I -> X` into a `CompleteCoverSpace`, returned as a `Partial X` defined exactly when `f` is convergent. Its value is obtained by lifting the eventuality filter through completion.
-- **`limit.infPoint`**: The point in `Completion (DirectedCoverSpace I)` corresponding to the eventuality filter on `I`.
-- **`limit.char`**: Identifies `limit fc` with the filter-point of `fc.func-cauchy EventualityFilter`.
-- **`limit-isLimit`**: The value `limit f fc` is in fact a limit of `f` in the sense of `X.IsLimit`.
-- **`limit-char`**: `limit f = defined l` iff `l` is a limit of `f`.
-- **`limit-apply`**: Continuity of limits: for a `CoverMap` `g`, `g (limit f) = limit (g ∘ f)`.
-- **`limit-ext`**: Pointwise equal nets have equal limits.
+- **`limit`**: For `X : CompleteCoverSpace`, the partial function `I -> X` defined on convergent nets, returning the value obtained by lifting to the completion and evaluating at the eventuality filter point.
+  - **`limit.infPoint`**: The completion point built from the eventuality filter on the directed set.
+  - **`limit.char`**: Identifies the limit value with the filter-point of the cauchy filter induced by `f`.
+- **`limit-isLimit`**: The computed `limit f fc` is indeed a limit of `f` in the sense of `X.IsLimit`.
+- **`limit-char`**: `limit f = defined l` iff `X.IsLimit f l`.
+- **`limit-apply`**: Limits commute with cover-continuous maps: `g (limit f) = limit (g ∘ f)`.
+- **`limit-ext`**: Pointwise-equal nets have equal limits.
 
-#### Uniform and Topological Group Characterizations
+#### Specialized Convergence Criteria
 
-- **`convergent-uniform-char`**: Convergence in a `RegularPreuniformSpace` characterized via uniform covers (Cauchy condition on uniform covers). Includes a converse `conv` lemma.
-- **`convergent-topAbGroup-char`**: TFAE characterization of convergence in a topological abelian group: net convergence ⇔ Cauchy condition on differences `f m - f n` ⇔ Cauchy condition on differences `f n - f N`.
+- **`convergent-uniform-char`**: For regular preuniform spaces, convergence is characterized by eventual entry into uniform-cover elements.
+  - **`convergent-uniform-char.conv`**: The reverse direction.
+- **`convergent-topAbGroup-char`**: For topological abelian groups, three equivalent forms (TFAE): `IsConvergent f`, the Cauchy condition `U (f m - f n)` eventually for `n <= m`, and `U (f n - f N)` eventually with a fixed `N`.
+- **`convergent-metric-char`**: For extended pseudo-metric spaces, convergence is `∀ eps > 0, ∃ N, ∀ n >= N, (dist (f n) (f N)).U eps`.
+  - **`convergent-metric-char.double`**: Two-sided Cauchy version: `(dist (f n) (f m)).U eps` for `n, m >= N`.
+- **`convergent-metric-real`**: Real-valued `eps` variant for ordinary pseudo-metric spaces.
 
-#### Metric Characterizations
+#### Metric Limit Characterizations
 
-- **`convergent-metric-char`**: In an `ExPseudoMetricSpace`, `f` is convergent iff for every rational `eps > 0`, eventually `dist (f n) (f N) < eps`. The `double` helper produces a two-sided Cauchy witness.
-- **`convergent-metric-real`**: Same as above but with real `eps`, in a `PseudoMetricSpace`.
-- **`limit-metric-char`**: `l` is a limit of `f` iff for every `eps > 0`, eventually `dist l (f n) < eps` (extended-rational version).
-- **`limit-metric-real`**: Real-`eps` version of `limit-metric-char` for `PseudoMetricSpace`.
-- **`nat-limit-metric`**: A geometric convergence criterion for `Nat`-indexed sequences: if distances satisfy `dist l (f (suc n)) <= d * dist l (f n)` with `0 <= d < 1` and the initial distance is bounded, then `l` is the limit. The `induction` helper gives the explicit bound `dist l (f n) <= q^n * B`.
+- **`limit-metric-char`**: `X.IsLimit f l` iff `∀ eps > 0, ∃ N, (dist l (f n)).U eps` eventually (extended pseudo-metric form).
+- **`limit-metric-real`**: Real `eps` variant of the above.
+- **`nat-limit-metric`**: Geometric convergence: if `dist l (f (suc n)) <= d * dist l (f n)` with `0 <= d < 1` and `dist l (f 0)` bounded, then `f` converges to `l`.
+  - **`nat-limit-metric.induction`**: Inductive bound `dist l (f n) <= q^n * B` driving the convergence proof.
 
-#### Limits at a Point (Topological)
+#### Directed Sets at a Point
 
-- **`SubPointDirectedSet`**: Directed set of open neighborhoods of a limit point `a` of a set `U`, ordered by reverse inclusion. Elements are tuples `(V, V open, V a, x, V x, U x)`. Used to express `lim_{x -> a, x ∈ U}`.
-- **`SubPointDirectedSet.limit-comp`**: Composition of net limits with limits at a point: if `f n -> lx` along `f` taking values in `S` and `g(h) -> ly` along the neighborhood directed set, then `g (f n, _) -> ly`.
-- **`SubPointDirectedSet.map`**: Functoriality of the neighborhood directed set under a continuous map with a section.
-- **`SubPointDirectedSet.limit-id`**: The "tag" projection from `SubPointDirectedSet` to `X` has limit `a`.
-- **`SubPointDirectedSet.limit-char`**: Characterization of `lim_{x -> a, S x} f x = y` via the open-neighborhood/epsilon-delta-style condition.
-
-#### Punctured Neighborhood of Zero (for Skew Fields)
-
-- **`InvDirectedSet`**: The neighborhood directed set at `0` in a `NearSkewField`, restricted to invertible elements lying in an open set `S` containing `0`. Used for limits like `lim_{h -> 0, h invertible} f(h)`.
-- **`InvDirectedSet.aux`**: `0` is a limit point of the invertible elements in `S`.
-- **`InvDirectedSet.limit-id`**: The projection to `R` has limit `0`.
-- **`InvDirectedSet.limit-char`**: Open-neighborhood characterization of limits taken as `h -> 0` over invertible `h ∈ S`.
+- **`SubPointDirectedSet`**: For a limit point `a` of a set `U` in a topological space, the directed set of tuples `(V, Va, x, Vx, Ux)` ordered by reverse inclusion of the open neighborhood `V`. Used to take limits of partial functions defined on `U` as `x -> a`.
+  - **`SubPointDirectedSet.limit-comp`**: Composition lemma: a limit of `g` along `SubPointDirectedSet` transfers to a limit of `g ∘ f` along any net `f` converging to `lx` and staying in `S`.
+  - **`SubPointDirectedSet.map`**: Functoriality: continuous maps with sections induce maps of `SubPointDirectedSet`s.
+  - **`SubPointDirectedSet.limit-id`**: The projection `h.4` (the `x` component) tends to `a`.
+  - **`SubPointDirectedSet.limit-char`**: Characterization of limits along `SubPointDirectedSet` in `(open V, V y) <-> (open U, U a, ...)` form — the standard ε-δ-style continuity at a limit point.
+- **`InvDirectedSet`**: For an open `S` containing `0` in a near-skew-field, the directed set of nonzero invertible elements approaching `0` within `S`. Built as a `SubPointDirectedSet` with predicate `Inv ∧ S`.
+  - **`InvDirectedSet.aux`**: `0` is a limit point of `Inv ∧ S` whenever `S` is open and contains `0`.
+  - **`InvDirectedSet.limit-id`**: The element itself tends to `0`.
+  - **`InvDirectedSet.limit-char`**: Open-neighborhood characterization of limits indexed by `InvDirectedSet`, used for limits like `f(h)/h` as `h -> 0` through invertible elements.

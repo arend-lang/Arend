@@ -1,30 +1,44 @@
 ### Data.Bool
 
-This module defines the `Bool` type and basic boolean operations with associated lemmas.
+The two-element boolean type with standard logical operations and their basic properties.
 
-#### Bool Type
+This module defines `Bool` as an inductive type with constructors `false` and `true`, along with the propositional reflection `So` that converts a boolean into a proposition (true becomes the unit type, false becomes empty). The standard connectives `not`, `and`, `or`, and `xor` are defined by case analysis, and small lemmas bridge the boolean-level equations (e.g. `x and y = true`) to their propositional counterparts (e.g. a pair of equalities), which is the typical pattern for using decidable boolean predicates in propositional reasoning.
+
+#### Core Type
 
 - **`Bool`**: Inductive type with constructors `false` and `true`.
 
-#### So (Boolean Proposition)
+#### Propositional Reflection
 
-- **`So`**: Converts a `Bool` to a proposition: `So true = \Sigma` (unit), `So false = Empty`.
-  - **`fromSo`**: `So b` implies `b = true`.
-  - **`toSo`**: `b = true` implies `So b`.
+- **`So`**: `Bool -> \Prop` sending `true` to `\Sigma` (unit) and `false` to `Empty`; lifts a boolean into a proposition.
+- **`So.fromSo`**: Converts `So b` into the equality `b = true`.
+- **`So.toSo`**: Converts `b = true` into `So b`.
 
-#### Boolean Operations
+#### Negation
 
-- **`not`**: Boolean negation; `not true = false`, `not false = true`.
-- **`not-isInv`**: `not (not b) = b` (involution).
-- **`if`**: Conditional expression: `if true a b = a`, `if false a b = b`.
-- **`and`** (infix `\infixl 3`): Boolean conjunction; `true and y = y`, `false and y = false`.
-  - **`toSigma`**: `x and y = true` implies `(x = true, y = true)`.
-  - **`fromSigma`**: `(x = true, y = true)` implies `x and y = true`.
-- **`or`** (infix `\infixl 2`): Boolean disjunction; `true or y = true`, `false or y = y`.
-  - **`toOr`**: `x or y = true` implies `(x = true) || (y = true)`.
-  - **`fromOr`**: `(x = true) || (y = true)` implies `x or y = true`.
-- **`xor`** (infix `\infixl 2`): Boolean exclusive or; true when exactly one argument is true.
+- **`not`**: Boolean negation, swapping `true` and `false`.
+- **`not-isInv`**: Involutivity: `not (not b) = b`.
 
-#### Miscellaneous
+#### Conditional
 
-- **`true/=false`**: `true = false` implies `Empty` (true and false are distinct).
+- **`if`**: Polymorphic if-then-else: given `b : Bool` and `then else : A`, returns `then` if `b = true` and `else` otherwise.
+
+#### Conjunction
+
+- **`and`**: Infixl 3 boolean conjunction, defined by elimination on the left argument.
+- **`and.toSigma`**: From `x and y = true` extracts the pair `(x = true, y = true)`.
+- **`and.fromSigma`**: From `(x = true, y = true)` derives `x and y = true`.
+
+#### Disjunction
+
+- **`or`**: Infixl 2 boolean disjunction, defined by elimination on the left argument.
+- **`or.toOr`**: From `x or y = true` derives the propositional disjunction `(x = true) || (y = true)`.
+- **`or.fromOr`**: From `(x = true) || (y = true)` derives `x or y = true`.
+
+#### Exclusive Or
+
+- **`xor`**: Infixl 2 exclusive or, defined by full case analysis on both arguments.
+
+#### Disjointness
+
+- **`true/=false`**: The constructors are distinct: `true = false` implies `Empty`.

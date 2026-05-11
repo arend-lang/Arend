@@ -1,28 +1,30 @@
 ### Category.Topos.Presheaf
 
-Completeness and cocompleteness of presheaf categories, computing limits pointwise from the target category.
+Completeness, cocompleteness, and subobject structure for presheaf categories.
 
-#### Limits in Presheaf Categories
+This module establishes that the category of (V-)presheaves on a small precategory inherits limits and colimits from the target category, computed pointwise. Limits in `VPresheafCat D C` are built by taking, for each object `c : C`, the limit in `D` of the diagram evaluated at `c`, and assembling these into a presheaf via the universal property — the functorial action on morphisms `f : Y → X` is the unique mediating map between the pointwise limits. The cone and limit-map natural transformations are constructed by pointwise application, with naturality verified through `limUnique`. This pointwise construction is the standard tool for showing presheaf categories form bicomplete toposes, with `PresheafCat C` as the special case `D = Set`.
 
-- **`VPresheafComplete`**: Instance showing that the category of `D`-valued presheaves on a small precategory `C` is complete whenever `D` is complete. Limits are computed pointwise.
-- **`VPresheafComplete.limit'`**: Constructs a `Limit` for any functor `G : J -> VPresheafCat D C`, with apex, cone maps, and universal map all defined pointwise.
-- **`VPresheafComplete.functor-at-point`**: For each `c : C`, the functor `J -> D` obtained by evaluating `G` at `c`; used to take limits componentwise.
-- **`VPresheafComplete.L`**: The pointwise limit `D.limit (functor-at-point c)` at object `c`.
-- **`VPresheafComplete.cone`**: For `f : Hom Y X`, builds a cone over `functor-at-point Y` with apex `L X` by precomposing with `Func f`; provides the action of the limit presheaf on morphisms.
-- **`VPresheafComplete.apex`**: The limit presheaf itself, packaging the pointwise limits `L c` into a functor `C^op -> D` via `cone`.
-- **`VPresheafComplete.cone-nat-map`**: The natural transformation `apex -> G j` projecting the pointwise limit at component `j`.
-- **`VPresheafComplete.cone-at-point`**: Restricts a cone `z-cone : Cone G z` to a cone over `functor-at-point X` with apex `z X`.
-- **`VPresheafComplete.lim-nat-map`**: The unique mediating natural transformation `z -> apex` induced by a cone `z-cone : Cone G z`.
+#### Completeness of Presheaf Categories
+
+- **`VPresheafComplete`**: Instance proving that `VPresheafCat D C` is complete whenever `D` is, for `C` a small precategory. Limits are computed pointwise in `D`.
+- **`VPresheafComplete.limit'`**: Constructs the limit of a functor `G : J → VPresheafCat D C` by assembling pointwise limits into a presheaf, with cone and limit maps given as natural transformations.
+- **`VPresheafComplete.limit'.functor-at-point`**: For each `c : C`, the diagram `J → D` obtained by evaluating `G` at `c`.
+- **`VPresheafComplete.limit'.L`**: The pointwise limit `D.limit (functor-at-point c)` in `D`.
+- **`VPresheafComplete.limit'.cone`**: For `f : Hom Y X` in `C`, the cone over `functor-at-point Y` with apex `L X`, used to define the functorial action on morphisms.
+- **`VPresheafComplete.limit'.apex`**: The presheaf whose value at `c` is `L c`, with `Func f` defined as the mediating map `limMap (cone f)`; functoriality follows from `limUnique`.
+- **`VPresheafComplete.limit'.cone-nat-map`**: The cone projection `apex → G j` as a natural transformation, with components given by pointwise cone maps.
+- **`VPresheafComplete.limit'.cone-at-point`**: Restricts a cone over `G` with apex a presheaf `H` to a cone over `functor-at-point X` with apex `H X`.
+- **`VPresheafComplete.limit'.lim-nat-map`**: The universal mediating natural transformation from a cone apex to `apex`, with components defined via pointwise `limMap`.
 
 #### Cocompleteness and Bicompleteness
 
-- **`VPresheafCocomplete`**: Instance asserting cocompleteness of `VPresheafCat D C` when `D` is cocomplete (proof omitted).
-- **`VPresheafCatBicomplete`**: Instance combining `VPresheafComplete` and `VPresheafCocomplete` to show `VPresheafCat D C` is bicomplete when `D` is bicomplete.
+- **`VPresheafCocomplete`**: Instance asserting cocompleteness of `VPresheafCat D C` (proof currently a hole).
+- **`VPresheafCatBicomplete`**: Instance combining `VPresheafComplete` and `VPresheafCocomplete` to give bicompleteness of `VPresheafCat D C` when `D` is bicomplete.
 
-#### Set-Valued Presheaves
+#### Specialization to Set-Valued Presheaves
 
-- **`PresheafCatComplete`**: Specialization showing the ordinary presheaf category `PresheafCat C` is complete, instantiating `VPresheafComplete` at `SetBicat`.
-- **`PresheafCatBicomplete`**: Specialization showing `PresheafCat C` is bicomplete, instantiating `VPresheafCatBicomplete` at `SetBicat`.
+- **`PresheafCatComplete`**: Instance showing `PresheafCat C` is complete, obtained by specializing `VPresheafComplete` to `D = SetBicat`.
+- **`PresheafCatBicomplete`**: The category `PresheafCat C` is bicomplete, via `VPresheafCatBicomplete` at `SetBicat`.
 
 #### Subobjects
 

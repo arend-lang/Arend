@@ -1,32 +1,36 @@
 ### Homotopy.HLevel
 
-H-levels (homotopy truncation levels) for types, with two indexing conventions and closure properties under standard type formers.
+Homotopy levels (n-types) and their closure properties.
+
+This module defines two parallel indexings of homotopy levels: `ofHLevel_-1+` (starting at propositions, indexed from -1) and `ofHLevel_-2+` (starting at contractibility, indexed from -2). The two indexings are interconvertible via `HLevel_-2+1=>HLevel_-1` and `HLevel_-1=>HLevel_-2+1`. The bulk of the module establishes that h-levels are preserved under standard type-forming operations (Π, Σ, retracts, embeddings) and are upward-closed under the level ordering, providing the basic infrastructure for working with truncation levels throughout the library.
 
 #### H-Level Predicates
 
-- **`ofHLevel_-1+`**: `A ofHLevel_-1+ n` asserts `A` has h-level `n-1` (0 = prop, 1 = set, etc.); defined recursively as iterated path-space proposition-ness.
-- **`ofHLevel_-2+`**: `A ofHLevel_-2+ n` asserts `A` has h-level `n-2` (0 = contractible, 1 = prop, etc.); a `\Prop`-valued version with contractibility at the base.
-- **`ofHLevel_-1+.levelProp`**: Being of h-level `n-1` is itself a proposition (used as a `\use \level` instance).
+- **`ofHLevel_-1+`**: `A ofHLevel_-1+ n` asserts `A` is an `(n-1)`-type. `n = 0` means `isProp A`; `suc n` recurses on path types. Has a `\level` instance proving the predicate itself is a proposition.
+- **`ofHLevel_-2+`**: `A ofHLevel_-2+ n` asserts `A` is an `(n-2)`-type, valued in `\Prop`. `n = 0` means `Contr A`; `suc n` recurses on path types.
+- **`hLevel-inh`**: If `A`'s h-level can be shown assuming an inhabitant of `A`, then `A` has that h-level (for `n >= 1`).
+- **`I-isContr`**: The interval `I` is contractible, with `left` as center.
 
-#### Conversions Between Indexings
+#### Conversion Between Indexings
 
-- **`HLevel_-2+1=>HLevel_-1`**: `A ofHLevel_-2+ suc n -> A ofHLevel_-1+ n`.
-- **`HLevel_-1=>HLevel_-2+1`**: `A ofHLevel_-1+ n -> A ofHLevel_-2+ suc n` (converse direction).
-- **`I-isContr`**: The interval `I` is contractible, with center `left`.
+- **`HLevel_-2+1=>HLevel_-1`**: Converts `A ofHLevel_-2+ suc n` to `A ofHLevel_-1+ n` by extracting centers of contraction on path types.
+- **`HLevel_-1=>HLevel_-2+1`**: Converts `A ofHLevel_-1+ n` to `A ofHLevel_-2+ suc n` (the reverse direction).
 
-#### Cumulativity
+#### Upward Closure
 
-- **`hLevel-inh`**: From a function `A -> A ofHLevel_-1+ n` (h-level conditional on inhabitation), conclude `A ofHLevel_-1+ n`.
-- **`HLevel_-1_suc`**: H-levels are upward-closed by one: `A ofHLevel_-1+ n -> A ofHLevel_-1+ suc n`.
-- **`HLevel_-1_+`**: Upward closure by an arbitrary offset: `A ofHLevel_-1+ k -> A ofHLevel_-1+ (k + n)`.
-- **`HLevel_-1_<=`**: Upward closure under `<=` on naturals.
+- **`HLevel_-1_suc`**: An `n`-type is also a `(n+1)`-type. Base case uses `isProp.=>isSet`.
+- **`HLevel_-1_+`**: Iterated upward closure: `A ofHLevel_-1+ k` implies `A ofHLevel_-1+ (k + n)`.
+- **`HLevel_-1_<=`**: Upward closure along an inequality `k <= n`.
 
-#### Closure Under Type Formers
+#### Closure Under Type Constructors (h-level -1+)
 
-- **`HLevel-retracts`**: H-levels transfer along sections (retracts inherit h-level from their codomain).
-- **`HLevels-pi`**: Dependent function types preserve h-level: pointwise `B a ofHLevel_-1+ n` implies `(\Pi (a : A) -> B a) ofHLevel_-1+ n`.
-- **`HLevels-sigma`**: Sigma types preserve h-level when both base and fiber do.
-- **`HLevels-embeddings`**: H-levels transfer along embeddings (the domain inherits from the codomain).
-- **`HLevel_-2-retracts`**: Retract closure for the `-2+` indexing.
-- **`HLevels_-2-pi`**: Pi closure for the `-2+` indexing.
-- **`HLevels_-2-sigma`**: Sigma closure for the `-2+` indexing.
+- **`HLevel-retracts`**: H-levels transfer along sections (retracts): if `B` has h-level `n` and `A` retracts onto `B`, then `A` has h-level `n`.
+- **`HLevels-pi`**: Π-types preserve h-levels: if each `B a` has h-level `n`, so does `\Pi (a : A) -> B a`.
+- **`HLevels-sigma`**: Σ-types preserve h-levels given both components do.
+- **`HLevels-embeddings`**: H-levels transfer along embeddings: if `B` has h-level `n` and `e : A -> B` is an embedding, then `A` has h-level `n`.
+
+#### Closure Under Type Constructors (h-level -2+)
+
+- **`HLevel_-2-retracts`**: Retract-closure for the `-2+` indexing.
+- **`HLevels_-2-pi`**: Π-closure for the `-2+` indexing.
+- **`HLevels_-2-sigma`**: Σ-closure for the `-2+` indexing.

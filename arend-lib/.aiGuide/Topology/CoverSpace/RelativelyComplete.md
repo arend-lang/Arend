@@ -1,38 +1,40 @@
 ### Topology.CoverSpace.RelativelyComplete
 
-Relative completion of cover spaces: factoring a map through a dense embedding into a relatively complete and relatively Hausdorff map, generalizing the absolute completion construction.
+Relative completion of cover spaces: lifting cauchy/cover maps along a base map and the orthogonal factorization system of dense embeddings vs. relatively-Hausdorff-and-complete maps.
+
+This module generalizes the absolute completion of a cover space to a *relative* setting, where one works fiberwise over a base map `p : X -> Y`. A map is "relatively complete" if every cauchy filter on `X` whose pushforward refines the point filter at `y : Y` lifts to a unique point in the fiber over `y`. Combined with relative Hausdorffness, this yields a contractible lift, which powers the universal property of `RelativeCompletion f` — the space of regular cauchy filters on `X` paired with their limits in `Y`. The whole construction assembles into an orthogonal factorization system on `CoverSpaceCat` whose left class is dense embeddings and whose right class is relatively Hausdorff complete maps.
 
 #### Relative Completeness
 
-- **`IsRelativelyComplete`**: Property of `p : X -> Y` stating that for every Cauchy filter `F` on `X` whose image filter contains the point filter of `y : Y`, there exists `x : X` with `p x = y` whose point filter is contained in `F`.
-- **`IsRelativelyComplete.dense-complete`**: Reduction lemma — to prove `p` is relatively complete, it suffices to verify the lifting property for regular Cauchy filters arising from a dense embedding `f`.
+- **`IsRelativelyComplete`**: A map `p : X -> Y` is relatively complete if every cauchy filter `F` on `X` whose image refines `pointCF y` lifts to a point `x` with `p x = y` and `pointCF x ⊆ F`.
+- **`IsRelativelyComplete.dense-complete`**: Reduces relative completeness for a cauchy map `p` to the case of regular cauchy filters along a dense embedding `f`.
 
-#### Lifting Along Dense Embeddings
+#### Relatively Complete + Hausdorff
 
-- **`relativelyCompleteAndSeparated`**: Combines relative completeness and relative Hausdorffness: for `p` satisfying both, the lift `(x, p x = y, pointCF x ⊆ F)` is contractible (uniquely determined).
-- **`relativelyCompleteAndSeparated.neighborhood`**: Neighborhood control for the unique lift — if `V <=< U` and `F V`, then the lifted point's singleton is rather-below `U`.
-- **`relativelyCompleteAndSeparated.filter-lift`**: Constructs the Cauchy filter on `X` used to lift a point `y : Y` along a dense embedding.
-- **`relativelyCompleteAndSeparated.lift-contr`**: Given a square `g ∘ i = p ∘ f` with `i` a dense embedding, `p` relatively complete and Hausdorff, produces the unique lift `z : Z` for each `y : Y` with `p z = g y`.
+- **`relativelyCompleteAndSeparated`**: Combining relative completeness and relative Hausdorffness, the lift `Σ (x : X) (p x = y) (pointCF x ⊆ F)` is contractible.
+- **`relativelyCompleteAndSeparated.neighborhood`**: A neighborhood lemma: if `V <=< U` and `F V`, then the singleton of the unique lift is rather-below `U`.
+- **`relativelyCompleteAndSeparated.filter-lift`**: Constructs a cauchy filter on `Z` from a cauchy map `f : X -> Z` and a dense embedding `i : X -> Y`, evaluated at a point `y : Y`.
+- **`relativelyCompleteAndSeparated.lift-contr`**: Given a square `g ∘ i = p ∘ f` with `i` a dense embedding, produces the canonical lift `(z, p z = g y, pointCF z ⊆ filter-lift)` from contractibility.
 
-#### Universal Lifting Maps
+#### Lifting Maps Along Dense Embeddings
 
-- **`dense-cauchy-relative-lift`**: Lifts a Cauchy map `f : CauchyMap X Z` along a dense embedding `i : X -> Y` to a Cauchy map `Y -> Z` whenever `g ∘ i = p ∘ f` and `p` is relatively complete and Hausdorff.
-- **`dense-relative-lift`**: Same lift as above, but producing a `CoverMap` when the input `f : CoverMap X Z`.
-- **`dense-relative-lift-proj`**: Compatibility with `p`: the lift composed with `p` reproduces `g`, i.e. `p (lift y) = g y`.
-- **`dense-relative-lift-char`**: Compatibility with `i`: the lift restricted along `i` reproduces `f`, i.e. `lift (i x) = f x`.
+- **`dense-cauchy-relative-lift`**: Lifts a cauchy map `f : X -> Z` along a dense embedding `i : X -> Y` and a square `g ∘ i = p ∘ f` to a cauchy map `Y -> Z`, when `p` is relatively complete and Hausdorff.
+- **`dense-relative-lift`**: Same lift, but produces a `CoverMap` when `f` is a cover map.
+- **`dense-relative-lift-proj`**: The lift commutes with projection: `p (lift y) = g y`.
+- **`dense-relative-lift-char`**: The lift extends `f`: composing with `i` recovers `f`, i.e. `lift (i x) = f x`.
 
-#### Relative Completion Construction
+#### The Relative Completion
 
-- **`RelativeCompletion`**: Type of triples `(F, y, pointCF y ⊆ SetFilter-map f F)` where `F` is a regular Cauchy filter on `X` and `y : Y` is a target point compatible with `F` via `f`.
-- **`RelativeCompletion.inc`**: Forgetful map `RelativeCompletion f -> RegularCauchyFilter X × Y`.
-- **`RelativeCompletionCoverSpace`**: Cover space structure on `RelativeCompletion f`, transferred via `inc` from the product of the absolute completion of `X` and `Y`.
-- **`relativeCompletion`**: The canonical cover map `X -> RelativeCompletionCoverSpace f` sending `x` to `(pointCF x, f x, ...)`.
-- **`relativeCompletion.toCompletion`**: Projection from the relative completion to the absolute completion of `X`.
+- **`RelativeCompletion`**: The relative completion of `f : X -> Y` is the type of triples `(F, y, pointCF y ⊆ SetFilter-map f F)` with `F` a regular cauchy filter on `X`.
+- **`RelativeCompletion.inc`**: Forgetful map to `RegularCauchyFilter X × Y`.
+- **`RelativeCompletionCoverSpace`**: Cover space structure on `RelativeCompletion f`, transferred along `inc` from the product of the completion of `X` and `Y`.
+- **`relativeCompletion`**: The canonical cover map `X -> RelativeCompletion f`, sending `x` to `(pointCF x, f x, _)`.
+- **`relativeCompletion.toCompletion`**: Projection `RelativeCompletion f -> Completion X` onto the filter component.
 - **`relativeCompletion.isDenseEmbedding`**: The map `relativeCompletion` is a dense embedding.
-- **`relativeCompletion-proj`**: Projection `RelativeCompletionCoverSpace f -> Y` extracting the second coordinate.
+- **`relativeCompletion-proj`**: The projection `RelativeCompletion f -> Y` onto the limit component.
 - **`relativeCompletion-proj.isHausdorff`**: The projection is relatively Hausdorff.
 - **`relativeCompletion-proj.isCompletion`**: The projection is relatively complete.
 
-#### Orthogonal Factorization System
+#### Factorization System
 
-- **`CompletionOFS`**: Orthogonal factorization system on `CoverSpaceCat` whose left class consists of dense embeddings and whose right class consists of maps that are both relatively Hausdorff and relatively complete; every map factors as `relativeCompletion h` followed by `relativeCompletion-proj h`.
+- **`CompletionOFS`**: The orthogonal factorization system on `CoverSpaceCat` whose left class `L` consists of dense embeddings and whose right class `R` consists of maps that are simultaneously relatively Hausdorff and relatively complete; any cover map `h` factors as `relativeCompletion h` followed by `relativeCompletion-proj h`.

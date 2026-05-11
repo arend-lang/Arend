@@ -1,22 +1,44 @@
 ### Algebra.Monoid.Solver
 
-Reflective solver infrastructure for proving equalities in monoids and commutative monoids by normalizing syntactic terms.
+A reflection-based equality solver for monoids, commutative monoids, and meet-semilattices.
+
+The module formalizes a syntactic representation of monoid expressions (`MonoidTerm`) together with normalization procedures whose consistency lemmas reduce semantic equality of expressions to syntactic equality of normal forms. For plain monoids the normal form is a flat list of variables (associativity collapsed); for commutative monoids the list is additionally sorted (commutativity); for top-meet-semilattices duplicates are also removed (idempotence). The `interpret`/`interpretNF` pair links syntax to a fixed `vars : Array M`, and the `terms-equality` lemmas serve as the entry points used by tactics to discharge equational goals after reducing both sides to a canonical list.
 
 #### Term Syntax
 
-- **`MonoidTerm`**: Abstract syntax tree of monoid expressions over a variable type `V`, with constructors `var` (variable injection), `:ide` (identity element), and `:*` (binary product).
+- **`MonoidTerm`**: Inductive type of monoid expressions over a variable type `V`, with constructors `var`, `:ide` (unit), and `:*` (multiplication).
+- **`normalize`**: Flattens a `MonoidTerm V` to a `List V` using an accumulator-passing helper `normalize.aux`, eliminating units and associativity.
 
-#### Normalization
+#### MonoidData (Plain Monoid Solver)
 
-- **`normalize`**: Flattens a `MonoidTerm V` into a `List V` representing the sequence of variables in order, dropping identities and associativity. Implemented via the accumulator-passing helper `normalize.aux`.
+Class parameterized by a monoid `M` and a variable assignment `vars : Array M`; uses `V := Fin vars.len` as the variable type.
 
-#### Data Classes
+- **`interpret`**: Evaluates a `MonoidTerm V` in `M` using `vars`.
+- **`interpretNF`**: Evaluates a normal-form `List V` in `M`, with the cons-case lemma `interpretNF.cons`.
+- **`normalize-consistent`**: `interpret t = interpretNF (normalize t)`; the auxiliary `normalize-consistent.aux` handles the accumulator.
+- **`terms-equality`**: If two terms have equal normal forms, their interpretations are equal — the main solver entry point.
+- **`terms-equality-conv`**: Converse direction (assumes the monoid is free on `vars`, used in reverse-reflection contexts).
+- **`interpretNF_++`**: List concatenation interprets as monoid product.
+- **`replace-consistent`**: Substituting a slice `[i, i+s)` of a list with a list of equal interpretation preserves the overall interpretation; supports rewriting subterms.
 
-- **`MonoidData`**: Carries a `Monoid M` together with an interpretation `vars : Array M` mapping variable indices to monoid elements; the basic context used to evaluate `MonoidTerm`s in a non-commutative monoid.
-- **`CMonoidData`**: Extends `MonoidData`, overriding `M` to be a `CMonoid` so that solver routines may additionally exploit commutativity (e.g. by sorting normalized terms).
-- **`LData`**: Extends `CMonoidData` with a `TopMeetSemilattice L`, identifying `M` with `L`; provides the context for solving equalities in a top-bounded meet-semilattice viewed as a commutative idempotent monoid.
+#### CMonoidData (Commutative Monoid Solver)
 
-#### Index Manipulation Helpers (in `CMonoidData`)
+Extends `MonoidData`, overriding `M` to a `CMonoid`. Normal forms are sorted lists.
 
-- **`indices`**: Given a list of positions `is : List Nat` and a list `l : List A`, returns the sublist of `l` at those positions; used by the commutative solver to project selected variable occurrences.
-- **`removeIndices`**: Dual to `indices`; returns `l` with the entries at positions `is` deleted, supporting cancellation steps in the commutative normalization procedure.
+- **`sort-consistent`**: Sorting a list preserves its interpretation.
+- **`perm-consistent`**: Any permutation of a list has the same interpretation.
+- **`normalize-consistent`**: `interpret t = interpretNF (sort (normalize t))`.
+- **`terms-equality`** / **`terms-equality-conv`**: Solver entry points using sorted normal forms.
+- **`replace-consistent`**: Substitution by a list of indices `is`: replaces the elements at `is` with a list `r` of equal interpretation, returning `r ++ removeIndices is l`.
+- **`replace-consistent-lem`**: `interpretNF l = interpretNF (indices is l ++ removeIndices is l)` — splits a list into selected and unselected parts.
+- **`indices`** (in `\where`): Picks out elements of a list at the positions given by a list of `Nat`.
+- **`removeIndices`** (in `\where`): Deletes the elements of a list at the given positions.
+
+#### LData (Top-Meet-Semilattice Solver)
+
+Extends `CMonoidData` with `M` set to a `TopMeetSemilattice` `L`, treating meet as the commutative monoid operation with top as the unit. Normal forms are sorted lists with duplicates collapsed (using `RedBlack.sort`).
+
+- **`removeDuplicates`**: Removes adjacent duplicate variables from a list (relying on decidable equality on `V`); on a sorted list this yields a duplicate-free representative.
+- **`removeDuplicates-consistent`**: `interpretNF l = interpretNF (removeDuplicates l)` — uses idempotence of meet.
+- **`normalize-consistent`**: `interpret t = interpretNF (removeDuplicates (RedBlack.sort (normalize t)))`.
+- **`terms-equality`** / **`terms-equality-conv`**: Solver entry points using sorted, deduplicated normal forms.

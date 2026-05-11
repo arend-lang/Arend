@@ -1,12 +1,17 @@
 ### Order.Lexicographical
 
-Lexicographical orderings on pairs and lists, lifting decidable linear orders componentwise.
+Lexicographic orderings on product and list types built from decidable linear orders.
 
-#### Product Order
+This module lifts decidable linear orders to two standard composite structures: pairs `\Sigma A B` and lists `List A`. The pair ordering compares first components, falling back to the second only when first components are equal. The list ordering, defined inductively as `<L`, treats `nil` as smaller than any nonempty list and otherwise compares head-first with tie-breaking on tails. Both instances package the resulting strict order with irreflexivity, transitivity, and trichotomy proofs to yield a decidable linear order (`Dec`).
 
-- **`LexicographicalProduct`**: Decidable linear order instance on `\Sigma A B` for `A B : Dec`. Compares first components, breaking ties by the second: `a < b` iff `a.1 < b.1 \/ (a.1 = b.1 /\ a.2 < b.2)`. Provides irreflexivity, transitivity, and trichotomy derived from the underlying orders.
+#### Lexicographic Product
 
-#### List Order
+- **`LexicographicalProduct`**: `Dec` instance on `\Sigma A B` for decidable linear orders `A B`. Defines `a < b` as `a.1 < b.1` or (`a.1 = b.1` and `a.2 < b.2`), with the required strict-order and trichotomy laws.
 
-- **`LexicographicalList`**: Decidable linear order instance on `List A` for `A : Dec`, using the lexicographic extension `<L`.
-- **`<L`**: Inductive strict order on lists. `nil <L (b :: bs)` always holds (`nil<::`); for cons cells, either the heads compare strictly (`<head`) or the heads agree and the tails compare recursively (`<tail`).
+#### Lexicographic List
+
+- **`LexicographicalList`**: `Dec` instance on `List A` for a decidable linear order `A`, using `<L` as the strict order and supplying irreflexivity, transitivity, and trichotomy.
+- **`<L`**: Inductive lexicographic strict order on `List A` (`\Prop`-valued, infix at level 4). Constructors:
+  - **`nil<::`**: `nil <L (a :: as)` — the empty list precedes any nonempty list.
+  - **`<head`**: `a < b -> (a :: as) <L (b :: bs)` — strict order at the head.
+  - **`<tail`**: `a = b -> as <L bs -> (a :: as) <L (b :: bs)` — equal heads, recurse on tails.

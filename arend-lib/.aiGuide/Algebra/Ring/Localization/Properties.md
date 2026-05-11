@@ -1,17 +1,19 @@
 ### Algebra.Ring.Localization.Properties
 
-Properties of ring localizations: uniqueness up to isomorphism, behavior under subset closure, and the epi property of the localization map.
+Properties and uniqueness results for ring localizations.
+
+This module establishes that localization of a commutative ring at a subset is unique up to canonical isomorphism, and characterizes its categorical behavior. The central technique is the universal property: given two localizations, each lifts the inclusion of the other to produce a mutually inverse pair, yielding an isomorphism. The module also relates localization at a subset to localization at its multiplicative closure, and shows that the localization map is a categorical epimorphism in `CRing`.
 
 #### Uniqueness
 
-- **`localization-unique`**: Any two localizations of a commutative ring `R` at a sub-set `S` are equal: `l1 = l2`. Constructed by lifting between the two localizations to obtain an iso, then using `Cat.isotoid` to convert the iso into a path.
-- **`localization-unique.lift-iso`**: Given localizations `l1` at `S1` and `l2` at `S2` such that `S2`-elements become invertible in `l1` and `S1`-elements become invertible in `l2`, the universal map `l1.lift l2.inL p2` is an isomorphism. This is the core comparison lemma underlying uniqueness.
+- **`localization-unique`**: Any two localizations `l1 l2 : Localization R S` of a commutative ring `R` at a subset `S` are equal. Built by transporting along the canonical isomorphism produced by `lift-iso` between the two localizations.
+- **`localization-unique.lift-iso`**: Constructs an `Iso` between two localizations `l1` and `l2` (possibly at different subsets `S1`, `S2`) given that elements of each subset are inverted in the other localization. The isomorphism is the universal-property lift `l1.lift l2.inL p2`.
 
-#### Closure Invariance
+#### Closure Compatibility
 
-- **`localization-closure-equiv`**: Localizing at `S` is equivalent to localizing at its monoid closure `closure S`. Specifically, the lift `l1.lift l2.inL` from a localization at `S` to a localization at `closure S` is an iso, witnessing that closing `S` under multiplication and `1` does not change the localization.
-- **`localization-closure-equiv.inv-closure`**: In any localization `l` at `S`, every element of `closure S` becomes invertible: `closure S x -> Monoid.Inv (l.inL x)`. Justifies why lifting along the inclusion `S -> closure S` is well-defined.
+- **`localization-closure-equiv`**: A localization at `S` is canonically isomorphic to a localization at the multiplicative `closure S`. The map is the universal lift of `l2.inL` along the proof that elements of `S` (and hence of its closure) become invertible.
+- **`localization-closure-equiv.inv-closure`**: Auxiliary lemma showing that every element in the multiplicative closure of `S` is mapped to a `Monoid.Inv` element in any localization at `S`. Provides the invertibility data needed to apply the universal property.
 
-#### Epimorphism Property
+#### Categorical Properties
 
-- **`locMap-epi`**: The canonical localization map `locMap : R -> R[S^{-1}]` is an epimorphism in the category of commutative rings. Two ring homomorphisms out of the localization that agree after precomposing with `locMap` must be equal.
+- **`locMap-epi`**: The canonical localization map `locMap : R -> Loc R S` is an epimorphism in the category of commutative rings, for any `SubMonoid S` of `R`. Reflects the fact that ring homomorphisms out of a localization are determined by their values on the image of `R`.

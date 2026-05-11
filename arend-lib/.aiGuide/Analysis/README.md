@@ -1,25 +1,23 @@
-### Analysis Directory Overview
+### Analysis
 
-This directory provides limits, derivatives, series, power series, and measure theory for topological and normed algebraic structures.
+This directory formalizes mathematical analysis: convergence of nets and series, limits, derivatives, power series, and measure theory, developed over general topological/normed structures rather than fixed to the reals.
 
-#### Limits
+#### Limits and Convergence
 
-- **`Limit.md`**: Limits of nets (functions from directed sets) in cover spaces, with characterizations in uniform, topological-group, and metric settings.
-- **`FuncLimit.md`**: Convergence and limits of families of functions indexed by a directed set, with characterizations across cover, uniform, metric, and topological abelian group settings.
-
-#### Derivatives
-
-- **`Derivative.md`**: Directional and total derivatives for maps between topological left modules over a near skew field, with standard calculus lemmas.
-- **`StrongDerivative.md`**: Strong (Fréchet-style) differentiability for maps between topological modules over a near-skew-field, defined via continuous difference-quotient functions.
-- **`Calculus/SyntheticDerivative.md`**: Synthetic differential calculus over a discrete ring, defining differentiability and derivatives via Kock-Lawvere style nilpotent infinitesimals.
+- **`Limit.md`** — Convergence and limits of nets indexed by directed sets in cover spaces, with specializations to topological abelian groups and metric spaces, plus directed-set machinery (`SubPointDirectedSet`, `InvDirectedSet`) for limits at a point.
+- **`FuncLimit.md`** — Convergence of parametrized families of functions, uniform convergence, and limits along directed sets in cover/uniform/metric/topological-group settings.
 
 #### Series
 
-- **`Series.md`**: Infinite series in topological abelian groups — convergence, absolute convergence, partial sums, and standard convergence tests.
-- **`PowerSeries.md`**: Power series over extended pseudo-normed rings — convergence radius, absolute convergence, and the ratio test.
+- **`Series.md`** — Infinite series in topological abelian groups: ordinary and absolute convergence, mid-sums, Cauchy criterion, comparison/ratio/Weierstrass M-tests, and the `seriesSum` partial-valued sum operation.
+- **`PowerSeries.md`** — Formal power series over extended pseudo-normed rings, the radius of convergence as a `LowerReal`, absolute convergence inside the radius, and ratio-style convergence tests.
 
-#### Measure Theory
+#### Differentiation
 
-- **`Measure/MeasureRing.md`**: Measure rings — Boolean rings with a non-negative, countably-additive measure valued in upper reals, giving a topological abelian group structure.
-- **`Measure/OuterMeasureRing.md`**: Outer measure rings — Boolean pseudo-rings with a subadditive norm in extended reals, plus premeasure extension via filter limits. *(Currently commented out.)*
-- **`Measure/SimpleFunctions.md`**: Simple functions over a Riesz space with measurable predicates in a Boolean lattice, represented as quotients of arrays and equipped with abelian group, Q-module, and Riesz space structures.
+- **`Derivative.md`** — Directional and total (Fréchet-style) derivatives for maps between topological left modules over a near-skew field, defined via limits of difference quotients, with linearity, Leibniz, and chain rules.
+- **`StrongDerivative.md`** — Strong (Carathéodory-style) derivatives, defined by the existence of a continuous difference-quotient function, yielding linear-map derivatives and standard calculus rules at the quotient level.
+
+#### Subdirectories
+
+- **`Calculus/`** — Synthetic-differential-geometry style derivatives over rings with nilpotent infinitesimals.
+- **`Measure/`** — Measure theory: measure rings, outer measures, and integration of simple functions.

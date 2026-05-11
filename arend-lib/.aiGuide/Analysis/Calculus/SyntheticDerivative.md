@@ -1,28 +1,30 @@
 ### Analysis.Calculus.SyntheticDerivative
 
-Synthetic differential calculus over a discrete ring, defining differentiability and derivatives of maps between modules via the Kock-Lawvere style nilpotent infinitesimals.
+Synthetic differential calculus over a "differential ring" where derivatives are characterized by an algebraic remainder condition rather than limits.
 
-#### Base Ring
+This module formalizes differentiation in the style of synthetic differential geometry, replacing analytic limits with the algebraic property that `f(x + t·a) - f(x) = t·y` for some unique `y` (the directional derivative). The key structure is `DRing`, a commutative ring satisfying an "inverse-density" axiom that lets one cancel `t` whenever the equation holds for all invertible `t`. From this, derivatives become honest linear maps, and the standard calculus rules — linearity, composition (chain rule), and the Leibniz rule for bilinear maps — are derived purely algebraically. The use of a predicate `U` on the domain allows differentiation on arbitrary subsets, supporting partial functions.
 
-- **`DRing`**: Extends `CRing` with an `inv-dense` axiom: two functions on a subset agree everywhere if they agree on invertible elements. Captures rings where invertible elements are "dense" enough to determine equality.
-- **`DRing.cancel-lem`**: Cancellation lemma for module-valued functions — if `p.1 *c f p = p.1 *c g p` for all `p`, then `f p = g p`. Used to extract uniqueness of derivatives.
+#### Differential Ring
 
-#### Differentiability
+- **`DRing`**: A commutative ring extending `CRing` with the **`inv-dense`** axiom: any two functions defined on a subset that agree on all invertible elements agree everywhere. This is the core principle that makes derivatives unique despite being defined via the existence of remainders.
+- **`DRing.cancel-lem`**: Cancellation lemma — if `p.1 *c f p = p.1 *c g p` for all elements in the subset, then `f = g`. Uses `inv-dense` to extend cancellation from invertibles to the whole domain.
 
-- **`isDiff`**: The predicate that `f : \Sigma (x : A) (U x) -> B` is differentiable. For each base point `x`, direction `a`, and infinitesimal scalar `t`, there exists `y : B` with `t *c y = f(x + t*c a) - f x`. The witness `y` is the directional derivative.
-- **`isDiff.levelProp`**: `isDiff f` is a proposition — derivatives, when they exist, are unique.
-- **`isDiff.isDiff-eq`**: Derivative values agree under propositional equality of base points and scalars.
-- **`isDiffT`**: Total-space variant of `isDiff` for functions `f : A -> B` defined on the whole module (trivial subset).
+#### Differentiability Predicate
 
-#### The Derivative
+- **`isDiff`**: The differentiability predicate for `f : Σ (x : A) (U x) → B`. Asserts that for every base point `x`, direction `a`, and scalar `t` (with `x + t·a` still in `U`), there exists `y : B` with `t·y = f(x + t·a) - f(x)`. The witness `y` is the directional derivative at `x` in direction `a`.
+- **`isDiff.levelProp`**: Proof that `isDiff f` is a proposition — derivatives are unique when they exist, via `cancel-lem`.
+- **`isDiff.isDiff-eq`**: Equality lemma showing the derivative value depends only on the base point and the scalar, not on the proofs of subset membership.
+- **`isDiffT`**: Differentiability for total functions `A → B`, defined as `isDiff` over the trivial subset.
 
-- **`deriv`**: Extracts the derivative at a point `x` as a `LinearMap A B`. Linearity (`func-+`, `func-*c`) is established using `cancel-lem` and the `isDiff` data.
-- **`deriv.sub-lem`**: Helper showing `U (x.1 + 0 *c a)` from `U x.1`, used to instantiate the differentiability witness at zero.
+#### Derivative as Linear Map
 
-#### Differentiation Rules
+- **`deriv`**: Extracts the derivative of a differentiable `f` at a point `x` as a `LinearMap A B`. The underlying function takes a direction `a` to the witness `y` produced by `isDiff` at `t = 0`. Linearity (`func-+`, `func-*c`) follows from uniqueness of remainders.
+- **`deriv.sub-lem`**: Shows `U (x.1 + 0 *c a)` holds, used to evaluate the derivative at the base point.
 
-- **`linear_diff`**: Every `LinearMap A B` is differentiable, with derivative equal to the map itself.
-- **`const_diff`**: Constant functions are differentiable with zero derivative.
-- **`+_diff`**: Pointwise sum of differentiable functions is differentiable; derivative is the sum of derivatives.
-- **`o_diff`**: Chain rule — composition of differentiable functions is differentiable. Takes `df` for the inner map (on its first projection) and `dg` for the outer map, producing the derivative of `g ∘ f`.
-- **`bilinear_diff`**: A `BilinearMap A B C` is differentiable as a function on `\Sigma A B`, with derivative `m x.1 a.2 + m a.1 x.2 + t *c m a.1 a.2` (Leibniz rule plus a second-order infinitesimal correction).
+#### Calculus Rules
+
+- **`linear_diff`**: Linear maps are differentiable, with derivative equal to themselves: `f a` is the witness, since `f(x + t·a) - f x = t · f a`.
+- **`const_diff`**: Constant functions are differentiable with derivative `0`.
+- **`+_diff`**: Sum rule — if `f` and `g` are differentiable, so is `f + g`, with derivatives adding pointwise.
+- **`o_diff`**: Chain rule — composition `g ∘ f` is differentiable when both `f` and `g` are; the derivative of `f` shifts the base point of `g`'s derivative.
+- **`bilinear_diff`**: Leibniz rule for bilinear maps — `m : A × B → C` is differentiable with directional derivative `m x.1 a.2 + m a.1 x.2 + t · m a.1 a.2`, recovering the product rule when `m` is multiplication.

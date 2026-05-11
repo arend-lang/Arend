@@ -1,28 +1,33 @@
 ### Topology.NormedAbGroup.ExComplete
 
-Completion construction for extended pseudo-normed abelian groups, producing complete extended normed abelian groups with universal lifting properties.
+Completion of extended pseudo-normed abelian groups into complete extended normed abelian groups.
+
+This module constructs the universal completion of an `ExPseudoNormedAbGroup` `X` as a `CompleteExNormedAbGroup`, extending the metric-space completion with compatible group structure and norm. The norm of a regular Cauchy filter is defined via its underlying upper real, characterized as the distance to the zero filter. A separation reflection collapses points at zero distance via a quotient, and the composite isometry into the completion is dense, providing the universal property used to lift normed maps from `X` into any complete target.
 
 #### Universal Lifting
 
-- **`dense-normed-lift`**: Lifts a normed abelian group map `g : X -> Z` along a dense normed isometric embedding `f : X -> Y` to a normed map `Y -> Z`, where `Z` is a complete extended normed abelian group. Combines `dense-metric-lift` and `dense-topAb-lift` while preserving the norm.
-- **`dense-normed-lift.char`**: Characterizing equation `dense-normed-lift f fd g (f x) = g x` showing the lift extends `g` along `f`.
+- **`dense-normed-lift`**: Given a dense normed isometric embedding `f : X -> Y` and a normed group map `g : X -> Z` into a complete extended normed abelian group `Z`, produces the unique `NormedAbGroupMap Y -> Z` extending `g`. Combines `dense-metric-lift` and `dense-topAb-lift` while preserving norms.
+- **`dense-normed-lift.char`**: Computes the lifted map on the image: `dense-normed-lift f fd g (f x) = g x`.
 
-#### Completion
+#### Completion as Normed Group
 
-- **`ExNormedAbGroupCompletion`**: The completion of an extended pseudo-normed abelian group `X` as a `CompleteExNormedAbGroup`. Combines `ExMetricCompletion` and `TopAbGroupCompletion`, with norm extended to Cauchy filters.
-- **`ExNormedAbGroupCompletion.filter-norm_dist`**: Identifies the norm of a regular Cauchy filter `F` with its distance to the point filter at `0`.
-- **`ExNormedAbGroupCompletion.norm-cont`**: Continuity of the norm `ExMetricCompletion X -> ExUpperRealMetric` on the completion.
-- **`completion-exNormed-isometry`**: The canonical normed isometric embedding `X -> ExNormedAbGroupCompletion X`, extending `completion-ex-isometry` with group structure preservation.
+- **`ExNormedAbGroupCompletion`**: The completion of `X : ExPseudoNormedAbGroup` as a `CompleteExNormedAbGroup`. Combines `ExMetricCompletion X` (metric structure) and `TopAbGroupCompletion X` (topological group structure). The norm of a regular Cauchy filter `F` is the upper real whose underlying set of rationals consists of `q` such that some smaller `r < q` and some `U ∈ F` satisfy `(norm x).U r` for all `x ∈ U`.
+- **`ExNormedAbGroupCompletion.filter-norm_dist`**: Identifies the filter norm with the metric distance to the zero point filter: `norm F = dist F (pointCF 0)`.
+- **`ExNormedAbGroupCompletion.norm-cont`**: The norm map on the completion is continuous into `ExUpperRealMetric`.
 
-#### Separated Reflection
+#### Canonical Embedding
 
-- **`SeparatedNormedAbGroupReflection`**: The Hausdorff/separated reflection of an extended pseudo-normed abelian group `X`, obtained as the quotient `Quot X` by the equivalence `norm (x - x') = 0`. An `ExNormedAbGroup` instance with induced group operations and norm.
-- **`SeparatedNormedAbGroupReflection.Quot`**: The underlying quotient set `Quotient {X} (\lam x x' => X.norm (x - x') = 0)`.
-- **`SeparatedNormedAbGroupReflection.inN`**: The canonical projection `X -> Quot X` sending `x` to its equivalence class.
-- **`SeparatedNormedAbGroupReflection.~-nequiv`**: If `norm (x - x') = 0` then `inN x = inN x'` in the reflection.
-- **`SeparatedNormedAbGroupReflection.inN-isometry`**: The projection `inN` as a normed isometric map `X -> SeparatedNormedAbGroupReflection X`.
+- **`completion-exNormed-isometry`**: The canonical isometric inclusion `X -> ExNormedAbGroupCompletion X` as a `NormedIsometricMap`, packaging `completion-ex-isometry` with additivity.
 
-#### Separated Completion
+#### Separation Reflection
 
-- **`separated-completion`**: The induced normed isometric map `SeparatedNormedAbGroupReflection X -> ExNormedAbGroupCompletion X`, factoring the completion through the separated reflection.
-- **`separated-completion.isDense`**: The image of the separated reflection is dense in the completion.
+- **`SeparatedNormedAbGroupReflection`**: For `X : ExPseudoNormedAbGroup`, constructs an `ExNormedAbGroup` on the quotient by the equivalence `x ~ x' ⇔ norm (x - x') = 0`, eliminating the failure of separation in the pseudo-normed setting. Defines `zro`, `+`, `negative`, and `norm` on the quotient, with each operation verified to respect the equivalence.
+- **`SeparatedNormedAbGroupReflection.Quot`**: The underlying setoid quotient `Quotient {X} (\lam x x' => norm (x - x') = 0)`.
+- **`SeparatedNormedAbGroupReflection.inN`**: The canonical projection `X -> Quot X`.
+- **`SeparatedNormedAbGroupReflection.~-nequiv`**: If `norm (x - x') = 0` then `inN x = inN x'` in the quotient.
+- **`SeparatedNormedAbGroupReflection.inN-isometry`**: Packages `inN` as a `NormedIsometricMap` from `X` to its separated reflection.
+
+#### Reflection-to-Completion Map
+
+- **`separated-completion`**: The canonical normed isometric map `SeparatedNormedAbGroupReflection X -> ExNormedAbGroupCompletion X`, sending `in~ x` to the principal Cauchy filter `pointCF x`. Well-definedness uses that points at zero distance generate the same filter, established via a ball-shrinking argument with the triangle inequality.
+- **`separated-completion.isDense`**: The map `separated-completion` is dense in the completion, so the completion is the closure of the separated reflection.

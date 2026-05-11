@@ -1,24 +1,33 @@
-### Set Directory Overview
+### Set
 
-This directory provides set-level types, finiteness notions, filters, subsets, and categorical structure for sets.
+This directory formalizes h-sets and the structures built on them: subsets and their lattice/locale, finite and countable sets, filters, partial elements, set-theoretic categorical structure, and tools for proving types are sets.
 
-#### Core Set Theory
+#### Set Criteria
 
-- **`Hedberg.md`**: Hedberg's theorem and related lemmas — types with decidable (or relation-mediated) equality are sets.
-- **`Partial.md`**: Partial elements of a set — values defined on a propositional domain, supporting extensionality, lifting of functions, and a partial-monoid structure.
-- **`Countable.md`**: Countable types — bijections between `Nat` and various structured types (`Nat × Nat`, tuples, arrays, sums), plus a notion of countability via partial enumeration.
+- **`Hedberg.md`** — Hedberg's theorem and relation-based criteria for upgrading a type to an h-set (UIP).
 
-#### Finite Sets
+#### Morphisms and Categorical Structure
 
-- **`Fin.md`**: Finite sets as types equipped with a cardinality and a merely-existing equivalence with `Fin n`, together with constructions of common finite sets and search/decidability lemmas.
-- **`Fin/`**: Subdirectory contains `DFin.md` (Dedekind-finite sets: injective endofunctions are surjective), `KFin.md` (Kuratowski-finite sets: types admitting a surjection from a standard finite type), `Instances.md` (finiteness instances for sigma types, products, and dependent function types with cardinality formulas), `Pigeonhole.md` (pigeonhole principle for finite sets).
+- **`SetHom.md`** — The base record of a function between bare sets, used as the carrier of richer algebraic homomorphisms.
+- **`SetCategory.md`** — The bicomplete category `SetCat` of h-sets, with concrete (co)limits, set colimits over small precategories, and a structure identity principle.
 
-#### Subsets and Filters
+#### Subsets
 
-- **`Subset.md`**: Subsets of a type as `\Prop`-valued predicates, equipped with a frame/locale structure, together with operations on subsets, covers, and refinements.
-- **`Filter.md`**: Filters on meet-semilattices and on subset lattices, including proper/weakly-proper variants and their semilattice structure.
+- **`Subset.md`** — Subsets as predicates `X -> \Prop`, the powerset locale `SetLattice`, preimage as a frame homomorphism, and the language of covers and refinements.
 
-#### Categorical Structure
+#### Finite and Countable Sets
 
-- **`SetHom.md`**: A bare function between two sets, packaging domain, codomain, and the underlying map.
-- **`SetCategory.md`**: The category of sets, its bicomplete structure, and a construction of filtered colimits via quotients.
+- **`Fin.md`** — The `FinSet` class of types with a chosen cardinality and a propositional bijection to `Fin n`, with combinatorics, search, and standard instances.
+- **`Countable.md`** — Countable sets via partial surjections `Nat -> Maybe A` and explicit `Nat`-bijections, closed under sums, surjections, quotients, and factor rings.
+
+#### Filters
+
+- **`Filter.md`** — Filters on top meet-semilattices, specialized to subsets with proper/weakly-proper variants, pushforward along functions, and a meet-semilattice structure.
+
+#### Partial Elements
+
+- **`Partial.md`** — Partial elements as a propositional definedness paired with a value, with extensionality lemmas, functorial lifts, and a pointwise `AddMonoid` instance.
+
+#### Subdirectories
+
+- **`Fin/`** — Further development of finite sets: Kuratowski-finite sets, decidable-finite variants, the pigeonhole principle, and concrete `FinSet` instances.

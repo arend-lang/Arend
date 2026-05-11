@@ -1,17 +1,25 @@
 ### Category.KanExtension
 
-Left and right Kan extensions of functors along a functor between small categories, computed pointwise via (co)limits over comma categories.
+Constructions of left and right Kan extensions of functors along functors between small categories.
+
+Given a functor `p : C -> C'` and `F : C -> D`, the right Kan extension `Ran_p F : C' -> D` is built pointwise as a limit over the comma category `(b ↓ p)` for each `b : C'`, requiring `D` to be complete. The left Kan extension is obtained by dualizing the right Kan extension construction. The module also provides a `DoubleLimit` class establishing the universal/Fubini-style relationship between a limit of the Kan extension along a diagram `G : J -> C'` and the limit of `F` over the combined comma category, giving the canonical iso that justifies "limits commute with right Kan extensions".
 
 #### Kan Extensions
 
-- **`LeftKanExt`**: Given `p : Functor C C'` and `F : Functor C D` with `D` cocomplete, produces the left Kan extension `Functor C' D`. Defined by dualizing `RightKanExt` on opposite categories.
-- **`RightKanExt`**: Given `p : Functor C C'` and `F : Functor C D` with `D` complete, produces the right Kan extension `Functor C' D`. The object map sends `c'` to the limit of `F` over the comma category `(c' ↓ p)`; the morphism map is induced by precomposing the cone with the comma-category functor.
+- **`LeftKanExt`**: Left Kan extension `Lan_p F : C' -> D` of `F : C -> D` along `p : C -> C'`, defined by op-dualization of `RightKanExt` (requires `D` cocomplete).
+- **`RightKanExt`**: Right Kan extension `Ran_p F : C' -> D` along `p : C -> C'` (requires `D` complete). On objects sends `c'` to the limit of `F` over the comma category `(c' ↓ p)`; on morphisms uses the universal property via `commaFunctor` to reindex cones.
 
-#### Pointwise Construction (in `\where`)
+#### Pointwise Limit Helpers
 
-- **`lim`**: The pointwise limit defining the Kan extension at `b : C'`, namely `D.limit (Comp F (commaPrecat.rightForget (Const b) p))` — the limit of `F` restricted to the comma category over `b`.
-- **`commaFunctor`**: For `f : Hom y x` in `C'`, the induced functor between comma categories `(y ↓ p) → (x ↓ p)` used to transport cones along morphisms in `C'`.
+- **`RightKanExt.lim`**: The pointwise value of the right Kan extension at `b : C'`, computed as `D.limit (F ∘ rightForget (Const b) p)` — i.e. the limit of `F` over the comma category `(b ↓ p)`.
+- **`RightKanExt.commaFunctor`**: For `f : y -> x` in `C'`, the induced functor between comma categories `(x ↓ p) -> (y ↓ p)` used to define the action of `RightKanExt` on morphisms.
 
-#### Auxiliary Class
+#### Iterated Limits over Kan Extensions
 
-- **`DoubleLimit`**: Bundles the data `J, C, C' : SmallPrecat`, `D : CompletePrecat`, a functor `p : C → C'`, a diagram `F : C → D`, and an indexing functor `G : J → C'`, packaging the setup for iterated/double-limit constructions.
+- **`DoubleLimit`**: Class parameterized by `p : C -> C'`, `F : C -> D`, and a diagram `G : J -> C'`, packaging the comparison between `lim_J (Ran_p F ∘ G)` and the limit of `F` over the total comma category `(G ↓ p)`.
+  - **`lim'`**: The limit of `F ∘ rightForget G p` — i.e. the "outer" combined limit.
+  - **`cone`**: A cone over `F ∘ rightForget G p` with apex `D.limit (Ran_p F ∘ G)`, built by composing limit projections through both forgetful functors.
+  - **`cone'`**, **`cone''`**: Cones that exhibit `lim'` as a cone over `Ran_p F ∘ G` (and over each fiber `lim F (G j)`).
+  - **`iso`**: The canonical isomorphism `D.limit (Ran_p F ∘ G) ≅ lim'`, expressing that taking the limit over `J` of the pointwise Kan extension agrees with the joint limit.
+  - **`map_cone`**: Lifts a cone `c` over `G` to a cone over `F ∘ rightForget G p` with apex `Ran_p F c`.
+  - **`map_iso`**: If the induced map `lim'.limMap (map_cone c)` is an iso, then so is `limMap (Cone.map (Ran_p F) c)` — used to transport limit-preservation along Kan extension.

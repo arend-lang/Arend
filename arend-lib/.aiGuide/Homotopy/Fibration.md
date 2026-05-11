@@ -1,19 +1,21 @@
 ### Homotopy.Fibration
 
-Defines total spaces of type families and homotopy fibers of maps, with characterization of their path types.
+Homotopy fibers and total spaces of type families.
 
-#### Total Spaces
+This module provides the basic homotopy-theoretic notion of a fiber `Fib f b` of a map `f : A -> B` over a basepoint `b : B`, defined as the type of pairs `(a, p)` with `p : f a = b`. The total space of a type family is also defined here as a dependent sum. The key technical content is the path characterization for fibers: paths in `Fib f b0` correspond to pairs `(p, q)` where `p` equates the underlying points and `q` shows that transporting along `f p` matches the fiber proofs, packaged as a `QEquiv` so that fiber equality can be reasoned about componentwise.
 
-- **`Total`**: Total space `\Sigma (b : B) (F b)` of a type family `F : B -> \Type`.
-- **`Total.proj`**: First projection `Total F -> B` extracting the base point.
+#### Total Space
 
-#### Homotopy Fibers
+- **`Total`**: Total space of a type family `F : B -> \Type`, defined as `\Sigma (b : B) (F b)`.
+- **`Total.proj`**: First projection from the total space, sending `(b, _)` to `b`.
 
-- **`Fib`**: Homotopy fiber `\Sigma (a : A) (f a = base)` of a map `f : A -> B` over a point `base : B`.
-- **`Fib.make`**: Constructor for fiber elements from a point `a : A` and a path `f a = base`.
+#### Homotopy Fiber
 
-#### Path Characterization in Fibers
+- **`Fib`**: Homotopy fiber of `f : A -> B` over `base : B`, defined as `\Sigma (a : A) (f a = base)`.
+- **`Fib.make`**: Constructor for a fiber element from a point `a : A` and a witness `p : f a = base`.
 
-- **`Fib.ext`**: Extensionality for fibers — produces `x = x'` in `Fib f b0` from a path `p : x.1 = x'.1` between underlying points and a coherence `pmap f p *> x'.2 = x.2`.
-- **`Fib.ext.retraction`**: Helper providing the retraction data witnessing that `ext` is a section, used to establish the equivalence below.
-- **`Fib.equiv`**: Quasi-equivalence `(x = x') ≃ \Sigma (p : x.1 = x'.1) (pmap f p *> x'.2 = x.2)`, characterizing identity types of homotopy fibers via underlying paths plus coherence.
+#### Path Characterization
+
+- **`Fib.ext`**: Extensionality for fibers: given `p : x.1 = x'.1` and `q : pmap f p *> x'.2 = x.2`, produces an equality `x = x'` in `Fib f b0`.
+- **`Fib.ext.retraction`**: Underlying retraction lemma showing that the constructed path `x = x'` transports the trivial pair `(idp, idp_*> x.2)` to the given `(p, q)`; used to establish that `ext` is a section.
+- **`Fib.equiv`**: Quasi-equivalence `(x = x') ≃ \Sigma (p : x.1 = x'.1) (pmap f p *> x'.2 = x.2)`, characterizing path equality in the fiber via componentwise data and built using `pathEquiv` from the retraction provided by `ext`.

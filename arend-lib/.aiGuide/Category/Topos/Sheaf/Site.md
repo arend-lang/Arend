@@ -1,22 +1,34 @@
 ### Category.Topos.Sheaf.Site
 
-Sites, sieves, and presieves — the categorical foundations for sheaf theory and Grothendieck topologies.
+Sites and sieves: the Grothendieck-style covering data underlying sheaf theory.
 
-#### Presieves and Sieves
+This module formalizes the covering structure on a category that is needed to define sheaves. A `Presieve` on an object `x` is a family of morphisms into `x`; a `Sieve` is a presieve closed under precomposition. A `Site` equips a category with a notion of covering sieve stable under pullback, while a `SiteWithBasis` presents covers via a basis of pullback-stable families (mirroring the classical "basis for a Grothendieck topology"). Each presieve carries an associated diagram and cone, so covering data interacts directly with the limit machinery used to define sheaves as functors that turn covering cones into limits.
 
-- **`Presieve`**: A class capturing a family of morphisms into an object `x : C`, given by `S : Hom y x -> \Prop` for each `y : C`.
-- **`Presieve.idLimit`**: If a presieve `S` contains `id x`, then `Cone.map F S.cone` is a limit cone for any functor `F : C.op -> D`.
-- **`Presieve.transLimit`**: Transitivity of limits along presieves: given two presieves `S1`, `S2` and limits for `S2.pullback` along every `S1`-morphism (and along all morphisms via `S1` pullbacks), produces a limit cone for `S2`.
-- **`Sieve`**: Extends `Presieve` with closure under precomposition (`isSieve`): if `S f` holds then `S (f ∘ g)` holds.
-- **`Sieve.map`**: Pushforward of a sieve along a functor `F : C -> D`: at `y : D` contains morphisms factoring as `F g ∘ f` with `g` in the source sieve.
+#### Presieves
+
+- **`Presieve`**: A family `S : \Pi {y : C} -> Hom y x -> \Prop` of morphisms into a fixed object `x`; coerces to its underlying predicate.
+- **`Presieve.diagram`**: The diagram in `C` indexed by morphisms in the presieve, obtained by composing the slice forgetful functor with the embedding of the sub-slice on `S`.
+- **`Presieve.cone`**: The canonical cone over `diagram.op` with apex `x`, whose components are the morphisms of the presieve.
+- **`Presieve.pullback`**: Pullback of a presieve along `h : Hom y x`: `\lam g => S (h ∘ g)`.
+- **`Presieve.pullback_id`**: Pulling back along the identity recovers the original presieve.
+- **`Presieve.idLimit`**: If `S` contains the identity on `x`, then any cone obtained by pushing `S.cone` through a contravariant functor `F` is a limit (the identity makes the cone trivially universal).
+- **`Presieve.transLimit`**: Transitivity of "being a limit cone": if `F` turns `S2.pullback h` into a limit for every `h`, and `S1` covers `a`, then `F` turns `S2.cone` into a limit. Used to glue local sheaf conditions into global ones.
+
+#### Sieves
+
+- **`Sieve`**: A `Presieve` together with closure under precomposition (`isSieve`): `S f` implies `S (f ∘ g)`.
+- **`Sieve.pullback`**: Pullback of a sieve along `h`, automatically still a sieve.
+- **`Sieve.map`**: Pushforward of a sieve along a functor `F : C -> D`; the resulting sieve on `F s.x` consists of morphisms that factor through some `F.Func g` for `g` in `s`.
 
 #### Sites
 
-- **`Site`**: Extends `Precat` with a coverage `isCover : (x : Ob) -> Sieve x -> \Prop` satisfying stability under pullback (`cover-stable`).
-- **`SitePrehom`**: Extends `Functor` between sites, required to send covering sieves to covering sieves (`F-cover`).
-- **`inducedSite`**: Pulls back a site structure along a functor `F : C -> D`: a sieve `s` on `x` covers iff there is a covering sieve `s'` on `F x` with `s h ↔ s' (F h)`.
+- **`Site`**: A `Precat` together with a predicate `isCover : \Pi (x : Ob) -> Sieve x -> \Prop` satisfying `cover-stable`: covers pull back to covers along arbitrary morphisms.
+- **`SitePrehom`**: A functor between sites that preserves covers, i.e. sends covering sieves to covering sieves via `Sieve.map`. Extends `Functor`.
+- **`inducedSite`**: Pulls back a site structure on `D` along a functor `F : C -> D`: a sieve on `x` covers iff it equals the `F`-preimage of some cover of `F x`.
 
 #### Sites with a Basis
 
-- **`SiteWithBasis`**: Extends `Site` and `PrecatWithPullbacks` with a notion of `isBasicCover` indexed by a `\Set`; the induced coverage consists of sieves containing some basic cover, with `cover-stable` derived via pullback of the indexing family.
-- **`SiteWithBasisPrehom`**: Extends `Functor` between sites with bases, requiring preservation of basic covers (`F-basicCover`) and that the comparison map `F(pullback f g) -> pullback (F f) (F g)` is an iso (`F-pullback`).
+- **`SiteWithBasis`**: A site with chosen pullbacks (extends `Site` and `PrecatWithPullbacks`) presented by a basis `isBasicCover x g` on indexed families `g : J -> SlicePrecat x`. The induced `isCover` says a sieve covers iff it contains some basic family, and `cover-stable` is derived from `basicCover-stable` plus pullback compatibility.
+- **`SiteWithBasis.basicCover-stable`**: Basic covers are stable under pullback along arbitrary morphisms, using the chosen `pullbackFunctor`.
+- **`SiteWithBasis.genSieve`**: The sieve generated by a basic family `g`: morphisms that factor through some `(g j).2`.
+- **`SiteWithBasisPrehom`**: A functor between sites-with-basis (extends `Functor`) preserving basic covers (`F-basicCover`) and chosen pullbacks up to a canonical iso (`F-pullback`).
