@@ -52,6 +52,9 @@ public final class SymbolSearch {
       }
     }
 
+    warnAboutPipes(compiled);
+    System.out.println(formatQueryEcho(compiled, options));
+
     List<SourceLibrary> libsInScope = librariesInScope(requestedLibraries, libraryManager, options);
     if (libsInScope.isEmpty()) {
       System.out.println("No libraries to search.");
@@ -131,6 +134,79 @@ public final class SymbolSearch {
       System.out.println(lib.getLibraryName() + ": indexed (" + rebuilt
           + " stale module" + (rebuilt == 1 ? "" : "s") + " re-parsed).");
     }
+  }
+
+  /**
+   * Soft-warn once if any plain-mode pattern contains '|'. '|' is a legitimate
+   * Arend identifier character, so we cannot treat it as OR, but the user may
+   * have expected grep-style alternation — call it out.
+   */
+  private static void warnAboutPipes(List<SymbolPattern> patterns) {
+    for (SymbolPattern p : patterns) {
+      if (p.mode() == SymbolPattern.Mode.LITERAL && p.source().indexOf('|') >= 0) {
+        System.err.println("[WARN] '|' in pattern '" + p.source() + "' is matched literally, not as OR.");
+        System.err.println("       For OR, use whitespace or multiple -ss flags: -ss \"A B C\" or -ss A -ss B -ss C.");
+        return;
+      }
+    }
+  }
+
+  /**
+   * Echoes how each pattern was interpreted so a misparse (e.g. literal
+   * substring with spaces vs. OR'd tokens) shows up at a glance. Compact form
+   * for short queries with no extra filters; multi-line block otherwise.
+   */
+  static String formatQueryEcho(List<SymbolPattern> patterns, Options opts) {
+    String filters = describeFilters(opts);
+    boolean compact = patterns.size() <= 3 && filters.isEmpty();
+    StringBuilder sb = new StringBuilder();
+    if (compact) {
+      sb.append(patterns.size() == 1 ? "Searching for: " : "Searching for (OR): ");
+      for (int i = 0; i < patterns.size(); i++) {
+        if (i > 0) sb.append(", ");
+        sb.append(describePattern(patterns.get(i)));
+      }
+    } else {
+      sb.append("Searching for (OR):");
+      for (SymbolPattern p : patterns) sb.append("\n  ").append(describePattern(p));
+      if (!filters.isEmpty()) sb.append("\nFilters: ").append(filters);
+    }
+    return sb.toString();
+  }
+
+  private static String describePattern(SymbolPattern p) {
+    String tag = switch (p.mode()) {
+      case LITERAL -> "literal";
+      case LIT -> "literal";
+      case EQ -> "exact";
+      case GLOB -> "glob";
+      case REGEX -> "regex";
+      case HUMPBACK -> "humpback";
+    };
+    String body = "'" + p.body() + "'";
+    return switch (p.mode()) {
+      case GLOB, HUMPBACK -> tag + " " + body + " → /" + p.compiledRegex() + "/";
+      default -> tag + " " + body;
+    };
+  }
+
+  private static String describeFilters(Options opts) {
+    StringJoiner sj = new StringJoiner(", ");
+    if (opts.caseSensitive) sj.add("case-sensitive");
+    if (opts.noCache) sj.add("no-cache");
+    if (opts.limit != 200) sj.add("limit=" + opts.limit);
+    for (String c : opts.containsFilters) sj.add("contains='" + c + "'");
+    if (opts.kinds.size() != SymbolIndex.Kind.values().length) {
+      StringJoiner ks = new StringJoiner(",");
+      for (SymbolIndex.Kind k : opts.kinds) ks.add(k.name().toLowerCase(Locale.ROOT));
+      sj.add("kind=" + ks);
+    }
+    if (opts.onlyLibraries != null) {
+      StringJoiner ls = new StringJoiner(",");
+      for (String s : opts.onlyLibraries) ls.add(s);
+      sj.add("only=" + ls);
+    }
+    return sj.toString();
   }
 
   private static boolean matchesAny(List<SymbolPattern> patterns, String shortName) {
@@ -228,7 +304,19 @@ public final class SymbolSearch {
           if (!s.isEmpty()) opts.onlyLibraries.add(s.trim());
         }
       } else {
-        patterns.add(arg);
+        // Whitespace inside one -ss arg splits into multiple OR'd patterns,
+        // so `-ss "A B C"` is equivalent to `-ss A -ss B -ss C`. Catches the
+        // common "I thought quoted spaces meant OR" mistake that used to
+        // match the literal string with spaces and return zero hits.
+        for (String tok : arg.trim().split("\\s+")) {
+          if (tok.isEmpty()) continue;
+          if (tok.equals("-ss")) {
+            System.err.println("[ERROR] '-ss' inside quoted argument '" + arg
+                + "' — pass each pattern as a separate -ss flag");
+            return null;
+          }
+          patterns.add(tok);
+        }
       }
     }
     if (patterns.isEmpty()) {
