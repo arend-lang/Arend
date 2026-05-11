@@ -498,15 +498,35 @@ public class ConsoleMain {
       // Typecheck Prelude first — binary cache loading needs Prelude definitions to be available
       server.getCheckerFor(Collections.singletonList(Prelude.MODULE_LOCATION))
           .typecheck(UnstoppableCancellationIndicator.INSTANCE, ProgressReporter.empty());
-      for (SourceLibrary library : requestedLibraries) {
-        List<ModuleLocation> allModules = library.findModules(false).stream()
-            .map(mp -> new ModuleLocation(library.getLibraryName(), ModuleLocation.LocationKind.SOURCE, mp))
-            .toList();
-        if (!allModules.isEmpty()) {
-          // resolveAll forces raw loading of all modules and their transitive dependencies
-          server.getCheckerFor(allModules).resolveAll(UnstoppableCancellationIndicator.INSTANCE, ProgressReporter.empty());
-          // Now load typechecked definitions from binary caches
-          requester.loadBinaryCache(library, server);
+      if (requestedModules.isEmpty()) {
+        // Whole-library typechecking: pre-load every module of each requested library.
+        for (SourceLibrary library : requestedLibraries) {
+          List<ModuleLocation> allModules = library.findModules(false).stream()
+              .map(mp -> new ModuleLocation(library.getLibraryName(), ModuleLocation.LocationKind.SOURCE, mp))
+              .toList();
+          if (!allModules.isEmpty()) {
+            // resolveAll forces raw loading of all modules and their transitive dependencies
+            server.getCheckerFor(allModules).resolveAll(UnstoppableCancellationIndicator.INSTANCE, ProgressReporter.empty());
+            // Now load typechecked definitions from binary caches
+            requester.loadBinaryCache(library, server);
+          }
+        }
+      } else {
+        // Targeted typechecking: seed resolveAll with just the requested modules
+        // so only their transitive import cone is raw-loaded. loadBinaryCache then
+        // iterates server.getModules() — by now the cone — and only deserializes
+        // ARCs in it, avoiding the cost of touching every cached file in a large
+        // dependency library like arend-lib.
+        List<ModuleLocation> targets = new ArrayList<>();
+        for (Pair<ModulePath, LongName> requested : requestedModules) {
+          ModuleLocation module = server.findModule(requested.proj1, null, true, false);
+          if (module != null) targets.add(module);
+        }
+        if (!targets.isEmpty()) {
+          server.getCheckerFor(targets).resolveAll(UnstoppableCancellationIndicator.INSTANCE, ProgressReporter.empty());
+          for (SourceLibrary library : requestedLibraries) {
+            requester.loadBinaryCache(library, server);
+          }
         }
       }
       // Report goals from definitions loaded from binary cache
