@@ -12,7 +12,7 @@ import org.arend.ext.prettyprinting.PrettyPrinterFlag;
 import org.arend.ext.util.Pair;
 import org.arend.frontend.library.*;
 import org.arend.frontend.repl.PlainCliRepl;
-import org.arend.frontend.symbol.ReferenceResolveAutoFix;
+import org.arend.frontend.symbol.ReferenceResolveSuggest;
 import org.arend.frontend.symbol.SignatureFileWriter;
 import org.arend.frontend.symbol.SymbolSearch;
 import org.arend.frontend.repl.jline.JLineCliRepl;
@@ -214,15 +214,18 @@ public class ConsoleMain {
 
       Agent-oriented all-in-one mode. Runs in sequence:
 
-        1. Name resolution with auto-fix
+        1. Name resolution (suggest-only)
            For each unresolved short name, looks candidates up in the
-           binary symbol index. If exactly one candidate exists, rewrites
-           the source file to use the qualified name and adds the
-           required import. If multiple candidates exist, lists them so
-           you can pick one and re-run.
+           binary symbol index and prints a "Candidates for 'X' at ..."
+           block listing each match's library::module:longName, the
+           qualified name to splice into the source, and any required
+           import. The CLI never rewrites your sources -- pick the
+           right candidate and paste it in yourself. (An earlier
+           auto-rewrite version was retired because position/length
+           mistakes could mangle identifiers when several refs failed
+           on the same line.)
         2. Typecheck
-           Standard typecheck pass on the in-scope modules. Auto-fixed
-           sources are reloaded automatically (no re-run required).
+           Standard typecheck pass on the in-scope modules.
         3. Signature mirror
            Writes signature-only views of every typechecked module to
            <library>/.sig/<module>.ard. Function/lemma/instance bodies
@@ -485,7 +488,7 @@ public class ConsoleMain {
           .desc("print super/sub-class trees plus \\new and \\instance sites. Accepts MODULE:CLASS or a bare class name (resolved via the symbol index). Pass `-ch help` for full grammar.").build());
       cmdOptions.addOption(Option.builder("sc").longOpt("scope").hasArgs().argName("REFERABLE")
           .desc("dump the ambient scope at a referable's position; debug aid for reference-resolution issues. Accepts MODULE:PATH or a bare short name, plus an optional -ss-style pattern to filter results. Pass `-sc help` for full grammar.").build());
-      cmdOptions.addOption(Option.builder("ai").longOpt("ai-pipeline").desc("agent-oriented all-in-one mode: (1) name-resolve with auto-fix (rewrites unique candidates, lists alternatives otherwise), (2) typecheck, (3) emit signature-only mirrors to <library>/.sig/<module>.ard for verified definitions only (failed defs replaced with `-- skipped:` comments), (4) refresh the binary symbol index used by -ss/-fu/-ch/-sc. Honors positional-arg granularity (no args = library; MODULE; MODULE:DEF). Pass `-ai help` for full grammar.").build());
+      cmdOptions.addOption(Option.builder("ai").longOpt("ai-pipeline").desc("agent-oriented all-in-one mode: (1) name-resolve: for each unresolved short name, list candidates (qualified name + required imports) the user can paste back into the source -- never rewrites, (2) typecheck, (3) emit signature-only mirrors to <library>/.sig/<module>.ard for verified definitions only (failed defs replaced with `-- skipped:` comments), (4) refresh the binary symbol index used by -ss/-fu/-ch/-sc. Honors positional-arg granularity (no args = library; MODULE; MODULE:DEF). Pass `-ai help` for full grammar.").build());
       cmdOptions.addOption("r", "recompile", false, "recompile all modules from source, ignoring binary caches (.arc files)");
       cmdOptions.addOption("t", "test", false, "run tests");
       cmdOptions.addOption("v", "version", false, "print language version");
@@ -960,7 +963,7 @@ public class ConsoleMain {
     ProgressReporter<List<? extends Concrete.ResolvableDefinition>> progressReporter = timedProgressReporter != null ? timedProgressReporter : ProgressReporter.empty();
 
     if (aiMode) {
-      runAiAutoFix(server, requestedLibraries, requestedModules, libraryManager);
+      runAiNameResolve(server, requestedLibraries, requestedModules, libraryManager);
     }
 
     // Pre-load binary caches (unless --recompile is set)
@@ -1317,14 +1320,14 @@ public class ConsoleMain {
   /**
    * Step 1 of the -ai pipeline: resolve every module in scope, buffer the
    * resulting name-resolution errors, hand them to {@link
-   * ReferenceResolveAutoFix} to rewrite unique-candidate references and list
-   * alternatives for ambiguous ones, then invalidate any rewritten module so
-   * the subsequent typecheck phase reads fresh sources.
+   * ReferenceResolveSuggest} to look up candidates for each unresolved short
+   * name, and print the candidate list (qualified name + required imports)
+   * for the user to apply manually. Never rewrites sources.
    */
-  private void runAiAutoFix(ArendServer server, List<SourceLibrary> requestedLibraries,
-                            Set<Pair<ModulePath, LongName>> requestedModules, LibraryManager libraryManager) {
+  private void runAiNameResolve(ArendServer server, List<SourceLibrary> requestedLibraries,
+                                Set<Pair<ModulePath, LongName>> requestedModules, LibraryManager libraryManager) {
     System.out.println();
-    System.out.println("--- AI: resolve + auto-fix ---");
+    System.out.println("--- AI: resolve + suggest ---");
     long t = System.currentTimeMillis();
     myBufferErrors = true;
     myBufferedErrors.clear();
@@ -1352,25 +1355,16 @@ public class ConsoleMain {
       myBufferErrors = false;
     }
 
-    ReferenceResolveAutoFix.Result result =
-        ReferenceResolveAutoFix.process(server, libraryManager, myBufferedErrors, requestedLibraries);
+    ReferenceResolveSuggest.Result result =
+        ReferenceResolveSuggest.process(server, libraryManager, myBufferedErrors, requestedLibraries);
 
     for (GeneralError error : result.errorsToPrint()) printError(error);
     for (String block : result.suggestionBlocks()) { System.out.println(block); System.out.flush(); }
-    for (String info : result.infoMessages()) { System.out.println(info); System.out.flush(); }
     for (String warning : result.warnings()) { System.out.println(warning); System.out.flush(); }
 
-    if (!result.modifiedFiles().isEmpty()) {
-      System.out.println();
-      System.out.println("[INFO] Auto-fix rewrote " + result.modifiedFiles().size() + " file(s):");
-      for (Path p : result.modifiedFiles()) System.out.println("        " + p);
-      for (ModuleLocation loc : result.modifiedModules()) server.removeModule(loc);
-      System.out.println("[INFO] Modified modules invalidated; proceeding with typecheck on fresh sources.");
-    }
-
-    // Fixable resolve errors polluted myFailedDefinitions; reset so the
-    // typecheck phase tracks only real failures. Unfixable refs will resurface
-    // as typecheck errors and be re-recorded.
+    // Name-resolution errors recorded against myFailedDefinitions are reset so
+    // the typecheck phase tracks only real failures; unresolved refs will
+    // resurface as typecheck errors and be re-recorded.
     myFailedDefinitions.clear();
     myBufferedErrors.clear();
     System.out.println("--- Done (" + TimedProgressReporter.timeToString(System.currentTimeMillis() - t) + ") ---");
