@@ -1,79 +1,15 @@
 package org.arend.frontend;
 
 import org.apache.commons.cli.*;
-import org.arend.core.definition.Definition;
-import org.arend.core.expr.visitor.SizeExpressionVisitor;
-import org.arend.error.DummyErrorReporter;
-import org.arend.ext.error.ErrorReporter;
-import org.arend.ext.error.GeneralError;
-import org.arend.ext.module.LongName;
-import org.arend.ext.module.ModulePath;
-import org.arend.ext.prettyprinting.PrettyPrinterFlag;
-import org.arend.ext.util.Pair;
-import org.arend.frontend.library.*;
+import org.arend.frontend.cli.CliSetup;
+import org.arend.frontend.cli.CommandContext;
+import org.arend.frontend.cli.commands.ProofSearch;
+import org.arend.frontend.cli.commands.TypecheckPipeline;
 import org.arend.frontend.repl.PlainCliRepl;
-import org.arend.frontend.symbol.ReferenceResolveSuggest;
-import org.arend.frontend.symbol.SignatureFileWriter;
-import org.arend.frontend.symbol.SymbolSearch;
 import org.arend.frontend.repl.jline.JLineCliRepl;
-import org.arend.frontend.source.PreludeResourceSource;
-import org.arend.library.classLoader.FileClassLoaderDelegate;
-import org.arend.library.error.LibraryIOError;
-import org.arend.ext.module.FullName;
-import org.arend.ext.module.ModuleLocation;
-import org.arend.proof.ArendExpressionMatcher;
-import org.arend.proof.ProofSearchQuery;
-import org.arend.module.error.DefinitionNotFoundError;
-import org.arend.module.error.ModuleNotFoundError;
-import org.arend.naming.reference.GlobalReferable;
-import org.arend.naming.reference.LocatedReferable;
-import org.arend.naming.reference.TCDefReferable;
-import org.arend.naming.scope.EmptyScope;
-import org.arend.naming.scope.Scope;
 import org.arend.prelude.Prelude;
-import org.arend.util.Triple;
-import org.arend.server.ArendServer;
-import org.arend.server.ProgressReporter;
-import org.arend.server.impl.ArendServerImpl;
-import org.arend.server.impl.DefinitionData;
-import org.arend.term.concrete.Concrete;
-import org.arend.term.group.ConcreteGroup;
-import org.arend.term.group.ConcreteNamespaceCommand;
-import org.arend.term.group.ConcreteStatement;
-import org.arend.term.prettyprint.PrettyPrinterConfigWithRenamer;
-import org.arend.term.prettyprint.ToAbstractVisitor;
-import org.arend.typechecking.computation.UnstoppableCancellationIndicator;
-import org.arend.typechecking.doubleChecker.CoreModuleChecker;
-import org.arend.typechecking.error.local.GoalError;
-import org.arend.typechecking.order.MapTarjanSCC;
-import org.arend.util.FileUtils;
-
-import org.arend.core.definition.Definition;
-import org.arend.ext.reference.Precedence;
-import org.arend.naming.reference.TCDefReferable;
-import org.arend.source.PersistableBinarySource;
-import org.arend.term.prettyprint.PrettyPrintVisitor;
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.util.*;
-
-import static org.arend.ext.prettyprinting.PrettyPrinterConfig.DEFAULT;
-import static org.arend.proof.Utils.getSignatures;
 
 public class ConsoleMain {
-  private boolean myExitWithError;
-  private final Map<ModuleLocation, GeneralError.Level> myModuleResults = new LinkedHashMap<>();
-  /** Definitions that picked up an ERROR-level diagnostic (used to filter .sig). */
-  private final Set<TCDefReferable> myFailedDefinitions = new HashSet<>();
-
-  private final static String SHOW_TIMES = "show-times";
-  private final static String SHOW_SIZES = "show-sizes";
-  private final static String SHOW_MODULES = "show-modules";
-  private final static String SHOW_MODULES_WITH_INSTANCES = "show-modules-with-instances";
-  private final static String PRINT_FULL = "print-full";
-
   private static boolean containsHelpToken(String[] values) {
     if (values == null) return false;
     for (String v : values) if ("help".equalsIgnoreCase(v)) return true;
@@ -197,6 +133,7 @@ public class ConsoleMain {
       EXAMPLES
         arend -L libs my-lib -ss 'Monoid'                   (substring)
         arend -L libs my-lib -ss '*-comm'                   (literal '*-comm')
+        arend -L libs my-lib -ss 'BigSum_1 BigSum_+ BigSum-ext'  (OR via spaces)
         arend -L libs my-lib -ss 'BigSum_1 BigSum_+ BigSum-ext'  (OR via spaces)
         arend -L libs my-lib -ss Cauchy -ss Mertens         (OR via multi-flag)
         arend -L libs my-lib -ss 'eq:pmap' -ss kind=func,lemma
@@ -411,59 +348,6 @@ public class ConsoleMain {
         arend -L libs my-lib -sc 'Monoid' 'hb:CM'
         arend -L libs my-lib -sc 'Algebra.Monoid:Monoid' context=all
       """;
-  private final static String ANSI_GREEN = "\u001B[32m";
-  private final static String ANSI_RESET = "\u001B[0m";
-
-  private static class HighlightingPrettyPrintVisitor extends PrettyPrintVisitor {
-    private final Set<Concrete.SourceNode> highlightedNodes;
-    private int highlightCount = 0;
-
-    public HighlightingPrettyPrintVisitor(StringBuilder builder, int indent, Set<Concrete.SourceNode> highlightedNodes) {
-      super(builder, indent);
-      this.highlightedNodes = highlightedNodes;
-    }
-
-    @Override
-    protected PrettyPrintVisitor copy(StringBuilder builder, int indent, boolean doIndent) {
-      return new HighlightingPrettyPrintVisitor(builder, indent, highlightedNodes);
-    }
-
-    @Override
-    public void printExpr(Concrete.Expression expr, Precedence prec) {
-      if (highlightedNodes.contains(expr)) {
-        myBuilder.append(ANSI_GREEN);
-        highlightCount++;
-      }
-      super.printExpr(expr, prec);
-      if (highlightedNodes.contains(expr)) {
-        highlightCount--;
-        if (highlightCount == 0) {
-          myBuilder.append(ANSI_RESET);
-        }
-      }
-    }
-
-    @Override
-    public void prettyPrintParameter(Concrete.Parameter parameter) {
-      if (highlightedNodes.contains(parameter)) {
-        myBuilder.append(ANSI_GREEN);
-        highlightCount++;
-      }
-      super.prettyPrintParameter(parameter);
-      if (highlightedNodes.contains(parameter)) {
-        highlightCount--;
-        if (highlightCount == 0) {
-          myBuilder.append(ANSI_RESET);
-        }
-      }
-    }
-  }
-
-  private final ErrorReporter mySystemErrErrorReporter = error -> {
-    System.err.println(error);
-    System.err.flush();
-    myExitWithError = true;
-  };
 
   private CommandLine parseArgs(String[] args) {
     try {
@@ -492,10 +376,10 @@ public class ConsoleMain {
       cmdOptions.addOption("r", "recompile", false, "recompile all modules from source, ignoring binary caches (.arc files)");
       cmdOptions.addOption("t", "test", false, "run tests");
       cmdOptions.addOption("v", "version", false, "print language version");
-      cmdOptions.addOption(Option.builder().longOpt(SHOW_TIMES).build());
-      cmdOptions.addOption(Option.builder().longOpt(SHOW_SIZES).build());
-      cmdOptions.addOption(Option.builder().longOpt(SHOW_MODULES).build());
-      cmdOptions.addOption(Option.builder().longOpt(SHOW_MODULES_WITH_INSTANCES).build());
+      cmdOptions.addOption(Option.builder().longOpt(TypecheckPipeline.SHOW_TIMES).build());
+      cmdOptions.addOption(Option.builder().longOpt(TypecheckPipeline.SHOW_SIZES).build());
+      cmdOptions.addOption(Option.builder().longOpt(TypecheckPipeline.SHOW_MODULES).build());
+      cmdOptions.addOption(Option.builder().longOpt(TypecheckPipeline.SHOW_MODULES_WITH_INSTANCES).build());
       CommandLine cmdLine = new DefaultParser().parse(cmdOptions, args);
 
       if (cmdLine.hasOption("h")) {
@@ -545,355 +429,50 @@ public class ConsoleMain {
     }
   }
 
-  private void updateSourceResult(ModuleLocation module, GeneralError.Level result) {
-    if (module == null) return;
-    GeneralError.Level prevResult = myModuleResults.get(module);
-    if (prevResult == null || result.ordinal() > prevResult.ordinal()) {
-      myModuleResults.put(module, result);
-    }
-  }
-
-  private void reportTypeCheckResult(ModulePath modulePath, GeneralError.Level result) {
-    System.out.println("[" + resultChar(result) + "]" + " " + modulePath);
-  }
-
-  private static char resultChar(GeneralError.Level result) {
-    if (result == null) {
-      return ' ';
-    }
-    return switch (result) {
-      case GOAL -> '◯';
-      case ERROR -> '✗';
-      default -> '·';
-    };
-  }
-
-  private boolean myBufferErrors = false;
-  private final List<GeneralError> myBufferedErrors = new ArrayList<>();
-
-  private final ErrorReporter myErrorReporter = new ErrorReporter() {
-    @Override
-    public void report(GeneralError error) {
-      error.forAffectedDefinitions((referable, err) -> {
-        if (referable instanceof LocatedReferable) {
-          updateSourceResult(((LocatedReferable) referable).getLocation(), err.level);
-        }
-        if (err.level == GeneralError.Level.ERROR && referable instanceof TCDefReferable tcd) {
-          myFailedDefinitions.add(tcd);
-        }
-      });
-
-      if (myBufferErrors) {
-        myBufferedErrors.add(error);
-        return;
-      }
-
-      //Print error
-      PrettyPrinterConfigWithRenamer ppConfig = new PrettyPrinterConfigWithRenamer(EmptyScope.INSTANCE);
-      if (error instanceof GoalError) {
-        ppConfig.expressionFlags = EnumSet.of(PrettyPrinterFlag.SHOW_LOCAL_FIELD_INSTANCE);
-      }
-      if (error.level == GeneralError.Level.ERROR) {
-        myExitWithError = true;
-      }
-      String errorText = error.getDoc(ppConfig).toString();
-
-      if (error.isSevere()) {
-        System.err.println(errorText);
-        System.err.flush();
-      } else {
-        System.out.println(errorText);
-        System.out.flush();
-      }
-    }
-  };
-
-  private void printError(GeneralError error) {
-    PrettyPrinterConfigWithRenamer ppConfig = new PrettyPrinterConfigWithRenamer(EmptyScope.INSTANCE);
-    if (error instanceof GoalError) {
-      ppConfig.expressionFlags = EnumSet.of(PrettyPrinterFlag.SHOW_LOCAL_FIELD_INSTANCE);
-    }
-    if (error.level == GeneralError.Level.ERROR) {
-      myExitWithError = true;
-    }
-    String errorText = error.getDoc(ppConfig).toString();
-    if (error.isSevere()) {
-      System.err.println(errorText);
-      System.err.flush();
-    } else {
-      System.out.println(errorText);
-      System.out.flush();
-    }
-  }
-
-  private void showSizes(ArendServer server, SourceLibrary library) {
-    Map<Definition, Integer> sizes = new HashMap<>();
-    for (ModuleLocation module : server.getModules()) {
-      if (module.getLocationKind() == ModuleLocation.LocationKind.SOURCE && module.getLibraryName().equals(library.getLibraryName())) {
-        for (DefinitionData definitionData : server.getResolvedDefinitions(module)) {
-          Definition definition = definitionData.definition().getData().getTypechecked();
-          if (definition != null) {
-            sizes.put(definition, SizeExpressionVisitor.getSize(definition));
-          }
-        }
-      }
-    }
-
-    System.out.println();
-    List<Pair<Definition,Integer>> list = new ArrayList<>(sizes.size());
-    for (Map.Entry<Definition, Integer> entry : sizes.entrySet()) {
-      list.add(new Pair<>(entry.getKey(), entry.getValue()));
-    }
-    list.sort((o1, o2) -> Long.compare(o2.proj2, o1.proj2));
-    for (Pair<Definition, Integer> pair : list) {
-      System.out.println(pair.proj1.getReferable().getRefLongName() + ": " + pair.proj2);
-    }
-  }
-
-  private void printDefinitions(ArendServer server, String printString) {
-    if (printString == null) return;
-
-    Pair<ModulePath, LongName> pair = parseFullName(printString);
-    if (pair != null) {
-      ModuleLocation module = server.findModule(pair.proj1, null, false, false);
-      if (module == null) {
-        mySystemErrErrorReporter.report(new ModuleNotFoundError(pair.proj1));
-      } else {
-        boolean found = pair.proj2 == null;
-        for (DefinitionData definitionData : server.getResolvedDefinitions(module)) {
-          if (pair.proj2 == null || definitionData.definition().getData().getRefLongName().equals(pair.proj2)) {
-            Definition definition = definitionData.definition().getData().getTypechecked();
-            if (definition != null) {
-              System.out.println();
-              StringBuilder builder = new StringBuilder();
-              ToAbstractVisitor.convert(definition, DEFAULT).prettyPrint(builder, DEFAULT);
-              System.out.println(builder);
-            }
-
-            if (pair.proj2 != null) {
-              found = true;
-              break;
-            }
-          }
-        }
-        if (!found) {
-          mySystemErrErrorReporter.report(new DefinitionNotFoundError(new FullName(module, pair.proj2)));
-        }
-      }
-    }
-  }
-
-  private void showModules(ArendServer server, SourceLibrary library, boolean allModules) {
-    Map<ModulePath, List<ModulePath>> map = new HashMap<>();
-    for (ModuleLocation module : server.getModules()) {
-      if (module.getLocationKind() == ModuleLocation.LocationKind.SOURCE && module.getLibraryName().equals(library.getLibraryName())) {
-        ConcreteGroup group = server.getRawGroup(module);
-        if (group == null) continue;
-        boolean withInstances = allModules;
-        List<ModulePath> dependencies = new ArrayList<>();
-        for (ConcreteStatement statement : group.statements()) {
-          ConcreteNamespaceCommand cmd = statement.command();
-          if (cmd != null && cmd.isImport()) {
-            dependencies.add(new ModulePath(cmd.module().getPath()));
-          }
-          if (!withInstances && !dependencies.isEmpty()) {
-            ConcreteGroup subgroup = statement.group();
-            if (subgroup != null && subgroup.referable().getKind() == GlobalReferable.Kind.INSTANCE) {
-              withInstances = true;
-            }
-          }
-        }
-        if (withInstances) {
-          map.put(module.getModulePath(), dependencies);
-        }
-      }
-    }
-
-    new MapTarjanSCC<>(map) {
-      @Override
-      protected void unitFound(ModulePath unit, boolean withLoops) {
-        System.out.println("[" + unit + "]");
-      }
-
-      @Override
-      protected void sccFound(List<ModulePath> scc) {
-        System.out.println(scc);
-      }
-    }.order();
-  }
-
-  private Pair<ModulePath, LongName> parseFullName(String fullName) {
-    ModulePath modulePath;
-    LongName longName = null;
-    int index = fullName.indexOf(':');
-    if (index >= 0) {
-      longName = LongName.fromString(fullName.substring(index + 1));
-      if (!FileUtils.isCorrectDefinitionName(longName)) {
-        mySystemErrErrorReporter.report(FileUtils.illegalDefinitionName(longName.toString()));
-        return null;
-      }
-      fullName = fullName.substring(0, index);
-    }
-    modulePath = ModulePath.fromString(fullName);
-    if (!FileUtils.isCorrectModulePath(modulePath)) {
-      mySystemErrErrorReporter.report(FileUtils.illegalModuleName(modulePath.toString()));
-      return null;
-    }
-    return new Pair<>(modulePath, longName);
-  }
-
   private boolean run(String[] args) {
     CommandLine cmdLine = parseArgs(args);
     if (cmdLine == null) return false;
 
-    boolean doubleCheck = cmdLine.hasOption("c");
-    boolean recompile = cmdLine.hasOption("r");
-    LibraryManager libraryManager = new LibraryManager(mySystemErrErrorReporter);
-    CliServerRequester requester = new CliServerRequester(libraryManager);
-    if (recompile) {
-      requester.setRecompile(true);
-    }
-    ArendServer server = new ArendServerImpl(requester, false, false, !doubleCheck);
-    server.addReadOnlyModule(Prelude.MODULE_LOCATION, () -> Objects.requireNonNull(new PreludeResourceSource().loadGroup(DummyErrorReporter.INSTANCE)));
-    server.addErrorReporter(myErrorReporter);
+    CommandContext ctx = new CommandContext();
+    if (!CliSetup.bootstrap(ctx, cmdLine)) return false;
+    if (ctx.exitWithError) return false;
 
-    // Get library directories
-    List<Path> libDirs = new ArrayList<>();
-    if (cmdLine.hasOption("L")) {
-      for (String libDirString : cmdLine.getOptionValues("L")) {
-        Path libDir = Paths.get(libDirString);
-        if (Files.isDirectory(libDir)) {
-          libDirs.add(libDir);
-        } else {
-          myExitWithError = true;
-          System.err.println("[ERROR] " + libDir + " is not a directory");
-        }
-      }
-    } else {
-      Path defaultLibrariesRoot = FileUtils.defaultLibrariesRoot();
-      if (Files.isDirectory(defaultLibrariesRoot)) {
-        libDirs.add(defaultLibrariesRoot);
-      }
-    }
-
+    // -i REPL needs only libDirs + server (both set up by bootstrap); short-circuit before
+    // collecting requested modules / loading libraries.
     if (cmdLine.hasOption("i")) {
       String replKind = cmdLine.getOptionValue("i", "jline");
       switch (replKind.toLowerCase()) {
         case "plain":
-          PlainCliRepl.launch(false, libDirs, server);
+          PlainCliRepl.launch(false, ctx.libDirs, ctx.server);
           break;
         case "jline":
-          JLineCliRepl.launch(false, libDirs, server);
+          JLineCliRepl.launch(false, ctx.libDirs, ctx.server);
           break;
         default:
           System.err.println("[ERROR] Unrecognized repl type: " + replKind);
           return false;
       }
-      return true;
+      return !ctx.exitWithError;
     }
 
-    // Get source and output directories
-    String sourceDirStr = cmdLine.getOptionValue("s");
-    Path sourceDir = sourceDirStr == null ? null : Paths.get(sourceDirStr);
+    if (!CliSetup.loadRequestedLibraries(ctx, cmdLine)) return false;
+    if (ctx.exitWithError) return false;
 
-    String binaryDirStr = cmdLine.getOptionValue("b");
-    Path outDir = binaryDirStr != null ? Paths.get(binaryDirStr) : null;
-
-    String extDirStr = cmdLine.getOptionValue("e");
-    Path extDir = extDirStr != null ? Paths.get(extDirStr) : null;
-    String extMainClass = cmdLine.getOptionValue("m");
-
-    // Collect modules and libraries for which typechecking was requested
-    Collection<String> argFiles = cmdLine.getArgList();
-    Set<Pair<ModulePath, LongName>> requestedModules = new LinkedHashSet<>();
-    List<SourceLibrary> requestedLibraries = new ArrayList<>();
-    for (String fileName : argFiles) {
-      Path path = Paths.get(fileName);
-      if (Files.exists(path)) {
-        if (Files.isDirectory(path)) {
-          loadFileLibrary(path.resolve(FileUtils.LIBRARY_CONFIG_FILE), requestedLibraries);
-        } else if (path.endsWith(FileUtils.LIBRARY_CONFIG_FILE)) {
-          loadFileLibrary(path, requestedLibraries);
-        } else if (fileName.endsWith(FileUtils.ZIP_EXTENSION)) {
-          loadZipLibrary(path, requestedLibraries);
-        } else {
-          mySystemErrErrorReporter.report(new LibraryIOError(fileName, "not a library"));
-        }
-      } else if (!findLibrary(fileName, libDirs, requestedLibraries)) {
-        int colonIndex = fileName.indexOf(':');
-        if (colonIndex >= 0) {
-          Pair<ModulePath, LongName> parsed = parseFullName(fileName);
-          if (parsed != null && parsed.proj2 != null) {
-            requestedModules.add(parsed);
-          } else if (parsed != null) {
-            mySystemErrErrorReporter.report(new GeneralError(GeneralError.Level.ERROR, "Definition name missing after ':' in " + fileName));
-          }
-        } else {
-          ModulePath modulePath = ModulePath.fromString(fileName);
-          if (FileUtils.isCorrectModulePath(modulePath)) {
-            requestedModules.add(new Pair<>(modulePath, null));
-          } else {
-            mySystemErrErrorReporter.report(new GeneralError(GeneralError.Level.ERROR, "File " + fileName + " not found"));
-          }
-        }
-      }
-    }
-
-    if (sourceDir != null) {
-      if (outDir != null) {
-        try {
-          Files.createDirectories(outDir);
-        } catch (IOException e) {
-          mySystemErrErrorReporter.report(new LibraryIOError(outDir.toString(), "Cannot create output directory", e.getLocalizedMessage()));
-          outDir = null;
-        }
-      }
-
-      requestedLibraries.add(new FileSourceLibrary("\\default", false, -1,
-          requestedLibraries.stream().map(SourceLibrary::getLibraryName).toList(), null, null, extMainClass, null,
-          sourceDir, outDir, null, extDir == null ? null : new FileClassLoaderDelegate(extDir)));
-    }
-
-    if (requestedLibraries.isEmpty()) {
-      Path config = Paths.get(FileUtils.LIBRARY_CONFIG_FILE);
-      if (Files.isRegularFile(config)) {
-        loadFileLibrary(config, requestedLibraries);
-      } else {
-        System.out.println("Nothing to load");
-        return true;
-      }
-    }
-
-    if (myExitWithError) {
-      return false;
-    }
-
-    for (SourceLibrary library : requestedLibraries) {
-      loadLibrary(libraryManager, library, server);
-    }
-
-    for (SourceLibrary library : requestedLibraries) {
-      if (!loadDependencies(library, libraryManager, libDirs, server)) {
-        return false;
-      }
-    }
-
-    if (myExitWithError) {
-      return false;
-    }
-
+    // Dispatch to the requested command. Resolution-only commands (-ss/-rx/-fu/-ch/-sc/-ps)
+    // return immediately; everything else falls through to the default typecheck pipeline.
     if (cmdLine.hasOption("ss")) {
       org.arend.frontend.symbol.SymbolSearch.Parsed parsed =
-          org.arend.frontend.symbol.SymbolSearch.parseArgs(cmdLine.getOptionValues("ss"), mySystemErrErrorReporter);
+          org.arend.frontend.symbol.SymbolSearch.parseArgs(cmdLine.getOptionValues("ss"), ctx.systemErrErrorReporter);
       if (parsed == null) return false;
       org.arend.frontend.symbol.SymbolSearch.run(parsed.patterns(), parsed.options(),
-          requestedLibraries, libraryManager, server, mySystemErrErrorReporter);
-      return true;
+          ctx.requestedLibraries, ctx.libraryManager, ctx.server, ctx.systemErrErrorReporter);
+      return !ctx.exitWithError;
     }
 
     if (cmdLine.hasOption("rx")) {
       java.util.Set<String> only = null;
-      for (String arg : cmdLine.getOptionValues("rx") == null ? new String[0] : cmdLine.getOptionValues("rx")) {
+      String[] rxArgs = cmdLine.getOptionValues("rx") == null ? new String[0] : cmdLine.getOptionValues("rx");
+      for (String arg : rxArgs) {
         if (arg.startsWith("only=")) {
           if (only == null) only = new java.util.HashSet<>();
           for (String s : arg.substring("only=".length()).split(",")) {
@@ -904,8 +483,8 @@ public class ConsoleMain {
           return false;
         }
       }
-      org.arend.frontend.symbol.SymbolSearch.reindex(requestedLibraries, libraryManager, server, only);
-      return true;
+      org.arend.frontend.symbol.SymbolSearch.reindex(ctx.requestedLibraries, ctx.libraryManager, ctx.server, only);
+      return !ctx.exitWithError;
     }
 
     if (cmdLine.hasOption("fu")) {
@@ -913,8 +492,8 @@ public class ConsoleMain {
           org.arend.frontend.symbol.UsageSearch.parseArgs(cmdLine.getOptionValues("fu"));
       if (parsed == null) return false;
       org.arend.frontend.symbol.UsageSearch.run(parsed.spec(), parsed.options(),
-          requestedLibraries, libraryManager, server, mySystemErrErrorReporter);
-      return true;
+          ctx.requestedLibraries, ctx.libraryManager, ctx.server, ctx.systemErrErrorReporter);
+      return !ctx.exitWithError;
     }
 
     if (cmdLine.hasOption("ch")) {
@@ -922,8 +501,8 @@ public class ConsoleMain {
           org.arend.frontend.symbol.ClassHierarchy.parseArgs(cmdLine.getOptionValues("ch"));
       if (parsed == null) return false;
       org.arend.frontend.symbol.ClassHierarchy.run(parsed.spec(), parsed.options(),
-          requestedLibraries, libraryManager, server, mySystemErrErrorReporter);
-      return true;
+          ctx.requestedLibraries, ctx.libraryManager, ctx.server, ctx.systemErrErrorReporter);
+      return !ctx.exitWithError;
     }
 
     if (cmdLine.hasOption("sc")) {
@@ -931,618 +510,21 @@ public class ConsoleMain {
           org.arend.frontend.symbol.ReferableScope.parseArgs(cmdLine.getOptionValues("sc"));
       if (parsed == null) return false;
       org.arend.frontend.symbol.ReferableScope.run(parsed.spec(), parsed.pattern(), parsed.options(),
-          requestedLibraries, libraryManager, server, mySystemErrErrorReporter);
-      return true;
+          ctx.requestedLibraries, ctx.libraryManager, ctx.server, ctx.systemErrErrorReporter);
+      return !ctx.exitWithError;
     }
-
-    boolean aiMode = cmdLine.hasOption("ai");
 
     if (cmdLine.hasOption("ps")) {
-      String[] psArgs = cmdLine.getOptionValues("ps");
-      boolean printFull = false;
-      List<String> patterns = new ArrayList<>();
-      for (String arg : psArgs) {
-        if (arg.equals(PRINT_FULL)) {
-          printFull = true;
-        } else {
-          patterns.add(arg);
-        }
-      }
-      if (patterns.isEmpty()) {
-        System.err.println("[ERROR] Missing proof search pattern");
-        return false;
-      }
-      if (patterns.size() > 1) {
-        System.err.println("[ERROR] Only one proof search pattern is allowed. Use quotes if the pattern contains spaces.");
-        return false;
-      }
-      return matchAndPrint(server, libraryManager, requestedLibraries, patterns.getFirst(), printFull);
+      boolean psOk = ProofSearch.run(ctx, cmdLine.getOptionValues("ps"));
+      return psOk && !ctx.exitWithError;
     }
 
-    TimedProgressReporter timedProgressReporter = cmdLine.hasOption(SHOW_TIMES) ? new TimedProgressReporter() : null;
-    ProgressReporter<List<? extends Concrete.ResolvableDefinition>> progressReporter = timedProgressReporter != null ? timedProgressReporter : ProgressReporter.empty();
-
-    if (aiMode) {
-      runAiNameResolve(server, requestedLibraries, requestedModules, libraryManager);
-    }
-
-    // Pre-load binary caches (unless --recompile is set)
-    if (!recompile) {
-      // Typecheck Prelude first — binary cache loading needs Prelude definitions to be available
-      server.getCheckerFor(Collections.singletonList(Prelude.MODULE_LOCATION))
-          .typecheck(UnstoppableCancellationIndicator.INSTANCE, ProgressReporter.empty());
-      if (requestedModules.isEmpty()) {
-        // Whole-library typechecking: pre-load every module of each requested library.
-        for (SourceLibrary library : requestedLibraries) {
-          List<ModuleLocation> allModules = library.findModules(false).stream()
-              .map(mp -> new ModuleLocation(library.getLibraryName(), ModuleLocation.LocationKind.SOURCE, mp))
-              .toList();
-          if (!allModules.isEmpty()) {
-            // resolveAll forces raw loading of all modules and their transitive dependencies
-            server.getCheckerFor(allModules).resolveAll(UnstoppableCancellationIndicator.INSTANCE, ProgressReporter.empty());
-            // Now load typechecked definitions from binary caches
-            requester.loadBinaryCache(library, server);
-          }
-        }
-      } else {
-        // Targeted typechecking: seed resolveAll with just the requested modules
-        // so only their transitive import cone is raw-loaded. loadBinaryCache then
-        // iterates server.getModules() — by now the cone — and only deserializes
-        // ARCs in it, avoiding the cost of touching every cached file in a large
-        // dependency library like arend-lib.
-        List<ModuleLocation> targets = new ArrayList<>();
-        for (Pair<ModulePath, LongName> requested : requestedModules) {
-          ModuleLocation module = server.findModule(requested.proj1, null, true, false);
-          if (module != null) targets.add(module);
-        }
-        if (!targets.isEmpty()) {
-          server.getCheckerFor(targets).resolveAll(UnstoppableCancellationIndicator.INSTANCE, ProgressReporter.empty());
-          for (SourceLibrary library : requestedLibraries) {
-            requester.loadBinaryCache(library, server);
-          }
-        }
-      }
-      // Report goals from definitions loaded from binary cache
-      reportCachedGoals(server, requester.getBinaryCacheLoaded());
-    }
-
-    if (requestedModules.isEmpty()) {
-      for (SourceLibrary library : requestedLibraries) {
-        System.out.println();
-        System.out.println("--- Typechecking " + library.getLibraryName() + " ---");
-        long time = System.currentTimeMillis();
-
-        for (ModulePath modulePath : library.findModules(false)) {
-          server.getCheckerFor(Collections.singletonList(new ModuleLocation(library.getLibraryName(), ModuleLocation.LocationKind.SOURCE, modulePath))).typecheck(UnstoppableCancellationIndicator.INSTANCE, progressReporter);
-        }
-
-        time = System.currentTimeMillis() - time;
-
-        // Output nice per-module typechecking results
-        int numWithErrors = 0;
-        int numWithGoals = 0;
-        for (ModuleLocation module : server.getModules()) {
-          if (module.getLocationKind() == ModuleLocation.LocationKind.SOURCE && module.getLibraryName().equals(library.getLibraryName())) {
-            GeneralError.Level result = myModuleResults.get(module);
-            reportTypeCheckResult(module.getModulePath(), result);
-            if (result == GeneralError.Level.ERROR) numWithErrors++;
-            if (result == GeneralError.Level.GOAL) numWithGoals++;
-          }
-        }
-
-        if (numWithErrors > 0) {
-          myExitWithError = true;
-          System.out.println("Number of modules with errors: " + numWithErrors);
-        }
-        if (numWithGoals > 0) {
-          System.out.println("Number of modules with goals: " + numWithGoals);
-        }
-        System.out.println("--- Done (" + TimedProgressReporter.timeToString(time) + ") ---");
-
-        if (cmdLine.hasOption(SHOW_SIZES)) {
-          showSizes(server, library);
-        }
-
-        if (cmdLine.hasOption(SHOW_MODULES)) {
-          System.out.println();
-          System.out.println("Modules cycles:");
-          showModules(server, library, true);
-        }
-
-        if (cmdLine.hasOption(SHOW_MODULES_WITH_INSTANCES)) {
-          System.out.println();
-          System.out.println("Modules with instances cycles:");
-          showModules(server, library, false);
-        }
-
-        if (doubleCheck && numWithErrors == 0) {
-          System.out.println();
-          System.out.println("--- Checking " + library.getLibraryName() + " ---");
-          time = System.currentTimeMillis();
-
-          try {
-            CoreModuleChecker checker = new CoreModuleChecker(myErrorReporter);
-            for (ModuleLocation module : server.getModules()) {
-              if (module.getLocationKind() == ModuleLocation.LocationKind.SOURCE && module.getLibraryName().equals(library.getLibraryName())) {
-                ConcreteGroup group = server.getRawGroup(module);
-                if (group != null) {
-                  checker.checkGroup(group);
-                }
-              }
-            }
-          } finally {
-            time = System.currentTimeMillis() - time;
-            System.out.println("--- Done (" + TimedProgressReporter.timeToString(time) + ") ---");
-          }
-        }
-
-        persistLibrary(library, server, requester.getBinaryCacheLoaded());
-      }
-    } else {
-      for (Pair<ModulePath, LongName> requested : requestedModules) {
-        ModulePath modulePath = requested.proj1;
-        LongName definitionName = requested.proj2;
-        ModuleLocation module = server.findModule(modulePath, null, true, false);
-        if (module == null) {
-          mySystemErrErrorReporter.report(new ModuleNotFoundError(modulePath));
-        } else if (definitionName != null) {
-          System.out.println();
-          FullName fullName = new FullName(module, definitionName);
-          System.out.println("--- Typechecking " + fullName + " ---");
-          long time = System.currentTimeMillis();
-
-          server.getCheckerFor(Collections.singletonList(module)).typecheck(Collections.singletonList(fullName), myErrorReporter, UnstoppableCancellationIndicator.INSTANCE, progressReporter);
-
-          System.out.println("--- Done (" + TimedProgressReporter.timeToString(System.currentTimeMillis() - time) + ") ---");
-        } else {
-          System.out.println();
-          System.out.println("--- Typechecking " + module + " ---");
-          long time = System.currentTimeMillis();
-
-          server.getCheckerFor(Collections.singletonList(module)).typecheck(UnstoppableCancellationIndicator.INSTANCE, progressReporter);
-
-          System.out.println("--- Done (" + TimedProgressReporter.timeToString(System.currentTimeMillis() - time) + ") ---");
-
-          if (doubleCheck) {
-            System.out.println();
-            System.out.println("--- Checking " + module + " ---");
-            time = System.currentTimeMillis();
-
-            try {
-              CoreModuleChecker checker = new CoreModuleChecker(myErrorReporter);
-              ConcreteGroup group = server.getRawGroup(module);
-              if (group != null) {
-                checker.checkGroup(group);
-              }
-            } finally {
-              time = System.currentTimeMillis() - time;
-              System.out.println("--- Done (" + TimedProgressReporter.timeToString(time) + ") ---");
-            }
-          }
-        }
-      }
-      // Persist all libraries that had modules typechecked
-      for (SourceLibrary library : requestedLibraries) {
-        persistLibrary(library, server, requester.getBinaryCacheLoaded());
-      }
-    }
-
-    if (aiMode) {
-      finalizeAi(server, requestedLibraries, requestedModules, libraryManager);
-    }
-
-    printDefinitions(server, cmdLine.getOptionValue("p"));
-
-    if (cmdLine.hasOption("t")) {
-      for (SourceLibrary library : requestedLibraries) {
-        System.out.println();
-        System.out.println("--- Running tests in " + library.getLibraryName() + " ---");
-        long time = System.currentTimeMillis();
-
-        for (ModulePath modulePath : library.findModules(true)) {
-          server.getCheckerFor(Collections.singletonList(new ModuleLocation(library.getLibraryName(), ModuleLocation.LocationKind.TEST, modulePath))).typecheck(UnstoppableCancellationIndicator.INSTANCE, progressReporter);
-        }
-
-        time = System.currentTimeMillis() - time;
-
-        int[] total = new int[1];
-        int[] failed = new int[1];
-        for (ModuleLocation module : server.getModules()) {
-          if (module.getLocationKind() == ModuleLocation.LocationKind.TEST && module.getLibraryName().equals(library.getLibraryName())) {
-            for (ConcreteStatement statement : Objects.requireNonNull(server.getRawGroup(module)).statements()) {
-              if (statement.group() != null && statement.group().referable() instanceof TCDefReferable referable) {
-                Definition definition = referable.getTypechecked();
-                if (definition != null || referable.getKind().isTypecheckable()) {
-                  total[0]++;
-                  if (definition == null || definition.status() != Definition.TypeCheckingStatus.NO_ERRORS) {
-                    failed[0]++;
-                  }
-                }
-              }
-            }
-          }
-        }
-
-        System.out.println("Tests completed: " + total[0] + ", Failed: " + failed[0]);
-        System.out.println("--- Done (" + TimedProgressReporter.timeToString(time) + ") ---");
-
-        if (doubleCheck) {
-          System.out.println();
-          System.out.println("--- Checking tests in " + library.getLibraryName() + " ---");
-          time = System.currentTimeMillis();
-
-          try {
-            CoreModuleChecker checker = new CoreModuleChecker(myErrorReporter);
-            for (ModuleLocation module : server.getModules()) {
-              if (module.getLocationKind() == ModuleLocation.LocationKind.TEST && module.getLibraryName().equals(library.getLibraryName())) {
-                ConcreteGroup group = server.getRawGroup(module);
-                if (group != null) {
-                  checker.checkGroup(group);
-                }
-              }
-            }
-          } finally {
-            time = System.currentTimeMillis() - time;
-            System.out.println("--- Done (" + TimedProgressReporter.timeToString(time) + ") ---");
-          }
-        }
-      }
-    }
-
-    if (timedProgressReporter != null) {
-      timedProgressReporter.print();
-    }
-
-    return true;
-  }
-
-  /**
-   * Scans definitions loaded from binary cache for goals ({@code {?}}) and reports them.
-   * The goal flag ({@code isGoal}) is preserved in .arc files, so we can detect goals
-   * without re-typechecking.
-   */
-  private void reportCachedGoals(ArendServer server, Set<ModuleLocation> cachedModules) {
-    for (ModuleLocation module : cachedModules) {
-      ConcreteGroup group = server.getRawGroup(module);
-      if (group == null) continue;
-      reportGoalsInGroup(group, module);
-    }
-  }
-
-  private void reportGoalsInGroup(ConcreteGroup group, ModuleLocation module) {
-    LocatedReferable ref = group.referable();
-    if (ref instanceof TCDefReferable tcRef) {
-      Definition def = tcRef.getTypechecked();
-      if (def != null && def.getGoals().contains(def)) {
-        GeneralError goalError = new GeneralError(GeneralError.Level.GOAL, "Goal") {
-          @Override
-          public Object getCause() {
-            return ref;
-          }
-        };
-        myErrorReporter.report(goalError);
-      }
-    }
-    for (ConcreteStatement statement : group.statements()) {
-      if (statement.group() != null) {
-        reportGoalsInGroup(statement.group(), module);
-      }
-    }
-    for (ConcreteGroup dynGroup : group.dynamicGroups()) {
-      reportGoalsInGroup(dynGroup, module);
-    }
-  }
-
-  private void persistLibrary(SourceLibrary library, ArendServer server, Set<ModuleLocation> skipModules) {
-    if (!library.supportsPersisting()) return;
-    int persisted = 0;
-    int skipped = 0;
-    int failed = 0;
-    for (ModuleLocation module : server.getModules()) {
-      if (module.getLocationKind() == ModuleLocation.LocationKind.SOURCE && module.getLibraryName().equals(library.getLibraryName())) {
-        if (skipModules.contains(module)) {
-          skipped++;
-          continue;
-        }
-        PersistableBinarySource binarySource = library.getBinarySource(module.getModulePath());
-        if (binarySource != null) {
-          if (binarySource.persist(server, mySystemErrErrorReporter)) {
-            persisted++;
-          } else {
-            failed++;
-          }
-        }
-      }
-    }
-    if (persisted > 0 || failed > 0) {
-      System.out.println("[INFO] Persisted " + persisted + " module(s)" + (failed > 0 ? ", " + failed + " failed" : "") + (skipped > 0 ? " (" + skipped + " up-to-date)" : ""));
-    }
-  }
-
-  private void loadLibrary(LibraryManager libraryManager, SourceLibrary library, ArendServer server) {
-    System.out.println("[INFO] Loading " + library.getLibraryName());
-    long time = System.currentTimeMillis();
-    libraryManager.updateLibrary(library, server);
-    System.out.println("[INFO] " + "Loaded " + library.getLibraryName() + " (" + TimedProgressReporter.timeToString(System.currentTimeMillis() - time) + ")");
-  }
-
-  private boolean loadDependencies(SourceLibrary library, LibraryManager libraryManager, List<Path> libDirs, ArendServer server) {
-    for (String dependency : library.getLibraryDependencies()) {
-      if (!libraryManager.containsLibrary(dependency)) {
-        List<SourceLibrary> libDependency = new ArrayList<>(1);
-        findLibrary(dependency, libDirs, libDependency);
-        if (libDependency.isEmpty()) return false;
-        loadLibrary(libraryManager, libDependency.getFirst(), server);
-        if (!loadDependencies(libDependency.getFirst(), libraryManager, libDirs, server)) return false;
-      }
-    }
-    return true;
-  }
-
-  private boolean findLibrary(String libName, List<Path> libDirs, List<SourceLibrary> result) {
-    if (!FileUtils.isLibraryName(libName)) return false;
-
-    for (Path libDir : libDirs) {
-      Path configFile = libDir.resolve(libName).resolve(FileUtils.LIBRARY_CONFIG_FILE);
-      if (Files.isRegularFile(configFile)) {
-        loadFileLibrary(configFile, result);
-        return true;
-      } else {
-        Path zipFile = libDir.resolve(libName + FileUtils.ZIP_EXTENSION);
-        if (Files.isRegularFile(zipFile)) {
-          loadZipLibrary(zipFile, result);
-          return true;
-        }
-      }
-    }
-
-    return false;
-  }
-
-  private void loadFileLibrary(Path configFile, List<SourceLibrary> result) {
-    SourceLibrary library = FileSourceLibrary.fromConfigFile(configFile, false, mySystemErrErrorReporter);
-    if (library != null) {
-      result.add(library);
-    } else {
-      myExitWithError = true;
-    }
-  }
-
-  private void loadZipLibrary(Path zipFile, List<SourceLibrary> result) {
-    SourceLibrary library = ZipSourceLibrary.fromFile(zipFile.toFile(), mySystemErrErrorReporter);
-    if (library != null) {
-      result.add(library);
-    } else {
-      myExitWithError = true;
-    }
-  }
-
-  /**
-   * Step 1 of the -ai pipeline: resolve every module in scope, buffer the
-   * resulting name-resolution errors, hand them to {@link
-   * ReferenceResolveSuggest} to look up candidates for each unresolved short
-   * name, and print the candidate list (qualified name + required imports)
-   * for the user to apply manually. Never rewrites sources.
-   */
-  private void runAiNameResolve(ArendServer server, List<SourceLibrary> requestedLibraries,
-                                Set<Pair<ModulePath, LongName>> requestedModules, LibraryManager libraryManager) {
-    System.out.println();
-    System.out.println("--- AI: resolve + suggest ---");
-    long t = System.currentTimeMillis();
-    myBufferErrors = true;
-    myBufferedErrors.clear();
-    try {
-      if (requestedModules.isEmpty()) {
-        for (SourceLibrary lib : requestedLibraries) {
-          List<ModuleLocation> mods = lib.findModules(false).stream()
-              .map(mp -> new ModuleLocation(lib.getLibraryName(), ModuleLocation.LocationKind.SOURCE, mp))
-              .toList();
-          if (!mods.isEmpty()) {
-            server.getCheckerFor(mods).resolveAll(UnstoppableCancellationIndicator.INSTANCE, ProgressReporter.empty());
-          }
-        }
-      } else {
-        for (Pair<ModulePath, LongName> requested : requestedModules) {
-          ModuleLocation module = server.findModule(requested.proj1, null, true, false);
-          if (module == null) {
-            mySystemErrErrorReporter.report(new ModuleNotFoundError(requested.proj1));
-            continue;
-          }
-          server.getCheckerFor(Collections.singletonList(module)).resolveAll(UnstoppableCancellationIndicator.INSTANCE, ProgressReporter.empty());
-        }
-      }
-    } finally {
-      myBufferErrors = false;
-    }
-
-    ReferenceResolveSuggest.Result result =
-        ReferenceResolveSuggest.process(server, libraryManager, myBufferedErrors, requestedLibraries);
-
-    for (GeneralError error : result.errorsToPrint()) printError(error);
-    for (String block : result.suggestionBlocks()) { System.out.println(block); System.out.flush(); }
-    for (String warning : result.warnings()) { System.out.println(warning); System.out.flush(); }
-
-    // Name-resolution errors recorded against myFailedDefinitions are reset so
-    // the typecheck phase tracks only real failures; unresolved refs will
-    // resurface as typecheck errors and be re-recorded.
-    myFailedDefinitions.clear();
-    myBufferedErrors.clear();
-    System.out.println("--- Done (" + TimedProgressReporter.timeToString(System.currentTimeMillis() - t) + ") ---");
-  }
-
-  /**
-   * Steps 3-4 of the -ai pipeline: write the .sig mirror for verified
-   * definitions only (per-def filter via {@link #myFailedDefinitions}) and
-   * refresh the binary symbol index used by -ss / -fu / -ch / -sc.
-   */
-  private void finalizeAi(ArendServer server, List<SourceLibrary> requestedLibraries,
-                          Set<Pair<ModulePath, LongName>> requestedModules, LibraryManager libraryManager) {
-    Set<ModulePath> only = requestedModules.isEmpty() ? null : collectModulePaths(requestedModules);
-    System.out.println();
-    System.out.println("--- AI: .sig + reindex ---");
-    for (SourceLibrary library : requestedLibraries) {
-      SignatureFileWriter.Result r =
-          SignatureFileWriter.writeFiltered(server, library, only, myFailedDefinitions);
-      for (String err : r.errors()) System.err.println(err);
-      StringBuilder line = new StringBuilder("[INFO] .sig: wrote ")
-          .append(r.written()).append(" file(s) for ").append(library.getLibraryName());
-      if (r.skippedDefinitions() > 0) {
-        line.append("; skipped ").append(r.skippedDefinitions())
-            .append(" def").append(r.skippedDefinitions() == 1 ? "" : "s").append(" with errors");
-      }
-      if (r.skipped() > 0) {
-        line.append("; skipped ").append(r.skipped())
-            .append(" module").append(r.skipped() == 1 ? "" : "s").append(" (out of scope)");
-      }
-      System.out.println(line);
-    }
-    SymbolSearch.reindex(requestedLibraries, libraryManager, server, null);
-  }
-
-  private static Set<ModulePath> collectModulePaths(Set<Pair<ModulePath, LongName>> requestedModules) {
-    Set<ModulePath> result = new HashSet<>();
-    for (Pair<ModulePath, LongName> p : requestedModules) result.add(p.proj1);
-    return result;
-  }
-
-  private boolean matchAndPrint(ArendServer server, LibraryManager libraryManager, List<SourceLibrary> requestedLibraries, String pattern, boolean printFull) {
-    ProofSearchQuery.ParsingResult<ProofSearchQuery> queryResult = ProofSearchQuery.fromString(pattern);
-    if (queryResult == null) return false;
-    if (queryResult instanceof ProofSearchQuery.ParsingResult.Error<ProofSearchQuery> error) {
-      System.err.println("Search pattern error at " + error.range + ": " + error.message);
-      return false;
-    }
-    ProofSearchQuery query = ((ProofSearchQuery.ParsingResult.OK<ProofSearchQuery>) queryResult).value;
-    ArendExpressionMatcher matcher = new ArendExpressionMatcher(query);
-
-    for (SourceLibrary library : requestedLibraries) {
-      System.out.println("[INFO] Resolving " + library.getLibraryName());
-      long time = System.currentTimeMillis();
-      server.getCheckerFor(library.findModules(false).stream().map(modulePath -> new ModuleLocation(library.getLibraryName(), ModuleLocation.LocationKind.SOURCE, modulePath)).toList())
-              .resolveAll(UnstoppableCancellationIndicator.INSTANCE, ProgressReporter.empty());
-      System.out.println("[INFO] " + "Resolved " + library.getLibraryName() + " (" + TimedProgressReporter.timeToString(System.currentTimeMillis() - time) + ")");
-    }
-
-    int matches = 0;
-    for (ModuleLocation moduleLocation : server.getModules()) {
-      for (DefinitionData data : server.getResolvedDefinitions(moduleLocation)) {
-        for (Triple<Concrete.GeneralDefinition, List<Concrete.Expression>, Concrete.Expression> signature : getSignatures(data.definition())) {
-          TCDefReferable referable = signature.first().getData();
-          List<Concrete.Expression> parameters = signature.second();
-          Concrete.Expression codomain = signature.third();
-
-          Scope scope = server.getReferableScope(data.definition().getData());
-
-          ArendExpressionMatcher.ProofSearchMatchingResult result = matcher.match(parameters, codomain, scope);
-          if (result == null) continue;
-          matches++;
-
-          Set<Concrete.SourceNode> highlightedNodes = new HashSet<>(result.inCodomain());
-          if (result.inPattern() != null) {
-            for (Pair<Concrete.Expression, List<Concrete.Expression>> parameterData : result.inPattern()) {
-              highlightedNodes.addAll(parameterData.proj2);
-            }
-          }
-
-          // Render the signature into a single buffer so we can indent it uniformly.
-          StringBuilder sigBuilder = new StringBuilder();
-          Precedence topPrec = new Precedence(Concrete.Expression.PREC);
-          if (printFull) {
-            HighlightingPrettyPrintVisitor visitor = new HighlightingPrettyPrintVisitor(sigBuilder, 0, highlightedNodes);
-            data.definition().accept(visitor, null);
-          } else {
-            if (result.inPattern() != null) {
-              for (Pair<Concrete.Expression, List<Concrete.Expression>> parameterData : result.inPattern()) {
-                HighlightingPrettyPrintVisitor visitor = new HighlightingPrettyPrintVisitor(sigBuilder, 0, highlightedNodes);
-                sigBuilder.append("(");
-                parameterData.proj1.prettyPrint(visitor, topPrec);
-                sigBuilder.append(") -> ");
-              }
-            }
-            HighlightingPrettyPrintVisitor visitor = new HighlightingPrettyPrintVisitor(sigBuilder, 0, highlightedNodes);
-            codomain.prettyPrint(visitor, topPrec);
-          }
-
-          // Header line: <abs-path>:<line>:<col>  or  <library:module> when no source.
-          System.out.println(headerLineFor(moduleLocation, referable, libraryManager));
-          // Identity line: <library>::<long-name>  [<KIND>]
-          System.out.println(moduleLocation.getLibraryName() + "::" + referable.getRefLongName() + "  [" + kindLabel(referable, signature.first()) + "]");
-          // Signature, indented two spaces (and through any embedded newlines).
-          System.out.println(indentMultiline(sigBuilder.toString(), "  "));
-          System.out.println();
-        }
-      }
-    }
-
-    if (matches == 0) {
-      System.out.println("No matches.");
-    } else {
-      System.out.println("Found " + matches + " match" + (matches == 1 ? "" : "es"));
-    }
-    return true;
-  }
-
-  private static String headerLineFor(ModuleLocation moduleLocation, TCDefReferable referable, LibraryManager libraryManager) {
-    String libName = moduleLocation.getLibraryName();
-    SourceLibrary lib = libraryManager.getLibrary(libName);
-    if (lib instanceof org.arend.frontend.library.FileSourceLibrary fl
-        && moduleLocation.getLocationKind() == ModuleLocation.LocationKind.SOURCE) {
-      Path src = fl.getSourceBasePath();
-      if (src != null) {
-        try {
-          Path abs = org.arend.util.FileUtils.sourceFile(src, moduleLocation.getModulePath()).toAbsolutePath().normalize();
-          int line = 0, col = 0;
-          if (referable.getData() instanceof org.arend.error.SourcePosition sp) {
-            line = sp.line;
-            col = sp.column;
-          }
-          return line > 0 ? abs + ":" + line + ":" + col : abs.toString();
-        } catch (RuntimeException ignored) {
-          // fall through to synthetic label
-        }
-      }
-    }
-    return "<" + libName + ":" + moduleLocation.getModulePath() + ">";
-  }
-
-  private static String kindLabel(TCDefReferable ref, Concrete.GeneralDefinition def) {
-    if (def instanceof Concrete.BaseFunctionDefinition fdef) {
-      return switch (fdef.getKind()) {
-        case FUNC -> "FUNCTION";
-        case SFUNC -> "SFUNC";
-        case LEMMA -> "LEMMA";
-        case TYPE -> "TYPE";
-        case AXIOM -> "AXIOM";
-        case INSTANCE -> "INSTANCE";
-        case COERCE -> "COERCE";
-        case LEVEL -> "LEVEL";
-        case FUNC_COCLAUSE, CLASS_COCLAUSE -> "COCLAUSE";
-        case CONS -> "CONSTRUCTOR";
-      };
-    }
-    if (def instanceof Concrete.MetaDefinition) return "META";
-    if (def instanceof Concrete.DataDefinition) return "DATA";
-    if (def instanceof Concrete.ClassDefinition cdef) return cdef.isRecord() ? "RECORD" : "CLASS";
-    if (def instanceof Concrete.Constructor) return "CONSTRUCTOR";
-    if (def instanceof Concrete.ClassField) return "FIELD";
-    return ref.getKind().name();
-  }
-
-  private static String indentMultiline(String s, String prefix) {
-    if (s.isEmpty()) return prefix;
-    StringBuilder out = new StringBuilder(s.length() + prefix.length() * 4);
-    out.append(prefix);
-    for (int i = 0; i < s.length(); i++) {
-      char c = s.charAt(i);
-      out.append(c);
-      if (c == '\n' && i + 1 < s.length()) out.append(prefix);
-    }
-    return out.toString();
+    boolean tcOk = TypecheckPipeline.run(ctx, cmdLine);
+    return tcOk && !ctx.exitWithError;
   }
 
   public static void main(String[] args) {
-    ConsoleMain main = new ConsoleMain();
-    if (!main.run(args) || main.myExitWithError) {
+    if (!new ConsoleMain().run(args)) {
       System.exit(1);
     }
   }
