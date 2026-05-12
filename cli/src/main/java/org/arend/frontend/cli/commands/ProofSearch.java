@@ -15,7 +15,6 @@ import org.arend.server.ProgressReporter;
 import org.arend.server.impl.DefinitionData;
 import org.arend.term.concrete.Concrete;
 import org.arend.term.prettyprint.PrettyPrintVisitor;
-import org.arend.typechecking.computation.UnstoppableCancellationIndicator;
 import org.arend.util.Triple;
 import org.arend.frontend.TimedProgressReporter;
 
@@ -58,10 +57,10 @@ public final class ProofSearch {
       System.err.println("[ERROR] Only one proof search pattern is allowed. Use quotes if the pattern contains spaces.");
       return false;
     }
-    return matchAndPrint(ctx.server, ctx.libraryManager, ctx.requestedLibraries, patterns.getFirst(), printFull);
+    return matchAndPrint(ctx, ctx.server, ctx.libraryManager, ctx.requestedLibraries, patterns.getFirst(), printFull);
   }
 
-  private static boolean matchAndPrint(ArendServer server, LibraryManager libraryManager,
+  private static boolean matchAndPrint(CommandContext ctx, ArendServer server, LibraryManager libraryManager,
                                        List<SourceLibrary> requestedLibraries, String pattern, boolean printFull) {
     ProofSearchQuery.ParsingResult<ProofSearchQuery> queryResult = ProofSearchQuery.fromString(pattern);
     if (queryResult == null) return false;
@@ -78,7 +77,7 @@ public final class ProofSearch {
       server.getCheckerFor(library.findModules(false).stream()
               .map(modulePath -> new ModuleLocation(library.getLibraryName(), ModuleLocation.LocationKind.SOURCE, modulePath))
               .toList())
-          .resolveAll(UnstoppableCancellationIndicator.INSTANCE, ProgressReporter.empty());
+          .resolveAll(ctx.cancellation, ProgressReporter.empty());
       System.out.println("[INFO] " + "Resolved " + library.getLibraryName()
           + " (" + TimedProgressReporter.timeToString(System.currentTimeMillis() - time) + ")");
     }

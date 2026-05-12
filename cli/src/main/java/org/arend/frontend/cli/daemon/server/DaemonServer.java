@@ -3,6 +3,9 @@ package org.arend.frontend.cli.daemon.server;
 import org.arend.frontend.cli.CommandContext;
 import org.arend.frontend.cli.daemon.LockFile;
 import org.arend.frontend.cli.daemon.wire.Frame;
+import org.arend.typechecking.computation.CancellationIndicator;
+import org.arend.typechecking.computation.UnstoppableCancellationIndicator;
+import org.arend.util.ComputationInterruptedException;
 
 import java.io.IOException;
 import java.nio.channels.ClosedChannelException;
@@ -37,8 +40,10 @@ import java.util.concurrent.ExecutorService;
  * </ul>
  *
  * <p>Cancellation: each work item carries an {@link AtomicBoolean} that a {@code cancel}
- * op flips when its {@code targetId} matches {@link #currentTaskId}. Plumbing the flag
- * into the per-op handlers (as a {@code CancellationIndicator}) is deferred.
+ * op flips when its {@code targetId} matches {@link #currentTaskId}. The worker wraps
+ * that flag in a {@link FlagCancellationIndicator} and installs it on {@link
+ * CommandContext#cancellation}, so {@code ComputationRunner.checkCanceled()} inside the
+ * typechecker observes the cancel and throws {@link ComputationInterruptedException}.
  *
  * <p>{@link #shutdownLatch()} is the synchronisation point for {@link
  * org.arend.frontend.cli.daemon.DaemonMain}: it blocks on the latch and {@code
@@ -218,7 +223,9 @@ public final class DaemonServer {
       }
       workerState.set("BUSY");
       currentTaskId = item.requestId;
-      currentTaskCancel = new AtomicBoolean();
+      AtomicBoolean cancelFlag = new AtomicBoolean();
+      currentTaskCancel = cancelFlag;
+      ctx.cancellation = new FlagCancellationIndicator(cancelFlag);
       int exitCode = 1;
       try {
         if (CLI_OP.equals(item.op)) {
@@ -228,6 +235,10 @@ public final class DaemonServer {
           StreamRedirector.attach(item.replyTo, item.requestId);
           try {
             exitCode = CliDispatcher.run(ctx, (String[]) item.payload);
+          } catch (ComputationInterruptedException e) {
+            // A cancel op tripped the indicator; report 130 (the Unix Ctrl-C convention).
+            System.err.println("[CANCELLED]");
+            exitCode = 130;
           } catch (Throwable t) {
             t.printStackTrace(); // goes to the client via the redirect
             exitCode = 1;
@@ -243,6 +254,7 @@ public final class DaemonServer {
           }
         }
       } finally {
+        ctx.cancellation = UnstoppableCancellationIndicator.INSTANCE;
         workerState.set("IDLE");
         currentTaskId = "";
       }
@@ -258,4 +270,18 @@ public final class DaemonServer {
    */
   public record WorkItem(String op, String requestId, Object payload,
                          SocketChannel replyTo, AtomicBoolean cancel) {}
+
+  /**
+   * {@link CancellationIndicator} that reads from the same {@link AtomicBoolean} the
+   * cancel-op handler flips. Bridges the daemon's task-tracking model into the
+   * typechecker's {@code ComputationRunner.checkCanceled()} machinery.
+   */
+  private static final class FlagCancellationIndicator implements CancellationIndicator {
+    private final AtomicBoolean flag;
+
+    FlagCancellationIndicator(AtomicBoolean flag) { this.flag = flag; }
+
+    @Override public boolean isCanceled() { return flag.get(); }
+    @Override public void cancel() { flag.set(true); }
+  }
 }

@@ -15,6 +15,8 @@ import org.arend.naming.reference.TCDefReferable;
 import org.arend.naming.scope.EmptyScope;
 import org.arend.server.ArendServer;
 import org.arend.term.prettyprint.PrettyPrinterConfigWithRenamer;
+import org.arend.typechecking.computation.CancellationIndicator;
+import org.arend.typechecking.computation.UnstoppableCancellationIndicator;
 import org.arend.typechecking.error.local.GoalError;
 import org.arend.util.FileUtils;
 
@@ -56,6 +58,15 @@ public class CommandContext {
    * args against the warm context so source-timestamp checks pick up edits.
    */
   public String[] bootstrapArgs;
+
+  /**
+   * Cancellation indicator threaded through long-running CLI handlers (typecheck,
+   * proof search). In-process runs leave this as the unstoppable default; the daemon
+   * worker swaps in a per-task indicator wrapping its {@code currentTaskCancel} flag,
+   * so a client-side {@code cancel} op trips {@code ComputationRunner.checkCanceled()}
+   * inside the typechecker.
+   */
+  public CancellationIndicator cancellation = UnstoppableCancellationIndicator.INSTANCE;
 
   // Per-run mutable bookkeeping consulted across phases.
   public boolean exitWithError;
