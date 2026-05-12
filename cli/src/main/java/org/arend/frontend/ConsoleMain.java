@@ -373,6 +373,9 @@ public class ConsoleMain {
       cmdOptions.addOption(Option.builder("sc").longOpt("scope").hasArgs().argName("REFERABLE")
           .desc("dump the ambient scope at a referable's position; debug aid for reference-resolution issues. Accepts MODULE:PATH or a bare short name, plus an optional -ss-style pattern to filter results. Pass `-sc help` for full grammar.").build());
       cmdOptions.addOption(Option.builder("ai").longOpt("ai-pipeline").desc("agent-oriented all-in-one mode: (1) name-resolve: for each unresolved short name, list candidates (qualified name + required imports) the user can paste back into the source -- never rewrites, (2) typecheck, (3) emit signature-only mirrors to <library>/.sig/<module>.ard for verified definitions only (failed defs replaced with `-- skipped:` comments), (4) refresh the binary symbol index used by -ss/-fu/-ch/-sc. Honors positional-arg granularity (no args = library; MODULE; MODULE:DEF). Pass `-ai help` for full grammar.").build());
+      cmdOptions.addOption(Option.builder("d").longOpt("daemon").desc("start a daemon for the given library (single positional library reference). The daemon does the normal load+typecheck+persist+ai-finalize once, then idles serving future client requests.").build());
+      cmdOptions.addOption(Option.builder().longOpt("daemon-stop").desc("stop the daemon serving the given library (single positional library reference).").build());
+      cmdOptions.addOption(Option.builder().longOpt("daemon-status").desc("query the daemon serving the given library (reserved for M3).").build());
       cmdOptions.addOption("r", "recompile", false, "recompile all modules from source, ignoring binary caches (.arc files)");
       cmdOptions.addOption("t", "test", false, "run tests");
       cmdOptions.addOption("v", "version", false, "print language version");
@@ -429,6 +432,14 @@ public class ConsoleMain {
     }
   }
 
+  /**
+   * Same as {@link #run} but the method is exposed for the daemon child to reuse the full
+   * pipeline (parse + setup + dispatch) without going through {@code main}'s exit path.
+   */
+  public boolean runDaemonBootstrap(String[] args) {
+    return run(args);
+  }
+
   private boolean run(String[] args) {
     CommandLine cmdLine = parseArgs(args);
     if (cmdLine == null) return false;
@@ -436,6 +447,35 @@ public class ConsoleMain {
     CommandContext ctx = new CommandContext();
     if (!CliSetup.bootstrap(ctx, cmdLine)) return false;
     if (ctx.exitWithError) return false;
+
+    // Daemon control: doesn't load libraries in-process; the child JVM does.
+    // Library reference is always a single positional arg.
+    boolean daemonStart  = cmdLine.hasOption("d");
+    boolean daemonStop   = cmdLine.hasOption("daemon-stop");
+    boolean daemonStatus = cmdLine.hasOption("daemon-status");
+    if (daemonStart || daemonStop || daemonStatus) {
+      int chosen = (daemonStart ? 1 : 0) + (daemonStop ? 1 : 0) + (daemonStatus ? 1 : 0);
+      if (chosen > 1) {
+        System.err.println("[ERROR] only one of -d / --daemon-stop / --daemon-status may be given");
+        return false;
+      }
+      java.util.List<String> positional = cmdLine.getArgList();
+      if (positional.size() != 1) {
+        System.err.println("[ERROR] daemon mode requires exactly one positional library reference");
+        return false;
+      }
+      String libRef = positional.get(0);
+      int rc;
+      if (daemonStart) {
+        rc = org.arend.frontend.cli.daemon.DaemonStart.run(libRef, ctx.libDirs);
+      } else if (daemonStop) {
+        rc = org.arend.frontend.cli.daemon.DaemonStop.run(libRef, ctx.libDirs);
+      } else {
+        System.err.println("[ERROR] --daemon-status is reserved for M3");
+        rc = 1;
+      }
+      return rc == 0;
+    }
 
     // -i REPL needs only libDirs + server (both set up by bootstrap); short-circuit before
     // collecting requested modules / loading libraries.
@@ -524,6 +564,14 @@ public class ConsoleMain {
   }
 
   public static void main(String[] args) {
+    // Internal entry for the daemon child JVM: never returns to normal CLI dispatch.
+    // Detected here, before parseArgs, because commons-cli would reject the flag and we
+    // also want to bypass any normal-CLI output buffering before the parent has wired up
+    // stdout/stderr to daemon.log.
+    if (args.length > 0 && "--daemon-bootstrap".equals(args[0])) {
+      org.arend.frontend.cli.daemon.DaemonMain.run(args);
+      return;
+    }
     if (!new ConsoleMain().run(args)) {
       System.exit(1);
     }
