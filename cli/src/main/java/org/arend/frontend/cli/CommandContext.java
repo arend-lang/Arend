@@ -50,6 +50,13 @@ public class CommandContext {
   public boolean doubleCheck;
   public boolean recompile;
 
+  /**
+   * Original argv used to bootstrap the daemon (set only by {@code runDaemonBootstrap};
+   * null for in-process runs). The daemon's {@code refresh} op re-dispatches these exact
+   * args against the warm context so source-timestamp checks pick up edits.
+   */
+  public String[] bootstrapArgs;
+
   // Per-run mutable bookkeeping consulted across phases.
   public boolean exitWithError;
   public final Map<ModuleLocation, GeneralError.Level> moduleResults = new LinkedHashMap<>();

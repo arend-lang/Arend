@@ -28,8 +28,9 @@ import java.util.concurrent.ExecutorService;
  *   <li>{@code accept}: blocks on {@link SocketBinder.Bound#channel()}'s accept().
  *       Hands each new connection off to a small cached pool.</li>
  *   <li>per-client (from the pool): reads framed requests, dispatches inline ops
- *       (ping/status/cancel/shutdown) on the same thread. {@code cli} ops are enqueued
- *       for the worker so long-running typechecks don't block the accept thread.</li>
+ *       (ping/status/cancel/shutdown) on the same thread. {@code cli} and {@code
+ *       refresh} ops are enqueued for the worker so long-running typechecks don't block
+ *       the accept thread.</li>
  *   <li>{@code worker}: pulls {@link WorkItem}s from a {@link BlockingQueue}. The
  *       sentinel item triggers a clean shutdown; {@code cli} items run through
  *       {@link CliDispatcher} on the warm {@link CommandContext}.</li>
@@ -47,6 +48,7 @@ import java.util.concurrent.ExecutorService;
 public final class DaemonServer {
   private static final String SHUTDOWN_SENTINEL = "_shutdown_";
   private static final String CLI_OP = "cli";
+  private static final String REFRESH_OP = "refresh";
 
   private final SocketBinder.Bound bound;
   private final CommandContext ctx;
@@ -174,6 +176,13 @@ public final class DaemonServer {
       }
       case CLI_OP -> {
         String[] args = extractArgs(req);
+        workQueue.add(new WorkItem(CLI_OP, id, args, ch, null));
+      }
+      case REFRESH_OP -> {
+        // Reuse the cli-op worker path with the daemon's frozen bootstrap argv —
+        // re-running -ai against the warm context, source-timestamp checks pick up
+        // edits, and any streaming output goes back to this client.
+        String[] args = ctx.bootstrapArgs == null ? new String[0] : ctx.bootstrapArgs.clone();
         workQueue.add(new WorkItem(CLI_OP, id, args, ch, null));
       }
       default -> {
