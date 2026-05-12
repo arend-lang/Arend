@@ -1,21 +1,26 @@
 package org.arend.frontend.cli.daemon;
 
-import java.nio.file.Files;
+import org.arend.frontend.cli.daemon.client.DaemonRpc;
+
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Optional;
 
 /**
- * Parent-side: stop a running daemon by reading its lock file's PID and sending SIGTERM.
- * The daemon's JVM shutdown hook deletes the lock file; we poll for that to confirm.
+ * Parent-side: stop a running daemon.
  *
- * <p>In M3 this will be replaced by a socket-side {@code {op: shutdown}} message; M2
- * does it via the OS signal because no socket exists yet.
+ * <p>Sequence:
+ * <ol>
+ *   <li>Read lock; bail with success if absent (no daemon to stop).</li>
+ *   <li>Try socket-side {@code shutdown} via {@link DaemonRpc}. If it succeeds, wait
+ *       briefly for the lock file to vanish (proves the JVM exited and the shutdown
+ *       hook ran).</li>
+ *   <li>Otherwise (or if the RPC times out without the lock disappearing), fall back to
+ *       OS-level {@code destroy()} → {@code destroyForcibly()}.</li>
+ * </ol>
  */
 public final class DaemonStop {
-  /** Max time to wait for the daemon to clean up after SIGTERM before escalating. */
   public static final int GRACEFUL_TIMEOUT_SECONDS = 30;
-  /** Max time to wait after destroyForcibly() before giving up. */
   public static final int FORCEFUL_TIMEOUT_SECONDS = 5;
 
   private DaemonStop() {}
@@ -49,9 +54,27 @@ public final class DaemonStop {
     }
 
     System.out.println("Stopping Arend daemon for " + paths.libraryConfig + " (PID " + lf.pid + ")");
-    ph.get().destroy();
 
-    if (waitForLockGone(paths.lockFile, GRACEFUL_TIMEOUT_SECONDS)) {
+    // Try the clean path: socket-side `shutdown`. The daemon replies done, the worker
+    // pulls the sentinel, the JVM exits, the shutdown hook removes the lock.
+    int rpcRc = DaemonRpc.run(libRef, libDirsForward, "shutdown");
+    if (rpcRc == 0) {
+      if (DaemonRpc.waitForLockGone(paths.lockFile, GRACEFUL_TIMEOUT_SECONDS)) {
+        System.out.println("Daemon stopped (PID " + lf.pid + ")");
+        return 0;
+      }
+      System.err.println("[WARN]  -d stop: daemon ack'd shutdown but PID " + lf.pid
+          + " did not exit within " + GRACEFUL_TIMEOUT_SECONDS + "s; falling back to SIGTERM");
+    } else if (rpcRc == DaemonRpc.NO_DAEMON) {
+      // Stale lock already cleaned up by DaemonRpc.
+      return 0;
+    } else {
+      System.err.println("[WARN]  -d stop: socket-side shutdown failed (rc=" + rpcRc
+          + "); falling back to SIGTERM");
+    }
+
+    ph.get().destroy();
+    if (DaemonRpc.waitForLockGone(paths.lockFile, GRACEFUL_TIMEOUT_SECONDS)) {
       System.out.println("Daemon stopped (PID " + lf.pid + ")");
       return 0;
     }
@@ -59,7 +82,7 @@ public final class DaemonStop {
     System.err.println("[WARN]  -d stop: PID " + lf.pid + " did not exit gracefully within "
         + GRACEFUL_TIMEOUT_SECONDS + "s; escalating to SIGKILL");
     ph.get().destroyForcibly();
-    waitForLockGone(paths.lockFile, FORCEFUL_TIMEOUT_SECONDS);
+    DaemonRpc.waitForLockGone(paths.lockFile, FORCEFUL_TIMEOUT_SECONDS);
     LockFile.deleteQuietly(paths.lockFile);
 
     if (ProcessHandle.of(lf.pid).isPresent()) {
@@ -68,19 +91,5 @@ public final class DaemonStop {
     }
     System.out.println("Daemon killed (PID " + lf.pid + ")");
     return 0;
-  }
-
-  private static boolean waitForLockGone(Path lockPath, int timeoutSeconds) {
-    long deadline = System.currentTimeMillis() + timeoutSeconds * 1000L;
-    while (System.currentTimeMillis() < deadline) {
-      if (!Files.exists(lockPath)) return true;
-      try {
-        Thread.sleep(150);
-      } catch (InterruptedException e) {
-        Thread.currentThread().interrupt();
-        return false;
-      }
-    }
-    return !Files.exists(lockPath);
   }
 }

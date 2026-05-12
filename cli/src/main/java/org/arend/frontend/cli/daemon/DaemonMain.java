@@ -1,12 +1,13 @@
 package org.arend.frontend.cli.daemon;
 
 import org.arend.frontend.ConsoleMain;
+import org.arend.frontend.cli.daemon.server.DaemonServer;
+import org.arend.frontend.cli.daemon.server.SocketBinder;
 
 import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Arrays;
-import java.util.concurrent.CountDownLatch;
 
 /**
  * Child-side daemon entry point. Triggered by an internal {@code --daemon-bootstrap} flag
@@ -21,19 +22,19 @@ import java.util.concurrent.CountDownLatch;
  *   <li>Strip {@code --daemon-bootstrap <libRef>}; the remaining args are a normal CLI
  *       invocation (typically {@code -L <libdir> <libRef> -ai}).</li>
  *   <li>Resolve {@link DaemonPaths} from {@code libRef}; abort if it doesn't resolve.</li>
- *   <li>Run {@link ConsoleMain#run(String[])} on the stripped args. If it reports failure,
- *       exit 1 (no lock written = parent's wait-for-ready times out and reports).</li>
- *   <li>Write the lock file (signals READY to the parent).</li>
- *   <li>Install a JVM shutdown hook that deletes the lock file.</li>
- *   <li>Block indefinitely; SIGTERM / explicit destroy unblocks via shutdown hook.</li>
+ *   <li>Run {@link ConsoleMain#runDaemonBootstrap} on the forwarded args. If it reports
+ *       failure, exit 1 (no lock written → parent's wait-for-ready times out).</li>
+ *   <li>Bind the daemon socket (UDS or TCP), start the {@link DaemonServer}.</li>
+ *   <li>Write the lock file with the bound socket address (signals READY to the parent).</li>
+ *   <li>Install a JVM shutdown hook that closes the server + deletes lock + socket.</li>
+ *   <li>Block on the server's shutdown latch (decremented by the worker's shutdown sentinel
+ *       or by {@code SIGTERM} via the hook).</li>
  * </ol>
  */
 public final class DaemonMain {
   private DaemonMain() {}
 
   public static void run(String[] args) {
-    // Expected layout: args[0] == "--daemon-bootstrap", args[1] == library reference,
-    // args[2..] = forwarded normal-CLI args.
     if (args.length < 2) {
       System.err.println("[DAEMON] --daemon-bootstrap requires a library reference");
       System.exit(1);
@@ -68,43 +69,57 @@ public final class DaemonMain {
       return;
     }
 
+    SocketBinder.Bound bound;
+    try {
+      bound = SocketBinder.bind(paths.socketFile);
+    } catch (IOException e) {
+      System.err.println("[DAEMON] could not bind daemon socket: " + e.getMessage());
+      System.exit(1);
+      return;
+    }
+    System.out.println("[DAEMON] bound socket: " + bound.address());
+
+    DaemonServer server = new DaemonServer(bound);
+    server.start();
+
     LockFile lock = new LockFile(
         ProcessHandle.current().pid(),
         paths.libraryConfig.toString(),
         paths.libraryHash,
-        LockFile.PROTOCOL_VERSION_M2,
+        LockFile.PROTOCOL_VERSION_M3,
         System.currentTimeMillis(),
-        "" // no socket bound in M2
+        bound.address()
     );
     try {
       lock.writeAtomic(paths.lockFile);
     } catch (IOException e) {
       System.err.println("[DAEMON] could not write lock file " + paths.lockFile + ": " + e.getMessage());
+      server.close();
       System.exit(1);
       return;
     }
 
-    // Shutdown hook: removes lock + socket on graceful exit (SIGTERM, JVM exit, normal end).
-    // SIGKILL skips this and leaves a stale lock — the next client's stale-PID check cleans it.
     Path lockPath = paths.lockFile;
     Path socketPath = paths.socketFile;
-    final CountDownLatch shutdown = new CountDownLatch(1);
     Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+      server.close();
       LockFile.deleteQuietly(lockPath);
       LockFile.deleteQuietly(socketPath);
-      shutdown.countDown();
     }, "arend-daemon-shutdown"));
 
     System.out.println("[DAEMON] READY (PID " + ProcessHandle.current().pid() + ")");
     System.out.flush();
 
-    // Block until the shutdown hook fires. The hook runs on its own thread, but Runtime
-    // joins it before exiting, so simply waiting forever here suffices — the JVM teardown
-    // path will unblock us via the latch.
+    // Block until the worker pulls a shutdown sentinel (socket-side shutdown op) or a
+    // SIGTERM trips the JVM shutdown hook. In the signal case the hook calls
+    // server.close(), the worker's queue.take() is interrupted, and the JVM exits.
     try {
-      shutdown.await();
+      server.shutdownLatch().await();
     } catch (InterruptedException e) {
       Thread.currentThread().interrupt();
     }
+    // Trigger the shutdown hook explicitly: socket-side `shutdown` returns control here
+    // without going through the JVM-exit path, so we have to call exit ourselves.
+    System.exit(0);
   }
 }
