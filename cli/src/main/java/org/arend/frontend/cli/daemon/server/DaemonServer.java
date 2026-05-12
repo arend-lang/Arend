@@ -95,6 +95,21 @@ public final class DaemonServer {
     return shutdownLatch;
   }
 
+  /**
+   * Internal-refresh entry: enqueues a worker item that re-runs the bootstrap argv
+   * against the warm context, mimicking what a client {@code refresh} op does but with
+   * no reply socket. Output streams to {@code daemon.log} instead of a client. Skipped
+   * if a task is already running or queued, so a flurry of edits doesn't pile up.
+   */
+  public void requestInternalRefresh(String reason) {
+    if (ctx.bootstrapArgs == null) return;
+    if (!"IDLE".equals(workerState.get()) || !workQueue.isEmpty()) return;
+    System.out.println("[DAEMON][watch] refresh triggered (" + reason + ")");
+    System.out.flush();
+    workQueue.add(new WorkItem(CLI_OP, "watch-" + System.nanoTime(),
+        ctx.bootstrapArgs.clone(), null, null));
+  }
+
   /** Race-safe socket close; used by the shutdown hook to unblock {@code accept()}. */
   public void close() {
     try {
@@ -229,10 +244,11 @@ public final class DaemonServer {
       int exitCode = 1;
       try {
         if (CLI_OP.equals(item.op)) {
-          // Bind this thread's System.out / System.err to the originating client so the
-          // handler's println calls stream as wire frames. Other daemon threads keep
-          // writing to daemon.log via the default sink.
-          StreamRedirector.attach(item.replyTo, item.requestId);
+          boolean toClient = item.replyTo != null;
+          // For client-bound work, redirect this thread's stdout/stderr to wire frames.
+          // For internal refreshes (replyTo == null, e.g. SourceWatcher fired) the output
+          // stays on the default sink and lands in daemon.log.
+          if (toClient) StreamRedirector.attach(item.replyTo, item.requestId);
           try {
             exitCode = CliDispatcher.run(ctx, (String[]) item.payload);
           } catch (ComputationInterruptedException e) {
@@ -240,17 +256,19 @@ public final class DaemonServer {
             System.err.println("[CANCELLED]");
             exitCode = 130;
           } catch (Throwable t) {
-            t.printStackTrace(); // goes to the client via the redirect
+            t.printStackTrace(); // client-bound: via redirect; internal: to daemon.log
             exitCode = 1;
           } finally {
-            StreamRedirector.detach();
+            if (toClient) StreamRedirector.detach();
           }
-          try {
-            synchronized (item.replyTo) {
-              Frame.write(item.replyTo, Frame.doneFrame(item.requestId, exitCode));
+          if (toClient) {
+            try {
+              synchronized (item.replyTo) {
+                Frame.write(item.replyTo, Frame.doneFrame(item.requestId, exitCode));
+              }
+            } catch (IOException e) {
+              // Client probably disconnected before we could finish; nothing to do.
             }
-          } catch (IOException e) {
-            // Client probably disconnected before we could finish; nothing to do.
           }
         }
       } finally {

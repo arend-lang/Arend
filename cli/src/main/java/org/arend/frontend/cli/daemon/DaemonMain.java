@@ -4,12 +4,17 @@ import org.arend.frontend.ConsoleMain;
 import org.arend.frontend.cli.CommandContext;
 import org.arend.frontend.cli.daemon.server.DaemonServer;
 import org.arend.frontend.cli.daemon.server.SocketBinder;
+import org.arend.frontend.cli.daemon.server.SourceWatcher;
 import org.arend.frontend.cli.daemon.server.StreamRedirector;
+import org.arend.frontend.library.FileSourceLibrary;
+import org.arend.frontend.library.SourceLibrary;
 
 import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 
 /**
  * Child-side daemon entry point. Triggered by an internal {@code --daemon-bootstrap} flag
@@ -88,6 +93,11 @@ public final class DaemonMain {
     DaemonServer server = new DaemonServer(bound, warmCtx);
     server.start();
 
+    SourceWatcher watcher = startSourceWatcher(warmCtx, server);
+    if (watcher == null) {
+      System.out.println("[DAEMON][watch] disabled (no source roots resolved)");
+    }
+
     LockFile lock = new LockFile(
         ProcessHandle.current().pid(),
         paths.libraryConfig.toString(),
@@ -107,7 +117,9 @@ public final class DaemonMain {
 
     Path lockPath = paths.lockFile;
     Path socketPath = paths.socketFile;
+    SourceWatcher hookWatcher = watcher;
     Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+      if (hookWatcher != null) hookWatcher.stop();
       server.close();
       LockFile.deleteQuietly(lockPath);
       LockFile.deleteQuietly(socketPath);
@@ -115,6 +127,8 @@ public final class DaemonMain {
 
     System.out.println("[DAEMON] READY (PID " + ProcessHandle.current().pid() + ")");
     System.out.flush();
+    // ─── source watcher lifecycle ───
+    // Trigger a refresh on .ard edits; coalescing happens inside DaemonServer.
 
     // Block until the worker pulls a shutdown sentinel (socket-side shutdown op) or a
     // SIGTERM trips the JVM shutdown hook. In the signal case the hook calls
@@ -127,5 +141,32 @@ public final class DaemonMain {
     // Trigger the shutdown hook explicitly: socket-side `shutdown` returns control here
     // without going through the JVM-exit path, so we have to call exit ourselves.
     System.exit(0);
+  }
+
+  /**
+   * Collect the file-system roots of every loaded library and start a {@link
+   * SourceWatcher} that auto-fires {@link DaemonServer#requestInternalRefresh} when an
+   * {@code .ard} file under any of them changes. Returns null if no FS-backed root
+   * could be resolved (e.g. all libraries are synthetic or the build is incomplete).
+   */
+  private static SourceWatcher startSourceWatcher(CommandContext ctx, DaemonServer server) {
+    List<Path> roots = new ArrayList<>();
+    for (SourceLibrary lib : ctx.requestedLibraries) {
+      if (lib instanceof FileSourceLibrary file) {
+        Path src = file.getSourceBasePath();
+        if (src != null) roots.add(src);
+      }
+    }
+    if (roots.isEmpty()) return null;
+    SourceWatcher watcher = new SourceWatcher(roots,
+        () -> server.requestInternalRefresh("source edit"), 300L);
+    try {
+      watcher.start();
+    } catch (IOException e) {
+      System.err.println("[DAEMON][watch] disabled: " + e.getMessage());
+      return null;
+    }
+    System.out.println("[DAEMON][watch] watching " + roots.size() + " root(s): " + roots);
+    return watcher;
   }
 }
