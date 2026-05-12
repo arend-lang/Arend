@@ -377,6 +377,7 @@ public class ConsoleMain {
       cmdOptions.addOption(Option.builder().longOpt("daemon-stop").desc("stop the daemon serving the given library (single positional library reference).").build());
       cmdOptions.addOption(Option.builder().longOpt("daemon-ping").desc("ping the daemon serving the given library; reports IDLE or BUSY.").build());
       cmdOptions.addOption(Option.builder().longOpt("daemon-status").desc("dump status (state, queueDepth, uptimeMs, currentTaskId) of the daemon serving the given library.").build());
+      cmdOptions.addOption(Option.builder().longOpt("daemon-refresh").desc("re-run the bootstrap pipeline (-ai) on the daemon's warm context so source edits are picked up.").build());
       cmdOptions.addOption(Option.builder().longOpt("no-daemon").desc("force in-process execution even if a daemon serves the requested library.").build());
       cmdOptions.addOption("r", "recompile", false, "recompile all modules from source, ignoring binary caches (.arc files)");
       cmdOptions.addOption("t", "test", false, "run tests");
@@ -444,6 +445,7 @@ public class ConsoleMain {
     CommandLine cmdLine = parseArgs(args);
     if (cmdLine == null) return null;
     CommandContext ctx = new CommandContext();
+    ctx.bootstrapArgs = args.clone();
     if (!CliSetup.bootstrap(ctx, cmdLine)) return null;
     if (ctx.exitWithError) return null;
     if (!CliSetup.loadRequestedLibraries(ctx, cmdLine)) return null;
@@ -462,14 +464,16 @@ public class ConsoleMain {
 
     // Daemon control: doesn't load libraries in-process; the child JVM does.
     // Library reference is always a single positional arg.
-    boolean daemonStart  = cmdLine.hasOption("d");
-    boolean daemonStop   = cmdLine.hasOption("daemon-stop");
-    boolean daemonPing   = cmdLine.hasOption("daemon-ping");
-    boolean daemonStatus = cmdLine.hasOption("daemon-status");
-    if (daemonStart || daemonStop || daemonPing || daemonStatus) {
-      int chosen = (daemonStart ? 1 : 0) + (daemonStop ? 1 : 0) + (daemonPing ? 1 : 0) + (daemonStatus ? 1 : 0);
+    boolean daemonStart   = cmdLine.hasOption("d");
+    boolean daemonStop    = cmdLine.hasOption("daemon-stop");
+    boolean daemonPing    = cmdLine.hasOption("daemon-ping");
+    boolean daemonStatus  = cmdLine.hasOption("daemon-status");
+    boolean daemonRefresh = cmdLine.hasOption("daemon-refresh");
+    if (daemonStart || daemonStop || daemonPing || daemonStatus || daemonRefresh) {
+      int chosen = (daemonStart ? 1 : 0) + (daemonStop ? 1 : 0) + (daemonPing ? 1 : 0)
+          + (daemonStatus ? 1 : 0) + (daemonRefresh ? 1 : 0);
       if (chosen > 1) {
-        System.err.println("[ERROR] only one of -d / --daemon-stop / --daemon-ping / --daemon-status may be given");
+        System.err.println("[ERROR] only one of -d / --daemon-stop / --daemon-ping / --daemon-status / --daemon-refresh may be given");
         return false;
       }
       java.util.List<String> positional = cmdLine.getArgList();
@@ -484,7 +488,7 @@ public class ConsoleMain {
       } else if (daemonStop) {
         rc = org.arend.frontend.cli.daemon.DaemonStop.run(libRef, ctx.libDirs);
       } else {
-        String op = daemonPing ? "ping" : "status";
+        String op = daemonPing ? "ping" : daemonStatus ? "status" : "refresh";
         rc = org.arend.frontend.cli.daemon.client.DaemonRpc.run(libRef, ctx.libDirs, op);
         if (rc == org.arend.frontend.cli.daemon.client.DaemonRpc.NO_DAEMON) {
           System.err.println("[ERROR] " + op + ": no daemon running for the given library");
