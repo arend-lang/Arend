@@ -27,28 +27,30 @@ import org.arend.util.FileUtils;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.io.IOException;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
 
 /**
- * Auto-fix engine used by {@code -rr}: takes the buffered name-resolution
- * errors, looks up unresolved short names in the per-library binary symbol
- * indices, and either rewrites the source (unique candidate) or prints the
- * candidate list (multiple candidates).
+ * Name-resolution suggestion engine used by {@code -ai}'s step 1: takes the
+ * buffered name-resolution errors, looks up unresolved short names in the
+ * per-library binary symbol indices, and prints a candidate list (qualified
+ * name + required imports) the user can paste back into the source. Never
+ * rewrites sources — an earlier auto-fix version did and was prone to
+ * mangling identifiers when positions or replacement lengths got out of sync,
+ * so the unique-candidate path was folded into the same suggestion-block
+ * output as the ambiguous one.
+ *
+ * Also doubles as the home of the unrelated missing-constructor-import
+ * warning (a selective {@code \import M(Data)} that doesn't also list
+ * {@code Data}'s constructors), which fires from the same pass.
  */
-public final class ReferenceResolveAutoFix {
+public final class ReferenceResolveSuggest {
 
-  private ReferenceResolveAutoFix() {}
+  private ReferenceResolveSuggest() {}
 
   public record Result(
       @NotNull List<GeneralError> errorsToPrint,
       @NotNull List<String> suggestionBlocks,
-      @NotNull List<String> infoMessages,
-      @NotNull List<Path> modifiedFiles,
-      @NotNull Set<ModuleLocation> modifiedModules,
       @NotNull List<String> warnings
   ) {}
 
@@ -69,11 +71,8 @@ public final class ReferenceResolveAutoFix {
     // 1. Load all library symbol indices once.
     Map<SourceLibrary, SymbolIndex> indices = loadIndices(manager);
 
-    // 2. Collect fixes per file + buffered output for non-fixable errors.
-    Map<Path, FileFixes> perFile = new LinkedHashMap<>();
     List<GeneralError> errorsToPrint = new ArrayList<>();
     List<String> suggestionBlocks = new ArrayList<>();
-    List<String> infoMessages = new ArrayList<>();
     Set<String> namesAlreadySuggested = new HashSet<>();
 
     for (GeneralError err : errors) {
@@ -95,7 +94,7 @@ public final class ReferenceResolveAutoFix {
         continue;
       }
 
-      // 3. Find symbol-index candidates for this short name.
+      // 2. Find symbol-index candidates for this short name.
       List<IndexHit> hits = lookupCandidates(indices, nse.name);
 
       if (hits.isEmpty()) {
@@ -103,7 +102,7 @@ public final class ReferenceResolveAutoFix {
         continue;
       }
 
-      // 4. For each hit, compute a calculated name + import command via
+      // 3. For each hit, compute a calculated name + import command via
       //    SingleFileReferenceResolver. Drop hits whose target referable can't
       //    be located (stale index, foreign generated entries, etc.).
       List<Candidate> candidates = new ArrayList<>();
@@ -132,38 +131,21 @@ public final class ReferenceResolveAutoFix {
       // Deduplicate exact-equal candidates (same label + same calculated name).
       candidates = dedupCandidates(candidates);
 
-      if (candidates.size() == 1) {
-        Candidate only = candidates.getFirst();
-        final ModuleLocation moduleForFix = module;
-        FileFixes ff = perFile.computeIfAbsent(filePath, k -> new FileFixes(k, moduleForFix));
-        ff.replacements.add(new Replacement(position.line, position.column, nse.name.length(), only.calculatedName));
-        for (RawImportAdder imp : only.imports) ff.imports.add(imp);
-        infoMessages.add(formatInfoMessage(filePath, position, nse.name, only));
-      } else {
-        errorsToPrint.add(err);
-        // Print the candidate list once per (file, name) pair.
-        String key = filePath + "|" + nse.name;
-        if (namesAlreadySuggested.add(key)) {
-          suggestionBlocks.add(formatSuggestionBlock(filePath, position, nse.name, candidates));
-        }
+      // The original error is always re-emitted alongside the suggestion: the
+      // user still needs to see WHERE in the source the name failed; the
+      // candidate block tells them WHAT to write instead.
+      errorsToPrint.add(err);
+      String key = filePath + "|" + nse.name;
+      if (namesAlreadySuggested.add(key)) {
+        suggestionBlocks.add(formatSuggestionBlock(filePath, position, nse.name, candidates));
       }
     }
 
-    // 5. Apply the per-file fixes.
-    List<Path> modified = new ArrayList<>();
-    Set<ModuleLocation> modifiedMods = new LinkedHashSet<>();
-    for (FileFixes ff : perFile.values()) {
-      if (applyFixes(ff)) {
-        modified.add(ff.path);
-        if (ff.module != null) modifiedMods.add(ff.module);
-      }
-    }
-
-    // 6. Surface non-core warnings: imports that bring in a data type but
-    //    leave its constructors out of scope (the silent-variable-pattern bug).
+    // Surface non-core warnings: imports that bring in a data type but
+    // leave its constructors out of scope (the silent-variable-pattern bug).
     List<String> warnings = findMissingConstructorImports(server, manager, requestedLibraries);
 
-    return new Result(errorsToPrint, suggestionBlocks, infoMessages, modified, modifiedMods, warnings);
+    return new Result(errorsToPrint, suggestionBlocks, warnings);
   }
 
   // ---- missing-constructor-import warning -------------------------------
@@ -406,18 +388,6 @@ public final class ReferenceResolveAutoFix {
         + "  [" + kind + "]";
   }
 
-  private static String formatInfoMessage(Path file, SourcePosition pos, String name, Candidate fix) {
-    StringBuilder sb = new StringBuilder();
-    sb.append("[INFO] ").append(file).append(':').append(pos.line).append(':').append(pos.column);
-    sb.append(": auto-resolved '").append(name).append("' -> ").append(fix.calculatedName);
-    sb.append(" (").append(fix.label).append(')');
-    if (!fix.imports.isEmpty()) {
-      sb.append("; added");
-      for (RawImportAdder imp : fix.imports) sb.append(" `").append(imp.command()).append('`');
-    }
-    return sb.toString();
-  }
-
   private static String formatSuggestionBlock(Path file, SourcePosition pos, String name, List<Candidate> candidates) {
     StringBuilder sb = new StringBuilder();
     sb.append("  Candidates for '").append(name).append("' at ")
@@ -476,222 +446,4 @@ public final class ReferenceResolveAutoFix {
     }
   }
 
-  // ---- file rewriting ---------------------------------------------------
-
-  private record Replacement(int line, int column, int length, @NotNull String text) {}
-
-  private static final class FileFixes {
-    final Path path;
-    final ModuleLocation module;
-    final List<Replacement> replacements = new ArrayList<>();
-    final Set<RawImportAdder> imports = new LinkedHashSet<>();
-    FileFixes(Path path, ModuleLocation module) { this.path = path; this.module = module; }
-  }
-
-  private static boolean applyFixes(FileFixes ff) {
-    String original;
-    try {
-      original = Files.readString(ff.path, StandardCharsets.UTF_8);
-    } catch (IOException e) {
-      System.err.println("[ERROR] cannot read " + ff.path + ": " + e.getMessage());
-      return false;
-    }
-
-    String afterReplacements = applyReplacements(original, ff.replacements);
-    String afterImports = applyImports(afterReplacements, ff.imports);
-
-    if (afterImports.equals(original)) return false;
-    try {
-      Files.writeString(ff.path, afterImports, StandardCharsets.UTF_8);
-    } catch (IOException e) {
-      System.err.println("[ERROR] cannot write " + ff.path + ": " + e.getMessage());
-      return false;
-    }
-    return true;
-  }
-
-  private static String applyReplacements(String text, List<Replacement> replacements) {
-    if (replacements.isEmpty()) return text;
-    int[] lineStarts = computeLineStarts(text);
-    // Sort by file offset descending so each replacement keeps prior offsets intact.
-    List<Replacement> ordered = new ArrayList<>(replacements);
-    ordered.sort(Comparator.comparingInt(
-        (Replacement r) -> offsetOf(lineStarts, r.line, r.column)).reversed());
-    StringBuilder sb = new StringBuilder(text);
-    for (Replacement r : ordered) {
-      int start = offsetOf(lineStarts, r.line, r.column);
-      if (start < 0 || start + r.length > sb.length()) continue;
-      sb.replace(start, start + r.length, r.text);
-    }
-    return sb.toString();
-  }
-
-  private static int[] computeLineStarts(String text) {
-    List<Integer> starts = new ArrayList<>();
-    starts.add(0);
-    for (int i = 0; i < text.length(); i++) {
-      if (text.charAt(i) == '\n') starts.add(i + 1);
-    }
-    int[] arr = new int[starts.size()];
-    for (int i = 0; i < starts.size(); i++) arr[i] = starts.get(i);
-    return arr;
-  }
-
-  private static int offsetOf(int[] lineStarts, int line, int column) {
-    int idx = line - 1;
-    if (idx < 0 || idx >= lineStarts.length) return -1;
-    return lineStarts[idx] + (column - 1);
-  }
-
-  /**
-   * Insert each new {@code \import ...} line in the existing import block,
-   * keeping it sorted lexicographically by the module path. Imports that
-   * target the same module are merged: a "using everything" form supersedes
-   * any name-list form, otherwise the renaming sets are unioned.
-   */
-  private static String applyImports(String text, Set<RawImportAdder> imports) {
-    if (imports.isEmpty()) return text;
-
-    // 1. Lower the new imports into structured specs grouped by module path.
-    LinkedHashMap<String, ImportSpec> newSpecs = new LinkedHashMap<>();
-    for (RawImportAdder imp : imports) {
-      ConcreteNamespaceCommand cmd = imp.command();
-      String mod = String.join(".", cmd.module().getPath());
-      ImportSpec spec = newSpecs.computeIfAbsent(mod, ImportSpec::new);
-      spec.merge(cmd);
-    }
-
-    List<String> lines = new ArrayList<>(Arrays.asList(text.split("\n", -1)));
-
-    // 2. Find the contiguous block of \import lines at the top.
-    int firstImport = -1;
-    int lastImport = -1;
-    for (int i = 0; i < lines.size(); i++) {
-      String trimmed = lines.get(i).stripLeading();
-      if (trimmed.startsWith("\\import")) {
-        if (firstImport < 0) firstImport = i;
-        lastImport = i;
-      } else if (firstImport >= 0 && !trimmed.isEmpty()) {
-        break;
-      }
-    }
-
-    // 3. Walk the existing block. For each \import line whose module path
-    // matches one of the new specs, replace the line with a merged version;
-    // otherwise leave it alone.
-    List<String> mergedBlock = new ArrayList<>();
-    if (firstImport >= 0) {
-      for (int i = firstImport; i <= lastImport; i++) {
-        String original = lines.get(i);
-        String trimmed = original.stripLeading();
-        if (!trimmed.startsWith("\\import")) {
-          mergedBlock.add(original);
-          continue;
-        }
-        String key = importLineKey(trimmed);
-        ImportSpec spec = newSpecs.remove(key);
-        if (spec == null) {
-          mergedBlock.add(original);
-        } else {
-          // Merge the existing line's renamings into the new spec, then render.
-          ImportSpec existing = ImportSpec.parse(trimmed);
-          if (existing != null) spec.absorb(existing);
-          mergedBlock.add(spec.render());
-        }
-      }
-    }
-
-    // 4. Render the remaining new specs (modules not previously imported).
-    List<String> additions = new ArrayList<>();
-    for (ImportSpec spec : newSpecs.values()) additions.add(spec.render());
-    if (additions.isEmpty() && firstImport < 0) return text;
-
-    // 5. Reassemble the file with the imports block sorted lexicographically.
-    List<String> finalBlock = new ArrayList<>(mergedBlock);
-    finalBlock.addAll(additions);
-    finalBlock.sort(Comparator.naturalOrder());
-
-    if (firstImport < 0) {
-      List<String> head = new ArrayList<>(finalBlock);
-      if (!lines.isEmpty()) head.add("");
-      head.addAll(lines);
-      return String.join("\n", head);
-    }
-
-    List<String> rebuilt = new ArrayList<>();
-    rebuilt.addAll(lines.subList(0, firstImport));
-    rebuilt.addAll(finalBlock);
-    rebuilt.addAll(lines.subList(lastImport + 1, lines.size()));
-    return String.join("\n", rebuilt);
-  }
-
-  /** Crude module-path key: the bare module path token of {@code \import Foo.Bar(...)}. */
-  private static String importLineKey(String line) {
-    String body = line.stripLeading();
-    if (body.startsWith("\\import")) body = body.substring("\\import".length()).stripLeading();
-    int cut = body.length();
-    for (int i = 0; i < body.length(); i++) {
-      char c = body.charAt(i);
-      if (c == ' ' || c == '\t' || c == '(' || c == '\\') { cut = i; break; }
-    }
-    return body.substring(0, cut);
-  }
-
-  private static final class ImportSpec {
-    final String modulePath;
-    boolean usingAll = false;            // `\import Foo` (no name list)
-    final TreeSet<String> names = new TreeSet<>();
-
-    ImportSpec(String modulePath) { this.modulePath = modulePath; }
-
-    void merge(ConcreteNamespaceCommand cmd) {
-      // The "import everything" shape coming out of the resolver is
-      // isUsing() with empty renamings/hidings; it formats as `\import Foo`.
-      if (cmd.isUsing() && cmd.renamings().isEmpty() && cmd.hidings().isEmpty()) {
-        usingAll = true;
-        return;
-      }
-      for (ConcreteNamespaceCommand.NameRenaming r : cmd.renamings()) {
-        names.add(r.reference().getRefName());
-      }
-    }
-
-    void absorb(ImportSpec other) {
-      if (other.usingAll) usingAll = true;
-      names.addAll(other.names);
-    }
-
-    /** Best-effort parser for an existing {@code \import ...} source line. */
-    static @Nullable ImportSpec parse(String trimmed) {
-      String key = importLineKey(trimmed);
-      if (key.isEmpty()) return null;
-      ImportSpec spec = new ImportSpec(key);
-      String rest = trimmed.substring(trimmed.indexOf(key) + key.length()).trim();
-      if (rest.isEmpty()) {
-        spec.usingAll = true;
-        return spec;
-      }
-      // `\hiding (...)` is left untouched -- bail and don't merge with this line.
-      if (rest.contains("\\hiding")) return null;
-      // Strip an optional using prefix (the backslash form).
-      if (rest.startsWith("\\using")) rest = rest.substring("\\using".length()).trim();
-      // Now we expect `(name1, name2, ...)`. Anything else (e.g. \plevel renamings) -- bail.
-      if (!rest.startsWith("(") || !rest.endsWith(")")) return null;
-      String inside = rest.substring(1, rest.length() - 1);
-      for (String piece : inside.split(",")) {
-        String p = piece.trim();
-        if (p.isEmpty()) continue;
-        // `name \as alias` -- keep the original name; auto-fix doesn't introduce aliases.
-        int as = p.indexOf("\\as");
-        if (as >= 0) p = p.substring(0, as).trim();
-        if (!p.isEmpty()) spec.names.add(p);
-      }
-      return spec;
-    }
-
-    String render() {
-      if (usingAll || names.isEmpty()) return "\\import " + modulePath;
-      return "\\import " + modulePath + "(" + String.join(", ", names) + ")";
-    }
-  }
 }
