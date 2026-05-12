@@ -11,27 +11,37 @@ import java.util.regex.PatternSyntaxException;
  *
  * Default mode is a pure literal substring match (case-insensitive unless the
  * caller asks otherwise). All anchoring, wildcard, and regex behaviours are
- * opt-in via prefixes, because {@code ^}, {@code $}, {@code *}, {@code ?}, and
- * many other ASCII punctuation characters are valid inside Arend identifier
- * names ({@code *-comm}, {@code ^-1}, {@code &lt;*}, ...). Without that opt-in,
+ * opt-in via prefixes, because every Arend identifier character (per the
+ * {@code ID} rule in {@code Arend.g4}) must match literally:
+ * {@code ~ ! @ # $ % ^ & * - + = < > ? / | : [ ]}, ASCII letters and
+ * underscore, Unicode math operators (U+2200..U+22FF, U+2A00..U+2AFF), and --
+ * after the first character -- digits and {@code '}. Without that opt-in,
  * "find a definition whose name contains *-comm" should just work.
  *
+ * Conversely, anything outside that alphabet ({@code .}, parentheses, braces,
+ * comma, semicolon, quote, backslash, backtick, whitespace) cannot appear in
+ * any Arend short name, so a plain pattern containing such a character can
+ * only be a mistake -- we reject it with a fix-it instead of silently
+ * matching nothing.
+ *
  * Grammar:
- *   <text>            literal substring match (default). Rejected if the text
- *                     contains a regex sequence like '.*', '.+', '.?', or
- *                     '(?...', since those almost never appear in real names.
- *   lit:<text>        literal substring, bypassing the regex-look check.
- *   eq:<text>         exact full-name match
+ *   <text>            literal substring match (default). Rejected if it
+ *                     contains a character that is NOT an Arend identifier
+ *                     character (most commonly '.', '(', ')', '{', '}',
+ *                     covering both regex sequences like '.*' / '(?...' and
+ *                     qualified-name mistakes like 'Module.Foo').
+ *   eq:<text>         exact short-name match (anchored on both ends)
  *   glob:<pat>        '*' = any chars, '?' = any one char.
  *                     Use '\*' / '\?' for literal stars / question marks.
  *   re:<java-regex>   raw Java regex, matched with find()
  *   hb:<chars>        humpback / boundary-aware fuzzy match,
  *                     e.g. 'hb:PMA' on 'PosetAddMonoid', 'hb:p-iP' on
  *                     'pi-isProp'. Word boundaries are case transitions and
- *                     any of -_<>+*=^~/'.\!@#$%&|:; characters.
+ *                     any non-letter Arend identifier character (the
+ *                     operator-class chars and '_').
  */
 public final class SymbolPattern {
-  public enum Mode { LITERAL, LIT, EQ, GLOB, REGEX, HUMPBACK }
+  public enum Mode { LITERAL, EQ, GLOB, REGEX, HUMPBACK }
 
   private final Pattern myCompiled;
   private final String mySource;
@@ -64,7 +74,6 @@ public final class SymbolPattern {
     return switch (myMode) {
       case REGEX, EQ, HUMPBACK -> mySource.substring(3);
       case GLOB -> mySource.substring(5);
-      case LIT -> mySource.substring(4);
       case LITERAL -> mySource;
     };
   }
@@ -104,42 +113,87 @@ public final class SymbolPattern {
       return new SymbolPattern(Pattern.compile("^" + Pattern.quote(body) + "$", flags), pattern, Mode.EQ);
     }
 
-    if (pattern.startsWith("lit:")) {
-      String body = pattern.substring(4);
-      if (body.isEmpty()) throw new IllegalArgumentException("Empty lit: pattern");
-      return new SymbolPattern(Pattern.compile(Pattern.quote(body), flags), pattern, Mode.LIT);
-    }
-
-    String trigger = looksLikeRegex(pattern);
+    String trigger = firstNonIdentChar(pattern);
     if (trigger != null) {
       String globHint = pattern.replace(".*", "*").replace(".+", "*").replace(".?", "?");
       throw new IllegalArgumentException(
-          "looks like a regex (" + trigger + ") — try 're:" + pattern + "' (regex)"
-              + (globHint.equals(pattern) ? "" : ", 'glob:" + globHint + "' (glob)")
-              + ", or 'lit:" + pattern + "' (force literal)");
+          trigger + " — try 're:" + pattern + "' (regex)"
+              + (globHint.equals(pattern) ? "" : " or 'glob:" + globHint + "' (glob)"));
     }
     return new SymbolPattern(Pattern.compile(Pattern.quote(pattern), flags), pattern, Mode.LITERAL);
   }
 
   /**
-   * Spots regex sequences that almost certainly aren't part of a real Arend
-   * identifier, so the user gets a fix-it instead of a silent zero-match.
-   * Deliberately narrow: isolated metachars like '*', '+', '?', '^', '$', '|'
-   * are common in operator names ({@code *-comm}, {@code BigSum_+}, etc.) and
-   * stay literal.
+   * Catches plain patterns that can never match any Arend short name because
+   * they contain a character outside the {@code ID} rule in {@code Arend.g4}.
+   * That covers both regex mistakes ({@code .*}, {@code (?:}) and
+   * qualified-name mistakes ({@code Module.Foo}, {@code foo(bar)}) -- silent
+   * zero-match is a worse user experience than a fix-it.
+   *
+   * Returns a human-readable trigger string (e.g. "contains '.*' (regex
+   * sequence)"), or {@code null} if every character could appear in some
+   * Arend identifier.
    */
-  private static @Nullable String looksLikeRegex(String s) {
-    for (int i = 0; i + 1 < s.length(); i++) {
+  private static @Nullable String firstNonIdentChar(String s) {
+    for (int i = 0; i < s.length(); i++) {
       char c = s.charAt(i);
-      char n = s.charAt(i + 1);
-      if (c == '.' && (n == '*' || n == '+' || n == '?')) {
-        return "contains '." + n + "'";
+      if (isArendIdChar(c)) continue;
+      // Special-case the two most common shapes so the message points at
+      // the sequence rather than just the leading character.
+      if (c == '.' && i + 1 < s.length()) {
+        char n = s.charAt(i + 1);
+        if (n == '*' || n == '+' || n == '?') {
+          return "contains '." + n + "' (regex sequence, not a name char)";
+        }
       }
-      if (c == '(' && n == '?') {
-        return "contains '(?'";
+      if (c == '(' && i + 1 < s.length() && s.charAt(i + 1) == '?') {
+        return "contains '(?' (regex sequence, not a name char)";
       }
+      return "contains '" + c + "', which is not an Arend identifier character";
     }
     return null;
+  }
+
+  /**
+   * True when {@code s} looks like a dotted qualified Arend name --
+   * one-or-more identifier segments joined by {@code .} (e.g. {@code
+   * RatField.finv_*}, {@code Algebra.Monoid.comm}). Callers that already
+   * rejected {@code s} as a plain pattern can use this to distinguish the
+   * "qualified name typed where short-name was expected" case from generic
+   * regex / typo mistakes, and surface a more targeted hint.
+   */
+  public static boolean looksLikeQualifiedName(@NotNull String s) {
+    if (s.indexOf('.') < 0) return false;
+    int segStart = 0;
+    for (int i = 0; i <= s.length(); i++) {
+      if (i == s.length() || s.charAt(i) == '.') {
+        if (i == segStart) return false;
+        segStart = i + 1;
+      } else if (!isArendIdChar(s.charAt(i))) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  /**
+   * Mirrors {@code Arend.g4}'s {@code ID} rule: every character a short name
+   * can contain, including the continuation-only digits and apostrophe (we
+   * don't enforce first-vs-rest here because substring patterns don't care).
+   */
+  private static boolean isArendIdChar(char c) {
+    if (c >= 'a' && c <= 'z') return true;
+    if (c >= 'A' && c <= 'Z') return true;
+    if (c >= '0' && c <= '9') return true;
+    if (c == '_' || c == '\'') return true;
+    if (c >= 0x2200 && c <= 0x22FF) return true;
+    if (c >= 0x2A00 && c <= 0x2AFF) return true;
+    return switch (c) {
+      case '~', '!', '@', '#', '$', '%', '^', '&', '*',
+           '-', '+', '=', '<', '>', '?', '/', '|', ':',
+           '[', ']' -> true;
+      default -> false;
+    };
   }
 
   /**
@@ -165,11 +219,14 @@ public final class SymbolPattern {
   }
 
   /**
-   * Word boundary characters used by Arend names: dashes, underscores, math
-   * operators, primes, dots. A match starts here, OR after a lower-to-upper
-   * case transition.
+   * Word-boundary characters for humpback fuzzy matching: every non-letter
+   * Arend identifier character (operators and underscore), drawn from the
+   * same alphabet as {@link #isArendIdChar}. Apostrophe is deliberately
+   * omitted -- it is a continuation char used as a primed-variant suffix
+   * ({@code f'}, {@code x''}), not a word break. A match starts at a
+   * boundary char OR after a lower-to-upper case transition.
    */
-  private static final String BOUNDARY_CLASS = "[-_<>+*=^~/'.\\\\!@#$%&|:;]";
+  private static final String BOUNDARY_CLASS = "[~!@#$%\\^&*\\-+=<>?/|:\\[\\]_]";
 
   private static String buildHumpbackRegex(String pattern) {
     StringBuilder sb = new StringBuilder(pattern.length() * 8);

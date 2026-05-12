@@ -89,23 +89,35 @@ public class ConsoleMain {
       subsequent runs with no source changes are near-instant.
 
       PATTERN
-        Foo                literal substring match (case-insensitive by
-                           default). Isolated punctuation is treated as a
-                           normal name char, since Arend identifiers freely
-                           use *, ^, $, ?, |, etc. (e.g. *-comm, ^-1, <*).
-                           To search for a name containing '*-comm', just
-                           type '*-comm'.
-                           EXCEPTIONS: a plain pattern containing a regex
-                           SEQUENCE (.* / .+ / .? / (?...) is rejected with
-                           a fix-it suggestion -- these almost never appear
-                           in real names. A plain pattern containing '|' is
-                           matched literally (since '|' is a valid identifier
-                           char) but emits a soft warning, in case OR was
-                           intended.
-        lit:<text>         literal substring, bypassing the regex-look
-                           check. Use when a real name happens to look like
-                           a regex (e.g. 'lit:foo.*bar').
-        eq:<text>          exact full-name match
+        Foo                literal substring match against the SHORT name
+                           (case-insensitive by default). Every Arend
+                           identifier character is matched as plain text --
+                           no character is a regex metacharacter in this
+                           mode. So '*-comm', '^-1', '<*', '||', '+>+',
+                           '[*]', '?-elim' all work as literal substrings.
+
+                           Per Arend.g4, an identifier consists of:
+                             operators   ~ ! @ # $ % ^ & * - + = < > ? / | : [ ]
+                             letters     a-z  A-Z  _
+                             Unicode     U+2200..U+22FF, U+2A00..U+2AFF
+                                         (math operators: ∀ ∃ ∈ ⊂ ⊆ ∧ ∨ ≤ ⊕ …)
+                             cont. only  0-9  '         (not first character)
+
+                           Any other character ('.', '(', ')', '{', '}',
+                           ',', ';', '"', '\\', backtick, whitespace) can
+                           never appear in an Arend short name, so a plain
+                           pattern containing one is rejected with a fix-it
+                           pointing at re: or glob:. Most commonly that's a
+                           regex sequence ('.*', '.+', '.?', '(?...') or a
+                           qualified-name mistake ('Module.Foo' -- pass just
+                           'Foo' and read the long name from the output).
+
+                           A '|' in a plain pattern matches literally
+                           (since '|' IS a valid identifier char) but emits
+                           a soft warning, in case OR was intended.
+        eq:<text>          exact short-name match (anchored), e.g. 'eq:pmap'
+                           matches the function 'pmap' but not 'pmap2',
+                           'pmap_<*-comm', etc.
         glob:<pat>         '*' = any chars, '?' = any one char.
                            Use '\\*' / '\\?' for literal stars / question
                            marks (so glob:'abs\\_\\*' matches abs_*, abs_*q,
@@ -127,6 +139,20 @@ public class ConsoleMain {
         Each run prints the parsed query before searching so you can see at
         a glance how each token was interpreted ('literal', 'exact', 'glob',
         'regex', 'humpback'). Glob / humpback also show the compiled regex.
+
+      SHELL QUOTING
+        Apostrophe `'` is a valid Arend continuation char (it appears in
+        names like `-'`, `iabs_-_suc'`, primed-variant suffixes). It is
+        also the most common shell quote delimiter, so passing names that
+        contain it needs care:
+          arend -ss "iabs_-'"            # outer double quotes: '\\'' is literal
+          arend -ss 'iabs_-'\\'''        # outer singles, '\\''  splices an apostrophe
+          arend -ss iabs_-\\'            # no outer quotes; backslash-escape
+        Inside double quotes a bare `'` is NOT a delimiter — it stays in
+        the string. So  -ss "a' 'b"  parses as TWO patterns, `a'` and `'b`,
+        with the apostrophe on the wrong side of the space. A leading `'`
+        in a pattern triggers a soft warning, since no Arend short name
+        can start with `'` (it is a continuation-only character).
 
       EXTRA TOKENS  (each passed as a separate -ss argument)
         case-sensitive     match name case exactly (default: case-insensitive)
@@ -154,6 +180,20 @@ public class ConsoleMain {
         <library>::<long-name>  [<KIND>]
           <signature on a single line>
 
+        Results are ordered by SHORT-NAME LENGTH (ascending), so an exact-
+        length name appears before any longer name that just contains the
+        query (e.g. for '-ss fac': 'face' before 'factor' before 'factors'
+        before 'leftFactor' before 'completion-factor'). Ties are broken
+        alphabetically. For a strict exact match use 'eq:<name>'.
+
+        On zero matches, a plain-mode pattern is decomposed at operator-
+        chars / underscore (alphanumeric runs of length >= 3) and the
+        index is re-scanned for those parts -- so a miss on
+        'natCoef_fromRat' still surfaces names containing 'natCoef' or
+        'fromRat' as a "Did you mean?" list. Single-word queries with no
+        decomposition emit a plain "No matches." -- there is nothing to
+        suggest.
+
       EXAMPLES
         arend -L libs my-lib -ss 'Monoid'                   (substring)
         arend -L libs my-lib -ss '*-comm'                   (literal '*-comm')
@@ -162,7 +202,6 @@ public class ConsoleMain {
         arend -L libs my-lib -ss 'eq:pmap' -ss kind=func,lemma
         arend -L libs my-lib -ss 'glob:abs_*' -ss limit=20
         arend -L libs my-lib -ss 're:^abs.*\\+.*$'
-        arend -L libs my-lib -ss 'lit:foo.*bar'             (forced literal)
         arend -L libs my-lib -ss 'hb:isProp' -ss case-sensitive
         arend -L libs my-lib -ss only=self -ss 'shared-name'
         arend -L libs my-lib -ss Monoid -ss contains=comm   (Monoid* AND *comm*)

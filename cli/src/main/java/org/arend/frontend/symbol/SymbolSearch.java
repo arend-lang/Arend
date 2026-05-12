@@ -48,11 +48,25 @@ public final class SymbolSearch {
         compiled.add(SymbolPattern.compile(p, options.caseSensitive));
       } catch (IllegalArgumentException e) {
         System.err.println("[ERROR] Bad -ss pattern '" + p + "': " + e.getMessage());
+        if (SymbolPattern.looksLikeQualifiedName(p)) {
+          int firstDot = p.indexOf('.');
+          int lastDot = p.lastIndexOf('.');
+          String first = p.substring(0, firstDot);
+          String last = p.substring(lastDot + 1);
+          System.err.println(
+              "        note: -ss matches SHORT names only; long names like '"
+                  + p + "' are printed in the output.");
+          System.err.println(
+              "        try:  -ss '" + last + "'        # find by short name");
+          System.err.println(
+              "              -ch '" + first + "'        # browse the class hierarchy of '" + first + "'");
+        }
         return 0;
       }
     }
 
     warnAboutPipes(compiled);
+    warnAboutLeadingApostrophe(compiled);
     System.out.println(formatQueryEcho(compiled, options));
 
     List<SourceLibrary> libsInScope = librariesInScope(requestedLibraries, libraryManager, options);
@@ -61,11 +75,25 @@ public final class SymbolSearch {
       return 0;
     }
 
-    int total = 0;
-    int printed = 0;
-    boolean truncated = false;
-    StringBuilder out = new StringBuilder();
+    // Decompose each LITERAL pattern into "word parts" (alphanumeric runs split
+    // on operator chars). When the main search finds nothing we surface a "did
+    // you mean" list of names matching any of these parts, so a query like
+    // 'natCoef_fromRat' that misses can still nudge the user toward 'natCoef'
+    // and 'fromRat' hits without a second run. Only literal patterns are
+    // decomposed; explicit eq:/re:/glob:/hb: stays exact.
+    LinkedHashSet<String> suggestParts = collectWordParts(compiled);
+    List<SymbolPattern> suggestPatterns = new ArrayList<>();
+    for (String part : suggestParts) {
+      try {
+        suggestPatterns.add(SymbolPattern.compile(part, options.caseSensitive));
+      } catch (IllegalArgumentException ignored) {
+        // a part may itself contain non-ident chars (e.g. apostrophe-only
+        // fragments after a weird split) -- just skip those.
+      }
+    }
 
+    List<Hit> hits = new ArrayList<>();
+    List<Hit> suggestions = new ArrayList<>();
     for (SourceLibrary lib : libsInScope) {
       SymbolIndex idx = SymbolIndex.loadOrCreate(lib);
       // Trigger raw parsing only for modules whose cached mtime is stale
@@ -82,21 +110,42 @@ public final class SymbolSearch {
 
       for (SymbolIndex.Entry e : idx.allEntries()) {
         if (!options.kinds.contains(e.kind())) continue;
-        if (!matchesAny(compiled, e.shortName())) continue;
         if (!matchesAllContains(options, e.shortName())) continue;
-        total++;
-        if (options.limit > 0 && printed >= options.limit) {
-          truncated = true;
-          continue;
+        if (matchesAny(compiled, e.shortName())) {
+          hits.add(new Hit(lib.getLibraryName(), e));
+        } else if (!suggestPatterns.isEmpty() && matchesAny(suggestPatterns, e.shortName())) {
+          suggestions.add(new Hit(lib.getLibraryName(), e));
         }
-        appendEntry(out, lib.getLibraryName(), e);
-        printed++;
       }
+    }
+
+    // Rank: shortest short-name first, so an exact-length name (which is the
+    // best possible substring match for any literal query) always surfaces
+    // above longer names that merely contain the query. Tie-break
+    // alphabetically (case-insensitive) for determinism, then by library
+    // name so identical short names group together.
+    hits.sort(Comparator
+        .<Hit>comparingInt(h -> h.entry.shortName().length())
+        .thenComparing(h -> h.entry.shortName(), String.CASE_INSENSITIVE_ORDER)
+        .thenComparing(h -> h.libName));
+
+    int total = hits.size();
+    int printed = 0;
+    boolean truncated = false;
+    StringBuilder out = new StringBuilder();
+    for (Hit h : hits) {
+      if (options.limit > 0 && printed >= options.limit) {
+        truncated = true;
+        break;
+      }
+      appendEntry(out, h.libName, h.entry);
+      printed++;
     }
 
     System.out.print(out);
     if (total == 0) {
       System.out.println("No matches.");
+      printSuggestions(suggestions, suggestParts);
     } else {
       System.out.println();
       System.out.println("Found " + total + " match" + (total == 1 ? "" : "es")
@@ -104,6 +153,54 @@ public final class SymbolSearch {
     }
     return total;
   }
+
+  /**
+   * Splits each {@code LITERAL} pattern's body on non-alphanumeric Arend ID
+   * chars (operators, underscore) and keeps the surviving alphanumeric runs of
+   * length >= 3. Drops a part equal to the whole pattern (no decomposition
+   * happened, so it would just re-run the failed search). Apostrophe is
+   * stripped along with other separators -- a trailing {@code '} on a primed
+   * variant is a name suffix, not a meaningful sub-token to search for.
+   */
+  private static LinkedHashSet<String> collectWordParts(List<SymbolPattern> patterns) {
+    LinkedHashSet<String> parts = new LinkedHashSet<>();
+    Set<String> originals = new HashSet<>();
+    for (SymbolPattern p : patterns) {
+      if (p.mode() != SymbolPattern.Mode.LITERAL) continue;
+      String body = p.body();
+      originals.add(body);
+      for (String part : body.split("[^a-zA-Z0-9]+")) {
+        if (part.length() >= 3) parts.add(part);
+      }
+    }
+    parts.removeAll(originals);
+    return parts;
+  }
+
+  private static void printSuggestions(List<Hit> suggestions, LinkedHashSet<String> parts) {
+    if (suggestions.isEmpty()) return;
+    suggestions.sort(Comparator
+        .<Hit>comparingInt(h -> h.entry.shortName().length())
+        .thenComparing(h -> h.entry.shortName(), String.CASE_INSENSITIVE_ORDER)
+        .thenComparing(h -> h.libName));
+    int cap = 8;
+    int show = Math.min(suggestions.size(), cap);
+    System.out.println();
+    StringJoiner partList = new StringJoiner("', '", "'", "'");
+    for (String p : parts) partList.add(p);
+    System.out.println("Did you mean? (names containing word-parts of your query: " + partList + ")");
+    for (int i = 0; i < show; i++) {
+      Hit h = suggestions.get(i);
+      System.out.println("  " + h.libName + "::" + h.entry.longName()
+          + "  [" + h.entry.kind().name() + "]");
+    }
+    if (suggestions.size() > cap) {
+      System.out.println("  ... and " + (suggestions.size() - cap) + " more "
+          + "(re-run with a single word-part to see all).");
+    }
+  }
+
+  private record Hit(String libName, SymbolIndex.Entry entry) {}
 
   /**
    * Build (or refresh) the on-disk symbol index for every library in scope and
@@ -133,6 +230,27 @@ public final class SymbolSearch {
       idx.save();
       System.out.println(lib.getLibraryName() + ": indexed (" + rebuilt
           + " stale module" + (rebuilt == 1 ? "" : "s") + " re-parsed).");
+    }
+  }
+
+  /**
+   * Soft-warn for every plain-mode pattern starting with {@code '}. The Arend
+   * lexer treats {@code '} as a CONTINUATION-only character (no Arend short
+   * name can start with it), so a leading apostrophe is almost always shell-
+   * quoting bleed-through — e.g. {@code -ss "iabs_-' '-iabs"} where the user
+   * meant two patterns but got the apostrophe glued onto the second one. The
+   * substring search still works (it can match the middle of {@code foo'X}),
+   * so we don't reject — just point out the most likely mistake.
+   */
+  private static void warnAboutLeadingApostrophe(List<SymbolPattern> patterns) {
+    for (SymbolPattern p : patterns) {
+      if (p.mode() == SymbolPattern.Mode.LITERAL && p.source().startsWith("'")) {
+        System.err.println("[WARN] pattern '" + p.source()
+            + "' starts with `'` — valid as a substring (matches inside foo'X),");
+        System.err.println("       but no Arend short name can start with `'`. Likely shell-quoting"
+            + " bleed-through;");
+        System.err.println("       check the query echo line and re-quote if needed.");
+      }
     }
   }
 
@@ -177,7 +295,6 @@ public final class SymbolSearch {
   private static String describePattern(SymbolPattern p) {
     String tag = switch (p.mode()) {
       case LITERAL -> "literal";
-      case LIT -> "literal";
       case EQ -> "exact";
       case GLOB -> "glob";
       case REGEX -> "regex";
