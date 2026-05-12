@@ -13,6 +13,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.OptionalInt;
+import java.util.UUID;
 
 /**
  * Thin "find a daemon and send one op" wrapper used by the client CLI flags
@@ -64,10 +65,49 @@ public final class DaemonRpc {
     }
 
     try (DaemonClient client = DaemonClient.connect(addr)) {
-      return client.invoke(op, Map.of(), DaemonRpc::printFrame);
+      return invokeWithCancelHook(client, op, Map.of(), DaemonRpc::printFrame);
     } catch (IOException e) {
       System.err.println("[ERROR] " + op + ": cannot reach daemon at " + lf.socketPath + ": " + e.getMessage());
       return 1;
+    }
+  }
+
+  /**
+   * Wrap {@link DaemonClient#invoke} in a JVM shutdown hook that sends a cancel for the
+   * in-flight request id when the client process is terminated (Ctrl-C, SIGTERM). On
+   * normal completion the hook is removed; if registration races with shutdown (hook
+   * adds throw {@link IllegalStateException} once shutdown has started) we skip the
+   * hook and proceed without cancel coverage.
+   */
+  private static int invokeWithCancelHook(DaemonClient client, String op,
+                                          Map<String, Object> extra,
+                                          java.util.function.Consumer<Map<String, Object>> onFrame)
+      throws IOException {
+    String id = UUID.randomUUID().toString();
+    Thread hook = new Thread(() -> {
+      try {
+        System.err.println("[arend] interrupted; sending cancel to daemon (taskId=" + id + ")");
+        System.err.flush();
+        client.sendCancel(id);
+      } catch (IOException e) {
+        // Daemon may already be gone, or the connection is broken; nothing useful to do.
+        System.err.println("[arend] cancel send failed: " + e.getMessage());
+      }
+    }, "arend-daemon-cancel-" + id);
+    boolean registered;
+    try {
+      Runtime.getRuntime().addShutdownHook(hook);
+      registered = true;
+    } catch (IllegalStateException e) {
+      registered = false;
+    }
+    try {
+      return client.invoke(id, op, extra, onFrame);
+    } finally {
+      if (registered) {
+        try { Runtime.getRuntime().removeShutdownHook(hook); }
+        catch (IllegalStateException ignored) {}
+      }
     }
   }
 
@@ -105,7 +145,8 @@ public final class DaemonRpc {
     }
 
     try (DaemonClient client = DaemonClient.connect(addr)) {
-      int rc = client.invoke("cli", Map.of("args", Arrays.asList(origArgs)), DaemonRpc::printFrame);
+      int rc = invokeWithCancelHook(client, "cli", Map.of("args", Arrays.asList(origArgs)),
+          DaemonRpc::printFrame);
       return OptionalInt.of(rc);
     } catch (IOException e) {
       System.err.println("[WARN] daemon at " + lf.socketPath + " is unreachable (" + e.getMessage()

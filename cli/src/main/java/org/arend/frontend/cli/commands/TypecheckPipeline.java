@@ -30,7 +30,6 @@ import org.arend.term.group.ConcreteGroup;
 import org.arend.term.group.ConcreteNamespaceCommand;
 import org.arend.term.group.ConcreteStatement;
 import org.arend.term.prettyprint.ToAbstractVisitor;
-import org.arend.typechecking.computation.UnstoppableCancellationIndicator;
 import org.arend.typechecking.doubleChecker.CoreModuleChecker;
 import org.arend.typechecking.order.MapTarjanSCC;
 
@@ -74,12 +73,13 @@ public final class TypecheckPipeline {
     if (aiMode) {
       runAiNameResolve(ctx);
     }
+    ctx.cancellation.checkCanceled();
 
     // Pre-load binary caches (unless --recompile is set)
     if (!ctx.recompile) {
       // Typecheck Prelude first — binary cache loading needs Prelude definitions to be available
       ctx.server.getCheckerFor(Collections.singletonList(Prelude.MODULE_LOCATION))
-          .typecheck(UnstoppableCancellationIndicator.INSTANCE, ProgressReporter.empty());
+          .typecheck(ctx.cancellation, ProgressReporter.empty());
       if (ctx.requestedModules.isEmpty()) {
         // Whole-library typechecking: pre-load every module of each requested library.
         for (SourceLibrary library : ctx.requestedLibraries) {
@@ -87,7 +87,7 @@ public final class TypecheckPipeline {
               .map(mp -> new ModuleLocation(library.getLibraryName(), ModuleLocation.LocationKind.SOURCE, mp))
               .toList();
           if (!allModules.isEmpty()) {
-            ctx.server.getCheckerFor(allModules).resolveAll(UnstoppableCancellationIndicator.INSTANCE, ProgressReporter.empty());
+            ctx.server.getCheckerFor(allModules).resolveAll(ctx.cancellation, ProgressReporter.empty());
             ctx.requester.loadBinaryCache(library, ctx.server);
           }
         }
@@ -100,7 +100,7 @@ public final class TypecheckPipeline {
           if (module != null) targets.add(module);
         }
         if (!targets.isEmpty()) {
-          ctx.server.getCheckerFor(targets).resolveAll(UnstoppableCancellationIndicator.INSTANCE, ProgressReporter.empty());
+          ctx.server.getCheckerFor(targets).resolveAll(ctx.cancellation, ProgressReporter.empty());
           for (SourceLibrary library : ctx.requestedLibraries) {
             ctx.requester.loadBinaryCache(library, ctx.server);
           }
@@ -111,14 +111,16 @@ public final class TypecheckPipeline {
 
     if (ctx.requestedModules.isEmpty()) {
       for (SourceLibrary library : ctx.requestedLibraries) {
+        ctx.cancellation.checkCanceled();
         System.out.println();
         System.out.println("--- Typechecking " + library.getLibraryName() + " ---");
         long time = System.currentTimeMillis();
 
         for (ModulePath modulePath : library.findModules(false)) {
+          ctx.cancellation.checkCanceled();
           ctx.server.getCheckerFor(Collections.singletonList(
                   new ModuleLocation(library.getLibraryName(), ModuleLocation.LocationKind.SOURCE, modulePath)))
-              .typecheck(UnstoppableCancellationIndicator.INSTANCE, progressReporter);
+              .typecheck(ctx.cancellation, progressReporter);
         }
 
         time = System.currentTimeMillis() - time;
@@ -199,7 +201,7 @@ public final class TypecheckPipeline {
 
           ctx.server.getCheckerFor(Collections.singletonList(module))
               .typecheck(Collections.singletonList(fullName), ctx.errorReporter,
-                  UnstoppableCancellationIndicator.INSTANCE, progressReporter);
+                  ctx.cancellation, progressReporter);
 
           System.out.println("--- Done (" + TimedProgressReporter.timeToString(System.currentTimeMillis() - time) + ") ---");
         } else {
@@ -208,7 +210,7 @@ public final class TypecheckPipeline {
           long time = System.currentTimeMillis();
 
           ctx.server.getCheckerFor(Collections.singletonList(module))
-              .typecheck(UnstoppableCancellationIndicator.INSTANCE, progressReporter);
+              .typecheck(ctx.cancellation, progressReporter);
 
           System.out.println("--- Done (" + TimedProgressReporter.timeToString(System.currentTimeMillis() - time) + ") ---");
 
@@ -236,6 +238,7 @@ public final class TypecheckPipeline {
     }
 
     if (aiMode) {
+      ctx.cancellation.checkCanceled();
       finalizeAi(ctx);
     }
 
@@ -250,7 +253,7 @@ public final class TypecheckPipeline {
         for (ModulePath modulePath : library.findModules(true)) {
           ctx.server.getCheckerFor(Collections.singletonList(
                   new ModuleLocation(library.getLibraryName(), ModuleLocation.LocationKind.TEST, modulePath)))
-              .typecheck(UnstoppableCancellationIndicator.INSTANCE, progressReporter);
+              .typecheck(ctx.cancellation, progressReporter);
         }
 
         time = System.currentTimeMillis() - time;
@@ -324,22 +327,26 @@ public final class TypecheckPipeline {
     try {
       if (ctx.requestedModules.isEmpty()) {
         for (SourceLibrary lib : ctx.requestedLibraries) {
+          ctx.cancellation.checkCanceled();
           List<ModuleLocation> mods = lib.findModules(false).stream()
               .map(mp -> new ModuleLocation(lib.getLibraryName(), ModuleLocation.LocationKind.SOURCE, mp))
               .toList();
           if (!mods.isEmpty()) {
-            ctx.server.getCheckerFor(mods).resolveAll(UnstoppableCancellationIndicator.INSTANCE, ProgressReporter.empty());
+            ctx.server.getCheckerFor(mods).resolveAll(ctx.cancellation, ProgressReporter.empty());
+            ctx.cancellation.checkCanceled();
           }
         }
       } else {
         for (Pair<ModulePath, LongName> requested : ctx.requestedModules) {
+          ctx.cancellation.checkCanceled();
           ModuleLocation module = ctx.server.findModule(requested.proj1, null, true, false);
           if (module == null) {
             ctx.systemErrErrorReporter.report(new ModuleNotFoundError(requested.proj1));
             continue;
           }
           ctx.server.getCheckerFor(Collections.singletonList(module))
-              .resolveAll(UnstoppableCancellationIndicator.INSTANCE, ProgressReporter.empty());
+              .resolveAll(ctx.cancellation, ProgressReporter.empty());
+          ctx.cancellation.checkCanceled();
         }
       }
     } finally {
