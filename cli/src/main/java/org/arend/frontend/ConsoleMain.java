@@ -375,7 +375,8 @@ public class ConsoleMain {
       cmdOptions.addOption(Option.builder("ai").longOpt("ai-pipeline").desc("agent-oriented all-in-one mode: (1) name-resolve: for each unresolved short name, list candidates (qualified name + required imports) the user can paste back into the source -- never rewrites, (2) typecheck, (3) emit signature-only mirrors to <library>/.sig/<module>.ard for verified definitions only (failed defs replaced with `-- skipped:` comments), (4) refresh the binary symbol index used by -ss/-fu/-ch/-sc. Honors positional-arg granularity (no args = library; MODULE; MODULE:DEF). Pass `-ai help` for full grammar.").build());
       cmdOptions.addOption(Option.builder("d").longOpt("daemon").desc("start a daemon for the given library (single positional library reference). The daemon does the normal load+typecheck+persist+ai-finalize once, then idles serving future client requests.").build());
       cmdOptions.addOption(Option.builder().longOpt("daemon-stop").desc("stop the daemon serving the given library (single positional library reference).").build());
-      cmdOptions.addOption(Option.builder().longOpt("daemon-status").desc("query the daemon serving the given library (reserved for M3).").build());
+      cmdOptions.addOption(Option.builder().longOpt("daemon-ping").desc("ping the daemon serving the given library; reports IDLE or BUSY.").build());
+      cmdOptions.addOption(Option.builder().longOpt("daemon-status").desc("dump status (state, queueDepth, uptimeMs, currentTaskId) of the daemon serving the given library.").build());
       cmdOptions.addOption("r", "recompile", false, "recompile all modules from source, ignoring binary caches (.arc files)");
       cmdOptions.addOption("t", "test", false, "run tests");
       cmdOptions.addOption("v", "version", false, "print language version");
@@ -452,11 +453,12 @@ public class ConsoleMain {
     // Library reference is always a single positional arg.
     boolean daemonStart  = cmdLine.hasOption("d");
     boolean daemonStop   = cmdLine.hasOption("daemon-stop");
+    boolean daemonPing   = cmdLine.hasOption("daemon-ping");
     boolean daemonStatus = cmdLine.hasOption("daemon-status");
-    if (daemonStart || daemonStop || daemonStatus) {
-      int chosen = (daemonStart ? 1 : 0) + (daemonStop ? 1 : 0) + (daemonStatus ? 1 : 0);
+    if (daemonStart || daemonStop || daemonPing || daemonStatus) {
+      int chosen = (daemonStart ? 1 : 0) + (daemonStop ? 1 : 0) + (daemonPing ? 1 : 0) + (daemonStatus ? 1 : 0);
       if (chosen > 1) {
-        System.err.println("[ERROR] only one of -d / --daemon-stop / --daemon-status may be given");
+        System.err.println("[ERROR] only one of -d / --daemon-stop / --daemon-ping / --daemon-status may be given");
         return false;
       }
       java.util.List<String> positional = cmdLine.getArgList();
@@ -471,8 +473,12 @@ public class ConsoleMain {
       } else if (daemonStop) {
         rc = org.arend.frontend.cli.daemon.DaemonStop.run(libRef, ctx.libDirs);
       } else {
-        System.err.println("[ERROR] --daemon-status is reserved for M3");
-        rc = 1;
+        String op = daemonPing ? "ping" : "status";
+        rc = org.arend.frontend.cli.daemon.client.DaemonRpc.run(libRef, ctx.libDirs, op);
+        if (rc == org.arend.frontend.cli.daemon.client.DaemonRpc.NO_DAEMON) {
+          System.err.println("[ERROR] " + op + ": no daemon running for the given library");
+          rc = 1;
+        }
       }
       return rc == 0;
     }

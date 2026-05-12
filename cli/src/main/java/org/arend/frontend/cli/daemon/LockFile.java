@@ -28,6 +28,8 @@ import java.util.Properties;
  */
 public final class LockFile {
   public static final int PROTOCOL_VERSION_M2 = 0;
+  /** Bump for every protocol-breaking change to the wire frames. */
+  public static final int PROTOCOL_VERSION_M3 = 1;
 
   public final long pid;
   public final String libraryPath;
