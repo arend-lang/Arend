@@ -1,8 +1,10 @@
 package org.arend.frontend.cli.daemon;
 
 import org.arend.frontend.ConsoleMain;
+import org.arend.frontend.cli.CommandContext;
 import org.arend.frontend.cli.daemon.server.DaemonServer;
 import org.arend.frontend.cli.daemon.server.SocketBinder;
+import org.arend.frontend.cli.daemon.server.StreamRedirector;
 
 import java.io.IOException;
 import java.nio.file.Path;
@@ -62,8 +64,8 @@ public final class DaemonMain {
     System.out.println("[DAEMON] PID = " + ProcessHandle.current().pid());
     System.out.println("[DAEMON] forwarded args: " + String.join(" ", forwarded));
 
-    boolean ok = new ConsoleMain().runDaemonBootstrap(forwarded);
-    if (!ok) {
+    CommandContext warmCtx = new ConsoleMain().runDaemonBootstrap(forwarded);
+    if (warmCtx == null) {
       System.err.println("[DAEMON] initial typecheck failed; daemon will not start");
       System.exit(1);
       return;
@@ -79,7 +81,11 @@ public final class DaemonMain {
     }
     System.out.println("[DAEMON] bound socket: " + bound.address());
 
-    DaemonServer server = new DaemonServer(bound);
+    // Install the per-thread stdout/stderr shim BEFORE starting workers, so worker
+    // tasks can transparently capture handler output and stream it to clients.
+    StreamRedirector.install();
+
+    DaemonServer server = new DaemonServer(bound, warmCtx);
     server.start();
 
     LockFile lock = new LockFile(

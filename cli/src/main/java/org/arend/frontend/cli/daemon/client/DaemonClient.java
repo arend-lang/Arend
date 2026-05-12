@@ -25,7 +25,7 @@ import java.util.function.Consumer;
  *
  * <p>{@link #invoke} sends one Request frame and reads Response frames until it sees
  * {@code kind:done}. Non-done frames are passed to the caller-supplied {@code onFrame}
- * consumer (used by M4 to relay {@code kind:stdout/stderr} live to the terminal).
+ * consumer, which relays {@code kind:stdout/stderr} live to the terminal.
  */
 public final class DaemonClient implements AutoCloseable {
   private final SocketChannel channel;

@@ -3,7 +3,6 @@ package org.arend.frontend;
 import org.apache.commons.cli.*;
 import org.arend.frontend.cli.CliSetup;
 import org.arend.frontend.cli.CommandContext;
-import org.arend.frontend.cli.commands.ProofSearch;
 import org.arend.frontend.cli.commands.TypecheckPipeline;
 import org.arend.frontend.repl.PlainCliRepl;
 import org.arend.frontend.repl.jline.JLineCliRepl;
@@ -349,7 +348,8 @@ public class ConsoleMain {
         arend -L libs my-lib -sc 'Algebra.Monoid:Monoid' context=all
       """;
 
-  private CommandLine parseArgs(String[] args) {
+  /** Exposed so the daemon worker can re-parse per-request CLI args on the warm context. */
+  public static CommandLine parseArgs(String[] args) {
     try {
       Options cmdOptions = new Options();
       cmdOptions.addOption("h", "help", false, "print this message");
@@ -377,6 +377,7 @@ public class ConsoleMain {
       cmdOptions.addOption(Option.builder().longOpt("daemon-stop").desc("stop the daemon serving the given library (single positional library reference).").build());
       cmdOptions.addOption(Option.builder().longOpt("daemon-ping").desc("ping the daemon serving the given library; reports IDLE or BUSY.").build());
       cmdOptions.addOption(Option.builder().longOpt("daemon-status").desc("dump status (state, queueDepth, uptimeMs, currentTaskId) of the daemon serving the given library.").build());
+      cmdOptions.addOption(Option.builder().longOpt("no-daemon").desc("force in-process execution even if a daemon serves the requested library.").build());
       cmdOptions.addOption("r", "recompile", false, "recompile all modules from source, ignoring binary caches (.arc files)");
       cmdOptions.addOption("t", "test", false, "run tests");
       cmdOptions.addOption("v", "version", false, "print language version");
@@ -434,11 +435,21 @@ public class ConsoleMain {
   }
 
   /**
-   * Same as {@link #run} but the method is exposed for the daemon child to reuse the full
-   * pipeline (parse + setup + dispatch) without going through {@code main}'s exit path.
+   * Daemon-bootstrap variant of {@link #run}: parse + setup + dispatch + return the
+   * warm {@link CommandContext} (or null on failure). The daemon hands the returned
+   * ctx to its {@link org.arend.frontend.cli.daemon.server.DaemonServer} so subsequent
+   * per-request CLI commands can dispatch against an already-loaded ArendServer.
    */
-  public boolean runDaemonBootstrap(String[] args) {
-    return run(args);
+  public CommandContext runDaemonBootstrap(String[] args) {
+    CommandLine cmdLine = parseArgs(args);
+    if (cmdLine == null) return null;
+    CommandContext ctx = new CommandContext();
+    if (!CliSetup.bootstrap(ctx, cmdLine)) return null;
+    if (ctx.exitWithError) return null;
+    if (!CliSetup.loadRequestedLibraries(ctx, cmdLine)) return null;
+    if (ctx.exitWithError) return null;
+    int rc = org.arend.frontend.cli.Dispatch.execute(ctx, cmdLine);
+    return rc == 0 && !ctx.exitWithError ? ctx : null;
   }
 
   private boolean run(String[] args) {
@@ -501,72 +512,20 @@ public class ConsoleMain {
       return !ctx.exitWithError;
     }
 
+    // Try to route to a daemon serving the requested library. Returns empty when no
+    // daemon is available or healthy — caller falls through to the in-process pipeline.
+    if (!cmdLine.hasOption("no-daemon")) {
+      java.util.OptionalInt remote = org.arend.frontend.cli.daemon.client.DaemonRpc.tryRouteCli(
+          args, cmdLine.getArgList(), ctx.libDirs);
+      if (remote.isPresent()) {
+        return remote.getAsInt() == 0;
+      }
+    }
+
     if (!CliSetup.loadRequestedLibraries(ctx, cmdLine)) return false;
     if (ctx.exitWithError) return false;
 
-    // Dispatch to the requested command. Resolution-only commands (-ss/-rx/-fu/-ch/-sc/-ps)
-    // return immediately; everything else falls through to the default typecheck pipeline.
-    if (cmdLine.hasOption("ss")) {
-      org.arend.frontend.symbol.SymbolSearch.Parsed parsed =
-          org.arend.frontend.symbol.SymbolSearch.parseArgs(cmdLine.getOptionValues("ss"), ctx.systemErrErrorReporter);
-      if (parsed == null) return false;
-      org.arend.frontend.symbol.SymbolSearch.run(parsed.patterns(), parsed.options(),
-          ctx.requestedLibraries, ctx.libraryManager, ctx.server, ctx.systemErrErrorReporter);
-      return !ctx.exitWithError;
-    }
-
-    if (cmdLine.hasOption("rx")) {
-      java.util.Set<String> only = null;
-      String[] rxArgs = cmdLine.getOptionValues("rx") == null ? new String[0] : cmdLine.getOptionValues("rx");
-      for (String arg : rxArgs) {
-        if (arg.startsWith("only=")) {
-          if (only == null) only = new java.util.HashSet<>();
-          for (String s : arg.substring("only=".length()).split(",")) {
-            if (!s.isEmpty()) only.add(s.trim());
-          }
-        } else {
-          System.err.println("[ERROR] Unknown -rx token: " + arg);
-          return false;
-        }
-      }
-      org.arend.frontend.symbol.SymbolSearch.reindex(ctx.requestedLibraries, ctx.libraryManager, ctx.server, only);
-      return !ctx.exitWithError;
-    }
-
-    if (cmdLine.hasOption("fu")) {
-      org.arend.frontend.symbol.UsageSearch.Parsed parsed =
-          org.arend.frontend.symbol.UsageSearch.parseArgs(cmdLine.getOptionValues("fu"));
-      if (parsed == null) return false;
-      org.arend.frontend.symbol.UsageSearch.run(parsed.spec(), parsed.options(),
-          ctx.requestedLibraries, ctx.libraryManager, ctx.server, ctx.systemErrErrorReporter);
-      return !ctx.exitWithError;
-    }
-
-    if (cmdLine.hasOption("ch")) {
-      org.arend.frontend.symbol.ClassHierarchy.Parsed parsed =
-          org.arend.frontend.symbol.ClassHierarchy.parseArgs(cmdLine.getOptionValues("ch"));
-      if (parsed == null) return false;
-      org.arend.frontend.symbol.ClassHierarchy.run(parsed.spec(), parsed.options(),
-          ctx.requestedLibraries, ctx.libraryManager, ctx.server, ctx.systemErrErrorReporter);
-      return !ctx.exitWithError;
-    }
-
-    if (cmdLine.hasOption("sc")) {
-      org.arend.frontend.symbol.ReferableScope.Parsed parsed =
-          org.arend.frontend.symbol.ReferableScope.parseArgs(cmdLine.getOptionValues("sc"));
-      if (parsed == null) return false;
-      org.arend.frontend.symbol.ReferableScope.run(parsed.spec(), parsed.pattern(), parsed.options(),
-          ctx.requestedLibraries, ctx.libraryManager, ctx.server, ctx.systemErrErrorReporter);
-      return !ctx.exitWithError;
-    }
-
-    if (cmdLine.hasOption("ps")) {
-      boolean psOk = ProofSearch.run(ctx, cmdLine.getOptionValues("ps"));
-      return psOk && !ctx.exitWithError;
-    }
-
-    boolean tcOk = TypecheckPipeline.run(ctx, cmdLine);
-    return tcOk && !ctx.exitWithError;
+    return org.arend.frontend.cli.Dispatch.execute(ctx, cmdLine) == 0;
   }
 
   public static void main(String[] args) {

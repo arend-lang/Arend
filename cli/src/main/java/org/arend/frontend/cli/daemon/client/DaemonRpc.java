@@ -7,9 +7,12 @@ import org.arend.frontend.cli.daemon.server.SocketBinder;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.OptionalInt;
 
 /**
  * Thin "find a daemon and send one op" wrapper used by the client CLI flags
@@ -66,6 +69,58 @@ public final class DaemonRpc {
       System.err.println("[ERROR] " + op + ": cannot reach daemon at " + lf.socketPath + ": " + e.getMessage());
       return 1;
     }
+  }
+
+  /**
+   * Client-side auto-routing entry: if a daemon serves the library implied by
+   * {@code positional} (or, failing that, by the cwd), connect to it and send a
+   * {@code cli} op carrying the original CLI args. Returns the daemon's exit code on
+   * success, or empty if no daemon is reachable (caller falls back to in-process
+   * execution).
+   *
+   * <p>Connection failures, malformed lock files, hash mismatch, or a dead PID all
+   * return empty without consulting the daemon. A dead-PID lock file is removed in
+   * passing so the next start-daemon invocation is clean.
+   */
+  public static OptionalInt tryRouteCli(String[] origArgs, List<String> positional, List<Path> libDirs) {
+    DaemonPaths paths = findLibrary(positional, libDirs);
+    if (paths == null) return OptionalInt.empty();
+
+    Optional<LockFile> lockOpt = LockFile.read(paths.lockFile);
+    if (lockOpt.isEmpty()) return OptionalInt.empty();
+    LockFile lf = lockOpt.get();
+
+    if (!lf.libraryHash.equals(paths.libraryHash)) return OptionalInt.empty();
+    if (ProcessHandle.of(lf.pid).isEmpty()) {
+      LockFile.deleteQuietly(paths.lockFile);
+      return OptionalInt.empty();
+    }
+    if (lf.socketPath == null || lf.socketPath.isEmpty()) return OptionalInt.empty();
+
+    SocketBinder.Address addr;
+    try {
+      addr = SocketBinder.parseAddress(lf.socketPath);
+    } catch (IllegalArgumentException e) {
+      return OptionalInt.empty();
+    }
+
+    try (DaemonClient client = DaemonClient.connect(addr)) {
+      int rc = client.invoke("cli", Map.of("args", Arrays.asList(origArgs)), DaemonRpc::printFrame);
+      return OptionalInt.of(rc);
+    } catch (IOException e) {
+      System.err.println("[WARN] daemon at " + lf.socketPath + " is unreachable (" + e.getMessage()
+          + "); running locally");
+      return OptionalInt.empty();
+    }
+  }
+
+  /** First positional that resolves to a library config; else cwd's arend.yaml. */
+  private static DaemonPaths findLibrary(List<String> positional, List<Path> libDirs) {
+    for (String pos : positional) {
+      DaemonPaths d = DaemonPaths.resolveByName(pos, libDirs);
+      if (d != null) return d;
+    }
+    return DaemonPaths.resolve(Paths.get("."));
   }
 
   /** Wait for the lock file to vanish (signals daemon JVM exited and hook ran). */
