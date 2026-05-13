@@ -4,6 +4,7 @@ import org.arend.ext.module.ModuleLocation;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.File;
+import java.io.FilterInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.zip.ZipEntry;
@@ -27,12 +28,26 @@ public class ZipFileRawSource extends StreamRawSource {
 
   @Override
   protected @NotNull InputStream getInputStream() throws IOException {
-    try (ZipFile zipFile = new ZipFile(myFile)) {
+    ZipFile zipFile = new ZipFile(myFile);
+    try {
       ZipEntry entry = zipFile.getEntry(myEntry);
       if (entry == null) {
         throw new ZipException("Cannot find " + myEntry + " in " + myFile);
       }
-      return zipFile.getInputStream(entry);
+      InputStream entryStream = zipFile.getInputStream(entry);
+      return new FilterInputStream(entryStream) {
+        @Override
+        public void close() throws IOException {
+          try {
+            super.close();
+          } finally {
+            zipFile.close();
+          }
+        }
+      };
+    } catch (IOException e) {
+      zipFile.close();
+      throw e;
     }
   }
 }
