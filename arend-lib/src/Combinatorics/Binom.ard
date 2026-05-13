@@ -4,9 +4,12 @@
 \import Algebra.Semiring
 \import Arith.Int
 \import Arith.Nat
+\import Combinatorics.Factorial
 \import Data.Array
+\import Order.PartialOrder
 \import Order.StrictOrder
 \import Paths
+\import Paths.Meta
 \open Monoid (pow)
 \open AddMonoid (BigSum)
 
@@ -22,6 +25,47 @@
     \lemma binom_< {n m : Nat} (p : n < m) : binom n m = 0 \elim n, m, p
       | 0, suc m, _ => idp
       | suc n, suc m, NatOrder.suc<suc n<m => pmap2 (+) (binom_< n<m) (binom_< (n<m <∘ id<suc))
+
+    -- | Diagonal: `binom n n = 1`. Pascal gives `binom (suc n) (suc n) = binom n n + binom n (suc n)`;
+    --   the second summand vanishes by `binom_<` since `n < suc n`.
+    \lemma binom_n_n {n : Nat} : binom n n = 1 \elim n
+      | 0 => idp
+      | suc n => rewrite (binom_n_n {n}, binom_< id<suc) idp
+
+    -- | Factorial identity (sum form): `binom (k + m) k * fac k * fac m = fac (k + m)`.
+    --   The `(k, m)` parameterisation avoids truncated subtraction. Proof is by
+    --   simultaneous induction on `(k, m)` using IH at `(k, suc m)` and `(suc k, m)`,
+    --   both structurally smaller than `(suc k, suc m)`.
+    \lemma fac-id (k m : Nat) : binom (k Nat.+ m) k Nat.* fac k Nat.* fac m = fac (k Nat.+ m) \elim k, m
+      | 0, m => rewrite binom_0 NatSemiring.ide-left
+      | suc k, 0 => rewrite (binom_n_n {suc k}) NatSemiring.ide-left
+      | suc k, suc m =>
+          \have
+            | ih1 : binom (k Nat.+ suc m) k Nat.* fac (suc k) Nat.* fac (suc m)
+                  = suc k Nat.* fac (k Nat.+ suc m)
+                => \have | rearr : binom (k Nat.+ suc m) k Nat.* fac (suc k) Nat.* fac (suc m)
+                                  = suc k Nat.* (binom (k Nat.+ suc m) k Nat.* fac k Nat.* fac (suc m))
+                              => equation.cSemiring
+                   \in rearr *> pmap (suc k Nat.*) (fac-id k (suc m))
+            | ih2 : binom (k Nat.+ suc m) (suc k) Nat.* fac (suc k) Nat.* fac (suc m)
+                  = suc m Nat.* fac (k Nat.+ suc m)
+                => \have | rearr : binom (suc k Nat.+ m) (suc k) Nat.* fac (suc k) Nat.* fac (suc m)
+                                  = suc m Nat.* (binom (suc k Nat.+ m) (suc k) Nat.* fac (suc k) Nat.* fac m)
+                              => equation.cSemiring
+                         | n=n : k Nat.+ suc m = suc k Nat.+ m => idp
+                   \in rewrite n=n (rearr *> pmap (suc m Nat.*) (fac-id (suc k) m))
+          \in pmap (\lam x => x Nat.* fac (suc m)) NatSemiring.rdistr
+              *> NatSemiring.rdistr
+              *> pmap2 (Nat.+) ih1 ih2
+              *> inv NatSemiring.rdistr
+
+    -- | Factorial identity (truncated-subtraction form):
+    --   `binom n k * fac k * fac (n -' k) = fac n` whenever `k <= n`.
+    --   Derived from `fac-id` by transporting along `k + (n -' k) = n`.
+    \lemma fac-id-le {n k : Nat} (p : k <= n) : binom n k Nat.* fac k Nat.* fac (n -' k) = fac n
+      => transport (\lam x => binom x k Nat.* fac k Nat.* fac (n -' k) = fac x)
+           (<=_exists p)
+           (fac-id k (n -' k))
 
     \lemma expansion {R : CRing} (x y : R) (n : Nat) : pow (x + y) n = BigSum (\new Array R (suc n) (\lam i => natCoef (binom n i) * (pow x i * pow y (iabs (n Nat.- i))))) \elim n
       | 0 => equation

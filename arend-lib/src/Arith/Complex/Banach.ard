@@ -1,0 +1,164 @@
+\import Algebra.Group
+\import Algebra.Meta
+\import Algebra.Monoid
+\import Algebra.Ordered \hiding (abs>=0)
+\import Algebra.Pointed
+\import Algebra.Ring
+\import Algebra.Ring.Reduced
+\import Algebra.Semiring
+\import Algebra.StrictlyOrdered
+\import Arith.Complex
+\import Arith.Complex.Norm
+\import Arith.Nat
+\import Arith.Real
+\import Arith.Real.Field
+\import Arith.Real.Root
+\import Arith.Real.UpperReal
+\import Function.Meta
+\import Logic
+\import Meta
+\import Order.LinearOrder
+\import Order.PartialOrder
+\import Order.StrictOrder
+\import Paths
+\import Paths.Meta
+\import Arith.Rat
+\import Order.Lattice
+\import Set.Filter
+\import Set.Subset
+\import Topology.CoverSpace
+\import Topology.CoverSpace.Complete
+\import Topology.MetricSpace
+\import Topology.BanachAlgebra
+\import Topology.BanachSpace
+\import Topology.NormedAbGroup
+\import Topology.NormedAbGroup.Real
+\import Topology.NormedRing
+\open Monoid (pow)
+\open AddMonoid (*n)
+\open ComplexField (ComplexMonoid)
+
+{- | Reverse one-sided inequality: $|c| \leq |\Re c| + |\Im c|$. Combined with
+     `abs_re_<=` / `abs_im_<=` this exhibits $|\cdot|$ and the product sup-norm
+     as equivalent (within a factor of 2), which is the load-bearing fact for
+     any cover-space equivalence between $\mathbb{C}$ and $\mathbb{R} \times \mathbb{R}$. -}
+\lemma abs_<=_re_+_im {c : Complex}
+  : abs c <= RealField.abs c.re + RealField.abs c.im
+  => \have | sum>=0 : (0 : Real) <= RealField.abs c.re + RealField.abs c.im =>
+    linarith (RealField.abs>=0 {c.re}, RealField.abs>=0 {c.im})
+           | abs_re_sq : RealField.abs c.re * RealField.abs c.re = c.re * c.re =>
+             inv RealField.abs_* *> RealField.abs-ofPos RealField.square_>=0
+           | abs_im_sq : RealField.abs c.im * RealField.abs c.im = c.im * c.im =>
+             inv RealField.abs_* *> RealField.abs-ofPos RealField.square_>=0
+           | cross>=0 : (0 : Real) <= RealField.abs c.re * RealField.abs c.im =>
+             RealField.<=_*_positive_positive RealField.abs>=0 RealField.abs>=0
+           | rhs-expand : (RealField.abs c.re + RealField.abs c.im)
+           * (RealField.abs c.re + RealField.abs c.im)
+             = RealField.abs c.re * RealField.abs c.re
+                 + 2 * (RealField.abs c.re * RealField.abs c.im)
+                 + RealField.abs c.im * RealField.abs c.im =>
+             equation.cRing
+           | sq-bound : abs c * abs c
+             <= (RealField.abs c.re + RealField.abs c.im)
+             * (RealField.abs c.re + RealField.abs c.im) =>
+             transport (`<= _) (inv abs-square)
+               (linarith : c.re * c.re + c.im * c.im
+                 <= (RealField.abs c.re + RealField.abs c.im)
+                 * (RealField.abs c.re + RealField.abs c.im))
+     \in square_<=-cancel abs>=0 sum>=0 sq-bound
+
+{- | Completeness of $\mathbb{C}$ via $\Re$ / $\Im$ pushforward to $\mathbb{R}$
+     (which is complete). For a Complex Cauchy filter $F$: push forward via
+     $\Re$ and $\Im$ to get Real Cauchy filters, each converging to some
+     $r_0$ / $i_0$ by Real completeness; the witness is
+     $\mathrm{mkComplex}\,(r_0, i_0)$. The convergence proof bounds Complex
+     $\varepsilon$-neighborhoods by Real $\varepsilon/2$-rectangles via
+     `abs_<=_re_+_im`, then filter-meet on the two Real preimages. -}
+\instance ComplexComplete : CompleteExNormedAbGroup
+  | ExNormedAbGroup => ComplexNormed
+  | isCompleteMetric F balls =>
+    \let | F' : CauchyFilter ComplexNormed => \new CauchyFilter ComplexNormed {
+      | ProperFilter => F
+      | isCauchyFilter => cauchyFilter-metric-char.2 balls
+    }
+         | Fr : CauchyFilter RealNormed => Re.func-cauchy F'
+         | Fi : CauchyFilter RealNormed => Im.func-cauchy F'
+    \in \case RealNormed.isComplete (regCF Fr), RealNormed.isComplete (regCF Fi) \with {
+      | inP (r0, hr), inP (i0, hi) =>
+        inP (\new Complex r0 i0, \lam {eps} eps>0 =>
+          \let | h>0 : (0 : Rat) < RatField.half eps => RatField.half>0 eps>0
+               | hr2 : F (Re ^-1 OBall (RatField.half eps) r0) =>
+                 regCF_<= {RealNormed} {Fr} (hr (OBall-center_<=< h>0))
+               | hi2 : F (Im ^-1 OBall (RatField.half eps) i0) =>
+                 regCF_<= {RealNormed} {Fi} (hi (OBall-center_<=< h>0))
+               | both : F ((Re ^-1 OBall (RatField.half eps) r0)
+               ∧ (Im ^-1 OBall (RatField.half eps) i0)) =>
+                 filter-meet hr2 hi2
+          \in filter-mono both (\lam {c} (re_in, im_in) =>
+            \have | step1 : abs ((\new Complex r0 i0) - c)
+            ExUpperRealAbMonoid.<= RealField.abs (r0 - c.re)
+            ExUpperReal.+ RealField.abs (i0 - c.im) =>
+              transport (_ ExUpperRealAbMonoid.<=) RealAbGroup.+-upper $
+              Real.<=-upper.1 (abs_<=_re_+_im {(\new Complex r0 i0) - c})
+                  | step2 : (RealField.abs (r0 - c.re) ExUpperReal.+ RealField.abs (i0 - c.im)).U eps =>
+                    ExUpperReal.+_U_<=.2 (inP
+                    (RatField.half eps, re_in, RatField.half eps, im_in, linarith))
+            \in step1 step2))
+    }
+
+{- | $\mathbb{C}$ as a complete extended-normed ring. Follows directly from the
+     ring and metric-completeness instances above. -}
+\instance ComplexCompleteRing : CompleteExNormedRing
+  | ExPseudoNormedRing => ComplexValuedRing
+  | CompleteExNormedAbGroup => ComplexComplete
+
+{- | Norm doubling: $|c + c| = 2|c|$. The load-bearing inequality
+     $\|c\| + \|c\| \leq \|c + c\|$ of `RealPreBanachSpace.norm-double`. -}
+\lemma abs_+-double {c : Complex} : abs c + abs c = abs (c + c)
+  => \have | abs2-cc : abs2 (c + c) = 4 * abs2 c => equation.cRing
+           | lhs-sq : (abs c + abs c) * (abs c + abs c) = 4 * abs2 c =>
+             (equation.cRing : (abs c + abs c) * (abs c + abs c) = 4 * (abs c * abs c))
+               *> pmap (4 *) (abs-square {c})
+           | rhs-sq : abs (c + c) * abs (c + c) = 4 * abs2 c =>
+             abs-square {c + c} *> abs2-cc
+     \in sqrt-cancel (linarith (abs>=0 {c})) (abs>=0 {c + c})
+      (lhs-sq *> inv rhs-sq)
+
+{- | $\mathbb{C}$ as a real Banach algebra. Caps the Step-2 chain:
+     `ComplexCompleteRing` plus `isDivisible` (componentwise via
+     `complex-div-cancel`) and `norm-double` (Real-form `abs_+-double` lifted
+     to `ExUpperReal`). -}
+\instance ComplexBanach : RealBanachAlgebra Complex
+  | CompleteExNormedRing => ComplexCompleteRing
+  | isDivisible a {n} n/=0 =>
+    inP (\new Complex (RatField.finv n RealField.*c a.re)
+    (RatField.finv n RealField.*c a.im),
+         complex-div-cancel n/=0)
+  | norm-double {c} =>
+    =_<= (inv RealAbGroup.+-upper *> Real.=-upper.1 abs_+-double) \where {
+  {- | Divisibility helper for `RealPreBanachSpace.isDivisible` on $\mathbb{C}$:
+       dividing each component by $n$ in $\mathbb{R}$ and then $n \cdot n$-ing
+       recovers the original. -}
+  \lemma real-div-cancel {x : Real} {n : Nat} (n/=0 : n /= 0)
+    : n *n (RatField.finv n RealField.*c x) = x
+    => \have | s1 : n *n (RatField.finv n RealField.*c x)
+      = RatField.natCoef n RealField.*c (RatField.finv n RealField.*c x) =>
+      inv RealField.natCoef_*c
+             | s2 : RatField.natCoef n RealField.*c (RatField.finv n RealField.*c x)
+               = (RatField.natCoef n RatField.* RatField.finv n) RealField.*c x =>
+               inv RealField.*c-assoc
+             | nc/=0 : RatField.natCoef n /= (0 : Rat) => natRat/=0 n/=0
+             | s3 : (RatField.natCoef n RatField.* RatField.finv n) RealField.*c x
+               = (1 : Rat) RealField.*c x =>
+               pmap (RealField.`*c x) (RatField.finv-right nc/=0)
+             | s4 : (1 : Rat) RealField.*c x = x => RealField.ide_*c
+       \in s1 *> s2 *> s3 *> s4
+
+  {- | Componentwise extension to $\mathbb{C}$: dividing each component of $a$
+       by $n$ and then applying $n \cdot n$ recovers $a$. The action $n \cdot n\,c$
+       for Complex is componentwise via `Re` / `Im`'s `func-*n` (each being an
+       `AddGroupHom`). -}
+  \lemma complex-div-cancel {a : Complex} {n : Nat} (n/=0 : n /= 0)
+    : n *n (\new Complex (RatField.finv n RealField.*c a.re) (RatField.finv n RealField.*c a.im)) = a
+    => ext (Re.func-*n *> real-div-cancel n/=0, Im.func-*n *> real-div-cancel n/=0)
+}

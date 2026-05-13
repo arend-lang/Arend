@@ -1,0 +1,271 @@
+\import Algebra.Group
+\import Algebra.Meta
+\import Algebra.Monoid
+\import Algebra.Ordered
+\import Algebra.Pointed
+\import Algebra.Ring
+\import Algebra.Ring.Reduced
+\import Algebra.Semiring
+\import Algebra.StrictlyOrdered
+\import Arith.Complex
+\import Arith.Nat
+\import Arith.Real
+\import Arith.Real.Field
+\import Arith.Real.Root
+\import Arith.Real.UpperReal
+\import Function.Meta
+\import Logic
+\import Meta
+\import Order.LinearOrder
+\import Order.PartialOrder
+\import Order.StrictOrder
+\import Paths
+\import Paths.Meta
+\import Arith.Rat
+\import Order.Lattice
+\import Set.Filter
+\import Set.Subset
+\import Topology.CoverSpace
+\import Topology.CoverSpace.Complete
+\import Topology.MetricSpace
+\import Topology.BanachAlgebra
+\import Topology.BanachSpace
+\import Topology.NormedAbGroup
+\import Topology.NormedAbGroup.Real
+\import Topology.NormedRing
+\open Monoid (pow)
+\open AddMonoid (*n)
+\open ComplexField (ComplexMonoid)
+
+{- | Squared modulus: $|z|^2 = (\Re z)^2 + (\Im z)^2$. Avoiding the sqrt keeps
+     algebraic identities (multiplicativity, Cauchy–Schwarz) pure polynomial. -}
+\func abs2 (z : Complex) : Real
+  => z.re * z.re + z.im * z.im
+
+\lemma abs2>=0 {z : Complex} : (0 : Real) <= abs2 z
+  => linarith (RealField.square_>=0 {z.re}, RealField.square_>=0 {z.im})
+
+\lemma abs2_zro : abs2 (zro : Complex) = (0 : Real)
+  => equation
+
+\lemma abs2_ide : abs2 (ide : Complex) = (1 : Real)
+  => equation
+
+\lemma abs2_negative {z : Complex} : abs2 (negative z) = abs2 z
+  => equation
+
+{- | The key polynomial identity: $|xy|^2 = |x|^2 \cdot |y|^2$.
+     Proof reduces to
+     $$(\Re x \cdot \Re y - \Im x \cdot \Im y)^2 + (\Re x \cdot \Im y + \Im x \cdot \Re y)^2
+       = ((\Re x)^2 + (\Im x)^2)((\Re y)^2 + (\Im y)^2)$$
+     which holds by ring algebra. -}
+\lemma abs2_* {x y : Complex} : abs2 (x * y) = abs2 x * abs2 y
+  => equation.cRing
+
+{- | Brahmagupta–Fibonacci / 2-square identity, in the form needed for Cauchy–Schwarz:
+     $$((\Re x)^2 + (\Im x)^2)((\Re y)^2 + (\Im y)^2) - (\Re x \cdot \Re y + \Im x \cdot \Im y)^2
+       = (\Re x \cdot \Im y - \Im x \cdot \Re y)^2.$$ -}
+\lemma abs2_*_CS {x y : Complex}
+  : abs2 x * abs2 y - (x.re * y.re + x.im * y.im) * (x.re * y.re + x.im * y.im)
+  = (x.re * y.im - x.im * y.re) * (x.re * y.im - x.im * y.re)
+  => equation.cRing
+
+{- | Cauchy–Schwarz at the squared level:
+     $(\Re x \cdot \Re y + \Im x \cdot \Im y)^2 \leq |x|^2 \cdot |y|^2$. -}
+\lemma CS_<= {x y : Complex}
+  : (x.re * y.re + x.im * y.im) * (x.re * y.re + x.im * y.im) <= abs2 x * abs2 y
+  => linarith (abs2_*_CS {x} {y}, RealField.square_>=0 {x.re * y.im - x.im * y.re})
+
+{- | Modulus: $|z| = \sqrt{(\Re z)^2 + (\Im z)^2}$. -}
+\func abs (z : Complex) : Real
+  => sqrt (abs2 z)
+
+\lemma abs>=0 {z : Complex} : 0 <= abs z
+  => sqrt>=0
+
+\lemma abs_zro : abs (0 : Complex) = 0
+  => pmap sqrt abs2_zro *> sqrt_zro
+
+\lemma abs_ide : abs (1 : Complex) = 1
+  => pmap sqrt abs2_ide *> sqrt_ide
+
+\lemma abs_negative {z : Complex} : abs (negative z) = abs z
+  => pmap sqrt abs2_negative
+
+\lemma abs-square {z : Complex} : abs z * abs z = abs2 z
+  => pow_sqrt abs2>=0
+
+{- | $|\mathrm{fromReal}\ x| = |x|$. The complex modulus of a real-line embedding
+     reduces to the real absolute value via $|\mathrm{fromReal}\ x|^2 = x^2$ plus
+     $\sqrt{x^2} = |x|$. -}
+\lemma abs_fromReal {x : Real} : abs (fromReal x) = RealField.abs x
+  => pmap sqrt (pmap (_ +) zro_*-left *> zro-right
+                *> inv (RealField.abs-ofPos {x * x} RealField.square_>=0)
+                *> RealField.abs_*)
+     *> sqrt_pow RealField.abs>=0
+
+\lemma square_abs {z : Complex} : pow (abs z) 2 = abs2 z
+  => pmap (`* _) ide-left *> abs-square
+
+{- | Square-root uniqueness on nonnegatives: if $0 \leq x$, $0 \leq y$, and $x^2 = y^2$
+     then $x = y$. -}
+\lemma sqrt-cancel {x y : Real} (x>=0 : 0 <= x) (y>=0 : 0 <= y) (p : x * x = y * y) : x = y
+  => inv (sqrt_pow x>=0) *> pmap sqrt p *> sqrt_pow y>=0
+
+{- | Modulus is multiplicative: $|xy| = |x| \cdot |y|$. Reduce to the squared version
+     $|xy|^2 = (|x| \cdot |y|)^2$ and use that both sides are nonneg square roots of the
+     same value. -}
+\lemma abs_* {x y : Complex} : abs (x * y) = abs x * abs y
+  => sqrt-cancel (abs>=0 {x * y}) (RealField.<=_*_positive_positive (abs>=0 {x}) (abs>=0 {y}))
+       (abs-square {x * y}
+        *> abs2_*
+        *> pmap2 (\lam a b => a * b) (inv (abs-square {x})) (inv (abs-square {y}))
+        *> (equation.cRing : abs x * abs x * (abs y * abs y) = abs x * abs y * (abs x * abs y)))
+
+{- | Square-monotonicity inverse on nonneg reals: $s^2 \leq t^2 \implies s \leq t$. -}
+\lemma square_<=-cancel {s t : Real} (s>=0 : 0 <= s) (t>=0 : 0 <= t) (p : s * s <= t * t) : s <= t
+  => \lam t<s => p $ transport2 (<) (pmap (`* t) ide-left) (pmap (`* s) ide-left) $
+       RealField.pow_<-monotone {_} {_} {2} (\lam q => suc/=0 q) t>=0 t<s
+
+{- | Cauchy–Schwarz, linear form: $\Re x \cdot \Re y + \Im x \cdot \Im y \leq |x| \cdot |y|$.
+     Goes through $|s|$ (real abs of the inner product), which has
+     $|s|^2 = s^2 \leq (|x| \cdot |y|)^2$, then sqrt-cancels. -}
+\private \lemma CS-linear {x y : Complex} : x.re * y.re + x.im * y.im <= abs x * abs y
+  => \have | t>=0 : 0 <= abs x * abs y => RealField.<=_*_positive_positive abs>=0 abs>=0
+           | abs_s_sq : RealField.abs (x.re * y.re + x.im * y.im) * RealField.abs (x.re * y.re + x.im * y.im)
+                      = (x.re * y.re + x.im * y.im) * (x.re * y.re + x.im * y.im) =>
+               inv RealField.abs_* *> RealField.abs-ofPos RealField.square_>=0
+           | tt-eq : abs x * abs y * (abs x * abs y) = abs2 x * abs2 y =>
+               (equation.cRing : abs x * abs y * (abs x * abs y) = abs x * abs x * (abs y * abs y))
+               *> pmap2 (\lam a b => a * b) (abs-square {x}) (abs-square {y})
+           | sq<=tt : RealField.abs (x.re * y.re + x.im * y.im) * RealField.abs (x.re * y.re + x.im * y.im)
+                   <= abs x * abs y * (abs x * abs y) =>
+               transport2 (<=) (inv abs_s_sq) (inv tt-eq) (CS_<= {x} {y})
+           | abs_s<=t : RealField.abs (x.re * y.re + x.im * y.im) <= abs x * abs y =>
+               square_<=-cancel RealField.abs>=0 t>=0 sq<=tt
+     \in RealField.abs>=id <=∘ abs_s<=t
+
+{- | Triangle inequality $|x + y| \leq |x| + |y|$. Squared form:
+     $$|x+y|^2 = |x|^2 + 2(\Re x \cdot \Re y + \Im x \cdot \Im y) + |y|^2
+       \leq |x|^2 + 2|x||y| + |y|^2 = (|x|+|y|)^2.$$ -}
+\lemma abs_+ {x y : Complex} : abs (x + y) <= abs x + abs y
+  => \have | sum>=0 : (0 : Real) <= abs x + abs y => linarith (abs>=0 {x}, abs>=0 {y})
+           | lhs_sq : abs (x + y) * abs (x + y)
+                    = abs2 x + abs2 y + 2 * (x.re * y.re + x.im * y.im) =>
+               abs-square {x + y} *> (equation.cRing : abs2 (x + y) = abs2 x + abs2 y + 2 * (x.re * y.re + x.im * y.im))
+           | rhs_sq : (abs x + abs y) * (abs x + abs y)
+                    = abs2 x + abs2 y + 2 * (abs x * abs y) =>
+               (equation.cRing : (abs x + abs y) * (abs x + abs y)
+                               = abs x * abs x + abs y * abs y + 2 * (abs x * abs y))
+               *> pmap2 (\lam a b => a + b + 2 * (abs x * abs y)) (abs-square {x}) (abs-square {y})
+           | inner-bound : abs2 x + abs2 y + 2 * (x.re * y.re + x.im * y.im)
+                        <= abs2 x + abs2 y + 2 * (abs x * abs y) =>
+               linarith (CS-linear {x} {y})
+           | sq-bound : abs (x + y) * abs (x + y) <= (abs x + abs y) * (abs x + abs y) =>
+               transport2 (<=) (inv lhs_sq) (inv rhs_sq) inner-bound
+     \in square_<=-cancel (abs>=0 {x + y}) sum>=0 sq-bound
+
+{- | Reverse of `abs_zro`: $|c| = 0 \implies c = 0$. Since $|c|^2 = (\Re c)^2 + (\Im c)^2$
+     and both squares are nonneg, the sum vanishing forces each to vanish, then field
+     reducedness forces each component to zero. -}
+\lemma abs_zro-ext {c : Complex} (p : abs c = 0) : c = (zro : Complex)
+  => \have | abs2_c=0 : c.re * c.re + c.im * c.im = (0 : Real) =>
+               inv abs-square *> pmap (`* abs c) p *> RealField.zro_*-left
+           | re2=0 : c.re * c.re = (0 : Real) =>
+               linarith (RealField.square_>=0 {c.im}, RealField.square_>=0 {c.re})
+           | im2=0 : c.im * c.im = (0 : Real) =>
+               linarith (RealField.square_>=0 {c.im}, RealField.square_>=0 {c.re})
+     \in ext (RealField.isReduced re2=0, RealField.isReduced im2=0)
+
+{- | Complex numbers as a normed abelian group, with norm
+     $|c| = \sqrt{(\Re c)^2 + (\Im c)^2}$. The metric, uniform, and topological
+     structure are auto-derived from the norm. -}
+\instance ComplexNormed : NormedAbGroup Complex
+  | AbGroup => ComplexField
+  | norm => abs
+  | norm_zro => Real.=-upper.1 abs_zro
+  | norm_negative => Real.=-upper.1 abs_negative
+  | norm_+ => transport (_ ExUpperRealAbMonoid.<=) RealAbGroup.+-upper $ Real.<=-upper.1 abs_+
+  | norm-ext {c} p => abs_zro-ext $ (Real.=-upper {abs c} {0}).2 p
+
+{- | Complex numbers as a pseudo-valued ring: multiplicative modulus
+     $|xy| = |x| \cdot |y|$ plus $|1| = 1$. The ExPseudoNormedRing plumbing
+     (`norm_*_<=`, `norm_ide_<=`, `*-cont` via the bilinear-locally-uniform
+     default) all follow from these. -}
+\instance ComplexValuedRing : PseudoValuedRing Complex
+  | PseudoNormedAbGroup => ComplexNormed
+  | Ring => ComplexField
+  | norm_* => Real.=-upper.1 abs_* *> RealField.*-upper abs>=0 abs>=0
+  | norm_ide => Real.=-upper.1 abs_ide
+
+{- | Real part dominated by modulus: $|\Re c| \leq |c|$. Proved by squaring:
+     $(|\Re c|)^2 = (\Re c)^2 \leq (\Re c)^2 + (\Im c)^2 = |c|^2$, then `square_<=-cancel`. -}
+\lemma abs_re_<= {c : Complex} : RealField.abs c.re <= abs c
+  => square_<=-cancel RealField.abs>=0 abs>=0
+       (\have | lhs : RealField.abs c.re * RealField.abs c.re = c.re * c.re =>
+                  inv RealField.abs_* *> RealField.abs-ofPos RealField.square_>=0
+              | bound : c.re * c.re <= abs c * abs c =>
+                  transport (c.re * c.re <=) (inv abs-square)
+                    (linarith (RealField.square_>=0 {c.im}))
+        \in transport (`<= abs c * abs c) (inv lhs) bound)
+
+\lemma abs_im_<= {c : Complex} : RealField.abs c.im <= abs c
+  => square_<=-cancel RealField.abs>=0 abs>=0
+       (\have | lhs : RealField.abs c.im * RealField.abs c.im = c.im * c.im =>
+                  inv RealField.abs_* *> RealField.abs-ofPos RealField.square_>=0
+              | bound : c.im * c.im <= abs c * abs c =>
+                  transport (c.im * c.im <=) (inv abs-square)
+                    (linarith (RealField.square_>=0 {c.re}))
+        \in transport (`<= abs c * abs c) (inv lhs) bound)
+
+{- | The real-part projection $\Re : \mathbb{C} \to \mathbb{R}$ as a
+     non-expansive (1-Lipschitz) normed-group map. -}
+\func Re : NormedAbGroupMap ComplexNormed RealNormed \cowith
+  | func c => c.re
+  | func-+ => idp
+  | func-norm => Real.<=-upper.1 abs_re_<=
+
+{- | The imaginary-part projection $\Im : \mathbb{C} \to \mathbb{R}$ as a
+     non-expansive (1-Lipschitz) normed-group map. -}
+\func Im : NormedAbGroupMap ComplexNormed RealNormed \cowith
+  | func c => c.im
+  | func-+ => idp
+  | func-norm => Real.<=-upper.1 abs_im_<=
+
+{- | $\mathrm{fromReal} : \mathbb{R} \to \mathbb{C}$ as an isometric normed-group
+     map. Preserves addition (`fromReal_+`) and norm exactly (`abs_fromReal`),
+     hence in particular a `CoverMap`. -}
+\func fromRealMap : NormedIsometricMap RealNormed ComplexNormed fromReal \cowith
+  | func-+ => fromReal_+
+  | func-norm-isometry => Real.=-upper.1 abs_fromReal
+
+{- | $|I|^2 = 1$. By definition of `I` and ring arithmetic. -}
+\lemma abs2_I : abs2 I = (1 : Real)
+  => equation
+
+{- | $|I| = 1$. The imaginary unit has unit modulus. -}
+\lemma abs_I : abs I = 1
+  => pmap sqrt abs2_I *> sqrt_ide
+
+{- | $|I \cdot z| = |z|$. Follows from `abs_*` and $|I| = 1$. -}
+\lemma abs_I_* {z : Complex} : abs (I * z) = abs z
+  => abs_*  *> pmap (`* _) abs_I *> ide-left
+
+{- | Multiplication by $I$ as an isometric normed-group map. -}
+\func mulIMap : NormedIsometricMap ComplexNormed ComplexNormed (I *) \cowith
+  | func-+ => ldistr
+  | func-norm-isometry => Real.=-upper.1 abs_I_*
+
+{- | $|\overline{z}|^2 = |z|^2$. The imaginary part gets negated, but $(-x)^2 = x^2$. -}
+\lemma abs2_conj {z : Complex} : abs2 (conj z) = abs2 z
+  => pmap (z.re * z.re +) (Ring.negative_*-left *> pmap negative Ring.negative_*-right *> AddGroup.negative-isInv)
+
+{- | $|\overline{z}| = |z|$. The complex modulus is invariant under conjugation. -}
+\lemma abs_conj {z : Complex} : abs (conj z) = abs z
+  => pmap sqrt abs2_conj
+
+{- | Conjugation $\overline{\cdot} : \mathbb{C} \to \mathbb{C}$ as an isometric
+     normed-group map. -}
+\func conjMap : NormedIsometricMap ComplexNormed ComplexNormed conj \cowith
+  | func-+ => conj_+
+  | func-norm-isometry => Real.=-upper.1 abs_conj

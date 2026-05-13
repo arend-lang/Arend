@@ -6,6 +6,7 @@
 \import Algebra.Pointed
 \import Algebra.Ring
 \import Algebra.Ring.Local
+\import Algebra.Ring.RingHom
 \import Algebra.Semiring
 \import Arith.Real
 \import Function.Meta
@@ -55,3 +56,74 @@
                     })
                     \in Inv.lmake (\new Complex (x.re * d.inv) (negative (x.im * d.inv))) $ ext (equation {usingOnly d.inv-left}, equation))
   }
+
+{- | The imaginary unit $I = 0 + i \in \mathbb{C}$. -}
+\func I : Complex => \new Complex 0 1
+
+{- | Real-line embedding $\mathbb{R} \hookrightarrow \mathbb{C}$, $x \mapsto x + 0i$,
+     as a plain `\func`. The RingHom witness is `fromReal-RingHom`. -}
+\func fromReal (x : Real) : Complex => \new Complex x 0
+
+{- | $\mathrm{fromReal}\ 0 = 0$. By eta of the Complex record. -}
+\lemma fromReal_zro : fromReal 0 = (0 : Complex)
+  => idp
+
+{- | $\mathrm{fromReal}\ 1 = 1$. -}
+\lemma fromReal_ide : fromReal 1 = (1 : Complex)
+  => idp
+
+{- | $\mathrm{fromReal}$ preserves addition:
+     $\mathrm{fromReal}\,(x + y) = \mathrm{fromReal}\ x + \mathrm{fromReal}\ y$. -}
+\lemma fromReal_+ {x y : Real} : fromReal (x + y) = fromReal x + fromReal y
+  => ext (idp, inv zro-left)
+
+{- | $\mathrm{fromReal}$ preserves multiplication:
+     $\mathrm{fromReal}\,(xy) = \mathrm{fromReal}\ x \cdot \mathrm{fromReal}\ y$. -}
+\lemma fromReal_* {x y : Real} : fromReal (x * y) = fromReal x * fromReal y
+  => ext (equation, equation)
+
+{- | $\mathrm{fromReal}$ preserves negation:
+     $\mathrm{fromReal}\,(-x) = -\mathrm{fromReal}\ x$. -}
+\lemma fromReal_negative {x : Real} : fromReal (negative x) = negative (fromReal x)
+  => ext (idp, inv RealAbGroup.negative_zro)
+
+{- | Complex conjugation $\overline{a + bi} := a - bi$. -}
+\func conj (z : Complex) : Complex => \new Complex z.re (negative z.im)
+
+{- | $\overline{\overline{z}} = z$ — `conj` is its own inverse. -}
+\lemma conj_conj {z : Complex} : conj (conj z) = z
+  => ext (idp, AddGroup.negative-isInv)
+
+{- | $\overline{0} = 0$. -}
+\lemma conj_zro : conj 0 = (0 : Complex)
+  => ext (idp, RealAbGroup.negative_zro)
+
+{- | $\overline{1} = 1$. -}
+\lemma conj_ide : conj 1 = (1 : Complex)
+  => ext (idp, RealAbGroup.negative_zro)
+
+{- | $\overline{x + y} = \overline{x} + \overline{y}$ — `conj` preserves addition. -}
+\lemma conj_+ {x y : Complex} : conj (x + y) = conj x + conj y
+  => ext (idp, RealAbGroup.negative_+ *> +-comm)
+
+{- | $\overline{ -z} = -\overline{z}$ — `conj` preserves negation. -}
+\lemma conj_negative {z : Complex} : conj (negative z) = negative (conj z)
+  => ext (idp, idp)
+
+{- | $\overline{xy} = \overline{x} \cdot \overline{y}$ — `conj` preserves multiplication. -}
+\lemma conj_* {x y : Complex} : conj (x * y) = conj x * conj y
+  => ext (equation, equation)
+
+{- | $\overline{I} = -I$. -}
+\lemma conj_I : conj I = negative I
+  => ext (inv RealAbGroup.negative_zro, idp)
+
+{- | $\overline{\mathrm{fromReal}\ x} = \mathrm{fromReal}\ x$ — `conj` fixes the
+     real-line embedding. -}
+\lemma conj_fromReal {x : Real} : conj (fromReal x) = fromReal x
+  => ext RealAbGroup.negative_zro
+
+{- | $\overline{z^n} = (\overline{z})^n$ — `conj` commutes with monoid powers. -}
+\lemma conj_pow {z : Complex} (n : Nat) : conj (Monoid.pow z n) = Monoid.pow (conj z) n \elim n
+  | 0 => conj_ide
+  | suc n => conj_* *> pmap (`* conj z) (conj_pow n)

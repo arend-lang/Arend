@@ -1,0 +1,183 @@
+\import Algebra.Group
+\import Algebra.Group.GroupHom
+\import Algebra.Meta
+\import Algebra.Monoid
+\import Algebra.QModule
+\import Algebra.Ring
+\import Algebra.Semiring
+\import Analysis.Series
+\import Analysis.PowerSeries
+\import Arith.Complex
+\import Arith.Complex.Banach
+\import Arith.Complex.Norm
+\import Arith.Exp
+\import Arith.Nat
+\import Arith.Rat
+\import Arith.Real
+\import Arith.Real.Field
+\import Combinatorics.Factorial
+\import Function.Meta
+\import Meta
+\import Paths
+\import Paths.Meta
+\import Topology.BanachAlgebra
+\import Topology.CoverSpace.Complete
+\import Topology.NormedAbGroup
+\import Topology.NormedAbGroup.Real
+\import Topology.TopSpace
+\open CoverMap (∘)
+
+{- | $\Re$ distributes over complex multiplication:
+     $\Re(xy) = \Re x \cdot \Re y - \Im x \cdot \Im y$. Definitional — `*` on
+     `Complex` is `\new Complex (re*re − im*im) (re*im + im*re)`. -}
+\lemma Re_* {x y : Complex} : Re (x * y) = Re x * Re y - Im x * Im y => idp
+
+{- | $\Im$ distributes over complex multiplication:
+     $\Im(xy) = \Re x \cdot \Im y + \Im x \cdot \Re y$. Definitional, same reason. -}
+\lemma Im_* {x y : Complex} : Im (x * y) = Re x * Im y + Im x * Re y => idp
+
+{- | $\cos x := \Re\,\exp(I \cdot \mathrm{fromReal}\ x)$. Defined via the complex
+     exponential (Steps 2–3) rather than as a real power series. Trigonometric
+     identities follow as one-liners from `exp_+`, `exp_neg`, and the linear-map
+     properties of $\Re$ / $\Im$; the series expansion
+     $\cos x = \sum_k (-1)^k x^{2k} / (2k)!$ is a derivable theorem (deferred). -}
+\func cos (x : Real) : Real => Re (exp (I * fromReal x))
+
+{- | $\sin x := \Im\,\exp(I \cdot \mathrm{fromReal}\ x)$. -}
+\func sin (x : Real) : Real => Im (exp (I * fromReal x))
+
+{- | $\cos 0 = 1$. From $I \cdot \mathrm{fromReal}\ 0 = 0$ (since
+     $\mathrm{fromReal}\ 0 = 0$ and $z \cdot 0 = 0$) $+$ $\exp 0 = 1$ $+$ $\Re 1 = 1$. -}
+\lemma cos_zro : cos 0 = (1 : Real)
+  => pmap (\lam c => Re (exp c)) (pmap (I *) fromReal_zro *> zro_*-right)
+     *> pmap Re exp_zro
+
+{- | $\sin 0 = 0$. Same reasoning as `cos_zro` but projecting to the imaginary
+     part. -}
+\lemma sin_zro : sin 0 = (0 : Real)
+  => pmap (\lam c => Im (exp c)) (pmap (I *) fromReal_zro *> zro_*-right)
+     *> pmap Im exp_zro
+
+{- | $\cos(x+y) = \cos x \cdot \cos y - \sin x \cdot \sin y$. Standard cosine
+     addition formula. Strategy: $\exp(i(x+y)) = \exp(ix) \cdot \exp(iy)$ via
+     `exp_+` (Complex is commutative so the hypothesis is `*-comm`), then split
+     $\Re$ of the product via `Re_*`. -}
+\lemma cos_+ {x y : Real} : cos (x + y) = cos x * cos y - sin x * sin y
+  => pmap (\lam z => Re (exp z)) (pmap (I *) fromReal_+ *> ldistr)
+     *> pmap Re (exp_+ (*-comm {ComplexField} {I * fromReal x} {I * fromReal y}))
+     *> Re_*
+
+{- | $\sin(x+y) = \cos x \cdot \sin y + \sin x \cdot \cos y$. Standard sine
+     addition formula. Same strategy as `cos_+`, projecting $\Im$ of the product. -}
+\lemma sin_+ {x y : Real} : sin (x + y) = cos x * sin y + sin x * cos y
+  => pmap (\lam z => Im (exp z)) (pmap (I *) fromReal_+ *> ldistr)
+     *> pmap Im (exp_+ (*-comm {ComplexField} {I * fromReal x} {I * fromReal y}))
+     *> Im_*
+
+{- | $\cos$ as a `CoverMap RealNormed RealNormed`. The composition
+     $\mathbb{R} \xrightarrow{\mathrm{fromRealMap}} \mathbb{C}
+        \xrightarrow{I \cdot} \mathbb{C} \xrightarrow{\exp} \mathbb{C}
+        \xrightarrow{\Re} \mathbb{R}$,
+     each leg a `CoverMap` (the two `*Map` factors are isometric, hence
+     CoverMaps via $\mathrm{NormedIsometricMap} \to \mathrm{MetricMap}
+        \to \cdots \to \mathrm{CoverMap}$). -}
+\func cosMap : CoverMap RealNormed RealNormed cos
+  => Re ∘ exp ∘ mulIMap ∘ fromRealMap
+
+{- | $\sin$ as a `CoverMap RealNormed RealNormed`, same chain via $\Im$. -}
+\func sinMap : CoverMap RealNormed RealNormed sin
+  => Im ∘ exp ∘ mulIMap ∘ fromRealMap
+
+{- | `conj` as an additive-group endomorphism of $\mathbb{C}$. Lets us apply
+     `func-*q` (additive-group homs preserve `*q`) to drag `conj` through
+     `*q`. -}
+\func conjAddHom : AddGroupHom ComplexField ComplexField \cowith
+  | func => conj
+  | func-+ => conj_+
+
+{- | `conj` fixes $\mathrm{fromRat}\ r$ on `ComplexBanach`. Two steps:
+     $(1)$ $\overline{r *_{\mathbb{Q}} 1} = r *_{\mathbb{Q}} \overline{1}$
+     because `conj` is an `AddGroupHom` and `func-*q` extends preservation
+     of $+$ to preservation of `*q`; $(2)$ $r *_{\mathbb{Q}} \overline{1}
+     = r *_{\mathbb{Q}} 1$ by `conj_ide`. -}
+\lemma conj_fromRat_complex {r : Rat} : conj (ComplexBanach.fromRat r) = ComplexBanach.fromRat r
+  => func-*q {ComplexBanach} {ComplexBanach} {conjAddHom} *> pmap (r QModule.*q) conj_ide
+
+{- | Per-term identity for the exp series: `conj` rewrites $(c_k \cdot z^k)$
+     to $(c_k \cdot \overline{z}^k)$. Uses `conj_*`, `conj_fromRat_complex`,
+     and `conj_pow`. -}
+\private \lemma conj_expTerm {z : Complex} (k : Nat)
+  : conj (ComplexBanach.fromRat (RatField.finv (fac k)) * Monoid.pow z k)
+    = ComplexBanach.fromRat (RatField.finv (fac k)) * Monoid.pow (conj z) k
+  => conj_* *> pmap (`* conj (Monoid.pow z k)) conj_fromRat_complex
+     *> pmap (ComplexBanach.fromRat (RatField.finv (fac k)) *) (conj_pow k)
+
+{- | `conj` commutes with the exp partial sums:
+     $\overline{S_n(z)} = S_n(\overline{z})$. Lifts the per-term identity
+     `conj_expTerm` through `partialSum_hom` (which says any `AddMonoidHom`
+     commutes with `partialSum`). -}
+\private \lemma conj_partialSum {z : Complex} {n : Nat}
+  : conj (partialSum (powerSeries (\lam k => ComplexBanach.fromRat (RatField.finv (fac k))) __ z) n)
+    = partialSum (powerSeries (\lam k => ComplexBanach.fromRat (RatField.finv (fac k))) __ (conj z)) n
+  => partialSum_hom conjAddHom
+     *> path (\lam i => partialSum (\lam k => conj_expTerm {z} k @ i) n)
+
+{- | The big one: $\overline{\exp z} = \exp(\overline{z})$. Pushes `conj` through
+     the limit defining `exp` using `cont-limit` (continuity = limit preservation),
+     then rewrites the inner series via `conj_partialSum`, finishing with
+     uniqueness of limits against `exp-IsSeriesSum (conj z)`. -}
+\lemma conj_exp {z : Complex} : conj (exp z) = exp (conj z)
+  => ComplexBanach.limit-unique
+       (transport (\lam f => ComplexBanach.IsLimit f (conj (exp z)))
+         (path (\lam i n => conj_partialSum {z} {n} @ i))
+         (cont-limit (exp-IsSeriesSum z) conjMap))
+       (exp-IsSeriesSum (conj z))
+
+{- | `conj` of a purely-imaginary complex is its negation:
+     $\overline{I \cdot \mathrm{fromReal}\ x} = -(I \cdot \mathrm{fromReal}\ x)$.
+     Used to dispatch `cos_neg` / `sin_neg` via `conj_exp`. -}
+\private \lemma conj-of-pure-imag {x : Real}
+  : conj (I * fromReal x) = negative (I * fromReal x)
+  => conj_* *> pmap2 (*) conj_I conj_fromReal *> Ring.negative_*-left
+
+{- | $\cos(-x) = \cos x$. Pushes the negation through `fromReal`, then through
+     the imaginary axis to land on $\overline{I \cdot \mathrm{fromReal}\ x}$.
+     Then `conj_exp` flips $\exp \circ \overline{\cdot}$ to
+     $\overline{\cdot} \circ \exp$, and $\Re \circ \overline{\cdot} = \Re$
+     (definitionally) closes. -}
+\lemma cos_neg {x : Real} : cos (negative x) = cos x
+  => pmap (\lam z => Re (exp z))
+       (pmap (I *) fromReal_negative *> Ring.negative_*-right *> inv conj-of-pure-imag)
+     *> pmap Re (inv conj_exp)
+
+{- | $\sin(-x) = -\sin x$. Same chain as `cos_neg` but
+     $\Im \circ \overline{\cdot} = -\Im$. -}
+\lemma sin_neg {x : Real} : sin (negative x) = negative (sin x)
+  => pmap (\lam z => Im (exp z))
+       (pmap (I *) fromReal_negative *> Ring.negative_*-right *> inv conj-of-pure-imag)
+     *> pmap Im (inv conj_exp)
+
+{- | The unit-modulus identity:
+     $\exp(ix) \cdot \overline{\exp(ix)} = 1$ for real $x$.
+     Two steps: `conj` slides through `exp` (`conj_exp`), then `conj` on the
+     purely-imaginary input flips sign (`conj-of-pure-imag`), leaving `exp_neg`. -}
+\private \lemma exp-conj-cancel {x : Real}
+  : exp (I * fromReal x) Semiring.* conj (exp (I * fromReal x)) = Monoid.ide
+  => pmap (exp (I * fromReal x) Semiring.*)
+       (conj_exp *> pmap exp conj-of-pure-imag)
+     *> exp_neg {ComplexBanach} {I * fromReal x}
+
+{- | Pythagorean identity: $\cos^2 x + \sin^2 x = 1$. The Complex product
+     $\Re(z \cdot \overline{z})$ reduces to $(\Re z)^2 + (\Im z)^2$ (the
+     $-(-\cdot)$ cancellation inside Complex multiplication), which IS
+     $\cos^2 + \sin^2$. Combined with $z \cdot \overline{z} = 1$
+     (`exp-conj-cancel`), this yields the identity. -}
+\lemma pythagoras {x : Real} : cos x * cos x + sin x * sin x = (1 : Real)
+  => \have re-of-zz
+            : Complex.re {exp (I * fromReal x) Semiring.* conj (exp (I * fromReal x))}
+                = cos x * cos x + sin x * sin x
+            => pmap (cos x * cos x +) (pmap negative Ring.negative_*-right *> AddGroup.negative-isInv)
+     \in inv re-of-zz *> pmap (\lam c => Complex.re {c}) exp-conj-cancel
+
+
+

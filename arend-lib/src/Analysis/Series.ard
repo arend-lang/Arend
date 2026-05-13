@@ -49,11 +49,19 @@
 \lemma partialSum-empty {A : AddMonoid} {S : Series A} : partialSum S 0 = 0
   => \peval partialSum S 0
 
+\lemma partialSum_1 {A : AddMonoid} {S : Series A} : partialSum S 1 = S 0
+  => partialSum_suc {A} {S} {0}
+    *> pmap (`+ S 0) (partialSum-empty {A} {S})
+         *> zro-left
+
 \lemma partialSum_<= {A : PosetAddMonoid} {S T : Series A} {n : Nat} (p : \Pi (k : Nat) -> S k <= T k) : partialSum S n <= partialSum T n
   => transport2 (<=) (inv \peval partialSum S n) (inv \peval partialSum T n) (A.BigSum_<= \lam j => p j)
 
 \lemma partialSum_hom {A B : AddMonoid} (f : AddMonoidHom A B) {S : Series A} {n : Nat} : f (partialSum S n) = partialSum (\lam i => f (S i)) n
   => pmap f (\peval partialSum S n) *> f.func-BigSum *> inv \peval partialSum _ n
+
+\lemma partialSum_suc {A : AddMonoid} {S : Series A} {n : Nat} : partialSum S (suc n) = partialSum S n + S n
+  => (\peval partialSum S (suc n)) *> A.BigSum_suc-nat {n} {S} *> pmap (`+ S n) (inv (\peval partialSum S n))
 
 \func IsConvSeries {A : TopAbGroup} (S : Series A) : \Prop
   => IsConvergent (partialSum S)
@@ -147,6 +155,15 @@
   | 0, m => inv $ rewrite (\peval partialSum S _, \peval partialSum S _) $ pmap (_ +) A.negative_zro *> zro-right
   | suc n, 0 => absurd $ p NatOrder.zero<suc
   | suc n, suc m => midSum-diff (suc<=suc.conv p) *> rewrite (\peval partialSum S _, \peval partialSum S _, \peval partialSum _ _, \peval partialSum _ _) (inv A.sum-cancel-left)
+
+\lemma partialSum-split-shifted {A : AddMonoid} {S : Series A} {n q : Nat}
+  : partialSum S (n + q) = partialSum S n + partialSum (\lam k => S (n + k)) q \elim q
+  | 0 => inv zro-right *> pmap (partialSum S n +) (inv partialSum-empty)
+  | suc q' => partialSum_suc *> pmap (`+ S (n + q')) partialSum-split-shifted *> +-assoc *> pmap (partialSum S n +) (inv partialSum_suc)
+
+\lemma partialSum-split {A : AddMonoid} {S : Series A} {n m : Nat} (p : n <= m)
+  : partialSum S m = partialSum S n + midSum S n m
+  => rewriteI (<=_exists p) (partialSum-split-shifted *> pmap (partialSum S n +) midSum'_midSum)
 
 \lemma midSum_norm {A : ExPseudoNormedAbGroup} {S : Series A} {n m : Nat} : norm (midSum S n m) <= midSum (\lam j => norm (S j)) n m \elim n, m
   | 0, m => rewrite (\peval partialSum _ _, \peval partialSum _ _) A.norm_BigSum
@@ -336,3 +353,10 @@
 
 \lemma partialSum-cover {X : CoverSpace} {Y : TopAbGroup} (f : Nat -> CoverMap X Y) (n : Nat) : CoverMap X Y \lam x => partialSum (f __ x) n
   => transportInv (CoverMap X Y) (ext \lam x => \peval partialSum _ _) $ BigSum-cover \lam (j : Fin n) => f j
+
+{- | Monotonicity of $\mathrm{partialSum}$ for non-negative `ExUpperReal`
+     series: $n \leq m \implies \mathrm{partialSum}\,S\,n \leq
+     \mathrm{partialSum}\,S\,m$. -}
+\lemma partialSum-monotone {S : Series ExUpperReal} (S>=0 : \Pi (n : Nat) -> 0 <= S n) {n m : Nat} (p : n <= m)
+  : partialSum S n <= partialSum S m
+  => transport2 (<=) zro-right (inv (partialSum-split p)) (ExUpperRealAbMonoid.<=_+ <=-refl (midSum>=0 S>=0))

@@ -1,6 +1,16 @@
+\import Algebra.Domain
+\import Algebra.Field
+\import Algebra.Group
+\import Algebra.Meta
 \import Algebra.Monoid
 \import Algebra.Pointed
+\import Algebra.QModule
+\import Algebra.Ring
+\import Algebra.Semiring
+\import Algebra.StrictlyOrdered
+\import Analysis.CauchyProduct
 \import Analysis.FuncLimit
+\import Analysis.Limit
 \import Analysis.PowerSeries
 \import Analysis.Series
 \import Arith.Int
@@ -8,19 +18,26 @@
 \import Arith.Rat
 \import Arith.Real
 \import Arith.Real.UpperReal
+\import Combinatorics.Binom
 \import Combinatorics.Factorial
+\import Data.Array
 \import Function.Meta
 \import Logic
 \import Meta
 \import Order.Biordered
+\import Order.LinearOrder
 \import Order.PartialOrder
+\import Order.StrictOrder
 \import Paths
 \import Paths.Meta
 \import Topology.BanachAlgebra
+\import Topology.BanachSpace
 \import Topology.CoverSpace.Complete
 \import Topology.MetricSpace
 \import Topology.NormedAbGroup
 \import Topology.NormedAbGroup.Real
+\import Topology.TopSpace
+\open AddMonoid (BigSum)
 
 \sfunc exp {A : RealBanachAlgebra} : CoverMap A A
   => funcLimit (\lam n x => partialSum (powerSeries (\lam n => A.fromRat (RatField.finv (fac n))) __ x) n) (powerSeriesConv-funcConv exp-series-conv)
@@ -42,3 +59,274 @@
               rewrite (RealAbGroup.abs-ofPos $ rat_real_<=.1 $ <=_ratNom $ pos<=pos zero<=_) $
               RatField.finv_<-left {eps} {suc n} eps>0 $ eps'<N <∘l fromInt_<= (pos<=pos $ N<=n <=∘ id<=suc))
   }
+
+\open Monoid (pow)
+
+{- | Partial sums of the exp-series at $x = 0$ stabilise at $1$ after step $1$:
+     only the $k = 0$ term contributes ($0^0 = 1$); all later terms have $0^k = 0$. -}
+\private \lemma exp-partialSum-at-zero {A : RealBanachAlgebra} (n : Nat) (p : 1 <= n)
+  : partialSum (powerSeries (\lam k => A.fromRat (RatField.finv (fac k))) __ 0) n = 1 \elim n
+  | 0 => absurd (p NatOrder.zero<suc)
+  | 1 =>
+      partialSum_suc
+      *> pmap (`+ powerSeries (\lam k => A.fromRat (RatField.finv (fac k))) 0 0) partialSum-empty
+      *> zro-left
+      *> pmap (`* pow 0 0) (pmap A.fromRat
+          (inv ide-left *> RatField.finv-right (\lam q => RatField.zro/=ide (inv q)))
+        *> A.ide_*q)
+      *> ide-left
+  | suc (suc n'') =>
+      partialSum_suc
+      *> pmap2 (+) (exp-partialSum-at-zero (suc n'') (suc<=suc zero<=_))
+                   (pmap (A.fromRat (RatField.finv (fac (suc n''))) *) (Semiring.pow_0 (\lam q => suc/=0 q))
+                    *> zro_*-right)
+      *> zro-right
+
+{- | $\exp 0 = 1$. At $x = 0$ the power series collapses: only the $k = 0$ term
+     (which is $1$) survives because $0^k = 0$ for $k \geq 1$. So every partial
+     sum for $n \geq 1$ already equals $1$, and the limit is just $1$. -}
+\lemma exp_zro {A : RealBanachAlgebra} : exp 0 = (1 : A)
+  => A.limit-unique
+       (rewrite (\peval exp) limit-isLimit
+        : A.IsLimit (partialSum (powerSeries (\lam k => A.fromRat (RatField.finv (fac k))) __ 0)) (exp 0))
+       (\lam {U} Uo U1 => inP (1, \lam {n} p =>
+          transport U (inv (exp-partialSum-at-zero n p)) U1))
+
+{- | Bridge: $\exp x$ is the `IsSeriesSum` value of the exp power series at $x$.
+     Used by `exp_+` to connect the `\sfunc exp` (defined via `funcLimit`) with
+     the `IsSeriesSum`-based API needed by the Cauchy product `conv-sum`. -}
+\lemma exp-IsSeriesSum {A : RealBanachAlgebra} (x : A)
+  : IsSeriesSum (powerSeries (\lam k => A.fromRat (RatField.finv (fac k))) __ x) (exp x)
+  => rewrite (\peval exp) limit-isLimit
+
+{- | $\mathrm{fromRat}\,q \cdot \mathrm{fromRat}\,r = \mathrm{fromRat}\,(q r)$
+     in a `BanachAlgebra`. Follows from
+     $\mathrm{fromRat}\,q = q *_{\mathbb{Q}} 1$ and the `QAlgebra` `*q` structure. -}
+\private \lemma fromRat-* {A : BanachAlgebra} {q r : Rat}
+  : A.fromRat q Semiring.* A.fromRat r = A.fromRat (q RatField.* r)
+  => unfold A.fromRat (inv QPseudoAlgebra.*q-comm-left *> pmap (q QModule.*q) ide-left *> inv QModule.*q-assoc)
+
+{- | $n! > 0$, lifted to $\mathrm{natCoef}\,(n!) \neq 0$ in $\mathbb{Q}$. -}
+\private \lemma fac/=0-rat {n : Nat} : (natCoef {RatField} (fac n) : Rat) /= RatField.zro
+  => \lam q => RatField.<-irreflexive
+       (transport (\lam x => RatField.zro RatField.< x) q
+          (LinearlyOrderedSemiring.natCoef>0 {RatField} {fac n} fac>0))
+
+{- | Generic `CRing` rearrangement helper:
+     $(a \cdot b) \cdot (c \cdot d \cdot e) = c$
+     when $a \cdot d = 1$ and $b \cdot e = 1$. Avoids `Rat` literal fusion by
+     operating on opaque ring variables. -}
+\private \lemma cring-cancel-pair {R : CRing} (a b c d e : R) (ad=1 : a R.* d = R.ide) (be=1 : b R.* e = R.ide)
+  : (a R.* b) R.* (c R.* d R.* e) = c
+  => (equation.cRing : (a R.* b) R.* (c R.* d R.* e) = c R.* (a R.* d) R.* (b R.* e))
+     *> pmap2 (\lam u v => c R.* u R.* v) ad=1 be=1
+     *> ide-right
+     *> ide-right
+
+{- | The rational form of `binom.fac-id-le`:
+     $$\frac{1}{k!} \cdot \frac{1}{(n - k)!} = \binom{n}{k} \cdot \frac{1}{n!}$$
+     in $\mathbb{Q}$, for $k \leq n$. Proof: cancel right by
+     $\mathrm{natCoef}\,(n!)$; both sides become $\mathrm{natCoef}\,\binom{n}{k}$
+     using `binom.fac-id-le` (lifted to $\mathbb{Q}$ via `natCoef_*`) and
+     `finv-left`. The algebraic rearrangement is delegated to
+     `cring-cancel-pair` so $\mathbb{Q}$'s literal fusion doesn't trip up
+     `equation.cRing`. -}
+\private \lemma binom-fac-rat {n k : Nat} (p : k <= n)
+  : RatField.finv (fac k) RatField.* RatField.finv (fac (n -' k))
+    = natCoef (binom n k) RatField.* RatField.finv (fac n)
+  =>
+    \have
+      | fid : (natCoef {RatField} (binom n k) RatField.* natCoef (fac k)) RatField.* natCoef (fac (n -' k))
+            = natCoef (fac n)
+            => pmap (\lam x => x RatField.* natCoef {RatField} (fac (n -' k))) (inv Semiring.natCoef_*)
+               *> inv Semiring.natCoef_*
+               *> pmap natCoef (binom.fac-id-le p)
+      | fk-inv : RatField.finv (natCoef (fac k)) RatField.* natCoef (fac k) = 1
+            => RatField.finv-left fac/=0-rat
+      | fnk-inv : RatField.finv (natCoef (fac (n -' k))) RatField.* natCoef (fac (n -' k)) = 1
+            => RatField.finv-left fac/=0-rat
+      | fn-inv : RatField.finv (natCoef (fac n)) RatField.* natCoef (fac n) = 1
+            => RatField.finv-left fac/=0-rat
+      | left-half : (RatField.finv (fac k) RatField.* RatField.finv (fac (n -' k))) RatField.* natCoef (fac n)
+                  = natCoef (binom n k)
+            => pmap ((RatField.finv (fac k) RatField.* RatField.finv (fac (n -' k))) RatField.*) (inv fid)
+               *> cring-cancel-pair (RatField.finv (fac k)) (RatField.finv (fac (n -' k)))
+                                    (natCoef (binom n k)) (natCoef (fac k)) (natCoef (fac (n -' k)))
+                                    fk-inv fnk-inv
+      | right-half : (natCoef (binom n k) RatField.* RatField.finv (fac n)) RatField.* natCoef (fac n)
+                   = natCoef (binom n k)
+            => *-assoc *> pmap (natCoef {RatField} (binom n k) RatField.*) fn-inv *> ide-right
+    \in RatField.nonZero-cancel-right (fac/=0-rat {n}) (left-half *> inv right-half)
+
+{- | `A.fromRat` agrees with `natCoef` on a $\mathbb{N}$-valued rational:
+     $\mathrm{A.fromRat}\,(\mathrm{natCoef}\,n) = \mathrm{natCoef}\,n$. Used to
+     lift the $\mathbb{Q}$-level `binom-fac-rat` into the $A$-level
+     `cs-binom-id`. -}
+\private \lemma fromRat-natCoef {A : BanachAlgebra} {n : Nat}
+  : A.fromRat (natCoef n) = natCoef n
+  => unfold A.fromRat (QModule.*q_*n *> inv Semiring.natCoef_*n)
+
+{- | The $A$-level cs-binom identity:
+     $c_k \cdot c_{n - k} = \binom{n}{k} \cdot c_n$ for $k \leq n$,
+     where $c_k := \mathrm{A.fromRat}\,(1/k!)$. Lifts `binom-fac-rat` from
+     $\mathbb{Q}$ to $A$ via `fromRat`. -}
+\private \lemma cs-binom-id {A : RealBanachAlgebra} {n k : Nat} (p : k <= n)
+  : A.fromRat (RatField.finv (fac k)) Semiring.* A.fromRat (RatField.finv (fac (n -' k)))
+    = natCoef (binom n k) Semiring.* A.fromRat (RatField.finv (fac n))
+  => fromRat-* *> pmap A.fromRat (binom-fac-rat p)
+     *> inv fromRat-*
+     *> pmap (Semiring.`* A.fromRat (RatField.finv (fac n))) fromRat-natCoef
+
+{- | Inner step of `binom-expansion-comm`: pushing an $x$ past an IH-term.
+     $(b \cdot (x^i \cdot y^j)) \cdot x = b \cdot (x^{i+1} \cdot y^j)$.
+     The non-trivial step is $y^j \cdot x = x \cdot y^j$, supplied by
+     `pow-comm1`. -}
+\private \lemma cxy-mult-x {A : Ring} {x y : A} (xy=yx : x * y = y * x) {b : A} {i j : Nat}
+  : (b * (pow x i * pow y j)) * x = b * (pow x (suc i) * pow y j)
+  => *-assoc *> pmap (b *) (*-assoc *> pmap (pow x i *) (Monoid.pow-comm1 (inv xy=yx)) *> inv *-assoc)
+
+{- | Inner step of `binom-expansion-comm`: pushing a $y$ past an IH-term.
+     $(b \cdot (p \cdot y^j)) \cdot y = b \cdot (p \cdot y^{j+1})$.
+     Just associativity; $y^{j+1} = y^j \cdot y$ is definitional. -}
+\private \lemma cxy-mult-y {A : Ring} {y b p : A} {j : Nat}
+  : (b * (p * pow y j)) * y = b * (p * pow y (suc j))
+  => *-assoc *> pmap (b *) *-assoc
+
+{- | Non-commutative binomial expansion: if $x \cdot y = y \cdot x$, then
+     $$(x + y)^n = \sum_{k=0}^{n} \binom{n}{k} \cdot x^k \cdot y^{n - k}.$$
+     Structure parallels `Combinatorics.Binom.binom.expansion` (the `CRing`
+     version); each `equation` call there is replaced with an explicit
+     `pow-comm1` / `*-assoc` chain via `cxy-mult-x` and `cxy-mult-y`. -}
+\private \lemma binom-expansion-comm {A : Ring} (x y : A) (xy=yx : x * y = y * x) (n : Nat)
+  : pow (x + y) n = BigSum (\new Array A (suc n) (\lam i => natCoef (binom n i) * (pow x i * pow y (n -' i))))
+  \elim n
+  | 0 =>
+    -- Base: `pow (x + y) 0 = ide`, RHS is a length-1 BigSum whose single term is
+    -- `natCoef 1 * (ide * ide) = ide`.
+    inv (A.BigSum_suc {0} {\new Array A 1 (\lam i => natCoef (binom 0 i) * (pow x i * pow y (0 -' i)))}
+      *> zro-left
+      *> pmap (`* (pow x 0 * pow y 0)) (natCoefSuc 0 *> pmap (`+ ide) natCoefZero *> zro-left)
+      *> ide-left *> ide-left)
+  | suc n =>
+    \let
+      | IH : pow (x + y) n = BigSum (\new Array A (suc n) (\lam i => natCoef (binom n i) * (pow x i * pow y (n -' i))))
+           => binom-expansion-comm x y xy=yx n
+      | xy (i : Fin (suc n)) : A => pow x (suc i) * pow y (n -' i)
+      | cxy (i : Fin (suc n)) : A => natCoef (binom n i) * (pow x i * pow y (n -' i))
+      | t1 : pow (x + y) n * x = BigSum (\new Array A (suc n) (\lam i => natCoef (binom n i) * xy i))
+           => pmap (`* x) IH *> A.BigSum-rdistr {\new Array A (suc n) cxy}
+              *> path (\lam j => BigSum (\new Array A (suc n) (\lam i =>
+                  (cxy-mult-x xy=yx : cxy i * x = natCoef (binom n i) * xy i) @ j)))
+      | t2 : pow (x + y) n * y
+           = BigSum (\new Array A (suc (suc n)) (\lam i => natCoef (binom n i) * (pow x i * pow y (suc n -' i))))
+           => pmap (`* y) IH *> A.BigSum-rdistr {\new Array A (suc n) cxy}
+              *> path (\lam j => BigSum (\new Array A (suc n) (\lam i =>
+                  ((cxy-mult-y : cxy i * y = natCoef (binom n i) * (pow x i * pow y (suc (n -' i))))
+                   *> pmap (\lam k => natCoef (binom n i) * (pow x i * pow y k))
+                            (inv (-'_suc (<_suc_<= (fin_< i))))) @ j)))
+              *> inv (pmap (_ +) (pmap (`* _)
+                                        (pmap natCoef (binom.binom_< (transportInv (n <) (mod_< id<suc) id<suc))
+                                         *> natCoefZero)
+                                  *> zro_*-left)
+                      *> zro-right)
+              *> inv (A.BigSum_suc {suc n} {\new Array A (suc (suc n)) (\lam i =>
+                       natCoef (binom n i) * (pow x i * pow y (suc n -' i)))})
+    \in
+      -- pow (x+y) (suc n) = pow (x+y) n * (x + y)
+      -- ldistr: = pow (x+y) n * x + pow (x+y) n * y = t1.RHS + t2.RHS
+      -- t2.RHS has length suc(suc n); peel off the FIRST term (i = 0) giving
+      -- `natCoef 1 * (pow x 0 * pow y (suc n))`; t1.RHS keeps length suc n giving
+      -- `natCoef (binom n i) * xy i = natCoef (binom n i) * pow x (suc i) * pow y (n -' i)`.
+      -- Re-pairing then yields the target sum of length suc (suc n) via Pascal.
+      ldistr *> pmap2 (+) t1 (t2 *> pmap (natCoef __ * _ + _) binom.binom_0) *> +-comm *> +-assoc *> pmap (_ +) +-comm
+      *> inv (pmap (_ +) (A.BigSum_+ {_} {mkArray (\lam i => natCoef (binom n i) * xy i)}
+                                          {mkArray (\lam i => natCoef (binom n (suc i)) * xy i)}))
+      *> inv (path (\lam j => _ + BigSum (\new Array A (suc n) (\lam i =>
+            (pmap (`* xy i) (A.natCoef_+ {binom n i} {binom n (suc i)}) *> rdistr) @ j))))
+
+{- | $\mathrm{A.fromRat}\,q$ is central in $A$ (commutes with every element):
+     $\mathrm{A.fromRat}\,q \cdot a = a \cdot \mathrm{A.fromRat}\,q$. In a
+     `BanachAlgebra`, $\mathrm{fromRat}\,q := q *_{\mathbb{Q}} 1$; commutativity
+     follows from `*q-comm-left` / `*q-comm-right` (a $\mathbb{Q}$-scalar slides
+     past multiplication on either side). -}
+\private \lemma fromRat-comm-r {A : BanachAlgebra} {q : Rat} {a : A}
+  : A.fromRat q * a = a * A.fromRat q
+  => unfold A.fromRat (inv QPseudoAlgebra.*q-comm-left
+                       *> pmap (q QModule.*q) (ide-left *> inv ide-right)
+                       *> QPseudoAlgebra.*q-comm-right)
+
+{- | Each convolution term of the exp-series at $x$ and $y$ equals the
+     corresponding power-series term at $x + y$, given $x \cdot y = y \cdot x$:
+     $$\sum_{k=0}^{n} (c_k \cdot x^k) \cdot (c_{n - k} \cdot y^{n - k})
+       = c_n \cdot (x + y)^n,$$
+     where $c_k := \mathrm{A.fromRat}\,(1/k!)$. Strategy: `conv` unfolds
+     definitionally to $\sum_k (c_k \cdot x^k) \cdot (c_{n - k} \cdot y^{n - k})$.
+     Each term rearranges ($c_\bullet$ central, `cs-binom-id`) to
+     $c_n \cdot \binom{n}{k} \cdot (x^k \cdot y^{n - k})$. `BigSum-ldistr`
+     factors $c_n$ out, then `binom-expansion-comm` collapses the inner BigSum
+     to $(x + y)^n$, which definitionally equals $\mathrm{powerSeries}\,c\,n\,(x + y)$. -}
+\private \lemma exp-conv-eq {A : RealBanachAlgebra} {x y : A} (xy=yx : x * y = y * x) (n : Nat)
+  : conv (powerSeries (\lam k => A.fromRat (RatField.finv (fac k))) __ x)
+         (powerSeries (\lam k => A.fromRat (RatField.finv (fac k))) __ y) n
+    = powerSeries (\lam k => A.fromRat (RatField.finv (fac k))) n (x + y)
+  =>
+    \let
+      | cs (k : Nat) : A => A.fromRat (RatField.finv (fac k))
+      | a (k : Nat) : A => powerSeries (\lam j => cs j) k x   -- = cs k * pow x k
+      | b (k : Nat) : A => powerSeries (\lam j => cs j) k y   -- = cs k * pow y k
+      | term-eq (k : Fin (suc n)) : a k * b (n -' k) = cs n * (natCoef (binom n k) * (pow x k * pow y (n -' k)))
+          => \have | k<=n : k <= n => <_suc_<= (fin_< k)
+             \in
+             -- (cs k * pow x k) * (cs (n -' k) * pow y (n -' k))
+             *-assoc                                                            -- = cs k * (pow x k * (cs (n -' k) * pow y (n -' k)))
+             *> pmap (cs k *) (inv *-assoc                                       -- = cs k * ((pow x k * cs (n -' k)) * pow y (n -' k))
+                  *> pmap (`* pow y (n -' k)) (inv fromRat-comm-r)               -- = cs k * ((cs (n -' k) * pow x k) * pow y (n -' k))
+                  *> *-assoc)                                                    -- = cs k * (cs (n -' k) * (pow x k * pow y (n -' k)))
+             *> inv *-assoc                                                      -- = (cs k * cs (n -' k)) * (pow x k * pow y (n -' k))
+             *> pmap (`* (pow x k * pow y (n -' k))) (cs-binom-id k<=n)           -- = (natCoef (binom n k) * cs n) * (pow x k * pow y (n -' k))
+             *> pmap (`* (pow x k * pow y (n -' k))) Semiring.natCoef-comm        -- = (cs n * natCoef (binom n k)) * (pow x k * pow y (n -' k))
+             *> *-assoc                                                          -- = cs n * (natCoef (binom n k) * (pow x k * pow y (n -' k)))
+    \in
+      -- conv (ps x) (ps y) n  reduces to  BigSum (\new Array A (suc n) (\lam k => a k * b (n -' k)))  by def of `conv`.
+      path (\lam j => BigSum (\new Array A (suc n) (\lam k => term-eq k @ j)))
+      -- = BigSum [cs n * (binom n k * (pow x k * pow y (n -' k)))]
+      *> inv (A.BigSum-ldistr {cs n}
+                              {\new Array A (suc n) (\lam k =>
+                                  natCoef (binom n k) * (pow x k * pow y (n -' k)))})
+      -- = cs n * BigSum [binom n k * (pow x k * pow y (n -' k))]
+      *> pmap (cs n *) (inv (binom-expansion-comm x y xy=yx n))
+      -- = cs n * pow (x + y) n  (definitionally = powerSeries cs n (x+y))
+
+{- | Exponent property: $\exp(x + y) = \exp x \cdot \exp y$ when $x$ and $y$
+     commute. Combines Cauchy product (`conv-sum`), the exp-to-seriesSum bridge
+     (`exp-IsSeriesSum`), and the per-term equality (`exp-conv-eq`). -}
+\lemma exp_+ {A : RealBanachAlgebra} {x y : A} (xy=yx : x Semiring.* y = y Semiring.* x)
+  : exp (x Semiring.+ y) = exp x Semiring.* exp y
+  => \have
+       | ac-abs : IsAbsConvSeries (powerSeries (\lam k => A.fromRat (RatField.finv (fac k))) __ x)
+              => powerSeriesConv-absConv exp.exp-series-conv
+       | bc-abs : IsAbsConvSeries (powerSeries (\lam k => A.fromRat (RatField.finv (fac k))) __ y)
+              => powerSeriesConv-absConv exp.exp-series-conv
+       -- conv-sum gives IsSeriesSum (conv ps_x ps_y) (exp x * exp y).
+       | conv-sum-result : IsSeriesSum
+              (conv (powerSeries (\lam k => A.fromRat (RatField.finv (fac k))) __ x)
+                    (powerSeries (\lam k => A.fromRat (RatField.finv (fac k))) __ y))
+              (exp x Semiring.* exp y)
+            => conv-sum (exp-IsSeriesSum x) (exp-IsSeriesSum y) ac-abs bc-abs
+       -- Convert conv to ps_(x+y) via per-term equality `exp-conv-eq`.
+       | sum-eq : IsSeriesSum (powerSeries (\lam k => A.fromRat (RatField.finv (fac k))) __ (x Semiring.+ y))
+                              (exp x Semiring.* exp y)
+            => transport (\lam f => IsSeriesSum f (exp x Semiring.* exp y))
+                 (path (\lam i n => exp-conv-eq xy=yx n @ i))
+                 conv-sum-result
+     \in -- exp (x+y) is also IsSeriesSum of ps_(x+y), so uniqueness gives the result.
+         A.limit-unique (exp-IsSeriesSum (x Semiring.+ y)) sum-eq
+
+{- | Exponent of a negative is the multiplicative inverse:
+     $\exp x \cdot \exp(-x) = 1$. Corollary of `exp_+` — $x$ and $-x$ commute
+     (both products equal $-(x \cdot x)$) — together with
+     $x + (-x) = 0$ (`negative-right`) and `exp_zro`. -}
+\lemma exp_neg {A : RealBanachAlgebra} {x : A} : exp x Semiring.* exp (negative x) = 1
+  => inv (exp_+ (PseudoRing.negative_*-right *> inv PseudoRing.negative_*-left))
+     *> pmap exp negative-right
+     *> exp_zro

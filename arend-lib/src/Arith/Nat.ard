@@ -267,6 +267,21 @@
   | suc n, 0 => <=-refl
   | suc n, suc m => -'<=id <=∘ <=_+ <=-refl (zero<=_ {1})
 
+\func -'_suc {n m : Nat} (_ : m <= n) : suc n -' m = suc (n -' m)
+  | {0}, {0}, _ => idp
+  | {suc n}, {0}, _ => idp
+  | {0}, {suc m}, A0 => \case suc_<=_< A0
+  | {suc n}, {suc m}, A0 => -'_suc (suc<=suc.conv A0)
+
+\lemma sucn_-'n=1 {n : Nat} : suc n -' n = 1
+  => -'_suc {n} {n} <=-refl *> pmap suc -'id
+
+\func -'_inv {k m : Nat} (A0 : m <= k) : k -' (k -' m) = m \elim k, m
+  | 0, 0 => idp
+  | 0, suc m => \case suc_<=_< A0
+  | suc k, 0 => -'id
+  | suc k, suc m => \let A1 => -'_inv (suc<=suc.conv A0) \in rewrite (-'_suc -'<=id, A1) idp
+
 \lemma -'+-comm {n m k : Nat} (p : m <= n) : n + k -' m = n -' m + k \elim n, m, k
   | _, _, 0 => idp
   | _, 0, _ => rewrite (-'0, -'0) idp
