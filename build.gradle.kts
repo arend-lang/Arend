@@ -99,6 +99,7 @@ tasks.test {
     maxHeapSize = "4g"
     exclude("**/ArendLibRoundTripTest.class")
     exclude("**/ArendLibPartialRoundTripTest.class")
+    exclude("**/ArendLibPartialCacheTest.class")
 }
 
 // Separate task for the arend-lib round-trip serialization test.
@@ -147,5 +148,46 @@ tasks.register<Test>("partialRoundTripTest") {
     }
     System.getProperty("arend.ordering.probeOrder")?.let {
         systemProperty("arend.ordering.probeOrder", it)
+    }
+}
+
+// Partial-cache repro test: clones arend-lib/bin into a temp dir, deletes one
+// upstream module's .arc to simulate `touch <module>.ard`, applies the
+// production loadBinaryCache cascade against the trimmed cache, then typechecks
+// a downstream target. Fails iff `Meta 'contradiction' failed` /
+// `Cannot infer contradiction` errors surface. Reproduces the CLI's
+// secondary-contradiction failure mode in JUnit form. Run with:
+//   ./gradlew partialCacheTest -Darend.partial_cache.enabled=true \
+//     [-Darend.partial_cache.touched=Algebra.Domain] \
+//     [-Darend.partial_cache.target=Arith.Exp]
+// Requires arend-lib/bin to be pre-seeded (run `arend -L .. arend-lib -r -ai`
+// once before invoking).
+tasks.register<Test>("partialCacheTest") {
+    description = "Runs the partial-binary-cache contradiction-meta repro test"
+    group = "verification"
+    maxHeapSize = "6g"
+    jvmArgs("-Xss16m")
+    systemProperty("arend.subst.maxDepth", "2000")
+    systemProperty("arend.instance.maxDepth", "200")
+    // Required gate — without this the test self-skips via Assume.assumeTrue.
+    systemProperty("arend.partial_cache.enabled",
+        System.getProperty("arend.partial_cache.enabled", "true"))
+    testClassesDirs = sourceSets.test.get().output.classesDirs
+    classpath = sourceSets.test.get().runtimeClasspath
+    include("**/ArendLibPartialCacheTest.class")
+    System.getProperty("arend.partial_cache.touched")?.let {
+        systemProperty("arend.partial_cache.touched", it)
+    }
+    System.getProperty("arend.partial_cache.target")?.let {
+        systemProperty("arend.partial_cache.target", it)
+    }
+    System.getProperty("arend.partial_cache.skipDelete")?.let {
+        systemProperty("arend.partial_cache.skipDelete", it)
+    }
+    // Don't cache results — we want explicit re-runs while iterating.
+    outputs.upToDateWhen { false }
+    testLogging {
+        events("passed", "skipped", "failed", "standardOut", "standardError")
+        showStandardStreams = true
     }
 }

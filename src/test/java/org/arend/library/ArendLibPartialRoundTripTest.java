@@ -58,7 +58,12 @@ import static org.junit.Assert.fail;
  * <p>Target modules can be configured via the system property
  * {@code -Darend.partial_roundtrip.targets=AG.Projective,Algebra.Ring.RingHom}
  * (comma-separated fully qualified module names). If unset, the test defaults to
- * {@code AG.Projective}.
+ * {@code AG.Projective, Arith.Exp}: the first exercises class-instance recovery
+ * for ring/abelian-group hierarchies, the second pulls in both
+ * {@code Order.LinearOrder} and {@code Algebra.Domain} so a touch/edit of any
+ * upstream domain module produces the partial-cache state that surfaces spurious
+ * {@code contradiction} / {@code Cannot infer contradiction} errors in
+ * downstream {@code mcases}/{@code <|>} sites.
  *
  * <p>The test is skipped automatically when {@code arend-lib/src} is absent.
  */
@@ -68,7 +73,7 @@ public class ArendLibPartialRoundTripTest {
   private static final DateTimeFormatter TIME_FMT = DateTimeFormatter.ofPattern("HH:mm:ss");
 
   private static final String TARGETS_PROPERTY = "arend.partial_roundtrip.targets";
-  private static final String DEFAULT_TARGET = "AG.Projective";
+  private static final List<String> DEFAULT_TARGETS = List.of("AG.Projective", "Arith.Exp");
 
   /**
    * Global flag controlling whether the Phase 0 baseline typecheck is run.
@@ -215,7 +220,9 @@ public class ArendLibPartialRoundTripTest {
   private List<ModulePath> parseTargets() {
     String prop = System.getProperty(TARGETS_PROPERTY);
     if (prop == null || prop.isBlank()) {
-      return List.of(ModulePath.fromString(DEFAULT_TARGET));
+      List<ModulePath> defaults = new ArrayList<>(DEFAULT_TARGETS.size());
+      for (String name : DEFAULT_TARGETS) defaults.add(ModulePath.fromString(name));
+      return defaults;
     }
     List<ModulePath> result = new ArrayList<>();
     for (String name : prop.split(",")) {
