@@ -17,8 +17,10 @@ import java.util.Optional;
  *   <li>Resolve {@link DaemonPaths}. Validate single-library scope.</li>
  *   <li>Stale-PID check on existing lock file. If a healthy daemon already serves this
  *       library, print info and return success without spawning.</li>
- *   <li>Build child command line: {@code [setsid] <javaBin> -cp <cp> ConsoleMain
- *       --daemon-bootstrap <libRef> [-L ...] -ai}. {@code setsid} is dropped on Windows.</li>
+ *   <li>Build child command line: {@code [setsid|nohup] <javaBin> -cp <cp> ConsoleMain
+ *       --daemon-bootstrap <libRef> [-L ...] -ai}. Linux uses {@code setsid} (util-linux);
+ *       macOS uses {@code nohup} (POSIX) since {@code setsid} is not on the default PATH;
+ *       Windows uses no wrapper.</li>
  *   <li>Redirect stdin←/dev/null, stdout+stderr→append daemon.log. Start.</li>
  *   <li>Poll for daemon.lock to appear, timeout {@value #READY_TIMEOUT_SECONDS}s. Cold
  *       arend-lib bootstrap is ~2 minutes; we leave generous headroom.</li>
@@ -80,6 +82,7 @@ public final class DaemonStart {
       child = pb.start();
     } catch (IOException e) {
       System.err.println("[ERROR] -d: cannot spawn daemon process: " + e.getMessage());
+      System.err.println("        command: " + String.join(" ", cmd));
       return 1;
     }
 
@@ -125,9 +128,15 @@ public final class DaemonStart {
     String cp = System.getProperty("java.class.path");
 
     List<String> cmd = new ArrayList<>();
-    if (!isWindows()) {
-      // setsid puts the child in its own session so closing the parent's controlling
-      // terminal doesn't SIGHUP it. JDK has no native equivalent.
+    // Detach the child from the parent's controlling terminal so closing the parent
+    // shell doesn't SIGHUP the daemon. JDK has no native equivalent.
+    //   * Linux: setsid (util-linux) starts a new session — strongest guarantee.
+    //   * macOS: no setsid on default PATH; use nohup (POSIX-standard, always present)
+    //     which ignores SIGHUP in the child. Sufficient since stdio is already redirected.
+    //   * Windows: nothing — detached behaviour comes from the redirected stdio.
+    if (isMac()) {
+      cmd.add("nohup");
+    } else if (!isWindows()) {
       cmd.add("setsid");
     }
     cmd.add(javaBin);
@@ -153,5 +162,10 @@ public final class DaemonStart {
 
   private static boolean isWindows() {
     return System.getProperty("os.name", "").toLowerCase(Locale.ROOT).startsWith("windows");
+  }
+
+  private static boolean isMac() {
+    String osName = System.getProperty("os.name", "").toLowerCase(Locale.ROOT);
+    return osName.startsWith("mac") || osName.contains("darwin");
   }
 }
