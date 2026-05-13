@@ -2,6 +2,7 @@ package org.arend.server.impl;
 
 import org.arend.ext.ArendExtension;
 import org.arend.ext.ui.ArendUI;
+import org.arend.extImpl.SerializableKeyRegistryImpl;
 import org.arend.library.classLoader.ClassLoaderDelegate;
 import org.arend.naming.reference.LocatedReferable;
 import org.arend.server.ArendLibrary;
@@ -21,6 +22,7 @@ public class ArendLibraryImpl implements ArendLibrary {
   private final long myModificationStamp;
   private final List<String> myDependencies;
   private ArendExtension myExtension;
+  private SerializableKeyRegistryImpl myKeyRegistry;
   private final Map<String, LocatedReferable> myGeneratedNames;
   private final Version myVersion;
   private final Range<Version> myLanguageVersion;
@@ -85,6 +87,14 @@ public class ArendLibraryImpl implements ArendLibrary {
 
   public void setExtension(ArendExtension extension) {
     myExtension = extension;
+  }
+
+  public @Nullable SerializableKeyRegistryImpl getKeyRegistry() {
+    return myKeyRegistry;
+  }
+
+  public void setKeyRegistry(@Nullable SerializableKeyRegistryImpl keyRegistry) {
+    myKeyRegistry = keyRegistry;
   }
 
   @Override
