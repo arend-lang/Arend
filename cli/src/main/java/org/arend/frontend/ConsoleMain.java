@@ -135,6 +135,7 @@ public class ConsoleMain {
       cmdOptions.addOption(Option.builder("p").longOpt("print").hasArg().argName("target").desc("print a definition or a module").build());
       cmdOptions.addOption(Option.builder("ps").longOpt("proof-search").hasArgs().argName("pattern").desc("search for definitions matching the pattern").build());
       cmdOptions.addOption("r", "recompile", false, "recompile all modules from source, ignoring binary caches (.arc files)");
+      cmdOptions.addOption(null, "serialize", false, "after typechecking, persist typechecked modules as .arc binary caches; without this flag, no .arc files are written");
       cmdOptions.addOption("t", "test", false, "run tests");
       cmdOptions.addOption("v", "version", false, "print language version");
       cmdOptions.addOption(Option.builder().longOpt(SHOW_TIMES).build());
@@ -334,6 +335,7 @@ public class ConsoleMain {
 
     boolean doubleCheck = cmdLine.hasOption("c");
     boolean recompile = cmdLine.hasOption("r");
+    boolean serialize = cmdLine.hasOption("serialize");
     LibraryManager libraryManager = new LibraryManager(mySystemErrErrorReporter);
     CliServerRequester requester = new CliServerRequester(libraryManager);
     if (recompile) {
@@ -603,7 +605,9 @@ public class ConsoleMain {
           }
         }
 
-        persistLibrary(library, server, requester.getBinaryCacheLoaded());
+        if (serialize) {
+          persistLibrary(library, server, requester.getBinaryCacheLoaded());
+        }
       }
     } else {
       for (Pair<ModulePath, LongName> requested : requestedModules) {
@@ -648,9 +652,11 @@ public class ConsoleMain {
           }
         }
       }
-      // Persist all libraries that had modules typechecked
-      for (SourceLibrary library : requestedLibraries) {
-        persistLibrary(library, server, requester.getBinaryCacheLoaded());
+      if (serialize) {
+        // Persist all libraries that had modules typechecked
+        for (SourceLibrary library : requestedLibraries) {
+          persistLibrary(library, server, requester.getBinaryCacheLoaded());
+        }
       }
     }
 
