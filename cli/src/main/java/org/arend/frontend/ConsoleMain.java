@@ -315,6 +315,32 @@ public class ConsoleMain {
       no source declaration. Use -fu on the class itself to see all reference
       sites instead.
       """;
+  private final static String AI_GUIDE_HELP = """
+      arend -ag [MODULE]
+
+      Print the corresponding .md file from a library's .aiGuide/ directory.
+      Each loaded library may ship a top-level .aiGuide/ tree of hand-written
+      markdown summaries — one .md per Arend module, plus README.md files for
+      directories and the library root.
+
+      ARGUMENT
+        no value           print the library's .aiGuide/README.md
+        Algebra.Group      print .aiGuide/Algebra/Group.md
+        Algebra            print .aiGuide/Algebra.md; falls back to
+                           .aiGuide/Algebra/README.md if the former is missing
+
+      LIBRARY RESOLUTION
+        Searches every library loaded via -L / -s / positional arg, in the
+        order they were requested. The first library that has a matching .md
+        wins; the rest are skipped silently. On a total miss, every probed
+        path is reported on stderr.
+
+      EXAMPLES
+        arend -L libs arend-lib -ag
+        arend -L libs arend-lib -ag Algebra.Group
+        arend -L libs arend-lib -ag Algebra
+      """;
+
   private final static String SCOPE_HELP = """
       arend -sc <REFERABLE> [<PATTERN>] [option ...]
 
@@ -372,6 +398,8 @@ public class ConsoleMain {
           .desc("print super/sub-class trees plus \\new and \\instance sites. Accepts MODULE:CLASS or a bare class name (resolved via the symbol index). Pass `-ch help` for full grammar.").build());
       cmdOptions.addOption(Option.builder("sc").longOpt("scope").hasArgs().argName("REFERABLE")
           .desc("dump the ambient scope at a referable's position; debug aid for reference-resolution issues. Accepts MODULE:PATH or a bare short name, plus an optional -ss-style pattern to filter results. Pass `-sc help` for full grammar.").build());
+      cmdOptions.addOption(Option.builder("ag").longOpt("ai-guide").hasArg().optionalArg(true).argName("MODULE")
+          .desc("print the .aiGuide/<MODULE-path>.md from a loaded library (no arg = .aiGuide/README.md). Falls back to <MODULE>/README.md if the .md file is missing. Pass `-ag help` for the full grammar.").build());
       cmdOptions.addOption(Option.builder("ai").longOpt("ai-pipeline").desc("agent-oriented all-in-one mode: (1) name-resolve: for each unresolved short name, list candidates (qualified name + required imports) the user can paste back into the source -- never rewrites, (2) typecheck, (3) emit signature-only mirrors to <library>/.sig/<module>.ard for verified definitions only (failed defs replaced with `-- skipped:` comments), (4) refresh the binary symbol index used by -ss/-fu/-ch/-sc. Honors positional-arg granularity (no args = library; MODULE; MODULE:DEF). Pass `-ai help` for full grammar.").build());
       cmdOptions.addOption(Option.builder("d").longOpt("daemon").desc("start a daemon for the given library (single positional library reference). The daemon does the normal load+typecheck+persist+ai-finalize once, then idles serving future client requests.").build());
       cmdOptions.addOption(Option.builder().longOpt("daemon-stop").desc("stop the daemon serving the given library (single positional library reference).").build());
@@ -425,6 +453,11 @@ public class ConsoleMain {
 
       if (cmdLine.hasOption("rx") && containsHelpToken(cmdLine.getOptionValues("rx"))) {
         System.out.println(REINDEX_HELP);
+        return null;
+      }
+
+      if (cmdLine.hasOption("ag") && "help".equalsIgnoreCase(cmdLine.getOptionValue("ag", ""))) {
+        System.out.println(AI_GUIDE_HELP);
         return null;
       }
 
