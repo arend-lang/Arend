@@ -44,8 +44,7 @@ public class FieldCallExpression extends DefCallExpression implements CoreFieldC
       }
     } else if (thisExpr instanceof ErrorExpression && ((ErrorExpression) thisExpr).getExpression() != null) {
       return new FieldCallExpression(definition, ((ErrorExpression) thisExpr).replaceExpression(null));
-    } else if (definition == Prelude.ARRAY_LENGTH && thisExpr instanceof ArrayExpression) {
-      ArrayExpression array = (ArrayExpression) thisExpr;
+    } else if (definition == Prelude.ARRAY_LENGTH && thisExpr instanceof ArrayExpression array) {
       if (array.getTail() == null) {
         return new SmallIntegerExpression(array.getElements().size());
       } else {

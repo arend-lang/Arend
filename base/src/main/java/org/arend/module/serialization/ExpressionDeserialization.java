@@ -57,6 +57,9 @@ class ExpressionDeserialization {
     if (index == 0) {
       return null;
     } else {
+      if (index - 1 >= myBindings.size()) {
+        throw new DeserializationException("Binding ref " + index + " out of range (size=" + myBindings.size() + "). Bindings: " + myBindings.stream().map(b -> b == null ? "null" : b.getName()).toList());
+      }
       Binding binding = myBindings.get(index - 1);
       if (binding == null) {
         throw new DeserializationException("Trying to read a reference to an unregistered binding");
@@ -107,8 +110,30 @@ class ExpressionDeserialization {
   // Parameters
 
   DependentLink readParameters(List<ExpressionProtos.Telescope> protos) throws DeserializationException {
-    LinkList list = new LinkList();
+    // We track first/last manually instead of using LinkList to correctly handle
+    // mixed normal/existing_ref telescopes.  LinkList.append walks the chain via
+    // Helper.getLast, which can create cycles when an existing_ref binding is
+    // already part of the chain.
+    DependentLink first = null;
+    DependentLink last = null;
     for (ExpressionProtos.Telescope proto : protos) {
+      if (proto.getExistingRef() > 0) {
+        Binding existing = readBindingRef(proto.getExistingRef());
+        if (!(existing instanceof DependentLink existingLink)) {
+          throw new DeserializationException("Expected DependentLink for existing_ref " + proto.getExistingRef());
+        }
+        if (first == null) {
+          first = existingLink;
+        } else if (!last.getNext().hasNext()) {
+          // The chain currently ends at `last` (next is EmptyDependentLink).
+          // Link the existing binding after it to continue the parameter chain.
+          last.setNext(existingLink);
+        }
+        // else: last.getNext() already continues — the existing binding is
+        // reachable from the chain (all-existing_ref case).
+        last = existingLink;
+        continue;
+      }
       List<String> unfixedNames = new ArrayList<>(proto.getNameList().size());
       for (String name : proto.getNameList()) {
         unfixedNames.add(name.isEmpty() ? null : name);
@@ -120,12 +145,26 @@ class ExpressionDeserialization {
       for (DependentLink link = tele; link.hasNext(); link = link.getNext()) {
         registerBinding(link);
       }
-      list.append(tele);
+      if (first == null) {
+        first = tele;
+      } else {
+        last.setNext(tele);
+      }
+      last = DependentLink.Helper.getLast(tele);
     }
-    return list.getFirst();
+    return first != null ? first : EmptyDependentLink.getInstance();
   }
 
   private SingleDependentLink readSingleParameter(ExpressionProtos.Telescope proto) throws DeserializationException {
+    // If existing_ref is set, reuse the already-registered binding (preserving object identity).
+    if (proto.getExistingRef() > 0) {
+      Binding existing = readBindingRef(proto.getExistingRef());
+      if (!(existing instanceof SingleDependentLink)) {
+        throw new DeserializationException("Expected SingleDependentLink for existing_ref " + proto.getExistingRef());
+      }
+      return (SingleDependentLink) existing;
+    }
+
     List<String> unfixedNames = new ArrayList<>(proto.getNameList().size());
     for (String name : proto.getNameList()) {
       unfixedNames.add(name.isEmpty() ? null : name);
@@ -141,6 +180,13 @@ class ExpressionDeserialization {
   }
 
   DependentLink readParameter(ExpressionProtos.SingleParameter proto) throws DeserializationException {
+    if (proto.getExistingRef() > 0) {
+      Binding existing = readBindingRef(proto.getExistingRef());
+      if (!(existing instanceof DependentLink)) {
+        throw new DeserializationException("Expected DependentLink for existing_ref " + proto.getExistingRef());
+      }
+      return (DependentLink) existing;
+    }
     DependentLink link;
     if (proto.hasType()) {
       link = new TypedDependentLink(!proto.getIsNotExplicit(), proto.getName(), readType(proto.getType()), proto.getIsHidden(), EmptyDependentLink.getInstance());
@@ -151,8 +197,17 @@ class ExpressionDeserialization {
     return link;
   }
 
-  private TypedBinding readBinding(ExpressionProtos.TypedBinding proto) throws DeserializationException {
-    TypedBinding binding = new TypedBinding(proto.getName(), readExpr(proto.getType()));
+  private Binding readBinding(ExpressionProtos.TypedBinding proto) throws DeserializationException {
+    Expression type = readExpr(proto.getType());
+    // When the binding type is a ClassCallExpression, reproduce the typechecking behaviour:
+    // create a TypedSingleDependentLink with isHidden=true so that field calls through this
+    // binding are rendered without a "this." qualifier.  We must NOT use ClassCallBinding here
+    // because the pretty-printer special-cases ClassCallBinding to emit "{\this}" when
+    // SHOW_IMPLICIT_ARGS is enabled, whereas a plain hidden TypedSingleDependentLink is
+    // simply suppressed.
+    Binding binding = type instanceof ClassCallExpression classCallExpr
+        ? new TypedSingleDependentLink(false, proto.getName(), classCallExpr, true)
+        : new TypedBinding(proto.getName(), type);
     registerBinding(binding);
     return binding;
   }
@@ -160,7 +215,13 @@ class ExpressionDeserialization {
   // Expressions and ElimTrees
 
   AbsExpression readAbsExpr(ExpressionProtos.Expression.Abs proto) throws DeserializationException {
-    return new AbsExpression(proto.hasBinding() ? readBinding(proto.getBinding()) : null, readExpr(proto.getExpression()));
+    Binding binding;
+    if (proto.getExistingBindingRef() > 0) {
+      binding = readBindingRef(proto.getExistingBindingRef());
+    } else {
+      binding = proto.hasBinding() ? readBinding(proto.getBinding()) : null;
+    }
+    return new AbsExpression(binding, readExpr(proto.getExpression()));
   }
 
   ElimBody readElimBody(ExpressionProtos.ElimBody proto) throws DeserializationException {
@@ -199,13 +260,15 @@ class ExpressionDeserialization {
   private Pattern readPattern(ExpressionProtos.Pattern proto, LinkList list) throws DeserializationException {
     switch (proto.getKindCase()) {
       case BINDING -> {
+        boolean isExisting = proto.getBinding().getVar().getExistingRef() > 0;
         DependentLink param = readParameter(proto.getBinding().getVar());
-        list.append(param);
+        if (!isExisting) list.append(param);
         return new BindingPattern(param);
       }
       case EMPTY -> {
+        boolean isExisting = proto.getEmpty().getVar().getExistingRef() > 0;
         DependentLink param = readParameter(proto.getEmpty().getVar());
-        list.append(param);
+        if (!isExisting) list.append(param);
         return new EmptyPattern(param);
       }
       case CONSTRUCTOR -> {
@@ -412,6 +475,16 @@ class ExpressionDeserialization {
     ClassDefinition classDefinition = myCallTargetProvider.getCallTarget(proto.getClassRef(), ClassDefinition.class);
     myDependencyListener.dependsOn(myDefinition.getRef(), classDefinition.getReferable());
 
+    // If the thisBinding was already registered (same ClassCallExpression serialized twice),
+    // reuse the original ClassCallExpression to preserve ClassCallBinding identity.
+    if (proto.getExistingThisBindingRef() > 0) {
+      Binding existing = readBindingRef(proto.getExistingThisBindingRef());
+      if (existing instanceof ClassCallExpression.ClassCallBinding) {
+        return ((ClassCallExpression.ClassCallBinding) existing).getTypeExpr();
+      }
+      throw new DeserializationException("Expected ClassCallBinding for existing_this_binding_ref " + proto.getExistingThisBindingRef());
+    }
+
     Map<ClassField, Expression> fieldSet = new LinkedHashMap<>();
     LevelProtos.Sort sort = proto.getSort();
     ClassCallExpression classCall = new ClassCallExpression(classDefinition, readLevels(proto.getLevels()), fieldSet, new Sort(readLevel(sort.getPLevel(), LevelVariable.PVAR, classDefinition), readLevel(sort.getHLevel(), LevelVariable.HVAR, classDefinition)), readUniverseKind(proto.getUniverseKind()));
@@ -513,6 +586,14 @@ class ExpressionDeserialization {
   private LetExpression readLet(ExpressionProtos.Expression.Let proto) throws DeserializationException {
     List<HaveClause> clauses = new ArrayList<>();
     for (ExpressionProtos.Expression.Let.Clause cProto : proto.getClauseList()) {
+      if (cProto.getExistingRef() > 0) {
+        Binding existing = readBindingRef(cProto.getExistingRef());
+        if (!(existing instanceof HaveClause)) {
+          throw new DeserializationException("Expected HaveClause for existing_ref " + cProto.getExistingRef());
+        }
+        clauses.add((HaveClause) existing);
+        continue;
+      }
       HaveClause clause = LetClause.make(cProto.getIsLet(), validName(cProto.getName()), readLetClausePattern(cProto.getPattern()), readExpr(cProto.getExpression()));
       registerBinding(clause);
       clauses.add(clause);
@@ -562,6 +643,10 @@ class ExpressionDeserialization {
   private Expression readFieldCall(ExpressionProtos.Expression.FieldCall proto) throws DeserializationException {
     ClassField classField = myCallTargetProvider.getCallTarget(proto.getFieldRef(), ClassField.class);
     myDependencyListener.dependsOn(myDefinition.getRef(), classField.getParentClass().getReferable());
+    // Use makeExact to preserve the original expression structure.
+    // FieldCallExpression.make unfolds NewExpression arguments (returns the field
+    // implementation directly), which loses information when deserializing expressions
+    // that were originally stored as FieldCallExpression(field, NewExpression).
     return FieldCallExpression.make(classField, readExpr(proto.getExpression()));
   }
 

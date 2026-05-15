@@ -49,7 +49,9 @@ public class DefinitionDeserialization implements ArendDeserializer {
       default -> throw new DeserializationException("Unknown Definition kind: " + defProto.getDefinitionDataCase());
     }
 
-    def.setStatus(defProto.getNoErrors() ? Definition.TypeCheckingStatus.NO_ERRORS : Definition.TypeCheckingStatus.NEEDS_TYPE_CHECKING);
+    def.setStatus(defProto.getNoErrors() ? Definition.TypeCheckingStatus.NO_ERRORS :
+                  defProto.getHasErrors() ? Definition.TypeCheckingStatus.HAS_ERRORS :
+                  Definition.TypeCheckingStatus.HAS_WARNINGS);
     List<Pair<TCDefReferable, Integer>> parametersOriginalDefinitions = readParametersOriginalDefinitions(defProto.getParameterOriginalDefList());
     for (Pair<TCDefReferable, Integer> pair : parametersOriginalDefinitions) {
       myDependencyListener.dependsOn(def.getRef(), pair.proj1);
@@ -140,9 +142,6 @@ public class DefinitionDeserialization implements ArendDeserializer {
       loadKeys(fieldProto.getUserDataMap(), field);
     }
 
-    for (int classFieldRef : classProto.getFieldRefList()) {
-      classDef.addField(myCallTargetProvider.getCallTarget(classFieldRef, ClassField.class));
-    }
     for (int classFieldRef : classProto.getFieldRefList()) {
       classDef.addField(myCallTargetProvider.getCallTarget(classFieldRef, ClassField.class));
     }

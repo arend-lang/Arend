@@ -8,6 +8,7 @@ import org.arend.ext.module.ModulePath;
 import org.arend.ext.module.ModuleLocation;
 import org.arend.naming.reference.*;
 import org.arend.source.error.LocationError;
+import org.arend.term.concrete.Concrete;
 import org.arend.term.group.ConcreteGroup;
 import org.arend.term.group.ConcreteStatement;
 import org.arend.typechecking.order.dependency.DependencyListener;
@@ -21,7 +22,7 @@ public class ModuleSerialization {
   private final Set<Integer> myCurrentDefinitions = new HashSet<>();
   private boolean myComplete;
 
-  static final int VERSION = 14;
+  static final int VERSION = 15;
 
   public ModuleSerialization(ErrorReporter errorReporter, DependencyListener dependencyListener) {
     myErrorReporter = errorReporter;
@@ -82,6 +83,13 @@ public class ModuleSerialization {
     DefinitionProtos.Referable.Builder refBuilder = DefinitionProtos.Referable.newBuilder();
     refBuilder.setName(referable instanceof ModuleReferable ? ((ModuleReferable) referable).path.getLastName() : referable.textRepresentation());
     refBuilder.setPrecedence(DefinitionSerialization.writePrecedence(referable.getPrecedence()));
+    if (referable instanceof GlobalReferable gr) {
+      String aliasName = gr.getAliasName();
+      if (aliasName != null && !aliasName.isEmpty()) {
+        refBuilder.setAliasName(aliasName);
+        refBuilder.setAliasPrecedence(DefinitionSerialization.writePrecedence(gr.getAliasPrecedence()));
+      }
+    }
 
     Definition typechecked = referable instanceof TCDefReferable ? ((TCDefReferable) referable).getTypechecked() : null;
     if (typechecked != null && !(typechecked instanceof Constructor || typechecked instanceof ClassField)) {
@@ -95,11 +103,19 @@ public class ModuleSerialization {
     }
     builder.setReferable(refBuilder.build());
 
-    // Write subgroups
+    // Write subgroups and level declarations
     for (ConcreteStatement statement : group.statements()) {
       ConcreteGroup subgroup = statement.group();
       if (subgroup != null) {
         builder.addSubgroup(writeGroup(subgroup));
+      }
+      Concrete.LevelsDefinition pDef = statement.pLevelsDefinition();
+      if (pDef != null) {
+        builder.addPlevelsDeclaration(writeLevelsDeclaration(pDef));
+      }
+      Concrete.LevelsDefinition hDef = statement.hLevelsDefinition();
+      if (hDef != null) {
+        builder.addHlevelsDeclaration(writeLevelsDeclaration(hDef));
       }
     }
     for (ConcreteGroup subgroup : group.dynamicGroups()) {
@@ -115,6 +131,15 @@ public class ModuleSerialization {
     }
 
     return builder.build();
+  }
+
+  private static ModuleProtos.LevelsDeclaration writeLevelsDeclaration(Concrete.LevelsDefinition def) {
+    ModuleProtos.LevelsDeclaration.Builder b = ModuleProtos.LevelsDeclaration.newBuilder();
+    b.setIncreasing(def.isIncreasing());
+    for (LevelReferable ref : def.getReferables()) {
+      b.addName(ref.getRefName());
+    }
+    return b.build();
   }
 
   private static class CallTargetTree {
