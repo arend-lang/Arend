@@ -93,7 +93,7 @@ public class ToAbstractVisitor extends BaseExpressionVisitor<Void, Concrete.Expr
       expression.accept((ConflictDefinitionRenamer) definitionRenamer, null);
     }
     CollectFreeVariablesVisitor collector = new CollectFreeVariablesVisitor(definitionRenamer);
-    Set<Variable> variables = new HashSet<>();
+    Set<Variable> variables = new LinkedHashSet<>();
     NormalizationMode mode = config.getNormalizationMode();
     if (mode != null && subexpr == null) {
       expression = expression.normalize(mode);
@@ -133,7 +133,7 @@ public class ToAbstractVisitor extends BaseExpressionVisitor<Void, Concrete.Expr
       definitionRenamer = new ConflictDefinitionRenamer();
     }
     CollectFreeVariablesVisitor collector = new CollectFreeVariablesVisitor(definitionRenamer);
-    Set<Variable> variables = new HashSet<>();
+    Set<Variable> variables = new LinkedHashSet<>();
     collector.visitParameters(params, variables);
     ReferableRenamer renamer = new ReferableRenamer();
     ToAbstractVisitor visitor = new ToAbstractVisitor(null, config, definitionRenamer, collector, renamer);
@@ -163,7 +163,7 @@ public class ToAbstractVisitor extends BaseExpressionVisitor<Void, Concrete.Expr
       definition.accept((ConflictDefinitionRenamer) definitionRenamer, null);
     }
     CollectFreeVariablesVisitor collector = new CollectFreeVariablesVisitor(definitionRenamer);
-    Set<Variable> variables = new HashSet<>();
+    Set<Variable> variables = new LinkedHashSet<>();
     definition.accept(collector, variables);
     ReferableRenamer renamer = new ReferableRenamer();
     ToAbstractVisitor visitor = new ToAbstractVisitor(null, config, definitionRenamer, collector, renamer);

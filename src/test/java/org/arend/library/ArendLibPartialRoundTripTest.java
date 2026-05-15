@@ -81,8 +81,10 @@ public class ArendLibPartialRoundTripTest {
    *   <li>{@code true} (default) — run a full from-source typecheck first, then count
    *   only errors in Phase 3 that don't appear in the baseline as "secondary".</li>
    *   <li>{@code false} — skip the baseline pass entirely; the test passes iff Phase 3
-   *   produced no errors in modules <em>outside</em> the cone. Errors in cone modules
-   *   are ignored.</li>
+   *   produced no non-{@code GOAL} errors in modules <em>outside</em> the cone. Errors
+   *   in cone modules are ignored, and {@code GOAL}-level errors anywhere are tolerated
+   *   (arend-lib commits routinely carry GOALs but not outright ERRORs, so the
+   *   no-baseline fast path treats them as part of the accepted ground state).</li>
    * </ul>
    */
   private static final boolean RUN_BASELINE = false;
@@ -606,6 +608,10 @@ public class ArendLibPartialRoundTripTest {
       for (GeneralError err : entry.getValue()) {
         String key = errorKey(err);
         if (RUN_BASELINE && base.contains(key)) continue;
+        // No baseline: arend-lib commits are allowed to carry GOALs in fresh modules
+        // (a non-closed goal is a "TODO" marker, not a serialization regression), so
+        // we tolerate them. Real ERROR-level diagnostics still fail the test.
+        if (!RUN_BASELINE && err.level == GeneralError.Level.GOAL) continue;
         if (!emitted.add(key)) continue;
         String pos = renderErrorPosition(err);
         String cls = err instanceof org.arend.typechecking.error.local.CoreErrorWrapper w
