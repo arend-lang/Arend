@@ -145,6 +145,7 @@ public class LibraryService {
     ArendExtension extension = library.getExtension();
     SerializableKeyRegistryImpl keyRegistry = new SerializableKeyRegistryImpl();
     extension.registerKeys(keyRegistry);
+    library.setKeyRegistry(keyRegistry);
     extension.setDependencies(dependencies);
     GroupData preludeData = myServer.getGroupData(Prelude.MODULE_LOCATION);
     extension.setPrelude(preludeData == null ? Prelude.INSTANCE : new ConcretePrelude(preludeData.getFileScope()));
