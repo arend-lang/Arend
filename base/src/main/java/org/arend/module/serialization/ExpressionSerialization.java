@@ -7,6 +7,7 @@ import org.arend.core.context.binding.LevelVariable;
 import org.arend.core.context.binding.ParamLevelVariable;
 import org.arend.core.context.binding.PersistentEvaluatingBinding;
 import org.arend.core.context.param.DependentLink;
+import org.arend.core.context.param.SingleDependentLink;
 import org.arend.core.context.param.TypedDependentLink;
 import org.arend.core.definition.ClassField;
 import org.arend.core.definition.Constructor;
@@ -133,9 +134,38 @@ class ExpressionSerialization implements ExpressionVisitor<Void, ExpressionProto
   }
 
   private ExpressionProtos.Telescope writeSingleParameter(DependentLink link) {
-    ExpressionProtos.Telescope.Builder tBuilder = ExpressionProtos.Telescope.newBuilder();
     List<String> names = new ArrayList<>();
     TypedDependentLink typed = link.getNextTyped(names);
+
+    // If this parameter chain was already registered (e.g., Pi and Lambda share the same
+    // DependentLink chain, or a SigmaExpression's parameters appear in both result type and
+    // tuple body), emit an existing_ref instead of re-serializing.  We reference the first
+    // link (the chain head) so that the full chain is recovered on deserialization.
+    // For multi-element telescopes (UntypedDependentLink chain), we must check that ALL
+    // links in the telescope are already registered.  Otherwise, re-registering some links
+    // would create index mismatches: an existing_ref for a later single-element telescope
+    // would resolve to the old binding, whose type references the old (not re-registered)
+    // bindings, causing "Variable X is not bound" errors in the core checker.
+    Integer existingIndex = myBindingsMap.get(link);
+    if (existingIndex != null) {
+      boolean allRegistered = true;
+      if (!(link instanceof SingleDependentLink || link == typed)) {
+        // Multi-variable telescope: verify all links are registered
+        for (DependentLink l = link.getNext(); l != typed && l.hasNext(); l = l.getNext()) {
+          if (!myBindingsMap.containsKey(l)) { allRegistered = false; break; }
+        }
+        if (allRegistered && !myBindingsMap.containsKey(typed)) {
+          allRegistered = false;
+        }
+      }
+      if (allRegistered) {
+        ExpressionProtos.Telescope.Builder tBuilder = ExpressionProtos.Telescope.newBuilder();
+        tBuilder.setExistingRef(existingIndex + 1);
+        return tBuilder.build();
+      }
+    }
+
+    ExpressionProtos.Telescope.Builder tBuilder = ExpressionProtos.Telescope.newBuilder();
     List<String> fixedNames = new ArrayList<>(names.size());
     for (String name : names) {
       if (name != null && name.isEmpty()) {
@@ -156,6 +186,14 @@ class ExpressionSerialization implements ExpressionVisitor<Void, ExpressionProto
   }
 
   ExpressionProtos.SingleParameter writeParameter(DependentLink link) {
+    // If this binding is already registered (e.g., pattern bindings that share identity
+    // with function/case parameters), emit existing_ref to preserve object identity.
+    Integer existingIndex = myBindingsMap.get(link);
+    if (existingIndex != null) {
+      return ExpressionProtos.SingleParameter.newBuilder()
+          .setExistingRef(existingIndex + 1)
+          .build();
+    }
     ExpressionProtos.SingleParameter.Builder builder = ExpressionProtos.SingleParameter.newBuilder();
     if (link.getName() != null) {
       builder.setName(link.getName());
@@ -182,7 +220,14 @@ class ExpressionSerialization implements ExpressionVisitor<Void, ExpressionProto
   ExpressionProtos.Expression.Abs writeAbsExpr(AbsExpression expr) {
     ExpressionProtos.Expression.Abs.Builder builder = ExpressionProtos.Expression.Abs.newBuilder();
     if (expr.getBinding() != null) {
-      builder.setBinding(writeBinding(expr.getBinding()));
+      // If the binding is already registered (e.g., class "this" shared between
+      // Pi parameter and AbsExpression), emit existing_binding_ref to preserve identity.
+      Integer existingRef = myBindingsMap.get(expr.getBinding());
+      if (existingRef != null) {
+        builder.setExistingBindingRef(existingRef + 1);
+      } else {
+        builder.setBinding(writeBinding(expr.getBinding()));
+      }
     }
     builder.setExpression(writeExpr(expr.getExpression()));
     return builder.build();
@@ -421,6 +466,16 @@ class ExpressionSerialization implements ExpressionVisitor<Void, ExpressionProto
     ExpressionProtos.Expression.ClassCall.Builder builder = ExpressionProtos.Expression.ClassCall.newBuilder();
     builder.setClassRef(myCallTargetIndexProvider.getDefIndex(expr.getDefinition()));
     builder.setLevels(writeLevels(expr.getLevels(), expr.getDefinition()));
+    // Preserve ClassCallBinding identity: if the thisBinding was already registered
+    // (e.g., from a shared ClassCallExpression), emit existing_this_binding_ref and skip
+    // re-serializing the entire ClassCallExpression (since it's the same Java object).
+    Integer existingThisRef = myBindingsMap.get(expr.getThisBinding());
+    if (existingThisRef != null) {
+      builder.setExistingThisBindingRef(existingThisRef + 1);
+      // Skip implementations, sort, universeKind — the deserializer will reuse the
+      // original ClassCallExpression which already has all of these.
+      return builder.build();
+    }
     registerBinding(expr.getThisBinding());
     for (Map.Entry<ClassField, Expression> entry : expr.getImplementedHere().entrySet()) {
       builder.addFieldImpl(ExpressionProtos.Expression.ClassCall.ImplEntry.newBuilder().setField(myCallTargetIndexProvider.getDefIndex(entry.getKey())).setImpl(writeExpr(entry.getValue())));
@@ -576,6 +631,14 @@ class ExpressionSerialization implements ExpressionVisitor<Void, ExpressionProto
     ExpressionProtos.Expression.Let.Builder builder = ExpressionProtos.Expression.Let.newBuilder();
     builder.setIsStrict(letExpression.isStrict());
     for (HaveClause letClause : letExpression.getClauses()) {
+      Integer existingIndex = myBindingsMap.get(letClause);
+      if (existingIndex != null) {
+        // This clause was already registered (shared LetExpression in a DAG).
+        // Emit existing_ref to preserve binding identity on deserialization.
+        builder.addClause(ExpressionProtos.Expression.Let.Clause.newBuilder()
+            .setExistingRef(existingIndex + 1));
+        continue;
+      }
       ExpressionProtos.Expression.Let.Clause.Builder letBuilder = ExpressionProtos.Expression.Let.Clause.newBuilder()
         .setIsLet(letClause instanceof LetClause)
         .setPattern(writeLetClausePattern(letClause.getPattern()))

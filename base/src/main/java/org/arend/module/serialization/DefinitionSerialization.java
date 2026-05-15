@@ -54,6 +54,7 @@ public class DefinitionSerialization implements ArendSerializer {
     out.setHLevelsDerived(definition.areHLevelsDerived());
     out.setIsStdLevels(definition.getLevelParameters() == null);
     out.setNoErrors(definition.status().noErrors());
+    out.setHasErrors(definition.status().hasErrors());
     if (definition.getLevelParameters() != null) {
       out.addAllLevelParam(writeLevelParameters(definition.getLevelParameters()));
     }
@@ -487,6 +488,11 @@ public class DefinitionSerialization implements ArendSerializer {
     builder.setName(referable.textRepresentation());
     builder.setPrecedence(writePrecedence(referable.getPrecedence()));
     builder.setIndex(myCallTargetIndexProvider.getDefIndex(definition));
+    String aliasName = referable.getAliasName();
+    if (aliasName != null && !aliasName.isEmpty()) {
+      builder.setAliasName(aliasName);
+      builder.setAliasPrecedence(writePrecedence(referable.getAliasPrecedence()));
+    }
     return builder.build();
   }
 
