@@ -19,6 +19,7 @@ The Arend console app uses Apache Commons CLI for argument parsing. Below is the
 | `-p`     | `--print`                       | Yes (`target`) | Print a definition or a module; format: `Module.Path` or `Module.Path:DefinitionName` |
 | `-ps`    | `--proof-search`                | Yes (`pattern`) | Run proof searcher                                                                   |
 | `-r`     | `--recompile`                   | No | Recompile all modules from source, ignoring binary caches (`.arc` files)             |
+| *(none)* | `--serialize`                   | No | After typechecking, persist typechecked modules as `.arc` binary caches              |
 | `-t`     | `--test`                        | No | Run tests                                                                            |
 | *(none)* | `--show-times`                  | No | Show typechecking times per definition                                               |
 | *(none)* | `--show-sizes`                  | No | Show sizes (expression node counts) of typechecked definitions, sorted descending    |
@@ -46,6 +47,6 @@ Each positional argument is interpreted as one of the following:
 - If no files/modules are specified and no `-s` is given, the tool looks for `arend.yaml` in the current directory.
 - `-i` (`--interactive`) launches a REPL and skips typechecking entirely.
 - `-h` and `-v` cause the program to exit immediately after printing output.
-- After typechecking, compiled definitions are persisted to `.arc` files in the library's binary directory (configured via `binariesDir` in `arend.yaml`). On subsequent runs, these caches are loaded automatically unless `-r` is specified.
-- `-r` (`--recompile`) forces all modules to be re-typechecked from source, ignoring any existing `.arc` files. The resulting definitions are still persisted at the end.
+- Persistence of typechecked definitions to `.arc` files (in the library's `binariesDir` from `arend.yaml`) is **opt-in**: pass `--serialize` to enable it. Without the flag, typechecking runs but no `.arc` files are written.
+- Deserialization of existing `.arc` files is **on by default**: on subsequent runs, any `.arc` caches already present are loaded automatically (regardless of whether `--serialize` is set). Pass `-r` / `--recompile` to ignore them and re-typecheck from source.
 
