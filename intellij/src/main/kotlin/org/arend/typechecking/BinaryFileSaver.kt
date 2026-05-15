@@ -1,7 +1,9 @@
 package org.arend.typechecking
 
 import com.intellij.openapi.application.ApplicationManager
+import com.intellij.openapi.application.runReadAction
 import com.intellij.openapi.components.Service
+import com.intellij.openapi.components.service
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.project.ProjectManager
 import com.intellij.openapi.project.ProjectManagerListener
@@ -14,8 +16,12 @@ import com.intellij.openapi.vfs.newvfs.events.VFileEvent
 import com.intellij.psi.PsiManager
 import org.arend.ext.error.ErrorReporter
 import org.arend.ext.module.ModuleLocation
+import org.arend.module.IntellijBinarySource
 import org.arend.psi.ArendFile
+import org.arend.server.ArendServerService
 import org.arend.typechecking.error.NotificationErrorReporter
+import org.arend.util.FileUtils
+import org.arend.util.getRelativeFile
 
 
 @Service(Service.Level.PROJECT)
@@ -63,18 +69,16 @@ class BinaryFileSaver(private val project: Project) {
         if (moduleLocation.locationKind != ModuleLocation.LocationKind.SOURCE) {
             return
         }
-        /* TODO[server2]
-        val library = typeCheckingService.libraryManager.getRegisteredLibrary(moduleLocation.libraryName) as? SourceLibrary ?: return
-        if (library.supportsPersisting()) {
-            if (runReadAction { library.persistModule(moduleLocation.modulePath, errorReporter) }) {
-                val config = (library as? ArendRawLibrary)?.config ?: return
-                val root = config.root ?: return
-                val binDir = config.binariesDirList ?: return
-                val vFile = root.getRelativeFile(binDir + moduleLocation.modulePath.toList(), FileUtils.SERIALIZED_EXTENSION) ?: return
-                savedFiles.add(vFile)
-            }
+        val config = file.arendLibrary ?: return
+        val root = config.root ?: return
+        val binDir = config.binariesDir ?: return
+        val binDirList = binDir.split("/").filter { it.isNotEmpty() }
+        val server = project.service<ArendServerService>().server
+        val binarySource = IntellijBinarySource(root, binDirList, moduleLocation)
+        if (runReadAction { binarySource.persist(server, errorReporter) }) {
+            val vFile = root.getRelativeFile(binDirList + moduleLocation.modulePath.toList(), FileUtils.SERIALIZED_EXTENSION) ?: return
+            savedFiles.add(vFile)
         }
-        */
     }
 
     fun addToQueue(file: ArendFile) {

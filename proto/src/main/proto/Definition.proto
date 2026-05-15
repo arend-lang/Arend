@@ -29,6 +29,7 @@ message Definition {
     repeated int32 axiom = 16;
     bool no_errors = 17;
     bool has_errors = 18;
+    bool has_goals = 19;
 
     message RefList {
         repeated int32 ref = 1;
