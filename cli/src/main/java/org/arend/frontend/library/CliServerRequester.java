@@ -3,13 +3,15 @@ package org.arend.frontend.library;
 import org.arend.core.definition.Definition;
 import org.arend.ext.error.ErrorReporter;
 import org.arend.ext.module.ModuleLocation;
-import org.arend.ext.module.ModulePath;
+import org.arend.extImpl.SerializableKeyRegistryImpl;
 import org.arend.module.serialization.ModuleDeserialization;
 import org.arend.naming.reference.LocatedReferable;
 import org.arend.naming.reference.TCDefReferable;
 import org.arend.naming.reference.InternalReferable;
+import org.arend.server.ArendLibrary;
 import org.arend.server.ArendServer;
 import org.arend.server.ArendServerRequester;
+import org.arend.server.impl.ArendLibraryImpl;
 import org.arend.source.PersistableBinarySource;
 import org.arend.source.Source;
 import org.arend.source.StreamBinarySource;
@@ -81,6 +83,8 @@ public class CliServerRequester implements ArendServerRequester {
 
     ErrorReporter errorReporter = myLibraryManager.getErrorReporter();
     List<PendingBinaryLoad> pending = new ArrayList<>();
+    ArendLibrary serverLib = server.getLibrary(library.getLibraryName());
+    SerializableKeyRegistryImpl keyRegistry = serverLib instanceof ArendLibraryImpl impl ? impl.getKeyRegistry() : null;
 
     // Phase 1: parse protobuf files (does NOT touch any group referables)
     for (ModuleLocation module : server.getModules()) {
@@ -102,6 +106,7 @@ public class CliServerRequester implements ArendServerRequester {
 
       if (binarySource instanceof StreamBinarySource streamSource) {
         try {
+          streamSource.setKeyRegistry(keyRegistry);
           ModuleDeserialization deser = streamSource.parseProtobuf(errorReporter);
           if (deser != null) {
             pending.add(new PendingBinaryLoad(module, deser));
