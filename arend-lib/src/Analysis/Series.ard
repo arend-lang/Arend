@@ -50,9 +50,7 @@
   => \peval partialSum S 0
 
 \lemma partialSum_1 {A : AddMonoid} {S : Series A} : partialSum S 1 = S 0
-  => partialSum_suc {A} {S} {0}
-    *> pmap (`+ S 0) (partialSum-empty {A} {S})
-         *> zro-left
+  => (\peval partialSum S 1) *> zro-right
 
 \lemma partialSum_<= {A : PosetAddMonoid} {S T : Series A} {n : Nat} (p : \Pi (k : Nat) -> S k <= T k) : partialSum S n <= partialSum T n
   => transport2 (<=) (inv \peval partialSum S n) (inv \peval partialSum T n) (A.BigSum_<= \lam j => p j)
@@ -61,7 +59,7 @@
   => pmap f (\peval partialSum S n) *> f.func-BigSum *> inv \peval partialSum _ n
 
 \lemma partialSum_suc {A : AddMonoid} {S : Series A} {n : Nat} : partialSum S (suc n) = partialSum S n + S n
-  => (\peval partialSum S (suc n)) *> A.BigSum_suc-nat {n} {S} *> pmap (`+ S n) (inv (\peval partialSum S n))
+  => (\peval partialSum S (suc n)) *> A.BigSum_suc-nat {n} {S} *> pmap (`+ _) (inv \peval partialSum S n)
 
 \func IsConvSeries {A : TopAbGroup} (S : Series A) : \Prop
   => IsConvergent (partialSum S)
@@ -158,12 +156,12 @@
 
 \lemma partialSum-split-shifted {A : AddMonoid} {S : Series A} {n q : Nat}
   : partialSum S (n + q) = partialSum S n + partialSum (\lam k => S (n + k)) q \elim q
-  | 0 => inv zro-right *> pmap (partialSum S n +) (inv partialSum-empty)
-  | suc q' => partialSum_suc *> pmap (`+ S (n + q')) partialSum-split-shifted *> +-assoc *> pmap (partialSum S n +) (inv partialSum_suc)
+  | 0 => inv zro-right *> pmap (_ +) (inv partialSum-empty)
+  | suc q => partialSum_suc *> pmap (`+ _) partialSum-split-shifted *> +-assoc *> pmap (_ +) (inv partialSum_suc)
 
 \lemma partialSum-split {A : AddMonoid} {S : Series A} {n m : Nat} (p : n <= m)
   : partialSum S m = partialSum S n + midSum S n m
-  => rewriteI (<=_exists p) (partialSum-split-shifted *> pmap (partialSum S n +) midSum'_midSum)
+  => rewriteI (<=_exists p) $ partialSum-split-shifted *> pmap (partialSum S n +) midSum'_midSum
 
 \lemma midSum_norm {A : ExPseudoNormedAbGroup} {S : Series A} {n m : Nat} : norm (midSum S n m) <= midSum (\lam j => norm (S j)) n m \elim n, m
   | 0, m => rewrite (\peval partialSum _ _, \peval partialSum _ _) A.norm_BigSum
@@ -279,6 +277,13 @@
       }
   }
 
+\lemma convUpper-bounded {S : Series ExUpperReal} (S>=0 : \Pi (n : Nat) -> 0 <= S n) (Sb : \Pi (n : Nat) -> ∃ (S n).U) (Sc : IsConvUpperSeries S)
+  : IsBoundedUpperSeries S
+  => \case Sc RatField.zro<ide \with {
+    | inP (N0, g) => IsBoundedUpperSeries.shifted (\lam {n} _ => Sb n)
+      \lam {n} N0<=n => transport (`<= _) midSum_suc (midSum_<=-left N0<=n S>=0) $ g (N0<=n <=∘ id<=suc)
+  }
+
 \lemma upperSeries-bounded_<= {a b : Series ExUpperReal} (a<=b : \Pi (n : Nat) -> a n <= b n) (bB : IsBoundedUpperSeries b) : IsBoundedUpperSeries a \elim bB
   | inP (B,bB) => inP (B, \lam n => a<=b n (bB n))
 
@@ -359,4 +364,4 @@
      \mathrm{partialSum}\,S\,m$. -}
 \lemma partialSum-monotone {S : Series ExUpperReal} (S>=0 : \Pi (n : Nat) -> 0 <= S n) {n m : Nat} (p : n <= m)
   : partialSum S n <= partialSum S m
-  => transport2 (<=) zro-right (inv (partialSum-split p)) (ExUpperRealAbMonoid.<=_+ <=-refl (midSum>=0 S>=0))
+  => transport2 (<=) zro-right (inv (partialSum-split p)) $ <=_+ <=-refl (midSum>=0 S>=0)

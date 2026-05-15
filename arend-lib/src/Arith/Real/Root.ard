@@ -85,6 +85,9 @@
 \lemma sqrt_pow {x : Real} (x>=0 : 0 <= x) : sqrt (x * x) = x
   => (\peval sqrt _) *> pmap (\lam y => root 2 (y * x)) (inv ide-left) *> root_pow suc/=0 x>=0
 
+\lemma sqrt_pow_abs {x : Real} : sqrt (x * x) = RealAbGroup.abs x
+  => pmap sqrt (inv (RealAbGroup.abs-ofPos RealField.square_>=0) *> RealField.abs_*) *> sqrt_pow abs>=0
+
 \lemma pow_sqrt {x : Real} (x>=0 : 0 <= x) : sqrt x * sqrt x = x
   => pmap2 (*) (\peval sqrt x) (\peval sqrt x) *> pmap (`* _) (inv ide-left) *> pow_root suc/=0 x>=0
 
@@ -104,3 +107,8 @@
   => \case root-rat {2} suc/=0 a>=0 a<b \with {
     | inP (q,r,q>0,q<r,a<qq,rr<b) => inP (q, r, q>0, q<r, rewrite ide-left in a<qq, rewrite ide-left in rr<b)
   }
+
+{- | Square-root uniqueness on nonnegatives: if $0 \leq x$, $0 \leq y$, and $x^2 = y^2$
+     then $x = y$. -}
+\lemma sqrt-cancel {x y : Real} (x>=0 : 0 <= x) (y>=0 : 0 <= y) (p : x * x = y * y) : x = y
+  => inv (sqrt_pow x>=0) *> pmap sqrt p *> sqrt_pow y>=0

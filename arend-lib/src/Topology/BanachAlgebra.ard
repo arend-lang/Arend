@@ -47,6 +47,15 @@
 
 \class BanachAlgebra \extends BanachSpace, QAlgebra, CompleteExNormedRing {
   \func fromRat (q : Rat) => q *q 1
+
+  \lemma fromRat_* {q r : Rat} : fromRat q * fromRat r = fromRat (q RatField.* r)
+    => inv *q-comm-left *> pmap (q *q) ide-left *> inv *q-assoc
+
+  \lemma fromRat_natCoef {n : Nat} : fromRat n = natCoef n
+    => *q_*n *> inv natCoef_*n
+
+  \lemma fromRat-comm {q : Rat} {a : E} : fromRat q * a = a * fromRat q
+    => inv *q-comm-left *> pmap (q *q) (ide-left *> inv ide-right) *> *q-comm-right
 }
 
 \class RealPreBanachAlgebra \extends RealPreBanachSpace, ExPseudoNormedRing

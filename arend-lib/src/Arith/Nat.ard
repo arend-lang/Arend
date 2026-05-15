@@ -267,14 +267,14 @@
   | suc n, 0 => <=-refl
   | suc n, suc m => -'<=id <=∘ <=_+ <=-refl (zero<=_ {1})
 
-\func -'_suc {n m : Nat} (_ : m <= n) : suc n -' m = suc (n -' m)
-  | {0}, {0}, _ => idp
-  | {suc n}, {0}, _ => idp
-  | {0}, {suc m}, A0 => \case suc_<=_< A0
-  | {suc n}, {suc m}, A0 => -'_suc (suc<=suc.conv A0)
+\func -'_suc {n m : Nat} (p : m <= n) : suc n -' m = suc (n -' m) \elim n, m
+  | 0, 0 => idp
+  | 0, suc m => \case suc_<=_< p
+  | suc n, 0 => idp
+  | suc n, suc m => -'_suc (suc<=suc.conv p)
 
 \lemma sucn_-'n=1 {n : Nat} : suc n -' n = 1
-  => -'_suc {n} {n} <=-refl *> pmap suc -'id
+  => -'_suc <=-refl *> pmap suc -'id
 
 \func -'_inv {k m : Nat} (A0 : m <= k) : k -' (k -' m) = m \elim k, m
   | 0, 0 => idp

@@ -398,13 +398,10 @@
     \protected \lemma zro_*-right {x : ExUpperReal} (xb : x.IsBounded) : x * 0 = 0
       => ExUpperRealSemigroup.*-comm *> zro_*-left xb
 
-    \protected \lemma BigSum-rdistr-bounded {l : Array ExUpperReal} {z : ExUpperReal}
-                                            (l>=0 : \Pi (j : Fin l.len) -> 0 <= l j) (zb : z.IsBounded)
-      : AddMonoid.BigSum {ExUpperRealAbMonoid} l * z = AddMonoid.BigSum {ExUpperRealAbMonoid} (\lam i => l i * z) \elim l
+    \protected \lemma BigSum-rdistr {l : Array ExUpperReal} {z : ExUpperReal} (l>=0 : \Pi (j : Fin l.len) -> 0 <= l j) (zb : z.IsBounded)
+      : AddMonoid.BigSum l * z = AddMonoid.BigSum (\lam i => l i * z) \elim l
       | nil => zro_*-left zb
-      | :: a l =>
-          rdistr (l>=0 0) (ExUpperRealAbMonoid.BigSum_>=0 (\lam j => l>=0 (suc j)))
-          *> pmap (a * z +) (BigSum-rdistr-bounded (\lam j => l>=0 (suc j)) zb)
+      | :: a l => rdistr (l>=0 0) (ExUpperRealAbMonoid.BigSum_>=0 (\lam j => l>=0 (suc j))) *> pmap (_ +) (BigSum-rdistr (\lam j => l>=0 (suc j)) zb)
 
     \lemma *n_*_<= {n : Nat} {x : ExUpperReal} (x>=0 : 0 <= x) : n AddMonoid.*n x <= n * x \elim n
       | 0 => *_>=0

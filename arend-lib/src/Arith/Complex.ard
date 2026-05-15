@@ -1,12 +1,12 @@
 \import Algebra.Field
 \import Algebra.Group
+\import Algebra.Group.GroupHom
 \import Algebra.Meta
 \import Algebra.Monoid
 \import Algebra.Ordered
 \import Algebra.Pointed
 \import Algebra.Ring
 \import Algebra.Ring.Local
-\import Algebra.Ring.RingHom
 \import Algebra.Semiring
 \import Arith.Real
 \import Function.Meta
@@ -16,8 +16,30 @@
 \import Paths
 \import Paths.Meta
 \import Arith.Real.Field
+\open Complex \using (iunit \as i)
 
 \record Complex (re im : Real)
+  \where {
+    \use \coerce fromReal (x : Real) : Complex => \new Complex x 0
+
+    {- | The imaginary unit $iunit = 0 + i \in \mathbb{C}$. -}
+    \func iunit => \new Complex 0 1
+
+    {- | $\mathrm{fromReal}$ preserves addition:
+    $\mathrm{fromReal}\,(x + y) = \mathrm{fromReal}\ x + \mathrm{fromReal}\ y$. -}
+    \lemma fromReal_+ {x y : Real} : fromReal (x + y) = fromReal x ComplexField.+ fromReal y
+      => ext (idp, inv zro-left)
+
+    {- | $\mathrm{fromReal}$ preserves multiplication:
+    $\mathrm{fromReal}\,(xy) = \mathrm{fromReal}\ x \cdot \mathrm{fromReal}\ y$. -}
+    \lemma fromReal_* {x y : Real} : fromReal (x * y) = fromReal x ComplexField.* fromReal y
+      => ext (simplify, simplify)
+
+    {- | $\mathrm{fromReal}$ preserves negation:
+    $\mathrm{fromReal}\,(-x) = -\mathrm{fromReal}\ x$. -}
+    \lemma fromReal_negative {x : Real} : fromReal (negative x) = ComplexField.negative (fromReal x)
+      => ext (idp, inv RealAbGroup.negative_zro)
+  }
 
 \instance ComplexField : Field Complex
   | zro => \new Complex 0 0
@@ -26,11 +48,11 @@
   | +-assoc => ext (+-assoc, +-assoc)
   | +-comm => ext (+-comm, +-comm)
   | CMonoid => ComplexMonoid
-  | ldistr => ext (equation, equation)
-  | negative (x : Complex) => \new Complex (negative x.re) (negative x.im)
+  | ldistr => ext (equation.ring, equation.ring)
+  | negative x => \new Complex (negative x.re) (negative x.im)
   | negative-left => ext (negative-left, negative-left)
   | zro/=ide p => zro/=ide $ pmap (\lam (x : Complex) => x.re) p
-  | locality (x : Complex) => \case locality x.re \with {
+  | locality x => \case locality x.re \with {
     | byLeft r => byLeft $ inv-char.2 $ byLeft r
     | byRight r => byRight $ inv-char.2 $ byLeft r
   }
@@ -38,11 +60,11 @@
   \where {
     \open Monoid(Inv)
 
-    \instance ComplexMonoid : CMonoid Complex
+    \private \instance ComplexMonoid : CMonoid Complex
       | ide => \new Complex 1 0
       | * (x y : Complex) => \new Complex (x.re * y.re - x.im * y.im) (x.re * y.im + x.im * y.re)
-      | ide-left => ext (equation, equation)
-      | *-assoc => ext (equation, equation)
+      | ide-left => ext (simplify, simplify)
+      | *-assoc => ext (equation.ring, equation.ring)
       | *-comm => ext (pmap2 (__ - __) *-comm *-comm, +-comm *> pmap2 (+) *-comm *-comm)
 
     \lemma inv-char {x : Complex} : Inv x <-> Inv x.re || Inv x.im
@@ -54,76 +76,50 @@
                       | byLeft r => inP (0, ||.map real_<_L.2 (\lam c => real_<_U.2 $ RealAbGroup.negative_L.1 c) $ RealField.#0=>eitherPosOrNeg r)
                       | byRight r => inP (1, ||.map real_<_L.2 (\lam c => real_<_U.2 $ RealAbGroup.negative_L.1 c) $ RealField.#0=>eitherPosOrNeg r)
                     })
-                    \in Inv.lmake (\new Complex (x.re * d.inv) (negative (x.im * d.inv))) $ ext (equation {usingOnly d.inv-left}, equation))
+                    \in Inv.lmake (\new Complex (x.re * d.inv) (negative (x.im * d.inv))) $ ext (equation.cRing {d.inv-left}, equation.cRing))
   }
 
-{- | The imaginary unit $I = 0 + i \in \mathbb{C}$. -}
-\func I : Complex => \new Complex 0 1
-
-{- | Real-line embedding $\mathbb{R} \hookrightarrow \mathbb{C}$, $x \mapsto x + 0i$,
-     as a plain `\func`. The RingHom witness is `fromReal-RingHom`. -}
-\func fromReal (x : Real) : Complex => \new Complex x 0
-
-{- | $\mathrm{fromReal}\ 0 = 0$. By eta of the Complex record. -}
-\lemma fromReal_zro : fromReal 0 = (0 : Complex)
-  => idp
-
-{- | $\mathrm{fromReal}\ 1 = 1$. -}
-\lemma fromReal_ide : fromReal 1 = (1 : Complex)
-  => idp
-
-{- | $\mathrm{fromReal}$ preserves addition:
-     $\mathrm{fromReal}\,(x + y) = \mathrm{fromReal}\ x + \mathrm{fromReal}\ y$. -}
-\lemma fromReal_+ {x y : Real} : fromReal (x + y) = fromReal x + fromReal y
-  => ext (idp, inv zro-left)
-
-{- | $\mathrm{fromReal}$ preserves multiplication:
-     $\mathrm{fromReal}\,(xy) = \mathrm{fromReal}\ x \cdot \mathrm{fromReal}\ y$. -}
-\lemma fromReal_* {x y : Real} : fromReal (x * y) = fromReal x * fromReal y
-  => ext (equation, equation)
-
-{- | $\mathrm{fromReal}$ preserves negation:
-     $\mathrm{fromReal}\,(-x) = -\mathrm{fromReal}\ x$. -}
-\lemma fromReal_negative {x : Real} : fromReal (negative x) = negative (fromReal x)
-  => ext (idp, inv RealAbGroup.negative_zro)
-
-{- | Complex conjugation $\overline{a + bi} := a - bi$. -}
+-- | Complex conjugation $\overline{a + bi} := a - bi$.
 \func conj (z : Complex) : Complex => \new Complex z.re (negative z.im)
 
-{- | $\overline{\overline{z}} = z$ — `conj` is its own inverse. -}
+-- | $\overline{\overline{z}} = z$ — `conj` is its own inverse.
 \lemma conj_conj {z : Complex} : conj (conj z) = z
   => ext (idp, AddGroup.negative-isInv)
 
-{- | $\overline{0} = 0$. -}
+-- | $\overline{0} = 0$.
 \lemma conj_zro : conj 0 = (0 : Complex)
   => ext (idp, RealAbGroup.negative_zro)
 
-{- | $\overline{1} = 1$. -}
+-- | $\overline{1} = 1$.
 \lemma conj_ide : conj 1 = (1 : Complex)
   => ext (idp, RealAbGroup.negative_zro)
 
-{- | $\overline{x + y} = \overline{x} + \overline{y}$ — `conj` preserves addition. -}
+-- | $\overline{x + y} = \overline{x} + \overline{y}$ — `conj` preserves addition.
 \lemma conj_+ {x y : Complex} : conj (x + y) = conj x + conj y
   => ext (idp, RealAbGroup.negative_+ *> +-comm)
 
-{- | $\overline{ -z} = -\overline{z}$ — `conj` preserves negation. -}
-\lemma conj_negative {z : Complex} : conj (negative z) = negative (conj z)
-  => ext (idp, idp)
-
-{- | $\overline{xy} = \overline{x} \cdot \overline{y}$ — `conj` preserves multiplication. -}
+-- | $\overline{xy} = \overline{x} \cdot \overline{y}$ — `conj` preserves multiplication.
 \lemma conj_* {x y : Complex} : conj (x * y) = conj x * conj y
-  => ext (equation, equation)
+  => ext (simplify, equation.ring)
 
-{- | $\overline{I} = -I$. -}
-\lemma conj_I : conj I = negative I
+-- | $\overline{i} = -i$.
+\lemma conj_i : conj i = negative i
   => ext (inv RealAbGroup.negative_zro, idp)
 
-{- | $\overline{\mathrm{fromReal}\ x} = \mathrm{fromReal}\ x$ — `conj` fixes the
-     real-line embedding. -}
-\lemma conj_fromReal {x : Real} : conj (fromReal x) = fromReal x
+-- | $\overline{i x} = - i x$.
+\lemma conj_i_* {x : Real} : conj (i * x) = negative (i * x)
+  => conj_* *> pmap2 (*) conj_i conj_fromReal *> Ring.negative_*-left
+
+-- | $\overline{\mathrm{fromReal}\ x} = \mathrm{fromReal}\ x$ — `conj` fixes the real-line embedding.
+\lemma conj_fromReal {x : Real} : conj x = Complex.fromReal x
   => ext RealAbGroup.negative_zro
 
-{- | $\overline{z^n} = (\overline{z})^n$ — `conj` commutes with monoid powers. -}
+-- | $\overline{z^n} = (\overline{z})^n$ — `conj` commutes with monoid powers.
 \lemma conj_pow {z : Complex} (n : Nat) : conj (Monoid.pow z n) = Monoid.pow (conj z) n \elim n
   | 0 => conj_ide
   | suc n => conj_* *> pmap (`* conj z) (conj_pow n)
+
+-- | {conj} as an additive-group endomorphism of $\mathbb{C}$.
+\func conjAddHom : AddGroupHom ComplexField ComplexField \cowith
+  | func => conj
+  | func-+ => conj_+

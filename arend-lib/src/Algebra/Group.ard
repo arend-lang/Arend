@@ -364,10 +364,8 @@
 
   {- | `BigSum` of pointwise differences equals the difference of `BigSum`s, in
   an `AbGroup`: $\sum_k l_k - \sum_k l'_k = \sum_k (l_k - l'_k)$. -}
-  \lemma BigSum_- {n : Nat} {l l' : Array \this n}
-    : BigSum l - BigSum l' = BigSum (\lam k => l k - l' k)
-    => pmap (BigSum l +) BigSum_negative
-      *> inv (AbMonoid.BigSum_+ {_} {n} {l} {map negative l'})
+  \lemma BigSum_- {n : Nat} {l l' : Array E n} : BigSum (\lam k => l k - l' k) = BigSum l - BigSum l'
+    => BigSum_+ *> inv (pmap (_ +) BigSum_negative)
 
   \lemma sum-cancel-left {x y z : E} : x + z - (x + y) = z - y
     => pmap (_ +) negative_+ *> pmap2 (+) +-comm +-comm *> +-assoc *> pmap (z +) (inv +-assoc *> pmap (`- y) negative-right *> zro-left)

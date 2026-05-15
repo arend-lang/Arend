@@ -11,21 +11,22 @@
 \import Arith.Trig
 \import Paths
 \import Paths.Meta
+\open Complex \using (iunit \as i)
 
 {- | Every complex number decomposes as
-     $z = \mathrm{fromReal}\,(\Re z) + I \cdot \mathrm{fromReal}\,(\Im z)$.
+     $z = \mathrm{fromReal}\,(\Re z) + i \cdot \mathrm{fromReal}\,(\Im z)$.
      Pure record eta — `Complex` is the record `(re im : Real)`, and the RHS
      reconstructs $z$ componentwise. Both $\Re$ and $\Im$ of the RHS reduce to
      $\Re z$ and $\Im z$ respectively after the standard ring moves (the cross
      terms $0 \cdot \_$ / $\_ \cdot 0$ vanish). -}
-\lemma complex-decomp (z : Complex) : z = fromReal z.re + I * fromReal z.im
+\lemma complex-decomp (z : Complex) : z = fromReal z.re + i * z.im
   => ext (equation.cRing, equation.cRing)
 
 {- | Euler's formula:
-     $$\exp(I \cdot \mathrm{fromReal}\,x)
-       = \mathrm{fromReal}\,(\cos x) + I \cdot \mathrm{fromReal}\,(\sin x).$$
+     $$\exp(i \cdot \mathrm{fromReal}\,x)
+       = \mathrm{fromReal}\,(\cos x) + i \cdot \mathrm{fromReal}\,(\sin x).$$
      A direct specialisation of `complex-decomp` to
-     $z := \exp(I \cdot \mathrm{fromReal}\,x)$, using $\cos x = \Re z$ and
+     $z := \exp(i \cdot \mathrm{fromReal}\,x)$, using $\cos x = \Re z$ and
      $\sin x = \Im z$ (definitions of `cos` / `sin` in `Arith.Trig`). -}
-\lemma euler {x : Real} : exp (I * fromReal x) = fromReal (cos x) + I * fromReal (sin x)
-  => complex-decomp (exp (I * fromReal x))
+\lemma euler {x : Real} : exp (i * x) = fromReal (cos x) + i * sin x
+  => complex-decomp (exp (i * x))
