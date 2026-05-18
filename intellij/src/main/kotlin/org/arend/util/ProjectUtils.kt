@@ -118,6 +118,12 @@ fun Module.register(modules: List<Module> = emptyList()) {
     } ?: return
     refreshLibrariesDirectory(project.service<ArendProjectSettings>().librariesRoot)
 
+    // ModuleSynchronizer.install() ran an initial sync before YAML deps were populated,
+    // which would have wiped any pre-existing library orderEntries from the .iml. Now
+    // that copyFromYAML has filled in `dependencies`, re-sync so the IDE-side library
+    // orderEntries match arend.yaml.
+    config.synchronizeDependencies(false)
+
     val server = project.service<ArendServerService>().server
     val loaded = modules.mapNotNullTo(HashSet()) { if (ArendModuleType.has(it)) it.name else null }
     runReadAction {
