@@ -17,7 +17,9 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.io.File;
+import java.io.FilterInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
@@ -37,6 +39,36 @@ public class ZipSourceLibrary extends SourceLibrary {
     mySourcesDir = sourceDir;
     myClassLoaderDelegate = extDir == null ? null : new ZipClassLoaderDelegate(zipFile, extDir);
     myModules = modules;
+  }
+
+  /**
+   * Looks up {@code relPath} as a zip entry. The returned stream owns the
+   * {@link ZipFile} handle and closes it on {@link InputStream#close()}.
+   */
+  @Override
+  public @Nullable InputStream openAuxFile(@NotNull String relPath) throws IOException {
+    ZipFile zip = new ZipFile(myFile);
+    try {
+      ZipEntry entry = zip.getEntry(relPath);
+      if (entry == null || entry.isDirectory()) {
+        zip.close();
+        return null;
+      }
+      InputStream entryStream = zip.getInputStream(entry);
+      return new FilterInputStream(entryStream) {
+        @Override
+        public void close() throws IOException {
+          try {
+            super.close();
+          } finally {
+            zip.close();
+          }
+        }
+      };
+    } catch (IOException e) {
+      zip.close();
+      throw e;
+    }
   }
 
   public static ZipSourceLibrary fromFile(File file, ErrorReporter errorReporter) {

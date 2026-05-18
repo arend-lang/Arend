@@ -21,6 +21,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
@@ -120,5 +121,23 @@ public class FileSourceLibrary extends SourceLibrary {
   @Override
   public @Nullable ClassLoaderDelegate getClassLoaderDelegate() {
     return myClassLoaderDelegate;
+  }
+
+  /**
+   * Resolves the aux file under {@link #getBasePath()}, falling back to the parent
+   * of {@link #getSourceBasePath()} for libraries built without {@code fromConfigFile}.
+   */
+  @Override
+  public @Nullable InputStream openAuxFile(@NotNull String relPath) throws IOException {
+    Path root = basePath;
+    if (root == null && sourceBasePath != null) root = sourceBasePath.getParent();
+    if (root == null) return null;
+    Path target = root;
+    for (String part : relPath.split("/")) {
+      if (part.isEmpty() || part.equals(".") || part.equals("..")) return null;
+      target = target.resolve(part);
+    }
+    if (!Files.isRegularFile(target)) return null;
+    return Files.newInputStream(target);
   }
 }
