@@ -3801,6 +3801,14 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
   }
 
   @Override
+  public void solveEquationsFor(@NotNull CoreInferenceVariable variable) {
+    if (!(variable instanceof InferenceVariable) || variable instanceof MetaInferenceVariable) {
+      throw new IllegalArgumentException();
+    }
+    myEquations.solveEquationsFor((InferenceVariable) variable);
+  }
+
+  @Override
   public @NotNull CoreInferenceReferenceExpression generateNewInferenceVariable(@NotNull String name, @NotNull CoreExpression type, @NotNull ConcreteSourceNode marker, boolean isSolvableFromEquations) {
     if (!(type instanceof Expression && marker instanceof Concrete.SourceNode)) {
       throw new IllegalArgumentException();

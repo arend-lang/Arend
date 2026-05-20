@@ -646,6 +646,39 @@ public class TwoStageEquations implements Equations {
   }
 
   @Override
+  public void solveEquationsFor(InferenceVariable var) {
+    List<Equation> related = new ArrayList<>();
+    List<Equation> rest = new ArrayList<>();
+    for (Equation eq : myEquations) {
+      InferenceVariable v1 = eq.expr1.getInferenceVariable();
+      InferenceVariable v2 = eq.expr2.getInferenceVariable();
+      if (v1 == var || v2 == var) {
+        related.add(eq);
+      } else {
+        rest.add(eq);
+      }
+    }
+    if (related.isEmpty()) return;
+
+    myEquations = related;
+    try {
+      for (Equation equation : myEquations) {
+        equation.expr1 = equation.expr1.normalize(NormalizationMode.WHNF);
+        equation.expr2 = equation.expr2.normalize(NormalizationMode.WHNF);
+      }
+      while (!myEquations.isEmpty()) {
+        if (!solveClassCallsEq()) break;
+      }
+      while (!myEquations.isEmpty()) {
+        if (!solveClassCalls(CMP.LE) && !solveClassCalls(CMP.GE)) break;
+      }
+    } finally {
+      rest.addAll(myEquations);
+      myEquations = rest;
+    }
+  }
+
+  @Override
   public void solveLowerBounds(InferenceVariable var) {
     List<Equation> equations = new ArrayList<>();
     for (Iterator<Equation> iterator = myEquations.iterator(); iterator.hasNext(); ) {

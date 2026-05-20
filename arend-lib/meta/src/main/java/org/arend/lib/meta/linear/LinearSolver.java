@@ -54,6 +54,12 @@ public class LinearSolver {
   }
 
   private CoreExpression findInstance(CoreExpression type, boolean reportError) {
+    if (type instanceof CoreInferenceReferenceExpression infRef && infRef.getSubstExpression() == null && infRef.getVariable() != null) {
+      typechecker.solveEquationsFor(infRef.getVariable());
+      if (infRef.getSubstExpression() != null) {
+        type = infRef.getSubstExpression().normalize(NormalizationMode.WHNF);
+      }
+    }
     TypedExpression instance = type == null ? null : typechecker.findInstance(getInstanceClass(), type, null, marker);
     if (instance == null) {
       if (reportError) errorReporter.report(new InstanceInferenceError(typechecker.getExpressionPrettifier(), getInstanceClass().getRef(), type, marker));

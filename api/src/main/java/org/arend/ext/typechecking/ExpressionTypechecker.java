@@ -267,6 +267,18 @@ public interface ExpressionTypechecker extends UserDataHolder {
   boolean solveInferenceVariable(@NotNull CoreInferenceVariable variable, @NotNull CoreExpression expression);
 
   /**
+   * Runs the equation solver on pending equations that mention {@code variable}.
+   * Unlike a full solve at the end of elaboration, this scopes the solver to equations
+   * touching {@code variable}, so it is safe to call from a meta/tactic that wants to
+   * push inference progress on a specific variable without prematurely committing other
+   * in-flight equations.
+   *
+   * Note: incidental progress on other variables that appear on the opposite side of a
+   * touched equation may still occur.
+   */
+  void solveEquationsFor(@NotNull CoreInferenceVariable variable);
+
+  /**
    * Creates a new inference variable.
    *
    * @param name                      a name of the variable; used only for printing.

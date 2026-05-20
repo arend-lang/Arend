@@ -19,6 +19,13 @@ public interface Equations {
   boolean solve(Expression expr1, Expression expr2, Expression type, CMP cmp, Concrete.SourceNode sourceNode);
   boolean solve(InferenceVariable var, Expression expr);
   void solveLowerBounds(InferenceVariable var);
+  /**
+   * Runs the equation solver on the subset of pending equations that mention {@code var}
+   * on either side. Unlike {@link #solveEquations()}, this does not touch unrelated equations,
+   * so it is safe to call mid-elaboration (e.g. from a meta/tactic that wants to make
+   * inference progress on a specific variable without committing other in-flight equations).
+   */
+  void solveEquationsFor(InferenceVariable var);
   boolean addEquation(Level level1, Level level2, CMP cmp, Concrete.SourceNode sourceNode);
   boolean addVariable(InferenceLevelVariable var);
   void bindVariables(InferenceLevelVariable pVar, InferenceLevelVariable hVar);
