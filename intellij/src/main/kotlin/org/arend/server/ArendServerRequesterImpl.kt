@@ -1,6 +1,7 @@
 package org.arend.server
 
 import com.intellij.openapi.application.runReadAction
+import com.intellij.openapi.components.service
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.findDirectory
 import com.intellij.psi.PsiFileSystemItem
@@ -30,14 +31,14 @@ import java.util.function.Supplier
 
 class ArendServerRequesterImpl(private val project: Project) : ArendServerRequester {
     override fun requestModuleUpdate(server: ArendServer, module: ModuleLocation) {
-        if (module.locationKind == ModuleLocation.LocationKind.GENERATED) return
+        if (module.locationKind == LocationKind.GENERATED) return
         val repl = project.service<ArendReplService>().getRepl()
         runReadAction {
             val file = (if (server == repl?.getServer()) {
                 repl.replLibraries[module.libraryName]
             } else {
                 project.findInternalLibrary(module.libraryName)
-            })?.findArendFile(module.modulePath, module.locationKind == ModuleLocation.LocationKind.TEST)
+            })?.findArendFile(module.modulePath, module.locationKind)
             doUpdateModule(server, module, file ?: return@runReadAction)
         }
     }

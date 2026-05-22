@@ -34,7 +34,8 @@ import org.arend.psi.ext.*
 import org.arend.server.ArendServer
 import org.arend.server.ArendServerService
 import org.arend.server.ProgressReporter
-import org.arend.source.StreamBinarySource
+import org.arend.source.FileBinarySource
+import org.arend.source.GZIPStreamBinarySource
 import org.arend.term.group.ConcreteGroup
 import org.arend.term.prettyprint.PrettyPrinterConfigWithRenamer
 import org.arend.term.prettyprint.ToAbstractVisitor
@@ -44,7 +45,6 @@ import org.arend.util.FileUtils.SERIALIZED_EXTENSION
 import org.arend.util.arendModules
 import org.arend.util.getRelativeFile
 import org.arend.util.getRelativePath
-import java.util.zip.GZIPInputStream
 import kotlin.collections.iterator
 
 class ArcFileDecompiler : BinaryFileDecompiler {
@@ -124,7 +124,7 @@ class ArcFileDecompiler : BinaryFileDecompiler {
             val definitionsToFiles = mutableSetOf<String>()
             for (referable in statementVisitor.referables) {
                 val file = referable.containingFile as ArendFile
-                if (file == project.service<ArendServerService>().prelude) {
+                if (project.service<ArendServerService>().isPrelude(file)) {
                     continue
                 }
                 val fullName = referable.fullName.toString()
@@ -184,20 +184,22 @@ class ArcFileDecompiler : BinaryFileDecompiler {
             }
             val path = config?.binariesDirFile?.getRelativePath(virtualFile, SERIALIZED_EXTENSION) ?: mutableListOf(virtualFile.name)
             val arendFile = config?.sourcesDirFile?.getRelativeFile(path, EXTENSION)?.let { psiManager.findFile(it) } as? ArendFile?
-            arendFile?.moduleLocation?.let { server.getCheckerFor(listOf(it)).typecheck(null, DummyErrorReporter.INSTANCE, UnstoppableCancellationIndicator.INSTANCE, ProgressReporter.empty()) }
-
+            arendFile?.moduleLocation?.let {
+                server.getCheckerFor(listOf(it)).typecheck(null, DummyErrorReporter.INSTANCE, UnstoppableCancellationIndicator.INSTANCE, ProgressReporter.empty())
+            }
+            val moduleLocation = arendFile?.moduleLocation ?: return null
+            val binaryBasePath = config.binariesDirFile?.toNioPath() ?: return null
             try {
-                virtualFile.inputStream.use { inputStream ->
-                    val result = StreamBinarySource.getGroup(GZIPInputStream(inputStream), server, config?.libraryName)
+                val source = GZIPStreamBinarySource(FileBinarySource(binaryBasePath, moduleLocation))
+                val result = source.loadWithImports(server, DummyErrorReporter.INSTANCE) ?: return null
 
-                    val group = result.proj1
-                    val modules = result.proj2
+                val group = result.proj1
+                val modules = result.proj2
 
-                    project.service<ArcUnloadedModuleService>().removeLoadedModule(virtualFile)
-                    EditorNotifications.getInstance(project).updateNotifications(virtualFile)
-                    return Triple(group, arendFile, modules.map { config?.sourcesDirFile?.getRelativeFile(it.toList(), EXTENSION)
-                        ?.let { virtualFile -> psiManager.findFile(virtualFile) } })
-                }
+                project.service<ArcUnloadedModuleService>().removeLoadedModule(virtualFile)
+                EditorNotifications.getInstance(project).updateNotifications(virtualFile)
+                return Triple(group, arendFile, modules.map { config.sourcesDirFile?.getRelativeFile(it.toList(), EXTENSION)
+                    ?.let { virtualFile -> psiManager.findFile(virtualFile) } })
             } catch (e : DeserializationException) {
                 val message = e.message ?: return null
                 if (DEFINITION_IS_NOT_LOADED.matches(message) || NOT_FOUND_MODULE.matches(message)) {

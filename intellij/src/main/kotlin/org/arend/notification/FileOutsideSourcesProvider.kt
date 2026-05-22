@@ -29,7 +29,7 @@ class FileOutsideSourcesProvider : EditorNotificationProvider {
                 virtualFile.isArendScratch ||
                 virtualFile.getTaskFile(project) != null ||
                 file.name.endsWith(SERIALIZED_EXTENSION) ||
-                checkArcFile(file.virtualFile)) {
+                checkArcFile(file)) {
             return null
         }
         return Function<FileEditor, EditorNotificationPanel?> { fileEditor: FileEditor? ->

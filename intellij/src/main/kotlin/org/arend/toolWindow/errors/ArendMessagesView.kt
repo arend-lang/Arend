@@ -32,10 +32,10 @@ import com.intellij.ui.tabs.impl.SingleHeightTabs
 import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.tree.TreeUtil
 import org.arend.ArendIcons
-import org.arend.injection.InjectedArendEditor
 import org.arend.ext.error.GeneralError
 import org.arend.ext.error.LocalError
 import org.arend.ext.error.MissingClausesError
+import org.arend.ext.module.ModuleLocation
 import org.arend.ext.reference.ArendRef
 import org.arend.ext.reference.DataContainer
 import org.arend.psi.ArendFile
