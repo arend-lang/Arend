@@ -36,7 +36,7 @@ class UnresolvedArendPatternInspection : ArendInspectionBase() {
                 val resolve = identifier.reference?.resolve() ?: return
 
                 if (constructors.isNotEmpty() && (!constructors.contains(resolve) &&
-                    (resolve.containingFile as? ArendFile?)?.let { isPrelude(it) } == false)) {
+                    resolve.isValid && (resolve.containingFile as? ArendFile?)?.let { isPrelude(it) } == false)) {
                     val arendDefinition = ((SplitAtomPatternIntention.getElementType(element, element.project)?.first)
                         ?.let { TypeConstructorExpression.unfoldType(it) } as? DefCallExpression)
                         ?.definition?.referable?.data as? ArendDefinition<*>

@@ -16,7 +16,7 @@ class ArendCalleeTreeStructure(project: Project, baseNode: PsiElement) :
         val callees = HashSet<PsiElement>()
         val result = ArrayList<ArendHierarchyNodeDescriptor>()
         visit(defElement, callees, defElement)
-        callees.mapTo(result) { ArendHierarchyNodeDescriptor(myProject, descriptor, it, false) }
+        callees.filter { it.isValid }.mapTo(result) { ArendHierarchyNodeDescriptor(myProject, descriptor, it, false) }
         return result.toArray()
     }
 

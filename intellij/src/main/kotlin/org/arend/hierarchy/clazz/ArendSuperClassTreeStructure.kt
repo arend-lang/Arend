@@ -24,19 +24,19 @@ class ArendSuperClassTreeStructure(project: Project, baseNode: PsiElement, priva
         fun getChildren(descriptor: HierarchyNodeDescriptor, project: Project): Array<ArendHierarchyNodeDescriptor> {
             val classElement = descriptor.psiElement as? ArendDefClass ?: return emptyArray()
             val result = ArrayList<ArendHierarchyNodeDescriptor>()
-            classElement.superClassList.mapNotNullTo(result) { getSuperDefClass(it)?.let { element -> ArendHierarchyNodeDescriptor(project, descriptor, element, false) } }
+            classElement.superClassList.filter { it.isValid }.mapNotNullTo(result) { getSuperDefClass(it)?.let { element -> ArendHierarchyNodeDescriptor(project, descriptor, element, false) } }
             val settings = project.service<ArendProjectSettings>().data
             val classDefinition = classElement.tcReferable?.typechecked as? ClassDefinition ?: return result.toTypedArray()
             if (settings.showImplFields) {
-                getImplFields(classElement).mapTo(result) { ArendFieldHNodeDescriptor(project, descriptor, it, isBase = false, isImplemented = true) }
+                getImplFields(classElement).filter { it.isValid }.mapTo(result) { ArendFieldHNodeDescriptor(project, descriptor, it, isBase = false, isImplemented = true) }
             }
             if (settings.showNonImplFields) {
                 if (descriptor.parentDescriptor == null) {
-                    classDefinition.notImplementedFields.mapNotNull { it.referable.data as? PsiElement }.mapTo(result) { ArendFieldHNodeDescriptor(project, descriptor, it, isBase = false, isImplemented = false) }
+                    classDefinition.notImplementedFields.mapNotNull { it.referable.data as? PsiElement }.filter { it.isValid }.mapTo(result) { ArendFieldHNodeDescriptor(project, descriptor, it, isBase = false, isImplemented = false) }
                 } else {
                     val implFields = HashSet<PsiElement>()
                     implInAncestors(descriptor, implFields)
-                    classElement.internalReferables.mapNotNullTo(result) {
+                    classElement.internalReferables.filter { it.isValid }.mapNotNullTo(result) {
                         if (!implFields.contains(it))
                             ArendFieldHNodeDescriptor(project, descriptor, it, isBase = false, isImplemented = false)
                         else null
