@@ -533,6 +533,9 @@ public class ConsoleMain {
       }
       // Report goals from definitions loaded from binary cache
       reportCachedGoals(server, requester.getBinaryCacheLoaded());
+      // Re-report errors that were detected on a previous typecheck pass and
+      // whose modules are still in memory but won't be re-typechecked this run.
+      reportInMemoryErrors(server, myErrorReporter);
     }
 
     if (requestedModules.isEmpty()) {
@@ -767,10 +770,23 @@ public class ConsoleMain {
     int persisted = 0;
     int skipped = 0;
     int failed = 0;
+    int skippedWithErrors = 0;
     for (ModuleLocation module : server.getModules()) {
       if (module.getLocationKind() == ModuleLocation.LocationKind.SOURCE && module.getLibraryName().equals(library.getLibraryName())) {
         if (skipModules.contains(module)) {
           skipped++;
+          continue;
+        }
+        // Skip modules whose typechecked state contains any HAS_ERRORS def. Writing
+        // them is wasted work and, in a long-lived daemon, leaks Definition objects:
+        // every subsequent loadBinaryCache deserializes the module, the load-side
+        // hasMissingTypechecked check (CliServerRequester) detects the HAS_ERRORS
+        // state, calls clearTypechecked, and the typecheck loop re-typechecks from
+        // source — a cycle that allocates a fresh wave of FunctionDefinition objects
+        // per request while cached expression trees pin the previous wave.
+        org.arend.term.group.ConcreteGroup group = server.getRawGroup(module);
+        if (group != null && groupHasTypecheckingErrors(group)) {
+          skippedWithErrors++;
           continue;
         }
         PersistableBinarySource binarySource = library.getBinarySource(module.getModulePath());
@@ -783,8 +799,59 @@ public class ConsoleMain {
         }
       }
     }
-    if (persisted > 0 || failed > 0) {
-      System.out.println("[INFO] Persisted " + persisted + " module(s)" + (failed > 0 ? ", " + failed + " failed" : "") + (skipped > 0 ? " (" + skipped + " up-to-date)" : ""));
+    if (persisted > 0 || failed > 0 || skippedWithErrors > 0) {
+      System.out.println("[INFO] Persisted " + persisted + " module(s)"
+          + (failed > 0 ? ", " + failed + " failed" : "")
+          + (skippedWithErrors > 0 ? ", " + skippedWithErrors + " skipped (had errors)" : "")
+          + (skipped > 0 ? " (" + skipped + " up-to-date)" : ""));
+    }
+  }
+
+  /**
+   * Returns true if any typecheckable definition reachable from {@code group} has
+   * status {@link Definition.TypeCheckingStatus#HAS_ERRORS}. Mirrors the load-side
+   * {@code hasMissingTypechecked} check in {@code CliServerRequester} so the persist
+   * side won't write a module that the load side would immediately clear.
+   */
+  static boolean groupHasTypecheckingErrors(org.arend.term.group.ConcreteGroup group) {
+    if (group.referable() instanceof TCDefReferable tcRef && tcRef.getKind().isTypecheckable()) {
+      Definition def = tcRef.getTypechecked();
+      if (def != null && def.status() == Definition.TypeCheckingStatus.HAS_ERRORS) return true;
+    }
+    for (org.arend.naming.reference.InternalReferable internalRef : group.getInternalReferables()) {
+      if (internalRef instanceof TCDefReferable tcRef && tcRef.getKind().isTypecheckable()) {
+        Definition def = tcRef.getTypechecked();
+        if (def != null && def.status() == Definition.TypeCheckingStatus.HAS_ERRORS) return true;
+      }
+    }
+    for (org.arend.term.group.ConcreteStatement statement : group.statements()) {
+      if (statement.group() != null && groupHasTypecheckingErrors(statement.group())) return true;
+    }
+    for (org.arend.term.group.ConcreteGroup dynGroup : group.dynamicGroups()) {
+      if (groupHasTypecheckingErrors(dynGroup)) return true;
+    }
+    return false;
+  }
+
+  /**
+   * Re-reports typechecking errors stored in the server's {@code ErrorService} for
+   * source modules in the given library. Without this step, a daemon that
+   * bootstrapped with HAS_ERRORS modules would silently drop the error reports on
+   * the second and later client requests: persist now skips those modules, load
+   * doesn't see them in the binary cache, and the typechecker skips already-
+   * typechecked defs — so the per-request {@code moduleResults} map never gets
+   * an ERROR entry. Walking the ErrorService here restores the per-invocation
+   * "Number of modules with errors" summary that the old re-typecheck cycle
+   * incidentally provided.
+   */
+  private void reportInMemoryErrors(ArendServer server, ErrorReporter errorReporter) {
+    if (!(server instanceof org.arend.server.impl.ArendServerImpl impl)) return;
+    org.arend.server.impl.ErrorService errorService = impl.getErrorService();
+    for (ModuleLocation module : server.getModules()) {
+      if (module.getLocationKind() != ModuleLocation.LocationKind.SOURCE) continue;
+      for (GeneralError error : errorService.getTypecheckingErrors(module)) {
+        errorReporter.report(error);
+      }
     }
   }
 
