@@ -37,8 +37,8 @@ import static org.junit.Assert.assertTrue;
  *
  * <p>The underlying bug: writing modules with {@link Definition.TypeCheckingStatus#HAS_ERRORS}
  * to {@code .arc} sets up a cycle in {@code CliServerRequester.loadBinaryCache} —
- * every subsequent CLI invocation deserializes the module, the load-side
- * {@code hasMissingTypechecked} check detects the HAS_ERRORS state, calls
+ * every subsequent CLI invocation deserializes the module, Phase 2c's
+ * orphan-shell sweep detects the dangling reference, calls
  * {@code clearTypechecked}, and the typecheck loop re-typechecks from source.
  * In a long-lived daemon, each cycle allocates a fresh wave of
  * {@code FunctionDefinition} objects that are pinned by cached expression trees

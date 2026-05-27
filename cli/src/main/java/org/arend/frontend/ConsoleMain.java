@@ -777,13 +777,11 @@ public class ConsoleMain {
           skipped++;
           continue;
         }
-        // Skip modules whose typechecked state contains any HAS_ERRORS def. Writing
-        // them is wasted work and, in a long-lived daemon, leaks Definition objects:
-        // every subsequent loadBinaryCache deserializes the module, the load-side
-        // hasMissingTypechecked check (CliServerRequester) detects the HAS_ERRORS
-        // state, calls clearTypechecked, and the typecheck loop re-typechecks from
-        // source — a cycle that allocates a fresh wave of FunctionDefinition objects
-        // per request while cached expression trees pin the previous wave.
+        // Skip modules whose typechecked state contains any HAS_ERRORS def.  Persisting
+        // them would write a cache that the next load can't use (the deserialized
+        // module would still need re-typechecking from source) and, in a long-lived
+        // daemon, accumulates orphan FunctionDefinitions pinned by cached expression
+        // trees across the deserialize → clear → re-typecheck cycle.
         org.arend.term.group.ConcreteGroup group = server.getRawGroup(module);
         if (group != null && groupHasTypecheckingErrors(group)) {
           skippedWithErrors++;
@@ -809,9 +807,10 @@ public class ConsoleMain {
 
   /**
    * Returns true if any typecheckable definition reachable from {@code group} has
-   * status {@link Definition.TypeCheckingStatus#HAS_ERRORS}. Mirrors the load-side
-   * {@code hasMissingTypechecked} check in {@code CliServerRequester} so the persist
-   * side won't write a module that the load side would immediately clear.
+   * status {@link Definition.TypeCheckingStatus#HAS_ERRORS}. Used to gate persist:
+   * caching a module that contains an erroneous def would only feed the
+   * deserialize → orphan-shell-detected → clear → re-typecheck cycle in
+   * {@code CliServerRequester.loadBinaryCache}.
    */
   static boolean groupHasTypecheckingErrors(org.arend.term.group.ConcreteGroup group) {
     if (group.referable() instanceof TCDefReferable tcRef && tcRef.getKind().isTypecheckable()) {

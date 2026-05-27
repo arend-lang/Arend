@@ -3,7 +3,6 @@ package org.arend.frontend.library;
 import org.arend.core.definition.Definition;
 import org.arend.ext.error.ErrorReporter;
 import org.arend.ext.module.ModuleLocation;
-import org.arend.ext.module.ModulePath;
 import org.arend.extImpl.SerializableKeyRegistryImpl;
 import org.arend.module.serialization.ModuleDeserialization;
 import org.arend.naming.reference.LocatedReferable;
@@ -17,7 +16,6 @@ import org.arend.source.PersistableBinarySource;
 import org.arend.source.Source;
 import org.arend.source.StreamBinarySource;
 import org.arend.term.group.ConcreteGroup;
-import org.arend.term.group.ConcreteNamespaceCommand;
 import org.arend.term.group.ConcreteStatement;
 import org.arend.util.FileUtils;
 import org.jetbrains.annotations.NotNull;
@@ -87,7 +85,6 @@ public class CliServerRequester implements ArendServerRequester {
     List<PendingBinaryLoad> pending = new ArrayList<>();
     ArendLibrary serverLib = server.getLibrary(library.getLibraryName());
     SerializableKeyRegistryImpl keyRegistry = serverLib instanceof ArendLibraryImpl impl ? impl.getKeyRegistry() : null;
-    Map<ModuleLocation, Long> maxAncestorMtime = new HashMap<>();
 
     // Phase 1: parse protobuf files (does NOT touch any group referables)
     for (ModuleLocation module : server.getModules()) {
@@ -99,15 +96,10 @@ public class CliServerRequester implements ArendServerRequester {
       long arcTimestamp = binarySource.getTimeStamp();
       if (arcTimestamp <= 0) continue;
 
-      // Transitive timestamp-based cache invalidation: invalidate this .arc if any
-      // .ard in its transitive import closure (including its own source) is newer.
-      // Catches the case where an upstream refactor changes a class hierarchy without
-      // touching this module's own .ard — the cached expressions still reference the
-      // old hierarchy and would produce phantom errors.
-      long maxAncestor = transitiveMaxArdMtime(module, library, server, maxAncestorMtime, new HashSet<>());
-      if (maxAncestor > 0 && arcTimestamp < maxAncestor) {
-        System.out.println("[INFO] Binary cache stale: " + module + " (transitive .ard newer than cache)");
-        continue;
+      Source rawSource = library.getSource(module.getModulePath(), false);
+      if (rawSource != null) {
+        long rawTimestamp = rawSource.getTimeStamp();
+        if (rawTimestamp > 0 && arcTimestamp < rawTimestamp) continue;
       }
 
       if (binarySource instanceof StreamBinarySource streamSource) {
@@ -149,19 +141,9 @@ public class CliServerRequester implements ArendServerRequester {
         load.deserialization.readModule(
             server.getModuleScopeProvider(load.module.getLibraryName(), false),
             new org.arend.typechecking.order.dependency.DependencyCollector(null));
-        // Erroneous definitions are not persisted into ARC, so a deserialized module
-        // may contain TCDefReferables without a typechecked counterpart (or with a
-        // stale HAS_ERRORS status from older binaries). Detect this and force a
-        // full re-typecheck of the module from source — otherwise diagnostics
-        // disappear on subsequent runs and a previously-broken file looks clean.
-        if (group != null && hasMissingTypechecked(group)) {
-          clearTypechecked(group);
-          incomplete++;
-        } else {
-          loaded++;
-          myBinaryCacheLoaded.add(load.module);
-          loadedLoads.add(load);
-        }
+        loaded++;
+        myBinaryCacheLoaded.add(load.module);
+        loadedLoads.add(load);
       } catch (Exception e) {
         failed++;
         if (group != null) {
@@ -209,72 +191,6 @@ public class CliServerRequester implements ArendServerRequester {
           + (failed > 0 ? ", " + failed + " failed" : "")
           + " out of " + pending.size() + " candidates");
     }
-  }
-
-  /**
-   * Returns the maximum {@code .ard} timestamp across {@code module}'s own source
-   * and the transitive closure of its {@code \import}s within the same library.
-   * Used to invalidate this module's {@code .arc} when any upstream source has been
-   * edited since the cache was written (an upstream refactor of a class hierarchy
-   * can leave the local {@code .ard} untouched yet make the cached expressions
-   * reference structure that no longer matches the freshly retypechecked upstream).
-   *
-   * <p>Cycle-guarded: circular imports (e.g. {@code Algebra.StrictlyOrdered} ↔
-   * {@code Arith.Nat}) are detected via {@code visiting} and short-circuited.
-   * Cross-library imports and modules without a discoverable raw group are skipped
-   * — they contribute their own source timestamp (if any) but no further walk.
-   */
-  private static long transitiveMaxArdMtime(
-      ModuleLocation module, SourceLibrary library, ArendServer server,
-      Map<ModuleLocation, Long> memo, Set<ModuleLocation> visiting) {
-    Long cached = memo.get(module);
-    if (cached != null) return cached;
-    if (!visiting.add(module)) return 0L;
-    long max = 0L;
-    boolean inTests = module.getLocationKind() == ModuleLocation.LocationKind.TEST;
-    Source src = library.getLibraryName().equals(module.getLibraryName())
-        ? library.getSource(module.getModulePath(), inTests) : null;
-    if (src != null) {
-      long ts = src.getTimeStamp();
-      if (ts > 0) max = ts;
-    }
-    ConcreteGroup group = server.getRawGroup(module);
-    if (group != null) {
-      for (ConcreteStatement statement : group.statements()) {
-        ConcreteNamespaceCommand cmd = statement.command();
-        if (cmd == null || !cmd.isImport()) continue;
-        ModulePath depPath = new ModulePath(cmd.module().getPath());
-        ModuleLocation dep = server.findModule(depPath, module.getLibraryName(), inTests, false);
-        if (dep == null) continue;
-        max = Math.max(max, transitiveMaxArdMtime(dep, library, server, memo, visiting));
-      }
-    }
-    visiting.remove(module);
-    memo.put(module, max);
-    return max;
-  }
-
-  /**
-   * Returns true if the group contains a typecheckable definition whose typechecked
-   * counterpart is missing (null) or marked HAS_ERRORS. Inline metas and other
-   * non-typecheckable kinds (FIELD, CONSTRUCTOR, LEVEL, META, OTHER) are skipped —
-   * they legitimately have no typechecked counterpart in the cache.
-   */
-  private static boolean hasMissingTypechecked(ConcreteGroup group) {
-    LocatedReferable ref = group.referable();
-    if (ref instanceof TCDefReferable tcRef && tcRef.getKind().isTypecheckable()) {
-      Definition def = tcRef.getTypechecked();
-      if (def == null || def.status() == Definition.TypeCheckingStatus.HAS_ERRORS) {
-        return true;
-      }
-    }
-    for (ConcreteStatement statement : group.statements()) {
-      if (statement.group() != null && hasMissingTypechecked(statement.group())) return true;
-    }
-    for (ConcreteGroup dynGroup : group.dynamicGroups()) {
-      if (hasMissingTypechecked(dynGroup)) return true;
-    }
-    return false;
   }
 
   /**
