@@ -38,13 +38,13 @@ class ArendInfoViewEditor(project: Project) : ArendMessagesViewEditor(project, n
         }
     }
 
-    fun updateHtml(element: Pair<PsiElement, PsiElement?>) {
+    fun updateHtml(element: Pair<PsiElement, PsiElement?>, showNotification: Boolean) {
         lastElement = element
         val background = component?.background
         val foreground = component?.foreground
         ApplicationManager.getApplication().executeOnPooledThread {
             val html = runReadAction {
-                ArendDocumentationGenerator.generateDoc(element.first, element.second, true, fontSize, false, background, foreground)
+                ArendDocumentationGenerator.generateDoc(element.first, element.second, true, fontSize, false, background, foreground, showNotification)
             } ?: return@executeOnPooledThread
             updateHtml(html)
         }
@@ -53,6 +53,6 @@ class ArendInfoViewEditor(project: Project) : ArendMessagesViewEditor(project, n
     private fun changeFontSize(shift: Double) {
         fontSize += shift.toInt()
         if (fontSize <= 0) fontSize = 1
-        lastElement?.let { updateHtml(it) }
+        lastElement?.let { updateHtml(it, showNotification = false) }
     }
 }

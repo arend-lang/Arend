@@ -102,6 +102,7 @@ class ArendMessagesView(private val project: Project, private val toolWindow: To
     private var isCursorOnError = false
     private var isCursorOnDocComment = false
     private var lastDocComment: ArendDocComment? = null
+    var lastDocCorrectness: Boolean = true
 
     private val secondTabs = SingleHeightTabs(project, toolWindow.disposable)
 
@@ -165,7 +166,7 @@ class ArendMessagesView(private val project: Project, private val toolWindow: To
         EditorFactory.getInstance().eventMulticaster.addCaretListener(object : CaretListener {
             override fun caretPositionChanged(event: CaretEvent) {
                 if (event.editor.project != project) return
-                updateEditors(canClear = false)
+                updateEditors(canClear = false, showNotification = false)
             }
         }, project)
 
@@ -175,7 +176,7 @@ class ArendMessagesView(private val project: Project, private val toolWindow: To
                     val editor = FileEditorManager.getInstance(project).selectedTextEditor
                     if (editor != null && editor.document == event.document) {
                         PsiDocumentManager.getInstance(project).performLaterWhenAllCommitted {
-                            updateEditors(canClear = false)
+                            updateEditors(canClear = false, changeText = true, showNotification = false)
                         }
                     }
                 }
@@ -233,7 +234,7 @@ class ArendMessagesView(private val project: Project, private val toolWindow: To
 
     override fun valueChanged(e: TreeSelectionEvent?) = updateEditors(updateCursor = false)
 
-    private fun updateCursor(canClear: Boolean) {
+    private fun updateCursor(canClear: Boolean, showNotification: Boolean, changeText: Boolean) {
         val editor = FileEditorManager.getInstance(project).selectedTextEditor ?: return
         val document = editor.document
         val offset = editor.caretModel.offset
@@ -252,7 +253,8 @@ class ArendMessagesView(private val project: Project, private val toolWindow: To
             if (infoEditor == null) {
                 infoEditor = ArendInfoViewEditor(project)
             }
-            infoEditor!!.updateHtml(Pair(docComment, null))
+            val showNotificationInfo = (!changeText || lastDocCorrectness) && (showNotification || lastDocComment != docComment)
+            infoEditor!!.updateHtml(Pair(docComment, null), showNotificationInfo)
             lastDocComment = docComment
 
             isCursorOnError = false
@@ -278,10 +280,10 @@ class ArendMessagesView(private val project: Project, private val toolWindow: To
         }
     }
 
-    fun updateEditors(canClear: Boolean = true, updateCursor: Boolean = true) {
+    fun updateEditors(canClear: Boolean = true, updateCursor: Boolean = true, showNotification: Boolean = true, changeText: Boolean = false) {
         if (updateCursor) {
             runReadAction {
-                updateCursor(canClear)
+                updateCursor(canClear, showNotification, changeText)
             }
         }
         val treeElement = getSelectedMessage()

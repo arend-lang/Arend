@@ -5,6 +5,7 @@ import com.intellij.ide.BrowserUtil
 import com.intellij.ide.IdeEventQueue
 import com.intellij.lang.documentation.DocumentationMarkup.*
 import com.intellij.openapi.application.invokeLater
+import com.intellij.openapi.components.service
 import com.intellij.openapi.editor.colors.EditorColors
 import com.intellij.openapi.editor.colors.EditorColorsManager
 import com.intellij.openapi.ui.popup.JBPopupFactory
@@ -20,6 +21,7 @@ import com.intellij.ui.jcef.JBCefJSQuery
 import com.intellij.util.ui.JBUI.CurrentTheme.Link.Foreground.ENABLED
 import com.intellij.util.ui.JBUI.CurrentTheme.Link.Foreground.HOVERED
 import org.arend.documentation.ArendKeyword.Companion.isArendKeyword
+import org.arend.toolWindow.errors.ArendMessagesService
 import org.arend.ext.module.LongName
 import org.arend.naming.reference.LocatedReferableImpl
 import org.arend.naming.reference.RedirectingReferable
@@ -59,17 +61,19 @@ object ArendDocumentationGenerator {
     private var lastElement: PsiElement? = null
     private var lastOriginalElement: PsiElement? = null
 
-    fun generateDoc(element: PsiElement, originalElement: PsiElement?, withDocComments: Boolean = true, suggestedFont: Int? = null, withOpenInBrowserLink: Boolean = true, backgroundColor: Color? = null, textColor: Color? = null): String? {
+    fun generateDoc(element: PsiElement, originalElement: PsiElement?, withDocComments: Boolean = true, suggestedFont: Int? = null, withOpenInBrowserLink: Boolean = true, backgroundColor: Color? = null, textColor: Color? = null, showNotification: Boolean = true): String? {
         val ref = element as? PsiReferable ?: (element as? ArendDocComment)?.owner
         ?: return if (element.isArendKeyword()) generateDocForKeywords(element) else null
+        val project = ref.project
 
         val font = suggestedFont ?:
             (UIManager.getDefaults().getFont("Label.font")
                 ?.size?.times(COEFFICIENT_HTML_FONT))?.roundToInt()
         val docCommentInfo = ArendDocCommentInfo(hasLatexCode = false, wasPrevRow = false,
             suggestedFont = font?.times(COEFFICIENT_LATEX_FONT)?.toFloat() ?: DEFAULT_FONT,
-            backgroundColor = backgroundColor)
-
+            backgroundColor = backgroundColor,
+            showNotification = showNotification)
+        project.service<ArendMessagesService>().view?.lastDocCorrectness = true
         val latexImagesDir = File(LATEX_IMAGES_DIR)
         if (latexImagesDir.exists()) latexImagesDir.deleteRecursively()
 

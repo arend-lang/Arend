@@ -18,7 +18,7 @@ import java.net.URL
 private const val CLOSING_TAG_HTML = "</li>"
 private const val OPENING_TAG_HTML = "<li class=\"row\">"
 
-internal data class ArendDocCommentInfo(var hasLatexCode: Boolean, var wasPrevRow: Boolean, var itemContextLastIndex: Int = -1, val suggestedFont: Float, val backgroundColor: Color? = null)
+internal data class ArendDocCommentInfo(var hasLatexCode: Boolean, var wasPrevRow: Boolean, var itemContextLastIndex: Int = -1, val suggestedFont: Float, val backgroundColor: Color? = null, val showNotification: Boolean = true)
 
 internal fun hasLatexCode(doc: PsiElement) = doc.childrenWithLeaves.any { it.elementType == DOC_LATEX_CODE }
 
@@ -80,7 +80,8 @@ private fun StringBuilder.processDocCommentElement(
                 docElement.textOffset,
                 docElements.getOrNull(index - 1).elementType == DOC_NEWLINE_LATEX_CODE,
                 docCommentInfo.suggestedFont,
-                docCommentInfo.backgroundColor
+                docCommentInfo.backgroundColor,
+                docCommentInfo.showNotification
             )
         )
         elementType == DOC_NEWLINE_LATEX_CODE -> {

@@ -3,6 +3,7 @@ package org.arend.documentation
 import com.intellij.notification.NotificationAction
 import com.intellij.notification.NotificationType
 import com.intellij.notification.SingletonNotificationManager
+import com.intellij.openapi.components.service
 import com.intellij.openapi.editor.colors.EditorColors
 import com.intellij.openapi.editor.colors.EditorColorsManager
 import com.intellij.openapi.fileEditor.FileEditorManager
@@ -11,6 +12,7 @@ import com.intellij.openapi.updateSettings.impl.pluginsAdvertisement.getPluginSu
 import com.intellij.util.ui.ImageUtil
 import org.arend.documentation.ArendDocumentationGenerator.COEFFICIENT_HTML_FONT
 import org.arend.documentation.ArendDocumentationGenerator.COEFFICIENT_LATEX_FONT
+import org.arend.toolWindow.errors.ArendMessagesService
 import org.arend.util.ArendBundle
 import org.scilab.forge.jlatexmath.ParseException
 import org.scilab.forge.jlatexmath.TeXConstants
@@ -27,7 +29,7 @@ internal var counterLatexImages = 0
 internal const val LATEX_IMAGES_DIR = "latex-images"
 internal const val FONT_DIFF_COEFFICIENT = COEFFICIENT_HTML_FONT * COEFFICIENT_LATEX_FONT
 
-internal fun getHtmlLatexCode(title: String, latexCode: String, project: Project, offset: Int, isNewlineLatexCode: Boolean, font: Float, backgroundColor: Color? = null): String {
+internal fun getHtmlLatexCode(title: String, latexCode: String, project: Project, offset: Int, isNewlineLatexCode: Boolean, font: Float, backgroundColor: Color?, showNotification: Boolean): String {
     try {
         val formula = TeXFormula(latexCode)
         val icon: TeXIcon = formula.TeXIconBuilder()
@@ -57,20 +59,24 @@ internal fun getHtmlLatexCode(title: String, latexCode: String, project: Project
                 "src=\"file:///${file.absolutePath}\" title=$title width=\"${icon.iconWidth}\" height=\"${icon.iconHeight}\">"
     } catch (e: Exception) {
         if (e is ParseException) {
-            val notificationManager = SingletonNotificationManager(getPluginSuggestionNotificationGroup().displayId, NotificationType.WARNING)
+            if (showNotification) {
+                val notificationManager = SingletonNotificationManager(getPluginSuggestionNotificationGroup().displayId, NotificationType.WARNING)
 
-            val notificationAction = NotificationAction.createSimpleExpiring(ArendBundle.message("arend.click.to.set.cursor.latex")) {
-                val fileEditorManager = FileEditorManager.getInstance(project)
-                val editor = fileEditorManager.selectedTextEditor ?: return@createSimpleExpiring
-                val caretModel = editor.caretModel
-                caretModel.moveToOffset(offset)
-            }
+                val notificationAction = NotificationAction.createSimpleExpiring(ArendBundle.message("arend.click.to.set.cursor.latex")) {
+                    val fileEditorManager = FileEditorManager.getInstance(project)
+                    val editor = fileEditorManager.selectedTextEditor ?: return@createSimpleExpiring
+                    val caretModel = editor.caretModel
+                    caretModel.moveToOffset(offset)
+                }
 
-            e.message?.let {
-                notificationManager.notify("LaTeX parsing warning", it, project) { notification ->
-                    notification.setSuggestionType(true).addAction(notificationAction)
+                e.message?.let {
+                    notificationManager.notify("LaTeX parsing warning", it, project) { notification ->
+                        notification.setSuggestionType(true).addAction(notificationAction)
+                    }
                 }
             }
+            project.service<ArendMessagesService>().view?.lastDocCorrectness = false
+            return "<span style=\"color: red;\">Incorrect latex formula</span>"
         } else {
             LOG.error(e)
         }
