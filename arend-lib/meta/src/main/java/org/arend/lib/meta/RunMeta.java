@@ -27,14 +27,20 @@ public class RunMeta extends BaseMetaDefinition implements MetaResolver {
     List<? extends ConcreteExpression> args = Utils.getArgumentList(contextData.getArguments().getFirst().getExpression());
     ConcreteFactory factory = contextData.getFactory();
     ConcreteExpression result = args.getLast();
-    for (int i = args.size() - 2; i >= 0; i--) {
-      ConcreteExpression arg = args.get(i);
-      if (arg instanceof ConcreteLetExpression let && let.getExpression() instanceof ConcreteIncompleteExpression) {
-        result = factory.letExpr(let.isHave(), let.isStrict(), let.getClauses(), result);
-      } else if (arg instanceof ConcreteLamExpression && ((ConcreteLamExpression) arg).getBody() instanceof ConcreteIncompleteExpression) {
-        result = factory.lam(((ConcreteLamExpression) arg).getParameters(), result);
-      } else {
-        result = factory.app(arg, true, Collections.singletonList(result));
+    for (int i = args.size() - 1; i >= 0; i--) {
+      if (i <= args.size() - 2) {
+        ConcreteExpression arg = args.get(i);
+        if (arg instanceof ConcreteLetExpression let && let.getExpression() instanceof ConcreteIncompleteExpression) {
+          result = factory.letExpr(let.isHave(), let.isStrict(), let.getClauses(), result);
+        } else if (arg instanceof ConcreteLamExpression && ((ConcreteLamExpression) arg).getBody() instanceof ConcreteIncompleteExpression) {
+          result = factory.lam(((ConcreteLamExpression) arg).getParameters(), result);
+        } else {
+          result = factory.app(arg, true, Collections.singletonList(result));
+        }
+      }
+      if (i > 0) {
+        ConcreteExpression later = factory.meta("later", new LaterMeta());
+        result = factory.app(later, true, Collections.singletonList(result));
       }
     }
     return result;

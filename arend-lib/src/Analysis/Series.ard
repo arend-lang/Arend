@@ -4,7 +4,9 @@
 \import Algebra.Monoid.MonoidHom
 \import Algebra.Ordered
 \import Algebra.Pointed
+\import Algebra.QModule
 \import Algebra.Ring
+\import Algebra.Ring.FormalSeries.Composition
 \import Algebra.Semiring
 \import Analysis.FuncLimit
 \import Arith.Int
@@ -29,6 +31,7 @@
 \import Analysis.Limit
 \import Set.Fin
 \import Set.Partial
+\import Topology.BanachAlgebra (BanachAlgebra, RealBanachAlgebra)
 \import Topology.CoverSpace
 \import Topology.CoverSpace.Complete
 \import Topology.MetricSpace
@@ -39,6 +42,7 @@
 \import Topology.TopAbGroup.Complete
 \import Topology.TopAbGroup.Product
 \import Topology.TopSpace
+\import Topology.TopSpace.Product
 \open Monoid
 
 \func Series (A : \Set) => Nat -> A
@@ -61,6 +65,16 @@
 \lemma partialSum_suc {A : AddMonoid} {S : Series A} {n : Nat} : partialSum S (suc n) = partialSum S n + S n
   => (\peval partialSum S (suc n)) *> A.BigSum_suc-nat {n} {S} *> pmap (`+ _) (inv \peval partialSum S n)
 
+-- | $\sum_{n<N} (-f_n) = -\sum_{n<N} f_n$.
+\lemma partialSum_negative {A : AbGroup} {f : Series A} {N : Nat}
+  : partialSum (\lam n => A.negative (f n)) N = A.negative (partialSum f N) \elim N
+  | 0 => partialSum-empty *> inv (pmap A.negative partialSum-empty *> A.negative_zro)
+  | suc N => partialSum_suc
+    *> pmap (`+ A.negative (f N)) partialSum_negative
+         *> inv AbGroup.negative_+-comm
+              *> pmap A.negative (inv partialSum_suc)
+
+
 \func IsConvSeries {A : TopAbGroup} (S : Series A) : \Prop
   => IsConvergent (partialSum S)
 
@@ -82,6 +96,28 @@
 
 \lemma seriesSum-char {A : CompleteTopAbGroup} {S : Series A} {l : A} : (seriesSum S = defined l) <-> IsSeriesSum S l
   => limit-char
+
+-- | Series sums add: $\sum f = a$ and $\sum g = b$ give $\sum (f + g) = a + b$.
+\lemma IsSeriesSum_+ {A : TopAbGroup} {f g : Series A} {a b : A}
+                     (fa : IsSeriesSum f a) (gb : IsSeriesSum g b)
+  : IsSeriesSum (\lam n => f n + g n) (a + b)
+  => transport (A.IsLimit __ (a + b))
+    (path (\lam i N => inv (partialSum_+ {A} {f} {g} {N}) @ i))
+    (cont2-limit fa gb +-cont)
+
+-- | Negation commutes with series sum: $\sum f = a$ gives $\sum (-f) = -a$.
+\lemma IsSeriesSum_negative {A : TopAbGroup} {f : Series A} {a : A}
+                            (fa : IsSeriesSum f a)
+  : IsSeriesSum (\lam n => A.negative (f n)) (A.negative a)
+  => transport (A.IsLimit __ (A.negative a))
+    (path (\lam i N => inv (partialSum_negative {A} {f} {N}) @ i))
+    (cont-limit fa negative-cont)
+
+-- | Series subtract: $\sum f = a$ and $\sum g = b$ give $\sum (f - g) = a - b$.
+\lemma IsSeriesSum_- {A : TopAbGroup} {f g : Series A} {a b : A}
+                     (fa : IsSeriesSum f a) (gb : IsSeriesSum g b)
+  : IsSeriesSum (\lam n => f n - g n) (a - b)
+  => IsSeriesSum_+ fa (IsSeriesSum_negative gb)
 
 \func midSum {A : AddMonoid} (S : Series A) (n m : Nat) : A \elim n, m
   | 0, m => partialSum S m
@@ -365,3 +401,50 @@
 \lemma partialSum-monotone {S : Series ExUpperReal} (S>=0 : \Pi (n : Nat) -> 0 <= S n) {n m : Nat} (p : n <= m)
   : partialSum S n <= partialSum S m
   => transport2 (<=) zro-right (inv (partialSum-split p)) $ <=_+ <=-refl (midSum>=0 S>=0)
+
+-- | `partialSum` distributes over pointwise addition.
+\lemma partialSum_+ {A : AbMonoid} {f g : Series A} {N : Nat}
+  : partialSum (\lam n => f n + g n) N = partialSum f N + partialSum g N
+  => (\peval partialSum (\lam n => f n + g n) N)
+     *> AbMonoid.BigSum_+
+     *> pmap2 (+) (inv (\peval partialSum f N)) (inv (\peval partialSum g N))
+
+-- | Finite majorant principle: $\|\sum_{k < N} S_k\| \leq \sum_{k < N} \|S_k\|$.
+\lemma partialSum_norm_<= {A : ExPseudoNormedAbGroup} {S : Series A} {N : Nat}
+  : A.norm (partialSum S N) ExUpperRealAbMonoid.<= partialSum (\lam k => A.norm (S k)) N \elim N
+  | 0 => transport2 (<=) (inv (pmap A.norm partialSum-empty *> A.norm_zro)) (inv partialSum-empty) <=-refl
+  | suc N' => rewrite (partialSum_suc {A} {S} {N'}, partialSum_suc {ExUpperRealAbMonoid} {\lam k => A.norm (S k)} {N'})
+                      (A.norm_+ <=∘ <=_+ partialSum_norm_<= <=-refl)
+
+
+-- | The "point mass" at index $0$: $(A.\mathrm{ide}, 0, 0, \ldots)$. Sums to $A.\mathrm{ide}$.
+\func kronecker-delta0 {A : RealBanachAlgebra} (k : Nat) : A \elim k
+  | 0 => ide
+  | suc _ => zro
+
+\lemma kronecker-delta0-seriesSum {A : RealBanachAlgebra} : IsSeriesSum (kronecker-delta0 {A}) ide
+  => transport (\lam y => IsSeriesSum (kronecker-delta0 {A}) y) zro-right
+    (seriesSum-fin 1 (\lam {j} le => \case \elim j, \elim le \with {
+      | 0, le => absurd (NatSemiring.<-irreflexive (NatOrder.zero<suc NatSemiring.<∘l le))
+      | suc _, _ => idp
+    }))
+
+-- | The identity of FormalSubstMonoid sums to $x$ — only the $k=1$ term contributes: $1_A \cdot x = x$
+\lemma subst-ide-seriesSum {A : RealBanachAlgebra} (x : A)
+  : IsSeriesSum (\lam k => A.fromRat (subst-ide {RatField} k) A.* Monoid.pow x k) x
+  => transport (\lam y => IsSeriesSum _ y) reduce-sum (seriesSum-fin 2 vanish-from-2)
+  \where {
+    \private \lemma vanish-from-2 {A : RealBanachAlgebra} {x : A} {j : Nat} (le : 2 NatSemiring.<= j)
+      : A.fromRat (subst-ide {RatField} j) A.* Monoid.pow x j = A.zro
+    \elim j, le
+      | 0, le => absurd (NatSemiring.<-irreflexive (NatOrder.zero<suc NatSemiring.<∘l le))
+      | 1, le => absurd (NatSemiring.<-irreflexive (NatOrder.suc<suc NatOrder.zero<suc NatSemiring.<∘l le))
+      | suc (suc j'), _ =>
+        pmap (A.`* Monoid.pow x (suc (suc j'))) (BanachAlgebra.fromRat_zro {A}) *> A.zro_*-left
+
+    \private \lemma reduce-sum {A : BanachAlgebra} {x : A}
+      : A.BigSum (\new Array A 2 (\lam (k : Fin 2) => A.fromRat (subst-ide {RatField} k) A.* Monoid.pow x k)) = x
+      => pmap2 (A.+) (pmap (A.`* Monoid.pow x 0) (BanachAlgebra.fromRat_zro {A}) *> A.zro_*-left)
+        (A.zro-right *> pmap (A.`* Monoid.pow x 1) (QModule.ide_*q {A}) *> A.ide-left *> A.ide-left)
+        *> A.zro-left
+  }

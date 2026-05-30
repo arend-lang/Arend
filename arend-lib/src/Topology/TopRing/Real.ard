@@ -6,6 +6,7 @@
 \import Logic
 \import Topology.MetricSpace
 \import Topology.NormedAbGroup.Real
+\import Topology.TopModule
 \import Topology.TopRing
 
 \instance RealNearField : NearField Real
@@ -20,3 +21,10 @@
         | byRight p => inP (x + RealField.half eps, RealField.pos#0 p, h $ real_<_U.1 $ RealAbGroup.abs_-_< linarith linarith)
       }
   }
+
+{- | Real as a Hausdorff TopLModule over itself: bundles `RingTopLModule
+     RealNearField` (the canonical "ring as module over itself" structure)
+     with the Hausdorff property inherited from `RealNormed`. -}
+\instance RealAsHTLModule : HausdorffTopLModule RealNearField
+  | TopLModule => RingTopLModule RealNearField
+  | isSeparatedCoverSpace => RealNormed.isSeparatedCoverSpace

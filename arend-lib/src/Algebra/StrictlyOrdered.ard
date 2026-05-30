@@ -224,6 +224,14 @@
     | 1, NatOrder.suc<suc ()
     | 2, _ => transport2 (__ * a < __) (inv ide-left) ide-right $ <_*_positive-right a>0 a<1
     | suc (suc (suc k)), _ => transport (_ <) ide-right (<_*_positive-right (pow>0 a>0 {suc (suc k)}) a<1) <∘ pow<id a>0 a<1 {suc (suc k)} (NatOrder.suc<suc NatOrder.zero<suc)
+
+  \lemma pow<ide {a : E} (a>0 : 0 < a) (a<1 : a < 1) {k : Nat} : pow a (suc k) < ide \elim k
+    | 0 => rewrite ide-left a<1
+    | suc k => (rewrite ide-left in <_*_positive-left (pow<ide a>0 a<1 {k}) a>0) <∘ a<1
+
+  \lemma pow_<-degree {a : E} (a>0 : 0 < a) (a<1 : a < 1) {n k : Nat} (n<k : n NatOrder.< k) : pow a k < pow a n
+    => rewrite (inv (<=_exists (suc_<_<= n<k)), Monoid.pow_+) (rewrite (inv *-assoc, ide-right) in
+      <_*_positive-right {_} {_} {pow a (suc (k -' suc n))} {ide} (OrderedSemiring.pow>0 a>0 {n}) (OrderedSemiring.pow<ide a>0 a<1))
 }
 
 \class LinearlyOrderedSemiring \extends OrderedSemiring, LinearlyOrderedAbMonoid, PosetSemiring {

@@ -4,6 +4,7 @@
 \import Algebra.Monoid
 \import Algebra.Ordered
 \import Algebra.Pointed
+\import Algebra.QModule
 \import Algebra.Ring
 \import Algebra.Ring.Reduced
 \import Algebra.Semiring
@@ -35,6 +36,7 @@
 \import Topology.NormedAbGroup
 \import Topology.NormedAbGroup.Real
 \import Topology.NormedRing
+\import Topology.StoneCStarAlgebra()
 \open Monoid (pow)
 \open AddMonoid (*n)
 \open LatticeAbGroup
@@ -129,3 +131,9 @@
       : n *n (\new Complex (RatField.finv n RealField.*c a.re) (RatField.finv n RealField.*c a.im)) = a
       => ext (Re.func-*n *> real-div-cancel n/=0, Im.func-*n *> real-div-cancel n/=0)
   }
+
+\lemma fromRat-eq-fromReal-fromRat (r : Rat) : ComplexBanach.fromRat r = Complex.fromReal (Real.fromRat r)
+  => pmap (r QModule.*q) (inv (idp : Complex.fromReal 1 = (1 : Complex)))
+    *> inv (func-*q {_} {_} {fromRealMap} {r} {1})
+         *> pmap Complex.fromReal (RealStoneC*Algebra_fromRat r)
+  \where \open Topology.StoneCStarAlgebra(RealStoneC*Algebra, RealStoneC*Algebra_fromRat)

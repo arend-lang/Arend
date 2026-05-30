@@ -1,0 +1,55 @@
+\import Algebra.Monoid
+\import Algebra.Solver
+\import Algebra.Solver.Semigroup
+\import Arith.Fin.Order
+\import Data.Fin
+\import Data.List
+\import Logic
+\import Paths
+\import Paths.Meta
+\open SemigroupSolverModel (Term, interpret, interpretNE, normalize, normalize-consistent)
+\open Sort
+
+-- | Reflective solver model for commutative semigroups. The normal form is the
+--   (non-empty) multiset of variables; `interpretNF` interprets the sorted list,
+--   which is permutation-invariant by `*-comm`/`*-assoc` — no identity needed.
+\func CSemigroupSolverModel (S : CSemigroup) : SolverModel S \cowith
+  | Term => Term
+  | NF n => \Sigma (Fin n) (List (Fin n))
+  | normalize t => normalize t
+  | interpret => interpret
+  | interpretNF env nf => interpHead env (interpretNE env nf.1 nf.2) (RedBlack.sort (nf.1 :: nf.2))
+  | interpretNF-consistent {n} {env} {t} => sort-consistent *> normalize-consistent
+  \where {
+    -- | Interpret a list as a non-empty word; `fallback` is returned on `nil` (never reached here).
+    \func interpHead {n : Nat} {S : CSemigroup} (env : Fin n -> S) (fallback : S) (l : List (Fin n)) : S \elim l
+      | nil => fallback
+      | x :: l => interpretNE env x l
+
+    -- | Transpose the first two elements of a non-empty word.
+    \lemma swap-head {n : Nat} {S : CSemigroup} {env : Fin n -> S} {x y : Fin n} {l : List (Fin n)}
+      : interpretNE env x (y :: l) = interpretNE env y (x :: l) \elim l
+      | nil => *-comm
+      | z :: l => inv *-assoc *> pmap (`* interpretNE env z l) *-comm *> *-assoc
+
+    -- | The interpretation of a non-empty word is invariant under permutations.
+    \lemma interpretNE-perm {n : Nat} {S : CSemigroup} {env : Fin n -> S} {x : Fin n} {l : List (Fin n)} {y : Fin n} {m : List (Fin n)}
+      (p : Perm (x :: l) (y :: m)) : interpretNE env x l = interpretNE env y m \elim l, m, p
+      | nil, nil, perm-:: idp q => idp
+      | a :: l, b :: m, perm-:: idp q => pmap (env x *) (interpretNE-perm q)
+      | nil, b :: m, perm-:: idp q => \case Perm.perm_length q \with {}
+      | a :: l, nil, perm-:: idp q => \case Perm.perm_length q \with {}
+      | a :: l, b :: m, perm-swap idp idp idp => swap-head
+      | l, m, perm-trans {nil} p1 p2 => \case Perm.perm_length p1 \with {}
+      | l, m, perm-trans {z :: w} p1 p2 => interpretNE-perm p1 *> interpretNE-perm p2
+
+    \lemma sort-consistent {n : Nat} {S : CSemigroup} {env : Fin n -> S} {x : Fin n} {l : List (Fin n)}
+      : interpHead env (interpretNE env x l) (RedBlack.sort (x :: l)) = interpretNE env x l
+      => aux (transport (Perm (x :: l)) (inv (RedBlack.sort=insert (x :: l))) (Insertion.sort-perm (x :: l)))
+      \where {
+        \lemma aux {n : Nat} {S : CSemigroup} {env : Fin n -> S} {x : Fin n} {l : List (Fin n)} {srt : List (Fin n)}
+          (p : Perm (x :: l) srt) : interpHead env (interpretNE env x l) srt = interpretNE env x l \elim srt, p
+          | nil, p => \case Perm.perm_length p \with {}
+          | y :: m, p => inv (interpretNE-perm p)
+      }
+  }

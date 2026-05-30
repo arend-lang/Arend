@@ -86,6 +86,12 @@
     | 0 => zro_*-right *> inv negative-right
     | suc n => pmap (_ *) (AddMonoid.BigSum_suc-nat {_} {n} {pow x}) *> ldistr *> pmap2 (+) geometric-partial-sum rdistr *> +-assoc *> pmap (_ +) (inv +-assoc *> pmap (_ +) negative_*-left *> pmap (`+ _) (pmap (_ +) ide-left *> negative-left) *> zro-left *> pmap negative pow-left)
 
+  \lemma geometric-like-partial-sum {k n : Nat} {x : E} :
+    (1 - x) * AddMonoid.BigSum (\new Array E n (\lam j => pow x (j Nat.+ k))) = pow x k - pow x (n Nat.+ k) =>
+    \let A0 : (\lam (j : Fin n) => pow x (j Nat.+ k)) = (\lam j => pow x j * pow x k) => ext (\lam j => Monoid.pow_+) \in
+      rewrite A0 (rewriteI (Semiring.BigSum-rdistr {\this} {\new Array E n (\lam j => pow x j)} {pow x k}, *-assoc)
+        (rewrite Ring.geometric-partial-sum (rewrite (rdistr, ide-left, PseudoRing.negative_*-left, inv Monoid.pow_+) idp)))
+
   \func IsNilpotent (x : E) => ∃ (n : Nat) (pow x n = 0)
 
   \lemma pow_-1_+2 {n : Nat} : pow -1 (n Nat.+ 2) = pow -1 n
@@ -94,6 +100,11 @@
   \lemma pow_-1_even {n : Nat} : pow -1 (n Nat.* 2) = 1 \elim n
     | 0 => idp
     | suc n => negative_ide-right *> pmap negative negative_ide-right *> negative-isInv *> pow_-1_even
+
+  -- | $(-1)^{2k+1} = -1$ in any ring.
+  \lemma pow_-1_odd {R : Ring} (k : Nat)
+    : Monoid.pow {R} (R.negative R.ide) (2 Nat.* k Nat.+ 1) = R.negative R.ide =>
+    rewrite (NatSemiring.*-comm {2} {k}, pow_-1_even {R}, R.ide-left) idp
 
   \lemma pow_-1_mod2 {n : Nat} : pow -1 n = pow -1 (n Nat.mod 2)
     => pmap (pow -1) (inv (Nat.divModProp n 2)) *> pow_+ *> pmap (`* _) (pow_* *> pmap (pow __ _) (*-assoc *> ide-left *> negative_* *> ide-left) *> pow_ide) *> ide-left

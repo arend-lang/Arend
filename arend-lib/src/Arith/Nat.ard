@@ -267,14 +267,16 @@
   | suc n, 0 => <=-refl
   | suc n, suc m => -'<=id <=∘ <=_+ <=-refl (zero<=_ {1})
 
-\func -'_suc {n m : Nat} (p : m <= n) : suc n -' m = suc (n -' m) \elim n, m
-  | 0, 0 => idp
-  | 0, suc m => \case suc_<=_< p
-  | suc n, 0 => idp
-  | suc n, suc m => -'_suc (suc<=suc.conv p)
-
 \lemma sucn_-'n=1 {n : Nat} : suc n -' n = 1
   => -'_suc <=-refl *> pmap suc -'id
+
+\lemma -'<id {n m : Nat} : n -' m < suc n => suc_<=_< (suc<=suc -'<=id)
+
+\func -'_suc {n m : Nat} (_ : m <= n) : suc n -' m = suc (n -' m)
+  | {0}, {0}, _ => idp
+  | {suc n}, {0}, _ => idp
+  | {0}, {suc m}, A0 => \case suc_<=_< A0
+  | {suc n}, {suc m}, A0 => -'_suc (suc<=suc.conv A0)
 
 \func -'_inv {k m : Nat} (A0 : m <= k) : k -' (k -' m) = m \elim k, m
   | 0, 0 => idp
@@ -475,3 +477,12 @@
 
 \lemma mod_+-cong-right {n c a b : Nat} (p : a mod suc n = b mod suc n) : (a + c) mod suc n = (b + c) mod suc n
   => inv mod_+-left *> pmap ((__ + c) mod suc n) p *> mod_+-left
+
+-- | Every $n$ is $2k$ or $2k+1$.
+\func nat-parity (n : Nat)
+  : Or (\Sigma (k : Nat) (n = 2 Nat.* k)) (\Sigma (k : Nat) (n = 2 Nat.* k Nat.+ 1)) \elim n
+  | 0 => inl (0, idp)
+  | suc n' => \case nat-parity n' \with {
+    | inl (k, p) => inr (k, pmap suc p)
+    | inr (k, p) => inl (suc k, pmap suc p)
+  }

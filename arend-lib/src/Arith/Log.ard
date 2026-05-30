@@ -1,0 +1,400 @@
+\import Algebra.Field
+\import Algebra.Group
+\import Algebra.Meta
+\import Algebra.Monoid
+\import Algebra.Monoid.MonoidHom
+\import Algebra.QModule
+\import Algebra.Ring.FormalSeries
+\import Algebra.Ring.FormalSeries.Composition
+\import Algebra.Ring.FormalSeries.Derivative
+\import Algebra.StrictlyOrdered
+\import Analysis.SeriesComposition
+\import Data.Or
+\import Arith.Exp
+\import Arith.Exp.Real
+\import Arith.Log.Real
+\import Order.StrictOrder
+\import Topology.StoneCStarAlgebra
+\import Algebra.Pointed
+\import Algebra.Semiring
+\import Analysis.CauchyProduct
+\import Analysis.Limit
+\import Analysis.PowerSeries
+\import Analysis.RatAnalytic
+\import Analysis.Series
+\import Topology.CoverSpace.Subspace
+\import Arith.Int
+\import Arith.Nat
+\import Arith.Rat
+\import Arith.Real
+\import Arith.Real.Field
+\import Arith.Real.UpperReal
+\import Function.Meta
+\import Logic
+\import Meta
+\import Order.Biordered
+\import Order.LinearOrder
+\import Order.PartialOrder
+\import Paths
+\import Paths.Meta
+\import Set.Partial
+\import Topology.BanachAlgebra
+\import Topology.NormedAbGroup
+\import Topology.NormedAbGroup.Real
+\import Topology.NormedRing
+\open Monoid (pow)
+\open BanachAlgebra(fromRat_zro)
+
+-- | Rational Taylor coefficients of $\log(1 + w) = \sum_{n \geq 1} \frac{(-1)^{n - 1}}{n} w^n$.
+\func log1p-coef (n : Nat) : Rat \elim n
+  | 0 => 0
+  | suc n' => pow (RatField.negative 1) n' RatField.* RatField.finv (Rat.fromInt (pos (suc n')))
+
+-- | $\vert c_n \vert_{\mathbb Q} \leq 1$ for every $n$, where $c_n =$ `log1p-coef n`.
+--   For $n = 0$, $c_0 = 0$. For $n = m + 1$, $\vert c_n\vert = \vert(-1)^m\vert \cdot \vert 1/(m+1)\vert
+--   = 1 \cdot 1/(m+1) \leq 1/1 = 1$.
+\lemma log1p-coef-abs-<=1 (n : Nat) : RatField.abs (log1p-coef n) RatField.<= 1 \elim n
+  | 0 => rewrite RatField.abs_zro linarith
+  | suc n' =>
+    \have | n+1>0 : (0 : Rat) RatField.< Rat.fromInt (pos (suc n'))
+              => fromInt_< (pos<pos NatOrder.zero<suc)
+          | abs-eq : RatField.abs (log1p-coef (suc n')) = RatField.finv (Rat.fromInt (pos (suc n')))
+              => RatField.abs_*
+                 *> pmap2 (RatField.*)
+                      (RatField.abs_pow *> pmap (\lam x => Monoid.pow x n') (RatField.abs_negative {RatField.ide} *> RatField.abs_ide) *> RatField.pow_ide)
+                      (RatField.abs-ofPos (RatField.finv>=0 (RatField.<=-less n+1>0)))
+                 *> RatField.ide-left
+    \in transportInv (\lam (q : Rat) => q RatField.<= 1) abs-eq $
+        RatField.finv_<= RatField.zro<ide (fromInt_<= (pos<=pos (suc<=suc zero<=_)))
+          RatField.<=∘ =_<= {RatField} RatField.finv_ide
+
+-- | Kernel bound shared by `log1p-series-absConv` and `log1p-conv-at-s`:
+--   $\Vert \varphi(c_n)\Vert \cdot t^n \leq t^n$, because $\Vert \varphi(c_n)\Vert \leq 1$.
+\private \lemma log1p-coef-pow-bound {A : RealBanachAlgebra} (n : Nat) {t : ExUpperReal}
+  : A.norm (A.fromRat (log1p-coef n)) ExUpperRealSemigroup.* ExUpperRealSemigroup.pow t n
+    ExUpperRealAbMonoid.<= ExUpperRealSemigroup.pow t n
+  => ExUpperRealSemigroup.<=_*
+       (A.norm_fromRat ExUpperRealAbMonoid.<=∘ ExUpperReal.<=-rat.1 (log1p-coef-abs-<=1 n))
+       ExUpperRealAbMonoid.<=-refl
+     ExUpperRealAbMonoid.<=∘ =_<= (ExUpperRealSemigroup.ide-left ExUpperRealSemigroup.pow_>=0)
+
+-- | `RatAnalytic` view of `log(1 + ·)`: rational coefficients `(−1)^{n−1}/n`,
+--   finite radius `1`. Carries the full `BoundedDiskRatAnalytic` API
+--   (continuity, absolute convergence via `abs-conv`, series-sum via
+--   `func-IsSeriesSum`, `disk-partialSum-cover`, ...) by inheritance —
+--   `log1+` below is a thin wrapper around its `func` field.
+\func log1+-asRA {A : RealBanachAlgebra} : BoundedDiskRatAnalytic A \cowith
+  | coef-Rat => log1p-coef
+  | radius => 1
+  | ps-conv a>=0 a<1 => log1p-conv-at-s a>=0 (ExUpperRealAbMonoid.<-rat.1 a<1)
+  | radius-pos => inP (ratio 1 2, linarith, \lam one<b => linarith)
+
+-- | $\log(1 + w) := \sum_{n \geq 1} \frac{(-1)^{n - 1}}{n} w^n$ for
+--   $\vert w \vert_A < 1$, in any real Banach algebra $A$. Defined as
+--   `log1+-asRA` applied (via its `CoverMap` action) to the disk-element
+--   `(w, |w|<1)`.
+\func log1+ {A : RealBanachAlgebra} (w : A) (|w|<1 : (A.norm w).U 1) : A
+  => log1+-asRA (w, ExUpperRealAbMonoid.<-rat.2 |w|<1)
+\where {
+  -- | $D \log(1 + w) = \tfrac{1}{1 + w}$ at the coefficient level: $(n + 1) \cdot \frac{(-1)^n}{n + 1} = (-1)^n$.
+  \lemma deriv-coef-Rat (n : Nat)
+    : deriv {RatField} log1p-coef n = alt_pm {RatField} n
+    => run {
+      unfold deriv,
+      rewrite {2} (*-comm {RatField}),
+      rewriteI (*-assoc {RatField}),
+      rewrite (finv-right {RatField} {natCoef (suc n)} (natRat/=0 suc/=0)),
+      ide-left
+    }
+
+  -- | $\log(1 + \cdot)$ as a formal line diffeomorphism.
+  \func asFld : FormalLineDiffeomorphism { | R => RatField } \cowith
+    | f => log1p-coef
+    | f_0 => idp
+    | f1-inv => \new Monoid.Inv {RatField} (log1p-coef 1) 1 {
+      | inv-left  => pmap (`* 1) (ide-left *> RatField.finv_ide) *> ide-left
+      | inv-right => pmap (1 *) (ide-left *> RatField.finv_ide) *> ide-right
+    }
+}
+
+-- ============================================================================
+-- Faà di Bruno ODE machinery for the formal identity (exp − 1) ∘ log(1+·) = w.
+-- ============================================================================
+
+-- | $f_k := [w^k] (\exp \circ \log(1 + \cdot))$ over $\mathbb Q$.
+\private \func exp-log1p-coef-Rat (k : Nat) : Rat
+  => compose-coeff {RatField} exp.coef-Rat log1p-coef k
+
+-- | $f_0 = 1$.
+\private \lemma exp-log1p-coef-Rat_0 : exp-log1p-coef-Rat 0 = 1
+  => pmap (\lam (q : Rat) => q RatField.* 1 RatField.+ 0) RatField.finv_ide
+     *> RatField.ide-left *> RatField.zro-right
+
+-- | The tail $\sum_{i = 2}^{n + 2} f_i \cdot (-1)^{n + 2 - i}$ vanishes by IH: every term has factor $f_i = 0$.
+\private \lemma exp-log1p-step-tail-zero (n' : Nat)
+                                         (IH : \Pi (j : Nat) -> 2 NatSemiring.<= j -> j NatSemiring.<= suc (suc n') -> exp-log1p-coef-Rat j = 0)
+  : AddMonoid.BigSum (\new Array Rat (suc n') (exp-log1p-tail-term n')) = 0
+  => AddMonoid.BigSum_zro {RatField}
+    {\new Array Rat (suc n') (exp-log1p-tail-term n')}
+    (\lam (j : Fin (suc n')) =>
+      pmap (RatField.`* alt_pm {RatField} (suc (suc n') -' suc (suc j)))
+        (IH (suc (suc j)) (suc<=suc (suc<=suc zero<=_))
+          (suc<=suc (suc<=suc (<_suc_<= (fin_< j)))))
+        *> RatField.zro_*-left)
+  \where {
+    \private \func exp-log1p-tail-term (n' : Nat) (i : Fin (suc n')) : Rat
+      => exp-log1p-coef-Rat (suc (suc i)) RatField.* alt_pm {RatField} (suc (suc n') -' suc (suc i))
+  }
+
+{- | The ODE $D f = f \star \tfrac{1}{1 + w}$ (i.e. $D f_k = \sum_{j = 0}^k f_j \cdot (-1)^{k - j}$).
+     From the chain rule $D(\exp \circ \log) = (D \exp \circ \log) \cdot D \log = (\exp \circ \log) \cdot \tfrac{1}{1 + w}$. -}
+\private \lemma expLog1p-coef-Rat-ODE (k : Nat)
+  : deriv {RatField} exp-log1p-coef-Rat k = conv {RatField} exp-log1p-coef-Rat (alt_pm {RatField}) k
+  => unfold exp-log1p-coef-Rat $
+  deriv-compose {RatField} exp.coef-Rat log1p-coef idp k
+    *> rewrite (ext exp.deriv-coef-Rat : deriv {RatField} exp.coef-Rat = exp.coef-Rat,
+                ext log1+.deriv-coef-Rat : deriv {RatField} log1p-coef = alt_pm {RatField}) idp
+
+{- | Inductive step: given $f_j = 0$ for $2 \leq j \leq n + 2$, conclude $f_{n+3} = 0$.
+     The ODE at $k = n + 2$ gives $(n + 3) f_{n + 3} = \sum_{j = 0}^{n + 2} f_j (-1)^{n + 2 - j}$;
+     substituting $f_0 = f_1 = 1$, $f_j = 0$ for $j \geq 2$ leaves $(-1)^{n + 2} + (-1)^{n + 1} = 0$. -}
+\private \lemma exp-log1p-step (n' : Nat)
+                               (IH : \Pi (j : Nat) -> 2 NatSemiring.<= j -> j NatSemiring.<= suc (suc n') -> exp-log1p-coef-Rat j = 0)
+  : exp-log1p-coef-Rat (suc (suc (suc n'))) = 0
+  => \have
+      | ode => expLog1p-coef-Rat-ODE (suc (suc n'))
+      | unfold-conv => conv-at-BigSum exp-log1p-coef-Rat (alt_pm {RatField}) (suc (suc n'))
+      | collapse {a b G G' T : Rat} (g0 : a = 1) (g1 : b = 1)
+                 (gp : G = RatField.negative G') (tz : T = 0)
+                 : a RatField.* G RatField.+ (b RatField.* G' RatField.+ T) = 0
+                 => rewrite (g0, g1, gp, tz) equation.cRing
+     \in RatField.nonZero-left (natRat/=0 suc/=0) $
+           ode *> unfold-conv
+               *> collapse exp-log1p-coef-Rat_0 exp-log1p-coef-Rat_1
+                           (alt_pm-suc {RatField} (suc n'))
+                           (exp-log1p-step-tail-zero n' IH)
+
+\private \lemma exp-log1p-coef-Rat_1 : exp-log1p-coef-Rat 1 = 1
+  => unfold exp-log1p-coef-Rat $ unfold compose-coeff $
+  pmap2 (\lam (a b : Rat) => ((exp.coef-Rat 0) RatField.* a) RatField.+ (((exp.coef-Rat 1) RatField.* b) RatField.+ 0))
+    (pow-conv-zero-pos {RatField} {log1p-coef} NatSemiring.zro<ide)
+    (fseries-apply (ide-left {FSeriesRing RatField} {log1p-coef}))
+
+\private \lemma exp-log1p-coef-Rat_2 : exp-log1p-coef-Rat 2 = 0
+  => RatField.nonZero-left (natRat/=0 suc/=0)
+    (expLog1p-coef-Rat-ODE 1
+      *> conv-at-BigSum exp-log1p-coef-Rat (alt_pm {RatField}) 1
+           *> pmap2 (\lam (a b : Rat) => a RatField.* alt_pm {RatField} 1 RatField.+ (b RatField.* alt_pm {RatField} 0 RatField.+ 0))
+                exp-log1p-coef-Rat_0 exp-log1p-coef-Rat_1)
+
+-- ============================================================================
+-- The substitution-group identities: (exp − 1) ∘ log(1+·) = w  and  log(1+·) ∘ (exp − 1) = w.
+-- ============================================================================
+
+-- | The composition $(\exp - 1) \circ \log(1 + \cdot) = w$ as a formal series identity over $\mathbb Q$.
+\private \lemma compose-coeff-expm1-log1p (k : Nat)
+  : compose-coeff {RatField} exp-1.coef-Rat log1p-coef k = subst-ide {RatField} k
+  \elim k
+  | 0 => pmap (RatField.`+ 0) (RatField.zro_*-left {RatField.ide})
+         *> RatField.zro-right
+  | 1 => compose-coeff-expm1-eq-exp-pos 1 NatOrder.zero<suc
+         *> exp-log1p-coef-Rat_1
+  | suc (suc k') => compose-coeff-expm1-eq-exp-pos (suc (suc k')) NatOrder.zero<suc
+                    *> exp-log1p-tail=0 k' (suc (suc k'))
+                         (suc<=suc (suc<=suc zero<=_)) NatSemiring.<=-refl \where {
+
+  {- | The composition coefficient identity at index $k$: for $k > 0$,
+  the $n=0$ term of `compose-coeff` vanishes because $(\log(1+w))^0_k = [k = 0]$ is zero. -}
+  \private \lemma compose-coeff-expm1-eq-exp-pos (k : Nat) (k>0 : 0 NatSemiring.< k)
+    : compose-coeff {RatField} exp-1.coef-Rat log1p-coef k
+      = compose-coeff {RatField} exp.coef-Rat log1p-coef k
+    => RatField.BigSum-ext {suc k}
+      {\new Array Rat (suc k) (\lam n => (exp-1.coef-Rat n) RatField.* (pow {FSeriesRing RatField} log1p-coef n k))}
+      {\new Array Rat (suc k) (\lam n => (exp.coef-Rat n) RatField.* (pow {FSeriesRing RatField} log1p-coef n k))}
+      (\lam (n : Fin (suc k)) => \case \elim n \with {
+        | 0 => RatField.zro_*-left {pow {FSeriesRing RatField} log1p-coef 0 k}
+          *> inv (pmap ((exp.coef-Rat 0) RatField.*)
+          (pow-conv-zero-pos {RatField} {log1p-coef} k>0)
+          *> RatField.zro_*-right {exp.coef-Rat 0})
+        | suc n' => idp
+      })
+
+  \private \lemma exp-log1p-tail=0 (n : Nat)
+    : \Pi (j : Nat) -> 2 NatSemiring.<= j -> j NatSemiring.<= suc (suc n) -> exp-log1p-coef-Rat j = 0
+  \elim n
+    | 0 => \lam j j>=2 j<=2 => rewrite (NatSemiring.<=-antisymmetric j<=2 j>=2 : j = 2) exp-log1p-coef-Rat_2
+    | suc n' => \lam j j>=2 j<=topp =>
+      \case NatSemiring.trichotomy j (suc (suc n')) \with {
+        | less j<top => exp-log1p-tail=0 n' j j>=2 ((<_suc_<= j<top) NatSemiring.<=∘ id<=suc)
+        | equals j-eq => rewrite j-eq (exp-log1p-tail=0 n' (suc (suc n')) (suc<=suc (suc<=suc zero<=_)) NatSemiring.<=-refl)
+        | greater j>top =>
+          rewrite (NatSemiring.<=-antisymmetric j<=topp (suc_<_<= j>top) : j = suc (suc (suc n')))
+            (exp-log1p-step n' (exp-log1p-tail=0 n'))
+      }
+}
+
+-- | $\log(1 + \cdot) \circ (\exp - 1) = w$, derived via uniqueness of inverses in the substitution group.
+\private \lemma compose-coeff-log1p-expm1 (k : Nat)
+  : compose-coeff {RatField} log1p-coef exp-1.coef-Rat k = subst-ide {RatField} k
+  => \let | G : Group => FormalLineDiffeomorphismGroup RatField
+          | log1p-eq-inverse : log1+.asFld = G.inverse exp-1.asFld =>
+              G.cancel_*-left exp-1.asFld
+                (exts (\lam k => compose-coeff-expm1-log1p k) *> inv G.inverse-right)
+          | log1p-times-expM1-eq-ide : G.* log1+.asFld exp-1.asFld = G.ide =>
+              pmap (\lam (s : FormalLineDiffeomorphism { | R => RatField }) => G.* s exp-1.asFld) log1p-eq-inverse
+              *> G.inverse-left
+     \in pmap (\lam (s : FormalLineDiffeomorphism { | R => RatField }) => s.f k) log1p-times-expM1-eq-ide
+
+-- ============================================================================
+-- Analytic lifting to a Banach algebra, via compose-converges-{abs,radius}.
+-- ============================================================================
+
+-- | $\exp(\log(1 + w)) = 1 + w$ for $\vert w \vert_A < 1$ in any commutative real Banach algebra.
+\lemma exp-log1p {A : RealBanachAlgebra} (a-comm : \Pi (y z : A) -> y A.* z = z A.* y) (w : A) (|w|<1 : (A.norm w).U 1)
+  : exp (log1+ w |w|<1) = A.ide A.+ w
+  => \let | B : A => log1+ w |w|<1
+          | compose-result : IsSeriesSum
+              (\lam k => compose-coeff (\lam n => A.fromRat (exp-1.coef-Rat n))
+                                       (\lam n => A.fromRat (log1p-coef n)) k A.* Monoid.pow w k)
+              (exp B - A.ide)
+              => compose-converges-abs a-comm fromRat_zro exp-1.ps-conv
+                   (log1+-asRA.abs-conv (ExUpperRealAbMonoid.<-rat.2 |w|<1))
+                   (log1+-asRA.func-IsSeriesSum (ExUpperRealAbMonoid.<-rat.2 |w|<1))
+                   (exp-1.seriesSum B)
+          | coeff-id : (\lam k => compose-coeff (\lam n => A.fromRat (exp-1.coef-Rat n))
+                                                (\lam n => A.fromRat (log1p-coef n)) k A.* Monoid.pow w k)
+                     = (\lam k => A.fromRat (subst-ide {RatField} k) A.* Monoid.pow w k)
+              => path (\lam i k => coeff-eq-helper-expm1-log1p k @ i A.* Monoid.pow w k)
+          | subst-ide-sum => subst-ide-seriesSum w
+          | minus-eq : exp B - A.ide = w
+              => A.limit-unique (transport (\lam S => IsSeriesSum S _) coeff-id compose-result) subst-ide-sum
+     \in inv A.zro-right
+         *> pmap (exp B A.+) (inv A.negative-left)
+         *> inv A.+-assoc
+         *> pmap (\lam (x : A) => x A.+ A.ide) minus-eq
+         *> A.+-comm \where {
+
+    \private \lemma coeff-eq-helper-expm1-log1p {A : RealBanachAlgebra} (k : Nat)
+  : compose-coeff (\lam n => A.fromRat (exp-1.coef-Rat n)) (\lam n => A.fromRat (log1p-coef n)) k
+        = A.fromRat (subst-ide {RatField} k)
+      => run {
+      `*> pmap A.fromRat (compose-coeff-expm1-log1p k),
+      \have A0 => fromRat-BigSum {A} (suc k) (\lam n => (exp-1.coef-Rat n) RatField.* (pow-conv log1p-coef n k)),
+      later $ rewrite A0,
+      AddMonoid.BigSum-ext {A} {suc k}
+        {\new Array A (suc k) (\lam n => A.fromRat (exp-1.coef-Rat n) A.* pow-conv (\lam m => A.fromRat (log1p-coef m)) n k)}
+        {\new Array A (suc k) (\lam n => A.fromRat ((exp-1.coef-Rat n) RatField.* (pow-conv log1p-coef n k)))},
+        \lam i,
+        rewriteI A.fromRat_*,
+        rewrite fromRat-pow-conv,
+        idp
+    }
+  }
+
+-- | $\log(1 + (\exp w - 1)) = w$ whenever $\|w\| < \log 2$ in a commutative `RealBanachAlgebra`.
+\lemma log1p-expm1 {A : RealBanachAlgebra}
+                   (a-comm : \Pi (y z : A) -> y A.* z = z A.* y) {w : A} (w-small : A.norm w ExUpperRealAbMonoid.< log2)
+  : log1+ (exp w - A.ide) (exp-w-bound w-small) = w
+  => \case w-small \with {
+    | inP (q1, wU1, q1<=log2) =>
+      \case ExUpperReal.U-rounded {A.norm w} wU1 \with {
+        | inP (q, wU, q<q1) =>
+          log1p-expm1-radius a-comm (r>=0-derived q wU)
+            (log1p-conv-at-s (r>=0-derived q wU) (r-U-1-derived q<q1 q1<=log2))
+            (w-bound-derived q wU) (exp-w-bound w-small)
+      }
+  }
+  \where {
+    \private \lemma coeff-eq-helper {A : RealBanachAlgebra} (k : Nat)
+      : compose-coeff (\lam n => A.fromRat (log1p-coef n)) (\lam n => A.fromRat (exp-1.coef-Rat n)) k =
+      A.fromRat (subst-ide {RatField} k)
+      => \have lifted : compose-coeff (\lam n => A.fromRat (log1p-coef n))
+        (\lam n => A.fromRat (exp-1.coef-Rat n)) k
+        = A.fromRat (compose-coeff {RatField} log1p-coef exp-1.coef-Rat k)
+      => compose-coeff-fromRat log1p-coef exp-1.coef-Rat k
+         \in lifted *> pmap A.fromRat (compose-coeff-log1p-expm1 k)
+
+    \private \lemma log1p-expm1-radius
+      {A : RealBanachAlgebra} (a-comm : \Pi (y z : A) -> y A.* z = z A.* y)
+      {w : A} {r : ExUpperReal} (r>=0 : 0 <= r)
+      (a-conv-at-r : IsConvUpperSeries (\lam n => A.norm (A.fromRat (log1p-coef n)) * ExUpperRealSemigroup.pow r n))
+      (b-bound-r : \Pi (N : Nat) -> partialSum (\lam k => A.norm (powerSeries (\lam n => A.fromRat (exp-1.coef-Rat n)) k w)) N ExUpperRealAbMonoid.<= r)
+      (|exp-w-minus-ide|<1 : (A.norm (exp w - A.ide)).U 1)
+      : log1+ (exp w - A.ide) |exp-w-minus-ide|<1 = w
+      => \let | log1p-sum => log1+-asRA.func-IsSeriesSum (ExUpperRealAbMonoid.<-rat.2 |exp-w-minus-ide|<1)
+              | compose-result : IsSeriesSum
+                (\lam k => compose-coeff (\lam n => A.fromRat (log1p-coef n))
+                  (\lam n => A.fromRat (exp-1.coef-Rat n)) k A.* Monoid.pow w k)
+                (log1+ (exp w - A.ide) |exp-w-minus-ide|<1)
+              => compose-converges-radius a-comm fromRat_zro r>=0 a-conv-at-r
+                  exp-1.abs-conv b-bound-r (exp-1.seriesSum w) log1p-sum
+              | coeff-id : (\lam k => compose-coeff (\lam n => A.fromRat (log1p-coef n))
+                (\lam n => A.fromRat (exp-1.coef-Rat n)) k A.* Monoid.pow w k)
+                = (\lam k => A.fromRat (subst-ide {RatField} k) A.* Monoid.pow w k)
+              => path (\lam i k => (coeff-eq-helper {A} k @ i) A.* Monoid.pow w k)
+              | subst-ide-sum => subst-ide-seriesSum w
+         \in A.limit-unique (transport (\lam S => IsSeriesSum S _) coeff-id compose-result) subst-ide-sum
+
+    \private \lemma q>=0-from {A : RealBanachAlgebra} {w : A} {q : Rat} (wU : (A.norm w).U q) : (0 : Rat) RatField.<= q
+      => RatField.<=-less (norm>=0 wU)
+
+    \private \lemma r>=0-derived {A : RealBanachAlgebra} {w : A} (q : Rat) (wU : (A.norm w).U q)
+      : ExUpperRealAbMonoid.zro ExUpperRealAbMonoid.<= ((exp {RealStoneC*Algebra} (Real.fromRat q) - 1 : Real) : ExUpperReal)
+      => \have | r-real-nn : (0 : Real) <= exp {RealStoneC*Algebra} (Real.fromRat q) - 1
+      => linarith (Real-exp->=1-of-nonneg (rat_real_<=.1 (q>=0-from wU)) : (1 : Real) <= exp {RealStoneC*Algebra} (Real.fromRat q))
+         \in Real.<=-upper.1 r-real-nn
+
+    \private \lemma r-U-1-derived {q q1 : Rat}
+                                  (q<q1 : q RatField.< q1) (q1<=log2 : ExUpperReal.fromRat q1 ExUpperRealAbMonoid.<= log2)
+      : ((exp {RealStoneC*Algebra} (Real.fromRat q) - 1 : Real) : ExUpperReal).U 1
+      => \have | q1<=log2-Real : Real.fromRat q1 RealAbGroup.<= log2
+      => <=_U-char.2 (\lam {a} log2-U-a => q1<=log2 log2-U-a)
+               | q<log2 : Real.fromRat q < log2 => rat_real_<.1 q<q1 <∘l q1<=log2-Real
+               | exp-q<2 : exp {RealStoneC*Algebra} (Real.fromRat q) < Real.fromRat 2
+               => transport (exp {RealStoneC*Algebra} (Real.fromRat q) <) log2.exp-log2 (Real-exp-strict-mono q<log2)
+         \in real_<_U.1 linarith
+
+    \private \lemma w-bound-derived {A : RealBanachAlgebra} {w : A} (q : Rat) (wU : (A.norm w).U q) (N : Nat)
+      : partialSum (\lam k => A.norm (powerSeries (\lam n => A.fromRat (exp-1.coef-Rat n)) k w)) N
+      ExUpperRealAbMonoid.<= ((exp {RealStoneC*Algebra} (Real.fromRat q) - 1 : Real) : ExUpperReal)
+      => \let
+        | q>=0 : (0 : Rat) RatField.<= q => q>=0-from wU
+        | t-rat (k : Nat) : Rat => (exp-1.coef-Rat k) RatField.* (RatField.pow q k)
+        | t-real (k : Nat) : Real => Real.fromRat (exp-1.coef-Rat k) RealField.* RealField.pow (Real.fromRat q) k
+        | t-real>=0 (k : Nat) : (0 : Real) <= t-real k
+        => RealField.<=_*_positive_positive (rat_real_<=.1 (exp-1.coef>=0 k))
+            (RealField.pow>=0 (rat_real_<=.1 q>=0))
+        | iss : IsSeriesSum t-real (exp {RealStoneC*Algebra} (Real.fromRat q) - 1)
+        => transport (\lam (f : Nat -> Real) => IsSeriesSum f (exp {RealStoneC*Algebra} (Real.fromRat q) - 1))
+              (ext (\lam k => pmap (\lam (x : Real) => x RealField.* RealField.pow (Real.fromRat q) k)
+                (RealStoneC*Algebra_fromRat (exp-1.coef-Rat k))))
+            (exp-1.seriesSum {RealStoneC*Algebra} (Real.fromRat q))
+        | rat-real-hom : AddMonoidHom RatField RealAbGroup Real.fromRat => \new AddMonoidHom {
+          | func-zro => idp
+          | func-+ => inv RealAbGroup.+-rat
+        }
+        | term-eq (k : Nat) : Real.fromRat (t-rat k) = t-real k
+        => inv RealField.*-rat *> pmap (Real.fromRat (exp-1.coef-Rat k) RealField.*) (inv RealField.pow-rat)
+        | partial-eq-Real : Real.fromRat (partialSum t-rat N) = partialSum t-real N
+        => partialSum_hom rat-real-hom *> pmap (\lam (f : Nat -> Real) => partialSum f N) (ext term-eq)
+        | final-real-bound : Real.fromRat (partialSum t-rat N) <= exp {RealStoneC*Algebra} (Real.fromRat q) - 1
+        => transport (`<= _) (inv partial-eq-Real) (partialSum_<=_seriesSum t-real>=0 iss N)
+        \in partialSum_<= (\lam k => exp-1.term-bound q q>=0 wU k)
+        ExUpperRealAbMonoid.<=∘ =_<= (inv (partialSum_hom rat-upperReal))
+        ExUpperRealAbMonoid.<=∘ Real.<=-upper.1 final-real-bound
+
+    \private \lemma exp-w-bound {A : RealBanachAlgebra} {w : A}
+                                (w-small : A.norm w ExUpperRealAbMonoid.< log2) : (A.norm (exp w - A.ide)).U 1
+      => \case w-small \with {
+        | inP (q1, wU1, q1<=log2) => \case ExUpperReal.U-rounded {A.norm w} wU1 \with {
+          | inP (q, wU, q<q1) =>
+            seriesSum_norm_<= (exp-1.seriesSum w) (w-bound-derived q wU)
+              (r-U-1-derived q<q1 q1<=log2)
+        }
+      }
+  }
+
+\private \lemma log1p-conv-at-s {A : RealBanachAlgebra} {s : ExUpperReal}
+                       (s>=0 : 0 ExUpperRealAbMonoid.<= s) (s<1 : s.U 1)
+  : IsConvUpperSeries (\lam n => A.norm (A.fromRat (log1p-coef n)) * ExUpperRealSemigroup.pow s n)
+  => series_<= (\lam n => log1p-coef-pow-bound n) (geometric-upper-series-conv s>=0 s<1)

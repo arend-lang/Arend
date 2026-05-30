@@ -8,7 +8,7 @@
 \import Arith.Exp
 \import Arith.Real
 \import Arith.Real.Field
-\import Arith.Trig
+\import Arith.Trig.Real
 \import Paths
 \import Paths.Meta
 \open Complex \using (iunit \as i)

@@ -1,0 +1,396 @@
+\import Algebra.Group
+\import Algebra.Meta
+\import Algebra.Monoid
+\import Algebra.Ordered
+\import Algebra.Ring
+\import Algebra.Ring.FormalSeries.Derivative
+\import Algebra.Semiring
+\import Algebra.StrictlyOrdered
+\import Order.Biordered
+\import Order.Lattice
+\import Analysis.CauchyProduct
+\import Analysis.FuncLimit
+\import Analysis.Limit
+\import Analysis.PowerSeries
+\import Analysis.Series
+\import Arith.Int
+\import Arith.Nat
+\import Arith.Rat
+\import Arith.Real.UpperReal
+\import Arith.Real.UpperRealLattice
+\import Data.Array
+\import Function.Meta
+\import Logic
+\import Logic.Meta
+\import Meta
+\import Order.PartialOrder
+\import Order.StrictOrder
+\import Paths
+\import Paths.Meta
+\import Set
+\import Set.SetHom
+\import Set.Subset
+\import Topology.BanachAlgebra
+\import Topology.CoverSpace
+\import Topology.CoverSpace.Complete
+\import Topology.CoverSpace.Directed
+\import Topology.CoverSpace.Product
+\import Topology.CoverSpace.Subspace
+\import Topology.MetricSpace
+\import Topology.NormedAbGroup
+\import Topology.NormedRing
+\import Topology.RatherBelow
+\import Topology.TopSpace
+\open Monoid (pow)
+
+{- | The open disk $\{x \in A \mid \|x\| < r\}$ is open in $A$ for any
+     radius $r \in \overline{\mathbb R}_{\ge 0}^{+\infty}$. -}
+\lemma disk-open-aux {A : RealBanachAlgebra} {r : ExUpperReal}
+  : A.isOpen (\lam x => A.norm x ExUpperRealAbMonoid.< r)
+  => (dist_open {A} {\lam x => A.norm x ExUpperRealAbMonoid.< r}).2
+     \lam {x} (h : A.norm x ExUpperRealAbMonoid.< r) => \case h \with {
+       | inP (q, |x|<q, q<=r) => \case U-rounded |x|<q \with {
+         | inP (q', |x|<q', q'<q) => inP (q - q', linarith,
+           \lam {y} dxy<q-q' => inP (q,
+             ExUpperReal.U_<=
+               (ExUpperReal.<=_+-char
+                 (transport (A.norm y ExUpperRealAbMonoid.<=) (pmap (A.norm x ExUpperReal.+) A.dist-symm) (norm_dist-right {A} {y} {x}))
+                 |x|<q' dxy<q-q')
+               linarith,
+             q<=r))
+       }
+     }
+
+{- | The inclusion $\{y \in A \mid \|y\| < r\} \hookrightarrow A$ as a
+     `CoverMap`. Top-level analogue of the in-record `disk-incl`,
+     parameterised by an arbitrary `ExUpperReal` radius $r$. -}
+\func disk-incl-aux {A : RealBanachAlgebra} {r : ExUpperReal}
+  : CoverMap (OpenCompleteCoverSpace (disk-open-aux {A} {r})) A \cowith
+  | PrecoverMap => OpenCoverSpace.func A (disk-open-aux {A} {r})
+
+{- | Each partial sum $S_N(y) = \sum_{k < N} \mathrm{fromRat}(c_k) \cdot y^k$
+     is jointly continuous in $y$, viewed as a `CoverMap` from the open
+     sub-disk of radius $r$ to $A$. -}
+\lemma disk-partialSum-cover-aux {A : RealBanachAlgebra} {coefs : Nat -> Rat} {r : ExUpperReal} (n : Nat)
+  : CoverMap (OpenCompleteCoverSpace (disk-open-aux {A} {r})) A
+      (\lam s => partialSum (powerSeries (\lam k => A.fromRat (coefs k)) __ s.1) n)
+  => partialSum-cover {_} {A}
+       (\lam j => *-locally-uniform CoverMap.∘ ProductCoverSpace.tuple
+                    (CoverMap.const (A.fromRat (coefs j)))
+                    (pow-cover j CoverMap.∘ disk-incl-aux))
+       n
+
+{- | Weierstrass M-test on the open sub-disk
+     $V_q := \{y \in A \mid \|y\| < q\}$ for rational $q \ge 0$: given a
+     convergent upper-real bound
+     $\sum_n \|\mathrm{fromRat}(c_n)\| \cdot q^n < \infty$, the partial-sum
+     family $S_N$ is uniformly convergent (function-convergent) on $V_q$. -}
+\lemma funcConv-on-subDisk {A : RealBanachAlgebra} {coefs : Nat -> Rat}
+                            {q : Rat} (q>=0 : (0 : Rat) RatField.<= q)
+                            (conv : IsConvUpperSeries
+                                      (\lam n => A.norm (A.fromRat (coefs n))
+                                               ExUpperReal.* ExUpperRealSemigroup.pow (q : ExUpperReal) n))
+  : IsFuncConvergent
+      {_} {OpenCompleteCoverSpace (disk-open-aux {A} {(q : ExUpperReal)})} {A}
+      (\lam n s => partialSum (powerSeries (\lam k => A.fromRat (coefs k)) __ s.1) n)
+  => funcCovergent-metric-char
+       (\lam n => disk-partialSum-cover-aux {A} {coefs} {(q : ExUpperReal)} n)
+       \lam {eps} eps>0 => top-cauchy
+           {OpenCompleteCoverSpace (disk-open-aux {A} {(q : ExUpperReal)})}
+         \case MTest {\Sigma (x : A) ((A.norm x).U q)}
+                 (\lam n s => powerSeries (\lam k => A.fromRat (coefs k)) n s.1)
+                 (\lam n => A.norm (A.fromRat (coefs n)) ExUpperReal.* ExUpperRealSemigroup.pow (q : ExUpperReal) n)
+                 (\lam n s => norm_*_<= ExUpperRealAbMonoid.<=∘
+                              ExUpperRealSemigroup.<=_* ExUpperRealAbMonoid.<=-refl
+                                (norm_<=_pow ExUpperRealAbMonoid.<=∘ ExUpperRealSemigroup.pow_<= (ExUpperReal.<_<= s.2)))
+                 conv
+                 (A.metricUniform $ RatField.half>0 eps>0)
+         \with {
+           | inP (N, h) => inP $ later
+              (N, \lam {s} _ {n} N<=n =>
+                  \case h (s.1, ExUpperRealAbMonoid.<-rat.1 s.2) \with {
+                    | inP (_, inP (z, idp), g) => A.halving1/2 (g N<=n) (g <=-refl)
+                  })
+         }
+
+-- | Termwise Weierstrass bound (top-level so the `func`/`func-cont` field defaults can use it; cf. arend-quirks §20 — they can't call the in-record `abs-conv`).
+\lemma abs-conv-aux {A : RealBanachAlgebra} {coefs : Nat -> Rat} {radius : ExUpperReal}
+    (pc : \Pi {a : ExUpperReal} -> ExUpperRealAbMonoid.zro ExUpperRealAbMonoid.<= a -> a ExUpperRealAbMonoid.< radius
+          -> IsConvUpperSeries (\lam n => A.norm (A.fromRat (coefs n)) ExUpperReal.* ExUpperRealSemigroup.pow a n))
+    {x : A} (h : A.norm x ExUpperRealAbMonoid.< radius)
+  : IsAbsConvSeries (powerSeries (\lam n => A.fromRat (coefs n)) __ x)
+  => series_<= (\lam n => norm_*_<= ExUpperRealAbMonoid.<=∘ ExUpperRealSemigroup.<=_* ExUpperRealAbMonoid.<=-refl norm_<=_pow) (pc norm>=0 h)
+
+{- | An analytic function $f : \mathrm{disk} \to A$ on a finite open disk
+     $\mathrm{disk} = \{x \in A \mid \|x\| < \mathrm{radius}\}$ of a real
+     Banach algebra $A$. The function is given as the pointwise sum of a
+     power series $\sum_{n \ge 0} c_n \cdot x^n$ with rational coefficients
+     $c_n \in \mathbb Q$. -}
+\record BoundedDiskRatAnalytic (A : RealBanachAlgebra) \extends ContMap {
+  \override Dom : CoverSpace
+  \override Cod : CoverSpace
+
+  {- | Taylor coefficients $c_n \in \mathbb Q$. -}
+  | coef-Rat : Nat -> Rat
+
+  {- | Radius of guaranteed convergence: $f$ is defined wherever
+       $\|x\| < \mathrm{radius}$. -}
+  | radius : ExUpperReal
+
+  {- | Norm-series convergence: the upper-real series
+       $\sum_n \|\mathrm{fromRat}(c_n)\| \cdot a^n$ converges for every
+       $a \in [0, \mathrm{radius})$. -}
+  | ps-conv {a : ExUpperReal} : ExUpperRealAbMonoid.zro ExUpperRealAbMonoid.<= a
+            -> a ExUpperRealAbMonoid.< radius
+            -> IsConvUpperSeries (\lam n => A.norm (A.fromRat (coef-Rat n)) ExUpperReal.* ExUpperRealSemigroup.pow a n)
+
+  {- | Strict positivity: $0 < \mathrm{radius}$. -}
+  | radius-pos : ExUpperRealAbMonoid.zro ExUpperRealAbMonoid.< radius
+
+  | Dom => OpenCompleteCoverSpace (disk-open-aux {A} {radius})
+  | Cod => A
+  | func s => seriesSum (powerSeries (\lam n => A.fromRat (coef-Rat n)) __ s.1)
+                        (absConv-isConv (abs-conv-aux ps-conv s.2))
+
+  {- | Continuity of the analytic function on the disk. -}
+  | func-cont {U} Uo => (OpenCompleteCoverSpace (disk-open-aux {A} {radius})).open-char.2
+    \lam {s} Ufs => \case (s.2 : A.norm s.1 ExUpperRealAbMonoid.< radius) \with {
+      | inP (p, ns-U-p, p<=r) => \case U-rounded ns-U-p \with {
+        | inP (p', ns-U-p', p'<p) =>
+          \let | q : Rat => (p' RatField.+ p) RatField.* ratio 1 2
+               | ns-U-q : (A.norm s.1).U q => ExUpperReal.U_<= ns-U-p' (RatField.<=-less linarith)
+               | q>=0 : (0 : Rat) RatField.<= q => RatField.<=-less (norm>=0 ns-U-q)
+               | dq => disk-open-aux {A} {(q : ExUpperReal)}
+               | Vq => OpenCompleteCoverSpace dq
+               | g : CoverMap Vq A
+               => funcLimit
+                   {_} {Vq} {A}
+                   (\lam n s' => partialSum (powerSeries (\lam k => A.fromRat (coef-Rat k)) __ s'.1) n)
+                   (funcConv-on-subDisk {A} {coef-Rat} {q} q>=0 (ps-conv (ExUpperReal.<=-rat.1 q>=0) (inP (p, linarith, p<=r))))
+               | x' : Set.Total {A} (\lam x => A.norm x ExUpperRealAbMonoid.< (q : ExUpperReal)) => (s.1, ExUpperRealAbMonoid.<-rat.2 ns-U-q)
+               | x'<=<Ug : single x' <=< {Vq} (\lam y => U (g y))
+               => (Vq).open-char.1 (g.func-cont Uo) {x'}
+                   (transportInv U (A.limit-unique limit-isLimit (seriesConv-sum (absConv-isConv (abs-conv-aux ps-conv s.2)))) Ufs)
+          \in RatherBelow.<=<-left (<=<-cont {OpenCompleteCoverSpace (disk-open-aux {A} {radius})} {A} {disk-incl-aux {A} {radius}}
+            (OpenCoverSpace.<=<-conv A dq x'<=<Ug)) \lam {s'} (h, Ug-y) =>
+            transport U (A.limit-unique limit-isLimit (seriesConv-sum (absConv-isConv (abs-conv-aux ps-conv s'.2)))) Ug-y
+      }
+    }
+
+  {- | Pointwise absolute convergence of the lifted Taylor series at any
+       $x$ with $\|x\| < \mathrm{radius}$. -}
+  \lemma abs-conv {x : A} (h : A.norm x ExUpperRealAbMonoid.< radius)
+    : IsAbsConvSeries (powerSeries (\lam n => A.fromRat (coef-Rat n)) __ x)
+    => abs-conv-aux ps-conv h
+
+  {- | Pointwise series convergence at any $x$ with $\|x\| < \mathrm{radius}$. -}
+  \lemma func-IsConvSeries {x : A} (h : A.norm x ExUpperRealAbMonoid.< radius)
+    : IsConvSeries (powerSeries (\lam n => A.fromRat (coef-Rat n)) __ x)
+    => absConv-isConv (abs-conv h)
+
+  {- | The Taylor series at $x$ converges to $f(x, h) =$ `func (x, h)`. -}
+  \lemma func-IsSeriesSum {x : A} (h : A.norm x ExUpperRealAbMonoid.< radius)
+    : IsSeriesSum (powerSeries (\lam n => A.fromRat (coef-Rat n)) __ x) (func (x, h))
+    => seriesConv-sum (func-IsConvSeries h)
+
+  {- | The open disk $\{x \in A \mid \|x\| < \mathrm{radius}\}$ is open in $A$. -}
+  \lemma disk-open : A.isOpen (\lam x => A.norm x ExUpperRealAbMonoid.< radius)
+    => disk-open-aux {A} {radius}
+
+  {- | The open disk of convergence as a `CompleteCoverSpace`. -}
+  \func DiskCS : CompleteCoverSpace (Set.Total {A} (\lam x => A.norm x ExUpperRealAbMonoid.< radius))
+    => OpenCompleteCoverSpace disk-open
+
+  {- | The inclusion $\mathrm{disk} \hookrightarrow A$ as a `CoverMap`. -}
+  \func disk-incl : CoverMap DiskCS A \cowith
+    | PrecoverMap => OpenCoverSpace.func A disk-open
+
+  {- | Each partial sum is a `CoverMap` on the disk. -}
+  \lemma disk-partialSum-cover (n : Nat)
+    : CoverMap DiskCS A
+        (\lam s => partialSum (powerSeries (\lam k => A.fromRat (coef-Rat k)) __ s.1) n)
+    => partialSum-cover {DiskCS} {A}
+         (\lam j => *-locally-uniform CoverMap.∘ ProductCoverSpace.tuple
+                      (CoverMap.const (A.fromRat (coef-Rat j)))
+                      (pow-cover j CoverMap.∘ disk-incl))
+         n
+}
+
+{- | Globally-convergent analytic function: $f : A \to A$ as a `CoverMap`
+     for entire functions (`exp`, `exp − 1`, $\ldots$). Defined as a
+     standalone record (does not extend `BoundedDiskRatAnalytic`) because
+     its domain is the whole space $A$ rather than a Total-disk-pair, and
+     its CoverMap structure comes from `powerSeriesConv-funcConv` directly
+     — no disk-subspace machinery. -}
+\record RatAnalyticGlobal (A : RealBanachAlgebra) \extends CoverMap {
+  \override Dom : CoverSpace
+  \override Cod : CoverSpace
+
+  {- | Taylor coefficients $c_n \in \mathbb Q$. -}
+  | coef-Rat : Nat -> Rat
+
+  {- | Power-series convergence of $\sum_n \mathrm{fromRat}(c_n) \cdot x^n$
+       at every rational point. -}
+  | pc : IsPowerSeriesConv (\lam n => A.fromRat (coef-Rat n))
+
+  | Dom => A
+  | Cod => A
+  | func x => limit {_} {A}
+                (\lam n => partialSum (powerSeries (\lam k => A.fromRat (coef-Rat k)) __ x) n)
+                (funcConv-pointwise {_} {A} {A}
+                   (\lam n x => partialSum (powerSeries (\lam k => A.fromRat (coef-Rat k)) __ x) n)
+                   (powerSeriesConv-funcConv pc) {x})
+  | func-cover => CoverMap.func-cover {funcLimit
+                    {_} {A} {A}
+                    (\lam n x => partialSum (powerSeries (\lam k => A.fromRat (coef-Rat k)) __ x) n)
+                    (powerSeriesConv-funcConv pc)}
+}
+
+-- ============================================================================
+-- Formal derivative of a BoundedDiskRatAnalytic, with the same radius.
+-- ============================================================================
+
+{- | Rat-level: $(n+1) \cdot r^n \leq \sum_{k=0}^{n} r^k$ for $0 \leq r \leq 1$.
+     Each of the $n+1$ replicas of $r^n$ is dominated termwise by $r^k$ for
+     $k \leq n$ (since `pow_<=-degree` gives monotonicity in the exponent
+     for a base $\leq 1$); summing gives the partial-sum bound. -}
+\private \lemma suc-pow-leq-partialSum-Rat {r : Rat}
+    (r>=0 : (0 : Rat) RatField.<= r) (r<=1 : r RatField.<= 1) (n : Nat)
+  : RatField.natCoef (suc n) RatField.* RatField.pow r n
+    RatField.<= partialSum {RatField} (\lam k => RatField.pow r k) (suc n)
+  => \have
+    | const-arr : Array Rat (suc n) => \new Array Rat (suc n) (\lam _ => RatField.pow r n)
+    | pow-arr   : Array Rat (suc n) => \new Array Rat (suc n) (\lam k => RatField.pow r k)
+    | const-sum-eq : RatField.BigSum const-arr = RatField.natCoef (suc n) RatField.* RatField.pow r n
+        => RatField.BigSum_replicate {RatField.pow r n} {suc n}
+    | bigsum-leq : RatField.BigSum const-arr RatField.<= RatField.BigSum pow-arr
+        => PosetAddMonoid.BigSum_<= {RatField} {suc n} {const-arr} {pow-arr}
+             (\lam (j : Fin (suc n)) =>
+                RatField.pow_<=-degree r>=0 r<=1 (<_suc_<= (fin_< j)))
+    | partial-eq : partialSum {RatField} (\lam k => RatField.pow r k) (suc n) = RatField.BigSum pow-arr
+        => \peval partialSum (\lam k => RatField.pow r k) (suc n)
+     \in transport2 (RatField.<=) const-sum-eq (inv partial-eq) bigsum-leq
+
+{- | $(n+1) \cdot r^n$ is uniformly $\mathrm{.U}$-bounded for $0 \leq r < 1$.
+     Lift the Rat-level bound to ExUpperReal and combine with
+     `partialSum-uniform-bound` on the convergent geometric series. -}
+\private \lemma suc-pow-bounded {r : Rat}
+    (r>=0 : (0 : Rat) RatField.<= r) (r<1 : r RatField.< 1)
+  : IsBoundedUpperSeries (\lam n => fromRat (RatField.natCoef (suc n)) * pow r n)
+  => \have
+    | r<=1 : r RatField.<= 1 => RatField.<=-less r<1
+    | (inP (B, hB)) : ∃ (B : Rat) ∀ (m : Nat) ((partialSum (\lam k => fromRat (RatField.pow r k)) m).U B)
+        => partialSum-uniform-bound
+             (\lam k => <=-rat.1 (RatField.pow>=0 r>=0))
+             (inP (2, \lam k => RatField.pow_<=-degree r>=0 r<=1 (zero<=_ {k}) RatField.<∘r (linarith : (1 : Rat) RatField.< 2)))
+             (transport IsConvUpperSeries (path (\lam i k => rat-pow {r} r>=0 {k} @ i))
+                        (geometric-upper-series-conv {fromRat r} (<=-rat.1 r>=0) r<1))
+    \in inP (B, \lam n =>
+        \have | lhs-leq : fromRat (RatField.natCoef (suc n)) * pow r n
+                          <= partialSum (\lam k => fromRat (RatField.pow r k)) (suc n)
+                  => rewrite (pmap (fromRat (RatField.natCoef (suc n)) *) (rat-pow r>=0)
+                              *> *-rat (RatField.<=-less (RatField.natCoef>0 NatOrder.zero<suc)) (RatField.pow>=0 r>=0),
+                              inv (partialSum_hom rat-upperReal))
+                       (<=-rat.1 (suc-pow-leq-partialSum-Rat r>=0 r<=1 n))
+         \in lhs-leq (hB (suc n)))
+  \where {
+    \open ExUpperRealSemigroup
+    \open ExUpperReal (fromRat, *-rat, <=-rat)
+  }
+
+{- | Formal derivative of `f` as a `BoundedDiskRatAnalytic`. The derivative
+     coefficients are $(n+1) \cdot c_{n+1}$ over $\mathbb Q$ (via the formal
+     `deriv {RatField}`), and the radius is preserved: at any $a \in [0, r)$
+     we bound the term `(n+1) · \|fromRat(c_{n+1})\| · pow a n` by
+     `[bounded sequence] · \|fromRat(c_{n+1})\| · pow b (suc n)` for some
+     rational `b ∈ (a, r)`, then apply `series_*-bounded` ∘
+     `upperSeries-shift-conv`. -}
+\func derivRA {A : RealBanachAlgebra} (f : BoundedDiskRatAnalytic A) : BoundedDiskRatAnalytic A \cowith
+  | coef-Rat n => deriv {RatField} f.coef-Rat n
+  | radius => f.radius
+  | radius-pos => f.radius-pos
+  | ps-conv {a} a>=0 a<r => \case a<r \with {
+    | inP (q, aUq, fromRatQ<=radius) =>
+      \case ExUpperReal.U-rounded {a} aUq \with {
+        | inP (q', aUq', q'<q) =>
+          \case ExUpperReal.U-rounded {a} aUq' \with {
+            | inP (q'', aUq'', q''<q') =>
+              \let | b1>=0 => RatField.<=-less (a>=0 aUq'')
+                   | b2>0  => a>=0 aUq'
+              \in series_<= (\lam n => deriv-term-bound n q'' q' b1>=0 b2>0 aUq'')
+                    (series_*-bounded (\lam _ => *_>=0)
+                       (bounded-times-const
+                          (suc-pow-bounded (RatField.<=_*_positive_positive b1>=0 (RatField.<=-less (RatField.finv>0 b2>0)))
+                                           (RatField.<_*_positive-left q''<q' (RatField.finv>0 b2>0) RatField.<∘l =_<= {RatField} (RatField.finv-right (RatField.>_/= b2>0))))
+                          (RatField.finv q') (RatField.finv>0 b2>0))
+                       ((upperSeries-shift-conv {_} (\lam _ => *_>=0)).1
+                          (f.ps-conv (<=-rat.1 (RatField.<=-less b2>0)) (inP (q, q'<q, fromRatQ<=radius)))))
+          }
+      }
+  }
+\where {
+  \open ExUpperRealSemigroup
+  \open ExUpperReal (fromRat, *-rat, <=-rat, <_<=)
+
+  {- | `IsBoundedUpperSeries`'s closure under multiplication by a positive
+       Rat constant. Witness construction: lift `B` to `B ∨ 1 > 0` to give
+       it a strict upper-cut, then bound the product by `(B ∨ 1)·(c+1)+1`. -}
+  \private \lemma bounded-times-const {S : Series ExUpperReal} (Sb : IsBoundedUpperSeries S)
+                                       (c : Rat) (c>0 : (0 : Rat) RatField.< c)
+    : IsBoundedUpperSeries (\lam n => S n * fromRat c)
+    => \case Sb \with {
+      | inP (B, hB) =>
+        \let | Bpos : Rat   => B ∨ 1
+             | Bpos>0 : (0 : Rat) < Bpos
+                 => zro<ide <∘l JoinSemilattice.join-right {RatField}
+             | B' : Rat     => Bpos * (c + 1) + 1
+        \in inP (B', \lam n => ExUpperReal.*_U.2 (inP
+          (Bpos, ExUpperReal.U_<= (hB n) (JoinSemilattice.join-left {RatField}), Bpos>0,
+           c + 1,
+           (linarith : c < c + 1),
+           (linarith : (0 : Rat) < c + 1),
+           (linarith : Bpos * (c + 1) < B'))))
+    }
+
+  {- | Pointwise bound for the derivative term, feeding `series_<=` after the
+       `series_*-bounded ∘ upperSeries-shift-conv` chain produces a convergent
+       dominant. The derivation:
+
+       1. `norm (fromRat (deriv c n)) = (n+1) · norm (fromRat (c (suc n)))`
+          (an equality, via `*q-assoc` + `norm_*q-ofPos`).
+       2. `pow a n ≤ pow b1 n` since `a.U b1` ⇒ `a ≤ fromRat b1`, then
+          `scalar-eq`: `pow b1 n = pow (b1·finv b2) n · finv b2 · (pow b2 n · b2)`
+          (because `finv b2 · b2 = 1`, lifted from `Rat` via `rat-pow` / `*-rat`).
+       3. `<=_*` combines, and `equation.cSemigroup` re-associates the
+          commutative product into the goal shape. -}
+  \private \lemma deriv-term-bound {A : RealBanachAlgebra} {f : BoundedDiskRatAnalytic A} {a : ExUpperReal}
+      (n : Nat) (b1 b2 : Rat)
+      (b1>=0 : (0 : Rat) <= b1) (b2>0 : (0 : Rat) RatField.< b2)
+      (aUb1 : a.U b1)
+    : A.norm (A.fromRat (deriv {RatField} f.coef-Rat n)) * pow a n <=
+    ((fromRat (RatField.natCoef (suc n)) * pow (b1 RatField.* RatField.finv b2) n) * fromRat (RatField.finv b2))
+      * (A.norm (A.fromRat (f.coef-Rat (suc n))) * pow (fromRat b2) (suc n))
+    => \have
+      | b2/=0 => RatField.>_/= b2>0
+      | b2>=0 : (0 : Rat) <= b2 => RatField.<=-less b2>0
+      | finvb2>=0 : (0 : Rat) <= RatField.finv b2 => RatField.<=-less (RatField.finv>0 b2>0)
+      | ratio>=0 : (0 : Rat) <= b1 RatField.* RatField.finv b2 => RatField.<=_*_positive_positive b1>=0 finvb2>=0
+      | scalar-eq : pow (fromRat b1) n
+                  = (pow (fromRat (b1 RatField.* RatField.finv b2)) n * fromRat (RatField.finv b2))
+                    * (pow (fromRat b2) n * fromRat b2)
+          => rewrite (rat-pow b1>=0, rat-pow ratio>=0, rat-pow b2>=0,
+                      *-rat (RatField.pow>=0 ratio>=0) finvb2>=0,
+                      *-rat (RatField.pow>=0 b2>=0) b2>=0,
+                      *-rat (PosetSemiring.<=_*_positive_positive (RatField.pow>=0 ratio>=0) finvb2>=0)
+                            (PosetSemiring.<=_*_positive_positive (RatField.pow>=0 b2>=0) b2>=0))
+               (pmap fromRat (inv (equation.cRing
+                     *> pmap ((RatField.pow (b1 RatField.* RatField.finv b2) n RatField.* RatField.pow b2 n) RatField.*) (RatField.finv-left b2/=0)
+                     *> RatField.ide-right
+                     *> inv (pmap (RatField.pow __ n) (inv (RatField.*-assoc *> pmap (b1 RatField.*) (RatField.finv-left b2/=0) *> RatField.ide-right)) *> CMonoid.pow_*-comm))))
+      \in run {
+        `<=∘ =_<= equation.cSemigroup,
+        <=_* (=_<= (pmap A.norm (A.*q-assoc {RatField.natCoef (suc n)} {f.coef-Rat (suc n)} {A.ide})
+                    *> A.norm_*q-ofPos (RatField.<=-less (RatField.natCoef>0 NatOrder.zero<suc))))
+             (run { `<=∘ =_<= scalar-eq, pow_<= (<_<= aUb1) })
+      }
+}

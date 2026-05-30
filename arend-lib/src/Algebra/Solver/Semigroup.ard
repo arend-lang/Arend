@@ -1,0 +1,45 @@
+\import Algebra.Monoid
+\import Algebra.Solver
+\import Data.Fin
+\import Data.List
+\import Paths
+\import Paths.Meta
+
+-- | Reflective solver model for (non-commutative) semigroups. The normal form of a
+--   word is the non-empty list of its variables (head + tail), flattened by
+--   associativity. No identity is involved, so this works on bare `Semigroup`s.
+\func SemigroupSolverModel (S : Semigroup) : SolverModel S \cowith
+  | Term => Term
+  | NF n => \Sigma (Fin n) (List (Fin n))
+  | normalize t => normalize t
+  | interpret => interpret
+  | interpretNF env nf => interpretNE env nf.1 nf.2
+  | interpretNF-consistent {n} {env} {t} => normalize-consistent
+  \where {
+    \data Term (n : Nat)
+      | var (Fin n)
+      | \infixl 7 :* (t s : Term n)
+
+    \func interpret {n : Nat} (env : Fin n -> S) (t : Term n) : S \elim t
+      | var x => env x
+      | :* t s => interpret env t * interpret env s
+
+    -- | Interpret a non-empty list given as head `x` and tail `l`.
+    \func interpretNE {n : Nat} (env : Fin n -> S) (x : Fin n) (l : List (Fin n)) : S \elim l
+      | nil => env x
+      | y :: l => env x * interpretNE env y l
+
+    \func normalize {n : Nat} (t : Term n) : \Sigma (Fin n) (List (Fin n)) \elim t
+      | var x => (x, nil)
+      | :* t s => ((normalize t).1, (normalize t).2 ++ ((normalize s).1 :: (normalize s).2))
+
+    \lemma interpretNE_++ {n : Nat} {env : Fin n -> S} {x : Fin n} {l : List (Fin n)} {y : Fin n} {m : List (Fin n)}
+      : interpretNE env x (l ++ (y :: m)) = interpretNE env x l * interpretNE env y m \elim l
+      | nil => idp
+      | z :: l => pmap (env x *) interpretNE_++ *> inv *-assoc
+
+    \lemma normalize-consistent {n : Nat} {env : Fin n -> S} {t : Term n}
+      : interpretNE env (normalize t).1 (normalize t).2 = interpret env t \elim t
+      | var x => idp
+      | :* t s => interpretNE_++ *> pmap2 (*) normalize-consistent normalize-consistent
+  }

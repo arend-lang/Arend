@@ -90,6 +90,11 @@
   \lemma norm_BigSum {l : Array E} : norm (BigSum l) <= ExUpperRealAbMonoid.BigSum \lam j => norm (l j) \elim l
     | nil => transportInv (`<= _) norm_zro <=-refl
     | x :: l => norm_+ <=∘ <=_+ <=-refl norm_BigSum
+
+  -- | `FinSum` analog of `norm_BigSum` on `Fin n`.
+  \lemma norm_FinSum {n : Nat} {f : Fin n -> E}
+    : norm (AbMonoid.FinSum f) <= ExUpperRealAbMonoid.FinSum (\lam (j : Fin n) => norm (f j))
+    => =_<= (pmap norm (AbMonoid.FinSum=BigSum {\this} {n} {f})) <=∘ norm_BigSum <=∘ =_<= (inv (AbMonoid.FinSum=BigSum {ExUpperRealAbMonoid} {n} {\lam j => norm (f j)}))
 }
 
 \lemma norm>=0 {X : ExPseudoNormedAbGroup} {x : X} : 0 <= norm x

@@ -4,7 +4,7 @@
 \import Data.Array
 \import Data.Array.EPerm
 \import Data.Array.Perm
-\import Data.Fin (fsuc, fsuc/=)
+\import Data.Fin (fsuc, fsuc/=, nat_fin_=)
 \import Data.Or
 \import Equiv
 \import Equiv.Sigma
@@ -19,6 +19,7 @@
 \import Order.Biordered
 \import Order.LinearOrder
 \import Order.PartialOrder
+\import Order.StrictOrder
 \import Paths
 \import Paths.Meta
 \import Set
@@ -531,6 +532,22 @@
   \lemma BigSum_Perm {n : Nat} {l l' : Array E n} (p : Perm l l') : BigSum l = BigSum l'
     => BigSum_EPerm (EPerm.Perm_EPerm p)
 
+  -- | Reversing an array preserves its BigSum.
+  \lemma BigSum-reverse {k : Nat} (l : Array E (suc k))
+    : BigSum (\new Array E (suc k) (\lam i => l (k -' i))) = BigSum l
+    => BigSum_Perm {_} {suc k} (reverse-perm l)
+
+  -- | The permutation that reverses an array of length `suc k`.
+  \func reverse-perm {A : \Set} {k : Nat} (l : Array A (suc k))
+    : Perm (mkArray (\lam i => l (k -' i))) l
+    => Perm.perm-map {Fin (suc k)} {A} l {suc k} {\lam j => k -' j} {\lam j => j}
+        (Perm.perm-fin {suc k} (\lam j => k -' j)
+          (\lam {a} {a'} p => run {
+            \have a<=k : a <= {NatSemiring} k => <_suc_<= (fin_< a),
+            \have a'<=k : a' <= {NatSemiring} k => <_suc_<= (fin_< a'),
+            nat_fin_= (rewrite (mod_< {k -' a} {suc k} -'<id, mod_< {k -' a'} {suc k} -'<id, -'_inv a<=k, -'_inv a'<=k) in pmap (k -' __) p)
+          }))
+
   \sfunc FinSum {A : FinSet} (x : A -> E) : E
     => aux.1
     \where {
@@ -577,6 +594,9 @@
 
   \lemma FinSum=BigSum {n : Nat} {x : Fin n -> E} : FinSum x = BigSum x
     => FinSum_char2 idEquiv
+
+  \lemma FinSum-ext {A : FinSet} {x y : A -> E} (p : \Pi (a : A) -> x a = y a) : FinSum x = FinSum y
+    => pmap FinSum (ext p)
 
   \lemma FinSum_Equiv {A B : FinSet} (e : Equiv {A} {B}) {x : B -> E} : FinSum x = FinSum (\lam a => x (e a))
     => \case FinSum_char _ \with {

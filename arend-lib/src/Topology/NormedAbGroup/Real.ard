@@ -4,6 +4,8 @@
 \import Algebra.Ordered
 \import Algebra.StrictlyOrdered
 \import Algebra.Pointed
+\import Arith.Int
+\import Arith.Nat
 \import Arith.Rat
 \import Arith.Real
 \import Arith.Real.LowerReal
@@ -156,3 +158,11 @@
       \have d=x-y => LinearOrder.join/=right {RealAbGroup} \lam p => <-irreflexive $ (rewriteI p in y<x+d) <∘l transportInv (`<= _) (pmap (x +) RealAbGroup.negative_- *> +-comm *> +-assoc *> pmap (y +) negative-left *> zro-right) <=-refl
       \in RealAbGroup.from>0 (rewrite d=x-y in xy>0)
   }
+
+\lemma harmonic-limit : RealNormed.IsLimit (\lam n => RatField.finv (suc n)) 0
+  => \lam Uo U0 =>
+    \have | (inP (eps,eps>0,h)) => (dist_open {RealNormed}).1 Uo U0
+          | (N,eps'<N) => rat_natBound (RatField.finv eps)
+    \in inP (N, \lam {n} N<=n => h $ unfold OBall $ rewriteI (norm_dist {RealNormed}) $
+          rewrite (abs-ofPos $ rat_real_<=.1 $ <=_ratNom $ pos<=pos zero<=_) $
+          DiscreteOrderedField.finv_<-left {RatField} {eps} {suc n} eps>0 $ eps'<N <∘l fromInt_<= (pos<=pos $ N<=n <=∘ id<=suc))

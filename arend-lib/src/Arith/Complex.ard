@@ -25,6 +25,24 @@
     {- | The imaginary unit $iunit = 0 + i \in \mathbb{C}$. -}
     \func iunit => \new Complex 0 1
 
+    -- | $i^2 = -1$ in $\mathbb{C}$.
+    \lemma iunit-square : i ComplexField.* i = ComplexField.negative ComplexField.ide
+      => ext (pmap2 (\lam (a b : Real) => a - b) Ring.zro_*-left RealField.ide-left *> RealField.zro-left,
+              pmap2 (\lam (a b : Real) => a + b) Ring.zro_*-left Ring.zro_*-right *> RealField.zro-left *> inv RealAbGroup.negative_zro)
+
+    -- | $i^2 = -1$.
+    \lemma pow-iunit-2 : Monoid.pow {ComplexField} i 2 = ComplexField.negative ComplexField.ide
+      => pmap (\lam (c : Complex) => c ComplexField.* i) ComplexField.ide-left *> iunit-square
+
+    -- | $i^{2k} = (-1)^k$.
+    \lemma pow-iunit-even (k : Nat) : Monoid.pow i (2 Nat.* k) = Monoid.pow (ComplexField.negative ComplexField.ide) k
+      => Monoid.pow_* {ComplexField} {i} {2} {k} *> pmap (\lam (c : Complex) => Monoid.pow c k) pow-iunit-2
+
+    -- | $i^{2k+1} = (-1)^k\,i$.
+    \lemma pow-iunit-odd (k : Nat)
+      : Monoid.pow {ComplexField} i (2 Nat.* k Nat.+ 1) = Monoid.pow (ComplexField.negative ComplexField.ide) k ComplexField.* i
+      => pmap (\lam (c : Complex) => c ComplexField.* i) (pow-iunit-even k)
+
     {- | $\mathrm{fromReal}$ preserves addition:
     $\mathrm{fromReal}\,(x + y) = \mathrm{fromReal}\ x + \mathrm{fromReal}\ y$. -}
     \lemma fromReal_+ {x y : Real} : fromReal (x + y) = fromReal x ComplexField.+ fromReal y
@@ -39,6 +57,12 @@
     $\mathrm{fromReal}\,(-x) = -\mathrm{fromReal}\ x$. -}
     \lemma fromReal_negative {x : Real} : fromReal (negative x) = ComplexField.negative (fromReal x)
       => ext (idp, inv RealAbGroup.negative_zro)
+
+    -- | The embedding $\mathbb{R} \to \mathbb{C}$ commutes with $n$-th powers.
+    \lemma fromReal-pow {x : Real} (n : Nat)
+      : Complex.fromReal (RealField.pow x n) = ComplexField.pow (Complex.fromReal x) n \elim n
+      | 0 => idp
+      | suc n' => fromReal_* *> pmap (\lam (c : Complex) => c ComplexField.* Complex.fromReal x) (fromReal-pow n')
   }
 
 \instance ComplexField : Field Complex

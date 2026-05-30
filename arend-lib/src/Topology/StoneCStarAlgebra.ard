@@ -252,3 +252,28 @@
   | norm_*_<= => transportInv (`<= _) (RealField.abs_* *> RealField.*-upper RealAbGroup.abs>=0 RealAbGroup.abs>=0) <=-refl
   | c*-sum => Real.<=-upper.1 $ join-univ (=_<= (inv zro-right) <=∘ <=_+ <=-refl RealField.square_>=0 <=∘ join-left) (RealAbGroup.negative<=0 RealField.square_>=0 <=∘ RealAbGroup.abs>=0)
   | c*-square => transport (ExUpperRealAbMonoid.`<= _) (RealField.*-upper RealAbGroup.abs>=0 RealAbGroup.abs>=0) $ =_<= $ Real.=-upper.1 (inv RealField.abs_*)
+
+{- | On `Real`, the Banach-algebra `fromRat` (defined as $q *_q 1$) agrees with
+     the canonical `Real.fromRat`. Strategy: multiply both sides by `ratDenom q`
+     and apply `QModule.*q-cancel`; both sides reduce to `Real.fromRat (ratNom q)`. -}
+\lemma RealStoneC*Algebra_fromRat (q : Rat) : BanachAlgebra.fromRat {RealStoneC*Algebra} q = Real.fromRat q
+  => QModule.*q-cancel (natRat/=0 (ratDenom/=0 {q})) {q QModule.*q 1} {Real.fromRat q} $
+       inv QModule.*q-assoc
+       *> pmap (QModule.`*q (1 : Real)) (rat*denom-left {q})
+       *> QModule.*q_*i {_} {ratNom q} {1}
+       *> int*i_ide {ratNom q}
+       *> pmap Real.fromRat (inv (rat*denom-left {q}) *> RatField.natCoef_*_*n)
+       *> fromRat-*n
+       *> inv (QModule.*q_*n {_} {ratDenom q} {Real.fromRat q})
+  \where {
+    -- | `pos n *i (1:Real) = Real.fromRat n`; `neg (suc m) *i (1:Real) = Real.fromRat (-(suc m))`.
+    \private \lemma int*i_ide {z : Int} : z AbGroup.*i (1 : Real) = Real.fromRat (Rat.fromInt z) \elim z
+      | pos n => inv RealField.natCoef_*n
+      | neg (suc m) => AddGroup.*n_negative {_} {suc m} {1}
+                       *> pmap negative (inv RealField.natCoef_*n)
+                       *> RealAbGroup.negative-rat
+    -- | `Real.fromRat` distributes over `Nat`-scaling.
+    \private \lemma fromRat-*n {n : Nat} {q : Rat} : Real.fromRat (n AddMonoid.*n q) = n AddMonoid.*n Real.fromRat q \elim n
+      | 0 => idp
+      | suc n => inv RealAbGroup.+-rat *> pmap (`+ Real.fromRat q) fromRat-*n
+  }

@@ -367,6 +367,14 @@
   \lemma BigSum_- {n : Nat} {l l' : Array E n} : BigSum (\lam k => l k - l' k) = BigSum l - BigSum l'
     => BigSum_+ *> inv (pmap (_ +) BigSum_negative)
 
+  -- | `FinSum` analog of `BigSum_negative` on `Fin n`.
+  \lemma FinSum_negative {n : Nat} {x : Fin n -> E} : negative (FinSum x) = FinSum (\lam k => negative (x k))
+    => pmap negative FinSum=BigSum *> BigSum_negative *> inv FinSum=BigSum
+
+  -- | `FinSum` analog of `BigSum_-` on `Fin n`.
+  \lemma FinSum_- {n : Nat} {x y : Fin n -> E} : FinSum (\lam k => x k - y k) = FinSum x - FinSum y
+    => FinSum=BigSum *> BigSum_- *> pmap2 (-) (inv FinSum=BigSum) (inv FinSum=BigSum)
+
   \lemma sum-cancel-left {x y z : E} : x + z - (x + y) = z - y
     => pmap (_ +) negative_+ *> pmap2 (+) +-comm +-comm *> +-assoc *> pmap (z +) (inv +-assoc *> pmap (`- y) negative-right *> zro-left)
 

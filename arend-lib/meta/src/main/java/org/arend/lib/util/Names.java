@@ -189,6 +189,14 @@ public class Names {
     return new ModulePath("Algebra", "Solver", "Semiring");
   }
 
+  public static ModulePath getSemigroupSolverModule() {
+    return new ModulePath("Algebra", "Solver", "Semigroup");
+  }
+
+  public static ModulePath getCSemigroupSolverModule() {
+    return new ModulePath("Algebra", "Solver", "CSemigroup");
+  }
+
   public static ModulePath getBooleanRingModule() {
     return new ModulePath("Algebra", "Ring", "Boolean");
   }

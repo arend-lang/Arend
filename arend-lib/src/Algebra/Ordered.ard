@@ -37,7 +37,11 @@
     | suc n => <=_+-positive (*n_>=0 a>=0) a>=0
 }
 
-\class PosetAbMonoid \extends PosetAddMonoid, AbMonoid
+\class PosetAbMonoid \extends PosetAddMonoid, AbMonoid {
+  -- | `FinSum` analog of `BigSum_<=` on `Fin n`.
+  \lemma FinSum_<= {n : Nat} {f g : Fin n -> E} (p : \Pi (j : Fin n) -> f j <= g j) : FinSum f <= FinSum g
+    => =_<= FinSum=BigSum <=∘ BigSum_<= p <=∘ =_<= (inv FinSum=BigSum)
+}
 
 \class JoinSemilatticeAddMonoid \extends PosetAddMonoid, JoinSemilattice
   | join_+-left {a b c : E} : a + (b ∨ c) = (a + b) ∨ (a + c)
@@ -252,8 +256,16 @@
     | 0 => <=-refl
     | suc k => pow<=id a>=0 a<=1 {suc k} (\case __) <=∘ a<=1
 
+  \lemma pow>=1 {a : E} (a>=1 : a >= 1) {k : Nat} : pow a k >= 1 \elim k
+    | 0 => <=-refl
+    | suc k => <=-transitive a>=1 (rewriteI {1} ide-left (<=_*_positive-left (pow>=1 a>=1) (<=∘ zro<=ide a>=1)))
+
   \lemma pow_<=-degree {a : E} (a>=0 : 0 <= a) (a<=1 : a <= 1) {n k : Nat} (n<=k : n NatSemiring.<= k) : pow a k <= pow a n
     => rewrite (inv (<=_exists n<=k), pow_+) $ transport (_ <=) ide-right $ <=_*_positive-right (pow>=0 a>=0) $ pow<=1 a>=0 a<=1
+
+  \lemma pow_<=-degree_>=1 {a : E} (p : a >= 1) {n m : Nat} (m<=n : m NatSemiring.<= n) : pow a m <= pow a n =>
+    rewriteI (<=_exists {m} {n} m<=n, inv Monoid.pow_+) (rewriteI {1} ide-right
+      (<=_*_positive-right (PosetSemiring.pow>=0 (<=∘ zro<=ide p)) (PosetSemiring.pow>=1 p)))
 }
 
 \class PosetRing \extends PosetSemiring, Ring, PosetAbGroup

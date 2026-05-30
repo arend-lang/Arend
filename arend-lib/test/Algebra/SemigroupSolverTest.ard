@@ -1,0 +1,22 @@
+\import Algebra.Meta
+\import Algebra.Monoid
+\import Meta
+\import Algebra.Solver.Semigroup
+
+\lemma test1 {S : Semigroup} (x y z w : S)
+  : (x * y) * (z * w) = x * (y * (z * w))
+  => equation.semigroup
+
+\lemma test2 {S : Semigroup} (x y z : S)
+  : (x * y) * z = x * (y * z)
+  => equation.semigroup
+
+\lemma test3 {S : Semigroup} (x : S) : x = x => equation.semigroup
+
+\lemma testProof {S : Semigroup} (x y z w : S) (p : x * (y * (z * w)) = w * (z * (y * x)))
+  : (x * y) * (z * w) = ((w * z) * y) * x
+  => equation.semigroup p
+
+\lemma testIn {S : Semigroup} (x y z w : S) (p : (x * y) * (z * w) = ((w * z) * y) * x)
+  : x * (y * (z * w)) = w * (z * (y * x))
+  => equation.semigroup in p

@@ -7,9 +7,12 @@
 \import Algebra.Ring
 \import Algebra.Ring.Poly
 \import Algebra.Ring.RingHom
+\import Algebra.Semiring
+\import Analysis.Series
 \import Arith.Nat
 \import Data.Or
 \import Equiv
+\import Function
 \import Function.Meta
 \import Logic
 \import Logic.Meta
@@ -21,7 +24,9 @@
 \import Paths
 \import Paths.Meta
 \import Set.Fin
+\import Set.Fin.Instances
 \open AddGroup
+\open Monoid (pow)
 
 \type FSeries (R : \Set) => Nat -> R
 
@@ -196,7 +201,7 @@
       | (0, j, p) => \lam q => absurd $ q $ ext (idp, p)
       | (1, j, p) => \lam _ q => absurd $ q $ ext (idp, pmap pred p)
       | (suc (suc i), _, _) => \lam _ _ => R.zro_*-left
-    }) *> equation.ring
+    }) *> pmap2 (R.+) R.ide-right R.ide-right *> R.negative-right
   }
   | inv-right => ext \case \elim __ \with {
     | 0 => FSeriesRing.Pairs_zero *> ide-left
@@ -204,5 +209,84 @@
       | (i, 0, p) => \lam q => absurd $ q $ ext (p, idp)
       | (i, 1, p) => \lam _ q => absurd $ q $ ext (pmap pred p, idp)
       | (_, suc (suc j), _) => \lam _ _ => R.zro_*-right
-    }) *> equation.ring
+    }) *> pmap2 (R.+) R.ide-left R.ide-left *> R.negative-right
+  }
+
+-- | Coefficients of $\frac{1}{1+x} = \sum_{n \geq 0} (-1)^n x^n$.
+\func alt_pm {A : Ring} (n : Nat) : A
+  => pow (Ring.negative {A} Ring.ide) n
+
+-- | $(-1)^{n+1} = -(-1)^n$.
+\lemma alt_pm-suc {A : Ring} (n : Nat)
+  : alt_pm {A} (suc n) = A.negative (alt_pm {A} n)
+  => A.negative_*-right *> pmap A.negative A.ide-right
+
+-- | $1 \cdot (1 + x) = 1$ in $R[[x]]$: $\frac{1}{1+x} = \sum_{n \geq 0} (-1)^n x^n$ with `geometric-coef`.
+\lemma alt-geometric-FSeries {R : Ring} : Monoid.Inv {FSeriesRing R} alt_pm (polyCoef (padd (padd pzero 1) 1)) \cowith
+  | inv-left => ext \case \elim __ \with {
+    | 0 => FSeriesRing.Pairs_zero *> ide-left
+    | suc n => R.FinSum-unique2 {FSeriesRing.PairsFinSet (suc n)} {0, suc n, idp} {1, n, idp} (\lam p => \case pmap __.1 p) (\case \elim __ \with {
+      | (0, j, p) => \lam q => absurd $ q $ ext (idp, p)
+      | (1, j, p) => \lam _ q => absurd $ q $ ext (idp, pmap pred p)
+      | (suc (suc i), _, _) => \lam _ _ => R.zro_*-left
+    }) *> pmap2 (R.+) R.ide-left R.ide-left *> pmap (__ R.+ alt_pm {R} n) (alt_pm-suc {R} n) *> R.negative-left
+  }
+  | inv-right => ext \case \elim __ \with {
+    | 0 => FSeriesRing.Pairs_zero *> ide-left
+    | suc n => R.FinSum-unique2 {FSeriesRing.PairsFinSet (suc n)} {suc n, 0, idp} {n, 1, idp} (\lam p => \case pmap __.2 p) (\case \elim __ \with {
+      | (i, 0, p) => \lam q => absurd $ q $ ext (p, idp)
+      | (i, 1, p) => \lam _ q => absurd $ q $ ext (pmap pred p, idp)
+      | (_, suc (suc j), _) => \lam _ _ => R.zro_*-right
+    }) *> pmap2 (R.+) R.ide-right R.ide-right *> pmap (__ R.+ alt_pm {R} n) (alt_pm-suc {R} n) *> R.negative-left
+  }
+
+-- | The identity series vanishes at every positive index.
+\lemma pow-conv-zero-pos {A : Ring} {a : Series A} {k : Nat} (k>0 : 0 NatSemiring.< k)
+  : pow {FSeriesRing A} a 0 k = 0
+  => \case \elim k, k>0 \with {
+      | 0, p => absurd (\case p)
+      | suc m, _ => idp
+    }
+
+\lemma conv-at-BigSum {A : Ring} (a b : Series A) (n : Nat)
+  : ((FSeriesRing A).* a b) n = AddMonoid.BigSum (\new Array A (suc n) (\lam k => a k * b (n -' k)))
+  => A.FinSum_char2 {FSeriesRing.PairsFinSet n} {\lam s => a s.1 A.* b s.2}
+    (\new QEquiv {
+      | f i => (i, n -' i, <=_exists (<_suc_<= (fin_< i)))
+      | ret s => toFin s.1 (<=_<_suc (NatSemiring.<=_+ <=-refl zero<=_ <=∘ =_<= s.3))
+      | ret_f i => fin_nat-inj toFin=id
+      | f_sec s => ext (toFin=id, pmap2 (`-') (inv s.3 *> +-comm) toFin=id *> -'+)
+    })
+
+{- | Finite-support lemma: if $b_0 = 0$, the $n$-fold convolution
+     $b^{\star n}$ vanishes at every index $k < n$.
+
+     Combinatorially, $(b^{\star n})_k = \sum b_{i_1} \cdots b_{i_n}$
+     summed over compositions $i_1 + \cdots + i_n = k$.  If any $i_j = 0$ the
+     factor $b_{i_j} = b_0 = 0$ kills the term, so all $i_j \geq 1$ and hence
+     $k \geq n$. -}
+\lemma pow-conv-zero-below {A : Ring} {b : Series A} (b_0 : b 0 = 0)
+                           (n k : Nat) (k<n : k NatSemiring.< n)
+  : pow {FSeriesRing A} b n k = 0 \elim n
+  | 0 => absurd (\case k<n)
+  | suc m => conv-at-BigSum (pow {FSeriesRing A} b m) b k *>
+             AddMonoid.BigSum_zro {A}
+               {\new Array A (suc k) (\lam j => pow {FSeriesRing A} b m j * b (k -' j))}
+               (term-zero {A} {b} b_0 m k k<n)
+  \where {
+    \private \lemma term-zero {A : Ring} {b : Series A} (b_0 : b 0 = 0) (m k : Nat)
+                              (k<sucm : k NatSemiring.< suc m) (j : Fin (suc k))
+      : pow {FSeriesRing A} b m j * b (k -' j) = 0
+      => \have | j<=k : (j : Nat) NatSemiring.<= k => <_suc_<= (fin_< j)
+               | k<=m : k NatSemiring.<= m => <_suc_<= k<sucm
+         \in \case NatSemiring.trichotomy (j : Nat) k \with {
+           | less j<k =>
+               \have j<m : (j : Nat) NatSemiring.< m => j<k NatSemiring.<∘l k<=m
+               \in pmap (`* b (k -' (j : Nat))) (pow-conv-zero-below b_0 m (j : Nat) j<m)
+                   *> zro_*-left
+           | equals j=k =>
+               \have kj0 : k -' (j : Nat) = 0 => pmap (k -' __) j=k *> -'id
+               \in pmap (pow {FSeriesRing A} b m j *) (pmap b kj0 *> b_0) *> zro_*-right
+           | greater j>k => absurd (NatSemiring.<-irreflexive (j>k NatSemiring.<∘l j<=k))
+         }
   }

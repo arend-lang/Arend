@@ -3,6 +3,8 @@
 \import Algebra.Ordered
 \import Algebra.Pointed
 \import Algebra.Ring
+\import Algebra.Ring.FormalSeries
+\import Algebra.Semiring
 \import Analysis.FuncLimit
 \import Analysis.Series
 \import Arith.Nat
@@ -115,3 +117,43 @@
 \lemma power-ratio-test-inf {X : ExPseudoNormedRing} {cs : Series X} (b : Series Real)
                             (bp : \Pi (n : Nat) -> norm (cs (suc n)) <= norm (cs n) * b n) (bl : RealNormed.IsLimit b 0) : IsPowerSeriesConv cs
   => \lam a>=0 => power-ratio-test bp bl a>=0 $ rewrite Ring.zro_*-left RealAbGroup.zro<ide
+
+{- | Pointwise compatibility of convolution with `powerSeries`: when $x$
+     commutes with all coefficients,
+     $$(a_{\text{ps}} \star b_{\text{ps}})_n = (a \star b)_n \cdot x^n,$$
+     where $a_{\text{ps}}\,k = a_k \cdot x^k$ is `powerSeries a __ x`. -}
+\lemma conv-powerSeries {A : ExPseudoNormedRing}
+                        (x-comm : \Pi (y z : A) -> y * z = z * y) {a b : Series A} {x : A} {n : Nat}
+  : (FSeriesRing A).* (powerSeries a __ x) (powerSeries b __ x) n = powerSeries ((FSeriesRing A).* a b) n x
+  => \have | term-eq : \Pi (k : Fin (suc n))
+                     -> powerSeries a (k : Nat) x * powerSeries b (n -' k) x
+                      = (a k * b (n -' k)) * pow x n
+              => \lam k => term-eq-helper {A} x-comm {a} {b} {x} {n} k
+            | full-eq : AddMonoid.BigSum (\new Array A (suc n) (\lam k => powerSeries a (k : Nat) x * powerSeries b (n -' k) x))
+                      = AddMonoid.BigSum (\new Array A (suc n) (\lam k => (a (k : Nat) * b (n -' k)) * pow x n))
+              => AddMonoid.BigSum-ext {A} {suc n}
+                   {\new Array A (suc n) (\lam k => powerSeries a (k : Nat) x * powerSeries b (n -' k) x)}
+                   {\new Array A (suc n) (\lam k => (a (k : Nat) * b (n -' k)) * pow x n)}
+                   term-eq
+            | factor-out : AddMonoid.BigSum (\new Array A (suc n) (\lam k => (a (k : Nat) * b (n -' k)) * pow x n))
+                         = AddMonoid.BigSum (\new Array A (suc n) (\lam k => a (k : Nat) * b (n -' k))) * pow x n
+              => inv (Semiring.BigSum-rdistr {A} {\new Array A (suc n) (\lam k => a (k : Nat) * b (n -' k))} {pow x n})
+     \in conv-at-BigSum (powerSeries a __ x) (powerSeries b __ x) n
+         *> full-eq *> factor-out
+         *> pmap (`* pow x n) (inv (conv-at-BigSum a b n))
+  \where {
+    -- | $(a_k \cdot x^k) \cdot (b_{n - k} \cdot x^{n - k}) = (a_k \cdot b_{n - k}) \cdot x^n$.
+    \private \lemma term-eq-helper {A : ExPseudoNormedRing}
+                                   (x-comm : \Pi (y z : A) -> y * z = z * y) {a b : Series A} {x : A} {n : Nat} (k : Fin (suc n))
+      : powerSeries a (k : Nat) x * powerSeries b (n -' k) x = (a k * b (n -' k)) * pow x n
+      => \have | k<=n : (k : Nat) NatSemiring.<= n
+                  => <_suc_<= (fin_< k)
+               | k+rest=n : (k : Nat) Nat.+ (n -' k) = n
+                  => <=_exists k<=n
+               | comm-step : a (k : Nat) * pow x k * (b (n -' k) * pow x (n -' k))
+                           = a (k : Nat) * b (n -' k) * (pow x k * pow x (n -' k))
+                  => *-assoc *> pmap (a (k : Nat) *) (inv *-assoc *> pmap (`* pow x (n -' k)) (x-comm (pow x k) (b (n -' k))) *> *-assoc) *> inv *-assoc
+               | pow-merge : pow x (k : Nat) * pow x (n -' k) = pow x n
+                  => inv Monoid.pow_+ *> pmap (pow x) k+rest=n
+         \in comm-step *> pmap (a k * b (n -' k) *) pow-merge
+  }

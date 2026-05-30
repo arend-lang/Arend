@@ -34,6 +34,7 @@ import org.arend.lib.meta.equationNew.group.CommutativeGroupEquationMeta;
 import org.arend.lib.meta.equationNew.group.GroupEquationMeta;
 import org.arend.lib.meta.equationNew.monoid.*;
 import org.arend.lib.meta.equationNew.ring.*;
+import org.arend.lib.meta.equationNew.semigroup.*;
 import org.arend.lib.meta.exists.ExistsMeta;
 import org.arend.lib.meta.exists.GivenMeta;
 import org.arend.lib.meta.exists.ExistsResolver;
@@ -267,6 +268,8 @@ public class StdExtension implements ArendExtension {
     contributor.declare(algebra, Names.getNewMonoidSolverModule());
     contributor.declare(algebra, Names.getNewRingSolverModule());
     contributor.declare(algebra, Names.getNewSemiringSolverModule());
+    contributor.declare(algebra, Names.getSemigroupSolverModule());
+    contributor.declare(algebra, Names.getCSemigroupSolverModule());
     contributor.declare(algebra, Names.getBooleanRingModule());
     contributor.declare(algebra, Names.getBooleanRingSolverModule());
     contributor.declare(algebra, Names.getIntModule());
@@ -293,6 +296,24 @@ public class StdExtension implements ArendExtension {
         In the former case, the meta will prove an equality in a type without using any additional structure on it.
         In the latter case, the meta will prove an equality using only structure available in the specified class.
         """), equation);
+    ConcreteMetaDefinition semigroupSolver = makeDef(equation.getRef(), "semigroup", new DependencyMetaTypechecker(SemigroupEquationMeta.class, () -> new DeferredMetaDefinition(new SemigroupEquationMeta(), true)));
+    contributor.declare(multiline("""
+        The semigroup solver solves goals of the form `e1 = {S} e2` for some semigroup `S`.
+        If `e1` and `e2` represent the same word in the language of semigroups (the same sequence of
+        variables, up to associativity), then the solver proves the equality without any additional arguments.
+        For example, {semigroup} proves `(x * y) * (z * w) = x * (y * (z * w))`.
+        Otherwise it normalizes both sides and expects an argument proving the equality of the normal forms.
+        Unlike {monoid}, it uses no identity element and so applies to bare semigroups.
+        """), semigroupSolver);
+    ConcreteMetaDefinition cSemigroupSolver = makeDef(equation.getRef(), "cSemigroup", new DependencyMetaTypechecker(CSemigroupEquationMeta.class, () -> new DeferredMetaDefinition(new CSemigroupEquationMeta(), true)));
+    contributor.declare(multiline("""
+        The commutative semigroup solver solves goals of the form `e1 = {S} e2` for some commutative semigroup `S`.
+        If `e1` and `e2` represent the same multiset of variables, then the solver proves the equality without
+        any additional arguments. For example, {cSemigroup} proves `(x * y) * z = z * (y * x)`.
+        Otherwise it normalizes both sides and expects an argument proving the equality of the normal forms.
+        Unlike {cMonoid}, it uses no identity element and so applies to bare commutative semigroups
+        (e.g. the multiplicative structure of `ExUpperReal`).
+        """), cSemigroupSolver);
     ConcreteMetaDefinition monoidSolver = makeDef(equation.getRef(), "monoid", new DependencyMetaTypechecker(MonoidEquationMeta.class, () -> new DeferredMetaDefinition(new MonoidEquationMeta(), true)));
     contributor.declare(multiline("""
         The monoid solver solves goals of the form `e1 = {M} e2` for some monoid `M`.
