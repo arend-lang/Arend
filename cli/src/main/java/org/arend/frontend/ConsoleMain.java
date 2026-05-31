@@ -45,9 +45,7 @@ import org.arend.typechecking.error.local.GoalError;
 import org.arend.typechecking.order.MapTarjanSCC;
 import org.arend.util.FileUtils;
 
-import org.arend.core.definition.Definition;
 import org.arend.ext.reference.Precedence;
-import org.arend.naming.reference.TCDefReferable;
 import org.arend.source.PersistableBinarySource;
 import org.arend.term.prettyprint.PrettyPrintVisitor;
 import java.io.IOException;
@@ -338,8 +336,9 @@ public class ConsoleMain {
     boolean serialize = cmdLine.hasOption("serialize");
     LibraryManager libraryManager = new LibraryManager(mySystemErrErrorReporter);
     CliServerRequester requester = new CliServerRequester(libraryManager);
+    BinaryLoader binaryLoader = new BinaryLoader(libraryManager);
     if (recompile) {
-      requester.setRecompile(true);
+      binaryLoader.setRecompile(true);
     }
     ArendServer server = new ArendServerImpl(requester, false, false, !doubleCheck);
     server.addReadOnlyModule(Prelude.MODULE_LOCATION, () -> Objects.requireNonNull(new PreludeResourceSource().loadGroup(DummyErrorReporter.INSTANCE)));
@@ -510,7 +509,7 @@ public class ConsoleMain {
             // resolveAll forces raw loading of all modules and their transitive dependencies
             server.getCheckerFor(allModules).resolveAll(UnstoppableCancellationIndicator.INSTANCE, ProgressReporter.empty());
             // Now load typechecked definitions from binary caches
-            requester.loadBinaryCache(library, server);
+            binaryLoader.loadBinaryCache(library, server);
           }
         }
       } else {
@@ -527,12 +526,12 @@ public class ConsoleMain {
         if (!targets.isEmpty()) {
           server.getCheckerFor(targets).resolveAll(UnstoppableCancellationIndicator.INSTANCE, ProgressReporter.empty());
           for (SourceLibrary library : requestedLibraries) {
-            requester.loadBinaryCache(library, server);
+            binaryLoader.loadBinaryCache(library, server);
           }
         }
       }
       // Report goals from definitions loaded from binary cache
-      reportCachedGoals(server, requester.getBinaryCacheLoaded());
+      reportCachedGoals(server, binaryLoader.getBinaryCacheLoaded());
       // Re-report errors that were detected on a previous typecheck pass and
       // whose modules are still in memory but won't be re-typechecked this run.
       reportInMemoryErrors(server, myErrorReporter);
@@ -609,7 +608,7 @@ public class ConsoleMain {
         }
 
         if (serialize) {
-          persistLibrary(library, server, requester.getBinaryCacheLoaded());
+          persistLibrary(library, server, binaryLoader.getBinaryCacheLoaded());
         }
       }
     } else {
@@ -658,7 +657,7 @@ public class ConsoleMain {
       if (serialize) {
         // Persist all libraries that had modules typechecked
         for (SourceLibrary library : requestedLibraries) {
-          persistLibrary(library, server, requester.getBinaryCacheLoaded());
+          persistLibrary(library, server, binaryLoader.getBinaryCacheLoaded());
         }
       }
     }

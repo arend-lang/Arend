@@ -5,6 +5,7 @@ import org.arend.ext.error.GeneralError;
 import org.arend.ext.error.ListErrorReporter;
 import org.arend.ext.module.ModuleLocation;
 import org.arend.ext.module.ModulePath;
+import org.arend.frontend.library.BinaryLoader;
 import org.arend.frontend.library.CliServerRequester;
 import org.arend.frontend.library.FileSourceLibrary;
 import org.arend.frontend.library.LibraryManager;
@@ -42,7 +43,7 @@ import static org.junit.Assert.fail;
  *   <li>Mirror that cache to a temp directory and remove the .arc of one upstream module
  *       (default {@code Algebra.Domain}). This simulates the CLI behavior on
  *       {@code touch arend-lib/src/Algebra/Domain.ard}, which makes the timestamp filter
- *       in {@link CliServerRequester#loadBinaryCache} skip that module.</li>
+ *       in {@link BinaryLoader#loadBinaryCache} skip that module.</li>
  *   <li>Build a fresh {@link ArendServer} that loads .ard for every module (so the
  *       concrete tree is present everywhere) and applies the standard
  *       {@code loadBinaryCache} cascade against the trimmed cache. The cascade marks
@@ -61,7 +62,7 @@ import static org.junit.Assert.fail;
  *       loaded modules. That's the difference that exposes the visitor's deserialized
  *       super-walk / Java-meta gaps — they only fire when {@code myConcreteProvider} has
  *       no concrete for an upstream class.</li>
- *   <li>Reuses the production {@link CliServerRequester#loadBinaryCache} (and its
+ *   <li>Reuses the production {@link BinaryLoader#loadBinaryCache} (and its
  *       orphan-shell cascade) instead of hand-rolling the ARC overlay. So the test
  *       exercises the exact buckets you see from the CLI.</li>
  * </ul>
@@ -191,6 +192,7 @@ public class ArendLibPartialCacheTest {
       ListErrorReporter reporter = new ListErrorReporter();
       LibraryManager libManager = new LibraryManager(reporter);
       CliServerRequester requester = new CliServerRequester(libManager);
+      BinaryLoader binaryLoader = new BinaryLoader(libManager);
       ArendServerImpl server = new ArendServerImpl(requester, false, false, false);
       server.addReadOnlyModule(Prelude.MODULE_LOCATION,
           () -> new PreludeResourceSource().loadGroup(DummyErrorReporter.INSTANCE));
@@ -217,7 +219,7 @@ public class ArendLibPartialCacheTest {
 
       // The production cascade — populates "loaded", "incomplete", "failed" buckets,
       // prints the same `[INFO] Binary cache: ...` line the CLI prints.
-      requester.loadBinaryCache(arendLib, server);
+      binaryLoader.loadBinaryCache(arendLib, server);
       log("Phase 3 complete in " + String.format("%.1fs",
           (System.currentTimeMillis() - phase3Start) / 1000.0));
 
