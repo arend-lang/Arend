@@ -497,16 +497,6 @@ public class ConcreteFactoryImpl implements ConcreteFactory {
     return new ConcreteAppBuilderImpl(myData, (Concrete.Expression) function);
   }
 
-  @NotNull
-  @Override
-  public ConcreteExpression binOpSequence(@NotNull List<? extends ConcreteExpression> sequence) {
-    List<Concrete.BinOpSequenceElem<Concrete.Expression>> list = new ArrayList<>(sequence.size());
-    for (ConcreteExpression expr : sequence) {
-      list.add(new Concrete.BinOpSequenceElem<>((Concrete.Expression) expr));
-    }
-    return new Concrete.BinOpSequenceExpression(myData, list, null);
-  }
-
   @Override
   public @NotNull Concrete.FunctionDefinition function(@NotNull ArendRef ref, @NotNull FunctionKind kind, @NotNull Collection<? extends ConcreteParameter> parameters, @Nullable ConcreteExpression resultType, @Nullable ConcreteExpression resultTypeLevel, @NotNull ConcreteFunctionBody body) {
     if (!(ref instanceof LocatedReferableImpl cRef)) {
