@@ -49,7 +49,6 @@
 \import Topology.NormedAbGroup.Real
 \import Topology.NormedRing
 \open Monoid (pow)
-\open RealField
 
 -- | Real limits are bounded below by any tail lower bound on the sequence.
 \lemma Real-limit->= {f : Nat -> Real} {l : Real} (lim : RealNormed.IsLimit f l)

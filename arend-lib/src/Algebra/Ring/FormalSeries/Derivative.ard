@@ -143,11 +143,12 @@ An $A$-linear operation $A[[X]] \to A[[X]]$ satisfying:
                  Semiring.natCoef {A} (suc k) Ring.* (a (suc m) * pow {FSeriesRing A} b (suc m) (suc k)))}
               {\new Array A (suc k) (\lam (m : Fin (suc k)) =>
                  deriv a m Ring.* ((FSeriesRing A).* (pow {FSeriesRing A} b m) (deriv b)) k)}
-              (\lam (m : Fin (suc k)) => run {
-                equation.cRing *>,
-                pmap (a (suc m) Ring.*) (deriv-pow-conv-suc b m k) *>,
-                equation.cRing
-              })
+              (\lam (m : Fin (suc k)) =>
+                 (equation.cRing
+                    : Semiring.natCoef {A} (suc k) Ring.* (a (suc m) Ring.* pow {FSeriesRing A} b (suc m) (suc k))
+                      = a (suc m) Ring.* deriv (pow {FSeriesRing A} b (suc m)) k)
+                 *> pmap (a (suc m) Ring.*) (deriv-pow-conv-suc b m k)
+                 *> equation.cRing)
 
 
     \private \lemma rhs-equals-M {A : CRing} (a b : Series A) (b_0 : b 0 = A.zro) (k : Nat)

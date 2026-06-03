@@ -439,7 +439,7 @@
                 | pyth-scaled : (1 + x * x) * (c * c) + (1 + x * x) * (s * s) = 1 + x * x
                   => inv ldistr *> pmap ((1 + x * x) *) pyth *> ide-right
                 | cos-sq : (1 + x * x) * (c * c) = {Real} 1
-                  => linarith (re-eq-dist, pyth-scaled)
+                  => linarith
                 | sin-2a-eq : sin (2 * a) = c * s + s * c
                   => pmap sin (linarith : (2 : Real) * a = a + a) *> sin_+ {a} {a}
                 | sin-2a-expanded : (1 + x * x) * (c * s + s * c) = 2 * x
@@ -449,7 +449,7 @@
                      *> pmap ((1 + x * x) *) (equation.cRing : s * c + s * c = c * s + s * c)
                      *> sin-2a-expanded
                 | sin-cos : (1 + x * x) * (s * c) = {Real} x
-                  => linarith sin-cos-double
+                  => linarith
           \in inv ide-right *> pmap (s *) (inv cos-sq)
               *> (equation.cRing : s * ((1 + x * x) * (c * c)) = c * ((1 + x * x) * (s * c)))
               *> pmap (c *) sin-cos *> *-comm

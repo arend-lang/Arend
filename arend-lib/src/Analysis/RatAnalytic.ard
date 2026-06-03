@@ -388,7 +388,7 @@
                      *> RatField.ide-right
                      *> inv (pmap (RatField.pow __ n) (inv (RatField.*-assoc *> pmap (b1 RatField.*) (RatField.finv-left b2/=0) *> RatField.ide-right)) *> CMonoid.pow_*-comm))))
       \in run {
-        `<=∘ =_<= equation.cSemigroup,
+        `<=∘ =_<= {?},
         <=_* (=_<= (pmap A.norm (A.*q-assoc {RatField.natCoef (suc n)} {f.coef-Rat (suc n)} {A.ide})
                     *> A.norm_*q-ofPos (RatField.<=-less (RatField.natCoef>0 NatOrder.zero<suc))))
              (run { `<=∘ =_<= scalar-eq, pow_<= (<_<= aUb1) })

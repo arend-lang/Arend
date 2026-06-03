@@ -82,7 +82,7 @@
 -- | Sine addition formula: $\sin(x+y) = \cos x \sin y + \sin x \cos y$.
 \lemma sin_+ {x y : Complex} : sin (x + y) = cos x * sin y + sin x * cos y
   => unfold (cos, sin) $ rewrite (E_+ {x} {y}, E_neg_+ {x} {y})
-       (ext (equation.cRing {half-sq-re}, equation.cRing {half-sq-re}))
+       (ext (equation.cRing, equation.cRing))
 
 -- | $\cos(-z) = \cos z$ — cosine is even.
 \lemma cos_negative {z : Complex} : cos (negative z) = cos z
@@ -96,7 +96,7 @@
 
 {- | Euler's formula on $\mathbb{C}$: $\exp(i z) = \cos z + i \sin z$. -}
 \lemma euler {z : Complex} : exp (i * z) = cos z + i * sin z
-  => unfold (cos, sin, E) (ext (equation.cRing {half2-re}, equation.cRing {half2-re}))
+  => unfold (cos, sin) (ext (equation.cRing {half2-re}, equation.cRing {half2-re}))
 
 -- | Pythagorean identity: $\cos^2 z + \sin^2 z = 1$.
 \lemma pythagoras {z : Complex} : cos z * cos z + sin z * sin z = (1 : Complex)
@@ -152,9 +152,9 @@
 {- | The complex cosine agrees with the real cosine on $\mathbb{R}$:
      $\cos(\mathrm{fromReal}\,x) = \mathrm{fromReal}(\cos x)$. -}
 \lemma cos-fromReal {x : Real} : cos (Complex.fromReal x) = Complex.fromReal (rcos x)
-  => unfold cos $ rewrite (E-fromReal, E-neg-fromReal) (ext (equation.cRing {half2-re}, equation.cRing {half2-re}))
+  => unfold cos $ rewrite (E-fromReal, E-neg-fromReal) (ext (equation.cRing {half2-re}, equation.cRing))
 
 {- | The complex sine agrees with the real sine on $\mathbb{R}$:
      $\sin(\mathrm{fromReal}\,x) = \mathrm{fromReal}(\sin x)$. -}
 \lemma sin-fromReal {x : Real} : sin (Complex.fromReal x) = Complex.fromReal (rsin x)
-  => unfold sin $ rewrite (E-fromReal, E-neg-fromReal) (ext (equation.cRing {half2-re}, equation.cRing {half2-re}))
+  => unfold sin $ rewrite (E-fromReal, E-neg-fromReal) (ext (equation.cRing {half2-re}, equation.cRing))
