@@ -132,6 +132,11 @@ public abstract class Expression implements Body, CoreExpression {
     return type == null ? null : type.toSort();
   }
 
+  public boolean isPropType() {
+    Sort sort = getSortOfType();
+    return sort != null && sort.isProp();
+  }
+
   public Expression getType(boolean minimal) {
     return accept(minimal ? GetTypeVisitor.MIN_INSTANCE : GetTypeVisitor.INSTANCE, null);
   }

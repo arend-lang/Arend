@@ -190,7 +190,7 @@
           | suc n => rewrite (\peval yfunc (suc n) x, \peval yfunc (suc n) y) $ A.<=_*q-right rat_<=-dec $ <=_+ (<=_+ <=-refl $ A.negative_<= x<=y) $ <=_*_positive-left (yfunc-mono x<=y y<=1) (yfunc>=0 y<=1) <=∘ <=_*_positive-right (yfunc>=0 $ x<=y <=∘ y<=1) (yfunc-mono x<=y y<=1)
 
         \lemma c*abs-univ-bounded {x : A} {x<=1 : x <= 1} { -x<=1 : negative x <= 1} {w : A} (w<=1 : w <= 1) (|1-w|<=1 : norm (1 - w) <= 1) (x<=w : x <= w) (-x<=w : negative x <= w) : c*abs x x<=1 -x<=1 <= w
-          => transport2 (<=) (inv \peval sqrt _ _) (zfunc_pow w<=1 |1-w|<=1) $ (zfunc-lim-meet $ c*-<=_*-square w<=1 $ A.negative_<= x<=w <=∘ -x<=1).2 \lam n => (zfunc-lim-meet $ c*-<=_*-square x<=1 -x<=1).1 n <=∘ <=_+ <=-refl (A.negative_<= $ yfunc-mono (A.from>=0 $ transport (0 <=) (A.*_sum_diff *-comm) $ <=_*-positive (transport (0 <= w + __) A.negative-isInv (A.to>=0 -x<=w)) (A.to>=0 x<=w)) $ c*-<=_*-square w<=1 $ A.negative_<= x<=w <=∘ -x<=1)
+          => transport2 (<=) (inv \peval sqrt _ _) (zfunc_pow w<=1 |1-w|<=1) $ (zfunc-lim-meet $ c*-<=_*-square w<=1 $ A.negative_<= x<=w <=∘ -x<=1).2 \lam n => later ((zfunc-lim-meet $ c*-<=_*-square x<=1 -x<=1).1 n) <=∘ <=_+ <=-refl (A.negative_<= $ yfunc-mono (A.from>=0 $ transport (0 <=) (A.*_sum_diff *-comm) $ <=_*-positive (transport (0 <= w + __) A.negative-isInv (A.to>=0 -x<=w)) (A.to>=0 x<=w)) $ c*-<=_*-square w<=1 $ A.negative_<= x<=w <=∘ -x<=1)
 
         \func sqrt-t (s : UnitBall {A}) => sqrt s.1 s.2
 

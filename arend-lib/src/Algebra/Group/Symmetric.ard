@@ -173,9 +173,12 @@
       }
 
     \lemma steps {n k : Nat} {m : Fin (suc k)} {l : Array (Fin n) (suc k)} {inj : IsInj l}
-      : Monoid.pow {SymmetricGroup n} (PigeonholeSet.isEquiv (func l) (func-inj inj)) m (l 0) = l m \elim k, m
-      | k, 0 => idp
-      | suc k, suc m => unfold $ rewrite steps $ step NatOrder.zero<suc inj m *> pmap l (nat_fin_= $ mod_< $ NatOrder.suc<suc $ fin_< m)
+      : Monoid.pow {SymmetricGroup n} (PigeonholeSet.isEquiv (func l) (func-inj inj)) m (l 0) = l m \elim m
+      | 0 => idp
+      | suc m => unfold $ rewrite (steps {n} {k} {m} {l} {inj}) $ step NatOrder.zero<suc inj m *> pmap l (nat_fin_= $ mod_< $ NatOrder.suc<suc $ fin_< m)
+
+    \protected \lemma ext {n k : Nat} (l : Array (Fin n) k) (l' : Array (Fin n) k) {li : IsInj l} {l'i : IsInj l'} (p : l = l') : cycle l li = cycle l' l'i
+      => pmap {\Sigma (l : Array (Fin n) k) (IsInj l)} (\lam s => cycle s.1 s.2) {l,li} {l',l'i} (Paths.Meta.ext p)
   }
 
 \sfunc transposition {n : Nat} {a b : Fin n} (a/=b : a /= b) : Sym n
@@ -362,7 +365,9 @@
   }
 
 \lemma lift_transposition {n : Nat} {a b : Fin n} {a/=b : a /= b} : lift (transposition a/=b) = transposition (fsuc/= a/=b)
-  => pmap lift (\peval transposition a/=b) *> lift_cycle {n} {2} *> inv (\peval transposition (fsuc/= a/=b))
+  => pmap lift (\peval transposition a/=b) *> lift_cycle {n} {2}
+  *> cycle.ext (map fsuc (a :: b :: nil)) (suc a :: suc b :: nil) idp
+  *> inv (\peval transposition (fsuc/= a/=b))
 
 \lemma lift_transposition1 {n : Nat} {a : Fin n} : lift (transposition1 a) = transposition1 (suc a)
   => lift_transposition
