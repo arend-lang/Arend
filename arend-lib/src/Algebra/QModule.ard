@@ -124,6 +124,23 @@
 }
 
 \class QAlgebra \extends QPseudoAlgebra, Ring {
+  \func fromRat (q : Rat) => q *q 1
+
+  \lemma fromRat_* {q r : Rat} : fromRat q * fromRat r = fromRat (q RatField.* r)
+    => inv *q-comm-left *> pmap (q *q) ide-left *> inv *q-assoc
+
+  \lemma fromRat_natCoef {n : Nat} : fromRat n = natCoef n
+    => *q_*n *> inv natCoef_*n
+
+  \lemma fromRat_zro : fromRat RatField.zro = zro
+    => *q_*n
+
+  \lemma fromRat_ide : fromRat RatField.ide = ide
+    => ide_*q
+
+  \lemma fromRat-comm {q : Rat} {a : E} : fromRat q * a = a * fromRat q
+    => inv *q-comm-left *> pmap (q *q) (ide-left *> inv ide-right) *> *q-comm-right
+
   \lemma natCoef_*_*q {n : Nat} {a : E} : natCoef n * a = n *q a
     => natCoef_*_*n *> inv *q_*n
 

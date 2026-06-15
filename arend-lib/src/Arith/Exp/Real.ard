@@ -52,7 +52,7 @@
 
 -- | Real limits are bounded below by any tail lower bound on the sequence.
 \lemma Real-limit->= {f : Nat -> Real} {l : Real} (lim : RealNormed.IsLimit f l)
-                    {c : Real} {N0 : Nat} (lb : \Pi {n : Nat} (N0 <= n) -> c <= f n) : c <= l
+                     {c : Real} {N0 : Nat} (lb : \Pi {n : Nat} (N0 <= n) -> c <= f n) : c <= l
   => \lam l<c =>
     \let | (inP (N, hN)) => limit-metric-real.1 lim (OrderedAddGroup.to>0 l<c)
          | M : Nat => N0 ∨ N
@@ -65,7 +65,7 @@
 
 -- | Real limits are bounded above by any tail upper bound on the sequence.
 \lemma Real-limit-<= {f : Nat -> Real} {l : Real} (lim : RealNormed.IsLimit f l)
-                    {c : Real} {N0 : Nat} (ub : \Pi {n : Nat} (N0 <= n) -> f n <= c) : l <= c
+                     {c : Real} {N0 : Nat} (ub : \Pi {n : Nat} (N0 <= n) -> f n <= c) : l <= c
   => \lam c<l =>
     \let | (inP (N, hN)) => limit-metric-real.1 lim (OrderedAddGroup.to>0 c<l)
          | M : Nat => N0 ∨ N
@@ -80,138 +80,105 @@
     \in <-irreflexive (c<fM <∘l ub M>=N0)
 
 -- | Partial sums of a non-negative Real series are bounded above by the series sum.
-\lemma partialSum_<=_seriesSum {S : Series Real} (S>=0 : \Pi (n : Nat) -> (0 : Real) <= S n)
+\lemma partialSum_<=_seriesSum {S : Series Real} (S>=0 : \Pi (n : Nat) -> 0 <= S n)
                                {l : Real} (Sl : IsSeriesSum S l) (N : Nat)
   : partialSum S N <= l
-  => Real-limit->= Sl {partialSum S N} {N}
-       (\lam {n} N<=n => transport (partialSum S N <=) (inv (partialSum-split N<=n))
-                           (linarith (midSum>=0 S>=0 : (0 : Real) <= midSum S N n)))
+  => Real-limit->= Sl {partialSum S N} {N} \lam {n} N<=n =>
+      transportInv (_ <=) (partialSum-split N<=n) $ linarith (midSum>=0 S>=0)
 
--- | Infinite majorant principle: if $\sum_{k < N} \|S_k\| \leq B$ uniformly in $N$
---   and $\sum_k S_k = l$ in a normed AbGroup, then $\|l\| \leq B$.
+{- | Infinite majorant principle: if $\sum_{k < N} \|S_k\| \leq B$ uniformly in $N$
+ -   and $\sum_k S_k = l$ in a normed AbGroup, then $\|l\| \leq B$.
+ -}
 \lemma seriesSum_norm_<= {A : ExNormedAbGroup} {S : Series A} {l : A} (Sl : IsSeriesSum S l)
-                         {B : ExUpperReal}
-                         (B-bound : \Pi (N : Nat) -> partialSum (\lam k => A.norm (S k)) N ExUpperRealAbMonoid.<= B)
-  : A.norm l ExUpperRealAbMonoid.<= B
-  => \lam {q} BUq => \case ExUpperReal.U-rounded BUq \with {
-       | inP (q', BUq', q'<q) =>
-         \case limit-metric-char.1 Sl (linarith : (0 : Rat) RatField.< q - q') \with {
-           | inP (N, hN) =>
-             \have | dist-bd : (A.dist l (partialSum S N)).U (q - q') => hN <=-refl
-                   | norm-bd : A.norm (partialSum S N) ExUpperRealAbMonoid.<= B
-                               => partialSum_norm_<= ExUpperRealAbMonoid.<=∘ B-bound N
-                   | triangle : A.norm l ExUpperRealAbMonoid.<= A.dist l (partialSum S N) + B
-                                => norm_dist-left ExUpperRealAbMonoid.<=∘ <=_+ <=-refl norm-bd
-             \in ExUpperReal.U_<= (ExUpperReal.<=_+-char triangle dist-bd BUq')
-                                  (linarith : (q - q') RatField.+ q' RatField.<= q)
-         }
-     }
+                         {B : ExUpperReal} (B-bound : \Pi (N : Nat) -> partialSum (\lam k => A.norm (S k)) N <= B)
+  : A.norm l <= B
+  => \lam {q} BUq =>
+      \have | (inP (q', BUq', q'<q)) => U-rounded BUq
+            | (inP (N, hN)) => limit-metric-char.1 Sl (linarith : 0 < q - q')
+            | dist-bd : (A.dist l (partialSum S N)).U (q - q') => hN <=-refl
+            | norm-bd : norm (partialSum S N) <= B
+                      => partialSum_norm_<= <=∘ B-bound N
+            | triangle : norm l <= A.dist l (partialSum S N) + B
+                       => norm_dist-left <=∘ <=_+ <=-refl norm-bd
+      \in ExUpperReal.U_<= (ExUpperReal.<=_+-char triangle dist-bd BUq') linarith
 
 -- | For $x \geq 0$, $1 \leq \exp x$ — limit of partial sums that all lie $\geq 1$ from index 1.
-\lemma Real-exp->=1-of-nonneg {x : Real} (x>=0 : 0 <= x) : 1 <= exp {RealStoneC*Algebra} x
-  => Real-limit->= (exp.seriesSum {RealStoneC*Algebra} x) {1} {1} \lam {n} n>=1 => run {
-    rewrite (partialSum-split {_} {_} {1} {n} n>=1),
+\lemma Real-exp->=1-of-nonneg {x : Real} (x>=0 : 0 <= x) : 1 <= exp x
+  => Real-limit->= (exp.seriesSum x) \lam n>=1 => run {
+    rewrite (partialSum-split n>=1),
     rewrite partialSum_1,
-    transport (`<= _) zro-right (<=_+ <=-refl (midSum>=0 (term>=0 x>=0)))
+    transport (`<= _) zro-right $ <=_+ <=-refl $ midSum>=0 (term>=0 x>=0)
   }
   \where {
     -- | The index-1 partial sum of the exp series at `x` is `1`.
-    \lemma partialSum_1 {x : Real}
-      : partialSum {RealStoneC*Algebra} (\lam p => powerSeries (\lam k => RealStoneC*Algebra.fromRat (RatField.finv (pos (fac k)))) p x) 1 = (1 : Real)
+    \lemma partialSum_1 {x : Real} : partialSum (powerSeries exp.coef __ x) 1 = 1
       => partialSum_suc *> pmap (`+ _) partialSum-empty *> zro-left
          *> pmap (`* Monoid.pow x 0) (RealStoneC*Algebra_fromRat 1)
          *> ide-left
+
     -- | All exp-series terms at `x ≥ 0` are non-negative.
-    \lemma term>=0 {x : Real} (x>=0 : 0 <= x) (k : Nat)
-      : 0 <= powerSeries (\lam k => RealStoneC*Algebra.fromRat (RatField.finv (pos (fac k)))) k x
+    \lemma term>=0 {x : Real} (x>=0 : 0 <= x) (k : Nat) : 0 <= powerSeries exp.coef k x
       => RealField.<=_*_positive_positive
-           (transport (0 <=) (inv (RealStoneC*Algebra_fromRat (RatField.finv (pos (fac k)))))
+           (transportInv (0 <=) (RealStoneC*Algebra_fromRat (RatField.finv (pos (fac k))))
               (rat_real_<=.1 (RatField.finv>=0 (<=_ratNom (pos<=pos zero<=_)))))
            (RealField.pow>=0 x>=0)
   }
 
--- | For $x > 0$, $1 < \exp x$. Lower-bound `exp x` by the index-2 partial sum `1 + x`,
---   then `0 < x` gives `1 < 1 + x ≤ exp x`.
-\lemma Real-exp->1-of-pos {x : Real} (x>0 : 0 < x) : 1 < exp {RealStoneC*Algebra} x
-  => one<one+x x>0 <∘l one+x<=exp x>0
+{- | For $x > 0$, $1 < \exp x$. Lower-bound `exp x` by the index-2 partial sum `1 + x`,
+ -   then `0 < x` gives `1 < 1 + x ≤ exp x`.
+ -}
+\lemma Real-exp->1-of-pos {x : Real} (x>0 : 0 < x) : 1 < exp x
+  => (linarith : 1 < 1 + x) <∘l one+x<=exp x>0
   \where {
-    \private \lemma one<one+x {x : Real} (x>0 : 0 < x) : (1 : Real) < 1 + x
-      => transport (`< _) zro-right (<_+-right 1 x>0)
-    \private \lemma one+x<=exp {x : Real} (x>0 : 0 < x) : (1 : Real) + x <= exp {RealStoneC*Algebra} x
-      => Real-limit->= (exp.seriesSum {RealStoneC*Algebra} x) {1 + x} {2} \lam {n} n>=2 => run {
-        rewrite (partialSum-split {_} {_} {2} {n} n>=2),
+    \private \lemma one+x<=exp {x : Real} (x>0 : 0 < x) : 1 + x <= exp x
+      => Real-limit->= (exp.seriesSum x) \lam n>=2 => run {
+        rewrite (partialSum-split n>=2),
         rewrite partialSum_2,
-        transport (`<= _) zro-right
-          (<=_+ <=-refl (midSum>=0 (Real-exp->=1-of-nonneg.term>=0 (<=-less x>0))))
+        transport (`<= _) zro-right $ <=_+ <=-refl $ midSum>=0 $ Real-exp->=1-of-nonneg.term>=0 (<=-less x>0)
       }
-    \lemma partialSum_2 {x : Real}
-      : partialSum {RealStoneC*Algebra} (\lam p => powerSeries (\lam k => RealStoneC*Algebra.fromRat (RatField.finv (pos (fac k)))) p x) 2 = (1 : Real) + x
+
+    \private \lemma partialSum_2 {x : Real} : partialSum (\lam p => powerSeries exp.coef p x) 2 = 1 + x
       => partialSum_suc *> pmap2 (+) Real-exp->=1-of-nonneg.partialSum_1 term1_eq
-    \private \lemma term1_eq {x : Real}
-      : powerSeries {RealStoneC*Algebra} (\lam k => RealStoneC*Algebra.fromRat (RatField.finv (pos (fac k)))) 1 x = x
-      => pmap (`* Monoid.pow x 1) (RealStoneC*Algebra_fromRat 1) *> ide-left *> ide-left
+
+    \private \lemma term1_eq {x : Real} : powerSeries exp.coef 1 x = x
+      => pmap (`* _) (RealStoneC*Algebra_fromRat 1) *> ide-left *> ide-left
   }
 
--- | Real `exp` is strictly positive on all of `Real`. Constructive proof:
---   `exp x` is invertible (via `exp_negative`), so `#0=>eitherPosOrNeg` gives
---   `0 < exp x` or `exp x < 0`. The latter contradicts `0 <= exp(x/2)^2 = exp x`.
+{- | Real `exp` is strictly positive on all of `Real`. Constructive proof:
+ -   `exp x` is invertible (via `exp_negative`), so `#0=>eitherPosOrNeg` gives
+ -   `0 < exp x` or `exp x < 0`. The latter contradicts `0 <= exp(x/2)^2 = exp x`.
+ -}
 \lemma Real-exp-pos (x : Real) : 0 < exp {RealStoneC*Algebra} x
-  => \case RealField.#0=>eitherPosOrNeg (exp-x-Inv {x}) \with {
-    | byLeft exp-pos => run {
-      unfold (RealField.<),
-      unfold (OrderedAddGroup.<),
-      transport {RealField} (\lam p => isPos p) __ exp-pos,
-      later $ rewrite RealField.negative_zro,
-      inv zro-right
-    }
-    | byRight exp-neg => run {
-      absurd,
-      <-irreflexive {RealField} {exp x} ,
-      <∘l __ (exp-x>=0 {x}),
-      unfold (OrderedAddGroup.<),
-      unfold (RealField.isNeg) at exp-neg,
-      unfold (RealField.negative) at exp-neg,
-      rewrite zro-left,
-      exp-neg
-    }
+  => \case RealField.#0=>eitherPosOrNeg exp_Inv \with {
+    | byLeft exp-pos => RealField.pos_>0 exp-pos
+    | byRight exp-neg => absurd $ exp>=0 (RealField.neg_<0 exp-neg)
   }
   \where {
-    \private \lemma exp-x-Inv {x : Real} : Monoid.Inv (exp {RealStoneC*Algebra} x)
-      => \new Monoid.Inv (exp x) (exp (negative x)) {
-        | inv-left  => RealStoneC*Algebra.*-comm *> exp_negative
-        | inv-right => exp_negative
-      }
     -- | $0 \leq \exp x$ via $\exp x = \exp(x/2)^2$ and square non-negativity.
-    \private \lemma exp-x>=0 {x : Real} : (0 : Real) <= exp {RealStoneC*Algebra} x
-      => \let | half : Real => QModule.*q {RealStoneC*Algebra} (RatField.finv 2) x
-              | two-q-half : QModule.*q {RealStoneC*Algebra} 2 half = x
-                 => inv (QModule.*q-assoc {_} {2} {RatField.finv 2} {x})
-                    *> pmap (QModule.`*q x) (RatField.finv-right (natRat/=0 {2} suc/=0))
-                    *> QModule.ide_*q
+    \private \lemma exp>=0 {x : Real} : 0 <= exp x
+      => \let | half : Real => RatField.finv 2 QModule.*q x
+              | two-q-half : 2 QModule.*q half = x
+                 => inv QModule.*q-assoc *> pmap (QModule.`*q x) (RatField.finv-right (natRat/=0 {2} suc/=0)) *> QModule.ide_*q
               | half-sum : half + half = x
                  => inv QModule.*q_*2 *> two-q-half
               | sq-eq : exp x = exp half * exp half
                  => pmap exp (inv half-sum) *> exp_+ RealStoneC*Algebra.*-comm
-         \in transport (0 <=) (inv sq-eq) RealField.square_>=0
+         \in transportInv (0 <=) sq-eq RealField.square_>=0
   }
 
--- | Real `exp` is strictly monotone increasing.
-\lemma Real-exp-strict-mono {x y : Real} (x<y : x < y)
-  : exp {RealStoneC*Algebra} x < exp y
+-- | Real {exp} is strictly monotone increasing.
+\lemma Real-exp-strict-mono {x y : Real} (x<y : x < y) : exp x < exp y
   => \have | y-eq : y = x + (y - x)
-              => inv (inv +-assoc *> pmap (`+ negative x) +-comm *> +-assoc
-                      *> pmap (y +) negative-right *> zro-right)
-           | exp-y-eq : exp {RealStoneC*Algebra} y = exp x * exp (y - x)
-              => pmap exp y-eq *> exp_+ RealStoneC*Algebra.*-comm
-           | step : exp {RealStoneC*Algebra} x * 1 < exp x * exp (y - x)
+              => inv (inv +-assoc *> pmap (`+ _) +-comm *> +-assoc *> pmap (y +) negative-right *> zro-right)
+           | exp-y-eq : exp y = exp x * exp (y - x)
+              => pmap exp y-eq *> exp_+ *-comm
+           | step : exp x * 1 < exp x * exp (y - x)
               => RealField.<_*_positive-right (Real-exp-pos x)
                    (Real-exp->1-of-pos (OrderedAddGroup.to>0 x<y))
      \in transport2 (<) ide-right (inv exp-y-eq) step
 
--- | Real `exp` is injective. Follows from totality + strict monotonicity.
-\lemma Real-exp-inj {x y : Real} (eq : exp {RealStoneC*Algebra} x = exp y) : x = y
-  => <=-antisymmetric (not-gt x y eq) (not-gt y x (inv eq))
-  \where {
-    \private \lemma not-gt (a b : Real) (eq : exp {RealStoneC*Algebra} a = exp b) : a <= b
-      => \lam b<a => <-irreflexive $ transport (`< _) (inv eq) (Real-exp-strict-mono b<a)
-  }
+-- | Real {exp} is injective. Follows from totality + strict monotonicity.
+\lemma Real-exp-inj {x y : Real} (eq : exp x = exp y) : x = y
+  => \have not-gt {a b : Real} (eq : exp a = exp b) : a <= b
+            => \lam b<a => <-irreflexive $ transport (`< _) (inv eq) (Real-exp-strict-mono b<a)
+     \in <=-antisymmetric (not-gt eq) (not-gt (inv eq))

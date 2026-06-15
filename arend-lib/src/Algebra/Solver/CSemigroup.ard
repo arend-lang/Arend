@@ -7,12 +7,13 @@
 \import Logic
 \import Paths
 \import Paths.Meta
-\open SemigroupSolverModel (Term, interpret, interpretNE, normalize, normalize-consistent)
+\open SemigroupSolverModel
 \open Sort
 
--- | Reflective solver model for commutative semigroups. The normal form is the
---   (non-empty) multiset of variables; `interpretNF` interprets the sorted list,
---   which is permutation-invariant by `*-comm`/`*-assoc` — no identity needed.
+{- | Reflective solver model for commutative semigroups. The normal form is the
+ -   (non-empty) multiset of variables; `interpretNF` interprets the sorted list,
+ -   which is permutation-invariant by `*-comm`/`*-assoc` — no identity needed.
+ -}
 \func CSemigroupSolverModel (S : CSemigroup) : SolverModel S \cowith
   | Term => Term
   | NF n => \Sigma (Fin n) (List (Fin n))

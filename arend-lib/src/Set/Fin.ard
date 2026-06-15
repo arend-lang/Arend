@@ -364,52 +364,44 @@
 
 \func finSet {A : FinSet} => A
 
-\func finiteDependentChoice {A : \Type} (R : A -> A -> \Type) (a0 : A)
-                            (step : \Pi (a : A) -> TruncP (\Sigma (b : A) (R a b)))
-                            (n : Nat)
-  : TruncP (\Sigma (f : Fin (suc n) -> A) (f 0 = a0) (\Pi (i : Fin n) -> R (f i) (f (suc i))))
-\elim n
+\lemma finiteDependentChoice {A : \Type} (R : A -> A -> \Type) (a0 : A) (step : \Pi (a : A) -> ∃ (b : A) (R a b)) (n : Nat)
+  : ∃ (f : Fin (suc n) -> A) (f 0 = a0) (\Pi (i : Fin n) -> R (f i) (f (suc i)))
+  \elim n
   | 0 => inP (\lam _ => a0, idp, \case __)
   | suc n => \case finiteDependentChoice R a0 step n \with {
     | inP (f, f0=a0, chain) => \case step (f (finLast n)) \with {
-      | inP (b, Rfnb) =>
-        \let f' => extendSeq f b
-        \in inP (f', extendSeq-0 f b *> f0=a0, extendChain {A} {R} {n} f b chain Rfnb)
+      | inP (b, Rfnb) => inP (extendSeq f b, extendSeq-0 f b *> f0=a0, extendChain R f b chain Rfnb)
     }
-  } \where {
-  -- Helper to extend a sequence by one element
-  \func extendSeq {A : \Type} {n : Nat} (f : Fin (suc n) -> A) (b : A) (i : Fin (suc (suc n))) : A \elim n, i
-    | 0, 0 => f 0
-    | 0, 1 => b
-    | suc n, 0 => f 0
-    | suc n, suc i => extendSeq (\lam j => f (suc j)) b i
+  }
+  \where {
+    \func extendSeq {A : \Type} {n : Nat} (f : Fin (suc n) -> A) (b : A) (i : Fin (suc (suc n))) : A \elim n, i
+      | n, 0 => f 0
+      | 0, 1 => b
+      | suc n, suc i => extendSeq (\lam j => f (suc j)) b i
 
-  \func extendSeq-0 {A : \Type} {n : Nat} (f : Fin (suc n) -> A) (b : A) : extendSeq f b 0 = f 0 \elim n
-    | 0 => idp
-    | suc n => idp
+    \func extendSeq-0 {A : \Type} {n : Nat} (f : Fin (suc n) -> A) (b : A) : extendSeq f b 0 = f 0 \elim n
+      | 0 => idp
+      | suc n => idp
 
-  -- extendSeq f b (finLast (suc n)) = b
-  \func extendSeq-last {A : \Type} {n : Nat} (f : Fin (suc n) -> A) (b : A) : extendSeq f b (finLast (suc n)) = b \elim n
-    | 0 => idp
-    | suc n => extendSeq-last (\lam j => f (suc j)) b
+    \func extendSeq-last {A : \Type} {n : Nat} (f : Fin (suc n) -> A) (b : A) : extendSeq f b (finLast (suc n)) = b \elim n
+      | 0 => idp
+      | suc n => extendSeq-last (\lam j => f (suc j)) b
 
-  -- extendSeq f b agrees with f on the first (suc n) elements
-  \func extendSeq-agree {A : \Type} {n : Nat} (f : Fin (suc n) -> A) (b : A) (i : Fin (suc n))
-    : extendSeq f b i = f i \elim n, i
-    | 0, 0 => idp
-    | suc n, 0 => idp
-    | suc n, suc i => extendSeq-agree (\lam j => f (suc j)) b i
+    \func extendSeq-agree {A : \Type} {n : Nat} (f : Fin (suc n) -> A) (b : A) (i : Fin (suc n))
+      : extendSeq f b i = f i \elim n, i
+      | 0, 0 => idp
+      | suc n, 0 => idp
+      | suc n, suc i => extendSeq-agree (\lam j => f (suc j)) b i
 
-  -- Helper to prove the extended chain condition
-  \func extendChain {A : \Type} {R : A -> A -> \Type} {n : Nat}
-                    (f : Fin (suc n) -> A) (b : A)
-                    (chain : \Pi (i : Fin n) -> R (f i) (f (suc i)))
-                    (Rfnb : R (f (finLast n)) b)
-                    (i : Fin (suc n)) : R (extendSeq f b i) (extendSeq f b (suc i)) \elim n, i
-    | 0, 0 => transport2 R (inv (extendSeq-0 f b)) (inv (extendSeq-last f b)) Rfnb
-    | suc n, 0 =>
-      \let | p1 : extendSeq f b 0 = f 0 => extendSeq-0 f b
-           | p2 : extendSeq f b (suc 0) = f (suc 0) => extendSeq-agree f b (suc 0)
-      \in transport2 R (inv p1) (inv p2) (chain 0)
-    | suc n, suc i => extendChain {A} {R} {n} (\lam j => f (suc j)) b (\lam j => chain (suc j)) Rfnb i
-}
+    \func extendChain {A : \Type} (R : A -> A -> \Type) {n : Nat}
+                      (f : Fin (suc n) -> A) (b : A)
+                      (chain : \Pi (i : Fin n) -> R (f i) (f (suc i)))
+                      (Rfnb : R (f (finLast n)) b)
+                      (i : Fin (suc n)) : R (extendSeq f b i) (extendSeq f b (suc i)) \elim n, i
+      | 0, 0 => transport2 R (inv (extendSeq-0 f b)) (inv (extendSeq-last f b)) Rfnb
+      | suc n, 0 =>
+        \have | p1 : extendSeq f b 0 = f 0 => extendSeq-0 f b
+              | p2 : extendSeq f b 1 = f 1 => extendSeq-agree f b (suc 0)
+        \in transport2 R (inv p1) (inv p2) (chain 0)
+      | suc n, suc i => extendChain R (\lam j => f (suc j)) b (\lam j => chain (suc j)) Rfnb i
+  }

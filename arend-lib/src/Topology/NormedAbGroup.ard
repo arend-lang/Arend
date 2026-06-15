@@ -18,6 +18,7 @@
 \import Order.StrictOrder
 \import Paths
 \import Paths.Meta
+\import Set.Fin
 \import Set.Subset
 \import Topology.CoverSpace
 \import Topology.MetricSpace
@@ -92,9 +93,10 @@
     | x :: l => norm_+ <=∘ <=_+ <=-refl norm_BigSum
 
   -- | `FinSum` analog of `norm_BigSum` on `Fin n`.
-  \lemma norm_FinSum {n : Nat} {f : Fin n -> E}
-    : norm (AbMonoid.FinSum f) <= ExUpperRealAbMonoid.FinSum (\lam (j : Fin n) => norm (f j))
-    => =_<= (pmap norm (AbMonoid.FinSum=BigSum {\this} {n} {f})) <=∘ norm_BigSum <=∘ =_<= (inv (AbMonoid.FinSum=BigSum {ExUpperRealAbMonoid} {n} {\lam j => norm (f j)}))
+  \lemma norm_FinSum {A : FinSet} {f : A -> E} : norm (FinSum f) <= ExUpperRealAbMonoid.FinSum (\lam j => norm (f j))
+    => \case FinSum_char f \with {
+      | inP (e,p) => transportInv (norm __ <= _) p $ norm_BigSum <=∘ =_<= (inv $ ExUpperRealAbMonoid.FinSum_char2 e)
+    }
 }
 
 \lemma norm>=0 {X : ExPseudoNormedAbGroup} {x : X} : 0 <= norm x

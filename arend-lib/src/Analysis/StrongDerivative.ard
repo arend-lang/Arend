@@ -113,18 +113,10 @@
   : h *c tderiv-quot f d x h a = f (x + h *c a) - f x
   => deriv-isQuot d () ()
 
-\lemma tderiv-quot-cont {R : NearSkewField} {X : TopLModule R} {Y : HausdorffTopLModule R} {f : X -> Y}
-                        (gx : ContMap R X) (gh : ContMap R R) (ga : ContMap R X) (d : HasTDeriv f)
-  : ContMap R Y (\lam h => tderiv-quot f d (gx h) (gh h) (ga h))
-  => deriv-quot-cont gx gh ga d {top} (\lam _ => ((),())) ∘ TopTransfer-lift id (\lam _ => ())
-
--- | General-source version of `tderiv-quot-cont`: the three continuity inputs
---   `gx`, `gh`, `ga` can come from any topological space `Z`, not just `R`.
-\lemma tderiv-quot-cont-gen {R : NearSkewField} {X : TopLModule R} {Y : HausdorffTopLModule R} {Z : TopSpace} {f : X -> Y}
-                            (gx : ContMap Z X) (gh : ContMap Z R) (ga : ContMap Z X) (d : HasTDeriv f)
+\lemma tderiv-quot-cont {R : NearSkewField} {X : TopLModule R} {Y : HausdorffTopLModule R} {Z : TopSpace} {f : X -> Y}
+                        (gx : ContMap Z X) (gh : ContMap Z R) (ga : ContMap Z X) (d : HasTDeriv f)
   : ContMap Z Y (\lam z => tderiv-quot f d (gx z) (gh z) (ga z))
-  => (deriv-quot.deriv-tuple open-top (\lam s => f s.1) d).1
-       ∘ TopTransfer-lift (tuple gx (tuple gh ga)) (\lam _ => ((),()))
+  => (deriv-quot.deriv-tuple open-top (\lam s => f s.1) d).1 ∘ TopTransfer-lift (tuple gx (tuple gh ga)) \lam _ => ((),())
 
 \func tderiv {R : NearSkewField} {X : TopLModule R} {Y : HausdorffTopLModule R} (f : X -> Y) (d : HasTDeriv f) (x : X) : LinearMap X Y
   => deriv open-top (\lam s => f s.1) d (x,())

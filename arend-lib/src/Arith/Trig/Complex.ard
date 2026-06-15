@@ -18,143 +18,127 @@
 \import Paths.Meta
 \open Complex \using (iunit \as i)
 
--- | $E\,z := \exp(i z)$ — the complex exponential along the imaginary axis.
-\private \func E (z : Complex) : Complex => exp (i * z)
-
--- | $\tfrac12 \in \mathbb{C}$.
-\private \func half : Complex => Complex.fromReal (ratio 1 2)
-
 {- | Complex cosine $\cos z := \tfrac12\,(e^{iz} + e^{ -iz})$.
      Extends the real `Arith.Trig.Real.cos` to all of $\mathbb{C}$. -}
-\func cos (z : Complex) : Complex => (E z + E (negative z)) * half
+\sfunc cos (z : Complex) : Complex => (exp (i * z) + exp (i * negative z)) * ratio 1 2
 
 {- | Complex sine $\sin z := \tfrac1{2i}\,(e^{iz} - e^{ -iz}) = \tfrac i2\,(e^{ -iz} - e^{iz})$.
      Extends the real `Arith.Trig.Real.sin` to all of $\mathbb{C}$. -}
-\func sin (z : Complex) : Complex => i * (E (negative z) - E z) * half
+\sfunc sin (z : Complex) : Complex => i * (exp (i * negative z) - exp (i * z)) * ratio 1 2
 
--- | $i^2 = -1$.
-\private \lemma ii : i * i = negative (1 : Complex) => ext (simplify, simplify)
+\private \lemma half2 : ratio 1 2 ComplexField.+ ratio 1 2 = {Complex} 1 => ext (linarith, linarith)
 
--- | $\tfrac12 + \tfrac12 = 1$.
-\private \lemma half2 : half + half = (1 : Complex) => ext (linarith, linarith)
+\private \lemma half-sq : ratio 1 2 ComplexField.* ratio 1 2 + ratio 1 2 ComplexField.* ratio 1 2 = {Complex} ratio 1 2
+  => rewriteI ComplexField.rdistr (rewrite half2 ide-left)
 
--- | $\tfrac12\cdot\tfrac12 + \tfrac12\cdot\tfrac12 = \tfrac12$ — i.e. $2\,\mathrm{half}^2 = \mathrm{half}$.
-\private \lemma half-sq : half * half + half * half = half
-  => rewriteI (rdistr {ComplexField} {half} {half} {half}) (rewrite half2 ide-left)
-
--- | Real-component projections of `half2` / `half-sq`, the hints `equation.cRing`
---   needs once a Complex goal is split into its real and imaginary parts by `ext`.
---   (`iunit`'s `i^2 = -1` reduces automatically on the concrete components, so only the
---   non-trivial `half = 1/2` value has to be supplied.)
 \private \lemma half2-re => pmap (\lam (z : Complex) => z.re) half2
+
 \private \lemma half-sq-re => pmap (\lam (z : Complex) => z.re) half-sq
 
--- | $E(x+y) = E\,x \cdot E\,y$.
-\private \lemma E_+ {x y : Complex} : E (x + y) = E x * E y
-  => unfold E $ pmap exp (ldistr {_} {i} {x} {y}) *> exp_+ (*-comm {_} {i * x} {i * y})
+\private \lemma exp_i_+ {x y : Complex} : exp (i * (x + y)) = exp (i * x) * exp (i * y)
+  => pmap exp ldistr *> exp_+ (*-comm {_} {i * x} {i * y})
 
--- | $E(-(x+y)) = E(-x) \cdot E(-y)$.
-\private \lemma E_neg_+ {x y : Complex} : E (negative (x + y)) = E (negative x) * E (negative y)
-  => unfold E $ pmap exp (pmap (i *) (AbGroup.negative_+-comm {_} {x} {y}) *> ldistr {_} {i} {negative x} {negative y})
-                *> exp_+ (*-comm {_} {i * negative x} {i * negative y})
+\private \lemma exp_i_neg_+ {x y : Complex} : exp (i * negative (x + y)) = exp (i * negative x) * exp (i * negative y)
+  => pmap exp (pmap (i *) AbGroup.negative_+-comm *> ldistr {_} {i} {negative x} {negative y})
+     *> exp_+ (*-comm {_} {i * negative x} {i * negative y})
 
--- | $E\,0 = 1$.
-\private \lemma E_0 : E 0 = (1 : Complex) => unfold E $ pmap exp (zro_*-right {_} {i}) *> exp_zro
-
--- | $E\,z \cdot E(-z) = 1$.
-\private \lemma E_negative {z : Complex} : E z * E (negative z) = (1 : Complex)
-  => unfold E $ pmap (exp (i * z) *) (pmap exp (Ring.negative_*-right {_} {i} {z})) *> exp_negative {_} {i * z}
+\private \lemma exp_i_0 : exp (i * 0) = {Complex} 1
+  => pmap exp zro_*-right *> exp_zro
 
 -- | $\cos 0 = 1$.
-\lemma cos_zro : cos 0 = (1 : Complex)
-  => unfold cos $ rewrite (E_0, pmap E (AddGroup.negative_zro {ComplexField}) *> E_0)
-                    (ext (linarith, equation.cRing))
+\lemma cos_zro : cos 0 = {Complex} 1
+  => rewrite (\peval cos 0, exp_i_0, pmap (\lam z => exp (i * z)) ComplexField.negative_zro *> exp_i_0) $
+      ext (linarith, equation.cRing)
 
 -- | $\sin 0 = 0$.
-\lemma sin_zro : sin 0 = (0 : Complex)
-  => unfold sin $ rewrite (E_0, pmap E (AddGroup.negative_zro {ComplexField}) *> E_0) (ext (equation.cRing, equation.cRing))
+\lemma sin_zro : sin 0 = {Complex} 0
+  => rewrite (\peval sin 0, exp_i_0, pmap (\lam z => exp (i * z)) ComplexField.negative_zro *> exp_i_0) $
+      ext (equation.cRing, equation.cRing)
 
 -- | Cosine addition formula: $\cos(x+y) = \cos x \cos y - \sin x \sin y$.
 \lemma cos_+ {x y : Complex} : cos (x + y) = cos x * cos y - sin x * sin y
-  => unfold (cos, sin) $ rewrite (E_+ {x} {y}, E_neg_+ {x} {y})
-       (ext (equation.cRing {half-sq-re}, equation.cRing {half-sq-re}))
+  => (\peval cos _) *> later (rewrite (exp_i_+, exp_i_neg_+) $
+       ext (equation.cRing {half-sq-re}, equation.cRing {half-sq-re}))
+     *> inv (path \lam j => (\peval cos x) j * (\peval cos y) j - (\peval sin x) j * (\peval sin y) j)
 
 -- | Sine addition formula: $\sin(x+y) = \cos x \sin y + \sin x \cos y$.
 \lemma sin_+ {x y : Complex} : sin (x + y) = cos x * sin y + sin x * cos y
-  => unfold (cos, sin) $ rewrite (E_+ {x} {y}, E_neg_+ {x} {y})
-       (ext (equation.cRing, equation.cRing))
+  => (\peval sin _)
+     *> later (rewrite (exp_i_+, exp_i_neg_+) $ ext (equation.cRing {half-sq-re}, equation.cRing {half-sq-re}))
+     *> inv (path \lam j => (\peval cos x) j * (\peval sin y) j + (\peval sin x) j * (\peval cos y) j)
 
 -- | $\cos(-z) = \cos z$ — cosine is even.
 \lemma cos_negative {z : Complex} : cos (negative z) = cos z
-  => unfold cos $ rewrite (pmap E (AddGroup.negative-isInv {ComplexField} {z}) : E (negative (negative z)) = E z)
-       (ext (equation.cRing, equation.cRing))
+  => (\peval cos _)
+     *> later (rewrite (pmap (\lam z => exp (i * z)) ComplexField.negative-isInv) $ ext (equation.cRing, equation.cRing))
+     *> inv (\peval cos z)
 
 -- | $\sin(-z) = -\sin z$ — sine is odd.
 \lemma sin_negative {z : Complex} : sin (negative z) = negative (sin z)
-  => unfold sin $ rewrite (pmap E (AddGroup.negative-isInv {ComplexField} {z}) : E (negative (negative z)) = E z)
-       (ext (equation.cRing, equation.cRing))
+  => (\peval sin _)
+     *> later (rewrite (pmap (\lam z => exp (i * z)) ComplexField.negative-isInv) $ ext (equation.cRing, equation.cRing))
+     *> pmap negative (inv \peval sin z)
 
 {- | Euler's formula on $\mathbb{C}$: $\exp(i z) = \cos z + i \sin z$. -}
 \lemma euler {z : Complex} : exp (i * z) = cos z + i * sin z
-  => unfold (cos, sin) (ext (equation.cRing {half2-re}, equation.cRing {half2-re}))
+  => ext (equation.cRing {half2-re}, equation.cRing {half2-re}) *> inv (pmap2 (__ + i * __) (\peval cos z) (\peval sin z))
 
 -- | Pythagorean identity: $\cos^2 z + \sin^2 z = 1$.
-\lemma pythagoras {z : Complex} : cos z * cos z + sin z * sin z = (1 : Complex)
-  => inv (cos_minus {z} {z}) *> pmap cos (negative-right {ComplexField} {z}) *> cos_zro
+\lemma pythagoras {z : Complex} : cos z * cos z + sin z * sin z = {Complex} 1
+  => inv cos_minus *> pmap cos negative-right *> cos_zro
 
 -- | $\cos(x-y) = \cos x \cos y + \sin x \sin y$.
 \lemma cos_minus {x y : Complex} : cos (x - y) = cos x * cos y + sin x * sin y
-  => cos_+ {x} {negative y} *> rewrite (cos_negative {y}, sin_negative {y}) (ext (equation.cRing, equation.cRing))
+  => cos_+ *> rewrite (cos_negative, sin_negative) (ext (equation.cRing, equation.cRing))
 
 -- | $\sin(x-y) = \sin x \cos y - \cos x \sin y$.
 \lemma sin_minus {x y : Complex} : sin (x - y) = sin x * cos y - cos x * sin y
-  => sin_+ {x} {negative y} *> rewrite (cos_negative {y}, sin_negative {y}) (ext (equation.cRing, equation.cRing))
+  => sin_+ {x} {negative y} *> rewrite (cos_negative, sin_negative) (ext (equation.cRing, equation.cRing))
 
 -- | $(x+y)/2 + (x-y)/2 = x$. Helper for the sum-to-product identities.
-\private \lemma half-decomp-plus {x y : Complex} : (x + y) * half + (x - y) * half = x
+\private \lemma half-decomp-plus {x y : Complex} : (x + y) * ratio 1 2 + (x - y) * ratio 1 2 = x
   => ext (equation.cRing {half2-re}, equation.cRing {half2-re})
 
 -- | $(x+y)/2 - (x-y)/2 = y$. Helper for the sum-to-product identities.
-\private \lemma half-decomp-minus {x y : Complex} : (x + y) * half - (x - y) * half = y
+\private \lemma half-decomp-minus {x y : Complex} : (x + y) * ratio 1 2 - (x - y) * ratio 1 2 = y
   => ext (equation.cRing {half2-re}, equation.cRing {half2-re})
 
 {- | Sum-to-product for cosines:
      $\cos x - \cos y = -2 \sin\tfrac{x+y}2 \sin\tfrac{x-y}2$. -}
 \lemma cos-sum-to-product {x y : Complex}
-  : cos x - cos y = negative ((2 : Complex) * sin ((x + y) * half) * sin ((x - y) * half))
-  => \let
-       | cosX => pmap cos (inv (half-decomp-plus {x} {y})) *> cos_+ {(x + y) * half} {(x - y) * half}
-       | cosY => pmap cos (inv (half-decomp-minus {x} {y})) *> cos_minus {(x + y) * half} {(x - y) * half}
+  : cos x - cos y = negative (2 * sin ((x + y) * ratio 1 2) * sin ((x - y) * ratio 1 2))
+  => \have
+       | cosX => pmap cos (inv half-decomp-plus) *> cos_+ {(x + y) * ratio 1 2} {(x - y) * ratio 1 2}
+       | cosY => pmap cos (inv (half-decomp-minus {x} {y})) *> cos_minus
      \in rewrite (cosX, cosY) (ext (equation.cRing, equation.cRing))
 
 {- | Sum-to-product for sines:
      $\sin x - \sin y = 2 \cos\tfrac{x+y}2 \sin\tfrac{x-y}2$. -}
 \lemma sin-sum-to-product {x y : Complex}
-  : sin x - sin y = (2 : Complex) * cos ((x + y) * half) * sin ((x - y) * half)
+  : sin x - sin y = 2 * cos ((x + y) * ratio 1 2) * sin ((x - y) * ratio 1 2)
   => \let
-       | sinX => pmap sin (inv (half-decomp-plus {x} {y})) *> sin_+ {(x + y) * half} {(x - y) * half}
-       | sinY => pmap sin (inv (half-decomp-minus {x} {y})) *> sin_minus {(x + y) * half} {(x - y) * half}
+       | sinX => pmap sin (inv half-decomp-plus) *> sin_+ {(x + y) * ratio 1 2} {(x - y) * ratio 1 2}
+       | sinY => pmap sin (inv (half-decomp-minus {x} {y})) *> sin_minus
      \in rewrite (sinX, sinY) (ext (equation.cRing, equation.cRing))
 
 -- | $E(\mathrm{fromReal}\,x) = \mathrm{fromReal}(\cos x) + i\,\mathrm{fromReal}(\sin x)$ — real Euler.
-\private \lemma E-fromReal {x : Real} : E (Complex.fromReal x) = Complex.fromReal (rcos x) + i * Complex.fromReal (rsin x)
-  => unfold E (reuler {x})
+\private \lemma exp_i_fromReal {x : Real} : exp (i * x) = rcos x ComplexField.+ i * rsin x
+  => reuler
 
 -- | $E(-\mathrm{fromReal}\,x) = \mathrm{fromReal}(\cos x) - i\,\mathrm{fromReal}(\sin x)$.
-\private \lemma E-neg-fromReal {x : Real} : E (negative (Complex.fromReal x)) = Complex.fromReal (rcos x) - i * Complex.fromReal (rsin x)
-  => unfold E $
-     pmap exp (Ring.negative_*-right {_} {i} {Complex.fromReal x} *> inv (conj_i_* {x}))
-     *> inv (conj_exp {i * Complex.fromReal x})
-     *> pmap conj (reuler {x})
-     *> conj_+ {Complex.fromReal (rcos x)} {i * Complex.fromReal (rsin x)}
-     *> pmap2 (+) (conj_fromReal {rcos x}) (conj_i_* {rsin x})
+\private \lemma exp_i_negative_fromReal {x : Real} : exp (i * ComplexField.negative x) = Complex.fromReal (rcos x) - i * rsin x
+  => pmap exp (ComplexField.negative_*-right *> inv conj_i_*)
+     *> inv conj_exp
+     *> pmap conj reuler
+     *> conj_+ {rcos x} {i * rsin x}
+     *> pmap2 (+) conj_fromReal conj_i_*
 
 {- | The complex cosine agrees with the real cosine on $\mathbb{R}$:
      $\cos(\mathrm{fromReal}\,x) = \mathrm{fromReal}(\cos x)$. -}
-\lemma cos-fromReal {x : Real} : cos (Complex.fromReal x) = Complex.fromReal (rcos x)
-  => unfold cos $ rewrite (E-fromReal, E-neg-fromReal) (ext (equation.cRing {half2-re}, equation.cRing))
+\lemma cos-fromReal {x : Real} : cos x = {Complex} rcos x
+  => (\peval cos _) *> rewrite (exp_i_fromReal, exp_i_negative_fromReal) (ext (equation.cRing {half2-re}, equation.cRing))
 
 {- | The complex sine agrees with the real sine on $\mathbb{R}$:
      $\sin(\mathrm{fromReal}\,x) = \mathrm{fromReal}(\sin x)$. -}
-\lemma sin-fromReal {x : Real} : sin (Complex.fromReal x) = Complex.fromReal (rsin x)
-  => unfold sin $ rewrite (E-fromReal, E-neg-fromReal) (ext (equation.cRing {half2-re}, equation.cRing))
+\lemma sin-fromReal {x : Real} : sin x = {Complex} rsin x
+  => (\peval sin _) *> rewrite (exp_i_fromReal, exp_i_negative_fromReal) (ext (equation.cRing {half2-re}, equation.cRing))

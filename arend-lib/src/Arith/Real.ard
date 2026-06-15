@@ -96,6 +96,10 @@
     => (\lam p => p, \lam p => RealAbGroup.<=-antisymmetric (<=_U-char.2 \lam y<a => rewrite p y<a) (<=_U-char.2 \lam x<a => rewriteI p x<a))
 }
 
+\lemma rat-real-hom : AddMonoidHom RatField RealAbGroup Real.fromRat \cowith
+  | func-zro => idp
+  | func-+ => inv RealAbGroup.+-rat
+
 \lemma real-upperReal : AddMonoidHom RealAbGroup ExUpperRealAbMonoid (\lam x => x) \cowith
   | func-zro => idp
   | func-+ => RealAbGroup.+-upper

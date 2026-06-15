@@ -19,7 +19,6 @@
 \import Order.Biordered
 \import Order.LinearOrder
 \import Order.PartialOrder
-\import Order.StrictOrder
 \import Paths
 \import Paths.Meta
 \import Set
@@ -95,6 +94,19 @@
 
   \lemma BigProd_replicate1 {n : Nat} : BigProd (replicate n ide) = ide
     => BigProd_replicate *> pow_ide
+
+  \func IsCentral (x : E) : \Prop
+    => \Pi (y : E) -> x * y = y * x
+
+  \lemma IsCentral_ide : IsCentral 1
+    => \lam y => ide-left *> inv ide-right
+
+  \lemma IsCentral_* {x y : E} (xc : IsCentral x) (yc : IsCentral y) : IsCentral (x * y)
+    => \lam z => *-assoc *> pmap (x *) (yc z) *> inv *-assoc *> pmap (`* y) (xc z) *> *-assoc
+
+  \lemma IsCentral_pow {x : E} (xc : IsCentral x) {n : Nat} : IsCentral (pow x n) \elim n
+    | 0 => IsCentral_ide
+    | suc n => IsCentral_* (IsCentral_pow xc) xc
 
   \protected \func op : Monoid E \cowith
     | ide => ide
@@ -535,18 +547,19 @@
   -- | Reversing an array preserves its BigSum.
   \lemma BigSum-reverse {k : Nat} (l : Array E (suc k))
     : BigSum (\new Array E (suc k) (\lam i => l (k -' i))) = BigSum l
-    => BigSum_Perm {_} {suc k} (reverse-perm l)
-
-  -- | The permutation that reverses an array of length `suc k`.
-  \func reverse-perm {A : \Set} {k : Nat} (l : Array A (suc k))
-    : Perm (mkArray (\lam i => l (k -' i))) l
-    => Perm.perm-map {Fin (suc k)} {A} l {suc k} {\lam j => k -' j} {\lam j => j}
-        (Perm.perm-fin {suc k} (\lam j => k -' j)
-          (\lam {a} {a'} p => run {
-            \have a<=k : a <= {NatSemiring} k => <_suc_<= (fin_< a),
-            \have a'<=k : a' <= {NatSemiring} k => <_suc_<= (fin_< a'),
-            nat_fin_= (rewrite (mod_< {k -' a} {suc k} -'<id, mod_< {k -' a'} {suc k} -'<id, -'_inv a<=k, -'_inv a'<=k) in pmap (k -' __) p)
-          }))
+    => BigSum_Perm {_} {suc k} reverse-perm
+    \where {
+      -- | The permutation that reverses an array of length `suc k`.
+      \private \func reverse-perm {A : \Set} {k : Nat} {l : Array A (suc k)}
+        : Perm (mkArray (\lam i => l (k -' i))) l
+        => Perm.perm-map {Fin (suc k)} {A} l {suc k} {\lam j => k -' j} {\lam j => j}
+          (Perm.perm-fin {suc k} (\lam j => k -' j)
+            (\lam {a} {a'} p => run {
+              \have a<=k : a <= k => <_suc_<= (fin_< a),
+              \have a'<=k : a' <= k => <_suc_<= (fin_< a'),
+              nat_fin_= (rewrite (mod_< $ suc_<=_< (suc<=suc -'<=id), mod_< $ suc_<=_< (suc<=suc -'<=id), -'_inv a<=k, -'_inv a'<=k) in pmap (k -' __) p)
+            }))
+    }
 
   \sfunc FinSum {A : FinSet} (x : A -> E) : E
     => aux.1
@@ -588,6 +601,10 @@
                           inv (FinSum_char2 (unfold $ =-to-QEquiv (pmap Fin $ FinSum_char2 {NatSemiring} p.1) `transEquiv` SigmaFin.aux `transEquiv` sigma-equiv p.1 (\lam j => (f _).1)) *> pmap BigSum (exts $ (FinSum_char2 {NatSemiring} p.1, \lam j => idp)))
     }
 
+  \lemma FinSum-double-dep' {A : FinSet} (B : A -> FinSet) {x : \Pi (a : A) -> B a -> E}
+    : FinSum (\lam a => FinSum (x a)) = FinSum {_} {SigmaFin A B} \lam s => x s.1 s.2
+    => FinSum-double-dep B
+
   \lemma FinSum-double {A B : FinSet} {x : A -> B -> E}
     : FinSum (\lam a => FinSum (\lam b => x a b)) = FinSum (\lam (p : \Sigma A B) => x p.1 p.2)
     => FinSum-double-dep (\lam _ => B) *> pmap {FinSet (\Sigma A B)} (FinSum {_} {__} _) prop-pi
@@ -608,24 +625,38 @@
     => pmap FinSum (ext p) *> inv (FinSum_Equiv e)
 
   \lemma FinSum-inj {A B : FinSet} (f : A -> B) (inj : IsInj f) {x : B -> E} (p : \Pi (b : B) -> (\Pi (a : A) -> f a /= b) -> x b = 0) : FinSum x = FinSum (\lam a => x (f a))
-    => \have dec (b : B) : Decide (∃ (a : A) (f a = b)) => \new Decide { | decide => FinSet.search (\lam a => f a = b) (\lam a => decideEq (f a) b) }
-       \in FinSum_Equiv (later \new QEquiv {
-         | f => \case __ \with {
-           | inl s => s.1
-           | inr s => s.1
-         }
-         | ret b => \case decide {dec b} \with {
-           | yes e => inl (b,e)
-           | no q => inr (b,q)
-         }
-         | ret_f => \case \elim __ \with {
-           | inl s => rewrite (dec_yes_reduce s.2) idp
-           | inr s => rewrite (dec_no_reduce s.2) idp
-         }
-         | f_sec b => mcases {2} idp
-       }) *> FinSum_Or {_} {SigmaFin B \lam b => DecFin (decide {dec b})} {SigmaFin B \lam b => DecFin (decide {NotDecide (dec b)})} *>
-             pmap2 (+) (FinSum_Equiv $ later $ Equiv.fromInjSurj {A} {\Sigma (b : B) (∃ (a : A) (f a = b))} (\lam a => (f a, inP (a,idp))) (\lam {a} {a'} q => inj $ pmap __.1 q) \lam s => TruncP.map s.2 \lam t => (t.1, ext t.2))
-                       (FinSum_zro $ later \lam j => p j.1 \lam a q => j.2 $ inP (a,q)) *> zro-right
+    => FinSum_Equiv (later equiv)
+    *> FinSum_Or {_} {SigmaFin B \lam b => DecFin (decide {dec b})} {SigmaFin B \lam b => DecFin (decide {NotDecide (dec b)})}
+    *> pmap2 (+) (FinSum_Equiv $ later $ equiv2 inj) (FinSum_zro $ later \lam j => p j.1 \lam a q => j.2 $ inP (a,q)) *> zro-right
+    \where {
+      \protected \lemma dec (b : B) : Decide (∃ (a : A) (f a = b))
+        => \new Decide { | decide => FinSet.search (\lam a => f a = b) (\lam a => decideEq (f a) b) }
+
+      \protected \func equiv : QEquiv {Or (Given (b : B) ∃ (a : A) (f a = b)) (Given (b : B) (Not (∃ (a : A) (f a = b))))} {B} \cowith
+        | f => \case __ \with {
+          | inl s => s.1
+          | inr s => s.1
+        }
+        | ret b => \case decide {dec b} \with {
+          | yes e => inl (b,e)
+          | no q => inr (b,q)
+        }
+        | ret_f => \case \elim __ \with {
+          | inl s => rewrite (dec_yes_reduce s.2) idp
+          | inr s => rewrite (dec_no_reduce s.2) idp
+        }
+        | f_sec b => mcases {2} idp
+
+      \protected \func equiv2 {A B : FinSet} {f : A -> B} (inj : IsInj f)
+        => Equiv.fromInjSurj {A} {\Sigma (b : B) (∃ (a : A) (f a = b))}
+            (\lam a => (f a, inP (a,idp)))
+            (\lam {a} {a'} q => inj $ pmap __.1 q)
+            (\lam s => TruncP.map s.2 \lam t => (t.1, ext t.2))
+    }
+
+  \lemma FinSum-inj2 {A B : FinSet} (f : A -> B) (inj : IsInj f) {x : B -> E} (p : \Pi (b : B) -> (\Pi (a : A) -> f a /= b) -> x b = 0)
+                     {y : A -> E} (q : \Pi (a : A) -> x (f a) = y a) : FinSum x = FinSum y
+    => FinSum-inj f inj p *> FinSum-ext q
 
   \lemma FinSum_Or {A B : FinSet} {x : Or A B -> E} : FinSum x = FinSum (\lam a => x (inl a)) + FinSum (\lam b => x (inr b))
     => \case FinSum_char _, FinSum_char _ \with {

@@ -25,6 +25,6 @@
 {- | Real as a Hausdorff TopLModule over itself: bundles `RingTopLModule
      RealNearField` (the canonical "ring as module over itself" structure)
      with the Hausdorff property inherited from `RealNormed`. -}
-\instance RealAsHTLModule : HausdorffTopLModule RealNearField
+\instance RealTopLModule : HausdorffTopLModule RealNearField
   | TopLModule => RingTopLModule RealNearField
   | isSeparatedCoverSpace => RealNormed.isSeparatedCoverSpace

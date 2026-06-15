@@ -18,6 +18,7 @@
 \import Algebra.Monoid
 \import Algebra.Monoid.MonoidHom
 \import Algebra.Ordered
+\import Algebra.QModule
 \import Algebra.Ring
 \import Algebra.StrictlyOrdered
 \import Algebra.Semiring
@@ -27,6 +28,7 @@
 \import Arith.Nat
 \import Arith.Rat
 \import Arith.Real
+\import Logic.Meta
 \import Topology.BanachAlgebra
 \import Topology.StoneCStarAlgebra
 \import Arith.Real.Field
@@ -50,15 +52,13 @@
 \open Monoid (pow)
 
 -- | $\ell(a) := \mathrm{log1p}(a - 1)$ for $a \in (0, 2)$.
-\func ell (a : Real) (a-pos : (0 : Real) < a) (a-lt2 : a.U 2) : Real
-  => log1+ {RealStoneC*Algebra} (a - 1) (abs-a-1-<1 a-pos a-lt2)
+\func ell (a : Real) (\property a>0 : (0 : Real) < a) (\property a-lt2 : a.U 2) : Real
+  => log1+ (a - 1) (abs-a-1-<1 a>0 a-lt2)
   \where {
     -- | $0 < a < 2 \Rightarrow |a - 1| < 1$.
-    \lemma abs-a-1-<1 {a : Real} (_ : (0 : Real) < a) (a-lt2 : a.U 2)
+    \lemma abs-a-1-<1 {a : Real} (a>0 : (0 : Real) < a) (a-lt2 : a.U 2)
       : (RealNormed.norm (a - 1) : ExUpperReal).U 1
-      => real_<_U.1 $ RealAbGroup.abs_-_<
-           (linarith (real_<_U.2 a-lt2))
-           linarith
+      => real_<_U.1 $ RealAbGroup.abs_-_< (linarith (real_<_U.2 a-lt2)) linarith
   }
 
 -- | $\ell(a) + \ell(b) = \ell(ab)$ for $a, b, ab \in (0, 2)$.
@@ -67,219 +67,172 @@
                (b-pos : (0 : Real) < b) (b-lt2 : b.U 2)
                (ab-pos : (0 : Real) < a * b) (ab-lt2 : (a * b).U 2)
   : ell a a-pos a-lt2 + ell b b-pos b-lt2 = ell (a * b) ab-pos ab-lt2
-  => Real-exp-inj $
-       exp_+ RealField.*-comm
-       *> pmap2 (*) (exp-log1p {RealStoneC*Algebra} (\lam y z => RealField.*-comm) (a - 1) (ell.abs-a-1-<1 a-pos a-lt2))
-                    (exp-log1p {RealStoneC*Algebra} (\lam y z => RealField.*-comm) (b - 1) (ell.abs-a-1-<1 b-pos b-lt2))
-       *> (equation : ((1 : Real) + (a - 1)) * ((1 : Real) + (b - 1)) = (1 : Real) + (a * b - 1))
-       *> inv (exp-log1p {RealStoneC*Algebra} (\lam y z => RealField.*-comm) (a * b - 1) (ell.abs-a-1-<1 ab-pos ab-lt2))
+  => Real-exp-inj $ exp_+ RealField.*-comm
+       *> pmap2 (*) (exp-log1p (a - 1) (\lam z => *-comm) (ell.abs-a-1-<1 a-pos a-lt2))
+                    (exp-log1p (b - 1) (\lam z => *-comm) (ell.abs-a-1-<1 b-pos b-lt2))
+       *> equation.cRing
+       *> inv (exp-log1p (a * b - 1) (\lam z => *-comm) (ell.abs-a-1-<1 ab-pos ab-lt2))
 
 -- | $\exp(\ell(a)) = a$ for $a \in (0, 2)$.
-\lemma exp-ell (a : Real) (a-pos : (0 : Real) < a) (a-lt2 : a.U 2)
-  : exp {RealStoneC*Algebra} (ell a a-pos a-lt2) = a
-  => exp-log1p {RealStoneC*Algebra} (\lam y z => RealField.*-comm) (a - 1) (ell.abs-a-1-<1 a-pos a-lt2)
-     *> linarith
+\lemma exp-ell (a : Real) (a-pos : (0 : Real) < a) (a-lt2 : a.U 2) : exp (ell a a-pos a-lt2) = a
+  => exp-log1p (a - 1) (\lam z => *-comm) (ell.abs-a-1-<1 a-pos a-lt2) *> linarith
 
 -- | $\log 2 := \ell(3/2) - \ell(3/4)$.
-\func log2 : Real => ell (3 * RatField.finv 2) r3/2>0 r3/2<2 - ell (3 * RatField.finv 4) r3/4>0 r3/4<2 \where {
+\func log2 : Real => ell (3 * RatField.finv 2) r3/2>0 r3/2<2 - ell (3 * RatField.finv 4) r3/4>0 r3/4<2
+  \where {
+    \private \lemma r3/2>0 : (0 : Real) < 3 * RatField.finv 2 => rat_real_<.1 linarith
 
-  \private \lemma r3/2>0 : (0 : Real) < 3 * RatField.finv 2 => rat_real_<.1 linarith
+    \private \lemma r3/2<2 : (3 * RatField.finv 2 : Real).U 2 => real_<_U.1 (rat_real_<.1 linarith)
 
-  \private \lemma r3/2<2 : (Real.fromRat (3 * RatField.finv 2)).U (2 : Rat) => real_<_U.1 (rat_real_<.1 linarith)
+    \private \lemma r3/4>0 : (0 : Real) < 3 * RatField.finv 4 => rat_real_<.1 linarith
 
-  \private \lemma r3/4>0 : (0 : Real) < 3 * RatField.finv 4 => rat_real_<.1 linarith
+    \private \lemma r3/4<2 : (3 * RatField.finv 4 : Real).U 2 => real_<_U.1 (rat_real_<.1 linarith)
 
-  \private \lemma r3/4<2 : (Real.fromRat (3 * RatField.finv 4)).U (2 : Rat) => real_<_U.1 (rat_real_<.1 linarith)
-
-  -- | $\exp(\log 2) = 2$.
-  \lemma exp-log2 : exp {RealStoneC*Algebra} log2 = Real.fromRat 2
-    => \have
-      | key : exp {RealStoneC*Algebra} log2 * Real.fromRat (3 * RatField.finv 4) = Real.fromRat (3 * RatField.finv 2)
-      => pmap (exp {RealStoneC*Algebra} log2 *) (inv (exp-ell (3 * RatField.finv 4) r3/4>0 r3/4<2))
-          *> inv (exp_+ RealField.*-comm)
-               *> pmap (exp {RealStoneC*Algebra}) linarith
-                    *> exp-ell (3 * RatField.finv 2) r3/2>0 r3/2<2
-       \in inv ide-right
-        *> pmap (exp {RealStoneC*Algebra} log2 *) (inv RealField.*-rat)
-             *> inv *-assoc
-                  *> pmap (`* Real.fromRat (4 * RatField.finv 3)) key
-                       *> RealField.*-rat
-}
+    -- | $\exp(\log 2) = 2$.
+    \lemma exp-log2 : exp log2 = Real.fromRat 2
+      => \have key : exp log2 * (3 * RatField.finv 4) = {Real} 3 * RatField.finv 2
+               => pmap (_ *) (inv (exp-ell (3 * RatField.finv 4) r3/4>0 r3/4<2))
+                  *> inv (exp_+ *-comm) *> pmap exp linarith *> exp-ell (3 * RatField.finv 2) r3/2>0 r3/2<2
+         \in inv ide-right *> pmap (_ *) (inv RealField.*-rat)
+             *> inv *-assoc *> pmap (`* Real.fromRat (4 * RatField.finv 3)) key *> RealField.*-rat
+  }
 
 -- | $\ell(2y) = \ell(y) + \log 2$ for $0 < y < 1$.
 \lemma ell-double (y : Real) (y-pos : (0 : Real) < y) (y-lt1 : y.U 1)
   : ell (2 * y) linarith (real_<_U.1 (linarith (real_<_U.2 y-lt1)))
     = ell y y-pos (real_<_U.1 (linarith (real_<_U.2 y-lt1))) + log2
-  => Real-exp-inj $
-       exp-ell (2 * y) _ _
-       *> inv (exp_+ RealField.*-comm
-             *> pmap2 (*) (exp-ell y y-pos _) log2.exp-log2
-             *> RealField.*-comm
-             *> pmap (`* y) (inv (RealStoneC*Algebra_fromRat 2) *> BanachAlgebra.fromRat_natCoef))
-
+  => Real-exp-inj $ exp-ell (2 * y) _ _ *> inv
+      (exp_+ *-comm
+       *> pmap2 (*) (exp-ell y y-pos _) log2.exp-log2
+       *> *-comm
+       *> pmap (`* y) (inv (RealStoneC*Algebra_fromRat 2) *> QAlgebra.fromRat_natCoef))
 
 -- | The Real logarithm $\log : \mathbb R_{>0} \to \mathbb R$.
-\func log-Real (x : Real) (x-pos : (0 : Real) < x) : Real
-  => (TruncP.rec-set (dyadic-shift-inh x-pos) (log-cand x) log-cand-const).1 \where {
+\sfunc log-Real (x : Real) (x>0 : (0 : Real) < x) : Real
+  => (TruncP.rec-set (DyadicShift-inh x>0) (log-cand x) log-cand-const).1
+  \where {
+    \protected \lemma char {x : Real} (x>0 : (0 : Real) < x)
+      : ∃ (a : DyadicShift x) (ell (x * finv (RatField.pow 2 a.1)) a.2 a.3 + a.1 RealField.* log2 = log-Real x x>0)
+      => \case (TruncP.rec-set (DyadicShift-inh x>0) (log-cand x) log-cand-const).2 \with {
+        | inP r => inP (r.1, r.2 *> inv (\peval log-Real x x>0))
+      }
 
-  -- | Triples $(n,\, 0 < x/2^n,\, x/2^n < 2)$: dyadic shifts placing $x$ in $\ell$'s domain.
-  \func dyadic-shift (x : Real) : \Type
-  => \Sigma (n : Nat)
-           ((0 : Real) < x * Real.fromRat (RatField.finv (RatField.pow 2 n)))
-           ((x * Real.fromRat (RatField.finv (RatField.pow 2 n))).U 2)
+    -- | Triples $(n,\, 0 < x/2^n,\, x/2^n < 2)$: dyadic shifts placing $x$ in $\ell$'s domain.
+    \func DyadicShift (x : Real) : \Type
+      => \Sigma (n : Nat)
+             ((0 : Real) < x * RatField.finv (RatField.pow 2 n))
+             ((x * RatField.finv (RatField.pow 2 n)).U 2)
 
-  -- | For $x > 0$, `dyadic-shift x` is inhabited up to truncation — by Archimedeanity.
-  \lemma dyadic-shift-inh {x : Real} (x-pos : (0 : Real) < x) : TruncP (dyadic-shift x) =>
-    \case x.U-inh \with {
-    | inP (q, xUq) =>
-      \let | (n, hn) => rat_>1_pow-bound (linarith : (1 : Rat) RatField.< 2) q
-           | pow-pos : (0 : Rat) RatField.< RatField.pow 2 n => RatField.pow>0 linarith
-           | finv-pos : (0 : Rat) RatField.< RatField.finv (RatField.pow 2 n)
-               => RatField.finv>0 pow-pos
-           | q-finv-lt1 : q RatField.* RatField.finv (RatField.pow 2 n) RatField.< 1
-               => rewrite (RatField.finv-right (RatField.>_/= pow-pos)) in
-                  RatField.<_*_positive-left hn finv-pos
-      \in inP (n,
-        RealField.<_*_positive_positive x-pos (rat_real_<.1 finv-pos),
-        real_<_U.1
-          (RealField.<_*_positive-left (real_<_U.2 xUq) (rat_real_<.1 finv-pos)
-           <∘ rewrite RealField.*-rat
-                 (rat_real_<.1 (linarith : q RatField.* RatField.finv (RatField.pow 2 n) RatField.< 2))))
-  }
-
-  -- | `log-cand x (n, _, _)` $:= \ell(x/2^n) + n \cdot \log 2$.
-  \func log-cand (x : Real) (p : dyadic-shift x) : Real \elim p
-    | (n, x2n-pos, x2n-lt2)
-    => ell (x * RatField.finv (RatField.pow 2 n)) x2n-pos x2n-lt2
-        + Real.fromRat (Rat.fromInt (pos n)) * log2
-
-  -- | `log-cand x` is independent of the dyadic-shift representative.
-  \lemma log-cand-const {x : Real} (p p' : dyadic-shift x) : log-cand x p = log-cand x p' =>
-    \case NatSemiring.trichotomy p.1 p'.1 \with {
-      | less p<p' => cand-up p p' (p'.1 -' p.1) (inv (<=_exists (<=-less p<p')))
-      | equals p=p' => cand-eq p p' p=p'
-      | greater p>p' => inv (cand-up p' p (p.1 -' p'.1) (inv (<=_exists (<=-less p>p'))))
+    -- | For $x > 0$, `DyadicShift x` is inhabited up to truncation — by Archimedeanity.
+    \lemma DyadicShift-inh {x : Real} (x-pos : (0 : Real) < x) : TruncP (DyadicShift x) =>
+      \case x.U-inh \with {
+      | inP (q, xUq) =>
+        \have | (n, hn) => rat_>1_pow-bound {2} linarith q
+              | pow-pos : 0 RatField.< pow 2 n => RatField.pow>0 linarith
+              | finv-pos : 0 RatField.< RatField.finv (pow 2 n)
+                => RatField.finv>0 pow-pos
+              | q-finv-lt1 : q * RatField.finv (pow 2 n) < 1
+                => rewrite (RatField.finv-right (RatField.>_/= pow-pos)) in <_*_positive-left hn finv-pos
+        \in inP (n,
+          RealField.<_*_positive_positive x-pos (rat_real_<.1 finv-pos),
+          real_<_U.1 $ <_*_positive-left (real_<_U.2 xUq) (rat_real_<.1 finv-pos) <∘ rewrite RealField.*-rat (rat_real_<.1 linarith))
     }
-    \where {
-      \private \lemma cand-eq {x : Real} (p p' : dyadic-shift x) (h : p.1 = p'.1) : log-cand x p = log-cand x p' \elim p, p', h
-        | (n, p2, p3), (n', p2', p3'), idp => pmap2 (\lam a b => log-cand x (n, a, b)) prop-pi prop-pi
 
-      \private \func adm-up {x : Real} (p : dyadic-shift x) (k : Nat) : \Sigma (q : dyadic-shift x) (q.1 = p.1 + k) \elim k
-        | 0 => (p, idp)
-        | suc k' =>
-          \let | r => adm-up p k'
-               | q : dyadic-shift x => r.1
-               | n' : Nat => q.1
-               | y-pos : (0 : Real) < x * Real.fromRat (RatField.finv (RatField.pow 2 (suc n')))
-                   => RealField.<_*_positive_positive
-                   (RealField.positive_*-cancel-right p.2 (rat_real_<.1 (RatField.finv>0 (RatField.pow>0 linarith))))
-                   (rat_real_<.1 (RatField.finv>0 (RatField.pow>0 {2} (linarith : (0 : Rat) < 2) {suc n'})))
-               | y-eq : x * Real.fromRat (RatField.finv (RatField.pow 2 (suc n')))
-                         = x * Real.fromRat (RatField.finv (RatField.pow 2 n')) * Real.fromRat (RatField.finv 2)
-                   => rewrite (RatField.finv_*, inv RealField.*-rat) equation.cRing
-          \in ((suc n', y-pos, real_<_U.1 ( run {
-            rewrite y-eq,`<∘ (real_<_U.2 q.3),
-            linarith
-          } )), pmap suc r.2)
+    -- | `log-cand x (n, _, _)` $:= \ell(x/2^n) + n \cdot \log 2$.
+    \func log-cand (x : Real) (p : DyadicShift x) : Real \elim p
+      | (n, x2n-pos, x2n-lt2)
+      => ell (x * RatField.finv (pow 2 n)) x2n-pos x2n-lt2 + n RealField.* log2
 
-    \private \lemma cand-up {x : Real} (p p' : dyadic-shift x) (d : Nat) (h : p'.1 = p.1 + d)
-      : log-cand x p = log-cand x p' \elim d
-      | 0 => cand-eq p p' (inv h)
-      | suc d' =>
-        \let | r => adm-up p d'
-             | q : dyadic-shift x => r.1
-             | q-eq : q.1 = p.1 + d' => r.2
-        \in cand-up p q d' q-eq *> cand-step q p' (h *> pmap suc (inv q-eq))
+    -- | `log-cand x` is independent of the dyadic-shift representative.
+    \lemma log-cand-const {x : Real} (p p' : DyadicShift x) : log-cand x p = log-cand x p' =>
+      \case NatSemiring.trichotomy p.1 p'.1 \with {
+        | less p<p' => cand-up p p' (p'.1 -' p.1) (inv (<=_exists (<=-less p<p')))
+        | equals p=p' => cand-eq p p' p=p'
+        | greater p>p' => inv (cand-up p' p (p.1 -' p'.1) (inv (<=_exists (<=-less p>p'))))
+      }
+      \where {
+        \private \lemma cand-eq {x : Real} (p p' : DyadicShift x) (h : p.1 = p'.1) : log-cand x p = log-cand x p' \elim p, p', h
+          | (n, p2, p3), (n', p2', p3'), idp => pmap2 (\lam a b => log-cand x (n, a, b)) prop-pi prop-pi
 
-    \private \lemma ell-arg-eq {a b : Real} (eq : a = b)
-        (a-pos : (0 : Real) < a) (a-lt2 : a.U 2)
-        (b-pos : (0 : Real) < b) (b-lt2 : b.U 2)
-      : ell a a-pos a-lt2 = ell b b-pos b-lt2 \elim eq
-      | idp => pmap2 (\lam p q => ell a p q) prop-pi prop-pi
+        \private \func adm-up {x : Real} (p : DyadicShift x) (k : Nat) : \Sigma (q : DyadicShift x) (q.1 = p.1 + k) \elim k
+          | 0 => (p, idp)
+          | suc k =>
+            \have | r => adm-up p k
+                  | y-pos : (0 : Real) < x * RatField.finv (RatField.pow 2 (suc r.1.1))
+                    => RealField.<_*_positive_positive
+                       (RealField.positive_*-cancel-right p.2 $ rat_real_<.1 $ RatField.finv>0 $ RatField.pow>0 linarith)
+                       (rat_real_<.1 (RatField.finv>0 $ RatField.pow>0 {2} linarith {suc r.1.1}))
+                  | y-eq : x * RatField.finv (RatField.pow 2 (suc r.1.1))
+                           = x * RatField.finv (RatField.pow 2 r.1.1) * RatField.finv 2
+                    => rewrite RatField.finv_* $ equation.cRing {inv RealField.*-rat}
+            \in ((suc r.1.1, y-pos, real_<_U.1 $ rewrite y-eq $ linarith <∘ real_<_U.2 r.1.3), pmap suc r.2)
 
-    \private \lemma doubling-eq (x : Real) (n : Nat)
-      : (2 : Real) * (x * Real.fromRat (RatField.finv (RatField.pow 2 (suc n))))
-      = x * Real.fromRat (RatField.finv (RatField.pow 2 n))
-      => \have half-cancel : (2 : Real) * Real.fromRat (RatField.finv 2) = (1 : Real)
-                 => RealField.*-rat *> pmap Real.fromRat (RatField.finv-right (RatField.>_/= (linarith : (0 : Rat) < 2)))
-         \in rewrite (DiscreteField.finv_* {RatField}, inv RealField.*-rat)
-               ((equation.cRing : (2 : Real) * (x * (Real.fromRat (RatField.finv 2) * Real.fromRat (RatField.finv (RatField.pow 2 n))))
-                                = (2 : Real) * Real.fromRat (RatField.finv 2) * (x * Real.fromRat (RatField.finv (RatField.pow 2 n))))
-                *> rewrite half-cancel ide-left)
+      \private \lemma cand-up {x : Real} (p p' : DyadicShift x) (d : Nat) (h : p'.1 = p.1 + d)
+        : log-cand x p = log-cand x p' \elim d
+        | 0 => cand-eq p p' (inv h)
+        | suc d' =>
+          \have r => adm-up p d'
+          \in cand-up p r.1 d' r.2 *> cand-step r.1 p' (h *> pmap suc (inv r.2))
 
-    \private \lemma cand-step {x : Real} (p p' : dyadic-shift x) (h : p'.1 = suc p.1)
-      : log-cand x p = log-cand x p' \elim p, p', h
-      | (n, p2, p3), (sn, p2', p3'), idp =>
-        \let | y => x * Real.fromRat (RatField.finv (RatField.pow 2 (suc n)))
-             | twice_y=x/2^n : (2 : Real) * y = x * Real.fromRat (RatField.finv (RatField.pow 2 n)) => doubling-eq x n
-             | x/2^N<2 : x * Real.fromRat (RatField.finv (RatField.pow 2 n)) < (2 : Real) => real_<_U.2 p3
-             | y<1 : y.U 1 => real_<_U.1 (linarith : y < (1 : Real))
-             | ell-step : ell (x * Real.fromRat (RatField.finv (RatField.pow 2 n))) p2 p3 = ell y p2' p3' + log2
-                => ell-arg-eq (inv twice_y=x/2^n) p2 p3 linarith (real_<_U.1 (linarith (real_<_U.2 y<1)))
-                   *> ell-double y p2' y<1
-                   *> pmap (\lam q => ell y p2' q + log2) prop-pi
-             | coef-step : Real.fromRat (Rat.fromInt (pos (suc n))) * log2
-                         = Real.fromRat (Rat.fromInt (pos n)) * log2 + log2
-                => rewrite (inv RealAbGroup.+-rat
-                           : Real.fromRat (Rat.fromInt (pos (suc n)))
-                           = Real.fromRat (Rat.fromInt (pos n)) + Real.fromRat 1) equation.cRing
-        \in rewrite (ell-step, coef-step) equation.cRing
+      \private \lemma ell-arg-eq {a b : Real} (eq : a = b)
+          (a-pos : (0 : Real) < a) (a-lt2 : a.U 2)
+          (b-pos : (0 : Real) < b) (b-lt2 : b.U 2)
+        : ell a a-pos a-lt2 = ell b b-pos b-lt2 \elim eq
+        | idp => pmap2 (\lam p q => ell a p q) prop-pi prop-pi
+
+      \private \lemma doubling-eq (x : Real) (n : Nat)
+        : (2 : Real) * (x * RatField.finv (RatField.pow 2 (suc n))) = x * RatField.finv (RatField.pow 2 n)
+        => \have half-cancel : (2 : Real) * RatField.finv 2 = (1 : Real)
+                   => RealField.*-rat *> pmap Real.fromRat (RatField.finv-right (RatField.>_/= linarith))
+           \in rewrite (RatField.finv_*, inv RealField.*-rat) $ equation.cRing *> pmap (`* _) half-cancel *> ide-left
+
+      \private \lemma cand-step {x : Real} (p p' : DyadicShift x) (h : p'.1 = suc p.1)
+        : log-cand x p = log-cand x p' \elim p, p', h
+        | (n, p2, p3), (sn, p2', p3'), idp =>
+          \let | y => x * RatField.finv (RatField.pow 2 (suc n))
+               | twice_y=x/2^n : (2 : Real) * y = x * RatField.finv (RatField.pow 2 n) => doubling-eq x n
+               | x/2^N<2 : x * RatField.finv (RatField.pow 2 n) < (2 : Real) => real_<_U.2 p3
+               | y<1 : y.U 1 => real_<_U.1 linarith
+               | ell-step : ell (x * RatField.finv (RatField.pow 2 n)) p2 p3 = ell y p2' p3' + log2
+                  => ell-arg-eq (inv twice_y=x/2^n) p2 p3 linarith (real_<_U.1 (linarith (real_<_U.2 y<1)))
+                     *> ell-double y p2' y<1
+                     *> pmap (\lam q => ell y p2' q + log2) prop-pi
+               | coef-step : suc n RealField.* log2 = n RealField.* log2 + log2
+                  => pmap (RealField.`* _) (inv $ RealAbGroup.+-rat {n} {1}) *> equation.cRing
+          \in rewrite (ell-step, coef-step) equation.cRing
+    }
   }
-}
 
 -- ============================================================================
 -- log-Real and exp are mutual inverses on the positive reals / all of Real.
 -- ============================================================================
 
--- | $\exp(n \cdot \log 2) = 2^n$ for $n \in \mathbb N$.
-\private \lemma exp-n*log2 (n : Nat)
-  : exp {RealStoneC*Algebra} (Real.fromRat (Rat.fromInt (pos n)) * log2)
-    = Monoid.pow (Real.fromRat 2) n \elim n
-  | 0 =>
-    \have zro-coef : Real.fromRat (Rat.fromInt (pos 0)) * log2 = (0 : Real)
-            => pmap (\lam (q : Rat) => Real.fromRat q * log2) (Rat.ext idp idp) *> zro_*-left
-    \in pmap (exp {RealStoneC*Algebra}) zro-coef *> exp_zro
-  | suc n' =>
-    \have coef-step : Real.fromRat (Rat.fromInt (pos (suc n'))) * log2
-                    = Real.fromRat (Rat.fromInt (pos n')) * log2 + log2
-            => rewrite (inv RealAbGroup.+-rat
-                       : Real.fromRat (Rat.fromInt (pos (suc n')))
-                       = Real.fromRat (Rat.fromInt (pos n')) + Real.fromRat 1) equation.cRing
-    \in pmap (exp {RealStoneC*Algebra}) coef-step
-        *> exp_+ RealField.*-comm
-        *> pmap2 (*) (exp-n*log2 n') log2.exp-log2
-
--- | Cancellation: $(x \cdot 2^{-n}) \cdot 2^n = x$ over Real.
-\private \lemma cancel-pow-2-n (x : Real) (n : Nat)
-  : x * Real.fromRat (RatField.finv (RatField.pow 2 n)) * Monoid.pow (Real.fromRat 2) n = x
-  => \have | pow-bridge : Monoid.pow (Real.fromRat 2) n = Real.fromRat (RatField.pow 2 n)
-                => RealField.pow-rat
-           | pow/=0 : RatField.pow 2 n /= 0
-                => RatField.>_/= (RatField.pow>0 (linarith : (0 : Rat) RatField.< 2))
-           | inv-cancel : Real.fromRat (RatField.finv (RatField.pow 2 n)) * Real.fromRat (RatField.pow 2 n) = (1 : Real)
-                => RealField.*-rat *> pmap Real.fromRat (RatField.finv-left pow/=0)
-     \in pmap (x * Real.fromRat (RatField.finv (RatField.pow 2 n)) *) pow-bridge
-         *> *-assoc
-         *> pmap (x *) inv-cancel
-         *> ide-right
-
--- | Per-representative: $\exp(\mathrm{log-cand}\,x\,p) = x$.
-\private \lemma exp-log-cand (x : Real) (p : log-Real.dyadic-shift x)
-  : exp {RealStoneC*Algebra} (log-Real.log-cand x p) = x \elim p
-  | (n, p2, p3) =>
-    exp_+ RealField.*-comm
-    *> pmap2 (*) (exp-ell (x * Real.fromRat (RatField.finv (RatField.pow 2 n))) p2 p3) (exp-n*log2 n)
-    *> cancel-pow-2-n x n
-
 -- | $\exp(\log x) = x$ for any $x > 0$.
-\lemma exp-log-Real (x : Real) (x-pos : (0 : Real) < x)
-  : exp {RealStoneC*Algebra} (log-Real x x-pos) = x
-  => \case (TruncP.rec-set (log-Real.dyadic-shift-inh x-pos) (log-Real.log-cand x) log-Real.log-cand-const).2 \with {
-       | inP (p, log-cand-eq) =>
-         transport (\lam r => exp {RealStoneC*Algebra} r = x) log-cand-eq (exp-log-cand x p)
-     }
+\lemma exp-log-Real (x : Real) (x>0 : (0 : Real) < x) : exp (log-Real x x>0) = x
+  => \case log-Real.char x>0 \with {
+    | inP (s, p) => pmap exp (inv p) *> exp-log-cand x s
+  }
+  \where {
+    -- | $\exp(n \cdot \log 2) = 2^n$ for $n \in \mathbb N$.
+    \private \lemma exp-n*log2 (n : Nat) : exp (n RealField.* log2) = RealField.pow 2 n \elim n
+      | 0 =>
+        \have zro-coef : 0 RealField.* log2 = (0 : Real)
+                => pmap (RealField.`* log2) (Rat.ext idp idp) *> zro_*-left
+        \in pmap exp zro-coef *> exp_zro
+      | suc n =>
+        \have coef-step : suc n RealField.* log2 = n RealField.* log2 + log2
+                => pmap (RealField.`* _) (inv $ RealAbGroup.+-rat {n} {1}) *> equation.cRing
+        \in pmap exp coef-step *> exp_+ RealField.*-comm *> pmap2 (*) (exp-n*log2 n) log2.exp-log2
+
+    -- | Per-representative: $\exp(\mathrm{log-cand}\,x\,p) = x$.
+    \private \lemma exp-log-cand (x : Real) (p : log-Real.DyadicShift x) : exp (log-Real.log-cand x p) = x \elim p
+      | (n, p2, p3) => exp_+ *-comm
+        *> pmap2 (*) (exp-ell (x * Real.fromRat (RatField.finv (RatField.pow 2 n))) p2 p3) (exp-n*log2 n)
+        *> *-assoc
+        *> pmap (x *) (pmap (_ *) RealField.pow-rat *> RealField.*-rat *> pmap Real.fromRat (RatField.finv-left $ RatField.>_/= $ RatField.pow>0 idp))
+        *> ide-right
+  }
 
 -- | $\log(\exp y) = y$ for any $y \in \mathbb R$.
-\lemma log-Real-exp (y : Real)
-  : log-Real (exp {RealStoneC*Algebra} y) (Real-exp-pos y) = y
-  => Real-exp-inj (exp-log-Real (exp y) (Real-exp-pos y))
+\lemma log-Real-exp (y : Real) : log-Real (exp y) (Real-exp-pos y) = y
+  => Real-exp-inj $ exp-log-Real (exp y) (Real-exp-pos y)

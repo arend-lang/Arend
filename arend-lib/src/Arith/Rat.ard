@@ -11,7 +11,6 @@
 \import Algebra.Ring.Localization
 \import Algebra.Ring.Localization.Field
 \import Algebra.Semiring
-\import Arith.Fin
 \import Arith.Int
 \import Arith.Nat
 \import Data.Bool
@@ -455,11 +454,3 @@
       \in (R.1, RatField.finv_<-conv eps>0 $ transportInv (_ <) RatField.finv_pow R.2)
     | inr q<=0 => (1, transportInv (`<= _) ide-left q<=0 <∘r eps>0)
   }
-
--- | $0 < 1 / (m + 1)$ in $\mathbb{Q}$.
-\lemma ratio-1-suc>0 (m : Nat) : (0 : Rat) RatField.< ratio 1 (suc m) \elim m
-  | 0 => zro<ide
-  | suc m' => RatField.<-char (transport2 (<)
-      (inv zro_*-left)
-      (inv ide-right)
-      (pos<pos NatOrder.zero<suc))

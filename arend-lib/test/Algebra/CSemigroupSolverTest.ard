@@ -20,8 +20,9 @@
   : (z * y) * x = w
   => equation.cSemigroup {p}
 
--- | The motivating case: the multiplicative structure of `ExUpperReal` is a `CSemigroup`
---   with no `Monoid` instance, so only `equation.cSemigroup` (not `equation.cMonoid`) applies.
+{- | The motivating case: the multiplicative structure of {ExUpperReal} is a {CSemigroup}
+ -   with no {Monoid} instance, so only {equation.cSemigroup} (not {equation.cMonoid}) applies.
+ -}
 \lemma testExUpperReal (a b c : ExUpperReal)
   : (a ExUpperRealSemigroup.* b) ExUpperRealSemigroup.* c = c ExUpperRealSemigroup.* (b ExUpperRealSemigroup.* a)
   => equation.cSemigroup

@@ -267,16 +267,11 @@
   | suc n, 0 => <=-refl
   | suc n, suc m => -'<=id <=∘ <=_+ <=-refl (zero<=_ {1})
 
-\lemma sucn_-'n=1 {n : Nat} : suc n -' n = 1
-  => -'_suc <=-refl *> pmap suc -'id
-
-\lemma -'<id {n m : Nat} : n -' m < suc n => suc_<=_< (suc<=suc -'<=id)
-
-\func -'_suc {n m : Nat} (_ : m <= n) : suc n -' m = suc (n -' m)
-  | {0}, {0}, _ => idp
-  | {suc n}, {0}, _ => idp
-  | {0}, {suc m}, A0 => \case suc_<=_< A0
-  | {suc n}, {suc m}, A0 => -'_suc (suc<=suc.conv A0)
+\func -'_suc {n m : Nat} (p : m <= n) : suc n -' m = suc (n -' m) \elim n, m
+  | 0, 0 => idp
+  | 0, suc m => \case suc_<=_< p
+  | suc n, 0 => idp
+  | suc n, suc m => -'_suc (suc<=suc.conv p)
 
 \func -'_inv {k m : Nat} (A0 : m <= k) : k -' (k -' m) = m \elim k, m
   | 0, 0 => idp
@@ -303,10 +298,24 @@
   | suc n, 0, suc k => -'<=id <=∘ <=_+ <=-refl (zero<=_ {1})
   | suc n, suc m, suc k => -'-monotone-right (suc<=suc.conv p)
 
+\lemma -'_<-monotone-left {n m k : Nat} (p : n < m) (q : k < m) : n -' k < m -' k \elim n, m, k
+  | 0, 0, k => p
+  | 0, suc m, 0 => p
+  | 0, suc m, suc k => <_-' (unsuc< q)
+  | suc n, 0, 0 => p
+  | suc n, 0, suc k => \case p
+  | suc n, suc m, 0 => p
+  | suc n, suc m, suc k => -'_<-monotone-left (unsuc< p) (unsuc< q)
+
 \lemma -'_<= {n m : Nat} (p : n -' m = 0) : n <= m \elim n, m
   | 0, m => zero<=_
   | suc n, 0 => \case p
   | suc n, suc m => suc<=suc (-'_<= p)
+
+\lemma -'_+_<= {n m k : Nat} (p : n + m <= k) : n <= k -' m \elim m, k
+  | m, 0 => <=_+ <=-refl zero<=_ <=∘ p
+  | 0, suc k => p
+  | suc m, suc k => -'_+_<= (suc<=suc.conv p)
 
 \open LinearlyOrderedSemiring \hiding (Dec)
 
@@ -435,6 +444,15 @@
   | 0 => zero<suc
   | suc n => <=_+-left (suc_<_<= $ zero<=_ <∘r id<pow2) id<pow2
 
+-- | Every $n$ is $2k$ or $2k+1$.
+\func nat-parity (n : Nat)
+  : Or (\Sigma (k : Nat) (n = 2 * k)) (\Sigma (k : Nat) (n = 2 * k + 1)) \elim n
+  | 0 => inl (0, idp)
+  | suc n' => \case nat-parity n' \with {
+    | inl (k, p) => inr (k, pmap suc p)
+    | inr (k, p) => inl (suc k, pmap suc p)
+  }
+
 -- Properties of mod
 
 \lemma n*_+_mod_n {n q r : Nat} (r<n : r < n) : (n * q + r) mod n = {Nat} r \elim n
@@ -478,11 +496,35 @@
 \lemma mod_+-cong-right {n c a b : Nat} (p : a mod suc n = b mod suc n) : (a + c) mod suc n = (b + c) mod suc n
   => inv mod_+-left *> pmap ((__ + c) mod suc n) p *> mod_+-left
 
--- | Every $n$ is $2k$ or $2k+1$.
-\func nat-parity (n : Nat)
-  : Or (\Sigma (k : Nat) (n = 2 Nat.* k)) (\Sigma (k : Nat) (n = 2 Nat.* k Nat.+ 1)) \elim n
-  | 0 => inl (0, idp)
-  | suc n' => \case nat-parity n' \with {
-    | inl (k, p) => inr (k, pmap suc p)
-    | inr (k, p) => inl (suc k, pmap suc p)
-  }
+-- Properties of div
+
+\lemma div_suc-lem {n m : Nat} (m/=0 : m /= 0) : (n + m) div m = suc (n div m)
+  => div-unique (mod<right m/=0) (mod<right m/=0) m/=0 $ divModProp (n + m) m *> pmap (`+ m) (inv (divModProp n m) *> pmap (_ +) (inv (pmap (`mod m) +-comm *> n*_+_mod_n=mod.nat {m} {1})) *> +-comm) *> +-assoc *> +-comm
+
+\lemma n*_+_div_n=div {m q r : Nat} (m/=0 : m /= 0) : (m * q + r) div m = q + r div m \elim q
+  | 0 => idp
+  | suc q => pmap (`div m) (+-assoc *> pmap (_ +) +-comm *> inv +-assoc) *> div_suc-lem m/=0 *> pmap suc (n*_+_div_n=div m/=0)
+
+\lemma *_div=id {m q : Nat} (m/=0 : m /= 0) : (q * m) div m = q
+  => pmap (`div m) *-comm *> n*_+_div_n=div {m} {q} {0} m/=0
+
+\lemma div-monotone {n k m : Nat} (p : n <= k) : n div m <= k div m
+  => aux n <=-refl p
+  \where
+    \lemma aux (c : Nat) {n k m : Nat} (q : n <= c) (p : n <= k) : n div m <= k div m \elim c, m
+      | _, 0 => p
+      | 0, _ => rewrite (<=_exists q) zero<=_
+      | suc c, suc _ \as m => \case LinearOrder.dec<_<= n m, LinearOrder.dec<_<= k m \with {
+        | inl n<m, _ => transportInv (`<= _) (div_< n<m) zero<=_
+        | inr m<=n, inl k<m => absurd $ <-irreflexive $ k<m <∘l m<=n <∘l p
+        | inr m<=n, inr m<=k => \case m \as m', idp : m' = m \with {
+          | 0, s => rewriteI s p
+          | suc xxx, s =>
+            \have m/=0 m=0 => suc/=0 (s *> m=0)
+            \in rewriteI (<=_exists m<=n, <=_exists m<=k, NatSemiring.+-comm) $ rewrite {2} NatSemiring.+-comm $
+                  transport2 (<=) (inv $ div_suc-lem m/=0) (inv $ div_suc-lem m/=0) $ suc<=suc $ aux c (cases (n,q) \with {
+                    | 0, _ => zero<=_
+                    | suc n, q => -'<=id <=∘ suc<=suc.conv q
+                  }) (-'-monotone-left p)
+        }
+      }

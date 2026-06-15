@@ -36,7 +36,7 @@
 \import Topology.NormedAbGroup
 \import Topology.NormedAbGroup.Real
 \import Topology.NormedRing
-\import Topology.StoneCStarAlgebra()
+\import Topology.StoneCStarAlgebra (RealStoneC*Algebra_fromRat)
 \open Monoid (pow)
 \open AddMonoid (*n)
 \open LatticeAbGroup
@@ -132,8 +132,9 @@
       => ext (Re.func-*n *> real-div-cancel n/=0, Im.func-*n *> real-div-cancel n/=0)
   }
 
-\lemma fromRat-eq-fromReal-fromRat (r : Rat) : ComplexBanach.fromRat r = Complex.fromReal (Real.fromRat r)
-  => pmap (r QModule.*q) (inv (idp : Complex.fromReal 1 = (1 : Complex)))
-    *> inv (func-*q {_} {_} {fromRealMap} {r} {1})
-         *> pmap Complex.fromReal (RealStoneC*Algebra_fromRat r)
-  \where \open Topology.StoneCStarAlgebra(RealStoneC*Algebra, RealStoneC*Algebra_fromRat)
+-- | {conj} fixes $\mathrm{fromRat}\ r$ on `ComplexBanach`.
+\lemma conj_fromRat {r : Rat} : conj (ComplexBanach.fromRat r) = ComplexBanach.fromRat r
+  => func-*q {_} {_} {conjAddHom} *> pmap (r QModule.*q) conj_ide
+
+\lemma complexBanach-fromRat {r : Rat} : ComplexBanach.fromRat r = Complex.fromReal (Real.fromRat r)
+  => inv (func-*q {_} {_} {fromRealMap}) *> pmap Complex.fromReal (RealStoneC*Algebra_fromRat r)

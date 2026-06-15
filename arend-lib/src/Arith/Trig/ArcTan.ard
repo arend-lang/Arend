@@ -40,336 +40,168 @@
 \import Paths.Meta
 \import Topology.BanachAlgebra
 \import Topology.NormedAbGroup
-\import Topology.NormedAbGroup.Real
-\import Topology.NormedRing
+\import Topology.NormedRing (RealValuedRing)
 \import Topology.TopAbGroup
 \import Topology.TopSpace
 \import Topology.TopSpace.Product
 \import Topology.StoneCStarAlgebra()
 \open Monoid (pow)
 \open Complex \using (iunit \as i)
+\open LatticeAbGroup
 
-
-{- | Rational Taylor coefficients of $\arctan$: $c_{2k} = 0$ and
-     $c_{2k+1} = \tfrac{(-1)^k}{2k+1}$. Source of truth for the coefficients —
-     the `coef-Rat` field of `arctan-asRA`; the Real and Complex coefficient
-     functions are its `fromRat`-images. -}
-\func arctan-coef-Rat (m : Nat) : Rat \elim m
-  | 0 => 0
-  | 1 => 1
-  | suc (suc m') => RatField.negative (arctan-coef-Rat m')
-    RatField.* (Rat.fromInt (pos m') RatField.* RatField.finv (Rat.fromInt (pos (suc (suc m')))))
-
--- | $c_{2k} = 0$.
-\private \lemma arctan-coef-Rat_even (k : Nat) : arctan-coef-Rat (2 Nat.* k) = 0 \elim k
-  | 0 => idp
-  | suc k' =>
-    pmap (\lam (r : Rat) => RatField.negative r RatField.* (Rat.fromInt (pos (2 Nat.* k')) RatField.* RatField.finv (Rat.fromInt (pos (suc (suc (2 Nat.* k')))))))
-      (arctan-coef-Rat_even k')
-      *> pmap (RatField.`* _) RatField.negative_zro
-           *> RatField.zro_*-left
-
--- | $c_{2k+1} = \tfrac{(-1)^k}{2k+1}$.
-\private \lemma arctan-coef-Rat_odd (k : Nat)
-  : arctan-coef-Rat (2 Nat.* k Nat.+ 1) = pow (RatField.negative 1) k RatField.* RatField.finv (Rat.fromInt (pos (2 Nat.* k Nat.+ 1)))
-\elim k
-  | 0 => inv (RatField.ide-left {RatField.finv (Rat.fromInt (pos 1))})
-  | suc k' =>
-    \have | sucN+/=0 : Rat.fromInt (pos (2 Nat.* k' Nat.+ 1)) /= 0
-          => RatField.>_/= (fromInt_< (pos<pos NatOrder.zero<suc))
-          | pow-suc : pow (RatField.negative 1) (suc k') = RatField.negative (pow (RatField.negative 1) k')
-          => Ring.negative_*-right *> pmap RatField.negative RatField.ide-right
-          | rat-cancel : RatField.finv (Rat.fromInt (pos (2 Nat.* k' Nat.+ 1)))
-            RatField.* (Rat.fromInt (pos (2 Nat.* k' Nat.+ 1))
-            RatField.* RatField.finv (Rat.fromInt (pos (suc (suc (2 Nat.* k' Nat.+ 1))))))
-            = RatField.finv (Rat.fromInt (pos (suc (suc (2 Nat.* k' Nat.+ 1)))))
-          => run {
-            rewriteI (RatField.*-assoc {RatField.finv (Rat.fromInt (pos (2 Nat.* k' Nat.+ 1)))}
-                                       {Rat.fromInt (pos (2 Nat.* k' Nat.+ 1))}
-                                       {RatField.finv (Rat.fromInt (pos (suc (suc (2 Nat.* k' Nat.+ 1)))))}),
-            rewrite (RatField.finv-left sucN+/=0),
-            RatField.ide-left
-          }
-    \in run {
-      rewrite (arctan-coef-Rat_odd k'),
-      rewrite pow-suc,
-      rewriteI (Ring.negative_*-left {RatField} {pow (RatField.negative 1) k'}
-                                                {RatField.finv (Rat.fromInt (pos (2 Nat.* k' Nat.+ 1)))}),
-      rewrite RatField.*-assoc,
-      rewrite rat-cancel,
-      idp
-    }
-
--- | Real Taylor coefficients of $\arctan$, the `fromRat`-image of `arctan-coef-Rat`.
-\func arctan-coef (m : Nat) : Real => Real.fromRat (arctan-coef-Rat m)
-
--- | $|c_n|_{\mathbb Q} \le 1$ for every $n$.
-\lemma arctan-coef-abs-<=1 (n : Nat) : RatField.abs (arctan-coef-Rat n) RatField.<= 1 \elim n
-  | 0 => transportInv (RatField.`<= 1) RatField.abs_zro linarith
-  | 1 => transportInv (RatField.`<= 1) RatField.abs_ide RatField.<=-refl
-  | suc (suc m') =>
-    =_<= (RatField.abs_* *> pmap (RatField.`* _) RatField.abs_negative)
-    RatField.<=∘ RatField.<=_*_positive-left (arctan-coef-abs-<=1 m') RatField.abs>=0
-    RatField.<=∘ =_<= RatField.ide-left
-    RatField.<=∘ arctan-frac-abs-<=1 m'
+-- | Rational Taylor coefficients of $\arctan$: $c_{2k} = 0$ and $c_{2k+1} = \tfrac{(-1)^k}{2k+1}$.
+\sfunc arctan-coef-Rat (m : Nat) : Rat
+  => \case m Nat.mod 2 \with {
+    | 0 => 0
+    | 1 => pow (negative 1) (m Nat.div 2) * RatField.finv m
+  }
   \where {
-  -- | $\left|\tfrac{m'}{m'+2}\right|_{\mathbb Q} \le 1$.
-  \private \lemma arctan-frac-abs-<=1 (m' : Nat)
-    : RatField.abs (Rat.fromInt (pos m') RatField.* RatField.finv (Rat.fromInt (pos (suc (suc m'))))) RatField.<= 1
-    => \have | d/=0 : Rat.fromInt (pos (suc (suc m'))) /= 0 => RatField.>_/= (fromInt_< (pos<pos NatOrder.zero<suc))
-             | finv>=0 : (0 : Rat) RatField.<= RatField.finv (Rat.fromInt (pos (suc (suc m'))))
-             => RatField.finv>=0 (RatField.<=-less (fromInt_< (pos<pos NatOrder.zero<suc)))
-             | frac>=0 : (0 : Rat) RatField.<= Rat.fromInt (pos m') RatField.* RatField.finv (Rat.fromInt (pos (suc (suc m'))))
-             => transport (RatField.`<= _) RatField.zro_*-left
-                 (RatField.<=_*_positive-left (fromInt_<= (pos<=pos zero<=_)) finv>=0)
-       \in =_<= (RatField.abs-ofPos frac>=0)
-      RatField.<=∘ RatField.<=_*_positive-left (fromInt_<= (pos<=pos (linarith : m' NatSemiring.<= suc (suc m')))) finv>=0
-      RatField.<=∘ =_<= (RatField.finv-right d/=0)
+    -- | $c_{2k} = 0$.
+    \protected \lemma even {n k : Nat} (p : n = 2 * k) : arctan-coef-Rat n = 0
+      => pmap arctan-coef-Rat p *> (\peval arctan-coef-Rat _) *> mcases {_} {arg addPath} \with {
+        | 0, _ => idp
+        | 1, p => \case inv p *> div_mod (Monoid.LDiv.make k idp)
+      }
+
+    -- | $c_{2k+1} = \tfrac{(-1)^k}{2k+1}$.
+    \protected \lemma odd {n k : Nat} (p : n = 2 * k + 1)
+      : arctan-coef-Rat n = pow (negative 1) k * RatField.finv n
+      => pmap arctan-coef-Rat p *> (\peval arctan-coef-Rat _) *> cases ((2 Nat.* k + 1) Nat.mod 2 arg addPath) \with {
+        | 0, p => \case inv p *> {Nat} n*_+_mod_n (NatOrder.suc<suc NatOrder.zero<suc)
+        | 1, _ => pmap2 (pow _ __ * RatField.finv __) (n*_+_div_n=div {2} {k} {1} \case __) (inv p)
+      }
   }
 
--- TODO: belongs in `\where` of `arctan-conv-at-s` (its only consumer).
--- | $\|\varphi(c_n)\| \cdot t^n \le t^n$ in a Banach algebra, since $\|\varphi(c_n)\| \le 1$.
-\private \lemma arctan-coef-pow-bound {A : RealBanachAlgebra} (n : Nat) {t : ExUpperReal}
-  : A.norm (A.fromRat (arctan-coef-Rat n)) ExUpperRealSemigroup.* ExUpperRealSemigroup.pow t n
-  ExUpperRealAbMonoid.<= ExUpperRealSemigroup.pow t n
-  => ExUpperRealSemigroup.<=_*
-    (A.norm_fromRat ExUpperRealAbMonoid.<=∘ ExUpperReal.<=-rat.1 (arctan-coef-abs-<=1 n))
-    ExUpperRealAbMonoid.<=-refl
-  ExUpperRealAbMonoid.<=∘ =_<= (ExUpperRealSemigroup.ide-left ExUpperRealSemigroup.pow_>=0)
+-- | Real Taylor coefficients of $\arctan$, the image of {arctan-coef-Rat} in {Real}.
+\func arctan-coef (m : Nat) : Real => arctan-coef-Rat m
 
-{- | `BoundedDiskRatAnalytic` view of $\arctan$ on a Banach algebra: coefficients
-     $\tfrac{(-1)^k}{2k+1}$ at odd degrees ($0$ at even), radius $1$. Carries the
-     continuity / absolute-convergence / series-sum API by inheritance; `arctan`
-     wraps its `func` field. -}
+{- | {BoundedDiskRatAnalytic} view of $\arctan$ on a Banach algebra: coefficients
+ -   $\tfrac{(-1)^k}{2k+1}$ at odd degrees ($0$ at even), radius $1$.
+ -}
 \func arctan-asRA {A : RealBanachAlgebra} : BoundedDiskRatAnalytic A \cowith
   | coef-Rat => arctan-coef-Rat
   | radius => 1
   | ps-conv a>=0 a<1 => arctan-conv-at-s a>=0 (ExUpperRealAbMonoid.<-rat.1 a<1)
   | radius-pos => inP (ratio 1 2, linarith, \lam one<b => linarith)
-    \where {
-      -- | The arctan coefficient series converges (as an upper-real series) for $s \in [0,1)$.
-      \private \lemma arctan-conv-at-s {A : RealBanachAlgebra} {s : ExUpperReal}
-                                       (s>=0 : 0 ExUpperRealAbMonoid.<= s) (s<1 : s.U 1)
-        : IsConvUpperSeries (\lam n => A.norm (A.fromRat (arctan-coef-Rat n)) * ExUpperRealSemigroup.pow s n)
-        => series_<= (\lam n => arctan-coef-pow-bound n) (geometric-upper-series-conv s>=0 s<1)
+  \where {
+    -- | $|c_n|_{\mathbb Q} \le 1$ for every $n$.
+    \lemma arctan-coef-abs-<=1 (n : Nat) : abs (arctan-coef-Rat n) <= 1
+      => \case nat-parity n \with {
+        | inl (k,p) => rewrite (arctan-coef-Rat.even p) zro<=ide
+        | inr (k,p) => rewrite (arctan-coef-Rat.odd p, RatField.abs_*) $ RatField.<=_*_positive-left
+          (transport2 (<=) (inv RatField.abs_pow) (RatField.pow_ide {k}) $ RatField.pow_<=-monotone abs>=0 $ later <=-refl) abs>=0
+          <=∘ transportInv (`<= 1) (ide-left *> abs-ofPos (RatField.finv>=0 $ fromInt_<= $ pos<=pos zero<=_))
+                (RatField.finv_<= {1} idp $ fromInt_<= $ pos<=pos $ <=_+ zero<=_ <=-refl <=∘ =_<= (inv p))
+      }
+
+    -- | $\|\varphi(c_n)\| \cdot t^n \le t^n$ in a Banach algebra, since $\|\varphi(c_n)\| \le 1$.
+    \private \lemma arctan-coef-pow-bound {A : RealBanachAlgebra} (n : Nat) {t : ExUpperReal}
+      : A.norm (A.fromRat (arctan-coef-Rat n)) * ExUpperRealSemigroup.pow t n <= ExUpperRealSemigroup.pow t n
+      => ExUpperRealSemigroup.<=_* (A.norm_fromRat <=∘ ExUpperReal.<=-rat.1 (arctan-coef-abs-<=1 n)) <=-refl
+          <=∘ =_<= (ExUpperRealSemigroup.ide-left ExUpperRealSemigroup.pow_>=0)
+
+    -- | The arctan coefficient series converges (as an upper-real series) for $s \in [0,1)$.
+    \private \lemma arctan-conv-at-s {A : RealBanachAlgebra} {s : ExUpperReal} (s>=0 : 0 <= s) (s<1 : s.U 1)
+      : IsConvUpperSeries (\lam n => A.norm (A.fromRat (arctan-coef-Rat n)) * ExUpperRealSemigroup.pow s n)
+      => series_<= (\lam n => arctan-coef-pow-bound n) (geometric-upper-series-conv s>=0 s<1)
     }
 
-{- | The arctangent $\arctan x$ for $|x| < 1$, as the sum of its Taylor series.
-     `\sfunc` so downstream identities treat it as an opaque atom. -}
-\sfunc arctan (x : Real) (|x|<1 : (RealValuedRing.norm x).U 1) : Real
-  => arctan-asRA {RealStoneC*Algebra} (x, ExUpperRealAbMonoid.<-rat.2 |x|<1)
-    \where \open Topology.StoneCStarAlgebra(RealStoneC*Algebra)
+-- | The arctangent $\arctan x$ for $|x| < 1$, as the sum of its Taylor series.
+\sfunc arctan (x : Real) (|x|<1 : (abs x).U 1) : Real
+  => arctan-asRA (x, ExUpperRealAbMonoid.<-rat.2 |x|<1)
+  \where \open Topology.StoneCStarAlgebra
 
 -- | $\sum_n c_n\,x^n = \arctan x$ for $|x| < 1$: the Taylor series sums to $\arctan$.
-\lemma arctan-coef-powerSeries-IsSeriesSum {x : Real} (|x|<1 : (RealValuedRing.norm x).U 1)
-  : IsSeriesSum {RealValuedRing} (powerSeries arctan-coef __ x) (arctan x |x|<1)
-  => transport (\lam (c : Nat -> Real) => IsSeriesSum {RealValuedRing} (powerSeries c __ x) (arctan x |x|<1))
-    (path (\lam i n => RealStoneC*Algebra_fromRat (arctan-coef-Rat n) @ i))
-    (transport (IsSeriesSum {RealValuedRing} (powerSeries (\lam n => RealStoneC*Algebra.fromRat (arctan-coef-Rat n)) __ x))
-      (inv (\peval arctan x |x|<1))
-      ((arctan-asRA {RealStoneC*Algebra}).func-IsSeriesSum {x} (ExUpperRealAbMonoid.<-rat.2 |x|<1)))
-  \where \open Topology.StoneCStarAlgebra(RealStoneC*Algebra,  RealStoneC*Algebra_fromRat)
+\lemma arctan-coef-powerSeries-IsSeriesSum {x : Real} (|x|<1 : (abs x).U 1)
+  : IsSeriesSum (powerSeries arctan-coef __ x) (arctan x |x|<1)
+  => transport2 (\lam c => IsSeriesSum (powerSeries c __ x))
+      (ext \lam n => RealStoneC*Algebra_fromRat (arctan-coef-Rat n))
+      (inv \peval arctan x |x|<1)
+      (arctan-asRA.func-IsSeriesSum (ExUpperRealAbMonoid.<-rat.2 |x|<1))
+  \where \open Topology.StoneCStarAlgebra
 
 -- | Arctan coefficients lifted to $\mathbb{C}$: $c_m$ viewed via `Complex.fromReal`.
-\private \func arctan-coef-C (m : Nat) : Complex => Complex.fromReal (arctan-coef m)
+\private \func arctan-coef-C (m : Nat) : Complex
+  => Complex.fromReal (arctan-coef m)
 
 -- | $2i\,c_m$ in $\mathbb{C}$ — coefficients of the $2i\arctan$ series.
 \private \func twoi-arctan-coef-C (m : Nat) : Complex
-  => 2 ComplexField.* i ComplexField.* arctan-coef-C m
+  => 2 * i * arctan-coef-C m
 
 -- | $\sum_n 2i\,c_n\,x^n = 2i\,\arctan x$ in $\mathbb{C}$ (real $x$ embedded).
-\private \lemma twoi-arctan-coef-C-powerSeries-IsSeriesSum {x : Real} (|x|<1 : (RealValuedRing.norm x).U 1)
-  : IsSeriesSum {ComplexCompleteRing} (powerSeries twoi-arctan-coef-C __ (Complex.fromReal x))
-      (2 ComplexField.* i ComplexField.* Complex.fromReal (arctan x |x|<1))
-  => \have | real-sum : IsSeriesSum {RealValuedRing} (powerSeries arctan-coef __ x) (arctan x |x|<1)
+\private \lemma twoi-arctan-coef-C-powerSeries-IsSeriesSum {x : Real} (|x|<1 : (abs x).U 1)
+  : IsSeriesSum (powerSeries twoi-arctan-coef-C __ x) (2 * i * arctan x |x|<1)
+  => \have | real-sum : IsSeriesSum (powerSeries arctan-coef __ x) (arctan x |x|<1)
               => arctan-coef-powerSeries-IsSeriesSum |x|<1
-           | step1 : ComplexBanach.IsLimit
-               (\lam n => Complex.fromReal (partialSum (powerSeries arctan-coef __ x) n))
-               (Complex.fromReal (arctan x |x|<1))
+           | step1 : ComplexBanach.IsLimit (\lam n => partialSum (powerSeries arctan-coef __ x) n) (arctan x |x|<1)
                => cont-limit real-sum fromRealMap
-           | step2-eq : \Pi (n : Nat) ->
-               Complex.fromReal (partialSum (powerSeries arctan-coef __ x) n)
-             = partialSum (\lam m => arctan-coef-C m ComplexField.* Monoid.pow (Complex.fromReal x) m) n
-               => \lam n => partialSum_hom fromRealMap
-                            *> pmap (\lam (g : Series Complex) => partialSum g n)
-                                    (path (\lam i m => (fromReal_* {arctan-coef m} {Monoid.pow x m}
-                                                        *> pmap (arctan-coef-C m ComplexField.*) (fromReal-pow m)) @ i))
-           | step2 : ComplexBanach.IsLimit
-               (partialSum (\lam m => arctan-coef-C m ComplexField.* Monoid.pow (Complex.fromReal x) m))
-               (Complex.fromReal (arctan x |x|<1))
-               => limit-transport {ComplexBanach} {NatBSemilattice}
-                    {\lam n => Complex.fromReal (partialSum (powerSeries arctan-coef __ x) n)}
-                    {partialSum (\lam m => arctan-coef-C m ComplexField.* Monoid.pow (Complex.fromReal x) m)}
-                    {Complex.fromReal (arctan x |x|<1)}
-                    step1 (\lam n => inv (step2-eq n))
-           | step3 : ComplexBanach.IsLimit
-               (\lam n => (2 ComplexField.* i) ComplexField.* partialSum (\lam m => arctan-coef-C m ComplexField.* Monoid.pow (Complex.fromReal x) m) n)
-               ((2 ComplexField.* i) ComplexField.* Complex.fromReal (arctan x |x|<1))
-               => cont2-limit {NatBSemilattice} {ComplexCompleteRing} {ComplexCompleteRing} {ComplexCompleteRing}
-                    {\lam _ => 2 ComplexField.* i}
-                    {partialSum (\lam m => arctan-coef-C m ComplexField.* Monoid.pow (Complex.fromReal x) m)}
-                    {2 ComplexField.* i}
-                    {Complex.fromReal (arctan x |x|<1)}
-                    (const-limit {NatBSemilattice} {ComplexCompleteRing} {2 ComplexField.* i}) step2 ComplexCompleteRing.*-cont
-           | step4-eq : \Pi (n : Nat) ->
-               (2 ComplexField.* i) ComplexField.* partialSum (\lam m => arctan-coef-C m ComplexField.* Monoid.pow (Complex.fromReal x) m) n
-             = partialSum (powerSeries twoi-arctan-coef-C __ (Complex.fromReal x)) n
-               => \lam n => partialSum_hom (*-addMonoidHom-left {ComplexField} {2 ComplexField.* i})
-                            *> pmap (\lam (g : Series Complex) => partialSum g n)
-                                    (path (\lam j m => inv (ComplexField.*-assoc {2 ComplexField.* i} {arctan-coef-C m} {Monoid.pow (Complex.fromReal x) m}) @ j))
-     \in limit-transport {ComplexBanach} {NatBSemilattice}
-           {\lam n => (2 ComplexField.* i) ComplexField.* partialSum (\lam m => arctan-coef-C m ComplexField.* Monoid.pow (Complex.fromReal x) m) n}
-           {partialSum (powerSeries twoi-arctan-coef-C __ (Complex.fromReal x))}
-           {(2 ComplexField.* i) ComplexField.* Complex.fromReal (arctan x |x|<1)}
-           step3 (\lam n => inv (step4-eq n))
+           | step2-eq n : partialSum (powerSeries arctan-coef __ x) n = {Complex} partialSum (\lam m => arctan-coef-C m * ComplexField.pow x m) n
+               => partialSum_hom fromRealMap *> pmap (partialSum __ n) (ext \lam m => fromReal_* *> pmap (_ *) fromReal_pow)
+           | step2 : IsSeriesSum (\lam m => arctan-coef-C m * ComplexField.pow x m) (arctan x |x|<1)
+               => limit-transport {_} {_} {\lam n => Complex.fromReal (partialSum (powerSeries arctan-coef __ x) n)} step1 (\lam n => inv (step2-eq n))
+           | step3 : ComplexBanach.IsLimit (\lam n => (2 * i) * partialSum (\lam m => arctan-coef-C m * ComplexField.pow x m) n) (2 * i * arctan x |x|<1)
+               => cont2-limit {_} {_} {_} {_} {\lam _ => 2 * i} const-limit step2 ComplexCompleteRing.*-cont
+           | step4-eq n : (2 * i) * partialSum (\lam m => arctan-coef-C m * ComplexField.pow x m) n = partialSum (powerSeries twoi-arctan-coef-C __ x) n
+               => partialSum_hom (*-addMonoidHom-left {_} {2 * i}) *> pmap (partialSum __ n) (ext \lam m => inv (*-assoc {_} {2 * i}))
+     \in limit-transport {_} {_} {\lam n => (2 * i) * partialSum (\lam m => arctan-coef-C m * ComplexField.pow x m) n} step3 (\lam n => inv (step4-eq n))
 
 -- ============================================================================
 -- The arctan–log bridge
 -- ============================================================================
 
 -- | $|x| < 1 \implies |ix| < 1$ in $\mathbb{C}$ — domain witness for $\log(1+ix)$.
-\private \lemma norm-ix<1 {x : Real} (|x|<1 : (RealValuedRing.norm x).U 1)
-  : (ComplexValuedRing.norm (i ComplexField.* Complex.fromReal x)).U 1
-  => transport (\lam (r : Real) => r.U 1) (inv (cabs_i_* *> cabs_fromReal)) |x|<1
+\private \lemma norm-ix<1 {x : Real} (|x|<1 : (abs x).U 1) : (cabs (i * x)).U 1
+  => transportInv (\lam (r : Real) => r.U 1) (cabs_i_* *> cabs_fromReal) |x|<1
 
 -- | $|x| < 1 \implies |{-}ix| < 1$ in $\mathbb{C}$ — domain witness for $\log(1-ix)$.
-\private \lemma norm-neg-ix<1 {x : Real} (|x|<1 : (RealValuedRing.norm x).U 1)
-  : (ComplexValuedRing.norm (ComplexField.negative (i ComplexField.* Complex.fromReal x))).U 1
-  => transport (\lam (r : Real) => r.U 1)
-       (inv (cabs_negative {i ComplexField.* Complex.fromReal x} *> cabs_i_* *> cabs_fromReal)) |x|<1
+\private \lemma norm-neg-ix<1 {x : Real} (|x|<1 : (abs x).U 1) : (cabs (negative (i * x))).U 1
+  => transportInv (\lam (r : Real) => r.U 1) (cabs_negative {i * x} *> cabs_i_* *> cabs_fromReal) |x|<1
 
--- TODO: hoist to `Arith.Log` — closed form of `log1p-coef`.
--- | $\tfrac{(-1)^{2k}}{2k+1} = \tfrac{1}{2k+1}$.
-\private \lemma log1p-coef-odd (k : Nat)
-  : log1p-coef (2 Nat.* k Nat.+ 1) = RatField.finv (Rat.fromInt (pos (2 Nat.* k Nat.+ 1)))
-  => pmap (\lam (q : Rat) => q RatField.* RatField.finv (Rat.fromInt (pos (2 Nat.* k Nat.+ 1))))
-          (pmap (\lam (e : Nat) => Monoid.pow (RatField.negative 1) e) (NatSemiring.*-comm {2} {k})
-           *> Ring.pow_-1_even {RatField} {k})
-     *> RatField.ide-left
-
--- TODO: hoist to `Arith.Complex.Banach` — the embedding $\mathbb{Q}\to\mathbb{C}$ commutes with $(-1)^k$.
--- | The Complex $(-1)^k$ equals the embedded rational $(-1)^k$.
-\private \lemma pow-neg-ide-bridge (k : Nat)
-  : Monoid.pow (ComplexField.negative ComplexField.ide) k = Complex.fromReal (Real.fromRat (Monoid.pow (RatField.negative 1) k)) \elim k
-  | 0 => idp
-  | suc k' => pmap (\lam (c : Complex) => c ComplexField.* ComplexField.negative ComplexField.ide) (pow-neg-ide-bridge k')
-              *> pmap (Complex.fromReal (Real.fromRat (Monoid.pow (RatField.negative 1) k')) ComplexField.*) neg1-bridge
-              *> inv fromReal_*
-              *> pmap Complex.fromReal RealField.*-rat
-  \where {
-    -- | $-1 \in \mathbb{C}$ equals the embedded rational $-1$.
-    \private \lemma neg1-bridge : ComplexField.negative ComplexField.ide = Complex.fromReal (Real.fromRat (RatField.negative 1))
-      => inv (pmap Complex.fromReal (inv RealAbGroup.negative-rat)
-              *> Complex.fromReal_negative
-              *> pmap ComplexField.negative (idp : Complex.fromReal (Real.fromRat 1) = ComplexField.ide))
-  }
-
--- TODO: hoist to `Algebra.Ring` — $(-z)^n = (-1)^n z^n$ in any commutative ring.
--- | $(-z)^n = (-1)^n\,z^n$ in $\mathbb{C}$.
-\private \lemma pow-neg-complex {z : Complex} (n : Nat)
-  : Monoid.pow (ComplexField.negative z) n = Monoid.pow (ComplexField.negative ComplexField.ide) n ComplexField.* Monoid.pow z n
-  => pmap (\lam (w : Complex) => Monoid.pow w n) (inv (Ring.negative_*-left {ComplexField} {ComplexField.ide} {z} *> pmap ComplexField.negative ComplexField.ide-left))
-     *> Monoid.pow-comm (ComplexField.*-comm {ComplexField.negative ComplexField.ide} {z})
-
--- TODO: belongs in `\where` of `arctan-log-per-term` (its only consumer).
--- | $2i\,c_{2k+1} = 2i\,(-1)^k\,\tfrac{1}{2k+1}$ in $\mathbb{C}$.
-\private \lemma twoi-coef-odd (k : Nat)
-  : twoi-arctan-coef-C (2 Nat.* k Nat.+ 1)
-  = 2 ComplexField.* i ComplexField.* (Monoid.pow (ComplexField.negative ComplexField.ide) k
-                                       ComplexField.* ComplexBanach.fromRat (log1p-coef (2 Nat.* k Nat.+ 1)))
-  => pmap (\lam (c : Complex) => 2 ComplexField.* i ComplexField.* c)
-       (pmap (\lam (r : Rat) => Complex.fromReal (Real.fromRat r)) (arctan-coef-Rat_odd k)
-        *> pmap Complex.fromReal (inv RealField.*-rat)
-        *> fromReal_*
-        *> pmap (\lam (c : Complex) => c ComplexField.* Complex.fromReal (Real.fromRat (RatField.finv (Rat.fromInt (pos (2 Nat.* k Nat.+ 1))))))
-                (inv (pow-neg-ide-bridge k))
-        *> pmap (\lam (c : Complex) => Monoid.pow (ComplexField.negative ComplexField.ide) k ComplexField.* c)
-                (inv (fromRat-eq-fromReal-fromRat (RatField.finv (Rat.fromInt (pos (2 Nat.* k Nat.+ 1))))))
-        *> pmap (\lam (c : Rat) => Monoid.pow (ComplexField.negative ComplexField.ide) k ComplexField.* ComplexBanach.fromRat c)
-                (inv (log1p-coef-odd k)))
-
--- | Per-term identity matching the $\log(1+ix) - \log(1-ix)$ and $2i\arctan x$ series:
---   $b_n\,(ix)^n - b_n\,(-ix)^n = 2i\,c_n\,x^n$, where $b_n$ are the $\log(1+\cdot)$ coefficients.
+{- | Per-term identity matching the $\log(1+ix) - \log(1-ix)$ and $2i\arctan x$ series:
+ -   $b_n\,(ix)^n - b_n\,(-ix)^n = 2i\,c_n\,x^n$, where $b_n$ are the $\log(1+\cdot)$ coefficients.
+ -}
 \private \lemma arctan-log-per-term (n : Nat) {x : Real}
-  : ComplexBanach.fromRat (log1p-coef n) ComplexField.* Monoid.pow (i ComplexField.* Complex.fromReal x) n
-    - ComplexBanach.fromRat (log1p-coef n) ComplexField.* Monoid.pow (ComplexField.negative (i ComplexField.* Complex.fromReal x)) n
-    = twoi-arctan-coef-C n ComplexField.* Monoid.pow (Complex.fromReal x) n
-  => \case nat-parity n \with {
-    | inl (k, p) => rewrite p (per-term-even k)
-    | inr (k, p) => rewrite p (per-term-odd k)
-  }
+  : ComplexBanach.fromRat (log1p-coef n) * pow (i * x) n - ComplexBanach.fromRat (log1p-coef n) * pow (negative (i * x)) n
+    = twoi-arctan-coef-C n * pow (Complex.fromReal x) n
+  => \let c => ComplexBanach.fromRat (log1p-coef n) * pow (i * x) n
+     \in pmap2 (-) (inv $ ide-right {_} {c})
+          (pmap (_ *) (pmap (pow __ n) (inv $ ComplexField.negative_ide-right {i * x}) *> ComplexField.pow_*-comm {i * x} { -1 }) *> inv *-assoc)
+       *> inv (ComplexField.ldistr_- {c} {1})
+       *> \case nat-parity n \with {
+          | inl (k, p) => pmap (c * (1 - __)) (pmap (pow -1) p *> pow_*2 *> simplify ComplexField.pow_ide)
+            *> pmap (c *) (negative-right {_} {1})
+            *> zro_*-right
+            *> inv (pmap (2 * _ * Complex.fromReal __ * _) (arctan-coef-Rat.even p)
+              *> pmap (`* _) (ComplexField.zro_*-right {2 * i}) *> zro_*-left)
+          | inr (k, p) => *-comm *> inv *-assoc *> pmap (_ *) ComplexField.pow_*-comm *> inv *-assoc
+            *> pmap (`* _) {(1 - pow -1 n) * _ * _} {2 * i * Complex.fromReal _} (*-assoc {_} {1 - pow -1 n}
+              *> pmap (_ *) *-comm *> inv *-assoc *> pmap2 (*) (pmap2 (*) {1 - pow -1 n}
+                  (pmap (1 +) (pmap (\lam x => negative (pow -1 x)) p *> pmap negative ComplexField.negative_ide-right
+                    *> ComplexField.negative-isInv *> pow_*2 *> pmap (pow __ k) (ComplexField.negative_* *> ide-left)
+                    *> ComplexField.pow_ide *> inv zro-left *> pmap (`+ 1) (inv natCoefZero)
+                    *> inv (natCoefSuc 0)) *> +-comm *> inv (natCoefSuc 1))
+                  (pmap (pow i) p *> *-comm *> pmap (i *) (pow_*2 *> pmap (pow __ k) Complex.iunit-square
+                    *> pmap (pow __ k) (inv Complex.fromReal_negative *> pmap Complex.fromReal (RealAbGroup.negative-rat {1}))
+                    *> inv Complex.fromReal_pow *> pmap Complex.fromReal RealField.pow-rat))
+                *> inv (*-assoc {_} {2})) (pmap ComplexBanach.fromRat (pmap log1p-coef p
+                  *> pmap2 (*) (pow_*2 *> RatField.pow_ide) (pmap (RatField.finv __) (inv p))
+                  *> ide-left) *> complexBanach-fromRat)
+              *> *-assoc *> pmap (2 * i *) (inv Complex.fromReal_* *> pmap Complex.fromReal RealField.*-rat))
+            *> inv (pmap (2 * _ * Complex.fromReal __ * _) (arctan-coef-Rat.odd p))
+        }
   \where {
-    -- | $2i\,c_{2k} = 0$.
-    \private \lemma twoi-coef-even (k : Nat) : twoi-arctan-coef-C (2 Nat.* k) = ComplexField.zro
-      => pmap (\lam (c : Complex) => 2 ComplexField.* i ComplexField.* c)
-              (pmap (\lam (r : Rat) => Complex.fromReal (Real.fromRat r)) (arctan-coef-Rat_even k)
-                 : arctan-coef-C (2 Nat.* k) = (0 : Complex))
-         *> Ring.zro_*-right {ComplexField} {2 ComplexField.* i}
-
-    -- | Per-term identity at even index: both sides are $0$.
-    \private \lemma per-term-even (k : Nat) {x : Real}
-      : ComplexBanach.fromRat (log1p-coef (2 Nat.* k)) ComplexField.* Monoid.pow (i ComplexField.* Complex.fromReal x) (2 Nat.* k)
-        - ComplexBanach.fromRat (log1p-coef (2 Nat.* k)) ComplexField.* Monoid.pow (ComplexField.negative (i ComplexField.* Complex.fromReal x)) (2 Nat.* k)
-        = twoi-arctan-coef-C (2 Nat.* k) ComplexField.* Monoid.pow (Complex.fromReal x) (2 Nat.* k)
-      => run {
-        rewrite (pow-neg-complex {i ComplexField.* Complex.fromReal x} (2 Nat.* k)),
-        rewrite (NatSemiring.*-comm {2} {k}, Ring.pow_-1_even, NatSemiring.*-comm {k} {2}),
-        rewrite (ComplexField.ide-left {Monoid.pow (i ComplexField.* Complex.fromReal x) (2 Nat.* k)}),
-        rewrite (twoi-coef-even k),
-        rewrite (Ring.zro_*-left {ComplexField} {Monoid.pow (Complex.fromReal x) (2 Nat.* k)}),
-        AddGroup.negative-right {ComplexField}
-          {ComplexBanach.fromRat (log1p-coef (2 Nat.* k)) ComplexField.* Monoid.pow (i ComplexField.* Complex.fromReal x) (2 Nat.* k)}
-      }
-
-    -- | Per-term identity at odd index $2k+1$.
-    \private \lemma per-term-odd (k : Nat) {x : Real}
-      : ComplexBanach.fromRat (log1p-coef (2 Nat.* k Nat.+ 1)) ComplexField.* Monoid.pow (i ComplexField.* Complex.fromReal x) (2 Nat.* k Nat.+ 1)
-        - ComplexBanach.fromRat (log1p-coef (2 Nat.* k Nat.+ 1)) ComplexField.* Monoid.pow (ComplexField.negative (i ComplexField.* Complex.fromReal x)) (2 Nat.* k Nat.+ 1)
-        = twoi-arctan-coef-C (2 Nat.* k Nat.+ 1) ComplexField.* Monoid.pow (Complex.fromReal x) (2 Nat.* k Nat.+ 1)
-      => rewrite (pow-neg-complex {i ComplexField.* Complex.fromReal x} (2 Nat.* k Nat.+ 1),
-                  RealField.pow_-1_odd k,
-                  Monoid.pow-comm {_} {i} {Complex.fromReal x} (ComplexField.*-comm {i} {Complex.fromReal x}) {2 Nat.* k Nat.+ 1},
-                  pow-iunit-odd k,
-                  twoi-coef-odd k)
-                 (ext (equation.cRing, equation.cRing))
+    \lemma pow_*2 {R : Ring} {a : R} {n : Nat} : pow a (2 * n) = pow (a * a) n
+      => R.pow_* *> pmap (\lam x => pow (x * a) n) ide-left
   }
 
 -- | $\log(1 + ix) - \log(1 - ix) = 2i\,\arctan x$ in $\mathbb{C}$, for $|x| < 1$.
-\private \lemma arctan-log-bridge {x : Real} (|x|<1 : (RealValuedRing.norm x).U 1)
-  : log1+ {ComplexBanach} (i ComplexField.* Complex.fromReal x) (norm-ix<1 |x|<1)
-    ComplexField.+ ComplexField.negative (log1+ {ComplexBanach} (ComplexField.negative (i ComplexField.* Complex.fromReal x)) (norm-neg-ix<1 |x|<1))
-    = 2 ComplexField.* i ComplexField.* Complex.fromReal (arctan x |x|<1)
-  => \have | logp-sum : IsSeriesSum {ComplexBanach}
-               (powerSeries (\lam n => ComplexBanach.fromRat (log1p-coef n)) __ (i ComplexField.* Complex.fromReal x))
-               (log1+ {ComplexBanach} (i ComplexField.* Complex.fromReal x) (norm-ix<1 |x|<1))
-                    => log1+-asRA.func-IsSeriesSum (ExUpperRealAbMonoid.<-rat.2 (norm-ix<1 |x|<1))
-           | logn-sum : IsSeriesSum {ComplexBanach}
-               (powerSeries (\lam n => ComplexBanach.fromRat (log1p-coef n)) __
-                  (ComplexField.negative (i ComplexField.* Complex.fromReal x)))
-               (log1+ {ComplexBanach} (ComplexField.negative (i ComplexField.* Complex.fromReal x)) (norm-neg-ix<1 |x|<1))
-                    => log1+-asRA.func-IsSeriesSum (ExUpperRealAbMonoid.<-rat.2 (norm-neg-ix<1 |x|<1))
-           | diff-sum : IsSeriesSum {ComplexBanach}
-               (\lam n => powerSeries {ComplexBanach} (\lam k => ComplexBanach.fromRat (log1p-coef k)) n (i ComplexField.* Complex.fromReal x)
-                          - powerSeries {ComplexBanach} (\lam k => ComplexBanach.fromRat (log1p-coef k)) n (ComplexField.negative (i ComplexField.* Complex.fromReal x)))
-               (log1+ {ComplexBanach} (i ComplexField.* Complex.fromReal x) (norm-ix<1 |x|<1)
-                - log1+ {ComplexBanach} (ComplexField.negative (i ComplexField.* Complex.fromReal x)) (norm-neg-ix<1 |x|<1))
-                    => IsSeriesSum_- {ComplexBanach} logp-sum logn-sum
-           | per-term-paths
-             : (\lam n => powerSeries {ComplexBanach} (\lam k => ComplexBanach.fromRat (log1p-coef k)) n (i ComplexField.* Complex.fromReal x)
-                          - powerSeries {ComplexBanach} (\lam k => ComplexBanach.fromRat (log1p-coef k)) n (ComplexField.negative (i ComplexField.* Complex.fromReal x)))
-             = (\lam n => twoi-arctan-coef-C n ComplexField.* Monoid.pow (Complex.fromReal x) n)
-                    => path (\lam i n => arctan-log-per-term n {x} @ i)
-           | h-sum-diff : IsSeriesSum {ComplexBanach}
-               (\lam n => twoi-arctan-coef-C n ComplexField.* Monoid.pow (Complex.fromReal x) n)
-               (log1+ {ComplexBanach} (i ComplexField.* Complex.fromReal x) (norm-ix<1 |x|<1)
-                - log1+ {ComplexBanach} (ComplexField.negative (i ComplexField.* Complex.fromReal x)) (norm-neg-ix<1 |x|<1))
-                    => transport (\lam s => IsSeriesSum {ComplexBanach} s _)
-                                 per-term-paths diff-sum
-           | h-sum-rhs : IsSeriesSum {ComplexBanach}
-               (\lam n => twoi-arctan-coef-C n ComplexField.* Monoid.pow (Complex.fromReal x) n)
-               (2 ComplexField.* i ComplexField.* Complex.fromReal (arctan x |x|<1))
-                    => twoi-arctan-coef-C-powerSeries-IsSeriesSum |x|<1
-     \in ComplexBanach.limit-unique h-sum-diff h-sum-rhs
+\private \lemma arctan-log-bridge {x : Real} (|x|<1 : (abs x).U 1)
+  : log1+ (i * x) (norm-ix<1 |x|<1) - log1+ (negative (i * x)) (norm-neg-ix<1 |x|<1) = 2 * i * arctan x |x|<1
+  => ComplexBanach.limit-unique
+      (transport (IsSeriesSum __ _) (ext \lam n => arctan-log-per-term n) $
+        IsSeriesSum_- (log1+-asRA.func-IsSeriesSum $ ExUpperRealAbMonoid.<-rat.2 $ norm-ix<1 |x|<1)
+                      (log1+-asRA.func-IsSeriesSum $ ExUpperRealAbMonoid.<-rat.2 $ norm-neg-ix<1 |x|<1))
+      (twoi-arctan-coef-C-powerSeries-IsSeriesSum |x|<1)
 
 -- ============================================================================
 -- From the complex identity to tan-arctan and the cos/sin bridges
@@ -377,47 +209,29 @@
 
 -- | $(1 + ix)(1 - ix) = 1 + x^2$ in $\mathbb{C}$.
 \private \lemma one-plus-ix-times-one-minus-ix {x : Real}
-  : (Complex.fromReal 1 ComplexField.+ i ComplexField.* Complex.fromReal x)
-    ComplexField.* (Complex.fromReal 1 ComplexField.+ ComplexField.negative (i ComplexField.* Complex.fromReal x))
-    = Complex.fromReal (1 + x * x)
+  : (1 + i * x) * (1 - i * x) = {Complex} 1 + x * x
   => ext (equation.cRing, equation.cRing)
 
 -- | $(1 + x^2)\,\exp(2i\,\arctan x) = (1 + ix)^2$ in $\mathbb{C}$, for $|x| < 1$.
-\private \lemma exp-complex-identity {x : Real} (|x|<1 : (RealValuedRing.norm x).U 1)
-  : Complex.fromReal (1 + x * x) ComplexField.* exp (2 ComplexField.* i ComplexField.* Complex.fromReal (arctan x |x|<1))
-    = (Complex.fromReal 1 ComplexField.+ i ComplexField.* Complex.fromReal x)
-        ComplexField.* (Complex.fromReal 1 ComplexField.+ i ComplexField.* Complex.fromReal x)
-  => \let | ix => i ComplexField.* Complex.fromReal x
+\private \lemma exp-complex-identity {x : Real} (|x|<1 : (abs x).U 1)
+  : (1 + x * x) ComplexField.* exp (2 * i * arctan x |x|<1) = (1 + i * x) * (1 + i * x)
+  => \let | ix => i * x
           | pix => norm-ix<1 |x|<1
           | pnix => norm-neg-ix<1 |x|<1
-          | P => log1+ {ComplexBanach} ix pix
-          | N => log1+ {ComplexBanach} (ComplexField.negative ix) pnix
-     \in \have | eqP : exp P = Complex.fromReal 1 ComplexField.+ ix
-                  => exp-log1p {ComplexBanach} (\lam y z => ComplexField.*-comm) ix pix
-               | eqN : exp N = Complex.fromReal 1 ComplexField.+ ComplexField.negative ix
-                  => exp-log1p {ComplexBanach} (\lam y z => ComplexField.*-comm) (ComplexField.negative ix) pnix
-               | exp-arg : exp (2 ComplexField.* i ComplexField.* Complex.fromReal (arctan x |x|<1))
-                         = exp P ComplexField.* exp (ComplexField.negative N)
-                  => pmap exp (inv (arctan-log-bridge |x|<1))
-                     *> exp_+ {ComplexBanach} {P} {ComplexField.negative N} (ComplexField.*-comm {P} {ComplexField.negative N})
-               | f1x2 : Complex.fromReal (1 + x * x)
-                      = (Complex.fromReal 1 ComplexField.+ ix) ComplexField.* exp N
-                  => inv one-plus-ix-times-one-minus-ix
-                     *> pmap ((Complex.fromReal 1 ComplexField.+ ix) ComplexField.*) (inv eqN)
-               | cancelN : exp N ComplexField.* exp (ComplexField.negative N) = ComplexField.ide
-                  => exp_negative {ComplexBanach} {N}
-          \in pmap (Complex.fromReal (1 + x * x) ComplexField.*) exp-arg
-              *> pmap (\lam (t : Complex) => t ComplexField.* (exp P ComplexField.* exp (ComplexField.negative N))) f1x2
-              *> pmap (\lam (t : Complex) => ((Complex.fromReal 1 ComplexField.+ ix) ComplexField.* exp N)
-                                              ComplexField.* (t ComplexField.* exp (ComplexField.negative N))) eqP
-              *> mul-cancel-helper {ComplexField} {Complex.fromReal 1 ComplexField.+ ix}
-                                   {exp N} {exp (ComplexField.negative N)} cancelN
-  \where {
-    -- | $(A b)(A c) = A^2$ when $bc = 1$.
-    \private \lemma mul-cancel-helper {M : CMonoid} {A b c : M} (bc : b Monoid.* c = Monoid.ide)
-      : (A Monoid.* b) Monoid.* (A Monoid.* c) = A Monoid.* A
-      => equation.cMonoid {bc}
-  }
+          | P => log1+ ix pix
+          | N => log1+ (negative ix) pnix
+     \in \have | eqP : exp P = 1 + ix
+                  => exp-log1p ix (\lam z => *-comm {_} {ix}) pix
+               | eqN : exp N = 1 - ix
+                  => exp-log1p (negative ix) (\lam z => *-comm {_} {negative ix}) pnix
+               | exp-arg : exp (2 * i * arctan x |x|<1) = exp P * exp (negative N)
+                  => pmap exp (inv (arctan-log-bridge |x|<1)) *> exp_+ (ComplexField.*-comm {P} {ComplexField.negative N})
+               | mul-cancel-helper {M : CMonoid} {A b c : M} (bc : b * c = 1) : (A * b) * (A * c) = A * A
+                 => equation.cMonoid {bc}
+          \in pmap (_ *) exp-arg
+              *> pmap (__ * (exp P * exp (negative N))) (inv one-plus-ix-times-one-minus-ix *> pmap (_ *) (inv eqN))
+              *> pmap (\lam t => ((1 + ix) * exp N) * (t * exp (negative N))) eqP
+              *> mul-cancel-helper {ComplexField} {1 + ix} exp_negative-right
 
 -- | $\sin(\arctan x) = x\,\cos(\arctan x)$ for $|x| < 1$ (i.e. $\tan(\arctan x) = x$).
 \lemma tan-arctan {x : Real} (|x|<1 : (RealValuedRing.norm x).U 1)
@@ -425,206 +239,83 @@
   => \let | a : Real => arctan x |x|<1
           | s : Real => sin a
           | c : Real => cos a
-     \in \have | identity-re : (1 + x * x) * cos (2 * a) = 1 - x * x
-                  => Re-of-complex-identity |x|<1
-                | identity-im : (1 + x * x) * sin (2 * a) = 2 * x
-                  => Im-of-complex-identity |x|<1
-                | pyth : c * c + s * s = 1 => pythagoras {a}
-                | cos-2a-eq : cos (2 * a) = c * c - s * s
-                  => pmap cos (linarith : (2 : Real) * a = a + a) *> cos_+ {a} {a}
-                | re-eq : (1 + x * x) * (c * c - s * s) = 1 - x * x
-                  => pmap (\lam (y : Real) => (1 + x * x) * y) (inv cos-2a-eq) *> identity-re
-                | re-eq-dist : (1 + x * x) * (c * c) - (1 + x * x) * (s * s) = 1 - x * x
-                  => inv Ring.ldistr_- *> re-eq
-                | pyth-scaled : (1 + x * x) * (c * c) + (1 + x * x) * (s * s) = 1 + x * x
-                  => inv ldistr *> pmap ((1 + x * x) *) pyth *> ide-right
-                | cos-sq : (1 + x * x) * (c * c) = {Real} 1
-                  => linarith
-                | sin-2a-eq : sin (2 * a) = c * s + s * c
-                  => pmap sin (linarith : (2 : Real) * a = a + a) *> sin_+ {a} {a}
-                | sin-2a-expanded : (1 + x * x) * (c * s + s * c) = 2 * x
-                  => pmap ((1 + x * x) *) (inv sin-2a-eq) *> identity-im
-                | sin-cos-double : (1 + x * x) * (s * c) + (1 + x * x) * (s * c) = 2 * x
-                  => inv ldistr
-                     *> pmap ((1 + x * x) *) (equation.cRing : s * c + s * c = c * s + s * c)
-                     *> sin-2a-expanded
-                | sin-cos : (1 + x * x) * (s * c) = {Real} x
-                  => linarith
-          \in inv ide-right *> pmap (s *) (inv cos-sq)
-              *> (equation.cRing : s * ((1 + x * x) * (c * c)) = c * ((1 + x * x) * (s * c)))
-              *> pmap (c *) sin-cos *> *-comm
+     \in \have
+          | identity-re : (1 + x * x) * cos (2 * a) = 1 - x * x
+            => Re-of-complex-identity |x|<1
+          | identity-im : (1 + x * x) * sin (2 * a) = 2 * x
+            => Im-of-complex-identity |x|<1
+          | pyth : c * c + s * s = 1 => pythagoras
+          | cos-2a-eq : cos (2 * a) = c * c - s * s
+            => pmap cos linarith *> cos_+
+          | re-eq : (1 + x * x) * (c * c - s * s) = 1 - x * x
+            => pmap (_ *) (inv cos-2a-eq) *> identity-re
+          | re-eq-dist : (1 + x * x) * (c * c) - (1 + x * x) * (s * s) = 1 - x * x
+            => inv Ring.ldistr_- *> re-eq
+          | pyth-scaled : (1 + x * x) * (c * c) + (1 + x * x) * (s * s) = 1 + x * x
+            => inv ldistr *> pmap (_ *) pyth *> ide-right
+          | cos-sq : (1 + x * x) * (c * c) = 1
+            => linarith
+          | sin-2a-eq : sin (2 * a) = c * s + s * c
+            => pmap sin linarith *> sin_+
+          | sin-2a-expanded : (1 + x * x) * (c * s + s * c) = 2 * x
+            => pmap (_ *) (inv sin-2a-eq) *> identity-im
+          | sin-cos-double : (1 + x * x) * (s * c) + (1 + x * x) * (s * c) = 2 * x
+            => inv ldistr *> pmap (_ *) equation.cRing *> sin-2a-expanded
+          | sin-cos : (1 + x * x) * (s * c) = x
+            => linarith
+          \in inv ide-right *> pmap (s *) (inv cos-sq) *> equation.cRing *> pmap (c *) sin-cos *> *-comm
   \where {
     -- | $2i\,y = i\,(2y)$ in $\mathbb{C}$.
-    \private \lemma two-i-fromReal-comm {y : Real}
-      : 2 ComplexField.* i ComplexField.* Complex.fromReal y
-        = i ComplexField.* Complex.fromReal (2 * y)
+    \private \lemma two-i-fromReal-comm {y : Real} : 2 * i * y = i * (2 * y)
       => ext (equation.cRing, equation.cRing)
 
-    -- | $\Re(A\cdot Z) = A\,\Re Z$ for real $A$.
-    \private \lemma fromReal-mul-re {A : Real} {Z : Complex}
-      : (Complex.fromReal A ComplexField.* Z).re = A * Z.re
-      => pmap (A * Z.re -) RealField.zro_*-left *> RealField.minus_zro
-
-    -- | $\Im(A\cdot Z) = A\,\Im Z$ for real $A$.
-    \private \lemma fromReal-mul-im {A : Real} {Z : Complex}
-      : (Complex.fromReal A ComplexField.* Z).im = A * Z.im
-      => pmap (A * Z.im +) RealField.zro_*-left *> RealField.zro-right
-
-    -- | $\Re((1+ix)^2) = 1 - x^2$.
-    \private \lemma rhs-re {x : Real}
-      : ((Complex.fromReal 1 ComplexField.+ i ComplexField.* Complex.fromReal x)
-         ComplexField.* (Complex.fromReal 1 ComplexField.+ i ComplexField.* Complex.fromReal x)).re
-        = 1 - x * x
-      => equation.cRing
-
-    -- | $\Im((1+ix)^2) = 2x$.
-    \private \lemma rhs-im {x : Real}
-      : ((Complex.fromReal 1 ComplexField.+ i ComplexField.* Complex.fromReal x)
-         ComplexField.* (Complex.fromReal 1 ComplexField.+ i ComplexField.* Complex.fromReal x)).im
-        = 2 * x
-      => equation.cRing
-
     -- | Real part of the complex identity: $(1 + x^2)\,\cos(2\arctan x) = 1 - x^2$.
-    \private \lemma Re-of-complex-identity {x : Real}
-                                           (|x|<1 : (RealValuedRing.norm x).U 1)
+    \private \lemma Re-of-complex-identity {x : Real} (|x|<1 : (abs x).U 1)
       : (1 + x * x) * cos (2 * arctan x |x|<1) = 1 - x * x
       => \have
-        | re-eq : (Complex.fromReal (1 + x * x) ComplexField.*
-                    exp (2 ComplexField.* i ComplexField.* Complex.fromReal (arctan x |x|<1))).re
-                = ((Complex.fromReal 1 ComplexField.+ i ComplexField.* Complex.fromReal x)
-                    ComplexField.* (Complex.fromReal 1 ComplexField.+ i ComplexField.* Complex.fromReal x)).re
-           => pmap (\lam (z : Complex) => z.re) (exp-complex-identity |x|<1)
-        | exp-arg-eq : exp (2 ComplexField.* i ComplexField.* Complex.fromReal (arctan x |x|<1))
-                     = exp (i ComplexField.* Complex.fromReal (2 * arctan x |x|<1))
-           => pmap exp (two-i-fromReal-comm {arctan x |x|<1})
-        | re-rewritten : (Complex.fromReal (1 + x * x) ComplexField.*
-                           exp (i ComplexField.* Complex.fromReal (2 * arctan x |x|<1))).re
-                       = 1 - x * x
-           => inv (pmap (\lam (z : Complex) => (Complex.fromReal (1 + x * x) ComplexField.* z).re) exp-arg-eq)
-              *> re-eq *> rhs-re
-     \in inv fromReal-mul-re *> re-rewritten
+            | re-eq : ((1 + x * x) ComplexField.* exp (2 * i * arctan x |x|<1)).re = ((1 + i * x) * (1 + i * x)).re
+               => pmap (Complex.re {__}) (exp-complex-identity |x|<1)
+            | exp-arg-eq : exp (2 * i * arctan x |x|<1) = exp (i * (2 * arctan x |x|<1))
+               => pmap exp two-i-fromReal-comm
+            | re-rewritten : ((1 + x * x) ComplexField.* exp (i * (2 * arctan x |x|<1))).re = 1 - x * x
+               => inv (pmap (\lam z => ((1 + x * x) ComplexField.* z).re) exp-arg-eq) *> re-eq *> equation.cRing
+         \in pmap (_ *) (\peval cos _) *> equation.ring *> re-rewritten
 
     -- | Imaginary part of the complex identity: $(1 + x^2)\,\sin(2\arctan x) = 2x$.
-    \private \lemma Im-of-complex-identity {x : Real}
-                                           (|x|<1 : (RealValuedRing.norm x).U 1)
+    \private \lemma Im-of-complex-identity {x : Real} (|x|<1 : (abs x).U 1)
       : (1 + x * x) * sin (2 * arctan x |x|<1) = 2 * x
       => \have
-        | im-eq : (Complex.fromReal (1 + x * x) ComplexField.*
-                    exp (2 ComplexField.* i ComplexField.* Complex.fromReal (arctan x |x|<1))).im
-                = ((Complex.fromReal 1 ComplexField.+ i ComplexField.* Complex.fromReal x)
-                    ComplexField.* (Complex.fromReal 1 ComplexField.+ i ComplexField.* Complex.fromReal x)).im
-           => pmap (\lam (z : Complex) => z.im) (exp-complex-identity |x|<1)
-        | exp-arg-eq : exp (2 ComplexField.* i ComplexField.* Complex.fromReal (arctan x |x|<1))
-                     = exp (i ComplexField.* Complex.fromReal (2 * arctan x |x|<1))
-           => pmap exp (two-i-fromReal-comm {arctan x |x|<1})
-        | im-rewritten : (Complex.fromReal (1 + x * x) ComplexField.*
-                           exp (i ComplexField.* Complex.fromReal (2 * arctan x |x|<1))).im
-                       = 2 * x
-           => inv (pmap (\lam (z : Complex) => (Complex.fromReal (1 + x * x) ComplexField.* z).im) exp-arg-eq)
-              *> im-eq *> rhs-im
-     \in inv fromReal-mul-im *> im-rewritten
+            | im-eq : ((1 + x * x) ComplexField.* exp (2 * i * arctan x |x|<1)).im = ((1 + i * x) * (1 + i * x)).im
+               => pmap (Complex.im {__}) (exp-complex-identity |x|<1)
+            | exp-arg-eq : exp (2 * i * arctan x |x|<1) = exp (i * (2 * arctan x |x|<1))
+               => pmap exp two-i-fromReal-comm
+            | im-rewritten : ((1 + x * x) ComplexField.* exp (i * (2 * arctan x |x|<1))).im = 2 * x
+               => inv (pmap (\lam z => ((1 + x * x) ComplexField.* z).im) exp-arg-eq) *> im-eq *> equation.cRing
+         \in pmap (_ *) (\peval sin _) *> equation.ring *> im-rewritten
   }
 
 -- | $(1 + x^2)\,\cos^2(\arctan x) = 1$.
 \private \lemma cos-arctan-sq {x : Real} (|x|<1 : (RealValuedRing.norm x).U 1)
   : (1 + x * x) * (cos (arctan x |x|<1) * cos (arctan x |x|<1)) = 1
-  => (equation.cRing : (1 + x * x) * (cos (arctan x |x|<1) * cos (arctan x |x|<1))
-                     = cos (arctan x |x|<1) * cos (arctan x |x|<1)
-                     + (x * cos (arctan x |x|<1)) * (x * cos (arctan x |x|<1)))
-     *> pmap (\lam (s : Real) => cos (arctan x |x|<1) * cos (arctan x |x|<1) + s * s)
-             (inv (tan-arctan |x|<1))
-     *> pythagoras {arctan x |x|<1}
+  => equation.cRing *> pmap (\lam s => _ * _ + s * s) (inv (tan-arctan |x|<1)) *> pythagoras
 
 -- | $(1 + x^2)\,\sin^2(\arctan x) = x^2$.
 \lemma sin-arctan-sq {x : Real} (|x|<1 : (RealValuedRing.norm x).U 1)
   : (1 + x * x) * (sin (arctan x |x|<1) * sin (arctan x |x|<1)) = x * x
-  => pmap (\lam (s : Real) => (1 + x * x) * (s * s)) (tan-arctan |x|<1)
-     *> (equation.cRing : (1 + x * x) * (x * cos (arctan x |x|<1) * (x * cos (arctan x |x|<1)))
-                        = x * x * ((1 + x * x) * (cos (arctan x |x|<1) * cos (arctan x |x|<1))))
+  => pmap (\lam s => (1 + x * x) * (s * s)) (tan-arctan |x|<1)
+     *> equation.cRing
      *> pmap (x * x *) (cos-arctan-sq |x|<1)
      *> ide-right
 
 -- | $(1 + x^2)\,\cos(2\arctan x) = 1 - x^2$ — product form of $\cos(2\arctan x) = \tfrac{1-x^2}{1+x^2}$.
 \lemma cos-double-arctan {x : Real} (|x|<1 : (RealValuedRing.norm x).U 1)
   : (1 + x * x) * cos (2 * arctan x |x|<1) = 1 - x * x
-  => \have dbl : cos (2 * arctan x |x|<1) = cos (arctan x |x|<1) * cos (arctan x |x|<1)
-                                          - sin (arctan x |x|<1) * sin (arctan x |x|<1)
-              => pmap cos (linarith : (2 : Real) * arctan x |x|<1 = arctan x |x|<1 + arctan x |x|<1)
-                 *> cos_+ {arctan x |x|<1} {arctan x |x|<1}
-     \in pmap (\lam (y : Real) => (1 + x * x) * y) dbl
-         *> Ring.ldistr_-
-         *> pmap2 (\lam (a b : Real) => a - b) (cos-arctan-sq |x|<1) (sin-arctan-sq |x|<1)
-
--- ============================================================================
--- Arctan addition formula, Machin identity, and the definition of π_M
--- ============================================================================
-
--- | $\left|\tfrac{1}{m+2}\right| < 1$ — domain witness for $\arctan\tfrac{1}{m+2}$.
-\private \lemma ratio-norm-<1 (m : Nat)
-  : (RealValuedRing.norm (ratio 1 (suc (suc m)))).U 1
-  => transport (\lam (y : Real) => Real.U {y} 1)
-      (inv (LatticeAbGroup.abs-ofPos (rat_real_<=.1 (RatField.<=-char linarith))))
-      (real_<_U.1 (rat_real_<.1 (RatField.<-char linarith)))
+  => pmap (\lam y => (1 + x * x) * y) (pmap cos linarith *> cos_+)
+     *> Ring.ldistr_-
+     *> pmap2 {Real} (-) (cos-arctan-sq |x|<1) (sin-arctan-sq |x|<1)
 
 {- | Arctan addition formula, product (division-free) form:
      $\sin(\arctan a + \arctan b)\,(1 - ab) = (a + b)\,\cos(\arctan a + \arctan b)$. -}
-\lemma arctan-addition {a b : Real}
-    (|a|<1 : (RealValuedRing.norm a).U 1) (|b|<1 : (RealValuedRing.norm b).U 1)
-  : sin (arctan a |a|<1 + arctan b |b|<1) * (1 - a * b)  = (a + b) * cos (arctan a |a|<1 + arctan b |b|<1)
-  => rewrite (sin_+ {arctan a |a|<1} {arctan b |b|<1},
-              cos_+ {arctan a |a|<1} {arctan b |b|<1},
-              tan-arctan |a|<1, tan-arctan |b|<1)
-             equation.cRing
-
-\func pi : Real
-  => 16 * arctan (ratio 1 5) (ratio-norm-<1 3) - 4 * arctan (ratio 1 239) (ratio-norm-<1 237)
-
-\func pi/4 : Real
-  => 4 * arctan (ratio 1 5) (ratio-norm-<1 3) - arctan (ratio 1 239) (ratio-norm-<1 237)
-
-\lemma tan_pi/4 : sin pi/4 = cos pi/4
-  => \let | a => arctan (ratio 1 5) (ratio-norm-<1 3)
-          | b => arctan (ratio 1 239) (ratio-norm-<1 237)
-     \in \have | tan_a : (5 : Real) * sin a = cos a
-                  => pmap ((5 : Real) *) (tan-arctan (ratio-norm-<1 3))
-                     *> inv *-assoc *>
-                        pmap (`* cos a) (RealField.*-rat *> pmap Real.fromRat (idp : (5 : Rat) * ratio 1 5 = 1)) *> ide-left
-               | tan_b : (239 : Real) * sin b = cos b
-                  => pmap ((239 : Real) *) (tan-arctan (ratio-norm-<1 237))
-                     *> inv *-assoc *>
-                        pmap (`* cos b) (RealField.*-rat *> pmap Real.fromRat (idp : (239 : Rat) * ratio 1 239 = 1)) *> ide-left
-               | A : 4 * a - b = (a + a) + (a + a) - b => linarith
-        \in unfold pi/4 $ rewrite A $
-            rewrite (sin_minus {(a + a) + (a + a)} {b},
-                     cos_minus {(a + a) + (a + a)} {b},
-                     sin_+ {a + a} {a + a}, cos_+ {a + a} {a + a},
-                     sin_+ {a} {a},         cos_+ {a} {a},
-                     inv tan_a, inv tan_b)
-                    equation.cRing
-
-\lemma pi=4*pi/4 : pi = 4 * pi/4
-  => unfold (pi, pi/4) equation.cRing
-
-\lemma cos_pi/2 : cos (2 * pi/4) = 0
-  => pmap cos (linarith : (2 : Real) * pi/4 = pi/4 + pi/4)
-     *> cos_+ {pi/4} {pi/4}
-     *> pmap (\lam (s : Real) => cos pi/4 * cos pi/4 - s * s) tan_pi/4
-     *> RealField.negative-right
-
--- | $\cos \pi_M = -1$.
-\lemma cos_pi : cos pi = negative 1
-  => \have | py : cos (2 * pi/4) * cos (2 * pi/4)
-                + sin (2 * pi/4) * sin (2 * pi/4) = 1
-              => pythagoras {2 * pi/4}
-           | cz : cos (2 * pi/4) = 0 => cos_pi/2
-           | sin2=1 : sin (2 * pi/4) * sin (2 * pi/4) = 1
-              => rewrite (cz, zro_*-left {RealField} {zro}, zro-left) at py $ py
-     \in pmap cos pi=4*pi/4
-         *> pmap cos (linarith : (4 : Real) * pi/4 = 2 * pi/4 + 2 * pi/4)
-         *> cos_+ {2 * pi/4} {2 * pi/4}
-         *> pmap (\lam (c : Real) => c * c - sin (2 * pi/4) * sin (2 * pi/4)) cz
-         *> pmap (\lam (s : Real) => (0 : Real) * 0 - s) sin2=1
-         *> helper
-  \where {
-    \private \lemma helper : zro * zro - ide = {Real} negative ide => linarith
-  }
+\lemma arctan-addition {a b : Real} (|a|<1 : (abs a).U 1) (|b|<1 : (abs b).U 1)
+  : sin (arctan a |a|<1 + arctan b |b|<1) * (1 - a * b) = (a + b) * cos (arctan a |a|<1 + arctan b |b|<1)
+  => rewrite (sin_+, cos_+, tan-arctan |a|<1, tan-arctan |b|<1) equation.cRing

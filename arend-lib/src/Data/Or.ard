@@ -32,3 +32,9 @@
         | inr b => pmap inr (e2.f_ret b)
       }
   }
+
+\sfunc uninl {A B : \Type} {a a' : A} (p : inl a = {Or A B} inl a') : a = a'
+  => pmap (Or.rec (\lam x => x) (\lam _ => a)) p
+
+\sfunc uninr {A B : \Type} {b b' : B} (p : inr b = {Or A B} inr b') : b = b'
+  => pmap (Or.rec (\lam x => b) (\lam x => x)) p

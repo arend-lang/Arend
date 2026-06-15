@@ -5,9 +5,10 @@
 \import Paths
 \import Paths.Meta
 
--- | Reflective solver model for (non-commutative) semigroups. The normal form of a
---   word is the non-empty list of its variables (head + tail), flattened by
---   associativity. No identity is involved, so this works on bare `Semigroup`s.
+{- | Reflective solver model for (non-commutative) semigroups. The normal form of a
+ -   word is the non-empty list of its variables (head + tail), flattened by
+ -   associativity. No identity is involved, so this works on bare `Semigroup`s.
+ -}
 \func SemigroupSolverModel (S : Semigroup) : SolverModel S \cowith
   | Term => Term
   | NF n => \Sigma (Fin n) (List (Fin n))

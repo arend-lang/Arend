@@ -1,20 +1,28 @@
 \import Algebra.Algebra
 \import Algebra.Meta
+\import Algebra.Module
 \import Algebra.Monoid
+\import Algebra.Ordered
 \import Algebra.Pointed
 \import Algebra.Ring
 \import Algebra.Ring.FormalSeries
 \import Algebra.Ring.FormalSeries.Composition
 \import Algebra.Semiring
-\import Analysis.Series
-\import Analysis.SeriesComposition
 \import Arith.Nat
 \import Arith.Rat
+\import Data.Or
+\import Function
 \import Function.Meta
 \import Logic
 \import Meta
+\import Order.Biordered
+\import Order.Lattice
+\import Order.LinearOrder
+\import Order.PartialOrder
 \import Paths
 \import Paths.Meta
+\import Set.Fin
+\import Set.Fin.Instances
 \open Monoid (pow)
 
 {- | Formal derivative on power series:
@@ -30,189 +38,89 @@ An $A$-linear operation $A[[X]] \to A[[X]]$ satisfying:
 * Leibniz: $D(f \star g) = Df \star g + f \star Dg$.
 
 * Chain rule, when $g_0 = 0$: $D(a\circ g) = ((Da)\circ g) \star Dg$. -}
-\func deriv {A : Ring} (a : Series A) : Series A
-  => \lam n => Semiring.natCoef {A} (suc n) Ring.* a (suc n)
+\func deriv {A : Ring} (a : FSeries A) : FSeries A
+  => \lam n => natCoef (suc n) * a (suc n)
+
+\lemma deriv_ide {A : Ring} : deriv {A} 1 = 0
+  => ext \lam k => zro_*-right
 
 {- | Leibniz rule: $D(a \star b) = Da \star b\ +\ a \star Db$.
  - At each index $n$, the identity
  - $$(n+1) \sum_{i=0}^{n+1} a_i b_{n+1-i}
  - = \sum_{i=0}^{n+1} \big(i + (n+1-i)\big)\, a_i b_{n+1-i}$$
  - splits the LHS into the two convolution terms $Da \star b$ and $a \star Db$. -}
-\lemma deriv-leibniz {A : Ring} (a b : Series A) (n : Nat)
-  : deriv ((FSeriesRing A).* a b) n = ((FSeriesRing A).* (deriv a) b) n Ring.+ ((FSeriesRing A).* a (deriv b)) n
-  => run {
-      unfold deriv,
-      rewrite (conv-at-BigSum a b (suc n)),
-      rewrite (A.BigSum-ldistr {Semiring.natCoef {A} (suc n)}
-        {\new Array A (suc (suc n)) (\lam k => a k Ring.* b (suc n -' k))}),
-      rewrite (A.BigSum-ext {suc (suc n)} (\lam k =>
-        pmap (__ Ring.* (a k Ring.* b (suc n -' k)))
-          (pmap (Semiring.natCoef {A}) (inv (<=_exists (<_suc_<= (fin_< k))))
-            *> Semiring.natCoef_+) *> A.rdistr)),
-      rewrite (AbMonoid.BigSum_+ {A} {suc (suc n)}
-             {\new Array A (suc (suc n)) (\lam k =>
-               Semiring.natCoef {A} k Ring.* (a k Ring.* b (suc n -' k)))}
-             {\new Array A (suc (suc n)) (\lam k =>
-               Semiring.natCoef {A} (suc n -' k) Ring.* (a k Ring.* b (suc n -' k)))}),
-       \have head=0 : Semiring.natCoef {A} 0 Ring.* (a 0 Ring.* b (suc n)) = A.zro => rewrite A.natCoefZero A.zro_*-left,
-       rewrite (pmap (__ Ring.+ _) head=0, A.zro-left),
-       rewrite (A.BigSum-ext {suc n}
-         {\new Array A (suc n) (\lam i => Semiring.natCoef {A} (suc i) Ring.* (a (suc i) Ring.* b (n -' i)))}
-         {\new Array A (suc n) (\lam i => Semiring.natCoef {A} (suc i) Ring.* a (suc i) Ring.* b (n -' i))}
-         (\lam i => inv A.*-assoc)),
-       \have tail=0 : Semiring.natCoef {A} (suc n -' suc n) Ring.* (a (suc n) Ring.* b (suc n -' suc n)) = A.zro
-       => rewrite (-'id {n}, A.natCoefZero) A.zro_*-left,
-       rewrite (A.BigSum_suc-nat {suc n} {\lam (k : Nat) => Semiring.natCoef {A} (suc n -' k) Ring.* (a k Ring.* b (suc n -' k))}),
-       rewrite (pmap (_ Ring.+ __) tail=0, A.zro-right),
-       rewrite (A.BigSum-ext {suc n}
-         {\new Array A (suc n) (\lam i => Semiring.natCoef {A} (suc n -' i) Ring.* (a i Ring.* b (suc n -' i)))}
-         {\new Array A (suc n) (\lam i => a i Ring.* (Semiring.natCoef {A} (suc (n -' i)) Ring.* b (suc (n -' i))))}
-         (\lam i => rewrite (-'_suc (<_suc_<= (fin_< i)), inv A.*-assoc, A.natCoef-comm) A.*-assoc)),
-       rewriteI (conv-at-BigSum (\lam k => Semiring.natCoef {A} (suc k) Ring.* a (suc k)) b n),
-       rewriteI (conv-at-BigSum a (\lam k => Semiring.natCoef {A} (suc k) Ring.* b (suc k)) n),
-       idp
-     }
+\lemma deriv-leibniz {A : Ring} {a b : FSeries A}
+  : deriv (a * b) = deriv a * b + a * deriv b
+  => ext \lam n => later $ A.FinSum-ldistr
+  *> A.FinSum-ext (later \lam s => pmap (`* _) (pmap natCoef (inv s.3) *> A.natCoef_+) *> rdistr)
+  *> A.FinSum_+
+  *> pmap2 (+)
+      (A.FinSum-inj2
+        (later \lam s => (suc s.1, s.2, pmap suc s.3))
+        (\lam {s} {s'} p => ext (pmap (\lam x => pred x.1) p, pmap __.2 p))
+        (later \lam s c => cases (s.1 arg addPath) \with {
+          | 0, _ => pmap (`* _) natCoefZero *> zro_*-left
+          | suc k, q => absurd $ c (k, s.2, pmap (\lam x => pred (x + _)) (inv q) *> pmap pred s.3) $ ext (inv q, idp)
+        })
+        (\lam s => inv *-assoc))
+      (A.FinSum-inj2
+        (later \lam s => (s.1, suc s.2, pmap suc s.3))
+        (\lam {s} {s'} p => ext (pmap __.1 p, pmap (\lam x => pred x.2) p))
+        (later \lam s c => cases (s.2 arg addPath) \with {
+          | 0, _ => pmap (`* _) natCoefZero *> zro_*-left
+          | suc k, q => absurd $ c (s.1, k, pmap (\lam x => pred (_ + x)) (inv q) *> pmap pred s.3) $ ext (idp, inv q)
+        })
+        (\lam s => equation.monoid {A.natCoef-comm {suc s.2} {a s.1}}))
 
--- | Leibniz at $n = 0$: $D(a \star b)_0 = a_1 b_0 + a_0 b_1$.
-\lemma deriv-leibniz_0 {A : Ring} (a b : Series A)
-  : deriv ((FSeriesRing A).* a b) 0 = (FSeriesRing A).* (deriv a) b 0 Ring.+ (FSeriesRing A).* a (deriv b) 0
-  => deriv-leibniz a b 0
+-- | Power rule in a commutative ring: $D(B^{n+1}) = (n+1) \cdot B^{n} \cdot DB$.
+\lemma deriv-pow-conv-suc {A : CRing} (b : FSeries A) (n : Nat)
+  : deriv (pow b (suc n)) = natCoef (suc n) *c (pow b n * deriv b) \elim n
+  | 0 => pmap deriv ide-left *> inv (pmap (`*c (1 * deriv b)) (natCoefSuc 0 *> pmap (`+ 1) natCoefZero *> zro-left) *> ide_*c *> ide-left)
+  | suc n =>
+    \let | c => pow b (suc n) * deriv b
+         | d => pow b n * deriv b
+    \in deriv-leibniz {_} {pow b (suc n)} *> pmap (__ * b + c) (deriv-pow-conv-suc b n) *>
+      inv (pmap (`*c c) (natCoefSuc _) *> *c-rdistr {_} {_} {_} {c}
+        *> pmap2 (+) {natCoef _ *c c} {natCoef _ *c d * b} (pmap (natCoef _ *c) {c} {d * b}
+          (pmap (`* deriv b) {pow b (suc n)} {b * pow b n} (inv Ring.pow-left) *> *-assoc {_} {_} {_} {deriv b} *> *-comm {_} {_} {d})
+            *> *c-comm-left {_} {_} {d}) {1 *c c} {c} ide_*c)
 
--- | Power rule in a commutative ring: $D(B^{\star (n+1)}) = (n+1) \cdot B^{\star n} \star DB$.
-\lemma deriv-pow-conv-suc {A : CRing} (b : Series A) (n k : Nat)
-  : deriv (pow {FSeriesRing A} b (suc n)) k
-  = Semiring.natCoef {A} (suc n) Ring.* (FSeriesRing A).* (pow {FSeriesRing A} b n) (deriv b) k
-\elim n
-  | 0 => run {
-      rewrite (ide-left {FSeriesRing A} {b}),
-      rewrite (ide-left {FSeriesRing A} {deriv b}),
-      rewrite (Semiring.natCoefSuc {A} 0),
-      rewrite A.natCoefZero,
-      rewrite A.zro-left,
-      rewrite A.ide-left,
-      idp
-    }
-  | suc n' =>
-    \have
-      | ih-series-eq : deriv (pow {FSeriesRing A} b (suc n'))
-                         = (\lam (j : Nat) =>
-                              Semiring.natCoef {A} (suc n')
-                              Ring.* (FSeriesRing A).* (pow {FSeriesRing A} b n') (deriv b) j)
-                        => ext (\lam (j : Nat) => deriv-pow-conv-suc b n' j)
-    \in run {
-      rewrite (*-comm {FSeriesAlgebra A} {pow {FSeriesRing A} b (suc n')} {b}),
-      rewrite (deriv-leibniz b (pow {FSeriesRing A} b (suc n')) k),
-      rewrite (fseries-apply (*-comm {FSeriesAlgebra A} {deriv b} {pow {FSeriesRing A} b (suc n')})),
-      rewrite ih-series-eq,
-      rewrite (fseries-apply (inv (*c-comm-right {FSeriesAlgebra A} {Semiring.natCoef {A} (suc n')} {b} {(FSeriesRing A).* (pow {FSeriesRing A} b n') (deriv b)}))),
-      rewriteI (*-assoc {FSeriesRing A} {b} {pow {FSeriesRing A} b n'} {deriv b}),
-      rewrite (*-comm {FSeriesAlgebra A} {b} {pow {FSeriesRing A} b n'}),
-      rewrite (Semiring.natCoefSuc {A} (suc n')),
-      rewriteI A.+-comm,
-      rewriteI (pmap (Semiring.natCoef {A} (suc n') Ring.* (FSeriesRing A).* (pow {FSeriesRing A} b (suc n')) (deriv b) k Ring.+) A.ide-left),
-      inv (A.rdistr {Semiring.natCoef {A} (suc n')} {A.ide} {(FSeriesRing A).* (pow {FSeriesRing A} b (suc n')) (deriv b) k})
-    }
-
-{- | Chain rule for `compose-coeff`. For $b$ with $b_0 = 0$:
- - $$D(a\circ b) = (Da)\circ b \star Db.$$
+{- | Chain rule for {fcompose}. For $b$ with $b_0 = 0$:
+ - $$D(a \circ b) = (Da) \circ b \star Db.$$
  - The formal-power-series counterpart of $(f \circ g)' = f'(g) \cdot g'$.
  - Commutativity of $A$ is required: the factored form
- - $D(B^n) = n \cdot B^{n-1} \cdot DB$ depends on commutativity. -}
-\lemma deriv-compose {A : CRing} (a b : Series A) (b_0 : b 0 = A.zro) (k : Nat)
-  : deriv (\lam k' => compose-coeff a b k') k
-  = ((FSeriesRing A).* (\lam k' => compose-coeff (deriv a) b k') (deriv b)) k
+ - $D(B^n) = n \cdot B^{n-1} \cdot DB$ depends on commutativity.
+ -}
+\lemma deriv-compose {A : CRing} (a b : FSeries A) (b_0 : b 0 = A.zro) (k : Nat)
+  : deriv (fcompose a b) k = (fcompose (deriv a) b * deriv b) k
   => lhs-equals-M a b k *> inv (rhs-equals-M a b b_0 k)
   \where {
     -- | The canonical "middle" form $M_k(a,b) := \sum_{m = 0}^k (D a)_m · (B^{\star m} \star D b)_k$.
-    \private \func M-form {A : CRing} (a b : Series A) (k : Nat) : A
-      => AddMonoid.BigSum (\new Array A (suc k) (\lam (m : Fin (suc k)) =>
-           deriv a m Ring.* (FSeriesRing A).* (pow {FSeriesRing A} b m) (deriv b) k))
+    \private \func M-form {A : CRing} (a b : FSeries A) (k : Nat) : A
+      => A.FinSum \lam (m : Fin (suc k)) => deriv a m * (pow b m * deriv b) k
 
-    \private \lemma lhs-equals-M {A : CRing} (a b : Series A) (k : Nat)
-      : deriv (\lam k' => compose-coeff a b k') k = M-form a b k
-      => unfold deriv $ unfold compose-coeff $
-         A.BigSum-ldistr {Semiring.natCoef {A} (suc k)}
-           {\new Array A (suc (suc k))
-                (\lam (n : Fin (suc (suc k))) => a n * pow {FSeriesRing A} b n (suc k))}
-         *> pmap (\lam (x : A) => x Ring.+ _)
-                 (pmap (Ring.* {A} _) A.zro_*-right
-                  *> A.zro_*-right)
-         *> A.zro-left
-         *> AddMonoid.BigSum-ext {A} {suc k}
-              {\new Array A (suc k) (\lam (m : Fin (suc k)) =>
-                 Semiring.natCoef {A} (suc k) Ring.* (a (suc m) * pow {FSeriesRing A} b (suc m) (suc k)))}
-              {\new Array A (suc k) (\lam (m : Fin (suc k)) =>
-                 deriv a m Ring.* ((FSeriesRing A).* (pow {FSeriesRing A} b m) (deriv b)) k)}
-              (\lam (m : Fin (suc k)) =>
-                 (equation.cRing
-                    : Semiring.natCoef {A} (suc k) Ring.* (a (suc m) Ring.* pow {FSeriesRing A} b (suc m) (suc k))
-                      = a (suc m) Ring.* deriv (pow {FSeriesRing A} b (suc m)) k)
-                 *> pmap (a (suc m) Ring.*) (deriv-pow-conv-suc b m k)
-                 *> equation.cRing)
+    \private \lemma lhs-equals-M {A : CRing} (a b : FSeries A) (k : Nat)
+      : deriv (fcompose a b) k = M-form a b k
+      => A.BigSum-ldistr {_} {\new Array A (suc (suc k)) \lam n => a n * pow b n (suc k)}
+         *> pmap (`+ _) (pmap (* _) zro_*-right *> zro_*-right)
+         *> zro-left
+         *> inv (A.FinSum=BigSum {_} {\lam m => natCoef (suc k) * (a (suc m) * pow b (suc m) (suc k))})
+         *> A.FinSum-ext \lam m => equation.cRing {path \lam i => deriv-pow-conv-suc b m i k}
 
-
-    \private \lemma rhs-equals-M {A : CRing} (a b : Series A) (b_0 : b 0 = A.zro) (k : Nat)
-      : (FSeriesRing A).* (\lam k' => compose-coeff (deriv a) b k') (deriv b) k = M-form a b k
-      =>
-      \let -- the (suc k)-by-(suc k) "rectangular" term as a function of (m, j)
-           | term (m : Fin (suc k)) (j : Fin (suc k)) : A =>
-                (deriv a m * pow-conv b m j) Ring.* deriv b (k -' j)
-      \in -- Step 1+2: bridge conv to BigSum, then per j unfold compose-coeff and apply BigSum-rdistr.
-          conv-at-BigSum (\lam k' => compose-coeff (deriv a) b k') (deriv b) k *>
-          AddMonoid.BigSum-ext {A} {suc k}
-            {\new Array A (suc k) (\lam (j : Fin (suc k)) =>
-                compose-coeff (deriv a) b j Ring.* deriv b (k -' j))}
-            {\new Array A (suc k) (\lam (j : Fin (suc k)) =>
-                AddMonoid.BigSum (\new Array A (suc j) (\lam (m : Fin (suc j)) =>
-                  (deriv a m * pow-conv b m j) Ring.* deriv b (k -' j))))}
-            (\lam (j : Fin (suc k)) =>
-              unfold compose-coeff (A.BigSum-rdistr
-                {\new Array A (suc j) (\lam (m : Fin (suc j)) => deriv a m * pow-conv b m j)}
-                {deriv b (k -' j)}))
-          -- Step 3: extend each inner BigSum from `suc j` to `suc k` via BigSum-subset.
-          *> AddMonoid.BigSum-ext {A} {suc k}
-                {\new Array A (suc k) (\lam (j : Fin (suc k)) =>
-                    AddMonoid.BigSum (\new Array A (suc j) (\lam (m : Fin (suc j)) =>
-                      (deriv a m * pow-conv b m j) Ring.* deriv b (k -' j))))}
-                {\new Array A (suc k) (\lam (j : Fin (suc k)) =>
-                    AddMonoid.BigSum (\new Array A (suc k) (\lam (m : Fin (suc k)) => term m j)))}
-                (\lam (j : Fin (suc k)) => inner-extend a b b_0 k j)
-          -- Step 4: transpose double BigSum.
-          *> A.BigSum-transpose {suc k} {suc k} (\lam j m => term m j)
-          -- Step 5: factor (D a)_m out and refold conv.
-          *> AddMonoid.BigSum-ext {A} {suc k}
-                {\new Array A (suc k) (\lam (m : Fin (suc k)) =>
-                    AddMonoid.BigSum (\new Array A (suc k) (\lam (j : Fin (suc k)) => term m j)))}
-                {\new Array A (suc k) (\lam (m : Fin (suc k)) =>
-                    deriv a m Ring.* ((FSeriesRing A).* (pow-conv b m) (deriv b)) k)}
-                (\lam (m : Fin (suc k)) =>
-                  AddMonoid.BigSum-ext {A} {suc k}
-                    {\new Array A (suc k) (\lam (j : Fin (suc k)) => term m j)}
-                    {\new Array A (suc k) (\lam (j : Fin (suc k)) =>
-                      deriv a m Ring.* (pow-conv b m j * deriv b (k -' j)))}
-                    (\lam (j : Fin (suc k)) => A.*-assoc)
-                  *> inv (A.BigSum-ldistr {deriv a m}
-                            {\new Array A (suc k) (\lam (j : Fin (suc k)) =>
-                              pow-conv b m j * deriv b (k -' j))})
-                  *> pmap (deriv a m Ring.*)
-                          (inv (conv-at-BigSum (pow-conv b m) (deriv b) k)))
-
-    {- | For fixed $j : \mathrm{Fin}(k+1)$, the inner sum over $\mathrm{Fin}(j+1)$
-     equals the one over $\mathrm{Fin}(k+1)$: when $b_0 = 0$, $(B^m)_j = 0$ for $j < m$. -}
-    \private \lemma inner-extend {A : CRing} (a b : Series A) (b_0 : b 0 = A.zro) (k : Nat) (j : Fin (suc k))
-      : AddMonoid.BigSum (\new Array A (suc j) (\lam (m : Fin (suc j)) =>
-            (deriv a m * pow-conv b m j) Ring.* deriv b (k -' j)))
-      = AddMonoid.BigSum (\new Array A (suc k) (\lam (m : Fin (suc k)) =>
-            (deriv a m * pow-conv b m j) Ring.* deriv b (k -' j)))
-      => A.BigSum-subset {\new Array A (suc j) (\lam (m : Fin (suc j)) =>
-                            (deriv a m * pow-conv b m j) Ring.* deriv b (k -' j))}
-                         {\new Array A (suc k) (\lam (m : Fin (suc k)) =>
-                            (deriv a m * pow-conv b m j) Ring.* deriv b (k -' j))}
-                         (suc<=suc (<_suc_<= (fin_< j)))
-                         (\lam (_ : Fin (suc j)) =>
-                            pmap (\lam (x : Nat) =>
-                                    (deriv a x * pow-conv b x j) Ring.* deriv b (k -' j))
-                                 (inv toFin=id))
-                         (\lam (m : Fin (suc k)) sj<=m =>
-                            rewrite (pow-conv-zero-below b_0 m j (suc_<=_< sj<=m)) simplify)
+    \private \lemma rhs-equals-M {A : CRing} (a b : FSeries A) (b_0 : b 0 = A.zro) (k : Nat)
+      : (fcompose (deriv a) b * deriv b) k = M-form a b k
+      => A.FinSum-ext (later \lam s => pmap (`* _) (fcompose.=FinSum {_} {deriv a}) *> A.FinSum-rdistr)
+      *> A.FinSum-double-dep' (later \lam s => FinFin (suc s.1))
+      *> inv (A.FinSum-inj2 {_} {ProdFin (FinFin (suc k)) (FSeriesRing.PairsFinSet k)}
+          (later \lam s => (toFin s.2 $ fin_< s.2 <∘l suc<=suc (<=_+ <=-refl zero<=_ <=∘ =_<= s.1.3), s.1))
+          (IsInj.fromSplit
+            (later \lam s => (s.2, toFin (s.1 ∧ s.2.1) $ <=_<_suc meet-right))
+            (\lam s => ext (idp, fin_nat-inj $ toFin=id *> pmap (`∧ _) toFin=id *> MeetSemilattice.meet_<= (<_suc_<= $ fin_< s.2))))
+          (later \lam s c => \case LinearOrder.dec<_<= s.2.1 s.1 \with {
+            | inl q => equation.cRing {pow-conv-zero-below b_0 q}
+            | inr q => absurd $ c (s.2, toFin s.1 $ <=_<_suc q) $ ext (fin_nat-inj $ toFin=id *> toFin=id, idp)
+          })
+          (later \lam s => path (\lam i => natCoef (suc $ toFin=id i) * a (suc $ toFin=id i) * (pow b (toFin=id i) _ * _)) *> inv *-assoc))
+      *> inv A.FinSum-double
+      *> A.FinSum-ext (\lam m => inv A.FinSum-ldistr)
   }

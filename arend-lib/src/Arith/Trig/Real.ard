@@ -35,42 +35,40 @@
 \open Monoid (pow)
 
 -- | $\cos x := \Re\,\exp(i \cdot \mathrm{fromReal}\ x)$.
-\func cos (x : Real) : Real
+\sfunc cos (x : Real) : Real
   => Re (exp (i * x))
 
 -- | $\sin x := \Im\,\exp(i \cdot \mathrm{fromReal}\ x)$.
-\func sin (x : Real) : Real
+\sfunc sin (x : Real) : Real
   => Im (exp (i * x))
 
 -- | $\cos 0 = 1$.
 \lemma cos_zro : cos 0 = 1
-  => pmap (\lam c => Re (exp c)) zro_*-right *> pmap Re exp_zro
+  => (\peval cos 0) *> pmap (\lam c => Re (exp c)) zro_*-right *> pmap Re exp_zro
 
 -- | $\sin 0 = 0$.
 \lemma sin_zro : sin 0 = 0
-  => pmap (\lam c => Im (exp c)) zro_*-right *> pmap Im exp_zro
+  => (\peval sin 0) *> pmap (\lam c => Im (exp c)) zro_*-right *> pmap Im exp_zro
 
 -- | $\cos(x+y) = \cos x \cdot \cos y - \sin x \cdot \sin y$. Standard cosine addition formula.
 \lemma cos_+ {x y : Real} : cos (x + y) = cos x * cos y - sin x * sin y
-  => pmap (\lam (z : Complex) => Re (exp z)) (pmap (i *) (fromReal_+ {x} {y}) *> ldistr)
+  => (\peval cos _) *> pmap (\lam z => Re (exp z)) (pmap (i *) fromReal_+ *> ldistr)
      *> pmap Re (exp_+ (*-comm {_} {i * x} {i * y}))
+     *> inv (path \lam j => (\peval cos x) j * (\peval cos y) j - (\peval sin x) j * (\peval sin y) j)
 
 -- | $\sin(x+y) = \cos x \cdot \sin y + \sin x \cdot \cos y$. Standard sine addition formula.
 \lemma sin_+ {x y : Real} : sin (x + y) = cos x * sin y + sin x * cos y
-  => pmap (\lam (z : Complex) => Im (exp z)) (pmap (i *) (fromReal_+ {x} {y}) *> ldistr)
+  => (\peval sin _) *> pmap (\lam (z : Complex) => Im (exp z)) (pmap (i *) (fromReal_+ {x} {y}) *> ldistr)
      *> pmap Im (exp_+ (*-comm {_} {i * x} {i * y}))
+     *> inv (path \lam j => (\peval cos x) j * (\peval sin y) j + (\peval sin x) j * (\peval cos y) j)
 
 -- | $\cos$ as a `CoverMap RealNormed RealNormed`.
-\func cosMap : CoverMap RealNormed RealNormed cos
-  => Re ∘ exp ∘ mulIMap ∘ fromRealMap
+\lemma cosMap : CoverMap RealNormed RealNormed cos
+  => transportInv (CoverMap _ _) (ext \lam x => \peval cos x) (Re ∘ exp {ComplexBanach} ∘ mulIMap ∘ fromRealMap)
 
 -- | $\sin$ as a `CoverMap RealNormed RealNormed`.
-\func sinMap : CoverMap RealNormed RealNormed sin
-  => Im ∘ exp ∘ mulIMap ∘ fromRealMap
-
--- | `conj` fixes $\mathrm{fromRat}\ r$ on `ComplexBanach`.
-\lemma conj_fromRat {r : Rat} : conj (ComplexBanach.fromRat r) = ComplexBanach.fromRat r
-  => func-*q {_} {_} {conjAddHom} *> pmap (r QModule.*q) conj_ide
+\lemma sinMap : CoverMap RealNormed RealNormed sin
+  => transportInv (CoverMap _ _) (ext \lam x => \peval sin x) (Im ∘ exp {ComplexBanach} ∘ mulIMap ∘ fromRealMap)
 
 {- | $\overline{\exp z} = \exp(\overline{z})$. Pushes {conj} through
      the limit defining {exp} using {cont-limit},
@@ -79,7 +77,7 @@
 \lemma conj_exp {z : Complex} : conj (exp z) = exp (conj z)
   => ComplexBanach.limit-unique
        (transport (\lam f => ComplexBanach.IsLimit f (conj (exp z)))
-         (path (\lam i n => conj_partialSum {z} {n} i))
+         (ext \lam n => conj_partialSum)
          (cont-limit (exp.seriesSum z) conjMap))
        (exp.seriesSum (conj z))
   \where {
@@ -101,23 +99,24 @@
 
 -- | $\cos(-x) = \cos x$.
 \lemma cos_negative {x : Real} : cos (negative x) = cos x
-  => pmap (\lam (z : Complex) => Re (exp z))
-          (pmap (i *) (fromReal_negative {x}) *> Ring.negative_*-right *> inv (conj_i_* {x}))
-     *> pmap Re (inv conj_exp)
+  => (\peval cos _)
+     *> pmap (\lam z => Re (exp z)) (pmap (i *) fromReal_negative *> Ring.negative_*-right *> inv conj_i_*)
+     *> pmap Re (inv conj_exp) *> inv (\peval cos x)
 
 -- | $\sin(-x) = -\sin x$.
 \lemma sin_negative {x : Real} : sin (negative x) = negative (sin x)
-  => pmap (\lam (z : Complex) => Im (exp z))
-          (pmap (i *) (fromReal_negative {x}) *> Ring.negative_*-right *> inv (conj_i_* {x}))
-     *> pmap Im (inv conj_exp)
+  => (\peval sin _)
+     *> pmap (\lam z => Im (exp z)) (pmap (i *) fromReal_negative *> Ring.negative_*-right *> inv conj_i_*)
+     *> pmap Im (inv conj_exp) *> pmap negative (inv \peval sin x)
 
 -- | The unit-modulus identity: $\exp(ix) \cdot \overline{\exp(ix)} = 1$ for real $x$.
 \lemma exp-conj-cancel {x : Real} : exp (i * x) * conj (exp (i * x)) = 1
-  => pmap (_ *) (conj_exp *> pmap exp (conj_i_* {x})) *> exp_negative
+  => pmap (_ *) (conj_exp *> pmap exp conj_i_*) *> exp_negative-right
 
 -- | Pythagorean identity: $\cos^2 x + \sin^2 x = 1$.
 \lemma pythagoras {x : Real} : cos x * cos x + sin x * sin x = 1
-  => inv (pmap (_ +) (pmap negative Ring.negative_*-right *> AddGroup.negative-isInv))
+  => pmap2 (\lam c s => c * c + s * s) (\peval cos x) (\peval sin x)
+     *> inv (pmap (_ +) (pmap negative Ring.negative_*-right *> AddGroup.negative-isInv))
      *> pmap Re (exp-conj-cancel {x})
 
 -- | $\cos(x - y) = \cos x \cdot \cos y + \sin x \cdot \sin y$.
@@ -134,21 +133,13 @@
      *> pmap (`+ sin x * cos y) Ring.negative_*-right
      *> +-comm
 
--- | Half-decomposition: $x = (x+y)/2 + (x-y)/2$. Helper for sum-to-product identities.
-\private \lemma half-decomp-plus {x y : Real}
-  : (x + y) * ratio 1 2 + (x - y) * ratio 1 2 = x => linarith
-
--- | Half-decomposition: $y = (x+y)/2 - (x-y)/2$. Helper for sum-to-product identities.
-\private \lemma half-decomp-minus {x y : Real}
-  : (x + y) * ratio 1 2 - (x - y) * ratio 1 2 = y => linarith
-
 {- | Sum-to-product for cosines:
      $\cos x - \cos y = -2 \sin\frac{x+y}{2} \sin\frac{x-y}{2}$. -}
 \lemma cos-sum-to-product {x y : Real}
   : cos x - cos y = negative (2 * sin ((x + y) * ratio 1 2) * sin ((x - y) * ratio 1 2))
   => \let
-       | cosX => pmap cos (inv (half-decomp-plus {x} {y})) *> cos_+ {(x + y) * ratio 1 2} {(x - y) * ratio 1 2}
-       | cosY => pmap cos (inv (half-decomp-minus {x} {y})) *> cos_minus {(x + y) * ratio 1 2} {(x - y) * ratio 1 2}
+       | cosX => pmap cos (inv linarith) *> cos_+ {(x + y) * ratio 1 2} {(x - y) * ratio 1 2}
+       | cosY => pmap cos (inv (linarith : (x + y) * ratio 1 2 - (x - y) * ratio 1 2 = y)) *> cos_minus
      \in rewrite (cosX, cosY) equation.cRing
 
 {- | Sum-to-product for sines:
@@ -156,6 +147,6 @@
 \lemma sin-sum-to-product {x y : Real}
   : sin x - sin y = 2 * cos ((x + y) * ratio 1 2) * sin ((x - y) * ratio 1 2)
   => \let
-       | sinX => pmap sin (inv (half-decomp-plus {x} {y})) *> sin_+ {(x + y) * ratio 1 2} {(x - y) * ratio 1 2} *> +-comm
-       | sinY => pmap sin (inv (half-decomp-minus {x} {y})) *> sin_minus {(x + y) * ratio 1 2} {(x - y) * ratio 1 2}
+       | sinX => pmap sin (inv linarith) *> sin_+ {(x + y) * ratio 1 2} {(x - y) * ratio 1 2} *> +-comm
+       | sinY => pmap sin (inv (linarith : (x + y) * ratio 1 2 - (x - y) * ratio 1 2 = y)) *> sin_minus
      \in rewrite (sinX, sinY) equation.cRing
