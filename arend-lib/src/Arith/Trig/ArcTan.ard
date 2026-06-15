@@ -113,8 +113,8 @@
 
 -- | $\sum_n c_n\,x^n = \arctan x$ for $|x| < 1$: the Taylor series sums to $\arctan$.
 \lemma arctan-coef-powerSeries-IsSeriesSum {x : Real} (|x|<1 : (abs x).U 1)
-  : IsSeriesSum (powerSeries arctan-coef __ x) (arctan x |x|<1)
-  => transport2 (\lam c => IsSeriesSum (powerSeries c __ x))
+  : IsSeriesSum (powerSeries arctan-coef x) (arctan x |x|<1)
+  => transport2 (\lam c => IsSeriesSum (powerSeries c x))
       (ext \lam n => RealStoneC*Algebra_fromRat (arctan-coef-Rat n))
       (inv \peval arctan x |x|<1)
       (arctan-asRA.func-IsSeriesSum (ExUpperRealAbMonoid.<-rat.2 |x|<1))
@@ -130,18 +130,18 @@
 
 -- | $\sum_n 2i\,c_n\,x^n = 2i\,\arctan x$ in $\mathbb{C}$ (real $x$ embedded).
 \private \lemma twoi-arctan-coef-C-powerSeries-IsSeriesSum {x : Real} (|x|<1 : (abs x).U 1)
-  : IsSeriesSum (powerSeries twoi-arctan-coef-C __ x) (2 * i * arctan x |x|<1)
-  => \have | real-sum : IsSeriesSum (powerSeries arctan-coef __ x) (arctan x |x|<1)
+  : IsSeriesSum (powerSeries twoi-arctan-coef-C x) (2 * i * arctan x |x|<1)
+  => \have | real-sum : IsSeriesSum (powerSeries arctan-coef x) (arctan x |x|<1)
               => arctan-coef-powerSeries-IsSeriesSum |x|<1
-           | step1 : ComplexBanach.IsLimit (\lam n => partialSum (powerSeries arctan-coef __ x) n) (arctan x |x|<1)
+           | step1 : ComplexBanach.IsLimit (\lam n => partialSum (powerSeries arctan-coef x) n) (arctan x |x|<1)
                => cont-limit real-sum fromRealMap
-           | step2-eq n : partialSum (powerSeries arctan-coef __ x) n = {Complex} partialSum (\lam m => arctan-coef-C m * ComplexField.pow x m) n
+           | step2-eq n : partialSum (powerSeries arctan-coef x) n = {Complex} partialSum (\lam m => arctan-coef-C m * ComplexField.pow x m) n
                => partialSum_hom fromRealMap *> pmap (partialSum __ n) (ext \lam m => fromReal_* *> pmap (_ *) fromReal_pow)
            | step2 : IsSeriesSum (\lam m => arctan-coef-C m * ComplexField.pow x m) (arctan x |x|<1)
-               => limit-transport {_} {_} {\lam n => Complex.fromReal (partialSum (powerSeries arctan-coef __ x) n)} step1 (\lam n => inv (step2-eq n))
+               => limit-transport {_} {_} {\lam n => Complex.fromReal (partialSum (powerSeries arctan-coef x) n)} step1 (\lam n => inv (step2-eq n))
            | step3 : ComplexBanach.IsLimit (\lam n => (2 * i) * partialSum (\lam m => arctan-coef-C m * ComplexField.pow x m) n) (2 * i * arctan x |x|<1)
                => cont2-limit {_} {_} {_} {_} {\lam _ => 2 * i} const-limit step2 ComplexCompleteRing.*-cont
-           | step4-eq n : (2 * i) * partialSum (\lam m => arctan-coef-C m * ComplexField.pow x m) n = partialSum (powerSeries twoi-arctan-coef-C __ x) n
+           | step4-eq n : (2 * i) * partialSum (\lam m => arctan-coef-C m * ComplexField.pow x m) n = partialSum (powerSeries twoi-arctan-coef-C x) n
                => partialSum_hom (*-addMonoidHom-left {_} {2 * i}) *> pmap (partialSum __ n) (ext \lam m => inv (*-assoc {_} {2 * i}))
      \in limit-transport {_} {_} {\lam n => (2 * i) * partialSum (\lam m => arctan-coef-C m * ComplexField.pow x m) n} step3 (\lam n => inv (step4-eq n))
 

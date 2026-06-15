@@ -52,7 +52,7 @@
       {A : RealBanachAlgebra} {w : A} (wc : A.IsCentral w)
       {r : ExUpperReal} (r>=0 : 0 <= r)
       (a-conv-at-r : IsConvUpperSeries (\lam n => A.norm (A.fromRat (log1p-coef n)) * ExUpperRealSemigroup.pow r n))
-      (b-bound-r : \Pi (N : Nat) -> partialSum (\lam k => A.norm (powerSeries (\lam n => A.fromRat (exp-1.coef-Rat n)) k w)) N <= r)
+      (b-bound-r : \Pi (N : Nat) -> partialSum (\lam k => A.norm (powerSeries (\lam n => A.fromRat (exp-1.coef-Rat n)) w k)) N <= r)
       (|exp-w-minus-ide|<1 : (A.norm (exp w - A.ide)).U 1)
       : log1+ (exp w - A.ide) |exp-w-minus-ide|<1 = w
       => \let | log1p-sum => log1+-asRA.func-IsSeriesSum (ExUpperRealAbMonoid.<-rat.2 |exp-w-minus-ide|<1)
@@ -86,7 +86,7 @@
          \in real_<_U.1 linarith
 
     \lemma term-bound {A : RealBanachAlgebra} {w : A} (q : Rat) (q>=0 : 0 <= q) (wU : (A.norm w).U q) (k : Nat)
-      : A.norm (powerSeries (\lam n => A.fromRat (exp-1.coef-Rat n)) k w) <= ExUpperReal.fromRat (exp-1.coef-Rat k * pow q k)
+      : A.norm (powerSeries (\lam n => A.fromRat (exp-1.coef-Rat n)) w k) <= ExUpperReal.fromRat (exp-1.coef-Rat k * pow q k)
       => A.norm_*_<=
           <=∘ ExUpperRealSemigroup.<=_*
                 (A.norm_fromRat <=∘ =_<= (pmap ExUpperReal.fromRat (RatField.abs-ofPos (exp-1.coef>=0 k))))
@@ -94,7 +94,7 @@
           <=∘ =_<= (pmap (_ *) (ExUpperRealSemigroup.rat-pow q>=0) *> ExUpperReal.*-rat (exp-1.coef>=0 k) (RatField.pow>=0 q>=0))
 
     \private \lemma w-bound-derived {A : RealBanachAlgebra} {w : A} (q : Rat) (wU : (A.norm w).U q) (N : Nat)
-      : partialSum (\lam k => A.norm (powerSeries (\lam n => A.fromRat (exp-1.coef-Rat n)) k w)) N <= exp (q : Real) - 1
+      : partialSum (\lam k => A.norm (powerSeries (\lam n => A.fromRat (exp-1.coef-Rat n)) w k)) N <= exp (q : Real) - 1
       => \let
         | q>=0 : 0 <= q => q>=0-from wU
         | t-rat k => exp-1.coef-Rat k * RatField.pow q k

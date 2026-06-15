@@ -71,7 +71,7 @@
       => transport (IsSeriesSum __ _) (ext exp-expm1) $ IsSeriesSum_- (exp.seriesSum x) constSeries-seriesSum
       \where {
         \private \lemma exp-expm1 {A : RealBanachAlgebra} {x : A} (k : Nat)
-          : powerSeries (\lam n => A.fromRat (exp.coef-Rat n)) k x - FSeriesRing.coef 1 k = A.fromRat (coef-Rat k) * pow x k
+          : powerSeries (\lam n => A.fromRat (exp.coef-Rat n)) x k - FSeriesRing.coef 1 k = A.fromRat (coef-Rat k) * pow x k
           \elim k
           | 0 => unfold powerSeries $ rewrite (A.fromRat_zro, pmap A.fromRat DiscreteField.finv_ide *> QModule.ide_*q) equation
           | suc k' => A.minus_zro
@@ -79,7 +79,7 @@
 
     -- | Absolute convergence of the {exp-1} series at any $x$ — dominated by the $\exp$ series.
     \lemma abs-conv {A : RealBanachAlgebra} {x : A}
-      : IsAbsConvSeries (powerSeries (\lam n => A.fromRat (coef-Rat n)) __ x)
+      : IsAbsConvSeries (powerSeries (\lam n => A.fromRat (coef-Rat n)) x)
       => series_<= (\lam n => \case \elim n \with {
         | 0 => transportInv (`<= _) (pmap norm (ide-right *> A.fromRat_zro) *> norm_zro) norm>=0
         | suc n => ExUpperRealAbMonoid.<=-refl
@@ -125,7 +125,7 @@
          Since `exp` is a `RatAnalyticGlobal` with $\mathrm{Dom} = A$, the
          coerced `func` at `x` is `limit (partialSum ... x) (...)`, and
          `limit-isLimit` discharges the `IsSeriesSum` claim directly. -}
-    \lemma seriesSum {A : RealBanachAlgebra} (x : A) : IsSeriesSum (powerSeries coef __ x) (exp x)
+    \lemma seriesSum {A : RealBanachAlgebra} (x : A) : IsSeriesSum (powerSeries coef x) (exp x)
       => limit-isLimit
   }
 
@@ -144,11 +144,11 @@
        = c_n \cdot (x + y)^n,$$
      where $c_k := 1/k!$.  -}
 \private \lemma exp-conv-eq {A : RealBanachAlgebra} {x y : A} (xy=yx : x * y = y * x) (n : Nat)
-  : conv (powerSeries exp.coef __ x) (powerSeries exp.coef __ y) n = powerSeries exp.coef n (x + y)
+  : conv (powerSeries exp.coef x) (powerSeries exp.coef y) n = powerSeries exp.coef (x + y) n
   => \let
       | cs k => A.fromRat (RatField.finv (fac k))
-      | a k => powerSeries (\lam j => cs j) k x
-      | b k => powerSeries (\lam j => cs j) k y
+      | a k => powerSeries (\lam j => cs j) x k
+      | b k => powerSeries (\lam j => cs j) y k
       | term-eq (k : Fin (suc n)) : a k * b (n -' k) = cs n * (natCoef (binom n k) * (pow x k * pow y (n -' k)))
           => *-assoc
              *> pmap (cs k *) (inv *-assoc *> pmap (`* _) (inv A.fromRat-comm) *> *-assoc)

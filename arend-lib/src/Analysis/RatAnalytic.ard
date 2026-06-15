@@ -73,7 +73,7 @@
      sub-disk of radius $r$ to $A$. -}
 \lemma disk-partialSum-cover-aux {A : RealBanachAlgebra} {coefs : Nat -> Rat} {r : ExUpperReal} (n : Nat)
   : CoverMap (OpenCompleteCoverSpace (disk-open-aux {A} {r})) A
-      (\lam s => partialSum (powerSeries (\lam k => A.fromRat (coefs k)) __ s.1) n)
+      (\lam s => partialSum (powerSeries (\lam k => A.fromRat (coefs k)) s.1) n)
   => partialSum-cover {_} {A}
        (\lam j => *-locally-uniform CoverMap.∘ ProductCoverSpace.tuple
                     (CoverMap.const (A.fromRat (coefs j)))
@@ -92,13 +92,13 @@
                                                ExUpperReal.* ExUpperRealSemigroup.pow (q : ExUpperReal) n))
   : IsFuncConvergent
       {_} {OpenCompleteCoverSpace (disk-open-aux {A} {(q : ExUpperReal)})} {A}
-      (\lam n s => partialSum (powerSeries (\lam k => A.fromRat (coefs k)) __ s.1) n)
+      (\lam n s => partialSum (powerSeries (\lam k => A.fromRat (coefs k)) s.1) n)
   => funcCovergent-metric-char
        (\lam n => disk-partialSum-cover-aux {A} {coefs} {(q : ExUpperReal)} n)
        \lam {eps} eps>0 => top-cauchy
            {OpenCompleteCoverSpace (disk-open-aux {A} {(q : ExUpperReal)})}
          \case MTest {\Sigma (x : A) ((A.norm x).U q)}
-                 (\lam n s => powerSeries (\lam k => A.fromRat (coefs k)) n s.1)
+                 (\lam n s => powerSeries (\lam k => A.fromRat (coefs k)) s.1 n)
                  (\lam n => A.norm (A.fromRat (coefs n)) ExUpperReal.* ExUpperRealSemigroup.pow (q : ExUpperReal) n)
                  (\lam n s => norm_*_<= ExUpperRealAbMonoid.<=∘
                               ExUpperRealSemigroup.<=_* ExUpperRealAbMonoid.<=-refl
@@ -118,7 +118,7 @@
     (pc : \Pi {a : ExUpperReal} -> ExUpperRealAbMonoid.zro ExUpperRealAbMonoid.<= a -> a ExUpperRealAbMonoid.< radius
           -> IsConvUpperSeries (\lam n => A.norm (A.fromRat (coefs n)) ExUpperReal.* ExUpperRealSemigroup.pow a n))
     {x : A} (h : A.norm x ExUpperRealAbMonoid.< radius)
-  : IsAbsConvSeries (powerSeries (\lam n => A.fromRat (coefs n)) __ x)
+  : IsAbsConvSeries (powerSeries (\lam n => A.fromRat (coefs n)) x)
   => series_<= (\lam n => norm_*_<= ExUpperRealAbMonoid.<=∘ ExUpperRealSemigroup.<=_* ExUpperRealAbMonoid.<=-refl (A.norm_<=_pow {_} {n})) (pc norm>=0 h)
 
 {- | An analytic function $f : \mathrm{disk} \to A$ on a finite open disk
@@ -149,7 +149,7 @@
 
   | Dom => OpenCompleteCoverSpace (disk-open-aux {A} {radius})
   | Cod => A
-  | func s => seriesSum (powerSeries (\lam n => A.fromRat (coef-Rat n)) __ s.1)
+  | func s => seriesSum (powerSeries (\lam n => A.fromRat (coef-Rat n)) s.1)
                         (absConv-isConv (abs-conv-aux ps-conv s.2))
 
   {- | Continuity of the analytic function on the disk. -}
@@ -165,7 +165,7 @@
                | g : CoverMap Vq A
                => funcLimit
                    {_} {Vq} {A}
-                   (\lam n s' => partialSum (powerSeries (\lam k => A.fromRat (coef-Rat k)) __ s'.1) n)
+                   (\lam n s' => partialSum (powerSeries (\lam k => A.fromRat (coef-Rat k)) s'.1) n)
                    (funcConv-on-subDisk {A} {coef-Rat} {q} q>=0 (ps-conv (ExUpperReal.<=-rat.1 q>=0) (inP (p, linarith, p<=r))))
                | x' : Set.Total {A} (\lam x => A.norm x ExUpperRealAbMonoid.< (q : ExUpperReal)) => (s.1, ExUpperRealAbMonoid.<-rat.2 ns-U-q)
                | x'<=<Ug : single x' <=< {Vq} (\lam y => U (g y))
@@ -180,17 +180,17 @@
   {- | Pointwise absolute convergence of the lifted Taylor series at any
        $x$ with $\|x\| < \mathrm{radius}$. -}
   \lemma abs-conv {x : A} (h : A.norm x ExUpperRealAbMonoid.< radius)
-    : IsAbsConvSeries (powerSeries (\lam n => A.fromRat (coef-Rat n)) __ x)
+    : IsAbsConvSeries (powerSeries (\lam n => A.fromRat (coef-Rat n)) x)
     => abs-conv-aux ps-conv h
 
   {- | Pointwise series convergence at any $x$ with $\|x\| < \mathrm{radius}$. -}
   \lemma func-IsConvSeries {x : A} (h : A.norm x ExUpperRealAbMonoid.< radius)
-    : IsConvSeries (powerSeries (\lam n => A.fromRat (coef-Rat n)) __ x)
+    : IsConvSeries (powerSeries (\lam n => A.fromRat (coef-Rat n)) x)
     => absConv-isConv (abs-conv h)
 
   {- | The Taylor series at $x$ converges to $f(x, h) =$ `func (x, h)`. -}
   \lemma func-IsSeriesSum {x : A} (h : A.norm x ExUpperRealAbMonoid.< radius)
-    : IsSeriesSum (powerSeries (\lam n => A.fromRat (coef-Rat n)) __ x) (func (x, h))
+    : IsSeriesSum (powerSeries (\lam n => A.fromRat (coef-Rat n)) x) (func (x, h))
     => seriesConv-sum (func-IsConvSeries h)
 
   {- | The open disk $\{x \in A \mid \|x\| < \mathrm{radius}\}$ is open in $A$. -}
@@ -208,7 +208,7 @@
   {- | Each partial sum is a `CoverMap` on the disk. -}
   \lemma disk-partialSum-cover (n : Nat)
     : CoverMap DiskCS A
-        (\lam s => partialSum (powerSeries (\lam k => A.fromRat (coef-Rat k)) __ s.1) n)
+        (\lam s => partialSum (powerSeries (\lam k => A.fromRat (coef-Rat k)) s.1) n)
     => partialSum-cover {DiskCS} {A}
          (\lam j => *-locally-uniform CoverMap.∘ ProductCoverSpace.tuple
                       (CoverMap.const (A.fromRat (coef-Rat j)))
@@ -236,13 +236,13 @@
   | Dom => A
   | Cod => A
   | func x => limit {_} {A}
-                (\lam n => partialSum (powerSeries (\lam k => A.fromRat (coef-Rat k)) __ x) n)
+                (\lam n => partialSum (powerSeries (\lam k => A.fromRat (coef-Rat k)) x) n)
                 (funcConv-pointwise {_} {A} {A}
-                   (\lam n x => partialSum (powerSeries (\lam k => A.fromRat (coef-Rat k)) __ x) n)
+                   (\lam n x => partialSum (powerSeries (\lam k => A.fromRat (coef-Rat k)) x) n)
                    (powerSeriesConv-funcConv pc) {x})
   | func-cover => CoverMap.func-cover {funcLimit
                     {_} {A} {A}
-                    (\lam n x => partialSum (powerSeries (\lam k => A.fromRat (coef-Rat k)) __ x) n)
+                    (\lam n x => partialSum (powerSeries (\lam k => A.fromRat (coef-Rat k)) x) n)
                     (powerSeriesConv-funcConv pc)}
 }
 

@@ -36,7 +36,7 @@
 \import Topology.UniformSpace
 \open Monoid(pow)
 
-\func powerSeries {X : ExPseudoNormedRing} (cs : Nat -> X) (n : Nat) (x : X)
+\func powerSeries {X : ExPseudoNormedRing} (cs : Nat -> X) (x : X) (n : Nat)
   => cs n * pow x n
 
 \lemma powerSeries_0 {cs : Series ExUpperReal} (csb : \Pi (j : Nat) -> ∃ (B : Rat) ((cs j).U B)) : IsConvUpperSeries \lam j => cs j * RatField.pow 0 j
@@ -48,10 +48,10 @@
   | L-closed (inP (b,q<b,h)) q'<q => inP (b, q'<q <∘ q<b, h)
   | L-rounded {a} (inP (b,a<b,h)) => inP (RatField.mid a b, inP (b, RatField.mid<right a<b, h), RatField.mid>left a<b)
 
-\lemma convRadius-absConv {X : ExPseudoNormedRing} (cs : Nat -> X) {x : X} (p : norm x <LU convRadius cs) : IsAbsConvSeries (powerSeries cs __ x) \elim p
+\lemma convRadius-absConv {X : ExPseudoNormedRing} (cs : Nat -> X) {x : X} (p : norm x <LU convRadius cs) : IsAbsConvSeries (powerSeries cs x) \elim p
   | inP (a, |x|<a, inP (b,a<b,cc)) => series_<= (\lam j => norm_*_<= <=∘ later (ExUpperRealSemigroup.<=_* <=-refl $ transport (_ <=) (ExUpperRealSemigroup.rat-pow $ <=-less $ norm>=0 |x|<a <∘ a<b) $ X.norm_<=_pow <=∘ ExUpperRealSemigroup.pow_<= (ExUpperReal.<_<= |x|<a <=∘ ExUpperReal.<=-rat.1 (<=-less a<b)))) cc
 
-\lemma convRadius-div {X : ExPseudoValuedRing} (cs : Nat -> X) {x : X} (p : IsConvSeries (powerSeries cs __ x))
+\lemma convRadius-div {X : ExPseudoValuedRing} (cs : Nat -> X) {x : X} (p : IsConvSeries (powerSeries cs x))
                       {a : Rat} (a<|x| : a ExUpperRealAbMonoid.< norm x) : (convRadius cs).L a
   => \case LinearOrder.dec<_<= a 0, \elim a<|x| \with {
     | inl a<0, _ => inP (0, a<0, powerSeries_0 \lam j => norm-bounded _)
@@ -76,16 +76,16 @@
       => upper cc norm>=0 (norm-bounded x)
   }
 
-\lemma powerSeriesConv-absConv {X : ExPseudoNormedRing} {cs : Nat -> X} (p : IsPowerSeriesConv cs) {x : X} : IsAbsConvSeries (powerSeries cs __ x)
+\lemma powerSeriesConv-absConv {X : ExPseudoNormedRing} {cs : Nat -> X} (p : IsPowerSeriesConv cs) {x : X} : IsAbsConvSeries (powerSeries cs x)
   => \case norm-bounded x \with {
     | inP (B,|x|<B) => convRadius-absConv cs $ inP (B, |x|<B, inP (B + 1, linarith, p $ linarith $ norm>=0 |x|<B))
   }
 
 \lemma powerSeriesConv-funcConv {X : ExPseudoNormedRing} {cs : Nat -> X} (p : IsPowerSeriesConv cs)
-  : IsFuncConvergent \lam n x => partialSum (powerSeries cs __ x) n
+  : IsFuncConvergent \lam n x => partialSum (powerSeries cs x) n
   => funcCovergent-metric-char (partialSum-cover \lam j => *-locally-uniform CoverMap.∘ ProductCoverSpace.tuple (CoverMap.const (cs j)) (X.pow-cover j)) \lam {eps} eps>0 =>
       X.makeCauchy $ uniform-subset (X.metricUniform eps>0) \lam {_} (inP (x,idp)) =>
-        \case MTest {\Sigma (y : X) (norm y <= norm x + eps)} (\lam n s => powerSeries cs n s.1)
+        \case MTest {\Sigma (y : X) (norm y <= norm x + eps)} (\lam n s => powerSeries cs s.1 n)
                 (\lam n => norm (cs n) * ExUpperRealSemigroup.pow (norm x + eps) n)
                 (\lam n s => norm_*_<= <=∘ ExUpperRealSemigroup.<=_* <=-refl (X.norm_<=_pow <=∘ ExUpperRealSemigroup.pow_<= s.2))
                 (IsPowerSeriesConv.upper p (ExUpperRealAbMonoid.<=_+-positive norm>=0 $ ExUpperReal.<_<= eps>0) $ TruncP.map (norm-bounded x) \lam (B,|x|<B) => (B + eps, ExUpperRealAbMonoid.<-rat.1 $ transport (_ <) ExUpperReal.+-rat $ ExUpperRealAbMonoid.<_+-left $ ExUpperRealAbMonoid.<-rat.2 |x|<B))
@@ -95,7 +95,7 @@
           })
         }
 
-\lemma powerSeries-unbounded-conv {X : ExPseudoValuedRing} (Xu : X.IsUnbounded) {cs : Nat -> X} (Sc : \Pi (x : X) -> IsConvSeries (powerSeries cs __ x)) : IsPowerSeriesConv cs
+\lemma powerSeries-unbounded-conv {X : ExPseudoValuedRing} (Xu : X.IsUnbounded) {cs : Nat -> X} (Sc : \Pi (x : X) -> IsConvSeries (powerSeries cs x)) : IsPowerSeriesConv cs
   => \lam {a} a>=0 => \case Real.natBounded {a} \with {
     | inP (B,a<B) => \case Xu B \with {
       | inP (x,B<=|x|) => \case convRadius-div cs (Sc x) (ExUpperRealAbMonoid.<-rat.2 a<B <∘l B<=|x|) \with {
@@ -121,7 +121,7 @@
 {- | Pointwise compatibility of convolution with {powerSeries}: when $x$
      commutes with all coefficients,
      $$(a_{\text{ps}} \star b_{\text{ps}})_n = (a \star b)_n \cdot x^n,$$
-     where $a_{\text{ps}}\,k = a_k \cdot x^k$ is `powerSeries a __ x`. -}
+     where $a_{\text{ps}}\,k = a_k \cdot x^k$ is `powerSeries a x`. -}
 \lemma conv-powerSeries {A : ExPseudoNormedRing} {a b : FSeries A} {x : A} (xc : A.IsCentral x) {n : Nat}
-  : (FSeriesRing A).* (powerSeries a __ x) (powerSeries b __ x) n = powerSeries (a * b) n x
+  : (FSeriesRing A).* (powerSeries a x) (powerSeries b x) n = powerSeries (a * b) x n
   => A.FinSum-ext (\lam s => equation.monoid {A.IsCentral_pow xc {s.1} (b s.2), inv A.pow_+ *> pmap (pow x) s.3}) *> inv A.FinSum-rdistr

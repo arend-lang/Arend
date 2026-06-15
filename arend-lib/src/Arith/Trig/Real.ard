@@ -92,8 +92,8 @@
          `conj_expTerm` through `partialSum_hom` (which says any `AddMonoidHom`
          commutes with `partialSum`). -}
     \private \lemma conj_partialSum {z : Complex} {n : Nat}
-      : conj (partialSum (powerSeries (\lam k => ComplexBanach.fromRat (RatField.finv (fac k))) __ z) n)
-        = partialSum (powerSeries (\lam k => ComplexBanach.fromRat (RatField.finv (fac k))) __ (conj z)) n
+      : conj (partialSum (powerSeries (\lam k => ComplexBanach.fromRat (RatField.finv (fac k))) z) n)
+        = partialSum (powerSeries (\lam k => ComplexBanach.fromRat (RatField.finv (fac k))) (conj z)) n
       => partialSum_hom conjAddHom *> path (\lam i => partialSum (conj_expTerm __ i) n)
   }
 
