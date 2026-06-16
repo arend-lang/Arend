@@ -47,13 +47,13 @@
      the constant term is $0$. `(exp-1) x` equals `exp x - A.ide` — bridge
      via `eval_exp-1`. -}
 \func exp-1 {A : RealBanachAlgebra} : RatAnalyticGlobal A \cowith
-  | coef-Rat => exp-1.coef-Rat
-  | pc => exp-1.ps-conv
+  | coef-Rat => coef-Rat
+  | pc => ps-conv
   \where {
-    -- | Formal series for $\exp(w) - 1$: same as `exp.coef-Rat` except $0$ at index $0$.
+    -- | Formal series for $\exp(w) - 1$: same as {expRA.coef-Rat} except $0$ at index $0$.
     \func coef-Rat (n : Nat) : Rat \elim n
       | 0 => 0
-      | suc n => exp.coef-Rat (suc n)
+      | suc n => expRA.coef-Rat (suc n)
 
     \lemma coef>=0 (k : Nat) : 0 <= coef-Rat k \elim k
       | 0 => <=-refl
@@ -68,10 +68,10 @@
     -- | The {exp-1} series sums to $\exp x - 1$ at any $x$.
     \lemma seriesSum {A : RealBanachAlgebra} (x : A)
       : IsSeriesSum (\lam k => A.fromRat (coef-Rat k) * Monoid.pow x k) (exp x - 1)
-      => transport (IsSeriesSum __ _) (ext exp-expm1) $ IsSeriesSum_- (exp.seriesSum x) constSeries-seriesSum
+      => transport (IsSeriesSum __ _) (ext exp-expm1) $ IsSeriesSum_- (expRA.seriesSum x) constSeries-seriesSum
       \where {
         \private \lemma exp-expm1 {A : RealBanachAlgebra} {x : A} (k : Nat)
-          : powerSeries (\lam n => A.fromRat (exp.coef-Rat n)) x k - FSeriesRing.coef 1 k = A.fromRat (coef-Rat k) * pow x k
+          : powerSeries (\lam n => A.fromRat (expRA.coef-Rat n)) x k - FSeriesRing.coef 1 k = A.fromRat (coef-Rat k) * pow x k
           \elim k
           | 0 => unfold powerSeries $ rewrite (A.fromRat_zro, pmap A.fromRat DiscreteField.finv_ide *> QModule.ide_*q) equation
           | suc k' => A.minus_zro
@@ -83,7 +83,7 @@
       => series_<= (\lam n => \case \elim n \with {
         | 0 => transportInv (`<= _) (pmap norm (ide-right *> A.fromRat_zro) *> norm_zro) norm>=0
         | suc n => ExUpperRealAbMonoid.<=-refl
-      }) (powerSeriesConv-absConv exp.ps-conv)
+      }) (powerSeriesConv-absConv expRA.ps-conv)
 
     -- | Power-series convergence for {exp-1} — dominated by $\exp$'s convergence at any radius.
     \lemma ps-conv {A : RealBanachAlgebra}
@@ -91,12 +91,12 @@
       => \lam {a} a>=0 => series_<= (\lam j => \case \elim j \with {
         | 0 => transportInv (`<= _) (ExUpperRealSemigroup.ide-right norm>=0 *> pmap norm A.fromRat_zro *> norm_zro) ExUpperRealSemigroup.*_>=0
         | suc _ => <=-refl
-      }) (exp.ps-conv a>=0)
+      }) (expRA.ps-conv a>=0)
   }
 
-\func exp {A : RealBanachAlgebra} : RatAnalyticGlobal A \cowith
-  | coef-Rat => exp.coef-Rat
-  | pc => exp.ps-conv
+\func expRA {A : RealBanachAlgebra} : RatAnalyticGlobal A \cowith
+  | coef-Rat => coef-Rat
+  | pc => ps-conv
   \where {
     \protected \lemma ps-conv {A : RealBanachAlgebra} : IsPowerSeriesConv \lam n => A.fromRat (RatField.finv (fac n))
       => power-ratio-test-inf (\lam n => RatField.finv (suc n)) (\lam n => =_<= $ A.norm_*q *> *-comm *> pmap (_ *) (pmap ExUpperReal.fromRat
@@ -126,17 +126,23 @@
          coerced `func` at `x` is `limit (partialSum ... x) (...)`, and
          `limit-isLimit` discharges the `IsSeriesSum` claim directly. -}
     \lemma seriesSum {A : RealBanachAlgebra} (x : A) : IsSeriesSum (powerSeries coef x) (exp x)
-      => limit-isLimit
+      => transportInv (IsSeriesSum _) (\peval exp x) limit-isLimit
   }
+
+\sfunc exp {A : RealBanachAlgebra} (a : A) : A
+  => expRA a
+
+\lemma expMap {A : RealBanachAlgebra} : CoverMap A A exp
+  => transportInv (CoverMap A A) (path \lam i a => (\peval exp a) i) expRA
 
 {- | $\exp 0 = 1$. At $x = 0$ the power series collapses: only the $k = 0$ term
      (which is $1$) survives because $0^k = 0$ for $k \geq 1$. So every partial
      sum for $n \geq 1$ already equals $1$, and the limit is just $1$. -}
 \lemma exp_zro {A : RealBanachAlgebra} : exp 0 = 1
-  => A.limit-unique (exp.seriesSum 0)
+  => A.limit-unique (expRA.seriesSum 0)
        \lam {U} _ U1 => inP (1, \lam {n} p => transportInv U (later $ partialSum.=FinSum *> A.FinSum-unique (toFin 0 $ suc_<=_< p)
             (\lam j j/=0 => pmap (_ *) (A.pow_0 \lam p => j/=0 $ fin_nat-inj $ p *> inv toFin=id) *> zro_*-right)
-          *> pmap2 (*) (pmap (exp.coef-Rat __ A.*q _) toFin=id *> A.ide_*q) (pmap (pow 0) toFin=id) *> ide-left) U1)
+          *> pmap2 (*) (pmap (expRA.coef-Rat __ A.*q _) toFin=id *> A.ide_*q) (pmap (pow 0) toFin=id) *> ide-left) U1)
 
 {- | Each convolution term of the exp-series at $x$ and $y$ equals the
      corresponding power-series term at $x + y$, given $x \cdot y = y \cdot x$:
@@ -144,7 +150,7 @@
        = c_n \cdot (x + y)^n,$$
      where $c_k := 1/k!$.  -}
 \private \lemma exp-conv-eq {A : RealBanachAlgebra} {x y : A} (xy=yx : x * y = y * x) (n : Nat)
-  : conv (powerSeries exp.coef x) (powerSeries exp.coef y) n = powerSeries exp.coef (x + y) n
+  : conv (powerSeries expRA.coef x) (powerSeries expRA.coef y) n = powerSeries expRA.coef (x + y) n
   => \let
       | cs k => A.fromRat (RatField.finv (fac k))
       | a k => powerSeries (\lam j => cs j) x k
@@ -177,10 +183,10 @@
 
 {- | Exponent property: $\exp(x + y) = \exp x \cdot \exp y$ when $x$ and $y$
      commute. Combines Cauchy product ({conv-sum}), the exp-to-seriesSum bridge
-     ({exp.seriesSum}), and the per-term equality ({exp-conv-eq}). -}
+     ({expRA.seriesSum}), and the per-term equality ({exp-conv-eq}). -}
 \lemma exp_+ {A : RealBanachAlgebra} {x y : A} (xy=yx : x * y = y * x) : exp (x + y) = exp x * exp y
-  => A.limit-unique (exp.seriesSum (x + y)) $ transport (IsSeriesSum __ (exp x * exp y)) (ext (exp-conv-eq xy=yx)) $
-      conv-sum (exp.seriesSum x) (exp.seriesSum y) (powerSeriesConv-absConv exp.ps-conv) (powerSeriesConv-absConv exp.ps-conv)
+  => A.limit-unique (expRA.seriesSum (x + y)) $ transport (IsSeriesSum __ (exp x * exp y)) (ext (exp-conv-eq xy=yx)) $
+      conv-sum (expRA.seriesSum x) (expRA.seriesSum y) (powerSeriesConv-absConv expRA.ps-conv) (powerSeriesConv-absConv expRA.ps-conv)
 
 \lemma exp_negative-left {A : RealBanachAlgebra} {x : A} : exp (negative x) * exp x = 1
   => inv (exp_+ $ A.negative_*-left *> inv A.negative_*-right) *> pmap exp A.negative-left *> exp_zro
@@ -195,7 +201,8 @@
 \lemma exp_Inv {A : RealBanachAlgebra} {x : A} : Monoid.Inv (exp x)
   => \new Monoid.Inv (exp x) (exp (negative x)) exp_negative-left exp_negative-right
 
--- | $(\exp - 1) x = \exp x - 1$ — bridges the inherited series-limit
---   `exp-1 x` (from `RatAnalyticGlobal`) to the explicit expression.
+{- | $(\exp - 1) x = \exp x - 1$ — bridges the inherited series-limit
+ -   `exp-1 x` (from `RatAnalyticGlobal`) to the explicit expression.
+ -}
 \lemma eval_exp-1 {A : RealBanachAlgebra} {x : A} : exp-1 x = exp x - A.ide
   => A.limit-unique limit-isLimit (exp-1.seriesSum x)

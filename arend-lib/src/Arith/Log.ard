@@ -114,21 +114,21 @@
   \where {
     -- | $f_k := [w^k] (\exp \circ \log(1 + \cdot))$ over $\mathbb Q$.
     \private \func exp-log1p-coef-Rat (k : Nat) : Rat
-      => fcompose exp.coef-Rat log1p-coef k
+      => fcompose expRA.coef-Rat log1p-coef k
 
     {- | The ODE $D f = f \star \tfrac{1}{1 + w}$ (i.e. $D f_k = \sum_{j = 0}^k f_j \cdot (-1)^{k - j}$).
          From the chain rule $D(\exp \circ \log) = (D \exp \circ \log) \cdot D \log = (\exp \circ \log) \cdot \tfrac{1}{1 + w}$. -}
     \private \lemma expLog1p-coef-Rat-ODE (k : Nat)
       : deriv exp-log1p-coef-Rat k = conv exp-log1p-coef-Rat alt_pm k
-      => deriv-compose exp.coef-Rat log1p-coef idp k
-      *> rewrite (ext exp.deriv-coef-Rat : deriv exp.coef-Rat = exp.coef-Rat,
+      => deriv-compose expRA.coef-Rat log1p-coef idp k
+      *> rewrite (ext expRA.deriv-coef-Rat : deriv expRA.coef-Rat = expRA.coef-Rat,
                   ext log1+.deriv-coef-Rat : deriv log1p-coef = alt_pm) idp
 
     \private \lemma exp-log1p-coef-Rat_0 : exp-log1p-coef-Rat 0 = 1
       => pmap (__ * 1 + 0) RatField.finv_ide *> ide-left *> zro-right
 
     \private \lemma exp-log1p-coef-Rat_1 : exp-log1p-coef-Rat 1 = 1
-      => pmap2 (\lam a b => exp.coef-Rat 0 * a + (exp.coef-Rat 1 * b + 0))
+      => pmap2 (\lam a b => expRA.coef-Rat 0 * a + (expRA.coef-Rat 1 * b + 0))
           (pow-conv-zero-pos NatSemiring.zro<ide)
           (fseries-apply (ide-left {FSeriesRing RatField} {log1p-coef}))
 
@@ -141,12 +141,12 @@
     {- | The composition coefficient identity at index $k$: for $k > 0$,
     the $n=0$ term of `compose-coef` vanishes because $(\log(1+w))^0_k = [k = 0]$ is zero. -}
     \private \lemma compose-coef-expm1-eq-exp-pos (k : Nat) (k>0 : 0 < k)
-      : fcompose exp-1.coef-Rat log1p-coef k = fcompose exp.coef-Rat log1p-coef k
+      : fcompose exp-1.coef-Rat log1p-coef k = fcompose expRA.coef-Rat log1p-coef k
       => RatField.BigSum-ext {suc k}
           {\new Array Rat (suc k) (\lam n => exp-1.coef-Rat n * pow {FSeriesRing RatField} log1p-coef n k)}
-          {\new Array Rat (suc k) (\lam n => exp.coef-Rat n * pow {FSeriesRing RatField} log1p-coef n k)}
+          {\new Array Rat (suc k) (\lam n => expRA.coef-Rat n * pow {FSeriesRing RatField} log1p-coef n k)}
           \case \elim __ \with {
-            | 0 => zro_*-left *> inv (pmap (_ *) (pow-conv-zero-pos k>0) *> zro_*-right {_} {exp.coef-Rat 0})
+            | 0 => zro_*-left *> inv (pmap (_ *) (pow-conv-zero-pos k>0) *> zro_*-right {_} {expRA.coef-Rat 0})
             | suc n' => idp
           }
 

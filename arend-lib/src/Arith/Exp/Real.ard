@@ -104,20 +104,20 @@
 
 -- | For $x \geq 0$, $1 \leq \exp x$ — limit of partial sums that all lie $\geq 1$ from index 1.
 \lemma Real-exp->=1-of-nonneg {x : Real} (x>=0 : 0 <= x) : 1 <= exp x
-  => Real-limit->= (exp.seriesSum x) \lam n>=1 => run {
+  => Real-limit->= (expRA.seriesSum x) \lam n>=1 => run {
     rewrite (partialSum-split n>=1),
     rewrite partialSum_1,
     transport (`<= _) zro-right $ <=_+ <=-refl $ midSum>=0 (term>=0 x>=0)
   }
   \where {
     -- | The index-1 partial sum of the exp series at `x` is `1`.
-    \lemma partialSum_1 {x : Real} : partialSum (powerSeries exp.coef x) 1 = 1
+    \lemma partialSum_1 {x : Real} : partialSum (powerSeries expRA.coef x) 1 = 1
       => partialSum_suc *> pmap (`+ _) partialSum-empty *> zro-left
          *> pmap (`* Monoid.pow x 0) (RealStoneC*Algebra_fromRat 1)
          *> ide-left
 
     -- | All exp-series terms at `x ≥ 0` are non-negative.
-    \lemma term>=0 {x : Real} (x>=0 : 0 <= x) (k : Nat) : 0 <= powerSeries exp.coef x k
+    \lemma term>=0 {x : Real} (x>=0 : 0 <= x) (k : Nat) : 0 <= powerSeries expRA.coef x k
       => RealField.<=_*_positive_positive
            (transportInv (0 <=) (RealStoneC*Algebra_fromRat (RatField.finv (pos (fac k))))
               (rat_real_<=.1 (RatField.finv>=0 (<=_ratNom (pos<=pos zero<=_)))))
@@ -131,16 +131,16 @@
   => (linarith : 1 < 1 + x) <∘l one+x<=exp x>0
   \where {
     \private \lemma one+x<=exp {x : Real} (x>0 : 0 < x) : 1 + x <= exp x
-      => Real-limit->= (exp.seriesSum x) \lam n>=2 => run {
+      => Real-limit->= (expRA.seriesSum x) \lam n>=2 => run {
         rewrite (partialSum-split n>=2),
         rewrite partialSum_2,
         transport (`<= _) zro-right $ <=_+ <=-refl $ midSum>=0 $ Real-exp->=1-of-nonneg.term>=0 (<=-less x>0)
       }
 
-    \private \lemma partialSum_2 {x : Real} : partialSum (powerSeries exp.coef x) 2 = 1 + x
+    \private \lemma partialSum_2 {x : Real} : partialSum (powerSeries expRA.coef x) 2 = 1 + x
       => partialSum_suc *> pmap2 (+) Real-exp->=1-of-nonneg.partialSum_1 term1_eq
 
-    \private \lemma term1_eq {x : Real} : powerSeries exp.coef x 1 = x
+    \private \lemma term1_eq {x : Real} : powerSeries expRA.coef x 1 = x
       => pmap (`* _) (RealStoneC*Algebra_fromRat 1) *> ide-left *> ide-left
   }
 

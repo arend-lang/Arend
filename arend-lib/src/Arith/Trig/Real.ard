@@ -64,11 +64,11 @@
 
 -- | $\cos$ as a `CoverMap RealNormed RealNormed`.
 \lemma cosMap : CoverMap RealNormed RealNormed cos
-  => transportInv (CoverMap _ _) (ext \lam x => \peval cos x) (Re ∘ exp {ComplexBanach} ∘ mulIMap ∘ fromRealMap)
+  => transportInv (CoverMap _ _) (ext \lam x => \peval cos x) (Re ∘ expMap {ComplexBanach} ∘ mulIMap ∘ fromRealMap)
 
 -- | $\sin$ as a `CoverMap RealNormed RealNormed`.
 \lemma sinMap : CoverMap RealNormed RealNormed sin
-  => transportInv (CoverMap _ _) (ext \lam x => \peval sin x) (Im ∘ exp {ComplexBanach} ∘ mulIMap ∘ fromRealMap)
+  => transportInv (CoverMap _ _) (ext \lam x => \peval sin x) (Im ∘ expMap {ComplexBanach} ∘ mulIMap ∘ fromRealMap)
 
 {- | $\overline{\exp z} = \exp(\overline{z})$. Pushes {conj} through
      the limit defining {exp} using {cont-limit},
@@ -78,8 +78,8 @@
   => ComplexBanach.limit-unique
        (transport (\lam f => ComplexBanach.IsLimit f (conj (exp z)))
          (ext \lam n => conj_partialSum)
-         (cont-limit (exp.seriesSum z) conjMap))
-       (exp.seriesSum (conj z))
+         (cont-limit (expRA.seriesSum z) conjMap))
+       (expRA.seriesSum (conj z))
   \where {
     -- | Per-term identity for the exp series: `conj` rewrites $(c_k \cdot z^k)$ to $(c_k \cdot \overline{z}^k)$.
     \private \lemma conj_expTerm {z : Complex} (k : Nat)
