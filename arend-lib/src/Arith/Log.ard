@@ -79,7 +79,7 @@
  -   `log1+-asRA` applied (via its `CoverMap` action) to the disk-element
  -   `(w, |w|<1)`.
  -}
-\func log1+ {A : RealBanachAlgebra} (w : A) (\property |w|<1 : (A.norm w).U 1) : A
+\sfunc log1+ {A : RealBanachAlgebra} (w : A) (\property |w|<1 : (A.norm w).U 1) : A
   => log1+-asRA (w, ExUpperRealAbMonoid.<-rat.2 |w|<1)
   \where {
     -- | $D \log(1 + w) = \tfrac{1}{1 + w}$ at the coefficient level: $(n + 1) \cdot \frac{(-1)^n}{n + 1} = (-1)^n$.
@@ -204,7 +204,7 @@
               => compose-converges-abs wc A.fromRat_zro exp-1.ps-conv
                    (log1+-asRA.abs-conv (ExUpperRealAbMonoid.<-rat.2 |w|<1))
                    (log1+-asRA.func-IsSeriesSum (ExUpperRealAbMonoid.<-rat.2 |w|<1))
-                   (exp-1.seriesSum B)
+                   (transportInv (\lam x => IsSeriesSum _ (exp x - 1)) (\peval log1+ w |w|<1) (exp-1.seriesSum _))
           | coef-id : (\lam k => fcompose (\lam n => A.fromRat (exp-1.coef-Rat n)) (\lam n => A.fromRat (log1p-coef n)) k * pow w k)
                     = (\lam k => subst-ide k * pow w k)
               => path (\lam i k => coef-eq-helper-expm1-log1p k i * pow w k)

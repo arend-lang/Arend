@@ -59,8 +59,9 @@
               | compose-result : IsSeriesSum
                   (\lam k => fcompose (\lam n => A.fromRat (log1p-coef n)) (\lam n => A.fromRat (exp-1.coef-Rat n)) k * pow w k)
                   (log1+ (exp w - A.ide) |exp-w-minus-ide|<1)
-                => compose-converges-radius wc A.fromRat_zro r>=0 a-conv-at-r
-                    exp-1.abs-conv b-bound-r (exp-1.seriesSum w) log1p-sum
+                => transportInv (IsSeriesSum _) (\peval log1+ _ _) $
+                    compose-converges-radius wc A.fromRat_zro r>=0 a-conv-at-r
+                      exp-1.abs-conv b-bound-r (exp-1.seriesSum w) log1p-sum
               | coef-id : (\lam k => fcompose (\lam n => A.fromRat (log1p-coef n)) (\lam n => A.fromRat (exp-1.coef-Rat n)) k * pow w k)
                         = (\lam k => subst-ide k * pow w k)
                 => path \lam i k => coef-eq-helper k i * pow w k

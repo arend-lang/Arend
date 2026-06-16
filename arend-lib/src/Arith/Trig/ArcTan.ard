@@ -197,7 +197,8 @@
 -- | $\log(1 + ix) - \log(1 - ix) = 2i\,\arctan x$ in $\mathbb{C}$, for $|x| < 1$.
 \private \lemma arctan-log-bridge {x : Real} (|x|<1 : (abs x).U 1)
   : log1+ (i * x) (norm-ix<1 |x|<1) - log1+ (negative (i * x)) (norm-neg-ix<1 |x|<1) = 2 * i * arctan x |x|<1
-  => ComplexBanach.limit-unique
+  => pmap2 (-) (\peval log1+ _ _) (\peval log1+ _ _) *>
+    ComplexBanach.limit-unique
       (transport (IsSeriesSum __ _) (ext \lam n => arctan-log-per-term n) $
         IsSeriesSum_- (log1+-asRA.func-IsSeriesSum $ ExUpperRealAbMonoid.<-rat.2 $ norm-ix<1 |x|<1)
                       (log1+-asRA.func-IsSeriesSum $ ExUpperRealAbMonoid.<-rat.2 $ norm-neg-ix<1 |x|<1))
