@@ -59,6 +59,7 @@ import static org.arend.proof.Utils.getSignatures;
 
 public class ConsoleMain {
   private boolean myExitWithError;
+  private boolean mySuppressErrorOutput;
   private final Map<ModuleLocation, GeneralError.Level> myModuleResults = new LinkedHashMap<>();
 
   private final static String SHOW_TIMES = "show-times";
@@ -185,6 +186,7 @@ public class ConsoleMain {
   private final ErrorReporter myErrorReporter = new ErrorReporter() {
     @Override
     public void report(GeneralError error) {
+      if (mySuppressErrorOutput) return;
       error.forAffectedDefinitions((referable, err) -> {
         if (referable instanceof LocatedReferable) {
           updateSourceResult(((LocatedReferable) referable).getLocation(), err.level);
@@ -499,17 +501,17 @@ public class ConsoleMain {
       // Typecheck Prelude first — binary cache loading needs Prelude definitions to be available
       server.getCheckerFor(Collections.singletonList(Prelude.MODULE_LOCATION))
           .typecheck(UnstoppableCancellationIndicator.INSTANCE, ProgressReporter.empty());
+      Set<String> requestedLibraryNames = requestedLibraryNames(requestedLibraries);
+      boolean resolvedRequestedScope = false;
       if (requestedModules.isEmpty()) {
-        // Whole-library typechecking: pre-load every module of each requested library.
+        // Whole-library typechecking: resolve every module of each requested library.
         for (SourceLibrary library : requestedLibraries) {
           List<ModuleLocation> allModules = library.findModules(false).stream()
               .map(mp -> new ModuleLocation(library.getLibraryName(), ModuleLocation.LocationKind.SOURCE, mp))
               .toList();
           if (!allModules.isEmpty()) {
-            // resolveAll forces raw loading of all modules and their transitive dependencies
             server.getCheckerFor(allModules).resolveAll(UnstoppableCancellationIndicator.INSTANCE, ProgressReporter.empty());
-            // Now load typechecked definitions from binary caches
-            binaryLoader.loadBinaryCache(library, server);
+            resolvedRequestedScope = true;
           }
         }
       } else {
@@ -525,16 +527,22 @@ public class ConsoleMain {
         }
         if (!targets.isEmpty()) {
           server.getCheckerFor(targets).resolveAll(UnstoppableCancellationIndicator.INSTANCE, ProgressReporter.empty());
-          for (SourceLibrary library : requestedLibraries) {
-            binaryLoader.loadBinaryCache(library, server);
+          resolvedRequestedScope = true;
+        }
+      }
+      if (resolvedRequestedScope) {
+        for (SourceLibrary library : dependencyFirstLibraries(libraryManager, requestedLibraries)) {
+          binaryLoader.loadBinaryCache(library, server);
+          if (!requestedLibraryNames.contains(library.getLibraryName())) {
+            typecheckUncachedDependencyModules(server, binaryLoader, library);
           }
         }
       }
       // Report goals from definitions loaded from binary cache
-      reportCachedGoals(server, binaryLoader.getBinaryCacheLoaded());
+      reportCachedGoals(server, binaryLoader.getBinaryCacheLoaded(), requestedLibraryNames);
       // Re-report errors that were detected on a previous typecheck pass and
       // whose modules are still in memory but won't be re-typechecked this run.
-      reportInMemoryErrors(server, myErrorReporter);
+      reportInMemoryErrors(server, myErrorReporter, requestedLibraryNames);
     }
 
     if (requestedModules.isEmpty()) {
@@ -727,13 +735,68 @@ public class ConsoleMain {
     return true;
   }
 
+  private void typecheckUncachedDependencyModules(ArendServer server, BinaryLoader binaryLoader, SourceLibrary library) {
+    List<ModuleLocation> modules = new ArrayList<>();
+    for (ModuleLocation module : server.getModules()) {
+      if (module.getLocationKind() == ModuleLocation.LocationKind.SOURCE
+          && module.getLibraryName().equals(library.getLibraryName())
+          && !binaryLoader.getBinaryCacheLoaded().contains(module)) {
+        modules.add(module);
+      }
+    }
+    if (modules.isEmpty()) return;
+
+    boolean oldSuppressErrorOutput = mySuppressErrorOutput;
+    mySuppressErrorOutput = true;
+    try {
+      server.getCheckerFor(modules).typecheck(UnstoppableCancellationIndicator.INSTANCE, ProgressReporter.empty());
+    } finally {
+      mySuppressErrorOutput = oldSuppressErrorOutput;
+    }
+  }
+
+  private static Set<String> requestedLibraryNames(List<SourceLibrary> requestedLibraries) {
+    Set<String> result = new HashSet<>();
+    for (SourceLibrary library : requestedLibraries) {
+      result.add(library.getLibraryName());
+    }
+    return result;
+  }
+
+  private static List<SourceLibrary> dependencyFirstLibraries(LibraryManager libraryManager, List<SourceLibrary> requestedLibraries) {
+    List<SourceLibrary> result = new ArrayList<>();
+    Set<String> visiting = new HashSet<>();
+    Set<String> visited = new HashSet<>();
+    for (SourceLibrary library : requestedLibraries) {
+      collectDependencyFirst(libraryManager, library, visiting, visited, result);
+    }
+    return result;
+  }
+
+  private static void collectDependencyFirst(LibraryManager libraryManager, SourceLibrary library, Set<String> visiting, Set<String> visited, List<SourceLibrary> result) {
+    String libraryName = library.getLibraryName();
+    if (visited.contains(libraryName) || !visiting.add(libraryName)) return;
+
+    for (String dependencyName : library.getLibraryDependencies()) {
+      SourceLibrary dependency = libraryManager.getLibrary(dependencyName);
+      if (dependency != null) {
+        collectDependencyFirst(libraryManager, dependency, visiting, visited, result);
+      }
+    }
+
+    visiting.remove(libraryName);
+    visited.add(libraryName);
+    result.add(library);
+  }
+
   /**
    * Scans definitions loaded from binary cache for goals ({@code {?}}) and reports them.
    * The goal flag ({@code isGoal}) is preserved in .arc files, so we can detect goals
    * without re-typechecking.
    */
-  private void reportCachedGoals(ArendServer server, Set<ModuleLocation> cachedModules) {
+  private void reportCachedGoals(ArendServer server, Set<ModuleLocation> cachedModules, Set<String> requestedLibraryNames) {
     for (ModuleLocation module : cachedModules) {
+      if (!requestedLibraryNames.contains(module.getLibraryName())) continue;
       ConcreteGroup group = server.getRawGroup(module);
       if (group == null) continue;
       reportGoalsInGroup(group, module);
@@ -842,11 +905,11 @@ public class ConsoleMain {
    * "Number of modules with errors" summary that the old re-typecheck cycle
    * incidentally provided.
    */
-  private void reportInMemoryErrors(ArendServer server, ErrorReporter errorReporter) {
+  private void reportInMemoryErrors(ArendServer server, ErrorReporter errorReporter, Set<String> requestedLibraryNames) {
     if (!(server instanceof org.arend.server.impl.ArendServerImpl impl)) return;
     org.arend.server.impl.ErrorService errorService = impl.getErrorService();
     for (ModuleLocation module : server.getModules()) {
-      if (module.getLocationKind() != ModuleLocation.LocationKind.SOURCE) continue;
+      if (module.getLocationKind() != ModuleLocation.LocationKind.SOURCE || !requestedLibraryNames.contains(module.getLibraryName())) continue;
       for (GeneralError error : errorService.getTypecheckingErrors(module)) {
         errorReporter.report(error);
       }

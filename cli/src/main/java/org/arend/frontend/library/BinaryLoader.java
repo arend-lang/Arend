@@ -224,6 +224,5 @@ public class BinaryLoader {
       clearTypechecked(dynGroup);
     }
   }
-
   private record PendingBinaryLoad(ModuleLocation module, ModuleDeserialization deserialization) {}
 }
