@@ -71,15 +71,17 @@ import org.arend.typechecking.error.local.inference.RecursiveInstanceInferenceEr
 import org.arend.util.ComputationInterruptedException
 import com.intellij.openapi.progress.ProcessCanceledException
 import java.util.*
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.ConcurrentLinkedQueue
 
 abstract class BasePass(protected open val file: IArendFile, editor: Editor, name: String, protected val textRange: TextRange)
     : ProgressableTextEditorHighlightingPass(file.project, editor.document, name, file, editor, textRange, false, null), ErrorReporter, HighlightingCollector {
 
-    private val highlights = ArrayList<HighlightInfo>()
-    private val errorList = ArrayList<GeneralError>()
-    private val errorTooltips = HashMap<GeneralError, String>()
+    private val highlights = ConcurrentHashMap<Triple<Int, Int, String?>, HighlightInfo>()
+    private val errorList = ConcurrentLinkedQueue<GeneralError>()
+    private val errorTooltips = ConcurrentHashMap<GeneralError, String>()
 
-    fun getHighlights() = highlights
+    fun getHighlights() = highlights.values
 
     protected fun precalculateTooltips(errors: Collection<GeneralError>) {
         val ppConfig = PrettyPrinterConfigWithRenamer(EmptyScope.INSTANCE)
@@ -127,10 +129,7 @@ abstract class BasePass(protected open val file: IArendFile, editor: Editor, nam
     open fun applyInformationLater() {
         runReadAction {
             if (isValid) {
-                val deduplicatedHighlights = highlights.distinctBy {
-                    Triple(it.startOffset, it.endOffset, it.description)
-                }
-                UpdateHighlightersUtil.setHighlightersToEditor(myProject, document, textRange.startOffset, textRange.endOffset, deduplicatedHighlights, colorsScheme, id)
+                UpdateHighlightersUtil.setHighlightersToEditor(myProject, document, textRange.startOffset, textRange.endOffset, highlights.values, colorsScheme, id)
             }
         }
     }
@@ -138,7 +137,7 @@ abstract class BasePass(protected open val file: IArendFile, editor: Editor, nam
     fun addHighlightInfo(builder: HighlightInfo.Builder) {
         val info = builder.create()
         if (info != null) {
-            highlights.add(info)
+            highlights[Triple(info.startOffset, info.endOffset, info.description)] = info
         }
     }
 
