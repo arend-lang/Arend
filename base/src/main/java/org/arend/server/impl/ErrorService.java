@@ -73,6 +73,10 @@ public class ErrorService implements ErrorReporter {
     myTypecheckingErrors.remove(referable);
   }
 
+  public void clearTypecheckingErrors(ModuleLocation module) {
+    myTypecheckingErrors.keySet().removeIf(ref -> module.equals(ref.getLocation()));
+  }
+
   @Override
   public void report(GeneralError error) {
     error.forAffectedDefinitions((ref, newError) -> {

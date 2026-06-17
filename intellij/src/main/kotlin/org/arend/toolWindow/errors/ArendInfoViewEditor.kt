@@ -35,6 +35,7 @@ class ArendInfoViewEditor(project: Project) : ArendMessagesViewEditor(project, n
         if (lastHtml != html) {
             lastHtml = html
             browser.loadHTML(html)
+            browser.component.repaint()
         }
     }
 
