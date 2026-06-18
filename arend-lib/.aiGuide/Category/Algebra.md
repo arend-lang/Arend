@@ -1,0 +1,21 @@
+### Category.Algebra
+
+Internal algebraic structures (commutative monoids, abelian groups, commutative rings) defined inside an arbitrary cartesian category.
+
+This module lifts standard algebraic axioms from `Set` to any `CartesianPrecat` by replacing element-level operations with morphisms involving the terminal object and binary products. Units become morphisms `terminal.apex -> E`, binary operations become morphisms `Bprod E E -> E`, and the usual laws (associativity, commutativity, distributivity) are expressed as commuting diagrams using `prodMap`, `pair`, `proj1`/`proj2`, and the `associator`. This pattern allows the same algebraic theories to be instantiated in `Set`, sheaves, presheaves, or any other cartesian category, yielding e.g. topological groups or sheaves of rings as instances.
+
+#### Base
+
+- **`BaseObject`**: A carrier object `E` in a fixed `CartesianPrecat C`. Common ancestor for all internal algebraic structures.
+
+#### Internal Monoids
+
+- **`CMonoidObject`**: An internal commutative monoid structure on `E`. Extends `BaseObject` with a unit `iide : Hom terminal.apex E`, a multiplication `imul : Hom (Bprod E E) E`, and laws `iide-left` (left unit), `imul-assoc` (associativity via the `associator`), and `imul-comm` (commutativity via swap `pair proj2 proj1`).
+
+#### Internal Abelian Groups
+
+- **`AbGroupObject`**: An internal abelian group on `E`. Extends `BaseObject` with zero `izro`, addition `iadd`, and negation `inegative : Hom E E`, together with the abelian group laws `izro-left`, `iadd-assoc`, `iadd-comm`, and `inegative-left` (stating that `a + (-a) = 0` as a diagram).
+
+#### Internal Rings
+
+- **`CRingObject`**: An internal commutative ring on `E`. Extends both `AbGroupObject` and `CMonoidObject`, sharing the carrier and adding the left distributivity law `ildistr` expressing `a * (b + c) = a*b + a*c` via `prodMap` and `pair` of the appropriate projections.

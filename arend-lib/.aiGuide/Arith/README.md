@@ -1,0 +1,1 @@
+I've drafted the README content but need write permission to apply it. The replacement edit is ready — please approve the write to `/Users/admin/codingspace/arend-lang-new/Arend/arend-lib/.aiGuide/Arith/README.md`.

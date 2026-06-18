@@ -5,3 +5,4 @@ build/
 cli-*-full.jar
 lib/Prelude.arc
 .intellijPlatform/
+.arend/
