@@ -192,6 +192,43 @@ public class ConsoleMain {
       """;
 
 
+  private final static String CLASS_HIERARCHY_HELP = """
+      arend -ch <CLASS> [option ...]
+
+      Print the inheritance lattice around a class plus every \\instance and \\new construction site.
+      Resolves <CLASS> in two ways:
+        - 'MODULE_PATH:GROUP_PATH'    qualified, same shape as -fu / -p
+        - '<short-name>'              looked up via the symbol index, restricted to CLASS / RECORD entries.
+                                      Multiple matches print the candidates so you can pick.
+
+      EXTRA TOKENS  (each as a separate -ch argument)
+        up                only superclass chain
+        down              only subclass tree (and constructors of subclasses)
+        no-instances      omit the \\instance section
+        no-news           omit the \\new section
+        with-fields       annotate each tree node with its directly-declared fields
+        with-tests        also search test sources
+        only=name|self    restrict library scope (default: all loaded libraries)
+        format=tree|flat  Output format.
+                          `tree` (default) uses pseudographics for a human-friendly view.
+                          `flat` emits one tagged relation per line for grep / agentic loops:
+                            TARGET      lib::M:C  KIND  abs:line:col
+                            EXTENDS     lib::M:C  lib::N:Parent
+                            EXTENDED-BY lib::M:C  lib::M:Sub
+                            INSTANCE    lib::M:C  abs:line:col  instanceName
+                            NEW         lib::M:C  abs:line:col  impl=...  miss=...
+        limit=N           cap printed instance / new lines (default 200; 0 = all)
+
+      EXAMPLES
+        arend -L libs my-lib -ch 'CMonoid'
+        arend -L libs my-lib -ch 'Algebra.Monoid:CMonoid' -ch with-fields
+        arend -L libs my-lib -ch 'BaseSet' -ch down
+        arend -L libs my-lib -ch 'Monoid' -ch format=flat -ch up
+
+      Implicit instances inferred during typechecking are NOT shown -- they have no source declaration.
+      Use -fu on the class itself to see all reference sites instead.
+      """;
+ 
   public static CommandLine parseArgs(String[] args) {
     try {
       Options cmdOptions = new Options();
@@ -207,6 +244,8 @@ public class ConsoleMain {
           .desc("search by short name (uses an mtime-cached on-disk index). Pass `-ss help` for the full grammar.").build());
       cmdOptions.addOption(Option.builder("fu").longOpt("find-usages").hasArgs().argName("MODULE:DEF")
           .desc("find every usage of a definition. Pass `-fu help` for full grammar.").build());
+      cmdOptions.addOption(Option.builder("ch").longOpt("class-hierarchy").hasArgs().argName("MODULE:CLASS|name")
+          .desc("print super/sub-class trees plus \\new and \\instance sites. Pass `-ch help` for full grammar.").build());
       cmdOptions.addOption(Option.builder("ps").longOpt("proof-search").hasArgs().argName("sig-pattern")
           .desc("search by signature shape (parameters/codomain). Pass `-ps help` for the full grammar.").build());
       cmdOptions.addOption("r", "recompile", false, "recompile all modules from source, ignoring binary caches (.arc files)");
@@ -237,6 +276,11 @@ public class ConsoleMain {
 
       if (cmdLine.hasOption("fu") && containsHelpToken(cmdLine.getOptionValues("fu"))) {
         printTopicHelp(FIND_USAGES_HELP);
+        return null;
+      }
+
+      if (cmdLine.hasOption("ch") && containsHelpToken(cmdLine.getOptionValues("ch"))) {
+        printTopicHelp(CLASS_HIERARCHY_HELP);
         return null;
       }
 
@@ -333,7 +377,7 @@ public class ConsoleMain {
             "test", "print", "recompile", "double-check", "serialize")),
         new Group("REPL", List.of("interactive")),
         new Group("Information retrieval (queries against the loaded library)", List.of(
-            "symbol-search", "proof-search", "find-usages")),
+            "symbol-search", "proof-search", "find-usages", "class-hierarchy")),
         new Group("Diagnostics / verbosity", List.of(
             "slow-warn",
             TypecheckPipeline.SHOW_TIMES, TypecheckPipeline.SHOW_SIZES,
@@ -350,7 +394,7 @@ public class ConsoleMain {
     System.out.println("Workflows (mutually exclusive; first matching flag wins):");
     System.out.println("  arend [LIBRARY] [MODULE[:DEF]]                     Typecheck workflows");
     System.out.println("  arend [LIBRARY] -i [plain|jline]                   REPL");
-    System.out.println("  arend [LIBRARY] {-ss|-ps|-fu} ...                Information retrieval (no typecheck)");
+    System.out.println("  arend [LIBRARY] {-ss|-ps|-fu|-ch} ...            Information retrieval (no typecheck)");
     System.out.println();
     printWrapped("LIBRARY is a path to a directory containing arend.yaml, the arend.yaml file "
         + "itself, a .zip library, or a library name resolved via -L / the default library root "
