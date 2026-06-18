@@ -20,6 +20,33 @@ public class ConsoleMain {
     return false;
   }
 
+  private final static String PROOF_SEARCH_HELP = """
+      arend -ps <pattern> [print-full]
+
+      Search every loaded library for definitions whose SIGNATURE (parameters and codomain) contains expressions matching <pattern>.
+      Unlike -ss, this runs name resolution on the whole library first.
+      That makes it a lot slower than -ss, but it matches by structure rather than name.
+
+      PATTERN GRAMMAR
+        expr               A single sub-expression that must appear somewhere in the signature; `_` matches any subexpression.
+        expr \\and expr     Conjunction inside one clause: both must match the same parameter (or the same codomain).
+        e1 -> e2 -> codom  Position-aware: e1 matches a parameter; e2 matches a later parameter in the pi; codom matches the codomain.
+                           With one `->` the left side is 'any parameter' and the right side is the codomain.
+                           Patterns may be parenthesised.
+
+      OPTIONS
+        print-full         Print the entire definition with matching subterms highlighted, instead of only the matching slice.
+
+      EXAMPLES
+        arend -L libs my-lib -ps 'Monoid'
+        arend -L libs my-lib -ps 'Group -> _ = _'
+        arend -L libs my-lib -ps 'isProp \\and _ -> _'
+        arend -L libs my-lib -ps 'Monoid -> _' -ps print-full
+
+      See also: https://arend-lang.github.io/documentation/plugin-manual/navigating#proof-search
+      """;
+
+
   public static CommandLine parseArgs(String[] args) {
     try {
       Options cmdOptions = new Options();
@@ -31,6 +58,8 @@ public class ConsoleMain {
       cmdOptions.addOption(Option.builder("c").longOpt("double-check").desc("double check correctness of the result").build());
       cmdOptions.addOption(Option.builder("i").longOpt("interactive").hasArg().optionalArg(true).argName("plain|jline").desc("start an interactive REPL").build());
       cmdOptions.addOption(Option.builder("p").longOpt("print").hasArg().argName("MODULE[:DEF]").desc("after the typecheck, print the elaborated/typechecked form of MODULE (or a single DEF inside it): implicits filled in, eliminators desugared.").build());
+      cmdOptions.addOption(Option.builder("ps").longOpt("proof-search").hasArgs().argName("sig-pattern")
+          .desc("search by signature shape (parameters/codomain). Pass `-ps help` for the full grammar.").build());
       cmdOptions.addOption("r", "recompile", false, "recompile all modules from source, ignoring binary caches (.arc files)");
       cmdOptions.addOption(Option.builder().longOpt("slow-warn").hasArg().argName("ms").desc("emit a [WARN] line on stderr when typechecking of an individual definition exceeds this many milliseconds (default 5000; pass 0 to disable)").build());
       cmdOptions.addOption(null, "serialize", false, "after typechecking, persist typechecked modules as .arc binary caches; without this flag, no .arc files are written.");
@@ -49,6 +78,11 @@ public class ConsoleMain {
 
       if (cmdLine.hasOption("v")) {
         System.out.println("Arend " + Prelude.VERSION);
+        return null;
+      }
+
+      if (cmdLine.hasOption("ps") && containsHelpToken(cmdLine.getOptionValues("ps"))) {
+        printTopicHelp(PROOF_SEARCH_HELP);
         return null;
       }
 
@@ -139,6 +173,8 @@ public class ConsoleMain {
             + "no retrieval / REPL flag is given)", List.of(
             "test", "print", "recompile", "double-check", "serialize")),
         new Group("REPL", List.of("interactive")),
+        new Group("Information retrieval (queries against the loaded library)", List.of(
+            "proof-search")),
         new Group("Diagnostics / verbosity", List.of(
             "slow-warn",
             TypecheckPipeline.SHOW_TIMES, TypecheckPipeline.SHOW_SIZES,
@@ -155,6 +191,7 @@ public class ConsoleMain {
     System.out.println("Workflows (mutually exclusive; first matching flag wins):");
     System.out.println("  arend [LIBRARY] [MODULE[:DEF]]                     Typecheck workflows");
     System.out.println("  arend [LIBRARY] -i [plain|jline]                   REPL");
+    System.out.println("  arend [LIBRARY] -ps ...                            Information retrieval (no typecheck)");
     System.out.println();
     printWrapped("LIBRARY is a path to a directory containing arend.yaml, the arend.yaml file "
         + "itself, a .zip library, or a library name resolved via -L / the default library root "

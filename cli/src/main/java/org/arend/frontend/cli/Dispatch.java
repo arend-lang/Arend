@@ -1,6 +1,7 @@
 package org.arend.frontend.cli;
 
 import org.apache.commons.cli.CommandLine;
+import org.arend.frontend.cli.commands.ProofSearch;
 import org.arend.frontend.cli.commands.TypecheckPipeline;
 
 /**
@@ -18,6 +19,12 @@ public final class Dispatch {
   private Dispatch() {}
 
   public static int execute(CommandContext ctx, CommandLine cmdLine) {
+
+    if (cmdLine.hasOption("ps")) {
+      boolean psOk = ProofSearch.run(ctx, cmdLine.getOptionValues("ps"));
+      return (psOk && !ctx.exitWithError) ? 0 : 1;
+    }
+
     boolean tcOk = TypecheckPipeline.run(ctx, cmdLine);
     return (tcOk && !ctx.exitWithError) ? 0 : 1;
   }
