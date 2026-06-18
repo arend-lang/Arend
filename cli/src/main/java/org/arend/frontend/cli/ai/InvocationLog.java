@@ -62,7 +62,7 @@ public final class InvocationLog implements AutoCloseable {
     return new InvocationLog(target);
   }
 
-  /** Create a log at an explicit path. */
+  /** For the daemon's own session log when no client request is in flight. */
   public static InvocationLog atExplicitPath(Path file) {
     return new InvocationLog(file);
   }

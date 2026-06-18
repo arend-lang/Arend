@@ -41,7 +41,7 @@ import static org.junit.Assert.assertTrue;
  * every subsequent CLI invocation deserializes the module, Phase 2c's
  * orphan-shell sweep detects the dangling reference, calls
  * {@code clearTypechecked}, and the typecheck loop re-typechecks from source.
- * Each reload cycle allocates a fresh wave of
+ * In a long-lived daemon, each cycle allocates a fresh wave of
  * {@code FunctionDefinition} objects that are pinned by cached expression trees
  * the {@code clearTypechecked} walk doesn't touch — a slow leak that surfaces
  * as phantom errors with disambiguated {@code Foo.bar} actual types.

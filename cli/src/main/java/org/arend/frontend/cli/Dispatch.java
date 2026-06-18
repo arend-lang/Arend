@@ -6,10 +6,12 @@ import org.arend.frontend.cli.commands.TypecheckPipeline;
 
 /**
  * Per-op dispatch on a populated {@link CommandContext}. Pulled out of {@code
- * ConsoleMain.run()} so option handling stays small and each command has one entry point.
+ * ConsoleMain.run()} so the daemon worker can call exactly the same code as the local
+ * CLI path — one implementation, two callers.
  *
  * <p>Preconditions: {@code ctx.server / libraryManager / requestedLibraries} are
- * already populated via {@link CliSetup}. This method does NOT load libraries; the
+ * already populated (via {@link CliSetup} for the local path, or carried over the warm
+ * daemon context for the daemon path). This method does NOT load libraries — the
  * caller is responsible for that.
  *
  * <p>Returns a Unix-style exit code: 0 success, non-zero failure. Honors
@@ -19,8 +21,6 @@ public final class Dispatch {
   private Dispatch() {}
 
   public static int execute(CommandContext ctx, CommandLine cmdLine) {
-
-
     if (cmdLine.hasOption("ss")) {
       org.arend.frontend.symbol.SymbolSearch.Parsed parsed =
           org.arend.frontend.symbol.SymbolSearch.parseArgs(cmdLine.getOptionValues("ss"), ctx.systemErrErrorReporter);
@@ -29,7 +29,6 @@ public final class Dispatch {
           ctx.requestedLibraries, ctx.libraryManager, ctx.server, ctx.systemErrErrorReporter);
       return ctx.exitWithError ? 1 : 0;
     }
-
 
     if (cmdLine.hasOption("fu")) {
       org.arend.frontend.symbol.UsageSearch.Parsed parsed =
@@ -40,7 +39,6 @@ public final class Dispatch {
       return ctx.exitWithError ? 1 : 0;
     }
 
-
     if (cmdLine.hasOption("ch")) {
       org.arend.frontend.symbol.ClassHierarchy.Parsed parsed =
           org.arend.frontend.symbol.ClassHierarchy.parseArgs(cmdLine.getOptionValues("ch"));
@@ -49,7 +47,6 @@ public final class Dispatch {
           ctx.requestedLibraries, ctx.libraryManager, ctx.server, ctx.systemErrErrorReporter);
       return ctx.exitWithError ? 1 : 0;
     }
-
 
     if (cmdLine.hasOption("sc")) {
       org.arend.frontend.symbol.ReferableScope.Parsed parsed =

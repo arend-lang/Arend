@@ -39,7 +39,8 @@ import java.util.Map;
  *   <li>{@link Mode#SPLIT}: applies the split rules above (Phase 3+).</li>
  * </ul>
  *
- * <p>Single-threaded use is assumed: one router per invocation.
+ * <p>Single-threaded use is assumed (one router per invocation; the daemon worker
+ * creates a fresh router per request).
  */
 public final class AiOutputRouter {
   public enum Mode { PROXY, SPLIT }

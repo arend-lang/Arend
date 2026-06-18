@@ -203,8 +203,10 @@ public final class CliSetup {
 
   /**
    * Construct {@link CommandContext#outputRouter} from the current {@code aiMode}
-   * and requested-modules state. Replaces any existing router on the context with a
-   * fresh {@link InvocationLog} so logs don't grow append-only.
+   * and requested-modules state. Replaces any existing router on the context — this
+   * is called once for in-process runs (via {@link #loadRequestedLibraries}) and again
+   * per client request inside the daemon, with a fresh {@link InvocationLog} each
+   * time so logs don't grow append-only.
    *
    * <p>Non-{@code -ai} runs get a {@link AiOutputRouter.Mode#PROXY} router (everything
    * to stdout/stderr); {@code -ai} runs get {@link AiOutputRouter.Mode#SPLIT} (narration

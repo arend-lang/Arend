@@ -90,13 +90,25 @@ public class CommandContext {
 
   /**
    * Identifier for the current invocation, used as a uniqueness suffix on the
-   * per-invocation log filename. The in-process path leaves this as {@code "local"}.
+   * per-invocation log filename. The in-process path leaves this as {@code "local"};
+   * the daemon worker sets it to the client request ID so concurrent same-ms
+   * invocations don't clobber each other.
    */
   public String requestId = "local";
 
   /**
+   * Original argv used to bootstrap the daemon (set only by {@code runDaemonBootstrap};
+   * null for in-process runs). The daemon's {@code refresh} op re-dispatches these exact
+   * args against the warm context so source-timestamp checks pick up edits.
+   */
+  public String[] bootstrapArgs;
+
+  /**
    * Cancellation indicator threaded through long-running CLI handlers (typecheck,
-   * proof search). In-process runs leave this as the unstoppable default.
+   * proof search). In-process runs leave this as the unstoppable default; the daemon
+   * worker swaps in a per-task indicator wrapping its {@code currentTaskCancel} flag,
+   * so a client-side {@code cancel} op trips {@code ComputationRunner.checkCanceled()}
+   * inside the typechecker.
    */
   public CancellationIndicator cancellation = UnstoppableCancellationIndicator.INSTANCE;
 

@@ -215,7 +215,7 @@ public final class SymbolSearch {
 
   /**
    * Variant that routes informational output through an {@link org.arend.frontend.cli.ai.AiOutputRouter}.
-   * The router parameter is nullable for callers that still write directly to stdout.
+   * The router parameter is nullable for legacy callers (REPL, daemon worker pre-router).
    */
   public static void reindex(@NotNull List<SourceLibrary> requestedLibraries,
                              @NotNull LibraryManager libraryManager,

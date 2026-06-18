@@ -291,7 +291,6 @@ public final class TypecheckPipeline {
       }
     }
 
-
     if (aiMode) {
       ctx.cancellation.checkCanceled();
       finalizeAi(ctx);
@@ -362,7 +361,6 @@ public final class TypecheckPipeline {
     if (timedProgressReporter != null) {
       timedProgressReporter.print();
     }
-
 
     if (aiMode && ctx.outputRouter != null) {
       ctx.outputRouter.summary();
@@ -578,9 +576,10 @@ public final class TypecheckPipeline {
           continue;
         }
         // Skip modules whose typechecked state contains any HAS_ERRORS def.  Persisting
-        // them would write a cache that the next load can't use: the deserialized
-        // module would still need re-typechecking from source and could pin stale
-        // expression trees across the deserialize -> clear -> re-typecheck cycle.
+        // them would write a cache that the next load can't use (the deserialized
+        // module would still need re-typechecking from source) and, in a long-lived
+        // daemon, accumulates orphan FunctionDefinitions pinned by cached expression
+        // trees across the deserialize → clear → re-typecheck cycle.
         ConcreteGroup group = ctx.server.getRawGroup(module);
         if (group != null && groupHasTypecheckingErrors(group)) {
           skippedWithErrors++;
@@ -635,10 +634,13 @@ public final class TypecheckPipeline {
 
   /**
    * Re-reports typechecking errors stored in the server's {@code ErrorService} for
-   * source modules. Persist skips HAS_ERRORS modules, load doesn't see them in the
-   * binary cache, and the typechecker skips already-typechecked defs, so walking the
-   * ErrorService here restores the per-invocation "Number of modules with errors"
-   * summary for modules that remain in memory.
+   * source modules. Without this step, a daemon that bootstrapped with HAS_ERRORS
+   * modules would silently drop the error reports on the second and later client
+   * requests: persist now skips those modules, load doesn't see them in the binary
+   * cache, and the typechecker skips already-typechecked defs — so the per-request
+   * {@code moduleResults} map never gets an ERROR entry. Walking the ErrorService
+   * here restores the per-invocation "Number of modules with errors" summary that
+   * the old re-typecheck cycle incidentally provided.
    */
   private static void reportInMemoryErrors(CommandContext ctx, Set<String> requestedLibraryNames) {
     if (!(ctx.server instanceof org.arend.server.impl.ArendServerImpl impl)) return;
