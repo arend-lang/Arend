@@ -15,6 +15,8 @@ import org.arend.frontend.cli.CommandContext;
 import org.arend.frontend.cli.ai.AiOutputRouter;
 import org.arend.frontend.library.LibraryManager;
 import org.arend.frontend.library.SourceLibrary;
+import org.arend.frontend.symbol.SignatureFileWriter;
+import org.arend.frontend.symbol.SymbolSearch;
 import org.arend.module.error.DefinitionNotFoundError;
 import org.arend.module.error.ModuleNotFoundError;
 import org.arend.naming.reference.GlobalReferable;
@@ -413,6 +415,34 @@ public final class TypecheckPipeline {
   }
 
   // ───────── AI pipeline phases ─────────
+
+  /**
+   * Steps 3-4 of the -ai pipeline: write the .sig mirror for verified definitions only
+   * (per-def filter via {@link CommandContext#failedDefinitions}) and refresh the binary
+   * symbol index used by -ss / -fu / -ch / -sc.
+   */
+  private static void finalizeAi(CommandContext ctx) {
+    Set<ModulePath> only = ctx.requestedModules.isEmpty() ? null : collectModulePaths(ctx.requestedModules);
+    ctx.outputRouter.stage("");
+    ctx.outputRouter.stage("--- AI: .sig + reindex ---");
+    for (SourceLibrary library : ctx.requestedLibraries) {
+      SignatureFileWriter.Result r =
+          SignatureFileWriter.writeFiltered(ctx.server, library, only, ctx.failedDefinitions);
+      for (String err : r.errors()) System.err.println(err);
+      StringBuilder line = new StringBuilder("[INFO] .sig: wrote ")
+          .append(r.written()).append(" file(s) for ").append(library.getLibraryName());
+      if (r.skippedDefinitions() > 0) {
+        line.append("; skipped ").append(r.skippedDefinitions())
+            .append(" def").append(r.skippedDefinitions() == 1 ? "" : "s").append(" with errors");
+      }
+      if (r.skipped() > 0) {
+        line.append("; skipped ").append(r.skipped())
+            .append(" module").append(r.skipped() == 1 ? "" : "s").append(" (out of scope)");
+      }
+      ctx.outputRouter.info(line.toString());
+    }
+    SymbolSearch.reindex(ctx.requestedLibraries, ctx.libraryManager, ctx.server, null, ctx.outputRouter);
+  }
 
   private static Set<ModulePath> collectModulePaths(Set<Pair<ModulePath, LongName>> requestedModules) {
     Set<ModulePath> result = new HashSet<>();
