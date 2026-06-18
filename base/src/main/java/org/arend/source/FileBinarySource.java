@@ -54,4 +54,14 @@ public class FileBinarySource extends StreamBinarySource {
       return 0;
     }
   }
+
+  @Override
+  public boolean delete() {
+    try {
+      Files.deleteIfExists(myFile);
+      return true;
+    } catch (IOException e) {
+      return false;
+    }
+  }
 }

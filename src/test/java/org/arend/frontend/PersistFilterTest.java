@@ -6,6 +6,7 @@ import org.arend.ext.error.GeneralError;
 import org.arend.ext.error.ListErrorReporter;
 import org.arend.ext.module.ModuleLocation;
 import org.arend.ext.module.ModulePath;
+import org.arend.frontend.cli.commands.TypecheckPipeline;
 import org.arend.frontend.parser.ArendParser;
 import org.arend.frontend.parser.BuildVisitor;
 import org.arend.frontend.repl.CommonCliRepl;
@@ -40,7 +41,7 @@ import static org.junit.Assert.assertTrue;
  * every subsequent CLI invocation deserializes the module, Phase 2c's
  * orphan-shell sweep detects the dangling reference, calls
  * {@code clearTypechecked}, and the typecheck loop re-typechecks from source.
- * In a long-lived daemon, each cycle allocates a fresh wave of
+ * Each reload cycle allocates a fresh wave of
  * {@code FunctionDefinition} objects that are pinned by cached expression trees
  * the {@code clearTypechecked} walk doesn't touch — a slow leak that surfaces
  * as phantom errors with disambiguated {@code Foo.bar} actual types.
@@ -109,7 +110,7 @@ public class PersistFilterTest {
         Definition.TypeCheckingStatus.NO_ERRORS,
         getDef(group, "f").getTypechecked().status());
     assertFalse("predicate must report false on a clean module",
-        ConsoleMain.groupHasTypecheckingErrors(group));
+        TypecheckPipeline.groupHasTypecheckingErrors(group));
   }
 
   /**
@@ -130,7 +131,7 @@ public class PersistFilterTest {
     assertEquals("f should be in HAS_ERRORS state",
         Definition.TypeCheckingStatus.HAS_ERRORS, fDef.status());
     assertTrue("predicate must report true once any def is in HAS_ERRORS state",
-        ConsoleMain.groupHasTypecheckingErrors(group));
+        TypecheckPipeline.groupHasTypecheckingErrors(group));
   }
 
   /**
@@ -149,6 +150,6 @@ public class PersistFilterTest {
     ConcreteGroup group = server.getRawGroup(moduleLoc("Nested"));
     assertNotNull(group);
     assertTrue("nested HAS_ERRORS def must be detected by the walker",
-        ConsoleMain.groupHasTypecheckingErrors(group));
+        TypecheckPipeline.groupHasTypecheckingErrors(group));
   }
 }

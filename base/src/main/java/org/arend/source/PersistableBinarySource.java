@@ -26,4 +26,12 @@ public interface PersistableBinarySource extends BinarySource {
    * @return the loaded group, or null if loading failed
    */
   @Nullable ConcreteGroup load(@NotNull ArendServer server, @NotNull ErrorReporter errorReporter);
+
+  /**
+   * Deletes the underlying binary artifact if the implementation supports it
+   * (e.g., a file on disk). No-op for read-only or non-removable backings.
+   *
+   * @return true if deletion was performed or the artifact was already absent.
+   */
+  default boolean delete() { return false; }
 }
