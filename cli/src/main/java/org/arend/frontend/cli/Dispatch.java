@@ -50,6 +50,16 @@ public final class Dispatch {
       return ctx.exitWithError ? 1 : 0;
     }
 
+
+    if (cmdLine.hasOption("sc")) {
+      org.arend.frontend.symbol.ReferableScope.Parsed parsed =
+          org.arend.frontend.symbol.ReferableScope.parseArgs(cmdLine.getOptionValues("sc"));
+      if (parsed == null) return 1;
+      org.arend.frontend.symbol.ReferableScope.run(parsed.spec(), parsed.pattern(), parsed.options(),
+          ctx.requestedLibraries, ctx.libraryManager, ctx.server, ctx.systemErrErrorReporter);
+      return ctx.exitWithError ? 1 : 0;
+    }
+
     if (cmdLine.hasOption("ps")) {
       boolean psOk = ProofSearch.run(ctx, cmdLine.getOptionValues("ps"));
       return (psOk && !ctx.exitWithError) ? 0 : 1;

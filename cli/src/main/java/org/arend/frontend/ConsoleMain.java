@@ -229,6 +229,38 @@ public class ConsoleMain {
       Use -fu on the class itself to see all reference sites instead.
       """;
  
+  private final static String SCOPE_HELP = """
+      arend -sc <REFERABLE> [<PATTERN>] [option ...]
+
+      Dump the ambient name scope visible at a given referable's position.
+      Mainly intended for debugging reference-resolution issues: which names are in scope here, and what do they actually resolve to?
+
+      Resolves <REFERABLE> in two ways:
+        - 'MODULE_PATH:GROUP_PATH'    qualified, same shape as -fu / -p / -ch
+        - '<short-name>'              looked up via the symbol index.
+                                      Multiple matches print the candidates so you can pick.
+
+      <PATTERN> is optional and uses the same grammar as -ss (literal substring by default; eq:, glob:, re:, hb: prefixes available).
+      When given, only scope entries whose short name matches are printed.
+
+      EXTRA TOKENS  (each as a separate -sc argument)
+        context=static    only static-scope entries (default)
+        context=dynamic   only dynamic-scope entries (record/class fields)
+        context=all       print STATIC, DYNAMIC, PLEVEL, HLEVEL sections in turn
+
+      OUTPUT FORMAT
+        Each in-scope entry is printed as
+            SHORT_NAME -> LIBRARY::MODULE_PATH:LONG_NAME [KIND]
+        (locally-bound referables that have no global location print as
+            SHORT_NAME -> (local <RefType>))
+
+      EXAMPLES
+        arend -L libs my-lib -sc 'Algebra.Monoid:Monoid'
+        arend -L libs my-lib -sc 'Monoid' 'hb:CM'
+        arend -L libs my-lib -sc 'Algebra.Monoid:Monoid' context=all
+      """;
+
+
   public static CommandLine parseArgs(String[] args) {
     try {
       Options cmdOptions = new Options();
@@ -281,6 +313,11 @@ public class ConsoleMain {
 
       if (cmdLine.hasOption("ch") && containsHelpToken(cmdLine.getOptionValues("ch"))) {
         printTopicHelp(CLASS_HIERARCHY_HELP);
+        return null;
+      }
+
+      if (cmdLine.hasOption("sc") && containsHelpToken(cmdLine.getOptionValues("sc"))) {
+        printTopicHelp(SCOPE_HELP);
         return null;
       }
 
@@ -377,7 +414,7 @@ public class ConsoleMain {
             "test", "print", "recompile", "double-check", "serialize")),
         new Group("REPL", List.of("interactive")),
         new Group("Information retrieval (queries against the loaded library)", List.of(
-            "symbol-search", "proof-search", "find-usages", "class-hierarchy")),
+            "symbol-search", "proof-search", "find-usages", "class-hierarchy", "scope")),
         new Group("Diagnostics / verbosity", List.of(
             "slow-warn",
             TypecheckPipeline.SHOW_TIMES, TypecheckPipeline.SHOW_SIZES,
@@ -394,7 +431,7 @@ public class ConsoleMain {
     System.out.println("Workflows (mutually exclusive; first matching flag wins):");
     System.out.println("  arend [LIBRARY] [MODULE[:DEF]]                     Typecheck workflows");
     System.out.println("  arend [LIBRARY] -i [plain|jline]                   REPL");
-    System.out.println("  arend [LIBRARY] {-ss|-ps|-fu|-ch} ...            Information retrieval (no typecheck)");
+    System.out.println("  arend [LIBRARY] {-ss|-ps|-fu|-ch|-sc} ...        Information retrieval (no typecheck)");
     System.out.println();
     printWrapped("LIBRARY is a path to a directory containing arend.yaml, the arend.yaml file "
         + "itself, a .zip library, or a library name resolved via -L / the default library root "
