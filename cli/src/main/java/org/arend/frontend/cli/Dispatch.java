@@ -20,6 +20,16 @@ public final class Dispatch {
 
   public static int execute(CommandContext ctx, CommandLine cmdLine) {
 
+
+    if (cmdLine.hasOption("ss")) {
+      org.arend.frontend.symbol.SymbolSearch.Parsed parsed =
+          org.arend.frontend.symbol.SymbolSearch.parseArgs(cmdLine.getOptionValues("ss"), ctx.systemErrErrorReporter);
+      if (parsed == null) return 1;
+      org.arend.frontend.symbol.SymbolSearch.run(parsed.patterns(), parsed.options(),
+          ctx.requestedLibraries, ctx.libraryManager, ctx.server, ctx.systemErrErrorReporter);
+      return ctx.exitWithError ? 1 : 0;
+    }
+
     if (cmdLine.hasOption("ps")) {
       boolean psOk = ProofSearch.run(ctx, cmdLine.getOptionValues("ps"));
       return (psOk && !ctx.exitWithError) ? 0 : 1;

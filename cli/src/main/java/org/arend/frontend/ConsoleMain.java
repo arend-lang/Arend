@@ -20,6 +20,112 @@ public class ConsoleMain {
     return false;
   }
 
+  private final static String SYMBOL_SEARCH_HELP = """
+      arend -ss <pattern> [option ...]
+
+      Search every loaded library for definitions whose SHORT NAME matches <pattern>.
+      Each .ard file is loaded at most once; results live in a per-library on-disk index at <library>/<binariesDir>/.arend-symbol-index.
+      Subsequent runs with no source changes are near-instant.
+
+      PATTERN
+        Foo                Literal substring match against the SHORT name (case-insensitive by default).
+                           Every Arend identifier character is matched as plain text; nothing is a regex metacharacter here.
+                           So '*-comm', '^-1', '<*', '||', '+>+', '[*]', '?-elim' all work as literal substrings.
+
+                           Per Arend.g4, an identifier consists of:
+                             operators   ~ ! @ # $ % ^ & * - + = < > ? / | : [ ]
+                             letters     a-z  A-Z  _
+                             Unicode     U+2200..U+22FF, U+2A00..U+2AFF
+                                         (math operators: ∀ ∃ ∈ ⊂ ⊆ ∧ ∨ ≤ ⊕ …)
+                             cont. only  0-9  '         (not first character)
+
+                           Plain patterns reject non-identifier chars: '.', '(', ')', '{', '}', ',', ';', '"', backtick, whitespace.
+                           Such a pattern is rejected with a fix-it pointing at `re:` or `glob:`.
+                           Most commonly that's a regex sequence (`.*`, `.+`, `.?`, `(?...`) or a qualified-name mistake (`Module.Foo`).
+                           Pass just `Foo` and read the long name from the output.
+
+                           A '|' in a plain pattern matches literally (since '|' IS a valid identifier char).
+                           It emits a soft warning anyway, in case OR was intended.
+        eq:<text>          Exact short-name match (anchored).
+                           E.g. `eq:pmap` matches `pmap` but not `pmap2`, `pmap_<*-comm`, etc.
+        glob:<pat>         `*` = any chars, `?` = any one char.
+                           Use `\\*` / `\\?` for literal stars / question marks (so `glob:abs\\_\\*` matches `abs_*`, `abs_*q`, and so on).
+        re:<java-regex>    raw java.util.regex pattern, matched with find()
+        hb:<chars>         Humpback / camel-and-dash boundary fuzzy match.
+                           E.g. `hb:PMA` matches `PosetAddMonoid`; `hb:p-iP` matches `pi-isProp`.
+                           Use `case-sensitive` for strict camel.
+
+      MULTIPLE PATTERNS
+        Pass several patterns to OR them: a name matches if it satisfies any.
+          arend -ss Cauchy -ss Mertens
+        Whitespace inside a SINGLE -ss argument is also a separator, so:
+          arend -ss "Cauchy Mertens"           # same as -ss Cauchy -ss Mertens
+        Prefixed tokens mix freely:
+          arend -ss "glob:abs_* hb:cAss" -ss re:^foo.*bar$
+
+      QUERY ECHO
+        Each run prints the parsed query before searching so you can see how each token was interpreted ('literal', 'exact', 'glob', 'regex', 'humpback').
+        Glob / humpback also show the compiled regex.
+
+      SHELL QUOTING
+        Apostrophe `'` is a valid Arend continuation char — it appears in names like `-'`, `iabs_-_suc'`, and primed-variant suffixes.
+        It is also the most common shell quote delimiter, so passing names that contain it needs care:
+          arend -ss "iabs_-'"            # outer double quotes: '\\'' is literal
+          arend -ss 'iabs_-'\\'''        # outer singles, '\\''  splices an apostrophe
+          arend -ss iabs_-\\'            # no outer quotes; backslash-escape
+        Inside double quotes a bare `'` is NOT a delimiter — it stays in the string.
+        So `-ss "a' 'b"` parses as TWO patterns, `a'` and `'b`, with the apostrophe on the wrong side of the space.
+        A leading `'` in a pattern triggers a soft warning: no Arend short name can start with `'` (it is continuation-only).
+
+      EXTRA TOKENS  (each passed as a separate -ss argument)
+        case-sensitive     match name case exactly (default: case-insensitive)
+        no-cache           bypass the on-disk index, re-parse everything
+        limit=N            cap printed matches at N (0 = unlimited; default 200)
+        contains=<text>    Extra AND substring filter on the short name; can be repeated.
+                           Replaces post-pipe `| grep`.
+        kind=k1,k2,...     Keep only these kinds.
+                           Recognised: func, sfunc, lemma, type, axiom, instance, coclause, coerce, level.
+                           Plus: data, cons|constructor, class, record, field, meta, other.
+        only=name|self     Restrict scope.
+                           Default: every library currently registered (requested libs + transitive deps + prelude).
+                           `self` means the libraries listed on the command line.
+                           A literal name (e.g. `arend-lib`) picks that single library.
+                           Multiple values can be comma-separated (e.g. `only=arend-lib,liba`).
+
+      OUTPUT
+        Line-oriented; safe to post-filter with `| head`, `| tail`, `| grep` if that is what your fingers reach for.
+        `limit=N` and `contains=` do the same job inside the tool.
+
+        <abs-path>:<line>:<col>           or  <library:module> for generated
+        <library>::<long-name>  [<KIND>]
+          <signature on a single line>
+
+        Results are ordered by SHORT-NAME LENGTH (ascending).
+        An exact-length name appears before any longer name that just contains the query.
+        E.g. for `-ss fac`: `face` before `factor` before `factors` before `leftFactor` before `completion-factor`.
+        Ties are broken alphabetically.
+        For a strict exact match use `eq:<name>`.
+
+        On zero matches, a plain-mode pattern is decomposed at operator-chars / underscores (alphanumeric runs of length >= 3).
+        The index is re-scanned for those parts.
+        So a miss on `natCoef_fromRat` still surfaces names containing `natCoef` or `fromRat` as a "Did you mean?" list.
+        Single-word queries with no decomposition emit a plain "No matches." — there is nothing to suggest.
+
+      EXAMPLES
+        arend -L libs my-lib -ss 'Monoid'                   (substring)
+        arend -L libs my-lib -ss '*-comm'                   (literal '*-comm')
+        arend -L libs my-lib -ss 'BigSum_1 BigSum_+ BigSum-ext'  (OR via spaces)
+        arend -L libs my-lib -ss 'BigSum_1 BigSum_+ BigSum-ext'  (OR via spaces)
+        arend -L libs my-lib -ss Cauchy -ss Mertens         (OR via multi-flag)
+        arend -L libs my-lib -ss 'eq:pmap' -ss kind=func,lemma
+        arend -L libs my-lib -ss 'glob:abs_*' -ss limit=20
+        arend -L libs my-lib -ss 're:^abs.*\\+.*$'
+        arend -L libs my-lib -ss 'hb:isProp' -ss case-sensitive
+        arend -L libs my-lib -ss only=self -ss 'shared-name'
+        arend -L libs my-lib -ss Monoid -ss contains=comm   (Monoid* AND *comm*)
+      """;
+
+
   private final static String PROOF_SEARCH_HELP = """
       arend -ps <pattern> [print-full]
 
@@ -58,6 +164,8 @@ public class ConsoleMain {
       cmdOptions.addOption(Option.builder("c").longOpt("double-check").desc("double check correctness of the result").build());
       cmdOptions.addOption(Option.builder("i").longOpt("interactive").hasArg().optionalArg(true).argName("plain|jline").desc("start an interactive REPL").build());
       cmdOptions.addOption(Option.builder("p").longOpt("print").hasArg().argName("MODULE[:DEF]").desc("after the typecheck, print the elaborated/typechecked form of MODULE (or a single DEF inside it): implicits filled in, eliminators desugared.").build());
+      cmdOptions.addOption(Option.builder("ss").longOpt("symbol-search").hasArgs().argName("name-pattern")
+          .desc("search by short name (uses an mtime-cached on-disk index). Pass `-ss help` for the full grammar.").build());
       cmdOptions.addOption(Option.builder("ps").longOpt("proof-search").hasArgs().argName("sig-pattern")
           .desc("search by signature shape (parameters/codomain). Pass `-ps help` for the full grammar.").build());
       cmdOptions.addOption("r", "recompile", false, "recompile all modules from source, ignoring binary caches (.arc files)");
@@ -78,6 +186,11 @@ public class ConsoleMain {
 
       if (cmdLine.hasOption("v")) {
         System.out.println("Arend " + Prelude.VERSION);
+        return null;
+      }
+
+      if (cmdLine.hasOption("ss") && containsHelpToken(cmdLine.getOptionValues("ss"))) {
+        printTopicHelp(SYMBOL_SEARCH_HELP);
         return null;
       }
 
@@ -174,7 +287,7 @@ public class ConsoleMain {
             "test", "print", "recompile", "double-check", "serialize")),
         new Group("REPL", List.of("interactive")),
         new Group("Information retrieval (queries against the loaded library)", List.of(
-            "proof-search")),
+            "symbol-search", "proof-search")),
         new Group("Diagnostics / verbosity", List.of(
             "slow-warn",
             TypecheckPipeline.SHOW_TIMES, TypecheckPipeline.SHOW_SIZES,
@@ -191,7 +304,7 @@ public class ConsoleMain {
     System.out.println("Workflows (mutually exclusive; first matching flag wins):");
     System.out.println("  arend [LIBRARY] [MODULE[:DEF]]                     Typecheck workflows");
     System.out.println("  arend [LIBRARY] -i [plain|jline]                   REPL");
-    System.out.println("  arend [LIBRARY] -ps ...                            Information retrieval (no typecheck)");
+    System.out.println("  arend [LIBRARY] {-ss|-ps} ...                    Information retrieval (no typecheck)");
     System.out.println();
     printWrapped("LIBRARY is a path to a directory containing arend.yaml, the arend.yaml file "
         + "itself, a .zip library, or a library name resolved via -L / the default library root "
