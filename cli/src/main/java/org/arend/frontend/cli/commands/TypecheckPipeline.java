@@ -15,6 +15,7 @@ import org.arend.frontend.cli.CommandContext;
 import org.arend.frontend.cli.ai.AiOutputRouter;
 import org.arend.frontend.library.LibraryManager;
 import org.arend.frontend.library.SourceLibrary;
+import org.arend.frontend.symbol.ReferenceResolveSuggest;
 import org.arend.frontend.symbol.SignatureFileWriter;
 import org.arend.frontend.symbol.SymbolSearch;
 import org.arend.module.error.DefinitionNotFoundError;
@@ -65,6 +66,8 @@ public final class TypecheckPipeline {
    * {@link CommandContext#exitWithError} may also be set for non-fatal errors.
    */
   public static boolean run(CommandContext ctx, CommandLine cmdLine) {
+    boolean aiMode = cmdLine.hasOption("ai");
+
     // -p MODULE[:DEF] is consumed at the very end of this method (printDefinitions). Make
     // sure its target module is in the typecheck scope, otherwise the printed core would
     // be missing (silent no-op for whole-module targets; misleading "not found" for
@@ -94,6 +97,9 @@ public final class TypecheckPipeline {
       progressReporter = new SlowDefinitionWarningReporter(progressReporter, ctx.slowWarnMs, System.err);
     }
 
+    if (aiMode) {
+      runAiNameResolve(ctx);
+    }
     ctx.cancellation.checkCanceled();
 
     // Pre-load binary caches (unless --recompile is set)
@@ -286,6 +292,11 @@ public final class TypecheckPipeline {
     }
 
 
+    if (aiMode) {
+      ctx.cancellation.checkCanceled();
+      finalizeAi(ctx);
+    }
+
     printDefinitions(ctx.server, cmdLine.getOptionValue("p"), ctx);
 
     if (cmdLine.hasOption("t")) {
@@ -353,6 +364,10 @@ public final class TypecheckPipeline {
     }
 
 
+    if (aiMode && ctx.outputRouter != null) {
+      ctx.outputRouter.summary();
+    }
+
     return true;
   }
 
@@ -415,6 +430,64 @@ public final class TypecheckPipeline {
   }
 
   // ───────── AI pipeline phases ─────────
+
+  /**
+   * Step 1 of the -ai pipeline: resolve every module in scope, buffer the resulting name-
+   * resolution errors, hand them to {@link ReferenceResolveSuggest}, and print suggestions.
+   * Never rewrites sources.
+   */
+  private static void runAiNameResolve(CommandContext ctx) {
+    ctx.outputRouter.stage("");
+    ctx.outputRouter.stage("--- AI: resolve + suggest ---");
+    long t = System.currentTimeMillis();
+    ctx.bufferErrors = true;
+    ctx.bufferedErrors.clear();
+    try {
+      if (ctx.requestedModules.isEmpty()) {
+        for (SourceLibrary lib : ctx.requestedLibraries) {
+          ctx.cancellation.checkCanceled();
+          List<ModuleLocation> mods = lib.findModules(false).stream()
+              .map(mp -> new ModuleLocation(lib.getLibraryName(), ModuleLocation.LocationKind.SOURCE, mp))
+              .toList();
+          if (!mods.isEmpty()) {
+            ctx.server.getCheckerFor(mods).resolveAll(ctx.cancellation, ProgressReporter.empty());
+            ctx.cancellation.checkCanceled();
+          }
+        }
+      } else {
+        for (Pair<ModulePath, LongName> requested : ctx.requestedModules) {
+          ctx.cancellation.checkCanceled();
+          ModuleLocation module = ctx.server.findModule(requested.proj1, null, true, false);
+          if (module == null) {
+            ctx.systemErrErrorReporter.report(new ModuleNotFoundError(requested.proj1));
+            continue;
+          }
+          ctx.server.getCheckerFor(Collections.singletonList(module))
+              .resolveAll(ctx.cancellation, ProgressReporter.empty());
+          ctx.cancellation.checkCanceled();
+        }
+      }
+    } finally {
+      ctx.bufferErrors = false;
+    }
+
+    ReferenceResolveSuggest.Result result =
+        ReferenceResolveSuggest.process(ctx.server, ctx.libraryManager, ctx.bufferedErrors, ctx.requestedLibraries);
+
+    for (GeneralError error : result.errorsToPrint()) ctx.printError(error);
+    for (ReferenceResolveSuggest.SuggestionBlock block : result.suggestionBlocks()) {
+      ctx.outputRouter.resolveSuggestion(block.text(), block.affectedModule());
+    }
+    // Constructor-import advisories: useful but verbose; route to log only. The agent
+    // gets the actionable signal (Candidates blocks above) on stdout.
+    for (String warning : result.warnings()) ctx.outputRouter.info(warning);
+
+    // Name-resolution errors recorded against failedDefinitions are reset so the typecheck
+    // phase tracks only real failures; unresolved refs will resurface as typecheck errors.
+    ctx.failedDefinitions.clear();
+    ctx.bufferedErrors.clear();
+    ctx.outputRouter.stage("--- Done (" + TimedProgressReporter.timeToString(System.currentTimeMillis() - t) + ") ---");
+  }
 
   /**
    * Steps 3-4 of the -ai pipeline: write the .sig mirror for verified definitions only

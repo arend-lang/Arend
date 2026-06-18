@@ -55,10 +55,10 @@ public final class CliSetup {
   public static boolean bootstrap(CommandContext ctx, CommandLine cmdLine) {
     ctx.doubleCheck = cmdLine.hasOption("c");
     ctx.recompile = cmdLine.hasOption("r");
-    // --serialize is opt-in for the default typecheck path, but -ai implies it:
-    // the .arc binary cache is part of the expected AI workflow output and
-    // dramatically speeds up follow-up runs.
-    ctx.serialize = cmdLine.hasOption("serialize") || cmdLine.hasOption("ai");
+    // Serialization is on by default: .arc binary caches are part of the normal
+    // CLI output and dramatically speed up follow-up runs. --no-serialize keeps
+    // the run read-only with respect to binary caches.
+    ctx.serialize = !cmdLine.hasOption("no-serialize");
     ctx.aiMode = cmdLine.hasOption("ai");
     ctx.noQuiet = cmdLine.hasOption("no-quiet");
     if (cmdLine.hasOption("slow-warn")) {

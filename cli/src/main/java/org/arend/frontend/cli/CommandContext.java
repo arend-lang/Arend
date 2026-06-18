@@ -54,7 +54,7 @@ public class CommandContext {
   public boolean recompile;
   /**
    * If true, persist typechecked modules as .arc binary caches after typechecking.
-   * Off by default; enabled by {@code --serialize}, and implicitly by {@code -ai}.
+   * On by default; disabled by {@code --no-serialize}.
    */
   public boolean serialize;
 

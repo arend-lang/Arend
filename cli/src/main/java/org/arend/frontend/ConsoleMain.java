@@ -126,6 +126,40 @@ public class ConsoleMain {
       """;
 
 
+  private final static String AI_HELP = """
+      arend -ai [MODULE | MODULE:DEF]
+
+      Agent-oriented all-in-one mode. Runs in sequence:
+
+        1. Name resolution (suggest-only)
+           For each unresolved short name, prints a "Candidates for 'X' at ..." block sourced from the binary symbol index.
+           Each candidate shows its library::module:longName, the qualified name to splice in, and any required import.
+           The CLI never rewrites your sources -- pick the right candidate and paste it in yourself.
+           (Auto-rewrite was retired: position/length mistakes mangled identifiers when several refs failed on the same line.)
+        2. Typecheck
+           Standard typecheck pass on the in-scope modules.
+        3. Signature mirror
+           Writes signature-only views of every typechecked module to <library>/.sig/<module>.ard.
+           Function/lemma/instance bodies and class-field implementations are replaced with `{?}`.
+           Data constructors, field declarations, namespace commands, and \\where structure are preserved.
+           Definitions with typecheck errors become `-- skipped: <name> (typecheck errors)`.
+           The .sig pool therefore only contains verified declarations.
+        4. Symbol index refresh
+           Rebuilds the on-disk symbol index used by -ss / -fu / -ch / -sc.
+
+      GRANULARITY (positional args)
+        no args        every requested library, end-to-end
+        MODULE         that module + its transitive raw-import closure
+        MODULE:DEF     same plus an existence check for DEF
+
+      EXAMPLES
+        arend -L libs my-lib -ai
+        arend -L libs my-lib -ai Algebra.Group
+        arend -L libs my-lib -ai Algebra.Group:comm-Group
+        arend -L libs my-lib -ai -r           # full recompile + AI mode
+      """;
+
+
   private final static String PROOF_SEARCH_HELP = """
       arend -ps <pattern> [print-full]
 
@@ -278,11 +312,15 @@ public class ConsoleMain {
           .desc("find every usage of a definition. Pass `-fu help` for full grammar.").build());
       cmdOptions.addOption(Option.builder("ch").longOpt("class-hierarchy").hasArgs().argName("MODULE:CLASS|name")
           .desc("print super/sub-class trees plus \\new and \\instance sites. Pass `-ch help` for full grammar.").build());
+      cmdOptions.addOption(Option.builder("sc").longOpt("scope").hasArgs().argName("MODULE:PATH|name")
+          .desc("dump the ambient scope at a referable's position; debug aid for reference-resolution issues. Pass `-sc help` for full grammar.").build());
+      cmdOptions.addOption(Option.builder("ai").longOpt("ai-pipeline").desc("agent-oriented typecheck: quiet by default (verbose output goes to a per-invocation log), maintains the <library>/.sig/ signature mirror. Pass `-ai help` for full grammar.").build());
+      cmdOptions.addOption(Option.builder().longOpt("no-quiet").desc("with -ai: disable the per-invocation log split; emit verbose narration to stdout/stderr like a pre-quiet run. No effect outside -ai.").build());
       cmdOptions.addOption(Option.builder("ps").longOpt("proof-search").hasArgs().argName("sig-pattern")
           .desc("search by signature shape (parameters/codomain). Pass `-ps help` for the full grammar.").build());
       cmdOptions.addOption("r", "recompile", false, "recompile all modules from source, ignoring binary caches (.arc files)");
       cmdOptions.addOption(Option.builder().longOpt("slow-warn").hasArg().argName("ms").desc("emit a [WARN] line on stderr when typechecking of an individual definition exceeds this many milliseconds (default 5000; pass 0 to disable)").build());
-      cmdOptions.addOption(null, "serialize", false, "after typechecking, persist typechecked modules as .arc binary caches; without this flag, no .arc files are written.");
+      cmdOptions.addOption(null, "no-serialize", false, "do not persist typechecked modules as .arc binary caches after typechecking; serialization is on by default.");
       cmdOptions.addOption("t", "test", false, "run tests");
       cmdOptions.addOption("v", "version", false, "print language version");
       cmdOptions.addOption(Option.builder().longOpt(TypecheckPipeline.SHOW_TIMES).desc("after typechecking, print every definition's typecheck duration, sorted descending").build());
@@ -298,6 +336,12 @@ public class ConsoleMain {
 
       if (cmdLine.hasOption("v")) {
         System.out.println("Arend " + Prelude.VERSION);
+        return null;
+      }
+
+      // -ai takes no argument, so its `help` token shows up as a positional.
+      if (cmdLine.hasOption("ai") && cmdLine.getArgList().contains("help")) {
+        printTopicHelp(AI_HELP);
         return null;
       }
 
@@ -411,12 +455,12 @@ public class ConsoleMain {
             "libdir", "sources", "extensions", "extension-main")),
         new Group("Typecheck workflows (load the library and verify it; default workflow when "
             + "no retrieval / REPL flag is given)", List.of(
-            "test", "print", "recompile", "double-check", "serialize")),
+            "ai-pipeline", "test", "print", "recompile", "double-check", "no-serialize")),
         new Group("REPL", List.of("interactive")),
         new Group("Information retrieval (queries against the loaded library)", List.of(
             "symbol-search", "proof-search", "find-usages", "class-hierarchy", "scope")),
         new Group("Diagnostics / verbosity", List.of(
-            "slow-warn",
+            "no-quiet", "slow-warn",
             TypecheckPipeline.SHOW_TIMES, TypecheckPipeline.SHOW_SIZES,
             TypecheckPipeline.SHOW_MODULES, TypecheckPipeline.SHOW_MODULES_WITH_INSTANCES)),
         new Group("Meta", List.of("help", "version"))
