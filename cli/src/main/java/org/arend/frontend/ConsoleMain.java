@@ -153,6 +153,45 @@ public class ConsoleMain {
       """;
 
 
+  private final static String FIND_USAGES_HELP = """
+      arend -fu <MODULE_PATH>:<GROUP_PATH> [option ...]
+
+      Find every textual usage of the named definition that resolves to it after name resolution.
+      Same flow as IntelliJ's Find Usages.
+      Text-search narrows files first; ArendServer's resolveAll then validates each candidate by referable identity.
+
+      SPEC
+        MODULE_PATH    dotted module path,         e.g. Algebra.Monoid
+        GROUP_PATH     dotted in-module path,      e.g. Monoid.equals
+                       Reaches class fields, constructors, and \\where members.
+
+      EXTRA TOKENS  (each as a separate -fu argument)
+        with-tests        also search test sources
+        no-line           omit the source line content from output
+        aliases=false     don't include the target's alias name in the search
+        limit=N           cap printed usages at N (0 = unlimited; default 500)
+        only=name|self    Restrict scope.
+                          Default: every loaded library; `self` = libraries listed on the command line; comma-separated for multiple.
+
+      ALIAS HANDLING
+        Direct uses, the target's own alias, and locally renamed imports (`\\import M (foo \\as bar)` then `bar` in body) are caught.
+        Multi-hop renames are followed via fixed-point iteration.
+        Implicit references through instance resolution are NOT caught (they have no textual form).
+
+      OUTPUT
+        Usages of <library>::<long-name>  [<KIND>]
+
+        <abs-path>:<line>:<col>: <source line, trimmed>
+        ...
+        Found N usage(s)
+
+      EXAMPLES
+        arend -L libs my-lib -fu 'Algebra.Monoid:Monoid.equals'
+        arend -L libs my-lib -fu 'Paths:transport' -fu limit=20 -fu no-line
+        arend -L libs my-lib -fu only=self -fu 'Foo:bar'
+      """;
+
+
   public static CommandLine parseArgs(String[] args) {
     try {
       Options cmdOptions = new Options();
@@ -166,6 +205,8 @@ public class ConsoleMain {
       cmdOptions.addOption(Option.builder("p").longOpt("print").hasArg().argName("MODULE[:DEF]").desc("after the typecheck, print the elaborated/typechecked form of MODULE (or a single DEF inside it): implicits filled in, eliminators desugared.").build());
       cmdOptions.addOption(Option.builder("ss").longOpt("symbol-search").hasArgs().argName("name-pattern")
           .desc("search by short name (uses an mtime-cached on-disk index). Pass `-ss help` for the full grammar.").build());
+      cmdOptions.addOption(Option.builder("fu").longOpt("find-usages").hasArgs().argName("MODULE:DEF")
+          .desc("find every usage of a definition. Pass `-fu help` for full grammar.").build());
       cmdOptions.addOption(Option.builder("ps").longOpt("proof-search").hasArgs().argName("sig-pattern")
           .desc("search by signature shape (parameters/codomain). Pass `-ps help` for the full grammar.").build());
       cmdOptions.addOption("r", "recompile", false, "recompile all modules from source, ignoring binary caches (.arc files)");
@@ -191,6 +232,11 @@ public class ConsoleMain {
 
       if (cmdLine.hasOption("ss") && containsHelpToken(cmdLine.getOptionValues("ss"))) {
         printTopicHelp(SYMBOL_SEARCH_HELP);
+        return null;
+      }
+
+      if (cmdLine.hasOption("fu") && containsHelpToken(cmdLine.getOptionValues("fu"))) {
+        printTopicHelp(FIND_USAGES_HELP);
         return null;
       }
 
@@ -287,7 +333,7 @@ public class ConsoleMain {
             "test", "print", "recompile", "double-check", "serialize")),
         new Group("REPL", List.of("interactive")),
         new Group("Information retrieval (queries against the loaded library)", List.of(
-            "symbol-search", "proof-search")),
+            "symbol-search", "proof-search", "find-usages")),
         new Group("Diagnostics / verbosity", List.of(
             "slow-warn",
             TypecheckPipeline.SHOW_TIMES, TypecheckPipeline.SHOW_SIZES,
@@ -304,7 +350,7 @@ public class ConsoleMain {
     System.out.println("Workflows (mutually exclusive; first matching flag wins):");
     System.out.println("  arend [LIBRARY] [MODULE[:DEF]]                     Typecheck workflows");
     System.out.println("  arend [LIBRARY] -i [plain|jline]                   REPL");
-    System.out.println("  arend [LIBRARY] {-ss|-ps} ...                    Information retrieval (no typecheck)");
+    System.out.println("  arend [LIBRARY] {-ss|-ps|-fu} ...                Information retrieval (no typecheck)");
     System.out.println();
     printWrapped("LIBRARY is a path to a directory containing arend.yaml, the arend.yaml file "
         + "itself, a .zip library, or a library name resolved via -L / the default library root "
