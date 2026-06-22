@@ -60,6 +60,7 @@ public class CoreDefinitionChecker extends BaseDefinitionTypechecker {
     @Override public void bindVariables(org.arend.core.context.binding.inference.InferenceLevelVariable pVar, org.arend.core.context.binding.inference.InferenceLevelVariable hVar) {}
     @Override public boolean remove(Equation equation) { return false; }
     @Override public Boolean solveInstance(org.arend.core.context.binding.inference.TypeClassInferenceVariable variable, FieldCallExpression fieldCall, Expression expr) { return null; }
+    @Override public void solveEquationsFor(org.arend.core.context.binding.inference.InferenceVariable var) {}
     @Override public void solveEquations() {}
     @Override public LevelEquationsSolver makeLevelEquationsSolver() { return null; }
     @Override public void finalizeEquations(org.arend.ext.core.level.LevelSubstitution levelSubstitution, Concrete.SourceNode sourceNode) {}
