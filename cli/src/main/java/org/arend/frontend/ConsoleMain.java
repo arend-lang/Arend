@@ -58,6 +58,42 @@ import static org.arend.ext.prettyprinting.PrettyPrinterConfig.DEFAULT;
 import static org.arend.proof.Utils.getSignatures;
 
 public class ConsoleMain {
+
+  private static boolean containsHelpToken(String[] values) {
+    if (values == null) return false;
+    for (String value : values) {
+      if ("help".equalsIgnoreCase(value)) return true;
+    }
+    return false;
+  }
+
+  private static void printTopicHelp(String text) {
+    System.out.println(text);
+  }
+
+  private static final String SYMBOL_SEARCH_HELP = """
+      arend -ss <name-pattern> [case-sensitive] [no-cache] [limit=N] [contains=text] [kind=k1,k2] [only=name|self]
+
+      Search by short name using the per-library on-disk symbol index. Patterns support literal, eq:, glob:, re:, and hb: forms.
+      """;
+
+  private static final String FIND_USAGES_HELP = """
+      arend -fu <MODULE:DEF|short-name> [with-tests] [no-line] [aliases=true|false] [limit=N] [only=name|self]
+
+      Find usages of a definition in loaded libraries.
+      """;
+
+  private static final String CLASS_HIERARCHY_HELP = """
+      arend -ch <MODULE:CLASS|short-name> [up|down] [with-tests] [with-fields] [no-instances] [no-news] [format=tree|flat] [limit=N] [only=name|self]
+
+      Print superclass/subclass relationships and related class sites.
+      """;
+
+  private static final String SCOPE_HELP = """
+      arend -sc <MODULE:PATH|short-name> [pattern] [context=static|dynamic|plevel|hlevel|all] [limit=N]
+
+      Dump the ambient name scope visible at a referable's position.
+      """;
   private boolean myExitWithError;
   private boolean mySuppressErrorOutput;
   private final Map<ModuleLocation, GeneralError.Level> myModuleResults = new LinkedHashMap<>();
@@ -132,6 +168,14 @@ public class ConsoleMain {
       cmdOptions.addOption(Option.builder("c").longOpt("double-check").desc("double check correctness of the result").build());
       cmdOptions.addOption(Option.builder("i").longOpt("interactive").hasArg().optionalArg(true).argName("type").desc("start an interactive REPL, type can be plain or jline (default)").build());
       cmdOptions.addOption(Option.builder("p").longOpt("print").hasArg().argName("target").desc("print a definition or a module").build());
+      cmdOptions.addOption(Option.builder("ss").longOpt("symbol-search").hasArgs().argName("name-pattern")
+          .desc("search by short name using the symbol index. Pass `-ss help` for the full grammar.").build());
+      cmdOptions.addOption(Option.builder("fu").longOpt("find-usages").hasArgs().argName("MODULE:DEF")
+          .desc("find every usage of a definition. Pass `-fu help` for full grammar.").build());
+      cmdOptions.addOption(Option.builder("ch").longOpt("class-hierarchy").hasArgs().argName("MODULE:CLASS|name")
+          .desc("print super/sub-class trees plus \\new and \\instance sites. Pass `-ch help` for full grammar.").build());
+      cmdOptions.addOption(Option.builder("sc").longOpt("scope").hasArgs().argName("MODULE:PATH|name")
+          .desc("dump the ambient scope at a referable's position. Pass `-sc help` for full grammar.").build());
       cmdOptions.addOption(Option.builder("ps").longOpt("proof-search").hasArgs().argName("pattern").desc("search for definitions matching the pattern").build());
       cmdOptions.addOption("r", "recompile", false, "recompile all modules from source, ignoring binary caches (.arc files)");
       cmdOptions.addOption(null, "serialize", false, "after typechecking, persist typechecked modules as .arc binary caches; without this flag, no .arc files are written");
@@ -150,6 +194,23 @@ public class ConsoleMain {
 
       if (cmdLine.hasOption("v")) {
         System.out.println("Arend " + Prelude.VERSION);
+        return null;
+      }
+
+      if (cmdLine.hasOption("ss") && containsHelpToken(cmdLine.getOptionValues("ss"))) {
+        printTopicHelp(SYMBOL_SEARCH_HELP);
+        return null;
+      }
+      if (cmdLine.hasOption("fu") && containsHelpToken(cmdLine.getOptionValues("fu"))) {
+        printTopicHelp(FIND_USAGES_HELP);
+        return null;
+      }
+      if (cmdLine.hasOption("ch") && containsHelpToken(cmdLine.getOptionValues("ch"))) {
+        printTopicHelp(CLASS_HIERARCHY_HELP);
+        return null;
+      }
+      if (cmdLine.hasOption("sc") && containsHelpToken(cmdLine.getOptionValues("sc"))) {
+        printTopicHelp(SCOPE_HELP);
         return null;
       }
 
@@ -417,6 +478,42 @@ public class ConsoleMain {
 
     if (myExitWithError) {
       return false;
+    }
+
+    if (cmdLine.hasOption("ss")) {
+      org.arend.frontend.symbol.SymbolSearch.Parsed parsed =
+          org.arend.frontend.symbol.SymbolSearch.parseArgs(cmdLine.getOptionValues("ss"), mySystemErrErrorReporter);
+      if (parsed == null) return false;
+      org.arend.frontend.symbol.SymbolSearch.run(parsed.patterns(), parsed.options(),
+          requestedLibraries, libraryManager, server, mySystemErrErrorReporter);
+      return !myExitWithError;
+    }
+
+    if (cmdLine.hasOption("fu")) {
+      org.arend.frontend.symbol.UsageSearch.Parsed parsed =
+          org.arend.frontend.symbol.UsageSearch.parseArgs(cmdLine.getOptionValues("fu"));
+      if (parsed == null) return false;
+      org.arend.frontend.symbol.UsageSearch.run(parsed.spec(), parsed.options(),
+          requestedLibraries, libraryManager, server, mySystemErrErrorReporter);
+      return !myExitWithError;
+    }
+
+    if (cmdLine.hasOption("ch")) {
+      org.arend.frontend.symbol.ClassHierarchy.Parsed parsed =
+          org.arend.frontend.symbol.ClassHierarchy.parseArgs(cmdLine.getOptionValues("ch"));
+      if (parsed == null) return false;
+      org.arend.frontend.symbol.ClassHierarchy.run(parsed.spec(), parsed.options(),
+          requestedLibraries, libraryManager, server, mySystemErrErrorReporter);
+      return !myExitWithError;
+    }
+
+    if (cmdLine.hasOption("sc")) {
+      org.arend.frontend.symbol.ReferableScope.Parsed parsed =
+          org.arend.frontend.symbol.ReferableScope.parseArgs(cmdLine.getOptionValues("sc"));
+      if (parsed == null) return false;
+      org.arend.frontend.symbol.ReferableScope.run(parsed.spec(), parsed.pattern(), parsed.options(),
+          requestedLibraries, libraryManager, server, mySystemErrErrorReporter);
+      return !myExitWithError;
     }
 
     if (cmdLine.hasOption("ps")) {
