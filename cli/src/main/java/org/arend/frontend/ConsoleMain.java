@@ -59,41 +59,6 @@ import static org.arend.proof.Utils.getSignatures;
 
 public class ConsoleMain {
 
-  private static boolean containsHelpToken(String[] values) {
-    if (values == null) return false;
-    for (String value : values) {
-      if ("help".equalsIgnoreCase(value)) return true;
-    }
-    return false;
-  }
-
-  private static void printTopicHelp(String text) {
-    System.out.println(text);
-  }
-
-  private static final String SYMBOL_SEARCH_HELP = """
-      arend -ss <name-pattern> [case-sensitive] [no-cache] [limit=N] [contains=text] [kind=k1,k2] [only=name|self]
-
-      Search by short name using the per-library on-disk symbol index. Patterns support literal, eq:, glob:, re:, and hb: forms.
-      """;
-
-  private static final String FIND_USAGES_HELP = """
-      arend -fu <MODULE:DEF|short-name> [with-tests] [no-line] [aliases=true|false] [limit=N] [only=name|self]
-
-      Find usages of a definition in loaded libraries.
-      """;
-
-  private static final String CLASS_HIERARCHY_HELP = """
-      arend -ch <MODULE:CLASS|short-name> [up|down] [with-tests] [with-fields] [no-instances] [no-news] [format=tree|flat] [limit=N] [only=name|self]
-
-      Print superclass/subclass relationships and related class sites.
-      """;
-
-  private static final String SCOPE_HELP = """
-      arend -sc <MODULE:PATH|short-name> [pattern] [context=static|dynamic|plevel|hlevel|all] [limit=N]
-
-      Dump the ambient name scope visible at a referable's position.
-      """;
   private boolean myExitWithError;
   private boolean mySuppressErrorOutput;
   private final Map<ModuleLocation, GeneralError.Level> myModuleResults = new LinkedHashMap<>();
@@ -166,29 +131,29 @@ public class ConsoleMain {
       cmdOptions.addOption(Option.builder("e").longOpt("extensions").hasArg().argName("dir").desc("language extensions directory").build());
       cmdOptions.addOption(Option.builder("m").longOpt("extension-main").hasArg().argName("class").desc("main extension class").build());
       cmdOptions.addOption(Option.builder("c").longOpt("double-check").desc("double check correctness of the result").build());
-      cmdOptions.addOption(Option.builder("i").longOpt("interactive").hasArg().optionalArg(true).argName("type").desc("start an interactive REPL, type can be plain or jline (default)").build());
-      cmdOptions.addOption(Option.builder("p").longOpt("print").hasArg().argName("target").desc("print a definition or a module").build());
+      cmdOptions.addOption(Option.builder("i").longOpt("interactive").hasArg().optionalArg(true).argName("plain|jline").desc("start an interactive REPL").build());
+      cmdOptions.addOption(Option.builder("p").longOpt("print").hasArg().argName("MODULE[:DEF]").desc("after the typecheck, print the elaborated/typechecked form of MODULE (or a single DEF inside it): implicits filled in, eliminators desugared.").build());
       cmdOptions.addOption(Option.builder("ss").longOpt("symbol-search").hasArgs().argName("name-pattern")
-          .desc("search by short name using the symbol index. Pass `-ss help` for the full grammar.").build());
+          .desc("search by short name (uses an mtime-cached on-disk index). Pass `-ss help` for the full grammar.").build());
       cmdOptions.addOption(Option.builder("fu").longOpt("find-usages").hasArgs().argName("MODULE:DEF")
           .desc("find every usage of a definition. Pass `-fu help` for full grammar.").build());
       cmdOptions.addOption(Option.builder("ch").longOpt("class-hierarchy").hasArgs().argName("MODULE:CLASS|name")
           .desc("print super/sub-class trees plus \\new and \\instance sites. Pass `-ch help` for full grammar.").build());
       cmdOptions.addOption(Option.builder("sc").longOpt("scope").hasArgs().argName("MODULE:PATH|name")
           .desc("dump the ambient scope at a referable's position. Pass `-sc help` for full grammar.").build());
-      cmdOptions.addOption(Option.builder("ps").longOpt("proof-search").hasArgs().argName("pattern").desc("search for definitions matching the pattern").build());
+      cmdOptions.addOption(Option.builder("ps").longOpt("proof-search").hasArgs().argName("sig-pattern").desc("search by signature shape (parameters/codomain). Pass `-ps help` for the full grammar.").build());
       cmdOptions.addOption("r", "recompile", false, "recompile all modules from source, ignoring binary caches (.arc files)");
       cmdOptions.addOption(null, "serialize", false, "after typechecking, persist typechecked modules as .arc binary caches; without this flag, no .arc files are written");
       cmdOptions.addOption("t", "test", false, "run tests");
       cmdOptions.addOption("v", "version", false, "print language version");
-      cmdOptions.addOption(Option.builder().longOpt(SHOW_TIMES).build());
-      cmdOptions.addOption(Option.builder().longOpt(SHOW_SIZES).build());
-      cmdOptions.addOption(Option.builder().longOpt(SHOW_MODULES).build());
-      cmdOptions.addOption(Option.builder().longOpt(SHOW_MODULES_WITH_INSTANCES).build());
+      cmdOptions.addOption(Option.builder().longOpt(SHOW_TIMES).desc("after typechecking, print every definition's typecheck duration, sorted descending").build());
+      cmdOptions.addOption(Option.builder().longOpt(SHOW_SIZES).desc("after typechecking, print every definition's typechecked core-term size (number of subterms), sorted descending").build());
+      cmdOptions.addOption(Option.builder().longOpt(SHOW_MODULES).desc("after typechecking, print the module import-DAG in topological order via Tarjan SCC. Single modules: `[Module]`; import cycles: `[M1, M2, ...]`.").build());
+      cmdOptions.addOption(Option.builder().longOpt(SHOW_MODULES_WITH_INSTANCES).desc("like --show-modules, but restricted to modules that define at least one \\instance -- useful for spotting cycles among instance-providing modules").build());
       CommandLine cmdLine = new DefaultParser().parse(cmdOptions, args);
 
       if (cmdLine.hasOption("h")) {
-        new HelpFormatter().printHelp("arend [FILES]", cmdOptions);
+        ConsoleHelp.printGrouped(cmdOptions, List.of(SHOW_TIMES, SHOW_SIZES, SHOW_MODULES, SHOW_MODULES_WITH_INSTANCES));
         return null;
       }
 
@@ -197,20 +162,24 @@ public class ConsoleMain {
         return null;
       }
 
-      if (cmdLine.hasOption("ss") && containsHelpToken(cmdLine.getOptionValues("ss"))) {
-        printTopicHelp(SYMBOL_SEARCH_HELP);
+      if (cmdLine.hasOption("ss") && ConsoleHelp.containsHelpToken(cmdLine.getOptionValues("ss"))) {
+        ConsoleHelp.printSymbolSearch();
         return null;
       }
-      if (cmdLine.hasOption("fu") && containsHelpToken(cmdLine.getOptionValues("fu"))) {
-        printTopicHelp(FIND_USAGES_HELP);
+      if (cmdLine.hasOption("fu") && ConsoleHelp.containsHelpToken(cmdLine.getOptionValues("fu"))) {
+        ConsoleHelp.printFindUsages();
         return null;
       }
-      if (cmdLine.hasOption("ch") && containsHelpToken(cmdLine.getOptionValues("ch"))) {
-        printTopicHelp(CLASS_HIERARCHY_HELP);
+      if (cmdLine.hasOption("ch") && ConsoleHelp.containsHelpToken(cmdLine.getOptionValues("ch"))) {
+        ConsoleHelp.printClassHierarchy();
         return null;
       }
-      if (cmdLine.hasOption("sc") && containsHelpToken(cmdLine.getOptionValues("sc"))) {
-        printTopicHelp(SCOPE_HELP);
+      if (cmdLine.hasOption("sc") && ConsoleHelp.containsHelpToken(cmdLine.getOptionValues("sc"))) {
+        ConsoleHelp.printScope();
+        return null;
+      }
+      if (cmdLine.hasOption("ps") && ConsoleHelp.containsHelpToken(cmdLine.getOptionValues("ps"))) {
+        ConsoleHelp.printProofSearch();
         return null;
       }
 
