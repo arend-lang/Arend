@@ -148,12 +148,12 @@ public class TerminationCheckTest extends TypeCheckingTestCase {
   }
 
   @Test
-  public void twoErrors() {
+  public void oneError() {
     typeCheckModule("""
       \\data D Nat | con
       \\func f (x : Nat) (y : D (f x con)) : Nat => x
       \\func g : Nat => f 0 con
-      """, 2);
+      """, 1);
   }
 
   @Test

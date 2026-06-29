@@ -38,7 +38,7 @@ public class GroupData {
 
   private ConcreteGroup updateGroup(ConcreteGroup group) {
     Map<TCDefReferable, TCDefReferable> replaced = new HashMap<>();
-    ConcreteGroup result = updateGroup(group, null, replaced);
+    ConcreteGroup result = updateGroup(group, null, replaced, true);
 
     if (!replaced.isEmpty()) result.traverseGroup(subgroup -> {
       if (subgroup.definition() instanceof Concrete.Definition def) {
@@ -77,18 +77,20 @@ public class GroupData {
     return result;
   }
 
-  private ConcreteGroup updateGroup(ConcreteGroup group, TCDefReferable parent, Map<TCDefReferable, TCDefReferable> replaced) {
+  private ConcreteGroup updateGroup(ConcreteGroup group, TCDefReferable parent, Map<TCDefReferable, TCDefReferable> replaced, boolean parentOK) {
     if (group == null) return null;
 
     Concrete.ResolvableDefinition newDef = group.definition();
+    boolean ok = parentOK;
     if (newDef != null) {
       DefinitionData definitionData = myResolvedDefinitions != null ? myResolvedDefinitions.get(newDef.getData().getRefLongName()) : null;
-      boolean ok = definitionData != null && newDef.getData().isSimilar(definitionData.definition().getData());
+      ok = parentOK && definitionData != null && newDef.getData().isSimilar(definitionData.definition().getData());
       if (ok) {
         if (newDef instanceof Concrete.DataDefinition dataDef) {
           if (definitionData.definition() instanceof Concrete.DataDefinition oldData && dataDef.getConstructorClauses().size() == oldData.getConstructorClauses().size()) {
             List<Concrete.ConstructorClause> clauses = dataDef.getConstructorClauses();
             List<Concrete.ConstructorClause> oldClauses = oldData.getConstructorClauses();
+            loop:
             for (int i = 0; i < clauses.size(); i++) {
               List<Concrete.Constructor> constructors = clauses.get(i).getConstructors();
               List<Concrete.Constructor> oldConstructors = oldClauses.get(i).getConstructors();
@@ -99,12 +101,21 @@ public class GroupData {
               for (int j = 0; j < constructors.size(); j++) {
                 Concrete.Constructor constructor = constructors.get(j);
                 Concrete.Constructor oldConstructor = oldConstructors.get(j);
-                if (constructor.getData().getRefName().equals(oldConstructor.getData().getRefName()) && constructor.getData().isSimilar(oldConstructor.getData())) {
-                  InternalReferable conRef = oldConstructor.getData();
+                if (!constructor.getData().getRefName().equals(oldConstructor.getData().getRefName()) || !constructor.getData().isSimilar(oldConstructor.getData())) {
+                  ok = false;
+                  break loop;
+                }
+              }
+            }
+            if (ok) {
+              for (int i = 0; i < clauses.size(); i++) {
+                List<Concrete.Constructor> constructors = clauses.get(i).getConstructors();
+                List<Concrete.Constructor> oldConstructors = oldClauses.get(i).getConstructors();
+                for (int j = 0; j < constructors.size(); j++) {
+                  Concrete.Constructor constructor = constructors.get(j);
+                  InternalReferable conRef = oldConstructors.get(j).getData();
                   conRef.setData(constructor.getData().getData());
                   constructor.setReferable(conRef);
-                } else {
-                  ok = false;
                 }
               }
             }
@@ -118,22 +129,30 @@ public class GroupData {
             for (int i = 0; i < elements.size(); i++) {
               Concrete.ClassElement element = elements.get(i);
               Concrete.ClassElement oldElement = oldElements.get(i);
-              if (element.getClass().equals(oldElement.getClass())) {
-                if (element instanceof Concrete.ClassField field) {
-                  Concrete.ClassField oldField = (Concrete.ClassField) oldElement;
-                  if (field.getData().getRefName().equals(oldField.getData().getRefName()) && field.getData().isSimilar(oldField.getData())) {
-                    FieldReferableImpl fieldRef = oldField.getData();
-                    if (field.getData().equals(classDef.getClassifyingField())) {
-                      classDef.setClassifyingField(fieldRef);
-                    }
-                    fieldRef.setData(field.getData().getData());
-                    field.setReferable(fieldRef);
-                  } else {
-                    ok = false;
-                  }
-                }
-              } else {
+              if (!element.getClass().equals(oldElement.getClass())) {
                 ok = false;
+                break;
+              }
+              if (element instanceof Concrete.ClassField field) {
+                FieldReferableImpl oldField = ((Concrete.ClassField) oldElement).getData();
+                if (!field.getData().getRefName().equals(oldField.getRefName()) || !field.getData().isSimilar(oldField)) {
+                  ok = false;
+                  break;
+                }
+              }
+            }
+            if (ok) {
+              for (int i = 0; i < elements.size(); i++) {
+                Concrete.ClassElement element = elements.get(i);
+                Concrete.ClassElement oldElement = oldElements.get(i);
+                if (element instanceof Concrete.ClassField field) {
+                  FieldReferableImpl fieldRef = ((Concrete.ClassField) oldElement).getData();
+                  if (field.getData().equals(classDef.getClassifyingField())) {
+                    classDef.setClassifyingField(fieldRef);
+                  }
+                  fieldRef.setData(field.getData().getData());
+                  field.setReferable(fieldRef);
+                }
               }
             }
           } else {
@@ -152,12 +171,12 @@ public class GroupData {
 
     List<ConcreteStatement> statements = new ArrayList<>(group.statements().size());
     for (ConcreteStatement statement : group.statements()) {
-      statements.add(new ConcreteStatement(updateGroup(statement.group(), newDef instanceof Concrete.Definition ? newDef.getData() : null, replaced), statement.command(), statement.pLevelsDefinition(), statement.hLevelsDefinition()));
+      statements.add(new ConcreteStatement(updateGroup(statement.group(), newDef instanceof Concrete.Definition ? newDef.getData() : null, replaced, ok), statement.command(), statement.pLevelsDefinition(), statement.hLevelsDefinition()));
     }
 
     List<ConcreteGroup> dynamicGroups = new ArrayList<>(group.dynamicGroups().size());
     for (ConcreteGroup dynamicGroup : group.dynamicGroups()) {
-      dynamicGroups.add(updateGroup(dynamicGroup, null, replaced));
+      dynamicGroups.add(updateGroup(dynamicGroup, null, replaced, ok));
     }
 
     List<ParameterReferable> externalParameters = new ArrayList<>(group.externalParameters().size());

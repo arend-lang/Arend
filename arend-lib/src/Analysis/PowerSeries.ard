@@ -1,3 +1,4 @@
+\import Algebra.Group
 \import Algebra.Meta
 \import Algebra.Monoid
 \import Algebra.Ordered
@@ -26,12 +27,17 @@
 \import Paths
 \import Paths.Meta
 \import Set.Subset
+\import Topology.CoverSpace
 \import Topology.CoverSpace.Complete
+\import Topology.CoverSpace.Directed
 \import Topology.CoverSpace.Product
+\import Topology.MetricSpace
+\import Topology.MetricSpace.OpenBall
 \import Topology.NormedAbGroup
 \import Topology.NormedAbGroup.Real
 \import Topology.NormedAbGroup.Real.Functions
 \import Topology.NormedRing
+\import Topology.TopAbGroup.Product
 \import Topology.TopSpace
 \import Topology.UniformSpace
 \open Monoid(pow)
@@ -39,14 +45,26 @@
 \func powerSeries {X : ExPseudoNormedRing} (cs : Nat -> X) (x : X) (n : Nat)
   => cs n * pow x n
 
-\lemma powerSeries_0 {cs : Series ExUpperReal} (csb : \Pi (j : Nat) -> ∃ (B : Rat) ((cs j).U B)) : IsConvUpperSeries \lam j => cs j * RatField.pow 0 j
-  => (upperSeries-shift-conv \lam j => ExUpperRealSemigroup.*_>=0).2 \lam eps>0 => inP (0, \lam _ => transportInv (ExUpperReal.U {__} _) ((\peval partialSum _ _) *> AddMonoid.BigSum_zro \lam j => later $ pmap (_ *) (pmap ExUpperReal.fromRat $ RatField.pow_0 suc/=0) *> ExUpperRealSemigroup.zro_*-right (csb _)) eps>0)
-
 \func convRadius {X : ExPseudoNormedRing} (cs : Nat -> X) : LowerReal \cowith
   | L a => ∃ (b : `> a) (IsConvUpperSeries \lam j => X.norm (cs j) * pow b j)
-  | L-inh => inP (-1, inP (0, idp, powerSeries_0 \lam j => norm-bounded _))
+  | L-inh => inP (-1, inP (0, idp, powerSeries_0))
   | L-closed (inP (b,q<b,h)) q'<q => inP (b, q'<q <∘ q<b, h)
   | L-rounded {a} (inP (b,a<b,h)) => inP (RatField.mid a b, inP (b, RatField.mid<right a<b, h), RatField.mid>left a<b)
+  \where {
+    \lemma powerSeries_0 : IsConvUpperSeries (\lam n => norm (cs n) * pow RatField.zro n)
+      => transportInv IsConvUpperSeries (ext \case \elim __ \with {
+        | 0 => idp
+        | suc n => pmap (_ * ExUpperReal.fromRat __) zro_*-right *> ExUpperRealSemigroup.zro_*-right (norm-bounded _)
+      }) $ upper-constSeries-conv {norm (cs 0) * 1}
+
+    \lemma <LU-char {x : ExUpperReal} {a : Rat} (x<a : x.U a) (c : IsConvUpperSeries \lam j => norm (cs j) * pow a j) : x <LU convRadius cs
+      => \case U-rounded x<a \with {
+        | inP (b,x<b,b<a) => inP (b, x<b, inP (a, b<a, c))
+      }
+  }
+
+\lemma convRadius>=0 {X : ExPseudoNormedRing} {cs : Nat -> X} : 0 <= convRadius cs
+  => \lam q<0 => inP (0, q<0, convRadius.powerSeries_0)
 
 \lemma convRadius-absConv {X : ExPseudoNormedRing} (cs : Nat -> X) {x : X} (p : norm x <LU convRadius cs) : IsAbsConvSeries (powerSeries cs x) \elim p
   | inP (a, |x|<a, inP (b,a<b,cc)) => series_<= (\lam j => norm_*_<= <=∘ later (ExUpperRealSemigroup.<=_* <=-refl $ transport (_ <=) (ExUpperRealSemigroup.rat-pow $ <=-less $ norm>=0 |x|<a <∘ a<b) $ X.norm_<=_pow <=∘ ExUpperRealSemigroup.pow_<= (ExUpperReal.<_<= |x|<a <=∘ ExUpperReal.<=-rat.1 (<=-less a<b)))) cc
@@ -54,7 +72,7 @@
 \lemma convRadius-div {X : ExPseudoValuedRing} (cs : Nat -> X) {x : X} (p : IsConvSeries (powerSeries cs x))
                       {a : Rat} (a<|x| : a ExUpperRealAbMonoid.< norm x) : (convRadius cs).L a
   => \case LinearOrder.dec<_<= a 0, \elim a<|x| \with {
-    | inl a<0, _ => inP (0, a<0, powerSeries_0 \lam j => norm-bounded _)
+    | inl a<0, _ => convRadius>=0 a<0
     | inr a>=0, inP (c,a<c,c<=|x|) => \case isDense a<c \with {
       | inP (b,a<b,b<c) =>
         \have bc'>=0 => <=-less $ RatField.<_*_positive_positive (a>=0 <∘r a<b) $ RatField.finv>0 (a>=0 <∘r a<c)
@@ -74,6 +92,17 @@
 
     \protected \lemma atPoint (cc : IsPowerSeriesConv cs) {x : X} : IsConvUpperSeries \lam n => norm (cs n) * ExUpperRealSemigroup.pow (norm x) n
       => upper cc norm>=0 (norm-bounded x)
+
+    \protected \lemma char : IsPowerSeriesConv cs <-> (convRadius cs = LowerReal.infinity)
+      => (\lam psc => exts \lam q => propExt (\lam _ => ()) \lam _ => inP ((q + 1) ∨ 0, linarith <∘l join-left, psc join-right),
+          \lam cri {a} a>=0 => \case propExt.conv (path \lam i => (cri i).L a) () \with {
+            | inP (b,a<b,psc) => series_<= (\lam n => ExUpperRealSemigroup.<=_* <=-refl (ExUpperReal.<=-rat.1 $ RatField.pow_<=-monotone a>=0 $ <=-less a<b)) psc
+          })
+
+    \lemma toConvRadius_<LU (psc : IsPowerSeriesConv cs) {x : X} : dist 0 x <LU convRadius cs
+      => transport2 (<LU) norm_dist (inv $ char.1 psc) \case norm-bounded x \with {
+        | inP (q,x<q) => inP (q, x<q, ())
+      }
   }
 
 \lemma powerSeriesConv-absConv {X : ExPseudoNormedRing} {cs : Nat -> X} (p : IsPowerSeriesConv cs) {x : X} : IsAbsConvSeries (powerSeries cs x)
@@ -81,19 +110,67 @@
     | inP (B,|x|<B) => convRadius-absConv cs $ inP (B, |x|<B, inP (B + 1, linarith, p $ linarith $ norm>=0 |x|<B))
   }
 
-\lemma powerSeriesConv-funcConv {X : ExPseudoNormedRing} {cs : Nat -> X} (p : IsPowerSeriesConv cs)
+\lemma powerSeries-absConv {X : ExPseudoNormedRing} {cs : Nat -> X} {x : X}
+                           (cu : IsConvUpperSeries \lam n => norm (cs n) * ExUpperRealSemigroup.pow (norm x) n)
+  : IsAbsConvSeries (powerSeries cs x)
+  => series_<= (\lam n => norm_*_<= ExUpperRealAbMonoid.<=∘ ExUpperRealSemigroup.<=_* <=-refl (X.norm_<=_pow {x} {n})) cu
+
+
+\lemma powerSeriesConv-funcConv {X : ExPseudoNormedRing} (cs : Nat -> X)
+  : IsFuncConvergent {_} {OpenBallCoverSpace 0 (convRadius cs)} \lam n x => partialSum (powerSeries cs x.1) n
+  => funcCovergent-metric-char {_} {OpenBallCoverSpace 0 (convRadius cs)} {_} {\lam n x => partialSum (powerSeries cs x.1) n}
+      (partialSum-cover \lam j => *-locally-uniform ∘ tuple (const (cs j)) (X.pow-cover j ∘ func))
+      \lam eps>0 => closure-subset makeBasicCover2 \lam {_} (inP (_, inP ((q, inP (r,q<r,conv)),idp), idp)) => \case conv eps>0 \with {
+        | inP (N,h) => inP (N, \lam cx<q N<=n => rewrite (norm-dist, inv (midSum-diff N<=n)) $ midSum_norm $ midSum_<= {ExUpperRealAbMonoid}
+          (\lam {j} N<=j j<n => norm_*_<= ExUpperRealAbMonoid.<=∘ <=_* <=-refl (X.norm_<=_pow {_} {j} <=∘ pow_<= (=_<= norm_dist
+            <=∘ ExUpperReal.<_<= (U-closed cx<q q<r)) <=∘ =_<= (rat-pow $ <=-less $ dist>=0 cx<q <∘ q<r))) (h N<=n))
+      }
+  \where {
+    \open ProductCoverSpace (tuple)
+    \open CoverMap (∘, const)
+    \open OpenBallCoverSpace
+    \open ClosurePrecoverSpace
+    \open ExUpperRealSemigroup
+  }
+
+-- | The sum of a power series inside its radius of convergence.
+\sfunc powerSeriesSum {X : CompleteExNormedRing} (cs : Nat -> X) (x : X) (xc : dist 0 x <LU convRadius cs) : X
+  => seriesSum (powerSeries cs x) $ funcConv-pointwise {_} {OpenBallCoverSpace 0 (convRadius cs)}
+      (\lam n x => partialSum (powerSeries cs x.1) n) (powerSeriesConv-funcConv cs) {x,xc}
+
+-- | {powerSeriesSum} is a cover map.
+\lemma powerSeriesSum-cover {X : CompleteExNormedRing} {cs : Nat -> X}
+  : CoverMap (OpenBallCoverSpace 0 (convRadius cs)) X (\lam s => powerSeriesSum cs s.1 s.2)
+  => transportInv (CoverMap _ X) (ext \lam s => \peval powerSeriesSum cs s.1 s.2) $
+      funcLimit {_} {OpenBallCoverSpace 0 (convRadius cs)} (\lam n x => partialSum (powerSeries cs x.1) n) (powerSeriesConv-funcConv cs)
+
+-- | {powerSeriesSum} is indeed the sum of the series.
+\lemma powerSeriesSum-isSum {X : CompleteExNormedRing} {cs : Nat -> X} {x : X} {xc : dist 0 x <LU convRadius cs}
+  : IsSeriesSum (powerSeries cs x) (powerSeriesSum cs x xc)
+  => transportInv (IsSeriesSum _) (\peval powerSeriesSum cs x xc) (seriesConv-sum _)
+
+
+-- | The total version of {powerSeriesConv-funcConv}.
+\lemma powerSeriesConv-funcConv-total {X : ExPseudoNormedRing} {cs : Nat -> X} (psc : IsPowerSeriesConv cs)
   : IsFuncConvergent \lam n x => partialSum (powerSeries cs x) n
-  => funcCovergent-metric-char (partialSum-cover \lam j => *-locally-uniform CoverMap.∘ ProductCoverSpace.tuple (CoverMap.const (cs j)) (X.pow-cover j)) \lam {eps} eps>0 =>
-      X.makeCauchy $ uniform-subset (X.metricUniform eps>0) \lam {_} (inP (x,idp)) =>
-        \case MTest {\Sigma (y : X) (norm y <= norm x + eps)} (\lam n s => powerSeries cs s.1 n)
-                (\lam n => norm (cs n) * ExUpperRealSemigroup.pow (norm x + eps) n)
-                (\lam n s => norm_*_<= <=∘ ExUpperRealSemigroup.<=_* <=-refl (X.norm_<=_pow <=∘ ExUpperRealSemigroup.pow_<= s.2))
-                (IsPowerSeriesConv.upper p (ExUpperRealAbMonoid.<=_+-positive norm>=0 $ ExUpperReal.<_<= eps>0) $ TruncP.map (norm-bounded x) \lam (B,|x|<B) => (B + eps, ExUpperRealAbMonoid.<-rat.1 $ transport (_ <) ExUpperReal.+-rat $ ExUpperRealAbMonoid.<_+-left $ ExUpperRealAbMonoid.<-rat.2 |x|<B))
-                (X.metricUniform $ RatField.half>0 eps>0) \with {
-          | inP (N,h) => inP $ later (N, \lam {y} xy<eps N<=n => \case h (y, transport (_ <=) +-comm $ norm_dist-left <=∘ ExUpperRealAbMonoid.<=_+ (transport (`<= _) X.dist-symm $ ExUpperReal.<_<= xy<eps) <=-refl) \with {
-            | inP (_, inP (z,idp), g) => X.halving1/2 (g N<=n) (g <=-refl)
-          })
-        }
+  => powerSeriesConv-funcConv cs CoverMap.∘ ProductCoverSpace.prod {DirectedCoverSpace NatBSemilattice} {_} {_} {OpenBallCoverSpace 0 (convRadius cs)} CoverMap.id
+      (OpenBallCoverSpace.infinity-inv-cover X.distBounded $ IsPowerSeriesConv.char.1 psc)
+
+-- | The total version of {powerSeriesSum}.
+\sfunc powerSeriesSum-total {X : CompleteExNormedRing} (cs : Nat -> X) (psc : IsPowerSeriesConv cs) (x : X) : X
+  => powerSeriesSum cs x (IsPowerSeriesConv.toConvRadius_<LU psc)
+
+-- | {powerSeriesSum-total} is a cover map.
+\lemma powerSeriesSum-total-cover {X : CompleteExNormedRing} {cs : Nat -> X} (psc : IsPowerSeriesConv cs)
+  : CoverMap X X (powerSeriesSum-total cs psc)
+  => transportInv (CoverMap X X) (ext \lam x => \peval powerSeriesSum-total cs psc x) $
+      powerSeriesSum-cover CoverMap.∘ OpenBallCoverSpace.infinity-inv-cover X.distBounded (IsPowerSeriesConv.char.1 psc)
+
+-- | {powerSeriesSum-total} is indeed the sum of the series.
+\lemma powerSeriesSum-total-isSum {X : CompleteExNormedRing} {cs : Nat -> X} {x : X} {psc : IsPowerSeriesConv cs}
+  : IsSeriesSum (powerSeries cs x) (powerSeriesSum-total cs psc x)
+  => transportInv (IsSeriesSum _) (\peval powerSeriesSum-total cs psc x) powerSeriesSum-isSum
+
 
 \lemma powerSeries-unbounded-conv {X : ExPseudoValuedRing} (Xu : X.IsUnbounded) {cs : Nat -> X} (Sc : \Pi (x : X) -> IsConvSeries (powerSeries cs x)) : IsPowerSeriesConv cs
   => \lam {a} a>=0 => \case Real.natBounded {a} \with {

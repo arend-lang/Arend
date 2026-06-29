@@ -5,6 +5,7 @@ import org.arend.ext.error.GeneralError;
 import org.arend.ext.error.ListErrorReporter;
 import org.arend.ext.module.ModuleLocation;
 import org.arend.ext.module.ModulePath;
+import org.arend.frontend.library.BinaryLoader;
 import org.arend.frontend.library.CliServerRequester;
 import org.arend.frontend.library.FileSourceLibrary;
 import org.arend.frontend.library.LibraryManager;
@@ -38,19 +39,18 @@ import static org.junit.Assert.fail;
  * <p>Scenario:
  * <ol>
  *   <li>Take a fully built ARC cache (the test requires {@code arend-lib/bin} to already
- *       contain a complete set of .arc files — run {@code arend -L .. arend-lib -r -ai}
- *       once before invoking this test).</li>
+ *       contain a complete set of .arc files).</li>
  *   <li>Mirror that cache to a temp directory and remove the .arc of one upstream module
  *       (default {@code Algebra.Domain}). This simulates the CLI behavior on
  *       {@code touch arend-lib/src/Algebra/Domain.ard}, which makes the timestamp filter
- *       in {@link CliServerRequester#loadBinaryCache} skip that module.</li>
+ *       in {@link BinaryLoader#loadBinaryCache} skip that module.</li>
  *   <li>Build a fresh {@link ArendServer} that loads .ard for every module (so the
  *       concrete tree is present everywhere) and applies the standard
  *       {@code loadBinaryCache} cascade against the trimmed cache. The cascade marks
  *       cross-module references through the deleted module as "incomplete"/"failed",
  *       forcing re-typecheck of a non-trivial subset from source while the rest stay
  *       pure-deserialized.</li>
- *   <li>Type-check the configured target definition (default {@code Arith.Exp} on EF;
+ *   <li>Type-check the configured target definition (default {@code Arith.Exp};
  *       configurable via {@code -Darend.partial_cache.target=...}).</li>
  *   <li>Fail iff the run produced a {@code Meta 'contradiction' failed} or
  *       {@code Cannot infer contradiction} error.</li>
@@ -62,7 +62,7 @@ import static org.junit.Assert.fail;
  *       loaded modules. That's the difference that exposes the visitor's deserialized
  *       super-walk / Java-meta gaps — they only fire when {@code myConcreteProvider} has
  *       no concrete for an upstream class.</li>
- *   <li>Reuses the production {@link CliServerRequester#loadBinaryCache} (and its
+ *   <li>Reuses the production {@link BinaryLoader#loadBinaryCache} (and its
  *       orphan-shell cascade) instead of hand-rolling the ARC overlay. So the test
  *       exercises the exact buckets you see from the CLI.</li>
  * </ul>
@@ -158,7 +158,7 @@ public class ArendLibPartialCacheTest {
         "arend-lib/src not present – skipping",
         Files.isDirectory(AREND_LIB_DIR.resolve("src")));
     Assume.assumeTrue(
-        "arend-lib/bin not present (run `arend -L .. arend-lib -r -ai` first to seed it) – skipping",
+        "arend-lib/bin not present – skipping",
         Files.isDirectory(AREND_LIB_DIR.resolve("bin")));
 
     testStartMs = System.currentTimeMillis();
@@ -192,6 +192,7 @@ public class ArendLibPartialCacheTest {
       ListErrorReporter reporter = new ListErrorReporter();
       LibraryManager libManager = new LibraryManager(reporter);
       CliServerRequester requester = new CliServerRequester(libManager);
+      BinaryLoader binaryLoader = new BinaryLoader(libManager);
       ArendServerImpl server = new ArendServerImpl(requester, false, false, false);
       server.addReadOnlyModule(Prelude.MODULE_LOCATION,
           () -> new PreludeResourceSource().loadGroup(DummyErrorReporter.INSTANCE));
@@ -218,7 +219,7 @@ public class ArendLibPartialCacheTest {
 
       // The production cascade — populates "loaded", "incomplete", "failed" buckets,
       // prints the same `[INFO] Binary cache: ...` line the CLI prints.
-      requester.loadBinaryCache(arendLib, server);
+      binaryLoader.loadBinaryCache(arendLib, server);
       log("Phase 3 complete in " + String.format("%.1fs",
           (System.currentTimeMillis() - phase3Start) / 1000.0));
 

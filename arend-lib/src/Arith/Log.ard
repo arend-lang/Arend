@@ -7,13 +7,15 @@
 \import Algebra.Ring.FormalSeries.Composition
 \import Algebra.Ring.FormalSeries.Derivative
 \import Algebra.StrictlyOrdered
+\import Analysis.PowerSeries
 \import Analysis.SeriesComposition
 \import Arith.Exp
+\import Arith.Real
+\import Order.Biordered
 \import Order.StrictOrder
 \import Algebra.Pointed
 \import Algebra.Semiring
 \import Analysis.CauchyProduct
-\import Analysis.RatAnalytic
 \import Analysis.Series
 \import Arith.Int
 \import Arith.Nat
@@ -27,6 +29,7 @@
 \import Paths
 \import Paths.Meta
 \import Topology.BanachAlgebra
+\import Topology.NormedAbGroup
 \open Monoid (pow)
 
 -- | Rational Taylor coefficients of $\log(1 + w) = \sum_{n \geq 1} \frac{(-1)^{n - 1}}{n} w^n$.
@@ -51,18 +54,19 @@
                  *> ide-left
     \in transportInv (`<= 1) abs-eq $ RatField.finv_<= zro<ide (fromInt_<= (pos<=pos (suc<=suc zero<=_))) <=∘ =_<= RatField.finv_ide
 
-{- | `RatAnalytic` view of `log(1 + ·)`: rational coefficients `(−1)^{n−1}/n`,
- -   finite radius `1`. Carries the full `BoundedDiskRatAnalytic` API
- -   (continuity, absolute convergence via `abs-conv`, series-sum via
- -   `func-IsSeriesSum`, `disk-partialSum-cover`, ...) by inheritance —
- -   `log1+` below is a thin wrapper around its `func` field.
+{- | $\log(1 + w) := \sum_{n \geq 1} \frac{(-1)^{n - 1}}{n} w^n$ for
+ -   $\vert w \vert_A < 1$, in any real Banach algebra $A$. Defined as
+ -   `log1+-asRA` applied (via its `CoverMap` action) to the disk-element
+ -   `(w, |w|<1)`.
  -}
-\func log1+-asRA {A : RealBanachAlgebra} : BoundedDiskRatAnalytic A \cowith
-  | coef-Rat => log1p-coef
-  | radius => 1
-  | ps-conv a>=0 a<1 => log1p-conv-at-s a>=0 (ExUpperRealAbMonoid.<-rat.1 a<1)
-  | radius-pos => inP (ratio 1 2, linarith, \lam one<b => linarith)
+\sfunc log1+ {A : RealBanachAlgebra} (w : A) (\property |w|<1 : (A.norm w).U 1) : A
+  => powerSeriesSum (\lam n => A.fromRat (log1p-coef n)) w (convertProof |w|<1)
   \where {
+    \lemma log1p-conv-at-s-rat {A : RealBanachAlgebra} {s : Rat} (s>=0 : 0 <= s) (s<1 : s < 1)
+      : IsConvUpperSeries (\lam n => A.norm (A.fromRat (log1p-coef n)) * pow s n)
+      => transport IsConvUpperSeries (ext \lam n => pmap (_ *) (ExUpperRealSemigroup.rat-pow s>=0)) $
+          log1p-conv-at-s {A} {s} (ExUpperReal.<=-rat.1 s>=0) s<1
+
     \lemma log1p-conv-at-s {A : RealBanachAlgebra} {s : ExUpperReal} (s>=0 : 0 <= s) (s<1 : s.U 1)
       : IsConvUpperSeries (\lam n => A.norm (A.fromRat (log1p-coef n)) * ExUpperRealSemigroup.pow s n)
       => series_<= (\lam n => log1p-coef-pow-bound n) (geometric-upper-series-conv s>=0 s<1)
@@ -72,16 +76,12 @@
           => ExUpperRealSemigroup.<=_* (A.norm_fromRat <=∘ ExUpperReal.<=-rat.1 (log1p-coef-abs-<=1 n)) <=-refl
             <=∘ =_<= (ExUpperRealSemigroup.ide-left ExUpperRealSemigroup.pow_>=0)
       }
-  }
 
-{- | $\log(1 + w) := \sum_{n \geq 1} \frac{(-1)^{n - 1}}{n} w^n$ for
- -   $\vert w \vert_A < 1$, in any real Banach algebra $A$. Defined as
- -   `log1+-asRA` applied (via its `CoverMap` action) to the disk-element
- -   `(w, |w|<1)`.
- -}
-\sfunc log1+ {A : RealBanachAlgebra} (w : A) (\property |w|<1 : (A.norm w).U 1) : A
-  => log1+-asRA (w, ExUpperRealAbMonoid.<-rat.2 |w|<1)
-  \where {
+    \lemma convertProof (|w|<1 : (A.norm w).U 1) : A.dist 0 w <LU convRadius (\lam n => A.fromRat (log1p-coef n))
+      => \case U-rounded |w|<1 \with {
+        | inP (a,x<a,a<1) => transport (`<LU _) norm_dist $ convRadius.<LU-char x<a $ log1p-conv-at-s-rat (<=-less (norm>=0 x<a)) a<1
+      }
+
     -- | $D \log(1 + w) = \tfrac{1}{1 + w}$ at the coefficient level: $(n + 1) \cdot \frac{(-1)^n}{n + 1} = (-1)^n$.
     \lemma deriv-coef-Rat (n : Nat)
       : deriv log1p-coef n = alt_pm n
@@ -105,7 +105,7 @@
 -- ============================================================================
 
 -- | The composition $(\exp - 1) \circ \log(1 + \cdot) = w$ as a formal series identity over $\mathbb Q$.
-\lemma compose-coef-expm1-log1p (k : Nat) : fcompose exp-1.coef-Rat log1p-coef k = subst-ide k
+\lemma compose-coef-expm1-log1p (k : Nat) : fcompose exp-1-coef log1p-coef k = subst-ide k
   \elim k
   | 0 => pmap (`+ 0) (RatField.zro_*-left {1}) *> zro-right
   | 1 => compose-coef-expm1-eq-exp-pos 1 NatOrder.zero<suc *> exp-log1p-coef-Rat_1
@@ -114,21 +114,21 @@
   \where {
     -- | $f_k := [w^k] (\exp \circ \log(1 + \cdot))$ over $\mathbb Q$.
     \private \func exp-log1p-coef-Rat (k : Nat) : Rat
-      => fcompose expRA.coef-Rat log1p-coef k
+      => fcompose exp.coef-Rat log1p-coef k
 
     {- | The ODE $D f = f \star \tfrac{1}{1 + w}$ (i.e. $D f_k = \sum_{j = 0}^k f_j \cdot (-1)^{k - j}$).
          From the chain rule $D(\exp \circ \log) = (D \exp \circ \log) \cdot D \log = (\exp \circ \log) \cdot \tfrac{1}{1 + w}$. -}
     \private \lemma expLog1p-coef-Rat-ODE (k : Nat)
       : deriv exp-log1p-coef-Rat k = conv exp-log1p-coef-Rat alt_pm k
-      => deriv-compose expRA.coef-Rat log1p-coef idp k
-      *> rewrite (ext expRA.deriv-coef-Rat : deriv expRA.coef-Rat = expRA.coef-Rat,
+      => deriv-compose exp.coef-Rat log1p-coef idp k
+      *> rewrite (ext exp.deriv-coef-Rat : deriv exp.coef-Rat = exp.coef-Rat,
                   ext log1+.deriv-coef-Rat : deriv log1p-coef = alt_pm) idp
 
     \private \lemma exp-log1p-coef-Rat_0 : exp-log1p-coef-Rat 0 = 1
       => pmap (__ * 1 + 0) RatField.finv_ide *> ide-left *> zro-right
 
     \private \lemma exp-log1p-coef-Rat_1 : exp-log1p-coef-Rat 1 = 1
-      => pmap2 (\lam a b => expRA.coef-Rat 0 * a + (expRA.coef-Rat 1 * b + 0))
+      => pmap2 (\lam a b => exp.coef-Rat 0 * a + (exp.coef-Rat 1 * b + 0))
           (pow-conv-zero-pos NatSemiring.zro<ide)
           (fseries-apply (ide-left {FSeriesRing RatField} {log1p-coef}))
 
@@ -141,12 +141,12 @@
     {- | The composition coefficient identity at index $k$: for $k > 0$,
     the $n=0$ term of `compose-coef` vanishes because $(\log(1+w))^0_k = [k = 0]$ is zero. -}
     \private \lemma compose-coef-expm1-eq-exp-pos (k : Nat) (k>0 : 0 < k)
-      : fcompose exp-1.coef-Rat log1p-coef k = fcompose expRA.coef-Rat log1p-coef k
+      : fcompose exp-1-coef log1p-coef k = fcompose exp.coef-Rat log1p-coef k
       => RatField.BigSum-ext {suc k}
-          {\new Array Rat (suc k) (\lam n => exp-1.coef-Rat n * pow {FSeriesRing RatField} log1p-coef n k)}
-          {\new Array Rat (suc k) (\lam n => expRA.coef-Rat n * pow {FSeriesRing RatField} log1p-coef n k)}
+          {\new Array Rat (suc k) (\lam n => exp-1-coef n * pow {FSeriesRing RatField} log1p-coef n k)}
+          {\new Array Rat (suc k) (\lam n => exp.coef-Rat n * pow {FSeriesRing RatField} log1p-coef n k)}
           \case \elim __ \with {
-            | 0 => zro_*-left *> inv (pmap (_ *) (pow-conv-zero-pos k>0) *> zro_*-right {_} {expRA.coef-Rat 0})
+            | 0 => zro_*-left *> inv (pmap (_ *) (pow-conv-zero-pos k>0) *> zro_*-right {_} {exp.coef-Rat 0})
             | suc n' => idp
           }
 
@@ -197,18 +197,17 @@
 -- | $\exp(\log(1 + w)) = 1 + w$ for $\vert w \vert_A < 1$ in any commutative real Banach algebra.
 \lemma exp-log1p {A : RealBanachAlgebra} (w : A) (wc : A.IsCentral w) (|w|<1 : (A.norm w).U 1)
   : exp (log1+ w |w|<1) = 1 + w
-  => \let | B : A => log1+ w |w|<1
-          | compose-result : IsSeriesSum
-              (\lam k => fcompose (\lam n => A.fromRat (exp-1.coef-Rat n)) (\lam n => A.fromRat (log1p-coef n)) k * pow w k)
-              (exp B - 1)
-              => compose-converges-abs wc A.fromRat_zro exp-1.ps-conv
-                   (log1+-asRA.abs-conv (ExUpperRealAbMonoid.<-rat.2 |w|<1))
-                   (log1+-asRA.func-IsSeriesSum (ExUpperRealAbMonoid.<-rat.2 |w|<1))
-                   (transportInv (\lam x => IsSeriesSum _ (exp x - 1)) (\peval log1+ w |w|<1) (exp-1.seriesSum _))
-          | coef-id : (\lam k => fcompose (\lam n => A.fromRat (exp-1.coef-Rat n)) (\lam n => A.fromRat (log1p-coef n)) k * pow w k)
+  => \let | compose-result : IsSeriesSum
+              (\lam k => fcompose (\lam n => A.fromRat (exp-1-coef n)) (\lam n => A.fromRat (log1p-coef n)) k * pow w k)
+              (exp (log1+ w |w|<1) - 1)
+              => compose-converges-abs wc A.fromRat_zro exp-1-coef.ps-conv
+                   (powerSeries-absConv $ log1+.log1p-conv-at-s norm>=0 |w|<1)
+                   (transportInv (IsSeriesSum _) (\peval log1+ w |w|<1) powerSeriesSum-isSum)
+                   (exp-1-coef.seriesSum _)
+          | coef-id : (\lam k => fcompose (\lam n => A.fromRat (exp-1-coef n)) (\lam n => A.fromRat (log1p-coef n)) k * pow w k)
                     = (\lam k => subst-ide k * pow w k)
               => path (\lam i k => coef-eq-helper-expm1-log1p k i * pow w k)
-          | minus-eq : exp B - A.ide = w
+          | minus-eq : exp (log1+ w |w|<1) - A.ide = w
               => A.limit-unique (transport (\lam S => IsSeriesSum S _) coef-id compose-result) (subst-ide-seriesSum w)
      \in inv zro-right *> pmap (_ +) (inv negative-left) *> inv +-assoc *> pmap (`+ 1) minus-eq *> +-comm
   \where {
@@ -218,14 +217,14 @@
       | suc (suc k) => A.fromRat_zro
 
     \private \lemma coef-eq-helper-expm1-log1p {A : RealBanachAlgebra} (k : Nat)
-      : fcompose (\lam n => A.fromRat (exp-1.coef-Rat n)) (\lam n => A.fromRat (log1p-coef n)) k = subst-ide k
+      : fcompose (\lam n => A.fromRat (exp-1-coef n)) (\lam n => A.fromRat (log1p-coef n)) k = subst-ide k
       => run {
         `*> pmap A.fromRat (compose-coef-expm1-log1p k) *> subst-ide_fromRat,
-        \have A0 => A.toRatModule.*c_BigSum-rdistr {\new Array Rat (suc k) \lam n => exp-1.coef-Rat n * pow-conv log1p-coef n k},
+        \have A0 => A.toRatModule.*c_BigSum-rdistr {\new Array Rat (suc k) \lam n => exp-1-coef n * pow-conv log1p-coef n k},
         later $ rewrite A0,
         AddMonoid.BigSum-ext {A} {suc k}
-          {\new Array A (suc k) \lam n => A.fromRat (exp-1.coef-Rat n) * pow-conv (\lam m => A.fromRat (log1p-coef m)) n k}
-          {\new Array A (suc k) \lam n => A.fromRat (exp-1.coef-Rat n * pow-conv log1p-coef n k)},
+          {\new Array A (suc k) \lam n => A.fromRat (exp-1-coef n) * pow-conv (\lam m => A.fromRat (log1p-coef m)) n k}
+          {\new Array A (suc k) \lam n => A.fromRat (exp-1-coef n * pow-conv log1p-coef n k)},
           \lam i,
           rewriteI A.fromRat_*,
           pmap (_ *) fromRat-pow-conv

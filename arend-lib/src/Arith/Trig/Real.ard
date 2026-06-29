@@ -78,8 +78,8 @@
   => ComplexBanach.limit-unique
        (transport (\lam f => ComplexBanach.IsLimit f (conj (exp z)))
          (ext \lam n => conj_partialSum)
-         (cont-limit (expRA.seriesSum z) conjMap))
-       (expRA.seriesSum (conj z))
+         (cont-limit (exp.seriesSum z) conjMap))
+       (exp.seriesSum (conj z))
   \where {
     -- | Per-term identity for the exp series: `conj` rewrites $(c_k \cdot z^k)$ to $(c_k \cdot \overline{z}^k)$.
     \private \lemma conj_expTerm {z : Complex} (k : Nat)

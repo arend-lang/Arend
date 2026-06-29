@@ -21,7 +21,6 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.io.IOException;
-import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
@@ -30,7 +29,6 @@ public class FileSourceLibrary extends SourceLibrary {
   protected final Path sourceBasePath;
   protected final Path binaryBasePath;
   protected final Path testBasePath;
-  private @Nullable Path basePath;
   private final Set<ModulePath> myModules;
   private final ClassLoaderDelegate myClassLoaderDelegate;
 
@@ -61,15 +59,12 @@ public class FileSourceLibrary extends SourceLibrary {
 
       LibraryHeader header = LibraryHeader.fromConfig(new YAMLMapper().readValue(configFile.toFile(), LibraryConfig.class), configFile.toString(), errorReporter);
 
-      if (header == null) return null;
-      FileSourceLibrary lib = new FileSourceLibrary(libName, isExternalLibrary, Files.getLastModifiedTime(configFile).toMillis(),
+      return header == null ? null : new FileSourceLibrary(libName, isExternalLibrary, Files.getLastModifiedTime(configFile).toMillis(),
           header.dependencies(), header.version(), header.langVersion(), header.extMainClass(), header.modules(),
           header.sourcesDir() == null ? basePath : basePath.resolve(header.sourcesDir()),
           header.binariesDir() == null ? null : basePath.resolve(header.binariesDir()),
           header.testDir() == null ? null : basePath.resolve(header.testDir()),
           header.extDir() == null ? null : new FileClassLoaderDelegate(basePath.resolve(header.extDir())));
-      lib.basePath = basePath;
-      return lib;
     } catch (IOException e) {
       errorReporter.report(new LibraryIOError(configFile.toString(), "Failed to read configuration file", e.getLocalizedMessage()));
       return null;
@@ -101,43 +96,8 @@ public class FileSourceLibrary extends SourceLibrary {
     return binaryBasePath;
   }
 
-  public @Nullable Path getSourceBasePath() {
-    return sourceBasePath;
-  }
-
-  /**
-   * The directory containing this library's {@code arend.yaml}. Set when the
-   * library is loaded via {@link #fromConfigFile}; null for libraries created
-   * directly through the constructor (REPL, default project, tests).
-   */
-  public @Nullable Path getBasePath() {
-    return basePath;
-  }
-
-  public void setBasePath(@Nullable Path basePath) {
-    this.basePath = basePath;
-  }
-
   @Override
   public @Nullable ClassLoaderDelegate getClassLoaderDelegate() {
     return myClassLoaderDelegate;
-  }
-
-  /**
-   * Resolves the aux file under {@link #getBasePath()}, falling back to the parent
-   * of {@link #getSourceBasePath()} for libraries built without {@code fromConfigFile}.
-   */
-  @Override
-  public @Nullable InputStream openAuxFile(@NotNull String relPath) throws IOException {
-    Path root = basePath;
-    if (root == null && sourceBasePath != null) root = sourceBasePath.getParent();
-    if (root == null) return null;
-    Path target = root;
-    for (String part : relPath.split("/")) {
-      if (part.isEmpty() || part.equals(".") || part.equals("..")) return null;
-      target = target.resolve(part);
-    }
-    if (!Files.isRegularFile(target)) return null;
-    return Files.newInputStream(target);
   }
 }

@@ -1,0 +1,160 @@
+\import Algebra.Group
+\import Algebra.Meta
+\import Algebra.Monoid
+\import Arith.Rat
+\import Arith.Real
+\import Arith.Real.LowerReal
+\import Function
+\import Function.Meta
+\import Logic
+\import Logic.Meta
+\import Meta
+\import Order.Lattice
+\import Paths
+\import Paths.Meta
+\import Set.Filter
+\import Set.Subset
+\import Topology.CoverSpace
+\import Topology.CoverSpace.Complete
+\import Topology.CoverSpace.Subspace
+\import Topology.MetricSpace
+\import Topology.RatherBelow
+\import Topology.TopSpace
+\import Topology.UniformSpace
+\open Set
+
+\func LBall {X : ExPseudoMetricSpace} (r : LowerReal) (c : X) : Set X
+  => \lam x => dist c x <LU r
+
+\lemma LBall-open {X : ExPseudoMetricSpace} {r : LowerReal} {c : X} : isOpen (LBall r c)
+  => dist_open.2 $ later \lam {x} (inP (r1,cx<r1,r1<r)) => \case L-rounded r1<r \with {
+    | inP (r2,r2<r,r1<r2) => inP (r2 - r1, linarith, \lam {y} d => inP (r2, X.halving cx<r1 d linarith, r2<r))
+  }
+
+\lemma LBall_<=* {X : ExPseudoMetricSpace} {c : X} {r' : Rat} {r : LowerReal} (r'<r : r.L r') : OBall r' c <=* LBall r c
+  => \case L-rounded r'<r \with {
+    | inP (r2,r2<r,r'<r2) => inP (_, X.metricUniform {(r2 - r') * ratio 1 2} linarith,
+      \lam {w} (inP (_, (inP (y,idp), (z,(xz<delta,yz<e))), yw<e)) =>
+        inP (r2, X.halving xz<delta (X.halving1/2 yz<e yw<e) linarith, r2<r))
+  }
+
+\lemma LBall_<=< {X : ExPseudoMetricSpace} {c : X} {r' : Rat} {r : LowerReal} (r'<r : r.L r') : OBall r' c <=< LBall r c
+  => <=*_<=< (LBall_<=* r'<r)
+
+\func OpenBallCoverSpace {X : ExPseudoMetricSpace} (c : X) (r : LowerReal) : CoverSpace (Total (LBall r c)) \cowith
+  | isCauchy => C.isCauchy
+  | cauchy-cover => C.cauchy-cover
+  | cauchy-top => C.cauchy-top
+  | cauchy-refine => C.cauchy-refine
+  | cauchy-glue => C.cauchy-glue
+  | isRegular Cc => cauchy-subset (C.isRegular Cc) \lam {V} (inP (U,CU,V<=<U)) => inP $ later (U, CU, unfolds V<=<U)
+  | TopSpace => TopSub (LBall r c)
+  | cauchy-open {W} =>
+    (\lam (inP (U,Uo,WU)) {x} Wx =>
+        \have x<=<U => <=<-dir-aux $ X.open-char.1 Uo (rewrite WU in Wx)
+        \in closure-subset x<=<U \lam {V} h Vx {y} Vy => rewrite WU $ h (x, (idp, Vx)) Vy,
+     \lam e => (TopSub (LBall r c)).cover-open \lam {x} Wx => inP
+        (\lam y => single y.1 <=< extend W,
+         TopSub-map.func-cont X.interior,
+         <=<-conv-aux (closure-subset (e Wx) $ later \lam {V} h (_,(idp,Vx)) => h Vx),
+         \lam {y} y<=<W => (<=<_<= y<=<W idp).2))
+  \where {
+    \open ClosurePrecoverSpace
+
+    \private \meta C => ClosureCoverSpace isBasicCover basicCover-cover basicCover-regular
+
+    \func isBasicCover (C : Set (Set (Total (LBall r c)))) : \Prop
+      => ∃ (D : Set (Set X)) (X.isCauchy D || (D = SetIm (OBall __ c) r.L)) (C = \lam U => ∃ (V : D) (U = restrict V))
+
+    \lemma basicCover-cover {C : Set (Set (Total (LBall r c)))} (Cc : isBasicCover C) (s : Total (LBall r c))
+      : ∃ (U : C) (U s) \elim Cc
+      | inP (D, byLeft Dc, idp) => \case cauchy-cover Dc s.1 \with {
+        | inP (V,DV,Vs) => inP (_, inP (V, DV, idp), Vs)
+      }
+      | inP (_, byRight idp, idp) => \case s.2 \with {
+        | inP (r',cs<r',r'<r) => inP (_, inP (_, SetIm-con r'<r, idp), cs<r')
+      }
+
+    \lemma makeBasicCover1 {D : Set (Set X)} (Dc : X.isCauchy D)
+      : Closure isBasicCover \lam U => ∃ (V : D) (U = restrict V)
+      => closure $ inP (D, byLeft Dc, idp)
+
+    \lemma makeBasicCover2
+      : Closure isBasicCover \lam U => ∃ (V : SetIm (OBall __ c) r.L) (U = restrict V)
+      => closure $ inP (_, byRight idp, idp)
+
+    \lemma basicCover-regular {C : Set (Set (Total (LBall r c)))} (Cc : isBasicCover C)
+      : Closure isBasicCover \lam V => ∃ (U : C) (Closure isBasicCover \lam W => Given (V ∧ W) -> W ⊆ U) \elim Cc
+      | inP (D, Dc, idp) =>
+        \have step : Closure isBasicCover (\lam W => ∃ (V : Set X) (∃ (U : D) (V <=< U)) (W = restrict V)) => \case \elim D, \elim Dc \with {
+          | D, byLeft Dc => makeBasicCover1 (isRegular Dc)
+          | _, byRight idp => closure-subset makeBasicCover2 \lam {_} (inP (V,Vb,idp)) => flip SetIm-elim Vb \lam {r'} r'<r => \case L-rounded r'<r \with {
+            | inP (m,m<r,r'<m) => inP $ later (OBall r' c, inP (_, SetIm-con m<r, OBall_<=< r'<m), idp)
+          }
+        }
+        \in closure-subset step \lam {V'} => \case \elim __ \with {
+          | inP (V, inP (U,DU,V<=<U), V'=V) => inP (restrict U, inP (U, DU, idp), closure-subset (makeBasicCover1 V<=<U) \lam {W'} => \case \elim __ \with {
+            | inP (W,h,W'=W) => rewrite (V'=V,W'=W) \lam (s,t) => h (s.1,t) __
+          })
+        }
+
+    \private \lemma <=<-dir-aux {x : Total (LBall r c)} {U : Set X} (x<=<U : single x.1 <=< U) : single x <=< {C} restrict U
+      => closure-subset (makeBasicCover1 (unfolds in x<=<U)) $ later \lam {_} (inP (V, h, idp)) (_,(idp,Vx)) {y} Vy => h (x.1, (idp, Vx)) Vy
+
+    \private \lemma <=<-conv-aux {x : Total (LBall r c)} {U : Set (Total (LBall r c))} (x<=<U : single x <=< {C} U) : single x.1 <=< extend U
+      => \case closure-filter {C} {isBasicCover} (\new SetFilter {
+           | F V => single x.1 <=< extend V
+           | filter-mono q p => <=<-left q (extend-mono p)
+           | filter-top => <=<-left (X.open-char.1 LBall-open x.2) \lam Sx => (Sx,())
+           | filter-meet p q => rewrite extend_meet (RatherBelow.<=<_meet-same p q)
+         }) (\case \elim __ \with {
+           | inP (D,e,p) => \have (inP (V,DV,x<=<V)) : ∃ (V : D) (single x.1 <=< V) => \case \elim D, \elim e \with {
+             | D, byLeft Dc => CoverSpace.cauchy-regular-cover Dc x.1
+             | _, byRight idp => \case x.2 \with {
+               | inP (r',cx<r',r'<r) => inP (_, SetIm-con r'<r, X.open-char.1 OBall-open cx<r')
+             }
+           } \in rewrite p $ inP (_, inP (V, DV, idp), RatherBelow.<=<_meet-same (X.open-char.1 LBall-open x.2) x<=<V)
+         }) x<=<U \with {
+           | inP (V,h,x<=<V) => <=<-left x<=<V $ extend-mono $ h (x, (idp, transport V (ext idp) (<=<_<= x<=<V idp).2))
+         }
+
+    \lemma <=<-dir {x : Total (LBall r c)} {U : Set X} (x<=<U : single x.1 <=< U) : single x <=< {OpenBallCoverSpace c r} restrict U
+      => unfolds (<=<-dir-aux x<=<U)
+
+    \lemma <=<-conv {x : Total (LBall r c)} {U : Set (Total (LBall r c))} (x<=<U : single x <=< {OpenBallCoverSpace c r} U) : single x.1 <=< extend U
+      => <=<-conv-aux (unfolds x<=<U)
+
+    \func func : CoverMap (OpenBallCoverSpace c r) X __.1 \cowith
+      | func-cover Dc => makeBasicCover1 Dc
+
+    \func infinity-inv (Xb : X.IsDistBounded) (r=inf : r = LowerReal.infinity) (x : X) : OpenBallCoverSpace c r
+      => (x, \box transportInv (LBall __ c x) r=inf $ TruncP.map (Xb c x) \lam (q,cx<q) => (q, cx<q, ()))
+
+    \lemma infinity-inv-cover (Xb : X.IsDistBounded) (r=inf : r = LowerReal.infinity) : CoverMap X (OpenBallCoverSpace c r) (infinity-inv Xb r=inf) \cowith
+      | func-cover => closure-univ-cover $ later \lam {_} (inP (C, e, idp)) => \case \elim e \with {
+        | byLeft Cc => cauchy-subset Cc \lam {W} CW => inP $ later (_, inP (W, CW, idp), idp)
+        | byRight p => X.makeCauchy $ uniform-refine (X.metricUniform {1} idp) \lam {_} (inP (x,idp)) => \case Xb c x \with {
+          | inP (q,cx<q) => inP (_, inP $ later (_, inP $ rewrite p (_, SetIm-cone (q + 1) $ later $ rewrite r=inf (), idp), idp),
+                                 \lam {y} xy<1 => X.halving cx<q xy<1 RatField.<=-refl)
+        }
+      }
+  }
+
+\func OpenBallCompleteCoverSpace {X : CompleteExMetricSpace} (c : X) (r : LowerReal) : CompleteCoverSpace (Total (LBall r c)) \cowith
+  | CoverSpace => OpenBallCoverSpace c r
+  | isSeparatedCoverSpace => (Separated-char (OpenBallCoverSpace c r) 3 0 $ inP (X, func, \lam p => ext p)).isSeparatedCoverSpace
+  | isComplete F =>
+    \let | F' => cauchy-filter-extend F
+         | x => X.filter-point F'
+         | (inP (_, inP (U, inP ((r',r'<r), idp), idp), FU)) => F.isCauchyFilter makeBasicCover2
+    \in inP ((x, <=<_<= (X.filter-point-elem {F'} (LBall_<=< r'<r) FU) idp),
+             \lam {V} x<=<V => filter-mono (X.filter-point-sub (<=<-conv x<=<V)) \lam {y} Vy => Vy.2)
+  \where {
+    \open OpenBallCoverSpace
+
+    \func cauchy-filter-extend (F : CauchyFilter (OpenBallCoverSpace c r)) : CauchyFilter X \cowith
+      | ProperFilter => proper-filter-extend (LBall r c) F
+      | isCauchyFilter Cc => \case F.isCauchyFilter (OpenBallCoverSpace.makeBasicCover1 Cc) \with {
+        | inP (U', inP (U,CU,U'=U), FU') => inP (U, CU, rewrite U'=U in FU')
+      }
+  }

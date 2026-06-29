@@ -22,6 +22,7 @@
 \import Order.StrictOrder
 \import Paths
 \import Paths.Meta
+\import Relation.Equivalence
 \import Set.Filter
 \import Set.Subset
 \import Topology.CoverSpace
@@ -31,6 +32,9 @@
 \import Topology.MetricSpace
 \import Topology.NormedAbGroup
 \import Topology.RatherBelow
+\import Topology.TopAbGroup.Product
+\import Topology.TopSpace
+\import Topology.TopSpace.Product
 \open LatticeAbGroup
 \open LinearlyOrderedAbGroup
 \open RealNormed
@@ -166,3 +170,12 @@
     \in inP (N, \lam {n} N<=n => h $ unfold OBall $ rewriteI (norm_dist {RealNormed}) $
           rewrite (abs-ofPos $ rat_real_<=.1 $ <=_ratNom $ pos<=pos zero<=_) $
           DiscreteOrderedField.finv_<-left {RatField} {eps} {suc n} eps>0 $ eps'<N <∘l fromInt_<= (pos<=pos $ N<=n <=∘ id<=suc))
+
+\lemma ratio-shift-one-limit : RealNormed.IsLimit (\lam n => suc (suc n) RatField.* RatField.finv (suc n)) 1
+  => transport2 RealNormed.IsLimit {_} {\lam n => Real.fromRat $ suc (suc n) RatField.* RatField.finv (suc n)}
+      (later $ ext \lam n => RealAbGroup.+-rat
+        *> pmap Real.fromRat (RatField.+=+' *> rat_alt-inj (rat_alt_makeRat {_} {_} {_} {idp}
+          *> path (~-equiv _ _ $ pmap2 (\lam x y => suc (suc x) IntRing.* suc y) ide-left ide-left)
+          *> inv (rat_alt_makeRat {_} {_} {_} {idp}))))
+      zro-left
+      (cont2-limit {_} {RealNormed} {_} {_} {\lam n => RatField.finv (suc n)} {\lam _ => 1} harmonic-limit const-limit +-uniform)

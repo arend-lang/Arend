@@ -9,7 +9,6 @@
 \import Algebra.Semiring
 \import Algebra.StrictlyOrdered
 \import Analysis.PowerSeries
-\import Analysis.RatAnalytic
 \import Analysis.Series
 \import Arith.Complex
 \import Arith.Complex.Banach
@@ -39,6 +38,7 @@
 \import Paths
 \import Paths.Meta
 \import Topology.BanachAlgebra
+\import Topology.MetricSpace
 \import Topology.NormedAbGroup
 \import Topology.NormedRing (RealValuedRing)
 \import Topology.TopAbGroup
@@ -75,14 +75,9 @@
 -- | Real Taylor coefficients of $\arctan$, the image of {arctan-coef-Rat} in {Real}.
 \func arctan-coef (m : Nat) : Real => arctan-coef-Rat m
 
-{- | {BoundedDiskRatAnalytic} view of $\arctan$ on a Banach algebra: coefficients
- -   $\tfrac{(-1)^k}{2k+1}$ at odd degrees ($0$ at even), radius $1$.
- -}
-\func arctan-asRA {A : RealBanachAlgebra} : BoundedDiskRatAnalytic A \cowith
-  | coef-Rat => arctan-coef-Rat
-  | radius => 1
-  | ps-conv a>=0 a<1 => arctan-conv-at-s a>=0 (ExUpperRealAbMonoid.<-rat.1 a<1)
-  | radius-pos => inP (ratio 1 2, linarith, \lam one<b => linarith)
+-- | The arctangent $\arctan x$ for $|x| < 1$, as the sum of its Taylor series.
+\sfunc arctan-gen {A : RealBanachAlgebra} (x : A) (|x|<1 : (norm x).U 1) : A
+  => powerSeriesSum (\lam n => A.fromRat (arctan-coef-Rat n)) x (convertProof |x|<1)
   \where {
     -- | $|c_n|_{\mathbb Q} \le 1$ for every $n$.
     \lemma arctan-coef-abs-<=1 (n : Nat) : abs (arctan-coef-Rat n) <= 1
@@ -95,29 +90,34 @@
       }
 
     -- | $\|\varphi(c_n)\| \cdot t^n \le t^n$ in a Banach algebra, since $\|\varphi(c_n)\| \le 1$.
-    \private \lemma arctan-coef-pow-bound {A : RealBanachAlgebra} (n : Nat) {t : ExUpperReal}
-      : A.norm (A.fromRat (arctan-coef-Rat n)) * ExUpperRealSemigroup.pow t n <= ExUpperRealSemigroup.pow t n
+    \private \lemma arctan-coef-pow-bound {A : RealBanachAlgebra} (n : Nat) {t : Rat} (t>=0 : 0 <= t)
+      : A.norm (A.fromRat (arctan-coef-Rat n)) * pow t n <= ExUpperRealSemigroup.pow t n
       => ExUpperRealSemigroup.<=_* (A.norm_fromRat <=∘ ExUpperReal.<=-rat.1 (arctan-coef-abs-<=1 n)) <=-refl
-          <=∘ =_<= (ExUpperRealSemigroup.ide-left ExUpperRealSemigroup.pow_>=0)
+          <=∘ =_<= (pmap (1 *) (inv $ ExUpperRealSemigroup.rat-pow t>=0) *> ExUpperRealSemigroup.ide-left ExUpperRealSemigroup.pow_>=0)
 
     -- | The arctan coefficient series converges (as an upper-real series) for $s \in [0,1)$.
-    \private \lemma arctan-conv-at-s {A : RealBanachAlgebra} {s : ExUpperReal} (s>=0 : 0 <= s) (s<1 : s.U 1)
-      : IsConvUpperSeries (\lam n => A.norm (A.fromRat (arctan-coef-Rat n)) * ExUpperRealSemigroup.pow s n)
-      => series_<= (\lam n => arctan-coef-pow-bound n) (geometric-upper-series-conv s>=0 s<1)
-    }
+    \private \lemma arctan-conv-at-s {A : RealBanachAlgebra} {s : Rat} (s>=0 : 0 <= s) (s<1 : s < 1)
+      : IsConvUpperSeries (\lam n => A.norm (A.fromRat (arctan-coef-Rat n)) * pow s n)
+      => series_<= (\lam n => arctan-coef-pow-bound n s>=0) (geometric-upper-series-conv (ExUpperReal.<=-rat.1 s>=0) s<1)
+
+    \lemma convertProof (|x|<1 : (norm x).U 1) : dist 0 x <LU convRadius (\lam n => A.fromRat (arctan-coef-Rat n))
+      => \case U-rounded |x|<1 \with {
+        | inP (a,x<a,a<1) => transport (`<LU _) norm_dist $ convRadius.<LU-char x<a (arctan-conv-at-s (<=-less $ norm>=0 x<a) a<1)
+      }
+  }
 
 -- | The arctangent $\arctan x$ for $|x| < 1$, as the sum of its Taylor series.
-\sfunc arctan (x : Real) (|x|<1 : (abs x).U 1) : Real
-  => arctan-asRA (x, ExUpperRealAbMonoid.<-rat.2 |x|<1)
+\sfunc arctan (x : Real) (|x|<1 : abs x < 1) : Real
+  => arctan-gen x (real_<_U.1 |x|<1)
   \where \open Topology.StoneCStarAlgebra
 
 -- | $\sum_n c_n\,x^n = \arctan x$ for $|x| < 1$: the Taylor series sums to $\arctan$.
-\lemma arctan-coef-powerSeries-IsSeriesSum {x : Real} (|x|<1 : (abs x).U 1)
+\lemma arctan-coef-powerSeries-IsSeriesSum {x : Real} (|x|<1 : abs x < 1)
   : IsSeriesSum (powerSeries arctan-coef x) (arctan x |x|<1)
   => transport2 (\lam c => IsSeriesSum (powerSeries c x))
       (ext \lam n => RealStoneC*Algebra_fromRat (arctan-coef-Rat n))
-      (inv \peval arctan x |x|<1)
-      (arctan-asRA.func-IsSeriesSum (ExUpperRealAbMonoid.<-rat.2 |x|<1))
+      (inv $ (\peval arctan x |x|<1) *> (\peval arctan-gen x _))
+      powerSeriesSum-isSum
   \where \open Topology.StoneCStarAlgebra
 
 -- | Arctan coefficients lifted to $\mathbb{C}$: $c_m$ viewed via `Complex.fromReal`.
@@ -129,7 +129,7 @@
   => 2 * i * arctan-coef-C m
 
 -- | $\sum_n 2i\,c_n\,x^n = 2i\,\arctan x$ in $\mathbb{C}$ (real $x$ embedded).
-\private \lemma twoi-arctan-coef-C-powerSeries-IsSeriesSum {x : Real} (|x|<1 : (abs x).U 1)
+\private \lemma twoi-arctan-coef-C-powerSeries-IsSeriesSum {x : Real} (|x|<1 : abs x < 1)
   : IsSeriesSum (powerSeries twoi-arctan-coef-C x) (2 * i * arctan x |x|<1)
   => \have | real-sum : IsSeriesSum (powerSeries arctan-coef x) (arctan x |x|<1)
               => arctan-coef-powerSeries-IsSeriesSum |x|<1
@@ -150,12 +150,12 @@
 -- ============================================================================
 
 -- | $|x| < 1 \implies |ix| < 1$ in $\mathbb{C}$ — domain witness for $\log(1+ix)$.
-\private \lemma norm-ix<1 {x : Real} (|x|<1 : (abs x).U 1) : (cabs (i * x)).U 1
-  => transportInv (\lam (r : Real) => r.U 1) (cabs_i_* *> cabs_fromReal) |x|<1
+\private \lemma norm-ix<1 {x : Real} (|x|<1 : abs x < 1) : (cabs (i * x)).U 1
+  => transportInv (\lam (r : Real) => r.U 1) (cabs_i_* *> cabs_fromReal) (real_<_U.1 |x|<1)
 
 -- | $|x| < 1 \implies |{-}ix| < 1$ in $\mathbb{C}$ — domain witness for $\log(1-ix)$.
-\private \lemma norm-neg-ix<1 {x : Real} (|x|<1 : (abs x).U 1) : (cabs (negative (i * x))).U 1
-  => transportInv (\lam (r : Real) => r.U 1) (cabs_negative {i * x} *> cabs_i_* *> cabs_fromReal) |x|<1
+\private \lemma norm-neg-ix<1 {x : Real} (|x|<1 : abs x < 1) : (cabs (negative (i * x))).U 1
+  => transportInv (\lam (r : Real) => r.U 1) (cabs_negative {i * x} *> cabs_i_* *> cabs_fromReal) (real_<_U.1 |x|<1)
 
 {- | Per-term identity matching the $\log(1+ix) - \log(1-ix)$ and $2i\arctan x$ series:
  -   $b_n\,(ix)^n - b_n\,(-ix)^n = 2i\,c_n\,x^n$, where $b_n$ are the $\log(1+\cdot)$ coefficients.
@@ -195,13 +195,11 @@
   }
 
 -- | $\log(1 + ix) - \log(1 - ix) = 2i\,\arctan x$ in $\mathbb{C}$, for $|x| < 1$.
-\private \lemma arctan-log-bridge {x : Real} (|x|<1 : (abs x).U 1)
+\private \lemma arctan-log-bridge {x : Real} (|x|<1 : abs x < 1)
   : log1+ (i * x) (norm-ix<1 |x|<1) - log1+ (negative (i * x)) (norm-neg-ix<1 |x|<1) = 2 * i * arctan x |x|<1
-  => pmap2 (-) (\peval log1+ _ _) (\peval log1+ _ _) *>
-    ComplexBanach.limit-unique
+  => pmap2 (-) (\peval log1+ _ _) (\peval log1+ _ _) *> ComplexBanach.limit-unique
       (transport (IsSeriesSum __ _) (ext \lam n => arctan-log-per-term n) $
-        IsSeriesSum_- (log1+-asRA.func-IsSeriesSum $ ExUpperRealAbMonoid.<-rat.2 $ norm-ix<1 |x|<1)
-                      (log1+-asRA.func-IsSeriesSum $ ExUpperRealAbMonoid.<-rat.2 $ norm-neg-ix<1 |x|<1))
+        IsSeriesSum_- powerSeriesSum-isSum powerSeriesSum-isSum)
       (twoi-arctan-coef-C-powerSeries-IsSeriesSum |x|<1)
 
 -- ============================================================================
@@ -214,7 +212,7 @@
   => ext (equation.cRing, equation.cRing)
 
 -- | $(1 + x^2)\,\exp(2i\,\arctan x) = (1 + ix)^2$ in $\mathbb{C}$, for $|x| < 1$.
-\private \lemma exp-complex-identity {x : Real} (|x|<1 : (abs x).U 1)
+\private \lemma exp-complex-identity {x : Real} (|x|<1 : abs x < 1)
   : (1 + x * x) ComplexField.* exp (2 * i * arctan x |x|<1) = (1 + i * x) * (1 + i * x)
   => \let | ix => i * x
           | pix => norm-ix<1 |x|<1
@@ -235,7 +233,7 @@
               *> mul-cancel-helper {ComplexField} {1 + ix} exp_negative-right
 
 -- | $\sin(\arctan x) = x\,\cos(\arctan x)$ for $|x| < 1$ (i.e. $\tan(\arctan x) = x$).
-\lemma tan-arctan {x : Real} (|x|<1 : (RealValuedRing.norm x).U 1)
+\lemma tan-arctan {x : Real} (|x|<1 : abs x < 1)
   : sin (arctan x |x|<1) = x * cos (arctan x |x|<1)
   => \let | a : Real => arctan x |x|<1
           | s : Real => sin a
@@ -271,7 +269,7 @@
       => ext (equation.cRing, equation.cRing)
 
     -- | Real part of the complex identity: $(1 + x^2)\,\cos(2\arctan x) = 1 - x^2$.
-    \private \lemma Re-of-complex-identity {x : Real} (|x|<1 : (abs x).U 1)
+    \private \lemma Re-of-complex-identity {x : Real} (|x|<1 : abs x < 1)
       : (1 + x * x) * cos (2 * arctan x |x|<1) = 1 - x * x
       => \have
             | re-eq : ((1 + x * x) ComplexField.* exp (2 * i * arctan x |x|<1)).re = ((1 + i * x) * (1 + i * x)).re
@@ -283,7 +281,7 @@
          \in pmap (_ *) (\peval cos _) *> equation.ring *> re-rewritten
 
     -- | Imaginary part of the complex identity: $(1 + x^2)\,\sin(2\arctan x) = 2x$.
-    \private \lemma Im-of-complex-identity {x : Real} (|x|<1 : (abs x).U 1)
+    \private \lemma Im-of-complex-identity {x : Real} (|x|<1 : abs x < 1)
       : (1 + x * x) * sin (2 * arctan x |x|<1) = 2 * x
       => \have
             | im-eq : ((1 + x * x) ComplexField.* exp (2 * i * arctan x |x|<1)).im = ((1 + i * x) * (1 + i * x)).im
@@ -296,12 +294,12 @@
   }
 
 -- | $(1 + x^2)\,\cos^2(\arctan x) = 1$.
-\private \lemma cos-arctan-sq {x : Real} (|x|<1 : (RealValuedRing.norm x).U 1)
+\private \lemma cos-arctan-sq {x : Real} (|x|<1 : abs x < 1)
   : (1 + x * x) * (cos (arctan x |x|<1) * cos (arctan x |x|<1)) = 1
   => equation.cRing *> pmap (\lam s => _ * _ + s * s) (inv (tan-arctan |x|<1)) *> pythagoras
 
 -- | $(1 + x^2)\,\sin^2(\arctan x) = x^2$.
-\lemma sin-arctan-sq {x : Real} (|x|<1 : (RealValuedRing.norm x).U 1)
+\lemma sin-arctan-sq {x : Real} (|x|<1 : abs x < 1)
   : (1 + x * x) * (sin (arctan x |x|<1) * sin (arctan x |x|<1)) = x * x
   => pmap (\lam s => (1 + x * x) * (s * s)) (tan-arctan |x|<1)
      *> equation.cRing
@@ -309,7 +307,7 @@
      *> ide-right
 
 -- | $(1 + x^2)\,\cos(2\arctan x) = 1 - x^2$ — product form of $\cos(2\arctan x) = \tfrac{1-x^2}{1+x^2}$.
-\lemma cos-double-arctan {x : Real} (|x|<1 : (RealValuedRing.norm x).U 1)
+\lemma cos-double-arctan {x : Real} (|x|<1 : abs x < 1)
   : (1 + x * x) * cos (2 * arctan x |x|<1) = 1 - x * x
   => pmap (\lam y => (1 + x * x) * y) (pmap cos linarith *> cos_+)
      *> Ring.ldistr_-
@@ -317,6 +315,6 @@
 
 {- | Arctan addition formula, product (division-free) form:
      $\sin(\arctan a + \arctan b)\,(1 - ab) = (a + b)\,\cos(\arctan a + \arctan b)$. -}
-\lemma arctan-addition {a b : Real} (|a|<1 : (abs a).U 1) (|b|<1 : (abs b).U 1)
+\lemma arctan-addition {a b : Real} (|a|<1 : abs a < 1) (|b|<1 : abs b < 1)
   : sin (arctan a |a|<1 + arctan b |b|<1) * (1 - a * b) = (a + b) * cos (arctan a |a|<1 + arctan b |b|<1)
   => rewrite (sin_+, cos_+, tan-arctan |a|<1, tan-arctan |b|<1) equation.cRing

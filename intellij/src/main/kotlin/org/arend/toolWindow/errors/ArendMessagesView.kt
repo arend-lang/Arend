@@ -12,6 +12,8 @@ import com.intellij.openapi.components.service
 import com.intellij.openapi.editor.EditorFactory
 import com.intellij.openapi.editor.event.CaretEvent
 import com.intellij.openapi.editor.event.CaretListener
+import com.intellij.openapi.editor.event.DocumentEvent
+import com.intellij.openapi.editor.event.DocumentListener
 import com.intellij.openapi.fileEditor.FileEditorManager
 import com.intellij.openapi.fileEditor.FileEditorManagerEvent
 import com.intellij.openapi.fileEditor.FileEditorManagerListener
@@ -164,6 +166,19 @@ class ArendMessagesView(private val project: Project, private val toolWindow: To
             override fun caretPositionChanged(event: CaretEvent) {
                 if (event.editor.project != project) return
                 updateEditors(canClear = false)
+            }
+        }, project)
+
+        EditorFactory.getInstance().eventMulticaster.addDocumentListener(object : DocumentListener {
+            override fun documentChanged(event: DocumentEvent) {
+                if (isCursorOnDocComment) {
+                    val editor = FileEditorManager.getInstance(project).selectedTextEditor
+                    if (editor != null && editor.document == event.document) {
+                        PsiDocumentManager.getInstance(project).performLaterWhenAllCommitted {
+                            updateEditors(canClear = false)
+                        }
+                    }
+                }
             }
         }, project)
 

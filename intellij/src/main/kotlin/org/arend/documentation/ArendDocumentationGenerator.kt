@@ -17,6 +17,8 @@ import com.intellij.ui.awt.RelativePoint
 import com.intellij.ui.jcef.JBCefBrowser
 import com.intellij.ui.jcef.JBCefBrowserBase
 import com.intellij.ui.jcef.JBCefJSQuery
+import com.intellij.util.ui.JBUI.CurrentTheme.Link.Foreground.ENABLED
+import com.intellij.util.ui.JBUI.CurrentTheme.Link.Foreground.HOVERED
 import org.arend.documentation.ArendKeyword.Companion.isArendKeyword
 import org.arend.ext.module.LongName
 import org.arend.naming.reference.LocatedReferableImpl
@@ -76,7 +78,11 @@ object ArendDocumentationGenerator {
             if (withDocComments) {
                 wrapTag("head") {
                     wrapTag("style") {
+                        val linkColor = getHtmlRgbFormat(ENABLED.rgb)
+                        val linkHoverColor = getHtmlRgbFormat(HOVERED.rgb)
                         append(".normal_text { white_space: nowrap; }.code { white_space: pre; }")
+                        append("a, a:visited, a:active { color: $linkColor; text-decoration: none; }")
+                        append("a:hover { color: $linkHoverColor; text-decoration: underline; }")
                         if (font != null) {
                             append("$ROW_FONT_HTML$font$END_FONT_HTML")
                             append("$DEFINITION_FONT_HTML$font$END_FONT_HTML")
@@ -131,7 +137,11 @@ object ArendDocumentationGenerator {
         return buildString { wrapTag("html") {
             wrapTag("head") {
                 wrapTag("style") {
+                    val linkColor = getHtmlRgbFormat(ENABLED.rgb)
+                    val linkHoverColor = getHtmlRgbFormat(HOVERED.rgb)
                     append(".normal_text { white_space: nowrap; }.code { white_space: pre; }")
+                    append("a, a:visited, a:active { color: $linkColor; text-decoration: none; }")
+                    append("a:hover { color: $linkHoverColor; text-decoration: underline; }")
                 }
             }
             wrapTag("body") {
@@ -187,7 +197,7 @@ object ArendDocumentationGenerator {
         }, browser.cefBrowser)
     }
 
-    fun showInCefBrowser(title: String, linkColor: String) {
+    fun showInCefBrowser(title: String, linkColor: String, linkHoverColor: String) {
         val browser = JBCefBrowser()
         browser.component.preferredSize = Dimension(1, 1)
 
@@ -242,8 +252,13 @@ object ArendDocumentationGenerator {
                     (function() {
                         const style = document.createElement('style');
                         style.textContent = `
-                            a, a:visited, a:hover, a:active {
+                            a, a:visited, a:active {
                                 color: $linkColor !important;
+                                text-decoration: none;
+                            }
+                            a:hover {
+                                color: $linkHoverColor !important;
+                                text-decoration: underline;
                             }
                         `;
                         document.head.appendChild(style);

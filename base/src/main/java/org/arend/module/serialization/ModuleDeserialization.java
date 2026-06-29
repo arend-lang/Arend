@@ -170,6 +170,9 @@ public class ModuleDeserialization {
 
           assert def instanceof ClassDefinition;
           ClassField res = new ClassField(absField, (ClassDefinition) def);
+          if (fieldProto.getIsProperty()) {
+            res.setIsProperty();
+          }
           ((ClassDefinition) def).addPersonalField(res);
           absField.setTypechecked(res);
           myCallTargetProvider.putCallTarget(fieldProto.getReferable().getIndex(), res);
@@ -336,6 +339,9 @@ public class ModuleDeserialization {
           if (fillInternalDefinitions || fieldProto.getIsRealParameter()) {
             FieldReferableImpl absField = new FieldReferableImpl(null, readAccessModifier(fieldReferable.getAccessModifier()), readPrecedence(fieldReferable.getPrecedence()), fieldReferable.getName(), readAliasPrecedence(fieldReferable), fieldReferable.getAliasName().isEmpty() ? null : fieldReferable.getAliasName(), fieldProto.getIsExplicit(), fieldProto.getIsParameter(), fieldProto.getIsRealParameter(), referable);
             ClassField res = new ClassField(absField, classDef);
+            if (fieldProto.getIsProperty()) {
+              res.setIsProperty();
+            }
             classDef.addPersonalField(res);
             absField.setTypechecked(res);
             myCallTargetProvider.putCallTarget(fieldReferable.getIndex(), res);

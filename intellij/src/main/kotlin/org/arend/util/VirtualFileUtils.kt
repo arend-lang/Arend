@@ -1,6 +1,5 @@
 package org.arend.util
 
-import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.vfs.JarFileSystem
 import com.intellij.openapi.vfs.VfsUtil
 import com.intellij.openapi.vfs.VirtualFile

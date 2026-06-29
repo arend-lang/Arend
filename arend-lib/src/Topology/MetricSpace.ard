@@ -75,6 +75,9 @@
   \lemma metricUniform {eps : Rat} (eps>0 : 0 < eps) : PreuniformSpace.isUniform \lam U => ∃ (x : E) (U = \lam y => (dist x y).U eps)
     => dist-uniform.2 $ inP $ later (eps, eps>0, \lam x => inP (_, inP (x, idp), \lam r => r))
 
+  \func IsDistBounded : \Prop
+    => ∀ (x y : E) (dist x y).IsBounded
+
   \func NFilter (x : E) : SetFilter E \cowith
     | F U => ∃ (eps : Rat) (0 < eps) (OBall eps x ⊆ U)
     | filter-mono (inP (eps,eps>0,q)) p => inP (eps, eps>0, q <=∘ p)
@@ -137,8 +140,8 @@
 \lemma OBall_<=* {X : ExPseudoMetricSpace} {x : X} {eps delta : Rat} (delta<eps : delta < eps) : OBall delta x <=* OBall eps x
   => inP (_, metricUniform {_} {(eps - delta) * ratio 1 2} linarith, \lam {w} (inP (_, (inP (y,idp), (z,(xz<delta,yz<e))), yw<e)) => X.halving xz<delta (X.halving1/2 yz<e yw<e) linarith)
 
-\func IsBoundedSet {X : ExPseudoMetricSpace} (S : Set X) : \Prop
-  => ∃ (B : Rat) (0 < B) (x : S) ∀ {y : S} ((dist x y).U B)
+\lemma OBall_<=< {X : ExPseudoMetricSpace} {x : X} {eps delta : Rat} (delta<eps : delta < eps) : OBall delta x <=< OBall eps x
+  => <=*_<=< (OBall_<=* delta<eps)
 
 \lemma metric-contAt-char {X Y : ExPseudoMetricSpace} {f : X -> Y} {x : X}
   : IsContAt f x <-> ∀ {eps : Rat} (0 < eps) ∃ (delta : Rat) (0 < delta) ∀ {x'} ((dist x x').U delta -> (dist (f x) (f x')).U eps)

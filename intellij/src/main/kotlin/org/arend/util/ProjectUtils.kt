@@ -17,6 +17,7 @@ import com.intellij.psi.PsiFileFactory
 import com.intellij.psi.PsiManager
 import com.intellij.testFramework.TestModeFlags
 import org.arend.ArendLanguage
+import org.arend.educational.ArendConfigurator.Companion.getStudyLibrary
 import org.arend.ext.prettyprinting.doc.BaseDocVisitor
 import org.arend.ext.prettyprinting.doc.ReferenceDoc
 import org.arend.ext.reference.ArendRef
@@ -141,6 +142,19 @@ fun Module.register(modules: List<Module> = emptyList()) {
 
 fun Module.unregister() {
     project.service<ArendExtensionChangeService>().removeModule(this)
+}
+
+fun Project.registerStudyLibrary() {
+    val studyLibrary = runReadAction { getStudyLibrary(this) } ?: return
+    val server = service<ArendServerService>().server
+    if (server.getLibrary(studyLibrary.name) != null) return
+
+    val loaded = HashSet<String>()
+    loaded.addAll(arendModules.map { it.name })
+    runReadAction {
+        server.updateLibrary(studyLibrary, NotificationErrorReporter(this))
+        addDependencies(server, studyLibrary, loaded)
+    }
 }
 
 private fun groupMatch(group1: ConcreteGroup, group2: ArendGroup, function: (ConcreteGroup, ArendGroup) -> Boolean): Boolean {

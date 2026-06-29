@@ -31,38 +31,36 @@
   : log1+ (exp w - 1) (exp-w-bound w-small) = w \elim w-small
   | inP (q1, wU1, q1<=log2) \as w-small => \case (A.norm w).U-rounded wU1 \with {
     | inP (q, wU, q<q1) => log1p-expm1-radius wc (r>=0-derived q wU)
-        (log1+-asRA.log1p-conv-at-s (r>=0-derived q wU) (r-U-1-derived q<q1 q1<=log2))
+        (log1+.log1p-conv-at-s (r>=0-derived q wU) (r-U-1-derived q<q1 q1<=log2))
         (w-bound-derived q wU) (exp-w-bound w-small)
   }
   \where {
     -- | $\log(1 + \cdot) \circ (\exp - 1) = w$, derived via uniqueness of inverses in the substitution group.
     \private \lemma compose-coef-log1p-expm1 (k : Nat)
-      : fcompose log1p-coef exp-1.coef-Rat k = subst-ide k
-      => \let | log1p-eq-inverse : log1+.asFld = inverse exp-1.asFld
-                  => cancel_*-left exp-1.asFld $ exts (ext \lam k => compose-coef-expm1-log1p k) *> inv inverse-right
-              | log1p-times-expM1-eq-ide : log1+.asFld * exp-1.asFld = 1
+      : fcompose log1p-coef exp-1-coef k = subst-ide k
+      => \let | log1p-eq-inverse : log1+.asFld = inverse exp-1-coef.asFld
+                  => cancel_*-left exp-1-coef.asFld $ exts (ext \lam k => compose-coef-expm1-log1p k) *> inv inverse-right
+              | log1p-times-expM1-eq-ide : log1+.asFld * exp-1-coef.asFld = 1
                   => pmap (`* _) log1p-eq-inverse *> inverse-left
          \in pmap (\lam (s : FormalLineDiffeomorphism RatField) => s.f k) log1p-times-expM1-eq-ide
 
     \private \lemma coef-eq-helper {A : RealBanachAlgebra} (k : Nat)
-      : fcompose (\lam n => A.fromRat (log1p-coef n)) (\lam n => A.fromRat (exp-1.coef-Rat n)) k = subst-ide k
-      => compose-coef-fromRat log1p-coef exp-1.coef-Rat k *> pmap A.fromRat (compose-coef-log1p-expm1 k) *> exp-log1p.subst-ide_fromRat
+      : fcompose (\lam n => A.fromRat (log1p-coef n)) (\lam n => A.fromRat (exp-1-coef n)) k = subst-ide k
+      => compose-coef-fromRat log1p-coef exp-1-coef k *> pmap A.fromRat (compose-coef-log1p-expm1 k) *> exp-log1p.subst-ide_fromRat
 
     \private \lemma log1p-expm1-radius
       {A : RealBanachAlgebra} {w : A} (wc : A.IsCentral w)
       {r : ExUpperReal} (r>=0 : 0 <= r)
       (a-conv-at-r : IsConvUpperSeries (\lam n => A.norm (A.fromRat (log1p-coef n)) * ExUpperRealSemigroup.pow r n))
-      (b-bound-r : \Pi (N : Nat) -> partialSum (\lam k => A.norm (powerSeries (\lam n => A.fromRat (exp-1.coef-Rat n)) w k)) N <= r)
+      (b-bound-r : \Pi (N : Nat) -> partialSum (\lam k => A.norm (powerSeries (\lam n => A.fromRat (exp-1-coef n)) w k)) N <= r)
       (|exp-w-minus-ide|<1 : (A.norm (exp w - A.ide)).U 1)
       : log1+ (exp w - A.ide) |exp-w-minus-ide|<1 = w
-      => \let | log1p-sum => log1+-asRA.func-IsSeriesSum (ExUpperRealAbMonoid.<-rat.2 |exp-w-minus-ide|<1)
-              | compose-result : IsSeriesSum
-                  (\lam k => fcompose (\lam n => A.fromRat (log1p-coef n)) (\lam n => A.fromRat (exp-1.coef-Rat n)) k * pow w k)
+      => \let | compose-result : IsSeriesSum
+                  (\lam k => fcompose (\lam n => A.fromRat (log1p-coef n)) (\lam n => A.fromRat (exp-1-coef n)) k * pow w k)
                   (log1+ (exp w - A.ide) |exp-w-minus-ide|<1)
-                => transportInv (IsSeriesSum _) (\peval log1+ _ _) $
-                    compose-converges-radius wc A.fromRat_zro r>=0 a-conv-at-r
-                      exp-1.abs-conv b-bound-r (exp-1.seriesSum w) log1p-sum
-              | coef-id : (\lam k => fcompose (\lam n => A.fromRat (log1p-coef n)) (\lam n => A.fromRat (exp-1.coef-Rat n)) k * pow w k)
+                => compose-converges-radius wc A.fromRat_zro r>=0 a-conv-at-r
+                      exp-1-coef.abs-conv b-bound-r (exp-1-coef.seriesSum w) $ transportInv (IsSeriesSum _) (\peval log1+ _ _) powerSeriesSum-isSum
+              | coef-id : (\lam k => fcompose (\lam n => A.fromRat (log1p-coef n)) (\lam n => A.fromRat (exp-1-coef n)) k * pow w k)
                         = (\lam k => subst-ide k * pow w k)
                 => path \lam i k => coef-eq-helper k i * pow w k
          \in A.limit-unique (transport (IsSeriesSum __ _) coef-id compose-result) (subst-ide-seriesSum w)
@@ -87,25 +85,25 @@
          \in real_<_U.1 linarith
 
     \lemma term-bound {A : RealBanachAlgebra} {w : A} (q : Rat) (q>=0 : 0 <= q) (wU : (A.norm w).U q) (k : Nat)
-      : A.norm (powerSeries (\lam n => A.fromRat (exp-1.coef-Rat n)) w k) <= ExUpperReal.fromRat (exp-1.coef-Rat k * pow q k)
+      : A.norm (powerSeries (\lam n => A.fromRat (exp-1-coef n)) w k) <= ExUpperReal.fromRat (exp-1-coef k * pow q k)
       => A.norm_*_<=
           <=∘ ExUpperRealSemigroup.<=_*
-                (A.norm_fromRat <=∘ =_<= (pmap ExUpperReal.fromRat (RatField.abs-ofPos (exp-1.coef>=0 k))))
+                (A.norm_fromRat <=∘ =_<= (pmap ExUpperReal.fromRat (RatField.abs-ofPos (exp-1-coef.coef>=0 k))))
                 (A.norm_<=_pow <=∘ ExUpperRealSemigroup.pow_<= (ExUpperReal.<_<= wU))
-          <=∘ =_<= (pmap (_ *) (ExUpperRealSemigroup.rat-pow q>=0) *> ExUpperReal.*-rat (exp-1.coef>=0 k) (RatField.pow>=0 q>=0))
+          <=∘ =_<= (pmap (_ *) (ExUpperRealSemigroup.rat-pow q>=0) *> ExUpperReal.*-rat (exp-1-coef.coef>=0 k) (RatField.pow>=0 q>=0))
 
     \private \lemma w-bound-derived {A : RealBanachAlgebra} {w : A} (q : Rat) (wU : (A.norm w).U q) (N : Nat)
-      : partialSum (\lam k => A.norm (powerSeries (\lam n => A.fromRat (exp-1.coef-Rat n)) w k)) N <= exp (q : Real) - 1
+      : partialSum (\lam k => A.norm (powerSeries (\lam n => A.fromRat (exp-1-coef n)) w k)) N <= exp (q : Real) - 1
       => \let
         | q>=0 : 0 <= q => q>=0-from wU
-        | t-rat k => exp-1.coef-Rat k * RatField.pow q k
-        | t-real k => exp-1.coef-Rat k RealField.* RealField.pow q k
+        | t-rat k => exp-1-coef k * RatField.pow q k
+        | t-real k => exp-1-coef k RealField.* RealField.pow q k
         | t-real>=0 k : 0 <= t-real k
-          => RealField.<=_*_positive_positive (rat_real_<=.1 (exp-1.coef>=0 k)) $ RealField.pow>=0 (rat_real_<=.1 q>=0)
+          => RealField.<=_*_positive_positive (rat_real_<=.1 (exp-1-coef.coef>=0 k)) $ RealField.pow>=0 (rat_real_<=.1 q>=0)
         | iss : IsSeriesSum t-real (exp (q : Real) - 1)
           => transport (IsSeriesSum __ _)
-              (ext \lam k => pmap (`* RealField.pow (Real.fromRat q) k) (RealStoneC*Algebra_fromRat (exp-1.coef-Rat k)))
-              (exp-1.seriesSum (q : Real))
+              (ext \lam k => pmap (`* RealField.pow (Real.fromRat q) k) (RealStoneC*Algebra_fromRat (exp-1-coef k)))
+              (exp-1-coef.seriesSum (q : Real))
         | term-eq k : t-rat k = {Real} t-real k
           => inv RealField.*-rat *> pmap (_ *) (inv RealField.pow-rat)
         | partial-eq-Real : partialSum t-rat N = {Real} partialSum t-real N
@@ -119,6 +117,6 @@
     \private \lemma exp-w-bound {A : RealBanachAlgebra} {w : A}
                                 (w-small : A.norm w < log2) : (A.norm (exp w - A.ide)).U 1 \elim w-small
       | inP (q1, wU1, q1<=log2) => \case (A.norm w).U-rounded wU1 \with {
-        | inP (q, wU, q<q1) => seriesSum_norm_<= (exp-1.seriesSum w) (w-bound-derived q wU) (r-U-1-derived q<q1 q1<=log2)
+        | inP (q, wU, q<q1) => seriesSum_norm_<= (exp-1-coef.seriesSum w) (w-bound-derived q wU) (r-U-1-derived q<q1 q1<=log2)
       }
   }

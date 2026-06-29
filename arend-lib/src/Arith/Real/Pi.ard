@@ -10,6 +10,7 @@
 \import Arith.Trig.Real
 \import Function.Meta
 \import Meta
+\import Order.StrictOrder
 \import Paths
 \import Paths.Meta
 
@@ -18,10 +19,10 @@
   \where {
     -- | $\left|\tfrac{1}{m+2}\right| < 1$ — domain witness for $\arctan\tfrac{1}{m+2}$.
     \lemma ratio-norm-<1 (m : Nat)
-      : (RealAbGroup.abs (ratio 1 (suc (suc m)))).U 1
-      => transportInv (Real.U {__} 1)
+      : RealAbGroup.abs (ratio 1 (suc (suc m))) < 1
+      => transportInv (`< 1)
           (RealAbGroup.abs-ofPos (rat_real_<=.1 (RatField.<=-char linarith)))
-          (real_<_U.1 (rat_real_<.1 (RatField.<-char linarith)))
+          (rat_real_<.1 (RatField.<-char linarith))
   }
 
 -- | $\cos \pi_M = -1$.
@@ -62,3 +63,28 @@
     \lemma cos_pi/2 : cos (2 * pi/4) = 0
       => pmap cos linarith *> cos_+ *> pmap (\lam s => cos pi/4 * cos pi/4 - s * s) tan_pi/4 *> negative-right
   }
+
+
+
+-- | $\sin \pi = 0$.
+\lemma sin_pi : sin pi = {Real} 0
+  => pmap sin cos_pi.pi=4*pi/4
+    *> pmap sin (linarith : 4 * cos_pi.pi/4 = {Real} 2 * cos_pi.pi/4 + 2 * cos_pi.pi/4)
+         *> sin_+ {2 * cos_pi.pi/4} {2 * cos_pi.pi/4}
+              *> rewrite cos_pi.cos_pi/2 equation.cRing
+
+-- | $\cos(2\pi) = 1$.
+\lemma cos_two_pi : cos (2 * pi) = {Real} 1
+  => pmap cos linarith *> cos_+ *> rewrite (cos_pi, sin_pi) equation.cRing
+
+-- | $\sin(2\pi) = 0$.
+\lemma sin_two_pi : sin (2 * pi) = {Real} 0
+  => pmap sin linarith *> sin_+ {pi} {pi} *> rewrite (cos_pi, sin_pi) equation.cRing
+
+-- | $\cos$ is $2\pi$-periodic.
+\lemma cos_period {x : Real} : cos (x + 2 * pi) = cos x
+  => cos_+ *> rewrite (cos_two_pi, sin_two_pi) equation.cRing
+
+-- | $\sin$ is $2\pi$-periodic.
+\lemma sin_period {x : Real} : sin (x + 2 * pi) = sin x
+  => sin_+ *> rewrite (cos_two_pi, sin_two_pi) equation.cRing

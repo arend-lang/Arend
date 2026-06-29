@@ -1,0 +1,88 @@
+\import Algebra.Meta
+\import Algebra.Monoid
+\import Algebra.Ordered
+\import Algebra.Ring.FormalSeries.Derivative
+\import Analysis.PowerSeries
+\import Analysis.Series
+\import Arith.Int
+\import Arith.Nat
+\import Arith.Rat
+\import Arith.Real
+\import Arith.Real.LowerReal
+\import Arith.Real.UpperReal
+\import Data.Or
+\import Function.Meta
+\import Logic
+\import Meta
+\import Order.Biordered
+\import Order.LinearOrder
+\import Order.PartialOrder
+\import Order.StrictOrder
+\import Paths
+\import Paths.Meta
+\import Topology.BanachAlgebra
+\import Topology.NormedAbGroup.Real
+\import Topology.NormedRing
+
+\lemma derivative-convRadius {A : RealPreBanachAlgebra} {cs : Nat -> A} : convRadius (deriv cs) = convRadius cs
+  => <=-antisymmetric
+      (\lam {q} (inP (r,q<r,psc)) => \case LinearOrder.dec<_<= q 0 \with {
+        | inl q<0 => convRadius>=0 q<0
+        | inr q>=0 => inP (r, q<r, upperSeries-shift-conv.unshift
+          \have | r>=0 => q>=0 <=∘ <=-less q<r
+                | step : IsConvUpperSeries (\lam n => A.norm (cs (suc n)) * Monoid.pow r n)
+                  => series_<= (\lam n => transportInv (_ <= __ * _) (pmap A.norm A.natCoef_*_*n *> A.norm_*n {suc n})
+                      (transport2 (<=) (ExUpperRealSemigroup.ide-left *_>=0) (inv *-assoc) $
+                        <=_* (ExUpperReal.<=-rat.1 $ fromInt_<= (pos<=pos $ suc<=suc zero<=_) <=∘ RatField.abs>=id{suc n}) <=-refl)) psc
+          \in transport IsConvUpperSeries (ext \lam n => *-assoc *> pmap (_ *) (ExUpperReal.*-rat (RatField.pow>=0 r>=0) r>=0)) $
+                upperSeries-rdistr (\lam n => *_>=0) step {r} ExUpperReal.fromRat-bounded)
+      })
+      (\lam {q} (inP (s,q<s,psc)) => \case LinearOrder.dec<_<= q 0 \with {
+        | inl q<0 => convRadius>=0 q<0
+        | inr q>=0 => \case RatDenseOrder.isDense q<s \with {
+          | inP (r,q<r,r<s) =>
+            \have | s>0 => q>=0 <∘r q<r <∘ r<s
+                  | r>=0 => q>=0 <=∘ <=-less q<r
+                  | s'>=0 => RatField.finv>=0 (<=-less s>0)
+                  | lem1 {n} : 0 RatField.<= RatField.finv s * RatField.pow (r * RatField.finv s) n
+                    => RatField.<=_*-positive s'>=0 (RatField.pow>=0 $ RatField.<=_*-positive r>=0 s'>=0)
+                  | lem2 {n} : 0 RatField.<= RatField.abs (suc n) * RatField.finv s
+                    => RatField.<=_*-positive fromNat_>=0 s'>=0
+                  | rs'>=0 : 0 RatField.<= r * RatField.finv s
+                    => RatField.<=_*-positive r>=0 s'>=0
+                  | lem3 {n} : 0 RatField.<= suc (suc n) RatField.* RatField.finv (suc n)
+                    => RatField.<=_*-positive {suc (suc n)} {RatField.finv (suc n)} fromNat_>=0 (RatField.finv>=0 {suc n} fromNat_>=0)
+                  | S n : ExUpperReal => RatField.abs (suc n) * (RatField.finv s * RatField.pow (r * RatField.finv s) n)
+            \in inP (r, q<r, series_<=
+              (\lam n => =_<= $ unfold deriv $ pmap (`* _) (pmap A.norm A.natCoef_*_*n *> A.norm_*n {suc n}) *> *-assoc
+                *> pmap (_ *) (pmap (_ *) (pmap ExUpperReal.fromRat (inv
+                      (pmap (__ * _ * _) (RatField.finv-right (StrictPoset.>_/= s>0))
+                       *> pmap (`* _) (ide-left *> RatField.pow_*-comm)
+                       *> *-assoc
+                       *> pmap (_ *) (pmap (`* _) (inv RatField.finv_pow) *> RatField.finv-left (StrictPoset.>_/= $ RatField.pow>0 s>0))
+                       *> ide-right) *> pmap (`* _) *-assoc *> *-comm *> inv *-assoc)
+                    *> inv (ExUpperReal.*-rat (<=-less $ RatField.pow>0 s>0 {suc n}) lem1))
+                  *> inv *-assoc *> *-comm)
+                *> inv *-assoc
+                *> pmap (`* _) (ExUpperReal.*-rat fromNat_>=0 lem1))
+              (series_*-bounded {S}
+                (\lam n => *_>=0)
+                (convUpper-bounded {S}
+                  (\lam n => ExUpperReal.<=-rat.1 $ RatField.<=_*-positive fromNat_>=0 lem1)
+                  (\lam n => ExUpperReal.fromRat-bounded) $
+                  transport IsConvUpperSeries
+                    (ext \lam n => pmap (_ *) (ExUpperRealSemigroup.rat-pow $ RatField.<=_*-positive r>=0 s'>=0)
+                                   *> ExUpperReal.*-rat lem2 (RatField.pow>=0 rs'>=0) *> pmap ExUpperReal.fromRat *-assoc) $
+                    geometric-series-ratio {\lam n => RatField.abs (suc n) * RatField.finv s} (\lam n => ExUpperReal.<=-rat.1 lem2)
+                      ExUpperReal.fromRat-bounded (rat_real_<=.1 rs'>=0) (\lam n => suc (suc n) RatField.* RatField.finv (suc n))
+                      (\lam n => rat_real_<=.1 lem3)
+                      (\lam n => transportInv (_ ExUpperReal.<=) (ExUpperReal.*-rat lem2 lem3) $ ExUpperReal.<=-rat.1 $ =_<= $
+                        pmap (`* _) (inv $ RatField.*-assoc {suc (suc n)} {RatField.finv (suc n)}
+                          *> pmap (_ *) (RatField.finv-left {suc n} $ RatField.>_/= $ fromInt_< $ pos<pos NatOrder.zero<suc) *> ide-right)
+                        *> *-assoc *> *-comm)
+                      (transportInv (`< _) (ide-left *> pmap Real.fromRat *-comm) $ rat_real_<.1 $ RatField.<_rotate-left s>0 linarith)
+                      ratio-shift-one-limit)
+                ((upperSeries-shift-conv \lam n => *_>=0).1 psc)))
+        }
+      })
+  \where \open ExUpperRealSemigroup

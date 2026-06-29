@@ -180,7 +180,7 @@ public class TypecheckingOrderingListener extends BooleanComputationRunner imple
       case Concrete.MetaDefinition metaDefinition -> typechecked = new MetaTopDefinition(metaDefinition.getData());
       case null, default -> throw new IllegalStateException();
     }
-    typechecked.setStatus(Definition.TypeCheckingStatus.NEEDS_TYPE_CHECKING);
+    typechecked.setStatus(Definition.TypeCheckingStatus.HAS_ERRORS);
     definition.getData().setTypecheckedIfAbsent(typechecked);
     return typechecked;
   }

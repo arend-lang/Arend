@@ -40,6 +40,12 @@
       | ExtendedLowerReal => ExtendedLowerReal.fromRat x
       | L-inh => inP (x - 1, linarith)
 
+    \func infinity : LowerReal \cowith
+      | L a => \Sigma
+      | L-closed _ _ => ()
+      | L-rounded {q} _ => inP (q + 1, (), linarith)
+      | L-inh => inP (0,())
+
     \func BJoin (b : LowerReal) {J : \Set} (f : J -> ExtendedLowerReal) : LowerReal \cowith
       | L q => b.L q || Given (j : J) ((f j).L q)
       | L-closed e q'<q => \case \elim e \with {

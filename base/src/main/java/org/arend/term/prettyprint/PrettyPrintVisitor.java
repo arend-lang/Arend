@@ -1187,7 +1187,7 @@ public class PrettyPrintVisitor implements ConcreteExpressionVisitor<Precedence,
   }
 
   public void printIndent() {
-    myBuilder.append(" ".repeat(Math.max(0, myIndent)));
+    myBuilder.repeat(" ", Math.max(0, myIndent));
   }
 
   private void prettyPrintPrecedence(Precedence precedence) {
@@ -1272,7 +1272,7 @@ public class PrettyPrintVisitor implements ConcreteExpressionVisitor<Precedence,
     if (def.getData().getAccessModifier() == AccessModifier.PROTECTED) {
       myBuilder.append("\\protected ");
     }
-    boolean isUse = def instanceof Concrete.FunctionDefinition && ((Concrete.FunctionDefinition) def).getUseParent() != null
+    boolean isUse = def instanceof Concrete.FunctionDefinition && def.getUseParent() != null
         && def.getKind() != FunctionKind.LEVEL && def.getKind() != FunctionKind.COERCE && !def.getKind().isCoclause();
     if (isUse) {
       myBuilder.append("\\use ");

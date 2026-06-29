@@ -15,9 +15,23 @@ import static org.arend.term.concrete.ConcreteExpressionFactory.ref;
 
 public class ReferableRenamer extends Renamer {
   private final Map<Variable, LocalReferable> myMap = new HashMap<>();
+  private Variable myCanonicalThis = null;
 
   public void addNewName(Variable variable, LocalReferable referable) {
     myMap.put(variable, referable);
+  }
+
+  // Sets the binding that should render as the bare \this keyword. Returns the previous
+  // canonical so callers can save/restore around nested body traversal. Caller is
+  // responsible for restoring the previous value on exit.
+  public Variable setCanonicalThis(Variable canonical) {
+    Variable previous = myCanonicalThis;
+    myCanonicalThis = canonical;
+    return previous;
+  }
+
+  public Variable getCanonicalThis() {
+    return myCanonicalThis;
   }
 
   @Override
@@ -34,6 +48,9 @@ public class ReferableRenamer extends Renamer {
   }
 
   public Concrete.Expression getConcreteExpression(Variable variable) {
+    if (variable != null && variable == myCanonicalThis) {
+      return new Concrete.ThisExpression(null, null);
+    }
     return makeReference(myMap.get(variable));
   }
 

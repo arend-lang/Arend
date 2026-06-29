@@ -11,17 +11,35 @@
 \import Topology.CoverSpace
 \import Topology.CoverSpace.Complete
 \import Topology.RatherBelow
+\import Topology.TopSpace
 \open Set
 
-\func OpenCoverSpace (X : CoverSpace) {S : Set X} (So : X.isOpen S) : CoverSpace (Total S)
-  => ClosureCoverSpace isBasicCover basicCover-cover basicCover-regular
+\func OpenCoverSpace {X : CoverSpace} {S : Set X} (So : X.isOpen S) : CoverSpace (Total S) \cowith
+  | isCauchy => (C So).isCauchy
+  | cauchy-cover => (C So).cauchy-cover
+  | cauchy-top => (C So).cauchy-top
+  | cauchy-refine => (C So).cauchy-refine
+  | cauchy-glue => (C So).cauchy-glue
+  | isRegular Cc => cauchy-subset ((C So).isRegular Cc) \lam {V} (inP (U,CU,V<=<U)) => inP $ later (U, CU, unfolds V<=<U)
+  | TopSpace => TopSub S
+  | cauchy-open {W} =>
+    (\lam (inP (U,Uo,WU)) {x} Wx =>
+       \have x<=<U => <=<-dir-aux So $ X.open-char.1 Uo (rewrite WU in Wx)
+       \in closure-subset x<=<U \lam {V} h Vx {y} Vy => rewrite WU $ h (x, (idp, Vx)) Vy,
+     \lam c => (TopSub S).cover-open \lam {x} Wx => inP
+       (\lam y => single y.1 <=< extend W,
+        TopSub-map.func-cont X.interior,
+        <=<-conv-aux So (closure-subset (c Wx) $ later \lam {V} h (_,(idp,Vx)) => h Vx),
+        \lam {y} y<=<W => (<=<_<= y<=<W idp).2))
   \where {
     \open ClosurePrecoverSpace
+
+    \private \meta C So => ClosureCoverSpace isBasicCover (basicCover-cover So) basicCover-regular
 
     \func isBasicCover {X : CoverSpace} {S : Set X} (C : Set (Set (Total S))) : \Prop
       => ∃ (D : Set (Set X)) (X.isCauchy D || RegularClosure (single (single S)) D) (C = \lam U => ∃ (V : D) (U = restrict V))
 
-    \lemma basicCover-cover {C : Set (Set (Total S))} (Cc : isBasicCover C) (s : Total S) : ∃ (U : C) (U s) \elim Cc
+    \lemma basicCover-cover {X : CoverSpace} {S : Set X} (So : X.isOpen S) {C : Set (Set (Total S))} (Cc : isBasicCover C) (s : Total S) : ∃ (U : C) (U s) \elim Cc
       | inP (D, byLeft Dc, p) => \case cauchy-cover Dc s.1 \with {
         | inP (V,DV,Vs) => rewrite p $ inP (_, inP (V, DV, idp), Vs)
       }
@@ -29,7 +47,7 @@
         | inP (U,DU,s<=<U) => rewrite p $ inP (_, inP (U, DU, idp), <=<_<= s<=<U idp)
       }
 
-    \lemma basicCover-regular {C : Set (Set (Total S))} (Cc : isBasicCover C) : Closure isBasicCover \lam V => ∃ (U : C) (Closure isBasicCover \lam W => Given (V ∧ W) -> W ⊆ U) \elim Cc
+    \lemma basicCover-regular {X : CoverSpace} {S : Set X} {C : Set (Set (Total S))} (Cc : isBasicCover C) : Closure isBasicCover \lam V => ∃ (U : C) (Closure isBasicCover \lam W => Given (V ∧ W) -> W ⊆ U) \elim Cc
       | inP (D,Dc,p) => closure-subset (makeBasicCover $ ||.map isRegular (regular-closure-extends __ idp) Dc) \lam {V'} => \case \elim __ \with {
         | inP (V, inP (U,DU,V<=<U), V'=V) => inP (restrict U, rewrite p $ inP (U, DU, idp), closure-subset (makeBasicCover {X} $ byLeft V<=<U) \lam {W'} => \case \elim __ \with {
           | inP (W,h,W'=W) => rewrite (V'=V,W'=W) \lam (s,t) => h (s.1,t) __
@@ -51,23 +69,32 @@
         }
       }
 
-    \func func (X : CoverSpace) {S : Set X} (So : X.isOpen S) : PrecoverMap (OpenCoverSpace X So) X __.1 \cowith
+    \func func {X : CoverSpace} {S : Set X} (So : X.isOpen S) : CoverMap (OpenCoverSpace So) X __.1 \cowith
       | func-cover Dc => makeBasicCover (byLeft Dc)
 
-    \lemma <=<-conv (X : CoverSpace) {S : Set X} (So : X.isOpen S) {x' : Total S} {U' : Set (Total S)} (x'<=<U' : single x' <=< {OpenCoverSpace X So} U') : single x'.1 <=< extend U'
-      => \case closure-filter {OpenCoverSpace X So} {isBasicCover} (\new SetFilter {
-           | F V' => single x'.1 <=< extend V'
+    \private \lemma <=<-dir-aux {X : CoverSpace} {S : Set X} (So : X.isOpen S) {x : Total S} {U : Set X} (x<=<U : single x.1 <=< U) : single x <=< {C So} restrict U
+      => closure-subset (makeBasicCover (byLeft (unfolds in x<=<U))) $ later \lam {_} (inP (V, h, idp)) (_,(idp,Vx)) {y} Vy => h (x.1, (idp, Vx)) Vy
+
+    \private \lemma <=<-conv-aux {X : CoverSpace} {S : Set X} (So : X.isOpen S) {x : Total S} {U : Set (Total S)} (x<=<U : single x <=< {C So} U) : single x.1 <=< extend U
+      => \case closure-filter {C So} {isBasicCover} (\new SetFilter {
+           | F V => single x.1 <=< extend V
            | filter-mono q p => <=<-left q (extend-mono p)
-           | filter-top => <=<-left (X.open-char.1 So x'.2) \lam Sx => (Sx,())
+           | filter-top => <=<-left (X.open-char.1 So x.2) \lam Sx => (Sx,())
            | filter-meet p q => rewrite extend_meet (RatherBelow.<=<_meet-same p q)
          }) (\case \elim __ \with {
-           | inP (D,e,p) => \have (inP (V,DV,x'<=<V)) : ∃ (V : D) (single x'.1 <=< V) => \case \elim e \with {
-             | byLeft Dc => CoverSpace.cauchy-regular-cover Dc x'.1
-             | byRight Dr => closure-neighborhood (\lam q => rewriteI q $ inP (S, idp, X.open-char.1 So x'.2)) Dr
-           } \in rewrite p $ inP (_, inP (V, DV, idp), RatherBelow.<=<_meet-same (X.open-char.1 So x'.2) x'<=<V)
-         }) x'<=<U' \with {
-           | inP (V',h,x'<=<V') => <=<-left x'<=<V' $ extend-mono $ h (x', (idp, transport V' (ext idp) (<=<_<= x'<=<V' idp).2))
+           | inP (D,e,p) => \have (inP (V,DV,x<=<V)) : ∃ (V : D) (single x.1 <=< V) => \case \elim e \with {
+             | byLeft Dc => CoverSpace.cauchy-regular-cover Dc x.1
+             | byRight Dr => closure-neighborhood (\lam q => rewriteI q $ inP (S, idp, X.open-char.1 So x.2)) Dr
+           } \in rewrite p $ inP (_, inP (V, DV, idp), RatherBelow.<=<_meet-same (X.open-char.1 So x.2) x<=<V)
+         }) x<=<U \with {
+           | inP (V,h,x<=<V) => <=<-left x<=<V $ extend-mono $ h (x, (idp, transport V (ext idp) (<=<_<= x<=<V idp).2))
          }
+
+    \lemma <=<-dir {X : CoverSpace} {S : Set X} (So : X.isOpen S) {x : Total S} {U : Set X} (x<=<U : single x.1 <=< U) : single x <=< {OpenCoverSpace So} restrict U
+      => unfolds (<=<-dir-aux So x<=<U)
+
+    \lemma <=<-conv {X : CoverSpace} {S : Set X} (So : X.isOpen S) {x : Total S} {U : Set (Total S)} (x<=<U : single x <=< {OpenCoverSpace So} U) : single x.1 <=< extend U
+      => <=<-conv-aux So (unfolds x<=<U)
   }
 
 \func filter-extend {X : \Set} (U : Set X) (F : SetFilter (Total U)) : SetFilter X \cowith
@@ -82,22 +109,23 @@
     | inP (s,Us) => inP (s.1,Us)
   }
 
-\func cauchy-filter-extend (X : CoverSpace) {S : Set X} (So : X.isOpen S) (F : CauchyFilter (OpenCoverSpace X So)) : CauchyFilter X \cowith
+\func cauchy-filter-extend {X : CoverSpace} {S : Set X} (So : X.isOpen S) (F : CauchyFilter (OpenCoverSpace So)) : CauchyFilter X \cowith
   | ProperFilter => proper-filter-extend S F
   | isCauchyFilter Cc => \case F.isCauchyFilter (OpenCoverSpace.makeBasicCover $ byLeft Cc) \with {
     | inP (U', inP (U,CU,U'=U), FU') => inP (U, CU, rewrite U'=U in FU')
   }
 
 \func OpenCompleteCoverSpace {X : CompleteCoverSpace} {S : Set X} (So : X.isOpen S) : CompleteCoverSpace (Total S) \cowith
-  | SeparatedCoverSpace => Separated-char (OpenCoverSpace X So) 3 0 $ inP (X, func X So, \lam p => ext p)
+  | CoverSpace => OpenCoverSpace So
+  | isSeparatedCoverSpace => (Separated-char (OpenCoverSpace So) 3 0 $ inP (X, func So, \lam p => ext p)).isSeparatedCoverSpace
   | isComplete F =>
-    \let | F' => cauchy-filter-extend X So F
+    \let | F' => cauchy-filter-extend So F
          | x => X.filter-point F'
          | (inP (U', inP (U, inP (_, idp, U<=<S), U'=U), FU')) => isCauchyFilter {F} $ makeBasicCover $ byRight $ regular-closure-extends (regular-closure idp) idp
-    \in inP ((x, <=<_<= (X.filter-point-elem {F'} U<=<S $ rewrite U'=U in FU') idp), \lam {V'} x<=<V' => filter-mono (X.filter-point-sub (<=<-conv X So x<=<V')) \lam s => transport V' (ext idp) s.2)
+    \in inP ((x, <=<_<= (X.filter-point-elem {F'} U<=<S $ rewrite U'=U in FU') idp), \lam {V'} x<=<V' => filter-mono (X.filter-point-sub (<=<-conv So x<=<V')) \lam s => transport V' (ext idp) s.2)
   \where \open OpenCoverSpace
 
-\func ClosedCompleteCoverSpace {X : CompleteCoverSpace} {S : Set X} (Sc : X.IsClosed S) : CompleteCoverSpace (Total S) \cowith
+\func ClosedCoverSpace {X : CompleteCoverSpace} {S : Set X} (Sc : X.IsClosed S) : CompleteCoverSpace (Total S) \cowith
   | CoverSpace => CoverTransfer __.1
   | isSeparatedCoverSpace f => ext $ isSeparatedCoverSpace \lam Cc => \case f (PrecoverTransfer.makeCauchy Cc) \with {
     | inP (_, inP (U,CU,idp), s) => inP (U, CU, s)

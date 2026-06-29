@@ -71,7 +71,7 @@ private fun StringBuilder.processDocCommentElement(
                 append("<div class=\"row\"> ")
             }
         }
-        elementType == TokenType.WHITE_SPACE || elementType == DOC_TABS -> append(" ")
+        elementType == TokenType.WHITE_SPACE || elementType == DOC_TABS || elementType == DOC_NEXT_LINE -> append(" ")
         elementType == DOC_CODE -> append("<code>${docElement.text.htmlEscape()}</code>")
         elementType == DOC_LATEX_CODE ->
             append(getHtmlLatexCode("image${counterLatexImages++}",

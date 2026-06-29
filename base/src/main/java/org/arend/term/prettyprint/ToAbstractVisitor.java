@@ -93,7 +93,7 @@ public class ToAbstractVisitor extends BaseExpressionVisitor<Void, Concrete.Expr
       expression.accept((ConflictDefinitionRenamer) definitionRenamer, null);
     }
     CollectFreeVariablesVisitor collector = new CollectFreeVariablesVisitor(definitionRenamer);
-    Set<Variable> variables = new HashSet<>();
+    Set<Variable> variables = new LinkedHashSet<>();
     NormalizationMode mode = config.getNormalizationMode();
     if (mode != null && subexpr == null) {
       expression = expression.normalize(mode);
@@ -101,7 +101,30 @@ public class ToAbstractVisitor extends BaseExpressionVisitor<Void, Concrete.Expr
     expression.accept(collector, variables);
     ToAbstractVisitor visitor = subexpr == null ? new ToAbstractVisitor(prettifier, config, definitionRenamer, collector, renamer) : new ToAbstractWithSubexprVisitor(prettifier, config, definitionRenamer, collector, renamer, subexpr, levels);
     renamer.generateFreshNames(variables);
+    registerUniqueThisBinding(variables, renamer);
     return visitor.convertExpr(expression);
+  }
+
+  // If the free-variable set contains exactly one ClassCallBinding, register it on the
+  // renamer so it is rendered as the bare \this keyword instead of a numbered identifier.
+  // Multiple ClassCallBindings means nested class scopes — leave the numbered output so
+  // distinct bindings stay distinguishable.
+  private static boolean isThisBinding(Variable v) {
+    if (v instanceof ClassCallExpression.ClassCallBinding) return true;
+    if (v instanceof Binding b && b.isHidden() && "this".equals(b.getName())) return true;
+    return false;
+  }
+
+  private static void registerUniqueThisBinding(Set<Variable> variables, ReferableRenamer renamer) {
+    Variable single = null;
+    int count = 0;
+    for (Variable v : variables) {
+      if (isThisBinding(v)) {
+        count++;
+        single = v;
+      }
+    }
+    if (count == 1) renamer.setCanonicalThis(single);
   }
 
   public static List<Concrete.TypeParameter> convert(DependentLink params, PrettyPrinterConfig config) {
@@ -110,11 +133,12 @@ public class ToAbstractVisitor extends BaseExpressionVisitor<Void, Concrete.Expr
       definitionRenamer = new ConflictDefinitionRenamer();
     }
     CollectFreeVariablesVisitor collector = new CollectFreeVariablesVisitor(definitionRenamer);
-    Set<Variable> variables = new HashSet<>();
+    Set<Variable> variables = new LinkedHashSet<>();
     collector.visitParameters(params, variables);
     ReferableRenamer renamer = new ReferableRenamer();
     ToAbstractVisitor visitor = new ToAbstractVisitor(null, config, definitionRenamer, collector, renamer);
     renamer.generateFreshNames(variables);
+    registerUniqueThisBinding(variables, renamer);
     List<Concrete.TypeParameter> result = new ArrayList<>();
     visitor.visitDependentLink(params, result, true, true);
     return result;
@@ -139,11 +163,12 @@ public class ToAbstractVisitor extends BaseExpressionVisitor<Void, Concrete.Expr
       definition.accept((ConflictDefinitionRenamer) definitionRenamer, null);
     }
     CollectFreeVariablesVisitor collector = new CollectFreeVariablesVisitor(definitionRenamer);
-    Set<Variable> variables = new HashSet<>();
+    Set<Variable> variables = new LinkedHashSet<>();
     definition.accept(collector, variables);
     ReferableRenamer renamer = new ReferableRenamer();
     ToAbstractVisitor visitor = new ToAbstractVisitor(null, config, definitionRenamer, collector, renamer);
     renamer.generateFreshNames(variables);
+    registerUniqueThisBinding(variables, renamer);
     return definition.accept(visitor, null);
   }
 
@@ -1162,7 +1187,12 @@ public class ToAbstractVisitor extends BaseExpressionVisitor<Void, Concrete.Expr
       for (ClassDefinition superClass : def.getSuperClasses()) {
         if (superClass.isImplemented(field)) return;
       }
-      elements.add(new Concrete.ClassFieldImpl(null, field.getRef(), convertExpr(impl.getExpression()), null));
+      Variable saved = myRenamer.setCanonicalThis(impl.getBinding());
+      try {
+        elements.add(new Concrete.ClassFieldImpl(null, field.getRef(), convertExpr(impl.getExpression()), null));
+      } finally {
+        myRenamer.setCanonicalThis(saved);
+      }
     });
     // TODO: Add other elements of the class
     return new Concrete.ClassDefinition(def.getReferable(), pair.proj1, pair.proj2, def.isRecord(), false, superClasses, elements);
@@ -1178,14 +1208,19 @@ public class ToAbstractVisitor extends BaseExpressionVisitor<Void, Concrete.Expr
       kind = sort == null || sort.isProp() ? ClassFieldKind.FIELD : ClassFieldKind.ANY;
     }
 
-    List<Concrete.TypeParameter> parameters = new ArrayList<>();
-    Concrete.Expression type = convertExpr(field.getType().getCodomain());
-    while (type instanceof Concrete.PiExpression) {
-      parameters.addAll(((Concrete.PiExpression) type).getParameters());
-      type = ((Concrete.PiExpression) type).getCodomain();
-    }
+    Variable saved = myRenamer.setCanonicalThis(field.getType().getParameters());
+    try {
+      List<Concrete.TypeParameter> parameters = new ArrayList<>();
+      Concrete.Expression type = convertExpr(field.getType().getCodomain());
+      while (type instanceof Concrete.PiExpression) {
+        parameters.addAll(((Concrete.PiExpression) type).getParameters());
+        type = ((Concrete.PiExpression) type).getCodomain();
+      }
 
-    return new Concrete.ClassField(field.getReferable(), field.getReferable().isExplicitField(), kind, parameters, type, field.getTypeLevel() == null ? null : convertExpr(field.getTypeLevel()), false);
+      return new Concrete.ClassField(field.getReferable(), field.getReferable().isExplicitField(), kind, parameters, type, field.getTypeLevel() == null ? null : convertExpr(field.getTypeLevel()), false);
+    } finally {
+      myRenamer.setCanonicalThis(saved);
+    }
   }
 
   @Override

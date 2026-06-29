@@ -647,7 +647,7 @@ class ExpressionDeserialization {
     // FieldCallExpression.make unfolds NewExpression arguments (returns the field
     // implementation directly), which loses information when deserializing expressions
     // that were originally stored as FieldCallExpression(field, NewExpression).
-    return FieldCallExpression.makeExact(classField, readExpr(proto.getExpression()));
+    return FieldCallExpression.make(classField, readExpr(proto.getExpression()));
   }
 
   private SmallIntegerExpression readSmallInteger(ExpressionProtos.Expression.SmallInteger proto) {

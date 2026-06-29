@@ -11,10 +11,12 @@ import com.intellij.psi.impl.source.resolve.FileContextUtil
 import com.intellij.psi.util.CachedValueProvider
 import com.intellij.psi.util.CachedValuesManager
 import com.intellij.psi.util.PsiModificationTracker
+import com.jetbrains.edu.learning.StudyTaskManager
 import org.arend.ArendFileTypeInstance
 import org.arend.ArendIcons
 import org.arend.ArendLanguage
 import org.arend.IArendFile
+import org.arend.educational.ArendConfigurator.Companion.getStudyLibrary
 import org.arend.ext.prettyprinting.doc.Doc
 import org.arend.ext.prettyprinting.doc.DocFactory
 import org.arend.ext.reference.Precedence
@@ -77,6 +79,14 @@ class ArendFile(viewProvider: FileViewProvider) : PsiFileBase(viewProvider, Aren
                 return@getCachedValue cachedValue(null)
             }
             val fileIndex = ProjectFileIndex.getInstance(project)
+
+            if (StudyTaskManager.getInstance(project).course != null) {
+                val studyLibrary = getStudyLibrary(project)
+                if (studyLibrary != null && studyLibrary.yaml.isValid) {
+                    project.registerStudyLibrary()
+                    return@getCachedValue cachedValue(studyLibrary)
+                }
+            }
 
             val module = runReadAction { fileIndex.getModuleForFile(virtualFile) }
             if (module != null) {

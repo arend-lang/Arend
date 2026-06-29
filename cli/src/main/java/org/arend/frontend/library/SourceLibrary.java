@@ -11,8 +11,6 @@ import org.arend.util.Version;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.io.IOException;
-import java.io.InputStream;
 import java.util.List;
 
 public abstract class SourceLibrary implements ArendLibrary {
@@ -93,20 +91,5 @@ public abstract class SourceLibrary implements ArendLibrary {
    */
   public boolean supportsPersisting() {
     return !isExternalLibrary();
-  }
-
-  /**
-   * Open an auxiliary file shipped alongside {@code arend.yaml} (e.g. a doc under
-   * {@code .aiGuide/}). The path is relative to the library root and uses forward
-   * slashes as separators; it must not be absolute or contain {@code ..}.
-   *
-   * <p>Returns {@code null} if no such file exists. Throws {@link IOException} only
-   * if the backing storage itself can't be read (e.g. a corrupt zip).
-   *
-   * <p>The default implementation returns {@code null}; subclasses that have a
-   * notion of "library root" override this.
-   */
-  public @Nullable InputStream openAuxFile(@NotNull String relPath) throws IOException {
-    return null;
   }
 }

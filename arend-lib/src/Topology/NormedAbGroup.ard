@@ -121,8 +121,12 @@
   \default norm-ext p => dist-ext $ norm-dist *> pmap norm (pmap (_ +) negative_zro *> zro-right) *> p
 }
 
-\class BoundedExPseudoNormedAbGroup \extends ExPseudoNormedAbGroup
+\class BoundedExPseudoNormedAbGroup \extends ExPseudoNormedAbGroup {
   | norm-bounded (x : E) : (norm x).IsBounded
+
+  \lemma distBounded : IsDistBounded
+    => \lam x y => rewrite norm-dist (norm-bounded _)
+}
 
 \func bnorm {X : BoundedExPseudoNormedAbGroup} (x : X) : UpperReal \cowith
   | ExUpperReal => norm x

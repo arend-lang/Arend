@@ -26,7 +26,6 @@ import org.arend.util.appExprToConcrete
 class RedundantParensPass(file: ArendFile, editor: Editor):
     BasePass(file, editor, "Arend redundant parens annotator", TextRange(0, editor.document.textLength)){
     override fun collectInformationWithProgress(progress: ProgressIndicator) {
-        super.applyInformationWithProgress()
         val tuples = file.descendantsOfType<ArendTuple>().toList()
         for (element in tuples) {
             progress.checkCanceled()

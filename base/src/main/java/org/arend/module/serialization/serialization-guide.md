@@ -94,16 +94,56 @@ the invariant holds and the fallbacks are required.
    much earlier than in `ArendLibRoundTripTest` (which only tests
    self-consistency, not interaction with fresh typechecking).
 
-## Diagnostic system properties
+## Known issues
 
-All gated on system properties; zero cost when unset.
+Unfixed brittle spots in the layer. None have a known repro in arend-lib
+today; they're recorded so that the next person who sees the matching
+symptom has a pointer instead of starting cold.
 
-| Flag | Effect |
-|---|---|
-| `-Darend.subst.maxDepth=N` | `SubstVisitor.visitPi` throws `SubstDepthExceeded` at recursion depth N instead of blowing the stack. |
-| `-Darend.instance.maxDepth=N` | `GlobalInstancePool.findInstance` throws `InstanceDepthExceeded` when instance-search recursion exceeds N. |
-| `-Darend.ordering.probeOrder=<substr>` | `Ordering.order` logs every `order(def)` call whose long name contains the substring, with typechecked state and SKIP/REORDER decision. |
+### `getClassParameters` truncates at deserialized super-classes
 
-These are intentionally permanent. They cost nothing when their flags are
-unset and pay for themselves the first time a deserialization-induced
-infinite recursion or substitution cycle needs diagnosing.
+`CollectDefCallsVisitor.getClassParameters` walks a class's super-chain
+collecting **parameter-fields** (fields from a class header like
+`\class Map (C : Precat) { … }`) and feeds their types into
+`addParametersClassReferences`, which calls `addInstances(...)` for any
+class-typed parameter type. The super-class loop silently drops any super
+whose concrete is `null` — i.e. supers loaded from `.arc`. Two sibling
+sites in the same file (`fillInstanceMap` and
+`addCoreParameterClassReferences`) already carry the deserialized
+fallback; `getClassParameters` is the lone unpatched site.
+
+Symptom if triggered: `Cannot infer an instance of class X` at a
+reference site where a source-side class extends a deserialized class
+that carries a class-typed header parameter, with an `X`-classified
+`\instance` in scope.
+
+Not fixed because parameter-fields are sparse in arend-lib and the
+realistic instances (`Iso`/`Mono`/`SplitMono` referencing `Precat`) are
+already covered by the source class's own `addParametersClassReferences`
+walk. The fix also has an architectural choice worth thinking through
+when there's a concrete failure to validate against:
+`getClassParameters` returns concrete parameters, and the deserialized
+side has only core fields — either side-effect at the truncation point
+(call `addInstances` directly for class-typed core fields) or supplement
+at the call site (walk the core super-chain after the concrete walk).
+
+### Java-meta short-circuit in `visitReference`
+
+`CollectDefCallsVisitor.visitReference`'s `metaRef` branch only walks
+the meta's concrete `body`. When `body` is `null` (Java-implemented
+metas without a concrete body), the branch returns without exploring
+any dependencies. The surrounding parameter walk currently covers
+everything those metas demand, so the gap is dormant. Fixing properly
+would require a `MetaDefinition.getDependencyClasses()` SPI — defer
+until a Java meta actually demands classes that aren't on its
+surrounding function's signature.
+
+### `BinarySource.setDefinitionListener` has zero callers
+
+`BinarySource.setDefinitionListener` is declared and implemented in
+`StreamBinarySource`, but no production caller wires it up. This is
+the same "setter with no callers" shape that `setKeyRegistry` had
+before being plumbed in — flagged for symmetry. If a deserialized
+definition ever needs the listener's `loaded(...)` callback to fire
+for a side effect, that path is currently broken the same way the
+irreflexivity userData was before the key-registry plumb-through.

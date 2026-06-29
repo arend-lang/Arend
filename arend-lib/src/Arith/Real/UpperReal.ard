@@ -151,6 +151,10 @@
     => ExUpperRealAbMonoid.<=-antisymmetric (\lam {d} xy<d => *_U_<.2 $ inP (x, <=-rat.1 <=-refl, x>=0, y, <=-rat.1 <=-refl, y>=0, xy<d)) (\lam {d} xy<d => \case *_U.1 xy<d \with {
       | inP (a,x<a,a>0,b,y<b,b>0,ab<d) => RatField.<=_*_positive-left (<=-less x<a) y>=0 <∘r <=-less (<_*_positive-right a>0 y<b) <∘r ab<d
     })
+
+  \lemma *-bounded {x y : ExUpperReal} (xb : x.IsBounded) (yb : y.IsBounded) : (x * y).IsBounded \elim xb, yb
+    | inP (a,x<a), inP (b,y<b) => inP ((a ∨ 1) RatField.* (b ∨ 1), *_U_<=.2 $
+      inP (a ∨ 1, x.U_<= x<a join-left, idp <∘l join-right, b ∨ 1, y.U_<= y<b join-left, idp <∘l join-right, <=-refl))
 }
 
 \instance ExUpperRealPointed : Pointed ExUpperReal
@@ -498,7 +502,7 @@
     \lemma finv_<-rotate-left {a : Rat} (a>0 : 0 RatField.< a) {b c : ExUpperReal} (c>0 : 0 < c) (p : b < a * c) : RatField.finv a * b < c
       => transport (_ <) (inv ExUpperRealSemigroup.*-assoc *> pmap (`* c) (*-rat (<=-less $ RatField.finv>0 a>0) (<=-less a>0) *> pmap fromRat (RatField.finv-left $ RatField.>_/= a>0)) *> ide-left (<=-less c>0)) $ <_*-right (RatField.finv>0 a>0) p $ <_*-positive (<-rat.2 a>0) c>0
 
-    \func pow (x : ExUpperReal) (n : Nat) : ExUpperReal \elim n
+    \protected \func pow (x : ExUpperReal) (n : Nat) : ExUpperReal \elim n
       | 0 => 1
       | suc n => pow x n * x
 

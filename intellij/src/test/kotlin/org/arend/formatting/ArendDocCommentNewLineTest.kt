@@ -81,4 +81,22 @@ class ArendDocCommentNewLineTest : ArendFormatterTestBase() {
                 " - \n" +
                 " -}\n" +
                 "\\class Empty")
+
+    fun testDocCommentNextLine() = checkNewLine(
+        "{- | text{-caret-}\n" +
+                "   text2\n" +
+                " -}",
+        "{- | text\n" +
+                "   {-caret-}\n" +
+                "   text2\n" +
+                " -}")
+
+    fun testDocCommentNextLine2() = checkNewLine(
+        "{- | text\n" +
+                "   text2{-caret-}\n" +
+                " -}",
+        "{- | text\n" +
+                "   text2\n" +
+                " - {-caret-}\n" +
+                " -}")
 }

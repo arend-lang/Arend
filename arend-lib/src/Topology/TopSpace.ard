@@ -235,6 +235,9 @@
 \func TopSub {X : TopSpace} (S : Set X) : TopSpace (Set.Total S)
   => TopTransfer __.1
 
+\lemma TopSub-map {X : TopSpace} {S : Set X} : ContMap (TopSub S) X __.1
+  => TopTransfer-map __.1
+
 \lemma TopSub-func {X Y : TopSpace} (f : ContMap X Y) {U : Set X} {V : Set Y} (p : ∀ {x : U} (V (f x))) : ContMap (TopSub U) (TopSub V) \lam s => (f s.1, p s.2) \cowith
   | func-cont {_} (inP (V,Vo,idp)) => inP (f ^-1 V, func-cont Vo, idp)
 

@@ -81,8 +81,10 @@ public class ArendLibPartialRoundTripTest {
    *   <li>{@code true} (default) — run a full from-source typecheck first, then count
    *   only errors in Phase 3 that don't appear in the baseline as "secondary".</li>
    *   <li>{@code false} — skip the baseline pass entirely; the test passes iff Phase 3
-   *   produced no errors in modules <em>outside</em> the cone. Errors in cone modules
-   *   are ignored.</li>
+   *   produced no non-{@code GOAL} errors in modules <em>outside</em> the cone. Errors
+   *   in cone modules are ignored, and {@code GOAL}-level errors anywhere are tolerated
+   *   (arend-lib commits routinely carry GOALs but not outright ERRORs, so the
+   *   no-baseline fast path treats them as part of the accepted ground state).</li>
    * </ul>
    */
   private static final boolean RUN_BASELINE = false;
@@ -563,15 +565,6 @@ public class ArendLibPartialRoundTripTest {
           msg.append("Module ").append(shortTag).append(" crashed: ").append(t)
               .append("\nLast SCCs attempted in this module:\n  ")
               .append(String.join("\n  ", perModuleItems));
-          if (t instanceof org.arend.core.subst.SubstVisitor.SubstDepthExceeded sde) {
-            msg.append("\nCycling PiExpression: ").append(describePi(sde.cyclingPi));
-          }
-          if (t instanceof org.arend.typechecking.instance.pool.GlobalInstancePool.InstanceDepthExceeded ide) {
-            msg.append("\nInstance-search cycle on class: ")
-                .append(ide.searchClass == null ? "<null>" : ide.searchClass.getName())
-                .append(" classifying=").append(ide.classifyingExpression)
-                .append(ide.chainInfo);
-          }
           // Dump the bottom of the stack trace so we can see which call chain led to the crash.
           StringWriter sw = new StringWriter();
           t.printStackTrace(new PrintWriter(sw));
@@ -615,6 +608,10 @@ public class ArendLibPartialRoundTripTest {
       for (GeneralError err : entry.getValue()) {
         String key = errorKey(err);
         if (RUN_BASELINE && base.contains(key)) continue;
+        // No baseline: arend-lib commits are allowed to carry GOALs in fresh modules
+        // (a non-closed goal is a "TODO" marker, not a serialization regression), so
+        // we tolerate them. Real ERROR-level diagnostics still fail the test.
+        if (!RUN_BASELINE && err.level == GeneralError.Level.GOAL) continue;
         if (!emitted.add(key)) continue;
         String pos = renderErrorPosition(err);
         String cls = err instanceof org.arend.typechecking.error.local.CoreErrorWrapper w
@@ -1086,27 +1083,6 @@ public class ArendLibPartialRoundTripTest {
   private static String safeRender(Object o) {
     if (o == null) return "null";
     try { return o.toString(); } catch (Throwable t) { return "<print failed: " + t + ">"; }
-  }
-
-  private static String describePi(org.arend.core.expr.PiExpression pi) {
-    if (pi == null) return "null";
-    StringBuilder sb = new StringBuilder();
-    sb.append("hash=@").append(System.identityHashCode(pi))
-        .append(" params=").append(pi.getParameters())
-        .append(" codomain.class=").append(pi.getCodomain() == null ? "null" : pi.getCodomain().getClass().getSimpleName());
-    if (pi.getCodomain() instanceof org.arend.core.expr.PiExpression nested) {
-      sb.append(" codomain.hash=@").append(System.identityHashCode(nested));
-      sb.append(" SAME=").append(nested == pi);
-    }
-    try {
-      var cfg = new org.arend.ext.prettyprinting.PrettyPrinterConfig() {};
-      String rendered = pi.prettyPrint(cfg).toString();
-      if (rendered.length() > 300) rendered = rendered.substring(0, 300) + "…";
-      sb.append(" printed=").append(rendered);
-    } catch (Throwable ignored) {
-      sb.append(" printed=<print-failed>");
-    }
-    return sb.toString();
   }
 
   private void logFatal(String label, Throwable t, List<String> lastItems) {

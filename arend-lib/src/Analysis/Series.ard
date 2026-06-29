@@ -187,12 +187,16 @@
 \lemma upperSeries-shift-conv {S : Series ExUpperReal} (S>=0 : \Pi (j : Nat) -> 0 <= S j) : IsConvUpperSeries S <-> IsConvUpperSeries \lam n => S (suc n)
   => (\lam c eps>0 => \case c eps>0 \with {
     | inP (M,h) => inP (M, \lam M<=n => midSum_<=-left id<=suc S>=0 $ h (M<=n <=∘ id<=suc))
-  }, \lam c eps>0 => \case c eps>0 \with {
-    | inP (M,h) => inP (suc M, \lam {n} => \case \elim n \with {
-      | 0 => \lam p => absurd linarith
-      | suc n => \lam p => h (suc<=suc.conv p)
-    })
-  })
+  }, unshift)
+  \where {
+    \lemma unshift (c : IsConvUpperSeries \lam n => S (suc n)) : IsConvUpperSeries S
+      => \lam eps>0 => \case c eps>0 \with {
+        | inP (M,h) => inP (suc M, \lam {n} => \case \elim n \with {
+          | 0 => \lam p => absurd linarith
+          | suc n => \lam p => h (suc<=suc.conv p)
+        })
+      }
+  }
 
 \lemma upperSeries-shifts-conv {S : Series ExUpperReal} (S>=0 : \Pi (j : Nat) -> 0 <= S j) (N : Nat) : IsConvUpperSeries S <-> IsConvUpperSeries \lam n => S (n + N) \elim N
   | 0 => <->refl
@@ -337,7 +341,7 @@
       }
   }
 
-\lemma convUpper-bounded {S : Series ExUpperReal} (S>=0 : \Pi (n : Nat) -> 0 <= S n) (Sb : \Pi (n : Nat) -> ∃ (S n).U) (Sc : IsConvUpperSeries S)
+\lemma convUpper-bounded {S : Series ExUpperReal} (S>=0 : \Pi (n : Nat) -> 0 <= S n) (Sb : \Pi (n : Nat) -> (S n).IsBounded) (Sc : IsConvUpperSeries S)
   : IsBoundedUpperSeries S
   => \case Sc RatField.zro<ide \with {
     | inP (N0, g) => IsBoundedUpperSeries.shifted (\lam {n} _ => Sb n)
@@ -368,6 +372,14 @@
         \in t $ transport ExUpperReal.U (inv *-assoc *> pmap (`* eps) (RatField.finv-right $ RatField.>_/= B1>0) *> ide-left) $ later $ ExUpperRealSemigroup.<_*_U-right B1>0 (RatField.<_*_positive_positive (RatField.finv>0 B1>0) eps>0) (h N<=n))
     }
 
+\lemma upperSeries-ldistr {c : Series ExUpperReal} (c>=0 : \Pi (n : Nat) -> 0 <= c n) (cc : IsConvUpperSeries c) {a : ExUpperReal} (ab : a.IsBounded)
+  : IsConvUpperSeries (\lam n => a * c n)
+  => series_*-bounded c>=0 (TruncP.map ab \lam (q,a<q) => (q, \lam _ => a<q)) cc
+
+\lemma upperSeries-rdistr {c : Series ExUpperReal} (c>=0 : \Pi (n : Nat) -> 0 <= c n) (cc : IsConvUpperSeries c) {a : ExUpperReal} (ab : a.IsBounded)
+  : IsConvUpperSeries (\lam n => c n * a)
+  => transport IsConvUpperSeries (ext \lam n => *-comm) (upperSeries-ldistr c>=0 cc ab)
+
 \lemma geometric-upper-series-conv {r : ExUpperReal} (r>=0 : 0 <= r) (r<1 : r.U 1) : IsConvUpperSeries (ExUpperRealSemigroup.pow r)
   => \case U-rounded r<1 \with {
     | inP (q,r<q,q<1) => series_<= {_} {pow q __} (\lam j => transport (_ <=) (ExUpperRealSemigroup.rat-pow $ <=-less $ r>=0 r<q) $ ExUpperRealSemigroup.pow_<= (ExUpperReal.<_<= r<q)) \lam {eps} eps>0 =>
@@ -380,7 +392,7 @@
 \lemma geometric-series-absConv {X : ExPseudoNormedRing} {x : X} (|x|<1 : (norm x).U 1) : IsAbsConvSeries (pow x)
   => series_<= (\lam j => X.norm_<=_pow) $ geometric-upper-series-conv norm>=0 |x|<1
 
-\lemma upper-ratio-test {S : Series ExUpperReal} (S>=0 : \Pi (n : Nat) -> 0 <= S n) (S0b : ∃ (B : Rat) ((S 0).U B))
+\lemma upper-ratio-test {S : Series ExUpperReal} (S>=0 : \Pi (n : Nat) -> 0 <= S n) (S0b : (S 0).IsBounded)
                         (b : Series Real) (bp : \Pi (n : Nat) -> S (suc n) <= S n * b n)
                         {l : Real} (l<1 : l < 1) (bl : RealNormed.IsLimit b l) : IsConvUpperSeries S
   => \case real_<-char.1 (<_join-univ l<1 RealAbGroup.zro<ide) \with {
@@ -394,7 +406,7 @@
     }
   }
   \where {
-    \lemma iter-bound {f : Nat -> ExUpperReal} {b : Nat -> Real} (f>=0 : \Pi (j : Nat) -> 0 <= f j) {r : Real} (r>=0 : 0 <= r)
+    \lemma iter-bound {f : Series ExUpperReal} {b : Series Real} (f>=0 : \Pi (j : Nat) -> 0 <= f j) {r : Real} (r>=0 : 0 <= r)
                       (bp : \Pi (n : Nat) -> f (suc n) <= f n * b n) (bb : \Pi (n : Nat) -> b n <= r) (j : Nat) : f j <= f 0 * pow r j \elim j
       | 0 => transportInv (_ <=) (ExUpperRealSemigroup.ide-right $ f>=0 0) <=-refl
       | suc j => bp j <=∘ ExUpperRealSemigroup.<=_* <=-refl (Real.<=-upper.1 $ bb j) <=∘ transport (_ <=) (*-assoc *> inv (pmap (_ *) (RealField.*-upper (RealField.pow>=0 r>=0) r>=0))) (ExUpperRealSemigroup.<=_* (iter-bound f>=0 r>=0 bp bb j) <=-refl)
@@ -415,6 +427,15 @@
   => metric-uni-funcConvergent.2 \lam eps>0 => \case Mc eps>0 \with {
     | inP (N,g) => inP (N, \lam x {n} N<=n => rewrite (dist-symm, norm-dist, norm_-, inv $ midSum-diff {Y} {f __ x} N<=n) $ midSum_norm $ midSum_<= (\lam {j} _ _ => Mp j x) $ g N<=n)
   }
+
+\lemma geometric-series-ratio {S : Series ExUpperReal} (S>=0 : \Pi (n : Nat) -> 0 <= S n) (S0b : (S 0).IsBounded)
+                              {eps : Real} (eps>=0 : 0 <= eps)
+                              (b : Series Real) (b>=0 : \Pi (n : Nat) -> 0 <= b n) (bp : \Pi (n : Nat) -> S (suc n) <= S n * b n)
+                              {l : Real} (l<1 : l * eps < 1) (bl : RealNormed.IsLimit b l)
+  : IsConvUpperSeries (\lam n => S n * ExUpperRealSemigroup.pow eps n)
+  => upper-ratio-test (\lam n => ExUpperRealSemigroup.*_>=0) (ExUpperReal.*-bounded S0b ExUpperReal.fromRat-bounded) (\lam n => b n * eps)
+      (\lam n => later $ rewrite (RealField.*-upper (b>=0 n) eps>=0) (ExUpperRealSemigroup.<=_* (bp n) <=-refl <=∘ =_<= equation.cSemigroup))
+      l<1 (cont2-limit bl const-limit *-locally-uniform)
 
 \lemma partialSum-cover {X : CoverSpace} {Y : TopAbGroup} (f : Nat -> CoverMap X Y) (n : Nat) : CoverMap X Y \lam x => partialSum (f __ x) n
   => transportInv (CoverMap X Y) (ext \lam x => \peval partialSum _ _) $ BigSum-cover \lam (j : Fin n) => f j
@@ -447,11 +468,17 @@
         | suc _, _ => idp
       }
 
-\lemma constSeries-abs-conv {A : ExPseudoNormedAbGroup} {a : A} : IsAbsConvSeries (FSeriesRing.coef a)
+\lemma upper-constSeries-conv {a : ExUpperReal} : IsConvUpperSeries (FSeriesRing.coef a)
   => \lam eps>0 => inP (1, \lam n>=1 => rewrite (midSum.=FinSum *> {ExUpperReal} AbMonoid.FinSum_zro (later \case \elim __ \with {
-    | (0, p, _) => absurd $ p NatOrder.zero<suc
-    | (suc _, _, _) => norm_zro
+    | (0, p, _) => absurd (p NatOrder.zero<suc)
+    | (suc _, _, _) => idp
   })) eps>0)
+
+\lemma constSeries-abs-conv {A : ExPseudoNormedAbGroup} {a : A} : IsAbsConvSeries (FSeriesRing.coef a)
+  => transportInv IsConvUpperSeries (ext \case \elim __ \with {
+    | 0 => idp
+    | suc n => A.norm_zro
+  }) (upper-constSeries-conv {norm a})
 
 -- | The identity of FormalSubstMonoid sums to $x$ — only the $k=1$ term contributes: $1_A \cdot x = x$
 \lemma subst-ide-seriesSum {A : TopRing} (x : A) : IsSeriesSum (\lam k => subst-ide k A.* Monoid.pow x k) x

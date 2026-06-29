@@ -88,10 +88,10 @@
       => \lam Eu => cauchy-subset (funcConvergent-char.conv f fc $ Y.makeCauchy Eu) \lam (inP (N,V,EV,h)) => inP $ later (N, \lam Ux => inP (V, EV, h __ Ux))
   }
 
-\lemma funcCovergent-metric-char {I : DirectedSet} {X : CoverSpace} {Y : ExPseudoMetricSpace} (f : I -> CoverMap X Y)
+\lemma funcCovergent-metric-char {I : DirectedSet} {X : CoverSpace} {Y : ExPseudoMetricSpace} {f : I -> X -> Y} (fa : \Pi (i : I) -> CoverMap X Y (f i))
                                  (fc : \Pi {eps : Rat} -> 0 < eps -> X.isCauchy \lam U => ∃ (N : I) ∀ {x : U} ∀ {n} (N <= n -> (dist (f n x) (f N x)).U eps))
-  : IsFuncConvergent (\lam n => f n)
-  => funcConvergent-uniform-char f \lam Eu => \case dist-uniform.1 Eu \with {
+  : IsFuncConvergent f
+  => funcConvergent-uniform-char fa \lam Eu => \case dist-uniform.1 Eu \with {
     | inP (eps,eps>0,h) => cauchy-subset (fc eps>0) \lam (inP (N,g)) => inP $ later (N, \lam {x} Ux => \case h (f N x) \with {
       | inP (U,EU,dU) => inP (U, EU, \lam p => dU $ rewrite Y.dist-symm $ g Ux p)
     })

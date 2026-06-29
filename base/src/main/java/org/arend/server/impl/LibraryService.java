@@ -145,10 +145,6 @@ public class LibraryService {
     ArendExtension extension = library.getExtension();
     SerializableKeyRegistryImpl keyRegistry = new SerializableKeyRegistryImpl();
     extension.registerKeys(keyRegistry);
-    // Persist on the library so binary-cache loaders can re-attach serialized
-    // user data (FieldKeys etc.) during ARC deserialization. Without this the
-    // SerializableKey lookup in DefinitionDeserialization.loadKeys silently
-    // no-ops and every restored definition / field loses its userData.
     library.setKeyRegistry(keyRegistry);
     extension.setDependencies(dependencies);
     GroupData preludeData = myServer.getGroupData(Prelude.MODULE_LOCATION);

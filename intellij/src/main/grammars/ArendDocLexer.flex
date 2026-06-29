@@ -57,8 +57,9 @@ START_CHAR          = [~!@#$%\^&*\-+=<>?/|\[\]:a-zA-Z_\u2200-\u22FF\u2A00-\u2AFF
 ID_CHAR             = {START_CHAR} | [0-9']
 ID                  = {START_CHAR} {ID_CHAR}*
 
-NEW_LINE            = "\n" [ \t]* ("- ")?
-PARAGRAPH_SEP       = {NEW_LINE} [ \t]* ("\r"? {NEW_LINE} [ \t]*)+
+NEXT_LINE           = "\n" [ \t]*
+NEW_LINE            = {NEXT_LINE} "- "
+PARAGRAPH_SEP       = ({NEXT_LINE} | {NEW_LINE}) [ \t]* ("\r"? ({NEXT_LINE} | {NEW_LINE})  [ \t]*)+
 CODE_NEW_LINE       = "\n" [ \t]* "- "?
 NEW_LINE_HYPHEN     = "\n" [ \t]* "- "
 LINEBREAK           = "  " {NEW_LINE}
@@ -66,8 +67,8 @@ UNORDERED_LIST      = ("* " | "+ " | "- ")
 ORDERED_LIST        = [0-9]+ ". "
 BLOCKQUOTES         = "> "
 TABS                = "  "* " "?
-HEADER_1            = {NEW_LINE} "=" "="+ " "*
-HEADER_2            = {NEW_LINE} "-" "-"+ " "*
+HEADER_1            = ({NEXT_LINE} | {NEW_LINE}) "=" "="+ " "*
+HEADER_2            = ({NEXT_LINE} | {NEW_LINE}) "-" "-"+ " "*
 
 %%
 
@@ -174,6 +175,9 @@ HEADER_2            = {NEW_LINE} "-" "-"+ " "*
     {NEW_LINE} {
         return DOC_NEWLINE;
     }
+    {NEXT_LINE} {
+        return DOC_NEXT_LINE;
+    }
     [^] {
         textStart = getTokenStart();
         yybegin(TEXT);
@@ -181,7 +185,7 @@ HEADER_2            = {NEW_LINE} "-" "-"+ " "*
 }
 
 <TEXT> {
-    ("{" | "](" | "[" | "`" | "$$" | "$" | "*" | "_" | "**" | "__" | {LINEBREAK} | {NEW_LINE}) {
+    ("{" | "](" | "[" | "`" | "$$" | "$" | "*" | "_" | "**" | "__" | {LINEBREAK} | {NEXT_LINE} | {NEW_LINE}) {
         zzMarkedPos = zzStartRead;
         zzStartRead = textStart;
         yybegin(CONTENTS);
