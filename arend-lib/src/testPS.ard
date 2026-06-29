@@ -1,0 +1,47 @@
+\import Arith.Nat
+\import Paths
+\import Paths.Meta
+\import Function.Meta
+\open Nat
+
+-- Simple identity: should be solvable with idp
+\lemma refl-zero : 0 = 0
+  => {?}
+
+-- Rewrite-based proof: commutativity of addition
+\lemma comm (x y : Nat) : x + y = y + x
+  => {?}
+
+-- Associativity of addition via induction on c
+\lemma assoc (a b c : Nat) : a + b + c = a + (b + c) \elim c
+  | 0 => idp
+  | suc c => rewrite (assoc a b c) idp
+
+-- Single rewrite from hypothesis
+\lemma rewrite-hyp (x y : Nat) (p : x = 0) (q : 0 = y) : x = y
+  => {?}
+
+-- Case split on a boolean-like structure
+\lemma plus-zero-left (n : Nat) : 0 + n = n \elim n
+  | 0 => idp
+  | suc n => pmap suc (plus-zero-left n)
+
+-- Multi-step rewrite: needs two rewrites
+\lemma rewrite-two-steps (x y z : Nat) (p : x = y) (q : y = z) : x = z
+  => {?}
+
+-- Successor congruence
+\lemma suc-cong (a b : Nat) (p : a = b) : suc a = suc b
+  => {?}
+
+-- Multiple goals in one definition via case split
+\lemma plus-comm-cases (a b : Nat) : a + b = b + a
+  => {?}
+
+-- Zero is right identity of addition
+\lemma plus-zero-right (n : Nat) : n + 0 = n
+  => idp
+
+-- Transitivity via path composition
+\func trans-path {A : \Type} {a b c : A} (p : a = b) (q : b = c) : a = c
+  => {?}

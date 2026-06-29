@@ -2,7 +2,12 @@ package org.arend.frontend.cli;
 
 import org.apache.commons.cli.CommandLine;
 import org.arend.frontend.cli.commands.AiGuide;
+import org.arend.frontend.cli.commands.ApplyStep;
+import org.arend.frontend.cli.commands.CheckExpression;
+import org.arend.frontend.cli.commands.FindGoals;
+import org.arend.frontend.cli.commands.GetScope;
 import org.arend.frontend.cli.commands.ProofSearch;
+import org.arend.frontend.cli.commands.ProofSearchJson;
 import org.arend.frontend.cli.commands.TypecheckPipeline;
 
 /**
@@ -79,6 +84,31 @@ public final class Dispatch {
     if (cmdLine.hasOption("ps")) {
       boolean psOk = ProofSearch.run(ctx, cmdLine.getOptionValues("ps"));
       return (psOk && !ctx.exitWithError) ? 0 : 1;
+    }
+
+    if (cmdLine.hasOption("psj")) {
+      boolean ok = ProofSearchJson.run(ctx, cmdLine.getOptionValues("psj"));
+      return (ok && !ctx.exitWithError) ? 0 : 1;
+    }
+
+    if (cmdLine.hasOption("fg")) {
+      boolean ok = FindGoals.run(ctx, cmdLine.getOptionValues("fg"));
+      return (ok && !ctx.exitWithError) ? 0 : 1;
+    }
+
+    if (cmdLine.hasOption("ce")) {
+      boolean ok = CheckExpression.run(ctx, cmdLine.getOptionValues("ce"));
+      return (ok && !ctx.exitWithError) ? 0 : 1;
+    }
+
+    if (cmdLine.hasOption("as")) {
+      boolean ok = ApplyStep.run(ctx, cmdLine.getOptionValues("as"));
+      return (ok && !ctx.exitWithError) ? 0 : 1;
+    }
+
+    if (cmdLine.hasOption("gs")) {
+      boolean ok = GetScope.run(ctx, cmdLine.getOptionValues("gs"));
+      return (ok && !ctx.exitWithError) ? 0 : 1;
     }
 
     if (cmdLine.hasOption("ag")) {
