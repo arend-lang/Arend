@@ -605,7 +605,7 @@ public final class ClassHierarchy {
         Path file = sourcePathFor(libraryManager.getLibrary(s.module().getLibraryName()), s.module());
         String pathLabel = file == null
             ? "<" + s.module().getLibraryName() + ":" + s.module().getModulePath() + ">"
-            : file.toString();
+            : PathDisplay.shorten(file, libraryManager);
         System.out.println("  " + pathLabel + ":" + s.line() + ":" + s.column()
             + "  " + s.instanceRef().textRepresentation() + " : " + s.targetClass().textRepresentation());
         printed++;
@@ -638,7 +638,7 @@ public final class ClassHierarchy {
         Path file = sourcePathFor(libraryManager.getLibrary(s.module().getLibraryName()), s.module());
         String pathLabel = file == null
             ? "<" + s.module().getLibraryName() + ":" + s.module().getModulePath() + ">"
-            : file.toString();
+            : PathDisplay.shorten(file, libraryManager);
         Set<String> transitive = transitiveFields(s.targetClass(), graph);
         Set<String> missing = new LinkedHashSet<>(transitive);
         missing.removeAll(s.implementedFieldNames());
@@ -668,7 +668,7 @@ public final class ClassHierarchy {
       ClassNode root = graph.get(target.referable);
       Path tgtPath = sourcePathFor(libraryManager.getLibrary(target.libraryName), target.module);
       String tgtLoc = (tgtPath == null ? "<" + target.libraryName + ":" + target.module.getModulePath() + ">"
-          : tgtPath.toString());
+          : PathDisplay.shorten(tgtPath, libraryManager));
       int[] tgtPos = posOf(target.referable);
       String tgtLocFull = tgtPos[0] > 0 ? tgtLoc + ":" + tgtPos[0] + ":" + tgtPos[1] : tgtLoc;
       System.out.println("TARGET\t" + target.fullLabel() + "\t" + target.kind + "\t" + tgtLocFull);
@@ -718,7 +718,7 @@ public final class ClassHierarchy {
         for (InstanceSite s : sorted) {
           Path file = sourcePathFor(libraryManager.getLibrary(s.module().getLibraryName()), s.module());
           String loc = (file == null ? "<" + s.module().getLibraryName() + ":" + s.module().getModulePath() + ">"
-              : file.toString()) + ":" + s.line() + ":" + s.column();
+              : PathDisplay.shorten(file, libraryManager)) + ":" + s.line() + ":" + s.column();
           System.out.println("INSTANCE\t" + qualifiedLabel(s.targetClass(), moduleOf, libraryManager)
               + "\t" + loc + "\t" + s.instanceRef().textRepresentation());
         }
@@ -736,7 +736,7 @@ public final class ClassHierarchy {
         for (NewSite s : sorted) {
           Path file = sourcePathFor(libraryManager.getLibrary(s.module().getLibraryName()), s.module());
           String loc = (file == null ? "<" + s.module().getLibraryName() + ":" + s.module().getModulePath() + ">"
-              : file.toString()) + ":" + s.line() + ":" + s.column();
+              : PathDisplay.shorten(file, libraryManager)) + ":" + s.line() + ":" + s.column();
           Set<String> transitive = transitiveFields(s.targetClass(), graph);
           Set<String> missing = new LinkedHashSet<>(transitive);
           missing.removeAll(s.implementedFieldNames());
@@ -813,7 +813,7 @@ public final class ClassHierarchy {
       LibraryManager libraryManager) {
     if (moduleLoc == null) return "";
     Path src = sourcePathFor(libraryManager.getLibrary(moduleLoc.getLibraryName()), moduleLoc);
-    String pathLabel = src != null ? src.toString()
+    String pathLabel = src != null ? PathDisplay.shorten(src, libraryManager)
         : moduleLoc.getLibraryName() + ":" + moduleLoc.getModulePath();
     int[] pos = posOf(ref);
     return pos[0] > 0 ? pathLabel + ":" + pos[0] + ":" + pos[1] : pathLabel;

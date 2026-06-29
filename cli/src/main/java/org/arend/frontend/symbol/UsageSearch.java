@@ -134,6 +134,7 @@ public final class UsageSearch {
 
     // 2) Refresh symbol indexes for in-scope libraries. This also gets the
     //    server to register every source module so getRawGroup works below.
+    Map<SourceLibrary, SymbolIndex> indexes = new LinkedHashMap<>();
     for (SourceLibrary lib : libsInScope) {
       SymbolIndex idx = SymbolIndex.loadOrCreate(lib);
       for (ModulePath mp : lib.findModules(false)) {
@@ -148,6 +149,15 @@ public final class UsageSearch {
       }
       idx.refresh(lib, server, false);
       idx.save();
+      indexes.put(lib, idx);
+    }
+
+    // 2b) If the user passed a bare long-name (no module prefix), resolve it via
+    //     the symbol index: match by trailing short name, then keep only candidates
+    //     whose full long-name ends with the user's segments.
+    if (target.module.getModulePath().size() == 0) {
+      target = resolveByShortName(target.longName, indexes, libsInScope, server);
+      if (target == null) return 0;
     }
 
     // 3) Resolve target referable. We need a registered module + its raw group.
@@ -244,7 +254,7 @@ public final class UsageSearch {
       System.out.println();
       String headLine = (h.absoluteFile == null || h.absoluteFile.isEmpty()
           ? "<" + h.module.getLibraryName() + ":" + h.module.getModulePath() + ">"
-          : h.absoluteFile) + ":" + h.line + ":" + h.column;
+          : PathDisplay.shorten(h.absoluteFile, libraryManager)) + ":" + h.line + ":" + h.column;
       if (options.printLine) {
         String content = readLine(h.absoluteFile, h.line);
         System.out.println(headLine + (content == null ? "" : ": " + content.strip()));
@@ -266,8 +276,15 @@ public final class UsageSearch {
   private static @Nullable Target parseTarget(String spec) {
     int idx = spec.indexOf(':');
     if (idx < 0) {
-      System.err.println("[ERROR] -fu spec must be MODULE_PATH:GROUP_PATH (got '" + spec + "')");
-      return null;
+      // Bare-name form. Parse as LongName; later resolved against the symbol index
+      // by trailing short name, then suffix-matched against the user's segments.
+      LongName ln = LongName.fromString(spec);
+      if (!FileUtils.isCorrectDefinitionName(ln)) {
+        System.err.println("[ERROR] invalid definition name '" + spec + "'");
+        return null;
+      }
+      return new Target(
+          new ModuleLocation("", ModuleLocation.LocationKind.SOURCE, new ModulePath()), ln);
     }
     String modStr = spec.substring(0, idx);
     String defStr = spec.substring(idx + 1);
@@ -287,6 +304,68 @@ public final class UsageSearch {
     }
     // ModuleLocation populated below in resolveTarget once we know the library.
     return new Target(new ModuleLocation("", ModuleLocation.LocationKind.SOURCE, mp), ln);
+  }
+
+  /**
+   * Resolve a bare-long-name spec against the symbol index. Looks up entries whose
+   * short name matches the spec's last segment, then keeps only those whose full
+   * long-name ends with the user's segments (suffix match). Returns the unique
+   * candidate as a Target, or null after printing a diagnostic if zero or more
+   * than one survive.
+   */
+  private static @Nullable Target resolveByShortName(@NotNull LongName userLongName,
+                                                     @NotNull Map<SourceLibrary, SymbolIndex> indexes,
+                                                     @NotNull List<SourceLibrary> libsInScope,
+                                                     @NotNull ArendServer server) {
+    List<String> userSegs = userLongName.toList();
+    String shortName = userSegs.get(userSegs.size() - 1);
+
+    record Candidate(SourceLibrary lib, SymbolIndex.Entry entry) {}
+    List<Candidate> matches = new ArrayList<>();
+    for (Map.Entry<SourceLibrary, SymbolIndex> e : indexes.entrySet()) {
+      for (SymbolIndex.Entry entry : e.getValue().allEntries()) {
+        if (!entry.shortName().equals(shortName)) continue;
+        List<String> entrySegs = LongName.fromString(entry.longName()).toList();
+        if (!endsWith(entrySegs, userSegs)) continue;
+        matches.add(new Candidate(e.getKey(), entry));
+      }
+    }
+    if (matches.isEmpty()) {
+      System.err.println("[ERROR] No definition with short name '" + shortName + "' in scope"
+          + (userSegs.size() > 1 ? " whose long-name ends with '" + userLongName + "'" : "")
+          + ".");
+      return null;
+    }
+    if (matches.size() > 1) {
+      System.err.println("[ERROR] '" + userLongName + "' is ambiguous. Use one of:");
+      List<String> labels = new ArrayList<>();
+      for (Candidate c : matches) {
+        labels.add("  " + c.lib.getLibraryName() + "::" + c.entry.modulePath() + ":" + c.entry.longName());
+      }
+      Collections.sort(labels);
+      for (String l : labels) System.err.println(l);
+      return null;
+    }
+    Candidate only = matches.get(0);
+    ModulePath mp = only.entry.modulePath();
+    LongName fullLongName = LongName.fromString(only.entry.longName());
+    System.out.println("[INFO] Resolved '" + userLongName + "' -> "
+        + only.lib.getLibraryName() + "::" + mp + ":" + fullLongName);
+    // Pre-register the module on the server so resolveTarget's getRawGroup works.
+    server.findModule(mp, only.lib.getLibraryName(), true, false);
+    return new Target(
+        new ModuleLocation(only.lib.getLibraryName(), ModuleLocation.LocationKind.SOURCE, mp),
+        fullLongName);
+  }
+
+  /** True iff {@code tail} is a (non-empty) suffix of {@code full} (segment-wise). */
+  private static boolean endsWith(List<String> full, List<String> tail) {
+    if (tail.size() > full.size()) return false;
+    int offset = full.size() - tail.size();
+    for (int i = 0; i < tail.size(); i++) {
+      if (!full.get(offset + i).equals(tail.get(i))) return false;
+    }
+    return true;
   }
 
   private record ResolvedTarget(ModuleLocation module, LocatedReferable referable) {}

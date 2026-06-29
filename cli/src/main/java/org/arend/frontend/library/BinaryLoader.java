@@ -4,6 +4,7 @@ import org.arend.core.definition.Definition;
 import org.arend.ext.error.ErrorReporter;
 import org.arend.ext.module.ModuleLocation;
 import org.arend.extImpl.SerializableKeyRegistryImpl;
+import org.arend.module.error.BinaryCacheError;
 import org.arend.module.serialization.ModuleDeserialization;
 import org.arend.naming.reference.InternalReferable;
 import org.arend.naming.reference.LocatedReferable;
@@ -87,6 +88,7 @@ public class BinaryLoader {
             pending.add(new PendingBinaryLoad(module, deser));
           }
         } catch (Exception e) {
+          reportBinaryCacheError(errorReporter, module, "protobuf parsing", e);
           // Skip this module — will be re-typechecked from source
         }
       }
@@ -101,6 +103,7 @@ public class BinaryLoader {
         load.deserialization.readDefinitions(group);
         phase2b.add(load);
       } catch (Exception e) {
+        reportBinaryCacheError(errorReporter, load.module, "definition shell loading", e);
         clearTypechecked(group);
       }
     }
@@ -122,6 +125,7 @@ public class BinaryLoader {
         myBinaryCacheLoaded.add(load.module);
         loadedLoads.add(load);
       } catch (Exception e) {
+        reportBinaryCacheError(errorReporter, load.module, "definition body loading", e);
         failed++;
         if (group != null) {
           clearTypechecked(group);
@@ -224,5 +228,10 @@ public class BinaryLoader {
       clearTypechecked(dynGroup);
     }
   }
+
+  private static void reportBinaryCacheError(ErrorReporter errorReporter, ModuleLocation module, String phase, Exception e) {
+    errorReporter.report(new BinaryCacheError(module.getModulePath(), phase, e));
+  }
+
   private record PendingBinaryLoad(ModuleLocation module, ModuleDeserialization deserialization) {}
 }

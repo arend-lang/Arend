@@ -6,16 +6,7 @@ import org.arend.term.prettyprint.PrettyPrintVisitor;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * Renders the *header* of a {@link Concrete.ResolvableDefinition} on a single line,
- * suppressing the body, the constructor list, and the class element list.
- *
- * Output is shaped like the leading line a human would write in a .ard file, e.g.
- *   \class Monoid \extends Pointed, Semigroup
- *   \data Bool : \Set
- *   \func id {A : \Type} (x : A) : A
- *   \meta unfold (e : \Type)
- * The result is whitespace-collapsed (newlines/tabs become single spaces) and
- * trimmed, so it is always one line.
+ * Renders the header of a concrete definition on a single line for the symbol index.
  */
 public final class SignaturePrintVisitor {
   private SignaturePrintVisitor() {}
@@ -150,7 +141,6 @@ public final class SignaturePrintVisitor {
   }
 
   private static String collapse(String s) {
-    // collapse all whitespace runs to a single space, trim
     StringBuilder out = new StringBuilder(s.length());
     boolean prevSpace = true;
     for (int i = 0; i < s.length(); i++) {

@@ -138,7 +138,7 @@ public final class SymbolSearch {
         truncated = true;
         break;
       }
-      appendEntry(out, h.libName, h.entry);
+      appendEntry(out, h.libName, h.entry, libraryManager);
       printed++;
     }
 
@@ -341,12 +341,13 @@ public final class SymbolSearch {
     return true;
   }
 
-  private static void appendEntry(StringBuilder out, String libName, SymbolIndex.Entry e) {
+  private static void appendEntry(StringBuilder out, String libName, SymbolIndex.Entry e, LibraryManager libraryManager) {
     String header;
     if (e.absoluteFile() == null || e.absoluteFile().isEmpty()) {
       header = "<" + libName + ":" + e.modulePath() + ">";
     } else {
-      header = e.absoluteFile() + ":" + (e.line() == 0 ? "?" : e.line()) + ":" + (e.column() == 0 ? "?" : e.column());
+      header = PathDisplay.shorten(e.absoluteFile(), libraryManager)
+          + ":" + (e.line() == 0 ? "?" : e.line()) + ":" + (e.column() == 0 ? "?" : e.column());
     }
     out.append(header).append('\n');
     out.append(libName).append("::").append(e.longName()).append("  [").append(e.kind().name()).append("]\n");

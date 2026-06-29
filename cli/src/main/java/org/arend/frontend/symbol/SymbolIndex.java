@@ -37,8 +37,15 @@ import java.util.*;
  * {@link ArendServer#getRawGroup}.
  */
 public final class SymbolIndex {
-  private static final String FORMAT_HEADER = "# arend symbol index v1";
-  static final long GENERATED_MTIME = -1L;
+  // v2 adds a file-size field next to the mtime so identical-mtime overwrites (rare
+  // but real: same-second edits, `git checkout` of a file that already matched, file
+  // systems with low mtime resolution) invalidate the cached entries. Bumping the
+  // header version forces a clean rebuild of any v1 cache on disk.
+  private static final String FORMAT_HEADER = "# arend symbol index v2";
+  static final FileStamp GENERATED_STAMP = new FileStamp(-1L, -1L);
+
+  /** mtime+size snapshot of a source file; staleness compares both. */
+  public record FileStamp(long mtime, long size) {}
 
   public enum Kind { FUNCTION, SFUNC, LEMMA, TYPE, INSTANCE, COCLAUSE, COERCE, LEVEL, AXIOM,
                      DATA, CONSTRUCTOR, CLASS, RECORD, FIELD, META, OTHER }
@@ -56,7 +63,7 @@ public final class SymbolIndex {
 
   private final String myLibraryName;
   private final Path myCacheFile;
-  private final Map<ModulePath, Long> myTimestamps = new LinkedHashMap<>();
+  private final Map<ModulePath, FileStamp> myTimestamps = new LinkedHashMap<>();
   private final Map<ModulePath, List<Entry>> myEntries = new LinkedHashMap<>();
   // Generated bucket — keyed by a synthetic "$generated" path.
   private static final ModulePath GENERATED_BUCKET = new ModulePath("$generated");
@@ -74,12 +81,12 @@ public final class SymbolIndex {
     return all;
   }
 
-  /** True when this module isn't cached yet, or its cached mtime is older than the source. */
+  /** True when this module isn't cached yet, or its cached mtime/size doesn't match the source. */
   public boolean isStale(SourceLibrary library, ModulePath mp) {
-    Long cached = myTimestamps.get(mp);
+    FileStamp cached = myTimestamps.get(mp);
     if (cached == null) return true;
-    long mtime = sourceMtime(library, mp);
-    return cached != mtime;
+    FileStamp now = sourceStamp(library, mp);
+    return !cached.equals(now);
   }
 
   /** Loads the index for the given library, or returns an empty one. */
@@ -111,9 +118,9 @@ public final class SymbolIndex {
     // so we keep cached entries for modules the server hasn't (re-)loaded.
     for (ModulePath mp : library.findModules(false)) {
       seen.add(mp);
-      long mtime = sourceMtime(library, mp);
-      Long prev = myTimestamps.get(mp);
-      if (!force && prev != null && prev == mtime && myEntries.containsKey(mp)) continue;
+      FileStamp now = sourceStamp(library, mp);
+      FileStamp prev = myTimestamps.get(mp);
+      if (!force && prev != null && prev.equals(now) && myEntries.containsKey(mp)) continue;
 
       ModuleLocation moduleLoc = new ModuleLocation(libName, ModuleLocation.LocationKind.SOURCE, mp);
       ConcreteGroup group = server.getRawGroup(moduleLoc);
@@ -124,7 +131,7 @@ public final class SymbolIndex {
       String absStr = absolute == null ? "" : absolute.toString();
       collectGroup(group, mp, absStr, entries, new HashSet<>());
       myEntries.put(mp, entries);
-      myTimestamps.put(mp, mtime);
+      myTimestamps.put(mp, now);
     }
 
     // 2) Generated modules (metas registered programmatically)
@@ -149,7 +156,7 @@ public final class SymbolIndex {
       }
     }
     myEntries.put(GENERATED_BUCKET, generated);
-    myTimestamps.put(GENERATED_BUCKET, GENERATED_MTIME);
+    myTimestamps.put(GENERATED_BUCKET, GENERATED_STAMP);
 
     // 3) prune entries for modules that no longer exist
     myTimestamps.keySet().retainAll(seen);
@@ -315,11 +322,16 @@ public final class SymbolIndex {
 
   // ---- file helpers -------------------------------------------------------
 
-  private static long sourceMtime(SourceLibrary library, ModulePath mp) {
+  private static FileStamp sourceStamp(SourceLibrary library, ModulePath mp) {
     Path file = sourcePath(library, mp);
-    if (file == null) return 0L;
-    try { return Files.getLastModifiedTime(file).toMillis(); }
-    catch (IOException e) { return 0L; }
+    if (file == null) return new FileStamp(0L, 0L);
+    try {
+      long mtime = Files.getLastModifiedTime(file).toMillis();
+      long size = Files.size(file);
+      return new FileStamp(mtime, size);
+    } catch (IOException e) {
+      return new FileStamp(0L, 0L);
+    }
   }
 
   private static @Nullable Path sourcePath(SourceLibrary library, ModulePath mp) {
@@ -353,10 +365,11 @@ public final class SymbolIndex {
   private void writeTo(BufferedWriter w) throws IOException {
     w.write(FORMAT_HEADER); w.newLine();
     w.write("library: " + myLibraryName); w.newLine();
-    for (Map.Entry<ModulePath, Long> ts : myTimestamps.entrySet()) {
+    for (Map.Entry<ModulePath, FileStamp> ts : myTimestamps.entrySet()) {
       ModulePath mp = ts.getKey();
+      FileStamp st = ts.getValue();
       List<Entry> entries = myEntries.getOrDefault(mp, Collections.emptyList());
-      w.write("module " + mp + " " + ts.getValue()); w.newLine();
+      w.write("module " + mp + " " + st.mtime() + " " + st.size()); w.newLine();
       for (Entry e : entries) {
         w.write("  " + escape(e.shortName) + "|" + escape(e.longName) + "|" + e.kind.name() + "|"
             + (e.absoluteFile == null ? "" : e.absoluteFile) + "|"
@@ -377,12 +390,17 @@ public final class SymbolIndex {
       String line;
       while ((line = r.readLine()) != null) {
         if (line.startsWith("module ")) {
-          int sp = line.lastIndexOf(' ');
-          long ts = Long.parseLong(line.substring(sp + 1));
-          String mpStr = line.substring("module ".length(), sp);
+          // module <path> <mtime> <size>
+          String rest = line.substring("module ".length());
+          int sp2 = rest.lastIndexOf(' ');
+          int sp1 = rest.lastIndexOf(' ', sp2 - 1);
+          if (sp1 < 0 || sp2 < 0) throw new IOException("bad module line: " + line);
+          long size = Long.parseLong(rest.substring(sp2 + 1));
+          long mtime = Long.parseLong(rest.substring(sp1 + 1, sp2));
+          String mpStr = rest.substring(0, sp1);
           current = mpStr.equals(GENERATED_BUCKET.toString()) ? GENERATED_BUCKET : ModulePath.fromString(mpStr);
           currentEntries = new ArrayList<>();
-          myTimestamps.put(current, ts);
+          myTimestamps.put(current, new FileStamp(mtime, size));
           myEntries.put(current, currentEntries);
         } else if (current != null && line.startsWith("  ")) {
           Entry e = parseEntry(line.substring(2), current);
