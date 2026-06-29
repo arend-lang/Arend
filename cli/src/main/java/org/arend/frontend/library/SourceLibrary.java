@@ -92,4 +92,14 @@ public abstract class SourceLibrary implements ArendLibrary {
   public boolean supportsPersisting() {
     return !isExternalLibrary();
   }
+
+  /**
+   * Opens an auxiliary file relative to the library root (e.g. {@code .aiGuide/README.md}).
+   *
+   * <p>The default implementation returns {@code null}; subclasses that have a
+   * notion of "library root" override this.
+   */
+  public @Nullable java.io.InputStream openAuxFile(@NotNull String relPath) throws java.io.IOException {
+    return null;
+  }
 }

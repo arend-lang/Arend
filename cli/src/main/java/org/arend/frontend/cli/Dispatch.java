@@ -5,7 +5,6 @@ import org.arend.frontend.cli.commands.AiGuide;
 import org.arend.frontend.cli.commands.ApplyStep;
 import org.arend.frontend.cli.commands.CheckExpression;
 import org.arend.frontend.cli.commands.FindGoals;
-import org.arend.frontend.cli.commands.GetScope;
 import org.arend.frontend.cli.commands.ProofSearch;
 import org.arend.frontend.cli.commands.ProofSearchJson;
 import org.arend.frontend.cli.commands.TypecheckPipeline;
@@ -73,22 +72,29 @@ public final class Dispatch {
     }
 
     if (cmdLine.hasOption("sc")) {
+      boolean json = cmdLine.hasOption("json");
       org.arend.frontend.symbol.ReferableScope.Parsed parsed =
           org.arend.frontend.symbol.ReferableScope.parseArgs(cmdLine.getOptionValues("sc"));
       if (parsed == null) return 1;
-      org.arend.frontend.symbol.ReferableScope.run(parsed.spec(), parsed.pattern(), parsed.options(),
-          ctx.requestedLibraries, ctx.libraryManager, ctx.server, ctx.systemErrErrorReporter);
+      if (json) {
+        org.arend.frontend.symbol.ReferableScope.runJson(parsed.spec(), parsed.pattern(), parsed.options(),
+            ctx.requestedLibraries, ctx.libraryManager, ctx.server, ctx.systemErrErrorReporter);
+      } else {
+        org.arend.frontend.symbol.ReferableScope.run(parsed.spec(), parsed.pattern(), parsed.options(),
+            ctx.requestedLibraries, ctx.libraryManager, ctx.server, ctx.systemErrErrorReporter);
+      }
       return ctx.exitWithError ? 1 : 0;
     }
 
     if (cmdLine.hasOption("ps")) {
-      boolean psOk = ProofSearch.run(ctx, cmdLine.getOptionValues("ps"));
-      return (psOk && !ctx.exitWithError) ? 0 : 1;
-    }
-
-    if (cmdLine.hasOption("psj")) {
-      boolean ok = ProofSearchJson.run(ctx, cmdLine.getOptionValues("psj"));
-      return (ok && !ctx.exitWithError) ? 0 : 1;
+      boolean json = cmdLine.hasOption("json");
+      if (json) {
+        boolean ok = ProofSearchJson.run(ctx, cmdLine.getOptionValues("ps"));
+        return (ok && !ctx.exitWithError) ? 0 : 1;
+      } else {
+        boolean psOk = ProofSearch.run(ctx, cmdLine.getOptionValues("ps"));
+        return (psOk && !ctx.exitWithError) ? 0 : 1;
+      }
     }
 
     if (cmdLine.hasOption("fg")) {
@@ -103,11 +109,6 @@ public final class Dispatch {
 
     if (cmdLine.hasOption("as")) {
       boolean ok = ApplyStep.run(ctx, cmdLine.getOptionValues("as"));
-      return (ok && !ctx.exitWithError) ? 0 : 1;
-    }
-
-    if (cmdLine.hasOption("gs")) {
-      boolean ok = GetScope.run(ctx, cmdLine.getOptionValues("gs"));
       return (ok && !ctx.exitWithError) ? 0 : 1;
     }
 

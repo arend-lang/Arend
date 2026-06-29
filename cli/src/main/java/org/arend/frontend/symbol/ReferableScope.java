@@ -17,6 +17,8 @@ import org.arend.util.FileUtils;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+
 import java.util.*;
 
 /**
@@ -150,6 +152,79 @@ public final class ReferableScope {
       System.out.println("--- " + total + " entries ---");
     }
     return 0;
+  }
+
+  public static int runJson(@NotNull String spec,
+                            @Nullable SymbolPattern pattern,
+                            @NotNull Options options,
+                            @NotNull List<SourceLibrary> requestedLibraries,
+                            @NotNull LibraryManager libraryManager,
+                            @NotNull ArendServer server,
+                            @NotNull ErrorReporter errorReporter) {
+    List<SourceLibrary> libsInScope = librariesInScope(libraryManager);
+    if (libsInScope.isEmpty()) {
+      System.err.println("[ERROR] No libraries in scope.");
+      return 1;
+    }
+
+    Map<SourceLibrary, SymbolIndex> indexes = new LinkedHashMap<>();
+    for (SourceLibrary lib : libsInScope) {
+      SymbolIndex idx = SymbolIndex.loadOrCreate(lib);
+      for (ModulePath mp : lib.findModules(false)) {
+        if (idx.isStale(lib, mp)) {
+          server.findModule(mp, lib.getLibraryName(), false, false);
+        }
+      }
+      idx.refresh(lib, server, false);
+      idx.save();
+      indexes.put(lib, idx);
+    }
+
+    Resolved target = resolveTarget(spec, server, libsInScope, indexes);
+    if (target == null) return 1;
+
+    Scope scope = server.getReferableScope(target.referable);
+    if (scope == null) {
+      System.err.println("[ERROR] No scope available at " + label(target));
+      return 1;
+    }
+
+    List<Map<String, String>> entries = new ArrayList<>();
+    List<ScopeContext> contexts = options.context == Ctx.ALL
+        ? List.of(ScopeContext.STATIC, ScopeContext.DYNAMIC, ScopeContext.PLEVEL, ScopeContext.HLEVEL)
+        : List.of(options.context == Ctx.DYNAMIC ? ScopeContext.DYNAMIC : ScopeContext.STATIC);
+
+    for (ScopeContext ctx : contexts) {
+      for (Referable ref : scope.getElements(ctx)) {
+        String name = ref.textRepresentation();
+        if (pattern != null && !pattern.matches(name)) continue;
+        Map<String, String> entry = new LinkedHashMap<>();
+        entry.put("name", name);
+        if (ref instanceof LocatedReferable lr) {
+          ModuleLocation loc = lr.getLocation();
+          if (loc != null) {
+            entry.put("library", loc.getLibraryName());
+            entry.put("module", loc.getModulePath().toString());
+          }
+          entry.put("longName", lr.getRefLongName().toString());
+          entry.put("kind", lr.getKind().name());
+        }
+        entries.add(entry);
+      }
+    }
+
+    try {
+      ObjectMapper mapper = new ObjectMapper();
+      Map<String, Object> result = new LinkedHashMap<>();
+      result.put("target", label(target));
+      result.put("scope", entries);
+      result.put("count", entries.size());
+      System.out.println(mapper.writeValueAsString(result));
+      return 0;
+    } catch (Exception e) {
+      System.err.println("[ERROR] Failed to serialize scope: " + e.getMessage());
+      return 1;
+    }
   }
 
   private static int dumpSection(Scope scope, ScopeContext ctx, String header, @Nullable SymbolPattern pattern) {

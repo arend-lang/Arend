@@ -388,16 +388,13 @@ public class ConsoleMain {
       cmdOptions.addOption(Option.builder("p").longOpt("print").hasArg().argName("target").desc("print a definition or a module").build());
       cmdOptions.addOption(Option.builder("ps").longOpt("proof-search").hasArgs().argName("pattern")
           .desc("search by signature shape (parameters/codomain). Pass `-ps help` for the full grammar.").build());
-      cmdOptions.addOption(Option.builder("psj").longOpt("proof-search-json").hasArgs().argName("pattern")
-          .desc("search by signature shape, output JSON.").build());
       cmdOptions.addOption(Option.builder("fg").longOpt("find-goals").hasArgs().argName("MODULE:DEF")
           .desc("typecheck and return goals as JSON.").build());
       cmdOptions.addOption(Option.builder("ce").longOpt("check-expr").hasArgs().argName("MODULE:DEF GOAL_ID EXPR")
           .desc("parse and typecheck expression against a goal, return JSON.").build());
       cmdOptions.addOption(Option.builder("as").longOpt("apply-step").hasArgs().argName("MODULE:DEF GOAL_ID EXPR")
           .desc("substitute expression into goal and return updated proof state as JSON.").build());
-      cmdOptions.addOption(Option.builder("gs").longOpt("get-scope").hasArgs().argName("MODULE:DEF GOAL_ID")
-          .desc("return definitions in scope at a goal position as JSON.").build());
+      cmdOptions.addOption(Option.builder().longOpt("json").desc("output JSON instead of plain text (use with -ps or -sc)").build());
       cmdOptions.addOption(Option.builder("ss").longOpt("symbol-search").hasArgs().argName("pattern")
           .desc("search by short name (uses an mtime-cached on-disk index). Pass `-ss help` for the full grammar.").build());
       cmdOptions.addOption(Option.builder("rx").longOpt("reindex").hasArgs().optionalArg(true).argName("only=lib,...")
