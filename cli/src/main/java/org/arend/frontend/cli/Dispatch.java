@@ -3,7 +3,6 @@ package org.arend.frontend.cli;
 import org.apache.commons.cli.CommandLine;
 import org.arend.frontend.cli.commands.AiGuide;
 import org.arend.frontend.cli.commands.ApplyStep;
-import org.arend.frontend.cli.commands.CheckExpression;
 import org.arend.frontend.cli.commands.FindGoals;
 import org.arend.frontend.cli.commands.ProofSearch;
 import org.arend.frontend.cli.commands.ProofSearchJson;
@@ -102,11 +101,6 @@ public final class Dispatch {
 
     if (cmdLine.hasOption("fg")) {
       boolean ok = FindGoals.run(ctx, cmdLine.getOptionValues("fg"));
-      return (ok && !ctx.exitWithError) ? 0 : 1;
-    }
-
-    if (cmdLine.hasOption("ce")) {
-      boolean ok = CheckExpression.run(ctx, cmdLine.getOptionValues("ce"));
       return (ok && !ctx.exitWithError) ? 0 : 1;
     }
 

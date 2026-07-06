@@ -390,8 +390,6 @@ public class ConsoleMain {
           .desc("search by signature shape (parameters/codomain). Pass `-ps help` for the full grammar.").build());
       cmdOptions.addOption(Option.builder("fg").longOpt("find-goals").hasArgs().argName("MODULE:DEF")
           .desc("typecheck and return goals as JSON.").build());
-      cmdOptions.addOption(Option.builder("ce").longOpt("check-expr").hasArgs().argName("MODULE:DEF GOAL_ID EXPR")
-          .desc("parse and typecheck expression against a goal, return JSON.").build());
       cmdOptions.addOption(Option.builder("as").longOpt("apply-step").hasArgs().argName("MODULE:DEF GOAL_ID EXPR")
           .desc("substitute expression into goal and return updated proof state as JSON.").build());
       cmdOptions.addOption(Option.builder("sg").longOpt("signature").hasArgs().argName("MODULE:DEF")
