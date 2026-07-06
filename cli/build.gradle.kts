@@ -22,6 +22,8 @@ dependencies {
 val buildPrelude = tasks.register<org.arend.gradle.BuildPreludeTask>("buildPrelude") {
     classpath = sourceSets["main"].runtimeClasspath
     workingDir(rootProject.rootDir)
+    isIgnoreExitValue = true
+    onlyIf { rootProject.file("lib/Prelude.arc").exists() || !rootProject.file("lib/Prelude.ard").exists() }
 }
 
 val copyPrelude = tasks.register<Copy>("copyPrelude") {

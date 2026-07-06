@@ -394,6 +394,12 @@ public class ConsoleMain {
           .desc("parse and typecheck expression against a goal, return JSON.").build());
       cmdOptions.addOption(Option.builder("as").longOpt("apply-step").hasArgs().argName("MODULE:DEF GOAL_ID EXPR")
           .desc("substitute expression into goal and return updated proof state as JSON.").build());
+      cmdOptions.addOption(Option.builder("sg").longOpt("signature").hasArgs().argName("MODULE:DEF")
+          .desc("print the signature of a definition (no body).").build());
+      cmdOptions.addOption(Option.builder("si").longOpt("signature-info").hasArgs().argName("MODULE:DEF NAME")
+          .desc("return JSON signature info with parameter classification (propositional/explicit).").build());
+      cmdOptions.addOption(Option.builder("te").longOpt("type-expr").hasArgs().argName("MODULE:DEF GOAL_ID EXPR")
+          .desc("infer the type of an expression in a goal's context, return as JSON.").build());
       cmdOptions.addOption(Option.builder().longOpt("json").desc("output JSON instead of plain text (use with -ps or -sc)").build());
       cmdOptions.addOption(Option.builder("ss").longOpt("symbol-search").hasArgs().argName("pattern")
           .desc("search by short name (uses an mtime-cached on-disk index). Pass `-ss help` for the full grammar.").build());
@@ -490,8 +496,8 @@ public class ConsoleMain {
     if (ctx.exitWithError) return null;
     if (!CliSetup.loadRequestedLibraries(ctx, cmdLine)) return null;
     if (ctx.exitWithError) return null;
-    int rc = org.arend.frontend.cli.Dispatch.execute(ctx, cmdLine);
-    return rc == 0 && !ctx.exitWithError ? ctx : null;
+    org.arend.frontend.cli.Dispatch.execute(ctx, cmdLine);
+    return ctx;
   }
 
   private boolean run(String[] args) {

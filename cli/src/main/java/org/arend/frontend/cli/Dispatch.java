@@ -7,6 +7,9 @@ import org.arend.frontend.cli.commands.CheckExpression;
 import org.arend.frontend.cli.commands.FindGoals;
 import org.arend.frontend.cli.commands.ProofSearch;
 import org.arend.frontend.cli.commands.ProofSearchJson;
+import org.arend.frontend.cli.commands.Signature;
+import org.arend.frontend.cli.commands.SignatureInfo;
+import org.arend.frontend.cli.commands.TypeExpr;
 import org.arend.frontend.cli.commands.TypecheckPipeline;
 
 /**
@@ -109,6 +112,21 @@ public final class Dispatch {
 
     if (cmdLine.hasOption("as")) {
       boolean ok = ApplyStep.run(ctx, cmdLine.getOptionValues("as"));
+      return (ok && !ctx.exitWithError) ? 0 : 1;
+    }
+
+    if (cmdLine.hasOption("sg")) {
+      boolean ok = Signature.run(ctx, cmdLine.getOptionValues("sg"));
+      return (ok && !ctx.exitWithError) ? 0 : 1;
+    }
+
+    if (cmdLine.hasOption("si")) {
+      boolean ok = SignatureInfo.run(ctx, cmdLine.getOptionValues("si"));
+      return (ok && !ctx.exitWithError) ? 0 : 1;
+    }
+
+    if (cmdLine.hasOption("te")) {
+      boolean ok = TypeExpr.run(ctx, cmdLine.getOptionValues("te"));
       return (ok && !ctx.exitWithError) ? 0 : 1;
     }
 

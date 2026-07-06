@@ -3,7 +3,6 @@ package org.arend.frontend.cli.commands;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.arend.core.context.binding.Binding;
 import org.arend.core.expr.Expression;
-import org.arend.ext.error.GeneralError;
 import org.arend.ext.module.FullName;
 import org.arend.ext.module.LongName;
 import org.arend.ext.module.ModuleLocation;
@@ -12,7 +11,10 @@ import org.arend.ext.util.Pair;
 import org.arend.frontend.cli.CommandContext;
 import org.arend.module.error.ModuleNotFoundError;
 import org.arend.naming.reference.Referable;
+import org.arend.naming.reference.TCDefReferable;
 import org.arend.server.ProgressReporter;
+import org.arend.term.group.ConcreteGroup;
+import org.arend.term.group.ConcreteStatement;
 import org.arend.typechecking.error.local.GoalError;
 
 import java.util.*;
@@ -38,13 +40,29 @@ public final class FindGoals {
       return false;
     }
 
+    // Reset typechecked state so re-typecheck produces fresh GoalErrors.
+    // We use getRawGroup() because getResolvedDefinitions() returns empty
+    // for modules loaded from binary cache.
+    ConcreteGroup group = ctx.server.getRawGroup(module);
+    if (group != null) {
+      if (parsed.proj2 != null) {
+        resetDefinition(group, parsed.proj2);
+      } else {
+        resetAllDefinitions(group);
+      }
+    }
+
     List<GoalError> goalErrors = new ArrayList<>();
     org.arend.ext.error.ErrorReporter goalCapture = error -> {
       if (error instanceof GoalError ge) {
         goalErrors.add(ge);
       }
-      ctx.errorReporter.report(error);
     };
+
+    // Register with server's ErrorService so we receive GoalErrors
+    // (the typecheck() errorReporter param only gets "not found" errors;
+    // actual typechecking errors flow through the ErrorService).
+    ctx.server.addErrorReporter(goalCapture);
 
     ctx.server.getCheckerFor(Collections.singletonList(module))
         .resolveAll(ctx.cancellation, ProgressReporter.empty());
@@ -91,6 +109,34 @@ public final class FindGoals {
     } catch (Exception e) {
       System.err.println("[ERROR] Failed to serialize goals: " + e.getMessage());
       return false;
+    }
+  }
+
+  private static boolean resetDefinition(ConcreteGroup group, LongName targetName) {
+    if (group.referable() instanceof TCDefReferable tcRef && tcRef.getKind().isTypecheckable()) {
+      if (tcRef.getRefLongName().equals(targetName)) {
+        tcRef.setTypechecked(null);
+        return true;
+      }
+    }
+    for (ConcreteStatement stmt : group.statements()) {
+      if (stmt.group() != null && resetDefinition(stmt.group(), targetName)) return true;
+    }
+    for (ConcreteGroup dyn : group.dynamicGroups()) {
+      if (resetDefinition(dyn, targetName)) return true;
+    }
+    return false;
+  }
+
+  private static void resetAllDefinitions(ConcreteGroup group) {
+    if (group.referable() instanceof TCDefReferable tcRef && tcRef.getKind().isTypecheckable()) {
+      tcRef.setTypechecked(null);
+    }
+    for (ConcreteStatement stmt : group.statements()) {
+      if (stmt.group() != null) resetAllDefinitions(stmt.group());
+    }
+    for (ConcreteGroup dyn : group.dynamicGroups()) {
+      resetAllDefinitions(dyn);
     }
   }
 }
