@@ -5,10 +5,12 @@ import org.arend.ext.module.ModuleLocation;
 import org.arend.ext.module.ModulePath;
 import org.arend.frontend.library.LibraryManager;
 import org.arend.frontend.library.SourceLibrary;
+import org.arend.prelude.Prelude;
 import org.arend.server.ArendServer;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.io.PrintStream;
 import java.util.*;
 
 /**
@@ -16,6 +18,10 @@ import java.util.*;
  * library in scope, match it against the user pattern, and emit results.
  */
 public final class SymbolSearch {
+  // Same green as -ps uses to highlight matched sub-terms (ConsoleMain.ANSI_*).
+  private static final String ANSI_GREEN = "\u001B[32m";
+  private static final String ANSI_RESET = "\u001B[0m";
+
   public static final class Options {
     public boolean caseSensitive = false;
     public boolean noCache = false;
@@ -25,6 +31,8 @@ public final class SymbolSearch {
     public @Nullable Set<String> onlyLibraries = null;
     /** Extra AND substring filters applied after the pattern matches. */
     public final List<String> containsFilters = new ArrayList<>();
+    /** Emit results as a JSON array instead of the human-readable listing. */
+    public boolean json = false;
   }
 
   /**
@@ -37,7 +45,8 @@ public final class SymbolSearch {
                         @NotNull List<SourceLibrary> requestedLibraries,
                         @NotNull LibraryManager libraryManager,
                         @NotNull ArendServer server,
-                        @NotNull ErrorReporter errorReporter) {
+                        @NotNull ErrorReporter errorReporter,
+                        @NotNull PrintStream out) {
     if (patterns.isEmpty()) {
       System.err.println("[ERROR] -ss requires at least one pattern");
       return 0;
@@ -67,11 +76,13 @@ public final class SymbolSearch {
 
     warnAboutPipes(compiled);
     warnAboutLeadingApostrophe(compiled);
-    System.out.println(formatQueryEcho(compiled, options));
+    // In JSON mode the query echo is diagnostic, not a result -- keep it off stdout.
+    (options.json ? System.err : System.out).println(formatQueryEcho(compiled, options));
 
     List<SourceLibrary> libsInScope = librariesInScope(requestedLibraries, libraryManager, options);
     if (libsInScope.isEmpty()) {
-      System.out.println("No libraries to search.");
+      if (options.json) out.println("[]");
+      else System.out.println("No libraries to search.");
       return 0;
     }
 
@@ -130,25 +141,31 @@ public final class SymbolSearch {
         .thenComparing(h -> h.libName));
 
     int total = hits.size();
+
+    if (options.json) {
+      writeJson(out, hits, libsInScope, libraryManager, options.limit);
+      return total;
+    }
+
     int printed = 0;
     boolean truncated = false;
-    StringBuilder out = new StringBuilder();
+    StringBuilder sb = new StringBuilder();
     for (Hit h : hits) {
       if (options.limit > 0 && printed >= options.limit) {
         truncated = true;
         break;
       }
-      appendEntry(out, h.libName, h.entry, libraryManager);
+      appendEntry(sb, h.libName, h.entry, libraryManager, compiled);
       printed++;
     }
 
-    System.out.print(out);
+    out.print(sb);
     if (total == 0) {
-      System.out.println("No matches.");
+      out.println("No matches.");
       printSuggestions(suggestions, suggestParts);
     } else {
-      System.out.println();
-      System.out.println("Found " + total + " match" + (total == 1 ? "" : "es")
+      out.println();
+      out.println("Found " + total + " match" + (total == 1 ? "" : "es")
           + (truncated ? " (showing " + printed + "; pass `limit=0` for all)" : ""));
     }
     return total;
@@ -341,7 +358,8 @@ public final class SymbolSearch {
     return true;
   }
 
-  private static void appendEntry(StringBuilder out, String libName, SymbolIndex.Entry e, LibraryManager libraryManager) {
+  private static void appendEntry(StringBuilder out, String libName, SymbolIndex.Entry e,
+                                  LibraryManager libraryManager, List<SymbolPattern> patterns) {
     String header;
     if (e.absoluteFile() == null || e.absoluteFile().isEmpty()) {
       header = "<" + libName + ":" + e.modulePath() + ">";
@@ -350,11 +368,123 @@ public final class SymbolSearch {
           + ":" + (e.line() == 0 ? "?" : e.line()) + ":" + (e.column() == 0 ? "?" : e.column());
     }
     out.append(header).append('\n');
-    out.append(libName).append("::").append(e.longName()).append("  [").append(e.kind().name()).append("]\n");
+    out.append(libName).append("::").append(highlightName(e.longName(), e.shortName(), patterns))
+        .append("  [").append(e.kind().name()).append("]\n");
     if (!e.signature().isEmpty()) {
       out.append("  ").append(e.signature()).append('\n');
     }
     out.append('\n');
+  }
+
+  /**
+   * Wraps the query-matched portion of the SHORT name in ANSI green (the same
+   * colour {@code -ps} uses for matched sub-terms). The short name is the
+   * trailing segment of {@code longName}, so ranges computed against it are
+   * shifted by that offset before rendering. Ranges from every matching pattern
+   * are applied; overlaps are clamped. Only reached on the non-JSON path.
+   */
+  private static String highlightName(String longName, String shortName, List<SymbolPattern> patterns) {
+    int off = longName.endsWith(shortName) ? longName.length() - shortName.length()
+                                           : longName.lastIndexOf(shortName);
+    if (off < 0) return longName;
+    List<int[]> ranges = new ArrayList<>();
+    for (SymbolPattern p : patterns) ranges.addAll(p.highlightRanges(shortName));
+    if (ranges.isEmpty()) return longName;
+    ranges.sort(Comparator.comparingInt(r -> r[0]));
+    StringBuilder sb = new StringBuilder(longName.length() + 16);
+    sb.append(longName, 0, off);
+    int cur = 0;
+    for (int[] r : ranges) {
+      if (r[1] <= cur) continue;               // fully covered by an earlier range
+      int start = Math.max(r[0], cur);
+      if (start > cur) sb.append(shortName, cur, start);
+      sb.append(ANSI_GREEN).append(shortName, start, r[1]).append(ANSI_RESET);
+      cur = r[1];
+    }
+    sb.append(shortName, cur, shortName.length());
+    sb.append(longName, off + shortName.length(), longName.length());
+    return sb.toString();
+  }
+
+  /**
+   * Emits the ranked hits as a JSON array (one object per line) on {@code out}.
+   * Fields: {@code library} (omitted when only one non-prelude library is in
+   * scope), {@code file} (omitted for generated modules), {@code module},
+   * {@code line}, {@code column}, {@code longName}, {@code kind},
+   * {@code signature} (omitted when empty). Honours the same {@code limit} as
+   * the human listing.
+   */
+  private static void writeJson(PrintStream out, List<Hit> hits, List<SourceLibrary> libsInScope,
+                                LibraryManager libraryManager, int limit) {
+    boolean omitLibrary = countNonPreludeLibraries(libsInScope) <= 1;
+    int count = (limit > 0) ? Math.min(hits.size(), limit) : hits.size();
+    out.println("[");
+    for (int i = 0; i < count; i++) {
+      StringBuilder sb = new StringBuilder("  ");
+      appendJsonObject(sb, hits.get(i), libraryManager, omitLibrary);
+      if (i < count - 1) sb.append(',');
+      out.println(sb);
+    }
+    out.println("]");
+  }
+
+  private static void appendJsonObject(StringBuilder sb, Hit h, LibraryManager libraryManager, boolean omitLibrary) {
+    SymbolIndex.Entry e = h.entry;
+    sb.append('{');
+    boolean first = true;
+    if (!omitLibrary) first = jsonStr(sb, first, "library", h.libName);
+    if (e.absoluteFile() != null && !e.absoluteFile().isEmpty()) {
+      first = jsonStr(sb, first, "file", PathDisplay.shorten(e.absoluteFile(), libraryManager));
+    }
+    first = jsonStr(sb, first, "module", e.modulePath().toString());
+    first = jsonNum(sb, first, "line", e.line());
+    first = jsonNum(sb, first, "column", e.column());
+    first = jsonStr(sb, first, "longName", e.longName());
+    first = jsonStr(sb, first, "kind", e.kind().name());
+    if (!e.signature().isEmpty()) jsonStr(sb, first, "signature", e.signature());
+    sb.append('}');
+  }
+
+  private static boolean jsonStr(StringBuilder sb, boolean first, String key, String value) {
+    if (!first) sb.append(',');
+    sb.append('"').append(key).append("\":\"").append(jsonEscape(value)).append('"');
+    return false;
+  }
+
+  private static boolean jsonNum(StringBuilder sb, boolean first, String key, int value) {
+    if (!first) sb.append(',');
+    sb.append('"').append(key).append("\":").append(value);
+    return false;
+  }
+
+  /** Minimal RFC-8259 string escaping (backslashes are common in Arend signatures). */
+  private static String jsonEscape(String s) {
+    StringBuilder b = new StringBuilder(s.length() + 8);
+    for (int i = 0; i < s.length(); i++) {
+      char c = s.charAt(i);
+      switch (c) {
+        case '"' -> b.append("\\\"");
+        case '\\' -> b.append("\\\\");
+        case '\n' -> b.append("\\n");
+        case '\r' -> b.append("\\r");
+        case '\t' -> b.append("\\t");
+        case '\b' -> b.append("\\b");
+        case '\f' -> b.append("\\f");
+        default -> {
+          if (c < 0x20) b.append(String.format("\\u%04x", (int) c));
+          else b.append(c);
+        }
+      }
+    }
+    return b.toString();
+  }
+
+  private static int countNonPreludeLibraries(List<SourceLibrary> libs) {
+    int n = 0;
+    for (SourceLibrary lib : libs) {
+      if (!Prelude.LIBRARY_NAME.equals(lib.getLibraryName())) n++;
+    }
+    return n;
   }
 
   /**

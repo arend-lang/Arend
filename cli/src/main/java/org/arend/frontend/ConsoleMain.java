@@ -49,6 +49,7 @@ import org.arend.ext.reference.Precedence;
 import org.arend.source.PersistableBinarySource;
 import org.arend.term.prettyprint.PrettyPrintVisitor;
 import java.io.IOException;
+import java.io.PrintStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -123,6 +124,20 @@ public class ConsoleMain {
   };
 
   private CommandLine parseArgs(String[] args) {
+    // `--help`/`-h` combined with a query flag (`-ss`, `-fu`, `-ch`, `-sc`,
+    // `-ps`) prints that command's grammar, in EITHER order -- both `-ss --help`
+    // and `--help -ss` work. We detect it from the RAW args before Commons CLI
+    // parsing, because those flags take arguments: an argument-less `-ss --help`
+    // would otherwise fail parsing with "Missing argument for option: ss". A
+    // bare `-ss help` is no longer special -- it is a literal search for "help".
+    if (hasRawFlag(args, "h", "help")) {
+      if (hasRawFlag(args, "ss", "symbol-search")) { ConsoleHelp.printSymbolSearch(); return null; }
+      if (hasRawFlag(args, "fu", "find-usages")) { ConsoleHelp.printFindUsages(); return null; }
+      if (hasRawFlag(args, "ch", "class-hierarchy")) { ConsoleHelp.printClassHierarchy(); return null; }
+      if (hasRawFlag(args, "sc", "scope")) { ConsoleHelp.printScope(); return null; }
+      if (hasRawFlag(args, "ps", "proof-search")) { ConsoleHelp.printProofSearch(); return null; }
+      // else fall through: the general -h handler below prints the grouped help.
+    }
     try {
       Options cmdOptions = new Options();
       cmdOptions.addOption("h", "help", false, "print this message");
@@ -134,14 +149,15 @@ public class ConsoleMain {
       cmdOptions.addOption(Option.builder("i").longOpt("interactive").hasArg().optionalArg(true).argName("plain|jline").desc("start an interactive REPL").build());
       cmdOptions.addOption(Option.builder("p").longOpt("print").hasArg().argName("MODULE[:DEF]").desc("after the typecheck, print the elaborated/typechecked form of MODULE (or a single DEF inside it): implicits filled in, eliminators desugared.").build());
       cmdOptions.addOption(Option.builder("ss").longOpt("symbol-search").hasArgs().argName("name-pattern")
-          .desc("search by short name (uses an mtime-cached on-disk index). Pass `-ss help` for the full grammar.").build());
+          .desc("search by short name (uses an mtime-cached on-disk index). Pass `-ss --help` for the full grammar.").build());
       cmdOptions.addOption(Option.builder("fu").longOpt("find-usages").hasArgs().argName("MODULE:DEF")
-          .desc("find every usage of a definition. Pass `-fu help` for full grammar.").build());
+          .desc("find every usage of a definition. Pass `-fu --help` for full grammar.").build());
       cmdOptions.addOption(Option.builder("ch").longOpt("class-hierarchy").hasArgs().argName("MODULE:CLASS|name")
-          .desc("print super/sub-class trees plus \\new and \\instance sites. Pass `-ch help` for full grammar.").build());
+          .desc("print super/sub-class trees plus \\new and \\instance sites. Pass `-ch --help` for full grammar.").build());
       cmdOptions.addOption(Option.builder("sc").longOpt("scope").hasArgs().argName("MODULE:PATH|name")
-          .desc("dump the ambient scope at a referable's position. Pass `-sc help` for full grammar.").build());
-      cmdOptions.addOption(Option.builder("ps").longOpt("proof-search").hasArgs().argName("sig-pattern").desc("search by signature shape (parameters/codomain). Pass `-ps help` for the full grammar.").build());
+          .desc("dump the ambient scope at a referable's position. Pass `-sc --help` for full grammar.").build());
+      cmdOptions.addOption(Option.builder("ps").longOpt("proof-search").hasArgs().argName("sig-pattern").desc("search by signature shape (parameters/codomain). Pass `-ps --help` for the full grammar.").build());
+      cmdOptions.addOption(Option.builder().longOpt("json").desc("with -ss: print results as a JSON array on stdout and route [INFO] logs to stderr (ignored in REPL mode)").build());
       cmdOptions.addOption("r", "recompile", false, "recompile all modules from source, ignoring binary caches (.arc files)");
       cmdOptions.addOption(null, "serialize", false, "after typechecking, persist typechecked modules as .arc binary caches; without this flag, no .arc files are written");
       cmdOptions.addOption("t", "test", false, "run tests");
@@ -162,32 +178,21 @@ public class ConsoleMain {
         return null;
       }
 
-      if (cmdLine.hasOption("ss") && ConsoleHelp.containsHelpToken(cmdLine.getOptionValues("ss"))) {
-        ConsoleHelp.printSymbolSearch();
-        return null;
-      }
-      if (cmdLine.hasOption("fu") && ConsoleHelp.containsHelpToken(cmdLine.getOptionValues("fu"))) {
-        ConsoleHelp.printFindUsages();
-        return null;
-      }
-      if (cmdLine.hasOption("ch") && ConsoleHelp.containsHelpToken(cmdLine.getOptionValues("ch"))) {
-        ConsoleHelp.printClassHierarchy();
-        return null;
-      }
-      if (cmdLine.hasOption("sc") && ConsoleHelp.containsHelpToken(cmdLine.getOptionValues("sc"))) {
-        ConsoleHelp.printScope();
-        return null;
-      }
-      if (cmdLine.hasOption("ps") && ConsoleHelp.containsHelpToken(cmdLine.getOptionValues("ps"))) {
-        ConsoleHelp.printProofSearch();
-        return null;
-      }
-
       return cmdLine;
     } catch (ParseException e) {
       System.err.println(e.getMessage());
       return null;
     }
+  }
+
+  /** True if {@code -<shortOpt>} or {@code --<longOpt>} appears as a raw arg token (stopping at a bare {@code --}). */
+  private static boolean hasRawFlag(String[] args, String shortOpt, String longOpt) {
+    String shortFlag = "-" + shortOpt, longFlag = "--" + longOpt;
+    for (String arg : args) {
+      if (arg.equals("--")) break;
+      if (arg.equals(shortFlag) || arg.equals(longFlag)) return true;
+    }
+    return false;
   }
 
   private void updateSourceResult(ModuleLocation module, GeneralError.Level result) {
@@ -435,6 +440,16 @@ public class ConsoleMain {
       return false;
     }
 
+    // With `--json -ss`, stdout must carry ONLY the JSON result array. Route the
+    // [INFO] library-loading chatter (and the search's own query echo) to stderr
+    // for the duration by swapping System.out; the JSON is written to the real
+    // stdout captured here. `--json` without `-ss` is a no-op.
+    boolean jsonSearch = cmdLine.hasOption("json") && cmdLine.hasOption("ss");
+    PrintStream realStdout = System.out;
+    if (jsonSearch) {
+      System.setOut(System.err);
+    }
+
     for (SourceLibrary library : requestedLibraries) {
       loadLibrary(libraryManager, library, server);
     }
@@ -450,12 +465,17 @@ public class ConsoleMain {
     }
 
     if (cmdLine.hasOption("ss")) {
-      org.arend.frontend.symbol.SymbolSearch.Parsed parsed =
-          org.arend.frontend.symbol.SymbolSearch.parseArgs(cmdLine.getOptionValues("ss"), mySystemErrErrorReporter);
-      if (parsed == null) return false;
-      org.arend.frontend.symbol.SymbolSearch.run(parsed.patterns(), parsed.options(),
-          requestedLibraries, libraryManager, server, mySystemErrErrorReporter);
-      return !myExitWithError;
+      try {
+        org.arend.frontend.symbol.SymbolSearch.Parsed parsed =
+            org.arend.frontend.symbol.SymbolSearch.parseArgs(cmdLine.getOptionValues("ss"), mySystemErrErrorReporter);
+        if (parsed == null) return false;
+        parsed.options().json = jsonSearch;
+        org.arend.frontend.symbol.SymbolSearch.run(parsed.patterns(), parsed.options(),
+            requestedLibraries, libraryManager, server, mySystemErrErrorReporter, realStdout);
+        return !myExitWithError;
+      } finally {
+        if (jsonSearch) System.setOut(realStdout);
+      }
     }
 
     if (cmdLine.hasOption("fu")) {

@@ -3,6 +3,9 @@ package org.arend.frontend.symbol;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
 
@@ -34,11 +37,26 @@ import java.util.regex.PatternSyntaxException;
  *   glob:<pat>        '*' = any chars, '?' = any one char.
  *                     Use '\*' / '\?' for literal stars / question marks.
  *   re:<java-regex>   raw Java regex, matched with find()
- *   hb:<chars>        humpback / boundary-aware fuzzy match,
- *                     e.g. 'hb:PMA' on 'PosetAddMonoid', 'hb:p-iP' on
- *                     'pi-isProp'. Word boundaries are case transitions and
- *                     any non-letter Arend identifier character (the
- *                     operator-class chars and '_').
+ *   hb:<chars>        humpback / boundary-aware fuzzy match: each pattern char
+ *                     matches a char that STARTS a word, e.g. 'hb:PAM' on
+ *                     'PosetAddMonoid' (Poset·Add·Monoid) or 'hb:piP' on
+ *                     'pi-isProp' (pi·isProp — supply the word-start letters,
+ *                     not the '-' separator). A word starts at every non-plain
+ *                     character -- an uppercase letter, a digit, or an
+ *                     operator/symbol -- so a capital run splits ('HLevels' =
+ *                     H·Levels) and an embedded digit splits ('log1p' =
+ *                     log·1p), and also after any separator char. A '-' glued
+ *                     to a '_' does not split off a following lowercase word
+ *                     ('abs_-left' = abs·-left), but a non-plain char always
+ *                     starts a word, so 'HLevel_-1' = HLevel·-·1 and 'hb:HL-2s'
+ *                     matches 'HLevels_-2-sigma'. Boundary detection is
+ *                     always case-sensitive (uppercase is case-based),
+ *                     independent of the global case flag. Smart case on the
+ *                     pattern letters: an uppercase letter matches uppercase
+ *                     only, a lowercase letter matches either case -- so
+ *                     'hb:PAM' needs capital P·A·M while 'hb:pam' also matches
+ *                     a lowercase 'p_a_m' name. 'case-sensitive' additionally
+ *                     pins the lowercase letters to exact case.
  */
 public final class SymbolPattern {
   public enum Mode { LITERAL, EQ, GLOB, REGEX, HUMPBACK }
@@ -55,6 +73,29 @@ public final class SymbolPattern {
 
   public boolean matches(@NotNull String name) {
     return myCompiled.matcher(name).find();
+  }
+
+  /**
+   * Character ranges within {@code name} to highlight for a match, as
+   * {@code [start, end)} pairs (empty if the pattern does not match). For a
+   * humpback pattern the individual matched word-start characters are returned
+   * (via the per-char capture groups added in {@link #buildHumpbackRegex}); for
+   * every other mode the single overall match span is returned -- which is the
+   * matched substring for literal/regex and the whole name for anchored
+   * eq:/glob:.
+   */
+  public @NotNull List<int[]> highlightRanges(@NotNull String name) {
+    Matcher m = myCompiled.matcher(name);
+    if (!m.find()) return List.of();
+    List<int[]> ranges = new ArrayList<>();
+    if (myMode == Mode.HUMPBACK) {
+      for (int g = 1; g <= m.groupCount(); g++) {
+        int s = m.start(g), e = m.end(g);
+        if (s >= 0 && e > s) ranges.add(new int[]{s, e});
+      }
+    }
+    if (ranges.isEmpty()) ranges.add(new int[]{m.start(), m.end()});
+    return ranges;
   }
 
   public @NotNull String source() {
@@ -219,25 +260,81 @@ public final class SymbolPattern {
   }
 
   /**
-   * Word-boundary characters for humpback fuzzy matching: every non-letter
-   * Arend identifier character (operators and underscore), drawn from the
-   * same alphabet as {@link #isArendIdChar}. Apostrophe is deliberately
-   * omitted -- it is a continuation char used as a primed-variant suffix
-   * ({@code f'}, {@code x''}), not a word break. A match starts at a
-   * boundary char OR after a lower-to-upper case transition.
+   * Separator characters that break a word for humpback matching, EXCLUDING
+   * {@code -}. Every non-letter Arend identifier char (operators and
+   * underscore) drawn from the same alphabet as {@link #isArendIdChar}, minus
+   * {@code -} -- which needs the context-sensitive treatment in
+   * {@link #WORD_START} and so is handled by its own clause there. Apostrophe
+   * is deliberately omitted too -- it is a continuation char used as a
+   * primed-variant suffix ({@code f'}, {@code x''}), not a word break.
    */
-  private static final String BOUNDARY_CLASS = "[~!@#$%\\^&*\\-+=<>?/|:\\[\\]_]";
+  private static final String SEP_SIMPLE = "[~!@#$%\\^&*+=<>?/|:\\[\\]_]";
+
+  /**
+   * Start-of-word by "non-plain" character: EVERY character that is not a
+   * lowercase letter or apostrophe -- an uppercase letter, a digit, or an
+   * operator/symbol char -- begins its own word. So a capital run splits
+   * ({@code HLevels} = H·Levels, {@code IOError} = I·O·Error) and an embedded
+   * digit splits ({@code log1p} = log·1p, {@code expm1} = exp·m·1). Matched
+   * zero-width via a lookahead at that char. Wrapped in {@code (?-i:...)} so
+   * the {@code a-z} negation stays case-sensitive even when the whole pattern
+   * is compiled with {@link Pattern#CASE_INSENSITIVE}; without the guard case
+   * folding turns {@code [^a-z']} into "not a letter", which drops uppercase
+   * out of the class and lets every lowercase position start a word, so {@code
+   * hb:PAM} degrades into a plain {@code p..a..m} subsequence search. The
+   * pattern LETTERS still fold with the global flag (see
+   * {@link #buildHumpbackRegex}); only boundary detection is pinned to real
+   * case. Apostrophe is excluded because it is a primed-variant suffix
+   * ({@code f'}, {@code x''}), a continuation, not a word start. A non-plain
+   * char starts a word UNCONDITIONALLY -- even glued right after a
+   * {@code _}-demoted {@code -} -- so the digit in {@code HLevel_-1} /
+   * {@code HLevels_-2-sigma} is its own word ({@code hb:H1} and {@code hb:HL-2s}
+   * both match). The {@code _}-vs-{@code -} adjacency only affects a following
+   * lowercase LETTER -- see {@link #WORD_START}.
+   */
+  private static final String NONPLAIN_START = "(?-i:(?=[^a-z']))";
+
+  /**
+   * Zero-width assertion that the current position STARTS a word: at the
+   * string start, right after a {@link #SEP_SIMPLE} separator, right after a
+   * {@code -} that is a real separator, or at a {@link #NONPLAIN_START
+   * non-plain character}. The {@code -} exception encodes arend-lib's
+   * convention that {@code _} is the token separator and a {@code -} adjacent
+   * to it glues onto the neighbouring token rather than separating a following
+   * lowercase word: {@code abs_-left} is abs·-left (the {@code left} does NOT
+   * split off), {@code o-_Equiv} is o-·Equiv. The {@code (?<!_-)(?!_)} guard
+   * lives ONLY on this {@code -} clause, which is what makes a following
+   * lowercase letter a word start; a {@code -} not adjacent to {@code _} (e.g.
+   * {@code 2-pi}, {@code abs-comm}) still separates. This guard does NOT apply
+   * to {@link #NONPLAIN_START}: an uppercase letter, digit, or symbol starts a
+   * word wherever it appears, so {@code HLevel_-1} is HLevel·-·1 and
+   * {@code hb:H1} / {@code hb:HL-2s} match.
+   */
+  private static final String WORD_START =
+      "(?:^|(?<=" + SEP_SIMPLE + ")|(?<=-)(?<!_-)(?!_)|" + NONPLAIN_START + ")";
 
   private static String buildHumpbackRegex(String pattern) {
-    StringBuilder sb = new StringBuilder(pattern.length() * 8);
-    sb.append("(?:^|(?<=").append(BOUNDARY_CLASS).append(")|(?<=[a-z])(?=[A-Z]))");
+    StringBuilder sb = new StringBuilder(pattern.length() * 20);
     for (int i = 0; i < pattern.length(); i++) {
       char c = pattern.charAt(i);
-      sb.append(Pattern.quote(String.valueOf(c)));
-      if (i < pattern.length() - 1) {
-        // any chars, then either a boundary or a case transition before the next pattern char
-        sb.append(".*?(?:").append(BOUNDARY_CLASS).append("|(?<=[a-z])(?=[A-Z]))");
+      // Every pattern char must land on a word start; between chars, .*? skips
+      // freely to the next one. Each char is wrapped in a capturing group so the
+      // exact matched positions can be recovered for highlighting (see
+      // #highlightRanges) -- the group is zero-width-anchored by WORD_START, so
+      // it captures precisely the one matched character.
+      sb.append(WORD_START).append('(');
+      // Smart case: an UPPERCASE pattern letter matches uppercase only -- pin it
+      // with (?-i:...) so the global case-insensitive default can't fold it down
+      // to lowercase. A lowercase letter (or any non-letter char) is emitted
+      // plainly, so it honours the global flag: both cases by default, exact
+      // under `case-sensitive`.
+      if (c >= 'A' && c <= 'Z') {
+        sb.append("(?-i:").append(Pattern.quote(String.valueOf(c))).append(')');
+      } else {
+        sb.append(Pattern.quote(String.valueOf(c)));
       }
+      sb.append(')');
+      if (i < pattern.length() - 1) sb.append(".*?");
     }
     return sb.toString();
   }

@@ -14,14 +14,6 @@ import java.util.Set;
 final class ConsoleHelp {
   private ConsoleHelp() {}
 
-  static boolean containsHelpToken(String[] values) {
-    if (values == null) return false;
-    for (String value : values) {
-      if ("help".equalsIgnoreCase(value)) return true;
-    }
-    return false;
-  }
-
   private static final String SYMBOL_SEARCH_HELP = """
       arend -ss <pattern> [option ...]
 
@@ -52,10 +44,28 @@ final class ConsoleHelp {
                            E.g. `eq:pmap` matches `pmap` but not `pmap2`, `pmap_<*-comm`, etc.
         glob:<pat>         `*` = any chars, `?` = any one char.
                            Use `\\*` / `\\?` for literal stars / question marks (so `glob:abs\\_\\*` matches `abs_*`, `abs_*q`, and so on).
-        re:<java-regex>    raw java.util.regex pattern, matched with find()
-        hb:<chars>         Humpback / camel-and-dash boundary fuzzy match.
-                           E.g. `hb:PMA` matches `PosetAddMonoid`; `hb:p-iP` matches `pi-isProp`.
-                           Use `case-sensitive` for strict camel.
+        re:<java-regex>    Raw java.util.regex pattern, matched with find() — so it is UNANCHORED:
+                           `re:Monoid` hits any name CONTAINING "Monoid"; anchor with `^` / `$` for a whole-name match.
+                           Full Java syntax works: `|`, `[...]`, `(?:...)`, lookahead `(?=...)`, backrefs `\\1`, `\\p{...}`, `(?i)` …
+                           Case-insensitive by default; add `case-sensitive` to match case exactly.
+                           GOTCHA: under the default, case-based constructs match BOTH cases, so `re:[A-Z]` and `re:\\p{Lu}`
+                           also hit lowercase names — pass `case-sensitive` when case matters (e.g. "starts with a capital").
+                           A space inside the pattern splits it into separate patterns (see MULTIPLE PATTERNS), so a regex
+                           cannot contain a literal space — Arend short names never do anyway.
+        hb:<chars>         Humpback / camel-and-dash boundary fuzzy match: each char must start a new "word" —
+                           every NON-PLAIN char starts a word: an uppercase letter (capital run splits: `HLevels`=H·Levels),
+                           a digit (embedded digit splits: `log1p`=log·1p, `expm1`=exp·m·1), or an operator/symbol,
+                           as does a run after a dash / underscore / operator char.
+                           E.g. `hb:PAM` matches `PosetAddMonoid` (Poset·Add·Monoid); `hb:CM` matches `CMonoid`, `ContMap`;
+                           `hb:ccel1` matches `compose-coef-expm1-log1p` (compose·coef·expm1·log1p, with the trailing `1`).
+                           A `-` glued to a `_` does not split off a following LOWERCASE word (`abs_-left` = abs·-left), but a
+                           non-plain char always starts a word — so `HLevel_-1` = HLevel·-·1 and `hb:HL-2s` matches `HLevels_-2-sigma`.
+                           Boundary detection is ALWAYS case-sensitive (an uppercase letter is case-based),
+                           so hb: does not over-match under the default case-insensitive mode.
+                           SMART CASE on the pattern letters: an UPPERCASE letter matches uppercase only, a lowercase
+                           letter matches either case. So `hb:PAM` needs capital P·A·M (finds `PosetAddMonoid`, not a
+                           lowercase `p_a_m` name), while `hb:pam` finds both. `case-sensitive` additionally pins the
+                           lowercase letters (so `hb:pam case-sensitive` rejects capital word-starts).
 
       MULTIPLE PATTERNS
         Pass several patterns to OR them: a name matches if it satisfies any.
@@ -102,6 +112,11 @@ final class ConsoleHelp {
         <library>::<long-name>  [<KIND>]
           <signature on a single line>
 
+        With the global `--json` flag, results are emitted instead as a JSON array on stdout (one object per line:
+        library [omitted when a single non-prelude library is loaded], file, module, line, column, longName, kind,
+        signature). [INFO] logs and this query echo are routed to stderr, so stdout stays pure JSON (redirect the
+        log with `2>/tmp/log`).
+
         Results are ordered by SHORT-NAME LENGTH (ascending).
         An exact-length name appears before any longer name that just contains the query.
         E.g. for `-ss fac`: `face` before `factor` before `factors` before `leftFactor` before `completion-factor`.
@@ -120,10 +135,11 @@ final class ConsoleHelp {
         arend -L libs my-lib -ss Cauchy -ss Mertens         (OR via multi-flag)
         arend -L libs my-lib -ss 'eq:pmap' -ss kind=func,lemma
         arend -L libs my-lib -ss 'glob:abs_*' -ss limit=20
-        arend -L libs my-lib -ss 're:^abs.*\\+.*$'
-        arend -L libs my-lib -ss 'hb:isProp' -ss case-sensitive
+        arend -L libs my-lib -ss 're:^abs.*\\+.*$'                (regex, anchored both ends)
+        arend -L libs my-lib -ss 're:^[A-Z]' -ss case-sensitive   (Capitalised names; case-sensitive is required, see re: GOTCHA)
+        arend -L libs my-lib -ss 'hb:PAM'                         (humpback -> PosetAddMonoid, PosetAbMonoid, …)
         arend -L libs my-lib -ss only=self -ss 'shared-name'
-        arend -L libs my-lib -ss Monoid -ss contains=comm   (Monoid* AND *comm*)
+        arend -L libs my-lib -ss Monoid -ss contains=Add   (short name matches 'Monoid' AND contains 'Add', e.g. AddMonoid)
       """;
 
 
