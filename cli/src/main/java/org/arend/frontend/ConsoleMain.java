@@ -50,6 +50,7 @@ import org.arend.source.PersistableBinarySource;
 import org.arend.term.prettyprint.PrettyPrintVisitor;
 import java.io.IOException;
 import java.io.PrintStream;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -157,7 +158,8 @@ public class ConsoleMain {
       cmdOptions.addOption(Option.builder("sc").longOpt("scope").hasArgs().argName("MODULE:PATH|name")
           .desc("dump the ambient scope at a referable's position. Pass `-sc --help` for full grammar.").build());
       cmdOptions.addOption(Option.builder("ps").longOpt("proof-search").hasArgs().argName("sig-pattern").desc("search by signature shape (parameters/codomain). Pass `-ps --help` for the full grammar.").build());
-      cmdOptions.addOption(Option.builder().longOpt("json").desc("with -ss: print results as a JSON array on stdout and route [INFO] logs to stderr (ignored in REPL mode)").build());
+      cmdOptions.addOption(Option.builder().longOpt("json").desc("with -ss: print results as a JSON array on stdout; all diagnostics ([INFO]/[WARN]/[ERROR], query echo) go to a log file, keeping stdout pure JSON and the console clean (ignored in REPL mode)").build());
+      cmdOptions.addOption(Option.builder().longOpt("log-file").hasArg().argName("path").desc("with --json -ss: write diagnostics here instead of the default <tmpdir>/arend-symbol-search.log").build());
       cmdOptions.addOption("r", "recompile", false, "recompile all modules from source, ignoring binary caches (.arc files)");
       cmdOptions.addOption(null, "serialize", false, "after typechecking, persist typechecked modules as .arc binary caches; without this flag, no .arc files are written");
       cmdOptions.addOption("t", "test", false, "run tests");
@@ -440,32 +442,57 @@ public class ConsoleMain {
       return false;
     }
 
-    // With `--json -ss`, stdout must carry ONLY the JSON result array. Route the
-    // [INFO] library-loading chatter (and the search's own query echo) to stderr
-    // for the duration by swapping System.out; the JSON is written to the real
-    // stdout captured here. `--json` without `-ss` is a no-op.
+    // In `--json -ss` mode stdout must carry ONLY the JSON result array. Route
+    // every diagnostic -- the [INFO] library-loading chatter, the search's own
+    // query echo, and any [WARN]/[ERROR] -- to a log FILE rather than the
+    // console, so the terminal shows just the JSON. (The previous version merely
+    // swapped System.out for System.err, which on a bare terminal still
+    // interleaved the chatter with the JSON.) The JSON itself is written to the
+    // real stdout captured here; a single pointer line on the real stderr says
+    // where the log landed. Both System.out and System.err are redirected so
+    // that code reading either static field at call time (the error reporter,
+    // SymbolSearch's warnings/echo) lands in the log. If the file cannot be
+    // opened we fall back to stderr. `--json` without `-ss` is a no-op.
     boolean jsonSearch = cmdLine.hasOption("json") && cmdLine.hasOption("ss");
     PrintStream realStdout = System.out;
+    PrintStream realStderr = System.err;
+    PrintStream jsonLog = null;
+    Path jsonLogPath = null;
     if (jsonSearch) {
-      System.setOut(System.err);
-    }
-
-    for (SourceLibrary library : requestedLibraries) {
-      loadLibrary(libraryManager, library, server);
-    }
-
-    for (SourceLibrary library : requestedLibraries) {
-      if (!loadDependencies(library, libraryManager, libDirs, server)) {
-        return false;
+      jsonLogPath = resolveJsonLogPath(cmdLine);
+      try {
+        jsonLog = new PrintStream(Files.newOutputStream(jsonLogPath), true, StandardCharsets.UTF_8);
+        System.setOut(jsonLog);
+        System.setErr(jsonLog);
+      } catch (IOException e) {
+        realStderr.println("[WARN] cannot open -ss log file " + jsonLogPath + " (" + e.getMessage()
+            + "); routing diagnostics to stderr instead");
+        System.setOut(realStderr);
+        jsonLog = null;
+        jsonLogPath = null;
       }
     }
 
-    if (myExitWithError) {
-      return false;
-    }
+    // The load loops and the -ss block run inside this try so the redirected
+    // streams are ALWAYS restored -- including the early `return false` exits
+    // below, which the old code leaked past. The fu/ch/sc/ps/typecheck blocks
+    // after it are reached only when there is no -ss, hence never in JSON mode.
+    try {
+      for (SourceLibrary library : requestedLibraries) {
+        loadLibrary(libraryManager, library, server);
+      }
 
-    if (cmdLine.hasOption("ss")) {
-      try {
+      for (SourceLibrary library : requestedLibraries) {
+        if (!loadDependencies(library, libraryManager, libDirs, server)) {
+          return false;
+        }
+      }
+
+      if (myExitWithError) {
+        return false;
+      }
+
+      if (cmdLine.hasOption("ss")) {
         org.arend.frontend.symbol.SymbolSearch.Parsed parsed =
             org.arend.frontend.symbol.SymbolSearch.parseArgs(cmdLine.getOptionValues("ss"), mySystemErrErrorReporter);
         if (parsed == null) return false;
@@ -473,8 +500,15 @@ public class ConsoleMain {
         org.arend.frontend.symbol.SymbolSearch.run(parsed.patterns(), parsed.options(),
             requestedLibraries, libraryManager, server, mySystemErrErrorReporter, realStdout);
         return !myExitWithError;
-      } finally {
-        if (jsonSearch) System.setOut(realStdout);
+      }
+    } finally {
+      if (jsonSearch) {
+        System.setOut(realStdout);
+        System.setErr(realStderr);
+        if (jsonLog != null) {
+          jsonLog.close();
+          realStderr.println("[INFO] -ss diagnostics written to " + jsonLogPath);
+        }
       }
     }
 
@@ -1034,6 +1068,17 @@ public class ConsoleMain {
         errorReporter.report(error);
       }
     }
+  }
+
+  /**
+   * The file that {@code --json -ss} writes its diagnostics to. Honours an
+   * explicit {@code --log-file <path>}; otherwise defaults to
+   * {@code <java.io.tmpdir>/arend-symbol-search.log}, overwritten each run.
+   */
+  private static Path resolveJsonLogPath(CommandLine cmdLine) {
+    String custom = cmdLine.getOptionValue("log-file");
+    if (custom != null && !custom.isEmpty()) return Paths.get(custom);
+    return Paths.get(System.getProperty("java.io.tmpdir"), "arend-symbol-search.log");
   }
 
   private void loadLibrary(LibraryManager libraryManager, SourceLibrary library, ArendServer server) {

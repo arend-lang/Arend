@@ -40,10 +40,11 @@ final class ConsoleHelp {
 
                            A '|' in a plain pattern matches literally (since '|' IS a valid identifier char).
                            It emits a soft warning anyway, in case OR was intended.
-        eq:<text>          Exact short-name match (anchored).
-                           E.g. `eq:pmap` matches `pmap` but not `pmap2`, `pmap_<*-comm`, etc.
-        glob:<pat>         `*` = any chars, `?` = any one char.
-                           Use `\\*` / `\\?` for literal stars / question marks (so `glob:abs\\_\\*` matches `abs_*`, `abs_*q`, and so on).
+        glob:<pat>         Anchored whole-name match. `*` = any chars, `?` = any one char.
+                           With NO `*`/`?` this is an EXACT match: `glob:pmap` matches `pmap` but not `pmap2`, `Xpmap`.
+                           `*`/`?` are valid Arend identifier chars, so to match one literally escape it as `\\*` / `\\?`
+                           (`\\` never occurs in an Arend name, so there is no ambiguity): `glob:\\*-comm` matches exactly `*-comm`,
+                           `glob:abs\\_\\*` matches `abs_*`, `abs_*q`, and so on.
         re:<java-regex>    Raw java.util.regex pattern, matched with find() — so it is UNANCHORED:
                            `re:Monoid` hits any name CONTAINING "Monoid"; anchor with `^` / `$` for a whole-name match.
                            Full Java syntax works: `|`, `[...]`, `(?:...)`, lookahead `(?=...)`, backrefs `\\1`, `\\p{...}`, `(?i)` …
@@ -52,17 +53,22 @@ final class ConsoleHelp {
                            Prepend `(?i)` to opt back into case-insensitivity: `re:(?i)monoid`.
                            A space inside the pattern splits it into separate patterns (see MULTIPLE PATTERNS), so a regex
                            cannot contain a literal space — Arend short names never do anyway.
-        hb:<chars>         Humpback / camel-and-dash boundary fuzzy match: each char must start a new "word" —
-                           every NON-PLAIN char starts a word: an uppercase letter (capital run splits: `HLevels`=H·Levels),
-                           a digit (embedded digit splits: `log1p`=log·1p, `expm1`=exp·m·1), or an operator/symbol,
-                           as does a run after a dash / underscore / operator char.
-                           E.g. `hb:PAM` matches `PosetAddMonoid` (Poset·Add·Monoid); `hb:CM` matches `CMonoid`, `ContMap`;
-                           `hb:ccel1` matches `compose-coef-expm1-log1p` (compose·coef·expm1·log1p, with the trailing `1`).
-                           A `-` glued to a `_` does not split off a following LOWERCASE word (`abs_-left` = abs·-left), but a
-                           non-plain char always starts a word — so `HLevel_-1` = HLevel·-·1 and `hb:HL-2s` matches `HLevels_-2-sigma`.
-                           Boundary detection is ALWAYS case-sensitive (an uppercase letter is case-based), so hb: never over-matches.
-                           Pattern letters follow the usual SMART CASE (below): `hb:PAM` needs capital P·A·M (finds `PosetAddMonoid`,
-                           not a lowercase `p_a_m` name), while `hb:pam` finds both.
+        hb:<chars>         Humpback / camel-and-dash boundary fuzzy match. Names split into "words" at every
+                           NON-PLAIN char: an uppercase letter (`HLevels`=H·Levels), a digit (`log1p`=log·1p),
+                           or an operator/symbol, as does a run after a dash / underscore / operator char.
+                           The FIRST pattern char must land on a word start — this keeps hb: distinct from a
+                           plain substring (`hb:onoid` will NOT match `Monoid`). After that:
+                             * UPPERCASE / digit / operator must again start a word, skipping ahead as needed:
+                               `hb:PAM` -> `PosetAddMonoid` (Poset·Add·Monoid), `hb:CM` -> `CMonoid`,`ContMap`,
+                               `hb:ccel1` -> `compose-coef-expm1-log1p`;
+                             * a LOWERCASE letter is lenient: it starts a word OR continues the current one, so
+                               you can type word prefixes: `hb:ide` -> `ide`,`Ideal`; `hb:mon` -> `Monoid`,`Mono`.
+                           A `-` glued to a `_` does not split off a following LOWERCASE word (`abs_-left`=abs·-left),
+                           but a non-plain char always starts a word — `HLevel_-1`=HLevel·-·1, `hb:HL-2s`=`HLevels_-2-sigma`.
+                           Boundary detection is ALWAYS case-sensitive (an uppercase letter is case-based).
+                           Pattern letters follow SMART CASE (below): `hb:PAM` needs capital P·A·M (finds
+                           `PosetAddMonoid`, not a lowercase `p_a_m`), while `hb:pam` finds both. Short lowercase
+                           queries can be broad — results rank shortest-name-first, so exact matches lead.
 
       SMART CASE  (every mode except re:)
         A lowercase letter in the pattern matches EITHER case; an uppercase letter matches UPPERCASE only.
@@ -115,14 +121,15 @@ final class ConsoleHelp {
 
         With the global `--json` flag, results are emitted instead as a JSON array on stdout (one object per line:
         library [omitted when a single non-prelude library is loaded], file, module, line, column, longName, kind,
-        signature). [INFO] logs and this query echo are routed to stderr, so stdout stays pure JSON (redirect the
-        log with `2>/tmp/log`).
+        signature). All diagnostics ([INFO]/[WARN]/[ERROR] and this query echo) are written to a log file — by default
+        <tmpdir>/arend-symbol-search.log, or `--log-file <path>` — so stdout stays pure JSON and the console is clean;
+        a single line on stderr reports where the log was written.
 
         Results are ordered by SHORT-NAME LENGTH (ascending).
         An exact-length name appears before any longer name that just contains the query.
         E.g. for `-ss fac`: `face` before `factor` before `factors` before `leftFactor` before `completion-factor`.
         Ties are broken alphabetically.
-        For a strict exact match use `eq:<name>`.
+        For a strict exact match use `glob:<name>` (anchored; wildcard-free glob is an exact match).
 
         On zero matches, a plain-mode pattern is decomposed at operator-chars / underscores (alphanumeric runs of length >= 3).
         The index is re-scanned for those parts.
@@ -134,7 +141,7 @@ final class ConsoleHelp {
         arend -L libs my-lib -ss '*-comm'                   (literal '*-comm')
         arend -L libs my-lib -ss 'BigSum_1 BigSum_+ BigSum-ext'  (OR via spaces)
         arend -L libs my-lib -ss Cauchy -ss Mertens         (OR via multi-flag)
-        arend -L libs my-lib -ss 'eq:pmap' -ss kind=func,lemma
+        arend -L libs my-lib -ss 'glob:pmap' -ss kind=func,lemma          (exact name; anchored, no wildcards)
         arend -L libs my-lib -ss 'glob:abs_*' -ss limit=20
         arend -L libs my-lib -ss 're:^abs.*\\+.*$'                (regex, anchored both ends)
         arend -L libs my-lib -ss 're:^[A-Z]'                      (Capitalised names; re: is case-sensitive as typed)
@@ -258,7 +265,7 @@ final class ConsoleHelp {
         - '<short-name>'              looked up via the symbol index.
                                       Multiple matches print the candidates so you can pick.
 
-      <PATTERN> is optional and uses the same grammar as -ss (literal substring by default; eq:, glob:, re:, hb: prefixes available).
+      <PATTERN> is optional and uses the same grammar as -ss (literal substring by default; glob:, re:, hb: prefixes available).
       When given, only scope entries whose short name matches are printed.
 
       EXTRA TOKENS  (each as a separate -sc argument)

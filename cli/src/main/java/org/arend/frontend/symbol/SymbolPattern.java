@@ -37,16 +37,25 @@ import java.util.regex.PatternSyntaxException;
  *                     character (most commonly '.', '(', ')', '{', '}',
  *                     covering both regex sequences like '.*' / '(?...' and
  *                     qualified-name mistakes like 'Module.Foo').
- *   eq:<text>         exact short-name match (anchored on both ends)
- *   glob:<pat>        '*' = any chars, '?' = any one char.
- *                     Use '\*' / '\?' for literal stars / question marks.
+ *   glob:<pat>        anchored whole-name match. '*' = any chars, '?' = any one
+ *                     char. With no '*'/'?' this is an EXACT match; to match a
+ *                     literal '*'/'?' (both are valid Arend identifier chars)
+ *                     escape it as '\*' / '\?' -- '\' never occurs in an Arend
+ *                     name, so there is no ambiguity. (Replaces the old eq:.)
  *   re:<java-regex>   raw Java regex, matched with find(); case-sensitive
  *                     exactly as typed (prepend {@code (?i)} for insensitivity)
- *   hb:<chars>        humpback / boundary-aware fuzzy match: each pattern char
- *                     matches a char that STARTS a word, e.g. 'hb:PAM' on
+ *   hb:<chars>        humpback / boundary-aware fuzzy match. The first pattern
+ *                     char, and every UPPERCASE letter / digit / operator, must
+ *                     land on a char that STARTS a word, e.g. 'hb:PAM' on
  *                     'PosetAddMonoid' (Poset·Add·Monoid) or 'hb:piP' on
  *                     'pi-isProp' (pi·isProp — supply the word-start letters,
- *                     not the '-' separator). A word starts at every non-plain
+ *                     not the '-' separator). A lowercase pattern letter is more
+ *                     lenient: it matches a word start OR continues the current
+ *                     word contiguously, so you can type whole word prefixes --
+ *                     'hb:ide' matches 'ide', 'hb:posmon' matches 'PosetMonoid'.
+ *                     (Boundary-anchoring the first char is what keeps hb:
+ *                     distinct from a plain substring: 'hb:onoid' will not match
+ *                     'Monoid'.) A word starts at every non-plain
  *                     character -- an uppercase letter, a digit, or an
  *                     operator/symbol -- so a capital run splits ('HLevels' =
  *                     H·Levels) and an embedded digit splits ('log1p' =
@@ -63,7 +72,7 @@ import java.util.regex.PatternSyntaxException;
  *                     a lowercase 'p_a_m' name.
  */
 public final class SymbolPattern {
-  public enum Mode { LITERAL, EQ, GLOB, REGEX, HUMPBACK }
+  public enum Mode { LITERAL, GLOB, REGEX, HUMPBACK }
 
   private final Pattern myCompiled;
   private final String mySource;
@@ -85,8 +94,7 @@ public final class SymbolPattern {
    * humpback pattern the individual matched word-start characters are returned
    * (via the per-char capture groups added in {@link #buildHumpbackRegex}); for
    * every other mode the single overall match span is returned -- which is the
-   * matched substring for literal/regex and the whole name for anchored
-   * eq:/glob:.
+   * matched substring for literal/regex and the whole name for anchored glob:.
    */
   public @NotNull List<int[]> highlightRanges(@NotNull String name) {
     Matcher m = myCompiled.matcher(name);
@@ -117,7 +125,7 @@ public final class SymbolPattern {
   /** The user-facing payload, with mode prefix stripped (so 're:foo' → 'foo'). */
   public @NotNull String body() {
     return switch (myMode) {
-      case REGEX, EQ, HUMPBACK -> mySource.substring(3);
+      case REGEX, HUMPBACK -> mySource.substring(3);
       case GLOB -> mySource.substring(5);
       case LITERAL -> mySource;
     };
@@ -157,10 +165,13 @@ public final class SymbolPattern {
       return new SymbolPattern(Pattern.compile("^" + buildGlobRegex(body) + "$", flags), pattern, Mode.GLOB);
     }
 
+    // eq: was retired: an anchored, wildcard-free glob: is the same exact match.
+    // Point the user there rather than silently searching for the literal "eq:...".
     if (pattern.startsWith("eq:")) {
       String body = pattern.substring(3);
-      if (body.isEmpty()) throw new IllegalArgumentException("Empty eq: pattern");
-      return new SymbolPattern(Pattern.compile("^" + smartCaseLiteral(body) + "$", flags), pattern, Mode.EQ);
+      throw new IllegalArgumentException(
+          "eq: mode was removed — use 'glob:" + body + "' for an exact (anchored) match"
+              + " (glob: with no '*'/'?' matches the whole name; escape a literal star/question mark as \\*/\\?).");
     }
 
     String trigger = firstNonIdentChar(pattern);
@@ -253,8 +264,8 @@ public final class SymbolPattern {
    * (uppercase matches uppercase only); every other character -- a lowercase
    * letter, digit, or operator -- is quoted plainly and so honours the flag
    * (lowercase matches either case, and case-less chars are unaffected). Shared
-   * by literal, {@code eq:}, {@code glob:}, and {@code hb:} so smart case is
-   * identical across every non-regex mode.
+   * by literal, {@code glob:}, and {@code hb:} so smart case is identical
+   * across every non-regex mode.
    */
   private static String quoteSmartCase(char c) {
     String q = Pattern.quote(String.valueOf(c));
@@ -345,20 +356,50 @@ public final class SymbolPattern {
   private static final String WORD_START =
       "(?:^|(?<=" + SEP_SIMPLE + ")|(?<=-)(?<!_-)(?!_)|" + NONPLAIN_START + ")";
 
+  /**
+   * A "plain" character is one that does NOT start a word: a lowercase ASCII
+   * letter or an apostrophe. This is exactly the complement of the
+   * {@code [^a-z']} class used by {@link #NONPLAIN_START}. Only plain pattern
+   * chars are allowed to continue a word contiguously in
+   * {@link #buildHumpbackRegex}; every other char (uppercase letter, digit,
+   * operator) is itself a word start and stays boundary-anchored.
+   */
+  private static boolean isPlainChar(char c) {
+    return (c >= 'a' && c <= 'z') || c == '\'';
+  }
+
   private static String buildHumpbackRegex(String pattern) {
-    StringBuilder sb = new StringBuilder(pattern.length() * 20);
+    StringBuilder sb = new StringBuilder(pattern.length() * 24);
     for (int i = 0; i < pattern.length(); i++) {
       char c = pattern.charAt(i);
-      // Every pattern char must land on a word start; between chars, .*? skips
-      // freely to the next one. Each char is wrapped in a capturing group so the
-      // exact matched positions can be recovered for highlighting (see
-      // #highlightRanges) -- the group is zero-width-anchored by WORD_START, so
-      // it captures precisely the one matched character.
-      // The char itself is emitted smart-case (see #quoteSmartCase): an
-      // uppercase letter matches uppercase only, a lowercase letter matches
-      // either case.
-      sb.append(WORD_START).append('(').append(quoteSmartCase(c)).append(')');
-      if (i < pattern.length() - 1) sb.append(".*?");
+      // Each char is wrapped in a capturing group so the exact matched positions
+      // can be recovered for highlighting (see #highlightRanges). The char itself
+      // is emitted smart-case (see #quoteSmartCase): an uppercase letter matches
+      // uppercase only, a lowercase letter matches either case. WORD_START and
+      // the skip prefix contribute no capturing groups, so group g captures
+      // pattern char g-1 exactly.
+      String ch = "(" + quoteSmartCase(c) + ")";
+      if (i == 0) {
+        // The first char always anchors at a word start -- this is what keeps
+        // hb: distinct from a plain substring search: 'hb:onoid' does NOT match
+        // 'Monoid' (o is mid-word), whereas literal 'onoid' does.
+        sb.append(WORD_START).append(ch);
+      } else if (isPlainChar(c)) {
+        // A plain pattern char may EITHER skip to the next word start (the
+        // optional .*?WORD_START prefix) OR continue the current word
+        // contiguously (prefix omitted -- it matches the position right after
+        // the previous char). So 'hb:ide' matches 'ide' (i at a word start, then
+        // d,e continuing) and 'hb:posmon' matches 'PosetMonoid' (the 'pos' and
+        // 'mon' word prefixes). The skip branch is exactly the old strict rule,
+        // so every pre-change match still matches -- this only ADDS matches.
+        sb.append("(?:.*?").append(WORD_START).append(")?").append(ch);
+      } else {
+        // A non-plain pattern char (uppercase, digit, operator) must still land
+        // on a word start, reached by skipping intervening chars. Such chars are
+        // word starts themselves, so a contiguous option would be redundant;
+        // keeping them strict preserves the precision of 'hb:PAM'.
+        sb.append(".*?").append(WORD_START).append(ch);
+      }
     }
     return sb.toString();
   }

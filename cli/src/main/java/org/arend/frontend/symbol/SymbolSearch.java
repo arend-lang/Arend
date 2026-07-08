@@ -90,7 +90,7 @@ public final class SymbolSearch {
     // you mean" list of names matching any of these parts, so a query like
     // 'natCoef_fromRat' that misses can still nudge the user toward 'natCoef'
     // and 'fromRat' hits without a second run. Only literal patterns are
-    // decomposed; explicit eq:/re:/glob:/hb: stays exact.
+    // decomposed; explicit re:/glob:/hb: stays exact.
     LinkedHashSet<String> suggestParts = collectWordParts(compiled);
     List<SymbolPattern> suggestPatterns = new ArrayList<>();
     for (String part : suggestParts) {
@@ -311,7 +311,6 @@ public final class SymbolSearch {
   private static String describePattern(SymbolPattern p) {
     String tag = switch (p.mode()) {
       case LITERAL -> "literal";
-      case EQ -> "exact";
       case GLOB -> "glob";
       case REGEX -> "regex";
       case HUMPBACK -> "humpback";
