@@ -78,7 +78,7 @@ public final class ReferableScope {
     SymbolPattern pattern = null;
     if (patternSrc != null) {
       try {
-        pattern = SymbolPattern.compile(patternSrc, false);
+        pattern = SymbolPattern.compile(patternSrc);
       } catch (IllegalArgumentException e) {
         System.err.println("[ERROR] Bad -sc pattern: " + e.getMessage());
         return null;

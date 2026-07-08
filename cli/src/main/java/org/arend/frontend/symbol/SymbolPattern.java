@@ -12,8 +12,12 @@ import java.util.regex.PatternSyntaxException;
 /**
  * Compiles user-supplied symbol-search patterns into a {@link Pattern}.
  *
- * Default mode is a pure literal substring match (case-insensitive unless the
- * caller asks otherwise). All anchoring, wildcard, and regex behaviours are
+ * Default mode is a pure literal substring match with smart case: a lowercase
+ * pattern character matches either case, an uppercase pattern character matches
+ * uppercase only (identical to the humpback rule, and applied to every non-regex
+ * mode). There is no global case toggle -- for full case control, including
+ * forcing a lowercase-exact match, drop to {@code re:}, which matches exactly as
+ * typed. All anchoring, wildcard, and regex behaviours are
  * opt-in via prefixes, because every Arend identifier character (per the
  * {@code ID} rule in {@code Arend.g4}) must match literally:
  * {@code ~ ! @ # $ % ^ & * - + = < > ? / | : [ ]}, ASCII letters and
@@ -36,7 +40,8 @@ import java.util.regex.PatternSyntaxException;
  *   eq:<text>         exact short-name match (anchored on both ends)
  *   glob:<pat>        '*' = any chars, '?' = any one char.
  *                     Use '\*' / '\?' for literal stars / question marks.
- *   re:<java-regex>   raw Java regex, matched with find()
+ *   re:<java-regex>   raw Java regex, matched with find(); case-sensitive
+ *                     exactly as typed (prepend {@code (?i)} for insensitivity)
  *   hb:<chars>        humpback / boundary-aware fuzzy match: each pattern char
  *                     matches a char that STARTS a word, e.g. 'hb:PAM' on
  *                     'PosetAddMonoid' (Poset·Add·Monoid) or 'hb:piP' on
@@ -50,13 +55,12 @@ import java.util.regex.PatternSyntaxException;
  *                     ('abs_-left' = abs·-left), but a non-plain char always
  *                     starts a word, so 'HLevel_-1' = HLevel·-·1 and 'hb:HL-2s'
  *                     matches 'HLevels_-2-sigma'. Boundary detection is
- *                     always case-sensitive (uppercase is case-based),
- *                     independent of the global case flag. Smart case on the
- *                     pattern letters: an uppercase letter matches uppercase
+ *                     always case-sensitive (uppercase is case-based). Smart
+ *                     case on the pattern letters (the same rule as every other
+ *                     non-regex mode): an uppercase letter matches uppercase
  *                     only, a lowercase letter matches either case -- so
  *                     'hb:PAM' needs capital P·A·M while 'hb:pam' also matches
- *                     a lowercase 'p_a_m' name. 'case-sensitive' additionally
- *                     pins the lowercase letters to exact case.
+ *                     a lowercase 'p_a_m' name.
  */
 public final class SymbolPattern {
   public enum Mode { LITERAL, EQ, GLOB, REGEX, HUMPBACK }
@@ -119,18 +123,23 @@ public final class SymbolPattern {
     };
   }
 
-  public static @NotNull SymbolPattern compile(@NotNull String pattern, boolean caseSensitive) {
+  public static @NotNull SymbolPattern compile(@NotNull String pattern) {
     if (pattern.isEmpty()) {
       throw new IllegalArgumentException("Pattern is empty");
     }
 
-    int flags = caseSensitive ? 0 : (Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE);
+    // Every non-regex mode is compiled case-insensitively; individual uppercase
+    // letters are then pinned back to exact case via #quoteSmartCase. That is
+    // what makes matching smart-case -- a lowercase pattern letter matches
+    // either case, an uppercase one matches uppercase only. re: is the sole
+    // exception: it is matched exactly as typed (prepend (?i) for insensitivity).
+    int flags = Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE;
 
     if (pattern.startsWith("re:")) {
       String body = pattern.substring(3);
       if (body.isEmpty()) throw new IllegalArgumentException("Empty re: pattern");
       try {
-        return new SymbolPattern(Pattern.compile(body, flags), pattern, Mode.REGEX);
+        return new SymbolPattern(Pattern.compile(body), pattern, Mode.REGEX);
       } catch (PatternSyntaxException e) {
         throw new IllegalArgumentException("Invalid regex: " + e.getMessage(), e);
       }
@@ -151,7 +160,7 @@ public final class SymbolPattern {
     if (pattern.startsWith("eq:")) {
       String body = pattern.substring(3);
       if (body.isEmpty()) throw new IllegalArgumentException("Empty eq: pattern");
-      return new SymbolPattern(Pattern.compile("^" + Pattern.quote(body) + "$", flags), pattern, Mode.EQ);
+      return new SymbolPattern(Pattern.compile("^" + smartCaseLiteral(body) + "$", flags), pattern, Mode.EQ);
     }
 
     String trigger = firstNonIdentChar(pattern);
@@ -161,7 +170,7 @@ public final class SymbolPattern {
           trigger + " — try 're:" + pattern + "' (regex)"
               + (globHint.equals(pattern) ? "" : " or 'glob:" + globHint + "' (glob)"));
     }
-    return new SymbolPattern(Pattern.compile(Pattern.quote(pattern), flags), pattern, Mode.LITERAL);
+    return new SymbolPattern(Pattern.compile(smartCaseLiteral(pattern), flags), pattern, Mode.LITERAL);
   }
 
   /**
@@ -238,8 +247,31 @@ public final class SymbolPattern {
   }
 
   /**
+   * Quotes a single pattern character for smart-case matching: an uppercase
+   * ASCII letter is wrapped in {@code (?-i:...)} so the mode's global
+   * {@link Pattern#CASE_INSENSITIVE} flag cannot fold it down to lowercase
+   * (uppercase matches uppercase only); every other character -- a lowercase
+   * letter, digit, or operator -- is quoted plainly and so honours the flag
+   * (lowercase matches either case, and case-less chars are unaffected). Shared
+   * by literal, {@code eq:}, {@code glob:}, and {@code hb:} so smart case is
+   * identical across every non-regex mode.
+   */
+  private static String quoteSmartCase(char c) {
+    String q = Pattern.quote(String.valueOf(c));
+    return (c >= 'A' && c <= 'Z') ? "(?-i:" + q + ")" : q;
+  }
+
+  /** A smart-case (see {@link #quoteSmartCase}) literal match of the whole string. */
+  private static String smartCaseLiteral(String s) {
+    StringBuilder sb = new StringBuilder(s.length() * 4);
+    for (int i = 0; i < s.length(); i++) sb.append(quoteSmartCase(s.charAt(i)));
+    return sb.toString();
+  }
+
+  /**
    * Translates a glob ({@code *}, {@code ?}, {@code \*} / {@code \?} for
-   * literals) to a regex. Every other character is matched literally.
+   * literals) to a regex. Every other character is matched literally, smart-case
+   * (see {@link #quoteSmartCase}).
    */
   private static String buildGlobRegex(String pattern) {
     StringBuilder sb = new StringBuilder(pattern.length() + 8);
@@ -247,13 +279,13 @@ public final class SymbolPattern {
     while (i < pattern.length()) {
       char c = pattern.charAt(i);
       if (c == '\\' && i + 1 < pattern.length()) {
-        sb.append(Pattern.quote(String.valueOf(pattern.charAt(i + 1))));
+        sb.append(quoteSmartCase(pattern.charAt(i + 1)));
         i += 2;
         continue;
       }
       if (c == '*') sb.append(".*");
       else if (c == '?') sb.append('.');
-      else sb.append(Pattern.quote(String.valueOf(c)));
+      else sb.append(quoteSmartCase(c));
       i++;
     }
     return sb.toString();
@@ -322,18 +354,10 @@ public final class SymbolPattern {
       // exact matched positions can be recovered for highlighting (see
       // #highlightRanges) -- the group is zero-width-anchored by WORD_START, so
       // it captures precisely the one matched character.
-      sb.append(WORD_START).append('(');
-      // Smart case: an UPPERCASE pattern letter matches uppercase only -- pin it
-      // with (?-i:...) so the global case-insensitive default can't fold it down
-      // to lowercase. A lowercase letter (or any non-letter char) is emitted
-      // plainly, so it honours the global flag: both cases by default, exact
-      // under `case-sensitive`.
-      if (c >= 'A' && c <= 'Z') {
-        sb.append("(?-i:").append(Pattern.quote(String.valueOf(c))).append(')');
-      } else {
-        sb.append(Pattern.quote(String.valueOf(c)));
-      }
-      sb.append(')');
+      // The char itself is emitted smart-case (see #quoteSmartCase): an
+      // uppercase letter matches uppercase only, a lowercase letter matches
+      // either case.
+      sb.append(WORD_START).append('(').append(quoteSmartCase(c)).append(')');
       if (i < pattern.length() - 1) sb.append(".*?");
     }
     return sb.toString();

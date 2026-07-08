@@ -22,7 +22,7 @@ final class ConsoleHelp {
       Subsequent runs with no source changes are near-instant.
 
       PATTERN
-        Foo                Literal substring match against the SHORT name (case-insensitive by default).
+        Foo                Literal substring match against the SHORT name (smart case — see SMART CASE below).
                            Every Arend identifier character is matched as plain text; nothing is a regex metacharacter here.
                            So '*-comm', '^-1', '<*', '||', '+>+', '[*]', '?-elim' all work as literal substrings.
 
@@ -47,9 +47,9 @@ final class ConsoleHelp {
         re:<java-regex>    Raw java.util.regex pattern, matched with find() — so it is UNANCHORED:
                            `re:Monoid` hits any name CONTAINING "Monoid"; anchor with `^` / `$` for a whole-name match.
                            Full Java syntax works: `|`, `[...]`, `(?:...)`, lookahead `(?=...)`, backrefs `\\1`, `\\p{...}`, `(?i)` …
-                           Case-insensitive by default; add `case-sensitive` to match case exactly.
-                           GOTCHA: under the default, case-based constructs match BOTH cases, so `re:[A-Z]` and `re:\\p{Lu}`
-                           also hit lowercase names — pass `case-sensitive` when case matters (e.g. "starts with a capital").
+                           CASE-SENSITIVE exactly as typed — unlike every other mode, re: is NOT smart-case.
+                           So `re:^[A-Z]` / `re:\\p{Lu}` match capitals only (e.g. "starts with a capital").
+                           Prepend `(?i)` to opt back into case-insensitivity: `re:(?i)monoid`.
                            A space inside the pattern splits it into separate patterns (see MULTIPLE PATTERNS), so a regex
                            cannot contain a literal space — Arend short names never do anyway.
         hb:<chars>         Humpback / camel-and-dash boundary fuzzy match: each char must start a new "word" —
@@ -60,12 +60,14 @@ final class ConsoleHelp {
                            `hb:ccel1` matches `compose-coef-expm1-log1p` (compose·coef·expm1·log1p, with the trailing `1`).
                            A `-` glued to a `_` does not split off a following LOWERCASE word (`abs_-left` = abs·-left), but a
                            non-plain char always starts a word — so `HLevel_-1` = HLevel·-·1 and `hb:HL-2s` matches `HLevels_-2-sigma`.
-                           Boundary detection is ALWAYS case-sensitive (an uppercase letter is case-based),
-                           so hb: does not over-match under the default case-insensitive mode.
-                           SMART CASE on the pattern letters: an UPPERCASE letter matches uppercase only, a lowercase
-                           letter matches either case. So `hb:PAM` needs capital P·A·M (finds `PosetAddMonoid`, not a
-                           lowercase `p_a_m` name), while `hb:pam` finds both. `case-sensitive` additionally pins the
-                           lowercase letters (so `hb:pam case-sensitive` rejects capital word-starts).
+                           Boundary detection is ALWAYS case-sensitive (an uppercase letter is case-based), so hb: never over-matches.
+                           Pattern letters follow the usual SMART CASE (below): `hb:PAM` needs capital P·A·M (finds `PosetAddMonoid`,
+                           not a lowercase `p_a_m` name), while `hb:pam` finds both.
+
+      SMART CASE  (every mode except re:)
+        A lowercase letter in the pattern matches EITHER case; an uppercase letter matches UPPERCASE only.
+        So `monoid` finds both `Monoid` and `monoid`, whereas `Monoid` skips a lowercase `monoid`.
+        There is no case flag. For full case control — e.g. a lowercase-ONLY match — use re:, which is case-sensitive as typed.
 
       MULTIPLE PATTERNS
         Pass several patterns to OR them: a name matches if it satisfies any.
@@ -90,10 +92,9 @@ final class ConsoleHelp {
         A leading `'` in a pattern triggers a soft warning: no Arend short name can start with `'` (it is continuation-only).
 
       EXTRA TOKENS  (each passed as a separate -ss argument)
-        case-sensitive     match name case exactly (default: case-insensitive)
         no-cache           bypass the on-disk index, re-parse everything
         limit=N            cap printed matches at N (0 = unlimited; default 200)
-        contains=<text>    Extra AND substring filter on the short name; can be repeated.
+        contains=<text>    Extra AND substring filter on the short name (smart case, like a plain pattern); can be repeated.
                            Replaces post-pipe `| grep`.
         kind=k1,k2,...     Keep only these kinds.
                            Recognised: func, sfunc, lemma, type, axiom, instance, coclause, coerce, level.
@@ -136,7 +137,7 @@ final class ConsoleHelp {
         arend -L libs my-lib -ss 'eq:pmap' -ss kind=func,lemma
         arend -L libs my-lib -ss 'glob:abs_*' -ss limit=20
         arend -L libs my-lib -ss 're:^abs.*\\+.*$'                (regex, anchored both ends)
-        arend -L libs my-lib -ss 're:^[A-Z]' -ss case-sensitive   (Capitalised names; case-sensitive is required, see re: GOTCHA)
+        arend -L libs my-lib -ss 're:^[A-Z]'                      (Capitalised names; re: is case-sensitive as typed)
         arend -L libs my-lib -ss 'hb:PAM'                         (humpback -> PosetAddMonoid, PosetAbMonoid, …)
         arend -L libs my-lib -ss only=self -ss 'shared-name'
         arend -L libs my-lib -ss Monoid -ss contains=Add   (short name matches 'Monoid' AND contains 'Add', e.g. AddMonoid)

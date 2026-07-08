@@ -23,14 +23,13 @@ public final class SymbolSearch {
   private static final String ANSI_RESET = "\u001B[0m";
 
   public static final class Options {
-    public boolean caseSensitive = false;
     public boolean noCache = false;
     public int limit = 200;
     public final EnumSet<SymbolIndex.Kind> kinds = EnumSet.allOf(SymbolIndex.Kind.class);
     /** {@code null} = all loaded libraries; otherwise the explicit allow-list. */
     public @Nullable Set<String> onlyLibraries = null;
-    /** Extra AND substring filters applied after the pattern matches. */
-    public final List<String> containsFilters = new ArrayList<>();
+    /** Extra AND substring filters (each a smart-case literal) applied after the pattern matches. */
+    public final List<SymbolPattern> containsFilters = new ArrayList<>();
     /** Emit results as a JSON array instead of the human-readable listing. */
     public boolean json = false;
   }
@@ -54,7 +53,7 @@ public final class SymbolSearch {
     List<SymbolPattern> compiled = new ArrayList<>(patterns.size());
     for (String p : patterns) {
       try {
-        compiled.add(SymbolPattern.compile(p, options.caseSensitive));
+        compiled.add(SymbolPattern.compile(p));
       } catch (IllegalArgumentException e) {
         System.err.println("[ERROR] Bad -ss pattern '" + p + "': " + e.getMessage());
         if (SymbolPattern.looksLikeQualifiedName(p)) {
@@ -96,7 +95,7 @@ public final class SymbolSearch {
     List<SymbolPattern> suggestPatterns = new ArrayList<>();
     for (String part : suggestParts) {
       try {
-        suggestPatterns.add(SymbolPattern.compile(part, options.caseSensitive));
+        suggestPatterns.add(SymbolPattern.compile(part));
       } catch (IllegalArgumentException ignored) {
         // a part may itself contain non-ident chars (e.g. apostrophe-only
         // fragments after a weird split) -- just skip those.
@@ -326,10 +325,9 @@ public final class SymbolSearch {
 
   private static String describeFilters(Options opts) {
     StringJoiner sj = new StringJoiner(", ");
-    if (opts.caseSensitive) sj.add("case-sensitive");
     if (opts.noCache) sj.add("no-cache");
     if (opts.limit != 200) sj.add("limit=" + opts.limit);
-    for (String c : opts.containsFilters) sj.add("contains='" + c + "'");
+    for (SymbolPattern c : opts.containsFilters) sj.add("contains='" + c.body() + "'");
     if (opts.kinds.size() != SymbolIndex.Kind.values().length) {
       StringJoiner ks = new StringJoiner(",");
       for (SymbolIndex.Kind k : opts.kinds) ks.add(k.name().toLowerCase(Locale.ROOT));
@@ -349,11 +347,8 @@ public final class SymbolSearch {
   }
 
   private static boolean matchesAllContains(Options opts, String shortName) {
-    if (opts.containsFilters.isEmpty()) return true;
-    String hay = opts.caseSensitive ? shortName : shortName.toLowerCase(Locale.ROOT);
-    for (String needle : opts.containsFilters) {
-      String n = opts.caseSensitive ? needle : needle.toLowerCase(Locale.ROOT);
-      if (!hay.contains(n)) return false;
+    for (SymbolPattern needle : opts.containsFilters) {
+      if (!needle.matches(shortName)) return false;
     }
     return true;
   }
@@ -516,7 +511,7 @@ public final class SymbolSearch {
 
   /**
    * Parses sub-tokens passed alongside {@code -ss}, e.g.
-   * {@code -ss Monoid case-sensitive limit=50 only=arend-lib kind=class,instance}.
+   * {@code -ss Monoid limit=50 only=arend-lib kind=class,instance}.
    * Any token that doesn't look like an option is treated as a pattern; multiple
    * patterns are OR-ed at match time.
    */
@@ -524,7 +519,13 @@ public final class SymbolSearch {
     Options opts = new Options();
     List<String> patterns = new ArrayList<>();
     for (String arg : args) {
-      if (arg.equals("case-sensitive")) opts.caseSensitive = true;
+      if (arg.equals("case-sensitive")) {
+        // Retired: matching is now always smart-case (lowercase matches either
+        // case, uppercase is exact). Warn instead of silently searching for the
+        // literal token "case-sensitive", and point at re: for full case control.
+        System.err.println("[WARN] 'case-sensitive' is no longer a -ss option — matching is smart-case"
+            + " (lowercase matches either case, an uppercase letter is exact); use re: for full case control. Ignoring.");
+      }
       else if (arg.equals("no-cache")) opts.noCache = true;
       else if (arg.startsWith("limit=")) {
         try { opts.limit = Integer.parseInt(arg.substring("limit=".length())); }
@@ -534,7 +535,14 @@ public final class SymbolSearch {
         }
       } else if (arg.startsWith("contains=")) {
         String v = arg.substring("contains=".length());
-        if (!v.isEmpty()) opts.containsFilters.add(v);
+        if (!v.isEmpty()) {
+          try {
+            opts.containsFilters.add(SymbolPattern.compile(v));
+          } catch (IllegalArgumentException e) {
+            System.err.println("[ERROR] Bad -ss contains filter '" + v + "': " + e.getMessage());
+            return null;
+          }
+        }
       } else if (arg.startsWith("kind=")) {
         EnumSet<SymbolIndex.Kind> ks = EnumSet.noneOf(SymbolIndex.Kind.class);
         for (String name : arg.substring("kind=".length()).split(",")) {
