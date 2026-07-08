@@ -4,6 +4,8 @@ import com.fasterxml.jackson.dataformat.yaml.YAMLMapper;
 import org.antlr.v4.runtime.BaseErrorListener;
 import org.antlr.v4.runtime.CharStreams;
 import org.antlr.v4.runtime.CommonTokenStream;
+import org.arend.frontend.ConsoleHelp;
+import org.arend.frontend.symbol.SymbolSearch;
 import org.arend.ext.core.ops.NormalizationMode;
 import org.arend.ext.error.ErrorReporter;
 import org.arend.ext.error.GeneralError;
@@ -22,6 +24,7 @@ import org.arend.naming.reference.FullModuleReferable;
 import org.arend.prelude.GeneratedVersion;
 import org.arend.prelude.Prelude;
 import org.arend.repl.Repl;
+import org.arend.repl.action.AliasableCommand;
 import org.arend.repl.action.ReplCommand;
 import org.arend.server.ArendLibrary;
 import org.arend.server.ArendServer;
@@ -38,7 +41,10 @@ import org.jetbrains.annotations.Nls;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.PrintStream;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
@@ -191,6 +197,24 @@ public abstract class CommonCliRepl extends Repl {
   protected void loadCommands() {
     super.loadCommands();
     registerAction("prompt", new ChangePromptCommand());
+    SymbolSearchCommand symbolSearch = new SymbolSearchCommand();
+    registerAction("symbol-search", symbolSearch);
+    registerAction("ss", symbolSearch);
+  }
+
+  /**
+   * The {@link LibraryManager} backing this REPL's server, reached through the
+   * {@link CliServerRequester} (same path used by {@link #loadLibrary}). It holds
+   * every library registered at the REPL, so it is the search scope for
+   * {@code :symbol-search}. {@code null} only if the server is wired differently.
+   */
+  private @Nullable LibraryManager libraryManager() {
+    if (myServer instanceof ArendServerImpl arendServer
+        && arendServer.getRequester() instanceof DelegateServerRequester delegate
+        && delegate.requester instanceof CliServerRequester cliServerRequester) {
+      return cliServerRequester.getLibraryManager();
+    }
+    return null;
   }
 
   @Override
@@ -343,6 +367,59 @@ public abstract class CommonCliRepl extends Repl {
     }
     myServer.getModules().stream().filter(module -> module.getLocationKind() == ModuleLocation.LocationKind.GENERATED).map(ModuleLocation::getModulePath).forEach(result::add);
     return result;
+  }
+
+  /**
+   * {@code :symbol-search} / {@code :ss} {@code <pattern> [pattern | option ...]} —
+   * same syntax and behaviour as the {@code -ss} CLI flag, searching every library
+   * registered at the REPL. No {@code --json}. {@code :? ss} prints the help.
+   */
+  private final class SymbolSearchCommand extends AliasableCommand {
+    SymbolSearchCommand() {
+      super(new ArrayList<>());
+    }
+
+    @Override
+    public @Nls(capitalization = Nls.Capitalization.Sentence) @NotNull String description() {
+      return "Search registered libraries for definitions by short name (`:? ss` for the full grammar)";
+    }
+
+    @Override
+    public @Nls @NotNull String help(@NotNull Repl api) {
+      return ConsoleHelp.symbolSearchReplHelp();
+    }
+
+    @Override
+    public void invoke(@NotNull String line, @NotNull Repl api, @NotNull Supplier<@NotNull String> scanner) {
+      LibraryManager manager = libraryManager();
+      if (manager == null) {
+        eprintln("[ERROR] Symbol search is unavailable (no library manager on this server).");
+        return;
+      }
+      // SymbolSearch writes to the given PrintStream AND to System.out/System.err
+      // (query echo, warnings). Capture all of it and forward through the REPL's
+      // own output stream, so it works for both the plain and jline REPL. No JSON
+      // in the REPL, so Options.json stays false.
+      ByteArrayOutputStream buffer = new ByteArrayOutputStream();
+      PrintStream capture = new PrintStream(buffer, true, StandardCharsets.UTF_8);
+      PrintStream realOut = System.out, realErr = System.err;
+      System.setOut(capture);
+      System.setErr(capture);
+      try {
+        String[] args = line.isBlank() ? new String[0] : line.trim().split("\\s+");
+        SymbolSearch.Parsed parsed = SymbolSearch.parseArgs(args, errorReporter);
+        if (parsed != null) {
+          // The synthetic REPL library mirrors the real ones (same source files),
+          // so leaving it in scope would duplicate every hit; drop it.
+          parsed.options().excludeLibraries.add(REPL_NAME);
+          SymbolSearch.run(parsed.patterns(), parsed.options(), manager, myServer, errorReporter, capture);
+        }
+      } finally {
+        System.setOut(realOut);
+        System.setErr(realErr);
+      }
+      print(buffer.toString(StandardCharsets.UTF_8));
+    }
   }
 
   private final class ChangePromptCommand implements ReplCommand {

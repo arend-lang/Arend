@@ -11,18 +11,38 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-final class ConsoleHelp {
+public final class ConsoleHelp {
   private ConsoleHelp() {}
 
-  private static final String SYMBOL_SEARCH_HELP = """
+  /**
+   * The {@code -ss} / {@code --symbol-search} help. Assembled from three parts so
+   * the CLI and the REPL share the middle ({@link #SS_BODY}); only the head (the
+   * synopsis line) and the tail (OUTPUT + EXAMPLES) differ.
+   */
+  public static String symbolSearchHelp() {
+    return SS_HEAD_CLI + SS_BODY + SS_TAIL_CLI;
+  }
+
+  /**
+   * The {@code :symbol-search} REPL help: the shared middle with no synopsis line,
+   * no {@code --json} note, and {@code :ss} examples.
+   */
+  public static String symbolSearchReplHelp() {
+    return SS_BODY + SS_TAIL_REPL;
+  }
+
+  // ---- -ss / :symbol-search help, in three parts (see symbolSearchHelp) -------
+  // HEAD (CLI only): the synopsis line. The REPL omits it.
+  private static final String SS_HEAD_CLI = """
       arend [LIBRARY ...] -ss <pattern> [pattern | option ...]
 
+      """;
+
+  // BODY: shared verbatim by the CLI and the REPL.
+  private static final String SS_BODY = """
       Find definitions by SHORT NAME across the loaded libraries. Prints each match's
       location, full name, kind, and one-line signature. Fast: served from a
       per-library on-disk index that re-parses only changed files.
-
-      Use -ss to locate a definition by name; inspect it further with a sibling
-      command -- -fu (usages), -ch (class hierarchy), -sc (scope), -ps (by signature).
 
       PATTERN MODES
         Foo            substring match (default). Characters are literal, so Arend
@@ -45,13 +65,16 @@ final class ConsoleHelp {
         kind=k,...         keep only these kinds: func sfunc lemma type axiom instance
                            coclause coerce level data cons class record field meta
         contains=<text>    extra substring filter on the short name; repeatable
-        no-cache           ignore the index and re-parse everything
 
       SCOPE is every loaded library (the LIBRARY positionals + their dependencies +
       prelude); to search less, load less. Matches are ordered shortest-name-first
       (exact-length names lead), then alphabetically. A query that misses is split at
       operators into word-parts to suggest near names ("Did you mean?").
 
+      """;
+
+  // TAIL (CLI): OUTPUT with the --json note, and `arend ... -ss` examples.
+  private static final String SS_TAIL_CLI = """
       OUTPUT is line-oriented: location, then `library::LongName [KIND]`, then the
       one-line signature. With --json each match is one JSON object; diagnostics go to
       a log file (default <tmpdir>/arend-symbol-search.log) so stdout stays pure JSON.
@@ -65,6 +88,22 @@ final class ConsoleHelp {
         arend arend-lib -ss Ring -ss kind=class
         arend arend-lib -ss "pmap transport"          OR two names
         arend arend-lib -ss 're:comm$'                names ending in "comm"
+      """;
+
+  // TAIL (REPL): OUTPUT without JSON, and `:ss` examples (no shell quoting).
+  private static final String SS_TAIL_REPL = """
+      OUTPUT is line-oriented: location, then `library::LongName [KIND]`, then the
+      one-line signature.
+
+      EXAMPLES
+        :ss Monoid                 substring
+        :ss glob:pmap              exact name
+        :ss glob:*-comm            names ending in -comm
+        :ss hb:PAM                 humpback -> PosetAddMonoid
+        :ss Monoid contains=Add    'Monoid' AND *Add* -> AddMonoid
+        :ss Ring kind=class
+        :ss pmap transport         OR two names
+        :ss re:comm$               names ending in "comm"
       """;
 
 
@@ -203,7 +242,7 @@ final class ConsoleHelp {
       """;
 
   static void printSymbolSearch() {
-    printTopicHelp(SYMBOL_SEARCH_HELP);
+    printTopicHelp(symbolSearchHelp());
   }
 
   static void printProofSearch() {

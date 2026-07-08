@@ -23,13 +23,18 @@ public final class SymbolSearch {
   private static final String ANSI_RESET = "\u001B[0m";
 
   public static final class Options {
-    public boolean noCache = false;
     public int limit = 200;
     public final EnumSet<SymbolIndex.Kind> kinds = EnumSet.allOf(SymbolIndex.Kind.class);
     /** Extra AND substring filters (each a smart-case literal) applied after the pattern matches. */
     public final List<SymbolPattern> containsFilters = new ArrayList<>();
     /** Emit results as a JSON array instead of the human-readable listing. */
     public boolean json = false;
+    /**
+     * Library names to drop from the search scope. Set programmatically, not from a
+     * user token: the REPL uses it to exclude its synthetic {@code Repl} library,
+     * which mirrors the real libraries and would otherwise duplicate every hit.
+     */
+    public final Set<String> excludeLibraries = new HashSet<>();
   }
 
   public static int run(@NotNull List<String> patterns,
@@ -70,7 +75,7 @@ public final class SymbolSearch {
     // In JSON mode the query echo is diagnostic, not a result -- keep it off stdout.
     (options.json ? System.err : System.out).println(formatQueryEcho(compiled, options));
 
-    List<SourceLibrary> libsInScope = librariesInScope(libraryManager);
+    List<SourceLibrary> libsInScope = librariesInScope(libraryManager, options);
     if (libsInScope.isEmpty()) {
       if (options.json) out.println("[]");
       else System.out.println("No libraries to search.");
@@ -98,16 +103,17 @@ public final class SymbolSearch {
     List<Hit> suggestions = new ArrayList<>();
     for (SourceLibrary lib : libsInScope) {
       SymbolIndex idx = SymbolIndex.loadOrCreate(lib);
-      // Trigger raw parsing only for modules whose cached mtime is stale
-      // (or that aren't cached yet). Across-process, the server starts cold,
-      // so without this we'd parse every .ard file every run -- the on-disk
-      // index buys us a real speedup only when we skip those parses too.
+      // Re-parse only the modules whose cached mtime/size no longer matches the
+      // source (or that aren't cached yet); the on-disk index serves the rest.
+      // Across-process the server starts cold, so without this we'd parse every
+      // .ard file every run. A format-version change invalidates the whole cache
+      // (see SymbolIndex.FORMAT_HEADER), forcing a clean rebuild.
       for (ModulePath mp : lib.findModules(false)) {
-        if (options.noCache || idx.isStale(lib, mp)) {
+        if (idx.isStale(lib, mp)) {
           server.findModule(mp, lib.getLibraryName(), false, false);
         }
       }
-      idx.refresh(lib, server, options.noCache);
+      idx.refresh(lib, server, false);
       idx.save();
 
       for (SymbolIndex.Entry e : idx.allEntries()) {
@@ -285,7 +291,6 @@ public final class SymbolSearch {
 
   private static String describeFilters(Options opts) {
     StringJoiner sj = new StringJoiner(", ");
-    if (opts.noCache) sj.add("no-cache");
     if (opts.limit != 200) sj.add("limit=" + opts.limit);
     for (SymbolPattern c : opts.containsFilters) sj.add("contains='" + c.body() + "'");
     if (opts.kinds.size() != SymbolIndex.Kind.values().length) {
@@ -440,14 +445,16 @@ public final class SymbolSearch {
   }
 
   /**
-   * Search scope = every library currently registered with the manager. That is
-   * exactly what was loaded from the command line before {@code -ss} -- the
-   * requested libraries plus their transitive dependencies and prelude. Scope is
-   * therefore controlled by choosing what to load; there is no separate filter.
+   * Search scope = every library registered with the manager, minus any listed in
+   * {@link Options#excludeLibraries}. That set is normally the requested libraries
+   * plus their transitive dependencies and prelude, so scope is controlled by
+   * choosing what to load; the exclude-list only removes synthetic libraries (the
+   * REPL's {@code Repl} mirror).
    */
-  private static List<SourceLibrary> librariesInScope(LibraryManager manager) {
+  private static List<SourceLibrary> librariesInScope(LibraryManager manager, Options opts) {
     List<SourceLibrary> all = new ArrayList<>();
     for (String name : manager.getLibraries()) {
+      if (opts.excludeLibraries.contains(name)) continue;
       SourceLibrary lib = manager.getLibrary(name);
       if (lib != null) all.add(lib);
     }
@@ -471,7 +478,6 @@ public final class SymbolSearch {
         System.err.println("[WARN] 'case-sensitive' is no longer a -ss option — matching is smart-case"
             + " (lowercase matches either case, an uppercase letter is exact); use re: for full case control. Ignoring.");
       }
-      else if (arg.equals("no-cache")) opts.noCache = true;
       else if (arg.startsWith("limit=")) {
         try { opts.limit = Integer.parseInt(arg.substring("limit=".length())); }
         catch (NumberFormatException e) {
