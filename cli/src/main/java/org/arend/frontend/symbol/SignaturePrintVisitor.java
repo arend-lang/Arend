@@ -6,19 +6,27 @@ import org.arend.term.prettyprint.PrettyPrintVisitor;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * Renders the header of a concrete definition on a single line for the symbol index.
+ * Renders a concrete definition's signature for the symbol index.
+ *
+ * Leaf definitions (functions, lemmas, instances, individual constructors and
+ * fields, metas) collapse to a single-line header: keyword + name + parameters
+ * + result type. A container -- {@code \class}/{@code \record}/{@code \data} --
+ * instead renders its full body (the directly declared fields / constructors),
+ * multi-line, via {@link SignatureOnlyVisitor}: the standard pretty-printer with
+ * member function/lemma bodies stripped. This is the same "declaration without
+ * proof terms" the standalone {@code -sg} command produced, so {@code -ss} shows
+ * the inside contents of a record/class/data as its signature.
  */
 public final class SignaturePrintVisitor {
   private SignaturePrintVisitor() {}
 
   public static String render(Concrete.GeneralDefinition def) {
+    if (def instanceof Concrete.ClassDefinition || def instanceof Concrete.DataDefinition) {
+      return renderContainer((Concrete.ResolvableDefinition) def);
+    }
     StringBuilder sb = new StringBuilder();
     if (def instanceof Concrete.BaseFunctionDefinition fdef) {
       renderFunction(sb, fdef);
-    } else if (def instanceof Concrete.DataDefinition ddef) {
-      renderData(sb, ddef);
-    } else if (def instanceof Concrete.ClassDefinition cdef) {
-      renderClass(sb, cdef);
     } else if (def instanceof Concrete.MetaDefinition mdef) {
       renderMeta(sb, mdef);
     } else if (def instanceof Concrete.Constructor cons) {
@@ -50,27 +58,20 @@ public final class SignaturePrintVisitor {
     appendResultType(sb, def.getResultType(), def.getResultTypeLevel());
   }
 
-  private static void renderData(StringBuilder sb, Concrete.DataDefinition def) {
-    sb.append("\\data ").append(def.getData().textRepresentation());
-    appendTypeParams(sb, def.getParameters());
-    Concrete.Expression universe = def.getUniverse();
-    if (universe != null) {
-      sb.append(" : ");
-      appendExpr(sb, universe);
+  /**
+   * Full render of a {@code \class}/{@code \record}/{@code \data} through the
+   * pretty-printer, keeping the declared fields / constructors but stripping
+   * member function bodies (see {@link SignatureOnlyVisitor}). Multi-line;
+   * trailing whitespace per line and blank edge lines are trimmed.
+   */
+  private static String renderContainer(Concrete.ResolvableDefinition def) {
+    StringBuilder sb = new StringBuilder();
+    try {
+      def.accept(new SignatureOnlyVisitor(sb, 0, true), null);
+    } catch (RuntimeException e) {
+      return "";
     }
-  }
-
-  private static void renderClass(StringBuilder sb, Concrete.ClassDefinition def) {
-    sb.append(def.isRecord() ? "\\record " : "\\class ").append(def.getData().textRepresentation());
-    if (!def.getSuperClasses().isEmpty()) {
-      sb.append(" \\extends ");
-      boolean first = true;
-      for (Concrete.ReferenceExpression sup : def.getSuperClasses()) {
-        if (!first) sb.append(", ");
-        first = false;
-        sb.append(sup.getReferent().textRepresentation());
-      }
-    }
+    return trimLines(sb.toString());
   }
 
   private static void renderMeta(StringBuilder sb, Concrete.MetaDefinition def) {
@@ -158,5 +159,45 @@ public final class SignaturePrintVisitor {
     int end = out.length();
     while (end > 0 && out.charAt(end - 1) == ' ') end--;
     return out.substring(0, end);
+  }
+
+  /** Right-trims each line and drops blank leading/trailing lines. */
+  private static String trimLines(String s) {
+    String[] lines = s.split("\n", -1);
+    int first = 0, last = lines.length - 1;
+    while (first <= last && lines[first].isBlank()) first++;
+    while (last >= first && lines[last].isBlank()) last--;
+    StringBuilder out = new StringBuilder(s.length());
+    for (int i = first; i <= last; i++) {
+      String line = lines[i];
+      int end = line.length();
+      while (end > 0 && Character.isWhitespace(line.charAt(end - 1))) end--;
+      out.append(line, 0, end);
+      if (i < last) out.append('\n');
+    }
+    return out.toString();
+  }
+
+  /**
+   * The pretty-printer with function/lemma/instance bodies suppressed. For
+   * {@code \class}/{@code \record} and {@code \data} the directly declared
+   * fields / constructors are printed by other hooks and survive, so the result
+   * is the container's full signature without any proof terms. {@link #copy} is
+   * overridden so the suppression propagates into nested sub-prints. Ported from
+   * the standalone {@code -sg} command.
+   */
+  private static final class SignatureOnlyVisitor extends PrettyPrintVisitor {
+    SignatureOnlyVisitor(StringBuilder builder, int indent, boolean doIndent) {
+      super(builder, indent, doIndent);
+    }
+
+    @Override
+    protected PrettyPrintVisitor copy(StringBuilder builder, int indent, boolean doIndent) {
+      return new SignatureOnlyVisitor(builder, indent, doIndent);
+    }
+
+    @Override
+    public void prettyPrintBody(Concrete.FunctionBody body, boolean isFunction) {
+    }
   }
 }

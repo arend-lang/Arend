@@ -498,7 +498,7 @@ public class ConsoleMain {
         if (parsed == null) return false;
         parsed.options().json = jsonSearch;
         org.arend.frontend.symbol.SymbolSearch.run(parsed.patterns(), parsed.options(),
-            requestedLibraries, libraryManager, server, mySystemErrErrorReporter, realStdout);
+            libraryManager, server, mySystemErrErrorReporter, realStdout);
         return !myExitWithError;
       }
     } finally {

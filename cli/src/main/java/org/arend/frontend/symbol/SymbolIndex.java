@@ -39,9 +39,11 @@ import java.util.*;
 public final class SymbolIndex {
   // v2 adds a file-size field next to the mtime so identical-mtime overwrites (rare
   // but real: same-second edits, `git checkout` of a file that already matched, file
-  // systems with low mtime resolution) invalidate the cached entries. Bumping the
-  // header version forces a clean rebuild of any v1 cache on disk.
-  private static final String FORMAT_HEADER = "# arend symbol index v2";
+  // systems with low mtime resolution) invalidate the cached entries. v3 lets a
+  // signature span multiple lines (containers now store their full body -- fields /
+  // constructors), stored with `\n` escaped so each entry stays on one physical line.
+  // Bumping the header version forces a clean rebuild of any older cache on disk.
+  private static final String FORMAT_HEADER = "# arend symbol index v3";
   static final FileStamp GENERATED_STAMP = new FileStamp(-1L, -1L);
 
   /** mtime+size snapshot of a source file; staleness compares both. */
@@ -371,9 +373,12 @@ public final class SymbolIndex {
       List<Entry> entries = myEntries.getOrDefault(mp, Collections.emptyList());
       w.write("module " + mp + " " + st.mtime() + " " + st.size()); w.newLine();
       for (Entry e : entries) {
+        // escape() turns any newline in a multi-line container signature into a
+        // literal `\n`, so the entry stays on one physical line; unescape() on
+        // read restores it.
         w.write("  " + escape(e.shortName) + "|" + escape(e.longName) + "|" + e.kind.name() + "|"
             + (e.absoluteFile == null ? "" : e.absoluteFile) + "|"
-            + e.line + "|" + e.column + "|" + escapeOneLine(e.signature));
+            + e.line + "|" + e.column + "|" + escape(e.signature));
         w.newLine();
       }
     }
@@ -425,10 +430,6 @@ public final class SymbolIndex {
 
   private static String escape(String s) {
     return s.replace("\\", "\\\\").replace("|", "\\|").replace("\n", "\\n").replace("\r", "\\r");
-  }
-
-  private static String escapeOneLine(String s) {
-    return escape(s.replace('\n', ' ').replace('\r', ' '));
   }
 
   private static String unescape(String s) {

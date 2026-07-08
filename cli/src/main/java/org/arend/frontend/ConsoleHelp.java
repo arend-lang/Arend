@@ -15,139 +15,56 @@ final class ConsoleHelp {
   private ConsoleHelp() {}
 
   private static final String SYMBOL_SEARCH_HELP = """
-      arend -ss <pattern> [option ...]
+      arend [LIBRARY ...] -ss <pattern> [pattern | option ...]
 
-      Search every loaded library for definitions whose SHORT NAME matches <pattern>.
-      Each .ard file is loaded at most once; results live in a per-library on-disk index at <library>/<binariesDir>/.arend-symbol-index.
-      Subsequent runs with no source changes are near-instant.
+      Find definitions by SHORT NAME across the loaded libraries. Prints each match's
+      location, full name, kind, and one-line signature. Fast: served from a
+      per-library on-disk index that re-parses only changed files.
 
-      PATTERN
-        Foo                Literal substring match against the SHORT name (smart case — see SMART CASE below).
-                           Every Arend identifier character is matched as plain text; nothing is a regex metacharacter here.
-                           So '*-comm', '^-1', '<*', '||', '+>+', '[*]', '?-elim' all work as literal substrings.
+      Use -ss to locate a definition by name; inspect it further with a sibling
+      command -- -fu (usages), -ch (class hierarchy), -sc (scope), -ps (by signature).
 
-                           Per Arend.g4, an identifier consists of:
-                             operators   ~ ! @ # $ % ^ & * - + = < > ? / | : [ ]
-                             letters     a-z  A-Z  _
-                             Unicode     U+2200..U+22FF, U+2A00..U+2AFF
-                                         (math operators: ∀ ∃ ∈ ⊂ ⊆ ∧ ∨ ≤ ⊕ …)
-                             cont. only  0-9  '         (not first character)
+      PATTERN MODES
+        Foo            substring match (default). Characters are literal, so Arend
+                       operator names work as-is: *-comm, ^-1, ?-elim, <*, ||.
+        glob:Foo       whole-name match; * = any run, ? = one char. With no wildcard
+                       it is an EXACT name. Match a literal * or ? with \\* / \\?.
+        re:<regex>     Java regex, unanchored (find()); case-sensitive as typed.
+        hb:<chars>     humpback: type word starts / prefixes.
+                       hb:PAM -> PosetAddMonoid, hb:mon -> Monoid, hb:isP -> isProp.
 
-                           Plain patterns reject non-identifier chars: '.', '(', ')', '{', '}', ',', ';', '"', backtick, whitespace.
-                           Such a pattern is rejected with a fix-it pointing at `re:` or `glob:`.
-                           Most commonly that's a regex sequence (`.*`, `.+`, `.?`, `(?...`) or a qualified-name mistake (`Module.Foo`).
-                           Pass just `Foo` and read the long name from the output.
+      SMART CASE (all modes except re:): a lowercase letter matches either case, an
+      uppercase letter matches uppercase only. So `monoid` finds `Monoid`, while
+      `Monoid` skips a lowercase `monoid`.
 
-                           A '|' in a plain pattern matches literally (since '|' IS a valid identifier char).
-                           It emits a soft warning anyway, in case OR was intended.
-        glob:<pat>         Anchored whole-name match. `*` = any chars, `?` = any one char.
-                           With NO `*`/`?` this is an EXACT match: `glob:pmap` matches `pmap` but not `pmap2`, `Xpmap`.
-                           `*`/`?` are valid Arend identifier chars, so to match one literally escape it as `\\*` / `\\?`
-                           (`\\` never occurs in an Arend name, so there is no ambiguity): `glob:\\*-comm` matches exactly `*-comm`,
-                           `glob:abs\\_\\*` matches `abs_*`, `abs_*q`, and so on.
-        re:<java-regex>    Raw java.util.regex pattern, matched with find() — so it is UNANCHORED:
-                           `re:Monoid` hits any name CONTAINING "Monoid"; anchor with `^` / `$` for a whole-name match.
-                           Full Java syntax works: `|`, `[...]`, `(?:...)`, lookahead `(?=...)`, backrefs `\\1`, `\\p{...}`, `(?i)` …
-                           CASE-SENSITIVE exactly as typed — unlike every other mode, re: is NOT smart-case.
-                           So `re:^[A-Z]` / `re:\\p{Lu}` match capitals only (e.g. "starts with a capital").
-                           Prepend `(?i)` to opt back into case-insensitivity: `re:(?i)monoid`.
-                           A space inside the pattern splits it into separate patterns (see MULTIPLE PATTERNS), so a regex
-                           cannot contain a literal space — Arend short names never do anyway.
-        hb:<chars>         Humpback / camel-and-dash boundary fuzzy match. Names split into "words" at every
-                           NON-PLAIN char: an uppercase letter (`HLevels`=H·Levels), a digit (`log1p`=log·1p),
-                           or an operator/symbol, as does a run after a dash / underscore / operator char.
-                           The FIRST pattern char must land on a word start — this keeps hb: distinct from a
-                           plain substring (`hb:onoid` will NOT match `Monoid`). After that:
-                             * UPPERCASE / digit / operator must again start a word, skipping ahead as needed:
-                               `hb:PAM` -> `PosetAddMonoid` (Poset·Add·Monoid), `hb:CM` -> `CMonoid`,`ContMap`,
-                               `hb:ccel1` -> `compose-coef-expm1-log1p`;
-                             * a LOWERCASE letter is lenient: it starts a word OR continues the current one, so
-                               you can type word prefixes: `hb:ide` -> `ide`,`Ideal`; `hb:mon` -> `Monoid`,`Mono`.
-                           A `-` glued to a `_` does not split off a following LOWERCASE word (`abs_-left`=abs·-left),
-                           but a non-plain char always starts a word — `HLevel_-1`=HLevel·-·1, `hb:HL-2s`=`HLevels_-2-sigma`.
-                           Boundary detection is ALWAYS case-sensitive (an uppercase letter is case-based).
-                           Pattern letters follow SMART CASE (below): `hb:PAM` needs capital P·A·M (finds
-                           `PosetAddMonoid`, not a lowercase `p_a_m`), while `hb:pam` finds both. Short lowercase
-                           queries can be broad — results rank shortest-name-first, so exact matches lead.
+      Multiple patterns are OR'd; whitespace inside one argument also separates, so
+      `-ss "Monoid Ring"` is the same as `-ss Monoid -ss Ring`.
 
-      SMART CASE  (every mode except re:)
-        A lowercase letter in the pattern matches EITHER case; an uppercase letter matches UPPERCASE only.
-        So `monoid` finds both `Monoid` and `monoid`, whereas `Monoid` skips a lowercase `monoid`.
-        There is no case flag. For full case control — e.g. a lowercase-ONLY match — use re:, which is case-sensitive as typed.
+      OPTIONS  (each a separate -ss argument)
+        limit=N            cap matches; 0 = unlimited (default 200)
+        kind=k,...         keep only these kinds: func sfunc lemma type axiom instance
+                           coclause coerce level data cons class record field meta
+        contains=<text>    extra substring filter on the short name; repeatable
+        no-cache           ignore the index and re-parse everything
 
-      MULTIPLE PATTERNS
-        Pass several patterns to OR them: a name matches if it satisfies any.
-          arend -ss Cauchy -ss Mertens
-        Whitespace inside a SINGLE -ss argument is also a separator, so:
-          arend -ss "Cauchy Mertens"           # same as -ss Cauchy -ss Mertens
-        Prefixed tokens mix freely:
-          arend -ss "glob:abs_* hb:cAss" -ss re:^foo.*bar$
+      SCOPE is every loaded library (the LIBRARY positionals + their dependencies +
+      prelude); to search less, load less. Matches are ordered shortest-name-first
+      (exact-length names lead), then alphabetically. A query that misses is split at
+      operators into word-parts to suggest near names ("Did you mean?").
 
-      QUERY ECHO
-        Each run prints the parsed query before searching so you can see how each token was interpreted ('literal', 'exact', 'glob', 'regex', 'humpback').
-        Glob / humpback also show the compiled regex.
-
-      SHELL QUOTING
-        Apostrophe `'` is a valid Arend continuation char — it appears in names like `-'`, `iabs_-_suc'`, and primed-variant suffixes.
-        It is also the most common shell quote delimiter, so passing names that contain it needs care:
-          arend -ss "iabs_-'"            # outer double quotes: '\\'' is literal
-          arend -ss 'iabs_-'\\'''        # outer singles, '\\''  splices an apostrophe
-          arend -ss iabs_-\\'            # no outer quotes; backslash-escape
-        Inside double quotes a bare `'` is NOT a delimiter — it stays in the string.
-        So `-ss "a' 'b"` parses as TWO patterns, `a'` and `'b`, with the apostrophe on the wrong side of the space.
-        A leading `'` in a pattern triggers a soft warning: no Arend short name can start with `'` (it is continuation-only).
-
-      EXTRA TOKENS  (each passed as a separate -ss argument)
-        no-cache           bypass the on-disk index, re-parse everything
-        limit=N            cap printed matches at N (0 = unlimited; default 200)
-        contains=<text>    Extra AND substring filter on the short name (smart case, like a plain pattern); can be repeated.
-                           Replaces post-pipe `| grep`.
-        kind=k1,k2,...     Keep only these kinds.
-                           Recognised: func, sfunc, lemma, type, axiom, instance, coclause, coerce, level.
-                           Plus: data, cons|constructor, class, record, field, meta, other.
-        only=name|self     Restrict scope.
-                           Default: every library currently registered (requested libs + transitive deps + prelude).
-                           `self` means the libraries listed on the command line.
-                           A literal name (e.g. `arend-lib`) picks that single library.
-                           Multiple values can be comma-separated (e.g. `only=arend-lib,liba`).
-
-      OUTPUT
-        Line-oriented; safe to post-filter with `| head`, `| tail`, `| grep` if that is what your fingers reach for.
-        `limit=N` and `contains=` do the same job inside the tool.
-
-        <abs-path>:<line>:<col>           or  <library:module> for generated
-        <library>::<long-name>  [<KIND>]
-          <signature on a single line>
-
-        With the global `--json` flag, results are emitted instead as a JSON array on stdout (one object per line:
-        library [omitted when a single non-prelude library is loaded], file, module, line, column, longName, kind,
-        signature). All diagnostics ([INFO]/[WARN]/[ERROR] and this query echo) are written to a log file — by default
-        <tmpdir>/arend-symbol-search.log, or `--log-file <path>` — so stdout stays pure JSON and the console is clean;
-        a single line on stderr reports where the log was written.
-
-        Results are ordered by SHORT-NAME LENGTH (ascending).
-        An exact-length name appears before any longer name that just contains the query.
-        E.g. for `-ss fac`: `face` before `factor` before `factors` before `leftFactor` before `completion-factor`.
-        Ties are broken alphabetically.
-        For a strict exact match use `glob:<name>` (anchored; wildcard-free glob is an exact match).
-
-        On zero matches, a plain-mode pattern is decomposed at operator-chars / underscores (alphanumeric runs of length >= 3).
-        The index is re-scanned for those parts.
-        So a miss on `natCoef_fromRat` still surfaces names containing `natCoef` or `fromRat` as a "Did you mean?" list.
-        Single-word queries with no decomposition emit a plain "No matches." — there is nothing to suggest.
+      OUTPUT is line-oriented: location, then `library::LongName [KIND]`, then the
+      one-line signature. With --json each match is one JSON object; diagnostics go to
+      a log file (default <tmpdir>/arend-symbol-search.log) so stdout stays pure JSON.
 
       EXAMPLES
-        arend -L libs my-lib -ss 'Monoid'                   (substring)
-        arend -L libs my-lib -ss '*-comm'                   (literal '*-comm')
-        arend -L libs my-lib -ss 'BigSum_1 BigSum_+ BigSum-ext'  (OR via spaces)
-        arend -L libs my-lib -ss Cauchy -ss Mertens         (OR via multi-flag)
-        arend -L libs my-lib -ss 'glob:pmap' -ss kind=func,lemma          (exact name; anchored, no wildcards)
-        arend -L libs my-lib -ss 'glob:abs_*' -ss limit=20
-        arend -L libs my-lib -ss 're:^abs.*\\+.*$'                (regex, anchored both ends)
-        arend -L libs my-lib -ss 're:^[A-Z]'                      (Capitalised names; re: is case-sensitive as typed)
-        arend -L libs my-lib -ss 'hb:PAM'                         (humpback -> PosetAddMonoid, PosetAbMonoid, …)
-        arend -L libs my-lib -ss only=self -ss 'shared-name'
-        arend -L libs my-lib -ss Monoid -ss contains=Add   (short name matches 'Monoid' AND contains 'Add', e.g. AddMonoid)
+        arend arend-lib -ss Monoid                    substring
+        arend arend-lib -ss glob:pmap                 exact name
+        arend arend-lib -ss 'glob:*-comm'             names ending in -comm
+        arend arend-lib -ss hb:PAM                    humpback -> PosetAddMonoid
+        arend arend-lib -ss Monoid -ss contains=Add   'Monoid' AND *Add* -> AddMonoid
+        arend arend-lib -ss Ring -ss kind=class
+        arend arend-lib -ss "pmap transport"          OR two names
+        arend arend-lib -ss 're:comm$'                names ending in "comm"
       """;
 
 

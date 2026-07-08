@@ -26,22 +26,14 @@ public final class SymbolSearch {
     public boolean noCache = false;
     public int limit = 200;
     public final EnumSet<SymbolIndex.Kind> kinds = EnumSet.allOf(SymbolIndex.Kind.class);
-    /** {@code null} = all loaded libraries; otherwise the explicit allow-list. */
-    public @Nullable Set<String> onlyLibraries = null;
     /** Extra AND substring filters (each a smart-case literal) applied after the pattern matches. */
     public final List<SymbolPattern> containsFilters = new ArrayList<>();
     /** Emit results as a JSON array instead of the human-readable listing. */
     public boolean json = false;
   }
 
-  /**
-   * @param requestedLibraries the libraries explicitly named on the CLI; used as
-   *                           the seed for the search scope (and to compute
-   *                           {@code only=self}).
-   */
   public static int run(@NotNull List<String> patterns,
                         @NotNull Options options,
-                        @NotNull List<SourceLibrary> requestedLibraries,
                         @NotNull LibraryManager libraryManager,
                         @NotNull ArendServer server,
                         @NotNull ErrorReporter errorReporter,
@@ -78,7 +70,7 @@ public final class SymbolSearch {
     // In JSON mode the query echo is diagnostic, not a result -- keep it off stdout.
     (options.json ? System.err : System.out).println(formatQueryEcho(compiled, options));
 
-    List<SourceLibrary> libsInScope = librariesInScope(requestedLibraries, libraryManager, options);
+    List<SourceLibrary> libsInScope = librariesInScope(libraryManager);
     if (libsInScope.isEmpty()) {
       if (options.json) out.println("[]");
       else System.out.println("No libraries to search.");
@@ -219,37 +211,6 @@ public final class SymbolSearch {
   private record Hit(String libName, SymbolIndex.Entry entry) {}
 
   /**
-   * Build (or refresh) the on-disk symbol index for every library in scope and
-   * exit. Replaces the older "no-op {@code -ss zzznevermatch >/dev/null}" idiom.
-   */
-  public static void reindex(@NotNull List<SourceLibrary> requestedLibraries,
-                             @NotNull LibraryManager libraryManager,
-                             @NotNull ArendServer server,
-                             @Nullable Set<String> onlyLibraries) {
-    Options opts = new Options();
-    opts.onlyLibraries = onlyLibraries;
-    List<SourceLibrary> libsInScope = librariesInScope(requestedLibraries, libraryManager, opts);
-    if (libsInScope.isEmpty()) {
-      System.out.println("No libraries to index.");
-      return;
-    }
-    for (SourceLibrary lib : libsInScope) {
-      SymbolIndex idx = SymbolIndex.loadOrCreate(lib);
-      int rebuilt = 0;
-      for (ModulePath mp : lib.findModules(false)) {
-        if (idx.isStale(lib, mp)) {
-          server.findModule(mp, lib.getLibraryName(), false, false);
-          rebuilt++;
-        }
-      }
-      idx.refresh(lib, server, false);
-      idx.save();
-      System.out.println(lib.getLibraryName() + ": indexed (" + rebuilt
-          + " stale module" + (rebuilt == 1 ? "" : "s") + " re-parsed).");
-    }
-  }
-
-  /**
    * Soft-warn for every plain-mode pattern starting with {@code '}. The Arend
    * lexer treats {@code '} as a CONTINUATION-only character (no Arend short
    * name can start with it), so a leading apostrophe is almost always shell-
@@ -332,11 +293,6 @@ public final class SymbolSearch {
       for (SymbolIndex.Kind k : opts.kinds) ks.add(k.name().toLowerCase(Locale.ROOT));
       sj.add("kind=" + ks);
     }
-    if (opts.onlyLibraries != null) {
-      StringJoiner ls = new StringJoiner(",");
-      for (String s : opts.onlyLibraries) ls.add(s);
-      sj.add("only=" + ls);
-    }
     return sj.toString();
   }
 
@@ -365,7 +321,9 @@ public final class SymbolSearch {
     out.append(libName).append("::").append(highlightName(e.longName(), e.shortName(), patterns))
         .append("  [").append(e.kind().name()).append("]\n");
     if (!e.signature().isEmpty()) {
-      out.append("  ").append(e.signature()).append('\n');
+      // A container signature (\class/\record/\data) is multi-line; indent every
+      // line by two spaces so the field/constructor lines nest under the header.
+      out.append("  ").append(e.signature().replace("\n", "\n  ")).append('\n');
     }
     out.append('\n');
   }
@@ -482,35 +440,23 @@ public final class SymbolSearch {
   }
 
   /**
-   * Default scope = every library currently registered with the manager (so
-   * dependencies and prelude come along too). {@code only=...} narrows it.
+   * Search scope = every library currently registered with the manager. That is
+   * exactly what was loaded from the command line before {@code -ss} -- the
+   * requested libraries plus their transitive dependencies and prelude. Scope is
+   * therefore controlled by choosing what to load; there is no separate filter.
    */
-  private static List<SourceLibrary> librariesInScope(List<SourceLibrary> requested,
-                                                      LibraryManager manager,
-                                                      Options opts) {
+  private static List<SourceLibrary> librariesInScope(LibraryManager manager) {
     List<SourceLibrary> all = new ArrayList<>();
     for (String name : manager.getLibraries()) {
       SourceLibrary lib = manager.getLibrary(name);
       if (lib != null) all.add(lib);
     }
-    if (opts.onlyLibraries == null) return all;
-
-    Set<String> allow = new HashSet<>();
-    for (String s : opts.onlyLibraries) {
-      if ("self".equalsIgnoreCase(s)) {
-        for (SourceLibrary l : requested) allow.add(l.getLibraryName());
-      } else {
-        allow.add(s);
-      }
-    }
-    List<SourceLibrary> filtered = new ArrayList<>();
-    for (SourceLibrary lib : all) if (allow.contains(lib.getLibraryName())) filtered.add(lib);
-    return filtered;
+    return all;
   }
 
   /**
    * Parses sub-tokens passed alongside {@code -ss}, e.g.
-   * {@code -ss Monoid limit=50 only=arend-lib kind=class,instance}.
+   * {@code -ss Monoid limit=50 kind=class,instance}.
    * Any token that doesn't look like an option is treated as a pattern; multiple
    * patterns are OR-ed at match time.
    */
@@ -553,11 +499,6 @@ public final class SymbolSearch {
           ks.add(k);
         }
         if (!ks.isEmpty()) opts.kinds.retainAll(ks);
-      } else if (arg.startsWith("only=")) {
-        if (opts.onlyLibraries == null) opts.onlyLibraries = new HashSet<>();
-        for (String s : arg.substring("only=".length()).split(",")) {
-          if (!s.isEmpty()) opts.onlyLibraries.add(s.trim());
-        }
       } else {
         // Whitespace inside one -ss arg splits into multiple OR'd patterns,
         // so `-ss "A B C"` is equivalent to `-ss A -ss B -ss C`. Catches the
