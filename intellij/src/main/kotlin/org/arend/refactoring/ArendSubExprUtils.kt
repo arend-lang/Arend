@@ -141,7 +141,7 @@ fun correspondedSubExpr(range: TextRange, file: PsiFile, project: Project): SubE
 
     val extension = concreteDef?.data?.getLocation()?.libraryName?.let { arendServer.getLibrary(it) as? ArendLibraryImpl }?.extension
     getReferableConcreteGroup(psiDef)?.let { concreteGroup ->
-        DefinitionResolveNameVisitor(SimpleConcreteProvider(ArendServerImpl.updateDefinitions(concreteGroup)), TypingInfo.EMPTY, DummyErrorReporter.INSTANCE, extension?.literalTypechecker, resolver)
+        DefinitionResolveNameVisitor(SimpleConcreteProvider(ArendServerImpl.updateDefinitions(concreteGroup)), arendServer.typingInfo, DummyErrorReporter.INSTANCE, extension?.literalTypechecker, resolver)
             .resolveGroup(concreteGroup, getReferableScope(psiDef), ArendInstances(), LinkedHashMap())
     }
     val body = concreteDef?.let { it to psiDef }
