@@ -370,6 +370,40 @@ public abstract class CommonCliRepl extends Repl {
   }
 
   /**
+   * Split a REPL command line into arguments, honouring double quotes the way a
+   * shell would (the REPL does no shell processing of its own, so without this a
+   * pattern like {@code "re:.-comm"} would keep its quotes and be rejected). A
+   * double quote is never a valid Arend identifier character, so a {@code "..."}
+   * group is unambiguous: its contents become one argument with the quotes
+   * removed and interior spaces preserved. Single quotes are left as-is --
+   * apostrophe IS a valid Arend name character ({@code f'}, {@code iabs_-'}),
+   * not a quote.
+   */
+  static List<String> tokenizeArgs(String line) {
+    List<String> tokens = new ArrayList<>();
+    StringBuilder cur = new StringBuilder();
+    boolean inQuote = false, started = false;
+    for (int i = 0; i < line.length(); i++) {
+      char c = line.charAt(i);
+      if (c == '"') {
+        inQuote = !inQuote;
+        started = true;
+      } else if (!inQuote && Character.isWhitespace(c)) {
+        if (started) {
+          tokens.add(cur.toString());
+          cur.setLength(0);
+          started = false;
+        }
+      } else {
+        cur.append(c);
+        started = true;
+      }
+    }
+    if (started) tokens.add(cur.toString());
+    return tokens;
+  }
+
+  /**
    * {@code :symbol-search} / {@code :ss} {@code <pattern> [pattern | option ...]} —
    * same syntax and behaviour as the {@code -ss} CLI flag, searching every library
    * registered at the REPL. No {@code --json}. {@code :? ss} prints the help.
@@ -406,8 +440,8 @@ public abstract class CommonCliRepl extends Repl {
       System.setOut(capture);
       System.setErr(capture);
       try {
-        String[] args = line.isBlank() ? new String[0] : line.trim().split("\\s+");
-        SymbolSearch.Parsed parsed = SymbolSearch.parseArgs(args, errorReporter);
+        List<String> args = tokenizeArgs(line);
+        SymbolSearch.Parsed parsed = SymbolSearch.parseArgs(args.toArray(new String[0]), errorReporter);
         if (parsed != null) {
           // The synthetic REPL library mirrors the real ones (same source files),
           // so leaving it in scope would duplicate every hit; drop it.
