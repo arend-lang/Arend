@@ -1,6 +1,18 @@
 package org.arend.formatting
 
 class ArendReformatTest : ArendFormatterTestBase() {
+    fun testCollapseBlankLinesBeforeColon() = checkReformat(
+            "\\func f\n\n  : Nat => {?}",
+            "\\func f : Nat => {?}")
+
+    fun testWrapReturnTypeWithColon() = checkReformat(
+            "\\func test (aaaaaaaaaa : Nat) (bbbbbbbbbb : Nat) (cccccccccc : Nat) (dddddddddd : Nat) (eeeeeeeeee : Nat) (ffffffffff : Nat) : Nat => 1",
+            "\\func test (aaaaaaaaaa : Nat) (bbbbbbbbbb : Nat) (cccccccccc : Nat) (dddddddddd : Nat) (eeeeeeeeee : Nat) (ffffffffff : Nat)\n  : Nat => 1")
+
+    fun testWrapFatArrowWithBody() = checkReformat(
+            "\\func test => aaaaaaaaaa bbbbbbbbbb cccccccccc dddddddddd eeeeeeeeee ffffffffff gggggggggg hhhhhhhhhh iiiiiiiiii jjjjjjjjjj",
+            "\\func test\n  => aaaaaaaaaa bbbbbbbbbb cccccccccc dddddddddd eeeeeeeeee ffffffffff gggggggggg hhhhhhhhhh iiiiiiiiii jjjjjjjjjj")
+
     // Wrap tests
     fun testWrapAfterComment() = checkReformat(
             "\\func lol -- Lol\n => 1",
