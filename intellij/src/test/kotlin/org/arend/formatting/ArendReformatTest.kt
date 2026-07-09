@@ -144,4 +144,10 @@ class ArendReformatTest : ArendFormatterTestBase() {
           \let
             x => 1 
           \in 2)""".trimIndent())
+
+    // Reformatting a postfix section applied to further arguments used to throw IllegalStateException
+    // because BinOpParser reused a sub-expression operand's `data` for the synthetic application node.
+    fun testBug() = checkReformat(
+            "\\func test (h : Nat -> Nat) => Nat.`+ (Nat.`+ h 1)  2 ",
+            "\\func test (h : Nat -> Nat) => Nat.`+ (Nat.`+ h 1) 2")
 }

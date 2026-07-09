@@ -56,7 +56,7 @@ public class ExpressionBinOpEngine implements BinOpEngine<Concrete.Expression> {
       return new Concrete.LamExpression(expression.getData(), Collections.singletonList(new Concrete.NameParameter(expression.getData(), true, firstArg)), parse(new Concrete.BinOpSequenceExpression(expression.getData(), newSequence, expression.getClauses()), reporter, typingInfo));
     }
 
-    Concrete.Expression parsed = new BinOpParser<>(typingInfo, reporter, engine).parse(expression.getSequence());
+    Concrete.Expression parsed = new BinOpParser<>(typingInfo, reporter, engine, expression.getData()).parse(expression.getSequence());
     return parsed instanceof Concrete.AppExpression && parsed.getData() != expression.getData()
         ? Concrete.AppExpression.make(expression.getData(), ((Concrete.AppExpression) parsed).getFunction(), ((Concrete.AppExpression) parsed).getArguments())
         : parsed;
