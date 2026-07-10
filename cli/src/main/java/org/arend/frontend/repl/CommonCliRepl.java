@@ -488,14 +488,20 @@ public abstract class CommonCliRepl extends Repl {
         return;
       }
       // The whole line is one structured pattern with spaces (Monoid -> _ = _), so
-      // unlike :ss we do NOT treat separate tokens as separate patterns: strip a
-      // standalone `print-full` and rejoin the rest as the single pattern.
+      // unlike :ss we do NOT treat separate tokens as separate patterns: pull out the
+      // option tokens (`print-full`, `limit=N`) and rejoin the rest as the single
+      // pattern.
       List<String> tokens = tokenizeArgs(line);
-      boolean printFull = tokens.removeIf(t -> t.equals("print-full"));
-      String pattern = String.join(" ", tokens).trim();
+      List<String> optionTokens = new ArrayList<>();
+      List<String> patternTokens = new ArrayList<>();
+      for (String t : tokens) {
+        if (t.equals("print-full") || t.startsWith("limit=")) optionTokens.add(t);
+        else patternTokens.add(t);
+      }
+      String pattern = String.join(" ", patternTokens).trim();
       List<String> psArgs = new ArrayList<>();
       if (!pattern.isEmpty()) psArgs.add(pattern);
-      if (printFull) psArgs.add("print-full");
+      psArgs.addAll(optionTokens);
 
       // The synthetic REPL library mirrors the real ones, so keeping it in scope
       // would duplicate every hit; drop it (as :ss does).

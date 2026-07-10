@@ -147,6 +147,7 @@ public final class ConsoleHelp {
 
       OPTIONS
         print-full         Print each match's full SIGNATURE (the same header/body -ss shows) instead of only the matching slice.
+        limit=N            cap matches; 0 = unlimited (default 200)
 
       """;
 
@@ -164,6 +165,7 @@ public final class ConsoleHelp {
         arend -L libs my-lib -ps 'Group -> _ = _'
         arend -L libs my-lib -ps 'isProp \\and _ -> _'
         arend -L libs my-lib -ps 'Monoid -> _' -ps print-full
+        arend -L libs my-lib -ps 'Monoid -> _' -ps limit=0
         arend -L libs my-lib -ps 'Monoid -> _' --json
 
       See also: https://arend-lang.github.io/documentation/plugin-manual/navigating#proof-search
@@ -180,6 +182,7 @@ public final class ConsoleHelp {
         :ps Group -> _ = _
         :ps isProp \\and _ -> _
         :ps Monoid -> _ print-full
+        :ps Monoid -> _ limit=0
 
       See also: https://arend-lang.github.io/documentation/plugin-manual/navigating#proof-search
       """;

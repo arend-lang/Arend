@@ -46,6 +46,8 @@ public final class ProofSearch {
   private static final String PRINT_FULL = "print-full";
 
   public static final class Options {
+    /** Cap on printed/emitted matches; 0 = unlimited. Same default as {@code -ss}. */
+    public int limit = 200;
     /** Print each match's full signature (as {@code -ss}) instead of the matching slice. */
     public boolean printFull = false;
     /** Emit results as a single JSON object instead of the human-readable listing. */
@@ -62,8 +64,9 @@ public final class ProofSearch {
 
   /**
    * Parses the tokens passed alongside {@code -ps}. Every token is part of the
-   * (single) pattern except a standalone {@code print-full}. Returns {@code null}
-   * with a diagnostic on stderr when no pattern is given or more than one is.
+   * (single) pattern except a standalone {@code print-full} or a {@code limit=N}
+   * option. Returns {@code null} with a diagnostic on stderr when no pattern is
+   * given, more than one is, or {@code limit} is malformed.
    */
   public static @Nullable Parsed parseArgs(String[] args) {
     Options opts = new Options();
@@ -71,6 +74,13 @@ public final class ProofSearch {
     for (String arg : args) {
       if (arg.equals(PRINT_FULL)) {
         opts.printFull = true;
+      } else if (arg.startsWith("limit=")) {
+        try {
+          opts.limit = Integer.parseInt(arg.substring("limit=".length()));
+        } catch (NumberFormatException e) {
+          System.err.println("[ERROR] Bad -ps limit: " + arg);
+          return null;
+        }
       } else {
         patterns.add(arg);
       }
@@ -126,6 +136,11 @@ public final class ProofSearch {
       System.out.println("[INFO] Resolved " + library.getLibraryName() + " (" + TimedProgressReporter.timeToString(System.currentTimeMillis() - time) + ")");
     }
 
+    // Count every match for the total, but only emit up to `limit` (0 = all). The
+    // matcher still runs for every definition, so the total is exact even when the
+    // printed/collected list is truncated -- same contract as -ss.
+    int total = 0;
+    int printed = 0;
     for (ModuleLocation moduleLocation : server.getModules()) {
       if (options.excludeLibraries.contains(moduleLocation.getLibraryName())) continue;
       String file = null;                 // computed lazily, only in JSON mode
@@ -140,6 +155,9 @@ public final class ProofSearch {
 
           ArendExpressionMatcher.ProofSearchMatchingResult result = matcher.match(parameters, codomain, scope);
           if (result == null) continue;
+          total++;
+          if (options.limit > 0 && printed >= options.limit) continue;
+          printed++;
 
           if (options.json) {
             if (!fileComputed) { file = sourceFileFor(moduleLocation, libraryManager); fileComputed = true; }
@@ -196,7 +214,17 @@ public final class ProofSearch {
         }
       }
     }
-    if (options.json) ResultJson.write(jsonOut, rows, rows.size());
+    // `rows` is already capped at `limit` by the emit guard; `count` is the exact
+    // total so callers can tell how many matches were truncated.
+    if (options.json) {
+      ResultJson.write(jsonOut, rows, total);
+    } else if (total == 0) {
+      System.out.println("No matches.");
+    } else {
+      System.out.println("Found " + total + " match" + (total == 1 ? "" : "es")
+          + (options.limit > 0 && total > options.limit
+              ? " (showing " + options.limit + "; pass `limit=0` for all)" : ""));
+    }
     return true;
   }
 
