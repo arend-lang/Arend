@@ -202,13 +202,16 @@ public final class ProofSearch {
             for (Pair<Concrete.Expression, List<Concrete.Expression>> parameterData : result.inPattern()) {
               StringBuilder builder = new StringBuilder();
               HighlightingPrettyPrintVisitor visitor = new HighlightingPrettyPrintVisitor(builder, 0, highlightedNodes);
-              parameterData.proj1.prettyPrint(visitor, topPrec);
+              // Route through printExpr (not Expression.prettyPrint, which dispatches
+              // straight to accept()) so the whole parameter node is checked against the
+              // highlight set -- otherwise a match at the top of the parameter is missed.
+              visitor.printExpr(parameterData.proj1, topPrec);
               System.out.print("(" + builder + ") -> ");
             }
           }
           StringBuilder builder = new StringBuilder();
           HighlightingPrettyPrintVisitor visitor = new HighlightingPrettyPrintVisitor(builder, 0, highlightedNodes);
-          codomain.prettyPrint(visitor, topPrec);
+          visitor.printExpr(codomain, topPrec);
           System.out.println(builder);
           System.out.println();
         }
