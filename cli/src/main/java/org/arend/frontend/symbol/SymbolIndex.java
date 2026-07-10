@@ -274,7 +274,8 @@ public final class SymbolIndex {
     return new int[] { 0, 0 };
   }
 
-  private static Kind kindOf(LocatedReferable ref, @Nullable Concrete.GeneralDefinition def) {
+  /** Maps a referable + its concrete definition to an index {@link Kind}; shared with {@code -ps}. */
+  public static Kind kindOf(LocatedReferable ref, @Nullable Concrete.GeneralDefinition def) {
     // Prefer the fine-grained kind from the concrete definition when available
     // (so we can distinguish lemma vs sfunc vs axiom vs type vs func).
     if (def instanceof Concrete.BaseFunctionDefinition fdef) {

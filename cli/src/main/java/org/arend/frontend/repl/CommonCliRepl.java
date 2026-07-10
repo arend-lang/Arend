@@ -5,6 +5,7 @@ import org.antlr.v4.runtime.BaseErrorListener;
 import org.antlr.v4.runtime.CharStreams;
 import org.antlr.v4.runtime.CommonTokenStream;
 import org.arend.frontend.ConsoleHelp;
+import org.arend.frontend.symbol.ProofSearch;
 import org.arend.frontend.symbol.SymbolSearch;
 import org.arend.ext.core.ops.NormalizationMode;
 import org.arend.ext.error.ErrorReporter;
@@ -200,6 +201,9 @@ public abstract class CommonCliRepl extends Repl {
     SymbolSearchCommand symbolSearch = new SymbolSearchCommand();
     registerAction("symbol-search", symbolSearch);
     registerAction("ss", symbolSearch);
+    ProofSearchCommand proofSearch = new ProofSearchCommand();
+    registerAction("proof-search", proofSearch);
+    registerAction("ps", proofSearch);
   }
 
   /**
@@ -447,6 +451,74 @@ public abstract class CommonCliRepl extends Repl {
           // so leaving it in scope would duplicate every hit; drop it.
           parsed.options().excludeLibraries.add(REPL_NAME);
           SymbolSearch.run(parsed.patterns(), parsed.options(), manager, myServer, errorReporter, capture);
+        }
+      } finally {
+        System.setOut(realOut);
+        System.setErr(realErr);
+      }
+      print(buffer.toString(StandardCharsets.UTF_8));
+    }
+  }
+
+  /**
+   * {@code :proof-search} / {@code :ps} {@code <pattern> [print-full]} — same
+   * matching as the {@code -ps} CLI flag, searching every library registered at
+   * the REPL. No {@code --json}. {@code :? ps} prints the help.
+   */
+  private final class ProofSearchCommand extends AliasableCommand {
+    ProofSearchCommand() {
+      super(new ArrayList<>());
+    }
+
+    @Override
+    public @Nls(capitalization = Nls.Capitalization.Sentence) @NotNull String description() {
+      return "Search registered libraries for definitions by signature shape (`:? ps` for the full grammar)";
+    }
+
+    @Override
+    public @Nls @NotNull String help(@NotNull Repl api) {
+      return ConsoleHelp.proofSearchReplHelp();
+    }
+
+    @Override
+    public void invoke(@NotNull String line, @NotNull Repl api, @NotNull Supplier<@NotNull String> scanner) {
+      LibraryManager manager = libraryManager();
+      if (manager == null) {
+        eprintln("[ERROR] Proof search is unavailable (no library manager on this server).");
+        return;
+      }
+      // The whole line is one structured pattern with spaces (Monoid -> _ = _), so
+      // unlike :ss we do NOT treat separate tokens as separate patterns: strip a
+      // standalone `print-full` and rejoin the rest as the single pattern.
+      List<String> tokens = tokenizeArgs(line);
+      boolean printFull = tokens.removeIf(t -> t.equals("print-full"));
+      String pattern = String.join(" ", tokens).trim();
+      List<String> psArgs = new ArrayList<>();
+      if (!pattern.isEmpty()) psArgs.add(pattern);
+      if (printFull) psArgs.add("print-full");
+
+      // The synthetic REPL library mirrors the real ones, so keeping it in scope
+      // would duplicate every hit; drop it (as :ss does).
+      List<SourceLibrary> libs = new ArrayList<>();
+      for (String name : manager.getLibraries()) {
+        if (name.equals(REPL_NAME)) continue;
+        SourceLibrary lib = manager.getLibrary(name);
+        if (lib != null) libs.add(lib);
+      }
+
+      // ProofSearch writes plain results + the [INFO] resolve chatter to
+      // System.out/System.err; capture and forward through the REPL's stream so it
+      // works for both the plain and jline REPL. No JSON in the REPL.
+      ByteArrayOutputStream buffer = new ByteArrayOutputStream();
+      PrintStream capture = new PrintStream(buffer, true, StandardCharsets.UTF_8);
+      PrintStream realOut = System.out, realErr = System.err;
+      System.setOut(capture);
+      System.setErr(capture);
+      try {
+        ProofSearch.Parsed parsed = ProofSearch.parseArgs(psArgs.toArray(new String[0]));
+        if (parsed != null) {
+          parsed.options().excludeLibraries.add(REPL_NAME);
+          ProofSearch.run(parsed.pattern(), parsed.options(), libs, manager, myServer, capture);
         }
       } finally {
         System.setOut(realOut);

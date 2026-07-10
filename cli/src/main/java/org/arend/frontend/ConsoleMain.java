@@ -44,6 +44,11 @@ import org.arend.typechecking.doubleChecker.CoreModuleChecker;
 import org.arend.typechecking.error.local.GoalError;
 import org.arend.typechecking.order.MapTarjanSCC;
 import org.arend.util.FileUtils;
+import org.arend.error.SourcePosition;
+import org.arend.frontend.symbol.PathDisplay;
+import org.arend.frontend.symbol.ResultJson;
+import org.arend.frontend.symbol.SignaturePrintVisitor;
+import org.arend.frontend.symbol.SymbolIndex;
 
 import org.arend.ext.reference.Precedence;
 import org.arend.source.PersistableBinarySource;
@@ -69,54 +74,6 @@ public class ConsoleMain {
   private final static String SHOW_SIZES = "show-sizes";
   private final static String SHOW_MODULES = "show-modules";
   private final static String SHOW_MODULES_WITH_INSTANCES = "show-modules-with-instances";
-  private final static String PRINT_FULL = "print-full";
-  private final static String ANSI_GREEN = "\u001B[32m";
-  private final static String ANSI_RESET = "\u001B[0m";
-
-  private static class HighlightingPrettyPrintVisitor extends PrettyPrintVisitor {
-    private final Set<Concrete.SourceNode> highlightedNodes;
-    private int highlightCount = 0;
-
-    public HighlightingPrettyPrintVisitor(StringBuilder builder, int indent, Set<Concrete.SourceNode> highlightedNodes) {
-      super(builder, indent);
-      this.highlightedNodes = highlightedNodes;
-    }
-
-    @Override
-    protected PrettyPrintVisitor copy(StringBuilder builder, int indent, boolean doIndent) {
-      return new HighlightingPrettyPrintVisitor(builder, indent, highlightedNodes);
-    }
-
-    @Override
-    public void printExpr(Concrete.Expression expr, Precedence prec) {
-      if (highlightedNodes.contains(expr)) {
-        myBuilder.append(ANSI_GREEN);
-        highlightCount++;
-      }
-      super.printExpr(expr, prec);
-      if (highlightedNodes.contains(expr)) {
-        highlightCount--;
-        if (highlightCount == 0) {
-          myBuilder.append(ANSI_RESET);
-        }
-      }
-    }
-
-    @Override
-    public void prettyPrintParameter(Concrete.Parameter parameter) {
-      if (highlightedNodes.contains(parameter)) {
-        myBuilder.append(ANSI_GREEN);
-        highlightCount++;
-      }
-      super.prettyPrintParameter(parameter);
-      if (highlightedNodes.contains(parameter)) {
-        highlightCount--;
-        if (highlightCount == 0) {
-          myBuilder.append(ANSI_RESET);
-        }
-      }
-    }
-  }
 
   private final ErrorReporter mySystemErrErrorReporter = error -> {
     System.err.println(error);
@@ -158,8 +115,8 @@ public class ConsoleMain {
       cmdOptions.addOption(Option.builder("sc").longOpt("scope").hasArgs().argName("MODULE:PATH|name")
           .desc("dump the ambient scope at a referable's position. Pass `-sc --help` for full grammar.").build());
       cmdOptions.addOption(Option.builder("ps").longOpt("proof-search").hasArgs().argName("sig-pattern").desc("search by signature shape (parameters/codomain). Pass `-ps --help` for the full grammar.").build());
-      cmdOptions.addOption(Option.builder().longOpt("json").desc("with -ss: print results as a JSON array on stdout; all diagnostics ([INFO]/[WARN]/[ERROR], query echo) go to a log file, keeping stdout pure JSON and the console clean (ignored in REPL mode)").build());
-      cmdOptions.addOption(Option.builder().longOpt("log-file").hasArg().argName("path").desc("with --json -ss: write diagnostics here instead of the default <tmpdir>/arend-symbol-search.log").build());
+      cmdOptions.addOption(Option.builder().longOpt("json").desc("with -ss/-ps: print results as a single JSON object {results:[...],count:N} on stdout; all diagnostics ([INFO]/[WARN]/[ERROR], query echo) go to a log file, keeping stdout pure JSON and the console clean (ignored in REPL mode)").build());
+      cmdOptions.addOption(Option.builder().longOpt("log-file").hasArg().argName("path").desc("with --json -ss/-ps: write diagnostics here instead of the default <tmpdir>/arend-symbol-search.log").build());
       cmdOptions.addOption("r", "recompile", false, "recompile all modules from source, ignoring binary caches (.arc files)");
       cmdOptions.addOption(null, "serialize", false, "after typechecking, persist typechecked modules as .arc binary caches; without this flag, no .arc files are written");
       cmdOptions.addOption("t", "test", false, "run tests");
@@ -453,7 +410,7 @@ public class ConsoleMain {
     // that code reading either static field at call time (the error reporter,
     // SymbolSearch's warnings/echo) lands in the log. If the file cannot be
     // opened we fall back to stderr. `--json` without `-ss` is a no-op.
-    boolean jsonSearch = cmdLine.hasOption("json") && cmdLine.hasOption("ss");
+    boolean jsonSearch = cmdLine.hasOption("json") && (cmdLine.hasOption("ss") || cmdLine.hasOption("ps"));
     PrintStream realStdout = System.out;
     PrintStream realStderr = System.err;
     PrintStream jsonLog = null;
@@ -473,10 +430,10 @@ public class ConsoleMain {
       }
     }
 
-    // The load loops and the -ss block run inside this try so the redirected
+    // The load loops and the -ss/-ps blocks run inside this try so the redirected
     // streams are ALWAYS restored -- including the early `return false` exits
-    // below, which the old code leaked past. The fu/ch/sc/ps/typecheck blocks
-    // after it are reached only when there is no -ss, hence never in JSON mode.
+    // below, which the old code leaked past. The fu/ch/sc/typecheck blocks after
+    // it are reached only when there is no -ss/-ps, hence never in JSON mode.
     try {
       for (SourceLibrary library : requestedLibraries) {
         loadLibrary(libraryManager, library, server);
@@ -501,13 +458,22 @@ public class ConsoleMain {
             libraryManager, server, mySystemErrErrorReporter, realStdout);
         return !myExitWithError;
       }
+
+      if (cmdLine.hasOption("ps")) {
+        org.arend.frontend.symbol.ProofSearch.Parsed parsed =
+            org.arend.frontend.symbol.ProofSearch.parseArgs(cmdLine.getOptionValues("ps"));
+        if (parsed == null) return false;
+        parsed.options().json = jsonSearch;
+        return org.arend.frontend.symbol.ProofSearch.run(parsed.pattern(), parsed.options(),
+            requestedLibraries, libraryManager, server, realStdout);
+      }
     } finally {
       if (jsonSearch) {
         System.setOut(realStdout);
         System.setErr(realStderr);
         if (jsonLog != null) {
           jsonLog.close();
-          realStderr.println("[INFO] -ss diagnostics written to " + jsonLogPath);
+          realStderr.println("[INFO] " + (cmdLine.hasOption("ps") ? "-ps" : "-ss") + " diagnostics written to " + jsonLogPath);
         }
       }
     }
@@ -537,28 +503,6 @@ public class ConsoleMain {
       org.arend.frontend.symbol.ReferableScope.run(parsed.spec(), parsed.pattern(), parsed.options(),
           requestedLibraries, libraryManager, server, mySystemErrErrorReporter);
       return !myExitWithError;
-    }
-
-    if (cmdLine.hasOption("ps")) {
-      String[] psArgs = cmdLine.getOptionValues("ps");
-      boolean printFull = false;
-      List<String> patterns = new ArrayList<>();
-      for (String arg : psArgs) {
-        if (arg.equals(PRINT_FULL)) {
-          printFull = true;
-        } else {
-          patterns.add(arg);
-        }
-      }
-      if (patterns.isEmpty()) {
-        System.err.println("[ERROR] Missing proof search pattern");
-        return false;
-      }
-      if (patterns.size() > 1) {
-        System.err.println("[ERROR] Only one proof search pattern is allowed. Use quotes if the pattern contains spaces.");
-        return false;
-      }
-      return matchAndPrint(server, requestedLibraries, patterns.getFirst(), printFull);
     }
 
     TimedProgressReporter timedProgressReporter = cmdLine.hasOption(SHOW_TIMES) ? new TimedProgressReporter() : null;
@@ -1137,76 +1081,6 @@ public class ConsoleMain {
     } else {
       myExitWithError = true;
     }
-  }
-
-  private boolean matchAndPrint(ArendServer server, List<SourceLibrary> requestedLibraries, String pattern, boolean printFull) {
-    ProofSearchQuery.ParsingResult<ProofSearchQuery> queryResult = ProofSearchQuery.fromString(pattern);
-    if (queryResult == null) return false;
-    if (queryResult instanceof ProofSearchQuery.ParsingResult.Error<ProofSearchQuery> error) {
-      System.err.println("Search pattern error at " + error.range + ": " + error.message);
-      return false;
-    }
-    ProofSearchQuery query = ((ProofSearchQuery.ParsingResult.OK<ProofSearchQuery>) queryResult).value;
-    ArendExpressionMatcher matcher = new ArendExpressionMatcher(query);
-
-    for (SourceLibrary library : requestedLibraries) {
-      System.out.println("[INFO] Resolving " + library.getLibraryName());
-      long time = System.currentTimeMillis();
-      server.getCheckerFor(library.findModules(false).stream().map(modulePath -> new ModuleLocation(library.getLibraryName(), ModuleLocation.LocationKind.SOURCE, modulePath)).toList())
-              .resolveAll(UnstoppableCancellationIndicator.INSTANCE, ProgressReporter.empty());
-      System.out.println("[INFO] " + "Resolved " + library.getLibraryName() + " (" + TimedProgressReporter.timeToString(System.currentTimeMillis() - time) + ")");
-    }
-
-    for (ModuleLocation moduleLocation : server.getModules()) {
-      for (DefinitionData data : server.getResolvedDefinitions(moduleLocation)) {
-        for (Triple<Concrete.GeneralDefinition, List<Concrete.Expression>, Concrete.Expression> signature : getSignatures(data.definition())) {
-          TCDefReferable referable = signature.first().getData();
-          List<Concrete.Expression> parameters = signature.second();
-          Concrete.Expression codomain = signature.third();
-
-          Scope scope = server.getReferableScope(data.definition().getData());
-
-          ArendExpressionMatcher.ProofSearchMatchingResult result = matcher.match(parameters, codomain, scope);
-          if (result == null) continue;
-          if (referable.getData() != null) {
-            System.out.println(referable.getRefName() + " " + referable.getData().toString());
-          } else {
-            System.out.println(referable.getRefFullName().toString());
-          }
-
-          Set<Concrete.SourceNode> highlightedNodes = new HashSet<>(result.inCodomain());
-          if (result.inPattern() != null) {
-            for (Pair<Concrete.Expression, List<Concrete.Expression>> parameterData : result.inPattern()) {
-              highlightedNodes.addAll(parameterData.proj2);
-            }
-          }
-          highlightedNodes.addAll(result.inCodomain());
-
-          Precedence topPrec = new Precedence(Concrete.Expression.PREC);
-          if (printFull) {
-            StringBuilder builder = new StringBuilder();
-            HighlightingPrettyPrintVisitor visitor = new HighlightingPrettyPrintVisitor(builder, 0, highlightedNodes);
-            data.definition().accept(visitor, null);
-            System.out.println(builder);
-          } else {
-            if (result.inPattern() != null) {
-              for (Pair<Concrete.Expression, List<Concrete.Expression>> parameterData : result.inPattern()) {
-                StringBuilder builder = new StringBuilder();
-                HighlightingPrettyPrintVisitor visitor = new HighlightingPrettyPrintVisitor(builder, 0, highlightedNodes);
-                parameterData.proj1.prettyPrint(visitor, topPrec);
-                System.out.print("(" + builder + ") -> ");
-              }
-            }
-            StringBuilder builder = new StringBuilder();
-            HighlightingPrettyPrintVisitor visitor = new HighlightingPrettyPrintVisitor(builder, 0, highlightedNodes);
-            codomain.prettyPrint(visitor, topPrec);
-            System.out.println(builder);
-          }
-          System.out.println();
-        }
-      }
-    }
-    return true;
   }
 
   public static void main(String[] args) {

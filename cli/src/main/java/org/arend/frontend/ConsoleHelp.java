@@ -76,8 +76,9 @@ public final class ConsoleHelp {
   // TAIL (CLI): OUTPUT with the --json note, and `arend ... -ss` examples.
   private static final String SS_TAIL_CLI = """
       OUTPUT is line-oriented: location, then `library::LongName [KIND]`, then the
-      one-line signature. With --json each match is one JSON object; diagnostics go to
-      a log file (default <tmpdir>/arend-symbol-search.log) so stdout stays pure JSON.
+      one-line signature. With --json output is `{"results":[...],"count":N}` where
+      count is the total match count and results is truncated to `limit`; diagnostics
+      go to a log file (default <tmpdir>/arend-symbol-search.log) so stdout stays pure JSON.
 
       EXAMPLES
         arend arend-lib -ss Monoid                    substring
@@ -107,9 +108,32 @@ public final class ConsoleHelp {
       """;
 
 
-  private static final String PROOF_SEARCH_HELP = """
-      arend -ps <pattern> [print-full]
+  /**
+   * The {@code -ps} / {@code --proof-search} help. Like {@link #symbolSearchHelp},
+   * assembled from parts so the CLI and the REPL share the middle ({@link #PS_BODY});
+   * only the head (synopsis) and the tail (OUTPUT + EXAMPLES) differ.
+   */
+  public static String proofSearchHelp() {
+    return PS_HEAD_CLI + PS_BODY + PS_TAIL_CLI;
+  }
 
+  /**
+   * The {@code :proof-search} REPL help: the shared middle with no synopsis line,
+   * no {@code --json} note, and {@code :ps} examples.
+   */
+  public static String proofSearchReplHelp() {
+    return PS_BODY + PS_TAIL_REPL;
+  }
+
+  // ---- -ps / :proof-search help, in parts (see proofSearchHelp) ---------------
+  // HEAD (CLI only): the synopsis line. The REPL omits it.
+  private static final String PS_HEAD_CLI = """
+      arend [LIBRARY ...] -ps <pattern> [print-full] [--json]
+
+      """;
+
+  // BODY: shared verbatim by the CLI and the REPL.
+  private static final String PS_BODY = """
       Search every loaded library for definitions whose SIGNATURE (parameters and codomain) contains expressions matching <pattern>.
       Unlike -ss, this runs name resolution on the whole library first.
       That makes it a lot slower than -ss, but it matches by structure rather than name.
@@ -122,13 +146,40 @@ public final class ConsoleHelp {
                            Patterns may be parenthesised.
 
       OPTIONS
-        print-full         Print the entire definition with matching subterms highlighted, instead of only the matching slice.
+        print-full         Print each match's full SIGNATURE (the same header/body -ss shows) instead of only the matching slice.
+
+      """;
+
+  // TAIL (CLI): OUTPUT with the --json note, and `arend ... -ps` examples.
+  private static final String PS_TAIL_CLI = """
+      OUTPUT
+        Plain text: name + location, then either the matching slice (parameters -> codomain)
+        or, with print-full, the definition's signature. With --json output is
+        `{"results":[...],"count":N}` (the same shape as -ss); each result has a `signature`
+        field with print-full, otherwise an `expression` field with the matching slice.
+        In --json mode diagnostics go to a log file so stdout stays pure JSON.
 
       EXAMPLES
         arend -L libs my-lib -ps 'Monoid'
         arend -L libs my-lib -ps 'Group -> _ = _'
         arend -L libs my-lib -ps 'isProp \\and _ -> _'
         arend -L libs my-lib -ps 'Monoid -> _' -ps print-full
+        arend -L libs my-lib -ps 'Monoid -> _' --json
+
+      See also: https://arend-lang.github.io/documentation/plugin-manual/navigating#proof-search
+      """;
+
+  // TAIL (REPL): OUTPUT without JSON, and `:ps` examples (no shell quoting).
+  private static final String PS_TAIL_REPL = """
+      OUTPUT
+        name + location, then either the matching slice (parameters -> codomain)
+        or, with print-full, the definition's signature.
+
+      EXAMPLES
+        :ps Monoid
+        :ps Group -> _ = _
+        :ps isProp \\and _ -> _
+        :ps Monoid -> _ print-full
 
       See also: https://arend-lang.github.io/documentation/plugin-manual/navigating#proof-search
       """;
@@ -246,7 +297,7 @@ public final class ConsoleHelp {
   }
 
   static void printProofSearch() {
-    printTopicHelp(PROOF_SEARCH_HELP);
+    printTopicHelp(proofSearchHelp());
   }
 
   static void printFindUsages() {

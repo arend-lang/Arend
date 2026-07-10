@@ -77,7 +77,7 @@ public final class SymbolSearch {
 
     List<SourceLibrary> libsInScope = librariesInScope(libraryManager, options);
     if (libsInScope.isEmpty()) {
-      if (options.json) out.println("[]");
+      if (options.json) ResultJson.write(out, List.of(), 0);
       else System.out.println("No libraries to search.");
       return 0;
     }
@@ -140,7 +140,7 @@ public final class SymbolSearch {
     int total = hits.size();
 
     if (options.json) {
-      writeJson(out, hits, libsInScope, libraryManager, options.limit);
+      writeJson(out, hits, libsInScope, libraryManager, options.limit, total);
       return total;
     }
 
@@ -364,76 +364,36 @@ public final class SymbolSearch {
   }
 
   /**
-   * Emits the ranked hits as a JSON array (one object per line) on {@code out}.
-   * Fields: {@code library} (omitted when only one non-prelude library is in
-   * scope), {@code file} (omitted for generated modules), {@code module},
-   * {@code line}, {@code column}, {@code longName}, {@code kind},
-   * {@code signature} (omitted when empty). Honours the same {@code limit} as
-   * the human listing.
+   * Emits the ranked hits via {@link ResultJson}: {@code {"results": [...],
+   * "count": N}}. Each result has fields {@code library} (omitted when only one
+   * non-prelude library is in scope), {@code module}, {@code name} (the long
+   * name), {@code kind}, {@code signature} (omitted when empty) and a
+   * {@code location} object {@code {"file", "line", "col"}} (its {@code file}
+   * omitted for generated modules). {@code results} honours {@code limit};
+   * {@code count} is the total number of matches before truncation.
    */
   private static void writeJson(PrintStream out, List<Hit> hits, List<SourceLibrary> libsInScope,
-                                LibraryManager libraryManager, int limit) {
+                                LibraryManager libraryManager, int limit, int total) {
     boolean omitLibrary = countNonPreludeLibraries(libsInScope) <= 1;
-    int count = (limit > 0) ? Math.min(hits.size(), limit) : hits.size();
-    out.println("[");
-    for (int i = 0; i < count; i++) {
-      StringBuilder sb = new StringBuilder("  ");
-      appendJsonObject(sb, hits.get(i), libraryManager, omitLibrary);
-      if (i < count - 1) sb.append(',');
-      out.println(sb);
+    int shown = (limit > 0) ? Math.min(hits.size(), limit) : hits.size();
+    List<ResultJson.Row> rows = new ArrayList<>(shown);
+    for (int i = 0; i < shown; i++) {
+      Hit h = hits.get(i);
+      SymbolIndex.Entry e = h.entry;
+      String file = (e.absoluteFile() == null || e.absoluteFile().isEmpty())
+          ? null : PathDisplay.shorten(e.absoluteFile(), libraryManager);
+      rows.add(new ResultJson.Row(
+          omitLibrary ? null : h.libName,
+          e.modulePath().toString(),
+          e.longName(),
+          e.kind().name(),
+          e.signature().isEmpty() ? null : e.signature(),
+          null,            // -ss reports a full signature, never an "expression" slice
+          file,
+          e.line(),
+          e.column()));
     }
-    out.println("]");
-  }
-
-  private static void appendJsonObject(StringBuilder sb, Hit h, LibraryManager libraryManager, boolean omitLibrary) {
-    SymbolIndex.Entry e = h.entry;
-    sb.append('{');
-    boolean first = true;
-    if (!omitLibrary) first = jsonStr(sb, first, "library", h.libName);
-    if (e.absoluteFile() != null && !e.absoluteFile().isEmpty()) {
-      first = jsonStr(sb, first, "file", PathDisplay.shorten(e.absoluteFile(), libraryManager));
-    }
-    first = jsonStr(sb, first, "module", e.modulePath().toString());
-    first = jsonNum(sb, first, "line", e.line());
-    first = jsonNum(sb, first, "column", e.column());
-    first = jsonStr(sb, first, "longName", e.longName());
-    first = jsonStr(sb, first, "kind", e.kind().name());
-    if (!e.signature().isEmpty()) jsonStr(sb, first, "signature", e.signature());
-    sb.append('}');
-  }
-
-  private static boolean jsonStr(StringBuilder sb, boolean first, String key, String value) {
-    if (!first) sb.append(',');
-    sb.append('"').append(key).append("\":\"").append(jsonEscape(value)).append('"');
-    return false;
-  }
-
-  private static boolean jsonNum(StringBuilder sb, boolean first, String key, int value) {
-    if (!first) sb.append(',');
-    sb.append('"').append(key).append("\":").append(value);
-    return false;
-  }
-
-  /** Minimal RFC-8259 string escaping (backslashes are common in Arend signatures). */
-  private static String jsonEscape(String s) {
-    StringBuilder b = new StringBuilder(s.length() + 8);
-    for (int i = 0; i < s.length(); i++) {
-      char c = s.charAt(i);
-      switch (c) {
-        case '"' -> b.append("\\\"");
-        case '\\' -> b.append("\\\\");
-        case '\n' -> b.append("\\n");
-        case '\r' -> b.append("\\r");
-        case '\t' -> b.append("\\t");
-        case '\b' -> b.append("\\b");
-        case '\f' -> b.append("\\f");
-        default -> {
-          if (c < 0x20) b.append(String.format("\\u%04x", (int) c));
-          else b.append(c);
-        }
-      }
-    }
-    return b.toString();
+    ResultJson.write(out, rows, total);
   }
 
   private static int countNonPreludeLibraries(List<SourceLibrary> libs) {
