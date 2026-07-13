@@ -161,7 +161,7 @@ public final class UsageSearch {
     }
 
     // 3) Resolve target referable. We need a registered module + its raw group.
-    ResolvedTarget resolved = resolveTarget(server, target);
+    ResolvedTarget resolved = resolveTarget(server, target, libsInScope);
     if (resolved == null) {
       System.err.println("[ERROR] Definition not found: " + spec);
       return 0;
@@ -236,7 +236,9 @@ public final class UsageSearch {
 
     // 9) Print
     String kind = kindLabel(targetReferable);
-    System.out.println("Usages of " + target.module.getLibraryName() + "::" + targetReferable.getRefLongName()
+    System.out.println("Usages of " + QualifiedName.format(QualifiedName.showLibrary(libsInScope),
+        target.module.getLibraryName(), target.module.getModulePath().toString(),
+        targetReferable.getRefLongName().toString())
         + "  [" + kind + "]");
     if (hits.isEmpty()) {
       System.out.println();
@@ -274,8 +276,20 @@ public final class UsageSearch {
   private record Target(ModuleLocation module, LongName longName) {}
 
   private static @Nullable Target parseTarget(String spec) {
-    int idx = spec.indexOf(':');
-    if (idx < 0) {
+    // Accept an optional `library::` prefix (see QualifiedName.splitLibrary),
+    // matching the `library::module:def` labels every symbol tool prints. The
+    // library part scopes module resolution in resolveTarget.
+    QualifiedName.Split split = QualifiedName.splitLibrary(spec);
+    if (split.library() != null) {
+      Target rest = parseModuleDef(split.rest(), false);
+      if (rest == null) return null;
+      return new Target(
+          new ModuleLocation(split.library(), ModuleLocation.LocationKind.SOURCE,
+              rest.module.getModulePath()),
+          rest.longName);
+    }
+
+    if (spec.indexOf(':') < 0) {
       // Bare-name form. Parse as LongName; later resolved against the symbol index
       // by trailing short name, then suffix-matched against the user's segments.
       LongName ln = LongName.fromString(spec);
@@ -286,23 +300,35 @@ public final class UsageSearch {
       return new Target(
           new ModuleLocation("", ModuleLocation.LocationKind.SOURCE, new ModulePath()), ln);
     }
+    // ModuleLocation's library populated below in resolveTarget when absent here.
+    return parseModuleDef(spec, false);
+  }
+
+  /**
+   * Parses a {@code MODULE_PATH:GROUP_PATH} spec into a Target with an empty
+   * library name. Returns {@code null} on malformed input; when {@code quiet} is
+   * false the specific failure is printed (used for the top-level spec), when
+   * true it stays silent (used to probe a candidate `library::`-stripped tail).
+   */
+  private static @Nullable Target parseModuleDef(String spec, boolean quiet) {
+    int idx = spec.indexOf(':');
+    if (idx < 0) return null;
     String modStr = spec.substring(0, idx);
     String defStr = spec.substring(idx + 1);
     if (modStr.isEmpty() || defStr.isEmpty()) {
-      System.err.println("[ERROR] empty module or definition path in -fu spec '" + spec + "'");
+      if (!quiet) System.err.println("[ERROR] empty module or definition path in -fu spec '" + spec + "'");
       return null;
     }
     ModulePath mp = ModulePath.fromString(modStr);
     if (!FileUtils.isCorrectModulePath(mp)) {
-      System.err.println("[ERROR] invalid module path '" + modStr + "'");
+      if (!quiet) System.err.println("[ERROR] invalid module path '" + modStr + "'");
       return null;
     }
     LongName ln = LongName.fromString(defStr);
     if (!FileUtils.isCorrectDefinitionName(ln)) {
-      System.err.println("[ERROR] invalid definition name '" + defStr + "'");
+      if (!quiet) System.err.println("[ERROR] invalid definition name '" + defStr + "'");
       return null;
     }
-    // ModuleLocation populated below in resolveTarget once we know the library.
     return new Target(new ModuleLocation("", ModuleLocation.LocationKind.SOURCE, mp), ln);
   }
 
@@ -336,11 +362,13 @@ public final class UsageSearch {
           + ".");
       return null;
     }
+    boolean showLibrary = QualifiedName.showLibrary(libsInScope);
     if (matches.size() > 1) {
       System.err.println("[ERROR] '" + userLongName + "' is ambiguous. Use one of:");
       List<String> labels = new ArrayList<>();
       for (Candidate c : matches) {
-        labels.add("  " + c.lib.getLibraryName() + "::" + c.entry.modulePath() + ":" + c.entry.longName());
+        labels.add("  " + QualifiedName.format(showLibrary, c.lib.getLibraryName(),
+            c.entry.modulePath().toString(), c.entry.longName()));
       }
       Collections.sort(labels);
       for (String l : labels) System.err.println(l);
@@ -350,7 +378,7 @@ public final class UsageSearch {
     ModulePath mp = only.entry.modulePath();
     LongName fullLongName = LongName.fromString(only.entry.longName());
     System.out.println("[INFO] Resolved '" + userLongName + "' -> "
-        + only.lib.getLibraryName() + "::" + mp + ":" + fullLongName);
+        + QualifiedName.format(showLibrary, only.lib.getLibraryName(), mp.toString(), fullLongName.toString()));
     // Pre-register the module on the server so resolveTarget's getRawGroup works.
     server.findModule(mp, only.lib.getLibraryName(), true, false);
     return new Target(
@@ -370,9 +398,13 @@ public final class UsageSearch {
 
   private record ResolvedTarget(ModuleLocation module, LocatedReferable referable) {}
 
-  private static @Nullable ResolvedTarget resolveTarget(ArendServer server, Target target) {
-    ModuleLocation found = server.findModule(target.module.getModulePath(), null, true, true);
+  private static @Nullable ResolvedTarget resolveTarget(ArendServer server, Target target,
+                                                        List<SourceLibrary> libsInScope) {
+    String fromLibrary = target.module.getLibraryName().isEmpty() ? null : target.module.getLibraryName();
+    ModuleLocation found = server.findModule(target.module.getModulePath(), fromLibrary, true, true);
     if (found == null) return null;
+    QualifiedName.warnAmbiguousModule(fromLibrary != null, target.module.getModulePath(),
+        found.getLibraryName(), libsInScope);
     ConcreteGroup group = server.getRawGroup(found);
     if (group == null) return null;
 

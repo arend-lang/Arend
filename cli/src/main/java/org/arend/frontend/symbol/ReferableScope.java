@@ -101,6 +101,7 @@ public final class ReferableScope {
       System.err.println("[ERROR] No libraries in scope.");
       return 0;
     }
+    boolean showLibrary = QualifiedName.showLibrary(libsInScope);
 
     // Refresh symbol indexes so bare-name lookup works AND every source module
     // is registered on the server (the server needs the raw group of the
@@ -118,30 +119,30 @@ public final class ReferableScope {
       indexes.put(lib, idx);
     }
 
-    Resolved target = resolveTarget(spec, server, libsInScope, indexes);
+    Resolved target = resolveTarget(spec, server, libsInScope, indexes, showLibrary);
     if (target == null) return 0;
 
     Scope scope = server.getReferableScope(target.referable);
     if (scope == null) {
-      System.err.println("[ERROR] No scope available at " + label(target));
+      System.err.println("[ERROR] No scope available at " + label(target, showLibrary));
       return 0;
     }
 
-    System.out.println("--- Scope at " + label(target) + " ---");
+    System.out.println("--- Scope at " + label(target, showLibrary) + " ---");
     int total = 0;
     int matched = 0;
     if (options.context == Ctx.ALL) {
       // Print each context section in turn.
-      matched += dumpSection(scope, ScopeContext.STATIC,  "STATIC",  pattern);
-      matched += dumpSection(scope, ScopeContext.DYNAMIC, "DYNAMIC", pattern);
-      matched += dumpSection(scope, ScopeContext.PLEVEL,  "PLEVEL",  pattern);
-      matched += dumpSection(scope, ScopeContext.HLEVEL,  "HLEVEL",  pattern);
+      matched += dumpSection(scope, ScopeContext.STATIC,  "STATIC",  pattern, showLibrary);
+      matched += dumpSection(scope, ScopeContext.DYNAMIC, "DYNAMIC", pattern, showLibrary);
+      matched += dumpSection(scope, ScopeContext.PLEVEL,  "PLEVEL",  pattern, showLibrary);
+      matched += dumpSection(scope, ScopeContext.HLEVEL,  "HLEVEL",  pattern, showLibrary);
       total = scope.getElements(null).size();
     } else {
       ScopeContext ctx = options.context == Ctx.DYNAMIC ? ScopeContext.DYNAMIC : ScopeContext.STATIC;
       Collection<? extends Referable> elements = scope.getElements(ctx);
       total = elements.size();
-      matched = printEntries(elements, pattern);
+      matched = printEntries(elements, pattern, showLibrary);
     }
 
     if (pattern != null) {
@@ -152,31 +153,34 @@ public final class ReferableScope {
     return 0;
   }
 
-  private static int dumpSection(Scope scope, ScopeContext ctx, String header, @Nullable SymbolPattern pattern) {
+  private static int dumpSection(Scope scope, ScopeContext ctx, String header,
+      @Nullable SymbolPattern pattern, boolean showLibrary) {
     Collection<? extends Referable> elements = scope.getElements(ctx);
     if (elements.isEmpty()) return 0;
     System.out.println();
     System.out.println("[" + header + "]");
-    return printEntries(elements, pattern);
+    return printEntries(elements, pattern, showLibrary);
   }
 
-  private static int printEntries(Collection<? extends Referable> elements, @Nullable SymbolPattern pattern) {
+  private static int printEntries(Collection<? extends Referable> elements,
+      @Nullable SymbolPattern pattern, boolean showLibrary) {
     int matched = 0;
     for (Referable ref : elements) {
       String name = ref.textRepresentation();
       if (pattern != null && !pattern.matches(name)) continue;
-      System.out.println(name + " -> " + targetLabel(ref));
+      System.out.println(name + " -> " + targetLabel(ref, showLibrary));
       matched++;
     }
     return matched;
   }
 
-  private static String targetLabel(Referable ref) {
+  private static String targetLabel(Referable ref, boolean showLibrary) {
     if (ref instanceof LocatedReferable lr) {
       ModuleLocation loc = lr.getLocation();
       LongName ln = lr.getRefLongName();
-      String mod = loc == null ? "?" : loc.getLibraryName() + "::" + loc.getModulePath();
-      return mod + ":" + ln + " [" + lr.getKind() + "]";
+      if (loc == null) return "?:" + ln + " [" + lr.getKind() + "]";
+      return QualifiedName.format(showLibrary, loc.getLibraryName(), loc.getModulePath().toString(),
+          ln.toString()) + " [" + lr.getKind() + "]";
     }
     return "(local " + ref.getClass().getSimpleName() + ")";
   }
@@ -185,16 +189,22 @@ public final class ReferableScope {
 
   private record Resolved(LocatedReferable referable, ModuleLocation module, String libraryName) {}
 
-  private static String label(Resolved r) {
-    return r.libraryName + "::" + r.module.getModulePath() + ":" + r.referable.getRefLongName();
+  private static String label(Resolved r, boolean showLibrary) {
+    return QualifiedName.format(showLibrary, r.libraryName, r.module.getModulePath().toString(),
+        r.referable.getRefLongName().toString());
   }
 
   private static @Nullable Resolved resolveTarget(String spec, ArendServer server,
-      List<SourceLibrary> libsInScope, Map<SourceLibrary, SymbolIndex> indexes) {
-    int colon = spec.indexOf(':');
+      List<SourceLibrary> libsInScope, Map<SourceLibrary, SymbolIndex> indexes, boolean showLibrary) {
+    // Accept an optional `library::` prefix (see QualifiedName.splitLibrary); the
+    // library scopes module resolution below.
+    QualifiedName.Split split = QualifiedName.splitLibrary(spec);
+    String fromLibrary = split.library();
+    String rest = split.rest();
+    int colon = rest.indexOf(':');
     if (colon >= 0) {
-      String modStr = spec.substring(0, colon);
-      String defStr = spec.substring(colon + 1);
+      String modStr = rest.substring(0, colon);
+      String defStr = rest.substring(colon + 1);
       if (modStr.isEmpty() || defStr.isEmpty()) {
         System.err.println("[ERROR] empty module or definition path in -sc spec '" + spec + "'");
         return null;
@@ -209,11 +219,12 @@ public final class ReferableScope {
         System.err.println("[ERROR] invalid definition name '" + defStr + "'");
         return null;
       }
-      ModuleLocation found = server.findModule(mp, null, true, true);
+      ModuleLocation found = server.findModule(mp, fromLibrary, true, true);
       if (found == null) {
         System.err.println("[ERROR] Module not found: " + modStr);
         return null;
       }
+      QualifiedName.warnAmbiguousModule(fromLibrary != null, mp, found.getLibraryName(), libsInScope);
       ConcreteGroup group = server.getRawGroup(found);
       if (group == null) {
         System.err.println("[ERROR] Module not loaded: " + modStr);
@@ -246,7 +257,8 @@ public final class ReferableScope {
       System.err.println("[ERROR] '" + spec + "' is ambiguous. Use one of:");
       List<String> labels = new ArrayList<>();
       for (SymbolIndex.Entry e : matches) {
-        labels.add("  " + libOf.get(e).getLibraryName() + "::" + e.modulePath() + ":" + e.longName());
+        labels.add("  " + QualifiedName.format(showLibrary, libOf.get(e).getLibraryName(),
+            e.modulePath().toString(), e.longName()));
       }
       Collections.sort(labels);
       for (String l : labels) System.err.println(l);
@@ -271,8 +283,8 @@ public final class ReferableScope {
       System.err.println("[ERROR] Definition not found via index: " + only.longName());
       return null;
     }
-    System.out.println("[INFO] Resolved '" + spec + "' -> " + lib.getLibraryName() + "::"
-        + mp + ":" + only.longName());
+    System.out.println("[INFO] Resolved '" + spec + "' -> "
+        + QualifiedName.format(showLibrary, lib.getLibraryName(), mp.toString(), only.longName()));
     return new Resolved(ref, moduleLoc, lib.getLibraryName());
   }
 

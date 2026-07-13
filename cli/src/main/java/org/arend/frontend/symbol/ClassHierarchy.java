@@ -122,6 +122,7 @@ public final class ClassHierarchy {
       System.err.println("[ERROR] No libraries in scope.");
       return 0;
     }
+    boolean showLibrary = QualifiedName.showLibrary(libsInScope);
 
     // 1) Refresh per-library symbol indexes (needed for bare-name lookup, and
     //    cheaply registers every source module on the server so we can query
@@ -145,7 +146,7 @@ public final class ClassHierarchy {
     }
 
     // 2) Resolve target spec: qualified, or bare-name via index.
-    ResolvedTarget target = resolveTarget(spec, server, libsInScope, indexes);
+    ResolvedTarget target = resolveTarget(spec, server, libsInScope, indexes, showLibrary);
     if (target == null) return 0;
     SymbolIndex.Kind targetKind = target.kind;
     if (targetKind != SymbolIndex.Kind.CLASS && targetKind != SymbolIndex.Kind.RECORD) {
@@ -236,25 +237,34 @@ public final class ClassHierarchy {
     final ModuleLocation module;
     final SymbolIndex.Kind kind;
     final String libraryName;
+    final boolean showLibrary;
 
-    ResolvedTarget(LocatedReferable referable, ModuleLocation module, SymbolIndex.Kind kind, String libraryName) {
+    ResolvedTarget(LocatedReferable referable, ModuleLocation module, SymbolIndex.Kind kind,
+                   String libraryName, boolean showLibrary) {
       this.referable = referable;
       this.module = module;
       this.kind = kind;
       this.libraryName = libraryName;
+      this.showLibrary = showLibrary;
     }
 
     String fullLabel() {
-      return libraryName + "::" + module.getModulePath() + ":" + referable.getRefLongName();
+      return QualifiedName.format(showLibrary, libraryName, module.getModulePath().toString(),
+          referable.getRefLongName().toString());
     }
   }
 
   private static @Nullable ResolvedTarget resolveTarget(String spec, ArendServer server,
-      List<SourceLibrary> libsInScope, Map<SourceLibrary, SymbolIndex> indexes) {
-    int colon = spec.indexOf(':');
+      List<SourceLibrary> libsInScope, Map<SourceLibrary, SymbolIndex> indexes, boolean showLibrary) {
+    // Accept an optional `library::` prefix (see QualifiedName.splitLibrary); the
+    // library scopes module resolution below.
+    QualifiedName.Split split = QualifiedName.splitLibrary(spec);
+    String fromLibrary = split.library();
+    String rest = split.rest();
+    int colon = rest.indexOf(':');
     if (colon >= 0) {
-      String modStr = spec.substring(0, colon);
-      String defStr = spec.substring(colon + 1);
+      String modStr = rest.substring(0, colon);
+      String defStr = rest.substring(colon + 1);
       if (modStr.isEmpty() || defStr.isEmpty()) {
         System.err.println("[ERROR] empty module or definition path in -ch spec '" + spec + "'");
         return null;
@@ -269,11 +279,12 @@ public final class ClassHierarchy {
         System.err.println("[ERROR] invalid definition name '" + defStr + "'");
         return null;
       }
-      ModuleLocation found = server.findModule(mp, null, true, true);
+      ModuleLocation found = server.findModule(mp, fromLibrary, true, true);
       if (found == null) {
         System.err.println("[ERROR] Module not found: " + modStr);
         return null;
       }
+      QualifiedName.warnAmbiguousModule(fromLibrary != null, mp, found.getLibraryName(), libsInScope);
       ConcreteGroup group = server.getRawGroup(found);
       if (group == null) {
         System.err.println("[ERROR] Module not loaded: " + modStr);
@@ -285,7 +296,7 @@ public final class ClassHierarchy {
         return null;
       }
       SymbolIndex.Kind kind = kindOf(ref);
-      return new ResolvedTarget(ref, found, kind, found.getLibraryName());
+      return new ResolvedTarget(ref, found, kind, found.getLibraryName(), showLibrary);
     }
 
     // Bare-name lookup via the symbol index, restricted to CLASS / RECORD.
@@ -308,7 +319,8 @@ public final class ClassHierarchy {
       System.err.println("[ERROR] '" + spec + "' is ambiguous. Use one of:");
       List<String> labels = new ArrayList<>();
       for (SymbolIndex.Entry e : matches) {
-        labels.add("  " + libOf.get(e).getLibraryName() + "::" + e.modulePath() + ":" + e.longName());
+        labels.add("  " + QualifiedName.format(showLibrary, libOf.get(e).getLibraryName(),
+            e.modulePath().toString(), e.longName()));
       }
       Collections.sort(labels);
       for (String l : labels) System.err.println(l);
@@ -333,9 +345,9 @@ public final class ClassHierarchy {
       System.err.println("[ERROR] Definition not found via index: " + only.longName());
       return null;
     }
-    System.out.println("[INFO] Resolved '" + spec + "' -> " + lib.getLibraryName() + "::"
-        + mp + ":" + only.longName());
-    return new ResolvedTarget(ref, moduleLoc, only.kind(), lib.getLibraryName());
+    System.out.println("[INFO] Resolved '" + spec + "' -> "
+        + QualifiedName.format(showLibrary, lib.getLibraryName(), mp.toString(), only.longName()));
+    return new ResolvedTarget(ref, moduleLoc, only.kind(), lib.getLibraryName(), showLibrary);
   }
 
   private static @Nullable LocatedReferable walkLongName(ConcreteGroup group, LongName ln) {
@@ -683,8 +695,8 @@ public final class ClassHierarchy {
           ClassNode node = graph.get(cur);
           if (node == null) continue;
           for (LocatedReferable parent : node.directParents) {
-            System.out.println("EXTENDS\t" + qualifiedLabel(cur, moduleOf, libraryManager)
-                + "\t" + qualifiedLabel(parent, moduleOf, libraryManager));
+            System.out.println("EXTENDS\t" + qualifiedLabel(cur, moduleOf, libraryManager, target.showLibrary)
+                + "\t" + qualifiedLabel(parent, moduleOf, libraryManager, target.showLibrary));
             stack.push(parent);
           }
         }
@@ -699,8 +711,8 @@ public final class ClassHierarchy {
           ClassNode node = graph.get(cur);
           if (node == null) continue;
           for (LocatedReferable child : node.directChildren) {
-            System.out.println("EXTENDED-BY\t" + qualifiedLabel(cur, moduleOf, libraryManager)
-                + "\t" + qualifiedLabel(child, moduleOf, libraryManager));
+            System.out.println("EXTENDED-BY\t" + qualifiedLabel(cur, moduleOf, libraryManager, target.showLibrary)
+                + "\t" + qualifiedLabel(child, moduleOf, libraryManager, target.showLibrary));
             stack.push(child);
           }
         }
@@ -719,7 +731,7 @@ public final class ClassHierarchy {
           Path file = sourcePathFor(libraryManager.getLibrary(s.module().getLibraryName()), s.module());
           String loc = (file == null ? "<" + s.module().getLibraryName() + ":" + s.module().getModulePath() + ">"
               : PathDisplay.shorten(file, libraryManager)) + ":" + s.line() + ":" + s.column();
-          System.out.println("INSTANCE\t" + qualifiedLabel(s.targetClass(), moduleOf, libraryManager)
+          System.out.println("INSTANCE\t" + qualifiedLabel(s.targetClass(), moduleOf, libraryManager, target.showLibrary)
               + "\t" + loc + "\t" + s.instanceRef().textRepresentation());
         }
       }
@@ -740,7 +752,7 @@ public final class ClassHierarchy {
           Set<String> transitive = transitiveFields(s.targetClass(), graph);
           Set<String> missing = new LinkedHashSet<>(transitive);
           missing.removeAll(s.implementedFieldNames());
-          System.out.println("NEW\t" + qualifiedLabel(s.targetClass(), moduleOf, libraryManager)
+          System.out.println("NEW\t" + qualifiedLabel(s.targetClass(), moduleOf, libraryManager, target.showLibrary)
               + "\t" + loc + "\timpl=" + setLabel(s.implementedFieldNames())
               + "\tmiss=" + setLabel(missing));
         }
@@ -790,10 +802,11 @@ public final class ClassHierarchy {
   }
 
   private static String qualifiedLabel(LocatedReferable ref,
-      Map<LocatedReferable, ModuleLocation> moduleOf, LibraryManager libraryManager) {
+      Map<LocatedReferable, ModuleLocation> moduleOf, LibraryManager libraryManager, boolean showLibrary) {
     ModuleLocation moduleLoc = moduleOf.get(ref);
-    if (moduleLoc == null) return "?::" + ref.getRefLongName();
-    return moduleLoc.getLibraryName() + "::" + moduleLoc.getModulePath() + ":" + ref.getRefLongName();
+    if (moduleLoc == null) return "?:" + ref.getRefLongName();
+    return QualifiedName.format(showLibrary, moduleLoc.getLibraryName(),
+        moduleLoc.getModulePath().toString(), ref.getRefLongName().toString());
   }
 
   private static String nodeLabel(ClassNode node,

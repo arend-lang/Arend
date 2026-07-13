@@ -5,7 +5,6 @@ import org.arend.ext.module.ModuleLocation;
 import org.arend.ext.module.ModulePath;
 import org.arend.frontend.library.LibraryManager;
 import org.arend.frontend.library.SourceLibrary;
-import org.arend.prelude.Prelude;
 import org.arend.server.ArendServer;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -144,6 +143,10 @@ public final class SymbolSearch {
       return total;
     }
 
+    // Show the "library::" prefix only when more than one non-prelude library is
+    // in scope; mirror the JSON output, which omits its `library` field there.
+    boolean showLibrary = QualifiedName.showLibrary(libsInScope);
+
     int printed = 0;
     boolean truncated = false;
     StringBuilder sb = new StringBuilder();
@@ -152,14 +155,14 @@ public final class SymbolSearch {
         truncated = true;
         break;
       }
-      appendEntry(sb, h.libName, h.entry, libraryManager, compiled);
+      appendEntry(sb, showLibrary, h.libName, h.entry, libraryManager, compiled);
       printed++;
     }
 
     out.print(sb);
     if (total == 0) {
       out.println("No matches.");
-      printSuggestions(suggestions, suggestParts);
+      printSuggestions(suggestions, suggestParts, showLibrary);
     } else {
       out.println();
       out.println("Found " + total + " match" + (total == 1 ? "" : "es")
@@ -191,7 +194,7 @@ public final class SymbolSearch {
     return parts;
   }
 
-  private static void printSuggestions(List<Hit> suggestions, LinkedHashSet<String> parts) {
+  private static void printSuggestions(List<Hit> suggestions, LinkedHashSet<String> parts, boolean showLibrary) {
     if (suggestions.isEmpty()) return;
     suggestions.sort(Comparator
         .<Hit>comparingInt(h -> h.entry.shortName().length())
@@ -205,7 +208,7 @@ public final class SymbolSearch {
     System.out.println("Did you mean? (names containing word-parts of your query: " + partList + ")");
     for (int i = 0; i < show; i++) {
       Hit h = suggestions.get(i);
-      System.out.println("  " + h.libName + "::" + h.entry.longName()
+      System.out.println("  " + qualifiedName(showLibrary, h.libName, h.entry, h.entry.longName())
           + "  [" + h.entry.kind().name() + "]");
     }
     if (suggestions.size() > cap) {
@@ -313,7 +316,13 @@ public final class SymbolSearch {
     return true;
   }
 
-  private static void appendEntry(StringBuilder out, String libName, SymbolIndex.Entry e,
+  /** Adapts a {@link SymbolIndex.Entry} to the shared {@link QualifiedName#format} label. */
+  private static String qualifiedName(boolean showLibrary, String libName,
+                                      SymbolIndex.Entry e, String renderedLongName) {
+    return QualifiedName.format(showLibrary, libName, e.modulePath().toString(), renderedLongName);
+  }
+
+  private static void appendEntry(StringBuilder out, boolean showLibrary, String libName, SymbolIndex.Entry e,
                                   LibraryManager libraryManager, List<SymbolPattern> patterns) {
     String header;
     if (e.absoluteFile() == null || e.absoluteFile().isEmpty()) {
@@ -323,7 +332,7 @@ public final class SymbolSearch {
           + ":" + (e.line() == 0 ? "?" : e.line()) + ":" + (e.column() == 0 ? "?" : e.column());
     }
     out.append(header).append('\n');
-    out.append(libName).append("::").append(highlightName(e.longName(), e.shortName(), patterns))
+    out.append(qualifiedName(showLibrary, libName, e, highlightName(e.longName(), e.shortName(), patterns)))
         .append("  [").append(e.kind().name()).append("]\n");
     if (!e.signature().isEmpty()) {
       // A container signature (\class/\record/\data) is multi-line; indent every
@@ -374,7 +383,7 @@ public final class SymbolSearch {
    */
   private static void writeJson(PrintStream out, List<Hit> hits, List<SourceLibrary> libsInScope,
                                 LibraryManager libraryManager, int limit, int total) {
-    boolean omitLibrary = countNonPreludeLibraries(libsInScope) <= 1;
+    boolean omitLibrary = !QualifiedName.showLibrary(libsInScope);
     int shown = (limit > 0) ? Math.min(hits.size(), limit) : hits.size();
     List<ResultJson.Row> rows = new ArrayList<>(shown);
     for (int i = 0; i < shown; i++) {
@@ -394,14 +403,6 @@ public final class SymbolSearch {
           e.column()));
     }
     ResultJson.write(out, rows, total);
-  }
-
-  private static int countNonPreludeLibraries(List<SourceLibrary> libs) {
-    int n = 0;
-    for (SourceLibrary lib : libs) {
-      if (!Prelude.LIBRARY_NAME.equals(lib.getLibraryName())) n++;
-    }
-    return n;
   }
 
   /**

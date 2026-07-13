@@ -75,7 +75,8 @@ public final class ConsoleHelp {
 
   // TAIL (CLI): OUTPUT with the --json note, and `arend ... -ss` examples.
   private static final String SS_TAIL_CLI = """
-      OUTPUT is line-oriented: location, then `library::LongName [KIND]`, then the
+      OUTPUT is line-oriented: location, then `[library::]module:LongName [KIND]` (the
+      `library::` prefix appears only when more than one library is in scope), then the
       one-line signature. With --json output is `{"results":[...],"count":N}` where
       count is the total match count and results is truncated to `limit`; diagnostics
       go to a log file (default <tmpdir>/arend-symbol-search.log) so stdout stays pure JSON.
@@ -93,7 +94,8 @@ public final class ConsoleHelp {
 
   // TAIL (REPL): OUTPUT without JSON, and `:ss` examples (no shell quoting).
   private static final String SS_TAIL_REPL = """
-      OUTPUT is line-oriented: location, then `library::LongName [KIND]`, then the
+      OUTPUT is line-oriented: location, then `[library::]module:LongName [KIND]` (the
+      `library::` prefix appears only when more than one library is in scope), then the
       one-line signature.
 
       EXAMPLES
@@ -199,6 +201,9 @@ public final class ConsoleHelp {
         MODULE_PATH    dotted module path,         e.g. Algebra.Monoid
         GROUP_PATH     dotted in-module path,      e.g. Monoid.equals
                        Reaches class fields, constructors, and \\where members.
+        An optional `<library>::` prefix is accepted and scopes resolution to that
+        library, so a candidate line printed on an ambiguous lookup (e.g.
+        `arend-lib::Arith.Trig.Real:sin`) can be pasted back verbatim.
 
       EXTRA TOKENS  (each as a separate -fu argument)
         with-tests        also search test sources
@@ -214,7 +219,8 @@ public final class ConsoleHelp {
         Implicit references through instance resolution are NOT caught (they have no textual form).
 
       OUTPUT
-        Usages of <library>::<long-name>  [<KIND>]
+        Usages of [<library>::]<module>:<long-name>  [<KIND>]
+        (the `<library>::` prefix appears only when more than one library is in scope)
 
         <abs-path>:<line>:<col>: <source line, trimmed>
         ...
@@ -232,7 +238,10 @@ public final class ConsoleHelp {
 
       Print the inheritance lattice around a class plus every \\instance and \\new construction site.
       Resolves <CLASS> in two ways:
-        - 'MODULE_PATH:GROUP_PATH'    qualified, same shape as -fu / -p
+        - 'MODULE_PATH:GROUP_PATH'    qualified, same shape as -fu / -p. An optional
+                                      '<library>::' prefix scopes to that library (and is
+                                      printed back on output); without it, a module path
+                                      found in several loaded libraries picks the first and warns.
         - '<short-name>'              looked up via the symbol index, restricted to CLASS / RECORD entries.
                                       Multiple matches print the candidates so you can pick.
 
@@ -246,7 +255,8 @@ public final class ConsoleHelp {
         only=name|self    restrict library scope (default: all loaded libraries)
         format=tree|flat  Output format.
                           `tree` (default) uses pseudographics for a human-friendly view.
-                          `flat` emits one tagged relation per line for grep / agentic loops:
+                          `flat` emits one tagged relation per line for grep / agentic loops
+                          (the `lib::` prefix below is dropped when only one library is in scope):
                             TARGET      lib::M:C  KIND  abs:line:col
                             EXTENDS     lib::M:C  lib::N:Parent
                             EXTENDED-BY lib::M:C  lib::M:Sub
@@ -271,7 +281,10 @@ public final class ConsoleHelp {
       Mainly intended for debugging reference-resolution issues: which names are in scope here, and what do they actually resolve to?
 
       Resolves <REFERABLE> in two ways:
-        - 'MODULE_PATH:GROUP_PATH'    qualified, same shape as -fu / -p / -ch
+        - 'MODULE_PATH:GROUP_PATH'    qualified, same shape as -fu / -p / -ch. An optional
+                                      '<library>::' prefix scopes to that library (and is
+                                      printed back on output); without it, a module path
+                                      found in several loaded libraries picks the first and warns.
         - '<short-name>'              looked up via the symbol index.
                                       Multiple matches print the candidates so you can pick.
 
@@ -285,8 +298,9 @@ public final class ConsoleHelp {
 
       OUTPUT FORMAT
         Each in-scope entry is printed as
-            SHORT_NAME -> LIBRARY::MODULE_PATH:LONG_NAME [KIND]
-        (locally-bound referables that have no global location print as
+            SHORT_NAME -> [LIBRARY::]MODULE_PATH:LONG_NAME [KIND]
+        (the LIBRARY:: prefix appears only when more than one library is in scope;
+         locally-bound referables that have no global location print as
             SHORT_NAME -> (local <RefType>))
 
       EXAMPLES

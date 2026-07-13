@@ -52,8 +52,13 @@ public final class PathDisplay {
       String baseStr = base.toAbsolutePath().normalize().toString();
       if (pathString.startsWith(baseStr)) {
         String tail = pathString.substring(baseStr.length());
+        // The base directory must match at a path boundary: otherwise a library
+        // whose directory name is a string-prefix of another's (e.g. "PartI" vs
+        // "PartII") would swallow the sibling, mangling ".../PartII/src/X" into
+        // "PartI/I/src/X". Accept only an exact match or a following separator.
+        if (!tail.isEmpty() && tail.charAt(0) != '/' && tail.charAt(0) != '\\') continue;
         // Strip any leading separator so the result is "libName/<tail>" not "libName//tail".
-        if (!tail.isEmpty() && (tail.charAt(0) == '/' || tail.charAt(0) == '\\')) {
+        if (!tail.isEmpty()) {
           tail = tail.substring(1);
         }
         return tail.isEmpty() ? fl.getLibraryName() : fl.getLibraryName() + "/" + tail;
