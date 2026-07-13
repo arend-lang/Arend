@@ -115,8 +115,8 @@ public class ConsoleMain {
       cmdOptions.addOption(Option.builder("sc").longOpt("scope").hasArgs().argName("MODULE:PATH|name")
           .desc("dump the ambient scope at a referable's position. Pass `-sc --help` for full grammar.").build());
       cmdOptions.addOption(Option.builder("ps").longOpt("proof-search").hasArgs().argName("sig-pattern").desc("search by signature shape (parameters/codomain). Pass `-ps --help` for the full grammar.").build());
-      cmdOptions.addOption(Option.builder().longOpt("json").desc("with -ss/-ps: print results as a single JSON object {results:[...],count:N} on stdout; all diagnostics ([INFO]/[WARN]/[ERROR], query echo) go to a log file, keeping stdout pure JSON and the console clean (ignored in REPL mode)").build());
-      cmdOptions.addOption(Option.builder().longOpt("log-file").hasArg().argName("path").desc("with --json -ss/-ps: write diagnostics here instead of the default <tmpdir>/arend-symbol-search.log").build());
+      cmdOptions.addOption(Option.builder().longOpt("json").desc("with -ss/-ps/-fu: print results as a single JSON object {results:[...],count:N} on stdout; all diagnostics ([INFO]/[WARN]/[ERROR], query echo) go to a log file, keeping stdout pure JSON and the console clean (ignored in REPL mode). For -fu, each usage is a separate entry (never grouped by row).").build());
+      cmdOptions.addOption(Option.builder().longOpt("log-file").hasArg().argName("path").desc("with --json -ss/-ps/-fu: write diagnostics here instead of the default <tmpdir>/arend-symbol-search.log").build());
       cmdOptions.addOption("r", "recompile", false, "recompile all modules from source, ignoring binary caches (.arc files)");
       cmdOptions.addOption(null, "serialize", false, "after typechecking, persist typechecked modules as .arc binary caches; without this flag, no .arc files are written");
       cmdOptions.addOption("t", "test", false, "run tests");
@@ -410,7 +410,7 @@ public class ConsoleMain {
     // that code reading either static field at call time (the error reporter,
     // SymbolSearch's warnings/echo) lands in the log. If the file cannot be
     // opened we fall back to stderr. `--json` without `-ss` is a no-op.
-    boolean jsonSearch = cmdLine.hasOption("json") && (cmdLine.hasOption("ss") || cmdLine.hasOption("ps"));
+    boolean jsonSearch = cmdLine.hasOption("json") && (cmdLine.hasOption("ss") || cmdLine.hasOption("ps") || cmdLine.hasOption("fu"));
     PrintStream realStdout = System.out;
     PrintStream realStderr = System.err;
     PrintStream jsonLog = null;
@@ -467,24 +467,26 @@ public class ConsoleMain {
         return org.arend.frontend.symbol.ProofSearch.run(parsed.pattern(), parsed.options(),
             requestedLibraries, libraryManager, server, realStdout);
       }
+
+      if (cmdLine.hasOption("fu")) {
+        org.arend.frontend.symbol.UsageSearch.Parsed parsed =
+            org.arend.frontend.symbol.UsageSearch.parseArgs(cmdLine.getOptionValues("fu"));
+        if (parsed == null) return false;
+        parsed.options().json = jsonSearch;
+        org.arend.frontend.symbol.UsageSearch.run(parsed.spec(), parsed.options(),
+            requestedLibraries, libraryManager, server, mySystemErrErrorReporter, realStdout);
+        return !myExitWithError;
+      }
     } finally {
       if (jsonSearch) {
         System.setOut(realStdout);
         System.setErr(realStderr);
         if (jsonLog != null) {
           jsonLog.close();
-          realStderr.println("[INFO] " + (cmdLine.hasOption("ps") ? "-ps" : "-ss") + " diagnostics written to " + jsonLogPath);
+          String cmd = cmdLine.hasOption("ps") ? "-ps" : cmdLine.hasOption("fu") ? "-fu" : "-ss";
+          realStderr.println("[INFO] " + cmd + " diagnostics written to " + jsonLogPath);
         }
       }
-    }
-
-    if (cmdLine.hasOption("fu")) {
-      org.arend.frontend.symbol.UsageSearch.Parsed parsed =
-          org.arend.frontend.symbol.UsageSearch.parseArgs(cmdLine.getOptionValues("fu"));
-      if (parsed == null) return false;
-      org.arend.frontend.symbol.UsageSearch.run(parsed.spec(), parsed.options(),
-          requestedLibraries, libraryManager, server, mySystemErrErrorReporter);
-      return !myExitWithError;
     }
 
     if (cmdLine.hasOption("ch")) {

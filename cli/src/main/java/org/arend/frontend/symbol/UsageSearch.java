@@ -60,6 +60,10 @@ import java.util.regex.Pattern;
  */
 public final class UsageSearch {
 
+  // Same green -ss / -ps use to highlight matches (SymbolSearch/ProofSearch.ANSI_*).
+  private static final String ANSI_GREEN = "\u001B[32m";
+  private static final String ANSI_RESET = "\u001B[0m";
+
   // ---- options ------------------------------------------------------------
 
   public static final class Options {
@@ -68,6 +72,8 @@ public final class UsageSearch {
     public boolean useAliases = true;
     public int limit = 500;
     public @Nullable Set<String> onlyLibraries = null;
+    /** Emit results as a single JSON object instead of the human-readable listing. */
+    public boolean json = false;
   }
 
   public record Parsed(String spec, Options options) {}
@@ -120,7 +126,8 @@ public final class UsageSearch {
                         @NotNull List<SourceLibrary> requestedLibraries,
                         @NotNull LibraryManager libraryManager,
                         @NotNull ArendServer server,
-                        @NotNull ErrorReporter errorReporter) {
+                        @NotNull ErrorReporter errorReporter,
+                        @NotNull java.io.PrintStream out) {
     // 1) Parse spec
     Target target = parseTarget(spec);
     if (target == null) return 0;
@@ -215,7 +222,10 @@ public final class UsageSearch {
       for (DefinitionData data : server.getResolvedDefinitions(moduleLoc)) {
         Concrete.ResolvableDefinition def = data.definition();
         if (def == null) continue;
-        visitor.context = new VisitorContext(moduleLoc, absStr);
+        LocatedReferable defRef = def.getData();
+        String ambientName = defRef == null ? "" : defRef.getRefLongName().toString();
+        String ambientKind = defRef == null ? "OTHER" : SymbolIndex.kindOf(defRef, def).name();
+        visitor.context = new VisitorContext(moduleLoc, absStr, ambientName, ambientKind);
         try {
           def.accept(visitor, null);
         } catch (RuntimeException ignored) {
@@ -236,38 +246,95 @@ public final class UsageSearch {
 
     // 9) Print
     String kind = kindLabel(targetReferable);
-    System.out.println("Usages of " + QualifiedName.format(QualifiedName.showLibrary(libsInScope),
-        target.module.getLibraryName(), target.module.getModulePath().toString(),
-        targetReferable.getRefLongName().toString())
-        + "  [" + kind + "]");
-    if (hits.isEmpty()) {
-      System.out.println();
-      System.out.println("No usages.");
-      return 0;
+    // This search only resolves (never typechecks), so a field usage whose
+    // receiver type is known only after type inference -- e.g. a projection on a
+    // lambda/let binding or on a function result with an inferred return type --
+    // stays an unresolved field reference and is invisible here. Warn so the user
+    // knows the result may be incomplete for fields.
+    // TODO: to catch those, typecheck the candidate definitions (as IntelliJ's
+    //   ArendCustomSearcher does for class fields) and harvest the resolved field
+    //   references. The CLI can't reuse it as-is: concrete field refs stay
+    //   unresolved after typechecking, core terms carry no source positions, and
+    //   the `addReference` resolve-listener never fires because CLI references are
+    //   Position (not AbstractReference). It would need CLI refs to carry
+    //   AbstractReference identity + position, plus a capturing resolve listener.
+    if (isField(targetReferable)) {
+      System.err.println("[WARN] '" + targetReferable.getRefLongName()
+          + "' is a field; usages whose receiver type is only inferred during typechecking"
+          + " are NOT found (this search resolves but does not typecheck).");
     }
-    int printed = 0;
-    boolean truncated = false;
+    boolean showLibrary = QualifiedName.showLibrary(libsInScope);
     List<UsageHit> sorted = new ArrayList<>(hits);
     sorted.sort(Comparator.comparing((UsageHit h) -> h.absoluteFile)
         .thenComparingInt(h -> h.line)
         .thenComparingInt(h -> h.column));
-    for (UsageHit h : sorted) {
-      if (options.limit > 0 && printed >= options.limit) { truncated = true; continue; }
-      System.out.println();
-      String headLine = (h.absoluteFile == null || h.absoluteFile.isEmpty()
-          ? "<" + h.module.getLibraryName() + ":" + h.module.getModulePath() + ">"
-          : PathDisplay.shorten(h.absoluteFile, libraryManager)) + ":" + h.line + ":" + h.column;
-      if (options.printLine) {
-        String content = readLine(h.absoluteFile, h.line);
-        System.out.println(headLine + (content == null ? "" : ": " + content.strip()));
-      } else {
-        System.out.println(headLine);
+
+    // JSON mode: one entry per usage (never grouped by row); the caller has
+    // routed all diagnostics to a log so `out` carries only the JSON document.
+    if (options.json) {
+      int shown = options.limit > 0 ? Math.min(sorted.size(), options.limit) : sorted.size();
+      List<ResultJson.Row> rows = new ArrayList<>(shown);
+      for (int i = 0; i < shown; i++) {
+        UsageHit h = sorted.get(i);
+        String file = h.absoluteFile == null || h.absoluteFile.isEmpty()
+            ? null : PathDisplay.shorten(h.absoluteFile, libraryManager);
+        rows.add(new ResultJson.Row(showLibrary ? h.module.getLibraryName() : null,
+            h.module.getModulePath().toString(), h.ambientName, h.ambientKind,
+            null, null, file, h.line, h.column));
       }
-      printed++;
+      ResultJson.write(out, rows, hits.size());
+      return hits.size();
     }
-    System.out.println();
-    System.out.println("Found " + hits.size() + " usage" + (hits.size() == 1 ? "" : "s")
-        + (truncated ? " (showing " + printed + "; pass `limit=0` for all)" : ""));
+
+    // Text mode: -ss-style entries -- location line(s), the enclosing definition,
+    // then the source line with every usage on that row highlighted.
+    out.println("Usages of " + QualifiedName.format(showLibrary,
+        target.module.getLibraryName(), target.module.getModulePath().toString(),
+        targetReferable.getRefLongName().toString())
+        + "  [" + kind + "]");
+    if (hits.isEmpty()) {
+      out.println();
+      out.println("No usages.");
+      return 0;
+    }
+
+    boolean truncated = options.limit > 0 && sorted.size() > options.limit;
+    List<UsageHit> shownHits = truncated ? sorted.subList(0, options.limit) : sorted;
+
+    // Group hits on the same (file, line) so several usages on one row share a
+    // single source-line render with all of them highlighted. The list is sorted
+    // by (file, line, column), so equal-row hits are adjacent.
+    int gi = 0;
+    while (gi < shownHits.size()) {
+      UsageHit first = shownHits.get(gi);
+      int gj = gi + 1;
+      while (gj < shownHits.size()
+          && shownHits.get(gj).line == first.line
+          && shownHits.get(gj).absoluteFile.equals(first.absoluteFile)) {
+        gj++;
+      }
+      List<UsageHit> group = shownHits.subList(gi, gj);
+      gi = gj;
+
+      String loc = first.absoluteFile == null || first.absoluteFile.isEmpty()
+          ? "<" + first.module.getLibraryName() + ":" + first.module.getModulePath() + ">"
+          : PathDisplay.shorten(first.absoluteFile, libraryManager);
+      out.println();
+      for (UsageHit h : group) out.println(loc + ":" + h.line + ":" + h.column);
+      out.println(QualifiedName.format(showLibrary, first.module.getLibraryName(),
+          first.module.getModulePath().toString(), first.ambientName) + "  [" + first.ambientKind + "]");
+      if (options.printLine) {
+        String content = readLine(first.absoluteFile, first.line);
+        if (content != null) {
+          List<Integer> cols = new ArrayList<>(group.size());
+          for (UsageHit h : group) cols.add(h.column);
+          out.println("  " + highlightUsages(content, cols).strip());
+        }
+      }
+    }
+    out.println();
+    out.println("Found " + hits.size() + " usage" + (hits.size() == 1 ? "" : "s")
+        + (truncated ? " (showing " + shownHits.size() + "; pass `limit=0` for all)" : ""));
     return hits.size();
   }
 
@@ -566,9 +633,12 @@ public final class UsageSearch {
 
   // ---- usage visitor (Phase D) -------------------------------------------
 
-  private record UsageHit(ModuleLocation module, String absoluteFile, int line, int column) {}
+  /** {@code ambientName}/{@code ambientKind} describe the enclosing definition the usage sits in. */
+  private record UsageHit(ModuleLocation module, String absoluteFile, int line, int column,
+                          String ambientName, String ambientKind) {}
 
-  private record VisitorContext(ModuleLocation module, String absoluteFile) {}
+  private record VisitorContext(ModuleLocation module, String absoluteFile,
+                                String ambientName, String ambientKind) {}
 
   private static final class UsageVisitor extends BaseConcreteExpressionVisitor<Void> {
     private final LocatedReferable target;
@@ -580,7 +650,8 @@ public final class UsageSearch {
     private void recordRef(@Nullable Referable ref, @Nullable Object data) {
       if (ref == null || ref != target) return;
       if (!(data instanceof SourcePosition pos)) return;
-      collected.add(new UsageHit(context.module, context.absoluteFile, pos.line, pos.column));
+      collected.add(new UsageHit(context.module, context.absoluteFile, pos.line, pos.column,
+          context.ambientName, context.ambientKind));
     }
 
     @Override
@@ -694,6 +765,11 @@ public final class UsageSearch {
     return g.getKind().name();
   }
 
+  private static boolean isField(LocatedReferable ref) {
+    return ref instanceof org.arend.naming.reference.GlobalReferable g
+        && g.getKind() == org.arend.naming.reference.GlobalReferable.Kind.FIELD;
+  }
+
   private static boolean pathEquals(@Nullable String absStr, @Nullable Path path) {
     if (path == null || absStr == null) return false;
     return absStr.equals(path.toString());
@@ -707,5 +783,49 @@ public final class UsageSearch {
     } catch (IOException e) {
       return null;
     }
+  }
+
+  /**
+   * Wraps every reference token at the 1-based {@code columns} of {@code content}
+   * in ANSI green (the highlight -ss / -ps use), for the usages that fall on one
+   * source row.
+   *
+   * <p>We recover each token's span straight from the source: the referent's
+   * concrete data is a {@link SourcePosition} (start only, no end/range), and the
+   * resolved referent is the target's canonical referable -- so neither tells us
+   * the length of what was actually written, which may be the standard name, the
+   * target's {@code \alias}, or a local rename from a namespace command (e.g.
+   * {@code \open Complex} with a {@code (iunit \as i)} rename, then a bare
+   * {@code i}). Each recorded column lands on the referent token itself (for
+   * {@code x.im} it points at {@code im}, not {@code x}), so the maximal
+   * identifier run around it is exactly the written token. A column that doesn't
+   * sit on an identifier char (e.g. a stale line) is skipped.
+   */
+  private static String highlightUsages(@NotNull String content, @NotNull List<Integer> columns) {
+    // Collect distinct [start,end) token ranges around each usage column.
+    java.util.TreeMap<Integer, Integer> ranges = new java.util.TreeMap<>();
+    for (int column : columns) {
+      int idx = column - 1;
+      if (idx < 0 || idx >= content.length() || !isIdentifierChar(content.charAt(idx))) continue;
+      int start = idx;
+      while (start > 0 && isIdentifierChar(content.charAt(start - 1))) start--;
+      int end = idx;
+      while (end < content.length() && isIdentifierChar(content.charAt(end))) end++;
+      ranges.put(start, end);
+    }
+    if (ranges.isEmpty()) return content;
+    StringBuilder sb = new StringBuilder(content);
+    // Insert right-to-left so earlier insertions don't shift later offsets.
+    for (Map.Entry<Integer, Integer> e : ranges.descendingMap().entrySet()) {
+      sb.insert(e.getValue(), ANSI_RESET);
+      sb.insert(e.getKey(), ANSI_GREEN);
+    }
+    return sb.toString();
+  }
+
+  /** Arend name character: matches the class used by {@link #buildPattern}'s word-boundary scan. */
+  private static boolean isIdentifierChar(char c) {
+    return (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9')
+        || "_'~!@#$%^&*-+=<>?/|[]:".indexOf(c) >= 0;
   }
 }

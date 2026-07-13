@@ -217,14 +217,21 @@ public final class ConsoleHelp {
         Direct uses, the target's own alias, and locally renamed imports (`\\import M (foo \\as bar)` then `bar` in body) are caught.
         Multi-hop renames are followed via fixed-point iteration.
         Implicit references through instance resolution are NOT caught (they have no textual form).
+        A FIELD target additionally misses usages whose receiver type is known only after typechecking (this search resolves but does not typecheck); a [WARN] is printed for fields.
 
-      OUTPUT
+      OUTPUT (same shape as -ss: location, then the enclosing definition, then the source line)
         Usages of [<library>::]<module>:<long-name>  [<KIND>]
         (the `<library>::` prefix appears only when more than one library is in scope)
 
-        <abs-path>:<line>:<col>: <source line, trimmed>
+        <path>:<line>:<col>                             -- one per usage; usages sharing a
+        <path>:<line>:<col>                                row share the two lines below
+        [<library>::]<module>:<enclosing-def>  [KIND]   -- the definition the usage sits in
+          <source line, usages highlighted>
         ...
         Found N usage(s)
+
+        With --json: `{"results":[...],"count":N}` on stdout (diagnostics to a log file);
+        one entry per usage -- never grouped by row.
 
       EXAMPLES
         arend -L libs my-lib -fu 'Algebra.Monoid:Monoid.equals'

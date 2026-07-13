@@ -176,43 +176,47 @@ public final class ProofSearch {
             continue;
           }
 
-          if (referable.getData() != null) {
-            System.out.println(referable.getRefName() + " " + referable.getData().toString());
-          } else {
-            System.out.println(referable.getRefFullName().toString());
-          }
+          // -ss-style entry: location line, then `[library::]module:longName [KIND]`,
+          // then the matched signature/type slice (indented two spaces, like -ss).
+          int line = 0, col = 0;
+          if (referable.getData() instanceof SourcePosition sp) { line = sp.line; col = sp.column; }
+          String path = sourceFileFor(moduleLocation, libraryManager);
+          System.out.println((path == null || path.isEmpty())
+              ? "<" + moduleLocation.getLibraryName() + ":" + moduleLocation.getModulePath() + ">"
+              : path + ":" + line + ":" + col);
+          System.out.println(QualifiedName.format(!omitLibrary, moduleLocation.getLibraryName(),
+              moduleLocation.getModulePath().toString(), referable.getRefLongName().toString())
+              + "  [" + SymbolIndex.kindOf(referable, signature.first()).name() + "]");
 
-          // print-full prints the definition's signature (same as -ss), not its full body.
+          String content;
           if (options.printFull) {
-            System.out.println(SignaturePrintVisitor.render(signature.first()));
-            System.out.println();
-            continue;
-          }
-
-          Set<Concrete.SourceNode> highlightedNodes = new HashSet<>(result.inCodomain());
-          if (result.inPattern() != null) {
-            for (Pair<Concrete.Expression, List<Concrete.Expression>> parameterData : result.inPattern()) {
-              highlightedNodes.addAll(parameterData.proj2);
+            // print-full shows the definition's signature (same as -ss), not its full body.
+            content = SignaturePrintVisitor.render(signature.first());
+          } else {
+            Set<Concrete.SourceNode> highlightedNodes = new HashSet<>(result.inCodomain());
+            if (result.inPattern() != null) {
+              for (Pair<Concrete.Expression, List<Concrete.Expression>> parameterData : result.inPattern()) {
+                highlightedNodes.addAll(parameterData.proj2);
+              }
             }
-          }
-          highlightedNodes.addAll(result.inCodomain());
+            highlightedNodes.addAll(result.inCodomain());
 
-          Precedence topPrec = new Precedence(Concrete.Expression.PREC);
-          if (result.inPattern() != null) {
-            for (Pair<Concrete.Expression, List<Concrete.Expression>> parameterData : result.inPattern()) {
-              StringBuilder builder = new StringBuilder();
-              HighlightingPrettyPrintVisitor visitor = new HighlightingPrettyPrintVisitor(builder, 0, highlightedNodes);
-              // Route through printExpr (not Expression.prettyPrint, which dispatches
-              // straight to accept()) so the whole parameter node is checked against the
-              // highlight set -- otherwise a match at the top of the parameter is missed.
-              visitor.printExpr(parameterData.proj1, topPrec);
-              System.out.print("(" + builder + ") -> ");
+            Precedence topPrec = new Precedence(Concrete.Expression.PREC);
+            StringBuilder builder = new StringBuilder();
+            if (result.inPattern() != null) {
+              for (Pair<Concrete.Expression, List<Concrete.Expression>> parameterData : result.inPattern()) {
+                StringBuilder paramBuilder = new StringBuilder();
+                // Route through printExpr (not Expression.prettyPrint, which dispatches
+                // straight to accept()) so the whole parameter node is checked against the
+                // highlight set -- otherwise a match at the top of the parameter is missed.
+                new HighlightingPrettyPrintVisitor(paramBuilder, 0, highlightedNodes).printExpr(parameterData.proj1, topPrec);
+                builder.append('(').append(paramBuilder).append(") -> ");
+              }
             }
+            new HighlightingPrettyPrintVisitor(builder, 0, highlightedNodes).printExpr(codomain, topPrec);
+            content = builder.toString();
           }
-          StringBuilder builder = new StringBuilder();
-          HighlightingPrettyPrintVisitor visitor = new HighlightingPrettyPrintVisitor(builder, 0, highlightedNodes);
-          visitor.printExpr(codomain, topPrec);
-          System.out.println(builder);
+          System.out.println("  " + content.replace("\n", "\n  "));
           System.out.println();
         }
       }
