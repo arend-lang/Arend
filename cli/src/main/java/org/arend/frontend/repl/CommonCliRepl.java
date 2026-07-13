@@ -7,6 +7,7 @@ import org.antlr.v4.runtime.CommonTokenStream;
 import org.arend.frontend.ConsoleHelp;
 import org.arend.frontend.symbol.ProofSearch;
 import org.arend.frontend.symbol.SymbolSearch;
+import org.arend.frontend.symbol.UsageSearch;
 import org.arend.ext.core.ops.NormalizationMode;
 import org.arend.ext.error.ErrorReporter;
 import org.arend.ext.error.GeneralError;
@@ -204,6 +205,9 @@ public abstract class CommonCliRepl extends Repl {
     ProofSearchCommand proofSearch = new ProofSearchCommand();
     registerAction("proof-search", proofSearch);
     registerAction("ps", proofSearch);
+    FindUsagesCommand findUsages = new FindUsagesCommand();
+    registerAction("find-usages", findUsages);
+    registerAction("fu", findUsages);
   }
 
   /**
@@ -525,6 +529,64 @@ public abstract class CommonCliRepl extends Repl {
         if (parsed != null) {
           parsed.options().excludeLibraries.add(REPL_NAME);
           ProofSearch.run(parsed.pattern(), parsed.options(), libs, manager, myServer, capture);
+        }
+      } finally {
+        System.setOut(realOut);
+        System.setErr(realErr);
+      }
+      print(buffer.toString(StandardCharsets.UTF_8));
+    }
+  }
+
+  /**
+   * {@code :find-usages} / {@code :fu} {@code <MODULE_PATH>:<GROUP_PATH> [option ...]} —
+   * same syntax and behaviour as the {@code -fu} CLI flag, searching every library
+   * registered at the REPL. No {@code --json}. {@code :? fu} prints the help.
+   */
+  private final class FindUsagesCommand extends AliasableCommand {
+    FindUsagesCommand() {
+      super(new ArrayList<>());
+    }
+
+    @Override
+    public @Nls(capitalization = Nls.Capitalization.Sentence) @NotNull String description() {
+      return "Find every usage of a definition across registered libraries (`:? fu` for the full grammar)";
+    }
+
+    @Override
+    public @Nls @NotNull String help(@NotNull Repl api) {
+      return ConsoleHelp.findUsagesReplHelp();
+    }
+
+    @Override
+    public void invoke(@NotNull String line, @NotNull Repl api, @NotNull Supplier<@NotNull String> scanner) {
+      LibraryManager manager = libraryManager();
+      if (manager == null) {
+        eprintln("[ERROR] Find usages is unavailable (no library manager on this server).");
+        return;
+      }
+      // The synthetic REPL library mirrors the real ones, so keeping it in scope
+      // would duplicate every hit; drop it (as :ss / :ps do).
+      List<SourceLibrary> libs = new ArrayList<>();
+      for (String name : manager.getLibraries()) {
+        if (name.equals(REPL_NAME)) continue;
+        SourceLibrary lib = manager.getLibrary(name);
+        if (lib != null) libs.add(lib);
+      }
+
+      // UsageSearch writes results to the given stream and [INFO]/[WARN] chatter to
+      // System.out/System.err; capture all of it and forward through the REPL's own
+      // stream so it works for both the plain and jline REPL. No JSON in the REPL.
+      ByteArrayOutputStream buffer = new ByteArrayOutputStream();
+      PrintStream capture = new PrintStream(buffer, true, StandardCharsets.UTF_8);
+      PrintStream realOut = System.out, realErr = System.err;
+      System.setOut(capture);
+      System.setErr(capture);
+      try {
+        UsageSearch.Parsed parsed = UsageSearch.parseArgs(tokenizeArgs(line).toArray(new String[0]));
+        if (parsed != null) {
+          parsed.options().excludeLibraries.add(REPL_NAME);
+          UsageSearch.run(parsed.spec(), parsed.options(), libs, manager, myServer, errorReporter, capture);
         }
       } finally {
         System.setOut(realOut);

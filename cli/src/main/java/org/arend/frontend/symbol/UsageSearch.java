@@ -74,6 +74,12 @@ public final class UsageSearch {
     public @Nullable Set<String> onlyLibraries = null;
     /** Emit results as a single JSON object instead of the human-readable listing. */
     public boolean json = false;
+    /**
+     * Library names dropped from scope. Set programmatically, not from a user token:
+     * the REPL excludes its synthetic {@code Repl} mirror, which duplicates the real
+     * libraries' files and would otherwise double every hit (mirrors -ss/-ps).
+     */
+    public final Set<String> excludeLibraries = new HashSet<>();
   }
 
   public record Parsed(String spec, Options options) {}
@@ -718,6 +724,7 @@ public final class UsageSearch {
       List<SourceLibrary> requested, LibraryManager manager, Options opts) {
     List<SourceLibrary> all = new ArrayList<>();
     for (String name : manager.getLibraries()) {
+      if (opts.excludeLibraries.contains(name)) continue;
       SourceLibrary lib = manager.getLibrary(name);
       if (lib != null) all.add(lib);
     }

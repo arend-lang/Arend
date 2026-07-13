@@ -190,9 +190,14 @@ public final class ConsoleHelp {
       """;
 
 
-  private static final String FIND_USAGES_HELP = """
-      arend -fu <MODULE_PATH>:<GROUP_PATH> [option ...]
+  // -fu / :find-usages help, split like -ss so the CLI and REPL share FU_BODY;
+  // only the synopsis (FU_HEAD_CLI) and the tail (OUTPUT extras + EXAMPLES) differ.
+  private static final String FU_HEAD_CLI = """
+      arend [LIBRARY ...] -fu <MODULE_PATH>:<GROUP_PATH> [option ...]
 
+      """;
+
+  private static final String FU_BODY = """
       Find every textual usage of the named definition that resolves to it after name resolution.
       Same flow as IntelliJ's Find Usages.
       Text-search narrows files first; ArendServer's resolveAll then validates each candidate by referable identity.
@@ -205,7 +210,7 @@ public final class ConsoleHelp {
         library, so a candidate line printed on an ambiguous lookup (e.g.
         `arend-lib::Arith.Trig.Real:sin`) can be pasted back verbatim.
 
-      EXTRA TOKENS  (each as a separate -fu argument)
+      EXTRA TOKENS  (each a separate token)
         with-tests        also search test sources
         no-line           omit the source line content from output
         aliases=false     don't include the target's alias name in the search
@@ -229,14 +234,27 @@ public final class ConsoleHelp {
           <source line, usages highlighted>
         ...
         Found N usage(s)
+      """;
 
-        With --json: `{"results":[...],"count":N}` on stdout (diagnostics to a log file);
-        one entry per usage -- never grouped by row.
+  // TAIL (CLI): the --json note and `arend ... -fu` examples.
+  private static final String FU_TAIL_CLI = """
+
+      With --json: `{"results":[...],"count":N}` on stdout (diagnostics to a log file);
+      one entry per usage -- never grouped by row.
 
       EXAMPLES
         arend -L libs my-lib -fu 'Algebra.Monoid:Monoid.equals'
         arend -L libs my-lib -fu 'Paths:transport' -fu limit=20 -fu no-line
         arend -L libs my-lib -fu only=self -fu 'Foo:bar'
+      """;
+
+  // TAIL (REPL): `:fu` examples (no --json, no shell quoting needed).
+  private static final String FU_TAIL_REPL = """
+
+      EXAMPLES
+        :fu 'Algebra.Monoid:Monoid.equals'
+        :fu Paths:transport limit=20 no-line
+        :fu arend-lib::Arith.Trig.Real:sin
       """;
 
 
@@ -324,8 +342,18 @@ public final class ConsoleHelp {
     printTopicHelp(proofSearchHelp());
   }
 
+  /** The {@code -fu} CLI help: synopsis + shared body + CLI tail (--json note, examples). */
+  public static String findUsagesHelp() {
+    return FU_HEAD_CLI + FU_BODY + FU_TAIL_CLI;
+  }
+
+  /** The {@code :find-usages} REPL help: the shared body with no synopsis and {@code :fu} examples. */
+  public static String findUsagesReplHelp() {
+    return FU_BODY + FU_TAIL_REPL;
+  }
+
   static void printFindUsages() {
-    printTopicHelp(FIND_USAGES_HELP);
+    printTopicHelp(findUsagesHelp());
   }
 
   static void printClassHierarchy() {
