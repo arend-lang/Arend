@@ -72,20 +72,89 @@ import java.util.regex.PatternSyntaxException;
  *                     a lowercase 'p_a_m' name.
  */
 public final class SymbolPattern {
-  public enum Mode { LITERAL, GLOB, REGEX, HUMPBACK }
+  public enum Mode { LITERAL, GLOB, REGEX, HUMPBACK, LONGNAME }
 
   private final Pattern myCompiled;
   private final String mySource;
   private final Mode myMode;
+  /** Per-segment sub-patterns; non-null only for {@link Mode#LONGNAME} (see {@link #matchesLongName}). */
+  private final List<SymbolPattern> mySegments;
 
   private SymbolPattern(Pattern compiled, String source, Mode mode) {
     myCompiled = compiled;
     mySource = source;
     myMode = mode;
+    mySegments = null;
+  }
+
+  private SymbolPattern(String source, List<SymbolPattern> segments) {
+    myCompiled = null;
+    mySource = source;
+    myMode = Mode.LONGNAME;
+    mySegments = segments;
+  }
+
+  private SymbolPattern lastSegment() {
+    return mySegments.get(mySegments.size() - 1);
   }
 
   public boolean matches(@NotNull String name) {
+    // A LONGNAME pattern has no single compiled regex; matched via matchesLongName.
+    // For generic short-name callers (contains filter, highlighting) fall back to
+    // its final segment -- the sub-pattern that matches the definition's own name.
+    if (myMode == Mode.LONGNAME) return lastSegment().matches(name);
     return myCompiled.matcher(name).find();
+  }
+
+  /**
+   * Long-name match ({@link Mode#LONGNAME} only): the final segment pattern must
+   * match {@code shortName} (the ordinary {@code -ss} short-name test), and the
+   * remaining leading segment patterns must match, in order, a left-to-right
+   * subsequence of {@code prefixSegments} (the definition's enclosing module +
+   * namespace path). So {@code A.B.C} keeps a definition whose short name matches
+   * {@code C} and whose enclosing path has a segment matching {@code A} followed
+   * (somewhere later) by one matching {@code B}. Given a definition's genuine
+   * full name this collapses to that single definition.
+   */
+  public boolean matchesLongName(@NotNull List<String> prefixSegments, @NotNull String shortName) {
+    int m = mySegments.size();
+    if (!lastSegment().matches(shortName)) return false;
+    int pi = 0;   // next leading segment pattern to place, over mySegments[0 .. m-2]
+    for (int i = 0; i < prefixSegments.size() && pi < m - 1; i++) {
+      if (mySegments.get(pi).matches(prefixSegments.get(i))) pi++;
+    }
+    return pi == m - 1;
+  }
+
+  /** Where a {@link Mode#LONGNAME} pattern matched, for highlighting (see {@link #longNameHighlights}). */
+  public record LongNameHighlights(@NotNull List<int[]> shortNameRanges,
+                                   @NotNull List<List<int[]>> prefixRanges) {}
+
+  /**
+   * The highlight companion to {@link #matchesLongName}: runs the identical
+   * greedy match but records WHERE each segment pattern landed. Returns the char
+   * ranges the final segment matched within {@code shortName}, plus a list
+   * aligned 1:1 with {@code prefixSegments} giving the ranges each leading
+   * segment pattern matched in the segment it was assigned to (an empty list for
+   * every unassigned segment). Returns {@code null} exactly when
+   * {@link #matchesLongName} would return {@code false}.
+   */
+  public @Nullable LongNameHighlights longNameHighlights(@NotNull List<String> prefixSegments,
+                                                         @NotNull String shortName) {
+    int m = mySegments.size();
+    List<int[]> shortRanges = lastSegment().highlightRanges(shortName);
+    if (shortRanges.isEmpty()) return null;   // final segment did not match the short name
+    List<List<int[]>> prefixRanges = new ArrayList<>(prefixSegments.size());
+    for (int i = 0; i < prefixSegments.size(); i++) prefixRanges.add(List.of());
+    int pi = 0;
+    for (int i = 0; i < prefixSegments.size() && pi < m - 1; i++) {
+      List<int[]> rr = mySegments.get(pi).highlightRanges(prefixSegments.get(i));
+      if (!rr.isEmpty()) {
+        prefixRanges.set(i, rr);
+        pi++;
+      }
+    }
+    return pi == m - 1 ? new LongNameHighlights(shortRanges, prefixRanges) : null;
   }
 
   /**
@@ -97,6 +166,10 @@ public final class SymbolPattern {
    * matched substring for literal/regex and the whole name for anchored glob:.
    */
   public @NotNull List<int[]> highlightRanges(@NotNull String name) {
+    // For a LONGNAME pattern only the short-name portion is highlightable, via
+    // the final segment (the leading segments match the enclosing path, not the
+    // printed short name).
+    if (myMode == Mode.LONGNAME) return lastSegment().highlightRanges(name);
     Matcher m = myCompiled.matcher(name);
     if (!m.find()) return List.of();
     List<int[]> ranges = new ArrayList<>();
@@ -119,7 +192,7 @@ public final class SymbolPattern {
   }
 
   public @NotNull String compiledRegex() {
-    return myCompiled.pattern();
+    return myCompiled == null ? "" : myCompiled.pattern();
   }
 
   /** The user-facing payload, with mode prefix stripped (so 're:foo' → 'foo'). */
@@ -127,11 +200,22 @@ public final class SymbolPattern {
     return switch (myMode) {
       case REGEX, HUMPBACK -> mySource.substring(3);
       case GLOB -> mySource.substring(5);
-      case LITERAL -> mySource;
+      case LITERAL, LONGNAME -> mySource;
     };
   }
 
   public static @NotNull SymbolPattern compile(@NotNull String pattern) {
+    return compile(pattern, false);
+  }
+
+  /**
+   * @param longNameMode when true a prefix-less dotted pattern that
+   *   {@link #looksLikeQualifiedName looks like a qualified name} is compiled as
+   *   a {@link Mode#LONGNAME} query (see {@link #matchesLongName}) instead of
+   *   being rejected. Only {@code -ss} enables this; {@code glob:} / {@code re:}
+   *   / {@code hb:} are recognised first and so keep their existing behaviour.
+   */
+  public static @NotNull SymbolPattern compile(@NotNull String pattern, boolean longNameMode) {
     if (pattern.isEmpty()) {
       throw new IllegalArgumentException("Pattern is empty");
     }
@@ -174,6 +258,13 @@ public final class SymbolPattern {
               + " (glob: with no '*'/'?' matches the whole name; escape a literal star/question mark as \\*/\\?).");
     }
 
+    // Long-name search: a dotted, prefix-less pattern (e.g. `Monoid.*-comm`) is a
+    // by-part qualified-name query rather than an error. Reached only after the
+    // mode prefixes above, so glob:/re:/hb: are never intercepted here.
+    if (longNameMode && looksLikeQualifiedName(pattern)) {
+      return compileLongName(pattern);
+    }
+
     String trigger = firstNonIdentChar(pattern);
     if (trigger != null) {
       String globHint = pattern.replace(".*", "*").replace(".+", "*").replace(".?", "?");
@@ -181,7 +272,26 @@ public final class SymbolPattern {
           trigger + " — try 're:" + pattern + "' (regex)"
               + (globHint.equals(pattern) ? "" : " or 'glob:" + globHint + "' (glob)"));
     }
+    return compileLiteral(pattern);
+  }
+
+  /** A smart-case literal (default-mode) substring pattern. */
+  private static SymbolPattern compileLiteral(@NotNull String pattern) {
+    int flags = Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE;
     return new SymbolPattern(Pattern.compile(smartCaseLiteral(pattern), flags), pattern, Mode.LITERAL);
+  }
+
+  /**
+   * Builds a {@link Mode#LONGNAME} pattern from a dotted qualified name. Each
+   * dot-separated segment becomes an ordinary literal sub-pattern; the caller
+   * has verified via {@link #looksLikeQualifiedName} that every segment is a
+   * non-empty run of Arend identifier characters, so no segment carries a mode
+   * prefix or fails to compile.
+   */
+  private static SymbolPattern compileLongName(@NotNull String pattern) {
+    List<SymbolPattern> segments = new ArrayList<>();
+    for (String part : pattern.split("\\.")) segments.add(compileLiteral(part));
+    return new SymbolPattern(pattern, segments);
   }
 
   /**

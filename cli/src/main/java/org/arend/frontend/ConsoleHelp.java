@@ -52,6 +52,8 @@ public final class ConsoleHelp {
         re:<regex>     Java regex, unanchored (find()); case-sensitive as typed.
         hb:<chars>     humpback: type word starts / prefixes.
                        hb:PAM -> PosetAddMonoid, hb:mon -> Monoid, hb:isP -> isProp.
+        A.B.C          long name: match dotted parts of the qualified name; the last
+                       segment is the short name (details under LONG-NAME SEARCH).
 
       SMART CASE (all modes except re:): a lowercase letter matches either case, an
       uppercase letter matches uppercase only. So `monoid` finds `Monoid`, while
@@ -59,6 +61,11 @@ public final class ConsoleHelp {
 
       Multiple patterns are OR'd; whitespace inside one argument also separates, so
       `-ss "Monoid Ring"` is the same as `-ss Monoid -ss Ring`.
+
+      LONG-NAME SEARCH: a dotted pattern like `Monoid.*-comm` searches by parts of the
+      qualified name -- the last segment matches the short name (rules above), and each
+      earlier segment must match, in order, an enclosing module/namespace segment. A
+      definition's full name thus narrows down to that one definition.
 
       OPTIONS  (each a separate -ss argument)
         limit=N            cap matches; 0 = unlimited (default 200)
@@ -90,6 +97,7 @@ public final class ConsoleHelp {
         arend arend-lib -ss Ring -ss kind=class
         arend arend-lib -ss "pmap transport"          OR two names
         arend arend-lib -ss 're:comm$'                names ending in "comm"
+        arend arend-lib -ss 'Monoid.*-comm'           long name: *-comm under a Monoid path
       """;
 
   // TAIL (REPL): OUTPUT without JSON, and `:ss` examples (no shell quoting).
@@ -107,6 +115,7 @@ public final class ConsoleHelp {
         :ss Ring kind=class
         :ss pmap transport         OR two names
         :ss re:comm$               names ending in "comm"
+        :ss Monoid.*-comm          long name: *-comm under a Monoid path
       """;
 
 
@@ -317,7 +326,8 @@ public final class ConsoleHelp {
       When given, only scope entries whose short name matches are printed.
 
       EXTRA TOKENS  (each as a separate -sc argument)
-        context=static    only static-scope entries (default)
+        (no context=)     static and dynamic entries merged into one sorted list (default)
+        context=static    only static-scope entries
         context=dynamic   only dynamic-scope entries (record/class fields)
         context=all       print STATIC, DYNAMIC, PLEVEL, HLEVEL sections in turn
 

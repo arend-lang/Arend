@@ -35,10 +35,11 @@ public final class ReferableScope {
 
   // ---- options + arg parsing ---------------------------------------------
 
-  public enum Ctx { STATIC, DYNAMIC, ALL }
+  public enum Ctx { STATIC, DYNAMIC, STATIC_AND_DYNAMIC, ALL }
 
   public static final class Options {
-    public Ctx context = Ctx.STATIC;
+    // No context= token: static and dynamic entries merged into one sorted list.
+    public Ctx context = Ctx.STATIC_AND_DYNAMIC;
   }
 
   public record Parsed(@NotNull String spec, @Nullable SymbolPattern pattern, @NotNull Options options) {}
@@ -138,6 +139,13 @@ public final class ReferableScope {
       matched += dumpSection(scope, ScopeContext.PLEVEL,  "PLEVEL",  pattern, showLibrary);
       matched += dumpSection(scope, ScopeContext.HLEVEL,  "HLEVEL",  pattern, showLibrary);
       total = scope.getElements(null).size();
+    } else if (options.context == Ctx.STATIC_AND_DYNAMIC) {
+      // Default: static and dynamic entries as a single sorted list (not two sections).
+      List<Referable> elements = new ArrayList<>();
+      elements.addAll(scope.getElements(ScopeContext.STATIC));
+      elements.addAll(scope.getElements(ScopeContext.DYNAMIC));
+      total = elements.size();
+      matched = printEntries(elements, pattern, showLibrary);
     } else {
       ScopeContext ctx = options.context == Ctx.DYNAMIC ? ScopeContext.DYNAMIC : ScopeContext.STATIC;
       Collection<? extends Referable> elements = scope.getElements(ctx);
@@ -164,14 +172,17 @@ public final class ReferableScope {
 
   private static int printEntries(Collection<? extends Referable> elements,
       @Nullable SymbolPattern pattern, boolean showLibrary) {
-    int matched = 0;
+    // Sort by short name (then full line) so the dump has a stable, readable
+    // order independent of the scope's internal iteration order.
+    List<String> lines = new ArrayList<>();
     for (Referable ref : elements) {
       String name = ref.textRepresentation();
       if (pattern != null && !pattern.matches(name)) continue;
-      System.out.println(name + " -> " + targetLabel(ref, showLibrary));
-      matched++;
+      lines.add(name + " -> " + targetLabel(ref, showLibrary));
     }
-    return matched;
+    lines.sort(String.CASE_INSENSITIVE_ORDER);
+    for (String line : lines) System.out.println(line);
+    return lines.size();
   }
 
   private static String targetLabel(Referable ref, boolean showLibrary) {

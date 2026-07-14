@@ -49,22 +49,11 @@ public final class SymbolSearch {
     List<SymbolPattern> compiled = new ArrayList<>(patterns.size());
     for (String p : patterns) {
       try {
-        compiled.add(SymbolPattern.compile(p));
+        // longNameMode=true: a dotted pattern like `Monoid.*-comm` is a long-name
+        // query (matched by part), not an error -- see SymbolPattern.matchesLongName.
+        compiled.add(SymbolPattern.compile(p, true));
       } catch (IllegalArgumentException e) {
         System.err.println("[ERROR] Bad -ss pattern '" + p + "': " + e.getMessage());
-        if (SymbolPattern.looksLikeQualifiedName(p)) {
-          int firstDot = p.indexOf('.');
-          int lastDot = p.lastIndexOf('.');
-          String first = p.substring(0, firstDot);
-          String last = p.substring(lastDot + 1);
-          System.err.println(
-              "        note: -ss matches SHORT names only; long names like '"
-                  + p + "' are printed in the output.");
-          System.err.println(
-              "        try:  -ss '" + last + "'        # find by short name");
-          System.err.println(
-              "              -ch '" + first + "'        # browse the class hierarchy of '" + first + "'");
-        }
         return 0;
       }
     }
@@ -118,9 +107,9 @@ public final class SymbolSearch {
       for (SymbolIndex.Entry e : idx.allEntries()) {
         if (!options.kinds.contains(e.kind())) continue;
         if (!matchesAllContains(options, e.shortName())) continue;
-        if (matchesAny(compiled, e.shortName())) {
+        if (matchesAny(compiled, e)) {
           hits.add(new Hit(lib.getLibraryName(), e));
-        } else if (!suggestPatterns.isEmpty() && matchesAny(suggestPatterns, e.shortName())) {
+        } else if (!suggestPatterns.isEmpty() && matchesAny(suggestPatterns, e)) {
           suggestions.add(new Hit(lib.getLibraryName(), e));
         }
       }
@@ -284,6 +273,7 @@ public final class SymbolSearch {
       case GLOB -> "glob";
       case REGEX -> "regex";
       case HUMPBACK -> "humpback";
+      case LONGNAME -> "long-name";
     };
     String body = "'" + p.body() + "'";
     return switch (p.mode()) {
@@ -304,9 +294,30 @@ public final class SymbolSearch {
     return sj.toString();
   }
 
-  private static boolean matchesAny(List<SymbolPattern> patterns, String shortName) {
-    for (SymbolPattern p : patterns) if (p.matches(shortName)) return true;
+  private static boolean matchesAny(List<SymbolPattern> patterns, SymbolIndex.Entry e) {
+    List<String> prefix = null;   // lazily built; only long-name patterns need it
+    for (SymbolPattern p : patterns) {
+      if (p.mode() == SymbolPattern.Mode.LONGNAME) {
+        if (prefix == null) prefix = prefixSegments(e);
+        if (p.matchesLongName(prefix, e.shortName())) return true;
+      } else if (p.matches(e.shortName())) {
+        return true;
+      }
+    }
     return false;
+  }
+
+  /**
+   * The enclosing module + namespace path of an entry, as a segment list: the
+   * module-path segments followed by the in-module long-name segments, minus the
+   * final segment (the definition's own short name). This is what the leading
+   * segments of a {@link SymbolPattern.Mode#LONGNAME} query match against.
+   */
+  private static List<String> prefixSegments(SymbolIndex.Entry e) {
+    List<String> segs = new ArrayList<>(e.modulePath().toList());
+    for (String s : e.longName().split("\\.")) if (!s.isEmpty()) segs.add(s);
+    if (!segs.isEmpty()) segs.remove(segs.size() - 1);   // drop the short name
+    return segs;
   }
 
   private static boolean matchesAllContains(Options opts, String shortName) {
@@ -332,7 +343,7 @@ public final class SymbolSearch {
           + ":" + (e.line() == 0 ? "?" : e.line()) + ":" + (e.column() == 0 ? "?" : e.column());
     }
     out.append(header).append('\n');
-    out.append(qualifiedName(showLibrary, libName, e, highlightName(e.longName(), e.shortName(), patterns)))
+    out.append(renderQualifiedName(showLibrary, libName, e, patterns))
         .append("  [").append(e.kind().name()).append("]\n");
     if (!e.signature().isEmpty()) {
       // A container signature (\class/\record/\data) is multi-line; indent every
@@ -343,32 +354,106 @@ public final class SymbolSearch {
   }
 
   /**
-   * Wraps the query-matched portion of the SHORT name in ANSI green (the same
-   * colour {@code -ps} uses for matched sub-terms). The short name is the
-   * trailing segment of {@code longName}, so ranges computed against it are
-   * shifted by that offset before rendering. Ranges from every matching pattern
-   * are applied; overlaps are clamped. Only reached on the non-JSON path.
+   * Renders {@code [library::]module:LongName} with every query-matched part
+   * wrapped in ANSI green (the colour {@code -ps} uses for matched sub-terms).
+   *
+   * <p>For ordinary patterns only the matched span of the SHORT name (the
+   * trailing segment of the long name) lights up. For a
+   * {@link SymbolPattern.Mode#LONGNAME} pattern EVERY matched segment lights up
+   * -- the short name plus the enclosing module / namespace segments its leading
+   * parts matched -- so the whole matched long name is highlighted. Ranges from
+   * all OR-ed patterns are merged. Only reached on the non-JSON path.
    */
-  private static String highlightName(String longName, String shortName, List<SymbolPattern> patterns) {
-    int off = longName.endsWith(shortName) ? longName.length() - shortName.length()
-                                           : longName.lastIndexOf(shortName);
-    if (off < 0) return longName;
-    List<int[]> ranges = new ArrayList<>();
-    for (SymbolPattern p : patterns) ranges.addAll(p.highlightRanges(shortName));
-    if (ranges.isEmpty()) return longName;
+  private static String renderQualifiedName(boolean showLibrary, String libName,
+                                            SymbolIndex.Entry e, List<SymbolPattern> patterns) {
+    String moduleStr = e.modulePath().toString();
+    String longNameStr = e.longName();
+    String shortName = e.shortName();
+
+    List<int[]> moduleRanges = new ArrayList<>();
+    List<int[]> longNameRanges = new ArrayList<>();
+
+    // Segment offsets are needed only when a LONGNAME pattern is present.
+    List<String> moduleSegs = null;
+    int[] moduleOffsets = null, longOffsets = null;
+
+    for (SymbolPattern p : patterns) {
+      if (p.mode() == SymbolPattern.Mode.LONGNAME) {
+        if (moduleSegs == null) {
+          moduleSegs = e.modulePath().toList();
+          moduleOffsets = segmentOffsets(moduleSegs);
+          longOffsets = segmentOffsets(splitDot(longNameStr));
+        }
+        List<String> prefix = prefixSegments(e);
+        SymbolPattern.LongNameHighlights hl = p.longNameHighlights(prefix, shortName);
+        if (hl == null) continue;   // this OR-ed pattern is not the one that matched
+        // Final segment -> the short name (trailing segment of the long name).
+        int shortOff = shortNameOffset(longNameStr, shortName);
+        if (shortOff >= 0) {
+          for (int[] r : hl.shortNameRanges()) longNameRanges.add(new int[]{shortOff + r[0], shortOff + r[1]});
+        }
+        // Leading segments -> the module path or the long name's leading segments, by index.
+        int msz = moduleSegs.size();
+        List<List<int[]>> prefixRanges = hl.prefixRanges();
+        for (int i = 0; i < prefixRanges.size(); i++) {
+          List<int[]> rr = prefixRanges.get(i);
+          if (rr.isEmpty()) continue;
+          if (i < msz) {
+            for (int[] r : rr) moduleRanges.add(new int[]{moduleOffsets[i] + r[0], moduleOffsets[i] + r[1]});
+          } else {
+            int j = i - msz;   // index into the long name's leading segments
+            for (int[] r : rr) longNameRanges.add(new int[]{longOffsets[j] + r[0], longOffsets[j] + r[1]});
+          }
+        }
+      } else {
+        int off = shortNameOffset(longNameStr, shortName);
+        if (off < 0) continue;
+        for (int[] r : p.highlightRanges(shortName)) longNameRanges.add(new int[]{off + r[0], off + r[1]});
+      }
+    }
+
+    return QualifiedName.format(showLibrary, libName,
+        applyHighlights(moduleStr, moduleRanges), applyHighlights(longNameStr, longNameRanges));
+  }
+
+  /** Position of the trailing short name within its long name (-1 if absent). */
+  private static int shortNameOffset(String longName, String shortName) {
+    return longName.endsWith(shortName) ? longName.length() - shortName.length()
+                                        : longName.lastIndexOf(shortName);
+  }
+
+  /** Splits a dot-joined name into segments; empty string -> empty list. */
+  private static List<String> splitDot(String s) {
+    List<String> segs = new ArrayList<>();
+    if (!s.isEmpty()) Collections.addAll(segs, s.split("\\."));
+    return segs;
+  }
+
+  /** Char offset of each segment within {@code segs} joined by '.'. */
+  private static int[] segmentOffsets(List<String> segs) {
+    int[] offs = new int[segs.size()];
+    int pos = 0;
+    for (int i = 0; i < segs.size(); i++) {
+      offs[i] = pos;
+      pos += segs.get(i).length() + 1;   // + 1 for the '.' separator
+    }
+    return offs;
+  }
+
+  /** Wraps each {@code [start,end)} range of {@code s} in ANSI green; ranges sorted, overlaps clamped. */
+  private static String applyHighlights(String s, List<int[]> ranges) {
+    if (ranges.isEmpty()) return s;
     ranges.sort(Comparator.comparingInt(r -> r[0]));
-    StringBuilder sb = new StringBuilder(longName.length() + 16);
-    sb.append(longName, 0, off);
+    StringBuilder sb = new StringBuilder(s.length() + 16);
     int cur = 0;
     for (int[] r : ranges) {
       if (r[1] <= cur) continue;               // fully covered by an earlier range
       int start = Math.max(r[0], cur);
-      if (start > cur) sb.append(shortName, cur, start);
-      sb.append(ANSI_GREEN).append(shortName, start, r[1]).append(ANSI_RESET);
+      if (start > cur) sb.append(s, cur, start);
+      sb.append(ANSI_GREEN).append(s, start, r[1]).append(ANSI_RESET);
       cur = r[1];
     }
-    sb.append(shortName, cur, shortName.length());
-    sb.append(longName, off + shortName.length(), longName.length());
+    sb.append(s, cur, s.length());
     return sb.toString();
   }
 
