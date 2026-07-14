@@ -24,8 +24,6 @@ public final class SymbolSearch {
   public static final class Options {
     public int limit = 200;
     public final EnumSet<SymbolIndex.Kind> kinds = EnumSet.allOf(SymbolIndex.Kind.class);
-    /** Extra AND substring filters (each a smart-case literal) applied after the pattern matches. */
-    public final List<SymbolPattern> containsFilters = new ArrayList<>();
     /** Emit results as a JSON array instead of the human-readable listing. */
     public boolean json = false;
     /**
@@ -106,7 +104,6 @@ public final class SymbolSearch {
 
       for (SymbolIndex.Entry e : idx.allEntries()) {
         if (!options.kinds.contains(e.kind())) continue;
-        if (!matchesAllContains(options, e.shortName())) continue;
         if (matchesAny(compiled, e)) {
           hits.add(new Hit(lib.getLibraryName(), e));
         } else if (!suggestPatterns.isEmpty() && matchesAny(suggestPatterns, e)) {
@@ -285,7 +282,6 @@ public final class SymbolSearch {
   private static String describeFilters(Options opts) {
     StringJoiner sj = new StringJoiner(", ");
     if (opts.limit != 200) sj.add("limit=" + opts.limit);
-    for (SymbolPattern c : opts.containsFilters) sj.add("contains='" + c.body() + "'");
     if (opts.kinds.size() != SymbolIndex.Kind.values().length) {
       StringJoiner ks = new StringJoiner(",");
       for (SymbolIndex.Kind k : opts.kinds) ks.add(k.name().toLowerCase(Locale.ROOT));
@@ -318,13 +314,6 @@ public final class SymbolSearch {
     for (String s : e.longName().split("\\.")) if (!s.isEmpty()) segs.add(s);
     if (!segs.isEmpty()) segs.remove(segs.size() - 1);   // drop the short name
     return segs;
-  }
-
-  private static boolean matchesAllContains(Options opts, String shortName) {
-    for (SymbolPattern needle : opts.containsFilters) {
-      if (!needle.matches(shortName)) return false;
-    }
-    return true;
   }
 
   /** Adapts a {@link SymbolIndex.Entry} to the shared {@link QualifiedName#format} label. */
@@ -529,16 +518,6 @@ public final class SymbolSearch {
         catch (NumberFormatException e) {
           System.err.println("[ERROR] Bad -ss limit: " + arg);
           return null;
-        }
-      } else if (arg.startsWith("contains=")) {
-        String v = arg.substring("contains=".length());
-        if (!v.isEmpty()) {
-          try {
-            opts.containsFilters.add(SymbolPattern.compile(v));
-          } catch (IllegalArgumentException e) {
-            System.err.println("[ERROR] Bad -ss contains filter '" + v + "': " + e.getMessage());
-            return null;
-          }
         }
       } else if (arg.startsWith("kind=")) {
         EnumSet<SymbolIndex.Kind> ks = EnumSet.noneOf(SymbolIndex.Kind.class);

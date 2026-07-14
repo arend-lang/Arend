@@ -115,8 +115,8 @@ public class ConsoleMain {
       cmdOptions.addOption(Option.builder("sc").longOpt("scope").hasArgs().argName("MODULE:PATH|name")
           .desc("dump the ambient scope at a referable's position. Pass `-sc --help` for full grammar.").build());
       cmdOptions.addOption(Option.builder("ps").longOpt("proof-search").hasArgs().argName("sig-pattern").desc("search by signature shape (parameters/codomain). Pass `-ps --help` for the full grammar.").build());
-      cmdOptions.addOption(Option.builder().longOpt("json").desc("with -ss/-ps/-fu: print results as a single JSON object {results:[...],count:N} on stdout; all diagnostics ([INFO]/[WARN]/[ERROR], query echo) go to a log file, keeping stdout pure JSON and the console clean (ignored in REPL mode). For -fu, each usage is a separate entry (never grouped by row).").build());
-      cmdOptions.addOption(Option.builder().longOpt("log-file").hasArg().argName("path").desc("with --json -ss/-ps/-fu: write diagnostics here instead of the default <tmpdir>/arend-symbol-search.log").build());
+      cmdOptions.addOption(Option.builder().longOpt("json").desc("with -ss/-ps/-fu/-sc/-ch: print results as a single JSON object on stdout ({results:[...],count:N}; -sc uses {target,entries:[...],count:N}; -ch uses {target,superclasses:[...],subclasses:[...],instances:[...],newSites:[...],counts}); all diagnostics ([INFO]/[WARN]/[ERROR], query echo) go to a log file, keeping stdout pure JSON and the console clean (ignored in REPL mode). For -fu, each usage is a separate entry (never grouped by row).").build());
+      cmdOptions.addOption(Option.builder().longOpt("log-file").hasArg().argName("path").desc("with --json -ss/-ps/-fu/-sc/-ch: write diagnostics here instead of the default <tmpdir>/arend-symbol-search.log").build());
       cmdOptions.addOption("r", "recompile", false, "recompile all modules from source, ignoring binary caches (.arc files)");
       cmdOptions.addOption(null, "serialize", false, "after typechecking, persist typechecked modules as .arc binary caches; without this flag, no .arc files are written");
       cmdOptions.addOption("t", "test", false, "run tests");
@@ -409,8 +409,9 @@ public class ConsoleMain {
     // where the log landed. Both System.out and System.err are redirected so
     // that code reading either static field at call time (the error reporter,
     // SymbolSearch's warnings/echo) lands in the log. If the file cannot be
-    // opened we fall back to stderr. `--json` without `-ss` is a no-op.
-    boolean jsonSearch = cmdLine.hasOption("json") && (cmdLine.hasOption("ss") || cmdLine.hasOption("ps") || cmdLine.hasOption("fu"));
+    // opened we fall back to stderr. `--json` without a retrieval flag is a no-op.
+    boolean jsonSearch = cmdLine.hasOption("json") && (cmdLine.hasOption("ss") || cmdLine.hasOption("ps")
+        || cmdLine.hasOption("fu") || cmdLine.hasOption("sc") || cmdLine.hasOption("ch"));
     PrintStream realStdout = System.out;
     PrintStream realStderr = System.err;
     PrintStream jsonLog = null;
@@ -430,10 +431,10 @@ public class ConsoleMain {
       }
     }
 
-    // The load loops and the -ss/-ps blocks run inside this try so the redirected
-    // streams are ALWAYS restored -- including the early `return false` exits
-    // below, which the old code leaked past. The fu/ch/sc/typecheck blocks after
-    // it are reached only when there is no -ss/-ps, hence never in JSON mode.
+    // The load loops and the -ss/-ps/-fu/-sc/-ch blocks run inside this try so the
+    // redirected streams are ALWAYS restored -- including the early `return false`
+    // exits below, which the old code leaked past. The typecheck blocks after it
+    // are reached only when none of those matched, hence never in JSON mode.
     try {
       for (SourceLibrary library : requestedLibraries) {
         loadLibrary(libraryManager, library, server);
@@ -477,34 +478,37 @@ public class ConsoleMain {
             requestedLibraries, libraryManager, server, mySystemErrErrorReporter, realStdout);
         return !myExitWithError;
       }
+
+      if (cmdLine.hasOption("ch")) {
+        org.arend.frontend.symbol.ClassHierarchy.Parsed parsed =
+            org.arend.frontend.symbol.ClassHierarchy.parseArgs(cmdLine.getOptionValues("ch"));
+        if (parsed == null) return false;
+        parsed.options().json = jsonSearch;
+        org.arend.frontend.symbol.ClassHierarchy.run(parsed.spec(), parsed.options(),
+            requestedLibraries, libraryManager, server, mySystemErrErrorReporter, realStdout);
+        return !myExitWithError;
+      }
+
+      if (cmdLine.hasOption("sc")) {
+        org.arend.frontend.symbol.ReferableScope.Parsed parsed =
+            org.arend.frontend.symbol.ReferableScope.parseArgs(cmdLine.getOptionValues("sc"));
+        if (parsed == null) return false;
+        parsed.options().json = jsonSearch;
+        org.arend.frontend.symbol.ReferableScope.run(parsed.spec(), parsed.pattern(), parsed.options(),
+            requestedLibraries, libraryManager, server, mySystemErrErrorReporter, realStdout);
+        return !myExitWithError;
+      }
     } finally {
       if (jsonSearch) {
         System.setOut(realStdout);
         System.setErr(realStderr);
         if (jsonLog != null) {
           jsonLog.close();
-          String cmd = cmdLine.hasOption("ps") ? "-ps" : cmdLine.hasOption("fu") ? "-fu" : "-ss";
+          String cmd = cmdLine.hasOption("ps") ? "-ps" : cmdLine.hasOption("fu") ? "-fu"
+              : cmdLine.hasOption("sc") ? "-sc" : cmdLine.hasOption("ch") ? "-ch" : "-ss";
           realStderr.println("[INFO] " + cmd + " diagnostics written to " + jsonLogPath);
         }
       }
-    }
-
-    if (cmdLine.hasOption("ch")) {
-      org.arend.frontend.symbol.ClassHierarchy.Parsed parsed =
-          org.arend.frontend.symbol.ClassHierarchy.parseArgs(cmdLine.getOptionValues("ch"));
-      if (parsed == null) return false;
-      org.arend.frontend.symbol.ClassHierarchy.run(parsed.spec(), parsed.options(),
-          requestedLibraries, libraryManager, server, mySystemErrErrorReporter);
-      return !myExitWithError;
-    }
-
-    if (cmdLine.hasOption("sc")) {
-      org.arend.frontend.symbol.ReferableScope.Parsed parsed =
-          org.arend.frontend.symbol.ReferableScope.parseArgs(cmdLine.getOptionValues("sc"));
-      if (parsed == null) return false;
-      org.arend.frontend.symbol.ReferableScope.run(parsed.spec(), parsed.pattern(), parsed.options(),
-          requestedLibraries, libraryManager, server, mySystemErrErrorReporter);
-      return !myExitWithError;
     }
 
     TimedProgressReporter timedProgressReporter = cmdLine.hasOption(SHOW_TIMES) ? new TimedProgressReporter() : null;

@@ -88,7 +88,7 @@ public final class ResultJson {
   }
 
   /** Minimal RFC-8259 string escaping (backslashes are common in Arend signatures). */
-  private static String escape(String s) {
+  public static String escape(String s) {
     StringBuilder b = new StringBuilder(s.length() + 8);
     for (int i = 0; i < s.length(); i++) {
       char c = s.charAt(i);

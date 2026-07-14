@@ -5,9 +5,12 @@ import org.antlr.v4.runtime.BaseErrorListener;
 import org.antlr.v4.runtime.CharStreams;
 import org.antlr.v4.runtime.CommonTokenStream;
 import org.arend.frontend.ConsoleHelp;
+import org.arend.frontend.symbol.ClassHierarchy;
 import org.arend.frontend.symbol.ProofSearch;
+import org.arend.frontend.symbol.ReferableScope;
 import org.arend.frontend.symbol.SymbolSearch;
 import org.arend.frontend.symbol.UsageSearch;
+import org.arend.naming.scope.Scope;
 import org.arend.ext.core.ops.NormalizationMode;
 import org.arend.ext.error.ErrorReporter;
 import org.arend.ext.error.GeneralError;
@@ -208,6 +211,12 @@ public abstract class CommonCliRepl extends Repl {
     FindUsagesCommand findUsages = new FindUsagesCommand();
     registerAction("find-usages", findUsages);
     registerAction("fu", findUsages);
+    ClassHierarchyCommand classHierarchy = new ClassHierarchyCommand();
+    registerAction("class-hierarchy", classHierarchy);
+    registerAction("ch", classHierarchy);
+    ScopeCommand scope = new ScopeCommand();
+    registerAction("scope", scope);
+    registerAction("sc", scope);
   }
 
   /**
@@ -587,6 +596,134 @@ public abstract class CommonCliRepl extends Repl {
         if (parsed != null) {
           parsed.options().excludeLibraries.add(REPL_NAME);
           UsageSearch.run(parsed.spec(), parsed.options(), libs, manager, myServer, errorReporter, capture);
+        }
+      } finally {
+        System.setOut(realOut);
+        System.setErr(realErr);
+      }
+      print(buffer.toString(StandardCharsets.UTF_8));
+    }
+  }
+
+  /**
+   * {@code :class-hierarchy} / {@code :ch} {@code <CLASS> [option ...]} — same
+   * syntax and behaviour as the {@code -ch} CLI flag, over every library registered
+   * at the REPL. No {@code --json}. {@code :? ch} prints the help.
+   */
+  private final class ClassHierarchyCommand extends AliasableCommand {
+    ClassHierarchyCommand() {
+      super(new ArrayList<>());
+    }
+
+    @Override
+    public @Nls(capitalization = Nls.Capitalization.Sentence) @NotNull String description() {
+      return "Print the inheritance lattice around a class plus its \\instance / \\new sites (`:? ch` for the full grammar)";
+    }
+
+    @Override
+    public @Nls @NotNull String help(@NotNull Repl api) {
+      return ConsoleHelp.classHierarchyHelp();
+    }
+
+    @Override
+    public void invoke(@NotNull String line, @NotNull Repl api, @NotNull Supplier<@NotNull String> scanner) {
+      LibraryManager manager = libraryManager();
+      if (manager == null) {
+        eprintln("[ERROR] Class hierarchy is unavailable (no library manager on this server).");
+        return;
+      }
+      // The synthetic REPL library mirrors the real ones, so keeping it in scope
+      // would duplicate every class; drop it (as :ss / :ps / :fu do).
+      List<SourceLibrary> libs = new ArrayList<>();
+      for (String name : manager.getLibraries()) {
+        if (name.equals(REPL_NAME)) continue;
+        SourceLibrary lib = manager.getLibrary(name);
+        if (lib != null) libs.add(lib);
+      }
+
+      // ClassHierarchy writes results to the given stream and [INFO]/[WARN] chatter to
+      // System.out/System.err; capture all of it and forward through the REPL's own
+      // stream. No JSON in the REPL.
+      ByteArrayOutputStream buffer = new ByteArrayOutputStream();
+      PrintStream capture = new PrintStream(buffer, true, StandardCharsets.UTF_8);
+      PrintStream realOut = System.out, realErr = System.err;
+      System.setOut(capture);
+      System.setErr(capture);
+      try {
+        ClassHierarchy.Parsed parsed = ClassHierarchy.parseArgs(tokenizeArgs(line).toArray(new String[0]));
+        if (parsed != null) {
+          parsed.options().excludeLibraries.add(REPL_NAME);
+          ClassHierarchy.run(parsed.spec(), parsed.options(), libs, manager, myServer, errorReporter, capture);
+        }
+      } finally {
+        System.setOut(realOut);
+        System.setErr(realErr);
+      }
+      print(buffer.toString(StandardCharsets.UTF_8));
+    }
+  }
+
+  /**
+   * {@code :scope} / {@code :sc} {@code [<CLASS> [<PATTERN>] [option ...]]} — same
+   * syntax and behaviour as the {@code -sc} CLI flag when given a spec; with NO
+   * argument, plain {@code :sc} dumps the current session scope (Prelude + the REPL
+   * module + everything imported). No {@code --json}. {@code :? sc} prints the help.
+   */
+  private final class ScopeCommand extends AliasableCommand {
+    ScopeCommand() {
+      super(new ArrayList<>());
+    }
+
+    @Override
+    public @Nls(capitalization = Nls.Capitalization.Sentence) @NotNull String description() {
+      return "Dump the ambient scope at a referable (`:sc <spec>`), or the current session scope (plain `:sc`); `:? sc` for the grammar";
+    }
+
+    @Override
+    public @Nls @NotNull String help(@NotNull Repl api) {
+      return ConsoleHelp.scopeHelp();
+    }
+
+    @Override
+    public void invoke(@NotNull String line, @NotNull Repl api, @NotNull Supplier<@NotNull String> scanner) {
+      LibraryManager manager = libraryManager();
+      if (manager == null) {
+        eprintln("[ERROR] Scope dump is unavailable (no library manager on this server).");
+        return;
+      }
+      // The synthetic REPL library mirrors the real ones, so keeping it in scope
+      // would make bare-name resolution ambiguous; drop it (as :ss / :ps / :fu / :ch do).
+      List<SourceLibrary> libs = new ArrayList<>();
+      for (String name : manager.getLibraries()) {
+        if (name.equals(REPL_NAME)) continue;
+        SourceLibrary lib = manager.getLibrary(name);
+        if (lib != null) libs.add(lib);
+      }
+
+      // ReferableScope writes results to the given stream and [INFO]/[WARN] chatter
+      // to System.out/System.err; capture all of it and forward. No JSON in the REPL.
+      ByteArrayOutputStream buffer = new ByteArrayOutputStream();
+      PrintStream capture = new PrintStream(buffer, true, StandardCharsets.UTF_8);
+      PrintStream realOut = System.out, realErr = System.err;
+      System.setOut(capture);
+      System.setErr(capture);
+      try {
+        List<String> tokens = tokenizeArgs(line);
+        if (tokens.isEmpty()) {
+          // Plain `:sc`: dump the current session scope directly.
+          Scope scope = getServerScope();
+          if (scope == null) {
+            eprintln("[ERROR] No current scope available.");
+          } else {
+            ReferableScope.runCurrentScope(scope, null, new ReferableScope.Options(), libs, capture);
+          }
+        } else {
+          ReferableScope.Parsed parsed = ReferableScope.parseArgs(tokens.toArray(new String[0]));
+          if (parsed != null) {
+            parsed.options().excludeLibraries.add(REPL_NAME);
+            ReferableScope.run(parsed.spec(), parsed.pattern(), parsed.options(),
+                libs, manager, myServer, errorReporter, capture);
+          }
         }
       } finally {
         System.setOut(realOut);

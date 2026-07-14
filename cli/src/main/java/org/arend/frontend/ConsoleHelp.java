@@ -40,7 +40,7 @@ public final class ConsoleHelp {
 
   // BODY: shared verbatim by the CLI and the REPL.
   private static final String SS_BODY = """
-      Find definitions by SHORT NAME across the loaded libraries. Prints each match's
+      Find definitions by NAME across the loaded libraries. Prints each match's
       location, full name, kind, and one-line signature. Fast: served from a
       per-library on-disk index that re-parses only changed files.
 
@@ -71,7 +71,6 @@ public final class ConsoleHelp {
         limit=N            cap matches; 0 = unlimited (default 200)
         kind=k,...         keep only these kinds: func sfunc lemma type axiom instance
                            coclause coerce level data cons class record field meta
-        contains=<text>    extra substring filter on the short name; repeatable
 
       SCOPE is every loaded library (the LIBRARY positionals + their dependencies +
       prelude); to search less, load less. Matches are ordered shortest-name-first
@@ -93,7 +92,6 @@ public final class ConsoleHelp {
         arend arend-lib -ss glob:pmap                 exact name
         arend arend-lib -ss 'glob:*-comm'             names ending in -comm
         arend arend-lib -ss hb:PAM                    humpback -> PosetAddMonoid
-        arend arend-lib -ss Monoid -ss contains=Add   'Monoid' AND *Add* -> AddMonoid
         arend arend-lib -ss Ring -ss kind=class
         arend arend-lib -ss "pmap transport"          OR two names
         arend arend-lib -ss 're:comm$'                names ending in "comm"
@@ -111,7 +109,6 @@ public final class ConsoleHelp {
         :ss glob:pmap              exact name
         :ss glob:*-comm            names ending in -comm
         :ss hb:PAM                 humpback -> PosetAddMonoid
-        :ss Monoid contains=Add    'Monoid' AND *Add* -> AddMonoid
         :ss Ring kind=class
         :ss pmap transport         OR two names
         :ss re:comm$               names ending in "comm"
@@ -298,11 +295,20 @@ public final class ConsoleHelp {
                             NEW         lib::M:C  abs:line:col  impl=...  miss=...
         limit=N           cap printed instance / new lines (default 200; 0 = all)
 
+      With --json the hierarchy is one object on stdout, mirroring the trees:
+        {"target":{name,kind,location}, "superclasses":[<node>..], "subclasses":[<node>..],
+         "instances":[{instance,class,location}..], "newSites":[{class,location,impl,missing}..],
+         "counts":{instances,newSites}}
+      where a <node> is {name, location[, record][, fields][, repeat], children:[<node>..]}
+      (children = parents in superclasses / children in subclasses; repeat flags a diamond).
+      Diagnostics go to a log file (as with --json -ss). up/down/no-instances/no-news/limit apply.
+
       EXAMPLES
         arend -L libs my-lib -ch 'CMonoid'
         arend -L libs my-lib -ch 'Algebra.Monoid:CMonoid' -ch with-fields
         arend -L libs my-lib -ch 'BaseSet' -ch down
         arend -L libs my-lib -ch 'Monoid' -ch format=flat -ch up
+        arend -L libs my-lib -ch 'Monoid' --json
 
       Implicit instances inferred during typechecking are NOT shown -- they have no source declaration.
       Use -fu on the class itself to see all reference sites instead.
@@ -337,11 +343,20 @@ public final class ConsoleHelp {
         (the LIBRARY:: prefix appears only when more than one library is in scope;
          locally-bound referables that have no global location print as
             SHORT_NAME -> (local <RefType>))
+        With --json the scope is one object {"target":..,"entries":[{name,context,
+        kind,module,longName[,library]} | {name,context,local:true,refType}],"count":N}
+        on stdout; diagnostics go to a log file (as with --json -ss).
+
+      In the REPL, `:sc` with NO argument dumps the current session scope (Prelude +
+      the REPL module + everything you have imported); `:sc <REFERABLE> ...` behaves
+      as above. The context= tokens and a <PATTERN> apply to the spec form only.
 
       EXAMPLES
         arend -L libs my-lib -sc 'Algebra.Monoid:Monoid'
         arend -L libs my-lib -sc 'Monoid' 'hb:CM'
         arend -L libs my-lib -sc 'Algebra.Monoid:Monoid' context=all
+        arend -L libs my-lib -sc 'Algebra.Monoid:Monoid' --json
+        :sc                                    (REPL) dump the current session scope
       """;
 
   static void printSymbolSearch() {
@@ -370,8 +385,18 @@ public final class ConsoleHelp {
     printTopicHelp(CLASS_HIERARCHY_HELP);
   }
 
+  /** The {@code -ch} / {@code :class-hierarchy} help text (shared by the CLI and the REPL). */
+  public static String classHierarchyHelp() {
+    return CLASS_HIERARCHY_HELP;
+  }
+
   static void printScope() {
     printTopicHelp(SCOPE_HELP);
+  }
+
+  /** The {@code -sc} / {@code :scope} help text (shared by the CLI and the REPL). */
+  public static String scopeHelp() {
+    return SCOPE_HELP;
   }
 
 

@@ -24,6 +24,7 @@ import org.arend.util.FileUtils;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.io.PrintStream;
 import java.nio.file.Path;
 import java.util.*;
 
@@ -61,6 +62,14 @@ public final class ClassHierarchy {
     public boolean withTests = false;
     public int limit = 200;
     public @Nullable Set<String> onlyLibraries = null;
+    /** Emit the hierarchy as a single JSON object instead of the human-readable tree/flat listing. */
+    public boolean json = false;
+    /**
+     * Library names to drop from the search scope. Set programmatically (not from a
+     * user token): the REPL uses it to exclude its synthetic {@code Repl} library,
+     * which mirrors the real ones and would otherwise duplicate every class.
+     */
+    public final Set<String> excludeLibraries = new HashSet<>();
   }
 
   public record Parsed(String spec, Options options) {}
@@ -116,10 +125,12 @@ public final class ClassHierarchy {
                         @NotNull List<SourceLibrary> requestedLibraries,
                         @NotNull LibraryManager libraryManager,
                         @NotNull ArendServer server,
-                        @NotNull ErrorReporter errorReporter) {
+                        @NotNull ErrorReporter errorReporter,
+                        @NotNull PrintStream out) {
     List<SourceLibrary> libsInScope = librariesInScope(requestedLibraries, libraryManager, options);
     if (libsInScope.isEmpty()) {
       System.err.println("[ERROR] No libraries in scope.");
+      if (options.json) writeEmptyJson(out);
       return 0;
     }
     boolean showLibrary = QualifiedName.showLibrary(libsInScope);
@@ -147,10 +158,14 @@ public final class ClassHierarchy {
 
     // 2) Resolve target spec: qualified, or bare-name via index.
     ResolvedTarget target = resolveTarget(spec, server, libsInScope, indexes, showLibrary);
-    if (target == null) return 0;
+    if (target == null) {
+      if (options.json) writeEmptyJson(out);
+      return 0;
+    }
     SymbolIndex.Kind targetKind = target.kind;
     if (targetKind != SymbolIndex.Kind.CLASS && targetKind != SymbolIndex.Kind.RECORD) {
       System.err.println("[ERROR] " + target.fullLabel() + " is " + targetKind + ", not a class/record.");
+      if (options.json) writeEmptyJson(out);
       return 0;
     }
 
@@ -224,6 +239,10 @@ public final class ClassHierarchy {
     }
 
     // 5) Print.
+    if (options.json) {
+      writeJson(out, target, graph, moduleOf, newCollector, instanceCollector, options, libraryManager);
+      return 0;
+    }
     Printer printer = options.format == Format.FLAT ? new FlatPrinter() : new TreePrinter();
     printer.print(target, graph, moduleOf, newCollector, instanceCollector,
         options, libraryManager);
@@ -869,10 +888,174 @@ public final class ClassHierarchy {
     return String.join(",", new TreeSet<>(set));
   }
 
+  // ---- JSON output -------------------------------------------------------
+
+  /**
+   * Emits the hierarchy as one JSON object on {@code out}, mirroring the trees:
+   * {@code {"target": {...}, "superclasses": [<node>...], "subclasses": [<node>...],
+   * "instances": [...], "newSites": [...], "counts": {...}}}. A tree node is
+   * {@code {"name","location"[,"record"][,"fields"][,"repeat"],"children":[...]}}
+   * where {@code children} are the node's parents (in {@code superclasses}) or its
+   * children (in {@code subclasses}); a diamond repeat is flagged {@code "repeat":
+   * true} with empty children, mirroring the text tree's "…". {@code superclasses}
+   * / {@code subclasses} follow the up/down direction; {@code instances} /
+   * {@code newSites} honour no-instances/no-news and are truncated to {@code limit}
+   * (full totals are in {@code counts}).
+   */
+  private static void writeJson(PrintStream out, ResolvedTarget target,
+      Map<LocatedReferable, ClassNode> graph, Map<LocatedReferable, ModuleLocation> moduleOf,
+      NewSiteCollector newCollector, InstanceCollector instanceCollector,
+      Options options, LibraryManager lm) {
+    boolean showLibrary = target.showLibrary;
+    ClassNode root = graph.get(target.referable);
+    List<String> parts = new ArrayList<>();
+
+    int[] tpos = posOf(target.referable);
+    parts.add("\"target\": {\"name\":" + jsonStr(target.fullLabel())
+        + ",\"kind\":" + jsonStr(target.kind.name())
+        + ",\"location\":" + jsonLocation(target.module, tpos[0], tpos[1], lm) + "}");
+
+    if (options.direction != Direction.DOWN) {
+      Set<LocatedReferable> seen = new HashSet<>();
+      seen.add(target.referable);
+      List<String> trees = new ArrayList<>();
+      if (root != null) {
+        for (LocatedReferable p : root.directParents) {
+          if (graph.get(p) != null) trees.add(buildTree(p, true, graph, moduleOf, seen, options, lm, showLibrary));
+        }
+      }
+      parts.add("\"superclasses\": " + jsonArray(trees));
+    }
+    if (options.direction != Direction.UP) {
+      Set<LocatedReferable> seen = new HashSet<>();
+      seen.add(target.referable);
+      List<LocatedReferable> kids = root == null ? new ArrayList<>() : new ArrayList<>(root.directChildren);
+      kids.sort(Comparator.comparing(r -> r.getRefLongName().toString()));
+      List<String> trees = new ArrayList<>();
+      for (LocatedReferable c : kids) {
+        if (graph.get(c) != null) trees.add(buildTree(c, false, graph, moduleOf, seen, options, lm, showLibrary));
+      }
+      parts.add("\"subclasses\": " + jsonArray(trees));
+    }
+
+    List<String> countParts = new ArrayList<>();
+    if (!options.noInstances) {
+      Set<LocatedReferable> closure = subclassClosure(target.referable, graph, options.direction);
+      List<InstanceSite> insts = new ArrayList<>();
+      for (InstanceSite s : instanceCollector.sites) if (closure.contains(s.targetClass())) insts.add(s);
+      insts.sort(Comparator.comparing((InstanceSite s) -> sortKeyPath(s.module(), lm))
+          .thenComparingInt(InstanceSite::line).thenComparingInt(InstanceSite::column));
+      List<String> rows = new ArrayList<>();
+      for (InstanceSite s : limited(insts, options.limit)) {
+        rows.add("{\"instance\":" + jsonStr(s.instanceRef().textRepresentation())
+            + ",\"class\":" + jsonStr(qualifiedLabel(s.targetClass(), moduleOf, lm, showLibrary))
+            + ",\"location\":" + jsonLocation(s.module(), s.line(), s.column(), lm) + "}");
+      }
+      parts.add("\"instances\": " + jsonArray(rows));
+      countParts.add("\"instances\":" + insts.size());
+    }
+    if (!options.noNews) {
+      Set<LocatedReferable> closure = subclassClosure(target.referable, graph, options.direction);
+      List<NewSite> news = new ArrayList<>();
+      for (NewSite s : newCollector.sites) if (closure.contains(s.targetClass())) news.add(s);
+      news.sort(Comparator.comparing((NewSite s) -> sortKeyPath(s.module(), lm))
+          .thenComparingInt(NewSite::line).thenComparingInt(NewSite::column));
+      List<String> rows = new ArrayList<>();
+      for (NewSite s : limited(news, options.limit)) {
+        Set<String> missing = new LinkedHashSet<>(transitiveFields(s.targetClass(), graph));
+        missing.removeAll(s.implementedFieldNames());
+        rows.add("{\"class\":" + jsonStr(qualifiedLabel(s.targetClass(), moduleOf, lm, showLibrary))
+            + ",\"location\":" + jsonLocation(s.module(), s.line(), s.column(), lm)
+            + ",\"impl\":" + jsonStrArray(new TreeSet<>(s.implementedFieldNames()))
+            + ",\"missing\":" + jsonStrArray(new TreeSet<>(missing)) + "}");
+      }
+      parts.add("\"newSites\": " + jsonArray(rows));
+      countParts.add("\"newSites\":" + news.size());
+    }
+    parts.add("\"counts\": {" + String.join(",", countParts) + "}");
+
+    out.println("{\n  " + String.join(",\n  ", parts) + "\n}");
+  }
+
+  private static <T> List<T> limited(List<T> list, int limit) {
+    return (limit > 0 && list.size() > limit) ? list.subList(0, limit) : list;
+  }
+
+  private static String buildTree(LocatedReferable ref, boolean superDir,
+      Map<LocatedReferable, ClassNode> graph, Map<LocatedReferable, ModuleLocation> moduleOf,
+      Set<LocatedReferable> seen, Options options, LibraryManager lm, boolean showLibrary) {
+    ClassNode node = graph.get(ref);
+    boolean repeat = !seen.add(ref);
+    StringBuilder sb = new StringBuilder("{");
+    sb.append("\"name\":").append(jsonStr(qualifiedLabel(ref, moduleOf, lm, showLibrary)));
+    int[] pos = posOf(ref);
+    sb.append(",\"location\":").append(jsonLocation(moduleOf.get(ref), pos[0], pos[1], lm));
+    if (node != null && node.isRecord) sb.append(",\"record\":true");
+    if (options.withFields && node != null && !node.directFieldNames.isEmpty()) {
+      sb.append(",\"fields\":").append(jsonStrArray(new TreeSet<>(node.directFieldNames)));
+    }
+    if (repeat) return sb.append(",\"repeat\":true,\"children\":[]}").toString();
+    List<LocatedReferable> next;
+    if (superDir) {
+      next = node == null ? List.of() : node.directParents;
+    } else {
+      next = node == null ? new ArrayList<>() : new ArrayList<>(node.directChildren);
+      next.sort(Comparator.comparing(r -> r.getRefLongName().toString()));
+    }
+    sb.append(",\"children\":[");
+    boolean first = true;
+    for (LocatedReferable child : next) {
+      if (graph.get(child) == null) continue;
+      if (!first) sb.append(',');
+      sb.append(buildTree(child, superDir, graph, moduleOf, seen, options, lm, showLibrary));
+      first = false;
+    }
+    return sb.append("]}").toString();
+  }
+
+  private static String jsonLocation(@Nullable ModuleLocation moduleLoc, int line, int col, LibraryManager lm) {
+    StringBuilder sb = new StringBuilder("{");
+    if (moduleLoc != null) {
+      Path src = sourcePathFor(lm.getLibrary(moduleLoc.getLibraryName()), moduleLoc);
+      String file = src != null ? PathDisplay.shorten(src, lm)
+          : moduleLoc.getLibraryName() + ":" + moduleLoc.getModulePath();
+      sb.append("\"file\":").append(jsonStr(file)).append(',');
+    }
+    return sb.append("\"line\":").append(line).append(",\"col\":").append(col).append('}').toString();
+  }
+
+  private static String jsonStr(String s) {
+    return "\"" + ResultJson.escape(s) + "\"";
+  }
+
+  private static String jsonStrArray(Collection<String> items) {
+    if (items.isEmpty()) return "[]";
+    StringBuilder sb = new StringBuilder("[");
+    boolean first = true;
+    for (String s : items) {
+      if (!first) sb.append(',');
+      sb.append(jsonStr(s));
+      first = false;
+    }
+    return sb.append(']').toString();
+  }
+
+  /** Wraps pre-rendered object strings, one per line, at the top-level array indent. */
+  private static String jsonArray(List<String> objs) {
+    if (objs.isEmpty()) return "[]";
+    return "[\n    " + String.join(",\n    ", objs) + "\n  ]";
+  }
+
+  private static void writeEmptyJson(PrintStream out) {
+    out.println("{\"target\": null, \"superclasses\": [], \"subclasses\": [], "
+        + "\"instances\": [], \"newSites\": [], \"counts\": {}}");
+  }
+
   private static List<SourceLibrary> librariesInScope(
       List<SourceLibrary> requested, LibraryManager manager, Options opts) {
     List<SourceLibrary> all = new ArrayList<>();
     for (String name : manager.getLibraries()) {
+      if (opts.excludeLibraries.contains(name)) continue;
       SourceLibrary lib = manager.getLibrary(name);
       if (lib != null) all.add(lib);
     }

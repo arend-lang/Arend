@@ -17,6 +17,7 @@ import org.arend.util.FileUtils;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.io.PrintStream;
 import java.util.*;
 
 /**
@@ -40,6 +41,15 @@ public final class ReferableScope {
   public static final class Options {
     // No context= token: static and dynamic entries merged into one sorted list.
     public Ctx context = Ctx.STATIC_AND_DYNAMIC;
+    /** Emit the scope as a single JSON object instead of the human-readable listing. */
+    public boolean json = false;
+    /**
+     * Library names to drop from the search scope. Set programmatically (not from a
+     * user token): the REPL uses it to exclude its synthetic {@code Repl} library,
+     * which mirrors the real ones and would otherwise make bare-name resolution
+     * ambiguous.
+     */
+    public final Set<String> excludeLibraries = new HashSet<>();
   }
 
   public record Parsed(@NotNull String spec, @Nullable SymbolPattern pattern, @NotNull Options options) {}
@@ -96,10 +106,12 @@ public final class ReferableScope {
                         @NotNull List<SourceLibrary> requestedLibraries,
                         @NotNull LibraryManager libraryManager,
                         @NotNull ArendServer server,
-                        @NotNull ErrorReporter errorReporter) {
-    List<SourceLibrary> libsInScope = librariesInScope(libraryManager);
+                        @NotNull ErrorReporter errorReporter,
+                        @NotNull PrintStream out) {
+    List<SourceLibrary> libsInScope = librariesInScope(libraryManager, options);
     if (libsInScope.isEmpty()) {
       System.err.println("[ERROR] No libraries in scope.");
+      if (options.json) writeJson(out, null, List.of());
       return 0;
     }
     boolean showLibrary = QualifiedName.showLibrary(libsInScope);
@@ -121,15 +133,43 @@ public final class ReferableScope {
     }
 
     Resolved target = resolveTarget(spec, server, libsInScope, indexes, showLibrary);
-    if (target == null) return 0;
+    if (target == null) {
+      if (options.json) writeJson(out, null, List.of());
+      return 0;
+    }
 
     Scope scope = server.getReferableScope(target.referable);
     if (scope == null) {
       System.err.println("[ERROR] No scope available at " + label(target, showLibrary));
+      if (options.json) writeJson(out, label(target, showLibrary), List.of());
       return 0;
     }
 
-    System.out.println("--- Scope at " + label(target, showLibrary) + " ---");
+    return dumpScope(scope, label(target, showLibrary), pattern, options, showLibrary, out);
+  }
+
+  /**
+   * REPL entry point for {@code :sc} with no spec: dumps the caller-supplied
+   * current session {@code scope} directly, skipping target resolution and index
+   * refresh. {@code libsInScope} only decides whether the {@code LIBRARY::} prefix
+   * is shown.
+   */
+  public static int runCurrentScope(@NotNull Scope scope, @Nullable SymbolPattern pattern,
+      @NotNull Options options, @NotNull List<SourceLibrary> libsInScope, @NotNull PrintStream out) {
+    return dumpScope(scope, "current REPL scope", pattern, options,
+        QualifiedName.showLibrary(libsInScope), out);
+  }
+
+  /**
+   * Dumps {@code scope} under the header/target {@code targetLabel}, honouring the
+   * context selection, optional {@code pattern} filter and JSON mode. Shared by the
+   * {@code -sc <spec>} path and the REPL {@code :sc} current-scope path.
+   */
+  private static int dumpScope(@NotNull Scope scope, @NotNull String targetLabel,
+      @Nullable SymbolPattern pattern, @NotNull Options options, boolean showLibrary, @NotNull PrintStream out) {
+    if (options.json) return runJson(scope, targetLabel, pattern, options, showLibrary, out);
+
+    System.out.println("--- Scope at " + targetLabel + " ---");
     int total = 0;
     int matched = 0;
     if (options.context == Ctx.ALL) {
@@ -144,12 +184,12 @@ public final class ReferableScope {
       List<Referable> elements = new ArrayList<>();
       elements.addAll(scope.getElements(ScopeContext.STATIC));
       elements.addAll(scope.getElements(ScopeContext.DYNAMIC));
-      total = elements.size();
+      total = distinctCount(elements, showLibrary);
       matched = printEntries(elements, pattern, showLibrary);
     } else {
       ScopeContext ctx = options.context == Ctx.DYNAMIC ? ScopeContext.DYNAMIC : ScopeContext.STATIC;
       Collection<? extends Referable> elements = scope.getElements(ctx);
-      total = elements.size();
+      total = distinctCount(elements, showLibrary);
       matched = printEntries(elements, pattern, showLibrary);
     }
 
@@ -172,16 +212,25 @@ public final class ReferableScope {
 
   private static int printEntries(Collection<? extends Referable> elements,
       @Nullable SymbolPattern pattern, boolean showLibrary) {
-    // Sort by short name (then full line) so the dump has a stable, readable
-    // order independent of the scope's internal iteration order.
-    List<String> lines = new ArrayList<>();
+    // Sort by short name (then full line) so the dump has a stable, readable order,
+    // and dedup identical lines: a merged scope (e.g. the REPL's, or STATIC+DYNAMIC)
+    // can surface the same binding twice.
+    Set<String> lines = new LinkedHashSet<>();
     for (Referable ref : elements) {
       String name = ref.textRepresentation();
       if (pattern != null && !pattern.matches(name)) continue;
       lines.add(name + " -> " + targetLabel(ref, showLibrary));
     }
-    lines.sort(String.CASE_INSENSITIVE_ORDER);
-    for (String line : lines) System.out.println(line);
+    List<String> sorted = new ArrayList<>(lines);
+    sorted.sort(String.CASE_INSENSITIVE_ORDER);
+    for (String line : sorted) System.out.println(line);
+    return sorted.size();
+  }
+
+  /** Number of DISTINCT rendered entries (same key used by {@link #printEntries}), unfiltered. */
+  private static int distinctCount(Collection<? extends Referable> elements, boolean showLibrary) {
+    Set<String> lines = new HashSet<>();
+    for (Referable ref : elements) lines.add(ref.textRepresentation() + " -> " + targetLabel(ref, showLibrary));
     return lines.size();
   }
 
@@ -194,6 +243,89 @@ public final class ReferableScope {
           ln.toString()) + " [" + lr.getKind() + "]";
     }
     return "(local " + ref.getClass().getSimpleName() + ")";
+  }
+
+  // ---- JSON output -------------------------------------------------------
+
+  /** One rendered scope entry plus its in-scope name, used to sort the JSON array deterministically. */
+  private record JsonRow(String name, String body) {}
+
+  /**
+   * Emits {@code {"target": "...", "entries": [...], "count": N}} on {@code out}.
+   * Each entry carries the in-scope {@code name} (the key you would write to
+   * reference it here), the {@code context} it lives in (STATIC/DYNAMIC/PLEVEL/
+   * HLEVEL), and either the resolved target ({@code kind}, {@code module},
+   * {@code longName}, optional {@code library}) or {@code "local": true} with a
+   * {@code refType} for locally-bound referables that have no global location.
+   */
+  private static int runJson(Scope scope, String targetLabel, @Nullable SymbolPattern pattern,
+                             Options options, boolean showLibrary, PrintStream out) {
+    List<JsonRow> rows = new ArrayList<>();
+    if (options.context == Ctx.ALL) {
+      collectJson(scope, ScopeContext.STATIC,  "STATIC",  pattern, showLibrary, rows);
+      collectJson(scope, ScopeContext.DYNAMIC, "DYNAMIC", pattern, showLibrary, rows);
+      collectJson(scope, ScopeContext.PLEVEL,  "PLEVEL",  pattern, showLibrary, rows);
+      collectJson(scope, ScopeContext.HLEVEL,  "HLEVEL",  pattern, showLibrary, rows);
+    } else if (options.context == Ctx.STATIC_AND_DYNAMIC) {
+      collectJson(scope, ScopeContext.STATIC,  "STATIC",  pattern, showLibrary, rows);
+      collectJson(scope, ScopeContext.DYNAMIC, "DYNAMIC", pattern, showLibrary, rows);
+    } else {
+      ScopeContext ctx = options.context == Ctx.DYNAMIC ? ScopeContext.DYNAMIC : ScopeContext.STATIC;
+      collectJson(scope, ctx, ctx.name(), pattern, showLibrary, rows);
+    }
+    // Dedup identical entries (a merged scope can surface the same binding twice);
+    // entries in different contexts keep distinct bodies, so they survive.
+    LinkedHashMap<String, JsonRow> uniq = new LinkedHashMap<>();
+    for (JsonRow r : rows) uniq.putIfAbsent(r.body(), r);
+    rows = new ArrayList<>(uniq.values());
+    // Same order as the text dump: by in-scope name (case-insensitive), then body.
+    rows.sort(Comparator.comparing(JsonRow::name, String.CASE_INSENSITIVE_ORDER).thenComparing(JsonRow::body));
+    writeJson(out, targetLabel, rows);
+    return rows.size();
+  }
+
+  private static void collectJson(Scope scope, ScopeContext ctx, String context,
+      @Nullable SymbolPattern pattern, boolean showLibrary, List<JsonRow> rows) {
+    for (Referable ref : scope.getElements(ctx)) {
+      String name = ref.textRepresentation();
+      if (pattern != null && !pattern.matches(name)) continue;
+      rows.add(new JsonRow(name, jsonEntry(context, ref, showLibrary)));
+    }
+  }
+
+  private static String jsonEntry(String context, Referable ref, boolean showLibrary) {
+    StringBuilder sb = new StringBuilder("{");
+    sb.append("\"name\":\"").append(ResultJson.escape(ref.textRepresentation())).append('"');
+    sb.append(",\"context\":\"").append(context).append('"');
+    if (ref instanceof LocatedReferable lr) {
+      sb.append(",\"kind\":\"").append(ResultJson.escape(String.valueOf(lr.getKind()))).append('"');
+      ModuleLocation loc = lr.getLocation();
+      if (loc != null) {
+        if (showLibrary) sb.append(",\"library\":\"").append(ResultJson.escape(loc.getLibraryName())).append('"');
+        sb.append(",\"module\":\"").append(ResultJson.escape(loc.getModulePath().toString())).append('"');
+      }
+      sb.append(",\"longName\":\"").append(ResultJson.escape(lr.getRefLongName().toString())).append('"');
+    } else {
+      sb.append(",\"local\":true,\"refType\":\"").append(ResultJson.escape(ref.getClass().getSimpleName())).append('"');
+    }
+    return sb.append('}').toString();
+  }
+
+  private static void writeJson(PrintStream out, @Nullable String target, List<JsonRow> rows) {
+    String targetField = target == null ? "" : "\"target\": \"" + ResultJson.escape(target) + "\", ";
+    if (rows.isEmpty()) {
+      out.println("{" + targetField + "\"entries\": [], \"count\": 0}");
+      return;
+    }
+    out.println("{");
+    if (target != null) out.println("  \"target\": \"" + ResultJson.escape(target) + "\",");
+    out.println("  \"entries\": [");
+    for (int i = 0; i < rows.size(); i++) {
+      out.println("    " + rows.get(i).body() + (i < rows.size() - 1 ? "," : ""));
+    }
+    out.println("  ],");
+    out.println("  \"count\": " + rows.size());
+    out.println("}");
   }
 
   // ---- target resolution -------------------------------------------------
@@ -342,9 +474,10 @@ public final class ReferableScope {
     return null;
   }
 
-  private static List<SourceLibrary> librariesInScope(LibraryManager manager) {
+  private static List<SourceLibrary> librariesInScope(LibraryManager manager, Options options) {
     List<SourceLibrary> all = new ArrayList<>();
     for (String name : manager.getLibraries()) {
+      if (options.excludeLibraries.contains(name)) continue;
       SourceLibrary lib = manager.getLibrary(name);
       if (lib != null) all.add(lib);
     }
