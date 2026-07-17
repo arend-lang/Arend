@@ -118,7 +118,7 @@ public abstract class StreamBinarySource implements PersistableBinarySource {
         return false;
       }
 
-      ModuleProtos.Module module = new ModuleSerialization(errorReporter, new DependencyCollector(null)).writeModule(group, currentModule.getModulePath());
+      ModuleProtos.Module module = new ModuleSerialization(errorReporter, new DependencyCollector(server)).writeModule(group, currentModule.getModulePath());
       if (module == null) {
         return false;
       }

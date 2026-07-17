@@ -29,6 +29,7 @@ import org.arend.util.registerStudyLibrary
 import org.arend.util.unregister
 import org.arend.yaml.YAMLFileListener
 import com.jetbrains.edu.learning.StudyTaskManager
+import org.arend.typechecking.BinaryFileSaver
 
 
 class ArendStartupActivity : ProjectActivity {
@@ -117,6 +118,15 @@ class ArendStartupActivity : ProjectActivity {
                 }
 
                 super.onLibraryUpdated(libraryName)
+            }
+        })
+
+
+        project.messageBus.connect().subscribe(ProjectCloseListener.TOPIC, object : ProjectCloseListener {
+            override fun projectClosing(closedProject: Project) {
+                if (closedProject == project) {
+                    project.service<BinaryFileSaver>().saveAll()
+                }
             }
         })
 

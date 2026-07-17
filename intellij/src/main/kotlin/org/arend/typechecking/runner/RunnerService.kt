@@ -16,6 +16,7 @@ import org.arend.ext.module.ModuleLocation
 import org.arend.server.ArendServerRequesterImpl
 import org.arend.server.ArendServerService
 import org.arend.toolWindow.errors.ArendMessagesService
+import org.arend.typechecking.ArendBinaryCacheService
 import org.arend.typechecking.CoroutineCancellationIndicator
 import org.arend.typechecking.error.NotificationErrorReporter
 import org.arend.ext.module.FullName
@@ -29,17 +30,19 @@ class RunnerService(private val project: Project, private val coroutineScope: Co
         coroutineScope.launch {
             val message = module?.toString() ?: (library ?: "project")
             val server = project.service<ArendServerService>().server
-            // Snapshot the errors before the run. The resolve phase may clear stale errors (e.g.
-            // errors left under a recreated referable, or cascading errors whose real cause was
-            // fixed elsewhere) without any definition being re-typechecked afterwards (updated == 0).
-            // In that case we still have to refresh the editor highlighting, otherwise the red
-            // underlining of the (now removed) errors would linger until the next edit, even though
-            // the gutter status is already correct.
+
             fun errorSnapshot(): Map<ModuleLocation, List<Any>> =
                 if (module == null) server.errorMap.mapValues { ArrayList(it.value) }
                 else server.errorMap[module]?.let { mapOf(module to ArrayList(it)) } ?: emptyMap()
             val errorsBefore = errorSnapshot()
+
             withBackgroundProgress(project, "Checking $message") { reportSequentialProgress { reporter ->
+                var cacheLoaded = false
+                reporter.nextStep(1, "Loading binary cache") { reportRawProgress {
+                    val cacheLibrary = module?.libraryName ?: library
+                    cacheLoaded = cacheLibrary != null && project.service<ArendBinaryCacheService>().loadCache(cacheLibrary)
+                } }
+
                 val checker = reporter.nextStep(if (onlyResolve) 100 else 5, "Resolving $message") { reportRawProgress { reporter ->
                     if (module == null) {
                         ArendServerRequesterImpl(project).requestUpdate(server, library, isTest)
@@ -52,7 +55,6 @@ class RunnerService(private val project: Project, private val coroutineScope: Co
                 if (checkerFactory == null) withContext(Dispatchers.EDT) {
                     project.service<ArendMessagesService>().update()
                 }
-
                 val updated = if (onlyResolve) false else reporter.nextStep(100, "Typechecking $message") {
                     reportRawProgress { reporter ->
                         val indicator = IntellijProgressReporter<List<Concrete.ResolvableDefinition>>(reporter) {
@@ -71,7 +73,7 @@ class RunnerService(private val project: Project, private val coroutineScope: Co
                 }
 
                 val errorsChanged = checkerFactory == null && errorsBefore != errorSnapshot()
-                if ((updated || errorsChanged) && checkerFactory == null) {
+                if ((updated || errorsChanged || cacheLoaded) && checkerFactory == null) {
                     if (!ApplicationManager.getApplication().isUnitTestMode) {
                         DaemonCodeAnalyzer.getInstance(project).restart()
                     }
