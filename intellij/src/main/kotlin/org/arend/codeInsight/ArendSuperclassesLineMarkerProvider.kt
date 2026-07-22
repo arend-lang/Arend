@@ -10,6 +10,7 @@ import com.intellij.openapi.components.service
 import com.intellij.openapi.editor.markup.GutterIconRenderer
 import com.intellij.psi.PsiElement
 import com.intellij.ui.AnimatedIcon
+import org.arend.arc.ArcFile
 import org.arend.highlight.ArendSubclassesPass
 import org.arend.psi.ext.ArendDefClass
 import org.arend.psi.ext.ArendDefIdentifier
@@ -26,7 +27,7 @@ class ArendSuperclassesLineMarkerProvider : LineMarkerProviderDescriptor() {
         result: MutableCollection<in LineMarkerInfo<*>>
     ) {
         for (element in elements) {
-            if (element is ArendDefIdentifier && element.parent is ArendDefClass) {
+            if (element is ArendDefIdentifier && element.parent is ArendDefClass && element.containingFile !is ArcFile) {
                 val status = element.getUserData(ArendSubclassesPass.Companion.ArendSubclassesKey)
                 if (status == true) {
                     result.add(LineMarkerInfo(element.id, element.textRange, AllIcons.Gutter.OverridenMethod,

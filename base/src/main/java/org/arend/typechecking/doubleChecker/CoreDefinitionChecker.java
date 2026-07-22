@@ -55,6 +55,7 @@ public class CoreDefinitionChecker extends BaseDefinitionTypechecker {
     @Override public boolean solve(Expression expr1, Expression expr2, Expression type, CMP cmp, Concrete.SourceNode sourceNode) { return false; }
     @Override public boolean solve(org.arend.core.context.binding.inference.InferenceVariable var, Expression expr) { return false; }
     @Override public void solveLowerBounds(org.arend.core.context.binding.inference.InferenceVariable var) {}
+    @Override public void solveEquationsFor(org.arend.core.context.binding.inference.InferenceVariable var) {}
     @Override public boolean addEquation(Level expr1, Level expr2, CMP cmp, Concrete.SourceNode sourceNode) { return true; }
     @Override public boolean addVariable(org.arend.core.context.binding.inference.InferenceLevelVariable var) { return false; }
     @Override public void bindVariables(org.arend.core.context.binding.inference.InferenceLevelVariable pVar, org.arend.core.context.binding.inference.InferenceLevelVariable hVar) {}

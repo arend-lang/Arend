@@ -48,7 +48,7 @@
         <!-- File Type -->
 
         <fileType language="Arend" implementationClass="org.arend.ArendFileType" name="Arend" extensions="ard;ars" />
-        <fileType fieldName="INSTANCE" implementationClass="org.arend.psi.arc.ArcFileType" name="Arc" extensions="arc" />
+        <fileType fieldName="INSTANCE" implementationClass="org.arend.arc.ArcFileType" name="Arc" extensions="arc" />
         <internalFileTemplate name="Arend File"/>
         <internalFileTemplate name="Solution.ard"/>
         <internalFileTemplate name="Test.ard"/>

@@ -27,6 +27,7 @@ import org.jetbrains.annotations.Nullable;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.util.List;
 
 /**
  * Represents a source that loads a binary module from an {@link InputStream} and persists it to an {@link OutputStream}.
@@ -63,6 +64,10 @@ public abstract class StreamBinarySource implements PersistableBinarySource {
 
   @Override
   public @Nullable ConcreteGroup load(@NotNull ArendServer server, @NotNull ErrorReporter errorReporter) {
+    return loadWithImports(server, errorReporter).proj1;
+  }
+
+  public Pair<ConcreteGroup, List<ModulePath>> loadWithImports(@NotNull ArendServer server, @NotNull ErrorReporter errorReporter) {
     ModuleLocation module = getModule();
     try (InputStream inputStream = getInputStream()) {
       if (inputStream == null) return null;
@@ -79,7 +84,9 @@ public abstract class StreamBinarySource implements PersistableBinarySource {
       ModuleScopeProvider scopeProvider =
           server.getModuleScopeProvider(module.getLibraryName(), false);
       moduleDeserialization.readModule(scopeProvider, new DependencyCollector(null));
-      return group;
+      return new Pair<>(group, moduleProto.getModuleCallTargetsList().stream()
+              .map(target -> new ModulePath(target.getNameList()))
+              .filter(modulePath -> !modulePath.equals(module.getModulePath())).toList());
     } catch (IOException | DeserializationException e) {
       errorReporter.report(new ExceptionError(e, "loading", module.getModulePath()));
       return null;

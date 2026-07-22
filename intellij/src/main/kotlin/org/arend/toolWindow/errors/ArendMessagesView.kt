@@ -35,13 +35,11 @@ import org.arend.ArendIcons
 import org.arend.ext.error.GeneralError
 import org.arend.ext.error.LocalError
 import org.arend.ext.error.MissingClausesError
-import org.arend.injection.InjectedArendEditor
 import org.arend.ext.module.ModuleLocation
 import org.arend.ext.reference.ArendRef
 import org.arend.ext.reference.DataContainer
 import org.arend.psi.ArendFile
 import org.arend.psi.ancestor
-import org.arend.psi.arc.ArcFile
 import org.arend.psi.doc.ArendDocComment
 import org.arend.psi.ext.ArendGoal
 import org.arend.psi.ext.PsiLocatedReferable
