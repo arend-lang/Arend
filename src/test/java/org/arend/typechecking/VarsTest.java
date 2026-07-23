@@ -884,4 +884,13 @@ public class VarsTest extends TypeCheckingTestCase {
             | f (n : Nat) : Nat => g (\\lam x => x)
       """);
   }
+
+  @Test
+  public void levelsTest() {
+    typeCheckModule("""
+      \\func foo.{u} (X : \\Set u) => 0
+        \\where
+          \\func test (Y : \\Set u) => 1
+      """);
+  }
 }

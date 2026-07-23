@@ -183,6 +183,32 @@ public class WhereVarsFixVisitor extends BaseConcreteExpressionVisitor<Void> {
           }
         }
       }
+
+      if (definition.getLevelParameters() == null) {
+        Set<Referable> directLevelRefs = new HashSet<>();
+        definition.accept(new FindLevelVariablesVisitor(directLevelRefs), null);
+        directLevelRefs.removeIf(ref -> ref instanceof TCLevelReferable);
+        if (!directLevelRefs.isEmpty()) {
+          Set<TCDefReferable> pLevelsDefs = new HashSet<>();
+          Concrete.LevelParameters pLevels = null;
+          for (Map.Entry<TCDefReferable, Concrete.ExternalParameters> entry : definition.getExternalParameters().entrySet()) {
+            Concrete.LevelParameters candidate = entry.getValue().pLevelParameters();
+            if (candidate == null) continue;
+            for (LevelReferable levelReferable : candidate.referables) {
+              if (directLevelRefs.contains(levelReferable)) {
+                pLevelsDefs.add(entry.getKey());
+                if (pLevels == null) pLevels = candidate;
+                break;
+              }
+            }
+          }
+          checkLevels(pLevelsDefs, null, new LocalErrorReporter(definition.getData(), errorReporter), definition);
+          if (pLevels != null) {
+            definition.setLevelParameters(pLevels);
+          }
+        }
+      }
+
       if (!parametersOriginalDefinitions.isEmpty()) {
         paramsMap.put(definition.getData(), new Pair<>(newParams, parametersOriginalDefinitions));
       }
