@@ -1,6 +1,8 @@
 package org.arend.frontend.cli.commands;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.arend.core.definition.DataDefinition;
+import org.arend.core.expr.DefCallExpression;
 import org.arend.core.expr.Expression;
 import org.arend.ext.error.GeneralError;
 import org.arend.ext.module.FullName;
@@ -166,13 +168,24 @@ public final class TypeExpr {
       var result = checker.checkExpr(concreteExpr, null);
       if (result == null || !tcErrors.isEmpty()) {
         String errMsg = tcErrors.isEmpty() ? "Type inference failed" : tcErrors.get(0).toString();
-        System.err.println("[ERROR] " + errMsg);
+        System.err.println(errMsg);
         return false;
       }
 
       Expression type = result.type;
       Map<String, Object> output = new LinkedHashMap<>();
       output.put("type", type != null ? type.toString() : null);
+      if (type instanceof DefCallExpression defCall) {
+        if (defCall.getDefinition() instanceof DataDefinition dataDef) {
+          Map<String, Object> dataTypeMap = new LinkedHashMap<>();
+          var modulePath = dataDef.getRef().getModulePath();
+          if (modulePath != null) {
+            dataTypeMap.put("module", modulePath.toString());
+            dataTypeMap.put("typename", dataDef.getName());
+            output.put("datatype", dataTypeMap);
+          }
+        }
+      }
       System.out.println(MAPPER.writeValueAsString(output));
       return true;
 

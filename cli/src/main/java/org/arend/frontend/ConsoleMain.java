@@ -398,6 +398,9 @@ public class ConsoleMain {
           .desc("return JSON signature info with parameter classification (propositional/explicit).").build());
       cmdOptions.addOption(Option.builder("te").longOpt("type-expr").hasArgs().argName("MODULE:DEF GOAL_ID EXPR")
           .desc("infer the type of an expression in a goal's context, return as JSON.").build());
+      cmdOptions.addOption(Option.builder("gs").longOpt("get-scope").hasArgs().argName("MODULE:DEF GOAL_ID")
+        .desc("return the scope of a given goal as JSON.").build());
+
       cmdOptions.addOption(Option.builder().longOpt("json").desc("output JSON instead of plain text (use with -ps or -sc)").build());
       cmdOptions.addOption(Option.builder("ss").longOpt("symbol-search").hasArgs().argName("pattern")
           .desc("search by short name (uses an mtime-cached on-disk index). Pass `-ss help` for the full grammar.").build());

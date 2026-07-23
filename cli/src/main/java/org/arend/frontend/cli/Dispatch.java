@@ -1,15 +1,7 @@
 package org.arend.frontend.cli;
 
 import org.apache.commons.cli.CommandLine;
-import org.arend.frontend.cli.commands.AiGuide;
-import org.arend.frontend.cli.commands.ApplyStep;
-import org.arend.frontend.cli.commands.FindGoals;
-import org.arend.frontend.cli.commands.ProofSearch;
-import org.arend.frontend.cli.commands.ProofSearchJson;
-import org.arend.frontend.cli.commands.Signature;
-import org.arend.frontend.cli.commands.SignatureInfo;
-import org.arend.frontend.cli.commands.TypeExpr;
-import org.arend.frontend.cli.commands.TypecheckPipeline;
+import org.arend.frontend.cli.commands.*;
 
 /**
  * Per-op dispatch on a populated {@link CommandContext}. Pulled out of {@code
@@ -121,6 +113,11 @@ public final class Dispatch {
 
     if (cmdLine.hasOption("te")) {
       boolean ok = TypeExpr.run(ctx, cmdLine.getOptionValues("te"));
+      return (ok && !ctx.exitWithError) ? 0 : 1;
+    }
+
+    if (cmdLine.hasOption("gs")) {
+      boolean ok = GetScope.run(ctx, cmdLine.getOptionValues("gs"));
       return (ok && !ctx.exitWithError) ? 0 : 1;
     }
 

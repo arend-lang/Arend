@@ -278,6 +278,7 @@ public final class ApplyStep {
       result.put("goals", newGoals);
       result.put("errors", errors);
       System.out.println(MAPPER.writeValueAsString(result));
+      System.err.println(errors);
       return true;
     } catch (Exception e) {
       System.err.println("[ERROR] Failed to serialize result: " + e.getMessage());

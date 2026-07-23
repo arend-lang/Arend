@@ -29,3 +29,7 @@ sourceSets {
 tasks.compileJava {
     dependsOn(generateVersion)
 }
+
+tasks.sourcesJar {
+    dependsOn(generateVersion)
+}
