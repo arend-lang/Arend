@@ -76,7 +76,7 @@ public class CoverageTest extends TypeCheckingTestCase {
   public void missingAbsurdPattern() {
     typeCheckModule("""
       \\data Empty
-      \\func \\infix 4 isNeg (x : Nat) : \\Type0
+      \\func isNeg (x : Nat) : \\Type0
         | 0 => Empty
         | suc x => Empty
       \\func test {n : Nat} (p : isNeg n) : Empty

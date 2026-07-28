@@ -235,14 +235,14 @@
           later $ rewrite (helper, ldistr),
           rewrite {2} +-comm,
           LinearlyOrderedAbMonoid.<=_+-right linarith,
-          <=∘ (PosetSemiring.pow_<=-degree_>=1 {RealField} (PosetSemiring.natCoef_<= {_} {1} {3} linarith) (<_suc_<= (fin_< (suc k)))),
+          PosetSemiring.pow_<=-degree_>=1 {RealField} (PosetSemiring.natCoef_<= {_} {1} {3} linarith) (<_suc_<= (fin_< (suc k))) <=∘,
           rewriteI {1} ide-left,
           <=_*_positive-left __ (PosetSemiring.pow>=0 {_} {_} {suc _} linarith),
           linarith
         }
       | ai_ri_<_a0 (i : Fin (suc n)) (i>0 : i > {NatSemiring} 0) : a i * pow r i < a 0 => run {
-        <∘r (PosetSemiring.<=_*_positive-right (ai>=0 i) (PosetSemiring.pow_<=-monotone {_} {r} {r0} {i} (<=-less r>0) r<=r0)),
-        <∘l (rewrite (+-assoc, negative-left, zro-right, ide-right) in <_+-left eps (C2 0 i i>0)),
+        PosetSemiring.<=_*_positive-right (ai>=0 i) (PosetSemiring.pow_<=-monotone {_} {r} {r0} {i} (<=-less r>0) r<=r0) <∘r,
+        (rewrite (+-assoc, negative-left, zro-right, ide-right) in <_+-left eps (C2 0 i i>0)) <∘l,
         rewrite (C1, +-assoc, negative-left, zro-right),
         <=-refl
       }
@@ -260,7 +260,7 @@
                PosetSemiring.pow_<=-degree one/3>=0 linarith {suc _} {suc (suc _)},
                <=_* {suc j} {2 * n} {suc k0} {n} (suc_<_<= (fin_< j NatSemiring.<∘ id<suc)) (suc_<_<= (fin_< k0))
              },
-             `<=∘ helper,
+             <=∘ helper,
              later $ rewrite (rdistr, *-comm {_} {_} {a 0}),
              <=_+ <=-refl,
              rewriteI {1} ide-right,
@@ -270,10 +270,10 @@
            },
            ai_ri_<_a0 (suc k) NatOrder.zero<suc,
            run {
-             <∘r (<=_+ (PosetAddMonoid.BigSum_<= {RealField} {k} {\lam i => a (suc (i : Nat)) * pow r (suc i)}
+             <=_+ (PosetAddMonoid.BigSum_<= {RealField} {k} {\lam i => a (suc (i : Nat)) * pow r (suc i)}
                {\lam i => a (suc k) * pow r (suc k) * pow one/3 (k -' i) + eps * pow 3 (suc i)} (\lam i => <=-less (C2j+2 i)))
                (PosetAddMonoid.BigSum_<= {RealField} {n-1 -' k} {\lam i => a (k Nat.+ i + 2) * pow r (k Nat.+ i + 2)}
-                 {\lam i => a (suc k) * pow r (suc k) * pow one/3 (suc i) + eps * pow one/3 (k Nat.+ i + 2) } (\lam i => <=-less (C2j i)))),
+                 {\lam i => a (suc k) * pow r (suc k) * pow one/3 (suc i) + eps * pow one/3 (k Nat.+ i + 2) } (\lam i => <=-less (C2j i))) <∘r,
              rewrite (AbMonoid.BigSum_+ {RealField} {n-1 -' k} {\new Array RealField (n-1 -' k) (\lam i => a (suc k) * pow r (suc k) * pow one/3 (suc i))} {\new Array RealField (n-1 -' k) (\lam i => eps * pow one/3 (k Nat.+ i + 2))}),
              rewrite (AbMonoid.BigSum_+ {RealField} {k} {\new Array RealField k (\lam i => a (suc k) * pow r (suc k) * pow one/3 (k -' i))} {\new Array RealField k (\lam i => eps * pow 3 (suc i))}),
              rewriteI (Semiring.BigSum-ldistr {_} {a (suc k) RealField.* (pow {RealField} r (suc k))} {arr-1/3^i+1}),
@@ -368,8 +368,8 @@
                               => run {
                                   rewrite (nat_fin_= suc_k'_compatibility),
                                   rewrite (toFin=id {_} {_} {k<n}),
-                                  <∘ (rewrite (+-assoc, eps-eps/2, mod_< {i} {suc kj} i<kj+1, nat_fin_= (mod_< {suc i} {suc n} linarith))
-                                    in <_+-left (negative eps) (Pk' (Fin.fromNat i))),
+                                  (rewrite (+-assoc, eps-eps/2, mod_< {i} {suc kj} i<kj+1, nat_fin_= (mod_< {suc i} {suc n} linarith))
+                                    in <_+-left (negative eps) (Pk' (Fin.fromNat i))) <∘,
                                   x-eps<x eps2>0
                                 }
                           \in \case LinearOrder.trichotomy i kj \with {
@@ -381,15 +381,15 @@
                                 unfold (-),
                                 rewriteI (-eps2-eps2=-eps, +-assoc, *-assoc),
                                 <_+-left {_} (negative eps/2),
-                                <∘l (OrderedAddMonoid.<_+-right _ (OrderedAddGroup.negative_< (<_*_positive-right eps>0 ((PosetSemiring.pow<=id one/3>=0 linarith {suc i} (\case __)) <∘r linarith)))),
-                                <=∘ (rewrite PseudoRing.rdistr_- in <=_*_positive-left (<=-less (IA (suc i) linarith)) (PosetSemiring.pow>=0 {_} {one/3} {suc i} one/3>=0)),
+                                OrderedAddMonoid.<_+-right _ (OrderedAddGroup.negative_< (<_*_positive-right eps>0 ((PosetSemiring.pow<=id one/3>=0 linarith {suc i} (\case __)) <∘r linarith))) <∘l,
+                                (rewrite PseudoRing.rdistr_- in <=_*_positive-left (<=-less (IA (suc i) linarith)) (PosetSemiring.pow>=0 {_} {one/3} {suc i} one/3>=0)) <=∘,
                                 rewriteI {2} (*-assoc {_} {a (suc kj)}),
                                 <=_*_positive-right (PosetSemiring.<=_*_positive_positive (ai>=0 (suc kj)) (PosetSemiring.pow>=0 {_} {_} {suc kj}
                                   (PosetSemiring.<=_*_positive_positive (<=-less r0>0) ( PosetSemiring.pow>=0 one/3>=0)))),
                                 PosetSemiring.pow_<=-degree one/3>=0 linarith {suc kj} {suc i} (suc<=suc (NatSemiring.<=-less kj<i))
                               },
-                              <∘ i-term-eps<kj-term-eps/2,
-                              <∘l (<_+-left (negative eps/2) (rewrite (toFin=id, nat_fin_= (mod_< {suc kj} {suc n} (<=_<_suc kj+1<=n))) in Pk' (toFin kj id<suc))),
+                              i-term-eps<kj-term-eps/2 <∘,
+                              <_+-left (negative eps/2) (rewrite (toFin=id, nat_fin_= (mod_< {suc kj} {suc n} (<=_<_suc kj+1<=n))) in Pk' (toFin kj id<suc)) <∘l,
                               rewrite (nat_fin_= suc_k'_compatibility, toFin=id, +-assoc, AddGroup.toZero idp, zro-right),
                               <=-refl
                             }

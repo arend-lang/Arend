@@ -26,6 +26,59 @@ public class InfixPostfixTest extends TypeCheckingTestCase {
   }
 
   @Test
+  public void plainRightSectionTest() {
+    typeCheckModule("""
+      \\func test1 : (Nat.div (suc 1)) 5 = 2 => idp
+      \\func test2 : (Nat.+ (suc 1)) 5 = 7 => idp
+      \\open Nat
+      \\func test3 : (div (suc 1)) 5 = 2 => idp
+      \\func test4 : (+ (suc 1)) 5 = 7 => idp
+      """);
+  }
+
+  @Test
+  public void plainMultiArgumentUnaffectedTest() {
+    typeCheckModule("""
+      \\open Nat
+      \\func test : (+ 3 4) = 7 => idp
+      """);
+  }
+
+  @Test
+  public void plainMultiArgumentUnaffectedTest2() {
+    typeCheckModule("""
+      \\record R
+        | \\infix 5 + (x y : Nat) : Nat
+      \\func test (r : R) => + {r} 0 1
+      """);
+  }
+
+  @Test
+  public void plainNonInfixPrefixUnaffectedTest() {
+    typeCheckModule("""
+      \\func f (x y : Nat) => x
+      \\func test : (f 5) 2 = 5 => idp
+      """);
+  }
+
+  @Test
+  public void rightSectionSingleParameterTest() {
+    typeCheckModule("""
+      \\func \\infix 5 f (x : Nat) => x
+      \\func test : (5 f) = 5 => idp
+      """);
+  }
+
+  @Test
+  public void fieldRightSectionTest() {
+    typeCheckModule("""
+      \\record R
+        | \\infix 5 + (x y : Nat) : Nat
+      \\func test (r : R) : (r.+ 1) = (\\lam x => x r.+ 1) => idp
+      """);
+  }
+
+  @Test
   public void postfixTest() {
     typeCheckModule("""
       \\module Test \\where {

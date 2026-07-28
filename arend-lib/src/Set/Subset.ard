@@ -152,7 +152,7 @@
   => p __
 
 \func ^-1_FrameHom {A B : \Type} (f : A -> B) : FrameHom (SetLattice B) (SetLattice A) \cowith
-  | func => ^-1 f
+  | func => f ^-1
   | func-<= p {_} => p
   | func-top>= {_} _ => ()
   | func-meet>= c => c

@@ -1,7 +1,9 @@
 package org.arend.naming.binOp;
 
 import org.arend.ext.error.ErrorReporter;
+import org.arend.ext.reference.Precedence;
 import org.arend.ext.util.Pair;
+import org.arend.naming.reference.GlobalReferable;
 import org.arend.naming.reference.LocalReferable;
 import org.arend.naming.reference.Referable;
 import org.arend.naming.renamer.Renamer;
@@ -47,16 +49,35 @@ public class ExpressionBinOpEngine implements BinOpEngine<Concrete.Expression> {
   }
 
   public static @NotNull Concrete.Expression parse(@NotNull Concrete.BinOpSequenceExpression expression, @NotNull ErrorReporter reporter, @NotNull TypingInfo typingInfo) {
-    Concrete.BinOpSequenceElem<Concrete.Expression> first = expression.getSequence().getFirst();
-    if (first.fixity == Fixity.INFIX || first.fixity == Fixity.POSTFIX) {
+    List<Concrete.BinOpSequenceElem<Concrete.Expression>> sequence = expression.getSequence();
+    Concrete.BinOpSequenceElem<Concrete.Expression> first = sequence.getFirst();
+    boolean isSection = first.fixity == Fixity.INFIX || first.fixity == Fixity.POSTFIX;
+    boolean rebuildFirstAsUnknown = false;
+    if (!isSection && first.fixity == Fixity.NONFIX && sequence.size() == 2) {
+      // A plain (non-backtick) infix operator applied to exactly one argument in prefix
+      // position is treated as a right section, just like `(op x) works today.
+      Referable referable = engine.getReferable(first.getComponent());
+      Precedence precedence = referable instanceof GlobalReferable ? typingInfo.getRefPrecedence((GlobalReferable) referable) : null;
+      if (precedence != null && precedence.isInfix) {
+        isSection = true;
+        rebuildFirstAsUnknown = true;
+      }
+    }
+
+    if (isSection) {
       LocalReferable firstArg = new LocalReferable(Renamer.UNNAMED);
-      List<Concrete.BinOpSequenceElem<Concrete.Expression>> newSequence = new ArrayList<>(expression.getSequence().size() + 1);
+      List<Concrete.BinOpSequenceElem<Concrete.Expression>> newSequence = new ArrayList<>(sequence.size() + 1);
       newSequence.add(new Concrete.BinOpSequenceElem<>(new Concrete.ReferenceExpression(expression.getData(), firstArg)));
-      newSequence.addAll(expression.getSequence());
+      if (rebuildFirstAsUnknown) {
+        newSequence.add(new Concrete.BinOpSequenceElem<>(first.getComponent(), Fixity.UNKNOWN, first.isExplicit));
+        newSequence.addAll(sequence.subList(1, sequence.size()));
+      } else {
+        newSequence.addAll(sequence);
+      }
       return new Concrete.LamExpression(expression.getData(), Collections.singletonList(new Concrete.NameParameter(expression.getData(), true, firstArg)), parse(new Concrete.BinOpSequenceExpression(expression.getData(), newSequence, expression.getClauses()), reporter, typingInfo));
     }
 
-    Concrete.Expression parsed = new BinOpParser<>(typingInfo, reporter, engine).parse(expression.getSequence());
+    Concrete.Expression parsed = new BinOpParser<>(typingInfo, reporter, engine).parse(sequence);
     return parsed instanceof Concrete.AppExpression && parsed.getData() != expression.getData()
         ? Concrete.AppExpression.make(expression.getData(), ((Concrete.AppExpression) parsed).getFunction(), ((Concrete.AppExpression) parsed).getArguments())
         : parsed;

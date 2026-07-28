@@ -285,7 +285,7 @@
   | isCompletelyRegular f x => \case f x \with {
     | inP (U,CU,Ux) => inP (U, inP (U, CU, inP (=, \lam p => rewrite p \lam x => inP (single x, \lam (y,(Uy,x=y)) => rewrite x=y $ single_<= Uy, idp), \lam p => inP (_, idp, p), idp)), Ux)
   }
-  | cauchy-open => (\lam _ Sx x' => inP (= x', \lam p => rewrite p $ single_<= Sx, idp), \lam _ => ())
+  | cauchy-open => (\lam _ Sx x' => inP (x' =, \lam p => rewrite p $ single_<= Sx, idp), \lam _ => ())
 
 \func PrecoverTransfer {X : \Set} {Y : PrecoverSpace} (f : X -> Y) : PrecoverSpace X \cowith
   | isCauchy C => Y.isCauchy \lam V => ∃ (U : C) (f ^-1 V ⊆ U)

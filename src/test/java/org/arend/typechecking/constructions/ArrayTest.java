@@ -258,7 +258,7 @@ public class ArrayTest extends TypeCheckingTestCase {
 
   @Test
   public void test() {
-    typeCheckModule("\\func test => :: 0");
+    typeCheckModule("\\func test => 0 ::");
   }
 
   @Test

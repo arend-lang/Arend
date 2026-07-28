@@ -164,17 +164,17 @@
     | :: a context-a, nil, :: a1 context-c => run {
       rewrite (lb-ls-to-ls {_} {_} {nil}),
       rewrite (Transports.sublist-skip-over-transport-right {A} {a} _ (SubList.extend-left-single (sublist-match idp SubList.identity))),
-      transport-lemma (SubList (a1 :: nil ++ context-c)) (:: a)
+      transport-lemma (SubList (a1 :: nil ++ context-c)) (a ::)
     }
     | :: a context-a, nil, nil => run {
       rewrite (lb-ls-to-ls {_} {_} {nil}),
       rewrite (Transports.sublist-skip-over-transport-right {A} {a} _ (SubList.extend-left-single sublist-nil)),
-      transport-lemma (SubList nil) (:: a)
+      transport-lemma (SubList nil) (a ::)
     }
     | :: a context-a, :: a1 context-b, context-c => run {
       rewrite (lb-ls-to-ls {_} {_} {:: a1 context-b}),
       rewrite (Transports.sublist-skip-over-transport-right {A} {a} _ (SubList.extend-left-single (sublist-match idp SubList.identity))),
-      transport-lemma (SubList (a1 :: context-b ++ context-c)) (:: a)
+      transport-lemma (SubList (a1 :: context-b ++ context-c)) (a ::)
     }
     \where {
       \func transport-lemma {A B : \Type} (C : B -> \Type) (map : A -> B) {a a' : A} {eq : a = a'} {x : C (map a')}

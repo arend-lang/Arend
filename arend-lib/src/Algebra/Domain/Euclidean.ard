@@ -175,7 +175,7 @@
 \class EuclideanRingData \extends EuclideanSemiringData, CRing {
   | summandDiv {x} {y} {z} {d} _ p => \new LDiv {
     | inv => z - x
-    | inv-right => ldistr *> +-comm *> pmap (+ _) (inv p) *> simplify
+    | inv-right => ldistr *> +-comm *> pmap (_ +) (inv p) *> simplify
   }
 
   \func bezout-fueled (s : Nat) (a b : E) : \Sigma E E \elim s

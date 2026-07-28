@@ -22,8 +22,8 @@
   | rel {a b c d : X} : (a # b) o (c # d) = (a o c) # (b o d)
 
   \func units-coincide : id_o = id_#
-    => rewrite (inv id_o-right, pmap (o id_o) (inv $ id_#-left),
-                pmap (`o (id_# # id_o)) (inv $ id_#-right), rel, id_o-left, id_o-right) id_#-right
+    => rewrite (inv id_o-right, pmap (id_o o) (inv $ id_#-left),
+                pmap (o (id_# # id_o)) (inv $ id_#-right), rel, id_o-left, id_o-right) id_#-right
 
   \func binop_rels_1 {a b : X} : a o b = b # a
     => rewrite (pmap (\lam z => z o b) (inv id_#-left),

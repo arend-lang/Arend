@@ -127,8 +127,8 @@
     : toLinearMap bu lv' (toMatrix lu bv f) u = extend bv lv' (f u)
     => path (\lam i => BigSum (\lam j => V.*c_BigSum-ldistr {U.basis-split bu u j} {\lam k => V.basis-split bv (f (lu j)) k *c lv' k} i)) *>
         V.BigSum-transpose _ *> pmap BigSum (exts \lam j => pmap BigSum (exts \lam j => inv V.*c-assoc) *>
-          inv (V.*c_BigSum-rdistr {\lam k => U.basis-split bu u k * V.basis-split bv (f (lu k)) j}) *> pmap (`*c _) (inv $ V.basis-split-unique bv (\lam k => BigSum (\lam j => U.basis-split bu u j * V.basis-split bv (f (lu j)) k))
-            (pmap f (U.basis-split-char {lu} {bu}) *> func-BigSum *> pmap BigSum (exts \lam j => func-*c *> pmap (*c _) (V.basis-split-char {lv} {bv}) *> V.*c_BigSum-ldistr *> pmap BigSum (exts \lam k => inv *c-assoc)) *>
+          inv (V.*c_BigSum-rdistr {\lam k => U.basis-split bu u k * V.basis-split bv (f (lu k)) j}) *> pmap (*c _) (inv $ V.basis-split-unique bv (\lam k => BigSum (\lam j => U.basis-split bu u j * V.basis-split bv (f (lu j)) k))
+            (pmap f (U.basis-split-char {lu} {bu}) *> func-BigSum *> pmap BigSum (exts \lam j => func-*c *> pmap (_ *c) (V.basis-split-char {lv} {bv}) *> V.*c_BigSum-ldistr *> pmap BigSum (exts \lam k => inv *c-assoc)) *>
               V.BigSum-transpose _ *> inv (path (\lam i => BigSum \lam j => V.*c_BigSum-rdistr {\lam k => U.basis-split bu u k * V.basis-split bv (f (lu k)) j} {lv j} i))) j))
 
   \func matrix-equiv {R : Ring} {U V : LModule R} {lu : Array U} {lv : Array V} (bu : U.IsBasis lu) (bv : V.IsBasis lv)

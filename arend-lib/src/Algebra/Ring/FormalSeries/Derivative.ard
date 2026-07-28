@@ -102,7 +102,7 @@ An $A$-linear operation $A[[X]] \to A[[X]]$ satisfying:
     \private \lemma lhs-equals-M {A : CRing} (a b : FSeries A) (k : Nat)
       : deriv (fcompose a b) k = M-form a b k
       => A.BigSum-ldistr {_} {\new Array A (suc (suc k)) \lam n => a n * pow b n (suc k)}
-         *> pmap (`+ _) (pmap (* _) zro_*-right *> zro_*-right)
+         *> pmap (+ _) (pmap (_ *) zro_*-right *> zro_*-right)
          *> zro-left
          *> inv (A.FinSum=BigSum {_} {\lam m => natCoef (suc k) * (a (suc m) * pow b (suc m) (suc k))})
          *> A.FinSum-ext \lam m => equation.cRing {path \lam i => deriv-pow-conv-suc b m i k}

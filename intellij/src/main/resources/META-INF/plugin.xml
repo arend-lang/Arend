@@ -457,7 +457,6 @@
         <highlightingPassFactory implementation="org.arend.highlight.ArendHighlightingPassFactory"/>
         <highlightingPassFactory implementation="org.arend.highlight.ErrorHighlightingPassFactory"/>
         <highlightingPassFactory implementation="org.arend.injection.InjectionHighlightingPassFactory"/>
-        <highlightingPassFactory implementation="org.arend.highlight.PartiallyInfixOperatorPrefixFormPassFactory"/>
         <highlightingPassFactory implementation="org.arend.highlight.NameShadowingHighlighterPassFactory"/>
         <highlightingPassFactory implementation="org.arend.highlight.ArendSubclassesPassFactory"/>
         <!-- TODO[server2]
