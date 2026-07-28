@@ -34,7 +34,7 @@ public class AppHoleTest extends TypeCheckingTestCase {
   public void inNestedBinOpWithParen2() {
     typeCheckModule(
       "\\func \\infixl 7 % (x : Nat) (f : Nat -> Nat) => f x" +
-      "\\func test => % 114 (__ Nat.+ 514)");
+      "\\func test => (%) 114 (__ Nat.+ 514)");
   }
 
   @Test

@@ -90,7 +90,7 @@ $$(A \circ c)^n = A^n \circ c.$$
     {\new Array A (suc k) \lam (m : Fin (suc k)) => pow b 0 m * pow c m k} 0
     (\lam j zero-not-j => pmap (`* _) (FSeriesRing.coef_/=0 \lam p => zero-not-j (fin_nat-inj (inv p))) *> A.zro_*-left)
     *> A.ide-left
-  | suc n => pmap (* __ (fcompose b c) k) {(FSeriesRing A).pow _ n} (ext $ pow-conv-compose c_0 n) *> inv (compose-coef-* c_0 k)
+  | suc n => pmap ((*) __ (fcompose b c) k) {(FSeriesRing A).pow _ n} (ext $ pow-conv-compose c_0 n) *> inv (compose-coef-* c_0 k)
 
 {- | Associativity of formal-power-series composition.  With both $b_0 = 0$
      (so the outer composition is finite/truncated) and $c_0 = 0$ (so the

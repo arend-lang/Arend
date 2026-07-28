@@ -90,7 +90,7 @@
           | :: a a2, :: y b, c, sublist-skip sublist => pmap sublist-skip (over-right-single {_} {_} {_} {c} sublist)
           | nil, :: y b, nil, sublist-skip sublist => pmap sublist-skip (trivial-sublist-contractible _ _)
           | nil, :: y b, :: a1 c, sublist-skip sublist =>
-            pmap sublist-skip (trivial-sublist-contractible _ _ *> over-right-single {_} {_} {_} {:: a1 c} sublist)
+            pmap sublist-skip (trivial-sublist-contractible _ _ *> over-right-single {_} {_} {_} {a1 :: c} sublist)
       }
   }
 
@@ -172,7 +172,7 @@
       transport-lemma (SubList nil) (a ::)
     }
     | :: a context-a, :: a1 context-b, context-c => run {
-      rewrite (lb-ls-to-ls {_} {_} {:: a1 context-b}),
+      rewrite (lb-ls-to-ls {_} {_} {a1 :: context-b}),
       rewrite (Transports.sublist-skip-over-transport-right {A} {a} _ (SubList.extend-left-single (sublist-match idp SubList.identity))),
       transport-lemma (SubList (a1 :: context-b ++ context-c)) (a ::)
     }

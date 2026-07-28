@@ -176,7 +176,7 @@
       => \let e => \new QEquiv {PresieveMatchingFamily F x S d} {Cone coneF d} {
         | f mf => \new Cone {
           | coneMap j => Func j.4 ∘ mf (j.2,j.3)
-          | coneCoh h => $ inv o-assoc *> pmap (`∘ _) (inv Func-o) *> mf.isMatching (inv o-assoc *> h.2)
+          | coneCoh h => inv o-assoc *> pmap (∘ _) (inv Func-o) *> mf.isMatching (inv o-assoc *> h.2)
         }
         | ret c => \new MatchingFamily {
           | family j => c.coneMap (j.1.1, j.1, j.2, id)

@@ -205,7 +205,7 @@
       => (\lam p a<x => \case L-rounded a<x \with {
         | inP (b,b<x,a<b) => \case y.LU-located a<b \with {
           | byLeft a<y => a<y
-          | byRight y<b => $ absurd $ p $ inP (b,y<b,b<x)
+          | byRight y<b => absurd $ p $ inP (b,y<b,b<x)
         }
       }, \lam p (inP (a,y<a,x<a)) => y.LU-disjoint (p x<a) y<a)
 

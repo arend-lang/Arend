@@ -35,7 +35,7 @@
     | func-+ => toRatModule.*c-ldistr
     | func-uniform Eu =>
       \have cu => *i-uniform ∘ *q_<=1-right-uniform (RatField.finv>=0 fromNat_>=0) (RatField.finv_<= idp $ fromInt_<= $ pos<=pos $ suc_<_<= $ nonZero>0 ratDenom/=0)
-      \in uniform-subset (cu.func-uniform Eu) \lam t => TruncP.map t \lam s => $ later (s.1, s.2, s.3 *> ext \lam x => pmap s.1 $ inv *q_*i *> inv *q-assoc *> pmap (`*q x) (inv rat-split))
+      \in uniform-subset (cu.func-uniform Eu) \lam t => TruncP.map t \lam s => later (s.1, s.2, s.3 *> ext \lam x => pmap s.1 $ inv *q_*i *> inv *q-assoc *> pmap (`*q x) (inv rat-split))
     \where {
       \private \lemma *q_<=1-right-uniform {q : Rat} (q>=0 : RatField.zro RatField.<= q) (q<=1 : q RatField.<= 1) : TopAbGroupMap \this \this (q *q) \cowith
         | func-+ => toRatModule.*c-ldistr

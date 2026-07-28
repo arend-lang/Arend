@@ -708,7 +708,7 @@ public class ConcreteBuilder implements AbstractDefinitionVisitor<Concrete.Resol
     return new Concrete.SigmaExpression(data, buildTypeParameters(parameters, false));
   }
 
-  private Concrete.Expression makeBinOpSequence(Object data, Concrete.Expression left, Collection<? extends Abstract.BinOpSequenceElem> sequence, Abstract.FunctionClauses clauses) {
+  private Concrete.Expression makeBinOpSequence(Object data, Concrete.Expression left, boolean leftIsVariable, Collection<? extends Abstract.BinOpSequenceElem> sequence, Abstract.FunctionClauses clauses) {
     if (sequence.isEmpty() && clauses == null) {
       return left;
     }
@@ -718,7 +718,7 @@ public class ConcreteBuilder implements AbstractDefinitionVisitor<Concrete.Resol
     }
 
     List<Concrete.BinOpSequenceElem<Concrete.Expression>> elems = new ArrayList<>();
-    elems.add(new Concrete.BinOpSequenceElem<>(left));
+    elems.add(new Concrete.BinOpSequenceElem<>(left, leftIsVariable ? Fixity.UNKNOWN : Fixity.NONFIX, true));
     for (Abstract.BinOpSequenceElem elem : sequence) {
       Abstract.Expression arg = elem.getExpression();
       if (arg != null) {
@@ -730,8 +730,8 @@ public class ConcreteBuilder implements AbstractDefinitionVisitor<Concrete.Resol
   }
 
   @Override
-  public Concrete.Expression visitBinOpSequence(@Nullable Object data, @NotNull Abstract.Expression left, @NotNull Collection<? extends Abstract.BinOpSequenceElem> sequence, Void params) {
-    return makeBinOpSequence(data, left.accept(this, null), sequence, null);
+  public Concrete.Expression visitBinOpSequence(@Nullable Object data, @NotNull Abstract.Expression left, boolean leftIsVariable, @NotNull Collection<? extends Abstract.BinOpSequenceElem> sequence, Void params) {
+    return makeBinOpSequence(data, left.accept(this, null), leftIsVariable, sequence, null);
   }
 
   @Override
@@ -851,7 +851,7 @@ public class ConcreteBuilder implements AbstractDefinitionVisitor<Concrete.Resol
       result = new Concrete.NewExpression(data, result);
     }
 
-    return makeBinOpSequence(data, result, sequence, clauses);
+    return makeBinOpSequence(data, result, false, sequence, clauses);
   }
 
   @Override

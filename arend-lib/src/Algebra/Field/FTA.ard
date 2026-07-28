@@ -191,7 +191,7 @@
             rewrite (*-assoc {RealField} {a (suc k)} {pow r (suc k)} {pow one/3 (suc k)}, inv (CMonoid.pow_*-comm {RealField} {r} {one/3} {suc k})),
             OrderedAddGroup.<-diff-mid,
             \have | i+1_mod : Fin.fromNat {n} (suc i) = {Nat} i Nat.+ 1
-                    => mod_< (NatOrder.suc<suc (<∘l (fin_< i) (suc_<_<= (fin_< k))))
+                    => mod_< (NatOrder.suc<suc (fin_< i <∘l suc_<_<= (fin_< k)))
                   | helper : \Pi (i : Fin (suc n)) -> i > 0 -> a (suc k) * pow (r * one/3) (suc k) > a i * pow (r * one/3) i - eps
                     => rewrite (inv eq2, inv eq1, *-assoc, inv (*-assoc {_} {r0}),
                          inv (*-assoc {_} {r0 * pow one/3 j}), *-assoc {_} {r0}) in C2 (suc (suc j)),

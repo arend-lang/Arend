@@ -33,24 +33,44 @@ public class InfixPostfixTest extends TypeCheckingTestCase {
       \\open Nat
       \\func test3 : (div (suc 1)) 5 = 2 => idp
       \\func test4 : (+ (suc 1)) 5 = 7 => idp
+      \\func test5 : (div suc 1) 5 = 2 => idp
+      \\func test6 : (+ suc 1) 5 = 7 => idp
       """);
   }
 
   @Test
-  public void plainMultiArgumentUnaffectedTest() {
+  public void parenthesizedOperatorUnaffectedTest() {
     typeCheckModule("""
       \\open Nat
-      \\func test : (+ 3 4) = 7 => idp
+      \\func test : ((+) 3 4) = 7 => idp
       """);
   }
 
   @Test
-  public void plainMultiArgumentUnaffectedTest2() {
+  public void plainMultiArgumentSectionTest() {
+    typeCheckModule("""
+      \\open Nat
+      \\func test => + 3 4
+      """, 1);
+  }
+
+  @Test
+  public void plainImplicitArgumentSectionTest() {
+    typeCheckModule("""
+      \\record R
+        | \\infix 5 + (x y : Nat) : Nat
+      \\func f (x : Nat) => x
+      \\func test (r : R) : (+ {r} f 3) 4 = 4 r.+ (f 3) => idp
+      """);
+  }
+
+  @Test
+  public void plainImplicitArgumentUnaffectedTest() {
     typeCheckModule("""
       \\record R
         | \\infix 5 + (x y : Nat) : Nat
       \\func test (r : R) => + {r} 0 1
-      """);
+      """, 1);
   }
 
   @Test
@@ -272,15 +292,7 @@ public class InfixPostfixTest extends TypeCheckingTestCase {
           | \\infix 5 + (x y : Nat) : Nat
           | \\fix 5 * (x y : Nat) : Nat
         \\func test0 (r : R) => + {r} 0 1
-      """ /* +
-      "\\func test1 (r : R) : (r.+ 0 1) = (+ {r} 0 1) => idp\n" +
-      "\\func test2 (r : R) : (0 r.+ 1) = (+ {r} 0 1) => idp\n" +
-      "\\func test3 (r : R) : (0 r.`+` 1) = (+ {r} 0 1) => idp\n" +
-      "\\func test4 (r : R) : (0 r.`+ 1) = (+ {r} 0 1) => idp\n" +
-      "\\func test5 (r : R) : (r.* 0 1) = (* {r} 0 1) => idp\n" +
-      "\\func test6 (r : R) : (0 r.* 1) = (* {r} 0 1) => idp\n" +
-      "\\func test7 (r : R) : (0 r.`*` 1) = (* {r} 0 1) => idp\n" +
-      "\\func test8 (r : R) : (0 r.`* 1) = (* {r} 0 1) => idp" */);
+      """, 1);
   }
 
   @Test

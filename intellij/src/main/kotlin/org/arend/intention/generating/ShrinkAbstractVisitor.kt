@@ -52,8 +52,8 @@ class ShrinkAbstractVisitor(val textRange: TextRange) : AbstractExpressionVisito
     override fun visitSigma(data: Any?, parameters: MutableCollection<out Abstract.Parameter>, params: Unit?): String =
             """\Sigma $DOTS $DOTS"""
 
-    override fun visitBinOpSequence(data: Any?, left: Abstract.Expression, sequence: Collection<Abstract.BinOpSequenceElem>, params: Unit?): String {
-        val parsed = parseBinOp(left, sequence)
+    override fun visitBinOpSequence(data: Any?, left: Abstract.Expression, leftIsVariable: Boolean, sequence: Collection<Abstract.BinOpSequenceElem>, params: Unit?): String {
+        val parsed = parseBinOp(left, leftIsVariable, sequence)
         var requiredConcrete = parsed
         forEachRange(parsed) { range, expr -> if (textRange.contains(range)) requiredConcrete = expr; false }
         return if (requiredConcrete is Concrete.AppExpression) {

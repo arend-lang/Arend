@@ -1112,10 +1112,10 @@ public class BuildVisitor extends ArendBaseVisitor<Object> {
     return visitArgumentAppExpr(ctx.argumentAppExpr());
   }
 
-  @SuppressWarnings({"rawtypes", "unchecked"})
   @Override
   public Concrete.Expression visitArgumentAppExpr(ArgumentAppExprContext ctx) {
-    Concrete.Expression expr = visitAtomFieldsAcc(ctx.atomFieldsAcc());
+    AtomFieldsAccContext atomFieldsAccCtx = ctx.atomFieldsAcc();
+    Concrete.Expression expr = visitAtomFieldsAcc(atomFieldsAccCtx);
 
     List<ArgumentContext> argumentCtxs = ctx.argument();
     if (argumentCtxs.isEmpty()) {
@@ -1123,7 +1123,7 @@ public class BuildVisitor extends ArendBaseVisitor<Object> {
     }
 
     List<Concrete.BinOpSequenceElem<Concrete.Expression>> sequence = new ArrayList<>(argumentCtxs.size());
-    sequence.add(new Concrete.BinOpSequenceElem(expr));
+    sequence.add(new Concrete.BinOpSequenceElem<>(expr, expr instanceof Concrete.ReferenceExpression && atomFieldsAccCtx.atom() instanceof AtomLiteralContext literal && isName(literal.literal()) ? Fixity.UNKNOWN : Fixity.NONFIX, true));
     for (ArgumentContext argumentCtx : argumentCtxs) {
       sequence.add(visitArgument(argumentCtx));
     }

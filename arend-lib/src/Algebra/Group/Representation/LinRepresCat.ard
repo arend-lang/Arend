@@ -51,6 +51,6 @@
       | func-** => unfold (rewrite (f.func-**, B.**_negative) idp)
 
     \func mulconstInterwining (c : R) (f : InterwiningMap A B) : InterwiningMap A B \cowith
-      | LinearMap => LModule.*c {LinearMapLModule A B} c f
+      | LinearMap => c *c f
       | func-** => rewrite (B.**_*c, inv f.func-**) idp
   }

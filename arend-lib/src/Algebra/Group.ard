@@ -149,8 +149,8 @@
                 ide                 `qed
        \in idempotent-is-trivial inverse-x-idempotent
 
-  \private \lemma make-ide-left {M : Semigroup} {ide : M} (ide-right : \Pi {x : M} -> * x ide = x) (inverse : M -> M)
-    (inverse-right : \Pi {x : M} -> x * inverse x = ide) (inverse-left : \Pi {x : M} -> inverse x * x = ide) {x : M} : * ide x = x
+  \private \lemma make-ide-left {M : Semigroup} {ide : M} (ide-right : \Pi {x : M} -> x * ide = x) (inverse : M -> M)
+    (inverse-right : \Pi {x : M} -> x * inverse x = ide) (inverse-left : \Pi {x : M} -> inverse x * x = ide) {x : M} : ide * x = x
     => ide * x              ==< pmap (`* x) (inv inverse-right) >==
        (x * inverse x) * x  ==< *-assoc >==
        x * (inverse x * x)  ==< cong inverse-left >==

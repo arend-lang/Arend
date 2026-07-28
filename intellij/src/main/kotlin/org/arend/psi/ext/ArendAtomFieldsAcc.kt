@@ -26,4 +26,16 @@ class ArendAtomFieldsAcc(node: ASTNode) : ArendExpr(node) {
             visitor.visitFieldAccs(this, atom, fieldAccs, ipName, ipName?.referenceName, ipName?.fixity, params)
         }
     }
+
+    val isVariable: Boolean
+        get() {
+            for (fieldAcc in fieldAccList) {
+                if (fieldAcc.refIdentifier == null) {
+                    return false
+                }
+            }
+
+            val literal = atom.literal ?: return false
+            return literal.refIdentifier != null || literal.ipName != null
+        }
 }

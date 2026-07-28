@@ -263,7 +263,7 @@
   | summandDiv {x y z d : Nat} (d/=0 : d /= 0) (dx+y=dz : d * x + y = d * z) : Monoid.LDiv d y \elim d {
     | 0 => absurd (d/=0 idp)
     | suc _ \as d => \new Monoid.LDiv {
-      | inv => div y d
+      | inv => y div d
       | inv-right => pmap (d * y div d +) (mod-unique {d} {z} {0} {x + y div d} {y mod d} NatOrder.zero<suc (fin_< (y mod d)) (inv (pmap (`+ _) ldistr *> +-assoc *> pmap (_ +) (divModProp y d) *> dx+y=dz))) *> divModProp y d
     }
   }

@@ -134,7 +134,7 @@
   | nil =>  nil
   | (xa, xb) :: xs => \case reduce xs \with {
     | nil => (xa, xb) :: nil
-    | (ya, yb) :: ys => \case decideEq xa ya, xor xb yb \with {
+    | (ya, yb) :: ys => \case decideEq xa ya, xb xor yb \with {
       | yes e, true => ys
       | _, _ => (xa, xb) :: (ya, yb) :: ys
     }
@@ -143,9 +143,9 @@
 \func reduce_equiv {S : DecSet} (x : List (\Sigma S Bool)) : x ~ reduce x \elim x
   | nil => crefl idp
   | a :: nil => crefl idp
-  | a :: a1 :: x => cases ((reduce x) arg addPath) \with {
-    | nil, p => cases ((decideEq a.1 a1.1) arg addPath) \with {
-      | yes e, p1 => cases ((xor a.2 a1.2) arg addPath) \with {
+  | a :: a1 :: x => cases (reduce x arg addPath) \with {
+    | nil, p => cases (decideEq a.1 a1.1 arg addPath) \with {
+      | yes e, p1 => cases (a.2 xor a1.2 arg addPath) \with {
         | false, p2 => rewrite p in FreeGroup.adjacent_cons a (FreeGroup.adjacent_cons a1 (reduce_equiv x))
         | true, p2 => csym (ctrans (csym (rewrite p in reduce_equiv x)) (cin (inP (nil, x, a.1, a.2, (idp, rewrite {2} e (rewrite (helper1 p2) idp))))))
       }
@@ -153,15 +153,15 @@
     }
     | a2 :: x1, p => \have A0 => rewrite p in FreeGroup.adjacent_cons a (FreeGroup.adjacent_cons a1 (reduce_equiv x)) \in cases ((decideEq a.1 a1.1) arg addPath) \with {
       | yes e, p1 => cases ((decideEq a1.1 a2.1) arg addPath) \with {
-        | yes e1, p2 => cases ((xor a1.2 a2.2) arg addPath) \with {
-          | false, p3 => rewrite p1 (cases ((xor a.2 a1.2) arg addPath) \with {
+        | yes e1, p2 => cases (a1.2 xor a2.2 arg addPath) \with {
+          | false, p3 => rewrite p1 (cases (a.2 xor a1.2 arg addPath) \with {
             | false, p4 => A0
             | true, p4 => csym (ctrans (csym (rewrite p in reduce_equiv x)) (cin (inP (nil, x, a.1, a.2, (idp, rewrite {2} e (rewrite (helper1 p4) idp))))))
           })
           | true, p3 => ctrans A0 (cases (x1 arg addPath) \with {
             | nil, p4 => csym (cin (inP (a :: nil, nil, a1.1, a1.2, (idp, rewrite {2} e1 (rewrite (helper1 p3) idp)))))
-            | a3 :: x2, p4 => cases ((S.decideEq a.1 a3.1) arg addPath) \with {
-              | yes e2, p5 => cases ((xor a.2 a3.2) arg addPath) \with {
+            | a3 :: x2, p4 => cases (S.decideEq a.1 a3.1 arg addPath) \with {
+              | yes e2, p5 => cases (a.2 xor a3.2 arg addPath) \with {
                 | false, p6 => csym (cin (inP (a :: nil, a3 :: x2, a1.1, a1.2, (idp, rewrite {2} e1 (rewrite (helper1 p3) idp)))))
                 | true, p6 => csym (ctrans {_} {AreAdjacent} {_} {_} {a :: a3 :: x2}
                     (cin (inP (nil, x2, a.1, a.2, (idp, rewrite {2} e2 (rewrite (helper1 p6) idp)))))
@@ -171,18 +171,18 @@
             }
           })
         }
-        | no n, p2 => rewrite p1 (ctrans A0 (cases ((xor a.2 a1.2) arg addPath) \with {
+        | no n, p2 => rewrite p1 (ctrans A0 (cases (a.2 xor a1.2 arg addPath) \with {
           | false, p3 => crefl idp
           | true, p3 => csym (cin (inP (nil, a2 :: x1, a.1, a.2, (idp, rewrite {2} e (rewrite (helper1 p3) idp)))))
         }))
       }
       | no n, p1 => ctrans A0 (cases ((decideEq a1.1 a2.1) arg addPath) \with {
-        | yes e, p2 => cases ((xor a1.2 a2.2) arg addPath) \with {
+        | yes e, p2 => cases (a1.2 xor a2.2 arg addPath) \with {
           | false, p3 => rewrite p1 (crefl idp)
           | true, p3 => cases (x1 arg addPath) \with {
             | nil, p4 => csym (cin (inP (a :: nil, nil, a1.1, a1.2, (idp, rewrite {2} e (rewrite (helper1 p3) idp)))))
             | a3 :: x2, p4 => cases ((S.decideEq a.1 a3.1) arg addPath) \with {
-              | yes e1, p5 => cases ((xor a.2 a3.2) arg addPath) \with {
+              | yes e1, p5 => cases (a.2 xor a3.2 arg addPath) \with {
                 | false, p6 => csym (cin (inP (a :: nil, a3 :: x2, a1.1, a1.2, (idp, rewrite {2} e (rewrite (helper1 p3) idp)))))
                 | true, p6 => csym (ctrans {_} {AreAdjacent} {_} {_} {a :: a3 :: x2}
                     (cin (inP (nil, x2, a.1, a.2, (idp, rewrite {2} e1 (rewrite (helper1 p6) idp)))))
@@ -198,7 +198,7 @@
   } \where {
   \open FreeGroup
 
-  \func helper1 {a2 b2 : Bool} (_ : xor a2 b2 = true) : not a2 = b2 \with
+  \func helper1 {a2 b2 : Bool} (_ : a2 xor b2 = true) : not a2 = b2 \with
     | {false}, {true}, p => idp
     | {true}, {false}, p => idp
 }
@@ -206,7 +206,7 @@
 \func isIrreducible {S : DecSet} (x : List (\Sigma S Bool)) : Bool \elim x
   | nil => true
   | a :: nil => true
-  | (xa, xb) :: (ya, yb) :: xs => \case decideEq xa ya, xor xb yb \with {
+  | (xa, xb) :: (ya, yb) :: xs => \case decideEq xa ya, xb xor yb \with {
     | yes e, true => false
     | _, _ => isIrreducible ((ya, yb) :: xs)
   }
@@ -215,7 +215,7 @@
   isIrreducible (a :: x) = true -> isIrreducible x = true \elim x
   | nil => \lam _ => idp
   | a1 :: x => cases ((S.decideEq a.1 a1.1) arg addPath) \with {
-    | yes e, p => cases ((xor a.2 a1.2) arg addPath) \with {
+    | yes e, p => cases (a.2 xor a1.2 arg addPath) \with {
       | false, p1 => id
       | true, p1 => \lam Q => \case Q
     }
@@ -226,13 +226,13 @@
   | nil => idp
   | a :: nil => idp
   | a :: a1 :: x => \have IH => reduceIsIrreducible (a1 :: x) \in cases ((reduce x) arg addPath) \with {
-    | nil, p => cases ((decideEq a.1 a1.1) arg addPath) \with {
-      | yes e, p1 => cases ((xor a.2 a1.2) arg addPath) \with {
+    | nil, p => cases (decideEq a.1 a1.1 arg addPath) \with {
+      | yes e, p1 => cases (a.2 xor a1.2 arg addPath) \with {
         | false, p2 => rewrite (p1, p2) idp
         | true, p2 => idp
       }
       | no n, p1 => cases ((decideEq a.1 a1.1) arg addPath) \with {
-        | yes e, p2 => cases ((xor a.2 a1.2) arg addPath) \with {
+        | yes e, p2 => cases (a.2 xor a1.2 arg addPath) \with {
           | false, p3 => idp
           | true, p3 => \case inv p1 *> p2
         }
@@ -240,9 +240,9 @@
       }
     }
     | a2 :: x1, p => rewrite p at IH $ cases ((decideEq a1.1 a2.1) arg addPath) \with {
-      | yes e, p1 => cases ((xor a1.2 a2.2) arg addPath) \with {
+      | yes e, p1 => cases (a1.2 xor a2.2 arg addPath) \with {
         | false, p2 => rewrite (p1, p2, p1, p2) at IH $ cases ((decideEq a.1 a1.1) arg addPath) \with {
-          | yes e1, p3 => cases ((xor a.2 a1.2) arg addPath) \with {
+          | yes e1, p3 => cases (a.2 xor a1.2 arg addPath) \with {
             | false, p4 => rewrite (p3, p4, p1, p2) IH
             | true, p4 => IH
           }
@@ -251,7 +251,7 @@
         | true, p2 => cases (x1 arg addPath) \with {
           | nil, p3 => idp
           | a3 :: x2, p3 => rewrite (p1, p2, p3) at IH $ cases ((decideEq a.1 a3.1) arg addPath) \with {
-            | yes e1, p4 => cases ((xor a.2 a3.2) arg addPath) \with {
+            | yes e1, p4 => cases (a.2 xor a3.2 arg addPath) \with {
               | false, p5 => rewrite (p4, p5) IH
               | true, p5 => isIrreducibleCons IH
             }
@@ -260,7 +260,7 @@
         }
       }
       | no n, p1 => rewrite (p1, p1) at IH $ cases ((decideEq a.1 a1.1) arg addPath) \with {
-        | yes e, p2 => cases ((xor a.2 a1.2) arg addPath) \with {
+        | yes e, p2 => cases (a.2 xor a1.2 arg addPath) \with {
           | false, p3 => rewrite (p2, p3, p1) IH
           | true, p3 => IH
         }
@@ -274,12 +274,12 @@
   | nil => cases ((reduce y) arg addPath) \with {
     | nil, p => rewrite (helper1, helper2) idp
     | a :: x, p => cases ((decideEq s a.1) arg addPath) \with {
-      | yes e, p1 => cases ((xor (not b) a.2) arg addPath) \with {
+      | yes e, p1 => cases ((not b) xor a.2 arg addPath) \with {
         | false, p2 => rewrite (helper1, helper2) idp
         | true, p2 => rewrite (e, helper3 p2) (cases (x arg addPath) \with {
           | nil, p3 => idp
-          | a1 :: x1, p3 => cases ((decideEq a.1 a1.1) arg addPath) \with {
-            | yes e1, p4 => cases ((xor a.2 a1.2) arg addPath) \with {
+          | a1 :: x1, p3 => cases (decideEq a.1 a1.1 arg addPath) \with {
+            | yes e1, p4 => cases (a.2 xor a1.2 arg addPath) \with {
               | false, p5 => idp
               | true, p5 => rewrite p3 at p $
                   \have A0 : isIrreducible (a :: a1 :: x1) = false => rewrite (p4, p5) idp
@@ -299,12 +299,12 @@
       | no n, _ => absurd (n idp)
     }
 
-    \func helper2 (p : Bool) : xor p (not p) = true => cases p \with {
+    \func helper2 (p : Bool) : p xor (not p) = true => cases p \with {
       | false => idp
       | true => idp
     }
 
-    \func helper3 {a b : Bool} (_ : xor (not a) b = true) : a = b \elim a, b
+    \func helper3 {a b : Bool} (_ : (not a) xor b = true) : a = b \elim a, b
       | false, false => idp
       | false, true => contradiction
       | true, false => contradiction

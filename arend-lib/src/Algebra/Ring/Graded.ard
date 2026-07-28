@@ -43,7 +43,7 @@
                   | inl (i',i_i') => transportInv (\lam r => isHomogen (l' r) _) (fin_nat-inj i_i') $ transportInv (isHomogen __ i) (++.++_index-left i') homogen-zro
                   | inr (i',i_i') => transportInv (\lam r => isHomogen (l' r) _) (fin_nat-inj i_i') $ transportInv (isHomogen __ i) ++.++_index-right $ transportInv (isHomogen _) (later $ i_i' *> pmap suc ++.index-right-nat) $ homogen-* (lh (suc j)) (lh i')
                 }) (transport (isHomogen __ _) lj=l' (lh (suc j))) \with {
-                  | inl (j',q,j'_j) => lj=l' *> q *> pmap (++ (replicate (suc j) zro) _ __) {j'} {++.index-right {_} {replicate (suc j) zro} 0} (fin_nat-inj $ j'_j *> pmap suc (inv ++.index-right-nat)) *> ++.++_index-right *> *-comm
+                  | inl (j',q,j'_j) => lj=l' *> q *> pmap ((++) (replicate (suc j) zro) _ __) {j'} {++.index-right {_} {replicate (suc j) zro} 0} (fin_nat-inj $ j'_j *> pmap suc (inv ++.index-right-nat)) *> ++.++_index-right *> *-comm
                   | inr l'=0 => lj=l' *> l'=0 *> inv (pmap (_ *) (lj=l' *> l'=0) *> zro_*-right)
                 }
               | x0lj=0 {j} : x0 * l j = 0 => homogen-unique (negative x0 + x0 * x0 :: map (x0 *) l) (\case \elim __ \with {
@@ -212,7 +212,7 @@
                  (lh : \Pi (j : Fin l.len) -> isHomogen (l j) (n Nat.+ j))
                  (l'h : \Pi (j : Fin l'.len) -> isHomogen (l' j) (n Nat.+ l.len Nat.+ j))
                  (j : Fin (DArray.len {l ++ l'}))
-        : isHomogen (++ l l' j) (n Nat.+ j) \elim l, j
+        : isHomogen ((++) l l' j) (n Nat.+ j) \elim l, j
         | nil, j => l'h j
         | a :: l, 0 => lh 0
         | a :: l, suc j => aux (suc n) (\lam j => lh (suc j)) l'h j

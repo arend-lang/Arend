@@ -17,6 +17,6 @@ class ArendArgumentAppExpr(node: ASTNode) : ArendAppExpr(node) {
     override fun <P, R> accept(visitor: AbstractExpressionVisitor<in P, out R>, params: P?): R {
         val expr = firstRelevantChild as? ArendExpr ?: error("Incomplete expression: $this")
         val args = argumentList
-        return if (args.isEmpty()) expr.accept(visitor, params) else visitor.visitBinOpSequence(this, expr, args, params)
+        return if (args.isEmpty()) expr.accept(visitor, params) else visitor.visitBinOpSequence(this, expr, atomFieldsAcc.isVariable, args, params)
     }
 }

@@ -80,9 +80,12 @@ import org.arend.term.concrete.Concrete
 @Deprecated("Obsolete") fun parseBinOp(left: Abstract.Expression, sequence: Collection<Abstract.BinOpSequenceElem>): Concrete.Expression =
         parseBinOp(null, left, sequence)
 
-@Deprecated("Obsolete") fun parseBinOp(data: Any?, left: Abstract.Expression, sequence: Collection<Abstract.BinOpSequenceElem>, errorReporter: ErrorReporter = DummyErrorReporter.INSTANCE, scope: Scope? = null): Concrete.Expression {
+@Deprecated("Obsolete") fun parseBinOp(left: Abstract.Expression, leftIsVariable: Boolean, sequence: Collection<Abstract.BinOpSequenceElem>): Concrete.Expression =
+        parseBinOp(null, left, sequence, leftIsVariable = leftIsVariable)
+
+@Deprecated("Obsolete") fun parseBinOp(data: Any?, left: Abstract.Expression, sequence: Collection<Abstract.BinOpSequenceElem>, errorReporter: ErrorReporter = DummyErrorReporter.INSTANCE, scope: Scope? = null, leftIsVariable: Boolean = left is ArendAtomFieldsAcc && left.isVariable): Concrete.Expression {
     val concreteSeq = mutableListOf<Concrete.BinOpSequenceElem<Concrete.Expression>>()
-    concreteSeq.add(Concrete.BinOpSequenceElem(getExpression(left)))
+    concreteSeq.add(Concrete.BinOpSequenceElem(getExpression(left), if (leftIsVariable) Fixity.UNKNOWN else Fixity.NONFIX, true))
     for (elem in sequence) {
         concreteSeq.add(Concrete.BinOpSequenceElem(getExpression(elem.expression), if (elem.isVariable) Fixity.UNKNOWN else Fixity.NONFIX, elem.isExplicit))
     }

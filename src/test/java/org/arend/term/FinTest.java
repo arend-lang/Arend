@@ -53,26 +53,26 @@ public class FinTest extends TypeCheckingTestCase {
 
   @Test
   public void getTypeModCoerce() {
-    typeCheckDef("\\func kiva (a : Nat) : Fin 8 => Nat.mod a 0");
+    typeCheckDef("\\func kiva (a : Nat) : Fin 8 => (Nat.mod) a 0");
   }
 
   @Test
   public void getTypeModFailing() {
-    typeCheckDef("\\func kiva (a : Nat) : Fin 0 => Nat.mod a 0", 1);
+    typeCheckDef("\\func kiva (a : Nat) : Fin 0 => (Nat.mod) a 0", 1);
     assertThatErrorsAre(Matchers.typeMismatchError());
   }
 
   @Test
   public void getTypeModFailing2() {
-    typeCheckDef("\\func kiva (a : Nat) : Fin 8 => Nat.mod a 9", 1);
+    typeCheckDef("\\func kiva (a : Nat) : Fin 8 => (Nat.mod) a 9", 1);
     assertThatErrorsAre(Matchers.typeMismatchError());
   }
 
   @Test
   public void getTypeMod() {
-    typeCheckDef("\\func kiva : Fin 8 => Nat.mod 10 8");
-    typeCheckDef("\\func oyama (a : Nat) : Fin (suc a) => Nat.mod 114514 (suc a)");
-    typeCheckDef("\\func kiwa : Nat.mod 10 8 = {Fin 8} 2 => idp {Fin 8} {2}");
+    typeCheckDef("\\func kiva : Fin 8 => (Nat.mod) 10 8");
+    typeCheckDef("\\func oyama (a : Nat) : Fin (suc a) => (Nat.mod) 114514 (suc a)");
+    typeCheckDef("\\func kiwa : (Nat.mod) 10 8 = {Fin 8} 2 => idp {Fin 8} {2}");
   }
 
   @Test
@@ -150,21 +150,21 @@ public class FinTest extends TypeCheckingTestCase {
 
   @Test
   public void modType() {
-    assertEquals(Fin(7), typeCheckExpr("Nat.mod 17 7", null).type);
+    assertEquals(Fin(7), typeCheckExpr("(Nat.mod) 17 7", null).type);
     assertEquals(divModType(Fin(7)), typeCheckExpr("Nat.divMod 17 7", null).type);
   }
 
   @Test
   public void modType2() {
     List<Binding> context = Collections.singletonList(new TypedBinding("n", Nat()));
-    assertEquals(Fin(13), typeCheckExpr(context, "Nat.mod n 13", null).type);
+    assertEquals(Fin(13), typeCheckExpr(context, "(Nat.mod) n 13", null).type);
     assertEquals(divModType(Fin(13)), typeCheckExpr(context, "Nat.divMod n 13", null).type);
   }
 
   @Test
   public void modType3() {
     List<Binding> context = Collections.singletonList(new TypedBinding("n", Nat()));
-    assertEquals(Nat(), typeCheckExpr(context, "Nat.mod n 0", null).type);
+    assertEquals(Nat(), typeCheckExpr(context, "(Nat.mod) n 0", null).type);
     assertEquals(Prelude.DIV_MOD_TYPE, typeCheckExpr(context, "Nat.divMod n 0", null).type);
   }
 
@@ -172,7 +172,7 @@ public class FinTest extends TypeCheckingTestCase {
   public void modType4() {
     TypedBinding binding = new TypedBinding("n", Nat());
     Expression type = Fin(Suc(new ReferenceExpression(binding)));
-    assertEquals(type, typeCheckExpr(Collections.singletonList(binding), "Nat.mod n (suc n)", null).type);
+    assertEquals(type, typeCheckExpr(Collections.singletonList(binding), "(Nat.mod) n (suc n)", null).type);
     assertEquals(divModType(type), typeCheckExpr(Collections.singletonList(binding), "Nat.divMod n (suc n)", null).type);
   }
 
