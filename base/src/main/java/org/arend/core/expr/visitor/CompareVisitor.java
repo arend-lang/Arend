@@ -210,6 +210,23 @@ public class CompareVisitor implements ExpressionVisitor2<Expression, Expression
     return false;
   }
 
+  private boolean compareFunCalls(FunCallExpression expr1, FunCallExpression expr2) {
+    if (expr1.getDefinition() != expr2.getDefinition() || expr1.getDefinition().isSFunc()) {
+      return false;
+    }
+
+    Result result = myResult;
+    CMP cmp = myCMP;
+    myCMP = CMP.EQ;
+    boolean ok = visitDefCall(expr1, expr2);
+    myCMP = cmp;
+    if (!ok) {
+      // The calls may still be equal after unfolding their common head.
+      myResult = result;
+    }
+    return ok;
+  }
+
   private boolean initResult(Expression expr1, Expression expr2) {
     if (myNormalCompare && myResult == null && !myOnlySolveVars) {
       expr1 = expr1.copyStrict();
@@ -468,6 +485,10 @@ public class CompareVisitor implements ExpressionVisitor2<Expression, Expression
         initResult(expr1, expr2);
         return false;
       }
+      return true;
+    }
+
+    if (expr1 instanceof FunCallExpression funCall1 && expr2 instanceof FunCallExpression funCall2 && compareFunCalls(funCall1, funCall2)) {
       return true;
     }
 

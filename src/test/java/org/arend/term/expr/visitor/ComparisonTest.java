@@ -220,4 +220,43 @@ public class ComparisonTest extends TypeCheckingTestCase {
     assertEquals(result2.expression, result1.expression);
     assertEquals(result1.expression, result2.expression);
   }
+
+  @Test(timeout = 5000)
+  public void compareFunCallsBeforeHeadNormalization() {
+    typeCheckModule("\\func idType (A : \\Type) => A\n\\func loop (A : \\Type) => A");
+    FunctionDefinition idType = (FunctionDefinition) getDefinition("idType");
+    FunctionDefinition loop = (FunctionDefinition) getDefinition("loop");
+    DependentLink parameter = loop.getParameters();
+
+    // Normalizing either call diverges, but their arguments are equal after normalization.
+    loop.setBody(FunCall(loop, LevelPair.SET0, FunCall(idType, LevelPair.SET0, Ref(parameter))));
+    Expression expr1 = FunCall(loop, LevelPair.SET0, FunCall(idType, LevelPair.SET0, Universe(0)));
+    Expression expr2 = FunCall(loop, LevelPair.SET0, Universe(0));
+
+    assertTrue(compare(expr1, expr2, null, CMP.EQ));
+  }
+
+  @Test
+  public void compareFunCallsFallsBackToHeadNormalization() {
+    typeCheckModule(
+      "\\func constZero (n : Nat) => 0\n" +
+      "\\func lhs => constZero 0\n" +
+      "\\func rhs => constZero 1");
+    Expression expr1 = (Expression) ((FunctionDefinition) getDefinition("lhs")).getBody();
+    Expression expr2 = (Expression) ((FunctionDefinition) getDefinition("rhs")).getBody();
+
+    assertTrue(compare(expr1, expr2, null, CMP.EQ));
+  }
+
+  @Test
+  public void compareFunCallsDetectsUnequalCalls() {
+    typeCheckModule(
+      "\\func idNat (n : Nat) => n\n" +
+      "\\func lhs => idNat 0\n" +
+      "\\func rhs => idNat 1");
+    Expression expr1 = (Expression) ((FunctionDefinition) getDefinition("lhs")).getBody();
+    Expression expr2 = (Expression) ((FunctionDefinition) getDefinition("rhs")).getBody();
+
+    assertFalse(compare(expr1, expr2, null, CMP.EQ));
+  }
 }
