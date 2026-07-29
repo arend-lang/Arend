@@ -1,1 +1,45 @@
-Bug fixes
+This release includes a major internal overhaul of the universe/level system,
+an opt-in binary caching mode for the CLI,
+and substantial additions to arend-lib, most notably in algebraic geometry and analysis.
+
+Language updates:
+<ul>
+    <li>Introduce types not bounded by universe levels.
+        The old explicit level-bound machinery (\lp, \plevels, default level parameters) has been removed;
+        level polymorphism is now inferred automatically by the level solver.</li>
+    <li>Introduce classes not bounded by universe levels, with a local override available when a definition needs to be pinned to a finite level.</li>
+    <li>Prefix application of infix operators is now forbidden. Applying an infix operator to a single argument is instead interpreted as a right section.</li>
+</ul>
+
+Plugin updates:
+<ul>
+    <li>Updated IntelliJ platform support to 2025.3, then to 2026.2.</li>
+    <li>Added basic Arend support for the JetBrains Educational plugin (course builder, project generator, and task checker).</li>
+    <li>Fixed a UI freeze in the custom searcher, formatter performance issues, and the Arend Messages panel.</li>
+</ul>
+
+CLI updates:
+<ul>
+    <li>Added an opt-in binary cache (.arc) serialization mode for faster incremental rechecking: pass --serialize to persist typechecked results, and -r/--recompile to ignore existing caches.</li>
+    <li>Added console query tooling: -ss (symbol search), -ps (proof search), -fu (find usages), -ch (class hierarchy), and -sc (scope), all with --json output support.</li>
+    <li>The proof searcher, previously IDE-only, is now available in the console app.</li>
+    <li>REPL improvements: Ctrl+J (multi-line input), Ctrl+C (clear line), Ctrl+D (quit), -L support, and module preloading.</li>
+    <li>Added progress indication to the console app and support for typechecking individual definitions from the CLI.</li>
+</ul>
+
+arend-lib updates:
+<ul>
+    <li>Introduce scheme sites, affine opens, affine schemes, and general schemes built from a scheme site.</li>
+    <li>Construct Spec and Proj; prove Spec is a reflective embedding of CRing^op into scheme sites and check the sheaf condition for the structure sheaf on Spec R.</li>
+    <li>Define locally ringed locales and construct a fully faithful functor and equivalence of morphisms between scheme sites and locally ringed locales; prove every scheme can be reconstructed from a scheme site.</li>
+    <li>Refactor locales and sites, including dense sites and preorder sites; prove the category of ringed locales is univalent.</li>
+    <li>Cauchy product of power series; make exp and log(1+x) into functions with full analytic properties; define sin and cos and prove cos π = -1.</li>
+    <li>Make complex numbers a Banach algebra.</li>
+    <li>Define Noetherian rings and prove products of Noetherian rings are Noetherian; define Bar-Noetherian rings, bar induction, and prove the fan theorem.</li>
+    <li>Prove Hilbert's basis theorem for Bar-Noetherian rings.</li>
+    <li>Define tensor products of modules and of algebras.</li>
+    <li>Refactor Heyting algebras, complete lattices, and the localization of rings and monoids.</li>
+    <li>Replace Equiv with QEquiv and IsEquiv throughout the library.</li>
+    <li>Refactor the hierarchy of substructures and group representation theory.</li>
+    <li>Add natarith/intarith tactics extending the linarith-style solver, including Nat div/mod support.</li>
+</ul>
