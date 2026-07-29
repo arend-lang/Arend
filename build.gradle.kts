@@ -147,13 +147,22 @@ tasks.register<Test>("roundTripTest") {
     }
 }
 
-// Partial round-trip test: typechecks a target module + its prerequisites
-// (the "cone"), serializes the cone, then on a fresh server deserializes the
-// cone and typechecks the rest of arend-lib from sources.  Reports only
-// secondary typechecking errors (errors that don't appear in modules outside
-// the cone).  Uses ARD+ARC overlay for cone modules so concrete-tree state
-// (e.g. inline meta bodies) is available.  Run with:
+// Partial round-trip test: serializes a "cone" of arend-lib, then on a fresh
+// server deserializes the cone and typechecks the rest of arend-lib from
+// sources.  Reports only secondary typechecking errors (errors that don't
+// appear in modules outside the cone).  Uses ARD+ARC overlay for cone modules
+// so concrete-tree state (e.g. inline meta bodies) is available.
+//
+// Two ways to choose the cone; they reproduce different cache states and are not
+// interchangeable (see the test's javadoc):
+//   targets — cone = the target's transitive prerequisites (small deserialized side)
+//   touched — cone = everything except the listed modules and their transitive
+//             dependents; this is the split a real post-edit `arend --serialize`
+//             produces (large deserialized side).  Reproduces the spurious
+//             Topology.CoverSpace.Locale / Topology.Locale.Points errors.
+// Run with:
 //   ./gradlew partialRoundTripTest [-Darend.partial_roundtrip.targets=AG.Projective,Algebra.Ring.RingHom]
+//   ./gradlew partialRoundTripTest -Darend.partial_roundtrip.touched=Topology.Locale.PreorderSite
 tasks.register<Test>("partialRoundTripTest") {
     description = "Runs the arend-lib partial serialization round-trip test"
     group = "verification"
@@ -175,20 +184,36 @@ tasks.register<Test>("partialRoundTripTest") {
     System.getProperty("arend.partial_roundtrip.targets")?.let {
         systemProperty("arend.partial_roundtrip.targets", it)
     }
+    System.getProperty("arend.partial_roundtrip.touched")?.let {
+        systemProperty("arend.partial_roundtrip.touched", it)
+    }
     System.getProperty("arend.ordering.probeOrder")?.let {
         systemProperty("arend.ordering.probeOrder", it)
+    }
+    // The test's whole output is its phase log on stdout; without this the task
+    // prints nothing at all and a pass/fail is indistinguishable from a no-op.
+    outputs.upToDateWhen { false }
+    testLogging {
+        events("passed", "skipped", "failed", "standardOut", "standardError")
+        showStandardStreams = true
     }
 }
 
 // Partial-cache repro test: clones arend-lib/bin into a temp dir, deletes one
 // upstream module's .arc to simulate `touch <module>.ard`, applies the
 // production loadBinaryCache cascade against the trimmed cache, then typechecks
-// a downstream target. Fails iff `Meta 'contradiction' failed` /
-// `Cannot infer contradiction` errors surface. Reproduces the CLI's
-// secondary-contradiction failure mode in JUnit form. Run with:
+// the whole library. Fails on any non-GOAL error: the sources are untouched, so
+// every error is caused by the partial cache. Unlike partialRoundTripTest this
+// drives the real BinaryLoader, so it is the one that catches loader defects
+// rather than round-trip fidelity defects. Run with:
 //   ./gradlew partialCacheTest -Darend.partial_cache.enabled=true \
 //     [-Darend.partial_cache.touched=Algebra.Domain] \
 //     [-Darend.partial_cache.target=Arith.Exp]
+// Known-reproducing invalidation points:
+//   -Darend.partial_cache.touched=Topology.Locale.PreorderSite
+//       -> 25 errors in Topology.CoverSpace.Locale / Topology.Locale.Points
+//   -Darend.partial_cache.touched=Algebra.Domain            (the default)
+//       -> 9 errors in Algebra.Field.Splitting
 // Requires arend-lib/bin to be pre-seeded (run `arend -L .. arend-lib -r -ai`
 // once before invoking).
 tasks.register<Test>("partialCacheTest") {
