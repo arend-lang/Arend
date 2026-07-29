@@ -48,7 +48,7 @@
   \lemma f#_f*-right {a a' : Cod} {a<=a' : a <= a'} {b : Dom} {b<=a : b <=f* a} {x : Cod.R a'} : f# b<=a (Cod.R.Func a<=a' x) = f# (<=f*-right b<=a a<=a') x
     => f#-right a<=a' b<=a _
 
-  \sfunc f#-cover {a : Cod} {b : Dom} (b<=a : Cover {Dom.toSite} b (`<=f* a))
+  \sfunc f#-cover {a : Cod} {b : Dom} (b<=a : Cover {Dom.toSite} b (<=f* a))
     : Given (h : RingHom (Cod.R a) (Dom.R b))
       ∀ {c d} (Ud : d <=f* a) (ca : c <= b) (cd : c <= d) (Dom.R.Func ca RingHom.∘ h = Dom.R.Func cd RingHom.∘ f# Ud)
     => IsPreorderSheaf.sheaf-map Dom.toRLSite.R-sheaf b<=a f# \lam ba b'a cb cb' => exts \lam x => f#_f*-left *> inv f#_f*-left
@@ -82,7 +82,7 @@
       }
     }
 
-  \lemma f#-cover_f# {b : Dom} {a : Cod} {b<<a : Cover {Dom.toSite} b (`<=f* a)} (b<=a : b <=f* a) {x : Cod.R a} : (f#-cover b<<a).1 x = f# b<=a x
+  \lemma f#-cover_f# {b : Dom} {a : Cod} {b<<a : Cover {Dom.toSite} b (<=f* a)} (b<=a : b <=f* a) {x : Cod.R a} : (f#-cover b<<a).1 x = f# b<=a x
     => inv (path \lam i => Dom.R.Func-id i _) *> path (\lam i => (f#-cover b<<a).2 b<=a <=-refl <=-refl i x) *> path (\lam i => Dom.R.Func-id i _)
 } \where {
   \protected \func id.{u} {S : SchemeSite.{u}} : SchemeSitePrehom S S \cowith
@@ -145,7 +145,7 @@
 }
 
 \func satPrehom.{u} {X Y : SchemeSite.{u}} (f : SchemeSitePrehom X Y) : SchemeSiteHom X Y \cowith
-  | <=f* b a => Cover {X.toSite} b (f.`<=f* a)
+  | <=f* b a => Cover {X.toSite} b (f.<=f* a)
   | <=f*-cover-left c => cover-trans* c \lam d => d
   | <=f*-right c aa' => cover-sub c \lam {b} ba => <=f*-right ba aa'
   | f# b<=a => (f.f#-cover b<=a).1
@@ -164,7 +164,7 @@
   }
 
 \record SchemeSiteHom \extends SchemeSitePrehom {
-  | <=f*-cover-left {b : Dom} {a : Cod} : Cover {Dom.toSite} b (`<=f* a) -> b <=f* a
+  | <=f*-cover-left {b : Dom} {a : Cod} : Cover {Dom.toSite} b (<=f* a) -> b <=f* a
   | <=f*-left b'<=b b<=a => <=f*-cover-left (cover-inj b'<=b b<=a)
 
   \lemma <=f*-restrict {b : Dom} {a a' : Cod} (a'a : a' <= a) : b <=f* a' <-> Given (b<=a : b <=f* a) ∃ (x : Cod.R a) (Cod.IsLocalizationAt a'a x) (Inv (f# b<=a x))
@@ -345,7 +345,7 @@
           (<=f*-left b''b1' $ <=f*-left b1'b0' b0'a', \box transport Inv f.f#_f*-left $ b1'l.localization-inv powers-id),
           locR (x * v.1),
           SatSite.loc-lemma a'a al LDiv.ide-div (v.1, v.2, v.3, v.4 *> pmap (Y.R.Func _) (inv ide-left)),
-          transport2 (\lam x y => Localization (powers x) _ y) (inv $ lift_inL *> func-* *> pmap (`* _) (inv f.f#_f*-left)) (inv X.R.Func-o) $
+          transport2 (\lam x y => Localization (powers x) _ y) (inv $ lift_inL *> func-* *> pmap (* _) (inv f.f#_f*-left)) (inv X.R.Func-o) $
             comp1 b1l $ transportSubMonoid1 b1'l
               (\have ci => b1l.localization-inv $ transportInv (powers __ _) f.f#_f*-left (func-powers v.3)
                \in inP (1, LDiv.make ci.inv $ inv $ ci.rotate-inv-right $ *-assoc *> ide-left

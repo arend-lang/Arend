@@ -15,7 +15,7 @@
 \func kerQuotHom {G H : Group} (f : GroupHom G H) : GroupHom (G // KernelGroup f) H \cowith
   | func (x : G // KernelGroup f) : H \with {
     | in~ n => f n
-    | ~-equiv y x r => (H.makeInv (inverse (f y))).inv-cancel-left $ inverse-left *> inv r *> f.func-* *> pmap (`* _) f.func-inverse
+    | ~-equiv y x r => (H.makeInv (inverse (f y))).inv-cancel-left $ inverse-left *> inv r *> f.func-* *> pmap (* _) f.func-inverse
   }
   | func-* {in~ x} {in~ y} => f.func-*
 

@@ -32,7 +32,7 @@
 
     -- | $i^2 = -1$.
     \lemma pow-iunit-2 : Monoid.pow {ComplexField} i 2 = ComplexField.negative ComplexField.ide
-      => pmap (ComplexField.`* i) ComplexField.ide-left *> iunit-square
+      => pmap (ComplexField.* i) ComplexField.ide-left *> iunit-square
 
     -- | $i^{2k} = (-1)^k$.
     \lemma pow-iunit-even (k : Nat) : Monoid.pow i (2 Nat.* k) = Monoid.pow (ComplexField.negative ComplexField.ide) k
@@ -41,7 +41,7 @@
     -- | $i^{2k+1} = (-1)^k\,i$.
     \lemma pow-iunit-odd (k : Nat)
       : ComplexField.pow i (2 Nat.* k Nat.+ 1) = Monoid.pow (ComplexField.negative ComplexField.ide) k ComplexField.* i
-      => pmap (ComplexField.`* i) (pow-iunit-even k)
+      => pmap (ComplexField.* i) (pow-iunit-even k)
 
     {- | $\mathrm{fromReal}$ preserves addition:
          $\mathrm{fromReal}\,(x + y) = \mathrm{fromReal}\ x + \mathrm{fromReal}\ y$. -}
@@ -62,7 +62,7 @@
     \lemma fromReal_pow {x : Real} {n : Nat}
       : Complex.fromReal (RealField.pow x n) = ComplexField.pow (Complex.fromReal x) n \elim n
       | 0 => idp
-      | suc n => fromReal_* *> pmap (ComplexField.`* _) fromReal_pow
+      | suc n => fromReal_* *> pmap (ComplexField.* _) fromReal_pow
   }
 
 \instance ComplexField : Field Complex
@@ -106,7 +106,7 @@
 -- | Complex conjugation $\overline{a + bi} := a - bi$.
 \func conj (z : Complex) : Complex => \new Complex z.re (negative z.im)
 
--- | $\overline{\overline{z}} = z$ — `conj` is its own inverse.
+-- | $\overline{\overline{z}} = z$ — {conj} is its own inverse.
 \lemma conj_conj {z : Complex} : conj (conj z) = z
   => ext (idp, AddGroup.negative-isInv)
 
@@ -118,11 +118,11 @@
 \lemma conj_ide : conj 1 = (1 : Complex)
   => ext (idp, RealAbGroup.negative_zro)
 
--- | $\overline{x + y} = \overline{x} + \overline{y}$ — `conj` preserves addition.
+-- | $\overline{x + y} = \overline{x} + \overline{y}$ — {conj} preserves addition.
 \lemma conj_+ {x y : Complex} : conj (x + y) = conj x + conj y
   => ext (idp, RealAbGroup.negative_+ *> +-comm)
 
--- | $\overline{xy} = \overline{x} \cdot \overline{y}$ — `conj` preserves multiplication.
+-- | $\overline{xy} = \overline{x} \cdot \overline{y}$ — {conj} preserves multiplication.
 \lemma conj_* {x y : Complex} : conj (x * y) = conj x * conj y
   => ext (simplify, equation.ring)
 
@@ -134,14 +134,14 @@
 \lemma conj_i_* {x : Real} : conj (i * x) = negative (i * x)
   => conj_* *> pmap2 (*) conj_i conj_fromReal *> Ring.negative_*-left
 
--- | $\overline{\mathrm{fromReal}\ x} = \mathrm{fromReal}\ x$ — `conj` fixes the real-line embedding.
+-- | $\overline{\mathrm{fromReal}\ x} = \mathrm{fromReal}\ x$ — {conj} fixes the real-line embedding.
 \lemma conj_fromReal {x : Real} : conj x = Complex.fromReal x
   => ext RealAbGroup.negative_zro
 
--- | $\overline{z^n} = (\overline{z})^n$ — `conj` commutes with monoid powers.
+-- | $\overline{z^n} = (\overline{z})^n$ — {conj} commutes with monoid powers.
 \lemma conj_pow {z : Complex} (n : Nat) : conj (Monoid.pow z n) = Monoid.pow (conj z) n \elim n
   | 0 => conj_ide
-  | suc n => conj_* *> pmap (`* conj z) (conj_pow n)
+  | suc n => conj_* *> pmap (* conj z) (conj_pow n)
 
 -- | {conj} as an additive-group endomorphism of $\mathbb{C}$.
 \func conjAddHom : AddGroupHom ComplexField ComplexField \cowith

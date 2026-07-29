@@ -536,7 +536,7 @@
       \lemma sum-lem {a b c : Nat} : a ∧ (b + c) = a ∧ b + (a -' b) ∧ c \elim a, b
         | 0, b => rdistr0 *> inv (pmap2 (+) rdistr0 rdistr0)
         | suc a, 0 => idp
-        | suc a, suc b => inv (NatSemiring.meet_+-left {1}) *> pmap suc sum-lem *> pmap (`+ _) (NatSemiring.meet_+-left {1})
+        | suc a, suc b => inv (NatSemiring.meet_+-left {1}) *> pmap suc sum-lem *> pmap (+ _) (NatSemiring.meet_+-left {1})
     }
 
   \lemma removeVar_<=-lem (t : GroupTerm V) (v : V) (withInv : Bool) {n : Nat} (p : n <= countVar t v withInv)
@@ -546,7 +546,7 @@
   \lemma removeVar-correct (t : GroupTerm V) (v : V) (n : Nat) (p : n <= countVar t v false) (q : n <= countVar t v true)
     : interpret (removeVar n (removeVar n t v true).1 v false).1 = interpret t
     => inv (*-assoc *> pmap (_ *) (inv (pmap (_ *) G.inverse_pow) *> inverse-right) *> ide-right) *>
-       pmap (`* _) (removeVar_<=-lem (removeVar n t v true).1 v false $ transportInv (n <=) (count-remove-lem false) p) *>
+       pmap (* _) (removeVar_<=-lem (removeVar n t v true).1 v false $ transportInv (n <=) (count-remove-lem false) p) *>
        removeVar_<=-lem t v true q
 
   \lemma removeVars-correct (t : GroupTerm V) {l : List (\Sigma V Nat)} (a : All (\lam p => \Sigma (p.2 <= countVar t p.1 false) (p.2 <= countVar t p.1 true)) l) (b : All2 (__.1 /= __.1) l)

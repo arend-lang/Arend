@@ -28,7 +28,7 @@
   | func-zro => zro_*-right
   | func-+ => ldistr
 
-\lemma *-addMonoidHom-right {R : PseudoSemiring} {a : R} : AddMonoidHom R R (`* a) \cowith
+\lemma *-addMonoidHom-right {R : PseudoSemiring} {a : R} : AddMonoidHom R R (* a) \cowith
   | func-zro => zro_*-left
   | func-+ => rdistr
 
@@ -44,7 +44,7 @@
 \lemma *-addGroupHom-left {R : PseudoRing} {a : R} : AddGroupHom R R (a *) \cowith
   | func-+ => ldistr
 
-\lemma *-addGroupHom-right {R : PseudoRing} {a : R} : AddGroupHom R R (`* a) \cowith
+\lemma *-addGroupHom-right {R : PseudoRing} {a : R} : AddGroupHom R R (* a) \cowith
   | func-+ => rdistr
 
 \record PseudoRingHom \extends AddGroupHom, SemigroupHom {
@@ -131,18 +131,18 @@
   | func => natCoef
   | func-+ {n m : Nat} : R.natCoef (n + m) = natCoef n + natCoef m \elim m {
     | 0 => inv (pmap (natCoef n +) natCoefZero *> zro-right)
-    | suc m => natCoefSuc (n + m) *> pmap (`+ ide) func-+ *> +-assoc *> pmap (natCoef n +) (inv (natCoefSuc m))
+    | suc m => natCoefSuc (n + m) *> pmap (+ ide) func-+ *> +-assoc *> pmap (natCoef n +) (inv (natCoefSuc m))
   }
   | func-zro => natCoefZero
-  | func-ide => natCoefSuc 0 *> pmap (`+ ide) natCoefZero *> zro-left
+  | func-ide => natCoefSuc 0 *> pmap (+ ide) natCoefZero *> zro-left
   | func-* {n m : Nat} : R.natCoef (n * m) = natCoef n * natCoef m \elim m {
     | 0 => natCoefZero *> inv (pmap (natCoef n *) natCoefZero *> zro_*-right)
-    | suc m => func-+ *> pmap (`+ natCoef n) func-* *> inv (pmap (natCoef n *) (natCoefSuc m) *> ldistr *> pmap (natCoef n * natCoef m +) ide-right)
+    | suc m => func-+ *> pmap (+ natCoef n) func-* *> inv (pmap (natCoef n *) (natCoefSuc m) *> ldistr *> pmap (natCoef n * natCoef m +) ide-right)
   }
 
 \lemma natComm {R : Semiring} (n : Nat) (x : R) : natMap n * x = x * natMap n \elim n
-  | 0 => pmap (`* x) natCoefZero *> zro_*-left *> inv (pmap (x *) natCoefZero *> zro_*-right)
-  | suc n => pmap (`* x) (natCoefSuc n) *> rdistr *> pmap (natCoef n * x +) ide-left *> pmap (`+ x) (natComm n x) *> inv (pmap (x *) (natCoefSuc n) *> ldistr *> pmap (x * natCoef n +) ide-right)
+  | 0 => pmap (* x) natCoefZero *> zro_*-left *> inv (pmap (x *) natCoefZero *> zro_*-right)
+  | suc n => pmap (* x) (natCoefSuc n) *> rdistr *> pmap (natCoef n * x +) ide-left *> pmap (+ x) (natComm n x) *> inv (pmap (x *) (natCoefSuc n) *> ldistr *> pmap (x * natCoef n +) ide-right)
 
 \func intMap {R : Ring} : RingHom IntRing R \cowith
   | func => intCoef
@@ -168,7 +168,7 @@
       | 0, suc _ \as m => inv (pmap (__ - natCoef m) natCoefZero *> zro-left)
       | suc _ \as n, 0 => inv (pmap (natCoef n + negative __) natCoefZero *> pmap (natCoef n +) negative_zro *> zro-right)
       | suc n, suc m => intCoef_diff n m *>
-      pmap (natCoef n +) (inv (pmap (ide +) negative_+ *> inv +-assoc *> pmap (`- natCoef m) negative-right *> zro-left)) *>
+      pmap (natCoef n +) (inv (pmap (ide +) negative_+ *> inv +-assoc *> pmap (- natCoef m) negative-right *> zro-left)) *>
       inv (pmap2 (__ + negative __) (natCoefSuc n) (natCoefSuc m) *> +-assoc)
   }
 

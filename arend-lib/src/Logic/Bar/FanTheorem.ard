@@ -36,7 +36,7 @@
       }, \lam ap js => ap (js 0) \lam i => js (suc i))
 
     \lemma allPaths_++ {P : Array A -> \Prop} {ls : Array (Array A)} {r : Array A}
-      : AllPaths P (ls ++ map {A} {Array A} (`:: nil) r) <-> AllPaths (\lam l => P (l ++ r)) ls \elim ls
+      : AllPaths P (ls ++ map {A} {Array A} (:: nil) r) <-> AllPaths (\lam l => P (l ++ r)) ls \elim ls
       | nil => (\lam c _ => c \lam _ => 0,
                 \lam c js => transport P (exts \lam i => cases (js i) idp) $ c \case __)
       | l1 :: ls => (\lam c => allPaths_::.2 \lam k => allPaths_++.1 $ allPaths_::.1 c k,
@@ -70,7 +70,7 @@
       | l :: ls => allPaths_::.2 \lam k => allPaths-split (allPaths_::.1 ap1 k) (allPaths_::.1 ap2 k)
 
     \lemma allPaths-bar-shift {ls : Array (Array A)} {l r : Array A}
-      (h : ∀ (a : l) (Bar (AllPaths \lam l' => P (l' ++ a :: r)) ls)) : Bar (AllPaths P) (ls ++ l :: map (`:: nil) r) \elim l
+      (h : ∀ (a : l) (Bar (AllPaths \lam l' => P (l' ++ a :: r)) ls)) : Bar (AllPaths P) (ls ++ l :: map (:: nil) r) \elim l
       | nil => bar-stop allPaths-empty
       | a :: l => bar-shift-right $
         bar-impl (\lam {ls'} c => transport (AllPaths P) ++-assoc $ allPaths-split (allPaths_++.2 c.1) $ transportInv (AllPaths P) ++-assoc c.2) $

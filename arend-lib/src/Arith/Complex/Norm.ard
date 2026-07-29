@@ -153,7 +153,7 @@
      reducedness forces each component to zero. -}
 \lemma cabs_zro-ext {c : Complex} (p : cabs c = 0) : c = 0
   => \have | abs2_c=0 : c.re * c.re + c.im * c.im = (0 : Real)
-              => inv cabs-square *> pmap (`* cabs c) p *> RealField.zro_*-left
+              => inv cabs-square *> pmap (* cabs c) p *> RealField.zro_*-left
            | re2=0 : c.re * c.re = (0 : Real)
               => linarith (RealField.square_>=0 {c.im}, RealField.square_>=0 {c.re})
            | im2=0 : c.im * c.im = (0 : Real)
@@ -226,7 +226,7 @@
 
 {- | $|i \cdot z| = |z|$. Follows from `abs_*` and $|i| = 1$. -}
 \lemma cabs_i_* {z : Complex} : cabs (i * z) = cabs z
-  => cabs_* *> pmap (`* _) abs_i *> ide-left
+  => cabs_* *> pmap (* _) abs_i *> ide-left
 
 {- | Multiplication by $i$ as an isometric normed-group map. -}
 \func mulIMap : NormedIsometricMap ComplexNormed ComplexNormed (i *) \cowith

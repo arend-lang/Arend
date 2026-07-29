@@ -45,9 +45,9 @@
       | func (r : R) : LinearMap U U \cowith {
         | func u => r *c u
         | func-+ => *c-ldistr
-        | func-*c => inv *c-assoc *> pmap (`*c _) R.*-comm *> *c-assoc
+        | func-*c => inv *c-assoc *> pmap (*c _) R.*-comm *> *c-assoc
       }
       | func-+ => exts \lam _ => *c-rdistr
       | func-ide => exts \lam _ => ide_*c
-      | func-* => exts \lam u => pmap (`*c u) R.*-comm *> *c-assoc
+      | func-* => exts \lam u => pmap (*c u) R.*-comm *> *c-assoc
   }

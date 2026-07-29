@@ -55,7 +55,7 @@
     (bound : \Pi (k : Nat) -> k < m -> (A.norm (S k)).U c)
   : (A.norm (partialSum S m)).U (Rat.fromInt (pos (suc m)) * c)
   => rewrite partialSum.=FinSum $ A.norm_FinSum $ ExUpperRealAbMonoid.FinSum_<= (\lam j => ExUpperReal.<_<= $ bound j (fin_< j)) $
-      rewriteI (AddMonoidHom.func-FinSum rat-upperReal) $ transportInv (`< _) RatField.FinSum_replicate $ RatField.<_*_positive-left linarith c>0
+      rewriteI (AddMonoidHom.func-FinSum rat-upperReal) $ transportInv (< _) RatField.FinSum_replicate $ RatField.<_*_positive-left linarith c>0
 
 {- | If $a$ is absolutely convergent, so is `pow-conv a n`.  By induction on $n$
      using `conv-absConv` at the inductive step. -}
@@ -105,7 +105,7 @@
      for $k < M$ by `pow-conv-zero-below`. -}
 \lemma pow-conv-partialSum-M-zero {A : ExPseudoNormedRing} {b : Series A} {x : A} (b_0 : b 0 = 0) (M : Nat)
   : partialSum (\lam k => powerSeries (pow-conv b M) x k) M = 0
-  => partialSum.=FinSum *> A.FinSum_zro \lam j => pmap (`* _) (pow-conv-zero-below b_0 (fin_< j)) *> zro_*-left
+  => partialSum.=FinSum *> A.FinSum_zro \lam j => pmap (* _) (pow-conv-zero-below b_0 (fin_< j)) *> zro_*-left
 
 {- | Structural identity bridging the formal and analytic partial sums:
      for every $N$,
@@ -135,9 +135,9 @@
                                           *> zro_*-right)
               *> zro-right
      \in compose-partialSum-lhs-suc {A} {a} {b} {x} M
-         *> pmap (`+ _) (compose-partialSum-decomp b_0 M)
+         *> pmap (+ _) (compose-partialSum-decomp b_0 M)
          *> pmap (_ +) (inv \peval partialSum h (suc M))
-         *> pmap (`+ _) (inv g-suc-eq)
+         *> pmap (+ _) (inv g-suc-eq)
          *> inv partialSum_+
          *> pmap (partialSum __ _) (inv f-eq)
   \where {
@@ -233,7 +233,7 @@
                   => \have diff-eq : partialSum (\lam n' => F n' N) N0 - partialSum (\lam n' => F n' N) N
                                    = negative (midSum (\lam n' => F n' N) N0 N)
                             => pmap (_ -) pSF-split *> pmap (_ +) A.negative_+ *> inv +-assoc
-                            *> pmap (`+ _) +-comm *> +-assoc *> pmap (_ +) negative-right *> zro-right
+                            *> pmap (+ _) +-comm *> +-assoc *> pmap (_ +) negative-right *> zro-right
                      \in norm-dist *> pmap norm diff-eq *> norm_negative
                | tail-norm-bound : norm (midSum (\lam n' => F n' N) N0 N) ExUpperRealAbMonoid.<= midSum D N0_D N
                   => midSum_norm <=∘ midSum_<= (\lam {j} _ _ => F-bound j N) <=∘ midSum_<=-left N0_D<=N0 D>=0
@@ -245,7 +245,7 @@
                | total : (dist sL (partialSum (\lam n' => F n' N) N)).U
                          (eps * ratio 1 3 + (eps * ratio 1 3 + eps * ratio 1 3))
                   => ExUpperReal.<=_+-char dist-triang half1 half2
-         \in ExUpperReal.U_<= total $ transport (`<= eps) (inv ide-right *> ldistr *> pmap (_ +) ldistr) <=-refl)
+         \in ExUpperReal.U_<= total $ transport (<= eps) (inv ide-right *> ldistr *> pmap (_ +) ldistr) <=-refl)
 
 {- | Substitution / composition theorem: if $b_0 = 0$, $B(x) = \sum_m b_m x^m$
     converges to $B$ absolutely, and $A(B) = \sum_n a_n \cdot B^n$ converges to $s_A$, then $$\sum_k [x^k]\,A(B(x)) \cdot x^k \;=\; s_A.$$
@@ -301,16 +301,16 @@
          | step1 => partialSum_<= (\lam k => conv-norm_<= (powerSeries (pow-conv b m) x) (powerSeries b x) k)
          | step2 => partialSum-uconv-square (\lam _ => norm>=0) (\lam _ => norm>=0)
          | step3 => ExUpperRealSemigroup.<=_* (partialSum-pow-conv-norm-bound xc g>=0 g-bound m N) (g-bound N)
-    \in transport (`<= _) (inv rewrite-eq) (step1 <=∘ step2 <=∘ step3)
+    \in transport (<= _) (inv rewrite-eq) (step1 <=∘ step2 <=∘ step3)
   \where {
     {- | Base case ($n = 0$) for `partialSum-pow-conv-norm-bound`: the identity
          series `pow-conv b 0` is supported only at index $0$, where its norm is
          at most $1$, so its partial sums are bounded by $1$. -}
     \private \lemma partialSum-unitSeries-norm-bound {A : ExPseudoNormedRing} {x : A} (N : Nat)
       : partialSum (\lam k => norm (powerSeries (FSeriesRing A).ide x k)) N <= ExUpperReal.fromRat 1 \elim N
-      | 0 => transportInv (`<= _) partialSum-empty (ExUpperReal.<=-rat.1 RatField.zro<=ide)
-      | 1 => transportInv (`<= _) (partialSum_1 *> pmap norm ide-left) norm_ide_<=
-      | suc (suc N) => transportInv (`<= _) (partialSum_suc *> pmap (_ +) (pmap norm zro_*-left *> norm_zro) *> zro-right) (partialSum-unitSeries-norm-bound (suc N))
+      | 0 => transportInv (<= _) partialSum-empty (ExUpperReal.<=-rat.1 RatField.zro<=ide)
+      | 1 => transportInv (<= _) (partialSum_1 *> pmap norm ide-left) norm_ide_<=
+      | suc (suc N) => transportInv (<= _) (partialSum_suc *> pmap (_ +) (pmap norm zro_*-left *> norm_zro) *> zro-right) (partialSum-unitSeries-norm-bound (suc N))
   }
 
 {- | Restricted variant of `compose-converges-abs` that accepts a *radius bound*
@@ -359,7 +359,7 @@
           | g>=0-rat : 0 <= g => RatField.<=-less (rewrite partialSum-empty in h-g 0)
           | g-er>=0 : 0 <= ExUpperReal.fromRat g => ExUpperReal.<=-rat.1 g>=0-rat
           | g-er-bounded : ∃ (B : Rat) ((ExUpperReal.fromRat g).U B)
-              => inP (g + 1, transport (`< _) zro-right $ RatField.<_+-right g RatField.zro<ide)
+              => inP (g + 1, transport (< _) zro-right $ RatField.<_+-right g RatField.zro<ide)
      \in compose-converges-radius xc b_0 g-er>=0
            (IsPowerSeriesConv.upper a-PS-conv g-er>=0 g-er-bounded)
            b-abs (\lam N => ExUpperReal.<_<= (h-g N)) B-sum sA-sum

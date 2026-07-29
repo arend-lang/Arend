@@ -138,12 +138,12 @@
   }
   | *-assoc {n m k : Nat} : (n * m) * k = n * (m * k) \elim k {
     | 0 => idp
-    | suc k => pmap (`+ n * m) *-assoc *> inv ldistr
+    | suc k => pmap (+ n * m) *-assoc *> inv ldistr
   }
   | ldistr {n m k : Nat} : n * (m + k) = n * m + n * k \elim k {
     | 0 => idp
     | suc k =>
-        n * (m + k) + n     ==< pmap (`+ n) ldistr >==
+        n * (m + k) + n     ==< pmap (+ n) ldistr >==
         n * m + n * k + n   ==< +-assoc >==
         n * m + (n * k + n) `qed
   }
@@ -152,11 +152,11 @@
     | suc n, 0 => *-comm
     | 0, suc m => *-comm
     | suc n, suc m => pmap suc (
-        suc n * m + n   ==< pmap (`+ n) *-comm >==
+        suc n * m + n   ==< pmap (+ n) *-comm >==
         m * n + m + n   ==< +-assoc >==
         m * n + (m + n) ==< pmap2 (+) (inv *-comm) +-comm >==
         n * m + (n + m) ==< inv +-assoc >==
-        n * m + n + m   ==< pmap (`+ m) *-comm >==
+        n * m + n + m   ==< pmap (+ m) *-comm >==
         suc m * n + m   `qed)
   }
   | zro_*-left => *-comm
@@ -260,7 +260,7 @@
   | suc n, suc m, suc k => -'+-comm {_} {_} {1} (-'<=id <=∘ suc<=suc.conv m<=n) *> pmap suc (-'-'r (suc<=suc.conv k<=m) (suc<=suc.conv m<=n))
 
 \lemma -'-'r_id {n k : Nat} (k<=n : k <= n) : n -' (n -' k) = k
-  => -'-'r k<=n <=-refl *> pmap (`+ k) -'id
+  => -'-'r k<=n <=-refl *> pmap (+ k) -'id
 
 \lemma <=_exists {n m : Nat} (p : n <= m) : n + (m -' n) = m \elim n, m
   | 0, 0 => idp
@@ -378,8 +378,8 @@
 
 \lemma mod-unique {n q r q' r' : Nat} (r<n : r < n) (r'<n : r' < n) (p : n * q + r = n * q' + r') : r = r' \elim q, q'
   | 0, 0 => p
-  | 0, suc q' => \case n*_+_<n {n} {suc q'} (transport (`< n) p r<n)
-  | suc q, 0 => \case n*_+_<n {n} {suc q} (transport (`< n) (inv p) r'<n)
+  | 0, suc q' => \case n*_+_<n {n} {suc q'} (transport (< n) p r<n)
+  | suc q, 0 => \case n*_+_<n {n} {suc q} (transport (< n) (inv p) r'<n)
   | suc q, suc q' =>
     \have t => +-assoc *> pmap (_ +) +-comm *> inv +-assoc *> p *> +-assoc *> pmap (_ +) +-comm *> inv +-assoc
     \in mod-unique r<n r'<n (cancel-right n t)
@@ -395,7 +395,7 @@
   | suc m => fin_< (n mod suc m)
 
 \lemma div_< {n m : Nat} (n<m : n < m) : n div m = 0
-  => n*_+_<n (transportInv (`< m) (divModProp n m) n<m)
+  => n*_+_<n (transportInv (< m) (divModProp n m) n<m)
 
 \lemma mod_< {n m : Nat} (n<m : n < m) : n mod m = n
   => inv (pmap (m * __ + _) (div_< n<m)) *> divModProp n m
@@ -421,7 +421,7 @@
 \lemma natAssociates-areEqual {n m : Nat} (n|m : LDiv n m) (m|n : LDiv m n) : n = m \elim n
   | 0 => inv NatSemiring.zro_*-left *> n|m.inv-right
   | suc _ \as n =>
-    \have t : m|n.inv = 1 => natUnit (cancel_*-left {n} (\case __) (inv *-assoc *> pmap (`* _) n|m.inv-right *> m|n.inv-right))
+    \have t : m|n.inv = 1 => natUnit (cancel_*-left {n} (\case __) (inv *-assoc *> pmap (* _) n|m.inv-right *> m|n.inv-right))
     \in inv m|n.inv-right *> pmap (m *) t
 
 \lemma ldiv_<= {n m : Nat} (m/=0 : m /= 0) (n|m : LDiv n m) : n <= m
@@ -478,7 +478,7 @@
 -- Properties of mod
 
 \lemma n*_+_mod_n {n q r : Nat} (r<n : r < n) : (n * q + r) mod n = {Nat} r \elim n
-  | 0 => pmap (`+ r) NatSemiring.zro_*-left
+  | 0 => pmap (+ r) NatSemiring.zro_*-left
   | suc n => mod-unique (fin_< _) r<n (divModProp (suc n * q + r) (suc n))
 
 \lemma n*_+_mod_n=mod {n q r : Nat} : (suc n * q + r) mod suc n = r mod suc n
@@ -489,7 +489,7 @@
   }
   \where
     \lemma nat {n q r : Nat} : (n * q + r) mod n = r mod n \elim n
-      | 0 => pmap (`+ r) NatSemiring.zro_*-left
+      | 0 => pmap (+ r) NatSemiring.zro_*-left
       | suc n => n*_+_mod_n=mod
 
 \lemma mod_+-left {n a b : Nat} : (a mod suc n + b) mod suc n = (a + b) mod suc n
@@ -500,7 +500,7 @@
   }
 
 \lemma mod_+-right {n a b : Nat} : (a + b mod suc n) mod suc n = (a + b) mod suc n
-  => fin_nat-inj (pmap (`mod _) +-comm *> mod_+-left *> pmap (`mod _) +-comm)
+  => fin_nat-inj (pmap (mod _) +-comm *> mod_+-left *> pmap (mod _) +-comm)
 
 \lemma mod_*-left {n a b : Nat} : (a mod suc n * b) mod suc n = (a * b) mod suc n
   => run {
@@ -510,7 +510,7 @@
   }
 
 \lemma mod_*-right {n a b : Nat} : (a * b mod suc n) mod suc n = (a * b) mod suc n
-  => fin_nat-inj (pmap (`mod _) *-comm *> mod_*-left *> pmap (`mod _) *-comm)
+  => fin_nat-inj (pmap (mod _) *-comm *> mod_*-left *> pmap (mod _) *-comm)
 
 \lemma mod_+-cong-left {n c a b : Nat} (p : a mod suc n = b mod suc n) : (c + a) mod suc n = (c + b) mod suc n
   => inv mod_+-right *> pmap ((c + __) mod suc n) p *> mod_+-right
@@ -521,14 +521,14 @@
 -- Properties of div
 
 \lemma div_suc-lem {n m : Nat} (m/=0 : m /= 0) : (n + m) div m = suc (n div m)
-  => div-unique (mod<right m/=0) (mod<right m/=0) m/=0 $ divModProp (n + m) m *> pmap (`+ m) (inv (divModProp n m) *> pmap (_ +) (inv (pmap (`mod m) +-comm *> n*_+_mod_n=mod.nat {m} {1})) *> +-comm) *> +-assoc *> +-comm
+  => div-unique (mod<right m/=0) (mod<right m/=0) m/=0 $ divModProp (n + m) m *> pmap (+ m) (inv (divModProp n m) *> pmap (_ +) (inv (pmap (mod m) +-comm *> n*_+_mod_n=mod.nat {m} {1})) *> +-comm) *> +-assoc *> +-comm
 
 \lemma n*_+_div_n=div {m q r : Nat} (m/=0 : m /= 0) : (m * q + r) div m = q + r div m \elim q
   | 0 => idp
-  | suc q => pmap (`div m) (+-assoc *> pmap (_ +) +-comm *> inv +-assoc) *> div_suc-lem m/=0 *> pmap suc (n*_+_div_n=div m/=0)
+  | suc q => pmap (div m) (+-assoc *> pmap (_ +) +-comm *> inv +-assoc) *> div_suc-lem m/=0 *> pmap suc (n*_+_div_n=div m/=0)
 
 \lemma *_div=id {m q : Nat} (m/=0 : m /= 0) : (q * m) div m = q
-  => pmap (`div m) *-comm *> n*_+_div_n=div {m} {q} {0} m/=0
+  => pmap (div m) *-comm *> n*_+_div_n=div {m} {q} {0} m/=0
 
 \lemma div-monotone {n k m : Nat} (p : n <= k) : n div m <= k div m
   => aux n <=-refl p
@@ -537,7 +537,7 @@
       | _, 0 => p
       | 0, _ => rewrite (<=_exists q) zero<=_
       | suc c, suc _ \as m => \case LinearOrder.dec<_<= n m, LinearOrder.dec<_<= k m \with {
-        | inl n<m, _ => transportInv (`<= _) (div_< n<m) zero<=_
+        | inl n<m, _ => transportInv (<= _) (div_< n<m) zero<=_
         | inr m<=n, inl k<m => absurd $ <-irreflexive $ k<m <∘l m<=n <∘l p
         | inr m<=n, inr m<=k => \case m \as m', idp : m' = m \with {
           | 0, s => rewriteI s p

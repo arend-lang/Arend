@@ -42,7 +42,7 @@
   | CompleteExMetricSpace => ExMetricCompletion X
   | CompleteTopAbGroup => TopAbGroupCompletion X
   | norm (F : RegularCauchyFilter X) : ExUpperReal \cowith {
-    | U q => ∃ (r : `< q) (U : F.F) ∀ {x : U} ((X.norm x).U r)
+    | U q => ∃ (r : < q) (U : F.F) ∀ {x : U} ((X.norm x).U r)
     | U-closed (inP (r,r<q,U,FU,h)) q<q' => inP (r, r<q <∘ q<q', U, FU, h)
     | U-rounded {q} (inP (r,r<q,U,FU,h)) => inP (RatField.mid r q, inP (r, RatField.mid>left r<q, U, FU, h), RatField.mid<right r<q)
   }
@@ -52,7 +52,7 @@
     \lemma filter-norm_dist {F : RegularCauchyFilter X} : norm F = (ExMetricCompletion X).dist F (pointCF 0)
       => <=-antisymmetric (\lam (inP (a,a<b,U,FU,V,V0,h)) => inP (a, a<b, U, FU, \lam Ux => rewrite (norm_dist,dist-symm) $ h Ux $ <=<_<= V0 idp))
         \lam {b} (inP (a,a<b,U,FU,h)) => inP (RatField.mid a b, RatField.mid<right a<b, U, FU, OBall (RatField.half (b - a)) 0, OBall-center_<=< $ RatField.half>0 $ RatField.to>0 a<b,
-          \lam {x'} Ux' y0 => rewrite norm-dist $ ExUpperRealAbMonoid.<-rat.1 $ norm_+ <∘r transport (_ <) (pmap ExUpperReal.fromRat linarith) (transport (_ <) ExUpperReal.+-rat $ ExUpperRealAbMonoid.<_+ (ExUpperRealAbMonoid.<-rat.2 $ h Ux') $ transportInv (`< _) (norm_negative *> norm_dist) $ ExUpperRealAbMonoid.<-rat.2 y0))
+          \lam {x'} Ux' y0 => rewrite norm-dist $ ExUpperRealAbMonoid.<-rat.1 $ norm_+ <∘r transport (_ <) (pmap ExUpperReal.fromRat linarith) (transport (_ <) ExUpperReal.+-rat $ ExUpperRealAbMonoid.<_+ (ExUpperRealAbMonoid.<-rat.2 $ h Ux') $ transportInv (< _) (norm_negative *> norm_dist) $ ExUpperRealAbMonoid.<-rat.2 y0))
 
     \lemma norm-cont : ContMap (ExMetricCompletion X) ExUpperRealMetric norm
       => transportInv (ContMap _ _) {norm} {dist __ _} (ext \lam F => filter-norm_dist) $ dist-uniform-map ContMap.∘ ProductTopSpace.tuple ContMap.id (ContMap.const (pointCF 0))
@@ -120,7 +120,7 @@
     | ~-equiv x y r =>
       \have lem {x y : X} (p : norm (x - y) = 0) {U : Set X} (x<=<U : pointCF x U) : pointCF y U => \case <=<-ball x<=<U \with {
         | inP (eps,eps>0,q) => <=<-left (OBall-center_<=< eps>0) \lam {z} d => q
-          \have xz<=yz => dist-triang <=∘ =_<= (pmap (`+ _) (norm-dist *> p) *> zro-left)
+          \have xz<=yz => dist-triang <=∘ =_<= (pmap (+ _) (norm-dist *> p) *> zro-left)
           \in xz<=yz d
       }
       \in exts \lam U => ext (lem r, lem $ norm_- *> r)

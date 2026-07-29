@@ -24,8 +24,8 @@
   \default join-left \as join-left-impl {x} {y} : x <= join-impl x y => Join-cond (byLeft idp)
   \default join-right \as join-right-impl {x} {y} : y <= join-impl x y => Join-cond (byRight idp)
   \default join-univ \as join-univ-impl {x} {y} {z} x<=z y<=z : join-impl x y <= z => Join-univ \case \elim __ \with {
-    | byLeft p => transportInv (`<= z) p x<=z
-    | byRight p => transportInv (`<= z) p y<=z
+    | byLeft p => transportInv (<= z) p x<=z
+    | byRight p => transportInv (<= z) p y<=z
   }
 
   \default Meet \as Meet-impl C => Join \lam x => ∀ {y : C} (x <= y)
@@ -105,8 +105,8 @@
 
   \lemma join_Join {x y : E} : x ∨ y = Join \lam z => (z = x) || (z = y)
     => <=-antisymmetric (join-univ (Join-cond $ byLeft idp) (Join-cond $ byRight idp)) $ Join-univ \case \elim __ \with {
-      | byLeft p => transportInv (`<= _) p join-left
-      | byRight p => transportInv (`<= _) p join-right
+      | byLeft p => transportInv (<= _) p join-left
+      | byRight p => transportInv (<= _) p join-right
     }
 
   \protected \func op : CompleteLattice => \new CompleteLattice {

@@ -130,7 +130,7 @@
   }
 
 \lemma metric-uni-funcConvergent {I : DirectedSet} {X : \Set} {Y : ExPseudoMetricSpace} {f : I -> X -> Y}
-  : IsUniFuncConvergent f <-> ∀ {eps : `> 0} ∃ (N : I) ∀ x {n} (N <= n -> (dist (f n x) (f N x)).U eps)
+  : IsUniFuncConvergent f <-> ∀ {eps : > 0} ∃ (N : I) ∀ x {n} (N <= n -> (dist (f n x) (f N x)).U eps)
   => (\lam fc eps>0 => \case fc $ Y.metricUniform $ RatField.half>0 eps>0 \with {
     | inP (N,h) => inP (N, \lam x N<=n => \case h x \with {
       | inP (_, inP (y,idp), g) => Y.halving1/2 (g N<=n) (g <=-refl)

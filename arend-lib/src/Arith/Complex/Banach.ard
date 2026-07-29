@@ -58,7 +58,7 @@
                         = abs c.re * abs c.re + 2 * (abs c.re * abs c.im) + abs c.im * abs c.im
               => equation.cRing
            | sq-bound : cabs c * cabs c <= (abs c.re + abs c.im) * (abs c.re + abs c.im)
-              => transport (`<= _) (inv cabs-square) linarith
+              => transport (<= _) (inv cabs-square) linarith
      \in square_<=-cancel cabs>=0 sum>=0 sq-bound
 
 {- | Completeness of $\mathbb{C}$ via $\Re$ / $\Im$ pushforward to $\mathbb{R}$
@@ -121,7 +121,7 @@
          dividing each component by $n$ in $\mathbb{R}$ and then $n \cdot n$-ing
          recovers the original. -}
     \lemma real-div-cancel {x : Real} {n : Nat} (n/=0 : n /= 0) : n *n (RatField.finv n *c x) = x
-      => inv RealField.natCoef_*c *> inv *c-assoc *> pmap (`*c x) (RatField.finv-right $ natRat/=0 n/=0) *> ide_*c
+      => inv RealField.natCoef_*c *> inv *c-assoc *> pmap (*c x) (RatField.finv-right $ natRat/=0 n/=0) *> ide_*c
 
     {- | Componentwise extension to $\mathbb{C}$: dividing each component of $a$
          by $n$ and then applying $n \cdot n$ recovers $a$. The action $n \cdot n\,c$

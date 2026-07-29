@@ -34,18 +34,18 @@
   }
 
 \lemma movePath1 {A : \1-Type} {a a' a'' : A} {p : a = a'} {q : a' = a''} {r : a = a''} (h : p *> q = r) : p = r *> inv q
-  => inv (pmap (p *>) (*>_inv q)) *> inv (*>-assoc p q (inv q)) *> pmap (`*> inv q) h
+  => inv (pmap (p *>) (*>_inv q)) *> inv (*>-assoc p q (inv q)) *> pmap (*> inv q) h
 
 \lemma movePath2 {A : \1-Type} {a a' a'' : A} {p : a = a'} {q : a' = a''} {r : a = a''} (h : p = r *> inv q) : p *> q = r
-  => pmap (`*> q) h *> *>-assoc r (inv q) q *> pmap (r *>) (inv_*> q)
+  => pmap (*> q) h *> *>-assoc r (inv q) q *> pmap (r *>) (inv_*> q)
 
 \func leftMulEquiv {G : Group} (g : G) : QEquiv (g *) \cowith
   | ret => inverse g *
   | ret_f h => simplify
   | f_sec h => simplify
 
-\func rightMulEquiv {G : Group} (g : G) : QEquiv (`* g) \cowith
-  | ret => `* inverse g
+\func rightMulEquiv {G : Group} (g : G) : QEquiv (* g) \cowith
+  | ret => * inverse g
   | ret_f h => simplify
   | f_sec h => simplify
 

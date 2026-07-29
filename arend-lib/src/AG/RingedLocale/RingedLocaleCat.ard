@@ -62,7 +62,7 @@
         => \have | ei=id => inv FrameHom.id-left *> path (\lam i => (e.hinv_f i).f*)
                  | gp : \Sigma (g : RingedLocaleHom R2 R1 LocaleHom.id) (g = e.hinv) => RingedLocaleHom.castOver e.hinv ei=id
                  | fg => RingedLocaleHom.eqCast $ pmap (f RingedLocalePrecat.∘) gp.2 *> e.f_hinv
-                 | gf => RingedLocaleHom.eqCast $ pmap (RingedLocalePrecat.`∘ f) gp.2 *> e.hinv_f
+                 | gf => RingedLocaleHom.eqCast $ pmap (RingedLocalePrecat.∘ f) gp.2 *> e.hinv_f
            \in \new Iso {
              | hinv => gp.1.f# a
              | hinv_f => path (\lam i => (fg i).f# a)

@@ -175,10 +175,10 @@
         (\lam b a => (cover-sub __ \lam {c} (inP (d,c<=fd,d<=a)) => inP (_, SetIm-con d<=a, c<=fd),
                       cover-sub __ \lam {c} (inP (_, inP ((d,d<=a),idp), c<=fd)) => inP (d, c<=fd, d<=a)))
         \lam a b b<=a _b<=a x => S.toLRLSite.R-equals b<=a $ unfold \lam {c} {d} (inP d<=a) c<=b c<=d =>
-          \let | mfe => VSheaf.sheaf-locale_SJoin {SiteLocale S.toSite} (SiteLocaleSheaf {S.toSite} S.R S.toLRLSite.R-sheaf) {T} {f} {g.`<=f* a} {U.R a}
+          \let | mfe => VSheaf.sheaf-locale_SJoin {SiteLocale S.toSite} (SiteLocaleSheaf {S.toSite} S.R S.toLRLSite.R-sheaf) {T} {f} {g.<=f* a} {U.R a}
                | mf => LRLSchemeSiteHom.compose-right.matchingFaimly {_} {T} {U} a
           \in path (\lam i => ((g SchemeSitePrehom.∘ toSchemeSiteHom f).f#-cover b<=a).2 (inP d<=a) c<=b c<=d i x) *>
-            pmap (S.R.Func c<=d) SchemeSitePrehom.compose.f#-eval *> pmap (S.R.Func c<=d) (unfold (rewrite (prop-pi {_} {((d<=a.1, d<=a.3) : Set.Total (g.`<=f* a)).2}) idp) *>
+            pmap (S.R.Func c<=d) SchemeSitePrehom.compose.f#-eval *> pmap (S.R.Func c<=d) (unfold (rewrite (prop-pi {_} {((d<=a.1, d<=a.3) : Set.Total (g.<=f* a)).2}) idp) *>
             inv (path \lam i => (IsEquiv.f_ret mfe {mf} i (d<=a.1, d<=a.3) x).1 (d, d<=a.2))) *>
             (IsEquiv.ret mfe mf x).2 {d, cover-refl $ inP (_, SetIm-con d<=a.3, d<=a.2)} {c, cover-left c<=b _b<=a} c<=d *>
             inv ((IsEquiv.ret mfe mf x).2 {b,_b<=a} {c, cover-left c<=b _b<=a} c<=b)
@@ -199,7 +199,7 @@
 
   \lemma fromSchemeSiteHom_toLRLHom.{u} {X : LocallyRingedLocale.{u}} {T U : SatSchemeSite.{u}} {f : LRLSchemeSiteHom X T} {g : SchemeSiteHom T U}
     : fromSchemeSiteHom g ∘l f.toLRLHom = {LRLSchemeSiteHom X U} g ∘r f
-    => toLRLHom_toSchemeSiteHom {X} {T} {U} {f} {fromSchemeSiteHom g} *> pmap (`∘r f) (SchemeSiteHom-equiv.ret_f g)
+    => toLRLHom_toSchemeSiteHom {X} {T} {U} {f} {fromSchemeSiteHom g} *> pmap (∘r f) (SchemeSiteHom-equiv.ret_f g)
 
   \protected \lemma equals.{u} {L : LocallyRingedLocale.{u}} {S : SatSchemeSite.{u}} {f g : LRLSchemeSiteHom L S}
       (p1 : \Pi (a : S) -> f a <= g a) (p2 : \Pi (a : S) -> g a <= f a)
@@ -229,7 +229,7 @@
         \lam U => SeparatedVPresheaf.separated-locale_SJoin L.R (LimitCRing $ SiteLocaleSheaf.extend.limFunctor U) \lam {a} Ua => inv $
           path (\lam i => IsEquiv.f_ret (VSheaf.sheaf-locale_SJoin L.R) {LRLSchemeSiteHom.toLRLHom.matchingFamily {fromLRLHom f} U} i (a,Ua)) *>
           exts (\lam x => pmap (f.f# _) (inv $ (CRingCat.Iso_QEquiv (SiteLocaleSheaf.embed-iso {S.toSite} S.toLRLSite.R-sheaf)).adjoint $ unfold idp)) *>
-          f.f#.natural (embed-univ Ua) *> pmap (RingHom.`∘ _) L.R.F.Func-o
+          f.f#.natural (embed-univ Ua) *> pmap (RingHom.∘ _) L.R.F.Func-o
 
   \protected \func compose-left \alias \infixl 8 ∘l.{u} {L M : LocallyRingedLocale.{u}} {U : SatSchemeSite.{u}} (g : LRLSchemeSiteHom M U) (f : LocallyRingedLocaleHom L M) : LRLSchemeSiteHom L U \cowith
     | f* => f PreorderHom.∘ g
@@ -241,7 +241,7 @@
 
   \protected \func compose-right \alias \infixl 8 ∘r.{u} {L : LocallyRingedLocale.{u}} {T U : SatSchemeSite.{u}} (g : SchemeSitePrehom T U) (f : LRLSchemeSiteHom L T) : LRLSchemeSiteHom L U \cowith
     | f* : PreorderHom U L \cowith {
-      | func a => SJoin f (g.`<=f* a)
+      | func a => SJoin f (g.<=f* a)
       | func-<= x<=y => SJoin-univ \lam a<=x => SJoin-cond $ g.<=f*-right a<=x x<=y
     }
     | f# {
@@ -249,7 +249,7 @@
       | natural {a} {b} b<=a => unfold $ unfolds at b $ unfold $ SeparatedVPresheaf.separated-locale_SJoin L.R (U.R a) \lam {c} c<=b =>
         \have | ca => unfold in path \lam i => IsEquiv.f_ret (VSheaf.sheaf-locale_SJoin L.R) {matchingFaimly a} i (c, g.<=f*-right c<=b b<=a)
               | cb => unfold in path \lam i => IsEquiv.f_ret (VSheaf.sheaf-locale_SJoin L.R) {matchingFaimly b} i (c, c<=b)
-        \in inv o-assoc *> pmap (`∘ _) cb *> o-assoc *> pmap (_ ∘) (exts \lam x => g.f#_f*-right *> pmap (g.f# __ x) prop-pi) *> inv ca *> pmap (`∘ _) L.R.F.Func-o *> o-assoc
+        \in inv o-assoc *> pmap (∘ _) cb *> o-assoc *> pmap (_ ∘) (exts \lam x => g.f#_f*-right *> pmap (g.f# __ x) prop-pi) *> inv ca *> pmap (∘ _) L.R.F.Func-o *> o-assoc
     }
     | isLRLSchemeSiteHom-top => f.isLRLSchemeSiteHom-top <=∘ IJoin-univ \lam a =>
         LocaleSite.locale_cover (f.toPreorderSiteHom.func-Cover g.<=f*-top) <=∘
@@ -264,7 +264,7 @@
           *> pmap (L.R.F.Func meet-right) (path (\lam i => IsEquiv.f_ret (VSheaf.sheaf-locale_SJoin L.R) {matchingFaimly a} i (d0,d0a) x)
             *> pmap (\lam r => f.f# d0 (g.f# r x)) prop-pi)) $ (L.R.F.Func meet-left).func-Inv xi) <=∘ SJoin-cond d'b)
     \where {
-      \func matchingFaimly (a : U) : MatchingFamily {L} L.R {Set.Total (g.`<=f* a)} (SJoin f (g.`<=f* a)) (\lam j => (f j.1, SJoin-cond j.2)) (U.R a) \cowith
+      \func matchingFaimly (a : U) : MatchingFamily {L} L.R {Set.Total (g.<=f* a)} (SJoin f (g.<=f* a)) (\lam j => (f j.1, SJoin-cond j.2)) (U.R a) \cowith
         | family j => f.f# j.1 RingHom.∘ g.f# j.2
         | isMatching {j} {j'} {z} {z<=fj} {z<=fj'} _ => SeparatedVPresheaf.separated-locale_<= L.R (meet-univ z<=fj z<=fj' <=∘ f.isLRLSchemeSiteHom-meet) {U.R a} \lam {z'} =>
           SetIm-elim \lam {t} t<=jj' z'<=ft z'<=z => exts \lam x => inv (path \lam i => L.R.F.Func-o i _) *> pmap (L.R.F.Func __ _) prop-pi *> path (\lam i => L.R.F.Func-o i _) *>

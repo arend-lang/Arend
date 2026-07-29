@@ -61,8 +61,8 @@
   }
   | meet (x y : LocType (positiveSubset R)) : LocType (positiveSubset R) \with {
     | in~ s, in~ t => in~ ((s.1 * t.2) ∧ (t.1 * s.2), s.2 * t.2, positive_* s.3 t.3)
-    | in~ s, ~-equiv x y r => ~-lequiv1 $ pmap (_ *) *-comm *> inv *-assoc *> pmap (`* _) (meet_*-right (<_<= $ pos_>0 y.3) *> pmap2 (∧) equation equation *> inv (meet_*-right (<_<= $ pos_>0 x.3))) *> *-assoc *> pmap (_ *) *-comm
-    | ~-equiv x y r, in~ t => ~-lequiv1 $ inv *-assoc *> pmap (`* _) (meet_*-right (<_<= $ pos_>0 y.3) *> pmap2 (∧) equation equation *> inv (meet_*-right $ <_<= $ pos_>0 x.3)) *> *-assoc
+    | in~ s, ~-equiv x y r => ~-lequiv1 $ pmap (_ *) *-comm *> inv *-assoc *> pmap (* _) (meet_*-right (<_<= $ pos_>0 y.3) *> pmap2 (∧) equation equation *> inv (meet_*-right (<_<= $ pos_>0 x.3))) *> *-assoc *> pmap (_ *) *-comm
+    | ~-equiv x y r, in~ t => ~-lequiv1 $ inv *-assoc *> pmap (* _) (meet_*-right (<_<= $ pos_>0 y.3) *> pmap2 (∧) equation equation *> inv (meet_*-right $ <_<= $ pos_>0 x.3)) *> *-assoc
   }
   | meet-left {x} {y} => \case \elim x, \elim y \with {
     | in~ s, in~ t => \lam p => \case positive_*-cancel $ rewrite (R.*-comm {s.2} {t.2}, inv *-assoc, inv rdistr) in unfolds p \with {
@@ -86,8 +86,8 @@
   }
   | join (x y : LocType (positiveSubset R)) : LocType (positiveSubset R) \with {
     | in~ s, in~ t => in~ ((s.1 * t.2) ∨ (t.1 * s.2), s.2 * t.2, positive_* s.3 t.3)
-    | in~ s, ~-equiv x y r => ~-lequiv1 $ pmap (_ *) *-comm *> inv *-assoc *> pmap (`* _) (join_*-right (<_<= $ pos_>0 y.3) *> pmap2 (∨) equation equation *> inv (join_*-right $ <_<= $ pos_>0 x.3)) *> *-assoc *> pmap (_ *) *-comm
-    | ~-equiv x y r, in~ t => ~-lequiv1 $ inv *-assoc *> pmap (`* _) (join_*-right (<_<= $ pos_>0 y.3) *> pmap2 (∨) equation equation *> inv (join_*-right $ <_<= $ pos_>0 x.3)) *> *-assoc
+    | in~ s, ~-equiv x y r => ~-lequiv1 $ pmap (_ *) *-comm *> inv *-assoc *> pmap (* _) (join_*-right (<_<= $ pos_>0 y.3) *> pmap2 (∨) equation equation *> inv (join_*-right $ <_<= $ pos_>0 x.3)) *> *-assoc *> pmap (_ *) *-comm
+    | ~-equiv x y r, in~ t => ~-lequiv1 $ inv *-assoc *> pmap (* _) (join_*-right (<_<= $ pos_>0 y.3) *> pmap2 (∨) equation equation *> inv (join_*-right $ <_<= $ pos_>0 x.3)) *> *-assoc
   }
   | join-left {x} {y} => \case \elim x, \elim y \with {
     | in~ s, in~ t => \lam p => \case positive_*-cancel $ rewrite (R.*-comm {s.2} {t.2}, inv *-assoc, inv rdistr) in unfolds p \with {

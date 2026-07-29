@@ -66,11 +66,11 @@
     \lemma Func-homogen-conv.{u} {R : GradedCRing.{u}} {a b : ProjCarrier R} (ba : b <= a) {x : LocRing (powers a.1)}
                                  (xs : HomogenLocRing.subRing (SpecStructureSheaf.Func ba x))
       : ∃ (y : HomogenLocRing (powers a.1)) (SpecStructureSheaf.Func ba x = SpecStructureSheaf.Func ba y.1) \elim x, xs
-      | in~ (x, _, inP (n,idp)), inP ((y, _, inP (k,idp)), yp, yn, y1h, y2h) => \case ~-unlequiv $ inv (pmap (`* locR (pow a.1 n)) yp) *> LR.lift_inL-quot (later $ inP (n,idp)) (~-lequiv1 *-assoc) \with {
+      | in~ (x, _, inP (n,idp)), inP ((y, _, inP (k,idp)), yp, yn, y1h, y2h) => \case ~-unlequiv $ inv (pmap (* locR (pow a.1 n)) yp) *> LR.lift_inL-quot (later $ inP (n,idp)) (~-lequiv1 *-assoc) \with {
         | inP (_, inP (m,idp), p) => simplify at p $ \case ProjCarrier.homogen a, ProjCarrier.homogen b, R.homogen-factor (LDiv.make x $ inv $ p *> *-assoc *> *-comm) (R.IsHomogen_* (R.IsHomogen_* (inP (yn,y1h)) $ R.IsHomogen_pow $ ProjCarrier.homogen a) $ R.IsHomogen_pow $ ProjCarrier.homogen b) (R.IsHomogen_* (R.IsHomogen_pow $ ProjCarrier.homogen b) (R.IsHomogen_pow $ ProjCarrier.homogen b)) \with {
           | inP (an,ah), inP (bn,bh), inP (x',x'n,x'h,q) => \case R.degree-unique {y * pow a.1 n * pow b.1 m} {yn + an * n + bn * m} {yn + bn * m + x'n} (homogen-* (homogen-* y1h $ R.homogen-pow ah) $ R.homogen-pow bh) $ transportInv (isHomogen __ _) q $ homogen-* (homogen-* y2h $ R.homogen-pow bh) x'h \with {
             | inl y_=0 => \case ba \with {
-              | inP (c,cp) => inP ((HomogenLocRing _).zro, yp *> ~-lequiv _ (later $ inP (n + m, idp)) (simplify $ pmap (y *) (pow_+ *> pmap (`* _) (pmap (pow __ n) (inv cp) *> R.pow_*-comm) *> *-assoc *> pmap (_ *) *-comm) *> inv *-assoc *> inv *-assoc *> pmap (`* pow c n) y_=0 *> R.zro_*-left) *> inv (SpecStructureSheaf.Func ba).func-zro)
+              | inP (c,cp) => inP ((HomogenLocRing _).zro, yp *> ~-lequiv _ (later $ inP (n + m, idp)) (simplify $ pmap (y *) (pow_+ *> pmap (* _) (pmap (pow __ n) (inv cp) *> R.pow_*-comm) *> *-assoc *> pmap (_ *) *-comm) *> inv *-assoc *> inv *-assoc *> pmap (* pow c n) y_=0 *> R.zro_*-left) *> inv (SpecStructureSheaf.Func ba).func-zro)
             }
             | inr e => inP ((_, inP ((x', _, inP (n,idp)), idp, x'n, x'h, transport (isHomogen _) (NatSemiring.cancel-left _ $ +-comm *> NatSemiring.cancel-left yn (inv +-assoc *> e *> +-assoc)) $ R.homogen-pow ah)),
                             yp *> inv (LR.lift-quot-char x' _ (later $ inP (n,idp)) (~-lequiv1 simplify) $
@@ -112,17 +112,17 @@
       })
       | loc-stable {a'} {a} {b} (inP a|a') (inP a|b) => \case a.2, R.homogen-factor a|a' (ProjCarrier.homogen a') (ProjCarrier.homogen a), R.homogen-factor a|b (ProjCarrier.homogen b) (ProjCarrier.homogen a) \with {
         | inP (an,ah), inP (c,cn,ch,a'=ac), inP (d,dn,dh,b=ad) => inP ((a.1 * (c * d), inP (an + (cn + dn), homogen-* ah $ homogen-* ch dh)),
-          inP $ LDiv.make d $ pmap (`* d) a'=ac *> *-assoc,
-          inP $ LDiv.make c $ pmap (`* _) b=ad *> *-assoc *> pmap (_ *) *-comm,
+          inP $ LDiv.make d $ pmap (* d) a'=ac *> *-assoc,
+          inP $ LDiv.make c $ pmap (* _) b=ad *> *-assoc *> pmap (_ *) *-comm,
           (_, \box inP ((pow d (suc an), _, inP (dn,idp)), idp, dn * suc an, R.homogen-pow dh {suc an}, transport (isHomogen _) *-comm $ R.homogen-pow ah)),
           StructureSheaf-loc $ transportSubMonoid1 (factor-right1 LR LR \lam x => later LR.lift_inL)
-            (inP (suc an, LDiv.make (locR (pow a.1 (suc an) * pow a.1 dn)) $ later (~-lequiv1 $ equation.cMonoid {b=ad, pmap (pow __ an) b=ad *> R.pow_*-comm}) *> pmap (`* _) locR.func-pow))
+            (inP (suc an, LDiv.make (locR (pow a.1 (suc an) * pow a.1 dn)) $ later (~-lequiv1 $ equation.cMonoid {b=ad, pmap (pow __ an) b=ad *> R.pow_*-comm}) *> pmap (* _) locR.func-pow))
             (inP (1, LDiv.make (inl~ (pow d an, _, later $ inP (suc dn, idp))) $ unfold $ ~-lequiv1 $ equation.cMonoid {b=ad})),
           StructureSheaf-loc $ transportSubMonoid1 (factor-right1 LR LR \lam x => later LR.lift_inL)
             (inP (suc an, LDiv.make (locR (pow a.1 dn) * locR (pow a'.1 (suc an))) $ inv (*-assoc {_} {_} {locR _} {locR _}) *>
-                          pmap (`* _) (LR.lift_inL-quot (later $ inP (dn,idp)) {pow d (suc an)} $ ~-lequiv1 simplify) *>
+                          pmap (* _) (LR.lift_inL-quot (later $ inP (dn,idp)) {pow d (suc an)} $ ~-lequiv1 simplify) *>
                           later (~-lequiv1 $ simplify $ inv (R.pow_*-comm {_} {_} {suc an}) *> pmap (pow __ (suc an))
-                            (*-comm *> pmap (`* d) a'=ac *> *-assoc)) *> pmap (`* _) locR.func-pow))
+                            (*-comm *> pmap (* d) a'=ac *> *-assoc)) *> pmap (* _) locR.func-pow))
             (inP (1, LDiv.make (inl~ (pow d an * pow c dn, _, later $ inP (suc dn, idp))) $ inv $ ide-left *>
               LR.lift-quot-char (pow d (suc an)) _ (later $ inP (dn,idp)) (~-lequiv1 simplify)
                 (later $ ~-lequiv1 $ simplify $ equation.cMonoid {a'=ac, pmap (pow __ dn) a'=ac *> R.pow_*-comm}))))

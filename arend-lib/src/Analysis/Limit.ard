@@ -177,7 +177,7 @@
   \where {
     \private \lemma induction {B : Rat} (fB : (dist l (f 0)).U B) {q : Rat} (q>=0 : 0 <= q) (dq : \Pi (n : Nat) -> dist l (f (suc n)) <= ExUpperReal.fromRat q * dist l (f n)) (n : Nat) : dist l (f n) <= RatField.pow q n * B \elim n
       | 0 => ExUpperReal.<_<= fB <=∘ =_<= (inv $ pmap ExUpperReal.fromRat ide-left)
-      | suc n => dq n <=∘ ExUpperRealSemigroup.<=_* <=-refl (induction fB q>=0 dq n) <=∘ =_<= (ExUpperReal.*-rat q>=0 (RatField.<=_*-positive (RatField.pow>=0 q>=0) $ <=-less $ dist>=0 fB) *> pmap ExUpperReal.fromRat (inv *-assoc *> pmap (`* B) RatField.pow-left))
+      | suc n => dq n <=∘ ExUpperRealSemigroup.<=_* <=-refl (induction fB q>=0 dq n) <=∘ =_<= (ExUpperReal.*-rat q>=0 (RatField.<=_*-positive (RatField.pow>=0 q>=0) $ <=-less $ dist>=0 fB) *> pmap ExUpperReal.fromRat (inv *-assoc *> pmap (* B) RatField.pow-left))
   }
 
 \lemma limit-metric-real {I : DirectedSet} {X : PseudoMetricSpace} {f : I -> X} {l : X}

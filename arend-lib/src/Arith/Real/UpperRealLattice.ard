@@ -29,7 +29,7 @@
   | Meet-cond {C} {x} Cx x<b => inP (x,Cx,x<b)
   | Meet-univ c (inP (x,Cx,x<b)) => c Cx x<b
   | Join (C : ExUpperReal -> \Prop) : ExUpperReal \cowith {
-    | U q => ∃ (r : `< q) ∀ {x : C} (x.U r)
+    | U q => ∃ (r : < q) ∀ {x : C} (x.U r)
     | U-closed (inP (r,r<q,c)) q<q' => inP (r, r<q <∘ q<q', c)
     | U-rounded {q} (inP (r,r<q,c)) => inP (RatField.mid r q, inP (r, RatField.mid>left r<q, c), RatField.mid<right r<q)
   }

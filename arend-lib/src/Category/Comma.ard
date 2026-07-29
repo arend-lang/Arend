@@ -7,8 +7,8 @@
 \func commaPrecat {C D E : Precat} (F : Functor C E) (G : Functor D E) : Precat \cowith
   | Ob => \Sigma (x : C) (y : D) (Hom (F x) (G y))
   | Hom (x,y,a) (x',y',a') => \Sigma (f : Hom x x') (g : Hom y y') (a' ∘ F.Func f = G.Func g ∘ a)
-  | id => (id, id, pmap (_ ∘) Func-id *> id-right *> inv (pmap (`∘ _) Func-id *> id-left))
-  | o (f,g,p) (f',g',p') => (f ∘ f', g ∘ g', pmap (_ ∘) Func-o *> inv o-assoc *> pmap (`∘ _) p *> o-assoc *> pmap (_ ∘) p' *> inv o-assoc *> pmap (`∘ _) (inv Func-o))
+  | id => (id, id, pmap (_ ∘) Func-id *> id-right *> inv (pmap (∘ _) Func-id *> id-left))
+  | o (f,g,p) (f',g',p') => (f ∘ f', g ∘ g', pmap (_ ∘) Func-o *> inv o-assoc *> pmap (∘ _) p *> o-assoc *> pmap (_ ∘) p' *> inv o-assoc *> pmap (∘ _) (inv Func-o))
   | id-left => ext (id-left,id-left)
   | id-right => ext (id-right,id-right)
   | o-assoc => ext (o-assoc,o-assoc)

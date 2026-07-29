@@ -238,7 +238,7 @@
   | nil => idp
   | l :: ls => pmap (_ ++) (Big++_map f) *> inv (map_++ f)
 
-\func Big++-split {A : \Type} {l : Array A} : l = Big (++) nil (map (`:: nil) l) \elim l
+\func Big++-split {A : \Type} {l : Array A} : l = Big (++) nil (map (:: nil) l) \elim l
   | nil => idp
   | a :: l => pmap (a ::) Big++-split
 

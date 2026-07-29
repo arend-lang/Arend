@@ -83,7 +83,7 @@
           | x :: tail => mcases {1} {arg addPath} \with {
             | nil, p => pmap (_ *) (inv (pmap (interpretNF'.simple env) p) *> simple_reduce tail)
             | y :: l, p => mcases (pmap (_ *) $ inv (pmap (interpretNF'.simple env) p) *> simple_reduce tail) \with {
-              | no q, yes e => rewrite (inv $ simple_reduce tail, p) $ inv (pmap (`* _) (later $ cases (x.1, y.1, q) \with {
+              | no q, yes e => rewrite (inv $ simple_reduce tail, p) $ inv (pmap (* _) (later $ cases (x.1, y.1, q) \with {
                 | false, true, _ => rewrite e inverse-left
                 | true, false, _ => rewrite e inverse-right
                 | false, false, q => absurd (q idp)
@@ -105,8 +105,8 @@
       => interpretNF'.=simple *> _simple *> inv (pmap2 (inverse __ * __) interpretNF'.=simple interpretNF'.=simple)
       \where
         \protected \lemma _simple {l acc : List (\Sigma Bool V)} : interpretNF'.simple env (inverseNF l acc) = inverse (interpretNF'.simple env l) * interpretNF'.simple env acc \elim l
-          | nil => inv $ pmap (`* _) G.inverse_ide *> ide-left
-          | (b,v) :: l => _simple *> inv *-assoc *> pmap (`* _) \case \elim b \with {
+          | nil => inv $ pmap (* _) G.inverse_ide *> ide-left
+          | (b,v) :: l => _simple *> inv *-assoc *> pmap (* _) \case \elim b \with {
             | false => inv $ G.inverse_* *> pmap (_ *) G.inverse-isInv
             | true => inv G.inverse_*
           }

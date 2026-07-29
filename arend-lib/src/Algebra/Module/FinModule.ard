@@ -31,7 +31,7 @@
       => \have | (inP (l,lb)) => F.isFinModule
                | (inP s) => FinSet.finiteAC (\lam j => gs (f (l j)))
                | h => extend lb \lam j => (s j).1
-         \in inP (h, basis-ext (g LinearMap.∘ h) f lb.2 \lam j => pmap g (U.BigSum-unique {\lam k => F.basis-split lb (l j) k *c (s k).1} j (\lam k j/=k => pmap (`*c _) (F.basis_split_/= j/=k) *> U.*c_zro-left) *> pmap (`*c _) F.basis_split_= *> ide_*c) *> (s j).2)
+         \in inP (h, basis-ext (g LinearMap.∘ h) f lb.2 \lam j => pmap g (U.BigSum-unique {\lam k => F.basis-split lb (l j) k *c (s k).1} j (\lam k j/=k => pmap (*c _) (F.basis_split_/= j/=k) *> U.*c_zro-left) *> pmap (*c _) F.basis_split_= *> ide_*c) *> (s j).2)
 
     \lemma surj-split {R : Ring} {U : LModule R} {V : FinModule R} (g : LinearMap U V) (gs : IsSurj g)
       : ∃ (h : LinearMap V U) ∀ x (g (h x) = x)

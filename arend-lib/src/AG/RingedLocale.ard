@@ -121,9 +121,9 @@
   \lemma principal-affine {a b : L} (aff : IsAffineOpen a) {ba : b <= a} {x : R a} (xp : IsPrincipalOpenAt ba x) : IsAffineOpen b
     => (\lam {y} {c} cb yp => \case (principal-localization aff xp).localization-surj y \with {
           | inP (z, w, inP (n,idp), q) => Localization.transportSubMonoid1 (Localization.factor-right1 (principal-localization aff xp) (principal-localization aff (principal-o.aux yp xp q)) \lam x => inv $ path \lam i => R.F.Func-o i x)
-            (inP (1, LDiv.make (R.F.Func ba w * R.F.Func ba x) $ inv *-assoc *> pmap (`* _) q *> inv func-* *> inv ide-left))
+            (inP (1, LDiv.make (R.F.Func ba w * R.F.Func ba x) $ inv *-assoc *> pmap (* _) q *> inv func-* *> inv ide-left))
             (inP (1, \let e => (principal-localization aff xp).localization-inv (inP (suc n, idp))
-                     \in LDiv.make e.inv $ inv $ ide-left *> Inv.rotate-inv-right (pmap (y *) func-* *> inv *-assoc *> pmap (`* _) q *> inv func-*)))
+                     \in LDiv.make e.inv $ inv $ ide-left *> Inv.rotate-inv-right (pmap (y *) func-* *> inv *-assoc *> pmap (* _) q *> inv func-*)))
         },
         \lam {c} cb y yp c<=U =>
           \let | (inP (z, _, inP (n,idp), yx=z)) => (principal-localization aff xp).localization-surj y
@@ -132,7 +132,7 @@
                 Localization.factor-right1 (principal-localization aff xp) r.6 \lam y => inv $ pmap (R.F.Func __ y) prop-pi *> path \lam i => R.F.Func-o i y)) $
               (LocalizationIdeal.sclosure-char (principal-localization aff xp)).1 $ inP (_, inP (n Nat.* m Nat.+ m, idp), _, q,
                 pmap (_ *) (pmap (R.F.Func ba) pow_+ *> func-* *> pmap2 (*) (MonoidHom.func-pow *> pow_* *> pmap (pow __ m) (inv MonoidHom.func-pow)) MonoidHom.func-pow) *>
-                inv *-assoc *> pmap (`* _) (inv CMonoid.pow_*-comm) *> pmap (pow __ m * pow (R.F.Func ba x) m) yx=z *> inv (MonoidHom.func-pow *> pmap (pow __ m) func-* *> CMonoid.pow_*-comm))),
+                inv *-assoc *> pmap (* _) (inv CMonoid.pow_*-comm) *> pmap (pow __ m * pow (R.F.Func ba x) m) yx=z *> inv (MonoidHom.func-pow *> pmap (pow __ m) func-* *> CMonoid.pow_*-comm))),
         \lam {c} cb => aff.3 (cb <=∘ ba) <=∘ Join-univ \lam {d} (dc, inP (y,yp)) => Join-cond (dc, inP (R.F.Func ba y, principal-factor-right $ transport (IsPrincipalOpenAt __ y) prop-pi yp)))
 
   \lemma restrict-affine {a : L} : (restrict a).IsAffineScheme <-> IsAffineOpen a
@@ -280,7 +280,7 @@
       \let proj => (extend {_} {CRingBicat}).Func (embed-univ Ux)
       \in cover-sub (isLocallyRingedPres x ((extend.lim {_} {CRingBicat} (embed x)).coneMap (x, cover-refl idp) (proj a))) \lam {y} s => inP (embed y, (embed-univ $ U.2 $ cover-inj s.1 Ux, \case s.2 \with {
         | byLeft ai => byLeft $ (embedProj {_} {CRingBicat} y).equiv-Inv (CRingCat.Iso<->IsEquiv.1 (embed-iso R-sheaf)) $ transport Inv (a.2 s.1) ai
-        | byRight ai => byRight $ (embedProj {_} {CRingBicat} y).equiv-Inv (CRingCat.Iso<->IsEquiv.1 (embed-iso R-sheaf)) $ transport Inv (func-+ *> pmap (_ +) func-ide *> pmap (`+ _) (a.2 s.1)) ai
+        | byRight ai => byRight $ (embedProj {_} {CRingBicat} y).equiv-Inv (CRingCat.Iso<->IsEquiv.1 (embed-iso R-sheaf)) $ transport Inv (func-+ *> pmap (_ +) func-ide *> pmap (+ _) (a.2 s.1)) ai
       }), cover-refl idp)
 
   \protected \func IsPrincipalOpenAt {a b : P} (ba : b <= a) (x : R a) : \Prop

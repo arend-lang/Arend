@@ -39,7 +39,7 @@
   | ide_*c {a : E} : 1 *c a = a
 
   \lemma cancel {r : R} {a b : E} (i : Monoid.Inv r) (s : r *c a = r *c b) : a = b
-    => inv ide_*c *> inv (pmap (`*c a) i.inv-left) *> *c-assoc *> pmap (i.inv *c) s *> inv *c-assoc *> pmap (`*c b) i.inv-left *> ide_*c
+    => inv ide_*c *> inv (pmap (*c a) i.inv-left) *> *c-assoc *> pmap (i.inv *c) s *> inv *c-assoc *> pmap (*c b) i.inv-left *> ide_*c
 
   \lemma *c_zro-left {a : E} : 0 *c a = 0
     => cancel-left (0 *c a) $ inv *c-rdistr *> simplify
@@ -48,7 +48,7 @@
     => cancel-left (r *c 0) $ inv *c-ldistr *> simplify
 
   \lemma *c_negative-left {r : R} {a : E} : R.negative r *c a = negative (r *c a)
-    => negative-unique (r *c a) (inv *c-rdistr *> pmap (`*c a) R.negative-left *> *c_zro-left) negative-right
+    => negative-unique (r *c a) (inv *c-rdistr *> pmap (*c a) R.negative-left *> *c_zro-left) negative-right
 
   \lemma *c_negative-right {r : R} {a : E} : r *c negative a = negative (r *c a)
     => negative-unique (r *c a) (inv *c-ldistr *> pmap (r *c) negative-left *> *c_zro-right) negative-right
@@ -63,8 +63,8 @@
     => *c_negative-left *> pmap negative ide_*c
 
   \lemma natCoef_*c {n : Nat} {a : E} : natCoef n *c a = n *n a \elim n
-    | 0 => pmap (`*c a) natCoefZero *> *c_zro-left
-    | suc n => pmap (`*c a) (natCoefSuc n) *> *c-rdistr *> pmap2 (+) natCoef_*c ide_*c
+    | 0 => pmap (*c a) natCoefZero *> *c_zro-left
+    | suc n => pmap (*c a) (natCoefSuc n) *> *c-rdistr *> pmap2 (+) natCoef_*c ide_*c
 
   \lemma *c_BigSum-rdistr {l : Array R} {a : E} : R.BigSum l *c a = BigSum (\lam i => l i *c a) \elim l
     | nil => *c_zro-left
@@ -76,7 +76,7 @@
 
   \lemma *c_FinSum-rdistr {J : FinSet} {f : J -> R} {a : E} : R.FinSum f *c a = FinSum (\lam j => f j *c a)
     => \case R.FinSum_char f \with {
-         | inP (e,p) => pmap (`*c a) p *> *c_BigSum-rdistr *> inv (FinSum_char2 e)
+         | inP (e,p) => pmap (*c a) p *> *c_BigSum-rdistr *> inv (FinSum_char2 e)
        }
 
   \lemma *c_FinSum-ldistr {r : R} {J : FinSet} {f : J -> E} : r *c FinSum f = FinSum (\lam j => r *c f j)
@@ -98,8 +98,8 @@
 
   \lemma independent-subset {l : Array E} (li : IsIndependent l) {k : Nat} (p : k <= l.len) : IsIndependent (\lam j => l (fin-inc_<= p j))
     => \lam c q j => inv (fit_<' c _) *> li (fit R.zro c) (inv (BigSum-subset {_} {_} {\lam j => fit R.zro c j *c l j} p
-                      (\lam i => pmap (`*c _) (inv (fit_<' c (fin_< i <∘l p))))
-                      (\lam i k<=i => pmap (`*c _) (fit_>= c k<=i) *> *c_zro-left)) *> q) (fin-inc_<= p j)
+                      (\lam i => pmap (*c _) (inv (fit_<' c (fin_< i <∘l p))))
+                      (\lam i k<=i => pmap (*c _) (fit_>= c k<=i) *> *c_zro-left)) *> q) (fin-inc_<= p j)
 
   \lemma independent-nonZero {l : Array E} (lb : IsIndependent l) {j : Fin l.len} (p : l j = 0) : 0 = {R} 1
     => inv (lb (replace (replicate l.len R.zro) j ide) (BigSum_zro \lam k => later \case decideEq j k \with {
@@ -132,10 +132,10 @@
         => gi _ $ sum_++ g *> pmap2 (+) (inv (sum_negative g)) p *> negative-left
 
       \lemma IsZeroSum_= (g : J -> E) {c : Array (\Sigma R J)} (p : IsZeroSum c) : sum g c = 0 \elim p
-        | inP (l',e,f) => sum_EPerm g e *> sum_Big++ g *> BigSum_zro \lam j => unfold sum $ inv *c_BigSum-rdistr *> pmap (`*c _) (f j) *> *c_zro-left
+        | inP (l',e,f) => sum_EPerm g e *> sum_Big++ g *> BigSum_zro \lam j => unfold sum $ inv *c_BigSum-rdistr *> pmap (*c _) (f j) *> *c_zro-left
 
       \lemma ~_= (g : J -> E) {c d : Array (\Sigma R J)} (p : c Z~ d) : sum g c = sum g d
-        => fromZero $ +-comm *> pmap (`+ _) (sum_negative g) *> later (inv (sum_++ g)) *> IsZeroSum_= g p
+        => fromZero $ +-comm *> pmap (+ _) (sum_negative g) *> later (inv (sum_++ g)) *> IsZeroSum_= g p
     }
 
   \lemma IsIndependentSet-right-inj {J K : \Set} {f : J -> K} (inj : IsInj f) {g : K -> E} (gi : IsIndependentSet g) : IsIndependentSet (\lam j => g (f j))
@@ -166,7 +166,7 @@
     \where
       \lemma sum_BigSum {l : Array E} {c : Array (\Sigma R (Fin l.len))} : sum l c = BigSum (\lam j => count c j *c l j)
         => BigSum_EPerm (EPerm.EPerm_map (\lam s => s.1 *c l s.2) nub-split) *> sum_Big++ l *> inv FinSum=BigSum *>
-            inv (FinSum-inj (nub (map __.2 c)) nub-isInj (\lam j q => pmap (`*c _) (count_zro j \lam k => /=-sym \let (i,p) => nub-isSurj (map __.2 c) k \in later $ rewriteI p (q i)) *> *c_zro-left) *> pmap FinSum (exts \lam j =>
+            inv (FinSum-inj (nub (map __.2 c)) nub-isInj (\lam j q => pmap (*c _) (count_zro j \lam k => /=-sym \let (i,p) => nub-isSurj (map __.2 c) k \in later $ rewriteI p (q i)) *> *c_zro-left) *> pmap FinSum (exts \lam j =>
               \let (i,q) => nub-preimage j
               \in rewrite q $ *c_BigSum-rdistr *> pmap BigSum (exts \lam k => pmap (_ *c l __) $ keep.satisfies (\lam s => decideEq (c i).2 s.2) {c} {k}))) *> FinSum=BigSum
 
@@ -209,7 +209,7 @@
         \lam b => (IsIndependent<->IsIndependentSet.2 b.1, IsGenerated<->IsGeneratingSet.2 b.2))
 
   \lemma independent-split-unique {l : Array E} (li : IsIndependent l) {c d : Array R l.len} (p : BigSum (\lam j => c j *c l j) = BigSum (\lam j => d j *c l j)) (j : Fin l.len) : c j = d j
-    => R.fromZero $ li (\lam i => c i - d i) (cancel-right _ $ inv (BigSum_+ {_} {_} {\lam j => (c j - d j) *c l j}) *> pmap BigSum (exts \lam j => pmap (`+ _) *c-rdistr *> +-assoc *> pmap (_ +) (pmap (`+ _) *c_negative-left *> negative-left) *> zro-right) *> p *> inv zro-left) j
+    => R.fromZero $ li (\lam i => c i - d i) (cancel-right _ $ inv (BigSum_+ {_} {_} {\lam j => (c j - d j) *c l j}) *> pmap BigSum (exts \lam j => pmap (+ _) *c-rdistr *> +-assoc *> pmap (_ +) (pmap (+ _) *c_negative-left *> negative-left) *> zro-right) *> p *> inv zro-left) j
 
   \lemma basis-split-pair {l : Array E} (lb : IsBasis l) (x : E) : \Sigma (c : Array R l.len) (x = BigSum (\lam j => c j *c l j))
     \level basis-split-unique lb.1 x
@@ -344,10 +344,10 @@
   \func pullback (f : RingHom) (M : LModule f.Cod) : LModule f.Dom \cowith
     | AbGroup => M
     | *c a x => f a *c x
-    | *c-assoc => pmap (`*c _) f.func-* *> *c-assoc
+    | *c-assoc => pmap (*c _) f.func-* *> *c-assoc
     | *c-ldistr => *c-ldistr
-    | *c-rdistr => pmap (`*c _) f.func-+ *> *c-rdistr
-    | ide_*c => pmap (`*c _) f.func-ide *> ide_*c
+    | *c-rdistr => pmap (*c _) f.func-+ *> *c-rdistr
+    | ide_*c => pmap (*c _) f.func-ide *> ide_*c
 
   \lemma generated-fin-comp (f : RingHom) {M : LModule f.Cod} {I J : FinSet} {a : I -> f.Cod} {b : J -> M} (Cg : (homLModule f).IsGeneratedFin a) (Mg : M.IsGeneratedFin b)
     : LModule.IsGeneratedFin {pullback f M} (\lam (p : \Sigma J I) => a p.2 *c b p.1)
@@ -458,7 +458,7 @@
 \func homLModule (f : RingHom) : LModule f.Dom \cowith
   | AbGroup => f.Cod
   | *c x y => f x * y
-  | *c-assoc => pmap (`* _) f.func-* *> *-assoc
+  | *c-assoc => pmap (* _) f.func-* *> *-assoc
   | *c-ldistr => ldistr
-  | *c-rdistr => pmap (`* _) f.func-+ *> rdistr
-  | ide_*c => pmap (`* _) f.func-ide *> ide-left
+  | *c-rdistr => pmap (* _) f.func-+ *> rdistr
+  | ide_*c => pmap (* _) f.func-ide *> ide-left

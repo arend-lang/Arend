@@ -67,7 +67,7 @@
 
 \lemma change-basis-right {R : Ring} {U V W : LModule R} (f : ModuleIso {R} {U} {V}) {lv : Array V} {lw : Array W} (bv : V.IsBasis lv) (bw : W.IsBasis lw) (A : Matrix R lv.len lw.len)
   : toLinearMap bv lw A LinearMap.∘ f.f = toLinearMap (iso-basis f.reverse bv) lw A
-  => exts \lam u => pmap AddMonoid.BigSum $ exts \lam j => pmap (`*c _) $ V.basis-split-unique bv _ (pmap f.f (U.basis-split-char {_} {iso-basis f.reverse bv}) *> AddMonoidHom.func-BigSum *> pmap AddMonoid.BigSum (exts \lam k => func-*c *> pmap (_ *c) (f.f_finv (lv k)))) j
+  => exts \lam u => pmap AddMonoid.BigSum $ exts \lam j => pmap (*c _) $ V.basis-split-unique bv _ (pmap f.f (U.basis-split-char {_} {iso-basis f.reverse bv}) *> AddMonoidHom.func-BigSum *> pmap AddMonoid.BigSum (exts \lam k => func-*c *> pmap (_ *c) (f.f_finv (lv k)))) j
 
 \func basis-iso {R : Ring} {U V : LModule R} {n : Nat} {lu : Array U n} (bu : U.IsBasis lu) {lv : Array V n} (bv : V.IsBasis lv) : ModuleIso {R} {U} {V} \cowith
   | f => extend bu lv
@@ -78,12 +78,12 @@
 \lemma change-basis_matrix-left {R : Ring} {U V : LModule R} (f : LinearMap U V) {n : Nat} {lu lu' : Array U n} (bu : U.IsBasis lu) (bu' : U.IsBasis lu') {lv : Array V} (bv : V.IsBasis lv)
   : toMatrix lu bu (basis-iso bu' bu).f MatrixRing.product toMatrix lu' bv f = toMatrix lu bv f
   => inv $ (matrix-equiv bu bv).adjointInv $ inv $ toLinearMap_* (toMatrix lu bu (extend bu' lu)) (toMatrix lu' bv f) bu bu' bv *>
-      pmap2 (LinearMap.∘) ((matrix-equiv bu' bv).ret_f f) {_} {LinearMap.id} (exts \lam u => toLinearMap_toMatrix-right bu bu bu' *> pmap AddMonoid.BigSum (exts \lam j => pmap (`*c _) $ U.basis-split-unique bu _ idp j) *> inv (U.basis-split-char {lu'} {bu'}))
+      pmap2 (LinearMap.∘) ((matrix-equiv bu' bv).ret_f f) {_} {LinearMap.id} (exts \lam u => toLinearMap_toMatrix-right bu bu bu' *> pmap AddMonoid.BigSum (exts \lam j => pmap (*c _) $ U.basis-split-unique bu _ idp j) *> inv (U.basis-split-char {lu'} {bu'}))
 
 \lemma change-basis_matrix-right {R : Ring} {U V : LModule R} (f : LinearMap U V) {lu : Array U} (bu : U.IsBasis lu) {n : Nat} {lv lv' : Array V n} (bv : V.IsBasis lv) (bv' : V.IsBasis lv')
   : toMatrix lu bv' f MatrixRing.product toMatrix lv bv (basis-iso bv bv').f = toMatrix lu bv f
   => inv $ (matrix-equiv bu bv).adjointInv $ inv $ toLinearMap_* (toMatrix lu bv' f) (toMatrix lv bv (extend bv lv')) bu bv' bv *>
-      pmap2 (LinearMap.∘) {_} {LinearMap.id} (exts \lam u => toLinearMap_toMatrix-left bv bv' *> pmap AddMonoid.BigSum (exts \lam j => pmap (`*c _) $ V.basis-split-unique bv _ idp j) *> inv (V.basis-split-char {lv'} {bv'})) ((matrix-equiv bu bv').ret_f f)
+      pmap2 (LinearMap.∘) {_} {LinearMap.id} (exts \lam u => toLinearMap_toMatrix-left bv bv' *> pmap AddMonoid.BigSum (exts \lam j => pmap (*c _) $ V.basis-split-unique bv _ idp j) *> inv (V.basis-split-char {lv'} {bv'})) ((matrix-equiv bu bv').ret_f f)
 
 \lemma change-basis_M~ {R : Ring} {U V : LModule R} (f : LinearMap U V) {n m : Nat} {lu lu' : Array U n} (bu : U.IsBasis lu) (bu' : U.IsBasis lu') {lv lv' : Array V m} (bv : V.IsBasis lv) (bv' : V.IsBasis lv') : toMatrix lu bv f M~ toMatrix lu' bv' f
-  => inP (toMatrixInv bu' bu' (basis-iso bu bu'), toMatrixInv bv' bv' (basis-iso bv' bv), inv $ pmap (MatrixRing.`product toMatrix lv' bv' (extend bv' lv)) (change-basis_matrix-left f bu' bu bv) *> change-basis_matrix-right f bu' bv' bv)
+  => inP (toMatrixInv bu' bu' (basis-iso bu bu'), toMatrixInv bv' bv' (basis-iso bv' bv), inv $ pmap (MatrixRing.product toMatrix lv' bv' (extend bv' lv)) (change-basis_matrix-left f bu' bu bv) *> change-basis_matrix-right f bu' bv' bv)

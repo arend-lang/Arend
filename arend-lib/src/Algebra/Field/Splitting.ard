@@ -36,13 +36,13 @@
 
 \lemma splitting-monic {k K : DiscreteField} {p : Poly k} (pm : isMonic p) {f : RingHom k K} (s : IsSplittingField p f)
   : ∃ (l : Array K) (RingHom.isAlgebraGenerated f l) (polyMap f p = Monoid.BigProd (map (\lam a => padd 1 (negative a)) l)) \elim pm, s
-  | inP (n,pd,pc), inP (l, c, lg, lq) => inP (l, lg, lq *> pmap (PolyRing.`*c _) (
+  | inP (n,pd,pc), inP (l, c, lg, lq) => inP (l, lg, lq *> pmap (PolyRing.*c _) (
     \have | pc1 : polyCoef (polyMap f p) n = 1 => polyCoef_polyMap *> pmap f pc *> func-ide
           | pc2 : polyCoef (polyMap f p) l.len = c => rewrite lq $ polyCoef_*c *> pmap (c *) (leadCoef_BigProd1 (\lam _ => idp) \lam _ => idp) *> ide-right
     \in \case LinearOrder.trichotomy l.len n \with {
       | less q => absurd $ K.zro/=ide $ inv (degree<=.toCoefs _ _ (rewrite lq $ degree<=_*c $ degree<=_BigProd1 \lam _ => idp) q) *> pc1
       | equals q => inv pc2 *> pmap (polyCoef _) q *> pc1
-      | greater q => absurd $ K.zro/=ide $ pmap (polyCoef __ n) {pzero} (inv $ lq *> pmap (PolyRing.`*c _) (inv pc2 *> degree<=.toCoefs _ _ (degree<=_polyMap pd) q) *> PolyRing.zro_*c) *> pc1
+      | greater q => absurd $ K.zro/=ide $ pmap (polyCoef __ n) {pzero} (inv $ lq *> pmap (PolyRing.*c _) (inv pc2 *> degree<=.toCoefs _ _ (degree<=_polyMap pd) q) *> PolyRing.zro_*c) *> pc1
     }) *> PolyRing.ide_*c)
 
 \sfunc countableSplittingField.{u} {k : DiscreteField.{u}} (c : Countable k) {p : Poly k} : \Sigma (K : DiscreteField.{u}) (Countable K) (f : RingHom k K) (IsSplittingField p f)
@@ -74,7 +74,7 @@
                             | (K,PK,f,Ks) => aux rfd.RootFieldP {_} {n} (pmap pred (inv (rewrite (decideEq/=_reduce $ /=-sym zro/=ide) in inv (degree_polyMap RingHom.field-isInj) *> degree_*_= (\lam q => p/=0 $ polyMap-inj RingHom.field-isInj q) (rootDiv_* rfd.isRoot)) *> d)) $ S-factor $ transport S (rootDiv_* rfd.isRoot) (S-hom rfd.rootFieldHom Sp)
                        \in (K, PK, f RingHom.∘ rfd.rootFieldHom, TruncP.map Ks \lam (l,c,fl,q) => later
                             (f rfd.root :: l, c, RingHom.isAlgebraGenerated-comp rfd.RootField-gen fl,
-                             inv (polyMap-comp rfd.rootFieldHom f) *> pmap (polyMap f) (rootDiv_* rfd.isRoot) *> (polyMapRingHom f).func-* *> pmap (`* _) q *> inv PolyRing.*c-comm-left *>
+                             inv (polyMap-comp rfd.rootFieldHom f) *> pmap (polyMap f) (rootDiv_* rfd.isRoot) *> (polyMapRingHom f).func-* *> pmap (* _) q *> inv PolyRing.*c-comm-left *>
                              pmap (c PolyRing.*c) (pmap (_ *) (pmap2 (\lam x y => padd (padd pzero x) y) func-ide AddGroupHom.func-negative) *> *-comm {_} {_} {padd 1 (negative (f root))})))
     }
 

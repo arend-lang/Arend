@@ -82,7 +82,7 @@
       }
     })
 
-  \protected \type IsLocallyCompact => \Pi (x : E) -> Cover x (`<< x)
+  \protected \type IsLocallyCompact => \Pi (x : E) -> Cover x (<< x)
 
   \lemma locallyCompact-locale : IsLocallyCompact <-> (SiteLocale \this).IsLocallyCompact
     => (\lam lc U {x} Ux => cover-sub (lc x) \lam {y} y<<x => inP (embed y, <<-left (<<-site.1 y<<x) (embed-univ Ux), cover-refl idp),

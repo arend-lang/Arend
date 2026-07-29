@@ -39,11 +39,11 @@
   | F => Spec.satSite
   | Func {R} {S} f => satFunc (siteHom f)
   | Func-id {R} => satCounit.isMono $
-    satCounit_satFunc *> pmap (SchemeSiteHom.`∘ _) siteHom_id *> SchemeSitePrecat.id-left *> inv SchemeSitePrecat.id-right
+    satCounit_satFunc *> pmap (SchemeSiteHom.∘ _) siteHom_id *> SchemeSitePrecat.id-left *> inv SchemeSitePrecat.id-right
   | Func-o {R} {S} {T} {g} {f} => satCounit.isMono $
-    satCounit_satFunc *> pmap (SchemeSiteHom.`∘ _) siteHom_compose *> SchemeSitePrecat.o-assoc
+    satCounit_satFunc *> pmap (SchemeSiteHom.∘ _) siteHom_compose *> SchemeSitePrecat.o-assoc
     *> pmap (_ SchemeSiteHom.∘) (inv satCounit_satFunc) *> inv SchemeSitePrecat.o-assoc
-    *> pmap (SchemeSiteHom.`∘ _) (inv satCounit_satFunc) *> SchemeSitePrecat.o-assoc
+    *> pmap (SchemeSiteHom.∘ _) (inv satCounit_satFunc) *> SchemeSitePrecat.o-assoc
   | isFullyFaithful => inP $ transQEquiv siteHom-equiv (transQEquiv satCounit_spec satLift-equiv)
   \where {
     \func SpecFunc.{u} {R : CRing.{u}} {a b : R} (p : TruncP (LDiv a b)) : RingHom (LocRing (powers a)) (LocRing (powers b))
@@ -74,7 +74,7 @@
       | f_sec g => SchemeSiteHom.equals-affine2 {_} {_} {_} {g} () (\lam _ => ()) () (\lam _ => ()) \lam {_} {_} => pmap g.f# prop-pi
 
     \lemma satCounit_spec.{u} {X : SchemeSite.{u}} {R : CRing.{u}}
-      : QEquiv {SchemeSiteHom X (Spec.site R)} {SchemeSiteHom (SatSite X) (Spec.site R)} (SchemeSiteHom.`∘ satCounit) reverse \cowith
+      : QEquiv {SchemeSiteHom X (Spec.site R)} {SchemeSiteHom (SatSite X) (Spec.site R)} (SchemeSiteHom.∘ satCounit) reverse \cowith
       | ret_f g => SchemeSiteHom.equals
         (\lam b a => (\lam _ => g.topElement () \lam _ => (), \lam _ => ()))
         (\lam a b b<=fa b<=ga x => pmap (lift _ _) (SchemeSitePrehom.f#-cover_f# (inP $ later (b, cover-refl <=-refl, <=f*-right b<=ga ()))

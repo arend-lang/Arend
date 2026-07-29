@@ -27,10 +27,10 @@
 
 \class PosetQModule \extends QModule, PosetDivAbGroup {
   \lemma *q_>=0 {q : Rat} (q>=0 : RatField.zro RatField.<= q) {a : E} (a>=0 : 0 <= a) : 0 <= q *q a
-    => <=_*n-div ratDenom/=0 $ transport (0 <=) (pmap (`*i a) (iabs.ofPos $ <=_ratNom.conv q>=0) *> inv *q_*i *> pmap (`*q a) (inv rat*denom-left) *> *q-assoc *> *q_*n) (*n_>=0 a>=0)
+    => <=_*n-div ratDenom/=0 $ transport (0 <=) (pmap (*i a) (iabs.ofPos $ <=_ratNom.conv q>=0) *> inv *q_*i *> pmap (*q a) (inv rat*denom-left) *> *q-assoc *> *q_*n) (*n_>=0 a>=0)
 
   \lemma *q_>=0-cancel {q : Rat} (q>0 : 0 < q) {a : E} (qa>=0 : 0 <= q *q a) : 0 <= a
-    => transport (0 <=) (inv *q-assoc *> pmap (`*q a) (RatField.finv-left $ RatField.>_/= q>0) *> ide_*q) $ *q_>=0 (<=-less $ RatField.finv>0 q>0) qa>=0
+    => transport (0 <=) (inv *q-assoc *> pmap (*q a) (RatField.finv-left $ RatField.>_/= q>0) *> ide_*q) $ *q_>=0 (<=-less $ RatField.finv>0 q>0) qa>=0
 
   \lemma <=_*q-left {q r : Rat} (q<=r : q RatField.<= r) {a : E} (a>=0 : 0 <= a) : q *q a <= r *q a
     => from>=0 $ transport (0 <=) toRatModule.*c-rdistr_- $ *q_>=0 (RatField.to>=0 q<=r) a>=0
@@ -45,10 +45,10 @@
     => transport (__ *q a <= b) RatField.finv_finv $ <=_*q-rotate_finv-left (RatField.finv>0 q>0) a<=qb
 
   \lemma <=_*q-rotate-right {q : Rat} (q>0 : 0 < q) {a b : E} (p : RatField.finv q *q a <= b) : a <= q *q b
-    => transport (`<= _) (inv *q-assoc *> pmap (`*q a) (RatField.finv-right $ RatField.>_/= q>0) *> ide_*q) $ <=_*q-right (<=-less q>0) p
+    => transport (<= _) (inv *q-assoc *> pmap (*q a) (RatField.finv-right $ RatField.>_/= q>0) *> ide_*q) $ <=_*q-right (<=-less q>0) p
 
   \lemma <=_*q-rotate_finv-left {q : Rat} (q>0 : 0 < q) {a b : E} (a<=qb : a <= q *q b) : RatField.finv q *q a <= b
-    => <=_*q-right (<=-less $ RatField.finv>0 q>0) a<=qb <=∘ =_<= (inv *q-assoc *> pmap (`*q b) (RatField.finv-left $ RatField.>_/= q>0) *> ide_*q)
+    => <=_*q-right (<=-less $ RatField.finv>0 q>0) a<=qb <=∘ =_<= (inv *q-assoc *> pmap (*q b) (RatField.finv-left $ RatField.>_/= q>0) *> ide_*q)
 }
 
 \class RieszSpace \extends PosetQModule, AbsAbGroup, LatticeAbGroup.FromJoin {
@@ -57,7 +57,7 @@
   \default <=_*n-div n/=0 na>=0 => transport (0 <=) (noTorsion-div n/=0 (abs_*n *> abs-ofPos na>=0)) abs>=0
 
   \lemma join_*q {q : Rat} (q>=0 : RatField.zro RatField.<= q) {x y : E} : q *q (x ∨ y) = (q *q x) ∨ (q *q y)
-    => noTorsion-div ratDenom/=0 $ inv *q_*n *> inv *q-assoc *> pmap (`*q _) rat*denom-left *> *q_*i *> pmap (`*i _) (inv $ iabs.ofPos $ <=_ratNom.conv q>=0) *> join_*n *> pmap2 (∨) (pmap (`*i x) (iabs.ofPos $ <=_ratNom.conv q>=0) *> inv *q_*i *> pmap (`*q x) (inv rat*denom-left) *> *q-assoc *> *q_*n) (pmap (`*i y) (iabs.ofPos $ <=_ratNom.conv q>=0) *> inv *q_*i *> pmap (`*q y) (inv rat*denom-left) *> *q-assoc *> *q_*n) *> inv join_*n
+    => noTorsion-div ratDenom/=0 $ inv *q_*n *> inv *q-assoc *> pmap (*q _) rat*denom-left *> *q_*i *> pmap (*i _) (inv $ iabs.ofPos $ <=_ratNom.conv q>=0) *> join_*n *> pmap2 (∨) (pmap (*i x) (iabs.ofPos $ <=_ratNom.conv q>=0) *> inv *q_*i *> pmap (*q x) (inv rat*denom-left) *> *q-assoc *> *q_*n) (pmap (*i y) (iabs.ofPos $ <=_ratNom.conv q>=0) *> inv *q_*i *> pmap (*q y) (inv rat*denom-left) *> *q-assoc *> *q_*n) *> inv join_*n
 
   \lemma abs_*q {q : Rat} (q>=0 : RatField.zro RatField.<= q) {x : E} : abs (q *q x) = q *q abs x
     => inv $ join_*q q>=0 *> pmap (_ ∨) toRatModule.*c_negative-right
@@ -75,8 +75,8 @@
     | PosetQModule => A
     | join => join
     | join-left => transportInv (_ <=) (\peval join _ _) $ A.<=_*q-cancel-left {2} idp $ transport2 (<=) (inv A.*q_*2) (inv +-assoc *> inv A.ide_*q *> A.*q-assoc) $ <=_+ <=-refl $ equation.abGroup =<= <=_+ <=-refl (getAbs _).2
-    | join-right => transportInv (_ <=) (\peval join _ _) $ A.<=_*q-cancel-left {2} idp $ transport2 (<=) (inv A.*q_*2) (inv +-assoc *> pmap (`+ _) +-comm *> inv A.ide_*q *> A.*q-assoc) $ <=_+ <=-refl $ equation.abGroup =<= <=_+ <=-refl (getAbs _).3
-    | join-univ {x} {y} x<=z y<=z => transportInv (`<= _) (\peval join _ _) $ A.<=_*q-cancel-left {2} idp $ transport2 (<=) (inv A.ide_*q *> A.*q-assoc) (inv A.*q_*2) $ A.<=_+-cancel-left (negative (x + y)) $ transportInv (`<= _) (inv +-assoc *> pmap (`+ _) negative-left *> zro-left) $ (getAbs _).4
+    | join-right => transportInv (_ <=) (\peval join _ _) $ A.<=_*q-cancel-left {2} idp $ transport2 (<=) (inv A.*q_*2) (inv +-assoc *> pmap (+ _) +-comm *> inv A.ide_*q *> A.*q-assoc) $ <=_+ <=-refl $ equation.abGroup =<= <=_+ <=-refl (getAbs _).3
+    | join-univ {x} {y} x<=z y<=z => transportInv (<= _) (\peval join _ _) $ A.<=_*q-cancel-left {2} idp $ transport2 (<=) (inv A.ide_*q *> A.*q-assoc) (inv A.*q_*2) $ A.<=_+-cancel-left (negative (x + y)) $ transportInv (<= _) (inv +-assoc *> pmap (+ _) negative-left *> zro-left) $ (getAbs _).4
       -- TODO: Use solver for PosetAbGroup
       (A.from>=0 $ transport (A.zro <=) equation.abGroup $ A.<=_+-positive (A.to>=0 x<=z) (A.to>=0 x<=z))
       (A.from>=0 $ transport (A.zro <=) equation.abGroup $ A.<=_+-positive (A.to>=0 y<=z) (A.to>=0 y<=z))

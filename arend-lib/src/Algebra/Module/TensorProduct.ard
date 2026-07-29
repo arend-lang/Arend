@@ -85,7 +85,7 @@
     }) *> path tensorSum_+-left
     | tensorSum_+-right => path tensorSum_+-right
     | tensorSum-scalar => pmap tensorSum (exts \case \elim __ \with {
-      | 0 => ext (inv *c-assoc *> pmap (A.`*c _) *-comm *> *c-assoc, idp)
+      | 0 => ext (inv *c-assoc *> pmap (A.*c _) *-comm *> *c-assoc, idp)
       | suc j => idp
     }) *> path tensorSum-scalar
   }
@@ -105,7 +105,7 @@
     \private \lemma negative-induction {l : Array (\Sigma A B)} : tensorSum (map (\lam s => (A.negative s.1, s.2)) l ++ l) = tensorSum nil \elim l
       | nil => idp
       | s :: l => path (tensorSum-perm $ EPerm_++-swap {_} {map (\lam s => (A.negative s.1, s.2)) (s :: l)})
-        *> inv (path tensorSum_+-left) *> pmap tensorSum (pmap (`:: _ ++ l) $ ext (A.negative-right, idp))
+        *> inv (path tensorSum_+-left) *> pmap tensorSum (pmap (:: _ ++ l) $ ext (A.negative-right, idp))
         *> tensorSum_zro-left s.2 *> negative-induction
 
     \private \lemma *c-induction {r r' : R} {l : Array (\Sigma A B)}
@@ -146,10 +146,10 @@
   | func (x : TensorProduct A B) : C \with {
     | tensorSum l => AddMonoid.BigSum $ map (\lam s => f s.1 s.2) l
     | tensorSum-perm e => AbMonoid.BigSum_EPerm $ EPerm_map (\lam s => f s.1 s.2) e
-    | tensorSum_zro => pmap (`+ _) f.linear-left.func-zro *> zro-left
-    | tensorSum_+-left => pmap (`+ _) f.linear-left.func-+ *> +-assoc
-    | tensorSum_+-right => pmap (`+ _) f.linear-right.func-+ *> +-assoc
-    | tensorSum-scalar => pmap (`+ _) $ f.linear-left.func-*c *> inv f.linear-right.func-*c
+    | tensorSum_zro => pmap (+ _) f.linear-left.func-zro *> zro-left
+    | tensorSum_+-left => pmap (+ _) f.linear-left.func-+ *> +-assoc
+    | tensorSum_+-right => pmap (+ _) f.linear-right.func-+ *> +-assoc
+    | tensorSum-scalar => pmap (+ _) $ f.linear-left.func-*c *> inv f.linear-right.func-*c
   }
   | func-+ {x} {y} => \case \elim x, \elim y \with {
     | tensorSum l, tensorSum l' => pmap AddMonoid.BigSum (map_++ \lam s => f s.1 s.2) *> AddMonoid.BigSum_++

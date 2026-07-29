@@ -30,7 +30,7 @@
     }
 } \where {
   \use \coerce fromRat (x : Rat) : ExtendedLowerReal \cowith
-    | L => `< x
+    | L => < x
     | L-closed s t => t <∘ s
     | L-rounded q<x => TruncP.map (isDense q<x) (\lam t => (t.1,t.3,t.2))
 }

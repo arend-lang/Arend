@@ -220,8 +220,8 @@
             \have one/3^k+1<=1 : pow one/3 (suc k) <= ide => <=-less (pow1/3-strict-monotone {_} NatOrder.zero<suc),
             \have one-1/3^n>=0 : Real.fromRat 1 - pow {RealField} (ratio 1 3) n >= zro =>
               rewriteI (negative-right {RealField} {pow {RealField} (ratio 1 3) n}) (<=_+ (PosetSemiring.pow<=1 one/3>=0 linarith {n}) <=-refl),
-              `<=∘ (rewriteI {2} (zro-right {_} {ide}) (<=_+ (<=-refl {_} {Real.fromRat ide}) (PosetAddGroup.negative<=0 (<=-less (OrderedSemiring.pow>0 one/3>0 {n}))))),
-              `<=∘ (rewrite *-assoc in (rewrite ide-left in (<=_*_positive-left (rewrite ide-left in <=_*_positive-left {RealField} one/3^k+1<=1 one/2>=0) one-1/3^n>=0) <=∘
+              <=∘ rewriteI {2} (zro-right {_} {ide}) (<=_+ (<=-refl {_} {Real.fromRat ide}) (PosetAddGroup.negative<=0 (<=-less (OrderedSemiring.pow>0 one/3>0 {n})))),
+              <=∘ (rewrite *-assoc in (rewrite ide-left in (<=_*_positive-left (rewrite ide-left in <=_*_positive-left {RealField} one/3^k+1<=1 one/2>=0) one-1/3^n>=0) <=∘
                                                           (<=_*_positive-left linarith one-1/3^n>=0))),
             unfold arr-1/3^k+i+2,
             \have helper : (\lam (i : Fin (n-1 -' k)) => pow one/3 (suc (suc k) Nat.+ i)) = (\lam i => pow one/3 (suc k) * pow one/3 (suc i)) => ext (\lam _ => rewrite Monoid.pow_+ equation.cMonoid),
@@ -249,13 +249,13 @@
       \in inP (r, r>0, k,
            rewrite (an=1, ide-left) in (rewrite {2} (mod_< id<suc) in ai_ri_<_a0 n (rewrite (mod_< id<suc) n>0)),
            run {
-             `<∘r (rewriteI eq1 in C2 (suc j) (suc k0) NatOrder.zero<suc),
+             <∘r (rewriteI eq1 in C2 (suc j) (suc k0) NatOrder.zero<suc),
              rewrite -2eps=-eps-eps,
              `<=_+ (<=-refl {RealField} {negative eps}),
              \have helper : a (suc k0) * pow r (suc k0) >= (a 0 - eps) * pow one/3 (2 * n * n) => run {
                rewrite (pmap (a (suc k0) *) (CMonoid.pow_*-comm {RealField} {r0} {pow one/3 (suc j)} {suc k0})),
                rewrite (pmap (pow r0 (suc k0) *) (inv (Monoid.pow_* {RealField} {one/3} {suc j} {suc k0}))),
-               rewrite (inv (*-assoc {RealField}) *> pmap (`* pow one/3 ((suc j : Nat) * suc k0)) C1),
+               rewrite (inv (*-assoc {RealField}) *> pmap (* pow one/3 ((suc j : Nat) * suc k0)) C1),
                <=_*_positive-right (<=-less a0_minus_eps_>0),
                PosetSemiring.pow_<=-degree one/3>=0 linarith {suc _} {suc (suc _)},
                <=_* {suc j} {2 * n} {suc k0} {n} (suc_<_<= (fin_< j NatSemiring.<∘ id<suc)) (suc_<_<= (fin_< k0))

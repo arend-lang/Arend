@@ -284,7 +284,7 @@
               \have hk : k < M => fin_< k
               \in ExUpperRealSemigroup.<=_* <=-refl $ ExUpperReal.<_<= $ gb $ linarith $ <=_exists {k} {n} linarith)
           <=∘ =_<= (inv $ ExUpperRealSemigroup.BigSum-rdistr (\lam _ => norm>=0) $ inP (eps2 + 1, linarith))
-          <=∘ =_<= (pmap (ExUpperRealSemigroup.`* eps2) (inv \peval partialSum (\lam k => norm (a k)) M))
+          <=∘ =_<= (pmap (ExUpperRealSemigroup.* eps2) (inv \peval partialSum (\lam k => norm (a k)) M))
           <=∘ =_<= ExUpperRealSemigroup.*-comm
 
     {- | Tail-piece bound (mid-sum from $M$ to $n$): bounded by

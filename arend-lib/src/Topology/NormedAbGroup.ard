@@ -89,7 +89,7 @@
     => \Pi (B : Nat) -> ∃ (x : E) (ExUpperReal.fromRat B <= norm x)
 
   \lemma norm_BigSum {l : Array E} : norm (BigSum l) <= ExUpperRealAbMonoid.BigSum \lam j => norm (l j) \elim l
-    | nil => transportInv (`<= _) norm_zro <=-refl
+    | nil => transportInv (<= _) norm_zro <=-refl
     | x :: l => norm_+ <=∘ <=_+ <=-refl norm_BigSum
 
   -- | `FinSum` analog of `norm_BigSum` on `Fin n`.
@@ -155,7 +155,7 @@
   => Real.=-upper.2 (later norm-dist)
 
 \lemma lnorm_BigSum {X : PseudoNormedAbGroup} {l : Array X} : lnorm (X.BigSum l) <= RealAbGroup.BigSum \lam j => lnorm (l j) \elim l
-  | nil => transportInv (`<= _) lnorm_zro <=-refl
+  | nil => transportInv (<= _) lnorm_zro <=-refl
   | x :: l => lnorm_+ <=∘ <=_+ <=-refl lnorm_BigSum
 
 \lemma lnorm_- {X : PseudoNormedAbGroup} {x y : X} : lnorm (x - y) = lnorm (y - x)
@@ -222,7 +222,7 @@
         rewrite norm-dist at xx'<gamma $ rewrite norm-dist at yy'<gamma $ rewrite norm-dist at x0x<1 $ rewrite norm-dist at y0y<1 $ rewrite norm-dist $
         <-rat.1 $ transport (norm __ < eps) (pmap2 (+) fr fl *> simplify : f x (y - y') + f (x - x') y' = f x y - f x' y') $ norm_+ <∘r
           <=_+ norm_*_<= norm_*_<= <∘r transport (_ + __ < _) *-comm (<=_+ (ExUpperRealSemigroup.<=_* <=-refl $ <=-less $ <-rat.2 yy'<gamma) (ExUpperRealSemigroup.<=_* <=-refl (<=-less $ <-rat.2 xx'<gamma)) <∘r
-          transport (`< _) (ExUpperRealSemigroup.rdistr norm>=0 norm>=0) (ExUpperRealSemigroup.<=_* <=-refl (<=-rat.1 meet-left) <∘r ExUpperRealSemigroup.<_*-left'
+          transport (< _) (ExUpperRealSemigroup.rdistr norm>=0 norm>=0) (ExUpperRealSemigroup.<=_* <=-refl (<=-rat.1 meet-left) <∘r ExUpperRealSemigroup.<_*-left'
             (<=_+ (lem x0x<1) (lem (U_<= yy'<gamma meet-right) <=∘ <=_+ (lem y0y<1) <=-refl) <∘r transport (_ <) +-rat (<_+ (transport (_ <) +-rat $ <_+-left $ <-rat.2 |x0|<x0b) $ transport (_ < ) +-rat $ <_+-left $ transport (_ <) +-rat $ <_+-left $ <-rat.2 |y0|<y0b)) (ExUpperRealAbMonoid.<=_+-positive norm>=0 norm>=0) gamma>0 <∘l gamma-m)))
     }
   })

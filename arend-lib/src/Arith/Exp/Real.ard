@@ -60,7 +60,7 @@
          | M>=N : N <= M => join-right
          | abs-bd : RealAbGroup.abs (l - f M) < c - l => hN M>=N
          | fM-l<c-l : f M - l < c - l
-            => transport (`< _) AddGroup.negative_- (RealAbGroup.abs>=neg <∘r abs-bd)
+            => transport (< _) AddGroup.negative_- (RealAbGroup.abs>=neg <∘r abs-bd)
     \in lb M>=N0 $ <_+-cancel-right (negative l) fM-l<c-l
 
 -- | Real limits are bounded above by any tail upper bound on the sequence.
@@ -107,13 +107,13 @@
   => Real-limit->= (exp.seriesSum x) \lam n>=1 => run {
     rewrite (partialSum-split n>=1),
     rewrite partialSum_1,
-    transport (`<= _) zro-right $ <=_+ <=-refl $ midSum>=0 (term>=0 x>=0)
+    transport (<= _) zro-right $ <=_+ <=-refl $ midSum>=0 (term>=0 x>=0)
   }
   \where {
     -- | The index-1 partial sum of the exp series at `x` is `1`.
     \lemma partialSum_1 {x : Real} : partialSum (powerSeries exp.coef x) 1 = 1
-      => partialSum_suc *> pmap (`+ _) partialSum-empty *> zro-left
-         *> pmap (`* Monoid.pow x 0) (RealStoneC*Algebra_fromRat 1)
+      => partialSum_suc *> pmap (+ _) partialSum-empty *> zro-left
+         *> pmap (* Monoid.pow x 0) (RealStoneC*Algebra_fromRat 1)
          *> ide-left
 
     -- | All exp-series terms at `x ≥ 0` are non-negative.
@@ -134,18 +134,18 @@
       => Real-limit->= (exp.seriesSum x) \lam n>=2 => run {
         rewrite (partialSum-split n>=2),
         rewrite partialSum_2,
-        transport (`<= _) zro-right $ <=_+ <=-refl $ midSum>=0 $ Real-exp->=1-of-nonneg.term>=0 (<=-less x>0)
+        transport (<= _) zro-right $ <=_+ <=-refl $ midSum>=0 $ Real-exp->=1-of-nonneg.term>=0 (<=-less x>0)
       }
 
     \private \lemma partialSum_2 {x : Real} : partialSum (powerSeries exp.coef x) 2 = 1 + x
       => partialSum_suc *> pmap2 (+) Real-exp->=1-of-nonneg.partialSum_1 term1_eq
 
     \private \lemma term1_eq {x : Real} : powerSeries exp.coef x 1 = x
-      => pmap (`* _) (RealStoneC*Algebra_fromRat 1) *> ide-left *> ide-left
+      => pmap (* _) (RealStoneC*Algebra_fromRat 1) *> ide-left *> ide-left
   }
 
-{- | Real `exp` is strictly positive on all of `Real`. Constructive proof:
- -   `exp x` is invertible (via `exp_negative`), so `#0=>eitherPosOrNeg` gives
+{- | Real {exp} is strictly positive on all of {Real}. Constructive proof:
+ -   `exp x` is invertible (via `exp_negative`), so {#0=>eitherPosOrNeg} gives
  -   `0 < exp x` or `exp x < 0`. The latter contradicts `0 <= exp(x/2)^2 = exp x`.
  -}
 \lemma Real-exp-pos (x : Real) : 0 < exp {RealStoneC*Algebra} x
@@ -158,7 +158,7 @@
     \private \lemma exp>=0 {x : Real} : 0 <= exp x
       => \let | half : Real => RatField.finv 2 QModule.*q x
               | two-q-half : 2 QModule.*q half = x
-                 => inv QModule.*q-assoc *> pmap (QModule.`*q x) (RatField.finv-right (natRat/=0 {2} suc/=0)) *> QModule.ide_*q
+                 => inv QModule.*q-assoc *> pmap (QModule.*q x) (RatField.finv-right (natRat/=0 {2} suc/=0)) *> QModule.ide_*q
               | half-sum : half + half = x
                  => inv QModule.*q_*2 *> two-q-half
               | sq-eq : exp x = exp half * exp half
@@ -169,7 +169,7 @@
 -- | Real {exp} is strictly monotone increasing.
 \lemma Real-exp-strict-mono {x y : Real} (x<y : x < y) : exp x < exp y
   => \have | y-eq : y = x + (y - x)
-              => inv (inv +-assoc *> pmap (`+ _) +-comm *> +-assoc *> pmap (y +) negative-right *> zro-right)
+              => inv (inv +-assoc *> pmap (+ _) +-comm *> +-assoc *> pmap (y +) negative-right *> zro-right)
            | exp-y-eq : exp y = exp x * exp (y - x)
               => pmap exp y-eq *> exp_+ *-comm
            | step : exp x * 1 < exp x * exp (y - x)
@@ -180,5 +180,5 @@
 -- | Real {exp} is injective. Follows from totality + strict monotonicity.
 \lemma Real-exp-inj {x y : Real} (eq : exp x = exp y) : x = y
   => \have not-gt {a b : Real} (eq : exp a = exp b) : a <= b
-            => \lam b<a => <-irreflexive $ transport (`< _) (inv eq) (Real-exp-strict-mono b<a)
+            => \lam b<a => <-irreflexive $ transport (< _) (inv eq) (Real-exp-strict-mono b<a)
      \in <=-antisymmetric (not-gt eq) (not-gt (inv eq))

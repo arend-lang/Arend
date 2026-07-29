@@ -47,7 +47,7 @@
   \where \open IntEuclidean
 
 \lemma int_mod_*-right {n : Nat} {a b : Int} : (a * b mod suc n) mod suc n = (a * b) mod suc n
-  => pmap (`mod _) *-comm *> int_mod_*-left *> pmap (`mod _) *-comm
+  => pmap (mod _) *-comm *> int_mod_*-left *> pmap (mod _) *-comm
   \where \open IntEuclidean
 
 \func base-digit (n b j : Nat) : Nat \elim j
@@ -56,8 +56,8 @@
 
 \lemma base-digit-sum {l : Array Nat} {b : Nat} (p : \Pi (j : Fin l.len) -> l j < b) {j : Fin l.len}
   : l j = base-digit (BigSum (\lam j => l j * Monoid.pow b j)) b j \elim l, j
-  | a :: l, 0 => inv $ pmap (`mod b) +-comm *> pmap (\lam x => (x + a) mod b) (inv $ *-comm *> Semiring.BigSum-rdistr *> pmap BigSum (exts \lam j => *-assoc)) *> n*_+_mod_n {b} {BigSum (\lam j => l j * Monoid.pow b j)} (p 0)
-  | a :: l, suc j => base-digit-sum (\lam j => p (suc j)) *> pmap (base-digit __ b j) (unfold BigSum $ inv $ pmap (`div b) +-comm *> pmap (\lam x => (x + a) div b) (inv $ *-comm *> Semiring.BigSum-rdistr *> pmap BigSum (exts \lam j => *-assoc)) *> n*_+_div_n=div (later \lam b=0 => \case rewrite b=0 in p 0) *> pmap (_ +) (div_< (p 0)) *> zro-right)
+  | a :: l, 0 => inv $ pmap (mod b) +-comm *> pmap (\lam x => (x + a) mod b) (inv $ *-comm *> Semiring.BigSum-rdistr *> pmap BigSum (exts \lam j => *-assoc)) *> n*_+_mod_n {b} {BigSum (\lam j => l j * Monoid.pow b j)} (p 0)
+  | a :: l, suc j => base-digit-sum (\lam j => p (suc j)) *> pmap (base-digit __ b j) (unfold BigSum $ inv $ pmap (div b) +-comm *> pmap (\lam x => (x + a) div b) (inv $ *-comm *> Semiring.BigSum-rdistr *> pmap BigSum (exts \lam j => *-assoc)) *> n*_+_div_n=div (later \lam b=0 => \case rewrite b=0 in p 0) *> pmap (_ +) (div_< (p 0)) *> zro-right)
 
 \instance FinRing {n : Nat} : CRing.Dec (Fin (suc n))
   | zro => 0
@@ -72,7 +72,7 @@
   | ldistr {x} {y} {z} => mod_*-right *> pmap Fin.fromNat ldistr *> inv (mod_+-left *> mod_+-right)
   | negative x => iabs (suc n Nat.- x)
   | negative-left {x} =>
-    \let t => pmap (`+ pos x) (pos_iabs (<=-less (fin_< x))) *> IntRing.+-assoc {pos (suc n)} {neg x} *> pmap (_ +) (IntRing.negative-left {pos x})
+    \let t => pmap (+ pos x) (pos_iabs (<=-less (fin_< x))) *> IntRing.+-assoc {pos (suc n)} {neg x} *> pmap (_ +) (IntRing.negative-left {pos x})
     \in mod_+-left *> transport (__ Nat.mod suc n = 0) (inv (pmap iabs t)) (fin_nat-inj (n*_+_mod_n {_} {1} NatOrder.zero<suc))
   | decideEq x y => \case NatSemiring.decideEq x y \with {
     | yes x=y => yes (fin_nat-inj x=y)
@@ -89,7 +89,7 @@
       => mod_< {a mod pos (suc n)} {suc n} natMod<right
 
     \lemma ldiv-modEq (x y : Int) (n : Nat) (p : ∃ (Monoid.LDiv {IntEuclidean} (suc n) (x - y))) : x mod suc n = y mod suc n \elim p
-      | inP (e, p) => rewrite (rewrite (+-assoc, negative-left, zro-right) in inv (pmap (`+` y) p)) $
+      | inP (e, p) => rewrite (rewrite (+-assoc, negative-left, zro-right) in inv (pmap (+ y) p)) $
       rewrite (ldistr, +-assoc, natDivModProp y n) in int_n*_+_mod_n {n} {y mod suc n} {e + y div pos (suc n)} natMod<right
 
     \sfunc modEq-ldiv (x y : Int) (n : Nat) (p : x mod suc n = y mod suc n) : Monoid.LDiv {IntEuclidean} (suc n) (x - y)
@@ -129,7 +129,7 @@
           | n, 0 => natCoefZero
           | n, suc k => rewrite (natCoefSuc k, aux k, mod_+-right) (fin_mod_id (suc k))
 
-    \lemma intHom {n : Nat} : RingHom IntRing (FinRing {n}) (`mod suc n)
+    \lemma intHom {n : Nat} : RingHom IntRing (FinRing {n}) (mod suc n)
       => transport (RingHom _ _) (ext (FinRing.intCoef-char n)) intMap
   }
 
@@ -171,7 +171,7 @@
       => \case nat_irr p (GCD.res|val1 {gcd-isGCD p x}) \with {
            | byLeft gcd=1 => gcd=1
            | byRight gcd=p =>
-             \have p<=x => transport (`<= x) gcd=p (ldiv_<= x/=0 (GCD.res|val2 {gcd-isGCD p x}))
+             \have p<=x => transport (<= x) gcd=p (ldiv_<= x/=0 (GCD.res|val2 {gcd-isGCD p x}))
              \in absurd (p<=x x<p)
          }
   }

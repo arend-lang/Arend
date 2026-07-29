@@ -120,7 +120,7 @@
 \func homotopy_app-comm {A : \Type} (f : A -> A) (h : \Pi (a : A) -> f a = a) (a : A) : h (f a) = pmap f (h a) =>
   h (f a)                             ==< pmap (h (f a) *>) (inv (*>_inv (h a))) >==
   h (f a) *> (h a *> inv (h a))       ==< inv (*>-assoc (h (f a)) (h a) (inv (h a))) >==
-  (h (f a) *> h a) *> inv (h a)       ==< pmap (`*> inv (h a)) (inv (homotopy-isNatural f (\lam a => a) h (h a))) >==
+  (h (f a) *> h a) *> inv (h a)       ==< pmap (*> inv (h a)) (inv (homotopy-isNatural f (\lam a => a) h (h a))) >==
   (pmap f (h a) *> h a) *> inv (h a)  ==< *>-assoc (pmap f (h a)) (h a) (inv (h a)) >==
   pmap f (h a) *> (h a *> inv (h a))  ==< pmap (pmap f (h a) *>) (*>_inv (h a)) >==
   pmap f (h a)                        `qed
@@ -154,7 +154,7 @@
   | idp, idp => idp
 
 \func transport_path-left {A : \Type} {a0 a b : A} (p : a = b) (q : a = a0)
-  : transport (`= a0) p q = inv p *> q
+  : transport (= a0) p q = inv p *> q
   | idp, idp => idp
 
 \func transport_path_pmap {A B : \Type} (f g : A -> B) {a a' : A} (p : a = a') (q : f a = g a) (s : f a' = g a') (h : q *> pmap g p = pmap f p *> s) : transport (\lam x => f x = g x) p q = s \elim p

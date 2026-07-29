@@ -31,7 +31,7 @@
 
   \lemma transport_Hom-right {C D : Precat} {x y : C} (p : x = y) {z : D} (F : Functor C D) {g : Hom z (F x)}
     : transport (Hom z) (pmap F p) g = F.Func (transport (Hom x) p id) ∘ g \elim p
-    | idp => inv (pmap (`∘ g) Func-id *> id-left)
+    | idp => inv (pmap (∘ g) Func-id *> id-left)
 
   \lemma transport_Hom_iso-right {C : Cat} {D : Precat} (e : Iso {C}) {z : D} (F : Functor C D) {g : Hom z (F e.dom)}
     : transport (Hom z) (pmap F (C.isotoid e)) g = F.Func e.f ∘ g
@@ -40,7 +40,7 @@
   \lemma transport_Hom_iso {C D : Cat} {E : Precat} (e1 : Iso {C}) (e2 : Iso {D}) (F : Functor C E) (G : Functor D E) {g : Hom (F e1.dom) (G e2.dom)} {f : Hom (F e1.cod) (G e2.cod)}
                            (h : G.Func e2.f ∘ g = f ∘ F.Func e1.f)
     : coe (\lam i => Hom (F (C.isotoid e1 @ i)) (G (D.isotoid e2 @ i))) g right = f
-    => transport_Hom (C.isotoid e1) (D.isotoid e2) F G (pmap (`∘ g) (transport_Hom_iso-right e2 G *> id-right) *> h *> pmap (f ∘) (inv (transport_Hom_iso-right e1 F *> id-right)))
+    => transport_Hom (C.isotoid e1) (D.isotoid e2) F G (pmap (∘ g) (transport_Hom_iso-right e2 G *> id-right) *> h *> pmap (f ∘) (inv (transport_Hom_iso-right e1 F *> id-right)))
 }
 
 \func Id {C : Precat} : Functor C C \cowith
@@ -90,7 +90,7 @@
     | natural f => inv H.Func-o *> pmap H.Func (a.natural f) *> H.Func-o
 
   \lemma equals-mono {C D : Precat} {F G : Functor C D} {a b : NatTrans F G} (e : SplitMono {C}) (p : a e.cod = b e.cod) : a e.dom = b e.dom
-    => (G.Func-splitMono e).isMono $ inv (a.natural e.f) *> pmap (`∘ _) p *> b.natural e.f
+    => (G.Func-splitMono e).isMono $ inv (a.natural e.f) *> pmap (∘ _) p *> b.natural e.f
 
   \protected \func \fixl 8 id {C : Precat} {D : Precat} {F : Functor C D} : NatTrans F F \cowith
     | trans X => D.id

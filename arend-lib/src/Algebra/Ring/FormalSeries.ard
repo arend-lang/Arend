@@ -44,14 +44,14 @@
   | * f g n => R.FinSum {PairsFinSet n} \lam s => f s.1 * g s.2
   | *-assoc {x} {y} {z} => ext \lam n => path (\lam i => R.FinSum (\lam (s : PairsFinSet n) => R.FinSum-rdistr {PairsFinSet s.1} {z s.2} {\lam t => x t.1 * y t.2} i)) *>
       R.FinSum-double-dep' _ *> R.FinSum_Equiv2 (later \new QEquiv {
-        | f ((i,j,i+j=n),(k,m,k+m=i)) => ((k, m + j, inv +-assoc *> pmap (`+ j) k+m=i *> i+j=n), (m, j, idp))
+        | f ((i,j,i+j=n),(k,m,k+m=i)) => ((k, m + j, inv +-assoc *> pmap (+ j) k+m=i *> i+j=n), (m, j, idp))
         | ret ((i,j,i+j=n),(k,m,k+m=j)) => ((i + k, m, +-assoc *> pmap (i +) k+m=j *> i+j=n), (i, k, idp))
         | ret_f s => PairsFinSet-ext1 s.2.3 idp idp idp
         | f_sec s => PairsFinSet-ext2 idp s.2.3 idp idp
       }) (\lam s => *-assoc) *> inv (path (\lam i => R.FinSum (\lam (s : PairsFinSet n) => R.FinSum-ldistr {PairsFinSet s.2} {x s.1} {\lam t => y t.1 * z t.2} i)) *> R.FinSum-double-dep' _)
   | ldistr => ext \lam n => pmap R.FinSum (ext \lam s => R.ldistr) *> R.FinSum_+
   | rdistr => ext \lam n => pmap R.FinSum (ext \lam s => R.rdistr) *> R.FinSum_+
-  | ide-left {x} => ext \lam n => R.FinSum-unique (later (0, n, idp)) (\lam s s/=0 => pmap (`* _) (coef_/=0 \lam p => s/=0 $ ext (p, pmap (`+ _) (inv p) *> s.3)) *> R.zro_*-left) *> ide-left
+  | ide-left {x} => ext \lam n => R.FinSum-unique (later (0, n, idp)) (\lam s s/=0 => pmap (* _) (coef_/=0 \lam p => s/=0 $ ext (p, pmap (+ _) (inv p) *> s.3)) *> R.zro_*-left) *> ide-left
   | ide-right {x} => ext \lam n => R.FinSum-unique (later (n, 0, idp)) (\lam s s/=0 => pmap (_ *) (coef_/=0 \lam p => s/=0 $ ext (pmap (_ +) (inv p) *> s.3, p)) *> R.zro_*-right) *> ide-right
   | natCoef n => coef (R.natCoef n)
   | natCoefZero => ext \case \elim __\with {
@@ -76,7 +76,7 @@
         | f i => (i, n -' i, <=_exists $ <_suc_<= $ fin_< i)
         | ret s => toFin s.1 $ <=_<_suc $ NatSemiring.<=_+ <=-refl zero<=_ <=∘ =_<= s.3
         | ret_f i => fin_nat-inj toFin=id
-        | f_sec s => ext (toFin=id, pmap2 (`-') (inv s.3 *> +-comm) toFin=id *> -'+)
+        | f_sec s => ext (toFin=id, pmap2 (-') (inv s.3 *> +-comm) toFin=id *> -'+)
       }
 
     \lemma PairsFinSet-ext1 {n : Nat} {x y : \Sigma (s : PairsFinSet n) (PairsFinSet s.1)} (p1 : x.1.1 = y.1.1) (p2 : x.1.2 = y.1.2) (p3 : x.2.1 = y.2.1) (p4 : x.2.2 = y.2.2) : x = y \elim x, y, p1, p2, p3, p4
@@ -112,7 +112,7 @@
       }) (later \case \elim __ \with {
         | (0, j, p) => pmap f $ ext (idp,p)
         | (suc i, j, p) => idp
-      }) *> R.FinSum_Or {UnitFin} {PairsFinSet n} {Or.rec (\lam _ => f (0, suc n, idp)) (\lam s => f (suc s.1, s.2, pmap suc s.3))} *> pmap (`+ _) (R.FinSum-unique () (\lam k c => absurd $ c idp))
+      }) *> R.FinSum_Or {UnitFin} {PairsFinSet n} {Or.rec (\lam _ => f (0, suc n, idp)) (\lam s => f (suc s.1, s.2, pmap suc s.3))} *> pmap (+ _) (R.FinSum-unique () (\lam k c => absurd $ c idp))
   }
 
 \instance FSeriesAlgebra (R : CRing) : CAlgebra R
@@ -230,7 +230,7 @@
       | f i => (i, n -' i, <=_exists (<_suc_<= (fin_< i)))
       | ret s => toFin s.1 (<=_<_suc (NatSemiring.<=_+ <=-refl zero<=_ <=∘ =_<= s.3))
       | ret_f i => fin_nat-inj toFin=id
-      | f_sec s => ext (toFin=id, pmap2 (`-') (inv s.3 *> +-comm) toFin=id *> -'+)
+      | f_sec s => ext (toFin=id, pmap2 (-') (inv s.3 *> +-comm) toFin=id *> -'+)
     }
 
 {- | Finite-support lemma: if $b_0 = 0$, the $n$-fold convolution
@@ -246,5 +246,5 @@
   | 0 => absurd (\case k<n)
   | suc n => A.FinSum_zro $ later \case \elim __ \with {
     | (i, 0, p) => pmap (_ *) b_0 *> A.zro_*-right
-    | (i, suc j, p) => pmap (`* _) (pow-conv-zero-below b_0 linarith) *> A.zro_*-left
+    | (i, suc j, p) => pmap (* _) (pow-conv-zero-below b_0 linarith) *> A.zro_*-left
   }

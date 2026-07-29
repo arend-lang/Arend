@@ -71,12 +71,12 @@
                          \in inP (s.1, s.2, \lam {m} d => \case LinearOrder.trichotomy n m \with {
                            | less n<m => absurd $ <-irreflexive $ lem2 n<m (lem1 n<m n<N $ real_<_U.2 d) <∘ real_<_U.2 d
                            | equals n=m => transport s.1 (toFin=id *> n=m) s.3
-                           | greater m<n => absurd $ <-irreflexive $ lem2 m<n (n<N <∘ id<suc) <∘ transport (`< _) (ldist-symm {NatMetricSpace}) (real_<_U.2 d)
+                           | greater m<n => absurd $ <-irreflexive $ lem2 m<n (n<N <∘ id<suc) <∘ transport (< _) (ldist-symm {NatMetricSpace}) (real_<_U.2 d)
                          })
             | inr N<=n => inP (U, CU, \lam {m} d => g \case LinearOrder.dec<_<= m N, LinearOrder.dec<_<= m n \with {
               | inr N<=m, _ => N<=m
               | _, inr n<=m => N<=n <=∘ n<=m
-              | inl m<N, inl m<n => \have d' => transport (`< _) (ldist-symm {NatMetricSpace}) (real_<_U.2 d)
+              | inl m<N, inl m<n => \have d' => transport (< _) (ldist-symm {NatMetricSpace}) (real_<_U.2 d)
                                     \in absurd $ <-irreflexive $ lem2 m<n (lem1 m<n m<N d') <∘ d'
             })
           }))

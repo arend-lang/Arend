@@ -47,7 +47,7 @@
   | func-cont {V} Vo => \case \elim d \with {
     | inP (f',f'd) => TopSpace.cover-open {TopSub U} \lam {x} Vfx =>
         \have fc : ContMap (TopSub U) Y f => transport (ContMap (TopSub U) Y)
-            (ext \lam y => pmap (`+ _) (inv ide_*c *> f'd x.2 (\box rewrite ide_*c $ simplify y.2)) *> simplify (pmap f $ ext $ rewrite ide_*c simplify))
+            (ext \lam y => pmap (+ _) (inv ide_*c *> f'd x.2 (\box rewrite ide_*c $ simplify y.2)) *> simplify (pmap f $ ext $ rewrite ide_*c simplify))
             (+-cont ∘ tuple (f' ∘ TopSub-func (tuple (const x.1) (tuple (const 1) (+-cont ∘ tuple id (const (negative x.1))))) \lam {y} Uy => unfold (x.2, rewrite ide_*c $ simplify Uy)) (const (f x)))
         \in inP (f ^-1 V, fc.func-cont Vo, Vfx, <=-refl)
   }
@@ -126,7 +126,7 @@
   => IsTDerivQuot.isTDeriv (fc ∘ proj2 ∘ proj2) has_deriv deriv-quot_linear x a
   \where {
     \lemma deriv-quot_linear : IsTDerivQuot f (\lam s => f s.2.2)
-      => \lam {x} {h} {a} => inv $ pmap (`- _) f.func-+ *> simplify f.func-*c
+      => \lam {x} {h} {a} => inv $ pmap (- _) f.func-+ *> simplify f.func-*c
 
     \lemma has_deriv : HasTDeriv f
       => HasTDeriv.make (fc ∘ proj2 ∘ proj2) deriv-quot_linear
@@ -162,7 +162,7 @@
   => IsDerivQuot.isDeriv (\lam x => c *c f x) isCont Uo has_deriv deriv-quot_*c Ux a
   \where {
     \lemma deriv-quot_*c : IsDerivQuot (\lam x => c *c f x) (\lam s => c *c deriv-quot Uo f d s)
-      => \lam Ux Ua => inv *c-assoc *> pmap (`*c _) *-comm *> *c-assoc *> pmap (c *c) (deriv-isQuot d Ux Ua) *> Y.*c-ldistr_-
+      => \lam Ux Ua => inv *c-assoc *> pmap (*c _) *-comm *> *c-assoc *> pmap (c *c) (deriv-isQuot d Ux Ua) *> Y.*c-ldistr_-
 
     \lemma isCont => *c-cont ∘ tuple (const c) (deriv-quot.deriv-tuple Uo f d).1
 

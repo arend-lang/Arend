@@ -72,7 +72,7 @@
     \lemma abs-conv {A : RealBanachAlgebra} {x : A}
       : IsAbsConvSeries (powerSeries (\lam n => A.fromRat (exp-1-coef n)) x)
       => series_<= (\lam n => \case \elim n \with {
-        | 0 => transportInv (`<= _) (pmap norm (ide-right *> A.fromRat_zro) *> norm_zro) norm>=0
+        | 0 => transportInv (<= _) (pmap norm (ide-right *> A.fromRat_zro) *> norm_zro) norm>=0
         | suc n => ExUpperRealAbMonoid.<=-refl
       }) (powerSeriesConv-absConv exp.ps-conv)
 
@@ -80,7 +80,7 @@
     \lemma ps-conv {A : RealBanachAlgebra}
       : IsPowerSeriesConv (\lam n => A.fromRat (exp-1-coef n))
       => \lam {a} a>=0 => series_<= (\lam j => \case \elim j \with {
-        | 0 => transportInv (`<= _) (ExUpperRealSemigroup.ide-right norm>=0 *> pmap norm A.fromRat_zro *> norm_zro) ExUpperRealSemigroup.*_>=0
+        | 0 => transportInv (<= _) (ExUpperRealSemigroup.ide-right norm>=0 *> pmap norm A.fromRat_zro *> norm_zro) ExUpperRealSemigroup.*_>=0
         | suc _ => <=-refl
       }) (exp.ps-conv a>=0)
   }
@@ -91,8 +91,8 @@
     \protected \lemma ps-conv {A : RealBanachAlgebra} : IsPowerSeriesConv \lam n => A.fromRat (RatField.finv (fac n))
       => power-ratio-test-inf (\lam n => RatField.finv (suc n)) (\lam n => =_<= $ A.norm_*q *> *-comm *> pmap (_ *) (pmap ExUpperReal.fromRat
           (RatField.abs-ofPos (RatField.finv>=0 $ <=_ratNom $ pos<=pos zero<=_) *> RatField.finv_* {suc n} *>
-          pmap (`* _) (inv $ RatField.abs-ofPos $ RatField.finv>=0 $ <=_ratNom $ pos<=pos zero<=_)) *>
-          inv (ExUpperReal.*-rat RatField.abs>=0 $ <=_ratNom $ pos<=pos zero<=_)) *> inv (pmap (`* _) (A.norm_*q {RatField.finv (fac n)} {1} *> *-comm) *> *-assoc))
+          pmap (* _) (inv $ RatField.abs-ofPos $ RatField.finv>=0 $ <=_ratNom $ pos<=pos zero<=_)) *>
+          inv (ExUpperReal.*-rat RatField.abs>=0 $ <=_ratNom $ pos<=pos zero<=_)) *> inv (pmap (* _) (A.norm_*q {RatField.finv (fac n)} {1} *> *-comm) *> *-assoc))
         harmonic-limit
 
     \protected \func coef-Rat (n : Nat) : Rat => RatField.finv (fac n)
@@ -111,10 +111,7 @@
         ide-left
       }
 
-    {- | Bridge: $\exp x$ is the `IsSeriesSum` value of the exp power series at $x$.
-         Since `exp` is a `RatAnalyticGlobal` with $\mathrm{Dom} = A$, the
-         coerced `func` at `x` is `limit (partialSum ... x) (...)`, and
-         `limit-isLimit` discharges the `IsSeriesSum` claim directly. -}
+    -- | Bridge: $\exp x$ is the {IsSeriesSum} value of the exp power series at $x$.
     \lemma seriesSum {A : RealBanachAlgebra} (x : A) : IsSeriesSum (powerSeries coef x) (exp x)
       => transportInv (IsSeriesSum _) (\peval exp x) powerSeriesSum-total-isSum
   }
@@ -144,10 +141,10 @@
       | b k => powerSeries (\lam j => cs j) y k
       | term-eq (k : Fin (suc n)) : a k * b (n -' k) = cs n * (natCoef (binom n k) * (pow x k * pow y (n -' k)))
           => *-assoc
-             *> pmap (cs k *) (inv *-assoc *> pmap (`* _) (inv A.fromRat-comm) *> *-assoc)
+             *> pmap (cs k *) (inv *-assoc *> pmap (* _) (inv A.fromRat-comm) *> *-assoc)
              *> inv *-assoc
-             *> pmap (`* _) (cs-binom-id $ <_suc_<= (fin_< k))
-             *> pmap (`* _) Semiring.natCoef-comm
+             *> pmap (* _) (cs-binom-id $ <_suc_<= (fin_< k))
+             *> pmap (* _) Semiring.natCoef-comm
              *> *-assoc
      \in
       conv_BigSum (\lam k => a k) (\lam k => b k) n
@@ -159,13 +156,13 @@
       : RatField.finv (fac k) * RatField.finv (fac (n -' k)) = natCoef (binom n k) * RatField.finv (fac n)
       => inv $ *-comm *> pmap (_ *) (inv (RatField.*-assoc {binom n k} *>
               pmap (_ *) (RatField.finv-right $ natRat/=0 $ NatSemiring.>_/= $ NatSemiring.<_*_positive_positive fac>0 fac>0))
-            *> pmap (RatField.`* _) (pmap (_ *) *-comm *> inv *-assoc *> binom.fac-id-le p))
-          *> inv *-assoc *> pmap (`* _) (RatField.finv-left $ natRat/=0 fac/=0) *> ide-left *> RatField.finv_*
+            *> pmap (RatField.* _) (pmap (_ *) *-comm *> inv *-assoc *> binom.fac-id-le p))
+          *> inv *-assoc *> pmap (* _) (RatField.finv-left $ natRat/=0 fac/=0) *> ide-left *> RatField.finv_*
 
     \private \lemma cs-binom-id {A : RealBanachAlgebra} {n k : Nat} (p : k <= n)
       : A.fromRat (RatField.finv (fac k)) * A.fromRat (RatField.finv (fac (n -' k)))
           = natCoef (binom n k) * A.fromRat (RatField.finv (fac n))
-      => A.fromRat_* *> pmap A.fromRat (binom-fac-rat p) *> inv A.fromRat_* *> pmap (`* _) A.fromRat_natCoef
+      => A.fromRat_* *> pmap A.fromRat (binom-fac-rat p) *> inv A.fromRat_* *> pmap (* _) A.fromRat_natCoef
   }
 
 {- | Exponent property: $\exp(x + y) = \exp x \cdot \exp y$ when $x$ and $y$
@@ -181,7 +178,7 @@
 {- | Exponent of a negative is the multiplicative inverse:
      $\exp x \cdot \exp(-x) = 1$. Corollary of {exp_+} — $x$ and $-x$ commute
      (both products equal $-(x \cdot x)$) — together with
-     $x + (-x) = 0$ (`negative-right`) and `exp_zro`. -}
+     $x + (-x) = 0$ ({negative-right}) and {exp_zro}. -}
 \lemma exp_negative-right {A : RealBanachAlgebra} {x : A} : exp x * exp (negative x) = 1
   => inv (exp_+ $ A.negative_*-right *> inv A.negative_*-left) *> pmap exp A.negative-right *> exp_zro
 

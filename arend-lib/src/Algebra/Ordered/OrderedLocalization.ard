@@ -48,7 +48,7 @@
   | meet-left {in~ a} {in~ b} => inP (0, S.contains_zro, <=_+ (<=_+ meet-left <=-refl <=∘ =_<= equation.abMonoid) <=-refl)
   | meet-right {in~ a} {in~ b} => inP (0, S.contains_zro, <=_+ (<=_+ meet-right <=-refl <=∘ =_<= equation.abMonoid) <=-refl)
   | meet-univ {in~ a} {in~ b} {in~ c} (inP (d,Sd,dp)) (inP (e,Se,ep)) => inP (d + e, contains_+ Sd Se, meet-univ (transport2 (<=) equation.abMonoid equation.abMonoid $ <=_+ dp (<=-refl {_} {b.2 + e})) (transport2 (<=) equation.abMonoid equation.abMonoid $ <=_+ ep (<=-refl {_} {a.2 + d})) <=∘ inv meet_+-right =<= <=_+ (=_<= $ inv meet_+-left) <=-refl)
-  | meet_+-left {in~ a} {in~ b} {in~ c} => ~-lequiv $ pmap (`+ _) meet_+-left *> meet_+-right *> pmap2 (∧) equation.abMonoid equation.abMonoid *> inv meet_+-right
+  | meet_+-left {in~ a} {in~ b} {in~ c} => ~-lequiv $ pmap (+ _) meet_+-left *> meet_+-right *> pmap2 (∧) equation.abMonoid equation.abMonoid *> inv meet_+-right
 
 \instance GrothendieckMeetLattice (M : MeetSemilatticeAbMonoid) : LatticeAbGroup.FromMeet (MaxLocAbType M)
   | PosetAbGroup => GrothendieckOrderedAbGroup M

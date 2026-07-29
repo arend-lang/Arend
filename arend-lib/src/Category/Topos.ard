@@ -86,8 +86,8 @@
 
   \lemma Power-singleton-mono {c : Ob} : Mono (Power-singleton c) \cowith
     | isMono {_} {g} p => subobjEq-lifts.1 $ transport (subobjLifts _) pullback_Power $ subobjPullback-lifts.2 $ transport (subobjLifts __ _)
-      (pair-unique (inv o-assoc *> pmap (`∘ _) (beta1 *> id-left) *> beta1 *> inv (pmap (`∘ _) (beta1 *> id-left) *> beta1) *> o-assoc)
-                   (inv o-assoc *> pmap (`∘ _) beta2 *> o-assoc *> pmap (_ ∘) beta2 *> p *> inv (pmap (`∘ _) beta2 *> o-assoc *> pmap (_ ∘) beta2) *> o-assoc)) $
+      (pair-unique (inv o-assoc *> pmap (∘ _) (beta1 *> id-left) *> beta1 *> inv (pmap (∘ _) (beta1 *> id-left) *> beta1) *> o-assoc)
+                   (inv o-assoc *> pmap (∘ _) beta2 *> o-assoc *> pmap (_ ∘) beta2 *> p *> inv (pmap (∘ _) beta2 *> o-assoc *> pmap (_ ∘) beta2) *> o-assoc)) $
       subobjPullback-lifts.1 $ transportInv (subobjLifts _) pullback_Power $ subobjEq-lifts.2 idp
 
   \sfunc Power-singleton-subobj (c : Ob) : Subobj (Power c)
@@ -105,26 +105,26 @@
     \where {
       \protected \sfunc char : \Sigma (eval : Hom (Bprod (PHom b c) b) c) (Power-singleton c ∘ eval = PHom.psmap ∘ pair proj2 (Equalizer.eql ∘ proj1))
         => \have (g,p) => subobjLifts.toMap (\peval Power-singleton-subobj c) $ subobjPullback-lifts.1 $ (Power_lift-char {_} {_} {_} {b} {(PHom b c).eql}).2 $ Equalizer.equal *> Power-char_top
-           \in (g ∘ swap, inv o-assoc *> pmap (`∘ _) p *> o-assoc *> pmap (_ ∘) (pair-unique
-                (inv o-assoc *> pmap (`∘ _) (beta1 *> id-left) *> beta1 *> inv beta1)
-                (inv o-assoc *> pmap (`∘ _) beta2 *> o-assoc *> pmap (_ ∘) beta2 *> inv beta2)))
+           \in (g ∘ swap, inv o-assoc *> pmap (∘ _) p *> o-assoc *> pmap (_ ∘) (pair-unique
+                (inv o-assoc *> pmap (∘ _) (beta1 *> id-left) *> beta1 *> inv beta1)
+                (inv o-assoc *> pmap (∘ _) beta2 *> o-assoc *> pmap (_ ∘) beta2 *> inv beta2)))
     }
 
   \lemma PHom-univ {a b c : Ob} : IsEquiv {Hom a (PHom b c)} {Hom (Bprod a b) c} (\lam g => PHom-eval ∘ prodMap g id)
     => IsEquiv.fromInjSurj (\lam {g} {g'} p =>
           \have | t => pmap (subobjPullback (prodMap id swap ∘ associator)) $ subobjPullback_o *> IsEquiv.isInj (IsEquiv.ret-equiv Power-univ)
-                        (inv Power-char_o *> inv o-assoc *> pmap (`∘ _) (inv PHom-eval.char.2) *> o-assoc *> pmap (Power-singleton c ∘) p *> inv o-assoc *> pmap (`∘ _) PHom-eval.char.2 *> o-assoc *> Power-char_o) *> inv subobjPullback_o
+                        (inv Power-char_o *> inv o-assoc *> pmap (∘ _) (inv PHom-eval.char.2) *> o-assoc *> pmap (Power-singleton c ∘) p *> inv o-assoc *> pmap (∘ _) PHom-eval.char.2 *> o-assoc *> Power-char_o) *> inv subobjPullback_o
                 | lem g : associator-iso.hinv ∘ prodMap id (pair proj2 (Equalizer.eql ∘ proj1) ∘ prodMap g id) ∘ (prodMap id swap ∘ associator) = prodMap id (Equalizer.eql ∘ g)
-                  => pmap (_ ∘ prodMap _ __ ∘ _) (pair-comp *> pmap2 pair (beta2 *> id-left) (o-assoc *> pmap (_ ∘) beta1)) *> pmap2 (_ ∘ pair __ __ ∘ _) id-left pair-comp *> pmap (`∘ _) associator-inv-pair *> pair-comp *> pmap2 pair
-                      (pair-comp *> pmap2 pair (inv o-assoc *> pmap (`∘ _) beta1 *> pmap (`∘ _) id-left *> beta1) (o-assoc *> pmap (_ ∘) (inv o-assoc *> pmap (`∘ _) beta2 *> o-assoc *> pmap (_ ∘) beta2) *> inv o-assoc *> pmap (`∘ _) beta2 *> beta1) *> inv pair-comp *> pmap (`∘ _) pair-eta)
-                      (o-assoc *> o-assoc *> pmap (_ ∘) (o-assoc *> pmap (_ ∘) (pmap (_ ∘) (inv o-assoc *> pmap (`∘ _) beta2 *> o-assoc) *> inv o-assoc *> pmap2 (∘) beta1 beta2 *> beta2)) *> inv o-assoc)
+                  => pmap (_ ∘ prodMap _ __ ∘ _) (pair-comp *> pmap2 pair (beta2 *> id-left) (o-assoc *> pmap (_ ∘) beta1)) *> pmap2 (_ ∘ pair __ __ ∘ _) id-left pair-comp *> pmap (∘ _) associator-inv-pair *> pair-comp *> pmap2 pair
+                      (pair-comp *> pmap2 pair (inv o-assoc *> pmap (∘ _) beta1 *> pmap (∘ _) id-left *> beta1) (o-assoc *> pmap (_ ∘) (inv o-assoc *> pmap (∘ _) beta2 *> o-assoc *> pmap (_ ∘) beta2) *> inv o-assoc *> pmap (∘ _) beta2 *> beta1) *> inv pair-comp *> pmap (∘ _) pair-eta)
+                      (o-assoc *> o-assoc *> pmap (_ ∘) (o-assoc *> pmap (_ ∘) (pmap (_ ∘) (inv o-assoc *> pmap (∘ _) beta2 *> o-assoc) *> inv o-assoc *> pmap2 (∘) beta1 beta2 *> beta2)) *> inv o-assoc)
           \in Equalizer.eqMono $ IsEquiv.isInj Power-univ $ pmap (subobjPullback __ _) (inv (lem g)) *> subobjPullback_o *> t *> inv subobjPullback_o *> pmap (subobjPullback __ _) (lem g'))
-        \lam h => inP (Equalizer.eqMap (Power-char (graph h)) (graph-eq h), Power-singleton-mono.isMono $ inv o-assoc *> pmap (`∘ _) PHom-eval.char.2 *> o-assoc *>
-          pmap (_ ∘) (pair-comp *> pmap2 pair (beta2 *> id-left) (o-assoc *> pmap (_ ∘) beta1 *> inv o-assoc *> pmap (`∘ _) Equalizer.eqBeta)) *>
+        \lam h => inP (Equalizer.eqMap (Power-char (graph h)) (graph-eq h), Power-singleton-mono.isMono $ inv o-assoc *> pmap (∘ _) PHom-eval.char.2 *> o-assoc *>
+          pmap (_ ∘) (pair-comp *> pmap2 pair (beta2 *> id-left) (o-assoc *> pmap (_ ∘) beta1 *> inv o-assoc *> pmap (∘ _) Equalizer.eqBeta)) *>
           IsEquiv.isInj Power-univ (pmap (subobjPullback __ _) (inv prod-id-left) *> subobjPullback_o *> pmap (subobjPullback _) pullback_Power *> inv subobjPullback_o *>
-          pmap (subobjPullback __ _) (pmap (_ ∘) (pmap (prodMap _) (inv $ pair-comp *> pmap2 pair (o-assoc *> id-left *> beta1) (o-assoc *> pmap (_ ∘) beta2)) *> inv prod-id-left) *> inv o-assoc *> pmap (`∘ _) (inv associator-inv-prod) *> pmap (\lam r => prodMap r _ ∘ _ ∘ _) prod-id *> o-assoc) *>
+          pmap (subobjPullback __ _) (pmap (_ ∘) (pmap (prodMap _) (inv $ pair-comp *> pmap2 pair (o-assoc *> id-left *> beta1) (o-assoc *> pmap (_ ∘) beta2)) *> inv prod-id-left) *> inv o-assoc *> pmap (∘ _) (inv associator-inv-prod) *> pmap (\lam r => prodMap r _ ∘ _ ∘ _) prod-id *> o-assoc) *>
           subobjPullback_o *> pmap (subobjPullback _) pullback_Power *> inv subobjPullback_o *> pmap (subobjPullback __ _)
-            (o-assoc *> pmap (_ ∘) (inv o-assoc *> pmap (`∘ _) associator-iso.f_hinv *> id-left) *> prod-id-left *> pmap (prodMap _) (o-assoc *> pmap (h ∘) (swap-pair *> pair-eta) *> id-right)) *>
+            (o-assoc *> pmap (_ ∘) (inv o-assoc *> pmap (∘ _) associator-iso.f_hinv *> id-left) *> prod-id-left *> pmap (prodMap _) (o-assoc *> pmap (h ∘) (swap-pair *> pair-eta) *> id-right)) *>
           pmap (subobjPullback _) (inv pullback_Power) *> inv subobjPullback_o *> pmap (subobjPullback __ _) prod-id-left))
     \where {
       \func graph (h : Hom (Bprod a b) c) : Subobj (Bprod (Bprod c b) a)
@@ -155,7 +155,7 @@
       | Omega => Power terminal
       | Omega-true => subobjPullback (pair terminalMap id) (Power-belongs terminal)
       | Omega-univ => transport IsEquiv
-          (ext \lam h => inv subobjPullback_o *> pmap (subobjPullback __ _) (pair-unique terminal-unique $ inv o-assoc *> pmap (`∘ _) beta2 *> o-assoc *> pmap (h ∘) beta2 *> id-right *> inv id-left *> pmap (`∘ h) (inv beta2) *> o-assoc) *> subobjPullback_o) $
+          (ext \lam h => inv subobjPullback_o *> pmap (subobjPullback __ _) (pair-unique terminal-unique $ inv o-assoc *> pmap (∘ _) beta2 *> o-assoc *> pmap (h ∘) beta2 *> id-right *> inv id-left *> pmap (∘ h) (inv beta2) *> o-assoc) *> subobjPullback_o) $
           IsEquiv.trans Power-univ $ inP (subobjPullback_Iso-equiv Bprod_terminal-left)
       | CHom b c => PHom b c
       | CHom-eval => PHom-eval

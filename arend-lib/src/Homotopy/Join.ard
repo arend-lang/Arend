@@ -220,7 +220,7 @@
   }
 
 \func Join_Susp.{u} (A B : \Type u) : Join (Susp A) B = Susp (Join A B) =>
-  Join (Susp A) B            ==< pmap (`Join B) (QEquiv_= (symQEquiv (Join_Sphere0 A))) >==
+  Join (Susp A) B            ==< pmap (Join __ B) (QEquiv_= (symQEquiv (Join_Sphere0 A))) >==
   Join (Join (Sphere 0) A) B ==< QEquiv_= (Join-assoc (Sphere 0) A B) >==
   Join (Sphere 0) (Join A B) ==< QEquiv_= (Join_Sphere0 (Join A B)) >==
   Susp (Join A B)            `qed

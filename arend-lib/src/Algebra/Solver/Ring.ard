@@ -60,14 +60,14 @@
 
     \lemma intCoef-correct {x : Int} : R.intCoef x = intCoef x \elim x
       | pos n => natCoef-correct
-      | neg 1 => pmap negative $ R.natCoefSuc 0 *> pmap (`+ ide) R.natCoefZero *> zro-left
+      | neg 1 => pmap negative $ R.natCoefSuc 0 *> pmap (+ ide) R.natCoefZero *> zro-left
       | neg (suc (suc n)) => idp
 
     \lemma intMap' : RingHom IntRing R intCoef
       => transport (RingHom IntRing R) (path \lam i x => intCoef-correct {_} {x} i) intMap
 
     \func RingData (env : Array R) : Data R IntRing IntRing intMap' env \cowith
-      | alg-comm x a => inv (pmap (`* a) intCoef-correct) *> intComm x a *> pmap (a *) intCoef-correct
+      | alg-comm x a => inv (pmap (* a) intCoef-correct) *> intComm x a *> pmap (a *) intCoef-correct
 
     \func signMulCoef (c : Int) (r : R) : R \elim c
       | pos _ => r
@@ -85,7 +85,7 @@
 
     \lemma ringMulCoef-correct {env : Array R} {c : Int} {l : List (Fin env.len)} : ringMulCoef c l = (RingData env).mulCoef c l \elim c
       | pos n => idp
-      | neg (suc n) => pmap negative (RingData env).mulCoef-consistent *> inv R.negative_*-left *> pmap (`* _) (inv $ intMap'.func-negative {suc n}) *> inv (RingData env).mulCoef-consistent
+      | neg (suc n) => pmap negative (RingData env).mulCoef-consistent *> inv R.negative_*-left *> pmap (* _) (inv $ intMap'.func-negative {suc n}) *> inv (RingData env).mulCoef-consistent
 
     \lemma ringInterpretNF-correct {env : Array R} {l : SemiringSolverModel.NF Int env.len} : ringInterpretNF' l = (RingData env).interpretNF' l \elim l
       | nil => idp
@@ -95,7 +95,7 @@
     \lemma interpretNF_negative {env : Array R} {l : NF Int env.len}
       : (RingData env).interpretNF' (map (\lam s => (s.1, negative s.2)) l) = negative ((RingData env).interpretNF' l) \elim l
       | nil => inv R.negative_zro
-      | a :: l => (RingData env).interpretNF_:: *> +-comm *> pmap2 (+) interpretNF_negative (pmap (`* _) intMap'.func-negative *> R.negative_*-left) *> inv (pmap negative (RingData env).interpretNF_:: *> R.negative_+)
+      | a :: l => (RingData env).interpretNF_:: *> +-comm *> pmap2 (+) interpretNF_negative (pmap (* _) intMap'.func-negative *> R.negative_*-left) *> inv (pmap negative (RingData env).interpretNF_:: *> R.negative_+)
 
     \lemma normalize-consistent {env : Array R} {t : Term Int env.len} : (RingData env).interpretNF' (normalize t) = interpret env t \elim t
       | coef c => inv intCoef-correct
@@ -115,5 +115,5 @@
     \lemma apply-axioms (env : Array R) (l : Array (\Sigma (NF Int env.len) (t s : Term Int env.len) (p : interpret env t = interpret env s))) (add : NF Int env.len)
       : ringInterpretNF env (Big (++) add (arrayMap (\lam s => multiply s.1 (normalize (s.2 :+ :negative s.3))) l)) = ringInterpretNF' add
       => \have d => RingData env
-         \in ringInterpretNF-correct *> d.interpretNF-correct *> d.interpretNF_Big_++ *> pmap (`+ _) (R.BigSum_zro \lam j => d.interpretNF_multiply *> pmap (_ *) (d.interpretNF_++ *> pmap (_ +) interpretNF_negative *> R.toZero (normalize-consistent *> later (l j).4 *> inv normalize-consistent)) *> R.zro_*-right) *> zro-left *> inv ringInterpretNF-correct
+         \in ringInterpretNF-correct *> d.interpretNF-correct *> d.interpretNF_Big_++ *> pmap (+ _) (R.BigSum_zro \lam j => d.interpretNF_multiply *> pmap (_ *) (d.interpretNF_++ *> pmap (_ +) interpretNF_negative *> R.toZero (normalize-consistent *> later (l j).4 *> inv normalize-consistent)) *> R.zro_*-right) *> zro-left *> inv ringInterpretNF-correct
   }

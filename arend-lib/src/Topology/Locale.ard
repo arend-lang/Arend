@@ -38,8 +38,8 @@
   | join-left => Join-cond (byLeft idp)
   | join-right => Join-cond (byRight idp)
   | join-univ x<=z y<=z => Join-univ \case \elim __ \with {
-    | byLeft p => transportInv (`<= _) p x<=z
-    | byRight p => transportInv (`<= _) p y<=z
+    | byLeft p => transportInv (<= _) p x<=z
+    | byRight p => transportInv (<= _) p y<=z
   }
   | Join-ldistr>= {C : E -> \Prop} {e : E} : e ∧ Join C <= SJoin (e ∧) C
   | ldistr>= => Join-ldistr>= <=∘ Join-univ (SetIm-elim $ later \case \elim __ \with {
@@ -62,10 +62,10 @@
   \lemma Join-ldistr {C : E -> \Prop} {e : E} : e ∧ Join C = SJoin (e ∧) C
     => <=-antisymmetric Join-ldistr>= $ SJoin-univ \lam Ca => meet-monotone <=-refl (Join-cond Ca)
 
-  \lemma Join-rdistr>= {C : E -> \Prop} {e : E} : Join C ∧ e <= SJoin (`∧ e) C
+  \lemma Join-rdistr>= {C : E -> \Prop} {e : E} : Join C ∧ e <= SJoin (∧ e) C
     => =_<= Join-rdistr
 
-  \lemma Join-rdistr {C : E -> \Prop} {e : E} : Join C ∧ e = SJoin (`∧ e) C
+  \lemma Join-rdistr {C : E -> \Prop} {e : E} : Join C ∧ e = SJoin (∧ e) C
     => meet-comm *> Join-ldistr *> pmap (SJoin __ C) (ext \lam x => meet-comm)
 
   \lemma Join-distr>= {C D : E -> \Prop} : Join C ∧ Join D <= SJoin (\lam s => s.1 ∧ s.2) (\lam s => \Sigma (C s.1) (D s.2))
@@ -156,7 +156,7 @@
 
   \func IsCompact => IsCompactOpen top
 
-  \type IsLocallyCompact => \Pi (x : E) -> x <= Join (`<< x)
+  \type IsLocallyCompact => \Pi (x : E) -> x <= Join (<< x)
 
   \func IsAlgebraic => \Pi (a : E) -> a <= Join \lam b => \Sigma (b <= a) (IsCompactOpen b)
 
@@ -184,16 +184,16 @@
   -- | The "weakly rather below" relation: `x <=<w y` if and only if the weak closure of {x} is contained in {y}.
   \type \infix 4 <=<w (x y : E) => (open x).map.wclosed-image <= {NucleusFrame _} open y
 
-  \type IsRegularLocale => \Pi (x : E) -> x <= Join (`<=< x)
+  \type IsRegularLocale => \Pi (x : E) -> x <= Join (<=< x)
 
-  \type IsWeaklyRegularLocale => \Pi (x : E) -> x <= Join (`<=<w x)
+  \type IsWeaklyRegularLocale => \Pi (x : E) -> x <= Join (<=<w x)
 
   \func open (a : E) : Nucleus _ (a --> __) \cowith
     | nucleus-meet => <=-antisymmetric
         (meet-univ (<=-curry (<=-eval <=∘ meet-left)) (<=-curry (<=-eval <=∘ meet-right)))
         (<=-curry (meet-univ (meet-monotone meet-left <=-refl <=∘ <=-eval) (meet-monotone meet-right <=-refl <=∘ <=-eval)))
     | nucleus-unit => <=-curry meet-left
-    | nucleus-join>= => <=-curry (transport (_ ∧ __ <= _) meet-idemp (transport (`<= _) meet-assoc (meet-monotone <=-eval <=-refl <=∘ <=-eval)))
+    | nucleus-join>= => <=-curry (transport (_ ∧ __ <= _) meet-idemp (transport (<= _) meet-assoc (meet-monotone <=-eval <=-refl <=∘ <=-eval)))
 
   \func closed (a : E) : Nucleus _ (a ∨ __) \cowith
     | nucleus-meet => equation
@@ -742,7 +742,7 @@
   => \lam a => d $ o _ <=∘ Join-univ (\lam h => Join-cond $ func_positive h)
 
 \lemma <<_<= {L : Locale} {x y : L} (x<<y : x << y) : x <= y
-  => \case x<<y {`= y} (Join-cond idp) \with {
+  => \case x<<y {= y} (Join-cond idp) \with {
     | inP (l,h,x<=l) => x<=l <=∘ IJoin-univ \lam j => =_<= (h j)
   }
 

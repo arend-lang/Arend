@@ -43,7 +43,7 @@
       | F : \Pi (j : J) -> X j -> Y j
 
     \instance universe.{u} {fam : Family.{u}} : Universe.{u} \cowith
-      | isLocal Z => \Pi (j : J) -> IsEquiv {Y j -> Z} {X j -> Z} (`o F j)
+      | isLocal Z => \Pi (j : J) -> IsEquiv {Y j -> Z} {X j -> Z} (o F j)
 
     \data LData.{u} {fam : Family.{u}} (A : \Type u)
       | alpha A

@@ -27,7 +27,7 @@
   -- | If the subrepresentation splits as a submodule, then it splits as a subrepresentation.
   \lemma mean-func-preserve {f : LinearMap E (ILinRepres S)} (p : \Pi (s : ILinRepres S) -> f s.1 = s) (t : ILinRepres S)
     : mean_func f t.1 = t
-    => pmap (_ *c) SumOverGroup-multiply *> inv *c-assoc *> pmap (`*c _) (*-comm *> cardInv.inv-right) *> ide_*c
+    => pmap (_ *c) SumOverGroup-multiply *> inv *c-assoc *> pmap (*c _) (*-comm *> cardInv.inv-right) *> ide_*c
     \where {
       \func SumOverGroup-multiply : SumOverGroup f t.1 = R.natCoef G.card *c t
         => SumOverGroup_same-elements *> SumOverGroup.FinSumEqual-multiply t
@@ -39,7 +39,7 @@
         => SumOverGroup_Sub *> AbMonoid.FinSum-ext (\lam g => SumOverGroup_subrepr-property g t)
 
       \lemma SumOverGroup_subrepr-property (g : G) (t : ILinRepres S) : g ** f (inverse g ** t.1) = t
-        => pmap (g **) (p (inverse g ** t)) *> inv **-assoc *> pmap (`** t) inverse-right *> **_ide
+        => pmap (g **) (p (inverse g ** t)) *> inv **-assoc *> pmap (** t) inverse-right *> **_ide
     }
 }
 

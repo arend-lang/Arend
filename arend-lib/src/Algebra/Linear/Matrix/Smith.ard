@@ -55,14 +55,14 @@
 
 \lemma blockMatrix_M~ {R : CRing} {n m n' m' : Nat} {A B : Matrix R n m} {C D : Matrix R n' m'} (A~B : A M~ B) (C~D : C M~ D)
   : blockMatrix A C M~ blockMatrix B D \elim A~B, C~D
-  | inP (P1 : Inv, Q1 : Inv, A~B), inP (P2 : Inv, Q2 : Inv, C~D) => inP (blockMatrix_Inv.2 (P1,P2), blockMatrix_Inv.2 (Q1,Q2), pmap2 blockMatrix A~B C~D *> inv (pmap (MatrixRing.`product blockMatrix Q1.val Q2.val) (blockMatrix_* _ _ _ _) *> blockMatrix_* (P1.val MatrixRing.product A) (P2.val MatrixRing.product C) _ _))
+  | inP (P1 : Inv, Q1 : Inv, A~B), inP (P2 : Inv, Q2 : Inv, C~D) => inP (blockMatrix_Inv.2 (P1,P2), blockMatrix_Inv.2 (Q1,Q2), pmap2 blockMatrix A~B C~D *> inv (pmap (MatrixRing.product blockMatrix Q1.val Q2.val) (blockMatrix_* _ _ _ _) *> blockMatrix_* (P1.val MatrixRing.product A) (P2.val MatrixRing.product C) _ _))
 
 \instance M~-equiv {R : Ring} {n m : Nat} : Equivalence (Matrix R n m) (M~)
   | ~-reflexive {A} => inP (Inv.ide-isInv, Inv.ide-isInv, inv $ product_ide-right *> product_ide-left)
   | ~-symmetric {A} {B} => TruncP.map __ $ later \lam s => (Inv.reverse {s.1}, Inv.reverse {s.2}, inv $ pmap (\lam z => Inv.inv {s.1} product z product Inv.inv {s.2}) (s.3 *> product-assoc _ _ _) *>
                               \let A' => A product Inv.val {s.2}
-                              \in pmap (`product _) (inv (product-assoc _ _ A') *> pmap (`product A') (Inv.inv-left {s.1}) *> product_ide-left {_} {_} {_} {A'}) *> product-assoc _ _ _ *> pmap (A product) (Inv.inv-right {s.2}) *> product_ide-right)
-  | ~-transitive {P} {Q} {S} (inP s) (inP t) => inP (Inv.product t.1 s.1, Inv.product s.2 t.2, t.3 *> pmap (_ product __ product _) s.3 *> pmap (`product _) {_ product (_ product P product _)} {_ * _ product P product _} (pmap (_ product) (product-assoc _ _ _) *> inv (product-assoc _ _ (P product _)) *> inv (product-assoc (_ * _) _ _)) *> product-assoc (_ * _ product P) _ _)
+                              \in pmap (product _) (inv (product-assoc _ _ A') *> pmap (product A') (Inv.inv-left {s.1}) *> product_ide-left {_} {_} {_} {A'}) *> product-assoc _ _ _ *> pmap (A product) (Inv.inv-right {s.2}) *> product_ide-right)
+  | ~-transitive {P} {Q} {S} (inP s) (inP t) => inP (Inv.product t.1 s.1, Inv.product s.2 t.2, t.3 *> pmap (_ product __ product _) s.3 *> pmap (product _) {_ product (_ product P product _)} {_ * _ product P product _} (pmap (_ product) (product-assoc _ _ _) *> inv (product-assoc _ _ (P product _)) *> inv (product-assoc (_ * _) _ _)) *> product-assoc (_ * _ product P) _ _)
   \where \open MatrixRing
 
 \type IsSmith {R : Semiring} {n m : Nat} (A : Matrix R n m) : \Prop
@@ -73,7 +73,7 @@
 
     \lemma smith-diag {R : CRing} {n m : Nat} {A : Matrix R n m} (As : IsSmith A) {i i' : Fin n} {j j' : Fin m} (p : i = {Nat} j) (q : (i : Nat) <= i') : TruncP (LDiv (A i j) (A i' j'))
       => \case decideEq (i' : Nat) j' \with {
-        | yes r => transport2 (\lam x y => TruncP (LDiv _ (A x y))) (fin_nat-inj $ toFin=id *> <=_exists q) (fin_nat-inj $ toFin=id *> later (rewriteI p $ <=_exists q *> r)) $ aux As p {i' -' i} (transportInv (`< n) (<=_exists q) (fin_< i')) $ rewriteI p $ transportInv (`< m) (<=_exists q *> r) (fin_< j')
+        | yes r => transport2 (\lam x y => TruncP (LDiv _ (A x y))) (fin_nat-inj $ toFin=id *> <=_exists q) (fin_nat-inj $ toFin=id *> later (rewriteI p $ <=_exists q *> r)) $ aux As p {i' -' i} (transportInv (< n) (<=_exists q) (fin_< i')) $ rewriteI p $ transportInv (< m) (<=_exists q *> r) (fin_< j')
         | no r => inP $ transportInv (LDiv _) (As.1 r) R.zero-div
       }
       \where
@@ -81,7 +81,7 @@
           : TruncP (LDiv (A i j) (A (toFin _ p) (toFin _ q))) \elim k
           | 0 => inP $ LDiv.make 1 $ ide-right *> inv (pmap2 (\lam l => A l) toFin=fin toFin=fin)
           | suc k => \case aux As i=j (id<suc <∘ p) (id<suc <∘ q), As.2 (i + k) p (rewrite i=j q) \with {
-            | inP d1, inP d2 => inP $ LDiv.trans d1 $ transport2 (\lam x y => LDiv (A _ x) (A _ y)) (fin_nat-inj $ toFin=id *> pmap (Nat.`+ k) i=j *> inv toFin=id) (fin_nat-inj $ toFin=id *> pmap (\lam x => suc (x Nat.+ k)) (later i=j) *> inv toFin=id) d2
+            | inP d1, inP d2 => inP $ LDiv.trans d1 $ transport2 (\lam x y => LDiv (A _ x) (A _ y)) (fin_nat-inj $ toFin=id *> pmap (Nat.+ k) i=j *> inv toFin=id) (fin_nat-inj $ toFin=id *> pmap (\lam x => suc (x Nat.+ k)) (later i=j) *> inv toFin=id) d2
           }
 
     \lemma smith-diag-func {R : CRing} {n m : Nat} {A : Matrix R n m} (As : IsSmith A)
@@ -194,7 +194,7 @@
       (A : Matrix R 2 2) (A10=0 : A 1 0 = 0) : ∃ (B : Matrix R 2 2) (IsDiagonal B) (A M~ B)
       => \let | (inP (s,u,p,d,f)) => StrictBezoutRing.bezoutArray {\new StrictBezoutRing { | CRing => R | isStrictBezout => bez }} (A 0 0, A 0 1, A 1 1)
               | (inP (B,Bd,e)) => diag (makeMatrix ((u 0, u 1), (0, u 2))) idp (BezoutRing.bezoutArray_coprime s p)
-         \in inP (d *c B, *c_IsDiagonal Bd, transport (`M~ _) (matrixExt \lam i j => *-comm *> inv (later \case \elim i, \elim j \with {
+         \in inP (d *c B, *c_IsDiagonal Bd, transport (M~ _) (matrixExt \lam i j => *-comm *> inv (later \case \elim i, \elim j \with {
           | 0, 0 => f 0
           | 0, 1 => f 1
           | 1, 0 => A10=0 *> inv zro_*-left
@@ -239,7 +239,7 @@
                                         | 0 => \lam p => absurd (p idp)
                                         | suc j => \lam _ => zro_*-right
                                       }) *> ide-right
-                                      | suc j => pmap (__ i j) A2~B *> inv zro-left *> pmap (`+ _) (inv zro_*-right)
+                                      | suc j => pmap (__ i j) A2~B *> inv zro-left *> pmap (+ _) (inv zro_*-right)
                                     })
              | E' => mkMatrix \lam i j => B i (suc j)
              | G => P2.val MatrixRing.product E'
@@ -330,7 +330,7 @@
               | suc i, suc j => idp
             }
             | (inP (C,Cs,B'~C)) => IH B'
-            | A~C : A M~ blockMatrix M11 C => ~-transitive A~B $ transportInv (`~ _) B=B' $ blockMatrix_M~ {_} {_} {_} {_} {_} {M11} {M11} {B'} {C} ~-reflexive B'~C
+            | A~C : A M~ blockMatrix M11 C => ~-transitive A~B $ transportInv (~ _) B=B' $ blockMatrix_M~ {_} {_} {_} {_} {_} {M11} {M11} {B'} {C} ~-reflexive B'~C
        \in inP (blockMatrix M11 C, (\lam {i} {j} => \case \elim i, \elim j \with {
          | 0, 0 => \lam p => absurd (p idp)
          | 0, suc j => \lam _ => idp
@@ -478,7 +478,7 @@
                       \in R.BigProd_zro j $ later $ Ad \lam p => ej/=j $ inj $ nat_fin_= $ p *> inv (pmap {Array Nat k} (__ j) t)
            | no q => \have s => array/= q
                      \in R.BigProd_zro s.1 $ later (Ad s.2)
-      }) *> R.zro_*-right) *> pmap (`* _) sign_ide *> ide-left
+      }) *> R.zro_*-right) *> pmap (* _) sign_ide *> ide-left
 
     \lemma diag-div {R : CRing} {n m k : Nat} {A : Matrix R n m} (As : IsSmith A) (p : k <= n) (q : k <= m) (li : Array (Fin n) k) (lj : Array (Fin m) k)
       : TruncP (LDiv (diagProd A p q) (determinant (subMatrix A li lj)))

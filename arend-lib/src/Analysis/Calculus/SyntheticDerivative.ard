@@ -53,7 +53,7 @@
     | func a => (d x a (0, sub-lem x)).1
     | func-+ {a} {a'} =>
       \have s => cancel-lem Bd {\lam t => \Sigma (U (x.1 + t *c (a + a'))) (U (x.1 + t *c a)) (U (x.1 + t *c a + t *c a'))} (\lam t => meet3-isOpenProp (Uo _) (Uo _) (Uo _)) (\lam t => (d x (a + a') (t.1, t.2.1)).1) (\lam t => (d (x.1 + t.1 *c a, t.2.2) a' (t.1, t.2.3)).1 + (d x a (t.1, t.2.2)).1)
-        (\lam t => (d _ _ (_, _)).2 *> pmap (`- _) (pmap f (ext $ rewrite *c-ldistr $ inv +-assoc) *> inv zro-right *> pmap (_ +) (inv negative-left) *> inv +-assoc) *> +-assoc *> inv (pmap2 (+) (d _ _ (_, _)).2 (d _ _ (_, _)).2) *> inv B.*c-ldistr)
+        (\lam t => (d _ _ (_, _)).2 *> pmap (- _) (pmap f (ext $ rewrite *c-ldistr $ inv +-assoc) *> inv zro-right *> pmap (_ +) (inv negative-left) *> inv +-assoc) *> +-assoc *> inv (pmap2 (+) (d _ _ (_, _)).2 (d _ _ (_, _)).2) *> inv B.*c-ldistr)
         (0, (sub-lem x, sub-lem x, rewrite (A.*c_zro-left, zro-right) (sub-lem x)))
       \in s *> +-comm *> pmap (_ +) (IsDiff.IsDiff-eq Bd Uo d (pmap (x.1 +) A.*c_zro-left *> zro-right) idp)
     | func-*c {r} {a} =>
@@ -91,5 +91,5 @@
   -- | Bilinear maps are differentiable
   \func bilinear_diff {A B C : LModule R} (Cd : IsInvDense C) (m : BilinearMap A B C) : IsDiffT Cd (\lam (p : \Sigma A B) => m p.1 p.2)
     => \lam (x,_) a (t,_) => (m x.1 a.2 + m a.1 x.2 + t *c m a.1 a.2, rewrite (m.linear-left.func-+, m.linear-right.func-+, m.linear-left.func-*c, m.linear-right.func-*c) $
-        later (rewrite (negative-left,zro-left,*c-ldistr,*c-ldistr) $ +-assoc *> pmap (_ +) (pmap (_ + _ *c __) (inv m.linear-right.func-*c) *> inv *c-ldistr *> pmap (_ *c) (inv m.linear-right.func-+))) *> pmap (`+ _) +-assoc *> +-assoc *> +-comm)
+        later (rewrite (negative-left,zro-left,*c-ldistr,*c-ldistr) $ +-assoc *> pmap (_ +) (pmap (_ + _ *c __) (inv m.linear-right.func-*c) *> inv *c-ldistr *> pmap (_ *c) (inv m.linear-right.func-+))) *> pmap (+ _) +-assoc *> +-assoc *> +-comm)
 }

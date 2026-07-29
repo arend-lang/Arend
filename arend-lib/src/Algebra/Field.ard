@@ -39,7 +39,7 @@
     }
     | res-univ g g|x g|y => \new Monoid.LDiv {
       | inv => Monoid.LDiv.inv {g|x} * Inv.inv {x#0}
-      | inv-right => inv *-assoc *> pmap (`* _) Monoid.LDiv.inv-right *> Inv.inv-right
+      | inv-right => inv *-assoc *> pmap (* _) Monoid.LDiv.inv-right *> Inv.inv-right
     }
   }
 
@@ -148,7 +148,7 @@
     | inP (y,yy=x) => inP (finv y, inv finv_* *> pmap finv yy=x)
 } \where {
   \private \lemma aux {R : CRing} (p : R.zro /= R.ide) (x : R) (q : (x = 0) || Inv x) : (x = 0) `Or` Inv x
-    \level Or.levelProp (\lam x=0 (j : Inv x) => p $ inv R.zro_*-left *> pmap (`* _) (inv x=0) *> j.inv-right)
+    \level Or.levelProp (\lam x=0 (j : Inv x) => p $ inv R.zro_*-left *> pmap (* _) (inv x=0) *> j.inv-right)
     => \case q \with {
          | byLeft r => inl r
          | byRight r => inr r
@@ -159,7 +159,7 @@
     | zro/=ide q => D.zro/=ide $ inv f.func-zro *> pmap f q *> f.func-ide
     | eitherZeroOrInv a => ||.map (\lam q => IsEquiv.isInj e $ q *> inv f.func-zro) (\lam (fai : Inv (f a)) => \new Inv a {
       | inv => IsEquiv.ret e fai.inv
-      | inv-left => IsEquiv.isInj e $ f.func-* *> pmap (`* _) (IsEquiv.f_ret e) *> fai.inv-left *> inv f.func-ide
+      | inv-left => IsEquiv.isInj e $ f.func-* *> pmap (* _) (IsEquiv.f_ret e) *> fai.inv-left *> inv f.func-ide
       | inv-right => IsEquiv.isInj e $ f.func-* *> pmap (_ *) (IsEquiv.f_ret e) *> fai.inv-right *> inv f.func-ide
     }) (D.eitherZeroOrInv (f a))
 

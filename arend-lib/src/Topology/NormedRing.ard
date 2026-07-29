@@ -110,7 +110,7 @@
   | norm_ide_<= => =_<= norm_ide
 
   \lemma norm_Inv-cancel-left {x : E} (d : Monoid.Inv x) {y z : ExUpperReal} (y>=0 : 0 <= y) (z>=0 : 0 <= z) (p : norm x ExUpperRealSemigroup.* y = norm x ExUpperRealSemigroup.* z) : y = z
-    => inv (pmap (ExUpperRealSemigroup.* _) (inv norm_* *> pmap norm d.inv-left *> norm_ide) *> ExUpperRealSemigroup.ide-left y>=0) *> ExUpperRealSemigroup.*-assoc *> pmap (_ ExUpperRealSemigroup.*) p *> inv ExUpperRealSemigroup.*-assoc *> pmap (ExUpperRealSemigroup.`* _) (inv norm_* *> pmap norm d.inv-left *> norm_ide) *> ExUpperRealSemigroup.ide-left z>=0
+    => inv (pmap (ExUpperRealSemigroup.* _) (inv norm_* *> pmap norm d.inv-left *> norm_ide) *> ExUpperRealSemigroup.ide-left y>=0) *> ExUpperRealSemigroup.*-assoc *> pmap (_ ExUpperRealSemigroup.*) p *> inv ExUpperRealSemigroup.*-assoc *> pmap (ExUpperRealSemigroup.* _) (inv norm_* *> pmap norm d.inv-left *> norm_ide) *> ExUpperRealSemigroup.ide-left z>=0
 
   \lemma norm_Inv-cancel-right {x y : ExUpperReal} (x>=0 : 0 <= x) (y>=0 : 0 <= y) {z : E} (d : Monoid.Inv z) (p : x ExUpperRealSemigroup.* norm z = y ExUpperRealSemigroup.* norm z) : x = y
     => norm_Inv-cancel-left d x>=0 y>=0 (*-comm *> p *> *-comm)
@@ -118,7 +118,7 @@
 
 \lemma norm_pow {X : ExPseudoValuedRing} {x : X} {n : Nat} : norm (pow x n) = ExUpperRealSemigroup.pow (norm x) n \elim n
   | 0 => norm_ide
-  | suc n => norm_* *> pmap (`* _) norm_pow
+  | suc n => norm_* *> pmap (* _) norm_pow
 
 \class PseudoValuedRing \extends PseudoNormedRing, ExPseudoValuedRing
 
@@ -127,7 +127,7 @@
 
 \lemma lnorm_pow {X : PseudoValuedRing} {x : X} {n : Nat} : lnorm (pow x n) = pow (lnorm x) n \elim n
   | 0 => lnorm_ide
-  | suc n => lnorm_* *> pmap (`* _) lnorm_pow
+  | suc n => lnorm_* *> pmap (* _) lnorm_pow
 
 \func RatValue => ExPseudoValuedRing { | E => Rat | * => RatField.* | ide => RatField.ide | + => RatField.+ | negative => RatField.negative }
 

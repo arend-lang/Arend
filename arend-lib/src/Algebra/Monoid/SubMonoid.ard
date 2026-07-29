@@ -37,7 +37,7 @@
 
   \lemma sub-pow {x : IMonoid \this} {n : Nat} : ((IMonoid \this).pow x n).1 = Monoid.pow x.1 n \elim n
     | 0 => idp
-    | suc n => pmap (`* x.1) sub-pow
+    | suc n => pmap (* x.1) sub-pow
 } \where {
   \func max {X : Monoid} : SubMonoid \cowith
     | SubPointed => SubPointed.max {X}

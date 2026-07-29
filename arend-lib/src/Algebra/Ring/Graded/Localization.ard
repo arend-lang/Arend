@@ -44,7 +44,7 @@
           | inP (y2n,y2h), inP (cn,ch) => \case R.homogen-factor (LDiv.make y.1 $ *-comm *> inv *-assoc *> (simplify in cp)) (inP (_, homogen-* (homogen-* y2h x2h) ch)) (inP (_, homogen-* x1h ch)) \with {
             | inP (z,zn,zh,zp) => \case R.degree-unique {y.2 * x.2 * c} {y2n + n + cn} {n + cn + zn} (homogen-* (homogen-* y2h x2h) ch) $ transportInv (isHomogen __ _) zp $ homogen-* (homogen-* x1h ch) zh \with {
               | inl q => Inv.lmake 0 $ ext $ LocRing.isLocalization.trivial-char R.zro_*-left 0 1 $ transport S q $ contains_* (contains_* y.3 x.3) Sc
-              | inr e => Inv.lmake (later (_, inP ((z, y.2, y.3), idp, zn, zh, transport (isHomogen _) (NatSemiring.cancel-left cn $ +-comm *> NatSemiring.cancel-left n (inv +-assoc *> pmap (`+ _) +-comm *> e *> +-assoc)) y2h))) $ ext $ ~-lequiv c Sc $ equation.cMonoid {zp}
+              | inr e => Inv.lmake (later (_, inP ((z, y.2, y.3), idp, zn, zh, transport (isHomogen _) (NatSemiring.cancel-left cn $ +-comm *> NatSemiring.cancel-left n (inv +-assoc *> pmap (+ _) +-comm *> e *> +-assoc)) y2h))) $ ext $ ~-lequiv c Sc $ equation.cMonoid {zp}
             }
           }
         }

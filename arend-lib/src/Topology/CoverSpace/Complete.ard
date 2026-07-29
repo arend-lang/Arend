@@ -467,7 +467,7 @@
     TruncP.map __ \lam (g,p) => (g, p, completion-lift-unique (completion PrecoverMap.∘ g) PrecoverMap.id \lam x => pmap pointCF (p x)),
     \lam (inP (g,p,q)) => \new CompleteCoverSpace {
       | isSeparatedCoverSpace {x} {y} c => inv (p x) *> pmap g (SeparatedCoverSpace.separated-char 7 2 c) *> p y
-      | isComplete F => inP (g F, transportInv {RegularCauchyFilter X} (`⊆ F) (q F) <=-refl)
+      | isComplete F => inP (g F, transportInv {RegularCauchyFilter X} (⊆ F) (q F) <=-refl)
     })
 
 \lemma Separated-char.{u} (X : CoverSpace.{u}) : TFAE (

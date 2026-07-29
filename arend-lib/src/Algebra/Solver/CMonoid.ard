@@ -26,13 +26,13 @@
     \protected \lemma perm-consistent {n : Nat} {env : Fin n -> M} {l l' : List (Fin n)} (p : Sort.Perm l l') : MonoidSolverModel.interpretNF env l = MonoidSolverModel.interpretNF env l' \elim l, l', p
       | nil, nil, perm-nil => idp
       | :: a1 l1, :: a2 l2, perm-:: idp p => repeat {2} (rewrite MonoidSolverModel.interpretNF_::) $ pmap (env a1 *) (perm-consistent p)
-      | :: a1 (:: a1' l1), :: a2 (:: a2' l2), perm-swap idp idp idp => repeat {2} (rewrite MonoidSolverModel.interpretNF_::) $ inv *-assoc *> pmap (`* _) *-comm *> *-assoc
+      | :: a1 (:: a1' l1), :: a2 (:: a2' l2), perm-swap idp idp idp => repeat {2} (rewrite MonoidSolverModel.interpretNF_::) $ inv *-assoc *> pmap (* _) *-comm *> *-assoc
       | l1, l2, perm-trans p1 p2 => perm-consistent p1 *> perm-consistent p2
 
     \lemma interpretNF_iterr {env : Array M} {l : List (Fin env.len)} {v : List (Fin env.len)} {n : Nat}
       : MonoidSolverModel.interpretNF env (iterr (l ++) n v) = M.pow (MonoidSolverModel.interpretNF env l) n * MonoidSolverModel.interpretNF env v \elim n
       | 0 => inv ide-left
-      | suc n => MonoidSolverModel.interpretNF_++ *> pmap (_ *) interpretNF_iterr *> inv *-assoc *> pmap (`* _) M.pow-left
+      | suc n => MonoidSolverModel.interpretNF_++ *> pmap (_ *) interpretNF_iterr *> inv *-assoc *> pmap (* _) M.pow-left
 
     \lemma apply-axiom (env : Array M) (t s : Term env.len) (p : interpret env t = interpret env s) (n : Nat) (add : List (Fin env.len))
       : MonoidSolverModel.interpretNF env (RedBlack.sort (iterr ((MonoidSolverModel M).normalize t ++) n add)) = MonoidSolverModel.interpretNF env (RedBlack.sort (iterr ((MonoidSolverModel M).normalize s ++) n add))

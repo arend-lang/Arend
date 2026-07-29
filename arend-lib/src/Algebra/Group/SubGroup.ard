@@ -38,11 +38,11 @@
     => in~ x
 
   \lemma contains_~ {x : S} : contains x <-> 1 equivalence.~ x
-    => (transportInv contains $ pmap (`* x) inverse_ide *> ide-left,
-        transport contains $ pmap (`* x) inverse_ide *> ide-left)
+    => (transportInv contains $ pmap (* x) inverse_ide *> ide-left,
+        transport contains $ pmap (* x) inverse_ide *> ide-left)
 
   \lemma ~-pequiv-left {x y : S} (p : 1 equivalence.~ y) : inc~ x = inc~ (x * y)
-    => ~-pequiv $ transport contains (inv (pmap (`* y) inverse-left *> ide-left) *> *-assoc) (contains_~.2 p)
+    => ~-pequiv $ transport contains (inv (pmap (* y) inverse-left *> ide-left) *> *-assoc) (contains_~.2 p)
 }
 
 \instance IGroup (S : SubGroup {}) : Group

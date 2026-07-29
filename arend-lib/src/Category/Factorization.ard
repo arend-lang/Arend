@@ -22,9 +22,9 @@
   \open PrecatWithBprod
 
   \lemma left-epi {C : CartesianPrecat} (w : WFS {C}) {x y : C} (f : Hom x y) (Lf : L f) {z : C} (Rd : R (diagonal z)) {g h : Hom y z} (p : g ∘ f = h ∘ f) : g = h
-    => \have | (l,_,q) => lift (g ∘ f) (pair g h) f (diagonal z) (inv o-assoc *> pmap (`∘ f) (pair-comp *> pmap2 pair id-left id-left) *> pair-comp *> pmap (pair _) p *> inv pair-comp) Lf Rd
-             | l=g => inv (pmap (`∘ l) beta1) *> o-assoc *> pmap (proj1 ∘) q *> beta1
-             | l=h => inv (pmap (`∘ l) beta2) *> o-assoc *> pmap (proj2 ∘) q *> beta2
+    => \have | (l,_,q) => lift (g ∘ f) (pair g h) f (diagonal z) (inv o-assoc *> pmap (∘ f) (pair-comp *> pmap2 pair id-left id-left) *> pair-comp *> pmap (pair _) p *> inv pair-comp) Lf Rd
+             | l=g => inv (pmap (∘ l) beta1) *> o-assoc *> pmap (proj1 ∘) q *> beta1
+             | l=h => inv (pmap (∘ l) beta2) *> o-assoc *> pmap (proj2 ∘) q *> beta2
        \in inv l=g *> l=h
 }
 

@@ -14,8 +14,8 @@
   | ~-equiv m1 m2 r =>
     \have lem {m1 m2 : Mono {C} { | cod => obj }} (m1<=m2 : inso~ m1 <= inso~ m2) (m2<=m1 : inso~ m2 <= inso~ m1) (m1r : IsRegularMono m1.f) : IsRegularMono m2.f => \case \elim m1<=m2, \elim m2<=m1, \elim m1r \with {
       | inP m1<=m2, inP m2<=m1, inP e => inP $ Equalizer.mono=>equalizer m2
-        (pmap (_ ∘) (inv m2<=m1.2) *> inv o-assoc *> pmap (`∘ _) e.equal *> o-assoc *> pmap (_ ∘) m2<=m1.2)
-        \lam h hp => inP (m1<=m2.1 ∘ e.eqMap h hp, inv o-assoc *> pmap (`∘ _) m1<=m2.2 *> e.eqBeta)
+        (pmap (_ ∘) (inv m2<=m1.2) *> inv o-assoc *> pmap (∘ _) e.equal *> o-assoc *> pmap (_ ∘) m2<=m1.2)
+        \lam h hp => inP (m1<=m2.1 ∘ e.eqMap h hp, inv o-assoc *> pmap (∘ _) m1<=m2.2 *> e.eqBeta)
     }
     \in propExt (lem (inP (r.1,r.2)) (inP (r.3,r.4))) (lem (inP (r.3,r.4)) (inP (r.1,r.2)))
 
@@ -28,10 +28,10 @@
     \lemma pullback-isRegularMono {C : CartesianPrecat} {P : Pullback {C}} (fm : IsRegularMono P.f) (gm : IsRegularMono P.g) : IsRegularMono (P.f ∘ pbProj1) \elim fm, gm
       | inP (fe : Equalizer) \as fm, inP (ge : Equalizer) \as gm => inP $ Equalizer.mono=>equalizer
         (Mono.comp (regularMono_Mono fm) (regularMono_Mono $ regularMono_pullback P gm))
-        (pair-comp *> pmap2 pair (inv o-assoc *> pmap (`∘ _) fe.equal *> o-assoc) (pmap (_ ∘) P.pbCoh *> inv o-assoc *> pmap (`∘ _) ge.equal *> o-assoc *> pmap (_ ∘) (inv P.pbCoh)) *> inv pair-comp)
+        (pair-comp *> pmap2 pair (inv o-assoc *> pmap (∘ _) fe.equal *> o-assoc) (pmap (_ ∘) P.pbCoh *> inv o-assoc *> pmap (∘ _) ge.equal *> o-assoc *> pmap (_ ∘) (inv P.pbCoh)) *> inv pair-comp)
         \lam {w} h p =>
-          \have | (inP (m1,q1)) => IsEquiv.isSurj (fe.isEqualizer w) $ later (h, pmap (`∘ h) (inv beta1) *> o-assoc *> pmap (proj1 ∘) p *> inv o-assoc *> pmap (`∘ h) beta1)
-                | (inP (m2,q2)) => IsEquiv.isSurj (ge.isEqualizer w) $ later (h, pmap (`∘ h) (inv beta2) *> o-assoc *> pmap (proj2 ∘) p *> inv o-assoc *> pmap (`∘ h) beta2)
+          \have | (inP (m1,q1)) => IsEquiv.isSurj (fe.isEqualizer w) $ later (h, pmap (∘ h) (inv beta1) *> o-assoc *> pmap (proj1 ∘) p *> inv o-assoc *> pmap (∘ h) beta1)
+                | (inP (m2,q2)) => IsEquiv.isSurj (ge.isEqualizer w) $ later (h, pmap (∘ h) (inv beta2) *> o-assoc *> pmap (proj2 ∘) p *> inv o-assoc *> pmap (∘ h) beta2)
                 | p1 => pmap __.1 q1
                 | p2 => pmap __.1 q2
           \in inP (pbMap m1 m2 (p1 *> inv p2), o-assoc *> pmap (_ ∘) P.pbBeta1 *> p1)

@@ -58,9 +58,9 @@
           | byLeft (p=0,q=0) => p=0 *> inv q=0
           | byRight (a,b,u,v,ab=1,ba=1) => \case pm.1, qm.1 \with {
             | inP (n,dp,cp), inP (m,dq,cq) => \case LinearOrder.trichotomy n m \with {
-              | less n<m => absurd $ NonZeroSemiring.inv-nonZero (\new Monoid.Inv b a ab=1 ba=1) $ inv ide-left *> pmap (`* _) (inv cq) *> inv polyCoef_*-right *> (rewrite (inv q|p.inv-right, v) in degree<=.toCoefs p n dp n<m)
-              | equals n=m => inv ide-right *> pmap (p *) (inv $ u *> pmap (padd pzero) (inv ide-left *> pmap (`* a) (inv cp *> pmap (polyCoef p) n=m) *> inv polyCoef_*-right *> (rewrite (inv p|q.inv-right, u) in cq))) *> p|q.inv-right
-              | greater m<n => absurd $ NonZeroSemiring.inv-nonZero (\new Monoid.Inv a b ba=1 ab=1) $ inv ide-left *> pmap (`* _) (inv cp) *> inv polyCoef_*-right *> (rewrite (inv p|q.inv-right, u) in degree<=.toCoefs q m dq m<n)
+              | less n<m => absurd $ NonZeroSemiring.inv-nonZero (\new Monoid.Inv b a ab=1 ba=1) $ inv ide-left *> pmap (* _) (inv cq) *> inv polyCoef_*-right *> (rewrite (inv q|p.inv-right, v) in degree<=.toCoefs p n dp n<m)
+              | equals n=m => inv ide-right *> pmap (p *) (inv $ u *> pmap (padd pzero) (inv ide-left *> pmap (* a) (inv cp *> pmap (polyCoef p) n=m) *> inv polyCoef_*-right *> (rewrite (inv p|q.inv-right, u) in cq))) *> p|q.inv-right
+              | greater m<n => absurd $ NonZeroSemiring.inv-nonZero (\new Monoid.Inv a b ba=1 ab=1) $ inv ide-left *> pmap (* _) (inv cp) *> inv polyCoef_*-right *> (rewrite (inv p|q.inv-right, u) in degree<=.toCoefs q m dq m<n)
             }
           }
         }
@@ -68,7 +68,7 @@
 
     \lemma fromMinPoly {K : DiscreteField} {R : CRing} {f : RingHom K R} {a : R} {p : Poly K} (p/=0 : p /= 0) (pm : isMinPoly f a p) : isMonicMinPoly f a (finv (leadCoef p) *c p)
       => (field-toMonic p/=0, (polyMapEvalRingHom.polyMapEval_*c *> pmap (_ *) pm.1 *> zro_*-right, \lam {q} qe => \case pm.2 qe \with {
-            | inP (x,s) => inP $ Monoid.LDiv.make (leadCoef p *c x) $ inv *c-comm-left *> pmap (_ *c) (inv *c-comm-right) *> inv *c-assoc *> pmap (`*c _) (K.finv-left \lam q => p/=0 $ leadCoef=0-lem q) *> ide_*c *> s
+            | inP (x,s) => inP $ Monoid.LDiv.make (leadCoef p *c x) $ inv *c-comm-left *> pmap (_ *c) (inv *c-comm-right) *> inv *c-assoc *> pmap (*c _) (K.finv-left \lam q => p/=0 $ leadCoef=0-lem q) *> ide_*c *> s
           }))
   }
 
@@ -82,7 +82,7 @@
             | inv-right => inv zro-right *> pmap (_ +) (inv r=0) *> d.isDivMod q p
           }
           | no r/=0 => absurd $ <-irreflexive $ d.isEuclideanMap q p p/=0 r/=0 <∘l c r/=0
-                        (inv ((polyMapEvalRingHom f a).func-+ *> pmap (`+ _) ((polyMapEvalRingHom f a).func-* *> equation) *> zro-left) *>
+                        (inv ((polyMapEvalRingHom f a).func-+ *> pmap (+ _) ((polyMapEvalRingHom f a).func-* *> equation) *> zro-left) *>
                          pmap (\lam u => polyEval (polyMap f u) a) (d.isDivMod q p) *> qe)
       }, minPoly_degree f a p pe p/=0)
   \where {
@@ -110,11 +110,11 @@
               | byLeft (e : Monoid.Inv) => \case polyInv e \with {
                 | inP s => absurd $ NonZeroSemiring.inv-nonZero (f.func-Inv s.3) $ inv zro-left *> (rewrite (s.2,zro_*-left) in qe)
               }
-              | byRight (e : Monoid.Inv) => rewrite (inv $ pmap (`* e.inv) p=qd *> *-assoc *> pmap (q *) e.inv-right *> ide-right, degree_* p/=0 \lam e1=0 => zro/=ide {PolyDomain K} $ inv zro_*-right *> pmap (e *) (inv e1=0) *> e.inv-right) (<=_+ <=-refl zero<=_)
+              | byRight (e : Monoid.Inv) => rewrite (inv $ pmap (* e.inv) p=qd *> *-assoc *> pmap (q *) e.inv-right *> ide-right, degree_* p/=0 \lam e1=0 => zro/=ide {PolyDomain K} $ inv zro_*-right *> pmap (e *) (inv e1=0) *> e.inv-right) (<=_+ <=-refl zero<=_)
             }
           | no _, no r/=0 => \have | dr<dq => d.isEuclideanMap p q q/=0 r/=0
                                    | dp<=dr => aux f a p pe (dr<dq <∘l suc<=suc.conv (suc_<_<= qd)) r/=0 $
-                                       inv ((polyMapEvalRingHom f a).func-+ *> pmap (`+ _) ((polyMapEvalRingHom f a).func-* *> pmap (`* _) qe *> zro_*-left) *> zro-left) *>
+                                       inv ((polyMapEvalRingHom f a).func-+ *> pmap (+ _) ((polyMapEvalRingHom f a).func-* *> pmap (* _) qe *> zro_*-left) *> zro-left) *>
                                        pmap (\lam x => polyEval (polyMap f x) a) (d.isDivMod p q) *> pe
                              \in LinearOrder.<_<= (dp<=dr <∘r dr<dq)
         }
@@ -178,5 +178,5 @@
                                     | q<p => degree<_degree q/=0 fromArray_degree<
                               \in linarith
         }, \lam (x, inP (q,s)) => \let (d,r,q=dp+r,r<p) => monicPolyDivision q p (degree p) (degree_degree<= <=-refl) (monic-coef pm.1)
-                                  \in inP (\lam j => polyCoef r j, ext $ inv s *> pmap (polyMapEval f __ a) q=dp+r *> (polyMapEvalRingHom f a).func-+ *> pmap (`+ _) ((polyMapEvalRingHom f a).func-* *> pmap (_ *) pm.2.1 *> zro_*-right) *> zro-left *> polyMapEval_polyCoef r<p *> inv IRing.embed.func-BigSum))),
+                                  \in inP (\lam j => polyCoef r j, ext $ inv s *> pmap (polyMapEval f __ a) q=dp+r *> (polyMapEvalRingHom f a).func-+ *> pmap (+ _) ((polyMapEvalRingHom f a).func-* *> pmap (_ *) pm.2.1 *> zro_*-right) *> zro-left *> polyMapEval_polyCoef r<p *> inv IRing.embed.func-BigSum))),
       \lam (inP (l,lb)) => inP $ finDim_minPoly f (polyImage f a) (polyImage-ext f a) lb polyImage-element)

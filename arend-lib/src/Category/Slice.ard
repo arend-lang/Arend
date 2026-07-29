@@ -17,7 +17,7 @@
 \instance SlicePrecat {C : Precat} (x : C) : Precat (ObOver x)
   | Hom (y,f) (z,g) => \Sigma (h : Hom y z) (g ∘ h = f)
   | id => (id, id-right)
-  | o (h1,p1) (h2,p2) => (h1 ∘ h2, inv o-assoc *> pmap (`∘ h2) p1 *> p2)
+  | o (h1,p1) (h2,p2) => (h1 ∘ h2, inv o-assoc *> pmap (∘ h2) p1 *> p2)
   | id-left => ext id-left
   | id-right => ext id-right
   | o-assoc => ext o-assoc

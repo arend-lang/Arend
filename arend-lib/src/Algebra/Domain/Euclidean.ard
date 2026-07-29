@@ -82,7 +82,7 @@
           *-comm *> inv (pmap (_ +) mod=0 *> zro-right) *> isDivMod a b
         }
         | no mod/=0 => rdistr *> pmap2 (+)
-            (pmap (`* _) *-comm *> *-assoc *> *-comm *> pmap (`* _) (reduce*fueled-left s b (divMod a b).2 (isEuclideanMap a b b/=0 mod/=0 <∘l <_suc_<= b<=s)))
+            (pmap (* _) *-comm *> *-assoc *> *-comm *> pmap (* _) (reduce*fueled-left s b (divMod a b).2 (isEuclideanMap a b b/=0 mod/=0 <∘l <_suc_<= b<=s)))
             (reduce*fueled-right s b (divMod a b).2 (isEuclideanMap a b b/=0 mod/=0 <∘l <_suc_<= b<=s)) *> isDivMod a b
       }
     }
@@ -104,7 +104,7 @@
     | 0 => g|a
     | suc s => mcases \with {
       | yes _ => g|a
-      | no b/=0 => gcd-isGCD-fueled s g|b (summandDiv (ldiv/=0 b/=0 g|b) (pmap (`+ _) (inv *-assoc) *> pmap (__ * _ + _) g|b.inv-right *> isDivMod a b *> inv g|a.inv-right))
+      | no b/=0 => gcd-isGCD-fueled s g|b (summandDiv (ldiv/=0 b/=0 g|b) (pmap (+ _) (inv *-assoc) *> pmap (__ * _ + _) g|b.inv-right *> isDivMod a b *> inv g|a.inv-right))
     }
 
   \func gcd-isGCD (a b : E) : GCD a b \cowith
@@ -142,7 +142,7 @@
           })
           | no q => inr
             \have b|m : LDiv b (divMod b a).2 => summandDiv {_} {b|a.inv * (divMod b a).1} (ldiv/=0 a/=0 b|a) $
-                pmap (`+ _) (inv *-assoc *> later (rewrite b|a.inv-right idp)) *> isDivMod b a *> inv ide-right
+                pmap (+ _) (inv *-assoc *> later (rewrite b|a.inv-right idp)) *> isDivMod b a *> inv ide-right
             \in \case aux b q b|m (isEuclideanMap b a a/=0 q <∘l <_suc_<= p) \with {
               | inl m|b => ((divMod b a).2, b|m, m|b, isEuclideanMap b a a/=0 q)
               | inr (b',b'|b,b|b',s) => (b', b'|b, b|b', s <∘ isEuclideanMap b a a/=0 q)
@@ -264,7 +264,7 @@
     | 0 => absurd (d/=0 idp)
     | suc _ \as d => \new Monoid.LDiv {
       | inv => y div d
-      | inv-right => pmap (d * y div d +) (mod-unique {d} {z} {0} {x + y div d} {y mod d} NatOrder.zero<suc (fin_< (y mod d)) (inv (pmap (`+ _) ldistr *> +-assoc *> pmap (_ +) (divModProp y d) *> dx+y=dz))) *> divModProp y d
+      | inv-right => pmap (d * y div d +) (mod-unique {d} {z} {0} {x + y div d} {y mod d} NatOrder.zero<suc (fin_< (y mod d)) (inv (pmap (+ _) ldistr *> +-assoc *> pmap (_ +) (divModProp y d) *> dx+y=dz))) *> divModProp y d
     }
   }
   \where {
@@ -301,7 +301,7 @@
       | yes x=0 => rewrite x=0 (nonZero>0 |y|/=0)
       | no x/=0 =>
         \have t : iabs (pos (iabs x Nat.mod iabs y) * signum x) = iabs x Nat.mod iabs y => iabs_* *> pmap (_ *) (iabs.signum_/=0 (x/=0 $ pmap signum __))
-        \in transport (`< iabs y) (inv t) $ isEuclideanMap (iabs x) (iabs y) |y|/=0 \lam e => r/=0 $ pmap (pos __ * _) e *> zro_*-left
+        \in transport (< iabs y) (inv t) $ isEuclideanMap (iabs x) (iabs y) |y|/=0 \lam e => r/=0 $ pmap (pos __ * _) e *> zro_*-left
     }
   \where {
     \func modToNat (m : Int) (p : \Sigma Int Int) : \Sigma Int Nat \elim p
@@ -326,8 +326,8 @@
     \lemma natMod<right {x : Int} {n : Nat} : x mod suc n < suc n
       => \let (q,r) => IntEuclidean.divMod x (suc n)
          \in \case r \as r, idp : r = (IntEuclidean.divMod x (suc n)).2 \return (modToNat (suc n) (q,r)).2 < suc n \with {
-               | pos m, p => transportInv (`< suc n) (pmap iabs p) (intMod<right x n)
-               | neg (suc m), p => pos<=pos.conv (transportInv (`<= pos n) (pos_iabs (<=-less (transportInv (`< suc n) (pmap iabs p) (intMod<right x n)))) (IntRing.<=_+ {pos n} {n} {neg m} {0} <=-refl (signum.signum_neg/=1 __))) <∘r id<suc
+               | pos m, p => transportInv (< suc n) (pmap iabs p) (intMod<right x n)
+               | neg (suc m), p => pos<=pos.conv (transportInv (<= pos n) (pos_iabs (<=-less (transportInv (< suc n) (pmap iabs p) (intMod<right x n)))) (IntRing.<=_+ {pos n} {n} {neg m} {0} <=-refl (signum.signum_neg/=1 __))) <∘r id<suc
              }
 
     \lemma divModProp (x y : Int) (y/=0 : y /= 0) : y * x div y + x mod y = x
@@ -340,11 +340,11 @@
                        | yes x=0 => rewrite x=0 idp
                        | no x/=0 => iabs_* *> pmap (_ *) (iabs.signum_/=0 x/=0)
                      }
-                 \in pmap (_ +) (pos_iabs $ transportInv (`<= iabs y) (pmap iabs p) $ transportInv (`<= iabs y) t $ <=-less $ mod<right \lam |y|=0 => y/=0 $ iabs.equals0 |y|=0) *>
-                     pmap (`+ _) Ring.ldistr_- *>
+                 \in pmap (_ +) (pos_iabs $ transportInv (<= iabs y) (pmap iabs p) $ transportInv (<= iabs y) t $ <=-less $ mod<right \lam |y|=0 => y/=0 $ iabs.equals0 |y|=0) *>
+                     pmap (+ _) Ring.ldistr_- *>
                      pmap ((_ + negative __) + _) (inv iabs.signum_*) *>
                      +-assoc *>
-                     pmap (_ +) (inv (+-assoc {_} {_} {pos (iabs y)} {neg (suc n)}) *> pmap (`+ _) (IntRing.negative-right {iabs y})) *>
+                     pmap (_ +) (inv (+-assoc {_} {_} {pos (iabs y)} {neg (suc n)}) *> pmap (+ _) (IntRing.negative-right {iabs y})) *>
                      pmap (_ +) p *>
                      IntEuclidean.isDivMod x y
              }
@@ -358,8 +358,8 @@
 
     \lemma mod-unique {q q' : Int} {n r r' : Nat} (r<n : r < n) (r'<n : r' < n) (p : pos n * q + r = pos n * q' + r') : r = r' \elim q, q'
       | pos q, pos q' => Arith.Nat.mod-unique r<n r'<n (pmap iabs p)
-      | pos q, neg q' => Arith.Nat.mod-unique {n} {q' + q} {r} {0} r<n r'<n (pmap iabs (pmap (`+ pos r) (IntRing.ldistr {n} {q'} {q}) *> aux (pos (n * q)) r (pos (n * q')) r' p))
-      | neg q, pos q' => inv (Arith.Nat.mod-unique {n} {q + q'} {r'} {0} r'<n r<n (pmap iabs (pmap (`+ pos r') (IntRing.ldistr {n} {q} {q'}) *> aux (pos (n * q')) r' (pos (n * q)) r (inv p))))
+      | pos q, neg q' => Arith.Nat.mod-unique {n} {q' + q} {r} {0} r<n r'<n (pmap iabs (pmap (+ pos r) (IntRing.ldistr {n} {q'} {q}) *> aux (pos (n * q)) r (pos (n * q')) r' p))
+      | neg q, pos q' => inv (Arith.Nat.mod-unique {n} {q + q'} {r'} {0} r'<n r<n (pmap iabs (pmap (+ pos r') (IntRing.ldistr {n} {q} {q'}) *> aux (pos (n * q')) r' (pos (n * q)) r (inv p))))
       | neg q, neg q' => inv (Arith.Nat.mod-unique r'<n r<n (pmap iabs (aux 0 r' (n * q) (n * q' + r) (inv (aux (neg (n * q)) r (n * q') r' p) *> IntRing.+-assoc {neg (n * q)} {n * q'} {r}) )))
       \where
         \lemma aux (x y x' y' : Int) (p : x + y = negative x' + y') : (x' + x) + y = y'
@@ -413,7 +413,7 @@
     \have abs_g'|g : LDiv (iabs g') g => g.res-univ (iabs g') (ldiv_int_nat g'|a) (ldiv_int_nat g'|b)
     \in \new LDiv {
       | inv => signum g' * abs_g'|g.inv
-      | inv-right => inv *-assoc *> pmap (`* _) (inv iabs.signum_*) *> pmap pos abs_g'|g.inv-right
+      | inv-right => inv *-assoc *> pmap (* _) (inv iabs.signum_*) *> pmap pos abs_g'|g.inv-right
     }
 
 \func gcd_int_nat (g : GCD {IntRing}) : GCD (iabs g.val1) (iabs g.val2) (iabs g) \cowith

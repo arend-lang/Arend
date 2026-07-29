@@ -32,7 +32,7 @@
   \where {
     \func site {X : PrecoverSpace} : PreorderSite (Set X) \cowith
       | Preorder => SetLattice X
-      | isBasicCover U C => OneOf (∃ (D : X.isCauchy) (C = SetIm (U ∧) D), C = (`s<=< U), Given (\Pi {x : X} -> Not (U x)) (C = empty))
+      | isBasicCover U C => OneOf (∃ (D : X.isCauchy) (C = SetIm (U ∧) D), C = (s<=< U), Given (\Pi {x : X} -> Not (U x)) (C = empty))
       | basic-cover-stable {V} {U} V<=U {C} => \case \elim C, \elim __ \with {
         | _, inP (0, inP (C,Cc,idp)) => inP (_, inP (0, inP (C,Cc,idp)), SetIm-elim \lam {W} CW => inP $ later (_, SetIm-con CW, MeetSemilattice.meet-monotone V<=U <=-refl), SetIm-elim \lam _ => meet-left)
         | _, inP (1,idp) => inP (_, inP (1,idp), \lam {W} W<=<V => inP (W, <=<-left W<=<V V<=U, <=-refl), s<=<_<= __)
@@ -118,7 +118,7 @@
     | inP (V,DV,U<=V) => points_*-mono U<=V <=∘ SJoin-cond DV
   }
   | cauchy-glue p e => p <=∘ SJoin-univ \lam {U} CU => meet-univ <=-refl top-univ <=∘ MeetSemilattice.meet-monotone <=-refl (e CU) <=∘
-      L.SJoin-ldistr>= <=∘ SJoin-univ \lam {V} DUV => later $ transport (`<= _) points_*_meet $ SJoin-cond $ inP $ later (U, V, CU, DUV, idp)
+      L.SJoin-ldistr>= <=∘ SJoin-univ \lam {V} DUV => later $ transport (<= _) points_*_meet $ SJoin-cond $ inP $ later (U, V, CU, DUV, idp)
   \where {
     \lemma points_<=< {a b : L} (p : a L.<=< b) : points^* a s<=< {LocalePrecoverSpace L} points^* b
       => unfolds $ p <=∘ join-univ (points^*-points_* (\lam xna xa => CompleteFilter.isProper $ filter-mono (filter-meet xna xa) L.<=-eval) <=∘ SJoin-cond (byLeft idp)) (points-unit <=∘ SJoin-cond (byRight idp))
@@ -184,7 +184,7 @@
       })))
   \where {
     \protected \func frameHom (f : PrecoverMap (LocalePrecoverSpace L) (LocalePrecoverSpace M)) : FrameHom M L \cowith
-      | func a => SJoin (\lam b => points_* $ f ^-1 points^* b) (M.`<=< a)
+      | func a => SJoin (\lam b => points_* $ f ^-1 points^* b) (M.<=< a)
       | func-<= p => SJoin-univ \lam {b} b<=<x => SJoin-cond (<=<-left b<=<x p)
       | func-top>= => Join-cond (later \lam _ => filter-top) <=∘ SJoin-cond <=<_top
       | func-meet>= => L.SJoin-distr>= <=∘ SJoin-univ (later \lam {(b,c)} (b<=<x,c<=<y) => inv (pmap points_* (pmap (f ^-1) points^*_meet *> func-meet {^-1_FrameHom f} {points^* b} {points^* c}) *> points_*_meet) =<= SJoin-cond (<=<_meet b<=<x c<=<y))

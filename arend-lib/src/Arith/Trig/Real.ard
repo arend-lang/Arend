@@ -130,7 +130,7 @@
 \lemma sin_minus {x y : Real} : sin (x - y) = sin x * cos y - cos x * sin y
   => sin_+ {x} {negative y}
      *> pmap2 (\lam a b => cos x * a + sin x * b) (sin_negative {y}) (cos_negative {y})
-     *> pmap (`+ sin x * cos y) Ring.negative_*-right
+     *> pmap (+ sin x * cos y) Ring.negative_*-right
      *> +-comm
 
 {- | Sum-to-product for cosines:

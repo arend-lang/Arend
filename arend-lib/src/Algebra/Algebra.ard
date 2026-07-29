@@ -44,9 +44,9 @@
   => coefMap a *c x
 
 \lemma *a-assoc {R : CRing} {A : AAlgebra R} {X : LModule A} {a b : R} {x : X} : a * b *a x = a *a (b *a x)
-  => pmap (`*c x) A.coefHom.func-* *> *c-assoc
+  => pmap (*c x) A.coefHom.func-* *> *c-assoc
 
-\lemma *alg-linear-left {R : CRing} {A : AAlgebra R} {b : A} : LinearMap A A (`* b) \cowith
+\lemma *alg-linear-left {R : CRing} {A : AAlgebra R} {b : A} : LinearMap A A (* b) \cowith
   | func-+ => A.rdistr
   | func-*c => inv *c-comm-left
 

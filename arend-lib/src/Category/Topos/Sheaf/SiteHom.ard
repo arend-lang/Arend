@@ -48,7 +48,7 @@
     : Covering a (\lam u => ∃ (x : C) (e : Iso {D} {F x} {u.1}) (h : Hom x b) (g ∘ u.2 ∘ e.f = Func h) (h' : Hom x b') (g' ∘ u.2 ∘ e.f = Func h'))
     => covering-trans* (Func-dense-map-image g) \lam {pa} (inP (x,Fx=pa,x>b,xbc)) => covering-stable-retract Fx=pa.hinv Fx=pa.f Fx=pa.f_hinv $
         covering-sub (Func-covering $ Func-dense-map $ g' ∘ pa.2 ∘ Fx=pa.f) \lam {_} (inP (y, inP (y>b',yb'c), idp)) =>
-          inP ((_,_), inP ((_,_), inP (y.1, idIso, x>b ∘ y.2, id-right *> inv o-assoc *> inv o-assoc *> pmap (`∘ _) xbc *> inv Func-o, y>b', id-right *> inv o-assoc *> inv o-assoc *> yb'c), id, id-right), id, id-right)
+          inP ((_,_), inP ((_,_), inP (y.1, idIso, x>b ∘ y.2, id-right *> inv o-assoc *> inv o-assoc *> pmap (∘ _) xbc *> inv Func-o, y>b', id-right *> inv o-assoc *> inv o-assoc *> yb'c), id, id-right), id, id-right)
 }
 
 \record SiteDenseHom \extends SiteDensePrehom, SiteHom
@@ -58,7 +58,7 @@
   | Func-flat-terminal => covering-sub Func-dense-image \lam {v} (inP (x,v=Fx)) => inP (x,v=Fx)
   | Func-flat-pullback {y0} {y1} {y2} {p1} {p2} {u} {f} {g} f_g => covering-trans* (Func-dense-map2-image f g)
     \lam {pu} (inP (x,Fx=pu,x>y1,f_x>y1,x>y2,g_x>y2)) => covering-stable-retract Fx=pu.hinv Fx=pu.f Fx=pu.f_hinv $
-      covering-sub (Func-covering $ Func-dense-equal (p1 ∘ x>y1) (p2 ∘ x>y2) $ Func-o *> pmap (_ ∘) (inv f_x>y1) *> inv o-assoc *> pmap (`∘ _) (inv o-assoc *> pmap (`∘ _) f_g *> o-assoc) *> o-assoc *> pmap (_ ∘) g_x>y2 *> inv Func-o)
+      covering-sub (Func-covering $ Func-dense-equal (p1 ∘ x>y1) (p2 ∘ x>y2) $ Func-o *> pmap (_ ∘) (inv f_x>y1) *> inv o-assoc *> pmap (∘ _) (inv o-assoc *> pmap (∘ _) f_g *> o-assoc) *> o-assoc *> pmap (_ ∘) g_x>y2 *> inv Func-o)
       \lam {_} (inP (px,q,idp)) => inP ((_,_), inP ((_,_), inP (px.1, x>y1 ∘ px.2, x>y2 ∘ px.2, inv o-assoc *> q *> o-assoc, id,
-        id-right *> Func-o *> pmap (`∘ _) (inv f_x>y1) *> o-assoc *> o-assoc,
-        id-right *> Func-o *> pmap (`∘ _) (inv g_x>y2) *> o-assoc *> o-assoc), id, id-right), id, id-right)
+        id-right *> Func-o *> pmap (∘ _) (inv f_x>y1) *> o-assoc *> o-assoc,
+        id-right *> Func-o *> pmap (∘ _) (inv g_x>y2) *> o-assoc *> o-assoc), id, id-right), id, id-right)

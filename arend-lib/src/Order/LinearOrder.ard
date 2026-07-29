@@ -163,7 +163,7 @@
 
     | <-comparison y {x} {z} x<z => \case trichotomy x y \with {
       | less x<y => byLeft x<y
-      | equals x=y => byRight (transport (`< z) x=y x<z)
+      | equals x=y => byRight (transport (< z) x=y x<z)
       | greater y<x => byRight (y<x <∘ x<z)
     }
     | <-connectedness {x} {y} x/<y y/<x => \case trichotomy x y \with {
@@ -220,7 +220,7 @@
       })
 
     \default decideEq x y => \case trichotomy x y \with {
-      | less x<y => no (\lam x=y => <-irreflexive (transport (`< y) x=y x<y))
+      | less x<y => no (\lam x=y => <-irreflexive (transport (< y) x=y x<y))
       | equals x=y => yes x=y
       | greater y<x => no (\lam x=y => <-irreflexive (transport (y <) x=y y<x))
     }

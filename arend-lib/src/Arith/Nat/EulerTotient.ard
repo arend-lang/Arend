@@ -104,7 +104,7 @@
   \where {
     \func factor-lem {x : Int} (c : Ideal.closure1 (pos (suc n)) x) : FinRing.intHom {n} x = 0
       => \case Ideal.closure1-lem.1 c \with {
-        | inP (d,p) => inv (FinRing.intCoef-char n x) *> pmap intMap p *> intMap.func-* *> pmap (`* _) (fin_nat-inj $ id_mod {suc n}) *> (FinRing {n}).zro_*-left
+        | inP (d,p) => inv (FinRing.intCoef-char n x) *> pmap intMap p *> intMap.func-* *> pmap (* _) (fin_nat-inj $ id_mod {suc n}) *> (FinRing {n}).zro_*-left
       }
   }
 

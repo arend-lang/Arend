@@ -55,7 +55,7 @@
     \func eperm-++-left {A : \Type} {l1 l2 l : Array A} (e : EPerm l1 l2) : EPerm (l1 ++ l) (l2 ++ l) \elim l1, l2, e
       | nil, nil, eperm-nil => eperm-refl
       | x :: l1, y :: l2, eperm-:: p e => eperm-:: p (eperm-++-left e)
-      | x :: (x' :: l1), y :: (y' :: l2), eperm-swap p1 p2 q => eperm-swap p1 p2 (pmap (`++ l) q)
+      | x :: (x' :: l1), y :: (y' :: l2), eperm-swap p1 p2 q => eperm-swap p1 p2 (pmap (++ l) q)
       | l1, l2, eperm-trans e1 e2 => eperm-trans (eperm-++-left e1) (eperm-++-left e2)
 
     \func eperm-++-right {A : \Type} {l l1 l2 : Array A} (e : EPerm l1 l2) : EPerm (l ++ l1) (l ++ l2)

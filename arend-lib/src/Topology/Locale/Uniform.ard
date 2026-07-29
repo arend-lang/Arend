@@ -146,7 +146,7 @@
   | inP (U,uU,a*U<=b) => star.star-refl uU <=∘ a*U<=b
 
 \class UniformLocale \extends PreuniformLocale {
-  | isAdmissible (b : E) : b <= Join (`<=u b)
+  | isAdmissible (b : E) : b <= Join (<=u b)
 
   \func IsComplete => ∃ (g : UniformHom \this (Completion \this)) (completion UniformHom.∘ g = UniformHom.id) (g UniformHom.∘ completion = UniformHom.id)
 } \where {
@@ -200,7 +200,7 @@
   | isEmb L M => \new Retraction {L = {UniformLocale.{u}} M} {
     | sec p => path (\lam i => \new UniformLocale {
       | PreuniformLocale => p i
-      | isAdmissible => prop-dpi (\Pi (b : p __) -> b <= Join (`<=u b)) L.isAdmissible M.isAdmissible i
+      | isAdmissible => prop-dpi (\Pi (b : p __) -> b <= Join (<=u b)) L.isAdmissible M.isAdmissible i
     })
     | f_sec => idpe
   }
@@ -211,7 +211,7 @@
   | isBasicCover a U => OneOf (
     U = \lam x => \Sigma (IsPositive a) (x <= a),
     ∃ (V : isUniform) (U = SetIm (a ∧) V),
-    U = (`<=u a)
+    U = (<=u a)
   )
   | basic-cover-stable a<=b {U} => \case \elim U, \elim __ \with {
     | _, inP (0, idp) => inP (_, inP (0,idp), \lam s => inP (_, (positive_<= s.1 a<=b, s.2 <=∘ a<=b), <=-refl), __.2)
@@ -326,7 +326,7 @@
 \lemma completion-isComplete.{u} (L : UniformLocale.{u}) : (Completion L).IsComplete
   => \have | (g,fact) => completion-factor (UniformEmbedding.comp completion completion) (sdense-comp completion completionLocale.sdense completion completionLocale.sdense)
            | cg=id => completion.isMono {_} {_} {_} {UniformHom.id} fact
-     \in inP (g, cg=id, completion.isMono {_} {_} {_} {UniformHom.id} $ pmap (UniformHom.`∘ _) cg=id)
+     \in inP (g, cg=id, completion.isMono {_} {_} {_} {UniformHom.id} $ pmap (UniformHom.∘ _) cg=id)
 
 \func completion-functor {L M : UniformLocale} (f : UniformHom M L) : UniformHom (Completion M) (Completion L) \cowith
   | FrameHom => LocaleSite.adjointMap (presentation f)
@@ -368,6 +368,6 @@
   \elim Mc
   | inP Mc => inP \new QEquiv {
     | ret f => completion-functor f UniformHom.∘ Mc.1
-    | ret_f g => completion.isMono $ pmap (UniformHom.`∘ _) completion-natural *> pmap (completion UniformHom.∘ g UniformHom.∘) Mc.2
-    | f_sec f => pmap (UniformHom.`∘ _) completion-natural *> pmap (f UniformHom.∘) Mc.2
+    | ret_f g => completion.isMono $ pmap (UniformHom.∘ _) completion-natural *> pmap (completion UniformHom.∘ g UniformHom.∘) Mc.2
+    | f_sec f => pmap (UniformHom.∘ _) completion-natural *> pmap (f UniformHom.∘) Mc.2
   }

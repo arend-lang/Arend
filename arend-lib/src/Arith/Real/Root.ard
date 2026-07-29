@@ -41,7 +41,7 @@
         (\lam {x} {y} p => RealField.pow_<-monotone n/=0 x.2 p)
         (TopMonoid.pow-cont ∘ elemCont)
         (\lam x => RealField.pow>=0 {x.1} x.2)
-        (\lam {v} v>=0 => inP (0, v ∨ 1, zro<ide <∘l join-right, \lam p _ => p, transportInv (`<= v) (Semiring.pow_0 n/=0) v>=0, join-left <=∘ RealField.pow>=id join-right n/=0))
+        (\lam {v} v>=0 => inP (0, v ∨ 1, zro<ide <∘l join-right, \lam p _ => p, transportInv (<= v) (Semiring.pow_0 n/=0) v>=0, join-left <=∘ RealField.pow>=id join-right n/=0))
   }
 
 \lemma root>=0 {n : Nat} {x : Real} : 0 <= root n x \elim n
@@ -67,7 +67,7 @@
   => real-cont_<-inv-mono {pow __ n} (\lam p => RealField.pow_<=-monotone root>=0 $ <=-less p) (cont-char.1 TopMonoid.pow-cont _) $ transport2 (<) (inv $ pow_root n/=0 x>=0) (inv $ pow_root n/=0 $ x>=0 <=∘ <=-less x<y) x<y
 
 \lemma root>0 {n : Nat} (n/=0 : n /= 0) {x : Real} (x>0 : 0 < x) : 0 < root n x
-  => transport (`< _) root_zro (root-monotone n/=0 <=-refl x>0)
+  => transport (< _) root_zro (root-monotone n/=0 <=-refl x>0)
 
 \lemma root-rat {n : Nat} (n/=0 : n /= 0) {a b : Rat} (a>=0 : 0 <= a) (a<b : a < b) : ∃ (q r : Rat) (0 < q) (q < r) (a < pow q n) (pow r n < b)
   => \case real_<-char.1 $ root-monotone n/=0 (rat_real_<=.1 a>=0) (rat_real_<.1 a<b) \with {
@@ -89,7 +89,7 @@
   => pmap sqrt (inv (RealAbGroup.abs-ofPos RealField.square_>=0) *> RealField.abs_*) *> sqrt_pow abs>=0
 
 \lemma pow_sqrt {x : Real} (x>=0 : 0 <= x) : sqrt x * sqrt x = x
-  => pmap2 (*) (\peval sqrt x) (\peval sqrt x) *> pmap (`* _) (inv ide-left) *> pow_root suc/=0 x>=0
+  => pmap2 (*) (\peval sqrt x) (\peval sqrt x) *> pmap (* _) (inv ide-left) *> pow_root suc/=0 x>=0
 
 \lemma sqrt_zro : sqrt 0 = 0
   => (\peval sqrt 0) *> root_zro

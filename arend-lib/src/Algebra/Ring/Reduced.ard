@@ -22,7 +22,7 @@
   | isReduced {a : E} : a * a = 0 -> a = 0
 
   \lemma noNilpotent {a : E} {n : Nat} (p : pow a n = 0) : a = 0
-    => aux $ pmap (pow a) (inv $ <=_exists $ LinearOrder.<_<= id<pow2) *> pow_+  *> pmap (`* pow a (NatSemiring.pow 2 n -' n)) p *> zro_*-left
+    => aux $ pmap (pow a) (inv $ <=_exists $ LinearOrder.<_<= id<pow2) *> pow_+  *> pmap (* pow a (NatSemiring.pow 2 n -' n)) p *> zro_*-left
     \where
       \lemma aux {a : E} {n : Nat} (p : pow a (NatSemiring.pow 2 n) = 0) : a = 0 \elim n
         | 0 => inv ide-left *> p
@@ -31,11 +31,11 @@
 
 \class ReducedCRing \extends ReducedRing, CRing {
   \lemma div_zero {a b : E} (d : LDiv a b) (p : a * b = 0) : b = 0
-    => isReduced $ pmap (`* b) (inv d.inv-right *> *-comm) *> *-assoc *> pmap (d.inv *) p *> zro_*-right
+    => isReduced $ pmap (* b) (inv d.inv-right *> *-comm) *> *-assoc *> pmap (d.inv *) p *> zro_*-right
 
   \lemma div_pow_zero {a b : E} {n : Nat} (d : LDiv a (pow b n)) (p : a * b = 0) : b = 0 \elim n
-    | 0 => inv ide-left *> pmap (`* b) (inv d.inv-right *> *-comm) *> *-assoc *> pmap (d.inv *) p *> zro_*-right
-    | suc n => noNilpotent {_} {_} {suc n} $ div_zero d $ pmap (a *) *-comm *> inv *-assoc *> pmap (`* _) p *> zro_*-left
+    | 0 => inv ide-left *> pmap (* b) (inv d.inv-right *> *-comm) *> *-assoc *> pmap (d.inv *) p *> zro_*-right
+    | suc n => noNilpotent {_} {_} {suc n} $ div_zero d $ pmap (a *) *-comm *> inv *-assoc *> pmap (* _) p *> zro_*-left
 
   \lemma div-cancel {a b b' : E} (d : LDiv a b) (d' : LDiv a b') (p : a * b = a * b') : b = b'
     => div_pow-cancel {_} {a} {b} {b'} {1} {1} (rewrite ide-left d) (rewrite ide-left d') p
@@ -78,7 +78,7 @@
   | isImpotent {a : E} : a * a = a -> (a = 0) || (a = 1)
 
   \lemma decomp {a b : E} (a+b=1 : a + b = 1) (ab=0 : a * b = 0) : (\Sigma (a = 1) (b = 0)) || (\Sigma (a = 0) (b = 1))
-    => \case isImpotent $ inv zro-left *> pmap (`+ _) (inv ab=0) *> inv rdistr *> pmap (`* b) a+b=1 *> ide-left \with {
+    => \case isImpotent $ inv zro-left *> pmap (+ _) (inv ab=0) *> inv rdistr *> pmap (* b) a+b=1 *> ide-left \with {
       | byLeft b=0 => byLeft (inv zro-right *> pmap (a +) (inv b=0) *> a+b=1, b=0)
       | byRight b=1 => byRight (inv ide-right *> pmap (a *) (inv b=1) *> ab=0, b=1)
     }

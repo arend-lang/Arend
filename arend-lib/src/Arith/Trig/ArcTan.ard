@@ -85,7 +85,7 @@
         | inl (k,p) => rewrite (arctan-coef-Rat.even p) zro<=ide
         | inr (k,p) => rewrite (arctan-coef-Rat.odd p, RatField.abs_*) $ RatField.<=_*_positive-left
           (transport2 (<=) (inv RatField.abs_pow) (RatField.pow_ide {k}) $ RatField.pow_<=-monotone abs>=0 $ later <=-refl) abs>=0
-          <=∘ transportInv (`<= 1) (ide-left *> abs-ofPos (RatField.finv>=0 $ fromInt_<= $ pos<=pos zero<=_))
+          <=∘ transportInv (<= 1) (ide-left *> abs-ofPos (RatField.finv>=0 $ fromInt_<= $ pos<=pos zero<=_))
                 (RatField.finv_<= {1} idp $ fromInt_<= $ pos<=pos $ <=_+ zero<=_ <=-refl <=∘ =_<= (inv p))
       }
 
@@ -102,7 +102,7 @@
 
     \lemma convertProof (|x|<1 : (norm x).U 1) : dist 0 x <LU convRadius (\lam n => A.fromRat (arctan-coef-Rat n))
       => \case U-rounded |x|<1 \with {
-        | inP (a,x<a,a<1) => transport (`<LU _) norm_dist $ convRadius.<LU-char x<a (arctan-conv-at-s (<=-less $ norm>=0 x<a) a<1)
+        | inP (a,x<a,a<1) => transport (<LU _) norm_dist $ convRadius.<LU-char x<a (arctan-conv-at-s (<=-less $ norm>=0 x<a) a<1)
       }
   }
 
@@ -172,13 +172,13 @@
             *> pmap (c *) (negative-right {_} {1})
             *> zro_*-right
             *> inv (pmap (2 * _ * Complex.fromReal __ * _) (arctan-coef-Rat.even p)
-              *> pmap (`* _) (ComplexField.zro_*-right {2 * i}) *> zro_*-left)
+              *> pmap (* _) (ComplexField.zro_*-right {2 * i}) *> zro_*-left)
           | inr (k, p) => *-comm *> inv *-assoc *> pmap (_ *) ComplexField.pow_*-comm *> inv *-assoc
-            *> pmap (`* _) {(1 - pow -1 n) * _ * _} {2 * i * Complex.fromReal _} (*-assoc {_} {1 - pow -1 n}
+            *> pmap (* _) {(1 - pow -1 n) * _ * _} {2 * i * Complex.fromReal _} (*-assoc {_} {1 - pow -1 n}
               *> pmap (_ *) *-comm *> inv *-assoc *> pmap2 (*) (pmap2 (*) {1 - pow -1 n}
                   (pmap (1 +) (pmap (\lam x => negative (pow -1 x)) p *> pmap negative ComplexField.negative_ide-right
                     *> ComplexField.negative-isInv *> pow_*2 *> pmap (pow __ k) (ComplexField.negative_* *> ide-left)
-                    *> ComplexField.pow_ide *> inv zro-left *> pmap (`+ 1) (inv natCoefZero)
+                    *> ComplexField.pow_ide *> inv zro-left *> pmap (+ 1) (inv natCoefZero)
                     *> inv (natCoefSuc 0)) *> +-comm *> inv (natCoefSuc 1))
                   (pmap (pow i) p *> *-comm *> pmap (i *) (pow_*2 *> pmap (pow __ k) Complex.iunit-square
                     *> pmap (pow __ k) (inv Complex.fromReal_negative *> pmap Complex.fromReal (RealAbGroup.negative-rat {1}))

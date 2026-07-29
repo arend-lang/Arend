@@ -20,7 +20,7 @@
 
   \lemma func-pow {x : Dom} {n : Nat} : func (Monoid.pow x n) = Monoid.pow (func x) n \elim n
     | 0 => func-ide
-    | suc n => func-* *> pmap (`* _) func-pow
+    | suc n => func-* *> pmap (* _) func-pow
 
   \lemma func-BigProd {l : Array Dom} : func (Monoid.BigProd l) = Monoid.BigProd (\lam j => func (l j)) \elim l
     | nil => func-ide
@@ -34,7 +34,7 @@
     | inv-right => inv func-* *> pmap func d.inv-right *> func-ide
 
   \lemma func-InvElem (e : Inv {Dom}) (e' : Inv {Cod}) (p : func e = e') : func e.inv = e'.inv
-    => inv ide-left *> pmap (`* _) (inv (pmap (_ *) p *> e'.inv-left)) *> *-assoc *> pmap (_ *) (inv func-* *> pmap func e.inv-right *> func-ide) *> ide-right
+    => inv ide-left *> pmap (* _) (inv (pmap (_ *) p *> e'.inv-left)) *> *-assoc *> pmap (_ *) (inv func-* *> pmap func e.inv-right *> func-ide) *> ide-right
 
   \lemma equiv-hom (e : IsEquiv func) : MonoidHom Cod Dom (IsEquiv.ret e) \cowith
     | func-ide => IsEquiv.isInj e $ IsEquiv.f_ret e *> inv func-ide
@@ -70,7 +70,7 @@
 
   \lemma func-*n {n : Nat} {x : Dom} : func (n AddMonoid.*n x) = n AddMonoid.*n func x \elim n
     | 0 => func-zro
-    | suc n => func-+ *> pmap (`+ _) func-*n
+    | suc n => func-+ *> pmap (+ _) func-*n
 } \where {
   \use \coerce toMonoidHom (f : AddMonoidHom) : MonoidHom \cowith
     | Dom => f.Dom

@@ -65,8 +65,8 @@
     | tupleMap h => \new NatTrans {
       | trans a => D.pair (h 0 a) (h 1 a)
       | natural f => D.pair-unique
-        (inv o-assoc *> pmap (`∘ _) D.beta1 *> (h 0).natural f *> pmap (_ ∘) (inv D.beta1) *> inv o-assoc *> pmap (`∘ _) (inv D.beta1) *> o-assoc)
-        (inv o-assoc *> pmap (`∘ _) D.beta2 *> (h 1).natural f *> pmap (_ ∘) (inv D.beta2) *> inv o-assoc *> pmap (`∘ _) (inv D.beta2) *> o-assoc)
+        (inv o-assoc *> pmap (∘ _) D.beta1 *> (h 0).natural f *> pmap (_ ∘) (inv D.beta1) *> inv o-assoc *> pmap (∘ _) (inv D.beta1) *> o-assoc)
+        (inv o-assoc *> pmap (∘ _) D.beta2 *> (h 1).natural f *> pmap (_ ∘) (inv D.beta2) *> inv o-assoc *> pmap (∘ _) (inv D.beta2) *> o-assoc)
     }
     | tupleBeta {z} {f} {j} => \case \elim j \with {
       | 0 => exts \lam a => D.beta1
@@ -95,7 +95,7 @@
           | F => \new Functor {
             | F c => L c
             | Func f => limMap (cone f)
-            | Func-id {X} => limUnique \lam j => limBeta {L X} (cone id) j *> pmap (`∘ _) Func-id *> id-left *> inv id-right
+            | Func-id {X} => limUnique \lam j => limBeta {L X} (cone id) j *> pmap (∘ _) Func-id *> id-left *> inv id-right
             | Func-o {_} {Y} {Z} {g} {f} => limUnique (\lam j => rewrite (limBeta {L Z} (cone (f ∘ g)) j, inv o-assoc,
                                                                           limBeta {L Z} (cone g) j) (unfold coneMap
                 (rewrite (Func-o {G j}, o-assoc, o-assoc) (rewrite (limBeta {L Y} (cone f) j) (unfold coneMap idp)))))

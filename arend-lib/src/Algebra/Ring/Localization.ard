@@ -36,11 +36,11 @@
     | MonoidHom => liftMonoidHom f l
     | func-+ {x} {y} => \case localization-surj x, localization-surj y \with {
       | inP (y1,c1,Sc1,p1), inP (y2,c2,Sc2,p2) => (l (contains_* Sc1 Sc2)).inv-cancel-right $ inv $ T.rdistr *>
-          pmap2 (T.+) (pmap (_ *) f.func-* *> inv *-assoc *> pmap (`* _) (lift_inL-quot Sc1 p1) *> inv f.func-*)
-                      (pmap (_ *) (f.func-* *> *-comm) *> inv *-assoc *> pmap (`* _) (lift_inL-quot Sc2 p2) *> inv f.func-*) *>
+          pmap2 (T.+) (pmap (_ *) f.func-* *> inv *-assoc *> pmap (* _) (lift_inL-quot Sc1 p1) *> inv f.func-*)
+                      (pmap (_ *) (f.func-* *> *-comm) *> inv *-assoc *> pmap (* _) (lift_inL-quot Sc2 p2) *> inv f.func-*) *>
           inv f.func-+ *> inv (lift_inL-quot (contains_* Sc1 Sc2) $ Ring.rdistr *>
-            pmap2 (+) (pmap (x *) func-* *> inv *-assoc *> pmap (`* _) p1 *> inv func-*)
-                      (pmap (y *) (func-* *> *-comm) *> inv *-assoc *> pmap (`* _) p2 *> inv func-*) *>
+            pmap2 (+) (pmap (x *) func-* *> inv *-assoc *> pmap (* _) p1 *> inv func-*)
+                      (pmap (y *) (func-* *> *-comm) *> inv *-assoc *> pmap (* _) p2 *> inv func-*) *>
             inv func-+)
     }
 
@@ -57,7 +57,7 @@
     | inP (n,p) => loc-trivial-char.2 $ transport S p (S.contains_pow Sx)
 
   \lemma isLocal-char : Ring.IsLocal {L} <-> ∀ {x} {y} (S (x + y)) ∃ (r : B) (S (x * r) || S (y * r))
-    => <->trans Ring.isLocal-sum-char $ later (\lam l Sx+y => \case l (inv Ring.rdistr *> pmap (`* _) (inv func-+) *> (localization-inv Sx+y).inv-right) \with {
+    => <->trans Ring.isLocal-sum-char $ later (\lam l Sx+y => \case l (inv Ring.rdistr *> pmap (* _) (inv func-+) *> (localization-inv Sx+y).inv-right) \with {
       | byLeft [x/x+y]-inv => \case inv-char.1 $ Inv.cfactor-left [x/x+y]-inv \with {
         | inP (r,Sxr) => inP (r, byLeft Sxr)
       }
@@ -144,9 +144,9 @@
   | contains a => ∃ (b : S.contains) (c : I.contains) (a * f b = f c)
   | contains_zro => inP (1, contains_ide, 0, contains_zro, R.zro_*-left *> inv func-zro)
   | contains_+ (inP (b,Sb,c,Ic,p)) (inP (b',Sb',c',Ic',p')) => inP (b * b', contains_* Sb Sb', c * b' + c' * b, contains_+ (ideal-right Ic) (ideal-right Ic'),
-    R.rdistr *> pmap2 (+) (pmap (_ *) func-* *> inv *-assoc *> pmap (`* _) p *> inv func-*) (pmap (_ *) (func-* *> *-comm) *> inv *-assoc *> pmap (`* _) p' *> inv func-*) *> inv func-+)
+    R.rdistr *> pmap2 (+) (pmap (_ *) func-* *> inv *-assoc *> pmap (* _) p *> inv func-*) (pmap (_ *) (func-* *> *-comm) *> inv *-assoc *> pmap (* _) p' *> inv func-*) *> inv func-+)
   | ideal-left {r} (inP (b,Sb,c,Ic,p)) => \case L.localization-surj r \with {
-    | inP (r',d,Sd,q) => inP (b * d, contains_* Sb Sd, r' * c, ideal-left Ic, pmap (_ *) func-* *> *-assoc *> pmap (_ *) (inv *-assoc *> pmap (`* _) p *> *-comm) *> inv *-assoc *> pmap (`* _) q *> inv func-*)
+    | inP (r',d,Sd,q) => inP (b * d, contains_* Sb Sd, r' * c, ideal-left Ic, pmap (_ *) func-* *> *-assoc *> pmap (_ *) (inv *-assoc *> pmap (* _) p *> *-comm) *> inv *-assoc *> pmap (* _) q *> inv func-*)
   }
   \where {
     \lemma unit-char (L : Localization S R f) : LocalizationIdeal I f L 1 <-> ∃ (x : I.S) (S x) (I x)

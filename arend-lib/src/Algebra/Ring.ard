@@ -21,7 +21,7 @@
 \class PseudoRing \extends PseudoSemiring, AbGroup {
   | zro_*-left {x} => AddGroup.cancel-left (zro * x) (
     zro * x + zro * x ==< inv rdistr >==
-    (zro + zro) * x   ==< pmap (`* x) zro-left >==
+    (zro + zro) * x   ==< pmap (* x) zro-left >==
     zro * x           ==< inv zro-right >==
     zro * x + zro     `qed
   )
@@ -33,7 +33,7 @@
   )
 
   \lemma negative_*-left {x y : E} : negative x * y = negative (x * y)
-    => negative-unique (x * y) (inv rdistr *> pmap (`* y) negative-left *> zro_*-left) negative-right
+    => negative-unique (x * y) (inv rdistr *> pmap (* y) negative-left *> zro_*-left) negative-right
 
   \lemma negative_*-right {x y : E} : x * negative y = negative (x * y)
     => op.negative_*-left
@@ -51,10 +51,10 @@
     => rdistr *> pmap (_ +) negative_*-left
 
   \lemma *_sum_diff {x y : E} (p : x * y = y * x) : (x + y) * (x - y) = x * x - y * y
-    => rdistr *> pmap2 (+) ldistr_- ldistr_- *> +-assoc *> pmap (_ +) (inv +-assoc *> pmap (`+ _) (pmap (_ +) (inv p) *> negative-left) *> zro-left)
+    => rdistr *> pmap2 (+) ldistr_- ldistr_- *> +-assoc *> pmap (_ +) (inv +-assoc *> pmap (+ _) (pmap (_ +) (inv p) *> negative-left) *> zro-left)
 
   \lemma *_diff_sum {x y : E} (p : x * y = y * x) : (x - y) * (x + y) = x * x - y * y
-    => ldistr *> pmap2 (+) rdistr_- rdistr_- *> +-assoc *> pmap (_ +) (inv +-assoc *> pmap (`+ _) (pmap (_ +) p *> negative-left) *> zro-left)
+    => ldistr *> pmap2 (+) rdistr_- rdistr_- *> +-assoc *> pmap (_ +) (inv +-assoc *> pmap (+ _) (pmap (_ +) p *> negative-left) *> zro-left)
 
   \protected \func op : PseudoRing \cowith
     | AbGroup => \this
@@ -87,7 +87,7 @@
 
   \lemma geometric-partial-sum {n : Nat} {x : E} : (1 - x) * BigSum (\new Array E n (\lam j => pow x j)) = 1 - pow x n \elim n
     | 0 => zro_*-right *> inv negative-right
-    | suc n => pmap (_ *) (AddMonoid.BigSum_suc-nat {_} {n} {pow x}) *> ldistr *> pmap2 (+) geometric-partial-sum rdistr *> +-assoc *> pmap (_ +) (inv +-assoc *> pmap (_ +) negative_*-left *> pmap (`+ _) (pmap (_ +) ide-left *> negative-left) *> zro-left *> pmap negative pow-left)
+    | suc n => pmap (_ *) (AddMonoid.BigSum_suc-nat {_} {n} {pow x}) *> ldistr *> pmap2 (+) geometric-partial-sum rdistr *> +-assoc *> pmap (_ +) (inv +-assoc *> pmap (_ +) negative_*-left *> pmap (+ _) (pmap (_ +) ide-left *> negative-left) *> zro-left *> pmap negative pow-left)
 
   \lemma geometric-like-partial-sum {k n : Nat} {x : E}
     : (1 - x) * AddMonoid.BigSum (\new Array E n (\lam j => pow x (j Nat.+ k))) = pow x k - pow x (n Nat.+ k)
@@ -110,10 +110,10 @@
     => rewrite (NatSemiring.*-comm {2} {k}, pow_-1_even, ide-left) idp
 
   \lemma pow_-1_mod2 {n : Nat} : pow -1 n = pow -1 (n Nat.mod 2)
-    => pmap (pow -1) (inv (Nat.divModProp n 2)) *> pow_+ *> pmap (`* _) (pow_* *> pmap (pow __ _) (*-assoc *> ide-left *> negative_* *> ide-left) *> pow_ide) *> ide-left
+    => pmap (pow -1) (inv (Nat.divModProp n 2)) *> pow_+ *> pmap (* _) (pow_* *> pmap (pow __ _) (*-assoc *> ide-left *> negative_* *> ide-left) *> pow_ide) *> ide-left
 
   \lemma idempotent_LDiv {a b : E} (q : b * b = b) (d : Monoid.LDiv b a) : a = b * a
-    => inv d.inv-right *> pmap (`* _) (inv q) *> *-assoc *> pmap (b *) d.inv-right
+    => inv d.inv-right *> pmap (* _) (inv q) *> *-assoc *> pmap (b *) d.inv-right
 
   \type IsConnected => \Pi (a : E) -> a * a = a -> (a = 0) || (a = 1)
 
@@ -126,7 +126,7 @@
     => (\lam l {x} x+y=1 => \case l (negative x) \with {
       | byLeft [-x]-inv => byLeft $ transport Monoid.Inv negative-isInv (negative_inv [-x]-inv)
       | byRight [-x+1]-inv => byRight $ transport Monoid.Inv (equation.abGroup { -1 x+y=1 }) [-x+1]-inv
-    }, \lam l x => \case l (inv +-assoc *> pmap (`+ 1) negative-left *> zro-left) \with {
+    }, \lam l x => \case l (inv +-assoc *> pmap (+ 1) negative-left *> zro-left) \with {
       | byLeft [-x]-inv => byLeft $ transport Monoid.Inv negative-isInv (negative_inv [-x]-inv)
       | byRight [x+1]-inv => byRight [x+1]-inv
     })
@@ -160,7 +160,7 @@
   -- | A ring with decidable equality.
   \class Dec \extends AddGroup.Dec, With#
     | #0-*-left {x} {y} x*y#0 => \case decideEq x zro \with {
-      | yes x=0 => absurd (#0-zro (transport #0 (pmap (`* y) x=0 *> zro_*-left) x*y#0))
+      | yes x=0 => absurd (#0-zro (transport #0 (pmap (* y) x=0 *> zro_*-left) x*y#0))
       | no x/=0 => nonZeroApart x/=0
     }
     | #0-*-right {x} {y} x*y#0 => \case decideEq y zro \with {

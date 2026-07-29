@@ -245,7 +245,7 @@
 
 \class StrictIntegralDomain \extends StrictDomain, ImpotentCRing {
   \lemma div-associates {a b : E} (a|b : LDiv a b) (b|a : LDiv b a) : TruncP (associates a b)
-    => \case zeroOrCancel-left $ inv *-assoc *> pmap (`* _) a|b.inv-right *> b|a.inv-right *> inv ide-right \with {
+    => \case zeroOrCancel-left $ inv *-assoc *> pmap (* _) a|b.inv-right *> b|a.inv-right *> inv ide-right \with {
       | byLeft a=0 => inP (Inv.ide-isInv, a=0 *> inv (ldiv=0 a|b a=0) *> inv ide-left)
       | byRight r => inP (Inv.lmake _ r, inv b|a.inv-right *> *-comm)
     }

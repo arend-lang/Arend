@@ -24,7 +24,7 @@
   \where {
     -- | If a point {x} in an H-space belongs to the same connected component as {base}, then ``(x *)`` is an equivalence.
     \lemma lem {A : HSpace} {x : A} (c : TruncP (base = x)) : IsEquiv (x *) \elim c
-      | inP base=x => rewriteI (path (\lam i y => (inv (base-left y) *> pmap (`* y) base=x) @ i)) (inP idEquiv)
+      | inP base=x => rewriteI (path (\lam i y => (inv (base-left y) *> pmap (* y) base=x) @ i)) (inP idEquiv)
   }
 
 -- | For every point {x} in a connected H-space, ``(* x)`` is an equivalence.
@@ -86,14 +86,14 @@
           | jinl a => pinl ((),a)
           | jinr a => pinr ((),a)
           | pglue (a,a') =>
-            \let e : HAEquiv (`* a) => IsEquiv.toQEquiv (HSpaceConn-right a)
+            \let e : HAEquiv (* a) => IsEquiv.toQEquiv (HSpaceConn-right a)
             \in ppglue (e.sec a', a) *> pmap (\lam x => pinr ((),x)) (e.f_sec a')
 
         \func joinTotalJoin {A : HSpaceConn} (x : Join A A) : totalJoin (joinTotal x) = x
           | jinl a => idp
           | jinr a => idp
           | pglue (a,a') i =>
-            \have | e : HAEquiv (`* a) => IsEquiv.toQEquiv (HSpaceConn-right a)
+            \have | e : HAEquiv (* a) => IsEquiv.toQEquiv (HSpaceConn-right a)
                   | p =>
                     pmap totalJoin (ppglue (e.sec a', a) *> pmap (\lam y => pinr ((),y)) (e.f_sec a')) ==< pmap_*>-comm totalJoin (ppglue (e.sec a', a)) (pmap (\lam y => pinr ((),y)) (e.f_sec a')) >==
                     jglue a (e.sec a' * a) *> pmap jinr (e.f_sec a')                                   ==< Jl (\lam x p => jglue a (e.sec a' * a) *> pmap jinr p = jglue a x) idp (e.f_sec a') >==
@@ -104,7 +104,7 @@
           | pinl (_,a) => idp
           | pinr (_,a) => idp
           | pglue (a,a') i =>
-            \let | e : HAEquiv (`* a') => IsEquiv.toQEquiv (HSpaceConn-right a')
+            \let | e : HAEquiv (* a') => IsEquiv.toQEquiv (HSpaceConn-right a')
                  | s => ppglue (e.ret (a * a'), a')
                  | p =>
                    s *> pmap (\lam y => pinr ((),y)) (e.f_sec (a * a')) ==< pmap (\lam p => s *> pmap (\lam y => pinr ((),y)) p) (inv (e.f_ret_f=f_sec_f a)) >==

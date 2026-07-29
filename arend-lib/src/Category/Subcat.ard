@@ -31,7 +31,7 @@
     \func funcLift {C D : Precat} {X : \Type} (f : X -> D) (g : C -> X) (G : Functor C D) (p : \Pi {a : C} -> Iso {D} {f (g a)} {G a}) : Functor C (subPrecat f) g \cowith
       | Func h => p.hinv ∘ G.Func h ∘ p.f
       | Func-id => rewrite (G.Func-id, id-right) p.hinv_f
-      | Func-o => rewrite G.Func-o $ later (rewrite (p.f_hinv, id-left) $ pmap (`∘ _) (inv o-assoc) *> o-assoc) *> pmap (_ ∘) (pmap (`∘ _) o-assoc *> o-assoc) *> inv o-assoc
+      | Func-o => rewrite G.Func-o $ later (rewrite (p.f_hinv, id-left) $ pmap (∘ _) (inv o-assoc) *> o-assoc) *> pmap (_ ∘) (pmap (∘ _) o-assoc *> o-assoc) *> inv o-assoc
   }
 
 \func subCat {C : Cat} {X : \Type} (e : Embedding {X} {C}) : Cat \cowith
@@ -88,5 +88,5 @@
     pmap (_ ∘) (c.coneCoh h)
   }
   | limMap {z} c' => I.isReflective.ret (c.limMap (Cone.map I.op {J.op} c'))
-  | limBeta c' j => IsEquiv.isInj I.isFullyFaithful $ Func-o *> pmap (_ ∘) I.inverse-right *> inv o-assoc *> pmap (`∘ _) (I.isReflective.f_ret _) *> c.limBeta (Cone.map I.op {J.op} c') j
+  | limBeta c' j => IsEquiv.isInj I.isFullyFaithful $ Func-o *> pmap (_ ∘) I.inverse-right *> inv o-assoc *> pmap (∘ _) (I.isReflective.f_ret _) *> c.limBeta (Cone.map I.op {J.op} c') j
   | limUnique {z} {f} {g} p => inv (I.isReflective.ret_f f) *> pmap I.isReflective.ret (c.limUnique \lam j => o-assoc *> (rewrite I.inverse-right in inv I.Func-o *> pmap I.Func (p j) *> I.Func-o) *> inv o-assoc) *> I.isReflective.ret_f g

@@ -30,7 +30,7 @@
      $[x^k]\,A(B(x)) = \sum_{n=0}^{k} a_n \cdot (b ^{\star n})_k.$
 
      When $b_0 = 0$ the inner term vanishes for $n > k$ (see
-     `pow-conv-zero-below`), so the sum is genuinely finite and the formal
+     {pow-conv-zero-below}), so the sum is genuinely finite and the formal
      substitution is well-defined. -}
 \func fcompose {A : Ring} (a b : FSeries A) : FSeries A
   => \lam k => A.BigSum \new Array A (suc k) \lam n => a n * pow b n k
@@ -43,7 +43,7 @@
 {- | If $c_0 = 0$, then for any $j \leq k$, the inner sum
      $\sum_{m \leq j} f_m \cdot (c^{\star m})_j$ may be extended to range $m \leq k$
      without changing its value, because $(c^{\star m})_j = 0$ whenever $m > j$
-     (`pow-conv-zero-below`).  This is the form used by {fcompose} when
+     ({pow-conv-zero-below}).  This is the form used by {fcompose} when
      bridging triangular and rectangular finite sums. -}
 \lemma compose-coef-extend {A : Ring} {f c : FSeries A} (c_0 : c 0 = A.zro) (k j : Nat) (j<=k : j <= k)
   : fcompose f c j = A.BigSum (\new Array A (suc k) \lam m => f m * pow c m j)
@@ -88,16 +88,16 @@ $$(A \circ c)^n = A^n \circ c.$$
   : pow (fcompose b c) n k = fcompose (pow b n) c k \elim n
   | 0 => inv $ AddMonoid.BigSum-unique {A}
     {\new Array A (suc k) \lam (m : Fin (suc k)) => pow b 0 m * pow c m k} 0
-    (\lam j zero-not-j => pmap (`* _) (FSeriesRing.coef_/=0 \lam p => zero-not-j (fin_nat-inj (inv p))) *> A.zro_*-left)
+    (\lam j zero-not-j => pmap (* _) (FSeriesRing.coef_/=0 \lam p => zero-not-j (fin_nat-inj (inv p))) *> A.zro_*-left)
     *> A.ide-left
   | suc n => pmap ((*) __ (fcompose b c) k) {(FSeriesRing A).pow _ n} (ext $ pow-conv-compose c_0 n) *> inv (compose-coef-* c_0 k)
 
 {- | Associativity of formal-power-series composition.  With both $b_0 = 0$
      (so the outer composition is finite/truncated) and $c_0 = 0$ (so the
-     key lemma `pow-conv-compose` applies), in a commutative ring $A$:
+     key lemma {pow-conv-compose} applies), in a commutative ring $A$:
      $$[x^k]\,((a \circ b) \circ c) = [x^k]\,(a \circ (b \circ c)).$$
 
-     Proof outline (after `pow-conv-compose` for the inner step):
+     Proof outline (after {pow-conv-compose} for the inner step):
      $ [x^k]\,((a \circ b) \circ c) = \sum_m (a \circ b)_m \cdot (c^{\star m})_k
      = \sum_m \sum_{n \leq m} a_n (b^{\star n})_m (c^{\star m})_k
      = \sum_{n} a_n \sum_{m \geq n} b^n_m c^m_k
@@ -106,7 +106,7 @@ $$(A \circ c)^n = A^n \circ c.$$
 
 The step $\sum_{n \leq m}$ over $(n, m)$ with $n \leq m$ to $\sum_n \sum_m$
 rectangularly uses Fubini (`BigSum-transpose`) plus the vanishing of
-$(b^{\star n})_m$ for $m < n$ (`pow-conv-zero-below` with $b_0 = 0$). -}
+$(b^{\star n})_m$ for $m < n$ ({pow-conv-zero-below} with $b_0 = 0$). -}
 \lemma compose-coef-assoc {A : CRing} {a b c : FSeries A}
                           (b_0 : b 0 = A.zro) (c_0 : c 0 = A.zro) (k : Nat)
   : fcompose (fcompose a b) c k = fcompose a (fcompose b c) k
@@ -114,7 +114,7 @@ $(b^{\star n})_m$ for $m < n$ (`pow-conv-zero-below` with $b_0 = 0$). -}
     rewrite (A.BigSum-ext {suc k}
       {\new Array A (suc k) \lam m => fcompose a b m * pow c m k}
       {\new Array A (suc k) \lam m => A.BigSum \new Array A (suc k) \lam n => a n * pow b n m * pow c m k}
-      (\lam m => pmap (`* _) (compose-coef-extend b_0 k m (<_suc_<= (fin_< m)))
+      (\lam m => pmap (* _) (compose-coef-extend b_0 k m (<_suc_<= (fin_< m)))
         *> A.BigSum-rdistr {\new Array A (suc k) \lam n => a n * pow b n m})),
     rewrite (A.BigSum-transpose {suc k} {suc k} \lam m n => a n * pow b n m * pow c m k),
     A.BigSum-ext {suc k}
@@ -180,7 +180,7 @@ $(b^{\star n})_m$ for $m < n$ (`pow-conv-zero-below` with $b_0 = 0$). -}
   | 0 => R.zro-right *> R.zro_*-left *> inv f_0
   | suc k' =>
     R.BigSum-unique {\new Array R (suc (suc k')) \lam n => subst-ide n * pow f n (suc k')} 1
-       (\lam j j/=spec => pmap (`* _) (subst-ide-vanish j \lam p => j/=spec $ fin_nat-inj (inv p)) *> R.zro_*-left)
+       (\lam j j/=spec => pmap (* _) (subst-ide-vanish j \lam p => j/=spec $ fin_nat-inj (inv p)) *> R.zro_*-left)
      *> ide-left
      *> fseries-apply ide-left
   \where {
@@ -239,7 +239,7 @@ $(b^{\star n})_m$ for $m < n$ (`pow-conv-zero-below` with $b_0 = 0$). -}
 \lemma g-prefix-stable {R : Ring} {f : FSeries R} {finv1 : Monoid.Inv (f 1)} (n k : Nat) (k<n : k < n)
   : g-prefix f finv1 (suc n) k = g-prefix f finv1 n k
   => mcases \with {
-     | yes p => absurd $ <-irreflexive $ transport (`< n) p k<n
+     | yes p => absurd $ <-irreflexive $ transport (< n) p k<n
      | no _ => idp
    }
 
@@ -292,7 +292,7 @@ $(b^{\star n})_m$ for $m < n$ (`pow-conv-zero-below` with $b_0 = 0$). -}
   : pow g (suc m') 0 = R.zro
   \elim m'
   | 0 => FSeriesRing.Pairs_zero *> R.ide-left *> g_0
-  | suc m'' => FSeriesRing.Pairs_zero *> pmap (`* g 0) (pow-zero-at-zero g_0 m'') *> R.zro_*-left
+  | suc m'' => FSeriesRing.Pairs_zero *> pmap (* g 0) (pow-zero-at-zero g_0 m'') *> R.zro_*-left
 
 {- | $g^{m+2}\ (\mathrm{suc}\ K) = (g')^{m+2}\ (\mathrm{suc}\ K)$ when $g, g'$ both vanish at $0$
  -   and agree on $[0, K]$. The convolution at $\mathrm{suc}\ K$ for $m \geq 2$ doesn't see index $\mathrm{suc}\ K$.
@@ -304,8 +304,8 @@ $(b^{\star n})_m$ for $m < n$ (`pow-conv-zero-below` with $b_0 = 0$). -}
   => R.FinSum-ext $ later \case \elim __ \with {
        | (i, 0, _) => pmap (_ *) g_0 *> R.zro_*-right *> inv (pmap (_ *) g'_0 *> R.zro_*-right)
        | (0, suc j', p) =>
-         pmap (`* _) (pow-zero-at-zero g_0 m'') *> R.zro_*-left
-         *> inv (pmap (`* _) (pow-zero-at-zero g'_0 m'') *> R.zro_*-left)
+         pmap (* _) (pow-zero-at-zero g_0 m'') *> R.zro_*-left
+         *> inv (pmap (* _) (pow-zero-at-zero g'_0 m'') *> R.zro_*-left)
        | (suc i', suc j', p) =>
          \have | si'<=K : suc i' <= K => suc<=suc.conv $ transport (suc (suc i') <=) p $ <=_+ <=-refl (suc<=suc zero<=_)
                | sj'<=K : suc j' <= K => suc<=suc.conv $ transport (suc (suc j') <=) p $ <=_+ (suc<=suc zero<=_) <=-refl
@@ -318,7 +318,7 @@ $(b^{\star n})_m$ for $m < n$ (`pow-conv-zero-below` with $b_0 = 0$). -}
   \elim n
   | 0 => idp
   | suc n' => mcases \with {
-    | yes p => absurd $ <-irreflexive $ transport (`< _) (inv p) id<suc <∘l n<=k
+    | yes p => absurd $ <-irreflexive $ transport (< _) (inv p) id<suc <∘l n<=k
     | no _ => g-prefix-vanish-top n' k $ <=-less id<suc <=∘ n<=k
   }
 
@@ -363,7 +363,7 @@ $(b^{\star n})_m$ for $m < n$ (`pow-conv-zero-below` with $b_0 = 0$). -}
 
 -- | The composition coefficient at index 1: $[x^1]\,(s \circ t) = s_1 \cdot t_1$.
 \lemma compose-coef_1 {R : Ring} {s t : FSeries R} : fcompose s t 1 = s 1 R.* t 1
-  => pmap (\lam y => _ + (_ * y + 0)) (fseries-apply ide-left) *> pmap (`+ _) R.zro_*-right *> R.zro-left *> R.zro-right
+  => pmap (\lam y => _ + (_ * y + 0)) (fseries-apply ide-left) *> pmap (+ _) R.zro_*-right *> R.zro-left *> R.zro-right
 
 -- | Formal line diffeomorphism: a formal substitution whose 1st coefficient is invertible in $R$.
 \record FormalLineDiffeomorphism \extends FormalSubst
@@ -385,7 +385,7 @@ $(b^{\star n})_m$ for $m < n$ (`pow-conv-zero-below` with $b_0 = 0$). -}
   | f_0 => idp
   | f1-inv => s.f1-inv.reverse
 
--- | The group of formal line diffeomorphisms. `inverse-left` is derived from `inverse-right` via Group's `\default`.
+-- | The group of formal line diffeomorphisms.
 \instance FormalLineDiffeomorphismGroup (R : CRing) : Group (FormalLineDiffeomorphism { | R => R })
   | ide => \new FormalLineDiffeomorphism R subst-ide idp subst-ide-f1-inv
   | * => subst-compose-inv

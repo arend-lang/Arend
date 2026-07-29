@@ -68,11 +68,11 @@
 
   \func extend {R : Ring} {U V : LModule R} {l : Array U} (lb : U.IsBasis l) (lv : Array V l.len) : LinearMap U V \cowith
     | func x => BigSum (\lam j => U.basis-split lb x j *c lv j)
-    | func-+ {x} {y} => pmap BigSum (exts \lam j => pmap (`*c _) (U.basis-split-unique lb (\lam j => U.basis-split lb x j + U.basis-split lb y j) (pmap2 (+) U.basis-split-char (U.basis-split-char {_} {lb}) *> inv (U.BigSum_+ {_} {\lam j => U.basis-split lb x j *c l j}) *> pmap BigSum (exts \lam j => inv U.*c-rdistr)) j) *> *c-rdistr) *> V.BigSum_+ {_} {\lam j => U.basis-split lb x j *c lv j}
-    | func-*c {r} {x} => pmap BigSum (exts \lam j => pmap (`*c _) (U.basis-split-unique lb (\lam j => r * U.basis-split lb x j) (pmap (r *c) (U.basis-split-char {_} {lb}) *> U.*c_BigSum-ldistr *> pmap BigSum (exts \lam j => inv *c-assoc)) j) *> *c-assoc) *> inv V.*c_BigSum-ldistr
+    | func-+ {x} {y} => pmap BigSum (exts \lam j => pmap (*c _) (U.basis-split-unique lb (\lam j => U.basis-split lb x j + U.basis-split lb y j) (pmap2 (+) U.basis-split-char (U.basis-split-char {_} {lb}) *> inv (U.BigSum_+ {_} {\lam j => U.basis-split lb x j *c l j}) *> pmap BigSum (exts \lam j => inv U.*c-rdistr)) j) *> *c-rdistr) *> V.BigSum_+ {_} {\lam j => U.basis-split lb x j *c lv j}
+    | func-*c {r} {x} => pmap BigSum (exts \lam j => pmap (*c _) (U.basis-split-unique lb (\lam j => r * U.basis-split lb x j) (pmap (r *c) (U.basis-split-char {_} {lb}) *> U.*c_BigSum-ldistr *> pmap BigSum (exts \lam j => inv *c-assoc)) j) *> *c-assoc) *> inv V.*c_BigSum-ldistr
 
   \lemma extend-char {R : Ring} {U V : LModule R} {l : Array U} (lb : U.IsBasis l) (lv : Array V l.len) (j : Fin l.len) : extend lb lv (l j) = lv j
-    => V.BigSum-unique {\lam k => U.basis-split lb (l j) k *c lv k} j (\lam k j/=k => pmap (`*c _) (U.basis_split_/= j/=k) *> V.*c_zro-left) *> pmap (`*c _) U.basis_split_= *> ide_*c
+    => V.BigSum-unique {\lam k => U.basis-split lb (l j) k *c lv k} j (\lam k j/=k => pmap (*c _) (U.basis_split_/= j/=k) *> V.*c_zro-left) *> pmap (*c _) U.basis_split_= *> ide_*c
 
   \lemma basis-ext {R : Ring} {U V : LModule R} (f g : LinearMap U V) {l : Array U} (lb : U.IsGenerated l) (p : \Pi (j : Fin l.len) -> f (l j) = g (l j)) (u : U) : f u = g u
     => \case lb u \with {
@@ -136,7 +136,7 @@
     | f => toMatrix lu bv __
     | ret => toLinearMap bu lv
     | ret_f f => exts \lam u => toLinearMap_toMatrix-left bu bu *> pmap f (basis-ext (extend bu \new lu) id bu.2 (\lam j => inv U.basis-split-char) u)
-    | f_sec A => matrixExt \lam i j => pmap (V.basis-split bv __ j) (V.BigSum-unique {\lam j => U.basis-split bu (lu i) j *c BigSum (\lam k => A j k *c lv k)} i (\lam k i/=k => pmap (`*c _) (U.basis_split_/= i/=k) *> V.*c_zro-left) *> pmap (`*c _) U.basis_split_= *> ide_*c) *> V.basis-split-unique bv (A i) idp j
+    | f_sec A => matrixExt \lam i j => pmap (V.basis-split bv __ j) (V.BigSum-unique {\lam j => U.basis-split bu (lu i) j *c BigSum (\lam k => A j k *c lv k)} i (\lam k i/=k => pmap (*c _) (U.basis_split_/= i/=k) *> V.*c_zro-left) *> pmap (*c _) U.basis_split_= *> ide_*c) *> V.basis-split-unique bv (A i) idp j
 
   \lemma toLinearMap_ide {R : Ring} {U : LModule R} {l : Array U} (lb : U.IsBasis l) : toLinearMap lb l MatrixRing.ide = id {R} {U}
     => (matrix-equiv lb lb).isInj $ (matrix-equiv lb lb).f_sec MatrixRing.ide *> inv (toMatrix_ide lb)
@@ -150,7 +150,7 @@
     => exts \lam u => f.func-BigSum *> pmap BigSum (exts \lam j => func-*c *> pmap (_ *c) (func-BigSum *> pmap BigSum (exts \lam k => func-*c)))
 }
 
-\lemma *-linear-left {R : Ring} {x : R} : LinearMap (RingLModule R) (RingLModule R) (`* x) \cowith
+\lemma *-linear-left {R : Ring} {x : R} : LinearMap (RingLModule R) (RingLModule R) (* x) \cowith
   | func-+ => rdistr
   | func-*c => *-assoc
 
@@ -172,7 +172,7 @@
 
 \lemma linearMap_*c {R : CRing} {A B : LModule R} {r : R} (f : LinearMap A B) : LinearMap A B (\lam a => r *c f a) \cowith
   | func-+ => pmap (r *c) f.func-+ *> *c-ldistr
-  | func-*c => pmap (r *c) f.func-*c *> inv *c-assoc *> pmap (`*c _) *-comm *> *c-assoc
+  | func-*c => pmap (r *c) f.func-*c *> inv *c-assoc *> pmap (*c _) *-comm *> *c-assoc
 
 \lemma linearMap_BigSum {R : Ring} {A B : LModule R} {m : Nat} (f : Fin m -> LinearMap A B) : LinearMap A B (\lam a => BigSum (\lam i => f i a)) \cowith
   | func-+ => cong (ext (\lam i => func-+)) *> B.BigSum_+
@@ -299,14 +299,14 @@
 
     \lemma alternating_perm {n : Nat} {f : Array A n -> B} (fa : isAlternating f) {l l' : Array A n} (p : Perm l l') : f l = Perm.sign p *c f l' \elim n, l, l', p
       | 0, nil, nil, perm-nil => inv ide_*c
-      | suc n, x :: l, _ :: l', perm-:: idp p => alternating_perm (reduce (\lam l => f l) fa) p *> pmap (R.pow -1 __ `*c _) (inv Perm.inversions_perm-::)
+      | suc n, x :: l, _ :: l', perm-:: idp p => alternating_perm (reduce (\lam l => f l) fa) p *> pmap (R.pow -1 __ *c _) (inv Perm.inversions_perm-::)
       | suc (suc n), x :: x' :: l, _ :: _ :: _, perm-swap idp idp idp =>
           f (x :: x' :: l)            ==< substract1from0 fa >==
           f (x - x' :: x' :: l)       ==< add0to1 fa *> simplify >==
           f (x - x' :: x :: l)        ==< substract1from0 fa *> simplify >==
-          f (negative x' :: x :: l)   ==< pmap (\lam y => f (y :: x :: l)) (inv A.neg_ide_*c) *> (fa.1 (x :: l) 0).func-*c *> inv (pmap (`*c _) ide-left) >==
+          f (negative x' :: x :: l)   ==< pmap (\lam y => f (y :: x :: l)) (inv A.neg_ide_*c) *> (fa.1 (x :: l) 0).func-*c *> inv (pmap (*c _) ide-left) >==
           1 * -1 *c f (x' :: x :: l)  `qed
-      | n, l1, l2, perm-trans p1 p2 => alternating_perm fa p1 *> pmap (_ *c) (alternating_perm fa p2) *> inv (pmap (`*c _) (pmap (R.pow -1) Perm.inversions_perm-trans *> R.pow_+) *> *c-assoc)
+      | n, l1, l2, perm-trans p1 p2 => alternating_perm fa p1 *> pmap (_ *c) (alternating_perm fa p2) *> inv (pmap (*c _) (pmap (R.pow -1) Perm.inversions_perm-trans *> R.pow_+) *> *c-assoc)
   }
 
 \lemma isAlternating_zro {R : Ring} {n : Nat} {A B : LModule R} : isAlternating {R} {n} {A} {B} (\lam x => 0)

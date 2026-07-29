@@ -73,7 +73,7 @@
   \lemma gcd_pow_div {a b : E} {n : Nat} (a|bc : LDiv a (pow b n)) (a_b : IsCoprime a b) : TruncP (LDiv a b) \elim n
     | 0 => inP \new LDiv {
       | inv => a|bc.inv * b
-      | inv-right => inv *-assoc *> pmap (`* b) a|bc.inv-right *> ide-left
+      | inv-right => inv *-assoc *> pmap (* b) a|bc.inv-right *> ide-left
     }
     | suc n => \case coprime_*_div (rewrite *-comm in a|bc) a_b \with {
       | inP r => gcd_pow_div r a_b
@@ -103,7 +103,7 @@
 
   \lemma coprime_*_div-left {d e a : E} (d_e : IsCoprime d e) (d|a : LDiv d a) (e|a : LDiv e a) : TruncP (LDiv (d * e) a)
     => \case coprime_*_div (rewrite (inv e|a.inv-right) in d|a) d_e \with {
-      | inP (r : LDiv) => inP $ LDiv.make r.inv $ pmap (`* _) *-comm *> *-assoc *> pmap (e *) r.inv-right *> e|a.inv-right
+      | inP (r : LDiv) => inP $ LDiv.make r.inv $ pmap (* _) *-comm *> *-assoc *> pmap (e *) r.inv-right *> e|a.inv-right
     }
 
   \lemma coprime_BigProd_div-left {l : Array E} {a : E} (p : \Pi (i j : Fin l.len) -> i /= j -> IsCoprime (l i) (l j)) (l|a : \Pi (j : Fin l.len) -> LDiv (l j) a) : TruncP (LDiv (BigProd l) a) \elim l
@@ -122,7 +122,7 @@
   \lemma split-regular {a b c : E} (ar : IsRegularElem a) (a|bc : LDiv a (b * c)) : ∃ (a1 a2 : E) (a = a1 * a2) (LDiv a1 b) (LDiv a2 c)
     => \have | (inP (a1,a2,a|a1a2,a1a2|a,a1|b,a2|c)) => split-equiv a|bc
              | (u : Inv, p) => DivQuotient.regular_equivalent-associates a (a1 * a2) ar a|a1a2 a1a2|a
-       \in inP (u * a1, a2, p *> inv *-assoc, LDiv.trans (LDiv.make u.inv $ *-comm *> inv *-assoc *> pmap (`* _) u.inv-left *> ide-left) a1|b, a2|c)
+       \in inP (u * a1, a2, p *> inv *-assoc, LDiv.trans (LDiv.make u.inv $ *-comm *> inv *-assoc *> pmap (* _) u.inv-left *> ide-left) a1|b, a2|c)
 } \where {
   \func gcd-ldistr_cancel {M : CMonoid} {c x y z : M} (cancel : M.IsRegularElem c) (gcd : GCD x y z) (gcd' : GCD (c * x) (c * y)) : GCD (c * x) (c * y) (c * z)
     => \let | cz|gcd' : LDiv (c * z) gcd' => gcd'.res-univ (c * z) (LDiv.product-left c gcd.res|val1) (LDiv.product-left c gcd.res|val2)
@@ -130,7 +130,7 @@
             | cancel-c {x} {y} (d : LDiv (c * x) (c * y)) => LDiv.make d.inv (cancel (inv *-assoc *> d.inv-right))
             | zs|z : LDiv (z * s) z => gcd.res-univ (z * s) (cancel-c $ transport (LDiv __ _) (inv cz|gcd'.inv-right *> *-assoc) gcd'.res|val1)
                 (cancel-c $ transport (LDiv __ _) (inv cz|gcd'.inv-right *> *-assoc) gcd'.res|val2)
-       \in GCD.~-stable (LDiv.make zs|z.inv $ pmap (`* _) (inv cz|gcd'.inv-right) *> *-assoc *> *-assoc *> pmap (c *) (inv *-assoc) *> pmap (c *) zs|z.inv-right) cz|gcd' gcd'
+       \in GCD.~-stable (LDiv.make zs|z.inv $ pmap (* _) (inv cz|gcd'.inv-right) *> *-assoc *> *-assoc *> pmap (c *) (inv *-assoc) *> pmap (c *) zs|z.inv-right) cz|gcd' gcd'
 }
 
 \class CancelGCDMonoid \extends GCDMonoid, CancelCMonoid {
@@ -151,10 +151,10 @@
       | no r => no \lam p => r p
     }, \lam f a b => \case isGCD a b \with {
       | inP (g : GCD) => \case f g.res|val1.inv \with {
-        | yes (r : Inv) => yes $ LDiv.trans (LDiv.make r.inv $ pmap (`* _) (inv g.res|val1.inv-right) *> *-assoc *> pmap (g *) r.inv-right *> ide-right) g.res|val2
+        | yes (r : Inv) => yes $ LDiv.trans (LDiv.make r.inv $ pmap (* _) (inv g.res|val1.inv-right) *> *-assoc *> pmap (g *) r.inv-right *> ide-right) g.res|val2
         | no r => no \lam a|b => r
             \let a|g : LDiv a g => g.res-univ a LDiv.id-div a|b
-            \in Inv.lmake a|g.inv $ cancel_*-left a $ inv *-assoc *> pmap (`* _) a|g.inv-right *> g.res|val1.inv-right *> inv ide-right
+            \in Inv.lmake a|g.inv $ cancel_*-left a $ inv *-assoc *> pmap (* _) a|g.inv-right *> g.res|val1.inv-right *> inv ide-right
       }
     })
 }
@@ -212,17 +212,17 @@
     | join-univ => GCD.res-univ _
 
   \lemma gcd_*-comm (a b c : E) : gcd a (b * c) = gcd a (gcd a b * c) =>
-    gcd a (b * c)               ==< pmap (`gcd (b * c)) (inv (DivLattice.join_<= (\new LDiv a (a * c) c idp))) >==
+    gcd a (b * c)               ==< pmap (gcd __ (b * c)) (inv (DivLattice.join_<= (\new LDiv a (a * c) c idp))) >==
     gcd (gcd (a * c) a) (b * c) ==< pmap (\lam x => gcd x (b * c)) DivLattice.join-comm >==
     gcd (gcd a (a * c)) (b * c) ==< DivLattice.join-assoc >==
     gcd a (gcd (a * c) (b * c)) ==< pmap (gcd a) (inv (gcd_*-right a b c)) >==
     gcd a (gcd a b * c)         `qed
 }
 
--- | The quotient of a monoid by the equivalence relation ``x ~ y`` iff ``x | y`` and ``y | x``.
+-- | The quotient of a monoid by the equivalence relation `x ~ y` iff `x | y` and `y | x`.
 \func DivQuotient (M : CMonoid) => PreorderC {DivPreoder M}
   \where {
-    {- | The preoreder on a monoid in which ``x <= y`` iff ``y | x``.
+    {- | The preoreder on a monoid in which `x <= y` iff `y | x`.
      -   We define {DivQuotient} as the poset completion of this preorder.
      -}
     \func DivPreoder (M : CMonoid) : Preorder M \cowith
@@ -238,7 +238,7 @@
       Quotient.equalityEquiv (Preorder.EquivRel {DivPreoder M}) p
 
     \func regular_equivalent-associates {M : CMonoid} (x y : M) (xr : M.IsRegularElem x) (x|y : LDiv x y) (y|x : LDiv y x) : associates x y
-      => (Inv.lmake x|y.inv $ xr $ inv *-assoc *> pmap (`* _) x|y.inv-right *> y|x.inv-right *> inv ide-right, inv y|x.inv-right *> *-comm)
+      => (Inv.lmake x|y.inv $ xr $ inv *-assoc *> pmap (* _) x|y.inv-right *> y|x.inv-right *> inv ide-right, inv y|x.inv-right *> *-comm)
 
     \lemma equivalent-associates {M : CancelCMonoid} (x y : M) (p : x ~ y) : associates x y \elim p
        | (inP y|x, inP x|y) => regular_equivalent-associates x y (cancel_*-left x) x|y y|x
@@ -253,7 +253,7 @@
       | *-comm {inD x} {inD y} => pmap inD *-comm
       | <=_*-left (inD z) {inD x} {inD y} (inP (y|x : LDiv)) => inP (\new LDiv {
         | inv => y|x.inv
-        | inv-right => pmap (`* _) *-comm *> *-assoc *> pmap (z *) y|x.inv-right *> *-comm
+        | inv-right => pmap (* _) *-comm *> *-assoc *> pmap (z *) y|x.inv-right *> *-comm
       })
       \where {
       \func \infixl 7 *' {M : CMonoid} (x y : DivQuotient M) : DivQuotient M
@@ -368,7 +368,7 @@
     \lemma <=gcdInv {x y : M} (g : GCD x y) (gi : Inv g) : IsCoprime x y
       => \lam z z|x z|y =>
           \have z|g : LDiv z g => g.res-univ z z|x z|y
-          \in Inv.rmake (z|g.inv * gi.inv) $ inv *-assoc *> pmap (`* _) z|g.inv-right *> gi.inv-right
+          \in Inv.rmake (z|g.inv * gi.inv) $ inv *-assoc *> pmap (* _) z|g.inv-right *> gi.inv-right
 
     \lemma <=gcd {x y : M} (g : GCD x y ide) : IsCoprime x y
       => <=gcdInv g Inv.ide-isInv

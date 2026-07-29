@@ -184,7 +184,7 @@
 
 \lemma integralExt-generated {R S : CRing} (f : RingHom R S) {l : Array S} (fi : ∀ (x : l) (isIntegral f x)) (gen : RingHom.isAlgebraGenerated f l)
   : LModule.IsFinitelyGenerated {homLModule f} \elim l
-  | nil => inP (1 :: nil, \lam x => TruncP.map (gen x) \lam t => (mLastCoef t.1 :: nil, t.2 *> unfold (rewriteI {1} (ret_f {MPoly_Empty {Fin 0} \case __} t.1) $ pmap (`+ 0) simplify)))
+  | nil => inP (1 :: nil, \lam x => TruncP.map (gen x) \lam t => (mLastCoef t.1 :: nil, t.2 *> unfold (rewriteI {1} (ret_f {MPoly_Empty {Fin 0} \case __} t.1) $ pmap (+ 0) simplify)))
   | a :: l =>
     \let | g => polyImageHom f a
          | h => IRing.embed {polyImage f a}

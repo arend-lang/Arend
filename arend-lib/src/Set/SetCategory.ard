@@ -167,7 +167,7 @@
       | suc n => idp
 
     \lemma natHom-comp {n m k : Nat} {s : \Sigma (l : Nat) (n + l = m)} {t : \Sigma (l : Nat) (m + l = k)}
-      : natHom (s.1 + t.1, inv +-assoc *> pmap (`+ _) s.2 *> t.2) = natHom t ∘ natHom s \elim k, t
+      : natHom (s.1 + t.1, inv +-assoc *> pmap (+ _) s.2 *> t.2) = natHom t ∘ natHom s \elim k, t
       | 0, (0, idp) => pmap natHom (sigma-isProp _ _) *> inv id-left
       | suc k, (0, idp) => pmap natHom (sigma-isProp _ _) *> inv id-left
       | 0, (suc m, ())

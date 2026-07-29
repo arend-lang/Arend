@@ -385,7 +385,7 @@
   | 0 => (nil, Sym.equals \lam (0) => cases (e 0) idp)
   | suc n => \have r => transposition1-decomp (reduce e)
              \in (map fsuc r.1 ++ \new Array (Fin (suc n)) (e 0) (\lam j => j Nat.mod suc n),
-                  aux NatOrder.zero<suc *> pmap (`* _) {lift (reduce e)} (pmap lift r.2 *> lift_BigProd *> path (\lam i => BigProd (map (\lam a => lift_transposition1 {n} {a} i) r.1))) *> inv (pmap BigProd (map_++ transposition1) *> BigProd_++))
+                  aux NatOrder.zero<suc *> pmap (* _) {lift (reduce e)} (pmap lift r.2 *> lift_BigProd *> path (\lam i => BigProd (map (\lam a => lift_transposition1 {n} {a} i) r.1))) *> inv (pmap BigProd (map_++ transposition1) *> BigProd_++))
   \where {
     \open Monoid
     \open NatOrder
@@ -409,7 +409,7 @@
                       \in inv $ BigProd-fixed (\lam i => transposition1.transposition1_> $ transportInv (suc __ < _) (mod_Fin_< $ fin_< i <∘l <_suc_<= (fin_< (e 0))) $ suc_<_<= (fin_< i) NatSemiring.<∘r transportInv (_ <) t1 s) *> nat_fin_= t1
           | Tri.equals s => \case e.isInj (nat_fin_= s)
           | greater s =>
-            \have | r => pmap (transposition1 __ _) (nat_fin_= $ mod_Fin_< (transportInv (`< n) (toFin'=id s) $ s NatSemiring.<∘l <_suc_<= (fin_< (e 0))) *> toFin'=id s *> inv (FinSet.skip-left s)) *> transposition1.transposition1-right *> nat_fin_= (FinSet.skip-left s)
+            \have | r => pmap (transposition1 __ _) (nat_fin_= $ mod_Fin_< (transportInv (< n) (toFin'=id s) $ s NatSemiring.<∘l <_suc_<= (fin_< (e 0))) *> toFin'=id s *> inv (FinSet.skip-left s)) *> transposition1.transposition1-right *> nat_fin_= (FinSet.skip-left s)
                   | t i => inv $ mod_Fin_< $ fin_< i <∘l <_suc_<= (fin_< (e 0))
             \in inv $ BigProd-unique (toFin' s) (\lam i p => transposition1.transposition1_> $ later $ NatOrder.suc<suc $ transport2 (<) (t i) (toFin'=id s *> inv (FinSet.skip-left s)) p) (\lam i p => pmap (transposition1 _) r *> transposition1.transposition1_< (transport2 (<) (toFin'=id s) (t i) p) *> inv r) *> r
         }
@@ -630,7 +630,7 @@
             | 0, suc j2 => \lam s1 s2 => absurd $ r-supp $ rewrite (inv r.4, inv (c-supp s1).2) in independent_Support_BigProd r.3 s2
             | suc j1, 0 => \lam s1 s2 => absurd $ r-supp $ rewrite (inv r.4, inv (c-supp s2).2) in independent_Support_BigProd r.3 s1
             | suc j1, suc j2 => \lam s1 s2 => pmap fsuc (r.3 j1 j2 s1 s2)
-          }, inv (pmap (`* e) inverse-right *> ide-left) *> *-assoc {SymmetricGroup n} {c} {inverse c} *> pmap (c *) r.4)
+          }, inv (pmap (* e) inverse-right *> ide-left) *> *-assoc {SymmetricGroup n} {c} {inverse c} *> pmap (c *) r.4)
         | inr r => (nil, (\case __), (\case __), Sym.equals \lam j => tightness (r j))
       }
 

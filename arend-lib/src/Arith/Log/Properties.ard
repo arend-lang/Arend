@@ -41,7 +41,7 @@
       => \let | log1p-eq-inverse : log1+.asFld = inverse exp-1-coef.asFld
                   => cancel_*-left exp-1-coef.asFld $ exts (ext \lam k => compose-coef-expm1-log1p k) *> inv inverse-right
               | log1p-times-expM1-eq-ide : log1+.asFld * exp-1-coef.asFld = 1
-                  => pmap (`* _) log1p-eq-inverse *> inverse-left
+                  => pmap (* _) log1p-eq-inverse *> inverse-left
          \in pmap (\lam (s : FormalLineDiffeomorphism RatField) => s.f k) log1p-times-expM1-eq-ide
 
     \private \lemma coef-eq-helper {A : RealBanachAlgebra} (k : Nat)
@@ -102,14 +102,14 @@
           => RealField.<=_*_positive_positive (rat_real_<=.1 (exp-1-coef.coef>=0 k)) $ RealField.pow>=0 (rat_real_<=.1 q>=0)
         | iss : IsSeriesSum t-real (exp (q : Real) - 1)
           => transport (IsSeriesSum __ _)
-              (ext \lam k => pmap (`* RealField.pow (Real.fromRat q) k) (RealStoneC*Algebra_fromRat (exp-1-coef k)))
+              (ext \lam k => pmap (* RealField.pow (Real.fromRat q) k) (RealStoneC*Algebra_fromRat (exp-1-coef k)))
               (exp-1-coef.seriesSum (q : Real))
         | term-eq k : t-rat k = {Real} t-real k
           => inv RealField.*-rat *> pmap (_ *) (inv RealField.pow-rat)
         | partial-eq-Real : partialSum t-rat N = {Real} partialSum t-real N
           => partialSum_hom rat-real-hom *> pmap (partialSum __ N) (ext term-eq)
         | final-real-bound : partialSum t-rat N RealAbGroup.<= exp (q : Real) - 1
-          => transport (`<= _) (inv partial-eq-Real) (partialSum_<=_seriesSum t-real>=0 iss N)
+          => transport (<= _) (inv partial-eq-Real) (partialSum_<=_seriesSum t-real>=0 iss N)
         \in partialSum_<= (term-bound q q>=0 wU)
             <=∘ =_<= (inv (partialSum_hom rat-upperReal))
             <=∘ Real.<=-upper.1 final-real-bound

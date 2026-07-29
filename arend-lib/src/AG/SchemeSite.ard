@@ -137,9 +137,9 @@
              => Ideal.sclosure-univ {_} {_} {LocalizationIdeal (I a) _ dl} (later \lam {y} (inP (b,c,bc,Uc,bd,bl)) => \case dl.localization-surj y \with {
                | inP (r, _, inP (n,idp), q) => inP (_, inP (suc n, idp), z * r, Ideal.sclosure-superset $ inP $ later (b, c, bc, Uc, bd <=∘ da,
                     transportInv (Localization _ _) R.Func-o $ Localization.comp1 dl $ Localization.transportSubMonoid1 bl
-                      (inP (1, LDiv.make (dl.localization-inv (inP (n,idp))).inv $ pmap (`* _) (inv q) *> *-assoc *> pmap (y *) LDiv.inv-right *> ide-right *> inv ide-left))
+                      (inP (1, LDiv.make (dl.localization-inv (inP (n,idp))).inv $ pmap (* _) (inv q) *> *-assoc *> pmap (y *) LDiv.inv-right *> ide-right *> inv ide-left))
                       (inP (1, LDiv.make _ $ q *> inv ide-left))),
-                  pmap (y *) func-* *> inv *-assoc *> pmap (`* _) q *> *-comm *> inv func-*)
+                  pmap (y *) func-* *> inv *-assoc *> pmap (* _) q *> *-comm *> inv func-*)
              }) __
            | (inP h) => FinSet.finiteAC \lam j => \case (l j).2.2 \return ∃ (n : Nat) (I a (pow (l j).2.1 n)) \with {
                | inP (b,c,bc,Tc,ba,bl) => \case (LocalizationIdeal.unit-char {I a} bl).1 $ lem ba bl $ basicCover-stable bc $ Cover_Ideal (T<=U Tc) \with {
@@ -227,7 +227,7 @@
     => \case FinSet.finiteAC (\lam j => Localization.localization-inj1 (L j) (e j)) \with {
       | inP h => \case pow-lin-comb1 lc (\lam j => (h j).1) \with {
         | inP (ts,q) => inv ide-right *> pmap (x *) (inv q) *> R.BigSum-ldistr
-          *> pmap R.BigSum (exts \lam j => pmap (x *) *-comm *> inv *-assoc *> pmap (`* _) (h j).2 *> *-assoc *> pmap (y *) *-comm)
+          *> pmap R.BigSum (exts \lam j => pmap (x *) *-comm *> inv *-assoc *> pmap (* _) (h j).2 *> *-assoc *> pmap (y *) *-comm)
           *> inv R.BigSum-ldistr *> pmap (y *) q *> ide-right
       }
     }
@@ -239,9 +239,9 @@
     : ∃ (r : R) ∀ (j : Fin l.len) (L j r = v j)
     => \let | (inP v') => FinSet.finiteAC \lam j => Localization.localization-surj1 (L j) (v j)
             | am i j : (Lc i j).1 (L i ((v' i).1 * pow (l j).2 (v' j).2)) = (Lc i j).1 (L i ((v' j).1 * pow (l i).2 (v' i).2))
-               => pmap (Lc i j).1 (func-* *> pmap (`* _) (inv (v' i).3)) *> func-* *> pmap (`* _) func-* *> *-assoc
-               *> pmap2 (*) (Lc i j).4 (*-comm *> pmap2 (*) ((Lc i j).3 _) ((Lc i j).3 _)) *> inv *-assoc *> pmap (`* _) (inv func-*)
-               *> inv func-* *> pmap (Lc i j).2 (pmap (`* _) (v' j).3 *> inv func-*) *> inv ((Lc i j).3 _)
+               => pmap (Lc i j).1 (func-* *> pmap (* _) (inv (v' i).3)) *> func-* *> pmap (* _) func-* *> *-assoc
+               *> pmap2 (*) (Lc i j).4 (*-comm *> pmap2 (*) ((Lc i j).3 _) ((Lc i j).3 _)) *> inv *-assoc *> pmap (* _) (inv func-*)
+               *> inv func-* *> pmap (Lc i j).2 (pmap (* _) (v' j).3 *> inv func-*) *> inv ((Lc i j).3 _)
             | (inP kp) => (ProdFin (FinFin l.len) (FinFin l.len)).choice \lam (i,j) => Localization.localization-inj1 (Localization.comp1 (L i) (Lc i j).1) (am i j)
             | k => NatBSemilattice.FinJoin \lam ij => (kp ij).1
             | (inP (ts,q)) => pow-lin-comb1 lc (\lam j => (v' j).2 + k)
@@ -251,8 +251,8 @@
                 (\let | x => (l i).2 | y => (l j).2 | e => (kp (j,i)).1 | d => k -' e
                       | k=d+e : k = e + d => inv $ <=_exists $ NatBSemilattice.FinJoin-cond (j,i)
                       | split z : pow z k = pow z e * pow z d => pmap (pow z) k=d+e *> pow_+
-                 \in equation.cMonoid {split x, split y, pmap (`* pow x d * pow y d) $ rewrite R.pow_*-comm in (kp (j,i)).2, pow_+, split y})
-                *> inv *-assoc *> pmap (`* _) *-comm *> *-assoc) *> inv R.BigSum-ldistr *> pmap (_ *) q *> ide-right) *> func-*) *> inv (v' i).3)
+                 \in equation.cMonoid {split x, split y, pmap (* (pow x d * pow y d)) $ rewrite R.pow_*-comm in (kp (j,i)).2, pow_+, split y})
+                *> inv *-assoc *> pmap (* _) *-comm *> *-assoc) *> inv R.BigSum-ldistr *> pmap (_ *) q *> ide-right) *> func-*) *> inv (v' i).3)
 }
 
 \record SatSchemeSite.{u} \extends SchemeSite.{u} {
@@ -287,7 +287,7 @@
               (later \lam {y} (inP (d,c,dc,Uc,db,dl)) => \case (loc-principal.1 bp).localization-surj y \with {
                 | inP (z, _, inP (n,idp), q) =>
                   \have ei => (loc-principal.1 bp).localization-inv (inP (suc n, idp))
-                  \in transportInv (Ideal.sclosure _) (ei.rotate-inv-right $ pmap (y *) func-* *> inv *-assoc *> pmap (`* _) q *> *-comm *> inv func-*) $
+                  \in transportInv (Ideal.sclosure _) (ei.rotate-inv-right $ pmap (y *) func-* *> inv *-assoc *> pmap (* _) q *> *-comm *> inv func-*) $
                       ideal-right $ Ideal.sclosure-superset $ SetIm-con $ inP $ later (c, Uc, d, dc, db,
                         transportInv (Localization _ _) R.Func-o $ Localization.comp1 (loc-principal.1 bp) $ Localization.transportSubMonoid1 dl
                         (inP (1, LDiv.make _ $ inv (((loc-principal.1 bp).localization-inv (inP (n, idp))).rotate-inv-right q) *> inv ide-left))

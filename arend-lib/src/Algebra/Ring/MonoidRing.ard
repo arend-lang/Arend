@@ -49,8 +49,8 @@
     \func ~_++-left {M : \Set} {R : AddMonoid} {l1 l2 l : Array (\Sigma R M)} (e : l1 ~ l2) : (l1 ++ l) ~ (l2 ++ l) \elim e
       | ~-perm e => ~-perm (eperm-++-left e)
       | ~-sym e => ~-sym (~_++-left e)
-      | ~-zro p => ~-zro (pmap (`++ l) p)
-      | ~-+ m p q => ~-+ m (pmap (`++ l) p) (pmap (`++ l) q)
+      | ~-zro p => ~-zro (pmap (++ l) p)
+      | ~-+ m p q => ~-+ m (pmap (++ l) p) (pmap (++ l) q)
 
     \lemma ~_++-right {M : \Set} {R : AddMonoid} {l l1 l2 : Array (\Sigma R M)} (e : Closure (~) l1 l2) : Closure (~) (l ++ l1) (l ++ l2) \elim e
       | cin e => cin (~-perm eperm-++-comm) `ctrans` cin (~_++-left e) `ctrans` cin (~-perm eperm-++-comm)
@@ -410,8 +410,8 @@
       : R.BigSum (map (\lam s => s.1 * f s.2) l) = R.BigSum (map (\lam s => s.1 * f s.2) l') \elim r
       | ~-perm e => R.BigSum_EPerm $ EPerm_map (\lam s => s.1 * f s.2) e
       | ~-sym r => inv (evalMS-coh f r)
-      | ~-zro idp => pmap (`+ _) zro_*-left *> zro-left
-      | ~-+ m idp idp => pmap (`+ _) rdistr *> +-assoc
+      | ~-zro idp => pmap (+ _) zro_*-left *> zro-left
+      | ~-+ m idp idp => pmap (+ _) rdistr *> +-assoc
   }
 
 \func evalMSMonoidHom {M : \Set} {R : Semiring} (f : M -> R) : AddMonoidHom (MonoidAbMonoid M R) R \cowith
@@ -453,7 +453,7 @@
   | func-+ {p q : Poly R} : polyToMonoidSet m (p + q) = polyToMonoidSet m p + polyToMonoidSet m q \elim p, q {
     | pzero, q => inv zro-left
     | p, pzero => pmap (polyToMonoidSet m) +-comm *> inv zro-right
-    | padd p a, padd q b => rewrite (func-+,rdistr,msMonomial_+) $ +-assoc *> pmap (_ +) (later (inv +-assoc) *> pmap (`+ _) +-comm *> +-assoc) *> inv +-assoc
+    | padd p a, padd q b => rewrite (func-+,rdistr,msMonomial_+) $ +-assoc *> pmap (_ +) (later (inv +-assoc) *> pmap (+ _) +-comm *> +-assoc) *> inv +-assoc
   }
 
 \func polyToMonoidSetRingHom {M : CMonoid} {R : CRing} (m : M) : RingHom (PolyRing R) (MonoidRing M R) \cowith
@@ -461,7 +461,7 @@
   | func-ide => idp
   | func-* {p q : Poly R} : polyToMonoidSet m (p * q) = polyToMonoidSet m p * polyToMonoidSet m q \elim p {
     | pzero => inv zro_*-left
-    | padd p a => polyToMonoidSetHom.func-+ *> pmap2 (+) (pmap (_ +) msMonomial_0 *> zro-right *> pmap (`* _) func-* *> *-assoc *> pmap (_ *) *-comm *> inv *-assoc) func-*c *> inv rdistr
+    | padd p a => polyToMonoidSetHom.func-+ *> pmap2 (+) (pmap (_ +) msMonomial_0 *> zro-right *> pmap (* _) func-* *> *-assoc *> pmap (_ *) *-comm *> inv *-assoc) func-*c *> inv rdistr
   }
   \where {
     \lemma func-*c {m : M} {a : R} {p : Poly R} : polyToMonoidSet m (a PolyRing.*c p) = msMonomial a ide * polyToMonoidSet m p \elim p
