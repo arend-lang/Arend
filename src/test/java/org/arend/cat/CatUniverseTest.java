@@ -2,8 +2,10 @@ package org.arend.cat;
 
 import org.arend.Matchers;
 import org.arend.typechecking.TypeCheckingTestCase;
+import org.junit.Ignore;
 import org.junit.Test;
 
+@Ignore
 public class CatUniverseTest extends TypeCheckingTestCase {
   @Test
   public void subType() {

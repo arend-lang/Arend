@@ -74,7 +74,6 @@ class ArendUniverseAtom(node: ASTNode) : ArendExpr(node), ArendArgument {
         val child = firstRelevantChild
         return when (child.elementType) {
             SET -> acceptSet(this, child!!, null, visitor, params)
-            CAT_UNIVERSE -> acceptCatUniverse(this, child!!, null, visitor, params)
             UNIVERSE -> acceptUniverse(this, child!!, null, visitor, params)
             TRUNCATED_UNIVERSE -> acceptTruncated(this, child!!, null, visitor, params)
             else -> error("Incorrect expression: universe")
