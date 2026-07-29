@@ -5,6 +5,7 @@ import org.jetbrains.intellij.platform.gradle.tasks.GenerateParserTask
 import org.jetbrains.intellij.platform.gradle.IntelliJPlatformType
 import org.jetbrains.intellij.platform.gradle.TestFrameworkType
 import org.jetbrains.intellij.platform.gradle.tasks.BuildPluginTask
+import org.jetbrains.intellij.platform.gradle.tasks.BuildSearchableOptionsTask
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 import org.jetbrains.intellij.platform.gradle.tasks.PatchPluginXmlTask
 import org.jetbrains.intellij.platform.gradle.tasks.RunIdeTask
@@ -107,6 +108,46 @@ configurations.all {
 
 tasks.named<JavaExec>("runIde") {
     jvmArgs = listOf("-Xmx4g")
+}
+
+// `buildSearchableOptions` boots an IDE and runs `TraverseUIStarter`, which instantiates *every*
+// registered Configurable on the EDT to scrape its labels. Since we hard-depend on `com.jetbrains.edu`
+// (see plugin.xml), that includes the JetBrains Academy settings page:
+//   EduConfigurable.createComponent -> LoginOptions.initAccounts -> MarketplaceConnector.getAccount
+//   -> MarketplaceSettings.getMarketplaceAccount -> getJBAUserInfo -> getJBAIdToken
+// `getMarketplaceAccount` returns early only while no JetBrains Account is logged in; otherwise it goes
+// on to the *blocking* `JBAccountInfoService.getIdToken()`, called from the EDT, whose future is never
+// completed in this IDE mode. The event thread then parks forever and the build never finishes (the
+// symptom is `buildPlugin` sitting at 0% CPU in buildSearchableOptions with no network activity).
+//
+// The account is not part of the sandbox: it lives in the machine-global `java.util.prefs` store, at
+// ~/.java/.userPrefs/jetbrains/jetprofile (keys `userid` and `idtoken`). Pointing this throwaway IDE at
+// an empty prefs root is enough to make the Academy page render as logged out, so the traversal walks
+// past it and we still get searchable options for our own settings pages.
+//
+// The task also gets its own config/system/log directories. By default it shares them with `runIde`
+// (the plugin wires every SandboxAware task to `prepareSandbox`), so building while a sandbox IDE is
+// open trips the single-instance lock and the task dies with "Only one instance of IDEA can be run at
+// a time." Only the plugins directory stays shared — that is the one `prepareSandbox` populates, and
+// loading the plugin under test is all we need from it.
+tasks.withType<BuildSearchableOptionsTask>().configureEach {
+    val ideDirectory = layout.buildDirectory.dir("tmp/searchableOptionsIde").get().asFile
+    val prefsRoot = ideDirectory.resolve("prefs")
+    val configDirectory = ideDirectory.resolve("config")
+    val systemDirectory = ideDirectory.resolve("system")
+    val logDirectory = ideDirectory.resolve("log")
+
+    systemProperty("java.util.prefs.userRoot", prefsRoot.absolutePath)
+    sandboxConfigDirectory.set(configDirectory)
+    sandboxSystemDirectory.set(systemDirectory)
+    sandboxLogDirectory.set(logDirectory)
+
+    doFirst {
+        // `SandboxArgumentProvider` silently omits -Didea.{config,system,log}.path for directories that
+        // do not exist yet, which would send this IDE to the developer's real IntelliJ config. The
+        // arguments are computed in the task action, so creating the directories here is early enough.
+        listOf(prefsRoot, configDirectory, systemDirectory, logDirectory).forEach { it.mkdirs() }
+    }
 }
 
 tasks.withType<PatchPluginXmlTask>().configureEach {
