@@ -33,7 +33,7 @@
 \import Relation.Equivalence
 \import Set.Fin
 \import Set.Fin.Instances
-\import Set.Subset
+\import Set.Set
 \import Topology.Locale
 \import Topology.Locale.PreorderSite
 \open SubMonoid

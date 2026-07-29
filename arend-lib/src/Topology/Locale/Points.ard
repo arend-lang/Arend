@@ -11,7 +11,7 @@
 \import Paths.Meta
 \import Set
 \import Set.Filter
-\import Set.Subset
+\import Set.Set
 \import Topology.Locale
 \import Topology.Locale.LocaleCat
 \import Topology.Locale.PreorderSite

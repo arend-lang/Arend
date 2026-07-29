@@ -10,7 +10,7 @@
 \import Paths.Meta
 \import Relation.Equivalence
 \import Set.Filter
-\import Set.Subset
+\import Set.Set
 \import Topology.CoverSpace
 \import Topology.CoverSpace.CoverSpaceCategory
 \import Topology.CoverSpace.Complete

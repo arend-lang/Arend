@@ -6,7 +6,7 @@
 \import Operations
 \import Order.PartialOrder
 \import Paths.Meta
-\import Set.Subset
+\import Set.Set
 \import Topology.CoverSpace
 \import Topology.CoverSpace.Complete
 \import Topology.CoverSpace.Product

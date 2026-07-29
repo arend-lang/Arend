@@ -12,7 +12,7 @@
 \import Paths.Meta
 \import Set
 \import Set.Fin
-\import Set.Subset
+\import Set.Set
 \import Set.Fin.KFin
 
 \record KFinSetOf (X : \Set) (\coerce P : X -> \Prop) {

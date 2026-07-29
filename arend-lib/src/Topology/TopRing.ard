@@ -4,7 +4,7 @@
 \import Logic
 \import Logic.Meta
 \import Paths
-\import Set.Subset
+\import Set.Set
 \import Topology.TopAbGroup
 \import Topology.TopModule
 \import Topology.TopSpace

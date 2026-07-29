@@ -5,7 +5,7 @@
 \import Order.Lattice.CompleteLattice
 \import Order.PartialOrder
 \import Paths.Meta
-\import Set.Subset
+\import Set.Set
 
 \record Filter (A : TopMeetSemilattice) (\coerce F : A -> \Prop)
   | filter-mono {a b : A} : F a -> a <= b -> F b

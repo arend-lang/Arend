@@ -31,7 +31,7 @@
 \import Order.PartialOrder
 \import Paths
 \import Paths.Meta
-\import Set.Subset
+\import Set.Set
 \import Topology.Locale
 \import Topology.Locale.LocaleCat
 \import Topology.Locale.PreorderSite

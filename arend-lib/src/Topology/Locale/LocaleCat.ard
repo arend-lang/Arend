@@ -19,7 +19,7 @@
 \import Paths.Meta
 \import Set
 \import Set.SetCategory
-\import Set.Subset
+\import Set.Set
 \import Topology.Locale
 \import Topology.Locale.LocaleColimits
 \import Topology.Locale.LocaleProduct

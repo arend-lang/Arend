@@ -7,7 +7,7 @@
 \import Order.Lattice
 \import Order.PartialOrder
 \import Paths.Meta
-\import Set.Subset
+\import Set.Set
 \import Topology.TopSpace
 
 \instance TopSpaceHasProduct.{u} : HasProduct TopSpace.{u}

@@ -15,7 +15,7 @@
 \import Order.PartialOrder
 \import Paths
 \import Paths.Meta
-\import Set.Subset
+\import Set.Set
 \import Topology.Locale.PreorderSite
 
 \lemma denseSite-FF (f : SiteDensePrehom) {E : Precat} {F : Functor f.D.op E} {G : Functor f.D.op E} (G-sheaf : IsSheaf G)

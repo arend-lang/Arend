@@ -20,7 +20,7 @@
 \import Order.StrictOrder
 \import Paths
 \import Paths.Meta
-\import Set.Subset
+\import Set.Set
 \open LatticeAbGroup
 
 \func IsSup (A : Set Real) (b : Real) : \Prop

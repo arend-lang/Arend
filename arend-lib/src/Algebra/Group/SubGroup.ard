@@ -19,7 +19,7 @@
 \import Set.Fin.Instances
 \import Set.SetHom
 \import Set.SubSet
-\import Set.Subset
+\import Set.Set
 \open Group \hiding (Dec)
 
 \class SubGroup \extends SubMonoid {

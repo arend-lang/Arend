@@ -26,7 +26,7 @@
 \import Paths.Meta
 \import Set.Fin
 \import Set.Fin.KFinSetOf
-\import Set.Subset
+\import Set.Set
 \import Topology.RatherBelow
 \open MeetSemilattice
 \open JoinSemilattice

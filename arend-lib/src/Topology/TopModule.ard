@@ -8,7 +8,7 @@
 \import Order.Lattice
 \import Paths
 \import Paths.Meta
-\import Set.Subset
+\import Set.Set
 \import Topology.TopAbGroup
 \import Topology.TopAbGroup.Complete
 \import Topology.TopAbGroup.Product

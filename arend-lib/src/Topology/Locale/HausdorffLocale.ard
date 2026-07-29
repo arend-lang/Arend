@@ -7,7 +7,7 @@
 \import Order.Lattice.CompleteLattice
 \import Order.PartialOrder
 \import Paths
-\import Set.Subset
+\import Set.Set
 \import Topology.Locale
 \import Topology.Locale.LocaleProduct
 \import Topology.Locale.PreorderSite

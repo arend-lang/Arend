@@ -19,7 +19,7 @@
 \import Order.StrictOrder
 \import Paths
 \import Set.Fin
-\import Set.Subset
+\import Set.Set
 \import Topology.Compact
 \import Topology.CoverSpace
 \import Topology.CoverSpace.Complete

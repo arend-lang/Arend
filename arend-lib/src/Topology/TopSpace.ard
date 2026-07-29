@@ -11,7 +11,7 @@
 \import Set
 \import Set.SetHom
 \import Set.Filter
-\import Set.Subset
+\import Set.Set
 
 \class TopSpace \extends BaseSet {
   | isOpen : Set E -> \Prop

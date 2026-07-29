@@ -17,7 +17,7 @@
 \import Set
 \import Set.Fin
 \import Set.Fin.Instances
-\import Set.Subset
+\import Set.Set
 
 \class PosetAddMonoid \extends AddMonoid, Poset {
   | <=_+ {a b c d : E} : a <= b -> c <= d -> a + c <= b + d

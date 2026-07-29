@@ -20,7 +20,7 @@
 \import Paths
 \import Paths.Meta
 \import Set.Filter
-\import Set.Subset
+\import Set.Set
 \import Topology.Locale
 \import Topology.Locale.Points
 \import Topology.Locale.PreorderSite

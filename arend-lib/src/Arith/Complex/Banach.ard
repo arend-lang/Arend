@@ -27,7 +27,7 @@
 \import Arith.Rat
 \import Order.Lattice
 \import Set.Filter
-\import Set.Subset
+\import Set.Set
 \import Topology.CoverSpace
 \import Topology.CoverSpace.Complete
 \import Topology.MetricSpace

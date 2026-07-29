@@ -15,7 +15,7 @@
 \import Set
 \import Set.Fin
 \import Set.Fin.Instances
-\import Set.Subset
+\import Set.Set
 \import Topology.CoverSpace
 \import Topology.CoverSpace.Complete
 \import Topology.MetricSpace

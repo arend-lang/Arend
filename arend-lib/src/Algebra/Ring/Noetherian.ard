@@ -15,7 +15,7 @@
 \import Order.PartialOrder
 \import Paths
 \import Paths.Meta
-\import Set.Subset
+\import Set.Set
 
 \class WeaklyNoetherianCRing \extends CRing
   | isWeaklyNoetherian (I : Nat -> Ideal \this) : (\Pi (n : Nat) -> (I n).IsFinitelyGenerated) -> Ideal.ChainCondition I

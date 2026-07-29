@@ -10,7 +10,7 @@
 \import Paths
 \import Paths.Meta
 \import Set.Filter
-\import Set.Subset
+\import Set.Set
 \import Topology.RatherBelow
 \import Topology.TopSpace
 \open Set

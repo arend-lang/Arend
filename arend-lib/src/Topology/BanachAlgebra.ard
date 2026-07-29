@@ -31,7 +31,7 @@
 \import Order.StrictOrder
 \import Paths
 \import Paths.Meta
-\import Set.Subset
+\import Set.Set
 \import Topology.BanachSpace
 \import Topology.CoverSpace.Complete
 \import Topology.CoverSpace.CompletionTools

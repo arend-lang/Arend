@@ -8,7 +8,7 @@
 \import Order.PartialOrder
 \import Paths
 \import Paths.Meta
-\import Set.Subset (Set, ⊆)
+\import Set.Set (Set, ⊆)
 
 \func Presieve {C : Precat} (x : C)
   => Set (ObOver x)
