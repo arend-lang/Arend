@@ -31,8 +31,10 @@ public class DefinitionDeserialization implements ArendDeserializer {
   private final DependencyListener myDependencyListener; // TODO[server2]: Delete this; set dependencies from concrete instead.
   private final SerializableKeyRegistryImpl myKeyRegistry;
   private final DefinitionListener myDefinitionListener;
+  private final DeferredBoxFixes myDeferredBoxFixes;
 
-  public DefinitionDeserialization(CallTargetProvider callTargetProvider, DependencyListener dependencyListener, SerializableKeyRegistryImpl keyRegistry, DefinitionListener definitionListener) {
+  public DefinitionDeserialization(CallTargetProvider callTargetProvider, DependencyListener dependencyListener, SerializableKeyRegistryImpl keyRegistry, DefinitionListener definitionListener, DeferredBoxFixes deferredBoxFixes) {
+    myDeferredBoxFixes = deferredBoxFixes;
     myCallTargetProvider = callTargetProvider;
     myDependencyListener = dependencyListener;
     myKeyRegistry = keyRegistry;
@@ -40,7 +42,7 @@ public class DefinitionDeserialization implements ArendDeserializer {
   }
 
   public void fillInDefinition(DefinitionProtos.Definition defProto, Definition def) throws DeserializationException {
-    final ExpressionDeserialization defDeserializer = new ExpressionDeserialization(myCallTargetProvider, myDependencyListener, def);
+    final ExpressionDeserialization defDeserializer = new ExpressionDeserialization(myCallTargetProvider, myDependencyListener, def, myDeferredBoxFixes);
 
     switch (defProto.getDefinitionDataCase()) {
       case CLASS -> fillInClassDefinition(defDeserializer, defProto.getClass_(), (ClassDefinition) def);

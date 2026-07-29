@@ -3,8 +3,10 @@ package org.arend.frontend.library;
 import org.arend.core.definition.Definition;
 import org.arend.ext.error.ErrorReporter;
 import org.arend.ext.module.ModuleLocation;
+import org.arend.ext.module.ModulePath;
 import org.arend.extImpl.SerializableKeyRegistryImpl;
 import org.arend.module.error.BinaryCacheError;
+import org.arend.module.serialization.DeferredBoxFixes;
 import org.arend.module.serialization.ModuleDeserialization;
 import org.arend.naming.reference.InternalReferable;
 import org.arend.naming.reference.LocatedReferable;
@@ -53,6 +55,13 @@ public class BinaryLoader {
    *       This requires all dependency modules to have completed phase 1.</li>
    * </ol>
    *
+   * <p>Phase 2 needs more from its dependencies than phase 1 provides. Resolving a call target
+   * only needs the shell -- object identity is preserved, because filling a definition mutates
+   * it in place -- but the smart constructors that build the deserialized expressions
+   * <em>inspect</em> the callee, and a shell answers those questions wrongly rather than
+   * failing. So phase 2 runs dependencies-first, and {@link DeferredBoxFixes} covers what
+   * ordering cannot: import cycles mean no order satisfies every module.
+   *
    * @param library  the library whose modules should be loaded from binary.
    * @param server   the server containing the raw-loaded modules.
    */
@@ -94,6 +103,10 @@ public class BinaryLoader {
       }
     }
 
+    // Process dependencies before dependents, so that phase 2b's expression building sees
+    // filled-in callees wherever the import graph allows it.
+    pending = sortDependenciesFirst(pending, server);
+
     // Phase 2a: fill in Definition shells on all groups (no cross-module scope needed)
     List<PendingBinaryLoad> phase2b = new ArrayList<>();
     for (PendingBinaryLoad load : pending) {
@@ -115,9 +128,11 @@ public class BinaryLoader {
     int failed = 0;
     int incomplete = 0;
     List<PendingBinaryLoad> loadedLoads = new ArrayList<>();
+    DeferredBoxFixes boxFixes = new DeferredBoxFixes();
     for (PendingBinaryLoad load : phase2b) {
       ConcreteGroup group = server.getRawGroup(load.module);
       try {
+        load.deserialization.setDeferredBoxFixes(boxFixes);
         load.deserialization.readModule(
             server.getModuleScopeProvider(load.module.getLibraryName(), false),
             new org.arend.typechecking.order.dependency.DependencyCollector(null));
@@ -132,6 +147,11 @@ public class BinaryLoader {
         }
       }
     }
+
+    // Every module of this pass is filled in now, so any defcall that was built while its
+    // callee was still a shell can finally get its \box wrapping. Must happen before phase 2c,
+    // which inspects the loaded expressions.
+    int boxFixCount = boxFixes.apply();
 
     // Phase 2c: a module that fillInDefinition partway through leaves later
     // definitions in NEEDS_TYPE_CHECKING state with null result type.  Modules
@@ -170,8 +190,52 @@ public class BinaryLoader {
       System.out.println("[INFO] Binary cache: " + loaded + " loaded"
           + (incomplete > 0 ? ", " + incomplete + " incomplete" : "")
           + (failed > 0 ? ", " + failed + " failed" : "")
-          + " out of " + pending.size() + " candidates");
+          + " out of " + pending.size() + " candidates"
+          // Routinely non-zero and not a warning: ordering only sequences whole modules, so any
+          // forward reference within a module -- plus every import cycle -- still builds a
+          // defcall before its callee is filled. Reported because this is the path that used to
+          // silently produce bogus source-level errors.
+          + (boxFixCount > 0 ? ", " + boxFixCount + " deferred box fix(es)" : ""));
     }
+  }
+
+  /**
+   * Orders {@code pending} so that a module comes after everything it imports. Import cycles are
+   * unavoidable in practice (e.g. {@code Algebra.StrictlyOrdered} and {@code Arith.Nat} through
+   * {@code LinearlyOrderedCSemiring.Dec} / {@code NatSemiring}); the DFS breaks them at an
+   * arbitrary edge rather than failing, and {@link DeferredBoxFixes} repairs the fallout.
+   */
+  private static List<PendingBinaryLoad> sortDependenciesFirst(List<PendingBinaryLoad> pending, ArendServer server) {
+    Map<ModulePath, PendingBinaryLoad> byPath = new HashMap<>();
+    for (PendingBinaryLoad load : pending) {
+      byPath.put(load.module().getModulePath(), load);
+    }
+    List<PendingBinaryLoad> sorted = new ArrayList<>(pending.size());
+    Set<PendingBinaryLoad> done = new HashSet<>();
+    Set<PendingBinaryLoad> onPath = new HashSet<>();
+    for (PendingBinaryLoad load : pending) {
+      visitDependencies(load, byPath, server, done, onPath, sorted);
+    }
+    return sorted;
+  }
+
+  private static void visitDependencies(PendingBinaryLoad load, Map<ModulePath, PendingBinaryLoad> byPath,
+                                        ArendServer server, Set<PendingBinaryLoad> done,
+                                        Set<PendingBinaryLoad> onPath, List<PendingBinaryLoad> sorted) {
+    if (done.contains(load) || !onPath.add(load)) return;
+    ConcreteGroup group = server.getRawGroup(load.module());
+    if (group != null) {
+      for (ConcreteStatement statement : group.statements()) {
+        if (statement.command() == null || !statement.command().isImport()) continue;
+        PendingBinaryLoad dependency = byPath.get(new ModulePath(statement.command().module().getPath()));
+        if (dependency != null && dependency != load) {
+          visitDependencies(dependency, byPath, server, done, onPath, sorted);
+        }
+      }
+    }
+    onPath.remove(load);
+    done.add(load);
+    sorted.add(load);
   }
 
   /**

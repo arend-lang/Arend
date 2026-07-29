@@ -32,9 +32,12 @@ import java.util.concurrent.atomic.AtomicInteger;
 import static org.junit.Assert.fail;
 
 /**
- * Repro test for the "secondary contradiction" failure mode observed when an upstream
- * arend-lib module's source is touched and the CLI tries to satisfy a downstream target
- * via the partial binary cache (commit 78de87dae and friends).
+ * Repro test for spurious typechecking errors reported when an upstream arend-lib module's
+ * source is touched and the CLI satisfies the rest of the library from the now-partial binary
+ * cache. Originally written for one instance of this — the "secondary contradiction" failure
+ * mode (commit 78de87dae and friends) — and since generalised, because the same setup with a
+ * different invalidation point surfaces structural errors that have nothing to do with
+ * {@code contradiction}.
  *
  * <p>Scenario:
  * <ol>
@@ -50,11 +53,25 @@ import static org.junit.Assert.fail;
  *       cross-module references through the deleted module as "incomplete"/"failed",
  *       forcing re-typecheck of a non-trivial subset from source while the rest stay
  *       pure-deserialized.</li>
- *   <li>Type-check the configured target definition (default {@code Arith.Exp};
- *       configurable via {@code -Darend.partial_cache.target=...}).</li>
- *   <li>Fail iff the run produced a {@code Meta 'contradiction' failed} or
- *       {@code Cannot infer contradiction} error.</li>
+ *   <li>Type-check every module, the way {@code arend} with no MODULE positional does
+ *       (see {@link #WHOLE_LIBRARY}; set it to {@code false} to narrow to
+ *       {@code -Darend.partial_cache.target}, default {@code Arith.Exp}).</li>
+ *   <li>Fail iff the run produced any non-{@code GOAL} error. The sources are untouched —
+ *       only a {@code .arc} was removed — so every such error is caused by the partial
+ *       cache. {@code Meta 'contradiction' failed} / {@code Cannot infer contradiction}
+ *       errors are reported under their own heading, since they were this test's original
+ *       subject.</li>
  * </ol>
+ *
+ * <p>Two invalidation points are known to reproduce real CLI failures:
+ * <pre>
+ *   -Darend.partial_cache.touched=Algebra.Domain              # contradiction metas
+ *   -Darend.partial_cache.touched=Topology.Locale.PreorderSite # spurious structural errors
+ * </pre>
+ * The second is the one {@link ArendLibPartialRoundTripTest} cannot see (that test hand-rolls
+ * its ARC overlay and so never runs {@code loadBinaryCache}); it reports ~25 errors in
+ * {@code Topology.CoverSpace.Locale} and {@code Topology.Locale.Points}, whose sources are
+ * unchanged and which typecheck cleanly under {@code arend -r}.
  *
  * <p>Differences from {@link ArendLibPartialRoundTripTest}:
  * <ul>
@@ -80,6 +97,14 @@ public class ArendLibPartialCacheTest {
   private static final String TARGET_PROPERTY = "arend.partial_cache.target";
   private static final String DEFAULT_TOUCHED = "Algebra.Domain";
   private static final String DEFAULT_TARGET = "Arith.Exp";
+
+  /**
+   * Whether Phase 4 typechecks every module (as {@code arend} with no MODULE positional
+   * does) or only {@code -Darend.partial_cache.target}. Whole-library is the default because
+   * a target-scoped typecheck cannot see defects triggered by modules the target does not
+   * import — see the comment at the Phase 4 call site for the measured case.
+   */
+  private static final boolean WHOLE_LIBRARY = true;
 
   private PrintWriter logWriter;
   private Path logFile;
@@ -150,7 +175,7 @@ public class ArendLibPartialCacheTest {
   }
 
   @Test
-  public void partialCacheContradictionRepro() throws Exception {
+  public void partialCacheSpuriousErrorRepro() throws Exception {
     Assume.assumeTrue(
         "Set -D" + ENABLED_PROPERTY + "=true to run this test",
         "true".equals(System.getProperty(ENABLED_PROPERTY)));
@@ -232,7 +257,7 @@ public class ArendLibPartialCacheTest {
               + TARGET_PROPERTY + "=<module> to override",
           allModulePaths.contains(targetPath));
 
-      log("Phase 4: typechecking " + targetName);
+      log("Phase 4: typechecking " + (WHOLE_LIBRARY ? "the whole library" : targetName));
       long phase4Start = System.currentTimeMillis();
 
       AtomicInteger itemCount = new AtomicInteger();
@@ -247,17 +272,39 @@ public class ArendLibPartialCacheTest {
               if (total % 200 == 0) log("  " + total + " items typechecked (elapsed: " + elapsed() + ")");
             }
           };
-      server.getCheckerFor(Collections.singletonList(targetLoc))
-          .typecheck(UnstoppableCancellationIndicator.INSTANCE, progress);
+      // Drive the typecheck exactly the way ConsoleMain does when no MODULE positional is
+      // given: one checker call per module, in findModules() order. Scope matters here, it
+      // is not just a speed knob — typechecking the target alone lets the whole
+      // Topology.Locale.PreorderSite case pass clean (deleting Topology/CoverSpace/Locale.arc
+      // and typechecking only that module reports 0 errors, while the same cache under a
+      // whole-library run reports 25). Restricting to the target hides any defect whose
+      // trigger is a module the target does not import.
+      List<ModuleLocation> toCheck = WHOLE_LIBRARY
+          ? allLocations
+          : Collections.singletonList(targetLoc);
+      for (ModuleLocation loc : toCheck) {
+        server.getCheckerFor(Collections.singletonList(loc))
+            .typecheck(UnstoppableCancellationIndicator.INSTANCE, progress);
+      }
       log("Phase 4 complete in " + String.format("%.1fs",
           (System.currentTimeMillis() - phase4Start) / 1000.0));
 
       // ---- Phase 5: triage errors ---------------------------------------------
+      // Any ERROR at all is a finding: the sources are unmodified (only a .arc was removed),
+      // and arend-lib's committed state typechecks clean from source, so every error here is
+      // caused by the partial cache. GOALs are exempt — arend-lib commits carry those
+      // deliberately. `contradiction` errors are still called out separately because that was
+      // this test's original subject and stays worth recognising on sight.
       List<String> contradictionErrors = new ArrayList<>();
       List<String> otherErrors = new ArrayList<>();
+      int goals = 0;
       for (Map.Entry<ModuleLocation, List<GeneralError>> entry : server.getErrorMap().entrySet()) {
         String modKey = entry.getKey().getModulePath().toString();
         for (GeneralError err : entry.getValue()) {
+          if (err.level == GeneralError.Level.GOAL) {
+            goals++;
+            continue;
+          }
           String msg = err.getShortMessage();
           String line = modKey + " :: " + msg;
           if (msg.contains("Meta 'contradiction'") || msg.contains("Cannot infer contradiction")) {
@@ -268,15 +315,17 @@ public class ArendLibPartialCacheTest {
         }
       }
       log("Errors: " + contradictionErrors.size() + " contradiction-related, "
-          + otherErrors.size() + " other");
+          + otherErrors.size() + " other, " + goals + " goal(s) ignored");
       for (String e : contradictionErrors) log("  CONTRADICTION: " + e);
       for (String e : otherErrors) log("  OTHER: " + e);
 
-      if (!contradictionErrors.isEmpty()) {
-        fail("Partial-cache repro reproduced contradiction-meta failure(s):\n  "
-            + String.join("\n  ", contradictionErrors)
-            + (otherErrors.isEmpty() ? ""
-                : "\n(Plus " + otherErrors.size() + " unrelated errors — see log)"));
+      if (!contradictionErrors.isEmpty() || !otherErrors.isEmpty()) {
+        List<String> all = new ArrayList<>(contradictionErrors);
+        all.addAll(otherErrors);
+        fail("Partial-cache repro produced " + all.size() + " spurious error(s) after deleting "
+            + touchedName + ".arc"
+            + (contradictionErrors.isEmpty() ? "" : " (" + contradictionErrors.size() + " contradiction-related)")
+            + ":\n  " + String.join("\n  ", all));
       }
     } finally {
       log("=== ArendLib partial-cache repro END (total: " + elapsed() + ") ===");

@@ -43,27 +43,60 @@ import static org.junit.Assert.fail;
 /**
  * Partial round-trip test for arend-lib ARC serialization.
  *
- * <p>Scenario: typecheck a single target module (plus its transitive prerequisites),
- * serialize the resulting definitions to a temporary binary directory, then on a
- * fresh server deserialize those ARC files and attempt to typecheck the remaining
- * modules of arend-lib from source. The test fails only if the second typechecking
- * pass reports <em>secondary</em> errors — i.e. errors that do not also appear in a
- * baseline run where all modules are typechecked from source. Secondary errors
- * indicate that the deserialized prerequisites caused a regression when consumed by
- * downstream modules.
+ * <p>Scenario: split arend-lib into a <em>cone</em> that is serialized and then
+ * deserialized on a fresh server, and a remainder that is typechecked from source
+ * against that deserialized cone. The test fails only if the second typechecking pass
+ * reports <em>secondary</em> errors — i.e. errors that do not also appear in a baseline
+ * run where all modules are typechecked from source. Secondary errors indicate that the
+ * deserialized cone caused a regression when consumed by modules typechecked from source.
  *
  * <p>No structural / content comparison of the deserialized cone is performed; that
  * is the responsibility of {@link ArendLibRoundTripTest}.
  *
- * <p>Target modules can be configured via the system property
- * {@code -Darend.partial_roundtrip.targets=AG.Projective,Algebra.Ring.RingHom}
- * (comma-separated fully qualified module names). If unset, the test defaults to
- * {@code AG.Projective, Arith.Exp}: the first exercises class-instance recovery
- * for ring/abelian-group hierarchies, the second pulls in both
+ * <p>Two ways of choosing the cone are supported, and they are <em>not</em>
+ * interchangeable — each reproduces a different real-world cache state.
+ *
+ * <p><b>Target mode</b> — {@code -Darend.partial_roundtrip.targets=AG.Projective,Algebra.Ring.RingHom}
+ * (comma-separated fully qualified module names). The cone is each target's transitive
+ * <em>prerequisites</em>; everything else is typechecked from source. If unset, the test
+ * defaults to {@code AG.Projective, Arith.Exp}: the first exercises class-instance
+ * recovery for ring/abelian-group hierarchies, the second pulls in both
  * {@code Order.LinearOrder} and {@code Algebra.Domain} so a touch/edit of any
  * upstream domain module produces the partial-cache state that surfaces spurious
  * {@code contradiction} / {@code Cannot infer contradiction} errors in
  * downstream {@code mcases}/{@code <|>} sites.
+ *
+ * <p><b>Touched mode</b> — {@code -Darend.partial_roundtrip.touched=Topology.Locale.PreorderSite}
+ * (comma-separated). The cone is <em>everything except</em> the listed modules and their
+ * transitive dependents. This is the split the CLI actually produces after you edit one
+ * file: the edited module's {@code .arc} is stale, every {@code .arc} that references it
+ * then fails to deserialize, and that whole closure is re-typechecked from source while
+ * the rest of the library — usually the overwhelming majority — loads from cache.
+ *
+ * <p>Touched mode exists because target mode cannot express that split: a target's cone is
+ * always a prerequisite-closed <em>prefix</em> of the library, so the from-source side is the
+ * large one. Target {@code Topology.Locale.PreorderSite} yields a 159-module cone with 232
+ * modules from source; the CLI's post-edit state is the inverse ratio — 369 deserialized, 22
+ * from source — and no module's prerequisite cone equals that complement.
+ *
+ * <p><b>Scope limit — what this test cannot see.</b> Neither mode reproduces the spurious
+ * {@code Topology.CoverSpace.Locale} / {@code Topology.Locale.Points} errors that a plain
+ * {@code arend} reports once {@code Topology/Locale/PreorderSite.ard} is newer than its
+ * {@code .arc} (commit {@code e6ff51db4} touched that file). Reproduce that with:
+ *
+ * <pre>
+ *   ./gradlew partialCacheTest -Darend.partial_cache.touched=Topology.Locale.PreorderSite
+ * </pre>
+ *
+ * Four successive alignments with the CLI were measured here and all still reported zero
+ * secondary errors: the same target, the same 22/369 cone split (touched mode), a
+ * per-module Phase 3 driver ({@link #PHASE3_PER_MODULE}), and CLI-matching
+ * {@link #CLEAR_LEMMAS}. What remains is that Phase 3 hand-rolls its own ARD+ARC overlay
+ * rather than calling {@link org.arend.frontend.library.BinaryLoader#loadBinaryCache} — so
+ * this test measures round-trip <em>fidelity</em> of the serialized data, and is blind to
+ * defects in how the production loader sequences {@code readDefinitions} / {@code readModule}
+ * and cascades failures. That narrowing is the useful result: the data round-trips fine, the
+ * loader does not. {@link ArendLibPartialCacheTest} is the one that drives the real loader.
  *
  * <p>The test is skipped automatically when {@code arend-lib/src} is absent.
  */
@@ -73,6 +106,7 @@ public class ArendLibPartialRoundTripTest {
   private static final DateTimeFormatter TIME_FMT = DateTimeFormatter.ofPattern("HH:mm:ss");
 
   private static final String TARGETS_PROPERTY = "arend.partial_roundtrip.targets";
+  private static final String TOUCHED_PROPERTY = "arend.partial_roundtrip.touched";
   private static final List<String> DEFAULT_TARGETS = List.of("AG.Projective", "Arith.Exp");
 
   /**
@@ -88,6 +122,30 @@ public class ArendLibPartialRoundTripTest {
    * </ul>
    */
   private static final boolean RUN_BASELINE = false;
+
+  /**
+   * How Phase 3 drives the typecheck of the non-cone modules.
+   * <ul>
+   *   <li>{@code true} — one {@code getCheckerFor(module).typecheck()} call per module, in
+   *   {@code findModules()} order, mirroring {@code ConsoleMain}.</li>
+   *   <li>{@code false} (default) — a single {@code getCheckerFor(allLocations)} call, which
+   *   runs the SCC ordering over every definition in the library at once.</li>
+   * </ul>
+   * See the class javadoc: both drivers were measured on the
+   * {@code Topology.Locale.PreorderSite} touched closure and report identical errors, so
+   * this is a comparison knob, not a reproduction knob.
+   */
+  private static final boolean PHASE3_PER_MODULE = false;
+
+  /**
+   * Whether servers are built with {@code clearLemmas} (drop {@code \lemma} bodies once
+   * typechecked). {@code ConsoleMain} passes {@code !doubleCheck}, so a plain {@code arend}
+   * run has this on and the {@code .arc} files it writes carry no lemma bodies — this test's
+   * caches are therefore richer than the CLI's. Also measured as making no difference to the
+   * touched-closure result; left off so the existing targets keep their long-standing
+   * behaviour.
+   */
+  private static final boolean CLEAR_LEMMAS = false;
 
   private PrintWriter logWriter;
   private Path logFile;
@@ -190,13 +248,24 @@ public class ArendLibPartialRoundTripTest {
     log("Temp binary root: " + tempBinRoot.toAbsolutePath());
 
     try {
-      List<ModulePath> targets = parseTargets();
-      log("Targets: " + targets);
+      List<ModulePath> touched = parseModuleList(TOUCHED_PROPERTY, Collections.emptyList());
+      List<ModulePath> targets = touched.isEmpty()
+          ? parseModuleList(TARGETS_PROPERTY, DEFAULT_TARGETS)
+          : Collections.emptyList();
+      log(touched.isEmpty() ? "Mode: target (cone = prerequisites of), targets: " + targets
+                            : "Mode: touched (cone = all but dependents of), touched: " + touched);
 
       // Phase 0 (baseline) runs once and is shared across all target runs.
       BaselineResult baseline = runBaseline();
 
       List<String> allSecondaryErrors = new ArrayList<>();
+      if (!touched.isEmpty()) {
+        List<String> errors = runTouchedRoundTrip(touched, baseline);
+        if (!errors.isEmpty()) {
+          allSecondaryErrors.add("=== Touched " + touched + " produced " + errors.size() + " secondary error(s) ===");
+          allSecondaryErrors.addAll(errors);
+        }
+      }
       for (ModulePath target : targets) {
         log("--- Running partial round-trip for target: " + target + " ---");
         List<String> errors = runPartialRoundTrip(target, baseline);
@@ -219,14 +288,14 @@ public class ArendLibPartialRoundTripTest {
     }
   }
 
-  private List<ModulePath> parseTargets() {
-    String prop = System.getProperty(TARGETS_PROPERTY);
-    if (prop == null || prop.isBlank()) {
-      List<ModulePath> defaults = new ArrayList<>(DEFAULT_TARGETS.size());
-      for (String name : DEFAULT_TARGETS) defaults.add(ModulePath.fromString(name));
-      return defaults;
-    }
+  /** Reads a comma-separated module list from {@code property}, falling back to {@code defaults}. */
+  private List<ModulePath> parseModuleList(String property, List<String> defaults) {
+    String prop = System.getProperty(property);
     List<ModulePath> result = new ArrayList<>();
+    if (prop == null || prop.isBlank()) {
+      for (String name : defaults) result.add(ModulePath.fromString(name));
+      return result;
+    }
     for (String name : prop.split(",")) {
       String trimmed = name.trim();
       if (!trimmed.isEmpty()) {
@@ -254,7 +323,7 @@ public class ArendLibPartialRoundTripTest {
     ListErrorReporter baselineReporter = new ListErrorReporter();
     LibraryManager baselineLibManager = new LibraryManager(baselineReporter);
     ArendServer baselineServer = new ArendServerImpl(
-        new CliServerRequester(baselineLibManager), false, false, false);
+        new CliServerRequester(baselineLibManager), false, false, CLEAR_LEMMAS);
     baselineServer.addReadOnlyModule(Prelude.MODULE_LOCATION,
         () -> new PreludeResourceSource().loadGroup(DummyErrorReporter.INSTANCE));
 
@@ -291,13 +360,107 @@ public class ArendLibPartialRoundTripTest {
   }
 
   // ---------------------------------------------------------------------------
+  // Touched mode: cone = all modules except the touched ones and their dependents
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Reproduces the CLI's post-edit cache state: {@code touched} and everything that
+   * (transitively) imports it are typechecked from source, the whole rest of the library
+   * is deserialized. Phase 1 has to typecheck <em>all</em> modules, because the cone here
+   * is not a prerequisite-closed prefix — it is the complement of a dependent closure, so
+   * it contains modules that no single target would pull in.
+   */
+  private List<String> runTouchedRoundTrip(List<ModulePath> touched, BaselineResult baseline) throws Exception {
+    List<ModuleLocation> allLocations = baseline.allLocations;
+
+    log("Phase 1: typecheck all " + allLocations.size() + " module(s) (touched mode)");
+    long phase1Start = System.currentTimeMillis();
+    ArendServer server1 = newSourceServer();
+    server1.getCheckerFor(allLocations)
+        .typecheck(UnstoppableCancellationIndicator.INSTANCE, progress("Phase 1"));
+    log("Phase 1 complete in " + String.format("%.1fs",
+        (System.currentTimeMillis() - phase1Start) / 1000.0));
+
+    Set<ModuleLocation> invalidated = collectDependents(touched, allLocations, server1);
+    Set<ModuleLocation> coneSet = new LinkedHashSet<>(allLocations);
+    coneSet.removeAll(invalidated);
+    if (coneSet.isEmpty()) {
+      fail("Touched closure covers the whole library: " + touched);
+    }
+
+    List<String> invalidatedNames = new ArrayList<>(invalidated.size());
+    for (ModuleLocation loc : invalidated) invalidatedNames.add(loc.getModulePath().toString());
+    Collections.sort(invalidatedNames);
+    log("Touched closure: " + invalidated.size() + " module(s) from source, "
+        + coneSet.size() + " deserialized");
+    System.out.println("=== From-source modules for touched " + touched
+        + " (" + invalidatedNames.size() + ") ===");
+    for (String n : invalidatedNames) System.out.println(n);
+    System.out.println("=== End from-source modules ===");
+
+    String label = touched.size() == 1 ? touched.get(0).toString() : "touched_" + touched.size();
+    return runConeRoundTrip("touched:" + touched, label, coneSet, server1, baseline);
+  }
+
+  /**
+   * Returns {@code seeds} plus every module in {@code all} that transitively imports one of
+   * them, following the same import edges {@link #topoSortByImports} reads. This mirrors the
+   * cascade {@code BinaryLoader} discovers by exception: a stale {@code .arc} makes every
+   * {@code .arc} referencing it fail to deserialize, transitively.
+   */
+  private static Set<ModuleLocation> collectDependents(
+      List<ModulePath> seeds, List<ModuleLocation> all, ArendServer server) {
+    Map<ModulePath, ModuleLocation> byPath = new HashMap<>();
+    for (ModuleLocation loc : all) byPath.put(loc.getModulePath(), loc);
+
+    Map<ModuleLocation, List<ModuleLocation>> dependents = new HashMap<>();
+    for (ModuleLocation loc : all) {
+      ConcreteGroup g = server.getRawGroup(loc);
+      if (g == null) continue;
+      for (ConcreteStatement s : g.statements()) {
+        if (s.command() == null || !s.command().isImport()) continue;
+        ModuleLocation dep = byPath.get(new ModulePath(s.command().module().getPath()));
+        if (dep != null && !dep.equals(loc)) {
+          dependents.computeIfAbsent(dep, k -> new ArrayList<>()).add(loc);
+        }
+      }
+    }
+
+    Set<ModuleLocation> result = new LinkedHashSet<>();
+    Deque<ModuleLocation> queue = new ArrayDeque<>();
+    for (ModulePath seed : seeds) {
+      ModuleLocation loc = byPath.get(seed);
+      if (loc == null) {
+        fail("Touched module not found in arend-lib: " + seed);
+      } else if (result.add(loc)) {
+        queue.add(loc);
+      }
+    }
+    while (!queue.isEmpty()) {
+      for (ModuleLocation d : dependents.getOrDefault(queue.remove(), Collections.emptyList())) {
+        if (result.add(d)) queue.add(d);
+      }
+    }
+    return result;
+  }
+
+  // ---------------------------------------------------------------------------
   // One partial round-trip iteration for a single target module
   // ---------------------------------------------------------------------------
 
+  /** A fresh server that loads arend-lib strictly from {@code .ard} sources. */
+  private ArendServer newSourceServer() {
+    LibraryManager libManager = new LibraryManager(new ListErrorReporter());
+    ArendServer server = new ArendServerImpl(
+        new CliServerRequester(libManager), false, false, CLEAR_LEMMAS);
+    server.addReadOnlyModule(Prelude.MODULE_LOCATION,
+        () -> new PreludeResourceSource().loadGroup(DummyErrorReporter.INSTANCE));
+    libManager.updateLibrary(buildArendLibrary(), server);
+    return server;
+  }
+
   private List<String> runPartialRoundTrip(ModulePath target, BaselineResult baseline) throws Exception {
     List<ModulePath> modulePaths = baseline.modulePaths;
-    List<ModuleLocation> allLocations = baseline.allLocations;
-    Map<String, Set<String>> baselineErrors = baseline.errorsByModule;
 
     ModuleLocation targetLoc =
         new ModuleLocation("arend-lib", ModuleLocation.LocationKind.SOURCE, target);
@@ -309,14 +472,7 @@ public class ArendLibPartialRoundTripTest {
     log("Phase 1: typecheck target cone for " + target);
     long phase1Start = System.currentTimeMillis();
 
-    ListErrorReporter reporter1 = new ListErrorReporter();
-    LibraryManager libManager1 = new LibraryManager(reporter1);
-    ArendServer server1 = new ArendServerImpl(
-        new CliServerRequester(libManager1), false, false, false);
-    server1.addReadOnlyModule(Prelude.MODULE_LOCATION,
-        () -> new PreludeResourceSource().loadGroup(DummyErrorReporter.INSTANCE));
-    FileSourceLibrary arendLib1 = buildArendLibrary();
-    libManager1.updateLibrary(arendLib1, server1);
+    ArendServer server1 = newSourceServer();
 
     server1.getCheckerFor(List.of(targetLoc))
         .typecheck(UnstoppableCancellationIndicator.INSTANCE, progress("Phase 1"));
@@ -366,10 +522,28 @@ public class ArendLibPartialRoundTripTest {
     for (String n : coneNames) System.out.println(n);
     System.out.println("=== End cone modules ===");
 
+    return runConeRoundTrip("target:" + target, target.toString(), coneSet, server1, baseline);
+  }
+
+  // ---------------------------------------------------------------------------
+  // Shared pipeline: serialize the cone, deserialize it on a fresh server, then
+  // typecheck everything outside the cone from source and diff the errors.
+  // ---------------------------------------------------------------------------
+
+  /**
+   * @param what  human-readable description of how the cone was chosen (log/summary only).
+   * @param label filesystem-safe name for this run's temp binary directory.
+   */
+  private List<String> runConeRoundTrip(
+      String what, String label, Set<ModuleLocation> coneSet, ArendServer server1, BaselineResult baseline)
+      throws Exception {
+    List<ModuleLocation> allLocations = baseline.allLocations;
+    Map<String, Set<String>> baselineErrors = baseline.errorsByModule;
+
     // ---- Phase 2: serialize the cone to a temp directory --------------------
     log("Phase 2: serialize " + coneSet.size() + " cone module(s)");
     long phase2Start = System.currentTimeMillis();
-    Path targetBinDir = tempBinRoot.resolve(target.toString().replace('.', '_'));
+    Path targetBinDir = tempBinRoot.resolve(label.replace('.', '_'));
     Files.createDirectories(targetBinDir);
 
     List<String> persistErrors = new ArrayList<>();
@@ -403,7 +577,7 @@ public class ArendLibPartialRoundTripTest {
     // full substitution). A StackOverflow here identifies a single cone definition whose
     // type is structurally broken (cyclic Pi chain, aliased binding, etc.) — that's the
     // root cause of the Phase 3 fatal crashes, not the non-cone module that triggers it.
-    List<String> validationFindings = validateConeTypes(target, coneSet, targetBinDir, server1);
+    List<String> validationFindings = validateConeTypes(coneSet, targetBinDir, server1);
     for (String f : validationFindings) logError("Phase 2.5 BAD_TYPE: " + f);
 
     // ---- Phase 3: reset server, deserialize cone, typecheck the rest --------
@@ -469,7 +643,7 @@ public class ArendLibPartialRoundTripTest {
       }
     };
 
-    ArendServer server2 = new ArendServerImpl(hybridRequester, false, false, false);
+    ArendServer server2 = new ArendServerImpl(hybridRequester, false, false, CLEAR_LEMMAS);
     server2.addReadOnlyModule(Prelude.MODULE_LOCATION,
         () -> new PreludeResourceSource().loadGroup(DummyErrorReporter.INSTANCE));
     FileSourceLibrary arendLib2 = buildArendLibrary();
@@ -521,8 +695,21 @@ public class ArendLibPartialRoundTripTest {
     List<String> fatalErrors = new ArrayList<>();
     boolean bulkCrashed = false;
     try {
-      server2.getCheckerFor(allLocations)
-          .typecheck(UnstoppableCancellationIndicator.INSTANCE, detailedProgress);
+      if (PHASE3_PER_MODULE) {
+        // Drive the typecheck exactly the way ConsoleMain does: one checker call per
+        // module, in findModules() order. This is not cosmetic — a single
+        // getCheckerFor(allLocations) call runs the SCC ordering over every definition
+        // in the library at once, which groups cross-module SCCs differently than 391
+        // incremental calls do, and the spurious-error behaviour we are chasing only
+        // shows up under the incremental grouping.
+        for (ModuleLocation loc : allLocations) {
+          server2.getCheckerFor(List.of(loc))
+              .typecheck(UnstoppableCancellationIndicator.INSTANCE, detailedProgress);
+        }
+      } else {
+        server2.getCheckerFor(allLocations)
+            .typecheck(UnstoppableCancellationIndicator.INSTANCE, detailedProgress);
+      }
     } catch (Throwable t) {
       bulkCrashed = true;
       logFatal("Phase 3 bulk", t, lastItems);
@@ -748,7 +935,7 @@ public class ArendLibPartialRoundTripTest {
     long expectedClass = secondaryErrors.stream().filter(e -> e.contains("Expected a class")).count();
     long typeMismatch = secondaryErrors.stream().filter(e -> e.contains("Type mismatch")).count();
     long fatal = fatalErrors.size();
-    log("Secondary error summary for target " + target + ": "
+    log("Secondary error summary for " + what + ": "
         + secondaryErrors.size() + " total"
         + " | Cannot-resolve=" + cannotResolve
         + ", Expected-class=" + expectedClass
@@ -901,7 +1088,6 @@ public class ArendLibPartialRoundTripTest {
    * modules would trip over.
    */
   private List<String> validateConeTypes(
-      org.arend.ext.module.ModulePath target,
       Set<ModuleLocation> coneSet,
       Path targetBinDir,
       ArendServer depSource) {
