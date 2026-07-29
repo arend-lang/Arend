@@ -546,6 +546,11 @@ public class ArendServerImpl implements ArendServer {
   }
 
   @Override
+  public void removeErrorReporter(@NotNull ErrorReporter errorReporter) {
+    myErrorService.removeErrorReporter(errorReporter);
+  }
+
+  @Override
   public @NotNull Map<ModuleLocation, List<GeneralError>> getErrorMap() {
     return myErrorService.getAllErrors();
   }

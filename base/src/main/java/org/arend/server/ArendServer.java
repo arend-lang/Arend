@@ -140,6 +140,13 @@ public interface ArendServer {
   void addErrorReporter(@NotNull ErrorReporter errorReporter);
 
   /**
+   * Removes an error listener previously added by {@link #addErrorReporter}.
+   * Temporary reporters must be removed after use — on a long-lived server
+   * (e.g. the CLI daemon) they otherwise accumulate without bound.
+   */
+  void removeErrorReporter(@NotNull ErrorReporter errorReporter);
+
+  /**
    * @return errors grouped by modules.
    */
   @NotNull Map<ModuleLocation, List<GeneralError>> getErrorMap();

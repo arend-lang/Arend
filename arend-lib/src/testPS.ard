@@ -8,7 +8,8 @@
 \import Paths.Meta
 \import Function.Meta
 \open Nat
-\open Monoid (LDiv, Inv)
+\open Monoid
+\open Prime
 
 \lemma prime-char-dir {n : Nat} (p : Irr n) {k : Nat} (k|n : LDiv k n) : (k = n) || (k = 1)
             => {?}

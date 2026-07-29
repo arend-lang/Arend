@@ -198,15 +198,23 @@ public final class ApplyStep {
 
         if (targetDef instanceof Concrete.FunctionDefinition funcDef) {
           Concrete.FunctionBody origBody = funcDef.getBody();
+          // TermFunctionBody is mutated in place below, so snapshot the term itself.
+          // Restoring origBody alone would be a no-op and would leak the attempted
+          // body into subsequent commands on this warm (daemon) context.
+          Concrete.Expression origTerm =
+              origBody instanceof Concrete.TermFunctionBody tb ? tb.getTerm() : null;
 
+          boolean substituted = false;
           if (bodyExpr != null) {
             if (origBody instanceof Concrete.TermFunctionBody termBody) {
               termBody.setTerm(bodyExpr);
+              substituted = true;
             } else {
               errors.add("Unsupported function body type for expression");
             }
           } else {
             setBody(funcDef, elimBody);
+            substituted = true;
           }
 
           if (errors.isEmpty()) {
@@ -222,10 +230,14 @@ public final class ApplyStep {
               }
             };
             ctx.server.addErrorReporter(retypeCapture);
-
-            ctx.server.getCheckerFor(Collections.singletonList(module))
-                .typecheck(Collections.singletonList(new FullName(module, parsed.proj2)),
-                    retypeCapture, ctx.cancellation, ProgressReporter.empty());
+            try {
+              ctx.server.getCheckerFor(Collections.singletonList(module))
+                  .typecheck(Collections.singletonList(new FullName(module, parsed.proj2)),
+                      retypeCapture, ctx.cancellation, ProgressReporter.empty());
+            } finally {
+              // The daemon reuses this server across commands; don't leak the capture.
+              ctx.server.removeErrorReporter(retypeCapture);
+            }
 
             if (tcErrors.isEmpty()) {
               success = true;
@@ -260,8 +272,20 @@ public final class ApplyStep {
               }
             }
 
-            // Restore original body
-            setBody(funcDef, origBody);
+            // Drop the typechecked state produced for the substituted body;
+            // the next command will re-typecheck from Concrete.
+            funcDef.getData().setTypechecked(null);
+          }
+
+          // Restore the original body whenever it was substituted — even when
+          // resolution failed before typechecking — otherwise the attempted body
+          // leaks into subsequent commands on this warm (daemon) context.
+          if (substituted) {
+            if (origBody instanceof Concrete.TermFunctionBody termBody && origTerm != null) {
+              termBody.setTerm(origTerm);
+            } else {
+              setBody(funcDef, origBody);
+            }
           }
         } else {
           errors.add("Target is not a function definition");

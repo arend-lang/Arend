@@ -17,6 +17,10 @@ public class ErrorService implements ErrorReporter {
     myErrorReporters.add(errorReporter);
   }
 
+  public void removeErrorReporter(ErrorReporter errorReporter) {
+    myErrorReporters.remove(errorReporter);
+  }
+
   public void setResolverErrors(ModuleLocation module, List<GeneralError> errors) {
     if (errors.isEmpty()) {
       myResolverErrors.remove(module);

@@ -33,8 +33,13 @@ import org.arend.typechecking.visitor.SyntacticDesugarVisitor;
 import java.util.*;
 
 /**
- * {@code -te MODULE:DEF GOAL_ID EXPRESSION} — infer the type of EXPRESSION
+ * {@code -te MODULE:DEF GOAL_ID EXPRESSION [PROOF_BODY]} — infer the type of EXPRESSION
  * in the context of the specified goal, and return it as JSON.
+ *
+ * <p>When the optional PROOF_BODY (the caller's current full proof body) is given,
+ * goals are taken from that body instead of the on-disk one, so GOAL_ID and the
+ * goal's local context (e.g. case-branch bindings) match the caller's proof state.
+ * The on-disk body is restored before the command returns.
  *
  * Output:
  * <pre>
@@ -48,13 +53,14 @@ public final class TypeExpr {
 
   public static boolean run(CommandContext ctx, String[] args) {
     if (args == null || args.length < 3) {
-      System.err.println("[ERROR] -te requires: MODULE:DEF GOAL_ID EXPRESSION");
+      System.err.println("[ERROR] -te requires: MODULE:DEF GOAL_ID EXPRESSION [PROOF_BODY]");
       return false;
     }
 
     String spec = args[0];
     String goalId = args[1];
     String exprText = args[2];
+    String bodyText = args.length > 3 ? args[3] : null;
 
     Pair<ModulePath, LongName> parsed = ctx.parseFullName(spec);
     if (parsed == null) return false;
@@ -65,29 +71,6 @@ public final class TypeExpr {
       return false;
     }
 
-    // Typecheck to find goals
-    ConcreteGroup group = ctx.server.getRawGroup(module);
-    if (group != null && parsed.proj2 != null) {
-      resetDefinition(group, parsed.proj2);
-    }
-
-    List<GoalError> goalErrors = new ArrayList<>();
-    org.arend.ext.error.ErrorReporter capture = error -> {
-      if (error instanceof GoalError ge) goalErrors.add(ge);
-    };
-    ctx.server.addErrorReporter(capture);
-
-    ctx.server.getCheckerFor(Collections.singletonList(module))
-        .resolveAll(ctx.cancellation, ProgressReporter.empty());
-    if (parsed.proj2 != null) {
-      ctx.server.getCheckerFor(Collections.singletonList(module))
-          .typecheck(Collections.singletonList(new FullName(module, parsed.proj2)),
-              capture, ctx.cancellation, ProgressReporter.empty());
-    } else {
-      ctx.server.getCheckerFor(Collections.singletonList(module))
-          .typecheck(ctx.cancellation, ProgressReporter.empty());
-    }
-
     int targetGoal;
     try {
       targetGoal = Integer.parseInt(goalId);
@@ -95,6 +78,45 @@ public final class TypeExpr {
       System.err.println("[ERROR] Invalid goal ID: " + goalId);
       return false;
     }
+
+    Concrete.FunctionDefinition funcDef = null;
+    ArendRef targetRef = null;
+    for (DefinitionData data : ctx.server.getResolvedDefinitions(module)) {
+      if (parsed.proj2 == null || data.definition().getData().getRefLongName().equals(parsed.proj2)) {
+        targetRef = data.definition().getData();
+        if (data.definition() instanceof Concrete.FunctionDefinition fd) funcDef = fd;
+        break;
+      }
+    }
+
+    // When the caller passes its current proof body, substitute it for the goal
+    // lookup so goal indices and goal contexts (branch-local bindings) match the
+    // caller's proof state rather than the on-disk body. Always restored below.
+    BodySubstitutor subst = null;
+    if (bodyText != null) {
+      if (funcDef == null) {
+        System.err.println("[ERROR] Target is not a function definition: " + spec);
+        return false;
+      }
+      subst = BodySubstitutor.substitute(ctx, module, funcDef, bodyText);
+      if (subst == null) return false;
+    }
+
+    // Typecheck to find goals. The captured GoalErrors (and their typechecking
+    // contexts) stay valid after the body is restored, so restore right away.
+    List<GoalError> goalErrors;
+    try {
+      goalErrors = FindGoals.findGoals(module, parsed.proj2, ctx);
+    } finally {
+      if (subst != null) subst.restore();
+    }
+
+    // Keep only the target definition's goals so indices match -as output.
+    if (targetRef != null) {
+      final ArendRef finalTargetRef = targetRef;
+      goalErrors.removeIf(ge -> ge.definition != null && ge.definition != finalTargetRef);
+    }
+
     if (targetGoal < 0 || targetGoal >= goalErrors.size()) {
       System.err.println("[ERROR] Goal ID " + goalId + " out of range (found " + goalErrors.size() + " goals)");
       return false;

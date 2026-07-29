@@ -46,14 +46,18 @@ public final class GetScope {
       return false;
     }
 
+
+
     // Typecheck to capture goal contexts
-    List<GoalError> goalErrors = new ArrayList<>();
+    List<GoalError> goalErrors = FindGoals.findGoals(module, parsed.proj2, ctx);
+    /*
     org.arend.ext.error.ErrorReporter goalCapture = error -> {
       if (error instanceof GoalError ge) {
         goalErrors.add(ge);
       }
     };
 
+    ctx.server.addErrorReporter(goalCapture);
     ctx.server.getCheckerFor(Collections.singletonList(module))
         .resolveAll(ctx.cancellation, ProgressReporter.empty());
 
@@ -64,7 +68,7 @@ public final class GetScope {
     } else {
       ctx.server.getCheckerFor(Collections.singletonList(module))
           .typecheck(ctx.cancellation, ProgressReporter.empty());
-    }
+    }*/
 
     int targetGoal;
     try {
