@@ -34,11 +34,23 @@ class ExpressionDeserialization {
 
   private final DependencyListener myDependencyListener;
   private final Definition myDefinition;
+  private final DeferredBoxFixes myDeferredBoxFixes;
 
-  ExpressionDeserialization(CallTargetProvider callTargetProvider, DependencyListener dependencyListener, Definition definition) {
+  ExpressionDeserialization(CallTargetProvider callTargetProvider, DependencyListener dependencyListener, Definition definition, DeferredBoxFixes deferredBoxFixes) {
     myCallTargetProvider = callTargetProvider;
     myDependencyListener = dependencyListener;
     myDefinition = definition;
+    myDeferredBoxFixes = deferredBoxFixes;
+  }
+
+  /**
+   * {@code fixBoxes} has already run inside the {@code make} that produced {@code expr}. If
+   * {@code callee} was still an unfilled shell it had no parameters to inspect, so that run did
+   * nothing and has to be repeated once the callee is filled -- see {@link DeferredBoxFixes}.
+   */
+  private <T extends DefCallExpression> T deferBoxFixes(T expr, Definition callee) {
+    myDeferredBoxFixes.deferIfUnfilled(expr, callee);
+    return expr;
   }
 
   // Bindings
@@ -442,7 +454,11 @@ class ExpressionDeserialization {
   private Expression readFunCall(ExpressionProtos.Expression.FunCall proto) throws DeserializationException {
     FunctionDefinition functionDefinition = myCallTargetProvider.getCallTarget(proto.getFunRef(), FunctionDefinition.class);
     myDependencyListener.dependsOn(myDefinition.getRef(), functionDefinition.getReferable());
-    return FunCallExpression.make(functionDefinition, readLevels(proto.getLevels()), readExprList(proto.getArgumentList()));
+    Expression result = FunCallExpression.make(functionDefinition, readLevels(proto.getLevels()), readExprList(proto.getArgumentList()));
+    // make() only returns a FunCall when it did not fold the call away (Prelude arithmetic,
+    // array constructors); a folded result never had boxes to fix.
+    if (result instanceof DefCallExpression defCall) deferBoxFixes(defCall, functionDefinition);
+    return result;
   }
 
   private Expression readConCalls(ExpressionProtos.Expression.ConCalls protos) throws DeserializationException {
@@ -457,6 +473,7 @@ class ExpressionDeserialization {
       ConCallExpression arg = readConCall(conCalls.get(i), i == conCalls.size() - 1);
       expr.getDefCallArguments().set(conCalls.get(i - 1).getRecursiveParam(), arg);
       expr.fixBoxes();
+      deferBoxFixes(expr, expr.getDefinition().getDataType());
       expr = arg;
     }
 
@@ -489,6 +506,7 @@ class ExpressionDeserialization {
     }
     if (last) {
       result.fixBoxes();
+      deferBoxFixes(result, constructor.getDataType());
     }
     return result;
   }
@@ -496,7 +514,7 @@ class ExpressionDeserialization {
   private DataCallExpression readDataCall(ExpressionProtos.Expression.DataCall proto) throws DeserializationException {
     DataDefinition dataDefinition = myCallTargetProvider.getCallTarget(proto.getDataRef(), DataDefinition.class);
     myDependencyListener.dependsOn(myDefinition.getRef(), dataDefinition.getReferable());
-    return DataCallExpression.make(dataDefinition, readLevels(proto.getLevels()), readExprList(proto.getArgumentList()));
+    return deferBoxFixes(DataCallExpression.make(dataDefinition, readLevels(proto.getLevels()), readExprList(proto.getArgumentList())), dataDefinition);
   }
 
   private ClassCallExpression readClassCall(ExpressionProtos.Expression.ClassCall proto) throws DeserializationException {
