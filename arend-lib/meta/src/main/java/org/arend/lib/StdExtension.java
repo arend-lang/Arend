@@ -3,6 +3,8 @@ package org.arend.lib;
 import org.arend.ext.*;
 import org.arend.ext.concrete.ConcreteFactory;
 import org.arend.ext.concrete.definition.ConcreteMetaDefinition;
+import org.arend.ext.concrete.expr.ConcreteExpression;
+import org.arend.ext.prettifier.ExpressionPrettifier;
 import org.arend.ext.reference.ArendRef;
 import org.arend.ext.typechecking.meta.MetaTypechecker;
 import org.arend.ext.typechecking.meta.TrivialMetaTypechecker;
@@ -24,6 +26,7 @@ import org.arend.lib.meta.cases.MatchingCasesMeta;
 import org.arend.lib.meta.cases.MatchingCasesMetaResolver;
 import org.arend.lib.meta.cong.CongruenceMeta;
 import org.arend.lib.meta.debug.PrintMeta;
+import org.arend.lib.meta.debug.PutStrLnMeta;
 import org.arend.lib.meta.debug.RandomMeta;
 import org.arend.lib.meta.debug.SleepMeta;
 import org.arend.lib.meta.debug.TimeMeta;
@@ -62,7 +65,8 @@ public class StdExtension implements ArendExtension {
   public final ReflexivityKey reflexivityKey = new ReflexivityKey("reflexivity", this);
 
   private final StdGoalSolver goalSolver = new StdGoalSolver();
-  private final StdNumberTypechecker numberTypechecker = new StdNumberTypechecker();
+  private final StdLiteralTypechecker literalTypechecker = new StdLiteralTypechecker();
+  private final ExpressionPrettifier expressionPrettifier = new StringExpressionPrettifier(this);
   private final ListDefinitionListener definitionListener = new ListDefinitionListener().addDeclaredListeners(this);
   public ArendUI ui;
 
@@ -79,6 +83,10 @@ public class StdExtension implements ArendExtension {
   @Override
   public void setConcreteFactory(@NotNull ConcreteFactory factory) {
     this.factory = factory;
+  }
+
+  public ConcreteExpression makeString(String s) {
+    return factory.string(s);
   }
 
   private MetaRef makeRef(ModulePath modulePath, String name, MetaDefinition definition) {
@@ -581,6 +589,7 @@ public class StdExtension implements ArendExtension {
     ModulePath debug = new ModulePath("Debug", "Meta");
     contributor.declare(text("Returns current time in milliseconds"), makeDef(debug, "time", new TimeMeta()));
     contributor.declare(text("Prints the argument to the console"), makeDef(debug, "println", new PrintMeta(this)));
+    contributor.declare(text("Low-level variant of `Debug.putStrLn`. The byte array of its argument must evaluate to constructor form. Use `Debug.putStrLn` to print arbitrary evaluable Strings."), makeDef(debug, "putStrLnMaterialized", new PutStrLnMeta(this)));
     contributor.declare(text("`sleep m` waits for `m` milliseconds"), makeDef(debug, "sleep", new SleepMeta()));
     contributor.declare(multiline("""
         `random` returns a random number.
@@ -607,11 +616,16 @@ public class StdExtension implements ArendExtension {
 
   @Override
   public @Nullable LiteralTypechecker getLiteralTypechecker() {
-    return numberTypechecker;
+    return literalTypechecker;
   }
 
   @Override
   public @Nullable DefinitionListener getDefinitionListener() {
     return definitionListener;
+  }
+
+  @Override
+  public @Nullable ExpressionPrettifier getExpressionPrettifier() {
+    return expressionPrettifier;
   }
 }

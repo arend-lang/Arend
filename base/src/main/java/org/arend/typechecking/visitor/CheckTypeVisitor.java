@@ -3455,6 +3455,22 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
   }
 
   @Override
+  public @NotNull TypecheckingResult checkByteArray(byte @NotNull [] bytes) {
+    // Construct the element-type lambda `\lam (_ : Fin bytes.length) => Fin 256`.
+    TypedSingleDependentLink param = new TypedSingleDependentLink(true, null, Fin(bytes.length));
+    Expression elementsType = Fin(256);
+    Expression elementsTypeFun = new LamExpression(param, elementsType);
+
+    List<Expression> elements = new ArrayList<>(bytes.length);
+    for (byte b : bytes) {
+      elements.add(new SmallIntegerExpression(b & 0xFF));
+    }
+
+    Expression resultExpr = ArrayExpression.make(elementsTypeFun, elements, null);
+    return new TypecheckingResult(resultExpr, resultExpr.getType());
+  }
+
+  @Override
   public @Nullable Definition getCoreDefinition(@Nullable ArendRef ref) {
     return ref instanceof TCDefReferable ? ((TCDefReferable) ref).getTypechecked() : null;
   }
@@ -3507,7 +3523,17 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
       }
     }
 
-    return expr.getResolvedExpression() != null ? checkExpr(expr.getResolvedExpression(), expectedType) : checkResult(expectedType, new TypecheckingResult(new StringExpression(string), ExpressionFactory.String()), expr);
+    if (expr.getResolvedExpression() != null) {
+      return checkExpr(expr.getResolvedExpression(), expectedType);
+    }
+
+    // String is library-owned (arend-lib), not part of the bootstrap Prelude, so there is no core
+    // representation to fall back on: without a literal-typechecker extension a string literal cannot
+    // be elaborated, which is a hard error. The hint targets libraries with a custom extension class:
+    // such an extension must provide string support itself, typically by extending
+    // DefaultArendExtension, which forwards the literal typechecker of the library's dependencies.
+    errorReporter.report(new TypecheckingError("Cannot check string: no literal typechecker is available. The library must depend on arend-lib; if it defines its own extension, the extension should extend DefaultArendExtension to inherit string support from the library's dependencies", expr));
+    return null;
   }
 
   @Override

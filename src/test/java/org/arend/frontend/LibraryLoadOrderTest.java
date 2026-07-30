@@ -2,6 +2,7 @@ package org.arend.frontend;
 
 import org.arend.error.DummyErrorReporter;
 import org.arend.ext.ArendExtension;
+import org.arend.ext.DefaultArendExtension;
 import org.arend.ext.LiteralTypechecker;
 import org.arend.ext.error.ListErrorReporter;
 import org.arend.frontend.library.FileSourceLibrary;
@@ -70,6 +71,23 @@ public class LibraryLoadOrderTest {
     @Override
     public @Nullable LiteralTypechecker getLiteralTypechecker() {
       return myLiteralTypechecker;
+    }
+  }
+
+  /**
+   * Stands in for a project extension following the documented procedure: extend
+   * {@link DefaultArendExtension} to inherit the services of the library's dependencies.
+   */
+  public static class InheritingExtension extends DefaultArendExtension {
+  }
+
+  /** An extension that provides its own literal typechecker, which must win over the dependency's. */
+  public static class OverridingExtension extends DefaultArendExtension {
+    static final LiteralTypechecker OWN_TYPECHECKER = new LiteralTypechecker() {};
+
+    @Override
+    public @Nullable LiteralTypechecker getLiteralTypechecker() {
+      return OWN_TYPECHECKER;
     }
   }
 
@@ -200,6 +218,35 @@ public class LibraryLoadOrderTest {
         1, DependencyExtension.instances);
     assertSame("'proj' must still point at the live extension instance of 'dep'",
         extensionOf("dep").getLiteralTypechecker(), extensionOf("proj").getLiteralTypechecker());
+  }
+
+  /**
+   * The documented procedure for custom extensions: a project extension that extends
+   * {@link DefaultArendExtension} inherits the literal typechecker of its dependency, so string
+   * literals from arend-lib keep elaborating in a project with its own extension.
+   */
+  @Test
+  public void inheritingExtensionSeesDependencyLiteralTypechecker() throws IOException {
+    writeLibrary("dep", List.of(), DependencyExtension.class.getName());
+    SourceLibrary project = writeLibrary("proj", List.of("dep"), InheritingExtension.class.getName());
+
+    assertTrue(load(project));
+
+    assertSame("an extension extending DefaultArendExtension must inherit the literal typechecker of its dependency",
+        extensionOf("dep").getLiteralTypechecker(), extensionOf("proj").getLiteralTypechecker());
+    assertNotNull(extensionOf("proj").getLiteralTypechecker());
+  }
+
+  /** A custom extension that provides its own literal typechecker must not be overridden by a dependency. */
+  @Test
+  public void overridingExtensionKeepsItsOwnLiteralTypechecker() throws IOException {
+    writeLibrary("dep", List.of(), DependencyExtension.class.getName());
+    SourceLibrary project = writeLibrary("proj", List.of("dep"), OverridingExtension.class.getName());
+
+    assertTrue(load(project));
+
+    assertSame("the library's own literal typechecker must take precedence over the dependency's",
+        OverridingExtension.OWN_TYPECHECKER, extensionOf("proj").getLiteralTypechecker());
   }
 
   /** A dependency cycle must terminate instead of recursing forever, still loading both libraries. */
