@@ -1,5 +1,18 @@
 \import Debug.Meta
 \import Meta
+\import Data.String
+
+-- Converts any evaluable String to the constructor representation expected by the printing primitive.
+\private \func materialize (s : String) : String
+  => \new String { | bytes => materializeBytes s.bytes }
+  \where {
+    \func materializeBytes (bytes : Array Byte) : Array Byte \elim bytes
+      | nil => nil
+      | byte :: bytes => byte :: materializeBytes bytes
+  }
+
+-- Prints a String as raw text and returns the optional continuation, or Unit if it is omitted.
+\meta putStrLn s => putStrLnMaterialized (materialize s)
 
 \meta runTimed m => run {
   \let t => time,

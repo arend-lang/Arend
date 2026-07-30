@@ -21,7 +21,10 @@ public class ModuleSerialization {
   private final Set<Integer> myCurrentDefinitions = new HashSet<>();
   private boolean myComplete;
 
-  static final int VERSION = 19;
+  // Bumped 19 -> 20 when the string Expression node (proto field 30) was removed: the wire format
+  // changed, so v19 caches must be recompiled rather than deserialized (a v19 .arc could still carry
+  // a now-unknown field-30 node).
+  static final int VERSION = 20;
 
   public ModuleSerialization(ErrorReporter errorReporter, DependencyListener dependencyListener) {
     myErrorReporter = errorReporter;

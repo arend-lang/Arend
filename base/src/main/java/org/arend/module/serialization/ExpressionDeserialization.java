@@ -436,7 +436,6 @@ class ExpressionDeserialization {
       case FIELD_CALL -> readFieldCall(proto.getFieldCall());
       case SMALL_INTEGER -> readSmallInteger(proto.getSmallInteger());
       case BIG_INTEGER -> readBigInteger(proto.getBigInteger());
-      case STRING -> readString(proto.getString());
       case PATH -> readPath(proto.getPath());
       case AT -> readAt(proto.getAt());
       case PATH_TYPE -> readPathType(proto.getPathType());
@@ -707,7 +706,4 @@ class ExpressionDeserialization {
     return new BigIntegerExpression(new BigInteger(proto.getValue().toByteArray()));
   }
 
-  private StringExpression readString(ExpressionProtos.Expression.String proto) {
-    return new StringExpression(proto.getValue());
-  }
 }

@@ -1,0 +1,28 @@
+\import Arith.Fin.Order
+\import Data.Array
+\import Set
+\import Function
+\import Function.Meta
+\import Paths
+
+-- `String` is a record wrapping `Array Byte` (not a `\func` alias) so it stays a distinct type:
+-- a `DecSet String` instance won't collide with `DecSet (Array Byte)` during instance search, and
+-- `Array`'s byte-indexing (`.at`/`!!`) isn't exposed on it -- a byte offset is not a character
+-- offset under UTF-8. For the same reasons, no coercion to/from `Array Byte` is provided.
+\func Byte => Fin 256
+\record String (bytes : Array Byte)
+
+\lemma stringExt {s t : String} (p : s.bytes = t.bytes) : s = t
+  => path (\lam i => \new String { | bytes => p i })
+
+\lemma stringInj {s t : String} (p : s = t) : s.bytes = t.bytes
+  => pmap (String.bytes {__}) p
+
+\instance StringDecSet : DecSet String
+  | decideEq s t => \case arrayDecSet s.bytes t.bytes \with {
+    | yes p => yes $ stringExt p
+    | no q => no $ q o stringInj
+  }
+
+\func \infixr 5 ++ (s t : String) : String
+  => \new String { | bytes => s.bytes Data.Array.++ t.bytes }
