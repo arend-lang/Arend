@@ -66,7 +66,6 @@ public class Prelude implements ArendPrelude {
   public static DataDefinition FIN;
   public static Constructor FIN_ZERO;
   public static Constructor FIN_SUC;
-  public static FunctionDefinition FIN_FROM_NAT;
 
   public static DataDefinition INT;
   public static Constructor POS, NEG;
@@ -201,10 +200,6 @@ public class Prelude implements ArendPrelude {
         ISO.setResultType(new UniverseExpression(SortExpression.makeMax(Arrays.asList(new SortExpression.Var(0, Collections.emptyList()), new SortExpression.Var(1, Collections.emptyList())))));
         ISO.setStatus(Definition.TypeCheckingStatus.NO_ERRORS);
       }
-      case "fromNat" -> {
-        FIN_FROM_NAT = (FunctionDefinition) definition;
-        FIN_FROM_NAT.setStatus(Definition.TypeCheckingStatus.NO_ERRORS);
-      }
       case "divMod" -> {
         DIV_MOD = (FunctionDefinition) definition;
         DIV_MOD.setStatus(Definition.TypeCheckingStatus.NO_ERRORS);
@@ -254,7 +249,6 @@ public class Prelude implements ArendPrelude {
     consumer.accept(ZERO);
     consumer.accept(SUC);
     consumer.accept(FIN);
-    consumer.accept(FIN_FROM_NAT);
     consumer.accept(INT);
     consumer.accept(POS);
     consumer.accept(NEG);
@@ -349,11 +343,6 @@ public class Prelude implements ArendPrelude {
   @Override
   public DataDefinition getFin() {
     return FIN;
-  }
-
-  @Override
-  public FunctionDefinition getFinFromNat() {
-    return FIN_FROM_NAT;
   }
 
   @Override
@@ -549,11 +538,6 @@ public class Prelude implements ArendPrelude {
   @Override
   public ArendRef getFinRef() {
     return FIN == null ? null : FIN.getRef();
-  }
-
-  @Override
-  public ArendRef getFinFromNatRef() {
-    return FIN_FROM_NAT == null ? null : FIN_FROM_NAT.getRef();
   }
 
   @Override

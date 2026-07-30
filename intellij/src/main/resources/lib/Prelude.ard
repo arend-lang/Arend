@@ -68,10 +68,6 @@
   }
 
 \data Fin (n : Nat)
-  \where {
-    \use \coerce fromNat {m : Nat} (n : Nat) : Fin (suc m)
-      => n Nat.mod suc m
-  }
 
 \data Int
   | \coerce pos Nat

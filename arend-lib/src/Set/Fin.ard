@@ -4,7 +4,7 @@
 \import Arith.Fin.Order
 \import Arith.Nat \using (pred \as pred')
 \import Data.Bool
-\import Data.Fin (finLast, fpred, fsuc, fsuc/=, nat_fin_=)
+\import Data.Fin
 \import Data.Or
 \import Equiv
 \import Function
@@ -226,14 +226,14 @@
       | suc n, 0 => idp
       | suc n, suc i => pmap suc char
 
-    \lemma char_nat {n : Nat} (i : Nat) : fin-inc {suc i} {n} i = {Nat} i
+    \lemma char_nat {n : Nat} (i : Nat) : fin-inc {suc i} {n} (i Nat.mod suc i) = {Nat} i
       => char *> mod_< id<suc
   }
 
 \func fin-inc-right {n m : Nat} (i : Fin m) : Fin (n + m)
   => fin-inc_<= (<=_+ zero<=_ <=-refl) i
   \where {
-    \lemma char_nat {n : Nat} (i : Nat) : fin-inc-right {n} {suc i} i = {Nat} i
+    \lemma char_nat {n : Nat} (i : Nat) : fin-inc-right {n} {suc i} (i Nat.mod suc i) = {Nat} i
       => toFin=id *> mod_< id<suc
   }
 
@@ -415,7 +415,7 @@
       | 0, 0 => transport2 R (inv (extendSeq-0 f b)) (inv (extendSeq-last f b)) Rfnb
       | suc n, 0 =>
         \have | p1 : extendSeq f b 0 = f 0 => extendSeq-0 f b
-              | p2 : extendSeq f b 1 = f 1 => extendSeq-agree f b (suc 0)
+              | p2 : extendSeq f b 1 = f 1 => extendSeq-agree f b (fsuc fzero)
         \in transport2 R (inv p1) (inv p2) (chain 0)
       | suc n, suc i => extendChain R (\lam j => f (suc j)) b (\lam j => chain (suc j)) Rfnb i
   }

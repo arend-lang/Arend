@@ -61,16 +61,16 @@
 
 \instance FinRing {n : Nat} : CRing.Dec (Fin (suc n))
   | zro => 0
-  | + x y => (x + y : Nat)
-  | zro-left {x} => pmap Fin.fromNat zro-left *> fin_mod_id x
-  | +-assoc => mod_+-left *> pmap Fin.fromNat +-assoc *> inv mod_+-right
-  | +-comm => pmap Fin.fromNat +-comm
-  | ide => Fin.fromNat 1
-  | * x y => (x * y : Nat)
-  | ide-left {x} => mod_*-left *> pmap Fin.fromNat ide-left *> fin_mod_id x
-  | *-assoc => mod_*-left *> pmap Fin.fromNat *-assoc *> inv mod_*-right
-  | ldistr {x} {y} {z} => mod_*-right *> pmap Fin.fromNat ldistr *> inv (mod_+-left *> mod_+-right)
-  | negative x => iabs (suc n Nat.- x)
+  | + x y => finMod (x + y)
+  | zro-left {x} => pmap finMod zro-left *> fin_mod_id x
+  | +-assoc => mod_+-left *> pmap finMod +-assoc *> inv mod_+-right
+  | +-comm => pmap finMod +-comm
+  | ide => finMod 1
+  | * x y => finMod (x * y)
+  | ide-left {x} => mod_*-left *> pmap finMod ide-left *> fin_mod_id x
+  | *-assoc => mod_*-left *> pmap finMod *-assoc *> inv mod_*-right
+  | ldistr {x} {y} {z} => mod_*-right *> pmap finMod ldistr *> inv (mod_+-left *> mod_+-right)
+  | negative x => finMod $ iabs (suc n Nat.- x)
   | negative-left {x} =>
     \let t => pmap (+ pos x) (pos_iabs (<=-less (fin_< x))) *> IntRing.+-assoc {pos (suc n)} {neg x} *> pmap (_ +) (IntRing.negative-left {pos x})
     \in mod_+-left *> transport (__ Nat.mod suc n = 0) (inv (pmap iabs t)) (fin_nat-inj (n*_+_mod_n {_} {1} NatOrder.zero<suc))
@@ -78,8 +78,8 @@
     | yes x=y => yes (fin_nat-inj x=y)
     | no x/=y => no (\lam p => x/=y p)
   }
-  | *-comm => pmap Fin.fromNat *-comm
-  | natCoef => Fin.fromNat
+  | *-comm => pmap finMod *-comm
+  | natCoef => finMod
   | natCoefZero => idp
   | natCoefSuc m => inv (mod_+-left *> mod_+-right)
   \where {
@@ -99,13 +99,10 @@
           | inv-right => rewrite AbGroup.sum-cancel-right Ring.ldistr_-
         }
 
-    \lemma finEq-modeq {x y n : Nat} (p : x = {Fin (suc n)} y) : x Nat.mod suc n = {Nat} y Nat.mod suc n
-      => cong
-
-    \lemma ldiv-finEq {x y n : Nat} (p : ∃ (Monoid.LDiv {IntEuclidean} (suc n) (x Nat.- y))) : x = {Fin (suc n)} y
+    \lemma ldiv-finEq {x y n : Nat} (p : ∃ (Monoid.LDiv {IntEuclidean} (suc n) (x Nat.- y))) : x Nat.mod suc n = y Nat.mod suc n
       => fin_nat-inj (repeat {2} (rewrite natMod=mod) in ldiv-modEq (pos x) (pos y) n p)
 
-    \lemma intCoef-char (n : Nat) (k : Int) : (FinRing {n}).intCoef k = k mod suc n \elim k {
+    \lemma intCoef-char (n : Nat) (k : Int) : (FinRing {n}).intCoef k = k mod suc n Nat.mod suc n \elim k {
       | pos zero => idp
       | pos (suc m) => rewrite (natCoefSuc, fin_mod_id {n} (_ Nat.mod suc n)) idp
       | neg (suc m) => ldiv-finEq $ inP \case suc m Nat.mod suc n \as r, idp : suc m Nat.mod suc n = {Nat} r \with {
@@ -120,8 +117,8 @@
       }
     }
 
-    \lemma intCoef_pos-char {n : Nat} (k : Nat) : (FinRing {n}).intCoef (pos k) = k
-      => rewrite (natMod=mod k (suc n), fin_mod_id k) in intCoef-char n (pos k)
+    \lemma intCoef_pos-char {n : Nat} (k : Nat) : (FinRing {n}).intCoef (pos k) = k Nat.mod suc n
+      => rewrite (natMod=mod k (suc n), fin_mod_id (k Nat.mod suc n)) in intCoef-char n (pos k)
 
     \lemma intCoef-surj {n : Nat} : IsSurj (FinRing {n}).intCoef => \lam y => inP (y, aux y)
       \where
@@ -129,7 +126,7 @@
           | n, 0 => natCoefZero
           | n, suc k => rewrite (natCoefSuc k, aux k, mod_+-right) (fin_mod_id (suc k))
 
-    \lemma intHom {n : Nat} : RingHom IntRing (FinRing {n}) (mod suc n)
+    \lemma intHom {n : Nat} : RingHom IntRing (FinRing {n}) (__ mod suc n Nat.mod suc n)
       => transport (RingHom _ _) (ext (FinRing.intCoef-char n)) intMap
   }
 
@@ -143,7 +140,7 @@
   | isDivMod x y => run {
     unfold_let,
     rewrite mod_*-right,
-    mod_+-left *> mod_+-right *> pmap Fin.fromNat (Nat.divModProp x y) *> fin_mod_id x
+    mod_+-left *> mod_+-right *> pmap finMod (Nat.divModProp x y) *> fin_mod_id x
   }
   | isEuclideanMap x y y/=0 _ => mod<=left <∘r mod<right (fin_nat-ineq y/=0)
 

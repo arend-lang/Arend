@@ -108,6 +108,9 @@
 \lemma mod_Fin=mod {k n : Nat} {p : 0 < n} : mod_Fin k p = {Nat} k mod n \elim n
   | suc n => idp
 
+\func finMod {n : Nat} (k : Nat) : Fin (suc n)
+  => k mod suc n
+
 \lemma fin_nat-inj {n : Nat} {x y : Fin n} (p : x = {Nat} y) : x = y \elim n, x, y, p
   | suc n, zero, zero, _ => idp
   | suc n, suc x, suc y, p => pmap (\lam z => suc z) (fin_nat-inj (pmap pred p))

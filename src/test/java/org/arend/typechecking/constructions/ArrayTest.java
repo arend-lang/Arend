@@ -389,9 +389,9 @@ public class ArrayTest extends TypeCheckingTestCase {
   @Test
   public void inferTypeTest() {
     typeCheckModule("""
-      \\func test1 : Fin 2 -> Fin 7 => DArray.at {3 :: 5 :: nil}
-      \\func test2 : Fin 2 -> Fin 7 => (3 :: 5 :: nil) DArray.!!
-      \\func test3 : Fin 2 -> Fin 7 => 3 :: 5 :: nil
+      \\func test1 : Fin 2 -> Fin 7 => DArray.at {3 :: {_} {\\lam _ => Fin 7} 5 :: nil}
+      \\func test2 : Fin 2 -> Fin 7 => (3 :: {_} {\\lam _ => Fin 7} 5 :: nil) DArray.!!
+      \\func test3 : Fin 2 -> Fin 7 => 3 :: {_} {\\lam _ => Fin 7} 5 :: nil
       """);
   }
 

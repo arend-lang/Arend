@@ -85,7 +85,7 @@
   \lemma BigProd_++ {l l' : Array E} : BigProd (l ++ l') = BigProd l * BigProd l'
     => AddMonoid.BigSum_++ {AddMonoid.fromMonoid \this}
 
-  \lemma BigProd_suc {n : Nat} {l : Array E (suc n)} : BigProd l = BigProd (\new Array E n (\lam i => l i)) * l n
+  \lemma BigProd_suc {n : Nat} {l : Array E (suc n)} : BigProd l = BigProd (\new Array E n (\lam i => l i)) * l (n Nat.mod suc n)
     => AddMonoid.BigSum_suc {AddMonoid.fromMonoid \this}
 
   \lemma BigProd_replicate {x : E} {n : Nat} : BigProd (replicate n x) = pow x n \elim n
@@ -415,7 +415,7 @@
     | 0, l => inv zro-left
     | suc n, a :: l => pmap (a +) BigSum-split *> inv +-assoc
 
-  \lemma BigSum_suc {n : Nat} {l : Array E (suc n)} : BigSum l = BigSum (\new Array E n (\lam i => l i)) + l n \elim n, l
+  \lemma BigSum_suc {n : Nat} {l : Array E (suc n)} : BigSum l = BigSum (\new Array E n (\lam i => l i)) + l (n Nat.mod suc n) \elim n, l
     | 0, :: a nil => simplify
     | suc n, :: a l => pmap (a +) (BigSum_suc {_} {n} {l} *> pmap (_ + (a :: l) __) (fin_nat-inj (pmap suc (mod_< id<suc) *> inv (mod_< id<suc)))) *> inv +-assoc
 
@@ -554,14 +554,14 @@
 
   -- | Reversing an array preserves its BigSum.
   \lemma BigSum-reverse {k : Nat} (l : Array E (suc k))
-    : BigSum (\new Array E (suc k) (\lam i => l (k -' i))) = BigSum l
+    : BigSum (\new Array E (suc k) (\lam i => l ((k -' i) Nat.mod suc k))) = BigSum l
     => BigSum_Perm {_} {suc k} reverse-perm
     \where {
       -- | The permutation that reverses an array of length `suc k`.
       \private \func reverse-perm {A : \Set} {k : Nat} {l : Array A (suc k)}
-        : Perm (mkArray (\lam i => l (k -' i))) l
-        => Perm.perm-map {Fin (suc k)} {A} l {suc k} {\lam j => k -' j} {\lam j => j}
-          (Perm.perm-fin {suc k} (\lam j => k -' j)
+        : Perm (mkArray (\lam i => l ((k -' i) Nat.mod suc k))) l
+        => Perm.perm-map {Fin (suc k)} {A} l {suc k} {\lam j => (k -' j) Nat.mod suc k} {\lam j => j}
+          (Perm.perm-fin {suc k} (\lam j => (k -' j) Nat.mod suc k)
             (\lam {a} {a'} p => run {
               \have a<=k : a <= k => <_suc_<= (fin_< a),
               \have a'<=k : a' <= k => <_suc_<= (fin_< a'),

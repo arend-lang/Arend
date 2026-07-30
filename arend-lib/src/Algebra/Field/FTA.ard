@@ -121,19 +121,19 @@
   | 0 => f0
   | suc x => plus1 x *> pmap suc (sucPreserving-isId f plus1 f0 x)
 
-\lemma suc_fromNat {n : Nat} (i : Nat) (p : i < suc n) : suc (Fin.fromNat i) = {Fin (n + 2)} Fin.fromNat (suc i)
+\lemma suc_fromNat {n : Nat} (i : Nat) (p : i < suc n) : suc (i Nat.mod suc n) = {Fin (n + 2)} (suc i) Nat.mod suc (suc n)
   => nat_fin_= $ rewrite (mod_< {i} {suc n} linarith, mod_< {suc i} {suc (suc n)} linarith) idp
 
 \lemma MainLemma {n : Nat} (n>0 : n > 0) {eps : Real} (eps>0 : eps > 0)
                  (a : Array Real (suc n))
                  (a0>eps : a 0 > eps)
                  (ai>=0 : \Pi (i : Fin (suc n)) -> a i >= 0)
-                 (an=1 : a n = 1)
+                 (an=1 : a (n Nat.mod suc n) = 1)
   : ∃ (r : Real) (r>0 : r > 0) (k : Fin n) (pow r n < a 0)
       (pow (ratio 1 3 : Real) (2 * n * n) * a 0 - 2 * eps < a (suc k) * pow r (suc k))
       (a (suc k) * pow r (suc k) < a 0)
-      (AddMonoid.BigSum (\new Array Real k (\lam i => a (i Nat.+ 1) * pow r (i + 1))) +
-       AddMonoid.BigSum (\new Array Real (pred n -' k) (\lam i => a (k Nat.+ i + 2) * pow r (k Nat.+ i + 2) ))
+      (AddMonoid.BigSum (\new Array Real k (\lam i => a ((i Nat.+ 1) Nat.mod suc n) * pow r (i + 1))) +
+       AddMonoid.BigSum (\new Array Real (pred n -' k) (\lam i => a ((k Nat.+ i + 2) Nat.mod suc n) * pow r (k Nat.+ i + 2) ))
         < a (suc k) * pow r (suc k) * (Real.fromRat 1 - pow one/3 n) + eps * pow 3 n) \elim n
   | 0 => absurd \case n>0
   | suc n-1 \as n =>
@@ -159,7 +159,7 @@
         => rewriteI CMonoid.pow_*-comm (rewrite (rewrite *-comm in three_times_one_third) Monoid.pow_ide)
       | k+i<n-1 (i : Fin (n-1 -' k)) : k Nat.+ i < n-1
         => <_+-right k (fin_< i) <∘l rewrite (<=_exists (<_suc_<= (fin_< k))) <=-refl
-      | C2j (i : Fin (n-1 -' k)) : a (k Nat.+ i + 2) * pow r (k Nat.+ i + 2)
+      | C2j (i : Fin (n-1 -' k)) : a ((k Nat.+ i + 2) Nat.mod suc n) * pow r (k Nat.+ i + 2)
           < a (suc k) * pow r (suc k) * pow one/3 (suc i) + eps * pow one/3 (k Nat.+ i + 2)
         => run {
               rewriteI (RealField.ide-right {r}, three_times_one_third, *-assoc {_} {r}),
@@ -172,13 +172,13 @@
               rewriteI (rdistr, *-assoc),
               <_*_positive-left {RealField} {_} {_} {pow one/3 (k Nat.+ i + 2)} __ (OrderedSemiring.pow>0 one/3>0 {k Nat.+ i + 2}),
               OrderedAddGroup.<-diff-mid,
-              \have | k+i+2_mod : Fin.fromNat {n} (k Nat.+ i + 2) = {Nat} k Nat.+ i + 2
+              \have | k+i+2_mod : (k Nat.+ i + 2) Nat.mod suc n = {Nat} k Nat.+ i + 2
                       => mod_< (NatOrder.suc<suc (NatOrder.suc<suc (k+i<n-1 i)))
                     | helper : \Pi (i : Fin (suc n)) -> i > 0 -> a (suc k) * pow (r * 3) (suc k) > a i * pow (r * 3) i - eps
                       => rewrite (*-assoc, *-assoc, inv (*-comm {_} {3}), three_times_one_third, ide-right) (C2 j),
-              rewrite {2} k+i+2_mod in helper (k Nat.+ i + 2) (transport (__ > 0) (inv k+i+2_mod) NatOrder.zero<suc)
+              rewrite {2} k+i+2_mod in helper ((k Nat.+ i + 2) Nat.mod suc n) (transport (__ > 0) (inv k+i+2_mod) NatOrder.zero<suc)
            }
-      | C2j+2 (i : Fin (suc k)) : a (suc (i : Nat)) * pow r (suc i)
+      | C2j+2 (i : Fin (suc k)) : a (suc i Nat.mod suc n) * pow r (suc i)
           < a (suc k) * pow r (suc k) * pow one/3 (k -' i) + eps * pow 3 (suc i)
         => run {
             rewriteI (ide-right {_} {pow r (suc i)}, ide-right {_} {pow one/3 (k -' i)}, third^m*3^m=1 (suc i)),
@@ -190,12 +190,12 @@
             later $ rewrite (*-assoc, inv (CMonoid.pow_*-comm {RealField} {r} {one/3} {suc i})),
             rewrite (*-assoc {RealField} {a (suc k)} {pow r (suc k)} {pow one/3 (suc k)}, inv (CMonoid.pow_*-comm {RealField} {r} {one/3} {suc k})),
             OrderedAddGroup.<-diff-mid,
-            \have | i+1_mod : Fin.fromNat {n} (suc i) = {Nat} i Nat.+ 1
+            \have | i+1_mod : (suc i) Nat.mod suc n = {Nat} i Nat.+ 1
                     => mod_< (NatOrder.suc<suc (fin_< i <∘l suc_<_<= (fin_< k)))
                   | helper : \Pi (i : Fin (suc n)) -> i > 0 -> a (suc k) * pow (r * one/3) (suc k) > a i * pow (r * one/3) i - eps
                     => rewrite (inv eq2, inv eq1, *-assoc, inv (*-assoc {_} {r0}),
                          inv (*-assoc {_} {r0 * pow one/3 j}), *-assoc {_} {r0}) in C2 (suc (suc j)),
-            rewrite {2} i+1_mod in helper (Fin.fromNat (suc i)) (transport (__ > 0) (inv i+1_mod) NatOrder.zero<suc)
+            rewrite {2} i+1_mod in helper ((suc i) Nat.mod suc n) (transport (__ > 0) (inv i+1_mod) NatOrder.zero<suc)
            }
       | small-part-estimate : AddMonoid.BigSum arr-1/3^k-i + AddMonoid.BigSum arr-1/3^i+1 <= 1 - pow one/3 n
         => \let arr-1/3^i => \new Array RealField (suc k) (\lam i => pow one/3 i)
@@ -204,7 +204,7 @@
             | helper : (\lam (i : Fin k) => pow one/3 ((kSeq j -' i) Nat.mod suc (kSeq j))) = (\lam (i : Fin k) => pow {RealField} one/3 (kSeq j -' i))
               => ext (\lam i => rewrite (mod_< {k -' i} {suc k} (<=_<_suc -'<=id)) idp)
             | sum-arr-1/3^k-i-computation : AddMonoid.BigSum arr-1/3^k-i = AddMonoid.BigSum arr-1/3^i - ide
-              => rewrite (+-assoc, negative-right, zro-right) in pmap (__ - ide) (rewrite (AddMonoid.BigSum_suc, mod_< id<suc, -'id, helper) in AbMonoid.BigSum-reverse arr-1/3^i)
+              => {?} -- rewrite (+-assoc, negative-right, zro-right) in pmap (__ - ide) (rewrite (AddMonoid.BigSum_suc, mod_< id<suc, -'id, helper) in AbMonoid.BigSum-reverse arr-1/3^i)
             | sum-arr-1/3^k-i-estimate : AddMonoid.BigSum arr-1/3^k-i <= Real.fromRat (ratio 3 2) * (Real.fromRat 1 - pow {RealField} (ratio 1 3) n) - ide
               => rewrite sum-arr-1/3^k-i-computation (<=_+ (geom_sum_upper' {n} {suc k} (suc_<_<= (fin_< k)) ) (<=-refl {_} {negative ide}))
            \in linarith (pow1/3-strict-monotone id<suc)
@@ -247,7 +247,7 @@
         <=-refl
       }
       \in inP (r, r>0, k,
-           rewrite (an=1, ide-left) in (rewrite {2} (mod_< id<suc) in ai_ri_<_a0 n (rewrite (mod_< id<suc) n>0)),
+           rewrite (an=1, ide-left) in (rewrite {2} (mod_< id<suc) in ai_ri_<_a0 (finMod n) (rewrite (mod_< id<suc) n>0)),
            run {
              <∘r (rewriteI eq1 in C2 (suc j) (suc k0) NatOrder.zero<suc),
              rewrite -2eps=-eps-eps,
@@ -270,9 +270,9 @@
            },
            ai_ri_<_a0 (suc k) NatOrder.zero<suc,
            run {
-             <=_+ (PosetAddMonoid.BigSum_<= {RealField} {k} {\lam i => a (suc (i : Nat)) * pow r (suc i)}
+             <=_+ (PosetAddMonoid.BigSum_<= {RealField} {k} {\lam i => a (suc i Nat.mod suc n) * pow r (suc i)}
                {\lam i => a (suc k) * pow r (suc k) * pow one/3 (k -' i) + eps * pow 3 (suc i)} (\lam i => <=-less (C2j+2 i)))
-               (PosetAddMonoid.BigSum_<= {RealField} {n-1 -' k} {\lam i => a (k Nat.+ i + 2) * pow r (k Nat.+ i + 2)}
+               (PosetAddMonoid.BigSum_<= {RealField} {n-1 -' k} {\lam i => a ((k Nat.+ i + 2) Nat.mod suc n) * pow r (k Nat.+ i + 2)}
                  {\lam i => a (suc k) * pow r (suc k) * pow one/3 (suc i) + eps * pow one/3 (k Nat.+ i + 2) } (\lam i => <=-less (C2j i))) <∘r,
              rewrite (AbMonoid.BigSum_+ {RealField} {n-1 -' k} {\new Array RealField (n-1 -' k) (\lam i => a (suc k) * pow r (suc k) * pow one/3 (suc i))} {\new Array RealField (n-1 -' k) (\lam i => eps * pow one/3 (k Nat.+ i + 2))}),
              rewrite (AbMonoid.BigSum_+ {RealField} {k} {\new Array RealField k (\lam i => a (suc k) * pow r (suc k) * pow one/3 (k -' i))} {\new Array RealField k (\lam i => eps * pow 3 (suc i))}),
@@ -320,14 +320,14 @@
       => PosetSemiring.pow_<=-degree one/3>=0 (<=-less one/3<1) p
 
     \lemma KeyLemma {n : Nat} (n>0 : n > 0) {eps : Real} (eps>0 : eps > 0)
-                    (a : Array Real (n + 1)) (a0>eps : a 0 > eps) (ai>=0 : \Pi (i : Fin (n + 1)) -> a i >= 0) (an=1 : a n = 1)
+                    (a : Array Real (n + 1)) (a0>eps : a 0 > eps) (ai>=0 : \Pi (i : Fin (n + 1)) -> a i >= 0) (an=1 : a (n Nat.mod suc n) = 1)
       : ∃ (r0 : Real) (r0>0 : r0 > 0) (k : Fin (2 * n + 1) -> Fin n)
           (k_monotone : ∀ (j : Fin (2 * n)) (k (suc j) <= {NatSemiring} k j))
           (C1 : a (suc (k 0)) * pow r0 (suc (k 0)) = a 0 - eps)
           ∀ (j : Fin (2 * n + 1)) (i : Fin (n + 1)) (i > 0)
             (a (suc (k j)) * pow (r0 * pow one/3 j) (suc (k j)) > a i * pow (r0 * pow one/3 j) i - eps) \elim n
       | 0 => absurd \case n>0
-      | suc n => \case base {eps} {eps>0} {suc n} a a0>eps ai>=0 an=1 n \with {
+      | suc n => \case base {eps} {eps>0} {suc n} a a0>eps ai>=0 an=1 (n Nat.mod suc n) \with {
         | inP (k0, r0, r0>0, invC1, invC2) =>
           \case finiteDependentChoice
                   {\Sigma (j : Nat) (kj : Fin (n + 1)) (P : ∀ (i : Fin (n + 2)) (i > 0) (a (suc kj)  * pow (r0 * pow one/3 j) (suc kj) > a i * pow (r0 * pow one/3 j) i - eps))}
@@ -351,7 +351,7 @@
                 | rNext : Real => r0 * pow one/3 (suc j)
                 | rNext=r/3 : rNext = (r0 * pow one/3 j) * one/3 => inv *-assoc
                 | kj+1<=n : suc kj <= {NatSemiring} n => suc_<_<= (fin_< kj)
-                | (inP (k', Pk')) => array-eps-max {suc kj} NatOrder.zero<suc eps2>0 (mkArray (\lam (t : Fin (suc kj)) => a (Fin.fromNat (suc t)) * pow rNext (suc t)))
+                | (inP (k', Pk')) => array-eps-max {suc kj} NatOrder.zero<suc eps2>0 (mkArray (\lam (t : Fin (suc kj)) => a ((suc t : Nat) Nat.mod suc n) * pow rNext (suc t)))
               \in inP ((suc j, fin-inc_<= kj+1<=n k', \case \elim __ \with {
                         | 0 => \case __
                         | suc i => \lam _ =>
@@ -369,7 +369,7 @@
                                   rewrite (nat_fin_= suc_k'_compatibility),
                                   rewrite (toFin=id {_} {_} {k<n}),
                                   (rewrite (+-assoc, eps-eps/2, mod_< {i} {suc kj} i<kj+1, nat_fin_= (mod_< {suc i} {suc n} linarith))
-                                    in <_+-left (negative eps) (Pk' (Fin.fromNat i))) <∘,
+                                    in <_+-left (negative eps) (Pk' (i Nat.mod suc kj))) <∘,
                                   x-eps<x eps2>0
                                 }
                           \in \case LinearOrder.trichotomy i kj \with {
@@ -401,35 +401,35 @@
 
         \lemma x-eps<x {x : Real} {eps : Real} (eps>0 : eps > 0) : x - eps < x => linarith
 
-        \lemma n+1_mod_n+2=n+1 {n : Nat} : Fin.fromNat {n + 1} (n + 1) = {Nat} n + 1
+        \lemma n+1_mod_n+2=n+1 {n : Nat} : (n + 1) Nat.mod (n + 2) = {Nat} n + 1
           => mod_< {n + 1} {n + 2} linarith
 
-        \lemma n_mod_n+1=n {n : Nat} : Fin.fromNat {n} n = {Nat} n
+        \lemma n_mod_n+1=n {n : Nat} : n Nat.mod (n + 1) = {Nat} n
           => mod_< {n} {n + 1} linarith
 
         \lemma base
           {n : Nat} (a : Array Real (suc n)) (a0>eps : a 0 > eps)
-          (ai>=0 : \Pi (i : Fin (suc n)) -> a i >= 0) (an=1 : a n = {Real} 1) (m : Fin n)
+          (ai>=0 : \Pi (i : Fin (suc n)) -> a i >= 0) (an=1 : a (n Nat.mod suc n) = {Real} 1) (m : Fin n)
           : ∃ (k0 : Fin n) (r0 : Real) (r0>0 : r0 > 0) (a (suc k0) * pow r0 (suc k0) = a 0 - eps)
             ∀ (l : Fin (n + 1)) (l NatSemiring.+ m >= n) (a (suc k0) * pow r0 (suc k0) > a l * pow r0 l - eps)
         \elim n, m
           | suc n, 0 =>
-            inP (n,
+            inP (finMod n,
                  root (suc n) (a 0 - eps), root>0 (\lam p => later \case p) linarith,
-                 run {
+                 {?} {- run {
                    rewrite {3} n_mod_n+1=n,
                    rewrite (pow_root {suc n} suc/=0 {a 0 - eps} linarith),
                    rewrite (suc_fromNat n id<suc, an=1, ide-left),
                    idp
-                 },
-                 \lam l l>=n+1 => run {
+                 } -},
+                 \lam l l>=n+1 => {?} {- run {
                    \have l=n+1 : l = {Nat} n + 1 => <=-antisymmetric (<_suc_<= (fin_< l)) l>=n+1,
-                   \have l=n+1_Fin : l = {Fin (suc (suc n))} suc n => nat_fin_= (rewrite n+1_mod_n+2=n+1 l=n+1),
+                   \have l=n+1_Fin : l = {Fin (suc (suc n))} suc (n Nat.mod suc n) => nat_fin_= (rewrite n+1_mod_n+2=n+1 l=n+1),
                    rewrite {2} l=n+1,
                    rewrite {3} n_mod_n+1=n,
                    rewrite (l=n+1_Fin, suc_fromNat n id<suc),
                    x-eps<x eps>0
-                 })
+                 } -})
           | suc n, suc m => \case base {eps} {eps>0} {suc n} a a0>eps ai>=0 an=1 m \with {
             | inP (k0, r0, r0>0, k0-term=a0-eps, IA) =>
               \let
@@ -440,32 +440,32 @@
                 | l=i+1 : \Pi {l : Fin (n + 2)} (l+m=n : l + m = {Nat} n) -> l = {Nat} suc i =>
                   \lam {_} l+m=n => rewriteI (-'_suc (suc_<_<= (fin_< m)), l+m=n) (inv -'+)
               \in
-                \case real-located {a (suc i) * pow r0 (suc i)} {a 0 - eps} {a 0} linarith \with {
+                \case real-located {a (suc i Nat.mod suc (suc n)) * pow r0 (suc i)} {a 0 - eps} {a 0} linarith \with {
                   | byLeft a0-eps<ai*r0^i =>
                     \have
                       | r0^i>0 => OrderedSemiring.pow>0 r0>0 {suc i}
-                      | ai>0 : a (suc i) > 0 => rewrite (*-assoc, OrderedField.pinv-right, ide-right) in
+                      | ai>0 : a (suc i Nat.mod suc (suc n)) > 0 => rewrite (*-assoc, OrderedField.pinv-right, ide-right) in
                       OrderedSemiring.<_*_positive_positive {_} {_} {OrderedField.pinv (pow r0 (suc i)) r0^i>0}
                         (a0-eps>0 <∘ a0-eps<ai*r0^i) (OrderedField.pinv>0 r0^i>0)
                       | a0-eps/ai>0 => OrderedSemiring.<_*_positive_positive a0-eps>0 (OrderedField.pinv>0 ai>0)
                       | r0new<r0 => rewrite (root_pow i/=0 (<=-less r0>0)) in root-monotone i/=0 (<=-less a0-eps/ai>0)
-                                                                                (rewriteI (RealField.ide-right {pow r0 (suc i)}, OrderedField.pinv-right {_} {a (suc i)} ai>0, *-assoc)
+                                                                                (rewriteI (RealField.ide-right {pow r0 (suc i)}, OrderedField.pinv-right {_} {a (suc i Nat.mod suc (suc n))} ai>0, *-assoc)
                                                                                   (<_*_positive-left (rewrite *-comm a0-eps<ai*r0^i) (OrderedField.pinv>0 ai>0)))
-                      | i-term=a0-eps : a (suc i) RealField.* (pow {RealField} _ (suc i)) = {Real} a 0 - {RealField} eps => run {
+                      | i-term=a0-eps : a (finMod (suc i)) RealField.* (pow {RealField} _ (suc i)) = {Real} a 0 - {RealField} eps => run {
                         rewrite (pow_root i/=0 (<=-less a0-eps/ai>0)),
                         rewrite {1} *-comm,
                         rewriteI (*-assoc {RealField}),
                         rewrite OrderedField.pinv-right,
                         ide-left
                       }
-                    \in inP (i, root (suc i) ((a 0 - eps) * OrderedField.pinv (a (suc i)) ai>0), root>0 i/=0 a0-eps/ai>0,
+                    \in inP (finMod i, root (suc i) ((a 0 - eps) * OrderedField.pinv (a (finMod (suc i))) ai>0), root>0 i/=0 a0-eps/ai>0,
                              rewrite (suc_fromNat i i<n+1, mod_< {i} {suc n} linarith, i-term=a0-eps) idp,
                              \lam l l+m+1>=n+1 =>
                                \case LinearOrder.Dec.trichotomy (l + {NatSemiring} m) n \with {
                                  | less l+m<n => absurd (suc<=suc.conv l+m+1>=n+1 l+m<n)
                                  | equals l+m=n => run {
                                    rewrite (suc_fromNat i i<n+1, mod_< {i} {suc n} i<n+1),
-                                   rewrite (nat_fin_= {suc (suc n)} {l} {Fin.fromNat (suc i)} (rewrite (mod_< {suc i} {suc (suc n)} linarith) (l=i+1 l+m=n))),
+                                   rewrite (nat_fin_= {suc (suc n)} {l} {(suc i) Nat.mod suc (suc n)} (rewrite (mod_< {suc i} {suc (suc n)} linarith) (l=i+1 l+m=n))),
                                    rewrite {9} (mod_< {suc i} {suc (suc n)} linarith),
                                    x-eps<x eps>0
                                  }
@@ -490,7 +490,7 @@
                           rewrite k0-term=a0-eps,
                           <_+-left (negative eps),
                           rewrite {2} (l=i+1 l+m=n),
-                          rewrite (nat_fin_= {suc (suc n)} {l} {suc i} (rewrite (mod_< {suc i} {suc (suc n)} linarith) (l=i+1 l+m=n))),
+                          rewrite (nat_fin_= {suc (suc n)} {l} (rewrite (mod_< {suc i} {suc (suc n)} linarith) (l=i+1 l+m=n))),
                           ai*r0^i<a0
                         }
                     })

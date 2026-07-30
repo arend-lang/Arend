@@ -52,11 +52,6 @@ public class FinTest extends TypeCheckingTestCase {
   }
 
   @Test
-  public void getTypeModCoerce() {
-    typeCheckDef("\\func kiva (a : Nat) : Fin 8 => (Nat.mod) a 0");
-  }
-
-  @Test
   public void getTypeModFailing() {
     typeCheckDef("\\func kiva (a : Nat) : Fin 0 => (Nat.mod) a 0", 1);
     assertThatErrorsAre(Matchers.typeMismatchError());
@@ -78,11 +73,6 @@ public class FinTest extends TypeCheckingTestCase {
   @Test
   public void getTypeDivMod() {
     typeCheckDef("\\func emmmer (a : Nat) : \\Sigma Nat (Fin (suc a)) => Nat.divMod 10 (suc a)");
-  }
-
-  @Test(timeout = 5000)
-  public void fromNatCoercion() {
-    typeCheckDef("\\func darkflames : Fin 1919811 => Fin.fromNat 1919810");
   }
 
   @Test
