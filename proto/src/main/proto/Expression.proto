@@ -29,7 +29,6 @@ message Expression {
         Universe universe = 17;
         SmallInteger small_integer = 18;
         BigInteger big_integer = 19;
-        String string = 30;
         PEval pEval = 20;
         Box box = 29;
         TypeConstructor type_constructor = 27;
@@ -38,6 +37,11 @@ message Expression {
         Path path = 24;
         At at = 25;
     }
+
+    // Field 30 / "string" previously encoded a string node that no longer exists.
+    // Reserved to prevent accidental reuse of the field number or name.
+    reserved 30;
+    reserved "string";
 
     message Abs {
         TypedBinding binding = 1;
@@ -198,9 +202,6 @@ message Expression {
     }
     message BigInteger {
         bytes value = 1;
-    }
-    message String {
-        string value = 1;
     }
 }
 

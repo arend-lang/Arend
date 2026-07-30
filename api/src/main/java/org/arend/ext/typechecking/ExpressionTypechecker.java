@@ -342,6 +342,19 @@ public interface ExpressionTypechecker extends UserDataHolder {
   @Nullable TypedExpression checkNumber(@NotNull BigInteger number, @Nullable CoreExpression expectedType, @NotNull ConcreteExpression marker);
 
   /**
+   * Builds a compact {@code Array (Fin 256)} directly from raw bytes, without going through concrete
+   * syntax. Each element is generated internally from the corresponding byte, so unlike a general
+   * array builder there is nothing caller-supplied to type-check: the result is well-typed by
+   * construction. Use this for large byte-array literals, where a {@code b0 :: b1 :: ... :: nil}
+   * concrete chain would be quadratic to elaborate (one set of level equations per {@code ::}) and
+   * would overflow the concrete-tree visitors' Java stack.
+   *
+   * @param bytes  the bytes of the array, in order
+   * @return       an {@code Array (Fin 256)} containing {@code bytes} (as values {@code 0..255})
+   */
+  @NotNull TypedExpression checkByteArray(byte @NotNull [] bytes);
+
+  /**
    * Returns the definitions corresponding to the given reference.
    */
   @Nullable CoreDefinition getCoreDefinition(@Nullable ArendRef ref);
