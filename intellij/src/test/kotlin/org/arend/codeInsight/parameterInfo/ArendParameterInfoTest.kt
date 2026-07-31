@@ -357,7 +357,7 @@ class ArendParameterInfoTest : ArendTestBase() {
          \func usage1 (a b c : Nat) => a +++ b +++ c
        }
 
-       \func usage2 (a b c : Nat) => foo.+++ {_} {0{-caret-}} (foo.+++ {_} {0} a b) c
+       \func usage2 (a b c : Nat) => (a foo.+++ {_} {0{-caret-}} b) foo.+++ {_} {0} c
        } 
     """, "{this : Foo}, <highlight>{w : Nat}</highlight>, x : Nat, y : Nat")
 
@@ -376,7 +376,7 @@ class ArendParameterInfoTest : ArendTestBase() {
          | zero => \infixl 2 consZero (x = x)
          | suc n' => \infixl 1 consSuc (MyData X n' y x) (MyData X n' y x)
 
-       \func lol => consZero {Nat} {1} {1}{-caret-} idp  
+       \func lol => (consZero) {Nat} {1} {1}{-caret-} idp
     """, "{X : \\Type}, {y : X}, <highlight>{x : X}</highlight>, _ : x = x")
 
 }

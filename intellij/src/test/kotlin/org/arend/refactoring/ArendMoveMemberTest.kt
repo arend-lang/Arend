@@ -1833,13 +1833,13 @@ $testMOR8Header
            \func usage1 (a b c : Nat) => a +++ b +++ c
          }
 
-         \func usage2 (a b c : Nat) => foo.+++ {_} {0} (foo.+++ {_} {0} a b) c
+         \func usage2 (a b c : Nat) => (a foo.+++ {_} {0} b) foo.+++ {_} {0} c
        }
 
        \class Bar \extends Foo {
-         \func lol1 => (Foo.foo.+++ {_} {0}) 101 102
+         \func lol1 => 101 Foo.foo.+++ {_} {0} 102
        } \where {
-         \func lol2 => Foo.foo.+++ {\new Foo {101} 102} {0} 101 102
+         \func lol2 => 101 Foo.foo.+++ {\new Foo {101} 102} {0} 102
        }
     """, """
        \class Foo {u : Nat} {

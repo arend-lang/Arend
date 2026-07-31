@@ -491,8 +491,8 @@ class SplitAtomPatternIntentionTest: QuickFixTestBase() {
       \record Map {A B : \Type}
         | f : A -> B
 
-      \func u-assoc' {A B C : \Type} : Map {union (union A B) C} {union A (union B C)} \cowith
-        | f (w : union (union A B) C) : union A (union B C) \with {
+      \func u-assoc' {A B C : \Type} : Map {(A union B) union C} {A union (B union C)} \cowith
+        | f (w : (A union B) union C) : A union (B union C) \with {
           | inj1 a{-caret-} => {?}
           | inj2 b => {?}
         }
@@ -504,8 +504,8 @@ class SplitAtomPatternIntentionTest: QuickFixTestBase() {
       \record Map {A B : \Type}
         | f : A -> B
 
-      \func u-assoc' {A B C : \Type} : Map {union (union A B) C} {union A (union B C)} \cowith
-        | f (w : union (union A B) C) : union A (union B C) \with {
+      \func u-assoc' {A B C : \Type} : Map {(A union B) union C} {A union (B union C)} \cowith
+        | f (w : (A union B) union C) : A union (B union C) \with {
           | inj1 (inj1 a) => {?}
           | inj1 (inj2 b) => {?}
           | inj2 b => {?}
