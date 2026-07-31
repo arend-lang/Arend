@@ -151,7 +151,17 @@ abstract class UsageEntry(val refactoringContext: ChangeSignatureRefactoringCont
             1
         } else {
             val contextName = getContextName()
-            doubleBuilder.append(contextName, if (globalReferable?.precedence?.isInfix == true) "($contextName)" else contextName)
+            val isInfixOperator = globalReferable?.precedence?.isInfix == true
+            // An infix operator may no longer be applied in prefix position: `++ {1} 2` parses as the
+            // section `\lam x => x ++ ({1} 2)`. So whenever we do not render the call in infix notation
+            // the operator has to be parenthesized. Patterns are exempt -- `PatternBinOpEngine` gives the
+            // leading component `Fixity.NONFIX`, so a prefix constructor pattern still parses as before --
+            // and so is dot notation, where the name is a field access rather than the head of the call.
+            // A bare reference that is not applied to anything keeps its original spelling: it is not a
+            // prefix application, so it is not what this rule is about, and rewriting it would change
+            // text the refactoring has no reason to touch.
+            val needsParens = isInfixOperator && this !is PatternEntry && !contextName.startsWith(".") && getArguments().isNotEmpty()
+            doubleBuilder.append(if (needsParens) "($contextName)" else contextName, if (isInfixOperator) "($contextName)" else contextName)
             0
         }
 

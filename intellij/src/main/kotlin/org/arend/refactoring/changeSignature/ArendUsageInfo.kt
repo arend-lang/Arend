@@ -71,8 +71,11 @@ class ArendUsageInfo(val psi: PsiElement, val task: ChangeSignatureRefactoringDe
                     if (childAppExpr != null && childAppExpr.textRange == childTuple.textRange) return isParenthesizedLongName(childAppExpr)
                 }
 
-                val atom = psi.descendantOfType<ArendAtom>()
-                val result = atom != null && atom.textRange == psi.textRange
+                // A long name is an `ArendAtom` followed by `ArendFieldAcc`s, so the node covering the
+                // whole expression is the enclosing `ArendAtomFieldsAcc`; the atom alone only spans the
+                // first qualifier (`M` in `(M.consZero)`).
+                val atomFieldsAcc = psi.descendantOfType<ArendAtomFieldsAcc>()
+                val result = atomFieldsAcc != null && atomFieldsAcc.textRange == psi.textRange
                 return result
             }
 

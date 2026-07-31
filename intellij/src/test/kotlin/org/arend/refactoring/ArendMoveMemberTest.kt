@@ -1232,7 +1232,7 @@ class ArendMoveMemberTest : ArendMoveTestBase() {
 
                \func foo14 {this : R} => \lam (n : Nat) => \lam n1 => R.bar {this} n1 n
 
-               \func foo15 {this : R} : Nat -> Nat => R.ibar {this} 1
+               \func foo15 {this : R} : Nat -> Nat => (R.ibar) {this} 1
 
                \func foo16 {this : R} : Nat => 1 R.ibar {this} 2
 
