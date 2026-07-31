@@ -10,6 +10,7 @@ import com.intellij.openapi.roots.ContentEntry
 import com.intellij.openapi.roots.ModifiableRootModel
 import com.intellij.openapi.roots.ModuleRootModificationUtil
 import com.intellij.openapi.roots.libraries.LibraryTablesRegistrar
+import com.intellij.openapi.util.Disposer
 import com.intellij.openapi.vfs.LocalFileSystem
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.psi.PsiElement
@@ -34,6 +35,7 @@ import org.arend.module.config.ArendModuleConfigService
 import org.arend.module.config.ExternalLibraryConfig
 import org.arend.naming.reference.FullModuleReferable
 import org.arend.naming.reference.MetaReferable
+import org.arend.prelude.Prelude
 import org.arend.psi.parentOfType
 import org.arend.server.ArendServerService
 import org.arend.server.ProgressReporter
@@ -61,6 +63,11 @@ abstract class ArendTestBase : BasePlatformTestCase(), ArendTestCase {
 
     override fun setUp() {
         super.setUp()
+
+        if (lastProject !== project) {
+            lastProject = project
+            Disposer.register(project) { Prelude.reset() }
+        }
 
         // Without this, a template started by a test (e.g. the inplace renamer that the generate-function
         // intentions open on the definition they have just created) does not show its lookup but silently
@@ -205,6 +212,9 @@ abstract class ArendTestBase : BasePlatformTestCase(), ArendTestCase {
 
     companion object {
         const val CARET_MARKER = "{-caret-}"
+
+        /** The project the JVM-global [Prelude] was last built from; see the reset in [setUp]. */
+        private var lastProject: com.intellij.openapi.project.Project? = null
 
         @JvmStatic
         fun camelOrWordsToSnake(name: String): String {

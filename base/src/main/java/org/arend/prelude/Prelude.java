@@ -288,6 +288,11 @@ public class Prelude implements ArendPrelude {
     PRELUDE_GROUP = group;
     IS_INITIALIZED = true;
   }
+  
+  public static void reset() {
+    PRELUDE_GROUP = null;
+    IS_INITIALIZED = false;
+  }
 
   public static class PreludeTypechecking extends TypecheckingOrderingListener {
     public PreludeTypechecking(ConcreteProvider concreteProvider) {
