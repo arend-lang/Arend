@@ -26,7 +26,10 @@
      $\Re z$ and $\Im z$ respectively after the standard ring moves (the cross
      terms $0 \cdot \_$ / $\_ \cdot 0$ vanish). -}
 \lemma complex-decomp (z : Complex) : z = fromReal z.re + i * z.im
-  => cring-ext
+  => complex-ext
+
+-- | The circle map $t \mapsto e^{it}$.
+\func exp^i* (t : Real) : Complex => exp (i * t)
 
 {- | Euler's formula:
      $$\exp(i \cdot \mathrm{fromReal}\,x)
@@ -34,30 +37,23 @@
      A direct specialisation of `complex-decomp` to
      $z := \exp(i \cdot \mathrm{fromReal}\,x)$, using $\cos x = \Re z$ and
      $\sin x = \Im z$ (definitions of `cos` / `sin` in `Arith.Trig`). -}
-\lemma euler {x : Real} : exp (i * x) = fromReal (cos x) + i * sin x
+\lemma euler {x : Real} : exp^i* x = fromReal (cos x) + i * sin x
   => complex-decomp (exp (i * x)) *> inv (pmap2 (fromReal __ + i * fromReal __) (\peval cos x) (\peval sin x))
 
-{- | The circle map $a \mapsto e^{it}$. Reduces to `exp (i * t)`, but naming it
-     keeps `pmap` from having to guess whether its argument is a `Real` to be
-     coerced or already a `Complex` — an unannotated `\lam t => exp (i * t)`
-     elaborates inconsistently across the two sides of an equation. -}
-\func e^i* (t : Real) : Complex => exp (i * t)
-
 -- | $e^{i0} = 1$.
-\lemma e^i*_zro : e^i* 0 = 1 => pmap exp zro_*-right *> exp_zro
+\lemma exp^i*_zro : exp^i* 0 = 1
+  => pmap exp zro_*-right *> exp_zro
 
 -- | $e^{i(a+b)} = e^{ia}\,e^{ib}$.
-\lemma e^i*_+ {a b : Real} : e^i* (a + b) = e^i* a * e^i* b
-  => pmap exp cring-ext *> exp_+ cring-ext
+\lemma exp^i*_+ {a b : Real} : exp^i* (a + b) = exp^i* a * exp^i* b
+  => pmap exp complex-ext *> exp_+
 
 -- | $(e^{ia})^k = e^{i(ka)}$.
-\lemma pow_e^i* {a : Real} {k : Nat} : pow (e^i* a) k = e^i* (natCoef {RealField} k * a) \elim k
-  | 0 => inv $ pmap e^i* (pmap (`* a) RealField.natCoefZero *> zro_*-left) *> e^i*_zro
-  | suc k => pmap (`* e^i* a) pow_e^i* *> inv e^i*_+
-             *> pmap e^i* (inv $ pmap (`* a) (RealField.natCoefSuc k) *> rdistr
-                                *> pmap (natCoef {RealField} k * a +) ide-left)
+\lemma pow_exp^i* {a : Real} {k : Nat} : pow (exp^i* a) k = exp^i* (k RealField.* a) \elim k
+  | 0 => inv $ pmap exp^i* (pmap (`* a) natCoefZero *> zro_*-left) *> exp^i*_zro
+  | suc k => pmap (* _) pow_exp^i* *> inv exp^i*_+
+             *> pmap exp^i* (inv $ pmap (* a) (natCoefSuc k) *> rdistr *> pmap (_ +) ide-left)
 
 -- | Euler's identity $e^{i\pi} = -1$, from `cos_pi` and `sin_pi`.
-\lemma e^i*_pi : e^i* pi = ComplexField.negative 1
-  => euler *> pmap2 (\lam c s => Complex.fromReal c + i * Complex.fromReal s) cos_pi sin_pi
-     *> cring-ext
+\lemma exp^i*_pi : exp^i* pi = ComplexField.negative 1
+  => euler *> pmap2 (\lam c s => Complex.fromReal c + i * Complex.fromReal s) cos_pi sin_pi *> complex-ext

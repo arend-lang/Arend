@@ -182,8 +182,7 @@
 
 {- | Triangle inequality for finite sums: $|\sum_i z_i| \leq \sum_i |z_i|$ — the {lnorm_BigSum}
      law at {ComplexNormed}. -}
-\lemma cabs_BigSum {l : Array Complex}
-  : cabs (AddMonoid.BigSum {ComplexField} l) <= AddMonoid.BigSum {RealAbGroup} (\new Array Real l.len (\lam i => cabs (l i)))
+\lemma cabs_BigSum {l : Array Complex} : cabs (ComplexField.BigSum l) <= RealAbGroup.BigSum (\lam i => cabs (l i))
   => lnorm_BigSum {ComplexNormed}
 
 {- | Real part dominated by modulus: $|\Re c| \leq |c|$. Proved by squaring:
@@ -250,7 +249,7 @@
      its conjugate is the real number $|z|^2$. This is what turns a division by a
      complex number into a division by the real $|z|^2$. -}
 \lemma mul-conj {z : Complex} : z * conj z = Complex.fromReal (cabs2 z)
-  => cring-ext
+  => complex-ext
 
 {- | Conjugation $\overline{\cdot} : \mathbb{C} \to \mathbb{C}$ as an isometric
      normed-group map. -}
@@ -258,27 +257,27 @@
   | func-+ => conj_+
   | func-norm-isometry => Real.=-upper.1 cabs_conj
 
--- | `onUnitCircle u` says that `u` lies on the unit circle, in the sqrt-free form $|u|^2 = 1$.
-\func onUnitCircle (u : Complex) : \Prop => cabs2 u = 1
+-- | `OnUnitCircle u` says that `u` lies on the unit circle, in the sqrt-free form $|u|^2 = 1$.
+\func OnUnitCircle (u : Complex) : \Prop
+  => cabs2 u = 1
 
-\lemma cabs=1_onUnitCircle {u : Complex} (p : cabs u = 1) : onUnitCircle u
+\lemma cabs=1_OnUnitCircle {u : Complex} (p : cabs u = 1) : OnUnitCircle u
   => inv cabs-square *> pmap (\lam c => c * c) p *> ide-left
 
-\lemma onUnitCircle_* {u w : Complex} (pu : onUnitCircle u) (pw : onUnitCircle w) : onUnitCircle (u * w)
+\lemma OnUnitCircle_* {u w : Complex} (pu : OnUnitCircle u) (pw : OnUnitCircle w) : OnUnitCircle (u * w)
   => cabs2_* *> pmap2 (*) pu pw *> ide-left
 
-\lemma onUnitCircle_negative {u : Complex} (pu : onUnitCircle u) : onUnitCircle (ComplexField.negative u)
+\lemma OnUnitCircle_negative {u : Complex} (pu : OnUnitCircle u) : OnUnitCircle (ComplexField.negative u)
   => cabs2_negative *> pu
 
-\lemma onUnitCircle_conj {u : Complex} (pu : onUnitCircle u) : onUnitCircle (conj u)
+\lemma OnUnitCircle_conj {u : Complex} (pu : OnUnitCircle u) : OnUnitCircle (conj u)
   => cabs2_conj *> pu
 
 {- | For a unit `v`, $\overline v\,v = 1$: `mul-conj` reads $v\overline v$ as the
      real scalar $|v|^2$, which is $1$. -}
-\lemma onUnitCircle_conj-inv {v : Complex} (unit : onUnitCircle v) : conj v * v = 1
+\lemma OnUnitCircle_conj-inv {v : Complex} (unit : OnUnitCircle v) : conj v * v = 1
   => *-comm *> mul-conj *> pmap Complex.fromReal unit
 
-{- | Rotating by a unit `v` and back is the identity, $u = (u\overline v)\,v$ —
-     the gluing step of the chart cover in `Arith.Complex.Arg.unit-arg`. -}
-\lemma onUnitCircle-rotate {u v : Complex} (unit : onUnitCircle v) : u = (u * conj v) * v
-  => inv (*-assoc *> pmap (u *) (onUnitCircle_conj-inv unit) *> ide-right)
+-- | Rotating by a unit `v` and back is the identity, $u = (u\overline v)\,v$.
+\lemma OnUnitCircle-rotate {u v : Complex} (unit : OnUnitCircle v) : u = (u * conj v) * v
+  => inv (*-assoc *> pmap (u *) (OnUnitCircle_conj-inv unit) *> ide-right)

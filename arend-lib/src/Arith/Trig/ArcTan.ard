@@ -209,7 +209,7 @@
 -- | $(1 + ix)(1 - ix) = 1 + x^2$ in $\mathbb{C}$.
 \private \lemma one-plus-ix-times-one-minus-ix {x : Real}
   : (1 + i * x) * (1 - i * x) = {Complex} 1 + x * x
-  => cring-ext
+  => complex-ext
 
 -- | $(1 + x^2)\,\exp(2i\,\arctan x) = (1 + ix)^2$ in $\mathbb{C}$, for $|x| < 1$.
 \private \lemma exp-complex-identity {x : Real} (|x|<1 : abs x < 1)
@@ -224,7 +224,7 @@
                | eqN : exp N = 1 - ix
                   => exp-log1p (negative ix) (\lam z => *-comm {_} {negative ix}) pnix
                | exp-arg : exp (2 * i * arctan x |x|<1) = exp P * exp (negative N)
-                  => pmap exp (inv (arctan-log-bridge |x|<1)) *> exp_+ (ComplexField.*-comm {P} {ComplexField.negative N})
+                  => pmap exp (inv (arctan-log-bridge |x|<1)) *> exp_+
                | mul-cancel-helper {M : CMonoid.{0}} {A b c : M} (bc : b * c = 1) : (A * b) * (A * c) = A * A
                  => equation.cMonoid {bc}
           \in pmap (_ *) exp-arg
@@ -266,7 +266,7 @@
   \where {
     -- | $2i\,y = i\,(2y)$ in $\mathbb{C}$.
     \private \lemma two-i-fromReal-comm {y : Real} : 2 * i * y = i * (2 * y)
-      => cring-ext
+      => complex-ext
 
     -- | Real part of the complex identity: $(1 + x^2)\,\cos(2\arctan x) = 1 - x^2$.
     \private \lemma Re-of-complex-identity {x : Real} (|x|<1 : abs x < 1)
@@ -293,7 +293,7 @@
          \in pmap (_ *) (\peval sin _) *> equation.ring *> im-rewritten
   }
 
--- | $(1 + x^2)\,\cos^2(\arctan x) = 1$. Companion to the public `sin-arctan-sq`.
+-- | $(1 + x^2)\,\cos^2(\arctan x) = 1$.
 \lemma cos-arctan-sq {x : Real} (|x|<1 : abs x < 1)
   : (1 + x * x) * (cos (arctan x |x|<1) * cos (arctan x |x|<1)) = 1
   => equation.cRing *> pmap (\lam s => _ * _ + s * s) (inv (tan-arctan |x|<1)) *> pythagoras
@@ -325,11 +325,7 @@
                + sin (arctan x |x|<1) * cos (arctan x |x|<1)
         => pmap sin (linarith : 2 * arctan x |x|<1 = arctan x |x|<1 + arctan x |x|<1) *> sin_+
       | tan : sin (arctan x |x|<1) = x * cos (arctan x |x|<1) => tan-arctan |x|<1
-     \in rewrite (double, tan) $
-         (equation.cRing : (1 + x * x) * (cos (arctan x |x|<1) * (x * cos (arctan x |x|<1))
-                                        + x * cos (arctan x |x|<1) * cos (arctan x |x|<1))
-                         = 2 * x * ((1 + x * x) * (cos (arctan x |x|<1) * cos (arctan x |x|<1))))
-         *> pmap (2 * x *) (cos-arctan-sq |x|<1) *> ide-right
+     \in rewrite (double, tan) $ equation.cRing *> pmap (2 * x *) (cos-arctan-sq |x|<1) *> ide-right
 
 {- | Arctan addition formula, product (division-free) form:
      $\sin(\arctan a + \arctan b)\,(1 - ab) = (a + b)\,\cos(\arctan a + \arctan b)$. -}

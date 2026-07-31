@@ -107,7 +107,7 @@
      component with the commutative-ring solver. The workhorse for `Complex`
      identities, whose `re`/`im` arithmetic computes and so defeats a direct
      `equation.cRing` on the record itself. -}
-\meta cring-ext => ext (equation.cRing, equation.cRing)
+\meta complex-ext => ext (equation.cRing, equation.cRing)
 
 -- | Complex conjugation $\overline{a + bi} := a - bi$.
 \func conj (z : Complex) : Complex => \new Complex z.re (negative z.im)

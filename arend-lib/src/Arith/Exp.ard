@@ -168,19 +168,22 @@
 {- | Exponent property: $\exp(x + y) = \exp x \cdot \exp y$ when $x$ and $y$
      commute. Combines Cauchy product ({conv-sum}), the exp-to-seriesSum bridge
      ({exp.seriesSum}), and the per-term equality ({exp-conv-eq}). -}
-\lemma exp_+ {A : RealBanachAlgebra} {x y : A} (xy=yx : x * y = y * x) : exp (x + y) = exp x * exp y
+\lemma exp_+-noncomm {A : RealBanachAlgebra} {x y : A} (xy=yx : x * y = y * x) : exp (x + y) = exp x * exp y
   => A.limit-unique (exp.seriesSum (x + y)) $ transport (IsSeriesSum __ (exp x * exp y)) (ext (exp-conv-eq xy=yx)) $
       conv-sum (exp.seriesSum x) (exp.seriesSum y) (powerSeriesConv-absConv exp.ps-conv) (powerSeriesConv-absConv exp.ps-conv)
 
+\lemma exp_+ {A : RealBanachCAlgebra} {x y : A} : exp (x + y) = exp x * exp y
+  => exp_+-noncomm *-comm
+
 \lemma exp_negative-left {A : RealBanachAlgebra} {x : A} : exp (negative x) * exp x = 1
-  => inv (exp_+ $ A.negative_*-left *> inv A.negative_*-right) *> pmap exp A.negative-left *> exp_zro
+  => inv (exp_+-noncomm $ A.negative_*-left *> inv A.negative_*-right) *> pmap exp A.negative-left *> exp_zro
 
 {- | Exponent of a negative is the multiplicative inverse:
-     $\exp x \cdot \exp(-x) = 1$. Corollary of {exp_+} — $x$ and $-x$ commute
+     $\exp x \cdot \exp(-x) = 1$. Corollary of {exp_+-noncomm} — $x$ and $-x$ commute
      (both products equal $-(x \cdot x)$) — together with
      $x + (-x) = 0$ ({negative-right}) and {exp_zro}. -}
 \lemma exp_negative-right {A : RealBanachAlgebra} {x : A} : exp x * exp (negative x) = 1
-  => inv (exp_+ $ A.negative_*-right *> inv A.negative_*-left) *> pmap exp A.negative-right *> exp_zro
+  => inv (exp_+-noncomm $ A.negative_*-right *> inv A.negative_*-left) *> pmap exp A.negative-right *> exp_zro
 
 \lemma exp_Inv {A : RealBanachAlgebra} {x : A} : Monoid.Inv (exp x)
   => \new Monoid.Inv (exp x) (exp (negative x)) exp_negative-left exp_negative-right

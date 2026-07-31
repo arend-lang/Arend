@@ -112,10 +112,11 @@
      `ComplexCompleteRing` plus `isDivisible` (componentwise via
      `complex-div-cancel`) and `norm-double` (Real-form `abs_+-double` lifted
      to `ExUpperReal`). -}
-\instance ComplexBanach : RealBanachAlgebra Complex
+\instance ComplexBanach : RealBanachCAlgebra Complex
   | CompleteExNormedRing => ComplexCompleteRing
   | isDivisible a {n} n/=0 => inP (\new Complex (RatField.finv n *c a.re) (RatField.finv n *c a.im), complex-div-cancel n/=0)
   | norm-double {c} => =_<= (inv RealAbGroup.+-upper *> Real.=-upper.1 cabs_+-double)
+  | *-comm => ComplexField.*-comm
   \where {
     {- | Divisibility helper for `RealPreBanachSpace.isDivisible` on $\mathbb{C}$:
          dividing each component by $n$ in $\mathbb{R}$ and then $n \cdot n$-ing

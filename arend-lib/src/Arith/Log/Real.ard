@@ -67,7 +67,7 @@
                (b-pos : (0 : Real) < b) (b-lt2 : b.U 2)
                (ab-pos : (0 : Real) < a * b) (ab-lt2 : (a * b).U 2)
   : ell a a-pos a-lt2 + ell b b-pos b-lt2 = ell (a * b) ab-pos ab-lt2
-  => Real-exp-inj $ exp_+ RealField.*-comm
+  => Real-exp-inj $ exp_+
        *> pmap2 (*) (exp-log1p (a - 1) (\lam z => *-comm) (ell.abs-a-1-<1 a-pos a-lt2))
                     (exp-log1p (b - 1) (\lam z => *-comm) (ell.abs-a-1-<1 b-pos b-lt2))
        *> equation.cRing
@@ -92,7 +92,7 @@
     \lemma exp-log2 : exp log2 = Real.fromRat 2
       => \have key : exp log2 * (3 * RatField.finv 4) = {Real} 3 * RatField.finv 2
                => pmap (_ *) (inv (exp-ell (3 * RatField.finv 4) r3/4>0 r3/4<2))
-                  *> inv (exp_+ *-comm) *> pmap exp linarith *> exp-ell (3 * RatField.finv 2) r3/2>0 r3/2<2
+                  *> inv exp_+ *> pmap exp linarith *> exp-ell (3 * RatField.finv 2) r3/2>0 r3/2<2
          \in inv ide-right *> pmap (_ *) (inv RealField.*-rat)
              *> inv *-assoc *> pmap (* Real.fromRat (4 * RatField.finv 3)) key *> RealField.*-rat
   }
@@ -102,7 +102,7 @@
   : ell (2 * y) linarith (real_<_U.1 (linarith (real_<_U.2 y-lt1)))
     = ell y y-pos (real_<_U.1 (linarith (real_<_U.2 y-lt1))) + log2
   => Real-exp-inj $ exp-ell (2 * y) _ _ *> inv
-      (exp_+ *-comm
+      (exp_+
        *> pmap2 (*) (exp-ell y y-pos _) log2.exp-log2
        *> *-comm
        *> pmap (* y) (inv (RealStoneC*Algebra_fromRat 2) *> QAlgebra.fromRat_natCoef))
@@ -222,11 +222,11 @@
       | suc n =>
         \have coef-step : suc n RealField.* log2 = n RealField.* log2 + log2
                 => pmap (RealField.* _) (inv $ RealAbGroup.+-rat {n} {1}) *> equation.cRing
-        \in pmap exp coef-step *> exp_+ RealField.*-comm *> pmap2 (*) (exp-n*log2 n) log2.exp-log2
+        \in pmap exp coef-step *> exp_+ *> pmap2 (*) (exp-n*log2 n) log2.exp-log2
 
     -- | Per-representative: $\exp(\mathrm{log-cand}\,x\,p) = x$.
     \private \lemma exp-log-cand (x : Real) (p : log-Real.DyadicShift x) : exp (log-Real.log-cand x p) = x \elim p
-      | (n, p2, p3) => exp_+ *-comm
+      | (n, p2, p3) => exp_+
         *> pmap2 (*) (exp-ell (x * Real.fromRat (RatField.finv (RatField.pow 2 n))) p2 p3) (exp-n*log2 n)
         *> *-assoc
         *> pmap (x *) (pmap (_ *) RealField.pow-rat *> RealField.*-rat *> pmap Real.fromRat (RatField.finv-left $ RatField.>_/= $ RatField.pow>0 idp))

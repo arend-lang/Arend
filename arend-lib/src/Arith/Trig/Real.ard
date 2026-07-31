@@ -53,13 +53,13 @@
 -- | $\cos(x+y) = \cos x \cdot \cos y - \sin x \cdot \sin y$. Standard cosine addition formula.
 \lemma cos_+ {x y : Real} : cos (x + y) = cos x * cos y - sin x * sin y
   => (\peval cos _) *> pmap (\lam z => Re (exp z)) (pmap (i *) fromReal_+ *> ldistr)
-     *> pmap Re (exp_+ (*-comm {_} {i * x} {i * y}))
+     *> pmap Re exp_+
      *> inv (path \lam j => (\peval cos x) j * (\peval cos y) j - (\peval sin x) j * (\peval sin y) j)
 
 -- | $\sin(x+y) = \cos x \cdot \sin y + \sin x \cdot \cos y$. Standard sine addition formula.
 \lemma sin_+ {x y : Real} : sin (x + y) = cos x * sin y + sin x * cos y
   => (\peval sin _) *> pmap (\lam (z : Complex) => Im (exp z)) (pmap (i *) (fromReal_+ {x} {y}) *> ldistr)
-     *> pmap Im (exp_+ (*-comm {_} {i * x} {i * y}))
+     *> pmap Im exp_+
      *> inv (path \lam j => (\peval cos x) j * (\peval sin y) j + (\peval sin x) j * (\peval cos y) j)
 
 -- | $\cos$ as a `CoverMap RealNormed RealNormed`.

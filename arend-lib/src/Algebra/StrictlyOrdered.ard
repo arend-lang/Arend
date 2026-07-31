@@ -277,15 +277,17 @@
       | byRight (x<0,x>0) => <-irreflexive (x<0 <∘ x>0)
     }
 
-  -- | Squaring is strictly monotone on the non-negatives.
   \lemma square_<-mono {x y : E} (x>=0 : 0 <= x) (p : x < y) : x * x < y * y
     => <=_*_positive-right x>=0 (<=-less p) <∘r <_*_positive-left p (x>=0 <∘r p)
 
-  {- | Converse of {square_<-mono}: from $x^2 \leq y^2$ with $y$ non-negative,
-       $x \leq y$. The strict form needs subtraction and lives in {OrderedCRing}
-       as `square_<-cancel`; the equality form for reals is `sqrt-cancel`. -}
   \lemma square_<=-cancel {x y : E} (x>=0 : 0 <= x) (y>=0 : 0 <= y) (p : x * x <= y * y) : x <= y
     => \lam y<x => p (square_<-mono y>=0 y<x)
+
+  \lemma square_<-cancel {x y : E} (x>=0 : 0 <= x) (y>=0 : 0 <= y) (xx<yy : x * x < y * y) : x < y
+    => \case <-comparison (x * y) xx<yy \with {
+      | byLeft xx<xy => <_*_positive-cancel-left x>=0 xx<xy
+      | byRight xy<yy => <_*_positive-cancel-right y>=0 xy<yy
+    }
 
   \lemma sum_squares_>0 {l : Array E} (p : ∃ (j : Fin l.len) (0 < l j || l j < 0)) : 0 < BigSum (map (\lam x => x * x) l) \elim p
     | inP (j,p) => BigSum_>0 (\lam j => square_>=0) $ inP $ later (j, \case \elim p \with {
@@ -529,6 +531,12 @@
   \lemma positive_*-cancel-right {x y : E} (x*y>0 : 0 < x * y) (y>0 : 0 < y) : 0 < x
     => pos_>0 $ pos_*-cancel-right (>0_pos x*y>0) (>0_pos y>0)
 
+  \lemma square>0-cancel {x : E} (xx>0 : 0 < x * x) : 0 < x || x < 0
+    => \case positive_*-cancel (>0_pos xx>0) \with {
+      | byLeft r => byLeft (pos_>0 r.1)
+      | byRight r => byRight (neg_<0 r.1)
+    }
+
   \func denseOrder (t : Inv (1 + 1)) : UnboundedDenseLinearOrder \cowith
     | DenseLinearOrder => LinearlyOrderedSemiring.denseOrder t
     | withoutUpperBound x => inP (x + 1, transport (< _) zro-right $ <_+-right x zro<ide)
@@ -549,8 +557,7 @@
        \in <=-antisymmetric (join-univ lem1 $ rewriteI negative_*-left $ rewrite abs_negative in lem1 {negative x})
         (rewrite (join_*-right abs>=0) $ join-univ lem2 $ transport (_ <=) (later $ rewrite negative_*-left abs_negative) lem2)
 
-  -- | $|x|^2 = x^2$ — squaring forgets the sign.
-  \lemma abs-sq {x : E} : abs x * abs x = x * x
+  \lemma abs-square {x : E} : abs x * abs x = x * x
     => inv abs_* *> abs-ofPos square_>=0
 
   \lemma abs_ide : abs 1 = 1
@@ -599,20 +606,9 @@
   }
 }
 
-\class OrderedCRing \extends OrderedRing, IntegralDomain, LinearlyOrderedCSemiring {
+\class OrderedCRing \extends OrderedRing, IntegralDomain, LinearlyOrderedCSemiring
   | pos_*-cancel-right xy>0 => pos_*-cancel-left (transport isPos *-comm xy>0)
-
-  {- | Strict converse of {LinearlyOrderedSemiring.square_<-mono}: from $x^2 < y^2$
-       with both non-negative, $x < y$. Factor $y^2 - x^2 = (y-x)(y+x)$ and cancel
-       the positive $y+x$ — hence commutativity, which the non-strict
-       {LinearlyOrderedSemiring.square_<=-cancel} does not need. -}
-  \lemma square_<-cancel {x y : E} (x>=0 : 0 <= x) (y>=0 : 0 <= y) (p : x * x < y * y) : x < y
-    => \have prod>0 : zro * (y + x) < (y - x) * (y + x)
-               => transportInv (`< _) zro_*-left
-                    (transportInv (0 <) (equation.cRing : (y - x) * (y + x) = y * y - x * x)
-                      (linarith : 0 < y * y - x * x))
-       \in linarith (<_*_positive-cancel-right (linarith : 0 <= y + x) prod>0)
-} \where
+  \where
     \class Dec \extends OrderedRing.Dec, OrderedCRing, LinearlyOrderedCSemiring.Dec, IntegralDomain.Dec
 
 \class OrderedField \extends OrderedCRing, Field {

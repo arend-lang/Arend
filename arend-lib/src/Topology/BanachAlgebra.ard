@@ -195,6 +195,9 @@
       })
 }
 
+
+\class RealBanachCAlgebra \extends RealBanachAlgebra, CRing
+
 \instance BanachAlgebraCompletion (X : RealPreBanachAlgebra) : RealBanachAlgebra
   | BanachSpace => BanachCompletion X
   | * => *-func

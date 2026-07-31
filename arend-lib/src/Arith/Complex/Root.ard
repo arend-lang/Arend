@@ -25,16 +25,12 @@
   : ∃ (w : Complex) (Monoid.pow w k = z) \elim k
   | 0 => absurd \case k>0
   | suc k-1 \as k =>
-    \have kc>0 : (0 : Real) < natCoef {RealField} k => LinearlyOrderedSemiring.natCoef>0 k>0
-    \in \case complex-arg rho>0 \with {
-      | inP (theta, z-eq) =>
-        \let | b => OrderedField.pinv (natCoef {RealField} k) kc>0 * theta
-        \in inP (Complex.fromReal (root k (cabs z)) * e^i* b,
-                 CMonoid.pow_*-comm {ComplexField} {Complex.fromReal (root k (cabs z))} {e^i* b} {k}
-                 *> pmap2 (*)
-                      (inv (Complex.fromReal_pow {root k (cabs z)} {k})
-                       *> pmap Complex.fromReal (pow_root suc/=0 (<=-less rho>0)))
-                      (pow_e^i*
-                       *> pmap e^i* (inv *-assoc *> pmap (`* theta) (OrderedField.pinv-right kc>0) *> ide-left))
-                 *> inv z-eq)
-    }
+    \let | kc>0 : 0 RealAbGroup.< k => RealField.natCoef>0 k>0
+         | (inP (theta, z-eq)) => complex-arg rho>0
+         | b => RealField.pinv k kc>0 * theta
+    \in inP (Complex.fromReal (root k (cabs z)) * exp^i* b,
+               ComplexField.pow_*-comm {_} {_} {k}
+               *> pmap2 (*)
+                    (inv (Complex.fromReal_pow {_} {k}) *> pmap Complex.fromReal (pow_root suc/=0 (<=-less rho>0)))
+                    (pow_exp^i* *> pmap exp^i* (inv *-assoc *> pmap (* theta) (RealField.pinv-right kc>0) *> ide-left))
+               *> inv z-eq)

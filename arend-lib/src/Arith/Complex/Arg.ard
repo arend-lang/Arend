@@ -12,7 +12,6 @@
 \import Arith.Rat
 \import Arith.Real
 \import Arith.Real.Field
-\import Arith.Real.Root
 \import Arith.Trig.ArcTan
 \import Function.Meta
 \import Logic
@@ -32,15 +31,7 @@
 
      The main results are `unit-arg` — every $u$ with $|u| = 1$ is $e^{i\theta}$
      for some real $\theta$ — and its polar form `complex-arg`. The latter is
-     what `Arith.Complex.Root.complex-root` turns into $k$-th roots, the
-     ingredient a constructive Kneser-lemma / FTA development needs in order to
-     aim $b_k z^k$ against $b_0$.
-
-     Supporting material lives with its subject matter rather than here: the
-     circle map `e^i*` and its homomorphism laws in `Arith.Complex.Euler`, the
-     `onUnitCircle` predicate and its closure lemmas in `Arith.Complex.Norm`,
-     `square>0_sign` in `Arith.Real.Root`, and the square-monotonicity lemmas as
-     class members of `LinearlyOrderedSemiring` / `OrderedCRing`.
+     what `Arith.Complex.Root.complex-root` turns into $k$-th roots.
 
      Surjectivity of $\theta \mapsto e^{i\theta}$ is obtained *without* a total
      inverse trigonometric function: the stereographic parameter `stereo`,
@@ -89,7 +80,7 @@
 {- | $|t| < 1$ for a unit `u` in the open right half plane, so `arctan` accepts
      it. By `square_<-cancel` it suffices that $(\Im u)^2 < (1+\Re u)^2$, which
      on the circle reads $1 - (\Re u)^2 < 1 + 2\Re u + (\Re u)^2$. -}
-\lemma stereo<1 {u : Complex} (unit : onUnitCircle u) (re>0 : u.re > 0) : abs (stereo u re>0) < 1
+\lemma stereo<1 {u : Complex} (unit : OnUnitCircle u) (re>0 : u.re > 0) : abs (stereo u re>0) < 1
   => \let
       | d => 1 + u.re
       | t => stereo u re>0
@@ -102,7 +93,7 @@
         => (equation.cRing : negative t * d = negative (t * d)) *> pmap negative td
       | absim<d : abs u.im < d
         => RealField.square_<-cancel RealAbGroup.abs>=0 (<=-less (denom>0 re>0))
-             (transportInv (`< _) RealField.abs-sq (linarith : u.im * u.im < d * d))
+             (transportInv (`< _) RealField.abs-square (linarith : u.im * u.im < d * d))
       | cancel-d {s s' : Real} (e : s = s' * d) (b : s < d) : s' < 1
         => <_*_positive-cancel-right (<=-less (denom>0 re>0)) $ transport2 (<) e (inv ide-left) b
      \in <_join-univ (cancel-d (inv td) (RealAbGroup.abs>=id <∘r absim<d))
@@ -116,7 +107,7 @@
      decision that `real-located` can only deliver inside a `\Prop`, and no
      continuous choice exists anyway. `unit-arg` glues four rotated copies of
      this chart, and only the truncated `∃` survives the gluing. -}
-\func arg-right {u : Complex} (unit : onUnitCircle u) (re>0 : u.re > 0) : Real
+\func arg-right {u : Complex} (unit : OnUnitCircle u) (re>0 : u.re > 0) : Real
   => 2 * arctan (stereo u re>0) (stereo<1 unit re>0)
 
 {- | The chart's defining property: $e^{i\,\mathrm{argRight}(u)} = u$.
@@ -125,8 +116,7 @@
      the circle $(1+t^2)d^2 = 2d$, $(1-t^2)d^2 = \Re u\,(2d)$ and
      $2t\,d^2 = \Im u\,(2d)$, so the two double-angle identities collapse
      against a single cancellation of $2d$. -}
-\lemma e^i*_arg-right {u : Complex} (unit : onUnitCircle u) (re>0 : u.re > 0)
-  : e^i* (arg-right unit re>0) = u
+\lemma exp^i*_arg-right {u : Complex} (unit : OnUnitCircle u) (re>0 : u.re > 0) : exp^i* (arg-right unit re>0) = u
   => \let
       | d => 1 + u.re
       | t => stereo u re>0
@@ -169,8 +159,7 @@
      $B = 3\Re u + 4\Im u$ picks one, and the identity in `key` bounds
      $25(\Re u)^2 + B^2$ below by $10$, so the two located comparisons against
      $4 < 5$ always leave a usable branch. -}
-\lemma unit-arg {u : Complex} (unit : onUnitCircle u)
-  : ∃ (theta : Real) (e^i* theta = u)
+\lemma unit-arg {u : Complex} (unit : OnUnitCircle u) : ∃ (theta : Real) (exp^i* theta = u)
   => \let | bv => 3 * u.re + 4 * u.im
           | w => u * conj vrot
      \in \have
@@ -180,27 +169,26 @@
                              - (10 + 6 * ((2 * u.re + u.im) * (2 * u.re + u.im)))
                              = 10 * (u.re * u.re + u.im * u.im - 1)))
       | bound : 25 * (u.re * u.re) + bv * bv >= 10 => linarith (RealField.square_>=0 {2 * u.re + u.im})
-      | unit-w : onUnitCircle w => onUnitCircle_* unit (onUnitCircle_conj vrot-unit)
+      | unit-w : OnUnitCircle w => OnUnitCircle_* unit (OnUnitCircle_conj vrot-unit)
       | w-re5 : 5 * w.re = bv => linarith
-      | u-decomp : u = w * vrot => onUnitCircle-rotate vrot-unit
+      | u-decomp : u = w * vrot => OnUnitCircle-rotate vrot-unit
      \in \case real-located {25 * (u.re * u.re)} {4} {5} (linarith : (4 : Real) < 5) \with {
-       | byLeft resq-big => \case square>0_sign (linarith : (0 : Real) < u.re * u.re) \with {
-         | byLeft re>0 => arg-shift u unit re>0 e^i*_zro (inv ide-right)
+       | byLeft resq-big => \case RealField.square>0-cancel (linarith : (0 : Real) < u.re * u.re) \with {
+         | byLeft re>0 => arg-shift u unit re>0 exp^i*_zro (inv ide-right)
          | byRight re<0 =>
-           arg-shift (ComplexField.negative u) (onUnitCircle_negative {u} unit)
-             (linarith : negative u.re > 0) e^i*_pi (inv $ cring-ext)
+           arg-shift (ComplexField.negative u) (OnUnitCircle_negative {u} unit)
+             (linarith : negative u.re > 0) exp^i*_pi (inv complex-ext)
        }
        | byRight resq-small =>
-         \have v-eq : e^i* (arg-right vrot-unit vrot-re>0) = vrot => e^i*_arg-right vrot-unit vrot-re>0
-         \in \case square>0_sign (linarith : (0 : Real) < bv * bv) \with {
+         \have v-eq : exp^i* (arg-right vrot-unit vrot-re>0) = vrot => exp^i*_arg-right vrot-unit vrot-re>0
+         \in \case RealField.square>0-cancel (linarith : (0 : Real) < bv * bv) \with {
            | byLeft bv>0 => arg-shift w unit-w (linarith : w.re > 0) v-eq u-decomp
            | byRight bv<0 =>
-             arg-shift (ComplexField.negative w) (onUnitCircle_negative {w} unit-w)
+             arg-shift (ComplexField.negative w) (OnUnitCircle_negative {w} unit-w)
                        (linarith : negative w.re > 0)
-                       (e^i*_+ *> pmap2 (*) e^i*_pi v-eq
-                        *> (cring-ext
-                            : ComplexField.negative 1 * vrot = ComplexField.negative vrot))
-                       (u-decomp *> inv (cring-ext))
+                       (exp^i*_+ *> pmap2 (*) exp^i*_pi v-eq
+                        *> (complex-ext : ComplexField.negative 1 * vrot = ComplexField.negative vrot))
+                       (u-decomp *> inv complex-ext)
          }
      }
   \where {
@@ -208,24 +196,24 @@
          $\rho = e^{i\psi}$ and $u = w\rho$, then `u` has an argument too. All
          four branches of `unit-arg` go through this — the right half plane
          itself is the case $\rho = 1$, $\psi = 0$. -}
-    \private \lemma arg-shift {u : Complex} (w : Complex) (unit-w : onUnitCircle w) (w-re>0 : w.re > 0)
+    \private \lemma arg-shift {u : Complex} (w : Complex) (unit-w : OnUnitCircle w) (w-re>0 : w.re > 0)
                               {rho : Complex} {psi : Real}
-                              (rho-eq : e^i* psi = rho) (u-eq : u = w * rho)
-      : ∃ (theta : Real) (e^i* theta = u)
+                              (rho-eq : exp^i* psi = rho) (u-eq : u = w * rho)
+      : ∃ (theta : Real) (exp^i* theta = u)
       => inP (arg-right unit-w w-re>0 + psi,
-              e^i*_+ *> pmap2 (*) (e^i*_arg-right unit-w w-re>0) rho-eq *> inv u-eq)
+              exp^i*_+ *> pmap2 (*) (exp^i*_arg-right unit-w w-re>0) rho-eq *> inv u-eq)
 
     -- | The explicit rotation $v = \tfrac35 + \tfrac45 i$, a unit in the right half plane.
     \private \func vrot : Complex => \new Complex (ratio 3 5) (ratio 4 5)
 
-    \private \lemma vrot-unit : onUnitCircle vrot => linarith
+    \private \lemma vrot-unit : OnUnitCircle vrot => linarith
 
     \private \lemma vrot-re>0 : vrot.re > 0 => linarith
   }
 
 -- | Polar decomposition: every nonzero `z` is $|z|\,e^{i\theta}$.
 \lemma complex-arg {z : Complex} (rho>0 : 0 < cabs z)
-  : ∃ (theta : Real) (z = Complex.fromReal (cabs z) * e^i* theta)
+  : ∃ (theta : Real) (z = Complex.fromReal (cabs z) * exp^i* theta)
   => \let u => Complex.fromReal (pinv (cabs z) rho>0) * z
      \in \have
       | cabs-u=1 : cabs u = 1
@@ -235,6 +223,6 @@
         => inv *-assoc
            *> pmap (`* z) (inv Complex.fromReal_* *> pmap Complex.fromReal (pinv-right rho>0))
            *> ide-left
-     \in \case unit-arg {u} (cabs=1_onUnitCircle {u} cabs-u=1) \with {
+     \in \case unit-arg {u} (cabs=1_OnUnitCircle {u} cabs-u=1) \with {
        | inP (theta, u-eq) => inP (theta, inv (pmap (Complex.fromReal (cabs z) *) u-eq *> z-eq))
      }

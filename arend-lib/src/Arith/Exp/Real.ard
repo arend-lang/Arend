@@ -162,7 +162,7 @@
               | half-sum : half + half = x
                  => inv QModule.*q_*2 *> two-q-half
               | sq-eq : exp x = exp half * exp half
-                 => pmap exp (inv half-sum) *> exp_+ RealStoneC*Algebra.*-comm
+                 => pmap exp (inv half-sum) *> exp_+
          \in transportInv (0 <=) sq-eq RealField.square_>=0
   }
 
@@ -171,7 +171,7 @@
   => \have | y-eq : y = x + (y - x)
               => inv (inv +-assoc *> pmap (+ _) +-comm *> +-assoc *> pmap (y +) negative-right *> zro-right)
            | exp-y-eq : exp y = exp x * exp (y - x)
-              => pmap exp y-eq *> exp_+ *-comm
+              => pmap exp y-eq *> exp_+
            | step : exp x * 1 < exp x * exp (y - x)
               => RealField.<_*_positive-right (Real-exp-pos x)
                    (Real-exp->1-of-pos (OrderedAddGroup.to>0 x<y))

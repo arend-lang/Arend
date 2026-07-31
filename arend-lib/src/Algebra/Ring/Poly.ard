@@ -142,20 +142,9 @@
   | padd p e, 0 => idp
   | padd p e, suc n => polyCoef_polyMap
 
--- | Evaluating at $0$ returns the constant coefficient: $p(0) = [x^0]\,p$.
-\lemma polyEval_zro {R : Ring} {p : Poly R} : polyEval p 0 = polyCoef p 0 \elim p
-  | pzero => idp
-  | padd p e => pmap (`+ e) zro_*-right *> zro-left
-
 \lemma polyEval_fromArray {R : Ring} {l : Array R} {a : R} : polyEval (Poly.fromArray l) a = R.BigSum (\lam j => l j * pow a j) \elim l
   | nil => idp
   | c :: l => +-comm *> pmap2 (+) (inv ide-right) (pmap (* a) polyEval_fromArray *> R.BigSum-rdistr *> pmap R.BigSum (exts \lam j => *-assoc))
-
-{- | The {polyEval_fromArray} sum at $0$ collapses to the head coefficient. Stated over an
-     array variable so that all three implicits of the chain below are inferrable. -}
-\lemma polyEval_fromArray_zro {R : Ring} {n : Nat} {l : Array R (suc n)}
-  : R.BigSum (\lam i => l i * pow 0 i) = l 0
-  => inv (polyEval_fromArray {R} {l} {0}) *> polyEval_zro *> polyCoef_fromArray
 
 \lemma polyMapEval_fromArray {R : AddPointed} {E : Ring} {f : AddPointedHom R E} {l : Array f.Dom} {a : f.Cod}
   : polyMapEval f (Poly.fromArray l) a = AddMonoid.BigSum (\lam j => f (l j) * pow a j)

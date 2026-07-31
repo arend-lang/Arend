@@ -112,27 +112,3 @@
      then $x = y$. -}
 \lemma sqrt-cancel {x y : Real} (x>=0 : 0 <= x) (y>=0 : 0 <= y) (p : x * x = y * y) : x = y
   => inv (sqrt_pow x>=0) *> pmap sqrt p *> sqrt_pow y>=0
-
-{- | For reals a strictly positive square determines a sign: $x^2 > 0$ yields
-     $x > 0$ or $x < 0$. `sqrt` supplies the scale at which locatedness resolves
-     it; the middle branch is ruled out because $|x| < \sqrt{x^2}$ is absurd.
-
-     Only a `\Prop`-valued `||`, so this decides a sign inside a proof but never
-     produces a `Real` — see `Arith.Complex.Arg.arg-right`. -}
-\lemma square>0_sign {x : Real} (p : 0 < x * x) : (0 < x) || (x < 0)
-  => \let | r => sqrt (x * x)
-     \in \have
-      | rr : r * r = x * x => pow_sqrt (<=-less p)
-      | rpos : 0 < r => sqrt>0 p
-      | mid-absurd : \Pi (RealAbGroup.negative r < x) (x < r) -> Empty
-        => \lam a b => <-irreflexive $ transport (x * x <) rr $
-             transport (`< r * r) RealField.abs-sq $
-             RealField.square_<-mono RealAbGroup.abs>=0
-               (RealAbGroup.<_join-univ b (linarith : RealAbGroup.negative x < r))
-     \in \case real-located {x} {RealAbGroup.negative r} {0} (linarith : RealAbGroup.negative r < 0) \with {
-       | byLeft x>-r => \case real-located {x} {0} {r} rpos \with {
-         | byLeft x>0 => byLeft x>0
-         | byRight x<r => absurd (mid-absurd x>-r x<r)
-       }
-       | byRight x<0 => byRight x<0
-     }

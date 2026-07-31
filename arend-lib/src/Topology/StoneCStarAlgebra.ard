@@ -123,7 +123,7 @@
         \in ExUpperRealAbMonoid.<-rat.1 $ ExUpperRealSemigroup.finv_<-rotate-left a>0 (ExUpperRealAbMonoid.<-rat.2 $ norm>=0 |x|<c) $ transport (_ <) ExUpperRealSemigroup.*-comm $ c*-square <∘r |xx|<ca) a<b) $ ExUpperRealLattice.SJoin-univ $ later \lam |a|<=1 => norm_*_<= <=∘ ExUpperRealSemigroup.<=_* <=-refl |a|<=1 <=∘ =_<= (ExUpperRealSemigroup.ide-right norm>=0)
 }
 
-\class StoneC*Algebra \extends StoneC*PseudoAlgebra, RealBanachAlgebra, OrderedC*Algebra, PosetRing {
+\class StoneC*Algebra \extends StoneC*PseudoAlgebra, RealBanachCAlgebra, OrderedC*Algebra, PosetRing {
   | <= => StoneC*Algebra.<=
   | <=-refl => inP (0, zro_*-right *> inv negative-right)
   | <=-transitive y-x-sq z-y-sq => transport IsSquare simplify (square-sum c*-sum z-y-sq y-x-sq)
