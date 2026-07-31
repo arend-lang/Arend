@@ -110,11 +110,6 @@
       *> pmap2 (*) (inv cabs-square) (inv cabs-square)
       *> {Real} equation.cRing
 
-{- | Square-monotonicity inverse on nonneg reals: $s^2 \leq t^2 \implies s \leq t$. -}
-\lemma square_<=-cancel {s t : Real} (s>=0 : 0 <= s) (t>=0 : 0 <= t) (p : s * s <= t * t) : s <= t
-  => \lam t<s => p $ transport2 (__ * t < __ * s) ide-left ide-left $
-       RealField.pow_<-monotone {_} {_} {2} suc/=0 t>=0 t<s
-
 {- | Cauchy–Schwarz, linear form: $\Re x \cdot \Re y + \Im x \cdot \Im y \leq |x| \cdot |y|$.
      Goes through $|s|$ (real abs of the inner product), which has
      $|s|^2 = s^2 \leq (|x| \cdot |y|)^2$, then sqrt-cancels. -}
@@ -129,7 +124,7 @@
                         <= cabs x * cabs y * (cabs x * cabs y)
               => transport2 (<=) (inv abs_s_sq) (inv tt-eq) CS_<=
            | abs_s<=t : RealField.abs (x.re * y.re + x.im * y.im) <= cabs x * cabs y
-              => square_<=-cancel RealField.abs>=0 t>=0 sq<=tt
+              => RealField.square_<=-cancel RealField.abs>=0 t>=0 sq<=tt
      \in RealField.abs>=id <=∘ abs_s<=t
 
 {- | Triangle inequality $|x + y| \leq |x| + |y|$. Squared form:
@@ -146,7 +141,7 @@
               => linarith (CS-linear {x} {y})
            | sq-bound : cabs (x + y) * cabs (x + y) <= (cabs x + cabs y) * (cabs x + cabs y)
               => transport2 (<=) (inv lhs_sq) (inv rhs_sq) inner-bound
-     \in square_<=-cancel (cabs>=0 {x + y}) sum>=0 sq-bound
+     \in RealField.square_<=-cancel (cabs>=0 {x + y}) sum>=0 sq-bound
 
 {- | Reverse of {cabs_zro}: $|c| = 0 \implies c = 0$. Since $|c|^2 = (\Re c)^2 + (\Im c)^2$
      and both squares are nonneg, the sum vanishing forces each to vanish, then field
@@ -181,16 +176,26 @@
   | norm_* => Real.=-upper.1 cabs_* *> RealField.*-upper cabs>=0 cabs>=0
   | norm_ide => Real.=-upper.1 cabs_ide
 
+-- | Modulus of a power: $|z^k| = |z|^k$ — the {lnorm_pow} law at {ComplexValuedRing}.
+\lemma cabs_pow {z : Complex} {k : Nat} : cabs (pow z k) = pow (cabs z) k
+  => lnorm_pow {ComplexValuedRing}
+
+{- | Triangle inequality for finite sums: $|\sum_i z_i| \leq \sum_i |z_i|$ — the {lnorm_BigSum}
+     law at {ComplexNormed}. -}
+\lemma cabs_BigSum {l : Array Complex}
+  : cabs (AddMonoid.BigSum {ComplexField} l) <= AddMonoid.BigSum {RealAbGroup} (\new Array Real l.len (\lam i => cabs (l i)))
+  => lnorm_BigSum {ComplexNormed}
+
 {- | Real part dominated by modulus: $|\Re c| \leq |c|$. Proved by squaring:
-     $(|\Re c|)^2 = (\Re c)^2 \leq (\Re c)^2 + (\Im c)^2 = |c|^2$, then `square_<=-cancel`. -}
+     $(|\Re c|)^2 = (\Re c)^2 \leq (\Re c)^2 + (\Im c)^2 = |c|^2$, then `RealField.square_<=-cancel`. -}
 \lemma cabs_re_<= {c : Complex} : RealField.abs c.re <= cabs c
-  => square_<=-cancel abs>=0 cabs>=0 $ transport2 (<=)
+  => RealField.square_<=-cancel abs>=0 cabs>=0 $ transport2 (<=)
       (zro-right *> inv (RealField.abs-ofPos RealField.square_>=0) *> RealField.abs_*)
       (inv cabs-square)
       (<=_+ <=-refl RealField.square_>=0)
 
 \lemma cabs_im_<= {c : Complex} : RealField.abs c.im <= cabs c
-  => square_<=-cancel RealField.abs>=0 cabs>=0 $ transport2 (<=)
+  => RealField.square_<=-cancel RealField.abs>=0 cabs>=0 $ transport2 (<=)
       (zro-left *> inv (RealField.abs-ofPos RealField.square_>=0) *> RealField.abs_*)
       (inv cabs-square)
       (<=_+ RealField.square_>=0 <=-refl)
@@ -241,8 +246,39 @@
 \lemma cabs_conj {z : Complex} : cabs (conj z) = cabs z
   => pmap sqrt cabs2_conj
 
+{- | $z\overline{z} = |z|^2$, viewed inside $\mathbb{C}$: the product of a number with
+     its conjugate is the real number $|z|^2$. This is what turns a division by a
+     complex number into a division by the real $|z|^2$. -}
+\lemma mul-conj {z : Complex} : z * conj z = Complex.fromReal (cabs2 z)
+  => cring-ext
+
 {- | Conjugation $\overline{\cdot} : \mathbb{C} \to \mathbb{C}$ as an isometric
      normed-group map. -}
 \func conjMap : NormedIsometricMap ComplexNormed ComplexNormed conj \cowith
   | func-+ => conj_+
   | func-norm-isometry => Real.=-upper.1 cabs_conj
+
+-- | `onUnitCircle u` says that `u` lies on the unit circle, in the sqrt-free form $|u|^2 = 1$.
+\func onUnitCircle (u : Complex) : \Prop => cabs2 u = 1
+
+\lemma cabs=1_onUnitCircle {u : Complex} (p : cabs u = 1) : onUnitCircle u
+  => inv cabs-square *> pmap (\lam c => c * c) p *> ide-left
+
+\lemma onUnitCircle_* {u w : Complex} (pu : onUnitCircle u) (pw : onUnitCircle w) : onUnitCircle (u * w)
+  => cabs2_* *> pmap2 (*) pu pw *> ide-left
+
+\lemma onUnitCircle_negative {u : Complex} (pu : onUnitCircle u) : onUnitCircle (ComplexField.negative u)
+  => cabs2_negative *> pu
+
+\lemma onUnitCircle_conj {u : Complex} (pu : onUnitCircle u) : onUnitCircle (conj u)
+  => cabs2_conj *> pu
+
+{- | For a unit `v`, $\overline v\,v = 1$: `mul-conj` reads $v\overline v$ as the
+     real scalar $|v|^2$, which is $1$. -}
+\lemma onUnitCircle_conj-inv {v : Complex} (unit : onUnitCircle v) : conj v * v = 1
+  => *-comm *> mul-conj *> pmap Complex.fromReal unit
+
+{- | Rotating by a unit `v` and back is the identity, $u = (u\overline v)\,v$ —
+     the gluing step of the chart cover in `Arith.Complex.Arg.unit-arg`. -}
+\lemma onUnitCircle-rotate {u v : Complex} (unit : onUnitCircle v) : u = (u * conj v) * v
+  => inv (*-assoc *> pmap (u *) (onUnitCircle_conj-inv unit) *> ide-right)

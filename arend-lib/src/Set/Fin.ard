@@ -240,6 +240,10 @@
 \func fin-raise {n k : Nat} (i : Fin n) : Fin (k + n) \elim k
   | 0 => i
   | suc k => suc (fin-raise i)
+  \where
+    \lemma char {n k : Nat} {i : Fin n} : fin-raise {n} {k} i = {Nat} k Nat.+ i \elim k
+      | 0 => idp
+      | suc k => pmap suc char
 
 \func sface {n : Nat} (k : Fin (suc n)) (i : Fin n) : Fin (suc n) \elim n, k, i
   | suc n, 0, i => suc i

@@ -53,7 +53,7 @@
 -- | $\sin 0 = 0$.
 \lemma sin_zro : sin 0 = {Complex} 0
   => rewrite (\peval sin 0, exp_i_0, pmap (\lam z => exp (i * z)) ComplexField.negative_zro *> exp_i_0) $
-      ext (equation.cRing, equation.cRing)
+      cring-ext
 
 -- | Cosine addition formula: $\cos(x+y) = \cos x \cos y - \sin x \sin y$.
 \lemma cos_+ {x y : Complex} : cos (x + y) = cos x * cos y - sin x * sin y
@@ -70,13 +70,13 @@
 -- | $\cos(-z) = \cos z$ — cosine is even.
 \lemma cos_negative {z : Complex} : cos (negative z) = cos z
   => (\peval cos _)
-     *> later (rewrite (pmap (\lam z => exp (i * z)) ComplexField.negative-isInv) $ ext (equation.cRing, equation.cRing))
+     *> later (rewrite (pmap (\lam z => exp (i * z)) ComplexField.negative-isInv) $ cring-ext)
      *> inv (\peval cos z)
 
 -- | $\sin(-z) = -\sin z$ — sine is odd.
 \lemma sin_negative {z : Complex} : sin (negative z) = negative (sin z)
   => (\peval sin _)
-     *> later (rewrite (pmap (\lam z => exp (i * z)) ComplexField.negative-isInv) $ ext (equation.cRing, equation.cRing))
+     *> later (rewrite (pmap (\lam z => exp (i * z)) ComplexField.negative-isInv) $ cring-ext)
      *> pmap negative (inv \peval sin z)
 
 {- | Euler's formula on $\mathbb{C}$: $\exp(i z) = \cos z + i \sin z$. -}
@@ -89,11 +89,11 @@
 
 -- | $\cos(x-y) = \cos x \cos y + \sin x \sin y$.
 \lemma cos_minus {x y : Complex} : cos (x - y) = cos x * cos y + sin x * sin y
-  => cos_+ *> rewrite (cos_negative, sin_negative) (ext (equation.cRing, equation.cRing))
+  => cos_+ *> rewrite (cos_negative, sin_negative) (cring-ext)
 
 -- | $\sin(x-y) = \sin x \cos y - \cos x \sin y$.
 \lemma sin_minus {x y : Complex} : sin (x - y) = sin x * cos y - cos x * sin y
-  => sin_+ {x} {negative y} *> rewrite (cos_negative, sin_negative) (ext (equation.cRing, equation.cRing))
+  => sin_+ {x} {negative y} *> rewrite (cos_negative, sin_negative) (cring-ext)
 
 -- | $(x+y)/2 + (x-y)/2 = x$. Helper for the sum-to-product identities.
 \private \lemma half-decomp-plus {x y : Complex} : (x + y) * ratio 1 2 + (x - y) * ratio 1 2 = x
@@ -110,7 +110,7 @@
   => \have
        | cosX => pmap cos (inv half-decomp-plus) *> cos_+ {(x + y) * ratio 1 2} {(x - y) * ratio 1 2}
        | cosY => pmap cos (inv (half-decomp-minus {x} {y})) *> cos_minus
-     \in rewrite (cosX, cosY) (ext (equation.cRing, equation.cRing))
+     \in rewrite (cosX, cosY) (cring-ext)
 
 {- | Sum-to-product for sines:
      $\sin x - \sin y = 2 \cos\tfrac{x+y}2 \sin\tfrac{x-y}2$. -}
@@ -119,7 +119,7 @@
   => \let
        | sinX => pmap sin (inv half-decomp-plus) *> sin_+ {(x + y) * ratio 1 2} {(x - y) * ratio 1 2}
        | sinY => pmap sin (inv (half-decomp-minus {x} {y})) *> sin_minus
-     \in rewrite (sinX, sinY) (ext (equation.cRing, equation.cRing))
+     \in rewrite (sinX, sinY) (cring-ext)
 
 -- | $E(\mathrm{fromReal}\,x) = \mathrm{fromReal}(\cos x) + i\,\mathrm{fromReal}(\sin x)$ — real Euler.
 \private \lemma exp_i_fromReal {x : Real} : exp (i * x) = rcos x ComplexField.+ i * rsin x

@@ -59,7 +59,7 @@
               => equation.cRing
            | sq-bound : cabs c * cabs c <= (abs c.re + abs c.im) * (abs c.re + abs c.im)
               => transport (<= _) (inv cabs-square) linarith
-     \in square_<=-cancel cabs>=0 sum>=0 sq-bound
+     \in RealField.square_<=-cancel cabs>=0 sum>=0 sq-bound
 
 {- | Completeness of $\mathbb{C}$ via $\Re$ / $\Im$ pushforward to $\mathbb{R}$
      (which is complete). For a Complex Cauchy filter $F$: push forward via

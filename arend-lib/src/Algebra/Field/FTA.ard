@@ -12,6 +12,9 @@
 \import Algebra.StrictlyOrdered
 \import Analysis.Series
 \import Arith.Complex
+\import Arith.Complex.Norm
+\import Arith.Complex.Root
+\import Arith.Complex.Arg
 \import Arith.Fin
 \import Arith.Fin.Order
 \import Arith.Int
@@ -31,6 +34,7 @@
 \import Logic.Meta
 \import Meta
 \import Order.Biordered
+\import Order.Lattice
 \import Order.LinearOrder
 \import Order.PartialOrder
 \import Order.StrictOrder
@@ -39,7 +43,10 @@
 \import Set
 \import Set.Fin
 \open Monoid (pow)
+\open AddMonoid (BigSum, BigSum_suc, BigSum-ext, BigSum-split)
 \open LinearlyOrderedAbGroup
+\open OrderedField (pinv, pinv-left, pinv-right, pinv>0, pinv_*)
+\open OrderedSemiring (<_*_positive-left, <_*_positive-right, <_*_positive_positive)
 
 {- | Given a non-empty finite array of reals `c : Array Real n` and a positive number $\varepsilon$,
      there exists an index `k` such that every entry of the array is $< c_k + \varepsilon$.
@@ -124,16 +131,32 @@
 \lemma suc_fromNat {n : Nat} (i : Nat) (p : i < suc n) : suc (i Nat.mod suc n) = {Fin (n + 2)} (suc i) Nat.mod suc (suc n)
   => nat_fin_= $ rewrite (mod_< {i} {suc n} linarith, mod_< {suc i} {suc (suc n)} linarith) idp
 
+\private \func one/3 : Real => ratio 1 3
+
+\private \lemma one/3>0 : ratio 1 3 > {RealField} 0 => linarith
+
+\private \lemma one/3>=0 : ratio 1 3 >= {RealField} 0 => <=-less one/3>0
+
+\private \lemma one/3<1 : ratio 1 3 < {RealField} 1 => linarith
+
+\private \lemma one/2>=0 : ratio 1 2 >= {RealField} zro => linarith
+
+\private \lemma pow1/3-strict-monotone {i k : Nat} (p : k < i) : pow one/3 i < pow one/3 k
+  => OrderedSemiring.pow_<-degree {_} {one/3} one/3>0 one/3<1 p
+
+\private \lemma pow1/3-monotone {i k : Nat} (p : k <= i) : pow one/3 i <= pow one/3 k
+  => PosetSemiring.pow_<=-degree one/3>=0 (<=-less one/3<1) p
+
 \lemma MainLemma {n : Nat} (n>0 : n > 0) {eps : Real} (eps>0 : eps > 0)
-                 (a : Array Real (suc n))
+                 (a : Nat -> Real)
                  (a0>eps : a 0 > eps)
-                 (ai>=0 : \Pi (i : Fin (suc n)) -> a i >= 0)
-                 (an=1 : a (n Nat.mod suc n) = 1)
+                 (ai>=0 : \Pi (i : Nat) -> a i >= 0)
+                 (an=1 : a n = 1)
   : ∃ (r : Real) (r>0 : r > 0) (k : Fin n) (pow r n < a 0)
       (pow (ratio 1 3 : Real) (2 * n * n) * a 0 - 2 * eps < a (suc k) * pow r (suc k))
       (a (suc k) * pow r (suc k) < a 0)
-      (AddMonoid.BigSum (\new Array Real k (\lam i => a ((i Nat.+ 1) Nat.mod suc n) * pow r (i + 1))) +
-       AddMonoid.BigSum (\new Array Real (pred n -' k) (\lam i => a ((k Nat.+ i + 2) Nat.mod suc n) * pow r (k Nat.+ i + 2) ))
+      (BigSum (\new Array Real k (\lam i => a (i Nat.+ 1) * pow r (i + 1))) +
+       BigSum (\new Array Real (pred n -' k) (\lam i => a (k Nat.+ i + 2) * pow r (k Nat.+ i + 2) ))
         < a (suc k) * pow r (suc k) * (Real.fromRat 1 - pow one/3 n) + eps * pow 3 n) \elim n
   | 0 => absurd \case n>0
   | suc n-1 \as n =>
@@ -159,7 +182,7 @@
         => rewriteI CMonoid.pow_*-comm (rewrite (rewrite *-comm in three_times_one_third) Monoid.pow_ide)
       | k+i<n-1 (i : Fin (n-1 -' k)) : k Nat.+ i < n-1
         => <_+-right k (fin_< i) <∘l rewrite (<=_exists (<_suc_<= (fin_< k))) <=-refl
-      | C2j (i : Fin (n-1 -' k)) : a ((k Nat.+ i + 2) Nat.mod suc n) * pow r (k Nat.+ i + 2)
+      | C2j (i : Fin (n-1 -' k)) : a (k Nat.+ i + 2) * pow r (k Nat.+ i + 2)
           < a (suc k) * pow r (suc k) * pow one/3 (suc i) + eps * pow one/3 (k Nat.+ i + 2)
         => run {
               rewriteI (RealField.ide-right {r}, three_times_one_third, *-assoc {_} {r}),
@@ -176,9 +199,9 @@
                       => mod_< (NatOrder.suc<suc (NatOrder.suc<suc (k+i<n-1 i)))
                     | helper : \Pi (i : Fin (suc n)) -> i > 0 -> a (suc k) * pow (r * 3) (suc k) > a i * pow (r * 3) i - eps
                       => rewrite (*-assoc, *-assoc, inv (*-comm {_} {3}), three_times_one_third, ide-right) (C2 j),
-              rewrite {2} k+i+2_mod in helper ((k Nat.+ i + 2) Nat.mod suc n) (transport (__ > 0) (inv k+i+2_mod) NatOrder.zero<suc)
+              rewrite k+i+2_mod in helper ((k Nat.+ i + 2) Nat.mod suc n) (transport (__ > 0) (inv k+i+2_mod) NatOrder.zero<suc)
            }
-      | C2j+2 (i : Fin (suc k)) : a (suc i Nat.mod suc n) * pow r (suc i)
+      | C2j+2 (i : Fin (suc k)) : a (suc i) * pow r (suc i)
           < a (suc k) * pow r (suc k) * pow one/3 (k -' i) + eps * pow 3 (suc i)
         => run {
             rewriteI (ide-right {_} {pow r (suc i)}, ide-right {_} {pow one/3 (k -' i)}, third^m*3^m=1 (suc i)),
@@ -195,21 +218,21 @@
                   | helper : \Pi (i : Fin (suc n)) -> i > 0 -> a (suc k) * pow (r * one/3) (suc k) > a i * pow (r * one/3) i - eps
                     => rewrite (inv eq2, inv eq1, *-assoc, inv (*-assoc {_} {r0}),
                          inv (*-assoc {_} {r0 * pow one/3 j}), *-assoc {_} {r0}) in C2 (suc (suc j)),
-            rewrite {2} i+1_mod in helper ((suc i) Nat.mod suc n) (transport (__ > 0) (inv i+1_mod) NatOrder.zero<suc)
+            rewrite i+1_mod in helper ((suc i) Nat.mod suc n) (transport (__ > 0) (inv i+1_mod) NatOrder.zero<suc)
            }
-      | small-part-estimate : AddMonoid.BigSum arr-1/3^k-i + AddMonoid.BigSum arr-1/3^i+1 <= 1 - pow one/3 n
+      | small-part-estimate : BigSum arr-1/3^k-i + BigSum arr-1/3^i+1 <= 1 - pow one/3 n
         => \let arr-1/3^i => \new Array RealField (suc k) (\lam i => pow one/3 i)
            \in \have
-            | sum-arr-1/3^i+1-estimate : AddMonoid.BigSum arr-1/3^i+1 <= Real.fromRat (ratio 1 2) * (Real.fromRat 1 - pow {RealField} (ratio 1 3) n-1) => geom_sum_upper {n-1} {n-1 -' k} -'<=id
+            | sum-arr-1/3^i+1-estimate : BigSum arr-1/3^i+1 <= Real.fromRat (ratio 1 2) * (Real.fromRat 1 - pow {RealField} (ratio 1 3) n-1) => geom_sum_upper {n-1} {n-1 -' k} -'<=id
             | helper : (\lam (i : Fin k) => pow one/3 ((kSeq j -' i) Nat.mod suc (kSeq j))) = (\lam (i : Fin k) => pow {RealField} one/3 (kSeq j -' i))
               => ext (\lam i => rewrite (mod_< {k -' i} {suc k} (<=_<_suc -'<=id)) idp)
-            | sum-arr-1/3^k-i-computation : AddMonoid.BigSum arr-1/3^k-i = AddMonoid.BigSum arr-1/3^i - ide
-              => linarith (rewrite (AddMonoid.BigSum_suc, helper, mod_< {k} {suc k} id<suc, -'id)
+            | sum-arr-1/3^k-i-computation : BigSum arr-1/3^k-i = BigSum arr-1/3^i - ide
+              => linarith (rewrite (BigSum_suc, helper, mod_< {k} {suc k} id<suc, -'id)
                              in AbMonoid.BigSum-reverse arr-1/3^i)
-            | sum-arr-1/3^k-i-estimate : AddMonoid.BigSum arr-1/3^k-i <= Real.fromRat (ratio 3 2) * (Real.fromRat 1 - pow {RealField} (ratio 1 3) n) - ide
+            | sum-arr-1/3^k-i-estimate : BigSum arr-1/3^k-i <= Real.fromRat (ratio 3 2) * (Real.fromRat 1 - pow {RealField} (ratio 1 3) n) - ide
               => rewrite sum-arr-1/3^k-i-computation (<=_+ (geom_sum_upper' {n} {suc k} (suc_<_<= (fin_< k)) ) (<=-refl {_} {negative ide}))
            \in linarith (pow1/3-strict-monotone id<suc)
-      | big-part-estimate : AddMonoid.BigSum arr-3^i+1 + AddMonoid.BigSum arr-1/3^k+i+2 < pow (natCoef 3) n => run {
+      | big-part-estimate : BigSum arr-3^i+1 + BigSum arr-1/3^k+i+2 < pow (natCoef 3) n => run {
           \have one-3=-2 : negative (ide - natCoef 3) = {RealField} natCoef 2 => linarith,
           \have helper => pmap negative (Ring.geometric-like-partial-sum {RealField} {1} {k} {natCoef 3}),
           rewrite (inv PseudoRing.negative_*-left, one-3=-2, AbGroup.negative_+-comm) at helper,
@@ -217,7 +240,7 @@
           rewrite (AddGroup.negative-isInv, ide-left) at helper,
           rewriteI {4} zro-right,
           rewriteI (negative-left {_} {ide}, +-assoc),
-          \have sum-arr-1/3^k+i+2<=1 : AddMonoid.BigSum arr-1/3^k+i+2 <= ide => run {
+          \have sum-arr-1/3^k+i+2<=1 : BigSum arr-1/3^k+i+2 <= ide => run {
             \have one/3^k+1<=1 : pow one/3 (suc k) <= ide => <=-less (pow1/3-strict-monotone {_} NatOrder.zero<suc),
             \have one-1/3^n>=0 : Real.fromRat 1 - pow {RealField} (ratio 1 3) n >= zro =>
               rewriteI (negative-right {RealField} {pow {RealField} (ratio 1 3) n}) (<=_+ (PosetSemiring.pow<=1 one/3>=0 linarith {n}) <=-refl),
@@ -248,7 +271,7 @@
         <=-refl
       }
       \in inP (r, r>0, k,
-           rewrite (an=1, ide-left) in (rewrite {2} (mod_< id<suc) in ai_ri_<_a0 (finMod n) (rewrite (mod_< id<suc) n>0)),
+           rewrite (an=1, ide-left) in (rewrite (mod_< id<suc) in ai_ri_<_a0 (finMod n) (rewrite (mod_< id<suc) n>0)),
            run {
              <∘r (rewriteI eq1 in C2 (suc j) (suc k0) NatOrder.zero<suc),
              rewrite -2eps=-eps-eps,
@@ -271,9 +294,9 @@
            },
            ai_ri_<_a0 (suc k) NatOrder.zero<suc,
            run {
-             <=_+ (PosetAddMonoid.BigSum_<= {RealField} {k} {\lam i => a (suc i Nat.mod suc n) * pow r (suc i)}
+             <=_+ (PosetAddMonoid.BigSum_<= {RealField} {k} {\lam i => a (suc i) * pow r (suc i)}
                {\lam i => a (suc k) * pow r (suc k) * pow one/3 (k -' i) + eps * pow 3 (suc i)} (\lam i => <=-less (C2j+2 i)))
-               (PosetAddMonoid.BigSum_<= {RealField} {n-1 -' k} {\lam i => a ((k Nat.+ i + 2) Nat.mod suc n) * pow r (k Nat.+ i + 2)}
+               (PosetAddMonoid.BigSum_<= {RealField} {n-1 -' k} {\lam i => a (k Nat.+ i + 2) * pow r (k Nat.+ i + 2)}
                  {\lam i => a (suc k) * pow r (suc k) * pow one/3 (suc i) + eps * pow one/3 (k Nat.+ i + 2) } (\lam i => <=-less (C2j i))) <∘r,
              rewrite (AbMonoid.BigSum_+ {RealField} {n-1 -' k} {\new Array RealField (n-1 -' k) (\lam i => a (suc k) * pow r (suc k) * pow one/3 (suc i))} {\new Array RealField (n-1 -' k) (\lam i => eps * pow one/3 (k Nat.+ i + 2))}),
              rewrite (AbMonoid.BigSum_+ {RealField} {k} {\new Array RealField k (\lam i => a (suc k) * pow r (suc k) * pow one/3 (k -' i))} {\new Array RealField k (\lam i => eps * pow 3 (suc i))}),
@@ -282,10 +305,10 @@
              rewriteI (Semiring.BigSum-ldistr {_} {a (suc k) RealField.* (pow {RealField} r (suc k))} {arr-1/3^k-i}),
              later $ rewriteI (Semiring.BigSum-ldistr {_} {eps} {arr-3^i+1}),
              \have helper-reorder :
-               a (suc k) RealField.* (pow r (k Nat.+ 1)) * AddMonoid.BigSum arr-1/3^k-i + eps * AddMonoid.BigSum arr-3^i+1 +
-              (a (suc k) RealField.* (pow r (k Nat.+ 1)) * AddMonoid.BigSum arr-1/3^i+1 + eps * AddMonoid.BigSum arr-1/3^k+i+2) =
-              (a (suc k) RealField.* (pow r (k Nat.+ 1))) * (AddMonoid.BigSum arr-1/3^k-i + AddMonoid.BigSum arr-1/3^i+1) +
-             eps * (AddMonoid.BigSum arr-3^i+1 + AddMonoid.BigSum arr-1/3^k+i+2) => equation.ring,
+               a (suc k) RealField.* (pow r (k Nat.+ 1)) * BigSum arr-1/3^k-i + eps * BigSum arr-3^i+1 +
+              (a (suc k) RealField.* (pow r (k Nat.+ 1)) * BigSum arr-1/3^i+1 + eps * BigSum arr-1/3^k+i+2) =
+              (a (suc k) RealField.* (pow r (k Nat.+ 1))) * (BigSum arr-1/3^k-i + BigSum arr-1/3^i+1) +
+             eps * (BigSum arr-3^i+1 + BigSum arr-1/3^k+i+2) => equation.ring,
              rewrite helper-reorder,
              \have ak+1*r^k+1>=0 : a (suc k) * pow {RealField} r (suc k) >= 0 =>
                PosetSemiring.<=_*_positive_positive {RealField} (ai>=0 (suc k)) (PosetSemiring.pow>=0 {_} {r} {suc k} (<=-less r>0)),
@@ -295,33 +318,17 @@
            })
   \where \private {
     \lemma geom_sum_upper {n m : Nat} (m<=n : m <= n)
-      : AddMonoid.BigSum {RealAbGroup} (\lam (i : Fin m) => pow {RealField} (ratio 1 3) (suc i))
+      : BigSum {RealAbGroup} (\lam (i : Fin m) => pow {RealField} (ratio 1 3) (suc i))
         <= Real.fromRat (ratio 1 2) * (Real.fromRat 1 - pow {RealField} (ratio 1 3) n)
       => linarith (pow1/3-monotone m<=n, Ring.geometric-like-partial-sum {RealField} {1} {m} {ratio 1 3})
 
     \lemma geom_sum_upper' {n m : Nat} (m<=n : m <= n)
-      : AddMonoid.BigSum {RealAbGroup} (\lam (i : Fin m) => pow {RealField} (ratio 1 3) i)
+      : BigSum {RealAbGroup} (\lam (i : Fin m) => pow {RealField} (ratio 1 3) i)
         <= Real.fromRat (ratio 3 2) * (Real.fromRat 1 - pow {RealField} (ratio 1 3) n)
       => linarith (Ring.geometric-partial-sum {RealField} {m} {ratio 1 3}, pow1/3-monotone m<=n)
 
-    \func one/3 : Real => ratio 1 3
-
-    \lemma one/3>0 : ratio 1 3 > {RealField} 0 => linarith
-
-    \lemma one/3>=0 : ratio 1 3 >= {RealField} 0 => <=-less one/3>0
-
-    \lemma one/3<1 : ratio 1 3 < {RealField} 1 => linarith
-
-    \lemma one/2>=0 : ratio 1 2 >= {RealField} zro => linarith
-
-    \lemma pow1/3-strict-monotone {i k : Nat} (p : k < i) : pow one/3 i < pow one/3 k
-      => OrderedSemiring.pow_<-degree {_} {one/3} one/3>0 one/3<1 p
-
-    \lemma pow1/3-monotone {i k : Nat} (p : k <= i) : pow one/3 i <= pow one/3 k
-      => PosetSemiring.pow_<=-degree one/3>=0 (<=-less one/3<1) p
-
     \lemma KeyLemma {n : Nat} (n>0 : n > 0) {eps : Real} (eps>0 : eps > 0)
-                    (a : Array Real (n + 1)) (a0>eps : a 0 > eps) (ai>=0 : \Pi (i : Fin (n + 1)) -> a i >= 0) (an=1 : a (n Nat.mod suc n) = 1)
+                    (a : Nat -> Real) (a0>eps : a 0 > eps) (ai>=0 : \Pi (i : Nat) -> a i >= 0) (an=1 : a n = 1)
       : ∃ (r0 : Real) (r0>0 : r0 > 0) (k : Fin (2 * n + 1) -> Fin n)
           (k_monotone : ∀ (j : Fin (2 * n)) (k (suc j) <= {NatSemiring} k j))
           (C1 : a (suc (k 0)) * pow r0 (suc (k 0)) = a 0 - eps)
@@ -340,7 +347,7 @@
           }
       } \where {
         \private \lemma step
-          {n : Nat} (a : Array Real (suc n)) (ai>=0 : \Pi (i : Fin (suc n)) -> a i >= 0) (r0 : Real) (r0>0 : r0 > 0)
+          {n : Nat} (a : Nat -> Real) (ai>=0 : \Pi (i : Nat) -> a i >= 0) (r0 : Real) (r0>0 : r0 > 0)
           : ∀ (tuple_j : triple) ∃ (tuple_j+1 : triple) Given (tuple_j+1.2 NatSemiring.<= tuple_j.2) (tuple_j+1.1 = tuple_j.1 Nat.+ 1)
           => \lam (j, kj, IA) =>
               \let
@@ -402,15 +409,12 @@
 
         \lemma x-eps<x {x : Real} {eps : Real} (eps>0 : eps > 0) : x - eps < x => linarith
 
-        \lemma n+1_mod_n+2=n+1 {n : Nat} : (n + 1) Nat.mod (n + 2) = {Nat} n + 1
-          => mod_< {n + 1} {n + 2} linarith
-
         \lemma n_mod_n+1=n {n : Nat} : n Nat.mod (n + 1) = {Nat} n
           => mod_< {n} {n + 1} linarith
 
         \lemma base
-          {n : Nat} (a : Array Real (suc n)) (a0>eps : a 0 > eps)
-          (ai>=0 : \Pi (i : Fin (suc n)) -> a i >= 0) (an=1 : a (n Nat.mod suc n) = {Real} 1) (m : Fin n)
+          {n : Nat} (a : Nat -> Real) (a0>eps : a 0 > eps)
+          (ai>=0 : \Pi (i : Nat) -> a i >= 0) (an=1 : a n = {Real} 1) (m : Fin n)
           : ∃ (k0 : Fin n) (r0 : Real) (r0>0 : r0 > 0) (a (suc k0) * pow r0 (suc k0) = a 0 - eps)
             ∀ (l : Fin (n + 1)) (l NatSemiring.+ m >= n) (a (suc k0) * pow r0 (suc k0) > a l * pow r0 l - eps)
         \elim n, m
@@ -418,14 +422,14 @@
             \have | pow-eq : pow (root (suc n) (a 0 - eps)) (finMod n) * root (suc n) (a 0 - eps) = a 0 - eps
                     => pmap (\lam (m : Nat) => pow (root (suc n) (a 0 - eps)) m * root (suc n) (a 0 - eps)) n_mod_n+1=n
                        *> pow_root {suc n} suc/=0 {a 0 - eps} linarith
-                  | an+1=1 : a (suc (finMod n)) = ide => pmap a (suc_fromNat n id<suc) *> an=1
+                  | an+1=1 : a (suc (finMod n)) = ide => pmap a (pmap suc (mod_< {n} {suc n} id<suc)) *> an=1
                   | term=a0-eps : a (suc (finMod n)) * (pow (root (suc n) (a 0 - eps)) (finMod n) * root (suc n) (a 0 - eps)) = a 0 - eps
                     => rewrite (an+1=1, pow-eq) ide-left
             \in inP (finMod n, root (suc n) (a 0 - eps), root>0 (\lam p => later \case p) linarith, term=a0-eps,
                      \lam l l>=n+1 =>
                        \have | l=n+1 : l = {Nat} n + 1 => <=-antisymmetric (<_suc_<= (fin_< l)) l>=n+1
                              | l-term=a0-eps : a l * pow (root (suc n) (a 0 - eps)) l = a 0 - eps
-                               => pmap2 (*) (pmap a (nat_fin_= (l=n+1 *> inv n+1_mod_n+2=n+1)) *> an=1)
+                               => pmap2 (*) (pmap a l=n+1 *> an=1)
                                             (pmap (pow (root (suc n) (a 0 - eps))) l=n+1 *> pow_root {suc n} suc/=0 {a 0 - eps} linarith)
                                   *> ide-left
                        \in linarith)
@@ -497,3 +501,307 @@
           }
       }
   }
+
+-- # Lemma 4 (Kneser's Lemma)
+
+{- | Shifted split of a finite sum: $\sum_{i<m+l} f_i = \sum_{i<m} f_i + \sum_{j<l} f_{m+j}$.
+
+     Phrased for a coefficient function on `Nat` rather than an `Array`, which keeps the
+     index arithmetic free of the `Fin.fromNat` truncation. -}
+\private \lemma BigSum-shift {M : AddMonoid} (f : Nat -> M) (m l : Nat)
+  : BigSum (\new Array M (m Nat.+ l) (f __))
+    = BigSum (\new Array M m (f __)) + BigSum (\new Array M l (\lam j => f (m Nat.+ j)))
+  => BigSum-split {M} {m} {l} {\new Array M (m Nat.+ l) (f __)}
+     *> pmap2 (+) (BigSum-ext (\lam i => pmap f fin-inc.char))
+                  (BigSum-ext (\lam j => pmap f fin-raise.char))
+
+-- | A polynomial evaluated at $0$ is its constant coefficient.
+\private \lemma polySum_zro (b : Nat -> Complex) (m : Nat)
+  : BigSum (\new Array Complex (suc m) (\lam i => b i * pow (0 : Complex) i)) = b 0
+  => polyEval_fromArray_zro {ComplexField} {m} {\new Array Complex (suc m) (b __)}
+
+{- | Directional core of Lemma 4. If $b_0 \neq 0$, $b_k \neq 0$, $k > 0$ and
+     $|b_k| r^k < |b_0|$, then some $z$ of modulus $r$ makes $b_k z^k$ point exactly opposite
+     to $b_0$, so that the two terms cancel as much as they can:
+     $$|b_0 + b_k z^k| = |b_0| - |b_k| r^k.$$
+
+     Take $z = rv$, where $v$ is a $k$-th root (`complex-root`) of the unit vector `unit-dir`
+     supplies. Then $b_k z^k = -\,(|b_k| r^k / |b_0|)\,b_0$ is a negative real multiple of
+     $b_0$, so the moduli subtract. -}
+\lemma opposite-direction {b0 bk : Complex} (b0>0 : 0 < cabs b0) (bk>0 : 0 < cabs bk)
+                          {k : Nat} (k>0 : 0 < k) {r : Real} (r>0 : 0 < r)
+                          (small : cabs bk * pow r k < cabs b0)
+  : ∃ (z : Complex) (cabs z = r) (cabs (b0 + bk * pow z k) = cabs b0 - cabs bk * pow r k) \elim k
+  | 0 => absurd \case k>0
+  | suc k-1 \as k =>
+    \case unit-dir b0>0 bk>0 \with {
+      | inP (u, cu, bku) => \case complex-root {u} (rewrite cu linarith) k>0 \with {
+        | inP (v, pv) =>
+          \have
+            | cv : cabs v = 1 => run {
+                rewriteI (root_pow {k} suc/=0 (cabs>=0 {v})),
+                rewrite (inv (cabs_pow {v} {k}), pv, cu),
+                root_ide suc/=0
+              }
+            | s<1 : cabs bk * pow r k * pinv (cabs b0) b0>0 < 1
+              => <_*_positive-left small (pinv>0 b0>0) <∘l =_<= (pinv-right b0>0)
+            | bkzk : bk * pow (Complex.fromReal r * v) k
+                       = ComplexField.negative
+                           (Complex.fromReal (cabs bk * pow r k * pinv (cabs b0) b0>0) * b0)
+              => pmap (bk *) (CMonoid.pow_*-comm {ComplexField} {Complex.fromReal r} {v} {k}
+                              *> pmap (`* pow v k) (inv (Complex.fromReal_pow {r} {k}))
+                              *> pmap (Complex.fromReal (pow r k) *) pv)
+                 *> cring-pull-neg bku
+                 *> neg_fromReal_* equation.cRing
+            | sum-eq : b0 + bk * pow (Complex.fromReal r * v) k
+                         = Complex.fromReal (1 - cabs bk * pow r k * pinv (cabs b0) b0>0) * b0
+              => pmap (b0 +) bkzk *> cring-diff *> pmap (`* b0) (inv fromReal_1-)
+          \in inP (Complex.fromReal r * v,
+                   cabs_* *> pmap2 (*) (cabs_fromReal *> RealField.abs-ofPos (<=-less r>0)) cv
+                   *> ide-right,
+                   pmap cabs sum-eq *> cabs_*
+                   *> pmap (`* cabs b0)
+                           (cabs_fromReal *> RealField.abs-ofPos
+                              (linarith : (0 : Real) <= 1 - cabs bk * pow r k * pinv (cabs b0) b0>0))
+                   *> pinv-cancel b0>0)
+      }
+    }
+  \where {
+    {- | The unit complex number pointing opposite to $b_0/b_k$: there is a $u$ with $|u| = 1$ and
+         $b_k u = -\,(|b_k|/|b_0|)\,b_0$. Concretely $u = -\,b_0\overline{b_k}/(|b_0|\,|b_k|)$,
+         which works because $b_k \overline{b_k} = |b_k|^2$ is real. -}
+    \lemma unit-dir {b0 bk : Complex} (b0>0 : 0 < cabs b0) (bk>0 : 0 < cabs bk)
+      : ∃ (u : Complex) (cabs u = 1)
+          (bk * u = ComplexField.negative (Complex.fromReal (cabs bk * pinv (cabs b0) b0>0) * b0))
+      => \have | t>0 : 0 < pinv (cabs b0) b0>0 * pinv (cabs bk) bk>0
+                     => <_*_positive_positive (pinv>0 b0>0) (pinv>0 bk>0)
+         \in inP (ComplexField.negative (Complex.fromReal (pinv (cabs b0) b0>0 * pinv (cabs bk) bk>0)
+                                         * (b0 * conj bk)),
+                  dir-cabs b0 bk (pinv (cabs b0) b0>0 * pinv (cabs bk) bk>0) (<=-less t>0)
+                  *> pmap (`* (cabs b0 * cabs bk)) (pinv_* b0>0 bk>0) *> pinv-left _,
+                  cring-swap (mul-conj *> pmap Complex.fromReal (inv cabs-square))
+                  *> neg_fromReal_* (equation.cRing
+                                     *> pmap (cabs bk * pinv (cabs b0) b0>0 *) (pinv-left bk>0)
+                                     *> ide-right))
+      \where {
+        {- | Modulus of the direction vector $-\,t\,b_0\overline{b_k}$ for a nonnegative real scale
+             $t$. The scale is a parameter rather than an inlined expression: with a concrete
+             `Complex` product in the goal the implicit arguments of `cabs_*` are not inferrable. -}
+        \lemma dir-cabs (b0 bk : Complex) (t : Real) (t>=0 : 0 <= t)
+          : cabs (ComplexField.negative (Complex.fromReal t * (b0 * conj bk)))
+            = t * (cabs b0 * cabs bk)
+          => cabs_negative {Complex.fromReal t * (b0 * conj bk)}
+             *> cabs_* {Complex.fromReal t} {b0 * conj bk}
+             *> pmap2 (*) (cabs_fromReal *> RealField.abs-ofPos t>=0)
+                          (cabs_* {b0} {conj bk} *> pmap (cabs b0 *) cabs_conj)
+
+        -- | $x \cdot (-(t (y c))) = -((t s) y)$ whenever $x c = s$: moves $x$ next to $c$ and folds.
+        \lemma cring-swap {C : CRing} {t x y c s : C} (h : x * c = s)
+          : x * negative (t * (y * c)) = negative (t * s * y)
+          => equation.cRing *> pmap (\lam w => negative (t * w * y)) h
+      }
+
+    {- | Half of the cancellation at the heart of the lemma: $x (p z) = -(p e y)$ whenever
+         $x z = -(e y)$. Stated over an abstract `CRing` because on a concrete `Complex` both
+         `equation.cRing` and `rewrite` unfold the record into its components and then fail. -}
+    \lemma cring-pull-neg {C : CRing} {x y z p e : C} (h : x * z = negative (e * y))
+      : x * (p * z) = negative (p * e * y)
+      => equation.cRing *> pmap (p *) h *> equation.cRing
+
+{- | Fold a product of two real scalars under $-(\_ \cdot b_0)$: from a real identity
+         $xy = z$ conclude $-(x\,y\,b_0) = -(z\,b_0)$ in $\mathbb{C}$. Shared by `bkzk` above
+         and by `unit-dir`. -}
+    \lemma neg_fromReal_* {b0 : Complex} {x y z : Real} (h : x * y = z)
+      : ComplexField.negative (Complex.fromReal x * Complex.fromReal y * b0)
+        = ComplexField.negative (Complex.fromReal z * b0)
+      => pmap (\lam w => ComplexField.negative (w * b0))
+              (inv Complex.fromReal_* *> pmap Complex.fromReal h)
+
+    -- | The other half: $u + -(e u) = (1 - e) u$.
+    \lemma cring-diff {C : CRing} {e u : C} : u + negative (e * u) = (1 - e) * u => equation.cRing
+
+    -- | $\mathrm{fromReal}\,(1 - y) = 1 - \mathrm{fromReal}\ y$.
+    \lemma fromReal_1- {y : Real} : Complex.fromReal (1 - y) = 1 - Complex.fromReal y
+      => Complex.fromReal_+ *> pmap (_ +) Complex.fromReal_negative
+
+    -- | $(1 - x A^{-1}) A = A - x$.
+    \lemma pinv-cancel {E : OrderedField} {A x : E} (A>0 : 0 < A)
+      : (1 - x * pinv A A>0) * A = A - x
+      => equation.cRing *> pmap (\lam u => A - x * u) (pinv-left A>0) *> pmap (A -) ide-right
+  }
+
+-- | The Kneser factor $q = 1 - 3^{ -2n^2 - n}$, explicit as in the statement of Lemma 4.
+\func kneser-q (n : Nat) : Real => 1 - pow one/3 (2 * n * n + n)
+
+\lemma kneser-q>0 {n : Nat} (n>0 : 0 < n) : 0 < kneser-q n
+  => linarith (pow1/3-strict-monotone {2 * n * n + n} {0} (linarith : 0 < 2 * n * n + n))
+
+\lemma kneser-q<1 {n : Nat} : kneser-q n < 1
+  => linarith (OrderedSemiring.pow>0 one/3>0 {2 * n * n + n})
+
+{- | **Lemma 4 (Kneser's Lemma).** With the explicit factor $q = $ `kneser-q n`, which satisfies
+     $0 < q < 1$ by `kneser-q>0` and `kneser-q<1`: for every monic polynomial
+     $f(z) = \sum_{i \le n} b_i z^i$ of degree $n > 0$ over $\mathbb{C}$ and every $c$ with
+     $|f(0)| < c$, there is a $z$ with $|z|^n < c$ and $|f(z)| < qc$.
+
+     The proof follows the informal one. Either $|f(0)|$ already lies below $qc$ and $z = 0$
+     works, or $|f(0)| > 0$; then choose $\varepsilon$ satisfying conditions (1) and (2)
+     (`exists-eps`), feed the moduli $a_i = |b_i|$ to `MainLemma` to obtain a radius $r$ and an
+     index $k$, and use `opposite-direction` to place $z$ on the circle of radius $r$ so that
+     $b_k z^k$ points against $b_0$. The remaining terms are negligible by the third estimate
+     of `MainLemma`. -}
+\lemma KneserLemma {n : Nat} (n>0 : 0 < n) (b : Nat -> Complex) (bn=1 : b n = 1)
+                   {c : Real} (b0<c : cabs (b 0) < c)
+  : ∃ (z : Complex) (pow (cabs z) n < c)
+      (cabs (BigSum (\new Array Complex (suc n) (\lam i => b i * pow z i)))
+        < kneser-q n * c) \elim n
+  | 0 => absurd \case n>0
+  | suc m \as n =>
+    \have | c>0 : (0 : Real) < c => linarith (cabs>=0 {b 0})
+          | q>0 : (0 : Real) < kneser-q n => kneser-q>0 n>0
+    \in \case real-located {cabs (b 0)} {0} {kneser-q n * c} (<_*_positive_positive q>0 c>0) \with {
+      | byRight small => inP (0, rewrite (cabs_zro, zro_*-right) c>0, rewrite (polySum_zro b n) small)
+      | byLeft a0>0 =>
+        \have
+          | A>0 : (0 : Real) < pow one/3 (2 * n * n) * cabs (b 0)
+            => <_*_positive_positive (OrderedSemiring.pow>0 one/3>0 {2 * n * n}) a0>0
+          | B>0 : (0 : Real) < kneser-q n * (c - cabs (b 0)) => <_*_positive_positive q>0 linarith
+          | D>0 : (0 : Real) < pow 3 n + 1
+            => linarith (OrderedSemiring.pow>0 (linarith : (0 : Real) < 3) {n})
+        \in \case exists-eps A>0 B>0 D>0 \with {
+          | inP (eps, eps>0, cond1, cond2) =>
+            \have
+              | scale<=1 : pow one/3 (2 * n * n) * cabs (b 0) <= cabs (b 0)
+                => PosetSemiring.<=_*_positive-left (PosetSemiring.pow<=1 one/3>=0 (<=-less one/3<1) {2 * n * n})
+                     (<=-less a0>0) <=∘ =_<= ide-left
+              | a0>eps : cabs (b 0) > eps => linarith
+            \in \case MainLemma n>0 eps>0 (\lam i => cabs (b i)) a0>eps
+                        (\lam i => cabs>=0) (pmap cabs bn=1 *> cabs_ide) \with {
+              | inP (r, r>0, kF, rn<a0, lower, upper, sums) =>
+                \have
+                  | R>0 : (0 : Real) < pow r (suc kF) => OrderedSemiring.pow>0 r>0 {suc kF}
+                  | prod>0 : (0 : Real) < cabs (b (suc kF)) * pow r (suc kF) => linarith
+                  | ak>0 : (0 : Real) < cabs (b (suc kF))
+                    => LinearlyOrderedSemiring.<_*_positive-cancel-right (<=-less R>0)
+                         (transportInv (`< cabs (b (suc kF)) * pow r (suc kF)) zro_*-left prod>0)
+                  | kF<=m => <_suc_<= (fin_< kF)
+                \in \case opposite-direction a0>0 ak>0 {suc kF} NatOrder.zero<suc r>0 upper \with {
+                  | inP (z, cz, key) =>
+                    \have
+                      | sums' : BigSum (\new Array Real kF (\lam i => cabs (b (suc i)) * pow r (suc i)))
+                                + BigSum (\new Array Real (m -' kF)
+                                    (\lam i => cabs (b (suc kF Nat.+ suc i)) * pow r (suc kF Nat.+ suc i)))
+                                  < cabs (b (suc kF)) * pow r (suc kF)
+                                    - pow one/3 n * (cabs (b (suc kF)) * pow r (suc kF)) + pow 3 n * eps
+                        => sums <∘l =_<= equation.cRing
+                      | lower-scaled : pow one/3 n * (pow one/3 (2 * n * n) * cabs (b 0) - 2 * eps)
+                               < pow one/3 n * (cabs (b (suc kF)) * pow r (suc kF))
+                        => <_*_positive-right (OrderedSemiring.pow>0 one/3>0 {n}) lower
+                      | pow-split : pow one/3 n * (pow one/3 (2 * n * n) * cabs (b 0) - 2 * eps)
+                               = pow one/3 (2 * n * n + n) * cabs (b 0) - 2 * (pow one/3 n * eps)
+                        => rewrite (Monoid.pow_+ {RealField} {one/3} {2 * n * n} {n}) equation.cRing
+                      | eps-third : pow one/3 n * eps <= (ratio 1 3 : Real) * eps
+                        => PosetSemiring.<=_*_positive-left
+                             (pow1/3-monotone {n} {1} (suc_<_<= n>0) <=∘ =_<= ide-left) (<=-less eps>0)
+                      | cond2' : pow 3 n * eps + eps
+                                   < c - cabs (b 0) - pow one/3 (2 * n * n + n) * c
+                                     + pow one/3 (2 * n * n + n) * cabs (b 0)
+                        => =_<= equation.cRing <∘r (cond2 <∘l =_<= equation.cRing)
+                      | q-eq : c - pow one/3 (2 * n * n + n) * c = kneser-q n * c => equation.cRing
+                    \in inP (z, rewrite cz linarith,
+                             polySum-bound b z r cz kF (m -' kF) (pmap (\lam t => suc (suc t)) (inv (<=_exists kF<=m)))
+                               <∘r (usingOnly (key, sums', cond2', lower-scaled, pow-split, eps-third, eps>0) linarith
+                                    <∘l =_<= q-eq))
+                }
+            }
+        }
+    }
+  \where {
+    {- | The two conditions (1) and (2) on $\varepsilon$ in the proof of Lemma 4: given
+         positive $A$, $B$ and $D$, there is an $\varepsilon > 0$ with $2\varepsilon < A$ and
+         $D\varepsilon < B$. -}
+    \lemma exists-eps {A B D : Real} (A>0 : 0 < A) (B>0 : 0 < B) (D>0 : 0 < D)
+      : ∃ (eps : Real) (0 < eps) (2 * eps < A) (D * eps < B)
+      => \case min-bound (linarith : (0 : Real) < A * ratio 1 2)
+                         (<_*_positive_positive B>0 (pinv>0 D>0)) \with {
+           | inP (eps, eps>0, e<A, e<B) =>
+             inP (eps, eps>0, linarith,
+                  <_*_positive-right D>0 e<B
+                    <∘l =_<= (inv *-assoc *> pmap (`* pinv D D>0) *-comm *> pinv-frac D>0))
+         }
+      \where {
+        -- | Between any two positive reals there is a positive real below both: half their minimum.
+        \lemma min-bound {A B : Real} (A>0 : 0 < A) (B>0 : 0 < B)
+          : ∃ (eps : Real) (0 < eps) (eps < A) (eps < B)
+          => \have m>0 : (0 : Real) < A ∧ B => <_meet-univ A>0 B>0
+             \in inP ((A ∧ B) * ratio 1 2, linarith,
+                      linarith (RealAbGroup.meet-left {A} {B}),
+                      linarith (RealAbGroup.meet-right {A} {B}))
+
+        -- | $x y \cdot y^{-1} = x$.
+        \lemma pinv-frac {E : OrderedField} {x y : E} (y>0 : 0 < y) : x * y * pinv y y>0 = x
+          => *-assoc *> pmap (x *) (pinv-right y>0) *> ide-right
+      }
+
+    {- | Triangle-inequality bound for a split polynomial value: the modulus is at most the modulus
+         of the two distinguished terms together, plus the sums of the moduli of the rest. -}
+    \lemma polySum-bound (b : Nat -> Complex) (z : Complex) (r : Real) (cz : cabs z = r)
+                         {N : Nat} (p q : Nat) (Neq : N = suc p Nat.+ suc q)
+      : cabs (BigSum (\new Array Complex N (\lam i => b i * pow z i)))
+        <= cabs (b 0 + b (suc p) * pow z (suc p))
+           + (BigSum (\new Array Real p (\lam i => cabs (b (suc i)) * pow r (suc i)))
+              + BigSum (\new Array Real q
+                  (\lam i => cabs (b (suc p Nat.+ suc i)) * pow r (suc p Nat.+ suc i))))
+      => =_<= (pmap cabs (BigSum-split4 (\lam i => b i * pow z i) ide-right p q Neq))
+         <=∘ cabs_+3 (b 0 + b (suc p) * pow z (suc p))
+                     (tail-bound b cz p suc) (tail-bound b cz q (suc p Nat.+ suc __))
+      \where {
+        {- | Split $\sum_{i<N} g_i$ into the four groups that Lemma 4 needs: the constant term (given
+             as `c` together with a proof that it is $g_0$, which lets the caller normalize it), the
+             distinguished term $g_k$ with $k = p+1$, the terms strictly between them, and the terms
+             above $k$. The length is given as `N` plus a proof that $N = (p+1) + (q+1)$, so the
+             caller does not have to transport the array. -}
+        \lemma BigSum-split4 {M : AbMonoid} (g : Nat -> M) {c : M} (g0 : g 0 = c)
+                             {N : Nat} (p q : Nat) (Neq : N = suc p Nat.+ suc q)
+          : BigSum (\new Array M N (g __))
+            = (c + g (suc p)) + (BigSum (\new Array M p (\lam i => g (suc i)))
+                                 + BigSum (\new Array M q (\lam i => g (suc p Nat.+ suc i)))) \elim Neq
+          | idp => BigSum-shift g (suc p) (suc q)
+                   *> pmap2 (+) (BigSum-shift g 1 p *> pmap (`+ _) (zro-right *> g0))
+                                (BigSum-shift (\lam j => g (suc p Nat.+ j)) 1 q *> pmap (`+ _) zro-right)
+                   *> +-exchange
+
+        -- | Regroup a sum of two sums: $(x + s) + (y + t) = (x + y) + (s + t)$.
+        \lemma +-exchange {M : AbMonoid} {x y s t : M} : (x + s) + (y + t) = (x + y) + (s + t)
+          => equation.abMonoid
+
+        -- | Triangle inequality for a tail sum: $|\sum_i b_{f i} z^{f i}| \le \sum_i |b_{f i}| r^{f i}$.
+        \lemma tail-bound (b : Nat -> Complex) {z : Complex} {r : Real} (cz : cabs z = r)
+                          (m : Nat) (f : Nat -> Nat)
+          : cabs (BigSum (\new Array Complex m (\lam i => b (f i) * pow z (f i))))
+            <= BigSum (\new Array Real m (\lam i => cabs (b (f i)) * pow r (f i)))
+          => cabs_BigSum <=∘ =_<= (BigSum-ext (\lam i => cabs_*
+               *> pmap (cabs (b (f i)) *) (cabs_pow *> pmap (\lam t => pow t (f i)) cz)))
+
+        {- | $|X + (Y + Z)| \leq |X| + (y + z)$ from bounds $|Y| \leq y$ and $|Z| \leq z$. `X` is
+             explicit: a concrete `Complex` sum in the goal unfolds into its components, so an
+             implicit `X` under the `+` would not be inferrable. -}
+        \lemma cabs_+3 (X : Complex) {Y Z : Complex} {y z : Real} (py : cabs Y <= y) (pz : cabs Z <= z)
+          : cabs (X + (Y + Z)) <= cabs X + (y + z)
+          => cabs_+ {X} {Y + Z} <=∘ <=_+ <=-refl (cabs_+ {Y} {Z} <=∘ <=_+ py pz)
+      }
+  }
+
+{- | Lemma 4 restated for `Poly ComplexField`: “monic of degree $n$” is `degree< f (suc n)`
+     together with `polyCoef f n = 1`. -}
+\lemma KneserLemma-poly {n : Nat} (n>0 : 0 < n) (f : Poly ComplexField)
+                        (deg : degree< f (suc n)) (monic : polyCoef f n = 1)
+                        {c : Real} (f0<c : cabs (polyEval f 0) < c)
+  : ∃ (z : Complex) (pow (cabs z) n < c) (cabs (polyEval f z) < kneser-q n * c)
+  => \have | ev (z : Complex) : polyEval f z
+                              = BigSum (\new Array Complex (suc n) (\lam i => polyCoef f i * pow z i))
+           => polyEval_polyCoef deg
+     \in \case KneserLemma n>0 (polyCoef f) monic
+                 (rewriteI (ev 0 *> polySum_zro (polyCoef f) n) f0<c) \with {
+       | inP (z, |z|^n<c, |f|<qc) => inP (z, |z|^n<c, rewrite (ev z) |f|<qc)
+     }
