@@ -37,7 +37,7 @@ public class Sort implements CoreSort {
   public Sort(@NotNull Level pLevel, @NotNull ConstLevel hLevel, boolean isCat) {
     myPLevel = hLevel.isProp() && !pLevel.isZero() ? new Level(BigInteger.ZERO) : pLevel;
     myHLevel = hLevel;
-    myCat = false; // TODO[sorts]: Temporarily disable \Cat sorts.
+    myCat = isCat;
   }
 
   public Sort(@NotNull Level pLevel, @NotNull ConstLevel hLevel) {
@@ -67,7 +67,7 @@ public class Sort implements CoreSort {
   }
 
   public boolean isOmega() {
-    return /* TODO[sorts]: myCat && */ myPLevel.isInfinity() && myHLevel.isInfinity();
+    return myCat && myPLevel.isInfinity() && myHLevel.isInfinity();
   }
 
   public boolean isCat() {
@@ -75,7 +75,7 @@ public class Sort implements CoreSort {
   }
 
   public Sort succ() {
-    return isProp() ? SET0 : new Sort(getPLevel().add(BigInteger.ONE), getHLevel().add(BigInteger.ONE));
+    return isProp() ? SET0 : new Sort(getPLevel().add(BigInteger.ONE), getHLevel().add(BigInteger.ONE), myCat);
   }
 
   public Sort max(Sort sort) {

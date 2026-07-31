@@ -16,7 +16,7 @@
   => pathEquiv (QEquiv {__} {__}) \lam {A} {B} => \new Retraction {
        | f => =-to-QEquiv
        | sec => QEquiv-to-=
-       | f_sec e => QEquiv.equals {A} {B} {_} {e} \lam a => Jl (\lam _ p => =-to-QEquiv p a = coe p a right) idp (QEquiv-to-= e)
+       | f_sec e => QEquiv.equals {A} {B} {_} {e} \lam a => Jl {\Set u} (\lam _ p => =-to-QEquiv p a = coe p a right) idp (QEquiv-to-= e)
      }
 
 \lemma =-to-QEquiv-functorial.{u} {A B C : \Set u} {p : A = B} {q : B = C}

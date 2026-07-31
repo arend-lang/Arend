@@ -421,7 +421,7 @@ public class SortTest extends TypeCheckingTestCase {
   @Test
   public void classImplTest() {
     typeCheckModule("""
-      \\record R (f : Nat -> \\Set)
+      \\record R (f : Nat -> \\Set0)
       \\func test : R => \\new R \\case __ \\with {
         | 0 => \\Sigma
         | suc _ => Nat

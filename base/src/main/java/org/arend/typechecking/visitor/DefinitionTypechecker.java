@@ -795,8 +795,8 @@ public class DefinitionTypechecker extends BaseDefinitionTypechecker implements 
         : def.getBody() instanceof Concrete.CoelimFunctionBody && !def.isRecursive()
           ? null // The result type will be typechecked together with all field implementations during body typechecking.
           : def.getBody() instanceof Concrete.TermFunctionBody && cResultType instanceof Concrete.UniverseExpression universe && universe.isInfSort()
-            ? new TypeExpression(universe.getHLevel() == null ? UniverseExpression.OMEGA : new UniverseExpression(new Sort(Level.INFINITY, new ConstLevel(universe.getHLevel()))),
-                new SortExpression.Const(universe.getHLevel() == null ? Sort.INFINITY : new Sort(Level.INFINITY, new ConstLevel(universe.getHLevel().add(BigInteger.ONE)))))
+            ? new TypeExpression(new UniverseExpression(new Sort(Level.INFINITY, new ConstLevel(universe.getHLevel()), universe.getKind() == ConcreteUniverseExpression.Kind.CAT)),
+                new SortExpression.Const(new Sort(Level.INFINITY, new ConstLevel(universe.getHLevel()), universe.getKind() == ConcreteUniverseExpression.Kind.CAT).succ()))
             : checkResultTypeLater(def)
               ? typechecker.checkType(cResultType, def.getBody() instanceof Concrete.ElimFunctionBody ? UniverseExpression.OMEGA : UniverseExpression.INF_OMEGA)
               : typechecker.finalCheckType(cResultType, def.getBody() instanceof Concrete.ElimFunctionBody ? UniverseExpression.OMEGA : UniverseExpression.INF_OMEGA);
@@ -1219,7 +1219,7 @@ public class DefinitionTypechecker extends BaseDefinitionTypechecker implements 
       Concrete.Expression bodyTerm = ((Concrete.TermFunctionBody) body).getTerm();
       boolean useExpectedType = !expectedType.isError();
       TypecheckingResult nonFinalResult = typechecker.checkExpr(bodyTerm, useExpectedType ? expectedType : null);
-      if (useExpectedType && !expectedType.isOmega()) {
+      if (useExpectedType) {
         if (kind == FunctionKind.LEMMA || kind == FunctionKind.SFUNC || def.getData().getKind() == GlobalReferable.Kind.DEFINED_CONSTRUCTOR || nonFinalResult == null || !nonFinalResult.type.isInstance(ClassCallExpression.class)) {
           if (nonFinalResult == null) {
             nonFinalResult = new TypecheckingResult(null, expectedType);
@@ -1577,7 +1577,7 @@ public class DefinitionTypechecker extends BaseDefinitionTypechecker implements 
     dataDefinition.getConstructors().clear();
 
     Sort userSort = dataDefinition.getSort();
-    if (userSort != null && userSort.isOmega()) userSort = null;
+    if (userSort != null && userSort.getPLevel().isInfinity() && userSort.getHLevel().isInfinity()) userSort = null;
     List<SortExpression> inferredSortList = new ArrayList<>();
 
     boolean dataOk = true;

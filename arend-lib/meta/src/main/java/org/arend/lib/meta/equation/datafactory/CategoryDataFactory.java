@@ -41,13 +41,14 @@ public class CategoryDataFactory implements DataFactory {
     List<CoreExpression> valueList = obValues.getValues();
     List<ConcreteClause> caseClauses = new ArrayList<>();
     for (Map.Entry<Pair<Integer, Integer>, Map<Integer, Integer>> entry : homMap.entrySet()) {
-      caseClauses.add(factory.clause(Arrays.asList(factory.numberPattern(entry.getKey().proj1), factory.numberPattern(entry.getKey().proj2)), DataFactoryBase.makeFin(entry.getValue().size(), factory, prelude.getFinRef())));
+      caseClauses.add(factory.clause(Arrays.asList(factory.numberPattern(entry.getKey().proj1), factory.numberPattern(entry.getKey().proj2)), factory.number(entry.getValue().size())));
     }
     if (homMap.size() < valueList.size() * valueList.size()) {
-      caseClauses.add(factory.clause(Arrays.asList(factory.refPattern(null, null), factory.refPattern(null, null)), DataFactoryBase.makeFin(0, factory, prelude.getFinRef())));
+      caseClauses.add(factory.clause(Arrays.asList(factory.refPattern(null, null), factory.refPattern(null, null)), factory.number(0)));
     }
     return factory.lam(Arrays.asList(factory.param(lamParam1), factory.param(lamParam2)),
-            factory.caseExpr(false, Arrays.asList(factory.caseArg(factory.ref(lamParam1), null, null), factory.caseArg(factory.ref(lamParam2), null, null)), null, null, caseClauses));
+            factory.app(factory.ref(prelude.getFinRef()), true,
+                factory.caseExpr(false, Arrays.asList(factory.caseArg(factory.ref(lamParam1), null, null), factory.caseArg(factory.ref(lamParam2), null, null)), null, null, caseClauses)));
   }
 
   protected ConcreteExpression makeLambda3() {

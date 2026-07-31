@@ -241,7 +241,7 @@ public class ClassDefinition extends TopLevelDefinition implements CoreClassDefi
       }
       if (!fieldType.isInstance(ErrorExpression.class)) {
         SortExpression fieldSort = fieldType.accept(visitor, null).toSortExpression();
-        if (fieldSort == null || fieldSort instanceof SortExpression.Const(Sort sort) && sort.isOmega()) {
+        if (fieldSort == null || fieldSort instanceof SortExpression.Const(Sort sort) && sort.getPLevel().isInfinity() && sort.getHLevel().isInfinity()) {
           fieldSort = getFieldType(field, idLevels, thisExpr2).normalize(NormalizationMode.WHNF).getSortExpressionOfType();
           if (!ignoreErrors && fieldSort == null) {
             return null;

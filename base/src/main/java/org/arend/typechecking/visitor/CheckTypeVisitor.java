@@ -3363,18 +3363,6 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
 
   @Override
   public TypecheckingResult visitUniverse(Concrete.UniverseExpression expr, Expression expectedType) {
-    if (expr.isInfSort()) {
-      if (expectedType != UniverseExpression.INF_OMEGA) {
-        errorReporter.report(new TypecheckingError("Infinite level is not allowed here", expr));
-        return null;
-      }
-
-      return checkResult(expectedType, expr.getHLevel() == null
-          ? new TypecheckingResult(UniverseExpression.OMEGA, UniverseExpression.OMEGA)
-          : new TypecheckingResult(new UniverseExpression(new Sort(Level.INFINITY, new ConstLevel(expr.getHLevel()))), new UniverseExpression(new Sort(Level.INFINITY, new ConstLevel(expr.getHLevel().add(BigInteger.ONE))))), expr);
-    }
-
-    Level pLevel = expr.getPLevel() != null ? expr.getPLevel().accept(this, null) : null;
     BigInteger hLevel;
     if (expr.getHLevel() != null) {
       BigInteger number = expr.getHLevel();
@@ -3387,22 +3375,30 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
       hLevel = null;
     }
 
+    boolean isCat = expr.getKind() == ConcreteUniverseExpression.Kind.CAT;
+    if (isCat && hLevel != null) {
+      errorReporter.report(new TypecheckingError("\\Cat cannot have an h-level", expr));
+    }
+
+    if (expr.isInfSort()) {
+      if (expectedType != UniverseExpression.INF_OMEGA) {
+        errorReporter.report(new TypecheckingError("Infinite level is not allowed here", expr));
+        return null;
+      }
+
+      Sort sort = new Sort(Level.INFINITY, new ConstLevel(hLevel), isCat);
+      return checkResult(expectedType, new TypecheckingResult(new UniverseExpression(sort), new UniverseExpression(sort.succ())), expr);
+    }
+
+    Level pLevel = expr.getPLevel() != null ? expr.getPLevel().accept(this, null) : null;
+
     if (pLevel == null) {
       InferenceLevelVariable pl = new InferenceLevelVariable(expr, false);
       myEquations.addVariable(pl);
       pLevel = new Level(pl);
     }
 
-    Sort sort;
-    if (expr.getKind() == ConcreteUniverseExpression.Kind.CAT) {
-      if (hLevel != null) {
-        errorReporter.report(new TypecheckingError("\\Cat cannot have an h-level", expr));
-      }
-      sort = new Sort(pLevel, true);
-    } else {
-      sort = new Sort(pLevel, new ConstLevel(hLevel));
-    }
-
+    Sort sort = new Sort(pLevel, new ConstLevel(hLevel), isCat);
     return checkResult(expectedType, new TypecheckingResult(new UniverseExpression(sort), new UniverseExpression(sort.succ())), expr);
   }
 
@@ -3984,9 +3980,12 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
       if (resultType == null && expectedType == null) {
         return null;
       }
-      if (resultType == null && expectedType.isOmega()) {
-        errorReporter.report(new TypecheckingError("Large elimination is not allowed", expr.getResultType() != null ? expr.getResultType() : expr));
-        return null;
+      if (resultType == null) {
+        Sort sort = expectedType.toSort();
+        if (sort != null && sort.getPLevel().isInfinity()) {
+          errorReporter.report(new TypecheckingError("Large elimination is not allowed", expr.getResultType() != null ? expr.getResultType() : expr));
+          return null;
+        }
       }
       resultExpr = resultType != null ? resultType.expression() : checkedSubst(expectedType, elimSubst, allowedBindings, expr.getResultType() != null ? expr.getResultType() : expr);
 

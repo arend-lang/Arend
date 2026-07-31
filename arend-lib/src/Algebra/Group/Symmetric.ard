@@ -298,7 +298,7 @@
   => \case decideEq A.card B.card, A.finEq, B.finEq \with {
     | yes e, inP Ae, inP Be =>
       flip (coe \lam i => FinSet (QEquiv {A} {QEquiv_= Be i})) right $
-      flip (coe \lam i => FinSet (QEquiv {QEquiv_= Ae i} {_})) right $
+      flip (coe \lam i => FinSet (QEquiv {QEquiv_= Ae i} {Fin B.card})) right $
       \have r => equiv_fin {A.card} {B.card}
       \in \new FinSet {
         | card => r.1

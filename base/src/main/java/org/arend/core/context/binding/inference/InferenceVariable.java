@@ -23,6 +23,7 @@ public abstract class InferenceVariable implements Variable, CoreInferenceVariab
   private final String myName;
   private Expression myType;
   private ConstLevel myHLevel;
+  private boolean myCat = true;
   private final Set<Binding> myBounds;
   private final Concrete.SourceNode mySourceNode;
   private InferenceReferenceExpression myReference;
@@ -68,6 +69,14 @@ public abstract class InferenceVariable implements Variable, CoreInferenceVariab
 
   public void setHLevel(ConstLevel level) {
     myHLevel = level;
+  }
+
+  public boolean isCat() {
+    return myCat;
+  }
+
+  public void setCat(boolean isCat) {
+    myCat = isCat;
   }
 
   public Set<Binding> getBounds() {

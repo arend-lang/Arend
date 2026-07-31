@@ -49,6 +49,7 @@ public class UniverseExpression extends Expression implements CoreUniverseExpres
   public Expression replaceInfinityLevel(InferenceVariable variable) {
     if (mySortExpression instanceof SortExpression.Const(Sort sort) && sort.getPLevel().isInfinity()) {
       variable.setHLevel(sort.getHLevel());
+      variable.setCat(sort.isCat());
       return new UniverseExpression(new SortExpression.InfVar(variable));
     } else {
       return null;
@@ -59,7 +60,7 @@ public class UniverseExpression extends Expression implements CoreUniverseExpres
   public Expression replaceInferenceVariable() {
     if (mySortExpression instanceof SortExpression.InfVar var) {
       ConstLevel hLevel = var.getVariable().getHLevel();
-      return hLevel == null ? UniverseExpression.OMEGA : new UniverseExpression(new Sort(Level.INFINITY, hLevel));
+      return new UniverseExpression(new Sort(Level.INFINITY, hLevel == null ? ConstLevel.INFINITY : hLevel, var.getVariable().isCat()));
     } else {
       return this;
     }

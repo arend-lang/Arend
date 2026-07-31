@@ -3,15 +3,15 @@
 \import Logic.Rewriting.TRS.Utils
 \import Data.List (nil, ::)
 
-\data SingularSort | lc-term
+\func SingularSort => \Sigma
 
 \data LC-Symbols : \Set | abstraction | application
 
 \instance LC-FSignature : FSignature SingularSort \cowith
   | symbol sort => LC-Symbols
   | domain symb => \case \elim symb \with {
-    | abstraction => (lc-term :: nil, lc-term) :: nil
-    | application => (nil, lc-term) :: (nil, lc-term) :: nil
+    | abstraction => (() :: nil, ()) :: nil
+    | application => (nil, ()) :: (nil, ()) :: nil
   }
 
 \data MetaVariables | metavar-a | metavar-b
@@ -19,29 +19,29 @@
 \func BetaRedexContext : MetaContext SingularSort \cowith
   | metaname sort => MetaVariables
   | m-domain var => \case \elim var \with {
-    | metavar-a => lc-term :: nil
+    | metavar-a => () :: nil
     | metavar-b => nil
   }
 
-\func BetaRedex : Term LC-FSignature nil lc-term BetaRedexContext =>
+\func BetaRedex : Term LC-FSignature nil () BetaRedexContext =>
   func application
       (\lam i => \case \elim i \with {
         | 0 => func abstraction (\lam 0 => metavar metavar-a (\lam 0 => var 0 idp))
         | 1 => metavar metavar-b impossible-lambda
       })
 
-\func BetaResult : Term LC-FSignature nil lc-term BetaRedexContext =>
+\func BetaResult : Term LC-FSignature nil () BetaRedexContext =>
   metavar metavar-a (\lam 0 => metavar metavar-b impossible-lambda)
 
-\func beta-reduction : RewriteRule lc-term \cowith
+\func beta-reduction : RewriteRule () \cowith
   | rr-mc => BetaRedexContext
   | rr-l => BetaRedex
   | rr-r => BetaResult
   | rr-l-func-root => T-has-functional-root {LC-FSignature}
 
 \func LC-rules : RuleRegistry LC-FSignature \cowith
-  | rule-J (lc-term) => \Sigma
-  | rule-container {(lc-term)} () => beta-reduction
+  | rule-J _ => \Sigma
+  | rule-container () => beta-reduction
 
 \instance UntypedLambdaCalculus  : SimpleHigherOrderTermRewritingSystem \cowith
   | env => LC-FSignature
@@ -50,21 +50,21 @@
 
 
 -- \x.\y.x
-\func K : Term LC-FSignature nil lc-term (EmptyMetaContext {LC-FSignature})
+\func K : Term LC-FSignature nil () (EmptyMetaContext {LC-FSignature})
   => func abstraction
       (\lam 0 => func abstraction (\lam 0 => var 0 idp))
 
 -- \x.x
-\func I : Term LC-FSignature nil lc-term (EmptyMetaContext {LC-FSignature})
+\func I : Term LC-FSignature nil () (EmptyMetaContext {LC-FSignature})
   => func abstraction
       (\lam 0 => var 0 idp)
 
 -- (\x.x) (\x.x)
-\func I_I : PureTerm LC-FSignature nil lc-term =>
+\func I_I : PureTerm LC-FSignature nil () =>
   func application (\lam i => \case \elim i \with { | 0 => I | 1 => I })
 
 \func suitable-substitution : MetaSubstitution LC-FSignature nil BetaRedexContext (EmptyMetaContext {LC-FSignature}) =>
-  \lam {(lc-term)} mvar => \case \elim mvar \with {
+  \lam mvar => \case \elim mvar \with {
     | metavar-a => var 0 idp
     | metavar-b => I
   }

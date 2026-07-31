@@ -220,7 +220,7 @@ public class TwoStageEquations implements Equations {
         }
         InferenceLevelVariable pl = new InferenceLevelVariable(sourceNode, true);
         addVariable(pl);
-        Sort genSort = new Sort(new Level(pl), sort.getHLevel());
+        Sort genSort = new Sort(new Level(pl), sort.getHLevel(), sort.isCat());
         solve(cInf, new UniverseExpression(genSort), false);
         return Sort.compare(sort, genSort, cmp, this, sourceNode);
       }

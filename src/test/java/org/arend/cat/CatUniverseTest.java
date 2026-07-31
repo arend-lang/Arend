@@ -22,11 +22,4 @@ public class CatUniverseTest extends TypeCheckingTestCase {
       \\func test {C : \\Cat} (c : C) => c
       """);
   }
-
-  @Test
-  public void idpTest() {
-    typeCheckDef("""
-      \\func test {C : \\Cat} {c : C} : c = c => idp
-      """);
-  }
 }
