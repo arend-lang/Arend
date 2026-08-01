@@ -325,7 +325,8 @@ public class TypecheckingOrderingListener extends BooleanComputationRunner imple
       for (DependentLink param = constructor.getParameters(); param.hasNext(); param = param.getNext()) {
         param = param.getNextTyped(null);
         if (param.getType().accept(visitor1, null) instanceof UniverseExpression universe) {
-          sortExpressions.add(universe.getSortExpression());
+          SortExpression paramSort = universe.getSortExpression();
+          sortExpressions.add(param.isDotted() ? paramSort.withoutCat() : paramSort);
         } else {
           return;
         }

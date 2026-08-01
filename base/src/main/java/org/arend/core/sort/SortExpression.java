@@ -34,6 +34,11 @@ public sealed interface SortExpression extends CoreSortExpression permits SortEx
     return subst(LevelSubstitution.EMPTY);
   }
 
+  default @NotNull SortExpression withoutCat() {
+    Sort resolved = withInfLevel();
+    return resolved.isCat() ? new Const(new Sort(resolved.getPLevel(), resolved.getHLevel(), false)) : this;
+  }
+
   @Override
   @Nullable BigInteger getSortHLevel();
 
@@ -96,6 +101,11 @@ public sealed interface SortExpression extends CoreSortExpression permits SortEx
     @Override
     public @NotNull SortExpression simplify() {
       return this;
+    }
+
+    @Override
+    public @NotNull SortExpression withoutCat() {
+      return sort.isCat() ? new Const(new Sort(sort.getPLevel(), sort.getHLevel(), false)) : this;
     }
 
     @Override
@@ -363,6 +373,15 @@ public sealed interface SortExpression extends CoreSortExpression permits SortEx
     }
 
     @Override
+    public @NotNull SortExpression withoutCat() {
+      List<SortExpression> sorts = new ArrayList<>(mySorts.size());
+      for (SortExpression sort : mySorts) {
+        sorts.add(sort.withoutCat());
+      }
+      return makeMax(sorts);
+    }
+
+    @Override
     public @NotNull Sort withInfLevel() {
       Sort result = Sort.PROP;
       for (SortExpression sort : mySorts) {
@@ -439,6 +458,11 @@ public sealed interface SortExpression extends CoreSortExpression permits SortEx
     }
 
     @Override
+    public @NotNull SortExpression withoutCat() {
+      return new Pi(myDomain, myCodomain.withoutCat());
+    }
+
+    @Override
     public @NotNull Sort withInfLevel() {
       Sort domain = myDomain.withInfLevel();
       Sort codomain = myCodomain.withInfLevel();
@@ -479,6 +503,11 @@ public sealed interface SortExpression extends CoreSortExpression permits SortEx
     }
 
     @Override
+    public @NotNull SortExpression withoutCat() {
+      return new Prev(mySort.withoutCat());
+    }
+
+    @Override
     public @NotNull Sort withInfLevel() {
       Sort result = mySort.withInfLevel();
       return result.isSet() || result.isProp() ? Sort.PROP : result.getHLevel().isInfinity() ? result : new Sort(result.getPLevel(), new ConstLevel(result.getHLevel().value().subtract(BigInteger.ONE)));
@@ -516,6 +545,11 @@ public sealed interface SortExpression extends CoreSortExpression permits SortEx
     @Override
     public @NotNull SortExpression replaceRecursiveData(@NotNull Expression argument) {
       return makeSucc(mySort.replaceRecursiveData(argument));
+    }
+
+    @Override
+    public @NotNull SortExpression withoutCat() {
+      return new Succ(mySort.withoutCat());
     }
 
     @Override

@@ -439,7 +439,7 @@ public class DefinitionTypechecker extends BaseDefinitionTypechecker implements 
             TypeExpression paramType = typechecker.checkType(parameter.getType(), UniverseExpression.OMEGA);
             if (paramType != null) {
               paramResults.add(paramType.expression());
-              sorts.add(paramType.sort());
+              sorts.add(isDotted ? paramType.sort().withoutCat() : paramType.sort());
             }
           } else {
             TypecheckingResult paramType = typechecker.finalCheckExpr(parameter.getType(), def instanceof Concrete.DataDefinition || def instanceof Concrete.FunctionDefinition ? UniverseExpression.INF_OMEGA : UniverseExpression.OMEGA);
