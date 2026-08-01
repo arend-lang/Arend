@@ -64,6 +64,11 @@ public class EmptyDependentLink implements SingleDependentLink {
   }
 
   @Override
+  public boolean isDotted() {
+    return false;
+  }
+
+  @Override
   public boolean hasNext() {
     return false;
   }

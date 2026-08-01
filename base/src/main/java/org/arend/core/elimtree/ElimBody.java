@@ -56,7 +56,7 @@ public class ElimBody implements Body, CoreElimBody {
   }
 
   private static DependentLink copyDependentLink(DependentLink link, ExprSubstitution substitution, LinkList linkList) {
-    TypedDependentLink result = new TypedDependentLink(link.isExplicit(), link.getName(), link.getType().subst(substitution), link.isHidden(), EmptyDependentLink.getInstance());
+    TypedDependentLink result = new TypedDependentLink(link.isExplicit(), link.getName(), link.getType().subst(substitution), link.isHidden(), link.isDotted(), EmptyDependentLink.getInstance());
     linkList.append(result);
     substitution.add(link, new ReferenceExpression(result));
     return result;

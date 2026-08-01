@@ -15,23 +15,34 @@ public class TypedDependentLink implements DependentLink {
   private Expression myType;
   private DependentLink myNext;
   private final boolean myHidden;
+  private final boolean myDotted;
 
-  public TypedDependentLink(boolean isExplicit, String name, Expression type, boolean isHidden, DependentLink next) {
+  public TypedDependentLink(boolean isExplicit, String name, Expression type, boolean isHidden, boolean isDotted, DependentLink next) {
     assert next != null;
     myExplicit = isExplicit;
     myName = name;
     myType = type;
     myNext = next;
     myHidden = isHidden;
+    myDotted = isDotted;
+  }
+
+  public TypedDependentLink(boolean isExplicit, String name, Expression type, boolean isHidden, DependentLink next) {
+    this(isExplicit, name, type, isHidden, false, next);
   }
 
   public TypedDependentLink(boolean isExplicit, String name, Expression type, DependentLink next) {
-    this(isExplicit, name, type, false, next);
+    this(isExplicit, name, type, false, false, next);
   }
 
   @Override
   public boolean isProperty() {
     return false;
+  }
+
+  @Override
+  public boolean isDotted() {
+    return myDotted;
   }
 
   @Override
@@ -78,7 +89,7 @@ public class TypedDependentLink implements DependentLink {
   @Override
   public DependentLink subst(SubstVisitor substVisitor, int size, boolean updateSubst) {
     if (size > 0) {
-      TypedDependentLink result = new TypedDependentLink(myExplicit, myName, myType.accept(substVisitor, null), myHidden, EmptyDependentLink.getInstance());
+      TypedDependentLink result = new TypedDependentLink(myExplicit, myName, myType.accept(substVisitor, null), myHidden, myDotted, EmptyDependentLink.getInstance());
       if (updateSubst) {
         substVisitor.getExprSubstitution().addSubst(this, new ReferenceExpression(result));
       } else {

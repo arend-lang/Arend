@@ -202,6 +202,32 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
     context.putAll(bindings);
   }
 
+  public Utils.CompleteMapContextSaver<Referable, Binding> clearCategoricalContext() {
+    var saver = new Utils.CompleteMapContextSaver<>(context);
+    context.entrySet().removeIf(entry -> !(entry.getValue() instanceof DependentLink dl && dl.isDotted()));
+    return saver;
+  }
+
+  public boolean checkDotted(Concrete.Parameter parameter, boolean allowed) {
+    if (parameter.isDotted() && !allowed) {
+      errorReporter.report(new TypecheckingError("Dotted parameters (.:) are not allowed here", parameter));
+      return false;
+    }
+    return parameter.isDotted();
+  }
+
+  private boolean checkLambdaDotted(Concrete.Parameter parameter, SingleDependentLink piParam) {
+    if (parameter.isDotted()) {
+      if (piParam != null && piParam.isExplicit() == parameter.isExplicit() && !piParam.isDotted()) {
+        errorReporter.report(new TypecheckingError("Expected pi-type is not dotted", parameter));
+        return false;
+      }
+      return true;
+    } else {
+      return piParam != null && piParam.isExplicit() == parameter.isExplicit() && piParam.isDotted();
+    }
+  }
+
   private void removeBinding(Referable ref) {
     Binding binding = context.remove(ref);
     if (binding != null) {
@@ -2203,8 +2229,15 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
     return link;
   }
 
-  private SingleDependentLink visitTypeParameter(Concrete.TypeParameter param, List<SortExpression> sorts, Expression expectedType) {
-    TypeExpression argResult = checkType(param.getType(), UniverseExpression.OMEGA);
+  private SingleDependentLink visitTypeParameter(Concrete.TypeParameter param, List<SortExpression> sorts, Expression expectedType, boolean isDotted) {
+    TypeExpression argResult;
+    if (isDotted) {
+      try (var ignored = clearCategoricalContext()) {
+        argResult = checkType(param.getType(), UniverseExpression.OMEGA);
+      }
+    } else {
+      argResult = checkType(param.getType(), UniverseExpression.OMEGA);
+    }
     if (argResult == null) return null;
     if (expectedType != null) {
       Expression expected = expectedType.normalize(NormalizationMode.WHNF).getUnderlyingExpression();
@@ -2219,35 +2252,43 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
 
     if (param instanceof Concrete.TelescopeParameter) {
       List<? extends Referable> referableList = param.getReferableList();
-      SingleDependentLink link = ExpressionFactory.singleParams(param.isExplicit(), param.getNames(), argResult.expression());
+      SingleDependentLink link = ExpressionFactory.singleParams(param.isExplicit(), param.getNames(), argResult.expression(), isDotted);
       int i = 0;
       for (SingleDependentLink link1 = link; link1.hasNext(); link1 = link1.getNext(), i++) {
         addBinding(referableList.get(i) , link1);
       }
       return link;
     } else {
-      return new TypedSingleDependentLink(param.isExplicit(), null, argResult.expression());
+      return new TypedSingleDependentLink(param.isExplicit(), null, argResult.expression(), false, isDotted);
     }
   }
 
-  private boolean visitParameter(Concrete.Parameter arg, LinkList list) {
+  private boolean visitParameter(Concrete.Parameter arg, LinkList list, boolean allowDotted) {
     if (arg.getType() == null) {
       errorReporter.report(new TypecheckingError("Incomplete expression", arg));
       return false;
     }
-    TypecheckingResult result = checkExpr(arg.getType(), UniverseExpression.OMEGA);
+    boolean isDotted = checkDotted(arg, allowDotted);
+    TypecheckingResult result;
+    if (isDotted) {
+      try (var ignored = clearCategoricalContext()) {
+        result = checkExpr(arg.getType(), UniverseExpression.OMEGA);
+      }
+    } else {
+      result = checkExpr(arg.getType(), UniverseExpression.OMEGA);
+    }
     if (result == null) return false;
 
     if (arg instanceof Concrete.TelescopeParameter) {
       List<? extends Referable> referableList = arg.getReferableList();
-      DependentLink link = ExpressionFactory.parameter(arg.isExplicit(), arg.getNames(), result.expression);
+      DependentLink link = ExpressionFactory.parameter(arg.isExplicit(), arg.getNames(), result.expression, isDotted);
       list.append(link);
       int i = 0;
       for (DependentLink link1 = link; link1.hasNext(); link1 = link1.getNext(), i++) {
         addBinding(referableList.get(i), link1);
       }
     } else {
-      DependentLink link = ExpressionFactory.parameter(arg.isExplicit(), Collections.singletonList(null), result.expression);
+      DependentLink link = ExpressionFactory.parameter(arg.isExplicit(), Collections.singletonList(null), result.expression, isDotted);
       list.append(link);
       addBinding(null, link);
     }
@@ -2263,7 +2304,7 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
         if (!(parameter instanceof Concrete.TypeParameter)) {
           throw new IllegalArgumentException();
         }
-        if (!visitParameter((Concrete.TypeParameter) parameter, list)) {
+        if (!visitParameter((Concrete.TypeParameter) parameter, list, false)) {
           return null;
         }
       }
@@ -2386,13 +2427,13 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
             errorReporter.report(new ImplicitLambdaError(referable, -1, param));
           }
 
-          SingleDependentLink link = new TypedSingleDependentLink(piParam.isExplicit(), referable == null ? null : referable.textRepresentation(), piParam.getType());
+          SingleDependentLink link = new TypedSingleDependentLink(piParam.isExplicit(), referable == null ? null : referable.textRepresentation(), piParam.getType(), false, piParam.isDotted());
           addBinding(referable, link);
           newProvider.subst(piParam, new ReferenceExpression(link));
           return new Pair<>(bodyToLam(link, visitLam(parameters.subList(1, parameters.size()), expr, newProvider)), true);
         }
       } else if (param instanceof Concrete.TypeParameter) {
-        SingleDependentLink link = visitTypeParameter((Concrete.TypeParameter) param, null, piParam == null || piParam.isExplicit() != param.isExplicit() ? null : piParam.getType());
+        SingleDependentLink link = visitTypeParameter((Concrete.TypeParameter) param, null, piParam == null || piParam.isExplicit() != param.isExplicit() ? null : piParam.getType(), checkLambdaDotted(param, piParam));
         if (link == null) {
           return new Pair<>(null, true);
         }
@@ -2525,7 +2566,7 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
         if (arg.isProperty()) {
           errorReporter.report(new CertainTypecheckingError(CertainTypecheckingError.Kind.PROPERTY_IGNORED, arg));
         }
-        SingleDependentLink link = visitTypeParameter(arg, paramSorts, null);
+        SingleDependentLink link = visitTypeParameter(arg, paramSorts, null, arg.isDotted());
         if (link == null) {
           return null;
         }
@@ -2576,6 +2617,7 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
   }
 
   private boolean visitSigmaParameter(Concrete.TypeParameter arg, Expression expectedType, List<SortExpression> resultSorts, LinkList list) {
+    checkDotted(arg, false);
     TypeExpression result = checkType(arg.getType(), expectedType == null ? UniverseExpression.OMEGA : expectedType);
     if (result == null) return false;
 
@@ -2802,7 +2844,7 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
     if (param instanceof Concrete.NameParameter) {
       return bodyToLam(visitNameParameter((Concrete.NameParameter) param, letClause), typecheckLetClause(parameters.subList(1, parameters.size()), letClause, false));
     } else if (param instanceof Concrete.TypeParameter) {
-      SingleDependentLink link = visitTypeParameter((Concrete.TypeParameter) param, null, null);
+      SingleDependentLink link = visitTypeParameter((Concrete.TypeParameter) param, null, null, param.isDotted());
       return link == null ? null : bodyToLam(link, typecheckLetClause(parameters.subList(1, parameters.size()), letClause, false));
     } else {
       throw new IllegalStateException();
@@ -3546,7 +3588,7 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
               if (!(param instanceof Concrete.Parameter)) {
                 throw new IllegalArgumentException();
               }
-              if (!visitParameter((Concrete.Parameter) param, list)) {
+              if (!visitParameter((Concrete.Parameter) param, list, false)) {
                 return null;
               }
             }

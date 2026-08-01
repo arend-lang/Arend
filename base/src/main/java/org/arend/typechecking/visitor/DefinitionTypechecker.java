@@ -423,6 +423,7 @@ public class DefinitionTypechecker extends BaseDefinitionTypechecker implements 
     Expression resultType = fieldType == null ? null : isClassCoclause ? fieldType : fieldType.getCodomain();
     ExprSubstitution substitution = fieldType == null ? null : new ExprSubstitution();
     int skip = def instanceof Concrete.CoClauseFunctionDefinition ? ((Concrete.CoClauseFunctionDefinition) def).getNumberOfExternalParameters() : 0;
+    boolean allowDotted = def instanceof Concrete.DataDefinition || def instanceof Concrete.Constructor || def instanceof Concrete.BaseFunctionDefinition;
 
     boolean first = true;
     for (Concrete.Parameter parameter : def.getParameters()) {
@@ -430,18 +431,21 @@ public class DefinitionTypechecker extends BaseDefinitionTypechecker implements 
         resultType = resultType.normalize(NormalizationMode.WHNF).getUnderlyingExpression();
       }
 
+      boolean isDotted = typechecker.checkDotted(parameter, allowDotted);
       List<Expression> paramResults = new ArrayList<>();
       if (parameter.getType() != null) {
-        if (def instanceof Concrete.Constructor) {
-          TypeExpression paramType = typechecker.checkType(parameter.getType(), UniverseExpression.OMEGA);
-          if (paramType != null) {
-            paramResults.add(paramType.expression());
-            sorts.add(paramType.sort());
-          }
-        } else {
-          TypecheckingResult paramType = typechecker.finalCheckExpr(parameter.getType(), def instanceof Concrete.DataDefinition || def instanceof Concrete.FunctionDefinition ? UniverseExpression.INF_OMEGA : UniverseExpression.OMEGA);
-          if (paramType != null) {
-            paramResults.add(paramType.expression);
+        try (var ignored = isDotted ? typechecker.clearCategoricalContext() : null) {
+          if (def instanceof Concrete.Constructor) {
+            TypeExpression paramType = typechecker.checkType(parameter.getType(), UniverseExpression.OMEGA);
+            if (paramType != null) {
+              paramResults.add(paramType.expression());
+              sorts.add(paramType.sort());
+            }
+          } else {
+            TypecheckingResult paramType = typechecker.finalCheckExpr(parameter.getType(), def instanceof Concrete.DataDefinition || def instanceof Concrete.FunctionDefinition ? UniverseExpression.INF_OMEGA : UniverseExpression.OMEGA);
+            if (paramType != null) {
+              paramResults.add(paramType.expression);
+            }
           }
         }
         if (typedParameters != null) {
@@ -500,17 +504,17 @@ public class DefinitionTypechecker extends BaseDefinitionTypechecker implements 
         if (paramResults.isEmpty()) {
           param = null;
         } else if (referableList.size() == 1 && referableList.getFirst() instanceof HiddenLocalReferable) {
-          param = parameter(parameter.isExplicit(), isProperty, names.getFirst(), paramResults.getFirst(), true);
+          param = parameter(parameter.isExplicit(), isProperty, names.getFirst(), paramResults.getFirst(), true, isDotted);
         } else if (paramResults.size() == names.size()) {
-          param = parameter(parameter.isExplicit(), isProperty, names.getFirst(), paramResults.getFirst(), false);
+          param = parameter(parameter.isExplicit(), isProperty, names.getFirst(), paramResults.getFirst(), false, isDotted);
           DependentLink current = param;
           for (int i = 1; i < names.size(); i++) {
-            DependentLink newParam = parameter(parameter.isExplicit(), isProperty, names.get(i), paramResults.get(i), false);
+            DependentLink newParam = parameter(parameter.isExplicit(), isProperty, names.get(i), paramResults.get(i), false, isDotted);
             current.setNext(newParam);
             current = newParam;
           }
         } else {
-          param = parameter(parameter.isExplicit(), isProperty, names, paramResults.getFirst());
+          param = parameter(parameter.isExplicit(), isProperty, names, paramResults.getFirst(), isDotted);
         }
         numberOfParameters = names.size();
 
@@ -523,7 +527,7 @@ public class DefinitionTypechecker extends BaseDefinitionTypechecker implements 
       } else {
         numberOfParameters = 1;
         Referable ref = parameter.getReferableList().getFirst();
-        param = paramResults.isEmpty() ? null : parameter(parameter.isExplicit(), isProperty, Collections.singletonList(ref == null ? null : ref.getRefName()), paramResults.getFirst());
+        param = paramResults.isEmpty() ? null : parameter(parameter.isExplicit(), isProperty, Collections.singletonList(ref == null ? null : ref.getRefName()), paramResults.getFirst(), isDotted);
         if (param != null) {
           typechecker.addBinding(ref, param);
         }

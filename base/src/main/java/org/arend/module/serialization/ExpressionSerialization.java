@@ -199,6 +199,7 @@ class ExpressionSerialization implements ExpressionVisitor<Void, ExpressionProto
     tBuilder.setIsHidden(typed.isHidden());
     tBuilder.setType(writeExpr(typed.getType()));
     tBuilder.setIsProperty(typed.isProperty());
+    tBuilder.setIsDotted(typed.isDotted());
     for (; link != typed; link = link.getNext()) {
       registerBinding(link);
     }
@@ -224,6 +225,7 @@ class ExpressionSerialization implements ExpressionVisitor<Void, ExpressionProto
       builder.setType(writeExpr(link.getType()));
     }
     builder.setIsHidden(link.isHidden());
+    builder.setIsDotted(link.isDotted());
     registerBinding(link);
     return builder.build();
   }

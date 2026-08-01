@@ -180,8 +180,8 @@ class ExpressionDeserialization {
       }
       Expression type = readExpr(proto.getType());
       DependentLink tele = proto.getIsHidden() && unfixedNames.size() == 1
-        ? new TypedDependentLink(!proto.getIsNotExplicit(), unfixedNames.getFirst(), type, true, EmptyDependentLink.getInstance())
-        : ExpressionFactory.parameter(!proto.getIsNotExplicit(), proto.getIsProperty(), unfixedNames, type);
+        ? new TypedDependentLink(!proto.getIsNotExplicit(), unfixedNames.getFirst(), type, true, proto.getIsDotted(), EmptyDependentLink.getInstance())
+        : ExpressionFactory.parameter(!proto.getIsNotExplicit(), proto.getIsProperty(), unfixedNames, type, proto.getIsDotted());
       for (DependentLink link = tele; link.hasNext(); link = link.getNext()) {
         registerBinding(link);
       }
@@ -211,8 +211,8 @@ class ExpressionDeserialization {
     }
     Expression type = readExpr(proto.getType());
     SingleDependentLink tele = proto.getIsHidden() && unfixedNames.size() == 1
-      ? new TypedSingleDependentLink(!proto.getIsNotExplicit(), unfixedNames.getFirst(), type, true)
-      : ExpressionFactory.singleParams(!proto.getIsNotExplicit(), unfixedNames, type);
+      ? new TypedSingleDependentLink(!proto.getIsNotExplicit(), unfixedNames.getFirst(), type, true, proto.getIsDotted())
+      : ExpressionFactory.singleParams(!proto.getIsNotExplicit(), unfixedNames, type, proto.getIsDotted());
     for (DependentLink link = tele; link.hasNext(); link = link.getNext()) {
       registerBinding(link);
     }
@@ -229,7 +229,7 @@ class ExpressionDeserialization {
     }
     DependentLink link;
     if (proto.hasType()) {
-      link = new TypedDependentLink(!proto.getIsNotExplicit(), proto.getName(), readExpr(proto.getType()), proto.getIsHidden(), EmptyDependentLink.getInstance());
+      link = new TypedDependentLink(!proto.getIsNotExplicit(), proto.getName(), readExpr(proto.getType()), proto.getIsHidden(), proto.getIsDotted(), EmptyDependentLink.getInstance());
     } else {
       link = new UntypedDependentLink(proto.getName());
     }

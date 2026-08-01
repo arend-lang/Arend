@@ -94,6 +94,7 @@ OCT_DIGIT           = [0-8]
     "("                     { return LPAREN; }
     ")"                     { return RPAREN; }
     ":"                     { return COLON; }
+    ".:"                    { return DOT_COLON; }
     "->"                    { return ARROW; }
     "=>"                    { return FAT_ARROW; }
     "."                     { return DOT; }

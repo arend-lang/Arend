@@ -230,7 +230,14 @@ public class StdImplicitArgsInference implements ImplicitArgsInference {
       return fixImplicitArgs(result, Collections.singletonList(param), fun, false, arg instanceof RecursiveInstanceHoleExpression ? (RecursiveInstanceHoleExpression) arg : null);
     }
 
-    TypecheckingResult argResult = myVisitor.checkArgument(arg, param.hasNext() ? param.getType() : null, result, null);
+    TypecheckingResult argResult;
+    if (param.hasNext() && param.isDotted()) {
+      try (var ignored = myVisitor.clearCategoricalContext()) {
+        argResult = myVisitor.checkArgument(arg, param.getType(), result, null);
+      }
+    } else {
+      argResult = myVisitor.checkArgument(arg, param.hasNext() ? param.getType() : null, result, null);
+    }
     if (argResult == null) {
       return null;
     }

@@ -95,7 +95,7 @@ public abstract class BiConcreteVisitor extends BaseConcreteExpressionVisitor<Co
     for (var existingParameter : parameters) {
       if (existingParameter instanceof Concrete.TelescopeParameter) {
         for (Referable innerParameter : existingParameter.getReferableList()) {
-          flattenedParameters.add(new Concrete.TelescopeParameter(null, existingParameter.isExplicit(), List.of(innerParameter), existingParameter.getType(), existingParameter.isProperty()));
+          flattenedParameters.add(new Concrete.TelescopeParameter(null, existingParameter.isExplicit(), List.of(innerParameter), existingParameter.getType(), existingParameter.isProperty(), existingParameter.isDotted()));
         }
       } else {
         flattenedParameters.add(existingParameter);

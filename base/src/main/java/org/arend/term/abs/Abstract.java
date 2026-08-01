@@ -31,6 +31,9 @@ public final class Abstract {
     boolean isExplicit();
     boolean isStrict();
     boolean isProperty();
+    default boolean isDotted() {
+      return false;
+    }
     @NotNull List<? extends AbstractReferable> getReferableList();
     @Nullable Expression getType();
   }

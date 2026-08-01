@@ -28,6 +28,8 @@ class ArendNameTele(node: ASTNode): ArendLamParam(node), Abstract.Parameter {
     override fun isStrict() = hasChildOfType(STRICT_KW)
 
     override fun isProperty() = propertyKw != null
+
+    override fun isDotted() = hasChildOfType(DOT_COLON)
 }
 
 class ArendNameTeleUntyped(node: ASTNode): ArendSourceNodeImpl(node), Abstract.Parameter {
@@ -72,6 +74,8 @@ class ArendTypeTele(node: ASTNode): ArendSourceNodeImpl(node), Abstract.Paramete
     override fun isStrict() = hasChildOfType(STRICT_KW)
 
     override fun isProperty() = propertyKw != null
+
+    override fun isDotted() = typedExpr?.isDotted ?: false
 }
 
 class ArendFieldTele(node: ASTNode): ArendSourceNodeImpl(node), FieldParameter {

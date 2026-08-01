@@ -149,6 +149,29 @@ public class PrettyPrintingParserTest extends TypeCheckingTestCase {
   }
 
   @Test
+  public void prettyPrintingParserDottedPi() {
+    SingleDependentLink x = new TypedSingleDependentLink(true, "x", Universe(1), false, true);
+    Expression expr = Pi(x, Ref(x));
+    Concrete.Expression result = ToAbstractVisitor.convert(expr, new PrettyPrinterConfig() {
+      @NotNull
+      @Override
+      public EnumSet<PrettyPrinterFlag> getExpressionFlags() {
+        return EnumSet.of(PrettyPrinterFlag.SHOW_TYPES_IN_LAM, PrettyPrinterFlag.SHOW_IMPLICIT_ARGS);
+      }
+
+      @Override
+      public NormalizationMode getNormalizationMode() {
+        return null;
+      }
+    });
+    assertTrue(result instanceof Concrete.PiExpression);
+    assertTrue(((Concrete.PiExpression) result).getParameters().getFirst().isDotted());
+    StringBuilder builder = new StringBuilder();
+    result.accept(new PrettyPrintVisitor(builder, 0), new Precedence(Concrete.Expression.PREC));
+    assertTrue(builder.toString().contains(".:"));
+  }
+
+  @Test
   public void prettyPrintingParserFunDef() {
     // f {x : \Type1} (A : \Type1 -> \Type0) : A x -> (\Type1 -> \Type1) -> \Type1 -> \Type1 => \t y z. y z;
     LocalReferable x = ref("x");

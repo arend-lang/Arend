@@ -994,13 +994,14 @@ public class BuildVisitor extends ArendBaseVisitor<Object> {
       List<ParsedLocalReferable> vars = new ArrayList<>();
       List<ExprContext> exprs = typedExpr.expr();
       if (exprs.size() == 2) {
-        getVarList(exprs.get(0), vars);
+        getVarList(exprs.getFirst(), vars);
         ParamAttrContext paramAttr = typedExpr.paramAttr();
+        boolean isDotted = typedExpr.DOT_COLON() != null;
         if (isDefinition && paramAttr.STRICT() != null) {
-          parameters.add(new Concrete.DefinitionTelescopeParameter(tokenPosition(tele.start), explicit, true, vars, visitExpr(exprs.get(1)), paramAttr.PROPERTY() != null));
+          parameters.add(new Concrete.DefinitionTelescopeParameter(tokenPosition(tele.start), explicit, true, vars, visitExpr(exprs.get(1)), paramAttr.PROPERTY() != null, isDotted));
         } else {
           checkStrict(typedExpr);
-          parameters.add(new Concrete.TelescopeParameter(tokenPosition(tele.start), explicit, vars, visitExpr(exprs.get(1)), paramAttr.PROPERTY() != null));
+          parameters.add(new Concrete.TelescopeParameter(tokenPosition(tele.start), explicit, vars, visitExpr(exprs.get(1)), paramAttr.PROPERTY() != null, isDotted));
         }
       } else {
         getVarList(exprs.getFirst(), vars);
@@ -1059,7 +1060,8 @@ public class BuildVisitor extends ArendBaseVisitor<Object> {
         for (IdOrUnknownContext id : ids) {
           vars.add(visitIdOrUnknown(id, allowNullRefs, tele));
         }
-        parameters.add(new Concrete.TelescopeParameter(tokenPosition(tele.start), explicit, vars, visitExpr(type), (tele instanceof NameExplicitContext ? ((NameExplicitContext) tele).paramAttr() : ((NameImplicitContext) tele).paramAttr()).PROPERTY() != null));
+        boolean isDotted = explicit ? ((NameExplicitContext) tele).DOT_COLON() != null : ((NameImplicitContext) tele).DOT_COLON() != null;
+        parameters.add(new Concrete.TelescopeParameter(tokenPosition(tele.start), explicit, vars, visitExpr(type), (tele instanceof NameExplicitContext ? ((NameExplicitContext) tele).paramAttr() : ((NameImplicitContext) tele).paramAttr()).PROPERTY() != null, isDotted));
       }
     }
     return parameters;
@@ -1440,21 +1442,22 @@ public class BuildVisitor extends ArendBaseVisitor<Object> {
       List<ExprContext> exprs = typedExpr.expr();
       ParamAttrContext paramAttr = typedExpr.paramAttr();
       Position position = tokenPosition(tele.start);
+      boolean isDotted = typedExpr.DOT_COLON() != null;
       if (exprs.size() == 2) {
         List<ParsedLocalReferable> vars = new ArrayList<>();
         getVarList(exprs.get(0), vars);
         if (isDefinition && paramAttr.STRICT() != null) {
-          parameters.add(new Concrete.DefinitionTelescopeParameter(position, explicit, true, vars, visitExpr(exprs.get(1)), paramAttr.PROPERTY() != null));
+          parameters.add(new Concrete.DefinitionTelescopeParameter(position, explicit, true, vars, visitExpr(exprs.get(1)), paramAttr.PROPERTY() != null, isDotted));
         } else {
           checkStrict(typedExpr);
-          parameters.add(new Concrete.TelescopeParameter(position, explicit, vars, visitExpr(exprs.get(1)), paramAttr.PROPERTY() != null));
+          parameters.add(new Concrete.TelescopeParameter(position, explicit, vars, visitExpr(exprs.get(1)), paramAttr.PROPERTY() != null, isDotted));
         }
       } else {
         if (isDefinition && paramAttr.STRICT() != null) {
-          parameters.add(new Concrete.DefinitionTelescopeParameter(position, explicit, true, Collections.singletonList(null), visitExpr(exprs.getFirst()), paramAttr.PROPERTY() != null));
+          parameters.add(new Concrete.DefinitionTelescopeParameter(position, explicit, true, Collections.singletonList(null), visitExpr(exprs.getFirst()), paramAttr.PROPERTY() != null, isDotted));
         } else {
           checkStrict(typedExpr);
-          parameters.add(new Concrete.TypeParameter(position, explicit, visitExpr(exprs.getFirst()), paramAttr.PROPERTY() != null));
+          parameters.add(new Concrete.TypeParameter(position, explicit, visitExpr(exprs.getFirst()), paramAttr.PROPERTY() != null, isDotted));
         }
       }
     }

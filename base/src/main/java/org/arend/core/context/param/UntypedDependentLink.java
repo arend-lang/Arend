@@ -30,6 +30,11 @@ public class UntypedDependentLink implements DependentLink {
   }
 
   @Override
+  public boolean isDotted() {
+    return myNext.isDotted();
+  }
+
+  @Override
   public @NotNull Expression getType() {
     return myNext.getType();
   }
@@ -92,7 +97,7 @@ public class UntypedDependentLink implements DependentLink {
   @Override
   public DependentLink subst(SubstVisitor substVisitor, int size, boolean updateSubst) {
     if (size == 1) {
-      TypedDependentLink result = new TypedDependentLink(isExplicit(), myName, getType().accept(substVisitor, null), EmptyDependentLink.getInstance());
+      TypedDependentLink result = new TypedDependentLink(isExplicit(), myName, getType().accept(substVisitor, null), false, isDotted(), EmptyDependentLink.getInstance());
       if (updateSubst) {
         substVisitor.getExprSubstitution().addSubst(this, new ReferenceExpression(result));
       } else {

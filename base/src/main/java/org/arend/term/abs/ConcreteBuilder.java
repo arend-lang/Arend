@@ -468,14 +468,15 @@ public class ConcreteBuilder implements AbstractDefinitionVisitor<Concrete.Resol
 
     boolean isStrict = parameter.isStrict();
     boolean isProperty = parameter.isProperty();
+    boolean isDotted = parameter.isDotted();
     if (!isNamed && (referableList.isEmpty() || referableList.size() == 1 && referableList.getFirst() == null)) {
       if (isDefinition && isStrict || !allowNullRefs) {
-        return new Concrete.DefinitionTelescopeParameter(parameter.getData(), parameter.isExplicit(), true, Collections.singletonList(allowNullRefs ? null : new DataLocalReferable(parameter, null)), cType, isProperty);
+        return new Concrete.DefinitionTelescopeParameter(parameter.getData(), parameter.isExplicit(), true, Collections.singletonList(allowNullRefs ? null : new DataLocalReferable(parameter, null)), cType, isProperty, isDotted);
       } else {
         if (isStrict) {
           myErrorReporter.report(new AbstractExpressionError(GeneralError.Level.ERROR, "\\strict is not allowed here", parameter.getData()));
         }
-        return new Concrete.TypeParameter(parameter.getData(), parameter.isExplicit(), cType, isProperty);
+        return new Concrete.TypeParameter(parameter.getData(), parameter.isExplicit(), cType, isProperty, isDotted);
       }
     } else {
       List<Referable> dataReferableList = new ArrayList<>(referableList.size());
@@ -483,12 +484,12 @@ public class ConcreteBuilder implements AbstractDefinitionVisitor<Concrete.Resol
         dataReferableList.add(referable instanceof Abstract.ClassField ? convertField((Abstract.ClassField) referable, myDefinition) : referable == null && !allowNullRefs ? new DataLocalReferable(parameter, null) : makeLocalRef(referable));
       }
       if (isDefinition && isStrict) {
-        return new Concrete.DefinitionTelescopeParameter(parameter.getData(), parameter.isExplicit(), true, dataReferableList, cType, isProperty);
+        return new Concrete.DefinitionTelescopeParameter(parameter.getData(), parameter.isExplicit(), true, dataReferableList, cType, isProperty, isDotted);
       } else {
         if (isStrict) {
           myErrorReporter.report(new AbstractExpressionError(GeneralError.Level.ERROR, "\\strict is not allowed here", parameter.getData()));
         }
-        return new Concrete.TelescopeParameter(parameter.getData(), parameter.isExplicit(), dataReferableList, cType, isProperty);
+        return new Concrete.TelescopeParameter(parameter.getData(), parameter.isExplicit(), dataReferableList, cType, isProperty, isDotted);
       }
     }
   }

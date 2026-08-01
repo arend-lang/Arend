@@ -30,12 +30,28 @@ public class ExpressionFactory {
     return new TypedDependentLink(true, var, type, EmptyDependentLink.getInstance());
   }
 
+  public static DependentLink parameter(boolean explicit, boolean isProperty, String name, Expression type, boolean isHidden, boolean isDotted) {
+    return isProperty ? new PropertyTypedDependentLink(explicit, name, type, isHidden, EmptyDependentLink.getInstance()) : new TypedDependentLink(explicit, name, type, isHidden, isDotted, EmptyDependentLink.getInstance());
+  }
+
   public static DependentLink parameter(boolean explicit, boolean isProperty, String name, Expression type, boolean isHidden) {
-    return isProperty ? new PropertyTypedDependentLink(explicit, name, type, isHidden, EmptyDependentLink.getInstance()) : new TypedDependentLink(explicit, name, type, isHidden, EmptyDependentLink.getInstance());
+    return parameter(explicit, isProperty, name, type, isHidden, false);
+  }
+
+  public static DependentLink parameter(boolean explicit, boolean isProperty, List<String> names, Expression type, boolean isDotted) {
+    DependentLink link = isProperty ? new PropertyTypedDependentLink(explicit, names.getLast(), type, EmptyDependentLink.getInstance()) : new TypedDependentLink(explicit, names.getLast(), type, false, isDotted, EmptyDependentLink.getInstance());
+    for (int i = names.size() - 2; i >= 0; i--) {
+      link = new UntypedDependentLink(names.get(i), link);
+    }
+    return link;
   }
 
   public static DependentLink parameter(boolean explicit, boolean isProperty, List<String> names, Expression type) {
-    DependentLink link = isProperty ? new PropertyTypedDependentLink(explicit, names.getLast(), type, EmptyDependentLink.getInstance()) : new TypedDependentLink(explicit, names.getLast(), type, EmptyDependentLink.getInstance());
+    return parameter(explicit, isProperty, names, type, false);
+  }
+
+  public static DependentLink parameter(boolean explicit, List<String> names, Expression type, boolean isDotted) {
+    DependentLink link = new TypedDependentLink(explicit, names.getLast(), type, false, isDotted, EmptyDependentLink.getInstance());
     for (int i = names.size() - 2; i >= 0; i--) {
       link = new UntypedDependentLink(names.get(i), link);
     }
@@ -43,19 +59,19 @@ public class ExpressionFactory {
   }
 
   public static DependentLink parameter(boolean explicit, List<String> names, Expression type) {
-    DependentLink link = new TypedDependentLink(explicit, names.getLast(), type, EmptyDependentLink.getInstance());
+    return parameter(explicit, names, type, false);
+  }
+
+  public static SingleDependentLink singleParams(boolean explicit, List<String> names, Expression type, boolean isDotted) {
+    SingleDependentLink link = new TypedSingleDependentLink(explicit, names.getLast(), type, false, isDotted);
     for (int i = names.size() - 2; i >= 0; i--) {
-      link = new UntypedDependentLink(names.get(i), link);
+      link = new UntypedSingleDependentLink(names.get(i), link);
     }
     return link;
   }
 
   public static SingleDependentLink singleParams(boolean explicit, List<String> names, Expression type) {
-    SingleDependentLink link = new TypedSingleDependentLink(explicit, names.getLast(), type);
-    for (int i = names.size() - 2; i >= 0; i--) {
-      link = new UntypedSingleDependentLink(names.get(i), link);
-    }
-    return link;
+    return singleParams(explicit, names, type, false);
   }
 
   public static DataCallExpression Nat() {

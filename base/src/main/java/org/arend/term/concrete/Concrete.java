@@ -93,6 +93,10 @@ public final class Concrete {
       return false;
     }
 
+    public boolean isDotted() {
+      return false;
+    }
+
     public abstract @NotNull List<? extends Referable> getReferableList();
 
     @Override
@@ -158,21 +162,32 @@ public final class Concrete {
 
   public static class TypeParameter extends Parameter {
     private final boolean myProperty;
+    private final boolean myDotted;
     public Expression type;
 
-    public TypeParameter(Object data, boolean explicit, Expression type, boolean isProperty) {
+    public TypeParameter(Object data, boolean explicit, Expression type, boolean isProperty, boolean isDotted) {
       super(data, explicit);
       this.type = type;
       myProperty = isProperty;
+      myDotted = isDotted;
+    }
+
+    public TypeParameter(Object data, boolean explicit, Expression type, boolean isProperty) {
+      this(data, explicit, type, isProperty, false);
     }
 
     public TypeParameter(boolean explicit, Expression type, boolean isProperty) {
-      this(type.getData(), explicit, type, isProperty);
+      this(type.getData(), explicit, type, isProperty, false);
     }
 
     @Override
     public boolean isProperty() {
       return myProperty;
+    }
+
+    @Override
+    public boolean isDotted() {
+      return myDotted;
     }
 
     @Override
@@ -194,16 +209,20 @@ public final class Concrete {
 
     @Override
     public TypeParameter copy(Object data) {
-      return new TypeParameter(data, isExplicit(), type, isProperty());
+      return new TypeParameter(data, isExplicit(), type, isProperty(), isDotted());
     }
   }
 
   public static class TelescopeParameter extends TypeParameter {
     private List<? extends Referable> myReferableList;
 
-    public TelescopeParameter(Object data, boolean explicit, List<? extends Referable> referableList, Expression type, boolean isProperty) {
-      super(data, explicit, type, isProperty);
+    public TelescopeParameter(Object data, boolean explicit, List<? extends Referable> referableList, Expression type, boolean isProperty, boolean isDotted) {
+      super(data, explicit, type, isProperty, isDotted);
       myReferableList = referableList;
+    }
+
+    public TelescopeParameter(Object data, boolean explicit, List<? extends Referable> referableList, Expression type, boolean isProperty) {
+      this(data, explicit, referableList, type, isProperty, false);
     }
 
     @Override
@@ -223,7 +242,7 @@ public final class Concrete {
 
     @Override
     public TelescopeParameter copy(Object data) {
-      return new TelescopeParameter(data, isExplicit(), myReferableList, type, isProperty());
+      return new TelescopeParameter(data, isExplicit(), myReferableList, type, isProperty(), isDotted());
     }
   }
 
@@ -243,8 +262,8 @@ public final class Concrete {
   public static class DefinitionTelescopeParameter extends TelescopeParameter {
     private final boolean myStrict;
 
-    public DefinitionTelescopeParameter(Object data, boolean explicit, boolean strict, List<? extends Referable> referableList, Expression type, boolean isProperty) {
-      super(data, explicit, referableList, type, isProperty);
+    public DefinitionTelescopeParameter(Object data, boolean explicit, boolean strict, List<? extends Referable> referableList, Expression type, boolean isProperty, boolean isDotted) {
+      super(data, explicit, referableList, type, isProperty, isDotted);
       myStrict = strict;
     }
 
@@ -255,7 +274,7 @@ public final class Concrete {
 
     @Override
     public TelescopeParameter copy(Object data) {
-      return new DefinitionTelescopeParameter(data, isExplicit(), isStrict(), getReferableList(), type, isProperty());
+      return new DefinitionTelescopeParameter(data, isExplicit(), isStrict(), getReferableList(), type, isProperty(), isDotted());
     }
   }
 

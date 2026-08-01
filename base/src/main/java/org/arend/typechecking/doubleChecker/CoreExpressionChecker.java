@@ -1,5 +1,6 @@
 package org.arend.typechecking.doubleChecker;
 
+import org.arend.core.context.Utils;
 import org.arend.core.context.binding.*;
 import org.arend.core.context.binding.inference.InferenceVariable;
 import org.arend.core.context.param.*;
@@ -71,7 +72,13 @@ public class CoreExpressionChecker implements ExpressionVisitor<Expression, Expr
 
   private void checkList(List<? extends Expression> args, DependentLink parameters, ExprSubstitution substitution, LevelSubstitution levelSubst) {
     for (Expression arg : args) {
-      arg.accept(this, parameters.getType().subst(substitution, levelSubst));
+      if (parameters.isDotted()) {
+        try (var ignored = clearCategoricalContext()) {
+          arg.accept(this, parameters.getType().subst(substitution, levelSubst));
+        }
+      } else {
+        arg.accept(this, parameters.getType().subst(substitution, levelSubst));
+      }
       substitution.add(parameters, arg);
       parameters = parameters.getNext();
     }
@@ -248,7 +255,13 @@ public class CoreExpressionChecker implements ExpressionVisitor<Expression, Expr
       throw new CoreException(CoreErrorWrapper.make(new TypeMismatchError(DocFactory.text("a pi type with " + (expr.isExplicit() ? "explicit" : "implicit") + " parameter"), piType, mySourceNode), expr.getFunction()));
     }
 
-    expr.getArgument().accept(this, piType.getParameters().getType());
+    if (piType.getParameters().isDotted()) {
+      try (var ignored = clearCategoricalContext()) {
+        expr.getArgument().accept(this, piType.getParameters().getType());
+      }
+    } else {
+      expr.getArgument().accept(this, piType.getParameters().getType());
+    }
     return check(expectedType, piType.applyExpression(expr.getArgument()), expr);
   }
 
@@ -292,6 +305,13 @@ public class CoreExpressionChecker implements ExpressionVisitor<Expression, Expr
     if (myContext != null) myContext.remove(binding);
   }
 
+  private Utils.CompleteSetContextSaver<Binding> clearCategoricalContext() {
+    Set<Binding> context = myContext != null ? myContext : new HashSet<>();
+    Utils.CompleteSetContextSaver<Binding> saver = new Utils.CompleteSetContextSaver<>(context);
+    context.removeIf(binding -> !(binding instanceof DependentLink dl && dl.isDotted()));
+    return saver;
+  }
+
   private SortExpression toSort(Expression type) {
     SortExpression sort = type.toSortExpression();
     if (sort == null) {
@@ -305,7 +325,14 @@ public class CoreExpressionChecker implements ExpressionVisitor<Expression, Expr
     for (; link.hasNext(); link = link.getNext()) {
       addBinding(link, expr);
       if (link instanceof TypedDependentLink) {
-        Expression paramType = link.getType().accept(this, type);
+        Expression paramType;
+        if (link.isDotted()) {
+          try (var ignored = clearCategoricalContext()) {
+            paramType = link.getType().accept(this, type);
+          }
+        } else {
+          paramType = link.getType().accept(this, type);
+        }
         SortExpression sort = toSort(paramType);
         result.add(sort);
         if (link.isProperty()) {
@@ -333,7 +360,13 @@ public class CoreExpressionChecker implements ExpressionVisitor<Expression, Expr
     for (; link.hasNext(); link = link.getNext()) {
       addBinding(link, expr);
       if (link instanceof TypedDependentLink) {
-        checkInf(link.getType(), type, allowInf);
+        if (link.isDotted()) {
+          try (var ignored = clearCategoricalContext()) {
+            checkInf(link.getType(), type, allowInf);
+          }
+        } else {
+          checkInf(link.getType(), type, allowInf);
+        }
       }
     }
   }
@@ -343,7 +376,14 @@ public class CoreExpressionChecker implements ExpressionVisitor<Expression, Expr
     for (; link.hasNext(); link = link.getNext()) {
       addBinding(link, expr);
       if (link instanceof TypedDependentLink) {
-        SortExpression sort = link.getType().accept(this, UniverseExpression.OMEGA).toSortExpression();
+        SortExpression sort;
+        if (link.isDotted()) {
+          try (var ignored = clearCategoricalContext()) {
+            sort = link.getType().accept(this, UniverseExpression.OMEGA).toSortExpression();
+          }
+        } else {
+          sort = link.getType().accept(this, UniverseExpression.OMEGA).toSortExpression();
+        }
         if (sort == null) {
           throw new CoreException(CoreErrorWrapper.make(new TypecheckingError("Cannot infer the sort of type", null), link.getType()));
         }
