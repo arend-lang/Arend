@@ -469,7 +469,7 @@ public class PrettyPrintVisitor implements ConcreteExpressionVisitor<Precedence,
         myBuilder.append(referable == null ? "_" : referable.textRepresentation()).append(' ');
       }
 
-      myBuilder.append(parameter.isDotted() ? ".: " : ": ");
+      myBuilder.append(parameter.isDotted() ? ":. " : ": ");
       printExpr(((Concrete.TypeParameter) parameter).getType(), new Precedence(Concrete.Expression.PREC));
       if (parameter.isExplicit()) {
         myBuilder.append(')');

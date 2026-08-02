@@ -276,11 +276,11 @@ tele : '(' typedExpr ')'                # explicit
 
 paramAttr : (STRICT | PROPERTY)?;
 
-typedExpr : paramAttr expr ((COLON | DOT_COLON) expr)? ;
+typedExpr : paramAttr expr ((COLON | COLON_DOT) expr)? ;
 
 nameTele : idOrUnknown                                                    # nameId
-         | '(' paramAttr idOrUnknown+ (COLON | DOT_COLON) expr ')'        # nameExplicit
-         | '{' paramAttr idOrUnknown (idOrUnknown* (COLON | DOT_COLON) expr)? '}' # nameImplicit
+         | '(' paramAttr idOrUnknown+ (COLON | COLON_DOT) expr ')'        # nameExplicit
+         | '{' paramAttr idOrUnknown (idOrUnknown* (COLON | COLON_DOT) expr)? '}' # nameImplicit
          ;
 
 idOrUnknown : ID            # iuId
@@ -325,7 +325,7 @@ fragment UNICODE_ESCAPE : '\\' 'u'+ HEX_DIGIT HEX_DIGIT HEX_DIGIT HEX_DIGIT;
 fragment HEX_DIGIT : [0-9a-fA-F];
 fragment OCT_DIGIT : [0-8];
 COLON : ':';
-DOT_COLON : '.:';
+COLON_DOT : ':.';
 ARROW : '->';
 APPLY_HOLE : '__';
 UNDERSCORE : '_';

@@ -13,8 +13,8 @@ public class CatDataTest extends TypeCheckingTestCase {
   @Test
   public void dataSortTest() {
     DataDefinition def = (DataDefinition) typeCheckDef("""
-      \\data Ob (X .: \\Cat)
-        | con (_ .: X)
+      \\data Ob (X :. \\Cat)
+        | con (_ :. X)
       """);
     assertEquals(new Sort(Level.INFINITY, ConstLevel.INFINITY, false), def.getSortExpression().withInfLevel());
   }
@@ -22,7 +22,7 @@ public class CatDataTest extends TypeCheckingTestCase {
   @Test
   public void dataSortTest2() {
     DataDefinition def = (DataDefinition) typeCheckDef("""
-      \\data Ob (X .: \\Cat)
+      \\data Ob (X :. \\Cat)
         | con (_ : X)
       """);
     assertEquals(new Sort(Level.INFINITY, ConstLevel.INFINITY, true), def.getSortExpression().withInfLevel());
@@ -31,8 +31,8 @@ public class CatDataTest extends TypeCheckingTestCase {
   @Test
   public void dataSortTest3() {
     DataDefinition def = (DataDefinition) typeCheckDef("""
-      \\data Ob (X .: \\Cat)
-        | con (_ .: X) (n : Nat)
+      \\data Ob (X :. \\Cat)
+        | con (_ :. X) (n : Nat)
       """);
     assertEquals(new Sort(Level.INFINITY, ConstLevel.INFINITY, false), def.getSortExpression().withInfLevel());
   }
@@ -40,8 +40,8 @@ public class CatDataTest extends TypeCheckingTestCase {
   @Test
   public void dataSortTest4() {
     DataDefinition def = (DataDefinition) typeCheckDef("""
-      \\data Ob (X .: \\Cat)
-        | con (_ : X) (n .: Nat)
+      \\data Ob (X :. \\Cat)
+        | con (_ : X) (n :. Nat)
       """);
     assertEquals(new Sort(Level.INFINITY, ConstLevel.INFINITY, true), def.getSortExpression().withInfLevel());
   }

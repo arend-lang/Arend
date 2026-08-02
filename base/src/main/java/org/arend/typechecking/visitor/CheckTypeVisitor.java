@@ -210,7 +210,7 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
 
   public boolean checkDotted(Concrete.Parameter parameter, boolean allowed) {
     if (parameter.isDotted() && !allowed) {
-      errorReporter.report(new TypecheckingError("Dotted parameters (.:) are not allowed here", parameter));
+      errorReporter.report(new TypecheckingError("Dotted parameters (:.) are not allowed here", parameter));
       return false;
     }
     return parameter.isDotted();

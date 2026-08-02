@@ -168,7 +168,7 @@ public class PrettyPrintingParserTest extends TypeCheckingTestCase {
     assertTrue(((Concrete.PiExpression) result).getParameters().getFirst().isDotted());
     StringBuilder builder = new StringBuilder();
     result.accept(new PrettyPrintVisitor(builder, 0), new Precedence(Concrete.Expression.PREC));
-    assertTrue(builder.toString().contains(".:"));
+    assertTrue(builder.toString().contains(":."));
   }
 
   @Test
