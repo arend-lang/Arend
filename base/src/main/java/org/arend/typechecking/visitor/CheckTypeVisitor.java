@@ -3428,7 +3428,7 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
         return null;
       }
 
-      Sort sort = new Sort(Level.INFINITY, new ConstLevel(hLevel), isCat);
+      Sort sort = new Sort(Level.INFINITY, new ConstLevel(hLevel, isCat));
       return checkResult(expectedType, new TypecheckingResult(new UniverseExpression(sort), new UniverseExpression(sort.succ())), expr);
     }
 
@@ -3440,7 +3440,7 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
       pLevel = new Level(pl);
     }
 
-    Sort sort = new Sort(pLevel, new ConstLevel(hLevel), isCat);
+    Sort sort = new Sort(pLevel, new ConstLevel(hLevel, isCat));
     return checkResult(expectedType, new TypecheckingResult(new UniverseExpression(sort), new UniverseExpression(sort.succ())), expr);
   }
 

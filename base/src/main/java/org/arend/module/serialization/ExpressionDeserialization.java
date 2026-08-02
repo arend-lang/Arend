@@ -96,7 +96,7 @@ class ExpressionDeserialization {
   }
 
   private ConstLevel readConstLevel(LevelProtos.ConstLevel proto) {
-    return proto.getIsInfinity() ? ConstLevel.INFINITY : new ConstLevel(readBigInteger(proto.getValue()));
+    return new ConstLevel(proto.getIsInfinity() ? null : readBigInteger(proto.getValue()), proto.getIsCat());
   }
 
   Sort readSort(LevelProtos.Sort proto) {

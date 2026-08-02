@@ -242,7 +242,7 @@ public class UseTypechecking {
     if (level == null) {
       return null;
     }
-    if (def != null && useParent instanceof DataDefinition && parameters == null && ((DataDefinition) useParent).getSortExpression() instanceof SortExpression.Const(Sort sort) && sort.getHLevel().isLessOrEquals(new ConstLevel(level))) {
+    if (def != null && useParent instanceof DataDefinition && parameters == null && ((DataDefinition) useParent).getSortExpression() instanceof SortExpression.Const(Sort sort) && sort.getHLevel().isLessOrEquals(new ConstLevel(level, true))) {
       errorReporter.report(new CertainTypecheckingError(CertainTypecheckingError.Kind.USELESS_LEVEL, def));
     }
 

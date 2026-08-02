@@ -30,7 +30,7 @@ public class PiExpression extends Expression implements CorePiExpression, CoreAb
   }
 
   public static Sort piSort(Sort domSort, Sort codSort) {
-    return new Sort(domSort.getPLevel().max(codSort.getPLevel()), codSort.getHLevel(), codSort.isCat());
+    return new Sort(domSort.getPLevel().max(codSort.getPLevel()), codSort.getHLevel());
   }
 
   @NotNull

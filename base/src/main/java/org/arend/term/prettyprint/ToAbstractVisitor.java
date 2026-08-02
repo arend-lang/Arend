@@ -759,7 +759,7 @@ public class ToAbstractVisitor extends BaseExpressionVisitor<Void, Concrete.Expr
   }
 
   private Concrete.UniverseExpression visitSort(Sort sort) {
-    return cUniverse(visitLevelNull(sort.getPLevel(), false), !sort.getHLevel().isInfinity() ? sort.getHLevel().value() : null, sort.isCat() ? ConcreteUniverseExpression.Kind.CAT : ConcreteUniverseExpression.Kind.TYPE);
+    return cUniverse(visitLevelNull(sort.getPLevel(), false), !sort.getHLevel().isInfinity() ? sort.getHLevel().value() : null, sort.getHLevel().isCat() ? ConcreteUniverseExpression.Kind.CAT : ConcreteUniverseExpression.Kind.TYPE);
   }
 
   private Concrete.LevelExpression visitLevel(Level level) {

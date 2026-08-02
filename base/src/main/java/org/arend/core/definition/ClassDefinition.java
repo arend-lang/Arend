@@ -256,7 +256,7 @@ public class ClassDefinition extends TopLevelDefinition implements CoreClassDefi
     SortExpression sort = SortExpression.makeMax(sorts);
     if (hLevel != null) {
       Sort infSort = sort.withInfLevel();
-      ConstLevel constLevel = new ConstLevel(hLevel);
+      ConstLevel constLevel = new ConstLevel(hLevel, false);
       if (constLevel.isLess(infSort.getHLevel())) {
         sort = new SortExpression.Const(new Sort(infSort.getPLevel(), constLevel));
       }

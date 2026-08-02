@@ -16,42 +16,28 @@ import java.util.List;
 public class Sort implements CoreSort {
   private final Level myPLevel;
   private final ConstLevel myHLevel;
-  private final boolean myCat;
 
   public static final Sort PROP = new Sort(new Level(BigInteger.ZERO), ConstLevel.PROP);
-  public static final Sort SET0 = new Sort(new Level(BigInteger.ZERO), new ConstLevel(BigInteger.ZERO));
-  public static final Sort INFINITY = new Sort(Level.INFINITY, ConstLevel.INFINITY, true);
+  public static final Sort SET0 = new Sort(new Level(BigInteger.ZERO), new ConstLevel(BigInteger.ZERO, false));
+  public static final Sort INFINITY = new Sort(Level.INFINITY, ConstLevel.CAT_INFINITY);
 
   public static Sort SetOfLevel(int pLevel) {
     return new Sort(pLevel, 0);
-  }
-
-  public static Sort SetOfLevel(Level pLevel) {
-    return new Sort(pLevel, new ConstLevel(BigInteger.ZERO));
   }
 
   public static Sort TypeOfLevel(int pLevel) {
     return new Sort(new Level(BigInteger.valueOf(pLevel)), ConstLevel.INFINITY);
   }
 
-  public Sort(@NotNull Level pLevel, @NotNull ConstLevel hLevel, boolean isCat) {
+  public Sort(@NotNull Level pLevel, @NotNull ConstLevel hLevel) {
     myPLevel = hLevel.isProp() && !pLevel.isZero() ? new Level(BigInteger.ZERO) : pLevel;
     myHLevel = hLevel;
-    myCat = isCat;
-  }
-
-  public Sort(@NotNull Level pLevel, @NotNull ConstLevel hLevel) {
-    this(pLevel, hLevel, false);
   }
 
   public Sort(int pLevel, int hLevel) {
-    this(new Level(BigInteger.valueOf(pLevel)), new ConstLevel(BigInteger.valueOf(hLevel)));
+    this(new Level(BigInteger.valueOf(pLevel)), new ConstLevel(BigInteger.valueOf(hLevel), false));
     assert pLevel >= 0;
     assert hLevel >= 0;
-  }
-
-  public Sort(Level pLevel, boolean isCat) {
-    this(pLevel, ConstLevel.INFINITY, isCat);
   }
 
   @NotNull
@@ -67,23 +53,15 @@ public class Sort implements CoreSort {
   }
 
   public boolean isOmega() {
-    return myCat && myPLevel.isInfinity() && myHLevel.isInfinity();
-  }
-
-  public boolean isCat() {
-    return myCat;
+    return myHLevel.isCat() && myPLevel.isInfinity() && myHLevel.isInfinity();
   }
 
   public Sort succ() {
-    return isProp() ? SET0 : new Sort(getPLevel().add(BigInteger.ONE), getHLevel().add(BigInteger.ONE), myCat);
+    return isProp() ? SET0 : new Sort(getPLevel().add(BigInteger.ONE), getHLevel().add(BigInteger.ONE));
   }
 
   public Sort max(Sort sort) {
-    if (isProp()) return sort;
-    if (sort.isProp()) return this;
-    Level pLevel = myPLevel.max(sort.myPLevel);
-    ConstLevel hLevel = myHLevel.max(sort.myHLevel);
-    return pLevel == null || hLevel == null ? null : new Sort(pLevel, hLevel, myCat || sort.myCat);
+    return isProp() ? sort : sort.isProp() ? this : new Sort(myPLevel.max(sort.myPLevel), myHLevel.max(sort.myHLevel));
   }
 
   public static Sort max(List<Sort> sorts) {
@@ -114,9 +92,6 @@ public class Sort implements CoreSort {
     if (sort2.isProp() && !sort1.getPLevel().hasInferenceVariables()) {
       return cmp == CMP.GE || sort1.isProp();
     }
-    if (sort1.myCat != sort2.myCat && (cmp == CMP.EQ || cmp == CMP.LE && sort1.myCat || cmp == CMP.GE && sort2.myCat)) {
-      return false;
-    }
     return sort1.getHLevel().compare(sort2.getHLevel(), cmp) && Level.compare(sort1.getPLevel(), sort2.getPLevel(), cmp, equations, sourceNode);
   }
 
@@ -125,7 +100,7 @@ public class Sort implements CoreSort {
   }
 
   public Sort subst(LevelSubstitution subst) {
-    return subst.isEmpty() || myPLevel.isClosed() ? this : new Sort(myPLevel.subst(subst), myHLevel, myCat);
+    return subst.isEmpty() || myPLevel.isClosed() ? this : new Sort(myPLevel.subst(subst), myHLevel);
   }
 
   @Override

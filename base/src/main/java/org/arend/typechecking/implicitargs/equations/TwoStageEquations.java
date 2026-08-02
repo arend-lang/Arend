@@ -202,7 +202,7 @@ public class TwoStageEquations implements Equations {
           }
           InferenceVariable infVar = new DerivedInferenceVariable(cInf.getName() + "-cod", cInf, UniverseExpression.OMEGA, myVisitor.getAllBindings());
           infVar.setType(new UniverseExpression(new SortExpression.InfVar(infVar)));
-          infVar.setCat(cInf.isCat());
+          infVar.setHLevel(cInf.getHLevel());
           Expression newRef = InferenceReferenceExpression.make(infVar, this);
           Expression solution = newRef;
           for (int i = pis.size() - 1; i >= 0; i--) {
@@ -221,7 +221,7 @@ public class TwoStageEquations implements Equations {
         }
         InferenceLevelVariable pl = new InferenceLevelVariable(sourceNode, true);
         addVariable(pl);
-        Sort genSort = new Sort(new Level(pl), sort.getHLevel(), sort.isCat());
+        Sort genSort = new Sort(new Level(pl), sort.getHLevel());
         solve(cInf, new UniverseExpression(genSort), false);
         return Sort.compare(sort, genSort, cmp, this, sourceNode);
       }

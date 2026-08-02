@@ -615,7 +615,7 @@ public class DefinitionTypechecker extends BaseDefinitionTypechecker implements 
 
   private boolean checkLevel(LevelMismatchError.TargetKind kind, BigInteger level, Sort actualSort, Concrete.SourceNode sourceNode) {
     if (kind != null && !Objects.equals(level, ConstLevel.PROP.value())) {
-      Sort sort = level != null ? new Sort(Level.INFINITY, new ConstLevel(actualSort != null ? level.min(actualSort.getHLevel().value()) : level)) : actualSort;
+      Sort sort = level != null ? new Sort(Level.INFINITY, new ConstLevel(actualSort != null ? level.min(actualSort.getHLevel().value()) : level, false)) : actualSort;
       errorReporter.report(new LevelMismatchError(kind, sort, sourceNode));
       return false;
     } else {
@@ -799,8 +799,8 @@ public class DefinitionTypechecker extends BaseDefinitionTypechecker implements 
         : def.getBody() instanceof Concrete.CoelimFunctionBody && !def.isRecursive()
           ? null // The result type will be typechecked together with all field implementations during body typechecking.
           : def.getBody() instanceof Concrete.TermFunctionBody && cResultType instanceof Concrete.UniverseExpression universe && universe.isInfSort()
-            ? new TypeExpression(new UniverseExpression(new Sort(Level.INFINITY, new ConstLevel(universe.getHLevel()), universe.getKind() == ConcreteUniverseExpression.Kind.CAT)),
-                new SortExpression.Const(new Sort(Level.INFINITY, new ConstLevel(universe.getHLevel()), universe.getKind() == ConcreteUniverseExpression.Kind.CAT).succ()))
+            ? new TypeExpression(new UniverseExpression(new Sort(Level.INFINITY, new ConstLevel(universe.getHLevel(), universe.getKind() == ConcreteUniverseExpression.Kind.CAT))),
+                new SortExpression.Const(new Sort(Level.INFINITY, new ConstLevel(universe.getHLevel(), universe.getKind() == ConcreteUniverseExpression.Kind.CAT)).succ()))
             : checkResultTypeLater(def)
               ? typechecker.checkType(cResultType, def.getBody() instanceof Concrete.ElimFunctionBody ? UniverseExpression.OMEGA : UniverseExpression.INF_OMEGA)
               : typechecker.finalCheckType(cResultType, def.getBody() instanceof Concrete.ElimFunctionBody ? UniverseExpression.OMEGA : UniverseExpression.INF_OMEGA);

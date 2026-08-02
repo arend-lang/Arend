@@ -16,7 +16,7 @@ public class CatDataTest extends TypeCheckingTestCase {
       \\data Ob (X :. \\Cat)
         | con (_ :. X)
       """);
-    assertEquals(new Sort(Level.INFINITY, ConstLevel.INFINITY, false), def.getSortExpression().withInfLevel());
+    assertEquals(new Sort(Level.INFINITY, ConstLevel.INFINITY), def.getSortExpression().withInfLevel());
   }
 
   @Test
@@ -25,7 +25,7 @@ public class CatDataTest extends TypeCheckingTestCase {
       \\data Ob (X :. \\Cat)
         | con (_ : X)
       """);
-    assertEquals(new Sort(Level.INFINITY, ConstLevel.INFINITY, true), def.getSortExpression().withInfLevel());
+    assertEquals(new Sort(Level.INFINITY, ConstLevel.CAT_INFINITY), def.getSortExpression().withInfLevel());
   }
 
   @Test
@@ -34,7 +34,7 @@ public class CatDataTest extends TypeCheckingTestCase {
       \\data Ob (X :. \\Cat)
         | con (_ :. X) (n : Nat)
       """);
-    assertEquals(new Sort(Level.INFINITY, ConstLevel.INFINITY, false), def.getSortExpression().withInfLevel());
+    assertEquals(new Sort(Level.INFINITY, ConstLevel.INFINITY), def.getSortExpression().withInfLevel());
   }
 
   @Test
@@ -43,6 +43,6 @@ public class CatDataTest extends TypeCheckingTestCase {
       \\data Ob (X :. \\Cat)
         | con (_ : X) (n :. Nat)
       """);
-    assertEquals(new Sort(Level.INFINITY, ConstLevel.INFINITY, true), def.getSortExpression().withInfLevel());
+    assertEquals(new Sort(Level.INFINITY, ConstLevel.CAT_INFINITY), def.getSortExpression().withInfLevel());
   }
 }

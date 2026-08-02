@@ -36,7 +36,7 @@ public sealed interface SortExpression extends CoreSortExpression permits SortEx
 
   default @NotNull SortExpression withoutCat() {
     Sort resolved = withInfLevel();
-    return resolved.isCat() ? new Const(new Sort(resolved.getPLevel(), resolved.getHLevel(), false)) : this;
+    return resolved.getHLevel().isCat() ? new Const(new Sort(resolved.getPLevel(), new ConstLevel(resolved.getHLevel().value(), false))) : this;
   }
 
   @Override
@@ -105,7 +105,7 @@ public sealed interface SortExpression extends CoreSortExpression permits SortEx
 
     @Override
     public @NotNull SortExpression withoutCat() {
-      return sort.isCat() ? new Const(new Sort(sort.getPLevel(), sort.getHLevel(), false)) : this;
+      return sort.getHLevel().isCat() ? new Const(new Sort(sort.getPLevel(), new ConstLevel(sort.getHLevel().value(), false))) : this;
     }
 
     @Override
@@ -283,7 +283,7 @@ public sealed interface SortExpression extends CoreSortExpression permits SortEx
     @Override
     public @NotNull Sort withInfLevel() {
       checkIfSolved();
-      return sort == null || sort == this ? new Sort(Level.INFINITY, ConstLevel.INFINITY, variable.isCat()) : sort.withInfLevel();
+      return sort == null || sort == this ? new Sort(Level.INFINITY, variable.getHLevel()) : sort.withInfLevel();
     }
 
     @Override
@@ -411,7 +411,7 @@ public sealed interface SortExpression extends CoreSortExpression permits SortEx
   }
 
   static @NotNull SortExpression makeTrunc(@NotNull SortExpression sort, BigInteger level) {
-    return makePi(sort, new Const(new Sort(new Level(BigInteger.ZERO), new ConstLevel(level))));
+    return makePi(sort, new Const(new Sort(new Level(BigInteger.ZERO), new ConstLevel(level, false))));
   }
 
   static @NotNull SortExpression makePrev(@NotNull SortExpression sort) {
@@ -419,7 +419,7 @@ public sealed interface SortExpression extends CoreSortExpression permits SortEx
       if (aSort.isProp() || aSort.isSet()) return new Const(Sort.PROP);
       ConstLevel hLevel = aSort.getHLevel();
       if (hLevel.isInfinity()) return sort;
-      return new Const(new Sort(aSort.getPLevel(), new ConstLevel(hLevel.value().subtract(BigInteger.ONE))));
+      return new Const(new Sort(aSort.getPLevel(), new ConstLevel(hLevel.value().subtract(BigInteger.ONE), hLevel.isCat())));
     }
     return new Prev(sort);
   }
@@ -510,7 +510,7 @@ public sealed interface SortExpression extends CoreSortExpression permits SortEx
     @Override
     public @NotNull Sort withInfLevel() {
       Sort result = mySort.withInfLevel();
-      return result.isSet() || result.isProp() ? Sort.PROP : result.getHLevel().isInfinity() ? result : new Sort(result.getPLevel(), new ConstLevel(result.getHLevel().value().subtract(BigInteger.ONE)));
+      return result.isSet() || result.isProp() ? Sort.PROP : result.getHLevel().isInfinity() ? result : new Sort(result.getPLevel(), new ConstLevel(result.getHLevel().value().subtract(BigInteger.ONE), result.getHLevel().isCat()));
     }
 
     @Override

@@ -29,6 +29,7 @@ message ConstLevel {
     bool is_infinity = 1;
     // BigInteger, big-endian two's complement; empty => 0. Meaningful only when !is_infinity.
     bytes value = 2;
+    bool isCat = 3;
 }
 
 message Sort {
