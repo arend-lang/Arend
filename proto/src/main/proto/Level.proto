@@ -52,6 +52,7 @@ message SortExpression {
     message VarSort {
         int32 index = 1;
         repeated int32 field = 2;
+        ConstLevel h_level = 3;
     }
 
     message MaxSort {

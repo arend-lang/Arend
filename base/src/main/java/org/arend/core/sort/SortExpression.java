@@ -120,12 +120,12 @@ public sealed interface SortExpression extends CoreSortExpression permits SortEx
    *
    * @param index   refers to one of the parameters of the (data or function) definition.
    */
-  record Var(int index, List<ClassField> fields) implements SortExpression {
-    private static SortExpression getTypeUniverse(Expression expr) {
+  record Var(int index, List<ClassField> fields, ConstLevel hLevel) implements SortExpression {
+    private SortExpression getTypeUniverse(Expression expr) {
       while (expr instanceof PiExpression piExpr) {
         expr = piExpr.getCodomain();
       }
-      return expr instanceof UniverseExpression universe ? universe.getSortExpression() : new Const(Sort.INFINITY);
+      return expr instanceof UniverseExpression universe ? universe.getSortExpression() : new Const(new Sort(Level.INFINITY, hLevel));
     }
 
     @Override
@@ -166,14 +166,14 @@ public sealed interface SortExpression extends CoreSortExpression permits SortEx
         }
       }
 
-      if (arg == null) return new Const(Sort.INFINITY);
+      if (arg == null) return new Const(new Sort(Level.INFINITY, hLevel));
 
       arg = arg.normalize(NormalizationMode.WHNF).accept(visitor, null).normalize(NormalizationMode.WHNF);
       while (arg instanceof PiExpression piExpr) {
         arg = piExpr.getCodomain().normalize(NormalizationMode.WHNF);
       }
       SortExpression result = arg.toSortExpression();
-      return result == null ? new Const(Sort.INFINITY) : result;
+      return result == null ? new Const(new Sort(Level.INFINITY, hLevel)) : result;
     }
 
     @Override
@@ -183,7 +183,7 @@ public sealed interface SortExpression extends CoreSortExpression permits SortEx
 
     @Override
     public @NotNull Sort withInfLevel() {
-      return Sort.INFINITY;
+      return new Sort(Level.INFINITY, hLevel);
     }
 
     @Override

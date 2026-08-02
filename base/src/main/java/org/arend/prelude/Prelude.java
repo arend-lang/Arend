@@ -160,7 +160,7 @@ public class Prelude implements ArendPrelude {
       }
       case "Path" -> {
         PATH = (DataDefinition) definition;
-        PATH.setSortExpression(new SortExpression.Prev(new SortExpression.Var(0, Collections.emptyList())));
+        PATH.setSortExpression(new SortExpression.Prev(new SortExpression.Var(0, Collections.emptyList(), ConstLevel.INFINITY)));
         PATH.setCovariant(1, false);
         PATH.setCovariant(2, false);
         PATH_CON = PATH.getConstructor("path");
@@ -197,7 +197,7 @@ public class Prelude implements ArendPrelude {
       }
       case "iso" -> {
         ISO = (FunctionDefinition) definition;
-        ISO.setResultType(new UniverseExpression(SortExpression.makeMax(Arrays.asList(new SortExpression.Var(0, Collections.emptyList()), new SortExpression.Var(1, Collections.emptyList())))));
+        ISO.setResultType(new UniverseExpression(SortExpression.makeMax(Arrays.asList(new SortExpression.Var(0, Collections.emptyList(), ConstLevel.INFINITY), new SortExpression.Var(1, Collections.emptyList(), ConstLevel.INFINITY)))));
         ISO.setStatus(Definition.TypeCheckingStatus.NO_ERRORS);
       }
       case "divMod" -> {

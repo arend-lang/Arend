@@ -93,6 +93,7 @@ class ExpressionSerialization implements ExpressionVisitor<Void, ExpressionProto
     } else {
       builder.setValue(writeBigInteger(level.value()));
     }
+    builder.setIsCat(level.isCat());
     return builder.build();
   }
 
@@ -113,6 +114,7 @@ class ExpressionSerialization implements ExpressionVisitor<Void, ExpressionProto
         for (ClassField field : v.fields()) {
           varBuilder.addField(myCallTargetIndexProvider.getDefIndex(field));
         }
+        varBuilder.setHLevel(writeConstLevel(v.hLevel()));
         builder.setVarSort(varBuilder.build());
       }
       case SortExpression.RecursiveData ignored -> builder.setRecursiveData(true);

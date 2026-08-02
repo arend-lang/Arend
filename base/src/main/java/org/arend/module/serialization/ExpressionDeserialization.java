@@ -109,11 +109,12 @@ class ExpressionDeserialization {
         return new SortExpression.Const(readSort(proto.getConstSort()));
       }
       case VAR_SORT -> {
+        LevelProtos.SortExpression.VarSort varSort = proto.getVarSort();
         List<ClassField> fields = new ArrayList<>();
-        for (int fieldRef : proto.getVarSort().getFieldList()) {
+        for (int fieldRef : varSort.getFieldList()) {
           fields.add(myCallTargetProvider.getCallTarget(fieldRef, ClassField.class));
         }
-        return new SortExpression.Var(proto.getVarSort().getIndex(), fields);
+        return new SortExpression.Var(varSort.getIndex(), fields, readConstLevel(varSort.getHLevel()));
       }
       case RECURSIVE_DATA -> {
         return new SortExpression.RecursiveData();

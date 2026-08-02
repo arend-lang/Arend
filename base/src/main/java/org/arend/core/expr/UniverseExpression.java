@@ -61,7 +61,11 @@ public class UniverseExpression extends Expression implements CoreUniverseExpres
 
   @Override
   public Expression replaceInfinityLevel(int index, List<ClassField> fields) {
-    return mySortExpression instanceof SortExpression.Const(Sort sort) && sort.getPLevel().isInfinity() || mySortExpression instanceof SortExpression.Var ? new UniverseExpression(new SortExpression.Var(index, fields)) : null;
+    return mySortExpression instanceof SortExpression.Const(Sort sort) && sort.getPLevel().isInfinity()
+      ? new UniverseExpression(new SortExpression.Var(index, fields, sort.getHLevel()))
+      : mySortExpression instanceof SortExpression.Var var
+        ? new UniverseExpression(new SortExpression.Var(index, fields, var.hLevel()))
+        : null;
   }
 
   @Override
