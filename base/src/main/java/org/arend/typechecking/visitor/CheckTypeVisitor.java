@@ -2229,6 +2229,14 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
     return link;
   }
 
+  private void checkCatDomain(TypeExpression domain, Concrete.SourceNode sourceNode) {
+    if (!domain.sort().withInfLevel().getHLevel().isCat()) return;
+    List<? extends CoreBinding> bindings = domain.expression().findFreeBindings().stream().filter(binding -> binding instanceof DependentLink link && !link.isDotted()).toList();
+    if (!bindings.isEmpty()) {
+      errorReporter.report(new TypecheckingError("A domain of a \\Pi-type living in \\Cat depends on non-dotted parameters " + bindings, sourceNode));
+    }
+  }
+
   private SingleDependentLink visitTypeParameter(Concrete.TypeParameter param, List<SortExpression> sorts, Expression expectedType, boolean isDotted) {
     TypeExpression argResult;
     if (isDotted) {
@@ -2239,6 +2247,7 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
       argResult = checkType(param.getType(), UniverseExpression.OMEGA);
     }
     if (argResult == null) return null;
+    checkCatDomain(argResult, param);
     if (expectedType != null) {
       Expression expected = expectedType.normalize(NormalizationMode.WHNF).getUnderlyingExpression();
       if ((expected instanceof ClassCallExpression || expected instanceof PiExpression || expected instanceof SigmaExpression || expected instanceof UniverseExpression)
