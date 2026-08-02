@@ -283,7 +283,7 @@ public sealed interface SortExpression extends CoreSortExpression permits SortEx
     @Override
     public @NotNull Sort withInfLevel() {
       checkIfSolved();
-      return sort == null || sort == this ? Sort.INFINITY : sort.withInfLevel();
+      return sort == null || sort == this ? new Sort(Level.INFINITY, ConstLevel.INFINITY, variable.isCat()) : sort.withInfLevel();
     }
 
     @Override

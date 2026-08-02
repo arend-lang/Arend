@@ -178,6 +178,7 @@ public class StdImplicitArgsInference implements ImplicitArgsInference {
         if (defCallResult.getArguments().isEmpty()) {
           InferenceVariable infVar = new FunctionInferenceVariable(Prelude.PATH_CON, Prelude.PATH_CON.getDataTypeParameters(), 1, UniverseExpression.OMEGA, fun, myVisitor.getAllBindings());
           infVar.setType(new UniverseExpression(new SortExpression.InfVar(infVar)));
+          infVar.setCat(false);
           Expression binding = InferenceReferenceExpression.make(infVar, myVisitor.getEquations());
           result = result.applyExpression(new LamExpression(lamParam, binding), true, myVisitor, fun);
           argResult = myVisitor.checkArgument(arg, new PiExpression(lamParam, binding), result, null);
