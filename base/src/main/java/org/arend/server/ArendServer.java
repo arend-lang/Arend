@@ -125,6 +125,13 @@ public interface ArendServer {
   @Nullable ConcreteGroup getRawGroup(@NotNull ModuleLocation module);
 
   /**
+   * @return true if the given module is registered and its definitions have been resolved.
+   *         Distinguishes a module without definitions from a module that was never resolved,
+   *         since {@link #getResolvedDefinitions} returns an empty collection in both cases.
+   */
+  boolean isResolved(@NotNull ModuleLocation module);
+
+  /**
    * @return the group data of the specified module.
    */
   @NotNull Collection<? extends DefinitionData> getResolvedDefinitions(@NotNull ModuleLocation module);

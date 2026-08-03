@@ -17,7 +17,7 @@ import org.arend.search.ClassDescendantsSearch
 class ArendSubclassesPass(file: IArendFile, editor: Editor, textRange: TextRange)
     : BasePass(file, editor, "Arend subclasses annotator", textRange) {
 
-    override fun collectInformationWithProgress(indicator: ProgressIndicator) {
+    override fun collectHighlightingInfo(indicator: ProgressIndicator): Boolean {
         val defIdentifiers = file.descendantsOfType<ArendDefIdentifier>().filter { it.parent is ArendDefClass }
         val newDefIdentifiers = defIdentifiers.filter { it.getUserData(ArendSubclassesKey) == null }.toList()
         if (newDefIdentifiers.isNotEmpty()) {
@@ -42,6 +42,7 @@ class ArendSubclassesPass(file: IArendFile, editor: Editor, textRange: TextRange
                 DaemonCodeAnalyzer.getInstance(file.project).restart(file, newDefIdentifiers)
             }
         }
+        return true
     }
 
     companion object {

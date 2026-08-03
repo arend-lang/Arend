@@ -20,9 +20,10 @@ import org.arend.util.LocalVariablesScopeCollector.Companion.getLocalVariables
 class NameShadowingHighlighterPass(file: ArendFile, editor: Editor) :
     BasePass(file, editor, "Arend name shadowing annotator", TextRange(0, editor.document.textLength)) {
 
-    override fun collectInformationWithProgress(progress: ProgressIndicator) {
+    override fun collectHighlightingInfo(progress: ProgressIndicator): Boolean {
         val typeTeles = file.descendantsOfType<ArendConstructor>().map { it.descendantsOfType<ArendTypeTele>() }.flatten()
         exploreScope(typeTeles)
+        return true
     }
 
     private fun exploreScope(teles: Sequence<ArendSourceNodeImpl>) {

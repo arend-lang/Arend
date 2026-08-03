@@ -70,6 +70,7 @@ import org.arend.typechecking.error.local.inference.LambdaInferenceError
 import org.arend.typechecking.error.local.inference.RecursiveInstanceInferenceError
 import org.arend.util.ComputationInterruptedException
 import com.intellij.openapi.progress.ProcessCanceledException
+import com.intellij.openapi.progress.ProgressIndicator
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ConcurrentLinkedQueue
@@ -81,7 +82,42 @@ abstract class BasePass(protected open val file: IArendFile, editor: Editor, nam
     private val errorList = ConcurrentLinkedQueue<GeneralError>()
     private val errorTooltips = ConcurrentHashMap<GeneralError, String>()
 
+    @Volatile
+    private var collected = false
+
+    @Volatile
+    private var hasResults = false
+
     fun getHighlights() = highlights.values
+
+    /**
+     * The daemon starts an independent highlighting session for every showing editor of a document
+     * (the Find Usages preview and diff viewers are editors too) but shares one pass instance
+     * between them, keyed by document and pass class. `ProgressableTextEditorHighlightingPass` runs
+     * [collectInformationWithProgress] only for the session that owns the pass, yet it calls
+     * [applyInformationWithProgress] for every session. This tells the two apart.
+     *
+     * @return true if the collecting phase ran in this session.
+     */
+    protected fun wasCollected() = collected
+
+    /**
+     * @return true if [collectHighlightingInfo] produced a result that may be written to the editor.
+     */
+    protected fun hasResults() = hasResults
+
+    final override fun collectInformationWithProgress(progress: ProgressIndicator) {
+        hasResults = collectHighlightingInfo(progress)
+        // Written last: a reader that sees `collected` is guaranteed to see the final `hasResults`,
+        // and an interrupted collection leaves both false.
+        collected = true
+    }
+
+    /**
+     * Fills in the highlighting of the file.
+     * @return false if the result is incomplete and must not be written to the editor.
+     */
+    protected abstract fun collectHighlightingInfo(progress: ProgressIndicator): Boolean
 
     protected fun precalculateTooltips(errors: Collection<GeneralError>) {
         val ppConfig = PrettyPrinterConfigWithRenamer(EmptyScope.INSTANCE)
@@ -101,6 +137,9 @@ abstract class BasePass(protected open val file: IArendFile, editor: Editor, nam
     }
 
     override fun applyInformationWithProgress() {
+        if (!hasResults) {
+            return
+        }
         ApplicationManager.getApplication().invokeLater({
             applyInformationLater()
         }, if (file is ArendExpressionCodeFragment) ModalityState.defaultModalityState() else ModalityState.stateForComponent(editor.component))

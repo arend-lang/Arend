@@ -24,8 +24,8 @@ class ArendHighlightingPass(file: IArendFile, editor: Editor, textRange: TextRan
 
     private val module = (file as? ArendFile)?.moduleLocation
 
-    public override fun collectInformationWithProgress(progress: ProgressIndicator) {
-        if ((file as? ArendFile)?.isRepl == true) return
+    override fun collectHighlightingInfo(progress: ProgressIndicator): Boolean {
+        if ((file as? ArendFile)?.isRepl == true) return true
         progress.isIndeterminate = true
         val server = myProject.service<ArendServerService>().server
         val visitor = HighlightingVisitor(this, server.typingInfo)
@@ -34,14 +34,24 @@ class ArendHighlightingPass(file: IArendFile, editor: Editor, textRange: TextRan
             ArendFragmentUtils.resolveFragment(file, visitor, server)
         } else if (module != null) {
             server.getCheckerFor(listOf(module)).resolveModules(ProgressCancellationIndicator(progress), ProgressReporter.empty())
+            // The module stays unresolved when the resolver gives up (the computation was
+            // interrupted, a dependency changed under us, ...). Publishing the empty result would
+            // drop the highlighting of the whole file until some later pass happens to succeed.
+            if (!server.isResolved(module)) return false
             for (definitionData in server.getResolvedDefinitions(module)) {
                 definitionData.definition.accept(visitor, null)
             }
         }
         collectHighlights()
+        return true
     }
 
     override fun applyInformationWithProgress() {
+        // Nothing happened in this session, another one owns the pass; do not touch the editor and
+        // do not schedule the checker for a second time.
+        if (!wasCollected()) return
+        // Publishes the highlighting only if it was collected; the checker is started in any case,
+        // a failed resolve is precisely when the module has to be revisited.
         super.applyInformationWithProgress()
         myProject.service<ArendMessagesService>().update(module)
         if (module?.locationKind == ModuleLocation.LocationKind.GENERATED) return

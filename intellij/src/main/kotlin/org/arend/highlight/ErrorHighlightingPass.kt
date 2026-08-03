@@ -11,11 +11,12 @@ import org.arend.server.ArendServerService
 class ErrorHighlightingPass(override val file: ArendFile, editor: Editor)
     : BasePass(file, editor, "Arend typechecker annotator", TextRange(0, editor.document.textLength)) {
 
-    override fun collectInformationWithProgress(progress: ProgressIndicator) {
-        val module = file.moduleLocation ?: return
-        val errors = myProject.service<ArendServerService>().server.errorMap[module] ?: return
+    override fun collectHighlightingInfo(progress: ProgressIndicator): Boolean {
+        val module = file.moduleLocation ?: return true
+        val errors = myProject.service<ArendServerService>().server.errorMap[module] ?: return true
         reportAll(errors)
         collectHighlights()
+        return true
     }
 
     override fun applyInformationLater() {

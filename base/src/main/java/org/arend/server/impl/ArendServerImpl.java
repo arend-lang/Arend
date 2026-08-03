@@ -526,6 +526,12 @@ public class ArendServerImpl implements ArendServer {
   }
 
   @Override
+  public boolean isResolved(@NotNull ModuleLocation module) {
+    GroupData groupData = myGroups.get(module);
+    return groupData != null && groupData.isResolved();
+  }
+
+  @Override
   public @NotNull Collection<? extends DefinitionData> getResolvedDefinitions(@NotNull ModuleLocation module) {
     GroupData groupData = myGroups.get(module);
     Collection<? extends DefinitionData> result = groupData == null ? null : groupData.getResolvedDefinitions();

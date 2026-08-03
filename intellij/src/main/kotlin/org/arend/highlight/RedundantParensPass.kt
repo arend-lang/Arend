@@ -25,7 +25,7 @@ import org.arend.util.appExprToConcrete
 
 class RedundantParensPass(file: ArendFile, editor: Editor):
     BasePass(file, editor, "Arend redundant parens annotator", TextRange(0, editor.document.textLength)){
-    override fun collectInformationWithProgress(progress: ProgressIndicator) {
+    override fun collectHighlightingInfo(progress: ProgressIndicator): Boolean {
         val tuples = file.descendantsOfType<ArendTuple>().toList()
         for (element in tuples) {
             progress.checkCanceled()
@@ -39,6 +39,7 @@ class RedundantParensPass(file: ArendFile, editor: Editor):
                 addHighlightInfo(builder)
             }
         }
+        return true
     }
 
     fun isApplicationUsedAsBinOpArgument(tuple: ArendTuple, tupleExpression: ArendExpr): Boolean {
