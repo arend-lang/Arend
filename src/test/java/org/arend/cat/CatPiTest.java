@@ -43,4 +43,20 @@ public class CatPiTest extends TypeCheckingTestCase {
   public void lamCatDotTest() {
     typeCheckDef("\\func test (X :. \\Cat) => \\lam (x : X) => 0");
   }
+
+  @Test
+  public void paramTest() {
+    typeCheckModule("""
+      \\func def (X : \\Cat) (x : X) => 0
+      \\func test (X :. \\Cat) => def X
+      """);
+  }
+
+  @Test
+  public void paramError() {
+    typeCheckModule("""
+      \\func def (X : \\Cat) (x : X) => 0
+      \\func test (X : \\Cat) => def X
+      """, 1);
+  }
 }

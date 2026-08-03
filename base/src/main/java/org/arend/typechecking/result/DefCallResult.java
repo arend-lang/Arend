@@ -90,7 +90,9 @@ public class DefCallResult implements TResult {
 
       names.add(link.getName());
       if (link instanceof TypedDependentLink) {
-        SingleDependentLink parameter = ExpressionFactory.singleParams(link.isExplicit(), names, link.getType().subst(substitution));
+        Expression parameterType = link.getType().subst(substitution);
+        typechecker.checkCatDomain(parameterType, myDefCall);
+        SingleDependentLink parameter = ExpressionFactory.singleParams(link.isExplicit(), names, parameterType);
         parameters.add(parameter);
         names.clear();
 
