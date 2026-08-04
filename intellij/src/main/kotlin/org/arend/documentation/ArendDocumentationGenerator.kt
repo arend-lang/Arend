@@ -74,7 +74,7 @@ object ArendDocumentationGenerator {
             backgroundColor = backgroundColor,
             showNotification = showNotification)
         project.service<ArendMessagesService>().view?.lastDocCorrectness = true
-        val latexImagesDir = File(LATEX_IMAGES_DIR)
+        val latexImagesDir = getLatexImagesDir()
         if (latexImagesDir.exists()) latexImagesDir.deleteRecursively()
 
         var offsetStartText = -1

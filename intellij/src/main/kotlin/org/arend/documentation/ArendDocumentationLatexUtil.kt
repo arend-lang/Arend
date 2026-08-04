@@ -3,6 +3,7 @@ package org.arend.documentation
 import com.intellij.notification.NotificationAction
 import com.intellij.notification.NotificationType
 import com.intellij.notification.SingletonNotificationManager
+import com.intellij.openapi.application.PathManager
 import com.intellij.openapi.components.service
 import com.intellij.openapi.editor.colors.EditorColors
 import com.intellij.openapi.editor.colors.EditorColorsManager
@@ -26,8 +27,13 @@ import javax.swing.JLabel
 import javax.swing.UIManager
 
 internal var counterLatexImages = 0
-internal const val LATEX_IMAGES_DIR = "latex-images"
+private const val LATEX_IMAGES_DIR = "latex-images"
 internal const val FONT_DIFF_COEFFICIENT = COEFFICIENT_HTML_FONT * COEFFICIENT_LATEX_FONT
+
+// The rendered formulas are scratch files referenced from the documentation HTML, so they belong to
+// the IDE temp directory. A relative path would resolve against the working directory of the process,
+// which litters the project root (and the source tree, when the tests run).
+internal fun getLatexImagesDir() = File(PathManager.getTempPath(), LATEX_IMAGES_DIR)
 
 internal fun getHtmlLatexCode(title: String, latexCode: String, project: Project, offset: Int, isNewlineLatexCode: Boolean, font: Float, backgroundColor: Color?, showNotification: Boolean): String {
     try {
@@ -47,8 +53,8 @@ internal fun getHtmlLatexCode(title: String, latexCode: String, project: Project
 
         icon.paintIcon(label, graphics, 0, 0)
 
-        val latexImagesDir = File(LATEX_IMAGES_DIR).apply {
-            mkdir()
+        val latexImagesDir = getLatexImagesDir().apply {
+            mkdirs()
         }
         val file = File(latexImagesDir.path + File.separator + title + ".png")
         ImageIO.write(image, "png", file.getAbsoluteFile())
