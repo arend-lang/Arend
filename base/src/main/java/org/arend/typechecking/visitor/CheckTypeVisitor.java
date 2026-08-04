@@ -114,6 +114,7 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
   private Definition myDefinition;
   private Set<TCDefReferable> myRecursiveDefinitions = Collections.emptySet();
   private boolean myAllowDeferredMetas = true;
+  private final Deque<Map<Referable, Binding>> myClearedCategoricalBindings = new ArrayDeque<>();
 
   private record DeferredMeta(MetaDefinition meta, Map<Referable, Binding> context, LocalExpressionPrettifier localPrettifier, ContextDataImpl contextData, InferenceVariable inferenceVar, MyErrorReporter errorReporter) {}
 
@@ -203,10 +204,41 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
     context.putAll(bindings);
   }
 
-  public Utils.CompleteMapContextSaver<Referable, Binding> clearCategoricalContext() {
+  public class ClearedCategoricalContext implements AutoCloseable {
+    private final Utils.CompleteMapContextSaver<Referable, Binding> mySaver;
+
+    private ClearedCategoricalContext(Utils.CompleteMapContextSaver<Referable, Binding> saver) {
+      mySaver = saver;
+    }
+
+    @Override
+    public void close() {
+      myClearedCategoricalBindings.pop();
+      mySaver.close();
+    }
+  }
+
+  public ClearedCategoricalContext clearCategoricalContext() {
     var saver = new Utils.CompleteMapContextSaver<>(context);
-    context.entrySet().removeIf(entry -> entry.getValue() instanceof DependentLink dl && dl.getVariance() != BindingVariance.INVARIANT);
-    return saver;
+    Map<Referable, Binding> removed = new LinkedHashMap<>();
+    context.entrySet().removeIf(entry -> {
+      if (entry.getValue() instanceof DependentLink dl && dl.getVariance() != BindingVariance.INVARIANT) {
+        removed.put(entry.getKey(), entry.getValue());
+        return true;
+      }
+      return false;
+    });
+    myClearedCategoricalBindings.push(removed);
+    return new ClearedCategoricalContext(saver);
+  }
+
+  private boolean isClearedCategoricalBinding(Referable ref) {
+    for (Map<Referable, Binding> removed : myClearedCategoricalBindings) {
+      if (removed.containsKey(ref)) {
+        return true;
+      }
+    }
+    return false;
   }
 
   public BindingVariance checkVariance(Concrete.Parameter parameter, boolean allowed) {
@@ -2031,7 +2063,11 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
 
     Binding def = context.get(ref);
     if (def == null) {
-      errorReporter.report(new IncorrectReferenceError(ref, sourceNode));
+      if (isClearedCategoricalBinding(ref)) {
+        errorReporter.report(new TypecheckingError("Covariant variable '" + ref.textRepresentation() + "' is used in an invariant position", sourceNode));
+      } else {
+        errorReporter.report(new IncorrectReferenceError(ref, sourceNode));
+      }
       return null;
     }
     Expression type = def.getType();
