@@ -1,5 +1,6 @@
 package org.arend.term.abs;
 
+import org.arend.ext.core.context.BindingVariance;
 import org.arend.naming.reference.Referable;
 import org.arend.term.Fixity;
 import org.jetbrains.annotations.NotNull;
@@ -12,8 +13,8 @@ import java.util.List;
 public interface AbstractExpressionVisitor<P, R> {
   R visitReference(@Nullable Object data, @NotNull Referable referent, @Nullable Fixity fixity, @Nullable Collection<? extends Abstract.LevelExpression> pLevels, P params);
   R visitThis(@Nullable Object data, P params);
-  R visitLam(@Nullable Object data, @NotNull Collection<? extends Abstract.LamParameter> parameters, /* @NotNull */ @Nullable Abstract.Expression body, P params);
-  R visitPi(@Nullable Object data, @NotNull Collection<? extends Abstract.Parameter> parameters, /* @NotNull */ @Nullable Abstract.Expression codomain, P params);
+  R visitLam(@Nullable Object data, @NotNull Collection<? extends Abstract.LamParameter> parameters, @Nullable BindingVariance variance, /* @NotNull */ @Nullable Abstract.Expression body, P params);
+  R visitPi(@Nullable Object data, @NotNull Collection<? extends Abstract.Parameter> parameters, @Nullable BindingVariance variance, /* @NotNull */ @Nullable Abstract.Expression codomain, P params);
   R visitUniverse(@Nullable Object data, @Nullable BigInteger pLevelNum, @Nullable BigInteger hLevelNum, @Nullable Abstract.LevelExpression pLevel, P params);
   R visitCatUniverse(@Nullable Object data, @Nullable BigInteger pLevelNum, @Nullable Abstract.LevelExpression pLevel, P params);
   R visitApplyHole(@Nullable Object data, P params);

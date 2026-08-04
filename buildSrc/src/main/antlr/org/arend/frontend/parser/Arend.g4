@@ -138,8 +138,8 @@ associativity : '\\infix'               # nonAssocInfix
 letKw : HAVE | LET | HAVES | LETS;
 
 expr  : appPrefix? appExpr (implementStatements argument*)? withBody?     # app
-      | <assoc=right> expr '->' expr                                      # arr
-      | '\\Pi' tele+ '->' expr                                            # pi
+      | <assoc=right> expr (ARROW | ARROW_PLUS) expr                       # arr
+      | '\\Pi' tele+ (ARROW | ARROW_PLUS) expr                             # pi
       | '\\Sigma' tele*                                                   # sigma
       | lamExpr                                                           # lam
       | letExpr                                                           # let
@@ -147,10 +147,10 @@ expr  : appPrefix? appExpr (implementStatements argument*)? withBody?     # app
       ;
 
 expr2 : appPrefix? appExpr (implementStatements argument*)?               # app2
-      | <assoc=right> expr2 '->' expr2                                    # arr2
-      | '\\Pi' tele+ '->' expr2                                           # pi2
+      | <assoc=right> expr2 (ARROW | ARROW_PLUS) expr2                     # arr2
+      | '\\Pi' tele+ (ARROW | ARROW_PLUS) expr2                            # pi2
       | '\\Sigma' tele*                                                   # sigma2
-      | '\\lam' lamParam+ ('=>' expr2?)?                                  # lam2
+      | '\\lam' lamParam+ (('=>' | FAT_ARROW_PLUS) expr2?)?               # lam2
       | letKw '|'? letClause ('|' letClause)* ('\\in' expr2?)?            # let2
       | caseExpr                                                          # case2
       ;
@@ -159,7 +159,7 @@ lamParam : nameTele     # lamTele
          | atomPattern  # lamPattern
          ;
 
-lamExpr : '\\lam' lamParam+ ('=>' expr?)?;
+lamExpr : '\\lam' lamParam+ (('=>' | FAT_ARROW_PLUS) expr?)?;
 
 caseExpr : (EVAL | PEVAL)? (CASE | SCASE) caseArg (',' caseArg)* ('\\return' returnExpr2)? withBody?;
 
@@ -325,8 +325,10 @@ fragment UNICODE_ESCAPE : '\\' 'u'+ HEX_DIGIT HEX_DIGIT HEX_DIGIT HEX_DIGIT;
 fragment HEX_DIGIT : [0-9a-fA-F];
 fragment OCT_DIGIT : [0-8];
 COLON : ':';
-COLON_PLUS : ':+';
+COLON_PLUS : ':+' | ':⁺';
 ARROW : '->';
+ARROW_PLUS : '->+' | '->⁺';
+FAT_ARROW_PLUS : '=>+' | '=>⁺';
 APPLY_HOLE : '__';
 UNDERSCORE : '_';
 DOT : '.';

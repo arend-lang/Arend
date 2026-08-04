@@ -31,9 +31,9 @@ class ArendSyntaxHighlighter : SyntaxHighlighterBase() {
             ArendElementTypes.INFIX, ArendElementTypes.POSTFIX -> ArendHighlightingColors.OPERATORS
             ArendElementTypes.DOT -> ArendHighlightingColors.DOT
             ArendElementTypes.COMMA -> ArendHighlightingColors.COMMA
-            ArendElementTypes.COLON -> ArendHighlightingColors.COLON
+            ArendElementTypes.COLON, ArendElementTypes.COLON_PLUS -> ArendHighlightingColors.COLON
             ArendElementTypes.PIPE -> ArendHighlightingColors.PIPE
-            ArendElementTypes.ARROW, ArendElementTypes.FAT_ARROW -> ArendHighlightingColors.ARROW
+            ArendElementTypes.ARROW, ArendElementTypes.ARROW_PLUS, ArendElementTypes.FAT_ARROW, ArendElementTypes.FAT_ARROW_PLUS -> ArendHighlightingColors.ARROW
 
             ArendElementTypes.LBRACE, ArendElementTypes.RBRACE -> ArendHighlightingColors.BRACES
             ArendElementTypes.LPAREN, ArendElementTypes.RPAREN -> ArendHighlightingColors.PARENTHESIS

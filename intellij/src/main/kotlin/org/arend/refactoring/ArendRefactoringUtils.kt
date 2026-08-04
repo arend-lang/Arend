@@ -12,6 +12,7 @@ import com.intellij.psi.util.elementType
 import com.intellij.psi.util.endOffset
 import com.intellij.psi.util.siblings
 import org.arend.core.definition.Definition
+import org.arend.ext.core.context.BindingVariance
 import org.arend.ext.core.context.CoreBinding
 import org.arend.ext.core.context.CoreParameter
 import org.arend.ext.core.expr.CoreExpression
@@ -844,8 +845,8 @@ private object PrecVisitor : AbstractExpressionVisitor<Void?, Int> {
         if (pLevel != null) APP_PREC else MAX_PREC
 
     override fun visitThis(data: Any?, params: Void?) = MAX_PREC
-    override fun visitLam(data: Any?, parameters: Collection<Abstract.LamParameter>, body: Abstract.Expression?, params: Void?) = MIN_PREC
-    override fun visitPi(data: Any?, parameters: Collection<Abstract.Parameter>, codomain: Abstract.Expression?, params: Void?) = MIN_PREC
+    override fun visitLam(data: Any?, parameters: Collection<Abstract.LamParameter>, variance: BindingVariance?, body: Abstract.Expression?, params: Void?) = MIN_PREC
+    override fun visitPi(data: Any?, parameters: Collection<Abstract.Parameter>, variance: BindingVariance?, codomain: Abstract.Expression?, params: Void?) = MIN_PREC
     override fun visitApplyHole(data: Any?, params: Void?) = MAX_PREC
     override fun visitInferHole(data: Any?, params: Void?) = MAX_PREC
     override fun visitGoal(data: Any?, name: String?, expression: Abstract.Expression?, params: Void?) = MAX_PREC

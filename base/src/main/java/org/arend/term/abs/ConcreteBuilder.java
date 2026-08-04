@@ -271,7 +271,7 @@ public class ConcreteBuilder implements AbstractDefinitionVisitor<Concrete.Resol
       myErrorReporter.report(new AbstractExpressionError(GeneralError.Level.ERROR, "Expected a universe", universe.getData()));
     }
 
-    List<Concrete.TypeParameter> typeParameters = buildTypeParameters(def.getParameters(), true);
+    List<Concrete.TypeParameter> typeParameters = buildTypeParameters(def.getParameters(), true, null);
     Collection<? extends Abstract.ConstructorClause> absClauses = def.getClauses();
     List<Concrete.ConstructorClause> clauses = new ArrayList<>(absClauses.size());
     Collection<? extends Abstract.Reference> elimExpressions = def.getEliminatedExpressions();
@@ -285,7 +285,7 @@ public class ConcreteBuilder implements AbstractDefinitionVisitor<Concrete.Resol
 
       List<Concrete.Constructor> constructors = new ArrayList<>(absConstructors.size());
       for (Abstract.Constructor constructor : absConstructors) {
-        Concrete.Constructor cons = new Concrete.Constructor(convertInternalReferable(constructor.getReferable(), myDefinition, true), buildTypeParameters(constructor.getParameters(), true), buildReferences(constructor.getEliminatedExpressions()), buildClauses(constructor.getClauses()), constructor.isCoerce());
+        Concrete.Constructor cons = new Concrete.Constructor(convertInternalReferable(constructor.getReferable(), myDefinition, true), buildTypeParameters(constructor.getParameters(), true, null), buildReferences(constructor.getEliminatedExpressions()), buildClauses(constructor.getClauses()), constructor.isCoerce());
         Abstract.Expression resultType = constructor.getResultType();
         if (resultType != null) {
           cons.setResultType(resultType.accept(this, null));
@@ -302,7 +302,7 @@ public class ConcreteBuilder implements AbstractDefinitionVisitor<Concrete.Resol
 
   public void buildClassParameters(Collection<? extends Abstract.FieldParameter> absParameters, Concrete.ClassDefinition classDef, List<Concrete.ClassElement> elements) {
     for (Abstract.FieldParameter absParameter : absParameters) {
-      Concrete.Parameter parameter = buildParameter(absParameter, false, false, true);
+      Concrete.Parameter parameter = buildParameter(absParameter, false, false, true, null);
       if (parameter.getType() != null) {
         boolean forced = absParameter.isClassifying();
         boolean explicit = parameter.isExplicit();
@@ -351,7 +351,7 @@ public class ConcreteBuilder implements AbstractDefinitionVisitor<Concrete.Resol
             Concrete.Expression type = resultType.accept(this, null);
             Abstract.Expression resultTypeLevel = field.getResultTypeLevel();
             Concrete.Expression typeLevel = resultTypeLevel == null ? null : resultTypeLevel.accept(this, null);
-            elements.add(new Concrete.ClassField((FieldReferableImpl) fieldRef, true, field.getClassFieldKind(), buildTypeParameters(parameters, false), type, typeLevel, field.isCoerce()));
+            elements.add(new Concrete.ClassField((FieldReferableImpl) fieldRef, true, field.getClassFieldKind(), buildTypeParameters(parameters, false, null), type, typeLevel, field.isCoerce()));
             if (field.isClassifying()) {
               setClassifyingField(classDef, (FieldReferable) fieldRef, field, true);
             }
@@ -365,7 +365,7 @@ public class ConcreteBuilder implements AbstractDefinitionVisitor<Concrete.Resol
             continue;
           }
           Abstract.Expression typeLevel = field.getResultTypeLevel();
-          elements.add(new Concrete.OverriddenField(field.getData(), ref.getReferent(), buildTypeParameters(field.getParameters(), false), type.accept(this, null), typeLevel == null ? null : typeLevel.accept(this, null)));
+          elements.add(new Concrete.OverriddenField(field.getData(), ref.getReferent(), buildTypeParameters(field.getParameters(), false, null), type.accept(this, null), typeLevel == null ? null : typeLevel.accept(this, null)));
         }
         case null, default ->
             myErrorReporter.report(new AbstractExpressionError(GeneralError.Level.ERROR, "Unknown class element", element));
@@ -424,7 +424,7 @@ public class ConcreteBuilder implements AbstractDefinitionVisitor<Concrete.Resol
       List<? extends Abstract.LamParameter> parameters = implementation.getLamParameters();
       Concrete.Expression term = impl.accept(this, null);
       List<Concrete.Parameter> cParams = new ArrayList<>();
-      List<Concrete.Pattern> patterns = buildLamParameters(parameters, cParams);
+      List<Concrete.Pattern> patterns = buildLamParameters(parameters, null, cParams);
       if (!parameters.isEmpty() || !patterns.isEmpty()) {
         term = Concrete.PatternLamExpression.make(parameters.getFirst().getData(), cParams, patterns, term);
       }
@@ -451,7 +451,7 @@ public class ConcreteBuilder implements AbstractDefinitionVisitor<Concrete.Resol
     return referable == null ? null : new DataLocalReferable(referable, referable.getRefName());
   }
 
-  public Concrete.Parameter buildParameter(Abstract.Parameter parameter, boolean isNamed, boolean isDefinition, boolean allowNullRefs) {
+  public Concrete.Parameter buildParameter(Abstract.Parameter parameter, boolean isNamed, boolean isDefinition, boolean allowNullRefs, @Nullable BindingVariance forcedVariance) {
     List<? extends Abstract.AbstractReferable> referableList = parameter.getReferableList();
     Abstract.Expression type = parameter.getType();
     Concrete.Expression cType;
@@ -469,7 +469,7 @@ public class ConcreteBuilder implements AbstractDefinitionVisitor<Concrete.Resol
 
     boolean isStrict = parameter.isStrict();
     boolean isProperty = parameter.isProperty();
-    BindingVariance variance = parameter.getVariance();
+    BindingVariance variance = forcedVariance != null ? forcedVariance : parameter.getVariance();
     if (!isNamed && (referableList.isEmpty() || referableList.size() == 1 && referableList.getFirst() == null)) {
       if (isDefinition && isStrict || !allowNullRefs) {
         return new Concrete.DefinitionTelescopeParameter(parameter.getData(), parameter.isExplicit(), true, Collections.singletonList(allowNullRefs ? null : new DataLocalReferable(parameter, null)), cType, isProperty, variance);
@@ -498,15 +498,15 @@ public class ConcreteBuilder implements AbstractDefinitionVisitor<Concrete.Resol
   public List<Concrete.Parameter> buildParameters(Collection<? extends Abstract.Parameter> absParameters, boolean isDefinition, boolean allowNullRefs) {
     List<Concrete.Parameter> parameters = new ArrayList<>(absParameters.size());
     for (Abstract.Parameter absParameter : absParameters) {
-      parameters.add(buildParameter(absParameter, true, isDefinition, allowNullRefs));
+      parameters.add(buildParameter(absParameter, true, isDefinition, allowNullRefs, null));
     }
     return parameters;
   }
 
-  public List<Concrete.TypeParameter> buildTypeParameters(Collection<? extends Abstract.Parameter> absParameters, boolean isDefinition) {
+  public List<Concrete.TypeParameter> buildTypeParameters(Collection<? extends Abstract.Parameter> absParameters, boolean isDefinition, BindingVariance variance) {
     List<Concrete.TypeParameter> parameters = new ArrayList<>(absParameters.size());
     for (Abstract.Parameter absParameter : absParameters) {
-      Concrete.Parameter parameter = buildParameter(absParameter, false, isDefinition, true);
+      Concrete.Parameter parameter = buildParameter(absParameter, false, isDefinition, true, variance);
       if (parameter instanceof Concrete.TypeParameter) {
         parameters.add((Concrete.TypeParameter) parameter);
       } else {
@@ -625,21 +625,21 @@ public class ConcreteBuilder implements AbstractDefinitionVisitor<Concrete.Resol
   }
 
   @Override
-  public Concrete.Expression visitLam(@Nullable Object data, @NotNull Collection<? extends Abstract.LamParameter> parameters, @Nullable Abstract.Expression body, Void params) {
+  public Concrete.Expression visitLam(@Nullable Object data, @NotNull Collection<? extends Abstract.LamParameter> parameters, @Nullable BindingVariance variance, @Nullable Abstract.Expression body, Void params) {
     if (parameters.isEmpty() && body == null) {
       return new Concrete.ErrorHoleExpression(data, null);
     }
     Concrete.Expression cBody = body == null ? new Concrete.IncompleteExpression(data) : body.accept(this, null);
     if (parameters.isEmpty()) return cBody;
     List<Concrete.Parameter> cParams = new ArrayList<>();
-    return Concrete.PatternLamExpression.make(data, cParams, buildLamParameters(parameters, cParams), cBody);
+    return Concrete.PatternLamExpression.make(data, cParams, buildLamParameters(parameters, variance, cParams), cBody);
   }
 
-  private List<Concrete.Pattern> buildLamParameters(Collection<? extends Abstract.LamParameter> parameters, List<Concrete.Parameter> cParams) {
+  private List<Concrete.Pattern> buildLamParameters(Collection<? extends Abstract.LamParameter> parameters, @Nullable BindingVariance variance, List<Concrete.Parameter> cParams) {
     List<Concrete.Pattern> patterns = Collections.emptyList();
     for (Abstract.LamParameter parameter : parameters) {
       if (parameter instanceof Abstract.Parameter) {
-        cParams.add(buildParameter((Abstract.Parameter) parameter, true, false, true));
+        cParams.add(buildParameter((Abstract.Parameter) parameter, true, false, true, variance));
         if (!patterns.isEmpty()) patterns.add(null);
       } else if (parameter instanceof Abstract.Pattern) {
         if (patterns.isEmpty()) {
@@ -655,12 +655,12 @@ public class ConcreteBuilder implements AbstractDefinitionVisitor<Concrete.Resol
   }
 
   @Override
-  public Concrete.Expression visitPi(@Nullable Object data, @NotNull Collection<? extends Abstract.Parameter> parameters, @Nullable Abstract.Expression codomain, Void params) {
+  public Concrete.Expression visitPi(@Nullable Object data, @NotNull Collection<? extends Abstract.Parameter> parameters, @Nullable BindingVariance variance, @Nullable Abstract.Expression codomain, Void params) {
     if (codomain == null) {
       myErrorLevel = GeneralError.Level.ERROR;
     }
     Concrete.Expression cCodomain = codomain == null ? new Concrete.ErrorHoleExpression(data, null) : codomain.accept(this, null);
-    return parameters.isEmpty() ? cCodomain : new Concrete.PiExpression(data, buildTypeParameters(parameters, false), cCodomain);
+    return parameters.isEmpty() ? cCodomain : new Concrete.PiExpression(data, buildTypeParameters(parameters, false, variance), cCodomain);
   }
 
   @Override
@@ -707,7 +707,7 @@ public class ConcreteBuilder implements AbstractDefinitionVisitor<Concrete.Resol
 
   @Override
   public Concrete.SigmaExpression visitSigma(@Nullable Object data, @NotNull Collection<? extends Abstract.Parameter> parameters, Void params) {
-    return new Concrete.SigmaExpression(data, buildTypeParameters(parameters, false));
+    return new Concrete.SigmaExpression(data, buildTypeParameters(parameters, false, null));
   }
 
   private Concrete.Expression makeBinOpSequence(Object data, Concrete.Expression left, boolean leftIsVariable, Collection<? extends Abstract.BinOpSequenceElem> sequence, Abstract.FunctionClauses clauses) {

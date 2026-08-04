@@ -470,7 +470,7 @@ public class PrettyPrintVisitor implements ConcreteExpressionVisitor<Precedence,
         myBuilder.append(referable == null ? "_" : referable.textRepresentation()).append(' ');
       }
 
-      myBuilder.append(parameter.getVariance() == BindingVariance.COVARIANT ? ":+ " : ": ");
+      myBuilder.append(parameter.getVariance() == BindingVariance.COVARIANT ? ":⁺ " : ": ");
       printExpr(((Concrete.TypeParameter) parameter).getType(), new Precedence(Concrete.Expression.PREC));
       if (parameter.isExplicit()) {
         myBuilder.append(')');
@@ -583,7 +583,7 @@ public class PrettyPrintVisitor implements ConcreteExpressionVisitor<Precedence,
 
       @Override
       String getOpText() {
-        return "->";
+        return expr.getParameters().size() == 1 && !(expr.getParameters().getFirst() instanceof Concrete.TelescopeParameter) && expr.getParameters().getFirst().getVariance() == BindingVariance.COVARIANT ? "->⁺" : "->";
       }
 
       @Override

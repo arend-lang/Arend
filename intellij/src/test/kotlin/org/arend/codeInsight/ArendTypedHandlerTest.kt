@@ -35,4 +35,14 @@ class ArendTypedHandlerTest : ArendTestBase() {
     fun `test parens goal 2`() = check("""\func f => {-caret-}{?}""", """\func f => ({?}""", '(', false)
 
     fun `test braces 2`() = check("""\class Foo {\n  | foo : {-caret-}Nat\n}""", """\class Foo {\n  | foo : {Nat}\n}""", '{')
+
+    fun `test colon plus superscript`() = check("""\func f (x :{-caret-} \Type) => x""", """\func f (x :⁺ \Type) => x""", '+', false)
+
+    fun `test arrow plus superscript`() = check("""\func f (X : \Cat) => X ->{-caret-} Nat""", """\func f (X : \Cat) => X ->⁺ Nat""", '+', false)
+
+    fun `test fat arrow plus superscript`() = check("""\func f (X : \Cat) => \lam (x : X) =>{-caret-} 0""", """\func f (X : \Cat) => \lam (x : X) =>⁺ 0""", '+', false)
+
+    fun `test colon plus not replaced in string`() = check("""\func f => "x :{-caret-}"""", """\func f => "x :+"""", '+', false)
+
+    fun `test colon plus not replaced in comment`() = check("""\func f => {- x :{-caret-} -} 0""", """\func f => {- x :+ -} 0""", '+', false)
 }

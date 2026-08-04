@@ -9,12 +9,14 @@ import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.project.Project
 import com.intellij.psi.PsiDocumentManager
 import com.intellij.psi.PsiFile
+import com.intellij.psi.util.elementType
 import com.intellij.psi.util.endOffset
 import com.intellij.psi.util.startOffset
 import com.intellij.util.text.CharArrayCharSequence
 import org.arend.psi.ArendElementTypes.*
 import org.arend.settings.ArendSettings
 import org.arend.psi.ArendFile
+import org.arend.psi.ancestor
 import org.arend.psi.childOfType
 import org.arend.psi.ext.ArendCompositeElement
 
@@ -22,13 +24,7 @@ import org.arend.psi.ext.ArendCompositeElement
 class ArendTypedHandler : TypedHandlerDelegate() {
 
     private fun changeCorrespondingBracket(c: Char, editor: Editor, file: PsiFile) {
-        var element = file.findElementAt(editor.selectionModel.selectionStart)
-        while (element !is ArendCompositeElement?) {
-            element = element?.parent
-        }
-        if (element == null) {
-            return
-        }
+        val element = file.findElementAt(editor.selectionModel.selectionStart)?.ancestor<ArendCompositeElement>() ?: return
 
         val correspondingElementOffset = when (c) {
             '(' -> element.childOfType(RBRACE)?.textOffset
@@ -60,6 +56,23 @@ class ArendTypedHandler : TypedHandlerDelegate() {
         val document = editor.document
         document.insertString(editor.selectionModel.selectionStart, "{")
         document.insertString(editor.selectionModel.selectionEnd, "}")
+    }
+
+    private fun replaceWithSuperscriptPlus(project: Project, editor: Editor, file: PsiFile) {
+        PsiDocumentManager.getInstance(project).commitDocument(editor.document)
+        val offset = editor.caretModel.offset
+        val element = file.findElementAt(offset - 1) ?: return
+        if (element.elementType !in PLUS_TOKEN_TYPES) {
+            return
+        }
+        val text = element.text
+        if (!text.endsWith('+')) {
+            return
+        }
+
+        val start = element.startOffset
+        editor.document.replaceString(start, start + text.length, text.dropLast(1) + '⁺')
+        editor.caretModel.moveToOffset(start + text.length)
     }
 
     override fun beforeSelectionRemoved(c: Char, project: Project, editor: Editor, file: PsiFile): Result {
@@ -97,6 +110,11 @@ class ArendTypedHandler : TypedHandlerDelegate() {
             return Result.STOP
         }
 
+        if (c == '+') {
+            replaceWithSuperscriptPlus(project, editor, file)
+            return Result.CONTINUE
+        }
+
         if (c != '-') {
             return Result.CONTINUE
         }
@@ -128,3 +146,5 @@ class ArendTypedHandler : TypedHandlerDelegate() {
 }
 
 private val BRACKETS = listOf("(", "{", ")", "}")
+
+private val PLUS_TOKEN_TYPES = setOf(COLON_PLUS, ARROW_PLUS, FAT_ARROW_PLUS)

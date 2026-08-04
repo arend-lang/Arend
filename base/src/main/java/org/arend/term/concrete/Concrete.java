@@ -173,6 +173,10 @@ public final class Concrete {
       myVariance = variance;
     }
 
+    public TypeParameter(boolean explicit, Expression type, boolean isProperty, BindingVariance variance) {
+      this(type.getData(), explicit, type, isProperty, variance);
+    }
+
     public TypeParameter(Object data, boolean explicit, Expression type, boolean isProperty) {
       this(data, explicit, type, isProperty, BindingVariance.INVARIANT);
     }

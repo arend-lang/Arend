@@ -3,6 +3,7 @@ package org.arend.intention.generating
 import com.intellij.openapi.util.TextRange
 import com.intellij.psi.PsiElement
 import com.intellij.util.containers.tail
+import org.arend.ext.core.context.BindingVariance
 import org.arend.naming.reference.GlobalReferable
 import org.arend.naming.reference.Referable
 import org.arend.resolving.util.parseBinOp
@@ -24,10 +25,10 @@ class ShrinkAbstractVisitor(val textRange: TextRange) : AbstractExpressionVisito
 
     override fun visitThis(data: Any?, params: Unit?): String = "\\this"
 
-    override fun visitLam(data: Any?, parameters: MutableCollection<out Abstract.LamParameter>, body: Abstract.Expression?, params: Unit?): String =
+    override fun visitLam(data: Any?, parameters: MutableCollection<out Abstract.LamParameter>, variance: BindingVariance?, body: Abstract.Expression?, params: Unit?): String =
             """\lam $DOTS => ${body?.accept(this, Unit) ?: "INVALID"}"""
 
-    override fun visitPi(data: Any?, parameters: MutableCollection<out Abstract.Parameter>, codomain: Abstract.Expression?, params: Unit?): String =
+    override fun visitPi(data: Any?, parameters: MutableCollection<out Abstract.Parameter>, variance: BindingVariance?, codomain: Abstract.Expression?, params: Unit?): String =
             """\Pi $DOTS -> ${codomain?.accept(this, Unit) ?: "INVALID"}"""
 
     override fun visitUniverse(data: Any?, pLevelNum: BigInteger?, hLevelNum: BigInteger?, pLevel: Abstract.LevelExpression?, params: Unit?): String =

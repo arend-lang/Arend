@@ -169,7 +169,7 @@ public class PrettyPrintingParserTest extends TypeCheckingTestCase {
     assertEquals(BindingVariance.COVARIANT, ((Concrete.PiExpression) result).getParameters().getFirst().getVariance());
     StringBuilder builder = new StringBuilder();
     result.accept(new PrettyPrintVisitor(builder, 0), new Precedence(Concrete.Expression.PREC));
-    assertTrue(builder.toString().contains(":+"));
+    assertTrue(builder.toString().contains(":⁺"));
   }
 
   @Test

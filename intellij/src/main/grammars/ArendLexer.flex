@@ -95,8 +95,13 @@ OCT_DIGIT           = [0-8]
     ")"                     { return RPAREN; }
     ":"                     { return COLON; }
     ":+"                    { return COLON_PLUS; }
+    ":⁺"                    { return COLON_PLUS; }
     "->"                    { return ARROW; }
+    "->+"                   { return ARROW_PLUS; }
+    "->⁺"                   { return ARROW_PLUS; }
     "=>"                    { return FAT_ARROW; }
+    "=>+"                   { return FAT_ARROW_PLUS; }
+    "=>⁺"                   { return FAT_ARROW_PLUS; }
     "."                     { return DOT; }
     ","                     { return COMMA; }
     "__"                    { return APPLY_HOLE; }

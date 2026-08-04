@@ -938,20 +938,24 @@ public class BuildVisitor extends ArendBaseVisitor<Object> {
     return new Concrete.GoalExpression(tokenPosition(ctx.start), id == null ? null : id.getText(), exprCtx == null ? null : visitExpr(exprCtx));
   }
 
-  private Concrete.PiExpression visitArr(ParserRuleContext ctx, Concrete.Expression domain, Concrete.Expression codomain) {
+  private Concrete.PiExpression visitArr(ParserRuleContext ctx, Concrete.Expression domain, Concrete.Expression codomain, boolean covariant) {
     List<Concrete.TypeParameter> arguments = new ArrayList<>(1);
-    arguments.add(new Concrete.TypeParameter(domain.getData(), true, domain, false));
-    return new Concrete.PiExpression(tokenPosition(ctx.getToken(ARROW, 0).getSymbol()), arguments, codomain);
+    arguments.add(new Concrete.TypeParameter(domain.getData(), true, domain, false, covariant ? BindingVariance.COVARIANT : BindingVariance.INVARIANT));
+    TerminalNode arrow = ctx.getToken(ARROW, 0);
+    if (arrow == null) {
+      arrow = ctx.getToken(ARROW_PLUS, 0);
+    }
+    return new Concrete.PiExpression(tokenPosition(arrow.getSymbol()), arguments, codomain);
   }
 
   @Override
   public Concrete.PiExpression visitArr(ArrContext ctx) {
-    return visitArr(ctx, visitExpr(ctx.expr(0)), visitExpr(ctx.expr(1)));
+    return visitArr(ctx, visitExpr(ctx.expr(0)), visitExpr(ctx.expr(1)), ctx.ARROW_PLUS() != null);
   }
 
   @Override
   public Concrete.PiExpression visitArr2(Arr2Context ctx) {
-    return visitArr(ctx, visitExpr(ctx.expr2(0)), visitExpr(ctx.expr2(1)));
+    return visitArr(ctx, visitExpr(ctx.expr2(0)), visitExpr(ctx.expr2(1)), ctx.ARROW_PLUS() != null);
   }
 
   @Override
@@ -1044,7 +1048,7 @@ public class BuildVisitor extends ArendBaseVisitor<Object> {
     return ctx instanceof IuIdContext ? new ParsedLocalReferable(tokenPosition(ctx.start), ((IuIdContext) ctx).ID().getText()) : allowNullRefs ? null : new ParsedLocalReferable(tokenPosition(tele.start), null);
   }
 
-  private List<Concrete.Parameter> visitNameTele(NameTeleContext tele, boolean allowNullRefs) {
+  private List<Concrete.Parameter> visitNameTele(NameTeleContext tele, boolean allowNullRefs, boolean forceCovariant) {
     List<Concrete.Parameter> parameters = new ArrayList<>();
     if (tele instanceof NameIdContext) {
       parameters.add(new Concrete.NameParameter(tokenPosition(tele.start), true, visitIdOrUnknown(((NameIdContext) tele).idOrUnknown(), allowNullRefs, tele)));
@@ -1061,7 +1065,7 @@ public class BuildVisitor extends ArendBaseVisitor<Object> {
         for (IdOrUnknownContext id : ids) {
           vars.add(visitIdOrUnknown(id, allowNullRefs, tele));
         }
-        boolean isCovariant = explicit ? ((NameExplicitContext) tele).COLON_PLUS() != null : ((NameImplicitContext) tele).COLON_PLUS() != null;
+        boolean isCovariant = forceCovariant || (explicit ? ((NameExplicitContext) tele).COLON_PLUS() != null : ((NameImplicitContext) tele).COLON_PLUS() != null);
         parameters.add(new Concrete.TelescopeParameter(tokenPosition(tele.start), explicit, vars, visitExpr(type), (tele instanceof NameExplicitContext ? ((NameExplicitContext) tele).paramAttr() : ((NameImplicitContext) tele).paramAttr()).PROPERTY() != null, isCovariant ? BindingVariance.COVARIANT : BindingVariance.INVARIANT));
       }
     }
@@ -1069,10 +1073,14 @@ public class BuildVisitor extends ArendBaseVisitor<Object> {
   }
 
   private List<Concrete.Pattern> visitLamParams(List<LamParamContext> list, List<Concrete.Parameter> parameters, boolean allowNullRefs) {
+    return visitLamParams(list, parameters, allowNullRefs, false);
+  }
+
+  private List<Concrete.Pattern> visitLamParams(List<LamParamContext> list, List<Concrete.Parameter> parameters, boolean allowNullRefs, boolean forceCovariant) {
     List<Concrete.Pattern> patterns = Collections.emptyList();
     for (LamParamContext ctx : list) {
       if (ctx instanceof LamTeleContext) {
-        parameters.addAll(visitNameTele(((LamTeleContext) ctx).nameTele(), allowNullRefs));
+        parameters.addAll(visitNameTele(((LamTeleContext) ctx).nameTele(), allowNullRefs, forceCovariant));
         if (!patterns.isEmpty()) patterns.add(null);
       } else if (ctx instanceof LamPatternContext) {
         if (patterns.isEmpty()) {
@@ -1097,13 +1105,13 @@ public class BuildVisitor extends ArendBaseVisitor<Object> {
   @Override
   public Concrete.LamExpression visitLam2(Lam2Context ctx) {
     List<Concrete.Parameter> parameters = new ArrayList<>();
-    return Concrete.PatternLamExpression.make(tokenPosition(ctx.start), parameters, visitLamParams(ctx.lamParam(), parameters, true), visitIncompleteExpression(ctx.expr2(), ctx));
+    return Concrete.PatternLamExpression.make(tokenPosition(ctx.start), parameters, visitLamParams(ctx.lamParam(), parameters, true, ctx.FAT_ARROW_PLUS() != null), visitIncompleteExpression(ctx.expr2(), ctx));
   }
 
   @Override
   public Concrete.LamExpression visitLamExpr(LamExprContext ctx) {
     List<Concrete.Parameter> parameters = new ArrayList<>();
-    return Concrete.PatternLamExpression.make(tokenPosition(ctx.start), parameters, visitLamParams(ctx.lamParam(), parameters, true), visitIncompleteExpression(ctx.expr(), ctx));
+    return Concrete.PatternLamExpression.make(tokenPosition(ctx.start), parameters, visitLamParams(ctx.lamParam(), parameters, true, ctx.FAT_ARROW_PLUS() != null), visitIncompleteExpression(ctx.expr(), ctx));
   }
 
   private Concrete.Expression visitAppExpr(AppExprContext ctx) {
@@ -1417,6 +1425,10 @@ public class BuildVisitor extends ArendBaseVisitor<Object> {
   }
 
   private List<Concrete.TypeParameter> visitTeles(List<TeleContext> teles, boolean isDefinition) {
+    return visitTeles(teles, isDefinition, false);
+  }
+
+  private List<Concrete.TypeParameter> visitTeles(List<TeleContext> teles, boolean isDefinition, boolean forceCovariant) {
     List<Concrete.TypeParameter> parameters = new ArrayList<>(teles.size());
     for (TeleContext tele : teles) {
       boolean explicit = !(tele instanceof ImplicitContext);
@@ -1425,11 +1437,11 @@ public class BuildVisitor extends ArendBaseVisitor<Object> {
         switch (tele) {
           case ExplicitContext explicitContext -> typedExpr = explicitContext.typedExpr();
           case TeleLiteralContext teleLiteralContext -> {
-            parameters.add(new Concrete.TypeParameter(true, visitAtomFieldsAcc(teleLiteralContext.atomFieldsAcc()), false));
+            parameters.add(new Concrete.TypeParameter(true, visitAtomFieldsAcc(teleLiteralContext.atomFieldsAcc()), false, forceCovariant ? BindingVariance.COVARIANT : BindingVariance.INVARIANT));
             continue;
           }
           case TeleUniverseContext teleUniverseContext -> {
-            parameters.add(new Concrete.TypeParameter(true, visitExpr(teleUniverseContext.universeAtom()), false));
+            parameters.add(new Concrete.TypeParameter(true, visitExpr(teleUniverseContext.universeAtom()), false, forceCovariant ? BindingVariance.COVARIANT : BindingVariance.INVARIANT));
             continue;
           }
           case null, default -> {
@@ -1443,7 +1455,7 @@ public class BuildVisitor extends ArendBaseVisitor<Object> {
       List<ExprContext> exprs = typedExpr.expr();
       ParamAttrContext paramAttr = typedExpr.paramAttr();
       Position position = tokenPosition(tele.start);
-      BindingVariance variance = typedExpr.COLON_PLUS() != null ? BindingVariance.COVARIANT : BindingVariance.INVARIANT;
+      BindingVariance variance = forceCovariant || typedExpr.COLON_PLUS() != null ? BindingVariance.COVARIANT : BindingVariance.INVARIANT;
       if (exprs.size() == 2) {
         List<ParsedLocalReferable> vars = new ArrayList<>();
         getVarList(exprs.get(0), vars);
@@ -1554,12 +1566,12 @@ public class BuildVisitor extends ArendBaseVisitor<Object> {
 
   @Override
   public Concrete.PiExpression visitPi(PiContext ctx) {
-    return new Concrete.PiExpression(tokenPosition(ctx.start), visitTeles(ctx.tele(), false), visitExpr(ctx.expr()));
+    return new Concrete.PiExpression(tokenPosition(ctx.start), visitTeles(ctx.tele(), false, ctx.ARROW_PLUS() != null), visitExpr(ctx.expr()));
   }
 
   @Override
   public Object visitPi2(Pi2Context ctx) {
-    return new Concrete.PiExpression(tokenPosition(ctx.start), visitTeles(ctx.tele(), false), visitExpr(ctx.expr2()));
+    return new Concrete.PiExpression(tokenPosition(ctx.start), visitTeles(ctx.tele(), false, ctx.ARROW_PLUS() != null), visitExpr(ctx.expr2()));
   }
 
   private Concrete.Expression visitApp(AppPrefixContext prefixCtx, AppExprContext appCtx, ImplementStatementsContext implCtx, List<ArgumentContext> argumentCtxs, WithBodyContext body) {
