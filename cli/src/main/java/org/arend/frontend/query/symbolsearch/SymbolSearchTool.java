@@ -28,7 +28,7 @@ public final class SymbolSearchTool extends ConsoleQueryTool {
   @Override public String argName() { return "name-pattern"; }
 
   @Override public String cliDescription() {
-    return "search by short name (uses an mtime-cached on-disk index). Pass `-ss --help` for the full grammar.";
+    return "search by short name (uses an mtime-cached on-disk index). Pass `-ss help` for the full grammar.";
   }
   @Override public void printHelp() { ConsoleHelp.printSymbolSearch(); }
 

@@ -37,7 +37,7 @@ public final class ClassHierarchyTool extends ConsoleQueryTool {
   @Override public String argName() { return "MODULE:CLASS|name"; }
 
   @Override public String cliDescription() {
-    return "print super/sub-class trees plus \\new and \\instance sites. Pass `-ch --help` for full grammar.";
+    return "print super/sub-class trees plus \\new and \\instance sites. Pass `-ch help` for full grammar.";
   }
   @Override public void printHelp() { ConsoleHelp.printClassHierarchy(); }
 
