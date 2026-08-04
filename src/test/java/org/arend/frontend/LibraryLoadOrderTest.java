@@ -4,6 +4,8 @@ import org.arend.error.DummyErrorReporter;
 import org.arend.ext.ArendExtension;
 import org.arend.ext.LiteralTypechecker;
 import org.arend.ext.error.ListErrorReporter;
+import org.arend.frontend.cli.CliSetup;
+import org.arend.frontend.cli.CommandContext;
 import org.arend.frontend.library.FileSourceLibrary;
 import org.arend.frontend.library.LibraryManager;
 import org.arend.frontend.library.SourceLibrary;
@@ -75,7 +77,7 @@ public class LibraryLoadOrderTest {
 
   private ArendServerImpl server;
   private LibraryManager libraryManager;
-  private ConsoleMain consoleMain;
+  private CommandContext ctx;
   private Path libDir;
   /** Names of the libraries the server was told about, in the order the loader told it. */
   private final List<String> loadOrder = new ArrayList<>();
@@ -93,12 +95,15 @@ public class LibraryLoadOrderTest {
       }
     });
     libraryManager = new LibraryManager(new ListErrorReporter(new ArrayList<>()));
-    consoleMain = new ConsoleMain();
     libDir = tempFolder.newFolder("libs").toPath();
+    ctx = new CommandContext();
+    ctx.libraryManager = libraryManager;
+    ctx.server = server;
+    ctx.libDirs.add(libDir);
   }
 
   /**
-   * Writes a library directory that {@code ConsoleMain.findLibrary} can discover by name. A library
+   * Writes a library directory that {@code CliSetup.findLibrary} can discover by name. A library
    * given an {@code extensionMainClass} also gets an {@code ext} directory, because the extension is
    * only loaded when the library exposes a class-loader delegate; the class itself is then resolved
    * from the test classpath by the parent class loader.
@@ -129,11 +134,11 @@ public class LibraryLoadOrderTest {
     return extension;
   }
 
-  /** Runs the loader over {@code requested} exactly as {@code ConsoleMain} does for the command line. */
+  /** Runs the loader over {@code requested} exactly as the CLI does for the command line. */
   private boolean load(SourceLibrary... requested) {
     Set<String> loading = new HashSet<>();
     for (SourceLibrary library : requested) {
-      if (!consoleMain.loadLibraryWithDependencies(library, libraryManager, List.of(libDir), server, loading)) return false;
+      if (!CliSetup.loadLibraryWithDependencies(ctx, library, loading)) return false;
     }
     return true;
   }

@@ -59,6 +59,21 @@ public final class ConsoleHelp {
       Multiple patterns are OR'd; whitespace inside one argument also separates, so
       `-ss "Monoid Ring"` is the same as `-ss Monoid -ss Ring`.
 
+      PATTERN CHARACTERS (default mode). Only Arend identifier characters are accepted,
+      which is what lets operator names be typed literally -- nothing here is a regex
+      metacharacter. Per Arend.g4 an identifier is built from:
+        operators   ~ ! @ # $ % ^ & * - + = < > ? / | : [ ]
+        letters     a-z  A-Z  _
+        Unicode     U+2200..U+22FF, U+2A00..U+2AFF   (math: forall, exists, in, and, or, <=)
+        cont. only  0-9  '                           (never the first character)
+      A dotted pattern is read as a long name (see below). Any other non-identifier
+      character -- ( ) { } , ; " backtick, whitespace -- is rejected with a fix-it
+      pointing at `re:` or `glob:`; that usually means a regex (`.*`, `(?...`) was typed
+      in the default mode. `eq:` was removed and redirects to `glob:`.
+
+      Each run echoes the parsed query before searching, so you can see how every token
+      was interpreted (literal / glob / regex / humpback / long name).
+
       LONG-NAME SEARCH: a dotted pattern like `Monoid.*-comm` searches by parts of the
       qualified name -- the last segment matches the short name (rules above), and each
       earlier segment must match, in order, an enclosing module/namespace segment. A
@@ -85,6 +100,18 @@ public final class ConsoleHelp {
       one-line signature. With --json output is `{"results":[...],"count":N}` where
       count is the total match count and results is truncated to `limit`; diagnostics
       go to a log file (default <tmpdir>/arend-symbol-search.log) so stdout stays pure JSON.
+
+      SHELL QUOTING
+        Apostrophe `'` is a valid Arend continuation char -- it shows up in names like
+        `-'`, `iabs_-_suc'` and other primed variants. It is also the usual shell quote
+        delimiter, so such names need care:
+          arend -ss "iabs_-'"          outer double quotes: the `'` is literal
+          arend -ss 'iabs_-'\\'''       outer singles; '\\'' splices in an apostrophe
+          arend -ss iabs_-\\'           unquoted, backslash-escaped
+        Inside double quotes a bare `'` is not a delimiter, it stays in the string. So
+        `-ss "a' 'b"` is TWO patterns, `a'` and `'b`, with the apostrophe attached to the
+        wrong side of the space. A leading `'` warns: no Arend short name can start with
+        one (it is continuation-only).
 
       EXAMPLES
         arend arend-lib -ss Monoid                    substring
@@ -412,6 +439,13 @@ public final class ConsoleHelp {
   }
 
 
+  /**
+   * Prints {@code --help} as semantic groups instead of one alphabetised list. Each group
+   * shows the option's short/long name + arg-name placeholder, followed by its declared
+   * description (wrapped). {@code diagnosticOptions} fills the Diagnostics group, whose
+   * membership the caller owns. Anything not assigned to an explicit group is dropped to a
+   * trailing {@code Other} block so undeclared options can't silently disappear.
+   */
   static void printGrouped(Options cmdOptions, List<String> diagnosticOptions) {
     record Group(String title, List<String> longOpts) {}
     List<Group> groups = List.of(
@@ -422,9 +456,12 @@ public final class ConsoleHelp {
             + "synthetic library.", List.of(
             "libdir", "sources", "extensions", "extension-main")),
         new Group("Typecheck workflows (load the library and verify it; default workflow when "
-            + "no retrieval / REPL flag is given)", List.of(
-            "test", "print", "recompile", "double-check", "serialize")),
+            + "no retrieval / REPL / daemon flag is given)", List.of(
+            "test", "print", "recompile", "double-check", "no-serialize")),
         new Group("REPL", List.of("interactive")),
+        new Group("Daemon control (the daemon is a long-lived JVM that holds a warm "
+            + "ArendServer; subsequent CLI calls auto-route to it unless --no-daemon is given)", List.of(
+            "daemon", "daemon-status", "daemon-ping", "daemon-refresh", "daemon-stop", "no-daemon")),
         new Group("Information retrieval (queries against the loaded library)", List.of(
             "symbol-search", "proof-search", "find-usages", "class-hierarchy", "scope")),
         new Group("Diagnostics / verbosity", diagnosticOptions),
@@ -437,6 +474,7 @@ public final class ConsoleHelp {
     System.out.println("Workflows (mutually exclusive; first matching flag wins):");
     System.out.println("  arend [LIBRARY] [MODULE[:DEF]]                     Typecheck workflows");
     System.out.println("  arend [LIBRARY] -i [plain|jline]                   REPL");
+    System.out.println("  arend [LIBRARY] -d|--daemon-{stop,status,refresh}  Daemon control");
     System.out.println("  arend [LIBRARY] {-ss|-ps|-fu|-ch|-sc} ...          Information retrieval (no typecheck)");
     System.out.println();
     ConsoleHelpRenderer.printWrapped("LIBRARY is a path to a directory containing arend.yaml, the arend.yaml file "
@@ -459,6 +497,11 @@ public final class ConsoleHelp {
     if (!leftover.isEmpty()) {
       ConsoleHelpRenderer.printGroup(cmdOptions, "Other", leftover, placed, width, indent);
     }
-  }
 
+    ConsoleHelpRenderer.printWrapped("Daemon-served commands silently lock these to the daemon's bootstrap values "
+        + "(the per-request value is parsed but never applied; use --no-daemon to override): "
+        + "-L, -s, -e, -m, -c, -r, --no-serialize, --slow-warn.", 0, width);
+    ConsoleHelpRenderer.printWrapped("These are rejected outright inside a daemon-served command: -i, -d, "
+        + "--daemon-stop, --daemon-ping, --daemon-status, --daemon-refresh.", 0, width);
+  }
 }
