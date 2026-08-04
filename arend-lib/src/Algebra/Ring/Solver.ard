@@ -32,7 +32,7 @@
   | :zro
   | :ide
   | :negative (RingTerm C V)
-  | \infixl 6 :+ (t s : RingTerm C V)
+  | \infixl 6 :_+ (t s : RingTerm C V)
   | \infixl 7 :* (t s : RingTerm C V)
 
 \class BaseData {C : Semiring} {S : LinearOrder.Dec C} {R : Semiring} (alg : SemiringHom C R) \extends CMonoidData {
@@ -61,8 +61,8 @@
     | :zro => 0
     | :ide => 1
     | :negative t => pnegative (interpret t)
-    | :+ t s => interpret t + interpret s
-    | :* t s => interpret t * interpret s
+    | t :_+ s => interpret t + interpret s
+    | t :* s => interpret t * interpret s
 
   \lemma interpretRingNF_++ (l1 l2 : List (\Sigma (List V) C)) : interpretRingNF (l1 ++ l2) = interpretRingNF l1 + interpretRingNF l2 \elim l1
     | nil => inv zro-left
@@ -153,8 +153,8 @@
     | :zro => nil
     | :ide => (nil, 1) :: nil
     | :negative t => negate (normalize' t)
-    | :+ t s => normalize' t ++ normalize' s
-    | :* t s => remove0 (collapse (multiply' (normalize' t) (normalize' s)))
+    | t :_+ s => normalize' t ++ normalize' s
+    | t :* s => remove0 (collapse (multiply' (normalize' t) (normalize' s)))
 
   \lemma normalize-consistent' (t : RingTerm C V) : interpret t = interpretRingNF (normalize' t)
     | coef c => inv ide-right
@@ -162,8 +162,8 @@
     | :zro => idp
     | :ide => inv (ide-right *> alg.func-ide)
     | :negative t => rewrite normalize-consistent' (interpretNF_negate (normalize' t))
-    | :+ t s => repeat {2} (rewrite normalize-consistent') (inv (interpretRingNF_++ (normalize' t) (normalize' s)))
-    | :* t s => repeat {2} (rewrite normalize-consistent') (inv (interpretNF_multiply' (normalize' t) (normalize' s)) *> collapse-consistent _ *> remove0-consistent _)
+    | t :_+ s => repeat {2} (rewrite normalize-consistent') (inv (interpretRingNF_++ (normalize' t) (normalize' s)))
+    | t :* s => repeat {2} (rewrite normalize-consistent') (inv (interpretNF_multiply' (normalize' t) (normalize' s)) *> collapse-consistent _ *> remove0-consistent _)
 
   \func normalize (t : RingTerm C V) => remove0 (collapse (sort (normalize' t)))
 

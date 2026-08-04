@@ -13,6 +13,7 @@ import org.arend.ext.variable.Variable;
 import org.arend.extImpl.AbstractedExpressionImpl;
 import org.arend.naming.reference.*;
 import org.arend.naming.renamer.MapReferableRenamer;
+import org.arend.ext.core.context.BindingVariance;
 import org.arend.term.Fixity;
 import org.arend.ext.concrete.definition.FunctionKind;
 import org.arend.term.concrete.*;
@@ -469,7 +470,7 @@ public class PrettyPrintVisitor implements ConcreteExpressionVisitor<Precedence,
         myBuilder.append(referable == null ? "_" : referable.textRepresentation()).append(' ');
       }
 
-      myBuilder.append(parameter.isDotted() ? ":. " : ": ");
+      myBuilder.append(parameter.getVariance() == BindingVariance.COVARIANT ? ":+ " : ": ");
       printExpr(((Concrete.TypeParameter) parameter).getType(), new Precedence(Concrete.Expression.PREC));
       if (parameter.isExplicit()) {
         myBuilder.append(')');

@@ -698,10 +698,10 @@ public class ToAbstractVisitor extends BaseExpressionVisitor<Void, Concrete.Expr
       Referable referable = makeLocalReference(link, freeVars, genName || !link.isExplicit());
       if (referable == null && !isNamed && referableList.isEmpty()) {
         Concrete.Expression convertedType = convertExpr(link.getType());
-        args.add(new Concrete.TypeParameter(convertedType.getData(), link.isExplicit(), convertedType, link.isProperty(), link.isDotted()));
+        args.add(new Concrete.TypeParameter(convertedType.getData(), link.isExplicit(), convertedType, link.isProperty(), link.getVariance()));
       } else {
         referableList.add(referable);
-        args.add(new Concrete.TelescopeParameter(null, link.isExplicit(), new ArrayList<>(referableList), convertExpr(link.getType()), link.isProperty(), link.isDotted()));
+        args.add(new Concrete.TelescopeParameter(null, link.isExplicit(), new ArrayList<>(referableList), convertExpr(link.getType()), link.isProperty(), link.getVariance()));
         referableList.clear();
       }
     }

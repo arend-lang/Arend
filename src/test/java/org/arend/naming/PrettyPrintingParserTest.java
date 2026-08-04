@@ -6,6 +6,7 @@ import org.arend.core.definition.FunctionDefinition;
 import org.arend.core.elimtree.ElimBody;
 import org.arend.core.elimtree.ElimClause;
 import org.arend.core.expr.*;
+import org.arend.ext.core.context.BindingVariance;
 import org.arend.naming.reference.LocatedReferableImpl;
 import org.arend.term.group.AccessModifier;
 import org.arend.term.prettyprint.ToAbstractVisitor;
@@ -150,7 +151,7 @@ public class PrettyPrintingParserTest extends TypeCheckingTestCase {
 
   @Test
   public void prettyPrintingParserDottedPi() {
-    SingleDependentLink x = new TypedSingleDependentLink(true, "x", Universe(1), false, true);
+    SingleDependentLink x = new TypedSingleDependentLink(true, "x", Universe(1), false, BindingVariance.COVARIANT);
     Expression expr = Pi(x, Ref(x));
     Concrete.Expression result = ToAbstractVisitor.convert(expr, new PrettyPrinterConfig() {
       @NotNull
@@ -165,10 +166,10 @@ public class PrettyPrintingParserTest extends TypeCheckingTestCase {
       }
     });
     assertTrue(result instanceof Concrete.PiExpression);
-    assertTrue(((Concrete.PiExpression) result).getParameters().getFirst().isDotted());
+    assertEquals(BindingVariance.COVARIANT, ((Concrete.PiExpression) result).getParameters().getFirst().getVariance());
     StringBuilder builder = new StringBuilder();
     result.accept(new PrettyPrintVisitor(builder, 0), new Precedence(Concrete.Expression.PREC));
-    assertTrue(builder.toString().contains(":."));
+    assertTrue(builder.toString().contains(":+"));
   }
 
   @Test

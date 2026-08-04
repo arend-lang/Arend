@@ -12,6 +12,8 @@ import java.util.Map;
 public interface CoreParameter {
   boolean isExplicit();
 
+  @NotNull BindingVariance getVariance();
+
   /**
    * Returns the underlying binding of the parameter.
    */

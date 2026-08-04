@@ -19,7 +19,7 @@
         LPAREN              = '('
         RPAREN              = ')'
         COLON               = ':'
-        COLON_DOT           = ':.'
+        COLON_PLUS          = ':+'
         ARROW               = '->'
         FAT_ARROW           = '=>'
         DOT                 = '.'
@@ -786,9 +786,9 @@ private paramAttr ::= STRICT_KW | PROPERTY_KW
 
 private nameTeleUntyped_recover ::= !(ID | FAT_ARROW) & statement_recover
 
-private nameTeleExplicit ::= LPAREN paramAttr? identifierOrUnknown+ (COLON | COLON_DOT) expr RPAREN { pin = 1 }
+private nameTeleExplicit ::= LPAREN paramAttr? identifierOrUnknown+ (COLON | COLON_PLUS) expr RPAREN { pin = 1 }
 
-private nameTeleImplicit ::= LBRACE (paramAttr identifierOrUnknown+ (COLON | COLON_DOT) expr | identifierOrUnknown [identifierOrUnknown* (COLON | COLON_DOT) expr]) RBRACE { pin = 1 }
+private nameTeleImplicit ::= LBRACE (paramAttr identifierOrUnknown+ (COLON | COLON_PLUS) expr | identifierOrUnknown [identifierOrUnknown* (COLON | COLON_PLUS) expr]) RBRACE { pin = 1 }
 
 private nameTele_first ::= !(ID | UNDERSCORE | LPAREN | LBRACE)
 
@@ -822,7 +822,7 @@ private typeTele_recover ::= !(LPAREN | LBRACE | ID | ALIAS_KW | COLON | WITH_KW
 
 typedExpr ::= typedExprNamed | expr
 
-private typedExprNamed ::= identifierOrUnknown+ (COLON | COLON_DOT) expr { pin = 2 }
+private typedExprNamed ::= identifierOrUnknown+ (COLON | COLON_PLUS) expr { pin = 2 }
 
 identifierOrUnknown ::= defIdentifier | UNDERSCORE
 

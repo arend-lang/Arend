@@ -43,7 +43,7 @@
     | :zro => true
     | :ide => true
     | :negative t => isConst t
-    | t :+ t1 => isConst t and isConst t1
+    | t :_+ t1 => isConst t and isConst t1
     | t :* t1 => isConst t and isConst t1
 
   \func Cert (n : Nat) => Array Nat n
@@ -53,7 +53,7 @@
 
   \func cert-toTerm (l : Array (RingTerm C V)) (c : Cert l.len) : RingTerm C V \elim l, c
     | nil, nil => :zro
-    | t :: l, k :: c => coef (natCoef k) :* t :+ cert-toTerm l c
+    | t :: l, k :: c => coef (natCoef k) :* t :_+ cert-toTerm l c
 
   \func interpretCert (l : Array (RingTerm C V)) (c : Cert l.len)
     => interpretRingNF (normalize (cert-toTerm l c))

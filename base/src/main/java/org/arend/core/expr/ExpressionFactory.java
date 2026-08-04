@@ -3,6 +3,7 @@ package org.arend.core.expr;
 import org.arend.core.context.param.*;
 import org.arend.core.definition.ClassField;
 import org.arend.core.subst.Levels;
+import org.arend.ext.core.context.BindingVariance;
 import org.arend.prelude.Prelude;
 import org.arend.util.SingletonList;
 
@@ -30,16 +31,16 @@ public class ExpressionFactory {
     return new TypedDependentLink(true, var, type, EmptyDependentLink.getInstance());
   }
 
-  public static DependentLink parameter(boolean explicit, boolean isProperty, String name, Expression type, boolean isHidden, boolean isDotted) {
-    return isProperty ? new PropertyTypedDependentLink(explicit, name, type, isHidden, EmptyDependentLink.getInstance()) : new TypedDependentLink(explicit, name, type, isHidden, isDotted, EmptyDependentLink.getInstance());
+  public static DependentLink parameter(boolean explicit, boolean isProperty, String name, Expression type, boolean isHidden, BindingVariance variance) {
+    return isProperty ? new PropertyTypedDependentLink(explicit, name, type, isHidden, EmptyDependentLink.getInstance()) : new TypedDependentLink(explicit, name, type, isHidden, variance, EmptyDependentLink.getInstance());
   }
 
   public static DependentLink parameter(boolean explicit, boolean isProperty, String name, Expression type, boolean isHidden) {
-    return parameter(explicit, isProperty, name, type, isHidden, false);
+    return parameter(explicit, isProperty, name, type, isHidden, BindingVariance.INVARIANT);
   }
 
-  public static DependentLink parameter(boolean explicit, boolean isProperty, List<String> names, Expression type, boolean isDotted) {
-    DependentLink link = isProperty ? new PropertyTypedDependentLink(explicit, names.getLast(), type, EmptyDependentLink.getInstance()) : new TypedDependentLink(explicit, names.getLast(), type, false, isDotted, EmptyDependentLink.getInstance());
+  public static DependentLink parameter(boolean explicit, boolean isProperty, List<String> names, Expression type, BindingVariance variance) {
+    DependentLink link = isProperty ? new PropertyTypedDependentLink(explicit, names.getLast(), type, EmptyDependentLink.getInstance()) : new TypedDependentLink(explicit, names.getLast(), type, false, variance, EmptyDependentLink.getInstance());
     for (int i = names.size() - 2; i >= 0; i--) {
       link = new UntypedDependentLink(names.get(i), link);
     }
@@ -47,11 +48,11 @@ public class ExpressionFactory {
   }
 
   public static DependentLink parameter(boolean explicit, boolean isProperty, List<String> names, Expression type) {
-    return parameter(explicit, isProperty, names, type, false);
+    return parameter(explicit, isProperty, names, type, BindingVariance.INVARIANT);
   }
 
-  public static DependentLink parameter(boolean explicit, List<String> names, Expression type, boolean isDotted) {
-    DependentLink link = new TypedDependentLink(explicit, names.getLast(), type, false, isDotted, EmptyDependentLink.getInstance());
+  public static DependentLink parameter(boolean explicit, List<String> names, Expression type, BindingVariance variance) {
+    DependentLink link = new TypedDependentLink(explicit, names.getLast(), type, false, variance, EmptyDependentLink.getInstance());
     for (int i = names.size() - 2; i >= 0; i--) {
       link = new UntypedDependentLink(names.get(i), link);
     }
@@ -59,11 +60,11 @@ public class ExpressionFactory {
   }
 
   public static DependentLink parameter(boolean explicit, List<String> names, Expression type) {
-    return parameter(explicit, names, type, false);
+    return parameter(explicit, names, type, BindingVariance.INVARIANT);
   }
 
-  public static SingleDependentLink singleParams(boolean explicit, List<String> names, Expression type, boolean isDotted) {
-    SingleDependentLink link = new TypedSingleDependentLink(explicit, names.getLast(), type, false, isDotted);
+  public static SingleDependentLink singleParams(boolean explicit, List<String> names, Expression type, BindingVariance variance) {
+    SingleDependentLink link = new TypedSingleDependentLink(explicit, names.getLast(), type, false, variance);
     for (int i = names.size() - 2; i >= 0; i--) {
       link = new UntypedSingleDependentLink(names.get(i), link);
     }
@@ -71,7 +72,7 @@ public class ExpressionFactory {
   }
 
   public static SingleDependentLink singleParams(boolean explicit, List<String> names, Expression type) {
-    return singleParams(explicit, names, type, false);
+    return singleParams(explicit, names, type, BindingVariance.INVARIANT);
   }
 
   public static DataCallExpression Nat() {

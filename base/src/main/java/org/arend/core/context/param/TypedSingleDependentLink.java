@@ -3,13 +3,14 @@ package org.arend.core.context.param;
 import org.arend.core.expr.Expression;
 import org.arend.core.expr.ReferenceExpression;
 import org.arend.core.subst.SubstVisitor;
+import org.arend.ext.core.context.BindingVariance;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.List;
 
 public class TypedSingleDependentLink extends TypedDependentLink implements SingleDependentLink {
-  public TypedSingleDependentLink(boolean isExplicit, String name, Expression type, boolean isHidden, boolean isDotted) {
-    super(isExplicit, name, type, isHidden, isDotted, EmptyDependentLink.getInstance());
+  public TypedSingleDependentLink(boolean isExplicit, String name, Expression type, boolean isHidden, BindingVariance variance) {
+    super(isExplicit, name, type, isHidden, variance, EmptyDependentLink.getInstance());
   }
 
   public TypedSingleDependentLink(boolean isExplicit, String name, Expression type, boolean isHidden) {
@@ -31,7 +32,7 @@ public class TypedSingleDependentLink extends TypedDependentLink implements Sing
   @Override
   public SingleDependentLink subst(SubstVisitor substVisitor, int size, boolean updateSubst) {
     if (size > 0) {
-      TypedSingleDependentLink result = new TypedSingleDependentLink(isExplicit(), getName(), getType().accept(substVisitor, null), isHidden(), isDotted());
+      TypedSingleDependentLink result = new TypedSingleDependentLink(isExplicit(), getName(), getType().accept(substVisitor, null), isHidden(), getVariance());
       if (updateSubst) {
         substVisitor.getExprSubstitution().addSubst(this, new ReferenceExpression(result));
       } else {

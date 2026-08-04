@@ -22,6 +22,7 @@ import org.arend.core.sort.Level;
 import org.arend.core.sort.Sort;
 import org.arend.core.sort.SortExpression;
 import org.arend.core.subst.Levels;
+import org.arend.ext.core.context.BindingVariance;
 import org.arend.ext.core.level.ConstLevel;
 import org.arend.prelude.Prelude;
 
@@ -201,7 +202,7 @@ class ExpressionSerialization implements ExpressionVisitor<Void, ExpressionProto
     tBuilder.setIsHidden(typed.isHidden());
     tBuilder.setType(writeExpr(typed.getType()));
     tBuilder.setIsProperty(typed.isProperty());
-    tBuilder.setIsDotted(typed.isDotted());
+    tBuilder.setIsCovariant(typed.getVariance() == BindingVariance.COVARIANT);
     for (; link != typed; link = link.getNext()) {
       registerBinding(link);
     }
@@ -227,7 +228,7 @@ class ExpressionSerialization implements ExpressionVisitor<Void, ExpressionProto
       builder.setType(writeExpr(link.getType()));
     }
     builder.setIsHidden(link.isHidden());
-    builder.setIsDotted(link.isDotted());
+    builder.setIsCovariant(link.getVariance() == BindingVariance.COVARIANT);
     registerBinding(link);
     return builder.build();
   }

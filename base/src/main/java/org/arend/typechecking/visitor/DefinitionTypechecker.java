@@ -21,6 +21,7 @@ import org.arend.core.sort.Sort;
 import org.arend.core.sort.SortExpression;
 import org.arend.core.subst.*;
 import org.arend.ext.concrete.expr.ConcreteUniverseExpression;
+import org.arend.ext.core.context.BindingVariance;
 import org.arend.ext.core.level.ConstLevel;
 import org.arend.ext.core.level.LevelSubstitution;
 import org.arend.error.CountingErrorReporter;
@@ -423,7 +424,7 @@ public class DefinitionTypechecker extends BaseDefinitionTypechecker implements 
     Expression resultType = fieldType == null ? null : isClassCoclause ? fieldType : fieldType.getCodomain();
     ExprSubstitution substitution = fieldType == null ? null : new ExprSubstitution();
     int skip = def instanceof Concrete.CoClauseFunctionDefinition ? ((Concrete.CoClauseFunctionDefinition) def).getNumberOfExternalParameters() : 0;
-    boolean allowDotted = def instanceof Concrete.DataDefinition || def instanceof Concrete.Constructor || def instanceof Concrete.BaseFunctionDefinition;
+    boolean allowCovariant = def instanceof Concrete.DataDefinition || def instanceof Concrete.Constructor || def instanceof Concrete.BaseFunctionDefinition;
 
     boolean first = true;
     for (Concrete.Parameter parameter : def.getParameters()) {
@@ -431,15 +432,15 @@ public class DefinitionTypechecker extends BaseDefinitionTypechecker implements 
         resultType = resultType.normalize(NormalizationMode.WHNF).getUnderlyingExpression();
       }
 
-      boolean isDotted = typechecker.checkDotted(parameter, allowDotted);
+      BindingVariance variance = typechecker.checkVariance(parameter, allowCovariant);
       List<Expression> paramResults = new ArrayList<>();
       if (parameter.getType() != null) {
-        try (var ignored = isDotted ? typechecker.clearCategoricalContext() : null) {
+        try (var ignored = variance == BindingVariance.INVARIANT ? typechecker.clearCategoricalContext() : null) {
           if (def instanceof Concrete.Constructor) {
             TypeExpression paramType = typechecker.checkType(parameter.getType(), UniverseExpression.OMEGA);
             if (paramType != null) {
               paramResults.add(paramType.expression());
-              sorts.add(isDotted ? paramType.sort().withoutCat() : paramType.sort());
+              sorts.add(variance == BindingVariance.INVARIANT ? paramType.sort().withoutCat() : paramType.sort());
             }
           } else {
             TypecheckingResult paramType = typechecker.finalCheckExpr(parameter.getType(), def instanceof Concrete.DataDefinition || def instanceof Concrete.FunctionDefinition ? UniverseExpression.INF_OMEGA : UniverseExpression.OMEGA);
@@ -504,17 +505,17 @@ public class DefinitionTypechecker extends BaseDefinitionTypechecker implements 
         if (paramResults.isEmpty()) {
           param = null;
         } else if (referableList.size() == 1 && referableList.getFirst() instanceof HiddenLocalReferable) {
-          param = parameter(parameter.isExplicit(), isProperty, names.getFirst(), paramResults.getFirst(), true, isDotted);
+          param = parameter(parameter.isExplicit(), isProperty, names.getFirst(), paramResults.getFirst(), true, variance);
         } else if (paramResults.size() == names.size()) {
-          param = parameter(parameter.isExplicit(), isProperty, names.getFirst(), paramResults.getFirst(), false, isDotted);
+          param = parameter(parameter.isExplicit(), isProperty, names.getFirst(), paramResults.getFirst(), false, variance);
           DependentLink current = param;
           for (int i = 1; i < names.size(); i++) {
-            DependentLink newParam = parameter(parameter.isExplicit(), isProperty, names.get(i), paramResults.get(i), false, isDotted);
+            DependentLink newParam = parameter(parameter.isExplicit(), isProperty, names.get(i), paramResults.get(i), false, variance);
             current.setNext(newParam);
             current = newParam;
           }
         } else {
-          param = parameter(parameter.isExplicit(), isProperty, names, paramResults.getFirst(), isDotted);
+          param = parameter(parameter.isExplicit(), isProperty, names, paramResults.getFirst(), variance);
         }
         numberOfParameters = names.size();
 
@@ -527,7 +528,7 @@ public class DefinitionTypechecker extends BaseDefinitionTypechecker implements 
       } else {
         numberOfParameters = 1;
         Referable ref = parameter.getReferableList().getFirst();
-        param = paramResults.isEmpty() ? null : parameter(parameter.isExplicit(), isProperty, Collections.singletonList(ref == null ? null : ref.getRefName()), paramResults.getFirst(), isDotted);
+        param = paramResults.isEmpty() ? null : parameter(parameter.isExplicit(), isProperty, Collections.singletonList(ref == null ? null : ref.getRefName()), paramResults.getFirst(), variance);
         if (param != null) {
           typechecker.addBinding(ref, param);
         }

@@ -16,6 +16,7 @@ import org.arend.core.sort.Sort;
 import org.arend.core.sort.SortExpression;
 import org.arend.core.subst.ExprSubstitution;
 import org.arend.core.subst.Levels;
+import org.arend.ext.core.context.BindingVariance;
 import org.arend.ext.core.level.ConstLevel;
 import org.arend.ext.core.level.LevelSubstitution;
 import org.arend.ext.concrete.expr.ConcreteArgument;
@@ -233,7 +234,7 @@ public class StdImplicitArgsInference implements ImplicitArgsInference {
     }
 
     TypecheckingResult argResult;
-    if (param.hasNext() && param.isDotted()) {
+    if (param.hasNext() && param.getVariance() == BindingVariance.INVARIANT) {
       try (var ignored = myVisitor.clearCategoricalContext()) {
         argResult = myVisitor.checkArgument(arg, param.getType(), result, null);
       }

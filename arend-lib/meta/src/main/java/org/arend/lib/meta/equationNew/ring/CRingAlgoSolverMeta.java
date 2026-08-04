@@ -34,7 +34,7 @@ public class CRingAlgoSolverMeta extends BaseAlgebraEquationMeta {
 
   @Dependency(name = "RingSolverModel.Term.:zro")           ArendRef zroTerm;
   @Dependency(name = "RingSolverModel.Term.:ide")           ArendRef ideTerm;
-  @Dependency(name = "RingSolverModel.Term.:+")             ArendRef addTerm;
+  @Dependency(name = "RingSolverModel.Term.:_+")            ArendRef addTerm;
   @Dependency(name = "RingSolverModel.Term.:negative")      ArendRef negativeTerm;
   @Dependency(name = "RingSolverModel.Term.:*")             ArendRef mulTerm;
   @Dependency(name = "RingSolverModel.Term.coef")           ArendRef coefTerm;

@@ -1,5 +1,6 @@
 package org.arend.term.abs;
 
+import org.arend.ext.core.context.BindingVariance;
 import org.arend.ext.prettyprinting.doc.Doc;
 import org.arend.ext.reference.Precedence;
 import org.arend.naming.reference.GlobalReferable;
@@ -31,8 +32,8 @@ public final class Abstract {
     boolean isExplicit();
     boolean isStrict();
     boolean isProperty();
-    default boolean isDotted() {
-      return false;
+    default @NotNull BindingVariance getVariance() {
+      return BindingVariance.INVARIANT;
     }
     @NotNull List<? extends AbstractReferable> getReferableList();
     @Nullable Expression getType();

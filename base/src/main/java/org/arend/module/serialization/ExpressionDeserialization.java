@@ -20,6 +20,7 @@ import org.arend.core.sort.Sort;
 import org.arend.core.sort.SortExpression;
 import org.arend.core.subst.Levels;
 import org.arend.core.subst.ListLevels;
+import org.arend.ext.core.context.BindingVariance;
 import org.arend.ext.core.level.ConstLevel;
 import org.arend.ext.serialization.DeserializationException;
 import org.arend.prelude.Prelude;
@@ -180,9 +181,10 @@ class ExpressionDeserialization {
         unfixedNames.add(name.isEmpty() ? null : name);
       }
       Expression type = readExpr(proto.getType());
+      BindingVariance variance = proto.getIsCovariant() ? BindingVariance.COVARIANT : BindingVariance.INVARIANT;
       DependentLink tele = proto.getIsHidden() && unfixedNames.size() == 1
-        ? new TypedDependentLink(!proto.getIsNotExplicit(), unfixedNames.getFirst(), type, true, proto.getIsDotted(), EmptyDependentLink.getInstance())
-        : ExpressionFactory.parameter(!proto.getIsNotExplicit(), proto.getIsProperty(), unfixedNames, type, proto.getIsDotted());
+        ? new TypedDependentLink(!proto.getIsNotExplicit(), unfixedNames.getFirst(), type, true, variance, EmptyDependentLink.getInstance())
+        : ExpressionFactory.parameter(!proto.getIsNotExplicit(), proto.getIsProperty(), unfixedNames, type, variance);
       for (DependentLink link = tele; link.hasNext(); link = link.getNext()) {
         registerBinding(link);
       }
@@ -211,9 +213,10 @@ class ExpressionDeserialization {
       unfixedNames.add(name.isEmpty() ? null : name);
     }
     Expression type = readExpr(proto.getType());
+    BindingVariance variance = proto.getIsCovariant() ? BindingVariance.COVARIANT : BindingVariance.INVARIANT;
     SingleDependentLink tele = proto.getIsHidden() && unfixedNames.size() == 1
-      ? new TypedSingleDependentLink(!proto.getIsNotExplicit(), unfixedNames.getFirst(), type, true, proto.getIsDotted())
-      : ExpressionFactory.singleParams(!proto.getIsNotExplicit(), unfixedNames, type, proto.getIsDotted());
+      ? new TypedSingleDependentLink(!proto.getIsNotExplicit(), unfixedNames.getFirst(), type, true, variance)
+      : ExpressionFactory.singleParams(!proto.getIsNotExplicit(), unfixedNames, type, variance);
     for (DependentLink link = tele; link.hasNext(); link = link.getNext()) {
       registerBinding(link);
     }
@@ -230,7 +233,8 @@ class ExpressionDeserialization {
     }
     DependentLink link;
     if (proto.hasType()) {
-      link = new TypedDependentLink(!proto.getIsNotExplicit(), proto.getName(), readExpr(proto.getType()), proto.getIsHidden(), proto.getIsDotted(), EmptyDependentLink.getInstance());
+      BindingVariance variance = proto.getIsCovariant() ? BindingVariance.COVARIANT : BindingVariance.INVARIANT;
+      link = new TypedDependentLink(!proto.getIsNotExplicit(), proto.getName(), readExpr(proto.getType()), proto.getIsHidden(), variance, EmptyDependentLink.getInstance());
     } else {
       link = new UntypedDependentLink(proto.getName());
     }

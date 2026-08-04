@@ -4,6 +4,7 @@ import com.intellij.lang.ASTNode
 import com.intellij.psi.PsiElement
 import com.intellij.psi.util.elementType
 import org.arend.ext.concrete.definition.ClassFieldKind
+import org.arend.ext.core.context.BindingVariance
 import org.arend.psi.*
 import org.arend.psi.ArendElementTypes.*
 import org.arend.term.abs.Abstract
@@ -29,7 +30,8 @@ class ArendNameTele(node: ASTNode): ArendLamParam(node), Abstract.Parameter {
 
     override fun isProperty() = propertyKw != null
 
-    override fun isDotted() = hasChildOfType(DOT_COLON)
+    override fun getVariance(): BindingVariance =
+        if (hasChildOfType(COLON_PLUS)) BindingVariance.COVARIANT else BindingVariance.INVARIANT
 }
 
 class ArendNameTeleUntyped(node: ASTNode): ArendSourceNodeImpl(node), Abstract.Parameter {
@@ -75,7 +77,8 @@ class ArendTypeTele(node: ASTNode): ArendSourceNodeImpl(node), Abstract.Paramete
 
     override fun isProperty() = propertyKw != null
 
-    override fun isDotted() = typedExpr?.isDotted ?: false
+    override fun getVariance(): BindingVariance =
+        typedExpr?.variance ?: BindingVariance.INVARIANT
 }
 
 class ArendFieldTele(node: ASTNode): ArendSourceNodeImpl(node), FieldParameter {

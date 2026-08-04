@@ -32,7 +32,7 @@
       | :zro
       | :ide
       | :negative (Term C n)
-      | \infixl 6 :+ (t s : Term C n)
+      | \infixl 6 :_+ (t s : Term C n)
       | \infixl 7 :* (t s : Term C n)
 
     \func normalize {n : Nat} {C : Ring.Dec} (t : Term C n) : NF C n \elim t
@@ -41,7 +41,7 @@
       | :zro => nil
       | :ide => (nil, 1) :: nil
       | :negative t => map (\lam s => (s.1, C.negative s.2)) (normalize t)
-      | t :+ s => normalize t ++ normalize s
+      | t :_+ s => normalize t ++ normalize s
       | t :* s => remove0 (collapse (multiply (normalize t) (normalize s)))
 
     \func interpret (env : Array R) (t : Term Int env.len) : R \elim t
@@ -50,7 +50,7 @@
       | :zro => 0
       | :ide => 1
       | :negative t => negative (interpret env t)
-      | :+ t s => interpret env t + interpret env s
+      | t :_+ s => interpret env t + interpret env s
       | :* t s => interpret env t * interpret env s
 
     \func intCoef (x : Int) : R
@@ -103,17 +103,17 @@
       | :zro => idp
       | :ide => idp
       | :negative t => interpretNF_negative *> pmap negative normalize-consistent
-      | :+ t s => (RingData env).interpretNF_++ *> pmap2 (+) normalize-consistent normalize-consistent
-      | :* t s => (RingData env).remove0-consistent *> (RingData env).collapse-consistent *> (RingData env).interpretNF_multiply *> pmap2 (*) normalize-consistent normalize-consistent
+      | t :_+ s => (RingData env).interpretNF_++ *> pmap2 (+) normalize-consistent normalize-consistent
+      | t :* s => (RingData env).remove0-consistent *> (RingData env).collapse-consistent *> (RingData env).interpretNF_multiply *> pmap2 (*) normalize-consistent normalize-consistent
 
-    \lemma terms-equality (env : Array R) (t s : Term Int env.len) (p : ringInterpretNF env (normalize (t :+ :negative s)) = 0) : interpret env t = interpret env s
+    \lemma terms-equality (env : Array R) (t s : Term Int env.len) (p : ringInterpretNF env (normalize (t :_+ :negative s)) = 0) : interpret env t = interpret env s
       => R.fromZero $ inv ((RingData env).interpretNF-correct *> (RingData env).interpretNF_++ *> pmap2 (+) normalize-consistent (interpretNF_negative *> pmap negative normalize-consistent)) *> inv ringInterpretNF-correct *> p
 
-    \lemma terms-equality-conv (env : Array R) (t s : Term Int env.len) (p : interpret env t = interpret env s) : ringInterpretNF env (normalize (t :+ :negative s)) = 0
+    \lemma terms-equality-conv (env : Array R) (t s : Term Int env.len) (p : interpret env t = interpret env s) : ringInterpretNF env (normalize (t :_+ :negative s)) = 0
       => ringInterpretNF-correct *> (RingData env).interpretNF-correct *> (RingData env).interpretNF_++ *> pmap (_ +) interpretNF_negative *> R.toZero (normalize-consistent *> p *> inv normalize-consistent)
 
     \lemma apply-axioms (env : Array R) (l : Array (\Sigma (NF Int env.len) (t s : Term Int env.len) (p : interpret env t = interpret env s))) (add : NF Int env.len)
-      : ringInterpretNF env (Big (++) add (arrayMap (\lam s => multiply s.1 (normalize (s.2 :+ :negative s.3))) l)) = ringInterpretNF' add
+      : ringInterpretNF env (Big (++) add (arrayMap (\lam s => multiply s.1 (normalize (s.2 :_+ :negative s.3))) l)) = ringInterpretNF' add
       => \have d => RingData env
          \in ringInterpretNF-correct *> d.interpretNF-correct *> d.interpretNF_Big_++ *> pmap (+ _) (R.BigSum_zro \lam j => d.interpretNF_multiply *> pmap (_ *) (d.interpretNF_++ *> pmap (_ +) interpretNF_negative *> R.toZero (normalize-consistent *> later (l j).4 *> inv normalize-consistent)) *> R.zro_*-right) *> zro-left *> inv ringInterpretNF-correct
   }

@@ -26,9 +26,13 @@ public class FreeVariablesCollector extends VoidExpressionVisitor<Void> {
     return collector.myResult;
   }
 
+  public void addBinding(Binding binding) {
+    myResult.add(binding);
+  }
+
   @Override
   public Void visitReference(ReferenceExpression expr, Void params) {
-    myResult.add(expr.getBinding());
+    addBinding(expr.getBinding());
     return null;
   }
 

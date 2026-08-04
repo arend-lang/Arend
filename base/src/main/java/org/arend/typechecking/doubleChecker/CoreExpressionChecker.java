@@ -16,6 +16,7 @@ import org.arend.core.sort.Sort;
 import org.arend.core.sort.SortExpression;
 import org.arend.core.subst.ExprSubstitution;
 import org.arend.core.subst.Levels;
+import org.arend.ext.core.context.BindingVariance;
 import org.arend.ext.core.level.ConstLevel;
 import org.arend.ext.core.level.LevelSubstitution;
 import org.arend.ext.core.ops.CMP;
@@ -72,7 +73,7 @@ public class CoreExpressionChecker implements ExpressionVisitor<Expression, Expr
 
   private void checkList(List<? extends Expression> args, DependentLink parameters, ExprSubstitution substitution, LevelSubstitution levelSubst) {
     for (Expression arg : args) {
-      if (parameters.isDotted()) {
+      if (parameters.getVariance() == BindingVariance.INVARIANT) {
         try (var ignored = clearCategoricalContext()) {
           arg.accept(this, parameters.getType().subst(substitution, levelSubst));
         }
@@ -255,7 +256,7 @@ public class CoreExpressionChecker implements ExpressionVisitor<Expression, Expr
       throw new CoreException(CoreErrorWrapper.make(new TypeMismatchError(DocFactory.text("a pi type with " + (expr.isExplicit() ? "explicit" : "implicit") + " parameter"), piType, mySourceNode), expr.getFunction()));
     }
 
-    if (piType.getParameters().isDotted()) {
+    if (piType.getParameters().getVariance() == BindingVariance.INVARIANT) {
       try (var ignored = clearCategoricalContext()) {
         expr.getArgument().accept(this, piType.getParameters().getType());
       }
@@ -308,7 +309,7 @@ public class CoreExpressionChecker implements ExpressionVisitor<Expression, Expr
   private Utils.CompleteSetContextSaver<Binding> clearCategoricalContext() {
     Set<Binding> context = myContext != null ? myContext : new HashSet<>();
     Utils.CompleteSetContextSaver<Binding> saver = new Utils.CompleteSetContextSaver<>(context);
-    context.removeIf(binding -> !(binding instanceof DependentLink dl && dl.isDotted()));
+    context.removeIf(binding -> binding instanceof DependentLink dl && dl.getVariance() != BindingVariance.INVARIANT);
     return saver;
   }
 
@@ -326,7 +327,7 @@ public class CoreExpressionChecker implements ExpressionVisitor<Expression, Expr
       addBinding(link, expr);
       if (link instanceof TypedDependentLink) {
         Expression paramType;
-        if (link.isDotted()) {
+        if (link.getVariance() == BindingVariance.INVARIANT) {
           try (var ignored = clearCategoricalContext()) {
             paramType = link.getType().accept(this, type);
           }
@@ -360,7 +361,7 @@ public class CoreExpressionChecker implements ExpressionVisitor<Expression, Expr
     for (; link.hasNext(); link = link.getNext()) {
       addBinding(link, expr);
       if (link instanceof TypedDependentLink) {
-        if (link.isDotted()) {
+        if (link.getVariance() == BindingVariance.INVARIANT) {
           try (var ignored = clearCategoricalContext()) {
             checkInf(link.getType(), type, allowInf);
           }
@@ -377,7 +378,7 @@ public class CoreExpressionChecker implements ExpressionVisitor<Expression, Expr
       addBinding(link, expr);
       if (link instanceof TypedDependentLink) {
         SortExpression sort;
-        if (link.isDotted()) {
+        if (link.getVariance() == BindingVariance.INVARIANT) {
           try (var ignored = clearCategoricalContext()) {
             sort = link.getType().accept(this, UniverseExpression.OMEGA).toSortExpression();
           }

@@ -26,7 +26,6 @@ public interface DependentLink extends Binding, CoreParameter {
   DependentLink subst(SubstVisitor substVisitor, int size, boolean updateSubst);
   TypedDependentLink getNextTyped(List<String> names);
   boolean isProperty();
-  boolean isDotted();
 
   @Override
   default Binding subst(SubstVisitor visitor) {

@@ -21,6 +21,7 @@ import org.arend.ext.typechecking.GoalSolver;
 import org.arend.ext.util.Pair;
 import org.arend.naming.reference.*;
 import org.arend.ext.concrete.definition.ClassFieldKind;
+import org.arend.ext.core.context.BindingVariance;
 import org.arend.term.Fixity;
 import org.arend.term.prettyprint.PrettyPrintVisitor;
 import org.jetbrains.annotations.NotNull;
@@ -93,8 +94,8 @@ public final class Concrete {
       return false;
     }
 
-    public boolean isDotted() {
-      return false;
+    public BindingVariance getVariance() {
+      return BindingVariance.INVARIANT;
     }
 
     public abstract @NotNull List<? extends Referable> getReferableList();
@@ -162,22 +163,22 @@ public final class Concrete {
 
   public static class TypeParameter extends Parameter {
     private final boolean myProperty;
-    private final boolean myDotted;
+    private final BindingVariance myVariance;
     public Expression type;
 
-    public TypeParameter(Object data, boolean explicit, Expression type, boolean isProperty, boolean isDotted) {
+    public TypeParameter(Object data, boolean explicit, Expression type, boolean isProperty, BindingVariance variance) {
       super(data, explicit);
       this.type = type;
       myProperty = isProperty;
-      myDotted = isDotted;
+      myVariance = variance;
     }
 
     public TypeParameter(Object data, boolean explicit, Expression type, boolean isProperty) {
-      this(data, explicit, type, isProperty, false);
+      this(data, explicit, type, isProperty, BindingVariance.INVARIANT);
     }
 
     public TypeParameter(boolean explicit, Expression type, boolean isProperty) {
-      this(type.getData(), explicit, type, isProperty, false);
+      this(type.getData(), explicit, type, isProperty, BindingVariance.INVARIANT);
     }
 
     @Override
@@ -186,8 +187,8 @@ public final class Concrete {
     }
 
     @Override
-    public boolean isDotted() {
-      return myDotted;
+    public BindingVariance getVariance() {
+      return myVariance;
     }
 
     @Override
@@ -209,20 +210,20 @@ public final class Concrete {
 
     @Override
     public TypeParameter copy(Object data) {
-      return new TypeParameter(data, isExplicit(), type, isProperty(), isDotted());
+      return new TypeParameter(data, isExplicit(), type, isProperty(), getVariance());
     }
   }
 
   public static class TelescopeParameter extends TypeParameter {
     private List<? extends Referable> myReferableList;
 
-    public TelescopeParameter(Object data, boolean explicit, List<? extends Referable> referableList, Expression type, boolean isProperty, boolean isDotted) {
-      super(data, explicit, type, isProperty, isDotted);
+    public TelescopeParameter(Object data, boolean explicit, List<? extends Referable> referableList, Expression type, boolean isProperty, BindingVariance variance) {
+      super(data, explicit, type, isProperty, variance);
       myReferableList = referableList;
     }
 
     public TelescopeParameter(Object data, boolean explicit, List<? extends Referable> referableList, Expression type, boolean isProperty) {
-      this(data, explicit, referableList, type, isProperty, false);
+      this(data, explicit, referableList, type, isProperty, BindingVariance.INVARIANT);
     }
 
     @Override
@@ -242,7 +243,7 @@ public final class Concrete {
 
     @Override
     public TelescopeParameter copy(Object data) {
-      return new TelescopeParameter(data, isExplicit(), myReferableList, type, isProperty(), isDotted());
+      return new TelescopeParameter(data, isExplicit(), myReferableList, type, isProperty(), getVariance());
     }
   }
 
@@ -262,8 +263,8 @@ public final class Concrete {
   public static class DefinitionTelescopeParameter extends TelescopeParameter {
     private final boolean myStrict;
 
-    public DefinitionTelescopeParameter(Object data, boolean explicit, boolean strict, List<? extends Referable> referableList, Expression type, boolean isProperty, boolean isDotted) {
-      super(data, explicit, referableList, type, isProperty, isDotted);
+    public DefinitionTelescopeParameter(Object data, boolean explicit, boolean strict, List<? extends Referable> referableList, Expression type, boolean isProperty, BindingVariance variance) {
+      super(data, explicit, referableList, type, isProperty, variance);
       myStrict = strict;
     }
 
@@ -274,7 +275,7 @@ public final class Concrete {
 
     @Override
     public TelescopeParameter copy(Object data) {
-      return new DefinitionTelescopeParameter(data, isExplicit(), isStrict(), getReferableList(), type, isProperty(), isDotted());
+      return new DefinitionTelescopeParameter(data, isExplicit(), isStrict(), getReferableList(), type, isProperty(), getVariance());
     }
   }
 

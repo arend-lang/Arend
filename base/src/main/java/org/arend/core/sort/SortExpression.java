@@ -34,10 +34,7 @@ public sealed interface SortExpression extends CoreSortExpression permits SortEx
     return subst(LevelSubstitution.EMPTY);
   }
 
-  default @NotNull SortExpression withoutCat() {
-    Sort resolved = withInfLevel();
-    return resolved.getHLevel().isCat() ? new Const(new Sort(resolved.getPLevel(), new ConstLevel(resolved.getHLevel().value(), false))) : this;
-  }
+  @NotNull SortExpression withoutCat();
 
   @Override
   @Nullable BigInteger getSortHLevel();
@@ -72,6 +69,7 @@ public sealed interface SortExpression extends CoreSortExpression permits SortEx
     return equations.addEquation(sortExpr1, sortExpr2, cmp, sourceNode);
   }
 
+
   record Const(@NotNull Sort sort) implements SortExpression, ConstSortExpression {
     @Override
     public @NotNull Sort getSort() {
@@ -105,7 +103,7 @@ public sealed interface SortExpression extends CoreSortExpression permits SortEx
 
     @Override
     public @NotNull SortExpression withoutCat() {
-      return sort.getHLevel().isCat() ? new Const(new Sort(sort.getPLevel(), new ConstLevel(sort.getHLevel().value(), false))) : this;
+      return new Const(new Sort(sort.getPLevel(), new ConstLevel(sort.getHLevel().value(), false)));
     }
 
     @Override
@@ -187,6 +185,11 @@ public sealed interface SortExpression extends CoreSortExpression permits SortEx
     }
 
     @Override
+    public @NotNull SortExpression withoutCat() {
+      return new Var(index, fields, new ConstLevel(hLevel.value(), false));
+    }
+
+    @Override
     public boolean isInfinite() {
       return true;
     }
@@ -206,6 +209,11 @@ public sealed interface SortExpression extends CoreSortExpression permits SortEx
     @Override
     public @NotNull SortExpression replaceRecursiveData(@NotNull Expression argument) {
       return argument instanceof UniverseExpression universe ? universe.getSortExpression() : new Const(Sort.INFINITY);
+    }
+
+    @Override
+    public @NotNull SortExpression withoutCat() {
+      return this;
     }
 
     @Override
@@ -284,6 +292,12 @@ public sealed interface SortExpression extends CoreSortExpression permits SortEx
     public @NotNull Sort withInfLevel() {
       checkIfSolved();
       return sort == null || sort == this ? new Sort(Level.INFINITY, variable.getHLevel()) : sort.withInfLevel();
+    }
+
+    @Override
+    public @NotNull SortExpression withoutCat() {
+      checkIfSolved();
+      return sort == null || sort == this ? new Const(new Sort(Level.INFINITY, new ConstLevel(variable.getHLevel().value(), false))) : sort.withoutCat();
     }
 
     @Override

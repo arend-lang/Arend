@@ -1,5 +1,6 @@
 package org.arend.naming;
 
+import org.arend.ext.core.context.BindingVariance;
 import org.arend.naming.reference.GlobalReferable;
 import org.arend.naming.reference.LocalReferable;
 import org.arend.naming.reference.Referable;
@@ -93,25 +94,25 @@ public class ParserTest extends NameResolverTestCase {
 
   @Test
   public void parserDottedPi() {
-    Concrete.Expression expr = resolveNamesExpr("\\Pi (x :. \\Type0) (y : \\Type0) -> \\Type0");
+    Concrete.Expression expr = resolveNamesExpr("\\Pi (x :+ \\Type0) (y : \\Type0) -> \\Type0");
     Concrete.PiExpression pi = (Concrete.PiExpression) expr;
     assertEquals(2, pi.getParameters().size());
-    assertTrue(pi.getParameters().get(0).isDotted());
-    assertFalse(pi.getParameters().get(1).isDotted());
+    assertEquals(BindingVariance.COVARIANT, pi.getParameters().get(0).getVariance());
+    assertEquals(BindingVariance.INVARIANT, pi.getParameters().get(1).getVariance());
   }
 
   @Test
   public void parserDottedSigmaParses() {
-    Concrete.Expression expr = parseExpr("\\Sigma (x :. \\Type0)");
+    Concrete.Expression expr = parseExpr("\\Sigma (x :+ \\Type0)");
     Concrete.SigmaExpression sigma = (Concrete.SigmaExpression) expr;
-    assertTrue(sigma.getParameters().getFirst().isDotted());
+    assertEquals(BindingVariance.COVARIANT, sigma.getParameters().getFirst().getVariance());
   }
 
   @Test
   public void parserDottedLetParses() {
-    Concrete.Expression expr = parseExpr("\\let | f (x :. \\Type0) => x \\in f");
+    Concrete.Expression expr = parseExpr("\\let f (x :+ \\Type0) => x \\in f");
     Concrete.LetExpression let = (Concrete.LetExpression) expr;
-    assertTrue(let.getClauses().getFirst().getParameters().getFirst().isDotted());
+    assertEquals(BindingVariance.COVARIANT, let.getClauses().getFirst().getParameters().getFirst().getVariance());
   }
 
   @Test

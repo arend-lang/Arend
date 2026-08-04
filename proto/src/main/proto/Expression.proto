@@ -218,7 +218,7 @@ message SingleParameter {
     // instead of creating a new one. Used when pattern bindings share identity
     // with function/case parameters.
     int32 existing_ref = 5;
-    bool is_dotted = 6;
+    bool is_covariant = 6;
 }
 
 message Telescope {
@@ -230,7 +230,7 @@ message Telescope {
     // When > 0, this telescope reuses an already-registered binding (at index existing_ref - 1)
     // instead of defining a new one. Used to preserve object identity across Pi/Lambda param sharing.
     int32 existing_ref = 6;
-    bool is_dotted = 7;
+    bool is_covariant = 7;
 }
 
 message TypedBinding {

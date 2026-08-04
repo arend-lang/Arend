@@ -6,6 +6,7 @@ import org.antlr.v4.runtime.tree.TerminalNode;
 import org.arend.ext.concrete.definition.ClassFieldKind;
 import org.arend.ext.concrete.definition.FunctionKind;
 import org.arend.ext.concrete.expr.ConcreteUniverseExpression;
+import org.arend.ext.core.context.BindingVariance;
 import org.arend.ext.error.ErrorReporter;
 import org.arend.ext.error.GeneralError;
 import org.arend.ext.reference.Precedence;
@@ -996,12 +997,12 @@ public class BuildVisitor extends ArendBaseVisitor<Object> {
       if (exprs.size() == 2) {
         getVarList(exprs.getFirst(), vars);
         ParamAttrContext paramAttr = typedExpr.paramAttr();
-        boolean isDotted = typedExpr.COLON_DOT() != null;
+        BindingVariance variance = typedExpr.COLON_PLUS() != null ? BindingVariance.COVARIANT : BindingVariance.INVARIANT;
         if (isDefinition && paramAttr.STRICT() != null) {
-          parameters.add(new Concrete.DefinitionTelescopeParameter(tokenPosition(tele.start), explicit, true, vars, visitExpr(exprs.get(1)), paramAttr.PROPERTY() != null, isDotted));
+          parameters.add(new Concrete.DefinitionTelescopeParameter(tokenPosition(tele.start), explicit, true, vars, visitExpr(exprs.get(1)), paramAttr.PROPERTY() != null, variance));
         } else {
           checkStrict(typedExpr);
-          parameters.add(new Concrete.TelescopeParameter(tokenPosition(tele.start), explicit, vars, visitExpr(exprs.get(1)), paramAttr.PROPERTY() != null, isDotted));
+          parameters.add(new Concrete.TelescopeParameter(tokenPosition(tele.start), explicit, vars, visitExpr(exprs.get(1)), paramAttr.PROPERTY() != null, variance));
         }
       } else {
         getVarList(exprs.getFirst(), vars);
@@ -1060,8 +1061,8 @@ public class BuildVisitor extends ArendBaseVisitor<Object> {
         for (IdOrUnknownContext id : ids) {
           vars.add(visitIdOrUnknown(id, allowNullRefs, tele));
         }
-        boolean isDotted = explicit ? ((NameExplicitContext) tele).COLON_DOT() != null : ((NameImplicitContext) tele).COLON_DOT() != null;
-        parameters.add(new Concrete.TelescopeParameter(tokenPosition(tele.start), explicit, vars, visitExpr(type), (tele instanceof NameExplicitContext ? ((NameExplicitContext) tele).paramAttr() : ((NameImplicitContext) tele).paramAttr()).PROPERTY() != null, isDotted));
+        boolean isCovariant = explicit ? ((NameExplicitContext) tele).COLON_PLUS() != null : ((NameImplicitContext) tele).COLON_PLUS() != null;
+        parameters.add(new Concrete.TelescopeParameter(tokenPosition(tele.start), explicit, vars, visitExpr(type), (tele instanceof NameExplicitContext ? ((NameExplicitContext) tele).paramAttr() : ((NameImplicitContext) tele).paramAttr()).PROPERTY() != null, isCovariant ? BindingVariance.COVARIANT : BindingVariance.INVARIANT));
       }
     }
     return parameters;
@@ -1442,22 +1443,22 @@ public class BuildVisitor extends ArendBaseVisitor<Object> {
       List<ExprContext> exprs = typedExpr.expr();
       ParamAttrContext paramAttr = typedExpr.paramAttr();
       Position position = tokenPosition(tele.start);
-      boolean isDotted = typedExpr.COLON_DOT() != null;
+      BindingVariance variance = typedExpr.COLON_PLUS() != null ? BindingVariance.COVARIANT : BindingVariance.INVARIANT;
       if (exprs.size() == 2) {
         List<ParsedLocalReferable> vars = new ArrayList<>();
         getVarList(exprs.get(0), vars);
         if (isDefinition && paramAttr.STRICT() != null) {
-          parameters.add(new Concrete.DefinitionTelescopeParameter(position, explicit, true, vars, visitExpr(exprs.get(1)), paramAttr.PROPERTY() != null, isDotted));
+          parameters.add(new Concrete.DefinitionTelescopeParameter(position, explicit, true, vars, visitExpr(exprs.get(1)), paramAttr.PROPERTY() != null, variance));
         } else {
           checkStrict(typedExpr);
-          parameters.add(new Concrete.TelescopeParameter(position, explicit, vars, visitExpr(exprs.get(1)), paramAttr.PROPERTY() != null, isDotted));
+          parameters.add(new Concrete.TelescopeParameter(position, explicit, vars, visitExpr(exprs.get(1)), paramAttr.PROPERTY() != null, variance));
         }
       } else {
         if (isDefinition && paramAttr.STRICT() != null) {
-          parameters.add(new Concrete.DefinitionTelescopeParameter(position, explicit, true, Collections.singletonList(null), visitExpr(exprs.getFirst()), paramAttr.PROPERTY() != null, isDotted));
+          parameters.add(new Concrete.DefinitionTelescopeParameter(position, explicit, true, Collections.singletonList(null), visitExpr(exprs.getFirst()), paramAttr.PROPERTY() != null, variance));
         } else {
           checkStrict(typedExpr);
-          parameters.add(new Concrete.TypeParameter(position, explicit, visitExpr(exprs.getFirst()), paramAttr.PROPERTY() != null, isDotted));
+          parameters.add(new Concrete.TypeParameter(position, explicit, visitExpr(exprs.getFirst()), paramAttr.PROPERTY() != null, variance));
         }
       }
     }

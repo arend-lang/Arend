@@ -26,7 +26,7 @@ public abstract class BaseSemiringEquationMeta extends BaseAlgebraEquationMeta {
   @Dependency(name = "SolverModel.terms-equality-conv") ArendRef termsEqualityConv;
   @Dependency(name = "SemiringSolverModel.Term.:zro")   ArendRef zroTerm;
   @Dependency(name = "SemiringSolverModel.Term.:ide")   ArendRef ideTerm;
-  @Dependency(name = "SemiringSolverModel.Term.:+")     ArendRef addTerm;
+  @Dependency(name = "SemiringSolverModel.Term.:_+")    ArendRef addTerm;
   @Dependency(name = "SemiringSolverModel.Term.:*")     ArendRef mulTerm;
   @Dependency(name = "SemiringSolverModel.Term.coef")   ArendRef coefTerm;
   @Dependency(name = "SemiringSolverModel.Term.var")    ArendRef varTerm;

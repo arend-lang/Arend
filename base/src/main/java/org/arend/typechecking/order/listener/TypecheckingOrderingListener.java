@@ -15,6 +15,7 @@ import org.arend.core.sort.Sort;
 import org.arend.core.sort.SortExpression;
 import org.arend.error.CountingErrorReporter;
 import org.arend.ext.ArendExtension;
+import org.arend.ext.core.context.BindingVariance;
 import org.arend.ext.core.definition.CoreFunctionDefinition;
 import org.arend.ext.core.expr.CoreExpression;
 import org.arend.ext.core.ops.CMP;
@@ -326,7 +327,7 @@ public class TypecheckingOrderingListener extends BooleanComputationRunner imple
         param = param.getNextTyped(null);
         if (param.getType().accept(visitor1, null) instanceof UniverseExpression universe) {
           SortExpression paramSort = universe.getSortExpression();
-          sortExpressions.add(param.isDotted() ? paramSort.withoutCat() : paramSort);
+          sortExpressions.add(param.getVariance() == BindingVariance.INVARIANT ? paramSort.withoutCat() : paramSort);
         } else {
           return;
         }

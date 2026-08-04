@@ -30,7 +30,7 @@ public class BaseAlgebraicMeta extends BaseMetaDefinition {
   @Dependency(name = "RingTerm.:zro")                   public ArendRef zroTerm;
   @Dependency(name = "RingTerm.:negative")              public ArendRef negativeTerm;
   @Dependency(name = "RingTerm.:*")                     public ArendRef mulTerm;
-  @Dependency(name = "RingTerm.:+")                     public ArendRef addTerm;
+  @Dependency(name = "RingTerm.:_+")                    public ArendRef addTerm;
   @Dependency(name = "BaseData.R")                      public ArendRef RingDataCarrier;
   @Dependency(name = "MonoidData.vars")                 public ArendRef DataFunction;
 }
