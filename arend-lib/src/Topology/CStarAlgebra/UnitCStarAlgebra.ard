@@ -2,6 +2,17 @@
      [1] Simon Henry, Constructive Gelfand Duality for non-unital commutative C*-algebras, 2014, https://arxiv.org/abs/1412.2009
  -}
 
+{- | Construction of the unitization of a (possibly non-unital) Stone C*-algebra and the induced Riesz space structure
+ -   on Stone C*-algebras.
+ -
+ -   This module shows that any `StoneC*PseudoAlgebra` `A` can be embedded into a unital Stone C*-algebra
+ -   `\Sigma Real A`, where the real component supplies a unit and the norm is defined operator-theoretically as a
+ -   supremum over unit-ball multiplications. It then derives a canonical Riesz space (lattice ordered abelian group)
+ -   structure on every Stone C*-algebra by constructing an absolute value `|a|` as the unique positive square root of
+ -   `a * a`, built via the functional calculus `sqrt` from `RealBanachAlgebra`. The pseudo-algebra case is handled by
+ -   transferring the Riesz structure through the unitization, using the order pulled back along the unit embedding.
+ -}
+
 \import Algebra.Group
 \import Algebra.Meta
 \import Algebra.Monoid
@@ -43,6 +54,10 @@
 \import Topology.TopSpace.Product
 \open CompleteLattice
 
+{- | Instance constructing a `StoneC*Algebra` on `\Sigma Real A` for any `StoneC*PseudoAlgebra` `A`, using the unital
+ -   algebra `UnitAlgebra RealField A.toRealAlgebra`. The norm is
+ -   `|x.1| ∨ sup { |x.1 *r s + x.2 * s| : s ∈ A, |s| ≤ 1 }`, the standard operator norm on the unitization.
+ -}
 \instance UnitC*Algebra (A : StoneC*PseudoAlgebra) : StoneC*Algebra (\Sigma Real A)
   | Ring => UnitAlgebra RealField A.toRealAlgebra
   | *-comm => ext (RealField.*-comm, equation.abGroup $ A.toZero A.*-comm)
@@ -95,18 +110,28 @@
     \open ExUpperRealAbMonoid(<-rat)
     \open ExUpperRealSemigroup(<=_*)
 
+    -- | Existence lemma `∃ (y : A) (|y| ≤ 1)`, needed to ensure the join in the norm is over an inhabited family.
     \private \lemma inhabitted : ∃ (y : A) (A.norm y <= 1)
       => inP (A.zro, transportInv (<= _) norm_zro $ <=-less ExUpperRealAbMonoid.zro<ide)
   }
 
+{- | Equips any `StoneC*Algebra A` with a `RieszSpace` structure, using `RieszSpace.fromAbs` together with the absolute
+ -   value produced by `abs-aux`.
+ -}
 \func StoneC*AlgebraRieszSpace (A : StoneC*Algebra) : RieszSpace A
   => RieszSpace.fromAbs \lam a => TruncP.map (abs-aux a) \lam s => (s.1,s.3,s.4,s.5)
   \where \protected {
+    {- | The underlying `HausdorffTopPosetAbGroup` on `A`, combining its topological abelian group and poset structure
+     -   with closedness of the positive cone.
+     -}
     \func StoneC*AlgebraTopPoset : HausdorffTopPosetAbGroup \cowith
       | TopAbGroup => A
       | PosetAbGroup => A
       | positive-closed => transport A.IsClosed (ext \lam x => ext A.square-positive) A.square-closed
 
+    {- | Existence of an absolute value: for every `a : A`, there is `b` with `b * b = a * a`, `a ≤ b`, `-a ≤ b`, and
+     -   `b` is the least such upper bound.
+     -}
     \lemma abs-aux (a : A) : ∃ (b : A) (b * b = a * a) (a <= b) (negative a <= b) ∀ {c} (a <= c -> negative a <= c -> b <= c)
       => \case norm-bounded a \with {
         | inP (B,|a|<B) =>
@@ -119,6 +144,7 @@
                    \lam a<=c -a<=c => A.<=_*q-rotate-left (norm>=0 |a|<B) $ c*abs.c*abs-univ (A.<=_*q-right (<=-less $ RatField.finv>0 $ norm>=0 |a|<B) a<=c) $ transport (<= _) A.toRatModule.*c_negative-right $ A.<=_*q-right (<=-less $ RatField.finv>0 $ norm>=0 |a|<B) -a<=c)
       }
 
+    -- | `|a| * |a| = a * a`, characterizing the absolute value.
     \lemma abs-square {a : A} : (StoneC*AlgebraRieszSpace A).abs a * (StoneC*AlgebraRieszSpace A).abs a = a * a
       => \case abs-aux a \with {
         | inP (b,bb=aa,a<=b,-a<=b,bu) =>
@@ -126,6 +152,9 @@
           \in pmap (\lam x => x * x) (<=-antisymmetric (A'.join-univ a<=b -a<=b) (bu A'.abs>=id A'.abs>=neg)) *> bb=aa
       }
 
+    {- | For `a : A` with `a ≤ 1` and `-a ≤ 1`, defines `|a| := sqrt(a * a)` using the square-root functional calculus
+     -   from `RealBanachAlgebra`.
+     -}
     \func c*abs (a : A) (a<=1 : a <= 1) (-a<=1 : negative a <= 1) : A
       => sqrt-t (a * a, square-norm)
       \where {
@@ -133,24 +162,32 @@
         \open RealBanachAlgebra.sqrt(yfunc,zfunc,zfunc-lim,UnitBall)
         \open ExUpperRealSemigroup(<=_*)
 
+        -- | Positivity of the `n`th approximant `yfunc n x` used in the sqrt iteration.
         \lemma yfunc>=0 {x : A} (x<=1 : x <= 1) {n : Nat} : 0 <= yfunc n x \elim n
           | 0 => transportInv (0 <=) (\peval yfunc 0 _) <=-refl
           | suc n => transportInv (0 <=) (\peval yfunc (suc n) x) $ A.*q_>=0 rat_<=-dec $ A.<=_+-positive (A.to>=0 x<=1) c*-square-positive
 
+        -- | `|1 - a * a| ≤ 1`, the bound enabling the sqrt power series to converge on `a * a`.
         \lemma square-norm : norm (1 - a * a) <= 1
           => A.square-lem c*-square-positive (c*-<=_*-square a<=1 -a<=1)
 
+        -- | `x ≤ |x|` and `-x ≤ |x|`; the absolute value dominates `x` and `-x`.
         \lemma c*abs>=id {x : A} {x<=1 : x <= 1} { -x<=1 : negative x <= 1} : x <= c*abs x x<=1 -x<=1
           => transportInv (x <=) (\peval sqrt _ _) $ A.closed-limit0 StoneC*AlgebraTopPoset.<=-closed-right limit-isLimit induction
           \where {
+            -- | Inductive step `x ≤ 1 - yfunc n (x * x)` driving `c*abs>=id`.
             \private \lemma induction (n : Nat) : x <= 1 - yfunc n (x * x) \elim n
               | 0 => transport (x <=) (inv zro-right *> pmap (1 +) (inv $ pmap negative (\peval yfunc 0 _) *> A.negative_zro)) x<=1
               | suc n => rewrite (\peval yfunc (suc n) _) $ A.<=_*q-cancel-left {2} idp $ later $ rewrite (A.toRatModule.*c-ldistr_-, inv A.*q-assoc, A.ide_*q, A.*q_*2, A.*q_*2) $ A.from>=0 $ transport (0 <=) {(1 - yfunc n _ - x) * (1 - x + yfunc n _)} equation.cRing $ A.<=_*-positive (A.to>=0 $ induction n) $ A.<=_+-positive (A.to>=0 x<=1) $ yfunc>=0 (c*-<=_*-square x<=1 -x<=1)
           }
 
+        -- | `x ≤ |x|` and `-x ≤ |x|`; the absolute value dominates `x` and `-x`.
         \lemma c*abs>=neg {x : A} {x<=1 : x <= 1} { -x<=1 : negative x <= 1} : negative x <= c*abs x x<=1 -x<=1
           => transport (_ <=) (unfold c*abs $ pmap sqrt-t $ ext A.negative_*) (c*abs>=id {A} {_} { -x<=1} {rewrite A.negative-isInv x<=1})
 
+        {- | Identities `zfunc-lim (w * w) = w` under positivity/norm hypotheses, expressing that sqrt inverts squaring
+         -   on positive elements.
+         -}
         \lemma zfunc_pow>0 {w : A} (w<=1 : w <= 1) (|1-w|<1 : (norm (1 - w)).U 1) : zfunc-lim (w * w, square-norm w<=1 $ ExUpperReal.<_<= |1-w|<1) = w
           => \case U-rounded |1-w|<1 \with {
             | inP (q,|1-w|<q,q<1) => A.limit-unique {_} {zfunc __ (w * w)} limit-isLimit $ nat-limit-metric (rewrite norm-dist $ norm-bounded _) {ratio 1 2 * (1 + q)} (ExUpperReal.<=-rat.1 $ linarith $ norm>=0 |1-w|<q) linarith
@@ -159,10 +196,14 @@
                 A.norm_*q-ofPos rat_<=-dec =<= <=_* <=-refl (A.norm_*_<= <=∘ <=_* (transport (_ <=) ExUpperReal.+-rat $ A.norm_+ <=∘ <=_+ (sqrt.yfunc<=rfunc {_} {_} {w * w, square-norm w<=1 $ ExUpperReal.<_<= |1-w|<1} <=∘ ExUpperReal.<=-rat.1 RealBanachAlgebra.rfunc<=1) (ExUpperReal.<_<= |1-w|<q)) (=_<= $ pmap norm equation.abGroup)) <=∘ =_<= (inv *-assoc *> pmap (* _) (ExUpperReal.*-rat rat_<=-dec $ RatField.<=_+-positive zro<=ide $ <=-less $ norm>=0 |1-w|<q))
           }
           \where {
+            -- | Auxiliary norm bound `|1 - w * w| ≤ 1` from `|1 - w| ≤ 1`.
             \lemma square-norm (w<=1 : w <= 1) (|1-w|<=1 : norm (1 - w) <= 1) : norm (1 - w * w) <= 1
               => A.square-lem c*-square-positive $ c*-<=_*-square w<=1 $ transport (_ <=) A.negative_zro (A.negative_<= $ A.norm-c*-positive |1-w|<=1) <=∘ zro<=ide
           }
 
+        {- | Identities `zfunc-lim (w * w) = w` under positivity/norm hypotheses, expressing that sqrt inverts squaring
+         -   on positive elements.
+         -}
         \lemma zfunc_pow {w : A} (w<=1 : w <= 1) (|1-w|<=1 : norm (1 - w) <= 1) : zfunc-lim (w * w, zfunc_pow>0.square-norm w<=1 |1-w|<=1) = w
           => \let M => ExPseudoMetricTransfer {\Sigma (x : A) (\Sigma (x <= 1) (norm (1 - x) <= 1))} __.1
              \in denseSet-lift-unique (\lam {s} Uo Us => \case (dist_open {M}).1 Uo Us \with {
@@ -177,41 +218,59 @@
              (zfunc-lim ContMap.∘ TopTransfer-lift (*-locally-uniform ContMap.∘ ProductTopSpace.tuple ContMap.id ContMap.id ContMap.∘ TopTransfer-map __.1) (later \lam s => zfunc_pow>0.square-norm s.2.1 s.2.2))
              (TopTransfer-map __.1) (\lam {s} p => zfunc_pow>0 s.2.1 p) {w,(w<=1,|1-w|<=1)}
 
+        {- | Identities `zfunc-lim (w * w) = w` under positivity/norm hypotheses, expressing that sqrt inverts squaring
+         -   on positive elements.
+         -}
         \lemma zfunc_pow' {w : A} (w>=0 : 0 <= w) (w<=1 : w <= 1)
           => zfunc_pow w<=1 (A.square-lem w>=0 w<=1)
 
+        -- | Monotonicity of the sqrt approximants in the index and in the argument.
         \lemma yfunc-step {x : A} (x<=1 : x <= 1) {n : Nat} : yfunc n x <= yfunc (suc n) x \elim n
           | 0 => transportInv (<= _) (\peval yfunc 0 x) (yfunc>=0 x<=1)
           | suc n => A.from>=0 $ transportInv (0 <=) sqrt.yfunc-rec $ A.*q_>=0 rat_<=-dec $ A.<=_*-positive (A.<=_+-positive (yfunc>=0 x<=1) (yfunc>=0 x<=1)) $ A.to>=0 (yfunc-step x<=1)
 
+        -- | `zfunc-lim s` is a meet of the approximants `zfunc n s.1`.
         \lemma zfunc-lim-meet {s : UnitBall {A}} (s<=1 : s.1 <= 1) : A.IsMeet (zfunc __ s.1) (zfunc-lim s)
           => StoneC*AlgebraTopPoset.limit-Meet (sequence-anti-monotone \lam {n} => <=_+ <=-refl (A.negative_<= $ yfunc-step s<=1)) limit-isLimit
 
+        -- | Monotonicity of the sqrt approximants in the index and in the argument.
         \lemma yfunc-mono {x y : A} (x<=y : x <= y) (y<=1 : y <= 1) {n : Nat} : yfunc n y <= yfunc n x \elim n
           | 0 => rewrite (\peval yfunc 0 x, \peval yfunc 0 y) <=-refl
           | suc n => rewrite (\peval yfunc (suc n) x, \peval yfunc (suc n) y) $ A.<=_*q-right rat_<=-dec $ <=_+ (<=_+ <=-refl $ A.negative_<= x<=y) $ <=_*_positive-left (yfunc-mono x<=y y<=1) (yfunc>=0 y<=1) <=∘ <=_*_positive-right (yfunc>=0 $ x<=y <=∘ y<=1) (yfunc-mono x<=y y<=1)
 
+        {- | Universal property in the unit ball: any `w` with `w ≤ 1`, `|1 - w| ≤ 1`, `x ≤ w`, `-x ≤ w` dominates
+         -   `c*abs x`.
+         -}
         \lemma c*abs-univ-bounded {x : A} {x<=1 : x <= 1} { -x<=1 : negative x <= 1} {w : A} (w<=1 : w <= 1) (|1-w|<=1 : norm (1 - w) <= 1) (x<=w : x <= w) (-x<=w : negative x <= w) : c*abs x x<=1 -x<=1 <= w
           => transport2 (<=) (inv \peval sqrt _ _) (zfunc_pow w<=1 |1-w|<=1) $ (zfunc-lim-meet $ c*-<=_*-square w<=1 $ A.negative_<= x<=w <=∘ -x<=1).2 \lam n => later ((zfunc-lim-meet $ c*-<=_*-square x<=1 -x<=1).1 n) <=∘ <=_+ <=-refl (A.negative_<= $ yfunc-mono (A.from>=0 $ transport (0 <=) (A.*_sum_diff *-comm) $ <=_*-positive (transport (0 <= w + __) A.negative-isInv (A.to>=0 -x<=w)) (A.to>=0 x<=w)) $ c*-<=_*-square w<=1 $ A.negative_<= x<=w <=∘ -x<=1)
 
+        -- | Wrapper `sqrt s.1 s.2` for elements of the unit ball.
         \func sqrt-t (s : UnitBall {A}) => sqrt s.1 s.2
 
+        -- | Injectivity of squaring on positive elements bounded by 1: `x * x = y * y ⇒ x = y`.
         \lemma square-inj {x y : A} (x>=0 : 0 <= x) (x<=1 : x <= 1) (y>=0 : 0 <= y) (y<=1 : y <= 1) (xx=yy : x * x = y * y) : x = y
           => \have lem : sqrt-t (x * x, square-norm {A} {x} {x<=1} {A.negative_<= x>=0 <=∘ A.negative_zro =<= zro<=ide}) = sqrt-t (y * y, square-norm {A} {y} {y<=1} {A.negative_<= y>=0 <=∘ A.negative_zro =<= zro<=ide}) => pmap sqrt-t (ext xx=yy)
              \in inv ((\peval sqrt _ _) *> zfunc_pow' x>=0 x<=1) *> lem *> (\peval sqrt _ _) *> zfunc_pow' y>=0 y<=1
 
+        -- | Any element bounding both `a` and `-a` is non-negative.
         \lemma elem>=0 {a x : A} (a<=x : a <= x) (-a<=x : negative a <= x) : 0 <= x
           => A.<=_*n-cancel-left {2} suc/=0 $ zro-right =<= <=_+ <=-refl (inv negative-right =<= <=_+ a<=x -a<=x) <=∘ =_<= (inv +-assoc)
 
+        -- | `0 ≤ |a| ≤ 1`.
         \lemma c*abs>=0 {x : A} {x<=1 : x <= 1} { -x<=1 : negative x <= 1} : 0 <= c*abs x x<=1 -x<=1
           => elem>=0 c*abs>=id c*abs>=neg
 
+        -- | `0 ≤ |a| ≤ 1`.
         \lemma c*abs<=1 {x : A} {x<=1 : x <= 1} { -x<=1 : negative x <= 1} : c*abs x x<=1 -x<=1 <= 1
           => c*abs-univ-bounded <=-refl (rewrite (negative-right,norm_zro) $ ExUpperReal.<=-rat.1 zro<=ide) x<=1 -x<=1
 
+        -- | Compatibility with rational scaling: `q · |x| = |q · x|` for `0 ≤ q ≤ 1`.
         \lemma c*abs_*q {q : Rat} (q>=0 : 0 <= q) (q<=1 : q <= 1) {x : A} {x<=1 : x <= 1} { -x<=1 : negative x <= 1} {qx<=1 : q A.*q x <= 1} { -qx<=1 : negative (q A.*q x) <= 1} : q A.*q c*abs x x<=1 -x<=1 = c*abs (q A.*q x) qx<=1 -qx<=1
           => square-inj (A.*q_>=0 q>=0 c*abs>=0) (A.<=_*q-left q<=1 c*abs>=0 <=∘ A.ide_*q =<= c*abs<=1) c*abs>=0 c*abs<=1 $ inv A.toRatAlgebra.*c-comm-right *> pmap (q A.*q) (inv A.toRatAlgebra.*c-comm-left) *> inv A.*q-assoc *> pmap (_ A.*q) sqrt.isSquare *> A.*q-assoc *> pmap (q A.*q) A.toRatAlgebra.*c-comm-right *> A.toRatAlgebra.*c-comm-left *> inv sqrt.isSquare
 
+        {- | Full universal property: `|a| ≤ w` whenever `a ≤ w` and `-a ≤ w`, certifying `c*abs` as the least absolute
+         -   value.
+         -}
         \lemma c*abs-univ {w : A} (a<=w : a <= w) (-a<=w : negative a <= w) : c*abs a a<=1 -a<=1 <= w
           => \case norm-bounded w \with {
             | inP (B,|w|<B) =>
@@ -225,6 +284,9 @@
       }
   }
 
+{- | Riesz space structure on a `StoneC*PseudoAlgebra A`, obtained by embedding `a ↦ (0, a)` into `UnitC*Algebra A` and
+ -   pulling back the absolute value, observing that the resulting `b` lives in the `A`-component since `b.1 * b.1 = 0`.
+ -}
 \func StoneC*PseudoAlgebraRieszSpace (A : StoneC*PseudoAlgebra) : RieszSpace A
   => RieszSpace.fromAbs {StoneC*PseudoAlgebaPoset} \lam a => \case StoneC*AlgebraRieszSpace.abs-aux {UnitC*Algebra A} (0,a) \with {
     | inP (b,bb=aa,a<=b,-a<=b,bu) =>
@@ -232,6 +294,9 @@
       \in inP (b.2, transport (_ <=) bc a<=b, transport2 (<=) (ext (RealAbGroup.negative_zro,idp)) bc -a<=b, \lam a<=c -a<=c => transport (<= _) bc $ bu a<=c $ ext (RealAbGroup.negative_zro,idp) =<= -a<=c)
   }
   \where {
+    {- | `PosetQModule` on `A` whose order is `a ≤ b ⟺ unit-algebra a ≤ unit-algebra b`, transported from the
+     -   unitization.
+     -}
     \func StoneC*PseudoAlgebaPoset : PosetQModule \cowith
       | QModule => A
       | <= a b => unit-algebra {_} {A.toRealAlgebra} a <= unit-algebra {_} {A.toRealAlgebra} b

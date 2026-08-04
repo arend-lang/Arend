@@ -1,39 +1,62 @@
+{- | Core path (identity type) operations and lemmas for the cubical type theory underlying Arend.
+ -
+ -   This module provides the foundational vocabulary for working with the path type `a = a'`, including congruence
+ -   (`pmap`), transport along type families, and concatenation operators in both right- and left-biased forms. The dual
+ -   concatenation operators (`*>` and `<*`) eliminate on different arguments, making them definitionally convenient in
+ -   different proof contexts; lemmas like `<*_*>` mediate between them. The module also sets up equational reasoning
+ -   (`==<`, `>==`, `qed`), J-eliminators (`Jl`, `Jr`), and a comprehensive set of transport/coe lemmas that
+ -   characterize how transport interacts with sigma types, function types, and path types — these are essential for
+ -   nearly all subsequent reasoning about dependent types in the library.
+ -}
+
+-- | `idp` as a function: `a = a`.
 \func idpe {A : \Type} (a : A) : a = a => idp
 
+-- | Congruence: `(a = a') -> f a = f a'`.
 \func pmap {A B : \Type} (f : A -> B) {a a' : A} (p : a = a') : f a = f a' => path (\lam i => f (p @ i))
 
+-- | Binary congruence for two-argument functions.
 \func pmap2 {A B C : \Type} (f : A -> B -> C) {a a' : A} (p : a = a') {b b' : B} (q : b = b') : f a b = f a' b'
   => path (\lam i => f (p @ i) (q @ i))
 
+-- | Transport along a path in a type family `B : A -> \Type`.
 \func transport {A : \Type} (B : A -> \Type) {a a' : A} (p : a = a') (b : B a) : B a'
   => coe (\lam i => B (p @ i)) b right
 
+-- | Transport in the reverse direction.
 \func transportInv {A : \Type} (B : A -> \Type) {a a' : A} (p : a = a') (b : B a') : B a \elim p
   | idp => b
 
+-- | Transport along two paths simultaneously in a binary family.
 \func transport2 {A B : \Type} (C : A -> B -> \Type) {a a' : A} {b b' : B} (p : a = a') (q : b = b') (c : C a b) : C a' b' \elim p, q
   | idp, idp => c
 
+-- | Path inversion: `(a = a') -> (a' = a)`.
 \func inv {A : \Type} {a a' : A} (p : a = a') : a' = a \elim p
   | idp => idp
 
+-- | Right-biased path concatenation, eliminating on the second argument.
 \func \infixr 9 *> {A : \Type} {a a' a'' : A} (p : a = a') (q : a' = a'') : a = a'' \elim q
   | idp => p
   \where
     \func concat {A : I -> \Type} {a : A left} {a' a'' : A right} (p : Path A a a') (q : a' = a'') : Path A a a'' \elim q
       | idp => p
 
+-- | Left-biased path concatenation, eliminating on the first argument.
 \func \infixr 9 <* {A : \Type} {a a' a'' : A} (p : a = a') (q : a' = a'') : a = a'' \elim p
   | idp => q
   \where
     \func concat {A : I -> \Type} {a a' : A left} {a'' : A right} (p : a = a') (q : Path A a' a'') : Path A a a'' \elim p
       | idp => q
 
+-- | Squeeze a path: `a = p @ i`.
 \func psqueeze {A : \Type} {a a' : A} (p : a = a') (i : I) : a = p @ i => path (p @ I.squeeze i __)
 
+-- | Based path induction (left-based J).
 \func Jl {A : \Type} {a : A} (B : \Pi (a' : A) -> a = a' -> \Type) (b : B a idp) {a' : A} (p : a = a') : B a' p \elim p
   | idp => b
   \where {
+    -- | Right-based variant of path induction.
     \func Jr {A : \Type} {a' : A} (B : \Pi (a : A) -> a = a' -> \Type) (b : B a' idp) {a : A} (p : a = a') : B a p \elim p
       | idp => b
 
@@ -42,56 +65,73 @@
       coe (\lam i => B (p @ i) (psqueeze p i)) b right
   }
 
+-- | Congruence distributes over concatenation.
 \func pmap_*>-comm {A B : \Type} (f : A -> B) {a a' a'' : A} (p : a = a') (q : a' = a'')
   : pmap f (p *> q) = pmap f p *> pmap f q \elim q
   | idp => idp
 
+-- | Congruence distributes over concatenation.
 \func pmap_<*-comm {A B : \Type} (f : A -> B) {a a' a'' : A} (p : a = a') (q : a' = a'')
   : pmap f (p <* q) = pmap f p <* pmap f q \elim p
   | idp => idp
 
+-- | Congruence distributes over concatenation.
 \func pmap2_*>-comm {A B C : \Type} (f : A -> B -> C) {a a' a'' : A} (p : a = a') (q : a' = a'') {b b' b'' : B} (s : b = b') (t : b' = b'')
   : pmap2 f (p *> q) (s *> t) = pmap2 f p s *> pmap2 f q t \elim q, t
   | idp, idp => idp
 
+-- | `inv (inv p) = p`.
 \func inv_inv {A : \Type} {a a' : A} (p : a = a') : inv (inv p) = p
   | idp => idp
 
+-- | `inv p *> p = idp`.
 \func inv_*> {A : \Type} {a a' : A} (p : a = a') : inv p *> p = idp
   | idp => idp
 
+-- | `p *> inv p = idp`.
 \func *>_inv {A : \Type} {a a' : A} (p : a = a') : p *> inv p = idp
   | idp => idp
 
+-- | `idp *> p = p`.
 \func idp_*> {A : \Type} {a a' : A} (p : a = a') : idp *> p = p
   | idp => idp
   \where
     \func idp_concat {A : \Type} {a a' : A} (p : a = a') : *>.concat idp p = p \elim p
       | idp => idp
 
+-- | `p <* idp = p`.
 \func <*_idp {A : \Type} {a a' : A} (p : a = a') : p <* idp = p
   | idp => idp
 
+-- | `p <* q = p *> q` — bridges the two concatenation operators.
 \func <*_*> {A : \Type} {a a' a'' : A} (p : a = a') (q : a' = a'') : p <* q = p *> q
   | idp, idp => idp
 
+-- | `inv (p *> q) = inv q *> inv p`.
 \func *>_inv-comm {A : \Type} {a a' a'' : A} (p : a = a') (q : a' = a'') : inv (p *> q) = inv q *> inv p
   | idp, idp => idp
 
+-- | `pmap f (inv p) = inv (pmap f p)`.
 \func pmap_inv-comm {A B : \Type} {a a' : A} (f : A -> B) (p : a = a') : pmap f (inv p) = inv (pmap f p) \elim p
   | idp => idp
 
+-- | Associativity of `*>`.
 \func *>-assoc {A : \Type} {a1 a2 a3 a4 : A} (p : a1 = a2) (q : a2 = a3) (r : a3 = a4) : (p *> q) *> r = p *> (q *> r) \elim r
   | idp => idp
 
+-- | Reflexivity for closing equational reasoning chains.
 \func \fix 2 qed {A : \Type} (a : A) : a = a => idp
 
+-- | Transitivity step in a chain.
 \func \infixr 1 >== {A : \Type} {a a' a'' : A} (p : a = a') (q : a' = a'') => p *> q
 
+-- | Start of an equational reasoning chain.
 \func \infix 2 ==< {A : \Type} (a : A) {a' : A} (p : a = a') => p
 
+-- | `Path A a (coe A a right)` — canonical dependent path along `coe`.
 \func idpOver (A : I -> \Type) (a : A left) : Path A a (coe A a right) => path (coe A a)
 
+-- | Constructs a dependent path from `coe A a right = a'`.
 \func pathOver {A : I -> \Type} {a : A left} {a' : A right} (p : coe A a right = a') : Path A a a'
   => *>.concat (idpOver A a) p
   \where {
@@ -99,24 +139,30 @@
       => coe (\lam i => coe A a i = p i) idp right
   }
 
+-- | Characterizes `coe` on path types: `coe (\lam i => p @ i = r @ i) q right = inv p *> q *> r`.
 \func coe_path {A : \Type} {a1 a2 a3 a4 : A} (p : a2 = a1) (q : a2 = a3) (r : a3 = a4)
   : coe (\lam i => p @ i = r @ i) q right = inv p *> q *> r
   => coe (\lam j => coe (\lam i => p @ i = r @ i) q j = inv (psqueeze p j) *> q *> psqueeze r j) (inv (idp_*> q)) right
   \where
+    -- | Alternative form of `coe_path` with reversed orientation.
     \func alt {A : \Type} {a1 a2 a3 a4 : A} (p : a1 = a2) (q : a2 = a3) (r : a4 = a3)
       : coe (\lam i => p @ i = r @ i) (p *> q *> inv r) right = q
       | idp, idp, idp => idp
 
+-- | `(a = a') = (a' = a)` as a path between types, via `iso`.
 \func path-sym.{u} {A : \Type u} (a a' : A) : (a = a') = (a' = a) => path (iso inv inv inv_inv inv_inv)
 
+-- | Rearranges `q = p *> r` into `inv p *> q = r`.
 \func rotatePathLeft {A : \Type} {a a' a'' : A} {p : a' = a} {q : a' = a''} {r : a = a''} (t : q = p *> r)
   : inv p *> q = r \elim p, r, t
   | idp, idp, idp => idp
 
+-- | For a homotopy `h : f ~ g`, `pmap f p *> h a' = h a *> pmap g p`.
 \func homotopy-isNatural {A B : \Type} (f g : A -> B) (h : \Pi (a : A) -> f a = g a) {a a' : A} (p : a = a')
   : pmap f p *> h a' = h a *> pmap g p \elim p
   | idp => idp_*> (h a)
 
+-- | For `f` with fixpoint homotopy `h`, `h (f a) = pmap f (h a)`.
 \func homotopy_app-comm {A : \Type} (f : A -> A) (h : \Pi (a : A) -> f a = a) (a : A) : h (f a) = pmap f (h a) =>
   h (f a)                             ==< pmap (h (f a) *>) (inv (*>_inv (h a))) >==
   h (f a) *> (h a *> inv (h a))       ==< inv (*>-assoc (h (f a)) (h a) (inv (h a))) >==
@@ -125,73 +171,91 @@
   pmap f (h a) *> (h a *> inv (h a))  ==< pmap (pmap f (h a) *>) (*>_inv (h a)) >==
   pmap f (h a)                        `qed
 
+-- | Dependent congruence: `transport B p (f a) = f a'`.
 \func pmapd {A : \Type} {B : A -> \Type} (f : \Pi (x : A) -> B x) {a a' : A} (p : a = a')
   : transport B p (f a) = f a' \elim p
   | idp => idp
 
+-- | Characterizes `pmapd` via a `pathOver` decomposition.
 \func pmapd_pathOver {A : \Type} (B : A -> \Type) (f : \Pi (x : A) -> B x) {a a' : A} (p : a = a') (s : transport B p (f a) = f a')
                      (t : path (\lam i => f (p @ i)) = {Path (\lam i => B (p @ i)) (f a) (f a')} pathOver s) : pmapd f p = s \elim p
   | idp => t *> idp_*>.idp_concat s
 
+-- | Transport over concatenation: `transport B (p *> q) x = transport B q (transport B p x)`.
 \func transport_*> {A : \Type} (B : A -> \Type) {a a' a'' : A} (p : a = a') (q : a' = a'') (x : B a)
   : transport B (p *> q) x = transport B q (transport B p x) \elim q
   | idp => idp
 
+-- | Transport in a function type family `\lam y => B y -> C y`, applied.
 \func transport_pi {A : \Type} (B C : A -> \Type) {a a' : A} (p : a = a') (f : B a -> C a) (x : B a')
   : transport (\lam y => B y -> C y) p f x = transport C p (f (transport B (inv p) x)) \elim p
   | idp => idp
 
+-- | Transport in a function type family characterized by a pointwise condition.
 \func transport_pi2 {A : \Type} (B C : A -> \Type) {a a' : A} (p : a = a') (f : B a -> C a) (g : B a' -> C a') (t : \Pi (x : B a) -> transport C p (f x) = g (transport B p x))
   : transport (\lam y => B y -> C y) p f = g \elim p
   | idp => path (\lam i x => t x @ i)
 
+-- | Transport in a dependent function family `\lam y => \Pi b, C y b`.
 \func transport_depPi {A B : \Type} (C : A -> B -> \Type) {a a' : A} (p : a = a') (f : \Pi (b : B) -> C a b) (x : B)
   : transport (\lam y => \Pi (b : B) -> C y b) p f x = transport (C __ x) p (f x) \elim p
   | idp => idp
 
+-- | Transport in `\lam x => a0 = x` is post-concatenation.
 \func transport_path-right {A : \Type} {a0 a b : A} (p : a = b) (q : a0 = a)
   : transport (a0 =) p q = q *> p
   | idp, idp => idp
 
+-- | Transport in `\lam x => x = a0` is pre-concatenation with inverse.
 \func transport_path-left {A : \Type} {a0 a b : A} (p : a = b) (q : a = a0)
   : transport (= a0) p q = inv p *> q
   | idp, idp => idp
 
+-- | Transport in `\lam x => f x = g x` characterized by `q *> pmap g p = pmap f p *> s`.
 \func transport_path_pmap {A B : \Type} (f g : A -> B) {a a' : A} (p : a = a') (q : f a = g a) (s : f a' = g a') (h : q *> pmap g p = pmap f p *> s) : transport (\lam x => f x = g x) p q = s \elim p
   | idp => h *> idp_*> s
   \where {
+    -- | Converse of `transport_path_pmap`.
     \func conv {A B : \Type} (f g : A -> B) {a a' : A} (p : a = a') (q : f a = g a) (s : f a' = g a') (h : transport (\lam x => f x = g x) p q = s) : q *> pmap g p = pmap f p *> s \elim p
       | idp => h *> inv (idp_*> s)
   }
 
+-- | Specialization where `f` is constant.
 \func transport_path_pmap-right {A B : \Type} (b : B) (g : A -> B) {a a' : A} (p : a = a') (q : b = g a) (s : b = g a') (h : q *> pmap g p = s) : transport (\lam x => b = g x) p q = s \elim p
   | idp => h
   \where {
+    -- | Converse direction.
     \func conv {A B : \Type} (b : B) (g : A -> B) {a a' : A} (p : a = a') (q : b = g a) (s : b = g a') (h : transport (\lam x => b = g x) p q = s) : q *> pmap g p = s \elim p
       | idp => h
   }
 
+-- | `transport B (inv p) (transport B p x) = x`.
 \func transport_inv_id {A : \Type} (B : A -> \Type) {a b : A} (p : a = b) (x : B a)
   : transport B (inv p) (transport B p x) = x \elim p
   | idp => idp
 
+-- | `transport B p (transport B (inv p) x) = x`.
 \func transport_id_inv {A : \Type} (B : A -> \Type) {a b : A} (p : a = b) (x : B b)
   : transport B p (transport B (inv p) x) = x \elim p
   | idp => idp
 
+-- | Rearranges `transport B p x = y` into `x = transport B (inv p) y`.
 \func transport-rotate {A : \Type} (B : A -> \Type) {a a' : A} (p : a = a') {x : B a} {y : B a'} (t : transport B p x = y)
   : x = transport B (inv p) y \elim p
   | idp => t
 
+-- | Identifies `transport B (inv p)` with a given left-inverse `g`.
 \func transport_inv_func {A : \Type} (B : A -> \Type) {a a' : A} (p : a = a') (g : B a' -> B a) (gf : \Pi (x : B a) -> g (transport B p x) = x) (b : B a')
   : transport B (inv p) b = g b \elim p
   | idp => inv (gf b)
 
+-- | `coe` on sigma types splits componentwise.
 \func coe_sigma {A : I -> \Type} (B : \Pi (i : I) -> A i -> \Type) (p : \Sigma (a : A left) (B left a)) (j : I)
   : coe (\lam i => \Sigma (a : A i) (B i a)) p j = (coe A p.1 j, coe (\lam i => B i (coe A p.1 i)) p.2 j)
   => coe (\lam k => coe (\lam i => \Sigma (a : A i) (B i a)) p (I.squeeze j k) =
                     (coe A p.1 (I.squeeze j k), coe (\lam i => B i (coe A p.1 i)) p.2 (I.squeeze j k))) idp right
 
+-- | `coe` on function types: characterizes the action of `coe` on `B i -> C i` via `coe2`.
 \func coe_pi {B C : I -> \Type} {f : B left -> C left}
   : coe (\lam i => B i -> C i) f right = \lam x => coe C (f (coe2 B right x left)) right
   => coe (\lam j => coe (\lam i => B i -> C i) f j = \lam x => coe C (f (coe2 B j x left)) j) idp right

@@ -1,3 +1,13 @@
+{- | The trace of a square matrix as a linear map, with its core algebraic properties.
+ -
+ -   This module defines the matrix trace as a composition of two linear maps: extracting the diagonal of an `n × n`
+ -   matrix into an array, then summing the array via the ring's big sum. Packaging trace as a `LinearMap` between
+ -   module structures (`MatrixModule R n n` to `RingLModule R`) makes its additivity and scalar-compatibility part of
+ -   its type, so they can be reused without re-proving. The remaining lemmas establish the standard trace identities —
+ -   invariance under transposition, cyclicity on products, conjugation invariance, behavior on diagonal matrices, and
+ -   the value on the identity matrix.
+ -}
+
 \import Algebra.Linear.Matrix
 \import Algebra.Module
 \import Algebra.Module.LinearMap
@@ -11,47 +21,63 @@
 \import Paths.Meta
 \import Set
 
+-- | The trace `LinearMap (MatrixModule R n n) (RingLModule R)`, sending a matrix `M` to `BigSum (diag M)`.
 \func Trace {R : Ring} {n : Nat} : LinearMap (MatrixModule R n n) (RingLModule R) \cowith
   | func M => BigSumHom (diag M)
   | func-+ => rewrite (diag.func-+, inv BigSumHom.func-+) idp
   | func-*c => rewrite (diag.func-*c, inv BigSumHom.func-*c) idp
   \where {
+    {- | The diagonal-extraction `LinearMap (MatrixModule R n n) (ArrayLModule n (RingLModule R))`, mapping `M` to the
+     -   array `i ↦ M i i`.
+     -}
     \func diag : LinearMap (MatrixModule R n n) (ArrayLModule n (RingLModule R)) \cowith
       | func M => \lam i => M i i
       | func-+ => exts \lam _ => idp
       | func-*c => exts \lam _ => idp
 
+    -- | The summation `LinearMap (ArrayLModule n (RingLModule R)) (RingLModule R)`, given by `R.BigSum`.
     \func BigSumHom : LinearMap (ArrayLModule n (RingLModule R)) (RingLModule R) \cowith
       | func e => R.BigSum e
       | func-+ => R.BigSum_+
       | func-*c => inv LModule.*c_BigSum-ldistr
   }
 
+-- | `Trace M = Trace (transpose M)` — the trace is invariant under transposition.
 \lemma Trace-transpose {R : Ring}{n : Nat} (M : MatrixModule R n n) : Trace M = Trace (transpose M)
   => idp
 
 \open MatrixRing
 
+{- | For a commutative ring `R`, `Trace (A product B) = Trace (B product A)` for `A : Matrix R n m` and
+ -   `B : Matrix R m n` — the cyclic property of the trace.
+ -}
 \func Trace-prod {R : CRing}{n m : Nat}(A : MatrixModule R n m)(B : MatrixModule R m n)
   : Trace (A product B) = Trace (B product A)
   => rewrite (Trace-prod-unfold A B, R.BigSum-transpose, Trace-prod-unfold B A, help) idp
 \where \protected {
+  {- | The double-sum swap `∑ⱼ ∑ₖ A k j * B j k = ∑ᵢ ∑ⱼ B i j * A j i`, the core combinatorial step behind cyclicity
+   -   (uses commutativity of `R`).
+   -}
   \lemma help
     : R.BigSum (\lam j => R.BigSum (\lam k => A k j R.* B j k)) =
       R.BigSum (\lam i => R.BigSum (\lam j => B i j R.* A j i))
     => R.BigSum-ext \lam j => R.BigSum-ext \lam i => R.*-comm
 
+  -- | Unfolds `Trace (X product Y)` to the double sum `∑ᵢ ∑ⱼ X i j * Y j i`.
   \lemma Trace-prod-unfold {R : Ring} {n m : Nat} (X : MatrixModule R n m) (Y : MatrixModule R m n)
     : Trace (X product Y) = R.BigSum (\lam i => R.BigSum (\lam j => X i j R.* Y j i))
     => idp
 }
 
+-- | `Trace (B⁻¹ product A product B) = Trace A` — conjugation invariance, derived from cyclicity.
 \lemma Trace-conjugation {R : CRing} {n : Nat} {A B : Matrix R n n} {T : Monoid.Inv B} : Trace (T.inv product A product B) = Trace A
   => rewrite (Trace-prod (T.inv product A) B, inv $ product-assoc B T.inv A, T.inv-right, Ring.ide-left {MatrixRing R n}) idp
 
+-- | `Trace (diagonal l) = R.BigSum l` — trace of a diagonal matrix is the sum of its diagonal entries.
 \lemma Trace-diagonal {R : Ring} {l : Array R} : Trace (diagonal l) = R.BigSum l
   => unfold (rewrite diag-diagonal idp)
 \where {
+  -- | Auxiliary identity `Trace.diag (diagonal l) = l`.
   \lemma diag-diagonal {n : Nat} (l : Array R n) : Trace.diag (diagonal l) = l
     => exts \lam _ => mcases \with {
       | yes p => idp
@@ -59,5 +85,8 @@
     }
 }
 
+{- | `Trace (Ring.ide {MatrixRing R n}) = R.natCoef n` — the trace of the `n × n` identity matrix is the natural-number
+ -   coefficient `n` in `R`.
+ -}
 \lemma Trace-ide {R : Ring}{n : Nat} : Trace (Ring.ide {MatrixRing R n}) = R.natCoef n
   => rewrite (Trace-diagonal {R} {replicate n R.ide}, R.BigSum_replicate1) idp

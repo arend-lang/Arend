@@ -1,3 +1,13 @@
+{- | Constructions of left and right Kan extensions of functors along functors between small categories.
+ -
+ -   Given a functor `p : C -> C'` and `F : C -> D`, the right Kan extension `Ran_p F : C' -> D` is built pointwise as a
+ -   limit over the comma category `(b ↓ p)` for each `b : C'`, requiring `D` to be complete. The left Kan extension is
+ -   obtained by dualizing the right Kan extension construction. The module also provides a `DoubleLimit` class
+ -   establishing the universal/Fubini-style relationship between a limit of the Kan extension along a diagram
+ -   `G : J -> C'` and the limit of `F` over the combined comma category, giving the canonical iso that justifies
+ -   "limits commute with right Kan extensions".
+ -}
+
 \import Category
 \import Category.Comma
 \import Category.Functor
@@ -7,9 +17,16 @@
 \import Paths
 \import Paths.Meta
 
+{- | Left Kan extension `Lan_p F : C' -> D` of `F : C -> D` along `p : C -> C'`, defined by op-dualization of
+ -   `RightKanExt` (requires `D` cocomplete).
+ -}
 \func LeftKanExt.{s,o} {C : Precat.{s,s}} {C' : Precat.{o,s}} {D : CocompletePrecat.{s}} (p : Functor C C') (F : Functor C D) : Functor C' D
   => Functor.op {RightKanExt D.op p.op F.op}
 
+{- | Right Kan extension `Ran_p F : C' -> D` along `p : C -> C'` (requires `D` complete). On objects sends `c'` to the
+ -   limit of `F` over the comma category `(c' ↓ p)`; on morphisms uses the universal property via `commaFunctor` to
+ -   reindex cones.
+ -}
 \func RightKanExt.{s,o} {C : Precat.{s,s}} {C' : Precat.{o,s}} (D : CompletePrecat.{s}) (p : Functor C C') (F : Functor C D) : Functor C' D \cowith
    | F c' => lim _ F c'
    | Func {x} {y} f => limMap {lim p F y} (Cone.premap (commaFunctor f) (lim p F x))
@@ -19,18 +36,28 @@
   \where {
     \open Limit
 
+    {- | The pointwise value of the right Kan extension at `b : C'`, computed as `D.limit (F ∘ rightForget (Const b) p)`
+     -   — i.e. the limit of `F` over the comma category `(b ↓ p)`.
+     -}
     \func lim.{s,o} {C : Precat.{s,s}} {C' : Precat.{o,s}} {D : CompletePrecat.{s}} (p : Functor C C') (F : Functor C D) (b : C')
       => D.limit (Comp F (commaPrecat.rightForget (Const {TrivialCat} b) p))
 
+    {- | For `f : y -> x` in `C'`, the induced functor between comma categories `(x ↓ p) -> (y ↓ p)` used to define the
+     -   action of `RightKanExt` on morphisms.
+     -}
     \func commaFunctor {C C' : Precat} {p : Functor C C'} {x y : C'} (f : Hom y x)
       => commaPrecat.functor (Const {TrivialCat} x) (Const y) p p (Const.natTrans f) id
 
     -- | A limit of the form `lim_{j : J} (LeftKanExt.op D p F (G j))` is a double limit and can be expressed as a single limit of {F} over the comma category `G|p`.
     \class DoubleLimit.{s,o} \noclassifying {J C : Precat.{s,s}} {C' : Precat.{o,s}} {D : CompletePrecat.{s}} (p : Functor C C') (F : Functor C D) (G : Functor J C') {
+      {- | If the induced map `lim'.limMap (map_cone c)` is an iso, then so is `limMap (Cone.map (Ran_p F) c)` — used to
+       -   transport limit-preservation along Kan extension.
+       -}
       \lemma map_iso (c : Cone G) (e : Iso (lim'.limMap (map_cone c))) : Iso (limMap {D.limit (Comp (RightKanExt D p F) G)} (Cone.map (RightKanExt D p F) c))
         => Iso.rightFactor _ iso $ transport (Iso __) (lim'.limUniqueBeta {_} {map_cone c} \lam k => inv (pmap (∘ _) (lim'.limBeta cone k) *> o-assoc *> pmap (_ ∘) (limBeta (Cone.map (RightKanExt D p F) c) _) *>
               limBeta {limit (Comp F (commaPrecat.rightForget (Const {TrivialCat} (G k.1)) p))} (Cone.premap (commaFunctor (c.coneMap k.1)) (lim p F c)) ((), k.2, k.3) *> repeat {2} unfold (rewrite id-left idp)) *> o-assoc) e
 
+      -- | Lifts a cone `c` over `G` to a cone over `F ∘ rightForget G p` with apex `Ran_p F c`.
       \func map_cone (c : Cone G) : Cone (Comp F (commaPrecat.rightForget G p)) \cowith
         | apex => RightKanExt D p F c
         | coneMap (j,z,f) => coneMap $ later ((), z, f ∘ c.coneMap j)
@@ -38,24 +65,33 @@
           coneCoh {D.limit (Comp F (commaPrecat.rightForget (Const {TrivialCat} c) p))} {(), w.2, w.3 ∘ c.coneMap w.1} {(), w'.2, w'.3 ∘ c.coneMap w'.1}
             (Graph.empty idp, h2, id-right *> pmap (w'.3 ∘) (inv (c.coneCoh h1)) *> inv o-assoc *> pmap (∘ _) h3 *> o-assoc)
 
+      {- | The canonical isomorphism `D.limit (Ran_p F ∘ G) ≅ lim'`, expressing that taking the limit over `J` of the
+       -   pointwise Kan extension agrees with the joint limit.
+       -}
       \func iso : Iso {D} {D.limit (Comp (RightKanExt D p F) G)} {lim'} \cowith
         | f => lim'.limMap cone
         | hinv => limMap cone'
         | hinv_f => limUnique \lam j => inv o-assoc *> pmap (∘ _) (limBeta cone' j) *> limUnique (\lam w => inv o-assoc *> pmap (∘ _) (limBeta {lim p F (G j)} (cone'' j) w) *> lim'.limBeta cone (j, w.2, w.3)) *> inv id-right
         | f_hinv => limUnique \lam w => inv o-assoc *> pmap (∘ _) (lim'.limBeta cone w) *> o-assoc *> pmap (_ ∘) (limBeta {D.limit (Comp (RightKanExt D p F) G)} cone' w.1) *> limBeta {lim p F (G w.1)} (cone'' w.1) ((), w.2, w.3) *> inv id-right
 
+      -- | The limit of `F ∘ rightForget G p` — i.e. the "outer" combined limit.
       \func lim' : Limit => D.limit (Comp F (commaPrecat.rightForget G p))
 
+      {- | A cone over `F ∘ rightForget G p` with apex `D.limit (Ran_p F ∘ G)`, built by composing limit projections
+       -   through both forgetful functors.
+       -}
       \func cone : Cone (Comp F (commaPrecat.rightForget G p)) (D.limit (Comp (RightKanExt D p F) G)) \cowith
         | coneMap w => later (coneMap $ later ((), w.2, w.3)) ∘ coneMap (commaPrecat.leftForget G p w)
         | coneCoh {w} {w'} h => inv o-assoc *> pmap (∘ _) (coneCoh {lim p F (G w.1)} {(), w.2, w.3} {(), w'.2, id ∘ w'.3 ∘ G.Func h.1} (TrivialCat.id, h.2, id-right *> o-assoc *> id-left *> h.3) *>
                                                             inv (limBeta {lim p F (G w'.1)} (Cone.premap (commaFunctor (G.Func h.1)) (lim p F (G w.1))) ((), w'.2, w'.3) )) *>
                                     o-assoc *> pmap (_ ∘) (coneCoh {D.limit (Comp (RightKanExt D p F) G)} h.1)
 
+      -- | Cones that exhibit `lim'` as a cone over `Ran_p F ∘ G` (and over each fiber `lim F (G j)`).
       \func cone'' (j : J) : Cone (Comp F (commaPrecat.rightForget (Const {TrivialCat} (G j)) p)) lim' \cowith
         | coneMap y => coneMap $ later (j, y.2, y.3)
         | coneCoh {y} {y'} h => lim'.coneCoh {j, y.2, y.3} {j, y'.2, y'.3} (id, h.2, pmap (y'.3 ∘) (later Func-id) *> h.3)
 
+      -- | Cones that exhibit `lim'` as a cone over `Ran_p F ∘ G` (and over each fiber `lim F (G j)`).
       \func cone' : Cone (Comp (RightKanExt D p F) G) lim' \cowith
         | coneMap j => limMap {lim p F (G j)} (cone'' j)
         | coneCoh {j} {j'} h => limUnique \lam w => inv o-assoc *> pmap (∘ _) (limBeta {lim p F (G j')} (Cone.premap (commaFunctor (G.Func h)) (lim p F (G j))) w) *>

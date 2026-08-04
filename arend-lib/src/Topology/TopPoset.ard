@@ -1,3 +1,12 @@
+{- | Topological partially ordered sets where the order relation is closed.
+ -
+ -   This module combines the Hausdorff topological space structure with a partial order, requiring the order relation
+ -   `<=` to be a closed subset of the product space. This closure condition automatically implies the Hausdorff
+ -   property (via the antisymmetry-based characterization of equality) and ensures that limits of monotone nets in
+ -   directed sets coincide with joins or meets. The abelian group variant additionally aligns the order with the group
+ -   structure, where closedness of `<=` reduces to closedness of the positive cone.
+ -}
+
 \import Algebra.Group
 \import Algebra.Ordered
 \import Function.Meta
@@ -12,25 +21,39 @@
 \open ProductTopSpace
 \open ContMap
 
+-- | A class extending `HausdorffTopSpace` and `Poset` where the order relation is closed in the product topology.
 \class HausdorffTopPoset \extends HausdorffTopSpace, Poset {
+  -- | The set `{(s.1, s.2) | s.1 <= s.2}` is closed in `ProductTopSpace \this \this`.
   | <=-closed : (ProductTopSpace \this \this).IsClosed \lam s => s.1 <= s.2
   | isHausdorff => \have P => ProductTopSpace \this \this \in
     hausdorff-char.2 $ transport P.IsClosed (ext \lam s => ext (\lam p => <=-antisymmetric p.1 p.2, \lam p => (=_<= p, =_<= (inv p)))) $ P.closed-inter <=-closed $ cont-closed (tuple proj2 proj1) <=-closed
 
+  -- | For fixed `b`, the lower set `(<= b) = {x | x <= b}` is closed.
   \lemma <=-closed-left {b : E} : IsClosed (<= b)
     => cont-closed (tuple id (const b)) <=-closed
 
+  -- | For fixed `a`, the upper set `(a <=) = {x | a <= x}` is closed.
   \lemma <=-closed-right {a : E} : IsClosed (a <=)
     => cont-closed (tuple (const a) id) <=-closed
 
+  {- | A monotone increasing net `f : I -> E` over a directed set with topological limit `l` has `l` as its supremum
+   -   (`IsJoin f l`).
+   -}
   \lemma limit-Join {I : DirectedSet} {f : I -> E} (fm : \Pi {i j : I} -> i I.<= j -> f i <= f j) {l : E} (fl : IsLimit f l) : IsJoin f l
     => (\lam i => closed-limit <=-closed-right fl fm, \lam u => closed-limit0 <=-closed-left fl u)
 
+  {- | A monotone decreasing net `f : I -> E` over a directed set with topological limit `l` has `l` as its infimum
+   -   (`IsMeet f l`).
+   -}
   \lemma limit-Meet {I : DirectedSet} {f : I -> E} (fm : \Pi {i j : I} -> i I.<= j -> f j <= f i) {l : E} (fl : IsLimit f l) : IsMeet f l
     => (\lam j => closed-limit <=-closed-left fl fm, \lam u => closed-limit0 <=-closed-right fl u)
 }
 
+{- | A class extending `HausdorffTopAbGroup`, `HausdorffTopPoset`, and `PosetAbGroup`, combining a Hausdorff topological
+ -   abelian group with a compatible partial order.
+ -}
 \class HausdorffTopPosetAbGroup \extends HausdorffTopAbGroup, HausdorffTopPoset, PosetAbGroup {
+  -- | The positive cone `{x | 0 <= x}` is closed.
   | positive-closed : IsClosed (0 <=)
 
   \default <=-closed => transport (IsClosed {ProductTopSpace \this \this}) (ext \lam s => ext (from>=0,to>=0)) $ cont-closed (subtract-cont ContMap.∘ tuple proj2 proj1) positive-closed

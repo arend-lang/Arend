@@ -1,3 +1,14 @@
+{- | Homomorphisms of (semi)rings, their kernels and images, and the canonical maps from `Nat` and `Int`.
+ -
+ -   This module layers ring homomorphisms on top of the additive and multiplicative monoid/group homomorphism records:
+ -   a `SemiringHom` combines `AddMonoidHom` with `MonoidHom`, and a `RingHom` adds `AddGroupHom` so kernels become
+ -   two-sided ideals. The image of a ring homomorphism is packaged as a `SubRing`, with the inclusion exhibited as an
+ -   injective `RingHom` for use in factorization arguments. The `\where` block provides identity, composition, and
+ -   equality-by-extensionality, plus the universal maps `natMap` and `intMap` from `NatSemiring` and `IntRing`, which
+ -   let any ring be regarded as an algebra over `Nat`/`Int`. Notions of finite/algebraic generation
+ -   (`isAlgebraGenerated`, `isFiniteAlgebra`) are formulated via multivariate polynomial evaluation through `f`.
+ -}
+
 \import Algebra.Field
 \import Algebra.Group
 \import Algebra.Group.GroupHom
@@ -24,26 +35,32 @@
 \import Paths
 \import Paths.Meta
 
+-- | For a pseudo-semiring `R` and `a : R`, left multiplication `a *` is an additive monoid homomorphism.
 \lemma *-addMonoidHom-left {R : PseudoSemiring} {a : R} : AddMonoidHom R R (a *) \cowith
   | func-zro => zro_*-right
   | func-+ => ldistr
 
+-- | Right multiplication `* a` is an additive monoid homomorphism.
 \lemma *-addMonoidHom-right {R : PseudoSemiring} {a : R} : AddMonoidHom R R (* a) \cowith
   | func-zro => zro_*-left
   | func-+ => rdistr
 
+-- | Record extending `AddMonoidHom` and `MonoidHom` between semirings; a map preserving `+`, `0`, `*`, and `1`.
 \record SemiringHom \extends AddMonoidHom, MonoidHom {
   \override Dom : Semiring
   \override Cod : Semiring
 
+  -- | A semiring homomorphism commutes with the canonical `Nat` coefficient embedding: `func (natCoef n) = natCoef n`.
   \lemma func-natCoef {n : Nat} : func (natCoef n) = natCoef n \elim n
     | 0 => rewrite (natCoefZero,natCoefZero) func-zro
     | suc n => rewrite (natCoefSuc,natCoefSuc) $ func-+ *> pmap2 (+) func-natCoef func-ide
 }
 
+-- | In a pseudo-ring, `a *` is an additive group homomorphism.
 \lemma *-addGroupHom-left {R : PseudoRing} {a : R} : AddGroupHom R R (a *) \cowith
   | func-+ => ldistr
 
+-- | In a pseudo-ring, `* a` is an additive group homomorphism.
 \lemma *-addGroupHom-right {R : PseudoRing} {a : R} : AddGroupHom R R (* a) \cowith
   | func-+ => rdistr
 
@@ -67,30 +84,36 @@
     | ideal-left Ifa => transportInv I f.func-* $ I.ideal-left Ifa
 }
 
+-- | Record extending `SemiringHom` and `AddGroupHom` between rings; the principal abstraction of the module.
 \record RingHom \extends PseudoRingHom, SemiringHom {
   \override Dom : Ring
   \override Cod : Ring
 
+  -- | The kernel as a two-sided ideal `TIdeal Dom`, built from `AddGroupHom.Kernel` with both-sided ideal closure.
   \protected \func Kernel : TIdeal Dom \cowith
     | SubAddGroup => KernelAddGroup \this
     | ideal-left A0 => rewrite (func-*, A0, zro_*-right) idp
     | ideal-right A0 => rewrite (func-*, A0, zro_*-left) idp
 } \where {
+    -- | Pointwise equality of ring homomorphisms suffices for equality (extensionality).
     \func equals {R S : Ring} {f g : RingHom R S} (p : \Pi (x : R) -> f x = g x) : f = g
       => exts p
 
+    -- | The identity ring homomorphism `RingHom R R`.
     \func id {R : Ring} : RingHom R R \cowith
       | func x => x
       | func-ide => idp
       | func-+ => idp
       | func-* => idp
 
+    -- | Composition of ring homomorphisms `g ∘ f : RingHom R T` from `f : RingHom R S` and `g : RingHom S T`.
     \func \fixl 8 compose \alias \infixl 8 ∘ {R S T : Ring} (g : RingHom S T) (f : RingHom R S) : RingHom R T \cowith
       | func x => g (f x)
       | func-ide => pmap g f.func-ide *> g.func-ide
       | func-+ => pmap g f.func-+ *> g.func-+
       | func-* => pmap g f.func-* *> g.func-*
 
+  -- | If `S` is contractible, then `RingHom R S` is contractible — contractible rings are terminal in `Ring`.
   \lemma contr-isTerm {R S : Ring} (c : Contr S) : Contr (RingHom R S) \cowith
       | center => \new RingHom {
         | func _ => c.center
@@ -100,17 +123,25 @@
       }
       | contraction f => exts \lam e => c.contraction _
 
+    -- | Any ring homomorphism from a field `K` to a non-zero ring is injective.
     \lemma field-isInj {K : Field} {R : NonZeroRing} {f : RingHom K R} : IsInj f
       => f.injective \lam p => K.#0-tight \lam a#0 => R.inv-nonZero (f.func-Inv a#0) p
 
+    {- | Predicate that an array `l : Array E` generates `E` as an `R`-algebra along `f : RingHom R E`: every `x : E` is
+     -   the evaluation at `l` of a multivariate polynomial over `R`.
+     -}
     \type isAlgebraGenerated {R E : CRing} (f : RingHom R E) (l : Array E) : \Prop
       => \Pi (x : E) -> ∃ (p : MPoly (Fin l.len) R) (x = mPolyEval l (mPoly-map f p))
 
+    -- | `f` makes `E` a finitely generated `R`-algebra (existence of such an `l`).
     \type isFiniteAlgebra {R E : CRing} (f : RingHom R E) : \Prop
       => ∃ (l : Array E) (isAlgebraGenerated f l)
 
     \open Algebra.Ring.Poly
 
+    {- | If `E` is generated over `R` by a single element `a` (via univariate polynomials) and `S` is generated over `E`
+     -   by `l`, then `S` is generated over `R` by `g a :: l` along `g ∘ f`.
+     -}
     \lemma isAlgebraGenerated-comp {R E S : CRing} {f : RingHom R E} {g : RingHom E S} {a : E} {l : Array S}
                                    (fg : \Pi (x : E) -> ∃ (p : Poly R) (polyMapEval f p a = x)) (gg : isAlgebraGenerated g l) : isAlgebraGenerated (g ∘ f) (g a :: l)
       => \lam x =>
@@ -119,14 +150,17 @@
           \in inP (MPoly_Fin-suc'.retHom s, pq *> rewrite (inv sq, MPoly_Fin-suc'.map-comm) (pmap (mPolyEval l)
               (inv mPoly-map-comp *> pmap (mPoly-map __ s) (exts \lam p => unfold (inv polyEval_polyMap) *> pmap (polyEval __ _) (polyMap-comp f g)) *> mPoly-map-comp {_} {PolyAlgebra R} {PolyAlgebra S}) *> inv MPoly_Fin-suc'.eval-comm))
 
+    -- | A single element `a : E` whose orbit under `f` covers all of `E` makes `f` generated by `a :: nil`.
     \lemma isAlgebraGenerated-poly {R E : CRing} {f : RingHom R E} {a : E}
                                    (fg : \Pi (x : E) -> ∃ (p : Poly R) (polyMapEval f p a = x)) : isAlgebraGenerated f (a :: nil)
       => isAlgebraGenerated-comp {R} {E} {E} {f} {RingHom.id} {a} {nil} fg \lam x => inP (mConst x, simplify)
 
+  -- | Kernel of a homomorphism out of a commutative ring, packaged as an `Ideal R`.
   \func KernelC {R : CRing} {S : Ring} (f : RingHom R S) : Ideal R \cowith
     | TIdeal => f.Kernel
 }
 
+-- | The unique semiring homomorphism `SemiringHom NatSemiring R` for any semiring `R`, given by `natCoef`.
 \func natMap {R : Semiring} : SemiringHom NatSemiring R \cowith
   | func => natCoef
   | func-+ {n m : Nat} : R.natCoef (n + m) = natCoef n + natCoef m \elim m {
@@ -140,10 +174,12 @@
     | suc m => func-+ *> pmap (+ natCoef n) func-* *> inv (pmap (natCoef n *) (natCoefSuc m) *> ldistr *> pmap (natCoef n * natCoef m +) ide-right)
   }
 
+-- | Elements coming from `Nat` commute with everything: `natMap n * x = x * natMap n`.
 \lemma natComm {R : Semiring} (n : Nat) (x : R) : natMap n * x = x * natMap n \elim n
   | 0 => pmap (* x) natCoefZero *> zro_*-left *> inv (pmap (x *) natCoefZero *> zro_*-right)
   | suc n => pmap (* x) (natCoefSuc n) *> rdistr *> pmap (natCoef n * x +) ide-left *> pmap (+ x) (natComm n x) *> inv (pmap (x *) (natCoefSuc n) *> ldistr *> pmap (x * natCoef n +) ide-right)
 
+-- | The unique ring homomorphism `RingHom IntRing R` for any ring `R`, given by `intCoef`.
 \func intMap {R : Ring} : RingHom IntRing R \cowith
   | func => intCoef
   | func-+ {x y : Int} : R.intCoef (x + y) = intCoef x + intCoef y \elim x, y {
@@ -163,6 +199,7 @@
     \open AddGroup(negative_zro,negative_+)
     \open Ring
 
+    -- | Compatibility of `intCoef` with the natural-number difference: `intCoef (n Nat.- m) = intCoef n - intCoef m`.
     \lemma intCoef_diff {R : Ring} (n m : Nat) : R.intCoef (n Nat.- m) = intCoef n - intCoef m \elim n, m
       | 0, 0 => inv (pmap (natCoef 0 + negative __) natCoefZero *> pmap (natCoef 0 +) negative_zro *> zro-right)
       | 0, suc _ \as m => inv (pmap (__ - natCoef m) natCoefZero *> zro-left)
@@ -172,6 +209,7 @@
       inv (pmap2 (__ + negative __) (natCoefSuc n) (natCoefSuc m) *> +-assoc)
   }
 
+-- | Elements coming from `Int` commute with everything: `intMap n * x = x * intMap n`.
 \lemma intComm {R : Ring} (n : Int) (x : R) : intMap n * x = x * intMap n \elim n
   | pos n => natComm n x
   | neg n => rewrite Ring.intCoef_neg (Ring.negative_*-left *> pmap negative (natComm n x) *> inv Ring.negative_*-right)

@@ -107,6 +107,7 @@
     }
 }
 
+-- | Single-element cover, used as the preorder.
 \func Cover1 {P : PreorderSite} (x y : P) => Cover x (single y)
 
 \truncated \data Cover {P : PreorderSite} (x : P) (U : Set P) : \Prop
@@ -131,6 +132,7 @@
       | cover-inj x<=t Vt => cover-left x<=t (V<=U Vt)
       | cover-trans x<=T T<=V => cover-trans x<=T \lam Tt => cover-trans* (T<=V Tt) V<=U
 
+    -- | Standard manipulations of covers.
     \lemma cover-trans1 {x y : P} {U : Set P} (x<=y : Cover1 x y) (y<=U : Cover y U) : Cover x U
       => cover-trans* x<=y \lam {_} (idp) => y<=U
 
@@ -215,6 +217,7 @@
   | Join-univ {C} {W} d => closure-univ $ later \lam (inP (U,CU,Ux)) => d CU Ux
   | Join-ldistr>= {C} {W} (Wx,x<=C) => cover-down-sub x<=C \lam {y} (inP (U,CU,Uz)) y<=z y<=x => inP (_, SetIm-con CU, (W.2 $ cover-inj y<=x Wx, U.2 $ cover-inj y<=z Uz))
   \where {
+    -- | Carrier of `PresentedFrame`.
     \type Opens (P : PreorderSite) => Given (U : P -> \Prop) ∀ {x : P} (Cover x U -> U x)
 
     \protected \type \infix 4 <= (U V : Opens P) => \Pi {x : P} -> U.1 x -> V.1 x
@@ -228,6 +231,7 @@
     \lemma closure_embed {C D : P -> \Prop} : closure C ∧ {SiteLocale P} closure D = closure (\lam x => ∃ (y : C) (z : D) (x P.<= y) (x P.<= z))
       => exts \lam a => propExt (\lam (a<=C,a<=D) => cover-inter a<=C a<=D) (\lam ac => (cover-refine ac \lam (inP (y,Cy,_,_,x<=y,_)) => inP (y,Cy,x<=y), cover-refine ac \lam (inP (_,_,z,Dz,_,x<=z)) => inP (z,Dz,x<=z)))
 
+    -- | Inclusion `P -> PresentedFrame P` of generators.
     \func embed (x : P) : Opens P
       => closure (single x)
 
@@ -247,9 +251,11 @@
       => \lam Ux => cover-trans* (cover-down (U<=a Ux)) \lam {y} (inP (_,idp,y<=a,y<=x)) => cover-down-sub (cover-left y<=x (U<=b Ux))
           \lam {z} {_} (idp) z<=b z<=y => inP (_, SetIm-cone z (U.2 $ cover-inj (z<=y <=∘ y<=x) Ux, z<=y <=∘ y<=a, z<=b), cover-refl idp)
 
+    -- | Frame homomorphisms out of `PresentedFrame P` are determined by their values on generators.
     \lemma func-equality {L : Locale} {f g : LocaleHom L (SiteLocale P)} (p : \Pi (x : P) -> f (embed x) = g (embed x)) {U : Opens P} : f U = g U
       => pmap f element_SJoin *> f.func-SJoin *> pmap (SJoin __ U.1) (ext p) *> inv g.func-SJoin *> inv (pmap g element_SJoin)
 
+    -- | Frame homomorphisms out of `PresentedFrame P` are determined by their values on generators.
     \lemma func-equality_ext {L : Locale} {f g : LocaleHom L (SiteLocale P)} (p : \Pi (x : P) -> f (embed x) = g (embed x)) : f = g
       => exts \lam U => func-equality p
   }
@@ -261,10 +267,12 @@
   | isBasicCover x U => x <= Join U
   | basic-cover-stable {a} a<=b {U} b<=U => inP (\lam c => Given (c <= a) ∃ (u : U) (c <= u), meet-univ <=-refl (a<=b <=∘ b<=U) <=∘ Join-ldistr>= <=∘ L.SJoin-univ \lam {u} Uu => Join-cond $ later (meet-left, inP (u, Uu, meet-right)), __.2, __.1)
   \where {
+    -- | Translates `Cover` in `F L` to `<=` in `L`.
     \lemma locale_cover {L : Locale} {x : L} {U : Set L} (x<=U : Cover {LocaleSite L} x U) : x <= Join U \elim x<=U
       | cover-inj x<=t Ut => x<=t <=∘ Join-cond Ut
       | cover-trans x<=T T<=U => x<=T <=∘ Join-univ \lam Tw => locale_cover (T<=U Tw)
 
+    -- | Adjoint frame homomorphism `PresentedFrame X -> Y` from a presentation map `X -> F Y`.
     \func adjointMap {X : PreorderSite} {Y : Locale} (f : PreorderSiteHom X (LocaleSite Y)) : FrameHom (SiteLocale X) Y \cowith
       | func U => SJoin f U.1
       | func-<= {U} {V} U<=V => SJoin-univ \lam Ua => SJoin-cond (U<=V Ua)
@@ -274,6 +282,7 @@
           SJoin-cond $ later (U.2 $ cover-inj s.1 Ua, V.2 $ cover-inj s.2 Vb))
       | func-Join>= => SJoin-univ \lam c => locale_cover (f.func-Cover c) <=∘ SJoin-univ (later \lam {b} (inP (U,CU,Ub)) => SJoin-cond Ub <=∘ SJoin-cond CU)
 
+    -- | `adjointMap f` extends `f` on generators.
     \lemma adjointMap_embed {X : PreorderSite} {Y : Locale} {f : PreorderSiteHom X (LocaleSite Y)} {x : X} : adjointMap f (embed x) = f x
       => <=-antisymmetric (SJoin-univ \lam c => locale_cover (f.func-Cover c) <=∘ SJoin-univ \lam p => func-<= $ =_<= $ inv p) (SJoin-conde x (later $ cover-refl idp))
 
@@ -345,6 +354,7 @@
   : (LocaleSite.adjointMap f).IsStronglyDense
   => \lam {Q} {U} p Ux => cover-sub (s $ SJoin-cond Ux <=∘ p) \lam {y} q => inP (embed y, q, cover-refl idp)
 
+-- | Strong density is closed under composition.
 \lemma sdense-comp {L M K : Locale} (f : LocaleHom L M) (fd : f.IsStronglyDense) (g : LocaleHom M K) (gd : g.IsStronglyDense) : (g LocaleHom.∘ f).IsStronglyDense
   => \lam p => gd (fd p)
 

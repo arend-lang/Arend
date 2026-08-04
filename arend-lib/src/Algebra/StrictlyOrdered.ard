@@ -1,3 +1,16 @@
+{- | Hierarchy of algebraic structures equipped with a strict order compatible with their operations, ranging from
+ -   ordered monoids to ordered fields.
+ -
+ -   This module builds an extensive tower of order-compatible algebraic classes. The strict order `<` is taken as
+ -   primitive at the monoid level (with addition required to be strictly monotone in each argument), while at the group
+ -   level `<` is reconstructed from a positivity predicate `isPos` so that `x < y ↔ isPos (y - x)`. Linearly ordered
+ -   variants additionally require comparison/connectedness/cotransitivity-style axioms, yielding lattice and apartness
+ -   structure for free. Multiplicative compatibility is layered on via ordered (commutative) semirings, rings, and
+ -   fields, with rings using the positivity predicate to interact with the apartness `#0` of a domain. Decidable
+ -   variants (`Dec` subclasses) provide trichotomy and constructive case analysis. The `Ordered…Algebra` classes lift
+ -   this to algebras over an ordered base ring.
+ -}
+
 \import Algebra.Algebra
 \import Algebra.Domain
 \import Algebra.Field
@@ -21,6 +34,9 @@
 \import Paths.Meta
 \open Monoid(Inv)
 
+{- | Strict poset structure on an additive monoid with monotonicity `<_+-left`, `<_+-right` of addition in each
+ -   argument. Provides `<_+` (additivity of strict inequality on both sides).
+ -}
 \class OrderedAddMonoid \extends StrictPoset, AddMonoid {
   | <_+-left (z : E) {x y : E} : x < y -> x + z < y + z
   | <_+-right (z : E) {x y : E} : x < y -> z + x < z + y
@@ -29,13 +45,19 @@
     => <_+-left b p <∘ <_+-right c q
 }
 
+-- | Commutative ordered additive monoid; right-monotonicity is derived from left-monotonicity via `+-comm`.
 \class OrderedAbMonoid \extends OrderedAddMonoid, AbMonoid
   | <_+-right z x<y => transport2 (<) +-comm +-comm (<_+-left z x<y)
 
+-- | Combines `BiorderedLattice` with abelian monoid, supplying join/meet semilattice structure compatible with `+`.
 \class BiorderedLatticeAbMonoid \extends BiorderedLattice, JoinSemilatticeAbMonoid, MeetSemilatticeAbMonoid, AbMonoid
 
+-- | Adds the linear lattice property to the biordered abelian monoid.
 \class LinearlyBiorderedAbMonoid \extends BiorderedLatticeAbMonoid, LinearLattice
 
+{- | Linearly biordered ordered abelian monoid with strict cancellation laws `<_+-cancel-left`, `<_+-cancel-right`.
+ -   Derives `<=_+`, and the compatibility of `+` with `meet`/`join` (`meet_+-left`, `join_+-left`).
+ -}
 \class LinearlyOrderedAbMonoid \extends LinearlyBiorderedAbMonoid, OrderedAbMonoid {
   | <_+-cancel-left (x : E) {y z : E} : x + y < x + z -> y < z
   | <_+-cancel-right (z : E) {x y : E} : x + z < y + z -> x < y
@@ -51,23 +73,29 @@
     \have t => LinearOrder.join/=left $ <_/= $ <_+-cancel-left a $ join-left <∘r p
     \in join-right $ rewrite t in p) $ join-univ (<=_+ <=-refl join-left) (<=_+ <=-refl join-right)
 
+  -- | From `b + d ≤ a + c` (or strict) plus a comparison between `c` and `d`, conclude `b < a`.
   \lemma <_+-invert-right {a b c d : E} (p : b + d <= a + c) (q : c < d) : b < a
     => <_+-cancel-right c $ <_+-right b q <∘l p
 
+  -- | From `b + d ≤ a + c` (or strict) plus a comparison between `c` and `d`, conclude `b < a`.
   \lemma <_+-invert-left {a b c d : E} (p : b + d < a + c) (q : c <= d) : b < a
     => <_+-cancel-right c $ <=_+ <=-refl q <∘r p
 
+  -- | Mixed strict/non-strict additivity of inequalities.
   \lemma <=_+-left {a b c d : E} (p : a <= c) (q : b < d) : a + b < c + d
     => <_+-right a q <∘l <=_+ p <=-refl
 
+  -- | Mixed strict/non-strict additivity of inequalities.
   \lemma <=_+-right {a b c d : E} (p : a < c) (q : b <= d) : a + b < c + d
     => <_+-left b p <∘l <=_+ <=-refl q
 
+  -- | A nonneg array with at least one strictly positive entry has strictly positive `BigSum`.
   \lemma BigSum_>0 {l : Array E} (q : \Pi (j : Fin l.len) -> 0 <= l j) (p : ∃ (j : Fin l.len) (0 < l j)) : 0 < BigSum l \elim l, p
     | nil, inP ((),_)
     | a :: l, inP (0, p) => transport (< _) zro-right $ <=_+-right p $ BigSum_>=0 \lam j => q (suc j)
     | a :: l, inP (suc j, p) => transport (< _) zro-right $ <=_+-left (q 0) $ BigSum_>0 (\lam j => q (suc j)) $ inP (j,p)
 
+  -- | For a nonempty array and `e > 0`, some element exceeds the join minus `e` (an `ε`-approximation of the supremum).
   \lemma Big_join-choice {n : Nat} {l : Array E (suc n)} {e : E} (e>0 : 0 < e) : ∃ (a : l) (Big (∨) (l 0) (tail l) < a + e) \elim n, l
     | 0, a :: l => inP (0, transport (< _) zro-right $ <_+-right a e>0)
     | suc n, a :: l => \case <-comparison (Big (∨) a l) {l 0} {l 0 + e} $ transport (< _) zro-right $ <_+-right (l 0) e>0 \with {
@@ -81,11 +109,17 @@
     }
 }
 
+{- | Additive group with a `\Prop`-valued positivity predicate `isPos`, axioms `zro/>0` and additive closure
+ -   `positive_+`.
+ -}
 \class PreorderedAddGroup \extends AddGroup
   | isPos : E -> \Prop
   | zro/>0 : Not (isPos zro)
   | positive_+ {x y : E} : isPos x -> isPos y -> isPos (x + y)
 
+{- | Defines `x < y := isPos (y - x)` and derives the strict-order axioms from positivity. Introduces
+ -   `isNeg x := isPos (negative x)`.
+ -}
 \class OrderedAddGroup \extends OrderedAddMonoid, PreorderedAddGroup {
   | < => OrderedAddGroup.<
   | <-irreflexive x<x => zro/>0 (transport isPos negative-right x<x)
@@ -101,74 +135,98 @@
   | isNeg : E -> \Prop
   | isNeg x => isPos (negative x)
 
+  -- | Conversion between `isNeg (x - y)` and `x < y`.
   \lemma fromNeg {x y : E} (x-y<0 : isNeg (x - y)) : x < y
     => transport isPos (negative_+ *> pmap (- x) negative-isInv) x-y<0
 
+  -- | Conversion between `isNeg (x - y)` and `x < y`.
   \lemma toNeg {x y : E} (x<y : x < y) : isNeg (x - y)
     => transport isPos (inv (negative_+ *> pmap (- x) negative-isInv)) x<y
 
+  -- | `isPos x ↔ 0 < x`.
   \lemma pos_>0 {x : E} (p : isPos x) : x > zro
     => transportInv (\lam y => isPos (x + y)) negative_zro $ transportInv isPos zro-right p
 
+  -- | `isPos x ↔ 0 < x`.
   \lemma >0_pos {x : E} (x>0 : x > zro) : isPos x
     => transport isPos zro-right $ transport (\lam y => isPos (x + y)) negative_zro x>0
 
+  -- | `isNeg x ↔ x < 0`.
   \lemma neg_<0 {x : E} (p : isNeg x) : x < zro
     => rewrite negative-isInv in positive_negative (pos_>0 p)
 
+  -- | `isNeg x ↔ x < 0`.
   \lemma <0_neg {x : E} (x<0 : x < zro) : isNeg x
     => >0_pos (negative_positive x<0)
 
   \lemma positive_negative' {x : E} (x>0 : isPos x) : isNeg (negative x)
     => unfold (simplify x>0)
 
+  -- | Sign-flipping under negation.
   \lemma positive_negative {x : E} (x>0 : x > zro) : negative x < zro
     => transport isPos (unfold (-) $ rewrite (negative-isInv,negative_zro) (zro-right *> inv zro-left)) x>0
 
   \lemma negative_positive' {x : E} (-x<0 : isNeg (negative x)) : isPos x
     => transport isPos negative-isInv -x<0
 
+  -- | Sign-flipping under negation.
   \lemma negative_positive {x : E} (x<0 : x < zro) : negative x > zro
     => transport isPos (unfold (-) $ rewrite negative_zro (zro-left *> inv zro-right)) x<0
 
+  -- | Order-reversal for `negative`.
   \lemma negative_< {x y : E} (x<y : x < y) : negative y < negative x
     => transportInv (\lam y => isPos (_ + y)) negative-isInv $ >0_pos $ rewrite negative-left in <_+-right (negative x) x<y
 
+  -- | Order-reversal for `negative`.
   \lemma negative_<-inv {x y : E} (p : negative x < negative y) : y < x
     => transport2 (<) negative-isInv negative-isInv (negative_< p)
 
+  -- | Order-reversal for `negative`.
   \lemma negative_<-left {x y : E} (p : negative x < y) : negative y < x
     => transport (_ <) negative-isInv (negative_< p)
 
+  -- | Order-reversal for `negative`.
   \lemma negative_<-right {x y : E} (p : x < negative y) : y < negative x
     => transport (< _) negative-isInv (negative_< p)
 
+  -- | `x - y < z ↔ x < z + y`.
   \lemma <-diff-mid {x y z : E} (p : x - y < z) : x < z + y
     => simplify in <_+-left y p
 
+  -- | `x - y < z ↔ x < z + y`.
   \lemma <-diff-mid-conv {x y z : E} (p : x < z + y) : x - y < z
     => simplify in <_+-left (negative y) p
 
+  -- | `0 < y - x ↔ x < y`.
   \lemma from>0 {x y : E} (p : 0 < y - x) : x < y
     => transport (< _) (zro-left *> negative-isInv) (<-diff-mid-conv p)
 
+  -- | `0 < y - x ↔ x < y`.
   \lemma to>0 {x y : E} (p : x < y) : 0 < y - x
     => <-diff-mid $ transportInv (< _) (zro-left *> negative-isInv) p
 
+  -- | `x - y < 0 ↔ x < y`.
   \lemma from<0 {x y : E} (p : x - y < 0) : x < y
     => transport (x <) zro-left (<-diff-mid p)
 
+  -- | `x - y < 0 ↔ x < y`.
   \lemma to<0 {x y : E} (p : x < y) : x - y < 0
     => <-diff-mid-conv $ transportInv (x <) zro-left p
 } \where {
+  -- | The defining relation `\infix 4 <` on a `PreorderedAddGroup`.
   \type \infix 4 < {A : PreorderedAddGroup} (x y : A) => isPos (y - x)
 }
 
+-- | Abelian ordered additive group.
 \class OrderedAbGroup \extends OrderedAbMonoid, OrderedAddGroup, AbGroup {
+  -- | From `x - y < z` derive `x - z < y`.
   \lemma <-diff-left {x y z : E} (p : x - y < z) : x - z < y
     => (simplify, rewrite +-comm) in <_+-right (negative z) (<-diff-mid p)
 }
 
+{- | Adds comparison `<_+-comparison` (positivity of a sum splits over summands), tightness `<_+-connectedness`, and
+ -   absolute value compatibility (`abs>=0`). Derives the linearly-ordered cancellation laws and `<-comparison`.
+ -}
 \class LinearlyOrderedAbGroup \extends OrderedAbGroup, LinearlyOrderedAbMonoid, AbsAbGroup {
   | <_+-comparison (x y : E) : isPos (x + y) -> isPos x || isPos y
   | <_+-connectedness {x : E} : Not (isPos x) -> Not (isNeg x) -> x = zro
@@ -185,10 +243,14 @@
   | <-connectedness x/<y y/<x => fromZero $ <_+-connectedness (y/<x __) \lam p => x/<y (fromNeg p)
   | abs>=0 => \lam p => <-irreflexive $ negative_positive (join-left <∘r p) <∘ join-right <∘r p
 
+  -- | `|x - y| < z` from the two one-sided strict bounds `x - y < z` and `y - x < z`.
   \lemma abs_-_< {x y z : E} (p : x - y < z) (q : y - x < z) : abs (x - y) < z
     => <_join-univ p (simplify q)
 }
 
+{- | Ordered abelian additive monoid with multiplicative compatibility: `zro<ide`, and four monotonicity laws
+ -   `<_*_positive-left/right`, `<_*_negative-left/right`.
+ -}
 \class OrderedSemiring \extends Semiring, OrderedAbMonoid {
   | zro<ide : zro < ide
   | <_*_positive-left {x y z : E} : x < y -> z > zro -> x * z < y * z
@@ -196,30 +258,38 @@
   | <_*_negative-left {x y z : E} : x < y -> z < zro -> x * z > y * z
   | <_*_negative-right {x y z : E} : x < zro -> y < z -> x * y > x * z
 
+  -- | Strict monotonicity of `natCoef` on `Nat`.
   \lemma natCoef_< {n m : Nat} (p : n NatOrder.< m) : natCoef n < natCoef m \elim n, m, p
     | 0, 1, NatOrder.zero<suc => rewrite (natCoefZero,natCoefSuc,natCoefZero,zro-left) zro<ide
     | 0, suc (suc m), NatOrder.zero<suc => rewrite (natCoefZero,natCoefSuc) $ transport (< _) (zro-right *> natCoefZero) $ <_+ (natCoef_< NatOrder.zero<suc) zro<ide
     | suc n, suc m, NatOrder.suc<suc p => rewrite (natCoefSuc,natCoefSuc) $ <_+-left ide (natCoef_< p)
 
+  -- | Sign of products of strictly positive/negative elements.
   \lemma <_*_positive_positive {x y : E} (x>0 : 0 < x) (y>0 : 0 < y) : 0 < x * y
     => transport (< _) zro_*-right (<_*_positive-right x>0 y>0)
 
+  -- | Sign of products of strictly positive/negative elements.
   \lemma <_*_negative_negative {x y : E} (x<0 : x < 0) (y<0 : y < 0) : 0 < x * y
     => transport (< _) zro_*-right (<_*_negative-right x<0 y<0)
 
+  -- | Mixed-sign products are negative.
   \lemma <_*_positive_negative {x y : E} (x>0 : 0 < x) (y<0 : y < 0) : x * y < 0
     => transport (_ <) zro_*-right (<_*_positive-right x>0 y<0)
 
+  -- | Mixed-sign products are negative.
   \lemma <_*_negative_positive {x y : E} (x<0 : x < 0) (y>0 : 0 < y) : x * y < 0
     => transport (_ <) zro_*-left (<_*_positive-left x<0 y>0)
 
+  -- | Joint strict monotonicity in both factors when both are positive.
   \lemma <_* {a b c d : E} (a>0 : 0 < a) (c>0 : 0 < c) (a<b : a < b) (c<d : c < d) : a * c < b * d
     => <_*_positive-left a<b c>0 <∘ <_*_positive-right (a>0 <∘ a<b) c<d
 
+  -- | Powers of a positive element are positive.
   \lemma pow>0 {a : E} (p : 0 < a) {k : Nat} : 0 < pow a k \elim k
     | 0 => zro<ide
     | suc k => <_*_positive_positive (pow>0 p) p
 
+  -- | For `0 < a < 1` and `k > 1`, `pow a k < a`.
   \lemma pow<id {a : E} (a>0 : 0 < a) (a<1 : a < 1) {k : Nat} (k>1 : 1 NatOrder.< k) : pow a k < a \elim k, k>1
     | 1, NatOrder.suc<suc ()
     | 2, _ => transport2 (__ * a < __) (inv ide-left) ide-right $ <_*_positive-right a>0 a<1
@@ -234,6 +304,9 @@
       <_*_positive-right {_} {_} {pow a (suc (k -' suc n))} {ide} (OrderedSemiring.pow>0 a>0 {n}) (OrderedSemiring.pow<ide a>0 a<1))
 }
 
+{- | Adds cancellation `<_*-cancel-left/right` (which case-split on the sign of the cancelled factor) and integrates
+ -   with `PosetSemiring`. Derives `<=_*_positive-left/right` and `zro<=ide`.
+ -}
 \class LinearlyOrderedSemiring \extends OrderedSemiring, LinearlyOrderedAbMonoid, PosetSemiring {
   | <_*-cancel-left {x y z : E} : x * y < x * z -> (\Sigma (x > zro) (y < z)) || (\Sigma (x < zro) (y > z))
   | <_*-cancel-right {x y z : E} : x * z < y * z -> (\Sigma (z > zro) (x < y)) || (\Sigma (z < zro) (x > y))
@@ -247,30 +320,35 @@
     | byRight (x<0,_) => x>=0 x<0
   }
 
+  -- | Strict cancellation of multiplication when the canceled factor has known sign.
   \lemma <_*_positive-cancel-left {x y z : E} (x>=0 : 0 <= x) (p : x * y < x * z) : y < z
     => \case <_*-cancel-left p \with {
       | byLeft (_,r) => r
       | byRight (x<0,_) => absurd (x>=0 x<0)
     }
 
+  -- | Strict cancellation of multiplication when the canceled factor has known sign.
   \lemma <_*_positive-cancel-right {x y z : E} (z>=0 : 0 <= z) (p : x * z < y * z) : x < y
     => \case <_*-cancel-right p \with {
       | byLeft (_,r) => r
       | byRight (z<0,_) => absurd (z>=0 z<0)
     }
 
+  -- | Strict cancellation of multiplication when the canceled factor has known sign.
   \lemma <_*_negative-cancel-left {x y z : E} (x<=0 : x <= 0) (p : x * y < x * z) : z < y
     => \case <_*-cancel-left p \with {
       | byLeft (x>0,_) => absurd (x<=0 x>0)
       | byRight (_,r) => r
     }
 
+  -- | Strict cancellation of multiplication when the canceled factor has known sign.
   \lemma <_*_negative-cancel-right {x y z : E} (z<=0 : z <= 0) (p : x * z < y * z) : y < x
     => \case <_*-cancel-right p \with {
       | byLeft (z>0,_) => absurd (z<=0 z>0)
       | byRight (_,r) => r
     }
 
+  -- | `0 ≤ x * x`.
   \lemma square_>=0 {x : E} : 0 <= x * x
     => \lam xx<0 => \case <_*-cancel-left (transportInv (_ <) zro_*-right xx<0) \with {
       | byLeft (x>0,x<0) => <-irreflexive (x<0 <∘ x>0)
@@ -289,82 +367,102 @@
       | byRight xy<yy => <_*_positive-cancel-right y>=0 xy<yy
     }
 
+  -- | A sum of squares is strictly positive when at least one summand is nonzero.
   \lemma sum_squares_>0 {l : Array E} (p : ∃ (j : Fin l.len) (0 < l j || l j < 0)) : 0 < BigSum (map (\lam x => x * x) l) \elim p
     | inP (j,p) => BigSum_>0 (\lam j => square_>=0) $ inP $ later (j, \case \elim p \with {
       | byLeft p => <_*_positive_positive p p
       | byRight p => <_*_negative_negative p p
     })
 
+  -- | Sign of the multiplicative inverse matches the sign of the original element.
   \lemma >0_Inv (t : Inv {\this}) (p : t > 0) : t.inv > 0
     => \case <_*-cancel-left (transport2 (<) (inv zro_*-right) (inv t.inv-right) zro<ide) \with {
       | byLeft q => q.2
       | byRight q => absurd (<-irreflexive (p <∘ q.1))
     }
 
+  -- | Sign of the multiplicative inverse matches the sign of the original element.
   \lemma <0_Inv (t : Inv {\this}) (p : t < 0) : t.inv < 0
     => \case <_*-cancel-left (transport2 (<) (inv zro_*-right) (inv t.inv-right) zro<ide) \with {
       | byLeft q => absurd (<-irreflexive (p <∘ q.1))
       | byRight q => q.2
     }
 
+  -- | Sign of the multiplicative inverse matches the sign of the original element.
   \lemma >=0_Inv (t : Inv {\this}) (p : 0 <= t) : 0 <= t.inv
     => \lam q => p (<0_Inv t.reverse q)
 
+  -- | Sign of the multiplicative inverse matches the sign of the original element.
   \lemma <=0_Inv (t : Inv {\this}) (p : t <= 0) : t.inv <= 0
     => \lam q => p (>0_Inv t.reverse q)
 
+  -- | Cancel an invertible nonneg factor in non-strict inequalities.
   \lemma <=_Inv-cancel-left {x y z : E} (xi : Inv x) (x>=0 : 0 <= x) (p : x * y <= x * z) : y <= z
     => transport2 (<=) (inv *-assoc *> pmap (* y) xi.inv-left *> ide-left) (inv *-assoc *> pmap (* z) xi.inv-left *> ide-left) $ <=_*_positive-right (>=0_Inv xi x>=0) p
 
+  -- | Cancel an invertible nonneg factor in non-strict inequalities.
   \lemma <=_Inv-cancel-right {x y z : E} (xi : Inv x) (p : y * x <= z * x) (x>=0 : 0 <= x) : y <= z
     => transport2 (<=) (*-assoc *> pmap (y *) xi.inv-right *> ide-right) (*-assoc *> pmap (z *) xi.inv-right *> ide-right) $ <=_*_positive-left p (>=0_Inv xi x>=0)
 
+  -- | Midpoint `(a + b) * t.inv` given an inverse `t` of `1 + 1`.
   \func mid_inv (t : Inv (1 + 1)) (a b : E) => (a + b) * t.inv
 
+  -- | The midpoint lies strictly between `a` and `b` when `a < b`.
   \lemma mid_inv>left (t : Inv (1 + 1)) {a b : E} (p : a < b) : a < mid_inv t a b
     => \have | t>0 : t.inv > 0 => >0_Inv t $ zro<ide <∘ transport (< _) zro-left (<_+-left 1 zro<ide)
              | a2<a+b : a * (1 + 1) < a + b => rewrite (ldistr,ide-right) (<_+-right a p)
        \in transport (< _) (*-assoc *> pmap (a *) t.inv-right *> ide-right) $ <_*_positive-left a2<a+b t>0
 
+  -- | The midpoint lies strictly between `a` and `b` when `a < b`.
   \lemma mid_inv<right (t : Inv (1 + 1)) {a b : E} (p : a < b) : mid_inv t a b < b
     => \have | t>0 : t.inv > 0 => >0_Inv t $ zro<ide <∘ transport (< _) zro-left (<_+-left 1 zro<ide)
              | a+b<b2 : a + b < b * (1 + 1) => rewrite (ldistr,ide-right) (<_+-left b p)
        \in transport (_ <)  (*-assoc *> pmap (b *) t.inv-right *> ide-right) (<_*_positive-left a+b<b2 t>0)
 
+  -- | Promotes the order to a `DenseLinearOrder` using midpoints when `2` is invertible.
   \func denseOrder (t : Inv (1 + 1)) : DenseLinearOrder \cowith
     | LinearOrder => \this
     | isDense {x} {z} p => inP (mid_inv t x z, mid_inv>left t p, mid_inv<right t p)
 
+  -- | `natCoef n > 0` for `n > 0`.
   \lemma natCoef>0 {n : Nat} (p : 0 NatOrder.< n) : zro < natCoef n \elim n
     | 0 => \case p
     | suc n => rewrite natCoefSuc $ transport (< _) zro-left $ <=_+-left natCoef>=0 zro<ide
 
+  -- | `pow` is strictly monotone on nonneg arguments for nonzero exponent.
   \lemma pow_<-monotone {a b : E} {k : Nat} (k/=0 : k /= 0) (a>=0 : 0 <= a) (a<b : a < b) : pow a k < pow b k \elim k
     | 0 => absurd (k/=0 idp)
     | suc k => <=_*_positive-left (pow_<=-monotone a>=0 $ <=-less a<b) a>=0 <∘r <_*_positive-right (pow>0 $ a>=0 <∘r a<b) a<b
 
+  -- | Distributivity of `*` over `meet`/`join` when the multiplied factor is nonneg.
   \lemma meet_*-left {a b c : E} (a>=0 : 0 <= a) : a * (b ∧ c) = (a * b) ∧ (a * c)
     => <=-antisymmetric (meet-univ (<=_*_positive-right a>=0 meet-left) (<=_*_positive-right a>=0 meet-right))
       \lam p => \have bc=b => meet/=right $ <_/= $ <_*_positive-cancel-left a>=0 $ p <∘l meet-right
                 \in <_/= (<_*_positive-cancel-left a>=0 $ p <∘l meet-left) bc=b
 
+  -- | Distributivity of `*` over `meet`/`join` when the multiplied factor is nonneg.
   \lemma meet_*-right {a b c : E} (c>=0 : 0 <= c) : (a ∧ b) * c = (a * c) ∧ (b * c)
     => <=-antisymmetric (meet-univ (<=_*_positive-left meet-left c>=0) (<=_*_positive-left meet-right c>=0))
       \lam p => \have ab=a => meet/=right $ <_/= $ <_*_positive-cancel-right c>=0 $ p <∘l meet-right
                 \in <_/= (<_*_positive-cancel-right c>=0 $ p <∘l meet-left) ab=a
 
+  -- | Distributivity of `*` over `meet`/`join` when the multiplied factor is nonneg.
   \lemma join_*-left {a b c : E} (a>=0 : 0 <= a) : a * (b ∨ c) = (a * b) ∨ (a * c)
     => <=-antisymmetric
       (\lam p => \have bc=c => join/=left $ <_/= $ <_*_positive-cancel-left a>=0 $ join-left <∘r p
                  \in <_/= (<_*_positive-cancel-left a>=0 $ join-right <∘r p) (inv bc=c)) $
     join-univ (<=_*_positive-right a>=0 join-left) (<=_*_positive-right a>=0 join-right)
 
+  -- | Distributivity of `*` over `meet`/`join` when the multiplied factor is nonneg.
   \lemma join_*-right {a b c : E} (c>=0 : 0 <= c) : (a ∨ b) * c = (a * c) ∨ (b * c)
     => <=-antisymmetric
       (\lam p => \have ab=b => join/=left $ <_/= $ <_*_positive-cancel-right c>=0 $ join-left <∘r p
                  \in <_/= (<_*_positive-cancel-right c>=0 $ join-right <∘r p) (inv ab=b)) $
     join-univ (<=_*_positive-left join-left c>=0) (<=_*_positive-left join-right c>=0)
 
+  {- | Decidable linearly ordered semiring (using `LinearOrder.Dec`); derives `<_+-cancel-left`, `<_*-cancel-left`,
+   -   `<_*-cancel-right` from trichotomy.
+   -}
   \class Dec \extends LinearlyOrderedSemiring, LinearOrder.Dec {
     | <_+-cancel-left x {y} {z} x+y<x+z => \case trichotomy y z \with {
       | equals y=z => absurd (<-irreflexive (rewrite y=z in x+y<x+z))
@@ -388,6 +486,7 @@
       | greater x>y, greater z>0 => absurd (<-irreflexive (x*z<y*z <∘ <_*_positive-left x>y z>0))
     }
 
+    -- | From `x + y ≤ a + b` infer `x ≤ a ∨ y ≤ b` decidably.
     \lemma splitSum {x y a b : E} (p : x + y <= a + b) : x <= a || y <= b
       => \case dec<_<= a x, dec<_<= b y \with {
         | inr x<=a, _ => byLeft x<=a
@@ -397,13 +496,16 @@
   }
 } \where \open LinearOrder
 
+-- | Commutative ordered semiring; right-multiplicative laws follow from left ones via `*-comm`.
 \class OrderedCSemiring \extends OrderedSemiring, CSemiring, OrderedAbMonoid
   | <_*_positive-right x>0 y<z => transport2 (<) *-comm *-comm (<_*_positive-left y<z x>0)
   | <_*_negative-right x<0 y<z => transport2 (>) *-comm *-comm (<_*_negative-left y<z x<0)
 
+-- | Linear version; derives `<_*-cancel-right` from `<_*-cancel-left`.
 \class LinearlyOrderedCSemiring \extends LinearlyOrderedSemiring, OrderedCSemiring
   | <_*-cancel-right x*z<y*z => <_*-cancel-left (transport2 (<) *-comm *-comm x*z<y*z)
   \where
+    -- | Decidable linearly ordered commutative semiring.
     \class Dec \extends OrderedCSemiring, LinearlyOrderedSemiring.Dec
 
 {- | An ordered ring is a linearly ordered domain and a distributive lattice such that the product of positive elements is positive
@@ -422,6 +524,7 @@
   }
   \field #0=>eitherPosOrNeg {x : E} : x `#0 -> isPos x || isNeg x
 
+  -- | Sign of factors recovered from sign of product.
   | positive_*-cancel {x y : E} : isPos (x * y) -> (\Sigma (isPos x) (isPos y)) || (\Sigma (isNeg x) (isNeg y))
   | positive_*-cancel {x} {y} xy>0 => \case <-comparison x (pos_>0 xy>0) \with {
     | byLeft x>0 => byLeft (>0_pos x>0, pos_*-cancel-left xy>0 $ >0_pos x>0)
@@ -434,17 +537,21 @@
     }
   }
 
+  -- | Sign of factors recovered from sign of product.
   | negative_*-cancel {x y : E} : isNeg (x * y) -> (\Sigma (isPos x) (isNeg y)) || (\Sigma (isNeg x) (isPos y))
   | negative_*-cancel x*y<0 => ||.map (\lam t => (t.1, t.2))
     (\lam t => (t.1, negative_positive' t.2))
     (positive_*-cancel (transport isPos (inv Ring.negative_*-right) x*y<0))
 
+  -- | Sign rules for products.
   | positive_negative_* {x y : E} : isPos x -> isNeg y -> isNeg (x * y)
   | positive_negative_* x>0 y<0 => transport isPos Ring.negative_*-right (positive_* x>0 y<0)
 
+  -- | Sign rules for products.
   | negative_positive_* {x y : E} : isNeg x -> isPos y -> isNeg (x * y)
   | negative_positive_* x<0 y>0 => transport isPos Ring.negative_*-left (positive_* x<0 y>0)
 
+  -- | Sign rules for products.
   | <_*_negative {x y : E} : isNeg x -> isNeg y -> isPos (x * y)
   | <_*_negative x<0 y<0 => transport isPos Ring.negative_* (positive_* x<0 y<0)
 
@@ -516,18 +623,22 @@
   \default negative=>#0 \as negative=>#0Impl {x} : isNeg x -> #0 x => byRight
   \default #0=>eitherPosOrNeg \as #0=>eitherPosOrNegImpl {x} (x#0 : #0 x) => x#0
 
+  -- | Strict inequalities imply additive apartness.
   \lemma pos#0 {x : E} (x>0 : 0 < x) : x AddGroup.`#0
     => positive=>#0 (>0_pos x>0)
 
+  -- | Strict inequalities imply additive apartness.
   \lemma neg#0 {x : E} (x<0 : x < 0) : x AddGroup.`#0
     => negative=>#0 (<0_neg x<0)
 
+  -- | Strict-version cancellation of a positive factor.
   \lemma positive_*-cancel-left {x y : E} (xy>0 : 0 < x * y) (x>0 : 0 < x) : 0 < y
     => \case positive_*-cancel (>0_pos xy>0) \with {
       | byLeft (_, y>0) => pos_>0 y>0
       | byRight (-x>0, _) => absurd (zro/>0 (transport isPos negative-right (positive_+ (>0_pos x>0) -x>0)))
     }
 
+  -- | Strict-version cancellation of a positive factor.
   \lemma positive_*-cancel-right {x y : E} (x*y>0 : 0 < x * y) (y>0 : 0 < y) : 0 < x
     => pos_>0 $ pos_*-cancel-right (>0_pos x*y>0) (>0_pos y>0)
 
@@ -537,14 +648,17 @@
       | byRight r => byRight (neg_<0 r.1)
     }
 
+  -- | Promotes to an `UnboundedDenseLinearOrder` (no upper or lower bound, dense via midpoints) when `2` is invertible.
   \func denseOrder (t : Inv (1 + 1)) : UnboundedDenseLinearOrder \cowith
     | DenseLinearOrder => LinearlyOrderedSemiring.denseOrder t
     | withoutUpperBound x => inP (x + 1, transport (< _) zro-right $ <_+-right x zro<ide)
     | withoutLowerBound x => inP (x - 1, transport (_ <) zro-right $ <_+-right x (positive_negative zro<ide))
 
+  -- | A negative invertible element has negative inverse.
   \lemma inv-negative (t : Inv {\this}) (p : t < 0) : t.inv < 0
     => transport2 (<) negative-isInv negative_zro $ negative_< $ >0_Inv (negative_inv t) (rewrite negative_zro in negative_< p)
 
+  -- | Multiplicativity of `abs`.
   \lemma abs_* {x y : E} : abs (x * y) = abs x * abs y
     => \have | lem1 {x : E} : x * y <= abs x * abs y => \lam p =>
       \have | t : abs x * (abs y - y) < (x - abs x) * y => rewrite (ldistr_-,rdistr_-) $ <_+-left _ p
@@ -560,13 +674,18 @@
   \lemma abs-square {x : E} : abs x * abs x = x * x
     => inv abs_* *> abs-ofPos square_>=0
 
+  -- | Multiplicativity of `abs`.
   \lemma abs_ide : abs 1 = 1
     => abs-ofPos (LinearOrder.<_<= zro<ide)
 
+  -- | Multiplicativity of `abs`.
   \lemma abs_pow {x : E} {n : Nat} : abs (pow x n) = pow (abs x) n \elim n
     | 0 => abs_ide
     | suc n => abs_* *> pmap (* _) abs_pow
 } \where {
+  {- | Decidable ordered ring; uses additive trichotomy `+_trichotomy` to derive comparison, connectedness, and
+   -   `pos_*-cancel-left`. The default `#0` becomes nonzero (`/= zro`).
+   -}
   \class Dec \extends Domain.Dec, OrderedRing, LinearlyOrderedSemiring.Dec {
     \field +_trichotomy (x : E) : Tri x zro
 
@@ -606,11 +725,18 @@
   }
 }
 
+{- | Combines `OrderedRing` with `IntegralDomain` and `LinearlyOrderedCSemiring`; right cancellation derived via
+ -   commutativity.
+ -}
 \class OrderedCRing \extends OrderedRing, IntegralDomain, LinearlyOrderedCSemiring
   | pos_*-cancel-right xy>0 => pos_*-cancel-left (transport isPos *-comm xy>0)
   \where
+    -- | Decidable ordered commutative integral domain.
     \class Dec \extends OrderedRing.Dec, OrderedCRing, LinearlyOrderedCSemiring.Dec, IntegralDomain.Dec
 
+{- | Ordered commutative ring that is a `Field`. Constructively guarantees that every element is either `< 0` or `+1` is
+ -   positive (locality), and `pos_*-cancel-left` uses field invertibility.
+ -}
 \class OrderedField \extends OrderedCRing, Field {
   | zro/=ide _0=1 => <-irreflexive (transport (< ide) _0=1 zro<ide)
   | locality x => \case <_+-comparison (x + ide) (negative x) (transport isPos (inv (pmap (- x) +-comm *> +-assoc *> pmap (ide +) negative-right *> zro-right)) ide>zro) \with {
@@ -624,47 +750,63 @@
     }
   | negative=>#0 x<0 => transport #0 negative-isInv (Ring.negative_inv (positive=>#0 x<0))
 
+  -- | The inverse of a strictly positive element, packaged with its positivity proof.
   \func pinv (x : E) (\property x>0 : 0 < x) : E
     => Inv.inv {pos#0 x>0}
 
+  -- | `pinv x * x = 1` and `x * pinv x = 1`.
   \lemma pinv-left {x : E} (x>0 : 0 < x) : pinv x x>0 * x = 1
     => Inv.inv-left {pos#0 x>0}
 
+  -- | `pinv x * x = 1` and `x * pinv x = 1`.
   \lemma pinv-right {x : E} (x>0 : 0 < x) : x * pinv x x>0 = 1
     => Inv.inv-right {pos#0 x>0}
 
+  -- | Involutivity: `pinv (pinv x) = x`.
   \lemma pinv_pos-inv {x : E} (x>0 : 0 < x) : pinv (pinv x x>0) (pinv>0 x>0) = x
     => inv $ Inv.inv-isUnique (Inv.reverse {pos#0 x>0}) (pos#0 $ pinv>0 x>0) idp
 
+  -- | `pinv` reverses strict order on positives.
   \lemma pinv_< {x y : E} (x>0 : 0 < x) (y>0 : 0 < y) (x<y : x < y) : pinv y y>0 < pinv x x>0
     => pinv_<-conv (pinv>0 y>0) (pinv>0 x>0) $ transport2 (<) (inv $ pinv_pos-inv x>0) (inv $ pinv_pos-inv y>0) x<y
 
+  -- | `pinv` reverses strict order on positives.
   \lemma pinv_<-conv {x y : E} (x>0 : 0 < x) (y>0 : 0 < y) (p : pinv y y>0 < pinv x x>0) : x < y
     => transport2 (<) (inv *-assoc *> pmap (* x) (pinv-right y>0) *> ide-left) ide-right $ <_*_positive-right y>0 $ transport (_ <) (pinv-left x>0) (<_*_positive-left p x>0)
 
+  -- | Non-strict order-reversal version.
   \lemma pinv_<= {x y : E} (x>0 : 0 < x) (y>0 : 0 < y) (x<=y : x <= y) : pinv y y>0 <= pinv x x>0
     => \lam q => x<=y (pinv_<-conv y>0 x>0 q)
 
+  -- | Non-strict order-reversal version.
   \lemma pinv_<=-conv {x y : E} (x>0 : 0 < x) (y>0 : 0 < y) (p : pinv y y>0 <= pinv x x>0) : x <= y
     => \lam q => p (pinv_< y>0 x>0 q)
 
+  -- | Positivity of `pinv` on positives.
   \lemma pinv>0 {x : E} (x>0 : 0 < x) : 0 < pinv x x>0
     => positive_*-cancel-left (transportInv (0 <) (pinv-right x>0) zro<ide) x>0
 
+  -- | For `0 < x < 1`, `1 < pinv x`.
   \lemma pinv>1 {x : E} (x>0 : 0 < x) (x<1 : x < 1) : 1 < pinv x x>0
     => transport (< _) pinv_ide $ pinv_< x>0 zro<ide x<1
 
+  -- | `pinv 1 = 1`.
   \lemma pinv_ide : pinv 1 zro<ide = 1
     => inv ide-left *> pinv-right zro<ide
 
+  -- | Multiplicativity of `pinv`.
   \lemma pinv_* {x y : E} (x>0 : 0 < x) (y>0 : 0 < y) : pinv x x>0 * pinv y y>0 = pinv (x * y) (<_*_positive_positive x>0 y>0)
     => Inv.inv-isUnique (Inv.lmake _ $ *-assoc *> pmap (_ *) (inv *-assoc *> pmap (* x) (pinv-left y>0) *> ide-left) *> pinv-left x>0) (pos#0 $ <_*_positive_positive x>0 y>0) *-comm
 
+  -- | Compatibility with `pow`.
   \lemma pinv_pow {x : E} (x>0 : 0 < x) {n : Nat} : pow (pinv x x>0) n = pinv (pow x n) (pow>0 x>0) \elim n
     | 0 => inv pinv_ide
     | suc n => pmap (* _) (pinv_pow x>0) *> pinv_* (pow>0 x>0) x>0
 }
 
+{- | Ordered field with decidable equality (extends `DiscreteField` and `OrderedCRing.Dec`); uses `eitherZeroOrInv` to
+ -   supply trichotomy.
+ -}
 \class DiscreteOrderedField \extends OrderedCRing.Dec, OrderedField, DiscreteField {
   | positive=>#0 {x} x>0 => \case eitherZeroOrInv x \with {
     | byLeft x=0 => absurd (zro/>0 (transport isPos x=0 x>0))
@@ -678,34 +820,44 @@
     }
   }
 
+  -- | Sign of the discrete inverse `finv`.
   \lemma finv>0 {x : E} (x>0 : 0 < x) : 0 < finv x
     => >0_Inv (nonZero-Inv (>_/= x>0)) x>0
 
+  -- | Sign of the discrete inverse `finv`.
   \lemma finv<0 {x : E} (x<0 : x < 0) : finv x < 0
     => inv-negative (nonZero-Inv (<_/= x<0)) x<0
 
+  -- | Position of `finv` relative to `1`.
   \lemma finv<1 {x : E} (x>1 : 1 < x) : finv x < 1
     => \have x>0 => zro<ide <∘ x>1
        \in transport2 (<) ide-left (finv-right $ >_/= x>0) $ <_*_positive-left x>1 (finv>0 x>0)
 
+  -- | Position of `finv` relative to `1`.
   \lemma finv>1 {x : E} (x>0 : 0 < x) (x<1 : x < 1) : 1 < finv x
     => transport2 (<) (finv-right $ >_/= x>0) ide-left $ <_*_positive-left x<1 (finv>0 x>0)
 
+  -- | `finv` reverses strict inequality on positives.
   \lemma finv_< {x y : E} (x>0 : 0 < x) (x<y : x < y) : finv y < finv x
     => rewrite (finv-right $ >_/= x>0, ide-right, inv *-assoc, finv-left $ >_/= $ x>0 <∘ x<y, ide-left) in <_*_positive-right (finv>0 $ x>0 <∘ x<y) (<_*_positive-left x<y (finv>0 x>0))
 
+  -- | `finv` reverses strict inequality on positives.
   \lemma finv_<-conv {x y : E} (x>0 : 0 < x) (p : finv x < finv y) : y < x
     => transport2 (<) finv_finv finv_finv $ finv_< (finv>0 x>0) p
 
+  -- | Inequality manipulations swapping a `finv` across sides.
   \lemma finv_<-left {x y : E} (x>0 : 0 < x) (p : finv x < y) : finv y < x
     => transport (_ <) finv_finv $ finv_< (finv>0 x>0) p
 
+  -- | Inequality manipulations swapping a `finv` across sides.
   \lemma finv_<-right {x y : E} (x>0 : 0 < x) (p : x < finv y) : y < finv x
     => transport (< _) finv_finv $ finv_< x>0 p
 
+  -- | Move a positive factor across an inequality as `finv`.
   \lemma <_rotate-right {x y z : E} (y>0 : 0 < y) (xy<z : x * y < z) : x < z * finv y
     => transport (< _) (*-assoc *> pmap (x *) (finv-right (>_/= y>0)) *> ide-right) (<_*_positive-left xy<z (finv>0 y>0))
 
+  -- | Move a positive factor across an inequality as `finv`.
   \lemma <_rotate-left {x y z : E} (y>0 : 0 < y) (p : x < y * z) : finv y * x < z
     => transport (_ <) (inv *-assoc *> pmap (* z) (finv-left (>_/= y>0)) *> ide-left) (<_*_positive-right (finv>0 y>0) p)
 
@@ -715,27 +867,36 @@
   \lemma <_rotate-left-conv {x y z : E} (y>0 : 0 < y) (p : finv y * x < z) : x < y * z
     => transport (x <) (pmap (z *) finv_finv *> *-comm) $ <_rotate-right (finv>0 y>0) $ transport (< z) *-comm p
 
+  -- | Non-strict order reversal.
   \lemma finv_<= {x y : E} (x>0 : 0 < x) (x<=y : x <= y) : finv y <= finv x
     => \lam p => x<=y (finv_<-conv x>0 p)
 
+  -- | Non-strict version of positivity preservation.
   \lemma finv>=0 {x : E} (x>=0 : 0 <= x) : 0 <= finv x
     => \lam p => x>=0 $ transport (< 0) finv_finv (finv<0 p)
 
+  -- | Telescoping identity `finv x - finv (x + 1) = finv (x * (x + 1))`.
   \lemma finv>0-diff {x : E} (x>0 : 0 < x) : finv x - finv (x + 1) = finv (x * (x + 1))
     => finv-diff (\lam x=0 => linarith) (\lam x+1=0 => linarith)
 }
 
+{- | Associative algebra over an `OrderedCRing` with order-reflecting/preserving coefficient map (`coef_<`,
+ -   `coef_<-inv`).
+ -}
 \class OrderedAAlgebra \extends AAlgebra, OrderedRing {
   \override R : OrderedCRing
   | coef_< {x y : R} : x < {R} y -> coefMap x < coefMap y
   | coef_<-inv {x y : R} : coefMap x < coefMap y -> x < {R} y
 
+  -- | Non-strict version of `coef_<`.
   \lemma coef_<= {x y : R} (p : x <= {R} y) : coefMap x <= coefMap y
     => \lam q => p (coef_<-inv q)
 }
 
+-- | Commutative ordered algebra over an ordered commutative ring.
 \class OrderedCAlgebra \extends OrderedAAlgebra, CAlgebra, OrderedCRing {
   \override R : OrderedCRing
 }
 
+-- | Commutative ordered algebra whose underlying ring is an ordered field.
 \class OrderedFieldAlgebra \extends OrderedCAlgebra, OrderedField

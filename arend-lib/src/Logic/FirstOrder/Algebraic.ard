@@ -1,3 +1,15 @@
+{- | First-order logic with equality over algebraic (multi-sorted) signatures, including syntactic theories, free models
+ -   via quotient terms, and semantic structures.
+ -
+ -   This module builds first-order logic on top of the term language from `Logic.FirstOrder.Term`, extending signatures
+ -   with predicate symbols and adding atomic formulas (equalities and predicate applications). A `Theory` packages a
+ -   signature with axioms given as sequents, and `isTheorem` is a directly-defined provability predicate using
+ -   equational congruence and axiom instantiation. The free model of a closed theory is constructed as `QTerm`, an
+ -   HIT-style quotient of ground terms by provable equality, with `qinj`/`qapply`/`qmerge`/`qquot` constructors making
+ -   it a term algebra modulo theory. The semantic side (`Structure`, `Model`) interprets terms and formulas in a
+ -   multi-sorted carrier and proves soundness via `theoremIsTrue`.
+ -}
+
 \import Algebra.Meta
 \import Arith.Nat
 \import Data.Bool
@@ -17,14 +29,19 @@
 \import Set
 \import Set.Fin
 
+-- | Class extending `TermSig` with predicate symbols `PredSymb` and their arity `predDomain : PredSymb -> Array Sort`.
 \class Signature \extends TermSig
   | PredSymb : \Set
   | predDomain : PredSymb -> Array Sort
 
+{- | First-order atomic formulas over a signature, with two constructors — `equality` between terms of the same sort,
+ -   and `predicate` applying `P : PredSymb` to a tuple of terms with matching sorts.
+ -}
 \data Formula {S : Signature} (V : S -> \Set)
   | equality {s : S} (Term V s) (Term V s)
   | predicate (P : PredSymb) (DArray (\lam j => Term V (predDomain P j)))
 
+-- | Capture-free substitution of terms for variables in a formula, lifting `subst` from terms.
 \func substF {S : Signature} {U V : S -> \Set} (phi : Formula U) (rho : \Pi {s : S} -> U s -> Term V s) : Formula V \elim phi
   | equality t1 t2 => equality (subst t1 rho) (subst t2 rho)
   | predicate P ts => predicate P (\lam j => subst (ts j) rho)
@@ -35,8 +52,12 @@
     | inr p => transport (Term U) p t
   }
 
+{- | A sequent `(V, vf, Γ, φ)` consisting of a finite variable context, a list of hypothesis formulas `Γ`, and a
+ -   conclusion formula `φ`.
+ -}
 \func Sequent {S : Signature} => \Sigma (V : S -> \Set0) (FinSet (\Sigma (s : S) (V s))) (Array (Formula V)) (Formula V)
 
+-- | Class extending `Signature` with `axioms : Sequent -> \Prop` selecting which sequents are axioms.
 \class Theory \extends Signature {
   | axioms : Sequent -> \Prop
 
@@ -51,17 +72,20 @@
               (psi = substF a.4 rho)
     }
 
+  -- | Symmetry of provable equality.
   \lemma symmetry {V : Sort -> \Set} {phi : Array (Formula V)} {s : Sort} {t t' : Term V s} (p : IsTheorem phi (equality t t')) : IsTheorem phi (equality t' t)
     => equalityElim (equality (var (inr idp)) (subst t \lam v => var (inl v))) p
         (refl $ inv $ subst-assoc t *> subst_var t)
         (pmap (equality t') $ inv $ subst-assoc t *> subst_var t)
 
+  -- | Transitivity of provable equality.
   \lemma transitivity {V : Sort -> \Set} {phi : Array (Formula V)} {s : Sort} {t1 t2 t3 : Term V s}
                       (p1 : IsTheorem phi (equality t1 t2)) (p2 : IsTheorem phi (equality t2 t3)) : IsTheorem phi (equality t1 t3)
     => equalityElim (equality (subst t1 \lam v => var (inl v)) (var (inr idp))) p2
         (transportInv (\lam x => IsTheorem phi (equality x t2)) (subst-assoc t1 *> subst_var t1) p1)
         (pmap (equality __ t3) $ inv $ subst-assoc t1 *> subst_var t1)
 
+  -- | From pointwise provable equalities of arguments, derive `apply f l = apply f l'`.
   \lemma congruence {V : Sort -> \Set} {phi : Array (Formula V)} {s : Sort} {f : Symb s} {l l' : DArray (\lam j => Term V (domain f j))}
                     (e : \Pi (j : Fin (domain f).len) -> IsTheorem phi (equality (l j) (l' j)))
     : IsTheorem phi (equality (apply f l) (apply f l'))
@@ -150,6 +174,10 @@
     | equality a b => transitivity (transitivity (symmetry (congruenceT a cc)) cd) (congruenceT b cc)
     | predicate P ts => congruenceP (\lam j => congruenceT (ts j) cc) cd
 
+  {- | Variant of `isTheorem` for partial/relevant logic, with extra constructors (`varDef`, `predDef`, `funcDef`,
+   -   `partAxiom`) tracking definedness obligations on variables, predicates, function applications, and axiom
+   -   instances.
+   -}
   \truncated \data IsPartialTheorem {V : Sort -> \Set} (phi : Array (Formula V)) (psi : Formula V) : \Prop \elim psi
     | equality (var v) (var v') => varDef (v = v')
     | equality a b => sym (IsTheorem phi (equality b a))
@@ -170,38 +198,51 @@
     }
 }
 
+{- | Class with carrier `E : Sort -> \Set`, an `operation` for each function symbol, and a `relation` for each predicate
+ -   symbol.
+ -}
 \class Structure (T : Signature) (\classifying E : Sort -> \Set) {
   | operation {r : Sort} (h : Symb r) : DArray (\lam j => E (domain h j)) -> E r
   | relation (P : PredSymb) : DArray (\lam j => E (predDomain P j)) -> \Prop
 
+  -- | Environments — sort-respecting assignments of variables to elements.
   \func Env (V : Sort -> \Set) => \Pi {s : Sort} -> V s -> E s
 
+  -- | Recursive interpretation of a term in an environment.
   \func interpret {V : Sort -> \Set} (rho : Env V) {s : Sort} (t : Term V s) : E s \elim t
     | var v => rho v
     | apply f d => operation f (\lam j => interpret rho (d j))
 
+  -- | Substitution lemma: interpreting a substituted term equals interpreting under the composed environment.
   \lemma subst_interpret {U V : Sort -> \Set} {rho : Env V} {tau : \Pi {s : T} -> U s -> Term V s} {s : Sort} (t : Term U s)
     : interpret rho (subst t tau) = interpret (\lam u => interpret rho (tau u)) t \elim t
     | var v => idp
     | apply f d => cong (ext (\lam j => subst_interpret (d j)))
 
+  -- | Truth of an atomic formula in an environment (equality of interpretations or holding of the relation).
   \func IsFormulaTrue {V : Sort -> \Set} (rho : Env V) (phi : Formula V) : \Prop \elim phi
     | equality t t' => interpret rho t = interpret rho t'
     | predicate P d => relation P (\lam j => interpret rho (d j))
 
+  -- | Substitution lemma for formula truth.
   \lemma subst_IsFormulaTrue {U V : Sort -> \Set} {rho : Env V} {tau : \Pi {s : T} -> U s -> Term V s} {phi : Formula U}
     : IsFormulaTrue rho (substF phi tau) = IsFormulaTrue (\lam u => interpret rho (tau u)) phi \elim phi
     | equality t t' => pmap2 (=) (subst_interpret t) (subst_interpret t')
     | predicate P d => cong (ext (\lam j => subst_interpret (d j)))
 
+  -- | Validity of a sequent — for every environment, hypotheses imply conclusion.
   \func IsSequentTrue (S : Sequent) =>
     \Pi (rho : Env S.1) -> ∀ (phi : S.3) (IsFormulaTrue rho phi) -> IsFormulaTrue rho S.4
 }
 
+-- | Class extending `Structure` over a `Theory`, with `isModel` requiring every axiom to hold.
 \class Model \extends Structure {
   \override T : Theory
   | isModel (S : Sequent) : axioms {T} S -> Structure.IsSequentTrue S
 
+  {- | Soundness — any `isTheorem` derivation transports to truth in any model under any environment satisfying the
+   -   hypotheses.
+   -}
   \lemma theoremIsTrue {V : Sort -> \Set} {phis : Array (Formula V)} {psi : Formula V} (t : IsTheorem phis psi) (rho : Env V) (c : ∀ (phi : phis) (IsFormulaTrue rho phi)) : IsFormulaTrue rho psi \elim psi, t
     | equality a _, refl idp => idp
     | psi, assumption j p => rewrite p (c j)

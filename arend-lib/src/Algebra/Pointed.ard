@@ -1,19 +1,36 @@
+{- | Pointed sets: types equipped with a distinguished basepoint, with both multiplicative and additive flavors.
+ -
+ -   This module provides the minimal scaffolding for structures with a distinguished element, used as the foundational
+ -   layer for monoids, groups, and rings throughout the algebra hierarchy. The dual classes `Pointed` (with `ide`) and
+ -   `AddPointed` (with `zro`) share the same underlying structure but differ in naming convention to reflect
+ -   multiplicative versus additive usage; coercions allow seamless conversion between the two views. The `equals` lemma
+ -   packages up extensionality for pointed sets, reducing equality to a carrier equality plus compatibility of the
+ -   basepoint.
+ -}
+
 \import Paths
 \import Set
 
+-- | Extends `BaseSet` with a distinguished element `ide : E`, the multiplicative identity / generic basepoint.
 \class Pointed \extends BaseSet
   | ide : E
   \where {
+    {- | Extensionality for pointed sets: given a carrier equality `p : X = Y` in `\Set` and a proof `q` that `ide` is
+     -   preserved across the transport, produces an equality `X = Y` of `Pointed` structures.
+     -}
     \func equals.{u} {X Y : Pointed.{u}} (p : X = {\Set u} Y) (q : coe (p @) ide right = ide) : X = {Pointed.{u}} Y
       => path (\lam i => \new Pointed (p @ i) (pathOver {p @} q @ i))
   }
 
+-- | Extends `BaseSet` with a distinguished element `zro : E`, the additive identity / zero element.
 \class AddPointed \extends BaseSet {
   | zro : E
 
   \protected \func IsZero : \Prop
     => \Pi (x : E) -> x = 0
 } \where {
+    -- | Coerces a `Pointed` to an `AddPointed` by reinterpreting `ide` as `zro`.
     \use \coerce fromPointed (P : Pointed) => \new AddPointed P.E P.ide
+    -- | Coerces an `AddPointed` to a `Pointed` by reinterpreting `zro` as `ide`.
     \use \coerce toPointed (P : AddPointed) => \new Pointed P.E P.zro
   }

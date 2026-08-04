@@ -1,3 +1,13 @@
+{- | Real n-th roots and square roots, defined via the inverse of the power map on nonnegative reals.
+ -
+ -   This module constructs `root n x` as the unique nonnegative real whose n-th power equals `x ∨ 0`, obtained by
+ -   inverting the strictly monotone, continuous power function `pow _ n` on the subspace of nonnegative reals. The
+ -   construction relies on `monotone-inverse` together with continuity of `pow` (via `TopMonoid.pow-cont`) and the
+ -   intermediate value theorem machinery from `Arith.Real.IVT`, which is why the input is clamped to `x ∨ 0` to ensure
+ -   a nonnegative argument. From this primitive, the standard algebraic and order-theoretic properties of roots are
+ -   derived, and `sqrt` is defined as the specialization to `n = 2`.
+ -}
+
 \import Algebra.Meta
 \import Algebra.Monoid
 \import Algebra.Ordered
@@ -32,10 +42,16 @@
 \open Monoid(pow)
 \open ContMap
 
+{- | The n-th root function `root : Nat -> Real -> Real`. Returns `0` when `n = 0`, otherwise inverts `pow _ (suc n)` on
+ -   nonnegative reals applied to `x ∨ 0`.
+ -}
 \sfunc root (n : Nat) (x : Real) : Real \elim n
   | 0 => 0
   | suc n => (IsEquiv.ret (rootEquiv {suc n} suc/=0) (x ∨ 0, join-right)).1
   \where {
+    {- | The underlying equivalence between nonnegative reals given by the n-th power map (for `n /= 0`), built via
+     -   `monotone-inverse` using strict monotonicity and continuity of `pow`.
+     -}
     \lemma rootEquiv {n : Nat} (n/=0 : n /= 0) : IsEquiv {Elem {Real} (0 <=)} {Elem {Real} (0 <=)} (\lam s => (pow s.1 n, RealField.pow>=0 {s.1} s.2))
       => monotone-inverse (\lam s => pow s.1 n)
         (\lam {x} {y} p => RealField.pow_<-monotone n/=0 x.2 p)
@@ -44,31 +60,41 @@
         (\lam {v} v>=0 => inP (0, v ∨ 1, zro<ide <∘l join-right, \lam p _ => p, transportInv (<= v) (Semiring.pow_0 n/=0) v>=0, join-left <=∘ RealField.pow>=id join-right n/=0))
   }
 
+-- | `0 <= root n x` — roots are always nonnegative.
 \lemma root>=0 {n : Nat} {x : Real} : 0 <= root n x \elim n
   | 0 => transportInv (0 <=) (\peval root 0 x) <=-refl
   | suc n => transportInv (0 <=) (\peval root (suc n) x) $ (IsEquiv.ret (root.rootEquiv {suc n} suc/=0) (x ∨ 0, join-right)).2
 
+-- | `root n (pow x n) = x` for `n /= 0` and `x >= 0`; left inverse on nonnegative reals.
 \lemma root_pow {n : Nat} (n/=0 : n /= 0) {x : Real} (x>=0 : 0 <= x) : root n (pow x n) = x \elim n
   | 0 => absurd (n/=0 idp)
   | suc n => (\peval root (suc n) _) *> pmap (\lam y => (IsEquiv.ret (root.rootEquiv n/=0) y).1) (ext $ RealAbGroup.join-comm *> RealAbGroup.join_<= (RealField.pow>=0 {x} {suc n} x>=0)) *> pmap __.1 (IsEquiv.ret_f (root.rootEquiv n/=0) {x,x>=0})
 
+-- | `pow (root n x) n = x` for `n /= 0` and `x >= 0`; right inverse on nonnegative reals.
 \lemma pow_root {n : Nat} (n/=0 : n /= 0) {x : Real} (x>=0 : 0 <= x) : pow (root n x) n = x \elim n
   | 0 => absurd (n/=0 idp)
   | suc n => pmap (pow __ (suc n)) (\peval root (suc n) x) *> pmap (\lam y => pow (IsEquiv.ret (root.rootEquiv n/=0) y).1 (suc n)) (ext $ RealAbGroup.join-comm *> RealAbGroup.join_<= x>=0) *> pmap __.1 (IsEquiv.f_ret (root.rootEquiv n/=0) {x,x>=0})
 
+-- | `root n 0 = 0`.
 \lemma root_zro {n : Nat} : root n 0 = 0 \elim n
   | 0 => \peval root 0 0
   | suc n => pmap (root (suc n)) (inv zro_*-right) *> root_pow suc/=0 <=-refl
 
+-- | `root n 1 = 1` for `n /= 0`.
 \lemma root_ide {n : Nat} (n/=0 : n /= 0) : root n 1 = 1
   => pmap (root n) (inv Monoid.pow_ide) *> root_pow n/=0 (<=-less zro<ide)
 
+-- | Strict monotonicity of `root n` on nonnegative reals: `x < y` implies `root n x < root n y`.
 \lemma root-monotone {n : Nat} (n/=0 : n /= 0) {x y : Real} (x>=0 : 0 <= x) (x<y : x < y) : root n x < root n y
   => real-cont_<-inv-mono {pow __ n} (\lam p => RealField.pow_<=-monotone root>=0 $ <=-less p) (cont-char.1 TopMonoid.pow-cont _) $ transport2 (<) (inv $ pow_root n/=0 x>=0) (inv $ pow_root n/=0 $ x>=0 <=∘ <=-less x<y) x<y
 
+-- | Roots preserve positivity: `0 < x` implies `0 < root n x`.
 \lemma root>0 {n : Nat} (n/=0 : n /= 0) {x : Real} (x>0 : 0 < x) : 0 < root n x
   => transport (< _) root_zro (root-monotone n/=0 <=-refl x>0)
 
+{- | Rational approximation of roots: for `0 <= a < b`, there exist rationals `0 < q < r` with `a < pow q n` and
+ -   `pow r n < b`, sandwiching the n-th root by rational powers.
+ -}
 \lemma root-rat {n : Nat} (n/=0 : n /= 0) {a b : Rat} (a>=0 : 0 <= a) (a<b : a < b) : ∃ (q r : Rat) (0 < q) (q < r) (a < pow q n) (pow r n < b)
   => \case real_<-char.1 $ root-monotone n/=0 (rat_real_<=.1 a>=0) (rat_real_<.1 a<b) \with {
     | inP (q,a'<q,q<b') => \case real_<-char.1 q<b' \with {
@@ -77,32 +103,43 @@
     }
   }
 
+-- | Square root, defined as `root 2 x`.
 \sfunc sqrt (x : Real) => root 2 x
 
+-- | `0 <= sqrt x`.
 \lemma sqrt>=0 {x : Real} : 0 <= sqrt x
   => transportInv (0 <=) (\peval sqrt x) root>=0
 
+-- | `sqrt (x * x) = x` for `x >= 0`.
 \lemma sqrt_pow {x : Real} (x>=0 : 0 <= x) : sqrt (x * x) = x
   => (\peval sqrt _) *> pmap (\lam y => root 2 (y * x)) (inv ide-left) *> root_pow suc/=0 x>=0
 
 \lemma sqrt_pow_abs {x : Real} : sqrt (x * x) = RealAbGroup.abs x
   => pmap sqrt (inv (RealAbGroup.abs-ofPos RealField.square_>=0) *> RealField.abs_*) *> sqrt_pow abs>=0
 
+-- | `sqrt x * sqrt x = x` for `x >= 0`.
 \lemma pow_sqrt {x : Real} (x>=0 : 0 <= x) : sqrt x * sqrt x = x
   => pmap2 (*) (\peval sqrt x) (\peval sqrt x) *> pmap (* _) (inv ide-left) *> pow_root suc/=0 x>=0
 
+-- | `sqrt 0 = 0`.
 \lemma sqrt_zro : sqrt 0 = 0
   => (\peval sqrt 0) *> root_zro
 
+-- | `sqrt 1 = 1`.
 \lemma sqrt_ide : sqrt 1 = 1
   => (\peval sqrt 1) *> root_ide suc/=0
 
+-- | Strict monotonicity of `sqrt` on nonnegative reals.
 \lemma sqrt-monotone {x y : Real} (x>=0 : 0 <= x) (x<y : x < y) : sqrt x < sqrt y
   => transport2 (<) (inv \peval sqrt x) (inv \peval sqrt y) $ root-monotone suc/=0 x>=0 x<y
 
+-- | `sqrt` preserves strict positivity.
 \lemma sqrt>0 {x : Real} (x>0 : 0 < x) : 0 < sqrt x
   => transportInv (0 <) (\peval sqrt x) (root>0 suc/=0 x>0)
 
+{- | Rational sandwich for square roots: for `0 <= a < b`, there exist rationals `0 < q < r` with `a < q * q` and
+ -   `r * r < b`.
+ -}
 \lemma sqrt-rat {a b : Rat} (a>=0 : 0 <= a) (a<b : a < b) : ∃ (q r : Rat) (0 < q) (q < r) (a < q * q) (r * r < b)
   => \case root-rat {2} suc/=0 a>=0 a<b \with {
     | inP (q,r,q>0,q<r,a<qq,rr<b) => inP (q, r, q>0, q<r, rewrite ide-left in a<qq, rewrite ide-left in rr<b)

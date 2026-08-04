@@ -1,3 +1,14 @@
+{- | Reduced rings: rings with no nonzero nilpotent elements, plus several strengthenings.
+ -
+ -   A ring is **reduced** when `a * a = 0` implies `a = 0`; this propagates to `pow a n = 0 -> a = 0` via a doubling
+ -   trick that reduces arbitrary powers to powers of two. The hierarchy layers commutativity (`ReducedCRing`), the
+ -   existence of annihilator-witnessing idempotent multipliers (`PPRing`, i.e. principally projective / pp-rings), and
+ -   the impotent condition where idempotents are forced to be `0` or `1` (`ImpotentRing`). On commutative reduced
+ -   rings, divisibility behaves cancellatively: a divisor of one factor in a zero/equal product determines the other
+ -   factor uniquely, and these cancellation lemmas are also given in `pow`-divisibility form for use with radical-style
+ -   arguments.
+ -}
+
 \import Algebra.Field
 \import Algebra.Group
 \import Algebra.Group.SubGroup
@@ -18,41 +29,59 @@
 \open Monoid(LDiv,Inv)
 \open equation(cRing)
 
+-- | Extends `Ring` with `isReduced : a * a = 0 -> a = 0`.
 \class ReducedRing \extends Ring {
   | isReduced {a : E} : a * a = 0 -> a = 0
 
+  -- | Any nilpotent is zero: `pow a n = 0 -> a = 0`.
   \lemma noNilpotent {a : E} {n : Nat} (p : pow a n = 0) : a = 0
     => aux $ pmap (pow a) (inv $ <=_exists $ LinearOrder.<_<= id<pow2) *> pow_+  *> pmap (* pow a (NatSemiring.pow 2 n -' n)) p *> zro_*-left
     \where
+      {- | Auxiliary form for power-of-two exponents `pow a (2^n) = 0 -> a = 0`, used to bootstrap `noNilpotent` by
+       -   rounding `n` up to a power of two.
+       -}
       \lemma aux {a : E} {n : Nat} (p : pow a (NatSemiring.pow 2 n) = 0) : a = 0 \elim n
         | 0 => inv ide-left *> p
         | suc n => aux $ isReduced (inv pow_+ *> p)
 }
 
+-- | Extends `ReducedRing` and `CRing`; reduced commutative rings, where divisibility cancellation becomes available.
 \class ReducedCRing \extends ReducedRing, CRing {
+  -- | If `a` divides `b` and `a * b = 0`, then `b = 0`.
   \lemma div_zero {a b : E} (d : LDiv a b) (p : a * b = 0) : b = 0
     => isReduced $ pmap (* b) (inv d.inv-right *> *-comm) *> *-assoc *> pmap (d.inv *) p *> zro_*-right
 
+  -- | Variant where `a` divides a power `pow b n`: still `a * b = 0 -> b = 0`.
   \lemma div_pow_zero {a b : E} {n : Nat} (d : LDiv a (pow b n)) (p : a * b = 0) : b = 0 \elim n
     | 0 => inv ide-left *> pmap (* b) (inv d.inv-right *> *-comm) *> *-assoc *> pmap (d.inv *) p *> zro_*-right
     | suc n => noNilpotent {_} {_} {suc n} $ div_zero d $ pmap (a *) *-comm *> inv *-assoc *> pmap (* _) p *> zro_*-left
 
+  {- | If `a` divides both `b` and `b'` and `a * b = a * b'`, then `b = b'` (left cancellation through a common
+   -   divisor).
+   -}
   \lemma div-cancel {a b b' : E} (d : LDiv a b) (d' : LDiv a b') (p : a * b = a * b') : b = b'
     => div_pow-cancel {_} {a} {b} {b'} {1} {1} (rewrite ide-left d) (rewrite ide-left d') p
 
+  -- | Same cancellation when `a` only divides powers of `b` and `b'`.
   \lemma div_pow-cancel {a b b' : E} {n n' : Nat} (d : LDiv a (pow b n)) (d' : LDiv a (pow b' n')) (p : a * b = a * b') : b = b'
     => \let | I => (Ideal.closure1 a).radical 
             | (inP (k,c)) => I.contains_- (inP (n, Ideal.closure1_LDiv.2 $ inP d)) (inP (n', Ideal.closure1_LDiv.2 $ inP d'))
             | (inP dd) => Ideal.closure1_LDiv.1 c
        \in fromZero $ div_pow_zero dd $ ldistr_- *> toZero p
 
+  -- | Lifts a divisibility `LDiv (a * b) (a * b')` to `LDiv b b'` when `a` divides both `b` and `b'`.
   \lemma div_div-cancel {a b b' : E} (d : LDiv a b) (d' : LDiv a b') (p : LDiv (a * b) (a * b')) : LDiv b b' p.inv
     => div_pow_div-cancel {_} {a} {b} {b'} {1} {1} (rewrite ide-left d) (rewrite ide-left d') p
 
+  -- | The `pow`-divisibility analogue of `div_div-cancel`.
   \lemma div_pow_div-cancel {a b b' : E} {n n' : Nat} (d : LDiv a (pow b n)) (d' : LDiv a (pow b' n')) (p : LDiv (a * b) (a * b')) : LDiv b b' p.inv \cowith
     | inv-right => div_pow-cancel {_} {a} (rewrite pow_*-comm $ LDiv.factor-left d) d' $ inv *-assoc *> p.inv-right
 }
 
+{- | Extends `ReducedCRing` with `isPPRing`: for every `a` there exists `u` with `a = u * a` and `u` annihilating
+ -   everything `a` annihilates. Such `u` acts as an idempotent generator of the annihilator complement; reducedness is
+ -   derived automatically from this data.
+ -}
 \class PPRing \extends ReducedCRing {
   | isPPRing (a : E) : ∃ (u : E) (a = u * a) ∀ {x} (a * x = 0 -> u * x = 0)
 
@@ -60,6 +89,9 @@
     | inP s => s.2 *> s.3 aa=0
   }
 
+  {- | Upgrades a Bézout structure on a pp-ring to a strict Bézout structure (where the gcd witnesses are coprime in a
+   -   refined sense).
+   -}
   \lemma bezout->strictBezout (bez : IsBezout) : IsStrictBezout
     => \lam a b =>
         \let | (inP (s,t,(a',p),(b',q))) => bez a b
@@ -74,15 +106,22 @@
                  })
 }
 
+{- | Extends `ReducedRing` and `NonZeroRing`; idempotents are trivial: `a * a = a -> (a = 0) || (a = 1)`. Models rings
+ -   with no nontrivial connected components (e.g. integral domains, local rings up to reducedness).
+ -}
 \class ImpotentRing \extends ReducedRing, NonZeroRing {
   | isImpotent {a : E} : a * a = a -> (a = 0) || (a = 1)
 
+  -- | From a partition of unity `a + b = 1` with `a * b = 0`, one of `a`, `b` is `1` and the other is `0`.
   \lemma decomp {a b : E} (a+b=1 : a + b = 1) (ab=0 : a * b = 0) : (\Sigma (a = 1) (b = 0)) || (\Sigma (a = 0) (b = 1))
     => \case isImpotent $ inv zro-left *> pmap (+ _) (inv ab=0) *> inv rdistr *> pmap (* b) a+b=1 *> ide-left \with {
       | byLeft b=0 => byLeft (inv zro-right *> pmap (a +) (inv b=0) *> a+b=1, b=0)
       | byRight b=1 => byRight (inv ide-right *> pmap (a *) (inv b=1) *> ab=0, b=1)
     }
 } \where {
+  {- | Transports the `ImpotentRing` structure along an injective ring homomorphism `f : R -> E` into an impotent ring,
+   -   equipping the source `R` with an `ImpotentRing` instance.
+   -}
   \func subring {R : Ring} {E : ImpotentRing} (f : RingHom R E) (inj : IsInj f) : ImpotentRing { | Ring => R } \cowith
     | zro/=ide p => E.zro/=ide $ inv f.func-zro *> pmap f p *> f.func-ide
     | isReduced aa=0 => inj $ isReduced (inv f.func-* *> pmap f aa=0 *> f.func-zro) *> inv f.func-zro
@@ -92,8 +131,12 @@
     }
 }
 
+-- | Extends `ImpotentRing`, `ReducedCRing`, and `NonZeroCRing`; the commutative version of `ImpotentRing`.
 \class ImpotentCRing \extends ImpotentRing, ReducedCRing, NonZeroCRing
   \where {
+    {- | Commutative analogue of `ImpotentRing.subring`: pulls back an impotent structure along an injective ring
+     -   homomorphism from a `CRing`, yielding an `ImpotentCRing`.
+     -}
     \func subring {R : CRing} {E : ImpotentRing} (f : RingHom R E) (inj : IsInj f) : ImpotentCRing { | CRing => R } \cowith
       | ImpotentRing => ImpotentRing.subring f inj
   }

@@ -1,3 +1,14 @@
+{- | Power series over extended pseudo-normed rings, their radius of convergence, and convergence tests.
+ -
+ -   This module formalizes formal power series `∑ cₙ xⁿ` valued in an `ExPseudoNormedRing`, together with their
+ -   analytic behavior. The central abstraction is the **radius of convergence** `convRadius`, packaged as a `LowerReal`
+ -   whose lower set records rationals `a` for which `∑ ‖cₙ‖ bⁿ` converges for some `b > a`; this lower-real
+ -   presentation matches the constructive style used elsewhere for real numbers. The predicate `IsPowerSeriesConv`
+ -   captures series that converge absolutely on every rational radius (i.e. infinite radius of convergence), and the
+ -   module connects these notions via absolute convergence inside the radius, divergence outside, uniform/functional
+ -   convergence of partial sums, and ratio-style tests bounding `‖cₙ₊₁‖ / ‖cₙ‖`.
+ -}
+
 \import Algebra.Group
 \import Algebra.Meta
 \import Algebra.Monoid
@@ -42,15 +53,24 @@
 \import Topology.UniformSpace
 \open Monoid(pow)
 
+{- | The `n`-th term `cₙ * xⁿ` of a power series with coefficients `cs : Nat -> X` evaluated at `x : X`, for
+ -   `X : ExPseudoNormedRing`.
+ -}
 \func powerSeries {X : ExPseudoNormedRing} (cs : Nat -> X) (x : X) (n : Nat)
   => cs n * pow x n
 
+{- | The radius of convergence of a power series, presented as a `LowerReal`. A rational `a` lies below the radius iff
+ -   there exists `b > a` such that `∑ ‖cₙ‖ * bⁿ` converges as an upper-real series.
+ -}
 \func convRadius {X : ExPseudoNormedRing} (cs : Nat -> X) : LowerReal \cowith
   | L a => ∃ (b : > a) (IsConvUpperSeries \lam j => X.norm (cs j) * pow b j)
   | L-inh => inP (-1, inP (0, idp, powerSeries_0))
   | L-closed (inP (b,q<b,h)) q'<q => inP (b, q'<q <∘ q<b, h)
   | L-rounded {a} (inP (b,a<b,h)) => inP (RatField.mid a b, inP (b, RatField.mid<right a<b, h), RatField.mid>left a<b)
   \where {
+    {- | Evaluating any termwise upper-bounded series at `x = 0` yields a convergent upper-real series (the trivial
+     -   `n = 0` case dominates).
+     -}
     \lemma powerSeries_0 : IsConvUpperSeries (\lam n => norm (cs n) * pow RatField.zro n)
       => transportInv IsConvUpperSeries (ext \case \elim __ \with {
         | 0 => idp
@@ -66,9 +86,15 @@
 \lemma convRadius>=0 {X : ExPseudoNormedRing} {cs : Nat -> X} : 0 <= convRadius cs
   => \lam q<0 => inP (0, q<0, convRadius.powerSeries_0)
 
+{- | If `‖x‖ <LU convRadius cs`, then `powerSeries cs __ x` converges absolutely. This is the key "inside the radius"
+ -   theorem.
+ -}
 \lemma convRadius-absConv {X : ExPseudoNormedRing} (cs : Nat -> X) {x : X} (p : norm x <LU convRadius cs) : IsAbsConvSeries (powerSeries cs x) \elim p
   | inP (a, |x|<a, inP (b,a<b,cc)) => series_<= (\lam j => norm_*_<= <=∘ later (ExUpperRealSemigroup.<=_* <=-refl $ transport (_ <=) (ExUpperRealSemigroup.rat-pow $ <=-less $ norm>=0 |x|<a <∘ a<b) $ X.norm_<=_pow <=∘ ExUpperRealSemigroup.pow_<= (ExUpperReal.<_<= |x|<a <=∘ ExUpperReal.<=-rat.1 (<=-less a<b)))) cc
 
+{- | Contrapositive direction over a pseudo-valued ring: if the power series at `x` converges, then every rational
+ -   `a < ‖x‖` lies in the lower set of `convRadius cs`.
+ -}
 \lemma convRadius-div {X : ExPseudoValuedRing} (cs : Nat -> X) {x : X} (p : IsConvSeries (powerSeries cs x))
                       {a : Rat} (a<|x| : a ExUpperRealAbMonoid.< norm x) : (convRadius cs).L a
   => \case LinearOrder.dec<_<= a 0, \elim a<|x| \with {
@@ -84,12 +110,21 @@
     }
   }
 
+{- | Property that a power series `cs` converges absolutely on every rational radius `a ≥ 0`, i.e. `∑ ‖cₙ‖ * aⁿ` is a
+ -   convergent upper-real series for all such `a`. Effectively expresses "infinite radius of convergence".
+ -}
 \type IsPowerSeriesConv {X : ExPseudoNormedRing} (cs : Nat -> X) : \Prop
   => \Pi {a : Rat} -> 0 <= a -> IsConvUpperSeries (\lam n => norm (cs n) * pow a n)
   \where {
+    {- | Upgrades `IsPowerSeriesConv` to convergence at any extended-upper-real radius `a ≥ 0` that is rationally
+     -   bounded above.
+     -}
     \protected \lemma upper (cc : IsPowerSeriesConv cs) {a : ExUpperReal} (a>=0 : 0 <= a) (aB : ∃ (B : Rat) (a.U B)) : IsConvUpperSeries \lam n => norm (cs n) * ExUpperRealSemigroup.pow a n \elim aB
       | inP (B,a<B) => series_<= (\lam n => ExUpperRealSemigroup.<=_* <=-refl (transport (_ <=) (ExUpperRealSemigroup.rat-pow $ <=-less $ a>=0 a<B) $ ExUpperRealSemigroup.pow_<= $ ExUpperReal.<_<= a<B)) $ cc $ <=-less $ a>=0 a<B
 
+    {- | Specializes the upper-real version to `a := ‖x‖` for any point `x : X`, yielding convergence of
+     -   `∑ ‖cₙ‖ * ‖x‖ⁿ`.
+     -}
     \protected \lemma atPoint (cc : IsPowerSeriesConv cs) {x : X} : IsConvUpperSeries \lam n => norm (cs n) * ExUpperRealSemigroup.pow (norm x) n
       => upper cc norm>=0 (norm-bounded x)
 
@@ -105,6 +140,7 @@
       }
   }
 
+-- | An `IsPowerSeriesConv` series converges absolutely at every point `x : X`.
 \lemma powerSeriesConv-absConv {X : ExPseudoNormedRing} {cs : Nat -> X} (p : IsPowerSeriesConv cs) {x : X} : IsAbsConvSeries (powerSeries cs x)
   => \case norm-bounded x \with {
     | inP (B,|x|<B) => convRadius-absConv cs $ inP (B, |x|<B, inP (B + 1, linarith, p $ linarith $ norm>=0 |x|<B))
@@ -116,6 +152,9 @@
   => series_<= (\lam n => norm_*_<= ExUpperRealAbMonoid.<=∘ ExUpperRealSemigroup.<=_* <=-refl (X.norm_<=_pow {x} {n})) cu
 
 
+{- | The sequence of partial sums `n ↦ x ↦ ∑_{k<n} cₖ * xᵏ` is functionally (uniformly on the appropriate cover)
+ -   convergent.
+ -}
 \lemma powerSeriesConv-funcConv {X : ExPseudoNormedRing} (cs : Nat -> X)
   : IsFuncConvergent {_} {OpenBallCoverSpace 0 (convRadius cs)} \lam n x => partialSum (powerSeries cs x.1) n
   => funcCovergent-metric-char {_} {OpenBallCoverSpace 0 (convRadius cs)} {_} {\lam n x => partialSum (powerSeries cs x.1) n}
@@ -172,6 +211,9 @@
   => transportInv (IsSeriesSum _) (\peval powerSeriesSum-total cs psc x) powerSeriesSum-isSum
 
 
+{- | Converse over an unbounded pseudo-valued ring: if the power series converges at every point of `X`, then it
+ -   satisfies `IsPowerSeriesConv`.
+ -}
 \lemma powerSeries-unbounded-conv {X : ExPseudoValuedRing} (Xu : X.IsUnbounded) {cs : Nat -> X} (Sc : \Pi (x : X) -> IsConvSeries (powerSeries cs x)) : IsPowerSeriesConv cs
   => \lam {a} a>=0 => \case Real.natBounded {a} \with {
     | inP (B,a<B) => \case Xu B \with {
@@ -181,6 +223,9 @@
     }
   }
 
+{- | Ratio test at a single rational radius. Given `‖c_{n+1}‖ ≤ ‖cₙ‖ * bₙ` with `b → l` and `l * a < 1` for `a ≥ 0`, the
+ -   series `∑ ‖cₙ‖ * aⁿ` converges as an upper-real series.
+ -}
 \lemma power-ratio-test {X : ExPseudoNormedRing} {c : Series X} {b : Series Real} (bp : \Pi (n : Nat) -> norm (c (suc n)) <= norm (c n) * b n)
                         {l : Real} (bl : RealNormed.IsLimit b l) {a : Rat} (a>=0 : 0 <= a) (la<1 : l * a < 1) : IsConvUpperSeries \lam j => norm (c j) * pow a j
   => upper-ratio-test (\lam n => ExUpperRealSemigroup.*_>=0) (rewrite (ExUpperRealSemigroup.ide-right norm>=0) (norm-bounded (c 0))) (\lam n => b n * a)
@@ -191,6 +236,9 @@
     la<1 (cont-limit bl $ RealField.*-cover CoverMap.∘ ProductCoverSpace.tuple CoverMap.id (CoverMap.const (Real.fromRat a)))
   \where \open ExUpperRealSemigroup(<=_*)
 
+{- | Infinite-radius ratio test. If `‖c_{n+1}‖ ≤ ‖cₙ‖ * bₙ` and `b → 0`, then `cs` is `IsPowerSeriesConv` (equivalent to
+ -   a power series with infinite radius of convergence, e.g. exp, sin, cos).
+ -}
 \lemma power-ratio-test-inf {X : ExPseudoNormedRing} {cs : Series X} (b : Series Real)
                             (bp : \Pi (n : Nat) -> norm (cs (suc n)) <= norm (cs n) * b n) (bl : RealNormed.IsLimit b 0) : IsPowerSeriesConv cs
   => \lam a>=0 => power-ratio-test bp bl a>=0 $ rewrite Ring.zro_*-left RealAbGroup.zro<ide

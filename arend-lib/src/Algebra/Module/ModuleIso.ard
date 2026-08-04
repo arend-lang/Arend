@@ -34,6 +34,7 @@
   \use \level levelProp {R : Ring} {U V : LModule R} (f : LinearMap U V) (e e' : ModuleIso f)
     => equals e e' idp
 
+  -- | A linear map is an iso iff it is both injective and surjective.
   \lemma iso<->inj+surj {R : Ring} {U V : LModule R} {f : LinearMap U V} : ModuleIso f <-> (\Sigma (IsInj f) (IsSurj f))
     => (\lam e => (e.isInj, e.isSurj),
         \lam s =>
@@ -49,41 +50,53 @@
           })
 }
 
+{- | Given bases `lu`, `lv` of `U` and `V` of equal length and an invertible matrix `A : MatrixRing R n`, produces the
+ -   corresponding linear iso `U ≃ V`.
+ -}
 \func toLinearMapIso {R : Ring} {U V : LModule R} {n : Nat} {lu : Array U n} (bu : U.IsBasis lu) {lv : Array V n} (bv : V.IsBasis lv) (A : Monoid.Inv {MatrixRing R n}) : ModuleIso {R} {U} {V} \cowith
   | f => toLinearMap bu lv A.val
   | finv => toLinearMap bv lu A.inv
   | finv_f x => path \lam i => (inv (toLinearMap_* A.val A.inv bu bv bu) *> {LinearMap U U} cong A.inv-right *> toLinearMap_ide bu) i x
   | f_finv y => path \lam i => (inv (toLinearMap_* A.inv A.val bv bu bv) *> {LinearMap V V} cong A.inv-left *> toLinearMap_ide bv) i y
 
+-- | Conversely, an iso `U ≃ V` between `n`-dimensional free modules yields an invertible `n × n` matrix.
 \func toMatrixInv {R : Ring} {U V : LModule R} {n : Nat} {lu : Array U n} (bu : U.IsBasis lu) {lv : Array V n} (bv : V.IsBasis lv) (e : ModuleIso {R} {U} {V}) : Monoid.Inv {MatrixRing R n} \cowith
   | val => toMatrix lu bv e.f
   | inv => toMatrix lv bu e.finv
   | inv-left => inv (toMatrix_* e.finv e.f lv bu bv) *> pmap (toMatrix lv bv) (exts e.f_finv) *> toMatrix_ide bv
   | inv-right => inv (toMatrix_* e.f e.finv lu bv bu) *> pmap (toMatrix lu bu) (exts e.finv_f) *> toMatrix_ide bu
 
+-- | An iso `f : U ≃ V` carries a basis of `U` to a basis of `V` via `map f.f`.
 \lemma iso-basis {R : Ring} {U V : LModule R} (f : ModuleIso {R} {U} {V}) {l : Array U} (lb : U.IsBasis l) : V.IsBasis (map f.f l)
   => (\lam c p j => lb.1 c (f.isInj $ f.f.func-BigSum *> pmap AddMonoid.BigSum (exts \lam j => func-*c) *> p *> inv f.f.func-zro) j,
       \lam v => TruncP.map (lb.2 (f.finv v)) \lam s => (s.1, f.reverse.isInj $ s.2 *> pmap AddMonoid.BigSum (exts \lam j => inv $ func-*c *> pmap (_ *c) (f.finv_f (l j))) *> inv AddMonoidHom.func-BigSum))
 
+{- | Composing `toLinearMap bv lw A` with an iso `f : U ≃ V` equals `toLinearMap (iso-basis f.reverse bv) lw A` —
+ -   precomposition by an iso reindexes the source basis.
+ -}
 \lemma change-basis-right {R : Ring} {U V W : LModule R} (f : ModuleIso {R} {U} {V}) {lv : Array V} {lw : Array W} (bv : V.IsBasis lv) (bw : W.IsBasis lw) (A : Matrix R lv.len lw.len)
   : toLinearMap bv lw A LinearMap.∘ f.f = toLinearMap (iso-basis f.reverse bv) lw A
   => exts \lam u => pmap AddMonoid.BigSum $ exts \lam j => pmap (*c _) $ V.basis-split-unique bv _ (pmap f.f (U.basis-split-char {_} {iso-basis f.reverse bv}) *> AddMonoidHom.func-BigSum *> pmap AddMonoid.BigSum (exts \lam k => func-*c *> pmap (_ *c) (f.f_finv (lv k)))) j
 
+-- | The iso `U ≃ V` obtained from two same-length bases via `extend` (sending one basis to the other).
 \func basis-iso {R : Ring} {U V : LModule R} {n : Nat} {lu : Array U n} (bu : U.IsBasis lu) {lv : Array V n} (bv : V.IsBasis lv) : ModuleIso {R} {U} {V} \cowith
   | f => extend bu lv
   | finv => extend bv lu
   | finv_f => basis-ext (extend bv lu LinearMap.∘ extend bu lv) LinearMap.id bu.2 \lam j => pmap (extend bv lu) (extend-char bu lv j) *> extend-char bv lu j
   | f_finv => basis-ext (extend bu lv LinearMap.∘ extend bv lu) LinearMap.id bv.2 \lam j => pmap (extend bu lv) (extend-char bv lu j) *> extend-char bu lv j
 
+-- | Multiplying a map's matrix by the change-of-source-basis matrix recovers the matrix in the new source basis.
 \lemma change-basis_matrix-left {R : Ring} {U V : LModule R} (f : LinearMap U V) {n : Nat} {lu lu' : Array U n} (bu : U.IsBasis lu) (bu' : U.IsBasis lu') {lv : Array V} (bv : V.IsBasis lv)
   : toMatrix lu bu (basis-iso bu' bu).f MatrixRing.product toMatrix lu' bv f = toMatrix lu bv f
   => inv $ (matrix-equiv bu bv).adjointInv $ inv $ toLinearMap_* (toMatrix lu bu (extend bu' lu)) (toMatrix lu' bv f) bu bu' bv *>
       pmap2 (LinearMap.∘) ((matrix-equiv bu' bv).ret_f f) {_} {LinearMap.id} (exts \lam u => toLinearMap_toMatrix-right bu bu bu' *> pmap AddMonoid.BigSum (exts \lam j => pmap (*c _) $ U.basis-split-unique bu _ idp j) *> inv (U.basis-split-char {lu'} {bu'}))
 
+-- | Dual statement on the right (target basis change).
 \lemma change-basis_matrix-right {R : Ring} {U V : LModule R} (f : LinearMap U V) {lu : Array U} (bu : U.IsBasis lu) {n : Nat} {lv lv' : Array V n} (bv : V.IsBasis lv) (bv' : V.IsBasis lv')
   : toMatrix lu bv' f MatrixRing.product toMatrix lv bv (basis-iso bv bv').f = toMatrix lu bv f
   => inv $ (matrix-equiv bu bv).adjointInv $ inv $ toLinearMap_* (toMatrix lu bv' f) (toMatrix lv bv (extend bv lv')) bu bv' bv *>
       pmap2 (LinearMap.∘) {_} {LinearMap.id} (exts \lam u => toLinearMap_toMatrix-left bv bv' *> pmap AddMonoid.BigSum (exts \lam j => pmap (*c _) $ V.basis-split-unique bv _ idp j) *> inv (V.basis-split-char {lv'} {bv'})) ((matrix-equiv bu bv').ret_f f)
 
+-- | Two matrix representations of the same linear map in different bases are matrix-equivalent (`M~`).
 \lemma change-basis_M~ {R : Ring} {U V : LModule R} (f : LinearMap U V) {n m : Nat} {lu lu' : Array U n} (bu : U.IsBasis lu) (bu' : U.IsBasis lu') {lv lv' : Array V m} (bv : V.IsBasis lv) (bv' : V.IsBasis lv') : toMatrix lu bv f M~ toMatrix lu' bv' f
   => inP (toMatrixInv bu' bu' (basis-iso bu bu'), toMatrixInv bv' bv' (basis-iso bv' bv), inv $ pmap (MatrixRing.product toMatrix lv' bv' (extend bv' lv)) (change-basis_matrix-left f bu' bu bv) *> change-basis_matrix-right f bu' bv' bv)

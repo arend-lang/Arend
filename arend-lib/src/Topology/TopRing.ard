@@ -1,3 +1,13 @@
+{- | Topological algebraic structures: continuous semigroups, monoids, rings, and near-(skew)fields.
+ -
+ -   This module layers the standard algebraic hierarchy onto topological spaces by requiring the binary operations to
+ -   be continuous as maps out of the product topology. The `TopRing` class combines additive (via `TopAbGroup`) and
+ -   multiplicative (via `TopMonoid`) continuity over a single topological space. `NearSkewField` and `NearField` weaken
+ -   the field axioms by only requiring the set of multiplicative inverses to be topologically dense, which is enough to
+ -   obtain rigidity results for continuous module maps — captured by the `nearField-*-unique` lemmas, which show that
+ -   continuous maps into a Hausdorff topological module are determined by their behavior under scalar multiplication.
+ -}
+
 \import Algebra.Module
 \import Algebra.Monoid
 \import Algebra.Ring
@@ -12,28 +22,52 @@
 \open ContMap
 \open ProductTopSpace
 
+{- | Extends `TopSpace` and `Semigroup`. A semigroup whose multiplication `* : E × E → E` is continuous, witnessed by
+ -   the field `*-cont` as a `ContMap` from the product topology.
+ -}
 \class TopSemigroup \extends TopSpace, Semigroup
   | *-cont : ContMap (ProductTopSpace \this \this) \this \lam s => s.1 * s.2
 
+{- | Extends `TopSemigroup` and `Monoid`. Adds `pow-cont`, the lemma that the power map `pow __ n : E → E` is continuous
+ -   for any natural number `n`.
+ -}
 \class TopMonoid \extends TopSemigroup, Monoid {
   \lemma pow-cont {n : Nat} : IsCont (pow __ n) \elim n
     | 0 => ContMap.const 1
     | suc n => *-cont ∘ tuple pow-cont id
 }
 
+{- | Extends `TopAbGroup`, `TopMonoid`, and `Ring`. A ring whose addition, negation, and multiplication are all
+ -   continuous on the underlying topological space.
+ -}
 \class TopRing \extends TopAbGroup, TopMonoid, Ring
 
+{- | Extends `TopRing`. A topological ring in which the set of multiplicative units (`Monoid.Inv x`) is dense, expressed
+ -   via `inv-dense : IsDenseSet`. Captures rings where invertible elements approximate every element, generalizing skew
+ -   fields in a topological setting.
+ -}
 \class NearSkewField \extends TopRing
   | inv-dense : IsDenseSet \lam (x : E) => Monoid.Inv x
 
+{- | Extends `NearSkewField` and `CRing`. The commutative version: a topological commutative ring with a dense set of
+ -   units.
+ -}
 \class NearField \extends NearSkewField, CRing
 
+{- | Two continuous maps `f g : ContMap (TopSub U) Y` from an open subset `U` of a `NearSkewField` `R` into a
+ -   `HausdorffTopLModule R` agree on every point `h ∈ U`, provided they agree after scaling by `h` (i.e.,
+ -   `h *c f (h, Uh) = h *c g (h, Uh)`). Used to extend equalities from invertible elements to all of `U` via density.
+ -}
 \lemma nearField-map-unique {R : NearSkewField} {Y : HausdorffTopLModule R} {U : Set R} (Uo : isOpen U) (f g : ContMap (TopSub U) Y)
                             (p : \Pi {h : R} (Uh : U h) -> h *c f (h,Uh) = h *c g (h,Uh)) {h : R} (Uh : U h) : f (h,Uh) = g (h,Uh)
   => denseSet-lift-unique (\lam {s} {_} (inP (V,Vo,idp)) Vs => \case inv-dense (open-inter Uo Vo) (s.2,Vs) \with {
     | inP (h,hi,(Uh,Vh)) => inP ((h,Uh),hi,Vh)
   }) f g (\lam {s} (si : Monoid.Inv s.1) => inv ide_*c *> pmap (*c _) (inv si.inv-left) *> *c-assoc *> pmap (_ *c) (p s.2) *> inv *c-assoc *> pmap (*c _) si.inv-left *> ide_*c)
 
+{- | Global version of the above: continuous maps `f g : ContMap R Y` into a Hausdorff topological `R`-module are equal
+ -   whenever `h *c f h = h *c g h` for all `h : R`. The key rigidity principle for continuous module maps out of a
+ -   near-skew-field.
+ -}
 \lemma nearField-tmap-unique {R : NearSkewField} {Y : HausdorffTopLModule R} (f g : ContMap R Y)
                              (p : \Pi {h : R} -> h *c f h = h *c g h) {h : R} : f h = g h
   => nearField-map-unique open-top (f ∘ TopTransfer-map __.1) (g ∘ TopTransfer-map __.1) (\lam _ => p) {h} ()

@@ -1,3 +1,16 @@
+{- | Ordered abelian groups and modules with divisibility properties, culminating in Riesz spaces (lattice-ordered
+ -   vector spaces over the rationals).
+ -
+ -   This module builds a tower of ordered algebraic structures: starting from torsion-free posets where positivity can
+ -   be detected after multiplying by a nonzero natural, extending to ordered rational modules where positivity and
+ -   ordering interact compatibly with rational scalar multiplication, and finally to Riesz spaces — lattice-ordered
+ -   Q-modules where absolute value is a derived operation. The `fromAbs` construction provides an alternative way to
+ -   define a Riesz space: given a `PosetQModule` together with a least upper bound of `a` and `-a` for every element,
+ -   the join structure can be recovered via the formula `a ∨ b = ½ (a + b + |a − b|)`. This gives two equivalent
+ -   presentations — one starting from a lattice and deriving `abs`, the other starting from `abs` and deriving the
+ -   lattice.
+ -}
+
 \import Algebra.Group
 \import Algebra.Meta
 \import Algebra.Monoid
@@ -17,60 +30,89 @@
 \import Paths.Meta
 \import Set
 
+{- | Extends `PosetAbGroup` and `TorsionFreeGroup`. A poset abelian group where `0 <= n *n a` implies `0 <= a` for
+ -   nonzero `n`. Torsion-freeness is derived from this divisibility property via antisymmetry.
+ -}
 \class PosetDivAbGroup \extends PosetAbGroup, TorsionFreeGroup {
+  -- | For `n /= 0`, positivity of `n *n a` reflects to positivity of `a`.
   | <=_*n-div {n : Nat} (n/=0 : n /= 0) {a : E} : 0 <= n *n a -> 0 <= a
   \default noTorsion n/=0 na=0 => <=-antisymmetric (negative-to<=0 $ <=_*n-div n/=0 $ transportInv (0 <=) *n_negative $ negative>=0 $ =_<= na=0) (<=_*n-div n/=0 $ =_<= $ inv na=0)
 
+  -- | Cancellation `n *n a <= n *n b -> a <= b` for nonzero `n`.
   \lemma <=_*n-cancel-left {n : Nat} (n/=0 : n /= 0) {a b : E} (na<=nb : n *n a <= n *n b) : a <= b
     => from>=0 $ <=_*n-div n/=0 $ transportInv (0 <=) *n-ldistr_- (to>=0 na<=nb)
 }
 
+{- | Extends `QModule` and `PosetDivAbGroup`. A rational module whose order interacts compatibly with scalar
+ -   multiplication by rationals.
+ -}
 \class PosetQModule \extends QModule, PosetDivAbGroup {
+  -- | Rational scaling preserves nonnegativity: `q >= 0` and `a >= 0` imply `q *q a >= 0`.
   \lemma *q_>=0 {q : Rat} (q>=0 : RatField.zro RatField.<= q) {a : E} (a>=0 : 0 <= a) : 0 <= q *q a
     => <=_*n-div ratDenom/=0 $ transport (0 <=) (pmap (*i a) (iabs.ofPos $ <=_ratNom.conv q>=0) *> inv *q_*i *> pmap (*q a) (inv rat*denom-left) *> *q-assoc *> *q_*n) (*n_>=0 a>=0)
 
+  -- | For `q > 0`, `q *q a >= 0` reflects to `a >= 0`.
   \lemma *q_>=0-cancel {q : Rat} (q>0 : 0 < q) {a : E} (qa>=0 : 0 <= q *q a) : 0 <= a
     => transport (0 <=) (inv *q-assoc *> pmap (*q a) (RatField.finv-left $ RatField.>_/= q>0) *> ide_*q) $ *q_>=0 (<=-less $ RatField.finv>0 q>0) qa>=0
 
+  -- | Monotonicity in the scalar: `q <= r` and `a >= 0` imply `q *q a <= r *q a`.
   \lemma <=_*q-left {q r : Rat} (q<=r : q RatField.<= r) {a : E} (a>=0 : 0 <= a) : q *q a <= r *q a
     => from>=0 $ transport (0 <=) toRatModule.*c-rdistr_- $ *q_>=0 (RatField.to>=0 q<=r) a>=0
 
+  -- | Monotonicity in the vector: `q >= 0` and `a <= b` imply `q *q a <= q *q b`.
   \lemma <=_*q-right {q : Rat} (q>=0 : RatField.zro RatField.<= q) {a b : E} (a<=b : a <= b) : q *q a <= q *q b
     => from>=0 $ transport (_ <=) toRatModule.*c-ldistr_- $ *q_>=0 q>=0 (to>=0 a<=b)
 
+  -- | Cancellation `q *q a <= q *q b -> a <= b` for `q > 0`.
   \lemma <=_*q-cancel-left {q : Rat} (q>0 : 0 < q) {a b : E} (qa<=qb : q *q a <= q *q b) : a <= b
     => from>=0 $ *q_>=0-cancel q>0 $ transportInv (0 <=) toRatModule.*c-ldistr_- (to>=0 qa<=qb)
 
+  -- | Rearranges `a <= q⁻¹ *q b` to `q *q a <= b`.
   \lemma <=_*q-rotate-left {q : Rat} (q>0 : 0 < q) {a b : E} (a<=qb : a <= RatField.finv q *q b) : q *q a <= b
     => transport (__ *q a <= b) RatField.finv_finv $ <=_*q-rotate_finv-left (RatField.finv>0 q>0) a<=qb
 
+  -- | Rearranges `q⁻¹ *q a <= b` to `a <= q *q b`.
   \lemma <=_*q-rotate-right {q : Rat} (q>0 : 0 < q) {a b : E} (p : RatField.finv q *q a <= b) : a <= q *q b
     => transport (<= _) (inv *q-assoc *> pmap (*q a) (RatField.finv-right $ RatField.>_/= q>0) *> ide_*q) $ <=_*q-right (<=-less q>0) p
 
+  -- | Rearranges `a <= q *q b` to `q⁻¹ *q a <= b`.
   \lemma <=_*q-rotate_finv-left {q : Rat} (q>0 : 0 < q) {a b : E} (a<=qb : a <= q *q b) : RatField.finv q *q a <= b
     => <=_*q-right (<=-less $ RatField.finv>0 q>0) a<=qb <=∘ =_<= (inv *q-assoc *> pmap (*q b) (RatField.finv-left $ RatField.>_/= q>0) *> ide_*q)
 }
 
+{- | Extends `PosetQModule`, `AbsAbGroup`, and `LatticeAbGroup.FromJoin`. A lattice-ordered Q-module whose absolute
+ -   value is determined as `abs a = a ∨ (-a)`. The key axioms `abs>=0` and `<=_*n-div` are derived from the lattice
+ -   structure (using that `2 *n abs a = (a + (-a)) ∨ ...` is nonnegative).
+ -}
 \class RieszSpace \extends PosetQModule, AbsAbGroup, LatticeAbGroup.FromJoin {
   -- <=_*n-div is equivalent to conjunction of noTorsion and abs>=0.
   \default abs>=0 => <=_*n-div {_} {2} suc/=0 $ rewrite zro-left $ transportInv (0 <=) join_+-left $ transportInv (0 <=) join_+-right (inv negative-left =<= join-right) <=∘ join-left
   \default <=_*n-div n/=0 na>=0 => transport (0 <=) (noTorsion-div n/=0 (abs_*n *> abs-ofPos na>=0)) abs>=0
 
+  -- | Rational scaling distributes over join: `q *q (x ∨ y) = (q *q x) ∨ (q *q y)` for `q >= 0`.
   \lemma join_*q {q : Rat} (q>=0 : RatField.zro RatField.<= q) {x y : E} : q *q (x ∨ y) = (q *q x) ∨ (q *q y)
     => noTorsion-div ratDenom/=0 $ inv *q_*n *> inv *q-assoc *> pmap (*q _) rat*denom-left *> *q_*i *> pmap (*i _) (inv $ iabs.ofPos $ <=_ratNom.conv q>=0) *> join_*n *> pmap2 (∨) (pmap (*i x) (iabs.ofPos $ <=_ratNom.conv q>=0) *> inv *q_*i *> pmap (*q x) (inv rat*denom-left) *> *q-assoc *> *q_*n) (pmap (*i y) (iabs.ofPos $ <=_ratNom.conv q>=0) *> inv *q_*i *> pmap (*q y) (inv rat*denom-left) *> *q-assoc *> *q_*n) *> inv join_*n
 
+  -- | Absolute value commutes with nonnegative rational scaling: `abs (q *q x) = q *q abs x`.
   \lemma abs_*q {q : Rat} (q>=0 : RatField.zro RatField.<= q) {x : E} : abs (q *q x) = q *q abs x
     => inv $ join_*q q>=0 *> pmap (_ ∨) toRatModule.*c_negative-right
 
+  -- | Rational scaling distributes over meet: `q *q (x ∧ y) = (q *q x) ∧ (q *q y)` for `q >= 0`.
   \lemma meet_*q {q : Rat} {x y : E} (q>=0 : RatField.zro RatField.<= q) : q *q (x ∧ y) = (q *q x) ∧ (q *q y)
     => inv negative-isInv *> pmap negative (inv toRatModule.*c_negative-right *> pmap (q *q) meet_negative *> join_*q q>=0 *> pmap2 (∨) toRatModule.*c_negative-right toRatModule.*c_negative-right *> inv meet_negative) *> negative-isInv
 
+  -- | Standard formula `x ∨ y = ½ (x + y + |x − y|)`.
   \lemma join_abs {x y : E} : x ∨ y = ratio 1 2 *q (x + y + abs (x - y))
     => *q-cancel {_} {2} /=-dec $ *q_*2 *> join_+-comm *> pmap2 (∨) equation.abGroup equation.abGroup *> inv join_+-left *> inv ide_*q *> *q-assoc
 
+  -- | Dual formula `x ∧ y = ½ (x + y − |x − y|)`.
   \lemma meet_abs {x y : E} : x ∧ y = ratio 1 2 *q (x + y - abs (x - y))
     => inv negative-isInv *> pmap negative (meet_negative *> join_abs) *> inv toRatModule.*c_negative-right *> pmap (_ *q) (later $ rewrite (pmap abs (pmap (_ +) negative-isInv *> +-comm) *> abs_-) equation.abGroup)
 } \where {
+  {- | Builds a `RieszSpace` from a `PosetQModule` `A` together with a function producing, for each `a`, a least upper
+   -   bound of `{a, -a}`. The join is reconstructed via the formula `a ∨ b = ½ (a + b + |a − b|)`, yielding a Riesz
+   -   space whose absolute value matches the supplied data.
+   -}
   \func fromAbs {A : PosetQModule} (abs : \Pi (a : A) -> ∃ (b : A) (a <= b) (negative a <= b) ∀ {c} (a <= c -> negative a <= c -> b <= c)) : RieszSpace \cowith
     | PosetQModule => A
     | join => join

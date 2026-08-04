@@ -1,3 +1,14 @@
+{- | The category of monoids and its bicompleteness, plus kernel/image constructions for monoid homomorphisms.
+ -
+ -   This module assembles `MonoidCat` (and the additive analogue `AddMonoidCat`) as categories whose morphisms are
+ -   monoid homomorphisms, and upgrades `MonoidCat` to a bicomplete category by exhibiting it as equivalent to the
+ -   category of models of the algebraic theory of monoids (one nullary operation for the unit, one binary operation for
+ -   multiplication, with unit and associativity axioms). Limits and colimits are then transported from `ModelCat` via
+ -   this equivalence, giving completeness and cocompleteness for free. The remaining constructions package the kernel
+ -   and image of a (additive) monoid homomorphism as monoid objects in their own right, together with the canonical
+ -   inclusion/projection homs, with abelian variants when the codomain is commutative.
+ -}
+
 \import Algebra.Monoid
 \import Algebra.Monoid.MonoidHom
 \import Algebra.Pointed
@@ -18,6 +29,9 @@
 \import Set.Fin
 \import Set.Fin.Instances
 
+{- | The category `Cat Monoid` whose homs are `MonoidHom`, with composition lifted through pointwise application.
+ -   Includes a forgetful functor `MonoidCat.forget : Functor MonoidCat SetCat`.
+ -}
 \instance MonoidCat.{u} : Cat Monoid.{u}
   | Hom M N => MonoidHom M N
   | id => MonoidHom.id
@@ -59,6 +73,9 @@
       })
   }
 
+{- | Promotes `MonoidCat` to a `BicompleteCat` by transporting limits and colimits from `ModelCat theory` along
+ -   `catEquiv`.
+ -}
 \instance MonoidBicat.{u} : BicompleteCat.{u}
   | Cat => MonoidCat.{u}
   | limit F => \new Limit {
@@ -71,6 +88,9 @@
   }
   | colimit => CocompletePrecat.applyEquiv catEquiv
   \where {
+    {- | The single-sorted algebraic `Theory` of monoids: function symbols `Fin 2` (arities 0 and 2), no predicates,
+     -   axioms expressing left/right unit and associativity.
+     -}
     \instance theory : Theory
       | Sort => \Sigma
       | Symb _ => Fin 2
@@ -86,6 +106,9 @@
           (\lam _ => Fin 3,  finSet, nil, equality (apply 1 (apply 1 (var 0 :: var 1 :: nil) :: var 2 :: nil)) (apply 1 (var 0 :: apply 1 (var 1 :: var 2 :: nil) :: nil))) ::
           nil)
 
+    {- | A `CatEquiv` between `ModelCat theory` and `MonoidCat`, with left adjoint `monoidToMod.functor`, unit `id`, and
+     -   counit interpreting a monoid model as a monoid.
+     -}
     \func catEquiv.{u} : CatEquiv MonoidCat.{u} (ModelCat theory) \cowith
       | LAdj => monoidToMod.functor
       | RAdj => modToMonoid.functor
@@ -124,6 +147,9 @@
         | f_hinv => idp
       }
 
+    {- | Converts a `Model theory` to a `Monoid` by reading `ide` from the nullary operation and `*` from the binary
+     -   operation.
+     -}
     \func modToMonoid (M : Model theory) : Monoid (M ()) \cowith
       | ide => operation 0 nil
       | * x y => operation 1 (x :: y :: nil)
@@ -141,6 +167,9 @@
           | Func-o => idp
       }
 
+    {- | Converts a `Monoid` into a `Model` of the theory; its `\where`-functor
+     -   `monoidToMod.functor : Functor MonoidCat (ModelCat theory)` provides the inverse direction of the equivalence.
+     -}
     \func monoidToMod (M : Monoid) : Model theory (\lam _ => M) \cowith
       | operation => \case \elim __ \with {
         | 0 => \lam _ => M.ide
@@ -167,6 +196,9 @@
       }
   }
 
+{- | The additive analogue: `Cat AddMonoid` with `AddMonoidHom` morphisms and a forgetful functor
+ -   `AddMonoidCat.forget : Functor AddMonoidCat SetCat`.
+ -}
 \instance AddMonoidCat.{u} : Cat AddMonoid.{u}
   | Hom M N => AddMonoidHom M N
   | id => AddMonoidHom.id

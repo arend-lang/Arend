@@ -1,3 +1,12 @@
+{- | Propositions, sets, and contractible types — the basic h-levels of homotopy type theory.
+ -
+ -   This module formalizes the fundamental truncation levels: `isProp` (any two elements are equal), `isSet` (any two
+ -   parallel paths are equal), and `Contr` (a center together with a contraction to every point). It establishes that
+ -   being a proposition is itself a proposition, that propositions are sets, and that propositions and contractible
+ -   types are equivalent (given a witness). These predicates are the foundation for working with mere propositions,
+ -   set-level mathematics, and uniqueness proofs throughout the library.
+ -}
+
 \import Equiv
 \import Equiv.Path
 \import Logic
@@ -6,12 +15,17 @@
 
 -- # Prop
 
+-- | A type `A` is a proposition iff `\Pi (a a' : A) -> a = a'`.
 \func isProp (A : \Type) => \Pi (a a' : A) -> a = a'
   \where {
+    {- | Every proposition is a set; produced via `\use \sfunc` so propositions automatically have decidable path
+     -   equality at the next level.
+     -}
     \use \sfunc =>isSet {A : \Type} (p : isProp A) (a a' : A) : isProp (a = a')
       => \lam s t => \have q => Jl (\lam x q => inv (p a a) *> p a x = q) (inv_*> (p a a))
                      \in inv (q s) *> q t
 
+    -- | `isProp A` is itself a proposition (registered as a level instance).
     \use \level levelProp (A : \Type) (e e' : isProp A) : e = e'
       => path \lam i a a' => =>isSet e a a' (e a a') (e' a a') i
 
@@ -19,8 +33,10 @@
       => \lam a a' => inv (IsEquiv.ret_f e) *> pmap (IsEquiv.ret e) (As _ _) *> IsEquiv.ret_f e
   }
 
+-- | A type `A` is a set iff any two parallel paths are equal: `\Pi (a a' : A) (p q : a = a') -> p = q`.
 \func isSet (A : \Type) => \Pi (a a' : A) (p q : a = a') -> p = q
   \where {
+    -- | `isSet A` is a proposition (registered as a level instance).
     \use \level levelProp {A : \Type} (e e' : isSet A) : e = e'
       => path \lam i a a' => isProp.levelProp (a = a') (e a a') (e' a a') i
 
@@ -34,10 +50,13 @@
 
 -- # Contr
 
+-- | Class of contractible types — packages `center : A` with `contraction : \Pi (a' : A) -> center = a'`.
 \class Contr (A : \Type) (center : A) (contraction : \Pi (a' : A) -> center = a')
   \where {
+    -- | Convenience constructor building a `Contr` from a center and contraction function.
     \func make {A : \Type} (a : A) (p : \Pi (a' : A) -> a = a')  => \new Contr A a p
 
+    -- | Being contractible is itself a proposition.
     \use \level levelProp (A : \Type) (c1 c2 : Contr A) : c1 = c2 => path (\lam i => \new Contr A {
       | center => c1.contraction c2.center i
       | contraction a' => pathOver {\lam i => c1.contraction c2.center i = a'} {c1.contraction a'} {c2.contraction a'}
@@ -49,6 +68,7 @@
       | contraction b => e.adjointInv (c.contraction _)
   }
 
+-- | Any function between contractible types is an equivalence.
 \lemma contr-equiv {A B : \Type} (Ac : Contr A) (Bc : Contr B) {f : A -> B} : IsEquiv f
   => inP \new QEquiv {
     | ret _ => Ac.center
@@ -56,18 +76,24 @@
     | f_sec y => isContr=>isProp Bc _ _
   }
 
+-- | A contractible type is a proposition (paths via the center: `inv (c a) *> c a'`).
 \func isContr=>isProp {A : \Type} (c : Contr A) : isProp A => \lam a a' => inv (c.contraction a) *> c.contraction a'
 
+-- | If `A -> Contr A`, then `A` is a proposition.
 \lemma isContr'=>isProp {A : \Type} (c : A -> Contr A) : isProp A => \lam a => isContr=>isProp (c a) a
 
+-- | A proposition with a witness is contractible.
 \lemma isProp=>isContr {A : \Type} (p : isProp A) (a : A) : Contr A => Contr.make a (p a)
 
+-- | A proposition with a propositionally-truncated witness (`TruncP A`) is contractible.
 \lemma isProp'=>isContr {A : \Type} (p : isProp A) (a : TruncP A) : Contr A \elim a
   | inP a => isProp=>isContr p a
 
+-- | Path spaces in a proposition are contractible: `Contr (a = a')`.
 \lemma isProp=>PathContr (A : \Type) (p : isProp A) (a a' : A) : Contr (a = a')
   => isProp=>isContr (isProp.=>isSet p a a') (p a a')
 
+-- | Dependent products of contractible types are contractible.
 \lemma pi-Contr {A : \Type} (B : A -> \Type) (p : \Pi (a : A) -> Contr (B a)) : Contr (\Pi (a : A) -> B a)
   => Contr.make (\lam a => Contr.center {p a}) (\lam f => path (\lam i a => Contr.contraction {p a} (f a) @ i))
 

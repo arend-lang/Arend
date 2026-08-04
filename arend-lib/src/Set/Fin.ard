@@ -1,3 +1,13 @@
+{- | Finite sets presented as types equipped with a bijection to a standard `Fin n`.
+ -
+ -   This module defines the `FinSet` class, which augments `KFinSet` (Kuratowski-finite) with a chosen cardinality and
+ -   a propositionally-truncated equivalence to `Fin finCard`. Because the cardinality is fixed and the equivalence
+ -   merely exists, `FinSet` automatically yields decidable equality, choice, and apartness via transport from the
+ -   standard finite ordinals. The module also provides search/decision procedures lifted from `Fin n`, face/skip
+ -   combinatorics for working with finite ordinals, and concrete `FinSet` instances (`Empty`, unit, `Bool`, `Fin n`,
+ -   decidable propositions, disjoint sums).
+ -}
+
 \import Algebra.Meta
 \import Algebra.Monoid
 \import Algebra.Ordered
@@ -21,6 +31,10 @@
 \import Set
 \import Set.Fin.KFin
 
+{- | Class extending `KFinSet`, `Choice`, and `DecSet`. Adds `finEq : TruncP (Equiv (Fin finCard) E)` and derives
+ -   `finSurj`, `choice`, `decideEq`, and the apartness structure (`#` defined as `/=`) from this equivalence. The class
+ -   is a proposition over its underlying `\Set`.
+ -}
 \class FinSet \extends KFinSet, DecSet {
   | finEq : TruncP (QEquiv {Fin card} {E})
   | finSurj => \case finEq \with {
@@ -79,6 +93,7 @@
       }
     }
 
+  -- | Finite axiom of choice for `TruncP`-valued families over `Fin n`.
   \lemma finiteAC {n : Nat} {A : Fin n -> \Type} (f : \Pi (i : Fin n) -> TruncP (A i)) : TruncP (\Pi (i : Fin n) -> A i)
     => \case ||-finiteAC {_} {Empty} (\lam i => \case f i \with {
       | inP a => byRight a
@@ -87,6 +102,9 @@
       | byRight r => inP r
     }
 
+    {- | Bounded search on `Fin n` returning the least witness of a decidable predicate, or a proof of universal
+     -   negation.
+     -}
     \func searchFin {n : Nat} (A : Fin n -> \Prop) (d : \Pi (j : Fin n) -> Dec (A j))
       : Or (\Sigma (j0 : Fin n) (A j0) (\Pi (j : Fin n) -> A j -> (j0 : Nat) <= j)) (\Pi (j : Fin n) -> Not (A j)) \elim n
       | 0 => inr (\case __)
@@ -102,6 +120,7 @@
         }
       }
 
+  -- | Lifts `searchFin` along an equivalence `Fin n ≃ B`.
   \func searchFin-equiv {B : \Type} {n : Nat} (e : QEquiv {Fin n} {B}) (A : B -> \Prop) (d : \Pi (b : B) -> Dec (A b))
     : Or (\Sigma (b : B) (A b)) (\Pi (b : B) -> Not (A b))
     => \case searchFin (\lam j => A (e j)) (\lam j => d (e j)) \with {
@@ -109,6 +128,7 @@
          | inr q => inr \lam b Ab => q (e.ret b) $ transportInv A (e.f_ret b) Ab
        }
 
+  -- | The least-witness triple is contractible when a witness exists.
   \lemma searchFin-unique {n : Nat} (A : Fin n -> \Prop) (d : \Pi (j : Fin n) -> Dec (A j)) (c : ∃ (j : Fin n) (A j))
       : Contr (\Sigma (j0 : Fin n) (A j0) (\Pi (j : Fin n) -> A j -> (j0 : Nat) <= j))
       => \case \elim c \with {
@@ -118,28 +138,34 @@
         }
       }
 
+    -- | Predecessor on `Fin (suc (suc n))`, sending `0 ↦ 0`.
     \func pred {n : Nat} (x : Fin (suc (suc n))) : Fin (suc n) \elim x
       | 0 => 0
       | suc x => x
 
+    -- | Injectivity of `fsuc` on `Fin n`.
     \lemma suc-isInj {n : Nat} (x y : Fin n) (p : suc x = suc y) : x = y \elim n
       | suc n => pmap pred p
 
+    -- | Equivalence `Fin n ≃ Fin m` forces `n = m`.
     \lemma FinCardBij {n m : Nat} (p : QEquiv {Fin n} {Fin m}) : n = m
       => <=-antisymmetric (FinCardInj p p.isInj) (FinCardInj p.ret (symQEquiv p).isInj)
 
+    -- | Injection `Fin n -> Fin m` forces `n <= m`.
     \lemma FinCardInj {n m : Nat} (f : Fin n -> Fin m) (f-inj : IsInj f) : n <= m \elim n, m
       | 0, _ => zero<=_
       | suc n, 0 => \case f 0
       | suc n, suc m => suc<=suc (FinCardInj (\lam x => skip (f 0) (f (suc x)) (\lam f_0=f_suc => \case f-inj f_0=f_suc))
                                              (\lam {x} {y} p => suc-isInj x y (f-inj (skip-isInj p))))
 
+    -- | `skip x0 x d : Fin n` removes the value `x0` from `Fin (suc n)`, given `x0 /= x`.
     \func skip {n : Nat} (x0 x : Fin (suc n)) (d : x0 /= x) : Fin n \elim n, x0, x
       | _, 0, 0 => absurd (d idp)
       | _, 0, suc x => x
       | suc n, suc x0, 0 => 0
       | suc n, suc x0, suc x => suc (skip x0 x (\lam x0=x => d (pmap (suc __) x0=x)))
 
+    -- | `skip x0 _ _` is injective in its second argument.
     \lemma skip-isInj {n : Nat} {x0 x y : Fin (suc n)} {d : x0 /= x} {d' : x0 /= y} (p : skip x0 x d = skip x0 y d') : x = y \elim n, x0, x, y
       | _, 0, 0, _ => absurd (d idp)
       | _, 0, _, 0 => absurd (d' idp)
@@ -149,12 +175,14 @@
       | suc n, suc x0, suc x, 0 => \case p
       | suc n, suc x0, suc x, suc y => pmap (suc __) (skip-isInj (suc-isInj _ _ p))
 
+    -- | `sface` and `skip` are mutually inverse on the appropriate domains.
     \lemma sface_skip {n : Nat} {x0 x : Fin (suc n)} {d : x0 /= x} : sface x0 (skip x0 x d) = x \elim n, x0, x
       | _, 0, 0 => absurd (d idp)
       | suc n, 0, suc x => idp
       | suc n, suc x0, 0 => idp
       | suc n, suc x0, suc x => pmap fsuc sface_skip
 
+    -- | `sface` and `skip` are mutually inverse on the appropriate domains.
     \lemma skip_sface {n : Nat} {k : Fin (suc n)} {i : Fin n} {d : k /= sface k i} : skip k (sface k i) d = i \elim n, k, i
       | suc n, 0, i => idp
       | suc n, suc k, 0 => idp
@@ -162,6 +190,7 @@
 
     \open NatOrder
 
+    -- | Order-preservation/reflection of `skip`.
     \lemma skip_< {n : Nat} {x0 x x' : Fin (suc n)} {d : x0 /= x} {d' : x0 /= x'} (p : skip x0 x d < skip x0 x' d') : x < x' \elim n, x0, x, x', p
       | _, 0, 0, _, _ => absurd (d idp)
       | _, 0, _, 0, _ => absurd (d' idp)
@@ -169,6 +198,7 @@
       | suc n, suc x0, 0, suc x', p => zero<suc
       | suc n, suc x0, suc x, suc x', suc<suc p => suc<suc (skip_< p)
 
+    -- | Order-preservation/reflection of `skip`.
     \lemma <_skip {n : Nat} {x0 x x' : Fin (suc n)} {d : x0 /= x} {d' : x0 /= x'} (p : x < x') : skip x0 x d < skip x0 x' d' \elim n, x0, x, x', p
       | _, 0, 0, _, _ => absurd (d idp)
       | _, 0, _, 0, _ => absurd (d' idp)
@@ -176,26 +206,31 @@
       | suc n, suc x0, 0, suc x', p => zero<suc
       | suc n, suc x0, suc x, suc x', suc<suc p => suc<suc (<_skip p)
 
+    -- | Numerical formula for `skip` below/above the removed point.
     \lemma skip-left {n : Nat} {x0 x : Fin (suc n)} {d : x0 /= x} (p : x < x0) : skip x0 x d = {Nat} x \elim n, x0, x, p
       | 0, 0, 0, ()
       | suc n, suc x0, 0, _ => idp
       | suc n, suc x0, suc x, suc<suc p => pmap suc (skip-left p)
 
+    -- | Numerical formula for `skip` below/above the removed point.
     \lemma skip-right {n : Nat} {x0 x : Fin (suc n)} {d : x0 /= x} (p : x0 < x) : skip x0 x d = {Nat} pred' x \elim n, x0, x, p
       | 0, 0, 0, ()
       | suc n, 0, suc x, _ => idp
       | suc n, suc x0, 0, _ => idp
       | suc n, suc x0, suc x, suc<suc p => pmap suc (skip-right p) *> suc_pred (/=-sym $ NatSemiring.<_/= $ zero<=_ <∘r p)
 
+    -- | Builds a `FinSet A l.len` from an array `l` whose entries are surjective and injective onto `A`.
     \lemma fromArray {A : \Set} (l : Array A) (p : \Pi (a : A) -> ∃ (i : Fin l.len) (l i = a)) (q : \Pi {i j : Fin l.len} -> l i = l j -> i = j) : FinSet A l.len \cowith
       | finEq => IsEquiv.fromInjSurj q p
   }
 
+-- | Equivalent `FinSet`s have equal cardinality.
 \lemma card_Equiv {A B : FinSet} (e : QEquiv {A} {B}) : A.card = B.card
   => \case A.finEq, B.finEq \with {
     | inP e1, inP e2 => FinSet.FinCardBij $ e1 `transQEquiv` e `transQEquiv` symQEquiv e2
   }
 
+-- | Injection between `FinSet`s gives `<=` on cardinalities.
 \lemma card_inj {A B : FinSet} (f : A -> B) (inj : IsInj f) : A.card <= B.card
   => \case A.finEq, B.finEq \with {
     | inP e1, inP e2 => FinSet.FinCardInj (\lam x => e2.ret (f (e1 x))) \lam p => e1.isInj $ inj $ (symQEquiv e2).isInj p
@@ -206,18 +241,23 @@
     | inP e' => inP (transQEquiv e' e)
   }
 
+-- | Compute `transport Fin (pmap suc p)` on `0` and `suc x`.
 \lemma transport_zero {n m : Nat} (p : n = m) : transport Fin (pmap suc p) 0 = 0 \elim p
   | idp => idp
 
+-- | Compute `transport Fin (pmap suc p)` on `0` and `suc x`.
 \lemma transport_suc {n m : Nat} (p : n = m) (x : Fin n) : transport Fin (pmap suc p) (suc x) = suc (transport Fin p x) \elim p
   | idp => idp
 
+-- | Transport along `n = m` preserves the underlying natural number.
 \lemma fin_transport {n m : Nat} {j : Fin n} {p : n = m} : transport Fin p j = {Nat} j \elim p
   | idp => idp
 
+-- | Inclusion `Fin n -> Fin m` from `n <= m`.
 \func fin-inc_<= {n m : Nat} (p : n <= m) (i : Fin n) : Fin m
   => toFin i (fin_< i NatSemiring.<∘l p)
 
+-- | Left inclusion `Fin n -> Fin (n + m)` preserving the underlying natural number (with lemma `char`/`char_nat`).
 \func fin-inc {n m : Nat} (i : Fin n) : Fin (n + m) \elim n, i
   | suc n, 0 => 0
   | suc n, suc i => suc (fin-inc i)
@@ -230,6 +270,7 @@
       => char *> mod_< id<suc
   }
 
+-- | Right inclusion `Fin m -> Fin (n + m)`.
 \func fin-inc-right {n m : Nat} (i : Fin m) : Fin (n + m)
   => fin-inc_<= (<=_+ zero<=_ <=-refl) i
   \where {
@@ -237,6 +278,7 @@
       => toFin=id *> mod_< id<suc
   }
 
+-- | Shift `Fin n -> Fin (k + n)` by adding `k` on the left.
 \func fin-raise {n k : Nat} (i : Fin n) : Fin (k + n) \elim k
   | 0 => i
   | suc k => suc (fin-raise i)
@@ -245,16 +287,19 @@
       | 0 => idp
       | suc k => pmap suc char
 
+-- | `sface k i : Fin (suc n)` — the `k`-th face inclusion `Fin n -> Fin (suc n)` skipping `k`.
 \func sface {n : Nat} (k : Fin (suc n)) (i : Fin n) : Fin (suc n) \elim n, k, i
   | suc n, 0, i => suc i
   | suc n, suc k, 0 => 0
   | suc n, suc k, suc i => suc (sface k i)
 
+-- | `sface k i /= k`.
 \lemma sface-skip {n : Nat} {k : Fin (suc n)} {i : Fin n} : sface k i /= k \elim n, k, i
   | suc n, 0, i => \case __
   | suc n, suc k, 0 => \case __
   | suc n, suc k, suc i => fsuc/= sface-skip
 
+-- | `sface k` is injective.
 \lemma sface-inj {n : Nat} {k : Fin (suc n)} {i i' : Fin n} (p : sface k i = sface k i') : i = i' \elim n, k, i, i'
   | suc n, 0, i, i' => pmap (fpred i) p
   | suc n, suc k, 0, 0 => idp
@@ -262,6 +307,7 @@
   | suc n, suc k, suc i, 0 => \case p
   | suc n, suc k, suc i, suc i' => pmap fsuc $ sface-inj $ pmap (fpred k) p
 
+-- | `FinSet Empty` with cardinality `0`.
 \instance EmptyFin : FinSet Empty
   | card => 0
   | finEq => inP \new QEquiv {
@@ -271,6 +317,7 @@
     | f_sec => \case __
   }
 
+-- | `FinSet (\Sigma)` with cardinality `1`.
 \instance UnitFin : FinSet (\Sigma)
   | card => 1
   | finEq => inP \new QEquiv {
@@ -280,6 +327,7 @@
     | f_sec _ => idp
   }
 
+-- | `FinSet Bool` with cardinality `2`; the equivalence `Fin 2 ≃ Bool` is given by `equiv`.
 \instance BoolFin : FinSet Bool 2
   | finEq => inP equiv
   \where
@@ -298,11 +346,13 @@
       }
       | f_sec => cases __ idp
 
+-- | `FinSet (Fin n)` with cardinality `n`.
 \instance FinFin (n : Nat) : FinSet (Fin n)
   | card => n
   | finEq => inP idEquiv
   | decideEq => decideEq
 
+-- | Turns a decidable proposition `P` into a `FinSet P` of cardinality `1` or `0`.
 \func DecFin {P : \Prop} (d : Dec P) : FinSet P \cowith
   | card => Dec.rec (\lam _ => 1) (\lam _ => 0) d
   | finEq => inP $ \case \elim d \with {
@@ -320,6 +370,9 @@
               }
   }
 
+{- | Pointwise decidability over a `FinSet` lifts to decidability of `\Pi (a : A) -> B a` (with helper `fin-dec` for
+ -   `Fin n`).
+ -}
 \func FinDec {A : FinSet} (B : A -> Decide) : Decide (\Pi (a : A) -> B a) \cowith
   | decide => \case A.finEq \with {
     | inP e => \case fin-dec (\lam j => B (e j)) \with {
@@ -340,6 +393,9 @@
       }
   }
 
+{- | `FinSet (Or S T)` with cardinality `S.finCard + T.finCard`; the underlying equivalence
+ -   `aux : Fin (n + m) ≃ Or (Fin n) (Fin m)` is supported by `ret_inl-lem` and `ret_inr-lem`.
+ -}
 \instance OrFin (S T : FinSet) : FinSet (Or S T)
   | card => S.card + T.card
   | finEq => \case S.finEq, T.finEq \with {
@@ -380,6 +436,7 @@
       | suc n => rewrite (ret_inr-lem {n} t) idp
   }
 
+-- | Coercion `\func finSet {A : FinSet} => A` to recover the underlying type.
 \func finSet {A : FinSet} => A
 
 \lemma finiteDependentChoice {A : \Type} (R : A -> A -> \Type) (a0 : A) (step : \Pi (a : A) -> ∃ (b : A) (R a b)) (n : Nat)

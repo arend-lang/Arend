@@ -1,3 +1,12 @@
+{- | Finitely generated free modules over a ring, equipped with a basis, and their dimension theory.
+ -
+ -   A `FinModule` is an `LModule` together with a (truth-valued) witness that some finite array of elements forms a
+ -   basis. The module develops the standard linear-algebra consequences: surjections from finite modules can be
+ -   lifted/split, any two bases have the same length (over a non-zero commutative ring), giving a well-defined
+ -   `dimension`, and surjective endomorphisms between equidimensional finite modules are isomorphisms. The standard
+ -   example `R^n` is shown to be a `FinModule` with basis the columns of the identity matrix.
+ -}
+
 \import Algebra.Linear.Matrix
 \import Algebra.Meta
 \import Algebra.Module
@@ -21,11 +30,17 @@
 \import Set
 \import Set.Fin
 
+{- | Extends `LModule` with the propositional witness `isFinModule : ∃ (l : Array E) (IsBasis l)` — a module that admits
+ -   some finite basis.
+ -}
 \class FinModule \extends LModule
   | isFinModule : ∃ (l : Array E) (IsBasis l)
   \where {
     \open LinearMap
 
+    {- | For a `FinModule` `F` over a ring `R`, any linear map `f : F → V` factors through any surjection `g : U ↠ V`;
+     -   produces `h : F → U` with `g ∘ h = f`.
+     -}
     \lemma surj-lift {R : Ring} {F : FinModule R} {U V : LModule R} (f : LinearMap F V) (g : LinearMap U V) (gs : IsSurj g)
       : ∃ (h : LinearMap F U) ∀ x (g (h x) = f x)
       => \have | (inP (l,lb)) => F.isFinModule
@@ -33,10 +48,14 @@
                | h => extend lb \lam j => (s j).1
          \in inP (h, basis-ext (g LinearMap.∘ h) f lb.2 \lam j => pmap g (U.BigSum-unique {\lam k => F.basis-split lb (l j) k *c (s k).1} j (\lam k j/=k => pmap (*c _) (F.basis_split_/= j/=k) *> U.*c_zro-left) *> pmap (*c _) F.basis_split_= *> ide_*c) *> (s j).2)
 
+    -- | A surjection `g : U ↠ V` onto a `FinModule` `V` admits a linear section `h : V → U` with `g ∘ h = id`.
     \lemma surj-split {R : Ring} {U : LModule R} {V : FinModule R} (g : LinearMap U V) (gs : IsSurj g)
       : ∃ (h : LinearMap V U) ∀ x (g (h x) = x)
       => surj-lift LinearMap.id g gs
 
+    {- | If `l` is a basis and `l'` generates `U`, then `l.len <= l'.len`. The Steinitz-style exchange bound underlying
+     -   invariance of dimension.
+     -}
     \lemma basis<=generating {R : NonZeroCRing} {U : LModule R} (l l' : Array U) (lb : U.IsBasis l) (l'g : U.IsGenerated l') : l.len <= l'.len
       => \let | g => arrayLinearMap l'
               | (inP (f,gf=id)) => surj-split {R} {_} {\new FinModule { | LModule => U | isFinModule => inP (l,lb) }} g (arrayLinearMap.surj-char.2 l'g)
@@ -44,6 +63,9 @@
               | B => toMatrix {R} MatrixRing.ide lb g
          \in matrix-split_<= {R} {_} {_} {A} {B} $ inv (toMatrix_* {R} {U} f g l ArrayFinModule.basis lb) *> cong (exts gf=id) *> toMatrix_ide lb
 
+    {- | Packages the dimension together with a basis-existence proof as a proposition (any two such pairs are equal),
+     -   making the natural number well-defined.
+     -}
     \lemma dimension-pair {R : NonZeroCRing} (U : FinModule R) : \Sigma (d : Nat) (∃ (l : Array U d) (U.IsBasis l))
       \level \lam s t => ext \case s.2, t.2 \with {
         | inP (l,lb), inP (l',l'b) => <=-antisymmetric (basis<=generating l l' lb l'b.2) (basis<=generating l' l l'b lb.2)
@@ -51,16 +73,20 @@
         | inP (l, lb) => (l.len, inP (\new l, lb))
       }
 
+    -- | The dimension of a `FinModule` over a non-zero commutative ring, extracted from `dimension-pair`.
     \func dimension {R : NonZeroCRing} (U : FinModule R) => (dimension-pair U).1
 
+    -- | Existence of a basis of length exactly `dimension U`.
     \lemma dimension-char {R : NonZeroCRing} {U : FinModule R} : ∃ (l : Array U (dimension U)) (U.IsBasis l)
       => (dimension-pair U).2
 
+    -- | Any basis `l` of `U` has length equal to `dimension U`.
     \lemma dimension-unique {R : NonZeroCRing} {U : FinModule R} {l : Array U} (b : U.IsBasis l) : dimension U = l.len
       => \case dimension-char \with {
            | inP (l',b') => <=-antisymmetric (basis<=generating l' l b' b.2) (basis<=generating l l' b b'.2)
          }
 
+    -- | Characterizes zero-dimensional modules as the trivial modules: `dimension U = 0 ↔ ∀ a, a = 0`.
     \lemma dimension=0 {R : NonZeroCRing} {U : FinModule R} : (dimension U = 0) <-> (\Pi (a : U) -> a = 0)
       => (\lam p a => \case rewrite p in dimension-char \with {
         | inP (l,lb) => U.basis-split-char {_} {lb}
@@ -69,22 +95,28 @@
         | suc n, inP (l,lb) => absurd $ R.zro/=ide $ inv $ lb.1 (replicate (suc n) (1 : R)) (f _) 0
       })
 
+    -- | A surjective linear map between `FinModule`s of equal dimension is an isomorphism in `LModuleCat R`.
     \lemma surj-iso {R : NonZeroCRing} {U V : FinModule R} (p : dimension U = dimension V) (g : LinearMap U V) (gs : IsSurj g) : ModuleIso g
       => \case dimension-char, dimension-char \with {
         | inP s, inP (lv,bv) => \let (lu,bu) => rewrite p s
                                 \in basis-surj-iso bu bv g gs
       }
       \where
+        {- | Helper showing that over a `CRing`, a surjection between modules with bases of equal length `n` is an
+         -   isomorphism — the matrix-level core of `surj-iso`.
+         -}
         \lemma basis-surj-iso {R : CRing} {U V : LModule R} {n : Nat} {lu : Array U n} (bu : U.IsBasis lu) {lv : Array V n} (bv : V.IsBasis lv) (g : LinearMap U V) (gs : IsSurj g) : ModuleIso g
           => \case surj-split {R} {U} {\new FinModule { | LModule => V | isFinModule => inP (lv,bv) }} g gs \with {
             | inP (h,gh=id) => rewriteI ((matrix-equiv bu bv).ret_f g) $ toLinearMapIso bu bv $ matirx-inv {R} {n} {toMatrix lv bu h} {toMatrix lu bv g} $ inv (toMatrix_* {R} {V} h g lv bu bv) *> cong (exts gh=id) *> toMatrix_ide bv
           }
   }
 
+-- | Instance making `Array R n` a `FinModule R` via the `ArrayLModule` structure on the regular module `RingLModule R`.
 \instance ArrayFinModule {R : Ring} (n : Nat) : FinModule R (Array R n)
   | LModule => ArrayLModule n (RingLModule R)
   | isFinModule => inP (_, basis)
   \where {
+    -- | The rows/columns of the identity matrix `MatrixRing.ide` form a basis of `R^n`.
     \lemma basis {R : Ring} {n : Nat} : (ArrayLModule n (RingLModule R)).IsBasis MatrixRing.ide
       => (\lam c p j => inv ide-right *> (rewrite (decideEq=_reduce idp) in inv (R.BigSum-unique j \lam k j/=k => later $ rewrite (decideEq/=_reduce $ /=-sym j/=k) R.zro_*-right) *> inv ArrayLModule.BigSum-index *> path (\lam i => p i j)),
           \lam x => inP (x, exts \lam j => inv $ ArrayLModule.BigSum-index *> R.BigSum-unique j (\lam k j/=k => later $ rewrite (decideEq/=_reduce $ /=-sym j/=k) R.zro_*-right) *> rewrite (decideEq=_reduce idp) ide-right))

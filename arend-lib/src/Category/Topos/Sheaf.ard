@@ -1,3 +1,14 @@
+{- | Presheaves and sheaves on sites, valued in arbitrary cocomplete categories or in `Set`.
+ -
+ -   A `VPresheaf` is a contravariant functor from a small category `C` to a category `D`; `Presheaf` is the special
+ -   case `D = Set`. A `VSheaf` adds the sheaf condition: for every covering sieve `s` of an object `x`, the diagram
+ -   `Comp F s.diagram.op` is a limit (with cone `Cone.map F s.cone`). The module sets up the categories of
+ -   (V)presheaves and (V)sheaves as full subcategories of functor categories, and provides the standard tools for
+ -   working with sheaves — direct image along site morphisms, transfer through (co)limit-preserving/reflecting
+ -   functors, equivalent characterizations on sites with a basis (matching families and equalizer presentations), and
+ -   extension of sheaves from a frame presentation `framePresSite P` to its presented frame `PresentedFrame P`.
+ -}
+
 \import Algebra.Meta
 \import Category
 \import Category.Functor
@@ -23,10 +34,14 @@
 \import Topology.Locale.PreorderSite
 \open CompleteLattice
 
+{- | Record of compatible families `family j : Hom z (F (g j).1)` over a basic cover `g : J -> SlicePrecat x`,
+ -   satisfying `F.Func pbProj1 ∘ family j = F.Func pbProj2 ∘ family j'` on all pullbacks.
+ -}
 \record MatchingFamily {C D : Precat} (F : Functor C.op D) {J : \Type} (x : C) (P : J -> ObOver x) (d : D)
   | \coerce family (j : J) : Hom d (F (P j).1)
   | isMatching {j j' : J} {z : C} {g : Hom z (P j).1} {g' : Hom z (P j').1} : (P j).2 ∘ g = (P j').2 ∘ g' -> F.Func g ∘ family j = F.Func g' ∘ family j'
   \where {
+    -- | Set-valued matching family record and canonical map.
     \func matchingFamily {C : Precat} {D : Precat} (F : Functor C.op D) {J : \Type} (x : C) (P : J -> ObOver x) (d : D) (h : Hom d (F x)) : MatchingFamily F x P d \cowith
       | family j => Func (P j).2 ∘ h
       | isMatching gg' => inv o-assoc *> pmap (∘ h) (inv Func-o *> pmap Func (later gg') *> Func-o) *> o-assoc
@@ -202,6 +217,7 @@
           | Func-id => Func-id
           | Func-o => Func-o
 
+        -- | The diagram, its limit object, and the cone induced by an inequality `b <= a` used to define `extend.Func`.
         \func cone : Cone coneF (F x) \cowith
           | coneMap j => Func (j.2.2 ∘ j.4)
           | coneCoh h => inv Func-o *> pmap F.Func h.2
@@ -231,6 +247,7 @@
     => \have r => IsEquiv.splitSurj (sheaf-matchingFamily x<=U) mf
        \in (r.1, \lam j => path \lam i => r.2 i j)
 
+  -- | Pushforward of a sheaf along a `SiteWithBasisPrehom f : C -> C'` — yields `Comp S f.op` as a sheaf on `C`.
   \lemma direct_image {C' : Site} (f : SiteHom C' C) : VSheaf D C' (Comp F f.op) \cowith
     | isSheaf {x} {S} xS {d} => IsEquiv.trans (sheaf-covering (f.Func-cover xS)) $
         IsEquiv.trans (MatchingFamily.map.isEquiv {C} {D} {F} {Given S} {Given (py : ObOver (f x)) ∃ (px : S) (py = (f px.1, Func px.2))} {\lam s => (_, inP (s.1,s.2,idp))} \lam (_, inP (px,Spx,idp)) => inP ((px,Spx),idp)) $
@@ -248,6 +265,7 @@
           | f_sec => idpe
         }
 } \where {
+  -- | Restricts a sheaf on a locale `L` to a sheaf on `L.restrict a` by composing with the restriction functor.
   \func restrict {L : Locale} (a : L) (F : VSheaf { | C => L }) : VSheaf F.D (L.restrict a) \cowith
     | F => Comp F Locale.restrict.functor.op
     | isSheaf {x} {S} x<=S {d} => IsEquiv.trans (F.isSheaf {x.1} {\lam px => S ((px.1, px.2 <=∘ x.2), px.2)} (x<=S <=∘ L.SJoin-univ \lam {b} s => Join-cond $ later (s.1, transport S (ext $ ext idp) s.2))) $ inP \new QEquiv {
@@ -263,6 +281,7 @@
       | f_sec mf => exts \lam j => cong $ ext $ ext (ext idp)
     }
 
+  -- | Direct image along a `FrameHom L' -> L`, producing a sheaf on `L'` from one on `L`.
   \lemma direct_image_locale {L L' : Locale} (f : FrameHom L' L) (S : VSheaf { | C => L }) : VSheaf S.D L' (Comp S f.op)
     => S.direct_image f.functor
 
@@ -276,6 +295,7 @@
         MatchingFamily.map.isEquiv $ later \lam (x, inP ((j,Uj),fj=x)) => inP ((j,Uj), ext $ ext fj=x)
 }
 
+-- | Category of `VSheaf D C` as a full subcategory of `VPresheafCat D C`.
 \instance VSheafCat (D : Cat) (C : Site) : Cat
   => subCat {VPresheafCat D C} {VSheaf D C} (\new Embedding {
     | f P => P
@@ -342,10 +362,12 @@
          \in (r.1, \lam {c} {d} Ud ca cd => r.2 (c,d,Ud,ca,cd))
   }
 
+-- | If `G` reflects all relevant limits and `Comp G F` is an `E`-valued sheaf, then `F` itself is a `D`-valued sheaf.
 \lemma sheaf-reflect.{s} {C : Site.{s,s}} {D E : Cat} (G : Functor D E)
                          (G-lim : \Pi {J : Precat.{s,s}} (H : Functor J D) -> ReflectsLimit G H) {F : Functor C.op D} (Fs : IsSheaf (Comp G F)) : IsSheaf F
   => \lam x<=S {d} => IsSheaf.sheaf-lim.2 $ G-lim {IsSheaf.sheaf-lim.coneJ {C}} _ IsSheaf.sheaf-lim.cone (\lam d => (IsSheaf.sheaf-lim {C} {E} {Comp G F}).1 (Fs x<=S)) d
 
+-- | If `G : D -> E` preserves all relevant limits, then `Comp G F` is a sheaf whenever `F : VSheaf D C` is.
 \lemma sheaf-preserve.{s} {C : Site.{s,s}} {D E : Cat} (G : Functor D E)
                           (G-lim : \Pi {J : Precat.{s,s}} (H : Functor J D) -> PreservesLimit G H) (F : VSheaf D C) : IsSheaf (Comp G F)
   => \lam x<=S {d} => (IsSheaf.sheaf-lim {C} {E} {Comp G F}).2 $ G-lim {IsSheaf.sheaf-lim.coneJ {C}} _ IsSheaf.sheaf-lim.cone (\lam d' => IsSheaf.sheaf-lim.1 (F.isSheaf x<=S)) d

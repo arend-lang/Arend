@@ -1,3 +1,14 @@
+{- | Localization of commutative monoids at a submonoid, with an additive variant and the Grothendieck group
+ -   construction.
+ -
+ -   This module constructs the localization `S⁻¹M` of a commutative monoid `M` at a submonoid `S` of "denominators" by
+ -   quotienting pairs `(x, y)` with `y ∈ S` under the equivalence `(x, y) ~ (x', y') ⟺ x · y' = x' · y`. The
+ -   construction is given twice — once multiplicatively for `CMonoid` and once additively for `AbMonoid` — using
+ -   `Quotient` to form the underlying type and lifting the monoid operation pointwise on representatives. As a key
+ -   application, localizing an `AbMonoid` at the maximal submonoid (everything) yields the **Grothendieck group**,
+ -   freely completing an additive monoid into an abelian group by formally adjoining negatives.
+ -}
+
 \import Algebra.Group
 \import Algebra.Meta
 \import Algebra.Monoid
@@ -11,22 +22,31 @@
 \import Relation.Equivalence
 \import Set
 
+{- | Additive analogue of `LocType` for an `AbMonoid` and a `SubAddMonoid`, quotienting pairs `(x, y)` by
+ -   `a₁ + b₂ = b₁ + a₂`.
+ -}
 \type LocAbType {M : AbMonoid} (S : SubAddMonoid M) => Quotient (~)
   \where {
+    -- | Additive counterparts of the multiplicative versions.
     \func SType {M : AbMonoid} (S : SubAddMonoid M) => \Sigma (x y : M) (S y)
 
+    -- | Additive counterparts of the multiplicative versions.
     \protected \func \infix 4 ~ (a b : SType S) => a.1 + b.2 = b.1 + a.2
 
+    -- | Additive counterparts of the multiplicative versions.
     \func inl~ (a : SType S) : LocAbType S => in~ a
 
+    -- | Additive equivalence-respecting lemmas.
     \lemma ~-lequiv {a b : SType S} (p : a ~ b) : inl~ a = inl~ b
       => path \lam i => ~-equiv a b p i
 
+    -- | Additive equivalence-respecting lemmas.
     \lemma ~-lequiv-right {a b : SType S} {c : M} (Sc : S c) (p : a.1 + b.2 + c = b.1 + a.2 + c) : inl~ a = inl~ b
       => \let a' : SType S => (a.1 + c, a.2 + c, contains_+ a.3 Sc)
          \in ~-lequiv equation.abMonoid *> ~-lequiv {_} {_} {a'} (equation.abMonoid {p})
   }
 
+-- | Abelian monoid instance on `LocAbType S` with `0 = (0, 0)` and `(x, y) + (x', y') = (x + x', y + y')`.
 \instance LocAbMonoid {M : AbMonoid} (S : SubAddMonoid M) : AbMonoid (LocAbType S) \cowith
   | zro => in~ (0, 0, S.contains_zro)
   | + (x y : LocAbType S) : LocAbType S \with {
@@ -39,8 +59,13 @@
   | +-comm {in~ a} {in~ b} => ~-lequiv equation.abMonoid
   \where \open LocAbType
 
+-- | The localization of `M` at the maximal submonoid `SubAddMonoid.max` (i.e., every element is a denominator).
 \func MaxLocAbType (M : AbMonoid) => LocAbType {M} SubAddMonoid.max
 
+{- | Abelian group structure on `MaxLocAbType M`, extending `LocAbMonoid SubAddMonoid.max`. The negation
+ -   `-(x, y) = (y, x)` swaps numerator and denominator, exhibiting the Grothendieck group as the universal group
+ -   completion of `M`.
+ -}
 \instance GrothendieckAbGroup (M : AbMonoid) : AbGroup (MaxLocAbType M)
   | AbMonoid => LocAbMonoid SubAddMonoid.max
   | negative (x : MaxLocAbType M) : MaxLocAbType M \with {

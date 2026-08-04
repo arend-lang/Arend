@@ -1,3 +1,14 @@
+{- | Uniform spaces and their preuniform/regular variants, presented via families of uniform covers.
+ -
+ -   This module formalizes uniform structures by axiomatizing a predicate `isUniform` on covers (sets of subsets)
+ -   rather than via entourages. A `PreuniformSpace` extends `PrecoverSpace` with a uniformity whose Cauchy covers are
+ -   exactly the closure of `isUniform` under refinement and gluing. Stronger classes — `RegularPreuniformSpace`,
+ -   `UniformSpace`, and their strongly-regular counterparts — add star-refinement axioms that yield regularity and
+ -   complete regularity of the underlying cover space. The order relations `<=*` and `s<=*` (rather-below relative to
+ -   uniform star-refinement) generalize the classical "entourage smaller than" comparisons and feed into `RatherBelow`
+ -   instances used elsewhere in the topology library.
+ -}
+
 \import Function.Meta
 \import Logic
 \import Logic.Meta
@@ -14,6 +25,11 @@
 \open Set
 \open ClosurePrecoverSpace
 
+{- | Class extending `PrecoverSpace`. Carries `isUniform : Set (Set E) -> \Prop` with axioms: every uniform cover covers
+ -   each point (`uniform-cover`), the singleton top cover is uniform (`uniform-top`), uniformity is closed under
+ -   refinement (`uniform-refine`) and pairwise intersection (`uniform-inter`), and the Cauchy structure is the closure
+ -   of uniformity (`uniform-cauchy`). Provides default implementations of `PrecoverSpace` axioms via the closure.
+ -}
 \class PreuniformSpace \extends PrecoverSpace {
   | isUniform : Set (Set E) -> \Prop
   | uniform-cover {C : Set (Set E)} : isUniform C -> \Pi (x : E) -> ∃ (U : C) (U x)
@@ -30,21 +46,28 @@
   \default isCauchy : Set (Set E) -> \Prop => Closure isUniform
   \default uniform-cauchy \as uniform-cauchy-impl {C} : isCauchy C <-> Closure isUniform C => <->refl
 
+  -- | Promotes a uniform cover to a Cauchy cover.
   \lemma makeCauchy {C : Set (Set E)} (Cu : isUniform C) : CoverSpace.isCauchy C
     => uniform-cauchy.2 (closure Cu)
 
+  -- | Property that every uniform cover refines to one consisting of inhabited sets.
   \func IsProperUniform : \Prop
     => ∀ {C : isUniform} (isUniform \lam U => \Sigma (C U) (∃ U))
 
+  {- | Weaker variant: a cover containing the empty set plus members of `C` being uniform forces `C` itself to be
+   -   uniform.
+   -}
   \func IsWeaklyProperUniform : \Prop
     => \Pi {C : Set (Set E)} -> isUniform (\lam U => (U = {Set E} bottom) || C U) -> isUniform C
 
+  -- | Proper uniformity implies weakly proper.
   \lemma proper_weaklyProper (p : IsProperUniform) : IsWeaklyProperUniform
     => \lam Cu => uniform-subset (p Cu) \case __ \with {
       | (byLeft e, inP (x,Ux)) => bottom-empty (rewrite e in Ux)
       | (byRight CU, _) => CU
     }
 
+  -- | Inhabited carrier implies weakly proper uniformity.
   \lemma inhabited_weaklyProper (p : TruncP E) : IsWeaklyProperUniform \elim p
     | inP x => \lam Cu => uniform-refine Cu \case \elim __ \with {
       | byLeft p => \case uniform-cover Cu x \with {
@@ -54,10 +77,12 @@
       | byRight CU => inP (_, CU, <=-refl)
     }
 
+  -- | Finite intersection of uniform covers is uniform.
   \lemma uniform-inter-big (Cs : Array (Set (Set E))) (Cu : ∀ (C : Cs) (isUniform C)) : isUniform (CoverInterBig Cs) \elim Cs
     | nil => uniform-top
     | C :: Cs => uniform-inter (Cu 0) $ uniform-inter-big _ (\lam j => Cu (suc j))
 
+  -- | Two-point separation by Cauchy covers is equivalent to separation by uniform covers.
   \lemma uniform-separated {x y : E} : ∀ {C : CoverSpace.isCauchy} ∃ (U : C) (\Sigma (U x) (U y)) <-> ∀ {C : isUniform} ∃ (U : C) (\Sigma (U x) (U y))
     => (\lam sf Cu => sf $ makeCauchy Cu, \lam sf Cc => closure-filter (\new SetFilter E {
       | F U => \Sigma (U x) (U y)
@@ -66,29 +91,38 @@
       | filter-meet (Ux,Uy) (Vx,Vy) => ((Ux, Vx), (Uy, Vy))
     }) sf $ uniform-cauchy.1 Cc)
 } \where {
+  -- | For `V : Set X` and a cover `C`, the star `star V C` is the union of members of `C` that meet `V`.
   \func star {X : \Set} (V : Set X) (C : Set (Set X)) : Set X
     => Union \lam W => \Sigma (C W) (Given (V ∧ W))
 
+  -- | `star` is monotone in both `V` (subset) and `C` (refinement).
   \lemma star-monotone {X : \Set} {V U : Set X} (p : V ⊆ U) {C D : Set (Set X)} (r : Refines C D) : star V C ⊆ star U D
     => \lam (inP (W',(CW',(y,(Vy,W'y))),W'x)) => \case r CW' \with {
       | inP (W,DW,W'<=W) => inP (W, (DW, (y, (p Vy, W'<=W W'y))), W'<=W W'x)
     }
 }
 
+-- | `V <=* U` iff some uniform cover `C` has `star V C ⊆ U` — the uniform "rather below".
 \func \infix 4 <=* {X : PreuniformSpace} (V U : Set X) : \Prop
   => ∃ (C : isUniform) (PreuniformSpace.star V C ⊆ U)
 
+-- | Characterization: `V <=* U` iff the cover `\lam W => Given (V ∧ W) -> W ⊆ U` is uniform.
 \lemma <=*-char {X : PreuniformSpace} {V U : Set X} : V <=* U <-> isUniform \lam W => Given (V ∧ W) -> W ⊆ U
   => (\lam (inP (C,Cu,p)) => uniform-subset Cu $ later \lam {W} CW s Wx => p $ inP (W,(CW,s),Wx),
       \lam Cu => inP (_, Cu, \lam (inP (W,(g,s),Wx)) => g s Wx))
 
+{- | Class extending `PreuniformSpace` and `CoverSpace` with `uniform-regular`: every uniform cover is refined by a
+ -   Cauchy cover whose members are `<=*`-below members of the original. Derives `isRegular` from this axiom.
+ -}
 \class RegularPreuniformSpace \extends PreuniformSpace, CoverSpace {
   | uniform-regular {C : Set (Set E)} : isUniform C -> isCauchy \lam V => ∃ (U : C) (V <=* U)
   | isRegular Cc => uniform-cauchy.2 $ ClosureCoverSpace.closure-regular RegularRatherBelow (\lam Cu => uniform-cauchy.1 $ cauchy-subset (uniform-regular Cu) \lam {V} (inP (U,CU,V<=*U)) => inP $ later (U, CU, <=*_<=< V<=*U)) (uniform-cauchy.1 Cc)
 
+  -- | Promotes regularity from uniform covers to arbitrary Cauchy covers.
   \lemma <=*-cauchy-regular {C : Set (Set E)} (Cc : isCauchy C) : isCauchy \lam V => ∃ (U : C) (V <=* U)
     => uniform-cauchy.2 $ ClosureCoverSpace.closure-regular StarRatherBelow (\lam Cu => uniform-cauchy.1 $ uniform-regular Cu) (uniform-cauchy.1 Cc)
 } \where {
+  -- | Builds a `RegularPreuniformSpace` from any `CoverSpace` by taking `isUniform := isCauchy`.
   \func fromCoverSpace (X : CoverSpace) : RegularPreuniformSpace X \cowith
     | isUniform => isCauchy
     | uniform-cover => cauchy-cover
@@ -101,6 +135,9 @@
         inP $ later (U, CU, inP (_, V<=<U, \lam (inP (W, (h,t), Wx)) => h t Wx))
 }
 
+{- | Class extending `RegularPreuniformSpace` and `CompletelyRegularCoverSpace`. Adds `uniform-star`: every uniform
+ -   cover admits a uniform star-refinement. Derives `uniform-regular` and complete regularity.
+ -}
 \class UniformSpace \extends RegularPreuniformSpace, CompletelyRegularCoverSpace {
   | uniform-star {C : Set (Set E)} : isUniform C -> ∃ (D : isUniform) ∀ {V : D} ∃ (U : C) ∀ {W : D} (Given (V ∧ W) -> W ⊆ U)
   | uniform-regular Cu => \case uniform-star Cu \with {
@@ -111,6 +148,7 @@
   | isCompletelyRegular Cc => cauchy-subset (uniform-cauchy.2 $ isCompletelyRegular {ClosureRegularCoverSpace isUniform uniform-cover uniform-star} (uniform-cauchy.1 Cc))
     \lam {V} (inP (U,CU,V<=<U)) => inP $ later (U, CU, unfolds $ unfolds at V<=<U $ TruncP.map V<=<U \lam (R',c,d,e) => (R', \lam r => uniform-cauchy.2 $ c r, d, e))
 
+  -- | `<=*` interpolation: `V <=* U` factors as `V <=* V' <=* U`.
   \lemma <=*-inter {V U : Set E} (p : V <=* U) : ∃ (V' : Set E) (V <=* V') (V' <=* U) \elim p
     | inP (C,Cc,p) => \case uniform-star Cc \with {
       | inP (D,Dc,g) => inP (PreuniformSpace.star V D, inP (D, Dc, <=-refl), inP (D, Dc, (\case __ \with {
@@ -120,6 +158,7 @@
       }) <=∘ p))
     }
 
+  -- | Uniform-cover refinement by `<=*`- or `<=<`-below sets.
   \lemma <=*-regular {C : Set (Set E)} (Cu : isUniform C) : isUniform \lam V => ∃ (U : C) (V <=* U)
     => \case uniform-star Cu \with {
       | inP (D,Du,h) => uniform-subset Du \lam {V} DV => \case h DV \with {
@@ -127,29 +166,41 @@
       }
     }
 
+  -- | Uniform-cover refinement by `<=*`- or `<=<`-below sets.
   \lemma <=<-regular {C : Set (Set E)} (Cu : isUniform C) : isUniform \lam V => ∃ (U : C) (V <=< U)
     => uniform-subset (<=*-regular Cu) \lam {V} (inP (U,CU,p)) => inP $ later (U, CU, <=*_<=< p)
 }
 
+-- | Uniform rather-below implies cover-space rather-below.
 \lemma <=*_<=< {X : PreuniformSpace} {V U : Set X} (p : V <=* U) : V <=< U
   => X.makeCauchy (<=*-char.1 p)
 
+-- | `RatherBelow` instance for `<=*` over a `PreuniformSpace`.
 \instance StarRatherBelow {X : PreuniformSpace} : RatherBelow (<=* {X})
   | <=<-left (inP (C,Cu,p)) q => inP (C, Cu, p <=∘ q)
   | <=<-right p (inP (C,Cu,q)) => inP (C, Cu, PreuniformSpace.star-monotone p Refines-refl <=∘ q)
   | <=<_top => inP (single top, uniform-top, top-univ)
   | <=<_meet (inP (C,Cu,p)) (inP (D,Du,q)) => inP (_, uniform-inter Cu Du, meet-univ (PreuniformSpace.star-monotone meet-left Refines-inter-left <=∘ p) (PreuniformSpace.star-monotone meet-right Refines-inter-right <=∘ q))
 
+-- | Pointwise enlargement of a uniform cover stays uniform.
 \lemma uniform-subset {X : PreuniformSpace} {C D : Set (Set X)} (Cc : isUniform C) (e : \Pi {U : Set X} -> C U -> D U) : isUniform D
   => uniform-refine Cc \lam {U} CU => inP (U, e CU, <=-refl)
 
+-- | Any cover containing the top set is uniform.
 \lemma top-uniform {X : PreuniformSpace} {C : Set (Set X)} (Ct : C top) : isUniform C
   => uniform-subset uniform-top $ later \lam p => rewriteI p Ct
 
+{- | Characterizes embeddings `f : PrecoverMap X Y` between a preuniform space and a precover space via lifting of
+ -   uniform covers to Cauchy covers of preimage-refinements.
+ -}
 \lemma uniform-embedding-char {X : PreuniformSpace} {Y : PrecoverSpace} {f : PrecoverMap X Y}
   : f.IsEmbedding <-> ∀ {C : isUniform} (isCauchy \lam V => ∃ (U : C) (f ^-1 V ⊆ U))
   => (\lam e Cu => e $ X.makeCauchy Cu, closure-embedding (uniform-cauchy.1 __) f)
 
+{- | Record extending `CoverMap` between `RegularPreuniformSpace`s. Carries `func-locally-uniform`: each uniform cover
+ -   of the codomain pulls back, after restricting to a uniform partition of the domain, to a uniform cover. Derives
+ -   `func-cover`.
+ -}
 \record LocallyUniformMap \extends CoverMap {
   \override Dom : RegularPreuniformSpace
   \override Cod : RegularPreuniformSpace
@@ -166,40 +217,52 @@
     }
 }
 
+-- | Record extending `LocallyUniformMap` with the stronger `func-uniform`: preimages of uniform covers are uniform.
 \record UniformMap \extends LocallyUniformMap {
   | func-uniform {E : Set (Set Cod)} : isUniform E -> isUniform \lam U => ∃ (V : E) (U = func ^-1 V)
   | func-locally-uniform Eu => inP (_, func-uniform Eu, \lam (inP (V,EV,p)) => uniform-subset (func-uniform Eu) \lam _ => inP $ later (V, EV, rewrite p meet-left))
 
+  -- | Property that uniform covers of the domain are refined by preimages of codomain sets.
   \func IsUniformEmbedding : \Prop
     => \Pi {C : Set (Set Dom)} -> isUniform C -> isUniform \lam V => ∃ (U : C) (func ^-1 V ⊆ U)
 
+  -- | Uniform embedding implies cover-space embedding.
   \lemma embedding->coverEmbedding (e : IsUniformEmbedding) : CoverMap.IsEmbedding
     => closure-embedding {_} {isUniform} (uniform-cauchy.1 __) \this \lam Cu => uniform-cauchy.2 (closure (e Cu))
 
+  -- | Combine density variants with uniform embedding.
   \func IsDenseUniformEmbedding : \Prop
     => \Sigma IsDense IsUniformEmbedding
 
+  -- | Combine density variants with uniform embedding.
   \func IsWeaklyDenseUniformEmbedding : \Prop
     => \Sigma IsWeaklyDense IsUniformEmbedding
 } \where {
+  -- | Identity, composition, and constant uniform maps.
   \protected \func id {X : RegularPreuniformSpace} : UniformMap X X \cowith
     | func x => x
     | func-uniform Eu => uniform-subset Eu \lam {U} EU => inP $ later (U, EU, idp)
 
+  -- | Identity, composition, and constant uniform maps.
   \protected \func compose \alias \infixl 8 ∘ {X Y Z : RegularPreuniformSpace} (g : UniformMap Y Z) (f : UniformMap X Y) : UniformMap X Z \cowith
     | func x => g (f x)
     | func-uniform Du => uniform-subset (f.func-uniform $ g.func-uniform Du) \lam (inP (V, inP (W,DW,q), p)) => inP $ later (W, DW, p *> rewrite q idp)
 
+  -- | Identity, composition, and constant uniform maps.
   \protected \func const {X Y : RegularPreuniformSpace} (y : Y) : UniformMap X Y \cowith
     | func _ => y
     | func-uniform Eu => top-uniform \case uniform-cover Eu y \with {
       | inP (U,EU,Uy) => inP $ later (U, EU, <=-antisymmetric (\lam _ => Uy) top-univ)
     }
 
+  -- | If `g : Y → Z` is a uniform embedding and `g ∘ f` is uniform, then `f : X → Y` is uniform.
   \lemma lift {X Y Z : RegularPreuniformSpace} {f : X -> Y} (g : UniformMap Y Z) (ge : g.IsUniformEmbedding) (fg : UniformMap X Z (\lam x => g (f x))) : UniformMap X Y f \cowith
     | func-uniform Eu => uniform-refine (fg.func-uniform (ge Eu)) \lam {_} (inP (V, inP (U,EU,p), idp)) => inP (_, inP (U, EU, idp), ^-1_<= f p)
 }
 
+{- | Pulls back a `RegularPreuniformSpace` structure along `f : X -> Y` by declaring `C` uniform iff its
+ -   preimage-refinement is uniform in `Y`.
+ -}
 \func RegularPreuniformTransfer {X : \Set} {Y : RegularPreuniformSpace} (f : X -> Y) : RegularPreuniformSpace X \cowith
   | CoverSpace => CoverTransfer f
   | isUniform C => isUniform \lam V => ∃ (U : C) (f ^-1 V ⊆ U)
@@ -219,6 +282,7 @@
            \lam {y} (inP (W',(inP (V',DV',r), (x,(Vfx,W'x))),W'y)) => p $ q $ inP (V', (DV', (f x, (Vfx, rewrite r in W'x))), rewrite r in W'y)
           )), <=-refl)
 
+-- | Pulls back a `UniformSpace` along `f`, extending the regular preuniform transfer with `uniform-star`.
 \func UniformTransfer {X : \Set} {Y : UniformSpace} (f : X -> Y) : UniformSpace X \cowith
   | RegularPreuniformSpace => RegularPreuniformTransfer f
   | uniform-star Cu => \case uniform-star Cu \with {
@@ -229,18 +293,22 @@
     })
   }
 
+-- | Strong variant: `V s<=* U` iff `\lam W => W = Compl V \/ W = U` is uniform.
 \type \infix 4 s<=* {X : PreuniformSpace} (V U : Set X) : \Prop
   => isUniform \lam W => (W = Compl V) || (W = U)
 
+-- | `s<=*` is stronger than both `s<=<` and `<=*`.
 \lemma s<=*_s<=< {X : PreuniformSpace} {V U : Set X} (p : V s<=* U) : V s<=< U
   => X.makeCauchy p
 
+-- | `s<=*` is stronger than both `s<=<` and `<=*`.
 \lemma s<=*_<=* {X : PreuniformSpace} {V U : Set X} (p : V s<=* U) : V <=* U
   => <=*-char.2 $ uniform-subset (unfolds in p) $ later \lam {W} e s => \case \elim e \with {
     | byLeft q => absurd $ later $ (rewrite q in s.2.2) s.2.1
     | byRight q => =_<= q
   }
 
+-- | `RatherBelow` instance for `s<=*`.
 \instance StronglyStarRatherBelow {X : PreuniformSpace} : RatherBelow (s<=* {X})
   | <=<_top => unfolds $ top-uniform $ byRight idp
   | <=<-left p q => uniform-refine (unfolds in p) \lam {U'} => later \case __ \with {
@@ -257,14 +325,19 @@
     | byRight q, byRight r => inP (_, byRight $ pmap2 (∧) q r, <=-refl)
   }
 
+{- | Extends `RegularPreuniformSpace` and `StronglyRegularCoverSpace` with `uniform-strongly-regular` using `s<=*`.
+ -   Derives `uniform-regular` and `isStronglyRegular`.
+ -}
 \class StronglyRegularPreuniformSpace \extends RegularPreuniformSpace, StronglyRegularCoverSpace {
   | uniform-strongly-regular {C : Set (Set E)} : isUniform C -> isCauchy \lam V => ∃ (U : C) (V s<=* U)
   | uniform-regular Cu => cauchy-subset (uniform-strongly-regular Cu) \lam {V} (inP (U,CU,p)) => inP $ later (U, CU, s<=*_<=* p)
   | isStronglyRegular Cc => uniform-cauchy.2 $ ClosureCoverSpace.closure-regular StronglyRatherBelow (\lam Cu => uniform-cauchy.1 $ cauchy-subset (uniform-strongly-regular Cu) \lam {V} (inP (U,CU,p)) => inP $ later (U, CU, uniform-cauchy.2 $ closure p)) (uniform-cauchy.1 Cc)
 
+  -- | Strong-regularity refinement at the Cauchy level.
   \lemma s<=*-cauchy-regular {C : Set (Set E)} (Cc : CoverSpace.isCauchy C) : CoverSpace.isCauchy \lam V => ∃ (U : C) (V s<=* U)
     => uniform-cauchy.2 $ ClosureCoverSpace.closure-regular StronglyStarRatherBelow (\lam Cu => uniform-cauchy.1 $ uniform-strongly-regular Cu) (uniform-cauchy.1 Cc)
 } \where {
+    -- | Constructs a strongly regular preuniform space from a `StronglyRegularCoverSpace`.
     \func fromCoverSpace (X : StronglyRegularCoverSpace) : StronglyRegularPreuniformSpace X \cowith
       | isUniform => isCauchy
       | uniform-cover => cauchy-cover
@@ -276,6 +349,9 @@
       | uniform-strongly-regular Cc => cauchy-subset (isStronglyRegular Cc) \lam {V} (inP (U,CU,V<=<U)) => inP $ later (U,CU,V<=<U)
 }
 
+{- | Extends `UniformSpace` and `StronglyRegularPreuniformSpace` with `uniform-strongly-star` (star-refinement using a
+ -   disjoint-or-contained dichotomy). Derives both `uniform-star` and `uniform-strongly-regular`.
+ -}
 \class StronglyRegularUniformSpace \extends UniformSpace, StronglyRegularPreuniformSpace {
   | uniform-strongly-star {C : Set (Set E)} : isUniform C -> ∃ (D : isUniform) ∀ {V : D} ∃ (U : C) ∀ {W : D} (Not (Given (V ∧ W)) || W ⊆ U)
   | uniform-star Cu => \case uniform-strongly-star Cu \with {
@@ -295,6 +371,7 @@
     }
   }
 
+  -- | Refinement lemmas for `s<=*` and `s<=<`.
   \lemma s<=*-regular {C : Set (Set E)} (Cu : isUniform C) : isUniform \lam V => ∃ (U : C) (V s<=* U)
     => \case uniform-strongly-star Cu \with {
       | inP (D,Du,h) => uniform-subset Du \lam {V} DV => \case h DV \with {
@@ -305,10 +382,12 @@
       }
     }
 
+  -- | Refinement lemmas for `s<=*` and `s<=<`.
   \lemma s<=<-regular {C : Set (Set E)} (Cu : isUniform C) : isUniform \lam V => ∃ (U : C) (V s<=< U)
     => uniform-subset (s<=*-regular Cu) \lam {V} (inP (U,CU,p)) => inP $ later (U, CU, makeCauchy p)
 }
 
+-- | Pulls back a `StronglyRegularUniformSpace` along `f`, adding `uniform-strongly-star`.
 \func StronglyRegularUniformTransfer {X : \Set} {Y : StronglyRegularUniformSpace} (f : X -> Y) : StronglyRegularUniformSpace X \cowith
   | PreuniformSpace => UniformTransfer f
   | uniform-strongly-star Cu => \case uniform-strongly-star Cu \with {

@@ -1,3 +1,15 @@
+{- | Reflective solver for semiring equalities, normalizing terms into sorted sums of monomials with coefficients.
+ -
+ -   This module implements the semiring instance of the generic `SolverModel` framework. Terms over a coefficient
+ -   semiring `C` and a finite set of variables are normalized to a list of monomials — pairs of a variable list (a
+ -   monoid word) and a coefficient — which are then multiplied out, sorted lexicographically, and collapsed by
+ -   combining like terms and dropping zero coefficients. A `Data` class records the embedding `alg : SemiringHom C R`
+ -   of coefficients into the target semiring `R` together with a commutation hypothesis between coefficients and
+ -   variables, providing all consistency lemmas needed for the solver. A specialization to `NatSemiring` coefficients
+ -   (`SemiringData`) gives the off-the-shelf solver via the canonical `natCoef` map, used by `apply-axiom` to rewrite
+ -   under products and sums.
+ -}
+
 \import Algebra.Group
 \import Algebra.Meta
 \import Algebra.Monoid
@@ -23,6 +35,9 @@
 \import Set
 \open Sort
 
+{- | Instance of `SolverModel R` for any `Semiring R`, using `Term Nat`/`NF Nat`, the pipeline above, and
+ -   `SemiringData env` for interpretation.
+ -}
 \func SemiringSolverModel (R : Semiring) : SolverModel R \cowith
   | Term => Term Nat
   | NF => NF Nat
@@ -31,6 +46,9 @@
   | interpretNF env => (SemiringData env).interpretNF
   | interpretNF-consistent {_} {env} => (SemiringData env).interpretNF-consistent
   \where {
+    {- | Inductive type of semiring expressions over variables `Fin n` and coefficients in `C`, with constructors `var`,
+     -   `coef`, `:zro`, `:ide`, `:+`, `:*`.
+     -}
     \data Term (C : \Set) (n : Nat)
       | var (Fin n)
       | coef C
@@ -39,8 +57,14 @@
       | \infixl 6 :+ (t s : Term C n)
       | \infixl 7 :* (t s : Term C n)
 
+    {- | Normal form as a list of monomials `\Sigma (List (Fin n)) C` — each monomial is a variable word paired with a
+     -   coefficient.
+     -}
     \func NF (C : \Set) (n : Nat) => List (\Sigma (List (Fin n)) C)
 
+    {- | Recursively converts a `Term` to `NF`: variables and `:ide` become unit-coefficient monomials, `:+`
+     -   concatenates, `:*` multiplies and post-processes.
+     -}
     \func normalize {n : Nat} {C : Semiring} {D : DecSet C} (t : Term C n) : NF C n \elim t
       | var v => (v :: nil, 1) :: nil
       | coef c => (nil, c) :: nil
@@ -49,14 +73,19 @@
       | t :+ s => normalize t ++ normalize s
       | t :* s => remove0 (collapse (multiply (normalize t) (normalize s)))
 
+    -- | Multiplies two normal forms; trivial on empty input, otherwise dispatches to `multiply'`.
     \func multiply {n : Nat} {C : Monoid} (l1 l2 : NF C n) : NF C n \elim l2
       | nil => nil
       | l2 => multiply' l1 l2 nil
 
+    -- | Tail-recursive multiplication accumulating cross products `(a.1 ++ b.1, a.2 * b.2)` into `acc`.
     \func multiply' {n : Nat} {C : Monoid} (l1 l2 acc : NF C n) : NF C n \elim l1
       | nil => acc
       | :: a l1 => multiply' l1 l2 (map (\lam b => (a.1 ++ b.1, a.2 * b.2)) l2 ++ acc)
 
+    {- | Helper that merges a pending monomial `(m, c)` into a list, summing coefficients of monomials with matching
+     -   variable word.
+     -}
     \func collapse1 {n : Nat} {C : AddMonoid} (c : C) (m : List (Fin n)) (l : NF C n) : NF C n \elim l
       | nil => (m, c) :: nil
       | :: a' l => \case decideEq m a'.1 \with {
@@ -64,10 +93,12 @@
         | no _ => (m, c) :: collapse1 a'.2 a'.1 l
       }
 
+    -- | Walks the list combining adjacent equal-keyed monomials via `collapse1` (intended after sorting).
     \func collapse {n : Nat} {C : AddMonoid} (l : NF C n) : NF C n
       | nil => nil
       | :: a l => collapse1 a.2 a.1 l
 
+    -- | Drops monomials whose coefficient is decidably `0`.
     \func remove0 {n : Nat} {C : AddPointed} {D : DecSet C} (l : NF C n) : NF C n \elim l
       | nil => nil
       | :: a l => \case decideEq a.2 0 \with {
@@ -75,11 +106,17 @@
         | no n => a :: remove0 l
       }
 
+    {- | Class parameterized by a target semiring `R`, a decidable linearly ordered coefficient semiring `C`, a
+     -   homomorphism `alg : SemiringHom C R`, and a variable environment `env : Array R`. Requires `alg-comm`:
+     -   coefficients commute with environment values in `R`.
+     -}
     \class Data \noclassifying (R : Semiring) (C : Semiring) (D : LinearOrder.Dec C) (alg : SemiringHom C R) (env : Array R) {
       | alg-comm (x : C) (y : R) : alg x R.* y = y R.* alg x
 
+      -- | Shorthand for `NF C env.len`.
       \func NF => SemiringSolverModel.NF C env.len
 
+      -- | Evaluates a `Term C env.len` in `R` using `alg` and `env`.
       \func interpret (t : Term C env.len) : R \elim t
         | coef c => alg c
         | var c => env c
@@ -88,6 +125,7 @@
         | :+ t s => interpret t + interpret s
         | :* t s => interpret t * interpret s
 
+      -- | Computes `alg c * MonoidSolverModel.interpretNF env l`, with a special case dropping `alg 1` when `c = 1`.
       \func mulCoef (c : C) (l : List (Fin env.len)) : R \elim l
         | nil => alg c
         | l => \case decideEq c 1 \with {
@@ -95,13 +133,16 @@
           | no _ => alg c * MonoidSolverModel.interpretNF env l
         }
 
+      -- | Direct interpretation of a normal form as a sum of `mulCoef`-evaluated monomials.
       \func interpretNF' (l : NF) : R \elim l
         | nil => 0
         | :: x nil => mulCoef x.2 x.1
         | :: x l => mulCoef x.2 x.1 + interpretNF' l
 
+      -- | Public interpretation; sorts via `RedBlack.sort`, collapses, removes zeros, then calls `interpretNF'`.
       \func interpretNF (l : NF) => interpretNF' (remove0 (collapse (RedBlack.sort l)))
 
+      -- | `mulCoef c l = alg c * MonoidSolverModel.interpretNF env l`.
       \lemma mulCoef-consistent {c : C} {l : List (Fin env.len)} : mulCoef c l = alg c * MonoidSolverModel.interpretNF env l \elim l
         | nil => inv ide-right
         | a :: l => mcases \with {
@@ -109,11 +150,13 @@
           | no _ => idp
         }
 
+      -- | Cons-step law for `interpretNF'`.
       \lemma interpretNF_:: {x : \Sigma (List (Fin env.len)) C} {l : NF}
         : interpretNF' (x :: l) = alg x.2 * MonoidSolverModel.interpretNF env x.1 + interpretNF' l \elim l
         | nil => mulCoef-consistent *> inv zro-right
         | :: a l => pmap (+ _) mulCoef-consistent
 
+      -- | `remove0` preserves the interpretation.
       \lemma remove0-consistent {l : NF} : interpretNF' (remove0 l) = interpretNF' l \elim l
         | nil => idp
         | :: a l => rewrite interpretNF_:: $ mcases \with {
@@ -121,6 +164,7 @@
           | no q => interpretNF_:: *> pmap (_ +) remove0-consistent
         }
 
+      -- | Collapsing like monomials preserves the interpretation.
       \lemma collapse1-consistent {c : C} {m : List (Fin env.len)} {l : NF}
         : interpretNF' (collapse1 c m l) = alg c * MonoidSolverModel.interpretNF env m + interpretNF' l \elim l
         | nil => mulCoef-consistent *> inv zro-right
@@ -129,19 +173,23 @@
           | no _ => rewrite (interpretNF_::,interpretNF_::) $ pmap (_ +) collapse1-consistent
         }
 
+      -- | Collapsing like monomials preserves the interpretation.
       \lemma collapse-consistent {l : NF} : interpretNF' (collapse l) = interpretNF' l \elim l
         | nil => idp
         | :: a l => collapse1-consistent *> inv interpretNF_::
 
+      -- | `interpretNF'` is invariant under permutations (uses `Perm`).
       \lemma perm-consistent {l l' : NF} (p : Perm l l') : interpretNF' l = interpretNF' l' \elim l, l', p
         | nil, nil, perm-nil => idp
         | :: a1 l1, :: a2 l2, perm-:: idp p => repeat {2} (rewrite interpretNF_::) (pmap (_ +) (perm-consistent p))
         | :: a1 (:: a1' l1), :: a2 (:: a2' l2), perm-swap idp idp idp => repeat {2} (rewrite interpretNF_::) (inv +-assoc *> pmap (+ _) +-comm *> +-assoc *> pmap2 (__ + (__ + _)) (inv mulCoef-consistent) mulCoef-consistent)
         | l1, l2, perm-trans p1 p2 => perm-consistent p1 *> perm-consistent p2
 
+      -- | `RedBlack.sort` preserves the interpretation.
       \lemma sort-consistent {l : NF} : interpretNF' (RedBlack.sort l) = interpretNF' l
         => rewrite (RedBlack.sort=insert l) $ inv $ perm-consistent (Insertion.sort-perm l)
 
+      -- | `interpretNF'` is a homomorphism on list concatenation.
       \lemma interpretNF_++ {l1 l2 : NF} : interpretNF' (l1 ++ l2) = interpretNF' l1 + interpretNF' l2 \elim l1
         | nil => inv zro-left
         | :: a l1 => run {
@@ -150,20 +198,24 @@
           inv +-assoc
         }
 
+      -- | Folded-concat version using `R.BigSum`.
       \lemma interpretNF_Big_++ {l : Array NF} {a : NF} : interpretNF' (Big (++) a l) = R.BigSum (arrayMap interpretNF' l) + interpretNF' a \elim l
         | Prelude.nil => inv zro-left
         | b Prelude.:: l => interpretNF_++ *> pmap (_ +) interpretNF_Big_++ *> inv +-assoc
 
+      -- | Effect of pre/post-multiplying every monomial in a list by fixed words and a coefficient.
       \lemma interpretNF_map {a1 : C} {a2 a3 : List (Fin env.len)} {l : NF}
         : interpretNF' (map (\lam b => (a2 ++ b.1 ++ a3, a1 * b.2)) l) = alg a1 * MonoidSolverModel.interpretNF env a2 * interpretNF' l * MonoidSolverModel.interpretNF env a3 \elim l
         | nil => inv (pmap (* _) R.zro_*-right *> R.zro_*-left)
         | :: a l => rewrite (interpretNF_::,interpretNF_::,MonoidSolverModel.interpretNF_++,MonoidSolverModel.interpretNF_++,alg.func-*,ldistr,rdistr) $
             pmap2 (+) (equation.monoid {alg-comm a.2 (MonoidSolverModel.interpretNF env a2)}) interpretNF_map
 
+      -- | Effect of pre/post-multiplying every monomial in a list by fixed words and a coefficient.
       \lemma interpretNF_map-left {a1 : C} {a2 : List (Fin env.len)} {l : NF}
         : interpretNF' (map (\lam b => (a2 ++ b.1, a1 * b.2)) l) = alg a1 * MonoidSolverModel.interpretNF env a2 * interpretNF' l
         => inv (path (\lam i => interpretNF' (map (\lam b => (a2 ++ ++_nil {_} {b.1} i , a1 * b.2)) l))) *> interpretNF_map *> ide-right
 
+      -- | Multiplication on `NF` matches semiring multiplication of interpretations.
       \lemma interpretNF_multiply' {l1 l2 : NF} {acc : NF}
         : interpretNF' (multiply' l1 l2 acc) = interpretNF' l1 * interpretNF' l2 + interpretNF' acc \elim l1
         | nil => rewrite R.zro_*-left (inv zro-left)
@@ -176,10 +228,12 @@
           +-comm
         }
 
+      -- | Multiplication on `NF` matches semiring multiplication of interpretations.
       \lemma interpretNF_multiply {l1 l2 : NF} : interpretNF' (multiply l1 l2) = interpretNF' l1 * interpretNF' l2 \elim l2
         | nil => inv zro_*-right
         | :: a l2 => interpretNF_multiply' *> zro-right
 
+      -- | `interpretNF' (normalize t) = interpret t`.
       \lemma normalize-consistent {t : Term C env.len} : interpretNF' (normalize t) = interpret t \elim t
         | coef c => idp
         | var v => rewrite (decideEq=_reduce idp) idp
@@ -188,33 +242,47 @@
         | :+ t s => interpretNF_++ *> pmap2 (+) normalize-consistent normalize-consistent
         | :* t s => remove0-consistent *> collapse-consistent *> interpretNF_multiply *> pmap2 (*) normalize-consistent normalize-consistent
 
+      -- | Sorted/collapsed/zeroed interpretation agrees with `interpretNF'`.
       \lemma interpretNF-correct {l : NF} : interpretNF l = interpretNF' l
         => remove0-consistent *> collapse-consistent *> sort-consistent
 
+      -- | Composite correctness `interpretNF (normalize t) = interpret t`, the field used by `SolverModel`.
       \lemma interpretNF-consistent {t : Term C env.len} : interpretNF (normalize t) = interpret t
         => interpretNF-correct *> normalize-consistent
 
+      {- | Substitution rule rewriting `interpret t = interpret s` into an equality of normalized expressions multiplied
+       -   by `left`/`right` contexts and added to `add`.
+       -}
       \lemma apply-axiom2 (t s : Term C env.len) (p : interpret t = interpret s) (left right add : NF)
         : interpretNF (multiply left (multiply (normalize t) right) ++ add) = interpretNF (multiply left (multiply (normalize s) right) ++ add)
         => interpretNF-correct *> interpretNF_++ *> pmap (+ _) (interpretNF_multiply *> pmap (_ *) (interpretNF_multiply *> pmap (* _) (normalize-consistent *> p *> inv normalize-consistent) *> inv interpretNF_multiply) *> inv interpretNF_multiply) *> inv (interpretNF-correct *> interpretNF_++)
     }
 
+    -- | Map `Nat -> R` with optimized cases `0 ↦ 0`, `1 ↦ 1`, otherwise `R.natCoef`.
     \func natCoef (x : Nat) : R
       | 0 => 0
       | 1 => 1
       | n => R.natCoef n
 
+    -- | `R.natCoef n = natCoef n`.
     \lemma natCoef-correct {n : Nat} : R.natCoef n = natCoef n \elim n
       | 0 => R.natCoefZero
       | 1 => R.natCoefSuc 0 *> pmap (+ 1) R.natCoefZero *> zro-left
       | suc (suc n) => idp
 
+    -- | Promotes `natCoef` to a `SemiringHom NatSemiring R`.
     \lemma natMap' : SemiringHom NatSemiring R natCoef
       => transport (SemiringHom NatSemiring R) (path \lam i n => natCoef-correct {_} {n} i) natMap
 
+    {- | Concrete `Data` instance with `C = NatSemiring` and `alg = natMap'`, supplying `alg-comm` from commutativity of
+     -   `natCoef`-images.
+     -}
     \func SemiringData (env : Array R) : Data R NatSemiring NatSemiring natMap' env \cowith
       | alg-comm n a => inv (pmap (* a) natCoef-correct) *> natComm n a *> pmap (a *) natCoef-correct
 
+    {- | Top-level axiom-application lemma over `Term Nat`, used by the solver tactic to rewrite goals using a
+     -   hypothesis `interpret t = interpret s`.
+     -}
     \lemma apply-axiom (env : Array R) (t s : Term Nat env.len) (p : (SemiringData env).interpret t = (SemiringData env).interpret s) (left right add : NF Nat env.len)
       => (SemiringData env).apply-axiom2 t s p left right add
   }

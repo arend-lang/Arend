@@ -4,6 +4,18 @@
  -   * Mathieu Anel, Georg Biedermann, Eric Finster, André Joyal, A Generalized Blakers-Massey Theorem (https://arxiv.org/abs/1703.09050)
  -  -}
 
+{- | Formalizes the generalized Blakers–Massey connectivity theorem for pushouts in the setting of higher modalities
+ -   (reflective subuniverses).
+ -
+ -   The Blakers–Massey theorem describes the connectivity of the pullback of inclusions into a pushout. This module
+ -   establishes a generalized form: given a pushout square built from a span `Q : X -> Y -> hType` and connectivity
+ -   assumptions on appropriate joins (the data class `Data`), the diagonal map `pbMap` from `Q x y` into the path space
+ -   `pinl x = pinr y` of the pushout is a connected map relative to a fixed reflective universe. The proof follows the
+ -   Favonia–Finster–Licata–Lumsdaine encode-decode approach: a type family `code` over the pushout is defined by gluing
+ -   an "equivalence data" structure (`EquivData`) at each generator, the equivalence is built explicitly via maps `LR`,
+ -   `RL` and homotopies `LRL`, `RLR`, and contractibility of the total space gives the connectivity result.
+ -}
+
 \import Algebra.Meta
 \import Equiv
 \import Equiv.Sigma
@@ -19,6 +31,9 @@
 \import Paths
 \import Paths.Meta
 
+{- | The generalized Blakers–Massey theorem: for any `d : Data`, `x0 : X`, `y0 : Y`, the map `pbMap` is a connected map
+ -   (with respect to the ambient reflective universe).
+ -}
 \lemma genBlakersMassey.{u} {d : Data.{u}} (x0 : X) (y0 : Y) : isConnectedMap (pbMap {d} {x0} {y0})
   => \lam p => surjective (POData.pullback_pushout-surjective {\new POData Y X (\lam y x => Q x y)} y0 x0 (inv (pmap swap p))) p
   \where {
@@ -28,6 +43,11 @@
     \lemma surjective.{u} {d : Data.{u}} {x0 : X} {y0 : Y} (q : TruncP (\Sigma (y : Y) (Q x0 y))) : isConnectedMap (pbMap {d} {x0} {y0}) \elim q
       | inP (y,q0) => \lam p => contr=>isConnected (Fib pbMap p) (DataExt.code-contr {\new DataExt { | Data => d | x0 => x0 | y0 => y | q0 => q0 }} p)
 
+    {- | Class extending `ReflUniverse`, packaging the data needed to prove an equivalence of localizations between
+     -   `LType A` and `LType B` from a span of connected types over `A` and `B`. Contains families
+     -   `M : A -> Connected`, `N : B -> Connected`, mutual maps `f`, `g` between total spaces, and pointwise
+     -   compatibility `p`, `q` on first projections.
+     -}
     \class EquivData.{u} \noclassifying (A B : \Type u) \extends ReflUniverse.{u} {
       | M : A -> Connected
       | N : B -> Connected
@@ -36,12 +56,18 @@
       | p : \Pi (a : A) (m : M a) -> (g (f (a,m))).1 = a
       | q : \Pi (b : B) (n : N b) -> (f (g (b,n))).1 = b
 
+      {- | Computes the value of the lifted map on `lEta (a, m)`, expressing it via the localization of `f` on the first
+       -   component.
+       -}
       \func eval (a : A) (m : M a) : lift (\lam a => IsEquiv.ret ((M a).equiv (LType B)) (\lam m => lEta (f (a,m)).1)) (lEta a) = lEta (f (a,m)).1 =>
         lift-prop (\lam a => IsEquiv.ret ((M a).equiv (LType B)) \lam m => lEta (f (a,m)).1) a *> path \lam i => IsEquiv.f_ret ((M a).equiv (LType B)) i m
 
       \func ltype-map : LType A -> LType B
         => lift \lam a => IsEquiv.ret ((M a).equiv (LType B)) (\lam m => lEta (f (a,m)).1)
 
+      {- | The lifted map `LType A -> LType B` is an equivalence — the core lemma used to identify `code` fibers across
+       -   the pushout glue.
+       -}
       \lemma equiv-lemma : IsEquiv {LType A} {LType B} ltype-map
         => \let | E1 a => (M a).equiv (LType B)
                 | E2 b => (N b).equiv (LType A)
@@ -64,20 +90,27 @@
                                                   inL b               `qed))
     }
 
+    -- | Class bundling a span `X`, `Y`, `Q : X -> Y -> hType` together with derived constructions on its pushout.
     \class POData.{u} {
       | X : \Type u
       | Y : \Type u
       | Q : X -> Y -> \Type u
 
+      -- | The pushout of the span, with vertices `pinl x` / `pinr y` and gluing along `Q x y`.
       \func PO => PushoutData {\Sigma (x : X) (y : Y) (Q x y)} __.1 __.2
 
+      -- | Symmetry map exchanging the two sides of the pushout.
       \func swap (x : PO) : PushoutData {\Sigma (y : Y) (x : X) (Q x y)} __.1 __.2
         | pinl b => pinr b
         | pinr c => pinl c
         | pglue (x,y,q) i => pglue (y,x,q) (inv (path (\lam j => j)) @ i)
 
+      -- | The "path-builder" map sending a witness `q : Q x y` to the glue path `pinl x = pinr y` in `PO`.
       \func pbMap {x : X} {y : Y} (q : Q x y) : pinl x = {PO} pinr y => PushoutData.ppglue ((x,y,q) : \Sigma (x : X) (y : Y) (Q x y))
 
+      {- | From a path `pinl x = pinr y`, extracts truncated existence of some `x'` with `Q x' y` — the surjectivity
+       -   step underlying `surjective` above.
+       -}
       \lemma pullback_pushout-surjective (x : X) (y : Y) (p : pinl x = {PO} pinr y) : TruncP (\Sigma (x' : X) (Q x' y))
         => \have | EP => \new EmbeddingPushout {
                            | A => \Sigma (y : Y) (TruncP (\Sigma (x : X) (Q x y)))
@@ -99,32 +132,54 @@
 
     \open POData
 
+    {- | Class extending `ReflUniverse` and `POData` with the Blakers–Massey connectivity assumption `ch`: for any
+     -   compatible `q0`, `q1`, `q2`, the join of the two relevant path-fiber types is connected.
+     -}
     \class Data.{u} \extends ReflUniverse.{u}, POData.{u}
       | ch {x x' : X} {y y' : Y} (q0 : Q x y) (q1 : Q x y') (q2 : Q x' y)
         : isConnectedType (Join (\Sigma (p : y = y') (transport (Q x) p q0 = q1)) (\Sigma (p : x = x') (transport (Q __ y) p q0 = q2)))
 
+    {- | Extension of `Data` with chosen basepoints `x0 : X`, `y0 : Y`, `q0 : Q x0 y0`, providing the setting for the
+     -   encode-decode argument.
+     -}
     \class DataExt.{u} \extends Data.{u} {
       | x0 : X
       | y0 : Y
       | q0 : Q x0 y0
 
+      {- | The fiber type used on the `pinl` side: a localization of pairs `(q1, witness)` where the witness equates a
+       -   constructed concatenation of `pbMap`s with the given path.
+       -}
       \func code-left {x : X} {w : PO} (p : pinl x = {PO} w) (p' : pinl x0 = w) : \Type u
         => LType (\Sigma (q1 : Q x y0) (pbMap q0 *> inv (pbMap q1) *> p = p'))
 
+      {- | Generic transport-along-pglue lemma turning a fiberwise equivalence into a transport equality of fiber
+       -   families.
+       -}
       \func code-glue-gen {x : X} {w : PO} (code : pinl x0 = w -> \Type u) (p : pinl x = w)
                           (t : \Pi (p' : pinl x0 = w) -> Equiv (code-left p p') (code p'))
         : transport (pinl x0 = __ -> \Type u) p (code-left idp) = code \elim p
         | idp => path (\lam i p' => Equiv_= (t p') @ i)
 
+      {- | Specialization of `code-glue-gen` showing that transport along `pbMap q` carries `code-left idp` to the
+       -   localized fiber `LType (Fib pbMap p)`.
+       -}
       \func code-glue {x : X} {y : Y} (q : Q x y)
         : transport (pinl x0 = __ -> \Type u) (pbMap q) (code-left idp) = (\lam p => LType (Fib pbMap p))
         => code-glue-gen (\lam p => LType (Fib pbMap p)) (pbMap q) \lam p => mkEquiv (code.equiv q p)
 
+      {- | The main type family on the pushout: `code-left idp p` on `pinl`, `LType (Fib pbMap p)` on `pinr`, glued via
+       -   `code-glue`.
+       -}
       \func code {w : PO} (p : pinl x0 = w) : \Type u \elim w
         | pinl x => code-left idp p
         | pinr y => LType (Fib pbMap p)
         | pglue (x,y,q) i => (pathOver (code-glue q) @ i) p
         \where {
+          {- | The `EquivData` instance used at each glue generator; sets `A` to witness pairs `(q1, ...)` and `B` to
+           -   `Fib pbMap p`, with `M`/`N` as joins of path-transport pairs, justified by the Blakers–Massey hypothesis
+           -   `ch`.
+           -}
           \func equivData {x : X} {y : Y} (q : Q x y) (p : pinl x0 = {PO} pinr y) : EquivData \cowith
             | isLocal => isLocal
             | localization => localization
@@ -143,22 +198,40 @@
             | p => LRL q p
             | q => RLR q p
 
+          {- | The fiberwise equivalence between `code-left (pbMap q)` and `LType (Fib pbMap p)` derived from
+           -   `equivData`.
+           -}
           \lemma equiv {x : X} {y : Y} (q : Q x y) (p : pinl x0 = {PO} pinr y)
             => (equivData q p).equiv-lemma
             \where \protected \func func => (equivData q p).ltype-map
 
+          {- | Path-algebra lemmas (e.g. `p *> inv q *> q = p`, `p *> inv p *> q = q`, and their compatibility) used to
+           -   massage the witnesses appearing in `LR`/`RL`.
+           -}
           \func pathLem1 {A : \Type u} {a a' a'' : A} (p : a = a') (q : a'' = a') : p *> inv q *> q = p
             | idp, idp => idp
 
+          {- | Path-algebra lemmas (e.g. `p *> inv q *> q = p`, `p *> inv p *> q = q`, and their compatibility) used to
+           -   massage the witnesses appearing in `LR`/`RL`.
+           -}
           \func pathLem2-gen {A : \Type u} {a a' a'' : A} {p1 p2 : a = a'} {q : a = a''} (t : p1 *> inv p2 = idp) : p1 *> inv p2 *> q = q \elim q
             | idp => t
 
+          {- | Path-algebra lemmas (e.g. `p *> inv q *> q = p`, `p *> inv p *> q = q`, and their compatibility) used to
+           -   massage the witnesses appearing in `LR`/`RL`.
+           -}
           \func pathLem2 {A : \Type u} {a a' a'' : A} (p : a = a') (q : a = a'') : p *> inv p *> q = q
             => pathLem2-gen (*>_inv p)
 
+          {- | Path-algebra lemmas (e.g. `p *> inv q *> q = p`, `p *> inv p *> q = q`, and their compatibility) used to
+           -   massage the witnesses appearing in `LR`/`RL`.
+           -}
           \func pathLem3 {A : \Type u} {a a' : A} (p : a = a') : pathLem1 p p = pathLem2 p p
             | idp => idp
 
+          {- | Explicit forward and backward maps between the two sides of the equivalence, defined by case analysis on
+           -   the `Join` constructors.
+           -}
           \func LR {x : X} {y : Y} (q : Q x y) (p : pinl x0 = {PO} pinr y)
                    (a : \Sigma (q1 : Q x y0) (pbMap q0 *> inv (pbMap q1) *> pbMap q = p))
                    (m : Join (\Sigma (p : y0 = y) (transport (Q x) p a.1 = q)) (\Sigma (p : x = x0) (transport (Q __ y0) p a.1 = q0)))
@@ -168,6 +241,9 @@
             | (a1,a2), jinr (idp,idp) =>                ((q,  inv (pathLem2 (pbMap a1) (pbMap q))  *> a2), pinr (idp,idp))
             | (a1,a2), pglue ((idp,idp),(idp,idp)) i => ((q0, inv (pathLem3 (pbMap q0) @ i)        *> a2), pglue ((idp,idp),(idp,idp)) i)
 
+          {- | Explicit forward and backward maps between the two sides of the equivalence, defined by case analysis on
+           -   the `Join` constructors.
+           -}
           \func RL {x : X} {y : Y} (q0 : Q x0 y0) (q : Q x y) (p : pinl x0 = {PO} pinr y)
                    (b : \Sigma (q2 : Q x0 y) (pbMap q2 = p))
                    (n : Join (\Sigma (p : y = y0) (transport (Q x0) p b.1 = q0)) (\Sigma (p : x0 = x) (transport (Q __ y) p b.1 = q)))
@@ -178,6 +254,7 @@
             | jinr (idp,idp) =>                ((q0,  pathLem2 (pbMap q0) (pbMap b.1) *> b.2), pinr (idp,idp))
             | pglue ((idp,idp),(idp,idp)) i => ((b.1, (pathLem3 (pbMap b.1) @ i)      *> b.2), pglue ((idp,idp),(idp,idp)) i)
 
+          -- | Round-trip homotopies `g ∘ f ~ id` and `f ∘ g ~ id` on first components, completing the equivalence.
           \func LRL {x : X} {y : Y} (q : Q x y) (p : pinl x0 = {PO} pinr y)
                     (a : \Sigma (q1 : Q x y0) (pbMap q0 *> inv (pbMap q1) *> pbMap q = p))
                     (m : Join (\Sigma (p : y0 = y) (transport (Q x) p a.1 = q)) (\Sigma (p : x = x0) (transport (Q __ y0) p a.1 = q0)))
@@ -187,6 +264,7 @@
             | (a1,idp), jinr (idp,idp) =>                path (\lam i => (q0, *>_inv (pathLem2 (pbMap q0) (pbMap q)) @ i))
             | (a1,idp), pglue ((idp,idp),(idp,idp)) j => path (\lam i => (q0, *>_inv (pathLem3 (pbMap q0) @ j)       @ i))
 
+          -- | Round-trip homotopies `g ∘ f ~ id` and `f ∘ g ~ id` on first components, completing the equivalence.
           \func RLR {x : X} {y : Y} (q : Q x y) (p : pinl x0 = {PO} pinr y)
                     (b : \Sigma (q2 : Q x0 y) (pbMap q2 = p))
                     (n : Join (\Sigma (p : y = y0) (transport (Q x0) p b.1 = q0)) (\Sigma (p : x0 = x) (transport (Q __ y) p b.1 = q)))
@@ -197,27 +275,37 @@
             | (b1,idp), pglue ((idp,idp),(idp,idp)) j => path (\lam i => (q0, inv_*> (pathLem3 (pbMap q0) @ j)       @ i))
         }
 
+      -- | Transport `code-left idp idp` to `code p` along an arbitrary path `p` in the pushout.
       \func coerce-path-gen {w : PO} (p : pinl x0 = w) (t : transport (pinl x0 = __ -> \Type u) p (code-left idp) = code)
         : code-left idp idp = code p \elim p
         | idp => path ((t @ __) idp)
 
+      -- | Transport `code-left idp idp` to `code p` along an arbitrary path `p` in the pushout.
       \func coerce-path {w : PO} (p : pinl x0 = w)
         : code-left idp idp = code p
         => coerce-path-gen p (pmapd (\lam _ => code) p)
 
+      -- | Abbreviation for the witness type appearing in `code-left`.
       \func Left {w : PO} (p : pinl x0 = w) => \Sigma (q : Q x0 y0) (pbMap q0 *> inv (pbMap q) *> p = p)
 
+      -- | Functorial action on `code-left` along a path `p`, applied to the `Left idp` summand via `pathLem2-gen`.
       \func code-left-diag {w : PO} (p : pinl x0 = w) (v : code-left idp idp) : code-left p p
         => lmap {_} {Left idp} {Left p} (\lam t => (t.1, code.pathLem2-gen t.2)) v
 
+      -- | Computes the transport in `coerce-path` for the `pglue` case, reducing it to the equivalence `t`.
       \func coerce-path-glue-gen {w : PO} (p : pinl x0 = w) (t : \Pi (p' : pinl x0 = w) -> Equiv (code-left p p') (code p')) (v : code-left idp idp)
         : transport (\lam T => T) (coerce-path-gen p (code-glue-gen code p t)) v = Equiv.toFunc (t p) (code-left-diag p v) \elim p
         | idp => pmap (Equiv.toFunc (t idp)) (inv (lmap.id-prop v))
 
+      -- | The canonical center element of `code p`, obtained by transporting `lEta point` along `coerce-path`.
       \func code-center {w : PO} (p : pinl x0 = w) : code p
         => transport (\lam T => T) (coerce-path p) (lEta point)
+        -- | The base witness `(q0, *>_inv (pbMap q0))` in `Left idp`.
         \where \func point : Left idp => (q0, *>_inv (pbMap q0))
 
+      {- | For any `c : Fib pbMap p` over a path to `pinr y0`, identifies `code-center p` with `lEta c` — the decode
+       -   step exhibiting `code-center` as a center of contraction.
+       -}
       \func code-path (p : pinl x0 = {PO} pinr y0) (c : Fib pbMap p) : code-center p = lEta c \elim c
         | (q,idp) =>
             code-center (pbMap q)
@@ -233,6 +321,7 @@
             lEta ((q, idp) : Fib pbMap p)
               `qed
 
+      -- | Contractibility of `code p` for every `p`, the encode-decode payload yielding `genBlakersMassey`.
       \lemma code-contr {w : PO} (p : pinl x0 = w) : Contr (code p) \cowith
         | center => code-center p
         | contraction => transport (\lam t => \Pi (c : code t.2) -> code-center t.2 = c) (isContr=>isProp (lsigma {PO} (pinl x0)) (pinr y0, pbMap q0) (w, p))

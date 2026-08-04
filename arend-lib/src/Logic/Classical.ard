@@ -1,3 +1,11 @@
+{- | Classical logic axioms: the law of excluded middle and the axiom of choice.
+ -
+ -   This module postulates the two classical axioms that go beyond Arend's constructive base. `alem` asserts
+ -   decidability of every proposition (excluded middle), while `achoice` provides global choice over arbitrary sets.
+ -   The `Choice` class packages a local form of choice for a given base set, supporting derived surjection-lifting
+ -   lemmas. By Diaconescu's theorem, choice implies excluded middle — this is realized concretely by `lemFromChoice`.
+ -}
+
 \import Data.Bool
 \import Homotopy.Fibration
 \import Logic
@@ -6,10 +14,17 @@
 \import Relation.Equivalence
 \import Set
 
+-- | Law of excluded middle: every proposition `P : \Prop` is decidable, `Dec P`.
 \axiom alem (P : \Prop) : Dec P
 
+{- | Axiom of choice: for `B : A -> \Set` over a set `A`, `(\Pi x -> TruncP (B x)) -> TruncP (\Pi x -> B x)` — pointwise
+ -   inhabitation lifts to a global section.
+ -}
 \axiom achoice {A : \Set} (B : A -> \Set) : (\Pi (x : A) -> TruncP (B x)) -> TruncP (\Pi (x : A) -> B x)
   \where {
+    {- | Diaconescu's theorem — derives the law of excluded middle `Dec P` for any proposition `P` from the global axiom
+     -   of choice `achoice`.
+     -}
     \lemma lemFromChoice (P : \Prop) : Dec P
       => \let | R (x y : Bool) : \Prop => \case x, y \with {
                                        | true, true => \Sigma

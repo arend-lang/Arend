@@ -1,3 +1,16 @@
+{- | Constructs the adjunction between cover spaces and locales, presenting a cover space's locale of opens via a frame
+ -   presentation and recovering a cover space from the points of a locale.
+ -
+ -   This module formalizes the pointful/pointfree correspondence in constructive topology: every precover space `X`
+ -   gives rise to a locale `CoverSpaceLocale X` whose frame is presented by subsets of `X` modulo cauchy-cover and
+ -   strongly-below relations, while every locale `L` yields a precover space `LocalePrecoverSpace L` on its complete
+ -   filters (points). The presentation uses three kinds of basic covers — top covered by a cauchy family, any open
+ -   covered by sets strongly below it, and bottom covered by anything — which together force the resulting frame to be
+ -   regular. The constructions form a functor `LocaleCat → PrecoverSpaceCat` with a unit
+ -   `X → LocaleCoverSpace (CoverSpaceLocale X)` that is a weakly dense embedding when `X` has weakly dense points,
+ -   providing the pieces of an adjunction between regular locales and strongly regular cover spaces.
+ -}
+
 \import Category.Functor
 \import Data.Bool
 \import Equiv
@@ -27,6 +40,7 @@
 \open Cover
 \open SiteLocale
 
+-- | The locale associated to a precover space `X`, defined as the `PresentedFrame` of `framePres`.
 \func CoverSpaceLocale (X : PrecoverSpace) : Locale
   => SiteLocale (site {X})
   \where {
@@ -39,27 +53,35 @@
         | _, inP (2,(U=0,idp)) => inP (_, inP (2, (\lam Vx => U=0 (V<=U Vx), idp)), Refines-refl, absurd __)
       }
 
+    -- | Any cauchy cover yields a frame-presentation cover of top.
     \lemma cover-cauchy {X : PrecoverSpace} {C : Set (Set X)} (Cc : isCauchy C) : Cover {site} top C
       => cover-sub (cover-basic $ inP (0, inP (C,Cc,idp))) $ unfolds $ SetIm-elim \lam Ca => transport C (inv TopMeetSemilattice.top-left) Ca
 
+    -- | Any open `U` is covered by all `V` with `V s<=< U` (regularity at the presentation level).
     \lemma cover-reg {X : PrecoverSpace} {U : Set X} : Cover {site} U \lam V => V s<=< U
       => cover-basic $ inP (1,idp)
 
+    -- | An empty subset is covered by any family.
     \lemma cover-empty {X : PrecoverSpace} {U : Set X} (Ue : \Pi {x : X} -> Not (U x)) {C : Set (Set X)} : Cover {site} U C
       => cover-sub (cover-basic $ inP (2, (Ue,idp))) empty-univ
 
     \lemma embed_meet {U V : Set X} : embed U ∧ embed V = embed {site} (U ∧ V)
       => <=-antisymmetric (\lam {W} (W<=U,W<=V) => cover-refine (cover-inter W<=U W<=V) \lam {T} (inP (_,idp,_,idp,T<=U,T<=V)) => inP (_, idp, \lam t => (T<=U t, T<=V t))) $ embed-univ (cover-inj meet-left idp, cover-inj meet-right idp)
 
+    -- | The embedding `Set X → CoverSpaceLocale X` preserves the strongly-below relation.
     \lemma embed_<=< {V U : Set X} (V<=<U : V s<=< U) : embed V Locale.<=< {CoverSpaceLocale X} embed U
       => \lam _ => cover-left top-univ $ cover-cauchy $ cauchy-subset (unfolds in V<=<U) \lam {W} => later \case \elim __ \with {
         | byLeft p => inP (_, byLeft idp, cover-refl $ inP (embed (Compl V), embed_meet =<= embed-univ (unfolds $ cover-basic $ inP (2, (\lam s => s.1 s.2, ext \lam U => propExt (\lam (inP (_,e,_)) => e) absurd))), cover-refl (inv p)))
         | byRight p => inP (_, byRight idp, cover-refl (inv p))
       }
 
+    -- | `CoverSpaceLocale X` is a regular locale.
     \lemma regular : Locale.IsRegularLocale {CoverSpaceLocale X}
       => regular-site \lam U => cover-sub cover-reg (embed_<=< __)
 
+    {- | From a presentation cover `Cover U g` and `U' s<=< U`, extracts a cauchy cover by `Compl U'` together with the
+     -   `g j`.
+     -}
     \lemma cover-char {X : StronglyRegularCoverSpace} {U : Set X} {C : Set(Set X)} (c : Cover {site} U C) {U' : Set X} (U'<=<U : U' s<=< U)
       : X.isCauchy \lam V => (V = Compl U') || C V \elim c
       | cover-inj {V} U<=V CV => cauchy-refine U'<=<U \lam {W} => \case \elim __ \with {
@@ -80,6 +102,7 @@
       }
       | cover-trans (inP (2,(Ue,idp))) _ => top-cauchy $ byLeft $ ext \lam a => propExt (\lam _ U'a => Ue $ s<=<_<= U'<=<U U'a) (\lam _ => ())
 
+    -- | If `single x <=< U` and `U` is covered by `g`, then some `g j` already contains a neighborhood of `x`.
     \lemma cover-point-char {X : StronglyRegularCoverSpace} {U : Set X} {C : Set (Set X)} (c : Cover {site} U C) {x : X} (x<=<U : single x <=< U) : ∃ (V : C) (single x <=< V)
       => \case s<=<-inter x<=<U \with {
         | inP (V,x<=<V,V<=<U) => \case CoverSpace.cauchy-regular-cover (cover-char c V<=<U) x \with {
@@ -88,23 +111,30 @@
         }
       }
 
+    -- | Weakly dense points of `X` give weakly dense points of `CoverSpaceLocale X`.
     \lemma hasWeaklyDensePoints {X : StronglyRegularCoverSpace} (Xd : X.HasWeaklyDensePoints) : HasDensePoints (CoverSpaceLocale X)
       => hasDensePoints-site \lam {U} p => cover-trans* cover-reg \lam {V} V<=<U => cover-empty \lam {x} Vx =>
           p {CoverSpaceLocale-unit.sitePoint x} $ later $ cauchy-subset (unfolds in s<=<_<=< V<=<U) $ later \lam {W} h (_,(idp,Wx)) => h (x,(Vx,Wx))
 
+    -- | Under dense points, `U` is covered by itself indexed by inhabitants (resp. by points strongly below `U`).
     \lemma cover-inh {X : PrecoverSpace} (Xd : X.HasDensePoints) {U : Set X} : Cover {site} U (\lam _ => ∃ (x : X) (U x))
       => cover-trans (inP (1,idp)) \lam {V} V<=<U => cover-trans (inP (0, inP (_, Xd V<=<U, idp))) $ SetIm-elim \lam {W} => later \case \elim W, \elim __ \with {
         | _, (byLeft idp, t) => cover-empty $ later \lam (Vx,nVx) => nVx Vx
         | _, (byRight idp, r) => cover-refl r
       }
 
+    -- | Under dense points, `U` is covered by itself indexed by inhabitants (resp. by points strongly below `U`).
     \lemma cover-reg-inh {X : PrecoverSpace} (Xd : X.HasDensePoints) {U : Set X} : Cover {site} U (\lam _ => ∃ (x : X) (single x <=< U))
       => cover-trans* cover-reg \lam {V} V<=<U => cover-sub (cover-inh Xd) \lam (inP (x,Vx)) => inP (x, <=<-right (single_<= Vx) $ s<=<_<=< V<=<U)
 
+    -- | Dense points of `X` give strongly dense points of `CoverSpaceLocale X`.
     \lemma hasStronglyDensePoints {X : StronglyRegularCoverSpace} (Xd : X.HasDensePoints) : HasStronglyDensePoints (CoverSpaceLocale X)
       => hasStronglyDensePoints-site \lam U => cover-sub (cover-reg-inh Xd) \lam (inP (x,x<=U)) => inP (CoverSpaceLocale-unit.sitePoint x, x<=U)
   }
 
+{- | The precover space on `CompleteFilter L` whose cauchy covers are families `C` such that `top ≤ ⋁ points_* s` over
+ -   `s ∈ C`.
+ -}
 \func LocalePrecoverSpace (L : Locale) : PrecoverSpace \cowith
   | E => CompleteFilter L
   | isCauchy C => top <= SJoin points_* C
@@ -120,34 +150,43 @@
   | cauchy-glue p e => p <=∘ SJoin-univ \lam {U} CU => meet-univ <=-refl top-univ <=∘ MeetSemilattice.meet-monotone <=-refl (e CU) <=∘
       L.SJoin-ldistr>= <=∘ SJoin-univ \lam {V} DUV => later $ transport (<= _) points_*_meet $ SJoin-cond $ inP $ later (U, V, CU, DUV, idp)
   \where {
+    -- | The map `points^*` sends locale `<=<` to cover-space `s<=<`.
     \lemma points_<=< {a b : L} (p : a L.<=< b) : points^* a s<=< {LocalePrecoverSpace L} points^* b
       => unfolds $ p <=∘ join-univ (points^*-points_* (\lam xna xa => CompleteFilter.isProper $ filter-mono (filter-meet xna xa) L.<=-eval) <=∘ SJoin-cond (byLeft idp)) (points-unit <=∘ SJoin-cond (byRight idp))
 
+    -- | A locale-theoretic cover `top ≤ SJoin C` translates to a cauchy cover by the sets `points^* a` for `a ∈ C`.
     \lemma cover-cauchy {C : Set L} (p : top <= L.Join C) : isCauchy {LocalePrecoverSpace L} \lam U => ∃ (a : C) (points^* a = U)
       => p <=∘ Join-univ \lam {a} Ca => points-unit <=∘ SJoin-cond (inP $ later (a, Ca, idp))
 
+    -- | Characterizes `single x <=< U` by the existence of `a` with `x a` and `points^* a ⊆ U`.
     \lemma single_<=<-char {x : CompleteFilter L} {U : Set (CompleteFilter L)} (x<=<U : single x <=< {LocalePrecoverSpace L} U) : ∃ (a : L) (x a) (points^* a ⊆ U)
       => \have t : top L.<= L.Join \lam a => x a -> points^* a ⊆ U => x<=<U <=∘ SJoin-univ \lam {W} h => later $ L.Join-univ \lam {a} q => Join-cond \lam xa => q <=∘ later (h (x, (idp, q xa)))
          \in \case x.filter-Join $ filter-mono filter-top t \with {
           | inP (a,h,xa) => inP (a, xa, h xa)
         }
 
+    -- | Locale-level dense points yield weakly dense points of the associated precover space.
     \lemma hasWeaklyDensePoints (Ld : HasDensePoints L) : (LocalePrecoverSpace L).HasWeaklyDensePoints
       => __ <=∘ SJoin-univ \lam {U} => later \case \elim __ \with {
         | byLeft e => rewrite e $ Ld <=∘ bottom-univ
         | byRight CU => SJoin-cond CU
       }
 
+    -- | Strongly dense locale points yield dense points of the associated precover space.
     \lemma hasDensePoints (Ld : HasStronglyDensePoints L) : (LocalePrecoverSpace L).HasDensePoints
       => __ <=∘ SJoin-univ \lam {U} CU => L.pHat-left (densePoints_cover Ld _) <=∘ IJoin-univ (later \lam (inP (x,c)) => SJoin-cond $ later (CU, \case filter-Join c \with {
         | inP (a,p,xa) => inP (x, p xa)
       }))
   }
 
+-- | From a regular locale `L`, builds a `StronglyRegularCoverSpace` on top of `LocalePrecoverSpace L`.
 \func LocaleCoverSpace {L : Locale} (Lr : L.IsRegularLocale) : StronglyRegularCoverSpace \cowith
   | PrecoverSpace => LocalePrecoverSpace L
   | isStronglyRegular => __ <=∘ SJoin-univ \lam {U} CU => Lr _ <=∘ Join-univ \lam w<=<_*U => points-unit <=∘ SJoin-cond (inP $ later (U, CU, <=<-left (points_<=< w<=<_*U) points-counit))
 
+{- | The functor `LocaleCat → PrecoverSpaceCat` sending `L` to `LocalePrecoverSpace L` and a frame homomorphism to its
+ -   filter-pullback as a `PrecoverMap`.
+ -}
 \func LocaleCoverSpaceFunctor.{u} : Functor LocaleCat.{u} PrecoverSpaceCat.{u} \cowith
   | F L => LocalePrecoverSpace L
   | Func f => \new PrecoverMap {
@@ -158,6 +197,10 @@
   | Func-id => idp
   | Func-o => idp
 
+{- | When the source has dense points and the target is a regular locale, the action of the functor on hom-sets is an
+ -   equivalence; injectivity uses a meet/regularity argument and surjectivity reconstructs a frame homomorphism via
+ -   `frameHom`.
+ -}
 \lemma LocaleCoverSpaceFunctor-fullyFaithful.{u} {L M : Locale.{u}} (Ld : HasDensePoints L) (Mr : M.IsRegularLocale) : IsEquiv (LocaleCoverSpaceFunctor.Func {L} {M})
   => IsEquiv.fromInjSurj
       (\have r {f g : FrameHom M L} (p : LocaleCoverSpaceFunctor.Func f = LocaleCoverSpaceFunctor.Func g) {a : M} : f a <= g a
@@ -183,6 +226,9 @@
         }
       })))
   \where {
+    {- | Given a `PrecoverMap` between locale-induced cover spaces, builds the corresponding `FrameHom M L` by
+     -   `a ↦ ⋁_{b <=< a} points_* (f ^-1 points^* b)`.
+     -}
     \protected \func frameHom (f : PrecoverMap (LocalePrecoverSpace L) (LocalePrecoverSpace M)) : FrameHom M L \cowith
       | func a => SJoin (\lam b => points_* $ f ^-1 points^* b) (M.<=< a)
       | func-<= p => SJoin-univ \lam {b} b<=<x => SJoin-cond (<=<-left b<=<x p)
@@ -197,6 +243,9 @@
         }
   }
 
+{- | For a strongly regular cover space `X` with weakly dense points, the canonical `PrecoverMap` from `X` into
+ -   `LocaleCoverSpace (CoverSpaceLocale X)`, sending `x` to the framePres-point determined by `U ↦ single x <=< U`.
+ -}
 \func CoverSpaceLocale-unit {X : StronglyRegularCoverSpace} (Xo : X.HasWeaklyDensePoints) : PrecoverMap X (LocaleCoverSpace {CoverSpaceLocale X} CoverSpaceLocale.regular) \cowith
   | func x => site-point (sitePoint x)
   | func-cover Dc => Xo $ cauchy-refine (isRegular $ CoverSpaceLocale.cover-char (Dc ()) <=<_top) \lam {V} => \case __ \with {
@@ -213,6 +262,7 @@
       | sitePoint-meet {U} {V} x<=<U x<=<V => inP (U ∧ V, <=<_meet-same x<=<U x<=<V, cover-inj meet-left idp, cover-inj meet-right idp)
       | sitePoint-cover {U} {C} U<=C x<=<U => CoverSpaceLocale.cover-point-char (cover-basic U<=C) x<=<U
 
+    -- | The unit is weakly dense.
     \lemma isDense (Xd : X.HasWeaklyDensePoints) : PrecoverMap.IsWeaklyDense {CoverSpaceLocale-unit Xd}
       => \lam {U} Uo c (F,UF) => \case F.filter-SJoin  $ F.filter-mono filter-top $ <=<_single.1 $ (PrecoverSpace.open-char {LocaleCoverSpace {CoverSpaceLocale X} CoverSpaceLocale.regular}).1 Uo UF \with {
         | inP (W,h,FW) => \case filter-Join FW \with {
@@ -223,16 +273,21 @@
         }
       }
 
+    -- | The unit is an embedding of cover spaces.
     \lemma isEmbedding (Xd : X.HasWeaklyDensePoints) : PrecoverMap.IsEmbedding {CoverSpaceLocale-unit Xd}
       => \lam {C} Cc _ => cover-trans (inP (0, inP (C, Cc, idp))) $ SetIm-elim \lam {U} CU => cover-refl $ inP $ later
           (_, SetIm-cone (points^* $ embed U) $ inP (U, CU, \lam {x} (inP (V,V<=U,x<=<V)) => \case CoverSpaceLocale.cover-point-char V<=U x<=<V \with {
             | inP (_,idp,x<=<U) => <=<_<= x<=<U idp
           }), cover-refl $ inP (embed U, <=-refl, cover-inj meet-right idp))
 
+    -- | Combines the above into a weakly dense embedding.
     \lemma isDenseEmbedding (Xd : X.HasWeaklyDensePoints) : PrecoverMap.IsWeaklyDenseEmbedding {CoverSpaceLocale-unit Xd}
       => (isDense Xd, isEmbedding Xd)
   }
 
+{- | Strengthens `LocaleCoverSpace` on a regular locale to a `StronglyCompleteCoverSpace`, witnessing that locales give
+ -   complete and separated cover spaces.
+ -}
 \func LocaleCompleteCoverSpace {L : Locale} (Lr : L.IsRegularLocale) : StronglyCompleteCoverSpace \cowith
   | StronglyRegularCoverSpace => LocaleCoverSpace Lr
   | isSeparatedCoverSpace {x} {y} sh => exts \lam a =>
@@ -249,6 +304,9 @@
   \where {
     \open SeparatedCoverSpace
 
+    {- | From a weakly cauchy filter on `LocaleCoverSpace Lr`, constructs a `CompleteFilter L` by
+     -   `a ↦ ∃ b, b <=< a ∧ F (points^* b)`, which serves as the limit point used to establish strong completeness.
+     -}
     \func makeFilter (F : WeaklyCauchyFilter (LocaleCoverSpace Lr)) : CompleteFilter L \cowith
       | F a => ∃ (b : L) (b L.<=< a) (F (points^* b))
       | filter-mono (inP (c,c<=<a,Fc)) a<=b => inP (c, <=<-left c<=<a a<=b, Fc)

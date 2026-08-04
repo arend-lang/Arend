@@ -1,3 +1,12 @@
+{- | Univalence: equivalences between types correspond to identifications of types.
+ -
+ -   This module establishes the univalence principle by constructing a `QEquiv` between the path type `A = B` and the
+ -   type of equivalences `Equiv {A} {B}`. The construction goes both directions: a path induces an equivalence via
+ -   `transport`, and an equivalence induces a path via Arend's native `iso` constructor for the path type. The
+ -   retraction property is verified using path induction (`Jl`), and the full equivalence is assembled using
+ -   `pathEquiv`, exploiting the fact that `=_Equiv` already coincides with `coe` along paths.
+ -}
+
 \import Function.Meta
 \import Logic
 \import Meta
@@ -6,9 +15,13 @@
 \import Equiv
 \import Equiv.Path
 
+{- | Converts a type equality `p : A = B` into an `Equiv {A} {B}` by rewriting along `p` and using the identity
+ -   equivalence.
+ -}
 \func =_Equiv.{u} {A B : \Type u} (p : A = B) : Equiv A B
   => transport (Equiv A __) p $ mkEquiv (inP idEquiv)
 
+-- | Builds a path `A = B` from a general `Equiv {A} {B}` by first promoting it to a `QEquiv` via `QEquiv.fromEquiv`.
 \func Equiv_=.{u} {A B : \Type u} (e : Equiv A B) : A = B => QEquiv_= (Equiv.toQEquiv e)
 
 \sfunc typeUnivalence.{u} {A B : \Type u} : QEquiv {A = B} {Equiv A B} =_Equiv Equiv_=

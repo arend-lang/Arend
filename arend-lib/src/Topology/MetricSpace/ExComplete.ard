@@ -1,3 +1,13 @@
+{- | Completion of extended pseudo-metric spaces and the universal property for extending metric maps.
+ -
+ -   This module constructs the metric completion of an extended pseudo-metric space as a complete extended metric
+ -   space, building on the underlying uniform-space completion via regular Cauchy filters. The distance between two
+ -   completion points (filters `F`, `G`) is defined as the upper-real whose rational over-approximations are witnessed
+ -   by sets `U ∈ F`, `V ∈ G` on which the original distance lies below the bound. The dense isometric embedding of `X`
+ -   into its completion together with the lifting lemma provides the universal property: any metric map from `X` to a
+ -   complete extended metric space factors uniquely through the completion.
+ -}
+
 \import Algebra.Group
 \import Algebra.Meta
 \import Algebra.Monoid
@@ -21,6 +31,11 @@
 \import Topology.TopSpace.Product
 \import Topology.UniformSpace.Complete
 
+{- | Given an isometric map `f : X → Y` with dense image and a metric map `g : X → Z` into a complete extended metric
+ -   space, produces the unique extension `Y → Z` as a `MetricMap`. Builds on `dense-uniform-lift` by upgrading the
+ -   resulting uniform map with the metric (distance-preserving) condition. Used to factor metric maps through
+ -   completions and other dense isometric embeddings.
+ -}
 \func dense-metric-lift {X Y : ExPseudoMetricSpace} {Z : CompleteExMetricSpace} (f : IsometricMap X Y) (fd : f.IsDense) (g : MetricMap X Z) : MetricMap Y Z \cowith
   | UniformMap => dense-uniform-lift f (f.dense->uniformEmbedding fd) g
   | func-dist {y} {y'} =>
@@ -32,6 +47,12 @@
     \open ContMap
   }
 
+{- | The completion of an `ExPseudoMetricSpace` `X` as a `CompleteExMetricSpace`, extending `UniformCompletion X`.
+ -   Points are regular Cauchy filters; the distance between filters `F` and `G` is the extended upper real whose
+ -   rational upper bounds `q` are precisely those for which some `r < q` and sets `U ∈ F`, `V ∈ G` exist with
+ -   `dist(x, y) < r` for all `x ∈ U`, `y ∈ V`. The upper-real structure (`U-closed`, `U-rounded`) follows from
+ -   monotonicity and density of rationals.
+ -}
 \instance ExMetricCompletion (X : ExPseudoMetricSpace) : CompleteExMetricSpace
   | CompleteUniformSpace => UniformCompletion X
   | dist (F G : RegularCauchyFilter X) : ExUpperReal \cowith {
@@ -66,6 +87,10 @@
     | inP (U,CU,g) => inP (U, CU, \lam {F} Fx => g $ inP (RatField.half eps, linarith, OBall (RatField.half $ RatField.half eps) x, OBall-center_<=< $ RatField.half>0 $ RatField.half>0 eps>0, _, Fx, \lam {z} xz<eps/4 {y} xy<eps/4 => X.halving1/2 xz<eps/4 xy<eps/4))
   }))
 
+{- | The canonical map `X → ExMetricCompletion X` as an `IsometricMap`, exhibiting `X` as an isometrically embedded (and
+ -   dense) subspace of its completion. Wraps the underlying `uniform-completion` with the isometry property, and is the
+ -   map used as `f` when applying `dense-metric-lift` to extend metric maps out of `X`.
+ -}
 \func completion-ex-isometry {X : ExPseudoMetricSpace} : IsometricMap X (ExMetricCompletion X) \cowith
   | UniformMap => uniform-completion
   | func-isometry {x} {y} => <=-antisymmetric (\lam xy<b => \case U-rounded xy<b \with {

@@ -1,3 +1,14 @@
+{- | Univariate polynomials over rings, defined as a higher inductive type with structural equations, plus their
+ -   ring/algebra/module structure.
+ -
+ -   `Poly R` is built from `pzero` and `padd p e` (cons a coefficient onto a polynomial) with the equation
+ -   `padd pzero 0 = pzero` ensuring leading-zero normalization. The module establishes the equivalence with the
+ -   quotient form `QPoly R` to derive set-truncation, then layers on evaluation, coefficient extraction, degree bounds,
+ -   the polynomial ring/algebra structure, division algorithms, and lifts of ring properties (domain, integral domain,
+ -   decidable equality) from the base ring. A separate `polyModule` construction interprets a polynomial in `R[X]` as
+ -   an iterated linear endomorphism, turning any `R`-module with an endomorphism into an `R[X]`-module.
+ -}
+
 \import Algebra.Algebra
 \import Algebra.Domain
 \import Algebra.Field
@@ -41,6 +52,9 @@
 \import Set.Fin
 \open Monoid
 
+{- | HIT of polynomials over `R : AddPointed` with constructors `pzero`, `padd : Poly R -> R -> Poly R`, and equation
+ -   `peq : padd pzero 0 = pzero`.
+ -}
 \data Poly (R : AddPointed)
   | pzero
   | padd (Poly R) R
@@ -48,15 +62,18 @@
   \where {
     \open QPoly
 
+    -- | Conversion to the quotient-of-arrays representation `QPoly R`.
     \use \func toQPoly {R : AddPointed} (p : Poly R) : QPoly R \elim p
       | pzero => in~ nil
       | padd p e => qadd (toQPoly p) e
       | peq => path (~-equiv _ _ idp)
 
+    -- | Builds a polynomial from a coefficient array.
     \use \func fromArray {R : AddPointed} (l : Array R) : Poly R \elim l
       | nil => pzero
       | :: a l => padd (fromArray l) a
 
+    -- | `toQPoly (fromArray l) = in~ l`.
     \use \func cfunc {R : AddPointed} (l : Array R) : toQPoly (fromArray l) = in~ l \elim l
       | nil => idp
       | :: a l => pmap (qadd __ a) (cfunc l)
@@ -69,6 +86,7 @@
       | padd p e => \lam s => \have t => qadd_nil s \in pmap2 padd (toQPoly-nil t.1) t.2 *> path peq
       | peq => pathOver $ coe_pi *> ext (\lam s => coe_path (path peq) _ idp *> path-lem)
 
+    -- | Inverse direction: any `p` with `toQPoly p = in~ l` equals `fromArray l`.
     \use \func gfunc {R : AddPointed} (l : Array R) (p : Poly R) : toQPoly p = in~ l -> p = fromArray l \elim l, p
       | nil, pzero => \lam _ => idp
       | nil, padd p e => \lam s => pmap2 padd (toQPoly-nil (qadd_nil s).1) (qadd_nil s).2 *> path peq
@@ -77,6 +95,7 @@
       | :: a l, padd p e => \lam s => pmap2 padd (gfunc l p (qadd_cons s).2) (qadd_cons {_} {e} {a} {toQPoly p} {l} s).1
       | :: a l, peq => pathOver $ coe_pi *> ext (\lam s => coe_path (path peq) _ idp *> pmap (inv (path peq) *>) (pmap2 (\lam x => pmap2 padd (gfunc l pzero x)) prop-pi set-pi))
 
+    -- | `toQPoly` is an equivalence.
     \use \sfunc toQPoly-equiv {R : AddPointed} : QEquiv toQPoly
       => contrFibers=>QEquiv {_} {QPoly R} \case \elim __ \with {
         | in~ l => \new Contr {
@@ -85,48 +104,59 @@
         }
       }
 
+    -- | `Poly R` is a set (transported from the set structure of `QPoly R`).
     \use \level levelSet {R : AddPointed} : isSet (Poly R)
       => isSet.equiv (inP toQPoly-equiv) (\lam _ _ _ _ => set-pi)
 
+    -- | Countability of `Poly R` from countability of `R`.
     \func poly-countable {R : AddPointed} (c : Countable R) : Countable (Poly R)
       => surj-countable (quotient-countable (array-countable c)) (symQEquiv toQPoly-equiv).isSurj
 
+    -- | If every element of `R` is zero, every polynomial equals `pzero`.
     \lemma poly-trivial {R : AddPointed} (p : \Pi (x : R) -> x = zro) (p : Poly R) : p = pzero \elim p
       | pzero => idp
       | padd q e => pmap2 padd (poly-trivial p q) (p e) *> peq
   }
 
+-- | Functorial action on polynomials along an `AddPointedHom`.
 \func polyMap (f : AddPointedHom) (p : Poly f.Dom) : Poly f.Cod \elim p
   | pzero => pzero
   | padd p e => padd (polyMap f p) (f e)
   | peq => rewrite f.func-zro peq
 
+-- | Compatibility with composition.
 \lemma polyMap-comp {A B C : AddPointed} (f : AddPointedHom A B) (g : AddPointedHom B C) {p : Poly A} : polyMap g (polyMap f p) = polyMap (g AddPointedHom.∘ f) p \elim p
   | pzero => idp
   | padd p e => pmap (padd __ _) (polyMap-comp f g)
 
+-- | `polyMap f` is injective when `f` is.
 \lemma polyMap-inj {A B : AddPointed} {f : AddPointedHom A B} (inj : IsInj f) {p q : Poly A} (s : polyMap f p = polyMap f q) : p = q \elim p, q
   | pzero, pzero => idp
   | pzero, padd q b => inv peq *> pmap2 padd (polyMap-inj {_} {_} {f} inj $ pmap polyShift s) (inj $ func-zro *> pmap (polyCoef __ 0) s)
   | padd p a, pzero => pmap2 padd (polyMap-inj {_} {_} {f} inj $ pmap polyShift s) (inj $ pmap (polyCoef __ 0) s *> inv func-zro) *> peq
   | padd p a, padd q b => pmap2 padd (later $ polyMap-inj {_} {_} {f} inj $ pmap polyShift s) (inj $ pmap (polyCoef __ 0) s)
 
+-- | `polyMap` commutes with `fromArray`.
 \lemma polyMap_fromArray {f : AddPointedHom} {l : Array f.Dom} : polyMap f (Poly.fromArray l) = Poly.fromArray (map f l) \elim l
   | nil => idp
   | a :: l => pmap (padd __ _) polyMap_fromArray
 
+-- | Evaluate `p : Poly R` at `a : R` (Horner-style recursion).
 \func polyEval {R : Ring} (p : Poly R) (a : R) : R \elim p
   | pzero => 0
   | padd p e => polyEval p a * a + e
   | peq => zro-right *> R.zro_*-left
 
+-- | Evaluate after mapping coefficients along an `AddPointedHom`.
 \func polyMapEval {A : AddPointed} {R : Ring} (f : AddPointedHom A R) (p : Poly A) (a : R) : R
   => polyEval (polyMap f p) a
 
+-- | `polyEval (polyMap f p) (f a) = f (polyEval p a)` for ring homs.
 \lemma polyEval_polyMap {f : RingHom} {p : Poly f.Dom} {a : f.Dom} : polyEval (polyMap f p) (f a) = f (polyEval p a) \elim p
   | pzero => inv func-zro
   | padd p e => inv $ f.func-+ *> pmap (+ _) (f.func-* *> pmap (* _) (inv polyEval_polyMap))
 
+-- | `n`-th coefficient of `p`.
 \func polyCoef {R : AddPointed} (p : Poly R) (n : Nat) : R \elim p, n
   | pzero, _ => 0
   | padd p e, 0 => e
@@ -134,33 +164,41 @@
   | peq, 0 => idp
   | peq, suc n => idp
 
+-- | Coefficients of a constant polynomial vanish at positive indices.
 \lemma polyCoef=0 {R : AddPointed} {r : R} {n : Nat} (n>0 : 0 < n) : polyCoef (padd pzero r) n = 0 \elim n
   | suc n => idp
 
+-- | `polyCoef` commutes with `polyMap`.
 \lemma polyCoef_polyMap {f : AddPointedHom} {p : Poly f.Dom} {n : Nat} : polyCoef (polyMap f p) n = f (polyCoef p n) \elim p, n
   | pzero, n => inv f.func-zro
   | padd p e, 0 => idp
   | padd p e, suc n => polyCoef_polyMap
 
+-- | Evaluation of an array-based polynomial as `Σ l_j · a^j`.
 \lemma polyEval_fromArray {R : Ring} {l : Array R} {a : R} : polyEval (Poly.fromArray l) a = R.BigSum (\lam j => l j * pow a j) \elim l
   | nil => idp
   | c :: l => +-comm *> pmap2 (+) (inv ide-right) (pmap (* a) polyEval_fromArray *> R.BigSum-rdistr *> pmap R.BigSum (exts \lam j => *-assoc))
 
+-- | Evaluation of an array-based polynomial as `Σ l_j · a^j`.
 \lemma polyMapEval_fromArray {R : AddPointed} {E : Ring} {f : AddPointedHom R E} {l : Array f.Dom} {a : f.Cod}
   : polyMapEval f (Poly.fromArray l) a = AddMonoid.BigSum (\lam j => f (l j) * pow a j)
   => pmap (polyEval __ a) polyMap_fromArray *> polyEval_fromArray
 
+-- | `polyCoef (fromArray l) j = l j`.
 \lemma polyCoef_fromArray {R : AddPointed} {l : Array R} {j : Fin l.len} : polyCoef (Poly.fromArray l) j = l j \elim l, j
   | a :: l, 0 => idp
   | a :: l, suc j => polyCoef_fromArray
 
+-- | Constant term `polyCoef p 0`.
 \func lastCoef {R : AddPointed} (p : Poly R) => polyCoef p 0
 
+-- | Drop the constant term, shifting coefficients down.
 \func polyShift {R : AddPointed} (p : Poly R) : Poly R \elim p
   | pzero => pzero
   | padd p e => p
   | peq => idp
 
+-- | If `polyEval p a = 0` then `a` divides `polyCoef p 0` (with explicit witness from `polyShift`).
 \lemma poly-root-div {R : CRing} {p : Poly R} {a : R} (q : polyEval p a = 0)
   : LDiv a (polyCoef p 0) (R.negative (polyEval (polyShift p) a)) \elim p
   | pzero => \new LDiv {
@@ -170,48 +208,60 @@
     | inv-right => R.negative_*-right *> inv (R.fromZero $ +-comm *> pmap (+ e) (R.negative-isInv *> *-comm) *> q)
   }
 
+-- | `padd p a = pzero -> p = pzero ∧ a = 0`.
 \lemma padd=pzero {R : AddPointed} {p : Poly R} {a : R} (q : padd p a = pzero) : \Sigma (p = pzero) (a = 0)
   => \have t => q *> inv peq
      \in (pmap polyShift t, pmap (polyCoef __ 0) t)
 
+-- | `c · X^n` as `padd … (padd pzero c) … 0`.
 \func monomial {R : AddPointed} (c : R) (n : Nat) : Poly R \elim n
   | 0 => padd pzero c
   | suc n => padd (monomial c n) 0
 
+-- | Standard identities for monomials.
 \lemma polyCoef_monomial {R : AddPointed} {c : R} {n : Nat} : polyCoef (monomial c n) n = c \elim n
   | 0 => idp
   | suc n => polyCoef_monomial
 
+-- | Standard identities for monomials.
 \lemma polyMap_monomial {f : AddPointedHom} {c : f.Dom} {n : Nat} : polyMap f (monomial c n) = monomial (f c) n \elim n
   | 0 => idp
   | suc n => pmap2 padd polyMap_monomial func-zro
 
+-- | Standard identities for monomials.
 \lemma polyEval_monomial {R : Ring} {c a : R} {n : Nat} : polyEval (monomial c n) a = c * pow a n \elim n
   | 0 => simplify
   | suc n => rewrite polyEval_monomial equation.semiring
 
+-- | Standard identities for monomials.
 \lemma polyMapEval_monomial {f : RingHom} {a : f.Cod} {n : Nat} : polyMapEval f (monomial 1 n) a = pow a n
   => pmap (polyEval __ a) polyMap_monomial *> polyEval_monomial *> pmap (* _) func-ide *> ide-left
 
+-- | `monomial 0 n = pzero`.
 \lemma monomial_zro {R : AddPointed} {n : Nat} : monomial R.zro n = pzero \elim n
   | 0 => peq
   | suc n => rewrite monomial_zro peq
 
+-- | Predicate `degree< p n` meaning all coefficients at index `≥ n` vanish.
 \func degree< {R : AddPointed} (p : Poly R) (n : Nat)
   => \Pi {k : Nat} -> n <= k -> polyCoef p k = 0
 
+-- | `degree< p 0 -> p = pzero`.
 \lemma degree<0 {R : AddPointed} {p : Poly R} (d : degree< p 0) : p = pzero
   => degree<=.trivialPoly (\lam k _ => d zero<=_)
 
+-- | Compatibility with `padd`.
 \lemma degree<_padd {R : AddPointed} {p : Poly R} {e : R} {n : Nat} (d : degree< p n) : degree< (padd p e) (suc n)
   => \lam {k} => \case \elim k \with {
     | 0 => \lam s => absurd (s NatOrder.zero<suc)
     | suc k => \lam s => d (suc<=suc.conv s)
   }
   \where
+    -- | Compatibility with `padd`.
     \lemma conv {R : AddPointed} {p : Poly R} {e : R} {n : Nat} (d : degree< (padd p e) (suc n)) : degree< p n
       => \lam s => d (suc<=suc s)
 
+-- | Preserved by coefficient maps.
 \lemma degree<_polyMap {f : AddPointedHom} {p : Poly f.Dom} {n : Nat} (d : degree< p n) : degree< (polyMap f p) n \elim p, n
   | pzero, n => \lam _ => idp
   | padd p e, 0 =>
@@ -219,15 +269,18 @@
     \in rewrite (t.1, t.2, f.func-zro) $ transportInv (degree< __ 0) peq \lam _ => idp
   | padd p e, suc n => degree<_padd $ degree<_polyMap (degree<_padd.conv d)
 
+-- | Evaluation as a finite sum of `coef · a^i` when degree is bounded.
 \lemma polyEval_polyCoef {R : Ring} {p : Poly R} {a : R} {n : Nat} (d : degree< p n) : polyEval p a = R.BigSum (\new Array R n (\lam i => polyCoef p i * R.pow a i)) \elim p, n
   | pzero, n => inv $ R.BigSum_zro \lam j => R.zro_*-left
   | p, 0 => rewrite (degree<0 d) idp
   | padd p e, suc n => rewrite (polyEval_polyCoef (degree<_padd.conv d)) $ pmap2 (+) (R.BigSum-rdistr *> pmap (\lam x => R.BigSum (\new Array R n x)) (ext \lam j => *-assoc)) (inv ide-right) *> +-comm
 
+-- | Evaluation as a finite sum of `coef · a^i` when degree is bounded.
 \lemma polyMapEval_polyCoef {f : RingHom} {p : Poly f.Dom} {a : f.Cod} {n : Nat} (d : degree< p n)
   : polyMapEval f p a = AddMonoid.BigSum (\lam (i : Fin n) => f (polyCoef p i) * pow a i)
   => polyEval_polyCoef (degree<_polyMap d) *> pmap AddMonoid.BigSum (exts \lam j => pmap (* _) polyCoef_polyMap)
 
+-- | Predicate `degree<= p n` meaning all coefficients at index `> n` vanish (recursively defined).
 \func degree<= {R : AddPointed} (p : Poly R) (n : Nat) : \Prop
   | pzero, n => \Sigma
   | padd p a, 0 => p = pzero
@@ -236,11 +289,13 @@
   | peq, suc n => idp
   \where {
 
+    -- | Equivalence with the coefficient-vanishing characterization.
     \lemma toCoefs {R : AddPointed} (p : Poly R) (n : Nat) (d : degree<= p n) {k : Nat} (n<k : n < k) : polyCoef p k = 0 \elim p, n, k, n<k
       | pzero, n, k, _ => idp
       | padd p e, 0, suc k, _ => rewrite d idp
       | padd p e, suc n, suc k, NatOrder.suc<suc n<k => toCoefs p n d n<k
 
+    -- | Polynomials that are forced to have every coefficient zero are `pzero`.
     \lemma trivialPoly {R : AddPointed} {p : Poly R} (d : \Pi (k : Nat) -> degree<= p k -> polyCoef p k = 0) : p = pzero
       => \case degree-exists p \with {
            | inP (n,dp) => aux d n dp
@@ -250,28 +305,35 @@
           | 0 => degree<=0 p dp *> pmap (padd pzero) (d 0 dp) *> peq
           | suc n => aux d n $ degree-reduce p n dp (d (suc n) dp)
 
+    -- | Equivalence with the coefficient-vanishing characterization.
     \lemma fromCoefs {R : AddPointed} (p : Poly R) (n : Nat) (d : \Pi {k : Nat} -> n < k -> polyCoef p k = 0) : degree<= p n \elim p, n
       | pzero, n => ()
       | padd p e, 0 => trivialPoly (\lam k _ => d NatOrder.zero<suc)
       | padd p e, suc n => fromCoefs p n (\lam n<k => d (NatOrder.suc<suc n<k))
   }
 
+-- | Translation between strict and non-strict degree bounds.
 \lemma degree<=_degree< {R : AddPointed} {p : Poly R} {n : Nat} (d : degree<= p n) : degree< p (suc n)
   => \lam s => degree<=.toCoefs p n d (id<suc <∘l s)
 
+-- | Translation between strict and non-strict degree bounds.
 \lemma degree<_degree<= {R : AddPointed} {p : Poly R} {n : Nat} (d : degree< p (suc n)) : degree<= p n
   => degree<=.fromCoefs p n \lam q => d (suc_<_<= q)
 
+-- | Preserved by coefficient maps.
 \lemma degree<=_polyMap {f : AddPointedHom} {p : Poly f.Dom} {n : Nat} (d : degree<= p n) : degree<= (polyMap f p) n
   => degree<_degree<= $ degree<_polyMap (degree<=_degree< d)
 
+-- | Existence of a degree bound for any polynomial.
 \lemma degree-exists {R : AddPointed} (p : Poly R) : ∃ (n : Nat) (degree<= p n) \elim p
   | pzero => inP (0, ())
   | padd p e => TruncP.map (degree-exists p) \lam s => (suc s.1, s.2)
 
+-- | Existence of a degree bound for any polynomial.
 \lemma degree<-exists {R : AddPointed} (p : Poly R) : ∃ (n : Nat) (degree< p n)
   => TruncP.map (degree-exists p) \lam s => (suc s.1, degree<=_degree< s.2)
 
+-- | Monotonicity in the bound.
 \lemma degree<=-trans {R : AddPointed} {p : Poly R} {n m : Nat} (d : degree<= p n) (n<=m : n <= m) : degree<= p m \elim p, n, m
   | pzero, n, m => ()
   | padd p x, 0, 0 => d
@@ -279,20 +341,24 @@
   | padd p x, 0, suc m => rewrite d ()
   | padd p x, suc n, suc m => degree<=-trans d (suc<=suc.conv n<=m)
 
+-- | Lower a `degree<= p (suc n)` bound when the leading coefficient is zero.
 \lemma degree-reduce {R : AddPointed} (p : Poly R) (n : Nat) (d : degree<= p (suc n)) (c : polyCoef p (suc n) = 0) : degree<= p n \elim p, n
   | pzero, n => ()
   | padd pzero e, 0 => idp
   | padd (padd p x) y, 0 => pmap2 padd d c *> peq
   | padd p e, suc n => degree-reduce p n d c
 
+-- | `degree<= p 0` characterizes `p` as a constant.
 \lemma degree<=0 {R : AddPointed} (p : Poly R) (d : degree<= p 0) : p = padd pzero (polyCoef p 0) \elim p
   | pzero => inv peq
   | padd p e => pmap (padd __ e) d
 
+-- | `degree<= (monomial c n) n`.
 \lemma degree<=_monomial {R : AddPointed} {c : R} {n : Nat} : degree<= (monomial c n) n \elim n
   | 0 => idp
   | suc n => degree<=_monomial
 
+-- | A polynomial bounded by `n` equals `fromArray` of its first `n` coefficients.
 \lemma fromArray_polyCoef {R : AddPointed} {n : Nat} {p : Poly R} (d : degree< p n) : p = Poly.fromArray (\new Array R n (\lam j => polyCoef p j)) \elim n, p
   | 0, p => degree<=.trivialPoly (\lam k _ => d zero<=_)
   | n, pzero => inv fromArray0
@@ -302,6 +368,7 @@
       | 0 => idp
       | suc n => pmap (padd __ zro) fromArray0 *> peq
 
+-- | `fromArray l` has degree less than `l.len`.
 \lemma fromArray_degree< {R : AddPointed} {l : Array R} : degree< (Poly.fromArray l) l.len \elim l
   | nil => \lam _ => idp
   | a :: l => \lam {k} => \case \elim k \with {
@@ -309,18 +376,23 @@
     | suc k => \lam d => fromArray_degree< (suc<=suc.conv d)
   }
 
+-- | `p` is monic if there exists `n` with `degree<= p n` and `polyCoef p n = 1`.
 \func isMonic {R : Ring} (p : Poly R) : \Prop
   => ∃ (n : Nat) (degree<= p n) (polyCoef p n = 1)
 
+-- | Stability and basic monic example.
 \lemma polyMap_isMonic {f : RingHom} {p : Poly f.Dom} (m : isMonic p) : isMonic (polyMap f p) \elim m
   | inP t => inP (t.1, degree<=_polyMap t.2, polyCoef_polyMap *> pmap f t.3 *> func-ide)
 
+-- | Stability and basic monic example.
 \lemma monomial-isMonic {R : Ring} (n : Nat) : isMonic (monomial R.ide n)
   => inP (n, degree<=_monomial, polyCoef_monomial)
 
+-- | Nondegeneracy and uniqueness of the monic-leading index (modulo `0 = 1`).
 \lemma monic/=0 {R : Ring} {p : Poly R} (pm : isMonic p) (p=0 : p = pzero) : 0 = {R} 1 \elim pm
   | inP (n,d,q) => rewrite p=0 in q
 
+-- | Nondegeneracy and uniqueness of the monic-leading index (modulo `0 = 1`).
 \lemma monic-unique {R : Ring} {p : Poly R} {n m : Nat} (n/=m : n /= m) (d1 : degree<= p n) (c1 : polyCoef p n = 1) (d2 : degree<= p m) (c2 : polyCoef p m = 1) : 0 = {R} 1
   => \case LinearOrder.trichotomy n m \with {
     | less n<m => inv (degree<=.toCoefs p n d1 n<m) *> c2
@@ -328,6 +400,7 @@
     | greater m<n => inv (degree<=.toCoefs p m d2 m<n) *> c1
   }
 
+-- | `Ring (Poly R)` instance (sum, product via Horner with the helper `*c`, negation, natural-number coefficients).
 \instance PolyRing (R : Ring) : Ring (Poly R)
   | zro => pzero
   | + (p q : Poly R) : Poly R \with {
@@ -394,62 +467,76 @@
   | natCoefZero => pmap (padd pzero) R.natCoefZero *> peq
   | natCoefSuc n => pmap (padd pzero) (R.natCoefSuc n)
   \where {
+    -- | Scalar multiplication of a polynomial by a coefficient.
     \func \infixl 7 *c {R : Ring} (r : R) (p : Poly R) : Poly R \elim p
       | pzero => pzero
       | padd p e => padd (r *c p) (r R.* e)
       | peq => pmap (padd pzero) R.zro_*-right *> path peq
 
+    -- | Algebraic properties of `*c`.
     \lemma zro_*c {R : Ring} {p : Poly R} : 0 *c p = pzero \elim p
       | pzero => idp
       | padd p e => pmap2 padd zro_*c R.zro_*-left *> path peq
 
+    -- | Algebraic properties of `*c`.
     \lemma ide_*c {R : Ring} {p : Poly R} : 1 *c p = p \elim p
       | pzero => idp
       | padd p e => pmap2 padd ide_*c R.ide-left
 
+    -- | Algebraic properties of `*c`.
     \lemma *c-rdistr {R : Ring} {e r : R} {p : Poly R} : (e R.+ r) *c p = e *c p + r *c p \elim p
       | pzero => idp
       | padd p e1 => pmap2 padd *c-rdistr R.rdistr
 
+    -- | Algebraic properties of `*c`.
     \lemma *c-ldistr {R : Ring} {c : R} {p q : Poly R} : c *c (p + q) = c *c p + c *c q \elim p, q
       | pzero, q => idp
       | padd p e, pzero => idp
       | padd p e, padd q e' => pmap2 padd *c-ldistr R.ldistr
 
+    -- | Algebraic properties of `*c`.
     \lemma *c-assoc {R : Ring} {c e : R} {p : Poly R} : c R.* e *c p = c *c (e *c p) \elim p
       | pzero => idp
       | padd p e' => pmap2 padd *c-assoc R.*-assoc
 
+    -- | Algebraic properties of `*c`.
     \lemma *c-comm-left {R : Ring} {r : R} {p q : Poly R} : r *c (p * q) = (r *c p) * q \elim p
       | pzero => idp
       | padd p e => *c-ldistr *> pmap2 (+) (pmap2 padd *c-comm-left R.zro_*-right) (inv *c-assoc)
 
+    -- | Algebraic properties of `*c`.
     \lemma padd0_*-comm {R : Ring} {p q : Poly R} : p * padd q 0 = padd (p * q) 0 \elim p
       | pzero => inv (path peq)
       | padd p e => pmap2 (\lam x => padd (x + _)) padd0_*-comm simplify
 
+    -- | Algebraic properties of `*c`.
     \lemma *c_* {R : Ring} {c : R} {p : Poly R} : c *c p = padd pzero c * p
       => inv $ pmap (+ _) peq
 
+    -- | Algebraic properties of `*c`.
     \lemma *c_negative {R : Ring} {c : R} {p : Poly R} : c *c negative p = negative (c *c p) \elim p
       | pzero => idp
       | padd p e => pmap2 padd *c_negative R.negative_*-right
   }
 
+-- | `padd p e = p * X + e` where `X = padd 1 0`.
 \lemma padd-expand {R : Ring} {p : Poly R} {e : R} : padd p e = p * padd 1 0 + padd 0 e \elim p
   | pzero => idp
   | padd p a => pmap2 padd (padd-expand *> simplify simplify) simplify
 
+-- | Constants embedding `R -> PolyRing R` as a ring hom.
 \func polyHom {R : Ring} : RingHom R (PolyRing R) \cowith
   | func => padd pzero
   | func-+ => idp
   | func-ide => idp
   | func-* => pmap (padd pzero) (inv zro-left)
 
+-- | Evaluating the canonical embedding at `X` recovers `p`.
 \lemma polyHom_polyMapEval {R : Ring} {p : Poly R} : polyMapEval polyHom p (padd 1 0) = p \elim p
   | pzero => idp
   | padd p e => unfold polyMapEval $ rewrite polyHom_polyMapEval $ inv padd-expand
 
+-- | `CAlgebra R` instance over a commutative ring.
 \instance PolyAlgebra (R : CRing) : CAlgebra R
   | Ring => PolyRing R
   | *c => *c
@@ -466,9 +553,11 @@
   }
   \where \open PolyRing
 
+-- | Compatibility of evaluation with quotient by an ideal.
 \lemma factorHom_polyMapEval {R : CRing} {I : Ideal (PolyAlgebra R)} {p : Poly R} : polyMapEval (factorHom {I} RingHom.∘ polyHom) p (in~ (padd 1 0)) = in~ p
   => pmap (polyEval __ _) (inv (later $ polyMap-comp _ _)) *> polyEval_polyMap *> pmap factorHom polyHom_polyMapEval
 
+-- | `Ring.With#` / `CRing.With#` instances using a recursive apartness `#0`.
 \instance PolyRingWith# (R : Ring.With#) : Ring.With#
   | Ring => PolyRing R
   | #0 (p : Poly R) : \Prop \with {
@@ -498,19 +587,23 @@
   \where {
     \open PolyRing
 
+    -- | Apartness behavior of scalar action.
     \lemma #0_*c-left {R : Ring.With#} {e : R} {p : Poly R} (h : #0 (e *c p)) : R.#0 e \elim p, h
       | padd p e', byLeft h => #0_*c-left h
       | padd p e', byRight h => R.#0-*-left h
 
+    -- | Apartness behavior of scalar action.
     \lemma #0_*c-right {R : Ring.With#} {e : R} {p : Poly R} (h : #0 (e *c p)) : #0 p \elim p, h
       | padd p e', byLeft h => byLeft (#0_*c-right h)
       | padd p e', byRight h => byRight (R.#0-*-right h)
   }
 
+-- | `Ring.With#` / `CRing.With#` instances using a recursive apartness `#0`.
 \instance PolyCRingWith# (R : CRing.With#) : CRing.With#
   | Ring.With# => PolyRingWith# R
   | *-comm => PolyAlgebra.*-comm
 
+-- | Domain / integral-domain instances over corresponding base rings.
 \instance PolyDomain (R : Domain) : Domain
   | Ring.With# => PolyRingWith# R
   | zro#ide => byRight R.zro#ide
@@ -533,10 +626,12 @@
     \open PolyRingWith#
   }
 
+-- | Domain / integral-domain instances over corresponding base rings.
 \instance PolyIntegralDomain (R : IntegralDomain) : IntegralDomain
   | Domain => PolyDomain R
   | *-comm => PolyAlgebra.*-comm
 
+-- | Strict-domain analogues with the `zeroProduct` lemma.
 \instance PolyStrictDomain (R : StrictDomain) : StrictDomain
   | Ring => PolyRing R
   | zro/=ide x => R.zro/=ide (pmap lastCoef x)
@@ -556,10 +651,12 @@
   }
   \where \open PolyRing
 
+-- | Strict-domain analogues with the `zeroProduct` lemma.
 \instance PolyStrictIntegralDomain (R : StrictIntegralDomain) : StrictIntegralDomain
   | StrictDomain => PolyStrictDomain R
   | *-comm => PolyAlgebra.*-comm
 
+-- | Decidable-equality versions.
 \instance PolyDecRing (R : Ring.Dec) : Ring.Dec
   | Ring => PolyRing R
   | decideEq (p q : Poly R) : Dec (p = q) \with {
@@ -581,46 +678,56 @@
     }
   }
 
+-- | Coefficients distribute over the ring/scalar operations.
 \lemma polyCoef_+ {R : Ring} {p q : Poly R} {n : Nat} : polyCoef (p + q) n = polyCoef p n + polyCoef q n \elim p, q, n
   | pzero, q, n => rewrite zro-left (inv zro-left)
   | padd p x, padd q y, 0 => idp
   | padd p x, pzero, n => inv zro-right
   | padd p x, padd q y, suc n => polyCoef_+
 
+-- | Coefficient of a finite sum.
 \lemma polyCoef_BigSum {R : Ring} {l : Array (Poly R)} {n : Nat} : polyCoef (AddMonoid.BigSum l) n = AddMonoid.BigSum (map (polyCoef __ n) l) \elim l
   | nil => idp
   | a :: l => polyCoef_+ *> pmap (_ +) polyCoef_BigSum
 
+-- | `polyCoef · n` as an `AddGroupHom`.
 \func polyCoefHom {R : Ring} {n : Nat} : AddGroupHom (PolyRing R) R \cowith
   | func => polyCoef __ n
   | func-zro => idp
   | func-+ => polyCoef_+
 
+-- | Coefficients distribute over the ring/scalar operations.
 \lemma polyCoef_negative {R : Ring} {p : Poly R} {n : Nat} : polyCoef (negative p) n = negative (polyCoef p n)
   => polyCoefHom.func-negative
 
+-- | Coefficients distribute over the ring/scalar operations.
 \lemma polyCoef_*c {R : Ring} {a : R} {p : Poly R} {n : Nat} : polyCoef (a PolyRing.*c p) n = a * polyCoef p n \elim p, n
   | pzero, n => inv zro_*-right
   | padd p e, 0 => idp
   | padd p e, suc n => polyCoef_*c
 
+-- | Coefficients distribute over the ring/scalar operations.
 \lemma polyCoef_*-right {R : Ring} {a : R} {p : Poly R} {n : Nat} : polyCoef (p * padd pzero a) n = polyCoef p n * a \elim p, n
   | pzero, n => inv zro_*-left
   | padd p e, 0 => zro-left
   | padd p e, suc n => rewrite (zro-right {PolyRing R}) polyCoef_*-right
 
+-- | Coefficients distribute over the ring/scalar operations.
 \lemma polyCoef_* {R : Ring} {a : R} {p : Poly R} {k n : Nat} : polyCoef (monomial a k * p) (k + n) = a * polyCoef p n \elim k
   | 0 => pmap (\lam s => polyCoef (s + _) n) peq *> rewrite zro-left polyCoef_*c
   | suc k => unfold $ rewrite PolyRing.zro_*c polyCoef_*
 
+-- | Multiplicativity of the constant term.
 \lemma lastCoef_* {R : Ring} {p q : Poly R} : lastCoef (p * q) = lastCoef p * lastCoef q \elim p
   | pzero => inv zro_*-left
   | padd p e => polyCoef_+ *> zro-left *> polyCoef_*c
 
+-- | Multiplicativity of the constant term.
 \lemma lastCoef_pow {R : Ring} {p : Poly R} {n : Nat} : lastCoef (pow p n) = R.pow (lastCoef p) n \elim n
   | 0 => idp
   | suc n => lastCoef_* *> pmap (* _) lastCoef_pow
 
+-- | `polyMap` packaged as a `RingHom (PolyRing f.Dom) (PolyRing f.Cod)`.
 \func polyMapRingHom (f : RingHom) : RingHom (PolyRing f.Dom) (PolyRing f.Cod) \cowith
   | func => polyMap f
   | func-+ {p q : Poly f.Dom} : polyMap f (p + q) = polyMap f p + polyMap f q \elim p, q {
@@ -638,6 +745,7 @@
       | pzero => idp
       | padd q b => pmap2 padd polyMap_*c f.func-*
 
+-- | Evaluation at `a : R` packaged as a ring hom `PolyRing R -> R` (for `R : CRing`).
 \func polyEvalRingHom {R : CRing} (a : R) : RingHom (PolyRing R) R \cowith
   | func => polyEval __ a
   | func-+ {p q : Poly R} : polyEval (p + q) a = polyEval p a + polyEval q a \elim p, q {
@@ -655,35 +763,43 @@
       | pzero => inv zro_*-right
       | padd p y => rewrite polyEval_*c equation.semiring
 
+-- | Composite ring hom for evaluation through a coefficient map.
 \func polyMapEvalRingHom {R : Ring} {S : CRing} (f : RingHom R S) (a : S) : RingHom (PolyRing R) S
   => polyEvalRingHom a RingHom.∘ polyMapRingHom f
   \where
     \lemma polyMapEval_*c {R : Ring} {S : CRing} {f : RingHom R S} {x : R} {a : S} {p : Poly R} : polyMapEval f (x PolyRing.*c p) a = f x * polyMapEval f p a
       => pmap (polyEval __ a) polyMapRingHom.polyMap_*c *> polyEvalRingHom.polyEval_*c
 
+-- | Two ring homs out of `PolyRing R` are equal if they agree on constants and on `padd 1 0` (the indeterminate `X`).
 \func polyMapEval-unique {R S : Ring} (f g : RingHom (PolyRing R) S) (p : \Pi (r : R) -> f (padd pzero r) = g (padd pzero r)) (q : f (padd 1 0) = g (padd 1 0)) (x : PolyRing R) : f x = g x \elim x
   | pzero => f.func-zro *> inv g.func-zro
   | padd x e => pmap f padd-expand *> f.func-+ *> pmap2 (+) (f.func-* *> pmap2 (*) (polyMapEval-unique _ _ p q x) q *> inv g.func-*) (p e) *> inv g.func-+ *> inv (pmap g padd-expand)
 
+-- | Closure under sum/negation.
 \lemma degree<_+ {R : Ring} {p q : Poly R} {n : Nat} (dp : degree< p n) (dq : degree< q n) : degree< (p + q) n
   => \lam s => polyCoef_+ *> pmap2 (+) (dp s) (dq s) *> zro-left
 
+-- | Closure under sum/negation.
 \lemma degree<_negative {R : Ring} {p : Poly R} {n : Nat} (dp : degree< p n) : degree< (negative p) n
   => \lam s => polyCoef_negative *> pmap negative (dp s) *> R.negative_zro
 
+-- | Degree reduction when multiplying by a linear monic.
 \lemma degree-monic-reduce {R : Ring} (p : Poly R) (a : R) (n : Nat) (d : degree<= (p * padd 1 a) (suc n)) : degree<= p n \elim p, n
   | pzero, n => ()
   | padd p e, 0 => \let t => degree<=0 _ $ transport (degree<= __ _) (+-assoc *> pmap (_ +) negative-right *> zro-right) $ degree<=_+ {_} {_} {negative (padd pzero (e * 1))} d idp
                    \in (aux a _ 0 (pmap (_ +) peq *> zro-right *> t)).1
   | padd p e, suc n => degree-monic-reduce p a n $ transport (degree<= __ _) (+-assoc *> pmap (_ +) negative-right *> zro-right) $ degree<=_+ {_} {_} {negative (padd pzero (e * 1))} d ()
+  -- | Degree reduction when multiplying by a linear monic.
   \where \private \lemma aux {p : Poly R} (a b c : R) (q : p * padd 1 a + padd pzero c = padd pzero b) : \Sigma (p = pzero) (c = b) \elim p
     | pzero => (idp, pmap (polyCoef __ 0) q)
     | padd p e => \let t => aux _ _ _ $ inv zro-right *> pmap polyShift q *> inv peq
                   \in (pmap2 padd t.1 (inv ide-right *> t.2) *> peq, inv zro-left *> pmap (+ c) (inv $ zro-left *> pmap (* _) (inv ide-right *> t.2) *> R.zro_*-left) *> pmap (polyCoef __ 0) q)
 
+-- | Coefficient of `padd q a * p` at successor index.
 \lemma polyCoef-linear-* {R : Ring} (p q : Poly R) (a : R) (n : Nat) : polyCoef (padd q a * p) (suc n) = polyCoef (q * p) n + a * polyCoef p (suc n)
   => polyCoef_+ *> pmap (_ +) polyCoef_*c
 
+-- | `polyCoef (p*q) (n+m) = polyCoef p n * polyCoef q m` under degree bounds.
 \lemma leadCoef-product {R : Ring} {p q : Poly R} {n m : Nat} (dp : degree<= p n) (dq : degree<= q m) : polyCoef (p * q) (n + m) = polyCoef p n * polyCoef q m \elim p, n
   | pzero, n => inv zro_*-left
   | padd p x, 0 => polyCoef_+ *> pmap2 (+) (\case \elim m \with {
@@ -692,44 +808,54 @@
   }) polyCoef_*c *> zro-left
   | padd p x, suc n => polyCoef_+ *> pmap2 (+) (leadCoef-product dp dq) (polyCoef_*c *> pmap (x *) (degree<=.toCoefs q m dq $ NatSemiring.<_+-left m NatOrder.zero<suc) *> zro_*-right) *> zro-right
 
+-- | Leading-coefficient identities for products and powers.
 \lemma leadCoef_BigProd {R : Ring} {l : Array (Poly R)} (d : Array Nat l.len) (ld : \Pi (j : Fin l.len) -> degree<= (l j) (d j))
   : polyCoef (BigProd l) (AddMonoid.BigSum d) = R.BigProd (\lam j => polyCoef (l j) (d j)) \elim l, d
   | nil, d => idp
   | p :: l, n :: d => leadCoef-product (ld 0) (degree<=_BigProd d (\lam j => ld (suc j))) *> pmap (_ *) (leadCoef_BigProd d (\lam j => ld (suc j)))
 
+-- | Leading-coefficient identities for products and powers.
 \lemma leadCoef_BigProd1 {R : Ring} {l : Array (Poly R)} (ld : \Pi (j : Fin l.len) -> degree<= (l j) 1) (lc : \Pi (j : Fin l.len) -> polyCoef (l j) 1 = 1) : polyCoef (BigProd l) l.len = 1
   => pmap (polyCoef _) (inv Semiring.BigSum_replicate1) *> leadCoef_BigProd (replicate l.len 1) ld *> pmap BigProd (exts lc) *> BigProd_replicate1 {_} {l.len}
 
+-- | Leading-coefficient identities for products and powers.
 \lemma leadCoef_pow {R : Ring} {p : Poly R} {d n : Nat} (pd : degree<= p d) : polyCoef (pow p n) (d * n) = pow (polyCoef p d) n
   => pmap2 polyCoef (inv BigProd_replicate) (*-comm *> inv Semiring.BigSum_replicate) *> leadCoef_BigProd {R} {replicate n p} (replicate n d) (\lam _ => pd) *> BigProd_replicate
 
+-- | Closure of `degree<=` under the algebraic operations.
 \lemma degree<=_+ {R : Ring} {p q : Poly R} {n : Nat} (dp : degree<= p n) (dq : degree<= q n) : degree<= (p + q) n \elim p, q, n
   | pzero, q, n => dq
   | padd p x, pzero, n => dp
   | padd p x, padd q y, 0 => pmap2 (+) dp dq
   | padd p x, padd q y, suc n => degree<=_+ dp dq
 
+-- | Closure of `degree<=` under the algebraic operations.
 \lemma degree<=_BigSum {R : Ring} {l : Array (Poly R)} {n : Nat} (d : \Pi (j : Fin l.len) -> degree<= (l j) n) : degree<= (AddMonoid.BigSum l) n
   => AddMonoid.BigSum-pred {_} {degree<= __ n} () (\lam {p} {q} => degree<=_+) d
 
+-- | Closure of `degree<=` under the algebraic operations.
 \lemma degree<=_FinSum {R : Ring} {J : FinSet} {a : J -> Poly R} {n : Nat} (d : \Pi (j : J) -> degree<= (a j) n) : degree<= (AbMonoid.FinSum a) n
   => AbMonoid.FinSum-pred {_} {degree<= __ n} () (\lam {p} {q} => degree<=_+) d
 
+-- | Closure of `degree<=` under the algebraic operations.
 \lemma degree<=_*c {R : Ring} {a : R} {p : Poly R} {n : Nat} (d : degree<= p n) : degree<= (a PolyRing.*c p) n \elim p, n
   | pzero, n => ()
   | padd p e, 0 => pmap (a PolyRing.*c) d
   | padd p e, suc n => degree<=_*c d
 
+-- | Closure of `degree<=` under the algebraic operations.
 \lemma degree<=_negative {R : Ring} {p : Poly R} {n : Nat} (d : degree<= p n) : degree<= (negative p) n \elim p, n
   | pzero, n => ()
   | padd p e, 0 => pmap negative d
   | padd p e, suc n => degree<=_negative d
 
+-- | Closure of `degree<=` under the algebraic operations.
 \lemma degree<=_* {R : Ring} {p q : Poly R} {n m : Nat} (dp : degree<= p n) (dq : degree<= q m) : degree<= (p * q) (n + m) \elim p, n
   | pzero, n => ()
   | padd p e, 0 => rewrite dp $ transportInv (\lam x => degree<= (x + _) m) peq $ degree<=_*c dq
   | padd p e, suc n => degree<=_+ (later $ degree<=_* dp dq) (degree<=_*c $ degree<=-trans dq $ NatSemiring.<=_+ {0} {suc n} zero<=_ <=-refl)
 
+-- | In a strict domain, `degree<= (p*q) 0` forces `p` or `q` to be a constant.
 \lemma degree<=0_*-conv {R : StrictDomain} {p q : Poly R} (d : degree<= (p * q) 0) : degree<= p 0 || degree<= q 0
   => \case degree-exists p, degree-exists q \with {
     | inP dp, inP dq => aux dp.2 dq.2 d
@@ -745,6 +871,7 @@
       }
   }
 
+-- | An invertible polynomial in a strict domain is a constant invertible.
 \lemma polyInv {R : StrictDomain} {p : Poly R} (pi : Inv p) : ∃ (r : R) (p = padd pzero r) (Inv r)
   => \have lem (dp : degree<= p 0) (dq : degree<= pi.inv 0) : ∃ (r : R) (p = padd pzero r) (Inv r)
   => inP (polyCoef p 0, degree<=0 p dp, \new Inv {
@@ -757,6 +884,7 @@
       | byRight d => lem (coefInv $ rewrite (degree<=0 pi.inv d, inv PolyRing.*c_*) in pi.inv-left) d
     }
   \where {
+    -- | An invertible polynomial in a strict domain is a constant invertible.
     \lemma coefInv {R : StrictDomain} {c : R} {p : Poly R} (q : c PolyRing.*c p = 1) : degree<= p 0 \elim p
       | pzero => ()
       | padd p a => \case zeroProduct {_} {padd pzero c} (pmap (+ _) peq *> zro-left *> pmap polyShift q) \with {
@@ -766,6 +894,7 @@
       }
   }
 
+-- | Mutual divisibility forces the inverses to be inverse constants (or both zero).
 \lemma polyDiv {R : StrictDomain} {p q : Poly R} (p|q : LDiv p q) (q|p : LDiv q p)
   : (\Sigma (p = 0) (q = 0)) || (\Sigma (a b : R) (p|q.inv = padd pzero a) (q|p.inv = padd pzero b) (a * b = 1) (b * a = 1))
   => \case StrictDomain.zeroOrCancel-left $ inv *-assoc *> pmap (* _) p|q.inv-right *> q|p.inv-right *> inv ide-right \with {
@@ -780,6 +909,7 @@
     }
   }
 
+-- | If `p*q` is a product of linear factors `(X - l_j)`, then either `q` has a root among the `l_j` or `q` is a unit.
 \lemma polyDiv-linear {R : StrictIntegralDomain} {p q : Poly R} {l : Array R} (s : p * q = Monoid.BigProd (map (\lam a => padd 1 (negative a)) l))
   : (\Sigma (j : Fin l.len) (polyEval q (l j) = 0)) || Monoid.Inv q \elim l
   | nil => byRight (Monoid.Inv.lmake p s)
@@ -792,6 +922,7 @@
     | byRight r => byLeft (0,r)
   }
 
+-- | Factorization lemma when `p * q = padd s 0`.
 \lemma monomial-factor {R : StrictIntegralDomain} {p q s : Poly R} (t : p * q = padd s 0)
   : ∃ (r : Poly R) (Or (\Sigma (p = padd r 0) (r * q = s)) (\Sigma (q = padd r 0) (p * r = s))) \elim p, q
   | pzero, q => inP (pzero, inl (inv peq, pmap polyShift t))
@@ -801,6 +932,7 @@
     | byRight b=0 => inP (q, inr (pmap (padd q) b=0, pmap (+ _) (inv zro-right *> pmap2 (\lam x => padd x 0 +) *-comm (inv PolyRing.zro_*c *> pmap (*c p) (inv b=0)) *> *-comm) *> pmap polyShift t))
   }
 
+-- | A divisor of `X^n` (in a strict integral domain) is itself a monomial `c · X^k`.
 \lemma monomial_div {R : StrictIntegralDomain} {n : Nat} {p : Poly R} (d : LDiv p (monomial 1 n)) : ∃ (c : R) (c /= 0) (k : Nat) (p = monomial c k) \elim n, p
   | 0, p => TruncP.map (polyInv $ Inv.lmake d.inv $ *-comm *> d.inv-right) \lam s => (s.1, NonZeroSemiring.inv-nonZero s.3, 0, s.2)
   | suc n, p => \case monomial-factor d.inv-right \with {
@@ -808,25 +940,31 @@
     | inP (r, inr s) => monomial_div (\new LDiv p (monomial 1 n) r s.2)
   }
 
+-- | If `monomial c (suc n)` divides `p`, then `p` has zero constant term.
 \lemma monomial_div2 {R : Ring} {n : Nat} {c : R} {p : Poly R} (d : LDiv (monomial c (suc n)) p) : lastCoef p = 0 \elim p
   | pzero => idp
   | padd p a => pmap lastCoef $ inv $ pmap (_ +) (inv PolyRing.zro_*c) *> d.inv-right
 
+-- | Closure of `degree<=` under the algebraic operations.
 \lemma degree<=_BigProd {R : Ring} {l : Array (Poly R)} (d : Array Nat l.len) (p : \Pi (j : Fin l.len) -> degree<= (l j) (d j))
   : degree<= (BigProd l) (AddMonoid.BigSum d) \elim l, d
   | nil, d => idp
   | a :: l, n :: d => degree<=_* (p 0) $ degree<=_BigProd d \lam j => p (suc j)
 
+-- | Closure of `degree<=` under the algebraic operations.
 \lemma degree<=_BigProd1 {R : Ring} {l : Array (Poly R)} (p : \Pi (j : Fin l.len) -> degree<= (l j) 1) : degree<= (BigProd l) l.len
   => transport (degree<= _) Semiring.BigSum_replicate1 (degree<=_BigProd (replicate l.len 1) p)
 
+-- | Closure of `degree<=` under the algebraic operations.
 \lemma degree<=_pow {R : Ring} {p : Poly R} {d n : Nat} (pd : degree<= p d) : degree<= (pow p n) (d * n)
   => transport2 degree<= BigProd_replicate (Semiring.BigSum_replicate *> *-comm) (degree<=_BigProd {_} {replicate n p} (replicate n d) \lam _ => pd)
 
+-- | `a *c monomial c n = monomial (a*c) n`.
 \lemma *c_monomial {R : Ring} {a c : R} {n : Nat} : a PolyRing.*c monomial c n = monomial (a * c) n \elim n
   | 0 => idp
   | suc n => pmap2 padd *c_monomial zro_*-right
 
+-- | Decidable degree (returns `0` for `pzero` and constants).
 \func degree {R : Ring.Dec} (p : Poly R) : Nat \elim p
   | pzero => 0
   | padd p _ => \case decideEq p 0 \with {
@@ -835,13 +973,16 @@
   }
   | peq => idp
 
+-- | Translations to/from the predicate-style bounds.
 \lemma degree_degree< {R : Ring.Dec} {p : Poly R} {n : Nat} (d : degree p < n) : degree< p n \elim n
   | suc n => degree<=_degree< $ degree_degree<= (<_suc_<= d)
 
+-- | Translations to/from the predicate-style bounds.
 \lemma degree<_degree {R : Ring.Dec} {p : Poly R} {n : Nat} (p/=0 : p /= 0) (d : degree< p n) : degree p < n \elim n
   | 0 => absurd $ p/=0 $ degree<=.trivialPoly \lam k _ => d zero<=_
   | suc n => <=_<_suc $ degree<=_degree $ degree<_degree<= d
 
+-- | Translations to/from the predicate-style bounds.
 \lemma degree_degree<= {R : Ring.Dec} {p : Poly R} {n : Nat} (q : degree p <= n) : degree<= p n \elim p, n
   | pzero, n => ()
   | padd p e, 0 => cases (decideEq p 0, q) \with {
@@ -853,6 +994,7 @@
     | no n1, q => suc<=suc.conv q
   }
 
+-- | Translations to/from the predicate-style bounds.
 \lemma degree<=_degree {R : Ring.Dec} {p : Poly R} {n : Nat} (d : degree<= p n) : degree p <= n \elim p, n
   | pzero, n => zero<=_
   | padd p e, 0 => rewrite (decideEq=_reduce d) zero<=_
@@ -861,6 +1003,7 @@
     | no _ => suc<=suc (degree<=_degree d)
   }
 
+-- | `degree` is preserved under injective ring-hom coefficient maps.
 \lemma degree_polyMap {R S : Ring.Dec} {f : RingHom R S} (inj : IsInj f) {p : Poly R} : degree (polyMap f p) = degree p \elim p
   | pzero => idp
   | padd p e => mcases {2} \with {
@@ -868,12 +1011,14 @@
     | no p/=0 => rewrite (decideEq/=_reduce \lam q => p/=0 $ polyMap-inj inj q) $ pmap suc (degree_polyMap inj)
   }
 
+-- | Leading coefficient of a monic polynomial at its `degree` is `1`.
 \lemma monic-coef {R : Ring.Dec} {p : Poly R} (pm : isMonic p) : polyCoef p (degree p) = 1 \elim pm
   | inP (n,d,q) => \case LinearOrder.dec<_<= (degree p) n \with {
     | inl p<n => R.trivial (inv (degree_degree< p<n <=-refl) *> q)
     | inr n<=p => pmap (polyCoef p) (<=-antisymmetric (degree<=_degree d) n<=p) *> q
   }
 
+-- | Decidable leading coefficient.
 \func leadCoef {R : Ring.Dec} (p : Poly R) : R \elim p
   | pzero => 0
   | padd p e => \case decideEq p 0 \with {
@@ -882,6 +1027,7 @@
   }
   | peq => idp
 
+-- | `leadCoef p = polyCoef p (degree p)`.
 \lemma leadCoef_polyCoef {R : Ring.Dec} {p : Poly R} : leadCoef p = polyCoef p (degree p) \elim p
   | pzero => idp
   | padd p e => mcases \with {
@@ -889,6 +1035,7 @@
     | no p/=0 => leadCoef_polyCoef
   }
 
+-- | `leadCoef p = 0 -> p = 0`.
 \lemma leadCoef=0-lem {R : Ring.Dec} {p : Poly R} (s : leadCoef p = 0) : p = 0 \elim p
   | pzero => idp
   | padd p a => cases (decideEq p 0, s) \with {
@@ -896,6 +1043,7 @@
     | no p/=0, s => absurd $ p/=0 (leadCoef=0-lem s)
   }
 
+-- | Behavior on monomials.
 \lemma leadCoef_monomial {R : Ring.Dec} {a : R} {n : Nat} : leadCoef (monomial a n) = a \elim n
   | 0 => idp
   | suc n => mcases \with {
@@ -903,6 +1051,7 @@
     | no _ => leadCoef_monomial
   }
 
+-- | Behavior on monomials.
 \lemma degree_monomial {R : Ring.Dec} {a : R} {n : Nat} (a/=0 : a /= 0) : degree (monomial a n) = n \elim n
   | 0 => idp
   | suc n => mcases \with {
@@ -910,6 +1059,7 @@
     | no _ => pmap suc (degree_monomial a/=0)
   }
 
+-- | A polynomial of degree `0` equals the constant given by its lead coefficient.
 \lemma degree=0-lem {R : Ring.Dec} {p : Poly R} (dp=0 : degree p = 0) : p = padd pzero (leadCoef p) \elim p
   | pzero => inv peq
   | padd p a => mcases \with {
@@ -917,9 +1067,15 @@
     | no p/=0 => \case rewrite (decideEq/=_reduce p/=0) in dp=0
   }
 
+{- | Over a discrete field, normalize a nonzero polynomial to a monic by scaling by the inverse of its leading
+ -   coefficient.
+ -}
 \lemma field-toMonic {K : DiscreteField} {p : Poly K} (p/=0 : p /= 0) : isMonic (finv (leadCoef p) *c p)
   => inP (degree p, degree<=_*c $ degree_degree<= <=-refl, polyCoef_*c *> pmap (_ *) (inv leadCoef_polyCoef) *> K.finv-left \lam s => p/=0 (leadCoef=0-lem s))
 
+{- | Generalized polynomial division with leading-coefficient powers as multipliers; returns quotient `q`, remainder
+ -   `r`, and the identity `(polyCoef g n)^k *c f = q*g + r` with `degree< r n`.
+ -}
 \func polyDivision {R : CRing} (f g : Poly R) (k m n : Nat) (p : suc m = k + n) (df : degree<= f m) (dg : degree<= g n)
   : \Sigma (q r : Poly R) (pow (polyCoef g n) k *c f = q * g + r) (degree< r n) \elim k, m, n
   | 0, m, n => (pzero, f, PolyRing.ide_*c *> equation.semiring, rewriteI p $ degree<=_degree< df)
@@ -932,6 +1088,7 @@
       (polyCoef_+ *> pmap (_ +) polyCoef_negative *> rewrite (polyCoef_*c, 3 pmap pred p, polyCoef_*, *-comm) negative-right)) dg
     \in (rec.1 + monomial (pow (polyCoef g n) k * polyCoef f (suc m)) k, rec.2, rewrite (PolyRing.*c-assoc, rdistr) $ unfold f1 (rewrite (PolyRing.*c-ldistr, PolyRing.*c_negative, PolyRing.*c-comm-left, *c_monomial) equation.abGroup) *> pmap (_ +) rec.3 *> inv +-assoc *> pmap (+ _) +-comm, rec.4)
 
+-- | Existence and uniqueness of division by a monic polynomial.
 \lemma monicPolyDivisionContr {R : CRing} (f g : Poly R) (n : Nat) (dg : degree<= g n) (dm : polyCoef g n = 1) : Contr (\Sigma (q r : Poly R) (f = q * g + r) (degree< r n))
   => \case degree-exists f \with {
     | inP (l,df) => isProp=>isContr (\lam s1 s2 =>
@@ -942,45 +1099,56 @@
       \in (s.1, s.2, later (rewrite dm $ inv $ pmap (*c f) (R.pow_ide {suc l}) *> PolyRing.ide_*c) *> s.3, s.4)
   }
   \where {
+    -- | Cancellation: if `q*g` has degree less than that of monic `g`, then `q = 0`.
     \lemma aux {R : Ring} (q g : Poly R) (n : Nat) (dg : degree<= g n) (dm : polyCoef g n = 1) (dqg : degree< (q * g) n) : q = 0
       => degree<=.trivialPoly \lam k dq => inv (leadCoef-product dq dg *> pmap (_ *) dm *> ide-right) *> dqg (<=_+ zero<=_ <=-refl)
   }
 
+-- | Existence and uniqueness of division by a monic polynomial.
 \lemma monicPolyDivision-unique {R : CRing} (f g : Poly R) (n : Nat) (dg : degree<= g n) (dm : polyCoef g n = 1)
   : isProp (\Sigma (q r : Poly R) (f = q * g + r) (degree< r n))
   => isContr=>isProp (monicPolyDivisionContr f g n dg dm)
 
+-- | Existence and uniqueness of division by a monic polynomial.
 \lemma monicPolyDivision {R : CRing} (f g : Poly R) (n : Nat) (dg : degree<= g n) (dm : polyCoef g n = 1)
   : \Sigma (q r : Poly R) (f = q * g + r) (degree< r n) \level monicPolyDivision-unique f g n dg dm
   => Contr.center {monicPolyDivisionContr f g n dg dm}
 
+-- | Division by `X - a` with remainder `polyEval f a`.
 \lemma degree1PolyDivision-unique {R : CRing} (f : Poly R) (a : R) {q1 q2 : Poly R} (p1 : f = q1 * padd 1 (negative a) + padd pzero (polyEval f a)) (p2 : f = q2 * padd 1 (negative a) + padd pzero (polyEval f a)) : q1 = q2
   => pmap __.1 $ monicPolyDivision-unique f (padd 1 (negative a)) 1 idp idp  (q1, padd pzero (polyEval f a), p1, degree<=_degree< idp) (q2, padd pzero (polyEval f a), p2, degree<=_degree< idp)
 
+-- | Division by `X - a` with remainder `polyEval f a`.
 \lemma degree1PolyDivision {R : CRing} (f : Poly R) (a : R)
   : \Sigma (q : Poly R) (f = q * padd 1 (negative a) + padd pzero (polyEval f a)) \level \lam s1 s2 => ext (degree1PolyDivision-unique f a s1.2 s2.2)
   => \have t => monicPolyDivision f (padd 1 (negative a)) 1 idp idp
      \in (t.1, t.3 *> pmap (_ +) (fromArray_polyCoef t.4 *> pmap (padd pzero) (later (repeat simplify (rewrite (fromArray_polyCoef t.4) simplify)) *> inv (pmap (polyEval __ a) t.3 *> (polyEvalRingHom a).func-+ *> pmap (+ _) func-*))))
 
+-- | Uniqueness of the linear divisor.
 \lemma rootPolyDivision-unique {R : CRing} (f : Poly R) (a : R) (p : polyEval f a = 0) : isProp (LDiv (padd 1 (negative a)) f)
   => \lam s1 s2 => ext $ degree1PolyDivision-unique f a
                            (inv (LDiv.inv-right {s1}) *> rewrite p (*-comm *> inv zro-right *> pmap (_ +) (inv peq)))
                            (inv (LDiv.inv-right {s2}) *> rewrite p (*-comm *> inv zro-right *> pmap (_ +) (inv peq)))
 
+-- | Quotient `f / (X - a)` (the witness from `degree1PolyDivision`).
 \func rootDiv {R : CRing} (f : Poly R) (a : R) : Poly R
   => (degree1PolyDivision f a).1
 
+-- | `f = rootDiv f a * (X - a)` whenever `polyEval f a = 0`.
 \lemma rootDiv_* {R : CRing} {f : Poly R} {a : R} (p : polyEval f a = 0)
   : f = rootDiv f a * padd 1 (negative a)
   => (degree1PolyDivision f a).2 *> pmap (_ +) (later $ rewrite p peq) *> zro-right
 
+-- | Dividing out a root drops the degree by one.
 \lemma rootPolyDivision_degree {R : IntegralDomain.Dec} {f : Poly R} (f/=0 : f /= 0) {a : R} (p : polyEval f a = 0) {n : Nat} : degree f = suc (degree (rootDiv f a))
   => rewrite {1} (rootDiv_* p *> *-comm) $ degree_* {_} {padd 1 (negative a)} (\lam p => R.zro/=ide $ inv $ pmap (polyCoef __ 1) p) (\lam q => f/=0 $ rootDiv_* p *> *-comm *> cong q *> zro_*-right) *> rewrite (decideEq/=_reduce $ /=-sym zro/=ide) idp
 
+-- | Decidable-equality versions.
 \instance PolyDecCRing (R : CRing.Dec) : CRing.Dec
   | Ring.Dec => PolyDecRing R
   | *-comm => PolyAlgebra.*-comm
 
+-- | Decidable-equality versions.
 \instance PolyDecDomain (R : Domain.Dec) : Domain.Dec
   | Domain => PolyDomain R
   | decideEq => PolyDecRing.decideEq
@@ -993,13 +1161,16 @@
   }
   \where \open PolyRingWith#
 
+-- | Decidable-equality versions.
 \instance PolyDecIntegralDomain (R : IntegralDomain.Dec) : IntegralDomain.Dec
   | Domain.Dec => PolyDecDomain R
   | *-comm => PolyAlgebra.*-comm
 
+-- | `degree (padd p a) = suc (degree p)` for nonzero `p`.
 \lemma degree_padd {R : Ring.Dec} {p : Poly R} (a : R) (p/=0 : p /= 0) : degree (padd p a) = suc (degree p)
   => rewrite (decideEq/=_reduce p/=0) idp
 
+-- | Behavior of degree and lead coefficient under addition with strictly smaller-degree summand.
 \lemma degree_+ {R : Ring.Dec} {p q : Poly R} (q<p : degree q < degree p) : degree (p + q) = degree p \elim p, q
   | pzero, pzero => idp
   | pzero, padd q a => \case q<p
@@ -1012,6 +1183,7 @@
     }
   }
 
+-- | Behavior of degree and lead coefficient under addition with strictly smaller-degree summand.
 \lemma leadCoef_+ {R : Ring.Dec} {p q : Poly R} (q<p : degree q < degree p) : leadCoef (p + q) = leadCoef p \elim p, q
   | pzero, pzero => idp
   | pzero, padd q a => \case q<p
@@ -1024,6 +1196,7 @@
     }
   }
 
+-- | Degree under scalar multiplication in a decidable domain.
 \lemma degree_*c {R : Domain.Dec} {c : R} {p : Poly R} (c/=0 : c /= 0) : degree (c PolyRing.*c p) = degree p \elim p
   | pzero => idp
   | padd p a => mcases {2} \with {
@@ -1031,10 +1204,12 @@
     | no p/=0 => rewrite (decideEq/=_reduce $ *c-nonZero c/=0 p/=0) $ pmap suc (degree_*c c/=0)
   }
   \where {
+    -- | Degree under scalar multiplication in a decidable domain.
     \lemma *c-nonZero (c/=0 : c /= 0) {p : Poly R} (p/=0 : p /= 0) : c PolyRing.*c p /= 0
       => transportInv (/= 0) PolyRing.*c_* $ Domain.nonZero_* {_} {padd pzero c} (\lam e => c/=0 $ pmap lastCoef e) p/=0
   }
 
+-- | Multiplicativity of degree on a decidable domain.
 \lemma degree_* {R : Domain.Dec} {p q : Poly R} (p/=0 : p /= 0) (q/=0 : q /= 0) : degree (p * q) = degree p + degree q \elim p
   | pzero => absurd (p/=0 idp)
   | padd p e => mcases \with {
@@ -1043,15 +1218,18 @@
     rewrite (decideEq/=_reduce $ Domain.nonZero_* p/=0' q/=0) (pmap suc (degree_* p/=0' q/=0))
   }
   \where
+    -- | Multiplicativity of degree on a decidable domain.
     \lemma degree_< (q/=0 : q /= 0) {a : R} {p : Poly R} (p/=0 : p /= 0) : degree (a PolyRing.*c q) < suc (degree (p * q))
       => \case decideEq a 0 \with {
         | yes a=0 => rewrite (a=0,PolyRing.zro_*c) NatOrder.zero<suc
         | no a/=0 => rewrite (degree_*c a/=0, degree_* p/=0 q/=0) $ <=_+ zero<=_ <=-refl <∘r id<suc
       }
 
+-- | Degree of a known product.
 \lemma degree_*_= {R : Domain.Dec} {p q s : Poly R} (s/=0 : s /= 0) (t : s = p * q) : degree s = degree p + degree q
   => pmap degree t *> degree_* (\lam p=0 => s/=0 $ t *> pmap (* q) p=0) (\lam q=0 => s/=0 $ t *> pmap (p *) q=0 *> zro_*-right)
 
+-- | Multiplicativity of the lead coefficient.
 \lemma leadCoef_*c {R : Domain.Dec} {a : R} {p : Poly R} : leadCoef (a PolyRing.*c p) = a * leadCoef p \elim p
   | pzero => inv R.zro_*-right
   | padd p e => mcases {2} \with {
@@ -1062,6 +1240,7 @@
     }
   }
 
+-- | Multiplicativity of the lead coefficient.
 \lemma leadCoef_* {R : Domain.Dec} {p q : Poly R} : leadCoef (p * q) = leadCoef p * leadCoef q \elim p
   | pzero => inv R.zro_*-left
   | padd p e => mcases \with {
@@ -1072,6 +1251,7 @@
     }
   }
 
+-- | Any nonzero polynomial factors uniquely as `X^n · q` with `q` having nonzero constant term.
 \func poly-factor-monomial {R : AddPointed} {D : DecSet R} {p : Poly R}
   : p /= pzero -> \Sigma (n : Nat) (q : Poly R) (p = iterr (padd __ 0) n q) (lastCoef q /= 0) \elim p
   | pzero => \lam p/=0 => absurd (p/=0 idp)
@@ -1082,6 +1262,7 @@
   }
   | peq => pathOver $ simp_coe \lam f => absurd (f idp)
 
+-- | Uniqueness of that factorization.
 \lemma poly-factor-monomial-unique {R : AddPointed} {n m : Nat} {q q' : Poly R} (c : iterr (padd __ 0) n q = iterr (padd __ 0) m q') (qc : lastCoef q /= 0) (q'c : lastCoef q' /= 0) : \Sigma (n = m) (q = q') \elim n, m
   | 0, 0 => (idp, c)
   | 0, suc m => absurd $ qc $ rewrite c idp
@@ -1089,10 +1270,14 @@
   | suc n, suc m => \have r => poly-factor-monomial-unique (pmap polyShift c) qc q'c
                     \in (pmap suc r.1, r.2)
 
+-- | `monomial 1 n * p` equals `n` iterations of `padd __ 0` on `p`.
 \lemma poly-monomial-char {R : Ring} {n : Nat} {p : Poly R} : monomial 1 n * p = iterr (padd __ 0) n p \elim n
   | 0 => pmap2 (+) peq PolyRing.ide_*c
   | suc n => pmap (_ +) PolyRing.zro_*c *> pmap (padd __ 0) poly-monomial-char
 
+{- | Given a linear endomorphism `f : LinearMap U U` of an `R`-module `U`, equips `U` with a `PolyRing R`-module
+ -   structure where `X` acts as `f`.
+ -}
 \func polyModule {R : Ring} {U : LModule R} (f : LinearMap U U) : LModule (PolyRing R) \cowith
   | AbGroup => U
   | *c p u => poly_func p f u
@@ -1111,19 +1296,23 @@
   }
   | ide_*c => pmap2 (+) f.func-zro ide_*c *> zro-left
   \where {
+    -- | Iteratively applies `f` and adds the scaled term, evaluating a polynomial as an endomorphism.
     \func poly_func {R : Ring} {U : LModule R} (p : Poly R) (f : AddPointedHom U U) (u : U) : U \elim p
       | pzero => 0
       | padd p e => f (poly_func p f u) + e *c u
       | peq => pmap2 (+) f.func-zro U.*c_zro-left *> zro-left
 
+    -- | Polynomial action on zero is zero.
     \lemma poly_func_zro {R : Ring} {U : LModule R} {p : Poly R} {f : AddPointedHom U U} : poly_func p f 0 = 0 \elim p
       | pzero => idp
       | padd p e => pmap2 (f __ + __) poly_func_zro U.*c_zro-right *> zro-right *> f.func-zro
 
+    -- | Compatibility of the action with scalar multiplication of the polynomial.
     \lemma poly_func_poly-*c {R : Ring} {U : LModule R} {a : R} {p : Poly R} {f : LinearMap U U} {u : U} : poly_func (a PolyRing.*c p) f u = a *c poly_func p f u \elim p
       | pzero => inv U.*c_zro-right
       | padd p e => pmap2 (+) (pmap f poly_func_poly-*c *> f.func-*c) U.*c-assoc *> inv U.*c-ldistr
 
+    -- | Finite generation transfers from `U` (as `R`-module) to `U` (as `R[X]`-module via `f`).
     \lemma finitelyGenerated {R : Ring} {U : LModule R} {f : LinearMap U U} (fg : U.IsFinitelyGenerated) : LModule.IsFinitelyGenerated {polyModule f} \elim fg
       | inP (l,lg) => inP (l, \lam x => TruncP.map (lg x) \lam s => (map (padd pzero) s.1, s.2 *> pmap U.BigSum (exts \lam j => inv $ pmap (+ _) f.func-zro *> zro-left)))
   }

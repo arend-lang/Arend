@@ -1,3 +1,13 @@
+{- | Constructs the permutation representation of a group from a G-set and shows when it fails to be irreducible.
+ -
+ -   This module turns any G-set `X` into a linear representation by letting `G` act on the free `R`-module `R^X` via
+ -   permutation of basis indices: `(g ** f) j = f (g⁻¹ · j)`. The construction is the standard "linearization" of a
+ -   group action, providing the bridge between combinatorial G-sets and linear representations. The second part of the
+ -   module exhibits a canonical proper sub-representation — the diagonal copy of the trivial representation spanned by
+ -   the all-ones vector — and uses it together with a non-constant indicator vector to witness reducibility whenever
+ -   `X` has at least two distinct points and `R` is non-trivial.
+ -}
+
 \import Algebra.Group
 \import Algebra.Group.GSet
 \import Algebra.Group.Representation.Irreducible
@@ -39,6 +49,9 @@
   (different-points : somepoint' /= somepoint)
   (decideEq-somepoint : \Pi (x : X) -> Dec (x = somepoint))
 {
+  {- | The diagonal embedding packaged as a `SubLRepres Repr` with source `R_m-triv`, using `fixed-submodule` to verify
+   -   the intertwining property.
+   -}
   \func invSubRepr : SubLRepres R G (PermRepr X) \cowith
     | contains f => ∀ {x y} (f x = f y)
     | contains_zro => idp
@@ -63,6 +76,9 @@
         | no _, no q, x => absurd (q idp)
       }
 
+  {- | Concludes that `PermRepr X` is not irreducible by feeding `invSubRepr` to the irreducibility hypothesis and
+   -   contradicting `SubRepr-non-trivial`.
+   -}
   \lemma Not-Irreducible (p : IsIrreducible {R} (PermRepr X)) : 0 = {R} 1
     => SubRepr-non-trivial (p invSubRepr)
 }

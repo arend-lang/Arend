@@ -1,3 +1,14 @@
+{- | Operations and lemmas for finite arrays (length-indexed sequences).
+ -
+ -   This module develops the basic theory of `Array A` (length-indexed vectors) and its dependent variant `DArray`. It
+ -   provides constructors and destructors (`mkArray`, `tail`, `::`, `nil`), two flavors of concatenation (`++` for
+ -   arrays of arbitrary length and `++'` when the right length is statically known), and a suite of structural
+ -   operations: `map`, `filter`/`filterMap`, decidable `keep`/`remove`, `nub`, `insert`/`skip`/`replace`, `take`,
+ -   `replicate`, and indexed access. The design centers on indexing by `Fin`, with many lemmas characterizing how
+ -   operations behave on indices (e.g. `++_index-left`, `skip-index`, `insert-index`) so that array equalities can be
+ -   reduced to pointwise equalities via `arrayExt`.
+ -}
+
 \import Algebra.Meta
 \import Arith.Nat
 \import Data.Bool
@@ -16,46 +27,59 @@
 \import Set
 \import Set.Fin
 
+-- | Build an `Array A n` from a function `Fin n -> A`.
 \func mkArray {A : \Type} {n : Nat} (f : Fin n -> A) => \new Array A n f
 
+-- | Extensionality: pointwise equal arrays are equal.
 \func arrayExt {A : \Type} {n : Nat} {l l' : Array A n} (p : \Pi (j : Fin n) -> l j = l' j) : l = l'
   => path (\lam i => \new Array A n (\lam j => p j i))
 
+-- | Drops the first element of an array.
 \func tail {A : \Type} (l : Array A) : Array A \elim l
   | nil => nil
   | _ :: a => a
 
+-- | Tail for dependent arrays.
 \func taild {n : Nat} {A : Fin (suc n) -> \Type} (a : DArray A) : DArray (\lam j => A (suc j)) \elim a
   | _ :: a => a
 
+-- | Inverse of extensionality, extracts pointwise equality from a path.
 \func array-unext {A : \Type} {n : Nat} {l l' : Array A n} (p : l = {Array A} l') (j : Fin n) : l j = l' j \elim n, l, l', j
   | suc n, a :: l, a1 :: l', 0 => unhead p
   | suc n, a :: l, a1 :: l', suc j => array-unext (pmap tail p) j
 
+-- | An array of length 0 equals `nil`.
 \func len=0 {A : \Type} {l : Array A} (p : l.len = 0) : l = nil \elim l
   | nil => idp
 
+-- | Apply `f : A -> B` pointwise.
 \func map {A B : \Type} (f : A -> B) (as : Array A) : Array B \cowith
   | len => as.len
   | at i => f (as i)
 
+-- | `map f (a :: l) = f a :: map f l`.
 \func map_:: {A B : \Type} (f : A -> B) {a : A} {l : Array A} : map f (a :: l) = f a :: map f l => idp
 
+-- | Congruence for `::`.
 \func cong_:: {A : \Type} {a a' : A} (p : a = a') {l l' : Array A} (q : l = l') : a :: l = a' :: l'
   => path \lam i => p i :: q i
 
+-- | Concatenation when the right length is statically known; preserves `xs.len + n`.
 \func \infixr 5 ++' {A : \Type} (xs : Array A) {n : Nat} (ys : Array A n) : Array A (xs.len Nat.+ n) \elim xs
   | nil => ys
   | a :: xs => a :: xs ++' ys
   \where {
+    -- | Indexing `++'` via `fin-inc`/`fin-raise`.
     \func ++'_index-left {A : \Type} {l : Array A} {n : Nat} {m : Array A n} {i : Fin l.len} : (l ++' m) (fin-inc i) = l i \elim l, i
       | a :: l, 0 => idp
       | a :: l, suc i => ++'_index-left
 
+    -- | Indexing `++'` via `fin-inc`/`fin-raise`.
     \func ++'_index-right {A : \Type} {l : Array A} {n : Nat} {m : Array A n} {i : Fin n} : (l ++' m) (fin-raise i) = m i \elim l
       | nil => idp
       | a :: l => ++'_index-right
 
+    -- | Decompose a `Fin (n+m)` as left or right.
     \func split-index {n m : Nat} (i : Fin (n Nat.+ m))
       : Or (\Sigma (j : Fin n) (i = fin-inc j)) (\Sigma (j : Fin m) (i = fin-raise j))
       => rewriteI (OrFin.aux.ret_f i) $ cases (OrFin.aux.f i) \with {
@@ -64,56 +88,70 @@
       }
   }
 
+-- | Any array of length `n+m` is a `++'` of its halves.
 \func ++'-split {A : \Type} {n m : Nat} {l : Array A (n Nat.+ m)} : l = (\new Array A n \lam i => l (fin-inc i)) ++' (\new Array A m \lam j => l (fin-raise j)) \elim n, l
   | 0, l => idp
   | suc n, a :: l => cong ++'-split
 
+-- | `map` distributes over both concatenations.
 \func map_++' {A B : \Type} (f : A -> B) {l : Array A} {n : Nat} {l' : Array A n} : map f (l ++' l') = map f l ++' map f l' \elim l
   | nil => idp
   | :: a l => path (\lam i => f a :: map_++' f i)
 
+-- | `map` distributes over both concatenations.
 \func map2_++' {A B C : \Type} (f : A -> B -> C) {n : Nat} {l1 : Array A n} {l2 : Array B n} {m : Nat} {l1' : Array A m} {l2' : Array B m}
   : mkArray (\lam j => f ((++') l1 l1' j) ((++') l2 l2' j)) = mkArray (\lam j => f (l1 j) (l2 j)) ++' mkArray (\lam j => f (l1' j) (l2' j)) \elim n, l1, l2
   | 0, nil, nil => idp
   | suc n, a1 :: l1, a2 :: l2 => path (\lam i => f a1 a2 :: map2_++' f i)
 
+-- | Concatenation of arrays of arbitrary length.
 \func \infixr 5 ++ {A : \Type} (xs ys : Array A) : Array A \elim xs
   | nil => ys
   | :: a xs => a :: xs ++ ys
   \where {
+    -- | Embed indices into the concatenation and characterize lookup.
     \func index-left {A : \Type} {l m : Array A} (i : Fin l.len) : Fin (l ++ m).len \elim l, i
       | a :: l, 0 => 0
       | a :: l, suc i => suc (index-left i)
 
+    -- | Embed indices into the concatenation and characterize lookup.
     \func ++_index-left {A : \Type} {l m : Array A} (i : Fin l.len) : (l ++ m) (index-left i) = l i \elim l, i
       | a :: l, 0 => idp
       | a :: l, suc i => ++_index-left i
 
+    -- | Numerical and injectivity properties of the index embeddings.
     \lemma index-left-nat {A : \Type} {l m : Array A} {i : Fin l.len} : index-left {A} {l} {m} i = {Nat} i \elim l, i
       | a :: l, 0 => idp
       | a :: l, suc i => pmap suc index-left-nat
 
+    -- | Numerical and injectivity properties of the index embeddings.
     \lemma index-left-inj {A : \Type} {l m : Array A} : IsInj (index-left {A} {l} {m})
       => \lam p => nat_fin_= $ inv index-left-nat *> p *> index-left-nat
 
+    -- | Embed indices into the concatenation and characterize lookup.
     \func index-right {A : \Type} {l m : Array A} (i : Fin m.len) : Fin (l ++ m).len \elim l
       | nil => i
       | a :: l => suc (index-right i)
 
+    -- | Embed indices into the concatenation and characterize lookup.
     \func ++_index-right {A : \Type} {l m : Array A} {i : Fin m.len} : (l ++ m) (index-right i) = m i \elim l
       | nil => idp
       | a :: l => ++_index-right
 
+    -- | Numerical and injectivity properties of the index embeddings.
     \lemma index-right-nat {A : \Type} {l m : Array A} {i : Fin m.len} : index-right {A} {l} i = {Nat} l.len Nat.+ i \elim l
       | nil => idp
       | a :: l => pmap suc index-right-nat
 
+    -- | Numerical and injectivity properties of the index embeddings.
     \lemma index-right-inj {A : \Type} {l m : Array A} : IsInj (index-right {A} {l} {m})
       => \lam p => nat_fin_= $ NatSemiring.cancel-left l.len $ inv index-right-nat *> p *> index-right-nat
 
+    -- | Numerical and injectivity properties of the index embeddings.
     \lemma index-left/=right {A : \Type} {l m m' : Array A} {i : Fin l.len} {j : Fin m'.len} : index-left {A} {l} {m} i /= {Nat} index-right {A} {l} j
       => \lam p => NatSemiring.<-irreflexive $ (fin_< i) NatSemiring.<∘l rewrite (inv index-left-nat *> p *> index-right-nat) (NatSemiring.<=_+ <=-refl zero<=_)
 
+    -- | Every index of `l ++ m` comes from `l` or `m`.
     \func split-index {A : \Type} {l m : Array A} (i : Fin (l ++ m).len)
       : Or (\Sigma (j : Fin l.len) (i = index-left j)) (\Sigma (j : Fin m.len) (i = index-right j)) \elim l, i
       | nil, i => inr (i,idp)
@@ -123,6 +161,7 @@
         | inr r => inr (r.1, \lam i => suc (r.2 i))
       }
 
+    -- | Lift a pointwise predicate from `l` and `l'` to `l ++ l'`.
     \func ++-all {A : \Type} {P : A -> \Type} {l l' : Array A} (Pl : \Pi (i : Fin l.len) -> P (l i)) (Pl' : \Pi (i : Fin l'.len) -> P (l' i)) (j : Fin (l ++ l').len) : P ((l ++ l') j)
       => \case ++.split-index j \with {
         | inl (i,p) => rewrite (p,++_index-left) (Pl i)
@@ -132,31 +171,38 @@
     \func Big++-all {A : \Type} {P : A -> \Type} {ls : Array (Array A)} (Pl : \Pi (i : Fin ls.len) (j : Fin (ls i).len) -> P (ls i j)) (k : Fin (Big (++) nil ls).len) : P (Big (++) nil ls k) \elim ls
       | l :: ls => ++-all {A} {P} (Pl 0) (Big++-all {A} {P} \lam i => Pl (suc i)) k
 
+    -- | Indexing into a flattened array of arrays.
     \func index-big {A : \Type} {ls : Array (Array A)} (i : Fin ls.len) (j : Fin (ls i).len) : Fin (Big (++) nil ls).len \elim ls, i
       | l :: ls, 0 => index-left j
       | l :: ls, suc i => index-right (index-big i j)
 
+    -- | Indexing into a flattened array of arrays.
     \func Big++-index {A : \Type} {ls : Array (Array A)} {i : Fin ls.len} {j : Fin (ls i).len} : Big (++) nil ls (index-big i j) = ls i j \elim ls, i
       | ls :: l, 0 => ++_index-left j
       | ls :: l, suc i => ++_index-right *> Big++-index
   }
 
+-- | The two concatenations agree.
 \func ++_++' {A : \Type} {l : Array A} {n : Nat} {l' : Array A n} : l ++ l' = l ++' l' \elim l
   | nil => idp
   | a :: l => pmap (a ::) ++_++'
 
+-- | `map` distributes over both concatenations.
 \func map_++ {A B : \Type} (f : A -> B) {l l' : Array A} : map f (l ++ l') = map f l ++ map f l' \elim l
   | nil => idp
   | :: a l => pmap (f a ::) (map_++ f)
 
+-- | `l ++ nil = l`.
 \func ++_nil {A : \Type} {l : Array A} : l ++ nil = l \elim l
   | nil => idp
   | :: a l => pmap (a ::) ++_nil
 
+-- | Length is additive.
 \lemma len_++ {A : \Type} {l l' : Array A} : (l ++ l').len = l.len Nat.+ l'.len \elim l
   | nil => idp
   | a :: l => pmap suc len_++
 
+-- | From `a :: l = a' :: l'` extract `a = a'` (uses helper `headDef`).
 \func unhead {A : \Type} {a a' : A} {l l' : Array A} (p : a :: l = a' :: l') : a = a'
   => pmap (headDef a) p
   \where
@@ -164,6 +210,7 @@
       | nil => def
       | a :: _ => a
 
+-- | From `a :: l = a' :: l'` extract `l = l'` (uses helper `tailDef`).
 \func untail {A : \Type} {a a' : A} {l l' : Array A} (p : a :: l = a' :: l') : l = l'
   => pmap (tailDef l) p
   \where
@@ -171,10 +218,12 @@
       | nil => def
       | _ :: l => l
 
+-- | Cancellation laws.
 \func ++-cancel-left {A : \Type} {l l1 l2 : Array A} (p : l ++ l1 = l ++ l2) : l1 = l2 \elim l
   | nil => p
   | :: a l => ++-cancel-left (untail p)
 
+-- | Cancellation laws.
 \func ++-cancel-right {A : \Type} {l l1 l2 : Array A} (p : l1 ++ l = l2 ++ l) : l1 = l2 \elim l1, l2
   | nil, nil => idp
   | nil, :: a l2 => absurd (contr p)
@@ -184,29 +233,36 @@
     \lemma contr {A : \Type} {l l' : Array A} {a : A} (p : l = a :: l' ++ l) : Empty
       => \case NatSemiring.cancel-right {0} {suc l'.len} l.len (pmap (DArray.len {__}) p *> pmap suc len_++)
 
+-- | Associativity.
 \func ++-assoc {A : \Type} {xs ys zs : Array A} : (xs ++ ys) ++ zs = xs ++ (ys ++ zs) \elim xs
   | nil => idp
   | :: x xs => pmap (x ::) ++-assoc
 
+-- | `replicate (n+m) a = replicate n a ++ replicate m a`.
 \func replicate_+ {A : \Type} {n m : Nat} {a : A} : replicate (n Nat.+ m) a = replicate n a ++ replicate m a \elim n
   | 0 => idp
   | suc n => pmap (a ::) replicate_+
 
+-- | `\Sigma (i : Fin l.len) (l i = x)` — proof that `x` occurs in `l`.
 \func Index {A : \Type} (x : A) (l : Array A) => \Sigma (i : Fin l.len) (l i = x)
 
+-- | Lift a membership witness across `++`.
 \func index-left {A : \Type} {x : A} {l l' : Array A} (i : Index x l) : Index x (l ++ l') \elim l, i
   | nil, ((), _)
   | :: y l, (0, e) => (0, e)
   | :: y l, (suc i, e) => \have (j,p) => index-left (i, e) \in (suc j, p)
 
+-- | Lift a membership witness across `++`.
 \func index-right {A : \Type} {x : A} {l l' : Array A} (i : Index x l') : Index x (l ++ l') \elim l
   | nil => i
   | :: y l => \have (j,p) => index-right i \in (suc j, p)
 
+-- | Keep elements satisfying a `Bool`-valued predicate.
 \func filter {A : \Type} (p : A -> Bool) (l : Array A) : Array A \elim l
   | nil => nil
   | :: a l => if (p a) (a :: filter p l) (filter p l)
 
+-- | Every element of `filter p l` satisfies `p`.
 \lemma filter-sat {A : \Type} (p : A -> Bool) (l : Array A) (i : Fin (filter p l).len) : p (filter p l i) = true \elim l
   | :: a l => cases (p a arg addPath, i) \with {
     | false, _, i => filter-sat p l i
@@ -214,14 +270,17 @@
     | true, q, suc i => filter-sat p l i
   }
 
+-- | Filtering by an always-true/false predicate.
 \func filter_true {A : \Type} {p : A -> Bool} {l : Array A} (c : \Pi (j : Fin l.len) -> p (l j) = true) : filter p l = l \elim l
   | nil => idp
   | a :: l => rewrite (c 0) $ pmap (a ::) $ filter_true \lam j => c (suc j)
 
+-- | Filtering by an always-true/false predicate.
 \func filter_false {A : \Type} {p : A -> Bool} {l : Array A} (c : \Pi (j : Fin l.len) -> p (l j) = false) : filter p l = nil \elim l
   | nil => idp
   | a :: l => rewrite (c 0) $ filter_false \lam j => c (suc j)
 
+-- | A satisfying element appears in `filter p l`.
 \func filter-index {A : \Type} (p : A -> Bool) (l : Array A) (i : Fin l.len) (px : p (l i) = true) : Index (l i) (filter p l) \elim l, i
   | nil, ()
   | :: a l, 0 => rewrite px (0, idp)
@@ -230,18 +289,22 @@
     | false => filter-index p l i px
   }
 
+-- | Generic right-fold over an array.
 \func Big {A B : \Type} (op : A -> B -> B) (b : B) (l : Array A) : B \elim l
   | nil => b
   | :: a l => op a (Big op b l)
 
+-- | Interaction of flattening (`Big ++ nil`) with `map` and the singleton embedding.
 \func Big++_map {A B : \Type} (f : A -> B) {ls : Array (Array A)} : Big (++) nil (map (map f) ls) = map f (Big (++) nil ls) \elim ls
   | nil => idp
   | l :: ls => pmap (_ ++) (Big++_map f) *> inv (map_++ f)
 
+-- | Interaction of flattening (`Big ++ nil`) with `map` and the singleton embedding.
 \func Big++-split {A : \Type} {l : Array A} : l = Big (++) nil (map (:: nil) l) \elim l
   | nil => idp
   | a :: l => pmap (a ::) Big++-split
 
+-- | Apply a partial map `A -> Maybe B` and collect the `just` results.
 \func filterMap {A B : \Type} (f : A -> Maybe B) (l : Array A) : Array B \elim l
   | nil => nil
   | :: a l => \case f a \with {
@@ -249,6 +312,7 @@
     | just b => b :: filterMap f l
   }
 
+-- | A `just`-mapped element appears in the result.
 \func filterMap-index {A B : \Type} (f : A -> Maybe B) (l : Array A) {b : B} {j : Fin l.len} (p : f (l j) = just b) : Index b (filterMap f l) \elim l, j
   | :: a l, 0 => rewrite p (0,idp)
   | :: a l, suc j => mcases \with {
@@ -256,16 +320,20 @@
     | just _ => \have (i,q) => filterMap-index f l p \in (suc i, q)
   }
 
+-- | Pair each element with its index (dependent).
 \func indexed (l : DArray) : DArray (\lam j => \Sigma (Fin l.len) (l.A j)) \cowith
   | at j => (j, l j)
 
+-- | Same, returning a non-dependent array of pairs.
 \func indexed' (l : DArray) : Array (\Sigma (j : Fin l.len) (l.A j)) \cowith
   | len => l.len
   | at j => (j, l j)
 
+-- | Constant array of length `n` with value `a`.
 \func replicate {A : \Type} (n : Nat) (a : A)
   => \new Array A n (\lam _ => a)
 
+-- | Decidable analogue of `filter` over a propositional predicate `P : A -> \Prop`.
 \func keep {A : \Type} {P : A -> \Prop} (D : \Pi (a : A) -> Dec (P a)) (l : Array A) : Array A \elim l
   | nil => nil
   | a :: l => \case D a \with {
@@ -273,6 +341,7 @@
     | no _ => keep D l
   }
   \where {
+    -- | Pointwise witness, surjectivity, preimage, and injectivity-preservation properties of `keep`.
     \lemma satisfies {A : \Type} {P : A -> \Prop} (D : \Pi (a : A) -> Dec (P a)) {l : Array A} {i : Fin (keep D l).len} : P (keep D l i) \elim l
       | a :: l => cases (D a, i) \with {
         | yes e, 0 => e
@@ -280,9 +349,11 @@
         | no n, i => satisfies D
       }
 
+    -- | Pointwise witness, surjectivity, preimage, and injectivity-preservation properties of `keep`.
     \func element {A : \Type} {P : A -> \Prop} {D : \Pi (a : A) -> Dec (P a)} {l : Array A} {j : Fin l.len} (p : P (l j)) : Index (l j) (keep D l)
       => rewrite keep=remove (remove.element $ later \lam q => q p)
 
+    -- | Pointwise witness, surjectivity, preimage, and injectivity-preservation properties of `keep`.
     \func preimage {A : \Type} {P : A -> \Prop} {D : \Pi (a : A) -> Dec (P a)} {l : Array A} (i : Fin (keep D l).len) : \Sigma (j : Fin l.len) (keep D l i = l j) \elim l
       | nil => (i,idp)
       | a :: l => cases (D a, i) \with {
@@ -291,6 +362,7 @@
         | no q, i => \let t => preimage i \in (suc t.1, t.2)
       }
 
+    -- | Pointwise witness, surjectivity, preimage, and injectivity-preservation properties of `keep`.
     \lemma no-repeats {A : \Type} {l : Array A} (p : \Pi {i j : Fin l.len} -> l i = l j -> i = j) {P : A -> \Prop} {D : \Pi (a : A) -> Dec (P a)} {i j : Fin (keep D l).len} (q : keep D l i = keep D l j) : i = j \elim l
       | a :: l => cases (D a, i, j, q) \with {
         | no _, i, j, q => no-repeats (\lam {i'} {j'} s => pmap (fpred i') $ p {suc i'} {suc j'} s) q
@@ -301,6 +373,7 @@
       }
   }
 
+-- | Distributivity over `++` and degenerate cases.
 \func keep_++ {A : \Type} {P : A -> \Prop} {D : \Pi (a : A) -> Dec (P a)} {l l' : Array A} : keep D (l ++ l') = keep D l ++ keep D l' \elim l
   | nil => idp
   | a :: l => mcases \with {
@@ -308,18 +381,22 @@
     | no n => keep_++
   }
 
+-- | Distributivity over `++` and degenerate cases.
 \func keep-all {A : \Type} {P : A -> \Prop} {D : \Pi (a : A) -> Dec (P a)} {l : Array A} (p : \Pi (j : Fin l.len) -> P (l j)) : keep D l = l \elim l
   | nil => idp
   | a :: l => rewrite (dec_yes_reduce (p 0)) $ pmap (a ::) $ keep-all \lam j => p (suc j)
 
+-- | Distributivity over `++` and degenerate cases.
 \func keep-none {A : \Type} {P : A -> \Prop} {D : \Pi (a : A) -> Dec (P a)} {l : Array A} (p : \Pi (j : Fin l.len) -> Not (P (l j))) : keep D l = nil \elim l
   | nil => idp
   | a :: l => rewrite (dec_no_reduce (p 0)) $ keep-none (\lam j => p (suc j))
 
+-- | Distributivity over `++` and degenerate cases.
 \func keep-unique {A : \Type} {P : A -> \Prop} {D : \Pi (a : A) -> Dec (P a)} {l : Array A} {j : Fin l.len} (Pj : P (l j)) (nPj : \Pi (i : Fin l.len) -> P (l i) -> i = j) : keep D l = l j :: nil \elim l, j
   | a :: l, 0 => rewrite (dec_yes_reduce Pj) $ pmap (a ::) {_} {nil} $ keep-none \lam i Pi => \case nPj (suc i) Pi
   | a :: l, suc j => rewrite (dec_no_reduce \lam Pa => \case nPj 0 Pa) $ keep-unique Pj \lam i Pi => unfsuc $ nPj (suc i) Pi
 
+-- | Dual of `keep` — drops elements satisfying `P`.
 \func remove {A : \Type} {P : A -> \Prop} (D : \Pi (a : A) -> Dec (P a)) (l : Array A) : Array A \elim l
   | nil => nil
   | a :: l => \case D a \with {
@@ -327,6 +404,7 @@
     | no _ => a :: remove D l
   }
   \where {
+    -- | Analogous properties of `remove`, plus extensionality up to predicate equivalence.
     \lemma no-element {A : \Type} {P : A -> \Prop} (D : \Pi (a : A) -> Dec (P a)) {l : Array A} {i : Fin (remove D l).len} (p : P (remove D l i)) : Empty \elim l
       | nil => \case i
       | a :: l => cases (D a, i, p) \with {
@@ -335,6 +413,7 @@
         | no q, suc i, p => no-element D p
       }
 
+    -- | Analogous properties of `remove`, plus extensionality up to predicate equivalence.
     \func element {A : \Type} {P : A -> \Prop} {D : \Pi (a : A) -> Dec (P a)} {l : Array A} {j : Fin l.len} (p : Not (P (l j))) : Index (l j) (remove D l) \elim l
       | a :: l => \case \elim j, \elim p \with {
         | 0, p => mcases \with {
@@ -348,6 +427,7 @@
         }
       }
 
+    -- | Analogous properties of `remove`, plus extensionality up to predicate equivalence.
     \func preimage {A : \Type} {P : A -> \Prop} {D : \Pi (a : A) -> Dec (P a)} {l : Array A} (i : Fin (remove D l).len) : \Sigma (j : Fin l.len) (remove D l i = l j) \elim l
       | nil => (i,idp)
       | a :: l => cases (D a, i) \with {
@@ -356,6 +436,7 @@
         | no q, suc i => \let t => preimage i \in (suc t.1, t.2)
       }
 
+    -- | Analogous properties of `remove`, plus extensionality up to predicate equivalence.
     \lemma no-repeats {A : \Type} {l : Array A} (p : \Pi {i j : Fin l.len} -> l i = l j -> i = j) {P : A -> \Prop} {D : \Pi (a : A) -> Dec (P a)} {i j : Fin (remove D l).len} (q : remove D l i = remove D l j) : i = j \elim l
       | nil => \case i
       | a :: l => cases (D a, i, j, q) \with {
@@ -366,6 +447,7 @@
         | no s, suc i, suc j, q => pmap fsuc (no-repeats (\lam {i'} {j'} s => pmap (fpred i') $ p {suc i'} {suc j'} s) q)
       }
 
+    -- | Analogous properties of `remove`, plus extensionality up to predicate equivalence.
     \func equals {A : \Type} {P Q : A -> \Prop} (pq : \Pi {a : A} -> P a -> Q a) (qp : \Pi {a : A} -> Q a -> P a)
                  {DP : \Pi (a : A) -> Dec (P a)} {DQ : \Pi (a : A) -> Dec (Q a)} {l : Array A} : remove DP l = remove DQ l \elim l
       | nil => idp
@@ -375,10 +457,12 @@
       }
   }
 
+-- | Degenerate cases, commutation with `map`, and double-`remove` identities.
 \func remove-none {A : \Type} {P : A -> \Prop} {D : \Pi (a : A) -> Dec (P a)} {l : Array A} (p : \Pi (j : Fin l.len) -> Not (P (l j))) : remove D l = l \elim l
   | nil => idp
   | a :: l => rewrite (dec_no_reduce (p 0)) $ pmap (a ::) $ remove-none \lam j => p (suc j)
 
+-- | Degenerate cases, commutation with `map`, and double-`remove` identities.
 \func remove_map {A B : \Type} (f : A -> B) {P : B -> \Prop} {D : \Pi (b : B) -> Dec (P b)} {l : Array A} : remove D (map f l) = map f (remove (\lam a => D (f a)) l) \elim l
   | nil => idp
   | a :: l => mcases \with {
@@ -386,6 +470,7 @@
     | no q => pmap (f a ::) (remove_map f)
   }
 
+-- | `keep` and `remove` are dual via `NotDec`.
 \func keep=remove {A : \Type} {P : A -> \Prop} {D : \Pi (a : A) -> Dec (P a)} {l : Array A} : keep D l = remove (\lam a => NotDec (D a)) l \elim l
   | nil => idp
   | a :: l => cases (D a) \with {
@@ -393,6 +478,7 @@
     | no q => rewrite (dec_yes_reduce q) keep=remove
   }
 
+-- | `keep` and `remove` are dual via `NotDec`.
 \func remove=keep {A : \Type} {P : A -> \Prop} {D : \Pi (a : A) -> Dec (P a)} {l : Array A} : remove D l = keep (\lam a => NotDec (D a)) l \elim l
   | nil => idp
   | a :: l => cases (D a) \with {
@@ -400,6 +486,7 @@
     | no q => rewrite (dec_yes_reduce q) $ pmap (a ::) remove=keep
   }
 
+-- | Degenerate cases, commutation with `map`, and double-`remove` identities.
 \func remove_remove {A : \Type} {P Q : A -> \Prop} {DP : \Pi (a : A) -> Dec (P a)} {DQ : \Pi (a : A) -> Dec (Q a)} {l : Array A}
   : remove DP (remove DQ l) = remove (\lam a => Dec_|| (DP a) (DQ a)) l \elim l
   | nil => idp
@@ -416,10 +503,12 @@
     }
   }
 
+-- | Degenerate cases, commutation with `map`, and double-`remove` identities.
 \func remove-swap {A : \Type} {P Q : A -> \Prop} {DP : \Pi (a : A) -> Dec (P a)} {DQ : \Pi (a : A) -> Dec (Q a)} {l : Array A}
   : remove DP (remove DQ l) = remove DQ (remove DP l)
   => remove_remove *> remove.equals (\lam {a} => ||.rec' byRight byLeft) (\lam {a} => ||.rec' byRight byLeft) *> inv remove_remove
 
+-- | When `P` and `Q` are disjoint, `keep DP` is unaffected by `remove DQ`.
 \func keep_remove=keep {A : \Type} {P Q : A -> \Prop} {DP : \Pi (a : A) -> Dec (P a)} {DQ : \Pi (a : A) -> Dec (Q a)} (PQ : \Pi {a : A} -> P a -> Q a -> Empty) {l : Array A} : keep DP (remove DQ l) = keep DP l \elim l
   | nil => idp
   | a :: l => mcases \with {
@@ -429,6 +518,7 @@
     | no n, no n1 => rewrite (dec_no_reduce n1) (keep_remove=keep PQ)
   }
 
+-- | `remove` does not increase length.
 \lemma remove<= {A : \Type} {P : A -> \Prop} {D : \Pi (a : A) -> Dec (P a)} {l : Array A} : (remove D l).len <= l.len \elim l
   | nil => <=-refl
   | a :: l => mcases \with {
@@ -436,6 +526,7 @@
     | no n => suc<=suc remove<=
   }
 
+-- | Effect of `remove` on counts.
 \lemma count_remove_yes {A : DecSet} {P : A -> \Prop} {D : \Pi (a : A) -> Dec (P a)} {l : Array A} {a : A} (Pa : P a) : count (remove D l) a = 0 \elim l
   | nil => idp
   | x :: l => mcases \with {
@@ -446,6 +537,7 @@
     }
   }
 
+-- | Effect of `remove` on counts.
 \lemma count_remove_no {A : DecSet} {P : A -> \Prop} {D : \Pi (a : A) -> Dec (P a)} {l : Array A} {a : A} (Pa : Not (P a)) : count (remove D l) a = count l a \elim l
   | nil => idp
   | x :: l => mcases \with {
@@ -455,6 +547,7 @@
     | no p, no q => rewrite (decideEq/=_reduce q) $ count_remove_no Pa
   }
 
+-- | Effect of `remove` on counts.
 \lemma count_remove {A : DecSet} {P : A -> \Prop} {D : \Pi (a : A) -> Dec (P a)} {l l' : Array A} {a : A} (p : count l a = count l' a)
   : count (remove D l) a = count (remove D l') a
   => \case D a \with {
@@ -462,9 +555,11 @@
     | no Pa => count_remove_no Pa *> p *> inv (count_remove_no Pa)
   }
 
+-- | Remove all occurrences of a specific element.
 \func removeElem {A : DecSet} (a : A) (l : Array A) : Array A
   => remove (decideEq a) l
 
+-- | Remove (at most) one occurrence of `a` from a non-empty array, lowering the length by one.
 \func remove1 {A : DecSet} (a : A) {n : Nat} (l : Array A (suc n)) : Array A n \elim n, l
   | 0, l => nil
   | suc n, a' :: l => \case decideEq a a' \with {
@@ -472,6 +567,7 @@
     | no _ => a' :: remove1 a l
   }
 
+-- | Surjectivity onto the original indices, non-occurrence of `a`, and injectivity preservation.
 \func remove1-surj {A : DecSet} (a : A) {n : Nat} (l : Array A (suc n)) (i : Fin n) : \Sigma (j : Fin (suc n)) (remove1 a l i = l j) \elim n, l
   | 0, b :: l => \case i
   | suc n, b :: l => mcases \with {
@@ -482,6 +578,7 @@
     }
   }
 
+-- | Surjectivity onto the original indices, non-occurrence of `a`, and injectivity preservation.
 \lemma remove1/= {A : DecSet} {a : A} {n : Nat} {l : Array A (suc n)} (inj : IsInj l) {j : Fin n} : remove1 a l j /= a \elim n, l
   | 0, b :: l => \case j
   | suc n, b :: l => mcases \with {
@@ -492,6 +589,7 @@
     }
   }
 
+-- | Surjectivity onto the original indices, non-occurrence of `a`, and injectivity preservation.
 \lemma remove1-inj {A : DecSet} {a : A} {n : Nat} {l : Array A (suc n)} (inj : IsInj l) {i j : Fin n} (p : remove1 a l i = remove1 a l j) : i = j \elim n, l
   | 0, b :: l => \case i
   | suc n, b :: l => cases (decideEq a b, p) \with {
@@ -504,10 +602,12 @@
     }
   }
 
+-- | Remove duplicate elements (left-to-right) over a `DecSet`.
 \func nub {A : DecSet} (l : Array A) : Array A \elim l
   | nil => nil
   | a :: l => a :: removeElem a (nub l)
 
+-- | Every element of `l` appears in `nub l`; uses helper `nub.remove-isSurj`.
 \func nub-isSurj {A : DecSet} (l : Array A) (i : Fin l.len) : \Sigma (j : Fin (nub l).len) (nub l j = l i) \elim l, i
   | a :: l, 0 => (0,idp)
   | a :: l, suc i =>
@@ -533,40 +633,48 @@
       }
   }
 
+-- | Every entry of `nub l` comes from `l`.
 \func nub-preimage {A : DecSet} {l : Array A} (j : Fin (nub l).len) : \Sigma (i : Fin l.len) (nub l j = l i) \elim l, j
   | a :: l, 0 => (0, idp)
   | a :: l, suc j => \have | (k,p) => remove.preimage j
                            | (i,q) => nub-preimage k
                      \in (suc i, p *> q)
 
+-- | `nub l` is injective.
 \lemma nub-isInj {A : DecSet} {l : Array A} {i j : Fin (nub l).len} (p : nub l i = nub l j) : i = j \elim l, i, j
   | a :: l, 0, 0 => idp
   | a :: l, 0, suc j => absurd $ remove.no-element (decideEq a) p
   | a :: l, suc i, 0 => absurd (remove.no-element (decideEq a) (inv p))
   | a :: l, suc i, suc j => pmap fsuc $ remove.no-repeats nub-isInj p
 
+-- | `nub` is the identity on injective arrays.
 \func nub_id {A : DecSet} {l : Array A} (inj : IsInj l) : nub l = l \elim l
   | nil => idp
   | a :: l => pmap (a ::) $ remove-none (\lam j p => \case inj {0} {suc (nub-preimage j).1} $ p *> (nub-preimage j).2) *> nub_id \lam p => unfsuc (inj p)
 
+-- | Insert `a` at position `j`, increasing length by one.
 \func insert {A : \Type} (a : A) (l : Array A) (j : Fin (suc l.len)) : Array A (suc l.len) \elim l, j
   | nil, j => a :: nil
   | b :: l, 0 => a :: b :: l
   | b :: l, suc j => b :: insert a l j
 
+-- | Inserting at `0` and the value at the inserted index.
 \func insert_zro {A : \Type} {n : Nat} {a : A} {l : Array A n} : insert a l 0 = a :: l \elim n, l
   | 0, nil => idp
   | suc n, b :: l => idp
 
+-- | Inserting at `0` and the value at the inserted index.
 \func insert-index {A : \Type} {a : A} {l : Array A} {j : Fin (suc l.len)} : insert a l j j = a \elim l, j
   | nil, 0 => idp
   | b :: l, 0 => idp
   | b :: l, suc j => insert-index
 
+-- | Drop the element at position `k`, decreasing length by one.
 \func skip {A : \Type} {n : Nat} (l : Array A (suc n)) (k : Fin (suc n)) : Array A n \elim n, l, k
   | n, _ :: l, 0 => l
   | suc n, a :: l, suc k => a :: skip l k
   \where {
+    -- | Reindex a `Fin (suc n)` distinct from `k` into `Fin n`.
     \func newIndex {n : Nat} {j i : Fin (suc n)} (p : i /= j) : Fin n \elim n, j, i
       | _, 0, 0 => absurd (p idp)
       | suc n, 0, suc i => i
@@ -575,6 +683,7 @@
 
     \open NatOrder
 
+    -- | `newIndex` preserves order.
     \lemma newIndex_< {n : Nat} {i j k : Fin (suc n)} {pj : j /= i} {pk : k /= i} (q : j < k) : newIndex pj < newIndex pk \elim n, i, j, k, q
       | _, 0, 0, _, _ => absurd (pj idp)
       | _, 0, _, 0, _ => absurd (pk idp)
@@ -583,50 +692,60 @@
       | suc n, suc i, suc j, suc k, suc<suc q => suc<suc (newIndex_< q)
   }
 
+-- | `skip` distributes over `++'`, is determined pointwise, and behaves trivially at index 0.
 \func skip_++' {A : \Type} {n m : Nat} {l : Array A (suc n)} {l' : Array A m} {k : Fin (suc n)} : skip (l ++' l') (fin-inc k) = skip l k ++' l' \elim n, l, k
   | 0, a :: nil, 0 => exts \lam j => skip_0
   | suc n, a :: l, 0 => idp
   | suc n, a :: l, suc k => cong skip_++'
 
+-- | `skip` distributes over `++'`, is determined pointwise, and behaves trivially at index 0.
 \func skipExt {A : \Type} {n : Nat} {l l' : Array A (suc n)} {k : Fin (suc n)} (p : \Pi (i : Fin (suc n)) -> i /= k -> l i = l' i) : skip l k = skip l' k \elim n, l, l', k
   | 0, l, l', 0 => idp
   | suc n, a :: l, a' :: l', 0 => arrayExt \lam j => p (suc j) (\case __)
   | suc n, a :: l, a' :: l', suc k => pmap2 (::) (p 0 (\case __)) $ skipExt \lam i q => p (suc i) (fsuc/= q)
 
+-- | `skip` distributes over `++'`, is determined pointwise, and behaves trivially at index 0.
 \func skip_0 {A : \Type} {n : Nat} {l : Array A (suc n)} {j : Fin n} : skip l 0 j = l (suc j) \elim n, l
   | 0, a :: l => idp
   | suc n, a :: l => idp
 
+-- | `map` commutes with `replace`, `insert`, `skip`, `fit`.
 \func skip_map {A B : \Type} (f : A -> B) {n : Nat} {l : Array A (suc n)} {k : Fin (suc n)} : map f (skip l k) = skip (map f l) k \elim n, l, k
   | 0, a :: l, 0 => idp
   | suc n, a :: l, 0 => idp
   | suc n, a :: l, suc k => path (\lam i => f a :: skip_map f i)
 
+-- | Update the element at index `i`.
 \func replace {A : \Type} (l : Array A) (i : Fin l.len) (a : A) : Array A l.len \elim l, i
   | b :: l, 0 => a :: l
   | b :: l, suc i => b :: replace l i a
 
+-- | Lookup at the replaced and unaffected indices.
 \func replace-index {A : \Type} {l : Array A} {i : Fin l.len} {a : A} : replace l i a i = a \elim l, i
   | b :: l, 0 => idp
   | b :: l, suc i => replace-index
 
+-- | Lookup at the replaced and unaffected indices.
 \func replace-notIndex {A : \Type} {l : Array A} {i j : Fin l.len} (i/=j : i /= {Nat} j) {a : A} : replace l i a j = l j \elim l, i, j
   | b :: l, 0, 0 => absurd (i/=j idp)
   | b :: l, 0, suc j => idp
   | b :: l, suc i, 0 => idp
   | b :: l, suc i, suc j => replace-notIndex \lam p => i/=j (pmap suc p)
 
+-- | Replacing immediately after inserting.
 \func replace_insert {A : \Type} {l : Array A} {i : Fin (suc l.len)} {a b : A} : replace (insert a l i) i b = insert b l i \elim l, i
   | nil, 0 => idp
   | c :: l, 0 => idp
   | c :: l, suc i => cong replace_insert
 
+-- | Skipping a replaced array (same vs. different index).
 \func skip_replace_= {A : \Type} {n : Nat} {l : Array A (suc n)} {i : Fin (suc n)} {a : A}
   : skip (replace l i a) i = skip l i \elim n, l, i
   | 0, b :: l, 0 => idp
   | suc n, b :: l, 0 => idp
   | suc n, b :: l, suc i => path (\lam i => b :: skip_replace_= i)
 
+-- | Skipping a replaced array (same vs. different index).
 \func skip_replace_/= {A : \Type} {n : Nat} {l : Array A (suc n)} {j i : Fin (suc n)} {a : A} (p : j /= i)
   : skip (replace l j a) i = replace (skip l i) (skip.newIndex p) a \elim n, l, j, i
   | _, _, 0, 0 => absurd (p idp)
@@ -635,39 +754,46 @@
   | suc n, b :: l, suc j, 0 => idp
   | suc n, b :: l, suc j, suc i => cong (skip_replace_/= _)
 
+-- | Looking up `skip l k` at `newIndex p` recovers `l j`.
 \func skip-index {A : \Type} {n : Nat} {l : Array A (suc n)} {i j : Fin (suc n)} {p : j /= i} : skip l i (skip.newIndex p) = l j \elim n, l, i, j
   | _, _, 0, 0 => absurd (p idp)
   | suc n, a :: l, 0, suc j => idp
   | suc n, a :: l, suc i, 0 => idp
   | suc n, a :: l, suc i, suc j => skip-index
 
+-- | `skip` on a `replicate` yields a shorter `replicate`.
 \func skip_replicate {A : \Type} {n : Nat} (a : A) {k : Fin (suc n)} : skip (replicate (suc n) a) k = replicate n a \elim n, k
   | 0, 0 => idp
   | suc n, 0 => idp
   | suc n, suc k => path (\lam i => a :: skip_replicate a i)
 
+-- | `map` commutes with `replace`, `insert`, `skip`, `fit`.
 \func map_replace {A B : \Type} (f : A -> B) {l : Array A} {i : Fin l.len} {a : A}
   : map f (replace l i a) = replace (map f l) i (f a) \elim l, i
   | b :: l, 0 => idp
   | b :: l, suc i => path (\lam i => f b :: map_replace f i)
 
+-- | `insert a (skip l k) k = replace l k a`.
 \func insert_skip {A : \Type} {n : Nat} {l : Array A (suc n)} {k : Fin (suc n)} {a : A}
   : insert a (skip l k) k = replace l k a \elim n, l, k
   | 0, b :: nil, 0 => idp
   | suc n, b :: l, 0 => idp
   | suc n, b :: l, suc k => cong insert_skip
 
+-- | `skip (insert a l j) j = l`.
 \func skip_insert_= {A : \Type} {n : Nat} {a : A} {l : Array A n} {j : Fin (suc n)} : skip (insert a l j) j = l \elim n, l, j
   | 0, nil, 0 => idp
   | suc n, b :: l, 0 => idp
   | suc n, b :: l, suc j => cong skip_insert_=
 
+-- | `map` commutes with `replace`, `insert`, `skip`, `fit`.
 \func map_insert {A B : \Type} (f : A -> B) {a : A} {l : Array A} {j : Fin (suc l.len)}
   : map f (insert a l j) = insert (f a) (map f l) j \elim l, j
   | nil, 0 => idp
   | b :: l, 0 => idp
   | b :: l, suc j => path (\lam i => f b :: map_insert f i)
 
+-- | Count occurrences of `a` in an array over a `DecSet`.
 \func count {A : DecSet} (l : Array A) (a : A) : Nat \elim l
   | nil => 0
   | x :: l => \case decideEq a x \with {
@@ -675,6 +801,7 @@
     | no _ => count l a
   }
 
+-- | `count l a <= l.len`.
 \lemma count<= {A : DecSet} {l : Array A} {a : A} : count l a <= l.len \elim l
   | nil => <=-refl
   | x :: l => mcases \with {
@@ -682,6 +809,7 @@
     | no q => count<= <=∘ id<=suc
   }
 
+-- | Additivity over `++` and over flattening.
 \lemma count_++ {A : DecSet} {l l' : Array A} {a : A} : count (l ++ l') a = count l a Nat.+ count l' a \elim l
   | nil => idp
   | x :: l => mcases \with {
@@ -689,18 +817,22 @@
     | no q => count_++
   }
 
+-- | Additivity over `++` and over flattening.
 \lemma count_Big++ {A : DecSet} {ls : Array (Array A)} {a : A} : count (Big (++) nil ls) a = NatSemiring.BigSum (map (count __ a) ls) \elim ls
   | nil => idp
   | l :: ls => count_++ *> pmap (_ Nat.+) count_Big++
 
+-- | Saturated and empty counts.
 \lemma count-all {A : DecSet} {l : Array A} {a : A} (p : \Pi (j : Fin l.len) -> l j = a) : count l a = l.len \elim l
   | nil => idp
   | x :: l => rewrite (decideEq=_reduce $ inv $ p 0) $ pmap suc $ count-all \lam j => p (suc j)
 
+-- | Saturated and empty counts.
 \lemma count-none {A : DecSet} {l : Array A} {a : A} (p : \Pi (j : Fin l.len) -> l j /= a) : count l a = 0 \elim l
   | nil => idp
   | x :: l => rewrite (decideEq/=_reduce $ /=-sym $ p 0) $ count-none \lam j => p (suc j)
 
+-- | `keep (decideEq a) l = replicate (count l a) a`.
 \lemma keep_count {A : DecSet} {l : Array A} {a : A} : keep (decideEq a) l = replicate (count l a) a \elim l
   | nil => idp
   | x :: l => mcases \with {
@@ -708,6 +840,9 @@
     | no q => keep_count
   }
 
+{- | Search for the first index satisfying a decidable predicate, returning either the minimal witness with proof of
+ -   minimality, or a proof of universal failure.
+ -}
 \func find {A : \Type} (P : A -> Decide) (l : Array A) : Or (\Sigma (j : Fin l.len) (P (l j)) (\Pi {i : Fin l.len} -> i NatOrder.< j -> P (l i) -> Empty)) (\Pi {j : Fin l.len} -> P (l j) -> Empty) \elim l
   | nil => inr \lam {j} => \case j
   | a :: l => \case decide {P a} \with {
@@ -724,12 +859,14 @@
     }
   }
 
+-- | Decide membership in an array over a `DecSet`.
 \sfunc index-dec {A : DecSet} (l : Array A) (a : A) : Or (Index a l) (Not (Index a l))
   => \case find (EqualityDecide A __ a) l \with {
        | inl p => inl (p.1,p.2)
        | inr q => inr \lam p => q p.2
      }
 
+-- | Decide whether an array has a repeated element, returning either the colliding indices or `IsInj l`.
 \func repeats-dec {A : DecSet} (l : Array A) : Or (\Sigma (i j : Fin l.len) (i /= j) (l i = l j)) (IsInj l) \elim l
   | nil => inr \lam {i} => \case i
   | a :: l => \case index-dec l a \with {
@@ -745,37 +882,45 @@
     }
   }
 
+-- | Boolean conjunction of `p` over the array.
 \func forall {A : \Type} (p : A -> Bool) (l : Array A) : Bool \elim l
   | nil => true
   | a :: l => p a and forall p l
 
+-- | Reflects `forall p l = true` into pointwise truth.
 \lemma forall-char {A : \Type} {p : A -> Bool} {l : Array A} (s : forall p l = true) (j : Fin l.len) : p (l j) = true \elim l, j
   | a :: l, 0 => (and.toSigma s).1
   | a :: l, suc j => forall-char (and.toSigma s).2 j
 
+-- | Coerce/pad an array to length `n`, using `a` as the default for missing positions.
 \func fit {A : \Type} (a : A) {n : Nat} (l : Array A) : Array A n \elim n, l
   | 0, _ => nil
   | suc n, nil => replicate (suc n) a
   | suc n, b :: l => b :: fit a l
 
+-- | Behavior of `fit` below and at/above the original length.
 \func fit_< {A : \Type} {a : A} {n : Nat} (l : Array A) {j : Fin n} (p : j NatOrder.< l.len) : fit a l j = l (toFin j p) \elim n, l, j, p
   | suc n, b :: l, 0, _ => idp
   | suc n, b :: l, suc j, NatOrder.suc<suc p => fit_< _ p
 
+-- | Behavior of `fit` below and at/above the original length.
 \func fit_>= {A : \Type} {a : A} {n : Nat} (l : Array A) {j : Fin n} (p : l.len <= j) : fit a l j = a \elim n, l, j
   | suc n, nil, j => idp
   | suc n, b :: l, 0 => absurd linarith
   | suc n, b :: l, suc j => fit_>= l (suc<=suc.conv p)
 
+-- | Behavior of `fit` below and at/above the original length.
 \func fit_<' {A : \Type} {a : A} {n : Nat} (l : Array A) {j : Fin l.len} (p : j NatOrder.< n) : fit a l (toFin j p) = l j \elim n, l, j, p
   | suc n, b :: l, 0, _ => idp
   | suc n, b :: l, suc j, NatOrder.suc<suc p => fit_<' _ p
 
+-- | `map` commutes with `replace`, `insert`, `skip`, `fit`.
 \func fit_map {A B : \Type} (f : A -> B) {a : A} {b : B} (p : f a = b) {n : Nat} {l : Array A} : map f (fit a {n} l) = fit b (map f l) \elim n, l
   | 0, l => idp
   | suc n, nil => pmap (replicate (suc n)) p
   | suc n, a' :: l => path (\lam i => f a' :: fit_map f p i)
 
+-- | From `l /= l'` over a `DecSet`, produce a witness index where they differ.
 \func array/= {A : DecSet} {n : Nat} {l l' : Array A n} (p : l /= l') : \Sigma (j : Fin n) (l j /= l' j) \elim n, l, l'
   | 0, nil, nil => absurd (p idp)
   | suc n, a :: l, a' :: l' => \case decideEq a a' \with {
@@ -784,22 +929,27 @@
     | no a/=a' => (0, a/=a')
   }
 
+-- | Convert an `Array` to a `Data.List` `List`.
 \func toList {A : \Type} (l : Array A) : List A \elim l
   | nil => List.nil
   | a :: l => a List.:: toList l
 
+-- | `length (toList l) = l.len`.
 \lemma toList_length {A : \Type} {l : Array A} : length (toList l) = l.len \elim l
   | nil => idp
   | a :: l => pmap suc toList_length
 
+-- | Convert a `List` to a length-indexed `Array`.
 \func fromList {A : \Type} (l : List A) : Array A (length l) \elim l
   | List.nil => nil
   | a List.:: l => a :: fromList l
 
+-- | Round-trip identity `fromList ∘ toList = id`.
 \func fromList_toList {A : \Type} {l : Array A} : fromList (toList l) = l \elim l
   | nil => idp
   | a :: l => pmap (a ::) fromList_toList
 
+-- | Prefix of length `n` of an array of length at least `n`.
 \func take {A : \Type} (n : Nat) (l : Array A) (p : n <= l.len) : Array A n \elim n, l
   | 0, l => nil
   | suc n, nil => absurd (p NatOrder.zero<suc)
@@ -810,6 +960,7 @@
   | suc n, nil => nil
   | suc n, a :: l => a :: take' n l
 
+-- | Lookup in `take` is lookup in the original via `fin-inc_<=`.
 \func take-index {A : \Type} {n : Nat} {l : Array A} {p : n <= l.len} {j : Fin n} : take n l p j = l (fin-inc_<= p j) \elim n, l, j
   | suc n, nil, j => absurd (p NatOrder.zero<suc)
   | suc n, a :: l, 0 => idp
@@ -849,6 +1000,9 @@
   | suc n, nil => idp
   | suc n, a :: l => pmap (a ::) take_drop
 
+{- | Array that takes value `value` at index `j` and `def` elsewhere; `alt` is an inductive alternative form, `char`
+ -   proves they agree.
+ -}
 \func singleAt {A : \Type} {n : Nat} (j : Fin n) (value def : A) : Array A n \cowith
   | at i => \case decideEq j i \with {
     | yes _ => value

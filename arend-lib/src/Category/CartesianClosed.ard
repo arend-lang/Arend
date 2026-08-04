@@ -1,3 +1,12 @@
+{- | Cartesian closed precategories: cartesian categories equipped with exponential objects (internal hom).
+ -
+ -   A cartesian closed precategory extends `CartesianPrecat` by requiring, for each object `X`, that the binary-product
+ -   functor `- × X` has a right adjoint — the exponential `exp X -`. This adjunction yields the standard apparatus of
+ -   internal hom: currying (`curry`), uncurrying (`uncurry`), evaluation, internal composition, and names of morphisms
+ -   as global elements of exponentials. The module also instantiates this structure on `SetBicat`, where exponentials
+ -   are ordinary function spaces `X -> Z`, packaged via a coreflection that converts to the adjoint presentation.
+ -}
+
 \import Category
 \import Category.Functor
 \import Category.Limit
@@ -12,14 +21,19 @@
 \import Set.SetCategory
 \open PrecatWithBprod
 
+{- | Extends `CartesianPrecat` with a field `exp (X : Ob) : isExponential X` providing, for every `X`, a right adjoint
+ -   to `- × X`. This gives the category internal homs.
+ -}
 \class CartesianClosedPrecat \extends CartesianPrecat {
   | CHom : Ob -> Ob -> Ob
   | CHom-eval {X Y : Ob} : Hom (Bprod (CHom X Y) X) Y
   | CHom-univ {X Y Z : Ob} : IsEquiv {Hom Z (CHom X Y)} {Hom (Bprod Z X) Y} (\lam g => CHom-eval ∘ prodMap g id)
 
+  -- | Curry `f : Hom (X × Y) Z` to `Hom X (exp Y Z)` via the unit of the adjunction.
   \func curry {X Y Z : Ob} (f : Hom (Bprod Z X) Y) : Hom Z (CHom X Y)
     => IsEquiv.ret CHom-univ f
 
+  -- | Uncurry `f : Hom X (exp Y Z)` to `Hom (X × Y) Z` via the counit (`epsilon`) and `prodMap`.
   \func uncurry {X Y Z : Ob} (g : Hom Z (CHom X Y)) : Hom (Bprod Z X) Y
     => CHom-eval ∘ prodMap g id
 
@@ -30,6 +44,9 @@
     => IsEquiv.f_ret CHom-univ
 }
 
+{- | Instance making `SetBicat` cartesian closed, with `exp X` obtained by converting the coreflection
+ -   `power-coreflection` into an adjoint via `RightAdjointCoreflection.toAdjoint`.
+ -}
 \instance SetCartesianClosed.{u} : CartesianClosedPrecat (\Set u)
   | CartesianPrecat => SetBicat.{u}
   | CHom X Y => X -> Y

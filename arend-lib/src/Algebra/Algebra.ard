@@ -1,3 +1,14 @@
+{- | Algebras over commutative rings: modules equipped with a compatible ring structure.
+ -
+ -   This module builds the standard hierarchy of associative algebras over a commutative ring `R`, layering ring
+ -   multiplication on top of the `LModule` scalar action. The key compatibility axioms (`*c-comm-left`,
+ -   `*c-comm-right`) require that the `R`-action commutes with internal multiplication on both sides, which makes the
+ -   scalar map `coefMap : R -> E` a ring homomorphism landing in the center. Commutative variants (`PseudoCAlgebra`,
+ -   `CAlgebra`) collapse the two-sided compatibility into one axiom via `*-comm`, and the `homAlgebra` construction
+ -   shows that any ring homomorphism `R -> E` exhibits `E` as an `R`-algebra — the canonical way to produce algebra
+ -   instances.
+ -}
+
 \import Algebra.Module
 \import Algebra.Module.LinearMap
 \import Algebra.Monoid
@@ -5,44 +16,68 @@
 \import Algebra.Ring.RingHom
 \import Paths
 
+{- | Extends `LModule` and `PseudoRing` over a commutative ring `R`. Adds the bilinearity axioms `*c-comm-left`
+ -   (`r *c (a * b) = (r *c a) * b`) and `*c-comm-right` (`r *c (a * b) = a * (r *c b)`) tying the scalar action to
+ -   internal multiplication.
+ -}
 \class PseudoAlgebra \extends LModule, PseudoRing {
   \override R : CRing
   | *c-comm-left  {r : R} {a b : E} : r *c (a * b) = (r *c a) * b
   | *c-comm-right {r : R} {a b : E} : r *c (a * b) = a * (r *c b)
 }
 
+{- | Associative algebra. Extends `PseudoAlgebra` and `Ring` (so a unit `1` is present) and adds the structure map
+ -   `coefMap : R -> E` with the defining equation `coefMap_*c : coefMap x = x *c 1`. Default implementations are
+ -   provided.
+ -}
 \class AAlgebra \extends PseudoAlgebra, Ring {
   | coefMap : R -> E
   | coefMap_*c {x : R} : coefMap x = x *c 1
   \default coefMap \as coefMap-impl x => x *c 1
   \default coefMap_*c \as coefMap_*c-impl {x} : coefMap-impl x = x *c 1 => idp
 
+  -- | Packages `coefMap` as a `RingHom R \this`, recording that the scalar embedding preserves `+`, `1`, and `*`.
   \func coefHom : RingHom R \this \cowith
     | func => coefMap
     | func-+ => coefMap_*c *> *c-rdistr *> inv (pmap2 (+) coefMap_*c coefMap_*c)
     | func-ide => coefMap_*c *> ide_*c
     | func-* => coefMap_*c *> *c-assoc *> pmap (_ *c) (inv ide-left) *> *c-comm-left *> inv (pmap2 (*) coefMap_*c coefMap_*c)
 
+  {- | Compatibility with natural number coefficients: `coefMap (R.natCoef n) = natCoef n`, so `coefMap` agrees with the
+   -   canonical `Nat`-action.
+   -}
   \lemma coefMap_natCoef {n : Nat} : coefMap (R.natCoef n) = natCoef n
     => coefHom.func-natCoef
 }
 
+{- | Commutative pseudo-algebra. Extends `PseudoAlgebra` and `CRing`; `*c-comm-right` is derived from `*c-comm-left`
+ -   using `*-comm`.
+ -}
 \class PseudoCAlgebra \extends PseudoAlgebra, CRing
   | *c-comm-right => pmap (_ *c) *-comm *> *c-comm-left *> *-comm
 
+-- | Commutative associative algebra. Extends `AAlgebra` and `PseudoCAlgebra`.
 \class CAlgebra \extends AAlgebra, PseudoCAlgebra
 
+{- | Given a ring homomorphism `f : RingHom R E` between commutative rings, builds a `CAlgebra` structure on `E` whose
+ -   scalar action is `r *c x = f r * x`. The standard recipe for producing algebra instances from ring maps.
+ -}
 \func homAlgebra {R E : CRing} (f : RingHom R E) : CAlgebra \cowith
   | CRing => E
   | LModule => homLModule f
   | *c-comm-left => inv *-assoc
 
+-- | Every commutative ring `R` is an algebra over itself, obtained as `homAlgebra RingHom.id`.
 \func ringAlgebra {R : CRing} : CAlgebra R
   => homAlgebra RingHom.id
 
+{- | Restriction of scalars. For an `R`-algebra `A` and `A`-module `X`, defines `a *a x = coefMap a *c x`, giving `X` an
+ -   underlying `R`-module structure.
+ -}
 \func \infixl 7 *a {R : CRing} {A : AAlgebra R} {X : LModule A} (a : R) (x : X) : X
   => coefMap a *c x
 
+-- | Associativity of the restricted action: `a * b *a x = a *a (b *a x)`.
 \lemma *a-assoc {R : CRing} {A : AAlgebra R} {X : LModule A} {a b : R} {x : X} : a * b *a x = a *a (b *a x)
   => pmap (*c x) A.coefHom.func-* *> *c-assoc
 

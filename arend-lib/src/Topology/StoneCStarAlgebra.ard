@@ -2,6 +2,18 @@
      [1] Coquand, Spitters, Constructive Gelfand Duality for C*-algebras, 2009, https://arxiv.org/abs/0808.1518
  -}
 
+{- | Commutative real C*-algebras (Stone C*-algebras) characterized by order, norm, and squares.
+ -
+ -   This module formalizes commutative C*-algebras over the reals via two complementary presentations: an
+ -   order-theoretic one (`OrderedC*Algebra`) built on a partial order with archimedean and square-positivity axioms,
+ -   and a norm-theoretic one (`StoneC*Algebra`) built on a Banach algebra structure satisfying the C*-identity. The
+ -   central result is that these presentations agree: every `OrderedC*Algebra` carries a canonical Banach norm via
+ -   `toBanach`, and in a `StoneC*Algebra` the order `x <= y` defined by `y - x` being a square coincides with the order
+ -   from which the norm was derived (`norm-char`). The `\where`-block lemmas (`square-sum`, `square-lem-aux`,
+ -   `norm-char-aux`) are abstract Banach-algebra-level helpers that let the equivalence be proved without circularity.
+ -   `Real` itself is the canonical instance.
+ -}
+
 \import Algebra.Group
 \import Algebra.Meta
 \import Algebra.Monoid
@@ -39,24 +51,37 @@
 \import Topology.TopSpace
 \import Topology.TopSpace.Product
 
+{- | Class extending `QAlgebra`, `PosetQModule`, and `CRing`. Axiomatizes a commutative real algebra with a compatible
+ -   partial order via `c*-archimedean` (every element bounded by a natural), `c*-square-positive` (`0 <= a * a`),
+ -   `c*-<=_*-square` (squares of contractions are contractions), and `c*-<=-square` (squares dominated by `1` give
+ -   contractions).
+ -}
 \class OrderedC*Algebra \extends QAlgebra, PosetQModule, CRing {
   | c*-archimedean (a : E) : ∃ (B : Nat) (a <= natCoef B)
   | c*-square-positive {a : E} : 0 <= a * a
   | c*-<=_*-square {a : E} : a <= 1 -> negative a <= 1 -> a * a <= 1
   | c*-<=-square {a : E} : a * a <= 1 -> a <= 1
 
+  -- | `0 <= 1` derived from the axioms.
   \protected \lemma zro<=ide : 0 <= 1
     => <=_*n-div {_} {2} suc/=0 $ transport2 (__ <= __ + 1) negative-left (inv zro-left) $ <=_+ (c*-<=-square (=_<= $ negative_* *> ide-left)) <=-refl
 
+  -- | From `a * a <= q² *q 1` with `q > 0`, conclude `a <= q *q 1`.
   \lemma <=-square {a : E} {q : Rat} (q>0 : 0 < q) (aa<=qq : a * a <= q RatField.* q *q ide) : a <= q *q ide
     => <=_*q-rotate-right q>0 $ c*-<=-square $ inv (pmap (*q _) RatField.finv_* *> *q-assoc *> pmap (_ *q) *q-comm-right *> *q-comm-left) =<= <=_*q-rotate_finv-left (RatField.<_*_positive_positive q>0 q>0) aa<=qq
 
+  -- | Same hypothesis yields `negative a <= q *q 1`.
   \lemma <=-square_negative {a : E} {q : Rat} (q>0 : 0 < q) (aa<=qq : a * a <= q RatField.* q *q ide) : negative a <= q *q ide
     => <=-square q>0 $ transportInv (<= _) negative_* aa<=qq
 
+  -- | Product of two contractions is a contraction.
   \lemma c*-<=_* {a b : E} (a<=1 : a <= 1) (-a<=1 : negative a <= 1) (b<=1 : b <= 1) (-b<=1 : negative b <= 1) : a * b <= 1
     => from>=0 $ <=_*n-div {_} {2} suc/=0 $ c*-square-positive {_} {a - b} <=∘ transport (<= _) equation.cRing (<=_+ (<=_+ <=-refl (<=_+ (c*-<=_*-square a<=1 -a<=1) <=-refl)) (<=_+ (c*-<=_*-square b<=1 -b<=1) <=-refl))
 
+  {- | Constructs a `RealPreBanachAlgebra` from the order, defining the norm of `a` as the upper real with rationals `q`
+   -   such that some `r < q` satisfies `a <= r *q 1` and `negative a <= r *q 1`. All Banach-algebra axioms (norm of
+   -   zero, negation, additivity, scaling, multiplicativity, identity bound) are checked.
+   -}
   \func toBanach : RealPreBanachAlgebra \cowith
     | Ring => \this
     | isDivisible => isDivisible
@@ -91,12 +116,15 @@
     }
     | norm_ide_<= b>1 => inP (1, b>1, idp, transportInv (1 <=) ide_*q <=-refl, transportInv (_ <=) ide_*q $ negative<=0 zro<=ide <=∘ zro<=ide)
 
+  -- | If `a <= 1` and `negative a <= 1`, then `toBanach.norm a <= 1`.
   \lemma toBanach_norm<=1 {x : E} (x<=1 : x <= 1) (-x<=1 : negative x <= 1) : toBanach.norm x ExUpperReal.<= ExUpperRealPointed.ide
     => \lam b>1 => inP (RatField.ide, b>1, idp, rewrite ide_*q x<=1, rewrite ide_*q -x<=1)
 
+  -- | `norm (a*a) <= norm (a*a + b*b)` for the constructed norm.
   \lemma toBanach_c*-sum {a b : E} : toBanach.norm (a * a) ExUpperReal.<= toBanach.norm (a * a + b * b)
     => \lam {d} (inP (c,c<d,c>0,aa+bb<=c,_)) => inP (c, c<d, c>0, inv zro-right =<= <=_+ <=-refl c*-square-positive <=∘ aa+bb<=c, negative<=0 c*-square-positive <=∘ *q_>=0 (<=-less c>0) zro<=ide)
 
+  -- | The C*-identity `norm a * norm a <= norm (a*a)` for the constructed norm.
   \lemma toBanach_c*-square {a : E} : toBanach.norm a ExUpperRealSemigroup.* toBanach.norm a ExUpperReal.<= toBanach.norm (a * a)
     => \lam {d} (inP (c,c<d,c>0,aa<=c,_)) => \case sqrt-rat (<=-less c>0) c<d \with {
       | inP (q,r,q>0,q<r,c<qq,rr<d) =>
@@ -105,16 +133,21 @@
         \in ExUpperReal.*_U.2 $ inP (r, |a|<r, q>0 <∘ q<r, r, |a|<r, q>0 <∘ q<r, rr<d)
     }
 
+  -- | Every element is bounded above by some positive rational multiple of `1`.
   \lemma *q-upperBound (a : E) : ∃ (q : Rat) (0 < q) (a <= q *q ide)
     => \case c*-archimedean a \with {
       | inP (B,a<=B) => inP (suc B, fromInt_< $ pos<pos NatOrder.zero<suc, a<=B <=∘ (natCoef_*n *> inv *q_*n) =<= <=_*q-left (fromInt_<= $ pos<=pos id<=suc) zro<=ide)
     }
 }
 
+{- | Class extending `RealBanachPseudoAlgebra` and `CRing`, axiomatized by the pure-norm form of the C*-identity:
+ -   `c*-sum` (norm monotone under adding squares) and `c*-square` (`norm a * norm a <= norm (a*a)`).
+ -}
 \class StoneC*PseudoAlgebra \extends RealBanachPseudoAlgebra, CRing {
   | c*-sum {a b : E} : norm (a * a) ExUpperReal.<= norm (a * a + b * b)
   | c*-square {a : E} : norm a ExUpperReal.* norm a ExUpperReal.<= norm (a * a)
 
+  -- | Characterizes the norm as a join: `norm x = sup { norm (x * y) : norm y <= 1 }`.
   \lemma norm_*-char {x : E} : norm x = ExUpperRealLattice.SJoin (\lam y => norm (x * y)) (norm __ <= ExUpperRealPointed.ide)
     => <=-antisymmetric (\lam {b} (inP (a,a<b,f)) =>
       \have a>0 => norm>=0 $ f $ inP ((0, norm_zro =<= <=-less ExUpperRealAbMonoid.zro<ide), idp)
@@ -123,6 +156,11 @@
         \in ExUpperRealAbMonoid.<-rat.1 $ ExUpperRealSemigroup.finv_<-rotate-left a>0 (ExUpperRealAbMonoid.<-rat.2 $ norm>=0 |x|<c) $ transport (_ <) ExUpperRealSemigroup.*-comm $ c*-square <∘r |xx|<ca) a<b) $ ExUpperRealLattice.SJoin-univ $ later \lam |a|<=1 => norm_*_<= <=∘ ExUpperRealSemigroup.<=_* <=-refl |a|<=1 <=∘ =_<= (ExUpperRealSemigroup.ide-right norm>=0)
 }
 
+{- | Class extending `StoneC*PseudoAlgebra`, `RealBanachAlgebra`, `OrderedC*Algebra`, and `PosetRing`. The order is
+ -   defined by `x <= y := IsSquare (y - x)`, and all `OrderedC*Algebra` axioms (reflexivity, transitivity,
+ -   antisymmetry, additivity, archimedean, square-positivity, and the contraction-square equivalences) are derived from
+ -   the Banach-algebra and C*-identity axioms.
+ -}
 \class StoneC*Algebra \extends StoneC*PseudoAlgebra, RealBanachCAlgebra, OrderedC*Algebra, PosetRing {
   | <= => StoneC*Algebra.<=
   | <=-refl => inP (0, zro_*-right *> inv negative-right)
@@ -148,9 +186,11 @@
   | c*-<=_*-square a<=1 -a<=1 => norm-square' $ norm_*_<= ExUpperRealAbMonoid.<=∘ transport (_ ExUpperReal.<=) (ExUpperReal.*-rat {1} {1} rat_<=-dec rat_<=-dec) (ExUpperRealSemigroup.<=_* (norm-char-aux c*-sum c*-square a<=1 -a<=1) (norm-char-aux c*-sum c*-square a<=1 -a<=1))
   | c*-<=-square {a} (inP (b,bb=1-aa)) => norm-square' $ ExUpperRealSemigroup.square<=1 $ c*-square ExUpperRealAbMonoid.<=∘ transport (_ ExUpperReal.<= norm __) {_} {1} (equation.abGroup {bb=1-aa}) (c*-sum {_} {a} {b}) ExUpperRealAbMonoid.<=∘ norm_ide_<=
 
+  -- | If `norm (1 - x) <= 1` then `0 <= x` — the standard "near-identity is positive" lemma.
   \lemma norm-c*-positive {x : E} (p : norm (1 - x) ExUpperReal.<= RatField.ide) : 0 <= x
     => transportInv IsSquare minus_zro (norm-square p)
 
+  -- | `norm x <= q` implies `x <= q *q 1`.
   \lemma norm_<=_*q {x : E} {q : Rat} (|x|<=q : norm x ExUpperReal.<= q) : x <= q *q 1
     => \case LinearOrder.dec<_<= 0 q \with {
       | inl q>0 =>
@@ -172,15 +212,19 @@
         | inP (a,|x|<a,a<b) => inP (a, a<b, norm>=0 |x|<a, norm_<=_*q $ ExUpperReal.<_<= |x|<a, norm_<=_*q $ transportInv (ExUpperReal.<= _) norm_negative $ ExUpperReal.<_<= |x|<a)
       }
 
+  -- | `IsSquare x` is equivalent to `0 <= x`, justifying the order definition.
   \lemma square-positive {x : E} : IsSquare x <-> 0 <= x
     => (transportInv IsSquare minus_zro __, transport IsSquare minus_zro __)
 
+  -- | For `0 <= x <= 1`, `norm (1 - x) <= 1`.
   \lemma square-lem {x : E} (x>=0 : 0 <= x) (x<=1 : x <= 1) : norm (1 - x) ExUpperReal.<= ExUpperRealPointed.ide
     => square-lem-aux c*-sum (square-positive.2 x>=0) $ square-positive.2 $ transport (<= _) negative-right $ <=_+ x<=1 <=-refl
 
+  -- | Scaled version: for `0 <= x <= q *q 1`, `norm (q *q 1 - x) <= q`.
   \lemma square_*q-lem {q : Rat} (q>0 : RatField.zro < q) {x : E} (x>=0 : 0 <= x) (x<=q : x <= q *q 1) : norm (q *q 1 - x) ExUpperReal.<= q
     => transport2 (ExUpperReal.<=) (inv (norm_*q-ofPos $ <=-less q>0) *> pmap norm (toRatModule.*c-ldistr_- *> pmap (_ -) (inv *q-assoc *> pmap (*q x) (RatField.finv-right $ RatField.>_/= q>0) *> ide_*q))) (ExUpperReal.*-rat (<=-less q>0) (<=-less RatField.zro<ide) *> pmap ExUpperReal.fromRat RatField.ide-right) $ ExUpperRealSemigroup.<=_* (ExUpperRealAbMonoid.<=-refl {q}) $ square-lem (transport (<= _) toRatModule.*c_zro-right $ <=_*q-right (<=-less $ RatField.finv>0 q>0) x>=0) $ transport (_ <=) (inv *q-assoc *> pmap (*q _) (RatField.finv-left $ RatField.>_/= q>0) *> ide_*q) $ <=_*q-right (<=-less $ RatField.finv>0 q>0) x<=q
 
+  -- | The predicate `IsSquare` is topologically closed (a limit of squares is a square).
   \lemma square-closed : IsClosed IsSquare
     => \lam {x} xl => \case norm-bounded x \with {
       | inP (q,|x|<q) => norm_*q-square (norm>=0 |x|<q) \lam {r} q<r =>
@@ -192,11 +236,14 @@
         \in hiding (lem1,lem2) $ lem linarith
     }
 } \where {
+  -- | The order definition `x <= y := IsSquare (y - x)`, parametric in any ring.
   \type \infix 4 <= {R : Ring} (x y : R) => R.IsSquare (y - x)
 
+  -- | Abstract version of `square-lem` for any `RealBanachAlgebra` satisfying `c*-sum`.
   \private \lemma square-lem-aux {X : RealBanachAlgebra} (c*-sum : \Pi {a b : X} -> X.norm (a * a) ExUpperReal.<= X.norm (a * a + b * b)) {x : X} (px : X.IsSquare x) (p1 : X.IsSquare (1 - x)) : X.norm (1 - x) ExUpperReal.<= ExUpperRealPointed.ide \elim px, p1
     | inP (a,pa), inP (b,pb) => rewriteI pb $ c*-sum {_} {a} <=∘ transportInv (X.norm __ ExUpperReal.<= _) (equation.abGroup {pa,pb}) X.norm_ide_<=
 
+  -- | Sum of two contractive squares is a square.
   \private \lemma square-sum1 {X : RealBanachAlgebra} (c*-sum : \Pi {a b : X} -> X.norm (a * a) ExUpperReal.<= X.norm (a * a + b * b)) {x y : X} (qx : X.norm x ExUpperReal.<= 1) (qy : X.norm y ExUpperReal.<= 1) (px : X.IsSquare x) (py : X.IsSquare y) : X.IsSquare (x + y)
     => \let | lem => transport (_ ExUpperReal.<=) (ExUpperReal.*-rat rat_<=-dec rat_<=-dec) $ ExUpperRealSemigroup.<=_* {ratio 1 2} ExUpperRealAbMonoid.<=-refl $ transport (_ ExUpperReal.<=) ExUpperReal.+-rat (X.norm_+ <=∘ ExUpperRealAbMonoid.<=_+ (square-lem-aux c*-sum px (X.norm-square' qx)) (square-lem-aux c*-sum py (X.norm-square' qy)))
             | sqrt[x+y]/2 => X.sqrt (ratio 1 2 X.*q (x + y)) $ (pmap X.norm (inv (X.toRatModule.*c-ldistr_- *> pmap (- _) (pmap (_ X.*q) (inv X.*q_*2) *> inv X.*q-assoc *> X.ide_*q)) *> pmap (_ X.*q) {1 + 1 - (x + y)} equation.ring) *> X.norm_*q-ofPos rat_<=-dec) =<= lem
@@ -222,6 +269,7 @@
         }
     }
 
+  -- | Under the C*-axioms, contractions in the order sense have norm `<= 1` — the key lemma matching the two norms.
   \private \lemma norm-char-aux {X : RealBanachAlgebra} (c*-sum : \Pi {a b : X} -> X.norm (a * a) ExUpperReal.<= X.norm (a * a + b * b)) (c*-square : \Pi {a : X} -> norm a ExUpperReal.* norm a ExUpperReal.<= norm (a * a))
                                 {x : X} (x<=1 : x <= 1) (-x<=1 : negative x <= 1) : norm x ExUpperReal.<= 1
     => \let | a1 => ratio 1 2 X.*q (1 - x)
@@ -243,6 +291,10 @@
        \in ExUpperRealSemigroup.square<=1 $ c*-square ExUpperRealAbMonoid.<=∘ (simplify in square-lem-aux c*-sum xx<=1 (inP (x, simplify idp)))
 }
 
+{- | The real numbers form a `StoneC*Algebra`, with `CompleteExNormedAbGroup` from `RealValuedRing`, `CRing` from
+ -   `RealField`, divisibility, the identity-norm bound, scaling, multiplicativity, and both C*-identity axioms
+ -   verified.
+ -}
 \instance RealStoneC*Algebra : StoneC*Algebra Real
   | CompleteExNormedAbGroup => RealValuedRing
   | CRing => RealField

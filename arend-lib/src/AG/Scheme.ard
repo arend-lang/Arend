@@ -1,7 +1,24 @@
+{- | Affine schemes and general schemes formalized via locales of prime ideals and locally ringed structures.
+ -
+ -   This module builds the spectrum of a commutative ring as a locale presented by a frame presentation `SpecPres`,
+ -   where basic opens are ring elements and the cover relation captures membership in the radical of an ideal generated
+ -   by a family. Schemes are defined as locally ringed locales — locales equipped with a sheaf of rings whose stalks
+ -   are local in the sense that every section either it or its `+1` shift is locally invertible — that are locally
+ -   isomorphic to affine schemes. The construction goes through frame presentations (`RingedFramePres`,
+ -   `LocallyRingedFramePres`) so that a sheaf can be specified on basic opens (powers localizations of the ring) and
+ -   then extended to the full presented frame, with descent verified by gluing localizations via partition-of-unity
+ -   arguments on power identities like `e^n = a·c + b·d`.
+ -}
+
 \import AG.RingedLocale
 \import Order.Lattice
 \import Order.Lattice.CompleteLattice
 \import Order.PartialOrder
 
+{- | Extends `LocallyRingedLocale` with `isScheme`: the top element is covered by opens `U` whose restriction
+ -   `VSheaf.restrict U R` is isomorphic, as a ringed locale, to some `affineRingedLocale R'`. The non-triviality and
+ -   locality fields are derived automatically by transporting the corresponding properties from each affine restriction
+ -   along the iso.
+ -}
 \record Scheme \extends LocallyRingedLocale
   | isLocallyAffine : top <= Join IsAffineOpen

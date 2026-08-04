@@ -70,6 +70,7 @@
         \func limFunctor (b : Opens P)
           => Comp F (subPrecat.embedding \lam (t : Set.Total b.1) => t.1).op
 
+        -- | The diagram, its limit object, and the cone induced by an inequality `b <= a` used to define `extend.Func`.
         \func lim (b : Opens P)
           => D.limit (limFunctor b)
 

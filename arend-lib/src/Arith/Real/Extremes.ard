@@ -1,3 +1,13 @@
+{- | Suprema and infima of subsets of the real numbers, characterized via the Dedekind-cut presentation of `Real`.
+ -
+ -   This module defines what it means for a real number to be the supremum or infimum of a set of reals, packages these
+ -   as proposition-level structures (using uniqueness to obtain `\level`), and provides constructors that build the
+ -   extremum directly as a Dedekind cut. The supremum's lower cut is the union of the lower cuts of its members, while
+ -   its upper cut consists of strict upper bounds; the infimum is built dually. Existence is established under either
+ -   an order-theoretic locatedness hypothesis (`As`) or a totally-bounded hypothesis (`Ac`) requiring finite ε-nets,
+ -   and inf-from-sup duality is provided by negation.
+ -}
+
 \import Algebra.Group
 \import Algebra.Meta
 \import Algebra.Monoid
@@ -23,21 +33,31 @@
 \import Set.Set
 \open LatticeAbGroup
 
+{- | `IsSup A b` asserts `b` is a least upper bound: every `a ∈ A` satisfies `a <= b`, and for every `eps > 0` some
+ -   `x ∈ A` exceeds `b - eps` (witnessed as `b < x + eps`).
+ -}
 \func IsSup (A : Set Real) (b : Real) : \Prop
   => \Sigma (∀ {a : A} (a <= b)) (∀ {eps} (0 < eps) ∃ (x : A) (b < x + eps))
   \where {
+    -- | Any other upper bound `c` of `A` satisfies `b <= c`, so `b` is the least upper bound.
     \lemma isLowest {b : Real} (s : IsSup A b) {c : Real} (Ac : ∀ {a : A} (a <= c)) : b <= c
       => \lam c<b => \case s.2 {b - c} linarith \with {
         | inP (x,Ax,p) => Ac Ax linarith
       }
 
+    -- | Suprema are unique: if both `b` and `b'` are suprema of `A`, then `b = b'`.
     \lemma isUnique {b b' : Real} (bs : IsSup A b) (b's : IsSup A b') : b = b'
       => <=-antisymmetric (isLowest bs b's.1) (isLowest b's bs.1)
   }
 
+-- | The Σ-type of pairs `(B : Real, IsSup A B)`; `levelProp` upgrades it to a proposition via uniqueness of suprema.
 \func HasSup (A : Set Real) => \Sigma (B : Real) (IsSup A B)
   \where \protected \use \level levelProp (s t : HasSup A) : s = t => ext (IsSup.isUnique s.2 t.2)
 
+{- | Builds the supremum of `A` directly as a `Real` (Dedekind cut). Lower cut: rationals below some member; upper cut:
+ -   rationals strictly above some real upper bound. Requires inhabitation `Aa0`, a strict upper bound `Ab`, and a
+ -   locatedness condition `As` deciding for any `x < y` whether some `a ∈ A` exceeds `x` or all of `A` lies below `y`.
+ -}
 \func makeSup {A : Set Real} {a0 : Real} (Aa0 : A a0) {b : Real} (Ab : ∀ {a : A} (a < b))
               (As : \Pi {x y : Real} -> x < y -> Given (a : A) (x < a) || ∀ {a : A} (a < y)) : Real \cowith
   | L z => ∃ (a : A) (Real.L {a} z)
@@ -64,6 +84,7 @@
     | byRight rb => byRight $ inP (RatField.mid q r, real_<_L.2 $ RatField.mid<right q<r, rb)
   }
   \where {
+    -- | Verifies that `makeSup` indeed satisfies `IsSup A` under its hypotheses.
     \lemma isSup (Aa0 : A a0) (Ab : ∀ {a : A} (a < b)) (As : \Pi {x y : Real} -> x < y -> Given (a : A) (x < a) || ∀ {a : A} (a < y)) : IsSup A (makeSup Aa0 Ab As)
       => (\lam Aa c => \case real_<-rat-char.1 c \with {
         | inP (b, inP (z,z<b,zb), b<a) => linarith (real_<_L.2 b<a, zb Aa)
@@ -73,6 +94,7 @@
         }
       })
 
+    -- | Converse: if `IsSup A b` holds, then the locatedness alternative `As` follows for any `x < y`.
     \lemma conv {b : Real} (bs : IsSup A b) {x y : Real} (x<y : x < y) : Given (a : A) (x < a) || ∀ {a : A} (a < y)
       => \case real-located {b} x<y \with {
         | byLeft x<b => \case bs.2 {b - x} linarith \with {
@@ -82,10 +104,14 @@
       }
   }
 
+-- | Packages `makeSup` and `makeSup.isSup` into a `HasSup A`.
 \lemma makeSup-pair {A : Set Real} {a0 : Real} (Aa0 : A a0) {b : Real} (Ab : ∀ {a : A} (a < b))
                     (As : \Pi {x y : Real} -> x < y -> Given (a : A) (x < a) || ∀ {a : A} (a < y)) : HasSup A
   => (makeSup Aa0 Ab As, makeSup.isSup Aa0 Ab As)
 
+{- | Existence of `HasSup A` under a totally-bounded hypothesis: for every `eps > 0` there is a finite list `l ⊆ A` such
+ -   that every element of `A` is within `eps` (in absolute value) of some entry of `l`.
+ -}
 \lemma makeSupTB {A : Set Real} {a0 : Real} (Aa0 : A a0) (Ac : \Pi {eps : Real} -> 0 < eps -> ∃ (l : Array Real) (∀ (a : l) (A a)) ∀ {x : A} ∃ (y : l) (abs (x - y) < eps)) : HasSup A
   => \case Ac RealAbGroup.zro<ide \with {
     | inP (l,_,lb) => makeSup-pair Aa0 {Big (∨) zro l + 1} (\lam Aa => \case lb Aa \with {
@@ -109,30 +135,41 @@
         }
   }
 
+{- | `IsInf A b` asserts `b` is the greatest lower bound: every `a ∈ A` satisfies `b <= a`, and for every `eps > 0` some
+ -   `x ∈ A` is below `b + eps`.
+ -}
 \func IsInf (A : Set Real) (b : Real) : \Prop
   => \Sigma (∀ {a : A} (b <= a)) (∀ {eps} (0 < eps) ∃ (x : A) (x < b + eps))
   \where {
+    -- | Any other lower bound `c` of `A` satisfies `c <= b`.
     \lemma isGreatest {b : Real} (s : IsInf A b) {c : Real} (Ac : ∀ {a : A} (c <= a)) : c <= b
       => \lam b<c => \case s.2 {c - b} linarith \with {
         | inP (x,Ax,p) => Ac Ax linarith
       }
 
+    -- | Infima are unique.
     \lemma isUnique {b b' : Real} (bs : IsInf A b) (b's : IsInf A b') : b = b'
       => <=-antisymmetric (isGreatest b's bs.1) (isGreatest bs b's.1)
   }
 
+-- | The Σ-type `(B : Real, IsInf A B)`, made into a proposition by uniqueness.
 \func HasInf (A : Set Real) => \Sigma (B : Real) (IsInf A B)
   \where \protected \use \level levelProp (s t : HasInf A) : s = t => ext (IsInf.isUnique s.2 t.2)
 
+-- | Duality lemma: if `negative b` is a supremum of `{x | A (negative x)}`, then `b` is an infimum of `A`.
 \func makeSupInf {A : Set Real} {b : Real} (bs : IsSup (\lam x => A (negative x)) (negative b)) : IsInf A b
   => (\lam Aa => transport2 (<=) AddGroup.negative-isInv AddGroup.negative-isInv $ PosetAddGroup.negative_<= $ bs.1 $ transportInv A AddGroup.negative-isInv Aa,
       \lam eps>0 => \case bs.2 eps>0 \with {
         | inP (x,A-x,-b<x+eps) => inP (negative x, A-x, linarith)
       })
 
+-- | Lifts `makeSupInf` to packaged form: `HasSup` of the negated set yields `HasInf A`.
 \lemma makeHasSupInf {A : Set Real} (s : HasSup (\lam x => A (negative x))) : HasInf A \elim s
   | (b,bs) => (negative b, makeSupInf $ rewrite AddGroup.negative-isInv bs)
 
+{- | Builds the infimum of `A` directly as a Dedekind cut, dual to `makeSup`. Lower cut: rationals strictly below some
+ -   real lower bound; upper cut: rationals above some member. Hypotheses mirror those of `makeSup`.
+ -}
 \func makeInf {A : Set Real} {a0 : Real} (Aa0 : A a0) {b : Real} (Ab : ∀ {a : A} (b < a))
               (As : \Pi {x y : Real} -> x < y -> ∀ {a : A} (x < a) || Given (a : A) (a < y)) : Real \cowith
   | L z => ∃ (z' : Real) ((z : Real) < z') ∀ {a : A} (z' < a)
@@ -159,6 +196,7 @@
     | byRight (a,Aa,q<a) => byRight $ inP (a, Aa, real_<_U.1 q<a)
   }
   \where {
+    -- | Verifies `makeInf` satisfies `IsInf A`.
     \lemma isInf : IsInf A (makeInf Aa0 Ab As)
       => (\lam Aa c => \case real_<-rat-char.1 c \with {
         | inP (b, a<b, inP (z,b<z,zb)) => linarith (real_<_U.2 a<b, zb Aa)
@@ -168,6 +206,7 @@
         }
       })
 
+    -- | Converse locatedness derived from `IsInf A b`.
     \lemma conv {b : Real} (bs : IsInf A b) {x y : Real} (x<y : x < y) : ∀ {a : A} (x < a) || Given (a : A) (a < y)
       => \case real-located {b} x<y \with {
         | byLeft x<b => byLeft \lam Aa => x<b <∘l bs.1 Aa
@@ -177,6 +216,7 @@
       }
   }
 
+-- | Existence of `HasInf A` under the same totally-bounded hypothesis as `makeSupTB`.
 \lemma makeInfTB {A : Set Real} {a0 : Real} (Aa0 : A a0) (Ac : \Pi {eps : Real} -> 0 < eps -> ∃ (l : Array Real) (∀ (a : l) (A a)) ∀ {x : A} ∃ (y : l) (abs (x - y) < eps)) : HasInf A
   => makeHasSupInf $ makeSupTB (transportInv A AddGroup.negative-isInv Aa0) \lam eps>0 => \case Ac eps>0 \with {
     | inP (l,Al,lb) => inP (map negative l, \lam j => transportInv A AddGroup.negative-isInv (Al j), \lam A-x => \case lb A-x \with {

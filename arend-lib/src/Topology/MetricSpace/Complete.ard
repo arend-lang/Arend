@@ -1,3 +1,13 @@
+{- | Completion of pseudometric spaces into complete metric spaces, lifting metric maps along weakly dense uniform
+ -   embeddings.
+ -
+ -   This module connects the abstract uniform-space completion machinery to the concrete metric setting. The completion
+ -   of a pseudometric space `X` is built on top of the strong uniform completion (so its underlying point set is the
+ -   space of strongly regular Cauchy filters), with the distance function obtained by lifting the original distance
+ -   along the dense embedding into the product completion via `weaklyDense-lift`. This gives a universal complete
+ -   metric space receiving a metric map from `X`, into which any metric map to a complete target factors uniquely.
+ -}
+
 \import Algebra.Meta
 \import Algebra.Monoid
 \import Algebra.Pointed
@@ -33,6 +43,10 @@
 \import Topology.UniformSpace
 \import Topology.UniformSpace.StronglyComplete
 
+{- | Given an isometric map `f : X -> Y` that is a weakly dense uniform embedding and a metric map `g : X -> Z` into a
+ -   complete metric space `Z`, produces the unique metric map `Y -> Z` extending `g`. Combines
+ -   `weaklyDense-uniform-lift` with a proof that the distance is preserved.
+ -}
 \func dense-metric-lift {X Y : PseudoMetricSpace} {Z : CompleteMetricSpace} (f : IsometricMap X Y) (fd : f.IsWeaklyDenseUniformEmbedding) (g : MetricMap X Z) : MetricMap Y Z \cowith
   | UniformMap => weaklyDense-uniform-lift f fd g
   | func-dist {y} {y'} =>
@@ -44,6 +58,10 @@
     \open ContMap
   }
 
+{- | Instance constructing a `CompleteMetricSpace` from any `PseudoMetricSpace X`. Its underlying uniform structure is
+ -   `UniformStrongCompletion X` (strongly regular Cauchy filters), and its distance is obtained by lifting
+ -   `ldist : X × X -> R` along the product dense embedding `strongCompletion × strongCompletion`.
+ -}
 \instance MetricCompletion (X : PseudoMetricSpace) : CompleteMetricSpace
   | StronglyCompleteUniformSpace => UniformStrongCompletion X
   | dist x y => dist-cover (x,y)
@@ -71,15 +89,26 @@
     \open ProductCoverSpace
     \open CoverMap
 
+    {- | The lifted distance as a cover map `StrongCompletion X ⨯ StrongCompletion X -> RealNormed`, defined via
+     -   `weaklyDense-lift` of the rational left-distance uniform map `ldist-uniform-map` over the product strongly
+     -   regular cover space.
+     -}
     \sfunc dist-cover : CoverMap (StrongCompletion X `ProductCoverSpace` StrongCompletion X) RealNormed
       => weaklyDense-lift {_} {ProductStronglyRegularCoverSpace (StrongCompletion X) (StrongCompletion X)} (prod strongCompletion strongCompletion) (prod.isWeaklyDenseEmbedding strongCompletion.isDenseEmbedding strongCompletion.isDenseEmbedding) ldist-uniform-map
 
+    {- | Characterization on point filters: `dist-cover (pointSCF x, pointSCF y) = ldist x y`, showing the lifted
+     -   distance restricts to the original distance on `X`.
+     -}
     \lemma dist-char {x y : X} : dist-cover (pointSCF x, pointSCF y) = ldist x y
       => rewrite (\peval dist-cover) $ weaklyDense-lift-char (prod.isWeaklyDenseEmbedding strongCompletion.isDenseEmbedding strongCompletion.isDenseEmbedding) (x,y)
 
+    -- | Reflexivity of the lifted distance: `dist-cover (F, F) = 0` for any strongly regular Cauchy filter `F`.
     \private \lemma dist-refl-lem {F : StronglyRegularCauchyFilter X} : dist-cover (F, F) = 0
       => weaklyDense-lift-unique strongCompletion strongCompletion.isDenseEmbedding.1 (dist-cover ∘ tuple id id) (const 0) (\lam x => dist-char *> ldist-refl) F
 
+    {- | Triangle inequality for the lifted distance on Cauchy filters:
+     -   `dist-cover (x, z) <= dist-cover (x, y) + dist-cover (y, z)`.
+     -}
     \lemma filter-dist-triang (x y z : StronglyRegularCauchyFilter X) : dist-cover (x,z) <= dist-cover (x,y) + dist-cover (y,z)
       => RealAbGroup.meet_<=' $ weaklyDense-lift-unique (prod (prod strongCompletion strongCompletion) strongCompletion) (prod.isWeaklyDenseEmbedding (prod.isWeaklyDenseEmbedding strongCompletion.isDenseEmbedding strongCompletion.isDenseEmbedding) strongCompletion.isDenseEmbedding).1
           (real-meet-uniform ∘ tuple (dist-cover ∘ prod proj1 id) (+-uniform ∘ tuple (dist-cover ∘ proj1) (dist-cover ∘ prod proj2 id)))
@@ -88,6 +117,10 @@
             rewrite (dist-char,dist-char,dist-char) $ RealAbGroup.meet_<= ldist-triang)
           ((x,y),z)
 
+    {- | Locality lemma — if filters `F` and `G` both contain an open ball of radius `eps/4` around a common point `x`,
+     -   then `dist-cover (F, G)` lies in the upper-real neighborhood `U eps`. Used to bound the completion distance
+     -   from concrete filter membership data.
+     -}
     \lemma dist-neighborhood (F G : StronglyRegularCauchyFilter X) {eps : Rat} (eps>0 : 0 < eps) {x : X} (Fx : F (OBall (RatField.half (RatField.half eps)) x)) (Gx : G (OBall (RatField.half (RatField.half eps)) x)) : (dist-cover (F,G)).U eps
       => rewrite (\peval dist-cover) $ real_<_U.1 $ simplify in RealAbGroup.abs>=_- <∘r real_<_U.2 (<=<_<= ((strongCompletion-lift-neighborhood2 {_} {_} {RealNormed} (ldist-uniform-map {X}) F G (OBall eps 0)).2 $ inP
             (OBall (RatField.half eps) 0, s<=*_s<=< $ OBall_s<=* (linarith : RatField.half eps < eps), _, Fx, _, Gx, \lam {z1} d1 {z2} d2 => real_<_U.1 $ RealAbGroup.abs_-_< (linarith (ldist>=0 {X} {z1}, rat_real_<.1 $ RatField.half>0 eps>0)) $ simplify $ real_<_U.2 $ ExPseudoMetricSpace.halving1/2 d1 d2)) idp)

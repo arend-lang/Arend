@@ -1,3 +1,14 @@
+{- | Defines Euler's totient function and develops the algebraic machinery linking residues mod n, units of finite
+ -   rings, and the Chinese remainder theorem.
+ -
+ -   This module establishes the equivalence between numbers coprime to `n` and the group of units of `Z/nZ` (realized
+ -   as `FinRing`), defining the totient as the finite cardinality of the coprime set. The construction goes through
+ -   Bezout-based inverse formulas: for `k` coprime to `n+1`, the modular inverse is computed via the Bezout
+ -   coefficients of the integer Euclidean domain. The module also identifies `FinRing` with the factor ring `Z/(n+1)Z`
+ -   by combining the kernel/image factorization of the integer coefficient map, and sets up the Chinese remainder map
+ -   for proving multiplicativity of the totient on coprime arguments.
+ -}
+
 \import Algebra.Domain.Bezout
 \import Algebra.Domain.Euclidean
 \import Algebra.Group
@@ -38,14 +49,21 @@
 \open FinRing
 \open Monoid
 
+{- | `Nat -> FinSet`. The finite set of `k : Fin (suc n)` with `gcd(k, suc n) = 1`, defined as a sigma over a decidable
+ -   predicate.
+ -}
 \func coPrimes (n : Nat) : FinSet
   => SigmaFin (FinFin (suc n)) \lam k => DecFin $ decideEq (NatEuclidean.gcd k (suc n)) 1
 
+-- | `Monoid M -> SubMonoid M`. The submonoid of invertible elements (units), with `contains x = Inv x`.
 \instance InvSubMonoid (M : Monoid) : SubMonoid M
   | contains x => Inv x
   | contains_ide => Inv.ide-isInv
   | contains_* xi yi => Inv.product xi yi
 
+{- | `Monoid M -> Group`. Promotes the units submonoid to a group, providing inverses by swapping the components of an
+ -   `Inv` witness.
+ -}
 \instance InvGroup (M : Monoid) : Group
   | Monoid => IMonoid (InvSubMonoid M)
   | inverse (x,xi) => (xi.inv, \new Inv {
@@ -55,6 +73,9 @@
   })
   | inverse-left {x} => ext x.2.inv-left
 
+{- | For `n > 0`, an equivalence `QEquiv {coPrimes n} {InvGroup (FinRing {n})}`. The forward map sends a coprime `k` to
+ -   a unit using `finv-formula`; the inverse uses Bezout's identity to show that any unit must be coprime to `n+1`.
+ -}
 \func coPrimes-eq (n : Nat) (n>0 : 0 NatOrder.< n) : QEquiv {coPrimes n} {InvGroup (FinRing {n})} \cowith
   | f (k, p) =>
     \let gcd-inv => gcd-inv {n} {k} (rewrite nat_gcd-comm p)
@@ -82,8 +103,12 @@
   \where {
     \open EuclideanRingData
 
+    {- | Computes the modular inverse of `x : Fin (suc n)` via Bezout coefficients from `IntEuclidean`, taking the
+     -   result mod `suc n`.
+     -}
     \func finv-formula (x : Fin (suc n)) => (IntEuclidean.natDivMod (bezout (pos (suc n)) (pos x)).2 (suc n)).2 Nat.mod suc n
 
+    -- | Lemma showing `x * finv-formula x = 1 mod (suc n)` when `gcd(suc n, x) = 1`.
     \lemma gcd-inv {x : Fin (suc n)} (x-coprime : NatEuclidean.gcd (suc n) x = {Nat} 1)
       : (x NatSemiring.* finv-formula x) Nat.mod suc n = 1 Nat.mod suc n
       => \let | (u,v) => bezout (pos (suc n)) (pos x)
@@ -97,6 +122,10 @@
 
   }
 
+{- | An isomorphism `FactorRing (closure1 (suc n)) ≃ FinRing {n}`, obtained by transporting through `ker-int-Coef` and
+ -   the surjectivity of the integer coefficient map, then applying the kernel/image factorization
+ -   `ringKerImageHom-iso`.
+ -}
 \lemma Z/nZ=FinRing {n : Nat}
   : IsEquiv {FactorRing (Ideal.closure1 (pos (suc n)))} {FinRing {n}} (factor-lift FinRing.intHom factor-lem)
   => IsEquiv.fromInjSurj (\lam {x} {y} => \case \elim x, \elim y \with {
@@ -109,14 +138,22 @@
       }
   }
 
+-- | `Nat -> Nat`. Euler's totient `φ(n+1)`, the finite cardinality of `coPrimes n`.
 \func EulerTotient (n : Nat) : Nat => (coPrimes n).card
 
+{- | For moduli `n, m`, the map `FinRing {suc n * m + n} -> FinRing {n} × FinRing {m}` reducing an element modulo each
+ -   factor via `Fin.fromNat`.
+ -}
 \func chinese-map {n m : Nat} (x : FinRing {suc n * m + n}) : \Sigma (FinRing {n}) (FinRing {m})
   => (x Nat.mod suc n, x Nat.mod suc m)
 
+-- | Any unit in `NatSemiring` equals `1` — the natural numbers have only the trivial unit.
 \lemma natSemiring-unit {n : Nat} (p : Inv {NatSemiring} n) : n = 1
   => natUnit p.inv-left
 
+{- | Surjectivity of `chinese-map` when `suc n` and `suc m` are coprime — the CRT statement used to prove
+ -   multiplicativity of the totient.
+ -}
 \lemma chinese-map-surj (n m : Nat) (p : IsCoprime (suc n) (suc m)) : IsSurj (chinese-map {n} {m})
   => \case \elim __ \with {
   | (r1, r2) => \case IntDomain.chinese2 r1 r2 (suc n) (suc m) (\lam z l l1 =>
@@ -142,6 +179,9 @@
         pmap (__ Nat.mod suc m) (mod-inv {suc m} {suc n} (\lam p => \case p) (r mod (suc n * suc m)))
       \in rewrite intCoef-char (B2 *> rewrite fin_mod_id B1)))
   }} \where {
+  {- | Auxiliary lemma `x mod (n*m) mod n = x mod n` for `n /= 0`, used to verify the components of the surjectivity
+   -   proof.
+   -}
   \lemma mod-inv {n m : Nat} (p : n /= 0) (x : Nat) : x Nat.mod (n Semigroup.* m) Nat.mod n = x Nat.mod n =>
     \let A0 => rewriteI NatSemiring.ldistr $ rewrite NatSemiring.*-assoc $
         rewriteI (AddMonoid.+-assoc {_} {n Nat.* m Nat.* x Nat.div (n Nat.* m)}) $

@@ -1,3 +1,13 @@
+{- | Subspace structures: equipping a subset `S ⊆ X` with the induced topological, cover, uniform, or metric structure
+ -   inherited from `X`.
+ -
+ -   This module systematically transfers each topological structure on `X` to its subset type `Elem S` via the
+ -   inclusion map `s ↦ s.1`. The construction relies on generic transfer instances (`TopTransfer`, `CoverTransfer`,
+ -   `UniformTransfer`, `MetricTransfer`) that pull back the structure along an arbitrary function. For metric spaces,
+ -   the injectivity of inclusion is supplied as the proof obligation (via `ext`), ensuring the induced pseudometric is
+ -   genuinely a metric.
+ -}
+
 \import Paths.Meta
 \import Set.Set
 \import Topology.CoverSpace
@@ -5,17 +15,24 @@
 \import Topology.TopSpace
 \import Topology.UniformSpace
 
+-- | Topology on `Elem S` induced from `X`, defined as `TopTransfer` along the first projection.
 \instance ElemTopSpace {X : TopSpace} (S : Set X) : TopSpace (Elem S)
   => TopTransfer {Elem S} (\lam s => s.1)
 
+-- | The inclusion map `Elem S → X`, `s ↦ s.1`, is continuous with respect to the induced topology on `Elem S`.
 \lemma elemCont {X : TopSpace} {S : Set X} : ContMap (ElemTopSpace S) X \lam s => s.1
   => TopTransfer-map \lam (s : Elem S) => s.1
 
+-- | Cover space structure on `Elem S` induced from a cover space `X` via `CoverTransfer`.
 \instance ElemCoverSpace {X : CoverSpace} (S : Set X) : CoverSpace (Elem S)
   => CoverTransfer {Elem S} (\lam s => s.1)
 
+-- | Uniform space structure on `Elem S` induced from a uniform space `X` via `UniformTransfer`.
 \instance ElemUniformSpace {X : UniformSpace} (S : Set X) : UniformSpace (Elem S)
   => UniformTransfer {Elem S} (\lam s => s.1)
 
+{- | Metric space structure on `Elem S` induced from a metric space `X` via `MetricTransfer`, with injectivity of
+ -   inclusion supplied by `ext` on subset elements.
+ -}
 \instance ElemMetricSpace {X : MetricSpace} (S : Set X) : MetricSpace (Elem S)
   => MetricTransfer {Elem S} (\lam s => s.1) \lam p => ext p

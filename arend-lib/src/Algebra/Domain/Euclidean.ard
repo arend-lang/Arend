@@ -1,3 +1,15 @@
+{- | Euclidean semirings, rings, and domains: structures equipped with a Euclidean function (size measure) supporting
+ -   division with remainder, from which GCDs, Bézout coefficients, and PID structure are derived.
+ -
+ -   This module formalizes the Euclidean algorithm constructively using a "fuel" parameter (a natural number bounding
+ -   the recursion depth) so that recursion is structurally well-founded; the fuel is supplied as
+ -   `suc' (euclideanMap b)` to guarantee termination. The semiring layer (`EuclideanSemiringData`) builds GCDs and a
+ -   "reduce" pair giving cofactors `(a/g, b/g)` directly from `divMod`, while the ring layer (`EuclideanRingData`)
+ -   additionally produces Bézout coefficients. `EuclideanDomain` packages this into a PID via a truncated existence of
+ -   the Euclidean structure, and the file closes by realizing `Nat` and `Int` as instances and transporting
+ -   GCD/divisibility facts between them via `iabs` and `pos`.
+ -}
+
 \import Algebra.Domain
 \import Algebra.Domain.Bezout
 \import Algebra.Domain.GCD
@@ -30,6 +42,10 @@
 \import Set.Fin
 \open Monoid(LDiv,Inv)
 
+{- | Class extending `CSemiring` and `DecSet` with a Euclidean size `euclideanMap : E -> Nat`, division-with-remainder
+ -   `divMod`, the equation `y * q + r = x`, the size-decrease law `euclideanMap r < euclideanMap y` when `y, r ≠ 0`,
+ -   and `summandDiv` (cancellation: if `d * x + y = d * z` then `d ∣ y`).
+ -}
 \class EuclideanSemiringData \extends CSemiring, DecSet {
   | euclideanMap : E -> Nat
   | divMod : E -> E -> \Sigma E E
@@ -37,8 +53,12 @@
   | isEuclideanMap (x y : E) : y /= 0 -> (divMod x y).2 /= 0 -> euclideanMap (divMod x y).2 < euclideanMap y
   | summandDiv {x y z d : E} (d/=0 : d /= 0) (p : d * x + y = d * z) : LDiv d y
 
+  -- | Top-level GCD `gcd a b := gcd-fueled (suc' (euclideanMap b)) a b`.
   \func gcd (a b : E) => gcd-fueled (suc' (euclideanMap b)) a b
 
+  {- | Recursive Euclidean algorithm with explicit fuel `s`; returns `a` when `b = 0` or fuel is exhausted, otherwise
+   -   recurses on `(b, (divMod a b).2)`.
+   -}
   \func gcd-fueled (s : Nat) (a b : E) : E \elim s
     | 0 => a
     | suc s => \case decideEq b 0 \with {
@@ -46,6 +66,7 @@
       | no _ => gcd-fueled s b (divMod a b).2
     }
 
+  -- | `gcd-fueled s a 0 = a`.
   \lemma fueled_zro (s : Nat) (a : E) : gcd-fueled s a 0 = a \elim s
     | 0 => idp
     | suc s => mcases \with {
@@ -53,6 +74,9 @@
       | no p => absurd (p idp)
     }
 
+  {- | Computes the pair of cofactors `(a/gcd, b/gcd)` in lockstep with `gcd-fueled`, accumulating quotients along the
+   -   recursion.
+   -}
   \func reduce-fueled (s : Nat) (a b : E) : \Sigma E E \elim s
     | 0 => (1,0)
     | suc s => \case decideEq b 0 \with {
@@ -62,8 +86,10 @@
                 \in (a' * d + b', a')
     }
 
+  -- | Top-level cofactor pair `reduce a b := reduce-fueled (suc' (euclideanMap b)) a b`.
   \func reduce (a b : E) => reduce-fueled (suc' (euclideanMap b)) a b
 
+  -- | `reduce-fueled s a 0 = (1, 0)`.
   \lemma reduce_zro (s : Nat) (a : E) : reduce-fueled s a 0 = (1,0) \elim s
     | 0 => idp
     | suc s => mcases \with {
@@ -71,6 +97,7 @@
       | no p => absurd (p idp)
     }
 
+  -- | `(reduce-fueled s a b).1 * gcd-fueled s a b = a` and the analogue for `b` (with sufficient fuel).
   \lemma reduce*fueled-left (s : Nat) (a b : E) (b<=s : euclideanMap b < s) : (reduce-fueled s a b).1 * gcd-fueled s a b = a \elim s
     | 0 => ide-left
     | suc s => mcases \with {
@@ -87,6 +114,7 @@
       }
     }
 
+  -- | `(reduce-fueled s a b).1 * gcd-fueled s a b = a` and the analogue for `b` (with sufficient fuel).
   \lemma reduce*fueled-right (s : Nat) (a b : E) (b<=s : euclideanMap b < s) : (reduce-fueled s a b).2 * gcd-fueled s a b = b \elim s
     | 0 => \case b<=s
     | suc s => mcases \with {
@@ -97,9 +125,11 @@
       }
     }
 
+  -- | `(reduce a b).2 * gcd a b = b`.
   \lemma reduce*gcd-right (a b : E) : (reduce a b).2 * gcd a b = b
     => reduce*fueled-right (suc' (euclideanMap b)) a b (rewrite suc'=suc id<suc)
 
+  -- | If `g ∣ a` and `g ∣ b`, then `g ∣ gcd-fueled s a b`; the universality side of the GCD property.
   \func gcd-isGCD-fueled (s : Nat) {a b g : E} (g|a : LDiv g a) (g|b : LDiv g b) : LDiv g (gcd-fueled s a b) \elim s
     | 0 => g|a
     | suc s => mcases \with {
@@ -107,6 +137,9 @@
       | no b/=0 => gcd-isGCD-fueled s g|b (summandDiv (ldiv/=0 b/=0 g|b) (pmap (+ _) (inv *-assoc) *> pmap (__ * _ + _) g|b.inv-right *> isDivMod a b *> inv g|a.inv-right))
     }
 
+  {- | Packages `gcd a b` as a full `GCD a b` record, supplying both divisibility witnesses (via `reduce`) and
+   -   universality.
+   -}
   \func gcd-isGCD (a b : E) : GCD a b \cowith
     | res => gcd a b
     | res|val1 => \new LDiv {
@@ -119,9 +152,11 @@
     }
     | res-univ g g|a g|b => gcd-isGCD-fueled (suc' (euclideanMap b)) g|a g|b
 
+  -- | `gcd x 0 = x`.
   \lemma gcd_0 {x : E} : gcd x 0 = x
     => aux
     \where
+      -- | `gcd x 0 = x`.
       \lemma aux {s : Nat} {x : E} : gcd-fueled s x 0 = x \elim s
         | 0 => idp
         | suc s => mcases \with {
@@ -129,9 +164,16 @@
           | no n => absurd (n idp)
         }
 
+  {- | Given `b ∣ a` and `a ≠ 0`, decides between `a ∣ b` (so `a` and `b` are associates) and the existence of an
+   -   associate `b'` of `b` with strictly smaller Euclidean size than `a`; the engine for inducting on `euclideanMap`.
+   -}
   \func isPseudonorm {a b : E} (a/=0 : a /= 0) (b|a : LDiv b a)
     => aux b a/=0 b|a id<suc
     \where
+      {- | Given `b ∣ a` and `a ≠ 0`, decides between `a ∣ b` (so `a` and `b` are associates) and the existence of an
+       -   associate `b'` of `b` with strictly smaller Euclidean size than `a`; the engine for inducting on
+       -   `euclideanMap`.
+       -}
       \func aux {a : E} (b : E) (a/=0 : a /= 0) (b|a : LDiv b a) {n : Nat} (p : euclideanMap a < n)
         : Or (LDiv a b) (\Sigma (b' : E) (LDiv b b') (LDiv b' b) (euclideanMap b' < euclideanMap a)) \elim n
         | 0 => \case p
@@ -149,6 +191,9 @@
             }
         }
 
+  {- | Decides invertibility of `a`, given that any inverse-witnessing element of nonzero `b` has
+   -   `euclideanMap a <= euclideanMap b`.
+   -}
   \lemma unit-dec (a : E) (f : \Pi {b : E} -> Inv a -> b /= 0 -> euclideanMap a <= euclideanMap b) : Dec (Inv a)
     => \case decideEq a 0 \with {
          | yes a=0 => \case decideEq zro ide \with {
@@ -161,10 +206,12 @@
          }
        }
 } \where {
+  -- | Helper sending `0 ↦ 1` and `suc n ↦ suc (suc n)`, used to provide fuel that strictly exceeds `euclideanMap b`.
   \func suc' (n : Nat) : Nat
     | 0 => 1
     | suc n => suc (suc n)
 
+  -- | `suc' n = suc n` for `n` viewed as the appropriate successor.
   \lemma suc'=suc (n : Nat) : suc' n = suc n
     | 0 => idp
     | suc n => idp
@@ -172,12 +219,16 @@
 
 \open EuclideanSemiringData
 
+{- | Class extending `EuclideanSemiringData` and `CRing`; in a ring, `summandDiv` is automatic (the inverse witness is
+ -   `z - x`).
+ -}
 \class EuclideanRingData \extends EuclideanSemiringData, CRing {
   | summandDiv {x} {y} {z} {d} _ p => \new LDiv {
     | inv => z - x
     | inv-right => ldistr *> +-comm *> pmap (_ +) (inv p) *> simplify
   }
 
+  -- | Extended Euclidean algorithm with fuel; returns coefficients `(u, v)` mirroring the recursion of `gcd-fueled`.
   \func bezout-fueled (s : Nat) (a b : E) : \Sigma E E \elim s
     | 0 => (1,0)
     | suc s => \case decideEq b 0 \with {
@@ -187,8 +238,10 @@
                 \in (v, u - d * v)
     }
 
+  -- | Top-level Bézout coefficients `bezout a b := bezout-fueled (suc' (euclideanMap b)) a b`.
   \func bezout (a b : E) => bezout-fueled (suc' (euclideanMap b)) a b
 
+  -- | `(bezout a b).1 * a + (bezout a b).2 * b = gcd a b`.
   \lemma bezoutIdentity-fueled (s : Nat) (a b : E) : (bezout-fueled s a b).1 * a + (bezout-fueled s a b).2 * b = gcd-fueled s a b \elim s
     | 0 => simplify
     | suc s => mcases \with {
@@ -196,10 +249,14 @@
       | no _ => pmap (_ * __ + _) (inv (isDivMod a b)) *> equation.cRing *> bezoutIdentity-fueled s b (divMod a b).2
     }
 
+  -- | `(bezout a b).1 * a + (bezout a b).2 * b = gcd a b`.
   \lemma bezoutIdentity (a b : E) : (bezout a b).1 * a + (bezout a b).2 * b = gcd a b
     => bezoutIdentity-fueled (suc' (euclideanMap b)) a b
 }
 
+{- | Class extending `PID`, requiring `isEuclidean : TruncP (EuclideanRingData ...)`. Implements `isBezout` directly
+ -   from `bezoutIdentity`, and `divChain` (ascending-chain termination) by induction on `euclideanMap`.
+ -}
 \class EuclideanDomain \extends PID, NoetherianCRing
   | isEuclidean : TruncP (EuclideanRingData { | CRing => \this | decideEq => decideEq })
   | isBezout a b => TruncP.map isEuclidean \lam (d : EuclideanRingData { | CRing => \this }) =>
@@ -250,6 +307,9 @@
         }
   }
 
+{- | Instance making `Nat` a `EuclideanSemiringData` with `euclideanMap = id` and the standard `divMod` from
+ -   `Arith.Nat`; `summandDiv` is proved via uniqueness of `mod`.
+ -}
 \instance NatEuclidean : EuclideanSemiringData
   | CSemiring => NatSemiring
   | euclideanMap n => n
@@ -270,11 +330,15 @@
   \where {
     \open Nat
 
+    -- | `NatEuclidean.gcd 0 x = x`.
     \lemma gcd0_ {x : Nat} : NatEuclidean.gcd 0 x = x \elim x
       | 0 => idp
       | suc x => idp
   }
 
+{- | Instance making `Int` a `EuclideanRingData` with `euclideanMap = iabs`; division/remainder are obtained from
+ -   `Nat`'s `divMod` on `iabs`, then re-signed via `signum`.
+ -}
 \instance IntEuclidean : EuclideanRingData
   | CRing => IntRing
   | decideEq => IntRing.decideEq
@@ -304,25 +368,33 @@
         \in transport (< iabs y) (inv t) $ isEuclideanMap (iabs x) (iabs y) |y|/=0 \lam e => r/=0 $ pmap (pos __ * _) e *> zro_*-left
     }
   \where {
+    {- | Normalizes a quotient/remainder pair so the remainder lies in `Nat`, adjusting the quotient by `signum m` when
+     -   necessary.
+     -}
     \func modToNat (m : Int) (p : \Sigma Int Int) : \Sigma Int Nat \elim p
       | (q, pos n) => (q, n)
       | (q, neg (suc n)) => (q - signum m, iabs (iabs m Nat.- suc n))
 
+    -- | Variant of `divMod` returning `(Int, Nat)`.
     \func natDivMod (x y : Int) : \Sigma Int Nat
       => modToNat y (IntEuclidean.divMod x y)
 
+    -- | Integer quotient (returning `Int`) and remainder (returning `Nat`).
     \func \infixl 8 div (x y : Int) : Int
       => (natDivMod x y).1
 
+    -- | Integer quotient (returning `Int`) and remainder (returning `Nat`).
     \func \infixl 8 mod (x y : Int) : Nat
       => (natDivMod x y).2
 
+    -- | Bounds `iabs (divMod x (suc n)).2 < suc n` and `x mod suc n < suc n`.
     \lemma intMod<right (x : Int) (n : Nat) : iabs (IntEuclidean.divMod x (suc n)).2 < suc n
       => \case decideEq (IntEuclidean.divMod x (suc n)).2 0 \with {
         | yes e => rewrite e NatOrder.zero<suc
         | no e => IntEuclidean.isEuclideanMap x (suc n) (\case __) e
       }
 
+    -- | Bounds `iabs (divMod x (suc n)).2 < suc n` and `x mod suc n < suc n`.
     \lemma natMod<right {x : Int} {n : Nat} : x mod suc n < suc n
       => \let (q,r) => IntEuclidean.divMod x (suc n)
          \in \case r \as r, idp : r = (IntEuclidean.divMod x (suc n)).2 \return (modToNat (suc n) (q,r)).2 < suc n \with {
@@ -330,6 +402,7 @@
                | neg (suc m), p => pos<=pos.conv (transportInv (<= pos n) (pos_iabs (<=-less (transportInv (< suc n) (pmap iabs p) (intMod<right x n)))) (IntRing.<=_+ {pos n} {n} {neg m} {0} <=-refl (signum.signum_neg/=1 __))) <∘r id<suc
              }
 
+    -- | `y * (x div y) + x mod y = x` when `y ≠ 0`, and the variant with `pos (suc n)`.
     \lemma divModProp (x y : Int) (y/=0 : y /= 0) : y * x div y + x mod y = x
       => \let (q,r) => IntEuclidean.divMod x y
          \in \case r \as r, idp : r = (IntEuclidean.divMod x y).2 \return y * (modToNat y (q,r)).1 + (modToNat y (q,r)).2 = x \with {
@@ -349,6 +422,7 @@
                      IntEuclidean.isDivMod x y
              }
 
+    -- | `y * (x div y) + x mod y = x` when `y ≠ 0`, and the variant with `pos (suc n)`.
     \lemma natDivModProp (x : Int) (n : Nat) : pos (suc n) * x div suc n + x mod suc n = x
       => divModProp x (suc n) (\case __)
 
@@ -356,24 +430,31 @@
       | inv => x div m - y div m
       | inv-right => IntRing.ldistr_- *> linarith (divModProp x m m/=0, divModProp y m m/=0)
 
+    -- | Uniqueness of the remainder under `pos n * q + r = pos n * q' + r'` with `r, r' < n`.
     \lemma mod-unique {q q' : Int} {n r r' : Nat} (r<n : r < n) (r'<n : r' < n) (p : pos n * q + r = pos n * q' + r') : r = r' \elim q, q'
       | pos q, pos q' => Arith.Nat.mod-unique r<n r'<n (pmap iabs p)
       | pos q, neg q' => Arith.Nat.mod-unique {n} {q' + q} {r} {0} r<n r'<n (pmap iabs (pmap (+ pos r) (IntRing.ldistr {n} {q'} {q}) *> aux (pos (n * q)) r (pos (n * q')) r' p))
       | neg q, pos q' => inv (Arith.Nat.mod-unique {n} {q + q'} {r'} {0} r'<n r<n (pmap iabs (pmap (+ pos r') (IntRing.ldistr {n} {q} {q'}) *> aux (pos (n * q')) r' (pos (n * q)) r (inv p))))
       | neg q, neg q' => inv (Arith.Nat.mod-unique r'<n r<n (pmap iabs (aux 0 r' (n * q) (n * q' + r) (inv (aux (neg (n * q)) r (n * q') r' p) *> IntRing.+-assoc {neg (n * q)} {n * q'} {r}) )))
       \where
+        -- | Uniqueness of the remainder under `pos n * q + r = pos n * q' + r'` with `r, r' < n`.
         \lemma aux (x y x' y' : Int) (p : x + y = negative x' + y') : (x' + x) + y = y'
           => +-assoc *> pmap (x' +) p *> simplify
 
+    -- | Compatibility between integer `mod` and `Nat.mod` on nonnegative inputs.
     \lemma natMod=mod' (x n : Nat) : (IntEuclidean.divMod x n).2 = x Nat.mod n \elim x
       | 0 => idp
       | suc x => idp
 
+    -- | Compatibility between integer `mod` and `Nat.mod` on nonnegative inputs.
     \lemma natMod=mod (x n : Nat) : x mod n = x Nat.mod n \elim x
       | 0 => idp
       | suc x => idp
   }
 
+{- | Instance making `Int` a `EuclideanDomain`; supplies `zro#ide`, the apartness multiplicativity `#0-*`, and packages
+ -   `IntEuclidean` into `isEuclidean`.
+ -}
 \instance IntDomain : EuclideanDomain
   | CRing => IntRing
   | zro#ide => \case __
@@ -389,23 +470,29 @@
   | decideEq => IntRing.decideEq
   | isEuclidean => inP IntEuclidean
 
+-- | Transport `LDiv` between `NatSemiring` and `IntRing` via `pos` and `iabs`.
 \lemma ldiv_nat_int (d : LDiv {NatSemiring}) : LDiv (pos d.val) (pos d.elem) (pos d.inv) \cowith
   | inv-right => pmap pos d.inv-right
 
+-- | Transport `LDiv` between `NatSemiring` and `IntRing` via `pos` and `iabs`.
 \lemma ldiv_int_nat (d : LDiv {IntRing}) : LDiv (iabs d.val) (iabs d.elem) (iabs d.inv) \cowith
   | inv-right => inv iabs_* *> pmap iabs d.inv-right
 
+-- | Analogous transports for invertibility, including the converse `Inv (iabs x) -> Inv x`.
 \lemma inv_nat_int (d : Inv {NatSemiring}) : Inv (pos d.val) (pos d.inv) \cowith
   | inv-left => pmap pos d.inv-left
   | inv-right => pmap pos d.inv-right
 
+-- | Analogous transports for invertibility, including the converse `Inv (iabs x) -> Inv x`.
 \lemma inv_int_nat (d : Inv {IntRing}) : Inv (iabs d.val) (iabs d.inv) \cowith
   | inv-left => inv iabs_* *> pmap iabs d.inv-left
   | inv-right => inv iabs_* *> pmap iabs d.inv-right
 
+-- | Analogous transports for invertibility, including the converse `Inv (iabs x) -> Inv x`.
 \lemma inv_abs {x : Int} (d : Inv (iabs x)) : Inv x
   => Inv.lmake (pos d.inv * signum x) (*-assoc *> pmap (_ *) (*-comm *> inv iabs.signum_*) *> pmap pos d.inv-left)
 
+-- | Transport `GCD` records between `Nat` and `Int`, adjusting cofactors by `signum`.
 \func gcd_nat_int (g : GCD {NatSemiring}) : GCD (pos g.val1) (pos g.val2) (pos g) \cowith
   | res|val1 => ldiv_nat_int g.res|val1
   | res|val2 => ldiv_nat_int g.res|val2
@@ -416,6 +503,7 @@
       | inv-right => inv *-assoc *> pmap (* _) (inv iabs.signum_*) *> pmap pos abs_g'|g.inv-right
     }
 
+-- | Transport `GCD` records between `Nat` and `Int`, adjusting cofactors by `signum`.
 \func gcd_int_nat (g : GCD {IntRing}) : GCD (iabs g.val1) (iabs g.val2) (iabs g) \cowith
   | res|val1 => ldiv_int_nat g.res|val1
   | res|val2 => ldiv_int_nat g.res|val2
@@ -434,15 +522,19 @@
       | inv-right => inv iabs_* *> pmap iabs pos_g'|g.inv-right
     }
 
+-- | Any two `GCD n m` records over `Nat` agree as `Nat`s.
 \lemma nat_gcd-isUnique {n m : Nat} (g g' : GCD n m) : g.res = g'.res
   => natAssociates-areEqual (g'.res-univ g g.res|val1 g.res|val2) (g.res-univ g' g'.res|val1 g'.res|val2)
 
+-- | Any two `GCD x y` records over `Int` agree up to absolute value.
 \lemma int_gcd-isUnique {x y : Int} (g g' : GCD x y) : iabs g = iabs g'
   => nat_gcd-isUnique (gcd_int_nat g) (gcd_int_nat g')
 
+-- | `gcd (pos n) (pos m) = pos (gcd n m)` — the integer GCD on nonnegative inputs reduces to the natural one.
 \lemma int_gcd_pos {n m : Nat} : gcd (pos n) (pos m) = pos (gcd n m)
   => aux (suc' m) *> pmap pos (int_gcd-isUnique (gcd-isGCD (pos n) (pos m)) (gcd_nat_int (gcd-isGCD n m)))
   \where {
+    -- | `gcd (pos n) (pos m) = pos (gcd n m)` — the integer GCD on nonnegative inputs reduces to the natural one.
     \lemma aux (s : Nat) {n m : Nat} : gcd-fueled s (pos n) (pos m) = iabs (gcd-fueled s (pos n) (pos m)) \elim s
       | 0 => idp
       | suc s => mcases \with {
@@ -451,6 +543,7 @@
       }
   }
 
+-- | `gcd (a + b * d) b = gcd a b` — invariance of GCD under adding multiples.
 \lemma nat_gcd_sum (a b d : Nat) : gcd (a + b * d) b = gcd a b
   => \let a' => a + b * d
      \in equation                     #'
@@ -459,8 +552,12 @@
          iabs (gcd (pos a) (pos b))   #' {inv (nat_gcd-isUnique (gcd-isGCD a b) (gcd_int_nat (gcd-isGCD (pos a) (pos b))))}
          gcd a b
 
+{- | Euclid's lemma for `Nat`: if `a ∣ b * c` and `gcd a b = 1`, then `a ∣ c`; proved by transporting through
+ -   `IntDomain.coprime_*_div`.
+ -}
 \func nat_gcd_*_div {a b c : Nat} (a|bc : LDiv a (b * c)) (a_b : gcd a b = 1) : LDiv a c
   => ldiv_int_nat $ Domain.Dec.LDiv_TruncP $ IntDomain.coprime_*_div {pos a} {pos b} {pos c} (ldiv_nat_int a|bc) $ IsCoprime.<=gcd $ gcd_nat_int $ transport (GCD a b __) a_b (gcd-isGCD a b)
 
+-- | Commutativity `gcd a b = gcd b a` on `Nat`.
 \lemma nat_gcd-comm {a b : Nat} : gcd a b = gcd b a
   => nat_gcd-isUnique (gcd-isGCD a b) (GCD.swap {gcd-isGCD b a})

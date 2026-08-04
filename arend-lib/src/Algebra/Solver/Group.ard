@@ -1,3 +1,14 @@
+{- | A reflective decision procedure for equalities in groups, instantiating the generic substitution-based solver
+ -   framework with a group-specific term language and normal form.
+ -
+ -   This module implements `SubstSolverModel` for groups by representing terms as a small AST (variable, identity,
+ -   inverse, multiplication) and normal forms as lists of signed variables `(Bool, Fin n)`, where the boolean tag
+ -   indicates whether the variable appears or its inverse appears. Normalization flattens products and pushes inverses
+ -   to the leaves via `inverseNF`, then `reduce` cancels adjacent inverse pairs. The monadic bind `>>=` lifts variable
+ -   substitutions through signed-list normal forms, dualizing them with `inverseNF` whenever a negative occurrence is
+ -   substituted, which is what makes the model compatible with the generic substitution-based solver.
+ -}
+
 \import Algebra.Group
 \import Algebra.Monoid
 \import Algebra.Solver \using (>>=-consistent)
@@ -12,6 +23,9 @@
 \import Paths.Meta
 \import Set
 
+{- | The `SubstSolverModel G` instance for a `Group G`, packaging the term language, normalization, signed-list NF,
+ -   `nfVar` (positive singleton), and the `>>=` substitution with its consistency proofs.
+ -}
 \func GroupSolverModel (G : Group) : SubstSolverModel G \cowith
   | Term => Term
   | NF n => List (\Sigma Bool (Fin n))
@@ -28,22 +42,34 @@
   | >>= => >>=
   | >>=-consistent => interpretNF'_reduce *> interpretNF'_>>= *> pmap (interpretNF' __ _) (ext \lam v => inv interpretNF'_reduce) *> inv interpretNF'_reduce
   \where {
+    {- | AST of group expressions over `Fin n` variables: `var`, `:ide`, `:inverse`, and `:*` (left-associative
+     -   product).
+     -}
     \data Term (n : Nat)
       | var (Fin n)
       | :ide
       | :inverse (Term n)
       | \infixl 7 :* (t s : Term n)
 
+    {- | Reverses a signed-variable list while flipping every sign, producing the normal form of the inverse of a
+     -   product; uses an accumulator.
+     -}
     \private \func inverseNF {V : \Set} (l acc : List (\Sigma Bool V)) : List (\Sigma Bool V) \elim l
       | nil => acc
       | x :: l => inverseNF l ((not x.1, x.2) :: acc)
 
+    {- | Converts a `Term n` into a `List (\Sigma Bool (Fin n))`: variables become a single positive entry, identity
+     -   becomes `nil`, inverses recurse through `inverseNF`, and products concatenate.
+     -}
     \private \func normalize {n : Nat} (t : Term n) : List (\Sigma Bool (Fin n)) \elim t
       | var v => (true,v) :: nil
       | :ide => nil
       | :inverse t => inverseNF (normalize t) nil
       | t :* s => normalize t ++ normalize s
 
+    {- | Cancels adjacent entries with the same variable but opposite signs in a normal form, called once after
+     -   normalization.
+     -}
     \private \func reduce {n : Nat} (l : List (\Sigma Bool (Fin n))) : List (\Sigma Bool (Fin n)) \elim l
       | nil => nil
       | x :: tail => \case reduce tail \with {
@@ -55,26 +81,33 @@
         }
       }
 
+    {- | Evaluates a signed-variable list in a group, mapping `(true, v)` to `env v` and `(false, v)` to
+     -   `inverse (env v)`, multiplying components.
+     -}
     \private \func interpretNF' {V : \Set} (env : V -> G) (l : List (\Sigma Bool V)) : G \elim l
       | nil => G.ide
       | x :: nil => if x.1 (env x.2) (inverse (env x.2))
       | x :: l => if x.1 (env x.2) (inverse (env x.2)) * interpretNF' env l
       \where \protected {
+        -- | Variant that always emits a final `* G.ide`, simplifying inductive proofs.
         \func simple (env : V -> G) (l : List (\Sigma Bool V)) : G \elim l
           | nil => G.ide
           | x :: l => if x.1 (env x.2) (inverse (env x.2)) * simple env l
 
+        -- | Equates `interpretNF'` with its `simple` counterpart.
         \lemma =simple {l : List (\Sigma Bool V)} : interpretNF' env l = simple env l \elim l
           | nil => idp
           | x :: nil => inv ide-right
           | x :: y :: l => pmap (_ *) =simple
       }
 
+    -- | Cons unfolds as `if-then-else * tail`.
     \private \lemma interpretNF'_:: {V : \Set} {env : V -> G} {x : \Sigma Bool V} {l : List (\Sigma Bool V)}
       : interpretNF' env (x :: l) = if x.1 (env x.2) (inverse (env x.2)) * interpretNF' env l \elim l
       | nil => inv ide-right
       | y :: l => idp
 
+    -- | `reduce` preserves interpretation (with helper `simple_reduce`).
     \private \lemma interpretNF'_reduce {n : Nat} {env : Fin n -> G} {l : List (\Sigma Bool (Fin n))} : interpretNF' env (reduce l) = interpretNF' env l
       => interpretNF'.=simple *> simple_reduce l *> inv interpretNF'.=simple
       \where
@@ -92,6 +125,7 @@
             }
           }
 
+    -- | Concatenation of normal forms corresponds to group multiplication (with `_simple` helper).
     \private \lemma interpretNF'_++ {V : \Set} {env : V -> G} {l l' : List (\Sigma Bool V)}
       : interpretNF' env (l ++ l') = interpretNF' env l * interpretNF' env l'
       => interpretNF'.=simple *> _simple *> inv (pmap2 (*) interpretNF'.=simple interpretNF'.=simple)
@@ -100,6 +134,7 @@
           | nil => inv ide-left
           | x :: l => pmap (_ *) _simple *> inv *-assoc
 
+    -- | `inverseNF l acc` interprets as `inverse (⟦l⟧) * ⟦acc⟧` (with `_simple` helper).
     \private \lemma interpretNF'_inverseNF {V : \Set} {env : V -> G} {l acc : List (\Sigma Bool V)}
       : interpretNF' env (inverseNF l acc) = inverse (interpretNF' env l) * interpretNF' env acc
       => interpretNF'.=simple *> _simple *> inv (pmap2 (inverse __ * __) interpretNF'.=simple interpretNF'.=simple)
@@ -111,17 +146,24 @@
             | true => inv G.inverse_*
           }
 
+    -- | `interpretNF' env (normalize t) = interpret env t`, the soundness of normalization.
     \private \lemma interpretNF'-consistent {n : Nat} {env : Fin n -> G} {t : Term n} : interpretNF' env (normalize t) = interpret env t \elim t
       | var v => idp
       | :ide => idp
       | :inverse t => interpretNF'_inverseNF *> ide-right *> pmap inverse interpretNF'-consistent
       | t :* s => interpretNF'_++ *> pmap2 (*) interpretNF'-consistent interpretNF'-consistent
 
+    {- | Monadic bind over signed-variable lists; substitutes each variable with its assigned normal form, applying
+     -   `inverseNF` to negatively-signed occurrences, and concatenates the results.
+     -}
     \func \infixl 2 >>= {U V : \Set} (l : List (\Sigma Bool U)) (k : U -> List (\Sigma Bool V)) : List (\Sigma Bool V) \elim l
       | nil => nil
       | (true,u) :: l => k u ++ (l >>= k)
       | (false,u) :: l => inverseNF (k u) nil ++ (l >>= k)
 
+    {- | Substitution commutes with interpretation: interpreting a bind equals interpreting the outer list under the
+     -   environment that interprets each substituted normal form.
+     -}
     \private \func interpretNF'_>>= {m n : Nat} {env : Fin n -> G} {l : List (\Sigma Bool (Fin m))} {k : Fin m -> List (\Sigma Bool (Fin n))}
       : interpretNF' env (l >>= k) = interpretNF' (\lam v => interpretNF' env (k v)) l
       => interpretNF'.=simple *> _simple *> inv (interpretNF'.=simple *> pmap (interpretNF'.simple __ l) (ext \lam v => interpretNF'.=simple))
@@ -132,5 +174,8 @@
           | (false,u) :: l => interpretNF'_++._simple *> pmap2 (*) (interpretNF'_inverseNF._simple *> ide-right) _simple
   }
 
+{- | The `SubstSolverModel` instance for an `AddGroup A`, obtained by reusing `GroupSolverModel` on
+ -   `AddGroup.toGroup A`.
+ -}
 \func AddGroupSolverModel (A : AddGroup) : SubstSolverModel A
   => GroupSolverModel (AddGroup.toGroup A)

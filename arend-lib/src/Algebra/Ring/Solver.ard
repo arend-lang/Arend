@@ -1,3 +1,15 @@
+{- | Reflective decision procedures for ring, semiring, commutative ring, lattice, and algebra equalities.
+ -
+ -   This module implements a generic normalization-based equality solver for (semi)ring expressions over a coefficient
+ -   algebra. Terms are represented syntactically by `RingTerm`, then normalized into sorted, collapsed lists of
+ -   monomials of the form `(List V, C)` — a variable word with a coefficient — whose interpretation back into the
+ -   carrier is provably equal to the original term. The hierarchy of `*Data` classes specializes the framework to
+ -   different algebraic settings (semiring, commutative semiring, ring, commutative ring, rationals, ℚ-algebras,
+ -   distributive lattices), each plugging in the appropriate coefficient ring, comparison function, negation, and
+ -   normalization strategy. The resulting `terms-equality` and `replace-consistent` lemmas are the entry points used by
+ -   reflection meta-tactics to discharge ring/lattice equations.
+ -}
+
 \import Algebra.Algebra
 \import Algebra.Group
 \import Algebra.Group.GroupHom
@@ -26,6 +38,9 @@
 \import Paths.Meta
 \import Set \hiding (#)
 
+{- | Inductive datatype of ring expressions over coefficients `C` and variables `V`, with constructors `coef`, `var`,
+ -   `:zro`, `:ide`, `:negative`, `:+`, `:*`.
+ -}
 \data RingTerm (C V : \Type)
   | coef C
   | var V
@@ -35,26 +50,36 @@
   | \infixl 6 :+ (t s : RingTerm C V)
   | \infixl 7 :* (t s : RingTerm C V)
 
+{- | Base class extending `CMonoidData`. Fixes a coefficient semiring `C` with decidable linear order `S`, a target
+ -   semiring `R`, and a semiring homomorphism `alg : C -> R`. Requires `alg-comm` (coefficients commute with
+ -   `R`-elements) and embeds monomial-level data via `mData : MonoidData`.
+ -}
 \class BaseData {C : Semiring} {S : LinearOrder.Dec C} {R : Semiring} (alg : SemiringHom C R) \extends CMonoidData {
   | M => AbMonoid.toCMonoid R
   | alg-comm (x : C) (y : R) : alg x R.* y = y R.* alg x
   \field mData : MonoidData {R} vars
 
+  -- | Interprets a normal-form list `List (\Sigma (List V) C)` as `Σ alg(c_i) * monomial(m_i)` in `R`.
   \func interpretRingNF (l : List (\Sigma (List V) C)) : R \elim l
     | nil => 0
     | :: x nil => alg x.2 * mData.interpretNF x.1
     | :: x l => alg x.2 * mData.interpretNF x.1 + interpretRingNF l
 
+  -- | Rewrites `interpretRingNF (x :: l)` as the head term plus the tail.
   \lemma cons (x : \Sigma (List V) C) (l : List (\Sigma (List V) C)) : interpretRingNF (x :: l) = alg x.2 * mData.interpretNF x.1 + interpretRingNF l \elim l
     | nil => inv zro-right
     | :: a l => idp
 }
 
+{- | Extends `BaseData` with negation infrastructure (`pnegative`, `negate`, `interpretNF_negate`) and the full
+ -   normalization/interpretation pipeline.
+ -}
 \class AlgData \extends BaseData {
   | pnegative : R -> R
   | negate : List (\Sigma (List V) C) -> List (\Sigma (List V) C)
   | interpretNF_negate (l : List (\Sigma (List V) C)) : pnegative (interpretRingNF l) = interpretRingNF (negate l)
 
+  -- | Recursive interpretation of a `RingTerm` into `R`.
   \func interpret (t : RingTerm C V) : R \elim t
     | coef c => alg c
     | var x => vars x
@@ -64,6 +89,7 @@
     | :+ t s => interpret t + interpret s
     | :* t s => interpret t * interpret s
 
+  -- | Interpretation respects list concatenation as addition.
   \lemma interpretRingNF_++ (l1 l2 : List (\Sigma (List V) C)) : interpretRingNF (l1 ++ l2) = interpretRingNF l1 + interpretRingNF l2 \elim l1
     | nil => inv zro-left
     | :: a l1 => run {
@@ -72,6 +98,7 @@
       inv +-assoc
     }
 
+  -- | Interpretation of monomial lists scaled and prefixed/suffixed by a fixed monomial.
   \lemma interpretNF_map (a1 : C) (a2 a3 : List V) (l : List (\Sigma (List V) C)) : interpretRingNF (map (\lam b => (a2 ++ b.1 ++ a3, a1 * b.2)) l) = alg a1 * mData.interpretNF a2 * interpretRingNF l * mData.interpretNF a3 \elim l
     | nil => inv (pmap (* _) zro_*-right *> zro_*-left)
     | :: a l => run {
@@ -81,9 +108,11 @@
       pmap (+ _) $ equation.monoid {alg-comm a.2 (mData.interpretNF a2)}
     }
 
+  -- | Interpretation of monomial lists scaled and prefixed/suffixed by a fixed monomial.
   \lemma interpretNF_map-left (a1 : C) (a2 : List V) (l : List (\Sigma (List V) C)) : interpretRingNF (map (\lam b => (a2 ++ b.1, a1 * b.2)) l) = alg a1 * mData.interpretNF a2 * interpretRingNF l
     => inv (path (\lam i => interpretRingNF (map (\lam b => (a2 ++ (++_nil {_} {b.1} @ i), a1 * b.2)) l))) *> interpretNF_map a1 a2 nil l *> ide-right
 
+  -- | Correctness of polynomial multiplication via the helper `multiply`/`multiply'`.
   \lemma interpretNF_multiply (l1 l2 : List (\Sigma (List V) C)) {acc : List (\Sigma (List V) C)} : interpretRingNF (multiply l1 l2 acc) = interpretRingNF l1 * interpretRingNF l2 + interpretRingNF acc \elim l1
     | nil => rewrite zro_*-left (inv zro-left)
     | :: a l1 => run {
@@ -95,19 +124,23 @@
       +-comm
     }
 
+  -- | Correctness of polynomial multiplication via the helper `multiply`/`multiply'`.
   \lemma interpretNF_multiply' (l1 l2 : List (\Sigma (List V) C)) : interpretRingNF (multiply' l1 l2) = interpretRingNF l1 * interpretRingNF l2 \elim l2
     | nil => inv zro_*-right
     | :: a l2 => interpretNF_multiply l1 (a :: l2) *> zro-right
 
+  -- | Normal-form interpretation is invariant under permutation/sorting of monomials.
   \lemma perm-consistent {l l' : List (\Sigma (List V) C)} (p : Perm l l') : interpretRingNF l = interpretRingNF l' \elim l, l', p
     | nil, nil, perm-nil => idp
     | :: a1 l1, :: a2 l2, perm-:: idp p => repeat {2} (rewrite BaseData.cons) (pmap (_ +) (perm-consistent p))
     | :: a1 (:: a1' l1), :: a2 (:: a2' l2), perm-swap idp idp idp => repeat {2} (rewrite BaseData.cons) (inv +-assoc *> pmap (+ interpretRingNF l1) +-comm *> +-assoc)
     | l1, l2, perm-trans p1 p2 => perm-consistent p1 *> perm-consistent p2
 
+  -- | Normal-form interpretation is invariant under permutation/sorting of monomials.
   \protected \lemma sort-consistent (l : List (\Sigma (List V) C)) : interpretRingNF l = interpretRingNF (sort l)
     => rewrite (sort=insert l) (perm-consistent (Insertion.sort-perm l))
 
+  -- | Merge adjacent monomials sharing the same variable word by adding their coefficients.
   \func collapse1 (m : List V) (c : C) (l : List (\Sigma (List V) C)) : List (\Sigma (List V) C) \elim l
     | nil => (m,c) :: nil
     | :: a' l => \case decideEq m a'.1 \with {
@@ -115,10 +148,12 @@
       | no _ => (m,c) :: collapse1 a'.1 a'.2 l
     }
 
+  -- | Merge adjacent monomials sharing the same variable word by adding their coefficients.
   \func collapse (l : List (\Sigma (List V) C)) : List (\Sigma (List V) C)
     | nil => nil
     | :: a l => collapse1 a.1 a.2 l
 
+  -- | Correctness of collapsing.
   \lemma collapse1-consistent (m : List V) (c : C) (l : List (\Sigma (List V) C)) : alg c * mData.interpretNF m + interpretRingNF l = interpretRingNF (collapse1 m c l) \elim l
     | nil => zro-right
     | :: a l => mcases \with {
@@ -129,10 +164,12 @@
       | no _ => repeat {2} (rewrite BaseData.cons) (pmap (_ +) (collapse1-consistent a.1 a.2 l))
     }
 
+  -- | Correctness of collapsing.
   \lemma collapse-consistent (l : List (\Sigma (List V) C)) : interpretRingNF l = interpretRingNF (collapse l)
     | nil => idp
     | :: a l => rewrite BaseData.cons (collapse1-consistent a.1 a.2 l)
 
+  -- | Drop monomials with zero coefficient.
   \func remove0 (l : List (\Sigma (List V) C)) : List (\Sigma (List V) C)
     | nil => nil
     | :: a l => \case decideEq a.2 zro \with {
@@ -140,6 +177,7 @@
       | no n => a :: remove0 l
     }
 
+  -- | Drop monomials with zero coefficient.
   \lemma remove0-consistent (l : List (\Sigma (List V) C)) : interpretRingNF l = interpretRingNF (remove0 l)
     | nil => idp
     | :: a l => rewrite BaseData.cons $ mcases \with {
@@ -147,6 +185,7 @@
       | no n => rewrite BaseData.cons $ pmap (_ +) (remove0-consistent l)
     }
 
+  -- | Recursive normalization of a `RingTerm` to a list of monomials (without sorting).
   \func normalize' (t : RingTerm C V) : List (\Sigma (List V) C) \elim t
     | coef c => (nil, c) :: nil
     | var v => (v :: nil, 1) :: nil
@@ -156,6 +195,7 @@
     | :+ t s => normalize' t ++ normalize' s
     | :* t s => remove0 (collapse (multiply' (normalize' t) (normalize' s)))
 
+  -- | The interpretation of a normalized term equals that of the original.
   \lemma normalize-consistent' (t : RingTerm C V) : interpret t = interpretRingNF (normalize' t)
     | coef c => inv ide-right
     | var v => rewrite alg.func-ide (inv ide-left)
@@ -165,17 +205,22 @@
     | :+ t s => repeat {2} (rewrite normalize-consistent') (inv (interpretRingNF_++ (normalize' t) (normalize' s)))
     | :* t s => repeat {2} (rewrite normalize-consistent') (inv (interpretNF_multiply' (normalize' t) (normalize' s)) *> collapse-consistent _ *> remove0-consistent _)
 
+  -- | Full normalization: `normalize' t` followed by `sort`, `collapse`, and `remove0`.
   \func normalize (t : RingTerm C V) => remove0 (collapse (sort (normalize' t)))
 
+  -- | The interpretation of a normalized term equals that of the original.
   \lemma normalizeList-consistent (l : List (\Sigma (List V) C)) : interpretRingNF l = interpretRingNF (remove0 (collapse (sort l)))
     => sort-consistent _ *> collapse-consistent _ *> remove0-consistent _
 
+  -- | The interpretation of a normalized term equals that of the original.
   \lemma normalize-consistent (t : RingTerm C V) : interpret t = interpretRingNF (normalize t)
     => normalize-consistent' t *> normalizeList-consistent _
 
+  -- | Main solver entry — equality of normal forms implies equality of interpretations.
   \protected \lemma terms-equality (t s : RingTerm C V) (p : interpretRingNF (normalize t) = interpretRingNF (normalize s)) : interpret t = interpret s
     => normalize-consistent t *> p *> inv (normalize-consistent s)
 
+  -- | Supports rewriting by a hypothesis `l = r` at selected monomial positions, used for guided rewriting tactics.
   \protected \lemma replace-consistent (list : List (\Sigma (List V) C)) (l r : RingTerm C V) (is : List Nat) (a b : List V) (c : C)
                                        (p : interpretRingNF (remove0 (collapse (sort (CMonoidData.indices is list)))) = interpretRingNF (remove0 (collapse (sort (map (\lam t => (a ++ t.1 ++ b, c * t.2)) (normalize' l))))))
                                        (rule : interpret l = interpret r)
@@ -185,6 +230,7 @@
        pmap (+ _) (normalizeList-consistent _ *> p *> inv (normalizeList-consistent _) *> interpretNF_map c a b _ *> pmap (_ * __ * _) (inv (normalize-consistent' l) *> rule *> normalize-consistent' r) *> inv (interpretNF_map c a b _)) *>
        inv (interpretRingNF_++ _ _)
 
+  -- | Supports rewriting by a hypothesis `l = r` at selected monomial positions, used for guided rewriting tactics.
   \protected \lemma replace-consistent-lem (is : List Nat) (l : List (\Sigma (List V) C)) : interpretRingNF l = interpretRingNF (CMonoidData.indices is l ++ CMonoidData.removeIndices is l)
     | nil, l => idp
     | :: 0 is, nil => idp
@@ -195,33 +241,43 @@
   \open Sort
   \open Sort.RedBlack
 
+  -- | Polynomial multiplication of monomial lists with an accumulator.
   \func multiply' {V : \Type} {C : Monoid} (l1 l2 : List (\Sigma (List V) C)) : List (\Sigma (List V) C) \elim l2
     | nil => nil
     | l2 => multiply l1 l2 nil
 
+  -- | Polynomial multiplication of monomial lists with an accumulator.
   \func multiply {V : \Type} {C : Monoid} (l1 l2 acc : List (\Sigma (List V) C)) : List (\Sigma (List V) C) \elim l1
     | nil => acc
     | :: a l1 => multiply l1 l2 (map (\lam b => (a.1 ++ b.1, a.2 * b.2)) l2 ++ acc)
 }
 
+{- | Specialization of `AlgData` to commutative `R` (a `CSemiring`) with commutative monomial data. Variable lists
+ -   inside monomials are sorted, allowing finer normalization.
+ -}
 \class CAlgData \extends AlgData {
   \override R : CSemiring
   \override mData : CMonoidData vars
   | mData => \new CMonoidData
   | alg-comm x y => *-comm
 
+  -- | Commutative variant — sorts each monomial's variable list before collapsing.
   \func normalize (t : RingTerm C V) => remove0 (collapse (sort (map (\lam p => (sort p.1, p.2)) (normalize' t))))
 
+  -- | Sorting variable lists inside each monomial preserves interpretation.
   \lemma map_sort-consistent (l : List (\Sigma (List V) C)) : interpretRingNF l = interpretRingNF (map (\lam p => (sort p.1, p.2)) l)
     | nil => idp
     | :: a l => repeat {2} (rewrite BaseData.cons) $ pmap2 (_ * __ + __) (CMonoidData.sort-consistent {mData} a.1) (map_sort-consistent l)
 
+  -- | Commutative analogues of the `AlgData` lemmas.
   \protected \lemma normalize-consistent (t : RingTerm C V) : interpret t = interpretRingNF (normalize t)
     => normalize-consistent' t *> map_sort-consistent _ *> normalizeList-consistent _
 
+  -- | Commutative analogues of the `AlgData` lemmas.
   \protected \lemma terms-equality (t s : RingTerm C V) (p : interpretRingNF (normalize t) = interpretRingNF (normalize s)) : interpret t = interpret s
     => normalize-consistent t *> p *> inv (normalize-consistent s)
 
+  -- | Commutative analogues of the `AlgData` lemmas.
   \protected \lemma replace-consistent (list : List (\Sigma (List V) C)) (l r : RingTerm C V) (is : List Nat) (a : List V) (c : C)
                                        (p : interpretRingNF (remove0 (collapse (sort (map (\lam p => (sort p.1, p.2)) (CMonoidData.indices is list))))) = interpretRingNF (remove0 (collapse (sort (map (\lam t => (sort (a ++ t.1), c * t.2)) (normalize' l))))))
                                        (rule : interpret l = interpret r)
@@ -243,6 +299,7 @@
   \open AlgData
 }
 
+-- | Instantiates `AlgData` with `C = NatSemiring` and trivial negation, giving a solver for arbitrary semirings.
 \class SemiringData \extends AlgData
   | C => NatSemiring
   | S => NatSemiring
@@ -253,8 +310,12 @@
   | negate x => x
   | interpretNF_negate l => idp
 
+-- | Combines `CAlgData` and `SemiringData` for commutative semirings.
 \class CSemiringData \extends CAlgData, SemiringData
 
+{- | Solver for bounded distributive lattices, reusing the commutative semiring framework with `C = Bool` (treating `∨`
+ -   as `+`, `∧` as `*`).
+ -}
 \class LatticeData (L : BoundedDistributiveLattice) \extends CAlgData {
   | R => L
   | C => BoundedDistributiveLattice.toSemiring BoolLattice
@@ -283,11 +344,17 @@
   | negate x => x
   | interpretNF_negate l => idp
 
+  {- | Three-valued comparison of variable lists under the lattice order (`lessOrEquals`, `greater`, `uncomparable`),
+   -   used to absorb redundant joinands.
+   -}
   \data ComparisonResult (l l' : List V)
     | lessOrEquals (mData.interpretNF l ∨ mData.interpretNF l' = mData.interpretNF l)
     | greater (mData.interpretNF l ∨ mData.interpretNF l' = mData.interpretNF l')
     | uncomparable
 
+  {- | Three-valued comparison of variable lists under the lattice order (`lessOrEquals`, `greater`, `uncomparable`),
+   -   used to absorb redundant joinands.
+   -}
   \func compare (l l' : List V) : ComparisonResult l l'
     | nil, _ => lessOrEquals (<=-antisymmetric top-univ join-left)
     | :: a l, nil => greater (<=-antisymmetric top-univ join-right)
@@ -307,6 +374,7 @@
       }
     }
 
+  -- | Insert a meet-monomial into a sorted join, eliminating absorbed entries.
   \func insert (m : List V) (l : List (List V)) : List (List V) \elim l
     | nil => m :: nil
     | :: a l => \case compare a m \with {
@@ -315,6 +383,7 @@
       | uncomparable => a :: insert m l
     }
 
+  -- | Insert a meet-monomial into a sorted join, eliminating absorbed entries.
   \lemma insert-consistent (m : List V) (l : List (List V)) : mData.interpretNF m ∨ interpretLatticeNF l = interpretLatticeNF (insert m l) \elim l
     | nil => zro-right
     | :: a l => mcases \with {
@@ -323,57 +392,71 @@
       | uncomparable => repeat {2} (rewrite interpretLatticeNF.cons) $ inv +-assoc *> pmap (∨ _) +-comm *> +-assoc *> pmap (_ ∨) (insert-consistent m l)
     }
 
+  -- | Build the join of a list using `insert` to keep it minimal.
   \func collapse (l : List (List V)) : List (List V)
     | nil => nil
     | :: a l => insert a (collapse l)
 
+  -- | Build the join of a list using `insert` to keep it minimal.
   \lemma collapse-consistent (l : List (List V)) : interpretLatticeNF l = interpretLatticeNF (collapse l)
     | nil => idp
     | :: a l => rewrite interpretLatticeNF.cons (pmap (_ ∨) (collapse-consistent l) *> insert-consistent a (collapse l))
 
+  -- | Drop monomials with `false` (zero) Bool coefficient, converting to a plain `List (List V)`.
   \func remove0 (l : List (\Sigma (List V) C)) : List (List V)
     | nil => nil
     | :: (_,false) l => remove0 l
     | :: (m,true) l => m :: remove0 l
 
+  -- | Drop monomials with `false` (zero) Bool coefficient, converting to a plain `List (List V)`.
   \lemma remove0-consistent (l : List (\Sigma (List V) C)) : interpretRingNF l = interpretLatticeNF (remove0 l)
     | nil => idp
     | :: (_,false) l => rewrite BaseData.cons $ pmap (∨ _) zro_*-left *> zro-left *> remove0-consistent l
     | :: (_,true) l => rewrite (BaseData.cons, interpretLatticeNF.cons) $ pmap2 (∨) ide-left (remove0-consistent l)
 
+  -- | Interpret a `List (List V)` as `⋁ (⋀ vars)`.
   \func interpretLatticeNF (l : List (List V)) : L \elim l
     | nil => bottom
     | :: x nil => mData.interpretNF x
     | :: x l => mData.interpretNF x ∨ interpretLatticeNF l
     \where
+      -- | Interpret a `List (List V)` as `⋁ (⋀ vars)`.
       \lemma cons (x : List V) (l : List (List V)) : interpretLatticeNF (x :: l) = mData.interpretNF x ∨ interpretLatticeNF l \elim l
         | nil => inv zro-right
         | :: a l => idp
 
+  -- | Bundled `LData` instance for variable-list duplicate removal.
   \func lData => \new LData { | L => L | vars => vars }
 
+  -- | Full lattice-normal-form pipeline plus the equality entry point.
   \func normalize (t : RingTerm C V) => sort (collapse (map (\lam l => LData.removeDuplicates {lData} (sort l)) (remove0 (normalize' t))))
 
+  -- | Invariance lemmas for the lattice normalization stages.
   \protected \lemma perm-consistent {l l' : List (List V)} (p : Perm l l') : interpretLatticeNF l = interpretLatticeNF l' \elim l, l', p
     | nil, nil, perm-nil => idp
     | :: a1 l1, :: a2 l2, perm-:: idp p => repeat {2} (rewrite interpretLatticeNF.cons) (pmap (_ +) (perm-consistent p))
     | :: a1 (:: a1' l1), :: a2 (:: a2' l2), perm-swap idp idp idp => repeat {2} (rewrite interpretLatticeNF.cons) (inv +-assoc *> pmap (+ interpretLatticeNF l1) +-comm *> +-assoc)
     | l1, l2, perm-trans p1 p2 => perm-consistent p1 *> perm-consistent p2
 
+  -- | Invariance lemmas for the lattice normalization stages.
   \protected \lemma sort-consistent (l : List (List V)) : interpretLatticeNF l = interpretLatticeNF (sort l)
     => rewrite (sort=insert l) (perm-consistent (Insertion.sort-perm l))
 
+  -- | Invariance lemmas for the lattice normalization stages.
   \lemma map_sort-consistent (l : List (List V)) : interpretLatticeNF l = interpretLatticeNF (map sort l)
     | nil => idp
     | :: a l => repeat {2} (rewrite interpretLatticeNF.cons) $ pmap2 (+) (CMonoidData.sort-consistent {mData} a) (map_sort-consistent l)
 
+  -- | Invariance lemmas for the lattice normalization stages.
   \lemma map_removeDuplicates-consistent (l : List (List V)) : interpretLatticeNF l = interpretLatticeNF (map (LData.removeDuplicates {lData}) l)
     | nil => idp
     | :: a l => repeat {2} (rewrite interpretLatticeNF.cons) $ pmap2 (∨) (LData.removeDuplicates-consistent {lData} a) (map_removeDuplicates-consistent l)
 
+  -- | Full lattice-normal-form pipeline plus the equality entry point.
   \protected \lemma normalize-consistent (t : RingTerm C V) : interpret t = interpretLatticeNF (normalize t)
     => normalize-consistent' t *> remove0-consistent _ *> map_sort-consistent _ *> map_removeDuplicates-consistent _ *> inv (pmap interpretLatticeNF (map_comp (LData.removeDuplicates {lData}) sort _)) *> collapse-consistent _ *> sort-consistent _
 
+  -- | Full lattice-normal-form pipeline plus the equality entry point.
   \protected \lemma terms-equality (t s : RingTerm C V) (p : interpretLatticeNF (normalize t) = interpretLatticeNF (normalize s)) : interpret t = interpret s
     => normalize-consistent t *> p *> inv (normalize-consistent s)
 } \where {
@@ -382,10 +465,12 @@
   \open Sort.RedBlack
   \open LinearOrder
 
+  -- | Absorption lemma `x ∧ a ∨ b = b` when `a ∨ b = b`.
   \lemma lattice-lem {L : BoundedLattice} {a b x : L} (p : a ∨ b = b) : x ∧ a ∨ b = b
     => JoinSemilattice.join_<= (<=-transitive meet-right (JoinSemilattice.join_<=' p))
 }
 
+-- | Specializes `AlgData` to genuine rings with `RingHom` and pointwise negation of monomial coefficients.
 \class BaseRingData \extends AlgData {
   \override C : Ring
   \override R : Ring
@@ -393,22 +478,26 @@
   \default mData => \new MonoidData
   | pnegative => negative
   | negate => BaseRingData.negate
+  -- | Default proof that `negative (interpretRingNF l) = interpretRingNF (negate l)`.
   \default interpretNF_negate (l : List (\Sigma (List V) C)) : negative (interpretRingNF l) = interpretRingNF (negate l) \elim l {
     | nil => AddGroup.negative_zro
     | :: a l => repeat {2} (rewrite BaseData.cons) (AddGroup.negative_+ *> +-comm *> pmap2 (+) (inv (pmap (* _) (AddGroupHom.func-negative {alg}) *> Ring.negative_*-left)) (interpretNF_negate l))
   }
 } \where {
+  -- | Negates each monomial coefficient in a list.
   \func negate {C : Ring} {V : \Type} (l : List (\Sigma (List V) C)) : List (\Sigma (List V) C) \elim l
     | nil => nil
     | :: (m,c) l => (m, negative c) :: negate l
 }
 
+-- | Concrete solver for arbitrary rings with `C = IntRing`.
 \class RingData \extends BaseRingData
   | C => IntRing
   | S => IntRing
   | alg => intMap
   | alg-comm => intComm
 
+-- | Solver for `RatField` itself (identity coefficient embedding).
 \class RatData \extends BaseRingData
   | C => RatField
   | S => RatField
@@ -416,6 +505,7 @@
   | alg => RingHom.id
   | alg-comm x y => RatField.*-comm
 
+-- | Solver for ℚ-algebras, using the canonical coefficient homomorphism from ℚ.
 \class RatAlgebraData \extends BaseRingData {
   | C => RatField
   | S => RatField
@@ -424,6 +514,9 @@
   | alg-comm x y => pmap (* _) coefMap_*c *> inv *c-comm-left *> pmap (x *c) (ide-left *> inv ide-right) *> *c-comm-right *> inv (pmap (y *) coefMap_*c)
 }
 
+{- | Solver for commutative rings, combining `CAlgData` and `RingData`. Provides commutative versions of `normalize`,
+ -   `normalize-consistent`, `terms-equality`, and `replace-consistent`.
+ -}
 \class CRingData \extends CAlgData, RingData {
   \override R : CRing
 
@@ -456,14 +549,20 @@
   \open Sort.RedBlack
 }
 
+{- | Sum `Σ cᵢ * genᵢ` over a list of (coefficient, generator) pairs — a generic element of the ideal generated by the
+ -   `genᵢ`.
+ -}
 \func idealElem {R : CRing} (gensCoeffs : List (\Sigma (c : R) (gen : R))) : R
   | nil => 0
   | :: (c, gen) xs => c * gen + idealElem xs
 
+-- | If every generator is zero, the resulting ideal element is zero.
 \lemma gensZeroToIdealZero {R : CRing} (gensCoeffs : List (\Sigma (c : R) (gen : R) (gen = 0))) : idealElem (map (\lam x => (x.1, x.2)) gensCoeffs) = 0
   | nil => idp
   | :: (c, gen, p) xs => argsZeroToSumZero (inv (argZeroToProdZero c (inv p))) (inv (gensZeroToIdealZero xs))
   \where {
+    -- | `a * b = 0` when `b = 0`.
     \lemma argZeroToProdZero {R : CRing} (a : R) {b : R} (p : zro = b) : a * b = 0 => coe (\lam j => a * (p @ j) = 0) zro_*-right right
+    -- | `a + b = 0` when both are zero.
     \lemma argsZeroToSumZero {R : CRing} {a b : R} (p : zro = a) (q : zro = b) : a + b = 0 => coe (\lam j => p @ j + q @ j = 0) zro-right right
   }

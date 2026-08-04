@@ -1,3 +1,17 @@
+{- | "The following are equivalent" — a propositional predicate stating that all elements of an array of propositions
+ -   are mutually equivalent, plus tools for proving it.
+ -
+ -   The module formalizes the classic mathematical idiom "TFAE" (the following are equivalent) as
+ -   `TFAE l = ∀ i j, l i → l j` over an array of propositions. Rather than requiring the user to supply the full
+ -   quadratic implication matrix, it provides two practical strategies: a **cycle** strategy (`cycle'` / `cycle`) where
+ -   one supplies the chain `l 0 → l 1 → … → l n → l 0`, and a **graph-connectivity** strategy (`proof'` / `proof`)
+ -   where the user supplies an arbitrary list of implications that is checked at type-checking time to be strongly
+ -   connected via a `Bool`-valued reachability algorithm. The internal graph machinery (`Path`, `collect`, `step1`,
+ -   etc.) implements a small reflective decision procedure: a primed variant computes the transitive closure
+ -   abstractly, an unprimed variant memoizes via an accumulator for efficiency, and correctness lemmas bridge the two
+ -   so that `So (checkConnected …)` discharges the proof obligation.
+ -}
+
 \import Arith.Nat
 \import Data.Array (Index, forall, forall-char, map, taild)
 \import Data.Bool
@@ -11,29 +25,44 @@
 \import Paths.Meta
 \import Set
 
+{- | The proposition `\Pi (i j : Fin l.len) -> l i -> l j` asserting all entries of an array of propositions imply each
+ -   other.
+ -}
 \type TFAE (l : Array \Prop) : \Prop
   => \Pi (i j : Fin l.len) -> l i -> l j
   \where {
+    {- | Proves `TFAE l` from an arbitrary list of pairwise implications `(i,j, l i → l j)` whose underlying directed
+     -   graph passes the connectivity check `checkConnected`. The check is supplied as a `So` hypothesis solved by
+     -   reflection.
+     -}
     \lemma proof' {l : Array \Prop} (p : Array (\Sigma (s : \Sigma (Fin l.len) (Fin l.len)) (l s.1 -> l s.2))) {s : So (checkConnected (map __.1 p) l.len)} : TFAE l
       => \lam i j => path-proof p (checkConnected-correct (So.fromSo s) i j)
       \where {
+        -- | Type alias `Array (\Sigma A A)` for a directed graph as an array of edges.
         \func Graph (A : \Set) => Array (\Sigma A A)
 
+        {- | Inductive reachability predicate on a graph with constructors `trivial` (reflexivity) and `step` (one edge
+         -   followed by a `Path`).
+         -}
         \truncated \data Path {A : \Set} (G : Graph A) (a a' : A) : \Prop
           | trivial (a = a')
           | step (i : Fin G.len) (a = (G i).1) (Path G (G i).2 a')
 
+        -- | Transports a witness `l i` along a `Path` of implications to obtain `l j`.
         \lemma path-proof {l : Array \Prop} (p : Array (\Sigma (s : \Sigma (Fin l.len) (Fin l.len)) (l s.1 -> l s.2))) {i j : Fin l.len} (c : Path (map __.1 p) i j) (a : l i) : l j \elim c
           | trivial q => rewriteI q a
           | step k q c => path-proof p c $ (p k).2 $ rewriteI q a
 
+        -- | Decides whether every vertex `< t` reaches every other vertex in graph `G : Graph Nat`, returning `Bool`.
         \func checkConnected (\strict G : Graph Nat) (t : Nat) : Bool
           => forall (\lam i => checkConnected1 G i t) \new Array Nat t \lam i => i
 
+        -- | Decides whether vertex `i` reaches every vertex `< t`.
         \func checkConnected1 (G : Graph Nat) (i t : Nat) : Bool
           => \let! r => collect G (i List.:: List.nil) (i List.:: List.nil) t
              \in forall (contains r) \new Array Nat t \lam j => j
 
+        -- | Memoized BFS that grows a reachable set, skipping vertices already in the accumulator `ex` for efficiency.
         \func step1 (G : Graph Nat) (ex : List Nat) (i : Nat) : List Nat \elim G
           | nil => List.nil
           | e :: G => \case decideEq i e.1 \with {
@@ -41,23 +70,28 @@
             | no q => step1 G ex i
           }
 
+        -- | Memoized BFS that grows a reachable set, skipping vertices already in the accumulator `ex` for efficiency.
         \func makeStep (G : Graph Nat) (\strict ex : List Nat) (l : List Nat) : List Nat \elim l
           | List.nil => List.nil
           | i List.:: l => \let! s => step1 G ex i \in s ++ makeStep G (union s ex) l
 
+        -- | Memoized BFS that grows a reachable set, skipping vertices already in the accumulator `ex` for efficiency.
         \func collect (G : Graph Nat) (\strict acc : List Nat) (l : List Nat) (n : Nat) : List Nat \elim n
           | 0 => acc
           | suc n => \let! l' => makeStep G acc l \in collect G (union l' acc) l' n
 
         -- correctnes
 
+        -- | From `checkConnected G n = true` extracts `Path G i j` for all `i j : Fin n`.
         \lemma checkConnected-correct {n : Nat} {G : Graph (Fin n)} (s : checkConnected G n = true) (i j : Fin n) : Path G i j
           => checkConnected1-correct i j (forall-char s i)
 
+        -- | Lifts a `Path` over `Nat` to a `Path` over `Fin n` when all endpoints fit.
         \lemma Path-Nat_Fin {n : Nat} {G : Graph (Fin n)} {i j : Fin n} (p : Path {Nat} G i j) : Path G i j \elim p
           | trivial q => trivial (nat_fin_= q)
           | step k p q => step k (nat_fin_= p) (Path-Nat_Fin q)
 
+        -- | Per-source variant: from `checkConnected1 G i n = true` extracts `Path G i j`.
         \lemma checkConnected1-correct {n : Nat} {G : Graph (Fin n)} (i j : Fin n) (s : checkConnected1 G i n = true) : Path G i j
           => \case collect->collect' {G} (contains_InList.1 (forall-char s j)) \with {
             | here p => trivial $ inv (nat_fin_= p)
@@ -67,6 +101,7 @@
             }
           }
 
+        -- | Non-memoized counterparts used as a clean reasoning bridge for correctness proofs.
         \func step1' (G : Graph Nat) (i : Nat) : List Nat \elim G
           | nil => List.nil
           | e :: G => \case decideEq i e.1 \with {
@@ -74,14 +109,17 @@
             | no q => step1' G i
           }
 
+        -- | Non-memoized counterparts used as a clean reasoning bridge for correctness proofs.
         \func makeStep' (G : Graph Nat) (l : List Nat) : List Nat \elim l
           | List.nil => List.nil
           | i List.:: l => step1' G i ++ makeStep' G l
 
+        -- | Non-memoized counterparts used as a clean reasoning bridge for correctness proofs.
         \func collect' (G : Graph Nat) (l : List Nat) (n : Nat) : List Nat \elim n
           | 0 => List.nil
           | suc n => makeStep' G l ++ collect' G (makeStep' G l) n
 
+        -- | Show that membership in the primed reachable sets witnesses an edge or a `Path` in `G`.
         \lemma step1'-correct {G : Graph Nat} {i j : Nat} (c : InList j (step1' G i)) : TruncP (Index (i,j) G) \elim G
           | nil => \case c
           | e :: G => cases (decideEq i e.1, c) \with {
@@ -90,6 +128,7 @@
             | no _, c => TruncP.map (step1'-correct c) \lam s => (suc s.1, s.2)
           }
 
+        -- | Show that membership in the primed reachable sets witnesses an edge or a `Path` in `G`.
         \lemma makeStep'-correct {G : Graph Nat} {l : List Nat} {j : Nat} (c : InList j (makeStep' G l)) : ∃ (i : Nat) (InList i l) (Index (i,j) G) \elim l
           | List.nil => \case c
           | a List.:: l => \case InList_++ c \with {
@@ -97,6 +136,7 @@
             | byRight r => TruncP.map (makeStep'-correct r) \lam s => (s.1, there s.2, s.3)
           }
 
+        -- | Show that membership in the primed reachable sets witnesses an edge or a `Path` in `G`.
         \lemma collect'-correct {G : Graph Nat} {l : List Nat} {n j : Nat} (c : InList j (collect' G l n)) : ∃ (i : Nat) (InList i l) (Path G i j) \elim n
           | 0 => \case c
           | suc n => \case InList_++ c \with {
@@ -106,6 +146,7 @@
             }
           }
 
+        -- | Reduce membership in the memoized variants to the primed variants (modulo the accumulator).
         \lemma step1->step1' {G : Graph Nat} {ex : List Nat} {i a : Nat} (c : InList a (step1 G ex i)) : InList a (step1' G i) \elim G
           | nil => c
           | e :: G => cases (decideEq i e.1, c) \with {
@@ -117,6 +158,7 @@
             | no q, c => step1->step1' c
           }
 
+        -- | Reduce membership in the memoized variants to the primed variants (modulo the accumulator).
         \lemma makeStep->makeStep' {G : Graph Nat} {ex l : List Nat} {a : Nat} (c : InList a (makeStep G ex l)) : InList a (makeStep' G l) \elim l
           | List.nil => c
           | a' List.:: l => \case InList_++ c \with {
@@ -124,6 +166,9 @@
             | byRight d => InList_++-right (makeStep->makeStep' d)
           }
 
+        {- | Closure and monotonicity of the primed BFS under list inclusion, used to chain reachability through
+         -   `collect'`.
+         -}
         \lemma step1'_makeStep' {G : Graph Nat} {l : List Nat} {a b : Nat} (p : InList b l) (c : InList a (step1' G b)) : InList a (makeStep' G l) \elim l
           | List.nil => \case p
           | a' List.:: l => \case \elim p \with {
@@ -131,6 +176,9 @@
             | there p => InList_++-right (step1'_makeStep' p c)
           }
 
+        {- | Closure and monotonicity of the primed BFS under list inclusion, used to chain reachability through
+         -   `collect'`.
+         -}
         \lemma makeStep'-monotone {G : Graph Nat} {l l' : List Nat} {a : Nat} (p : \Pi (a : Nat) -> InList a l -> InList a l') (c : InList a (makeStep' G l)) : InList a (makeStep' G l') \elim l
           | List.nil => \case c
           | b List.:: l => \case InList_++ c \with {
@@ -138,6 +186,9 @@
             | byRight d => makeStep'-monotone (\lam a al => p a (there al)) d
           }
 
+        {- | Closure and monotonicity of the primed BFS under list inclusion, used to chain reachability through
+         -   `collect'`.
+         -}
         \lemma collect'-monotone {G : Graph Nat} {l l' : List Nat} {n : Nat} (p : \Pi (a : Nat) -> InList a l -> InList a l') {i : Nat} (c : InList i (collect' G l n)) : InList i (collect' G l' n) \elim n
           | 0 => c
           | suc n => \case InList_++ c \with {
@@ -145,6 +196,7 @@
             | byRight d => InList_++-right (collect'-monotone (\lam a => makeStep'-monotone p) d)
           }
 
+        -- | Reduce membership in the memoized variants to the primed variants (modulo the accumulator).
         \lemma collect->collect' {G : Graph Nat} {acc l : List Nat} {n a : Nat} (c : InList a (collect G acc l n)) : InList a (acc ++ collect' G l n) \elim n
           | 0 => rewrite ++_nil c
           | suc n => \case InList_++ (collect->collect' c) \with {
@@ -156,12 +208,15 @@
           }
       }
 
+    -- | Convenience meta wrapping `proof'` with a `later` to defer typechecking of the conclusion.
     \meta proof P => proof' (later P)
 
+    -- | Proves `TFAE l` from a cyclic chain of implications `l i → l (i+1 mod n+1)` given as a dependent array.
     \lemma cycle' {n : Nat} {l : Array \Prop (suc n)} (p : DArray {suc n} (\lam i => l i -> l (suc i Nat.mod suc n))) : TFAE l
       => aux2 (\lam i a => later $ transport l (nat_fin_= $ mod_< $ fin_< (suc i)) (p i a))
         \lam a => transport l (later $ nat_fin_= $ rewrite (mod_< id<suc) id_mod) (p (n Nat.mod suc n) a)
       \where \private {
+        -- | Combines a linear chain `l i → l (i+1)` with a closing implication `l n → l 0` into a full `TFAE l`.
         \lemma aux2 {n : Nat} {l : Array \Prop (suc n)} (p : DArray {n} (\lam i => l i -> l (suc i))) (q : l (n Nat.mod suc n) -> l 0) : TFAE l \elim n
           | 0 => \lam (0) (0) a => a
           | suc n =>
@@ -172,10 +227,12 @@
               | suc i, suc j => t i j
             }
 
+        -- | Iterates implications `l i → l (i+1)` along a `Nat` offset `k` with `i + k = j` to obtain `l i → l j`.
         \lemma aux {n : Nat} {l : Array \Prop (suc n)} (p : DArray {n} (\lam i => l i -> l (suc i))) {i j : Fin (suc n)} {k : Nat} (q : i Nat.+ k = j) (a : l i) : l j \elim j, k, q
           | _, 0, idp => a
           | suc j, suc k, q => p j $ aux p (pmap pred q) a
       }
 
+    -- | Convenience meta wrapping `cycle'`.
     \meta cycle P => cycle' (later P)
   }

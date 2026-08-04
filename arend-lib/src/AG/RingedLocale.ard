@@ -41,6 +41,9 @@
 \open CompleteLattice
 \open Cover
 
+{- | Record bundling a locale `L` with a sheaf of commutative rings `R : VSheaf CRingCat L`. Coercible to its underlying
+ -   locale.
+ -}
 \record RingedLocale.{u} (\coerce L : Locale.{u}) (R : VSheaf CRingCat.{u} L) {
   \func GlobalSections : CRing
     => R top
@@ -154,9 +157,13 @@
             \lam xp => (xp.1, \lam ca xi => xp.2 ca xi))
     }
 } \where {
+  -- | Coerces a `VSheaf CRingCat L` to a `RingedLocale`.
   \use \coerce fromSheaf.{u} {L : Locale.{u}} (S : VSheaf CRingCat.{u} L) => \new RingedLocale L S
 }
 
+{- | A morphism `Dom -> Cod` consists of a frame map `f : FrameHom Cod Dom` together with a natural transformation
+ -   `f# : Cod.R -> direct_image f Dom.R` of sheaves.
+ -}
 \record RingedLocaleHom.{u} (Dom Cod : RingedLocale.{u}) (\coerce f* : FrameHom Cod Dom) (f# : NatTrans Cod.R (VSheaf.direct_image_locale f* Dom.R)) {
   \func IsIso : \Prop
     => Given (IsEquiv f*) ∀ (b : Cod) (IsEquiv (f# b))
@@ -172,6 +179,7 @@
     \func castOver.{u} {L M : RingedLocale.{u}} (h : RingedLocaleHom L M) {f : LocaleHom L M} (p : h.f* = f) : \Sigma (h' : RingedLocaleHom h.Dom h.Cod f) (h' = h) \elim p
       | idp => (h,idp)
 
+    -- | From `f = g` derives the inequality `f a <= g a` used to compare sheaf actions.
     \func fromHomEq {L M : Locale} {f g : LocaleHom L M} (p : f = g) (a : M) : f a <= g a
       => transport (\lam (h : LocaleHom L M) => f a <= h a) p <=-refl
 
@@ -197,6 +205,10 @@
       }
   }
 
+{- | Extends `RingedLocale` with two conditions: `isNonTrivial` (if `0 = 1` over `a`, then `a` is bottom) and
+ -   `isLocallyRinged` (every section is, on a covering family, either invertible or has invertible `+1`-shift, encoding
+ -   the local-ring stalk condition).
+ -}
 \record LocallyRingedLocale \extends RingedLocale {
   | isLRLNonTrivial (a : L) : 0 = {R a} 1 -> a <= bottom
   | isLocallyRinged (a : L) (x : R a) : a <= Join (\lam b => \Sigma (p : b <= a) (Inv (R.F.Func p x) || Inv (R.F.Func p (x + 1))))

@@ -1,3 +1,15 @@
+{- | Foundational definitions of (pre)categories, isomorphisms, and related structure used throughout the library.
+ -
+ -   This module sets up the core categorical vocabulary on which the rest of the library builds: precategories with
+ -   associative composition and identities, the univalence axiom upgrading a precategory to a (univalent) category, and
+ -   the standard menagerie of morphism classes — monomorphisms, split monos, and isomorphisms — packaged as records
+ -   that can be extended. Univalence is expressed via `idtoiso` being an `Equiv`, which gives `isotoid` together with
+ -   transport-along-iso lemmas that let path-based reasoning be replaced by isomorphism-based reasoning. A
+ -   `Structure Identity Principle` (`SIP`) and a free-category construction over a `Graph` round out the toolkit,
+ -   providing the standard ways to build new categories from a base category plus extra structure or from a directed
+ -   graph.
+ -}
+
 \import Equiv
 \import Equiv.Path
 \import Function.Meta ($)
@@ -7,6 +19,10 @@
 \import Paths.Meta
 \import Set
 
+{- | Class of precategories over `Ob : \hType obj`, with hom-sets `Hom : Ob -> Ob -> \Set hom`, identity `id`,
+ -   composition `o` (alias `∘`), and the unit/associativity laws `id-left`, `id-right`, `o-assoc`. Uses two universe
+ -   levels (`obj >= hom`).
+ -}
 \class Precat (Ob : \Type) {
   | Hom : Ob -> Ob -> \Set
   | id {X : Ob} : Hom X X
@@ -15,8 +31,10 @@
   | id-right {X Y : Ob} {f : Hom X Y} : f ∘ id = f
   | o-assoc {X Y Z W : Ob} {h : Hom Z W} {g : Hom Y Z} {f : Hom X Y} : (h ∘ g) ∘ f = h ∘ (g ∘ f)
 
+  -- | Diagrammatic-order composition `f >> g = g ∘ f`.
   \func \infixl 8 >> {x y z : Ob} (f : Hom x y) (g : Hom y z) => g ∘ f
 
+  -- | The opposite precategory, swapping the direction of `Hom` and composition.
   \protected \func op : Precat \cowith
     | Ob => Ob
     | Hom x y => Hom y x
@@ -26,28 +44,36 @@
     | id-right => id-left
     | o-assoc => inv o-assoc
 
+  -- | Sends a path `a = b` to the corresponding identity isomorphism; the basis for univalence.
   \func idtoiso {a b : Ob} (p : a = b) : Iso {_} {a} {b} \elim p
     | idp => idIso
 
   \func =_hom {a b : Ob} (p : a = b) : Hom a b
     => (idtoiso p).f
 
+  -- | Compute transport of a hom along base-object paths via the corresponding identity transports.
   \lemma transport_Hom {x1 y1 x2 y2 : Ob} (p1 : x1 = y1) (p2 : x2 = y2) {g : Hom x1 x2} {f : Hom y1 y2}
                        (h : transport (Hom x2) p2 id ∘ g = f ∘ transport (Hom x1) p1 id)
     : coe (\lam i => Hom (p1 @ i) (p2 @ i)) g right = f \elim p1, p2
     | idp, idp => inv id-left *> h *> id-right
 
+  -- | Compute transport of a hom along base-object paths via the corresponding identity transports.
   \lemma transport_Hom-left {x y z : Ob} (p : x = y) {g : Hom x z} {f : Hom y z} (h : g = f ∘ transport (Hom x) p id) : transport (Hom __ z) p g = f \elim p
     | idp => h *> id-right
 
+  -- | Compute transport of a hom along base-object paths via the corresponding identity transports.
   \lemma transport_Hom-right {x y z : Ob} (p : x = y) {g : Hom z x} {f : Hom z y} (h : transport (Hom x) p id ∘ g = f) : transport (Hom z) p g = f \elim p
     | idp => inv id-left *> h
 }
 
 \open Precat (>>)
 
+-- | Record packaging a morphism `f : Hom dom cod` in some ambient `C : Precat`; coerces to its underlying `f`.
 \record Map {C : Precat} {dom cod : C} (\coerce f : Hom dom cod)
 
+{- | Extends `Map` with the left-cancellation property `isMono`. The companion `Mono.comp` shows monos are closed under
+ -   composition.
+ -}
 \record Mono \extends Map
   | isMono {x : C} {g h : Hom x dom} : f ∘ g = f ∘ h -> g = h
   \where {
@@ -55,8 +81,12 @@
       | isMono p => f.isMono (g.isMono (inv o-assoc *> p *> o-assoc))
   }
 
+-- | The dual right-cancellation property, stated as a plain function on a morphism.
 \func IsEpi {C : Precat} {x y : C} (f : Hom x y) => \Pi {z : C} {g h : Hom y z} -> g ∘ f = h ∘ f -> g = h
 
+{- | Extends `Mono` with a chosen left inverse `hinv` and proof `hinv_f : hinv ∘ f = id dom`; `isMono` is derived from
+ -   these. `adjointMap` rewrites `f ∘ g = h` as `g = hinv ∘ h`.
+ -}
 \record SplitMono \extends Mono {
   | hinv : Hom cod dom
   | hinv_f : hinv ∘ f = id
@@ -74,15 +104,19 @@
     => inv id-left *> pmap (∘ g) (inv hinv_f) *> o-assoc *> pmap (hinv ∘) p
 }
 
+-- | Extends `SplitMono` with the second inversion law `f_hinv : f ∘ hinv = id cod`. Provides:
 \record Iso \extends SplitMono {
   | f_hinv : f ∘ hinv = id
 
+  -- | Variants of the adjoint rewriting in both directions.
   \lemma adjointMapInv {z : C} {g : Hom z dom} {h : Hom z cod} (p : g = hinv ∘ h) : f ∘ g = h
     => pmap (f ∘) p *> inv o-assoc *> pmap (∘ h) f_hinv *> id-left
 
+  -- | Variants of the adjoint rewriting in both directions.
   \lemma adjointMap' {z : C} {g : Hom cod z} {h : Hom dom z} (p : g ∘ f = h) : g = h ∘ hinv
     => inv id-right *> pmap (g ∘) (inv f_hinv) *> inv o-assoc *> pmap (∘ hinv) p
 
+  -- | Pre/post-composition with an iso is an equivalence on hom-sets.
   \lemma -o_Equiv {z : C} : IsEquiv {Hom cod z} {Hom dom z} (__ ∘ f)
     => inP \new QEquiv {
          | ret h => h ∘ hinv
@@ -90,6 +124,7 @@
          | f_sec h => o-assoc *> pmap (h ∘) hinv_f *> id-right
        }
 
+  -- | Pre/post-composition with an iso is an equivalence on hom-sets.
   \lemma o-_Equiv {z : C} : IsEquiv {Hom z dom} {Hom z cod} (f ∘ __)
     => inP \new QEquiv {
          | ret h => hinv ∘ h
@@ -97,46 +132,58 @@
          | f_sec h => inv o-assoc *> pmap (∘ _) f_hinv *> id-left
        }
 
+  -- | The inverse iso.
   \protected \func reverse : Iso => \new Iso hinv f f_hinv hinv_f
 
+  -- | The same iso viewed in the opposite category.
   \protected \func op : Iso => \new Iso {C.op} f hinv f_hinv hinv_f
 } \where {
+    -- | Two isos with equal underlying maps are equal.
     \use \func equals {C : Precat} {x y : C} (e e' : Iso {C} {x} {y}) (p : e.f = e'.f) : e = e'
       => ext (p, isMono {e} (e.f_hinv *> inv e'.f_hinv *> inv (pmap (e'.hinv >>) p)))
 
+    -- | `Iso f` is a proposition (uniqueness of inverses).
     \use \level levelProp {C : Precat} {x y : C} (f : Hom x y) (e e' : Iso f) => equals e e' idp
 
+    -- | A `SplitMono` and `Iso` sharing the same forward map share the same inverse.
     \lemma hinv-unique {C : Precat} {x y : C} (e : SplitMono {C} {x} {y}) (e' : Iso {C} {x} {y}) (p : e.f = e'.f) : e.hinv = e'.hinv
       => inv (o-assoc *> pmap (_ ∘) (pmap (∘ _) p *> e'.f_hinv) *> id-right) *> pmap (∘ _) e.hinv_f *> id-left
 
+    -- | 2-out-of-3-style results: if `e2 ∘ f` is iso and `e2` is mono, then `f` is iso; dually for epis.
     \lemma rightFactor {C : Precat} {x y z : C} (f : Hom x y) (e2 : Mono {C} {y} {z}) (e3 : Iso (e2.f ∘ f)) : Iso f \cowith
       | hinv => e3.hinv ∘ e2
       | hinv_f => o-assoc *> e3.hinv_f
       | f_hinv => e2.isMono $ inv o-assoc *> inv o-assoc *> pmap (∘ _) e3.f_hinv *> id-left *> inv id-right
 
+    -- | 2-out-of-3-style results: if `e2 ∘ f` is iso and `e2` is mono, then `f` is iso; dually for epis.
     \lemma leftFactor {C : Precat} {x y z : C} {f : Hom x y} (e : IsEpi f) (g : Hom y z) (e3 : Iso (g ∘ f)) : Iso g
       => Iso.op {rightFactor {C.op} g (\new Mono f e) e3.op}
 
+    -- | Isomorphisms compose to an isomorphism.
     \lemma composite {C : Precat} {x y z : C} (f : Iso {C} {x} {y}) (g : Iso {C} {y} {z}) : Iso (g.f ∘ f.f) \cowith
       | hinv => f.hinv ∘ g.hinv
       | hinv_f => o-assoc *> pmap (_ ∘) (inv o-assoc *> pmap (∘ _) g.hinv_f *> id-left) *> f.hinv_f
       | f_hinv => o-assoc *> pmap (_ ∘) (inv o-assoc *> pmap (∘ _) f.f_hinv *> id-left) *> g.f_hinv
 }
 
+-- | The identity morphism as an `Iso`.
 \func idIso {C : Precat} {x : C} : Iso (id {_} {x}) \cowith
   | hinv => id
   | f_hinv => id-left
   | hinv_f => id-right
 
+-- | Composition of two `Iso` values, packaging both forward and inverse legs.
 \func oIso {C : Precat} {x y z : C} (e : Iso {C} {x} {y}) (f : Iso {C} {y} {z}) : Iso {C} {x} {z} \cowith
   | f => f.f ∘ e.f
   | hinv => e.hinv ∘ f.hinv
   | f_hinv => o-assoc *> pmap (_ ∘) (inv o-assoc *> pmap (∘ _) e.f_hinv *> id-left) *> f.f_hinv
   | hinv_f => o-assoc *> pmap (_ ∘) (inv o-assoc *> pmap (∘ _) f.hinv_f *> id-left) *> e.hinv_f
 
+-- | Extends `Precat` with `univalence`: `idtoiso : a = b -> Iso a b` is an `Equiv`.
 \class Cat \extends Precat {
   | univalence {a b : Ob} : IsEquiv (idtoiso {_} {a} {b})
 
+  -- | Univalence is preserved by taking the opposite category.
   \protected \func op : Cat \cowith
     | Precat => Precat.op
     | univalence => univalenceFromQEquiv {Precat.op} (\lam {a} {b} => transQEquiv (IsEquiv.toQEquiv univalence) $ later \new QEquiv {
@@ -146,35 +193,43 @@
       | f_sec => idpe
     }) (\lam {c} => idp)
 
+  -- | The inverse of `idtoiso`, turning an iso into a path.
   \func isotoid {a b : Ob} (e : Iso {\this} {a} {b}) : a = b
     => IsEquiv.ret univalence e
 
   \lemma idtoiso_isotoid {a b : Ob} {e : Iso {\this} {a} {b}} : (idtoiso (isotoid e)).f = e.f
     => path \lam i => (IsEquiv.f_ret univalence i).f
 
+  -- | Transporting `id` along `isotoid e` recovers `e`.
   \lemma transport_iso (e : Iso {\this}) : transport (Hom e.dom) (isotoid e) id = e
     => Jl (\lam b p => transport (Hom e.dom) p id = idtoiso p) idp (isotoid e) *> path (\lam i => (IsEquiv.f_ret univalence i).f)
 
+  -- | Repackages univalence as a transport-form statement, useful for builders.
   \func univalenceToTransport (e : Iso {\this}) : \Sigma (p : e.dom = e.cod) (transport (Hom e.dom) p id = e)
     => (isotoid e, transport_iso e)
 
 
+  -- | Iso-flavored versions, replacing a path with `isotoid e` and reducing to commuting squares involving `e.f`.
   \lemma transport_Hom_iso (e1 e2 : Iso {\this}) {g : Hom e1.dom e2.dom} {f : Hom e1.cod e2.cod}
                            (h : g >> e2.f = e1.f >> f)
     : coe (\lam i => Hom (isotoid e1 @ i) (isotoid e2 @ i)) g right = f
     => transport_Hom (isotoid e1) (isotoid e2) (pmap (g >>) (transport_iso e2) *> h *> pmap (>> f) (inv (transport_iso e1)))
 
+  -- | Iso-flavored versions, replacing a path with `isotoid e` and reducing to commuting squares involving `e.f`.
   \lemma transport_Hom_iso-left (e : Iso {\this}) {z : Ob} (g : Hom e.dom z) {f : Hom e.cod z} (h : g = e.f >> f) : transport (Hom __ z) (isotoid e) g = f
     => transport_Hom-left (isotoid e) (h *> pmap (>> f) (inv (transport_iso e)))
 
+  -- | Iso-flavored versions, replacing a path with `isotoid e` and reducing to commuting squares involving `e.f`.
   \lemma transport_Hom_iso-right (e : Iso {\this}) {z : Ob} (g : Hom z e.dom) {f : Hom z e.cod} (h : g >> e.f = f) : transport (Hom z) (isotoid e) g = f
     => transport_Hom-right (isotoid e) (pmap (g >>) (transport_iso e) *> h)
 } \where {
+  -- | Builds univalence from any equivalence `(a = b) ≃ Iso a b` that sends `idp` to `id`.
   \lemma univalenceFromQEquiv {C : Precat} (e : \Pi {a b : C} -> QEquiv {a = b} {Iso {C} {a} {b}}) (i : \Pi {a : C} -> (e (idpe a)).f = id) {a b : C} : IsEquiv (C.idtoiso {a} {b})
     => \have t : e.f = C.idtoiso {a} {b} => ext (\case \elim b, \elim __ \with {
       | b, idp => Iso.equals _ _ i
     }) \in transport (IsEquiv __) t (inP e)
 
+  -- | Builds univalence from a transport-form witness for every iso.
   \lemma makeUnivalence {C : Precat} (c : \Pi (e : Iso {C}) -> \Sigma (p : e.dom = e.cod) (transport (Hom e.dom) p id = e)) {a b : C} : IsEquiv (C.idtoiso {a} {b})
     => inP $ pathEquiv (\lam a b => Iso {C} {a} {b}) (\lam {a} {b} => \new Retraction {
       | f => C.idtoiso
@@ -186,6 +241,9 @@
     => makeUnivalence \lam e => ((c e).1, pathOver.conv (c e).2)
 }
 
+{- | For a type `X`, the precategory whose hom from `x` to `y` is `Trunc0 (x = y)` (set-truncated paths) — i.e., the
+ -   propositional-equality groupoid as a precategory.
+ -}
 \func DiscretePrecat (X : \Type) : Precat X \cowith
   | Hom x y => Trunc0 (x = y)
   | id => in0 idp
@@ -196,10 +254,15 @@
   | id-right {_} {_} {p} => cases p (pmap in0 (idp_*> _))
   | o-assoc {_} {_} {_} {_} {p} {q} {r} => cases (p,q,r) (pmap in0 (inv (*>-assoc _ _ _)))
   \where {
+    -- | Lifts a function `X -> D` (for `D` a precategory) to a functorial action on discrete homs.
     \func map {X : \Type} {D : Precat} (f : X -> D) {x y : X} (h : Hom {DiscretePrecat X} x y) : Hom (f x) (f y) \elim h
       | in0 idp => id
   }
 
+{- | Given a univalent category `C`, a structure type-family `Str`, a notion of structure-preserving morphism `isHom`,
+ -   and a "rigidity" condition on the identity, transports a structured iso `(e, S1, S2, hom-data)` to a path of
+ -   objects together with a path of structures over it. Used to derive univalence for categories of structured objects.
+ -}
 \sfunc SIP (C : Cat) (Str : C -> \Type) (isHom : \Pi {x y : C} -> Str x -> Str y -> Hom x y -> \Type)
            (st : \Pi {x : C} {S1 S2 : Str x} -> isHom S1 S2 id -> isHom S2 S1 id -> S1 = S2)
            {x y : C} (e : Iso {C} {x} {y}) (S1 : Str x) (S2 : Str y) (p : isHom S1 S2 e) (q : isHom S2 S1 e.hinv)
@@ -234,23 +297,31 @@
     \in (S1=S2, pathOver $ dhi (g S1=S2) _ (gi S1=S2) fi $ Jl (\lam S p => (dh (g p) (gi p)).f = transport (Hom (do S1)) (do.pmap-isEquiv p) id) dh_id S1=S2 *>
                   pmap (transport (Hom _) __ _) (do.pmap-isEquiv.f_ret _) *> Cat.transport_iso _)) e S1 S2 p pi
 
+-- | Class of directed graphs: a vertex set `V` and edge family `E : V -> V -> \Set`.
 \class Graph (\coerce V : \Set) (E : V -> V -> \Set) {
+  {- | Inductive type of finite paths between vertices, with constructors `empty` (a vertex equality) and `cons`
+   -   (prepend an edge).
+   -}
   \data Paths (x y : V)
     | empty (x = y)
     | cons {z : V} (E x z) (Paths z y)
 
+  -- | Concatenation of paths.
   \func concat {x y z : V} (p : Paths x y) (q : Paths y z) : Paths x z \elim p
     | empty idp => q
     | cons e p => cons e (concat p q)
 
+  -- | Right unit and associativity of concatenation.
   \lemma concat_idp {x y : V} {p : Paths x y} : concat p (empty idp) = p \elim p
     | empty idp => idp
     | cons e p => pmap (cons e) concat_idp
 
+  -- | Right unit and associativity of concatenation.
   \lemma concat-assoc {x y z w : V} {p : Paths x y} {q : Paths y z} {r : Paths z w} : concat (concat p q) r = concat p (concat q r) \elim p
     | empty idp => idp
     | cons e p => pmap (cons e) concat-assoc
 
+  -- | The free (univalent) category on a graph, with `Hom = Paths`, identity `empty idp`, and composition `concat`.
   \func FreeCat : Cat V \cowith
     | Hom => Paths
     | id => empty idp
@@ -264,4 +335,5 @@
     }
 }
 
+-- | The terminal category, built as `Graph.FreeCat` over the singleton graph with no edges.
 \func TrivialCat : Cat => (\new Graph (\Sigma) (\lam _ _ => Empty)).FreeCat

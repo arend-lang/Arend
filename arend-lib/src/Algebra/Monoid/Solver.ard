@@ -1,3 +1,24 @@
+{- | A reflection-based equality solver for monoids, commutative monoids, and meet-semilattices.
+ -
+ -   The module formalizes a syntactic representation of monoid expressions (`MonoidTerm`) together with normalization
+ -   procedures whose consistency lemmas reduce semantic equality of expressions to syntactic equality of normal forms.
+ -   For plain monoids the normal form is a flat list of variables (associativity collapsed); for commutative monoids
+ -   the list is additionally sorted (commutativity); for top-meet-semilattices duplicates are also removed
+ -   (idempotence). The `interpret`/`interpretNF` pair links syntax to a fixed `vars : Array M`, and the
+ -   `terms-equality` lemmas serve as the entry points used by tactics to discharge equational goals after reducing both
+ -   sides to a canonical list.
+ -
+ -   MonoidData (Plain Monoid Solver): Class parameterized by a monoid `M` and a variable assignment `vars : Array M`;
+ -   uses `V := Fin vars.len` as the variable type.
+ -
+ -   CMonoidData (Commutative Monoid Solver): Extends `MonoidData`, overriding `M` to a `CMonoid`. Normal forms are
+ -   sorted lists.
+ -
+ -   LData (Top-Meet-Semilattice Solver): Extends `CMonoidData` with `M` set to a `TopMeetSemilattice` `L`, treating
+ -   meet as the commutative monoid operation with top as the unit. Normal forms are sorted lists with duplicates
+ -   collapsed (using `RedBlack.sort`).
+ -}
+
 \import Algebra.Monoid
 \import Algebra.Pointed
 \import Arith.Fin.Order
@@ -10,11 +31,17 @@
 \import Paths.Meta
 \import Set \hiding (#)
 
+{- | Inductive type of monoid expressions over a variable type `V`, with constructors `var`, `:ide` (unit), and `:*`
+ -   (multiplication).
+ -}
 \data MonoidTerm (V : \Type)
   | \protected var V
   | \protected :ide
   | \protected \infixl 7 :* (t s : MonoidTerm V)
 
+{- | Flattens a `MonoidTerm V` to a `List V` using an accumulator-passing helper `normalize.aux`, eliminating units and
+ -   associativity.
+ -}
 \protected \func normalize {V : \Type} (t : MonoidTerm V) => aux t nil
   \where
     \func aux {V : \Type} (t : MonoidTerm V) (acc : List V) : List V \elim t
@@ -25,11 +52,13 @@
 \class MonoidData \noclassifying {M : Monoid} (vars : Array M) {
   \meta V => Fin vars.len
 
+  -- | Evaluates a `MonoidTerm V` in `M` using `vars`.
   \protected \func interpret (t : MonoidTerm V) : M \elim t
     | var x => vars x
     | :ide => ide
     | :* t s => interpret t * interpret s
 
+  -- | Evaluates a normal-form `List V` in `M`, with the cons-case lemma `interpretNF.cons`.
   \func interpretNF (l : List V) : M \elim l
     | nil => ide
     | :: x nil => vars x
@@ -39,6 +68,7 @@
         | nil => inv ide-right
         | :: a l => idp
 
+  -- | `interpret t = interpretNF (normalize t)`; the auxiliary `normalize-consistent.aux` handles the accumulator.
   \protected \lemma normalize-consistent (t : MonoidTerm V) : interpret t = interpretNF (normalize t)
     => inv ide-right *> aux t nil
     \where
@@ -47,16 +77,22 @@
         | :ide => ide-left
         | :* t s => *-assoc *> pmap (interpret t *) (aux s acc) *> aux t (normalize.aux s acc)
 
+  -- | If two terms have equal normal forms, their interpretations are equal — the main solver entry point.
   \protected \lemma terms-equality (t s : MonoidTerm V) (p : interpretNF (normalize t) = interpretNF (normalize s)) : interpret t = interpret s
     => normalize-consistent t *> p *> inv (normalize-consistent s)
 
+  -- | Converse direction (assumes the monoid is free on `vars`, used in reverse-reflection contexts).
   \lemma terms-equality-conv (t s : MonoidTerm V) (p : interpret t = interpret s) : interpretNF (normalize t) = interpretNF (normalize s)
     => inv (normalize-consistent t) *> p *> normalize-consistent s
 
+  -- | List concatenation interprets as monoid product.
   \protected \lemma interpretNF_++ (l1 l2 : List V) : interpretNF (l1 ++ l2) = interpretNF l1 * interpretNF l2 \elim l1
     | nil => inv ide-left
     | :: a l1 => repeat {2} (rewrite interpretNF.cons) $ rewrite interpretNF_++ (inv *-assoc)
 
+  {- | Substituting a slice `[i, i+s)` of a list with a list of equal interpretation preserves the overall
+   -   interpretation; supports rewriting subterms.
+   -}
   \protected \lemma replace-consistent (l : List V) (i s : Nat) (r : List V) (p : interpretNF (slice l i s) = interpretNF r)
     : interpretNF l = interpretNF (replace l i s r)
     => run {
@@ -70,28 +106,39 @@
 \class CMonoidData \extends MonoidData {
   \override M : CMonoid
 
+  -- | Sorting a list preserves its interpretation.
   \lemma sort-consistent (l : List V) : interpretNF l = interpretNF (sort l)
     => rewrite sort=insert (perm-consistent (Insertion.sort-perm l))
 
+  -- | Any permutation of a list has the same interpretation.
   \protected \lemma perm-consistent {l l' : List V} (p : Perm l l') : interpretNF l = interpretNF l' \elim l, l', p
     | nil, nil, perm-nil => idp
     | :: a1 l1, :: a2 l2, perm-:: idp p => repeat {2} (rewrite interpretNF.cons) (pmap (vars a1 *) (perm-consistent p))
     | :: a1 (:: a1' l1), :: a2 (:: a2' l2), perm-swap idp idp idp => repeat {2} (rewrite interpretNF.cons) (inv *-assoc *> pmap (* interpretNF l1) *-comm *> *-assoc)
     | l1, l2, perm-trans p1 p2 => perm-consistent p1 *> perm-consistent p2
 
+  -- | `interpret t = interpretNF (sort (normalize t))`.
   \protected \lemma normalize-consistent (t : MonoidTerm V) : interpret t = interpretNF (sort (normalize t))
     => MonoidData.normalize-consistent t *> sort-consistent (normalize t)
 
+  -- | Solver entry points using sorted normal forms.
   \protected \lemma terms-equality (t s : MonoidTerm V) (p : interpretNF (sort (normalize t)) = interpretNF (sort (normalize s))) : interpret t = interpret s
     => normalize-consistent t *> p *> inv (normalize-consistent s)
 
+  -- | Solver entry points using sorted normal forms.
   \lemma terms-equality-conv (t s : MonoidTerm V) (p : interpret t = interpret s) : interpretNF (sort (normalize t)) = interpretNF (sort (normalize s))
     => inv (normalize-consistent t) *> p *> normalize-consistent s
 
+  {- | Substitution by a list of indices `is`: replaces the elements at `is` with a list `r` of equal interpretation,
+   -   returning `r ++ removeIndices is l`.
+   -}
   \protected \lemma replace-consistent (l : List V) (is : List Nat) (r : List V) (p : interpretNF (indices is l) = interpretNF r)
     : interpretNF l = interpretNF (r ++ removeIndices is l)
     => replace-consistent-lem is l *> interpretNF_++ _ _ *> pmap (* interpretNF (removeIndices is l)) p *> inv (interpretNF_++ _ _)
 
+  {- | `interpretNF l = interpretNF (indices is l ++ removeIndices is l)` — splits a list into selected and unselected
+   -   parts.
+   -}
   \protected \lemma replace-consistent-lem (is : List Nat) (l : List V) : interpretNF l = interpretNF (indices is l ++ removeIndices is l)
     | nil, l => idp
     | :: 0 is, nil => idp
@@ -103,12 +150,14 @@
   \open Sort
   \open Sort.RedBlack
 
+  -- | Picks out elements of a list at the positions given by a list of `Nat`.
   \func indices {A : \Type} (is : List Nat) (l : List A) : List A \elim is, l
     | nil, _ => nil
     | :: _ _, nil => nil
     | :: 0 is, :: a l => a :: indices is l
     | :: (suc n) is, :: _ l => indices (n :: is) l
 
+  -- | Deletes the elements of a list at the given positions.
   \func removeIndices {A : \Type} (is : List Nat) (l : List A) : List A \elim is, l
     | nil, l => l
     | :: _ _, nil => nil
@@ -119,6 +168,9 @@
 \class LData {L : TopMeetSemilattice} \extends CMonoidData {
   | M => L
 
+  {- | Removes adjacent duplicate variables from a list (relying on decidable equality on `V`); on a sorted list this
+   -   yields a duplicate-free representative.
+   -}
   \func removeDuplicates (l : List V) : List V \elim l
     | nil => nil
     | :: a nil => a :: nil
@@ -127,6 +179,7 @@
       | no _ =>  a :: removeDuplicates l
     }
 
+  -- | `interpretNF l = interpretNF (removeDuplicates l)` — uses idempotence of meet.
   \lemma removeDuplicates-consistent (l : List V) : interpretNF l = interpretNF (removeDuplicates l)
     | nil => idp
     | :: a nil => idp
@@ -136,12 +189,15 @@
       | no _ => rewrite {2} interpretNF.cons $ pmap (vars a ∧) (removeDuplicates-consistent (a1 :: l))
     }
 
+  -- | `interpret t = interpretNF (removeDuplicates (RedBlack.sort (normalize t)))`.
   \protected \lemma normalize-consistent (t : MonoidTerm V) : interpret t = interpretNF (removeDuplicates (RedBlack.sort (normalize t)))
     => CMonoidData.normalize-consistent t *> removeDuplicates-consistent _
 
+  -- | Solver entry points using sorted, deduplicated normal forms.
   \protected \lemma terms-equality (t s : MonoidTerm V) (p : interpretNF (removeDuplicates (RedBlack.sort (normalize t))) = interpretNF (removeDuplicates (RedBlack.sort (normalize s)))) : interpret t = interpret s
     => normalize-consistent t *> p *> inv (normalize-consistent s)
 
+  -- | Solver entry points using sorted, deduplicated normal forms.
   \lemma terms-equality-conv (t s : MonoidTerm V) (p : interpret t = interpret s) : interpretNF (removeDuplicates (RedBlack.sort (normalize t))) = interpretNF (removeDuplicates (RedBlack.sort (normalize s)))
     => inv (normalize-consistent t) *> p *> normalize-consistent s
 

@@ -1,3 +1,12 @@
+{- | Linear representations of a group on a module over a ring.
+ -
+ -   A `LinRepres` combines a left module structure (`LModule` over a ring `R`) with a group action (`GroupAction`) such
+ -   that the action is compatible with both the module addition and scalar multiplication. This makes each group
+ -   element act as a linear endomorphism of the module, formalizing the classical notion of a linear representation
+ -   `G → GL(E)`. The module exposes a coercion `toLinearMap` sending each group element to its associated linear
+ -   self-map, and provides the trivial representation as a canonical example.
+ -}
+
 \import Algebra.Group
 \import Algebra.Group.GSet.ExampleActions
 \import Algebra.Group.GSet
@@ -13,23 +22,39 @@
 -- REPRESENTATION THEORY Tammo tom Dieck
 -- also : https://www.maths.dur.ac.uk/users/jack.g.shotton/repthy/index.html
 
+{- | Class of linear representations, extending both `LModule` (over a ring `R`) and `GroupAction` (of a group `G`).
+ -   Adds the compatibility axioms requiring the action `**` to distribute over module addition and commute with scalar
+ -   multiplication.
+ -}
 \class LinRepres \extends LModule, GSet {
+  -- | The action is additive in the module argument: `g ** (e + e') = g ** e + g ** e'`.
   | **-ldistr {g : G} {e e' : E} : g ** (e + e') = g ** e + g ** e'
+  -- | The action commutes with scalar multiplication: `g ** (c *c e) = c *c (g ** e)`.
   | **_*c {g :  G} {e : E} {c : R} : g ** (c *c e) = c *c (g ** e)
 
+  -- | A group element acts trivially on the zero vector: `g ** 0 = 0`.
   \lemma **_zro {g : G} : g ** 0 = 0 => rewrite (inv *c_zro-right, **_*c, *c_zro-left, *c_zro-left) idp
 
+  -- | The action commutes with negation: `g ** negative e = negative (g ** e)`.
   \lemma **_negative {g : G} {e : E} : g ** negative e = negative (g ** e) => rewrite (inv neg_ide_*c, **_*c, neg_ide_*c) idp
 
+  {- | Sends a group element `g : G` to the `LinearMap` `e ↦ g ** e` from the representation to itself, packaging the
+   -   representation's compatibility axioms as additivity and `R`-linearity.
+   -}
   \func toLinearMap (g : G) : LinearMap \this \this \cowith
     | func e => g ** e
     | func-+ => **-ldistr
     | func-*c => **_*c
 
+  -- | The identity element acts as the identity linear map: `toLinearMap ide = LinearMap.id`.
   \lemma toLinearMap_ide : toLinearMap ide = LinearMap.id
     => exts \lam _ => **_ide
 }
 
+{- | Builds the trivial linear representation of a group `G` on a module `E` over a ring `R`, where every group element
+ -   acts as the identity. Combines `E`'s module structure with the trivial group action and verifies the linearity
+ -   axioms automatically.
+ -}
 \func TrivialAction {R : Ring} (E : LModule R) (G : Group) : LinRepres R G \cowith
   | LModule => E
   | GSet => trivialAction G E

@@ -1,3 +1,12 @@
+{- | Order of elements in groups whose underlying set satisfies the pigeonhole principle.
+ -
+ -   This module establishes that every element of a `PigeonholeSet`-based group has finite order, and packages this
+ -   into a computable `order` function when the group additionally has decidable equality. The pigeonhole principle
+ -   guarantees that the sequence of powers `g^n` must eventually repeat, yielding some `n > 0` with `g^n = 1`. From the
+ -   truncated existence proof, a search procedure (via `Sequence`'s `search`) extracts the *minimal* such exponent,
+ -   giving a well-defined notion of order with its characteristic universal property.
+ -}
+
 \import Algebra.Group
 \import Algebra.Meta
 \import Algebra.Monoid
@@ -19,23 +28,38 @@
 \import Set
 \import Set.Fin.Pigeonhole
 
+{- | For any element `g` of a group `G` whose carrier is a `PigeonholeSet`, there merely exists a positive `n` with
+ -   `g^n = 1`. Truncated existence statement derived from the pigeonhole principle applied to the sequence of powers.
+ -}
 \lemma hasFiniteOrder {G : Group} {P : PigeonholeSet G} (g : G) : ∃ (n : Nat) (n > 0) (G.pow g n = 1)
   => TruncP.map (P.pigeonhole< (\lam n => G.pow g n)) \lam (i,j,i<j,p) =>
       (j -' i, pos<pos.conv $ transportInv (_ <) (-'=- $ <=-less i<j) linarith, cancel_*-right (G.pow g i) $ inv G.pow_+ *> pmap (G.pow g) (unpos $ pmap (+ pos i) (-'=- $ <=-less i<j) *> linarith) *> inv p *> inv ide-left)
 
+{- | Given `g : G` in a group with pigeonhole carrier and decidable equality, returns the minimal positive natural
+ -   number `n` such that `g^n = 1`. Defined via `\sfunc` so its computational behavior is controlled.
+ -}
 \sfunc order {G : Group} {P : PigeonholeSet G} {D : DecSet G} (g : G) : Nat
   => (aux g).1
   \where {
+    {- | Internal sigma packaging the order together with proofs of positivity, the power equation `g^(order g) = 1`,
+     -   and minimality among all positive exponents satisfying the equation. Uses `search` over naturals with decidable
+     -   predicates and the truncation eliminator on `hasFiniteOrder`.
+     -}
     \func aux {G : Group} {P : PigeonholeSet G} {D : DecSet G} (g : G)
       : \Sigma (n : Nat) (\Sigma (n > 0) (G.pow g n = 1)) (\Pi (m : Nat) -> (\Sigma (m > 0) (G.pow g m = 1)) -> n <= m)
       => Contr.center {search _ (\lam n => later \have t => LinearOrder.<-dec 0 n \in decide) $ TruncP.map (hasFiniteOrder g) \lam t => (t.1, (t.2, t.3))}
   }
 
+-- | The order of any element is strictly positive.
 \lemma order>0 {G : Group} {P : PigeonholeSet G} {D : DecSet G} {g : G} : order g > 0
   => rewrite (\peval order g) (order.aux g).2.1
 
+-- | The defining equation `g^(order g) = 1`.
 \lemma order_pow {G : Group} {P : PigeonholeSet G} {D : DecSet G} {g : G} : G.pow g (order g) = 1
   => rewrite (\peval order g) (order.aux g).2.2
 
+{- | Minimality: if `m > 0` and `g^m = 1`, then `order g <= m`. Together with `order>0` and `order_pow`, this
+ -   characterizes `order g` uniquely.
+ -}
 \lemma order-min {G : Group} {P : PigeonholeSet G} {D : DecSet G} {g : G} {m : Nat} (p : m > 0) (q : G.pow g m = 1) : order g <= m
   => rewrite (\peval order g) $ (order.aux g).3 m (p,q)

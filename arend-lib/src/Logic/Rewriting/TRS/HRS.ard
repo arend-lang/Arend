@@ -1,3 +1,17 @@
+{- | Higher-order term rewriting systems (HRS): typed terms with metavariables and binders, rewrite rules over an
+ -   arbitrary signature, and the induced reduction relation as an abstract reduction system.
+ -
+ -   This module formalizes a many-sorted higher-order rewriting framework parameterized by an `FSignature` (sorts,
+ -   function symbols, and their domains carrying local context extensions) and a `MetaContext` (metavariables with
+ -   sort-indexed domains). Terms are an inductive family over a typing context and target sort, supporting variables,
+ -   metavariables applied to argument terms, and function symbols whose arguments live in extended contexts (modeling
+ -   binders). Two layers of substitution — ordinary `Substitution` for variables and `MetaSubstitution` for
+ -   metavariables (which performs the inner variable substitution at meta-instantiation sites) — drive the rewrite
+ -   mechanism. Rewrite rules are packaged in a `RuleRegistry`; the induced `RewriteRelation` allows top-level rule
+ -   application as well as congruence steps under function symbols and metavariables, and is finally lifted to an
+ -   `AbstractReductionSystem` instance.
+ -}
+
 \import Logic.Rewriting.ARS.AbstractReductionSystem
 \import Data.List \hiding (Sort)
 \import Logic
@@ -34,6 +48,9 @@
 
 \open FSignature
 
+{- | Record of metavariable declarations over a fixed `Sort`: each metavariable name has a sort and a list of argument
+ -   sorts (`m-domain`). Exposes `arity` and `index-in`.
+ -}
 \record MetaContext (Sort : \Set) {
   | metaname : Sort -> \Set
   | m-domain : \Pi {s : Sort} (metaname s) -> List Sort
@@ -49,19 +66,28 @@
            (context : List Sort)
            (termSort : Sort)
            (mc : MetaContext Sort): \Set
+  -- | Bound variable referring to a position in `context` whose sort matches `termSort`.
   | var (index : Index context) (termSort = context !! index)
+  {- | A metavariable `m` applied to a `DArray` of argument terms in the same context, with sorts taken from
+   -   `mc.m-domain m`.
+   -}
   | metavar
     (m : mc.metaname termSort)
     (arguments : DArray {mc.arity m} (\lam index => Term env context (mc.m-domain m !! index) mc))
+  {- | A function symbol `f` applied to arguments where each argument lives in `context ++ f !!domain index` (modeling
+   -   binders introduced by the symbol).
+   -}
   | func
     (f : symbol termSort)
     (arguments : DArray {env.arity f} (\lam index => Term env (context ++ f !!domain index) (f !!sort index) mc))
   \where {
+    -- | Function-argument extensionality: pointwise equal argument arrays give equal `func` terms.
     \func fext {env : FSignature} {context : List Sort} {termSort : Sort} {mc : MetaContext Sort} {f : symbol termSort}
                {args args' : DArray {env.arity f} (\lam index => Term env (context ++ f !!domain index) (f !!sort index) mc)}
                (eq : \Pi (index : Fin (env.arity f)) -> args index = args' index)
       : func f args = func f args' => pmap (func f) (exts eq)
 
+    -- | Metavariable-argument extensionality, analogous to `fext`.
     \func mext {env : FSignature} {context : List Sort} {termSort : Sort} {mc : MetaContext Sort} {m : mc.metaname termSort}
                {args args' : DArray {mc.arity m} (\lam index => Term env context (mc.m-domain m !! index) mc)}
                (eq : \Pi (index : Fin (mc.arity m)) -> args index = args' index)
@@ -72,6 +98,9 @@
 \func Substitution {env : FSignature} (old-context new-context : List Sort) (mc : MetaContext Sort) : \Set =>
   \Pi (index : Index old-context) -> Term env new-context (old-context !! index) mc
   \where {
+    {- | Recursive application of a substitution to a term, threading the substitution under binders via
+     -   `append-context-right`.
+     -}
     \func apply {env : FSignature} {s : Sort} {old-context : List Sort} {mc : MetaContext Sort}
                 (target : Term env old-context s mc)
                 {new-context : List Sort}
@@ -81,6 +110,7 @@
       | metavar m arguments => metavar m (\lam i => Substitution.apply (arguments i) map)
       | func f arguments => func f (\lam i => Substitution.apply (arguments i) (append-context-right map))
 
+    -- | Naturality of `Substitution.apply` with respect to transport along an equality of sorts.
     \func over-transport-sort {env : FSignature} {s s' : Sort} {old-context : List Sort} {mc : MetaContext Sort}
                               {target : Term env old-context s mc}
                               {new-context : List Sort}
@@ -90,6 +120,9 @@
       | idp => idp
   }
 
+{- | Propositional predicate asserting that a term has a function symbol at its root (rules that violate this are
+ -   excluded — only `func _ _` introduces `T-has-functional-root`).
+ -}
 \data FunctionRoot {env : FSignature} {s : Sort} {context : List Sort} {mc : MetaContext Sort}
                    (T : Term env context s mc) : \Prop \elim T
   | func _ _ => T-has-functional-root
@@ -98,6 +131,10 @@
 \func MetaSubstitution (env : FSignature) (new-context : List Sort) (old-metacontext new-metacontext : MetaContext Sort): \Set =>
   \Pi {s : Sort} (mvar : old-metacontext.metaname s) -> Term env (new-context ++ old-metacontext.m-domain mvar) s new-metacontext
   \where {
+    {- | Applies a meta-substitution to a term, tracking which subset of the current context is the "core" (`SubList`);
+     -   at each `metavar` occurrence, recursively meta-substitutes the arguments and then plugs them into the
+     -   metavariable's body via `Substitution.apply` and `extend-substitution-left`.
+     -}
     \func apply {env : FSignature} {context core-context : List Sort} {s : Sort} {old-metacontext new-metacontext : MetaContext Sort}
                 (t : Term env context s old-metacontext)
                 (sublist : SubList core-context context)
@@ -106,6 +143,7 @@
       | metavar m arguments => Substitution.apply (subst m) (extend-substitution-left sublist (\lam i => apply (arguments i) sublist subst))
       | func f arguments => func f (\lam i => apply (arguments i) (SubList.extend-right-single sublist) subst)
 
+    -- | Naturality of `MetaSubstitution.apply` under sort transport.
     \func over-transport-sort {env : FSignature} {context core-context : List Sort} {s s' : Sort} {old-metacontext new-metacontext : MetaContext Sort}
                               (eq : s = s')
                               (t : Term env context s old-metacontext)
@@ -115,6 +153,9 @@
       | idp => idp
   }
 
+{- | Record indexing a family of rewrite rules by sort: `rule-J s` enumerates rules of sort `s`, with accessors
+ -   `rule-mc`, `rule-l`, `rule-r`, and the rule's LHS function-root lemma `rule-func-root`.
+ -}
 \record RuleRegistry (env : FSignature) {
   | rule-J : Sort -> \Set
   | rule-container : \Pi {s : Sort} (id : rule-J s) -> RewriteRule {env} s
@@ -125,6 +166,9 @@
   \lemma rule-func-root {s : Sort} (id : rule-J s) : FunctionRoot (rule-l id) => rr-l-func-root {rule-container id}
 }
 
+{- | Record of a single rule at sort `s`: its own metacontext `rr-mc`, left- and right-hand sides `rr-l`, `rr-r` as
+ -   closed terms (empty context), and a proof `rr-l-func-root` that the LHS has a function root.
+ -}
 \record RewriteRule {env : FSignature} (s : Sort) {
   | rr-mc : MetaContext Sort
   | rr-l : Term env nil s rr-mc
@@ -132,6 +176,9 @@
   | rr-l-func-root : FunctionRoot rr-l
 }
 
+{- | Transports an argument array along an equality `f-A = f-B` of function symbols, producing arguments indexed by
+ -   `f-A`'s domain from those indexed by `f-B`'s.
+ -}
 \func arguments-over-f
   {env : FSignature} {s : Sort} {context : List Sort} {mc : MetaContext Sort}
   {f-A f-B : symbol s} (p : f-A = f-B)
@@ -139,6 +186,7 @@
   : \Pi (index : Index (domain f-A)) -> Term env (context ++ (f-A !!domain index)) (f-A !!sort index) mc =>
   transport (\lam f => \Pi (index : Index (domain f)) -> Term env (context ++ f !!domain index) (f !!sort index) mc) (inv p) arguments-B
 
+-- | Same for metavariable equality `m-A = m-B`.
 \func arguments-over-m
   {env : FSignature} {s : Sort} {context : List Sort} {mc : MetaContext Sort}
   {m-A m-B : mc.metaname s} (p : m-A = m-B)
@@ -146,6 +194,7 @@
   : \Pi (index : Index (mc.m-domain m-A)) -> Term env context (mc.m-domain m-A !! index) mc =>
   transport (\lam (m : mc.metaname s) => \Pi (index : Index (mc.m-domain m)) -> Term env context (mc.m-domain m !! index) mc) (inv p) arguments-B
 
+-- | One-step rewrite between terms `A` and `B` in the same context and sort, with three cases:
 \data RewriteRelation
   {env : FSignature}
   {mc : MetaContext Sort}
@@ -153,6 +202,9 @@
   {context : List Sort} {s : Sort}
   (A B : Term env context s mc) \elim A, B
   | A, B =>
+  {- | Top-level application of a rule `idx` with a meta-substitution that takes the (weakened, closed) LHS to `A` and
+   -   the RHS to `B`.
+   -}
   rewrite-with-rule
     (idx : set-of-rules.rule-J s)
     (substitution : MetaSubstitution env context (set-of-rules.rule-mc idx) mc)
@@ -160,6 +212,9 @@
     (right-coherence : MetaSubstitution.apply (weakening (set-of-rules.rule-r idx) SubList.sublist-nil-free) SubList.identity substitution = B)
 
   | func f-A arguments-A, func f-B arguments-B =>
+  {- | Congruence under a function symbol — given `f-A = f-B`, rewriting at one argument index `i` while all other
+   -   arguments coincide (modulo the symbol-equality transport).
+   -}
   rewrite-with-parameter-f
     (p : f-A = f-B)
     (i : Index (domain f-A))
@@ -167,16 +222,24 @@
     (other-unchanged : \Pi (j : index-in f-A) (j = i -> Empty) -> arguments-A j = arguments-over-f p arguments-B j)
 
   | metavar (m-A : mc.metaname s) arguments-A, metavar (m-B : mc.metaname s) arguments-B =>
+  -- | Congruence under a metavariable, analogous to the function case.
   rewrite-with-parameter-m
     (p : m-A = m-B)
     (i : Index (m-domain m-A))
     (reduction : RewriteRelation set-of-rules (arguments-A i) (arguments-over-m p arguments-B i))
     (other-unchanged : \Pi (j : mc.index-in m-A) (j = i -> Empty) -> arguments-A j = arguments-over-m p arguments-B j)
 
+{- | Class extending `AbstractReductionSystem` with `env`, `meta-context`, and `set-of-rules`. Its carrier `A` is the
+ -   sigma of `(context, sort, term)` triples; the reduction `~>` exists between two such triples when, after
+ -   transporting `B` along context/sort equalities, there is a `RewriteRelation` step from `A` to it.
+ -}
 \class HigherOrderTermRewritingSystem \noclassifying (env : FSignature) (meta-context : MetaContext Sort) (set-of-rules : RuleRegistry env)  \extends AbstractReductionSystem
   | A => \Sigma (context : List Sort) (sort : Sort) (Term env context sort meta-context)
   | ~> a b => \case \elim a, b \with {
     | (context, sort, A), (context', sort', B) => ∃ (p : context' = context) (q : sort' = sort) (RewriteRelation set-of-rules A (transport2 (\lam a b => Term env a b meta-context) p q B))
   }
 
+{- | Specialization extending both `HigherOrderTermRewritingSystem` and `SimpleARS`, restricting the framework to the
+ -   simple-ARS setting (e.g. propositional reduction).
+ -}
 \class SimpleHigherOrderTermRewritingSystem \extends HigherOrderTermRewritingSystem, SimpleARS

@@ -1,3 +1,15 @@
+{- | The category of left modules over a ring, together with kernel/image submodules, basis-change matrices, and the
+ -   equivalence between isomorphisms and injective+surjective linear maps.
+ -
+ -   This module assembles the categorical structure of `LModule R`: it packages `LinearMap`s as the morphisms of a
+ -   category `LModuleCat R`, lifts the abelian-group structure on hom-sets to make it pre-additive, and shows that
+ -   `LinearMap A B` is itself an `R`-module when `R` is commutative. Kernel and image of a linear map are constructed
+ -   as concrete submodules (built on top of their abelian-group counterparts), and the standard correspondence between
+ -   iso, injective+surjective, and "zero kernel + full image" is established. The final section connects bases of free
+ -   modules to matrices, exhibiting how a change of basis acts on linear maps via conjugation/multiplication by an
+ -   invertible matrix and proving that any two matrix representations of the same map are matrix-equivalent (`M~`).
+ -}
+
 \import Algebra.Group.GroupHom
 \import Algebra.Module
 \import Algebra.Module.Instances
@@ -9,6 +21,9 @@
 \import Category.PreAdditive
 \import Paths.Meta
 
+{- | The category of left `R`-modules with `LinearMap`s as morphisms; a `Cat` instance using identity and composition of
+ -   linear maps.
+ -}
 \instance LModuleCat.{u} (R : Ring) : Cat (LModule.{u} R)
   | Hom A B => LinearMap A B
   | id => LinearMap.id
@@ -18,6 +33,9 @@
   | o-assoc => idp
   | univalence => sip \lam f _ => exts (f.func-zro, \lam x x' => f.func-+, \lam x => f.func-negative, \lam e x => f.func-*c)
 
+{- | Pre-additive structure on `LModuleCat R`: hom-sets `LinearMap A B` form an abelian group under pointwise addition
+ -   (`linearMap_+`, `linearMap_zro`, `linearMap_negative`), and composition is bilinear.
+ -}
 \instance LModulePreAdditive.{u} (R : Ring) : PreAdditivePrecat (LModule.{u} R) \cowith
   | Precat => LModuleCat R
   | AbHom {A} {B} => LinearMapAbGroup A B

@@ -1,3 +1,13 @@
+{- | The Cayley-Hamilton theorem: every square matrix satisfies its own characteristic polynomial.
+ -
+ -   This module formalizes the classical theorem that for a matrix `A` over a commutative ring, evaluating the
+ -   characteristic polynomial `charPoly A` at `A` itself yields the zero matrix. The proof bridges the matrix algebra
+ -   `MatrixAlgebra R n` with the module-theoretic view of matrices as linear maps on `ArrayFinModule n`, using
+ -   `polyMapEval` to interpret polynomials over `R` as polynomials over the matrix algebra. The key reduction
+ -   translates polynomial-in-matrix evaluation to action on standard basis vectors via `polyModule.poly_func`, allowing
+ -   the result to follow from properties of the linear map associated with `A`.
+ -}
+
 \import Algebra.Algebra
 \import Algebra.Group
 \import Algebra.Linear.Matrix
@@ -17,6 +27,10 @@
 \import Paths.Meta
 \import Set
 
+{- | For a commutative ring `R` and an `n × n` matrix `A`,
+ -   `polyMapEval (CAlgebra.coefHom {MatrixAlgebra R n}) (charPoly A) A = 0`. States that `A` annihilates its own
+ -   characteristic polynomial when the polynomial is lifted to the matrix algebra and evaluated at `A`.
+ -}
 \lemma cayley-hamilton {R : CRing} {n : Nat} (A : Matrix R n n) : polyMapEval (CAlgebra.coefHom {MatrixAlgebra R n}) (charPoly A) A = 0
   => \let | M => polyModule {R} (toLinearMap A)
           | B => padd 1 0 *c matrix-map (padd pzero) 1 - matrix-map (padd pzero) A
@@ -29,11 +43,20 @@
                     rewrite (decideEq=_reduce idp) (exts \lam k => simplify (R.BigSum-unique i (\lam j i/=j => later $ rewrite (decideEq/=_reduce i/=j) (pmap (_ *) (simplify $ R.BigSum_zro \lam _ => R.zro_*-right) *> R.zro_*-right)) *> later (rewrite (decideEq=_reduce idp, decideEq=_reduce idp) (pmap (_ *) (simplify $ pmap (+ _) (R.BigSum_zro \lam _ => R.zro_*-right) *> zro-left) *> ide-right *> inv zro-left *> inv (pmap2 (+) (R.BigSum_zro \lam _ => R.zro_*-right) ide-right))) *> inv (R.BigSum-unique k (\lam j k/=j => later $ rewrite (decideEq/=_reduce (/=-sym k/=j)) $ simplify $ R.BigSum_zro \lam _ => R.zro_*-right))) *> inv ArrayLModule.BigSum-index))
      \in matrixExt (poly_func_matrix (charPoly A) A) *> pmap toMatrix t
   \where {
+    {- | Converts a matrix `A : Matrix R n m` into a `LinearMap (ArrayFinModule n) (ArrayFinModule m)` by the standard
+     -   rule `u ↦ (j ↦ ∑ᵢ A i j * u i)`. Provides the bridge between matrix algebra and the module-theoretic
+     -   formulation needed for the proof.
+     -}
     \func toLinearMap {R : CRing} {n m : Nat} (A : Matrix R n m) : LinearMap (ArrayFinModule n) (ArrayFinModule m) \cowith
       | func u => \lam j => R.BigSum \lam i => A i j * u i
       | func-+ => exts \lam j => pmap R.BigSum (exts \lam i => R.ldistr) *> R.BigSum_+
       | func-*c => exts \lam j => pmap R.BigSum (exts \lam i => equation) *> inv R.BigSum-ldistr
 
+    {- | Equates the `(i, j)` entry of `polyMapEval (CAlgebra.coefHom) p A` with
+     -   `polyModule.poly_func p (toLinearMap A) (MatrixRing.ide i) j`, reducing polynomial evaluation on a matrix to
+     -   polynomial action on the `i`-th standard basis vector via the associated linear map. Key technical lemma
+     -   reducing the matrix-polynomial identity to a module-level statement.
+     -}
     \lemma poly_func_matrix {R : CRing} {n : Nat} (p : Poly R) (A : Matrix R n n) (i j : Fin n)
       : polyMapEval (CAlgebra.coefHom {MatrixAlgebra R n}) p A i j = polyModule.poly_func p (toLinearMap A) (MatrixRing.ide i) j \elim p
       | pzero => idp

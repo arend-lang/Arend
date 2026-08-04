@@ -1,3 +1,13 @@
+{- | Group actions on sets (G-sets) and their basic structural theory.
+ -
+ -   A `GroupAction` equips a set `E` with a left action `**` of a group `G` satisfying associativity and identity laws,
+ -   making `E` a G-set. The module establishes the standard correspondence between G-sets and subgroups: every point
+ -   has a `Stabilizer` subgroup, and conversely every subgroup `H` yields a canonical G-set on its coset space
+ -   `H.Cosets` via left multiplication. Transitive actions are singled out as those where any two points are connected
+ -   by some group element, and the coset action is shown to always be transitive — reflecting the fact that transitive
+ -   G-sets are classified (up to choice of basepoint) by subgroups of `G`.
+ -}
+
 \import Algebra.Group
 \import Algebra.Group.SubGroup
 \import Algebra.Monoid
@@ -8,11 +18,17 @@
 \import Relation.Equivalence
 \import Set
 
+{- | Instance making `GroupAction G` into a category `Cat`. Morphisms are `EquivariantMap G A B`, identity is
+ -   `id-equivar`, and composition is the set-theoretic composition with equivariance derived by chaining `func-**` of
+ -   the two maps via `pmap`. The category laws (`id-left`, `id-right`, `o-assoc`) and `univalence` follow from the
+ -   underlying set structure.
+ -}
 \class GSet (G : Group) \extends BaseSet {
   | \infixl 8 ** : G -> E -> E -- priority should be bigger than priority of "+" in LModule (=7)
   | **_ide {e : E} : ide ** e = e
   | **-assoc {m n : G} {e : E} : (m * n) ** e = m ** (n ** e)
 
+  -- | Given a point `s : E`, the subgroup `{m : G | m ** s = s}` of group elements fixing `s`.
   \func Stabilizer (s : E) : SubGroup G \cowith
     | contains m => m ** s = s
     | contains_* {m n : G} (p : m ** s = s) (q : n ** s = s)  =>
@@ -30,12 +46,19 @@
       ide ** s ==< **_ide >==
       s `qed
 
+  -- | Realizes a G-set via cosets of a stabilizer — given a point `e`, returns the coset action of `Stabilizer e`.
   \func choosePoint (e : E) => ActionBySubgroup (Stabilizer e)
 }
 
+{- | Class extending `GroupAction` with the transitivity axiom `isTransAction`: for any two points `v v' : E`, there
+ -   merely exists `g : G` with `g ** v = v'`.
+ -}
 \class TransitiveGroupAction \extends GSet
   | isTransAction : \Pi (v v' : E) -> ∃ (g : G) (g ** v = v')
 
+{- | For any subgroup `H ≤ G`, constructs the canonical G-action on the coset space `H.Cosets` by left multiplication
+ -   `g ** [a] = [g * a]`. Well-definedness on equivalence classes uses `H`'s right-invariance.
+ -}
 \func ActionBySubgroup {G : Group} (H : SubGroup G) : GSet G \cowith
   | E => H.Cosets
   | ** (g : G) (e : H.Cosets) : H.Cosets \with {
@@ -49,6 +72,9 @@
   | **_ide {e} => \case \elim e \with{
     | in~ a => pmap in~ ide-left
   }
+  {- | Helper identity `g * x * (inverse x * y) = g * y`, used to show the coset action respects the coset equivalence
+   -   relation.
+   -}
   \where \lemma trivialRelation (g x y : G) : g * x * (inverse x * y) = g * y =>
     g * x * (inverse x * y)   ==< *-assoc >==
     g * (x * (inverse x * y)) ==< pmap (g *) (inv *-assoc) >==
@@ -57,6 +83,9 @@
     g * y `qed
 
 
+{- | Instance promoting `ActionBySubgroup H` to a `TransitiveGroupAction` — the action of `G` on `H.Cosets` is always
+ -   transitive, since any two cosets differ by a group element.
+ -}
 \instance TransitiveActionBySubgroup {G : Group} (H : SubGroup G) : TransitiveGroupAction G
    | GSet => ActionBySubgroup H
    | isTransAction (v v' : H.Cosets) : ∃ (g : G) (g ActionBySubgroup.** v = v') => \case \elim v, \elim v'\with{

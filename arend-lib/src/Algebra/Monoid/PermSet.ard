@@ -1,3 +1,14 @@
+{- | The free commutative monoid on a set, constructed as arrays quotiented by permutation equivalence.
+ -
+ -   This module realizes `PermSet A` as the quotient of `Array A` by `EPerm` (extensional permutation), giving the free
+ -   commutative monoid on `A` with concatenation as multiplication and the empty array as identity. Because the
+ -   underlying carrier is a quotient of lists, definitions on `PermSet` are typically built by `\elim`-ing on `in~` and
+ -   discharging the `~-equiv` case via permutation-invariance lemmas (e.g., `EPerm.eperm-++-left/right`,
+ -   `EPerm.EPerm_map`, `BigProd_EPerm`). The universal property is captured by `permSet-univ`, which sends any function
+ -   `A -> B` into a commutative monoid `B` by mapping pointwise and taking the big product, making `PermSet` the left
+ -   adjoint to the forgetful functor from `CMonoid` to `\Set`.
+ -}
+
 \import Algebra.Monoid
 \import Algebra.Monoid.MonoidHom
 \import Algebra.Pointed
@@ -10,24 +21,31 @@
 \import Relation.Equivalence
 \import Set
 
+-- | The free commutative monoid on `A : \Set`, defined as `Quotient {Array A} EPerm`.
 \type PermSet (A : \Set) => Quotient {Array A} EPerm
   \where {
+    -- | Embeds an array into `Quotient EPerm` via `in~`.
     \func inPS~ {A : \Set} (l : Array A) : Quotient EPerm => in~ l
 
+    -- | Embeds an array into `PermSet A` via `in~`.
     \func inPS {A : \Set} (l : Array A) : PermSet A => in~ l
 
+    -- | From an equality of quotient classes, extracts a truncated permutation `TruncP (EPerm l l')`.
     \lemma unext {A : \Set} {l l' : Array A} (p : inPS~ l = {PermSet A} inPS~ l') : TruncP (EPerm l l')
       => Quotient.equalityClosure EPerm.EPerm-equivalence (\lam e => inP e) (path (\lam i => p i))
 
+    -- | Lifts an `EPerm l l'` to an equality `inPS l = inPS l'` in `PermSet A`.
     \lemma ~-psequiv {A : \Set} {l l' : Array A} (e : EPerm l l') : inPS l = inPS l'
       => permSet-ext (~-pequiv e)
   }
 
 \open PermSet
 
+-- | Transports equalities from the underlying quotient `Quotient EPerm` to equalities in `PermSet A`.
 \lemma permSet-ext {A : \Set} {x y : PermSet A} (p : x = {Quotient EPerm} y) : x = y
   => path (\lam i => p i)
 
+-- | `DecSet` instance for `PermSet A` whenever `A : DecSet`.
 \instance PermSetDec (A : DecSet) : DecSet (PermSet A)
   | decideEq => \case \elim __, \elim __ \with {
     | in~ l, in~ l' => \case EPerm.EPermDec {A} {l} {l'} \with {
@@ -38,6 +56,9 @@
     }
   }
 
+{- | Commutative monoid (`CMonoid`) instance with identity `in~ nil` and multiplication given by list concatenation,
+ -   well-defined up to permutation via `EPerm.eperm-++-left/right`.
+ -}
 \instance PermSetMonoid (A : \Set) : CMonoid (PermSet A)
   | ide => in~ nil
   | * (x y : PermSet A) : PermSet A \with {
@@ -55,54 +76,75 @@
     | in~ l, in~ l' => ~-psequiv EPerm.eperm-++-comm
   }
 
+-- | Functorial action `(A -> B) -> PermSet A -> PermSet B`, defined by mapping over the underlying array.
 \func permSet-map {A B : \Set} (f : A -> B) (s : PermSet A) : PermSet B \elim s
   | in~ l => in~ (map f l)
   | ~-equiv x y r => ~-psequiv (EPerm.EPerm_map f r)
 
+-- | Functoriality: `permSet-map g ∘ permSet-map f = permSet-map (g ∘ f)`.
 \lemma permSet-map-comp {A B C : \Set} {f : A -> B} {g : B -> C} {s : PermSet A}
   : permSet-map g (permSet-map f s) = permSet-map (\lam a => g (f a)) s \elim s
   | in~ l => idp
 
+-- | Packages `permSet-map f` as a `MonoidHom` between `PermSetMonoid A` and `PermSetMonoid B`.
 \func permSet-hom {A B : \Set} (f : A -> B) : MonoidHom (PermSetMonoid A) (PermSetMonoid B) (permSet-map f) \cowith
   | func-ide => idp
   | func-* {x} {y} => \case \elim x, \elim y \with {
     | in~ l, in~ l' => pmap inPS (map_++ f)
   }
 
+-- | `permSet-map f` distributes over the monoid operation `*`.
 \lemma permSet-map_+ {A B : \Set} {f : A -> B} {x y : PermSet A} : permSet-map f (x * y) = permSet-map f x * permSet-map f y \elim x, y
   | in~ l, in~ l' => permSet-ext $ pmap in~ (map_++ f)
 
+{- | For `A : CMonoid`, sends `PermSet A` to `A` by taking the big product `BigProd` of the underlying list;
+ -   well-defined since `BigProd` is permutation-invariant.
+ -}
 \func permSet-sum {A : CMonoid} (x : PermSet A) : A \elim x
   | in~ l => A.BigProd l
   | ~-equiv x y r => A.BigProd_EPerm r
 
+-- | Naturality of `permSet-sum` along a monoid homomorphism `f : A -> B`.
 \lemma permSet-sum-natural {A B : CMonoid} (f : MonoidHom A B) {x : PermSet A} : f (permSet-sum x) = permSet-sum (permSet-map f x) \elim x
   | in~ l => f.func-BigProd
 
+-- | `permSet-sum` is a monoid homomorphism: it sends `x * y` to `permSet-sum x * permSet-sum y`.
 \lemma permSet-sum_+ {A : CMonoid} {x y : PermSet A} : permSet-sum (x * y) = permSet-sum x * permSet-sum y \elim x, y
   | in~ l, in~ l' => A.BigProd_++
 
+{- | Universal property: any `f : A -> B` into a commutative monoid extends uniquely to a
+ -   `MonoidHom (PermSetMonoid A) B` via `permSet-sum ∘ permSet-map f`.
+ -}
 \func permSet-univ {A : \Set} {B : CMonoid} (f : A -> B) : MonoidHom (PermSetMonoid A) B \cowith
   | func x => permSet-sum (permSet-map f x)
   | func-ide => idp
   | func-* => pmap permSet-sum permSet-map_+ *> permSet-sum_+
 
+-- | Naturality statement matching `permSet-sum-natural`, packaged for the universal map.
 \lemma permSet-univ-natural {A B : CMonoid} (f : MonoidHom A B) {x : PermSet A} : f (permSet-sum x) = permSet-sum (permSet-map f x) \elim x
   | in~ l => f.func-BigProd
 
+{- | Decides whether an element of `PermSet A` is the identity, using `unext` and `EPerm.EPerm_len` to handle the
+ -   non-empty case.
+ -}
 \func permSet-zro-dec {A : \Set} (x : PermSet A) : Dec (x = ide) \elim x
   | in~ nil => yes idp
   | in~ (_ :: _) => no \lam p => \case unext p \with {
     | inP e => \case EPerm.EPerm_len e
   }
 
+-- | Decomposes `inPS l` as the big product of singleton `PermSet`s `inPS (a :: nil)` over the elements of `l`.
 \lemma permSet-split {A : \Set} {l : Array A} : Monoid.BigProd (map (\lam a => inPS (a :: nil)) l) = inPS l \elim l
   | nil => idp
   | a :: l => pmap (_ *) permSet-split
 
+-- | The `n`-th monoid power of a singleton `inPS (a :: nil)` equals `inPS (replicate n a)`.
 \lemma permSet-pow {A : \Set} {a : A} {n : Nat} : Monoid.pow (inPS (a :: nil)) n = inPS (replicate n a)
   => inv Monoid.BigProd_replicate *> permSet-split
 
+{- | Sends `p : PermSet A` to its length as a `Nat`, well-defined since permutations preserve length
+ -   (`EPerm.EPerm_len`).
+ -}
 \func permSet-length {A : \Set} (p : PermSet A) : Nat \elim p
   | in~ l => l.len
   | ~-equiv l l' e => EPerm.EPerm_len e

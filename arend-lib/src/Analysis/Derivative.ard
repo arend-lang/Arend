@@ -1,3 +1,15 @@
+{- | Directional and total derivatives for maps between topological left modules over a near-skew field.
+ -
+ -   This module formalizes differentiation in a general functional-analytic setting: rather than working over the
+ -   reals, derivatives are defined for maps `f : Set.Total S -> Y` between topological left modules over a
+ -   `NearSkewField R`, where `S ⊆ X` is open. The central construction is the *difference quotient* `dquot`, which uses
+ -   an invertible scalar `h : Inv {R}` to form `h⁻¹ *c (f(x + h·a) - f x)`. Directional derivatives `IsDirDerivAt` are
+ -   defined as limits of this quotient over a directed set of invertible scalars approaching zero, while the total
+ -   derivative `IsDerivAt` requires a uniform limit jointly in the scalar `h` and the direction `a`. The structure
+ -   mirrors classical calculus (linearity, Leibniz rule, chain rule), but parametrizes everything over arbitrary
+ -   topological modules so the same theory specializes to real, complex, or non-archimedean analysis.
+ -}
+
 \import Algebra.Group
 \import Algebra.Meta
 \import Algebra.Module
@@ -29,23 +41,36 @@
 \func dquot {R : NearSkewField} {X Y : TopLModule R} {S : Set X} (f : Set.Total S -> Y) {x : Set.Total S} (h : Inv {R}) (a : X) (\property s : S (x.1 + h.val *c a))
   => h.inv *c (f (_,s) - f x)
   \where {
+    {- | Scaling law: `dquot f h (c·a) = c *c dquot f (h·c) a`, relating rescaling of the direction to rescaling of the
+     -   increment.
+     -}
     \lemma dquot_*c (S : Set X) {f : Set.Total S -> Y} {x : Set.Total S} {h : Inv {R}} (c : Inv {R}) (Sh : S (x.1 + h.val *c (c.val *c a)))
       : dquot f h _ Sh = c.val *c dquot f (Inv.prod h c) a (transportInv S (pmap (_ +) *c-assoc) Sh)
       => inv (pmap2 (\lam y z => y *c (f z - _)) (inv *-assoc *> pmap (* _) c.inv-right *> ide-left) (ext $ pmap (_ +) *c-assoc)) *> *c-assoc
 
+    -- | Additivity of the difference quotient over pointwise sums of functions.
     \lemma dquot_+ (S : Set X) {f g : Set.Total S -> Y} {x : Set.Total S} {h : Inv {R}} (Sh : S (x.1 + h.val *c a))
       : dquot (\lam x => f x + g x) h a Sh = dquot f h a Sh + dquot g h a Sh
       => Y.*c-ldistr_- *> pmap2 (-) Y.*c-ldistr Y.*c-ldistr *> +-assoc *> pmap (_ +) (pmap (_ +) Y.negative_+ *> inv +-assoc *> +-comm) *> inv +-assoc *> inv (pmap2 (+) Y.*c-ldistr_- Y.*c-ldistr_-)
 
+    {- | Leibniz-style expansion of `dquot` for `b(f x, g x)` with a bilinear map `b`, splitting into two terms in the
+     -   spirit of the product rule.
+     -}
     \lemma dquot_bilinear {R : NearSkewField} {X X1 X2 Y : TopLModule R} (S : Set X) {f : Set.Total S -> X1} {g : Set.Total S -> X2} {x : Set.Total S} {a : X} (b : BilinearMap X1 X2 Y)
                           (h : Inv {R}) (Sh : S (x.1 + h.val *c a)) : dquot (\lam x => b (f x) (g x)) h a Sh = b (dquot f h a Sh) (g (x.1 + h.val *c a, Sh)) + b (f x) (dquot g h a Sh)
       => pmap (_ *c) (simplify *> inv (pmap2 (+) b.linear-left.func-minus b.linear-right.func-minus)) *> *c-ldistr *> inv (pmap2 (+) b.linear-left.func-*c b.linear-right.func-*c)
 
+    {- | Chain-rule expansion of `dquot` for a composition `g ∘ f`, expressing it as `dquot g` evaluated at
+     -   `dquot f h a`.
+     -}
     \lemma dquot-comp {R : NearSkewField} {X Y Z : TopLModule R} (S : Set X) {f : Set.Total S -> Y} (T : Set Y) {g : Set.Total T -> Z} (Tf : \Pi (x : Set.Total S) -> T (f x)) {x : Set.Total S} {a : X}
                       (h : Inv {R}) (Sh : S (x.1 + h.val *c a)) : dquot (\lam x => g (f x, Tf x)) h a Sh = dquot g {f x, Tf x} h (dquot f h a Sh) (transportInv T (pmap (_ +) (inv *c-assoc *> pmap (*c _) h.inv-right *> ide_*c)) $ simplify $ Tf (_,Sh))
       => pmap (\lam z => _ *c (g z - _)) $ ext $ simplify *> pmap (_ +) (inv ide_*c *> pmap (*c _) (inv h.inv-right) *> *c-assoc)
   }
 
+{- | Predicate stating that `d : Y` is the directional derivative of `f` at `x` in direction `a`, defined as the limit
+ -   of `dquot f h a` along the directed set of nonzero invertible scalars.
+ -}
 \func IsDirDerivAt {R : NearSkewField} {X Y : TopLModule R} {S : Set X} (So : isOpen S) (f : Set.Total S -> Y) (x : Set.Total S) (a : X) (d : Y) : \Prop
   => Y.IsLimit {DirSet So} (\lam h => dquot f h.6.1 _ h.6.2) d
   \where {
@@ -53,10 +78,15 @@
 
     \private \lemma aux2 => transportInv S (pmap (x.1 +) (X.*c_zro-left {a}) *> zro-right) x.2
 
+    -- | The directed set of admissible scalars `h` (invertible and with `x + h·a ∈ S`), built via `InvDirectedSet`.
     \protected \func DirSet (So : isOpen S) => InvDirectedSet (aux1 So) aux2
 
+    -- | Auxiliary identification of the limit point used to set up `DirSet`.
     \lemma limit-id (So : isOpen S) => InvDirectedSet.limit-id (aux1 So) aux2
 
+    {- | Epsilon–delta-style characterization: for every open neighborhood `V` of `0` in `Y` there is an open
+     -   neighborhood `W` of `0` in `R` such that `V (d - dquot f h a s)` for all invertible `h ∈ W`.
+     -}
     \lemma limit-char (So : isOpen S)
       : IsDirDerivAt So f x a d <-> ∀ {V : Y.isOpen} (V 0) ∃ (W : R.isOpen) (W 0) ∀ {h : W} (hi : Inv h) (s : S (x.1 + h *c a)) (V (d - dquot f hi a s))
       => <->trans (InvDirectedSet.limit-char (aux1 So) aux2 {dquot f __ a}) $ later
@@ -66,18 +96,24 @@
             | inP (W,Wo,W0,g) => inP (W, Wo, W0, \lam Wh s => simplify in g Wh s.1 s.2)
           })
 
+    -- | Uniqueness of the directional derivative when `Y` is Hausdorff.
     \protected \lemma unique {R : NearSkewField} {X : TopLModule R} {Y : HausdorffTopLModule R} {S : Set X} (So : isOpen S) (f : Set.Total S -> Y)
                              (x : Set.Total S) (a : X) {d d' : Y} (dd : IsDirDerivAt So f x a d) (d'd : IsDirDerivAt So f x a d') : d = d'
       => Y.limit-unique dd d'd
   }
 
+-- | The directional derivative in direction `0` is `0` (for Hausdorff `Y`).
 \lemma dirDeriv_zro {R : NearSkewField} {X : TopLModule R} {Y : HausdorffTopLModule R} {S : Set X} (So : isOpen S) {f : Set.Total S -> Y} {x : Set.Total S} : IsDirDerivAt So f x 0 0
   => (IsDirDerivAt.limit-char So).2 \lam Vo V0 => inP (top, open-top, (), \lam _ _ _ => unfold dquot $ rewrite (zro-left,X.*c_zro-right,zro-right,negative-right,Y.*c_zro-right,Y.negative_zro) V0)
 
+-- | Additivity: `IsDirDerivAt` of `f + g` is `Df + Dg`.
 \lemma dirDeriv_+ {R : NearSkewField} {X Y : TopLModule R} {S : Set X} (So : isOpen S) {f g : Set.Total S -> Y} {x : Set.Total S} {a : X}
                   (Df Dg : Y) (fd : IsDirDerivAt So f x a Df) (gd : IsDirDerivAt So g x a Dg) : IsDirDerivAt So (\lam x => f x + g x) x a (Df + Dg)
   => limit-transport (cont2-limit fd gd +-cont) (\lam h => dquot.dquot_+ S h.6.2)
 
+{- | Leibniz rule for bilinear maps: if `b` is continuous and bilinear, the directional derivative of `b(f, g)` is
+ -   `b(Df, g x) + b(f x, Dg)`, requiring continuity of `g` at `x`.
+ -}
 \lemma dirDeriv_bilinear {R : NearSkewField} {X X1 X2 Y : TopLModule R} {S : Set X} (So : isOpen S) {f : Set.Total S -> X1} {g : Set.Total S -> X2} {x : Set.Total S} (gc : IsContAt {TopSub S} g x) {a : X}
                          (b : BilinearMap X1 X2 Y) (bc : ContMap (ProductTopLModule X1 X2) Y \lam s => b s.1 s.2) (Df : X1) (Dg : X2) (fd : IsDirDerivAt So f x a Df) (gd : IsDirDerivAt So g x a Dg)
   : IsDirDerivAt So (\lam x => b (f x) (g x)) x a (b Df (g x) + b (f x) Dg)
@@ -90,6 +126,9 @@
 \func IsDerivAt {R : NearSkewField} {X Y : TopLModule R} {S : Set X} (So : isOpen S) (f : Set.Total S -> Y) (x : Set.Total S) (Df : X -> Y) : \Prop
   => \Pi (a0 : X) -> Y.IsLimit {DirSet So a0} (\lam h => dquot f h.6.1 _ h.6.2) (Df a0)
   \where {
+    {- | Shows `(0, a)` is a limit point of the set of admissible `(h, a')` pairs in the product topology, justifying
+     -   the joint-limit construction.
+     -}
     \protected \lemma isLimitPoint (So : isOpen S) {a : X} : TopSpace.IsLimitPoint {ProductTopSpace R X} (0, a) (\lam s => \Sigma (Inv s.1) (S (x.1 + s.1 *c s.2)))
       => \lam {V} Vo V0 => \case Vo V0 \with {
         | inP (W,Wo,W0,W',W'o,W'a,g) => \case R.inv-dense (open-inter Wo $ func-cont {+-cont ∘ tuple (const x.1) (*c-cont ∘ tuple id (const a))} So) (W0, transportInv S (pmap (_ +) X.*c_zro-left *> zro-right) x.2) \with {
@@ -97,9 +136,15 @@
         }
       }
 
+    {- | The joint directed set of pairs `(h, a')` with `h` invertible and `x + h·a' ∈ S`, built via
+     -   `SubPointDirectedSet` on the product topology.
+     -}
     \protected \func DirSet (So : isOpen S) (a : X) => SubPointDirectedSet {ProductTopSpace R X}
         {\lam s => \Sigma (Monoid.Inv s.1) (S (x.1 + s.1 *c s.2))} (0,a) (isLimitPoint So)
 
+    {- | Joint epsilon–delta characterization quantifying simultaneously over neighborhoods of `0` in `R` and of `a₀` in
+     -   `X`.
+     -}
     \lemma limit-char (So : isOpen S)
       : IsDerivAt So f x Df <-> ∀ a0 {V : Y.isOpen} (V 0) ∃ (W : R.isOpen) (W 0) (U : X.isOpen) (U 0) ∀ {h : W} {a} (U (a0 - a)) (hi : Inv h) (s : S (x.1 + h *c a)) (V (Df a0 - dquot f hi a s))
       => (\lam fc a0 {V} Vo V0 => \case (SubPointDirectedSet.limit-char (isLimitPoint So) \lam h => dquot f h.2.1 _ h.2.2).1 (fc a0) (Y.UBall-open Vo {Df a0}) (Y.UBall-center {V} V0) \with {
@@ -110,14 +155,19 @@
         | inP (W,Wo,W0,U,Uo,U0,g) => inP (Set.Prod W (X.UBall U a0), Prod-open Wo (X.UBall-open Uo), (W0, X.UBall-center {U} U0), \lam {h} (Wh,Uh) Sh => simplify in g Wh Uh Sh.1 Sh.2)
       })
 
+    -- | Auxiliary identification of the limit point for the joint directed set.
     \lemma limit-id (So : isOpen S) {a0 : X} => SubPointDirectedSet.limit-id (isLimitPoint So {a0})
   }
 
+{- | A total derivative restricts to a directional derivative in every direction: `IsDerivAt So f x Df` implies
+ -   `IsDirDerivAt So f x a (Df a)`.
+ -}
 \lemma deriv-isDirDeriv {R : NearSkewField} {X Y : TopLModule R} {S : Set X} (So : isOpen S) {f : Set.Total S -> Y} {x : Set.Total S} {Df : X -> Y} (Dfd : IsDerivAt So f x Df) (a : X) : IsDirDerivAt So f x a (Df a)
   => (IsDirDerivAt.limit-char So).2 \lam Vo V0 => \case (IsDerivAt.limit-char So).1 Dfd a Vo V0 \with {
     | inP (W,Wo,W0,U,Uo,U0,g) => inP (W, Wo, W0, \lam Wh hi Sh => g Wh (transportInv U negative-right U0) hi Sh)
   }
 
+-- | Differentiability implies continuity at the point: `IsDerivAt` entails `IsContAt {TopSub S} f x`.
 \lemma deriv-isCont {R : NearSkewField} {X Y : TopLModule R} {S : Set X} (So : isOpen S) {f : Set.Total S -> Y} {x : Set.Total S} {Df : X -> Y} (Dfd : IsDerivAt So f x Df) : IsContAt {TopSub S} f x
   => topAb-sub-contAt.2 \lam {V} Vo V0 => \case Y.*c-cont.func-cont Vo {0,0} $ transportInv V Y.*c_zro-left V0 \with {
         | inP (W,Wo,W0,V',V'o,V'0,g) =>
@@ -132,6 +182,7 @@
                   )
       }
   \where {
+    -- | Auxiliary: `Df 0` lies in every open neighborhood of `0`, used in the continuity proof.
     \lemma deriv_zro {V : Set Y} (Vo : isOpen V) (V0 : V 0) : V (Df 0)
       => \case (IsDerivAt.limit-char So).1 Dfd 0 Vo V0 \with {
         | inP (W,Wo,W0,U,Uo,U0,g) => \case inv-dense Wo W0 \with {
@@ -140,11 +191,17 @@
       }
   }
 
+{- | When `Df` is given as a `TopAbGroupMap` and `Y` is Hausdorff, the derivative is automatically `R`-linear, packaging
+ -   it as a `LinearMap X Y`.
+ -}
 \lemma deriv-linear {R : NearSkewField} {X : TopLModule R} {Y : HausdorffTopLModule R} (S : Set X) (So : isOpen S) (f : Set.Total S -> Y) (x : Set.Total S) (Df : TopAbGroupMap X Y) (Dfd : IsDerivAt So f x Df) : LinearMap X Y Df \cowith
   | func-+ => Df.func-+
   | func-*c {_} {a} => denseSet-lift-unique R.inv-dense (Df ∘ *c-cont ∘ tuple id (const a)) (*c-cont ∘ tuple id (const _))
       \lam {c} ci => IsDirDerivAt.unique So f x (c *c a) (deriv-isDirDeriv So Dfd _) $ dirDeriv-*c So (deriv-isDirDeriv So Dfd a) ci
   \where {
+    {- | Scaling of directional derivatives: `IsDirDerivAt` at `a` with value `d` implies `IsDirDerivAt` at `c·a` with
+     -   value `c·d`, for invertible `c`.
+     -}
     \lemma dirDeriv-*c (So : isOpen S) {a : X} {d : Y} (p : IsDirDerivAt So f x a d) (c : Inv {R})
       : IsDirDerivAt So f x (c.val *c a) (c.val *c d)
       => (IsDirDerivAt.limit-char So).2 \lam {V} Vo V0 => \case (IsDirDerivAt.limit-char So).1 p (func-cont {*c-cont ∘ tuple (const c.val) id} Vo) (transportInv V Y.*c_zro-right V0) \with {
@@ -153,10 +210,14 @@
       }
   }
 
+-- | Additivity of total derivatives: `IsDerivAt` of `f + g` is `λa. Df a + Dg a`.
 \lemma deriv_+ {R : NearSkewField} {X Y : TopLModule R} {S : Set X} (So : isOpen S) {f g : Set.Total S -> Y} {x : Set.Total S}
                (Df Dg : X -> Y) (fd : IsDerivAt So f x Df) (gd : IsDerivAt So g x Dg) : IsDerivAt So (\lam x => f x + g x) x (\lam a => Df a + Dg a)
   => \lam a0 => limit-transport (cont2-limit (fd a0) (gd a0) +-cont) (\lam h => dquot.dquot_+ S h.6.2)
 
+{- | Total-derivative Leibniz rule: for a continuous bilinear `b`, the derivative of `b(f, g)` at `x` is
+ -   `λa. b(Df a, g x) + b(f x, Dg a)`.
+ -}
 \lemma deriv_bilinear {R : NearSkewField} {X X1 X2 Y : TopLModule R} {S : Set X} (So : isOpen S) {x : Set.Total S} {f : Set.Total S -> X1} {g : Set.Total S -> X2}
                       (b : BilinearMap X1 X2 Y) (bc : ContMap (ProductTopSpace X1 X2) Y \lam s => b s.1 s.2) (Df : X -> X1) (Dg : X -> X2) (fd : IsDerivAt So f x Df) (gd : IsDerivAt So g x Dg)
   : IsDerivAt So (\lam x => b (f x) (g x)) x (\lam a => b (Df a) (g x) + b (f x) (Dg a))
@@ -164,6 +225,9 @@
       (cont2-limit (cont2-limit (fd a0) (contAt-limit {_} {TopSub S} (TopSub-limit $ transport (X.IsLimit _) (pmap (_ +) (X.*c_zro-left {a0}) *> zro-right) $ cont-limit (IsDerivAt.limit-id So) (+-cont ∘ tuple (const x.1) *c-cont)) (deriv-isCont So gd)) bc) (cont-limit (gd a0) (bc ∘ tuple (const _) id)) +-cont)
       (\lam h => dquot.dquot_bilinear S b h.6.1 h.6.2)
 
+{- | Chain rule: if `f` is differentiable at `x` with derivative `Df` and `g` is differentiable at `f x` with derivative
+ -   `Dg`, then `g ∘ f` is differentiable at `x` with derivative `λa. Dg (Df a)`.
+ -}
 \lemma deriv-comp {R : NearSkewField} {X Y Z : TopLModule R} {S : Set X} (So : isOpen S) {T : Set Y} (To : isOpen T) {f : Set.Total S -> Y} (Tf : \Pi (x : Set.Total S) -> T (f x)) {g : Set.Total T -> Z} {x : Set.Total S}
                   (Df : X -> Y) (fd : IsDerivAt So f x Df) (Dg : Y -> Z) (gd : IsDerivAt To g (f x, Tf x) Dg) : IsDerivAt So (\lam x => g (f x, Tf x)) x (\lam a => Dg (Df a))
   => \lam a0 => limit-transport (SubPointDirectedSet.limit-comp {IsDerivAt.DirSet So a0}

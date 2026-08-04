@@ -1,3 +1,14 @@
+{- | Cover space structure on a directed set, where Cauchy covers are determined by eventual behavior, and its product
+ -   with arbitrary cover spaces.
+ -
+ -   This module equips a `DirectedSet I` with a canonical cover space structure: a family of sets is Cauchy iff some
+ -   member covers a tail `{n : I | N <= n}` and every point is covered by some member. The associated
+ -   `EventualityFilter` packages the "eventually" filter (sets containing a tail) as a Cauchy filter, modeling
+ -   convergence along the directed order. The product construction `DirectProdCover` characterizes Cauchy covers on
+ -   `I × X` in terms of an eventual cover in `X` together with a pointwise cover at each `n : I`, providing the bridge
+ -   needed when reasoning about nets or sequences valued in a cover space.
+ -}
+
 \import Data.Bool
 \import Function.Meta
 \import Logic
@@ -14,9 +25,13 @@
 \import Topology.CoverSpace.Complete
 \import Topology.CoverSpace.Product
 
+-- | The cover space `CoverSpace I` associated to a directed set `I`, obtained by regularizing `precover`.
 \func DirectedCoverSpace (I : DirectedSet) : CoverSpace I
   => RegPrecoverSpace precover
   \where {
+    {- | The underlying `PrecoverSpace I`. A family `C` is Cauchy iff some `U ∈ C` covers a tail (`∃ N, ∀ n ≥ N, U n`)
+     -   and every `n : I` is covered by some `V ∈ C`.
+     -}
     \func precover : PrecoverSpace I \cowith
       | isCauchy C => \Sigma (∃ (U : C) (N : I) (\Pi {n : I} -> N <= n -> U n)) (\Pi (n : I) -> ∃ (V : C) (V n))
       | cauchy-cover => __.2
@@ -44,10 +59,17 @@
           }
         })
 
+    {- | For any `N : I`, the cover consisting of the tail `{n | N <= n}` together with all singletons `{n}` is Cauchy —
+     -   the canonical witness used to refine arbitrary covers.
+     -}
     \lemma makePrecover (N : I) : precover.isCauchy \lam V => (V = \lam n => N <= n) || Given (n : I) (V = single n)
       => (inP (_, byLeft idp, N, \lam p => p), \lam n => inP (single n, byRight (n, idp), idp))
   }
 
+{- | The Cauchy filter on `DirectedCoverSpace I` whose underlying proper filter consists of subsets `U ⊆ I` containing a
+ -   tail (`∃ N, ∀ n ≥ N, U n`). Built via `regPrecoverCauchyFilter`, with directedness ensuring closure under finite
+ -   meets and inhabitation giving the top element.
+ -}
 \func EventualityFilter {I : DirectedSet} : CauchyFilter (DirectedCoverSpace I)
   => regPrecoverCauchyFilter (\new ProperFilter {
     | F U => ∃ (N : I) ∀ {n} (N <= n -> U n)
@@ -61,9 +83,14 @@
     | isProper (inP (N,f)) => inP (N, f <=-refl)
   }) $ later \lam (inP (U,CU,N,g), _) => inP (U, CU, inP (N, g))
 
+{- | Predicate on `Set (Set (Σ I X))` characterizing Cauchy covers of the product `I × X`: there is an `X`-Cauchy cover
+ -   whose members eventually (for `n ≥ N`) embed into some `D`-member, and for each fixed `n : I` the slices
+ -   `{x | V (n, x)}` form an `X`-Cauchy cover.
+ -}
 \func DirectProdCover {I : DirectedSet} {X : CoverSpace} (D : Set (Set (\Sigma I X))) : \Prop
   => \Sigma (X.isCauchy \lam U => ∃ (N : I) (V : D) (\Pi {n : I} {x : X} -> N <= n -> U x -> V (n,x))) (\Pi (n : I) -> X.isCauchy \lam U => ∃ (V : D) ∀ {x : U} (V (n,x)))
   \where {
+    -- | The `PrecoverSpace (Σ I X)` whose Cauchy covers are exactly `DirectProdCover`.
     \protected \func Space : PrecoverSpace (\Sigma I X) \cowith
       | isCauchy => DirectProdCover
       | cauchy-cover Cc s => \case cauchy-cover (Cc.2 s.1) s.2 \with {
@@ -82,6 +109,10 @@
       }, \lam n => cauchy-glue* (Cc.2 n) \lam (inP (U',CU',Uh)) => cauchy-subset ((Dc CU').2 n) \lam (inP (V',DU'V',Vh)) => inP $ later (U' ∧ V', inP (U',V',CU',DU'V',idp), \lam s => (Uh s.1, Vh s.2)))
   }
 
+{- | Bidirectional characterization showing that `isCauchy` in the product cover space `DirectedCoverSpace.precover ⨯ X`
+ -   coincides with `DirectProdCover` — the bridge between the abstract product construction and the explicit
+ -   eventual/pointwise description.
+ -}
 \lemma directedProdCover-char {I : DirectedSet} {X : CoverSpace} {D : Set (Set (\Sigma I X))} : isCauchy {DirectedCoverSpace.precover `ProductPrecoverSpace` X} D <-> DirectProdCover D
   => (ClosurePrecoverSpace.closure-cauchy {_} {DirectProdCover.Space} $ later \case \elim __ \with {
         | inP (_, byLeft idp, (inP (U, inP (V,CV,p), N, g), h)) => (top-cauchy $ inP $ later (N, V, CV, \lam s _ => p $ g s), \lam n => \case h n \with {

@@ -1,37 +1,64 @@
+{- | Strict (irreflexive) order relations and their basic algebra.
+ -
+ -   This module introduces the `StrictPoset` class, axiomatizing a strict order `<` via irreflexivity and transitivity,
+ -   with `>` defined as the flip of `<`. The opposite order `op` and the derived inequality lemmas (`<_/=`, `>_/=`)
+ -   show that any strict order yields a discrete distinction between related elements. A small `Reasoning` submodule
+ -   provides chaining combinators so that mixed strict/equational arguments compose like equational reasoning chains,
+ -   and `IsStrictlyMonotone` captures the standard preservation property for maps between strict posets.
+ -}
+
 \import Logic
 \import Paths
 \import Set
 
 -- | Strict partial orders are also known as quasiorders
 \class StrictPoset \extends BaseSet {
+  -- | The strict less-than relation, `E -> E -> \Prop`, declared `\infix 4`.
   | \infix 4 < : E -> E -> \Prop
+  -- | Axiom that `x < x` is impossible.
   | <-irreflexive {x : E} : Not (x < x)
+  -- | Transitivity `x < y -> y < z -> x < z`, declared `\infixr 9`.
   | <-transitive \alias \infixr 9 <∘ {x y z : E} : x < y -> y < z -> x < z
 
+  -- | The strict greater-than relation, defined as `\lam x y => y < x`.
   | \infix 4 > : E -> E -> \Prop
   | > x y => y < x
 
+  {- | The opposite strict poset on the same carrier, swapping `<`. Used to dualize statements about `<` to statements
+   -   about `>`.
+   -}
   \protected \func op : StrictPoset E \cowith
     | < x y => y < x
     | <-irreflexive => <-irreflexive
     | <-transitive p q => q <∘ p
 
+  -- | From `x < y` derives `x /= y`, since equality plus strictness would contradict irreflexivity.
   \lemma <_/= {x y : E} (x<y : x < y) : x /= y
     => \lam x=y => <-irreflexive (transport (< y) x=y x<y)
 
+  -- | Symmetric form: `x > y` implies `x /= y`.
   \lemma >_/= {x y : E} (y<x : x > y) : x /= y
     => \lam x=y => <-irreflexive (transport (y <) x=y y<x)
 } \where {
   \module Reasoning \where {
+    -- | Chains two strict inequalities `x < y` and `y < z` into `x < z` (transitivity in chain form).
     \lemma \infixr 1 >>> {P : StrictPoset} {x y z : P} => P.<∘
 
+    -- | Chains a strict inequality with an equation: `x < y` and `y = z` give `x < z`.
     \lemma \infixr 1 >>= {P : StrictPoset} {x y z : P} (x<y : x < y) (y=z : y = z) => transport (x <) y=z x<y
 
+    -- | Chains an equation with a strict inequality: `x = y` and `y < z` give `x < z`.
     \lemma \infixr 1 >=> {P : StrictPoset} {x y z : P} (x=y : x = y) (y<z : y < z) => transport (< z) (inv x=y) y<z
 
+    {- | Identity-like opener for a strict reasoning chain, fixing the starting element `x` and returning the proof
+     -   `p : x < y`.
+     -}
     \func \infix 2 <<< {P : StrictPoset} (x : P) {y : P} (p : x < y) => p
   }
 }
 
+{- | Predicate on `f : X -> Y` between strict posets asserting `x < x' -> f x < f x'`. The standard order-preservation
+ -   condition for strict orders.
+ -}
 \func IsStrictlyMonotone {X Y : StrictPoset} (f : X -> Y)
   => \Pi {x x' : X} -> x < x' -> f x < f x'

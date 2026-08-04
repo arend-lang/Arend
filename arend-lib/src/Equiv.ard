@@ -1,3 +1,18 @@
+{- | Equivalences between types, expressed as functions equipped with sections and retractions.
+ -
+ -   This module formalizes the standard hierarchy of "invertibility-like" structures on a function `f : A -> B`: a
+ -   `Section` provides a left inverse `ret`, a `Retraction` provides a right inverse `sec`, an `Equiv` combines both (a
+ -   half-adjoint equivalence), and a `QEquiv` is the strict variant where the section and retraction coincide. Each
+ -   notion is a record extending `TypeMap`, and the file proves they are propositions over a fixed `f` (so
+ -   equivalence-hood is a property, not extra structure). The module also develops the standard package of
+ -   constructions — identity, symmetry, composition, two-out-of-three, action on Π/Σ types, function-space currying —
+ -   together with `Embedding`/`Surjection` and the equivalence between embedding-and-surjection and equivalence
+ -   (`ESEquiv`).
+ -
+ -   Two-Out-Of-Three: `\module TwoOutOfThree` collects the standard 2-of-3 results for equivalences in a composition
+ -   `g ∘ f`.
+ -}
+
 \import Equiv.BiEquiv
 \import Equiv.Fiber
 \import Equiv.Path
@@ -12,8 +27,13 @@
 
 -- # Definition of equivalences
 
+-- | A wrapped function `f : A -> B`, used as the common base for all equivalence-like records (with `f` as a coercion).
 \record TypeMap {A B : \Type} (\coerce f : A -> B)
 
+{- | A function with a left inverse: fields `ret : B -> A` and `ret_f : ret (f x) = x`. The `=Fiber` lemma identifies
+ -   `Section f` with the fiber of precomposition `(-o f)` over `id`. `levelProp` shows `Section f` is a proposition
+ -   once `f` has a retraction.
+ -}
 \record Section \extends TypeMap
   | ret : B -> A
   | ret_f : \Pi (x : A) -> ret (f x) = x
@@ -35,6 +55,10 @@
         }) id) s
   }
 
+{- | Dual to `Section`: fields `sec : B -> A` and `f_sec : f (sec y) = y`. `=Fiber` identifies it with the fiber of
+ -   postcomposition `(o- f)` over `id`. `levelProp` shows propositionality given a section, and `isContr` shows
+ -   `Retraction e` is contractible when `e` is an `Equiv`.
+ -}
 \record Retraction \extends TypeMap
   | sec : B -> A
   | f_sec : \Pi (y : B) -> f (sec y) = y
@@ -59,6 +83,9 @@
       => isProp=>isContr (levelProp e) e
   }
 
+{- | Quasi-equivalence — an `Equiv` with `sec = ret`. Coerces to/from `Equiv` via `fromEquiv` (using `f_ret`) and
+ -   `fromEquiv'` (using `e.sec`).
+ -}
 \record QEquiv \extends Section, Retraction {
   | sec => ret
 
@@ -88,6 +115,7 @@
     \lemma equals {A B : \Set} {e e' : QEquiv {A} {B}} (p : \Pi (a : A) -> e a = e' a) : e = e'
       => exts (p, \lam b => e.isInj $ e.f_ret b *> inv (p _ *> e'.f_ret b))
 
+    -- | If `f` is a retraction and `g ∘ f` is a `QEquiv`, then `g` is a `QEquiv`.
     \func leftFactor {A B C : \Type} {f : A -> B} {g : B -> C} (e2 : Section g) (e3 : QEquiv (g `o` f)) : QEquiv f \cowith
       | ret b => e3.ret (g b)
       | ret_f => e3.ret_f
@@ -97,6 +125,7 @@
         e2.ret (g b)                  ==< e2.ret_f b >==
         b                             `qed
 
+    -- | If `g` is a section and `g ∘ f` is a `QEquiv`, then `f` is a `QEquiv`.
     \func rightFactor {A B C : \Type} {f : A -> B} (e1 : Retraction f) {g : B -> C} (e3 : QEquiv (g `o` f)) : QEquiv g \cowith
       | ret c => f (e3.ret c)
       | ret_f b =>
@@ -173,12 +202,18 @@
     \lemma rightFactor {A B C : \Type} {f : A -> B} (e1 : IsEquiv f) {g : B -> C} (e3 : IsEquiv \lam a => g (f a)) : IsEquiv g \elim e1, e3
       | inP e1, inP e3 => inP (QEquiv.rightFactor e1 e3)
 
+    -- | Given a commuting square with both verticals equivalences, `Equiv ab = Equiv cd`.
     \lemma parallelEquiv {A B C D : \Type} {ab : A -> B} {cd : C -> D} {ac : A -> C} {bd : B -> D}
                          (ace : IsEquiv ac) (bde : IsEquiv bd) (h : \Pi (a : A) -> bd (ab a) = cd (ac a)) : IsEquiv ab = IsEquiv cd
       => propExt (\lam abe => rightFactor ace $ transport IsEquiv (ext h) $ trans abe bde)
                  (\lam cde => leftFactor bde $ transportInv IsEquiv (ext h) $ trans ace cde)
   }
 
+{- | Extends both `Section` and `Retraction`. Provides `f_ret` (the derived adjoint coherence `f (ret y) = y`), `isInj`,
+ -   `isSurj`, and `adjoint`/`adjointInv` for moving across the equivalence. `levelProp` makes `Equiv f` a proposition;
+ -   `equals` reduces equality of equivalences to equality of underlying functions; `fromInjSurj` builds an `Equiv` from
+ -   injectivity and surjectivity on sets.
+ -}
 \data Equiv (A B : \Type)
   | mkEquiv {f : A -> B} (IsEquiv f)
   \where {
@@ -202,6 +237,7 @@
 
 -- # Examples of equialences
 
+-- | Identity equivalence on any type.
 \func idEquiv {A : \Type} : QEquiv \cowith
   | A => A
   | B => A
@@ -210,18 +246,23 @@
   | ret_f _ => idp
   | f_sec _ => idp
 
+-- | Symmetry — swap `f` and `ret` of a `QEquiv`.
 \func symQEquiv {A B : \Type} (e : QEquiv {A} {B}) : QEquiv {B} {A} \cowith
   | f => e.ret
   | ret => e.f
   | ret_f => e.f_sec
   | f_sec => e.ret_f
 
+-- | Composition of quasi-equivalences (right-associative, `\fixr 3`).
 \func \fixr 3 transQEquiv {A B C : \Type} (e1 : QEquiv {A} {B}) (e2 : QEquiv {B} {C}) : QEquiv {A} {C} \cowith
   | f x => e2 (e1 x)
   | ret y => e1.ret (e2.ret y)
   | ret_f x => pmap e1.ret (e2.ret_f (e1 x)) *> e1.ret_f x
   | f_sec y => pmap e2 (e1.f_sec (e2.sec y)) *> e2.f_sec y
 
+{- | Precomposition `(-o e)` and postcomposition `(o- e)` by an equivalence are themselves equivalences on function
+ -   spaces.
+ -}
 \lemma -o_IsEquiv {A B C : \Type} {f : A -> B} (e : IsEquiv f) : IsEquiv {B -> C} {A -> C} (-o f)
   => inP \new QEquiv {
     | ret => -o (IsEquiv.ret e)
@@ -229,6 +270,9 @@
     | f_sec g => path \lam i x => g (IsEquiv.ret_f e {x} i)
   }
 
+{- | Precomposition `(-o e)` and postcomposition `(o- e)` by an equivalence are themselves equivalences on function
+ -   spaces.
+ -}
 \lemma o-_IsEquiv {A B C : \Type} {f : A -> B} (e : IsEquiv f) : IsEquiv {C -> A} {C -> B} (f `o-)
   => inP \new QEquiv {
     | ret => IsEquiv.ret e `o-
@@ -236,6 +280,7 @@
     | f_sec g => path (\lam i x => IsEquiv.f_ret e {g x} i)
   }
 
+-- | Function-extensionality as an equivalence: `(f = f') ≃ Π a, f a = f' a`.
 \func piEquiv {A : \Type} (B : A -> \Type) (f f' : \Pi (a : A) -> B a) : QEquiv \cowith
   | A => f = f'
   | B => \Pi (a : A) -> f a = f' a
@@ -244,6 +289,7 @@
   | ret_f _ => idp
   | f_sec _ => idp
 
+-- | Equality in a Σ-type as a Σ of an equality in the base and a transported equality in the fiber.
 \func sigmaEquiv {A : \Type} (B : A -> \Type) (p p' : \Sigma (a : A) (B a)) : QEquiv \cowith
   | A => p = p'
   | B => \Sigma (s : p.1 = p'.1) (transport B s p.2 = p'.2)
@@ -257,6 +303,9 @@
                 | p'1, idp, p'2, idp => idp
               })
 
+{- | `(Π a : A, B (h a)) ≃ Σ (g : A -> Σ a' B a') ((λ a => (g a).1) = h)` — reorganizes a dependent function as a
+ -   section over `h`.
+ -}
 \func piSigmaEquiv {A A' : \Type} (h : A -> A') (B : A' -> \Type)
   : QEquiv {\Pi (a : A) -> B (h a)}
            {\Sigma (g : A -> \Sigma (a' : A') (B a')) ((\lam a => (g a).1) = h)}
@@ -270,11 +319,13 @@
                   idp
                   p.2
 
+-- | Specialization of `piSigmaEquiv` at `h = id`.
 \func piSigmaIdEquiv {A : \Type} (B : A -> \Type)
   : QEquiv {\Pi (a : A) -> B a}
            {\Sigma (g : A -> \Sigma (a : A) (B a)) ((\lam a => (g a).1) = id)}
   => piSigmaEquiv id B
 
+-- | Any two empty types are equivalent.
 \func emptyEquiv {A B : \Type} (Ae : A -> Empty) (Be : B -> Empty) : QEquiv {A} {B} \cowith
   | f a => absurd (Ae a)
   | ret b => absurd (Be b)
@@ -283,6 +334,12 @@
 
 -- # Embeddings and surjections
 
+{- | A `TypeMap` whose action `pmap f` on each path space is a retraction (so `pmap f` is itself an equivalence, exposed
+ -   via `pmap-isEquiv`). `levelProp` makes it a proposition; `fromInjection` builds an embedding from injectivity into
+ -   a set; `diag-equiv` exhibits the diagonal `a ↦ (a, a, idp)` as an equivalence; `projection` shows the first
+ -   projection out of `Σ a, B a` with `B` valued in `\Prop` is an embedding; `fibers`/`embeddingFiber-isProp`
+ -   characterize embeddings via propositional fibers.
+ -}
 \record Embedding \extends TypeMap {
   | isEmb : \Pi (a a' : A) -> Retraction (pmap f {a} {a'})
 
@@ -347,6 +404,7 @@
     )
 }
 
+-- | Composition of embeddings.
 \func transEmbedding {A B C : \Type} (e1 : Embedding {A} {B}) (e2 : Embedding {B} {C}) : Embedding {A} {C} \cowith
   | f a => e2 (e1 a)
   | isEmb a a' => \new Retraction {
@@ -360,4 +418,5 @@
     | f_sec p => path \lam i j a => ((e a).isEmb (f a) (g a)).f_sec (path \lam j => p j a) i j
   }
 
+-- | Notation `A >-> B` for `Embedding {A} {B}`.
 \func \infixr 1 >-> (A B : \Type) => Embedding {A} {B}

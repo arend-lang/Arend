@@ -1,6 +1,22 @@
+{- | Integrally closed domains: integral domains that are integrally closed in their field of fractions.
+ -
+ -   An integrally closed domain is an integral domain `R` such that every element of its fraction field which is
+ -   integral over `R` already lies in `R`. The formalization expresses this via the localization map `locMap` at the
+ -   submonoid of nonzero elements (which embeds `R` into its field of fractions) and the abstract predicate
+ -   `isIntegrallyClosed` on ring homomorphisms.
+ -}
+
 \import Algebra.Domain
 \import Algebra.Ring.Integral
 \import Algebra.Ring.Localization
 
+{- | Extends `IntegralDomain` with the property `isIntegrallyClosedDomain`, asserting that the canonical localization
+ -   map `locMap` from the domain into its field of fractions (built from the submonoid of nonzero elements) is
+ -   integrally closed — i.e., any element of the fraction field that is a root of a monic polynomial over `R` is in the
+ -   image of `R`.
+ -}
 \class IntegrallyClosedDomain \extends IntegralDomain
+  {- | Every element of the field of fractions integral over the domain lies in the domain. Proved via coprime
+   -   representation and the `loc_poly` lemma about monic polynomials over localizations.
+   -}
   | isIntegrallyClosedDomain : isIntegrallyClosed (locR {_} {subMonoid})

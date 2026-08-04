@@ -1,3 +1,15 @@
+{- | Constructive real numbers extended with positive infinity, presented as Dedekind-style cuts of rationals.
+ -
+ -   An `InfReal` packages a lower cut `L : Rat -> \Prop` (from `LowerReal`) together with an upper cut
+ -   `U : Rat -> \Prop` (from `ExUpperReal`, which permits `U` to be empty so `+∞` is representable). The defining
+ -   axioms are disjointness `LU-disjoint` and a constructive locatedness-with-bound principle `LU-focus-bound`: for any
+ -   `B` and `eps > 0`, either `B` is in the lower cut (the number exceeds `B`) or there is some `a` in `L` with
+ -   `a + eps` in `U` (a finite `eps`-bracket). Standard locatedness `LU-located` is derived from `LU-focus-bound` by
+ -   interval bisection (via `focus-iter`, which iterates a contraction with ratio `3/2`), and the lower-cut
+ -   inhabitedness `L-inh` is also derived. Equality of `InfReal` values is determined by the lower cut alone
+ -   (`real-lower-ext`), so the upper cut is recovered from `L` plus the bracketing axiom.
+ -}
+
 \import Algebra.Field
 \import Algebra.Group
 \import Algebra.Meta
@@ -22,6 +34,10 @@
 \import Paths
 \import Paths.Meta
 
+{- | Extends `LowerReal` and `ExUpperReal`. Adds `LU-disjoint` (cuts don't overlap), `LU-focus-bound` (constructive
+ -   bracketing allowing `+∞`), and a default `LU-focus-bound-impl` proof. `LU-located` and `L-inh` are derived from
+ -   `LU-focus-bound`. The internal lemma `LU-less` gives `L q -> U r -> q < r`.
+ -}
 \record InfReal \extends LowerReal, ExUpperReal {
   | LU-disjoint {q : Rat} : L q -> U q -> Empty
   | LU-located {q r : Rat} : q < r -> L q || U r
@@ -71,18 +87,24 @@
       | inr r<=q => absurd $ LU-disjoint Lq (U_<= Ur r<=q)
     }
 } \where {
+  -- | Embeds a rational `x : Rat` into `InfReal` using `LowerReal.fromRat` and `ExUpperReal.fromRat`.
   \use \coerce fromRat (x : Rat) : InfReal \cowith
     | LowerReal => LowerReal.fromRat x
     | ExUpperReal => ExUpperReal.fromRat x
     | LU-disjoint q<x x<q => <-irreflexive (q<x <∘ x<q)
     | LU-focus-bound B {eps} eps>0 => byRight (x - eps * finv 2, linarith, linarith)
 
+  -- | For `n : Nat`, `(3/2)^n > n`; used to bound the number of bisection steps in `focus-iter`.
   \lemma pow>id (n : Nat) : Monoid.pow (ratio 3 2) n > n \elim n
     | 0 => idp
     | 1 => idp
     | 2 => idp
     | suc (suc (suc n)) => linarith <∘r <_*_positive-left (pow>id (suc (suc n))) idp
 
+  {- | Iterated contraction lemma: given a relation `P` with a one-step shrink rule, after `n` iterations one obtains
+   -   `q', r'` with `(r' - q') * rat^n <= r - q`. Used to build `LU-focus-bound` from `LU-located` by bracket
+   -   bisection.
+   -}
   \lemma focus-iter (rat : Rat) (rat>=0 : 0 <= rat) (P : Rat -> Rat -> \Prop) (f : \Pi (q r : Rat) -> P q r -> ∃ (q' r' : P) ((r' - q') * rat <= r - q)) (n : Nat) (q r : Rat) (Pqr : P q r) : ∃ (q' r' : P) ((r' - q') * Monoid.pow rat n <= r - q) \elim n
     | 0 => inP (q, r, Pqr, transportInv (<= _) ide-right <=-refl)
     | suc n => \case f q r Pqr \with {
@@ -91,6 +113,7 @@
       }
     }
 
+  -- | Two `InfReal`s with equivalent lower cuts are equal.
   \lemma real-ext {x y : InfReal} (p : \Pi {a : Rat} -> x.L a <-> y.L a) : x = y
     => exts (\lam a => ext p, \lam b =>
         \have lem {x y : InfReal} (p : \Pi {a : Rat} -> x.L a <-> y.L a) (x<b : x.U b) : y.U b => \case U-rounded x<b \with {
@@ -101,10 +124,15 @@
         }
         \in ext (lem p, lem (\lam {_} => (p.2,p.1))))
 
+  -- | An `InfReal` equality reduces to equality at the `LowerReal` level.
   \lemma real-lower-ext {x y : InfReal} (p : x = {LowerReal} y) : x = y
     => real-ext \lam {a} => transport (\lam (y : LowerReal) => x.L a <-> y.L a) p <->refl
 }
 
+{- | Instance of `LinearlyBiorderedAbMonoid InfReal`, equipping `InfReal` with `0 = fromRat 0`, addition, strict order
+ -   `<`, and lattice operations `meet`, `join`, satisfying biordered abelian monoid laws (no negation, since `+∞` is
+ -   allowed).
+ -}
 \instance InfRealAbMonoid : LinearlyBiorderedAbMonoid InfReal
   | zro => InfReal.fromRat 0
   | + => +
@@ -151,6 +179,7 @@
   | meet_+-left => InfReal.real-lower-ext $ +-lower *> {LowerReal} pmap (_ LowerRealAbMonoid.+) meet-lower *> {LowerReal} meet_+-left *> {LowerReal} inv (pmap2 LowerRealAbMonoid.meet +-lower +-lower) *> {LowerReal} inv {LowerReal} meet-lower
   | join_+-left => InfReal.real-lower-ext $ +-lower *> {LowerReal} pmap (_ LowerRealAbMonoid.+) join-lower *> {LowerReal} join_+-left *> {LowerReal} inv (pmap2 LowerRealAbMonoid.join +-lower +-lower) *> {LowerReal} inv {LowerReal} join-lower
   \where {
+    -- | Adds two `InfReal`s by combining their `LowerReal` and `ExUpperReal` addends.
     \sfunc \infixl 6 + (x y : InfReal) : InfReal \cowith
       | LowerReal => x LowerRealAbMonoid.+ y
       | ExUpperReal => x ExUpperReal.+ y
@@ -172,35 +201,44 @@
           | byRight (x',x'<x,x<x'+eps/4), byRight (y',y'<y,y<y'+eps/4) => byRight (x' RatField.+ y' - eps * ratio 1 4, LowerRealAbMonoid.+_L.2 $ inP (x', x'<x, y', y'<y, linarith), ExUpperReal.+_U.2 $ inP (_, x<x'+eps/4, _, y<y'+eps/4, linarith))
         }
 
+    -- | `x + y` equals `x +_LowerReal y` as `LowerReal`s.
     \lemma +-lower {x y : InfReal} : x + y = {LowerReal} x LowerRealAbMonoid.+ y
       => \peval _ + _
 
+    -- | `fromRat x + fromRat y = fromRat (x + y)`; the embedding is a homomorphism.
     \lemma +-rat {x y : Rat} : InfReal.fromRat x + InfReal.fromRat y = InfReal.fromRat (x RatField.+ y)
       => InfReal.real-ext \lam {a} => <->trans +_L (\lam (inP (b,b<x,c,c<y,a<b+c)) => linarith, \lam a<x+y =>
           \let eps => (x RatField.+ y - a) * ratio 1 3
           \in inP (x - eps, linarith, y - eps, linarith, linarith))
 
+    -- | Characterizes the lower cut of a sum: `L(x+y, a) <-> ∃ b c, L(x,b) ∧ L(y,c) ∧ a < b + c`.
     \lemma +_L {x y : InfReal} {a : Rat} : InfReal.L {x + y} a <-> ∃ (b : x.L) (c : y.L) (a RatField.< b RatField.+ c)
       => <->trans (<->_=.2 $ pmap {LowerReal} (\lam t => InfReal.L {t} a) +-lower) LowerRealAbMonoid.+_L
 
+    -- | Sufficient condition for `L(x+y, a)` from witnesses with `a <= b + c`.
     \lemma +_L_<= {x y : InfReal} {a b : Rat} (b<x : x.L b) {c : Rat} (c<y : y.L c) (a<=b+c : a RatField.<= b RatField.+ c) : InfReal.L {x + y} a
       => \case L-rounded b<x \with {
         | inP (b',x<b',b<b') => +_L.2 $ inP (b', x<b', c, c<y, a<=b+c <∘r <_+-left c b<b')
       }
 
+    -- | `x + y` equals `x +_ExUpperReal y` as upper-real structures.
     \lemma +-upper {x y : InfReal} : x + y = x ExUpperReal.+ y
       => \peval _ + _
 
+    -- | Characterizes the upper cut of a sum: `U(x+y, a) <-> ∃ b c, U(x,b) ∧ U(y,c) ∧ b + c < a`.
     \lemma +_U {x y : InfReal} {a : Rat} : InfReal.U {x + y} a <-> ∃ (b : x.U) (c : y.U) (b RatField.+ c RatField.< a)
       => <->trans (<->_=.2 $ pmap (\lam t => InfReal.U {t} a) +-upper) ExUpperReal.+_U
 
+    -- | Sufficient condition for `U(x+y, a)` from witnesses with `b + c <= a`.
     \lemma +_U_<= {x y : InfReal} {a b : Rat} (x<b : x.U b) {c : Rat} (y<c : y.U c) (b+c<=a : b RatField.+ c RatField.<= a) : InfReal.U {x + y} a
       => \case U-rounded x<b \with {
         | inP (b',x<b',b'<b) => +_U.2 $ inP (b', x<b', c, y<c, <_+-left c b'<b <∘l b+c<=a)
       }
 
+    -- | `x < y` defined as `∃ a : Rat, U(x,a) ∧ L(y,a)` — there is a rational strictly between `x` and `y`.
     \type \infix 4 < (x y : InfReal) => ∃ (a : Rat) (x.U a) (y.L a)
 
+    -- | `¬(y < x) <-> ∀ a, L(x,a) -> L(y,a)`; the negation of `<` is lower-cut inclusion.
     \lemma <=_L {x y : InfReal} : Not (y < x) <-> ∀ {a : x.L} (y.L a)
       => (\lam p a<x => \case L-rounded a<x \with {
         | inP (b,b<x,a<b) => \case y.LU-located a<b \with {
@@ -209,6 +247,7 @@
         }
       }, \lam p (inP (a,y<a,x<a)) => y.LU-disjoint (p x<a) y<a)
 
+    -- | `¬(y < x) <-> ∀ b, U(y,b) -> U(x,b)`; equivalently, upper-cut inclusion in the other direction.
     \lemma <=_U {x y : InfReal} : Not (y < x) <-> ∀ {b : y.U} (x.U b)
       => (\lam p y<b => \case U-rounded y<b \with {
         | inP (a,y<a,a<b) => \case x.LU-located a<b \with {
@@ -217,6 +256,7 @@
         }
       }, \lam p (inP (a,y<a,x<a)) => x.LU-disjoint x<a (p y<a))
 
+    -- | Pointwise minimum via the underlying `LowerReal`/`ExUpperReal` meets.
     \sfunc meet (x y : InfReal) : InfReal \cowith
       | LowerReal => LowerRealAbMonoid.meet x y
       | ExUpperReal => ExUpperReal.meet x y
@@ -230,15 +270,19 @@
         | byRight x<r, _ => byRight $ ExUpperReal.meet_U.2 (byLeft x<r)
       }
 
+    -- | Equality with `LowerRealAbMonoid.meet` at the `LowerReal` level.
     \lemma meet-lower {x y : InfReal} : meet x y = {LowerReal} LowerRealAbMonoid.meet x y
       => \peval meet _ _
 
+    -- | `L(meet x y, a) <-> L(x,a) ∧ L(y,a)`.
     \lemma meet_L {x y : InfReal} {a : Rat} : InfReal.L {meet x y} a <-> (\Sigma (x.L a) (y.L a))
       => rewrite (\peval meet x y, \peval LowerRealAbMonoid.meet x y) <->refl
 
+    -- | `U(meet x y, a) <-> U(x,a) ∨ U(y,a)`.
     \lemma meet_U {x y : InfReal} {a : Rat} : InfReal.U {meet x y} a <-> x.U a || y.U a
       => rewrite (\peval meet x y, \peval ExUpperReal.meet x y) <->refl
 
+    -- | Pointwise maximum via the underlying joins.
     \sfunc join (x y : InfReal) : InfReal \cowith
       | LowerReal => LowerRealAbMonoid.join x y
       | ExUpperReal => ExUpperReal.join x y
@@ -252,32 +296,42 @@
         | byRight x<r, byRight y<r => byRight $ ExUpperReal.join_U.2 (x<r,y<r)
       }
 
+    -- | Equality with `LowerRealAbMonoid.join` at the `LowerReal` level.
     \lemma join-lower {x y : InfReal} : join x y = {LowerReal} LowerRealAbMonoid.join x y
       => \peval join _ _
 
+    -- | `L(join x y, a) <-> L(x,a) ∨ L(y,a)`.
     \lemma join_L {x y : InfReal} {a : Rat} : InfReal.L {join x y} a <-> x.L a || y.L a
       => rewrite (\peval join x y, \peval LowerRealAbMonoid.join x y) <->refl
 
+    -- | `U(join x y, a) <-> U(x,a) ∧ U(y,a)`.
     \lemma join_U {x y : InfReal} {a : Rat} : InfReal.U {join x y} a <-> (\Sigma (x.U a) (y.U a))
       => rewrite (\peval join x y, \peval ExUpperReal.join x y) <->refl
 
+    -- | `0 < 1` in `InfReal`.
     \lemma zro<ide : InfReal.fromRat 0 < InfReal.fromRat 1
       => inP (ratio 1 2, idp, idp)
 
+    -- | For a rational `a`, `a < x <-> L(x,a)`.
     \lemma <_L {a : Rat} {x : InfReal} : (a : InfReal) < x <-> x.L a
       => (\lam (inP (b,a<b,b<x)) => L-closed b<x a<b, \lam a<x => \case L-rounded a<x \with {
         | inP (b,b<x,a<b) => inP (b,a<b,b<x)
       })
 
+    -- | For a rational `a`, `x < a <-> U(x,a)`.
     \lemma <_U {a : Rat} {x : InfReal} : x < a <-> x.U a
       => (\lam (inP (b,x<b,b<a)) => U-closed x<b b<a, \lam x<a => \case U-rounded x<a \with {
         | inP (b,x<b,b<a) => inP (b,x<b,b<a)
       })
 
+    -- | Addition is strictly monotone in both arguments: `a < c -> b < d -> a + b < c + d`.
     \lemma <_+ {a b c d : InfReal} (p : a < c) (q : b < d) : a + b < c + d \elim p, q
       | inP (q,a<q,q<c), inP (r,b<r,r<d) => inP (q RatField.+ r, +_U_<= a<q b<r <=-refl, +_L_<= q<c r<d <=-refl)
   }
 
+{- | The `InfReal` strict order agrees with the `LowerReal` strict order: `x < y <-> x <_LowerReal y`. Lets one
+ -   transport order facts between the two presentations.
+ -}
 \lemma inf-real_<_LowerReal {x y : InfReal} : x < y <-> x LowerRealAbMonoid.< y
   => (\lam (inP (a,x<a,a<y)) => inP (a, a<y, \lam {b} b<x => x.LU-less b<x x<a), \lam (inP (b,b<y,x<=b)) => \case L-rounded b<y \with {
     | inP (a,a<y,b<a) => inP (a, \case x.LU-located b<a \with {

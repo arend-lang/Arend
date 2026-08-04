@@ -1,3 +1,14 @@
+{- | Matrices over a ring, their algebraic structure, and the theory of determinants.
+ -
+ -   This module defines `Matrix R n m` as nested arrays and equips square matrices with the full ring/algebra
+ -   structure: matrices over an abelian group form an abelian group, matrices over a ring form an `LModule`, square
+ -   matrices form a `Ring`, and over a commutative ring they form an `AAlgebra`. The determinant is built via the
+ -   symmetric group `Sym n` and a sign, with an equivalent cofactor-expansion form `determinantN` proven multilinear
+ -   and alternating; key results include multiplicativity, transpose invariance, the adjugate identities
+ -   `adj(M) * M = det(M) · 1`, and the equivalence `Inv M ↔ Inv (det M)`. Block matrices, triangular/diagonal
+ -   predicates, and minors are provided to support inductive arguments and reasoning about decomposed systems.
+ -}
+
 \import Algebra.Algebra
 \import Algebra.Group
 \import Algebra.Group.GroupHom
@@ -29,41 +40,54 @@
 \import Set
 \import Set.Fin
 
+-- | `Array (Array R m) n` — a matrix as `n` rows of length `m`.
 \type Matrix (R : \Type) (n m : Nat) => Array (Array R m) n
 
+-- | Builds a matrix from a function `Fin n -> Fin m -> R`.
 \func mkMatrix {R : \Type} {n m : Nat} (f : Fin n -> Fin m -> R) : Matrix R n m
   => \new Array (Array R m) n \lam i => \new Array R m (f i)
 
+-- | Coerces a nested array to `Matrix`.
 \func makeMatrix {R : \Type} {n m : Nat} (M : Array (Array R m) n) : Matrix R n m => M
 
+-- | A length-`n` array as an `n × 1` column matrix.
 \func mkColumn {R : \Type} (l : Array R) : Matrix R l.len 1
   => mkMatrix \lam i _ => l i
 
+-- | A length-`n` array as a `1 × n` row matrix.
 \func mkRow {R : \Type} (l : Array R) : Matrix R 1 l.len
   => mkMatrix \lam _ => l
 
+-- | Prepends a column to a matrix.
 \func addColumn {R : \Type} {n m : Nat} (l : Array R n) (M : Matrix R n m) : Matrix R n (suc m)
   => makeMatrix \lam j => l j :: M j
 
+-- | Prepends a row to a matrix.
 \func addRow {R : \Type} {n m : Nat} (l : Array R m) (M : Matrix R n m) : Matrix R (suc n) m
   => l :: M
 
+-- | Block-diagonal `[[A,0],[0,B]]` of size `(n+n') × (m+m')`.
 \func blockMatrix {R : AddPointed} {n m n' m' : Nat} (A : Matrix R n m) (B : Matrix R n' m') : Matrix R (n + n') (m + m')
   => makeMatrix $ map {Array R m} (++' replicate m' zro) A ++' map (replicate m zro ++') B
   \where {
+    -- | Entry lemmas for the four block regions.
     \lemma elem00 {A : Matrix R n m} {B : Matrix R n' m'} (i : Fin n) (j : Fin m) : blockMatrix A B (fin-inc i) (fin-inc j) = A i j
       => path (\lam k => ++'.++'_index-left {Array R (m + m')} k _) *> ++'.++'_index-left
 
+    -- | Entry lemmas for the four block regions.
     \lemma elem10 {A : Matrix R n m} {B : Matrix R n' m'} (i : Fin n') (j : Fin m) : blockMatrix A B (fin-raise i) (fin-inc j) = 0
       => path (\lam k => ++'.++'_index-right {Array R (m + m')} k _) *> ++'.++'_index-left
 
+    -- | Entry lemmas for the four block regions.
     \lemma elem01 {A : Matrix R n m} {B : Matrix R n' m'} (i : Fin n) (j : Fin m') : blockMatrix A B (fin-inc i) (fin-raise j) = 0
       => path (\lam k => ++'.++'_index-left {Array R (m + m')} k _) *> ++'.++'_index-right
 
+    -- | Entry lemmas for the four block regions.
     \lemma elem11 {A : Matrix R n m} {B : Matrix R n' m'} (i : Fin n') (j : Fin m') : blockMatrix A B (fin-raise i) (fin-raise j) = B i j
       => path (\lam k => ++'.++'_index-right {Array R (m + m')} k _) *> ++'.++'_index-right
   }
 
+-- | Taking the `(fin-inc i, fin-inc j)` minor commutes with stacking with `B`.
 \lemma blockMatrix_minor {R : AddPointed} {n m n' m' : Nat} {A : Matrix R (suc n) (suc m)} {B : Matrix R n' m'} (i : Fin (suc n)) (j : Fin (suc m))
   : minor (blockMatrix A B) (fin-inc i) (fin-inc j) = blockMatrix (minor A i j) B
   => determinant.minor=minor' (blockMatrix A B) _ _ *> path (\lam i' => skip (map_++' (skip __ _) {map {Array R (suc m)} (++' replicate m' zro) A} i') (fin-inc i)) *>
@@ -71,6 +95,7 @@
              | s2 => path (\lam i' => map (\lam l => (skip_++' {R} {_} {_} {replicate (suc m) zro} {l} {j} *> path (\lam i => skip_replicate {R} {m} zro {j} i ++' l)) i') B)
        \in matrixExt' $ skip_++' *> {Array (Array R (m + m')) (n + n')} path (\lam i' => s1 i' ++' s2 i')
 
+-- | Multiplication interacts blockwise with `blockMatrix`/`block12`/`block21`.
 \lemma blockMatrix_* {R : Ring} {n m n' m' k k' : Nat} (A : Matrix R n m) (B : Matrix R n' m') (C : Matrix R m k) (D : Matrix R m' k')
   : blockMatrix A B MatrixRing.product blockMatrix C D = blockMatrix (A MatrixRing.product C) (B MatrixRing.product D)
   => matrixExt \lam i j => R.BigSum-split *> \case ++'.split-index i, ++'.split-index j \with {
@@ -80,9 +105,11 @@
     | inr (i',p), inr (j',q) => rewrite (p,q) $ pmap2 (+) (R.BigSum_zro \lam i => pmap (_ *) (blockMatrix.elem01 i j') *> zro_*-right) (cong $ ext \lam j => pmap2 (*) (blockMatrix.elem11 i' j) (blockMatrix.elem11 j j')) *> zro-left *> inv (blockMatrix.elem11 {_} {_} {_} {_} {_} {A MatrixRing.product C} {B MatrixRing.product D} i' j')
   }
 
+-- | Vertical stacking `[[A],[B]]` (same column count).
 \func block21Matrix {R : AddPointed} {n m k : Nat} (A : Matrix R n k) (B : Matrix R m k) : Matrix R (n + m) k
   => makeMatrix (A ++' B)
 
+-- | Multiplication interacts blockwise with `blockMatrix`/`block12`/`block21`.
 \lemma blockMatrix_*-left {R : Ring} {n m n' m' k : Nat} {A : Matrix R n m} {B : Matrix R n' m'} {C : Matrix R m k} {D : Matrix R m' k}
   : blockMatrix A B MatrixRing.product block21Matrix C D = block21Matrix (A MatrixRing.product C) (B MatrixRing.product D)
   => matrixExt \lam i j => R.BigSum-split *> \case ++'.split-index i \with {
@@ -90,9 +117,11 @@
     | inr (i',p) => rewrite p $ pmap2 (+) (R.BigSum_zro \lam j' => pmap (* _) (blockMatrix.elem10 i' j') *> zro_*-left) (pmap R.BigSum $ exts \lam j' => pmap2 (\lam x (y : Array R k) => x * y j) (blockMatrix.elem11 i' j') (++'.++'_index-right {Array R k})) *> zro-left *> inv (pmap {Array R k} (__ j) (++'.++'_index-right {Array R k}))
   }
 
+-- | Horizontal concatenation `[A | B]` (same row count).
 \func block12Matrix {R : AddPointed} {n m k : Nat} (A : Matrix R k n) (B : Matrix R k m) : Matrix R k (n + m)
   => makeMatrix \lam j => A j ++' B j
 
+-- | Multiplication interacts blockwise with `blockMatrix`/`block12`/`block21`.
 \lemma blockMatrix_*-right {R : Ring} {n m n' m' k : Nat} {A : Matrix R n m} {B : Matrix R n' m'} {C : Matrix R k n} {D : Matrix R k n'}
   : block12Matrix C D MatrixRing.product blockMatrix A B = block12Matrix (C MatrixRing.product A) (D MatrixRing.product B)
   => matrixExt \lam i j => R.BigSum-split *> \case ++'.split-index j \with {
@@ -100,15 +129,19 @@
     | inr (j',p) => rewrite p $ pmap2 (+) (R.BigSum_zro \lam i' => pmap (_ *) (blockMatrix.elem01 i' j') *> zro_*-right) (pmap R.BigSum $ exts \lam i' => pmap2 (*) ++'.++'_index-right (blockMatrix.elem11 i' j')) *> zro-left *> inv ++'.++'_index-right
   }
 
+-- | Extensionality — equality of matrices from pointwise equality.
 \func matrixExt {R : \Type} {n m : Nat} {M N : Matrix R n m} (p : \Pi (i : Fin n) (j : Fin m) -> M i j = N i j) : M = N
   => path (\lam i => mkMatrix (\lam j k => p j k i))
 
+-- | Extensionality — equality of matrices from pointwise equality.
 \func matrixExt' {R : \Type} {n m : Nat} {M N : Matrix R n m} (p : M = {Array (Array R m) n} N) : M = N
   => path (\lam i => p i)
 
+-- | Apply a function `A -> B` to every entry.
 \func matrix-map {A B : \Type} (f : A -> B) {n m : Nat} (M : Matrix A n m) : Matrix B n m
   => mkMatrix \lam i j => f (M i j)
 
+-- | `Matrix A n m` is an `AbGroup` over an `AbGroup` `A` (pointwise `+`, `zro`, `negative`).
 \instance MatrixAbGroup (A : AbGroup) (n m : Nat) : AbGroup (Matrix A n m) \cowith
   | zro => mkMatrix \lam _ _ => zro
   | + M N => mkMatrix \lam i j => M i j + N i j
@@ -118,6 +151,7 @@
   | negative M => mkMatrix \lam i j => negative (M i j)
   | negative-left => matrixExt \lam i j => negative-left
 
+-- | `Matrix R n m` is an `LModule` over a ring `R` with pointwise scalar multiplication.
 \instance MatrixModule (R : Ring) (n m : Nat) : LModule R \cowith
   | AbGroup => MatrixAbGroup R n m
   | *c a M => mkMatrix \lam i j => a * M i j
@@ -126,22 +160,26 @@
   | *c-rdistr => matrixExt \lam i j => rdistr
   | ide_*c => matrixExt \lam i j => ide-left
   \where {
+    -- | Scalar multiplication generalised to matrices over an arbitrary `LModule`.
     \func *c-gen {R : Ring} {M : LModule R} (a : R) {n m : Nat} (A : Matrix M n m) : Matrix M n m
       => mkMatrix \lam i j => a *c A i j
   }
 
+-- | `block12 A B · block21 C D = A·C + B·D`.
 \lemma block12_21_* {R : Ring} {n m k k' : Nat} (A : Matrix R k n) (B : Matrix R k m) (C : Matrix R n k') (D : Matrix R m k')
   : block12Matrix A B MatrixRing.product block21Matrix C D = A MatrixRing.product C + B MatrixRing.product D
   => matrixExt \lam i j => R.BigSum-split *> pmap2 (R.BigSum __ + R.BigSum __)
       (exts \lam k => pmap2 (*) ++'.++'_index-left  (path \lam i => ++'.++'_index-left  {Array R k'} i j))
       (exts \lam k => pmap2 (*) ++'.++'_index-right (path \lam i => ++'.++'_index-right {Array R k'} i j))
 
+-- | Diagonal matrix of size `len(l) × len(l)` from an array `l`.
 \func diagonal {R : AddPointed} (l : Array R) : Matrix R l.len l.len
   => mkMatrix \lam i j => \case decideEq i j \with {
     | yes _ => l i
     | no _ => zro
   }
 
+-- | Square matrices `Matrix R n n` form a `Ring`; `ide` is the identity diagonal, `*` is `product`.
 \instance MatrixRing (R : Ring) (n : Nat) : Ring (Matrix R n n)
   | AbGroup => MatrixModule R n n
   | ide : Matrix R n n => diagonal (replicate n R.ide)
@@ -154,62 +192,77 @@
   \where {
     \open AddMonoid
 
+    -- | Generalised product `Matrix R n m × Matrix L m k -> Matrix L n k` with values in an `LModule`.
     \func product-gen {R : Ring} {L : LModule R} {n m k : Nat} (M : Matrix R n m) (N : Matrix L m k) : Matrix L n k
       => mkMatrix \lam i k => BigSum \lam j => M i j *c N j k
 
+    -- | Standard matrix multiplication via `BigSum`.
     \func \infixl 7 product {R : Ring} {n m k : Nat} (M : Matrix R n m) (N : Matrix R m k) : Matrix R n k
       => mkMatrix \lam i k => BigSum \lam j => M i j * N j k
 
     \lemma product-gen_ide-left {R : Ring} {M : LModule R} {n m : Nat} (A : Matrix M n m) : product-gen ide A = A
       => matrixExt \lam i j => BigSum-unique i (\lam k i/=k => later $ rewrite (decideEq/=_reduce i/=k) M.*c_zro-left) *> rewrite (decideEq=_reduce idp) M.ide_*c
 
+    -- | Identity and zero behaviour of the product.
     \lemma product_ide-left {R : Ring} {n m : Nat} {A : Matrix R n m} : ide product A = A
       => product-gen_ide-left {_} {RingLModule R} _
 
+    -- | Identity and zero behaviour of the product.
     \lemma product_ide-right {R : Ring} {n m : Nat} {M : Matrix R n m} : M product ide = M
       => matrixExt \lam i j => BigSum-unique j (\lam k j/=k => later $ rewrite (decideEq/=_reduce (\lam t => j/=k (inv t))) R.zro_*-right) *> rewrite (decideEq=_reduce idp) ide-right
 
+    -- | Identity and zero behaviour of the product.
     \lemma product_zro-left {R : Ring} {n m k : Nat} (A : Matrix R m k) : zro product A = {Matrix R n k} zro
       => matrixExt \lam i j => BigSum_zro \lam k => zro_*-left
 
+    -- | Identity and zero behaviour of the product.
     \lemma product_zro-right {R : Ring} {n m k : Nat} (A : Matrix R n m) : A product zro = {Matrix R n k} zro
       => matrixExt \lam i j => BigSum_zro \lam k => zro_*-right
 
+    -- | Associativity (also for the generalised version).
     \lemma product-gen-assoc {R : Ring} {M : LModule R} {n m k l : Nat} {A : Matrix R n m} {B : Matrix R m k} {C : Matrix M k l} : product-gen (A product B) C = product-gen A (product-gen B C)
       => matrixExt \lam j1 j2 => path (\lam i => BigSum (\lam j3 => M.*c_BigSum-rdistr {\lam j4 => A j1 j4 * B j4 j3} {C j3 j2} i)) *>
           M.BigSum-transpose _ *> pmap BigSum (arrayExt \lam j3 => pmap BigSum $ arrayExt \lam j4 => *c-assoc) *>
           inv (path (\lam i => BigSum (\lam j3 => M.*c_BigSum-ldistr {A j1 j3} {\lam j4 => B j3 j4 *c C j4 j2} i)))
 
+    -- | Associativity (also for the generalised version).
     \lemma product-assoc {R : Ring} {n m k l : Nat} (A : Matrix R n m) (B : Matrix R m k) (C : Matrix R k l) : A product B product C = A product (B product C)
       => product-gen-assoc {_} {RingLModule R}
 
+    -- | Distributivity over `+`.
     \lemma product-gen-ldistr {R : Ring} {M : LModule R} {n m k : Nat} {A : Matrix R n m} {B C : Matrix M m k} : product-gen A (B + C) = product-gen A B + product-gen A C
       => matrixExt \lam i j => pmap BigSum (arrayExt \lam k => *c-ldistr) *> M.BigSum_+
 
+    -- | Distributivity over `+`.
     \lemma product-ldistr {R : Ring} {n m k : Nat} {A : Matrix R n m} {B C : Matrix R m k} : A product (B + C) = A product B + A product C
       => product-gen-ldistr {_} {RingLModule R}
 
+    -- | Distributivity over `+`.
     \lemma product-gen-rdistr {R : Ring} {M : LModule R} {n m k : Nat} (A B : Matrix R n m) {C : Matrix M m k} : product-gen (A + B) C = product-gen A C + product-gen B C
       => matrixExt \lam i j => pmap BigSum (arrayExt \lam k => *c-rdistr) *> M.BigSum_+
 
+    -- | Distributivity over `+`.
     \lemma product-rdistr {R : Ring} {n m k : Nat} (A B : Matrix R n m) {C : Matrix R m k} : (A + B) product C = A product C + B product C
       => product-gen-rdistr {_} {RingLModule R} A B
 
     \lemma product-gen_negative-left {R : Ring} {L : LModule R} {n m k : Nat} (M : Matrix R n m) (N : Matrix L m k) : product-gen (negative M) N = negative (product-gen M N)
       => matrixExt \lam i j => pmap BigSum (arrayExt \lam k => L.*c_negative-left) *> inv L.BigSum_negative
 
+    -- | Compatibility with `negative`.
     \lemma product_negative-left {R : Ring} {n m k : Nat} {M : Matrix R n m} {N : Matrix R m k} : negative M product N = negative (M product N)
       => product-gen_negative-left {_} {RingLModule R} _ _
 
     \lemma product-gen_negative-right {R : Ring} {L : LModule R} {n m k : Nat} (M : Matrix R n m) (N : Matrix L m k) : product-gen M (negative N) = negative (product-gen M N)
       => matrixExt \lam i j => pmap BigSum (arrayExt \lam k => L.*c_negative-right) *> inv L.BigSum_negative
 
+    -- | Compatibility with `negative`.
     \lemma product_negative-right {R : Ring} {n m k : Nat} {M : Matrix R n m} {N : Matrix R m k} : M product negative N = negative (M product N)
       => product-gen_negative-right {_} {RingLModule R} _ _
 
     \lemma product-gen_negative-rdistr {R : Ring} {M : LModule R} {n m k : Nat} (A B : Matrix R n m) {C : Matrix M m k} : product-gen (A - B) C = product-gen A C - product-gen B C
       => product-gen-rdistr A (negative B) *> pmap (product-gen A C +) (product-gen_negative-left B C)
 
+    -- | The identity matrix generates the array `LModule`.
     \lemma ide_generates {R : Ring} {n : Nat} : LModule.IsGenerated {ArrayLModule n (RingLModule R)} ide
       => \lam l => inP (l, arrayExt \lam j => inv $ ArrayLModule.BigSum-index *> R.BigSum-unique j (\lam i j/=i => later $ rewrite (decideEq/=_reduce \lam p => j/=i (inv p)) zro_*-right) *> rewrite (decideEq=_reduce idp) ide-right)
 
@@ -218,6 +271,7 @@
       | 0 => nil
       | suc n => (1 :: replicate n zro) :: map (\lam l => R.zro :: l) ide'
 
+    -- | Recursive presentation of the identity matrix and its agreement with `ide`.
     \lemma ide=ide' {R : Ring} {n : Nat} : ide {R} {n} = ide' \elim n
       | 0 => idp
       | suc n => matrixExt \case \elim __, \elim __ \with {
@@ -231,27 +285,33 @@
       }
   }
 
+-- | For a `CRing` `R`, `Matrix R n n` is an `R`-algebra (`AAlgebra`).
 \instance MatrixAlgebra (R : CRing) (n : Nat) : AAlgebra { | R => R }
   | Ring => MatrixRing R n
   | LModule => MatrixModule R n n
   | *c-comm-left  => product_*c-comm-left _
   | *c-comm-right => product_*c-comm-right
   \where {
+    -- | Scalar multiplication commutes with matrix multiplication.
     \lemma product_*c-comm-left {R : Ring} {n m k : Nat} {a : R} (A : Matrix R n m) {B : Matrix R m k}
       : a *c (A MatrixRing.product B) = (a *c A) MatrixRing.product B
       => matrixExt \lam i j => R.BigSum-ldistr *> path (\lam i' => R.BigSum \lam k => inv (R.*-assoc {a} {A i k} {B k j}) i')
 
+    -- | Scalar multiplication commutes with matrix multiplication.
     \lemma product_*c-comm-right {R : CRing} {n m k : Nat} {a : R} {A : Matrix R n m} {B : Matrix R m k}
       : a *c (A MatrixRing.product B) = A MatrixRing.product (a *c B)
       => matrixExt \lam i j => R.BigSum-ldistr *> pmap R.BigSum (exts \lam k => equation.cMonoid)
   }
 
+-- | `det M = Σ_{e ∈ Sym n} sign(e) · ∏_j M(e j, j)`.
 \func determinant {R : CRing} {n : Nat} (M : Matrix R n n)
   => R.FinSum \lam (e : Sym n) => sign e * R.BigProd (\lam j => M (e j) j)
   \where {
+    -- | Submatrix obtained by removing row `i0` and column `j0`.
     \func minor {R : \Type} {n m : Nat} (M : Matrix R (suc n) (suc m)) (i0 : Fin (suc n)) (j0 : Fin (suc m)) : Matrix R n m
       => map (skip __ j0) (skip M i0)
 
+    -- | Two matrices agreeing off row `i`/column `j` have equal `(i,j)`-minors.
     \func minorExt {R : \Type} {n m : Nat} {M M' : Array (Array R (suc m)) (suc n)} {i : Fin (suc n)} {j : Fin (suc m)}
                    (p : \Pi {i' : Fin (suc n)} {j' : Fin (suc m)} -> i' /= i -> j' /= j -> M i' j' = M' i' j')
       : minor M i j = minor M' i j \elim n, M, M', i
@@ -259,9 +319,11 @@
       | suc n, l :: M, l' :: M', 0 => matrixExt \lam i' j' => path (\lam ii => skipExt (\lam k => p {suc i'} (\case __)) ii j')
       | suc n, l :: M, l' :: M', suc i => path (\lam ii => skipExt (\lam k => p {0} (\case __)) ii :: minorExt (\lam q => p (fsuc/= q)) ii)
 
+    -- | Alternative minor (skip rows after columns) and equivalence proof.
     \func minor' {R : \Type} {n m : Nat} (M : Matrix R (suc n) (suc m)) (i0 : Fin (suc n)) (j0 : Fin (suc m)) : Matrix R n m
       => skip (map (skip __ j0) M) i0
 
+    -- | Alternative minor (skip rows after columns) and equivalence proof.
     \func minor=minor' {R : \Type} {n m : Nat} (M : Matrix R (suc n) (suc m)) (i0 : Fin (suc n)) (j0 : Fin (suc m)) : minor M i0 j0 = minor' M i0 j0
       => matrixExt (aux M i0 j0)
       \where {
@@ -272,6 +334,7 @@
           | suc n, l :: M, suc i0, suc i => aux M i0 j0 i j
       }
 
+    -- | Skipping commutes with transposition.
     \func skip_transpose {R : \Type} {n m : Nat} {M : Array (Array R m) (suc n)} {i : Fin (suc n)}
       : transpose (skip M i) = map (skip __ i) (transpose M) \elim n, M, i
       | 0, l :: nil, 0 => idp
@@ -287,25 +350,31 @@
           | suc n, l :: M, suc i, 0 => idp
           | suc n, l :: M, suc i, suc j' => aux
 
+    -- | `minor (transpose M) i j = transpose (minor M j i)`.
     \func minor_transpose {R : \Type} {n m : Nat} (M : Matrix R (suc n) (suc m)) {i : Fin (suc m)} {j : Fin (suc n)}
       : minor (transpose M) i j = transpose (minor M j i)
       => path (\lam i' => map (skip __ j) (pmap transpose skip_transpose i')) *> inv skip_transpose *> inv (pmap transpose (minor=minor' M j i))
 
+    -- | Multilinearity and alternation in rows (and after transposition).
     \lemma multilinear {R : CRing} {n : Nat} : isMultiLinear {R} {n} {ArrayLModule n (RingLModule R)} {RingLModule R} (\lam M => determinant M) \elim n
       | 0 => ()
       | suc n => transportInv (\lam d => isMultiLinear {R} (\lam M => d M)) (path \lam i M => determinantN.determinant=determinant0 {R} {n} {M} i) (determinantN.multilinear {R} {suc n} 0)
 
+    -- | Multilinearity and alternation in rows (and after transposition).
     \lemma alternating {R : CRing} {n : Nat} : isAlternating {R} {n} {ArrayLModule n (RingLModule R)} {RingLModule R} (\lam M => determinant M) \elim n
       | 0 => ((), \lam _ (t,_,_,_) => \case t)
       | suc n => transportInv (\lam d => isAlternating {R} (\lam M => d M)) (path \lam i M => determinantN.determinant=determinant0 {R} {n} {M} i) (determinantN.alternating {R} {suc n} 0)
 
+    -- | Multilinearity and alternation in rows (and after transposition).
     \lemma alternatingT {R : CRing} {n : Nat} : isAlternating {R} {n} (\lam M => determinant (transpose M))
       => transportInv (isAlternating {R}) (ext \lam M => determinant_transpose M) alternating
 
+    -- | Concrete formula for `minor M 0 0`.
     \func minor00 {R : \Type} {n m : Nat} (M : Matrix R (suc n) (suc m)) : minor M 0 0 = mkMatrix \lam i j => M (suc i) (suc j)
       => matrixExt \lam i j => skip_0 *> rewrite skip_0 idp
   }
 
+-- | Cofactor (Laplace) expansion along column `k`.
 \func determinantN {R : CRing} {n : Nat} (k : Fin n) (M : Matrix R n n) : R \elim n
   | 0 => 1
   | suc n => R.BigSum \lam i => M i k * R.pow -1 (i Nat.+ k) * determinant (minor M i k)
@@ -314,10 +383,12 @@
     \open skip
     \open ArrayLModule
 
+    -- | Compatibility of `minor` with `insert`/`replace` operations on rows.
     \lemma minor_insert {R : CRing} {n m : Nat} {i : Fin (suc n)} {x : Array R (suc m)} {l : Array (Array R (suc m)) n} {j : Fin (suc m)}
       : minor (insert x l i) i j = \new Array (Array R m) n (\lam i => skip (l i) j)
       => path (\lam i' => map (skip __ j) (skip_insert_= i'))
 
+    -- | Compatibility of `minor` with `insert`/`replace` operations on rows.
     \lemma aux/= {R : CRing} {n m : Nat} {j i : Fin (suc n)} (p : j /= i) {k : Fin (suc m)} {x : Array R (suc m)} {M : Array (Array R (suc m)) n}
       : insert {Array R (suc m)} x M j i k = M (newIndex (\lam q => p (inv q))) k \elim n, j, i, M
       | _, 0, 0, _ => absurd (p idp)
@@ -325,10 +396,14 @@
       | suc n, suc j, 0, y :: M => idp
       | suc n, suc j, suc i, y :: M => aux/= (\lam q => p (pmap fsuc q))
 
+    -- | Compatibility of `minor` with `insert`/`replace` operations on rows.
     \lemma minor_replace {R : CRing} {n : Nat} {i k : Fin (suc n)} {M : Array (Array R (suc n)) (suc n)} {j : Fin (suc n)} {x : Array R (suc n)} (p : j /= i)
       : minor (replace M j x) i k = replace (minor M i k) (newIndex p) (skip x k)
       => path (\lam i => map (skip __ k) (skip_replace_/= p i)) *> pmap makeMatrix (map_replace (skip __ k))
 
+    {- | Multilinearity and alternation of `determinantN`; the `alternating` proof builds permutations of rows and
+     -   bounds their inversions.
+     -}
     \lemma multilinear {R : CRing} {n : Nat} (k : Fin n) : isMultiLinear {R} {n} {ArrayLModule n (RingLModule R)} {RingLModule R} (\lam M => determinantN k M) \elim n
       | 0 => ()
       | suc n => isMultilinear_BigSum {R} {suc n} {ArrayLModule (suc n) (RingLModule R)} (\lam i M => M i k * R.pow -1 (i Nat.+ k) * determinant (minor M i k)) \lam i M j => \case decideEq j i \with {
@@ -344,6 +419,9 @@
         }
       }
 
+    {- | Multilinearity and alternation of `determinantN`; the `alternating` proof builds permutations of rows and
+     -   bounds their inversions.
+     -}
     \lemma alternating {R : CRing} {n : Nat} (k : Fin n) : isAlternating {R} {n} {ArrayLModule n (RingLModule R)} {RingLModule R} (\lam M => determinantN k M) \elim n
       | 0 => ((), \lam _ => \case __.1)
       | suc n => (multilinear k, \lam M => aux k M)
@@ -395,6 +473,7 @@
                       rewrite (pmap {Array R _} (__ k) t.4) (pmap2 (+) *-assoc *-assoc *> inv ldistr *>  pmap (_ *) (minor-lem.aux t.3 t.4) *> zro_*-right )
       }
 
+    -- | `determinantN k ide = 1`.
     \lemma determinantN_ide {R : CRing} {n : Nat} (k : Fin n) : determinantN k (MatrixRing.ide {R} {n}) = 1 \elim n
       | 0 => idp
       | suc n => R.BigSum-unique {\lam i => MatrixRing.ide i k * R.pow -1 (i Nat.+ k) * determinant (minor MatrixRing.ide i k)} k (\lam j k/=j => rewrite (decideEq/=_reduce \lam p => k/=j $ inv p) simplify) *>
@@ -412,12 +491,14 @@
           | suc n, suc k => pmap makeMatrix $ pmap2 (::) (pmap (\lam l => R.ide :: l) (skip_replicate R.zro)) $ arrayExt \lam i => pmap2 (::) (double-skip *> pmap {Array R _} (__ i) (skip_replicate R.zro {k})) $ cong (arrayExt \lam j => double-skip *> inv double-skip) *> pmap {Matrix R n n} (__ i) (ide'_minor k)
       }
 
+    -- | `determinantN k M = determinant M` — Laplace expansion equals the symmetric-group definition.
     \lemma =determinant {R : CRing} {n : Nat} {k : Fin n} {M : Matrix R n n} : determinantN k M = determinant M
       => alternating-unique {R} (alternating k) determinant.alternating MatrixRing.ide_generates (determinantN_ide k *> inv determinant_ide) M
 
     \open AbMonoid
     \open Monoid
 
+    -- | Particular case at `k = 0` for `suc n`.
     \lemma determinant=determinant0 {R : CRing} {n : Nat} {M : Matrix R (suc n) (suc n)} : determinant M = determinantN {R} {suc n} 0 M
       => \have t (e : Sym (suc n)) : BigProd (\lam j => minor M (e 0) 0 (Sym.reduce e j) j) = BigProd (\lam j => M (e (fsuc j)) (fsuc j)) => cong (ext \lam j => minor_Sym)
          \in FinSum (\lam (e : Sym (suc n)) => sign e * BigProd (\lam j => M (e j) j)) ==< pmap FinSum (ext \lam e => rewrite (t,R.pow_+) equation) *> inv (FinSum_Equiv symmetric-rec) >==
@@ -437,18 +518,22 @@
       }
   }
 
+-- | `det A = 1` for `0 × 0`.
 \lemma determinant00 {R : CRing} (A : Matrix R 0 0) : determinant A = 1
   => determinant_ide
 
+-- | `det A = A 0 0` for `1 × 1`.
 \lemma determinant11 {R : CRing} (A : Matrix R 1 1) : determinant A = A 0 0
   => inv (determinantN.=determinant {R} {1} {0}) *> simplify (pmap (_ *) (determinant_ide {R} {0}) *> ide-right)
 
+-- | Standard `ad - bc` formula.
 \lemma determinant22 {R : CRing} {A : Matrix R 2 2} : determinant A = A 0 0 * A 1 1 - A 1 0 * A 0 1
   => inv (determinantN.=determinant {R} {2} {0}) *> simplify (pmap2 (+) (pmap (_ *) $ determinant11 (minor A 0 0)) $
       pmap (\lam x => negative $ _ * x) (determinant11 (minor A 1 0)))
 
 \open determinant(minor)
 
+-- | `det(ide) = 1`.
 \lemma determinant_ide {R : CRing} {n : Nat} : determinant (MatrixRing.ide {R} {n}) = 1 \elim n
   | 0 => \case R.FinSum_char _ \with {
     | inP p => p.2 *> zro-right *> ide-right
@@ -463,6 +548,7 @@
       }
   }
 
+-- | Multiplicativity: `det (M · N) = det M · det N`.
 \lemma determinant_* {R : CRing} {n : Nat} {M N : Matrix R n n} : determinant (M * N) = determinant M * determinant N
   => alternating-unique {R}
       (isAlternating_linear-left {R} (\new LinearMap {
@@ -475,39 +561,49 @@
       (pmap determinant ide-left *> inv (pmap (* _) determinant_ide *> ide-left))
       M
 
+-- | Transpose of a matrix.
 \func transpose {R : \Type} {n m : Nat} (M : Matrix R n m) : Matrix R m n
   => mkMatrix (\lam i j => M j i)
   \where {
+    -- | Invertibility transports along transposition.
     \lemma isInv {R : CRing} {n : Nat} (A : Monoid.Inv {MatrixRing R n}) : Monoid.Inv (transpose A.val)
       => determinant-inv.2 $ transportInv Monoid.Inv (later $ determinant_transpose A.val) (determinant-inv.1 A)
   }
 
+-- | `det (transpose M) = det M`.
 \lemma determinant_transpose {R : CRing} {n : Nat} (M : Matrix R n n) : determinant (transpose M) = determinant M
   => R.FinSum_Equiv SymmetricGroup.inv-isEquiv *> pmap R.FinSum (ext \lam (e : Sym n) => pmap2 (*) sign_inverse $ CMonoid.BigProd_Perm $ transport (Perm _) (arrayExt \lam j => later $ pmap (M (e j)) (e.ret_f j)) (Perm.equiv_perm e))
 
+-- | Classical adjugate (cofactor) matrix; `adj(M)_{ij} = (-1)^{j+i} · det (minor M j i)`.
 \func adjugate {R : CRing} {n : Nat} (M : Matrix R n n) : Matrix R n n \elim n
   | 0 => M
   | suc n => mkMatrix \lam i j => Monoid.pow -1 (j + i) * determinant (minor M j i)
 
+-- | `adjugate` commutes with `transpose`.
 \lemma adjugate_transpose {R : CRing} {n : Nat} (M : Matrix R n n) : adjugate (transpose M) = transpose (adjugate M) \elim n
   | 0 => idp
   | suc n => matrixExt \lam i j => pmap2 (R.pow -1 __ * __) +-comm $ pmap determinant (determinant.minor_transpose M) *> determinant_transpose (minor M i j)
 
+-- | Cramer-style identities `adj(M) · M = det M ·c 1` and `M · adj(M) = det M ·c 1`.
 \lemma adjugate-left {R : CRing} {n : Nat} {M : Matrix R n n} : adjugate M * M = determinant M *c 1
   => matrixExt \lam i k => mcases \with {
        | yes p => rewrite p determinant_adjugate_= *> inv ide-right
        | no q => determinant_adjugate_/= q *> inv zro_*-right
      }
   \where {
+    -- | Diagonal sum of adjugate-times-matrix is `det M`.
     \lemma determinant_adjugate_= {R : CRing} {n : Nat} {M : Matrix R n n} {k : Fin n} : R.BigSum (\lam j => adjugate M k j * M j k) = determinant M \elim n
       | suc n => path (\lam i => R.BigSum (\lam (j : Fin (suc n)) => (R.*-comm {R.pow -1 (j Nat.+ k) * determinant (minor M j k)} {M j k} *> inv *-assoc) i)) *> determinantN.=determinant
 
+    -- | Auxiliary identities used to prove the Cramer relations.
     \lemma adjugate-lem {R : CRing} {n : Nat} {M : Matrix R n n} {i i' j : Fin n} (i/=i' : i /= i') (p : \Pi (k : Fin n) -> M k i = M k i') : negative (adjugate M i j) = adjugate M i' j \elim n
       | suc n => AddMonoid.negative-unique (adjugate M i j) negative-left (determinantN.alternating.minor-lem' i/=i' p)
 
+    -- | Auxiliary identities used to prove the Cramer relations.
     \lemma adjugateExt {R : CRing} {n : Nat} {M M' : Matrix R n n} {i j : Fin n} (p : \Pi {i' j' : Fin n} -> i' /= i -> j' /= j -> M i' j' = M' i' j') : adjugate M j i = adjugate M' j i \elim n
       | suc n => pmap (R.pow -1 (i Nat.+ j) * determinant __) (determinant.minorExt p)
 
+    -- | Auxiliary identities used to prove the Cramer relations.
     \lemma determinant_adjugate_/= {R : CRing} {n : Nat} {M : Matrix R n n} {i k : Fin n} (i/=k : i /= k) : R.BigSum (\lam j => adjugate M i j * M j k) = 0
       => \let | M' => mkMatrix \lam i' j' => \case decideEq i j' \with {
                       | yes _ => M i' k
@@ -518,18 +614,21 @@
          \in pmap R.BigSum (arrayExt \lam j => pmap2 (*) (adjugateExt (\lam p q => later $ rewrite (decideEq/=_reduce $ /=-sym q) idp) *> inv (adjugate-lem (/=-sym i/=k) \lam j => later $ rewrite (decideEq/=_reduce i/=k, decideEq=_reduce idp) idp)) (later $ rewrite (decideEq/=_reduce i/=k) idp) *> R.negative_*-left) *> inv R.BigSum_negative *> pmap negative r *> R.negative_zro
   }
 
+-- | `transpose (M · M') = transpose M' · transpose M`; `.product` is the non-square version.
 \lemma transpose_* {R : CRing} {n : Nat} {M M' : Matrix R n n} : transpose (M * M') = transpose M' * transpose M
   => product
   \where
     \lemma product {R : CRing} {n m k : Nat} {M : Matrix R n m} {M' : Matrix R m k} : transpose (M MatrixRing.product M') = transpose M' MatrixRing.product transpose M
       => matrixExt \lam i j => cong $ ext \lam k => *-comm
 
+-- | Cramer-style identities `adj(M) · M = det M ·c 1` and `M · adj(M) = det M ·c 1`.
 \lemma adjugate-right {R : CRing} {n : Nat} {M : Matrix R n n} : M * adjugate M = determinant M *c 1
   => pmap (M *) (adjugate_transpose (transpose M)) *> inv (transpose_* {R} {n} {adjugate (transpose M)} {transpose M}) *> pmap transpose adjugate-left *> matrixExt (\lam i j => pmap2 (*) (determinant_transpose M) $ later $ mcases {1} \with {
     | yes p => rewrite (decideEq=_reduce (inv p)) idp
     | no q => rewrite (decideEq/=_reduce (/=-sym q)) idp
   })
 
+-- | `Inv M ↔ Inv (det M)` — invertibility iff the determinant is a unit.
 \lemma determinant-inv {R : CRing} {n : Nat} {M : Matrix R n n} : Inv M <-> Inv (determinant M)
   => (\lam (c : Inv M) => Inv.lmake (determinant c.inv) $ inv determinant_* *> pmap determinant c.inv-left *> determinant_ide,
       \lam (c : Inv (determinant M)) => \new Inv {
@@ -539,21 +638,26 @@
       })
   \where \open Monoid
 
+-- | A right inverse to `A` is itself invertible (when `A * B = 1`).
 \lemma matirx-inv {R : CRing} {n : Nat} {A : Matrix R n n} {B : Matrix R n n} (p : A * B = 1) : Monoid.Inv B
   => determinant-inv.2 (Monoid.Inv.lmake (determinant A) $ inv determinant_* *> pmap determinant p *> determinant_ide)
 
+-- | `det A = 1` implies `A` is invertible.
 \lemma determinant1_Inv {R : CRing} {n : Nat} (A : Matrix R n n) (p : determinant A = 1) : Monoid.Inv A
   => determinant-inv.2 $ transportInv Monoid.Inv p Monoid.Inv.ide-isInv
 
+-- | `Inv (blockMatrix A B) ↔ Inv A × Inv B`.
 \lemma blockMatrix_Inv {R : CRing} {n m : Nat} {A : Matrix R n n} {B : Matrix R m m} : Inv (blockMatrix A B) <-> (\Sigma (Inv A) (Inv B))
   => (\lam s => (determinant-inv.2 $ Inv.cfactor-left $ transport Inv (determinant_block A B) $ determinant-inv.1 s,
                  determinant-inv.2 $ Inv.cfactor-right $ transport Inv (determinant_block A B) $ determinant-inv.1 s),
       \lam s => determinant-inv.2 $ transportInv Inv (determinant_block A B) $ Inv.product (determinant-inv.1 s.1) (determinant-inv.1 s.2))
   \where \open Monoid
 
+-- | A ring homomorphism commutes with `determinant`.
 \lemma determinant_map {R S : CRing} (f : RingHom R S) {n : Nat} (A : Matrix R n n) : f (determinant A) = determinant (matrix-map f A)
   => AddMonoidHom.func-FinSum f *> pmap AbMonoid.FinSum (ext \lam e => func-* *> pmap2 (*) (sign.sign_hom f) f.func-BigProd)
 
+-- | `det (blockMatrix A B) = det A · det B`.
 \lemma determinant_block {R : CRing} {n m : Nat} (A : Matrix R n n) (B : Matrix R m m) : determinant (blockMatrix A B) = determinant A * determinant B \elim n
   | 0 => inv (pmap (* _) (determinant00 A) *> ide-left)
   | suc n => inv (determinantN.=determinant {R} {suc (n + m)} {0} {blockMatrix A B}) *>
@@ -583,65 +687,82 @@
      \in matrixExt \lam i j => pmap (*c _) (inv ide-right) *> (rewrite (decideEq=_reduce idp) in inv (M.BigSum-unique i \lam k i/=k => later $ rewrite (decideEq/=_reduce i/=k) $ pmap (*c _) R.zro_*-right *> M.*c_zro-left) *> path (\lam i' => t i' i j))
   \where \open MatrixRing
 
+-- | Off-diagonal entries are zero.
 \type IsDiagonal {R : AddPointed} {n m : Nat} (A : Matrix R n m) : \Prop
   => \Pi {i : Fin n} {j : Fin m} -> i /= {Nat} j -> A i j = 0
   \where {
+    -- | Diagonal implies triangular (both ways) and is preserved under transposition.
     \lemma transposed {R : AddPointed} {n m : Nat} {A : Matrix R n m} (d : IsDiagonal A) : IsDiagonal (transpose A)
       => \lam i/=j => d (/=-sym i/=j)
 
+    -- | Diagonal implies triangular (both ways) and is preserved under transposition.
     \lemma =>upperTriangular {R : AddPointed} {n m : Nat} {A : Matrix R n m} (d : IsDiagonal A) : IsUpperTriangular A
       => \lam i j j<i => d \lam p => linarith
 
+    -- | Diagonal implies triangular (both ways) and is preserved under transposition.
     \lemma =>lowerTriangular {R : AddPointed} {n m : Nat} {A : Matrix R n m} (d : IsDiagonal A) : IsLowerTriangular A
       => \lam i j j<i => d \lam p => linarith
   }
 
+-- | Scalar multiples preserve diagonality.
 \lemma *c_IsDiagonal {R : Ring} {n m : Nat} {A : Matrix R n m} {a : R} (Ad : IsDiagonal A) : IsDiagonal (a *c A)
   => \lam i/=j => pmap (a *) (Ad i/=j) *> zro_*-right
 
+-- | Entries below the diagonal vanish.
 \type IsUpperTriangular {R : AddPointed} {n m : Nat} (A : Matrix R n m) : \Prop
   => \Pi (i : Fin n) (j : Fin m) -> (j : Nat) < i -> A i j = 0
 
+-- | Entries above the diagonal vanish.
 \type IsLowerTriangular {R : AddPointed} {n m : Nat} (A : Matrix R n m) : \Prop
   => \Pi (i : Fin n) (j : Fin m) -> (i : Nat) < j -> A i j = 0
 
+-- | `diagonal l` is diagonal.
 \lemma diagonal-isDiagonal {R : AddPointed} {l : Array R} : IsDiagonal (diagonal l)
   => \lam {i} {j} q => rewrite (decideEq/=_reduce \lam (p : i = j) => q p) idp
 
+-- | Determinant of a triangular/diagonal matrix is the product of diagonal entries.
 \lemma determinant_IsUpperTriangular {R : CRing} {n : Nat} {A : Matrix R n n} (d : IsUpperTriangular A) : determinant A = R.BigProd (\lam j => A j j) \elim n
   | 0 => determinant00 A
   | suc n => inv (determinantN.=determinant {R} {suc n} {0}) *> pmap2 (+)
               (pmap2 (*) ide-right $ pmap determinant (determinant.minor00 _) *> determinant_IsUpperTriangular {R} {n} {mkMatrix \lam i j => A (suc i) (suc j)} \lam i j i<j => d (suc i) (suc j) (NatOrder.suc<suc i<j))
               (R.BigSum_zro \lam j => later $ rewrite (d (suc j) zero NatOrder.zero<suc, zro_*-left) zro_*-left) *> zro-right
 
+-- | Determinant of a triangular/diagonal matrix is the product of diagonal entries.
 \lemma determinant_IsLowerTriangular {R : CRing} {n : Nat} {A : Matrix R n n} (d : IsLowerTriangular A) : determinant A = R.BigProd (\lam j => A j j)
   => inv (determinant_transpose A) *> determinant_IsUpperTriangular {_} {_} {transpose A} (\lam i j => d j i)
 
+-- | Determinant of a triangular/diagonal matrix is the product of diagonal entries.
 \lemma determinant_IsDiagonal {R : CRing} {n : Nat} {A : Matrix R n n} (d : IsDiagonal A) : determinant A = R.BigProd (\lam j => A j j)
   => determinant_IsUpperTriangular (IsDiagonal.=>upperTriangular d)
 
+-- | `det (diagonal l) = ∏ l`.
 \lemma determinant_diagonal {R : CRing} {l : Array R} : determinant (diagonal l) = R.BigProd l
   => determinant_IsDiagonal {R} {l.len} {diagonal l} diagonal-isDiagonal *> pmap R.BigProd (exts \lam j => rewrite (decideEq=_reduce idp) idp)
 
+-- | For `m < n`, any product `A · B` of an `n × m` and an `m × n` matrix has zero determinant.
 \lemma determinant-nonSquare {R : CRing} {n m : Nat} (m<n : m < n) {A : Matrix R n m} {B : Matrix R m n} : determinant (A MatrixRing.product B) = 0
   => \have r : \Pi (A : Matrix R n m) (B : Matrix R m n) -> determinant (A MatrixRing.product B) = 0
              => rewriteI (<=_exists (LinearOrder.<_<= m<n), NatSemiring.+-comm) \lam A B => determinant-nonSquare_+ \lam p => linarith (-'_<= p)
      \in r A B
   \where {
+    -- | Auxiliary forms for sizes `k + n` and for `block12Matrix 0 A`.
     \lemma determinant-nonSquare_+ {R : CRing} {n k : Nat} (k/=0 : k /= 0) {A : Matrix R (k + n) n} {B : Matrix R n (k + n)} : determinant (A MatrixRing.product B) = 0 =>
       \let | A' => block12Matrix 0 A
            | B' => block21Matrix 0 B
            | p : A' * B' = A MatrixRing.product B => block12_21_* 0 A 0 B *> cong (MatrixRing.product_zro-left 0) *> zro-left
       \in pmap determinant (inv p) *> determinant_* {_} {_} {A'} {B'} *> pmap (* _) (determinant_block12 k/=0 A) *> zro_*-left
 
+    -- | Auxiliary forms for sizes `k + n` and for `block12Matrix 0 A`.
     \lemma determinant_block12 {R : CRing} {n k : Nat} (k/=0 : k /= 0) (A : Matrix R (k + n) n) : determinant (block12Matrix 0 A) = 0 \elim k
       | 0 => absurd (k/=0 idp)
       | suc k => inv (determinantN.=determinant {_} {suc k + n} {0} {block12Matrix {R} {suc k} 0 A}) *> pmap2 (+) (*-assoc *> zro_*-left) (R.BigSum_zro \lam j => *-assoc *> zro_*-left) *> zro-left
   }
 
+-- | `A · B = ide` with `m < n` forces `0 = 1` in `R`.
 \lemma matrix-split-trivial {R : CRing} {n m : Nat} (m<n : m < n) {A : Matrix R n m} {B : Matrix R m n} (p : A MatrixRing.product B = ide) : 0 = {R} 1
   => inv (determinant-nonSquare m<n) *> pmap determinant p *> determinant_ide
 
+-- | Over a non-trivial `CRing`, `A · B = ide` forces `n ≤ m` (rank/dimension lower bound).
 \lemma matrix-split_<= {R : NonZeroCRing} {n m : Nat} {A : Matrix R n m} {B : Matrix R m n} (p : A MatrixRing.product B = ide) : n <= m
   => \case LinearOrder.dec<_<= m n \with {
     | inl m<n => absurd $ zro/=ide $ matrix-split-trivial m<n p

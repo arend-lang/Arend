@@ -1,3 +1,14 @@
+{- | Inductive lists with concatenation, indexing, splitting, predicates, sorting, and membership.
+ -
+ -   The module defines the standard `List A` data type and builds up its algebra: concatenation `++` is associative
+ -   with `nil` as identity (witnessed by a `Monoid` instance), `length` and `map` satisfy the usual functoriality
+ -   lemmas, and positional access via `!!` uses `Fin (length l)` for safe indexing. Predicate types `All`, `All2`,
+ -   `AllC`, and `InList` express universal/pairwise/consecutive properties and membership as `\Prop`. The `Sort`
+ -   submodule provides permutation `Perm` and `Sorted` predicates, two implementations (insertion sort and red-black
+ -   tree sort), and proves their equivalence on decidable orders; `count` and `group` give multiset-style operations on
+ -   `DecSet`s, with key lemmas that connect `count` to `Perm` and `group` to `Sorted` lists.
+ -}
+
 \import Algebra.Meta
 \import Algebra.Monoid
 \import Data.Bool
@@ -15,66 +26,82 @@
 \import Paths.Meta
 \import Set
 
+-- | Inductive list type with constructors `nil` and `:: : A -> List A -> List A`.
 \data List (A : \Type)
   | nil
   | \infixr 5 :: A (List A)
 
+-- | Number of elements in a list.
 \func length {A : \Type} (l : List A) : Nat \elim l
   | nil => 0
   | :: a l => suc (length l)
 
+-- | Safe indexing `List A -> Fin (length l) -> A`.
 \func \infixl 9 !! {A : \Type} (l : List A) (i : Fin (length l)) : A \elim l, i
   | :: a l, 0 => a
   | :: a l, suc i => l !! i
 
+-- | Right-recursive list concatenation.
 \func \infixr 5 ++ {A : \Type} (xs ys : List A) : List A \elim xs
   | nil => ys
   | :: a xs => a :: xs ++ ys
 
+-- | Associativity of `++`.
 \func ++-assoc {A : \Type} {xs ys zs : List A} : (xs ++ ys) ++ zs = xs ++ (ys ++ zs) \elim xs
   | nil => idp
   | :: x xs => pmap (x ::) ++-assoc
 
+-- | Right identity: `l ++ nil = l`.
 \func ++_nil {A : \Type} {l : List A} : l ++ nil = l \elim l
   | nil => idp
   | :: a l => pmap (a ::) ++_nil
 
+-- | `length (l ++ l') = length l + length l'`.
 \lemma length_++ {A : \Type} {l l' : List A} : length (l ++ l') = length l Nat.+ length l' \elim l
   | nil => idp
   | :: a l => pmap suc length_++
 
+-- | Build a list of `n` copies of an element.
 \func replicate {A : \Type} (n : Nat) (a : A) : List A \elim n
   | 0 => nil
   | suc n => a :: replicate n a
 
+-- | `length (replicate n a) = n`.
 \lemma length_replicate {A : \Type} {n : Nat} {a : A} : length (replicate n a) = n \elim n
   | 0 => idp
   | suc n => pmap suc length_replicate
 
+-- | Apply `f : A -> B` pointwise.
 \func map {A B : \Type} (f : A -> B) (l : List A) : List B \elim l
   | nil => nil
   | :: a l => f a :: map f l
 
+-- | `map` preserves length.
 \func length_map {A B : \Type} (f : A -> B) (l : List A) : length (map f l) = length l \elim l
   | nil => idp
   | :: a l => pmap suc (length_map f l)
 
+-- | `map id = id`.
 \func map_id {A : \Type} {l : List A} : map (\lam x => x) l = l \elim l
   | nil => idp
   | :: a l => pmap (_ ::) map_id
 
+-- | `map` distributes over composition.
 \func map_comp {A B C : \Type} (g : B -> C) (f : A -> B) (l : List A) : map (\lam x => g (f x)) l = map g (map f l) \elim l
   | nil => idp
   | :: a l => pmap (_ ::) (map_comp g f l)
 
+-- | Head of a list with a default for the empty case.
 \func headDef {A : \Type} (x : A) (xs : List A) : A \elim xs
   | nil => x
   | :: a _ => a
 
+-- | Drop the first element (returns `nil` on `nil`).
 \func tail {A : \Type} (l : List A) : List A \elim l
   | nil => nil
   | :: a l => l
 
+-- | `Monoid` instance on `List A` with `nil`/`++`.
 \instance ListMonoid {A : \Set} : Monoid (List A)
   | ide => nil
   | * => ++
@@ -82,6 +109,7 @@
   | ide-right => ++_nil
   | *-assoc => ++-assoc
 
+-- | Split at position `n` into a pair `(prefix, suffix)`.
 \func splitAt {A : \Type} (n : Nat) (l : List A) : \Sigma (List A) (List A) \elim n, l
   | 0, l => (nil, l)
   | suc _, nil => (nil, nil)
@@ -89,56 +117,70 @@
       \let! (l1, l2) => splitAt n l
       \in (a :: l1, l2)
   \where
+    -- | `take n l ++ drop n l = l`.
     \func appendLem {A : \Type} (n : Nat) (l : List A) : take n l ++ drop n l = l \elim n, l
       | 0, l => idp
       | suc n, nil => idp
       | suc n, :: a l => pmap (a ::) (appendLem n l)
 
+-- | First/second component of `splitAt`.
 \func take {A : \Type} (n : Nat) (l : List A) => (splitAt n l).1
 
+-- | First/second component of `splitAt`.
 \func drop {A : \Type} (n : Nat) (l : List A) => (splitAt n l).2
 
+-- | Replace a slice of length `s` starting at `i` with another list.
 \func replace {A : \Type} (l : List A) (i s : Nat) (r : List A) =>
   \let! (l1, l2) => splitAt i l
   \in l1 ++ r ++ drop s l2
 
+-- | Sublist of length `s` starting at offset `i`.
 \func slice {A : \Type} (l : List A) (i s : Nat) => take s (drop i l)
   \where
+    -- | Decomposition `take i l ++ slice l i s ++ drop s (drop i l) = l`.
     \func appendLem {A : \Type} (l : List A) (i s : Nat) : take i l ++ slice l i s ++ drop s (drop i l) = l \elim l, i, s
       | l, 0, s => splitAt.appendLem s l
       | nil, suc i, 0 => idp
       | nil, suc i, suc s => idp
       | :: a l, suc i, s => pmap (a ::) (appendLem l i s)
 
+-- | `\Prop`-valued predicate that `P` holds at every element; constructors `all-nil`, `all-cons`.
 \data All {A : \Type} (P : A -> \Prop) (l : List A) \elim l
   | nil => all-nil
   | :: x l => all-cons (P x) (All P l)
 
+-- | `All P (map f l) -> All (P ∘ f) l`.
 \lemma all-map {A B : \Type} (f : A -> B) {P : B -> \Prop} {l : List A} (a : All P (map f l)) : All (\lam a => P (f a)) l \elim l, a
   | nil, all-nil => all-nil
   | :: x l, all-cons p a => all-cons p (all-map f a)
 
+-- | Pointwise modus ponens: combine `All P l` with `All (P → Q) l`.
 \lemma all-implies {A : \Type} {P Q : A -> \Prop} {l : List A} (a : All P l) (p : All (\lam a => P a -> Q a) l) : All Q l \elim l, a, p
   | nil, all-nil, all-nil => all-nil
   | :: x l, all-cons c a, all-cons f p => all-cons (f c) (all-implies a p)
 
+-- | From `(∀ a, P a)` derive `All P l`.
 \lemma all-forall {A : \Type} {P : A -> \Prop} {l : List A} (p : \Pi (a : A) -> P a) : All P l \elim l
   | nil => all-nil
   | :: a l => all-cons (p a) (all-forall p)
 
+-- | `P` holds for every ordered pair of distinct positions.
 \data All2 {A : \Type} (P : A -> A -> \Prop) (l : List A) \elim l
   | nil => all2-nil
   | :: x l => all2-cons (All (P x) l) (All2 P l)
 
+-- | `P` holds for every consecutive pair (used for sortedness).
 \data AllC {A : \Type} (P : A -> A -> \Prop) (l : List A) \elim l
   | nil => allC-nil
   | :: x nil => allC-single
   | :: x (:: y l) => allC-cons (P x y) (AllC P (y :: l))
 
+-- | Tail of an `AllC` is still `AllC`.
 \lemma allC-tail {A : \Type} {a : A} {l : List A} {P : A -> A -> \Prop} (a : AllC P (a :: l)) : AllC P l \elim l, a
   | nil, allC-single => allC-nil
   | :: y l, allC-cons p a => a
 
+-- | Number of occurrences of `a` in a list over a `DecSet`.
 \func count {A : DecSet} (l : List A) (a : A) : Nat \elim l
   | nil => 0
   | :: x l => \case decideEq x a \with {
@@ -146,6 +188,7 @@
     | no _ => count l a
   }
   \where {
+    -- | `All (a /=) l -> count l a = 0`.
     \lemma all-diff {A : DecSet} {l : List A} {a : A} (d : All (a /=) l) : count l a = 0 \elim l, d
       | nil, all-nil => idp
       | :: x l, all-cons p d => mcases \with {
@@ -154,6 +197,7 @@
       }
   }
 
+-- | Counts are permutation-invariant.
 \lemma count_perm {A : DecSet} {l l' : List A} (p : Perm l l') (a : A) : count l a = count l' a \elim l, l', p
   | nil, nil, perm-nil => idp
   | :: x l, :: _ l', perm-:: idp p => rewrite (count_perm p) idp
@@ -165,6 +209,7 @@
   }
   | l, l', perm-trans p1 p2 => count_perm p1 a *> count_perm p2 a
 
+-- | `count` is additive over `++`.
 \lemma count_++ {A : DecSet} {l l' : List A} {a : A} : count (l ++ l') a = count l a Nat.+ count l' a \elim l
   | nil => idp
   | :: x l => mcases \with {
@@ -172,6 +217,7 @@
     | no q => count_++
   }
 
+-- | Run-length encoding into `List (\Sigma A Nat)` using decidable equality.
 \func group {A : DecSet} (l : List A) : List (\Sigma A Nat) \elim l
   | nil => nil
   | :: a l => \case group l \with {
@@ -184,6 +230,7 @@
 
 \open Sort
 
+-- | For sorted input, the keys of `group l` are sorted.
 \lemma group-sorted {A : DecSet} {P : Preorder A} {l : List A} (s : Sorted l) : Sorted (map __.1 (group l)) \elim l, s
   | nil, sorted-nil => sorted-nil
   | :: x l, sorted-cons x<=l s => mcases {1} {arg addPath} \with {
@@ -207,6 +254,7 @@
       }
   }
 
+-- | For sorted input on a `Poset`, adjacent group keys are distinct (`All2 (/=)`).
 \lemma group-diff {A : DecSet} {P : Poset A} {l : List A} (s : Sorted l) : All2 (__.1 /= __.1) (group l) \elim l, s
   | nil, sorted-nil => all2-nil
   | :: x l, sorted-cons x<=l s => mcases {1} {arg addPath} \with {
@@ -227,6 +275,7 @@
       | :: a l, sorted-cons a<=l s => all-cons q (diff-lem s _ _ (p <=∘ a<=l) (\lam t => q (<=-antisymmetric p (transportInv (a <=) t a<=l))))
   }
 
+-- | For sorted input, each group's tally equals `count l a`.
 \lemma group_count-lem {A : DecSet} {P : Poset A} {l : List A} (s : Sorted l) : All (\lam p => p.2 = count l p.1) (group l) \elim l, s
   | nil, sorted-nil => all-nil
   | :: a l, sorted-cons a<=l s => mcases {2} {arg addPath} \with {
@@ -256,26 +305,31 @@
   }
 
 \module Sort \where {
+  -- | Inductive permutation relation with constructors `perm-nil`, `perm-::`, `perm-swap`, `perm-trans`.
   \data Perm {A : \Type} (xs ys : List A) \elim xs, ys
     | nil, nil => perm-nil
     | :: x xs, :: y ys => perm-:: (x = y) (Perm xs ys)
     | :: x (:: x' xs), :: y (:: y' ys) => perm-swap (x = y') (x' = y) (xs = ys)
     | xs, ys => perm-trans {zs : List A} (Perm xs zs) (Perm zs ys)
     \where {
+      -- | Reflexivity and symmetry.
       \func perm-refl {A : \Type} {xs : List A} : Perm xs xs \elim xs
         | nil => perm-nil
         | :: a l => perm-:: idp perm-refl
 
+      -- | Reflexivity and symmetry.
       \func perm-sym {A : \Type} {xs ys : List A} (p : Perm xs ys) : Perm ys xs \elim xs, ys, p
         | nil, nil, perm-nil => perm-nil
         | :: x xs, :: y ys, perm-:: p p1 => perm-:: (inv p) (perm-sym p1)
         | :: x (:: x' xs), :: y (:: y' ys), perm-swap p p1 p2 => perm-swap (inv p1) (inv p) (inv p2)
         | xs, ys, perm-trans p1 p2 => perm-trans (perm-sym p2) (perm-sym p1)
 
+      -- | Move an element across a prefix: `Perm (a :: xs ++ ys) (xs ++ a :: ys)`.
       \func perm-head {A : \Type} {a : A} {xs ys : List A} : Perm (a :: xs ++ ys) (xs ++ a :: ys) \elim xs
         | nil => perm-refl
         | :: a1 xs => perm-trans (perm-swap idp idp idp) (perm-:: idp perm-head)
 
+      -- | Permutations preserve length.
       \lemma perm_length {A : \Type} {xs ys : List A} (p : Perm xs ys) : length xs = length ys \elim xs, ys, p
         | nil, nil, perm-nil => idp
         | x :: xs, y :: ys, perm-:: _ q => pmap suc (perm_length q)
@@ -283,10 +337,12 @@
         | xs, ys, perm-trans p1 p2 => perm_length p1 *> perm_length p2
     }
 
+  -- | Inductive sortedness on a `Preorder`; `sorted-cons` requires the head dominates the next head.
   \data Sorted {A : Preorder} (xs : List A) \elim xs
     | nil => sorted-nil
     | :: x xs => sorted-cons (x A.<= headDef x xs) (Sorted xs)
     \where {
+      -- | In a sorted list, the head is below any element appearing later (with `aux` helper for prefixes).
       \lemma allSorted {A : Preorder} {a1 a2 : A} (l1 l2 : List A) (s : Sorted (a1 :: l1 ++ a2 :: l2)) : a1 A.<= a2
         => aux a1 (a1 :: l1) l2 s
         \where
@@ -294,6 +350,7 @@
             | nil, sorted-cons _ s => <=-refl
             | :: a1 l1, sorted-cons a1<=h s => <=-transitive a1<=h (aux a1 l1 l2 s)
 
+      -- | Sortedness is preserved by taking prefixes/suffixes.
       \lemma headSorted {A : Preorder} {l1 l2 : List A} (s : Sorted (l1 ++ l2)) : Sorted l1 \elim l1, s
         | nil, _ => sorted-nil
         | :: a l1, sorted-cons e s => sorted-cons (\case \elim l1, \elim e \with {
@@ -301,6 +358,7 @@
           | :: a1 l1, e => e
         }) (headSorted s)
 
+      -- | Sortedness is preserved by taking prefixes/suffixes.
       \lemma tailSorted {A : Preorder} (l1 l2 : List A) (s : Sorted (l1 ++ l2)) : Sorted l2 \elim l1, s
         | nil, s => s
         | :: a l1, sorted-cons _ s => tailSorted l1 l2 s
@@ -309,6 +367,7 @@
   \open LinearOrder
 
   \module Insertion \where {
+    -- | Sort by inserting all elements into a red-black tree, then traversing.
     \func sort {A : Dec} (xs : List A) : List A
       | nil => nil
       | :: a xs => insert a (sort xs)
@@ -323,10 +382,12 @@
 
     \open sort
 
+    -- | Output of `sort` is `Sorted`.
     \lemma sort-sorted {A : Dec} (xs : List A) : Sorted (sort xs) \elim xs
       | nil => sorted-nil
       | :: a xs => insert-sorted a (sort-sorted xs)
       \where {
+        -- | Output of `sort` is `Sorted`.
         \lemma insert-sorted {A : Dec} (a : A) {xs : List A} (s : Sorted xs) : Sorted (sort.insert a xs) \elim xs, s
           | nil, _ => sorted-cons <=-refl sorted-nil
           | :: a1 xs, sorted-cons p s1 \as s2 => mcases \with {
@@ -341,10 +402,12 @@
           }
       }
 
+    -- | `xs` is a `Perm` of `sort xs`.
     \func sort-perm {A : Dec} (xs : List A) : Perm xs (sort xs) \elim xs
       | nil => perm-nil
       | :: a l => perm-trans (perm-:: idp (sort-perm l)) (insert-perm a (sort l))
       \where {
+        -- | `xs` is a `Perm` of `sort xs`.
         \func insert-perm {A : Dec} (a : A) (xs : List A) : Perm (a :: xs) (insert a xs) \elim xs
           | nil => perm-:: idp perm-nil
           | :: b xs => mcases \with {
@@ -352,6 +415,7 @@
             | inr a<=b => Perm.perm-refl
           }
 
+        -- | `xs` is a `Perm` of `sort xs`.
         \lemma insert-comm {A : Dec} (a a' : A) (l : List A) : insert a (insert a' l) = insert a' (insert a l)
           => \case trichotomy a a' \with {
             | less a<a' => aux a<a' l
@@ -364,12 +428,14 @@
           }
       }
 
+    -- | `Perm xs ys -> sort xs = sort ys`.
     \lemma perm_sort {A : Dec} {xs ys : List A} (p : Perm xs ys) : sort xs = sort ys \elim xs, ys, p
       | nil, nil, perm-nil => idp
       | x :: xs, y :: ys, perm-:: p q => pmap2 insert p (perm_sort q)
       | x :: (x' :: xs), _ :: (_ :: _), perm-swap idp idp idp => sort-perm.insert-comm x x' (sort xs)
       | xs, ys, perm-trans p1 p2 => perm_sort p1 *> perm_sort p2
 
+    -- | `sort` is the identity on sorted lists.
     \lemma sorted_sort {A : Dec} {xs : List A} (s : Sorted xs) : sort xs = xs \elim xs, s
       | nil, sorted-nil => idp
       | x :: xs, sorted-cons p s => pmap (insert x) (sorted_sort s) *> \case \elim xs, \elim p \with {
@@ -384,10 +450,13 @@
   \module RedBlack \where {
     \func sort {A : Dec} (l : List A) => rbTreeToList (aux l rbLeaf) nil
       \where {
+        -- | Internal red-black tree representation with `red`/`black` and `rbLeaf`/`rbBranch`.
         \data Color | red | black
 
+        -- | Internal red-black tree representation with `red`/`black` and `rbLeaf`/`rbBranch`.
         \data RBTree (A : \Type) | rbLeaf | rbBranch Color (RBTree A) A (RBTree A)
 
+        -- | Accumulator-based and direct in-order traversals.
         \func rbTreeToList {A : \Type} (t : RBTree A) (r : List A) : List A \elim t
           | rbLeaf => r
           | rbBranch _ t1 a t2 => rbTreeToList t1 (a :: rbTreeToList t2 r)
@@ -396,10 +465,12 @@
           | nil => r
           | :: a l => aux l (repaint (insert a r))
 
+        -- | The standard insertion + rebalancing combinators.
         \func repaint {A : \Type} (t : RBTree A) : RBTree A
           | rbBranch red l a r => rbBranch black l a r
           | t => t
 
+        -- | The standard insertion + rebalancing combinators.
         \func insert {A : Dec} (a : A) (t : RBTree A) : RBTree A \elim t
           | rbLeaf => rbBranch red rbLeaf a rbLeaf
           | rbBranch c l1 a1 l2 => \case dec<_<= a1 a \with {
@@ -407,11 +478,13 @@
             | inr a<=a1 => balanceLeft c (insert a l1) a1 l2
           }
 
+        -- | The standard insertion + rebalancing combinators.
         \func balanceLeft {A : \Type} (c : Color) (\strict l : RBTree A) (v : A) (r : RBTree A) : RBTree A \elim c, l
           | black, rbBranch red (rbBranch red a x b) y c => rbBranch red (rbBranch black a x b) y (rbBranch black c v r)
           | black, rbBranch red a x (rbBranch red b y c) => rbBranch red (rbBranch black a x b) y (rbBranch black c v r)
           | c, a => rbBranch c a v r
 
+        -- | The standard insertion + rebalancing combinators.
         \func balanceRight {A : \Type} (c : Color) (l : RBTree A) (v : A) (\strict r : RBTree A) : RBTree A \elim c, r
           | black, rbBranch red (rbBranch red b y c) z d => rbBranch red (rbBranch black l v b) y (rbBranch black c z d)
           | black, rbBranch red b y (rbBranch red c z d) => rbBranch red (rbBranch black l v b) y (rbBranch black c z d)
@@ -420,6 +493,7 @@
 
     \open sort
 
+    -- | Accumulator-based and direct in-order traversals.
     \func toList {A : \Type} (t : RBTree A) : List A \elim t
       | rbLeaf => nil
       | rbBranch _ t1 a t2 => toList t1 ++ a :: toList t2
@@ -432,6 +506,10 @@
               | rbBranch c t1 a t2 => aux t1 (a :: rbTreeToList t2 l) *> pmap (toList t1 ++ a :: __) (aux t2 l) *> inv ++-assoc
       }
 
+      {- | Red-black tree sort agrees with insertion sort (with helper lemmas `toList_repaint`,
+       -   `toList_balance{Left,Right}`, `toList_insert`, `makeTree_insert`, `aux=makeTree` linking the tree
+       -   representation to the list-level `Insertion.sort.insert`).
+       -}
       \lemma sort=insert {A : Dec} (l : List A) : sort l = Insertion.sort l
         => toList.=rbTreeToList _ *> aux=makeTree l nil *> pmap (\lam s => toList (makeTree s)) ++_nil *> toList_mkTree l
         \where {
@@ -496,6 +574,7 @@
   }
 }
 
+-- | Boolean membership on a `DecSet`.
 \func contains {A : DecSet} (l : List A) (a : A) : Bool \elim l
   | nil => false
   | b :: l => \case decideEq b a \with {
@@ -503,38 +582,47 @@
     | no _ => contains l a
   }
 
+-- | Concatenation with duplicate suppression by `contains`.
 \func union {A : DecSet} (l l' : List A) : List A \elim l
   | nil => l'
   | a :: l => if (contains l' a) (union l l') (a :: union l l')
 
+-- | Propositional membership; constructors `here`, `there`.
 \truncated \data InList {A : \Type} (a : A) (l : List A) : \Prop \elim l
   | a' :: l => { here (a = a') | there (InList a l) }
   \where {
+    -- | Setwise equivalence of lists `\Pi a, InList a l <-> InList a l'`.
     \func \infix 4 ~ {A : \Type} (l l' : List A) => \Pi (a : A) -> InList a l <-> InList a l'
 
+    -- | `~` is preserved by consing the same head.
     \lemma ~_:: {A : \Type} {a : A} {l l' : List A} (p : l ~ l') : a :: l ~ a :: l'
       => \lam b => (InList_:: (p b).1, InList_:: (p b).2)
       \where
+        -- | `~` is preserved by consing the same head.
         \lemma InList_:: {A : \Type} {a b : A} {l l' : List A} (p : InList b l -> InList b l') (c : InList b (a :: l)) : InList b (a :: l') \elim c
           | here q => here q
           | there c => there (p c)
   }
 
+-- | Membership distributes over `++`.
 \lemma InList_++ {A : \Type} {a : A} {l l' : List A} (p : InList a (l ++ l')) : InList a l || InList a l' \elim l, p
   | nil, p => byRight p
   | a' :: l, here p => byLeft (here p)
   | a' :: l, there p => ||.map there id (InList_++ p)
 
+-- | Membership distributes over `++`.
 \lemma InList_++-left {A : \Type} {a : A} {l l' : List A} (p : InList a l) : InList a (l ++ l') \elim l, p
   | a' :: l, here p => here p
   | a' :: l, there p => there (InList_++-left p)
 
+-- | Membership distributes over `++`.
 \lemma InList_++-right {A : \Type} {a : A} {l l' : List A} (p : InList a l') : InList a (l ++ l') \elim l
   | nil => p
   | a' :: l => there (InList_++-right p)
 
 \open InList
 
+-- | `contains l a = true` iff `InList a l`.
 \lemma contains_InList {A : DecSet} {a : A} {l : List A} : (contains l a = true) <-> InList a l \elim l
   | nil => ((\case __), \case __)
   | a' :: l => (\lam p => cases (decideEq a' a, p) \with {
@@ -548,6 +636,7 @@
     }
   })
 
+-- | `union l l'` is set-equivalent to `l ++ l'`.
 \lemma union~++ {A : DecSet} {l l' : List A} : union l l' ~ l ++ l' \elim l
   | nil => \lam a => (id,id)
   | a :: l => cases (contains l' a arg addPath) \with {

@@ -1,3 +1,17 @@
+{- | Limits, colimits, and finite-limit structures (products, equalizers, pullbacks, terminal objects) for
+ -   precategories, plus their universal mapping properties.
+ -
+ -   This module formalizes limits via the `Cone`/`Limit` pattern: a cone over a diagram `G : Functor J D` is an apex
+ -   with compatible projection maps, and a limit is a cone such that pulling back along any morphism into the apex is
+ -   an equivalence with the cone space. Concrete shapes (products, equalizers, pullbacks, terminals) are presented both
+ -   as standalone universal records and as instances of `Limit` over specific shape categories, with mutual conversions
+ -   (`fromLimit`/`toLimit`) so users can mix styles. Diagrams over arbitrary graphs are handled via
+ -   `Diagram`/`DiagramCone`, which freely generates a small category from a graph. Completeness is layered:
+ -   `PrecatWithPullbacks` ⊂ `CartesianPrecat` ⊂ `FinCompletePrecat` ⊂ `CompletePrecat` ⊂ `CompleteCat`, with
+ -   `Colimit`/`Cocomplete*` defined dually via `op`. The classical reduction "products + equalizers ⇒ all limits"
+ -   appears as `limits<=pr+eq`.
+ -}
+
 \import Category
 \import Category.Adjoint
 \import Category.Functor
@@ -14,20 +28,26 @@
 \import Paths.Meta
 \import Set (in0)
 
+{- | A cone over `G : Functor J D` with apex `apex : D`: maps `coneMap j : Hom apex (G j)` satisfying naturality
+ -   `G.Func h ∘ coneMap j = coneMap j'`.
+ -}
 \class Cone {J : Precat} {D : Precat} (G : Functor J D) (\classifying apex : D)
   | coneMap (j : J) : Hom apex (G j)
   | coneCoh {j j' : J} (h : Hom j j') : G.Func h ∘ coneMap j = coneMap j'
   \where {
+    -- | Push a cone forward along a functor `F : C -> D`, yielding a cone over `Comp F G`.
     \func map {C D : Precat} (F : Functor C D) {J : Precat} {G : Functor J C} (c : Cone G) : Cone (Comp F G) \cowith
       | apex => F c.apex
       | coneMap j => Func (c.coneMap j)
       | coneCoh h => inv Func-o *> pmap Func (c.coneCoh h)
 
+    -- | Reindex a cone along a functor `F : J -> J'`, yielding a cone over `Comp c.G F`.
     \func premap {J J' : Precat} (F : Functor J J') (c : Cone {J'} {}) : Cone (Comp c.G F) \cowith
       | apex => c.apex
       | coneMap j => c.coneMap (F j)
       | coneCoh h => c.coneCoh (F.Func h)
 
+    -- | For a fully faithful `F`, the map `c ↦ map F c` is an equivalence between cones in `C` and cones in `D`.
     \func mapEquiv {C D : Precat} (F : FullyFaithfulFunctor C D) {J : Precat} {G : Functor J C} (X : C) : QEquiv {Cone G X} {Cone (Comp F G) (F X)} (\lam c => map F c) \cowith
       | ret (c : Cone) => \new Cone {
         | coneMap j => F.inverse (c.coneMap j)
@@ -41,6 +61,7 @@
       | f_sec c => exts (\lam j => F.inverse-right)
   }
 
+-- | Precompose a cone with `f : Hom z apex` to get a cone with apex `z`.
 \func conePullback {J : Precat} {D : Precat} {F : Functor J D} (C : Cone F) (z : D) (f : Hom z C.apex) : Cone F z \cowith
   | coneMap j => coneMap j ∘ f
   | coneCoh h => inv o-assoc *> pmap (∘ f) (coneCoh h)
@@ -48,6 +69,9 @@
 \func IsLimitCone {J D : Precat} {F : Functor J D} (C : Cone F) : \Prop
   => \Pi (z : D) -> IsEquiv (conePullback C z)
 
+{- | Extends `Cone`. A limit cone: `conePullback` is an equivalence at every `z`. Provides `limMap`, `limBeta`,
+ -   `limUnique` as defaults derived from `isLimit`, plus `limUniqueBeta`.
+ -}
 \class Limit \extends Cone {
   | isLimit : IsLimitCone \this
   | limMap {z : D} (c : Cone G z) : Hom z apex
@@ -71,20 +95,24 @@
   \lemma limUniqueBeta {z : D} {c : Cone G z} {g : Hom z apex} (p : \Pi (j : J) -> c.coneMap j = coneMap j ∘ g) : limMap c = g
     => limUnique (\lam j => limBeta c j *> p j)
 } \where {
+  -- | Being a limit (with fixed cone data) is a proposition.
   \use \level levelProp {J : Precat} {D : Precat} (G : Functor J D) (apex : D)
                         (cm : \Pi (j : J) -> Hom apex (G j)) (L L' : Limit G apex cm) : L = L' =>
     exts (\lam c => L.limUnique (\lam j => L.limBeta c j *> inv (L'.limBeta c j)))
 
+  -- | A cone whose comparison map into a known limit is an isomorphism is itself a limit.
   \lemma iso_lim {J : Precat} {D : Precat} {G : Functor J D} (c : Cone G) (L : Limit G) (e : Iso (L.limMap c)) : Limit { | Cone => c } \cowith
     | limMap c' => e.hinv ∘ limMap c'
     | limBeta c' j => pmap (∘ _) (inv (L.limBeta c j)) *> o-assoc *> pmap (_ ∘) (inv o-assoc *> pmap (∘ _) e.f_hinv *> id-left) *> L.limBeta c' j
     | limUnique {z} {f} {g} p => e.isMono $ L.limUnique (\lam j => inv o-assoc *> pmap (∘ f) (L.limBeta c j) *> p j *> pmap (∘ g) (inv (L.limBeta c j)) *> o-assoc)
 
+  -- | Any two limits of the same diagram are canonically isomorphic.
   \lemma lim_iso {J : Precat} {D : Precat} {G : Functor J D} (L L' : Limit G) : Iso (L.limMap L') \cowith
     | hinv => L'.limMap L
     | hinv_f => limUnique \lam j => inv o-assoc *> pmap (∘ _) (L'.limBeta L j) *> L.limBeta L' j *> inv id-right
     | f_hinv => limUnique \lam j => inv o-assoc *> pmap (∘ _) (L.limBeta L' j) *> L'.limBeta L j *> inv id-right
 
+  -- | Map between limits induced by a functor `H : L.J -> L'.J` and a natural transformation `Comp L'.G H ⇒ L.G`.
   \func transFuncMap {D : Precat} (L L' : Limit { | D => D }) (H : Functor L.J L'.J) (a : NatTrans (Comp L'.G H) L.G) : Hom L' L
     => limMap cone
   \where {
@@ -95,8 +123,10 @@
   }
 }
 
+-- | Macro defining colimits as limits in the opposite category.
 \meta Colimit G => Limit (Functor.op {G})
 
+-- | A graph `G : Graph` mapped to `D` with edge images; carries a derived `functor : Functor G.FreeCat D`.
 \class Diagram (G : Graph) (D : Precat) (F : G -> D) (Func : \Pi {x y : G} -> G.E x y -> Hom (F x) (F y)) {
   \protected \func functor : Functor G.FreeCat D \cowith
     | F => F
@@ -111,6 +141,9 @@
     }
 }
 
+{- | Extends `Diagram` and `Cone`. A cone whose coherence is checked only on graph edges (`diagramCoh`); full functorial
+ -   coherence is reconstructed via `coneCoh-lem`.
+ -}
 \class DiagramCone \extends Diagram, Cone
   | J => G.FreeCat
   | Cone.D => Diagram.D
@@ -122,12 +155,14 @@
       | Graph.empty idp => id-left
       | Graph.cons e h => o-assoc *> pmap (_ ∘) (p e) *> coneCoh-lem apex coneMap p h
 
+    -- | Diagram-cone version of `conePullback`.
     \func pullback {G : Graph} {D : Diagram G} {C : DiagramCone { | Diagram => D }} (z : D.D) (f : Hom z C.apex) : DiagramCone \cowith
       | Diagram => D
       | apex => z
       | coneMap j => coneMap j ∘ f
       | diagramCoh e => inv o-assoc *> pmap (∘ f) (diagramCoh e)
 
+    -- | Equivalence between `DiagramCone`s and `Cone`s over the freely generated functor.
     \func equiv {D : Diagram} (Z : D.D) : QEquiv {DiagramCone { | Diagram => D | apex => Z }} {Cone D.functor Z} (\lam d => d) \cowith
       | ret c => \new DiagramCone {
         | coneMap => c.coneMap
@@ -137,28 +172,34 @@
       | f_sec c => idp
   }
 
+-- | Extends `DiagramCone` and `Limit`; specifying limit-ness on the graph-cone formulation suffices.
 \class LimitDiagram \extends DiagramCone, Limit
   | isLimitDiagram (Z : D) : IsEquiv (DiagramCone.pullback Z)
   | isLimit Z => IsEquiv.trans (isLimitDiagram Z) $ inP (DiagramCone.equiv Z)
 
+-- | A `J`-indexed product with projections `proj`, tupling `tupleMap`, `tupleBeta`, and uniqueness `tupleEq`.
 \class Product {J : \Type} {D : Precat} (G : J -> D) (\classifying apex : D) {
   | proj (j : J) : Hom apex (G j)
   | tupleMap {Z : D} (f : \Pi (j : J) -> Hom Z (G j)) : Hom Z apex
   | tupleBeta {Z : D} {f : \Pi (j : J) -> Hom Z (G j)} {j : J} : proj j ∘ tupleMap f = f j
   | tupleEq {Z : D} {h1 h2 : Hom Z apex} : (\Pi (j : J) -> proj j ∘ h1 = proj j ∘ h2) -> h1 = h2
 
+  -- | Hom-set bijection: `Hom Z apex ≃ ∏ j, Hom Z (G j)`.
   \lemma isProduct (Z : D) : IsEquiv (\lam (h : Hom Z apex) => proj __ ∘ h) => inP \new QEquiv {
     | ret => tupleMap
     | ret_f h => tupleEq (\lam j => tupleBeta)
     | f_sec f => ext (\lam j => tupleBeta)
   }
 
+  -- | `tupleMap f ∘ h = tupleMap (λ j, f j ∘ h)`.
   \lemma tupleMapComp {W Z : D} (f : \Pi (j : J) -> Hom Z (G j)) (h : Hom W Z) : tupleMap f ∘ h = tupleMap (f __ ∘ h)
     => tupleEq \lam j => inv o-assoc *> pmap (∘ h) tupleBeta *> inv tupleBeta
 
+  -- | η-rule: `tupleMap (proj j ∘ f) = f`.
   \lemma tupleEta {Z : D} {f : Hom Z apex} : tupleMap (\lam j => proj j ∘ f) = f
     => tupleEq \lam j => tupleBeta
 
+  -- | A product is a limit over `DiscretePrecat J`.
   \protected \func toLimit : Limit {DiscretePrecat J} {D} \cowith
     | G => functor G
     | apex => apex
@@ -174,12 +215,14 @@
       | f_sec c => idp
     }
 } \where {
+  -- | Builds the discrete functor `DiscretePrecat J -> D` from a family `J -> D`.
   \func functor {J : \Type} {D : Precat} (G : J -> D) : Functor (DiscretePrecat J) D \cowith
     | F => G
     | Func => DiscretePrecat.map G
     | Func-id => idp
     | Func-o {x} {y} {z} {in0 idp} {in0 idp} => inv id-left
 
+  -- | Coercion from limit over a discrete category back to a `Product`.
   \use \coerce fromLimit {J : \Type} {D : Precat} (L : Limit {DiscretePrecat J} {D}) : Product L.G L.apex L.coneMap \cowith
     | tupleMap c => L.limMap (cone c)
     | tupleBeta => L.limBeta _ _
@@ -193,18 +236,25 @@
     }
 }
 
+{- | Apex with `eql : Hom apex X` satisfying `f ∘ eql = g ∘ eql`, classified by an equivalence
+ -   `Hom Z apex ≃ Σ (h : Hom Z X) (f ∘ h = g ∘ h)`.
+ -}
 \class Equalizer {D : Precat} {X Y : D} (f g : Hom X Y) (\classifying apex : D) (eql : Hom apex X) (equal : f ∘ eql = g ∘ eql) {
   | isEqualizer (Z : D) : IsEquiv {Hom Z apex} {\Sigma (h : Hom Z X) (f ∘ h = g ∘ h)} (\lam h => (eql ∘ h, inv o-assoc *> pmap (∘ h) equal *> o-assoc))
 
+  -- | Universal map, computation rule, and uniqueness (mono property of `eql`).
   \func eqMap {Z : D} (h : Hom Z X) (p : f ∘ h = g ∘ h) : Hom Z apex
     => IsEquiv.ret (isEqualizer Z) (h,p)
 
+  -- | Universal map, computation rule, and uniqueness (mono property of `eql`).
   \lemma eqBeta {Z : D} {h : Hom Z X} {p : f ∘ h = g ∘ h} : eql ∘ eqMap h p = h
     => pmap __.1 (IsEquiv.f_ret (isEqualizer Z))
 
+  -- | Universal map, computation rule, and uniqueness (mono property of `eql`).
   \lemma eqMono {Z : D} {h1 h2 : Hom Z apex} (p : eql ∘ h1 = eql ∘ h2) : h1 = h2
     => inv (IsEquiv.ret_f (isEqualizer Z)) *> pmap (IsEquiv.ret _) (ext p) *> IsEquiv.ret_f (isEqualizer Z)
 
+  -- | Equalizer as a limit over the parallel-arrows shape.
   \protected \func toLimit : Limit {Shape} {D} \cowith
     | G => functor f g
     | apex => apex
@@ -244,6 +294,7 @@
         | true => inv o-assoc
       }) equiv
 } \where {
+  -- | Two-object shape category `{false, true}` with two parallel arrows, used to encode equalizer diagrams.
   \data Arrows (x y : Bool) \with
     | false, true => { arrow1 | arrow2 }
     | false, false => id_false
@@ -255,6 +306,7 @@
     | false, false, id_false => id
     | true, true, id_true => id
 
+  -- | Two-object shape category `{false, true}` with two parallel arrows, used to encode equalizer diagrams.
   \func Shape : Precat Bool \cowith
     | Hom => Arrows
     | id {x : Bool} : Arrows x x \elim x {
@@ -272,6 +324,7 @@
     | id-right {x} {y} {f} => cases (x,y,f) idp
     | o-assoc {x} {y} {z} {w} {h} {g} {f} => cases (x,y,z,w,h,g,f) idp
 
+  -- | Two-object shape category `{false, true}` with two parallel arrows, used to encode equalizer diagrams.
   \func functor {D : Precat} {x y : D} (f g : Hom x y) : Functor Shape D \cowith
     | F => if __ y x
     | Func => map f g
@@ -281,6 +334,7 @@
       | false, false, true, arrow2, id_false => inv id-right
     }
 
+  -- | Coercion from a limit over `functor f g` to an `Equalizer`.
   \use \coerce fromLimit {D : Precat} {x y : D} {f g : Hom x y} (L : Limit (functor f g)) : Equalizer f g
     => \have cone {z : D} (h : Hom z x) (p : f ∘ h = g ∘ h) => \new Cone (functor f g) z {
          | coneMap => \case \elim __ \with {
@@ -307,15 +361,18 @@
          }
     }
 
+  -- | Canonical iso between any two equalizers, compatible with `eql`.
   \func unique {D : Precat} {x y : D} {f g : Hom x y} (E E' : Equalizer f g) : Iso {D} {E} {E'} \cowith
     | f => E'.eqMap eql equal
     | hinv => E.eqMap eql equal
     | hinv_f => E.eqMono $ inv o-assoc *> pmap (∘ _) E.eqBeta *> E'.eqBeta *> inv id-right
     | f_hinv => E'.eqMono $ inv o-assoc *> pmap (∘ _) E'.eqBeta *> E.eqBeta *> inv id-right
 
+  -- | Canonical iso between any two equalizers, compatible with `eql`.
   \lemma unique-map {D : Precat} {x y : D} {f g : Hom x y} (E E' : Equalizer f g) : E'.eql ∘ Iso.f {unique E E'} = E.eql
     => E'.eqBeta
 
+  -- | A mono with the universal "fills any factorization" property is an equalizer.
   \lemma mono=>equalizer {D : Precat} {x y e : D} {f g : Hom x y} {eql : Hom e x} (m : Mono eql) (equal : f ∘ eql = g ∘ eql)
                          (p : \Pi {z : D} (h : Hom z x) -> f ∘ h = g ∘ h -> ∃ (k : Hom z e) (eql ∘ k = h))
     : Equalizer f g e eql equal \cowith
@@ -323,6 +380,7 @@
       (\lam q => m.isMono $ pmap __.1 q)
       (\lam t => TruncP.map (p t.1 t.2) (\lam q => (q.1, ext q.2)))
 
+  -- | `id X` is an equalizer of `f, f`.
   \func id-equalizer {D : Precat} {X Y : D} {f : Hom X Y} : Equalizer f f X id \cowith
     | equal => idp
     | isEqualizer _ => inP \new QEquiv {
@@ -331,6 +389,7 @@
       | f_sec _ => exts id-left
     }
 
+  -- | Any equalizer of `f` with itself is iso to `X` via `eql`.
   \func equalizer-iso {D : Precat} {X Y : D} {f : Hom X Y} (eq : Equalizer f f) : Iso {D} {eq} {X} eq.eql
   \cowith
     | hinv => unique id-equalizer eq
@@ -338,6 +397,7 @@
     | f_hinv => unique-map id-equalizer eq
 }
 
+-- | Square `f ∘ pbProj1 = g ∘ pbProj2` with universal `pbMap`, `pbBeta1`, `pbBeta2`, `pbEta`.
 \class Pullback {D : Precat} {x y z : D} (f : Hom x z) (g : Hom y z) (\classifying apex : D) {
   | pbProj1 : Hom apex x
   | pbProj2 : Hom apex y
@@ -347,15 +407,18 @@
   | pbBeta2 {w : D} {p1 : Hom w x} {p2 : Hom w y} {c : f ∘ p1 = g ∘ p2} : pbProj2 ∘ pbMap p1 p2 c = p2
   | pbEta {w : D} {h1 h2 : Hom w apex} : pbProj1 ∘ h1 = pbProj1 ∘ h2 -> pbProj2 ∘ h1 = pbProj2 ∘ h2 -> h1 = h2
 
+  -- | Compatibility of `pbMap` with precomposition.
   \lemma pbMap-comp {a b : D} {p1 : Hom b x} {p2 : Hom b y} {c : f ∘ p1 = g ∘ p2} {h : Hom a b} : pbMap p1 p2 c ∘ h = pbMap (p1 ∘ h) (p2 ∘ h) (inv o-assoc *> pmap (∘ h) c *> o-assoc) =>
     pbEta (inv o-assoc *> rewrite pbBeta1 idp *> inv pbBeta1) (inv o-assoc *> rewrite pbBeta2 idp *> inv pbBeta2)
 
+  -- | Swap the two legs of a pullback.
   \func flip : Pullback g f apex pbProj2 pbProj1 (inv pbCoh) \cowith
     | pbMap p1 p2 c => pbMap p2 p1 (inv c)
     | pbBeta1 => pbBeta2
     | pbBeta2 => pbBeta1
     | pbEta q1 q2 => pbEta q2 q1
 
+  -- | Pullback as a `LimitDiagram` over the cospan shape.
   \protected \func toLimit : LimitDiagram \cowith
     | Diagram => diagram f g
     | apex => apex
@@ -378,6 +441,7 @@
       }
     }
 } \where {
+  -- | Cospan graph (3 vertices, two edges into the apex) and its diagram in `D`.
   \instance Shape : Graph.{0,0}
     | V => Fin 3
     | E => \case __, __ \with {
@@ -386,6 +450,7 @@
       | _, _ => Empty
     }
 
+  -- | Cospan graph (3 vertices, two edges into the apex) and its diagram in `D`.
   \func diagram {D : Precat} {x y z : D} (f : Hom x z) (g : Hom y z) : Diagram Shape D \cowith
     | F => \case __ \with {
       | 0 => x
@@ -397,6 +462,7 @@
       | 1, 2, _ => g
     }
 
+  -- | Coercion: limit over a cospan gives a `Pullback`.
   \use \coerce fromLimit {D : Precat} {x y z : D} {f : Hom x z} {g : Hom y z} (L : Limit (diagram f g).functor) : Pullback f g L.apex
     => \let | d => (DiagramCone.equiv {diagram f g} L.apex).ret L
             | d' {w} p1 p2 c => \new DiagramCone {
@@ -426,6 +492,7 @@
          }) *> IsEquiv.ret_f (L.isLimit w)
       }
 
+  -- | Transfer a pullback structure along an iso into the apex.
   \func fromIso (P : Pullback {}) (e : Iso {P.D} { | cod => P }) : Pullback P.f P.g e.dom \cowith
     | pbProj1 => pbProj1 ∘ e
     | pbProj2 => pbProj2 ∘ e
@@ -435,6 +502,7 @@
     | pbBeta2 => o-assoc *> pmap (_ ∘) (inv o-assoc *> pmap (∘ _) e.f_hinv *> id-left) *> pbBeta2
     | pbEta s1 s2 => e.isMono $ pbEta (inv o-assoc *> s1 *> o-assoc) (inv o-assoc *> s2 *> o-assoc)
 
+  -- | Canonical iso between any two pullbacks of the same cospan.
   \func unique {D : Precat} {x y z : D} (f : Hom x z) (g : Hom y z) (P P' : Pullback f g) : Iso {D} {P} {P'}
   \cowith
     | f => p-map P P'
@@ -442,6 +510,7 @@
     | hinv_f => hinv' P P'
     | f_hinv => hinv' P' P
     \where {
+      -- | Canonical iso between any two pullbacks of the same cospan.
       \func p-map{D : Precat} {x y z : D} {f : Hom x z} {g : Hom y z} (P P' : Pullback f g) : Hom P P' =>
         pbMap {P'} P.pbProj1 P.pbProj2 P.pbCoh
 
@@ -451,6 +520,7 @@
       \func p-beta2 {D : Precat} {x y z : D} {f : Hom x z} {g : Hom y z} (P P' : Pullback f g)
         : pbProj2 {P} ∘ (p-map P' P) = pbProj2 {P'} => pbBeta2 {P} {P'} {pbProj1 {P'}} {pbProj2 {P'}} {pbCoh {P'}}
 
+      -- | Canonical iso between any two pullbacks of the same cospan.
       \func hinv'{D : Precat} {x y z : D} {f : Hom x z} {g : Hom y z} (P P' : Pullback f g)
         : (p-map P' P) ∘ (p-map P P') = id => pbEta {P} {P} {(p-map P' P) ∘ (p-map P P')} {id}
           (rewriteI o-assoc $ rewrite (p-beta1 P P', p-beta1 P' P) (inv id-right))
@@ -458,6 +528,9 @@
     }
 }
 
+{- | Construct limits of arbitrary small diagrams from arbitrary products and binary equalizers via the standard
+ -   equalizer-of-two-products formula.
+ -}
 \func limits<=pr+eq.{u} {D : Precat}
   (pr : \Pi (J : \Type u) (G : J -> D) -> Product G)
   (eq : \Pi {X Y : D} (f g : Hom X Y) -> Equalizer f g)
@@ -479,9 +552,11 @@
     }
 
 
+-- | A `Precat` with a chosen pullback for every cospan.
 \class PrecatWithPullbacks \extends Precat
   | pullback {x y z : Ob} (f : Hom x z) (g : Hom y z) : Pullback f g
 
+-- | For `f : Hom x y` in a `PrecatWithPullbacks`, the base-change functor `SlicePrecat y -> SlicePrecat x`.
 \func pullbackFunctor {C : PrecatWithPullbacks} {x y : C} (f : Hom x y) : Functor (SlicePrecat y) (SlicePrecat x) \cowith
   | F (t : ObOver y) : ObOver x => (pullback f t.2, (pullback f t.2).pbProj1)
   | Func {a b : ObOver y} (g : Hom a b) : Hom (F a) (F b) =>
@@ -490,8 +565,10 @@
   | Func-id => ext $ pbEta (pbBeta1 *> inv id-right) (pbBeta2 *> id-left *> inv id-right)
   | Func-o => ext $ pbEta (pbBeta1 *> inv (pmap (∘ _) pbBeta1 *> later pbBeta1) *> o-assoc) (pbBeta2 *> inv (pmap (∘ _) pbBeta2 *> o-assoc *> pmap (_ ∘) pbBeta2 *> inv o-assoc) *> o-assoc)
 
+-- | Macro: `Product` over the empty type, i.e. a terminal object.
 \meta terminal-obj C => Product {Empty} {C} absurd
 
+-- | Any two terminal objects are canonically iso.
 \func terminal-obj-iso {C : Precat} (a b : terminal-obj C) : Iso {C} {a} {b}
 \cowith
   | f => tupleMap (\case __)
@@ -499,8 +576,10 @@
   | hinv_f => tupleEq (\case __)
   | f_hinv => tupleEq (\case __)
 
+-- | Unique morphism into a terminal and its uniqueness.
 \func terminalMap' {C : Precat} {t : terminal-obj C} {x : C} : Hom x t => tupleMap (\case __)
 
+-- | Build a terminal object from contractibility of each `Hom b a`.
 \func isTerminal {C : Precat} (a : C) (e : \Pi (b : C) -> Contr (Hom b a)) : terminal-obj C a
   \cowith
     | proj j => absurd j
@@ -508,14 +587,19 @@
     | tupleBeta {_} {_} {j} => absurd j
     | tupleEq {Z} {p} {q} _ => isContr=>isProp (e Z) p q
 
+-- | Unique morphism into a terminal and its uniqueness.
 \lemma terminal-unique' {C : Precat} {terminal : terminal-obj C} {x : C} {f g : Hom x terminal} : f = g => tupleEq (\case __)
 
+-- | In a (univalent) `Cat`, terminal objects form a proposition.
 \func terminal-prop {C : Cat} : isProp (terminal-obj C)
   => \lam a a' => exts (C.isotoid (unfold $ terminal-obj-iso a a'), \lam j => absurd j, \lam {Z} f => terminal-unique')
 
 \func IsTerminal {C : Precat} (t : C) : \Prop
   => \Pi {c : C} -> Contr (Hom c t)
 
+{- | Class with a chosen terminal and `terminalMap`, `terminal-unique`, plus `global-section` (a global element is a
+ -   split mono).
+ -}
 \class PrecatWithTerminal \extends Precat {
   | terminal : terminal-obj \this
 
@@ -528,6 +612,10 @@
     | hinv_f => terminal-unique
 }
 
+{- | Class with binary products `Bprod x y`. Exposes `proj1`, `proj2`, `pair`, `prodMap`, `diagonal`, `associator`,
+ -   `change` (symmetry), and the bifunctor `bprodBiFunctor`, plus algebraic lemmas (`prodMap-comp`, `prod-id`,
+ -   `pair-comp`, `pair-proj`, `associator-iso`, `change-inv`, `change-prod`, `bprod-comm`, `associtor-prod`).
+ -}
 \class PrecatWithBprod \extends Precat {
   | Bprod (x y : Ob) : Product (x :: y :: nil)
 
@@ -625,6 +713,7 @@
     : prodMap (prodMap f g) h ∘ associator-iso.hinv = associator-iso.hinv ∘ prodMap f (prodMap g h)
     => associator-iso.adjointMap $ inv o-assoc *> inv (associator-iso.adjointMap' associator-prod)
 
+  -- | Endofunctor `_ × Y` for fixed `Y`.
   \func bprodFunctorRight (Y : Ob) : Functor \this \this \cowith
     | F X => Bprod X Y
     | Func f => prodMap f id
@@ -661,6 +750,7 @@
     | Func-o => inv prodMap-comp
 }
 
+-- | Extends `PrecatWithTerminal` and `PrecatWithBprod`; provides `terminal-prod-left` (`X ≅ 1 × X`).
 \class CartesianPrecat \extends PrecatWithTerminal, PrecatWithBprod {
   \func Bprod_terminal-left {X : Ob} : Iso {\this} {X} {Bprod terminal X}  \cowith
     | f => pair terminalMap id
@@ -670,6 +760,7 @@
         (rewrite (inv o-assoc, beta2, id-right, id-left) idp)
 }
 
+-- | Extends `PrecatWithPullbacks` and `CartesianPrecat`; binary products are derived from terminals and pullbacks.
 \class FinCompletePrecat \extends PrecatWithPullbacks, CartesianPrecat {
   \default Bprod x y => \new Product {
     | apex => pullback (terminal.tupleMap (\case __)) (tupleMap (\case __))
@@ -694,6 +785,9 @@
             (inv o-assoc *> pmap (∘ _) beta2 *> inv id-left *> pmap (∘ _) (inv beta2) *> o-assoc), pbBeta1)
 }
 
+{- | Extends `FinCompletePrecat`; `limit G` for every functor from a small category. Derives pullback, terminal, binary
+ -   product, arbitrary `product`, and `equalizer`. Has dual `op : CocompletePrecat`.
+ -}
 \class CompletePrecat.{u} \extends FinCompletePrecat {
   | limit {J : Precat.{u,u}} (G : Functor J \this) : Limit G
   \default pullback f g => Pullback.fromLimit (limit {_} {Pullback.Shape.FreeCat} (Pullback.diagram f g).functor)
@@ -706,6 +800,7 @@
     | Precat => Precat.op
     | colimit G => limit $ Functor.op {G}
 } \where {
+  -- | Transport completeness along a categorical equivalence.
   \func applyEquiv.{u} {D : CompletePrecat.{u}} (E : CatEquiv { | D => D }) {J : Precat.{u,u}} (G : Functor J E.C) : Limit G
     => \have lim : Limit => limit (Comp E.LAdj G)
        \in \new Limit {
@@ -719,12 +814,14 @@
       }
 }
 
+-- | `CompletePrecat` that is a (univalent) `Cat`.
 \class CompleteCat.{u} \extends CompletePrecat.{u}, Cat {
   \protected \func op : CocompleteCat.{u} \cowith
     | Cat => Cat.op
     | colimit G => limit $ Functor.op {G}
 }
 
+-- | Duals and combination.
 \class CocompletePrecat.{u} \extends Precat {
   | colimit {J : Precat.{u,u}} (G : Functor J \this) : Colimit G
 
@@ -736,12 +833,14 @@
     => CompletePrecat.applyEquiv {D.op} E.op G.op
 }
 
+-- | Duals and combination.
 \class CocompleteCat.{u} \extends CocompletePrecat.{u}, Cat {
   \protected \func op : CompleteCat.{u} \cowith
     | Cat => Cat.op
     | limit G => colimit $ Functor.op {G}
 }
 
+-- | Duals and combination.
 \class BicompleteCat.{u} \extends CompleteCat.{u}, CocompleteCat.{u} {
   \protected \func op : BicompleteCat.{u} \cowith
     | Cat => Cat.op
@@ -749,24 +848,30 @@
     | colimit G => limit $ Functor.op {G}
 }
 
+-- | `G` preserves limits of `F` if `Cone.map G L` is again a limit.
 \func PreservesLimit {J C D : Precat} (G : Functor C D) (F : Functor J C)
   => \Pi (c : Cone F) -> IsLimitCone c -> IsLimitCone (Cone.map G c)
 
+-- | `G` reflects limits if a cone whose image is a limit is itself a limit.
 \func ReflectsLimit {J C D : Precat} (G : Functor C D) (F : Functor J C)
   => \Pi (c : Cone F) -> IsLimitCone (Cone.map G c) -> IsLimitCone c
 
+-- | A limit of `Comp G F` lifts to a limit of `F` together with preservation and reflection by `G`.
 \func CreatesLimit {J C D : Precat} (G : Functor C D) (F : Functor J C)
   => Limit (Comp G F) -> \Sigma (Limit F) (PreservesLimit G F) (ReflectsLimit G F)
 
 \lemma Mono_pullback (P : Pullback {}) (m : Mono P.g) : Mono P.pbProj1 \cowith
   | isMono {d} {dP} {dP'} q => P.pbEta q $ m.isMono $ inv o-assoc *> pmap (∘ _) (inv P.pbCoh) *> o-assoc *> pmap (_ ∘) q *> inv o-assoc *> pmap (∘ _) P.pbCoh *> o-assoc
 
+-- | `f` is a regular mono iff it occurs as some equalizer.
 \func IsRegularMono {C : Precat} {x y : C} (f : Hom x y) =>
   TruncP (Equalizer { | D => C | X => y | apex => x | eql => f })
 
+-- | Regular monos are monos.
 \lemma regularMono_Mono {C : Precat} {x y : C} {f : Hom x y} (reg : IsRegularMono f) : Mono f \elim reg
   | inP E => \new Mono f E.eqMono
 
+-- | Regular monos are stable under pullback.
 \lemma regularMono_pullback (P : Pullback {}) (m : IsRegularMono P.g) : IsRegularMono P.pbProj1 \elim m
   | inP E => inP \new Equalizer {
     | Y => E.Y
@@ -807,6 +912,7 @@
   | pbBeta2 {_} {_} {_} {c} => pbEta (inv o-assoc *> rewrite P.pbBeta1 (o-assoc *> pmap (_ ∘) Q.pbBeta1 *> c)) (inv o-assoc *> rewrite P.pbBeta2 Q.pbBeta2)
   | pbEta p1 p2 => Q.pbEta p1 $ rewrite P.pbBeta2 in o-assoc *> pmap (P.pbProj2 ∘) p2 *> inv o-assoc
 
+-- | Split monos are regular.
 \lemma splitMono_regular (f : SplitMono {}) : IsRegularMono f.f => inP \new Equalizer {
   | Y => f.cod
   | f => f.f ∘ f.hinv
@@ -819,4 +925,5 @@
   }
 }
 
+-- | Defined dually as a regular mono in the opposite category.
 \func isRegularEpi {C : Precat} {x y : C} (f : Hom x y) => IsRegularMono {C.op} f

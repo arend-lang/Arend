@@ -1,3 +1,15 @@
+{- | Functions with finite support from a set into an additively-pointed structure, equipped with pointwise algebraic
+ -   operations.
+ -
+ -   A `FinSuppFunc` packages a set homomorphism whose values are zero outside some finite list of inputs (the support
+ -   is given existentially as an array `s` together with a proof that any input not occurring in `s` maps to `0`).
+ -   Because the support is recorded as a truncated existential rather than a precise finite set, operations like
+ -   addition use list concatenation to combine supports, and the zero-outside-support condition is preserved by
+ -   reasoning about indices via `++.index-left` / `++.index-right`. This module then lifts the pointwise additive
+ -   structure of the codomain (pointed, monoid, abelian monoid, group, abelian group) onto `FinSuppFunc`, giving a
+ -   uniform construction of finitely-supported function spaces over any additive algebraic structure.
+ -}
+
 \import Algebra.Group
 \import Algebra.Monoid
 \import Algebra.Pointed
@@ -12,11 +24,18 @@
 \import Set.SetHom
 \import Set.Fin
 
+{- | Extends `SetHom` with codomain restricted to `AddPointed`, plus a field `fSupp` asserting the existence of an array
+ -   `s : Array Dom` such that for every `i` not equal to any `s j`, `func i = 0`. Models finitely-supported maps
+ -   without committing to a canonical support set.
+ -}
 \record FinSuppFunc \extends SetHom {
   \override Cod : AddPointed
   | fSupp : ∃ (s : Array Dom) ∀ i ((\Pi (j : Fin s.len) -> s j /= i) -> func i = 0)
 }
 
+{- | For a `DecSet` domain `M` and an `AddPointed` codomain `R` with decidable equality, equips `FinSuppFunc M R` with
+ -   decidable equality.
+ -}
 \instance FinSuppFuncDec (M : DecSet) (R : AddPointed) {D : DecSet R} : DecSet (FinSuppFunc M R)
   | decideEq f g => \case fSupp {f}, fSupp {g} \with {
     | inP (s, c), inP (s', c') =>
@@ -31,12 +50,16 @@
       }
   }
 
+-- | `AddPointed` instance — the zero function (with empty support `nil`).
 \instance FinSuppFuncAddPointed {A : BaseSet} {B : AddPointed} : AddPointed (FinSuppFunc A B)
   | zro => \new FinSuppFunc {
     | func _ => 0
     | fSupp => inP (nil, \lam _ _ => idp)
   }
 
+{- | `AddMonoid` instance lifting an `AddMonoid` codomain pointwise; addition combines supports via `++` and uses
+ -   `++.index-left` / `++.index-right` to show the sum vanishes off the concatenated support.
+ -}
 \instance FinSuppFuncAddMonoid {A : BaseSet} {B : AddMonoid} : AddMonoid (FinSuppFunc A B)
   | AddPointed => FinSuppFuncAddPointed
   | + f g => \new FinSuppFunc {
@@ -49,10 +72,14 @@
   | zro-right => exts (\lam a => zro-right)
   | +-assoc => exts (\lam a => +-assoc)
 
+-- | `AbMonoid` instance, inheriting commutativity from the codomain.
 \instance FinSuppFuncAbMonoid {A : BaseSet} {B : AbMonoid} : AbMonoid (FinSuppFunc A B)
   | AddMonoid => FinSuppFuncAddMonoid
   | +-comm => exts (\lam a => +-comm)
 
+{- | `AddGroup` instance; the negation reuses the support of `f` and uses `B.negative_zro` to verify that
+ -   `negative 0 = 0` off-support.
+ -}
 \instance FinSuppFuncAddGroup {A : BaseSet} {B : AddGroup} : AddGroup (FinSuppFunc A B)
   | AddMonoid => FinSuppFuncAddMonoid
   | negative f => \new FinSuppFunc {
@@ -62,6 +89,7 @@
   | negative-left => exts (\lam a => negative-left)
   | negative-right => exts (\lam a => negative-right)
 
+-- | `AbGroup` instance combining `FinSuppFuncAddGroup` with pointwise commutativity.
 \instance FinSuppFuncAbGroup {A : BaseSet} {B : AbGroup} : AbGroup (FinSuppFunc A B)
   | AddGroup => FinSuppFuncAddGroup
   | +-comm => FinSuppFuncAbMonoid.+-comm

@@ -1,3 +1,12 @@
+{- | Lexicographic orderings on product and list types built from decidable linear orders.
+ -
+ -   This module lifts decidable linear orders to two standard composite structures: pairs `\Sigma A B` and lists
+ -   `List A`. The pair ordering compares first components, falling back to the second only when first components are
+ -   equal. The list ordering, defined inductively as `<L`, treats `nil` as smaller than any nonempty list and otherwise
+ -   compares head-first with tie-breaking on tails. Both instances package the resulting strict order with
+ -   irreflexivity, transitivity, and trichotomy proofs to yield a decidable linear order (`Dec`).
+ -}
+
 \import Data.List
 \import Logic
 \import Order.LinearOrder
@@ -6,6 +15,9 @@
 \import Paths.Meta
 \open LinearOrder
 
+{- | `Dec` instance on `\Sigma A B` for decidable linear orders `A B`. Defines `a < b` as `a.1 < b.1` or (`a.1 = b.1`
+ -   and `a.2 < b.2`), with the required strict-order and trichotomy laws.
+ -}
 \instance LexicographicalProduct (A B : Dec) : Dec (\Sigma A B)
   | < a b => a.1 < b.1 || (\Sigma (a.1 = b.1) (a.2 < b.2))
   | <-irreflexive {t} => \case __ \with {
@@ -28,6 +40,9 @@
     }
   }
 
+{- | `Dec` instance on `List A` for a decidable linear order `A`, using `<L` as the strict order and supplying
+ -   irreflexivity, transitivity, and trichotomy.
+ -}
 \instance LexicographicalList (A : Dec) : Dec (List A)
   | < => <L
   | <-irreflexive {l : List A} (p : l <L l) : Empty \elim l, p {
@@ -56,10 +71,14 @@
     }
   }
   \where {
+    -- | Inductive lexicographic strict order on `List A` (`\Prop`-valued, infix at level 4). Constructors:
     \truncated \data \infix 4 <L {A : Dec} (l1 l2 : List A) : \Prop \elim l1, l2
+      -- | `nil <L (a :: as)` — the empty list precedes any nonempty list.
       | nil, :: _ _ => nil<::
       | :: a as, :: b bs => {
+        -- | `a < b -> (a :: as) <L (b :: bs)` — strict order at the head.
         | <head (a < b)
+        -- | `a = b -> as <L bs -> (a :: as) <L (b :: bs)` — equal heads, recurse on tails.
         | <tail (a = b) (as <L bs)
       }
   }

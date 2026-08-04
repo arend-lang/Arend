@@ -1,3 +1,16 @@
+{- | The Yoneda embedding, the category of elements, and the universal property of presheaf categories as free
+ -   cocompletions.
+ -
+ -   This module formalizes three interlocking constructions central to category theory. First, the **Yoneda embedding**
+ -   `C → PSh(C)` sends each object `c` to its representable presheaf `Hom(-, c)`, and the **Yoneda lemma** identifies
+ -   natural transformations out of a representable with elements of the target presheaf. Second, the
+ -   **category of elements** `∫P` of a presheaf `P` packages pairs `(c, p ∈ P(c))` into a category fibered over `C`,
+ -   providing the indexing diagram for the canonical colimit decomposition. Third, every presheaf is exhibited as a
+ -   colimit of representables (the **density theorem**), which yields the universal property: any functor `A : C → E`
+ -   into a cocomplete category extends essentially uniquely to a colimit-preserving functor `PSh(C) → E`, presenting
+ -   `PSh(C)` as the free cocompletion of `C`.
+ -}
+
 \import Algebra.Meta
 \import Category
 \import Category.Functor
@@ -27,6 +40,9 @@
   | trans _ f => F.Func f x
   | natural f => exts \lam g => path \lam i => F.Func-o i x
 
+{- | The Yoneda lemma as a `QEquiv` between `Hom(よ A, F)` and `F(A)`, with forward map `nat ↦ nat_A(id_A)` and inverse
+ -   sending `p ∈ F(A)` to the natural transformation `f ↦ F(f)(p)`.
+ -}
 \func Yoneda-lemma.{o,h} {C : Precat.{o,h}} {a : C} {F : Functor C.op SetCat.{h}} : QEquiv {NatTrans (HomLeft a) F} {F a} \cowith
   | f nat => nat a id
   | ret => Yoneda-trans
@@ -59,12 +75,16 @@
   | id-right => exts id-right
   | o-assoc => exts o-assoc
   \where {
+    -- | The forgetful functor `∫P → C` projecting onto the first component.
     \func projection.{s,o,h} {C : Precat.{o,h}} (P : Presheaf.{s} C) : Functor (PrecategoryOfElements P) C \cowith
       | F (x, _) => x
       | Func (f, _) => f
       | Func-id => idp
       | Func-o => idp
 
+    {- | Functoriality of the construction in `P`: a natural transformation `nat : P → F` induces a functor `∫P → ∫F`
+     -   sending `(c, p)` to `(c, nat_c(p))`.
+     -}
     \func functorial.{s,o,h} {C : Precat.{o,h}} (P F : Presheaf.{s} C) (nat : Hom P F)
       : Functor (PrecategoryOfElements P) (PrecategoryOfElements F) \cowith
       | F (c, p) => (c, nat c p)
@@ -119,17 +139,22 @@
       unfold in (ObjLift A Y).limBeta (cone-in-induced g) (c, f c p), id-left) idp
   }
   \where {
+    -- | The canonical diagram `∫P → PSh(C)` whose colimit recovers `P`.
     \func diagram.{s,o,h} {C : Precat.{s,s}} {E : CocompletePrecat.{s,o,h}} (A : Functor C E) (P : Presheaf.{s} C) : Functor (PrecategoryOfElements P) E
       => Comp A (projection P)
 
     \func ObjLift.{s,o,h} {C : Precat.{s,s}} {E : CocompletePrecat.{s,o,h}} (A : Functor C E) (P : Presheaf.{s} C)
       => E.colimit (diagram A P)
 
+    {- | The natural transformation between opposite diagrams used to induce the morphism `L(X) → L(Y)` from a presheaf
+     -   morphism `f : X → Y`.
+     -}
     \func induced-natural.{s,o,h} {C : Precat.{s,s}} {E : CocompletePrecat.{s,o,h}} {A : Functor C E} {X Y : Presheaf.{s} C} (f : NatTrans X Y)
       : NatTrans (Comp (diagram A Y).op (functorial X Y f).op) (diagram A X).op \cowith
       | trans (q, a) => id
       | natural _ => repeat {4} unfold $ rewrite (id-left, id-right) idp
 
+    -- | The auxiliary cone produced by `Limit.transFuncMap` and used in the universality proof.
     \func cone-in-induced.{s,o,h} {C : Precat.{s,s}} {E : CocompletePrecat.{s,o,h}} {A : Functor C E} {X Y : Presheaf.{s} C} (f : NatTrans X Y)
       => Limit.transFuncMap.cone {_} {ObjLift A X} {ObjLift A Y} {(functorial X Y f).op} {induced-natural f}
   }

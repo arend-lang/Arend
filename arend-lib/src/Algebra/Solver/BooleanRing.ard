@@ -1,3 +1,14 @@
+{- | A reflective decision procedure for equalities in Boolean rings.
+ -
+ -   This module instantiates the generic `SolverModel` interface for `BooleanRing`, providing a normalization-based
+ -   solver. Terms are represented as a syntactic algebra (`Term`), normalized to disjunctive-style normal forms (`NF`)
+ -   — lists of monomials, where each monomial is a Boolean array picking out which variables appear in the product.
+ -   Because Boolean rings are idempotent (`x * x = x`) and characteristic 2 (`x + x = 0`), monomials reduce to subsets
+ -   of variables and pairs of equal monomials cancel: this is exploited by sorting and `collapse`-ing the list of
+ -   monomials. The `terms-equality` lemma reduces an equation `t = s` to checking that the normal form of `t + s`
+ -   collapses to zero.
+ -}
+
 \import Algebra.Monoid
 \import Algebra.Ring.Boolean
 \import Algebra.Solver
@@ -18,6 +29,9 @@
 \import Paths.Meta
 \import Set
 
+{- | The `SolverModel` instance for a `BooleanRing B`, packaging together the term language, normal forms,
+ -   normalization, interpretation, and the consistency proof linking them.
+ -}
 \func BooleanRingSolverModel (B : BooleanRing) : SolverModel B \cowith
   | Term => Term
   | NF => NF
@@ -26,6 +40,9 @@
   | interpretNF => interpretNF
   | interpretNF-consistent => interpretNF=interpretNF' *> interpretNF'-consistent
   \where {
+    {- | Inductive datatype of ring terms over `n` variables, with constructors `var`, `:zro`, `:negative`, `:+` (sum),
+     -   and `:*` (product).
+     -}
     \data Term (n : Nat)
       | var (Fin n)
       | :zro
@@ -33,18 +50,30 @@
       | \infixl 6 :+ (t s : Term n)
       | \infixl 7 :* (t s : Term n)
 
+    {- | Normal form type — `List (Array Bool n)`. Each `Array Bool n` is a monomial encoded as a characteristic vector
+     -   over the `n` variables; the outer list is a sum of such monomials.
+     -}
     \func NF (n : Nat) => List (Array Bool n)
 
+    -- | `LinearOrder.Dec` instance on `Bool` (the opposite of `BoolPoset`), used to lexicographically sort monomials.
     \instance BoolOpPoset : LinearOrder.Dec => BoolPoset.op
 
+    {- | Tail-recursive helper that multiplies two normal forms accumulating into `acc`. For each monomial `a` in `l1`,
+     -   distributes it over `l2` by taking the pointwise `or` (union of variable supports) of `a` with each monomial in
+     -   `l2`.
+     -}
     \func multiply' {n : Nat} (l1 l2 acc : NF n) : NF n \elim l1
       | lnil => acc
       | a l:: l1 => multiply' l1 l2 (map (\lam (b : Array Bool n) => \new Array Bool n \lam j => a j or b j) l2 ++ acc)
 
+    -- | Top-level multiplication of normal forms via `multiply'` with empty accumulator.
     \func multiply {n : Nat} (l1 l2 : NF n) : NF n \elim l2
       | lnil => lnil
       | l2 => multiply' l1 l2 lnil
 
+    {- | Converts a `Term n` to an `NF n`. Variables become singleton monomials, `:zro` becomes the empty sum, negation
+     -   is the identity (since `-x = x` in a Boolean ring), `:+` concatenates, and `:*` multiplies.
+     -}
     \func normalize {n : Nat} (t : Term n) : NF n \elim t
       | var j => l:: (singleAt j true false) lnil
       | :zro => lnil
@@ -52,6 +81,7 @@
       | t :+ s => normalize t ++ normalize s
       | t :* s => multiply (normalize t) (normalize s)
 
+    -- | Evaluates a `Term env.len` in a `BooleanRing` `B` under an environment `env : Array B`.
     \func interpret (env : Array B) (t : Term env.len) : B \elim t
       | var j => env j
       | :zro => B.zro
@@ -59,29 +89,39 @@
       | t :+ s => interpret env t + interpret env s
       | t :* s => interpret env t * interpret env s
 
+    {- | Selects from `env` the entries whose corresponding `Bool` flag is `true`, producing the list of variables
+     -   present in a monomial.
+     -}
     \func toArray (cs : Array Bool) (env : Array B cs.len) : Array B \elim cs, env
       | nil, nil => nil
       | true :: l, b :: env => b :: toArray l env
       | false :: l, _ :: env => toArray l env
 
+    {- | Product of a list of ring elements, returning `B.zro` for the empty list (so an empty monomial — no variables
+     -   selected — interprets as zero, not one).
+     -}
     \func sBigProd (l : Array B) : B \elim l
       | nil => B.zro
       | b :: nil => b
       | b :: l => b * sBigProd l
 
+    -- | Interprets a single monomial `Array Bool n` as the product `sBigProd (toArray l env)`.
     \func interpretMonomial {n : Nat} (env : Array B n) (l : Array Bool n) : B
       => sBigProd (toArray l env)
 
+    -- | Sum interpretation of a normal form, summing `interpretMonomial` over the list.
     \func interpretNF' {n : Nat} (env : Array B n) (l : NF n) : B \elim l
       | lnil => B.zro
       | x l:: lnil => interpretMonomial env x
       | x l:: l => interpretMonomial env x + interpretNF' env l
       \where {
+        -- | Cons case for `interpretNF'`.
         \protected \lemma cons {n : Nat} {env : Array B n} {x : Array Bool n} {l : NF n} : interpretNF' env (l:: x l) = interpretMonomial env x + interpretNF' env l \elim l
           | lnil => inv zro-right
           | a l:: l => idp
       }
 
+    -- | Removes adjacent equal monomials from a (sorted) `NF` — implementing cancellation `x + x = 0`.
     \func collapse {n : Nat} (l : NF n) : NF n
       | lnil => lnil
       | a l:: lnil => l:: a lnil
@@ -90,20 +130,27 @@
         | no _ => l:: a (collapse (l:: b l))
       }
 
+    {- | Public interpretation: sorts the normal form (using `Sort.RedBlack.sort`), collapses duplicates, then evaluates
+     -   via `interpretNF'`.
+     -}
     \func interpretNF {n : Nat} (env : Fin n -> B) (l : NF n) : B => interpretNF' env (collapse (Sort.RedBlack.sort l))
 
+    -- | `toArray` of an all-`false` array yields the empty list.
     \lemma toArray_replicate {n : Nat} {env : Array B n} : toArray (\new Array Bool n \lam _ => false) env = nil \elim n, env
       | 0, nil => idp
       | suc n, a :: env => toArray_replicate
 
+    -- | `toArray` of a singleton-`true` array selects exactly that one variable.
     \lemma toArray_singleAt {n : Nat} {j : Fin n} {env : Array B n} : toArray (singleAt.alt j true false) env = env j :: nil \elim n, j, env
       | suc n, 0, a :: env => pmap (a ::) toArray_replicate
       | suc n, suc j, a :: env => toArray_singleAt
 
+    -- | Interpretation distributes over list concatenation as ring addition.
     \lemma interpretNF_++ {n : Nat} {env : Array B n} {l l' : NF n} : interpretNF' env (l ++ l') = interpretNF' env l + interpretNF' env l' \elim l
       | lnil => inv zro-left
       | a l:: l => interpretNF'.cons *> pmap (_ +) interpretNF_++ *> inv (pmap (+ _) interpretNF'.cons *> +-assoc)
 
+    -- | `Big ∧` on the union (pointwise `or`) of two flag arrays factors as the product of the individual `Big ∧`s.
     \lemma toArray_or {x0 : B} {n : Nat} {env : Array B n} {a b : Array Bool n}
       : Big (∧) x0 (toArray (\new Array Bool n \lam j => a j or b j) env) = Big (∧) x0 (toArray a env) * Big (∧) x0 (toArray b env) \elim n, a, b
       | 0, nil, nil => inv isBooleanRing
@@ -112,44 +159,56 @@
       | suc n, false :: a, true :: b => pmap (_ *) toArray_or *> inv (*-comm *> *-assoc *> pmap (_ *) *-comm)
       | suc n, false :: a, false :: b => toArray_or
 
+    -- | For a non-empty array bounded above by `x0`, `sBigProd` agrees with the meet-with-`x0` big-product.
     \lemma sBigProd_Big {n : Nat} (n/=0 : n /= 0) {a : Array B n} {x0 : B} (ap : \Pi (j : Fin n) -> a j <= x0) : sBigProd a = Big (∧) x0 a \elim n, a
       | 0, nil => absurd (n/=0 idp)
       | 1, a => <=-antisymmetric (meet-univ <=-refl $ ap 0) meet-left
       | suc (suc n), x :: a => pmap (_ *) $ sBigProd_Big suc/=0 (\lam j => ap (suc j))
 
+    -- | Each entry of `toArray l env` is bounded by `B.BigJoin env`.
     \lemma toArray<=env {n : Nat} {env : Array B n} {l : Array Bool n} (j : Fin (toArray l env).len) : toArray l env j <= B.BigJoin env \elim n, env, l, j
       | 0, nil, nil, ()
       | suc n, x :: env, true :: l, 0 => join-left
       | suc n, x :: env, true :: l, suc j => toArray<=env j <=∘ join-right
       | suc n, x :: env, false :: l, j => toArray<=env j <=∘ join-right
 
+    {- | A monomial is non-empty if at least one variable flag is `true` — needed because `sBigProd nil = zro`, so empty
+     -   monomials would evaluate incorrectly.
+     -}
     \private \func NonEmpty (l : Array Bool) => ∃ (j : Fin l.len) (l j = true)
 
+    -- | If a monomial is `NonEmpty`, its `toArray` is non-empty.
     \lemma toArray/=nil {n : Nat} {env : Array B n} {l : Array Bool n} (lp : NonEmpty l) : (toArray l env).len /= 0 \elim n, env, l, lp
       | 0, nil, nil, inP ((),_)
       | suc n, a :: env, true :: l, _ => \case __
       | suc n, a :: env, false :: l, inP (0, ())
       | suc n, a :: env, false :: l, inP (suc j, lp) => toArray/=nil $ inP (j,lp)
 
+    -- | Interpretation of a `or`-merged monomial equals the product of interpretations (when both are non-empty).
     \lemma interpretMonomial_or {n : Nat} {env : Array B n} {a b : Array Bool n} (ap : NonEmpty a) (bp : NonEmpty b)
       : interpretMonomial env (\new Array Bool n \lam j => a j or b j) = interpretMonomial env a * interpretMonomial env b
       => sBigProd_Big (toArray/=nil $ TruncP.map ap \lam s => (s.1, pmap (or _) s.2)) toArray<=env *> toArray_or *> inv (pmap2 (*) (sBigProd_Big (toArray/=nil ap) toArray<=env) (sBigProd_Big (toArray/=nil bp) toArray<=env))
 
+    -- | All monomials in an `NF` are non-empty; an invariant maintained by `normalize`.
     \func AllNonEmpty {n : Nat} (l : NF n) => \Pi (j : Fin (length l)) -> NonEmpty (l !! j)
 
+    -- | Interpretation of `map (or a) l` factors as `interpretMonomial env a * interpretNF' env l`.
     \lemma interpretNF_map {n : Nat} {env : Array B n} {a : Array Bool n} (ap : NonEmpty a) {l : NF n} (lp : AllNonEmpty l)
       : interpretNF' env (map (\lam (b : Array Bool n) => \new Array Bool n \lam j => a j or b j) l) = interpretMonomial env a * interpretNF' env l \elim l
       | lnil => inv B.zro_*-right
       | b l:: l => interpretNF'.cons *> pmap2 (+) (interpretMonomial_or ap (lp 0)) (interpretNF_map ap \lam j => lp (suc j)) *> inv (pmap (_ *) interpretNF'.cons *> B.ldistr)
 
+    -- | `multiply'` and `multiply` correctly compute the product of two normal-form interpretations.
     \lemma interpretNF_multiply' {n : Nat} {env : Array B n} {l l' acc : NF n} (lp : AllNonEmpty l) (l'p : AllNonEmpty l') : interpretNF' env (multiply' l l' acc) = interpretNF' env l * interpretNF' env l' + interpretNF' env acc \elim l
       | lnil => inv $ pmap (+ _) B.zro_*-left *> zro-left
       | a l:: l => interpretNF_multiply' (\lam j => lp (suc j)) l'p *> pmap (_ +) interpretNF_++ *> inv +-assoc *> pmap (+ _) (pmap (_ +) (interpretNF_map (lp 0) l'p) *> +-comm *> inv (pmap (* _) interpretNF'.cons *> B.rdistr))
 
+    -- | `multiply'` and `multiply` correctly compute the product of two normal-form interpretations.
     \lemma interpretNF_multiply {n : Nat} {env : Array B n} {l l' : NF n} (lp : AllNonEmpty l) (l'p : AllNonEmpty l') : interpretNF' env (multiply l l') = interpretNF' env l * interpretNF' env l' \elim l'
       | lnil => inv B.zro_*-right
       | a l:: l' => interpretNF_multiply' lp l'p *> zro-right
 
+    -- | `AllNonEmpty` is preserved by concatenation.
     \lemma all-++ {n : Nat} {l l' : NF n} (lp : AllNonEmpty l) (l'p : AllNonEmpty l') : AllNonEmpty (l ++ l') \elim l
       | lnil => l'p
       | a l:: l => \case \elim __ \with {
@@ -157,6 +216,7 @@
         | suc j => all-++ (\lam j => lp (suc j)) l'p j
       }
 
+    -- | Mapping `or a` over a list yields an `AllNonEmpty` list when `a` is non-empty.
     \lemma or-nonEmpty {n : Nat} {a : Array Bool n} {l : NF n} (ap : NonEmpty a) : AllNonEmpty (map (\lam (b : Array Bool n) => \new Array Bool n \lam j => a j or b j) l) \elim l
       | lnil => \case __
       | b l:: l => \case \elim __ \with {
@@ -164,14 +224,17 @@
         | suc j => or-nonEmpty ap j
       }
 
+    -- | Multiplication preserves `AllNonEmpty`.
     \lemma multiply'-nonEmpty {n : Nat} {l l' acc : NF n} (lp : AllNonEmpty l) (accp : AllNonEmpty acc) : AllNonEmpty (multiply' l l' acc) \elim l
       | lnil => accp
       | a l:: l => multiply'-nonEmpty (\lam j => lp (suc j)) $ all-++ (or-nonEmpty (lp 0)) accp
 
+    -- | Multiplication preserves `AllNonEmpty`.
     \lemma multiply-nonEmpty {n : Nat} {l l' : NF n} (lp : AllNonEmpty l) : AllNonEmpty (multiply l l') \elim l'
       | lnil => \case __
       | a l:: l' => multiply'-nonEmpty lp (later \case __)
 
+    -- | All monomials produced by `normalize` are non-empty.
     \lemma normalize-nonEmpty {n : Nat} {t : Term n} : AllNonEmpty (normalize t) \elim t
       | var j => \case \elim __ \with {
         | 0 => inP (j, rewrite (decideEq=_reduce idp) idp)
@@ -181,6 +244,7 @@
       | t :+ s => all-++ normalize-nonEmpty normalize-nonEmpty
       | t :* s => multiply-nonEmpty normalize-nonEmpty
 
+    -- | `interpretNF' env (normalize t) = interpret env t`.
     \lemma interpretNF'-consistent {n : Nat} {env : Array B n} {t : Term n} : interpretNF' env (normalize t) = interpret env t \elim t
       | var j => pmap sBigProd (pmap {Array Bool n} (toArray __ env) singleAt.char *> toArray_singleAt)
       | :zro => idp
@@ -188,6 +252,7 @@
       | t :+ s => interpretNF_++ *> pmap2 (+) interpretNF'-consistent interpretNF'-consistent
       | t :* s => interpretNF_multiply normalize-nonEmpty normalize-nonEmpty *> pmap2 (*) interpretNF'-consistent interpretNF'-consistent
 
+    -- | `collapse` preserves the interpretation (relies on `x + x = 0`).
     \lemma collapse-consistent {n : Nat} {env : Array B n} {l : NF n} : interpretNF' env (collapse l) = interpretNF' env l \elim l
       | lnil => idp
       | a l:: lnil => idp
@@ -196,28 +261,37 @@
         | no q => interpretNF'.cons *> pmap (_ +) collapse-consistent
       }
 
+    -- | Permutations of `NF` preserve the interpretation (sum is commutative).
     \lemma perm-consistent {n : Nat} {env : Array B n} {l l' : NF n} (p : Sort.Perm l l') : interpretNF' env l = interpretNF' env l' \elim l, l', p
       | lnil, lnil, Sort.perm-nil => idp
       | a1 l:: l1, a2 l:: l2, Sort.perm-:: idp p => interpretNF'.cons *> pmap (_ +) (perm-consistent p) *> inv interpretNF'.cons
       | a1 l:: a1' l:: l1, a2 l:: a2' l:: l2, Sort.perm-swap idp idp idp => pmap (_ +) interpretNF'.cons *> inv +-assoc *> pmap (+ _) +-comm *> +-assoc *> pmap (_ +) (inv interpretNF'.cons)
       | l1, l2, Sort.perm-trans p1 p2 => perm-consistent p1 *> perm-consistent p2
 
+    -- | Sorting preserves interpretation.
     \lemma sort-consistent {n : Nat} {env : Array B n} {l : NF n} : interpretNF' env (Sort.RedBlack.sort l) = interpretNF' env l
       => rewrite (Sort.RedBlack.sort=insert l) $ inv $ perm-consistent (Sort.Insertion.sort-perm l)
 
+    -- | `interpretNF` and `interpretNF'` agree on `AllNonEmpty` inputs after sort+collapse.
     \lemma interpretNF=interpretNF' {n : Nat} {env : Array B n} {l : NF n} : interpretNF env l = interpretNF' env l
       => collapse-consistent *> sort-consistent
 
+    {- | If the normal form of `t :+ s` interprets to zero, then `t` and `s` are equal in `B` — the core soundness
+     -   statement used by the solver.
+     -}
     \lemma terms-equality (env : Array B) (t s : Term env.len) (p : interpretNF env (normalize (t :+ s)) = B.zro) : interpret env t = interpret env s
       => B.fromZero $ pmap (_ +) B.negative=id *> inv (interpretNF=interpretNF' *> interpretNF_++ *> pmap2 (+) interpretNF'-consistent interpretNF'-consistent) *> p
 
+    -- | The converse direction of `terms-equality`.
     \lemma terms-equality-conv (env : Array B) (t s : Term env.len) (p : interpret env t = interpret env s) : interpretNF env (normalize (t :+ s)) = B.zro
       => interpretNF=interpretNF' *> interpretNF_++ *> pmap2 (+) interpretNF'-consistent interpretNF'-consistent *> pmap (_ +) (inv B.negative=id) *> B.toZero p
 
+    -- | Distributes interpretation over a `Big ++`-folded list of normal forms plus an extra summand.
     \lemma interpretNF_Big_++ {n : Nat} {env : Array B n} {l : Array (NF n)} {a : NF n} : interpretNF' env (Big (++) a l) = B.BigSum (Data.Array.map (interpretNF' env) l) + interpretNF' env a \elim l
       | nil => inv zro-left
       | b :: l => interpretNF_++ *> pmap (_ +) interpretNF_Big_++ *> inv +-assoc
 
+    -- | Decidability of `NonEmpty` for a Boolean array.
     \lemma nonEmpty-dec (l : Array Bool) : Dec (NonEmpty l)
       | nil => no \lam (inP ((),_))
       | true :: l => yes $ inP (0,idp)
@@ -229,6 +303,7 @@
         }
       }
 
+    -- | If `interpretNF' env l = 0`, then mapping `or a` over `l` still gives `0`.
     \lemma interpretNF_map_zro {n : Nat} {env : Array B n} {a : Array Bool n} {l : NF n} (lp : AllNonEmpty l) (p : interpretNF' env l = B.zro)
       : interpretNF' env (map (\lam (b : Array Bool n) => \new Array Bool n \lam j => a j or b j) l) = B.zro
       => \case nonEmpty-dec a \with {
@@ -239,14 +314,20 @@
         }) *> map_id) *> p
       }
 
+    -- | If one factor's interpretation is `0`, the product's is too.
     \lemma interpretNF_multiply'_zro {n : Nat} {env : Array B n} {l l' acc : NF n} (l'p : AllNonEmpty l') (p : interpretNF' env l' = B.zro) (q : interpretNF' env acc = B.zro) : interpretNF' env (multiply' l l' acc) = B.zro \elim l
       | lnil => q
       | a l:: l => interpretNF_multiply'_zro l'p p $ interpretNF_++ *> pmap2 (+) (interpretNF_map_zro l'p p) q *> zro-left
 
+    -- | If one factor's interpretation is `0`, the product's is too.
     \lemma interpretNF_multiply_zro {n : Nat} {env : Array B n} {l l' : NF n} (l'p : AllNonEmpty l') (p : interpretNF' env l' = B.zro) : interpretNF' env (multiply l l') = B.zro \elim l'
       | lnil => idp
       | a l:: l' => interpretNF_multiply'_zro l'p p idp
 
+    {- | Given a list of axioms `t = s` (each scaled by some monomial-list `s.1`), reduces the interpretation of the
+     -   combined sum to the interpretation of `add` alone — used by the solver to apply user-supplied ring equalities
+     -   during normalization.
+     -}
     \lemma apply-axioms {n : Nat} (env : Array B n) (l : Array (\Sigma (NF n) (t s : Term n) (p : interpret env t = interpret env s))) (add : NF n)
       : interpretNF env (Big (++) add (Data.Array.map (\lam s => multiply s.1 (normalize (s.2 :+ s.3))) l)) = interpretNF' env add
       => interpretNF=interpretNF' *> interpretNF_Big_++ *> pmap (+ _) (B.BigSum_zro \lam j => interpretNF_multiply_zro (all-++ normalize-nonEmpty normalize-nonEmpty) $ interpretNF_++ *> pmap (_ +) (inv B.negative=id) *> B.toZero (later $ interpretNF'-consistent *> (l j).4 *> inv interpretNF'-consistent)) *> zro-left

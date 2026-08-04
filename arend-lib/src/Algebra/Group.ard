@@ -1,3 +1,13 @@
+{- | Group structures and their additive/abelian/commutative variants, built on top of monoids.
+ -
+ -   This module defines the core algebraic hierarchy for groups: a `Group` extends `CancelMonoid` with an `inverse`
+ -   operation satisfying the standard left/right inverse laws, and cancellation is derived rather than postulated.
+ -   Parallel additive (`AddGroup`) and commutative (`CGroup`, `AbGroup`) variants are provided, along with coercions
+ -   between additive and multiplicative presentations. The module also develops integer powers (`ipow`, `*i`), a
+ -   constructive apartness extension (`With#`) for groups where the relation `#0` distinguishes elements from zero, and
+ -   decidable variants (`Dec`, `FinGroup`).
+ -}
+
 \import Algebra.Meta
 \import Algebra.Monoid
 \import Algebra.Monoid.MonoidHom
@@ -16,6 +26,10 @@
 \import Set
 \import Set.Fin
 
+{- | Class extending `CancelMonoid` with `inverse : E -> E` and laws `inverse-left`, `inverse-right`. Cancellation,
+ -   identity, and inverse laws are mutually derivable; default implementations close the loop. Includes `op` for the
+ -   opposite group.
+ -}
 \class Group \extends CancelMonoid {
   | inverse : E -> E
   | inverse-left {x : E} : inverse x * x = ide
@@ -46,10 +60,12 @@
       y * ide             ==< ide-right >==
       y                   `qed
 
+  -- | Integer power `ipow a x` — `pow a n` for positive, `pow (inverse a) n` for negative.
   \func ipow (a : E) (x : Int) : E \elim x
     | pos n => pow a n
     | neg n => pow (inverse a) n
 
+  -- | Standard exponent laws for `ipow`.
   \lemma ipow_+ {a : E} {x y : Int} : ipow a (x + y) = ipow a x * ipow a y \elim x, y
     | pos n, pos m => pow_+
     | pos n, neg m => ipow_-
@@ -64,11 +80,13 @@
         | suc n, suc m => equation.monoid {ipow_-, inv (pow-left {_} {inverse a}), inverse-right {_} {a}}
     }
 
+  -- | Standard exponent laws for `ipow`.
   \lemma ipow_negaitve {a : E} {x : Int} : ipow a (negative x) = inverse (ipow a x) \elim x
     | pos n => inv inverse_pow
     | neg n => inv inverse-isInv *> pmap inverse inverse_pow
     \where \open Arith.Int.IntRing(negative)
 
+  -- | Standard exponent laws for `ipow`.
   \lemma ipow_* {a : E} {x y : Int} : ipow a (x * y) = ipow (ipow a x) y \elim x, y
     | pos n, pos m => pow_*
     | pos n, neg m => pow_* *> pmap (pow __ m) (inv inverse_pow)
@@ -76,16 +94,20 @@
     | neg (suc n), neg m => pow_* *> pmap (pow __ m) (inv (inverse_pow {_} {_} {suc n} *> pmap (pow __ (suc n)) inverse-isInv))
     \where \open Arith.Int.IntRing(*)
 
+  -- | Standard exponent laws for `ipow`.
   \lemma ipow_ide {x : Int} : ipow ide x = ide \elim x
     | pos n => pow_ide
     | neg n => pmap (pow __ n) inverse_ide *> pow_ide
 
+  -- | `inverse (inverse x) = x`.
   \lemma inverse-isInv {x : E} : inverse (inverse x) = x
     => AddGroup.negative-isInv {AddGroup.fromGroup \this}
 
+  -- | `inverse ide = ide`.
   \lemma inverse_ide : inverse ide = ide
     => inv ide-right *> inverse-left
 
+  -- | `inverse (x * y) = inverse y * inverse x`.
   \lemma inverse_* {x y : E}  : inverse (x * y) = inverse y * inverse x => cancel_*-left (x * y) (
     (x * y) / (x * y)         ==< inverse-right >==
     ide                       ==< inv inverse-right >==
@@ -95,10 +117,12 @@
     x * (y * (inverse y / x)) ==< inv *-assoc >==
     (x * y) * (inverse y / x) `qed)
 
+  -- | `inverse (pow x n) = pow (inverse x) n`.
   \lemma inverse_pow {x : E} {n : Nat} : inverse (pow x n) = pow (inverse x) n \elim n
     | 0 => inverse_ide
     | suc n => inverse_* *> pmap (_ *) inverse_pow *> pow-left
 
+  -- | Packages `inverse a` as a `Monoid.Inv` witness.
   \lemma makeInv (a : E) : Inv a (inverse a) \cowith
     | inv-left => inverse-left
     | inv-right => inverse-right
@@ -111,11 +135,13 @@
 } \where {
   \open Monoid(Inv)
 
+  -- | Inverses agree between two group structures sharing identity and multiplication.
   \lemma inverse-equality {X : \Set} (G H : Group X) (z : G.ide = H.ide) (m : \Pi {x y : G} -> x G.* y = x H.* y) (e : G) : G.inverse e = H.inverse e
     => pmap (\lam (x : Inv) => x.inv) (Inv.levelProp {G}
         (\new Inv e (G.inverse e) G.inverse-left G.inverse-right)
         (\new Inv e (H.inverse e) (m *> H.inverse-left *> inv z) (m *> H.inverse-right *> inv z)))
 
+  -- | Lifts an equality of underlying monoids to an equality of groups.
   \func equals.{u} (G H : Group.{u}) (p : G = {Monoid.{u}} H) : G = {Group.{u}} H
     => exts Group {
          | Monoid => p
@@ -132,6 +158,7 @@
                 idp
     }
 
+  -- | Bootstrapping helpers used to derive missing identity/inverse laws from one-sided versions.
   \private \lemma make-inverse-left {M : Semigroup} {ide : M} (ide-right : \Pi {x : M} -> x * ide = x) (inverse : M -> M) (inverse-right : \Pi {x : M} -> x * inverse x = ide) {x : M} : inverse x * x = ide
     => \have | inverse-x-idempotent : (inverse x * x) * (inverse x * x) = inverse x * x =>
                 (inverse x * x) * (inverse x * x) ==< *-assoc >==
@@ -149,6 +176,7 @@
                 ide                 `qed
        \in idempotent-is-trivial inverse-x-idempotent
 
+  -- | Bootstrapping helpers used to derive missing identity/inverse laws from one-sided versions.
   \private \lemma make-ide-left {M : Semigroup} {ide : M} (ide-right : \Pi {x : M} -> x * ide = x) (inverse : M -> M)
     (inverse-right : \Pi {x : M} -> x * inverse x = ide) (inverse-left : \Pi {x : M} -> inverse x * x = ide) {x : M} : ide * x = x
     => ide * x              ==< pmap (* x) (inv inverse-right) >==
@@ -157,19 +185,24 @@
        x * ide              ==< ide-right >==
        x                      `qed
 
+  -- | Left translation `(h *)` is a quasi-equivalence with inverse `(inverse h *)`.
   \func translate-is-Equiv {G : Group} (h : G) : QEquiv (h *) \cowith
     | ret => inverse h *
     | ret_f _ => rewrite (inv G.*-assoc, G.inverse-left, G.ide-left) idp
     | f_sec _ => rewrite (inv G.*-assoc, G.inverse-right, G.ide-left) idp
 
+  -- | Group with decidable equality (`extends Group, DecSet`).
   \class Dec \extends Group, DecSet
 }
 
+-- | Division `x / y = x * inverse y`.
 \func \infixl 7 / {G : Group} (x y : G) => x * inverse y
 
+-- | `g * h * inverse g`.
 \func conjugate {E : Group} (g h : E)
   => g * h * inverse g
 
+-- | `conjugate ide g = g`.
 \lemma conjugate-via-id {G : Group} {g : G} : conjugate ide g = g =>
   conjugate ide g ==< idp >==
   ide * g * inverse ide ==< *-assoc >==
@@ -178,32 +211,41 @@
   g * ide ==< ide-right >==
   g `qed
 
+-- | Class extending `AddMonoid` with `negative`, `negative-left`, `negative-right`.
 \class AddGroup \extends AddMonoid {
   | negative : E -> E
   | negative-left {x : E} : negative x + x = zro
   | negative-right {x : E} : x + negative x = zro
 
+  -- | Additive cancellation.
   \lemma cancel-left (x : E) {y z : E} (p : x + y = x + z) : y = z =>
     Group.cancel_*-left {toGroup \this} x p
 
+  -- | Additive cancellation.
   \lemma cancel-right (z : E) {x y : E} (p : x + z = y + z) : x = y =>
     Group.cancel_*-right {toGroup \this} z p
 
+  -- | `negative (negative x) = x`.
   \lemma negative-isInv {x : E} : negative (negative x) = x =>
     cancel-left (negative x) (negative-right *> inv negative-left)
 
+  -- | `negative (x + y) = negative y - x`.
   \lemma negative_+ {x y : E} : negative (x + y) = negative y - x
     => Group.inverse_* {toGroup \this}
 
+  -- | `negative (x - y) = y - x`.
   \lemma negative_- {x y : E} : negative (x - y) = y - x
     => negative_+ *> pmap (- x) negative-isInv
 
+  -- | `negative zro = zro`.
   \lemma negative_zro : negative zro = zro
     => inv zro-right *> negative-left
 
+  -- | `x - zro = x`.
   \lemma minus_zro {x : E} : x - zro = x
     => pmap (x +) negative_zro *> zro-right
 
+  -- | Convert between `x = y` and `x - y = zro`.
   \lemma fromZero {x y : E} (x-y=0 : x - y = zro) : x = y =>
     x                    ==< inv zro-right >==
     x + zro              ==< pmap (x +) (inv negative-left) >==
@@ -212,26 +254,33 @@
     zro + y              ==< zro-left >==
     y                    `qed
 
+  -- | Convert between `x = y` and `x - y = zro`.
   \lemma toZero {x y : E} (x=y : x = y) : x - y = zro => rewriteI x=y negative-right
 
+  -- | `n *n negative a = negative (n *n a)`.
   \lemma *n_negative {n : Nat} {a : E} : n *n negative a = negative (n *n a)
     => *n_pow *> inv \this.inverse_pow *> inv (pmap negative *n_pow)
 
+  -- | Integer scalar multiplication on an `AddGroup`.
   \func \infixl 7 *i (x : Int) (a : E) : E \elim x
     | pos n => n *n a
     | neg n => n *n negative a
 
+  -- | `x *i a = ipow a x` under the multiplicative view.
   \protected \lemma *i_ipow {x : Int} {a : E} : x *i a = \this.ipow a x \elim x
     | pos n => *n_pow
     | neg n => *n_pow
 
+  -- | `(x * y) *i a = x *i (y *i a)`.
   \lemma *i-assoc {x y : Int} {a : E} : (x * y) *i a = x *i (y *i a)
     => pmap (*i _) *-comm *> *i_ipow *> \this.ipow_* *> inv (pmap (_ *i) *i_ipow *> *i_ipow)
     \where \open Arith.Int.IntRing(*,*-comm)
 
+  -- | `(x + y) *i a = x *i a + y *i a`.
   \lemma *i-rdistr {x y : Int} {a : E} : (x Arith.Int.IntRing.+ y) *i a = x *i a + y *i a
     => *i_ipow *> \this.ipow_+ *> inv (pmap2 (+) *i_ipow *i_ipow)
 
+  -- | `(z - y) + (y - x) = z - x`.
   \lemma diff_+ {x y z : E} : (z - y) + (y - x) = z - x =>
     (z - y) + (y - x)          ==< +-assoc >==
     z + (negative y + (y - x)) ==< inv (pmap (z +) +-assoc) >==
@@ -239,9 +288,12 @@
     z + (zro - x)              ==< pmap (z +) zro-left >==
     z - x                      `qed
 } \where {
+    -- | Coercions between `Group` and `AddGroup` views of the same data.
     \use \coerce fromGroup (G : Group) => \new AddGroup G.E G.ide (G.*) G.ide-left G.ide-right G.*-assoc G.inverse G.inverse-left G.inverse-right
+    -- | Coercions between `Group` and `AddGroup` views of the same data.
     \use \coerce toGroup (G : AddGroup) => \new Group G.E G.zro (G.+) G.+-assoc G.zro-left G.zro-right G.negative G.negative-left G.negative-right
 
+    -- | Negation agrees between two `AddGroup` structures sharing zero and addition.
     \lemma negative-equality {X : \Set} (A B : AddGroup X) (z : A.zro = B.zro) (m : \Pi {x y : A} -> x A.+ y = x B.+ y) (e : A) : A.negative e = B.negative e
       => Group.inverse-equality A B z m e
 
@@ -259,18 +311,23 @@
     | #-comparison x y z x-z#0 => #0-+ (transport #0 (inv diff_+) x-z#0)
     | tightness x-y/#0 => fromZero (#0-tight x-y/#0)
 
+    -- | `#0 x` implies `x /= zro`.
     \lemma apartNonZero {x : E} (x#0 : x `#0) : x /= zro
       => \lam x=0 => #0-zro (transport #0 x=0 x#0)
 
+    -- | `#0 (negative x)` implies `#0 x`.
     \lemma #0-negative-inv {x : E} (p : negative x `#0) : x `#0
       => transport #0 negative-isInv (#0-negative p)
 
+    -- | Splitting apartness across sums.
     \lemma #0-+-left {x y : E} (x#0 : #0 x) : #0 (x + y) || #0 y
       => ||.map (\lam r => r) #0-negative-inv $ #0-+ $ transportInv #0 (+-assoc *> pmap (x +) negative-right *> zro-right) x#0
 
+    -- | Splitting apartness across sums.
     \lemma #0-+-right {x y : E} (y#0 : #0 y) : #0 (x + y) || #0 x
       => ||.rec' (\lam r => byRight (#0-negative-inv r)) byLeft $ #0-+ {_} {negative x} {x + y} $ transportInv #0 simplify y#0
 
+    -- | Apartness propagates to/from a `BigSum`'s entries.
     \lemma #0-BigSum {l : Array E} (p : BigSum l `#0) : ∃ (j : Fin l.len) (l j `#0) \elim l
       | nil => absurd (#0-zro p)
       | a :: l => \case #0-+ p \with {
@@ -280,6 +337,7 @@
         }
       }
 
+    -- | Apartness propagates to/from a `BigSum`'s entries.
     \lemma #0-BigSum-conv {l : Array E} {i : Fin l.len} (p : l i `#0) : BigSum l `#0 || (\Sigma (j : Fin l.len) (j /= i) (l j `#0)) \elim l, i
       | a :: l, 0 => \case #0-+-left p \with {
         | byLeft r => byLeft r
@@ -314,6 +372,7 @@
     \default #0-zro (zro/=0 : #0 zro) : Empty => zro/=0 idp
     \default nonZeroApart \as notEqualApartImpl {x} x#0 : #0 x => x#0
 
+    -- | Decidability of `a = 0` versus `#0 a`.
     \lemma decide#0 (a : E) : Or (a = 0) (a With#.`#0) \level Or.levelProp (\lam p q => apartNonZero q p)
       => \case decideEq a 0 \with {
         | yes e => inl e
@@ -322,32 +381,41 @@
   }
 }
 
+-- | Subtraction `x - y = x + negative y`.
 \func \infixl 6 - {G : AddGroup} (x y : G) => x + negative y
 
+-- | Commutative group, extending `Group` and `CancelCMonoid`; `inverse-right` follows from commutativity.
 \class CGroup \extends Group, CancelCMonoid {
   | inverse-right => *-comm *> inverse-left
 
+  -- | `ipow (a * b) x = ipow a x * ipow b x`.
   \lemma ipow_*-comm {a b : E} {x : Int} : ipow (a * b) x = ipow a x * ipow b x \elim x
     | pos n => pow_*-comm
     | neg n => pmap (pow __ n) (inverse_* *> *-comm) *> pow_*-comm
 
+  -- | `inverse` distributes over `BigProd`.
   \lemma BigProd_inverse {l : Array E} : inverse (BigProd l) = BigProd (map inverse l)
     => AbGroup.BigSum_negative {AbGroup.fromCGroup \this}
 
+  -- | `BigProd` commutes with `ipow`.
   \lemma BigProd_ipow {k : Int} {l : Array E} : BigProd (\lam i => ipow (l i) k) = ipow (BigProd l) k \elim k
     | pos n => BigProd_pow
     | neg n => later (BigProd-ext {_} {l.len} \lam i => inv inverse_pow) *> inv BigProd_inverse *> pmap inverse BigProd_pow *> inverse_pow
 }
 
+-- | Class extending `AddGroup` and `AbMonoid`; `negative-right` follows from `+-comm`.
 \class AbGroup \extends AddGroup, AbMonoid {
   | negative-right => +-comm *> negative-left
 
+  -- | `n *n (a - b) = n *n a - n *n b`.
   \lemma *n-ldistr_- {n : Nat} {a b : E} : n *n (a - b) = n *n a - n *n b
     => *n-ldistr *> pmap (_ +) *n_negative
 
+  -- | `x *i (a + b) = x *i a + x *i b`.
   \lemma *i-ldistr {a b : E} {x : Int} : x *i (a + b) = x *i a + x *i b
     => *i_ipow *> \this.ipow_*-comm *> inv (pmap2 (+) *i_ipow *i_ipow)
 
+  -- | `negative` distributes over `BigSum`.
   \lemma BigSum_negative {l : Array E} : negative (BigSum l) = BigSum (map negative l) \elim l
     | nil => negative_zro
     | a :: l => negative_+ *> +-comm *> pmap (_ +) BigSum_negative
@@ -365,27 +433,36 @@
   \lemma FinSum_- {n : Nat} {x y : Fin n -> E} : FinSum (\lam k => x k - y k) = FinSum x - FinSum y
     => FinSum=BigSum *> BigSum_- *> pmap2 (-) (inv FinSum=BigSum) (inv FinSum=BigSum)
 
+  -- | Cancellation inside additive differences.
   \lemma sum-cancel-left {x y z : E} : x + z - (x + y) = z - y
     => pmap (_ +) negative_+ *> pmap2 (+) +-comm +-comm *> +-assoc *> pmap (z +) (inv +-assoc *> pmap (- y) negative-right *> zro-left)
 
+  -- | Cancellation inside additive differences.
   \lemma sum-cancel-right {x y z : E} : z + x - (y + x) = z - y
     => rewrite (+-comm {_} {z}, +-comm {_} {y}) sum-cancel-left
 
+  -- | `x - z - (x - y) = y - z`.
   \lemma diff-cancel-left {x y z : E} : x - z - (x - y) = y - z
     => sum-cancel-left *> +-comm *> pmap (- z) negative-isInv
 
+  -- | `negative (x + y) = negative x - y`.
   \lemma negative_+-comm {x y : E} : negative (x + y) = negative x - y
     => negative_+ *> +-comm
 
+  -- | `x - (y + z) = x - y - z`.
   \lemma diff_sum {x y z : E} : x - (y + z) = x - y - z
     => pmap (x +) negative_+-comm *> inv +-assoc
 
+  -- | `x - (y - z) = x - y + z`.
   \lemma diff_diff {x y z : E} : x - (y - z) = x - y + z
     => diff_sum *> pmap (x - y + __) negative-isInv
 } \where {
+    -- | Coercions between `CGroup` and `AbGroup`.
     \use \coerce fromCGroup (G : CGroup) => \new AbGroup G.E G.ide (G.*) G.ide-left G.ide-right G.*-assoc G.inverse G.inverse-left G.*-comm
+    -- | Coercions between `CGroup` and `AbGroup`.
     \use \coerce toCGroup (G : AbGroup) => \new CGroup G.E G.zro (G.+) G.+-assoc G.zro-left G.zro-right G.negative G.negative-left G.+-comm
 
+    -- | Lifts an equality of underlying `AddGroup`s to `AbGroup` equality.
     \func equals.{u} (A B : AbGroup.{u}) (p : A = {AddGroup.{u}} B) : A = {AbGroup.{u}} B
       => path (\lam i => \new AbGroup {
         | AddGroup => p @ i
@@ -393,4 +470,5 @@
       })
   }
 
+-- | Finite group with decidable equality (`extends Group, Group.Dec, FinSet`).
 \class FinGroup \extends Group, Group.Dec, FinSet

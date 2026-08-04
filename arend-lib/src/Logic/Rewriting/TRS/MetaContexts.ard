@@ -1,3 +1,14 @@
+{- | Constructions for combining and specializing metavariable contexts in higher-order term rewriting systems.
+ -
+ -   This module provides ways to assemble `MetaContext`s from simpler pieces — taking a finite family of metacontexts
+ -   and merging them into one (`ModularMetaContext`), distinguishing a special "hole" metavariable
+ -   (`PointedModularMetaContext`), or building a context with a single metavariable at a chosen sort
+ -   (`SingularMetaContext`). These constructions support compositional reasoning about terms with metavariables, where
+ -   a rewrite rule's pattern, the surrounding context, and a substitution may each carry their own metavariables that
+ -   must be combined coherently. The `upgrade-metavariables` helpers reindex terms from a component metacontext into
+ -   the merged one, and the modularity lemma ensures that applying a substitution commutes with this upgrade.
+ -}
+
 \import Data.List (List)
 \import Data.Or
 \import Logic
@@ -9,11 +20,17 @@
 \import Logic.Rewriting.TRS.HRS
 \import Logic.Rewriting.TRS.Substitutions
 
+{- | Merges a finite family `Fin n -> MetaContext Sort` into one metacontext whose metanames are pairs `(i, m)` of an
+ -   index and a metaname from the `i`-th component, with domains inherited componentwise.
+ -}
 \func ModularMetaContext {env : FSignature} {n : Nat} (meta-contexts : Fin n -> MetaContext Sort) : MetaContext Sort
 \cowith
   | metaname s => \Sigma (i : Fin n) (metaname {meta-contexts i} s)
   | m-domain m => m-domain {meta-contexts m.1} m.2
   \where {
+    {- | Lifts a `Term` over the `index`-th component metacontext into a term over the merged `ModularMetaContext`, by
+     -   retagging each metavariable with its component index.
+     -}
     \func upgrade-metavariables
       {env : FSignature} {context : List Sort} {s : Sort} {n : Nat}
       {index : Fin n}
@@ -26,6 +43,9 @@
       | func f arguments => func f (\lam i => upgrade-metavariables meta-contexts (arguments i))
   }
 
+{- | Extends `ModularMetaContext` with a distinguished metavariable at a specified `point : Sort` having context
+ -   `context-for-point`; metanames are `Or` of the equation `s = point` and the modular metanames.
+ -}
 \func PointedModularMetaContext {env : FSignature} {n : Nat} (point : Sort) (context-for-point : List Sort)
                                 (meta-contexts : Fin n -> MetaContext Sort) : MetaContext Sort
 \cowith
@@ -35,6 +55,9 @@
     | inr m => m-domain {ModularMetaContext meta-contexts} m
   }
   \where {
+    {- | Lifts a term from a component metacontext (indexed within `pointed-context`) into the pointed merged
+     -   metacontext, embedding ordinary metavariables on the `inr` side.
+     -}
     \func upgrade-metavariables
       {env : FSignature} {context : List Sort} {s : Sort}
       (point : Sort)
@@ -49,18 +72,27 @@
       | func f arguments => func f (\lam i => upgrade-metavariables point pointed-context metas (arguments i))
   }
 
+{- | A metacontext with a single metavariable at sort `point` over the given `context`; metanames are proofs
+ -   `s = point`.
+ -}
 \func SingularMetaContext {env : FSignature} (point : Sort) (context : List Sort)
   : MetaContext Sort \cowith
   | metaname s => s = point
   | m-domain eq => context
 
+-- | The metacontext with no metavariables (`metaname = Empty`); used to express closed/pure terms.
 \func EmptyMetaContext {env : FSignature} : MetaContext Sort \cowith
   | metaname m => Empty
   | m-domain e => contradiction
 
+-- | A `Term` over `EmptyMetaContext`, i.e., a term containing no metavariables.
 \func PureTerm (env : FSignature) (context : List Sort) (s : Sort) : \Set
   => Term env context s EmptyMetaContext
 
+{- | States that applying a metasubstitution to a weakened component term equals applying the merged substitution
+ -   `\lam m => substitutions m.1 m.2` to the upgraded term — i.e., per-component substitution and modular substitution
+ -   agree, so reasoning can move freely between the component view and the merged view.
+ -}
 \lemma apply-modularity {env : FSignature} {context subst-context pattern-context : List Sort} {s : Sort} {mc : MetaContext Sort} {n : Nat} {index : Fin n}
                         (producer : Fin n -> MetaContext Sort)
                         (substitutions : \Pi (i : Fin n) -> MetaSubstitution env subst-context (producer i) mc)

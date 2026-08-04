@@ -1,3 +1,11 @@
+{- | Pre-additive and additive precategories: categories enriched in abelian groups.
+ -
+ -   A pre-additive precategory equips each hom-set with an abelian group structure such that composition is bilinear on
+ -   both sides. This is the categorical generalization of a ring: rings correspond exactly to pre-additive categories
+ -   with a single object, a correspondence made precise here via univalence. Adding finite products (cartesian
+ -   structure) on top yields an additive precategory, the standard setting for homological algebra.
+ -}
+
 \import Algebra.Group
 \import Algebra.Ring
 \import Algebra.Semiring
@@ -8,17 +16,28 @@
 \import Paths
 \import Paths.Meta
 
+{- | Extends `Precat`. A precategory enriched in abelian groups, providing `AbHom : AbGroup (Hom X Y)` on every hom-set
+ -   together with left and right bilinearity laws (`l-bilinear`, `r-bilinear`) stating that composition distributes
+ -   over hom-set addition on either side.
+ -}
 \class PreAdditivePrecat \extends Precat
   | AbHom {X Y : Ob} : AbGroup (Hom X Y)
   | l-bilinear {X Y Z : Ob} {g h : Hom X Y} {f : Hom Y Z} : (g AbHom.+ h) >> f = g >> f AbHom.+ h >> f
   | r-bilinear {X Y Z : Ob} {g h : Hom Y Z} {f : Hom X Y} : f >> (g AbHom.+ h) = f >> g AbHom.+ f >> h
 
+{- | Establishes the equality `PreAdditivePrecat (\Sigma) = Ring` via univalence, identifying rings with pre-additive
+ -   categories on a single (unit) object. Built from a `QEquiv` between the two structures.
+ -}
 \func Ring=OneObjectPreAdd.{u} : QEquiv {PreAdditivePrecat.{u} (\Sigma)} {Ring.{u}} \cowith
   | f X => PreAdditiveCategory-OneObject X
   | ret R => Ring_toCat R
   | ret_f _ => idp
   | f_sec _ => exts (idp, idp, \lam _ _ => idp, \lam _ _ => idp, \lam _ => idp, idp, \lam n => natCoefCoincide)
   \where {
+    {- | Auxiliary lemma showing that the natural-number coefficient `natCoef n` computed in the ring obtained from a
+     -   one-object pre-additive category agrees with the original ring's `natCoef`, used to discharge the round-trip
+     -   equality in `Ring=OneObjectPreAdd`.
+     -}
     \func natCoefCoincide {b : Ring} {n : Nat} : natCoef {PreAdditiveCategory-OneObject (Ring_toCat b)} n = b.natCoef n \elim n
       | 0 => rewrite b.natCoefZero idp
       | suc n => rewrite (b.natCoefSuc, inv $ natCoefCoincide {b} {n} ) idp
@@ -34,6 +53,9 @@
       | ldistr => X.l-bilinear
       | rdistr => X.r-bilinear
 
+    {- | Sends a ring `R` to the pre-additive precategory on `\Sigma` whose unique hom-set is `R`, with composition
+     -   given by ring multiplication and the abelian group structure given by ring addition.
+     -}
     \func Ring_toCat (R : Ring) : PreAdditivePrecat (\Sigma) \cowith
       | Hom _ _ => R
       | id => R.ide
@@ -46,4 +68,7 @@
       | r-bilinear => R.rdistr
   }
 
+{- | Extends `PreAdditivePrecat` and `CartesianPrecat`. A pre-additive precategory that also has finite products, the
+ -   standard setting for additive/homological constructions.
+ -}
 \class AdditivePrecat \extends PreAdditivePrecat, CartesianPrecat

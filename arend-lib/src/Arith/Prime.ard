@@ -1,3 +1,14 @@
+{- | Primality for natural numbers, connecting the abstract `Prime` predicate from monoid theory to a concrete decidable
+ -   test.
+ -
+ -   This module bridges three views of primality on `Nat`: the algebraic notion `Prime` (irreducibility in a monoid),
+ -   divisibility-based characterizations (no proper divisors other than 1), and a computable boolean test `isPrime`
+ -   based on trial division by odd numbers up to the square root. The equivalences between these views are packaged so
+ -   that primality on `Nat` becomes decidable, with `prime-isDec` as the user-facing result. The trial-division
+ -   algorithm only checks odd divisors `j` while `j * j <= n`, which is the source of the `isOdd`-based bookkeeping
+ -   lemmas.
+ -}
+
 \import Algebra.Domain
 \import Algebra.Domain.Euclidean
 \import Algebra.Monoid
@@ -21,6 +32,7 @@
 
 -- A few characterizations of primality for natural numbers
 
+-- | An irreducible element of `NatSemiring` is `Prime` (with itself as the witness of non-invertibility).
 \lemma nat_irr-isPrime (p : Irr {NatSemiring}) : Prime p p.notInv \cowith
   | isCancelable-left => p.isCancelable-left
   | isPrime {x} {y} p|x*y =>
@@ -33,15 +45,18 @@
           | byRight p|y => byRight (ldiv_int_nat p|y)
         }
 
+-- | Equivalence `Prime n = (n /= 1) ∧ (∀ k, LDiv k n -> k = n ∨ k = 1)` — primality as "only divisors are 1 and `n`".
 \lemma prime-div {n : Nat} : Prime n = (\Sigma (n /= 1) (\Pi {k : Nat} -> LDiv k n -> (k = n) || (k = 1)))
   => propExt (\lam (p : Prime n) => (\lam n=1 => p.notInv (rewrite n=1 Inv.ide-isInv), dir p)) (\lam t => conv t.1 t.2)
   \where {
+    -- | The two directions of the equivalence.
     \lemma dir {n : Nat} (p : Irr n) {k : Nat} (k|n : LDiv k n) : (k = n) || (k = 1)
       => \case p.isIrr (inv k|n.inv-right) \with {
         | byLeft (s : Inv k) => byRight (natUnit s.inv-left)
         | byRight (s : Inv k|n.inv) => byLeft (inv (pmap (k *) (natUnit s.inv-left)) *> k|n.inv-right)
       }
 
+    -- | The two directions of the equivalence.
     \lemma conv {n : Nat} (n/=1 : n /= 1) (f : \Pi {k : Nat} -> LDiv k n -> (k = n) || (k = 1)) : Prime n
       => \have n/=0 : n /= 0 => \lam n=0 => \case f {2} (\new LDiv { | inv => 0 | inv-right => inv n=0 }) \with {
            | byLeft n=2 => \case n=2 *> n=0
@@ -57,6 +72,9 @@
          })
   }
 
+{- | Equivalence `Prime n = (n > 1) ∧ (∀ k, k < n -> LDiv k n -> k = 1)` — primality as "no nontrivial divisor below
+ -   `n`".
+ -}
 \lemma prime-less {n : Nat} : Prime n = (\Sigma (n > 1) (\Pi {k : Nat} -> k < n -> LDiv k n -> k = 1))
   => propExt (\lam p => (\case \elim n, p \with {
     | 0, p : Prime 0 => \case p.isCancelable-left {0} {1} idp
@@ -64,12 +82,14 @@
     | suc (suc n), _ => suc<suc zero<suc
   }, dir p)) (\lam t => conv t.1 t.2)
   \where {
+    -- | The two directions.
     \lemma dir {n : Nat} (p : Irr n) {k : Nat} (k<n : k < n) (k|n : LDiv k n) : k = 1
       => \case prime-div.dir p k|n \with {
            | byLeft k=n => absurd (<-irreflexive (transportInv (k <) k=n k<n))
            | byRight k=1 => k=1
          }
 
+    -- | The two directions.
     \lemma conv {n : Nat} (n>1 : n > 1) (f : \Pi {k : Nat} -> k < n -> LDiv k n -> k = 1) : Prime n
       => prime-div.conv (\lam n=1 => <-irreflexive (transportInv (< n) n=1 n>1)) (\lam {k} k|n => \case LinearOrder.trichotomy k n \with {
         | less k<n => byRight (f k<n k|n)
@@ -80,21 +100,29 @@
 
 -- A primality test
 
+{- | Boolean primality test on `Nat`. Returns `false` for 0 and 1, `true` for 2, and otherwise checks that `n` is odd
+ -   and has no odd divisor `j` with `j * j <= n`.
+ -}
 \func isPrime (n : Nat) : Bool
   | 0 => false
   | 1 => false
   | 2 => true
   | n => isPositive (n mod 2) and rec n n 3
   \where {
+    -- | `Bool` predicate testing `n /= 0`, used to read off `n mod k /= 0`.
     \func isPositive (n : Nat) : Bool
       | 0 => false
       | _ => true
 
+    -- | Boolean less-than on `Nat` via `Int` subtraction.
     \func \infix 4 < (n m : Nat) : Bool => \case n - m \with {
       | pos _ => false
       | neg (suc _) => true
     }
 
+    {- | Recursive trial-division loop: for fuel `c` starting at `j`, returns true once `n < j * j`, otherwise requires
+     -   `j ∤ n` and recurses with `j + 2`.
+     -}
     \func rec (n c j : Nat) : Bool \elim c
       | 0 => true
       | suc c => n < j * j or isPositive (n mod j) and rec n c (suc (suc j))
@@ -102,6 +130,7 @@
 
 \open isPrime \hiding (<)
 
+-- | If `isPrime n = true`, then `Prime n`.
 \lemma isPrime=>prime {n : Nat} (p : isPrime n = true) : Prime n \elim n, p
   | 2, _ => prime-less.conv (suc<suc zero<suc) (\lam {k} k<2 k|2 => \case \elim k, k<2, k|2 \with {
     | 0, _, q : LDiv => \case *-comm *> q.inv-right
@@ -112,23 +141,28 @@
   \where {
     \open NatSemiring
 
+    -- | If `n mod k` is positive then `k` does not divide `n`.
     \lemma mod_div-lem {k n : Nat} (p : isPositive (n mod k) = true) : Not (LDiv k n)
       => \lam k|n => \case rewrite (div_mod k|n) in p
 
+    -- | Propositional predicate "`n` is odd", defined by recursion on `suc (suc n)`.
     \func isOdd (n : Nat) : \Prop \elim n
       | 0 => Empty
       | 1 => \Sigma
       | suc (suc n) => isOdd n
 
+    -- | `k <= k * k`.
     \lemma square_<=-lem {k : Nat} : k <= k * k \elim k
       | 0 => zero<=_
       | suc k => <=_* <=-refl (suc<=suc zero<=_)
 
+    -- | `n` and `n + 1` cannot both be odd.
     \lemma odd_suc-lem {j : Nat} (j-odd : isOdd j) (sj-odd : isOdd (suc j)) : Empty \elim j
       | 0 => j-odd
       | 1 => sj-odd
       | suc (suc j) => odd_suc-lem j-odd sj-odd
 
+    -- | Two distinct odd numbers `j <= k` differ by at least 2: `suc (suc j) <= k`.
     \lemma odd-lem {j k : Nat} (j-odd : isOdd j) (k-odd : isOdd k) (j<=k : j <= k) (j/=k : j /= k) : suc (suc j) <= k
       => \case k -' j \as t, <=_exists j<=k : j + t = k \with {
            | 0, j=k => absurd (j/=k j=k)
@@ -136,6 +170,9 @@
            | suc (suc t), p => transport (suc (suc j) <=) p (suc<=suc (suc<=suc (<=_+ <=-refl zero<=_)))
          }
 
+    {- | Core invariant of the trial-division loop: if `rec n c j = true` and `k` is an odd divisor of `n` with `j <= k`
+     -   and `k * k <= n`, derive a contradiction.
+     -}
     \lemma rec-lem {n c j : Nat} (p : rec n c j = true) (j-odd : isOdd j) (s : n < c + j) {k : Nat} (k-odd : isOdd k) (j<=k : j <= k) (k*k<=n : k * k <= n) (k|n : LDiv k n) : Empty \elim c
       | 0 => <-irreflexive (s <∘l j<=k <∘l square_<=-lem <∘l k*k<=n)
       | suc c => \case or.toOr p \with {
@@ -149,6 +186,7 @@
         }
       }
 
+    -- | Every natural is either odd or divisible by 2.
     \lemma oddOrEven (n : Nat) : isOdd n || LDiv 2 n
       | 0 => byRight (\new LDiv { | inv => 0 | inv-right => idp })
       | 1 => byLeft ()
@@ -160,6 +198,7 @@
         })
       }
 
+    -- | Reduces primality to: `n > 1`, `2 ∤ n`, and no odd `k >= 3` with `k * k <= n` divides `n`.
     \lemma prime-lem {n : Nat} (n>1 : n > 1) (div2 : Not (LDiv 2 n)) (divOdd : \Pi {k : Nat} -> isOdd k -> 3 <= k -> k * k <= n -> Not (LDiv k n)) : Prime n
       => prime-lem2 n>1 (\lam {k} => \case \elim k, oddOrEven k \with {
         | 0, byLeft ()
@@ -169,6 +208,7 @@
         | k, byRight even => \lam _ k|n => absurd (div2 (LDiv.trans even k|n))
       })
 
+    -- | Reduces primality to: `n > 1` and every divisor `j` with `j * j <= n` equals 1.
     \lemma prime-lem2 {n : Nat} (n>1 : n > 1) (f : \Pi {j : Nat} -> j * j <= n -> LDiv j n -> j = 1) : Prime n
       => prime-less.conv n>1 (\lam {k} k<n (k|n : LDiv k n) => \case totality k k|n.inv \with {
         | byLeft k<=i => f (transport (k * k <=) k|n.inv-right (<=_* <=-refl k<=i)) k|n
@@ -178,6 +218,7 @@
       })
   }
 
+-- | If `Prime n`, then `isPrime n = true`.
 \lemma prime=>isPrime {n : Nat} (p : Prime n) : isPrime n = true \elim n
   | 0 => \case p.isCancelable-left {0} {1} idp
   | 1 => absurd (p.notInv Inv.ide-isInv)
@@ -186,22 +227,26 @@
   \where {
     \open NatSemiring
 
+    -- | For prime `n`, any `k < n` with `k /= 1` satisfies `n mod k > 0`.
     \lemma mod-lem {k n : Nat} (p : Prime n) (k<n : k < n) (k/=1 : k /= 1) : isPositive (n mod k) = true
       => mcases {isPositive} {arg addPath} \with {
         | 0, q => absurd (k/=1 (prime-less.dir p k<n (mod_div q)))
         | suc _, _ => idp
       }
 
+    -- | Reflects the propositional `<` on `Nat` into the boolean `isPrime.<`.
     \lemma <-lem {n m : Nat} (n<m : n < m) : n isPrime.< m = true => unfold (isPrime.<) (mcases {_} {arg addPath} \with {
       | 0, p => absurd (<-irreflexive (transportInv (n <) (triEquals p) n<m))
       | pos (suc k), p => absurd (<-irreflexive (<-transitive n<m (triGreater p)))
       | neg (suc k), _ => idp
     })
 
+    -- | For `j > 1`, `suc j < j * j` (used to terminate the loop).
     \lemma square_<-lem {j : Nat} (j>1 : j > 1) : suc j < j * j \elim j, j>1
       | 1, suc<suc ()
       | suc (suc j), _ => <_+-left (j + 3) zero<suc
 
+    -- | For prime `n` and any `j > 1`, the trial-division loop returns `true`.
     \lemma rec-lem {n c j : Nat} (p : Prime n) (j>1 : j > 1) : rec n c j = true \elim c
       | 0 => idp
       | suc c => or.fromOr (\case totality (suc j) n \with {
@@ -210,6 +255,7 @@
       })
   }
 
+-- | `Prime n` is decidable on `Nat`, by case analysis on `isPrime n` and the two directions above.
 \func prime-isDec {n : Nat} : Dec (Prime n)
   => \case isPrime n \as b, idp : isPrime n = b \with {
        | true, p => yes (isPrime=>prime p)

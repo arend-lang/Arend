@@ -1,6 +1,18 @@
+{- | Defines modalities as a strengthening of reflective subuniverses where local types are closed under dependent sums.
+ -
+ -   A `Modality` extends `ReflUniverse` with the requirement that for any local type `A` and family `B` of local types
+ -   over `A`, the total space `\Sigma (a : A) (B a)` is again local. This Σ-closure is what distinguishes modalities
+ -   from arbitrary reflective subuniverses, and it is equivalent to the localization having a dependent elimination
+ -   principle (rather than just a non-dependent universal property). The module records this characterization as
+ -   `modality-elim`, which exhibits the dependent eliminator as an equivalence of function spaces.
+ -}
+
 \import Equiv
 \import Homotopy.Localization.Universe
 
+{- | Class extending `ReflUniverse` with the field `isModality`, asserting that the subuniverse of local types is closed
+ -   under dependent sums: given `A : Local` and `B : A -> Local`, the type `\Sigma (a : A) (B a)` is itself local.
+ -}
 \class Modality \extends ReflUniverse
   | isModality (A : Local) (B : A -> Local) : Local (\Sigma (a : A) (B a))
 

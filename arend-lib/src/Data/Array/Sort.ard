@@ -1,3 +1,12 @@
+{- | Sorting for arrays over decidable linear orders, with permutation and sortedness specifications.
+ -
+ -   This module lifts list-based insertion sort (from `Data.List`) to length-indexed arrays by routing through
+ -   `toList`/`fromList` conversions. The main `sort` function preserves length via transport, and the surrounding
+ -   lemmas establish the two characteristic properties of any sorting routine: the output is sorted (`sort-sorted`) and
+ -   a permutation of the input (`sort-perm`). A uniqueness lemma (`perm_=`) shows that any two sorted permutations are
+ -   equal, making sorted-permutation a complete specification.
+ -}
+
 \import Arith.Nat
 \import Data.Array
 \import Data.Array.EPerm
@@ -9,14 +18,23 @@
 \import Paths
 \import Paths.Meta
 
+{- | Sorts an `Array A l.len` over a decidable linear order, returning an array of the same length. Implemented by
+ -   converting to a list, applying `Sort.Insertion.sort`, converting back to an array, and transporting along the
+ -   length-preservation proof.
+ -}
 \func sort {A : LinearOrder.Dec} (l : Array A) : Array A l.len
   => transport (\lam n => Array A n) (inv (Sort.Perm.perm_length (Sort.Insertion.sort-perm _)) *> toList_length) $ fromList (Sort.Insertion.sort (toList l))
   \where {
+    {- | Predicate on an array stating that `l i <= l j` whenever `i < j` as natural numbers. Defined for any
+     -   `Preorder`.
+     -}
     \func IsSorted {A : Preorder} (l : Array A) => \Pi {i j : Fin l.len} -> i NatOrder.< j -> l i <= l j
 
+    -- | Transporting an array along an equality of lengths preserves `IsSorted`.
     \lemma sorted_transport {A : Preorder} {n m : Nat} {l : Array A n} (p : n = m) (s : IsSorted l) : IsSorted (transport (\lam n => Array A n) p l) \elim p
       | idp => s
 
+    -- | If a `List` is `Sort.Sorted`, then `fromList l` satisfies `IsSorted`.
     \lemma list_sorted {A : Preorder} {l : List A} (s : Sort.Sorted l) : IsSorted (fromList l) \elim l, s
       | List.nil, Sort.sorted-nil => \lam {i} => \case i
       | x List.:: l, Sort.sorted-cons p s => \lam {i} {j} p => \case \elim i, \elim j, \elim p \with {
@@ -24,11 +42,13 @@
         | suc i, suc j, NatOrder.suc<suc p => list_sorted s p
       }
       \where {
+        -- | Helper lemma: when `l` is sorted, `headDef a l <= fromList l j` for any index `j`.
         \lemma headDef_fromList {a : A} {l : List A} {j : Fin (length l)} (s : Sort.Sorted l) : headDef a l <= fromList l j \elim l, j, s
           | b List.:: l, 0, _ => <=-refl
           | b List.:: l, suc j, Sort.sorted-cons p s => p <=∘ headDef_fromList s
       }
 
+    -- | Conversely, if an array satisfies `IsSorted`, then `toList l` is `Sort.Sorted`.
     \lemma sorted_list {A : Preorder} {l : Array A} (s : IsSorted l) : Sort.Sorted (toList l) \elim l
       | nil => Sort.sorted-nil
       | a :: {n} l => Sort.sorted-cons (\case \elim n, \elim l, \elim s \with {
@@ -36,28 +56,40 @@
         | suc n, b :: l, s => s {0} {1} NatOrder.zero<suc
       }) $ sorted_list \lam p => s (NatOrder.suc<suc p)
 
+    -- | The result of `sort l` is `IsSorted`.
     \lemma sort-sorted {A : LinearOrder.Dec} {l : Array A} : IsSorted (sort l)
       => sorted_transport _ (list_sorted (Sort.Insertion.sort-sorted _))
 
+    -- | The result of `sort l` is a `Perm`utation of `l` (defined via `EPerm`-to-`Perm` transport).
     \sfunc sort-perm {A : LinearOrder.Dec} {n : Nat} {l : Array A n} : Perm l (sort l)
       => Perm.perm-sym $ EPerm.EPerm_Perm_transport (EPerm.eperm-sym sort-eperm) _
       \where {
+        {- | Lifts a `Sort.Perm` between lists to an `EPerm` between their `fromList` arrays, by case analysis on the
+         -   list permutation constructors (`perm-nil`, `perm-::`, `perm-swap`, `perm-trans`).
+         -}
         \func list_perm {A : \Type} {l l' : List A} (p : Sort.Perm l l') : EPerm (fromList l) (fromList l') \elim l, l', p
           | List.nil, List.nil, Sort.perm-nil => eperm-nil
           | x List.:: l, y List.:: l', Sort.perm-:: p q => eperm-:: p (list_perm q)
           | x List.:: (x' List.:: l), y List.:: (y' List.:: l'), Sort.perm-swap p1 p2 q => eperm-swap p1 p2 (pmap fromList q)
           | l, l', Sort.perm-trans p1 p2 => eperm-trans (list_perm p1) (list_perm p2)
 
+        -- | The original array `l` is `EPerm`-equivalent to `fromList (Sort.Insertion.sort (toList l))`.
         \func sort-eperm {A : LinearOrder.Dec} {l : Array A} : EPerm l (fromList (Sort.Insertion.sort (toList l)))
           => transport (EPerm __ _) fromList_toList $ list_perm (Sort.Insertion.sort-perm _)
       }
 
+    {- | Lifts a `Perm` between equal-length arrays to a `Sort.Perm` between their `toList` representations, by case
+     -   analysis on array permutation constructors.
+     -}
     \func perm_list {A : \Type} {n : Nat} {l l' : Array A n} (p : Perm l l') : Sort.Perm (toList l) (toList l') \elim n, l, l', p
       | 0, nil, nil, perm-nil => Sort.perm-nil
       | suc n, x :: l, y :: l', perm-:: p q => Sort.perm-:: p (perm_list q)
       | suc (suc n), x :: (x' :: l), y :: (y' :: l'), perm-swap p1 p2 q => Sort.perm-swap p1 p2 (pmap toList q)
       | n, l, l', perm-trans p1 p2 => Sort.perm-trans (perm_list p1) (perm_list p2)
 
+    {- | Two sorted arrays of the same length that are permutations of each other are equal. This makes `IsSorted` +
+     -   `Perm` a complete specification of `sort`'s output.
+     -}
     \lemma perm_= {A : LinearOrder.Dec} {n : Nat} {l l' : Array A n} (p : Perm l l') (s : IsSorted l) (s' : IsSorted l') : l = l'
       => exts $ array-unext $ inv fromList_toList *> pmap fromList (inv (Sort.Insertion.sorted_sort (sorted_list s)) *> Sort.Insertion.perm_sort (perm_list p) *> Sort.Insertion.sorted_sort (sorted_list s')) *> fromList_toList
   }

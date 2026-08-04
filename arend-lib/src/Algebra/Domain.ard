@@ -1,3 +1,15 @@
+{- | Integral domains: rings without zero divisors, formalized both via tightness apartness and via classical
+ -   decidability.
+ -
+ -   This module provides the core hierarchy of domains in two flavors. The constructive `Domain` and `IntegralDomain`
+ -   are built on `Ring.With#` (rings with a tight apartness relation `#`), where non-zero-ness is expressed as `#0 x`
+ -   (apartness from zero) and the multiplicative structure restricts to a cancellative monoid on apart-from-zero
+ -   elements. The classical `StrictDomain` and `StrictIntegralDomain` instead axiomatize the zero-product property
+ -   directly. The `Dec` subclasses bridge the two by using decidable equality to derive apartness from `/=`. Auxiliary
+ -   constructions package the non-zero elements as a (cancel) monoid, lift divisibility and GCDs between the full ring
+ -   and its non-zero submonoid, and connect the formalism to reduced rings, impotent rings, and PP-rings.
+ -}
+
 \import Algebra.Group
 \import Algebra.Meta
 \import Algebra.Monoid
@@ -38,28 +50,35 @@
 
   \default zro/=ide zro=ide => #0-zro (transportInv #0 zro=ide zro#ide)
 
+  -- | Product of non-zero elements is non-zero (`/=` form).
   \lemma nonZero_* {x y : E} (x/=0 : x /= zro) (y/=0 : y /= zro) : x * y /= zro => \lam x*y=0 =>
     x/=0 (#0-tight (\lam x#0 =>
     y/=0 (#0-tight (\lam y#0 =>
         #0-zro (transport #0 x*y=0 (#0-* x#0 y#0))))))
 
+  -- | From `x * y = 0` and one factor non-zero, the other is zero.
   \lemma nonZero-left {x y : E} (x/=0 : x /= zro) (x*y=0 : x * y = zro) : y = zro
     => separatedEq (nonZero_* x/=0 __ x*y=0)
 
+  -- | From `x * y = 0` and one factor non-zero, the other is zero.
   \lemma nonZero-right {x y : E} (y/=0 : y /= zro) (x*y=0 : x * y = zro) : x = zro
     => separatedEq (nonZero_* __ y/=0 x*y=0)
 
+  -- | Cancellation by a non-zero factor on either side.
   \lemma nonZero-cancel-left {x y z : E} (x/=0 : x /= zro) (x*y=x*z : x * y = x * z) : y = z
     => fromZero (nonZero-left x/=0 (ldistr_- *> toZero x*y=x*z))
 
+  -- | Cancellation by a non-zero factor on either side.
   \lemma nonZero-cancel-right {x y z : E} (z/=0 : z /= zro) (x*z=y*z : x * z = y * z) : x = y
     => fromZero (nonZero-right z/=0 (rdistr_- *> toZero x*z=y*z))
 
+  -- | The non-zero part as a `SubMonoid` of the ring's multiplicative monoid.
   \func subMonoid : SubMonoid \this \cowith
     | contains => #0
     | contains_ide => zro#ide
     | contains_* => #0-*
 
+  -- | The cancellative monoid `\Sigma (x : E) (#0 x)` of apart-from-zero elements with inherited multiplication.
   \func nonZeroMonoid : CancelMonoid \cowith
     | E => subMonoid.Total
     | ide => (ide, zro#ide)
@@ -70,28 +89,36 @@
     | cancel_*-left x {y} {z} x*y=x*z => ext (nonZero-cancel-left (apartNonZero x.2) (pmap __.1 x*y=x*z))
     | cancel_*-right z {x} {y} x*z=y*z => ext (nonZero-cancel-right (apartNonZero z.2) (pmap __.1 x*z=y*z))
 
+  -- | Transport `LDiv` between the ring and `nonZeroMonoid`.
   \lemma ldiv_nonZero {a b : nonZeroMonoid} (a|b : Monoid.LDiv a.1 b.1) : Monoid.LDiv {nonZeroMonoid} a b \cowith
     | inv => (a|b.inv, #0-*-right (transportInv #0 a|b.inv-right b.2))
     | inv-right => ext a|b.inv-right
 
+  -- | Transport `LDiv` between the ring and `nonZeroMonoid`.
   \func nonZero_ldiv {a b : nonZeroMonoid} (a|b : Monoid.LDiv {nonZeroMonoid} a b) : Monoid.LDiv a.1 b.1 \cowith
     | inv => a|b.inv.1
     | inv-right => pmap __.1 a|b.inv-right
 
+  -- | Transport `Inv` between the ring and `nonZeroMonoid`.
   \lemma inv_nonZero {a : nonZeroMonoid} (i : Monoid.Inv a.1) : Monoid.Inv {nonZeroMonoid} a \cowith
     | inv => (i.inv, #0-*-right (transportInv #0 i.inv-right zro#ide))
     | inv-left => ext i.inv-left
     | inv-right => ext i.inv-right
 
+  -- | Transport `Inv` between the ring and `nonZeroMonoid`.
   \lemma nonZero_inv {a : nonZeroMonoid} (i : Monoid.Inv {nonZeroMonoid} a) : Monoid.Inv a.1 \cowith
     | inv => i.inv.1
     | inv-left => pmap __.1 i.inv-left
     | inv-right => pmap __.1 i.inv-right
 
+  -- | Powers preserve apartness from zero.
   \lemma pow_#0 {a : E} {n : Nat} (a#0 : a `#0) : pow a n `#0 \elim n
     | 0 => zro#ide
     | suc n => #0-* (pow_#0 a#0) a#0
 } \where {
+  {- | Domain with decidable equality, extending `Domain`, `Ring.Dec`, `StrictDomain`. Implements `zeroProduct` by case
+   -   analysis, and derives `zro#ide` and `#0-*` from `nonZeroApart`.
+   -}
   \class Dec \extends Domain, Ring.Dec, StrictDomain {
     \default zeroProduct {x} {y} xy=0 => \case decideEq x zro, decideEq y zro \with {
       | yes x=0, _ => byLeft x=0
@@ -101,6 +128,9 @@
     \default zro#ide => nonZeroApart (\lam x => zro/=ide (inv x))
     \default #0-* x#0 y#0 => nonZeroApart (\lam xy=0 => ||.rec' (apartNonZero x#0) (apartNonZero y#0) (zeroProduct xy=0))
 
+    {- | Truncates a propositionally truncated `LDiv` back to an actual `LDiv`, using cancellation when `a /= 0` and a
+     -   default witness when `a = 0`.
+     -}
     \func LDiv_TruncP {a b : E} (p : TruncP (LDiv a b)) : LDiv a b
       => \case decideEq a 0 \with {
         | yes a=0 => LDiv.make 1 \case p \with {
@@ -113,25 +143,32 @@
 
 -- | An integral domain is a commutative domain.
 \class IntegralDomain \extends Domain, CRing.With#, ImpotentCRing, NonZeroCRing {
+  -- | Commutative cancellative monoid of non-zero elements, refining `nonZeroMonoid` with `*-comm`.
   \func nonZeroCMonoid : CancelCMonoid \cowith
     | CancelMonoid => nonZeroMonoid
     | *-comm => ext *-comm
 
+  -- | Mutual divisibility plus non-zeroness implies the divisor's quotient is invertible (i.e., associates).
   \lemma div-inv (x y : E) (x/=0 : x /= zro) (x|y : LDiv x y) (y|x : LDiv y x) : Inv x|y.inv
     => Inv.rmake y|x.inv (Domain.nonZero-cancel-left x/=0 (equation {Monoid}))
 
+  -- | Transport `GCD` between the ring and `nonZeroCMonoid`.
   \func gcd_nonZero {a b : nonZeroCMonoid} (gcd : GCD a.1 b.1) : GCD {nonZeroCMonoid} a b \cowith
     | res => (gcd, #0-*-left (transportInv #0 gcd.res|val1.inv-right a.2))
     | res|val1 => ldiv_nonZero gcd.res|val1
     | res|val2 => ldiv_nonZero gcd.res|val2
     | res-univ g g|a g|b => ldiv_nonZero $ gcd.res-univ g.1 (nonZero_ldiv g|a) (nonZero_ldiv g|b)
 
+  -- | Transport `GCD` between the ring and `nonZeroCMonoid`.
   \func nonZero_gcd {a b : nonZeroCMonoid} (gcd : GCD {nonZeroCMonoid} a b) : GCD a.1 b.1 \cowith
     | res => gcd.res.1
     | res|val1 => nonZero_ldiv gcd.res|val1
     | res|val2 => nonZero_ldiv gcd.res|val2
     | res-univ g (g|a : LDiv g a.1) g|b => nonZero_ldiv {_} {g, #0-*-left $ transportInv #0 g|a.inv-right a.2} $ gcd.res-univ _ (ldiv_nonZero g|a) (ldiv_nonZero g|b)
 
+  {- | Equivalence between divisibility on `DivQuotient` of the whole ring (via the non-zero embedding) and divisibility
+   -   on the `DivQuotient` of `nonZeroCMonoid`.
+   -}
   \lemma divQuotient_LDiv {x y : DivQuotient nonZeroCMonoid} : TruncP (LDiv {DivQuotientMonoid \this} (map IMonoid.embed x) (map IMonoid.embed y)) <-> TruncP (LDiv {DivQuotientMonoid nonZeroCMonoid} x y) \elim x, y
     | in~ x, in~ y => (\case __ \with {
       | inP (in~ z, p) => TruncP.map (make~ p).2 \lam s => div-to~ {nonZeroCMonoid} $ ldiv_nonZero $ LDiv.trans (LDiv.factor-left LDiv.id-div) s
@@ -140,22 +177,28 @@
           \new LDiv (map IMonoid.embed (inD {nonZeroCMonoid} x)) (map IMonoid.embed (inD {nonZeroCMonoid} y)) (inD (z.1 * xz|y.inv.1)) $ pmap inD $ inv *-assoc *> pmap __.1 xz|y.inv-right
     })
 
+  -- | Lifts a `DivChain` on the whole ring's quotient monoid to one on the non-zero quotient monoid.
   \lemma toNonZeroDivChain (cc : CMonoid.DivChain {DivQuotientMonoid \this}) : CMonoid.DivChain {DivQuotientMonoid nonZeroCMonoid}
     => \lam a d => \have | (inP s) => cc (\lam i => map IMonoid.embed (a i)) \lam i => divQuotient_LDiv.2 (d i)
                          | (inP d) => divQuotient_LDiv.1 (inP s.2)
                    \in inP (s.1, d)
 
+  -- | Regular elements coincide exactly with elements `/= 0`.
   \lemma IsRegular_/=0 {a : E} : IsRegularElem a <-> a /= 0
     => (\lam ar a=0 => zro/=ide $ ar (rewrite a=0 simplify), \lam a/=0 p => nonZero-cancel-left a/=0 p)
 } \where {
   \open DivQuotient
 
+  {- | Decidable integral domain extending `IntegralDomain`, `Domain.Dec`, `CRing.Dec`, `StrictIntegralDomain`,
+   -   `PPRing`. Implements `isPPRing` via case-split on whether `a = 0`.
+   -}
   \class Dec \extends IntegralDomain, Domain.Dec, CRing.Dec, StrictIntegralDomain, PPRing {
     | isPPRing a => inP \case decideEq a 0 \with {
       | yes a=0 => (0, rewrite a=0 (inv zro_*-left), \lam _ => zro_*-left)
       | no a/=0 => (1, inv ide-left, \lam p => ide-left *> nonZero-left a/=0 p)
     }
 
+    -- | Converse of `toNonZeroDivChain`: lifts a non-zero `DivChain` back to a full-ring `DivChain`.
     \lemma fromNonZeroDivChain (cc : CMonoid.DivChain {DivQuotientMonoid nonZeroCMonoid}) : CMonoid.DivChain {DivQuotientMonoid \this}
       => \lam a ac =>
           \have | f => map IMonoid.embed
@@ -186,6 +229,9 @@
               }
           }
 
+    {- | Characterizes Krull dimension `≤ 1` by the existence, for every `a /= 0` and `u`, of `v` and `n` such that `a`
+     -   divides `u^n * (1 - u*v)`.
+     -}
     \lemma oneDimensional-char : Dim<= 1 <-> (\Pi (a u : E) -> a /= 0 -> ∃ (v : E) (n : Nat) (LDiv a (pow u n * (1 - u * v))))
       => (\lam d a u a/=0 => \case d (a,u) \with {
         | inP (b,m,p) => \have q => nonZero-cancel-left (apartNonZero $ pow_#0 $ nonZeroApart a/=0) (p *> inv zro_*-right)
@@ -199,6 +245,9 @@
   }
 }
 
+{- | Ring with the zero-product property `x * y = 0 -> x = 0 || y = 0`, extending `Ring`, `NonZeroSemiring`,
+ -   `ImpotentRing`. Derives `isReduced` and `isImpotent` from `zeroProduct`.
+ -}
 \class StrictDomain \extends Ring, NonZeroSemiring, ImpotentRing {
   | zeroProduct {x y : E} : x * y = zro -> (x = zro) || (y = zro)
   | isReduced => \case zeroProduct __ \with {
@@ -211,6 +260,7 @@
                           | byRight r => byRight (fromZero r)
                         }
 
+  -- | A vanishing finite product `BigProd l = 0` has some index `j` with `l j = 0`.
   \lemma zeroBigProd {l : Array E} (p : BigProd l = zro) : ∃ (j : Fin l.len) (l j = 0) \elim l
     | nil => absurd $ zro/=ide (inv p)
     | a :: l => \case zeroProduct p \with {
@@ -218,24 +268,28 @@
       | byRight r => TruncP.map (zeroBigProd r) \lam s => (suc s.1, s.2)
     }
 
+  -- | From `x * y = x * z` either `x = 0` or `y = z` (and the symmetric form).
   \lemma zeroOrCancel-left {x y z : E} (p : x * y = x * z) : (x = 0) || (y = z)
     => \case zeroProduct $ ldistr_- *> toZero p \with {
       | byLeft x=0 => byLeft x=0
       | byRight y-z=0 => byRight (fromZero y-z=0)
     }
 
+  -- | From `x * y = x * z` either `x = 0` or `y = z` (and the symmetric form).
   \lemma zeroOrCancel-right {x y z : E} (p : x * z = y * z) : (x = y) || (z = 0)
     => \case zeroProduct $ rdistr_- *> toZero p \with {
       | byLeft x-y=0 => byLeft (fromZero x-y=0)
       | byRight z=0 => byRight z=0
     }
 
+  -- | Cancellation of a non-zero factor (`/=` formulation).
   \lemma nonZero-cancel-left {x y z : E} (x/=0 : x /= 0) (p : x * y = x * z) : y = z
     => \case zeroOrCancel-left p \with {
       | byLeft x=0 => absurd (x/=0 x=0)
       | byRight r => r
     }
 
+  -- | Cancellation of a non-zero factor (`/=` formulation).
   \lemma nonZero-cancel-right {x y z : E} (z/=0 : z /= 0) (p : x * z = y * z) : x = y
     => \case zeroOrCancel-right p \with {
       | byLeft r => r
@@ -243,7 +297,9 @@
     }
 }
 
+-- | Commutative `StrictDomain` extending `ImpotentCRing`.
 \class StrictIntegralDomain \extends StrictDomain, ImpotentCRing {
+  -- | Mutual divisibility implies (truncated) associatedness.
   \lemma div-associates {a b : E} (a|b : LDiv a b) (b|a : LDiv b a) : TruncP (associates a b)
     => \case zeroOrCancel-left $ inv *-assoc *> pmap (* _) a|b.inv-right *> b|a.inv-right *> inv ide-right \with {
       | byLeft a=0 => inP (Inv.ide-isInv, a=0 *> inv (ldiv=0 a|b a=0) *> inv ide-left)

@@ -1,25 +1,45 @@
+{- | The disjoint sum (coproduct) type `Or A B` with its eliminators and equivalence-preservation lemma.
+ -
+ -   `Or A B` is the standard binary sum, formed from constructors `inl` and `inr`. The module provides the recursor and
+ -   functorial action needed to use sums in proofs and constructions, plus a propositional truncation lemma showing
+ -   `Or` of disjoint propositions is itself a proposition. The `Or_QEquiv` construction shows that `Or` is functorial
+ -   on equivalences, sending a pair of equivalences to an equivalence between sum types.
+ -}
+
 \import Equiv
 \import Paths
 \import Logic
 
+-- | The disjoint sum `Or A B` of two types, with right-associative fixity 2.
 \data \fixr 2 Or (A B : \Type)
+  -- | Left injection `A -> Or A B`.
   | inl A
+  -- | Right injection `B -> Or A B`.
   | inr B
   \where {
+    {- | When `A B : \Prop` are disjoint (i.e., `A -> B -> Empty`), `Or A B` is a proposition: any two elements are
+     -   equal.
+     -}
     \func levelProp {A B : \Prop} (e : A -> B -> Empty) (x y : Or A B) : x = y \elim x, y
       | inl a, inl a' => pmap inl prop-pi
       | inl a, inr b => absurd (e a b)
       | inr b, inl a => absurd (e a b)
       | inr b, inr b' => pmap inr prop-pi
 
+    -- | Functorial action: given `f : A -> C` and `g : B -> D`, lifts to `Or A B -> Or C D`.
     \func map {A B C D : \Type} (e : Or A B) (f : A -> C) (g : B -> D) : Or C D \elim e
       | inl a => inl (f a)
       | inr b => inr (g b)
 
+    -- | Non-dependent eliminator: given `f : A -> C` and `g : B -> C`, eliminates `Or A B` into `C`.
     \func rec {A B C : \Type} (f : A -> C) (g : B -> C) (e : Or A B) : C \elim e
       | inl a => f a
       | inr b => g b
 
+    {- | Given equivalences `e1 : Equiv` between `e1.A` and `e1.B`, and similarly `e2`, builds a `QEquiv` between
+     -   `Or e1.A e2.A` and `Or e1.B e2.B` by mapping componentwise; witnesses for the round-trip identities are derived
+     -   from those of `e1` and `e2`.
+     -}
     \func Or_QEquiv (e1 e2 : QEquiv) : QEquiv {Or e1.A e2.A} {Or e1.B e2.B} \cowith
       | f => map __ e1 e2
       | ret => map __ e1.ret e2.ret

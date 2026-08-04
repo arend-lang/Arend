@@ -1,3 +1,14 @@
+{- | Reflective solver for linear (in)equality problems over linearly ordered semirings and rings.
+ -
+ -   This module extends the ring solver framework (`AlgData`) to handle ordered structures by encoding hypotheses as a
+ -   list of equations tagged with a comparison operator (`<`, `<=`, `=`). A goal is discharged by exhibiting a
+ -   *certificate* — an array of natural-number coefficients — whose nonnegative linear combination of the hypotheses
+ -   contradicts a strict inequality. The construction reduces `<=`, `=`, and `<` goals to refuting an augmented
+ -   contradiction problem, and the strictness witness comes either from a hypothesis tagged `Less` with positive
+ -   coefficient or from a positive `f` slack in the certificate. The solver is parameterized over the algebraic setting
+ -   (semiring, ring, ℚ-algebra) via class extensions.
+ -}
+
 \import Algebra.Monoid
 \import Algebra.Ordered
 \import Algebra.StrictlyOrdered
@@ -18,25 +29,34 @@
 \import Paths
 \open LinearlyOrderedAbMonoid
 
+-- | Enumeration of comparison kinds (`Less`, `LessOrEquals`, `Equals`) used to label equations.
 \data Operation | Less | LessOrEquals | Equals
 
+{- | Reflective solver base class extending `AlgData` with `R : LinearlyOrderedSemiring`. Carries the machinery for
+ -   problems, certificates, and solving lemmas.
+ -}
 \class LinearData \extends AlgData {
   \override R : LinearlyOrderedSemiring
 
+  -- | A triple `(RingTerm C V, Operation, RingTerm C V)` representing one (in)equality.
   \func Equation => \Sigma (RingTerm C V) Operation (RingTerm C V)
 
+  -- | Interprets an `Equation` as a proposition (`<`, `<=`, or `=` between the interpreted ring terms).
   \func interpretEq (e : Equation) : \Prop \elim e
     | (t1, Less, t2) => interpret t1 < interpret t2
     | (t1, LessOrEquals, t2) => interpret t1 <= interpret t2
     | (t1, Equals, t2) => interpret t1 = interpret t2
 
+  -- | Lemma that any holding `interpretEq e` implies the non-strict bound `interpret e.1 <= interpret e.3`.
   \lemma interpretEq_<= (e : Equation) (h : interpretEq e) : interpret e.1 <= interpret e.3 \elim e
     | (t1, Less, t2) => LinearOrder.<_<= h
     | (t1, LessOrEquals, t2) => h
     | (t1, Equals, t2) => =_<= h
 
+  -- | A list of equations, i.e. `Array Equation`, representing a hypothesis set.
   \func Problem => Array Equation
 
+  -- | Boolean test recognizing closed `RingTerm`s (no variables) by structural recursion.
   \func isConst (t : RingTerm C V) : Bool \elim t
     | coef c => true
     | var v => false
@@ -46,25 +66,32 @@
     | t :+ t1 => isConst t and isConst t1
     | t :* t1 => isConst t and isConst t1
 
+  -- | `Array Nat n`, a vector of natural-number multipliers indexed by problem size.
   \func Cert (n : Nat) => Array Nat n
 
+  -- | Interprets a certificate as `∑ⱼ natCoef (c j) * interpret (l j)`.
   \func certSum (l : Array (RingTerm C V)) (c : Cert l.len)
     => R.BigSum (\lam j => R.natCoef (c j) * interpret (l j))
 
+  -- | Builds a `RingTerm` representing the linear combination `∑ coef (natCoef kⱼ) :* tⱼ`.
   \func cert-toTerm (l : Array (RingTerm C V)) (c : Cert l.len) : RingTerm C V \elim l, c
     | nil, nil => :zro
     | t :: l, k :: c => coef (natCoef k) :* t :+ cert-toTerm l c
 
+  -- | Normalized interpretation of a certificate term via `interpretRingNF ∘ normalize`.
   \func interpretCert (l : Array (RingTerm C V)) (c : Cert l.len)
     => interpretRingNF (normalize (cert-toTerm l c))
 
+  -- | Shows `AlgData.interpret (cert-toTerm l c) = certSum l c`.
   \lemma cert-toRingTerm-correct (l : Array (RingTerm C V)) (c : Cert l.len) : AlgData.interpret (cert-toTerm l c) = certSum l c \elim l, c
     | nil, nil => idp
     | t :: l, k :: c => pmap2 (+) (pmap (* _) alg.func-natCoef) (cert-toRingTerm-correct l c)
 
+  -- | Equates the normalized form `interpretCert l c` with `certSum l c`.
   \lemma interpretCert_certSum (l : Array (RingTerm C V)) {c : Cert l.len} : interpretCert l c = certSum l c
     => inv (normalize-consistent (cert-toTerm l c)) *> cert-toRingTerm-correct l c
 
+  -- | Boolean test for the `Less` tag, with `correct` lemma extracting `o = Less` from `isLess o = true`.
   \func isLess (o : Operation) : Bool
     | Less => true
     | _ => false
@@ -74,6 +101,7 @@
         | LessOrEquals => \case p
         | Equals => \case p
 
+  -- | Boolean test for positive naturals, with `correct` lemma yielding `0 < n` from `isSuc n = true`.
   \func isSuc (n : Nat) : Bool
     | suc _ => true
     | 0 => false
@@ -82,10 +110,14 @@
         | 0 => \case p
         | suc n => NatOrder.zero<suc
 
+  {- | Boolean predicate detecting whether any equation tagged `Less` has a positive coefficient in the certificate
+   -   (i.e. provides strict slack).
+   -}
   \func hasNegative (p : Problem) (c : Cert p.len) : Bool \elim p, c
     | nil, nil => false
     | e :: p, k :: c => isLess e.2 and isSuc k or hasNegative p c
 
+  -- | Extracts a witness `(j, 0 < c j, (p j).2 = Less)` from `hasNegative p c = true`.
   \func hasNegative-correct (p : Problem) (c : Cert p.len) (q : hasNegative p c = true) : ∃ (j : Fin p.len) (0 < c j) ((p j).2 = Less) \elim p, c
     | nil, nil => \case q
     | e :: p, k :: c => \case or.toOr q \with {
@@ -94,26 +126,36 @@
                       \in inP (suc t.1, t.2, t.3)
     }
 
+  {- | A certificate `c`, slack `f : Nat`, equality between the LHS- and RHS-combinations (with an extra `:ide` weighted
+   -   by `f`), and a proof that strictness is achieved either via `hasNegative` or `isSuc f`.
+   -}
   \func CorrectCert (p : Problem) => \Sigma (c : Cert p.len) (f : Nat) (interpretCert (map __.1 p) c = interpretCert (:ide :: map __.3 p) (f :: c)) (hasNegative p c or isSuc f = true)
 
+  -- | From a `CorrectCert`, derives the non-strict bound `certSum (map __.3 p) c.1 <= certSum (map __.1 p) c.1`.
   \lemma certToLeq (p : Problem) (c : CorrectCert p) : certSum (map __.3 p) c.1 <= certSum (map __.1 p) c.1
     => transport2 (<=) zro-left (inv aux) $ <=_+ (transport (<= _) ide-right $ <=_*_positive-left natCoef>=0 (LinearOrder.<_<= zro<ide)) <=-refl
     \where \lemma aux => inv (interpretCert_certSum (map __.1 p)) *> c.3 *> interpretCert_certSum (:ide :: map __.3 p) {c.2 :: c.1}
 
+  -- | Strengthens to a strict bound when the slack `f` is positive (`isSuc c.2 = true`).
   \lemma certToLess (p : Problem) (c : CorrectCert p) (q : isSuc c.2 = true) : certSum (map __.3 p) c.1 < certSum (map __.1 p) c.1
     => transport2 (<) zro-left (inv certToLeq.aux) $ LinearlyOrderedAbMonoid.<=_+-right (transport (< _) ide-right $ <_*_positive-left (natCoef>0 (isSuc.correct q)) zro<ide) <=-refl
 
+  {- | Refutes a problem: given a `CorrectCert` and proofs of all `interpretEq (p j)`, derives `Empty`. The
+   -   contradiction backbone of the solver.
+   -}
   \lemma solveContrProblem (p : Problem) (c : CorrectCert p) (h : DArray (\lam j => interpretEq (p j))) : Empty
     => \case or.toOr c.4 \with {
       | byLeft q => certToLeq p c (aux p c.1 (hasNegative-correct p c.1 q) h)
       | byRight q => <-irreflexive $ certToLess p c q <∘l aux_<= p c.1 h
     }
     \where {
+      -- | Sums hypotheses interpreted as `<=` inequalities into `certSum (map __.1 p) c <= certSum (map __.3 p) c`.
       \lemma aux_<= (p : Problem) (c : Cert p.len) (h : ∀ (e : p) (interpretEq e))
         : certSum (map __.1 p) c <= certSum (map __.3 p) c \elim p, c
         | nil, nil => <=-refl
         | e :: p, k :: c => <=_+ (<=_*_positive-right natCoef>=0 (interpretEq_<= e (h 0))) (aux_<= p c (\lam j => h (suc j)))
 
+      -- | Strengthens `aux_<=` to a strict inequality given a `Less`-tagged hypothesis with positive coefficient.
       \lemma aux (p : Problem) (c : Cert p.len) (cc : ∃ (j : Fin p.len) (0 < c j) ((p j).2 = Less)) (h : ∀ (e : p) (interpretEq e))
         : certSum (map __.1 p) c < certSum (map __.3 p) c \elim p, c, cc
         | nil, nil, inP ((),_,_)
@@ -121,6 +163,7 @@
         | e :: p, k :: c, inP (suc j, cj>0, pj=less) => <=_+-left (<=_*_positive-right natCoef>=0 (interpretEq_<= e (h 0))) (aux p c (inP (j, cj>0, pj=less)) (\lam j => h (suc j)))
     }
 
+  -- | Proves `interpret t1 <= interpret t2` by reducing to a contradiction problem `(t2, Less, t1) :: p`.
   \lemma solve<=Problem (p : Problem) (t1 t2 : RingTerm C V) (c : CorrectCert (toContr p t1 t2))
                         (h : DArray (\lam j => interpretEq (p j))) : interpret t1 <= interpret t2
     => \lam e => solveContrProblem (toContr p t1 t2) c (e :: h)
@@ -128,6 +171,7 @@
       \func toContr (p : Problem) (t1 t2 : RingTerm C V) : Problem
         => (t2,Less,t1) :: p
 
+  -- | Proves `interpret t1 = interpret t2` via two contradiction problems (each strict direction).
   \lemma solve=Problem (p : Problem) (t1 t2 : RingTerm C V) (c1 : CorrectCert (toContr1 p t1 t2)) (c2 : CorrectCert (toContr2 p t1 t2))
                        (h : DArray (\lam j => interpretEq (p j))) : interpret t1 = interpret t2
     => <-connectedness (\lam e => solveContrProblem (toContr1 p t1 t2) c1 (e :: h))
@@ -140,6 +184,7 @@
         => (t2,Less,t1) :: p
     }
 
+  -- | Proves `interpret t1 < interpret t2` by reducing to the contradiction problem `(t2, LessOrEquals, t1) :: p`.
   \lemma solve<Problem (p : Problem) (t1 t2 : RingTerm C V) (c : CorrectCert (toContr p t1 t2))
                        (h : DArray (\lam j => interpretEq (p j))) : interpret t1 < interpret t2
     => \case <_*-cancel-left (\case or.toOr c.4 \with {
@@ -156,16 +201,20 @@
   \open LinearlyOrderedSemiring
 }
 
+-- | Specialization combining `LinearData` with `SemiringData`.
 \class LinearSemiringData \extends LinearData, SemiringData
 
+-- | Specialization for ordered rings, extending `LinearData` and `RingData` with `R : OrderedRing`.
 \class LinearRingData \extends LinearData, RingData {
   \override R : OrderedRing
 }
 
+-- | Specialization for rational arithmetic over an ordered ring.
 \class LinearRatData \extends LinearData, RatData {
   \override R : OrderedRing
 }
 
+-- | Specialization for ordered ℚ-algebras, extending `RatAlgebraData` and `LinearData`.
 \class LinearRatAlgebraData \extends RatAlgebraData, LinearData {
   \override R : OrderedAAlgebra RatField
 }

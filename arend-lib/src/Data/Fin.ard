@@ -1,52 +1,82 @@
+{- | Basic operations and lemmas for finite types `Fin n`.
+ -
+ -   This module provides the elementary toolkit for working with `Fin n`, the type of natural numbers strictly less
+ -   than `n`. It defines the standard constructors `fzero`/`fsuc` along with case analysis (`fcase`), predecessor
+ -   operations (`fpred`, `fpredP`), and a collection of injectivity and disequality lemmas relating `Fin` to its
+ -   underlying `Nat` representation. The design treats `Fin (suc n)` as the disjoint union of zero and successor cases,
+ -   mirroring `Nat`, so most lemmas are simple transport/inversion results that let later modules manipulate finite
+ -   indices without unfolding to `Nat`.
+ -}
+
 \import Arith.Nat(pred)
 \import Logic
 \import Paths
 
+-- | The zero element of `Fin (suc n)`, defined as `0`.
 \cons fzero {n : Nat} : Fin (suc n) => 0
 
+-- | The successor function `Fin n -> Fin (suc n)`, defined as `suc`.
 \cons fsuc {n : Nat} (x : Fin n) : Fin (suc n) => suc x
 
+{- | Predecessor with a default value: given `def : Fin n` and `x : Fin (suc n)`, returns `def` if `x = 0` and the
+ -   underlying value otherwise.
+ -}
 \func fpred {n : Nat} (def : Fin n) (x : Fin (suc n)) : Fin n \elim x
   | 0 => def
   | suc x => x
 
+{- | Eliminator for `Fin (suc n)` into a type `A`: takes a value `a : A` for the zero case and a function
+ -   `f : Fin n -> A` for the successor case.
+ -}
 \func fcase {A : \Type} {n : Nat} (a : A) (f : Fin n -> A) (j : Fin (suc n)) : A \elim j
   | 0 => a
   | suc j => f j
 
+-- | Injectivity of `fsuc`: `suc x = suc y` implies `x = y`.
 \lemma unfsuc {n : Nat} {x y : Fin n} (p : suc x = suc y) : x = y
   => pmap (fpred x) p
 
+-- | `fsuc` preserves disequality: `x /= y` implies `fsuc x /= fsuc y`.
 \lemma fsuc/= {n : Nat} {x y : Fin n} (p : x /= y) : fsuc x /= fsuc y
   => \lam q => p (unfsuc q)
 
+-- | `fsuc x` is never equal to `0`.
 \lemma fsuc/=0 {n : Nat} {x : Fin n} : fsuc x /= 0
   => \case __
 
+-- | Converse of `fsuc/=`: `fsuc x /= fsuc y` implies `x /= y`.
 \lemma fsuc/=-conv {n : Nat} {x y : Fin n} (p : fsuc x /= fsuc y) : x /= y
   => \lam q => p (pmap fsuc q)
 
+-- | Equality in `Nat` lifts to equality in `Fin n`.
 \lemma nat_fin_= {n : Nat} {x y : Fin n} (p : x = {Nat} y) : x = y \elim n, x, y
   | suc n, 0, 0 => idp
   | suc n, 0, suc y => \case p
   | suc n, suc x, 0 => \case p
   | suc n, suc x, suc y => pmap fsuc (nat_fin_= (pmap pred p))
 
+-- | Disequality in `Fin n` descends to disequality of the underlying naturals.
 \lemma fin_nat_/= {n : Nat} {x y : Fin n} (p : x /= y) : (x : Nat) /= y
   => \lam q => p (nat_fin_= q)
 
+-- | For `x : Fin (suc n)` with `x /= 0` and any default `d`, `fsuc (fpred d x) = x`.
 \lemma fsuc_fpred {n : Nat} {x : Fin (suc n)} {d : Fin n} (p : x /= 0) : fsuc (fpred d x) = x \elim x
   | 0 => absurd (p idp)
   | suc x => idp
 
+{- | Predecessor with a proof of nonzero-ness: given `j : Fin (suc n)` and `j /= 0`, produces `Fin n`, using the proof
+ -   to discharge the zero case via `absurd`.
+ -}
 \func fpredP {n : Nat} (j : Fin (suc n)) (j/=0 : j /= 0) : Fin n \elim j
   | 0 => absurd (j/=0 idp)
   | suc j => j
 
+-- | Variant for `fpredP`: `fsuc (fpredP x p) = x` when `p : x /= 0`.
 \lemma fsuc_fpredP {n : Nat} {x : Fin (suc n)} (p : x /= 0) : fsuc (fpredP x p) = x \elim x
   | 0 => absurd (p idp)
   | suc x => idp
 
+-- | The largest element of `Fin (suc n)`, defined recursively as `suc (finLast n)`.
 \func finLast (n : Nat) : Fin (suc n) \elim n
   | 0 => 0
   | suc n => suc (finLast n)

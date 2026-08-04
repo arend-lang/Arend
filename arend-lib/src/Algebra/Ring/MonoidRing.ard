@@ -1,3 +1,14 @@
+{- | The monoid ring `R[M]` of a monoid `M` over a (semi)ring `R`, constructed as formal `R`-linear combinations of
+ -   monoid elements.
+ -
+ -   Elements are represented as quotients of arrays of `(coefficient, monomial)` pairs by the smallest equivalence
+ -   relation that identifies permutations, drops zero-coefficient terms, and merges like terms
+ -   (`(a+b, m) ~ (a, m) :: (b, m)`). This presentation avoids requiring decidable equality on `M`, with arithmetic
+ -   defined directly on representatives and lifted through the quotient. A separate `DecMonoidSet` gives a normalized
+ -   canonical form when both `M` and `R` have decidable equality, and a universal-property-style evaluation map sends a
+ -   monoid map `M -> R` to the induced ring homomorphism out of `R[M]`.
+ -}
+
 \import Algebra.Algebra
 \import Algebra.Group
 \import Algebra.Meta
@@ -31,45 +42,58 @@
 \open Transitive(Closure,cin,ctrans)
 \open AddMonoid
 
+-- | `Quotient (Array (\Sigma R M)) ~` — formal sums of monomials with `R`-coefficients indexed by `M`.
 \type MonoidSet (M : \Set) (R : AddMonoid) => Quotient {Array (\Sigma R M)} (~)
   \where {
+    {- | The generating equivalence: permutations, symmetry, dropping zero coefficients, and splitting/merging like
+     -   terms.
+     -}
     \data \infix 5 ~ {M : \Set} {R : AddMonoid} (l l' : Array (\Sigma R M))
       | ~-perm (EPerm l l')
       | ~-sym (l' ~ l)
       | ~-zro {m : M} (l = (0,m) :: l')
       | ~-+ {l'' : Array (\Sigma R M)} (m : M) {a b : R} (l = (a + b, m) :: l'') (l' = (a,m) :: (b,m) :: l'')
 
+    -- | Inject an array of `(r, m)` pairs into `MonoidSet`.
     \func inMS~ {M : \Set} {R : AddMonoid} (l : Array (\Sigma R M)) : Quotient (~) => in~ l
 
+    -- | Inject an array of `(r, m)` pairs into `MonoidSet`.
     \func inMS {M : \Set} {R : AddMonoid} (l : Array (\Sigma R M)) : MonoidSet M R => in~ l
 
+    -- | Promote `l ~ l'` to equality `inMS l = inMS l'`.
     \lemma ~-msequiv {M : \Set} {R : AddMonoid} {l l' : Array (\Sigma R M)} (p : l ~ l') : inMS l = inMS l'
       => path \lam i => ~-pequiv p i
 
+    -- | Concatenation respects `~` (and its closure) on each side and both sides.
     \func ~_++-left {M : \Set} {R : AddMonoid} {l1 l2 l : Array (\Sigma R M)} (e : l1 ~ l2) : (l1 ++ l) ~ (l2 ++ l) \elim e
       | ~-perm e => ~-perm (eperm-++-left e)
       | ~-sym e => ~-sym (~_++-left e)
       | ~-zro p => ~-zro (pmap (++ l) p)
       | ~-+ m p q => ~-+ m (pmap (++ l) p) (pmap (++ l) q)
 
+    -- | Concatenation respects `~` (and its closure) on each side and both sides.
     \lemma ~_++-right {M : \Set} {R : AddMonoid} {l l1 l2 : Array (\Sigma R M)} (e : Closure (~) l1 l2) : Closure (~) (l ++ l1) (l ++ l2) \elim e
       | cin e => cin (~-perm eperm-++-comm) `ctrans` cin (~_++-left e) `ctrans` cin (~-perm eperm-++-comm)
       | ctrans e1 e2 => ~_++-right e1 `ctrans` ~_++-right e2
 
+    -- | Concatenation respects `~` (and its closure) on each side and both sides.
     \lemma ~_++ {M : \Set} {R : AddMonoid} {l1 l2 l1' l2' : Array (\Sigma R M)} (e1 : Closure (~) l1 l1') (e2 : Closure (~) l2 l2') : Closure (~) (l1 ++ l2) (l1' ++ l2') \elim e1
       | cin e1 => cin (~_++-left e1) `ctrans` ~_++-right e2
       | ctrans r1 r2 => ~_++ r1 e2 `ctrans` ~_++ r2 (cin (~-perm eperm-refl))
 
+    -- | Pointwise `~`-related arrays of arrays give `~`-related big concatenations.
     \lemma ~_Big++ {M : \Set} {R : AddMonoid} {n : Nat} {ls ls' : Array (Array (\Sigma R M)) n} (es : \Pi (j : Fin n) -> Closure (~) (ls j) (ls' j)) : Closure (~) (Big (++) nil ls) (Big (++) nil ls') \elim n, ls, ls'
       | 0, nil, nil => cin (~-perm eperm-refl)
       | suc n, l :: ls, l' :: ls' => ~_++ (es 0) $ ~_Big++ \lam j => es (suc j)
 
+    -- | Applying `(f, g)` componentwise (with `f` an `AddMonoidHom`) preserves `~`.
     \func ~_map {M M' : \Set} (f : AddMonoidHom) (g : M -> M') {l l' : Array (\Sigma f.Dom M)} (e : l ~ l') : map (\lam s => (f s.1, g s.2)) l ~ map (\lam s => (f s.1, g s.2)) l' \elim e
       | ~-perm e => ~-perm (EPerm_map (\lam s => (f s.1, g s.2)) e)
       | ~-sym e => ~-sym (~_map f g e)
       | ~-zro {m} idp => ~-zro $ pmap (\lam x => (x, g m) :: map (\lam s => (f s.1, g s.2)) l') f.func-zro
       | ~-+ {l''} m idp idp => ~-+ (g m) (pmap (\lam x => (x, g m) :: map (\lam s => (f s.1, g s.2)) l'') f.func-+) idp
 
+    -- | Convert between equality of `inMS` values and the transitive closure of `~`.
     \lemma toClosure {M : \Set} {R : AddMonoid} {l l' : Array (\Sigma R M)} (c : inMS l = inMS l') : Closure (~) l l'
       => Quotient.equalityClosure (\new Equivalence (Array (\Sigma R M)) (Closure (~)) {
         | ~-transitive => ctrans
@@ -77,10 +101,12 @@
         | ~-symmetric => Closure.isSymmetric \lam p => later (~-sym p)
       }) cin $ path (\lam i => c i)
 
+    -- | Convert between equality of `inMS` values and the transitive closure of `~`.
     \lemma fromClosure {M : \Set} {R : AddMonoid} {l l' : Array (\Sigma R M)} (c : Closure (~) l l') : inMS l = inMS l' \elim c
       | cin r => ~-msequiv r
       | ctrans c1 c2 => fromClosure c1 *> fromClosure c2
 
+    -- | An array all sharing monomial `m` collapses to the single term `(BigSum coefs, m)`.
     \lemma unique-sum {M : \Set} {R : AddMonoid} (m : M) {l : Array (\Sigma R M)} (c : \Pi (j : Fin l.len) -> (l j).2 = m)
       : Closure (~) l ((R.BigSum (map __.1 l), m) :: nil) \elim l
       | nil => cin $ ~-sym (~-zro idp)
@@ -89,12 +115,15 @@
 
 \open MonoidSet
 
+-- | `(r, m) :: nil` as a `MonoidSet` — a single term `r · m`.
 \func msMonomial {M : \Set} {R : AddMonoid} (r : R) (m : M) : MonoidSet M R
   => inMS ((r,m) :: nil)
 
+-- | Transfer equality on the underlying quotient to equality in `MonoidSet`.
 \lemma monoidSet-ext {M : \Set} {R : AddMonoid} {x y : Quotient {Array (\Sigma R M)} (~)} (p : x = y) : x = {MonoidSet M R} y
   => path (\lam i => p i)
 
+-- | Sum of coefficients of monomials satisfying a decidable predicate `P` (over an `AbMonoid` `R`).
 \func monoidSet-coefs {M : \Set} {R : AbMonoid} {P : M -> \Prop} (d : \Pi (m : M) -> Dec (P m)) (x : MonoidSet M R) : R \elim x
   | in~ l => R.BigSum $ map __.1 $ keep (\lam s => d s.2) l
   | ~-equiv l l' r => monoidSet-coefs-coh r
@@ -113,12 +142,15 @@
       }
   }
 
+-- | Coefficient of a specific monomial `m` (requires `M : DecSet`).
 \func msCoef {M : DecSet} {R : AbMonoid} (p : MonoidSet M R) (m : M) : R
   => monoidSet-coefs (decideEq m) p
 
+-- | `msCoef (msMonomial r m) m = r`.
 \lemma msCoef_monomial {M : DecSet} {R : AbMonoid} {r : R} {m : M} : msCoef (msMonomial r m) m = r
   => unfold msCoef $ rewrite (decideEq=_reduce idp) zro-right
 
+-- | Coefficient extraction commutes with `monoidSet-map` along an injective `f`.
 \lemma msCoef_map {M N : DecSet} {f : M -> N} (inj : IsInj f) {R E : AbMonoid} {g : AddMonoidHom R E} {p : MonoidSet M R} {m : M} : msCoef (monoidSet-map f g p) (f m) = g (msCoef p m) \elim p
   | in~ l => pmap E.BigSum (keep-lem inj g) *> inv g.func-BigSum
   \where {
@@ -131,6 +163,7 @@
       }
   }
 
+-- | Additive abelian monoid on `MonoidSet M R` with `+ = ++` and `0 = nil`.
 \instance MonoidAbMonoid (M : \Set) (R : AddMonoid) : AbMonoid (MonoidSet M R)
   | zro => in~ nil
   | + (x y : MonoidSet M R) : MonoidSet M R \with {
@@ -149,6 +182,7 @@
   }
   \where \open MonoidSet
 
+-- | Adds negation by negating each coefficient (requires `R : AddGroup`).
 \instance MonoidAbGroup (M : \Set) (R : AddGroup) : AbGroup
   | AbMonoid => MonoidAbMonoid M R
   | negative (x : MonoidSet M R) : MonoidSet M R \with {
@@ -176,6 +210,7 @@
       | a :: l => ~-pequiv (~-perm $ EPerm_++-swap {_} {map func (a :: l)}) *> ~-pequiv (~-sym $ ~-+ a.2 (cong $ inv negative-right) idp) *> ~-pequiv (~-zro idp) *> ~_negative-left l
   }
 
+-- | Multiplication via `pairs func`, with `1 = (1, 1) :: nil` (requires `M : Monoid`, `R : Semiring`).
 \instance MonoidSemiring (M : Monoid) (R : Semiring) : Semiring
   | AbMonoid => MonoidAbMonoid M R
   | ide => in~ ((1,1) :: nil)
@@ -218,35 +253,42 @@
       | a :: l => ~_++ (cin $ ~_map (\new AddMonoidHom R R (a.1 R.*) zro_*-right ldistr) (a.2 M.*) r) (*-coh-right r)
   }
 
+-- | Combines the group and semiring structure for `R : Ring`.
 \instance MonoidRing (M : Monoid) (R : Ring) : Ring
   | Semiring => MonoidSemiring M R
   | AbGroup => MonoidAbGroup M R
 
+-- | Commutative version when both `M` and `R` are commutative.
 \instance MonoidCSemiring (M : CMonoid) (R : CSemiring) : CSemiring
   | Semiring => MonoidSemiring M R
   | *-comm {x} {y} => \case \elim x, \elim y \with {
     | in~ l, in~ l' => monoidSet-ext $ ~-pequiv (~-perm pairs.pairs-flip) *> cong (ext \lam t s => ext (*-comm,*-comm))
   }
 
+-- | `RingHom R (MonoidRing M R)` sending `a` to `a · 1`.
 \func monoidRingHom {M : Monoid} {R : Ring} : RingHom R (MonoidRing M R) \cowith
   | func a => inMS~ ((a,M.ide) :: nil)
   | func-+ => monoidSet-ext $ ~-pequiv $ mkcon ~-+ {nil} M.ide idp idp
   | func-ide => idp
   | func-* => rewriteI {1} M.ide-left idp
 
+-- | `R[M]` as a commutative `R`-algebra via `monoidRingHom`.
 \instance MonoidAlgebra (M : CMonoid) (R : CRing) : CAlgebra R
   => homAlgebra {R} {\new CRing { | Ring => MonoidRing M R | *-comm => *-comm }} monoidRingHom
 
+-- | Functorial action: lift `f : M -> N` and `g : AddMonoidHom` to `MonoidSet M _ -> MonoidSet N _`.
 \func monoidSet-map {M N : \Set} (f : M -> N) (g : AddMonoidHom) (x : MonoidSet M g.Dom) : MonoidSet N g.Cod \elim x
   | in~ l => inMS~ $ map (\lam s => (g s.1, f s.2)) l
   | ~-equiv l l' r => monoidSet-ext $ ~-pequiv (~_map g f r)
 
+-- | Upgrade `monoidSet-map` to `AddMonoidHom`/`SemiringHom`/`RingHom`.
 \func monoidSet-hom {M N : \Set} (f : M -> N) (g : AddMonoidHom) : AddMonoidHom (MonoidAbMonoid M g.Dom) (MonoidAbMonoid N g.Cod) (monoidSet-map f g) \cowith
   | func-zro => idp
   | func-+ {x} {y} => \case \elim x, \elim y \with {
     | in~ l, in~ l' => pmap inMS $ map_++ (\lam s => (g s.1, f s.2))
   }
 
+-- | Upgrade `monoidSet-map` to `AddMonoidHom`/`SemiringHom`/`RingHom`.
 \func monoidSet-semiringHom (f : MonoidHom) (g : SemiringHom) : SemiringHom (MonoidSemiring f.Dom g.Dom) (MonoidSemiring f.Cod g.Cod) \cowith
   | AddMonoidHom => monoidSet-hom f g
   | func-ide => pmap2 (\lam x y => inMS ((x,y) :: nil)) g.func-ide f.func-ide
@@ -254,51 +296,64 @@
     | in~ l, in~ l' => pmap inMS $ pairs.pairs_map (\lam s => (g s.1, f s.2)) \lam {a} {b} => ext (g.func-*,f.func-*)
   }
 
+-- | Upgrade `monoidSet-map` to `AddMonoidHom`/`SemiringHom`/`RingHom`.
 \func monoidSet-ringHom (f : MonoidHom) (g : RingHom) : RingHom (MonoidRing f.Dom g.Dom) (MonoidRing f.Cod g.Cod) \cowith
   | SemiringHom => monoidSet-semiringHom f g
 
+-- | Coefficient additivity of `msMonomial _ m`.
 \lemma msMonomial_+ {M : \Set} {R : AddMonoid} {a b : R} {m : M} : msMonomial (a + b) m = msMonomial a m + msMonomial b m
   => monoidSet-ext $ ~-pequiv $ mkcon ~-+ {nil} m idp idp
 
+-- | Coefficient additivity of `msMonomial _ m`.
 \lemma msMonomial_BigSum {M : \Set} {R : AddMonoid} {l : Array R} {m : M} : msMonomial (R.BigSum l) m = BigSum (map (msMonomial __ m) l) \elim l
   | nil => msMonomial_0
   | a :: l => msMonomial_+ *> pmap (_ +) msMonomial_BigSum
 
+-- | Coefficient additivity of `msMonomial _ m`.
 \lemma msMonomial_0 {M : \Set} {R : AddMonoid} {m : M} : msMonomial R.zro m = 0
   => monoidSet-ext $ ~-pequiv $ MonoidSet.~-zro idp
 
+-- | Multiplicativity and the splitting `r·1 * 1·m = r·m`.
 \lemma msMonomial_* {M : Monoid} {R : Semiring} {a b : R} : msMonomial (a * b) M.ide = msMonomial a M.ide * msMonomial b M.ide
   => monoidSet-ext $ unfold MonoidSemiring.func $ rewrite ide-left idp
 
+-- | Multiplicativity and the splitting `r·1 * 1·m = r·m`.
 \lemma msMonomial_pow {M : Monoid} {R : Semiring} {r : R} {m : M} {n : Nat} : Monoid.pow (msMonomial r m) n = msMonomial (Monoid.pow r n) (Monoid.pow m n) \elim n
   | 0 => idp
   | suc n => rewrite msMonomial_pow idp
 
+-- | Multiplicativity and the splitting `r·1 * 1·m = r·m`.
 \lemma msMonomial-split {M : Monoid} {R : Semiring} {a : R} {m : M} : msMonomial a M.ide * msMonomial R.ide m = msMonomial a m
   => pmap2 (\lam x y => inMS ((x,y) :: nil)) ide-right ide-left
 
+-- | Any `inMS l` is the sum of its monomials.
 \lemma msMonomial_BigSum-split {M : \Set} {R : AddMonoid} {l : Array (\Sigma R M)} : BigSum (map (\lam s => msMonomial s.1 s.2) l) = inMS l \elim l
   | nil => idp
   | s :: l => pmap (_ +) msMonomial_BigSum-split
 
+-- | Products of monomials combine componentwise.
 \lemma msMonomial_BigProd {M : Monoid} {R : Semiring} (l : Array (\Sigma R M))
   : Monoid.BigProd (map (\lam s => msMonomial s.1 s.2) l) = msMonomial (Monoid.BigProd $ map __.1 l) (Monoid.BigProd $ map __.2 l) \elim l
   | nil => idp
   | s :: l => pmap (_ *) (msMonomial_BigProd l)
 
+-- | Products of monomials combine componentwise.
 \lemma msMonomial_BigProd_ide {M : Monoid} {R : Semiring} {l : Array M}
   : Monoid.BigProd (map (\lam m => msMonomial R.ide m) l) = msMonomial R.ide (Monoid.BigProd l)
   => msMonomial_BigProd (map (\lam m => (R.ide,m)) l) *> pmap (msMonomial __ _) Monoid.BigProd_replicate1
 
+-- | Additivity of coefficient extraction.
 \lemma monoidSet-coefs_+ {M : \Set} {R : AbMonoid} {P : M -> \Prop} {d : \Pi (m : M) -> Dec (P m)} {x y : MonoidSet M R}
   : monoidSet-coefs d (x + y) = monoidSet-coefs d x + monoidSet-coefs d y \elim x, y
   | in~ l, in~ l' => pmap R.BigSum (pmap (map __.1) keep_++ *> map_++ __.1) *> R.BigSum_++
 
+-- | Additivity of coefficient extraction.
 \lemma monoidSet-coefs_BigSum {M : \Set} {R : AbMonoid} {P : M -> \Prop} {d : \Pi (m : M) -> Dec (P m)} {l : Array (MonoidSet M R)}
   : monoidSet-coefs d (BigSum l) = BigSum (map (monoidSet-coefs d) l) \elim l
   | nil => idp
   | a :: l => monoidSet-coefs_+ *> pmap (_ +) monoidSet-coefs_BigSum
 
+-- | Every `p` is a finite sum `∑ msMonomial (msCoef p m) m` over an injective list of monomials.
 \lemma msCoef-split {M : DecSet} {R : AbMonoid} (p : MonoidSet M R)
   : ∃ (l : Array M) (\Pi {i j : Fin l.len} -> l i = l j -> i = j) (p = BigSum (map (\lam m => msMonomial (msCoef p m) m) l)) \elim p
   | in~ l => inP (nub (map __.2 l), nub-isInj, inv msMonomial_BigSum-split *> AbMonoid.BigSum_EPerm (EPerm_map (\lam s => msMonomial s.1 s.2) nub-split) *>
@@ -306,6 +361,7 @@
       (pmap (\lam x => BigSum (map x _)) {\lam m => BigSum (map (\lam s => msMonomial s.1 s.2) (keep (\lam s => M.decideEq m s.2) l))}
           (ext \lam m => msMonomial_BigSum-split *> fromClosure (unique-sum m \lam j => inv $ keep.satisfies {\Sigma R M} (\lam s => decideEq m s.2))) : BigSum (map _ (nub (map __.2 l))) = _))
 
+-- | The set of monomials with nonzero coefficient is finite (decidable `R`).
 \lemma msCoefs-fin {M : DecSet} {R : AbMonoid} {Rd : DecSet R} (p : MonoidSet M R) : FinSet (\Sigma (m : M) (msCoef p m /= 0))
   => \case msCoef-split p \with {
        | inP (l, inj, q) =>
@@ -319,6 +375,7 @@
        }) {SubDecSet}
      }
 
+-- | A nonzero element has at least one nonzero coefficient.
 \lemma msCoef/=0 {M : DecSet} {R : AbMonoid} {Rd : DecSet R} {p : MonoidSet M R} (p/=0 : p /= 0) : ∃ (m : M) (msCoef p m /= 0)
   => \case KFinSet.dec {msCoefs-fin p} \with {
        | yes e => e
@@ -327,30 +384,40 @@
        }
   }
 
+-- | A nonzero coefficient at `m` implies `m` appears in the underlying representative.
 \func msCoef/=0_Index {M : DecSet} {R : AbMonoid} {l : Array (\Sigma R M)} {m : M} (p : msCoef (inMS l) m /= 0) : Index m (map __.2 l)
   => \case index-dec (map __.2 l) m \with {
     | inl r => r
     | inr q => absurd $ p $ pmap (\lam (l : Array (\Sigma R M)) => BigSum $ map __.1 l) $ keep-none \lam j p => q (j, inv p)
   }
 
+-- | Quotient of arrays with distinct monomials and nonzero coefficients, modulo permutation.
 \type DecMonoidSet (M : \Set) (R : AddPointed)
   => Quotient {Type M R} \lam s t => EPerm s.1 t.1
   \where {
+    -- | The underlying record carrying injectivity and nonzero-coefficient witnesses.
     \func Type  (M : \Set) (R : AddPointed) => \Sigma (l : Array (\Sigma R M)) (\Pi {i j : Fin l.len} -> (l i).2 = (l j).2 -> i = j) (\Pi (j : Fin l.len) -> (l j).1 /= 0)
 
+    -- | Quotient introduction and reflection of equality back to a permutation.
     \func inDMS {M : \Set} {R : AddPointed} (s : Type M R) : DecMonoidSet M R => in~ s
 
+    -- | Quotient introduction and reflection of equality back to a permutation.
     \lemma ~-dmsequiv {M : \Set} {R : AddPointed} {s t : Type M R} (p : EPerm s.1 t.1) : inDMS s = inDMS t
       => path \lam i => ~-pequiv p i
 
+    -- | Quotient introduction and reflection of equality back to a permutation.
     \lemma unext {M : \Set} {R : AddPointed} {s t : Type M R} (p : inDMS s = inDMS t) : TruncP (EPerm s.1 t.1)
       => Quotient.equalityClosure (Equivalence.map __.1 EPerm.EPerm-equivalence) (\lam e => inP e) (path \lam i => p i)
   }
 
+-- | Forget the canonical form to get a `MonoidSet`.
 \func decToMonoidSet {M : \Set} {R : AddMonoid} (p : DecMonoidSet M R) : MonoidSet M R \elim p
   | in~ s => in~ s.1
   | ~-equiv x y r => ~-msequiv (~-perm r)
 
+{- | `decToMonoidSet` is an equivalence when `M` and `R` have decidable equality — provides a canonical normal form via
+ -   internal helpers `msNorm`, `msNormVars`, and their `~`-invariance lemmas.
+ -}
 \lemma monoidSetDec-equiv {M : DecSet} {R : AbMonoid} {Rd : DecSet R} : IsEquiv (decToMonoidSet {M} {R})
   => IsEquiv.fromInjSurj (\lam {in~ s} {in~ t} q => \case Transitive.Closure.univ (Equivalence.map msNorm $ EPerm-equivalence) (\lam e => inP (msNorm_~ e)) (MonoidSet.toClosure q) \with {
        | inP r => DecMonoidSet.~-dmsequiv $ transport2 EPerm (msNorm=msNorm' *> msNorm'-norm) (msNorm=msNorm' *> msNorm'-norm) r
@@ -402,6 +469,7 @@
       | ~-+ m q1 q2 => EPerm_remove $ later $ rewrite (q1, q2) $ eperm-= $ pmap (m ::) $ later $ rewrite (decideEq=_reduce idp) $ remove.equals (\lam {a} => byLeft) (\lam {a} => ||.rec' (\lam x => x) (\lam x => x)) *> inv remove_remove
   }
 
+-- | Evaluate `x : MonoidSet M R` at a function `f : M -> R` by `∑ s.1 * f s.2`.
 \func evalMS {M : \Set} {R : Semiring} (x : MonoidSet M R) (f : M -> R) : R \elim x
   | in~ l => R.BigSum $ map (\lam s => s.1 * f s.2) l
   | ~-equiv l l' r => evalMS-coh f r
@@ -414,6 +482,7 @@
       | ~-+ m idp idp => pmap (+ _) rdistr *> +-assoc
   }
 
+-- | `evalMS _ f` as an `AddMonoidHom`.
 \func evalMSMonoidHom {M : \Set} {R : Semiring} (f : M -> R) : AddMonoidHom (MonoidAbMonoid M R) R \cowith
   | func => evalMS __ f
   | func-zro => idp
@@ -421,6 +490,7 @@
     | in~ l, in~ l' => pmap R.BigSum (map_++ (\lam s => s.1 * f s.2)) *> R.BigSum_++
   }
 
+-- | Upgrades when `f` is a `MonoidHom` into a (commutative) (semi)ring.
 \func evalMSSemiringHom {M : Monoid} {R : CSemiring} (f : MonoidHom M R) : SemiringHom (MonoidSemiring M R) R \cowith
   | AddMonoidHom => evalMSMonoidHom f
   | func-ide => simplify f.func-ide
@@ -428,25 +498,31 @@
     | in~ l, in~ l' => pairs.pairs-distr (\lam s => s.1 * f s.2) \lam {a} {b} => unfold MonoidSemiring.func (rewrite f.func-* equation)
   }
 
+-- | Upgrades when `f` is a `MonoidHom` into a (commutative) (semi)ring.
 \func evalMSRingHom {M : Monoid} {R : CRing} (f : MonoidHom M R) : RingHom (MonoidRing M R) R \cowith
   | SemiringHom => evalMSSemiringHom f
 
+-- | `evalMS (msMonomial a 0) f = a`.
 \lemma evalMS_monomial {M : AddPointed} {R : Semiring} {f : PointedHom M R} {a : R} : evalMS (msMonomial a M.zro) f = a
   => zro-right *> pmap (a *) func-ide *> ide-right
 
+-- | Naturality of evaluation along `monoidSet-map`.
 \lemma evalMS_map {M N : Monoid} {R : CRing} {f : M -> N} {x : MonoidSet M R} {g : N -> R}
   : evalMS (monoidSet-map f RingHom.id x) g = evalMS x (\lam m => g (f m)) \elim x
   | in~ l => idp
 
+-- | Naturality of evaluation along `monoidSet-map`.
 \lemma evalMS_map2 {M : \Set} {R S : Semiring} {x : MonoidSet M R} {f : M -> R} (g : SemiringHom R S)
   : evalMS (monoidSet-map (\lam y => y) g x) (\lam m => g (f m)) = g (evalMS x f) \elim x
   | in~ l => inv $ g.func-BigSum *> pmap BigSum (exts \lam j => g.func-*)
 
+-- | Substitute a monoid element `m` for the indeterminate of `Poly R` to produce an element of `MonoidSet M R`.
 \func polyToMonoidSet {M : Monoid} {R : Semiring} (m : M) (p : Poly R) : MonoidSet M R \elim p
   | pzero => 0
   | padd p a => polyToMonoidSet m p * msMonomial 1 m + msMonomial a ide
   | peq i => ~-pequiv {_} {_} {(R.zro,M.ide) :: nil} {nil} (MonoidSet.~-zro idp) i
 
+-- | The above as an `AddMonoidHom`.
 \func polyToMonoidSetHom {M : Monoid} {R : Ring} (m : M) : AddMonoidHom (PolyRing R) (MonoidRing M R) \cowith
   | func => polyToMonoidSet m
   | func-zro => idp
@@ -456,6 +532,7 @@
     | padd p a, padd q b => rewrite (func-+,rdistr,msMonomial_+) $ +-assoc *> pmap (_ +) (later (inv +-assoc) *> pmap (+ _) +-comm *> +-assoc) *> inv +-assoc
   }
 
+-- | Upgrade to a `RingHom` when `M` is commutative.
 \func polyToMonoidSetRingHom {M : CMonoid} {R : CRing} (m : M) : RingHom (PolyRing R) (MonoidRing M R) \cowith
   | AddMonoidHom => polyToMonoidSetHom m
   | func-ide => idp
@@ -469,10 +546,14 @@
       | padd p b => pmap (__ * _ + _) func-*c *> pmap2 (+) *-assoc simplify *> inv ldistr
   }
 
+-- | Evaluating the resulting monoid-set element at a monoid hom `f` agrees with `polyEval p (f m)`.
 \lemma polyToMonoidSet-eval {R : CRing} {M : Monoid} {p : Poly R} {f : MonoidHom M R} {m : M} : evalMS (polyToMonoidSet m p) f = polyEval p (f m) \elim p
   | pzero => idp
   | padd p a => (evalMSRingHom f).func-+ *> pmap2 (+) (func-* *> pmap2 (*) polyToMonoidSet-eval simplify) (unfold $ rewrite f.func-ide simplify)
 
+{- | Two ring homs out of `MonoidRing M R` agreeing on coefficient and monomial monomials are equal — the universal
+ -   property of `R[M]`.
+ -}
 \lemma monoidRingHom-unique {M : Monoid} {R S : CRing} {f g : RingHom (MonoidRing M R) S} (p : \Pi (r : R) -> f (msMonomial r ide) = g (msMonomial r ide)) (q : \Pi (m : M) -> f (msMonomial 1 m) = g (msMonomial 1 m)) (x : MonoidSet M R) : f x = g x \elim x
   | in~ l => pmap f monoidSet-list *> f.func-BigSum *> pmap BigSum (exts \lam j => simplify *> f.func-* *> pmap2 (*) (p (l j).1) (q (l j).2) *> inv g.func-* *> simplify) *> inv g.func-BigSum *> inv (pmap g monoidSet-list)
   \where {

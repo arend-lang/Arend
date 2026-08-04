@@ -1,3 +1,13 @@
+{- | Algebraic closures of fields, with an explicit construction for countable discrete fields.
+ -
+ -   This module characterizes algebraic closedness via the existence of roots of nonconstant monic polynomials and
+ -   shows it is equivalent to the property that every monic polynomial splits into linear factors. An algebraic closure
+ -   is packaged as a ring homomorphism that is both algebraically closed on the codomain and an integral extension. The
+ -   countable case is built constructively by iterating splitting field extensions along an enumeration of all
+ -   polynomials, then taking a lattice colimit over the resulting tower of discrete fields; properties of the closure
+ -   (splitting, integrality) are transferred through the colimit using the naturality of the inclusion maps.
+ -}
+
 \import Algebra.Domain
 \import Algebra.Field
 \import Algebra.Field.Splitting
@@ -85,6 +95,9 @@
     }
   }
 
+{- | A ring homomorphism `f : RingHom K E` is an algebraic closure if `E` is algebraically closed and `f` is an integral
+ -   extension: `\Sigma (IsAlgebraicallyClosed f.Cod) (isIntegralExt f)`.
+ -}
 \type IsAlgebraicClosure (f : RingHom) => \Sigma (IsAlgebraicallyClosed f.Cod) (isIntegralExt f)
 
 -- | If `E` is a strict domain, `f : K -> E` is integral, and every monic polynomial in {K} splits into linear factors in {E}, then {f} is an algebraic closure.
@@ -120,12 +133,19 @@
               }
             })
   \where \private {
+    {- | The tower of countable discrete fields `k = K_0 ⊆ K_1 ⊆ ...` where `K_{n+1}` is a splitting field over `K_n`
+     -   for the `n`-th polynomial in the enumeration; each step records the field, its countability witness, the
+     -   embedding from `k`, and integrality of that embedding.
+     -}
     \func sequence.{u} {k : DiscreteField.{u}} (kc : Countable k) (f : Nat -> Poly k) (n : Nat) : \Sigma (K : DiscreteField.{u}) (Countable K) (g : RingHom k K) (isIntegralExt g) \elim n
       | 0 => (k, kc, id, integralExt_id)
       | suc n => \let | (K,Kc,g,gi) => sequence kc f n
                       | t => countableSplittingField Kc {polyMap g (f n)}
                  \in (t.1, t.2, t.3 ∘ g, integralExt-comp _ _ gi $ splitting-integral (countableSplittingField Kc).4)
 
+    {- | Coherence lemma stating that the natural homomorphism from `K_0` to `K_n` along the tower agrees with the
+     -   iterated embedding `(sequence kc f n).3`; used to identify maps after passing through the colimit.
+     -}
     \lemma sequence3.{u} {k : DiscreteField.{u}} {kc : Countable k} {f : Nat -> Poly k} {n : Nat} {a : k}
       : NatFunctor.natHom {CRingCat.{u}} {_} {\lam {n} => (countableSplittingField (sequence kc f n).2 {polyMap (sequence kc f n).3 (f n)}).3} {0} (n,idp) a = (sequence kc f n).3 a \elim n
       | 0 => idp

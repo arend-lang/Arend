@@ -1,3 +1,13 @@
+{- | Notions of normal forms, accessibility, well-founded induction, and termination for abstract reduction systems.
+ -
+ -   This module formalizes when a reduction system terminates, building on the standard inductive accessibility
+ -   predicate `Acc`: an element is accessible when all its one-step successors are accessible. Termination is defined
+ -   as accessibility of every element under the one-step reduction `~>`, while normalization is the existence of a
+ -   normal form for every element. The module relates these notions (termination implies normalization under
+ -   decidability of reducibility), generalizes accessibility to the transitive closure, and exposes well-founded
+ -   induction principles for proving properties along reduction chains.
+ -}
+
 \import Logic.Accessible
 \import Logic.Rewriting.ARS.AbstractReductionSystem
 \import Logic
@@ -5,16 +15,21 @@
 \import Relation.Truncated
 \import Set
 
+-- | Predicate stating that `a` admits no one-step reduction: `∀ {b}, ¬ (a ~> b)`.
 \func isNormalForm {A : SimpleARS} (a : A) : \Prop => \Pi {b : A} -> Not (a ~> b)
 
+-- | Inductive proposition asserting `a` reduces (in `~>_*`) to some normal form, via constructor `normal-form`.
 \truncated \data HasNormalForm {A : SimpleARS} (a : A) : \Prop
   | normal-form (b : A) (isNormalForm b) (a ~>_* b)
 
+-- | An ARS is normalizing when every element has a normal form.
 \func isNormalizing (A : SimpleARS) : \Prop => \Pi (a : A) -> HasNormalForm a
 
+-- | Accessibility under the transitive closure of `R`, defined as `Acc (transitive-closure R) a`.
 \func Acc-Trans {A : \Set} (R : Rel A) (a : A) : \Prop
   => Acc (TransClosure R) a
 
+-- | Lemma upgrading ordinary accessibility to accessibility under the transitive closure.
 \lemma Acc=>AccTrans {A : \Set} {R : Rel A} {a : A} (acc : Acc R a) : Acc (TransClosure R) a \elim acc
   | acc r => acc \case \elim __ \with {
     | tc-direct b<a => Acc=>AccTrans (r b<a)
@@ -23,8 +38,12 @@
     }
   }
 
+-- | An ARS is terminating when every element is accessible under `~>`.
 \func isTerminating (A : SimpleARS) : \Prop => \Pi (a : A) -> Acc (\lam x y => y ~> x) a
 
+{- | If reducibility `∃ a', a ~> a'` is decidable at every point, then accessibility implies the existence of a normal
+ -   form. Bridges the constructive gap between termination and normalization.
+ -}
 \lemma Termination=>Normalization {A : SimpleARS} (dec : \Pi (a : A) -> Dec (∃ (a' : A) (a ~> a')))
                                   (a : A)
                                   (term : Acc (\lam x y => y ~> x) a) : HasNormalForm a =>
@@ -39,6 +58,9 @@
       a
       (Acc=>AccTrans term)
 
+{- | Induction principle on accessible elements: to prove `C a`, it suffices to prove `C b` for every one-step successor
+ -   `b`. Recurses structurally on the `Acc` proof.
+ -}
 \func well-founded-induction
   {A : \Set} {R : Rel A} (C : A -> \Type)
   (induction : \Pi (a : A) (\Pi (b : A) (R b a) -> C b) -> C a)
@@ -46,14 +68,19 @@
 \elim a-is-accessible
   | acc successors => induction a (\lam b a~>b => well-founded-induction C induction b (successors a~>b))
 
+-- | Variant taking an induction step quantified over the transitive closure of `R`, for elements in `Acc-Trans`.
 \func well-founded-induction-transitive {A : \Set} {R : Rel A} (C : A -> \Type)
                                         (induction : \Pi (a : A) (\Pi (b : A) (TransClosure R b a) -> C b) -> C a)
                                         (a : A) (a-is-accessible : Acc-Trans R a) : C a \elim a-is-accessible
   | acc successors => induction a (\lam b a~>b => well-founded-induction C induction b (successors a~>b))
 
 
+-- | The set of one-step successors of `a`, i.e. `Σ (b : A), a ~> b`.
 \func one-step-reduction {A : SimpleARS} (a : A) : \Set => \Sigma (b : A) (a ~> b)
 
+{- | Inductive type of reduction sequences starting at `a`, built by `branch` (extend by a one-step reduction) or
+ -   terminated by `leaf` at a normal form.
+ -}
 \data ReductionPath {A : SimpleARS} (a : A)
   | branch (b : A) (ReductionPath b) (a ~> b)
   | leaf (isNormalForm a)

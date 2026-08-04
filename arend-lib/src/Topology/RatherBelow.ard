@@ -1,3 +1,14 @@
+{- | Abstract "rather below" relations on topological meet-semilattices, capturing the idea of one open being
+ -   well-inside another.
+ -
+ -   A `RatherBelow` is a binary relation `R` on a `TopMeetSemilattice` that is monotone on both sides, has `top` as a
+ -   universal upper bound, and is preserved by binary meets. From any such relation, two derived strengthenings are
+ -   constructed: `<=<o` (Omega), the largest sub-relation that interpolates a single step, and `<=<c` (Interpolative),
+ -   the largest sub-relation that interpolates within itself — yielding a dense/way-below-style refinement. These
+ -   derived relations again form `RatherBelow` instances, so the construction iterates and `<=<c` provides the
+ -   interpolative core used in pointfree topology and frame-theoretic constructions.
+ -}
+
 \import Function.Meta
 \import Logic
 \import Logic.Meta
@@ -6,26 +17,38 @@
 \import Paths.Meta
 \import Set.Set
 
+-- | Class over `{A : TopMeetSemilattice}` with a relation `R : A -> A -> \Prop` satisfying:
 \class RatherBelow {A : TopMeetSemilattice} (R : A -> A -> \Prop) {
+  -- | Right-monotonicity in the codomain: `R U V -> V <= W -> R U W`.
   | <=<-left {U V W : A} : R U V -> V <= W -> R U W
+  -- | Left-monotonicity in the domain: `U <= V -> R V W -> R U W`.
   | <=<-right {U V W : A} : U <= V -> R V W -> R U W
+  -- | Everything is rather-below `top`.
   | <=<_top {V : A} : R V top
+  -- | Compatibility with binary meets: `R U V -> R U' V' -> R (U ∧ U') (V ∧ V')`.
   | <=<_meet {U V U' V' : A} : R U V -> R U' V' -> R (U ∧ U') (V ∧ V')
 
+  -- | From `R U V` and `R U V'` derive `R U (V ∧ V')` (single-domain meet).
   \lemma <=<_meet-same {U V V' : A} (p : R U V) (q : R U V') : R U (V ∧ V')
     => <=<-right (meet-univ <=-refl <=-refl) (<=<_meet p q)
 
+  {- | `V <=<o U` holds iff there exists a sub-relation `R' ⊆ R` containing `(V, U)` such that any `R'`-pair admits a
+   -   one-step `R`-interpolant. The largest "interpolative once" subrelation of `R`.
+   -}
   \type \infix 4 <=<o (V U : A) : \Prop
     => ∃ (R' : A -> A -> \Prop) (\Pi {V U : A} -> R' V U -> R V U) (\Pi {V U : A} -> R' V U -> ∃ (W : A) (R' V W) (R W U)) (R' V U)
 
+  -- | `<=<o` implies `R`.
   \lemma <=<o_<=< {V U : A} (p : V <=<o U) : R V U \elim p
     | inP (R,p,q,r) => p r
 
+  -- | One-step interpolation: `V <=<o U` yields some `W` with `V <=<o W` and `R W U`.
   \lemma <=<o-inter {V U : A} (p : V <=<o U) : ∃ (W : A) (V <=<o W) (R W U) \elim p
     | inP (R,p,q,RVU) => \case q RVU \with {
       | inP (W,RVW,W<=<U) => inP (W, inP (R, p, q, RVW), W<=<U)
     }
 
+  -- | The `RatherBelow` instance built from `<=<o`.
   \func Omega : RatherBelow {A} \cowith
     | R => <=<o
     | <=<_top => inP (\lam V U => U = top, \lam p => rewrite p <=<_top, \lam p => inP (top, idp, rewrite p <=<_top), idp)
@@ -50,23 +73,31 @@
     }
 
 
+  {- | `V <=<c U` holds iff there exists a sub-relation `R' ⊆ R` containing `(V, U)` that interpolates within itself.
+   -   The largest "fully interpolative" subrelation of `R`.
+   -}
   \type \infix 4 <=<c (V U : A) : \Prop
     => ∃ (R' : A -> A -> \Prop) (\Pi {V U : A} -> R' V U -> R V U) (\Pi {V U : A} -> R' V U -> ∃ (W : A) (R' V W) (R' W U)) (R' V U)
 
+  -- | `<=<c` implies `<=<o`.
   \lemma <=<c_<=<o {V U : A} (p : V <=<c U) : V <=<o U \elim p
     | inP (R,p,q,r) => inP (R, p, \lam r => TruncP.map (q r) \lam (W,RVW,RWU) => (W, RVW, p RWU), r)
 
+  -- | `<=<c` implies `R`.
   \lemma <=<c_<=< {V U : A} (p : V <=<c U) : R V U
     => <=<o_<=< (<=<c_<=<o p)
 
+  -- | Self-interpolation: `V <=<c U` yields some `W` with `V <=<c W` and `W <=<c U`.
   \lemma <=<c-inter {V U : A} (p : V <=<c U) : ∃ (W : A) (V <=<c W) (W <=<c U) \elim p
     | inP (R,p,q,RVU) => \case q RVU \with {
       | inP (W,RVW,RWU) => inP (W, inP (R, p, q, RVW), inP (R, p, q, RWU))
     }
 
+  -- | Functoriality: a relation morphism `R -> R2` lifts to `<=<c -> R2.<=<c`.
   \lemma <=<c-func {R2 : RatherBelow {A}} (p : \Pi {V U : A} -> R V U -> R2 V U) {V U : A} (q : V <=<c U) : V R2.<=<c U \elim q
     | inP (R',f,g,r) => inP (R', \lam r => p (f r), g, r)
 
+  -- | The `RatherBelow` instance built from `<=<c`.
   \func Interpolative : RatherBelow {A} \cowith
     | R => <=<c
     | <=<_top => inP (\lam V U => U = {A} top, \lam p => rewrite p <=<_top, \lam p => inP (top, idp, p), idp)
@@ -90,10 +121,14 @@
            inP (V1, V2, U1, U2, RV1U1, R'V2U2, idp, idp))
     }
 } \where {
+  -- | In a `CompleteLattice`, if `R bottom U` holds for all `U`, then `bottom R.<=<c U`.
   \lemma <=<c_bottom {A : BoundedLattice} {R : RatherBelow {A}} (p : \Pi {U : A} -> R bottom U) {U : A} : bottom R.<=<c U
     => inP (\lam V _ => V = bottom, \lam q => rewrite q p, \lam q => inP (bottom, q, idp), idp)
 }
 
+{- | Preimage compatibility: a function preserving `R` between set-lattices also preserves `<=<c`, i.e. `U RY.<=<c V`
+ -   implies `f ^-1 U RX.<=<c f ^-1 V`.
+ -}
 \lemma <=<c_^-1 {X Y : \Set} {RX : RatherBelow {SetLattice X}} {RY : RatherBelow {SetLattice Y}} {f : X -> Y} (<=<_^-1 : \Pi {U V : Set Y} -> RY U V -> RX (f ^-1 U) (f ^-1 V)) {U V : Set Y} (p : U RY.<=<c V) : f ^-1 U RX.<=<c f ^-1 V \elim p
   | inP (R',g,h,r) => inP (\lam U V => ∃ (U' V' : R') (U = f ^-1 U') (V = f ^-1 V'), \lam (inP (U',V',R'U'V',p,q)) => rewrite (p,q) $ <=<_^-1 $ g R'U'V', \lam (inP (U',V',R'U'V',p,q)) => \case h R'U'V' \with {
     | inP (W,R'U'W,R'WV') => inP (f ^-1 W, inP (U', W, R'U'W, p, idp), inP (W, V', R'WV', idp, q))

@@ -1,3 +1,14 @@
+{- | Normed abelian group structures on the rationals and reals, with tools for lifting maps from rationals to reals via
+ -   density.
+ -
+ -   The real numbers are presented as the strong completion of the rational normed group, packaging both `RatNormed`
+ -   and `RealNormed` as normed abelian groups using absolute value as norm. The embedding `rat_real : Q → R` is shown
+ -   to be a dense isometric cover embedding, which is the key fact powering the lifting machinery: any uniformly
+ -   continuous map out of the rationals (or pairs of rationals) extends uniquely to the reals. The module also provides
+ -   characterization lemmas that translate `<=<` (rather-below) relations on the reals into rational interval data,
+ -   making it possible to reason about lifted functions through their rational approximations.
+ -}
+
 \import Algebra.Group
 \import Algebra.Meta
 \import Algebra.Monoid
@@ -40,6 +51,7 @@
 \open RealNormed
 \open ProductCoverSpace
 
+-- | Normed abelian group instance for `RatField` with norm `abs`.
 \instance RatNormed : NormedAbGroup
   | AbGroup => RatField
   | norm a => abs a
@@ -48,10 +60,12 @@
   | norm_+ => transportInv (_ <=) ExUpperReal.+-rat $ ExUpperReal.<=-rat.1 abs_+
   | norm-ext p => abs_zro-ext $ ExUpperReal.fromRat-inj p
 
+-- | The canonical embedding `Real.fromRat` packaged as a `NormedIsometricMap RatNormed RealNormedAbGroup`.
 \func rat_real : NormedIsometricMap RatNormed RealNormedAbGroup Real.fromRat \cowith
   | func-+ => inv RealAbGroup.+-rat
   | func-norm-isometry => inv rat_real_abs
   \where {
+    -- | The image of `rat_real` is dense in the reals.
     \lemma dense : rat_real.IsDense
       => \lam {y} {U} Uo Uy => \case (dist_open {RealNormedAbGroup} {U}).1 Uo Uy \with {
         | inP (eps,eps>0,p) => \case y.LU-focus eps eps>0 \with {
@@ -59,10 +73,16 @@
         }
       }
 
+    {- | `rat_real` is a dense embedding of cover spaces (`CoverMap.IsDenseEmbedding`), enabling unique extension of
+     -   cover maps from `RatNormed` to `RealNormed`.
+     -}
     \lemma dense-coverEmbedding : CoverMap.IsDenseEmbedding {rat_real}
       => (dense, rat_real.embedding->coverEmbedding (rat_real.dense->uniformEmbedding dense).2)
   }
 
+{- | Complete normed abelian group on `Real` (extends `CompleteNormedAbGroup`); strong completeness witnessed by
+ -   `fromCF` reconstructing a real from a strongly regular Cauchy filter on `RatNormed`.
+ -}
 \instance RealNormed : CompleteNormedAbGroup
   | NormedAbGroup => RealNormedAbGroup
   | isStronglyComplete => dense-stronglyComplete (rat_real.dense->weaklyDense rat_real.dense, rat_real.embedding->coverEmbedding (rat_real.dense->uniformEmbedding rat_real.dense).2)
@@ -77,6 +97,7 @@
                 (RealAbGroup.<-diff-mid-conv $ transport (_ <) +-comm $ rat_real_<.1 (transport (_ <) +-comm (RatField.<-diff-mid $ abs>=_- <∘r |y2-z|<eps2) <∘ y2+eps2<b) <∘ real_<_L.2 b<x+eps)) <=∘ ^-1_<= rat_real p
       })
   \where {
+    -- | The underlying `NormedAbGroup` on `RealAbGroup` with norm `abs`, before adding completeness.
     \func RealNormedAbGroup : NormedAbGroup \cowith
       | AbGroup => RealAbGroup
       | norm => abs
@@ -85,6 +106,9 @@
       | norm_+ => transport (_ ExUpperRealAbMonoid.<=) RealAbGroup.+-upper $ Real.<=-upper.1 abs_+
       | norm-ext {x} p => abs_zro-ext $ (Real.=-upper {abs x} {0}).2 p
 
+    {- | Builds a `Real` from a `StronglyRegularCauchyFilter RatNormed` by defining its lower/upper Dedekind cuts via
+     -   rational open balls in the filter.
+     -}
     \func fromCF (F : StronglyRegularCauchyFilter RatNormed) : Real \cowith
       | L a => ∃ (x eps : Rat) (0 < eps) (F (OBall eps x)) (a < x - eps)
       | L-inh => \case cauchyFilter-metric-char.1 F.isCauchyFilter {1} RatField.zro<ide \with {
@@ -105,9 +129,14 @@
       }
   }
 
+-- | For rationals `a b`, the set `{x : Real | x.L a ∧ x.U b}` — the open interval `(a, b)` as a subset of `Real`.
 \func open-rat-int (a b : Rat) : Set Real
   => \lam (x : Real) => \Sigma (x.L a) (x.U b)
 
+{- | Characterizes when `cauchy-lift f fd g y` lies in `open-rat-int a b`: there must exist a slightly tighter interval
+ -   `(a', b')` and a neighborhood `V` of `y` whose `f`-preimage maps into `g⁻¹(a', b')`. Used to compute values of
+ -   lifted maps to the reals.
+ -}
 \lemma dense-lift-real-char {X Y : CoverSpace} {f : CoverMap X Y} (fd : f.IsDenseEmbedding) {g : CoverMap X RealNormed} (y : Y) (a b : Rat)
   : open-rat-int a b (cauchy-lift f fd g y) <-> ∃ (a' b' : Rat) (a < a') (b' < b) (V : Set Y) (f ^-1 V ⊆ g ^-1 open-rat-int a' b') (single y <=< V)
   => (\lam (a<z,z<b) => \case L-rounded a<z, U-rounded z<b \with {
@@ -118,6 +147,7 @@
   \where {
     \open ClosurePrecoverSpace
 
+    -- | For `eps > 0`, the family `{open-rat-int a (a+eps) | a : Rat}` is a Cauchy cover of `RealNormed`.
     \lemma makeRealCover (eps : Rat) (eps>0 : 0 < eps) : RealNormed.isCauchy \lam U => ∃ (a : Rat) (U = open-rat-int a (a + eps))
       => RealNormed.makeCauchy $ inP (RatField.half $ RatField.half eps, linarith, \lam x => \case rat_real.dense (OBall-open {RealNormed}) (OBall-center {RealNormed} $ RatField.half>0 $ RatField.half>0 eps>0) \with {
         | inP (_, inP (q,idp), p) => inP $ later (_, inP (q - eps * ratio 1 2, idp), \lam d =>
@@ -126,15 +156,22 @@
                real_<_U.1 $ transport (_ <) (RealAbGroup.+-rat *> pmap Real.fromRat linarith) $ RealAbGroup.<-diff-mid $ abs>=_- <∘r qy<eps/2))
       })
 
+    {- | Strict shrinking of rational intervals gives a rather-below relation: `(a', b') <=< (a, b)` when `a < a'` and
+     -   `b' < b`.
+     -}
     \lemma <=<_open-rat-int {a b a' b' : Rat} (a<a' : a < a') (b'<b : b' < b) : open-rat-int a' b' <=< open-rat-int a b
       => closure-subset (makeRealCover ((a' - a) ∧ (b - b')) $ <_meet-univ linarith linarith) \lam {U} (inP (c,p)) => rewrite p $ later \lam (e : Real, ((a'<e,e<b'),(c<e,e<c+eps))) (c<x,x<c+eps) => (L-closed c<x $ linarith (e.LU-less a'<e e<c+eps <∘l <=_+ <=-refl meet-left), U-closed x<c+eps $ <=_+ <=-refl meet-right <∘r linarith (e.LU-less c<e e<b'))
 
+    -- | A real `x` with `x.L a` and `x.U b` satisfies `single x <=< open-rat-int a b`.
     \lemma point_<=< {x : Real} {a b : Rat} (a<x : x.L a) (x<b : x.U b) : single x <=< open-rat-int a b
       => \case x.L-rounded a<x, x.U-rounded x<b \with {
         | inP (a',a'<x,a<a'), inP (b',x<b',b'<b) => <=<-right (later \lam p => rewriteI p (a'<x,x<b')) (<=<_open-rat-int a<a' b'<b)
       }
   }
 
+{- | Any neighborhood `U` of a point `x : Real` (in the `<=<` sense) contains an open rational interval around `x`:
+ -   there exist `a, b` with `x.L a`, `x.U b` such that every `y` strictly between `a` and `b` lies in `U`.
+ -}
 \lemma <=<-open-int {x : Real} {U : Set Real} (p : single x <=< U) : ∃ (a b : Rat) (x.L a) (x.U b) ∀ (y : Real) (y.L a -> y.U b -> U y)
   => \case <=<-ball p \with {
     | inP (eps,eps>0,q) => \case (real_<-rat-char {x - eps} {x}).1 $ transport (_ <) zro-right $ <_+-right x $ RealAbGroup.positive_negative $ rat_real_<.1 eps>0, (real_<-rat-char {x} {x + eps}).1 $ transport (< _) zro-right $ <_+-right x $ rat_real_<.1 eps>0 \with {
@@ -142,9 +179,15 @@
     }
   }
 
+{- | Lifts a cover map `f : RatNormed × RatNormed → X` (for any `CompleteCoverSpace` `X`) to a cover map
+ -   `RealNormed × RealNormed → X`, using density of `rat_real` on each factor.
+ -}
 \func real-lift2 {X : CompleteCoverSpace} (f : CoverMap (RatNormed ⨯ RatNormed) X) : CoverMap (RealNormed ⨯ RealNormed) X
   => dense-lift (prod rat_real rat_real) (prod.isDenseEmbedding rat_real.dense-coverEmbedding rat_real.dense-coverEmbedding) f
 
+{- | Characterizes when `real-lift2 f (x, y)` lands in `open-rat-int a b` in terms of rational intervals around `x` and
+ -   `y` and the behavior of `f` on those rational rectangles.
+ -}
 \lemma real-lift2-char {f : CoverMap (RatNormed ⨯ RatNormed) RealNormed} {x y : Real} (a b : Rat)
   : open-rat-int a b (real-lift2 f (x,y)) <-> ∃ (a' b' c1 d1 c2 d2 : Rat) (a < a') (b' < b) (x.L c1) (x.U d1) (y.L c2) (y.U d2) (\Pi {x y : Rat} -> \Sigma (c1 < x) (x < d1) -> \Sigma (c2 < y) (y < d2) -> open-rat-int a' b' (f (x,y)))
   => <->trans (dense-lift-real-char {RatNormed ⨯ RatNormed} {_} {prod rat_real rat_real} (prod.isDenseEmbedding rat_real.dense-coverEmbedding rat_real.dense-coverEmbedding) (x,y) a b) $ later
@@ -155,6 +198,9 @@
       }, \lam (inP (a',b',c1,d1,c2,d2,a<a',b'<b,c1<x,x<d1,c2<y,y<d2,q)) => inP (a', b', a<a', b'<b, \lam z => \Sigma (open-rat-int c1 d1 z.1) (open-rat-int c2 d2 z.2),
           \lam s => q s.1 s.2, RatherBelow.<=<_meet-same (<=<-right (later \lam s => pmap __.1 s) $ <=<_^-1 {_} {_} {proj1} $ dense-lift-real-char.point_<=< c1<x x<d1) (<=<-right (later \lam s => pmap __.2 s) $ <=<_^-1 {_} {_} {proj2} $ dense-lift-real-char.point_<=< c2<y y<d2)))
 
+{- | If `ldist x y > 0` then `x < y` or `y < x` — strict positivity of the distance forces a strict order between two
+ -   reals.
+ -}
 \lemma real-dist>0 {x y : Real} (xy>0 : 0 < ldist x y) : x < y || y < x
   => \case real-located {y} {x} {x + ldist x y} $ transport (< _) zro-right $ <_+-right x xy>0 \with {
     | byLeft x<y => byLeft x<y

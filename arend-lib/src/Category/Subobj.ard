@@ -1,3 +1,11 @@
+{- | Subobjects and regular subobjects of an object in a precategory, organized as preorders under factorization.
+ -
+ -   A subobject of `obj` is a monomorphism into `obj`; a regular subobject is a regular mono into `obj`. The preorder
+ -   `s <= t` holds when `s` factors through `t`, and antisymmetry of this preorder yields an isomorphism between the
+ -   underlying domains. The module also connects regular subobjects to limits: meets of regular subobjects correspond
+ -   to pullbacks, giving a translation between order-theoretic and limit-theoretic descriptions of intersections.
+ -}
+
 \import Category
 \import Category.Limit
 \import Equiv
@@ -12,6 +20,9 @@
 \import Relation.Equivalence
 \open PrecatWithBprod
 
+{- | Data type of subobjects of `obj : C`, with constructor `subobj` packaging a domain `sub` and a monomorphism
+ -   `sub -> obj`.
+ -}
 \type Subobj {C : Precat} (obj : C)
   => Quotient {Mono {C} { | cod => obj }} \lam m1 m2 => \Sigma (f : Hom m1.dom m2.dom) (m2.f ∘ f = m1.f) (g : Hom m2.dom m1.dom) (m1.f ∘ g = m2.f)
 
@@ -36,6 +47,9 @@
     | in~ m1, in~ m2, inP p, inP q => path \lam i => ~-equiv m1 m2 (p.1,p.2,q.1,q.2) i
   }
   \where {
+    {- | From a propositionally-truncated factorization through a mono `g`, extract the actual factoring map and
+     -   equation. Uses the uniqueness afforded by `Mono` to lift `∃` to `\Sigma`.
+     -}
     \lemma extractMap {obj : C} {f g : Mono {C} { | cod => obj }} (f<=g : inso~ f <= inso~ g) : \Sigma (h : Hom f.dom g.dom) (g.f ∘ h = f)
       => TruncP.remove (\lam p q => ext $ g.isMono $ p.2 *> inv q.2) f<=g
 

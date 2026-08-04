@@ -1,10 +1,24 @@
+{- | A diagonal-style argument showing that `\Prop` cannot have an injection from `\Prop -> \Prop` into itself, packaged
+ -   as the `InjData` class.
+ -
+ -   The module formalizes a propositional version of Cantor's theorem: any injection `f : \Prop -> \Prop` would force
+ -   `f (f A) = A`, collapsing the universe of propositions in a way that makes every proposition equivalent to the unit
+ -   type `\Sigma`. The `InjData` class bundles a candidate injection `f` together with its injectivity witness, and
+ -   exposes lemmas demonstrating that under such an assumption, propositions become trivial. This is useful as a
+ -   building block for impredicativity arguments and for proving that `\Prop` is not a small type.
+ -}
+
 \import Function.Meta
 \import Logic
 \import Meta
 \import Paths
 \import Paths.Meta
 
+{- | A class parameterized by a function `f : \Prop -> \Prop` together with a proof `inj` that `f` is injective on
+ -   propositions. Captures the hypothesis used in the diagonal argument.
+ -}
 \class InjData (f : \Prop -> \Prop) (inj : \Pi {A B : \Prop} -> f A = f B -> A = B) {
+  -- | `f (f A) = A` for any proposition `A`. The core fixed-point/diagonalization consequence of `f` being injective.
   \lemma PropFin (A : \Prop) : f (f A) = A => inj $ propExt
     (\lam p => run {
       aux at p,
@@ -16,13 +30,22 @@
       rewrite (aux p) p
     })
 
+  {- | Given a witness `h : f P`, derives `f (\Sigma) = P`. An auxiliary identification used to extract a proposition
+   -   from membership in the image of `f`.
+   -}
   \lemma aux {P : \Prop} (h : f P) : f (\Sigma) = P
     => propExt (\lam p => equals=>true (inj (true=>equals h *> inv (true=>equals p))))
                (\lam p => transport f (true=>equals p) h)
 
+  {- | Any inhabited proposition `P` is equal to `\Sigma`: from `h : P` produces `P = \Sigma`. Shows that under the
+   -   `InjData` assumption, all true propositions collapse to the unit.
+   -}
   \lemma true=>equals {P : \Prop} (h : P) : P = (\Sigma)
     => propExt (\lam p => ()) (\lam _ => h)
 
+  {- | Converse direction: from `P = \Sigma` produces an inhabitant of `P`. Together with `true=>equals` this
+   -   characterizes truth as equality with `\Sigma`.
+   -}
   \lemma equals=>true {P : \Prop} (p : P = (\Sigma)) : P
     => rewrite p ()
 }

@@ -5,6 +5,20 @@
      [4] Peter T. Johnstone, Fibrewise separation axioms for locales, 1990
  -}
 
+{- | Locales (point-free topological spaces): complete distributive lattices satisfying the infinite distributive law,
+ -   presented either directly or via generators and covering relations.
+ -
+ -   A **Locale** is a complete distributive lattice in which finite meets distribute over arbitrary joins; morphisms
+ -   (`FrameHom`) preserve top, finite meets, and arbitrary joins. The category `LocaleCat` is the opposite of
+ -   `FrameCat` so that morphisms point in the geometric (continuous-map) direction. Sublocales are encoded as
+ -   **nuclei**: monotone, inflationary, idempotent, meet-preserving operators on a frame, whose fixpoints form a
+ -   sublocale. Locales can also be presented by generators and basic covers (`FramePres`/`FrameUPres`), with
+ -   `PresentedFrame` constructing the free locale on such a presentation as the reflector of the inclusion
+ -   `FrameCat ↪ FramePresCat`. The file develops compactness, regularity, overtness, Hausdorff conditions, open/closed
+ -   sublocales, the way-below relation `<<`, the rather-below relation `<=<`, and standard factorization systems
+ -   (dense/closed, strongly-dense/weakly-closed).
+ -}
+
 \import Algebra.Meta
 \import Algebra.Ordered
 \import Category.Functor
@@ -33,6 +47,10 @@
 \open Locale
 \open CompleteLattice
 
+{- | Class extending `CompleteLattice`, `BoundedDistributiveLattice`, and `SiteWithBasis`. Joins are derived from
+ -   arbitrary `Join`, finite meets distribute over arbitrary joins (`Join-ldistr>=`), and the basic site cover is
+ -   `x <= Join (g i)`. Meets of arbitrary families are constructed as joins of all lower bounds.
+ -}
 \class Locale \extends CompleteLattice, HeytingAlebra, Site {
   | join x y => Join \lam z => (z = x) || (z = y)
   | join-left => Join-cond (byLeft idp)
@@ -59,18 +77,23 @@
   | <=-curry => Join-cond
   | <=-uncurry p => meet-monotone p <=-refl <=∘ meet-comm =<= Join-ldistr>= <=∘ Join-univ (SetIm-elim \lam {c} ca<=b => meet-comm =<= ca<=b)
 
+  -- | Finite-meet/arbitrary-join distributivity in the two variables and jointly.
   \lemma Join-ldistr {C : E -> \Prop} {e : E} : e ∧ Join C = SJoin (e ∧) C
     => <=-antisymmetric Join-ldistr>= $ SJoin-univ \lam Ca => meet-monotone <=-refl (Join-cond Ca)
 
+  -- | Finite-meet/arbitrary-join distributivity in the two variables and jointly.
   \lemma Join-rdistr>= {C : E -> \Prop} {e : E} : Join C ∧ e <= SJoin (∧ e) C
     => =_<= Join-rdistr
 
+  -- | Finite-meet/arbitrary-join distributivity in the two variables and jointly.
   \lemma Join-rdistr {C : E -> \Prop} {e : E} : Join C ∧ e = SJoin (∧ e) C
     => meet-comm *> Join-ldistr *> pmap (SJoin __ C) (ext \lam x => meet-comm)
 
+  -- | Finite-meet/arbitrary-join distributivity in the two variables and jointly.
   \lemma Join-distr>= {C D : E -> \Prop} : Join C ∧ Join D <= SJoin (\lam s => s.1 ∧ s.2) (\lam s => \Sigma (C s.1) (D s.2))
     => Join-rdistr>= <=∘ SJoin-univ \lam {a} Ca => Join-ldistr>= <=∘ SJoin-univ \lam {b} Db => SJoin-conde (a,b) (Ca,Db)
 
+  -- | Finite-meet/arbitrary-join distributivity in the two variables and jointly.
   \lemma Join-distr {C D : E -> \Prop} : Join C ∧ Join D = SJoin (\lam s => s.1 ∧ s.2) (\lam s => \Sigma (C s.1) (D s.2))
     => <=-antisymmetric Join-distr>= $ SJoin-univ $ later \lam s => meet-monotone (Join-cond s.1) (Join-cond s.2)
 
@@ -112,6 +135,7 @@
   \lemma IJoin-distr {J : \Type} {f : J -> E} {g : J -> E} : IJoin f ∧ IJoin g = IJoin (\lam (s : \Sigma J J) => f s.1 ∧ g s.2)
     => <=-antisymmetric IJoin-distr>= $ IJoin-univ \lam s => meet-monotone (IJoin-cond s.1) (IJoin-cond s.2)
 
+  -- | Way-below relation: `x << y` iff every cover of `y` admits a finite subcover of `x`.
   \type \infix 4 << (x y : E) => \Pi {U : E -> \Prop} -> y <= Join U -> ∃ (l : Array E) (∀ (a : l) (U a)) (x <= IJoin l)
 
   \protected \lemma <<-char {x y : E} : x << y <-> ∀ {U : E -> \Prop} (y <= Join U) ∃ (V : KFinSetOf E) (V ⊆ U) (x <= Join V)
@@ -154,8 +178,10 @@
         | suc j => IJoin-cond j <=∘ join-right
       }) $ compact_join (ac 0) $ compact_IJoin \lam j => ac (suc j)
 
+  -- | `top << top`.
   \func IsCompact => IsCompactOpen top
 
+  -- | Every element is the join of elements way-below it.
   \type IsLocallyCompact => \Pi (x : E) -> x <= Join (<< x)
 
   \func IsAlgebraic => \Pi (a : E) -> a <= Join \lam b => \Sigma (b <= a) (IsCompactOpen b)
@@ -184,10 +210,13 @@
   -- | The "weakly rather below" relation: `x <=<w y` if and only if the weak closure of {x} is contained in {y}.
   \type \infix 4 <=<w (x y : E) => (open x).map.wclosed-image <= {NucleusFrame _} open y
 
+  -- | Every element is a join of elements rather-below it.
   \type IsRegularLocale => \Pi (x : E) -> x <= Join (<=< x)
 
+  -- | Every element is a join of elements weakly rather-below it.
   \type IsWeaklyRegularLocale => \Pi (x : E) -> x <= Join (<=<w x)
 
+  -- | Nucleus `a --> __` defining the open sublocale at `a`.
   \func open (a : E) : Nucleus _ (a --> __) \cowith
     | nucleus-meet => <=-antisymmetric
         (meet-univ (<=-curry (<=-eval <=∘ meet-left)) (<=-curry (<=-eval <=∘ meet-right)))
@@ -195,16 +224,20 @@
     | nucleus-unit => <=-curry meet-left
     | nucleus-join>= => <=-curry (transport (_ ∧ __ <= _) meet-idemp (transport (<= _) meet-assoc (meet-monotone <=-eval <=-refl <=∘ <=-eval)))
 
+  -- | Nucleus `a ∨ __` defining the closed sublocale at `a`.
   \func closed (a : E) : Nucleus _ (a ∨ __) \cowith
     | nucleus-meet => equation
     | nucleus-unit => join-right
     | nucleus-join>= => join-univ join-left <=-refl
 
+  -- | The closed-sublocale embedding is closed.
   \lemma closed-isClosed (a : E) : Nucleus.isClosed {closed a}
     => \lam {x} => join-univ (join-left <=∘ join-left) join-right
 
+  -- | `Join (\lam (_ : P) => top)` — the proposition `P` reified as an element of the frame.
   \func pHat (P : \Prop) => Join \lam _ => P
 
+  -- | Monotonicity of `pHat` along implication.
   \lemma pHat-impl {P Q : \Prop} (f : P -> Q) : pHat P <= pHat Q
     => Join-univ \lam p => Join-cond (f p)
 
@@ -220,14 +253,18 @@
   \lemma pHat-left {P : \Prop} {a : E} (p : a <= pHat P) : a <= IJoin (\lam (_ : P) => a)
     => meet-univ <=-refl p <=∘ Join-ldistr>= <=∘ SJoin-univ \lam p => meet-left <=∘ IJoin-cond p
 
+  -- | `a` is positive when every `pHat`-cover of `a` proves the proposition.
   \type IsPositive (a : E) => \Pi {P : \Prop} -> a <= pHat P -> P
 
+  -- | Positivity is upward-closed.
   \lemma positive_<= {a b : E} (p : IsPositive a) (a<=b : a <= b) : IsPositive b
     => \lam q => p (a<=b <=∘ q)
 
+  -- | On overt locales, positivity of a join is equivalent to existence of a positive summand.
   \lemma positive_Join (o : IsOvert) {P : E -> \Prop} (J>0 : IsPositive (Join P)) : ∃ (a : P) (IsPositive a)
     => J>0 $ Join-univ \lam {a} Pa => o a <=∘ pHat-impl \lam a>0 => inP $ later (a,Pa,a>0)
     \where
+      -- | On overt locales, positivity of a join is equivalent to existence of a positive summand.
       \lemma conv {P : E -> \Prop} (p : ∃ (a : P) (IsPositive a)) : IsPositive (Join P) \elim p
         | inP (a,Pa,a>0) => \lam JP => a>0 $ Join-cond Pa <=∘ JP
 
@@ -239,14 +276,18 @@
       \lemma conv {A : \Type} {f : A -> E} {C : A -> \Prop} (p : ∃ (a : C) (IsPositive (f a))) : IsPositive (SJoin f C) \elim p
         | inP (a,Ca,fa>0) => positive_Join.conv $ inP (f a, SetIm-con Ca, fa>0)
 
+  -- | A positive element witnesses non-emptiness of any indexing set covering it.
   \lemma positive_cover {a : E} (p : IsPositive a) {C : E -> \Prop} (c : a <= Join C) : ∃ C
     => p $ c <=∘ Join-univ \lam {b} Cb => Join-cond (inP $ later (b,Cb))
 
+  -- | Every element is covered by its positive part.
   \func IsOvert => \Pi (a : E) -> a <= pHat (IsPositive a)
 
+  -- | Each element of an overt locale is covered by `Join` over the propositional witness of its own positivity.
   \lemma IsOvert_IJoin (o : IsOvert) {a : E} : a <= IJoin (\lam (_ : IsPositive a) => a)
     => meet-univ <=-refl (o a) <=∘ Join-ldistr>= <=∘ Join-univ (SetIm-elim \lam a>0 => meet-left <=∘ IJoin-cond a>0)
 
+  -- | Locale of elements below a fixed `a`, with derived operations; used to form the slice locale.
   \func restrict (a : E) : Locale \cowith
     | E => \Sigma (b : E) (b <= a)
     | <= p q => p.1 <= q.1
@@ -264,6 +305,7 @@
     | Join-univ => SJoin-univ
     | Join-ldistr>= => SJoin-ldistr>= <=∘ SJoin-univ \lam {s} Cs => SJoin-cond (SetIm-con Cs)
     \where {
+      -- | Frame homomorphism `L -> restrict a` given by `b ↦ b ∧ a`.
       \func map : FrameHom \this (restrict a) \cowith
         | func b => (b ∧ a, meet-right)
         | func-<= => meet-monotone __ <=-refl
@@ -273,6 +315,7 @@
         | func-meet>= => =_<= equation
         | func-Join>= => Join-rdistr>= <=∘ SJoin-univ \lam {b} Cb => SJoin-cond (SetIm-con Cb)
 
+      -- | Forgetful functor `restrict a -> L`.
       \func functor : Functor (restrict a) \this \cowith
         | F x => x.1
         | Func p => p
@@ -290,6 +333,9 @@
     }
 }
 
+{- | Record extending `SetHom` between locales; preserves `<=`, top, finite meets, and arbitrary joins. Several fields
+ -   have defaults derived from each other.
+ -}
 \record FrameHom \extends PosetHom {
   \override Dom : Locale
   \override Cod : Locale
@@ -320,58 +366,75 @@
   \lemma func-IJoin {J : \Type} {f : J -> Dom} : func (IJoin f) = IJoin (\lam a => func (f a))
     => <=-antisymmetric func-IJoin>= $ IJoin-univ \lam a => func-<= (IJoin-cond a)
 
+  -- | Preservation of binary joins.
   \lemma func-join>= {x y : Dom} : func (x ∨ y) <= func x ∨ func y
     => func-Join>= <=∘ SJoin-univ (later \case \elim __ \with {
       | byLeft p => rewrite p join-left
       | byRight p => rewrite p join-right
     })
 
+  -- | Preservation of binary joins.
   \lemma func-join {x y : Dom} : func (x ∨ y) = func x ∨ func y
     => <=-antisymmetric func-join>= $ join-univ (func-<= join-left) (func-<= join-right)
 
+  -- | Preservation of bottom.
   \lemma func-bottom>= : func bottom <= bottom
     => func-Join>= <=∘ SJoin-univ (later \case __)
 
+  -- | Preservation of bottom.
   \lemma func-bottom : func bottom = bottom
     => <=-antisymmetric func-bottom>= bottom-univ
 
+  -- | Frame homomorphisms preserve `pHat P`.
   \lemma func-pHat<= {P : \Prop} : pHat P <= func (pHat P)
     => Join-univ \lam p => top-univ <=∘ func-top>= <=∘ func-<= (Join-cond p)
 
+  -- | Frame homomorphisms preserve `pHat P`.
   \lemma func-pHat>= {P : \Prop} : func (pHat P) <= pHat P
     => func-Join>= <=∘ SJoin-univ \lam p => Join-cond p
 
+  -- | Frame homomorphisms preserve `pHat P`.
   \lemma func-pHat {P : \Prop} : func (pHat P) = pHat P
     => <=-antisymmetric func-pHat>= func-pHat<=
 
+  -- | Right adjoint of `func`, `direct y := SJoin (\lam x => func x <= y)`.
   \func direct (y : Cod) : Dom => Join (func __ <= y)
 
+  -- | Galois adjunction between `func` and `direct`.
   \lemma direct-<= {y z : Cod} (p : y <= z) : direct y <= direct z
     => Join-univ \lam q => Join-cond (q <=∘ p)
 
+  -- | Galois adjunction between `func` and `direct`.
   \lemma direct-unit {x : Dom} : x <= direct (func x)
     => Join-cond <=-refl
 
+  -- | Galois adjunction between `func` and `direct`.
   \lemma direct-counit {y : Cod} : func (direct y) <= y
     => func-Join>= <=∘ SJoin-univ \lam p => p
 
+  -- | Galois adjunction between `func` and `direct`.
   \lemma direct-adjoint {x : Dom} {y : Cod} : func x <= y <-> x <= direct y
     => (direct-unit <=∘ direct-<= __, func-<= __ <=∘ direct-counit)
 
+  -- | `direct` preserves finite meets.
   \lemma direct-meet {y z : Cod} : direct (y ∧ z) = direct y ∧ direct z
     => <=-antisymmetric (meet-univ (direct-<= meet-left) (direct-<= meet-right)) $ Join-cond $ meet-univ (direct-adjoint.2 meet-left) (direct-adjoint.2 meet-right)
 
+  -- | `direct` preserves finite meets.
   \lemma direct-top : direct top = top
     => <=-antisymmetric top-univ (Join-cond top-univ)
 
+  -- | Triangle identity `func ∘ direct ∘ func = func`.
   \lemma func_direct_func {x : Dom} : func (direct (func x)) = func x
     => <=-antisymmetric direct-counit (func-<= direct-unit)
 
+  -- | Nucleus `direct ∘ func` whose locale is the image sublocale.
   \func image : Nucleus _ (\lam x => direct (func x)) \cowith
     | nucleus-meet => pmap direct func-meet *> direct-meet
     | nucleus-unit => direct-unit
     | nucleus-join>= => direct-<= direct-counit
 
+  -- | Frame map `image.locale -> Cod` factoring through the image.
   \func factor : FrameHom image.locale Cod \cowith
     | func x => func x.1
     | func-top => func-top
@@ -381,14 +444,18 @@
   -- | A map is dense if and only if its image is dense.
   \protected \func IsDense => \Pi {x : Dom} -> func x <= bottom -> x <= bottom
 
+  -- | Equivalent reformulation of density via `direct bottom <= bottom`.
   \lemma dense_direct (d : IsDense) : direct bottom <= bottom
     => Join-univ d
 
+  -- | Equivalent reformulation of density via `direct bottom <= bottom`.
   \lemma direct_dense (d : direct bottom <= bottom) : IsDense
     => \lam p => Join-cond p <=∘ d
 
+  -- | Density extended to all `pHat P` instead of just `bottom`.
   \type IsStronglyDense => \Pi {P : \Prop} {x : Dom} -> func x <= pHat P -> x <= pHat P
 
+  -- | Surjectivity together with a universal property characterizing weakly-closed embeddings.
   \func IsWeaklyClosed => \Sigma (IsSurj func) (\Pi (j : Nucleus _) ->
       (\Pi {P : \Prop} {x : Dom} -> func x <= pHat P -> x <= j (pHat P)) -> \Pi {x : Dom} -> direct (func x) <= j x)
 
@@ -400,12 +467,14 @@
     | nucleus-unit => SMeet-univ \lam _ => nucleus-unit
     | nucleus-join>= => SMeet-univ \lam f => SMeet-cond f <=∘ nucleus-<= (SMeet-cond f) <=∘ nucleus-join>=
 
+  -- | Factorization through the weakly-closed image is strongly dense.
   \func wclosed-factor : FrameHom wclosed-image.locale Cod \cowith
     | func x => func x.1
     | func-top => func-top
     | func-meet => func-meet
     | func-Join>= => direct-adjoint.2 (SMeet-cond {_} {_} {_} {_} {image} $ later \lam hx<=P => direct-adjoint.1 (hx<=P <=∘ func-pHat<=)) <=∘ func-SJoin>=
 
+  -- | Factorization through the weakly-closed image is strongly dense.
   \lemma wclosed-factor-sdense : wclosed-factor.IsStronglyDense
     => \lam c => SMeet-univ (later \lam H => H c) <=∘ =_<= (inv wclosed-image.locale_pHat)
 
@@ -425,17 +494,20 @@
   -- | A map is open if and only if the image of an open sublocale is open.
   \func IsOpen => \Pi (x : Cod) -> ∃ (z : Dom) ∀ y (direct (x --> func y) = z --> y)
 
+  -- | For surjective `func`, `func ∘ direct = id`.
   \lemma surjective-split (s : IsSurj func) (x : Cod) : func (direct x) = x
     => \case s x \with {
       | inP (y,p) => rewriteI p func_direct_func
     }
 
+  -- | For surjective `func`, the factor `image.locale -> Cod` is an equivalence.
   \lemma surj_nucleus (s : IsSurj func) : IsEquiv factor => inP \new QEquiv {
     | ret y => (direct y, direct-<= direct-counit)
     | ret_f x => ext (<=-antisymmetric x.2 direct-unit)
     | f_sec y => surjective-split s y
   }
 
+  -- | Underlying functor between locales-as-categories.
   \protected \func functor : SiteHom Dom Cod \cowith
     | F => func
     | Func => func-<=
@@ -463,6 +535,7 @@
   \protected \lemma id-right {L M : Locale} {f : FrameHom L M} : f ∘ id = f
     => idp
 
+  -- | `direct` of a composite is the composite of `direct`s.
   \lemma direct_o {L M K : Locale} (f : FrameHom L M) (g : FrameHom M K) {x : K} : direct {g ∘ f} x = f.direct (g.direct x)
     => <=-antisymmetric (direct-adjoint.1 $ direct-adjoint.1 $ later $ direct-counit {g ∘ f}) $
         (direct-adjoint {g ∘ f}).1 $ g.func-<= direct-counit <=∘ direct-counit
@@ -492,17 +565,22 @@
   \default nucleus-join => <=-antisymmetric nucleus-join>= nucleus-unit
   \default nucleus-join>= => =_<= nucleus-join
 
+  -- | Universal property `x <= j y -> j x <= j y`.
   \lemma nucleus-univ {x y : L} (p : x <= nucleus y) : nucleus x <= nucleus y
     => nucleus-<= p <=∘ nucleus-join>=
 
+  -- | Implications into a `j`-fixed element are themselves `j`-fixed.
   \lemma nucleus_exponent {x y : L} (p : nucleus y <= y) : nucleus (x --> y) <= x --> y
     => <=-curry $ meet-monotone <=-refl nucleus-unit <=∘ nucleus-meet>= <=∘ nucleus-<= L.<=-eval <=∘ p
 
+  -- | `j` preserves implication up to `j`.
   \lemma exponent-func {x y : L} : x --> y <= nucleus x --> nucleus y
     => Join-univ \lam p => <=-curry $ meet-monotone nucleus-unit <=-refl <=∘ nucleus-meet>= <=∘ nucleus-<= p
 
+  -- | Sublocale carrier — elements fixed by the nucleus.
   \type Subtype => \Sigma (x : L) (nucleus x <= x)
 
+  -- | Locale structure on `Subtype`, with joins reflected through the nucleus.
   \instance locale : Locale Subtype
     | <= (x,_) (y,_) => x <= y
     | <=-refl => <=-refl
@@ -519,6 +597,7 @@
     | Join-univ {C} {e} c => nucleus-<= (SJoin-univ c) <=∘ e.2
     | Join-ldistr>= => meet-monotone nucleus-unit <=-refl <=∘ nucleus-meet>= <=∘ nucleus-<= (SJoin-ldistr>= <=∘ SJoin-univ \lam Ca => SJoin-cond $ SetIm-con Ca)
 
+  -- | Surjective frame homomorphism `L -> j.locale` sending `x` to `j x`; `map.surjective` proves it is surjective.
   \func map : FrameHom L locale \cowith
     | func x => (nucleus x, nucleus-join>=)
     | func-top => ext (<=-antisymmetric top-univ nucleus-unit)
@@ -544,6 +623,7 @@
   \protected \lemma lift_map {M : Locale} {f : LocaleHom M L} (f<=j : \Pi {x : L} -> f (nucleus x) <= f x) : map LocaleHom.∘ lift f f<=j = f
     => exts \lam x => <=-antisymmetric f<=j (func-<= nucleus-unit)
 
+  -- | For sublocale embeddings, `map.direct x = x.1`.
   \lemma map_direct (x : locale) : map.direct x = x.1
     => <=-antisymmetric (Join-univ (\lam j => nucleus-unit <=∘ j)) (Join-cond x.2)
 
@@ -553,10 +633,13 @@
   \lemma locale_IJoin {J : \Type} {g : J -> Subtype} : (locale.IJoin g).1 = nucleus (IJoin \lam j => (g j).1)
     => pmap nucleus $ <=-antisymmetric (SJoin-univ $ TSetIm-elim IJoin-cond) (IJoin-univ \lam j => SJoin-cond $ TSetIm-con j)
 
+  -- | Closed/dense conditions phrased on a single nucleus.
   \protected \func isClosed => \Pi {x : L} -> nucleus x <= nucleus bottom ∨ x
 
+  -- | Closed/dense conditions phrased on a single nucleus.
   \protected \func IsDense => nucleus bottom <= bottom
 } \where {
+  -- | Heyting implication of nuclei in the frame of nuclei.
   \protected \func exp {L : Locale} (j j' : Nucleus L) : Nucleus L \cowith
     | nucleus x => SMeet (\lam y => j y --> j' y) (x <=)
     | nucleus-meet>= {a} {b} =>
@@ -569,20 +652,24 @@
     | nucleus-join>= => SMeet-univ \lam x<=a => SMeet-cond (SMeet-cond x<=a) <=∘ L.exponent-monotone <=-refl (Nucleus.nucleus_exponent nucleus-join>=) <=∘
         inv L.curry =<= later (L.exponent-monotone (meet-univ (nucleus-<= $ <=-curry $ meet-left <=∘ nucleus-unit) <=-refl) <=-refl)
 
+  -- | Universal property of `exp`.
   \protected \lemma exp-univ1 {L : Locale} {j k n : Nucleus L} (p : \Pi {x : L} -> (NucleusFrame L).join j k x <= n x) {x : L} : j x <= exp k n x
     => SMeet-univ \lam x<=a => later $ <=-curry $ meet-monotone (nucleus-<= x<=a) <=-refl <=∘ SMeet-univ (later \lam {m} => \case \elim m, \elim __ \with {
       | _, byLeft idp => meet-left
       | _, byRight idp => meet-right
     }) <=∘ p
 
+  -- | Universal property of `exp`.
   \protected \lemma exp-univ2 {L : Locale} {k n : Nucleus L} {x y : L} (p : y <= exp k n x) : y ∧ k x <= n x
     => <=-uncurry $ p <=∘ SMeet-cond <=-refl
 
+  -- | Implication in `open a` is computed pointwise.
   \lemma open_exp {L : Locale} {a : L} (x y : (open a).locale) : (x --> {(open a).locale} y).1 = x.1 --> y.1
     => <=-antisymmetric
       (Join-univ \lam p => <=-curry $ <=-curry ((meet-assoc *> pmap (_ ∧) meet-comm *> inv meet-assoc) =<= meet-monotone p <=-refl <=∘ SJoin-rdistr>= <=∘ SJoin-univ \lam p => p) <=∘ y.2)
       (Join-univ \lam {w} p => <=-curry $ <=-curry (meet-left <=∘ meet-left) <=∘ SJoin-conde (later (a --> w, nucleus-join>=)) (<=-curry (meet-univ (meet-monotone meet-left <=-refl <=∘ L.<=-eval) (meet-left <=∘ meet-right) <=∘ p) <=∘ y.2))
 
+  -- | The open-sublocale embedding is open in the morphism sense.
   \lemma open-isOpen {L : Locale} (a : L) : (open a).map.IsOpen
     => \lam x => inP (a ∧ x.1, \lam y => rewrite Nucleus.map_direct $ open_exp x (a --> y, nucleus-join>=) *> inv L.curry *> pmap (__ --> y) meet-comm)
 
@@ -607,6 +694,9 @@
     | nucleus-meet>= => top-univ
 }
 
+{- | Locale instance on `Nucleus {L}`, ordered pointwise; meets pointwise, top constant, and joins via Meet over nuclei
+ -   dominating the family.
+ -}
 \instance NucleusFrame (L : Locale) : CompleteLattice (Nucleus L)
   | <= j j' => \Pi {x : L} -> j' x <= j x
   | <=-refl => <=-refl
@@ -624,6 +714,7 @@
   \where {
     \open Topology.Locale(NucleusFrame)
 
+    -- | Frame homomorphism `j.locale -> j'.locale` for `j <= j'`; `surjective` shows it is surjective.
     \func <=-map {L : Locale} (j j' : Nucleus L) (j'<=j : j' <= j) : FrameHom j.locale j'.locale \cowith
       | func x => (j' x.1, nucleus-join>=)
       | func-<= => nucleus-<=
@@ -634,18 +725,23 @@
         \lemma surjective (j'<=j : j' <= j) : IsSurj (<=-map j j' j'<=j)
           => \lam y => inP ((y.1, j'<=j <=∘ y.2), ext $ <=-antisymmetric y.2 nucleus-unit)
 
+    -- | Absorption laws `k (j x) = k x` and `j (k x) = k x` when `j <= k`.
     \lemma double-nucleus-left {L : Locale} {j k : Nucleus L} (k<=j : k <= j) (x : L) : k (j x) = k x
       => <=-antisymmetric (k.nucleus-univ k<=j) (nucleus-<= nucleus-unit)
 
+    -- | Absorption laws `k (j x) = k x` and `j (k x) = k x` when `j <= k`.
     \lemma double-nucleus-right {L : Locale} {j k : Nucleus L} (k<=j : k <= j) (x : L) : j (k x) = k x
       => <=-antisymmetric (k<=j <=∘ nucleus-join>=) nucleus-unit
 
+    -- | Properties of the weakly-closed-image construction inside `NucleusFrame`.
     \lemma wclosure_<= {j : Nucleus} : j <= {NucleusFrame _} j.map.wclosed-image
       => \lam {x} => SMeet-cond $ later \lam p => nucleus-unit <=∘ p <=∘ nucleus-<= (SJoin-univ \lam p => Join-cond p)
 
+    -- | Properties of the weakly-closed-image construction inside `NucleusFrame`.
     \lemma wclosure-sdense {j : Nucleus} : IsStronglyDense {<=-map j.map.wclosed-image j wclosure_<=}
       => wclosed-factor-sdense
 
+    -- | Properties of the weakly-closed-image construction inside `NucleusFrame`.
     \lemma wclosure-inclusion {j : Nucleus} (x : j.L) : <=-map j.map.wclosed-image j wclosure_<= (j.map.wclosed-image.map x) = j.map x
       => ext $ double-nucleus-left {j.L} wclosure_<= x
 
@@ -655,9 +751,11 @@
         \lemma conv {L : Locale} {a : L} {j : Nucleus L} (c : j <= open a) : top <= j a
           => <=-curry meet-right <=∘ c
 
+    -- | `open` is order-reversing in `a`.
     \lemma open_<= {L : Locale} {a b : L} (p : a <= b) : open a <= open b
       => \lam {x} => L.exponent-monotone p <=-refl
       \where
+        -- | `open` is order-reversing in `a`.
         \lemma conv {L : Locale} {a b : L} (p : open a <= open b) : a <= b
           => meet-univ top-univ <=-refl <=∘ <=-uncurry (nucleus<=open.conv p)
   }
@@ -668,9 +766,11 @@
     \lemma conv {L : Locale} {c a : L} (p : closed c <= open a) : top <= c ∨ a
       => L.top_exponent <=-refl <=∘ p
 
+-- | `open a >= closed c` iff `c ∧ a <= bottom`.
 \lemma open<=closed {L : Locale} {c a : L} (p : c ∧ a <= bottom) : open a <= closed c
   => \lam {x} => unfold (join-univ (<=-curry (p <=∘ bottom-univ)) (<=-curry meet-left))
   \where
+    -- | `open a >= closed c` iff `c ∧ a <= bottom`.
     \lemma conv {L : Locale} {c a : L} (p : open a <= closed c) : c ∧ a <= bottom
       => meet-monotone join-left <=-refl <=∘ <=-uncurry p
 
@@ -703,6 +803,7 @@
   | Join-univ {C} {W} p (inP (U,CU,Ux)) => p CU Ux
   | Join-ldistr>= {C} {W} (Wx, inP (U,CU,Ux)) => inP (\lam x => \Sigma (W x) (U x), SetIm-con CU, (Wx,Ux))
   \where {
+    -- | Adjunction `x ∧ y <= z <-> x <= y --> z`.
     \lemma exponent {X : \Set} (P Q : X -> \Prop) : P --> {discreteLocale X} Q = (\lam x => P x -> Q x)
       => ext \lam x => ext (\lam (inP (U,UP<=Q,Ux)) Px => UP<=Q (Ux,Px), \lam P=>Q => inP (\lam x => P x -> Q x, \lam p => p.1 p.2, P=>Q))
 
@@ -729,34 +830,42 @@
         }
       })
 
+-- | Strongly dense maps reflect/preserve positivity.
 \lemma sdense_positive {f : FrameHom} (d : f.IsStronglyDense) {x : f.Dom} (p : IsPositive x) : IsPositive (f x)
   => \lam fx<=P => p (d fx<=P)
 
+-- | Strongly dense maps reflect/preserve positivity.
 \lemma func_positive {f : FrameHom} {x : f.Dom} (p : IsPositive (f x)) : IsPositive x
   => \lam x<=P => p (func-<= x<=P <=∘ func-Join>= <=∘ SJoin-univ (\lam q => top-univ <=∘ Join-cond q))
 
 \lemma direct_positive {f : FrameHom} (d : f.IsStronglyDense) {x : f.Cod} (p : IsPositive (f.direct x)) : IsPositive x
   => positive_<= (sdense_positive d p) direct-counit
 
+-- | Strongly dense maps reflect overtness.
 \lemma sdense_overt {f : FrameHom} (d : f.IsStronglyDense) (o : IsOvert {f.Cod}) : IsOvert {f.Dom}
   => \lam a => d $ o _ <=∘ Join-univ (\lam h => Join-cond $ func_positive h)
 
+-- | `<<` implies `<=`.
 \lemma <<_<= {L : Locale} {x y : L} (x<<y : x << y) : x <= y
   => \case x<<y {= y} (Join-cond idp) \with {
     | inP (l,h,x<=l) => x<=l <=∘ IJoin-univ \lam j => =_<= (h j)
   }
 
+-- | `<<` is monotone in both arguments.
 \lemma <<-left {L : Locale} {x y z : L} (x<<y : x << y) (y<=z : y <= z) : x << z
   => \lam z<=C => x<<y (y<=z <=∘ z<=C)
 
+-- | `<<` is monotone in both arguments.
 \lemma <<-right {L : Locale} {x y z : L} (x<=y : x <= y) (y<<z : y << z) : x << z
   => \lam z<=C => \case y<<z z<=C \with {
     | inP (l,h,y<=l) => inP (l, h, x<=y <=∘ y<=l)
   }
 
+-- | `<=<` implies `<=`.
 \lemma <=<_<= {L : Locale} {x y : L} (x<=<y : x <=< y) : x <= y
   => meet-univ (top-univ <=∘ x<=<y) <=-refl <=∘ L.rdistr>= <=∘ join-univ (L.<=-eval <=∘ bottom-univ) meet-left
 
+-- | `<=<` is a `RatherBelow` relation: bounded by top, monotone on both sides, and closed under finite meets.
 \instance LocaleRatherBelow {L : Locale} : RatherBelow (L.<=<)
   | <=<_top => unfolds join-right
   | <=<-left p q => unfolds $ p <=∘ join-univ join-left (q <=∘ join-right)

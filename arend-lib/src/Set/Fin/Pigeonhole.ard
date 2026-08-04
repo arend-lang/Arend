@@ -1,3 +1,13 @@
+{- | Pigeonhole principle for finite and bounded-pigeonhole sets.
+ -
+ -   This module formalizes the pigeonhole principle as a class-based abstraction: a set is a `PigeonholeSet` when every
+ -   `Nat`-indexed sequence in it has a repeated value, and a `BoundedPigeonholeSet` when the bound `finCard` makes any
+ -   function out of `Fin (suc finCard)` collide. The bounded version implies the unbounded one by precomposing with the
+ -   inclusion `Fin → Nat`. The module also derives that injective endofunctions on bounded-pigeonhole sets are
+ -   equivalences, and provides the classical pigeonhole result for functions `Fin m → Fin n` with `n < m` via decidable
+ -   search.
+ -}
+
 \import Arith.Fin.Order
 \import Arith.Nat
 \import Data.Or
@@ -14,9 +24,12 @@
 \import Set.Fin(FinSet)
 \import Set.Fin.DFin
 
+-- | Extends `BaseSet`. A set such that any sequence `f : Nat -> E` has two distinct indices mapping to the same value.
 \class PigeonholeSet \extends BaseSet {
+  -- | Field of `PigeonholeSet`: any `f : Nat -> E` has indices `i /= j` with `f i = f j`.
   | pigeonhole (f : Nat -> E) : ∃ (i j : Nat) (i /= j) (f i = f j)
 
+  -- | Strengthened form ensuring the witnesses satisfy `i < j`.
   \lemma pigeonhole< (f : Nat -> E) : ∃ (i j : Nat) (i < j) (f i = f j)
     => TruncP.map (pigeonhole f) \lam t => \case LinearOrder.trichotomy t.1 t.2 \with {
       | less c => (t.1, t.2, c, t.4)
@@ -24,13 +37,16 @@
       | greater c => (t.2, t.1, c, inv t.4)
     }
 
+  -- | An injective self-map `f : E -> E` on a `PigeonholeSet` is an `Equiv`.
   \lemma isEquiv (f : E -> E) (inj : IsInj f) : IsEquiv f
     => isDFin.isEquiv (isDFin.fromPigeonhole \this) f inj
 }
 
+-- | Classical pigeonhole: any `f : Fin m -> Fin n` with `n < m` has two distinct inputs with the same image.
 \lemma pigeonhole-fin {n m : Nat} (f : Fin m -> Fin n) (p : n < m) : ∃ (i j : Fin m) (i /= j) (f i = f j)
   => aux f \lam inj => <-irreflexive $ p <∘l FinSet.FinCardInj f inj
   \where {
+    -- | For `f : Fin n -> A` over a `DecSet`, decides whether a colliding pair `(i, j)` exists.
     \lemma search-pair {n : Nat} {A : DecSet} (f : Fin n -> A) : Dec (∃ (i j : Fin n) (i /= j) (f i = f j))
       => \have t i : Dec (∃ (j : Fin n) (i /= j) (f i = f j)) => \case FinSet.searchFin (\lam j => \Sigma (i /= j) (f i = f j)) (\lam j => decide) \with {
            | inl (j,p,_) => yes (inP (j, p.1, p.2))
@@ -41,6 +57,7 @@
           | inr q => no \lam (inP (i,j,e,p)) => q i (inP (j, e, p))
         }
 
+    -- | If `f : Fin n -> A` is not injective (with `A` a `DecSet`), produces an explicit colliding pair.
     \lemma aux {n : Nat} {A : DecSet} (f : Fin n -> A) (p : Not (IsInj f)) : ∃ (i j : Fin n) (i /= j) (f i = f j)
       => \case search-pair f \with {
         | yes e => e

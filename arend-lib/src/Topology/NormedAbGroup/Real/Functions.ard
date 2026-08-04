@@ -1,3 +1,15 @@
+{- | Continuity properties of norm, distance, lattice, and arithmetic operations on (extended) real-valued metric and
+ -   normed structures.
+ -
+ -   This module collects the basic uniform/metric/locally-uniform continuity lemmas needed to lift pointwise
+ -   real-valued operations to maps between metric and normed spaces. The norm and distance functions are shown to be
+ -   (uniform) metric maps into the real line or the extended upper-real metric space, which is essential for working
+ -   with completions and continuous extensions. Lattice operations (`∧`, `∨`) and arithmetic (`+`, `*`) on (extended)
+ -   upper reals are established as uniform or locally uniform maps over Manhattan-product metrics, providing the
+ -   building blocks for continuous real analysis on top of `Topology.CoverSpace.Complete` and the metric-space
+ -   hierarchy.
+ -}
+
 \import Algebra.Group
 \import Algebra.Meta
 \import Algebra.Monoid
@@ -26,9 +38,15 @@
 \import Topology.UniformSpace
 \import Topology.UniformSpace.Product
 
+{- | For a `PseudoNormedAbGroup` `X`, the norm `X.norm : X -> RealNormed` is a `MetricMap` — distances in `X` dominate
+ -   distances of norms.
+ -}
 \lemma lnorm-metric {X : PseudoNormedAbGroup} : MetricMap X RealNormed X.norm \cowith
   | func-dist => rewrite (X.norm-dist,RealNormed.norm-dist) $ Real.<=-upper.1 $ join-univ lnorm_-left $ simplify lnorm_-right
 
+{- | The distance function `\lam s => dist s.1 s.2` from `X ⨯ X` to `ExUpperRealMetric` is a `UniformMap` for any
+ -   `ExPseudoMetricSpace` `X`.
+ -}
 \lemma dist-uniform-map {X : ExPseudoMetricSpace} : UniformMap (ProductUniformSpace X X) ExUpperRealMetric (\lam s => dist s.1 s.2) \cowith
   | func-uniform Eu => \case dist-uniform.2 Eu \with {
     | inP (eps,eps>0,h) => inP (_, X.metricUniform {eps * ratio 1 4} linarith, _, X.metricUniform {eps * ratio 1 4} linarith, \lam {_} (inP (_, inP (x,idp), _, inP (x',idp), idp)) => \case h (X.dist x x') \with {
@@ -38,14 +56,19 @@
     })
   }
 
+{- | For an `ExPseudoNormedAbGroup` `X`, the norm into `ExUpperRealMetric` is a `MetricMap`, the extended-real version
+ -   of `lnorm-metric`.
+ -}
 \lemma norm-metric-map {X : ExPseudoNormedAbGroup} : MetricMap X ExUpperRealMetric norm \cowith
   | func-dist => \lam xy<b => \case U-rounded xy<b \with {
     | inP (a,xy<a,a<b) => inP (a, a<b, <=-less $ dist>=0 xy<a, norm_dist-right <=∘ <=_+ <=-refl (ExUpperReal.<_<= xy<a), norm_dist-right <=∘ <=_+ <=-refl (rewrite dist-symm $ ExUpperReal.<_<= xy<a))
   }
 
+-- | For a `BoundedExPseudoNormedAbGroup` `X`, the bounded norm `bnorm` is a `MetricMap` into `UpperRealMetric`.
 \lemma bnorm-metric-map {X : BoundedExPseudoNormedAbGroup} : MetricMap X UpperRealMetric bnorm \cowith
   | func-dist => norm-metric-map.func-dist
 
+-- | The (real-valued) distance function on a `PseudoMetricSpace` is a `UniformMap` from `X ⨯ X` to `RealNormed`.
 \lemma ldist-uniform-map {X : PseudoMetricSpace} : UniformMap (ProductUniformSpace X X) RealNormed (\lam s => X.dist s.1 s.2) \cowith
   | func-uniform Eu => \case dist-uniform.2 Eu \with {
     | inP (eps,eps>0,h) => inP (_, X.metricUniform (RatField.half>0 eps>0), _, X.metricUniform (RatField.half>0 eps>0), \lam {_} (inP (_, inP (x,idp), _, inP (x',idp), idp)) => \case h (X.dist x x') \with {
@@ -55,6 +78,7 @@
     })
   }
 
+-- | Binary meet `∧` on `ExUpperRealMetric` is a `UniformMap` from the product to `ExUpperRealMetric`.
 \lemma upper-meet-uniform : UniformMap (ProductUniformSpace ExUpperRealMetric ExUpperRealMetric) ExUpperRealMetric \lam s => s.1 ∧ s.2 \cowith
   | func-uniform Eu => \case dist-uniform.2 Eu \with {
     | inP (eps,eps>0,h) => inP (_, ExUpperRealMetric.metricUniform eps>0, _, ExUpperRealMetric.metricUniform eps>0, \lam {_} (inP (_, inP (x,idp), _, inP (x',idp), idp)) => \case h (x ∧ x') \with {
@@ -64,6 +88,7 @@
     })
   }
 
+-- | Binary meet `∧` on `RealNormed` is a `UniformMap`.
 \lemma real-meet-uniform : UniformMap (ProductUniformSpace RealNormed RealNormed) RealNormed \lam s => s.1 ∧ s.2 \cowith
   | func-uniform Eu => \case dist-uniform.2 Eu \with {
     | inP (eps,eps>0,h) => inP (_, RealNormed.metricUniform eps>0, _, RealNormed.metricUniform eps>0, \lam {_} (inP (_, inP (x,idp), _, inP (x',idp), idp)) => \case h (x ∧ x') \with {
@@ -77,6 +102,7 @@
     })
   }
 
+-- | Binary join `∨` on `ExUpperRealMetric` is a `UniformMap`.
 \lemma upper-join-uniform : UniformMap (ProductUniformSpace ExUpperRealMetric ExUpperRealMetric) ExUpperRealMetric \lam s => s.1 ∨ s.2 \cowith
   | func-uniform Eu => \case dist-uniform.2 Eu \with {
     | inP (eps,eps>0,h) => inP (_, ExUpperRealMetric.metricUniform eps>0, _, ExUpperRealMetric.metricUniform eps>0, \lam {_} (inP (_, inP (x,idp), _, inP (x',idp), idp)) => \case h (x ∨ x') \with {
@@ -86,6 +112,7 @@
     })
   }
 
+-- | Binary join `∨` on `RealNormed` is a `UniformMap`.
 \lemma real-join-uniform : UniformMap (ProductUniformSpace RealNormed RealNormed) RealNormed \lam s => s.1 ∨ s.2 \cowith
   | func-uniform Eu => \case dist-uniform.2 Eu \with {
     | inP (eps,eps>0,h) => inP (_, RealNormed.metricUniform eps>0, _, RealNormed.metricUniform eps>0, \lam {_} (inP (_, inP (x,idp), _, inP (x',idp), idp)) => \case h (x ∨ x') \with {
@@ -99,6 +126,9 @@
     })
   }
 
+{- | Addition on `ExUpperRealMetric` is a `MetricMap` from the Manhattan product to `ExUpperRealMetric` (1-Lipschitz
+ -   with the ℓ¹ metric).
+ -}
 \lemma upper-+-uniform : MetricMap (ManhattanProductPseudoMetricSpace ExUpperRealMetric ExUpperRealMetric) ExUpperRealMetric \lam s => s.1 + s.2 \cowith
   | func-dist {x} {y} {d} xy<d => \case ExUpperReal.+_U.1 xy<d \with {
     | inP (a,x1y1<a,b,x2y2<b,a+b<d) => inP (a + b, a+b<d, RatField.<=_+-positive (<=-less $ dist>=0 {ExUpperRealMetric} x1y1<a) (<=-less $ dist>=0 {ExUpperRealMetric} x2y2<b),
@@ -106,6 +136,9 @@
         ExUpperRealAbMonoid.<=_+  (ExUpperRealMetric.dist-right x1y1<a)  (ExUpperRealMetric.dist-right x2y2<b) <=∘ transport (_ <= _ + __) ExUpperReal.+-rat (=_<= equation.abMonoid))
   }
 
+{- | Left multiplication `a *` by a bounded extended upper real `a` (with hypothesis `a.IsBounded`) is a
+ -   `UniformMetricMap` on `ExUpperRealMetric`.
+ -}
 \lemma upper-*-left-uniform {a : ExUpperReal} (aB : a.IsBounded) : UniformMetricMap ExUpperRealMetric ExUpperRealMetric (a *) \cowith
   | func-dist-uniform {eps} eps>0 => \case \elim aB \with {
     | inP (B,a<B) => inP (RatField.finv (B ∨ 1) * eps, RatField.<_*_positive_positive (RatField.finv>0 $ zro<ide <∘l join-right) eps>0, \lam (inP (b,bp,b>=0,x<=x'+b,x'<=x+b)) =>
@@ -113,9 +146,13 @@
       \in inP ((B ∨ 1) * b, RatField.<_*_positive-right (zro<ide <∘l join-right) bp <∘l =_<= (inv *-assoc *> pmap (* eps) (RatField.finv-right $ RatField.>_/= $ zro<ide <∘l join-right) *> ide-left), <=_*-positive (<=-less zro<ide <=∘ join-right) b>=0, lem x<=x'+b, lem x'<=x+b))
   }
 
+-- | Right multiplication `* a` by a bounded `a` is a `UniformMetricMap` on `ExUpperRealMetric`.
 \lemma upper-*-right-uniform {a : ExUpperReal} (aB : a.IsBounded) : UniformMetricMap ExUpperRealMetric ExUpperRealMetric (* a)
   => transport (UniformMetricMap ExUpperRealMetric ExUpperRealMetric) (ext \lam b => *-comm) (upper-*-left-uniform aB)
 
+{- | Multiplication on `UpperRealMetric` is a `LocallyUniformMap` from the Manhattan product to `UpperRealMetric`;
+ -   uniform continuity holds locally because boundedness of factors is needed.
+ -}
 \lemma upper-*-locally-uniform : LocallyUniformMap (ManhattanProductPseudoMetricSpace UpperRealMetric UpperRealMetric) UpperRealMetric (\lam s => s.1 * s.2)
   => LocallyUniformMetricMap.makeLocallyUniformMap2 (*) \lam {eps} eps>0 => inP (1, idp, \lam x0 y0 => \case x0.U-inh_>0, y0.U-inh_>0 \with {
     | inP (x0b,x0<x0b,x0b>0), inP (y0b,y0<y0b,y0b>0) => \case ExUpperRealSemigroup.div-lb-rat {(y0b + 1 + 1) + (x0b + 1 + 1)} (inP (1, idp, <=-rat.1 linarith)) $ <-rat.2 (RatField.half>0 eps>0) \with {
@@ -134,6 +171,9 @@
     \open ExUpperRealSemigroup(<=_*,ldistr_<=,rdistr_<=)
   }
 
+{- | The extended-upper-real multiplication `ExUpperReal.*` is a `LocallyUniformMap` from
+ -   `UpperRealMetric ⨯ UpperRealMetric` (Manhattan) into `ExUpperRealMetric`.
+ -}
 \lemma ex-upper-*-locally-uniform
   : LocallyUniformMap (ManhattanProductPseudoMetricSpace UpperRealMetric UpperRealMetric) ExUpperRealMetric (\lam s => s.1 ExUpperReal.* s.2)
   => transport (LocallyUniformMap _ _) (ext \lam s => UpperRealSemigroup.*-ex) (upper-ex-isometry LocallyUniformMap.∘l upper-*-locally-uniform)

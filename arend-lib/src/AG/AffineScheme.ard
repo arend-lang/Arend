@@ -39,6 +39,7 @@
 \open Cover
 \open CompleteLattice
 
+-- | The Zariski locale of a commutative ring, defined as `PresentedFrame (SpecPres R)`.
 \func Spec.{u} (R : CRing.{u}) : Scheme
   => (satSite R).toScheme
   \where {

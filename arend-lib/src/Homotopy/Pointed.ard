@@ -1,3 +1,12 @@
+{- | Pointed types and pointed maps as the basic setting for homotopy theory.
+ -
+ -   This module defines the class of pointed types (types equipped with a distinguished basepoint) and the type of
+ -   basepoint-preserving maps between them. A pointed type extends `InhSpace`, with inhabitedness witnessed by the
+ -   basepoint itself. The module also provides the bridge to algebraic pointed structures by sending a pointed type to
+ -   its set-truncation, viewed as an `Algebra.Pointed.Pointed`, and lifting pointed maps to pointed homomorphisms on
+ -   truncations.
+ -}
+
 \import Algebra.Pointed.PointedHom
 \import Homotopy.Space
 \import Logic
@@ -7,17 +16,26 @@
 \import Algebra.Pointed \using (Pointed \as AlgPointed)
 \import Set
 
+{- | Class extending `InhSpace` with a chosen `base : E`; inhabitedness `isInh` is automatically witnessed by
+ -   `inP base`.
+ -}
 \class Pointed \extends InhSpace
   | base : E
   | isInh => inP base
   \where
+    -- | Constructor producing a `Pointed` instance from a type `E` and an element `e : E`.
     \func make {E : \Type} (e : E) => \new Pointed E e
 
+-- | Canonical instance making the unit type `\Sigma` pointed at `()`.
 \instance UnitPointed : Pointed (\Sigma)
   | base => ()
 
+-- | Type of basepoint-preserving maps `A ->* B`, defined as `\Sigma (f : A -> B) (f base = base)`.
 \func \infixr 1 ->* (A B : Pointed) => \Sigma (f : A -> B) (f base = base)
   \where {
+    {- | Extensionality for pointed maps: given a pointwise homotopy `p : \Pi x -> f.1 x = g.1 x` and compatibility
+     -   `p base *> g.2 = f.2` of basepoint witnesses, concludes `f = g`.
+     -}
     \func ext {A B : Pointed} {f g : A ->* B} (p : \Pi (x : A) -> f.1 x = g.1 x) (q : p base *> g.2 = f.2) : f = g =>
       \let | p' => path (\lam i x => p x @ i)
            | q' => Jl (\lam _ p'' => (rewrite p'' in f.2) = inv (pmap (\lam (h : A -> B) => h base) p'') *> f.2)
@@ -30,6 +48,9 @@
   | E => Trunc0 X
   | ide => in0 X.base
 
+{- | Functorial action on pointed maps: a pointed map `f : X ->* Y` induces a `PointedHom` between the truncated
+ -   algebraic pointed structures via `Trunc0.map`.
+ -}
 \func PointedTrunc0-Func {X Y : Pointed} (f : X ->* Y) : PointedHom (PointedTrunc0 X) (PointedTrunc0 Y) \cowith
   | func x => Trunc0.map x f.1
   | func-ide => rewrite f.2 idp

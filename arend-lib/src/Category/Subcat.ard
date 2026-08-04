@@ -1,3 +1,14 @@
+{- | Subcategories of a precategory carved out by a map from an arbitrary type, plus reflective subcategories and how
+ -   they inherit (co)limits.
+ -
+ -   This module builds subcategories without insisting they be full predicate-cuts: a subcategory is presented by any
+ -   function `f : X -> C`, with `X` providing the objects and homs lifted from `C`. The full-subcategory case is
+ -   recovered as `pred P` for a proposition `P`. Reflective subcategories are then formalized as fully faithful
+ -   functors equipped with a left-adjoint reflector, packaged so that the adjunction data follows from the reflector
+ -   and unit alone. The final lemma shows that reflective subcategories inherit limits by reflecting colimits in the
+ -   ambient category.
+ -}
+
 \import Category
 \import Category.Adjoint
 \import Category.Functor
@@ -10,6 +21,9 @@
 \import Paths
 \import Paths.Meta
 
+{- | Given `f : X -> C`, builds a `Precat` on `X` whose homs are `Hom (f x) (f y)`. The basic way to present a
+ -   subcategory by an indexing map.
+ -}
 \func subPrecat {C : Precat} {X : \Type} (f : X -> C) : Precat X \cowith
   | Hom x y => Hom (f x) (f y)
   | id => id
@@ -18,22 +32,31 @@
   | id-right => id-right
   | o-assoc => o-assoc
   \where {
+    -- | The canonical inclusion `subPrecat f -> C` as a `FullyFaithfulFunctor` over `f`.
     \func embedding {C : Precat} {X : \Type} (f : X -> C) : FullyFaithfulFunctor (subPrecat f) C f \cowith
       | Func h => h
       | Func-id => idp
       | Func-o => idp
       | isFullyFaithful => inP idEquiv
 
+    -- | The full subcategory on objects satisfying a predicate `P : C -> \Prop`, defined as `subPrecat (Total.proj P)`.
     \func pred {C : Precat} (P : C -> \Prop) => subPrecat (Total.proj P)
       \where
+        -- | Inclusion of a predicate-defined full subcategory.
         \func embedding {C : Precat} (P : C -> \Prop) => subPrecat.embedding (Total.proj P)
 
+    {- | Lifts a functor `G : C -> D` through a subcategory presentation: given `g : C -> X` with `f ∘ g` isomorphic to
+     -   `G` objectwise (via `p`), produces a functor `C -> subPrecat f` covering `g`.
+     -}
     \func funcLift {C D : Precat} {X : \Type} (f : X -> D) (g : C -> X) (G : Functor C D) (p : \Pi {a : C} -> Iso {D} {f (g a)} {G a}) : Functor C (subPrecat f) g \cowith
       | Func h => p.hinv ∘ G.Func h ∘ p.f
       | Func-id => rewrite (G.Func-id, id-right) p.hinv_f
       | Func-o => rewrite G.Func-o $ later (rewrite (p.f_hinv, id-left) $ pmap (∘ _) (inv o-assoc) *> o-assoc) *> pmap (_ ∘) (pmap (∘ _) o-assoc *> o-assoc) *> inv o-assoc
   }
 
+{- | When `C` is a `Cat` (univalent) and the indexing `e : Embedding` into `C` is an embedding, `subPrecat e` is itself
+ -   a `Cat`. Univalence is inherited along the embedding.
+ -}
 \func subCat {C : Cat} {X : \Type} (e : Embedding {X} {C}) : Cat \cowith
   | Precat => subPrecat e
   | univalence => faithful-univalence (subPrecat.embedding e) e
@@ -49,17 +72,24 @@
          \in transport (Iso __) (F.isFaithful $ coh p *> pmap D.=_hom ((e.isEmb a b).f_sec (D.isotoid fi)) *> D.idtoiso_isotoid) (C.idtoiso p)
   }
 
+-- | An iso in `subPrecat f` transports to an iso between the images in `C`.
 \lemma subCat-iso {C : Precat} {X : \Type} {f : X -> C} (e : Iso {subPrecat f}) : Iso {C} {f e.dom} {f e.cod} e \cowith
   | hinv => e.hinv
   | hinv_f => e.hinv_f
   | f_hinv => e.f_hinv
   \where {
+    -- | Conversely, an iso between images in `C` lifts to an iso in `subPrecat f`.
     \protected \lemma conv {C : Precat} {X : \Type} {f : X -> C} {x x' : X} (e : Iso {C} {f x} {f x'}) : Iso {subPrecat f} {x} {x'} e \cowith
       | hinv => e.hinv
       | hinv_f => e.hinv_f
       | f_hinv => e.f_hinv
   }
 
+{- | A class extending `FullyFaithfulFunctor` and `RightAdjointUnit`, presenting `F : C -> D` as a reflective inclusion.
+ -   Carries a `reflector : D -> C`, a unit `reflectorMap : X -> F (reflector X)`, and the `isReflective` equivalence
+ -   `Hom (reflector X) Y ≃ Hom X (F Y)`. The left adjoint, its functoriality, and the unit/adjoint laws are all derived
+ -   from this data.
+ -}
 \class ReflectiveSubPrecat \extends FullyFaithfulFunctor {
   | reflector : D -> C
   | reflectorMap (X : D) : Hom X (F (reflector X))
@@ -78,6 +108,11 @@
     | isReflective => A.eta_epsilon-equiv
 }
 
+{- | Constructs a limit of `F.op : J.op -> I.C.op` from a colimit of `Comp I F` in the ambient category `D`. The apex is
+ -   `I.reflector` of the ambient colimit's apex, with cone maps and universal property obtained by transporting through
+ -   the reflective adjunction. This is the standard mechanism by which reflective subcategories inherit limits/colimits
+ -   from their ambient category.
+ -}
 \func reflectiveSubPrecatColimit {J : Precat} (I : ReflectiveSubPrecat) (F : Functor J I.C) (c : Colimit (Comp I F)) : Limit F.op \cowith
   | apex => I.reflector c.apex
   | coneMap j => I.inverse (reflectorMap _ ∘ c.coneMap j)

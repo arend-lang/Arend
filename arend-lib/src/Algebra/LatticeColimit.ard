@@ -1,3 +1,14 @@
+{- | Colimits of algebraic structures indexed by a bottom-joined semilattice, computed on the underlying set colimit.
+ -
+ -   This module builds colimits of monoids, additive monoids, additive/abelian groups, rings, commutative rings, and
+ -   discrete fields over a `BottomJoinSemilattice` `D`. The carrier is `SetColimit` of the composite functor through
+ -   the forgetful functor; the bottom element supplies the unit/zero, and binary operations are defined by joining the
+ -   two indices and transporting both arguments along `join-left`/`join-right` before combining. Each layer reuses the
+ -   previous layer (e.g., `RingLatticeColimit` extends `AbGroupLatticeColimit` and `MonoidLatticeColimit`), and every
+ -   level provides an `inMap` cocone with a coherence lemma `inMap-coh` showing it factors through the structure maps
+ -   `F.Func p`.
+ -}
+
 \import Algebra.Field
 \import Algebra.Group
 \import Algebra.Group.GroupCat
@@ -24,6 +35,10 @@
 \import Set.SetCategory
 \open SetColimit
 
+{- | `Monoid` instance on `SetColimit (Comp MonoidCat.forget F)` with unit `in~ (bottom, ide)` and product
+ -   `in~ (a₁ ∨ b₁, F.Func join-left a₂ * F.Func join-right b₂)`; well-definedness across `~-equiv` is established via
+ -   `~-cequiv`, `func-*`, `Func-app`, and `poset-app`.
+ -}
 \instance MonoidLatticeColimit.{u} {D : BottomJoinSemilattice} (F : Functor D MonoidCat.{u}) : Monoid (SetColimit (Comp MonoidCat.forget F))
   | ide => in~ (D.bottom, ide)
   | * (x y : SetColimit (Comp MonoidCat.forget F)) : SetColimit (Comp MonoidCat.forget F) \with {
@@ -54,15 +69,20 @@
     \private \lemma poset-id {j : D} {p : j <= j} {a : F j} : F.Func p a = a
       => SetColimit.poset-id {D} {Comp MonoidCat.forget F}
 
+    -- | Cocone homomorphism `MonoidHom (F d) (MonoidLatticeColimit F)` sending `a` to `in~ (d, a)`.
     \func inMap (d : D) : MonoidHom (F d) (MonoidLatticeColimit F) \cowith
       | func a => in~ (d,a)
       | func-ide => inv $ ~-cequiv D.bottom-univ func-ide
       | func-* => ~-cequiv join-left func-*
 
+    -- | Coherence: `inMap d = inMap d' ∘ F.Func p` for `p : d <= d'`.
     \lemma inMap-coh {d d' : D} (p : d <= d') : inMap d = inMap d' MonoidHom.∘ F.Func p
       => exts \lam a => ~-cequiv p idp
   }
 
+{- | `AddMonoid` instance built analogously, with `zro = in~ (bottom, zro)` and addition combining transported summands
+ -   at the join.
+ -}
 \instance AddMonoidLatticeColimit.{u} {D : BottomJoinSemilattice} (F : Functor D AddMonoidCat.{u}) : AddMonoid (SetColimit (Comp AddMonoidCat.forget F))
   | zro => in~ (D.bottom, zro)
   | + (x y : SetColimit (Comp AddMonoidCat.forget F)) : SetColimit (Comp AddMonoidCat.forget F) \with {
@@ -93,15 +113,20 @@
     \private \lemma poset-id {j : D} {p : j <= j} {a : F j} : F.Func p a = a
       => SetColimit.poset-id {D} {Comp AddMonoidCat.forget F}
 
+    -- | `AddMonoidHom (F d) (AddMonoidLatticeColimit F)`.
     \func inMap (d : D) : AddMonoidHom (F d) (AddMonoidLatticeColimit F) \cowith
       | func a => in~ (d,a)
       | func-zro => inv $ ~-cequiv D.bottom-univ func-zro
       | func-+ => ~-cequiv join-left func-+
 
+    -- | Cocone coherence relation.
     \lemma inMap-coh {d d' : D} (p : d <= d') : inMap d = inMap d' AddMonoidHom.∘ F.Func p
       => exts \lam a => ~-cequiv p idp
   }
 
+{- | `AddGroup` instance extending `AddMonoidLatticeColimit` (composed with `AddGroupCat.forgetToAddMonoid`); negation
+ -   is taken componentwise on representatives via `AddGroupHom.func-negative`.
+ -}
 \instance AddGroupLatticeColimit.{u} {D : BottomJoinSemilattice} (F : Functor D AddGroupCat.{u}) : AddGroup (SetColimit (Comp AddGroupCat.forget F))
   | AddMonoid => AddMonoidLatticeColimit (Comp AddGroupCat.forgetToAddMonoid F)
   | negative (x : SetColimit (Comp AddGroupCat.forget F)) : SetColimit (Comp AddGroupCat.forget F) \with {
@@ -114,30 +139,40 @@
   | negative-right {x} => \case \elim x \with {
     | in~ a => inv $ ~-cequiv D.bottom-univ $ func-zro *> inv func-zro *> pmap (F.Func _) (inv negative-right) *> func-+
   } \where {
+    -- | `AddGroupHom (F d) (AddGroupLatticeColimit F)`.
     \func inMap (d : D) : AddGroupHom (F d) (AddGroupLatticeColimit F) \cowith
       | func a => in~ (d,a)
       | func-zro => inv $ ~-cequiv D.bottom-univ func-zro
       | func-+ => ~-cequiv join-left func-+
 
+    -- | Cocone coherence.
     \lemma inMap-coh {d d' : D} (p : d <= d') : inMap d = inMap d' AddGroupHom.∘ F.Func p
       => exts \lam a => ~-cequiv p idp
   }
 
+{- | `AbGroup` instance extending `AddGroupLatticeColimit` via `AbGroupCat.forgetToAddGroup`, adding commutativity of
+ -   `+`.
+ -}
 \instance AbGroupLatticeColimit.{u} {D : BottomJoinSemilattice} (F : Functor D AbGroupCat.{u}) : AbGroup (SetColimit (Comp AbGroupCat.forget F))
   | AddGroup => AddGroupLatticeColimit (Comp AbGroupCat.forgetToAddGroup F)
   | +-comm {x} {y} => \case \elim x, \elim y \with {
     | in~ a, in~ b => ~-cequiv (=_<= D.join-comm) $ func-+ *> +-comm *> pmap2 (+) (inv (Func-app (Comp AbGroupCat.forget F)) *> poset-app) (inv (Func-app (Comp AbGroupCat.forget F)) *> poset-app)
   }
   \where {
+    -- | Embedding of each `F d` as an `AddGroupHom`.
     \func inMap (d : D) : AddGroupHom (F d) (AbGroupLatticeColimit F) \cowith
       | func a => in~ (d,a)
       | func-zro => inv $ ~-cequiv D.bottom-univ func-zro
       | func-+ => ~-cequiv join-left func-+
 
+    -- | Cocone coherence.
     \lemma inMap-coh {d d' : D} (p : d <= d') : inMap d = inMap d' AddGroupHom.∘ F.Func p
       => exts \lam a => ~-cequiv p idp
   }
 
+{- | `Ring` instance extending both `AbGroupLatticeColimit` (via `forgetToAbGroup`) and `MonoidLatticeColimit` (via
+ -   `forgetToMonoid`), with distributivity laws.
+ -}
 \instance RingLatticeColimit.{u} {D : BottomJoinSemilattice} (F : Functor D RingCat.{u}) : Ring (SetColimit (Comp RingCat.forget F))
   | AbGroup => AbGroupLatticeColimit (Comp RingCat.forgetToAbGroup F)
   | Monoid => MonoidLatticeColimit (Comp RingCat.forgetToMonoid F)
@@ -160,6 +195,7 @@
     \private \lemma poset-app {j j' : D} {f g : j <= j'} {a : F j} : F.Func f a = F.Func g a
       => pmap (F.Func __ a) prop-pi
 
+    -- | Component `RingHom (F d) (RingLatticeColimit F)` of the cocone.
     \func inMap (d : D) : RingHom (F d) (RingLatticeColimit F) \cowith
       | func a => in~ (d,a)
       | func-zro => inv $ ~-cequiv D.bottom-univ func-zro
@@ -167,16 +203,23 @@
       | func-ide => inv $ ~-cequiv D.bottom-univ func-ide
       | func-* => ~-cequiv join-left func-*
 
+    -- | Cocone coherence.
     \lemma inMap-coh {d d' : D} (p : d <= d') : inMap d = inMap d' RingHom.∘ F.Func p
       => exts \lam a => ~-cequiv p idp
   }
 
+-- | `CRing` instance extending `RingLatticeColimit` (via `CRingCat.forgetToRing`) with `*-comm`.
 \instance CRingLatticeColimit.{u} {D : BottomJoinSemilattice} (F : Functor D CRingCat.{u}) : CRing (SetColimit (Comp CRingCat.forget F))
   | Ring => RingLatticeColimit (Comp CRingCat.forgetToRing F)
   | *-comm {x} {y} => \case \elim x, \elim y \with {
     | in~ a, in~ b => ~-cequiv (=_<= D.join-comm) $ func-* *> *-comm *> pmap2 (*) (inv (Func-app (Comp CRingCat.forget F)) *> poset-app) (inv (Func-app (Comp CRingCat.forget F)) *> poset-app)
   }
 
+{- | Given a functor `F : Functor D CRingCat` together with a fiberwise discrete-field structure
+ -   `p : \Pi (d : D) -> DiscreteField { | CRing => F d }`, produces a `DiscreteField` structure on
+ -   `SetColimit (Comp CRingCat.forget F)` extending `CRingLatticeColimit F`, with `zro/=ide` and `eitherZeroOrInv`
+ -   lifted from the fibers.
+ -}
 \func DiscreteFieldLatticeColimit.{u} {D : BottomJoinSemilattice} (F : Functor D CRingCat.{u}) (p : \Pi (d : D) -> DiscreteField { | CRing => F d }) : DiscreteField (SetColimit (Comp CRingCat.forget F)) \cowith
   | CRing => CRingLatticeColimit F
   | zro/=ide q => \case unext-ub q \with {

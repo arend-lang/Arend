@@ -1,3 +1,13 @@
+{- | Total boundedness, compactness, and local uniformity for cover spaces and (pre)uniform spaces.
+ -
+ -   This module defines total boundedness as a Cauchy-cover condition expressible via finite refinements, and
+ -   identifies compactness with total boundedness on a complete cover space. It then leverages
+ -   regularity/proper-uniformity assumptions to upgrade Cauchy covers to uniform covers, turning cover maps out of
+ -   totally bounded spaces into uniform maps. The local-uniformity layer captures spaces where every Cauchy cover
+ -   refines a uniform one relative to a fixed uniform partition, with the canonical example being metric spaces whose
+ -   balls are totally bounded.
+ -}
+
 \import Algebra.Pointed
 \import Arith.Rat
 \import Arith.Real.UpperReal
@@ -23,14 +33,22 @@
 \open IsTotallyBounded(IsCover,Cond)
 \open ClosurePrecoverSpace
 
+-- | A cover space `X` is totally bounded iff every Cauchy cover admits a finite subarray that still covers `X`.
 \func IsTotallyBounded (X : CoverSpace) : \Prop
   => Cond X.isCauchy IsCover
   \where {
+    -- | Predicate stating that a family `C : Set (Set X)` covers `X` (every point lies in some member).
     \protected \func IsCover {X : \Set} (C : Set (Set X)) => \Pi (x : X) -> ∃ (U : C) (U x)
 
+    {- | General refinement condition `Cond P Q`: from any `P`-family pick a finite subfamily whose enumerated set lies
+     -   in `Q`.
+     -}
     \protected \func Cond {X : \Set} (P Q : Set (Set (Set X))) => ∀ {C : P} ∃ (U : Array (Set X)) (Q \lam V => ∃ (W : U) (W = V)) (∀ (V : U) (C V))
   }
 
+{- | On a regular preuniform space with proper uniformity, total boundedness lets every Cauchy cover be refined to a
+ -   uniform finite cover.
+ -}
 \lemma totallyBounded-uniform {X : RegularPreuniformSpace} (Xp : X.IsProperUniform) (Xtb : IsTotallyBounded X) : Cond X.isCauchy isUniform
   => \lam Cc =>
     \have | (inP (D,Dc,f)) => Xtb $ X.<=*-cauchy-regular Cc
@@ -42,11 +60,13 @@
       })
     }, \lam i => (g i).2)
 
+-- | Direct corollary: any Cauchy cover of a totally bounded proper regular preuniform space is uniform.
 \lemma totallyBounded-cauchy-uniform {X : RegularPreuniformSpace} (Xp : X.IsProperUniform) (Xtb : IsTotallyBounded X) {C : Set (Set X)} (Cc : isCauchy C) : isUniform C
   => \case totallyBounded-uniform Xp Xtb Cc \with {
     | inP (U,Uu,CU) => uniform-refine Uu \lam {_} (inP (j,idp)) => inP (U j, CU j, <=-refl)
   }
 
+-- | Strong-regular variant requiring only weakly proper uniformity.
 \lemma totallyBounded-strong-uniform {X : StronglyRegularPreuniformSpace} (Xp : X.IsWeaklyProperUniform) (Xtb : IsTotallyBounded X) : Cond X.isCauchy isUniform
   => \lam Cc =>
     \have | (inP (V,Vc,g)) => Xtb $ X.s<=*-cauchy-regular Cc
@@ -67,15 +87,20 @@
                 }
               }, \lam i => (h i).2)
 
+-- | Cauchy implies uniform under strong regularity and weak properness.
 \lemma totallyBounded-cauchy-strong-uniform {X : StronglyRegularPreuniformSpace} (Xp : X.IsWeaklyProperUniform) (Xtb : IsTotallyBounded X) {C : Set (Set X)} (Cc : isCauchy C) : isUniform C
   => \case totallyBounded-strong-uniform Xp Xtb Cc \with {
     | inP (U,Uu,CU) => uniform-refine Uu \lam {_} (inP (j,idp)) => inP (U j, CU j, <=-refl)
   }
 
+{- | Characterization: it suffices to verify the finite-refinement property on uniform covers (rather than Cauchy ones)
+ -   to conclude total boundedness.
+ -}
 \lemma totallyBounded-uniform-char {X : RegularPreuniformSpace} (base : Cond X.isUniform IsCover) : IsTotallyBounded X
   => \lam Cc => totallyBounded-closure base (uniform-cauchy.1 Cc)
   \where {
     -- This lemma is also true if IsCover is replaced with isCauchy.
+    -- | Auxiliary lemma propagating the finite-refinement property through the closure of the uniform covers.
     \private \lemma totallyBounded-closure {X : PreuniformSpace} (base : Cond X.isUniform IsCover) {C : Set (Set X)} (Cc : Closure isUniform C)
       : ∃ (D : Array (Set X)) (IsCover \lam V => ∃ (W : D) (W = V)) ∀ (V : D) (C V) \elim Cc
       | closure Cu => base Cu
@@ -101,20 +126,25 @@
       }
   }
 
+-- | A complete cover space is compact iff it is totally bounded.
 \func IsCompact (X : CompleteCoverSpace) : \Prop
   => IsTotallyBounded X
 
+-- | Cover maps out of a totally bounded proper regular preuniform space are automatically uniform.
 \lemma makeUniformMapTB {X Y : RegularPreuniformSpace} (Xp : X.IsProperUniform) (Xtb : IsTotallyBounded X) (f : CoverMap X Y) : UniformMap X Y f \cowith
   | func-uniform Eu => totallyBounded-cauchy-uniform Xp Xtb $ f.func-cover $ Y.makeCauchy Eu
 
+-- | Same upgrade under strong-regular uniformity and weak properness.
 \lemma makeUniformMapSTB {X : StronglyRegularUniformSpace} {Y : RegularPreuniformSpace} (Xp : X.IsWeaklyProperUniform) (Xtb : IsTotallyBounded X) (f : CoverMap X Y) : UniformMap X Y f \cowith
   | func-uniform Eu => totallyBounded-cauchy-strong-uniform Xp Xtb $ f.func-cover $ Y.makeCauchy Eu
 
 -- Totally bounded subsets
 
+-- | A subset `U ⊆ X` is totally bounded if its subspace (via `CoverTransfer` on the projection) is totally bounded.
 \func IsTotallyBoundedSet {X : CoverSpace} (U : Set X) : \Prop
   => IsTotallyBounded $ CoverTransfer {\Sigma (x : X) (U x)} __.1
 
+-- | Equivalent to: every Cauchy cover of `X` admits a finite array hitting every point of `U`.
 \lemma totallyBoundedSet-char {X : CoverSpace} {U : Set X}
   : IsTotallyBoundedSet U <-> ∀ {C : isCauchy} ∃ (D : Array (Set X)) (∀ {x : U} ∃ (V : D) (V x)) (∀ (V : D) (C V))
   => (\lam f Cc => \case f $ func-cover {PrecoverTransfer-map {\Sigma (x : X) (U x)} __.1} Cc \with {
@@ -131,11 +161,13 @@
     }
   })
 
+-- | Total boundedness is downward-closed under subset inclusion.
 \lemma totallyBoundedSet-subset {X : CoverSpace} {U V : Set X} (V<=U : V ⊆ U) (Utb : IsTotallyBoundedSet U) : IsTotallyBoundedSet V
   => totallyBoundedSet-char.2 \lam Cc => \case totallyBoundedSet-char.1 Utb Cc \with {
     | inP (D,DU,CD) => inP (D, \lam Vx => DU (V<=U Vx), CD)
   }
 
+-- | On regular preuniform spaces, the finite-array condition only needs to be checked against uniform covers.
 \lemma totallyBoundedSet-uniform-char {X : RegularPreuniformSpace} {S : Set X}
   : IsTotallyBoundedSet S <-> ∀ {C : isUniform} ∃ (D : Array (Set X)) (∀ {x : S} ∃ (V : D) (V x)) (∀ (V : D) (C V))
   => (\lam tb Cu => totallyBoundedSet-char.1 tb $ uniform-cauchy.2 $ closure Cu,
@@ -147,6 +179,9 @@
         }
       })
 
+{- | Metric characterization: `S` is totally bounded iff for every `ε > 0` there is a finite array of `ε`-centers
+ -   covering `S`.
+ -}
 \lemma totallyBoundedSet-metric-char {X : ExPseudoMetricSpace} {S : Set X}
   : IsTotallyBoundedSet S <-> ∀ {eps : Rat} (0 < eps) ∃ (D : Array X) ∀ {x : S} ∃ (y : D) ((dist y x).U eps)
   => (\lam tb eps>0 => \case totallyBoundedSet-uniform-char.1 tb (X.metricUniform eps>0) \with {
@@ -167,29 +202,45 @@
 
 -- Locally totally bounded spaces
 
+{- | Relation between covers `C` and `E`: every `U ∈ C` admits a uniform cover whose pieces, intersected with `U`,
+ -   refine some `W ∈ E`.
+ -}
 \func IsLocallyUniform {X : PreuniformSpace} (C : Set (Set X)) (E : Set (Set X)) : \Prop
   => ∀ {U : C} (isUniform \lam V => ∃ (W : E) (U ∧ V ⊆ W))
 
+-- | Existence of a uniform cover `C` such that every Cauchy cover `E` is locally uniform with respect to `C`.
 \func IsLocallyUniformSpace (X : PreuniformSpace) : \Prop
   => ∃ (C : X.isUniform) ∀ {E : X.isCauchy} (IsLocallyUniform C E)
 
+-- | If `C` is Cauchy and `E` is locally uniform over `C`, then `E` is itself Cauchy.
 \lemma locallyUniform-cauchy {X : PreuniformSpace} {C : Set (Set X)} (Cc : isCauchy C) (E : Set (Set X)) (lu : IsLocallyUniform C E) : isCauchy E
   => cauchy-glue-refine Cc \lam CU => X.makeCauchy (lu CU)
 
+{- | On strongly regular uniform spaces with `C` consisting of inhabited totally bounded sets, every Cauchy `E` is
+ -   automatically locally uniform over `C`.
+ -}
 \lemma locallyUniform-cover-char {X : StronglyRegularUniformSpace} {C : Set (Set X)} (Cb : ∀ {U : C} (IsTotallyBoundedSet U)) (Cp : ∀ {U : C} ∃ U) {E : Set (Set X)} (Ec : isCauchy E) : IsLocallyUniform C E
   => \lam {U} CU =>
     \have Du => totallyBounded-cauchy-strong-uniform {StronglyRegularUniformTransfer {\Sigma (x : X) (U x)} __.1} (PreuniformSpace.inhabited_weaklyProper $ Cp CU) (Cb CU) (PrecoverTransfer.makeCauchy Ec)
     \in uniform-subset Du \lam {V} (inP (_, inP (W,EW,idp), p)) => inP $ later (W, EW, \lam {x} (Ux,Vx) => p {x,Ux} Vx)
 
+{- | A strongly regular uniform space whose uniformity is generated by totally bounded sets (and is properly uniform) is
+ -   locally uniform.
+ -}
 \lemma locallyTotallyBounded-locallyUniform {X : StronglyRegularUniformSpace} (Xltb : X.isUniform IsTotallyBoundedSet) (Xd : X.IsProperUniform) : IsLocallyUniformSpace X
   => inP (\lam U => \Sigma (IsTotallyBoundedSet U) (∃ U), Xd Xltb, locallyUniform-cover-char (later __.1) (later __.2))
 
+-- | Property of an extended pseudometric space asserting every open ball `OBall ε x` is totally bounded.
 \func BallsTotallyBounded (X : ExPseudoMetricSpace) : \Prop
   => \Pi (x : X) {eps : Rat} -> 0 < eps -> IsTotallyBoundedSet (OBall eps x)
 
+-- | A pseudometric space with totally bounded balls is locally uniform.
 \lemma metric-locallyUniform {X : PseudoMetricSpace} (Xbtb : BallsTotallyBounded X) : IsLocallyUniformSpace X
   => locallyTotallyBounded-locallyUniform (uniform-subset (X.metricUniform RatField.zro<ide) $ later \lam {_} (inP (x,idp)) => Xbtb x RatField.zro<ide) X.metricProperUniform
 
+{- | Cover maps from a locally uniform regular preuniform space to a regular preuniform space lift to locally uniform
+ -   maps.
+ -}
 \lemma locallyUniformMapFromCover {X Y : RegularPreuniformSpace} (Xlu : IsLocallyUniformSpace X) (f : CoverMap X Y) : LocallyUniformMap X Y f \cowith
   | func-locally-uniform Eu => \case Xlu \with {
     | inP (C,Cu,h) => inP (C, Cu, \lam CU => uniform-subset (h (f.func-cover (Y.makeCauchy Eu)) CU) \lam {V} (inP (_, inP (W,EW,idp), p)) => inP $ later (W, EW, p))

@@ -1,3 +1,15 @@
+{- | Elementary toposes as finitely complete cartesian closed precategories equipped with a subobject classifier.
+ -
+ -   A `ToposPrecat` axiomatizes a topos by combining finite limits, cartesian closure, and a subobject classifier
+ -   `omega` with a generic mono `true-map : terminal → omega` such that every monomorphism arises uniquely as the
+ -   pullback of `true-map` along a characteristic map. From these axioms the module derives the power-object structure:
+ -   `Power B := omega^B` with its membership relation `belongs : Power B × B → omega`, internal equality `eq B`,
+ -   singletons, names of subobjects, and image factorization. The construction culminates in an internal exponential
+ -   object `graphs.apex B C` (built as a pullback expressing "graphs of single-valued total relations") together with
+ -   an evaluation map and transpose, giving an alternative, topos-theoretic proof that `B` is exponentiable. The
+ -   category `\Set` is shown to be a topos with `\Prop` as subobject classifier.
+ -}
+
 \import Category
 \import Category.CartesianClosed
 \import Category.Limit
@@ -47,12 +59,14 @@
   \sfunc Omega-pullback (m : Mono {\this}) : Pullback (Omega-char (inso~ m)) Omega-true-map m.dom m
     => (subobjPullback-char {_} {point-splitMono} Omega-true_Omega-true-map $ IsEquiv.f_ret Omega-univ {inso~ m}).center
 
+  -- | Every monomorphism is regular: `m` is the equalizer of `true-over-obj` and `char-map m`.
   \lemma mono-regular (m : Mono {\this}) : IsRegularMono m.f
     => regularMono_pullback (Omega-pullback m) (splitMono_regular point-splitMono)
 }
 
 \class PrecatWithPowerObject \extends FinCompletePrecat {
   | Power : Ob -> Ob
+  -- | The internal membership relation `Power B × B → omega`, the counit of the exponential adjunction.
   | Power-belongs (a : Ob) : Subobj {\this} (Bprod a (Power a))
   | Power-univ {c a : Ob} : IsEquiv {Hom c (Power a)} {Subobj {\this} (Bprod a c)} (\lam h => subobjPullback (prodMap id h) (Power-belongs a))
 
@@ -81,9 +95,11 @@
   \lemma Power-char_top {c b a : Ob} {f : Hom c b} : Power-char subobjTop ∘ f = Power-char (subobjTop {_} {Bprod a c})
     => IsEquiv.isInj Power-univ $ pmap (subobjPullback __ _) (inv prod-id-left) *> subobjPullback_o *> pmap (subobjPullback _) pullback_Power *> subobjPullback_top *> inv pullback_Power
 
+  -- | `B → Power B`, the transpose of internal equality, sending `b` to `{b}`.
   \func Power-singleton (c : Ob) : Hom c (Power c)
     => Power-char (subobjEq c)
 
+  -- | `singleton B` is a monomorphism.
   \lemma Power-singleton-mono {c : Ob} : Mono (Power-singleton c) \cowith
     | isMono {_} {g} p => subobjEq-lifts.1 $ transport (subobjLifts _) pullback_Power $ subobjPullback-lifts.2 $ transport (subobjLifts __ _)
       (pair-unique (inv o-assoc *> pmap (∘ _) (beta1 *> id-left) *> beta1 *> inv (pmap (∘ _) (beta1 *> id-left) *> beta1) *> o-assoc)
@@ -100,6 +116,7 @@
         => Power-char $ subobjPullback associator-iso.hinv (Power-belongs _)
     }
 
+  -- | Evaluation map `graphs.apex B C × B → C`, factoring the image relation through the singleton classifier.
   \func PHom-eval {b c : Ob} : Hom (Bprod (PHom b c) b) c
     => char.1
     \where {
@@ -141,6 +158,12 @@
     }
 }
 
+{- | Extends `FinCompletePrecat` and `CartesianClosedPrecat`. Adds a subobject classifier `omega`, a global element
+ -   `true-map : terminal → omega`, a characteristic map `char-map` for every mono, the pullback square `char-pullback`
+ -   exhibiting the mono as the preimage of `true`, and uniqueness `char-unique` of the classifying map. Cartesian
+ -   closure is derived: `omega` is exponentiable (`p-exponential`) and a default `exp` is provided via the power-object
+ -   construction.
+ -}
 \class ToposPrecat \extends PrecatWithSubobjClassifier, CartesianClosedPrecat, PrecatWithPowerObject
   \where {
     -- TODO: Make constructor classes
@@ -162,6 +185,9 @@
       | CHom-univ => PHom-univ
   }
 
+{- | Instance witnessing that `\Set` is a topos. The subobject classifier is `\Prop`, `true-map` picks out `\Sigma`, and
+ -   `char-map m` is `IsElement m` — the predicate "`b` is in the image of `m`".
+ -}
 \instance SetTopos.{u} : ToposPrecat.FromSubobjClassifier (\Set u)
   | FinCompletePrecat => SetBicat.{u}
   | CartesianClosedPrecat => SetCartesianClosed.{u}

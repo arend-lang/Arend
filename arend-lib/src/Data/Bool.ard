@@ -1,52 +1,74 @@
+{- | The two-element boolean type with standard logical operations and their basic properties.
+ -
+ -   This module defines `Bool` as an inductive type with constructors `false` and `true`, along with the propositional
+ -   reflection `So` that converts a boolean into a proposition (true becomes the unit type, false becomes empty). The
+ -   standard connectives `not`, `and`, `or`, and `xor` are defined by case analysis, and small lemmas bridge the
+ -   boolean-level equations (e.g. `x and y = true`) to their propositional counterparts (e.g. a pair of equalities),
+ -   which is the typical pattern for using decidable boolean predicates in propositional reasoning.
+ -}
+
 \import Logic
 \import Meta
 \import Paths
 
+-- | Inductive type with constructors `false` and `true`.
 \data Bool | false | true
 
+-- | `Bool -> \Prop` sending `true` to `\Sigma` (unit) and `false` to `Empty`; lifts a boolean into a proposition.
 \func So (b : Bool) : \Prop
   | true => \Sigma
   | false => Empty
   \where {
+    -- | Converts `So b` into the equality `b = true`.
     \lemma fromSo {b : Bool} (s : So b) : b = true \elim b
       | true => idp
 
+    -- | Converts `b = true` into `So b`.
     \lemma toSo {b : Bool} (p : b = true) : So b
       => transportInv So p ()
   }
 
+-- | Boolean negation, swapping `true` and `false`.
 \func not (b : Bool) : Bool
   | true => false
   | false => true
 
+-- | Involutivity: `not (not b) = b`.
 \lemma not-isInv {b : Bool} : not (not b) = b
   => cases b idp
 
+-- | Polymorphic if-then-else: given `b : Bool` and `then else : A`, returns `then` if `b = true` and `else` otherwise.
 \func if {A : \Type} (b : Bool) (then else : A) : A \elim b
   | true => then
   | false => else
 
+-- | Infixl 3 boolean conjunction, defined by elimination on the left argument.
 \func \infixl 3 and (x y : Bool) : Bool \elim x
   | true => y
   | false => false
   \where {
+    -- | From `x and y = true` extracts the pair `(x = true, y = true)`.
     \lemma toSigma {x y : Bool} (p : x and y = true) : \Sigma (x = true) (y = true) \elim x, y, p
       | true, true, _ => (idp,idp)
 
+    -- | From `(x = true, y = true)` derives `x and y = true`.
     \lemma fromSigma {x y : Bool} (p : \Sigma (x = true) (y = true)) : x and y = true \elim x, y, p
       | true, true, _ => idp
       | false, _, ((),_)
       | _, false, (_,())
   }
 
+-- | Infixl 2 boolean disjunction, defined by elimination on the left argument.
 \func \infixl 2 or (x y : Bool) : Bool \elim x
   | true => true
   | false => y
   \where {
+    -- | From `x or y = true` derives the propositional disjunction `(x = true) || (y = true)`.
     \lemma toOr {x y : Bool} (p : x or y = true) : (x = true) || (y = true) \elim x, y, p
       | true, _, _ => byLeft idp
       | _, true, _ => byRight idp
 
+    -- | From `(x = true) || (y = true)` derives `x or y = true`.
     \lemma fromOr {x y : Bool} (p : (x = true) || (y = true)) : x or y = true \elim x, y, p
       | true, _, _ => idp
       | false, true, _ => idp
@@ -54,10 +76,12 @@
       | false, false, byRight ()
   }
 
+-- | Infixl 2 exclusive or, defined by full case analysis on both arguments.
 \func \infixl 2 xor (a b : Bool) : Bool \with
   | false, false => false
   | false, true => true
   | true, false => true
   | true, true => false
 
+-- | The constructors are distinct: `true = false` implies `Empty`.
 \lemma true/=false (p : true = false) : Empty => transport So p ()

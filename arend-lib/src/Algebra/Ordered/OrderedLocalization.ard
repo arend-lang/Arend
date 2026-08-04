@@ -1,3 +1,13 @@
+{- | Order structure on localizations of ordered abelian monoids, including the Grothendieck construction as an ordered
+ -   group.
+ -
+ -   This module lifts the order from a `PosetAbMonoid` to its localization at a submonoid `S`, defining `a/s <= b/t` as
+ -   existence of a witness `c ∈ S` with `a·t·c <= b·s·c` (the standard "up to clearing denominators" formulation needed
+ -   because the submonoid elements need not be cancellative). Localizing at the maximal submonoid yields the
+ -   Grothendieck group as an ordered group, and when the base monoid is a meet-semilattice the construction extends to
+ -   a lattice-ordered abelian group via componentwise meets cleared by common denominators.
+ -}
+
 \import Algebra.Meta
 \import Algebra.Monoid
 \import Algebra.Monoid.AbLocalization
@@ -15,6 +25,10 @@
 \import Relation.Equivalence
 \open LocAbType
 
+{- | Instance making `LocAbType S` a `PosetAbMonoid` for any sub-additive-monoid `S` of a `PosetAbMonoid M`. The order
+ -   on equivalence classes `in~ a <= in~ b` is defined by `∃ (c ∈ S) (a.1 + b.2 + c <= a.2 + b.1 + c)`, with
+ -   well-definedness on both arguments shown by absorbing the equivalence-witness into the inequality witness.
+ -}
 \instance LocPosetAbMonoid {M : PosetAbMonoid} (S : SubAddMonoid M) : PosetAbMonoid (LocAbType S) \cowith
   | AbMonoid => LocAbMonoid S
   | <= (x y : LocAbType S) : \Prop \with {
@@ -34,10 +48,17 @@
       (transport2 (M.<=) equation.abMonoid equation.abMonoid $ <=_+ q $ M.<=-refl {d})
   | <=_+ {in~ a} {in~ b} {in~ c} {in~ d} (inP (e,Se,ep)) (inP (f,Sf,fp)) => inP (e + f, S.contains_+ Se Sf, transport2 (M.<=) equation.abMonoid equation.abMonoid $ <=_+ ep fp)
 
+{- | Instance giving the Grothendieck group `MaxLocAbType M` of a `PosetAbMonoid M` the structure of a `PosetAbGroup`,
+ -   by combining `GrothendieckAbGroup` with `LocPosetAbMonoid` at the maximal submonoid `SubAddMonoid.max`.
+ -}
 \instance GrothendieckOrderedAbGroup (M : PosetAbMonoid) : PosetAbGroup (MaxLocAbType M)
   | AbGroup => GrothendieckAbGroup M
   | PosetAbMonoid => LocPosetAbMonoid SubAddMonoid.max
 
+{- | Instance making `LocAbType S` a `MeetSemilatticeAbMonoid` when `M` is one. The meet of `in~ a` and `in~ b` uses a
+ -   common denominator `a.2 + b.2` and numerator `(a.1 + b.2) ∧ (a.2 + b.1)`; well-definedness uses `meet_+-right`
+ -   (compatibility of meet with addition) to shuffle the equivalence witness.
+ -}
 \instance LocPosetMeetSemilattice {M : MeetSemilatticeAbMonoid} (S : SubAddMonoid M) : MeetSemilatticeAbMonoid (LocAbType S) \cowith
   | PosetAbMonoid => LocPosetAbMonoid S
   | meet (x y : LocAbType S) : LocAbType S \with {
@@ -50,6 +71,10 @@
   | meet-univ {in~ a} {in~ b} {in~ c} (inP (d,Sd,dp)) (inP (e,Se,ep)) => inP (d + e, contains_+ Sd Se, meet-univ (transport2 (<=) equation.abMonoid equation.abMonoid $ <=_+ dp (<=-refl {_} {b.2 + e})) (transport2 (<=) equation.abMonoid equation.abMonoid $ <=_+ ep (<=-refl {_} {a.2 + d})) <=∘ inv meet_+-right =<= <=_+ (=_<= $ inv meet_+-left) <=-refl)
   | meet_+-left {in~ a} {in~ b} {in~ c} => ~-lequiv $ pmap (+ _) meet_+-left *> meet_+-right *> pmap2 (∧) equation.abMonoid equation.abMonoid *> inv meet_+-right
 
+{- | Instance assembling `MaxLocAbType M` into a `LatticeAbGroup.FromMeet` for any `MeetSemilatticeAbMonoid M`, by
+ -   combining `GrothendieckOrderedAbGroup` with `LocPosetMeetSemilattice` at the maximal submonoid — i.e., the
+ -   Grothendieck group of a meet-semilattice abelian monoid is automatically a lattice-ordered abelian group.
+ -}
 \instance GrothendieckMeetLattice (M : MeetSemilatticeAbMonoid) : LatticeAbGroup.FromMeet (MaxLocAbType M)
   | PosetAbGroup => GrothendieckOrderedAbGroup M
   | MeetSemilatticeAbMonoid => LocPosetMeetSemilattice SubAddMonoid.max

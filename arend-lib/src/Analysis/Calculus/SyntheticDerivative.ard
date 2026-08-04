@@ -1,3 +1,15 @@
+{- | Synthetic differential calculus over a "differential ring" where derivatives are characterized by an algebraic
+ -   remainder condition rather than limits.
+ -
+ -   This module formalizes differentiation in the style of synthetic differential geometry, replacing analytic limits
+ -   with the algebraic property that `f(x + t·a) - f(x) = t·y` for some unique `y` (the directional derivative). The
+ -   key structure is `DRing`, a commutative ring satisfying an "inverse-density" axiom that lets one cancel `t`
+ -   whenever the equation holds for all invertible `t`. From this, derivatives become honest linear maps, and the
+ -   standard calculus rules — linearity, composition (chain rule), and the Leibniz rule for bilinear maps — are derived
+ -   purely algebraically. The use of a predicate `U` on the domain allows differentiation on arbitrary subsets,
+ -   supporting partial functions.
+ -}
+
 \import Algebra.Group
 \import Algebra.Meta
 \import Algebra.Module
@@ -28,6 +40,9 @@
         -> (\Pi (p : \Sigma (z : R) (u : U z)) -> Monoid.Inv p.1 -> f p = g p)
         -> \Pi (p : \Sigma (z : R) (u : U z)) -> f p = g p
 
+  {- | Cancellation lemma — if `p.1 *c f p = p.1 *c g p` for all elements in the subset, then `f = g`. Uses `inv-dense`
+   -   to extend cancellation from invertibles to the whole domain.
+   -}
   \lemma cancel-lem {B : LModule R} (Bd : IsInvDense B) {U : R -> \Prop} (Uo : IsOpenPred U)
                     (f g : \Sigma (z : R) (U z) -> B)
                     (s : \Pi (p : \Sigma (z : R) (u : U z)) -> p.1 *c f p = p.1 *c g p)
@@ -37,9 +52,13 @@
   \func IsDiff {A B : LModule R} (Bd : IsInvDense B) {U : A -> \Prop} (Uo : IsOpenPred U) (f : \Sigma (x : A) (U x) -> B) : \Set
     => \Pi (x : \Sigma (a : A) (U a)) (a : A) (t : \Sigma (r : R) (U (x.1 + r *c a))) -> \Sigma (y : B) (t.1 *c y = f (x.1 + t.1 *c a, t.2) - f x)
     \where {
+      -- | Proof that `isDiff f` is a proposition — derivatives are unique when they exist, via `cancel-lem`.
       \use \level levelProp (d d' : IsDiff Bd Uo f) : d = d'
         => ext \lam x a t => ext $ cancel-lem Bd (\lam r => Uo _) _ _ (\lam t => (d x a t).2 *> inv (d' x a t).2) t
 
+      {- | Equality lemma showing the derivative value depends only on the base point and the scalar, not on the proofs
+       -   of subset membership.
+       -}
       \lemma IsDiff-eq (Bd : IsInvDense B) (Uo : IsOpenPred U) {f : \Sigma (x : A) (U x) -> B} (d : IsDiff Bd Uo f) {x x' : \Sigma (a : A) (U a)} (p : x.1 = x'.1) {a : A} {t : \Sigma (r : R) (U (x.1 + r *c a))} {t' : \Sigma (r : R) (U (x'.1 + r *c a))} (q : t.1 = t'.1) : (d x a t).1 = (d x' a t').1
         => path \lam i => (d (p i, prop-dpi _ _ _ i) a (q i, prop-dpi _ _ _ i)).1
     }
@@ -62,6 +81,7 @@
         (0, (sub-lem x, rewrite *c-assoc $ sub-lem x))
       \in s *> pmap (r *c) (IsDiff.IsDiff-eq Bd Uo d idp R.zro_*-left)
     \where
+      -- | Shows `U (x.1 + 0 *c a)` holds, used to evaluate the derivative at the base point.
       \lemma sub-lem {A : LModule} {U : A -> \Prop} {a : A} (x : \Sigma (a : A) (U a)) : U (x.1 + 0 *c a)
         => transportInv U (pmap (x.1 +) A.*c_zro-left *> zro-right) x.2
 

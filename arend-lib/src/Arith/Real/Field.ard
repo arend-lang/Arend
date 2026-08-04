@@ -1,3 +1,14 @@
+{- | The ordered field structure on the real numbers, defining multiplication, inverse, and the `OrderedFieldAlgebra`
+ -   instance over the rationals.
+ -
+ -   This module completes the algebraic structure of `Real` by extending the additive group `RealAbGroup` with
+ -   multiplication, scalar action by rationals, and multiplicative inverses. Multiplication is constructed by lifting
+ -   the locally uniform rational multiplication map through the cover-space completion (`real-lift2`), exploiting the
+ -   fact that `RealNormed` is the completion of `RatNormed`. Uniqueness lemmas (`unique1`, `unique2`, `unique3`)
+ -   provide the standard tool for proving identities on reals by checking them on rationals. The positive inverse is
+ -   constructed directly from the Dedekind-cut presentation via `real-pos-inv`.
+ -}
+
 \import Algebra.Field
 \import Algebra.Group
 \import Algebra.Meta
@@ -40,6 +51,10 @@
 \open DiscreteOrderedField
 \open LinearOrder \hiding (<=)
 
+{- | The `OrderedFieldAlgebra RatField Real` instance, equipping `Real` with multiplication, unit, scalar action
+ -   `*c = \lam a x => fromRat a * x`, coefficient embedding `coefMap = Real.fromRat`, natural-number coefficient map,
+ -   and proofs of field/order axioms (`positive_*`, `positive=>#0`, `#0=>eitherPosOrNeg`).
+ -}
 \instance RealField : OrderedFieldAlgebra RatField Real
   | LinearlyOrderedAbGroup => RealAbGroup
   | ide => 1
@@ -102,32 +117,47 @@
     \open Semigroup(* \as \infixl 7 *')
     \open CoverMap
 
+    {- | Two cover maps `f, g : RealNormed -> X` into a separated cover space are equal at any real `x` if they agree on
+     -   all rationals.
+     -}
     \lemma unique1 {X : SeparatedCoverSpace} (f g : CoverMap RealNormed X) (p : \Pi (x : Rat) -> f x = g x) {x : Real} : f x = g x
       => dense-lift-unique rat_real rat_real.dense f g p x
 
+    -- | Binary version: agreement on rational pairs implies agreement on real pairs.
     \lemma unique2 {X : SeparatedCoverSpace} (f g : CoverMap (RealNormed ⨯ RealNormed) X) (p : \Pi (x y : Rat) -> f (x,y) = g (x,y)) {x y : Real} : f (x,y) = g (x,y)
       => dense-lift-unique (prod rat_real rat_real) (ProductTopSpace.prod.isDense rat_real.dense rat_real.dense) f g (\lam s => p s.1 s.2) (x,y)
 
+    -- | Ternary version for maps from a triple product of `RealNormed`.
     \lemma unique3 {X : SeparatedCoverSpace} (f g : CoverMap (RealNormed ⨯ RealNormed ⨯ RealNormed) X) (p : \Pi (x y z : Rat) -> f ((x,y),z) = g ((x,y),z)) {x y z : Real} : f ((x,y),z) = g ((x,y),z)
       => dense-lift-unique (prod (prod rat_real rat_real) rat_real) (ProductTopSpace.prod.isDense (ProductTopSpace.prod.isDense rat_real.dense rat_real.dense) rat_real.dense) f g (\lam s => p s.1.1 s.1.2 s.2) ((x,y),z)
 
+    -- | Rational multiplication `(s.1, s.2) ↦ s.1 * s.2` is locally uniformly continuous on `RatNormed ⨯ RatNormed`.
     \lemma *-rat-locally-uniform : LocallyUniformMap (RatNormed ⨯ RatNormed) RatNormed (\lam s => s.1 *' s.2)
       => bilinear-locally-uniform (*') RatField.rdistr_- RatField.ldistr_- \lam {x} {y} =>
         transportInv (_ ExUpperReal.<=) (ExUpperReal.*-rat abs>=0 abs>=0) $ =_<= $ pmap ExUpperReal.fromRat RatField.abs_*
 
+    {- | The lifted cover map `RealNormed ⨯ RealNormed -> RealNormed`, obtained by composing `*-rat-locally-uniform`
+     -   with `rat_real` and applying `real-lift2`.
+     -}
     \private \func *-cover-def : CoverMap (RealNormed ⨯ RealNormed) RealNormed
       => real-lift2 (rat_real ∘ *-rat-locally-uniform)
 
+    -- | Multiplication on `Real`, defined as `*-cover-def (x, y)`.
     \sfunc \infixl 7 * (x y : Real) : Real
       => *-cover-def (x,y)
 
+    -- | Compatibility — multiplying rationals viewed as reals equals the rational product cast to `Real`.
     \lemma *-rat {x y : Rat} : x * y = {Real} x *' y
       => (\peval x * y) *> dense-lift-char (prod.isDenseEmbedding rat_real.dense-coverEmbedding rat_real.dense-coverEmbedding) {rat_real ∘ *-rat-locally-uniform} (x,y)
 
+    -- | Real-power of a rational coincides with the rational power, embedded into `Real`.
     \lemma pow-rat {x : Rat} {n : Nat} : RealField.pow x n = {Real} RatField.pow x n \elim n
       | 0 => idp
       | suc n => pmap (* x) pow-rat *> *-rat
 
+    {- | For non-negative `x, y`, the upper cut `(x * y).U d` holds iff there exist `a ∈ x.U`, `b ∈ y.U` with
+     -   `a * b <= d`.
+     -}
     \lemma *_>=0-char {x y : Real} (x>=0 : 0 <= x) (y>=0 : 0 <= y) {d : Rat} : (x * y).U d <-> ∃ (a : x.U) (b : y.U) (a *' b <= d)
       => (\lam xy<d => \case y.LU-located {0} {1} idp \with {
         | byLeft y>0 => *_>0-char2 x>=0 (real_<_L.2 y>0) xy<d
@@ -139,11 +169,13 @@
         }
       }, \lam (inP (a,x<a,b,y<b,ab<d)) => real_<_U.1 $ RealField.<=_*_positive-left (<=-less $ real_<_U.2 x<a) y>=0 <∘r transport (_ <) *-rat (RealField.<_*_positive-right (x>=0 <∘r real_<_U.2 x<a) (real_<_U.2 y<b)) <∘l rat_real_<=.1 ab<d)
       \where {
+        -- | If `y > 0` and `x * y < d`, there exists `a ∈ x.U` with `a * y < d`.
         \lemma *_>0-char {x y d : Real} (y>0 : 0 < y) (xy<d : x * y < d) : ∃ (a : x.U) (a * y < d)
           => \case real_<-rat-char.1 $ transport (< _) (*-assoc *> pmap (_ *) (RealField.pinv-right y>0) *> RealField.ide-right) $ RealField.<_*_positive-left xy<d (RealField.pinv>0 y>0) \with {
             | inP (a,x<a,p) => inP (a, x<a, transport (_ <) (*-assoc *> pmap (d *) (RealField.pinv-left y>0) *> RealField.ide-right) $ RealField.<_*_positive-left (real_<_L.2 p) y>0)
           }
 
+        -- | Refinement giving rational witnesses on both factors when `x >= 0` and `y > 0`.
         \lemma *_>0-char2 {x y : Real} (x>=0 : 0 <= x) (y>0 : 0 < y) {d : Rat} (xy<d : (x * y).U d) : ∃ (a : x.U) (b : y.U) (a *' b <= d)
           => \case *_>0-char y>0 (real_<_U.2 xy<d) \with {
             | inP (a,x<a,ay<d) => \case *_>0-char (x>=0 <∘r real_<_U.2 x<a) $ transport (< _) *-comm ay<d \with {
@@ -152,18 +184,24 @@
           }
       }
 
+    -- | For non-negative reals, `*` agrees with the multiplication on extended upper reals (`ExUpperReal.*`).
     \lemma *-upper {x y : Real} (x>=0 : 0 <= x) (y>=0 : 0 <= y) : x * y = x ExUpperReal.* y
       => exts \lam d => ext $ <->trans (*_>=0-char x>=0 y>=0) $ <->trans (later
          (\lam (inP (a,x<a,b,y<b,ab<=d)) => inP (a, x<a, rat_real_<.2 $ x>=0 <∘r real_<_U.2 x<a, b, y<b, rat_real_<.2 $ y>=0 <∘r real_<_U.2 y<b, ab<=d),
           \lam (inP (a,x<a,_,b,y<b,_,ab<=d)) => inP (a,x<a,b,y<b,ab<=d))) (<->sym ExUpperReal.*_U_<=)
 
+    -- | For non-negative `x`, real-powering coincides with `ExUpperRealSemigroup.pow`.
     \lemma pow-upper {x : Real} (x>=0 : 0 <= x) {n : Nat} : RealField.pow x n = ExUpperRealSemigroup.pow x n \elim n
       | 0 => idp
       | suc n => *-upper (RealField.pow>=0 x>=0) x>=0 *> pmap (ExUpperReal.* _) (pow-upper x>=0)
 
+    -- | Repackages `*` as a `CoverMap` from the product cover space `RealNormed ⨯ RealNormed` to `RealNormed`.
     \lemma *-cover : CoverMap (ProductCoverSpace RealNormed RealNormed) RealNormed (\lam s => s.1 * s.2)
       => transportInv (CoverMap _ _) (ext \lam s => \peval s.1 * s.2) *-cover-def
 
+    {- | For strictly positive `x, y`, characterizes membership of `x * y` in an open rational interval `(c, d)` via
+     -   rational witnesses for `x` and `y`.
+     -}
     \lemma *_positive-char {x y : Real} (x>0 : x.L 0) (y>0 : y.L 0) {c d : Rat} : open-rat-int c d (x * y) <-> ∃ (a b a' b' : Rat) (0 < a) (0 < a') (open-rat-int a b x) (open-rat-int a' b' y) (c < a *' a') (b *' b' < d)
       => rewrite (\peval x * y) $ <->trans (real-lift2-char c d) $ unfold
           (\lam (inP (a',b',c1,d1,c2,d2,c<a',b'<d,c1<x,x<d1,c2<y,y<d2,h)) => \case L-rounded (real_join_L c1<x x>0), U-rounded x<d1, L-rounded (real_join_L c2<y y>0), U-rounded y<d2 \with {
@@ -176,6 +214,7 @@
                 (c'<aa' <∘ RatField.<_* a>0 a'>0 a<x' a'<y', RatField.<_* (a>0 <∘ a<x') (a'>0 <∘ a'<y') x'<b y'<b' <∘ bb'<d'))
           })
 
+    -- | Characterizes the lower cut of `x * y` for positive `x, y`.
     \lemma *_positive-L {x y : Real} (x>0 : x.L 0) (y>0 : y.L 0) {c : Rat} : LowerReal.L {x * y} c <-> ∃ (a a' : Rat) (0 < a) (0 < a') (x.L a) (y.L a') (c < a *' a')
       => (\lam c<xy => \case U-inh {x * y} \with {
             | inP (d,xy<d) => \case (*_positive-char x>0 y>0).1 (c<xy,xy<d) \with {
@@ -185,6 +224,7 @@
             | inP (b,x<b), inP (b',y<b') => ((*_positive-char x>0 y>0 {c} {b *' b' + 1}).2 $ inP (a, b, a', b', a>0, a'>0, (a<x,x<b), (a'<y,y<b'), c<aa', linarith)).1
           })
 
+    -- | Characterizes the upper cut of `x * y` for positive `x, y`.
     \lemma *_positive-U {x y : Real} (x>0 : x.L 0) (y>0 : y.L 0) {d : Rat} : UpperReal.U {x * y} d <-> ∃ (b b' : Rat) (x.U b) (y.U b') (b *' b' < d)
       => (\lam xy<d => \case L-inh {x * y} \with {
             | inP (c,c<xy) => \case (*_positive-char x>0 y>0).1 (c<xy,xy<d) \with {
@@ -194,6 +234,9 @@
             | inP (a,a<x,a>0), inP (a',a'<y,a'>0) => ((*_positive-char x>0 y>0 {a *' a' - 1} {d}).2 $ inP (a, b, a', b', a>0, a'>0, (a<x,x<b), (a'<y,y<b'), linarith, bb'<d)).2
           })
 
+    {- | Constructs the inverse of a strictly positive real `x` directly as a Dedekind cut: lower cut consists of
+     -   `a <= 0` or `x.U (finv a)`; upper cut consists of `0 < a` with `x.L (finv a)`.
+     -}
     \func real-pos-inv {x : Real} (x>0 : x.L 0) : Real \cowith
       | L a => a <= 0 || x.U (finv a)
       | L-inh => inP (0, byLeft <=-refl)
@@ -231,17 +274,22 @@
         | inr a<=0 => byLeft (byLeft a<=0)
       }
 
+    -- | The inverse of a positive real is again positive (`L 0` holds).
     \lemma real-pos-inv>0 {x : Real} (x>0 : x.L 0) : LowerReal.L {real-pos-inv x>0} 0
       => byLeft <=-refl
 
+    -- | For a positive rational `x`, the field inverse `RealField.pinv x` agrees with `Real.fromRat (finv x)`.
     \lemma pos-inv_rat {x : Rat} (x>0 : 0 < Real.fromRat x) : RealField.pinv x x>0 = Real.fromRat (finv x)
       => Monoid.Inv.inv-isUnique (RealField.pos#0 x>0) (Monoid.Inv.lmake _ $ *-rat *> pmap Real.fromRat (RatField.finv-left \lam x=0 => <-irreflexive $ rewrite x=0 in x>0)) idp
 
+    -- | `finv x * x = 1` for nonzero rational `x`, computed as a real product.
     \lemma finv-left {x : Rat} (x/=0 : x /= 0) : finv x * x = 1
       => *-rat *> pmap Real.fromRat (RatField.finv-left x/=0)
 
+    -- | `x * finv x = 1` for nonzero rational `x`.
     \lemma finv-right {x : Rat} (x/=0 : x /= 0) : x * finv x = 1
       => *-rat *> pmap Real.fromRat (RatField.finv-right x/=0)
 
+    -- | `half x = x * ratio 1 2`, halves a real number.
     \func half (x : Real) => x * ratio 1 2
   }

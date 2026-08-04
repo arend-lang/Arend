@@ -1,3 +1,14 @@
+{- | Arithmetic, order, and divisibility infrastructure for the natural numbers.
+ -
+ -   This module equips `Nat` with the algebraic and order-theoretic structure needed throughout the library: it defines
+ -   truncated subtraction `-'` and predecessor `pred`, packages the strict order via the inductive `NatOrder.<`, and
+ -   assembles the canonical instances `NatSemiring : LinearlyOrderedCSemiring.Dec` and
+ -   `NatBSemilattice : BottomJoinSemilattice`. A second focus is the interplay between `Nat` and `Fin n`, providing
+ -   conversions `toFin`, `toFin'`, `mod_Fin` along with their characterization lemmas. The remainder of the file
+ -   develops the basic theory of `div`/`mod`, divisibility (`LDiv`), and modular arithmetic congruences used elsewhere
+ -   in the library.
+ -}
+
 \import Algebra.Monoid(Monoid)
 \import Algebra.Ordered
 \import Algebra.StrictlyOrdered
@@ -19,27 +30,33 @@
 
 -- # Various operations
 
+-- | Truncated subtraction on `Nat`: `0 -' m = 0`, `suc n -' suc m = n -' m`.
 \func \infixl 6 -' (n m : Nat) : Nat
   | 0, _ => 0
   | suc n, 0 => suc n
   | suc n, suc m => n -' m
 
+-- | Predecessor: `pred 0 = 0`, `pred (suc x) = x`.
 \func pred (x : Nat) : Nat
   | zero => 0
   | suc x' => x'
 
+-- | `suc (pred n) = n` when `n /= 0`.
 \lemma suc_pred {n : Nat} (n/=0 : n /= 0) : suc (pred n) = n \elim n
   | 0 => absurd (n/=0 idp)
   | suc n => idp
 
+-- | `n -' 0 = n`.
 \lemma -'0 {n : Nat} : n -' 0 = n \elim n
   | 0 => idp
   | suc n => idp
 
+-- | `(n + m) -' m = n`.
 \lemma -'+ {n m : Nat} : n + m -' m = n \elim m
   | 0 => -'0
   | suc n => -'+
 
+-- | `n -' n = 0`.
 \lemma -'id {n : Nat} : n -' n = 0 => -'+ {0}
 
 \lemma -'-'l {a b c : Nat} : a -' b -' c = a -' (b + c) \elim a, b
@@ -47,79 +64,97 @@
   | suc a, 0 => idp
   | suc a, suc b => -'-'l
 
+-- | `suc n = 0` is impossible.
 \func suc/=0 {n : Nat} (p : suc n = 0) : Empty
 
 -- # The order relations
 
 \module NatOrder \where {
+  -- | Inductive strict order: `0 < suc _` and `suc n < suc m` from `n < m`.
   \data \infix 4 < (n m : Nat) \with
     | 0, suc _ => zero<suc
     | suc n, suc m => suc<suc (n < m)
 
+  -- | Inverts `suc<suc`: `suc n < suc m -> n < m`.
   \lemma unsuc< {n m : Nat} (p : suc n < suc m) : n < m \elim p
     | suc<suc p => p
 }
 
 \open NatOrder
 
+-- | `0 < n -' m` implies `m < n`.
 \lemma -'_< {n m : Nat} (p : 0 < n -' m) : m < n \elim n, m, p
   | suc n, 0, _ => zero<suc
   | suc n, suc m, p => suc<suc (-'_< p)
 
+-- | `m < n` implies `0 < n -' m`.
 \lemma <_-' {n m : Nat} (p : m < n) : 0 < n -' m \elim n, m, p
   | suc n, 0, _ => zero<suc
   | suc n, suc m, suc<suc p => <_-' p
 
+-- | `n < suc n`.
 \lemma id<suc {n : Nat} : n < suc n \elim n
   | 0 => zero<suc
   | suc n => suc<suc id<suc
 
+-- | `n /= suc n`.
 \lemma id/=suc {n : Nat} : n /= suc n \elim n
   | 0 => \case __
   | suc n => \lam p => id/=suc {n} (pmap pred p)
 
+-- | `n /= 0` implies `0 < n`.
 \lemma nonZero>0 {n : Nat} (n/=0 : n /= 0) : 0 < n \elim n
   | 0 => absurd (n/=0 idp)
   | suc n => zero<suc
 
 -- # Fin properties
 
+-- | A `Fin n` is bounded by `n`.
 \lemma fin_< {n : Nat} (x : Fin n) : x < n \elim n, x
   | suc n, zero => zero<suc
   | suc n, suc x => suc<suc (fin_< x)
 
+-- | Lifts `k : Nat` with `k < n` to `Fin n` by structural recursion.
 \func toFin (k : Nat) {n : Nat} (\property p : k < n) : Fin n \elim k, n
   | 0, suc n => 0
   | suc k, suc n => suc (toFin _ (unsuc< p))
 
+-- | `toFin k p = k` as naturals.
 \lemma toFin=id {k n : Nat} {p : k < n} : toFin k p = {Nat} k \elim k, n, p
   | 0, suc n, zero<suc => idp
   | suc k, suc n, suc<suc p => pmap suc toFin=id
 
+-- | `toFin` is a left inverse on `Fin n`.
 \lemma toFin=fin {n : Nat} {k : Fin n} : toFin k (fin_< k) = k
   => fin_nat-inj toFin=id
 
+-- | Alternative lift via `mod`: `k mod suc n : Fin (suc n)`.
 \func toFin' {k n : Nat} (p : k < n) : Fin n \elim n
   | suc n => k mod suc n
 
+-- | Convert `k : Nat` to `Fin n` using modular reduction, given `0 < n`.
 \func mod_Fin (k : Nat) {n : Nat} (p : 0 < n) : Fin n \elim n
   | suc n => k mod suc n
 
+-- | `mod_Fin k p = k mod n` as naturals.
 \lemma mod_Fin=mod {k n : Nat} {p : 0 < n} : mod_Fin k p = {Nat} k mod n \elim n
   | suc n => idp
 
 \func finMod {n : Nat} (k : Nat) : Fin (suc n)
   => k mod suc n
 
+-- | Equality on `Nat` lifts to equality on `Fin n`.
 \lemma fin_nat-inj {n : Nat} {x y : Fin n} (p : x = {Nat} y) : x = y \elim n, x, y, p
   | suc n, zero, zero, _ => idp
   | suc n, suc x, suc y, p => pmap (\lam z => suc z) (fin_nat-inj (pmap pred p))
 
+-- | Disequality on `Fin n` lifts to disequality on `Nat`.
 \lemma fin_nat-ineq {n : Nat} {x y : Fin n} (p : Not (x = y)) : Not (x = {Nat} y)
   => \lam q => p (fin_nat-inj q)
 
 -- # Properties of +, *, and <
 
+-- | Decidable linearly ordered commutative semiring instance on `Nat` with the usual `+`, `*`, `<`, `0`, `1`.
 \instance NatSemiring : LinearlyOrderedCSemiring.Dec Nat
   | zro => 0
   | + => +
@@ -192,30 +227,37 @@
   \where {
     \open LinearOrder
 
+    -- | Read off equality / strict comparison from the sign of `n - m` (in `Int`).
     \lemma triEquals {n m : Nat} (p : n - m = 0) : n = m \elim n, m
       | 0, 0 => idp
       | suc n, suc m => pmap suc (triEquals p)
 
+    -- | Read off equality / strict comparison from the sign of `n - m` (in `Int`).
     \lemma triGreater {n m d : Nat} (p : n - m = suc d) : m < n \elim n, m, p
       | suc n, 0, p => zero<suc
       | suc n, suc m, p => suc<suc (triGreater p)
 
+    -- | Read off equality / strict comparison from the sign of `n - m` (in `Int`).
     \lemma triLess {n m d : Nat} (p : n - m = neg (suc d)) : n < m \elim n, m, p
       | 0, suc m, p => zero<suc
       | suc n, suc m, p => suc<suc (triLess p)
 
+    -- | Additive cancellation.
     \lemma cancel-right {n m : Nat} (k : Nat) (p : n + k = m + k) : n = m \elim k
       | 0 => p
       | suc k => cancel-right k (pmap pred p)
 
+    -- | Additive cancellation.
     \lemma cancel-left (n : Nat) {m k : Nat} (p : n + m = n + k) : m = k
       => cancel-right n (+-comm *> p *> +-comm)
 
+    -- | Multiplicative cancellation by a nonzero factor.
     \lemma cancel_*-left {k : Nat} (k/=0 : k /= 0) {n m : Nat} (p : k * n = k * m) : n = m \elim k, n, m
       | 0, _, _ => absurd (k/=0 idp)
       | _, 0, 0 => idp
       | k, suc n, suc m => pmap suc (cancel_*-left k/=0 (cancel-right k p))
 
+    -- | Multiplicative cancellation by a nonzero factor.
     \lemma cancel_*-right {n m k : Nat} (k/=0 : k /= 0) (p : n * k = m * k) : n = m
       => cancel_*-left k/=0 (*-comm *> p *> *-comm)
   }
@@ -224,29 +266,36 @@
 
 \open LinearOrder \hiding (Dec)
 
+-- | Bottom join-semilattice on `Nat` with `bottom = 0`, joining the semiring's lattice structure.
 \instance NatBSemilattice : BottomJoinSemilattice
   | JoinSemilattice => NatSemiring
   | bottom => 0
   | bottom-univ {_} => \case __
   \where {
+    -- | Additive cancellation under `<=`.
     \lemma <=_cancel-left (n : Nat) {m k : Nat} (p : n + m <= n + k) : m <= k \elim n
       | 0 => p
       | suc n => <=_cancel-left n (suc<=suc.conv p)
 
+    -- | Additive cancellation under `<=`.
     \lemma <=_cancel-right (n : Nat) {m k : Nat} (p : m + n <= k + n) : m <= k \elim n
       | 0 => p
       | suc n => <=_cancel-right n (suc<=suc.conv p)
 
+    -- | `x ∧ 0 = 0` and `0 ∧ x = 0`.
     \lemma ldistr0 {x : Nat} : x ∧ 0 = 0
       => cases x idp
 
+    -- | `x ∧ 0 = 0` and `0 ∧ x = 0`.
     \lemma rdistr0 {x : Nat} : 0 ∧ x = 0
       => cases x idp
   }
 
+-- | `0 <= x`.
 \lemma zero<=_ {x : Nat} : 0 <= x
   => NatBSemilattice.bottom-univ
 
+-- | Monotonicity of `suc` w.r.t. `<=`, with converse `suc<=suc.conv`.
 \lemma suc<=suc {x y : Nat} (p : x <= y) : suc x <= suc y
   => \case <=-dec p \with {
        | inl x<y => <=-less (suc<suc x<y)
@@ -265,6 +314,7 @@
 \lemma -'-'r_id {n k : Nat} (k<=n : k <= n) : n -' (n -' k) = k
   => -'-'r k<=n <=-refl *> pmap (+ k) -'id
 
+-- | `n <= m` witnesses `n + (m -' n) = m`.
 \lemma <=_exists {n m : Nat} (p : n <= m) : n + (m -' n) = m \elim n, m
   | 0, 0 => idp
   | 0, suc m => idp
@@ -274,6 +324,7 @@
   }
   | suc n, 0 => absurd (p zero<suc)
 
+-- | `n -' m <= n`.
 \lemma -'<=id {n m : Nat} : n -' m <= n \elim n, m
   | 0, _ => zero<=_
   | suc n, 0 => <=-refl
@@ -296,12 +347,14 @@
   | suc n, 0 => <=-refl
   | suc n, suc m => suc<=suc -'_<=+
 
+-- | Distributes `-'` over `+` when subtrahend is bounded.
 \lemma -'+-comm {n m k : Nat} (p : m <= n) : n + k -' m = n -' m + k \elim n, m, k
   | _, _, 0 => idp
   | _, 0, _ => rewrite (-'0, -'0) idp
   | 0, _, _ => rewrite (<=-antisymmetric p zero<=_, -'0) idp
   | suc n, suc m, k => -'+-comm (\lam q => p (suc<suc q))
 
+-- | Monotonicity of `-'` in each argument (right is anti-monotone).
 \lemma -'-monotone-left {n m k : Nat} (p : n <= m) : n -' k <= m -' k \elim n, m, k
   | 0, _, _ => zero<=_
   | suc n, 0, 0 => p
@@ -309,6 +362,7 @@
   | suc n, suc m, 0 => p
   | suc n, suc m, suc k => -'-monotone-left (suc<=suc.conv p)
 
+-- | Monotonicity of `-'` in each argument (right is anti-monotone).
 \lemma -'-monotone-right {n m k : Nat} (p : m <= n) : k -' n <= k -' m \elim n, m, k
   | 0, _, _ => rewrite (<=_exists p) <=-refl
   | suc n, m, 0 => zero<=_
@@ -324,6 +378,7 @@
   | suc n, suc m, 0 => p
   | suc n, suc m, suc k => -'_<-monotone-left (unsuc< p) (unsuc< q)
 
+-- | `n -' m = 0` implies `n <= m`.
 \lemma -'_<= {n m : Nat} (p : n -' m = 0) : n <= m \elim n, m
   | 0, m => zero<=_
   | suc n, 0 => \case p
@@ -341,13 +396,16 @@
 
 \open LinearlyOrderedSemiring \hiding (Dec)
 
+-- | Multiplication is monotone in both arguments.
 \lemma <=_* {n m k l : Nat} (n<=m : n <= m) (k<=l : k <= l) : n * k <= m * l
   => <=-transitive (<=_*_positive-right zero<=_ k<=l) (<=_*_positive-left n<=m zero<=_)
 
+-- | A strictly increasing `f : Nat -> Nat` satisfies `n <= f n`.
 \lemma monotone-diagonal (f : Nat -> Nat) (mon : \Pi (n : Nat) -> suc (f n) <= f (suc n)) {n : Nat} : n <= f n \elim n
   | 0 => zero<=_
   | suc n => <=-transitive (suc<=suc (monotone-diagonal f mon)) (mon n)
 
+-- | Iterated step inequalities promote to general `<=`-comparisons; `sequence-monotone.induction` is the additive form.
 \lemma sequence-monotone {X : Preorder} {f : Nat -> X} (fm : \Pi {n : Nat} -> f n X.<= f (suc n)) {n k : Nat} (p : n <= k) : f n X.<= f k
   => transport (_ X.<= f __) (<=_exists p) induction
   \where
@@ -355,30 +413,38 @@
       | 0 => <=-refl
       | suc m => induction <=∘ fm
 
+-- | Iterated step inequalities promote to general `<=`-comparisons; `sequence-monotone.induction` is the additive form.
 \lemma sequence-anti-monotone {X : Preorder} {f : Nat -> X} (fm : \Pi {n : Nat} -> f (suc n) X.<= f n) {n k : Nat} (p : n <= k) : f k X.<= f n
   => sequence-monotone {X.op} fm p
 
+-- | Conversions between `<` and `<=` shifted by `suc`.
 \lemma suc_<_<= {n m : Nat} (p : n < m) : suc n <= m \elim n, m, p
   | 0, suc m, p => suc<=suc zero<=_
   | suc n, suc m, p => suc<=suc $ suc_<_<= {n} {m} (\case p \with { | suc<suc x => x })
 
+-- | Conversions between `<` and `<=` shifted by `suc`.
 \lemma <_suc_<= {n m : Nat} (p : n < suc m) : n <= m
   => \lam q => suc_<_<= p (suc<suc q)
 
+-- | Conversions between `<` and `<=` shifted by `suc`.
 \lemma suc_<=_< {n m : Nat} (p : suc n <= m) : n < m
   => id<suc <∘l p
 
+-- | Conversions between `<` and `<=` shifted by `suc`.
 \lemma <=_<_suc {n m : Nat} (p : n <= m) : n < suc m
   => suc_<=_< (suc<=suc p)
 
+-- | `n <= suc n`.
 \lemma id<=suc {n : Nat} : n <= suc n => <=_+ <=-refl (zero<=_ {1})
 
+-- | `n * q + r < n` forces `q = 0`.
 \lemma n*_+_<n {n q r : Nat} (p : n * q + r < n) : q = 0 \elim q
   | 0 => idp
   | suc q => absurd (notLess (<=-transitive (<=_+ zero<=_ <=-refl) (<=_+ <=-refl zero<=_)) p)
 
 \open NatSemiring \hiding (<_*_positive-left, <_+-left)
 
+-- | Uniqueness of remainder and quotient in the Euclidean decomposition.
 \lemma mod-unique {n q r q' r' : Nat} (r<n : r < n) (r'<n : r' < n) (p : n * q + r = n * q' + r') : r = r' \elim q, q'
   | 0, 0 => p
   | 0, suc q' => \case n*_+_<n {n} {suc q'} (transport (< n) p r<n)
@@ -387,46 +453,58 @@
     \have t => +-assoc *> pmap (_ +) +-comm *> inv +-assoc *> p *> +-assoc *> pmap (_ +) +-comm *> inv +-assoc
     \in mod-unique r<n r'<n (cancel-right n t)
 
+-- | Uniqueness of remainder and quotient in the Euclidean decomposition.
 \lemma div-unique {n q r q' r' : Nat} (r<n : r < n) (r'<n : r' < n) (n/=0 : n /= 0) (p : n * q + r = n * q' + r') : q = q'
   => cancel_*-left n/=0 $ cancel-right r' $ rewrite (mod-unique r<n r'<n p) in p
 
+-- | `n mod m <= n`.
 \lemma mod<=left {n m : Nat} : n mod m <= n
   => transport (_ <=) (divModProp n m) (<=_+ zero<=_ <=-refl)
 
+-- | `n mod m < m` when `m /= 0`.
 \lemma mod<right {n m : Nat} (m/=0 : m /= 0) : n mod m < m \elim m
   | 0 => absurd (m/=0 idp)
   | suc m => fin_< (n mod suc m)
 
+-- | When `n < m`, division yields `0` and `mod` yields `n`.
 \lemma div_< {n m : Nat} (n<m : n < m) : n div m = 0
   => n*_+_<n (transportInv (< m) (divModProp n m) n<m)
 
+-- | When `n < m`, division yields `0` and `mod` yields `n`.
 \lemma mod_< {n m : Nat} (n<m : n < m) : n mod m = n
   => inv (pmap (m * __ + _) (div_< n<m)) *> divModProp n m
 
+-- | `toFin' p = k` as naturals when `k < n`.
 \lemma toFin'=id {k n : Nat} (p : k < n) : toFin' p = {Nat} k \elim n
   | suc n => mod_< p
 
+-- | `mod_Fin k p = k` as naturals when `k < n`.
 \lemma mod_Fin_< {n k : Nat} {p : 0 < n} (q : k < n) : mod_Fin k p = {Nat} k \elim n
   | suc n => mod_< q
 
+-- | `mod_Fin k p = k` for `k : Fin n`.
 \lemma mod_Fin=id {n : Nat} {k : Fin n} {p : 0 < n} : mod_Fin k p = k
   => fin_nat-inj $ mod_Fin_< (fin_< k)
 
+-- | `x mod suc n = x` for `x : Fin (suc n)`.
 \lemma fin_mod_id {n : Nat} (x : Fin (suc n)) : x mod suc n = x
   => fin_nat-inj (mod_< (fin_< x))
 
+-- | `n * m = 1` forces `m = 1` (units in `Nat` are trivial).
 \lemma natUnit {n m : Nat} (p : n * m = 1) : m = 1 \elim n, m, p
   | _, 1, _ => idp
   | 0, suc (suc n), p => \case inv NatSemiring.zro_*-left *> p
 
 \open Monoid(LDiv)
 
+-- | Mutually divisible naturals are equal.
 \lemma natAssociates-areEqual {n m : Nat} (n|m : LDiv n m) (m|n : LDiv m n) : n = m \elim n
   | 0 => inv NatSemiring.zro_*-left *> n|m.inv-right
   | suc _ \as n =>
     \have t : m|n.inv = 1 => natUnit (cancel_*-left {n} (\case __) (inv *-assoc *> pmap (* _) n|m.inv-right *> m|n.inv-right))
     \in inv m|n.inv-right *> pmap (m *) t
 
+-- | `n | m` with `m /= 0` implies `n <= m`.
 \lemma ldiv_<= {n m : Nat} (m/=0 : m /= 0) (n|m : LDiv n m) : n <= m
   => \case n|m.inv \as k, n|m.inv-right : n * k = m \with {
     | 0, p => absurd (m/=0 (inv p))
@@ -436,35 +514,43 @@
 \lemma ldiv*div=id {n m : Nat} (m|n : LDiv m n) : m * (n div m) = n
   => pmap (m * (n div m) +) (inv (div_mod m|n)) *> divModProp n m
 
+-- | `n mod m = 0` produces an `LDiv m n`.
 \func mod_div {n m : Nat} (p : n mod m = 0) : LDiv m n
   => rewriteI (divModProp n m) (rewrite p (\new LDiv {
     | inv => n div m
     | inv-right => idp
   }))
 
+-- | `m | n` implies `n mod m = 0`.
 \lemma div_mod {n m : Nat} (m|n : LDiv m n) : n mod m = 0 \elim n, m
   | 0, _ => idp
   | n, 0 => inv m|n.inv-right *> *-comm
   | suc x \as n, suc y \as m => mod-unique {m} {n div m} {_} {m|n.inv} (fin_< (n mod m)) zero<suc (divModProp n m *> inv m|n.inv-right)
 
+-- | `n mod n = 0`.
 \lemma id_mod {n : Nat} : n mod n = 0
   => div_mod \new LDiv {
     | inv => 1
     | inv-right => NatSemiring.ide-right
   }
 
+-- | `(n div m) * m <= n`.
 \lemma div_*<=id {n m : Nat} : n div m * m <= n
   => transport2 (<=) *-comm (Nat.divModProp n m) (<=_+ <=-refl zero<=_)
 
+-- | Reflects the boolean test `nat_<=_Bool n m := (n -' m == 0)` into `n <= m`.
 \lemma nat_<=-dec {n m : Nat} {so : So (nat_<=_Bool n m)} : n <= m
   => -'_<= (==_= so)
   \where
+    -- | The underlying boolean comparison.
     \func nat_<=_Bool (n m : Nat) : Bool
       => n -' m == 0
 
+-- | Boolean form of strict comparison `n < m`.
 \lemma nat_<-dec {n m : Nat} {so : So (nat_<=-dec.nat_<=_Bool (suc n) m)} : n < m
   => id<suc <∘l nat_<=-dec {suc n} {m} {so}
 
+-- | `n < 2^n`.
 \lemma id<pow2 {n : Nat} : n < Monoid.pow 2 n \elim n
   | 0 => zero<suc
   | suc n => <=_+-left (suc_<_<= $ zero<=_ <∘r id<pow2) id<pow2
@@ -480,10 +566,12 @@
 
 -- Properties of mod
 
+-- | `(n * q + r) mod n = r` when `r < n`.
 \lemma n*_+_mod_n {n q r : Nat} (r<n : r < n) : (n * q + r) mod n = {Nat} r \elim n
   | 0 => pmap (+ r) NatSemiring.zro_*-left
   | suc n => mod-unique (fin_< _) r<n (divModProp (suc n * q + r) (suc n))
 
+-- | `(suc n * q + r) mod suc n = r mod suc n`; `.nat` is the variant for general `n`.
 \lemma n*_+_mod_n=mod {n q r : Nat} : (suc n * q + r) mod suc n = r mod suc n
   => run {
     rewriteI {1} (divModProp r (suc n)),
@@ -495,6 +583,7 @@
       | 0 => pmap (+ r) NatSemiring.zro_*-left
       | suc n => n*_+_mod_n=mod
 
+-- | Reducing one summand modulo `suc n` does not change the sum's residue.
 \lemma mod_+-left {n a b : Nat} : (a mod suc n + b) mod suc n = (a + b) mod suc n
   => run {
     rewriteI {2} (divModProp a (suc n)),
@@ -502,9 +591,11 @@
     inv n*_+_mod_n=mod
   }
 
+-- | Reducing one summand modulo `suc n` does not change the sum's residue.
 \lemma mod_+-right {n a b : Nat} : (a + b mod suc n) mod suc n = (a + b) mod suc n
   => fin_nat-inj (pmap (mod _) +-comm *> mod_+-left *> pmap (mod _) +-comm)
 
+-- | Same for multiplication.
 \lemma mod_*-left {n a b : Nat} : (a mod suc n * b) mod suc n = (a * b) mod suc n
   => run {
     rewriteI {2} (divModProp a (suc n)),
@@ -512,27 +603,36 @@
     inv n*_+_mod_n=mod
   }
 
+-- | Same for multiplication.
 \lemma mod_*-right {n a b : Nat} : (a * b mod suc n) mod suc n = (a * b) mod suc n
   => fin_nat-inj (pmap (mod _) *-comm *> mod_*-left *> pmap (mod _) *-comm)
 
+-- | Congruence of `mod` under addition: equal residues remain equal after adding a common term.
 \lemma mod_+-cong-left {n c a b : Nat} (p : a mod suc n = b mod suc n) : (c + a) mod suc n = (c + b) mod suc n
   => inv mod_+-right *> pmap ((c + __) mod suc n) p *> mod_+-right
 
+-- | Congruence of `mod` under addition: equal residues remain equal after adding a common term.
 \lemma mod_+-cong-right {n c a b : Nat} (p : a mod suc n = b mod suc n) : (a + c) mod suc n = (b + c) mod suc n
   => inv mod_+-left *> pmap ((__ + c) mod suc n) p *> mod_+-left
 
 -- Properties of div
 
+-- | `(n + m) div m = suc (n div m)` for `m /= 0`; adding the divisor increments the quotient.
 \lemma div_suc-lem {n m : Nat} (m/=0 : m /= 0) : (n + m) div m = suc (n div m)
   => div-unique (mod<right m/=0) (mod<right m/=0) m/=0 $ divModProp (n + m) m *> pmap (+ m) (inv (divModProp n m) *> pmap (_ +) (inv (pmap (mod m) +-comm *> n*_+_mod_n=mod.nat {m} {1})) *> +-comm) *> +-assoc *> +-comm
 
+-- | `(m * q + r) div m = q + r div m`; quotient on a `mq + r` decomposition.
 \lemma n*_+_div_n=div {m q r : Nat} (m/=0 : m /= 0) : (m * q + r) div m = q + r div m \elim q
   | 0 => idp
   | suc q => pmap (div m) (+-assoc *> pmap (_ +) +-comm *> inv +-assoc) *> div_suc-lem m/=0 *> pmap suc (n*_+_div_n=div m/=0)
 
+-- | `(q * m) div m = q` for nonzero `m`; division cancels a clean multiple.
 \lemma *_div=id {m q : Nat} (m/=0 : m /= 0) : (q * m) div m = q
   => pmap (div m) *-comm *> n*_+_div_n=div {m} {q} {0} m/=0
 
+{- | Monotonicity of division: `n <= k` implies `n div m <= k div m` (proved via the helper `aux` by induction on a
+ -   bounding constant).
+ -}
 \lemma div-monotone {n k m : Nat} (p : n <= k) : n div m <= k div m
   => aux n <=-refl p
   \where

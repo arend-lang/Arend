@@ -1,3 +1,14 @@
+{- | Localization of commutative rings at a multiplicative subset, including the universal property and the field of
+ -   fractions construction.
+ -
+ -   This module formalizes ring localization both abstractly (via a universal property) and concretely (as a quotient
+ -   of pairs `(numerator, denominator)`). The `Localization` class characterizes any ring `R'` together with a map
+ -   `R → R'` that inverts a designated subset `S` and is universal among such maps. The concrete construction `LocRing`
+ -   builds the localization explicitly as `R × S` modulo the standard equivalence `r/s ~ r'/s'` iff `r·s' = r'·s` (up
+ -   to multiplication by an element of `S`, to handle non-cancellative rings). Specializing to an integral domain with
+ -   decidable equality and `S = R \ {0}` yields the field of fractions.
+ -}
+
 \import Algebra.Domain
 \import Algebra.Field
 \import Algebra.Group
@@ -32,6 +43,9 @@
   \override L : CRing
   \override inL : RingHom B L
 
+  {- | Underlying function and ring homomorphism extending `f : R → R'` (which inverts `S`) to `LocRing S → R'`, defined
+   -   by `f(r) · (f s)⁻¹`.
+   -}
   \func liftHom {T : CRing} (f : RingHom B T) (l : \Pi {x : B} -> S x -> Inv (f x)) : RingHom L T \cowith
     | MonoidHom => liftMonoidHom f l
     | func-+ {x} {y} => \case localization-surj x, localization-surj y \with {
@@ -85,6 +99,9 @@
     => (fromLocalization L).liftHom f \box (\lam {_} (inP (n,idp)) => transportInv Inv f.func-pow $ Inv.Inv_pow ai)
 }
 
+{- | Concrete `CRing` instance built as the quotient of pairs `(r, s, p : S s)` by the relation `r/s ~ r'/s'`. Defines
+ -   all ring operations on equivalence classes.
+ -}
 \instance LocRing {R : CRing} (S : SubMonoid R) : CRing \cowith
   | CMonoid => LocMonoid S
   | zro => in~ (zro, ide, contains_ide)
@@ -110,6 +127,7 @@
       | Localization => LocMonoid.isLocalization
   }
 
+-- | Over an integral domain with `0 ∉ S`, the equivalence reduces to plain cross-multiplication: `a₁·b₂ = b₁·a₂`.
 \lemma loc_unequals_domain {D : IntegralDomain} (S : SubMonoid D) (nz : \Pi (x : D) -> S x -> x /= 0) {a b : \Sigma (x y : D) (S y)} (p : inl~ a = inl~ b) : a.1 * b.2 = b.1 * a.2
   => \case ~-unlequiv p \with {
     | inP (c,c1,p) => Domain.nonZero-cancel-right (nz c c1) p
@@ -128,6 +146,9 @@
     | inP (c,Sc,p) => inP (c, Sc, simplify in p)
   }, \lam (inP (c,Sc,p)) => ~-lequiv c Sc (simplify p))
 
+{- | For a decidable integral domain `D`, the localization at `D \ {0}` is a `DiscreteField`. Provides the standard
+ -   field-of-fractions construction with decidable equality and explicit inverses for nonzero elements.
+ -}
 \instance FieldOfQuotients (D : IntegralDomain.Dec) : DiscreteField \cowith
   | CRing => LocRing D.subMonoid
   | zro/=ide p => \case LocMonoid.isLocalization.localization-inj p \with {

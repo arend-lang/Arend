@@ -1,3 +1,13 @@
+{- | Sites and sieves: the Grothendieck-style covering data underlying sheaf theory.
+ -
+ -   This module formalizes the covering structure on a category that is needed to define sheaves. A `Presieve` on an
+ -   object `x` is a family of morphisms into `x`; a `Sieve` is a presieve closed under precomposition. A `Site` equips
+ -   a category with a notion of covering sieve stable under pullback, while a `SiteWithBasis` presents covers via a
+ -   basis of pullback-stable families (mirroring the classical "basis for a Grothendieck topology"). Each presieve
+ -   carries an associated diagram and cone, so covering data interacts directly with the limit machinery used to define
+ -   sheaves as functors that turn covering cones into limits.
+ -}
+
 \import Category
 \import Category.Functor
 \import Category.Slice
@@ -10,6 +20,9 @@
 \import Paths.Meta
 \import Set.Set (Set, ⊆)
 
+{- | A family `S : \Pi {y : C} -> Hom y x -> \Prop` of morphisms into a fixed object `x`; coerces to its underlying
+ -   predicate.
+ -}
 \func Presieve {C : Precat} (x : C)
   => Set (ObOver x)
   \where {
@@ -23,6 +36,9 @@
       => \lam py => ∃ (px : P) (py = (F px.1, Func px.2)) -- (f : Hom py.1 (F px.1)) (py.2 = Func px.2 ∘ f)
   }
 
+{- | A `Precat` together with a predicate `isCover : \Pi (x : Ob) -> Sieve x -> \Prop` satisfying `cover-stable`: covers
+ -   pull back to covers along arbitrary morphisms.
+ -}
 \class Site \extends Precat {
   | isCover (x : Ob) : Presieve x -> \Prop
   | cover-stable {x y : Ob} (h : Hom x y) : ∀ {S : isCover y} ∃ (T : isCover x) ∀ {px : T} ∃ (py : S) (f : Hom px.1 py.1) (py.2 ∘ f = h ∘ px.2)

@@ -1,3 +1,12 @@
+{- | The category of linear representations of a group `G` over a ring `R`, with intertwining maps as morphisms.
+ -
+ -   This module assembles the categorical structure on `LinRepres R G`: morphisms are `R`-linear maps that commute with
+ -   the `G`-action (intertwiners), and the category inherits identity and composition from `LinearMap`. Kernels and
+ -   images of intertwining maps carry induced representation structures, lifting the corresponding `LModule`-level
+ -   constructions to the equivariant setting. When `R` is commutative, the hom-sets `InterwiningMap A B` themselves
+ -   form an `R`-module, giving the category an enriched structure suitable for representation-theoretic calculations.
+ -}
+
 \import Algebra.Group
 \import Algebra.Group.GroupHom
 \import Algebra.Group.Representation
@@ -12,6 +21,9 @@
 \import Paths
 \import Paths.Meta
 
+{- | Instance of `Cat (LinRepres R G)` with `InterwiningMap` as homs, identity `id-interwining`, and composition built
+ -   from `LinearMap` composition extended with the equivariance proof.
+ -}
 \instance RepresentationCat.{u} (R : Ring) (G : Group) : Cat (LinRepres.{u} R G)
   | Hom A B => InterwiningMap A B
   | id => InterwiningMap.id
@@ -23,6 +35,9 @@
                                         \lam _ => e.func-negative, \lam _ _ => e.func-*c,
                                         \lam _ _ => e.func-** )
 
+{- | For commutative `R`, equips `InterwiningMap A B` with an `R`-module structure (zero, addition, negation, scalar
+ -   multiplication), making the representation category `R`-linear.
+ -}
 \instance InterwiningMapLModule {R : CRing} {G : Group} (A B : LinRepres R G) : LModule R (InterwiningMap A B) \cowith
   | zro => zeroInterwining
   | + => addInterwining
@@ -38,18 +53,22 @@
   | *c-rdistr => exts (\lam _ => B.*c-rdistr)
   | ide_*c => exts (\lam _ => B.ide_*c)
   \where {
+    -- | The zero intertwiner, built from the zero linear map.
     \func zeroInterwining : InterwiningMap A B \cowith
       | LinearMap => linearMap_zro
       | func-** => inv B.**_zro
 
+    -- | Pointwise sum of two intertwiners.
     \func addInterwining (f g : InterwiningMap A B) : InterwiningMap A B \cowith
       | LinearMap => linearMap_+ f g
       | func-** => unfold (rewrite (f.func-**, g.func-**, B.**-ldistr) idp)
 
+    -- | Pointwise negation of an intertwiner.
     \func negativeInterwining (f : InterwiningMap A B) : InterwiningMap A B \cowith
       | LinearMap => linearMap_negative f
       | func-** => unfold (rewrite (f.func-**, B.**_negative) idp)
 
+    -- | Scalar multiplication of an intertwiner by `c : R`.
     \func mulconstInterwining (c : R) (f : InterwiningMap A B) : InterwiningMap A B \cowith
       | LinearMap => c *c f
       | func-** => rewrite (B.**_*c, inv f.func-**) idp

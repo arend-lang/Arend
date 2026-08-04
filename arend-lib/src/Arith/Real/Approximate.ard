@@ -1,3 +1,12 @@
+{- | Approximation of real numbers by rationals, integers, and natural numbers within prescribed error bounds.
+ -
+ -   This module provides existence lemmas showing that every real number can be approximated arbitrarily well by a
+ -   rational, and within a fixed bound by an integer or (for non-negative reals) a natural number. Distances are
+ -   measured using the `RealNormed` metric on the reals, treating `Rat`, `Int`, and `Nat` as embedded into `Real` via
+ -   the standard inclusions. These results encode the density of rationals in the reals and the bounded-distance
+ -   discreteness of integers, providing foundational lemmas for constructive analysis on `Real`.
+ -}
+
 \import Algebra.Group
 \import Algebra.Meta
 \import Algebra.Monoid
@@ -18,6 +27,9 @@
 \import Topology.MetricSpace
 \import Topology.NormedAbGroup.Real
 
+{- | For any real `x` and positive real `eps`, there exists a rational `q` with `RealNormed.dist q x < eps`. Expresses
+ -   density of `Rat` in `Real`.
+ -}
 \lemma real-rat-approx (x : Real) {eps : Real} (eps>0 : 0 < eps) : ∃ (q : Rat) (RealNormed.dist q x < eps)
   => \case real_<-rat-char.1 eps>0 \with {
     | inP (eps',eps'>0,eps'<eps) => \case x.LU-focus eps' eps'>0 \with {
@@ -25,17 +37,26 @@
     }
   }
 
+{- | For any real `x`, there exists an integer `n` with `RealNormed.dist n x < 1`. Every real is within unit distance of
+ -   some integer.
+ -}
 \lemma real-int-approx (x : Real) : ∃ (n : Int) (RealNormed.dist n x < 1)
   => \case exact x {ratio 1 2} linarith \with {
     | inP (n,d) => inP (n, transport (_ <) linarith d)
   }
   \where {
+    {- | Sharper integer approximation: for any `eps > 0`, there exists `n : Int` with distance less than `1/2 + eps`,
+     -   approaching the optimal half-unit bound.
+     -}
     \lemma exact (x : Real) {eps : Real} (eps>0 : 0 < eps) : ∃ (n : Int) (RealNormed.dist n x < Real.fromRat (ratio 1 2) + eps)
       => \case real-rat-approx x eps>0 \with {
         | inP (q,d) => inP (rat_round q, ldist-triang {RealNormed} <∘r RealAbGroup.<=_+-left (transportInv (<= _) RealAbGroup.dist-rat $ rat_real_<=.1 rat_round-dist) d)
       }
   }
 
+{- | For any non-negative real `x`, there exists a natural number `n` with `RealNormed.dist n x < 1`. The non-negative
+ -   analogue of `real-int-approx`.
+ -}
 \lemma real-nat-approx {x : Real} (x>=0 : 0 <= x) : ∃ (n : Nat) (RealNormed.dist n x < 1)
   => \case real-int-approx x \with {
     | inP (n,d) => inP (iabs n, transportInv (RealNormed.dist __ x < 1) (iabs.ofPos $ <_+1_<= $ fromInt_<.conv $ rat_real_<.2 $ transport (_ RealAbGroup.<) (RealAbGroup.+-rat {n} {1}) $ linarith $ RealAbGroup.abs>=neg <∘r d) d)

@@ -1,3 +1,13 @@
+{- | Subrepresentations of linear group representations as injective intertwining maps.
+ -
+ -   This module formalizes the notion of a subrepresentation `S \hookrightarrow E` of a linear `G`-representation over
+ -   a ring `R`, encoded as an intertwining map together with a proof of injectivity. Rather than defining
+ -   subrepresentations as predicate-cut subsets of the underlying module, the class wraps an injective
+ -   `InterwiningMap`, which keeps the categorical structure explicit and reusable. The two canonical sources of
+ -   subrepresentations — kernels and images of intertwining maps — are provided as constructors that package the
+ -   corresponding `LinRepres` together with the inclusion map.
+ -}
+
 \import Algebra.Group.GSet
 \import Algebra.Group.GSet.SubGSet
 \import Algebra.Group.Representation
@@ -10,6 +20,9 @@
 \import Paths.Meta
 \import Set.SubSet
 
+{- | Class of subrepresentations of a linear representation `E : LinRepres R G`. Bundles a representation `S`, an
+ -   intertwining inclusion `in : InterwiningMap S E`, and a proof `in-mono` that `in` is injective.
+ -}
 \class SubLRepres \extends SubLModule, SubGSet {
   \override S : LinRepres R G
 
@@ -30,6 +43,9 @@
   | SubLModule => KernelLModule f
   | contains_** fa=0 => f.func-** *> pmap (_ **) fa=0 *> LinRepres.**_zro
 
+{- | The image of an intertwining map `f : A → B` as a representation; underlying module is `ImageLModule f`, and the
+ -   `G`-action on `B` preserves the image because preimages can be transported by the equivariance of `f`.
+ -}
 \func ImageLRepres (f : InterwiningMap {}) : SubLRepres f.R f.G f.Cod \cowith
   | SubLModule => ImageLModule f
   | SubGSet => ImageGSet f

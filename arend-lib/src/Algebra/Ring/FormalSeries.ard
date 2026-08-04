@@ -1,3 +1,11 @@
+{- | Formal power series over a ring, represented as functions `Nat -> R` indexed by their coefficients.
+ -
+ -   A formal series is encoded as `FSeries R := Nat -> R`, mapping each natural number `n` to the coefficient of `x^n`.
+ -   Multiplication is the Cauchy convolution computed via a finite sum over index pairs `(i, j)` with `i + j = n`. The
+ -   module lifts the ring/algebra/domain structure of `R` pointwise to `FSeries R`, and connects polynomials to formal
+ -   series by exhibiting the coefficient map `polyCoef` as a ring homomorphism `PolyRing R -> FSeriesRing R`.
+ -}
+
 \import Algebra.Algebra
 \import Algebra.Domain
 \import Algebra.Group
@@ -27,11 +35,16 @@
 \open AddGroup
 \open Monoid (pow)
 
+-- | `FSeries R := Nat -> R`, the type of formal power series over a set `R`, indexed by coefficient position.
 \type FSeries (R : \Set) => Nat -> R
 
+-- | Pointwise extraction from a path of series: `x = y -> x n = y n`.
 \lemma fseries-apply {R : \Set} {x y : FSeries R} (p : x = y) {n : Nat} : x n = y n \elim p
   | idp => idp
 
+{- | Ring instance on `FSeries R` for any `Ring R`. Addition is pointwise; the unit `ide` is `coef 1`; multiplication is
+ -   the Cauchy product `(f * g) n = Σ_{i+j=n} f i * g j` via `R.FinSum` over `PairsFinSet n`.
+ -}
 \instance FSeriesRing (R : Ring) : Ring (FSeries R)
   | zro _ => 0
   | + f g n => f n + g n
@@ -63,14 +76,17 @@
     | suc j => inv zro-left
   }
   \where {
+    -- | Embeds a constant `a : R` as the series with `coef a 0 = a` and `coef a (suc _) = 0`.
     \func coef {A : AddPointed} (a : A) (n : Nat) : A \elim n
       | 0 => a
       | suc _ => 0
 
+    -- | For `n /= 0`, `coef a n = 0`.
     \lemma coef_/=0 {a : R} {n : Nat} (n/=0 : n /= 0) : coef a n = 0 \elim n
       | 0 => absurd (n/=0 idp)
       | suc n => idp
 
+    -- | The finite set `{(i, j) | i + j = n}` of cardinality `suc n`, indexing the convolution sum.
     \lemma PairsFinSet (n : Nat) : FinSet (\Sigma (i j : Nat) (\property i + j = n)) (suc n) \cowith
       | finEq => inP \new QEquiv {
         | f i => (i, n -' i, <=_exists $ <_suc_<= $ fin_< i)
@@ -79,17 +95,21 @@
         | f_sec s => ext (toFin=id, pmap2 (-') (inv s.3 *> +-comm) toFin=id *> -'+)
       }
 
+    -- | Extensionality lemmas for nested pairs in iterated convolutions, used in associativity proofs.
     \lemma PairsFinSet-ext1 {n : Nat} {x y : \Sigma (s : PairsFinSet n) (PairsFinSet s.1)} (p1 : x.1.1 = y.1.1) (p2 : x.1.2 = y.1.2) (p3 : x.2.1 = y.2.1) (p4 : x.2.2 = y.2.2) : x = y \elim x, y, p1, p2, p3, p4
       | ((i1,j1,p1),(k1,m1,q1)), ((i2,j2,p2),(k2,m2,q2)), idp, idp, idp, idp => idp
 
+    -- | Extensionality lemmas for nested pairs in iterated convolutions, used in associativity proofs.
     \lemma PairsFinSet-ext2 {n : Nat} {x y : \Sigma (s : PairsFinSet n) (PairsFinSet s.2)} (p1 : x.1.1 = y.1.1) (p2 : x.1.2 = y.1.2) (p3 : x.2.1 = y.2.1) (p4 : x.2.2 = y.2.2) : x = y \elim x, y, p1, p2, p3, p4
       | ((i1,j1,p1),(k1,m1,q1)), ((i2,j2,p2),(k2,m2,q2)), idp, idp, idp, idp => idp
 
+    -- | Reduction of the convolution sum at `n = 0`: `FinSum f = f (0, 0, idp)`.
     \lemma Pairs_zero {f : PairsFinSet 0 -> R} : R.FinSum f = f (0,0,idp)
       => R.FinSum-unique (later (0,0,idp)) \lam s s/=0 => absurd $ s/=0 $ ext
             (<=-antisymmetric (transport (_ <=) s.3 $ NatSemiring.<=_+ <=-refl zero<=_) zero<=_,
              <=-antisymmetric (transport (_ <=) s.3 $ NatSemiring.<=_+ zero<=_ <=-refl) zero<=_)
 
+    -- | Recursive splitting of the convolution at `suc n`, separating the `(0, suc n)` term from the rest.
     \lemma Pairs_suc-left {n : Nat} {f : PairsFinSet (suc n) -> R}
       : R.FinSum f = f (0, suc n, idp) + R.FinSum \lam (s : PairsFinSet n) => f (suc s.1, s.2, pmap suc s.3)
       => R.FinSum_Equiv2 (later \new QEquiv {
@@ -115,6 +135,9 @@
       }) *> R.FinSum_Or {UnitFin} {PairsFinSet n} {Or.rec (\lam _ => f (0, suc n, idp)) (\lam s => f (suc s.1, s.2, pmap suc s.3))} *> pmap (+ _) (R.FinSum-unique () (\lam k c => absurd $ c idp))
   }
 
+{- | `CAlgebra R` instance on `FSeries R` for a commutative ring `R`. Scalar multiplication is pointwise:
+ -   `(c *c x) n = c * x n`; the coefficient map sends `a` to `coef a`.
+ -}
 \instance FSeriesAlgebra (R : CRing) : CAlgebra R
   | Ring => FSeriesRing R
   | *c c x n => c * x n
@@ -135,6 +158,7 @@
     | f_sec => idpe
   }) \lam s => *-comm
 
+-- | `Ring.With#` instance lifting an apartness relation: `x #0` iff there exists some index `n` with `x n #0` in `R`.
 \instance FSeriesRingWith# (R : Ring.With#) : Ring.With#
   | Ring => FSeriesRing R
   | #0 x => ∃ (n : Nat) (x n `#0)
@@ -151,15 +175,22 @@
     | inP (s,q) => inP (s.2, R.#0-*-right q)
   }
 
+-- | Commutative version of `FSeriesRingWith#` for `CRing.With#`.
 \instance FSeriesCRingWith# (R : CRing.With#) : CRing.With#
   | Ring.With# => FSeriesRingWith# R
   | *-comm => (FSeriesAlgebra R).*-comm
 
+{- | `Domain` instance on `FSeries R` for a domain `R`. The auxiliary lemma `aux` proves that if `x n #0` and `y m #0`,
+ -   then some coefficient of `x * y` is apart from `0`, establishing `#0-*` for the convolution product.
+ -}
 \instance FSeriesDomain (R : Domain) : Domain
   | Ring.With# => FSeriesRingWith# R
   | zro#ide => inP (0, R.zro#ide)
   | #0-* (inP (n,xn#0)) (inP (m,ym#0)) => aux {R} {_} {n} {m} id<suc xn#0 ym#0
   \where {
+    {- | Existence of a nonzero coefficient in the product, given nonzero coefficients in each factor at indices summing
+     -   below a bound.
+     -}
     \protected \lemma aux {k n m : Nat} (n+m<k : n + m < k) {x y : FSeries R} (xn#0 : x n `#0) (ym#0 : y m `#0) : ∃ (k : Nat) ((x * y) k `#0) \elim k
       | suc k => \case R.#0-FinSum-conv {FSeriesRing.PairsFinSet (n + m)} {_} {n,m,idp} (R.#0-* xn#0 ym#0) \with {
         | byLeft r => inP (n + m, r)
@@ -175,10 +206,14 @@
       }
   }
 
+-- | `IntegralDomain` instance on `FSeries R` for an integral domain `R`.
 \instance FSeriesIntegralDomain (R : IntegralDomain) : IntegralDomain
   | Domain => FSeriesDomain R
   | *-comm => (FSeriesAlgebra R).*-comm
 
+{- | Ring homomorphism `PolyRing R -> FSeriesRing R` given by the coefficient extraction map `polyCoef`. Witnesses that
+ -   polynomials sit inside formal series as those with finitely many nonzero coefficients.
+ -}
 \func poly-FSeries {R : Ring} : RingHom (PolyRing R) (FSeriesRing R) (polyCoef __) \cowith
   | func-+ => ext \lam n => polyCoef_+
   | func-ide => ext \case \elim __\with {
@@ -187,12 +222,18 @@
   }
   | func-* => ext \lam n => *-lem
   \where {
+    {- | Compatibility of `polyCoef` with multiplication: `polyCoef (p * q) n` equals the Cauchy product of the
+     -   coefficient series.
+     -}
     \lemma *-lem {p q : Poly R} {n : Nat} : polyCoef (p * q) n = (polyCoef p * {FSeriesRing R} polyCoef q) n \elim p, n
       | pzero, n => inv $ fseries-apply $ (FSeriesRing R).zro_*-left {polyCoef q}
       | padd p e, 0 => polyCoef_+ *> zro-left *> polyCoef_*c *> inv FSeriesRing.Pairs_zero
       | padd p e, suc n => polyCoef_+ *> pmap2 (+) *-lem polyCoef_*c *> +-comm *> inv FSeriesRing.Pairs_suc-left
   }
 
+{- | The constant series `1, 1, 1, …` is invertible in `FSeriesRing R`, with inverse the image of the polynomial `1 - x`
+ -   (i.e. `padd (padd pzero -1) 1`). Encodes the geometric series identity `(1 - x) · Σ x^n = 1`.
+ -}
 \lemma geometric-FSeries {R : Ring} {a : R} : Monoid.Inv {FSeriesRing R} (pow a) (polyCoef (padd (padd pzero (negative a)) 1)) \cowith
   | inv-left => ext \case \elim __ \with {
     | 0 => FSeriesRing.Pairs_zero *> ide-left

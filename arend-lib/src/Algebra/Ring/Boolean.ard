@@ -1,3 +1,14 @@
+{- | Boolean rings: commutative rings in which every element is idempotent, equivalently Boolean algebras viewed
+ -   multiplicatively.
+ -
+ -   A Boolean ring satisfies `x * x = x` for all `x`, which forces commutativity, characteristic 2 (`x + x = 0`), and
+ -   `negative x = x`. The module exposes the canonical equivalence between Boolean rings and Boolean algebras:
+ -   multiplication acts as meet, the formula `x + y + x*y` acts as join, the partial order is `x <= y ⇔ x*y = x`, and
+ -   the zero is bottom. Adding a unit `1` extends this to the equivalence with Boolean algebras with complement
+ -   `compl x = x + 1`. A symmetric difference operation `diff x y = x + x*y` is provided as a counterpart of `x ∧ ¬y`,
+ -   with the lattice-theoretic lemmas needed to reason about it.
+ -}
+
 \import Algebra.Meta
 \import Algebra.Monoid
 \import Algebra.Pointed
@@ -12,7 +23,12 @@
 \import Paths
 \import Paths.Meta
 
+{- | A pseudo-commutative ring with `isBooleanRing : x * x = x`, simultaneously a `BottomDistributiveLattice`. Lattice
+ -   structure is induced: `meet = *`, `join x y = x + y + x*y`, `bottom = 0`, and `<=` is defined via `x * y = x`.
+ -   Commutativity `*-comm` is derived from idempotence.
+ -}
 \class BooleanRing \extends PseudoCRing, BottomDistributiveLattice {
+  -- | The defining axiom `x * x = x`.
   | isBooleanRing {x : E} : x * x = x
   | <= => BooleanRing.<=
   | <=-refl => isBooleanRing
@@ -32,54 +48,73 @@
 
   \default *-comm {x} {y} => inv zro-left *> pmap (+ _) (cancel-right y $ zro-left *> cancel-left x (inv isBooleanRing *> ldistr *> pmap2 (+) rdistr rdistr *> pmap2 (__ + _ + (_ + __)) isBooleanRing isBooleanRing *> +-assoc) *> inv +-assoc) *> +-assoc *> pmap (_ +) (sum2 isBooleanRing) *> zro-right
 
+  -- | `x + x = 0` — every Boolean ring has characteristic 2.
   \lemma double=0 {x : E} : x + x = 0
     => sum2 isBooleanRing
 
+  -- | `negative x = x` — additive inverse is the identity.
   \lemma negative=id {x : E} : negative x = x
     => cancel-left x $ negative-right *> inv double=0
 
+  -- | If `x * y = 0` then `x + y = x ∨ y`; addition coincides with join on disjoint elements.
   \lemma +_join {x y : E} (xy=0 : x * y = 0) : x + y = x ∨ y
     => inv zro-right *> pmap (_ +) (inv xy=0)
 
+  -- | `diff x y = x + x * y`, the Boolean-ring counterpart of `x ∧ ¬y`.
   \func diff (x y : E) => x + x * y
 
+  -- | `diff x y <= x`.
   \lemma diff_<= {x y : E} : diff x y <= x
     => rdistr *> pmap2 (+) isBooleanRing (*-comm *> inv *-assoc *> pmap (* y) isBooleanRing)
 
+  -- | `diff x y * y = 0` — `diff x y` is disjoint from `y`.
   \lemma diff_* {x y : E} : diff x y * y = 0
     => rdistr *> pmap (_ +) (*-assoc *> pmap (x *) isBooleanRing) *> double=0
 
+  -- | Universal property: if `x <= y` and `x * z = 0` then `x <= diff y z`.
   \lemma diff-univ {x y z : E} (p : x <= y) (q : x * z = 0) : x <= diff y z
     => ldistr *> pmap2 (+) p (pmap (x *) *-comm *> inv *-assoc *> pmap (* y) q *> zro_*-left) *> zro-right
 
+  -- | Monotonicity: `diff` is monotone in the first argument and antitone in the second.
   \lemma diff-mono {x y x' y' : E} (p : x <= x') (q : y' <= y) : diff x y <= diff x' y'
     => diff-univ (diff_<= <=∘ p) $ <=-antisymmetric (meet-monotone <=-refl q <=∘ =_<= diff_*) bottom-univ
 
+  -- | `diff x y * diff y x = 0` — the two asymmetric differences are disjoint.
   \lemma diff_*_diff {x y : E} : diff x y * diff y x = 0
     => <=-antisymmetric (meet-monotone <=-refl diff_<= <=∘ =_<= diff_*) bottom-univ
 
+  -- | `x + y = diff x y ∨ diff y x` — addition expressed as the join of asymmetric differences.
   \lemma +_diff {x y : E} : x + y = diff x y ∨ diff y x
     => inv zro-right *> pmap2 (+) (inv $ +-assoc *> pmap (x +) (+-comm *> +-assoc *> pmap (y +) (pmap (_ +) *-comm *> double=0) *> zro-right)) (inv diff_*_diff)
 
+  -- | For `y <= x`, decomposes `x = diff x y ∨ y`.
   \lemma split_<= {x y : E} (p : y <= x) : x = diff x y ∨ y
     => inv $ +-assoc *> +-assoc *> pmap (x +) (inv +-assoc *> pmap2 (+) (pmap (_ +) (<=-antisymmetric (meet-univ p <=-refl) meet-right) *> double=0) diff_* *> zro-right) *> zro-right
 
+  -- | General decomposition `x = diff x y ∨ x * y`.
   \lemma split {x y : E} : x = diff x y ∨ x * y
     => split_<= meet-left *> pmap (∨ _) (pmap (x +) (inv *-assoc *> pmap (* y) isBooleanRing))
 
+  -- | Triangle-like inequality `diff x z <= diff x y ∨ diff y z`.
   \lemma diff-trans {x y z : E} : diff x z <= diff x y ∨ diff y z
     => split =<= join-monotone (diff-mono diff_<= <=-refl) (diff-univ meet-right $ *-assoc *> pmap (_ *) *-comm *> inv *-assoc *> pmap (* y) diff_* *> zro_*-left)
 
+  -- | `diff` distributes over indexed joins: `diff (BigJoin l) x = BigJoin (j => diff (l j) x)`.
   \lemma diff_BigJoin {l : Array E} {x : E} : diff (BigJoin l) x = BigJoin \lam j => diff (l j) x \elim l
     | nil => equation.bRing
     | a :: l => equation.bRing *> pmap (_ ∨) diff_BigJoin
 } \where {
+  -- | General lemma that idempotence in any pseudo-ring forces `x + x = 0`.
   \private \lemma sum2 {R : PseudoRing} (br : \Pi {x : R} -> x * x = x) {x : R} : x + x = 0
     => inv $ R.cancel-left (x + x) $ zro-right *> inv br *> ldistr *> pmap2 (+) rdistr rdistr *> pmap2 (+) (pmap2 (+) br br) (pmap2 (+) br br)
 
+  -- | The canonical order on a semigroup with `x*x=x`, defined as `x * y = x`.
   \type \infix 4 <= {R : Semigroup} (x y : R) => x * y = x
 }
 
+{- | Boolean ring with unit, extending `CRing` and `BooleanAlgebra`. Provides `top = 1` and complement
+ -   `compl a = a + 1`.
+ -}
 \class UnitalBooleanRing \extends BooleanRing, CRing, BooleanAlgebra
   | top => 1
   | top-univ => ide-right
@@ -90,6 +125,9 @@
     \open MeetSemilattice
     \open JoinSemilattice
 
+    {- | Coercion turning any `BooleanAlgebra R` into a `UnitalBooleanRing` with `zro = bottom`, `+` as symmetric
+     -   difference `a ∧ ¬b ∨ b ∧ ¬a`, `*` as meet, `negative = id`, and `ide = top`.
+     -}
     \use \coerce fromBooleanAlgebra (R : BooleanAlgebra) : UnitalBooleanRing R \cowith
       | zro => R.bottom
       | + a b => a ∧ compl b ∨ b ∧ compl a
@@ -111,5 +149,8 @@
       | isBooleanRing => meet-idemp
   }
 
+{- | Instance producing a `UnitalBooleanRing` on the negated elements `NegatedElem R` of any Heyting algebra `R`, via
+ -   the Boolean algebra of regular elements.
+ -}
 \instance HeytingBooleanRing (R : HeytingAlebra) : UnitalBooleanRing (NegatedElem R)
   => UnitalBooleanRing.fromBooleanAlgebra (HeytingBooleanAlgebra R)

@@ -1,3 +1,15 @@
+{- | Ring structures built on top of pseudo-semirings and abelian groups, ranging from non-unital rings to commutative
+ -   rings with extra structure.
+ -
+ -   This module organizes the ring hierarchy by combining the additive abelian group structure (`AbGroup`) with
+ -   multiplicative semiring structure. `PseudoRing` covers the non-unital case where the zero-absorption laws are
+ -   derived from distributivity and additive cancellation. `Ring` adds a multiplicative identity, integer coefficients,
+ -   and basic arithmetic with negation, while `CRing` specializes to the commutative setting and exposes Bézout-style
+ -   divisibility, Krull-dimension bounds, and zero-dimensionality. The nested `With#` and `Dec` subclasses thread an
+ -   apartness relation `#0` (or decidable equality) through the ring axioms so that constructive results about non-zero
+ -   divisors and divisibility can be stated.
+ -}
+
 \import Algebra.Domain.Bezout
 \import Algebra.Group
 \import Algebra.Meta
@@ -32,50 +44,64 @@
     x * zro + zro     `qed
   )
 
+  -- | `negative x * y = negative (x * y)`.
   \lemma negative_*-left {x y : E} : negative x * y = negative (x * y)
     => negative-unique (x * y) (inv rdistr *> pmap (* y) negative-left *> zro_*-left) negative-right
 
+  -- | `x * negative y = negative (x * y)`.
   \lemma negative_*-right {x y : E} : x * negative y = negative (x * y)
     => op.negative_*-left
 
+  -- | `negative x * negative y = x * y` (sign-cancellation).
   \lemma negative_* {x y : E} : negative x * negative y = x * y =>
     negative x * negative y     ==< negative_*-left >==
     negative (x * negative y)   ==< pmap negative negative_*-right >==
     negative (negative (x * y)) ==< negative-isInv >==
     x * y                       `qed
 
+  -- | `x * (y - z) = x * y - x * z`.
   \lemma ldistr_- {x y z : E} : x * (y - z) = x * y - x * z
     => ldistr *> pmap (_ +) negative_*-right
 
+  -- | `(x - y) * z = x * z - y * z`.
   \lemma rdistr_- {x y z : E} : (x - y) * z = x * z - y * z
     => rdistr *> pmap (_ +) negative_*-left
 
+  -- | Difference-of-squares `(x + y) * (x - y) = x*x - y*y` under a commuting hypothesis.
   \lemma *_sum_diff {x y : E} (p : x * y = y * x) : (x + y) * (x - y) = x * x - y * y
     => rdistr *> pmap2 (+) ldistr_- ldistr_- *> +-assoc *> pmap (_ +) (inv +-assoc *> pmap (+ _) (pmap (_ +) (inv p) *> negative-left) *> zro-left)
 
+  -- | Difference-of-squares `(x - y) * (x + y) = x*x - y*y` under a commuting hypothesis.
   \lemma *_diff_sum {x y : E} (p : x * y = y * x) : (x - y) * (x + y) = x * x - y * y
     => ldistr *> pmap2 (+) rdistr_- rdistr_- *> +-assoc *> pmap (_ +) (inv +-assoc *> pmap (+ _) (pmap (_ +) p *> negative-left) *> zro-left)
 
+  -- | Opposite pseudo-ring (multiplication reversed).
   \protected \func op : PseudoRing \cowith
     | AbGroup => \this
     | PseudoSemiring => PseudoSemiring.op
 }
 
+-- | Unital ring extending `PseudoRing` and `Semiring`.
 \class Ring \extends PseudoRing, Semiring {
+  -- | Canonical map `Int -> E` sending `pos n` to `natCoef n` and `neg n` to `negative (natCoef n)`.
   \func intCoef (x : Int) : E
     | pos n => natCoef n
     | neg (suc _ \as n) => negative (natCoef n)
 
+  -- | Compatibility of `intCoef` with negation: `intCoef (neg n) = negative (natCoef n)`.
   \lemma intCoef_neg (n : Nat) : intCoef (neg n) = negative (natCoef n)
     | 0 => natCoefZero *> inv (pmap negative natCoefZero *> AddGroup.negative_zro)
     | suc n => idp
 
+  -- | `negative ide * x = negative x`.
   \lemma negative_ide-left {x : E} : negative ide * x = negative x
     => negative_*-left *> pmap negative ide-left
 
+  -- | `x * negative ide = negative x`.
   \lemma negative_ide-right {x : E} : x * negative ide = negative x
     => negative_*-right *> pmap negative ide-right
 
+  -- | Negation of a unit is a unit, with inverse `negative j.inv`.
   \lemma negative_inv (j : Monoid.Inv {\this}) : Monoid.Inv (negative j) (negative j.inv)
     => \new Monoid.Inv {
       | inv-left => negative_* *> j.inv-left
@@ -85,6 +111,7 @@
   \lemma Inv_negative {x : E} (j : Monoid.Inv (negative x)) : Monoid.Inv x
     => transport Monoid.Inv negative-isInv (negative_inv j)
 
+  -- | `(1 - x) * Σ_{j<n} x^j = 1 - x^n`, the telescoping geometric identity.
   \lemma geometric-partial-sum {n : Nat} {x : E} : (1 - x) * BigSum (\new Array E n (\lam j => pow x j)) = 1 - pow x n \elim n
     | 0 => zro_*-right *> inv negative-right
     | suc n => pmap (_ *) (AddMonoid.BigSum_suc-nat {_} {n} {pow x}) *> ldistr *> pmap2 (+) geometric-partial-sum rdistr *> +-assoc *> pmap (_ +) (inv +-assoc *> pmap (_ +) negative_*-left *> pmap (+ _) (pmap (_ +) ide-left *> negative-left) *> zro-left *> pmap negative pow-left)
@@ -98,9 +125,11 @@
   \lemma zro-nilpotent : IsNilpotent zro
     => inP (1, ide-left)
 
+  -- | `(-1)^(n+2) = (-1)^n` (period-2 of sign powers).
   \lemma pow_-1_+2 {n : Nat} : pow -1 (n Nat.+ 2) = pow -1 n
     => pow_+ {_} { -1} {n} {2} *> pmap (_ *) (*-assoc *> ide-left *> negative_* *> ide-left) *> ide-right
 
+  -- | `(-1)^(2n) = 1`.
   \lemma pow_-1_even {n : Nat} : pow -1 (n Nat.* 2) = 1 \elim n
     | 0 => idp
     | suc n => negative_ide-right *> pmap negative negative_ide-right *> negative-isInv *> pow_-1_even
@@ -109,14 +138,18 @@
   \lemma pow_-1_odd {k : Nat} : Monoid.pow (negative ide) (2 Nat.* k Nat.+ 1) = negative ide
     => rewrite (NatSemiring.*-comm {2} {k}, pow_-1_even, ide-left) idp
 
+  -- | `(-1)^n = (-1)^(n mod 2)`.
   \lemma pow_-1_mod2 {n : Nat} : pow -1 n = pow -1 (n Nat.mod 2)
     => pmap (pow -1) (inv (Nat.divModProp n 2)) *> pow_+ *> pmap (* _) (pow_* *> pmap (pow __ _) (*-assoc *> ide-left *> negative_* *> ide-left) *> pow_ide) *> ide-left
 
+  -- | If `b*b = b` and `b | a`, then `a = b*a`.
   \lemma idempotent_LDiv {a b : E} (q : b * b = b) (d : Monoid.LDiv b a) : a = b * a
     => inv d.inv-right *> pmap (* _) (inv q) *> *-assoc *> pmap (b *) d.inv-right
 
+  -- | Every idempotent is `0` or `1` (no nontrivial idempotents).
   \type IsConnected => \Pi (a : E) -> a * a = a -> (a = 0) || (a = 1)
 
+  -- | For every `a` there exists `b` with `a = a*b*a`.
   \func IsVonNeumannRegular => \Pi (a : E) -> ∃ (b : E) (a = a * b * a)
 
   -- | A ring is local if and only if it is non-trivial and satisfies {IsLocal}.
@@ -131,6 +164,7 @@
       | byRight [x+1]-inv => byRight [x+1]-inv
     })
 
+  -- | Opposite ring.
   \protected \func op : Ring \cowith
     | AbGroup => \this
     | Semiring => Semiring.op
@@ -141,6 +175,7 @@
     | #0-*-right {x y : E} : (x * y) `#0 -> y `#0
     | #0-negative {x} x#0 => #0-*-left (transport #0 (inv (negative_* *> ide-right)) x#0)
 
+    -- | If a finite sum is apart from zero, some summand is.
     \lemma #0-FinSum {J : FinSet} {x : J -> E} (p : FinSum x `#0) : ∃ (j : J) (x j `#0)
       => \case FinSum_char x \with {
         | inP (e,q) => \case #0-BigSum (transport #0 q p) \with {
@@ -148,6 +183,7 @@
         }
       }
 
+    -- | From a single nonzero summand, either the whole sum is nonzero or there is a second nonzero index.
     \lemma #0-FinSum-conv {J : FinSet} {x : J -> E} {i : J} (xi#0 : x i `#0) : FinSum x `#0 || (\Sigma (j : J) (j /= i) (x j `#0))
       => \case FinSum_char x \with {
         | inP (e, p) => \case #0-BigSum-conv {_} {\new Array E J.card \lam j => x (e j)} $ rewrite e.f_ret xi#0 \with {
@@ -169,15 +205,23 @@
     }
 }
 
+-- | Ring whose underlying semiring is non-zero (i.e. `0 ≠ 1`).
 \class NonZeroRing \extends Ring, NonZeroSemiring
 
+-- | Commutative pseudo-ring (extends `PseudoRing` and `PseudoCSemiring`).
 \class PseudoCRing \extends PseudoRing, PseudoCSemiring
 
+-- | Commutative unital ring extending `Ring`, `PseudoCRing`, and `CSemiring`.
 \class CRing \extends Ring, PseudoCRing, CSemiring {
+  {- | Every pair `a, b` admits `s, t` such that `s*a + t*b` divides both `a` and `b` (a Bézout combination is a common
+   -   divisor).
+   -}
   \func IsBezout => \Pi (a b : E) -> ∃ (s t : E) (LDiv (s * a + t * b) a) (LDiv (s * a + t * b) b)
 
+  -- | Strengthened Bézout: existence of `s, t, u, v` with `a*u = b*v` and `s*u + t*v = 1`.
   \func IsStrictBezout => \Pi (a b : E) -> ∃ (s t u v : E) (a * u = b * v) (s * u + t * v = 1)
 
+  -- | Equivalence between `IsBezout` and "every finitely generated ideal is principal".
   \lemma bezout_finitelyGenerated_principal : IsBezout <-> (\Pi {I : Ideal \this} -> I.IsFinitelyGenerated -> I.IsPrincipal)
     => (\lam bez {I} Ifg =>
           \have | (inP s) => Ifg
@@ -193,6 +237,7 @@
           \in inP (t.1 0, t.1 1, rewriteI p d|a, rewriteI p d|b)
     )
 
+  -- | Construction of a GCD `s*a + t*b` of `a` and `b` from the data of a Bézout combination.
   \func bezoutGCD {a b s t : E} (p : LDiv (s * a + t * b) a) (q : LDiv (s * a + t * b) b) : GCD a b (s * a + t * b) \cowith
     | res|val1 => p
     | res|val2 => q
@@ -207,14 +252,20 @@
         s * a + t * b                         `qed
     }
 
+  -- | Krull-dimension bound `≤ k`: for any `(k+1)`-tuple `x` there exist `a` and exponents `m` with `fold x a m = 0`.
   \type Dim<= (k : Nat) => \Pi (x : Array E (suc k)) -> ∃ (a : Array E (suc k)) (m : Array Nat (suc k)) (fold x a m = 0)
     \where
+      {- | The auxiliary recursive expression `pow x m * (fold xs as ms - x * a)` used in the dimension bound, with base
+       -   value `1`.
+       -}
       \func fold {k : Nat} (xs as : Array E k) (ms : Array Nat k) : E \elim k, xs, as, ms
         | 0, nil, nil, nil => 1
         | suc k, x :: xs, a :: as, m :: ms => pow x m * (fold xs as ms - x * a)
 
+  -- | For each `a` some power `a^n` equals `a^(n+1) * b`.
   \type IsZeroDimensional => \Pi (a : E) -> ∃ (b : E) (n : Nat) (pow a n = pow a (suc n) * b)
 
+  -- | A finite ring is zero-dimensional.
   \lemma finite-zeroDimensional (c : FinSet E) : IsZeroDimensional
     => \lam a => TruncP.map (c.pigeonhole< (pow a)) \lam s => (pow a (s.2 -' suc s.1), s.1, s.4 *> pmap (pow a) (inv $ <=_exists $ suc_<_<= s.3) *> pow_+ {_} {_} {suc s.1})
 } \where {
@@ -226,6 +277,7 @@
 
     -- | A commutative ring with decidable equality.
     \class Dec \extends Ring.Dec, With# {
+      -- | Decidability of `a = in~ 0` in the divisibility quotient.
       \lemma divQuotient_dec0 (a : DivQuotient \this) : Set.Dec (a = in~ 0)
         | in~ a => \case decideEq a 0 \with {
           | yes e => yes $ ~-pequiv $ rewrite e (inP LDiv.id-div, inP LDiv.id-div)
@@ -236,4 +288,5 @@
     }
 }
 
+-- | Commutative ring with `0 ≠ 1`.
 \class NonZeroCRing \extends CRing, NonZeroRing

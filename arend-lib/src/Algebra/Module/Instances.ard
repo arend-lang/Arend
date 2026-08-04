@@ -17,6 +17,9 @@
   | negative-left => exts \lam _ => LModule.negative-left
   | +-comm => exts \lam _ => LModule.+-comm
 
+{- | For a commutative ring `R`, `LinearMap A B` carries an `R`-module structure with scalar multiplication
+ -   `(c · f) a := c ·_B f a`.
+ -}
 \instance LinearMapLModule {R : CRing} (A B : LModule R) : LModule R \cowith
   | AbGroup => LinearMapAbGroup A B
   | *c r f => linearMap_*c {R} {A} {B} {r} f
@@ -25,6 +28,9 @@
   | *c-rdistr => exts \lam _ => B.*c-rdistr
   | ide_*c => exts \lam _ => B.ide_*c
 
+{- | For any ring `R` and module `U`, the endomorphism set `LinearMap U U` forms a ring under pointwise addition and
+ -   (reversed) composition `f * g := g ∘ f`.
+ -}
 \instance LinearMapRing {R : Ring} (U : LModule R) : Ring (LinearMap U U)
   | zro => linearMap_zro
   | + => linearMap_+
@@ -41,6 +47,7 @@
   | ldistr => idp
   | rdistr => exts \lam _ => func-+
   \where {
+    -- | When `R` is commutative, the ring homomorphism `R → LinearMap U U` sending `r` to scalar multiplication by `r`.
     \func *c-hom {R : CRing} {U : LModule R} : RingHom R (LinearMapRing U) \cowith
       | func (r : R) : LinearMap U U \cowith {
         | func u => r *c u

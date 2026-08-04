@@ -1,8 +1,22 @@
+{- | Higher inductive definition of the torus and its identification with the product of two circles.
+ -
+ -   The torus is presented as a HIT with a base point, two loops `line1` and `line2`, and a 2-dimensional `face`
+ -   constructor whose four boundary edges are filled by these loops, encoding the standard square presentation of the
+ -   torus. The module then establishes the fundamental equivalence `Torus ≃ Sphere1 × Sphere1` by mutually inverse
+ -   constructors mapping each torus generator to the corresponding pair of circle generators. As a consequence, the
+ -   loop space `Ω(Torus)` is computed to be `Int × Int`, by chaining the equivalence with the known result
+ -   `Ω(Sphere1) = Int` and the eta rule for sigma types.
+ -}
+
 \import Equiv
 \import Homotopy.Sphere.Circle
 \import Meta
 \import Paths
 
+{- | The 2-torus as a HIT with a point `point`, two loop constructors `line1`, `line2 : I → Torus` (each with both
+ -   endpoints equal to `point`), and a 2-cell `face : I → I → Torus` whose boundary alternates between `line1` and
+ -   `line2`, realizing the square presentation of `T²`.
+ -}
 \data Torus
   | point
   | line1  I \with { left => point | right => point }
@@ -14,18 +28,27 @@
     | i, right => line1 i
   }
 
+{- | A `QEquiv` between `Torus` and `\Sigma Sphere1 Sphere1`, witnessing that the torus is equivalent to the product of
+ -   two circles.
+ -}
 \func TorusSphere-equiv : QEquiv {Torus} {\Sigma Sphere1 Sphere1} \cowith
   | f => TorusSphere
   | ret => SphereTorus
   | ret_f _ => mcases {TorusSphere} idp
   | f_sec _ => mcases {SphereTorus} idp
   \where {
+    {- | The inverse map `\Sigma Sphere1 Sphere1 → Torus`, sending `(base1, base1)` to `point`, loops on each component
+     -   to `line1`/`line2`, and the diagonal 2-cell to `face`.
+     -}
     \func SphereTorus (_ : \Sigma Sphere1 Sphere1) : Torus
       | (base1, base1) => point
       | (base1, loop j) => line2 j
       | (loop i, base1) => line1 i
       | (loop i, loop j) => face i j
 
+    {- | The forward map `Torus → \Sigma Sphere1 Sphere1`, sending generators of the torus to the corresponding pairs of
+     -   `base1`/`loop` on the two circles.
+     -}
     \func TorusSphere (_ : Torus) : \Sigma Sphere1 Sphere1
       | point => (base1, base1)
       | line1 i => (loop i, base1)
@@ -33,14 +56,25 @@
       | face i j => (loop i, loop j)
   }
 
+{- | A path in the universe-induced equality between the torus point and the basepoint `(base1, base1)` of the sphere
+ -   product, obtained by transporting `point` along `Torus=Sphere`.
+ -}
 \func coordinate : Path Torus=Sphere point (base1, base1)
   => path (coe Torus=Sphere point)
   \where {
+    {- | The propositional equality `Torus = \Sigma Sphere1 Sphere1` obtained from `TorusSphere-equiv` via univalence
+     -   (`QEquiv-to-=`).
+     -}
     \func Torus=Sphere : Torus = (\Sigma Sphere1 Sphere1) => QEquiv_= TorusSphere-equiv
   }
 
+-- | The loop space of the torus, defined as `point = point`.
 \func OmegaTorus => point = point
 
+{- | The identification `OmegaTorus = \Sigma Int Int`, computed by an equational chain that transports the loop space
+ -   across `Torus=Sphere`, applies sigma eta to split it into a product of circle loop spaces, and then uses
+ -   `Loop_S1 : OmegaS1 = Int` componentwise.
+ -}
 \func Loop_S1^2 : OmegaTorus = (\Sigma Int Int) =>
   \let | sigmaEta => sigmaEquiv (\lam _ => Sphere1) (base1, base1) (base1, base1)
        | loopBase => (base1, base1) = (base1, base1)

@@ -1,3 +1,13 @@
+{- | Reflective decision procedure for equalities in commutative groups and abelian groups.
+ -
+ -   This module specializes the generic group solver to the commutative case, where the normal form of a term collapses
+ -   from a free word (used for general groups) to an integer-coefficient vector indexed by variables — i.e., an element
+ -   of `Z^n`. Normalization simply tallies signed exponents per variable, so equality of two terms reduces to
+ -   coefficient-wise equality of their difference with zero. The `AbGroupSolverModel` is obtained by reusing
+ -   `CGroupSolverModel` through the `AbGroup.toCGroup` coercion, and a separate `apply-axioms` interface lets the
+ -   solver discharge goals using user-supplied equational hypotheses scaled by integer coefficients.
+ -}
+
 \import Algebra.Group
 \import Algebra.Meta
 \import Algebra.Monoid
@@ -15,6 +25,10 @@
 \import Set
 \open GroupSolverModel
 
+{- | Instance of `SolverModel` for a commutative group `G`. Uses `Term` (from `GroupSolverModel`) for syntax,
+ -   `Array Int n` as the normal form (one integer exponent per variable), and provides `normalize`, `interpret`, and
+ -   `interpretNF` together with the consistency proof.
+ -}
 \func CGroupSolverModel (G : CGroup) : SolverModel G \cowith
   | Term => Term
   | NF n => Array Int n
@@ -23,68 +37,95 @@
   | interpretNF => interpretNF
   | interpretNF-consistent => interpretNF-consistent _
   \where {
+    {- | Expands a coefficient vector `cs : Array Int` against an environment into the explicit list of group elements
+     -   `[g_i^{c_i}]`, recursing on the magnitude of each integer and emitting `inverse` for negative coefficients.
+     -}
     \func toArray (cs : Array Int) (env : Array G cs.len) : Array G \elim cs, env
       | nil, nil => nil
       | 0 :: cs, _ :: env => toArray cs env
       | pos (suc n) :: cs, a :: env => a :: toArray (pos n :: cs) (a :: env)
       | neg (suc n) :: cs, a :: env => inverse a :: toArray (neg n :: cs) (a :: env)
 
+    {- | Right-folded product of an array of group elements, returning `ide` on the empty list (a non-padded variant of
+     -   `BigProd`).
+     -}
     \func sBigProd (l : Array G) : G \elim l
       | nil => G.ide
       | a :: nil => a
       | a :: l => a * sBigProd l
 
+    -- | `sBigProd (a :: l) = a * sBigProd l`, the cons-step rewrite for `sBigProd`.
     \lemma sBigProd_:: {a : G} {l : Array G} : sBigProd (a :: l) = a * sBigProd l \elim l
       | nil => inv ide-right
       | b :: l => idp
 
+    -- | Interprets a normal form `l : Array Int n` in environment `env` as `sBigProd (toArray l env)`.
     \func interpretNF {n : Nat} (env : Fin n -> G) (l : Array Int n) : G
       => sBigProd (toArray l env)
 
+    -- | Alternative interpretation via `BigProd (\lam j => ipow (env j) (l j))`, used for algebraic manipulation.
     \func interpretNF'  (l : Array Int) (env : Array G l.len) : G
       => G.BigProd \lam j => G.ipow (env j) (l j)
 
+    -- | Bridges the two interpretations: `sBigProd (toArray cs env) = interpretNF' cs env`.
     \lemma interpretNF-correct (cs : Array Int) {env : Array G cs.len} : sBigProd (toArray cs env) = interpretNF' cs env \elim cs, env
       | nil, nil => idp
       | 0 :: cs, _ :: env => interpretNF-correct cs *> inv ide-left
       | pos (suc m) :: cs, a :: env => equation.monoid {sBigProd_::, interpretNF-correct (_ :: cs), inv G.pow-left}
       | neg (suc m) :: cs, a :: env => equation.monoid {sBigProd_::, interpretNF-correct (_ :: cs), inv G.pow-left}
 
+    -- | Same statement via the auxiliary `interpretNF'`.
     \lemma interpretNF-consistent' {n : Nat} {env : Fin n -> G} {t : Term n} : interpretNF' (normalize t) env = interpret env t \elim t
       | var i => G.BigProd-unique i (\lam j p => later $ rewrite (decideEq/=_reduce p) idp) *> rewrite (decideEq=_reduce idp) ide-left
       | :ide => G.BigProd_replicate1
       | :inverse t => G.BigProd-ext (\lam i => G.ipow_negaitve) *> inv G.BigProd_inverse *> pmap inverse interpretNF-consistent'
       | t :* s => G.BigProd-ext (\lam i => G.ipow_+) *> G.BigProd_* *> pmap2 (*) interpretNF-consistent' interpretNF-consistent'
 
+    -- | `interpretNF env (normalize t) = interpret env t`, the soundness of the normal form via `interpretNF`.
     \lemma interpretNF-consistent {n : Nat} {env : Fin n -> G} (t : Term n) : interpretNF env (normalize t) = interpret env t
       => interpretNF-correct _ *> interpretNF-consistent'
 
+    {- | Recursively converts a `Term n` into its `Array Int n` exponent vector — `var v` becomes a unit basis vector at
+     -   `v`, `:ide` becomes the zero vector, `:inverse t` negates entrywise, and `t :* s` adds entrywise.
+     -}
     \func normalize {n : Nat} (t : Term n) : Array Int n \elim t
       | var v => singleAt v (pos 1) 0
       | :ide => replicate n (pos 0)
       | :inverse t => map negative (normalize t)
       | t :* s => mkArray \lam j => normalize t j + normalize s j
 
+    {- | Forward direction: if the normal form of `t :* :inverse s` is the identity, then
+     -   `interpret env t = interpret env s`. This is the lemma the solver tactic uses to close a goal.
+     -}
     \lemma terms-equality (env : Array G) (t s : Term env.len) (p : interpretNF env (normalize (t :* :inverse s)) = G.ide) : interpret env t = interpret env s
       => inv (*-assoc *> pmap (_ *) inverse-left *> G.ide-right) *> pmap (* _) (inv (interpretNF-consistent (t :* :inverse s)) *> p) *> G.ide-left
 
+    -- | Converse: an equality of interpretations yields the identity normal form for `t :* :inverse s`.
     \lemma terms-equality-conv (env : Array G) (t s : Term env.len) (p : interpret env t = interpret env s) : interpretNF env (normalize (t :* :inverse s)) = G.ide
       => interpretNF-consistent (t :* :inverse s) *> pmap (* _) p *> inverse-right
 
+    {- | Given a list of hypotheses `(c_i, t_i, s_i, p_i : ⟦t_i⟧ = ⟦s_i⟧)`, proves that the integer-linear combination
+     -   `Σ_i c_i · (normalize t_i − normalize s_i)` interprets (via `interpretNF'`) to `ide`. Lets the solver scale and
+     -   combine user-provided equations.
+     -}
     \lemma apply-axioms' {n : Nat} (env : Array G n) (l : Array (\Sigma Int (t s : Term n) (interpret env t = interpret env s)))
       : interpretNF' (mkArray \lam j => IntRing.BigSum \lam i => (l i).1 * (normalize (l i).2 j - normalize (l i).3 j)) env = G.ide
       => interpretNF_BigSum (\lam i => mkArray \lam j => (l i).1 * (normalize (l i).2 j - normalize (l i).3 j)) *> G.BigProd_ide \lam i => later $
           interpretNF-coef *> pmap (G.ipow __ _) (interpretNF_+ {G} {n} *> pmap (_ *) interpretNF_negative *> pmap (* _) (interpretNF-consistent' *> (l i).4 *> inv interpretNF-consistent') *> inverse-right) *> G.ipow_ide
       \where {
+        -- | `interpretNF'` distributes addition of coefficient vectors into the group product.
         \lemma interpretNF_+ {n : Nat} {env : Array G n} {l l' : Array Int n} : interpretNF' (mkArray \lam j => l j + l' j) env = interpretNF' l env * interpretNF' l' env
           => G.BigProd-ext (\lam j => G.ipow_+) *> G.BigProd_*
 
+        -- | `interpretNF'` takes coefficient negation to group inversion.
         \lemma interpretNF_negative {l : Array Int} {env : Array G l.len} : interpretNF' (map negative l) env = inverse (interpretNF' l env)
           => later (G.BigProd-ext {l.len} \lam j => G.ipow_negaitve) *> inv G.BigProd_inverse
 
+        -- | `interpretNF'` takes scalar multiplication of coefficients by `c` to integer power `ipow _ c`.
         \lemma interpretNF-coef {n : Nat} {l : Array Int n} {env : Array G l.len} {c : Int} : interpretNF' (map (c *) l) env = G.ipow (interpretNF' l env) c
           => later (G.BigProd-ext {l.len} \lam i => pmap (G.ipow _) *-comm *> G.ipow_*) *> G.BigProd_ipow
 
+        -- | `interpretNF'` of a column-wise integer sum equals the group `BigProd` of the row interpretations.
         \lemma interpretNF_BigSum {n : Nat} {env : Array G n} (ls : Array (Array Int n)) : interpretNF' (mkArray \lam j => IntRing.BigSum (ls __ j)) env = G.BigProd \lam i => interpretNF' (ls i) env \elim ls
           | nil => G.BigProd_replicate1
           | l :: ls => interpretNF_+ *> pmap (_ *) (interpretNF_BigSum ls)
@@ -95,17 +136,23 @@
       => interpretNF-correct (mkArray _) *> apply-axioms'.interpretNF_+ *> pmap (* _) (apply-axioms' env l) *> ide-left *> inv (interpretNF-correct right)
   }
 
+{- | Instance of `SolverModel` for an abelian group `A`, defined by composing `CGroupSolverModel` with
+ -   `AbGroup.toCGroup`.
+ -}
 \func AbGroupSolverModel (A : AbGroup) : SolverModel A
   => CGroupSolverModel (AbGroup.toCGroup A)
   \where {
     \open CGroupSolverModel
 
+    -- | Forward axiom-discharge lemma reformulated for abelian groups via `AbGroup.toCGroup`.
     \lemma terms-equality (env : Array A) (t s : Term env.len) (p : interpretNF {AbGroup.toCGroup A} env (normalize (t :* :inverse s)) = A.zro)
       => CGroupSolverModel.terms-equality env t s p
 
+    -- | Converse direction for the abelian wrapper.
     \lemma terms-equality-conv (env : Array A) (t s : Term env.len) (p : interpret {AbGroup.toCGroup A} env t = interpret {AbGroup.toCGroup A} env s)
       => CGroupSolverModel.terms-equality-conv env t s p
 
+    -- | `apply-axioms` lifted to abelian groups, used by the abelian-group solver tactic.
     \lemma apply-axioms {n : Nat} (env : Array A n) (l : Array (\Sigma Int (t s : Term env.len) (interpret {AbGroup.toCGroup A} env t = interpret {AbGroup.toCGroup A} env s))) (right : Array Int env.len)
       => CGroupSolverModel.apply-axioms {AbGroup.toCGroup A} env l right
   }

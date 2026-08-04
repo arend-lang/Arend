@@ -1,16 +1,31 @@
+{- | Path-connected (0-connected) spaces in homotopy type theory.
+ -
+ -   A space is 0-connected when it is inhabited and any two points are merely equal (i.e., propositionally truncated
+ -   path-equality). The module packages this as a class extending `InhSpace`, and provides the basic closure
+ -   properties: the unit type is connected, and the pushout of connected spaces over an inhabited space remains
+ -   connected. These instances furnish the building blocks for constructing connected spaces from simpler ones.
+ -}
+
 \import Homotopy.Pushout
 \import Homotopy.Space
 \import Homotopy.Suspension
 \import Logic
 \import Paths
 
+{- | Extends `InhSpace` with the field `isConn0 (x y : E) : TruncP (x = y)`, asserting that any two points are merely
+ -   path-equal.
+ -}
 \class Connected0 \extends InhSpace
   | isConn0 (x y : E) : TruncP (x = y)
 
+-- | The singleton type `\Sigma` is 0-connected.
 \instance UnitConnected0 : Connected0 (\Sigma)
   | isInh => inP ()
   | isConn0 _ _ => inP idp
 
+{- | The pushout `PushoutData f g` of maps `f : A -> B`, `g : A -> C` is 0-connected whenever `A` is inhabited and `B`,
+ -   `C` are 0-connected.
+ -}
 \instance PushoutConnected0 {A : InhSpace} {B C : Connected0} {f : A -> B} {g : A -> C} : Connected0 (PushoutData f g)
   | isInh => \case isInh \with {
     | inP b => inP (pinl b)

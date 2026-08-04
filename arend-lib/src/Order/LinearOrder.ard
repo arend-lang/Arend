@@ -1,3 +1,14 @@
+{- | Total and linear orders, with constructive variants based on a strict order plus comparison and connectedness.
+ -
+ -   This module formalizes orders where any two elements are comparable. `TotalOrder` extends `DistributiveLattice` and
+ -   derives meets/joins from a `totality` axiom by selecting one of the two compared elements. `LinearOrder` is the
+ -   constructive presentation built on a strict order `<` with `<-comparison` (a strict counterpart of trichotomy that
+ -   locates a third point) and `<-connectedness` (no element strictly differs in either direction implies equality);
+ -   from these, the non-strict order is defined as `Not (a' < a)`. The decidable variant `LinearOrder.Dec` provides a
+ -   full `Tri` trichotomy that yields decidable equality, lattice operations by case analysis, and constructive
+ -   minimum/maximum search over arrays. Density and unboundedness refinements are layered on top.
+ -}
+
 \import Data.Array
 \import Data.Or
 \import Function
@@ -16,6 +27,9 @@
 \open JoinSemilattice
 \open MeetSemilattice
 
+{- | Class extending `DistributiveLattice` with `totality : x <= y || y <= x`. Default meet/join, lattice laws, and the
+ -   distributivity inequality `ldistr>=` are derived from `totality` via the `tmeet`/`tjoin` helpers.
+ -}
 \class TotalOrder \extends DistributiveLattice {
   | totality (x y : E) : x <= y || y <= x
 
@@ -35,18 +49,21 @@
       | byRight z<=y => meet-monotone <=-refl (join-univ <=-refl z<=y) <=∘ join-left
     }
 
+  -- | For any `x y`, `x ∧ y = x` or `x ∧ y = y`.
   \lemma meet-isMin (x y : E) : (x ∧ y = x) || (x ∧ y = y)
     => \case totality x y \with {
       | byLeft x<=y => byLeft (<=-antisymmetric Lattice.meet-left (Lattice.meet-univ <=-refl x<=y))
       | byRight y<=x => byRight (<=-antisymmetric Lattice.meet-right (Lattice.meet-univ y<=x <=-refl))
     }
 
+  -- | A property `P` closed under both `x` and `y` holds at `x ∧ y` (since meet picks one).
   \lemma meet-prop (P : E -> \Prop) {x y : E} (Px : P x) (Py : P y) : P (x ∧ y)
     => \case meet-isMin x y \with {
       | byLeft p => transportInv P p Px
       | byRight p => transportInv P p Py
     }
 
+  -- | For arrays, `Big ∧ x l` equals either some `l j` or the seed `x`.
   \lemma Big01_meet-isMin (l : Array E) (x : E) : (\Sigma (j : Fin l.len) (Big (∧) x l = l j)) || (Big (∧) x l = x) \elim l
     | nil => byRight idp
     | a :: l => \case meet-isMin a (Big (∧) x l), Big01_meet-isMin l x \with {
@@ -55,24 +72,28 @@
       | byRight r, byRight q => byRight (r *> q)
     }
 
+  -- | For nonempty arrays, `Big_∧ l = l j` for some index `j`.
   \lemma Big_meet-isMin {n : Nat} (l : Array E (suc n)) : ∃ (j : Fin (suc n)) (Big_∧ l = l j) \elim l
     | a :: l => \case Big01_meet-isMin l a \with {
       | byLeft r => inP (suc r.1, r.2)
       | byRight r => inP (0, r)
     }
 
+  -- | Dual statements for joins.
   \lemma join-isMax (x y : E) : (x ∨ y = x) || (x ∨ y = y)
     => \case totality x y \with {
       | byLeft x<=y => byRight (<=-antisymmetric (Lattice.join-univ x<=y <=-refl) Lattice.join-right)
       | byRight y<=x => byLeft (<=-antisymmetric (Lattice.join-univ <=-refl y<=x) Lattice.join-left)
     }
 
+  -- | Dual statements for joins.
   \lemma join-prop (P : E -> \Prop) {x y : E} (Px : P x) (Py : P y) : P (x ∨ y)
     => \case join-isMax x y \with {
       | byLeft p => transportInv P p Px
       | byRight p => transportInv P p Py
     }
 
+  -- | Dual statements for joins.
   \lemma Big01_join-isMax (l : Array E) (x : E) : (\Sigma (j : Fin l.len) (Big (∨) x l = l j)) || (Big (∨) x l = x) \elim l
     | nil => byRight idp
     | a :: l => \case join-isMax a (Big (∨) x l), Big01_join-isMax l x \with {
@@ -81,16 +102,23 @@
       | byRight r, byRight q => byRight (r *> q)
     }
 
+  -- | Dual statements for joins.
   \lemma Big_join-isMax {n : Nat} (l : Array E (suc n)) : ∃ (j : Fin (suc n)) (Big_∨ l = l j) \elim l
     | a :: l => \case Big01_join-isMax l a \with {
       | byLeft r => inP (suc r.1, r.2)
       | byRight r => inP (0, r)
     }
 } \where {
+  {- | Build the meet/join of two elements from a proof `x <= y || y <= x` by selecting the smaller/larger one and
+   -   proving the universal property.
+   -}
   \func tmeet {E : Poset} {x y : E} => ||.rec MeetSemilattice.Meets-isProp
                                               (\lam x<=y => (x, E.<=-refl, x<=y, \lam z z<=x _ => z<=x))
                                               (\lam y<=x => (y, y<=x, E.<=-refl, \lam z _ z<=y => z<=y))
 
+  {- | Build the meet/join of two elements from a proof `x <= y || y <= x` by selecting the smaller/larger one and
+   -   proving the universal property.
+   -}
   \func tjoin {E : Poset} {x y : E} => ||.rec JoinSemilattice.Joins-isProp
                                               (\lam x<=y => (y, x<=y, E.<=-refl, \lam z _ y<=z => y<=z))
                                               (\lam y<=x => (x, E.<=-refl, y<=x, \lam z z<=x _ => z<=x))
@@ -119,6 +147,7 @@
   }
   | <=-less p => \lam q => <-irreflexive (p <∘ q)
 
+  -- | The opposite linear order, swapping `<`.
   \protected \func op : LinearOrder \cowith
     | StrictPoset => StrictPoset.op
     | <-comparison y x<z => \case <-comparison y x<z \with {
@@ -127,6 +156,9 @@
     }
     | <-connectedness p q => <-connectedness q p
 } \where {
+  {- | Linear order with the apartness relation `x # y := x < y || y < x`, providing irreflexivity, symmetry,
+   -   comparison, and tightness, so it extends `Set#`.
+   -}
   \class With# \extends LinearOrder, Set#
     | # x y => x < y || y < x
     | #-irreflexive x#x => \case x#x \with {
@@ -149,11 +181,14 @@
     }
     | tightness x/#y => <-connectedness (\lam x<y => x/#y (byLeft x<y)) (\lam y<x => x/#y (byRight y<x))
 
+  -- | Defined as `Not (a' < a)` for any strict poset.
   \type \infix 4 <= {A : StrictPoset} (a a' : A) => Not (a' < a)
 
+  -- | A strict inequality implies the non-strict one.
   \lemma <_<= {A : StrictPoset} {a a' : A} (p : a < a') : a <= a'
     => \lam q => <-irreflexive (p <∘ q)
 
+  -- | `a <= a'` and `a' < a` are contradictory.
   \lemma notLess {A : StrictPoset} {a a' : A} (p : a <= a') (q : a' < a) : Empty
     => p q
 
@@ -225,6 +260,7 @@
       | greater y<x => no (\lam x=y => <-irreflexive (transport (y <) x=y y<x))
     }
 
+    -- | Opposite decidable linear order.
     \protected \func op : Dec \cowith
       | LinearOrder => LinearOrder.op
       | decideEq => decideEq
@@ -235,12 +271,14 @@
       }
   }
 
+  -- | Decidability of `a < a'`.
   \func <-dec {A : Dec} (a a' : A) : Decide (a < a') \cowith
     | decide => \case dec<_<= a a' \with {
       | inl a<a' => yes a<a'
       | inr a'<=a => no a'<=a
     }
 
+  -- | From `a <= a'` and `a /= a'`, derive `a < a'`.
   \lemma <=_/= {A : Dec} {a a' : A} (p : a <= a') (q : a /= a') : a < a'
     => \case trichotomy a a' \with {
          | less r => r
@@ -248,23 +286,27 @@
          | greater r => absurd (p r)
        }
 
+  -- | A non-strict `a <= a'` resolves to either `a < a'` or `a = a'`.
   \func <=-dec {A : Dec} {a a' : A} (p : a <= a') : (a < a') `Or` (a = a') => \case trichotomy a a' \with {
     | less a<a' => inl a<a'
     | equals a=a' => inr a=a'
     | greater a'<a => absurd (p a'<a)
   }
 
+  -- | Decides between `a < a'` and `a' <= a`.
   \func dec<_<= {A : Dec} (a a' : A) : (a < a') `Or` (a' <= a) => \case trichotomy a a' \with {
     | less a<a' => inl a<a'
     | equals a=a' => inr (rewrite a=a' <-irreflexive)
     | greater a'<a => inr (<=-less a'<a)
   }
 
+  -- | Compute `dec<_<=` to its expected branch given the witness.
   \lemma dec<_reduce {A : Dec} {a a' : A} (p : a < a') : dec<_<= a a' = inl p
     => unfold dec<_<= (mcases contradiction \with {
       | less a<a' => pmap inl prop-pi
     })
 
+  -- | Compute `dec<_<=` to its expected branch given the witness.
   \lemma dec<=_reduce {A : Dec} {a a' : A} (p : a' <= a) : dec<_<= a a' = inr p
     => unfold dec<_<= (mcases (pmap inr prop-pi) \with {
       | less a<a' => contradiction
@@ -276,39 +318,48 @@
       | inr q => no q
     }
 
+  -- | Decidability of `a <= a'`.
   \lemma dec<= {A : Dec} (a a' : A) : Set.Dec (a <= a')
     => \case dec<_<= a' a \with {
          | inl q => no \lam p => <-irreflexive (q <∘l p)
          | inr q => yes q
        }
 
+  -- | Force `trichotomy` to the appropriate constructor when the relevant proof is in hand.
   \lemma trichotomy<_reduce {A : Dec} {a a' : A} (p : a < a') : trichotomy a a' = less p
     => cases (trichotomy a a') contradiction \with {
       | less q => pmap less prop-pi
     }
 
+  -- | Force `trichotomy` to the appropriate constructor when the relevant proof is in hand.
   \lemma trichotomy=_reduce {A : Dec} {a a' : A} (p : a = a') : trichotomy a a' = equals p
     => cases (trichotomy a a') contradiction \with {
       | equals q => pmap equals prop-pi
     }
 
+  -- | Force `trichotomy` to the appropriate constructor when the relevant proof is in hand.
   \lemma trichotomy>_reduce {A : Dec} {a a' : A} (p : a' < a) : trichotomy a a' = greater p
     => cases (trichotomy a a') contradiction \with {
       | greater q => pmap greater prop-pi
     }
 
+  -- | If `a ∧ b /= a`, then `a ∧ b = b`.
   \lemma meet/=left {A : LinearOrder} {_ : MeetSemilattice A (<=)} {a b : A} (p : a ∧ b /= a) : a ∧ b = b
     => <=-antisymmetric meet-right $ meet-univ (\lam a<b => p $ <=-antisymmetric meet-left $ meet-univ <=-refl $ <_<= a<b) <=-refl
 
+  -- | If `a ∧ b /= b`, then `a ∧ b = a`.
   \lemma meet/=right {A : LinearOrder} {_ : MeetSemilattice A (<=)} {a b : A} (p : a ∧ b /= b) : a ∧ b = a
     => rewrite meet-comm $ meet/=left $ later $ rewrite meet-comm p
 
+  -- | If `a /= a ∨ b`, then `a ∨ b = b`.
   \lemma join/=left {A : LinearOrder} {_ : JoinSemilattice A (<=)} {a b : A} (p : a /= a ∨ b) : a ∨ b = b
     => <=-antisymmetric (join-univ (\lam b<a => p $ <=-antisymmetric join-left (join-univ <=-refl $ <_<= b<a)) <=-refl) join-right
 
+  -- | If `b /= a ∨ b`, then `a ∨ b = a`.
   \lemma join/=right {A : LinearOrder} {_ : JoinSemilattice A (<=)} {a b : A} (p : b /= a ∨ b) : a ∨ b = a
     => rewrite join-comm $ join/=left $ later $ rewrite join-comm p
 
+  -- | For a nonempty array over a `Dec` linear order, returns an index `j` with `Big_∧ l = l j`.
   \func findMin {A : Dec} {n : Nat} (l : Array A (suc n)) : \Sigma (j : Fin (suc n)) (Big_∧ l = l j) \elim n, l
     | 0, a :: l => (0, idp)
     | suc n, a :: a' :: l => \case dec<_<= a' (Big (∧) a l) \with {
@@ -319,6 +370,7 @@
       }
     }
 
+  -- | Dual: returns an index witnessing `Big_∨ l = l j`.
   \func findMax {A : Dec} {n : Nat} (l : Array A (suc n)) : \Sigma (j : Fin (suc n)) (Big_∨ l = l j) \elim n, l
     | 0, a :: l => (0, idp)
     | suc n, a :: a' :: l => \case dec<_<= a' (Big (∨) a l) \with {
@@ -330,9 +382,13 @@
     }
 }
 
+-- | A strictly monotone map from a linear order to a strict poset is injective.
 \lemma monotone-injective {X : LinearOrder} {Y : StrictPoset} (f : X -> Y) (fm : IsStrictlyMonotone f) : IsInj f
   => \lam p => <-connectedness (\lam q => <-irreflexive $ rewrite p in fm q) (\lam q => <-irreflexive $ rewrite p in fm q)
 
+{- | Class extending `LinearOrder` and `BiorderedLattice`, supplying `<_meet-univ` and `<_join-univ` (strict universal
+ -   properties of meet/join) by case analysis on `<-comparison`.
+ -}
 \class LinearLattice \extends LinearOrder, BiorderedLattice {
   | <_meet-univ {x} {y} {z} x<y x<z => \case <-comparison (y ∧ z) x<y \with {
     | byLeft q => q
@@ -344,12 +400,14 @@
     }
 }
 
+-- | Linear order with `isDense : x < z -> ∃ y, x < y < z`. Has a decidable subclass `DenseLinearOrder.Dec`.
 \class DenseLinearOrder \extends LinearOrder
   | isDense {x z : E} : x < z -> ∃ (y : E) (x < y) (y < z)
   \where {
     \class Dec \extends DenseLinearOrder, LinearOrder.Dec
   }
 
+-- | Adds `withoutUpperBound` and `withoutLowerBound`. Has a decidable subclass `UnboundedDenseLinearOrder.Dec`.
 \class UnboundedDenseLinearOrder \extends DenseLinearOrder
   | withoutUpperBound (x : E) : ∃ (y : E) (x < y)
   | withoutLowerBound (x : E) : ∃ (y : E) (y < x)
@@ -357,6 +415,9 @@
     \class Dec \extends UnboundedDenseLinearOrder, DenseLinearOrder.Dec
   }
 
+{- | Three-way comparison data `less (a < a') | equals (a = a') | greater (a > a')`, with a `\use \level` instance
+ -   making it a proposition (since the three cases are mutually exclusive in a strict poset).
+ -}
 \data Tri {A : StrictPoset} (a a' : A)
   | less (a < a')
   | equals (a = a')

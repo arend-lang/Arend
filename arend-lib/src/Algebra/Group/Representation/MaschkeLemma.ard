@@ -1,3 +1,14 @@
+{- | Maschke's lemma: over a commutative ring where the group order is invertible, every short exact sequence of
+ -   finite-group representations splits.
+ -
+ -   The module formalizes the classical averaging argument: given a `LModule`-level retraction `p` of a
+ -   subrepresentation inclusion, one averages `p` over the finite group `G` (dividing by `|G|`) to produce a
+ -   `G`-equivariant retraction. The construction is built in two layers — `SumOverGroup` packages the unweighted sum
+ -   `Σ_g g·f(g⁻¹·-)` as an intertwining map between any two linear representations, and `MaschkeLemma` then scales it
+ -   by `|G|⁻¹` and verifies the retraction property. The hypothesis `q : natCoef |G| * |G|⁻¹ = 1` makes `|G|` formally
+ -   invertible in `R`, replacing the usual characteristic-coprime-to-`|G|` condition.
+ -}
+
 \import Algebra.Group
 \import Algebra.Group.GSet
 \import Algebra.Group.Representation
@@ -20,7 +31,14 @@
 \import Paths.Meta
 \import Set.Fin
 
+{- | Parameterized by a commutative ring `R`, a finite group `G`, an inverse `|G|^-1 : R` of the group order (witnessed
+ -   by `q`), a representation `E`, and a subrepresentation `S`. Provides the splitting of `S ↪ E` in the representation
+ -   category whenever it splits as `R`-modules.
+ -}
 \class MaschkeLemma {R : CRing} {G : FinGroup} (cardInv : Monoid.Inv (R.natCoef G.card)) {E : LinRepres R G} {S : SubLRepres R G E} {
+  {- | Averaging operator on linear maps: scales `SumOverGroup f` by `|G|^-1` to produce an intertwining map `E → W`.
+   -   This is the core symmetrization that turns a module map into an equivariant one.
+   -}
   \func mean_func {E W : LinRepres R G} (f : LinearMap E W) : InterwiningMap E W
     => cardInv.inv *c SumOverGroup f
 
@@ -51,20 +69,31 @@ produces an interwining linear map $f'$ via the following formula
   | LinearMap => int
   | func-** {a} {h} => rewrite (bring_h_out h a, inv $ ap-rearrange h a) idp
   \where {
+    {- | The abelian group of `R`-linear maps `A → B`, obtained from the pre-additive structure on `LModule R`. Hosts
+     -   the finite sum used to define `int`.
+     -}
     \func Ab : AbGroup
       => LinearMapAbGroup A B
 
+    -- | The `g`-th conjugated map `a ↦ g · f(g⁻¹ · a) : LinearMap A B`.
     \func adjust (g : G) (f : LinearMap A B) : LinearMap A B \cowith
       | func a => g B.** f (inverse g A.** a)
       | func-+ => rewrite (A.**-ldistr, f.func-+, B.**-ldistr) idp
       | func-*c => rewrite (A.**_*c, f.func-*c, B.**_*c) idp
 
+    -- | The underlying linear map of `SumOverGroup`, defined as `Ab.FinSum (adjust g f)`.
     \func int : LinearMap A B
       => Ab.FinSum (\lam (g : G) => adjust g f)
 
+    {- | `adjust g f (h · a) = h · adjust (h⁻¹ * g) f a`. Encodes how conjugation interacts with the action and is the
+     -   algebraic core of equivariance.
+     -}
     \func group_prop (g h : G)(a : A) : adjust g f (h A.** a) = h B.** adjust (inverse h * g) f a
       => unfold (inv (rewrite (inv B.**-assoc, inv G.*-assoc, G.inverse-right, G.ide-left, G.inverse_*, G.inverse-isInv, A.**-assoc) idp))
 
+    {- | A `G`-action commutes with `FinSum` in the target module: `h · Σ x_i = Σ (h · x_i)`. Reduces to
+     -   `BigSum-equivariance` via the `FinSum_char` characterization.
+     -}
     \func FinSum-equivariance (h : G) {x : G -> B} : h B.** B.FinSum x = B.FinSum (\lam z => h B.** x z)
       => \case B.FinSum_char x  \with {
         | inP p => rewrite (p.2, B.FinSum_char2 p.1, BigSum-equivariance) idp
@@ -72,11 +101,15 @@ produces an interwining linear map $f'$ via the following formula
       \where {
         \func act_array (h : G)(e : Array B) : Array B => \lam i => h B.** e i
 
+        -- | The same statement at the level of finite arrays, proved by induction on the array.
         \func BigSum-equivariance (e : Array B) : h B.** B.BigSum e = B.BigSum (act_array h e) \elim e
           | nil => rewrite B.**_zro idp
           | a :: l => rewrite (B.**-ldistr, BigSum-equivariance l) idp
       }
 
+    {- | Evaluation commutes with summation in `Ab`: `(Σ_g x_g) a = Σ_g (x_g a)`. Lets one move from sums of linear maps
+     -   to sums of vectors.
+     -}
     \func FinSumRewrite (x : G -> Ab) (a : A)
       : (Ab.FinSum x) a = B.FinSum (\lam e => (x e) a)
       => \case Ab.FinSum_char x \with {
@@ -92,17 +125,27 @@ produces an interwining linear map $f'$ via the following formula
           | a1 :: l => rewrite (Ab_Helper, BigSumRewrite l a) idp
       }
 
+    -- | `FinSum` is invariant under permutation of the index set. Used to reindex the sum over `G` by `g ↦ h⁻¹ * g`.
     \lemma PermutationInvariance {E : AbMonoid}{A : FinSet}
                                  (x : A -> E)(p : A -> A)(permute : QEquiv p): E.FinSum x  = E.FinSum {A} (x Function.o p)
       => E.FinSum_Equiv {A}{A} permute
 
+    {- | Apply `PermutationInvariance` with the permutation `g ↦ h⁻¹ * g` to rewrite `int` (resp. `int a`) in the form
+     -   needed by `bring_h_out`.
+     -}
     \lemma rearrange (h : G) : int = Ab.FinSum (\lam (g : G) => adjust (inverse h * g) f)
       => PermutationInvariance (adjust __ f) (inverse h *) (Group.translate-is-Equiv (inverse h))
 
+    {- | Apply `PermutationInvariance` with the permutation `g ↦ h⁻¹ * g` to rewrite `int` (resp. `int a`) in the form
+     -   needed by `bring_h_out`.
+     -}
     \lemma ap-rearrange (h : G) (a : A)
       : int a = Ab.FinSum (\lam g => adjust (inverse h * g) f) a
       => path \lam i => rearrange h i a
 
+    {- | Pulls a `G`-action out of `int`: `int (h · a) = h · int a` after re-indexing the sum. This is what makes `int`
+     -   an intertwining map.
+     -}
     \func bring_h_out (h : G) (a : A)
       : int (h A.** a) = h B.** (Ab.FinSum (\lam g => adjust (inverse h * g) f)) a
       => inv $ rewrite (zero-2-step h a, FinSum-equivariance, step-4 h a, inv $ FinSumRewrite (adjust __ f) (h A.** a)) idp
@@ -121,6 +164,9 @@ produces an interwining linear map $f'$ via the following formula
           }
 
       }
+    {- | Sum of a constant family `(_ : A) ↦ e` in an `R`-module equals `natCoef |A| *c e`. The numerical identity that,
+     -   combined with `q`, collapses the average back to the original element in `mean-func-preserve`.
+     -}
     \func FinSumEqual-multiply {E : LModule R} {A : FinSet} (e : E) : E.FinSum (\lam (_ : A) => e) = R.natCoef A.card *c e =>
       \case E.FinSum_char (\lam (_ : A) => e) \with {
         | inP a => rewrite (a.2, BigSumEqual A.card) idp

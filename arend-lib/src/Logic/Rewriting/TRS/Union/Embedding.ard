@@ -1,3 +1,16 @@
+{- | Bridges the native rewrite relation of a TRS union with the trichromatic parallel reduction used to prove
+ -   confluence.
+ -
+ -   This module provides the embedding/unembedding machinery that connects two views of reduction in a colored union of
+ -   term rewriting systems: the direct `RewriteRelation` over the joint rule registry `JRegistry`, and the structured
+ -   `TrichromaticParallelReduction` (with bordered/switching/top-level layers) used by the confluence proof. The main
+ -   result `fill-confluence` closes the diamond for the union by lifting two reduction sequences `A ~> B` and `A ~> C`
+ -   into the parallel-reduction world, applying the per-color confluence assumption to fill the diamond, and
+ -   unembedding the resulting joins back into ordinary closure-of-rewrite sequences. The internal helpers handle the
+ -   case analysis on whether a redex sits at a function root (and so picks up a color) or recurses into an argument
+ -   position.
+ -}
+
 \import Arith.Fin.Order
 \import Data.List \hiding (Sort)
 \import Data.Maybe
@@ -19,6 +32,11 @@
 \import Logic.Rewriting.TRS.Union.TopLevel
 \open TheoremContext
 
+{- | Given `A ~> B` and `A ~> C` as `Closure (RewriteRelation JRegistry)` and per-color confluence
+ -   (`ConfluentialSystem (envs c) (rules c)`), produces a `StraightJoin B C` — i.e. a common reduct `D` with reductions
+ -   `B ~> D` and `C ~> D` — by lifting to `TrichromaticParallelReduction`, invoking `bpr-confluence`, and unembedding
+ -   the resulting joins.
+ -}
 \func fill-confluence
   {tc : TheoremContext} {context : List Sort'} {s : Sort'}
   (A B C : Term env context s EmptyMetaContext)
@@ -43,6 +61,10 @@
 
 \module Internal \where {
 
+  {- | Diamond-completion at the level of `Closure Rel`: given `x ~> y` and `x ~> z` and a one-step unifier closing the
+   -   diamond for `Rel`, produces `w`, `y ~> w`, `z ~> w`. Recurses on the structure of `x->y` (`c-trivial`, `c-basic`,
+   -   `c-connect`).
+   -}
   \func unify-reduction
     {A : \Type} {Rel : A -> A -> \Type} (x y z : A)
     (x->y : Closure Rel x y) (x->z : Closure Rel x z)
@@ -54,6 +76,9 @@
                                     | (w', y->w', w->w') => unify-reduction c y w c->y c->w unifier
                                \in (w', y->w', Closure.compose z->w w->w')
     \where {
+      {- | Helper specializing the first reduction to a single `Rel` step, recursing on `x->z`. Used to drive
+       -   `unify-reduction`'s case for non-trivial first segments.
+       -}
       \func unify-line
         {A : \Type} {Rel : A -> A -> \Type} (x y z : A)
         (x->y : Rel x y) (x->z : Closure Rel x z)
@@ -67,6 +92,13 @@
           \in (w', c-connect w y->w w->w', z->w')
     }
 
+  {- | Converts a single `RewriteRelation JRegistry A B` step into a `TrichromaticParallelReduction A B`. Cases: On a
+   -   root rewrite at a `func` term, uses `coloring-lemma` to identify the rule's color and packages the step as a
+   -   colored top-level reduction wrapped in a parallelization. On a parameter rewrite (`rewrite-with-parameter-f`),
+   -   recurses into the argument and reassembles via `collect-reductions-together-raw` and `parallelization-f`, leaving
+   -   non-rewritten arguments as `equal-trees`. The variable-headed root case is impossible (closed by
+   -   `contradicting`).
+   -}
   \func embed-rewrite-relation {tc : TheoremContext} {context : List Sort'} {s : Sort'}
                                (A B : Term env context s EmptyMetaContext)
                                (A~>B : RewriteRelation JRegistry A B)
@@ -95,10 +127,16 @@
       \in (global-color, someColor, parallelization-f mediator inrd cwr)
     | metavar () arguments-A, _, _
     \where {
+      {- | Rules out a root redex headed by a variable: a meta-substitution applied to a function-rooted rule LHS cannot
+       -   equal `var index p`.
+       -}
       \lemma contradicting {env : FSignature} {context : List Sort} {s : Sort} {mc mc' : MetaContext Sort} (index : Index context) (p : s = context !! index) (msubst : MetaSubstitution env context mc mc')
                            (t : Term env nil s mc) (eq : MetaSubstitution.apply (weakening t SubList.sublist-nil-free) SubList.identity msubst = var index p) (rt : FunctionRoot t) : Empty \elim t, rt
         | func f arguments, T-has-functional-root => contradiction
 
+      {- | From a substitution that turns the (injected) linear pattern of a color-`c` rule into `func f arguments`,
+       -   concludes `f.1 = c` — i.e. the head symbol's color matches the rule's color.
+       -}
       \lemma coloring-lemma
         {tc : TheoremContext} {s : Sort'} {mc' : MetaContext Sort'}
         {context : List Sort'}
@@ -115,6 +153,11 @@
         | l-var index p (), froot
     }
 
+  {- | Converts a `BorderedParallelReduction gc color A B` into `Closure (RewriteRelation JRegistry) A B`. For
+   -   `parallelization-f`, performs a modular induction over the argument vector (using `modular-function`,
+   -   `modular-to-pointed`, and `pointed-function` lemmas) to chain per-argument reductions through
+   -   `rewrite-with-parameter-f`, then composes with the unembedded switching reduction at the head.
+   -}
   \func unembed-rewrite-relation {tc : TheoremContext} {context : List Sort'} {s : Sort'} {mc : MetaContext Sort'}
                                  {gc : Color}
                                  (color : Maybe Color)
@@ -146,6 +189,9 @@
            | from-cwr : Closure (RewriteRelation JRegistry) (func f mediator) B => unwrap-cwr color c
       \in Closure.compose joined from-cwr
 
+  {- | Unembeds a `SwitchingReduction gc color A B`: the `cr-skip` case is reflexivity, and the `cr-rewrite` case lifts
+   -   a `TopLevelColoredReduction` step-by-step through `unembed-tlcr`.
+   -}
   \func unwrap-cwr {tc : TheoremContext} {context : List Sort'} {s : Sort'} {mc : MetaContext Sort'}
                    {gc : Color}
                    (color : Maybe Color)
@@ -156,6 +202,10 @@
     | just color, cr-rewrite A->B p =>
       Closure.lift (\lam x => x) (\lam {a} {b} tlcr => unembed-tlcr color tlcr) A B A->B
 
+  {- | Unembeds a `TopLevelColoredReduction color A B` to a single `RewriteRelation JRegistry` step. Translates a
+   -   colored root-rewrite `rewrite-with-rule-colored` into `rewrite-with-rule` with the color-tagged rule index, and
+   -   recurses on `rewrite-with-parameter-f-colored`.
+   -}
   \func unembed-tlcr {tc : TheoremContext} {context : List Sort'} {s : Sort'} {mc : MetaContext Sort'}
                      (color : Color)
                      {A B : Term env context s mc}

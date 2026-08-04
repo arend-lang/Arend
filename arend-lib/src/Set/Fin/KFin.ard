@@ -1,3 +1,12 @@
+{- | Kuratowski-finite sets: types admitting a surjection from a standard finite set.
+ -
+ -   A `KFinSet` is a set equipped with a cardinality bound and a (truncated) surjection from `Fin finCard`, making it
+ -   finitely enumerable up to repetition. Unlike `FinSet`, no decidable equality is required, so quotients of finite
+ -   sets remain Kuratowski-finite even when equality is not decidable. The class extends `BoundedPigeonholeSet` because
+ -   any surjection from `Fin n` automatically witnesses the pigeonhole principle, and the module shows that adding
+ -   decidable equality recovers the stronger `FinSet` structure.
+ -}
+
 \import Arith.Nat(id<suc)
 \import Data.Array
 \import Data.Or
@@ -13,12 +22,16 @@
 \import Set.Fin.BoundedPigeonhole
 \import Set.Fin.Pigeonhole
 
+{- | Extends `BoundedPigeonholeSet`. A set `E` with a bound `finCard` and a truncated surjection `Fin finCard -> E`,
+ -   automatically yielding the bounded pigeonhole property.
+ -}
 \class KFinSet \extends BoundedPigeonholeSet {
   | finSurj : ∃ (f : Fin card -> E) (IsSurj f)
   | boundedPigeonhole => \case finSurj \with {
     | inP (f,s) => boundedPigeonhole {pigeonhole-surj (\new BoundedPigeonholeSet (Fin card) card (pigeonhole-fin __ id<suc)) f s}
   }
 
+  -- | For a decidable predicate `A : E -> \Prop`, decides `∃ (e : E) (A e)` by exhausting the surjection's domain.
   \lemma search (A : E -> \Prop) (d : \Pi (e : E) -> Dec (A e)) : Dec (∃ (e : E) (A e))
     => \case finSurj \with {
       | inP (f,fs) => \case FinSet.searchFin (\lam j => A (f j)) (\lam j => d (f j)) \with {
@@ -39,9 +52,11 @@
       }
     }
 
+  -- | Reduction lemma — `search` returns `yes` when a witness exists.
   \lemma search_yes_reduce {A : E -> \Prop} (d : \Pi (e : E) -> Dec (A e)) (e : ∃ (e : E) (A e)) : search A d = yes e
     => prop-pi
 
+  -- | Reduction lemma — `search` returns `no` when no witness exists.
   \lemma search_no_reduce {A : E -> \Prop} (d : \Pi (e : E) -> Dec (A e)) (q : Not (∃ (e : E) (A e))) : search A d = no q
     => prop-pi
 
@@ -51,6 +66,7 @@
       | no q => yes \lam e => dec-separated (d e) \lam p => q $ inP (e,p)
     }
 
+  -- | Decidability of inhabitation: `Dec (TruncP E)`.
   \lemma dec : Dec (TruncP E)
     => cases (card,finSurj) \with {
       | 0, inP (f,fs) => no \lam (inP x) => \case fs x \with {
@@ -59,12 +75,17 @@
       | suc n, inP (f,fs) => yes $ inP (f 0)
     }
 } \where {
+    -- | Builds `KFinSet A l.len` from an array `l : Array A` whose elements cover all of `A`.
     \lemma fromArray {A : \Set} (l : Array A) (p : \Pi (a : A) -> ∃ (i : Fin l.len) (l i = a)) : KFinSet A l.len \cowith
       | finSurj => inP (l,p)
 
+    -- | Extracts a covering array from a `KFinSet`, witnessing surjectivity onto its elements.
     \lemma toArray (A : KFinSet) : ∃ (l : Array A) ∀ a ∃ (i : Fin l.len) (l i = a)
       => TruncP.map A.finSurj \lam (f,p) => (f,p)
 
+    {- | A Kuratowski-finite set with decidable equality is a `FinSet` — decidable equality lets one prune the
+     -   surjection to a bijection.
+     -}
     \lemma KFin+Dec=>Fin {A : \Set} (k : KFinSet A) {d : DecSet A} : FinSet A
       => \case toArray k \with {
         | inP (l,q) =>
@@ -75,5 +96,8 @@
       }
 }
 
+{- | The quotient `Quotient R` of a `KFinSet A` by any relation `R` is itself Kuratowski-finite with the same
+ -   cardinality bound `A.finCard`, since the canonical projection composes with the surjection.
+ -}
 \lemma QuotientKFin {A : KFinSet} {R : A -> A -> \Type} : KFinSet (Quotient R) A.card \cowith
   | finSurj => TruncP.map A.finSurj \lam s => (\lam j => in~ (s.1 j), \lam (in~ x) => TruncP.map (s.2 x) \lam r => (r.1, pmap in~ r.2))

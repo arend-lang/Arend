@@ -1,3 +1,12 @@
+{- | Topological left modules over a topological ring, combining module structure with continuous scalar multiplication.
+ -
+ -   A `TopLModule` extends both `LModule` (over a `TopRing`) and `TopAbGroup`, requiring scalar multiplication
+ -   `*c : R × M → M` to be jointly continuous. Continuity of negation is derived for free from continuity of `*c` via
+ -   multiplication by `-1`, mirroring the standard reduction in topological module theory. Hausdorff and complete
+ -   variants are provided by mixing in the corresponding `TopAbGroup` refinements, and the file establishes that a
+ -   topological ring is a module over itself and that products of topological modules are again topological modules.
+ -}
+
 \import Algebra.Group
 \import Algebra.Module
 \import Algebra.Monoid
@@ -16,16 +25,27 @@
 \import Topology.TopSpace
 \import Topology.TopSpace.Product
 
+{- | Topological left module over a `TopRing R`, extending `LModule` and `TopAbGroup`. Requires `*c-cont`: scalar
+ -   multiplication is a continuous map `R × M → M`. Continuity of negation (`negative-cont`) is derived automatically
+ -   from `*c-cont` via the homotopy `-x = -1 *c x`.
+ -}
 \class TopLModule \extends LModule, TopAbGroup {
   \override R : TopRing
   | *c-cont : ContMap (ProductTopSpace R \this) \this \lam s => s.1 *c s.2
   | negative-cont => transport (ContMap \this \this) { -1 *c __} (ext \lam a => neg_ide_*c) (*c-cont ContMap.∘ ProductTopSpace.tuple (ContMap.const -1) ContMap.id)
 }
 
+-- | Topological module whose underlying space is Hausdorff; extends `TopLModule` and `HausdorffTopAbGroup`.
 \class HausdorffTopLModule \extends TopLModule, HausdorffTopAbGroup
 
+{- | Hausdorff topological module that is also complete as a topological abelian group; extends `HausdorffTopLModule`
+ -   and `CompleteTopAbGroup`.
+ -}
 \class CompleteTopLModule \extends HausdorffTopLModule, CompleteTopAbGroup
 
+{- | Canonical `TopLModule R R` structure on a topological ring `R` itself, with scalar multiplication given by ring
+ -   multiplication. Witnesses that every `TopRing` is a topological module over itself.
+ -}
 \func RingTopLModule (R : TopRing) : TopLModule R R \cowith
   | TopAbGroup => R
   | *c => *
@@ -35,6 +55,9 @@
   | ide_*c => ide-left
   | *c-cont => *-cont
 
+{- | Binary product `TopLModule R (\Sigma X Y)` of two topological `R`-modules `X` and `Y`, with componentwise scalar
+ -   action `r *c (x, y) = (r *c x, r *c y)` and the product topology from `ProductTopAbGroup`.
+ -}
 \instance ProductTopLModule {R : TopRing} (X Y : TopLModule R) : TopLModule R (\Sigma X Y)
   | TopAbGroup => ProductTopAbGroup X Y
   | *c r (x,y) => (r *c x, r *c y)
@@ -50,5 +73,8 @@
     }
   }
 
+{- | `HasProduct` instance for `TopLModule R`, registering `ProductTopLModule` as the categorical product so generic
+ -   product machinery applies to topological modules.
+ -}
 \instance TopLModuleHasProduct.{u} (R : TopRing) : HasProduct (TopLModule.{u} R)
   | Product A B => ProductTopLModule A B

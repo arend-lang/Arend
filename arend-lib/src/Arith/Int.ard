@@ -1,3 +1,13 @@
+{- | Integer arithmetic, ordering, and basic number-theoretic operations on the `Int` type.
+ -
+ -   This module equips `Int` (the inductive type with `pos n` and `neg n` constructors) with the structure of a
+ -   decidable ordered commutative ring (`IntRing`), implemented by case-splitting addition and multiplication on the
+ -   sign of operands. The module also defines successor/predecessor, sign, and absolute-value functions, and supplies
+ -   the lemmas needed to translate between integer-level statements and their natural-number counterparts (via
+ -   `pos`/`neg` injections and `iabs`). Many auxiliary distributivity lemmas inside `IntRing`'s `\where`-block exist to
+ -   make the case-split definitions usable in proofs without unfolding them everywhere.
+ -}
+
 \import Algebra.Group
 \import Algebra.Monoid
 \import Algebra.StrictlyOrdered
@@ -18,19 +28,23 @@
 \import Paths.Meta
 \open LinearOrder (trichotomy)
 
+-- | Integer successor: `pos n ↦ pos (suc n)`, `neg (suc n) ↦ neg n`.
 \func isuc (x : Int) : Int
   | pos n => pos (suc n)
   | neg (suc n) => neg n
 
+-- | Integer predecessor: `pos 0 ↦ neg 1`, `pos (suc n) ↦ pos n`, `neg n ↦ neg (suc n)`.
 \func ipred (x : Int) : Int
   | pos 0 => neg 1
   | pos (suc n) => pos n
   | neg n => neg (suc n)
 
+-- | `ipred (isuc x) = x`.
 \lemma ipred_isuc (x : Int) : ipred (isuc x) = x
   | pos n => idp
   | neg (suc n) => idp
 
+-- | `isuc (ipred x) = x`.
 \lemma isuc_ipred (x : Int) : isuc (ipred x) = x
   | pos 0 => idp
   | pos (suc n) => idp
@@ -38,33 +52,42 @@
 
 -- # Properties of +, *, and <
 
+-- | Sign of an integer, returning `0`, `1`, or `-1` as an `Int`.
 \func signum (x : Int) : Int
   | pos 0 => 0
   | pos (suc _) => 1
   | neg (suc _) => -1
   \where {
+    -- | `signum (x * y) = signum x * signum y`.
     \lemma *-comm {x y : Int} : signum (x IntRing.* y) = signum x IntRing.* signum y
       => mcases {signum,2,3} idp \with {
         | 0, pos (suc n) => pmap (\lam t => signum (pos t)) zro_*-left
         | 0, neg (suc n) => pmap (\lam t => signum (neg t)) zro_*-left
       }
 
+    -- | Sign of a nonzero positive/negative natural.
     \lemma signum_pos {n : Nat} (n/=0 : Not (n = 0)) : signum n = 1 \elim n
       | 0 => absurd (n/=0 idp)
       | suc _ => idp
 
+    -- | Sign of a nonzero positive/negative natural.
     \lemma signum_neg {n : Nat} (n/=0 : Not (n = 0)) : signum (neg n) = -1 \elim n
       | 0 => absurd (n/=0 idp)
       | suc _ => idp
 
+    -- | `signum (neg n) ≠ 1`.
     \lemma signum_neg/=1 {n : Nat} (p : signum (neg n) = 1) : Empty \elim n, p
       | 0, ()
 
+    -- | `signum (x - y) = -(signum (y - x))`.
     \lemma signum_- {x y : Int} : signum (x - y) = negative (signum (y - x))
       => pmap signum (inv (ldistr *> +-comm *> pmap2 (+) (Ring.negative_ide-left *> AddGroup.negative-isInv) Ring.negative_ide-left)) *> *-comm *> Ring.negative_ide-left
       \where \open Arith.Int(IntRing)
   }
 
+{- | Instance of `OrderedCRing.Dec` on `Int`. Defines `+`, `*`, `negative`, `0`, `1` by case-splitting on signs of
+ -   operands, with positivity given by `signum x = 1`. Includes the `natCoef` embedding `pos : Nat → Int`.
+ -}
 \instance IntRing : OrderedCRing.Dec Int
   | zro => pos 0
   | + (x y : Int) : Int \with {
@@ -162,6 +185,7 @@
 
     -- ## +
 
+    -- | Distribute `pos`/`neg` summands across `Nat` subtraction `n - m : Int`.
     \lemma lldistr (n m k : Nat) : (n Nat.+ m) - k = pos n + (m - k)
       | 0, 0, 0 => idp
       | suc n, 0, 0 => idp
@@ -169,24 +193,28 @@
       | n, suc m, 0 => idp
       | n, suc m, suc k => lldistr n m k
 
+    -- | Distribute `pos`/`neg` summands across `Nat` subtraction `n - m : Int`.
     \lemma lrdistr (n m k : Nat) : (n Nat.+ m) - k = (n - k) + pos m =>
       (n Nat.+ m) - k ==< pmap (- k) AbMonoid.+-comm >==
       (m Nat.+ n) - k ==< lldistr m n k >==
       pos m + (n - k) ==< +-comm >==
       (n - k) + pos m `qed
 
+    -- | Distribute `pos`/`neg` summands across `Nat` subtraction `n - m : Int`.
     \lemma rldistr (n m k : Nat) : n - (m Nat.+ k) = neg m + (n - k)
       | 0, m, k => idp
       | suc n, 0, 0 => pmap (\lam t => pos (suc t)) (inv AddMonoid.zro-left)
       | suc n, suc m, 0 => idp
       | suc n, m, suc k => rldistr n m k
 
+    -- | Distribute `pos`/`neg` summands across `Nat` subtraction `n - m : Int`.
     \lemma rrdistr (n m k : Nat) : n - (m Nat.+ k) = (n - m) + neg k =>
       n - (m Nat.+ k) ==< pmap (n -) AbMonoid.+-comm >==
       n - (k Nat.+ m) ==< rldistr n k m >==
       neg k + (n - m) ==< +-comm >==
       (n - m) + neg k `qed
 
+    -- | Rearrange `(n - m) + pos k` and `(n - m) + neg k`.
     \lemma minus+pos (n m k : Nat) : (n - m) + pos k = pos n + (k - m)
       | 0, 0, 0 => idp
       | 0, 0, suc k => idp
@@ -201,6 +229,7 @@
         isuc (pos n + (k - m)) ==< inv suc-left >==
         pos (suc n) + (k - m)  `qed
 
+    -- | Rearrange `(n - m) + pos k` and `(n - m) + neg k`.
     \lemma minus+neg (n m k : Nat) : (n - m) + neg k = neg m + (n - k)
       | 0, m, xk => idp
       | suc n, 0, 0 => pmap (\lam t => pos (suc t)) (inv AddMonoid.zro-left)
@@ -212,10 +241,12 @@
         ipred (neg m + (n - k)) ==< inv pred-left >==
         neg (suc m) + (n - k)   `qed
 
+    -- | `n - n = 0`.
     \lemma minus__ {n : Nat} : n - n = 0 \elim n
       | 0 => idp
       | suc n => minus__
 
+    -- | Pull `pos (suc n)` out of an integer sum as `isuc`.
     \lemma suc-left {x : Int} {n : Nat} : pos (suc n) + x = isuc (pos n + x) \elim x, n
       | pos _, _ => idp
       | neg 1, 0 => idp
@@ -224,9 +255,11 @@
       | neg (suc (suc m)), 0 => idp
       | neg (suc (suc m)), suc n => suc-left {neg (suc m)} {n}
 
+    -- | Pull `pos (suc n)` out of an integer sum as `isuc`.
     \lemma suc-right {x : Int} {n : Nat} : x + pos (suc n) = isuc (x + pos n) =>
       +-comm *> suc-left {x} {n} *> pmap isuc +-comm
 
+    -- | Pull `neg (suc n)` out of an integer sum as `ipred`.
     \lemma pred-left {x : Int} {n : Nat} : neg (suc n) + x = ipred (neg n + x) \elim x, n
       | pos 0, 0 => idp
       | pos 1, 0 => idp
@@ -239,21 +272,25 @@
       | neg (suc m), 0 => idp
       | neg (suc m), suc n => idp
 
+    -- | Pull `neg (suc n)` out of an integer sum as `ipred`.
     \lemma pred-right {x : Int} {n : Nat} : x + neg (suc n) = ipred (x + neg n) =>
       +-comm *> pred-left {x} {n} *> pmap ipred +-comm
 
     -- ## *
 
+    -- | Sign rules for products of `neg`/`pos` naturals.
     \lemma neg*pos {n m : Nat} : neg n * pos m = neg (n Nat.* m) \elim n, m
       | 0, 0 => idp
       | 0, suc m => neg*pos
       | suc n, _ => idp
 
+    -- | Sign rules for products of `neg`/`pos` naturals.
     \lemma neg*neg {n m : Nat} : neg n * neg m = pos (n Nat.* m) \elim n, m
       | 0, 0 => idp
       | 0, suc m => neg*neg
       | suc n, _ => idp
 
+    -- | Cancel a common `k` from `pos (n+k) + neg (m+k)`.
     \lemma pos_neg_+ {n m k : Nat} : pos (n Nat.+ k) + neg (m Nat.+ k) = pos n + neg m \elim n, m, k
       | _, 0, 0 => idp
       | 0, 0, 1 => idp
@@ -263,12 +300,14 @@
       | n, suc m, 1 => idp
       | n, suc m, suc (suc k) => pos_neg_+ {n} {suc m} {suc k}
 
+    -- | Distribute `pos n *` / `neg n *` over `Nat`-subtraction.
     \lemma pos_minus-ldistr {n m k : Nat} : pos n * (m - k) = pos (n Nat.* m) + neg (n Nat.* k) \elim m, k
       | 0, 0 => idp
       | 0, suc k => inv zro-left
       | suc m, 0 => idp
       | suc m, suc k => pos_minus-ldistr *> inv (pos_neg_+ {n Nat.* m} {n Nat.* k} {n})
 
+    -- | Distribute `pos n *` / `neg n *` over `Nat`-subtraction.
     \lemma neg_minus-ldistr {n m k : Nat} : neg n * (m - k) = neg (n Nat.* m) + pos (n Nat.* k) \elim m, k
       | 0, k => neg*neg *> pmap pos (inv AddMonoid.zro-left)
       | suc m, 0 => neg*pos *> inv zro-left
@@ -276,63 +315,76 @@
 
     -- ## <=
 
+    -- | Sign-based ordering bounds.
     \lemma neg<=0 {n : Nat} : neg n IntRing.<= 0 \elim n
       | 0 => \case __
       | suc n => \case __
 
+    -- | Sign-based ordering bounds.
     \lemma pos>=0 {n : Nat} : 0 IntRing.<= pos n \elim n
       | 0 => \case __
       | suc n => \case __
   }
 
+-- | Absolute value as a `Nat`: `pos n ↦ n`, `neg n ↦ n`.
 \func iabs (x : Int) : Nat
   | pos n => n
   | neg n => n
   \where {
+    -- | `iabs (signum x) = 1` for nonzero `x`.
     \lemma signum_/=0 {x : Int} (x/=0 : Not (x = 0)) : iabs (signum x) = 1 \elim x
       | pos 0 => absurd (x/=0 idp)
       | pos (suc n) => idp
       | neg (suc n) => idp
 
+    -- | Recover `x` (or `pos (iabs x)`) from `iabs` and `signum`.
     \lemma signum_* {x : Int} : pos (iabs x) = x * signum x \elim x
       | 0 => idp
       | pos (suc _) => idp
       | neg (suc _) => idp
 
+    -- | Recover `x` (or `pos (iabs x)`) from `iabs` and `signum`.
     \lemma *_signum {x : Int} : pos (iabs x) * signum x = x \elim x
       | 0 => idp
       | pos (suc _) => idp
       | neg (suc _) => idp
 
+    -- | `iabs (-x) = iabs x`.
     \lemma negative-comm {x : Int} : iabs (IntRing.negative x) = iabs x \elim x
       | pos n => idp
       | neg n => idp
 
+    -- | `iabs x = 0 ⇒ x = 0`.
     \lemma equals0 {x : Int} (|x|=0 : iabs x = 0) : x = 0 \elim x
       | 0 => idp
       | pos (suc _) => \case |x|=0
       | neg (suc _) => \case |x|=0
 
+    -- | `pos (iabs x) = x` (or `-x`) when `x ≥ 0` (or `x ≤ 0`).
     \lemma ofPos {x : Int} (x>=0 : 0 <= x) : pos (iabs x) = x \elim x
       | pos n => idp
       | neg (suc n) => absurd $ x>=0 idp
 
+    -- | `pos (iabs x) = x` (or `-x`) when `x ≥ 0` (or `x ≤ 0`).
     \lemma ofNeg {x : Int} (x<=0 : x <= 0) : pos (iabs x) = negative x \elim x
       | pos 0 => idp
       | pos (suc n) => absurd $ x<=0 idp
       | neg (suc n) => idp
   }
 
+-- | Agreement of `iabs` with the ring-theoretic `abs`.
 \lemma iabs=abs {x : Int} : pos (iabs x) = IntRing.abs x \elim x
   | pos n => inv $ IntRing.abs-ofPos $ pos<=pos zero<=_
   | neg n => inv $ IntRing.abs-ofNeg neg<=pos
 
+-- | `iabs (x * y) = iabs x * iabs y`.
 \lemma iabs_* {x y : Int} : iabs (x * y) = iabs x * iabs y \elim x, y
   | pos n, pos m => idp
   | pos n, neg m => idp
   | neg (suc n), pos m => idp
   | neg (suc n), neg m => idp
 
+-- | `x < y + 1 ⇒ x ≤ y`.
 \lemma <_+1_<= {x y : Int} (p : x < y + 1) : x <= y \elim x, y
   | pos n, pos m => pos<=pos $ <_suc_<= $ pos<pos.conv p
   | pos n, neg (suc m) => absurd $ neg<=pos p
@@ -341,9 +393,11 @@
 
 \open Monoid(LDiv)
 
+-- | A divisibility witness `LDiv x y` transfers to `LDiv (iabs x) (iabs y)`.
 \lemma ldiv_iabs {x y : Int} (d : LDiv x y) : LDiv (iabs x) (iabs y) (iabs d.inv) \cowith
   | inv-right => inv iabs_* *> pmap iabs d.inv-right
 
+-- | Conversely, an `iabs`-level divisibility lifts to `LDiv x y` by case analysis on signs.
 \func iabs_ldiv {x y : Int} (d : LDiv (iabs x) (iabs y)) : LDiv x y \elim x, y
   | 0, 0 => \new LDiv {
     | inv => 0
@@ -379,6 +433,7 @@
     | inv-right => pmap neg d.inv-right
   }
 
+-- | `x < isuc x`.
 \lemma id<isuc {x : Int} : x < isuc x \elim x
   | pos n => pos<pos id<suc
   | neg (suc n) => neg<neg id<suc
@@ -389,12 +444,14 @@
   | neg (suc n), pos m => neg<=pos
   | neg (suc n), neg (suc m) => neg<=neg $ <_suc_<= $ neg<neg.conv p
 
+-- | Express `pos`/`neg` of `iabs (x -ℕ y) : Int` directly as the integer subtraction.
 \lemma pos_iabs {x y : Nat} (y<=x : y <= x) : pos (iabs (x Nat.- y)) = x Nat.- y
   => cases ((x Nat.- y) arg addPath) \with {
     | pos n, p => idp
     | neg (suc n), p => absurd (y<=x (NatSemiring.triLess p))
   }
 
+-- | Express `pos`/`neg` of `iabs (x -ℕ y) : Int` directly as the integer subtraction.
 \lemma neg_iabs {x y : Nat} (x<=y : x <= y) : neg (iabs (x Nat.- y)) = x Nat.- y
   => cases ((x Nat.- y) arg addPath) \with {
     | pos (suc n), p => absurd (x<=y (NatSemiring.triGreater p))
@@ -402,23 +459,28 @@
     | neg (suc n), p => idp
   }
 
+-- | `iabs (suc n -ℕ i) = suc (iabs (n -ℕ i))` when `i ≤ n`.
 \lemma iabs_-_suc {n i : Nat} (p : i <= n) : iabs (suc n Nat.- i) = suc (iabs (n Nat.- i)) \elim n, i
   | _, 0 => idp
   | 0, suc i => \case <=_exists p
   | suc n, suc i => iabs_-_suc (suc<=suc.conv p)
 
+-- | `0 -ℕ n = neg n` as integers.
 \lemma zro-id=neg {n : Nat} : 0 Nat.- n = neg n \elim n
   | 0 => idp
   | suc n => idp
 
+-- | Truncated `Nat` subtraction `-'` agrees with integer subtraction when no underflow.
 \lemma -'=- {n m : Nat} (p : m <= n) : pos (n -' m) = n Nat.- m \elim n, m
   | 0, m => rewrite (<=_exists p) idp
   | suc n, 0 => idp
   | suc n, suc m => -'=- (suc<=suc.conv p)
 
+-- | Injectivity of `pos`.
 \lemma unpos {n m : Nat} (p : pos n = pos m) : n = m
   => pmap iabs p
 
+-- | Strict order on `Nat` corresponds to strict order on `pos n`.
 \lemma pos<pos {n m : Nat} (p : n < m) : pos n < pos m
   => \case trichotomy (pos n) (pos m) \with {
     | less n<m => n<m
@@ -426,6 +488,7 @@
     | greater m<n => absurd (signum.signum_neg/=1 (rewrite (neg_iabs (<=-less p)) m<n))
   }
   \where {
+    -- | Strict order on `Nat` corresponds to strict order on `pos n`.
     \lemma conv {n m : Nat} (p : pos n < pos m) : n < m
       => \case trichotomy n m \with {
         | less n<m => n<m
@@ -434,12 +497,14 @@
       }
   }
 
+-- | Order-reversing correspondence on negatives.
 \lemma neg<neg {n m : Nat} (p : n < m) : neg m < neg n
   => \case LinearOrder.dec<_<= (neg m) (neg n) \with {
     | inl q => q
     | inr q => absurd $ <-irreflexive $ p <∘l neg<=neg.conv q
   }
   \where {
+    -- | Order-reversing correspondence on negatives.
     \lemma conv {n m : Nat} (p : neg m < neg n) : n < m
       => \case trichotomy n m \with {
         | less n<m => n<m
@@ -448,30 +513,37 @@
       }
   }
 
+-- | Non-strict version.
 \lemma pos<=pos {n m : Nat} (p : n <= m) : pos n <= pos m
   => \lam q => signum.signum_neg/=1 (rewrite (neg_iabs p) q)
   \where
+    -- | Non-strict version.
     \lemma conv {n m : Nat} (p : pos n <= pos m) : n <= m
       => \lam m<n => p (pos<pos m<n)
 
+-- | Every `neg n` is `≤` every `pos m`.
 \lemma neg<=pos {n m : Nat} : neg n <= pos m
   => \lam q => signum.signum_neg/=1 q
 
+-- | `pos n ≤ neg m` forces `m = 0`.
 \lemma pos/<=neg {n m : Nat} (p : pos n <= neg m) : m = 0 \elim m
   | 0 => idp
   | suc m => absurd (p idp)
 
+-- | Order-reversing non-strict version.
 \lemma neg<=neg {n m : Nat} (p : n <= m) : neg m <= neg n \elim n, m
   | 0, 0 => <=-refl
   | 0, suc m => neg<=pos
   | suc n, 0 => absurd $ p NatOrder.zero<suc
   | suc n, suc m => IntRing.<=_+ {neg 1} <=-refl $ neg<=neg (suc<=suc.conv p)
   \where
+    -- | Order-reversing non-strict version.
     \lemma conv {n m : Nat} (p : neg n <= neg m) : m <= n \elim n, m
       | _, 0 => zero<=_
       | 0, suc m => \case pos/<=neg p
       | suc n, suc m => suc<=suc $ conv $ transport2 (<=) zro-id=neg zro-id=neg $ IntRing.<=_+ (<=-refl {_} {pos 1}) p
 
+-- | Two integers are equal iff their signs and absolute values agree.
 \lemma signum_iabs_eq {x y : Int} (p : signum x = signum y) (q : iabs x = iabs y) : x = y \elim x, y, p, q
   | 0, 0, _, _ => idp
   | pos (suc n), pos (suc m), p, q => pmap pos q
@@ -480,6 +552,7 @@
   | pos (suc n), neg (suc m), (), _
   | neg (suc n), pos (suc m), (), _
 
+-- | If `x * y = 1` then `y = 1` or `y = -1`.
 \func intUnits {x y : Int} (p : x * y = 1) : Or (y = 1) (y = -1)
   => \have t : iabs y = 1 => natUnit (inv iabs_* *> pmap iabs p)
      \in \case \elim y, t \with {
@@ -487,17 +560,20 @@
        | neg (suc n), p1 => inr (pmap neg p1)
      }
 
+-- | Reflects the boolean `int_<=_Bool x y` into `x <= y` via a `So` proof.
 \lemma int_<=-dec {x y : Int} {so : So (int_<=_Bool x y)} : x <= y \elim x, y
   | pos n, pos m => pos<=pos (nat_<=-dec {n} {m} {so})
   | pos n, neg (suc m) => absurd so
   | neg n, pos m => neg<=pos
   | neg n, neg (suc m) => neg<=neg (nat_<=-dec {suc m} {n} {so})
   \where
+    -- | Boolean comparison on `Int` by sign/case analysis.
     \func int_<=_Bool (x y : Int) : Bool
       | pos n, pos m => nat_<=-dec.nat_<=_Bool n m
       | pos n, neg (suc m) => false
       | neg n, pos m => true
       | neg n, neg (suc m) => nat_<=-dec.nat_<=_Bool (suc m) n
 
+-- | Strict variant: `So (int_<=_Bool (isuc x) y)` reflects to `x < y`.
 \lemma int_<-dec {x y : Int} {so : So (int_<=-dec.int_<=_Bool (isuc x) y)} : x < y
   => id<isuc <∘l int_<=-dec {isuc x} {y} {so}

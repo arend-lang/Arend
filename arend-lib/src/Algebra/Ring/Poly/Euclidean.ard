@@ -1,3 +1,14 @@
+{- | Polynomial rings over a discrete field as Euclidean domains via polynomial long division.
+ -
+ -   This module establishes that `Poly R` is a Euclidean domain whenever `R` is a discrete field, using the polynomial
+ -   degree as the Euclidean function. The division algorithm is implemented via fuel-based recursion (`divMod_fuel`)
+ -   that subtracts leading-coefficient-aligned monomial multiples of the divisor from the dividend until the remainder
+ -   has lower degree than the divisor. Special cases handle division by constants (using inversion of the leading
+ -   coefficient) and by zero. The module also provides decidability of unit and divisibility predicates, and uses the
+ -   Bézout structure to construct maximal ideals containing a given non-unit polynomial when the base field is
+ -   countable.
+ -}
+
 \import Algebra.Domain
 \import Algebra.Domain.Bezout
 \import Algebra.Domain.Euclidean
@@ -26,6 +37,10 @@
 \import Set.Countable
 \open Monoid
 
+{- | Instance of `EuclideanRingData (Poly R)` for a discrete field `R`. Sets the Euclidean map to `degree` and
+ -   implements `divMod` by case-splitting on whether `degree q = 0`: constants are handled directly via `finv` of the
+ -   leading coefficient, while non-constant divisors use `divMod_fuel`.
+ -}
 \instance PolyEuclideanRingData (R : DiscreteField) : EuclideanRingData (Poly R)
   | CRing => PolyAlgebra R
   | decideEq => PolyDecRing.decideEq
@@ -49,6 +64,10 @@
     | no dq/=0 => \lam _ => divMod_fuel-rem-lem p q dq/=0
   }
   \where {
+    {- | Fuel-recursive polynomial long division. Given `p`, `q`, and a fuel `n`, returns the quotient/remainder pair by
+     -   repeatedly subtracting `monomial (leadCoef p * finv (leadCoef q)) (degree p -' degree q) * q` from `p`.
+     -   Terminates when `degree p < degree q`.
+     -}
     \func divMod_fuel {R : DiscreteField} (p q : Poly R) (n : Nat) : \Sigma (Poly R) (Poly R) \elim n
       | 0 => (0,0)
       | suc n => \case LinearOrder.dec<_<= (degree p) (degree q) \with {
@@ -59,6 +78,9 @@
           \in (d + m, r)
       }
 
+    {- | Correctness lemma: `q * d + r = p` for the `(d, r)` produced by `divMod_fuel`, given sufficient fuel
+     -   `degree p < n` and a non-constant divisor.
+     -}
     \lemma divMod_fuel-correct {R : DiscreteField} (p q : Poly R) (dq/=0 : degree q /= 0) {n : Nat} (s : degree p < n) : q * (divMod_fuel p q n).1 + (divMod_fuel p q n).2 = p \elim n
       | 0 => \case s
       | suc n => mcases \with {
@@ -73,6 +95,7 @@
           \in equation.cRing {divMod_fuel-correct (p - m * q) q dq/=0 $ diff-lem dp=dmq (inv $ leadCoef_* *> pmap (* _) leadCoef_monomial *> *-assoc *> pmap (_ *) (R.finv-left lq/=0) *> ide-right) (\lam dmq=0 => dq/=0 $ <=_exists $ transport (_ <=) (dp=dmq *> dmq=0) q<=p) <∘l <_suc_<= s}
       }
 
+    -- | Bound on the remainder: `degree (divMod_fuel p q n).2 < degree q` whenever `degree q /= 0`.
     \lemma divMod_fuel-rem-lem {R : DiscreteField} (p q : Poly R) (dq/=0 : degree q /= 0) {n : Nat} : degree (divMod_fuel p q n).2 < degree q \elim n
       | 0 => nonZero>0 dq/=0
       | suc n => mcases \with {
@@ -80,6 +103,9 @@
         | inr q<=p => divMod_fuel-rem-lem _ q dq/=0
       }
 
+    {- | Key degree-decrease lemma: if two polynomials share the same (non-zero) degree and leading coefficient, their
+     -   difference has strictly smaller degree. Justifies termination of the long-division step.
+     -}
     \lemma diff-lem {R : Ring.Dec} {p q : Poly R} (s : degree p = degree q) (t : leadCoef p = leadCoef q) (dq/=0 : degree q /= 0) : degree (p - q) < degree p \elim p, q
       | _, pzero => absurd (dq/=0 idp)
       | pzero, padd q a => absurd (cases (decideEq q 0, s, t) \with {
@@ -95,10 +121,14 @@
       }
   }
 
+{- | Instance of `EuclideanDomain (Poly R)` over a discrete field, combining the Euclidean ring data with the decidable
+ -   integral domain structure on `Poly R`.
+ -}
 \instance PolyEuclideanDomain (R : DiscreteField) : EuclideanDomain (Poly R)
   | IntegralDomain.Dec => PolyDecIntegralDomain R
   | isEuclidean => inP (PolyEuclideanRingData R)
 
+-- | Decidability of being a unit in `Poly R`: `Dec (Inv p)`. Reduces to checking whether `p` is a non-zero constant.
 \lemma poly-dec-unit {R : DiscreteField} (p : Poly R) : Dec (Inv p) \elim p
   | pzero => no \lam e => NonZeroSemiring.inv-nonZero e idp
   | padd p a => \case decideEq p 0, decideEq a 0 \with {
@@ -109,9 +139,16 @@
     }
   }
 
+{- | Decidability of divisibility: `Dec (TruncP (LDiv a b))`. Uses the division algorithm to test whether the remainder
+ -   is zero.
+ -}
 \lemma poly-dec-div {R : DiscreteField} (a b : Poly R) : Dec (TruncP (LDiv a b))
   => GCDDomain.Dec.div_unit.2 poly-dec-unit a b
 
+{- | For a countable discrete field `K` and a non-unit `p : Poly K`, constructs a maximal ideal `M` of `PolyAlgebra K`
+ -   containing `p`. Built by applying `BezoutRing.maximal-ideal` to the singleton list `p :: nil`, leveraging the
+ -   Bézout structure on polynomial rings over a field together with countability of `Poly K`.
+ -}
 \func poly-maximal-ideal {K : DiscreteField} (c : Countable K) (p : Poly K) (pc : Not (Monoid.Inv p))
   : \Sigma (M : Ideal (PolyAlgebra K)) M.IsMaximal (M p)
   => \let (M,Mm,g) => BezoutRing.maximal-ideal (Poly.poly-countable c) poly-dec-div (p :: nil) (\lam c => pc $ c p \lam (0) => LDiv.id-div)

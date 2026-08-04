@@ -1,3 +1,12 @@
+{- | Product topology on `\Sigma X Y` and continuity properties of pairing.
+ -
+ -   This module equips the Cartesian product of two topological spaces with its standard product topology,
+ -   characterized via the existence of open boxes around each point. Projections, pairing (`tuple`), and the
+ -   bifunctorial product `prod` of continuous maps are provided, along with stability of density, weak density, and
+ -   embeddings under products. The module also derives compatibility of pairing with limits and continuity-at-a-point,
+ -   and gives a Hausdorff characterization in terms of the diagonal being closed in the product.
+ -}
+
 \import Function.Meta
 \import Logic
 \import Logic.Meta
@@ -10,9 +19,13 @@
 \import Set.Set
 \import Topology.TopSpace
 
+-- | `HasProduct` instance making `⨯` on `TopSpace` denote the product topological space.
 \instance TopSpaceHasProduct.{u} : HasProduct TopSpace.{u}
   | Product X Y => ProductTopSpace X Y
 
+{- | The product topological space on `\Sigma X Y`. A set `W` is open iff every point of `W` is contained in an open box
+ -   `U × V ⊆ W` with `U` open in `X` and `V` open in `Y`.
+ -}
 \instance ProductTopSpace (X Y : TopSpace) : TopSpace (\Sigma X Y)
   | isOpen W => ∀ {s : W} ∃ (U : X.isOpen) (U s.1) (V : Y.isOpen) (V s.2) ∀ {x : U} {y : V} (W (x,y))
   | open-top _ => inP (top, open-top, (), top, open-top, (), \lam _ _ => ())
@@ -25,23 +38,32 @@
   \where {
     \open ContMap
 
+    -- | First projection `ContMap (X ⨯ Y) X`.
     \func proj1 {X Y : TopSpace} : ContMap (ProductTopSpace X Y) X \cowith
       | func s => s.1
       | func-cont Uo => \lam Ux => inP (_, Uo, Ux, top, open-top, (), \lam Ux _ => Ux)
 
+    -- | Second projection `ContMap (X ⨯ Y) Y`.
     \func proj2 {X Y : TopSpace} : ContMap (ProductTopSpace X Y) Y \cowith
       | func s => s.2
       | func-cont Uo => \lam Uy => inP (top, open-top, (), _, Uo, Uy, \lam _ Uy => Uy)
 
+    {- | Pairing of continuous maps: given `f : ContMap X Y` and `g : ContMap X Z`, produces `ContMap X (Y ⨯ Z)` sending
+     -   `x` to `(f x, g x)`.
+     -}
     \func tuple {X Y Z : TopSpace} (f : ContMap X Y) (g : ContMap X Z) : ContMap X (ProductTopSpace Y Z) \cowith
       | func x => (f x, g x)
       | func-cont {W} Wo => X.cover-open \lam w => \case Wo w \with {
         | inP (U,Uo,Ufx,V,Vo,Vgx,h) => inP (_, open-inter (f.func-cont Uo) (g.func-cont Vo), (Ufx,Vgx), \lam (Ufx,Vgx) => h Ufx Vgx)
       }
 
+    {- | Functorial product of continuous maps `f : X → Y`, `f' : X' → Y'` giving `ContMap (X ⨯ X') (Y ⨯ Y')`, defined
+     -   as `tuple (f ∘ proj1) (f' ∘ proj2)`.
+     -}
     \func prod {X X' Y Y' : TopSpace} (f : ContMap X Y) (f' : ContMap X' Y') : ContMap (ProductTopSpace X X') (ProductTopSpace Y Y')
       => tuple (f ∘ proj1) (f' ∘ proj2)
       \where {
+        -- | The product of two dense continuous maps is dense.
         \lemma isDense {X X' Y Y' : TopSpace} {f : ContMap X Y} {g : ContMap X' Y'} (fd : f.IsDense) (gd : g.IsDense) : ContMap.IsDense {prod f g}
           => \lam Uo Ux => \case Uo Ux \with {
             | inP (U1,U1o,U1x,U2,U2o,U2y,h) => \case fd U1o U1x, gd U2o U2y \with {
@@ -49,11 +71,13 @@
             }
           }
 
+        -- | The product of two weakly dense continuous maps is weakly dense.
         \lemma isWeaklyDense {X X' Y Y' : TopSpace} {f : ContMap X Y} {g : ContMap X' Y'} (fd : f.IsWeaklyDense) (gd : g.IsWeaklyDense) : ContMap.IsWeaklyDense {prod f g}
           => \lam Uo c (y,Uy) => \case Uo Uy \with {
             | inP (U1,U1o,U1y,U2,U2o,U2y,h) => fd U1o (\lam (_, inP (x1,idp), U1fx1) => gd U2o (\lam (_, inP (x2,idp), U2gx2) => c (_, inP ((x1,x2), idp), h U1fx1 U2gx2)) (y.2,U2y)) (y.1,U1y)
           }
 
+        -- | The product of two topological embeddings is a topological embedding.
         \lemma isEmbedding {X X' Y Y' : TopSpace} {f : ContMap X Y} {g : ContMap X' Y'} (fd : f.IsTopEmbedding) (gd : g.IsTopEmbedding) : ContMap.IsTopEmbedding {prod f g}
           => (topEmbedding-char {prod f g}).2 \lam Uo Uxy => \case Uo Uxy \with {
             | inP (U1,U1o,U1x,U2,U2o,U2y,h) => \case f.topEmbedding-char.1 fd U1o U1x, g.topEmbedding-char.1 gd U2o U2y \with {
@@ -61,14 +85,17 @@
             }
           }
 
+        -- | The product of two dense topological embeddings is a dense topological embedding.
         \lemma isDenseEmbedding {X X' Y Y' : TopSpace} {f : ContMap X Y} {g : ContMap X' Y'} (fd : f.IsDenseTopEmbedding) (gd : g.IsDenseTopEmbedding) : ContMap.IsDenseTopEmbedding {prod f g}
           => (isDense fd.1 gd.1, isEmbedding fd.2 gd.2)
       }
   }
 
+-- | The Cartesian product `Set.Prod U V` of two open sets is open in `X ⨯ Y`.
 \lemma Prod-open {X Y : TopSpace} {U : Set X} (Uo : isOpen U) {V : Set Y} (Vo : isOpen V) : isOpen (Set.Prod U V)
   => \lam {s} (Us,Vs) => inP (U, Uo, Us, V, Vo, Vs, \lam Ux Vy => (Ux,Vy))
 
+-- | If `f` and `g` are continuous at `x`, then so is `\lam x => (f x, g x)`.
 \lemma contAt-tuple {X Y Z : TopSpace} {f : X -> Y} {g : X -> Z} {x : X} (fc : IsContAt f x) (gc : IsContAt g x) : IsContAt (\lam x => (f x, g x)) x
   => \lam {W} Wo W0 => \case Wo W0 \with {
     | inP (U,Uo,Ufx,V,Vo,Vgx,g) => \case fc Uo Ufx, gc Vo Vgx \with {
@@ -76,6 +103,7 @@
     }
   }
 
+-- | If `f → x` in `X` and `g → y` in `Y` (over a directed set `I`), then `\lam n => (f n, g n) → (x, y)` in `X ⨯ Y`.
 \lemma limit-tuple {I : DirectedSet} {X Y : TopSpace} {f : I -> X} {x : X} (fl : X.IsLimit f x) {g : I -> Y} {y : Y} (gl : Y.IsLimit g y)
   : TopSpace.IsLimit (\lam n => (f n, g n)) (x,y)
   => \lam Wo Wxy => \case Wo Wxy \with {
@@ -86,26 +114,40 @@
     }
   }
 
+{- | A continuous binary map `h : ContMap (X ⨯ Y) Z` preserves limits along directed sets componentwise:
+ -   `h (f n, g n) → h (lx, ly)`.
+ -}
 \lemma cont2-limit {I : DirectedSet} {X Y Z : TopSpace} {f : I -> X} {g : I -> Y} {lx : X} {ly : Y}
                    (px : X.IsLimit f lx) (py : Y.IsLimit g ly) (h : ContMap (ProductTopSpace X Y) Z) : Z.IsLimit (\lam n => h (f n, g n)) (h (lx,ly))
   => cont-limit (limit-tuple px py) h
 
+{- | For a Hausdorff join-semilattice target `Y` with continuous join, if `S ⊆ X` is dense and `f x ≤ g x` for all
+ -   `x ∈ S`, then `f x ≤ g x` for all `x : X`.
+ -}
 \lemma denseSet_<= {X : TopSpace} {Y : HausdorffTopSpace} {P : JoinSemilattice Y} (jc : ContMap (ProductTopSpace Y Y) Y \lam s => s.1 ∨ s.2)
                    {S : Set X} (Sd : IsDenseSet S) (f g : ContMap X Y) (p : \Pi {x : X} -> S x -> f x <= g x) {x : X} : f x <= g x
   => join-left <=∘ =_<= (denseSet-lift-unique Sd (jc ContMap.∘ ProductTopSpace.tuple f g) g \lam Sx => <=-antisymmetric (join-univ (p Sx) <=-refl) join-right)
 
+{- | Variant where the density is provided by a dense continuous map `f : X → Y`: pointwise inequality on the image
+ -   extends to all of `Y`.
+ -}
 \lemma dense_<= {X Y : TopSpace} {Z : HausdorffTopSpace} {P : JoinSemilattice Z} (jc : ContMap (ProductTopSpace Z Z) Z \lam s => s.1 ∨ s.2)
                 (f : ContMap X Y) (fd : f.IsDense) (g h : ContMap Y Z) (p : \Pi (x : X) -> g (f x) <= h (f x)) (y : Y) : g y <= h y
   => denseSet_<= jc fd g h \lam (inP (x,q)) => rewriteI q (p x)
 
+-- | Same as `denseSet_<=` but for strongly Hausdorff targets and weakly dense subsets.
 \lemma weaklyDenseSet_<= {X : TopSpace} {Y : StronglyHausdorffTopSpace} {P : JoinSemilattice Y} (jc : ContMap (ProductTopSpace Y Y) Y \lam s => s.1 ∨ s.2)
                          {S : Set X} (Sd : IsWeaklyDenseSet S) (f g : ContMap X Y) (p : \Pi {x : X} -> S x -> f x <= g x) {x : X} : f x <= g x
   => join-left <=∘ =_<= (weaklyDenseSet-lift-unique Sd (jc ContMap.∘ ProductTopSpace.tuple f g) g \lam Sx => <=-antisymmetric (join-univ (p Sx) <=-refl) join-right)
 
+-- | Same as `dense_<=` but for strongly Hausdorff targets and weakly dense maps.
 \lemma weaklyDense_<= {X Y : TopSpace} {Z : StronglyHausdorffTopSpace} {P : JoinSemilattice Z} (jc : ContMap (ProductTopSpace Z Z) Z \lam s => s.1 ∨ s.2)
                       (f : ContMap X Y) (fd : f.IsWeaklyDense) (g h : ContMap Y Z) (p : \Pi (x : X) -> g (f x) <= h (f x)) (y : Y) : g y <= h y
   => weaklyDenseSet_<= jc fd g h \lam (inP (x,q)) => rewriteI q (p x)
 
+{- | A space `X` is Hausdorff (any two points whose every neighborhood pair meets must be equal) iff the diagonal
+ -   `\lam s => s.1 = s.2` is closed in `ProductTopSpace X X`.
+ -}
 \lemma hausdorff-char {X : TopSpace} : (\Pi {x y : X} -> ∀ {U V : isOpen} (U x) (V y) ∃ (U ∧ V) -> x = y) <-> (ProductTopSpace X X).IsClosed (\lam s => s.1 = s.2)
   => (\lam f {s} sl => f \lam Uo Vo Us Vs => TruncP.map (sl (Prod-open Uo Vo) (Us,Vs)) \lam (t,p,(Ut,Vt)) => (t.1, (Ut, rewrite p Vt)),
       \lam f {x} {y} c => f {x,y} \lam {W} Wo Wxy => \case Wo Wxy \with {

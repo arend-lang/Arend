@@ -1,3 +1,14 @@
+{- | Adjoint functors and categorical equivalences between precategories.
+ -
+ -   This module formalizes adjunctions through the unit/counit (triangle identities) presentation: a `RightAdjoint` is
+ -   a functor `F : C -> D` together with a left adjoint `LAdj : D -> C`, a unit `eta : Id -> F ∘ LAdj`, a counit
+ -   `epsilon : LAdj ∘ F -> Id`, and the two zigzag laws. Specialized variants `RightAdjointUnit` and
+ -   `RightAdjointCounit` reconstruct the entire adjunction from just one of the natural transformations together with a
+ -   hom-set bijection, which is convenient when only one half is naturally available. A `CatEquiv` strengthens an
+ -   adjunction to an equivalence of categories by requiring `eta` and `epsilon` to be componentwise isomorphisms, and
+ -   inherits `FullyFaithfulFunctor` automatically.
+ -}
+
 \import Category
 \import Category.Functor
 \import Category.Limit
@@ -16,10 +27,14 @@
   | eta_epsilon-left {Y : D} : RAdj.Func (epsilon Y) ∘ eta (RAdj Y) = id
   | eta_epsilon-right {X : C} : epsilon (LAdj X) ∘ LAdj.Func (eta X) = id
 
+  {- | The hom-set adjunction bijection `Hom (LAdj X) Y ≃ Hom X (F Y)` given by `f ↦ Func f ∘ eta X` with inverse
+   -   `g ↦ epsilon Y ∘ LAdj.Func g`, derived from the triangle identities.
+   -}
   \lemma eta_epsilon-equiv {X : C} {Y : D} : QEquiv {Hom (LAdj X) Y} {Hom X (RAdj Y)} (Func __ ∘ eta X) (epsilon Y ∘ LAdj.Func __) \cowith
     | ret_f f => pmap (_ ∘) LAdj.Func-o *> inv o-assoc *> pmap (∘ _) (epsilon.natural f) *> o-assoc *> pmap (f ∘) eta_epsilon-right *> id-right
     | f_sec g => pmap (∘ _) Func-o *> o-assoc *> pmap (_ ∘) (inv (eta.natural g)) *> inv o-assoc *> pmap (∘ g) eta_epsilon-left *> id-left
 
+  -- | When `eta (F Y)` is an iso, identifies `Func (epsilon Y)` with its inverse.
   \lemma eta_Iso {Y : D} (e : Iso (eta (RAdj Y))) : Func (epsilon Y) = e.hinv
     => Iso.hinv-unique (\new SplitMono e.f {
       | hinv => Func (epsilon Y)
@@ -45,6 +60,9 @@
       | eta_epsilon-left => inv o-assoc *> pmap (∘ _) (inv Func-o *> pmap A1.RAdj.Func (pmap (∘ _) Func-o *> o-assoc *> pmap (_ ∘) (inv (A2.eta.natural _)) *> inv o-assoc *> pmap (∘ _) A2.eta_epsilon-left *> id-left)) *> A1.eta_epsilon-left
       | eta_epsilon-right => o-assoc *> pmap (_ ∘) (inv Func-o *> pmap A2.LAdj.Func (pmap (_ ∘) Func-o *> inv o-assoc *> pmap (∘ _) (A1.epsilon.natural _) *> o-assoc *> pmap (_ ∘) A1.eta_epsilon-right *> id-right)) *> A2.eta_epsilon-right
 
+  {- | Given a fully faithful `G1 : D -> E`, a `G2 : E -> D`, and a right adjoint structure on `Comp G1 G2`, transports
+   -   the adjunction to a right adjoint structure on `G2` itself with left adjoint `Comp adj.LAdj G1`.
+   -}
   \func rightFactor {C D E : Precat} (G1 : FullyFaithfulFunctor D E) (G2 : Functor C D) (adj : Adjunction E C { | RAdj => Comp G1 G2 }) : Adjunction D C \cowith
       | LAdj => Comp adj.LAdj G1
       | RAdj => G2
@@ -106,6 +124,10 @@
     | eta_epsilon-right => IsEquiv.f_ret epsilon-adjoint
 }
 
+{- | Class extending both `FullyFaithfulFunctor` and `RightAdjoint`, with `eta-iso` and `epsilon-iso` asserting that
+ -   every component of the unit and counit is an isomorphism. The fully-faithful structure is constructed explicitly
+ -   from the inverse of `epsilon` and the triangle identities.
+ -}
 \class CatEquiv \extends Adjunction {
   \field eta-iso {X : C} : Iso (eta X)
   \field epsilon-iso {Y : D} : Iso (epsilon Y)
@@ -116,6 +138,9 @@
     | f_sec g => Func-o *> pmap (∘ _) (Func-o *> pmap (∘ _) (eta_Iso eta-iso) *> natural {eta.iso-inv eta-iso} g) *> o-assoc *> pmap (g ∘) (Iso.hinv-unique (oIso eta-iso (RAdj.Func-iso epsilon-iso)) idIso eta_epsilon-left) *> id-right
   }
 
+  {- | The opposite categorical equivalence between `C^op` and `D^op`, with unit and counit obtained by transposing the
+   -   inverses of the originals.
+   -}
   \protected \func op : CatEquiv C.op D.op \cowith
     | LAdj => LAdj.op
     | RAdj => RAdj.op
@@ -126,6 +151,9 @@
     | eta-iso => eta-iso.op.reverse
     | epsilon-iso => epsilon-iso.op.reverse
 
+  {- | Swaps the roles of `F` and `LAdj`, exhibiting the left adjoint as a categorical equivalence in the reverse
+   -   direction with unit and counit given by the inverses of the original counit and unit.
+   -}
   \func reverse : CatEquiv D C \cowith
     | LAdj => RAdj
     | RAdj => LAdj

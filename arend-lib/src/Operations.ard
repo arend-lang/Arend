@@ -1,17 +1,35 @@
+{- | Type-class abstractions for binary product and coproduct operations on a carrier type.
+ -
+ -   This module introduces two minimal operator classes, `HasProduct` and `HasCoproduct`, which equip a type `E` with
+ -   binary product (`⨯`) and coproduct (`⨿`) operations. The design is intentionally lightweight: rather than
+ -   committing to categorical or algebraic structure, these classes only fix the operator notation, allowing diverse
+ -   instances (set-theoretic, categorical, lattice-theoretic) to share the same syntax. Default instances are provided
+ -   for the universe `\Type`, where the product is interpreted as the dependent pair `\Sigma A B` and the coproduct as
+ -   the disjoint union `Or A B`.
+ -}
+
 \import Data.Or
 
+{- | Class over a carrier `E : \hType` providing a binary operation `Product` (alias `⨯`, infixl 7): `E -> E -> E`. Used
+ -   to overload product notation across different mathematical structures.
+ -}
 \class HasProduct (E : \Type)
   | Product \alias \infixl 7 ⨯ : E -> E -> E
 
+-- | Instance of `HasProduct \Type` interpreting `A ⨯ B` as the sigma type `\Sigma A B`.
 \instance TypeHasProduct.{u} : HasProduct (\Type u)
   | Product A B => \Sigma A B
 
 \instance SetHasProduct.{u} : HasProduct (\Set u)
   | Product A B => \Sigma A B
 
+{- | Class over a carrier `E : \hType` providing a binary operation `Coproduct` (alias `⨿`, infixl 6): `E -> E -> E`.
+ -   Used to overload coproduct notation.
+ -}
 \class HasCoproduct (E : \Type)
   | Coproduct \alias \infixl 6 ⨿ : E -> E -> E
 
+-- | Instance of `HasCoproduct \Type` interpreting `A ⨿ B` as the disjoint sum `Or A B` from `Data.Or`.
 \instance TypeHasCoproduct.{u} : HasCoproduct (\Type u)
   | Coproduct A B => Or A B
 

@@ -1,3 +1,12 @@
+{- | Local rings: rings in which, for every element, either the element or its successor is invertible.
+ -
+ -   A local ring is a non-zero ring satisfying the constructive locality axiom: for any `x`, either `x` is a unit or
+ -   `x + 1` is a unit. This formulation is equivalent (constructively) to the classical condition that the non-units
+ -   form an ideal, and it implies that the ring of idempotents is connected (only `0` and `1` are idempotent). The
+ -   module derives several useful consequences — including unit-detection in sums and finite sums equaling `1` — and
+ -   provides a commutative variant.
+ -}
+
 \import Algebra.Group
 \import Algebra.Meta
 \import Algebra.Monoid
@@ -12,18 +21,27 @@
 \import Paths.Meta
 \open Monoid(Inv,LInv)
 
+{- | Extends `Ring` and `NonZeroRing`. A local ring with the constructive locality property, axiomatized via the
+ -   `locality` field.
+ -}
 \class LocalRing \extends Ring, NonZeroRing {
+  -- | For every `x : E`, either `x` is invertible or `x + ide` is invertible. The defining property of a local ring.
   | locality : IsLocal
 
+  {- | If `x + y = 1`, then either `x` or `y` is invertible. Constructive analogue of "non-units form an ideal" for
+   -   binary sums.
+   -}
   \lemma sum1=>eitherInv {x y : E} (x+y=1 : x + y = ide) : Inv x || Inv y
     => isLocal-sum-char.1 locality x+y=1
 
+  -- | If `x + y` is invertible, then either `x` or `y` is invertible.
   \lemma sumInv=>eitherInv {x y : E} (q : Inv (x + y)) : Inv x || Inv y =>
     \case sum1=>eitherInv (inv ldistr *> q.inv-left) \with {
       | byLeft s => byLeft (Inv.factor-right (\new LInv q.inv (x + y) q.inv-right) s)
       | byRight s => byRight (Inv.factor-right (\new LInv q.inv (x + y) q.inv-right) s)
     }
 
+  -- | Array generalization: if `BigSum l` is invertible, some entry `l j` is invertible.
   \lemma sumInvArray (l : Array E) (p : Inv (BigSum l)) : ∃ (j : Fin l.len) (Inv (l j)) \elim l
     | nil => absurd (NonZeroSemiring.inv-nonZero p idp)
     | a :: l => \case sumInv=>eitherInv p \with {
@@ -31,12 +49,17 @@
       | byRight r => TruncP.map (sumInvArray l r) \lam s => (suc s.1, s.2)
     }
 
+  -- | If `BigSum l = 1`, some entry `l j` is invertible. Useful for partition-of-unity style arguments.
   \lemma sum1Array (l : Array E) (p : BigSum l = 1) : ∃ (j : Fin l.len) (Inv (l j))
     => sumInvArray l (transportInv Inv p Inv.ide-isInv)
 
+  -- | Every local ring is connected (`IsConnected`), i.e. its only idempotents are `0` and `1`.
   \lemma connected : IsConnected
     => local=>connected locality
 } \where {
+  {- | Standalone helper showing that any ring satisfying the locality predicate is connected, independent of the
+   -   `LocalRing` class structure.
+   -}
   \lemma local=>connected {R : Ring} (loc : \Pi (a : R) -> Inv a || Inv (a + 1)) : R.IsConnected
     => \lam a p => \have q : a * (negative a + 1) = 0 => ldistr *> +-comm *> pmap (_ +) R.negative_*-right *> R.toZero (ide-right *> inv p)
                    \in \case loc (negative a) \with {
@@ -45,4 +68,5 @@
                    }
 }
 
+-- | Extends `LocalRing` and `NonZeroCRing`. The commutative version of a local ring.
 \class LocalCRing \extends LocalRing, NonZeroCRing

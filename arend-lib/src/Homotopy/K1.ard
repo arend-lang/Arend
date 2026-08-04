@@ -1,3 +1,14 @@
+{- | The Eilenberg-MacLane space `K(G,1)` for a group `G`, presented as a higher inductive type, with a proof that its
+ -   loop space recovers `G`.
+ -
+ -   `K1 G` is built as a 1-truncated higher inductive type with a single point `base`, a loop for each group element,
+ -   and a 2-cell `relation` enforcing that the loop assignment is a group homomorphism (composition of loops
+ -   corresponds to multiplication). The main theorem `Loop_K1` exhibits an equivalence `(base = base) = G` via the
+ -   standard encode/decode method: the universal cover `code` sends each loop to right-multiplication as an equivalence
+ -   on `G`, and the encode/decode functions assemble into an isomorphism. The functoriality of right-multiplication
+ -   (`rMul-functorial`, `equivPathComposition`) is what makes `code` respect the `relation` 2-cell.
+ -}
+
 \import Algebra.Group
 \import Algebra.Meta
 \import Algebra.Monoid
@@ -12,6 +23,9 @@
 \import Equiv.Univalence.Set
 \import Paths.Meta
 
+{- | The HIT defining `K(G,1)` as a `\1-Type`, with constructors `base`, `loop : G -> base = base`, and a square
+ -   `relation g g'` whose four faces witness `loop g *> loop g' = loop (g * g')`.
+ -}
 \truncated \data K1 (G : Group) : \1-Type
   | base
   | loop G : base = base
@@ -22,9 +36,15 @@
     | i, right => loop (g * g') i
   }
   \where {
+    {- | Extracts from `relation` the homomorphism law `path (loop g) *> path (loop g') = path (loop (g * g'))` using
+     -   the cube-equality characterization.
+     -}
     \lemma loop-comp {G : Group} (g g' : G) : path (loop g) *> path (loop g') = path (loop (g * g'))
       => movePath2 $ coe2 (Cube2.equality (path (loop g)) (path (loop (g * g'))) idp (path (loop g'))) right (path (\lam j => path (\lam i => relation g g' i j))) left
 
+    {- | The loop at the identity is reflexivity: `path (loop ide) = idp`. Proved by cancelling
+     -   `loop ide *> loop ide = loop ide` via the auxiliary `idp-lemma`.
+     -}
     \lemma loop-ide {G : Group} : path (loop (ide {G})) = idp
       => idp-lemma (path (loop ide)) (path (loop ide)) (loop-comp ide ide *> simplify)
       \where {
@@ -33,52 +53,79 @@
       }
   }
 
+-- | Rearranges `p *> q = r` into `p = r *> inv q`.
 \lemma movePath1 {A : \1-Type} {a a' a'' : A} {p : a = a'} {q : a' = a''} {r : a = a''} (h : p *> q = r) : p = r *> inv q
   => inv (pmap (p *>) (*>_inv q)) *> inv (*>-assoc p q (inv q)) *> pmap (*> inv q) h
 
+-- | Rearranges `p = r *> inv q` into `p *> q = r` (inverse of `movePath1`).
 \lemma movePath2 {A : \1-Type} {a a' a'' : A} {p : a = a'} {q : a' = a''} {r : a = a''} (h : p = r *> inv q) : p *> q = r
   => pmap (*> q) h *> *>-assoc r (inv q) q *> pmap (r *>) (inv_*> q)
 
+-- | `QEquiv (g *)` with inverse `inverse g *`; left-multiplication by `g` is an equivalence on `G`.
 \func leftMulEquiv {G : Group} (g : G) : QEquiv (g *) \cowith
   | ret => inverse g *
   | ret_f h => simplify
   | f_sec h => simplify
 
+-- | `QEquiv (* g)` with inverse `* inverse g`; right-multiplication by `g` is an equivalence on `G`.
 \func rightMulEquiv {G : Group} (g : G) : QEquiv (* g) \cowith
   | ret => * inverse g
   | ret_f h => simplify
   | f_sec h => simplify
 
+{- | Functoriality of right-multiplication: `(\lam x => rightMulEquiv g' (rightMulEquiv g x)) = rightMulEquiv (g * g')`,
+ -   by associativity.
+ -}
 \func rMul-functorial {G : Group} (g g' : G) : (\lam x => rightMulEquiv g' (rightMulEquiv g x)) = rightMulEquiv (g * g')
   => ext (\lam x => *-assoc)
 
+{- | The univalence-image equation
+ -   `Equiv-to-= (rightMulEquiv g) *> Equiv-to-= (rightMulEquiv g') = Equiv-to-= (rightMulEquiv (g * g'))`, the key fact
+ -   making `code` well-defined on `relation`.
+ -}
 \lemma equivPathComposition.{u} {G : Group.{u}} (g g' : G) : QEquiv-to-= (rightMulEquiv g) *> QEquiv-to-= (rightMulEquiv g') = QEquiv-to-= (rightMulEquiv (g * g'))
   => QEquiv-to-=-functorial (rightMulEquiv g) (rightMulEquiv g') *> pmap QEquiv-to-= (QEquiv.equals {G} {G} {_} {rightMulEquiv (g * g')} \lam a => *-assoc)
 
+{- | The universal cover `K1 G -> \Set` sending `base` to `G`, `loop g` to the path `Equiv-to-= (rightMulEquiv g)`, and
+ -   `relation` to a 2-cell built from `equivPathComposition` via `Cube2.map`.
+ -}
 \func code.{u} {G : Group.{u}} (x : K1 G) : \Set u \elim x
   | base => G
   | loop g => QEquiv-to-= (rightMulEquiv g)
   | relation g g' i j => Cube2.map (QEquiv-to-= (rightMulEquiv g)) (QEquiv-to-= (rightMulEquiv (g * g'))) idp (QEquiv-to-= (rightMulEquiv g'))
                                    (movePath1 (equivPathComposition g g')) @ j @ i
 
+-- | `(base = x) -> code x` defined by `transport code p ide`.
 \func encode.{u} {G : Group.{u}} (x : K1 G) (p : base = x) : code x
    => transport code p ide
 
+{- | `code x -> (base = x)` sending `c : G` (at `base`) to `path (loop c)`; over `loop g` it uses the homomorphism law
+ -   packaged as `decode_loop_homo`.
+ -}
 \func decode.{u} {G : Group.{u}} (x : K1 G) : code x -> base = x \elim x
   | base => \lam c => path (loop c)
   | loop g => pathOver (decode_loop_homo g)
   \where {
+    -- | Abbreviation `wind g = path (loop g) : base = base`.
     \func wind {G : Group} (g : G) : base {G} = base => path (loop g)
 
+    {- | Transport coherence `transport (\lam x => code x -> base = x) (wind g) wind = wind`, ultimately from
+     -   `K1.loop-comp`.
+     -}
     \func decode_loop_homo.{u} {G : Group.{u}} (g : G) : transport (\lam x => code {G} x -> base = x) (wind g) wind = wind
       => simp_coe (\lam c => simp_coe (K1.loop-comp c g))
   }
 
+-- | `decode x (encode x p) = p`, by path induction reducing to `K1.loop-ide`.
 \func encode_decode.{u} {G : Group.{u}} {x : K1 G} (p : base = x) : decode x (encode x p) = p
   | idp => K1.loop-ide
 
+-- | `encode x (decode x c) = c`, at `base` reducing to `ide-left`.
 \func decode_encode.{u} {G : Group.{u}} (x : K1 G) (c : code x) : encode x (decode x c) = c \elim x
   | base => ide-left
 
+{- | The main result: `(base {G} = base) = G`, packaging encode/decode into an iso. Witnesses that `K1 G` is an
+ -   Eilenberg-MacLane space `K(G,1)`.
+ -}
 \func Loop_K1.{u} {G : Group.{u}} : (base {G} = base) = G
   => path (iso (encode base) (decode base) (encode_decode {G} {base}) (decode_encode base))

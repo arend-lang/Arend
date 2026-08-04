@@ -1,3 +1,13 @@
+{- | Modular arithmetic on finite types `Fin (suc n)` and integer modular reduction lemmas.
+ -
+ -   This module establishes that the finite type `Fin (suc n)` carries the standard structure of integers modulo `n+1`.
+ -   It begins with utility lemmas about integer and natural division/modulo (used to bridge `Int` and `Nat` arithmetic
+ -   on residues), then defines a positional base-`b` digit decomposition, and finally builds the algebraic hierarchy on
+ -   `Fin (suc n)`: a commutative decidable ring, a Euclidean ring structure, and — when `suc n` is prime — a discrete
+ -   field via Bézout-derived inverses. The design routes computations through `IntEuclidean` so that ring identities on
+ -   `Fin (suc n)` reduce to identities on `Int` modulo `suc n`.
+ -}
+
 \import Algebra.Domain.Euclidean
 \import Algebra.Field
 \import Algebra.Group
@@ -26,10 +36,12 @@
 \open Nat(div,mod,divModProp)
 \open AddMonoid
 
+-- | `(pos (suc n) * q + r) mod suc n = r` when `r < suc n`; reduction kills the multiple of the modulus.
 \lemma int_n*_+_mod_n {n r : Nat} {q : Int} (r<=n : r < suc n) : (pos (suc n) * q + r) mod suc n = r
   => mod-unique {(pos (suc n) * q + r) div suc n} {q} natMod<right r<=n (natDivModProp (pos (suc n) * q + r) n)
   \where \open IntEuclidean
 
+-- | `(pos (suc n) * q + r) mod suc n = r mod suc n`; absorbs a multiple of the modulus inside `mod`.
 \lemma int_n*_+_mod_n=mod {n : Nat} {q r : Int} : (pos (suc n) * q + r) mod suc n = r mod suc n
   => run {
     rewriteI {1} (natDivModProp r n),
@@ -38,6 +50,7 @@
   }
   \where \open IntEuclidean
 
+-- | `(pos (a mod suc n) * b) mod suc n = (a * b) mod suc n`; `mod` distributes through left multiplication.
 \lemma int_mod_*-left {n : Nat} {a b : Int} : (pos (a mod suc n) * b) mod suc n = (a * b) mod suc n
   => run {
     rewriteI {2} (natDivModProp a n),
@@ -46,19 +59,28 @@
   }
   \where \open IntEuclidean
 
+-- | Right-multiplication analogue: `(a * b mod suc n) mod suc n = (a * b) mod suc n`.
 \lemma int_mod_*-right {n : Nat} {a b : Int} : (a * b mod suc n) mod suc n = (a * b) mod suc n
   => pmap (mod _) *-comm *> int_mod_*-left *> pmap (mod _) *-comm
   \where \open IntEuclidean
 
+-- | `base-digit n b j` extracts the `j`-th digit of `n` in base `b` by iterating `div b` and taking `mod b`.
 \func base-digit (n b j : Nat) : Nat \elim j
   | 0 => n mod b
   | suc j => base-digit (n div b) b j
 
+{- | Inverse property: if all entries of an array `l` are below `b`, then `l j` recovers as `base-digit` of
+ -   `BigSum (\lam j => l j * b^j)`.
+ -}
 \lemma base-digit-sum {l : Array Nat} {b : Nat} (p : \Pi (j : Fin l.len) -> l j < b) {j : Fin l.len}
   : l j = base-digit (BigSum (\lam j => l j * Monoid.pow b j)) b j \elim l, j
   | a :: l, 0 => inv $ pmap (mod b) +-comm *> pmap (\lam x => (x + a) mod b) (inv $ *-comm *> Semiring.BigSum-rdistr *> pmap BigSum (exts \lam j => *-assoc)) *> n*_+_mod_n {b} {BigSum (\lam j => l j * Monoid.pow b j)} (p 0)
   | a :: l, suc j => base-digit-sum (\lam j => p (suc j)) *> pmap (base-digit __ b j) (unfold BigSum $ inv $ pmap (div b) +-comm *> pmap (\lam x => (x + a) div b) (inv $ *-comm *> Semiring.BigSum-rdistr *> pmap BigSum (exts \lam j => *-assoc)) *> n*_+_div_n=div (later \lam b=0 => \case rewrite b=0 in p 0) *> pmap (_ +) (div_< (p 0)) *> zro-right)
 
+{- | Instance of `CRing.Dec` on `Fin (suc n)`. Addition and multiplication are inherited from `Nat` (with the result
+ -   coerced back to `Fin`), `negative x = iabs (suc n Nat.- x)`, `natCoef = Fin.fromNat`, and equality is decidable.
+ -   Provides the canonical commutative ring of integers modulo `suc n`.
+ -}
 \instance FinRing {n : Nat} : CRing.Dec (Fin (suc n))
   | zro => 0
   | + x y => finMod (x + y)
@@ -85,13 +107,18 @@
   \where {
     \open IntEuclidean
 
+    -- | Idempotence: `a mod pos (suc n) Nat.mod suc n = a mod pos (suc n)` (as a `Nat`).
     \lemma mod-mod {a : Int} {n : Nat} : a mod pos (suc n) Nat.mod suc n = {Nat} a mod pos (suc n)
       => mod_< {a mod pos (suc n)} {suc n} natMod<right
 
+    -- | If `suc n` divides `x - y` (in `Int`), then `x mod suc n = y mod suc n`.
     \lemma ldiv-modEq (x y : Int) (n : Nat) (p : ∃ (Monoid.LDiv {IntEuclidean} (suc n) (x - y))) : x mod suc n = y mod suc n \elim p
       | inP (e, p) => rewrite (rewrite (+-assoc, negative-left, zro-right) in inv (pmap (+ y) p)) $
       rewrite (ldistr, +-assoc, natDivModProp y n) in int_n*_+_mod_n {n} {y mod suc n} {e + y div pos (suc n)} natMod<right
 
+    {- | Converse: equality of residues yields a left-divisibility witness `Monoid.LDiv (suc n) (x - y)` in
+     -   `IntEuclidean`.
+     -}
     \sfunc modEq-ldiv (x y : Int) (n : Nat) (p : x mod suc n = y mod suc n) : Monoid.LDiv {IntEuclidean} (suc n) (x - y)
       => \have A x => divModProp x (suc n) \case __
          \in rewriteI (A x, A y, p) \new Monoid.LDiv {
@@ -99,9 +126,11 @@
           | inv-right => rewrite AbGroup.sum-cancel-right Ring.ldistr_-
         }
 
+    -- | Divisibility of `x Nat.- y` by `suc n` yields equality in `Fin (suc n)`.
     \lemma ldiv-finEq {x y n : Nat} (p : ∃ (Monoid.LDiv {IntEuclidean} (suc n) (x Nat.- y))) : x Nat.mod suc n = y Nat.mod suc n
       => fin_nat-inj (repeat {2} (rewrite natMod=mod) in ldiv-modEq (pos x) (pos y) n p)
 
+    -- | Characterizes the integer coefficient map: `intCoef k = k mod suc n`.
     \lemma intCoef-char (n : Nat) (k : Int) : (FinRing {n}).intCoef k = k mod suc n Nat.mod suc n \elim k {
       | pos zero => idp
       | pos (suc m) => rewrite (natCoefSuc, fin_mod_id {n} (_ Nat.mod suc n)) idp
@@ -117,9 +146,11 @@
       }
     }
 
+    -- | For natural `k`, `intCoef (pos k) = k` (under the `Fin` coercion).
     \lemma intCoef_pos-char {n : Nat} (k : Nat) : (FinRing {n}).intCoef (pos k) = k Nat.mod suc n
       => rewrite (natMod=mod k (suc n), fin_mod_id (k Nat.mod suc n)) in intCoef-char n (pos k)
 
+    -- | The integer coefficient map into `FinRing` is surjective; `aux` shows `natCoef k = k` for `k : Fin (suc n)`.
     \lemma intCoef-surj {n : Nat} : IsSurj (FinRing {n}).intCoef => \lam y => inP (y, aux y)
       \where
         \private \lemma aux {n : Nat} (k : Fin (suc n)) : (FinRing {n}).natCoef k = k \elim n, k
@@ -130,6 +161,9 @@
       => transport (RingHom _ _) (ext (FinRing.intCoef-char n)) intMap
   }
 
+{- | Instance of `EuclideanRingData` on `Fin (suc n)` extending `FinRing`. The Euclidean map is the identity
+ -   `Fin (suc n) -> Nat`, and `divMod x y` lifts `Nat.divMod` and reduces both quotient and remainder mod `suc n`.
+ -}
 \instance FinEuclidean {n : Nat} : EuclideanRingData (Fin (suc n))
   | CRing => FinRing {n}
   | decideEq => decideEq
@@ -144,6 +178,10 @@
   }
   | isEuclideanMap x y y/=0 _ => mod<=left <∘r mod<right (fin_nat-ineq y/=0)
 
+{- | Instance of `DiscreteField` on `Fin (suc n)` when `suc n` is prime, extending `FinRing`. The inverse `finv x` is
+ -   computed from Bézout coefficients of `pos (suc n)` and `pos x` via `IntEuclidean.natDivMod`, reduced mod `suc n`.
+ -   Establishes `Z/p` as a discrete field.
+ -}
 \instance FinField {n : Nat} {p : Prime (suc n)} : DiscreteField (Fin (suc n))
   | CRing => FinRing {n}
   | zro/=ide => \case __ *> {Nat} mod_< (NatOrder.suc<suc (nonZero>0 (\lam n=0 => p.notInv (transportInv (\lam x => Inv (suc x)) n=0 Inv.ide-isInv))))
@@ -164,6 +202,9 @@
     \open EuclideanRingData
     \open Monoid(Inv)
 
+    {- | For a prime `p` and `0 /= x < p`, `gcd p x = 1`; the key coprimality fact underlying invertibility of nonzero
+     -   residues mod a prime.
+     -}
     \lemma gcd=1 (p : Prime {NatSemiring}) {x : Nat} (x/=0 : Not (x = 0)) (x<p : x < p) : gcd p x = 1
       => \case nat_irr p (GCD.res|val1 {gcd-isGCD p x}) \with {
            | byLeft gcd=1 => gcd=1

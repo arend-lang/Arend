@@ -1,3 +1,15 @@
+{- | Reflective decision procedure for proving group and commutative-group equalities by normalizing syntactic
+ -   `GroupTerm` expressions.
+ -
+ -   The module defines a free syntax `GroupTerm V` over variables `V` together with an `interpret` function into a
+ -   target group `G`. Solvers are organized as classes (`GroupData`, `NatData`, `CGroupData`) that bundle the carrier
+ -   group with a variable assignment and provide a `simplify` operation paired with a `simplify-correct` lemma showing
+ -   `interpret t = interpret (simplify t)`. For general groups (`NatData`), simplification proceeds by repeatedly
+ -   locating adjacent inverse pairs of leaves and removing them, preserving normal form (no nested non-variable
+ -   inverses). For commutative groups (`CGroupData`), terms are flattened to a list of (variable, sign) leaves, sorted,
+ -   grouped, and cancelled bulk via `removeVar`/`removeVars`, exploiting commutativity to collect like terms.
+ -}
+
 \import Algebra.Group
 \import Algebra.Meta
 \import Algebra.Monoid
@@ -28,13 +40,16 @@
 \open OrderedAddMonoid
 \open LinearlyOrderedAbMonoid
 
+-- | Inductive syntax of group expressions over variables `V`, with constructors `var`, `:ide`, `:inv`, and `:*`.
 \data GroupTerm (V : \Type)
   | var V
   | :ide
   | :inv (GroupTerm V)
   | \infixl 6 :* (t s : GroupTerm V)
 
+-- | Class bundling a `Group G`, a variable set `V : \Set`, and an assignment `f : V -> G`. Provides:
 \class GroupData \noclassifying {G : Group} {V : \Set} (f : V -> G) {
+  -- | Evaluates a `GroupTerm V` in `G` by mapping `var` via `f`, `:ide` to `ide`, `:inv` to `inverse`, and `:*` to `*`.
   \func interpret (t : GroupTerm V) : G \elim t
     | var x => f x
     | :ide => ide
@@ -42,9 +57,13 @@
     | :* t s => interpret t * interpret s
 }
 
+-- | Extends `GroupData` with `V => Nat`. Implements the inverse-pair cancellation strategy.
 \class NatData \extends GroupData {
   | V => Nat
 
+  {- | Soundness when both removed leaves are in the interior — interpretation is preserved given the inverse-pair
+   -   hypothesis.
+   -}
   \func rp-correctness-both-inside (t : GroupTerm V) (nf-pf : isInNF t) (fstLeafToRemoveInd : Nat) (p : interpret (get-leaf t fstLeafToRemoveInd) = inverse (interpret $ get-leaf t (suc fstLeafToRemoveInd)))
                                    (lb : 1 <= fstLeafToRemoveInd) (ub : fstLeafToRemoveInd < count-leaves t) : interpret (remove-pair t fstLeafToRemoveInd).1 = interpret t \elim t
     | l :* r \as t => mcases {1} \with {
@@ -88,6 +107,7 @@
     \meta rw-meta v1 v2 p => rewrite (v1, v2, p, *-assoc, inv (*-assoc {_} {inverse {G} (interpret _)} {interpret _} {interpret _}), inverse-left, ide-left)
   }
 
+  -- | Soundness for boundary cases (factoring out the first/last leaf).
   \func rp-correctness-one-inside-left (t : GroupTerm V) (nf-pf : isInNF t)
     : interpret t = interpret (get-leaf t 1) * interpret (remove-pair t 0).1 \elim t
     | l :* r => mcases {2} \with {
@@ -115,6 +135,7 @@
     | :ide =>  rewrite ide-right idp
     | :inv t => cases (t arg (as = t), nf-pf arg (as = nf-pf)) \with { | var v, _ => rewrite ide-right idp }
 
+  -- | Soundness for boundary cases (factoring out the first/last leaf).
   \func rp-correctness-one-inside-right (t : GroupTerm V) (nf-pf : isInNF t)
     : interpret t = interpret (remove-pair t (count-leaves t)).1 * interpret (get-leaf t (count-leaves t)) \elim t
     | l :* r \as t => mcases {1} \with {
@@ -147,6 +168,7 @@
     | :ide => rewrite ide-left idp
     | :inv t => cases (t arg (as = t), nf-pf arg (as = nf-pf)) \with { | var v, _ => rewrite ide-left idp }
 
+  -- | Predicate stating that a term is in normal form — no `:inv` is applied to a non-variable subterm.
   \func isInNF (t : GroupTerm V) : \Prop \elim t
     | l :* r => \Sigma (isInNF l) (isInNF r)
     | var v => \Sigma
@@ -155,6 +177,7 @@
       | var v => \Sigma
     }
 
+  -- | Decision procedure returning `Maybe (isInNF t)`.
   \func isInNF-dec (t : GroupTerm V) : Maybe (isInNF t) \elim t
     | l :* r => \case isInNF-dec l, isInNF-dec r \with { | just p, just q => just (p, q) | _, _ => nothing }
     | var v => just ()
@@ -163,6 +186,7 @@
       | var v => just ()
     }
 
+  -- | Pair removal preserves normal form.
   \func rp-preserves-nf (t : GroupTerm V) (nf-pf : isInNF t) (fstLeafToRemoveInd : Nat)
     : isInNF (remove-pair t fstLeafToRemoveInd).1 \elim t
     | l :* r => mcases {1} \with {
@@ -180,6 +204,7 @@
     | :inv t => cases (t arg (as = t), nf-pf arg (as = nf-pf)) \with { | var v, _ => () }
 
 
+  -- | Pair removal does not increase leaf count.
   \func rp-count-leaves-lemma (t : GroupTerm V) (fstLeafToRemoveInd : Nat) : count-leaves (remove-pair t fstLeafToRemoveInd).1 <= count-leaves t \elim t
     | l :* r \as t => mcases {1} \with {
       | less q => mcases {1} \with {
@@ -202,6 +227,7 @@
     | :inv t => cases t zero<=_
 
 
+  -- | A normal-form term with zero leaves interprets to `ide`.
   \func get-leaf-zro-leaves-lemma (t : GroupTerm V) (p : count-leaves t = 0) (nf-pf : isInNF t)
     : interpret t = ide \elim t
     | l :* r => \let | leaves-l-is-0 : count-leaves l = 0 =>
@@ -218,22 +244,27 @@
        | var x, p, nf-pf => contradiction
     }
 
+  -- | Inductive type with `var-leaf v` and `inv-var-leaf v`, representing positive/negative variable occurrences.
   \data Leaf
     | var-leaf (v : V)
     | inv-var-leaf (v : V)
   \where {
+    -- | Conversion to a term, sign indicator, and underlying variable.
     \func leaf-to-term (l : Leaf) : GroupTerm V \elim l
       | var-leaf v => var v
       | inv-var-leaf v => :inv (var v)
 
+    -- | Conversion to a term, sign indicator, and underlying variable.
     \func isInv (l : Leaf) : Bool \elim l
       | var-leaf _ => false
       | inv-var-leaf _ => true
 
+    -- | Conversion to a term, sign indicator, and underlying variable.
     \func val (l : Leaf) : V \elim l
       | var-leaf v => v
       | inv-var-leaf v => v
 
+    -- | Recognizes a term as a leaf if it is `var v` or `:inv (var v)`.
     \func toLeaf (t : GroupTerm V) : Maybe Leaf \elim t
       | l :* r => nothing
       | var v => just $ var-leaf v
@@ -241,6 +272,7 @@
       | :inv (var v) => just $ inv-var-leaf v
       | :inv _ => nothing
 
+    -- | Round-trip soundness lemma for `toLeaf`.
     \func toLeafToTerm-isInv (t : GroupTerm V) (l : Leaf) (p : toLeaf t = just l) : t = leaf-to-term l \elim t
       | var v => rewrite (inv $ just-injective p) idp
       | :ide => contradiction
@@ -248,6 +280,9 @@
       | l :* r => contradiction
   }
 
+  {- | Structural lemmas characterizing when `remove-pair` reports success — the term must be a product of two leaves at
+   -   the appropriate index.
+   -}
   \func rp-returns-true-lemma''' (l r : GroupTerm V) (fstLeafToRemoveInd : Nat)
     : (remove-pair (l :* r) fstLeafToRemoveInd).2 = true ->
   \Sigma ((remove-pair l fstLeafToRemoveInd).2 = true) ((remove-pair r 0).2 = true) (fstLeafToRemoveInd = count-leaves l)
@@ -268,6 +303,9 @@
       }
     }
 
+  {- | Structural lemmas characterizing when `remove-pair` reports success — the term must be a product of two leaves at
+   -   the appropriate index.
+   -}
   \func rp-returns-true-lemma'' (t : GroupTerm V) (fstLeafToRemoveInd : Nat)
     : (remove-pair t fstLeafToRemoveInd).2 = true -> count-leaves t >= 1 \elim t
     | l :* r => \lam p => <=_+ (rp-returns-true-lemma'' l fstLeafToRemoveInd (rp-returns-true-lemma''' l r fstLeafToRemoveInd p).1) zero<=_
@@ -277,6 +315,9 @@
     | var x \as t' => \lam _ => <=-refl
     | :ide => absurd `o` true/=false `o` inv
 
+  {- | Structural lemmas characterizing when `remove-pair` reports success — the term must be a product of two leaves at
+   -   the appropriate index.
+   -}
   \func rp-returns-true-lemma' (l r : GroupTerm V) (fstLeafToRemoveInd : Nat)
     (p : (remove-pair (l :* r) fstLeafToRemoveInd).2 = true) : \Sigma (l' r' : Leaf) (l = Leaf.leaf-to-term l') (r = Leaf.leaf-to-term r') \elim l, r
     -- in this case we have fstLeafToRemoveInd = count-leaves ll + count-leaves lr = count-leaves ll, which means count-leaves lr = 0, but count-leaves lr >= 1
@@ -320,6 +361,9 @@
                                                 \in contradiction
   }
 
+  {- | Structural lemmas characterizing when `remove-pair` reports success — the term must be a product of two leaves at
+   -   the appropriate index.
+   -}
   \func rp-returns-true-lemma (t : GroupTerm V) (fstLeafToRemoveInd : Nat) (p : (remove-pair t fstLeafToRemoveInd).2 = true)
                               (lb : 1 <= {NatSemiring} fstLeafToRemoveInd) (ub : fstLeafToRemoveInd < count-leaves t)
     : interpret t = (interpret $ get-leaf t fstLeafToRemoveInd) * (interpret $ get-leaf t (suc fstLeafToRemoveInd)) \elim t
@@ -348,6 +392,9 @@
                  (rewrite (ql, qr) idp) \with {}
   }
 
+  {- | Structural lemmas characterizing when `remove-pair` reports success — the term must be a product of two leaves at
+   -   the appropriate index.
+   -}
   \func rp-returns-true-lemma-left (t : GroupTerm V)(p : (remove-pair t 0).2 = true)
     : \Sigma (interpret t = (interpret $ get-leaf t 1)) (interpret (remove-pair t 0).1 = ide) \elim t
     | l :* r \as t => \let | p_l => (rp-returns-true-lemma''' l r 0 p).1
@@ -364,6 +411,9 @@
     }
 
 
+  {- | Structural lemmas characterizing when `remove-pair` reports success — the term must be a product of two leaves at
+   -   the appropriate index.
+   -}
   \func rp-returns-true-lemma-right (t : GroupTerm V) (p : (remove-pair t (count-leaves t)).2 = true)
     : \Sigma (interpret t = (interpret $ get-leaf t (count-leaves t))) (interpret (remove-pair t (count-leaves t)).1 = ide) \elim t
     | l :* r \as t => \let | p_l => (rp-returns-true-lemma''' l r (count-leaves t) p).1
@@ -380,18 +430,21 @@
       | var v, p => (idp, idp)
     }
 
+  -- | When `ind < count-leaves l + 1`, the `ind`-th leaf of `l :* r` lives in `l`.
   \func get-leaf-less-lemma (l r : GroupTerm V) (ind : Nat) (p : ind < suc (count-leaves l))
                             : get-leaf (l :* r) ind = get-leaf l ind
     => rewrite (LinearOrder.dec<_reduce p) idp
 
 
 
+  -- | The last leaf of a term.
   \func get-rightmost-leaf (t : GroupTerm V) : GroupTerm V \elim t
     | l :* r => get-rightmost-leaf r
     | :inv (var x) \as t' => t'
     | var x \as t' => t'
     | t' => t'
 
+  -- | Retrieves the `n`-th leaf of a term, or `:ide` if out of range.
   \func get-leaf (t : GroupTerm V) (ind : Nat) : GroupTerm V \elim t
     | l :* r => \case LinearOrder.dec<_<= ind (suc $ count-leaves l) \with {
       | inl _ => get-leaf l ind
@@ -406,6 +459,7 @@
     }
     | :ide => :ide
 
+  -- | Counts leaf occurrences in a term (variables and inv-of-variables count 1; non-variable inverses count 0).
   \func count-leaves (t : GroupTerm V) : Nat \elim t
     | l :* r => count-leaves l + count-leaves r
     | :inv (var x) => 1
@@ -413,6 +467,9 @@
     | var x \as t' => 1
     | _ => 0
 
+  {- | Given a term and an index, removes the leaf at that index together with its right neighbour; returns the
+   -   rewritten term and a flag indicating whether the removal collapsed to `:ide`.
+   -}
   \func remove-pair (t : GroupTerm V) (fstLeafToRemoveInd : Nat)
     : \Sigma (GroupTerm V) Bool \elim t
     | l :* r => \case LinearOrder.trichotomy fstLeafToRemoveInd (count-leaves l) \with {
@@ -435,6 +492,7 @@
     | var x \as t' => (:ide, true)
     | :ide => (:ide, false)
     \where {
+      -- | Helper deciding leaf-level removal at indices 1 or 2.
       \func processLeaf (t : GroupTerm V) (fstLeafToRemoveInd : Nat) : \Sigma (GroupTerm V) Bool =>
         \case decideEq fstLeafToRemoveInd 1, decideEq fstLeafToRemoveInd 2 \with {
           | no _, no _ => (t, false)
@@ -449,9 +507,13 @@
     | var v => contradiction
     | :inv t => cases (t arg (as = t)) \with {} -}
 
+  {- | Searches the term for an index of a leaf whose interpretation is the inverse of the next leaf's, returning the
+   -   index together with the required side conditions and bounds.
+   -}
   \func find-fstLeafToRemoveInd (t : GroupTerm V) : Maybe (\Sigma (ind : Nat) (interpret (get-leaf t ind) = inverse (interpret (get-leaf t (suc ind)))) (1 <= ind) (ind < count-leaves t))
     => find-fstLeafToRemoveInd-rec t (count-leaves t)
     \where {
+      -- | Bounded recursion driving the search.
       \func find-fstLeafToRemoveInd-rec (t : GroupTerm V) (ind : Nat)
         : Maybe (\Sigma (ind' : Nat) (interpret (get-leaf t ind') = inverse (interpret (get-leaf t (suc ind')))) (1 <= ind') (ind' < count-leaves t))
         \elim ind
@@ -469,6 +531,7 @@
           | inr _ => find-fstLeafToRemoveInd-rec t ind
        }
 
+      -- | Two leaves with opposite signs and equal variable interpret as inverses of each other.
       \func leaf-isInv-lemma (l l' : Leaf) (p : Leaf.isInv l = not (Leaf.isInv l')) (q : Leaf.val l = Leaf.val l')
         : interpret (Leaf.leaf-to-term l) = inverse (interpret (Leaf.leaf-to-term l')) \elim l, l'
         | var-leaf v, var-leaf v1 => contradiction
@@ -477,6 +540,7 @@
         | inv-var-leaf v, inv-var-leaf v1 => contradiction
     }
 
+  -- | Alternative left-to-right scan threading the last visited leaf, returning the cancellation index.
   \func find-pair-to-remove (t : GroupTerm V) (lastVisitedLeaf : Maybe Leaf)
     : \Sigma Nat (Maybe Leaf) Bool \elim t
     | :inv (var x) => processLeaf (inv-var-leaf x) lastVisitedLeaf
@@ -511,9 +575,16 @@
      })
 }
 
+{- | Extends `NatData` with `G : CGroup`. Overrides `simplify` with a multiset-based normalization exploiting
+ -   commutativity.
+ -}
 \class CGroupData \extends NatData {
   \override G : CGroup
 
+  {- | Core correctness — for any `n`,
+   -   `interpret (removeVar n t v b).1 * pow (±f v) (n ∧ countVar t v b) = interpret t`, with the residual count equal
+   -   to `n -' countVar t v b`.
+   -}
   \lemma removeVar-lem (t : GroupTerm V) (v : V) (withInv : Bool) {n : Nat}
     : \Sigma (interpret (removeVar n t v withInv).1 * G.pow (if withInv (inverse (f v)) (f v)) (n ∧ countVar t v withInv) = interpret t)
              ((removeVar n t v withInv).2 = n -' countVar t v withInv) \elim t, n
@@ -529,31 +600,43 @@
     \where {
       \open NatBSemilattice
 
+      -- | Powers of `f v` versus `inverse (f v)` are inverses of each other.
       \lemma pow-lem {b : Bool} {n : Nat} {x : G} : G.pow (if b (inverse x) x) n = inverse (G.pow (if (not b) (inverse x) x) n) \elim b
         | false => inv $ G.inverse_pow *> pmap (G.pow __ n) (G.inverse-isInv {x})
         | true => inv G.inverse_pow
 
+      -- | Distribution lemma `a ∧ (b + c) = a ∧ b + (a -' b) ∧ c` used to split counts across `:*`.
       \lemma sum-lem {a b c : Nat} : a ∧ (b + c) = a ∧ b + (a -' b) ∧ c \elim a, b
         | 0, b => rdistr0 *> inv (pmap2 (+) rdistr0 rdistr0)
         | suc a, 0 => idp
         | suc a, suc b => inv (NatSemiring.meet_+-left {1}) *> pmap suc sum-lem *> pmap (+ _) (NatSemiring.meet_+-left {1})
     }
 
+  {- | When `n <= countVar t v b`, the meet simplifies and we get the cleaner equation
+   -   `interpret (removeVar ...).1 * pow ... n = interpret t`.
+   -}
   \lemma removeVar_<=-lem (t : GroupTerm V) (v : V) (withInv : Bool) {n : Nat} (p : n <= countVar t v withInv)
     : interpret (removeVar n t v withInv).1 * G.pow (if withInv (inverse (f v)) (f v)) n = interpret t
     => inv (pmap (_ * G.pow _ __) (MeetSemilattice.meet_<= p)) *> (removeVar-lem t v withInv).1
 
+  {- | Removing `n` occurrences of `v` with both signs successively preserves the interpretation, so `n` cancellations
+   -   are valid.
+   -}
   \lemma removeVar-correct (t : GroupTerm V) (v : V) (n : Nat) (p : n <= countVar t v false) (q : n <= countVar t v true)
     : interpret (removeVar n (removeVar n t v true).1 v false).1 = interpret t
     => inv (*-assoc *> pmap (_ *) (inv (pmap (_ *) G.inverse_pow) *> inverse-right) *> ide-right) *>
        pmap (* _) (removeVar_<=-lem (removeVar n t v true).1 v false $ transportInv (n <=) (count-remove-lem false) p) *>
        removeVar_<=-lem t v true q
 
+  {- | `interpret (removeVars t l) = interpret t` when each entry's count is bounded by both signed counts and the
+   -   variables are pairwise distinct.
+   -}
   \lemma removeVars-correct (t : GroupTerm V) {l : List (\Sigma V Nat)} (a : All (\lam p => \Sigma (p.2 <= countVar t p.1 false) (p.2 <= countVar t p.1 true)) l) (b : All2 (__.1 /= __.1) l)
     : interpret (removeVars t l) = interpret t \elim l, a, b
     | nil, all-nil, all2-nil => idp
     | :: x l, all-cons p a, all2-cons q b => removeVar-correct (removeVars t l) x.1 x.2 (transportInv (x.2 <=) (count-removeVars-lem q) p.1) (transportInv (x.2 <=) (count-removeVars-lem q) p.2) *> removeVars-correct t {l} a b
     \where {
+      -- | Removing variable `v` does not change counts of any other variable `u`.
       \lemma count-removeVar-lem {t : GroupTerm V} {u v : V} {w w' : Bool} {n : Nat} (p : u /= v)
         : countVar (removeVar n t v w').1 u w = countVar t u w \elim t, n
         | t, 0 => idp
@@ -567,15 +650,20 @@
         | :inv t, suc n => count-removeVar-lem p
         | :* t t1, suc n => pmap2 (+) (count-removeVar-lem p) (count-removeVar-lem p)
 
+      -- | Removing a list of variables disjoint from `v` does not change `v`'s count.
       \lemma count-removeVars-lem {t : GroupTerm V} {l : List (\Sigma V Nat)} {v : V} {withInv : Bool} (a : All (v /= __.1) l)
         : countVar (removeVars t l) v withInv = countVar t v withInv \elim l, a
         | nil, all-nil => idp
         | :: x l, all-cons p a => count-removeVar-lem p *> count-removeVar-lem p *> count-removeVars-lem a
     }
 
+  -- | `interpret t = interpret (simplify t)` for the commutative pipeline.
   \lemma simplify-correct (t : GroupTerm V) : interpret t = interpret (simplify t)
     => inv $ unfold simplify (rewrite RedBlack.sort=insert $ removeVars-correct t (countVars-correct t (group-correct t) sort-correct) $ countVars-diff sort-correct $ group-diff $ Insertion.sort-sorted (toList t false))
 } \where {
+  {- | Removes up to `n` occurrences of variable `v` (with chosen sign `withInv`) from a term, returning the rewritten
+   -   term and the residual count not yet consumed.
+   -}
   \func removeVar (n : Nat) (t : GroupTerm Nat) (v : Nat) (withInv : Bool) : \Sigma (GroupTerm Nat) Nat \elim n, t
     | 0, t => (t, 0)
     | suc n, :ide => (:ide, suc n)
@@ -591,6 +679,9 @@
             | (t2',n2) => removeVar n1 t2 v withInv
       \in (t1' :* t2', n2)
 
+  {- | Walks a sorted list of `((var, sign), count)` triples and pairs adjacent entries with equal variable but opposite
+   -   signs into a single `(var, min count)` cancellation entry.
+   -}
   \func countVars (l : List (\Sigma (\Sigma Nat Bool) Nat)) : List (\Sigma Nat Nat) \elim l
     | nil => nil
     | :: _ nil => nil
@@ -599,21 +690,25 @@
       | no _ => countVars (((y,c),m) :: l)
     }
 
+  -- | Iterates `removeVar` over a list of `(var, count)` pairs, each removing both positive and negative occurrences.
   \func removeVars (t : GroupTerm Nat) (l : List (\Sigma Nat Nat)) : GroupTerm Nat \elim l
     | nil => t
     | :: (v,n) l => (removeVar n (removeVar n (removeVars t l) v true).1 v false).1
 
+  -- | Flattens a term into a list of `(variable, sign)` pairs, with the outer `withInv` toggling signs through `:inv`.
   \func toList (t : GroupTerm Nat) (withInv : Bool) : List (\Sigma Nat Bool) \elim t
     | var v => (v, withInv) :: nil
     | :ide => nil
     | :inv t => toList t (not withInv)
     | :* t1 t2 => toList t1 withInv ++ toList t2 withInv
 
+  -- | The CGroup pipeline — `toList` ⟶ red-black `sort` ⟶ `group` ⟶ `countVars` ⟶ `removeVars`.
   \func simplify (t : GroupTerm Nat)
     => removeVars t $ countVars $ group $ RedBlack.sort $ toList t false
 
   -- Proof of correctness
 
+  -- | Counts signed occurrences of variable `v` in a term.
   \func countVar (t : GroupTerm Nat) (v : Nat) (withInv : Bool) : Nat \elim t
     | var x => \case decideEq (x,false) (v,withInv) \with {
       | yes _ => 1
@@ -623,6 +718,7 @@
     | :inv t => countVar t v (not withInv)
     | :* t1 t2 => countVar t1 v withInv + countVar t2 v withInv
 
+  -- | Removing `(v', not withInv)` does not change `(v, withInv)`-counts.
   \lemma count-remove-lem {t : GroupTerm Nat} {v v' : Nat} (withInv : Bool) {n : Nat}
     : countVar (removeVar n t v' (not withInv)).1 v withInv = countVar t v withInv \elim t, n
     | t, 0 => idp
@@ -637,6 +733,7 @@
     | :inv t, suc n => count-remove-lem (not withInv)
     | :* t1 t2, suc n => pmap2 (+) (count-remove-lem withInv) (count-remove-lem withInv)
 
+  -- | `count (toList t b) p` equals `countVar t p.1` with the appropriate sign flip.
   \lemma toList-correct (t : GroupTerm Nat) (p : \Sigma Nat Bool) (b : Bool) : count (toList t b) p = countVar t p.1 (if b (not p.2) p.2) \elim t
     | var v => mcases \with {
       | yes _, yes _ => idp
@@ -657,10 +754,12 @@
     })
     | :* t1 t2 => count_++ *> pmap2 (+) (toList-correct t1 p b) (toList-correct t2 p b)
 
+  -- | Each grouped count is bounded by the corresponding signed variable count in `t`.
   \lemma group-correct (t : GroupTerm Nat) : All (\lam p => p.2 <= countVar t p.1.1 p.1.2) $ group $ Insertion.sort $ toList t false
     => all-implies (group_count-lem (Insertion.sort-sorted (toList t false))) $ all-forall
         \lam p c => rewrite c $ =_<= $ inv (count_perm (Insertion.sort-perm (toList t false)) p.1) *> toList-correct t p.1 false
 
+  -- | After `countVars`, each entry's count is bounded by both the positive and negative counts of its variable.
   \lemma countVars-correct (t : GroupTerm Nat) {l : List (\Sigma (\Sigma Nat Bool) Nat)} (a : All (\lam p => p.2 <= countVar t p.1.1 p.1.2) l)
                            (a' : AllC (\lam p1 p2 => p1.1.1 = p2.1.1 -> \Sigma (p1.1.2 = false) (p2.1.2 = true)) l)
     : All (\lam p => \Sigma (p.2 <= countVar t p.1 false) (p.2 <= countVar t p.1 true)) (countVars l) \elim l, a, a'
@@ -671,6 +770,7 @@
       | no _ => countVars-correct t (all-cons p' a) a'
     }
 
+  -- | `countVars` preserves variable distinctness conditions.
   \lemma countVars-ineq {l : List (\Sigma (\Sigma Nat Bool) Nat)} {x : Nat} (a : All (x /= __.1.1) l) : All (x /= __.1) (countVars l) \elim l, a
     | nil, all-nil => all-nil
     | :: y nil, all-cons p a => all-nil
@@ -679,6 +779,7 @@
       | no _ => countVars-ineq (all-cons a1 a2)
     }
 
+  -- | `countVars` preserves variable distinctness conditions.
   \lemma countVars-diff {l : List (\Sigma (\Sigma Nat Bool) Nat)} (a' : AllC (\lam p1 p2 => p1.1.1 = p2.1.1 -> \Sigma (p1.1.2 = false) (p2.1.2 = true)) l) (a : All2 (__.1 /= __.1) l)
     : All2 (__.1 /= __.1) (countVars l) \elim l, a', a
     | nil, allC-nil, all2-nil => all2-nil
@@ -692,6 +793,9 @@
       | no _ => countVars-diff a' (all2-cons a2 a3)
     }
 
+  {- | Sorting yields adjacent entries with the same variable in `(false, true)` sign order, ensuring `countVars` finds
+   -   genuine cancellation pairs.
+   -}
   \lemma sort-correct-lem {l : List (\Sigma (\Sigma Nat Bool) Nat)} (s : Sorted (map __.1 l)) (a : All2 (__.1 /= __.1) l)
     : AllC (\lam p1 p2 => p1.1.1 = p2.1.1 -> \Sigma (p1.1.2 = false) (p2.1.2 = true)) l \elim l, s, a
     | nil, _, _ => allC-nil
@@ -704,6 +808,9 @@
       | greater y<x => absurd $ e $ byRight (inv u=v, y<x)
     }) (sort-correct-lem s a2)
 
+  {- | Sorting yields adjacent entries with the same variable in `(false, true)` sign order, ensuring `countVars` finds
+   -   genuine cancellation pairs.
+   -}
   \lemma sort-correct {l : List (\Sigma Nat Bool)} : AllC (\lam p1 p2 => p1.1.1 = p2.1.1 -> \Sigma (p1.1.2 = false) (p2.1.2 = true)) $ group $ Insertion.sort l
     => sort-correct-lem (group-sorted (Insertion.sort-sorted l)) (group-diff (Insertion.sort-sorted l))
 }

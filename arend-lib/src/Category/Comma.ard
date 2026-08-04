@@ -1,9 +1,24 @@
+{- | Construction of comma categories from a pair of functors with a common codomain.
+ -
+ -   Given functors `F : C → E` and `G : D → E`, the comma category `(F ↓ G)` has objects `(x, y, a : F x → G y)` and
+ -   morphisms given by commuting squares between such triangles. This module builds the precategory structure with
+ -   explicit composition proofs threaded through the functoriality of `F` and `G`, then upgrades to a univalent
+ -   category when `C` and `D` are univalent. Auxiliary constructions provide the canonical forgetful functors to the
+ -   source categories and a covariant action turning natural transformations between the defining functors into
+ -   functors between comma categories.
+ -}
+
 \import Algebra.Meta
 \import Category
 \import Category.Functor
 \import Paths
 \import Paths.Meta
 
+{- | The comma precategory `(F ↓ G)` for `F : Functor C E`, `G : Functor D E`. Objects are triples
+ -   `(x : C, y : D, a : Hom (F x) (G y))`; morphisms `(x,y,a) → (x',y',a')` are pairs `(f : x → x', g : y → y')`
+ -   together with a commutation proof `a' ∘ F f = G g ∘ a`. Identity and composition are inherited componentwise, with
+ -   the square-commutation proof rebuilt using `Func-id`, `Func-o`, and associativity.
+ -}
 \func commaPrecat {C D E : Precat} (F : Functor C E) (G : Functor D E) : Precat \cowith
   | Ob => \Sigma (x : C) (y : D) (Hom (F x) (G y))
   | Hom (x,y,a) (x',y',a') => \Sigma (f : Hom x x') (g : Hom y y') (a' ∘ F.Func f = G.Func g ∘ a)
@@ -13,14 +28,20 @@
   | id-right => ext (id-right,id-right)
   | o-assoc => ext (o-assoc,o-assoc)
   \where {
+    -- | The projection functor `(F ↓ G) → C` sending `(x, y, a) ↦ x` and `(f, g, _) ↦ f`.
     \lemma leftForget {C D E : Precat} (F : Functor C E) (G : Functor D E) : Functor (commaPrecat F G) C __.1 __.1 \cowith
       | Func-id => idp
       | Func-o => idp
 
+    -- | The projection functor `(F ↓ G) → D` sending `(x, y, a) ↦ y` and `(f, g, _) ↦ g`.
     \lemma rightForget {C D E : Precat} (F : Functor C E) (G : Functor D E) : Functor (commaPrecat F G) D __.2 __.2 \cowith
       | Func-id => idp
       | Func-o => idp
 
+    {- | Given natural transformations `a : F' ⇒ F` and `b : G ⇒ G'`, produces a functor `(F ↓ G) → (F' ↓ G')` by
+     -   conjugating the connecting morphism: `(x, y, s) ↦ (x, y, b y ∘ s ∘ a x)`. Functoriality of the morphism
+     -   component uses naturality of `a` and `b` together with the original square-commutation.
+     -}
     \func functor {C D E : Precat} (F F' : Functor C E) (G G' : Functor D E) (a : NatTrans F' F) (b : NatTrans G G') : Functor (commaPrecat F G) (commaPrecat F' G') \cowith
       | F (x,y,s) => (x, y, b y ∘ s ∘ a x)
       | Func (f,g,c) => (f, g, rewriteEq (inv (b.natural g), inv c, a.natural f) equation)
@@ -28,6 +49,9 @@
       | Func-o => ext (idp, idp)
   }
 
+{- | Upgrades `commaPrecat F G` to a univalent `Cat` whenever the source categories `C` and `D` are univalent (`E` may
+ -   remain a mere `Precat`).
+ -}
 \func commaCat {C D : Cat} {E : Precat} (F : Functor C E) (G : Functor D E) : Cat \cowith
   | Precat => commaPrecat F G
   | univalence => Cat.makeUnivalence \lam (e : Iso) =>

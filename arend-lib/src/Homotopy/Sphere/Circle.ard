@@ -1,3 +1,12 @@
+{- | The circle `S¹` as a higher inductive type and the computation of its loop space `Ω(S¹) = ℤ`.
+ -
+ -   This module presents the circle directly as a HIT `Sphere1` with one point `base1` and one loop, and proves it
+ -   equivalent to the suspension-based `Sphere 1`. The fundamental group calculation follows the standard HoTT
+ -   encode-decode method: a universal cover `code : Sphere1 -> Set` defined by transporting along the integer successor
+ -   equivalence, with `encode`/`decode` providing mutually inverse maps between paths `base1 = x` and elements of
+ -   `code x`. The end result `Loop_S1 : OmegaS1 = Int` exhibits `Ω(S¹)` as the integers.
+ -}
+
 \import Arith.Int
 \import Equiv
 \import Homotopy.Cube
@@ -7,14 +16,18 @@
 \import Paths
 \import Paths.Meta
 
+-- | The circle as a HIT with constructors `base1` and `loop : base1 = base1`.
 \data Sphere1
   | base1
   | loop : base1 = base1
   \where
+    -- | The loop packaged as a path: `path loop`.
     \func ploop => path loop
 
+-- | The loop space `base1 = base1`.
 \func OmegaS1 => base1 = base1
 
+-- | A `QEquiv` between `Sphere1` and `Sphere 1` (the suspension-based 1-sphere).
 \func Sphere1-equiv : QEquiv {Sphere1} {Sphere 1} \cowith
   | f => CircleSusp
   | ret => SuspCircle
@@ -23,10 +36,14 @@
   \where {
     \open Sphere1 (ploop)
 
+    -- | Maps `Sphere1 -> Sphere 1`, sending `base1` to `north` and `loop` to `pmerid north *> inv (pmerid south)`.
     \func CircleSusp (x : Sphere1) : Sphere 1
       | base1 => north
       | loop => pmerid north *> inv (pmerid south)
 
+    {- | Maps `Sphere 1 -> Sphere1`, collapsing the suspension by sending both poles to `base1` and using `loop` for one
+     -   meridian.
+     -}
     \func SuspCircle (x : Sphere 1) : Sphere1
       | north => base1
       | south => base1
@@ -34,6 +51,7 @@
       | pglue south i => base1
       | pglue (pglue () _) _
 
+    -- | The retraction `SuspCircle ∘ CircleSusp ~ id` on `Sphere1`, established via path algebra on the loop case.
     \func CircleSuspCircle (x : Sphere1) : SuspCircle (CircleSusp x) = x
       | base1 => idp
       | loop i =>
@@ -43,6 +61,7 @@
             ploop                                                `qed
         \in path (p @ __ @ i)
 
+    -- | The section `CircleSusp ∘ SuspCircle ~ id` on `Sphere 1`, using `Cube2.map` to fill the required 2-cell.
     \func SuspCircleSusp (x : Sphere 1) : CircleSusp (SuspCircle x) = x
       | north => idp
       | south => pmerid south
@@ -51,32 +70,44 @@
       | pglue (pglue () _) _
   }
 
+{- | The fibration `Sphere1 -> Set0` with `code base1 = Int` and the loop acting by the integer successor isomorphism
+ -   `iso isuc ipred ...`.
+ -}
 \func code (x : Sphere1) : \Set0
   | base1 => Int
   | loop i => iso isuc ipred ipred_isuc isuc_ipred i
 
+-- | For `p : base1 = x`, returns `transport code p 0` — the winding number of a path.
 \func encode (x : Sphere1) (p : base1 = x) => transport code p 0
 
+-- | Builds a path `OmegaS1` from an integer by iterating `path loop` (or its inverse for negatives).
 \func wind (x : Int) : OmegaS1
   | pos 0 => idp
   | pos (suc n) => wind (pos n) *> path loop
   | neg (suc n) => wind (neg n) *> inv (path loop)
 
+{- | Section `(x : Sphere1) -> code x -> base1 = x`; equals `wind` on `base1`, with the loop case handled via a
+ -   dependent path.
+ -}
 \func decode (x : Sphere1) : code x -> base1 = x \elim x
   | base1 => wind
   | loop => pathOver decode_loop
   \where {
+    -- | Key lemma `wind n *> path loop = wind (isuc n)` — appending the loop is the successor.
     \func wind_loop (n : Int) : wind n *> path loop = wind (isuc n)
       | pos _ => idp
       | neg (suc n) => *>-assoc (wind (neg n)) (inv (path loop)) (path loop) *> pmap (wind (neg n) *>) (inv_*> (path loop))
 
+    -- | Coherence showing `decode` is well-defined across the loop, proved using `simp_coe` and `wind_loop`.
     \func decode_loop : transport (\lam x => code x -> base1 = x) (path loop) wind = wind
       => simp_coe (\lam c => simp_coe (wind_loop c))
   }
 
+-- | `decode x (encode x p) = p` for any path `p`, by path induction.
 \func encode_decode {x : Sphere1} (p : base1 = x) : decode x (encode x p) = p
   | idp => idp
 
+-- | `encode base1 (wind x) = x`, by induction on the integer using `transport_*>` and `transport_inv_func`.
 \func encode_wind (x : Int) : encode base1 (wind x) = x
   | pos (suc m) =>
       encode base1 (wind (pos m) *> path loop)                 ==< transport_*> code (wind (pos m)) (path loop) 0 >==
@@ -89,8 +120,10 @@
       transport code (inv (path loop)) (neg m)                       ==< transport_inv_func code (path loop) ipred ipred_isuc (neg m) >==
       neg (suc m)                                                    `qed
 
+-- | `encode x (decode x c) = c`, reduced to `encode_wind` at `base1`.
 \func decode_encode (x : Sphere1) (c : code x) : encode x (decode x c) = c \elim x
   | base1 => encode_wind c
 
+-- | The equality `OmegaS1 = Int`, exhibited via the iso `(encode base1, wind, encode_decode, encode_wind)`.
 \func Loop_S1 : OmegaS1 = Int =>
   path (iso (encode base1) wind encode_decode encode_wind)

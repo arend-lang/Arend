@@ -1,3 +1,13 @@
+{- | Characterizes the maps that become equivalences after localization at a universe of local types.
+ -
+ -   A map `f : A -> B` is a *local equivalence* when precomposition with `f` induces an equivalence on function spaces
+ -   into every local type `Z`. This module establishes the basic theory: every connected map (with respect to the
+ -   universe) is a local equivalence, between local types this notion coincides with ordinary equivalence, and over a
+ -   reflective universe local equivalences are exactly the maps inverted by the localization functor `lmap`. The
+ -   `Extension` submodule reformulates the equivalence condition as a unique-extension property, the standard
+ -   orthogonality-style description of localizations.
+ -}
+
 \import Equiv
 \import Equiv.Fiber
 \import Function
@@ -11,12 +21,18 @@
 \import Paths
 \import Paths.Meta
 
+{- | A map `f : A -> B` is a local equivalence (with respect to a `Universe` of local types) if for every `Z : Local`,
+ -   precomposition `-o f : (B -> Z) -> (A -> Z)` is an `Equiv`.
+ -}
 \func IsLocalEquiv.{u} {U : Universe.{u}} {A B : \Type u} (f : A -> B) => \Pi (Z : Local.{u}) -> IsEquiv {B -> Z} {A -> Z} (-o f)
 
 \module Extension \where {
   -- | The type of extensions of {g} along {f}
   \func ext {A B C : \Type} (f : A -> B) (g : A -> C) => Fib (-o f) g
 
+  {- | A `QEquiv` repackaging `ext f g` as `\Pi (b : B) -> \Sigma (c : C) (\Pi (a : A) -> f a = b -> g a = c)`,
+   -   presenting an extension as a pointwise choice of value together with coherence over the fibers of `f`.
+   -}
   \func ext-equiv {A B C : \Type} (f : A -> B) (g : A -> C) : QEquiv {ext f g} {\Pi (b : B) -> \Sigma (c : C) (\Pi (a : A) -> f a = b -> g a = c)} \cowith
     | f p b => (p.1 b, \lam a fa=b => inv (path ((p.2 @ __) a)) *> pmap p.1 fa=b)
     | ret K => ((K __).1, path (\lam i a => inv ((K (f a)).2 a idp) @ i))
@@ -26,11 +42,18 @@
              Jl (\lam b' q' => inv (inv ((K (f a)).2 a idp)) *> pmap (K __).1 q' = (K b').2 a q') (inv_inv ((K (f a)).2 a idp)) q
       \in path (\lam i b => ((K b).1, p b __ __ @ i))
 
+  {- | If for every `g : A -> C` and every `b : B` the type of pointwise extensions is contractible, then
+   -   `-o f : (B -> C) -> (A -> C)` is an `Equiv`. This is the orthogonality criterion used to prove maps are local
+   -   equivalences.
+   -}
   \lemma contr-equiv.{u} {A B C : \Type u} (f : A -> B) (p : \Pi (g : A -> C) (b : B) -> Contr (\Sigma (c : C) (\Pi (a : A) -> f a = b -> g a = c)))
     : IsEquiv {B -> C} {A -> C} (-o f)
     => contrFibers=>IsEquiv (\lam g => rewrite (path (QEquiv_= (ext-equiv f g))) (HLevels_-2-pi (\lam b => \Sigma (c : C) (\Pi (a : A) -> f a = b -> g a = c)) {0} (p g)))
 }
 
+{- | Every connected map (in the sense of `isConnectedMap` for the universe `U`) is a local equivalence — connectivity
+ -   implies orthogonality to all local types.
+ -}
 \lemma connected_isLocalEquiv.{u} {U : Universe.{u}} {A B : \Type u} (f : A -> B) (conn : isConnectedMap f) : IsLocalEquiv f
   => \lam C => Extension.contr-equiv f (\lam g b =>
        \let | G (x : Fib f b) => g x.1
@@ -63,6 +86,9 @@
              }
   }
 
+{- | Over a `ReflUniverse` (a universe with a localization functor `lmap`), `isLocalEquiv f = Equiv (lmap f)`. A map is
+ -   a local equivalence exactly when its localization is an equivalence, justifying the name.
+ -}
 \lemma localEquivMap.{u} {U : ReflUniverse.{u}} {A B : \Type u} (f : A -> B) : IsLocalEquiv f = IsEquiv (lmap f)
   => \have p (C : Local) : IsEquiv {LType B -> C} {LType A -> C} (-o (lmap f)) = IsEquiv {B -> C} {A -> C} (-o f)
             => IsEquiv.parallelEquiv ((localization B).local-univ C)

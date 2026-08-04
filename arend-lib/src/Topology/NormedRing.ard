@@ -1,3 +1,13 @@
+{- | Normed and valued ring structures combining ring operations with norms valued in extended upper reals.
+ -
+ -   This module layers ring structure onto normed abelian groups, producing a hierarchy from submultiplicative norms
+ -   (`norm (x*y) <= norm x * norm y`) up to true valuations (`norm (x*y) = norm x * norm y`). The `Ex`-prefixed classes
+ -   use extended upper reals (allowing infinite norms) for pseudo-rings, while their non-`Ex` counterparts assume
+ -   bounded norms valued in `Real`. Continuity of multiplication is derived automatically from the submultiplicative
+ -   bound via bilinear local uniformity, and the design culminates in concrete instances `RatValuedRing` and
+ -   `RealValuedRing` that witness `Rat` and `Real` as complete valued (commutative) rings.
+ -}
+
 \import Algebra.Monoid
 \import Algebra.Pointed
 \import Algebra.Ring
@@ -26,34 +36,46 @@
 \import Topology.UniformSpace.Product
 \open Monoid(pow)
 
+{- | Extends `BoundedExPseudoNormedAbGroup`, `TopSemigroup`, and `PseudoRing`. Submultiplicative norm
+ -   `norm (x*y) <= norm x * norm y` with multiplication continuity derived from bilinear local uniformity.
+ -}
 \class ExPseudoNormedPseudoRing \extends BoundedExPseudoNormedAbGroup, TopSemigroup, PseudoRing
   | norm_*_<= {x y : E} : norm (x * y) <= norm x ExUpperReal.* norm y
   | *-cont => bilinear-locally-uniform (*) rdistr_- ldistr_- norm_*_<=
 
+-- | Multiplication on `X ⨯ X` is a locally uniform map.
 \lemma *-locally-uniform {X : ExPseudoNormedPseudoRing} : LocallyUniformMap (ProductUniformSpace X X) X (\lam s => s.1 * s.2)
   => bilinear-locally-uniform (*) X.rdistr_- X.ldistr_- norm_*_<=
 
+-- | Bounded variant extending `ExPseudoNormedPseudoRing` and `PseudoNormedAbGroup` (real-valued norm).
 \class PseudoNormedPseudoRing \extends ExPseudoNormedPseudoRing, PseudoNormedAbGroup
 
+-- | Submultiplicativity for the real-valued local norm `lnorm`.
 \lemma lnorm_*_<= {X : PseudoNormedPseudoRing} {x y : X} : lnorm (x * y) <= lnorm x * lnorm y
   => Real.<=-upper.2 $ transportInv (_ ExUpperReal.<=) (RealField.*-upper lnorm>=0 lnorm>=0) X.norm_*_<=
 
+-- | Extends `ExPseudoNormedPseudoRing` and `TopRing`, adding `norm 1 <= 1`.
 \class ExPseudoNormedRing \extends ExPseudoNormedPseudoRing, TopRing {
   | norm_ide_<= : norm 1 <= ExUpperReal.fromRat 1
 
+  -- | `norm (pow x n) <= (norm x)^n`.
   \lemma norm_<=_pow {x : E} {n : Nat} : norm (pow x n) <= ExUpperRealSemigroup.pow (norm x) n \elim n
     | 0 => norm_ide_<=
     | suc n => norm_*_<= <=∘ ExUpperRealSemigroup.<=_* norm_<=_pow <=-refl
 
+  -- | `pow __ n : X -> X` is a cover map.
   \lemma pow-cover (n : Nat) : CoverMap \this \this (pow __ n) \elim n
     | 0 => CoverMap.const 1
     | suc n => *-locally-uniform CoverMap.∘ ProductCoverSpace.tuple (pow-cover n) CoverMap.id
 }
 
+-- | Extends `ExPseudoNormedRing` and `CompleteExNormedAbGroup`.
 \class CompleteExNormedRing \extends ExPseudoNormedRing, CompleteExNormedAbGroup
 
+-- | Bounded variant extending `ExPseudoNormedRing` and `PseudoNormedPseudoRing`.
 \class PseudoNormedRing \extends ExPseudoNormedRing, PseudoNormedPseudoRing
 
+-- | `norm 1 <= 1` in the real-valued setting.
 \lemma lnorm_ide_<= {X : PseudoNormedRing} : X.norm 1 <= 1
   => Real.<=-upper.2 (later norm_ide_<=)
 
@@ -69,6 +91,7 @@
       \in U-closed (aux (norm>=0 |1|<q) q<1 |1|<q) R.2
   }) norm>=0
   \where {
+    -- | Helper showing `(norm 1).U (q^n)` for `0 < q < 1`, used to drive `norm 1` below any positive rational.
     \protected \lemma aux {q : Rat} (q>0 : q > 0) (q<1 : q < 1) (p : (X.norm 1).U q) {n : Nat} : (X.norm 1).U (pow q n) \elim n
       | 0 => U-closed p q<1
       | suc n => transport (norm __ <= _) ide-left X.norm_*_<= $ ExUpperReal.*_U_<=.2 $ inP (pow q n, aux q>0 q<1 p, RatField.pow>0 q>0, q, p, q>0, <=-refl)
@@ -81,9 +104,11 @@
     | inr b<=1 => absurd $ p $ norm_ide<1 $ ExUpperReal.U_<= |1|<b b<=1
   }
 
+-- | `norm 1 * norm x = norm x` and `norm x * norm 1 = norm x` (uses the dichotomy).
 \lemma norm_ide-left {X : ExPseudoNormedRing} {x : X} : X.norm 1 * norm x = norm x
   => <=-antisymmetric (transport (_ <=) (ExUpperRealSemigroup.ide-left norm>=0) $ ExUpperRealSemigroup.<=_* norm_ide_<= <=-refl) (transport (norm __ <= _) ide-left norm_*_<=)
 
+-- | `norm 1 * norm x = norm x` and `norm x * norm 1 = norm x` (uses the dichotomy).
 \lemma norm_ide-right {X : ExPseudoNormedRing} {x : X} : X.norm x * X.norm 1 = norm x
   => <=-antisymmetric (transport (_ <=) (ExUpperRealSemigroup.ide-right norm>=0) $ ExUpperRealSemigroup.<=_* <=-refl norm_ide_<=) (transport (norm __ <= _) ide-right norm_*_<=)
 
@@ -94,53 +119,68 @@
     | byRight p => byLeft $ Real.=-upper.2 $ later $ norm_ide<1 p
   }
 
+-- | `lnorm (pow x n) <= (lnorm x)^n`.
 \lemma lnorm_<=_pow {X : PseudoNormedRing} {x : X} {n : Nat} : lnorm (pow x n) <= pow (lnorm x) n \elim n
   | 0 => lnorm_ide_<=
   | suc n => lnorm_*_<= <=∘ RealField.<=_*_positive-left lnorm_<=_pow lnorm>=0
 
+-- | Extends `ExPseudoNormedPseudoRing`, strengthening submultiplicativity to equality `norm (x*y) = norm x * norm y`.
 \class ExPseudoValuedPseudoRing \extends ExPseudoNormedPseudoRing
   | norm_* {x y : E} : norm (x * y) = norm x ExUpperReal.* norm y
   | norm_*_<= => =_<= norm_*
 
+-- | Multiplicativity of `lnorm` in a `PseudoValuedRing`.
 \lemma lnorm_* {X : PseudoValuedRing} {x y : X} : lnorm (x * y) = lnorm x * lnorm y
   => Real.=-upper.2 $ later norm_* *> inv (RealField.*-upper lnorm>=0 lnorm>=0)
 
+-- | Extends `ExPseudoValuedPseudoRing`, `ExPseudoNormedRing`, and `Ring`, with `norm 1 = 1`.
 \class ExPseudoValuedRing \extends ExPseudoValuedPseudoRing, ExPseudoNormedRing, Ring {
   | norm_ide : norm 1 = ExUpperReal.fromRat 1
   | norm_ide_<= => =_<= norm_ide
 
+  -- | Cancellation of `norm x` in extended upper-real products when `x` is invertible.
   \lemma norm_Inv-cancel-left {x : E} (d : Monoid.Inv x) {y z : ExUpperReal} (y>=0 : 0 <= y) (z>=0 : 0 <= z) (p : norm x ExUpperRealSemigroup.* y = norm x ExUpperRealSemigroup.* z) : y = z
     => inv (pmap (ExUpperRealSemigroup.* _) (inv norm_* *> pmap norm d.inv-left *> norm_ide) *> ExUpperRealSemigroup.ide-left y>=0) *> ExUpperRealSemigroup.*-assoc *> pmap (_ ExUpperRealSemigroup.*) p *> inv ExUpperRealSemigroup.*-assoc *> pmap (ExUpperRealSemigroup.* _) (inv norm_* *> pmap norm d.inv-left *> norm_ide) *> ExUpperRealSemigroup.ide-left z>=0
 
+  -- | Cancellation of `norm x` in extended upper-real products when `x` is invertible.
   \lemma norm_Inv-cancel-right {x y : ExUpperReal} (x>=0 : 0 <= x) (y>=0 : 0 <= y) {z : E} (d : Monoid.Inv z) (p : x ExUpperRealSemigroup.* norm z = y ExUpperRealSemigroup.* norm z) : x = y
     => norm_Inv-cancel-left d x>=0 y>=0 (*-comm *> p *> *-comm)
 }
 
+-- | `norm (pow x n) = (norm x)^n` in a valued ring.
 \lemma norm_pow {X : ExPseudoValuedRing} {x : X} {n : Nat} : norm (pow x n) = ExUpperRealSemigroup.pow (norm x) n \elim n
   | 0 => norm_ide
   | suc n => norm_* *> pmap (* _) norm_pow
 
+-- | Extends `PseudoNormedRing` and `ExPseudoValuedRing` (bounded valued ring).
 \class PseudoValuedRing \extends PseudoNormedRing, ExPseudoValuedRing
 
+-- | `norm 1 = 1` for the real-valued local norm.
 \lemma lnorm_ide {X : PseudoValuedRing} : X.norm 1 = 1
   => (Real.=-upper {_} {1}).2 (later norm_ide)
 
+-- | `lnorm (pow x n) = (lnorm x)^n`.
 \lemma lnorm_pow {X : PseudoValuedRing} {x : X} {n : Nat} : lnorm (pow x n) = pow (lnorm x) n \elim n
   | 0 => lnorm_ide
   | suc n => lnorm_* *> pmap (* _) lnorm_pow
 
+-- | The `ExPseudoValuedRing` structure on `Rat` using `RatField` operations.
 \func RatValue => ExPseudoValuedRing { | E => Rat | * => RatField.* | ide => RatField.ide | + => RatField.+ | negative => RatField.negative }
 
+-- | `Rat` as a `PseudoValuedRing` via `RatNormed` and `RatField`.
 \instance RatValuedRing : PseudoValuedRing Rat
   | PseudoNormedAbGroup => RatNormed
   | Ring => RatField
   | norm_* => pmap ExUpperReal.fromRat RatField.abs_* *> inv (ExUpperReal.*-rat RatField.abs>=0 RatField.abs>=0)
   | norm_ide => idp
 
+-- | Extends `PseudoValuedRing` and `CompleteNormedAbGroup` (via `CompleteExNormedRing`).
 \class CompleteValuedRing \extends PseudoValuedRing, CompleteExNormedRing, CompleteNormedAbGroup
 
+-- | Adds commutativity, extending `CompleteValuedRing` and `CRing`.
 \class CompleteValuedCRing \extends CompleteValuedRing, CRing
 
+-- | `Real` as a `CompleteValuedCRing` via `RealNormed` and `RealField`.
 \instance RealValuedRing : CompleteValuedCRing Real
   | CompleteNormedAbGroup => RealNormed
   | CRing => RealField

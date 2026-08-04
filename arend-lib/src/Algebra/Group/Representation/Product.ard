@@ -1,3 +1,12 @@
+{- | Direct product (biproduct) of two linear representations of a group over a ring.
+ -
+ -   Given two linear representations `A` and `B` of a group `G` over a ring `R`, this module constructs their product
+ -   representation `A × B` whose underlying module is the product `LModule` and whose action is componentwise:
+ -   `g ** (a, b) = (g ** a, g ** b)`. The module also provides the universal data of a biproduct in the category of
+ -   linear representations: canonical injections, projections, and a copairing operation, which exhibit the product
+ -   simultaneously as a categorical product and coproduct (via the standard injection/projection structure).
+ -}
+
 \import Algebra.Group
 \import Algebra.Group.Representation.InterwiningMap
 \import Algebra.Group.Representation
@@ -10,6 +19,10 @@
 \import Paths
 \import Paths.Meta
 
+{- | The product representation of `A B : LinRepres R G`. Built on `ProductLModule R A B` with the diagonal action
+ -   `g ** (a, b) = (g A.** a, g B.** b)`, satisfying associativity, identity, left-distributivity, and compatibility
+ -   with scalar multiplication.
+ -}
 \func ProductLRepres {R : Ring} {G : Group} (A B : LinRepres R G) : LinRepres R G \cowith
   | LModule => ProductLModule R A B
   | ** g (a, b) => (g A.** a, g B.** b)
@@ -18,6 +31,7 @@
   | **-ldistr => rewrite (A.**-ldistr, B.**-ldistr) idp
   | **_*c => rewrite (A.**_*c, B.**_*c) idp
   \where {
+    -- | The canonical injection `A → A × B` as an intertwining map, sending `a` to `(a, 0)`.
     \func in_1 {R : Ring} {G : Group} (A B : LinRepres R G) : InterwiningMap A (ProductLRepres A B) \cowith
       | func a => (a, 0)
       | func-+ {a}{b} => rewrite (pmap (\lam z => (a A.+ b, z)) (inv B.zro-right)) idp
@@ -26,6 +40,7 @@
       \where {
         \func aux {r : R}{a : A}{b : B} : r *c (a, b) = (r *c a, r *c b) => idp
       }
+    -- | The canonical injection `B → A × B` as an intertwining map, sending `b` to `(0, b)`.
     \func in_2 {R : Ring} {G : Group} (A B : LinRepres R G) : InterwiningMap B (ProductLRepres A B) \cowith
       | func b => (0, b)
       | func-+ {a}{b} => rewrite (pmap (\lam z => (z, a B.+ b)) (inv A.zro-right)) idp
@@ -35,18 +50,23 @@
         \func aux {r : R}{a : A}{b : B} : r *c (a, b) = (r *c a, r *c b) => idp
       }
 
+    -- | The first projection `A × B → A` as an intertwining map, sending `(a, b)` to `a`.
     \func proj_1{R : Ring} {G : Group} (A B : LinRepres R G) : InterwiningMap (ProductLRepres A B) A \cowith
       | func (a, b) => a
       | func-** => idp
       | func-+ => idp
       | func-*c => idp
 
+    -- | The second projection `A × B → B` as an intertwining map, sending `(a, b)` to `b`.
     \func proj_2{R : Ring} {G : Group} (A B : LinRepres R G) : InterwiningMap (ProductLRepres A B) B \cowith
       | func (a, b) => b
       | func-** => idp
       | func-+ => idp
       | func-*c => idp
 
+    {- | Copairing: given intertwining maps `i : A → C` and `j : B → C`, produces the unique intertwining map
+     -   `A × B → C` defined by `(a, b) ↦ i a + j b`, witnessing the coproduct universal property.
+     -}
     \func coprod-map{R : Ring} {G : Group} {A B C : LinRepres R G}(i : InterwiningMap A C) (j : InterwiningMap B C) : InterwiningMap (ProductLRepres A B) C \cowith
       | func (a, b) => i a C.+ j b
       | func-+ => rewrite (i.func-+, j.func-+) equation

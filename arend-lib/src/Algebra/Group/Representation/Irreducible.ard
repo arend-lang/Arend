@@ -1,3 +1,12 @@
+{- | Defines irreducible linear representations of a group and proves Schur's Lemma for homomorphisms between them.
+ -
+ -   A linear representation is irreducible when every sub-representation is trivial (either zero or the whole space).
+ -   The module formalizes this as a universal property over `SubLRepres` and uses it to derive Schur's Lemma: any
+ -   intertwining map between irreducible representations is either zero or an isomorphism. The proof analyzes the
+ -   kernel and image as sub-representations, leveraging the fact that an intertwining map with zero kernel and full
+ -   image is an isomorphism in both the module and representation categories.
+ -}
+
 \import Algebra.Group
 \import Algebra.Group.Representation
 \import Algebra.Group.Representation.InterwiningMap

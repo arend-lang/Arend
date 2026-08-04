@@ -1,3 +1,14 @@
+{- | Normed abelian groups built on top of topological abelian groups and (extended) (pseudo)metric spaces.
+ -
+ -   This module assembles the hierarchy of normed structures by combining a norm `norm : E -> ExUpperReal` with the
+ -   additive group structure: every distance is recovered as `dist x y = norm (x - y)`, so the metric, uniform, and
+ -   topological structure are all derived from the norm. The hierarchy is parameterized along three orthogonal axes —
+ -   extended vs. real-valued (`Ex…` vs. plain), pseudo vs. genuine (whether `norm x = 0` forces `x = 0`), and bounded
+ -   vs. unbounded — with separate classes for completeness. Maps between normed groups specialize the
+ -   metric/topological group homomorphisms by stating their continuity directly in terms of the norm rather than the
+ -   distance.
+ -}
+
 \import Algebra.Group
 \import Algebra.Group.GroupHom
 \import Algebra.Meta
@@ -28,11 +39,21 @@
 \import Topology.UniformSpace.Product
 \open RatField(half,half>0)
 
+{- | Extended pseudo-normed abelian group; extends `ExPseudoMetricSpace` and `TopAbGroup`. Carries
+ -   `norm : E -> ExUpperReal` satisfying `norm zro = 0`, `norm (negative x) = norm x`, and the triangle inequality
+ -   `norm (x + y) <= norm x + norm y`, with `dist x y = norm (x - y)`. Derives addition/negation continuity, the
+ -   uniform structure, and the topology from the norm via default implementations.
+ -}
 \class ExPseudoNormedAbGroup \extends ExPseudoMetricSpace, TopAbGroup {
+  -- | The norm and its three structural laws.
   | norm : E -> ExUpperReal
+  -- | The norm and its three structural laws.
   | norm_zro : norm zro = 0
+  -- | The norm and its three structural laws.
   | norm_negative {x : E} : norm (negative x) = norm x
+  -- | The norm and its three structural laws.
   | norm_+ {x y : E} : norm (x + y) <= norm x ExUpperReal.+ norm y
+  -- | Coherence law tying distance to the norm of the difference.
   | norm-dist {x y : E} : dist x y = norm (x - y)
 
   | +-cont => \new UniformMap (ProductUniformSpace \this \this) \this {
@@ -78,16 +99,20 @@
   \default dist-symm => norm-dist *> simplify *> norm_negative *> inv norm-dist
   \default dist-triang => repeat {3} (rewrite norm-dist) $ transport (norm __ <= _) simplify norm_+
 
+  -- | Bounds on the norm of an `n`-fold sum: `norm (n *n a) <= n *n norm a` (and the multiplicative form).
   \lemma norm_*n_<=_*n {n : Nat} {a : E} : norm (n *n a) <= n ExUpperRealAbMonoid.*n norm a \elim n
     | 0 => =_<= norm_zro
     | suc n => norm_+ <=∘ <=_+ norm_*n_<=_*n <=-refl
 
+  -- | Bounds on the norm of an `n`-fold sum: `norm (n *n a) <= n *n norm a` (and the multiplicative form).
   \lemma norm_*n_<= {n : Nat} {a : E} : norm (n *n a) <= n ExUpperReal.* norm a
     => norm_*n_<=_*n <=∘ ExUpperRealSemigroup.*n_*_<= norm>=0
 
+  -- | Predicate that `norm` takes values exceeding every natural number.
   \func IsUnbounded : \Prop
     => \Pi (B : Nat) -> ∃ (x : E) (ExUpperReal.fromRat B <= norm x)
 
+  -- | Triangle inequality for finite sums: `norm (BigSum l) <= BigSum (\lam j => norm (l j))`.
   \lemma norm_BigSum {l : Array E} : norm (BigSum l) <= ExUpperRealAbMonoid.BigSum \lam j => norm (l j) \elim l
     | nil => transportInv (<= _) norm_zro <=-refl
     | x :: l => norm_+ <=∘ <=_+ <=-refl norm_BigSum
@@ -99,21 +124,29 @@
     }
 }
 
+-- | Norm is nonnegative.
 \lemma norm>=0 {X : ExPseudoNormedAbGroup} {x : X} : 0 <= norm x
   => rewrite norm_dist dist>=0
 
+-- | `norm x = dist 0 x`.
 \lemma norm_dist {X : ExPseudoNormedAbGroup} {x : X} : norm x = dist 0 x
   => inv norm_negative *> simplify *> inv norm-dist
 
+-- | `norm (x - y) = norm (y - x)`.
 \lemma norm_- {X : ExPseudoNormedAbGroup} {x y : X} : norm (x - y) = norm (y - x)
   => pmap norm (inv X.negative-isInv) *> norm_negative *> simplify
 
+-- | One-sided triangle bounds: `norm x <= dist x y + norm y` and `norm x <= norm y + dist x y`.
 \lemma norm_dist-left {X : ExPseudoNormedAbGroup} {x y : X} : norm x <= dist x y + norm y
   => rewrite norm-dist $ transport (norm  __ <= _) simplify norm_+
 
+-- | One-sided triangle bounds: `norm x <= dist x y + norm y` and `norm x <= norm y + dist x y`.
 \lemma norm_dist-right {X : ExPseudoNormedAbGroup} {x y : X} : norm x <= norm y + dist x y
   => rewrite norm-dist $ transport (norm  __ <= _) simplify norm_+
 
+{- | Extends `ExPseudoNormedAbGroup` and `ExMetricSpace` with `norm-ext`: `norm x = 0 -> x = 0`. The axiom is shown
+ -   equivalent to `dist-ext`.
+ -}
 \class ExNormedAbGroup \extends ExPseudoNormedAbGroup, ExMetricSpace {
   | norm-ext {x : E} : norm x = ExUpperRealAbMonoid.zro -> x = 0
 
@@ -121,6 +154,9 @@
   \default norm-ext p => dist-ext $ norm-dist *> pmap norm (pmap (_ +) negative_zro *> zro-right) *> p
 }
 
+{- | Adds `norm-bounded` requiring every `norm x` to be a bounded upper real (i.e., finite). Provides `bnorm` returning
+ -   the value as `UpperReal`.
+ -}
 \class BoundedExPseudoNormedAbGroup \extends ExPseudoNormedAbGroup {
   | norm-bounded (x : E) : (norm x).IsBounded
 
@@ -132,6 +168,9 @@
   | ExUpperReal => norm x
   | U-inh => norm-bounded x
 
+{- | Bounded version with real-valued norm; extends `BoundedExPseudoNormedAbGroup` and `PseudoMetricSpace`. Overrides
+ -   `norm : E -> Real`.
+ -}
 \class PseudoNormedAbGroup \extends BoundedExPseudoNormedAbGroup, PseudoMetricSpace {
   \override norm : E -> Real
   \default dist x y : Real => norm (x - y)
@@ -139,39 +178,54 @@
   | norm-bounded x => U-inh
 }
 
+-- | Real-valued norm `lnorm x = X.norm x` for a `PseudoNormedAbGroup`.
 \func lnorm {X : PseudoNormedAbGroup} (x : X) : Real
   => X.norm x
 
+-- | Nonnegativity and `lnorm 0 = 0`.
 \lemma lnorm>=0 {X : PseudoNormedAbGroup} {x : X} : 0 <= X.norm x
   => Real.<=-upper.2 (later norm>=0)
 
+-- | Nonnegativity and `lnorm 0 = 0`.
 \lemma lnorm_zro {X : PseudoNormedAbGroup} : lnorm X.zro = RealAbGroup.zro
   => Real.=-upper.2 (later norm_zro)
 
+-- | Triangle inequality in `Real`.
 \lemma lnorm_+ {X : PseudoNormedAbGroup} {x y : X} : lnorm (x + y) <= lnorm x + lnorm y
   => Real.<=-upper.2 $ transportInv (_ ExUpperRealAbMonoid.<=) RealAbGroup.+-upper X.norm_+
 
+-- | `ldist x y = lnorm (x - y)` linking the real-valued distance and norm.
 \lemma lnorm-ldist {X : PseudoNormedAbGroup} {x y : X} : ldist x y = lnorm (x - y)
   => Real.=-upper.2 (later norm-dist)
 
+-- | Triangle inequality for finite sums in `Real`.
 \lemma lnorm_BigSum {X : PseudoNormedAbGroup} {l : Array X} : lnorm (X.BigSum l) <= RealAbGroup.BigSum \lam j => lnorm (l j) \elim l
   | nil => transportInv (<= _) lnorm_zro <=-refl
   | x :: l => lnorm_+ <=∘ <=_+ <=-refl lnorm_BigSum
 
+-- | Symmetry `lnorm (x - y) = lnorm (y - x)`.
 \lemma lnorm_- {X : PseudoNormedAbGroup} {x y : X} : lnorm (x - y) = lnorm (y - x)
   => Real.=-upper.2 $ norm_- {X}
 
+-- | Reverse triangle inequalities `lnorm x - lnorm y <= lnorm (x - y)` (and the `y - x` form).
 \lemma lnorm_-left {X : PseudoNormedAbGroup} {x y : X} : lnorm x - lnorm y <= lnorm (x - y)
   => transport (_ <=) (+-assoc *> pmap (_ +) negative-right *> zro-right) $ <=_+ (transport (lnorm __ <= _) (+-assoc *> pmap (x +) negative-left *> zro-right) lnorm_+) <=-refl
 
+-- | Reverse triangle inequalities `lnorm x - lnorm y <= lnorm (x - y)` (and the `y - x` form).
 \lemma lnorm_-right {X : PseudoNormedAbGroup} {x y : X} : lnorm y - lnorm x <= lnorm (x - y)
   => transport (_ <=) lnorm_- lnorm_-left
 
+-- | Combined absolute reverse triangle inequality `|lnorm x - lnorm y| <= lnorm (x - y)`.
 \lemma lnorm_-_abs {X : PseudoNormedAbGroup} {x y : X} : RealAbGroup.abs (lnorm x - lnorm y) <= lnorm (x - y)
   => join-univ lnorm_-left (simplify lnorm_-right)
 
+-- | Full normed abelian group; extends `PseudoNormedAbGroup` and `ExNormedAbGroup`.
 \class NormedAbGroup \extends PseudoNormedAbGroup, ExNormedAbGroup
 
+{- | Extends `UniformMetricMap` and `TopAbGroupMap`. Characterizes uniform continuity directly via the norm:
+ -   `func-norm-uniform` says small-norm inputs give small-norm outputs. Equivalence with `func-dist-uniform` is
+ -   provided.
+ -}
 \record UniformNormedAbGroupMap \extends UniformMetricMap, TopAbGroupMap {
   \override Dom : ExPseudoNormedAbGroup
   \override Cod : ExPseudoNormedAbGroup
@@ -186,6 +240,7 @@
   }
 }
 
+-- | Extends `UniformNormedAbGroupMap` and `MetricMap`; non-expansive maps satisfying `norm (func x) <= norm x`.
 \record NormedAbGroupMap \extends UniformNormedAbGroupMap, MetricMap {
   \override Dom : ExPseudoNormedAbGroup
   \override Cod : ExPseudoNormedAbGroup
@@ -195,6 +250,7 @@
   | func-dist => unfold $ rewrite (norm-dist {Dom}, norm-dist {Cod}, inv AddGroupHom.func-minus) func-norm
 }
 
+-- | Extends `NormedAbGroupMap` and `IsometricMap`; norm-preserving maps with `norm (func x) = norm x`.
 \record NormedIsometricMap \extends NormedAbGroupMap, IsometricMap {
   \override Dom : ExPseudoNormedAbGroup
   \override Cod : ExPseudoNormedAbGroup
@@ -206,8 +262,10 @@
   \default func-norm-isometry => norm_dist *> pmap (dist __ _) (inv func-zro) *> func-isometry *> inv norm_dist
 }
 
+-- | Extends `ExNormedAbGroup`, `CompleteExMetricSpace`, and `CompleteTopAbGroup`.
 \class CompleteExNormedAbGroup \extends ExNormedAbGroup, CompleteExMetricSpace, CompleteTopAbGroup
 
+-- | Extends `CompleteExNormedAbGroup`, `NormedAbGroup`, and `CompleteMetricSpace`.
 \class CompleteNormedAbGroup \extends CompleteExNormedAbGroup, NormedAbGroup, CompleteMetricSpace
 
 -- | A bilinear map bounded by the product of norms is locally uniform.

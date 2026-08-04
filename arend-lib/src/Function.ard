@@ -1,15 +1,36 @@
+{- | Basic definitions for working with functions: identity, composition, injectivity, surjectivity, and images.
+ -
+ -   This module provides the fundamental combinators used pervasively throughout the library. Function composition
+ -   comes in three flavors — the standard infix `o`, plus partially-applied variants `-o` and `o-` that fix one of the
+ -   two functions, which is useful when passing composition into higher-order constructions. Injectivity and
+ -   surjectivity are defined propositionally, with surjectivity using a propositional truncation `∃` so that it is a
+ -   property rather than structure. The `Image` type packages the surjective-image of a function as the subset of its
+ -   codomain hit by some input.
+ -}
+
 \import Logic
 \import Logic.Meta
 \import Paths
 
+-- | The identity function `\lam x => x` on any type `A`.
 \func id {A : \Type} => \lam (x : A) => x
 
+{- | Composition with the left function fixed: given `f : A -> B`, returns `\lam g x => g (f x)`, i.e. precomposition by
+ -   `f`.
+ -}
 \func -o {A B C : \Type} (f : A -> B) => \lam (g : B -> C) x => g (f x)
 
+{- | Composition with the right function fixed: given `g : B -> C`, returns `\lam f x => g (f x)`, i.e. postcomposition
+ -   by `g`.
+ -}
 \func o- {A B C : \Type} (g : B -> C) => \lam (f : A -> B) x => g (f x)
 
+-- | Standard function composition `g o f = \lam x => g (f x)`.
 \func \infixr 8 o {A B C : \Type} (g : B -> C) (f : A -> B) => \lam x => g (f x)
 
+{- | Predicate that `f : A -> B` is injective: `f a = f a' -> a = a'` (defined on `\Set`s so the conclusion is a
+ -   proposition).
+ -}
 \func IsInj {A B : \Set} (f : A -> B)
   => \Pi {a a' : A} -> f a = f a' -> a = a'
   \where {
@@ -20,9 +41,13 @@
       => \lam {a} {a'} q => inv (p a) *> pmap g q *> p a'
   }
 
+{- | Predicate that `f : A -> B` is surjective: for every `y : B`, there merely exists an `x : A` with `f x = y`, using
+ -   propositional truncation `∃`.
+ -}
 \func IsSurj {A B : \Type} (f : A -> B)
   => \Pi (y : B) -> ∃ (x : A) (f x = y)
   \where {
+    -- | Composition of surjections is surjective: if `f` and `g` are surjective, so is `g o f`.
     \lemma comp {A B C : \Type} {f : A -> B} (fs : IsSurj f) {g : B -> C} (gs : IsSurj g) : IsSurj (g o f)
       => \lam z => \have | (inP (y,gy=z)) => gs z
                          | (inP (x,fx=y)) => fs y
@@ -37,8 +62,15 @@
 \func IsSplitSurj {A B : \Type} (f : A -> B)
   => ∃ (g : B -> A) ∀ y (f (g y) = y)
 
+{- | Combinator `(f : (A -> B) -> B) (g : A -> B) => f g`, applying a higher-order function to a given argument; useful
+ -   as a continuation-style helper.
+ -}
 \func assuming {A B : \Type} (f : (A -> B) -> B) (g : A -> B) => f g
 
+{- | The image of `f : A -> B`, defined as `\Sigma (b : B) (∃ (a : A) (f a = b))` — points in the codomain that are
+ -   merely hit by some input.
+ -}
 \type Image {A B : \Type} (f : A -> B) => \Sigma (b : B) (∃ (a : A) (f a = b))
 
+-- | Meta swapping the first two arguments of a binary function: `flip f a b` reduces to `f b a`.
 \meta flip f a b => f b a

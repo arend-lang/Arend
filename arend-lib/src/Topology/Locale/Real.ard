@@ -1,3 +1,14 @@
+{- | The locale of real numbers, presented as a frame of rational intervals.
+ -
+ -   This module constructs the real-line locale `RealLocale` as the frame presentation `RealPres` over rational
+ -   intervals `(p, q)`, using two basic cover relations: a "subdivision" cover splitting an interval `(p, s)` into
+ -   overlapping pieces `(p, q) ∪ (r, s)` whenever `p < r < q < s`, and a "shrinking" cover expressing `(p, q)` as the
+ -   union of all strictly interior subintervals `(r, s)`. Conjunction of intervals is given by the meet
+ -   `(p ∨ p', q ∧ q')` in the interval lattice. The module proves the resulting locale is locally compact, regular, and
+ -   has enough (strongly dense) points — including a canonical `ratPoint` for each rational — and builds derived
+ -   constructions like closed intervals as nuclei and the embedding of the discrete rationals.
+ -}
+
 \import Algebra.Group
 \import Algebra.Meta
 \import Algebra.Monoid
@@ -32,17 +43,23 @@
 \open JoinSemilattice
 \open LinearOrder(dec<_<=)
 
+-- | An interval over a poset `Q` is a pair `\Sigma Q Q`, intended as endpoints `(p, q)`.
 \type Interval (Q : StrictPoset) => \Sigma (a b : Q) (a < b)
 
+-- | Poset structure on `Interval Q` where `x <= y` iff `y.1 <= x.1` and `x.2 <= y.2` (containment of open intervals).
 \instance IntervalPoset (Q : BiorderedSet) : Poset (Interval Q)
   | <= => <=
   | <=-refl => (<=-refl, <=-refl)
   | <=-transitive t s => (<=-transitive s.1 t.1, <=-transitive t.2 s.2)
   | <=-antisymmetric t s => ext (<=-antisymmetric s.1 t.1, <=-antisymmetric t.2 s.2)
   \where {
+    -- | The underlying inclusion order on intervals.
     \type \infix 4 <= {Q : BiorderedSet} (x y : Interval Q) => \Sigma (y.1 Q.<= x.1) (x.2 Q.<= y.2)
   }
 
+{- | Biordered (strict + non-strict) structure on intervals over a `BiorderedSet`, with `x < y` iff `y.1 < x.1` and
+ -   `x.2 < y.2` (strict containment).
+ -}
 \instance IntervalBiordered (Q : BiorderedSet) : BiorderedSet (Interval Q)
   | Poset => IntervalPoset Q
   | < => <
@@ -52,9 +69,14 @@
   | <-transitive-left a<b b<=c => (b<=c.1 <∘r a<b.1, a<b.2 <∘l b<=c.2)
   | <=-less a<b => (<=-less a<b.1, <=-less a<b.2)
   \where {
+    -- | The strict "well-inside" order on intervals.
     \type \infix 4 < {Q : BiorderedSet} (x y : Interval Q) => \Sigma (y.1 Q.< x.1) (x.2 Q.< y.2)
   }
 
+{- | The frame presentation of the real line over a decidable linear order `Q`. Generators are intervals `Interval Q`,
+ -   conjunction is interval meet, and basic covers consist of (1) two-piece subdivisions of `(p, s)` via points `r < q`
+ -   strictly inside, and (2) covers of `(p, q)` by all interior subintervals `(r, s)` with `p < r < s < q`.
+ -}
 \instance RealPres (Q : LinearOrder.Dec) : PreorderSite (Interval Q)
   | Preorder => IntervalPoset Q
   | isBasicCover a U =>
@@ -102,6 +124,9 @@
     \lemma embed-char {Q : DenseLinearOrder.Dec} {a b : Interval Q} : (embed a).1 b <-> b <= a
       => (PreorderSite.subcanonical-cover1 RealPres.subcanonical, cover-inj __ idp)
 
+    {- | Over a dense decidable linear order, any cover of `a` by `g` implies that for every point `x` strictly inside
+     -   `a`, some `g j` strictly contains `x`.
+     -}
     \lemma toPointwiseCover {Q : DenseLinearOrder.Dec} {a : Interval Q} {U : Set (Interval Q)} (a<=U : Cover a U) {x : Q} (a1<x : a.1 < x) (x<a2 : x < a.2) : ∃ (b : U) (b.1 < x) (x < b.2) \elim a<=U
       | cover-inj {b} a<=b Ub => inP (b, Ub, a<=b.1 <∘r a1<x, x<a2 <∘l a<=b.2)
       | cover-trans (byLeft (b,c,a1<b,b<c,c<a2,idp)) T<=U => \case dec<_<= x c \with {
@@ -134,21 +159,28 @@
         }
       }) r
 
+    -- | The presentation `RealPres Q` is locally compact whenever `Q` is a dense decidable linear order.
     \lemma locallyCompact {Q : DenseLinearOrder.Dec} : (RealPres Q).IsLocallyCompact
       => \lam x => cover-sub (cover-basic $ byRight idp) \lam s => <<-intervals s
   }
 
+-- | The locale of real numbers, defined as the presented frame `PresentedFrame (RealPres RatField)`.
 \func RealLocale : Locale => SiteLocale (RealPres RatField)
   \where {
+    -- | `RealLocale` is locally compact.
     \lemma locallyCompact : RealLocale.IsLocallyCompact
       => PreorderSite.locallyCompact-locale.1 RealPres.locallyCompact
 
     \lemma <=<-intervals {x y : Interval RatField} (r : x < y) : embed x <=< embed y
       => make<=< $ halves3-cover r.1 r.2 <=∘ join-monotone (join-univ (RealLocale.<=-curry {_} {embed x} $ lowerHalf.lowerHalf_embed<=0 <=-refl) (RealLocale.<=-curry {_} {embed x} $ upperHalf.upperHalf_embed<=0 <=-refl)) <=-refl
 
+    -- | `RealLocale` is a regular locale.
     \lemma regular : RealLocale.IsRegularLocale
       => regular-site \lam x => later $ cover-trans (byRight idp) \lam r => cover-refl (<=<-intervals r)
 
+    {- | For each rational `x`, the canonical point of `RealLocale` whose membership in `(a, b)` is `a < x < b`. Built
+     -   via `framePres-point` from the interval covering rules and density of the rationals.
+     -}
     \func ratPoint (x : Rat) : CompleteFilter RealLocale
       => site-point (sitePoint x)
       \where
@@ -170,12 +202,14 @@
             }
           }
 
+    -- | `RealLocale` has strongly dense points — the rational points are enough to detect frame elements.
     \lemma hasStronglyDensePoints : HasStronglyDensePoints RealLocale
       => hasStronglyDensePoints-site $ later \lam a => \case isDense a.3 \with {
         | inP (x,a1<x,x<a2) => cover-refl $ inP (ratPoint.sitePoint x, (a1<x, x<a2))
       }
   }
 
+-- | The open lower half-line `(-∞, x)` for a rational `x`, formed as the join of all `embed (a, b)` with `b <= x`.
 \sfunc lowerHalf (x : Rat) : RealLocale
   => SJoin {_} {Interval RatField} embed \lam s => s.2 <= x
   \where {
@@ -199,6 +233,7 @@
       => \lam {y} s => absurd $ x<=c1 $ (RealPres.embed-char.1 s.2).1 <∘r y.3 <∘l lowerHalf.lowerHalf-char.1 s.1
   }
 
+-- | The open upper half-line `(x, +∞)` for a rational `x`, dual to `lowerHalf`.
 \sfunc upperHalf (x : Rat) : RealLocale
   => SJoin {_} {Interval RatField} embed \lam s => x <= s.1
   \where {
@@ -240,11 +275,18 @@
       \lam {t} (inP (a, inP (_, inP ((a',x<=a'1),idp), a<=a'), b, inP (_, inP ((b',b'2<=y),idp), b<=b'), t<=a, t<=b)) =>
         inP (_, idp, (c1<=x <=∘ x<=a'1 <=∘ (RealPres.embed-char.1 a<=a').1 <=∘ t<=a.1, t<=b.2 <=∘ (RealPres.embed-char.1 b<=b').2 <=∘ b'2<=y <=∘ y<=c2))
 
+{- | The closed interval `[x, y]` realized as the locale `Nucleus.locale {nucleus x y}` — the closed sublocale
+ -   complementary to `lowerHalf x ∨ upperHalf y`.
+ -}
 \func closedInterval (x y : Rat) => (nucleus x y).locale
   \where {
+    {- | The closed nucleus carving `[x, y]` out of `RealLocale` as the complement of the open exterior
+     -   `lowerHalf x ∨ upperHalf y`.
+     -}
     \func nucleus (x y : Rat) : Nucleus
       => closed (lowerHalf x ∨ upperHalf y)
 
+    -- | Heine–Borel: every closed interval `[x, y]` is compact.
     \lemma compact (x y : Rat) : (closedInterval x y).IsCompact
       => \case withoutLowerBound x, withoutUpperBound (x ∨ y) \with {
            | inP (a,a<x), inP (b,xy<b) => \case isDense a<x, isDense xy<b \with {
@@ -255,6 +297,11 @@
       }
   }
 
+{- | The locale homomorphism `Hom (discrete Rat) RealLocale` embedding the discrete rational locale into the reals.
+ -   Constructed via `FrameReflectiveSubcat.adjointMap` from the frame-presentation map sending an interval `(p, q)` to
+ -   the predicate `p < x < q` on rationals, with conjunction, basic-cover, and image conditions verified using lattice
+ -   properties and density of `Rat`.
+ -}
 \func rat_real : LocaleHom (discreteLocale Rat) RealLocale
   => LocaleSite.adjointMap $ later \new PreorderSiteHom {
     | func p x => \Sigma (p.1 < x) (x < p.2)

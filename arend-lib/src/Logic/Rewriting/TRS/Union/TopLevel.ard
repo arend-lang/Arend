@@ -1,3 +1,16 @@
+{- | Top-level confluence machinery for the disjoint union of two higher-order rewrite systems, lifting monochrome
+ -   confluence to the union via colored top-level reductions.
+ -
+ -   This module implements the key step in the modular confluence proof for the union of TRSs: any term `A` reducing in
+ -   two ways at the top color-layer can be decomposed into a *linear pattern* over `(envs color)` plus an outer
+ -   substitution whose metavariable images are rooted in the *opposite* color. Rewrites at the top color are reflected
+ -   back into the inner monochrome system through `decompose-along-reduction`, joined by the assumed monochrome
+ -   confluence, and re-injected into the union via `inject-term` and `MetaSubstitution.apply`. The numerous commutation
+ -   lemmas (`injection-over-substitution`, `metacommutation`, `colored-metacomposition`, etc.) are bookkeeping for the
+ -   interaction between term injection, weakening, substitution, and meta-substitution that this back-and-forth
+ -   requires.
+ -}
+
 \import Data.List \hiding (Sort)
 \import Data.Maybe
 \import Function.Meta
@@ -21,6 +34,11 @@
 \import Logic.Rewriting.TRS.Utils
 \open TheoremContext
 
+{- | Given monochrome confluence for `color`, joins two top-level colored reduction sequences `A ~> B` and `A ~> C` into
+ -   a common reduct `X` with `B ~> X` and `C ~> X`. Works by decomposing `A` along the color boundary, lifting each
+ -   reduction into the monochrome system, applying confluence there, and re-injecting the joining sequences back into
+ -   the union.
+ -}
 \func join-tlcrs
   {tc : TheoremContext} {context : List Sort'} {s : Sort'}
   (color : Color)
@@ -40,6 +58,10 @@
        | lifted-c~>d => Closure.lift (\lam x => MetaSubstitution.apply (inject-term envs x) SubList.sublist-nil-free subst) (\lam rel => lift-relation color subst rel.1 rel.2) join-b-c.b common-reduct join-b-c.b~>cr
   \in (injected-reduct, transport (Closure (TopLevelColoredReduction color) __ injected-reduct) eq-b lifted-b~>d, transport (Closure (TopLevelColoredReduction color) __ injected-reduct) eq-c lifted-c~>d)
 
+{- | Lifts a monochrome reduction `t ~> u` in `(envs color)` (with a `FunctionalWitness`) to a
+ -   `TopLevelColoredReduction color` between the union-injected, outer-substituted versions of `t` and `u`. Splits on
+ -   whether the rewrite is a rule application or a parameter rewrite.
+ -}
 \func lift-relation
   {tc : TheoremContext} {context : List Sort'} {s : Sort'} {mc : MetaContext Sort'}
   (color : Color)
@@ -67,6 +89,9 @@
         (\lam j _x => rewrite (eq j _x) idp)
   | metavar m-A arguments-A, metavar m-B arguments-B, rewrite-with-parameter-m idp i rd eq, ()
   \where {
+    {- | Extracts a `HasColoredRoot color` witness from a function-rooted linear pattern that has been substituted and
+     -   injected. Used to identify the color of a redex root.
+     -}
     \func produce-colored-root
       {tc : TheoremContext} {context : List Sort'} (color : Color) {s : Sort'} {mc mc' mc'' : MetaContext Sort'}
       (t : Term (envs color) context s mc')
@@ -81,6 +106,7 @@
       | var index p, func f arguments, ()
       | metavar m arguments, func f arguments1, ()
 
+    -- | Injection commutes with meta-substitution and with the substitution context-extension operations.
     \lemma injection-over-metasubstitution
       {tc : TheoremContext} {context context' : List Sort'} {s : Sort'} {mc mc' : MetaContext Sort'} (color : Color)
       (msubst : MetaSubstitution (envs color) context' mc mc')
@@ -94,6 +120,7 @@
         \in rewriteI inductive (rewrite (injection-over-left-extension color _ (\lam (i : Index (mc.m-domain m)) => MetaSubstitution.apply {envs color} (arguments i) sublist msubst)) (injection-over-substitution color _ (msubst m)))
       | func f arguments => Term.fext (\lam index => injection-over-metasubstitution color msubst (arguments index) _)
       \where {
+        -- | Injection commutes with meta-substitution and with the substitution context-extension operations.
         \lemma injection-over-left-extension
           {tc : TheoremContext} {context context' add-context : List Sort'} {mc : MetaContext Sort'} (color : Color)
           (sublist : SubList add-context context')
@@ -108,6 +135,7 @@
               (\lam i1 => rewrite (extend-substitution-left.on-end, extend-substitution-left.on-end {envs color}) (inv (inject-term.over-transport-sort _ _)))
         )
 
+        -- | Injection commutes with meta-substitution and with the substitution context-extension operations.
         \lemma injection-over-right-extension
           {tc : TheoremContext} {context context' add-context : List Sort'} {mc : MetaContext Sort'} (color : Color)
           (subst : Substitution {envs color} context context' mc)
@@ -119,6 +147,7 @@
             (\lam i1 => rewrite append-context-right.on-end (rewrite (append-context-right.on-end {envs color}) idp))
         )
 
+        -- | Injection commutes with meta-substitution and with the substitution context-extension operations.
         \lemma injection-over-substitution
           {tc : TheoremContext} {context context' : List Sort'} {s : Sort'} {mc : MetaContext Sort'} (color : Color)
           (subst : Substitution {envs color} context context' mc)
@@ -129,6 +158,9 @@
           | func f arguments => Term.fext (\lam index => injection-over-substitution color (append-context-right {envs color} subst) (arguments index) *> pmap (Substitution.apply (inject-term envs (arguments index))) (inv (injection-over-right-extension color _)))
       }
 
+    {- | Composition law for meta-substitutions: applying `msubst` then `msubst2` to a term equals applying their
+     -   composition in one step.
+     -}
     \lemma metacommutation {env : FSignature} {context context' : List Sort} {s : Sort} {mc mc' mc'' : MetaContext Sort}
                            (msubst : MetaSubstitution env context' mc mc')
                            (msubst2 : MetaSubstitution env nil mc' mc'')
@@ -145,6 +177,9 @@
         \in rewrite inductive (rewrite (subst-extend-left-comm msubst2 sublist (\lam (i : Index (mc.m-domain m)) => MetaSubstitution.apply (arguments i) sublist msubst)) (subst-metasubst-comm msubst2 (msubst m) _))
       | func f arguments => Term.fext (\lam index => rewrite (trivial-sublist-contractible (SubList.extend-right-single SubList.sublist-nil-free) SubList.sublist-nil-free) (metacommutation msubst msubst2 (arguments index) (SubList.extend-right-single sublist)))
 
+    {- | Auxiliary commutations for substitution under meta-substitution, including its interaction with
+     -   `append-context-right` and `extend-substitution-left`.
+     -}
     \lemma subst-metasubst-comm
       {env : FSignature} {context context' : List Sort} {s : Sort} {mc' mc'' : MetaContext Sort}
       (msubst2 : MetaSubstitution env nil mc' mc'')
@@ -163,6 +198,9 @@
       | func f arguments => Term.fext (\lam index =>
           rewrite (trivial-sublist-contractible _ SubList.sublist-nil-free, trivial-sublist-contractible (SubList.extend-right-single SubList.sublist-nil-free), inv (subst-metasubst-comm _ (arguments index) _), append-context-right-inside-metaapply) idp)
 
+    {- | Auxiliary commutations for substitution under meta-substitution, including its interaction with
+     -   `append-context-right` and `extend-substitution-left`.
+     -}
     \lemma append-context-right-inside-metaapply
       {env : FSignature} {context context' add-context : List Sort} {mc' mc'' : MetaContext Sort}
       (subst : Substitution context context' mc')
@@ -173,6 +211,9 @@
           (\lam fin => repeat {2} (rewrite append-context-right.on-begin) (rewrite (weakening.over-transport-sort, weakening.over-transport-sort, MetaSubstitution.over-transport-sort, weakening.over-metasubstitution) idp))
           (\lam fin => repeat {2} (rewrite append-context-right.on-end) idp))
 
+    {- | Auxiliary commutations for substitution under meta-substitution, including its interaction with
+     -   `append-context-right` and `extend-substitution-left`.
+     -}
     \lemma subst-extend-left-comm {env : FSignature} {context context' add-context : List Sort} {mc' mc'' : MetaContext Sort}
                                   (msubst2 : MetaSubstitution env nil mc' mc'')
                                   (sublist : SubList context' context)
@@ -186,6 +227,11 @@
           (\lam fin => repeat {2} (rewrite extend-substitution-left.on-end) (rewriteI MetaSubstitution.over-transport-sort idp)))
   }
 
+{- | Splits a pure term `A` at the color boundary, producing a linear pattern `t : LinearTerm (envs color)`, an outer
+ -   meta-substitution into the union whose images all have an *excluded* colored root (i.e. are headed by the opposite
+ -   color or are variables), and a proof that applying the substitution to `t` yields `A`. Recurses through function
+ -   symbols of matching color and uses `ModularMetaContext` to merge the per-argument linear contexts.
+ -}
 \func decompose-term {tc : TheoremContext} {context : List Sort'} {s : Sort'}
                      (color : Color)
                      (A : PureTerm env context s) :
@@ -220,6 +266,11 @@
        })
   }
 
+{- | Given the decomposition of `A` and a top-level colored reduction `A ~> B`, produces a corresponding monochrome
+ -   reduction `t ~> u` in `(envs color)` together with a `FunctionalWitness` and a proof that applying the outer
+ -   substitution to the injection of `u` is `B`. Handles the rule case via `decompose-metasubstitution` and the
+ -   parameter-rewriting case by recursion; metavariable and variable cases are ruled out by color analysis.
+ -}
 \func decompose-along-reduction {tc : TheoremContext} {context : List Sort'} {s : Sort'} {inner-mc mc : MetaContext Sort'}
                                 (color : Color)
                                 (t : Term (envs color) context s inner-mc)
@@ -276,11 +327,16 @@
     \in contradiction
   | var index p, B, A~>B => \let rc => TopLevelColoredReduction.extract-root-coloring A~>B \in \case \elim rc
   \where {
+    -- | Transports a `FunctionalWitness` along an equality of right-hand sides of a rewrite relation.
     \func unifying-lemma {tc : TheoremContext} {context : List Sort'} {s : Sort'} {mc : MetaContext Sort'} {color : Color}
                          (t u v : Term (envs color) context s mc) (eq : v = u) (rd : RewriteRelation {envs color} (rules color) t u)
                          (fw : FunctionalWitness {envs color} {rules color} rd):
       FunctionalWitness {envs color} {rules color} (transportInv (RewriteRelation {envs color} (rules color) t) eq rd) \elim eq | idp => fw
 
+    {- | Derives `Empty` from a term that simultaneously has an excluded colored root and, after a substitution, a
+     -   colored root of the same color — the central contradiction used to rule out metavariable/variable cases in
+     -   decomposition.
+     -}
     \lemma eliminate-colors {tc : TheoremContext} (color : Color) {context context' : List Sort'} {s : Sort'} {msig : MetaContext Sort'}
                             {T : Term env context s msig} {subst : Substitution context context' msig}
                             (hcr : HasExcludedColoredRoot color T)
@@ -288,6 +344,7 @@
       : Empty \elim T, hcr, hcr'
       | func f arguments, ex-func-root p, func-root q => p q
 
+    -- | Equate two weakenings of a closed term into a context, modulo a `++_nil` transport.
     \lemma different-weakening {env : FSignature} {context : List Sort} {s : Sort} {ms : MetaContext Sort}
                                (T : Term env nil s ms)
       : weakening T (SubList.sublist-nil-free {_} {context}) =
@@ -295,6 +352,7 @@
       | nil => idp
       | :: a context => lemma ++_nil (sublist-skip SubList.sublist-nil-free) (sublist-skip SubList.sublist-nil-free) (trivial-sublist-contractible _ _) T
       \where {
+        -- | Equate two weakenings of a closed term into a context, modulo a `++_nil` transport.
         \lemma lemma  {env : FSignature} {context context' : List Sort} {s : Sort} {ms : MetaContext Sort}
                       (eq : context' = context) (sl : SubList nil context) (sl' : SubList nil context') (sl=sl' : sl = transport (SubList nil) eq sl') (T : Term env nil s ms) :
           weakening T sl = transport (Term env __ s ms) eq (weakening T sl') \elim context, eq, sl=sl'
@@ -302,12 +360,14 @@
           | :: a context, idp, idp => idp
       }
 
+    -- | Push `transport` along context-equalities through `MetaSubstitution.apply`.
     \lemma metasubst-over-transport {env : FSignature} {context context' : List Sort} {s : Sort} {ms ms' : MetaContext Sort} (eq : context = context')
                                     (T : Term env context s ms) (S : Term env context' s ms') (msubst : MetaSubstitution env context' ms ms')
                                     (eq' : MetaSubstitution.apply T (transport (SubList context') (inv eq) SubList.identity) msubst = transport (Term env __ s ms') (inv eq) S)
       : MetaSubstitution.apply (transport (Term env __ s ms) eq T) SubList.identity msubst = S \elim eq
       | idp => eq'
 
+    -- | Push `transport` along context-equalities through `MetaSubstitution.apply`.
     \lemma metasubst-over-transport-2 {env : FSignature} {context context' : List Sort} {s : Sort} {ms ms' ms'' : MetaContext Sort}
                                       (eq : context' = context)
                                       (T : Term env nil s ms) (S : Term env context s ms'')
@@ -318,6 +378,9 @@
       | idp => eq'
   }
 
+{- | Packages a rule index, an inner substitution, and the appropriate left/right equalities into a
+ -   `monochrome-reduction color l r` via `rewrite-with-rule`.
+ -}
 \func produce-monochrome-reduction
   {tc : TheoremContext} {context : List Sort'} {s : Sort'} {mc : MetaContext Sort'} (color : Color)
   (idx : rule-J {rules color} s)
@@ -328,6 +391,9 @@
   (l-is-func : FunctionRoot (convert-to-injected-term color (get-rule-pattern idx)))
   : monochrome-reduction color l r => rewrite-with-rule idx subst l-eq r-eq
 
+{- | Composes two colored meta-substitutions through `inject-term`: applying a combined substitution equals applying the
+ -   inner one in `(envs color)` and then the outer one in the union.
+ -}
 \lemma colored-metacomposition {tc : TheoremContext} {global-context : List Sort'} {ms-a ms-b ms-c : MetaContext Sort'}
                                (color : Color)
                                (subst-a : MetaSubstitution (envs color) global-context ms-a ms-b)
@@ -345,6 +411,7 @@
     \in rewrite (eq m) (inv (rewrite inner-ext (rewrite (injection-over-substitution color) (commutation subst-b (\lam ind => inject-term envs (extend-substitution-left {envs color} sublist (\lam i => MetaSubstitution.apply {envs color} (arguments i) sublist subst-a) ind)) (inject-term envs (subst-a m)) *> pmap (Substitution.apply (MetaSubstitution.apply (inject-term envs (subst-a m)) SubList.sublist-nil-free subst-b)) (extend-left-commutation color _ _ _)))))
   | func f arguments => Term.fext (\lam index => colored-metacomposition color subst-a subst-b subst-c eq (SubList.extend-right-single sublist) (arguments index) *> invariant-through-empty-subst subst-b SubList.sublist-nil-free (SubList.extend-right-single SubList.sublist-nil-free) _)
   \where {
+    -- | Pushing a meta-substitution under `extend-substitution-left` for an injected substitution.
     \lemma extend-left-commutation {tc : TheoremContext} {context-a context-b context-c : List Sort'} {mc mc' : MetaContext Sort'}
                                    (color : Color)
                                    (subst : Substitution {envs color} context-b context-c mc)
@@ -360,6 +427,7 @@
           (\lam i1 => rewrite (extend-substitution-left.on-end, extend-substitution-left.on-end {envs color}, inject-term.over-transport-sort _ (subst i1), MetaSubstitution.over-transport-sort) idp)
     )
 
+    -- | Substitution and meta-substitution commute on terms over a shared meta-context.
     \lemma commutation {tc : TheoremContext} {term-context context : List Sort'} {s : Sort'} {ms-a ms-b : MetaContext Sort'}
                        (metasubst : MetaSubstitution env nil ms-a ms-b)
                        (subst : Substitution term-context context ms-a)
@@ -373,6 +441,7 @@
       | metavar m arguments => rewrite subst-comm (pmap (Substitution.apply (metasubst m)) (ext (\lam index => commutation metasubst subst (arguments index))))
       | func f arguments => Term.fext (\lam index => (rewrite (trivial-sublist-contractible _ SubList.sublist-nil-free)) (commutation metasubst (append-context-right subst) (arguments index) *> rewrite (trivial-sublist-contractible (SubList.extend-right-single SubList.sublist-nil-free) SubList.sublist-nil-free) (pmap (Substitution.apply (MetaSubstitution.apply (arguments index) SubList.sublist-nil-free metasubst)) (append-context-right-commutation subst metasubst))))
       \where {
+        -- | Meta-substitution distributes over `append-context-right`.
         \lemma append-context-right-commutation {env : FSignature} {context-a context-b context-c : List Sort} {ms ms' : MetaContext Sort}
                                                 (subst : Substitution context-a context-c ms)
                                                 (metasubst : MetaSubstitution env nil ms ms')
@@ -387,6 +456,7 @@
         )
       }
 
+    -- | Injection commutes with substitution and with `append-context-right`.
     \lemma injection-over-substitution
       {tc : TheoremContext} {context context' : List Sort'} {s : Sort'} {ms : MetaContext Sort'}
       (color : Color)
@@ -398,6 +468,7 @@
       | metavar m arguments => Term.mext (\lam index => injection-over-substitution color (arguments index) subst)
       | func f arguments => Term.fext (\lam index => rewrite (push-append-context-right color subst) (injection-over-substitution color (arguments index) (append-context-right {envs color} subst)))
       \where {
+        -- | Injection commutes with substitution and with `append-context-right`.
         \lemma push-append-context-right {tc : TheoremContext} {context context' additional-context : List Sort'} {ms : MetaContext Sort'}
                                          (color : Color)
                                          (subst : Substitution {envs color} context context' ms)
@@ -405,6 +476,7 @@
         (\lam i => inject-term envs (append-context-right {envs color} subst i)) =>
           ext (push-append-context-right-ext color subst)
 
+        -- | Injection commutes with substitution and with `append-context-right`.
         \lemma push-append-context-right-ext {tc : TheoremContext}
                                              (color : Color)
                                              {context context' additional-context : List Sort'} {ms : MetaContext Sort'}
@@ -417,6 +489,7 @@
       }
   }
 
+-- | `weakening (inject-term t) sl = inject-term (weakening t sl)` — injection commutes with weakening.
 \lemma injection-weakening-commutation
   {tc : TheoremContext} (color : Color) {context context' : List Sort'} {ms : MetaContext Sort'} {s : Sort'}
   (sublist : SubList context context')
@@ -426,6 +499,11 @@
   | metavar m arguments => Term.mext (\lam index => injection-weakening-commutation color sublist (arguments index))
   | func f arguments => Term.fext (\lam index => injection-weakening-commutation color (SubList.extend-right-both sublist) (arguments index))
 
+{- | Given a linear pattern `l` and a term `t` such that `l[big-substitution] = inject(t)[middle-substitution]`,
+ -   produces an inner meta-substitution into `inner-mc` that explains the pattern's metavariables in terms of the inner
+ -   term, and proves it composes correctly with `middle-substitution`. The function-symbol case recurses; the
+ -   full-metavariable case takes `t` itself as the image; the metavariable-of-`t` case is ruled out by color.
+ -}
 \func decompose-metasubstitution
   {tc : TheoremContext} {pattern-context core-context : List Sort'} {s : Sort'} {inner-mc mc : MetaContext Sort'}
   (color : Color)
@@ -503,12 +581,16 @@
      unfold transport (transport (\lam sbst => Substitution.apply {envs color} t sbst = t) (inv (weakening-extension-ext {envs color} {core-context} {pattern-context} {inner-mc})) (plain-identity-effect {envs color} _)))
   | l-var index p (), t
   \where {
+    {- | Returns the head symbol of a `func`-rooted term, used as a small projection to compare function symbols under
+     -   `pmap`.
+     -}
     \func unfunc {env : FSignature} {context : List Sort} {s : Sort} {ms : MetaContext Sort} (f : symbol s)
                  (T : Term env context s ms) : symbol s \elim T
       | var index p => f
       | metavar m arguments => f
       | func f1 arguments => f1
 
+    -- | Transport-coherent reformulation of a meta-substitution-equality used inside the recursive decomposition step.
     \lemma ad-hoc-lemma
       {tc : TheoremContext} {subst-context context big-context big-context' : List Sort'} {s : Sort'} {ms-a ms-b : MetaContext Sort'}
       {n : Nat} {index : Fin n}
@@ -527,6 +609,9 @@
       | idp => target-eq
   }
 
+{- | Extending the right-projecting variable substitution by the identity on the left equals the plain identity
+ -   meta-substitution.
+ -}
 \lemma weakening-extension-ext {env : FSignature} {left-context right-context : List Sort} {mc : MetaContext Sort}
   : extend-substitution-left {_} {left-context} {right-context} (SubList.extend-right-single SubList.identity) (\lam i => weakening (var i idp) (SubList.extend-left-single SubList.identity)) = plain-identity {_} {_} {mc} =>
   ext (partial-fin-induction
@@ -542,6 +627,9 @@
                | big-eq => Shifts.left-extension {Sort} {left-context} {right-context} i1
           \in q *> rewrite (pmap sigma-to-var big-eq) (rewrite transport-var-over-sort (var-extensionality idp))))
 
+{- | Rewrites a meta-substitution-and-weakening equation that holds modulo a context transport on the right-hand side
+ -   into one with the transport pushed onto the sublists on the left.
+ -}
 \lemma expand-substitution-3 {env : FSignature} {term-context ms-context big-context big-context' : List Sort} {s : Sort} {ms ms' : MetaContext Sort}
                              (T : Term env term-context s ms)
                              (msubst : MetaSubstitution env ms-context ms ms')

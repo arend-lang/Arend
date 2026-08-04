@@ -19,6 +19,9 @@
 \import Topology.Locale
 \import Topology.Locale.LocaleCat
 
+{- | Precategory of ringed locales. Composition combines frame composition with the appropriate composition of the
+ -   sheaf-component natural transformations.
+ -}
 \func RingedLocalePrecat.{u} : Precat RingedLocale.{u} \cowith
   | Hom => RingedLocaleHom
   | id => RingedLocaleHom.id
@@ -27,6 +30,7 @@
   | id-right => idp
   | o-assoc => idp
   \where {
+    -- | Forgetful functor `RingedLocalePrecat -> LocaleCat`.
     \func forget.{u} : Functor RingedLocalePrecat.{u} LocaleCat.{u} \cowith
       | F L => L
       | Func f => f

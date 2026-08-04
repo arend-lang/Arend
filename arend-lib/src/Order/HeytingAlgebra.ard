@@ -1,3 +1,13 @@
+{- | Heyting algebras: bounded distributive lattices equipped with an implication operation forming a Cartesian closed
+ -   structure.
+ -
+ -   A Heyting algebra extends `BoundedDistributiveLattice` and `CartesianClosedPrecat`, with the implication `-->`
+ -   characterized by the adjunction `x ∧ a <= b ↔ x <= a --> b`. From this single adjunction the module derives top,
+ -   distributivity, evaluation, and the exponential functor structure, exhibiting `_ --> y` as right adjoint to
+ -   `_ ∧ y`. Negation is defined as `neg x := x --> bottom`, supporting the standard intuitionistic theory of double
+ -   negation, negated elements, and continuations `(x --> y) --> y`.
+ -}
+
 \import Category.CartesianClosed
 \import Category.Functor
 \import Equiv
@@ -7,89 +17,123 @@
 \import Order.PartialOrder
 \import Paths
 
+{- | Extends `BoundedDistributiveLattice` and `CartesianClosedPrecat`. Adds implication `-->` with the adjunction
+ -   `<=-curry`/`<=-uncurry`. Provides default implementations of `top`, `top-univ`, `ldistr>=`, and `toCCC` derived
+ -   from the implication structure.
+ -}
 \class HeytingAlebra \extends BoundedDistributiveLattice {
+  -- | Heyting implication operator on the carrier.
   | \infixr 5 --> : E -> E -> E
+  -- | The defining adjunction `x ∧ a <= b ↔ x <= a --> b`.
   | <=-curry {x a b : E} : x ∧ a <= b -> x <= a --> b
+  -- | The defining adjunction `x ∧ a <= b ↔ x <= a --> b`.
   | <=-uncurry {x a b : E} : x <= a --> b -> x ∧ a <= b
 
   \default top \as top-impl => bottom --> bottom
   \default top-univ {x : E} : x <= top-impl => <=-curry meet-right
   \default ldistr>= {x y z : E} : x ∧ (y ∨ z) <= (x ∧ y) ∨ (x ∧ z) => meet-comm =<= <=-uncurry (join-univ (<=-curry (meet-comm =<= join-left)) (<=-curry (meet-comm =<= join-right)))
 
+  -- | Evaluation/counit: `(x --> y) ∧ x <= y`.
   \lemma <=-eval {x y : E} : (x --> y) ∧ x <= y
     => <=-uncurry <=-refl
 
+  -- | `x ∧ (x --> y) <= y`, the symmetric form of `<=-eval`.
   \lemma modus-ponens {x y : E} : x ∧ (x --> y) <= y
     => meet-comm =<= <=-eval
 
+  -- | `(x --> y) ∧ (y --> z) <= x --> z`.
   \lemma composition-law {x y z : E} : (x --> y) ∧ (y --> z) <= x --> z
     => <=-curry $ (meet-assoc *> meet-comm *> meet-assoc) =<= meet-monotone <=-refl modus-ponens <=∘ <=-eval
 
+  -- | `continuation y x := (x --> y) --> y`, the continuation monad applied at `y`.
   \func continuation (y : E) (x : E) => (x --> y) --> y
 
+  -- | `neg x := x --> bottom`, intuitionistic negation.
   \func neg (x : E) => x --> bottom
 
+  -- | `neg` is contravariant.
   \lemma neg-inverse {x y : E} (p : x <= y) : neg y <= neg x
     => <=-curry $ meet-monotone <=-refl p <=∘ <=-eval
 
+  -- | `neg bottom = top`.
   \lemma neg_bottom : neg bottom = top
     => <=-antisymmetric TopMeetSemilattice.top-univ (<=-curry meet-right)
 
+  -- | `neg top = bottom`.
   \lemma neg_top : neg top = bottom
     => <=-antisymmetric (meet-univ <=-refl TopMeetSemilattice.top-univ <=∘ <=-eval) bottom-univ
 
+  -- | `x <= neg (neg x)`, the unit of double-negation.
   \lemma id<=neg_neg {x : E} : x <= neg (neg x)
     => double-exponent-increasing
 
+  -- | `neg (x ∨ y) = neg x ∧ neg y`, De Morgan for join.
   \lemma neg_join {x y : E} : neg (x ∨ y) = neg x ∧ neg y
     => exponent_join
 
+  -- | Predicate `neg (neg x) <= x`, characterizing the elements fixed by double negation.
   \func IsNegated (x : E) : \Prop
     => neg (neg x) <= x
 
+  -- | `bottom` is negated.
   \lemma bottom-negated : IsNegated bottom
     => =_<= $ pmap neg neg_bottom *> neg_top
 
+  -- | Meets of negated elements are negated.
   \lemma meet-negated {x y : E} (xn : IsNegated x) (yn : IsNegated y) : IsNegated (x ∧ y)
     => meet-univ (double-exponent-monotone meet-left <=∘ xn) (double-exponent-monotone meet-right <=∘ yn)
 
+  -- | Every `neg x` is negated.
   \lemma neg-negated {x : E} : IsNegated (neg x)
     => exponent-monotone double-exponent-increasing <=-refl
 
+  -- | `x ∧ y --> z <= x --> (y --> z)`, the curried form of implication.
   \protected \func curry {x y z : E} : x ∧ y --> z = x --> (y --> z)
     => <=-antisymmetric (<=-curry $ <=-curry $ meet-assoc =<= <=-eval) (<=-curry $ inv meet-assoc =<= meet-monotone <=-eval <=-refl <=∘ <=-eval)
 
+  -- | From `x <= y` deduce `top <= x --> y`.
   \lemma top_exponent {x y : E} (p : x <= y) : top <= x --> y
     => <=-curry (meet-right <=∘ p)
 
+  -- | `y <= z` implies `x --> y <= x --> z` (covariant in the codomain).
   \lemma exponent-monotone {x y x' y' : E} (p : x' <= x) (q : y <= y') : x --> y <= x' --> y'
     => <=-curry $ meet-monotone <=-refl p <=∘ <=-eval <=∘ q
 
+  -- | `-->` distributes over meet on the right.
   \lemma exponent_meet {x y z : E} : x --> y ∧ z = (x --> y) ∧ (x --> z)
     => <=-antisymmetric (meet-univ (exponent-monotone <=-refl meet-left) (exponent-monotone <=-refl meet-right)) (<=-curry (meet-univ (meet-monotone meet-left <=-refl <=∘ <=-eval) (meet-monotone meet-right <=-refl <=∘ <=-eval)))
 
+  -- | `x ∨ y --> z = (x --> z) ∧ (y --> z)`, implication turns joins into meets.
   \lemma exponent_join {x y z : E} : x ∨ y --> z = (x --> z) ∧ (y --> z)
     => <=-antisymmetric (meet-univ (exponent-monotone join-left <=-refl) (exponent-monotone join-right <=-refl)) $ <=-curry $
         ldistr>= <=∘ join-univ (meet-monotone meet-left <=-refl <=∘ <=-eval) (meet-monotone meet-right <=-refl <=∘ <=-eval)
 
+  -- | `x <= (x --> y) --> y`, unit of the continuation.
   \lemma double-exponent-increasing {x y : E} : x <= (x --> y) --> y
     => <=-curry modus-ponens
 
+  -- | Iterated double continuation collapses: `((((x --> y) --> y) --> y) --> y) <= (x --> y) --> y`.
   \lemma double-exponent-idempotent {x y : E} : (((x --> y) --> y) --> y) --> y <= (x --> y) --> y
     => <=-curry (meet-monotone <=-refl double-exponent-increasing <=∘ <=-eval)
 
+  -- | Continuation at `x` is monotone in its target.
   \lemma double-exponent-monotone {x y z : E} (p : y <= z) : continuation x y <= continuation x z
     => <=-curry (meet-monotone <=-refl (exponent-monotone p <=-refl) <=∘ <=-eval)
 
+  -- | `x <= y --> x ∧ y`, unit of the meet⊣exponential adjunction.
   \lemma exponent-unit {x y : E} : x <= y --> x ∧ y
     => <=-curry <=-refl
 
+  -- | For each `X`, `(X --> -)` as an endofunctor on the Heyting algebra viewed as a category.
   \func exponent-functor (x : E) : Functor \this \this \cowith
     | F y => x --> y
     | Func f => exponent-monotone <=-refl f
     | Func-id => idp
     | Func-o => idp
 
+  {- | Constructs the right adjoint to `bprodFunctorRight Y`, exhibiting the algebra as a `CartesianClosedPrecat` via
+   -   the unit `exponent-unit` and counit `<=-eval`.
+   -}
   \func toCCC : CartesianClosedPrecat \cowith
     | CartesianPrecat => \this
     | CHom => -->

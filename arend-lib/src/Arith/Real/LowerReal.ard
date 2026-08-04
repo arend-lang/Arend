@@ -1,3 +1,13 @@
+{- | Dedekind-style lower reals as downward-closed, rounded, open subsets of the rationals.
+ -
+ -   A `LowerReal` is represented by its set of strict lower bounds `L : Rat -> \Prop`, required to be downward-closed
+ -   under `<` and rounded (every element has a strictly larger element still in `L`). Rationals embed via `q' < q`, and
+ -   the standard ordered abelian-monoid structure (addition, `<=`, `<`, meet, join) is built directly on these
+ -   predicates. The `ExtendedLowerReal` variant drops the inhabitedness condition `L-inh`, which lets it represent `-∞`
+ -   and form a complete lattice closed under arbitrary joins; `LowerReal` itself is closed only under bounded joins
+ -   (joins together with a fixed lower-real lower bound), captured by `BJoin`.
+ -}
+
 \import Algebra.Group
 \import Algebra.Meta
 \import Algebra.Monoid
@@ -18,26 +28,33 @@
 \import Paths
 \import Paths.Meta
 
+{- | A predicate `L : Rat -> \Prop` on rationals that is downward-closed (`L-closed`) and rounded/open (`L-rounded`);
+ -   represents a lower real possibly equal to `-∞`.
+ -}
 \record ExtendedLowerReal {
   | \protected L : Rat -> \Prop
   | L-closed {q q' : Rat} : L q -> q' < q -> L q'
   | L-rounded {q : Rat} : L q -> ∃ (r : L) (q < r)
 
+  -- | Downward closure extended from `<` to `<=`: if `L q` and `r <= q` then `L r`.
   \lemma L_<= {q r : Rat} (Lq : L q) (p : r <= q) : L r
     => \case LinearOrder.<=-dec p \with {
       | inl r<q => L-closed Lq r<q
       | inr r=q => transportInv L r=q Lq
     }
 } \where {
+  -- | Coercion `Rat -> ExtendedLowerReal` sending `x` to the predicate `< x`.
   \use \coerce fromRat (x : Rat) : ExtendedLowerReal \cowith
     | L => < x
     | L-closed s t => t <∘ s
     | L-rounded q<x => TruncP.map (isDense q<x) (\lam t => (t.1,t.3,t.2))
 }
 
+-- | Extends `ExtendedLowerReal` with `L-inh`, asserting `L` is inhabited; rules out `-∞`.
 \record LowerReal \extends ExtendedLowerReal
   | L-inh : ∃ L
   \where {
+    -- | Coercion `Rat -> LowerReal`.
     \use \coerce fromRat (x : Rat) : LowerReal \cowith
       | ExtendedLowerReal => ExtendedLowerReal.fromRat x
       | L-inh => inP (x - 1, linarith)
@@ -48,6 +65,9 @@
       | L-rounded {q} _ => inP (q + 1, (), linarith)
       | L-inh => inP (0,())
 
+    {- | Bounded supremum of a family `f : J -> ExtendedLowerReal` together with a `LowerReal` lower bound `b`; defined
+     -   by `b.L q || ∃ j, (f j).L q`. The bound `b` ensures the result is a genuine `LowerReal` even if `J` is empty.
+     -}
     \func BJoin (b : LowerReal) {J : \Set} (f : J -> ExtendedLowerReal) : LowerReal \cowith
       | L q => b.L q || Given (j : J) ((f j).L q)
       | L-closed e q'<q => \case \elim e \with {
@@ -68,12 +88,15 @@
 
     \open LowerRealAbMonoid(<=)
 
+    -- | `b <= BJoin b f`.
     \lemma BJoin-bound {b : LowerReal} {J : \Set} {f : J -> ExtendedLowerReal} : b <= BJoin b f
       => \lam a<b => byLeft a<b
 
+    -- | Each `f j <= BJoin b f`.
     \lemma BJoin-cond {b : LowerReal} {J : \Set} (j : J) {f : J -> ExtendedLowerReal} : f j <= BJoin b f
       => \lam a<fj => byRight (j,a<fj)
 
+    -- | Universal property: any `e` above `b` and all `f j` is above `BJoin b f`.
     \lemma BJoin-univ {b : LowerReal} {J : \Set} {f : J -> ExtendedLowerReal} {e : ExtendedLowerReal} (b<=e : b <= e) (c : \Pi (j : J) -> f j <= e) : BJoin b f <= e
       => \case \elim __ \with {
         | byLeft a<b => b<=e a<b
@@ -81,6 +104,9 @@
       }
   }
 
+{- | Instance of `BiorderedLatticeAbMonoid` on `LowerReal`, packaging zero, addition, `<`, `<=`, meet, and join with all
+ -   the order/algebra compatibility laws.
+ -}
 \instance LowerRealAbMonoid : BiorderedLatticeAbMonoid LowerReal
   | zro => LowerReal.fromRat 0
   | + => +
@@ -165,6 +191,7 @@
     }
   })
   \where {
+    -- | Addition of lower reals: `L (x+y) a` iff `∃ b ∈ x.L, c ∈ y.L, a < b + c`.
     \sfunc \infixl 6 + (x y : LowerReal) : LowerReal \cowith
       | L a => ∃ (b : x.L) (c : y.L) (a RatField.< b RatField.+ c)
       | L-inh => \case x.L-inh, y.L-inh \with {
@@ -173,17 +200,22 @@
       | L-closed (inP (a,a<x,b,b<y,q<a+b)) q'<q => inP (a, a<x, b, b<y, q'<q <∘ q<a+b)
       | L-rounded {q} (inP (a,a<x,b,b<y,q<a+b)) => inP (RatField.mid q (a RatField.+ b), inP (a, a<x, b, b<y, RatField.mid<right q<a+b), RatField.mid>left q<a+b)
 
+    -- | Characterization of membership in `(x + y).L`.
     \lemma +_L {x y : LowerReal} {a : Rat} : LowerReal.L {x + y} a <-> ∃ (b : x.L) (c : y.L) (a RatField.< b RatField.+ c)
       => rewrite (\peval x + y) <->refl
 
+    -- | Embedding `fromRat` is a homomorphism: `fromRat x + fromRat y = fromRat (x + y)`.
     \lemma +-rat {x y : Rat} : LowerReal.fromRat x + LowerReal.fromRat y = LowerReal.fromRat (x RatField.+ y)
       => (\peval _ + _) *> exts \lam a => ext (\lam (inP (b,b<x,c,c<y,a<b+c)) => a<b+c <∘ OrderedAddMonoid.<_+ b<x c<y,
                                                \lam a<x+y => inP (x - (x RatField.+ y - a) * ratio 1 3, linarith, y - (x RatField.+ y - a) * ratio 1 3, linarith, linarith))
 
+    -- | Order on `ExtendedLowerReal`: `x <= y` iff `x.L ⊆ y.L`.
     \type \infix 4 <= (x y : ExtendedLowerReal) => ∀ {a : x.L} (y.L a)
 
+    -- | Strict order: `x < y` iff some rational `b ∈ y.L` already dominates `x` (i.e. `x <= b`).
     \type \infix 4 < (x y : ExtendedLowerReal) => ∃ (b : y.L) (x <= b)
 
+    -- | For rational `a`, `(a : LowerReal) < x` iff `x.L a`; ties the strict order back to membership.
     \lemma lower_<_L {a : Rat} {x : LowerReal} : (a : LowerReal) LowerRealAbMonoid.< x <-> x.L a
       => (\lam (inP (b,b<x,p)) => \case L-rounded b<x \with {
         | inP (c,c<x,b<c) => L-closed c<x \case LinearOrder.dec<_<= a c \with {
@@ -192,6 +224,7 @@
         }
       }, \lam a<x => inP (a, a<x, \lam p => p))
 
+    -- | Pointwise intersection: `L (meet x y) a = (x.L a × y.L a)`.
     \sfunc meet (x y : LowerReal) : LowerReal \cowith
       | L a => \Sigma (x.L a) (y.L a)
       | L-inh => \case x.L-inh, y.L-inh \with {
@@ -202,9 +235,11 @@
         | inP (r,r<x,q<r), inP (r',r'<y,q<r') => inP (r ∧ r', (x.L_<= r<x meet-left, y.L_<= r'<y meet-right), <_meet-univ q<r q<r')
       }
 
+    -- | Membership characterization for `meet`.
     \lemma meet_L {x y : LowerReal} {a : Rat} : LowerReal.L {meet x y} a <-> (\Sigma (x.L a) (y.L a))
       => rewrite (\peval meet x y) <->refl
 
+    -- | Pointwise union: `L (join x y) a = x.L a || y.L a`.
     \sfunc join (x y : LowerReal) : LowerReal \cowith
       | L a => x.L a || y.L a
       | L-inh => \case x.L-inh \with {
@@ -220,17 +255,21 @@
         }
       }
 
+    -- | Membership characterization for `join`.
     \lemma join_L {x y : LowerReal} {a : Rat} : LowerReal.L {join x y} a <-> x.L a || y.L a
       => rewrite (\peval join x y) <->refl
 
+    -- | `0 < 1` as lower reals.
     \lemma zro<ide : (0 : LowerReal) < (1 : LowerReal) => inP (0, idp, \lam a<0 => a<0)
 
+    -- | If `¬ x.L a` then `x <= fromRat a`; the standard way to upper-bound a lower real by a rational.
     \lemma <=-char {x : LowerReal} {a : Rat} (p : Not (x.L a)) : x <= LowerReal.fromRat a
       => \lam {b} b<x => \case LinearOrder.dec<_<= b a \with {
         | inl b<a => b<a
         | inr a<=b => absurd $ p $ x.L_<= b<x a<=b
       }
 
+    -- | Strict monotonicity of addition: `a < c` and `b < d` imply `a + b < c + d`.
     \lemma <_+ {a b c d : LowerReal} (p : a < c) (q : b < d) : a + b < c + d \elim p, q
       | inP (q,q<c,p1), inP (r,r<d,p2) => inP (q RatField.+ r, LowerRealAbMonoid.+_L.2 $ \case L-rounded q<c, L-rounded r<d \with {
         | inP (q',q'<c,q<q'), inP (r',r'<d,r<r') => inP (q', q'<c, r', r'<d, RatField.<_+ q<q' r<r')
@@ -239,6 +278,10 @@
       })
   }
 
+{- | `CompleteLattice` instance on `ExtendedLowerReal` with arbitrary `Join` given by union of the predicates `L`.
+ -   Inhabitedness is not required, so the empty join (representing `-∞`) is well-defined; this is the natural ambient
+ -   lattice in which `BJoin` lives once a lower bound is supplied.
+ -}
 \instance ExtendedLowerRealLattice : CompleteLattice ExtendedLowerReal
   | <= => LowerRealAbMonoid.<=
   | <=-refl a<x => a<x

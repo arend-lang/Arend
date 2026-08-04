@@ -1,3 +1,11 @@
+{- | Small utility helpers for working with terms in the higher-order rewriting system (HRS) framework.
+ -
+ -   This module provides a couple of low-level conveniences used elsewhere in the TRS development: a helper for
+ -   case-splitting on the head symbol of a term, and a lemma for extracting equality of dependent components when the
+ -   base index is fixed. They are kept here so that the main TRS files can avoid repeating boilerplate pattern matches
+ -   and sigma-equality manipulations.
+ -}
+
 \import Data.List \hiding (Sort)
 \import Data.Maybe
 \import Logic
@@ -6,8 +14,13 @@
 \import Paths
 \import Logic.Rewriting.TRS.HRS
 
+-- | A `\meta` shorthand `\lam e => contradiction`, used to discharge impossible cases via lambda when pattern matching.
 \meta impossible-lambda => \lam e => contradiction
 
+{- | Given a term `T : Term env context s mc`, returns `just (f, arguments)` if `T` is headed by a function symbol `f`
+ -   with the expected dependent argument family, and `nothing` for variables or metavariables. Used to safely peel off
+ -   the function-symbol layer of a term.
+ -}
 \func unwrap-func {env : FSignature} {s : Sort} {context : List Sort} {mc : MetaContext Sort}
                   (T : Term env context s mc) : Maybe
     (\Sigma (f : env.symbol s) (\Pi (index : Index (env.domain f)) ->
@@ -16,5 +29,9 @@
   | metavar m arguments1 => nothing
   | func f1 arguments1 => just (f1, arguments1)
 
+{- | For a type family `B : A -> \Type` over a set `A`, given an equality `(a, b) = (a, b')` in `\Sigma (x : A) (B x)`
+ -   with the same first component `a`, extracts the underlying equality `b = b'`. Relies on `prop-isProp` to identify
+ -   the (necessarily reflexive) first-component path with `idp` before applying dependent `pmap`.
+ -}
 \func sigma-set-equalizer {A : \Set} {B : A -> \Type} {a : A} {b b' : B a} (p : (a,b) = {\Sigma (x : A) (B x)} (a,b')) : b = b'
   => pmap (transport B __ b) (prop-isProp idp (pmap __.1 p)) *> pmapd __.2 p

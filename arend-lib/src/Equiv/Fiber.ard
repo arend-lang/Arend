@@ -1,3 +1,12 @@
+{- | Characterizes equivalences in terms of contractibility of their fibers.
+ -
+ -   This module establishes the standard homotopy-theoretic equivalence: a map `f : A -> B` is an equivalence iff every
+ -   fiber `Σ(a : A), f a = b` is contractible. The forward direction extracts a quasi-equivalence by taking the
+ -   contraction center as a section, with the fiber-contraction property witnessing both `ret_f` and `f_sec`. The
+ -   reverse direction proves contractibility from any `Equiv` (and more generally from a `Section` paired with a
+ -   `Retraction`), giving the standard logical equivalence between the two characterizations of equivalence.
+ -}
+
 \import Homotopy.Fibration
 \import Logic
 \import Paths
@@ -5,9 +14,16 @@
 \import Equiv
 \import Equiv.HalfAdjoint
 
+{- | Predicate `(f : A -> B)` asserting that for every `b : B`, the fiber `Σ (a : A) (f a = b)` is contractible. The
+ -   standard "contractible fibers" characterization of an equivalence.
+ -}
 \func HasContrFibers {A B : \Type} (f : A -> B) : \Prop
   => \Pi (b : B) -> Contr (\Sigma (a : A) (f a = b))
 
+{- | From `hasContrFibers f`, constructs a `QEquiv f`. The inverse `ret y` is the first component of the contraction
+ -   center of the fiber over `y`; `ret_f` follows by transporting the fiber-contraction along `(x, idp)`, and `f_sec`
+ -   is the second component of the center.
+ -}
 \func contrFibers=>QEquiv {A B : \Type} {f : A -> B} (p : HasContrFibers f) : QEquiv f \cowith
   | ret y => (p y).center.1
   | ret_f x => pmap (\lam (r : Fib f (f x)) => r.1) ((p (f x)).contraction (x,idp))
@@ -16,9 +32,13 @@
 \lemma contrFibers=>IsEquiv {A B : \Type} {f : A -> B} (p : HasContrFibers f) : IsEquiv f
   => inP (contrFibers=>QEquiv p)
 
+-- | Any `Equiv e` has contractible fibers — the converse direction completing the characterization.
 \lemma IsEquiv=>contrFibers {A B : \Type} {f : A -> B} (e : IsEquiv f) : HasContrFibers f \elim e
   | inP e => fromSection e e
   \where {
+    {- | Strengthening showing that a `Section s` together with a `Retraction s` already suffices to produce
+     -   `hasContrFibers s`, without needing the full half-adjoint coherence.
+     -}
     \protected \lemma fromSection (s : Section f) (r : Retraction f) : HasContrFibers f
       => \lam b0 =>
           \let | r' y => pmap (\lam y => f (s.ret y)) (inv (r.f_sec y)) *> pmap f (s.ret_f (r.sec y)) *> r.f_sec y

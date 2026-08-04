@@ -1,3 +1,16 @@
+{- | Defines left modules over a ring and develops the linear-algebra machinery of independence, generation, and bases.
+ -
+ -   This module introduces `LModule R` as an abelian group equipped with a scalar multiplication `*c : R -> E -> E`
+ -   satisfying the usual axioms. The bulk of the file develops two parallel formulations of linear (in)dependence and
+ -   generation: an indexed array-based version (`IsIndependent`, `IsGenerated`, `IsBasis`) suited to finite
+ -   presentations, and a set-based version (`IsIndependentSet`, `IsGeneratingSet`, `IsBasisSet`) parameterized by an
+ -   arbitrary indexing set, with equivalences between the two formulations. The set-based independence uses an
+ -   auxiliary equivalence relation `Z~` on formal sums (arrays of `(R, J)` pairs) modulo zero-sums, capturing when two
+ -   formal linear combinations represent the same element. Standard module constructions are also provided: products,
+ -   the regular module `R` over itself, function modules `Array M n`, and pullback/composition of modules along ring
+ -   homomorphisms.
+ -}
+
 \import Algebra.Group
 \import Algebra.Group.Product
 \import Algebra.Meta
@@ -31,6 +44,9 @@
 \open AddMonoid
 \open AbMonoid
 
+{- | Left module over a `Ring R`, extending `AbGroup`. Provides scalar multiplication `*c : R -> E -> E` with
+ -   associativity (`*c-assoc`), left and right distributivity (`*c-ldistr`, `*c-rdistr`), and unit law (`ide_*c`).
+ -}
 \class LModule (R : Ring) \extends AbGroup {
   | \infixl 7 *c : R -> E -> E
   | *c-assoc {r r' : R} {a : E} : r * r' *c a = r *c (r' *c a)
@@ -38,106 +54,148 @@
   | *c-rdistr {r s : R} {a : E} : (r R.+ s) *c a = r *c a + s *c a
   | ide_*c {a : E} : 1 *c a = a
 
+  -- | Cancellation by an invertible scalar: if `r` is invertible and `r *c a = r *c b`, then `a = b`.
   \lemma cancel {r : R} {a b : E} (i : Monoid.Inv r) (s : r *c a = r *c b) : a = b
     => inv ide_*c *> inv (pmap (*c a) i.inv-left) *> *c-assoc *> pmap (i.inv *c) s *> inv *c-assoc *> pmap (*c b) i.inv-left *> ide_*c
 
+  -- | Scalar/vector zero annihilates: `0 *c a = 0` and `r *c 0 = 0`.
   \lemma *c_zro-left {a : E} : 0 *c a = 0
     => cancel-left (0 *c a) $ inv *c-rdistr *> simplify
 
+  -- | Scalar/vector zero annihilates: `0 *c a = 0` and `r *c 0 = 0`.
   \lemma *c_zro-right {r : R} : r *c 0 = 0
     => cancel-left (r *c 0) $ inv *c-ldistr *> simplify
 
+  -- | Negation commutes with scalar multiplication on either side.
   \lemma *c_negative-left {r : R} {a : E} : R.negative r *c a = negative (r *c a)
     => negative-unique (r *c a) (inv *c-rdistr *> pmap (*c a) R.negative-left *> *c_zro-left) negative-right
 
+  -- | Negation commutes with scalar multiplication on either side.
   \lemma *c_negative-right {r : R} {a : E} : r *c negative a = negative (r *c a)
     => negative-unique (r *c a) (inv *c-ldistr *> pmap (r *c) negative-left *> *c_zro-right) negative-right
 
+  -- | Distributivity over subtraction on either side.
   \lemma *c-ldistr_- {r : R} {a b : E} : r *c (a - b) = r *c a - r *c b
     => *c-ldistr *> pmap (_ +) *c_negative-right
 
+  -- | Distributivity over subtraction on either side.
   \lemma *c-rdistr_- {r s : R} {a : E} : (r - s) *c a = r *c a - s *c a
     => *c-rdistr *> pmap (_ +) *c_negative-left
 
+  -- | `-1 *c a = negative a`.
   \lemma neg_ide_*c {a : E} : -1 *c a = negative a
     => *c_negative-left *> pmap negative ide_*c
 
+  -- | `natCoef n *c a = n *n a` (compatibility with the natural-number coefficient action).
   \lemma natCoef_*c {n : Nat} {a : E} : natCoef n *c a = n *n a \elim n
     | 0 => pmap (*c a) natCoefZero *> *c_zro-left
     | suc n => pmap (*c a) (natCoefSuc n) *> *c-rdistr *> pmap2 (+) natCoef_*c ide_*c
 
+  -- | Distributivity of `*c` over `BigSum` on either argument.
   \lemma *c_BigSum-rdistr {l : Array R} {a : E} : R.BigSum l *c a = BigSum (\lam i => l i *c a) \elim l
     | nil => *c_zro-left
     | r :: l => *c-rdistr *> pmap (_ +) *c_BigSum-rdistr
 
+  -- | Distributivity of `*c` over `BigSum` on either argument.
   \lemma *c_BigSum-ldistr {r : R} {l : Array E} : r *c BigSum l = BigSum (\lam i => r *c l i) \elim l
     | nil => *c_zro-right
     | a :: l => *c-ldistr *> pmap (_ +) *c_BigSum-ldistr
 
+  -- | Same as above for `FinSum` indexed by a `FinSet`.
   \lemma *c_FinSum-rdistr {J : FinSet} {f : J -> R} {a : E} : R.FinSum f *c a = FinSum (\lam j => f j *c a)
     => \case R.FinSum_char f \with {
          | inP (e,p) => pmap (*c a) p *> *c_BigSum-rdistr *> inv (FinSum_char2 e)
        }
 
+  -- | Same as above for `FinSum` indexed by a `FinSet`.
   \lemma *c_FinSum-ldistr {r : R} {J : FinSet} {f : J -> E} : r *c FinSum f = FinSum (\lam j => r *c f j)
     => \case FinSum_char f \with {
          | inP (e,p) => pmap (r *c) p *> *c_BigSum-ldistr *> inv (FinSum_char2 e)
        }
 
+  -- | A list `l` admits a nontrivial linear combination summing to zero.
   \func IsDependent (l : Array E) : \Prop
     => ∃ (c : Array R l.len) (BigSum (\lam j => c j *c l j) = 0) (j : Fin l.len) (c j /= 0)
 
+  -- | Every linear combination summing to zero has all coefficients zero.
   \func IsIndependent (l : Array E) : \Prop
     => \Pi (c : Array R l.len) -> BigSum (\lam j => c j *c l j) = 0 -> \Pi (j : Fin l.len) -> c j = 0
 
+  -- | Every element is a linear combination of `l`.
   \type IsGenerated (l : Array E) : \Prop
     => \Pi (x : E) -> ∃ (c : Array R l.len) (x = BigSum (\lam i => c i *c l i))
 
+  -- | Conjunction of `IsIndependent` and `IsGenerated`.
   \type IsBasis (l : Array E) : \Prop
     => \Sigma (IsIndependent l) (IsGenerated l)
 
+  -- | A prefix of an independent list is independent.
   \lemma independent-subset {l : Array E} (li : IsIndependent l) {k : Nat} (p : k <= l.len) : IsIndependent (\lam j => l (fin-inc_<= p j))
     => \lam c q j => inv (fit_<' c _) *> li (fit R.zro c) (inv (BigSum-subset {_} {_} {\lam j => fit R.zro c j *c l j} p
                       (\lam i => pmap (*c _) (inv (fit_<' c (fin_< i <∘l p))))
                       (\lam i k<=i => pmap (*c _) (fit_>= c k<=i) *> *c_zro-left)) *> q) (fin-inc_<= p j)
 
+  -- | If a basis element equals zero, then `0 = 1` in `R` (so `R` is trivial).
   \lemma independent-nonZero {l : Array E} (lb : IsIndependent l) {j : Fin l.len} (p : l j = 0) : 0 = {R} 1
     => inv (lb (replace (replicate l.len R.zro) j ide) (BigSum_zro \lam k => later \case decideEq j k \with {
       | yes j=k => rewriteI j=k $ rewrite replace-index $ ide_*c *> p
       | no j/=k => rewrite (replace-notIndex {_} {replicate l.len R.zro} \lam p => j/=k $ fin_nat-inj p) *c_zro-left
     }) j) *> replace-index
 
+  {- | For `g : J -> E`, every formal sum (an `Array (\Sigma R J)`) summing to zero is a `IsZeroSum`. Has a
+   -   `\where`-block of helpers for working with formal sums.
+   -}
   \type IsIndependentSet {J : \Set} (g : J -> E) : \Prop
     => \Pi (c : Array (\Sigma R J)) -> sum g c = 0 -> IsZeroSum c
     \where {
+      -- | Evaluate a formal sum `Array (\Sigma R J)` against `g`.
       \func sum (g : J -> E) (c : Array (\Sigma R J)) => BigSum (\lam j => (c j).1 *c g (c j).2)
 
+      {- | Algebraic properties of `sum` (scalar distribution, concatenation, flattening, negation, permutation
+       -   invariance).
+       -}
       \lemma sum-ldistr (g : J -> E) {r : R} {c : Array (\Sigma R J)} : r *c sum g c = sum g (map (\lam s => (r * s.1, s.2)) c)
         => *c_BigSum-ldistr *> pmap BigSum (exts \lam j => inv *c-assoc)
 
+      {- | Algebraic properties of `sum` (scalar distribution, concatenation, flattening, negation, permutation
+       -   invariance).
+       -}
       \lemma sum_++ (g : J -> E) {c d : Array (\Sigma R J)} : sum g (c ++ d) = sum g c + sum g d
         => pmap BigSum (map_++ (\lam s => s.1 *c g s.2)) *> BigSum_++
 
+      {- | Algebraic properties of `sum` (scalar distribution, concatenation, flattening, negation, permutation
+       -   invariance).
+       -}
       \lemma sum_Big++ (g : J -> E) {l : Array (Array (\Sigma R J))} : sum g (Big (++) nil l) = BigSum (map (sum g) l) \elim l
         | nil => idp
         | c :: l => sum_++ g *> pmap (_ +) (sum_Big++ g)
 
+      {- | Algebraic properties of `sum` (scalar distribution, concatenation, flattening, negation, permutation
+       -   invariance).
+       -}
       \lemma sum_negative (g : J -> E) {c : Array (\Sigma R J)} : negative (sum g c) = sum g (map (\lam s => (R.negative s.1, s.2)) c)
         => BigSum_negative *> pmap BigSum (exts \lam j => inv *c_negative-left)
 
+      {- | Algebraic properties of `sum` (scalar distribution, concatenation, flattening, negation, permutation
+       -   invariance).
+       -}
       \lemma sum_EPerm (g : J -> E) {l l' : Array (\Sigma R J)} (p : EPerm l l') : sum g l = sum g l'
         => BigSum_EPerm $ EPerm.EPerm_map (\lam s => s.1 *c g s.2) p
 
+      -- | Independence implies that equal sums are `Z~`-related.
       \lemma =_~ (gi : IsIndependentSet g) {c d : Array (\Sigma R J)} (p : sum g c = sum g d) : c Z~ d
         => gi _ $ sum_++ g *> pmap2 (+) (inv (sum_negative g)) p *> negative-left
 
+      -- | Zero-sums evaluate to `0`; `Z~`-related sums evaluate equally.
       \lemma IsZeroSum_= (g : J -> E) {c : Array (\Sigma R J)} (p : IsZeroSum c) : sum g c = 0 \elim p
         | inP (l',e,f) => sum_EPerm g e *> sum_Big++ g *> BigSum_zro \lam j => unfold sum $ inv *c_BigSum-rdistr *> pmap (*c _) (f j) *> *c_zro-left
 
+      -- | Zero-sums evaluate to `0`; `Z~`-related sums evaluate equally.
       \lemma ~_= (g : J -> E) {c d : Array (\Sigma R J)} (p : c Z~ d) : sum g c = sum g d
         => fromZero $ +-comm *> pmap (+ _) (sum_negative g) *> later (inv (sum_++ g)) *> IsZeroSum_= g p
     }
 
+  -- | Pulling back an independent set along an injection stays independent.
   \lemma IsIndependentSet-right-inj {J K : \Set} {f : J -> K} (inj : IsInj f) {g : K -> E} (gi : IsIndependentSet g) : IsIndependentSet (\lam j => g (f j))
     => \lam c p => \case IsZeroSum.nonEmpty $ gi (map (\lam s => (s.1, f s.2)) c) p \with {
          | inP (l1, e, h) => inP
@@ -153,13 +211,16 @@
                 transportInv (\lam (l : Array (Array R)) => \Pi (j : Fin l.len) -> R.BigSum (l j) = 0) (pmap (map __.1) l2p) h)
        }
 
+  -- | Variant of independence that quantifies over injective `Array J` indexings.
   \type IsIndependentDec {J : \Set} (g : J -> E) : \Prop
     => \Pi (l : Array J) (c : Array R l.len) -> IsInj l -> BigSum (\lam j => c j *c g (l j)) = 0 -> \Pi (j : Fin c.len) -> c j = 0
 
+  -- | Equivalence of `IsIndependentSet` and `IsIndependentDec` for decidable `J`.
   \lemma IsIndependentSet<->IsIndependentDec {J : DecSet} {g : J -> E} : IsIndependentSet g <-> IsIndependentDec g
     => (\lam li l c inj p j => inv (count-unique {_} {J} {_} {c} inj j) *> IsZeroSum_count (li (\lam j => (c j, l j)) p) (l j),
         \lam li c p => count_IsZeroSum $ li _ (map (count c) $ nub (map __.2 c)) nub-isInj $ pmap BigSum (exts \lam j => *c_BigSum-rdistr *> pmap BigSum (exts \lam k => pmap (_ *c g __) $ keep.satisfies (\lam s => decideEq (nub (map (\lam p0 => p0.2) c) j) s.2) {c} {k})) *> inv (sum_Big++ g) *> inv (sum_EPerm g nub-split) *> p)
 
+  -- | Array independence agrees with set independence (over `Fin l.len`).
   \lemma IsIndependent<->IsIndependentSet {l : Array E} : IsIndependent l <-> IsIndependentSet l
     => (\lam li c p => count_IsZeroSum \lam j => li (count c) (inv sum_BigSum *> p) _,
         \lam li c p j => IsIndependentSet<->IsIndependentDec.1 li (mkArray \lam j => j) c (\lam q => q) p j)
@@ -170,6 +231,7 @@
               \let (i,q) => nub-preimage j
               \in rewrite q $ *c_BigSum-rdistr *> pmap BigSum (exts \lam k => pmap (_ *c l __) $ keep.satisfies (\lam s => decideEq (c i).2 s.2) {c} {k}))) *> FinSum=BigSum
 
+  -- | For finite `J`, set independence reduces to coefficient-wise vanishing of `FinSum`.
   \lemma IsIndependentSet-fin {J : FinSet} {g : J -> E} : IsIndependentSet g <-> (\Pi (c : J -> R) -> FinSum (\lam j => c j *c g j) = 0 -> \Pi (j : J) -> c j = 0)
     => \case J.finEq \with {
       | inP e =>
@@ -179,101 +241,129 @@
                pmap c (inv $ e.ret_f i) *> gi (\lam j => c (e.ret j)) (FinSum_char2 e *> pmap BigSum (exts \lam i => pmap (c __ *c _) (e.ret_f i)) *> p) (e i))
     }
 
+  -- | Every element is in the image of `sum g` for some formal sum.
   \type IsGeneratingSet {J : \Set} (g : J -> E) : \Prop
     => \Pi (x : E) -> ∃ (c : Array (\Sigma R J)) (x = IsIndependentSet.sum g c)
 
+  -- | Equivalent characterization in terms of `FinSum` over arbitrary finite index sets.
   \lemma IsGeneratingSet-fin {J : \Set} {g : J -> E} : IsGeneratingSet g <-> (\Pi (x : E) -> ∃ (K : FinSet.{0}) (c : K -> \Sigma R J) (x = FinSum (\lam k => (c k).1 *c g (c k).2)))
     => (\lam gs x => TruncP.map (gs x) \lam s => (_, s.1, s.2 *> inv FinSum=BigSum), \lam gs x =>
          \have | (inP (K, c, p)) => gs x
                | (inP e) => K.finEq
          \in inP (\lam j => c (e j), p *> FinSum_Equiv e *> FinSum=BigSum))
 
+  -- | Pushing forward a generating set along a surjection stays generating.
   \lemma IsGeneratingSet-surj {J K : \Set} {f : J -> K} (surj : IsSurj f) {g : K -> E} (gi : IsGeneratingSet g) : IsGeneratingSet (\lam j => g (f j))
     => \lam x =>
         \have | (inP s) => gi x
               | (inP h) => FinSet.finiteAC (\lam i => surj (s.1 i).2)
         \in inP (mkArray \lam i => ((s.1 i).1, (h i).1), s.2 *> pmap BigSum (exts \lam i => cong (inv (h i).2)))
 
+  -- | Bases transport along equivalences of index sets.
   \lemma IsBasisSet-equiv {J K : \Set} (e : QEquiv {J} {K}) {g : K -> E} (gb : IsBasisSet g) : IsBasisSet (\lam j => g (e j))
     => (IsIndependentSet-right-inj e.isInj gb.1, IsGeneratingSet-surj e.isSurj gb.2)
 
+  -- | Equivalences with the array-based notions.
   \lemma IsGenerated<->IsGeneratingSet {l : Array E} : IsGenerated l <-> IsGeneratingSet l
     => (\lam lg x => TruncP.map (lg x) \lam s => (\lam j => (s.1 j, j), s.2),
         \lam lg x => TruncP.map (lg x) \lam s => (count s.1, s.2 *> IsIndependent<->IsIndependentSet.sum_BigSum))
 
+  -- | Conjunction of `IsIndependentSet` and `IsGeneratingSet`.
   \type IsBasisSet {J : \Set} (g : J -> E) : \Prop
     => \Sigma (IsIndependentSet g) (IsGeneratingSet g)
 
+  -- | Equivalences with the array-based notions.
   \lemma IsBasis<->IsBasisSet {l : Array E} : IsBasis l <-> IsBasisSet l
     => (\lam b => (IsIndependent<->IsIndependentSet.1 b.1, IsGenerated<->IsGeneratingSet.1 b.2),
         \lam b => (IsIndependent<->IsIndependentSet.2 b.1, IsGenerated<->IsGeneratingSet.2 b.2))
 
+  -- | Two combinations equal as sums must agree coefficient-wise on an independent list.
   \lemma independent-split-unique {l : Array E} (li : IsIndependent l) {c d : Array R l.len} (p : BigSum (\lam j => c j *c l j) = BigSum (\lam j => d j *c l j)) (j : Fin l.len) : c j = d j
     => R.fromZero $ li (\lam i => c i - d i) (cancel-right _ $ inv (BigSum_+ {_} {_} {\lam j => (c j - d j) *c l j}) *> pmap BigSum (exts \lam j => pmap (+ _) *c-rdistr *> +-assoc *> pmap (_ +) (pmap (+ _) *c_negative-left *> negative-left) *> zro-right) *> p *> inv zro-left) j
 
+  {- | For a basis `l` and element `x`, returns the unique coefficient array witnessing `x = BigSum (c j *c l j)`,
+   -   packaged as a propositionally unique pair.
+   -}
   \lemma basis-split-pair {l : Array E} (lb : IsBasis l) (x : E) : \Sigma (c : Array R l.len) (x = BigSum (\lam j => c j *c l j))
     \level basis-split-unique lb.1 x
     => \case lb.2 x \with {
       | inP r => r
     }
     \where {
+      -- | The decomposition is propositionally unique.
       \lemma basis-split-unique {l : Array E} (li : IsIndependent l) (x : E) : isProp (\Sigma (c : Array R l.len) (x = BigSum (\lam j => c j *c l j)))
         => \lam s t => ext $ exts $ independent-split-unique li (inv s.2 *> t.2)
     }
 
+  -- | The coefficient array projecting `x` onto the basis `l`.
   \sfunc basis-split {l : Array E} (lb : IsBasis l) (x : E) : Array R l.len
     => (basis-split-pair lb x).1
 
+  -- | `x = BigSum (basis-split lb x j *c l j)`.
   \lemma basis-split-char {l : Array E} {lb : IsBasis l} {x : E} : x = BigSum (\lam j => basis-split lb x j *c l j)
     => (basis-split-pair lb x).2 *> pmap BigSum (exts \lam j => pmap {Array R l.len} (__ j *c _) (inv \peval basis-split lb x))
 
+  -- | Any decomposition coincides with `basis-split`.
   \lemma basis-split-unique {l : Array E} (lb : IsBasis l) {x : E} (d : Array R l.len) (p : x = BigSum (\lam j => d j *c l j)) (j : Fin l.len) : basis-split lb x j = d j
     => independent-split-unique lb.1 (inv basis-split-char *> p) j
 
+  -- | `basis-split` of a basis vector is the Kronecker delta.
   \lemma basis_split_basis {l : Array E} {lb : IsBasis l} {j k : Fin l.len} : basis-split lb (l j) k = (\case decideEq j k \with { | yes _ => 1 | no _ => 0 })
     => \let f : Array R l.len => \case decideEq j __ \with { | yes _ => 1 | no _ => 0 }
        \in independent-split-unique lb.1 {_} {f} (inv $ BigSum-unique {_} {\lam k => f k *c l k} j (\lam k j/=k => rewrite (decideEq/=_reduce j/=k) *c_zro-left) *> rewrite (decideEq=_reduce idp) ide_*c *> basis-split-char) k
 
+  -- | `basis-split` of a basis vector is the Kronecker delta.
   \lemma basis_split_= {l : Array E} {lb : IsBasis l} {j : Fin l.len} : basis-split lb (l j) j = 1
     => basis_split_basis *> rewrite (decideEq=_reduce idp) idp
 
+  -- | `basis-split` of a basis vector is the Kronecker delta.
   \lemma basis_split_/= {l : Array E} {lb : IsBasis l} {j k : Fin l.len} (j/=k : j /= k) : basis-split lb (l j) k = 0
     => basis_split_basis *> rewrite (decideEq/=_reduce j/=k) idp
 
+  -- | Every element is a `FinSum` over a `FinSet`.
   \type IsGeneratedFin {J : FinSet} (f : J -> E) : \Prop
     => \Pi (x : E) -> ∃ (c : J -> R) (x = FinSum (\lam j => c j *c f j))
 
+  -- | Existence of a finite generating array.
   \protected \func IsFinitelyGenerated : \Prop
     => ∃ (l : Array E) (IsGenerated l)
 
+  -- | From a basis indexed by a `FinSet`, extract a basis array of length `J.finCard`.
   \lemma basisSet_basis (J : FinSet) {g : J -> E} (gb : IsBasisSet g) : ∃ (l : Array E J.card) (IsBasis l)
     => \case J.finEq \with {
          | inP e => inP (\lam j => g (e j), IsBasis<->IsBasisSet.2 $ IsBasisSet-equiv e gb)
        }
 
+  -- | Free-module characterization: array bases ↔ basis sets indexed by some `FinSet`.
   \lemma free-char : ∃ (l : Array E) (IsBasis l) <-> ∃ (J : FinSet.{0}) (g : J -> E) (IsBasisSet g)
     => (TruncP.map __ \lam s => (FinFin (DArray.len {s.1}), s.1, IsBasis<->IsBasisSet.1 s.2), \case __ \with {
          | inP (J,g,gb) => basisSet_basis J gb
        })
 
+  -- | Conversions between `IsGenerated` (array) and `IsGeneratedFin` / `IsFinitelyGenerated`.
   \lemma generated-array-fin {l : Array E} (g : IsGenerated l) : IsGeneratedFin l
     => \lam x => TruncP.map (g x) \lam t => (t.1, t.2 *> inv FinSum=BigSum)
 
+  -- | Conversions between `IsGenerated` (array) and `IsGeneratedFin` / `IsFinitelyGenerated`.
   \lemma generated-fin-array {J : FinSet} {f : J -> E} (g : IsGeneratedFin f) : IsFinitelyGenerated
     => \case J.finEq \with {
       | inP e => inP (\lam i => f (e i), \lam x => TruncP.map (g x) \lam t => (\lam i => t.1 (e i), t.2 *> FinSum_Equiv e *> FinSum=BigSum))
     }
 
+  -- | The action is faithful: only `r = 0` annihilates every element.
   \func IsFaithful : \Prop
     => \Pi (r : R) -> (\Pi (m : E) -> r *c m = 0) -> r = 0
 } \where {
+  -- | For `l : Array (\Sigma R J)` and `j : J`, sums the coefficients tagged with `j`.
   \func count {R : Semiring} {J : DecSet} (l : Array (\Sigma R J)) (j : J) : R
     => R.BigSum (map __.1 $ keep (\lam s => decideEq j s.2) l)
 
+  -- | `count l j = 0` when `j` doesn't appear in `l`.
   \lemma count_zro {R : Semiring} {J : DecSet} {l : Array (\Sigma R J)} (j : J) (p : \Pi (k : Fin l.len) -> j /= (l k).2) : count {R} l j = 0
     => R.BigSum_zro \lam k => later \let t => keep.preimage k
                                     \in absurd $ p t.1 $ keep.satisfies (\lam s => decideEq j s.2) {l} *> pmap __.2 t.2
 
+  -- | For an injective indexing, `count` recovers the original coefficient.
   \lemma count-unique {R : Semiring} {J : DecSet} {l : Array J} {c : Array R l.len} (inj : IsInj l) (k : Fin l.len) : count (\lam j => (c j, l j)) (l k) = c k \elim l, k
     | j :: l, 0 => unfold count $ rewrite (decideEq=_reduce idp) $ pmap (_ +) (pmap (\lam x => BigSum (map {\Sigma R J} __.1 x)) (keep-none \lam k p => \case inj {0} {suc k} p)) *> zro-right
     | j :: l, suc k => unfold count $ mcases \with {
@@ -281,9 +371,11 @@
       | no q => count-unique {R} {J} {l} {\lam j => c (suc j)} (\lam p => unfsuc (inj p)) k
     }
 
+  -- | A formal sum is a zero-sum if (up to permutation) it groups into per-index blocks each summing to zero.
   \type IsZeroSum {R : Semiring} {J : \Set} (l : Array (\Sigma R J)) : \Prop
     => ∃ (l' : Array (\Sigma (Array R) J)) (EPerm l (Big (++) nil $ map (\lam s => map (__, s.2) s.1) l')) (\Pi (j : Fin l'.len) -> R.BigSum (l' j).1 = 0)
     \where {
+      -- | Normalizes by removing empty coefficient blocks.
       \private \lemma aux {l : Array (\Sigma (Array R) J)}
         : Big (++) nil (map (\lam s => map (__, s.2) s.1) l) =
           Big (++) nil (mkArray \lam i => map (__, (remove (\lam s => decideEq (DArray.len {s.1}) 0) l i).2) (remove (\lam s => decideEq (DArray.len {s.1}) 0) l i).1) \elim l
@@ -295,6 +387,7 @@
           | no n => pmap (_ ++) aux
         }
 
+      -- | Witness with all blocks nonempty.
       \lemma nonEmpty {l : Array (\Sigma R J)} (zs : IsZeroSum l) : ∃ (l' : Array (\Sigma (c : Array R) J (c.len /= 0))) (EPerm l (Big (++) nil $ map (\lam s => map (__, s.2) s.1) l')) (\Pi (j : Fin l'.len) -> R.BigSum (l' j).1 = 0) \elim zs
         | inP (l1,e,f) =>
           \let l2 => remove (\lam s => decideEq (DArray.len {s.1}) 0) l1
@@ -303,15 +396,18 @@
                    \lam i => \let (k,p) => remove.preimage i \in pmap (\lam x => BigSum x.1) p *> f k)
     }
 
+  -- | Equivalence of formal sums: `l1 Z~ l2` iff `negate(l2) ++ l1` is a zero-sum.
   \type \infix 4 Z~ {R : Ring} {J : \Set} (l1 l2 : Array (\Sigma R J)) : \Prop
     => IsZeroSum (map (\lam s => (R.negative s.1, s.2)) l2 ++ l1)
 
+  -- | If every distinct index has zero count, the sum is a zero-sum.
   \lemma count_IsZeroSum {R : Semiring} {J : DecSet} {l : Array (\Sigma R J)} (p : \Pi (j : Fin (DArray.len {nub $ map __.2 l})) -> count l (nub (map __.2 l) j) = 0) : IsZeroSum l
     => inP (map (\lam j => (map __.1 $ keep (\lam s => decideEq j s.2) l, j)) (nub $ map __.2 l), eperm-trans nub-split $ EPerm.eperm-= $ pmap (Big (++) nil) $ exts \lam i =>
         \let | j => nub (map __.2 l) i
              | l' => \new keep (\lam s => decideEq j s.2) l
         \in (exts (\lam k => ext (idp, inv $ keep.satisfies (\lam s => decideEq j s.2) {l})) : l' = map (\lam s => (s.1,j)) l'), p)
 
+  -- | Conversely, zero-sums have zero count at every index. Includes `count_EPerm`, `count_++`, `count_Big++` lemmas.
   \lemma IsZeroSum_count {R : Semiring} {J : DecSet} {l : Array (\Sigma R J)} (p : IsZeroSum l) (j : J) : count l j = 0 \elim p
     | inP (l',e,f) => count_EPerm e *> count_Big++ *> BigSum_zro \lam i => later \case decideEq j (l' i).2 \with {
       | yes p => pmap (\lam x => BigSum (map {\Sigma R J} __.1 x)) (keep-all \lam k => later p) *> f i
@@ -335,12 +431,18 @@
 
   \open IsIndependentSet
 
+  {- | Given a basis `u : J -> U` and a parallel target `v : J -> V`, transports `x : U` to a unique `y : V` along the
+   -   same coefficients (well-defined by `Z~`).
+   -}
   \sfunc basisSet-split {R : Ring} {U V : LModule R} {J : \Set} {u : J -> U} (ub : U.IsBasisSet u) (v : J -> V) (x : U)
     : \Sigma (y : V) (∃ (c : Array (\Sigma R J)) (x = sum u c) (y = sum v c))
     => \case TruncP.rec-set (ub.2 x) (\lam s => sum v s.1) (\lam s s' => ~_= v $ =_~ ub.1 $ inv s.2 *> s'.2) \with {
       | (y, t) => (y, TruncP.map t \lam s => (s.1.1, s.1.2, inv s.2))
     }
 
+  {- | Given `f : RingHom` and an `f.Cod`-module `M`, produces an `f.Dom`-module on the same underlying group via
+   -   `r *c x := f r *c x`.
+   -}
   \func pullback (f : RingHom) (M : LModule f.Cod) : LModule f.Dom \cowith
     | AbGroup => M
     | *c a x => f a *c x
@@ -349,6 +451,9 @@
     | *c-rdistr => pmap (*c _) f.func-+ *> *c-rdistr
     | ide_*c => pmap (*c _) f.func-ide *> ide_*c
 
+  {- | If `f.Cod` is finitely generated over `f.Dom` and `M` is finitely generated over `f.Cod`, then `M` (as
+   -   `f.Dom`-module) is generated by the product family.
+   -}
   \lemma generated-fin-comp (f : RingHom) {M : LModule f.Cod} {I J : FinSet} {a : I -> f.Cod} {b : J -> M} (Cg : (homLModule f).IsGeneratedFin a) (Mg : M.IsGeneratedFin b)
     : LModule.IsGeneratedFin {pullback f M} (\lam (p : \Sigma J I) => a p.2 *c b p.1)
     => \lam x => \have | (inP (d,p)) => Mg x
@@ -356,13 +461,16 @@
                  \in inP (\lam s => (g s.1).1 s.2, p *> path (\lam i => FinSum (\lam j => (g j).2 i *c b j)) *>
                             path (\lam i' => FinSum (\lam j => M.*c_FinSum-rdistr {I} {\lam i => (g j).1 i *c a i} {b j} i')) *> FinSum-double *> pmap FinSum (ext \lam s => *c-assoc))
 
+  -- | Pullback preserves finite generation under composition.
   \lemma generated-pullback (f : RingHom) {M : LModule f.Cod} (Cg : (homLModule f).IsFinitelyGenerated) (Mg : M.IsFinitelyGenerated) : (pullback f M).IsFinitelyGenerated \elim Cg, Mg
     | inP (l,Cg), inP (l',Mg) => LModule.generated-fin-array {pullback f M} $ generated-fin-comp f (LModule.generated-array-fin Cg) (M.generated-array-fin Mg)
 
+  -- | Finite generation composes along ring homomorphisms.
   \lemma generated-comp {R S T : Ring} (f : RingHom R S) (g : RingHom S T) (fg : (homLModule f).IsFinitelyGenerated) (gg : (homLModule g).IsFinitelyGenerated) : (homLModule (g RingHom.∘ f)).IsFinitelyGenerated
     => generated-pullback f fg gg
 }
 
+-- | The product `A × B` of `R`-modules with componentwise scalar action.
 \instance ProductLModule (R : Ring) (A B : LModule R) : LModule R
   | AbGroup => ProductAbGroup A B
   | *c r p => (r *c p.1, r *c p.2)
@@ -371,6 +479,7 @@
   | *c-rdistr => pmap2 (__,__) *c-rdistr *c-rdistr
   | ide_*c => pmap2 (__,__) ide_*c ide_*c
   \where {
+    -- | Coproduct injections as `LinearMap`s into the product.
     \func in1 {R : Ring} (A B : LModule R) : LinearMap A (ProductLModule R A B) \cowith
       | func a => (a, 0)
       | func-+ {a} {b} => rewrite (pmap (\lam z => (a A.+ b, z)) (inv B.zro-right)) idp
@@ -379,6 +488,7 @@
         \private \lemma aux {r : R} {a : A} {b : B} : r LModule.*c {ProductLModule R A B} (a, b) = (r *c a, r *c b) => idp
       }
 
+    -- | Coproduct injections as `LinearMap`s into the product.
     \func in2 {R : Ring} (A B : LModule R) : LinearMap B (ProductLModule R A B) \cowith
       | func b => (0, b)
       | func-+ {a} {b} => rewrite (pmap (\lam z => (z, a B.+ b)) (inv A.zro-right)) idp
@@ -387,21 +497,25 @@
         \private \lemma aux {r : R} {a : A} {b : B} : r LModule.*c {ProductLModule R A B} (a, b) = (r *c a, r *c b) => idp
       }
 
+    -- | Product projections as `LinearMap`s.
     \func proj1 {R : Ring} (A B : LModule R) : LinearMap (ProductLModule R A B) A \cowith
       | func (a, b) => a
       | func-+ => idp
       | func-*c => idp
 
+    -- | Product projections as `LinearMap`s.
     \func proj2 {R : Ring} (A B : LModule R) : LinearMap (ProductLModule R A B) B \cowith
       | func (a, b) => b
       | func-+ => idp
       | func-*c => idp
 
+    -- | From `i : A -> C` and `j : B -> C`, builds the cotuple `A × B -> C`.
     \func coprod-map {R : Ring} {A B C : LModule R} (i : LinearMap A C) (j : LinearMap B C) : LinearMap (ProductLModule R A B) C \cowith
       | func (a, b) => i a C.+ j b
       | func-+ => rewrite (i.func-+, j.func-+) equation
       | func-*c => rewrite (i.func-*c, j.func-*c, C.*c-ldistr) idp
 
+    -- | From `a : C -> A` and `b : C -> B`, builds the pairing `C -> A × B`.
     \func prod-map {R : Ring} {A B C : LModule R} (a : LinearMap C A) (b : LinearMap C B) : LinearMap C (ProductLModule R A B) \cowith
       | func c => (a c, b c)
       | func-+ => rewrite (a.func-+, b.func-+) idp
@@ -409,6 +523,7 @@
   }
 
 
+-- | The ring `R` as a left module over itself, with `*c := *`.
 \func RingLModule (R : Ring) : LModule R \cowith
   | AbGroup => R
   | *c => *
@@ -417,11 +532,13 @@
   | *c-rdistr => R.rdistr
   | ide_*c => ide-left
   \where {
+    -- | `(1 :: nil)` is a basis of `R` over itself.
     \lemma basis {R : Ring} : LModule.IsBasis {RingLModule R} (1 :: nil)
       => (\lam c p (0) => inv ide-right *> inv zro-right *> p, \lam x => inP (x :: nil, simplify))
   }
 
 
+-- | Length-`n` arrays over a module `M` form an `R`-module under pointwise operations.
 \instance ArrayLModule {R : Ring} (n : Nat) (M : LModule R) : LModule R (Array M n)
   | zro _ => 0
   | + f g j => f j + g j
@@ -437,24 +554,28 @@
   | *c-rdistr => arrayExt (\lam j => *c-rdistr)
   | ide_*c => arrayExt (\lam j => ide_*c)
   \where {
+    -- | Compatibility of `skip` (drop-index) with scalar multiplication and addition.
     \lemma skip_*c {R : CRing} {n : Nat} {r : R} {l : Array R (suc n)} {k : Fin (suc n)}
       : skip (r *c {ArrayLModule _ (RingLModule R)} l) k = r *c {ArrayLModule _ (RingLModule R)} skip l k \elim n, l, k
       | 0, a :: nil, 0 => idp
       | suc n, a :: l, 0 => idp
       | suc n, a :: l, suc k => path (\lam i => r *c a :: skip_*c i)
 
+    -- | Compatibility of `skip` (drop-index) with scalar multiplication and addition.
     \lemma skip_+ {R : CRing} {n : Nat} {l l' : Array R (suc n)} {k : Fin (suc n)}
       : skip (l + {ArrayLModule _ (RingLModule R)} l') k = skip l k + {ArrayLModule _ (RingLModule R)} skip l' k \elim n, l, l', k
       | 0, a :: nil, a' :: nil, 0 => idp
       | suc n, a :: l, a' :: l', 0 => idp
       | suc n, a :: l, a' :: l', suc k => path (\lam i => a + a' :: skip_+ i)
 
+    -- | `BigSum` of arrays evaluated at index `i` equals the `BigSum` of pointwise evaluations.
     \lemma BigSum-index {R : Ring} {n : Nat} {M : LModule R} {l : Array (Array M n)} {i : Fin n}
       : AddMonoid.BigSum {ArrayLModule n M} l i = M.BigSum (map {Array M n} (__ i) l) \elim l
       | nil => idp
       | a :: l => pmap (_ +) BigSum-index
   }
 
+-- | Given `f : RingHom`, makes `f.Cod` into an `f.Dom`-module via `x *c y := f x * y`.
 \func homLModule (f : RingHom) : LModule f.Dom \cowith
   | AbGroup => f.Cod
   | *c x y => f x * y

@@ -1,3 +1,13 @@
+{- | A reflection-based solver model for proving equalities in monoids and additive monoids.
+ -
+ -   This module provides a `SubstSolverModel` instance that decides equalities of monoid expressions by normalizing
+ -   them to lists of variables (flat words). The `Term` syntax mirrors the monoid signature (variables, identity,
+ -   multiplication), and normalization uses an accumulator-based traversal to flatten nested products into a single
+ -   list, exploiting associativity and the unit laws. The `>>=` operation provides substitution (list monad bind)
+ -   needed by the substitution-based solver framework, allowing variables to be replaced by sub-normal-forms. An
+ -   additive variant is obtained by reusing the multiplicative model via `AddMonoid.toMonoid`.
+ -}
+
 \import Algebra.Monoid
 \import Algebra.Solver
 \import Data.List
@@ -5,6 +15,9 @@
 \import Paths
 \import Paths.Meta
 
+{- | The main `SubstSolverModel M` instance for a `Monoid M`. Reifies monoid expressions into `Term`, normalizes to
+ -   `List (Fin n)`, and interprets normal forms back into `M`.
+ -}
 \func MonoidSolverModel (M : Monoid) : SubstSolverModel M \cowith
   | Term => Term
   | NF n => List (Fin n)
@@ -20,43 +33,71 @@
   | >>= => >>=
   | >>=-consistent => >>=-consistent
   \where {
+    {- | Inductive type of monoid expressions over `n` variables, with constructors `var (Fin n)`, `:ide` (identity),
+     -   and `:* (infixl 7)` (multiplication).
+     -}
     \data Term (n : Nat)
       | var (Fin n)
       | :ide
       | \infixl 7 :* (t s : Term n)
 
+    {- | Accumulator-passing flattening of a `Term n` into a `List (Fin n)`. Variables are consed onto the accumulator,
+     -   the identity is dropped, and products recurse right-then-left so the resulting list reads left-to-right.
+     -}
     \private \func normalize-aux {n : Nat} (t : Term n) (acc : List (Fin n)) : List (Fin n) \elim t
       | var v => v :: acc
       | :ide => acc
       | :* t s => normalize-aux t (normalize-aux s acc)
 
+    {- | Interprets a list of variables as a left-associated product in `M`, with `nil` mapped to `M.ide` and a
+     -   singleton mapped without a trailing identity (avoiding a redundant `* ide`).
+     -}
     \protected \func interpretNF {V : \Set} (env : V -> M) (l : List V) : M \elim l
       | nil => M.ide
       | x :: nil => env x
       | x :: l => env x * interpretNF env l
 
+    {- | Cons lemma: `interpretNF env (x :: l) = env x * interpretNF env l`, used to bridge the singleton special case
+     -   and the general case.
+     -}
     \protected \lemma interpretNF_:: {V : \Set} {env : V -> M} {x : V} {l : List V} : interpretNF env (x :: l) = env x * interpretNF env l \elim l
       | nil => inv ide-right
       | :: a l => idp
 
+    {- | Concatenation lemma: `interpretNF env (t ++ s) = interpretNF env t * interpretNF env s`, the key homomorphism
+     -   property of normal-form interpretation.
+     -}
     \protected \lemma interpretNF_++ {V : \Set} {env : V -> M} {t s : List V} : interpretNF env (t ++ s) = interpretNF env t * interpretNF env s \elim t
       | nil => inv ide-left
       | v :: l => rewrite (interpretNF_::,interpretNF_::) $ pmap (_ *) interpretNF_++ *> inv *-assoc
 
+    {- | Soundness of `normalize-aux`: `interpretNF env (normalize-aux t acc) = interpret env t * interpretNF env acc`.
+     -   Drives the solver's correctness proof.
+     -}
     \private \lemma interpretNF-consistent-aux {n : Nat} {env : Fin n -> M} {t : Term n} {acc : List (Fin n)} : interpretNF env (normalize-aux t acc) = interpret env t * interpretNF env acc \elim t
       | var x => interpretNF_::
       | :ide => inv ide-left
       | :* t s => interpretNF-consistent-aux *> pmap (_ *) interpretNF-consistent-aux *> inv *-assoc
 
+    {- | List monad bind, used as the substitution operation for the `SubstSolverModel`. Concatenates the results of
+     -   applying `k` to each element of `l`.
+     -}
     \func \infixl 2 >>= {U V : \Set} (l : List U) (k : U -> List V) : List V \elim l
       | nil => nil
       | u :: l => k u ++ (l >>= k)
 
+    {- | States that interpreting a substituted normal form equals interpreting the outer list under the environment
+     -   that interprets each substituted sub-list — the homomorphism law making substitution compatible with
+     -   interpretation.
+     -}
     \private \lemma >>=-consistent {U V : \Set} {env : V -> M} {l : List U} {k : U -> List V}
       : interpretNF env (l >>= k) = interpretNF (\lam u => interpretNF env (k u)) l \elim l
       | nil => idp
       | u :: l => interpretNF_++ *> pmap (_ *) >>=-consistent *> inv interpretNF_::
   }
 
+{- | The corresponding solver model for an `AddMonoid`, obtained by transporting `MonoidSolverModel` through
+ -   `AddMonoid.toMonoid`.
+ -}
 \func AddMonoidSolverModel (A : AddMonoid) : SubstSolverModel A
   => MonoidSolverModel (AddMonoid.toMonoid A)

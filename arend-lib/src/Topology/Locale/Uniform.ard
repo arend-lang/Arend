@@ -2,6 +2,17 @@
      Graham Manuell, Uniform locales and their constructive aspects, 2021, https://arxiv.org/abs/2106.00678
  -}
 
+{- | Pointfree theory of uniform locales: locales equipped with a system of uniform covers, generalizing uniform spaces.
+ -
+ -   A `PreuniformLocale` enriches a locale with a predicate `isUniform` on families of opens (closed under refinement,
+ -   intersection, and the star operation), where `star x U` denotes the union of `U`-elements positively meeting `x`.
+ -   The "uniformly way-below" relation `a <=u b` (witnessed by some uniform `U` with `star a U <= b`) plays the role of
+ -   strong inclusion, making every uniform locale weakly regular. A `UniformLocale` additionally satisfies
+ -   admissibility — every element is the join of opens uniformly below it — and the module constructs a completion
+ -   functor as a left adjoint along a coreflective embedding `Completion L -> L`, presented via `CompletionPres` using
+ -   basic covers for top, positivity, uniform refinement, and `<=u`-decomposition.
+ -}
+
 \import Algebra.Meta
 \import Category
 \import Category.Factorization
@@ -31,21 +42,26 @@
 \open CompleteLattice
 \open Cover
 
+-- | `star x U = ⋁ { y | U y ∧ IsPositive (x ∧ y) }` — the union of `U`-members that positively meet `x`.
 \func star {L : Locale} (x : L) (U : L -> \Prop) => Join (\lam y => \Sigma (U y) (IsPositive (x ∧ y)))
   \where {
     \lemma star-monotone {L : Locale} {x y : L} (x<=y : x <= y) {V U : L -> \Prop} (V<=U : ∀ {x : V} (U x)) : star x V <= star y U
       => Join-univ \lam j => Join-cond (V<=U j.1, positive_<= j.2 $ MeetSemilattice.meet-monotone x<=y <=-refl)
 
+    -- | Monotonicity of `star` in its first argument.
     \lemma star_<= {L : Locale} {x y : L} (x<=y : x <= y) (U : L -> \Prop) : star x U <= star y U
       => star-monotone x<=y (\lam u => u)
 
+    -- | `x <= star x U` whenever `U` is uniform.
     \lemma star-refl {L : PreuniformLocale} {x : L} {U : L -> \Prop} (uU : isUniform U) : x <= star x U
       => meet-univ <=-refl (top-univ <=∘ isCovering uU) <=∘ Join-ldistr>= <=∘ L.SJoin-univ \lam {b} Ub =>
           IsOvert_IJoin L.uniform-overt <=∘ L.IJoin-univ \lam xb>0 => meet-right <=∘ Join-cond (Ub,xb>0)
   }
 
+-- | Variant of `star` along a nucleus `j`, taking joins of `U y` positive in the sublocale.
 \func nucleus-star {L : Locale} (j : Nucleus L) (U : L -> \Prop) => Join (\lam y => \Sigma (U y) (j.locale.IsPositive (j y, nucleus-join>=)))
   \where {
+    -- | For an open nucleus `open a`, `nucleus-star (open a) U = star a U`.
     \lemma star_open {L : Locale} (a : L) (U : L -> \Prop) : nucleus-star (open a) U = star a U
       => pmap Join $ ext \lam x =>
           \let a-->x : (open a).Subtype => (a L.--> x, (open a).nucleus-join>=)
@@ -54,6 +70,10 @@
             (\lam (Ux,ax>0) => (Ux, (open_IsPositive {L} {a} {a-->x}).1 $ positive_<= ax>0 $ meet-univ (L.<=-curry $ meet-left <=∘ meet-right) meet-left))
   }
 
+{- | Class extending `Locale` with `isUniform : (E -> \Prop) -> \Prop` plus axioms: each uniform family covers, is
+ -   downward closed, intersections of uniform families are uniform, refinement preserves uniformity, and every uniform
+ -   `U` admits a star-refinement.
+ -}
 \class PreuniformLocale \extends Locale
   | uniform-overt : IsOvert
   | isUniform : (E -> \Prop) -> \Prop
@@ -64,12 +84,16 @@
   | <=-uniform {U V : E -> \Prop} : isUniform U -> (\Pi {x : E} -> U x -> V x) -> (\Pi {x y : E} -> V y -> x <= y -> V x) -> isUniform V
   | star-uniform {U : E -> \Prop} : isUniform U -> ∃ (V : isUniform) ∀ {x : V} (U (star x V))
   \where {
+    -- | Helper showing the downset closure of `∃ z, U z ∧ y <= f z` is preserved under `<=`.
     \lemma dClosure {L M : Preorder} {f : L -> M} {U : L -> \Prop} {x y : M} (p : ∃ (z : L) (U z) (y <= f z)) (x<=y : x <= y) : ∃ (z : L) (U z) (x <= f z) \elim p
       | inP (z,Uz,y<=fz) => inP (z, Uz, x<=y <=∘ y<=fz)
   }
 
 \open PreuniformLocale(dClosure)
 
+{- | Record extending `FrameHom` between preuniform locales, requiring that the downset closure of the direct image of
+ -   any uniform family is uniform.
+ -}
 \record UniformHom \extends FrameHom {
   \override Dom : PreuniformLocale
   \override Cod : PreuniformLocale
@@ -85,15 +109,20 @@
         (\lam {x} (inP (y, inP (z,Uz,y<=fz), x<=gy)) => inP (z, Uz, x<=gy <=∘ func-<= y<=fz)) dClosure
 }
 
+{- | Extension of `UniformHom` whose underlying frame map is surjective and which reflects uniformity
+ -   (`isUniformEmbedding`).
+ -}
 \record UniformEmbedding \extends UniformHom {
   | isEmbedding : IsSurj func
   | isUniformEmbedding {U : Cod -> \Prop} : isUniform U -> ∃ (V : isUniform) ∀ {x} (V x -> U (func x))
 
+  -- | For an embedding, `\lam x. ∃ y, U y ∧ x <= direct y` is uniform.
   \lemma direct-uniform {U : Cod -> \Prop} : isUniform U -> isUniform (\lam x => ∃ (y : Cod) (U y) (x <= direct y))
     => \case isUniformEmbedding __ \with {
       | inP (V,uV,V<=Uf) => <=-uniform uV (\lam {x} Vx => inP (func x, V<=Uf Vx, direct-unit)) (\lam (inP (z,Uz,p)) q => inP (z, Uz, q <=∘ p))
     }
 } \where {
+    -- | Composition of uniform embeddings.
     \func comp {L M K : PreuniformLocale} (g : UniformEmbedding M K) (f : UniformEmbedding L M) : UniformEmbedding L K \cowith
       | UniformHom => g UniformHom.∘ f
       | isEmbedding => IsSurj.comp f.isEmbedding g.isEmbedding
@@ -103,37 +132,46 @@
           \in inP (W, uW, \lam Wx => cV (cW Wx))
   }
 
+-- | `a <=u b` iff there exists a uniform `U` with `star a U <= b`.
 \func \infix 4 <=u {L : PreuniformLocale} (a b : L) => ∃ (U : L -> \Prop) (isUniform U) (star a U <= b)
   \where {
+    -- | Uniform homomorphisms preserve `<=u`.
     \lemma func-<=u (f : UniformHom) {a b : f.Dom} (p : a <=u b) : f a <=u f b \elim p
       | inP (U,uU,a*U<=b) => inP (_, func-uniform uU, Join-univ \lam {x} (inP (y,Uy,x<=fy), fa*x>0) =>
           x<=fy <=∘ func-<= (Join-cond (Uy, func_positive $ positive_<= fa*x>0 $ meet-monotone <=-refl x<=fy <=∘ func-meet>=)) <=∘ func-<= a*U<=b)
 
+    -- | `a <=u f.direct b` implies `f a <=u b` along a uniform homomorphism.
     \lemma adjoint (f : UniformHom) {a : f.Dom} {b : f.Cod} (p : a <=u f.direct b) : f a <=u b
       => <=u-trans-left (f a) (func-<=u f p) direct-counit
 
+    -- | Interpolation: `a <=u c` factors as `a <=u b <=u c`.
     \lemma dense {L : PreuniformLocale} {a c : L} (p : a <=u c) : ∃ (b : L) (a <=u b) (b <=u c) \elim p
       | inP (U,uU,a*U<=c) => \case star-uniform uU \with {
         | inP (V,uV,x*V<-U) => inP (star a V, inP (V,uV,<=-refl), inP (V, uV, Join-univ (\lam {y} (Vy,a*V^b>0) => star.star-refl uV <=∘ Join-cond (x*V<-U Vy, dense.meet_star-comm L.uniform-overt $ rewrite meet-comm a*V^b>0)) <=∘ a*U<=c))
       }
       \where
+        -- | Symmetry of positivity for `meet ∧ star` under overtness.
         \lemma meet_star-comm {L : Locale} (o : L.IsOvert) {a b : L} {U : L -> \Prop} (p : IsPositive (a ∧ star b U)) : IsPositive (b ∧ star a U)
           => \case positive_SJoin o (rewrite Join-ldistr in p) \with {
             | inP (c,(Uc,b^c>0),a^c>0) => rewrite Join-ldistr $ positive_SJoin.conv $ inP (c, (Uc, a^c>0), b^c>0)
           }
 
+    -- | The `<=u`-refinement of a uniform family is uniform.
     \lemma uniform-refine {L : PreuniformLocale} {U : L -> \Prop} (uU : isUniform U) : isUniform (\lam b => ∃ (a : L) (U a) (b <=u a))
       => \case star-uniform uU \with {
         | inP (V,uV,x*V<-U) => <=-uniform uV (\lam {x} Vx => inP (star x V, x*V<-U Vx, inP (V,uV,<=-refl))) (\lam {x} {y} (inP (a,Ua,y<=ua)) x<=y => inP (a, Ua, <=u-trans-right x<=y y<=ua))
       }
   }
 
+-- | Composition of `<=u` with `<=` on either side.
 \lemma <=u-trans-left {L : PreuniformLocale} (a : L) {b c : L} (p : a <=u b) (b<=c : b <= c) : a <=u c \elim p
   | inP (U,uU,a*U<=b) => inP (U, uU, a*U<=b <=∘ b<=c)
 
+-- | Composition of `<=u` with `<=` on either side.
 \lemma <=u-trans-right {L : PreuniformLocale} {a b c : L} (a<=b : a <= b) (p : b <=u c) : a <=u c \elim p
   | inP (U,uU,b*U<=c) => inP (U, uU, star.star_<= a<=b U <=∘ b*U<=c)
 
+-- | `<=u` is preserved by binary meets.
 \lemma <=u_meet {L : PreuniformLocale} {a a' b b' : L} (p : a <=u a') (q : b <=u b') : a ∧ b <=u a' ∧ b' \elim p, q
   | inP (U,uU,a*U<=a'), inP (V,uV,b*V<=b') => inP (_, meet-uniform uU uV, meet-univ
     (star.star-monotone meet-left (later __.1) <=∘ a*U<=a')
@@ -142,9 +180,13 @@
 \lemma <=u_top {L : PreuniformLocale} {a : L} : a <=u top
   => inP (_, top-uniform, top-univ)
 
+-- | `a <=u b` implies `a <= b`.
 \lemma <=u_<= {L : PreuniformLocale} {a b : L} (p : a <=u b) : a <= b \elim p
   | inP (U,uU,a*U<=b) => star.star-refl uU <=∘ a*U<=b
 
+{- | Class extending `PreuniformLocale` with admissibility: `b <= ⋁ { a | a <=u b }`. Provides `isComplete` as being an
+ -   iso to its completion.
+ -}
 \class UniformLocale \extends PreuniformLocale {
   | isAdmissible (b : E) : b <= Join (<=u b)
 
@@ -152,6 +194,7 @@
 } \where {
     \open NucleusFrame
 
+    -- | `nucleus-star j.map.wclosed-image U = nucleus-star j U` for a uniform cover.
     \lemma star_wclosure {L : PreuniformLocale} {j : Nucleus L} {U : L -> \Prop} (uU : isUniform U) : nucleus-star j.map.wclosed-image U = nucleus-star j U
       => pmap Join $ ext \lam x => propExt
           (\lam (Ux,p) => (Ux, \lam jx<=P => p $ unfolds $ SMeet-univ (later \lam c => SMeet-cond (unfold \lam {Q} {y} jy<=Q => nucleus-unit <=∘ jy<=Q <=∘ =_<= locale_pHat) <=∘ c (unfold $ nucleus-join>= <=∘ jx<=P)) <=∘ =_<= (inv j.map.wclosed-image.locale_pHat)))
@@ -160,6 +203,7 @@
     \lemma top<=star {L : PreuniformLocale} {j : Nucleus L} (o : j.locale.IsOvert) {U : L -> \Prop} (uU : isUniform U) : j <= open (nucleus-star j U)
       => nucleus<=open $ isCovering uU <=∘ Join-univ \lam {w} Uw => j.nucleus-unit <=∘ IsOvert_IJoin o {j w, nucleus-join>=} <=∘ j.locale.IJoin-univ {_} {_} {_, nucleus-join>=} \lam jw>0 => nucleus-<= $ Join-cond (Uw,jw>0)
 
+    -- | Sharpening to the weak-closure image.
     \lemma wclosure<=nucleus-star {L : PreuniformLocale} {j : Nucleus L} (o : j.locale.IsOvert) {U : L -> \Prop} (uU : isUniform U) : j.map.wclosed-image <= open (nucleus-star j U)
       => top<=star (sdense_overt {<=-map j.map.wclosed-image j wclosure_<=} wclosure-sdense o) uU <=∘ =_<= (pmap open $ star_wclosure uU)
 
@@ -167,10 +211,12 @@
       => wclosure<=nucleus-star (open_IsOvert uniform-overt) uU <=∘ =_<= (pmap open $ nucleus-star.star_open a U)
   }
 
+-- | Every uniform locale is weakly regular.
 \lemma uniform=>wregular {L : UniformLocale} : L.IsWeaklyRegularLocale
   => \lam x => L.isAdmissible x <=∘ Join-univ \lam {b} (inP (U,uU,b*U<=x)) => Join-cond $
         unfold (<=<w) $ UniformLocale.wclosure<=star uU <=∘ NucleusFrame.open_<= b*U<=x
 
+-- | Category of preuniform locales with uniform homomorphisms.
 \func PreuniformCat.{u} : Cat PreuniformLocale.{u} \cowith
   | Hom => UniformHom
   | id => UniformHom.id
@@ -188,6 +234,7 @@
                           \lam uU => uniform-lem (h2.func-uniform uU) (\lam Uy x<=y => isDownset uU Uy (h1.func-<= x<=y)))
   }
   \where {
+    -- | A downward-closed `U` is uniform whenever its `<=`-closure is.
     \lemma uniform-lem {L : PreuniformLocale} {U : L -> \Prop}
                        (u : isUniform (\lam y => ∃ (x : L) (U x) (y <= x)))
                        (d : \Pi {x y : L} -> U y -> x <= y -> U x)
@@ -195,6 +242,7 @@
       => <=-uniform u (\lam {x} (inP (y,Uy,x<=y)) => d Uy x<=y) d
   }
 
+-- | Subcategory of `PreuniformCat` on uniform locales (uses `subCat`).
 \func UniformCat.{u} : Cat UniformLocale.{u} => subCat {PreuniformCat.{u}} (\new Embedding {
   | f L => L
   | isEmb L M => \new Retraction {L = {UniformLocale.{u}} M} {
@@ -233,11 +281,14 @@
 \open CompletionSite
 \open SiteLocale
 
+-- | The completion as a `PresentedFrame`.
 \func CompletionLocale (L : UniformLocale) => SiteLocale (CompletionSite L)
 
+-- | The frame map `L -> CompletionLocale L` as the adjoint of the canonical presentation.
 \func completionLocale {L : UniformLocale} : LocaleHom L (CompletionLocale L)
   => LocaleSite.adjointMap completionLocale.presentation
   \where {
+    -- | The presenting `FramePresHom` from `CompletionPres L` to `L`.
     \func presentation {L : UniformLocale} : PreorderSiteHom (CompletionSite L) (LocaleSite L) \cowith
       | func x => x
       | func-<= p => p
@@ -249,13 +300,18 @@
       | func-flat-top {u} => cover-refl (TSetIm-con u)
       | func-flat-meet u<=x u<=y => cover-refl $ SetIm-con (u<=x,u<=y)
 
+    -- | The completion map is strongly dense.
     \lemma sdense {L : UniformLocale} : IsStronglyDense {completionLocale {L}}
       => sdense-site {_} {_} {completionLocale.presentation} \lam x<=Q => later $ cover-trans (inP (0,idp)) \lam (x>0,_) => cover-refl (x>0 x<=Q)
 
+    -- | `completionLocale (embed a) = a`.
     \lemma completion_embed {L : UniformLocale} {a : L} : completionLocale (embed a) = a
       => <=-antisymmetric (SJoin-univ \lam {b} b<=a => PreorderSite.subcanonical-cover1 subcanonical b<=a) (SJoin-cond $ cover-refl idp)
   }
 
+{- | The uniform locale structure on `CompletionLocale L`, with uniform families generated from uniform families on `L`
+ -   via `embed`.
+ -}
 \func Completion (L : UniformLocale) : UniformLocale \cowith
   | Locale => CompletionLocale L
   | uniform-overt => sdense_overt {completionLocale} completionLocale.sdense uniform-overt
@@ -276,6 +332,7 @@
                 \in (V, uV, q a <=∘ embed-univ (cover-inj a*U<=b idp))
     \in cover-trans (inP (2,idp)) \lam {y} y<=<x => cover-refl $ inP (embed y, <=u-trans-left {\this} (embed y) (embed_<=u y<=<x) $ embed-univ Ux, cover-refl idp)
   \where {
+    -- | Constructs a uniform `V` on the completion such that `star (embed a) V <= embed (star a U)`.
     \func make-covering {L : UniformLocale} (U : L -> \Prop) (uU : L.isUniform U)
       : \Sigma (V : CompletionLocale L -> \Prop) (isUniform V) (\Pi (a : L) -> star {CompletionLocale L} (embed a) V <= embed (star a U))
       => (\lam s => ∃ (x : L) (U x) (s <= embed x),
@@ -284,6 +341,7 @@
               SetIm-elim $ later \lam {b} (b<=a,Vb) => meet-univ (CompletionSite.Cover1_<= b<=a) (CompletionSite.Cover1_<= $ V<=x Vb))) idp))
   }
 
+-- | The canonical `UniformEmbedding (Completion L) L`.
 \func completion {L : UniformLocale} : UniformEmbedding (Completion L) L \cowith
   | FrameHom => completionLocale
   | func-uniform (inP (V,uV,V<=U,dV)) => <=-uniform uV (\lam {x} Vx => inP (embed x, V<=U Vx, SJoin-cond $ cover-refl idp)) dClosure
@@ -292,13 +350,18 @@
       inP (U, uU, \lam {a} Ua => inP (a,Ua,<=-refl), \lam (inP (a,Ua,y<=a)) x<=y => inP (a, Ua, x<=y <=∘ y<=a)),
       \lam {x} (inP (a,Ua,x<=a)) => isDownset uU (transportInv U completionLocale.completion_embed Ua) (func-<= {completionLocale} x<=a))
   \where {
+    -- | `completion` is a monomorphism in `UniformCat`.
     \lemma isMono.{u} {L M : UniformLocale.{u}} {f g : UniformHom M (Completion L)} (p : completion UniformHom.∘ f = completion UniformHom.∘ g) : f = g
       => ext $ path (\lam i => func {WFS.left-epi {LocaleCartesianPrecat} sdense_wclosed_ofs {_} {Completion L} completion completionLocale.sdense {M} (wregular_wHausdorff uniform=>wregular) p i})
   }
 
+{- | Any strongly dense uniform embedding `f : M -> L` factors uniquely through `completion`, yielding
+ -   `g : Completion L -> M` with `f ∘ g = completion`.
+ -}
 \sfunc completion-factor {L M : UniformLocale} (f : UniformEmbedding M L) (sd : f.IsStronglyDense) : \Sigma (g : UniformHom (Completion L) M) (f UniformHom.∘ g = completion)
   => (factor f sd, isFactor f sd)
   \where {
+    -- | The presenting `FramePresHom` driving the factorization.
     \func presentation {L M : UniformLocale} (f : UniformEmbedding M L) (sd : f.IsStronglyDense) : PreorderSiteHom (CompletionSite L) (LocaleSite M) \cowith
       | func => f.direct
       | func-<= => direct-<=
@@ -323,11 +386,13 @@
       => exts \lam U => SiteLocale.func-equality {_} {_} {f FrameHom.∘ factor f sd} \lam x => f.func-SJoin *> unfold (pmap (SJoin __ _) $ ext $ surjective-split f.isEmbedding)
   }
 
+-- | `Completion L` is complete (iso to its own completion).
 \lemma completion-isComplete.{u} (L : UniformLocale.{u}) : (Completion L).IsComplete
   => \have | (g,fact) => completion-factor (UniformEmbedding.comp completion completion) (sdense-comp completion completionLocale.sdense completion completionLocale.sdense)
            | cg=id => completion.isMono {_} {_} {_} {UniformHom.id} fact
      \in inP (g, cg=id, completion.isMono {_} {_} {_} {UniformHom.id} $ pmap (UniformHom.∘ _) cg=id)
 
+-- | Functorial action: a uniform map `f : M -> L` lifts to `Completion M -> Completion L`.
 \func completion-functor {L M : UniformLocale} (f : UniformHom M L) : UniformHom (Completion M) (Completion L) \cowith
   | FrameHom => LocaleSite.adjointMap (presentation f)
   | func-uniform => \case __ \with {
@@ -338,6 +403,7 @@
   \where {
     \open Cover
 
+    -- | Presents the lifted map via `closure` of `f` on `<=u`-pairs.
     \func presentation {L M : UniformLocale} (f : UniformHom M L) : PreorderSiteHom (CompletionSite M) (LocaleSite (Completion L)) \cowith
       | func a => closure \lam c => ∃ (b : M) (b <=u a) (c = f b)
       | func-<= x<=y => closure-univ $ later \lam {_} (inP (b,b<=<x,idp)) => cover-refl $ inP (b, <=u-trans-left b b<=<x x<=y, idp)
@@ -357,12 +423,16 @@
       )
   }
 
+-- | Naturality square `completion ∘ completion-functor f = f ∘ completion`.
 \lemma completion-natural {L M : UniformLocale} {f : UniformHom M L} : completion UniformHom.∘ completion-functor f = f UniformHom.∘ completion
   => exts \lam S => <=-antisymmetric
       (SJoin-univ \lam Ca => LocaleSite.locale_cover (completionLocale.presentation.func-Cover Ca) <=∘ Join-univ (SetIm-elim $ later \lam {x} (inP (_, inP ((b,Sb),idp), Cx)) => LocaleSite.locale_cover (completionLocale.presentation.func-Cover Cx) <=∘ Join-univ (SetIm-elim $ later \lam {_} (inP (c,c<=<b,idp)) => f.func-<= $ <=u_<= c<=<b) <=∘ SJoin-cond Sb))
       (SJoin-univ \lam {a} Sa => func-<= (isAdmissible a) <=∘ func-Join>= <=∘ SJoin-univ \lam {b} b<=ua => later $ SJoin-cond $ unfolds $ cover-refl $ inP (_, SetIm-con Sa, cover-refl $ inP (b, b<=ua, idp)))
       *> inv f.func-SJoin
 
+{- | For complete `M`, precomposition with `completion` is an equivalence `Hom(M, Completion L) ≃ Hom(M, L)` —
+ -   completion is a reflector of `UniformCat` onto its complete objects.
+ -}
 \lemma completion-isReflector.{u} {L M : UniformLocale.{u}} (Mc : M.IsComplete)
   : IsEquiv {UniformHom M (Completion L)} {UniformHom M L} (\lam g => completion UniformHom.∘ g)
   \elim Mc

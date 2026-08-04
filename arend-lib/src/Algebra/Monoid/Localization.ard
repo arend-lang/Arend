@@ -328,6 +328,7 @@
   | func-ide => idp
   | func-* => ~-lequiv1 simplify
 
+-- | Identifies `a/b` in `LocRing` with `locMap` applied to the divisor inverse: `inl~ (a, b, _) = locMap a|b.inv`.
 \lemma div_loc {M : CMonoid} {S : SubMonoid M} {a b : M} {Sb : S b} (a|b : Monoid.LDiv b a) : inl~ (a,b,Sb) = locM a|b.inv
   => ~-lequiv1 $ ide-right *> inv a|b.inv-right *> *-comm
 

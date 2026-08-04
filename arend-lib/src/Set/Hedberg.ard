@@ -1,3 +1,11 @@
+{- | Hedberg's theorem and related criteria for proving a type is a set (h-set).
+ -
+ -   This module provides standard tools for upgrading a type to an h-set (UIP — uniqueness of identity proofs). The
+ -   core idea is that if a type carries a reflexive proposition-valued relation that implies equality, then equality is
+ -   itself propositional, so the type is a set. Hedberg's classical theorem is the special case where the relation is
+ -   decidable equality, since `(a = a') ∨ (a ≠ a')` always furnishes such a relation.
+ -}
+
 \import Data.Or
 \import Equiv
 \import Equiv.Path
@@ -7,12 +15,22 @@
 \import Paths
 \import Paths.Meta
 
+{- | General set criterion: given a relation `R : A -> A -> \Type` that is pointwise propositional (`c`), reflexive
+ -   (`p`), and implies equality (`q`), concludes `isSet A`. Useful when the relation is not declared in `\Prop`
+ -   directly.
+ -}
 \lemma Set-lemma' {A : \Type} (R : A -> A -> \Type) (c : \Pi {a a' : A} -> isProp (R a a')) (p : \Pi {a : A} -> R a a) (q : \Pi {a a' : A} -> R a a' -> a = a') : isSet A
   => \lam a a' => isProp.equiv (inP (pathEquiv R (\lam {a} {a'} => \new Retraction (rewrite __ p) q (\lam _ => c _ _)))) c
 
+{- | Streamlined variant taking a `\Prop`-valued relation `R : A -> A -> \Prop` with reflexivity `p` and an implication
+ -   `R a a' -> a = a'`, yielding `isSet A`.
+ -}
 \lemma Set-lemma {A : \Type} (R : A -> A -> \Prop) (p : \Pi {a : A} -> R a a) (q : \Pi {a a' : A} -> R a a' -> a = a') : isSet A
   => Set-lemma' R (\lam {_} {_} => prop-isProp) p q
 
+{- | Hedberg's theorem: any type `A` with decidable equality (`\Pi (a a' : A) -> (a = a') \`Or\` (a /= a')`) is an
+ -   h-set. Obtained as a corollary of `Set-lemma` using the canonical stable relation derived from decidability.
+ -}
 \lemma Hedberg {A : \Type} (d : \Pi (a a' : A) -> (a = a') `Or` (a /= a')) : isSet A
   => Set-lemma
       (\lam a a' => \case d a a' \with {

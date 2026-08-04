@@ -1,3 +1,14 @@
+{- | Subrings of (pseudo) rings, packaged as predicates closed under the ring operations, together with the induced ring
+ -   structure on the carrier.
+ -
+ -   A `SubPseudoRing` is the predicate-style subobject of a `PseudoRing`, obtained by combining `SubPseudoSemiring`
+ -   with `SubAddGroup` so that closure under addition, multiplication, and negation is required. `SubRing` adds closure
+ -   under the multiplicative identity. The induced ring structure is built by reusing the `SubAddGroup` abelian-group
+ -   structure for `+` and the `SubSemiring` data for `*`, and the commutative variants (`cStruct`, `CSubRing`) lift
+ -   commutativity from the ambient ring. Ring homomorphisms factor through subrings via `corestrict`/`embed`, and
+ -   `ringHomImage` exhibits the image of a `RingHom` as a subring of the codomain.
+ -}
+
 \import Algebra.Group
 \import Algebra.Group.SubGroup
 \import Algebra.Monoid
@@ -12,10 +23,16 @@
 \import Paths
 \import Paths.Meta
 
+{- | Subobject of a `PseudoRing`, extending `SubPseudoSemiring` and `SubAddGroup`. Overrides `S` to a `PseudoRing` and
+ -   packages the closure conditions for `0`, `+`, `*`, and negation.
+ -}
 \class SubPseudoRing \extends SubPseudoSemiring, SubAddGroup {
   \override S : PseudoRing
 }
 
+{- | The induced `PseudoRing` on the carrier subset, combining `IPseudoSemiring` with the abelian-group structure from
+ -   `SubAddGroup.abStruct`.
+ -}
 \instance IPseudoRing (S : SubPseudoRing {}) : PseudoRing
   | PseudoSemiring => IPseudoSemiring S
   | AbGroup => IAbGroup S
@@ -24,9 +41,13 @@
   | PseudoRing => IPseudoRing S
   | *-comm => ext *-comm
 
+{- | Subobject of a `Ring`, extending `SubPseudoRing` and `SubSemiring`. Overrides `S` to a `Ring`, additionally
+ -   requiring closure under the multiplicative identity.
+ -}
 \class SubRing \extends SubPseudoRing, SubSemiring {
   \override S : Ring
 } \where {
+  -- | The maximal subring of a `Ring R`, containing every element; built from `SubSemiring.max` and `SubAddGroup.max`.
   \func max {R : Ring} : SubRing \cowith
     | SubSemiring => SubSemiring.max {R}
     | SubAddGroup => SubAddGroup.max
@@ -36,16 +57,21 @@
     | MonoidHom => SubMonoid.maxHom
 }
 
+-- | The induced `Ring` structure on the carrier, combining `ISemiring` with `SubAddGroup.abStruct`.
 \instance IRing (S : SubRing {}) : Ring
   | Semiring => ISemiring S
   | AbGroup => IAbGroup S
   \where {
+    {- | Given `f : RingHom R S` whose image lies in the subring (`\Pi (x : R) -> contains (f x)`), produces the
+     -   corestricted `RingHom R IRing`.
+     -}
     \func corestrict {R : Ring} (f : RingHom R S.S) (p : \Pi (x : R) -> S (f x)) : RingHom R (IRing S) \cowith
       | func x => (f x, p x)
       | func-+ => ext f.func-+
       | func-ide => ext f.func-ide
       | func-* => ext f.func-*
 
+    -- | The canonical inclusion `RingHom IRing S` sending `(x, _)` to `x`.
     \func embed : RingHom (IRing S) S.S \cowith
       | func => __.1
       | func-+ => idp
@@ -53,6 +79,7 @@
       | func-* => idp
   }
 
+-- | The induced commutative ring on a `CSubRing`'s carrier.
 \instance ICRing {R : CRing} (S : SubRing R) : CRing
   | Ring => IRing S
   | PseudoCRing => IPseudoCRing S

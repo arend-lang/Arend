@@ -1,3 +1,13 @@
+{- | Foundations for sets equipped with decidable propositions, apartness relations, and decidable equality.
+ -
+ -   This module builds the basic hierarchy of set-like structures used throughout the library. It starts from `Dec`
+ -   (decidable propositions) and `Decide` (its class form), then layers `BaseSet`, `SubSet`, and `SeparatedSet` on top.
+ -   The key constructive distinction is between equality-based reasoning and apartness (`Set#`): a tight apartness
+ -   recovers separated equality, and a `DecSet` provides decidable equality which automatically induces an apartness
+ -   via inequality. Combinators like `SigmaDecide`, `ProductDecSet`, and `ArrayDec` lift decidability through standard
+ -   type formers.
+ -}
+
 \import Data.Bool (Bool, So, false, not, true)
 \import Function.Meta
 \import Logic
@@ -7,6 +17,7 @@
 \import Paths
 \import Paths.Meta
 
+-- | Inductive type `yes E | no (Not E)` for a proposition `E`; lives in `\Prop` (proven via `levelProp`).
 \data Dec (E : \Prop)
   | yes E
   | no (Not E)
@@ -14,6 +25,7 @@
     \use \level levelProp {E : \Prop} : isProp (Dec E)
       => isProp-prover
 
+    -- | Eliminator for `Dec E` into an arbitrary type.
     \func rec {R : \Type} {E : \Prop} (y : E -> R) (n : Not E -> R) (d : Dec E) : R \elim d
       | yes e => y e
       | no q => n q
@@ -23,22 +35,28 @@
   | yes e => e
   | no p => absurd (q p)
 
+-- | Extracts a `NegatedProp` conclusion from a function out of `Dec E` (double-negation elimination at negated props).
 \lemma negated-dec (E : \Prop) {P : NegatedProp} (f : Dec E -> P) : P
   => isNegated \lam g => g $ f $ no \lam e => g $ f (yes e)
 
+-- | Converts `Dec E` into a `Bool`.
 \func decToBool {E : \Prop} (d : Dec E) : Bool
   | yes _ => true
   | no _ => false
 
+-- | Class wrapping a `Dec E` field, used as a typeclass for decidable propositions.
 \class Decide (E : \Prop)
   | decide : Dec E
 
+-- | Promotes a `Dec E` value to a `Decide E` instance.
 \lemma dec_decide {E : \Prop} (d : Dec E) : Decide E \cowith
   | decide => d
 
+-- | Normalize a `Dec E` to `yes e` / `no q` given evidence.
 \lemma dec_yes_reduce {E : \Prop} {d : Dec E} (e : E) : d = yes e
   => prop-pi
 
+-- | Normalize a `Dec E` to `yes e` / `no q` given evidence.
 \lemma dec_no_reduce {E : \Prop} {d : Dec E} (q : Not E) : d = no q
   => prop-pi
 
@@ -50,6 +68,7 @@
     | byRight b => q' b
   }
 
+-- | Decidability of `\Sigma (a : A) (B a)` from decidability of `A` and each `B a`.
 \func SigmaDecide {A : Decide} (B : A -> Decide) : Decide (\Sigma (a : A) (B a)) \cowith
   | decide => \case A.decide \with {
     | yes a => \case decide {B a} \with {
@@ -59,17 +78,22 @@
     | no q => no \lam p => q p.1
   }
 
+-- | Instance form of pair decidability.
 \instance ProductDecide (A B : Decide) : Decide => SigmaDecide {A} (\lam _ => B)
 
+-- | Decidability of `Not P` from decidability of `P`.
 \lemma NotDec {P : \Prop} (d : Dec P) : Dec (Not P) \elim d
   | yes a => no \lam f => f a
   | no q => yes q
 
+-- | Instance form of negation decidability.
 \instance NotDecide (A : Decide) : Decide (Not A)
   | decide => NotDec A.decide
 
+-- | Class carrying a single `\Set` field `E`; the foundation for all set classes.
 \class BaseSet (E : \Set)
 
+-- | Extends `BaseSet` with `separatedEq : Not (Not (x = y)) -> x = y` (¬¬-stable equality).
 \class SeparatedSet \extends BaseSet
   | separatedEq {x y : E} : Not (Not (x = y)) -> x = y
 
@@ -82,10 +106,14 @@
   | tightness {x y : E} : Not (x # y) -> x = y
   | separatedEq {x} ~~x=y => tightness (\lam x#y => ~~x=y (\lam x=y => #-irreflexive (transport (x #) (inv x=y) x#y)))
 
+  -- | Apart points are unequal (`x # y -> x /= y`).
   \lemma apartNotEqual {x y : E} (x#y : x # y) : x /= y =>
     \lam x=y => #-irreflexive (transport (x #) (inv x=y) x#y)
 }
 
+{- | Extends `BaseSet, Set#` with `decideEq (x y : E) : Dec (x = y)` and a boolean equality `==`. Provides default
+ -   implementations of `#` as `/=`, with the apartness laws derived from decidable equality.
+ -}
 \class DecSet \extends BaseSet, Set# {
   \field decideEq (x y : E) : Dec (x = y)
   | nonEqualApart {x y : E} : x /= y -> x # y
@@ -106,6 +134,7 @@
   }
 }
 
+-- | Decidable equality on dependent pairs.
 \func SigmaDecSet {A : DecSet} (B : A -> DecSet) : DecSet (\Sigma (a : A) (B a)) \cowith
   | decideEq p q => \case decideEq p.1 q.1 \with {
     | yes e => \case decideEq (transport (\lam a => B a) e p.2) q.2 \with {
@@ -115,11 +144,13 @@
     | no n => no (\lam e => n (pmap __.1 e))
   }
 
+-- | Decidable equality on a subset of a `DecSet` (membership proofs are propositional).
 \func SubDecSet {A : DecSet} {B : A -> \Prop} : DecSet (\Sigma (a : A) (B a))
   => SigmaDecSet \lam a => \new DecSet (B a) {
     | decideEq b b' => yes prop-pi
   }
 
+-- | Instance making `Bool` a `DecSet`; `compare` provides the explicit case analysis.
 \instance DecBool : DecSet
   | E => Bool
   | decideEq x y => compare x y
@@ -131,12 +162,15 @@
       | true, true => yes idp
   }
 
+-- | Instance for binary products of `DecSet`s.
 \instance ProductDecSet (A B : DecSet) : DecSet (\Sigma A B)
   => SigmaDecSet (\lam _ => B)
 
+-- | Each equality `a = a'` in a `DecSet` is itself a `Decide` instance.
 \instance EqualityDecide (A : DecSet) (a a' : A) : Decide (a = a')
   | decide => decideEq a a'
 
+-- | `DecSet` instance on fixed-length arrays, via `aux` performing pointwise decidable equality.
 \instance ArrayDec (A : DecSet) (n : Nat) : DecSet (Array A n)
   | decideEq => aux
   \where {
@@ -149,18 +183,22 @@
       }
   }
 
+-- | `decideEq x y = yes p` when `p : x = y`.
 \lemma decideEq=_reduce {A : DecSet} {x y : A} (p : x = y) : decideEq x y = yes p
   => prop-pi
 
+-- | `decideEq x y = no p` when `p : x /= y`.
 \lemma decideEq/=_reduce {A : DecSet} {x y : A} (p : x /= y) : decideEq x y = no p
   => prop-pi
 
+-- | Recover `a = a'` from `So (a == a')`.
 \lemma ==_= {A : DecSet} {a a' : A} (so : So (a == a')) : a = a'
   => unfold (==) at so $ mcases {decToBool} so _ \with {
     | yes p, _ => p
     | no n, ()
   }
 
+-- | Recover `a = a'` from `So (a == a')`.
 \lemma =-dec {A : DecSet} {a a' : A} {so : So (a == a')} : a = a'
   => ==_= so
 
@@ -170,9 +208,11 @@
     | no p, _ => p
   }
 
+-- | Set-truncation of a `\Type`, with constructor `in0` forcing the result to be a `\Set`.
 \truncated \data Trunc0 (A : \Type) : \Set
   | in0 A
   \where {
+    -- | Functorial action of `Trunc0` on functions.
     \func map {A B : \Type} (t : Trunc0 A) (f : A -> B) : Trunc0 B \elim t
       | in0 a => in0 (f a)
   }

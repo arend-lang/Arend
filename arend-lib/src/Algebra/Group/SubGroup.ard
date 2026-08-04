@@ -1,3 +1,14 @@
+{- | Subgroups, normal subgroups, and quotient groups.
+ -
+ -   This module formalizes subgroups by extending `SubMonoid` with closure under inversion, yielding an induced group
+ -   structure `IGroup` on the underlying sub-set. The equivalence `x ~ y ⟺ x⁻¹·y ∈ H` produces left cosets as a
+ -   quotient set, and when the subgroup is normal (closed under conjugation), this quotient inherits a well-defined
+ -   group structure via `NormalSubGroup.quotient`. Variants are provided for additive groups (`SubAddGroup`),
+ -   commutative groups (`cStruct`/`abStruct`), decidable membership (`DecSubGroup`), and finite groups (`FinSubGroup`),
+ -   and an alternative single-axiom presentation (`anotherSubgroupDefinition`) shows that closure under `x⁻¹·y`
+ -   together with `1 ∈ X` suffices.
+ -}
+
 \import Algebra.Group
 \import Algebra.Group.GroupHom
 \import Algebra.Meta
@@ -22,16 +33,21 @@
 \import Set.Set
 \open Group \hiding (Dec)
 
+{- | Extends `SubMonoid` with `contains_inverse`. Carries an underlying `Group` `S` and asserts the membership predicate
+ -   is closed under inversion.
+ -}
 \class SubGroup \extends SubMonoid {
   \override S : Group
   | contains_inverse {x : S} : contains x -> contains (inverse x)
 
+  -- | The coset equivalence `x ~ y := x⁻¹·y ∈ H` on `S`.
   \func equivalence : Equivalence S \cowith
     | ~ x y => contains (inverse x * y)
     | ~-reflexive => transportInv contains inverse-left contains_ide
     | ~-symmetric c => transport contains (inverse_* *> pmap (_ *) inverse-isInv) (contains_inverse c)
     | ~-transitive {x} {y} c1 c2 => rewriteEq (inverse-right {S} {y}, ide-left) in contains_* c1 c2
 
+  -- | The quotient set `S/~` of left cosets.
   \func Cosets => Quotient (equivalence.~)
 
   \func inc~ (x : S) : Cosets
@@ -45,6 +61,7 @@
     => ~-pequiv $ transport contains (inv (pmap (* y) inverse-left *> ide-left) *> *-assoc) (contains_~.2 p)
 }
 
+-- | The induced group structure on the sub-set, with inversion lifted componentwise.
 \instance IGroup (S : SubGroup {}) : Group
   | Monoid => IMonoid S
   | inverse x => (inverse x.1, contains_inverse x.2)
@@ -58,13 +75,16 @@
   | Group => IGroup S
   | *-comm => ext *-comm
 
+-- | Subgroup with decidable membership; extends `SubGroup` and `DecSubMonoid`.
 \class DecSubGroup \extends SubGroup, DecSubMonoid {
   \override S : Group
 }
 
+-- | Extends `SubGroup` with `isNormal`: closure under conjugation `g·h·g⁻¹` for any `g ∈ S` and `h ∈ H`.
 \class NormalSubGroup \extends SubGroup {
   | isNormal (g : S) {h : S} : contains h -> contains (conjugate g h)
 
+  -- | Equivalent normality form using `g⁻¹·h·g`.
   \lemma isNormal' (g : S) {h : S} (c : contains h) : contains (inverse g * h * g)
     => simplify in isNormal (inverse g) c
 
@@ -101,10 +121,14 @@
     | func-* => idp
 }
 
+-- | Extends `DecSubGroup` with an underlying `FinGroup`.
 \class FinSubGroup \extends DecSubGroup {
   \override S : FinGroup
 }
 
+{- | The induced finite group on the decidable sub-set, using `SigmaFin.DecSubSet-isFin` to obtain finiteness of the
+ -   carrier.
+ -}
 \instance IFinGroup (S : FinSubGroup {}) : FinGroup
   | Group => IGroup S
   | FinSet => SigmaFin.DecSubSet-isFin S.S S
@@ -115,13 +139,16 @@
   | <=-transitive p q r => q (p r)
   | <=-antisymmetric p q => exts \lam g => ext (p,q)
 
+-- | Additive analogue of `SubGroup`; extends `SubAddMonoid` with `contains_negative`.
 \class SubAddGroup \extends SubAddMonoid {
   \override S : AddGroup
   | contains_negative {x : S} : contains x -> contains (negative x)
 
+  -- | Closure under subtraction `x - y`.
   \lemma contains_- {x y : S} : contains x -> contains y -> contains (x - y)
     => \lam cx cy => contains_+ cx (contains_negative cy)
 } \where {
+  -- | The maximal sub-additive-group containing every element of `A`.
   \func max {A : AddGroup} : SubAddGroup \cowith
     | SubAddMonoid => SubAddMonoid.max {A}
     | contains_negative _ => ()
@@ -130,6 +157,7 @@
     | AddMonoidHom => SubAddMonoid.maxHom
 }
 
+-- | Induced `AddGroup` structure on the sub-set.
 \instance IAddGroup (S : SubAddGroup {}) : AddGroup
   | AddMonoid => IAddMonoid S
   | negative x => (negative x.1, contains_negative x.2)
@@ -163,6 +191,7 @@
   => Kernel-trivial-char {AddGroupHom.toGroupHom f}
 
 
+-- | The image of a group homomorphism `f` as a `Group`, extending `ImageMonoid f` with inverses.
 \func ImageGroup (f : GroupHom) : SubGroup f.Cod \cowith
   | SubMonoid => ImageMonoid f
   | contains_inverse (inP (a, p)) => inP (inverse a, f.func-inverse *> pmap inverse p)
@@ -174,6 +203,7 @@
   | MonoidHom => ImMonoidLeftHom f
 
 
+-- | The image of an `AddGroupHom` as an `AddGroup`, extending `ImageAddMonoid` with negation.
 \func ImageAddGroup (f : AddGroupHom) : SubAddGroup f.Cod \cowith
   | SubAddMonoid => ImageAddMonoid f
   | contains_negative (inP (a, p)) => inP (negative a, f.func-negative *> pmap negative p)

@@ -1,14 +1,33 @@
+{- | Monoids equipped with a partial order compatible with multiplication.
+ -
+ -   This module introduces the basic structures combining order theory with monoid operations, where multiplication is
+ -   monotone in each argument. The non-commutative version requires separate left and right monotonicity axioms, while
+ -   the commutative version derives right monotonicity from left monotonicity using commutativity. These classes serve
+ -   as the foundation for ordered algebraic hierarchies (ordered groups, semirings, rings) where multiplicative
+ -   operations must respect the order.
+ -}
+
 \import Algebra.Monoid
 \import Order.PartialOrder
 \import Paths
 
+{- | Extends `Poset` and `Monoid`. A monoid with a partial order such that multiplication is monotone in both arguments.
+ -   Required fields: `<=_*-left` (right-multiplication preserves order: `x <= y -> x * z <= y * z`) and `<=_*-right`
+ -   (left-multiplication preserves order: `x <= y -> z * x <= z * y`).
+ -}
 \class OrderedMonoid \extends Poset, Monoid {
   | <=_*-left (z : E) {x y : E} : x <= y -> x * z <= y * z
   | <=_*-right (z : E) {x y : E} : x <= y -> z * x <= z * y
 
+  {- | Joint monotonicity of multiplication: given `a <= c` and `b <= d`, concludes `a * b <= c * d`. Combines left and
+   -   right monotonicity to compare products of pairs of ordered elements.
+   -}
   \lemma <=_* {a b c d : E} (p : a <= c) (q : b <= d) : a * b <= c * d
     => <=_*-left b p <=∘ <=_*-right c q
 }
 
+{- | Extends `OrderedMonoid` and `CMonoid`. The commutative variant; `<=_*-right` is automatically derived from
+ -   `<=_*-left` by transporting along `*-comm` on both sides.
+ -}
 \class OrderedCMonoid \extends OrderedMonoid, CMonoid
   | <=_*-right z x<y => transport2 (<=) *-comm *-comm (<=_*-left z x<y)

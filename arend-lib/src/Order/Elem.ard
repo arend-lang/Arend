@@ -1,3 +1,12 @@
+{- | Order structures inherited by subsets via the underlying carrier's order.
+ -
+ -   This module lifts standard order classes from a type `X` to `Elem U`, the type of elements of a subset `U : Set X`.
+ -   Each instance defines the order on pairs by projecting to the first component (`.1`), so the subset inherits the
+ -   ambient order pointwise. This provides a uniform way to view any subset of an ordered structure as an ordered
+ -   structure in its own right, which is useful when restricting attention to a sub-collection while preserving
+ -   order-theoretic reasoning.
+ -}
+
 \import Order.Biordered
 \import Order.LinearOrder
 \import Order.PartialOrder
@@ -5,17 +14,26 @@
 \import Paths.Meta
 \import Set.Set
 
+{- | Strict poset structure on `Elem U` for `U : Set X` with `X : StrictPoset`. Defines `x < y` as `x.1 < y.1` and
+ -   inherits irreflexivity and transitivity from `X`.
+ -}
 \instance ElemStrictPoset {X : StrictPoset} (U : Set X) : StrictPoset (Elem U)
   | < x y => x.1 < y.1
   | <-irreflexive => <-irreflexive
   | <-transitive => <∘
 
+{- | Poset structure on `Elem U` for `U : Set X` with `X : Poset`. Defines `x <= y` as `x.1 <= y.1` and inherits
+ -   reflexivity, transitivity, and antisymmetry from `X`.
+ -}
 \instance ElemPoset {X : Poset} (U : Set X) : Poset (Elem U)
   | <= x y => x.1 <= y.1
   | <=-refl => <=-refl
   | <=-transitive => <=∘
   | <=-antisymmetric p q => ext (<=-antisymmetric p q)
 
+{- | `BiorderedSet` structure on `Elem U` combining `ElemStrictPoset` and `ElemPoset`. Inherits the compatibility axioms
+ -   (`<-transitive-right`, `<-transitive-left`, `<=-less`) tying `<` and `<=` together from the ambient biordered set.
+ -}
 \instance ElemBiordered {X : BiorderedSet} (U : Set X) : BiorderedSet (Elem U)
   | StrictPoset => ElemStrictPoset U
   | Poset => ElemPoset U
@@ -23,6 +41,9 @@
   | <-transitive-left => <∘l
   | <=-less => <=-less
 
+{- | Linear order structure on `Elem U` for `U : Set X` with `X : LinearOrder`. Built on `ElemStrictPoset`, inheriting
+ -   comparison and connectedness from `X`.
+ -}
 \instance ElemLinearOrder {X : LinearOrder} (U : Set X) : LinearOrder (Elem U)
   | StrictPoset => ElemStrictPoset U
   | <-comparison y p => <-comparison y.1 p

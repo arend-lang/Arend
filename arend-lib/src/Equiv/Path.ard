@@ -1,3 +1,12 @@
+{- | Equivalences between path types induced by retractions, embeddings, and sections.
+ -
+ -   This module shows how structure on a map `f : A -> B` lifts to its action on paths. The central trick is
+ -   `pathEquiv`: a family of retractions `(a = a') -> R a a'` already entails that each retraction is a
+ -   quasi-equivalence, because path induction reduces the section-then-retraction round trip to an idempotency
+ -   calculation. From this, `pmap` of any `Equiv` is again an equivalence, and the same machinery upgrades embeddings
+ -   and sections so that proofs of equality between points transport along `f` without losing information.
+ -}
+
 \import Equiv
 \import Equiv.HalfAdjoint
 \import Function.Meta
@@ -14,6 +23,9 @@
   )
   | f_sec => p.f_sec
 
+{- | For `p : a = b`, left-concatenation by `inv p` gives a `QEquiv {a = c} {b = c}`. Provides the standard path-space
+ -   equivalence induced by a base-point change.
+ -}
 \func pathConcatEquiv {A : \Type} {a b c : A} (p : a = b) : QEquiv {a = c} {b = c} \cowith
   | f => inv p *>
   | ret => p *>

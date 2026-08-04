@@ -1,3 +1,14 @@
+{- | Foundational propositional logic primitives: the empty type, propositional truncation, disjunction, and basic
+ -   prop-level reasoning utilities.
+ -
+ -   This module sets up the proof-relevant logical scaffolding used throughout the library. `Empty` and `Not` give
+ -   negation; `TruncP` is the propositional truncation that turns any type into a proposition while still allowing
+ -   recursion into propositions/sets; `||` is the prop-valued disjunction (distinct from the constructive `Or` in
+ -   `Data.Or`). The `propExt`, `prop-pi`, and `set-pi` lemmas exploit Arend's universe-level system (`\Prop`, `\Set`)
+ -   to obtain proof irrelevance and propositional extensionality. `NegatedProp` axiomatizes propositions for which
+ -   double-negation elimination holds, providing a hook for classical reasoning over specific types.
+ -}
+
 \import Algebra.Meta
 \import Data.Or
 \import Function.Meta
@@ -7,35 +18,47 @@
 \import Paths
 \import Paths.Meta
 
+-- | The empty type (false proposition).
 \data Empty
 
+-- | Ex falso: `Empty -> A` for any `A`.
 \func absurd {A : \Type} (x : Empty) : A
 
+-- | Negation: `A -> Empty`.
 \func Not (A : \Type) => A -> Empty
 
+-- | Disequality: `Not (a = a')`.
 \func \infix 1 /= {A : \Type} (a a' : A) => Not (a = a')
 
+-- | Symmetry of disequality.
 \lemma /=-sym {A : \Type} {a a' : A} (p : a /= a') : a' /= a
   => \lam r => p (inv r)
 
+-- | Propositional truncation of a type, with constructor `inP` and identification path `truncP`.
 \data TruncP (A : \Type)
   | inP A
   | truncP (a a' : TruncP A) : a = a'
   \where {
+    -- | Witness that `TruncP A` is a proposition.
     \use \level levelProp {A : \Type} (a a' : TruncP A) : a = a' => path (truncP a a')
 
+    -- | Eliminate `TruncP A` when `A` is already a proposition.
     \lemma remove {A : \Type} (p : isProp A) (t : TruncP A) : A \level p \elim t
       | inP a => a
 
+    -- | `remove` specialized for `A : \Prop`.
     \lemma remove' {A : \Prop} (t : TruncP A) : A \elim t
       | inP a => a
 
+    -- | Recursion into a proposition: factor `A -> B` through `TruncP A`.
     \lemma rec {A B : \Type} (p : isProp B) (t : TruncP A) (f : A -> B) : B \level p \elim t
       | inP a => f a
 
+    -- | Computation rule: `rec p (inP a) f = f a`.
     \lemma rec-eval {A B : \Type} {p : isProp B} {a : A} {f : A -> B} : rec p (inP a) f = f a \level isProp.=>isSet p _ _
       => p _ _
 
+    -- | Recursion into a set, returning the unique image together with its witness.
     \lemma rec-set {A : \Type} {B : \Set} (t : TruncP A) (f : A -> B) (p : \Pi (a a' : A) -> f a = f a')
       : \Sigma (b : B) (∃ (a : A) (f a = b)) \level level p \elim t
       | inP a => (f a, inP (a, idp))
@@ -49,33 +72,41 @@
         | inP (a',q) => inv q *> p a' a
       }
 
+    -- | Functorial action: `(A -> B) -> TruncP A -> TruncP B`.
     \func map {A B : \Type} (t : TruncP A) (f : A -> B) : TruncP B \elim t
       | inP a => inP (f a)
   }
 
+-- | Proof irrelevance: any two elements of a `\Prop` are equal.
 \lemma prop-pi {A : \Prop} {a a' : A} : a = a'
   => path \case truncP (inP a) (inP a') __ \with {
     | inP x => x
   }
 
+-- | Every `\Prop` satisfies `isProp`.
 \lemma prop-isProp {A : \Prop} : isProp A
   => \lam _ _ => prop-pi
 
+-- | UIP for `\Set`: any two paths between equal points are equal.
 \lemma set-pi {A : \Set} {a b : A} {p q : a = b} : p = q
   => prop-pi
 
+-- | Dependent proof irrelevance over a path of propositions.
 \lemma prop-dpi (A : I -> \Prop) (a : A left) (a' : A right) : Path A a a'
   => pathOver (prop-isProp (coe A a right) a')
 
 \lemma setPair-unext2 {A : \Set} {B : A -> \Set} {a : A} {b : B a} {b' : B a} (p : (a,b) = {\Sigma (a : A) (B a)} (a,b')) : b = b'
   => pmap (\lam x => transport B x b) (prop-pi : idp = pmap __.1 p) *> pmapd __.2 p
 
+-- | Wraps a type `A` together with `isProp A` to produce something that is propositionally `A`.
 \data ToProp (A : \Type) (p : isProp A)
   | toProp A
   \where {
+    -- | Extract the underlying `A`.
     \lemma fromProp {A : \Type} {p : isProp A} (t : ToProp A p) : A \level p \elim t
       | toProp a => a
 
+    -- | Witness that `ToProp A p` is a proposition.
     \use \level levelProp {A : \Type} {p : isProp A} (x y : ToProp A p) : x = y \elim x, y
       | toProp a, toProp a' => pmap toProp (p a a')
   }
@@ -109,17 +140,22 @@
       | byRight b => byLeft b
   }
 
+-- | Logical equivalence of propositions: `\Sigma (P -> Q) (Q -> P)`.
 \func \infix 0 <-> (P Q : \Prop) => \Sigma (P -> Q) (Q -> P)
 
+-- | `(P <-> Q) <-> (P = Q)` via propositional extensionality.
 \lemma <->_= {P Q : \Prop} : (P <-> Q) <-> (P = Q)
   => (\lam p => ext p, \lam p => rewrite p (\lam x => x, \lam x => x))
 
+-- | Reflexivity, transitivity, symmetry of `<->`.
 \lemma <->refl {P : \Prop} : P <-> P
   => (\lam p => p, \lam p => p)
 
+-- | Reflexivity, transitivity, symmetry of `<->`.
 \lemma <->trans {P Q S : \Prop} (f : P <-> Q) (g : Q <-> S) : P <-> S
   => (\lam p => g.1 (f.1 p), \lam s => f.2 (g.2 s))
 
+-- | Reflexivity, transitivity, symmetry of `<->`.
 \lemma <->sym {P Q : \Prop} (f : P <-> Q) : Q <-> P
   => (f.2,f.1)
 
@@ -155,24 +191,33 @@
 \lemma SetIm_TSetIm {A B C : \Type} {f : A -> B} {g : B -> C} : SetIm g (TSetIm f) = TSetIm (\lam a => g (f a))
   => ext \lam c => propExt (SetIm-elim $ TSetIm-elim TSetIm-con) (TSetIm-elim \lam a => SetIm-con $ TSetIm-con a)
 
+-- | Truncated existence: some predicate in an array of types is inhabited.
 \func OneOf (l : Array \Prop) => ∃ (P : l) P
 
+-- | Untruncated `Given` form of `OneOf`.
 \func ElemOf (l : Array \Prop) => Given (P : l) P
 
+-- | `x` belongs to the array `l`: `∃ (y : l) (y = x)`.
 \type arraySubset {X : \Type} (l : Array X) (x : X) => ∃ (y : l) (y = x)
 
+-- | Propositional extensionality: bi-implication of `\Prop`s yields equality.
 \lemma propExt {A B : \Prop} (f : A -> B) (g : B -> A) : A = B =>
   path (iso f g (\lam _ => prop-pi) (\lam _ => prop-pi))
   \where {
+    -- | Forward/backward transport along a `\Prop` equality.
     \lemma dir {A B : \Prop} (p : A = B) (a : A) : B => transport (\lam X => X) p a
 
+    -- | Forward/backward transport along a `\Prop` equality.
     \lemma conv {A B : \Prop} (p : A = B) (b : B) : A => dir (inv p) b
   }
 
+-- | Meta tactic discharging propositional equalities by `prop-pi` or contradiction.
 \meta isProp-prover => \lam x y => cases (x,y) (cong prop-pi <|> contradiction)
 
+-- | Class of propositions admitting double-negation elimination, with field `isNegated : Not (Not P) -> P`.
 \class NegatedProp (P : \Prop)
   | isNegated : Not (Not P) -> P
 
+-- | Instance witnessing that `Empty` is a `NegatedProp`.
 \instance EmptyNegated : NegatedProp Empty
   | isNegated p => p \lam x => x

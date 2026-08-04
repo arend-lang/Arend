@@ -1,3 +1,14 @@
+{- | Continuous germs at a point — equivalence classes of locally-defined continuous maps that agree on some open
+ -   neighborhood of the basepoint.
+ -
+ -   A `ContGerm X Y x` is the quotient of pairs `(U, continuous f : U → Y)` (with `U` an open neighborhood of `x`) by
+ -   the equivalence that identifies two such maps when they coincide on a common smaller open neighborhood of `x`. This
+ -   captures the standard notion of germ from sheaf theory in a constructive setting: only local behavior near `x`
+ -   matters. The module further shows that germs inherit algebraic structure pointwise (abelian group, ring, module)
+ -   from the codomain, and provides evaluation at the basepoint as a homomorphism, together with an injectivity result
+ -   for the multiplication-by-identity germ in the field/Hausdorff setting.
+ -}
+
 \import Algebra.Group
 \import Algebra.Group.GroupHom
 \import Algebra.Module
@@ -24,21 +35,31 @@
 \open ContMap
 \open MeetSemilattice
 
+{- | The type of continuous germs of maps `X → Y` at `x : X`, defined as the quotient of
+ -   `(U : Set X, isOpen U, U x, ContMap (TopSub U) Y)` by the local-agreement equivalence.
+ -}
 \type ContGerm (X Y : TopSpace) (x : X)
   => Quotient (equivalence.~)
   \where {
+    {- | The underlying equivalence relation: two local maps are related if they agree on some common open neighborhood
+     -   of `x` contained in both their domains.
+     -}
     \func equivalence : Equivalence (\Sigma (U : Set X) (isOpen U) (U x) (ContMap (TopSub U) Y)) \cowith
       | ~ f g => ∃ (V : isOpen) (V x) (p : V ⊆ f.1) (q : V ⊆ g.1) ∀ {x : X} (Vx : V x) (f.4 (x, p Vx) = g.4 (x, q Vx))
       | ~-transitive {f} {g} {h} (inP (U,Uo,Ux,p,_,r)) (inP (V,Vo,Vx,_,q,e)) => inP (U ∧ V, open-inter Uo Vo, (Ux,Vx), meet-left <=∘ p, meet-right <=∘ q, \lam s => pmap f.4 (ext idp) *> r s.1 *> pmap g.4 (ext idp) *> e s.2 *> pmap h.4 (ext idp))
       | ~-reflexive {f} => inP (f.1, f.2, f.3, <=-refl, <=-refl, \lam _ => idp)
       | ~-symmetric (inP (V,Vo,Vx,p,q,r)) => inP (V, Vo, Vx, q, p, \lam Vx => inv (r Vx))
 
+    -- | Postcomposes a germ `g : ContGerm X Y x` with a continuous map `h : Y → Z` to obtain `ContGerm X Z x`.
     \func comp-right {X Y Z : TopSpace} {x : X} (g : ContGerm X Y x) (h : ContMap Y Z) : ContGerm X Z x \elim g
       | in~ (U,Uo,Ux,g) => inCG Uo Ux (h ∘ g)
       | ~-equiv y z r => \case \elim r \with {
         | inP (V,Vo,Vx,p,q,r) => ~-cgequiv Vo Vx p q \lam Vx => pmap h (r Vx)
       }
 
+    {- | Pairs two germs `f : ContGerm X Y x` and `g : ContGerm X Z x` into `ContGerm X (Y ⨯ Z) x`, intersecting their
+     -   domains of definition.
+     -}
     \func tuple {X Y Z : TopSpace} {x : X} (f : ContGerm X Y x) (g : ContGerm X Z x) : ContGerm X (ProductTopSpace Y Z) x \elim f, g
       | in~ (U,Uo,Ux,f), in~ (V,Vo,Vx,g) => inCG (open-inter Uo Vo) (Ux,Vx) $ ProductTopSpace.tuple (f ∘ TopSub-inc meet-left) (g ∘ TopSub-inc meet-right)
       | in~ (U,Uo,Ux,f), ~-equiv y z r => \case \elim r \with {
@@ -49,27 +70,39 @@
       }
   }
 
+-- | Builds a germ from an open neighborhood `U` of `x` and a continuous map `f : TopSub U → Y`.
 \func inCG {X Y : TopSpace} {x : X} {U : Set X} (Uo : isOpen U) (Ux : U x) (f : ContMap (TopSub U) Y) : ContGerm X Y x
   => in~ (U,Uo,Ux,f)
 
+-- | Builds a germ from a globally defined continuous map `f : ContMap X Y` by restricting to the trivial open `\Sigma`.
 \sfunc inCGt {X Y : TopSpace} {x : X} (f : ContMap X Y) : ContGerm X Y x
   => inCG open-top () $ f ∘ TopTransfer-map {\Sigma X (\property \Sigma)} __.1
 
+{- | Standard introduction rule for germ equality: two pairs represent the same germ when their underlying maps agree on
+ -   a common open neighborhood `V` of `x`.
+ -}
 \lemma ~-cgequiv {X Y : TopSpace} {x : X} {u v : \Sigma (U : Set X) (isOpen U) (U x) (ContMap (TopSub U) Y)}
   {V : Set X} (Vo : isOpen V) (Vx : V x) (p : V ⊆ u.1) (q : V ⊆ v.1) (e : \Pi {x : X} (Vx : V x) -> u.4 (x, p Vx) = v.4 (x, q Vx)) : in~ u = {ContGerm X Y x} in~ v
   => path \lam i => ~-equiv u v (inP (V,Vo,Vx,p,q,e)) i
   \where {
+    -- | Converse — extracts the witnessing common open neighborhood and pointwise equality from a germ equality.
     \lemma conv {X Y : TopSpace} {x : X} {u v : \Sigma (U : Set X) (isOpen U) (U x) (ContMap (TopSub U) Y)} (p : in~ u = {ContGerm X Y x} in~ v)
       : ∃ (V : isOpen) (Vx : V x) (p : V ⊆ u.1) (q : V ⊆ v.1) (e : \Pi {x : X} (Vx : V x) -> u.4 (x, p Vx) = v.4 (x, q Vx))
       => Quotient.equalityEquiv ContGerm.equivalence (\lam i => (p i : Quotient (ContGerm.equivalence.~)))
   }
 
+{- | Evaluates a germ at the basepoint, producing `evalCG g : Y`. Well-defined on the quotient because all
+ -   representatives agree at `x`.
+ -}
 \func evalCG {X Y : TopSpace} {x : X} (g : ContGerm X Y x) : Y \elim g
   | in~ (U,Uo,Ux,g) => g (x,Ux)
   | ~-equiv y z r => \case \elim r \with {
     | inP (V,Vo,Vx,p,q,h) => pmap (\lam t => y.4 (x,t)) prop-pi *> h Vx *> pmap (\lam t => z.4 (x,t)) prop-pi
   }
 
+{- | Abelian group structure on `ContGerm X Y x` for `Y : TopAbGroup`. Addition is pointwise via `tuple` followed by the
+ -   continuous addition `+-cont`; the zero germ is the constant `0` map; negation uses `negative-cont`.
+ -}
 \instance ContGermAbGroup (X : TopSpace) (Y : TopAbGroup) (x : X) : AbGroup (ContGerm X Y x)
   | zro => inCG open-top () (const 0)
   | + f g => ContGerm.comp-right (ContGerm.tuple f g) +-cont
@@ -89,6 +122,9 @@
                                            \lam _ => pmap2 (f __ + g __) (ext idp) (ext idp) *> +-comm
   }
 
+{- | Ring structure on `ContGerm X Y x` for `Y : TopRing`, extending `ContGermAbGroup`. Multiplication is pointwise via
+ -   `tuple` followed by `*-cont`; the identity germ is the constant `1`.
+ -}
 \instance ContGermRing (X : TopSpace) (Y : TopRing) (x : X) : Ring (ContGerm X Y x)
   | AbGroup => ContGermAbGroup X Y x
   | ide => inCG open-top () (const 1)
@@ -112,6 +148,9 @@
                                                             \lam _ => rdistr *> pmap2 (+) (pmap2 (f __ * h __) (ext idp) (ext idp)) (pmap2 (g __ * h __) (ext idp) (ext idp))
   }
 
+{- | Left module structure on `ContGerm X Y x` over the ring `ContGermRing X R x`, where `Y : TopLModule R`. Scalar
+ -   multiplication is defined on representatives via `*c-cont` and lifted through both quotient arguments.
+ -}
 \instance ContGermLModule (X : TopSpace) {R : TopRing} (Y : TopLModule R) (x : X) : LModule (ContGermRing X R x) (ContGerm X Y x)
   | AbGroup => ContGermAbGroup X Y x
   | *c (f : ContGerm X R x) (g : ContGerm X Y x) : ContGerm X Y x \elim f, g {
@@ -135,14 +174,19 @@
     | in~ (U,Uo,Ux,f) => ~-cgequiv Uo Ux (\lam u => ((),u)) <=-refl \lam Ux => ide_*c *> pmap f (ext idp)
   }
 
+-- | Evaluation `evalCG` is an additive group homomorphism `ContGermAbGroup X Y x → Y`.
 \lemma evalCGAddGroupHom {X : TopSpace} {Y : TopAbGroup} {x : X} : AddGroupHom (ContGermAbGroup X Y x) Y evalCG \cowith
   | func-+ {f} {g} => \case \elim f, \elim g \with {
     | in~ (U,Uo,Ux,f), in~ (V,Vo,Vx,g) => pmap2 (f __ + g __) (ext idp) (ext idp)
   }
 
+-- | Compatibility of evaluation with scalar multiplication: `evalCG (inCGt (const r) *c g) = r *c evalCG g`.
 \lemma evalCG-linear {X : TopSpace} {R : TopRing} {Y : TopLModule R} {x : X} {r : R} {g : ContGerm X Y x} : evalCG (inCGt (const r) *c g) = r *c evalCG g \elim g
   | in~ (U,Uo,Ux,g) => rewrite (\peval inCGt (const r)) $ pmap (r *c g __) (ext idp)
 
+{- | Cancellation/injectivity: over a near skew-field `R` with Hausdorff target `Y`, multiplication by the identity germ
+ -   is injective on `ContGerm R Y 0` — i.e., `inCGt id *c f = inCGt id *c g` implies `f = g`.
+ -}
 \lemma cg-module-inj {R : NearSkewField} {Y : HausdorffTopLModule R} {f g : ContGerm R Y 0} (p : inCGt id *c f = inCGt id *c g) : f = g \elim f, g
   | in~ (U,Uo,Ux,f), in~ (V,Vo,Vx,g) => \case ~-cgequiv.conv $ rewrite (\peval inCGt id) in p \with {
     | inP (W,Wo,W0,p,q,r) => ~-cgequiv Wo W0 (p <=∘ meet-right) (q <=∘ meet-right) $

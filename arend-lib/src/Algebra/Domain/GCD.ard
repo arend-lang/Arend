@@ -1,3 +1,12 @@
+{- | GCD domains: integral domains in which every pair of nonzero elements has a greatest common divisor.
+ -
+ -   A `GCDDomain` extends `IntegralDomain` with the existence of GCDs for nonzero elements (truncated, since GCDs are
+ -   unique only up to units). The development connects GCD domains to `CancelGCDMonoid` via the submonoid of nonzero
+ -   elements, so monoid-level GCD theory is reused. The decidable subclass `Dec` strengthens this to a fully decidable
+ -   `GCDMonoid` with constructive GCDs, and proves that decidable GCD domains are integrally closed by analyzing
+ -   coprime representations of localized elements and using monicity of integral dependence polynomials.
+ -}
+
 \import Algebra.Domain
 \import Algebra.Domain.IntegrallyClosed
 \import Algebra.Group
@@ -25,9 +34,14 @@
 \import Set
 \open Monoid
 
+-- | Integral domain where any two `#0`-nonzero elements have a `GCD` (truncated). Extends `IntegralDomain`.
 \class GCDDomain \extends IntegralDomain {
+  -- | The defining field — produces `TruncP (GCD x y)` from `#0 x` and `#0 y`.
   | isGCDDomain (x y : E) : x `#0 -> y `#0 -> TruncP (GCD x y)
 
+  {- | Packages the nonzero elements of the domain as a `CancelGCDMonoid`, transferring GCDs from the domain to its
+   -   multiplicative monoid of nonzero elements.
+   -}
   \func nonZeroGCDMonoid : CancelGCDMonoid \cowith
     | CancelCMonoid => nonZeroCMonoid
     | isGCD x y =>
@@ -53,6 +67,7 @@
                    }
                })
 
+  -- | `GCD x 0 x` — any element is its own GCD with zero.
   \protected \func gcd_0 (x : E) : GCD x 0 x \cowith
     | res|val1 => \new LDiv {
       | inv => 1
@@ -64,6 +79,9 @@
     }
     | res-univ g g|a _ => g|a
 
+  {- | Given a `GCD g` of `a` and `b`, the same `g` is a GCD of `a + b * d` and `b`. Used for Euclidean-style
+   -   reductions.
+   -}
   \func gcd_sum (d : E) (g : GCD {\this}) : GCD (g.val1 + g.val2 * d) g.val2 g \cowith
     | res|val1 => \new LDiv {
       | inv => g.res|val1.inv + g.res|val2.inv * d
@@ -75,6 +93,9 @@
       | inv-right => ldistr *> pmap2 (+) g'|a+bd.inv-right (Ring.negative_*-right *> pmap negative (inv *-assoc *> pmap (* d) g'|b.inv-right)) *> simplify
     }) g'|b
 } \where {
+  {- | Decidable GCD domains. Extends `GCDDomain`, `GCDMonoid`, `IntegralDomain.Dec`, and `IntegrallyClosedDomain`.
+   -   Provides total GCDs (not just for nonzero pairs) via decidable equality with zero.
+   -}
   \class Dec \extends GCDDomain, GCDMonoid, IntegralDomain.Dec, IntegrallyClosedDomain {
     | isGCD => gcd nonZeroApart
     | gcd-ldistr c {x} {y} g => \case decideEq c 0 \with {
@@ -100,8 +121,10 @@
       }
     }
 
+    -- | Every element of the localization at the nonzero submonoid has a representation `a/b` with `GCD a b 1`.
     \lemma coprime-repr (x : LocRing subMonoid) => coprime-repr-aux x
 
+    -- | A one-dimensional decidable GCD domain (Krull dimension ≤ 1) is strictly Bezout.
     \lemma oneDimensional_Bezout (d : Dim<= 1) : IsStrictBezout
       => \lam a b => \case isGCD a b \with {
         | inP (g : GCD) => \case decideEq a 0 \with {
@@ -116,12 +139,16 @@
         }
       }
 
+    {- | If `a | b * c`, then `a` factors as `a = a1 * a2` with `a1 | b` and `a2 | c`. The key splitting property of GCD
+     -   domains.
+     -}
     \lemma split_* {a b c : E} (a|bc : LDiv a (b * c)) : ∃ (a1 a2 : E) (a = a1 * a2) (LDiv a1 b) (LDiv a2 c)
       => \case decideEq a 0 \with {
         | yes a=0 => inP (b, c, later (rewrite a=0 $ inv zro_*-left) *> a|bc.inv-right, LDiv.id-div, LDiv.id-div)
         | no a/=0 => split-regular (\lam p => nonZero-cancel-left a/=0 p) a|bc
       }
 
+    -- | Decidability of divisibility is equivalent to decidability of being a unit.
     \lemma div_unit : (\Pi (a b : E) -> Set.Dec (TruncP (LDiv a b))) <-> (\Pi (a : E) -> Set.Dec (Monoid.Inv a))
       => (\lam f a => \case f a 1 \with {
             | yes (inP r) => yes (Monoid.Inv.ldiv r)
@@ -138,6 +165,9 @@
             }
       })
   } \where {
+    {- | Builds a `TruncP (GCD a b)` for arbitrary `a`, `b` in a GCD domain with decidable equality, by reducing to the
+     -   `#0` case via `nonZeroApart`.
+     -}
     \private \lemma gcd {M : GCDDomain} {D : DecSet M} (d : \Pi {x : M} -> x /= 0 -> x M.`#0) (a b : M) : TruncP (GCD a b)
       => \case decideEq a 0, decideEq b 0 \with {
         | yes a=0, _ => inP (GCD.swap {transportInv (GCD b __) a=0 (M.gcd_0 b)})
@@ -145,6 +175,9 @@
         | no a/=0, no b/=0 => isGCDDomain a b (d a/=0) (d b/=0)
       }
 
+    {- | Constructs a coprime numerator/denominator representation of a localization element, using GCDs to cancel
+     -   common factors.
+     -}
     \lemma coprime-repr-aux {D : GCDDomain} {dec : IntegralDomain.Dec { | IntegralDomain => D }} (x : LocRing D.subMonoid)
       : ∃ (a b : D) (b#0 : D.#0 b) (GCD a b 1) (x = inl~ (a, b, b#0)) \elim x
       | in~ (x,y,y#0) => \case decideEq x 0 \with {
@@ -155,6 +188,9 @@
              ~-lequiv1 $ equation.cMonoid {inv gcd.res|val1.inv-right, gcd.res|val2.inv-right})
       }
 
+    {- | If a polynomial over the localization, with monic preimage, vanishes at `inl~ (a, b, Sb)`, then `b` divides
+     -   some power of `a`. The technical core of integral closure.
+     -}
     \lemma loc_poly {R : CRing} {S : SubMonoid R} (nt : \Pi {a : R} -> S a -> \Pi {x y : R} -> x * a = y * a -> x = y)
                     (p : Poly R) (m : isMonic p) {a b : R} {Sb : S b} (e : polyEval (polyMap locR p) (inl~ (a,b,Sb)) = 0)
       : ∃ (n : Nat) (LDiv b (pow a n)) \elim m

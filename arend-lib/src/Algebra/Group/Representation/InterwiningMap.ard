@@ -5,6 +5,9 @@
 \import Algebra.Module.LinearMap
 \import Algebra.Ring
 
+{- | Record extending `LinearMap` with the equivariance condition `func (g ** e) = g ** func e`; the morphisms of the
+ -   representation category. Domain and codomain are overridden to be `LinRepres R G`.
+ -}
 \record InterwiningMap \extends LinearMap, EquivariantMap {
   \override Dom : LinRepres R G
   \override Cod : LinRepres R G

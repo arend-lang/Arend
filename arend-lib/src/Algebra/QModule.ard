@@ -1,3 +1,15 @@
+{- | Abelian groups equipped with rational scalar multiplication, formalizing ℚ-modules and ℚ-algebras as uniquely
+ -   divisible, torsion-free structures.
+ -
+ -   The module builds up the notion of a ℚ-module from two complementary axioms: divisibility (every element has an
+ -   n-th part for n ≠ 0) and torsion-freeness (multiplication by a nonzero natural is injective). Together these make
+ -   division by naturals unique, which lets `*q` be defined by picking the unique witness from `uniquelyDivisible` and
+ -   scaling by an integer numerator. An auxiliary alternative representation `Rat.AltRat`
+ -   (numerator/positive-denominator pairs) is used to prove the algebraic laws of `*q` modulo the equivalence relation
+ -   defining `Rat`. The hierarchy then layers rings and algebras on top, with conversions to and from the standard
+ -   `LModule`/`PseudoAlgebra`/`AAlgebra` interfaces over `RatField`.
+ -}
+
 \import Algebra.Algebra
 \import Algebra.Group
 \import Algebra.Group.GroupHom
@@ -16,75 +28,101 @@
 \import Paths.Meta
 \import Relation.Equivalence
 
+-- | Extends `AbGroup`. Every element `a` has, for each nonzero `n`, some `b` with `n *n b = a` (existence only).
 \class DivisibleGroup \extends AbGroup
   | isDivisible (a : E) {n : Nat} : n /= 0 -> ∃ (b : E) (n *n b = a)
 
+-- | Extends `AbGroup`. `n *n a = 0` implies `a = 0` for nonzero `n`.
 \class TorsionFreeGroup \extends AbGroup {
   | noTorsion {a : E} {n : Nat} : n /= 0 -> n *n a = 0 -> a = 0
 
+  -- | Cancellation form: `n *n a = n *n b` implies `a = b`.
   \lemma noTorsion-div {a b : E} {n : Nat} (n/=0 : n /= 0) (p : n *n a = n *n b) : a = b
     => fromZero $ noTorsion n/=0 $ *n-ldistr_- *> toZero p
 }
 
+{- | Extends `DivisibleGroup` and `TorsionFreeGroup`. The combined axioms make division unique, yielding a ℚ-module
+ -   structure.
+ -}
 \class QModule \extends DivisibleGroup, TorsionFreeGroup {
+  -- | For nonzero `n`, the type `\Sigma (b : E) (n *n b = a)` is contractible — division by `n` is unique.
   \lemma uniquelyDivisible (a : E) {n : Nat} (n/=0 : n /= 0) : Contr (\Sigma (b : E) (n *n b = a))
     => isProp'=>isContr (\lam s t => ext $ fromZero $ noTorsion n/=0 $ *n-ldistr_- *> toZero (s.2 *> inv t.2)) (isDivisible a n/=0)
 
+  -- | Multiplication by a `Rat`, defined as `ratNom q *i (b)` where `b` is the unique division by `ratDenom q`.
   \sfunc \infixl 7 *q (q : Rat) (a : E) : E
     => ratNom q *i (uniquelyDivisible a (ratDenom/=0 {q})).center.1
 
+  -- | On integer scalars, `*q` agrees with integer multiplication `*i`.
   \lemma *q_*i {x : Int} {a : E} : x *q a = x *i a
     => (\peval _ *q _) *> pmap (x *i) (ud-unique zro-left)
 
+  -- | On natural scalars, `*q` agrees with `*n`.
   \lemma *q_*n {n : Nat} {a : E} : n *q a = n *n a
     => *q_*i
 
+  -- | `2 *q a = a + a`.
   \lemma *q_*2 {a : E} : 2 *q a = a + a
     => *q_*n *> +-assoc *> zro-left
 
+  -- | `1 *q a = a`.
   \lemma ide_*q {a : E} : 1 *q a = a
     => (\peval _ *q _) *> zro-left *> ud-unique zro-left
 
+  -- | `(q * r) *q a = q *q (r *q a)`.
   \lemma *q-assoc {q r : Rat} {a : E} : q * r *q a = q *q (r *q a)
     => *aq.*q_*aq *> pmap (*aq a) RatField.*_alt *> *aq.*aq-assoc {_} {rat_alt q} {rat_alt r} *> inv (pmap (_ *q) *aq.*q_*aq *> *aq.*q_*aq)
 
+  -- | Cancellation: `q *q a = q *q b` implies `a = b` for `q ≠ 0`.
   \lemma *q-cancel {q : Rat} (q/=0 : q /= RatField.zro) {a b : E} (p : q *q a = q *q b) : a = b
     => inv (pmap (*q a) (RatField.finv-left q/=0) *> ide_*q) *> *q-assoc *> pmap (RatField.finv q *q) p *> inv *q-assoc *> pmap (*q b) (RatField.finv-left q/=0) *> ide_*q
 
+  -- | The chosen division witness satisfies `n *n (...).1 = a`.
   \protected \lemma ud-cond {a : E} {n : Nat} {n/=0 : n /= 0} : n *n (uniquelyDivisible a n/=0).center.1 = a
     => (uniquelyDivisible a n/=0).center.2
 
+  -- | Any other witness coincides with the chosen one.
   \protected \lemma ud-unique {a b : E} {n : Nat} {n/=0 : n /= 0} (p : n *n b = a) : (uniquelyDivisible a n/=0).center.1 = b
     => pmap __.1 $ (uniquelyDivisible a n/=0).contraction (b,p)
 
+  -- | The witness is invariant under propositionally equal denominators.
   \protected \lemma ud-pi {a : E} {n m : Nat} {n/=0 : n /= 0} {m/=0 : m /= 0} (p : n = m) : (uniquelyDivisible a n/=0).center.1 = (uniquelyDivisible a m/=0).center.1 \elim p
     | idp => idp
 
+  {- | Scalar multiplication using `Rat.AltRat` (numerator, positive denominator) representation, defined by recursion
+   -   on the quotient with the corresponding `~-equiv` coherence proof.
+   -}
   \protected \func \infixl 7 *aq (q : Rat.AltRat) (a : E) : E \elim q
     | in~ (n, d, d>0) => n *i (uniquelyDivisible a $ >_/= d>0).center.1
     | ~-equiv (n1, d1, d1>0) (n2, d2, d2>0) r => noTorsion-div (>_/= d1>0) $
         inv (*i-assoc {_} {iabs d1}) *> pmap (*i _) *-comm *> *i-assoc *> pmap (n1 *i) (ud-cond *> inv ud-cond *> pmap (*i _) (>_iabs d2>0)) *> inv *i-assoc *> pmap (*i _) (r *> pmap (n2 *) (inv (>_iabs d1>0)) *> *-comm) *> *i-assoc {_} {iabs d1}
     \where {
+      -- | Auxiliary lemmas relating `signum`, `iabs`, and positivity of integers.
       \lemma >_/= {d : Int} (p : signum d = 1) : iabs d /= 0 \elim d
         | pos n => \lam n=0 => \case rewrite n=0 p
         | neg n => \lam n=0 => \case rewrite n=0 p
 
+      -- | Auxiliary lemmas relating `signum`, `iabs`, and positivity of integers.
       \lemma >_iabs {d : Int} (p : signum d = 1) : pos (iabs d) = d \elim d
         | pos n => iabs.ofPos (pos<=pos zero<=_)
         | neg (suc n) => \case p
 
+      -- | Bridge: `q *q a = rat_alt q *aq a`.
       \protected \lemma *q_*aq {q : Rat} {a : E} : q *q a = rat_alt q *aq a
         => \peval q *q a
 
+      -- | Associativity and right-distributivity for the alternative form (used to derive the `*q` laws).
       \protected \lemma *aq-assoc {q r : Rat.AltRat} {a : E} : q Rat.AltRat.* r *aq a = q *aq (r *aq a) \elim q, r
         | in~ q, in~ r => *i-assoc *> pmap (q.1 *i) (noTorsion-div (*aq.>_/= q.3) $ inv (*i-assoc {_} {iabs q.2}) *> pmap (*i _) *-comm *> *i-assoc *> pmap (r.1 *i) (noTorsion-div (*aq.>_/= r.3) $ inv (*i-assoc {_} {iabs r.2} {iabs q.2}) *> pmap (*n _) (*-comm *> inv iabs_*) *> ud-cond *> inv ud-cond) *> inv ud-cond)
 
+      -- | Associativity and right-distributivity for the alternative form (used to derive the `*q` laws).
       \protected \lemma *aq-rdistr {q r : Rat.AltRat} {a : E} : (q Rat.AltRat.+ r) *aq a = q *aq a + r *aq a \elim q, r
         | in~ q, in~ r => *i-rdistr *> pmap2 (+)
                                          (*i-assoc *> pmap (q.1 *i) (noTorsion-div (*aq.>_/= q.3) $ inv (*i-assoc {_} {iabs q.2}) *> pmap (*i _) (pmap (_ *) (inv (*aq.>_iabs r.3)) *> pmap pos (inv iabs_*)) *> ud-cond *> inv ud-cond))
                                          (*i-assoc *> pmap (r.1 *i) (noTorsion-div (*aq.>_/= r.3) $ inv (*i-assoc {_} {iabs r.2}) *> pmap (*i _) (*-comm *> pmap (* _) (inv (*aq.>_iabs q.3)) *> pmap pos (inv iabs_*)) *> ud-cond *> inv ud-cond))
     }
 
+  -- | Packages the `QModule` as an `LModule` over `RatField` using `*q` as scalar multiplication.
   \func toRatModule : LModule RatField \cowith
     | AbGroup => \this
     | *c => *q
@@ -93,36 +131,49 @@
     | *c-rdistr {r} {s} {a} => *aq.*q_*aq *> pmap (*aq a) RatField.+_alt *> *aq.*aq-rdistr {_} {rat_alt r} {rat_alt s} *> inv (pmap2 (+) *aq.*q_*aq *aq.*q_*aq)
     | ide_*c => ide_*q
 } \where {
+  {- | Converts an `LModule RatField` back into a `QModule` by extracting divisibility and torsion-freeness from the
+   -   rational scalar action.
+   -}
   \func fromRatModule (M : LModule RatField) : QModule \cowith
     | AbGroup => M
     | isDivisible a {n} n/0 => inP (RatField.finv n *c a, inv (*c-assoc *> M.natCoef_*c) *> pmap (*c a) (RatField.finv-right $ natRat/=0 n/0) *> ide_*c)
     | noTorsion n/=0 na=0 => inv (pmap (*c _) (RatField.finv-left $ natRat/=0 n/=0) *> ide_*c) *> *c-assoc *> pmap (_ *c) (M.natCoef_*c *> na=0) *> M.*c_zro-right
 }
 
+-- | Any `AddGroupHom` between `QModule`s automatically commutes with rational scaling: `f (q *q a) = q *q f a`.
 \lemma func-*q {A B : QModule} {f : AddGroupHom A B} {q : Rat} {a : A} : f (q A.*q a) = q B.*q f a
   => pmap f (\peval _ A.*q _) *> f.func-*i *> pmap (_ B.*i) (inv $ B.ud-unique $ inv f.func-*n *> pmap f A.ud-cond) *> inv (\peval _ B.*q _)
 
+{- | Extends `QModule` and `PseudoRing`. A pseudo-ring whose additive group is a ℚ-module, with rational scalars
+ -   commuting with multiplication.
+ -}
 \class QPseudoAlgebra \extends QModule, PseudoRing {
+  -- | `r *q (a * b) = (r *q a) * b`.
   \lemma *q-comm-left {r : Rat} {a b : E} : r *q (a * b) = r *q a * b
     => inv $ func-*q {_} {_} {*-addGroupHom-right}
 
+  -- | `r *q (a * b) = a * (r *q b)`.
   \lemma *q-comm-right {r : Rat} {a b : E} : r *q (a * b) = a * (r *q b)
     => inv $ func-*q {_} {_} {*-addGroupHom-left}
 
+  -- | A square scalar times a square element is a square: `IsSquare q -> IsSquare a -> IsSquare (q *q a)`.
   \lemma *q-square {q : Rat} {a : E} (qs : RatField.IsSquare q) (as : IsSquare a) : IsSquare (q *q a) \elim qs, as
     | inP (r,rr=q), inP (b,bb=a) => inP (r *q b, inv *q-comm-left *> pmap (r *q) (inv *q-comm-right) *> inv *q-assoc *> pmap2 (*q) rr=q bb=a)
 
+  -- | Packages as a `PseudoAlgebra RatField`.
   \func toRatAlgebra : PseudoAlgebra RatField \cowith
     | LModule => toRatModule
     | PseudoRing => \this
     | *c-comm-left => *q-comm-left
     | *c-comm-right => *q-comm-right
 } \where {
+  -- | Converts a `PseudoAlgebra RatField` to a `QPseudoAlgebra`.
   \func fromRatAlgebra (R : PseudoAlgebra RatField) : QPseudoAlgebra \cowith
     | QModule => QModule.fromRatModule R
     | PseudoRing => R
 }
 
+-- | Extends `QPseudoAlgebra` and `Ring`. A unital ℚ-algebra.
 \class QAlgebra \extends QPseudoAlgebra, Ring {
   \func fromRat (q : Rat) => q *q 1
 
@@ -141,18 +192,22 @@
   \lemma fromRat-comm {q : Rat} {a : E} : fromRat q * a = a * fromRat q
     => inv *q-comm-left *> pmap (q *q) (ide-left *> inv ide-right) *> *q-comm-right
 
+  -- | The natural-number coefficient `natCoef n` acts as `n *q -`.
   \lemma natCoef_*_*q {n : Nat} {a : E} : natCoef n * a = n *q a
     => natCoef_*_*n *> inv *q_*n
 
+  -- | Packages as an `AAlgebra RatField`.
   \func toRatAlgebra : AAlgebra RatField \cowith
     | PseudoAlgebra => QPseudoAlgebra.toRatAlgebra
     | Ring => \this
 } \where {
+    -- | Converts an `AAlgebra RatField` to a `QAlgebra`.
     \func fromRatAlgebra (R : AAlgebra RatField) : QAlgebra \cowith
       | QModule => QModule.fromRatModule R
       | Ring => R
   }
 
+-- | `Rat` itself as a `QAlgebra`, obtained from `RatField`'s self-algebra structure.
 \instance RatQAlgebra : QAlgebra Rat
   | Ring => RatField
   | QModule => QModule.fromRatModule ringAlgebra

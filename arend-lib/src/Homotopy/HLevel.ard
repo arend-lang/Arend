@@ -1,3 +1,12 @@
+{- | Homotopy levels (n-types) and their closure properties.
+ -
+ -   This module defines two parallel indexings of homotopy levels: `ofHLevel_-1+` (starting at propositions, indexed
+ -   from -1) and `ofHLevel_-2+` (starting at contractibility, indexed from -2). The two indexings are interconvertible
+ -   via `HLevel_-2+1=>HLevel_-1` and `HLevel_-1=>HLevel_-2+1`. The bulk of the module establishes that h-levels are
+ -   preserved under standard type-forming operations (Π, Σ, retracts, embeddings) and are upward-closed under the level
+ -   ordering, providing the basic infrastructure for working with truncation levels throughout the library.
+ -}
+
 \import Arith.Nat
 \import Equiv
 \import Equiv.Path
@@ -7,6 +16,9 @@
 \import Paths
 \import Paths.Meta
 
+{- | `A ofHLevel_-1+ n` asserts `A` is an `(n-1)`-type. `n = 0` means `isProp A`; `suc n` recurses on path types. Has a
+ -   `\level` instance proving the predicate itself is a proposition.
+ -}
 \func \infix 2 ofHLevel_-1+ (A : \Type) (n : Nat) : \Prop \elim n
   | 0 => ToProp (isProp A) (isProp.levelProp A)
   | suc n => \Pi (a a' : A) -> (a = a') ofHLevel_-1+ n
@@ -17,38 +29,48 @@
       }
       | suc n => path \lam i a a' => levelProp (a = a') n (e a a') (e' a a') i
 
+-- | If `A`'s h-level can be shown assuming an inhabitant of `A`, then `A` has that h-level (for `n >= 1`).
 \func hLevel-inh {A : \Type} (n : Nat) (f : A -> A ofHLevel_-1+ n) : A ofHLevel_-1+ n \elim n
   | 0 => toProp \lam a => ToProp.fromProp (f a) a
   | suc n => \lam a => f a a
 
+-- | The interval `I` is contractible, with `left` as center.
 \func I-isContr : Contr I \cowith
   | center => left
   | contraction i => path (I.squeeze i)
 
+{- | `A ofHLevel_-2+ n` asserts `A` is an `(n-2)`-type, valued in `\Prop`. `n = 0` means `Contr A`; `suc n` recurses on
+ -   path types.
+ -}
 \func \infix 2 ofHLevel_-2+ (A : \Type) (n : Nat) : \Prop \elim n
   | 0 => Contr A
   | suc n => \Pi (a a' : A) -> (a = a') ofHLevel_-2+ n
 
 -- # Prop-based and Contr-base hLevels are equivalent
 
+-- | Converts `A ofHLevel_-2+ suc n` to `A ofHLevel_-1+ n` by extracting centers of contraction on path types.
 \func HLevel_-2+1=>HLevel_-1 (A : \Type) (n : Nat) (p : A ofHLevel_-2+ suc n) : A ofHLevel_-1+ n \elim n
   | 0 => toProp \lam a a' => Contr.center {p a a'}
   | suc n => \lam a a' => HLevel_-2+1=>HLevel_-1 (a = a') n (p a a')
 
+-- | Converts `A ofHLevel_-1+ n` to `A ofHLevel_-2+ suc n` (the reverse direction).
 \lemma HLevel_-1=>HLevel_-2+1 (A : \Type) (n : Nat) (p : A ofHLevel_-1+ n) : A ofHLevel_-2+ suc n \elim n
   | 0 => isProp=>PathContr A (ToProp.fromProp p)
   | suc n => \lam a a' => HLevel_-1=>HLevel_-2+1 (a = a') n (p a a')
 
 -- # Every k-level is n-level whenever k <= n
 
+-- | An `n`-type is also a `(n+1)`-type. Base case uses `isProp.=>isSet`.
 \func HLevel_-1_suc {A : \Type} {n : Nat} (p : A ofHLevel_-1+ n) : A ofHLevel_-1+ suc n \elim n
   | 0 => \lam a a' => toProp (isProp.=>isSet (ToProp.fromProp p) a a')
   | suc n => \lam a a' => HLevel_-1_suc (p a a')
 
+-- | Iterated upward closure: `A ofHLevel_-1+ k` implies `A ofHLevel_-1+ (k + n)`.
 \func HLevel_-1_+ {A : \Type} {k : Nat} (n : Nat) (p : A ofHLevel_-1+ k) : A ofHLevel_-1+ k Nat.+ n \elim n
   | 0 => p
   | suc n => HLevel_-1_suc (HLevel_-1_+ n p)
 
+-- | Upward closure along an inequality `k <= n`.
 \func HLevel_-1_<= {A : \Type} (k : Nat) (n : Nat) (q : k <= n) (p : A ofHLevel_-1+ k) : A ofHLevel_-1+ n
   => rewriteI (<=_exists q) (HLevel_-1_+ (n -' k) p)
 

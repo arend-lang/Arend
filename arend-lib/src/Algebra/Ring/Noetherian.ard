@@ -1,3 +1,11 @@
+{- | Noetherian commutative rings, defined via the ascending chain condition on finitely generated ideals.
+ -
+ -   This module formalizes Noetherianity constructively. Rather than asserting that every ideal is finitely generated
+ -   (which is classically equivalent but constructively stronger), the definition requires that every chain of finitely
+ -   generated ideals stabilizes. This phrasing makes the property accessible without relying on classical logic, while
+ -   still capturing the essential finiteness behavior of Noetherian rings.
+ -}
+
 \import Algebra.Group
 \import Algebra.Monoid
 \import Algebra.Ring
@@ -112,7 +120,12 @@
 \func IsNoetherian (R : CRing) : \Prop
   => Bar (PausesElem {R}) nil
 
+-- | Extends `CRing`. A commutative ring satisfying the ascending chain condition on finitely generated ideals.
 \class NoetherianCRing \extends WeaklyNoetherianCRing
+  {- | Given a sequence of ideals `I : Nat -> Ideal \this`, if each `I n` is finitely generated
+   -   (`Ideal.IsFinitelyGenerated`), then the chain `I` satisfies `Ideal.ChainCondition` (i.e., it eventually
+   -   stabilizes).
+   -}
   | isNoetherian : IsNoetherian \this
   | isWeaklyNoetherian I Ifg Ic => \case bar-stream (elemToIdeal isNoetherian) (\lam n => (I (suc n), Ifg (suc n))) \with {
     | inP (l,p,s) => \case Pauses.toIndex s \with {

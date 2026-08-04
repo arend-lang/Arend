@@ -1,3 +1,14 @@
+{- | Reflective solver model for proving equalities in arbitrary (commutative) rings.
+ -
+ -   This module instantiates the generic `SolverModel` framework over a `Ring R` by representing ring expressions as a
+ -   syntactic `Term` AST with integer coefficients, normalizing them to sums of signed coefficient-times-monomial
+ -   pairs, and reducing equality goals `t = s` to checking that the normal form of `t - s` is zero. It reuses the
+ -   semiring solver's normalization machinery (`SemiringSolverModel.NF`, `multiply`, `collapse`, `remove0`,
+ -   `Sort.RedBlack.sort`) and lifts it to rings by handling negation via `:negative` and integer coefficients via
+ -   `intCoef : Int -> R`. The model also supports applying user-supplied equational axioms during normalization
+ -   (`apply-axioms`), enabling solving in quotient rings or settings with extra relations.
+ -}
+
 \import Algebra.Group
 \import Algebra.Monoid
 \import Algebra.Pointed
@@ -18,6 +29,9 @@
 \import Set
 \open SemiringSolverModel
 
+{- | The `SolverModel R` instance for a `Ring R`, using `Term Int` syntax, `NF Int` normal forms, and `ringInterpretNF`
+ -   as the semantic interpretation. Bridges syntactic ring expressions to the generic solver framework.
+ -}
 \func RingSolverModel (R : Ring) : SolverModel R \cowith
   | Term => Term Int
   | NF => NF Int
@@ -26,15 +40,27 @@
   | interpretNF env => ringInterpretNF env
   | interpretNF-consistent {_} {env} {_} => ringInterpretNF-correct *> (RingData env).interpretNF-correct *> normalize-consistent
   \where {
+    -- | AST of ring expressions over coefficient set `C` with `n` free variables. Constructors:
     \data Term (C : \Set) (n : Nat)
+      -- | A free variable indexed by `Fin n`.
       | var (Fin n)
+      -- | An element of the coefficient set `C` (typically `Int`).
       | coef C
+      -- | Ring zero and one.
       | :zro
+      -- | Ring zero and one.
       | :ide
+      -- | Unary negation.
       | :negative (Term C n)
+      -- | Binary addition and multiplication (left-associative).
       | \infixl 6 :+ (t s : Term C n)
+      -- | Binary addition and multiplication (left-associative).
       | \infixl 7 :* (t s : Term C n)
 
+    {- | Reduces a `Term C n` (over a decidable ring `C`) to a normal form `NF C n` — a list of
+     -   `(monomial, coefficient)` pairs. Recursively flattens sums, multiplies and collapses products, and pushes
+     -   negation through coefficients.
+     -}
     \func normalize {n : Nat} {C : Ring.Dec} (t : Term C n) : NF C n \elim t
       | var v => (v :: nil, 1) :: nil
       | coef c => (nil, c) :: nil
@@ -44,6 +70,9 @@
       | t :+ s => normalize t ++ normalize s
       | t :* s => remove0 (collapse (multiply (normalize t) (normalize s)))
 
+    {- | Evaluates a `Term Int env.len` in a ring `R` given a variable environment `env : Array R`, using `R.intCoef`
+     -   for integer coefficients.
+     -}
     \func interpret (env : Array R) (t : Term Int env.len) : R \elim t
       | coef c => R.intCoef c
       | var c => env c
@@ -53,50 +82,70 @@
       | :+ t s => interpret env t + interpret env s
       | :* t s => interpret env t * interpret env s
 
+    {- | Custom integer-to-ring coercion that special-cases `neg 1` as `negative ide` and otherwise delegates to
+     -   `R.natCoef`. Used internally for efficiency / to match the normal-form interpretation.
+     -}
     \func intCoef (x : Int) : R
       | pos n => natCoef n
       | neg 1 => negative ide
       | neg (suc _ \as n) => negative (R.natCoef n)
 
+    -- | Proves `R.intCoef x = intCoef x`, reconciling the canonical and custom coercions.
     \lemma intCoef-correct {x : Int} : R.intCoef x = intCoef x \elim x
       | pos n => natCoef-correct
       | neg 1 => pmap negative $ R.natCoefSuc 0 *> pmap (+ ide) R.natCoefZero *> zro-left
       | neg (suc (suc n)) => idp
 
+    -- | Promotes `intCoef` to a `RingHom IntRing R`.
     \lemma intMap' : RingHom IntRing R intCoef
       => transport (RingHom IntRing R) (path \lam i x => intCoef-correct {_} {x} i) intMap
 
+    {- | Bundles `env`, `intMap'`, and ring-commutativity data into the `Data` record consumed by the underlying
+     -   semiring solver machinery.
+     -}
     \func RingData (env : Array R) : Data R IntRing IntRing intMap' env \cowith
       | alg-comm x a => inv (pmap (* a) intCoef-correct) *> intComm x a *> pmap (a *) intCoef-correct
 
+    -- | Multiplies `r : R` by the sign of an integer `c` (identity if `c >= 0`, negation if `c < 0`).
     \func signMulCoef (c : Int) (r : R) : R \elim c
       | pos _ => r
       | neg (suc _) => negative r
 
+    {- | Interprets a single normal-form term `(c, l)` as `signMulCoef c · mulCoef |c| l`, splitting the integer
+     -   coefficient into sign and magnitude.
+     -}
     \func ringMulCoef {env : Array R} (c : Int) (l : List (Fin env.len)) : R
       => signMulCoef c $ (RingData env).mulCoef (iabs c) l
 
+    -- | Sums `ringMulCoef`-interpretations over a list of normal-form pairs.
     \func ringInterpretNF' {env : Array R} (l : SemiringSolverModel.NF Int env.len) : R \elim l
       | nil => 0
       | x :: nil => ringMulCoef x.2 x.1
       | x :: l => ringMulCoef x.2 x.1 + ringInterpretNF' l
 
+    {- | Top-level NF interpretation: sorts the list (via `Sort.RedBlack.sort`), collapses like terms, removes
+     -   zero-coefficient entries, then interprets via `ringInterpretNF'`.
+     -}
     \func ringInterpretNF (env : Array R) (l : SemiringSolverModel.NF Int env.len) => ringInterpretNF' (remove0 (collapse (Sort.RedBlack.sort l)))
 
+    -- | `ringMulCoef c l` agrees with the semiring `mulCoef`.
     \lemma ringMulCoef-correct {env : Array R} {c : Int} {l : List (Fin env.len)} : ringMulCoef c l = (RingData env).mulCoef c l \elim c
       | pos n => idp
       | neg (suc n) => pmap negative (RingData env).mulCoef-consistent *> inv R.negative_*-left *> pmap (* _) (inv $ intMap'.func-negative {suc n}) *> inv (RingData env).mulCoef-consistent
 
+    -- | `ringInterpretNF'` agrees with the semiring `interpretNF'`.
     \lemma ringInterpretNF-correct {env : Array R} {l : SemiringSolverModel.NF Int env.len} : ringInterpretNF' l = (RingData env).interpretNF' l \elim l
       | nil => idp
       | x :: nil => ringMulCoef-correct
       | x :: y :: l => pmap2 (+) ringMulCoef-correct ringInterpretNF-correct
 
+    -- | Mapping coefficient negation over a normal form negates its interpretation.
     \lemma interpretNF_negative {env : Array R} {l : NF Int env.len}
       : (RingData env).interpretNF' (map (\lam s => (s.1, negative s.2)) l) = negative ((RingData env).interpretNF' l) \elim l
       | nil => inv R.negative_zro
       | a :: l => (RingData env).interpretNF_:: *> +-comm *> pmap2 (+) interpretNF_negative (pmap (* _) intMap'.func-negative *> R.negative_*-left) *> inv (pmap negative (RingData env).interpretNF_:: *> R.negative_+)
 
+    -- | The interpretation of `normalize t` equals `interpret env t` — soundness of normalization.
     \lemma normalize-consistent {env : Array R} {t : Term Int env.len} : (RingData env).interpretNF' (normalize t) = interpret env t \elim t
       | coef c => inv intCoef-correct
       | var v => idp
@@ -106,12 +155,20 @@
       | :+ t s => (RingData env).interpretNF_++ *> pmap2 (+) normalize-consistent normalize-consistent
       | :* t s => (RingData env).remove0-consistent *> (RingData env).collapse-consistent *> (RingData env).interpretNF_multiply *> pmap2 (*) normalize-consistent normalize-consistent
 
+    {- | If `ringInterpretNF env (normalize (t :+ :negative s)) = 0`, then `interpret env t = interpret env s`. The main
+     -   solving step: reduces equality to a zero-check on the difference's normal form.
+     -}
     \lemma terms-equality (env : Array R) (t s : Term Int env.len) (p : ringInterpretNF env (normalize (t :+ :negative s)) = 0) : interpret env t = interpret env s
       => R.fromZero $ inv ((RingData env).interpretNF-correct *> (RingData env).interpretNF_++ *> pmap2 (+) normalize-consistent (interpretNF_negative *> pmap negative normalize-consistent)) *> inv ringInterpretNF-correct *> p
 
+    -- | Converse of `terms-equality`.
     \lemma terms-equality-conv (env : Array R) (t s : Term Int env.len) (p : interpret env t = interpret env s) : ringInterpretNF env (normalize (t :+ :negative s)) = 0
       => ringInterpretNF-correct *> (RingData env).interpretNF-correct *> (RingData env).interpretNF_++ *> pmap (_ +) interpretNF_negative *> R.toZero (normalize-consistent *> p *> inv normalize-consistent)
 
+    {- | Given a list of axioms `(NF, t, s, t = s)` and an additional normal form `add`, proves that interpreting the
+     -   combined NF (each axiom's NF multiplied by `normalize (t :+ :negative s)`, summed with `add`) equals
+     -   `ringInterpretNF' add`. Used to discharge equational hypotheses when solving in rings with extra relations.
+     -}
     \lemma apply-axioms (env : Array R) (l : Array (\Sigma (NF Int env.len) (t s : Term Int env.len) (p : interpret env t = interpret env s))) (add : NF Int env.len)
       : ringInterpretNF env (Big (++) add (arrayMap (\lam s => multiply s.1 (normalize (s.2 :+ :negative s.3))) l)) = ringInterpretNF' add
       => \have d => RingData env

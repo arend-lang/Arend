@@ -1,3 +1,13 @@
+{- | Foundational definitions of preorders and partial orders, presented as thin categories.
+ -
+ -   This module defines `Preorder` and `Poset` as the basic order-theoretic structures, identifying them with
+ -   (univalent) categories whose hom-sets are propositions: a preorder is a `Precat` and a poset is a `Cat`, with `<=`
+ -   serving as `Hom`. The `op` constructions give opposite orders, and the quotient `PreorderC` of a preorder by mutual
+ -   `<=` yields a canonical poset, exhibiting the standard preorder-to-poset reflection. The module also provides
+ -   product orders, sub-posets, and predicate-level abstractions of meets and joins (`Is-meet`, `IsJoin`, `IsMeet`)
+ -   used uniformly by downstream lattice/order theory.
+ -}
+
 \import Category
 \import Category.Functor
 \import Logic
@@ -6,9 +16,15 @@
 \import Set
 \import Set.SetHom
 
+{- | Class extending `BaseSet` and `Precat`. A reflexive transitive proposition-valued relation `<=` on a set `E`,
+ -   viewed as a thin category where objects are elements and morphisms are `<=`-witnesses.
+ -}
 \class Preorder \extends BaseSet, Precat {
+  -- | The order relation `E -> E -> \Prop`.
   | \infix 4 <= : E -> E -> \Prop
+  -- | Reflexivity `x <= x`.
   | <=-refl {x : E} : x <= x
+  -- | Transitivity `x <= y -> y <= z -> x <= z`.
   | <=-transitive \alias \infixr 9 <=∘ {x y z : E} : x <= y -> y <= z -> x <= z
   | Ob => E
   | Hom => <=
@@ -18,60 +34,81 @@
   | id-right => prop-pi
   | o-assoc => prop-pi
 
+  -- | Reverse order, defined as `\lam x y => y <= x`.
   | \infix 4 >= : E -> E -> \Prop
   | >= x y => y <= x
 
+  -- | The opposite preorder, swapping `<=`.
   \protected \func op : Preorder E \cowith
     | <= x y => y <= x
     | <=-refl => <=-refl
     | <=-transitive p q => <=-transitive q p
 
+  -- | The equivalence relation `x ~ y := (x <= y) × (y <= x)` of mutual ordering.
   \func EquivRel : Equivalence E \cowith
     | ~ x y => \Sigma (x <= y) (y <= x)
     | ~-reflexive {x} => (<=-refl, <=-refl)
     | ~-symmetric {x} {y} x~y => (x~y.2, x~y.1)
     | ~-transitive {x} {y} {z} x~y y~z => (x~y.1 <=∘ y~z.1, y~z.2 <=∘ x~y.2)
 
+  -- | The set-theoretic quotient `Quotient EquivRel.~`.
   \func PreorderC => Quotient (EquivRel.~)
 
+  -- | The induced poset structure on `PreorderC`, exhibiting the universal poset reflection of a preorder.
   \instance PosetC : Poset PreorderC
     | <= => <=C
     | <=-refl => <=C-reflexive
     | <=-transitive => <=C-transitive
     | <=-antisymmetric => <=C-antisymmetric
   \where {
+    -- | The order on `PreorderC`, defined by lifting `<=` through the quotient using `propExt`.
     \func \infix 4 <=C (x y : PreorderC) : \Prop \elim x, y
       | in~ x, in~ y => x <= y
       | ~-equiv x x' x~x', in~ y => propExt (<=-transitive x~x'.2) (<=-transitive {_} {x} {x'} {y} x~x'.1)
       | in~ x, ~-equiv y y' y~y' => propExt (<=-transitive __ y~y'.1) (<=-transitive {_} {x} __ y~y'.2)
 
+    -- | Order-axiom proofs for `<=C`.
     \lemma <=C-reflexive {x : PreorderC} : x <=C x \elim x
       | in~ x => <=-refl
 
+    -- | Order-axiom proofs for `<=C`.
     \lemma <=C-transitive {x y z : PreorderC} (x<=y : x <=C y) (y<=z : y <=C z) : x <=C z \elim x, y, z
       | in~ x, in~ y, in~ z => <=-transitive x<=y y<=z
 
+    -- | Order-axiom proofs for `<=C`.
     \lemma <=C-antisymmetric {x y : PreorderC} (x<=y : x <=C y) (y<=x : y <=C x) : x = y \elim x, y
       | in~ x, in~ y => path (~-equiv x y (x<=y, y<=x))
   }
 
+  -- | Binary meet predicate: `m` is a greatest lower bound of `x` and `y`.
   \func Is-meet (x y m : E) => \Sigma (m <= x) (m <= y) (\Pi (m' : E) -> m' <= x -> m' <= y -> m' <= m)
 
+  -- | `a` is the supremum of an `J`-indexed family `f : J -> E`.
   \func IsJoin {J : \Set} (f : J -> E) (a : E) => \Sigma (\Pi (j : J) -> f j <= a) (\Pi {b : E} -> (\Pi (j : J) -> f j <= b) -> a <= b)
 
+  -- | `a` is the infimum of an `J`-indexed family `f : J -> E`.
   \func IsMeet {J : \Set} (f : J -> E) (a : E) => \Sigma (\Pi (j : J) -> a <= f j) (\Pi {b : E} -> (\Pi (j : J) -> b <= f j) -> b <= a)
 }
 
+-- | A propositional equality `x = y` yields `x <= y`.
 \lemma =_<= {P : Preorder} {x y : P} (p : x = y) : x <= y
   | idp => <=-refl
 
+{- | Mixes a path with an order step: `x = y -> y <= z -> x <= z`. Useful for equational-then-inequational reasoning
+ -   chains.
+ -}
 \lemma \infixr 9 =<= {E : Preorder} {x y z : E} (p : x = y) (q : y <= z) : x <= z
   => =_<= p <=∘ q
 
+{- | Class extending `Preorder` and `Cat`. A preorder with antisymmetry; the `Cat` univalence is automatic via
+ -   `Cat.makeUnivalence` since isomorphisms reduce to mutual `<=`.
+ -}
 \class Poset \extends Preorder, Cat {
+  -- | `x <= y -> y <= x -> x = y`.
   | <=-antisymmetric {x y : E} : x <= y -> y <= x -> x = y
   | univalence => Cat.makeUnivalence \lam (e : Iso) => (<=-antisymmetric e.f e.hinv, prop-pi)
 
+  -- | The opposite poset, built on top of `Preorder.op`.
   \protected \func op : Poset \cowith
     | Preorder => Preorder.op
     | <=-antisymmetric p q => <=-antisymmetric q p
@@ -83,15 +120,20 @@
   | <=-transitive _ _ => ()
   | <=-antisymmetric _ _ => idp
 
+-- | Componentwise preorder structure on `\Sigma P Q`.
 \instance ProductPreorder (P Q : Preorder) : Preorder (\Sigma P Q)
   | <= (x,y) (x',y') => \Sigma (x <= x') (y <= y')
   | <=-refl => (<=-refl, <=-refl)
   | <=-transitive (p,q) (p',q') => (<=-transitive p p', <=-transitive q q')
 
+-- | Componentwise poset structure on `\Sigma P Q`, extending `ProductPreorder`.
 \instance ProductPoset (P Q : Poset) : Poset (\Sigma P Q)
   | Preorder => ProductPreorder P Q
   | <=-antisymmetric (p,q) (p',q') => ext (<=-antisymmetric p p', <=-antisymmetric q q')
 
+{- | The poset `\Sigma (x : P) (S x)` of elements satisfying a predicate `S : P -> \Prop`, with order inherited via the
+ -   first projection.
+ -}
 \func subPoset {P : Poset} (S : P -> \Prop) : Poset (\Sigma (x : P) (S x)) \cowith
   | <= x y => x.1 <= y.1
   | <=-refl => <=-refl
@@ -120,6 +162,9 @@
     | func-<= p => func-<= (func-<= p)
 }
 
+{- | Record extending `SetHom` with `Dom Cod : Poset`, carrying a monotonicity field
+ -   `func-<= : x <= y -> func x <= func y`. Used as the morphism type for posets.
+ -}
 \record PosetHom \extends PreorderHom {
   \override Dom : Poset
   \override Cod : Poset

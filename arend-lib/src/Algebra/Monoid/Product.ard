@@ -1,7 +1,19 @@
+{- | Componentwise product structures on monoids and additive (commutative) monoids.
+ -
+ -   This module equips the Cartesian product `\Sigma M N` of two monoids with the pointwise monoid operation, and lifts
+ -   this construction through the standard hierarchy: plain multiplicative monoids, additive monoids, and their
+ -   commutative variants. Each instance reuses the underlying multiplicative product when defining its additive or
+ -   commutative refinement, so the four instances form a small layered tower rather than independent definitions. This
+ -   is the canonical way to obtain product objects in the categories of monoids used elsewhere in the algebra library.
+ -}
+
 \import Algebra.Monoid
 \import Algebra.Pointed
 \import Paths
 
+{- | `Monoid` instance on `\Sigma M N` with identity `(1, 1)` and componentwise multiplication; provides the product in
+ -   the category of monoids.
+ -}
 \instance ProductMonoid (M N : Monoid) : Monoid (\Sigma M N)
   | ide => (1, 1)
   | * p q => (p.1 * q.1, p.2 * q.2)
@@ -9,6 +21,9 @@
   | ide-right => pmap2 (__,__) ide-right ide-right
   | *-assoc => pmap2 (__,__) *-assoc *-assoc
 
+{- | `AddMonoid` instance on `\Sigma A B` with zero `(0, 0)` and componentwise addition; the additive analogue of
+ -   `ProductMonoid`.
+ -}
 \instance ProductAddMonoid (A B : AddMonoid) : AddMonoid (\Sigma A B)
   | zro => (0, 0)
   | + p q => (p.1 + q.1, p.2 + q.2)
@@ -16,10 +31,16 @@
   | zro-right => pmap2 (__,__) zro-right zro-right
   | +-assoc => pmap2 (__,__) +-assoc +-assoc
 
+{- | `CMonoid` instance on the product of two commutative monoids, extending `ProductMonoid` with componentwise
+ -   commutativity.
+ -}
 \instance ProductCMonoid (M N : CMonoid) : CMonoid
   | Monoid => ProductMonoid M N
   | *-comm => pmap2 (__,__) *-comm *-comm
 
+{- | `AbMonoid` instance on the product of two abelian monoids, extending `ProductAddMonoid` with componentwise
+ -   commutativity of `+`.
+ -}
 \instance ProductAbMonoid (A B : AbMonoid) : AbMonoid
   | AddMonoid => ProductAddMonoid A B
   | +-comm => pmap2 (__,__) +-comm +-comm

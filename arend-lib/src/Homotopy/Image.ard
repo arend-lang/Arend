@@ -2,6 +2,18 @@
  -   Egbert Rijke, The join construction, https://arxiv.org/pdf/1701.07538.pdf
  -}
 
+{- | Constructs the homotopy image of a map as a sequential colimit of joins, factoring it as a surjection followed by
+ -   an embedding.
+ -
+ -   This module formalizes Rijke's image factorization for arbitrary maps using a "modal" join construction. Given a
+ -   relation `R` on the codomain that is sufficient to identify points (`ret : R b b' -> b = b'`), the image is built
+ -   by iteratively joining along fibers of `R`, then taking the sequential colimit. The resulting `MImage` factors the
+ -   original map as `dom-map` (a surjection from the domain) composed with `cod-map` (an embedding into the codomain),
+ -   where the embedding property follows when `R` is reflexive with `ret refl = idp`. The `YImage` specialization uses
+ -   the equivalence relation on type families (Yoneda-style), giving the image factorization for arbitrary functions
+ -   via univalence.
+ -}
+
 \import Data.SeqColimit
 \import Equiv
 \import Equiv.Univalence
@@ -13,23 +25,38 @@
 \import Paths
 \import Paths.Meta
 
+{- | The join of two types `A` and `B` along a relation `R : A -> B -> \Type`, defined as the pushout of the projections
+ -   from `\Sigma (x : A) (y : B) (R x y)`. Identifies `a : A` with `b : B` whenever `R a b` holds.
+ -}
 \func MJoin {A B : \Type} (R : A -> B -> \Type) => PushoutData {\Sigma (x : A) (y : B) (R x y)} __.1 __.2
   \where
+    {- | Class packaging the data needed for the iterated image construction: a map `f : A -> B`, a relation
+     -   `R : B -> B -> \Type`, and a function `ret` extracting paths from `R`-related elements.
+     -}
     \class MData.{u} \noclassifying {A : \Type u} {B : \Type (\suc u)} (f : A -> B) (R : B -> B -> \Type u) (ret : \Pi (b b' : B) -> R b b' -> b = b') {
+      {- | Inductive approximation of the image at level `n`, returning a type together with a map to `B`. Step `n+1`
+       -   joins the previous approximation with `A` along the lifted relation `R (f a) (g x)`.
+       -}
       \func MImageAppr (n : Nat) : \Sigma (X : \Type u) (X -> B) \elim n
         | 0 => (A,f)
         | suc n =>
           \let (X,g) => MImageAppr n
           \in (MJoin (\lam a x => R (f a) (g x)), PushoutData.rec f g (\lam q => ret (f q.1) (g q.2) q.3))
 
+      -- | The image, defined as the sequential colimit of the approximations.
       \func MImage => SeqColimit seq
 
+      {- | The underlying sequence whose colimit is `MImage`, with transition maps given by `pinr` (the right pushout
+       -   inclusion).
+       -}
       \func seq : Seq \cowith
         | A n => (MImageAppr n).1
         | f x => pinr x
 
+      -- | Inclusion of the domain `A` into `MImage` via the colimit at level 0.
       \func dom-map (a : A) : MImage => inSC {seq} {0} a
 
+      -- | `dom-map` is a surjection, given that `R` is reflexive.
       \lemma dom-map-surj (refl : \Pi {b : B} -> R b b) : IsSurj dom-map
         => seqColimit-surj seq \lam n => \case \elim __ \with {
           | pinl a => inP \case \elim n \with {
@@ -39,15 +66,20 @@
           | pinr x => inP (x,idp)
         }
 
+      {- | Projection from `MImage` to `B`, defined by `(MImageAppr n).2` on each level and constant on the colimit
+       -   transitions.
+       -}
       \func cod-map (x : MImage) : B \elim x
         | inSC {n} x => (MImageAppr n).2 x
         | quotSC {n} x => idp
 
+      -- | `cod-map` is an embedding, given that `R` is reflexive and `ret refl = idp`.
       \lemma cod-map-emb (refl : \Pi {b : B} -> R b b) (refl-idp : \Pi {b : B} -> ret b b refl = idp) : Embedding cod-map =>
         Embedding.fibers cod-map (\lam b => isContr'=>isProp (\lam (r : Fib cod-map b) => \case dom-map-surj refl r.1 \with {
           | inP r' => rewriteI (pmap cod-map r'.2 *> r.2) (fibers-contr refl refl-idp r'.1)
         }))
         \where
+          -- | Auxiliary lemma showing each fiber of `cod-map` over `f a` is contractible.
           \lemma fibers-contr (refl : \Pi {b : B} -> R b b) (refl-idp : \Pi {b : B} -> ret b b refl = idp) (a : A) : Contr (Fib cod-map (f a)) =>
             \let | P x => cod-map x = f a
                  | sec {b b' : B} (q : b = b') => transport (R b) q refl
@@ -58,23 +90,31 @@
                                        transport_path-left (ret (f a) ((MImageAppr n).2 p.1) (sec (inv p.2))) idp *> pmap inv (sec-ret (inv p.2)) *> inv_inv p.2)))))
     }
 
+{- | The image factorization of `A -> B`-valued type families, instantiated through `MData` with
+ -   `R F G := \Pi (b : B) -> Equiv (F b) (G b)` and `ret` obtained from `Equiv-to-=` (univalence).
+ -}
 \func YImage.{u} {A B : \Type u} (S : A -> B -> \Type u) => data.MImage
   \where {
     \open MJoin
 
+    -- | The `MData` instance specifying the relation as fiberwise equivalences and the path-extraction via univalence.
     \instance data : MData S \cowith
       | R F G => \Pi (b : B) -> Equiv (F b) (G b)
       | ret F G r => path (\lam i b => Equiv_= (r b) i)
 
+    -- | Domain inclusion `A -> YImage S`.
     \func dom-map (a : A) : YImage S
       => MData.dom-map a
 
+    -- | `dom-map` is a surjection.
     \lemma dom-map-surj : IsSurj dom-map
       => MData.dom-map-surj \lam {F} b => mkEquiv (inP idEquiv)
 
+    -- | The embedding `YImage S -> (B -> \Type)` recovering the original family.
     \func cod-map (y : YImage S) (b : B)
       => MData.cod-map y b
 
+    -- | `cod-map` is an embedding.
     \lemma cod-map-emb : Embedding cod-map
       => MData.cod-map-emb (\lam {F} b => mkEquiv (inP idEquiv)) \lam {F} =>
           \have p b : Equiv_= (mkEquiv (inP (idEquiv {F b}))) = idp => typeUnivalence.ret_f idp

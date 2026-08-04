@@ -1,3 +1,13 @@
+{- | Index-shifting machinery for sublists, used to relocate positions when a list is embedded into a larger one.
+ -
+ -   This module supports the bookkeeping needed when rewriting rules or terms reference positions in a list `a` that is
+ -   a sublist of a bigger list `b`. The core operation `shift-index` translates an index into `a` to the corresponding
+ -   index in `b` along a `SubList` witness, and the accompanying `proof` shows that the indexed element is preserved.
+ -   The remaining lemmas describe how `shift-index` interacts with the standard `SubList` constructions (identity,
+ -   skip, shrink, left/right extensions) and with the `expand-fin-left`/`expand-fin-right` embeddings induced by list
+ -   concatenation, providing the rewriting equalities needed to transport indexed data between contexts.
+ -}
+
 \import Data.Fin
 \import Data.List
 \import Logic.Rewriting.TRS.Utils.FinFunctions
@@ -6,6 +16,9 @@
 \import Paths.Meta
 \import Data.SubList
 
+{- | Given a `SubList a b` witness and an index `ind : Index a`, produces the corresponding index `Fin (length b)` by
+ -   walking the sublist witness and inserting `suc` for each skipped element.
+ -}
 \func shift-index {A : \Set} {a b : List A} (sublist : SubList a b) (ind : Index a) : Fin (length b)
   \elim a, b, sublist, ind
   | x :: xs, y :: ys, sublist-match p sublist, zero => zero
@@ -13,6 +26,9 @@
   | l, y :: ys, sublist-skip sublist, ind => suc (shift-index sublist ind)
 
 \module Shifts \where {
+  {- | Transports an equation `point = a !! ind` along a sublist embedding, yielding
+   -   `point = b !! shift-index sublist ind`. Confirms that `shift-index` preserves the indexed element.
+   -}
   \func proof {A : \Set} {a b : List A} {point : A} (sublist : SubList a b) (ind : Index a) (p : point = a !! ind)
     : point = b !! shift-index sublist ind
     \elim a, b, sublist, ind, p
@@ -21,18 +37,25 @@
     | nil, y :: ys, sublist-skip sublist, ind, idp => proof sublist ind idp
     | x :: a, y :: b, sublist-skip sublist, ind, idp => proof sublist ind idp
 
+  -- | `shift-index SubList.identity ind = ind`; the identity sublist leaves indices fixed.
   \lemma over-identity {A : \Set} {a : List A} (ind : Index a)
     : shift-index SubList.identity ind = ind
     \elim a, ind
     | a :: a1, zero => idp
     | a :: a1, suc ind => pmap fsuc (over-identity ind)
 
+  {- | Skipping a fresh head element `point'` shifts every index up by one:
+   -   `shift-index (sublist-skip sublist) ind = suc (shift-index sublist ind)`.
+   -}
   \lemma over-skip {A : \Set} {a b : List A} {point' : A} (sublist : SubList a b) (ind : Index a)
     : shift-index {_} {_} {point' :: b} (sublist-skip sublist) ind = suc (shift-index sublist ind)
     \elim a
     | x :: a => idp
     | nil => idp
 
+  {- | Relates shrinking the source list to advancing the index:
+   -   `shift-index (SubList.shrink sublist) ind = shift-index sublist (fsuc ind)`.
+   -}
   \lemma over-shrink {A : \Set} {x : A} {a b : List A} (sublist : SubList (x :: a) b) (ind : Index a)
     : shift-index (SubList.shrink sublist) ind  = shift-index sublist (fsuc ind)
     \elim a, b, sublist
@@ -40,18 +63,21 @@
     | a :: a1, y :: b, sublist-match p1 sublist => idp
     | a :: a1, y :: b, sublist-skip sublist => rewrite (over-shrink sublist ind) idp
 
+  -- | For the canonical embedding `a ↪ a ++ b`, `shift-index` agrees with `expand-fin-left`.
   \lemma over-right-single {A : \Set} {a b : List A} (ind : Index a)
     : shift-index (SubList.extend-right-single SubList.identity) ind = expand-fin-left {A} {a} {b} ind
     \elim a, ind
     | a :: a1, 0 => idp
     | a :: a1, suc ind => pmap fsuc (over-right-single ind)
 
+  -- | For the canonical embedding `b ↪ a ++ b`, `shift-index` agrees with `expand-fin-right`.
   \lemma over-left-single {A : \Set} {a b : List A} (ind : Index b)
     : shift-index {A} {b} {a ++ b} SubList.id+left ind = expand-fin-right ind
     \elim a
     | nil => over-identity _
     | a :: a1 => rewrite over-skip (pmap fsuc (over-left-single ind))
 
+  -- | Extending a sublist on the right by `c` leaves indices coming from `c` (via `expand-fin-right`) unchanged.
   \lemma over-right-both {A : \Set} {a b c : List A} (sublist : SubList a b) (fin : Index c)
     : shift-index (SubList.extend-right-both sublist) (expand-fin-right fin) = expand-fin-right fin \elim a, b, c, sublist, fin
     | nil, nil, a :: c, sublist-nil, 0 => idp
@@ -61,6 +87,10 @@
     | nil, y :: b, a :: c, sublist-skip sublist, suc fin => pmap fsuc (over-right-both {_} {_} {_} {a :: c} sublist (suc fin))
     | a :: a1, y :: b, c, sublist-skip sublist, fin => pmap fsuc (over-right-both sublist fin)
 
+  {- | For the inclusion `a ↪ a ++ b`, packages the equality `a !! ind = (a ++ b) !! expand-fin-left ind` together with
+   -   the fact that `(shift-index, proof)` agrees with `(expand-fin-left, _)` as an equality of dependent pairs. Useful
+   -   for transporting indexed data along right-concatenation.
+   -}
   \lemma right-extension {A : \Set} {a b : List A} (ind : Index a) :
     \Sigma (eq : (a !! ind) = (a ++ b) !! expand-fin-left ind)
            ((shift-index SubList.id+right ind, proof SubList.id+right ind idp)
@@ -71,6 +101,9 @@
     | a :: a1, suc ind => \have sig => right-extension {_} {a1} {b} ind
                           \in (sig.1, ext (pmap fsuc (pmap __.1 sig.2)))
 
+  {- | Variant of `right-extension` for left-concatenation with an arbitrary witness `point = b !! ind`, packaging the
+   -   corresponding `expand-fin-right` equality.
+   -}
   \lemma left-extension-generic {A : \Set} {a b : List A} {point : A} (ind : Index b) {point-eq : point = b !! ind} :
     \Sigma (eq2 : point = (a ++ b) !! expand-fin-right ind)
            ((shift-index (SubList.extend-left-single SubList.identity ) ind, proof (SubList.extend-left-single SubList.identity) ind point-eq)
@@ -82,12 +115,19 @@
       \have sig => left-extension-generic {_} {a1} {b} ind {idp}
       \in (sig.1, ext (later (rewrite over-skip (pmap fsuc (pmap __.1 sig.2)))))
 
+  {- | Specialization of `left-extension-generic` to `idp`, giving the canonical form
+   -   `(shift-index SubList.id+left ind, proof …) = (expand-fin-right ind, inv (expand-fin-right.correct …))`.
+   -}
   \lemma left-extension {A : \Set} {a b : List A} (ind : Index b)
     : (shift-index {A} {b} {a ++ b} SubList.id+left ind, proof SubList.id+left ind idp)
       = {\Sigma (ind' : Fin (length (a ++ b))) (b !! ind = (a ++ b) !! ind')}
       (expand-fin-right ind, inv (expand-fin-right.correct {_} {a} ind))
     => ext (over-left-single ind)
 
+  {- | Shifting an `expand-fin-left index` through `extend-right-both sublist` equals first shifting through `sublist`
+   -   and then through `extend-right-single SubList.identity`. Expresses commutativity of the right-both extension with
+   -   the left half of `a ++ c`.
+   -}
   \func right-both-after-expand-left {A : \Set} {a b c : List A} (sublist : SubList a b) (index : Index a)
     : shift-index (SubList.extend-right-both sublist {c}) (expand-fin-left index)
       = shift-index (SubList.extend-right-single SubList.identity) (shift-index sublist index)
@@ -96,6 +136,9 @@
     | x :: a, y :: b, sublist-match p sublist, suc index => pmap fsuc (right-both-after-expand-left sublist index)
     | a :: a1, y :: b, sublist-skip sublist, index => pmap fsuc (right-both-after-expand-left sublist index)
 
+  {- | Shifting an `expand-fin-right index` through `extend-right-both sublist` equals shifting through
+   -   `extend-left-single SubList.identity`. The dual statement on the right half.
+   -}
   \func right-both-after-expand-right {A : \Set} {a b : List A} (sublist : SubList a b) {c : List A} (index : Index c)
     : shift-index (SubList.extend-right-both sublist {c}) (expand-fin-right index)
       = shift-index (SubList.extend-left-single SubList.identity) index

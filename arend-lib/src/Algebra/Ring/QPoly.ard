@@ -1,3 +1,13 @@
+{- | Quotient construction of polynomials over a pointed additive structure as arrays modulo trailing-zero equivalence.
+ -
+ -   This module defines `QPoly R` — the type of polynomials over an `AddPointed` `R` — as the quotient of finite arrays
+ -   of coefficients by the relation that pads with trailing zeros. The equivalence relation `~` allows extending a
+ -   coefficient list by any number of zeros on the right, identifying lists like `[a, b]` and `[a, b, 0, 0]` so that
+ -   the resulting quotient does not distinguish polynomials by spurious leading zeros. The construction provides the
+ -   underlying carrier on which ring operations and degree-related lemmas can later be defined, with explicit
+ -   characterizations of when quotient elements are equal, decomposed, or trivial.
+ -}
+
 \import Algebra.Pointed
 \import Arith.Nat
 \import Data.Array
@@ -10,19 +20,30 @@
 \import Paths.Meta
 \import Relation.Equivalence
 
+{- | `Quotient {Array R} (__ = __ ++ 0 :: nil)` — polynomials over `R : AddPointed`, defined as arrays quotiented by
+ -   appending a single trailing zero.
+ -}
 \func QPoly (R : AddPointed) => Quotient {Array R} (__ = __ ++ 0 :: nil)
   \where {
+    -- | Symmetric trailing-zero relation on arrays, with two constructors:
     \data \infix 5 ~ {R : AddPointed} (l l' : Array R)
+      -- | `l ++ replicate n zro = l'` — `l'` extends `l` by `n` zeros.
       | eq-left (n : Nat) (l ++ replicate n zro = l')
+      -- | `l' ++ replicate (suc n) zro = l` — `l` extends `l'` by `suc n` zeros.
       | eq-right (n : Nat) (l' ++ replicate (suc n) zro = l)
       \where {
+        -- | Two zero-padding lengths producing the same list must be equal (uniqueness of pad length).
         \lemma lists-lem1 {R : AddPointed} {l l' : Array R} (n m : Nat) (p : l ++ replicate n zro = l') (q : l ++ replicate m zro = l') : n = m
           => NatSemiring.cancel-left _ (inv len_++ *> pmap (DArray.len {__}) (p *> inv q) *> len_++)
 
+        -- | One list cannot be both a left- and right-extension of the other in nontrivial ways.
         \lemma lists-lem2 {R : AddPointed} {l l' : Array R} {n m : Nat} (p : l ++ replicate n zro = l') (q : l' ++ replicate (suc m) zro = l) : Empty
           => \have t => ++-cancel-left $ inv ++-assoc *> pmap (++ _) p *> q *> inv ++_nil
              \in \case \elim n, \elim t \with { | 0, t => \case pmap (DArray.len {__}) t }
 
+        {- | `~` is a proposition (any two proofs `x ~ y` are equal), making it suitable for use in quotient
+         -   constructions.
+         -}
         \use \level levelProp {R : AddPointed} {l l' : Array R} (x y : l ~ l') : x = y \elim x, y
           | eq-left n p, eq-left m q => path (\lam i => eq-left (lists-lem1 n m p q i) (prop-dpi _ _ _ i))
           | eq-left n p, eq-right m q => absurd (lists-lem2 p q)
@@ -30,6 +51,7 @@
           | eq-right n p, eq-right m q => path (\lam i => eq-right (pmap pred (lists-lem1 (suc n) (suc m) p q) @ i) (prop-dpi _ _ _ i))
       }
 
+    -- | Witnesses that `~` is an `Equivalence` on `Array R` (reflexive, symmetric, transitive).
     \func ~-isEquiv {R : AddPointed} : Equivalence (Array R) \cowith
       | ~ => ~
       | ~-reflexive => eq-left 0 ++_nil
@@ -47,21 +69,26 @@
         | eq-right n p, eq-right m q => eq-right (suc m Nat.+ n) (pmap (_ ++) (replicate_+ {_} {suc m} {suc n}) *> inv ++-assoc *> pmap (++ zro :: _) q *> p)
       }
       \where {
+        -- | Symmetry of `~`.
         \lemma symm {R : AddPointed} {x y : Array R} (p : x ~ y) : y ~ x \elim p
           | eq-left 0 p => eq-left 0 (++_nil *> inv p *> ++_nil)
           | eq-left (suc n) p => eq-right n p
           | eq-right n p => eq-left (suc n) p
 
+        -- | If `x ++ replicate n zro = z ++ replicate m zro` with `m <= n`, then `x ~ z`.
         \lemma lists-lem1 {R : AddPointed} {x z : Array R} (n m : Nat) (p : x ++ replicate n zro = z ++ replicate m zro) (q : m <= n) : x ~ z
           => eq-left (n -' m) $ ++-cancel-right $ rewrite (inv (<=_exists q), NatSemiring.+-comm, replicate_+, inv ++-assoc) in p
 
+        -- | Two arrays both obtainable from `y` by zero-padding are related by `~`.
         \lemma lists-lem2 {R : AddPointed} {x y z : Array R} (n m : Nat) (p : y ++ replicate n zro = x) (q : y ++ replicate m zro = z) (s : n <= m) : x ~ z
           => eq-left (m -' n) $ rewrite (inv (<=_exists s), replicate_+, inv ++-assoc, p) in q
       }
 
+    -- | From `in~ l = in~ l'` in `QPoly R`, extracts `l ~ l'`.
     \lemma from=to~ {R : AddPointed} {l l' : Array R} (p : in~ l = {QPoly R} in~ l') : l ~ l'
       => Quotient.equalityClosure ~-isEquiv (\lam q => eq-right 0 (inv q)) p
 
+    -- | From `l ~ l'`, produces `in~ l = in~ l'` in `QPoly R`.
     \lemma from~to= {R : AddPointed} {l l' : Array R} (p : l ~ l') : in~ l = {QPoly R} in~ l' \elim p
       | eq-left 0 p => pmap in~ (inv ++_nil *> p)
       | eq-left (suc n) p => from~to= (eq-left n idp) *> inv (path $ ~-equiv _ _ $ inv $ ++-assoc *> (rewrite (replicate_+ {_} {n} {1}) in p))
@@ -73,6 +100,9 @@
       | in~ l => in~ (e :: l)
       | ~-equiv x y r => path (~-equiv _ _ (pmap (e ::) r))
 
+    {- | If `in~ nil = in~ (e :: l)` in `QPoly R`, then `e = 0` and `in~ nil = in~ l` (head must vanish, tail still
+     -   represents zero).
+     -}
     \lemma nil_cons {R : AddPointed} {e : R} {l : Array R} (s : in~ nil = {QPoly R} in~ (e :: l)) : \Sigma (zro = e) (in~ nil = {QPoly R} in~ l)
       => \case from=to~ s \with {
         | eq-left 0 p => \case pmap (DArray.len {__}) p
@@ -80,12 +110,16 @@
         | eq-right n ()
       }
 
+    -- | If `qadd p e = in~ nil`, then `p = in~ nil` and `e = 0` (a `qadd` is zero only when both arguments are zero).
     \lemma qadd_nil {R : AddPointed} {p : QPoly R} {e : R} (s : qadd p e = in~ nil) : \Sigma (p = in~ nil) (e = 0) \elim p
       | in~ l => \case from=to~ s \with {
         | eq-left n ()
         | eq-right n p => (inv $ from~to= $ ~-isEquiv.lists-lem2 {_} {_} {nil} 0 n idp (untail p) zero<=_, inv $ unhead p)
       }
 
+    {- | If `qadd p e = in~ (a :: l')`, then `e = a` and `p = in~ l'` (head and tail of `qadd` are uniquely determined
+     -   modulo the quotient).
+     -}
     \lemma qadd_cons {R : AddPointed} {e a : R} {p : QPoly R} {l' : Array R} (s : qadd p e = in~ (a :: l')) : \Sigma (e = a) (p = in~ l') \elim p
       | in~ l => \case from=to~ s \with {
         | eq-left n p => (unhead p, from~to= $ eq-left n $ untail p)

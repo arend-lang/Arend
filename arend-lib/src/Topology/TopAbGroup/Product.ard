@@ -1,3 +1,13 @@
+{- | Product structure and continuity of arithmetic operations for topological abelian groups.
+ -
+ -   This module equips the cartesian product of two topological abelian groups with its componentwise abelian group
+ -   structure and the product uniformity, yielding a topological abelian group. It also packages the standard
+ -   arithmetic operations (negation, addition, subtraction, integer scaling, finite sums) as uniform/cover maps, which
+ -   are the core tools needed when reasoning about continuity in additive topological settings. The `HasProduct`
+ -   instance integrates this construction with the generic categorical product machinery so products of topological
+ -   abelian groups can be formed in a uniform way.
+ -}
+
 \import Algebra.Group
 \import Algebra.Meta
 \import Algebra.Monoid
@@ -17,6 +27,10 @@
 \import Topology.TopSpace.Product
 \import Topology.UniformSpace.Product
 
+{- | The cartesian product `\Sigma X Y` of two topological abelian groups, with componentwise zero, addition, and
+ -   negation, and the product uniform space structure. Verifies that addition and negation are continuous, and that the
+ -   uniform-cover topology agrees with neighborhoods.
+ -}
 \instance ProductTopAbGroup (X Y : TopAbGroup) : TopAbGroup (\Sigma X Y)
   | UniformSpace => ProductUniformSpace X Y
   | zro => (0, 0)
@@ -55,30 +69,37 @@
       }
     })
 
+-- | `HasProduct` instance registering `ProductTopAbGroup` as the categorical product on `TopAbGroup`.
 \instance TopAbGroupHasProduct.{u} : HasProduct TopAbGroup.{u}
   | Product X Y => ProductTopAbGroup X Y
 
+-- | Negation `negative : X -> X` is a uniform map of topological abelian groups (`TopAbGroupMap X X`).
 \lemma negative-uniform {X : TopAbGroup} : TopAbGroupMap X X negative \cowith
   | func-+ => X.negative_+ *> +-comm
   | func-cont => negative-cont.func-cont
 
+-- | Addition `(s.1 + s.2) : X ⨯ X -> X` is a uniform map of topological abelian groups.
 \lemma +-uniform {X : TopAbGroup} : TopAbGroupMap (ProductTopAbGroup X X) X \lam s => s.1 + s.2 \cowith
   | func-+ => equation.abMonoid
   | func-cont => +-cont.func-cont
 
+-- | Subtraction `(s.1 - s.2) : X ⨯ X -> X` is a uniform map of topological abelian groups.
 \lemma subtract-uniform {X : TopAbGroup} : TopAbGroupMap (ProductTopAbGroup X X) X \lam s => s.1 - s.2 \cowith
   | func-+ => equation.abGroup
   | func-cont => X.subtract-cont.func-cont
 
+-- | Multiplication by a fixed natural number `n`, viewed as `n X.*n : X -> X`, is a uniform map.
 \lemma *n-uniform {X : TopAbGroup} {n : Nat} : TopAbGroupMap X X (n X.*n) \cowith
   | func-+ => X.*n-ldistr
   | func-cont => *n-cont.func-cont
   \where {
+    -- | The same map is continuous (`ContMap X X`), used as a building block for the uniform version.
     \private \lemma *n-cont {n : Nat} : ContMap X X (n X.*n) \elim n
       | 0 => ContMap.const 0
       | suc n => +-uniform ContMap.∘ ProductTopSpace.tuple *n-cont ContMap.id
   }
 
+-- | Multiplication by a fixed integer `n`, viewed as `n X.*i : X -> X`, is a uniform map.
 \lemma *i-uniform {X : TopAbGroup} {n : Int} : TopAbGroupMap X X (n X.*i) \cowith
   | func-+ => X.*i-ldistr
   | func-cont => \case \elim n \with {
@@ -86,6 +107,10 @@
     | neg n => (*n-uniform ContMap.∘ negative-cont).func-cont
   }
 
+{- | Given an array `fs : Array (CoverMap X Y)` of cover maps from a cover space `X` into a topological abelian group
+ -   `Y`, the pointwise sum `\lam x => Y.BigSum (\lam j => fs j x)` is itself a cover map. Used to lift continuity of
+ -   finite sums of cover-continuous functions.
+ -}
 \lemma BigSum-cover {X : CoverSpace} {Y : TopAbGroup} (fs : Array (CoverMap X Y))
   : CoverMap X Y \lam x => Y.BigSum \lam j => fs j x \elim fs
   | nil => CoverMap.const 0

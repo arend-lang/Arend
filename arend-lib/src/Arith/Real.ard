@@ -1,3 +1,15 @@
+{- | Constructive real numbers as Dedekind-style cuts that are simultaneously lower- and upper-bounded.
+ -
+ -   A `Real` extends both `InfReal` (lower-located reals) and `UpperReal`, combining a rounded lower set `L` and
+ -   rounded upper set `U` with the **focus** property: for every `eps > 0` there is a rational `a` with `L a` and
+ -   `U (a + eps)`. This focus condition is equivalent to the classical "located" property and implies `LU-located`,
+ -   making the cut tight enough to compute arbitrarily good rational enclosures. The module builds the linearly ordered
+ -   abelian group structure on `Real` (addition, negation, lattice operations, order) by transporting from
+ -   `InfReal`/`UpperReal` while sharpening their constructions to preserve focus, and provides the rational embedding
+ -   `fromRat` together with characterization lemmas relating `Real` operations to those on the constituent cut types
+ -   and on `Rat`.
+ -}
+
 \import Algebra.Field
 \import Algebra.Group
 \import Algebra.Meta
@@ -25,12 +37,17 @@
 \import Paths.Meta
 \open LinearOrder \hiding (<=)
 
+-- | Strict comparison `x <LU y` between an `ExUpperReal` and a `LowerReal`: `∃ (a : Rat) (x.U a) (y.L a)`.
 \func \infix 4 <LU (x : ExUpperReal) (y : LowerReal) : \Prop
   => ∃ (a : Rat) (x.U a) (y.L a)
 
+-- | Transitivity of `<LU` along a lower-real inequality.
 \lemma <LU-transitive {x : UpperReal} {y z : LowerReal} (p : x <LU y) (q : y <= z) : x <LU z \elim p
   | inP (a,x<a,a<y) => inP (a, x<a, q a<y)
 
+{- | Record extending `InfReal` and `UpperReal` with the **focus** axiom `LU-focus`: for every `eps > 0`, some rational
+ -   `a` satisfies `L a` and `U (a + eps)`. Derives `LU-located`, `L-inh`, `U-inh` automatically.
+ -}
 \record Real \extends InfReal, UpperReal {
   | LU-focus (eps : Rat) : eps > 0 -> ∃ (a : L) (U (a + eps))
 
@@ -53,6 +70,7 @@
     }
   }
 
+  -- | From `0 ∈ L` and `1 < d`, produces `0 < a`, `L a`, and `U (a * d)` (multiplicative right-focus).
   \lemma LU_*-focus-right (x>0 : L 0) {d : Rat} (d>1 : 1 < d) : ∃ (a : Rat) (0 < a) (L a) (U (a * d))
     => \case L-rounded x>0 \with {
       | inP (a0,a0<x,a0>0) => \case LU-focus (a0 * (d - 1)) (OrderedSemiring.<_*_positive_positive a0>0 linarith) \with {
@@ -60,6 +78,7 @@
       }
     }
 
+  -- | Dually, from `0 ∈ L` and `c < 1`, produces `b` with `L (b * c)` and `U b`.
   \lemma LU_*-focus-left (x>0 : L 0) {c : Rat} (c<1 : c < 1) : ∃ (b : Rat) (L (b * c)) (U b)
     => \case dec<_<= 0 c \with {
       | inl c>0 => \case LU_*-focus-right x>0 {finv c} (finv>1 c>0 c<1) \with {
@@ -74,24 +93,30 @@
   \open DiscreteField
   \open LinearlyOrderedSemiring
 
+  -- | Embeds a rational `x : Rat` as a real with `L = (· < x)`, `U = (x < ·)`.
   \use \coerce fromRat (x : Rat) : Real \cowith
     | InfReal => InfReal.fromRat x
     | UpperReal => UpperReal.fromRat x
     | LU-focus eps eps>0 => inP (x - eps * finv 2, linarith, linarith)
 
+  -- | Extensionality: two reals agree iff their lower sets agree on rationals.
   \lemma real-ext {x y : Real} (p : \Pi {a : Rat} -> x.L a <-> y.L a) : x = y
     => \have t => InfReal.real-ext p
        \in ext (pmap (\lam z => Real.L {z}) t, pmap (\lam z => Real.U {z}) t)
 
+  -- | Equality of reals is determined by equality at the `LowerReal` level.
   \lemma real-lower-ext {x y : Real} (p : x = {LowerReal} y) : x = y
     => real-ext \lam {a} => transport (\lam (y : LowerReal) => x.L a <-> y.L a) p <->refl
 
+  -- | Injectivity of the rational embedding.
   \lemma fromRat-inj {x y : Rat} (p : fromRat x = fromRat y) : x = y
     => <=-antisymmetric (rat_real_<=.2 $ =_<= {RealAbGroup} p) (rat_real_<=.2 $ =_<= {RealAbGroup} $ inv p)
 
+  -- | `RealAbGroup` order/equality coincides with `ExUpperReal` order/equality on `Real`.
   \lemma <=-upper {x y : Real} : x RealAbGroup.<= y <-> x ExUpperReal.<= y
     => (<=_U-char.1 __ __, \lam x<=y => <=_U-char.2 \lam p => x<=y p)
 
+  -- | `RealAbGroup` order/equality coincides with `ExUpperReal` order/equality on `Real`.
   \lemma =-upper {x y : Real} : (x = y) <-> (x = {ExUpperReal} y)
     => (\lam p => p, \lam p => RealAbGroup.<=-antisymmetric (<=_U-char.2 \lam y<a => rewrite p y<a) (<=_U-char.2 \lam x<a => rewriteI p x<a))
 }
@@ -100,13 +125,16 @@
   | func-zro => idp
   | func-+ => inv RealAbGroup.+-rat
 
+-- | The inclusion `Real → ExUpperReal` is an additive monoid homomorphism.
 \lemma real-upperReal : AddMonoidHom RealAbGroup ExUpperRealAbMonoid (\lam x => x) \cowith
   | func-zro => idp
   | func-+ => RealAbGroup.+-upper
 
+-- | `Pointed Real` with `ide = 1`.
 \instance RealPointed : Pointed Real
   | ide => Real.fromRat 1
 
+-- | `LinearlyOrderedAbGroup Real` with `0`, `1`, `+`, `negative`, `meet`, `join`, and positivity `isPos x = x.L 0`.
 \instance RealAbGroup : LinearlyOrderedAbGroup Real
   | zro => Real.fromRat 0
   | + => +
@@ -178,34 +206,47 @@
   \where {
     \open OrderedSemiring
 
+    -- | Sum of reals; combines the `InfReal` sum with the upper-set `U-inh` to preserve focus.
     \sfunc \infixl 6 + (x y : Real) : Real \cowith
       | InfReal => x InfRealAbMonoid.+ y
       | U-inh => \case x.U-inh, y.U-inh \with {
         | inP (a,x<a), inP (b,y<b) => inP (a RatField.+ b RatField.+ 1, InfRealAbMonoid.+_U.2 $ inP (a, x<a, b, y<b, linarith))
       }
 
+    {- | Characterize membership in `L`/`U` of `x + y` via existence of rational summands `b ∈ x.L`, `c ∈ y.L` (resp.
+     -   `x.U`, `y.U`) with `a < b + c` (resp. `b + c < a`).
+     -}
     \lemma +_L {x y : Real} {a : Rat} : Real.L {x + y} a <-> ∃ (b : x.L) (c : y.L) (a < b RatField.+ c)
       => rewrite (\peval x + y, \peval x InfRealAbMonoid.+ y, \peval x LowerRealAbMonoid.+ y) <->refl
 
+    {- | Characterize membership in `L`/`U` of `x + y` via existence of rational summands `b ∈ x.L`, `c ∈ y.L` (resp.
+     -   `x.U`, `y.U`) with `a < b + c` (resp. `b + c < a`).
+     -}
     \lemma +_U {x y : Real} {a : Rat} : Real.U {x + y} a <-> ∃ (b : x.U) (c : y.U) (b RatField.+ c < a)
       => rewrite (\peval x + y, \peval x InfRealAbMonoid.+ y, \peval x ExUpperReal.+ y) <->refl
 
+    -- | Real addition agrees with `ExUpperReal`, `LowerReal`, and `InfReal` addition respectively.
     \lemma +-upper {x y : Real} : x + y = x ExUpperReal.+ y
       => exts \lam a => <->_=.1 +_U *> inv (<->_=.1 ExUpperReal.+_U)
 
+    -- | Real addition agrees with `ExUpperReal`, `LowerReal`, and `InfReal` addition respectively.
     \lemma +-lower {x y : Real} : x + y = x LowerRealAbMonoid.+ y
       => exts \lam a => <->_=.1 +_L *> inv (<->_=.1 LowerRealAbMonoid.+_L)
 
+    -- | Rational embedding preserves addition.
     \lemma +-rat {x y : Rat} : x + y = {Real} x RatField.+ y
       => Real.real-lower-ext $ +-lower *> {LowerReal} LowerRealAbMonoid.+-rat
 
+    -- | Real addition agrees with `ExUpperReal`, `LowerReal`, and `InfReal` addition respectively.
     \lemma +-inf {x y : Real} : x + y = x InfRealAbMonoid.+ y
       => InfReal.real-lower-ext $ +-lower *> {LowerReal} inv {LowerReal} InfRealAbMonoid.+-lower
 
+    -- | Natural-number scaling agrees with the `ExUpperReal` version.
     \lemma *n-upper {n : Nat} {x : Real} : n RealAbGroup.*n x = n ExUpperRealAbMonoid.*n x \elim n
       | 0 => idp
       | suc n => +-upper *> pmap (ExUpperReal.+ x) *n-upper
 
+    -- | Pointwise negation; swaps `L` and `U` via rational negation.
     \sfunc negative (x : Real) : Real \cowith
       | L a => x.U (RatField.negative a)
       | L-inh => \case x.U-inh \with {
@@ -229,48 +270,61 @@
         | byRight x<-q => byLeft x<-q
       }
 
+    -- | Characterize `L`/`U` of `negative x`.
     \lemma negative_L {x : Real} {a : Rat} : Real.L {negative x} a <-> x.U (RatField.negative a)
       => rewrite (\peval negative x) <->refl
 
+    -- | Characterize `L`/`U` of `negative x`.
     \lemma negative_U {x : Real} {a : Rat} : Real.U {negative x} a <-> x.L (RatField.negative a)
       => rewrite (\peval negative x) <->refl
 
+    -- | Rational embedding preserves negation and subtraction.
     \lemma negative-rat {x : Rat} : negative x = {Real} RatField.negative x
       => (\peval negative x) *> exts (\lam a => ext (\lam p => linarith, \lam p => linarith), \lam a => ext (\lam p => linarith, \lam p => linarith))
 
+    -- | Rational embedding preserves negation and subtraction.
     \lemma minus-rat {x y : Rat} : x - {RealAbGroup} y = {Real} x - y
       => pmap (x +) negative-rat *> +-rat
 
+    -- | Lattice operations on reals; for `meet`, `L` is intersection and `U` is union; for `join`, dually.
     \sfunc meet (x y : Real) : Real \cowith
       | InfReal => InfRealAbMonoid.meet x y
       | U-inh => \case x.U-inh \with {
         | inP (a,x<a) => inP (a, InfRealAbMonoid.meet_U.2 $ byLeft x<a)
       }
 
+    -- | Compatibility with `InfReal` / `ExUpperReal` lattice structure.
     \lemma meet-inf {x y : Real} : meet x y = InfRealAbMonoid.meet x y
       => \peval meet x y
 
+    -- | Cut-level characterizations of meet/join.
     \lemma meet_L {x y : Real} {a : Rat} : Real.L {meet x y} a <-> (\Sigma (x.L a) (y.L a))
       => <->trans (<->_=.2 $ pmap (\lam z => Real.L {z} a) meet-inf) InfRealAbMonoid.meet_L
 
+    -- | Cut-level characterizations of meet/join.
     \lemma meet_U {x y : Real} {a : Rat} : Real.U {meet x y} a <-> x.U a || y.U a
       => <->trans (<->_=.2 $ pmap (\lam z => Real.U {z} a) meet-inf) InfRealAbMonoid.meet_U
 
+    -- | Lattice operations on reals; for `meet`, `L` is intersection and `U` is union; for `join`, dually.
     \sfunc join (x y : Real) : Real \cowith
       | InfReal => InfRealAbMonoid.join x y
       | U-inh => \case x.U-inh, y.U-inh \with {
         | inP (a,x<a), inP (b,y<b) => inP (a ∨ b, InfRealAbMonoid.join_U.2 (x.U_<= x<a join-left, y.U_<= y<b join-right))
       }
 
+    -- | Compatibility with `InfReal` / `ExUpperReal` lattice structure.
     \lemma join-inf {x y : Real} : join x y = InfRealAbMonoid.join x y
       => \peval join x y
 
+    -- | Cut-level characterizations of meet/join.
     \lemma join_L {x y : Real} {a : Rat} : Real.L {join x y} a <-> x.L a || y.L a
       => <->trans (<->_=.2 $ pmap (\lam z => Real.L {z} a) join-inf) InfRealAbMonoid.join_L
 
+    -- | Cut-level characterizations of meet/join.
     \lemma join_U {x y : Real} {a : Rat} : Real.U {join x y} a <-> (\Sigma (x.U a) (y.U a))
       => <->trans (<->_=.2 $ pmap (\lam z => Real.U {z} a) join-inf) InfRealAbMonoid.join_U
 
+    -- | Rational embedding commutes with `∧`, `∨`, absolute value, and distance.
     \lemma join-rat {x y : Rat} : join x y = {Real} x ∨ y
       => Real.real-ext \lam {a} => <->trans join_L (\case __ \with {
         | byLeft a<x => a<x <∘l join-left
@@ -280,12 +334,15 @@
         | inr x<=a => byRight $ transport (a <) (join/=left $ StrictPoset.<_/= $ x<=a <∘r a<xy) a<xy
       })
 
+    -- | Compatibility with `InfReal` / `ExUpperReal` lattice structure.
     \lemma join-upper {x y : Real} : join x y = ExUpperReal.join x y
       => <=-antisymmetric (\lam p => join_U.2 (ExUpperReal.join_U.1 p)) (\lam p => ExUpperReal.join_U.2 (join_U.1 p))
 
+    -- | `0 < 1` in `Real`.
     \lemma zro<ide : Real.fromRat 0 RealAbGroup.< Real.fromRat 1
       => real_<-rat-char.2 $ inP $ later (ratio 1 2, idp, idp)
 
+    -- | `LowerReal` order coincides with `RealAbGroup` order on `Real`.
     \lemma lower_<-char {x y : Real} : x LowerRealAbMonoid.< y <-> x RealAbGroup.< y
       => (\lam (inP (b,b<y,p)) => real_<-char.2 $ \case L-rounded b<y \with {
         | inP (c,c<y,b<c) => inP (c, (\lam b<x => <-irreflexive $ p $ real_<_L.1 b<x) <∘r real_<_L.2 b<c, real_<_L.2 c<y)
@@ -293,18 +350,23 @@
         | inP (a,x<a,a<y) => inP (a, real_<_L.1 a<y, \lam {b} b<x => real_<_L.1 $ real_<_L.2 b<x <∘ x<a)
       })
 
+    -- | `LowerReal` order coincides with `RealAbGroup` order on `Real`.
     \lemma lower_<=-char {x y : Real} : x LowerRealAbMonoid.<= y <-> x RealAbGroup.<= y
       => (\lam p => <=_L-char.2 $ unfolds in p, \lam p => unfolds $ <=_L-char.1 p)
 
+    -- | Rational embedding preserves negation and subtraction.
     \lemma diff-rat {x y : Rat} : x - {RealAbGroup} y = {Real} x - y
       => pmap (x +) negative-rat *> +-rat
 
+    -- | Rational embedding commutes with `∧`, `∨`, absolute value, and distance.
     \lemma abs-rat {x : Rat} : RealAbGroup.abs x = {Real} RatField.abs x
       => pmap (join x) negative-rat *> join-rat
 
+    -- | Rational embedding commutes with `∧`, `∨`, absolute value, and distance.
     \lemma dist-rat {x y : Rat} : RealAbGroup.abs (x - {RealAbGroup} y) = {Real} RatField.abs (x - y)
       => pmap RealAbGroup.abs diff-rat *> abs-rat
 
+    -- | `½ x + ½ x = x` at the rational embedding.
     \lemma half+half {x : Rat} : RatField.half x + RatField.half x = Real.fromRat x
       => +-rat *> pmap Real.fromRat linarith
 
@@ -381,6 +443,7 @@
 
 \open RealAbGroup(negative_L,+_L)
 
+-- | `x < y` iff some rational lies between via `x.U a` and `y.L a`.
 \lemma real_<-rat-char {x y : Real} : x < y <-> ∃ (a : Rat) (x.U a) (y.L a)
   => (\case +_L.1 __ \with {
         | inP (b,b<y,c,x<-c,b+c>0) => inP (b, x.U-closed (negative_L.1 x<-c) linarith, b<y)
@@ -389,46 +452,57 @@
         | inP (b,b<y,a<b) => +_L.2 $ inP (b, b<y, negative a, negative_L.2 $ simplify x<a, linarith)
       })
 
+-- | `x < y` iff some rational `a` separates them as reals: `x < a` and `a < y`.
 \lemma real_<-char {x y : Real} : x < y <-> ∃ (a : Rat) (x < a) ((a : Real) < y)
   => (\lam x<y => \case real_<-rat-char.1 x<y \with {
         | (inP (a,x<a,a<y)) => inP (a, real_<_U.2 x<a, real_<_L.2 a<y)
       }, \lam (inP (a,x<a,a<y)) => x<a <∘ a<y)
 
+-- | A rational lies in `x.L` (resp. `x.U`) iff it is strictly below (resp. above) `x` as a real.
 \lemma real_<_L {a : Rat} {x : Real} : (a : Real) < x <-> x.L a
   => <->trans real_<-rat-char (\lam (inP (b,a<b,b<x)) => x.L-closed b<x a<b, \lam a<x => \case x.L-rounded a<x \with {
     | inP (b,b<x,a<b) => inP (b, a<b, b<x)
   })
 
+-- | A rational lies in `x.L` (resp. `x.U`) iff it is strictly below (resp. above) `x` as a real.
 \lemma real_<_U {a : Rat} {x : Real} : x < a <-> x.U a
   => <->trans real_<-rat-char (\lam (inP (b,x<b,b<a)) => x.U-closed x<b b<a, x.U-rounded)
 
+-- | Comparison agrees with the `InfReal` ordering.
 \lemma real_<_InfReal {x y : Real} : x < y <-> x InfRealAbMonoid.< y
   => (\lam p => real_<-rat-char.1 p, \lam p => real_<-rat-char.2 p)
 
+-- | Comparison agrees with the `InfReal` ordering.
 \lemma real_<=_InfReal {x y : Real} : x <= y <-> x InfRealAbMonoid.<= y
   => (\lam x<=y y<x => x<=y (real_<_InfReal.2 y<x), \lam x<=y y<x => x<=y (real_<_InfReal.1 y<x))
 
+-- | The embedding `Rat → Real` is order-reflecting and order-preserving.
 \lemma rat_real_< {a b : Rat} : a < b <-> Real.fromRat a < Real.fromRat b
   => <->sym real_<_L
 
+-- | The embedding `Rat → Real` is order-reflecting and order-preserving.
 \lemma rat_real_<= {a b : Rat} : a <= b <-> Real.fromRat a <= Real.fromRat b
   => (\lam p q => p $ rat_real_<.2 q, \lam p q => p $ rat_real_<.1 q)
 
+-- | Rational embedding commutes with `∧`, `∨`, absolute value, and distance.
 \lemma rat_real_meet {a b : Rat} : Real.fromRat (a ∧ b) = Real.fromRat a ∧ Real.fromRat b
   => <=-antisymmetric (meet-univ (rat_real_<=.1 meet-left) (rat_real_<=.1 meet-right)) \case TotalOrder.meet-isMin a b \with {
     | byLeft p => rewrite p meet-left
     | byRight p => rewrite p meet-right
   }
 
+-- | Rational embedding commutes with `∧`, `∨`, absolute value, and distance.
 \lemma rat_real_join {a b : Rat} : Real.fromRat (a ∨ b) = Real.fromRat a ∨ Real.fromRat b
   => <=-antisymmetric (\case TotalOrder.join-isMax a b \with {
     | byLeft p => rewrite p RealAbGroup.join-left
     | byRight p => rewrite p RealAbGroup.join-right
   }) (join-univ (rat_real_<=.1 join-left) (rat_real_<=.1 join-right))
 
+-- | Rational embedding commutes with `∧`, `∨`, absolute value, and distance.
 \lemma rat_real_abs {a : Rat} : Real.fromRat (RatField.abs a) = RealAbGroup.abs (Real.fromRat a)
   => rat_real_join *> pmap (_ RealAbGroup.∨) (inv RealAbGroup.negative-rat)
 
+-- | `UnboundedDenseLinearOrder` instance — reals form a dense linear order without upper or lower bound.
 \instance RealDenseOrder : UnboundedDenseLinearOrder
   | LinearOrder => RealAbGroup
   | isDense x<z => \case real_<-rat-char.1 x<z \with {
@@ -441,6 +515,7 @@
     | inP (a,a<x) => inP (a, real_<_L.2 a<x)
   }
 
+-- | `x <= y` iff `x.L ⊆ y.L`, equivalently `y.U ⊆ x.U`.
 \lemma <=_L-char {x y : Real} : x <= y <-> (\Pi {a : Rat} -> x.L a -> y.L a)
   => (\lam h a<x => \case L-rounded a<x \with {
     | inP (b,b<x,a<b) => \case y.LU-located a<b \with {
@@ -451,6 +526,7 @@
     | inP (a,y<a,a<x) => y.LU-disjoint (f a<x) y<a
   })
 
+-- | `x <= y` iff `x.L ⊆ y.L`, equivalently `y.U ⊆ x.U`.
 \lemma <=_U-char {x y : Real} : x <= y <-> (\Pi {a : Rat} -> y.U a -> x.U a)
   => (\lam h y<a => \case U-rounded y<a \with {
     | inP (b,y<b,b<a) => \case x.LU-located b<a \with {
@@ -461,12 +537,14 @@
     | inP (a,y<a,a<x) => x.LU-disjoint a<x (f y<a)
   })
 
+-- | From `a < b` in `Real`, any real `x` satisfies `a < x` or `x < b` (located comparison).
 \lemma real-located {x a b : Real} (p : a < b) : a < x || x < b
   => \case inf-real-located {x} p \with {
     | byLeft r => byLeft (real_<_InfReal.2 r)
     | byRight r => byRight (real_<_InfReal.2 r)
   }
 
+-- | For any real `x` and `eps > 0`, there exists `a` with `a < x < a + eps` (real-valued focus).
 \lemma real-focus (x : Real) {eps : Real} (eps>0 : 0 < eps) : ∃ (a : Real) (a < x) (x < a + eps)
   => \case real_<-rat-char.1 eps>0 \with {
     | inP (eps',eps'>0,eps'<eps) => \case x.LU-focus eps' eps'>0 \with {
@@ -474,12 +552,16 @@
     }
   }
 
+-- | If `x.L a` and `x.L b` then `x.L (a ∨ b)` (lower set is upward-directed).
 \lemma real_join_L {a b : Rat} {x : Real} (a<x : x.L a) (b<x : x.L b) : x.L (a ∨ b)
   => \case TotalOrder.join-isMax a b \with {
     | byLeft p => rewrite p a<x
     | byRight p => rewrite p b<x
   }
 
+{- | For an `InfReal` `x`, real bound `B`, and `eps > 0`: either `B < x` or there exists a real `a < x` with
+ -   `x < a + eps`.
+ -}
 \lemma LU-focus-bound-real {x : InfReal} (B : Real) {eps : Real} (eps>0 : eps > 0) : B InfRealAbMonoid.< x || Given (a : Real) (a InfRealAbMonoid.< x) (x < a + eps)
   => \case B.U-inh, real_<-rat-char.1 eps>0 \with {
     | inP (Bq,B<Bq), inP (delta,delta>0,delta<eps) => \case x.LU-focus-bound Bq delta>0 \with {
@@ -488,6 +570,7 @@
     }
   }
 
+-- | Located comparison of `InfReal` against a real interval.
 \lemma inf-real-located {x : InfReal} {a b : Real} (p : a < b) : a InfRealAbMonoid.< x || x < b
   => \case real_<-rat-char.1 p \with {
     | inP (a',a<a',a'<b) => \case L-rounded a'<b \with {
@@ -498,10 +581,12 @@
     }
   }
 
+-- | Given `x : InfReal` with `x < B` for some real `B`, returns the corresponding `Real` (uses `B` to supply `U-inh`).
 \func inf-real-real (x : InfReal) {B : Real} (x<B : x < B) : Real \cowith
   | InfReal => x
   | U-inh => U-inh {inf-real-bounded x $ inP (B,x<B)}
 
+-- | Same construction taking the bound existentially: `∃ (B : Real) (x < B)`.
 \func inf-real-bounded (x : InfReal) (xB : ∃ (B : Real) (x < B)) : Real \cowith
   | InfReal => x
   | U-inh => \case xB \with {

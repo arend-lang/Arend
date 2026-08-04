@@ -1,8 +1,25 @@
+{- | Abstract framework for term-rewriting solvers that decide equalities in algebraic structures by normalizing
+ -   syntactic terms.
+ -
+ -   This module provides the categorical scaffolding shared by all algebraic solvers in the library (groups, rings,
+ -   lattices, linear arithmetic, etc.). The core idea is the `SolverModel` class: a set `M` is equipped with a syntax
+ -   of `Term`s, a notion of `NF` (normal forms), an interpretation into `M`, and a `normalize` function whose
+ -   consistency with interpretation lets one prove equalities in `M` by computing on normal forms. The
+ -   `SubstSolverModel` extension adds substitution structure on normal forms, making `NF` a monad indexed by variable
+ -   count and allowing pattern-based axiom application — essential for solvers that work modulo a set of equational
+ -   axioms.
+ -}
+
 \import Data.Fin
 \import Logic
 \import Paths
 \import Paths.Meta
 
+{- | Class over a carrier set `M` packaging the data needed for a normalization-based decision procedure. Fields:
+ -   `Term n` (terms with `n` free variables), `NF n` (normal forms), `normalize : Term n -> NF n`,
+ -   `interpret`/`interpretNF` (evaluation in `M` given an environment `Fin n -> M`), and `interpretNF-consistent`
+ -   (normalization preserves meaning).
+ -}
 \class SolverModel (M : \Set) {
   | \protected Term : Nat -> \Set
   | \protected NF : Nat -> \Set
@@ -11,19 +28,39 @@
   | \protected interpretNF {n : Nat} (env : Fin n -> M) : NF n -> M
   | \protected interpretNF-consistent {n : Nat} {env : Fin n -> M} {t : Term n} : interpretNF env (normalize t) = interpret env t
 
+  {- | The main user-facing lemma — to prove `interpret env t = interpret env s`, it suffices to show their normal forms
+   -   have equal interpretations. This is the primary entry point used by `Meta`-driven solver tactics.
+   -}
   \protected \lemma terms-equality (env : Array M) (t s : Term env.len) (p : interpretNF env (normalize t) = interpretNF env (normalize s)) : interpret env t = interpret env s
     => inv interpretNF-consistent *> p *> interpretNF-consistent
 
+  {- | Converse direction — equality of interpretations implies equality of normalized interpretations. Useful when
+   -   chaining solver invocations or reflecting back into normal-form land.
+   -}
   \protected \lemma terms-equality-conv (env : Array M) (t s : Term env.len) (p : interpret env t = interpret env s) : interpretNF env (normalize t) = interpretNF env (normalize s)
     => interpretNF-consistent *> p *> inv interpretNF-consistent
 }
 
+{- | Extends `SolverModel` with a Kleisli-style monadic structure on `NF`, allowing axioms to be applied at arbitrary
+ -   positions inside a normal form via substitution.
+ -}
 \class SubstSolverModel \extends SolverModel {
+  -- | Variable embedding `Fin n -> NF n` — the unit of the substitution monad.
   | \protected nfVar {n : Nat} : Fin n -> NF n
+  {- | Substitution / Kleisli bind `NF m -> (Fin m -> NF n) -> NF n`, replacing each variable in a normal form by
+   -   another normal form.
+   -}
   | \protected \infixl 2 >>= {m n : Nat} : NF m -> (Fin m -> NF n) -> NF n
+  {- | Coherence: substituting then interpreting equals interpreting under the substituted environment. Makes `NF` a
+   -   lawful indexed monad with respect to interpretation.
+   -}
   | \protected >>=-consistent {m n : Nat} {env : Fin n -> M} {nf : NF m} {k : Fin m -> NF n}
     : interpretNF env (nf >>= k) = interpretNF (\lam v => interpretNF env (k v)) nf
 
+  {- | Given a proven term equality `interpret env t = interpret env s` and a `pattern : NF (suc env.len)` with one
+   -   hole, derives equality of `pattern` instantiated with `normalize t` versus `normalize s`. This is the key
+   -   mechanism for plugging user-supplied equations into the normalization machinery.
+   -}
   \lemma apply-axiom (env : Array M) (t s : Term env.len) (p : interpret env t = interpret env s) (pattern : NF (suc env.len)) : interpretNF env (pattern >>= fcase (normalize t) nfVar) = interpretNF env (pattern >>= fcase (normalize s) nfVar)
     => >>=-consistent *> pmap (interpretNF __ pattern) (ext \case \elim __ \with {
       | 0 => terms-equality-conv env t s p

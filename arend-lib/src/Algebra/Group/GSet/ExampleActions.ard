@@ -1,3 +1,12 @@
+{- | Concrete examples of group actions used throughout the library.
+ -
+ -   This module collects standard constructions of `GroupAction` instances that appear repeatedly in group theory: a
+ -   group acting on itself by left translation, on its subsets, and on itself by conjugation, plus the trivial action.
+ -   These examples serve as the canonical building blocks for proofs about transitive actions, orbits, stabilizers, and
+ -   conjugacy classes, instantiating the abstract `GroupAction`/`TransitiveGroupAction` interfaces with the most common
+ -   concrete cases.
+ -}
+
 \import Algebra.Group
 \import Algebra.Group.GroupHom
 \import Algebra.Group.GSet
@@ -8,6 +17,9 @@
 \import Paths.Meta
 \import Set.SubSet
 
+{- | Left translation action of a group `G` on itself, where `g ** h = g * h`. Constructs a `TransitiveGroupAction G`
+ -   since any element can be sent to any other via left multiplication.
+ -}
 \func TranslationAction (G : Group) : TransitiveGroupAction G \cowith
   | E => G
   | ** => G.*
@@ -15,6 +27,9 @@
   | **_ide => G.ide-left
   | isTransAction => \lam (v v' : G) => inP (v' G.* inverse v, rewrite (G.*-assoc, G.inverse-left) G.ide-right)
 
+{- | Action of `G` on `SubSet G` defined by `(g ** p).contains h = p.contains (g⁻¹ * h)`, i.e., translating a subset by
+ -   `g`. Yields a `GroupAction G`.
+ -}
 \func TranslationActionOnSubsets (G : Group) : GSet G \cowith
   | E => SubSet G
   | ** (g : G) (p : SubSet G) => \new SubSet G {| contains h => p.contains (inverse g G.* h)}
@@ -22,17 +37,26 @@
   | **_ide => exts (\lam (e1 : G) => rewrite (G.inverse_ide, G.ide-left) idp)
 
 -- action by conjugating its own elements
+{- | Action of `G` on itself by conjugation: `g ** e = conjugate g e = g * e * g⁻¹`. Yields a `GroupAction G` whose
+ -   orbits are conjugacy classes.
+ -}
 \func conjAction (G : Group) : GSet G \cowith
   | E => G
   | ** (g : G)  => conjugate g
   | **-assoc => pmap (_ *) G.inverse_* *> equation.group
   | **_ide {e : G} : conjugate G.ide e = e => conjugate-via-id
 
+{- | Trivial action of `G` on any `BaseSet E`, where every group element acts as the identity. Useful as a default
+ -   instance and for constructing fixed-point sets.
+ -}
 \func trivialAction (G : Group) (E : \Set) : GSet G E \cowith
   | ** _ e => e
   | **-assoc => idp
   | **_ide => idp
 
+{- | Conjugation of a subset `S : SubSet G` by `g : G`, defined by `h ∈ conjugate-subset g S` iff `g⁻¹ * h * g ∈ S`.
+ -   Used in normalizer/centralizer constructions and reasoning about conjugacy of subgroups.
+ -}
 \func conjugate-subset {G : Group} (g : G) (S : SubSet G) : SubSet G \cowith
   | contains h => S.contains (conjugate (inverse g) h)
 

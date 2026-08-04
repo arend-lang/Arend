@@ -1,18 +1,37 @@
+{- | Constructs the disjoint union (sum) of a family of term rewriting systems sharing a common sort set.
+ -
+ -   This module formalizes how to combine an indexed family of functional signatures `S : J -> FSignature Sort` into a
+ -   single signature `SumFSignature S` whose function symbols are tagged pairs `(j, f)` identifying their originating
+ -   component. Terms, rewrite rules, and rule registries from any individual component can be injected into the union
+ -   by relabeling each function application with its component index, while variables and metavariables pass through
+ -   unchanged. This provides the standard set-theoretic basis for studying modular properties of TRSs (such as
+ -   confluence preservation under disjoint union).
+ -}
+
 \import Data.List (List)
 \import Meta
 \import Paths
 \import Logic.Rewriting.TRS.HRS
 
+{- | Given `S : J -> FSignature Sort`, builds the union signature whose symbols at sort `s` are dependent pairs
+ -   `(j : J, symbol {S j} s)` and whose domain is inherited from the selected component.
+ -}
 \func SumFSignature {J Sort : \Set} (S : J -> FSignature Sort) : FSignature Sort \cowith
   | symbol s => \Sigma (j : J) (symbol {S j} s)
   | domain symb => domain {S symb.1} symb.2
 
+{- | Maps a term `Term (S j) c s mc` from component `j` into `Term (SumFSignature S) c s mc` by tagging every `func`
+ -   node with its index `j`; recursive on `var`, `metavar`, and `func` constructors.
+ -}
 \func inject-term {J Sort : \Set} (S : J -> FSignature Sort) {s : Sort} {c : List Sort} {mc : MetaContext Sort}
                   {j : J} (t : Term (S j) c s mc) : Term (SumFSignature S) c s mc \elim t
   | var index p => var index p
   | metavar m args => metavar m (\lam i => inject-term S (args i))
   | func f args => func (j,f) (\lam i => inject-term S (args i))
   \where {
+    {- | Naturality of `inject-term` with respect to `transport` along a sort equality `eq : s = s'` — injection
+     -   commutes with sort transport.
+     -}
     \lemma over-transport-sort {J Sort : \Set} {S : J -> FSignature Sort} {s s' : Sort} {c : List Sort} {mc : MetaContext Sort}
                                (eq : s = s')
                                {j : J} (t : Term (S j) c s mc) :
@@ -20,6 +39,9 @@
     \elim eq
       | idp => idp
 
+    {- | Naturality of `inject-term` with respect to `transport` along a context equality `eq : c = c'` — injection
+     -   commutes with context transport.
+     -}
     \lemma over-transport-ctx {J Sort : \Set} {S : J -> FSignature Sort} {s : Sort} {c c' : List Sort} {mc : MetaContext Sort}
                               (eq : c = c')
                               {j : J} (t : Term (S j) c s mc) :
@@ -27,6 +49,9 @@
       | idp => idp
   }
 
+{- | Lifts a `RewriteRule` over component signature `S j` to a `RewriteRule` over `SumFSignature S` by injecting both
+ -   the left- and right-hand sides; preserves the metacontext and the root-is-function-symbol condition on the LHS.
+ -}
 \func inject-rule-container {J Sort : \Set} (S : J -> FSignature Sort) {s : Sort} {j : J} (R : RewriteRule {S j} s) : RewriteRule {SumFSignature S} s \cowith
   | rr-mc => R.rr-mc
   | rr-l => inject-term S R.rr-l
@@ -35,6 +60,10 @@
     | func f arguments, T-has-functional-root => T-has-functional-root {SumFSignature S}
   }
 
+{- | Given a family of rule registries `L : \Pi (j : J) -> RuleRegistry (S j)`, produces the combined
+ -   `RuleRegistry (SumFSignature S)` whose rule indices at sort `s` are pairs `(j, rule-J {L j} s)` and whose rule
+ -   containers come from the corresponding injected component rules.
+ -}
 \func SumRegistry {J Sort : \Set} (S : J -> FSignature Sort) (L : \Pi (j : J) -> RuleRegistry (S j)) : RuleRegistry (SumFSignature S) \cowith
   | rule-J s => \Sigma (j : J) (rule-J {L j} s)
   | rule-container p => inject-rule-container S (rule-container p.2)

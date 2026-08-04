@@ -1,3 +1,17 @@
+{- | Confluence proof for the union of color-disjoint confluent higher-order rewrite systems via bordered parallel
+ -   reduction.
+ -
+ -   This module formalizes the central diamond lemma for the union construction: if each constituent monochrome system
+ -   is confluent, then their disjoint union admits a joinable diagram on a refined parallel-reduction relation. The key
+ -   technical device is `BorderedParallelReduction`, which combines parallel rewriting in arguments with an optional
+ -   top-level monochrome rewrite step whose color must "oppose" the surrounding head symbol. Inner arguments carry an
+ -   `OppositeColored` tag preventing same-color collapse across the border, which lets confluence be reduced
+ -   componentwise to confluence in a single color via `unify-top` / `alternate-subst`. The proof proceeds by case
+ -   analysis on whether each side's bordered step rewrites at the root, dispatching to monochromatic confluence
+ -   (`join-multicolor-tlcrs`) and using substitution/weakening lifting lemmas (`reduction-over-substitution`,
+ -   `bpr-over-weakening`, `tlcr-over-substitution`) to propagate joins through contexts.
+ -}
+
 \import Algebra.Meta
 \import Logic.Rewriting.ARS.Relation
 \import Data.List (!!, ++, ++_nil, ++-assoc, List, nil, ::)
@@ -21,6 +35,11 @@
 \import Logic.Rewriting.TRS.Union.TopLevel
 \open TheoremContext
 
+{- | A single rewrite step in color `c`, indexed by source/target terms `A B`. Constructors `rewrite-with-rule-colored`
+ -   (root rule application of a `c`-colored rule with linear pattern matching) and `rewrite-with-parameter-f-colored`
+ -   (rewriting under a single function-symbol argument while leaving siblings intact). Records that the root has color
+ -   `c` via `HasColoredRoot`.
+ -}
 \data TopLevelColoredReduction {tc : TheoremContext}
                                (color : Color)
                                {mc : MetaContext Sort}
@@ -42,12 +61,19 @@
     (tlcr : TopLevelColoredReduction color (arguments-A i) (arguments-over-f p arguments-B i))
     (eq : \Pi (j : Index (domain f-A)) (j = i -> Empty) -> arguments-A j = arguments-over-f p arguments-B j)
   \where {
+    {- | Recovers `HasColoredRoot color A` from any colored reduction, encoding the invariant that monochrome reduction
+     -   preserves the root's color.
+     -}
     \lemma extract-root-coloring {tc : TheoremContext} {color : Color} {mc : MetaContext Sort'} {context : List Sort} {s : Sort} {A B : Term env context s mc} (tlcr : TopLevelColoredReduction color A B) : HasColoredRoot color A
     \elim A, B, tlcr
       | A, B, rewrite-with-rule-colored h _ _ _ _ => h
       | func f-A arguments-A, func f-B arguments-B, rewrite-with-parameter-f-colored p p1 i tlcr eq => func-root p1
   }
 
+{- | Predicate stating that an optional color `maybe` is incompatible with `negated`: either `nothing` (skip) or a
+ -   `just c` with `c /= negated`. Used to enforce the layering discipline between outer head symbol and inner bordered
+ -   reductions.
+ -}
 \data OppositeColored {tc : TheoremContext} (maybe : Maybe Color) (negated : Color) : \Prop \elim maybe
   | nothing => colored-nothing
   | just color => colored-opposite (color /= negated)
@@ -69,6 +95,10 @@
       (BorderedParallelReduction global-color someColor (arguments i) (mediator i)))
     (SwitchingReduction global-color color (func f mediator) B)
   \where {
+    {- | Extends a bordered reduction `A => B` by a closure of top-level colored reductions `B ~>* C`, producing a
+     -   bordered reduction `A => C`. Handles all three constructor cases by appending the tail to the existing
+     -   switching reduction.
+     -}
     \func append-tlcr
       {tc : TheoremContext}
       {global-color : Color}
@@ -210,6 +240,10 @@
         \in (X, c1, c2, rewrite gc2=right-color B=>X, rewrite (gc1=left-color *> lcolor=rcolor) C=>X)
     }
   \where {
+    {- | Closes a single-sided peak where one branch consists of a switching reduction and the other of a bare colored
+     -   closure. Uses `join-multicolor-tlcrs` to join the two and then `append-tlcr` to extend pending bordered
+     -   reductions to the join point.
+     -}
     \func unwrap-cwr
       {tc : TheoremContext} {gc1 gc2 : Color} {color3 color4 : Maybe Color} {context : List Sort'} {s : Sort'}
       (T1 T2 A B C : PureTerm env context s) {color-2 : Maybe Color}
@@ -228,6 +262,9 @@
              | (cl-2, t2=>X) => BorderedParallelReduction.append-tlcr T2 C T2=>C X (rewrite p C~>*X)
         \in (X, cl-1, t1=>X, cl-2, t2=>X)
 
+    {- | Closes a peak where both sides have switching reductions out of a common term `E`, splitting on whether each
+     -   switching reduction is `cr-skip` or `cr-rewrite` and chaining monochromatic joins to find the common reduct.
+     -}
     \func unwrap-double-cwr
       {tc : TheoremContext} {gc1 : Color} {color3 color4 : Maybe Color} {context : List Sort'} {s : Sort'}
       (T1 T2 A A' E B C : PureTerm env context s) {color-2 color-1 : Maybe Color}
@@ -263,6 +300,10 @@
              | (c2, T2=>X) => BorderedParallelReduction.append-tlcr _ _ T2=>C X (Closure.compose C~>*M2 M2~>*X)
         \in (X, c1, T1=>X, c2, T2=>X)
 
+    {- | Joins two top-level closures of (possibly different) colors. If colors agree, defers to `join-tlcrs` and
+     -   per-color confluence; if they disagree, at least one closure must be empty since both witnesses would force
+     -   `HasColoredRoot` of incompatible colors at the same root—an impossibility resolved by absurdity.
+     -}
     \func join-multicolor-tlcrs
       {tc : TheoremContext} (color1 color2 : Color) {context : List Sort'} {s : Sort'}
       {A B C : PureTerm env context s}
@@ -398,6 +439,9 @@
      \lam {s1} m => (someColor, unify-reduction rho C rd m))
   | lt-var index p, someColor, equal-trees p1 => (\lam {s1} mvar => contradiction, inv p1, \lam {s1} m => contradiction)
   \where {
+    {- | Helper that transports a bordered reduction across the trivial sort equality used by singular metacontexts,
+     -   producing the correctly-typed reduction on the metavariable image.
+     -}
     \func unify-reduction {tc : TheoremContext} {gc : Color} {someColor : Maybe Color} {context : List Sort'} {s s' : Sort'} {mc : MetaContext Sort'}
                           (rho :  MetaSubstitution env nil (SingularMetaContext s context) mc)
                           (C : Term env context s mc)
@@ -438,6 +482,9 @@
              in-indices
     \in (someColor, parallelization-f med inrd cwr)
   \where {
+    {- | Extends a per-index parallel reduction on substitutions through the `extend-substitution-left` plumbing used
+     -   when descending under binders.
+     -}
     \func extend-substitutuion-left-for-parallel
       {tc : TheoremContext} {left-context right-context some-context : List Sort'}
       {gc : Color}
@@ -465,6 +512,11 @@
       }
   }
 
+{- | Lifts a bordered parallel reduction `A => B` together with a parallel substitution refinement `subst => subst'` to
+ -   a bordered parallel reduction on the substituted terms. Handles the `equal-trees` case via
+ -   `distributed-reduction-for-substitution` and the `parallelization-f` case by recursing into mediators and
+ -   re-collecting.
+ -}
 \func reduction-over-substitution {tc : TheoremContext} {context new-context : List Sort'} {s : Sort'}
                                   {gc : Color}
                                   (color : Maybe Color)
@@ -483,6 +535,9 @@
          | (some-color, med, inrd, cwr) => collect-reductions-together-tlcr (just gc) f (\lam i => Substitution.apply (arguments i) (append-context-right subst)) (\lam i => Substitution.apply (mediator i) (append-context-right subst')) medium-reductions (Substitution.apply B subst') (cr-rewrite (rewrite p (Closure.lift (\lam t => Substitution.apply t subst') (\lam rel => tlcr-over-substitution subst' rel) (func f mediator) B tlcr)) idp)
     \in (some-color, parallelization-f med inrd cwr)
 
+{- | Extends a per-index bordered reduction on `subst => subst'` to operate on `append-context-right subst`, used when
+ -   descending under a binder that introduces an additional context.
+ -}
 \func expand-reduction-right
   {tc : TheoremContext} {context new-context additional-context : List Sort'}
   {gc : Color}
@@ -495,6 +550,10 @@
   | :: a context, 0 => \let ind => rd' 0 \in (ind.1, bpr-over-weakening ind.1 (subst 0) (subst' 0) ind.2 (SubList.extend-right-single SubList.identity))
   | :: a context, suc index => expand-reduction-right (\lam i => subst (suc i)) (\lam i => subst' (suc i)) (\lam i => rd' (suc i)) index
 
+{- | A single colored top-level reduction is preserved under substitution. Reuses linearity of patterns and a
+ -   `commutation` lemma between weakening, metasubstitution, and substitution to reconcile the two ways of composing
+ -   them.
+ -}
 \func tlcr-over-substitution {tc : TheoremContext} {context new-context : List Sort'} {s : Sort'} {mc : MetaContext Sort'}
                              {A B : Term env context s mc}
                              {color : Color}
@@ -511,6 +570,9 @@
 
   | func f-A arguments-A, func f-B arguments-B, rewrite-with-parameter-f-colored idp p1 i tlcr eq => rewrite-with-parameter-f-colored idp p1 i (tlcr-over-substitution (append-context-right subst) tlcr) (\lam j _x => rewrite (eq j _x) idp)
   \where {
+    {- | Technical transport-stripping lemma used to relate the substituted forms of weakened pattern templates after
+     -   rewriting their context equalities.
+     -}
     \func untransport {env : FSignature} {context-a context-a' context-b context-b' context-meta context-meta2 : List Sort} {s : Sort} {mc mc' : MetaContext Sort}
                       (t : Term env nil s mc)
                       (eq : context-a = context-a')
@@ -532,6 +594,9 @@
                      (transport2 (\lam (ctx : List Sort) (ctx' : List Sort) => Substitution ctx ctx' mc') eq' eq subst) \elim eq, eq'
       | idp, idp => true-eq
 
+    {- | States that pulling a substitution through the metasubstitution of a weakened term commutes correctly. Body
+     -   deferred (`hidden_proof`).
+     -}
     \lemma commutation {env : FSignature} {s : Sort} {aux-context core-context new-context : List Sort} {old-ms new-ms : MetaContext Sort}
                        (term : Term env aux-context s old-ms)
                        (subst : Substitution core-context new-context new-ms)
@@ -630,6 +695,7 @@
           | idp, idp, idp, idp => induction-statement
       }
 
+    -- | `HasColoredRoot` is preserved by substitution. Body deferred (`hidden_proof`).
     \lemma hcr-over-substitution {tc : TheoremContext} {context new-context : List Sort'} {s : Sort'} {mc : MetaContext Sort'}
                                  {color : Color}
                                  {A : Term env context s mc}
@@ -639,6 +705,9 @@
       | func _ arguments, func-root p => func-root p
   }
 
+{- | Lifts a `BorderedParallelReduction` along a context weakening, descending into mediators with
+ -   `SubList.extend-right-both` and using `tlcr-over-weakening` for the border step.
+ -}
 \func bpr-over-weakening
   {tc : TheoremContext} {context new-context : List Sort'} {s : Sort'}
   {gc : Color}
@@ -658,6 +727,9 @@
     \let inductive i => bpr-over-weakening (_x i).1 (arguments i) (mediator i) (_x i).3 (SubList.extend-right-both sublist)
     \in parallelization-f (\lam index => weakening (mediator index) (SubList.extend-right-both sublist)) (\lam i => ((_x i).1, (_x i).2, inductive i)) (cr-skip idp)
 
+{- | Lifts a top-level colored reduction along a context weakening by reducing weakening to substitution via
+ -   `weakening.substitution`.
+ -}
 \func tlcr-over-weakening
   {tc : TheoremContext} {context new-context : List Sort'} {s : Sort'}
   (color : Color)
@@ -669,6 +741,10 @@
        | substed-tlcr => tlcr-over-substitution weakening-subst tlcr
   \in repeat {2} (rewrite weakening.substitution-eq) substed-tlcr
 
+{- | For a pure term `A` and parallel-refined substitutions `subst => subst'`, produces a bordered parallel reduction
+ -   between the substituted forms. Recurses on the term structure: variables look up the per-index reduction; functions
+ -   descend into arguments and reassemble.
+ -}
 \func distributed-reduction-for-substitution {tc : TheoremContext} {context new-context : List Sort'} {s : Sort'}
                                              (A : PureTerm env context s)
                                              {gc : Color}
@@ -687,6 +763,11 @@
              (\lam index => Substitution.apply (arguments index) (append-context-right subst'))
              inner-reductions \in (sc, parallelization-f med inrd cwr)
 
+{- | Given per-argument bordered reductions `arguments-A i => arguments-B i` and a switching reduction
+ -   `func f arguments-B ~>* C`, packages them into a single bordered reduction `func f mediator => C` honoring the
+ -   opposite-color discipline. Performs an inductive walk over the arguments using `propagate-rewriting` to thread the
+ -   head reduction through each rewriting position.
+ -}
 \func collect-reductions-together-tlcr
   {tc : TheoremContext} {context : List Sort'} {s : Sort'} {mc : MetaContext Sort'}
   {gc : Color}
@@ -718,6 +799,10 @@
              )
   \in (ind-last.1, \lam index => (common-reduction index).1, \lam i => ((common-reduction i).2, (common-reduction i).4, (common-reduction i).3), ind-last.2)
   \where {
+    {- | Inductive step that combines a previous switching reduction at index `delim` with a new one at the next index,
+     -   splitting on whether each is `cr-skip` or `cr-rewrite` and using `upgrade-iterated-reduction` when an
+     -   inner-color rewrite must be lifted to a top-level one.
+     -}
     \func propagate-rewriting
       {tc : TheoremContext} {context : List Sort'} {s : Sort'} {mc : MetaContext Sort'}
       {gc : Color}
@@ -743,6 +828,10 @@
       | just color, cr-rewrite before~>C idp, just color1, inr b, cr-rewrite ind1~>ind' idp =>
         (just gc, cr-rewrite (Closure.compose (upgrade-iterated-reduction f (just-injective (inv b)) arguments-B midterms delim ind1~>ind') before~>C) idp)
 
+    {- | When a sub-argument reduction has color `f.1`, lifts a closure of those reductions to a closure of top-level
+     -   rewrites at the function head by invoking `rewrite-with-parameter-f-colored` at each step, threading through
+     -   `pointed-function` plumbing.
+     -}
     \func upgrade-iterated-reduction
       {tc : TheoremContext} {context : List Sort'} {s : Sort'} {mc : MetaContext Sort'}
       {gc : Color}
@@ -765,12 +854,19 @@
                rd
       \in rewrite (modular-to-pointed-forward arguments-A arguments-B) (rewrite {2} (modular-to-pointed arguments-A arguments-B) mapped)
 
+    {- | Builds `func f` with a `pointed-function` substituting one argument for a fresh point; used to package
+     -   single-argument rewrites at the head.
+     -}
     \func insert-term {env : FSignature} {context : List Sort} {s : Sort} {ms : MetaContext Sort} (f : symbol s)
                       (arguments : \Pi (index : Index (domain f)) -> Term env (context ++ (f FSignature.!!domain index)) (f FSignature.!!sort index) ms)
                       (index : Index (domain f))
                       (point : Term env (context ++ (f FSignature.!!domain index)) (f FSignature.!!sort index) ms)
       : Term env context s ms => func f (pointed-function arguments index point)
 
+    {- | Splits a `BorderedParallelReduction A => B` into a strictly-inner part landing at `midterm` and a top-level
+     -   switching-reduction tail, with the inner part guaranteed `OppositeColored required-color`. Decides via
+     -   `decideEq` whether to absorb or expose the border step.
+     -}
     \func unfold-bpr
       {tc : TheoremContext} {context : List Sort'} {s : Sort'} {mc : MetaContext Sort'}
       {gc : Color} {someColor : Maybe Color} (required-color : Color)
@@ -792,6 +888,9 @@
       }
   }
 
+{- | Specialization of `collect-reductions-together-tlcr` with no extra trailing reduction, packaging only the
+ -   per-argument bordered reductions into a single bordered step ending exactly at `func f arguments-B`.
+ -}
 \func collect-reductions-together-raw
   {tc : TheoremContext} {context : List Sort'} {s : Sort'} {mc : MetaContext Sort'}
   {gc : Color}

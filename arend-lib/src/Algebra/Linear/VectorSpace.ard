@@ -1,3 +1,15 @@
+{- | Vector spaces over discrete fields, the rank of a matrix over a Smith domain, and applications to images, kernels,
+ -   and linear (in)dependence.
+ -
+ -   This module specializes `LModule` to the case where the scalar ring is a `DiscreteField`, yielding `VectorSpace`
+ -   and its finite-dimensional refinement `FinVectorSpace`. The bulk of the file develops a coordinate-free notion of
+ -   matrix `rank` over a `SmithDomain` by reducing to Smith normal form and counting nonzero diagonal entries up to
+ -   associates (i.e., in `DivQuotient`); uniqueness of this count follows from uniqueness of Smith form. These rank
+ -   invariants then feed into structural results about linear maps between finite modules: bases can be simultaneously
+ -   adjusted so the map becomes diagonal, the image and kernel are themselves finite modules whose dimensions are
+ -   governed by the rank, and linear dependence becomes decidable.
+ -}
+
 \import Algebra.Domain
 \import Algebra.Field
 \import Algebra.Group
@@ -40,21 +52,30 @@
 \import Set.Fin.Instances
 \open LModule \hiding (count)
 
+-- | Extends `LModule` with the constraint that the scalar ring `R` is a `DiscreteField`.
 \class VectorSpace \extends LModule {
   \override R : DiscreteField
 }
 
+-- | Extends both `VectorSpace` and `FinModule`; finite-dimensional vector spaces over a discrete field.
 \class FinVectorSpace \extends VectorSpace, FinModule
 
+{- | For a matrix `A : Matrix R n m` over a `SmithDomain`, the rank is defined as the index of the first zero entry in
+ -   the Smith-normal diagonal (taken in `DivQuotient R`).
+ -}
 \func rank {R : SmithDomain} {n m : Nat} (A : Matrix R n m) : Nat
   => firstNonZero (rank-array A).1
   \where {
+    {- | Helper returning the first index in an array of `DivQuotient` values whose entry is zero (or the length if none
+     -   is zero).
+     -}
     \func firstNonZero {R : CRing.Dec} (l : Array (DivQuotient R)) : Nat
       => \case find (\lam a => dec_decide (R.divQuotient_dec0 a)) l \with {
            | inl s => s.1
            | inr _ => l.len
          }
 
+    -- | Characterizes `firstNonZero l <= k` as `l k = in~ 0`, given monotonicity of zero-ness along the array.
     \lemma firstNonZero_<= {R : CRing.Dec} {l : Array (DivQuotient R)} (c : \Pi {i j : Fin l.len} -> i NatSemiring.<= j -> l i = in~ 0 -> l j = in~ 0) {k : Fin l.len} : firstNonZero l <= k <-> l k = in~ 0
       => unfold firstNonZero $ mcases \with {
            | inl s => (\lam q => c q s.2, \lam q => \case LinearOrder.dec<_<= k s.1 \with {
@@ -64,12 +85,16 @@
            | inr c => (\lam q => absurd $ linarith (fin_< k), \lam q => absurd $ c q)
          }
 
+    -- | `firstNonZero l <= l.len`.
     \lemma firstNonZero<=len {R : CRing.Dec} {l : Array (DivQuotient R)} : firstNonZero l <= l.len
       => unfold firstNonZero $ mcases \with {
            | inl s => LinearOrder.<_<= (fin_< s.1)
            | inr _ => <=-refl
          }
 
+    {- | Constructs the canonical diagonal of associate classes, packaged with a witness that some Smith-form matrix `B`
+     -   equivalent to `A` realizes them; the type is propositional via Smith uniqueness.
+     -}
     \lemma rank-array {R : SmithDomain} {n m : Nat} (A : Matrix R n m)
       : \Sigma (d : Array (DivQuotient R) (n ∧ m)) (∃ (B : Matrix R n m) (A M~ B) (IsSmith B) ∀ j (d j = in~ (B (fin-inc_<= meet-left j) (fin-inc_<= meet-right j))))
         \level \lam (d, inP (B,A~B,Bs,q)) (d', inP (B',A~B',B's,q')) => ext $ exts \lam j => q j *> ~-pequiv (smith-unique.smith-div-equiv B's Bs (~-transitive (~-symmetric A~B') A~B) _ _) *> inv (q' j)
@@ -77,29 +102,35 @@
            | inP (B,Bs,A~B) => (\lam j => in~ $ B (fin-inc_<= meet-left j) (fin-inc_<= meet-right j), inP (B, A~B, Bs, \lam j => idp))
          }
 
+    -- | The diagonal `rank-array` is invariant under matrix equivalence `M~`.
     \lemma rank-array_M~ {R : SmithDomain} {n m : Nat} {A B : Matrix R n m} (A~B : A M~ B) : (rank-array A).1 = (rank-array B).1
       => \case (rank-array A).2, (rank-array B).2 \with {
            | inP (A',A~A',A's,d), inP (B',B~B',B's,e) => exts \lam j => d j *> ~-pequiv (smith-unique.smith-div-equiv B's A's (~-symmetric B~B' `~-transitive` ~-symmetric A~B `~-transitive` A~A') _ _) *> inv (e j)
          }
 
+    -- | `rank` itself is invariant under matrix equivalence.
     \lemma rank_M~ {R : SmithDomain} {n m : Nat} {A B : Matrix R n m} (A~B : A M~ B) : rank A = rank B
       => pmap firstNonZero (rank-array_M~ A~B)
 
+    -- | When `A` is already in Smith form, `rank-array A` is the diagonal of `A` mapped into `DivQuotient`.
     \lemma rank-array_smith {R : SmithDomain} {n m : Nat} {A : Matrix R n m} (As : IsSmith A)
       : (rank-array A).1 = mkArray \lam (j : Fin (n ∧ m)) => DivQuotient.inD (A (fin-inc_<= meet-left j) (fin-inc_<= meet-right j))
       => \case (rank-array A).2 \with {
         | inP (B,A~B,Bs,e) => exts \lam j => e j *> ~-pequiv (smith-unique.smith-div-equiv As Bs A~B _ _)
       }
 
+    -- | Computes `rank` directly from the diagonal when `A` is in Smith form.
     \lemma rank_smith {R : SmithDomain} {n m : Nat} {A : Matrix R n m} (As : IsSmith A)
       : rank A = firstNonZero \lam (j : Fin (n ∧ m)) => DivQuotient.inD (A (fin-inc_<= meet-left j) (fin-inc_<= meet-right j))
       => pmap firstNonZero (rank-array_smith As)
 
+    -- | `rank (transpose A) = rank A`.
     \lemma rank_transpose {R : SmithDomain} {n m : Nat} {A : Matrix R n m} : rank (transpose A) = rank A
       => \case (rank-array A).2 \with {
            | inP (B,A~B,Bs,_) => rank_M~ (M~.transposed A~B) *> rank_smith (IsSmith.transposed Bs) *> pmap firstNonZero (exts (NatSemiring.meet-comm, \lam j => pmap2 (\lam x y => DivQuotient.inD (B x y)) (fin_nat-inj $ toFin=id *> inv fin_transport *> inv toFin=id) (fin_nat-inj $ toFin=id *> inv fin_transport *> inv toFin=id))) *> inv (rank_smith Bs) *> rank_M~ (~-symmetric A~B)
          }
 
+    -- | Characterizes `rank A <= k` via vanishing of the `k`-th entry of `rank-array A`.
     \lemma rank_<= {R : SmithDomain} {n m : Nat} {A : Matrix R n m} {k : Nat} (p : k < n) (q : k < m)
       : rank A <= k <-> ((rank-array A).1 (toFin k $ <_meet-univ p q) = in~ 0)
       => \case (rank-array A).2 \with {
@@ -109,6 +140,7 @@
               }) {toFin k (<_meet-univ p q)}
          }
 
+    -- | Specialization of the above when `A` is in Smith form: `rank A <= k` iff `A k k = 0`.
     \lemma rank_smith_<= {R : SmithDomain} {n m : Nat} {A : Matrix R n m} (As : IsSmith A) {k : Nat} (p : k < n) (q : k < m)
       : rank A <= k <-> (A (toFin k p) (toFin k q) = 0)
       => <->trans (rank_<= p q) $ rewrite (path \lam i => rank-array_smith As i (toFin k (<_meet-univ p q)))
@@ -116,12 +148,18 @@
            \lam c => pmap in~ (pmap2 (\lam i => A i) (later $ fin_nat-inj $ toFin=id *> toFin=id *> inv toFin=id) (later $ fin_nat-inj $ toFin=id *> toFin=id *> inv toFin=id) *> c))
   }
 
+-- | `rank A <= n`, the number of rows.
 \lemma rank<=rows {R : SmithDomain} {n m : Nat} {A : Matrix R n m} : rank A <= n
   => rank.firstNonZero<=len <=∘ meet-left
 
+-- | `rank A <= m`, the number of columns.
 \lemma rank<=columns {R : SmithDomain} {n m : Nat} {A : Matrix R n m} : rank A <= m
   => rank.firstNonZero<=len <=∘ meet-right
 
+{- | Given bases `lu` of `U` and `lv` of `V` and a linear map `f : U -> V`, produces new bases `lu'`, `lv'` and scalars
+ -   `d : Array R` such that `f (lu' j) = d j *c lv' j` (diagonalization of `f`), with `d j = 0` characterized exactly
+ -   by `rank (toMatrix lu' bv' f) <= j`.
+ -}
 \lemma smith-bases {R : SmithDomain} {U V : LModule R} {lu : Array U} (bu : U.IsBasis lu) {lv : Array V} (bv : V.IsBasis lv) (f : LinearMap U V)
   : ∃ (lu' : Array U lu.len) (U.IsBasis lu') (lv' : Array V lv.len) (bv' : V.IsBasis lv') (d : Array R lu.len)
       (\Pi (j : Fin lu.len) -> f (lu' j) = d j *c fit V.zro lv' j)
@@ -146,6 +184,7 @@
     \open LinearMap
     \open Monoid
 
+    -- | Equivalent matrices `A M~ B` give rise to the same linear map relative to suitably transformed bases.
     \lemma M~_toLinearMap {R : Ring} {U V : LModule R} {lu : Array U} {lv : Array V} (bu : U.IsBasis lu) (bv : V.IsBasis lv) {A B : Matrix R lu.len lv.len} (A~B : A M~ B)
       : ∃ (lu' : Array U lu.len) (lv' : Array V lv.len) (bu' : U.IsBasis lu') (bv' : V.IsBasis lv') (toLinearMap bu lv A = toLinearMap bu' lv' B)
       => \let | (inP (C : Inv, D : Inv, A=CBD)) => ~-symmetric A~B
@@ -153,12 +192,16 @@
          \in inP (_, _, _, iso-basis (toLinearMapIso bv bv D) bv, t)
   }
 
+{- | For `f : LinearMap U V` between finite modules over a Smith domain, the image `ImageLModule f` is itself a
+ -   `FinModule` instance.
+ -}
 \instance image-fin {R : SmithDomain} {U V : FinModule R} (f : LinearMap U V) : FinModule
   | LModule => ImLModule f
   | isFinModule => \case U.isFinModule, V.isFinModule \with {
     | inP (lu,bu), inP (lv,bv) => TruncP.map (basis f bu bv) \lam s => (s.1,s.2)
   }
   \where {
+    -- | Constructs an explicit basis of the image of length `rank (toMatrix lu' bv' f)`.
     \protected \lemma basis {U V : LModule R} (f : LinearMap U V) {lu' : Array U} (bu' : U.IsBasis lu') {lv' : Array V} (bv' : V.IsBasis lv')
       : ∃ (l : Array (ImLModule f)) (IsBasis {ImLModule f} l) (l.len = rank (LinearMap.toMatrix lu' bv' f))
       => \let | (inP (lu, bu, lv, bv, d, g, d0)) => smith-bases bu' bv' f
@@ -178,12 +221,16 @@
                                           \lam j r<=j => func-*c *> pmap (_ *c) (g j *> pmap (*c _) ((d0 j).2 r<=j) *> *c_zro-left) *> *c_zro-right) *> inv IModule.embed.func-BigSum)),
                   rank.rank_M~ $ change-basis_M~ f bu bu' bv bv')
 
+    {- | `FinModule.dimension (image-fin f) = rank (toMatrix lu bv f)`; the dimension of the image equals the rank of
+     -   the matrix of `f`.
+     -}
     \lemma dimension_rank {f : LinearMap U V} {lu : Array U} (bu : U.IsBasis lu) {lv : Array V} (bv : V.IsBasis lv) : FinModule.dimension (image-fin f) = rank (LinearMap.toMatrix lu bv f)
       => \case basis f bu bv \with {
            | inP (li,bi,p) => FinModule.dimension-unique bi *> p
          }
   }
 
+-- | The kernel `KerLModule f` of a linear map between finite modules over a Smith domain is a `FinModule`.
 \instance kernel-fin {R : SmithDomain} {U V : FinModule R} (f : LinearMap U V) : FinModule
   | LModule => IModule (KernelLModule f)
   | isFinModule => \case U.isFinModule, V.isFinModule \with {
@@ -206,6 +253,7 @@
       }
   }
   \where {
+    -- | Selects the indices at which an array of decidable-zero ring elements is zero, packaged with proofs.
     \func filter0 {R : AddGroup.Dec} (ds : Array R) : Array (\Sigma (j : Fin ds.len) (ds j = 0)) \elim ds
       | nil => nil
       | d :: ds => \case decideEq d 0 \with {
@@ -213,6 +261,9 @@
         | no d/=0 => map (later \lam s => (suc s.1, s.2)) (filter0 ds)
       }
 
+    {- | A big sum collapses to the sum over indices where the coefficient is zero, when the summand vanishes off those
+     -   indices.
+     -}
     \lemma filter0_BigSum {R : AddGroup.Dec} {A : AddMonoid} (ds : Array R) (f : Fin ds.len -> A) (p : \Pi (j : Fin ds.len) -> ds j /= 0 -> f j = 0)
       : A.BigSum f = A.BigSum (\lam j => f (filter0 ds j).1) \elim ds
       | nil => idp
@@ -222,6 +273,9 @@
       }
   }
 
+{- | For an array `l` in a finite module over a Smith domain, decides whether `l` is linearly dependent or independent,
+ -   by inspecting the dimension of the kernel of the linear map sending coordinates to linear combinations of `l`.
+ -}
 \func dependency-dec {R : SmithDomain} {U : FinModule R} (l : Array U) : Or (U.IsDependent l) (U.IsIndependent l)
   => \let K => kernel-fin {R} {ArrayFinModule l.len} (arrayLinearMap l)
      \in cases (FinModule.dimension {R} K arg addPath) \with {

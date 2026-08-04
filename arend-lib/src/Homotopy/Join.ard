@@ -1,3 +1,13 @@
+{- | The join construction `A * B` of two types as a higher inductive type, realized as a pushout of the projections
+ -   from `A × B`.
+ -
+ -   The join is defined as `PushoutData {Σ A B} pr₁ pr₂`, gluing each `a : A` to each `b : B` via a path. Key results
+ -   show the join is symmetric, associative, contractible when one factor is contractible, and propositional when both
+ -   factors are propositions. The interaction with spheres and suspensions is the central application:
+ -   `Join (Sphere 0) A ≃ Susp A`, which combined with associativity yields `Join (Susp A) B = Susp (Join A B)` and
+ -   ultimately `Join (Sphere n) A = iterated suspension`.
+ -}
+
 \import Equiv
 \import Function.Iterate
 \import Logic.Unique
@@ -8,8 +18,10 @@
 \import Logic
 \import Paths
 
+-- | The join `A * B` defined as `PushoutData {Σ A B} __.1 __.2`, gluing `a` to `b` along the projections.
 \func Join (A B : \Type) => PushoutData {\Sigma A B} __.1 __.2
   \where {
+    -- | When `A B : \Prop`, the join is itself a proposition.
     \lemma levelProp {A B : \Prop} : isProp (Join A B) => isContr'=>isProp {Join A B} (\case __ \with {
       | pinl a => transport (Contr __) (QEquiv_= (Join-sym B A)) (Join_Contr B (isProp=>isContr prop-isProp a))
       | pinr b => Join_Contr A (isProp=>isContr prop-isProp b)
@@ -20,12 +32,16 @@
       | byRight b => jinr b
   }
 
+-- | Left inclusion `A -> Join A B`.
 \cons jinl {A B : \Type} (a : A) : Join A B => pinl a
 
+-- | Right inclusion `B -> Join A B`.
 \cons jinr {A B : \Type} (b : B) : Join A B => pinr b
 
+-- | The gluing path `jinl a = jinr b` for any `a : A`, `b : B`.
 \func jglue {A B : \Type} (a : A) (b : B) : jinl a = jinr b => path (pglue (a,b))
 
+-- | If `B` is contractible, then `Join A B` is contractible for any `A`.
 \lemma Join_Contr (A : \Type) (B : Contr) : Contr (Join A B) \cowith
   | center => jinr B.center
   | contraction x => \case \elim x \with {
@@ -39,12 +55,14 @@
         (Jl (\lam x p => inv (jglue a B.center) = pmap jinr p *> inv (jglue a x)) (inv (idp_*> _)) (B.contraction b))
   }
 
+-- | `QEquiv {Join (Sphere 0) A} {Susp A}` — joining with the 0-sphere produces the suspension.
 \func Join_Sphere0 (A : \Type) : QEquiv {Join (Sphere 0) A} {Susp A} \cowith
   | f => joinSusp
   | ret => suspJoin
   | ret_f => joinSuspJoin
   | f_sec => suspJoinSusp
   \where {
+    -- | The forward and backward maps; `suspJoin` sends a meridian `pglue a` to `jglue north a *> inv (jglue south a)`.
     \func joinSusp {A : \Type} (j : Join (Sphere 0) A) : Susp A
       | jinl north => north
       | jinl south => south
@@ -54,11 +72,15 @@
       | pglue (south, _) _ => south
       | pglue (pglue () _, _) _
 
+    -- | The forward and backward maps; `suspJoin` sends a meridian `pglue a` to `jglue north a *> inv (jglue south a)`.
     \func suspJoin {A : \Type} (s : Susp A) : Join (Sphere 0) A
       | north => jinl north
       | south => jinl south
       | pglue a => jglue north a *> inv (jglue south a)
 
+    {- | The two homotopies witnessing it is a quasi-equivalence, built using `Cube2` to fill the required squares on
+     -   path constructors.
+     -}
     \func joinSuspJoin {A : \Type} (j : Join (Sphere 0) A) : suspJoin (joinSusp j) = j
       | jinl north => idp
       | jinl south => idp
@@ -73,6 +95,9 @@
       | pglue (south, a) j => path (\lam i => pglue (south,a) (I.squeeze i j))
       | pglue (pglue () _, _) _
 
+    {- | The two homotopies witnessing it is a quasi-equivalence, built using `Cube2` to fill the required squares on
+     -   path constructors.
+     -}
     \func suspJoinSusp {A : \Type} (s : Susp A) : joinSusp (suspJoin s) = s
       | north => idp
       | south => idp
@@ -84,17 +109,20 @@
         \in path (t @ __ @ i)
   }
 
+-- | `QEquiv {Join A B} {Join B A}` — the join is symmetric.
 \func Join-sym (A B : \Type) : QEquiv {Join A B} {Join B A} \cowith
   | f => flip
   | ret => flip
   | ret_f => flip-flip
   | f_sec => flip-flip
   \where {
+    -- | Swaps `jinl`/`jinr` and inverts the gluing path.
     \func flip {A B : \Type} (j : Join A B) : Join B A
       | jinl a => jinr a
       | jinr b => jinl b
       | pglue (a,b) => inv (jglue b a)
 
+    -- | Witnesses `flip ∘ flip = id` via `pmap_inv-comm` and `inv_inv`.
     \func flip-flip {A B : \Type} (j : Join A B) : flip (flip j) = j
       | jinl a => idp
       | jinr b => idp
@@ -103,6 +131,7 @@
         \in path (p @ __ @ i)
   }
 
+-- | `QEquiv {Join (Join A B) C} {Join A (Join B C)}` — associativity of the join.
 \func Join-assoc (A B C : \Type) : QEquiv {Join (Join A B) C} {Join A (Join B C)} \cowith
   | f => leftToRight
   | ret => rightToLeft
@@ -111,6 +140,9 @@
   \where {
     \open I
 
+    {- | The two reassociation maps, defined by case analysis on each pushout layer; the doubly-glued case
+     -   `pglue (pglue (a, b), c)` is filled using `Jl` over `jglue b c` (resp. `jglue a b`) with a `Cube2`.
+     -}
     \func leftToRight {A B C : \Type} (j : Join (Join A B) C) : Join A (Join B C)
       | jinl (jinl a) => jinl a
       | jinl (jinr b) => jinr (jinl b)
@@ -123,6 +155,9 @@
                  (path (\lam j => path (\lam i => pglue (a, jinl b) (squeezeR j i))))
                  (jglue b c)
 
+    {- | The two reassociation maps, defined by case analysis on each pushout layer; the doubly-glued case
+     -   `pglue (pglue (a, b), c)` is filled using `Jl` over `jglue b c` (resp. `jglue a b`) with a `Cube2`.
+     -}
     \func rightToLeft {A B C : \Type} (j : Join A (Join B C)) : Join (Join A B) C
       | jinl a => jinl (jinl a)
       | jinr (jinl b) => jinl (jinr b)
@@ -135,6 +170,9 @@
                  (path (\lam j => path (\lam i => pglue (jinl a, c) (squeeze j i))))
                  (jglue a b)
 
+    {- | The round-trip homotopies; the deepest case requires comparing two cube fillings via a `Jl`-based identity plus
+     -   an explicit `coe` computation.
+     -}
     \func leftRightLeft {A B C : \Type} (j : Join (Join A B) C) : rightToLeft (leftToRight j) = j
       | jinl (jinl a) => idp
       | jinl (jinr b) => idp
@@ -174,6 +212,9 @@
                ) (Jl (\lam y q => Jl.def (\lam x p => Cube2 p p idp idp) idp q = idp) idp (jglue (jinl a) c)) right
         \in path ((Jl (\lam y q => s1 q = s2 q) idp (jglue b c) *> proof) @ __ @ j @ i)
 
+    {- | The round-trip homotopies; the deepest case requires comparing two cube fillings via a `Jl`-based identity plus
+     -   an explicit `coe` computation.
+     -}
     \func rightLeftRight {A B C : \Type} (j : Join A (Join B C)) : leftToRight (rightToLeft j) = j
       | jinl a => idp
       | jinr (jinl b) => idp
@@ -219,12 +260,18 @@
         \in path ((Jl (\lam y q => s1 q = s2 q) idp (jglue a b) *> proof) @ __ @ j @ i)
   }
 
+{- | Equality `Join (Susp A) B = Susp (Join A B)`, derived by combining symmetry, `Join_Sphere0`, and associativity
+ -   through `QEquiv-to-=`.
+ -}
 \func Join_Susp.{u} (A B : \Type u) : Join (Susp A) B = Susp (Join A B) =>
   Join (Susp A) B            ==< pmap (Join __ B) (QEquiv_= (symQEquiv (Join_Sphere0 A))) >==
   Join (Join (Sphere 0) A) B ==< QEquiv_= (Join-assoc (Sphere 0) A B) >==
   Join (Sphere 0) (Join A B) ==< QEquiv_= (Join_Sphere0 (Join A B)) >==
   Susp (Join A B)            `qed
 
+{- | For all `n : Nat`, `Join (Sphere n) A = iterr Susp (suc n) A`; proved by induction on `n` using `Join_Sphere0` at
+ -   the base and `Join_Susp` at the step.
+ -}
 \func Join_Sphere.{u} (A : \Type u) (n : Nat) : Join (Sphere n) A = iterr (Susp __) (suc n) A \elim n
   | 0 => QEquiv_= (Join_Sphere0 A)
   | suc n => Join_Susp (Sphere n) A *> pmap (Susp __) (Join_Sphere A n)

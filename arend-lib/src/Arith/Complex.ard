@@ -1,3 +1,13 @@
+{- | Complex numbers built on top of the real numbers as pairs of reals, equipped with their field structure.
+ -
+ -   A `Complex` number is a record of two `Real` components (real and imaginary parts), and the module assembles the
+ -   standard field operations on `Complex` from the underlying real arithmetic. Addition is pointwise, multiplication
+ -   uses the usual `(re*re - im*im, re*im + im*re)` formula, and the field instance is built up via an intermediate
+ -   commutative monoid for multiplication. Invertibility is characterized in terms of invertibility of the components,
+ -   reflecting that a complex number is nonzero (and hence invertible in the field) precisely when at least one of its
+ -   real or imaginary parts is.
+ -}
+
 \import Algebra.Field
 \import Algebra.Group
 \import Algebra.Group.GroupHom
@@ -18,6 +28,7 @@
 \import Arith.Real.Field
 \open Complex \using (iunit \as i)
 
+-- | Record of a complex number with fields `re : Real` and `im : Real`.
 \record Complex (re im : Real)
   \where {
     \use \coerce fromReal (x : Real) : Complex => \new Complex x 0
@@ -65,6 +76,10 @@
       | suc n => fromReal_* *> pmap (ComplexField.* _) fromReal_pow
   }
 
+{- | `Field Complex` instance. Provides zero `(0,0)`, pointwise addition, componentwise negation, multiplicative
+ -   structure inherited from `ComplexMonoid`, distributivity, the field axioms `zro/=ide`, locality, and
+ -   `#0`-tightness.
+ -}
 \instance ComplexField : Field Complex
   | zro => \new Complex 0 0
   | + (x y : Complex) => \new Complex (x.re + y.re) (x.im + y.im)
@@ -84,6 +99,9 @@
   \where {
     \open Monoid(Inv)
 
+    {- | `CMonoid Complex` instance defining the multiplicative monoid. Identity is `(1,0)` and product is
+     -   `(x.re*y.re - x.im*y.im, x.re*y.im + x.im*y.re)`.
+     -}
     \private \instance ComplexMonoid : CMonoid Complex
       | ide => \new Complex 1 0
       | * (x y : Complex) => \new Complex (x.re * y.re - x.im * y.im) (x.re * y.im + x.im * y.re)
@@ -91,6 +109,9 @@
       | *-assoc => ext (equation.ring, equation.ring)
       | *-comm => ext (pmap2 (__ - __) *-comm *-comm, +-comm *> pmap2 (+) *-comm *-comm)
 
+    {- | Characterization of invertibility: `Inv x <-> Inv x.re || Inv x.im`, i.e. a complex number is invertible iff
+     -   its real or imaginary part is invertible as a real number.
+     -}
     \lemma inv-char {x : Complex} : Inv x <-> Inv x.re || Inv x.im
       => (\lam p => \case RealField.sum1=>eitherInv {_} {negative _} $ pmap (\lam (x : Complex) => x.re) (Inv.inv-left {p}) \with {
                       | byLeft r => byLeft (Inv.cfactor-right r)

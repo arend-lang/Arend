@@ -1,3 +1,13 @@
+{- | Equivalences for sigma types, dependent function types, and related contractibility results.
+ -
+ -   This module collects standard equivalences used to manipulate sigma and pi types up to equivalence: contracting
+ -   away a contractible component, transporting an equivalence through one factor, and combining equivalences on both
+ -   factors. The key technique is exploiting that singleton sigmas `(Σ x, a₀ = x)` and `(Σ x, x = a₀)` are contractible
+ -   (the J-rule packaged as an equivalence), which lets us reduce many fibered statements to their fiberwise content.
+ -   These building blocks underlie fiber-wise reasoning, the characterization of equivalences via fibers
+ -   (`totalEquiv`), and rewriting of dependent types along base equivalences.
+ -}
+
 \import Equiv
 \import Equiv.Fiber
 \import Equiv.HalfAdjoint
@@ -11,48 +21,62 @@
   | center => ()
   | contraction _ => idp
 
+-- | `Contr (Σ (x : A) (a0 = x))` — the right-based path space at `a0` is contractible, with `(a0, idp)` as center.
 \func lsigma {A : \Type} (a0 : A) : Contr (\Sigma (x : A) (a0 = x)) \cowith
   | center => (a0,idp)
   | contraction p => Jl (\lam x q => (a0,idp) = {\Sigma (y : A) (a0 = y)} (x,q)) idp p.2
 
+-- | `Contr (Σ (x : A) (x = a0))` — dual: the left-based path space at `a0` is contractible.
 \func rsigma {A : \Type} (a0 : A) : Contr (\Sigma (x : A) (x = a0)) \cowith
   | center => (a0,idp)
   | contraction p => Jl (\lam x q => (a0,idp) = {\Sigma (y : A) (y = a0)} (x, inv q)) idp (inv p.2) *> path (\lam i => (p.1, inv_inv p.2 @ i))
 
+-- | If `A` is contractible, then `Σ (x : A) (B x) ≃ B c.center` — the base may be contracted away.
 \func contr-left {A : \Type} (c : Contr A) {B : A -> \Type} : QEquiv {\Sigma (x : A) (B x)} {B c.center} \cowith
   | f p => transport B (inv (c.contraction p.1)) p.2
   | ret b => (c.center, b)
   | ret_f p => inv (ext (inv (c.contraction p.1), idp))
   | f_sec b => rewriteI (isProp.=>isSet (isContr=>isProp c) c.center c.center idp (c.contraction c.center)) idp
 
+{- | If each fiber `C a` is contractible, then `Σ (x : A) (C x) ≃ A` — the fiber may be contracted away, leaving the
+ -   base.
+ -}
 \func contr-right {A : \Type} (C : A -> Contr) : QEquiv {\Sigma (x : A) (C x)} {A} \cowith
   | f p => p.1
   | ret a => (a, Contr.center {C a})
   | ret_f p => path (\lam i => (p.1, Contr.contraction {C p.1} p.2 @ i))
   | f_sec a => idp
 
+-- | `(Π (a' : A) (p : a = a') -> B a' p) ≃ B a idp`, the dependent-function form of the J-rule.
 \func pi-contr-left {A : \Type} (a : A) (B : \Pi (a' : A) -> a = a' -> \Type) : QEquiv {\Pi (a' : A) (p : a = a') -> B a' p} {B a idp} \cowith
   | f h => h a idp
   | ret b a' => Jl B b
   | ret_f h => path (\lam i a' p => Jl (\lam x q => Jl B (h a idp) q = h x q) idp p @ i)
   | f_sec => idpe
 
+-- | Dual variant: `(Π (a : A) (p : a = a') -> B a p) ≃ B a' idp`, using right-based J (`Jr`).
 \func pi-contr-right {A : \Type} (a' : A) (B : \Pi (a : A) -> a = a' -> \Type) : QEquiv {\Pi (a : A) (p : a = a') -> B a p} {B a' idp} \cowith
   | f h => h a' idp
   | ret b a => Jl.Jr B b
   | ret_f h => path (\lam i a p => Jl.Jr (\lam x q => Jl.Jr B (h a' idp) q = h x q) idp p @ i)
   | f_sec => idpe
 
+{- | Given a half-adjoint equivalence `e : A ≃ A'`, transports a sigma along the base:
+ -   `Σ (a : A) (B' (e a)) ≃ Σ (a' : A') (B' a')`. Uses the half-adjoint coherence `f_ret_f=f_sec_f` to construct the
+ -   round-trip path.
+ -}
 \func sigma-left {A A' : \Type} {B' : A' -> \Type} (e : HAEquiv {A} {A'}) : QEquiv {\Sigma (a : A) (B' (e a))} {\Sigma (a' : A') (B' a')} \cowith
   | f p => (e p.1, p.2)
   | ret p => (e.ret p.1, transport B' (inv (e.f_sec p.1)) p.2)
   | ret_f p => ext (e.ret_f p.1, path (\lam i => coe (\lam j => B' (e.f_ret_f=f_sec_f p.1 i j) ) _ right) *> transport_id_inv B' _ _)
   | f_sec p => ext (e.f_sec p.1, transport_id_inv B' _ _)
   \where {
+    -- | A path-level version: when `A = A'`, derives the corresponding equality of sigma types.
     \func path-func.{u} {A A' : \Type u} {B' : A' -> \Type u} (p : A = A') : (\Sigma (x : A) (B' (coe (p @) x right))) = (\Sigma (x' : A') (B' x'))
       => path \lam i => \Sigma (x : p i) (B' (coe2 p i x right))
   }
 
+-- | Given fiberwise equivalences `q a : B a ≃ B' a`, lifts to `Σ (a : A) (B a) ≃ Σ (a : A) (B' a)`.
 \func sigma-right {A : \Type} {B B' : A -> \Type} (q : \Pi (a : A) -> QEquiv {B a} {B' a})
   : QEquiv {\Sigma (a : A) (B a)} {\Sigma (a : A) (B' a)} \cowith
   | f p => (p.1, q p.1 p.2)
@@ -60,10 +84,12 @@
   | ret_f p => path (\lam i => (p.1, (q p.1).ret_f p.2 i))
   | f_sec p' => path (\lam i => (p'.1, (q p'.1).f_sec p'.2 i))
 
+-- | Combines the two: from `e1 : A ≃ A'` and `e2 a : B a ≃ B' (e1 a)`, builds `Σ (a : A) (B a) ≃ Σ (a' : A') (B' a')`.
 \func sigma-equiv {A A' : \Type} {B : A -> \Type} {B' : A' -> \Type} (e1 : QEquiv {A} {A'}) (e2 : \Pi (a : A) -> QEquiv {B a} {B' (e1 a)})
   : QEquiv {\Sigma (a : A) (B a)} {\Sigma (a : A') (B' a)}
   => sigma-right e2 `transQEquiv` sigma-left e1
 
+-- | `(Σ -> A) ≃ A` — functions out of the unit type are just elements of `A`.
 \func unit-func (A : \Type) : QEquiv {\Sigma -> A} {A} \cowith
   | f g => g ()
   | ret a _ => a
@@ -76,6 +102,7 @@
   => propExt (\lam e => contrFibers=>IsEquiv (\lam p => rewrite (totalFiber f p.1 p.2) (IsEquiv=>contrFibers (e p.1) p.2)))
              (\lam e j => contrFibers=>IsEquiv (\lam b => rewriteI (totalFiber f j b) (IsEquiv=>contrFibers e ((j,b) : \Sigma (j : J) (B j)))))
   \where {
+    -- | The induced total map `Σ (j : J) (A j) -> Σ (j : J) (B j)`.
     \func total.{u} {J : \Type u} {A B : J -> \Type u} (f : \Pi (j : J) -> A j -> B j) (p : \Sigma (j : J) (A j)) : \Sigma (j : J) (B j)
       => (p.1, f p.1 p.2)
 

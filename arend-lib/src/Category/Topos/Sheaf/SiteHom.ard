@@ -10,6 +10,9 @@
 \import Paths.Meta
 \open Covering
 
+{- | A functor between sites that preserves covers, i.e. sends covering sieves to covering sieves via `Sieve.map`.
+ -   Extends `Functor`.
+ -}
 \record SitePrehom \extends Functor {
   \override C : Site
   \override D : Site

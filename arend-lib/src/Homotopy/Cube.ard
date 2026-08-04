@@ -1,3 +1,13 @@
+{- | Higher-dimensional cubes of paths in a type, built on top of the basic path infrastructure.
+ -
+ -   This module formalizes 2-dimensional and 3-dimensional cubes (squares and cubes) as iterated path types. A `Cube2`
+ -   is a square whose four sides are paths between four corners, encoded as a path between two paths over a path of
+ -   endpoints. A `Cube3` is built analogously: it is a path between two `Cube2` faces, with the remaining four faces
+ -   witnessing that the boundary edges align. The `equality` lemma reduces a square to an ordinary path equation
+ -   `p_0 = p0_ <* p_1 *> inv p1_`, which gives a practical way to construct squares from algebraic identities between
+ -   their boundary paths.
+ -}
+
 \import Paths
 
 -- | The type of squares with a specified boundary
@@ -24,6 +34,11 @@
       => coe (equality p_0 p_1 p0_ p1_) r right
   }
 
+{- | A 3-dimensional cube with eight corners `v000, ..., v111`, twelve edge paths `e..._...`, and six face squares
+ -   `f__0, f__1, f_0_, f_1_, f0__, f1__`, defined as a path between the two `Cube2` faces `f__0` and `f__1` over a
+ -   path-family of squares whose vertical sides come from `f0__`, `f1__` and whose horizontal sides come from `f_0_`,
+ -   `f_1_`.
+ -}
 \func Cube3 {A : \Type} {v000 v001 v010 v011 v100 v101 v110 v111 : A}
             {e00_ : v000 = v100} {e10_ : v001 = v101} {e01_ : v010 = v110} {e11_ : v011 = v111}
             {e0_0 : v000 = v010} {e1_0 : v001 = v011} {e0_1 : v100 = v110} {e1_1 : v101 = v111}

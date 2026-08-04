@@ -1,3 +1,14 @@
+{- | Minimal polynomials of elements over a ring homomorphism, characterizing them via divisibility, irreducibility, and
+ -   degree-minimality.
+ -
+ -   This module formalizes the theory of minimal polynomials in the general setting of a ring homomorphism `f : R -> E`
+ -   and an element `a : E`. The central notion `isMinPoly` requires both that `p` annihilates `a` and that `p` divides
+ -   every other annihilating polynomial — a divisibility-based definition that works constructively without assuming
+ -   the field is decidable. Over discrete fields and impotent rings the module proves the classical equivalences
+ -   between the divisibility, primality, irreducibility, and minimal-degree characterizations, and connects existence
+ -   of a minimal polynomial to finiteness of the generated subalgebra as an `f`-module.
+ -}
+
 \import Algebra.Algebra
 \import Algebra.Domain
 \import Algebra.Domain.Euclidean
@@ -41,17 +52,26 @@
 \import Relation.Equivalence
 \import Set
 
+{- | The proposition that `p : Poly f.Dom` is a minimal polynomial of `a` over `f`: it evaluates to zero at `a` and
+ -   left-divides every other polynomial that does so.
+ -}
 \func isMinPoly (f : RingHom) (a : f.Cod) (p : Poly f.Dom) : \Prop
   => \Sigma (polyMapEval f p a = 0) (\Pi {q : Poly f.Dom} -> polyEval (polyMap f q) a = 0 -> TruncP (Monoid.LDiv p q))
 
+{- | For a minimal polynomial `p`, the canonical map from the polynomial-ring quotient `Poly R / (p)` into `E` (sending
+ -   the class of `q` to `polyMapEval f q a`) is an equivalence onto its image — capturing that `p` cuts out exactly the
+ -   relations satisfied by `a`.
+ -}
 \lemma integral_factor-equiv {R E : CRing} (f : RingHom R E) (a : E) (p : Poly R) (pm : isMinPoly f a p) : IsEquiv (integral_factor f a p pm.1)
   => IsEquiv.fromInjSurj (AddGroupHom.injective $ unfold \lam {q} => \case \elim q \with {
     | in~ q => \lam u => FactorRing.fequiv $ Ideal.closure1_LDiv.2 $ simplify $ pm.2 (pmap __.1 u)
   }) \lam s => TruncP.map s.2 \lam t => (in~ t.1, ext t.2)
 
+-- | A minimal polynomial that is additionally monic; pairs `isMonic p` with `isMinPoly f a p`.
 \func isMonicMinPoly (f : RingHom) (a : f.Cod) (p : Poly f.Dom) : \Prop
   => \Sigma (isMonic p) (isMinPoly f a p)
   \where {
+    -- | Over a strict domain, the monic minimal polynomial of `a` is unique: any two such polynomials are equal.
     \lemma unique {R : StrictDomain} {f : RingHom R} {a : f.Cod} {p q : Poly R} (pm : isMonicMinPoly f a p) (qm : isMonicMinPoly f a q) : p = q
       => \case pm.2.2 qm.2.1, qm.2.2 pm.2.1 \with {
         | inP (p|q : Monoid.LDiv), inP (q|p : Monoid.LDiv) => \case polyDiv p|q q|p \with {
@@ -66,12 +86,18 @@
         }
       }
 
+    {- | Over a discrete field, normalizes a nonzero minimal polynomial to a monic one by scaling by the inverse of its
+     -   leading coefficient.
+     -}
     \lemma fromMinPoly {K : DiscreteField} {R : CRing} {f : RingHom K R} {a : R} {p : Poly K} (p/=0 : p /= 0) (pm : isMinPoly f a p) : isMonicMinPoly f a (finv (leadCoef p) *c p)
       => (field-toMonic p/=0, (polyMapEvalRingHom.polyMapEval_*c *> pmap (_ *) pm.1 *> zro_*-right, \lam {q} qe => \case pm.2 qe \with {
             | inP (x,s) => inP $ Monoid.LDiv.make (leadCoef p *c x) $ inv *c-comm-left *> pmap (_ *c) (inv *c-comm-right) *> inv *c-assoc *> pmap (*c _) (K.finv-left \lam q => p/=0 $ leadCoef=0-lem q) *> ide_*c *> s
           }))
   }
 
+{- | Over a discrete field, the divisibility condition in `isMinPoly` is equivalent to degree-minimality among nonzero
+ -   annihilating polynomials.
+ -}
 \lemma minPoly_degree-char {K : DiscreteField} {E : CRing} (f : RingHom K E) (a : E) (p : Poly K) (pe : polyMapEval f p a = 0) (p/=0 : p /= 0)
   : (\Pi {q : Poly K} -> q /= 0 -> polyEval (polyMap f q) a = 0 -> degree p <= degree q) <-> (\Pi {q : Poly K} (qe : polyEval (polyMap f q) a = 0) -> TruncP (Monoid.LDiv p q))
   => (\lam c {q} qe =>
@@ -86,6 +112,9 @@
                          pmap (\lam u => polyEval (polyMap f u) a) (d.isDivMod q p) *> qe)
       }, minPoly_degree f a p pe p/=0)
   \where {
+    {- | The forward direction: a polynomial that left-divides all annihilators of `a` has minimal degree among nonzero
+     -   annihilators (over a decidable domain).
+     -}
     \lemma minPoly_degree {K : Domain.Dec} (f : RingHom K) (a : f.Cod) (p : Poly K) (pe : polyMapEval f p a = 0) (p/=0 : p /= 0)
                           (c : \Pi {q : Poly K} (qe : polyEval (polyMap f q) a = 0) -> TruncP (Monoid.LDiv p q))
                           {q : Poly K} (q/=0 : q /= 0) (qe : polyEval (polyMap f q) a = 0) : degree p <= degree q
@@ -94,10 +123,16 @@
          }
   }
 
+{- | Over a discrete field with target a nonzero commutative ring, an irreducible polynomial that vanishes at `a` is a
+ -   minimal polynomial of `a`.
+ -}
 \lemma irr_minPoly {K : DiscreteField} {E : NonZeroCRing} (f : RingHom K E) (a : E) (p : Irr {PolyAlgebra K}) (pe : polyMapEval f p a = 0) : isMinPoly f a p
   => \have p/=0 (p=0 : p.e = 0) => K.zro/=ide $ pmap lastCoef $ p.isCancelable-left {0} {1} $ rewrite p=0 idp
      \in (pe, (minPoly_degree-char f a p pe p/=0).1 \lam q/=0 qe => aux f a p pe id<suc q/=0 qe)
   \where {
+    {- | Helper bounding the degree of `p` against any nonzero annihilator `q` of degree below a fixed bound, by
+     -   induction on degree.
+     -}
     \lemma aux {K : DiscreteField} {E : NonZeroCRing} (f : RingHom K E) (a : E) (p : Irr {PolyAlgebra K}) (pe : polyMapEval f p a = 0) {n : Nat}
                {q : Poly K} (qd : degree q < n) (q/=0 : q /= 0) (qe : polyEval (polyMap f q) a = 0) : degree p <= degree q \elim n
       | suc n =>
@@ -120,9 +155,13 @@
         }
   }
 
+-- | Over a discrete field with target an impotent commutative ring, a nonzero minimal polynomial is prime in `Poly K`.
 \lemma minPoly_prime {K : DiscreteField} {E : ImpotentCRing} (f : RingHom K E) (a : E) (p : Poly K) (p/=0 : p /= 0) (pm : isMinPoly f a p) : Prime p
   => FactorIrrField.conv (\lam q => Domain.nonZero-cancel-left p/=0 q) $ DiscreteField.backwards (integral_factor f a p pm.1) (integral_factor-equiv f a p pm) $ polyImage_field f a (isIntegral.fromPoly p/=0 pm.1)
 
+{- | TFAE characterization: under the same hypotheses, the conditions (divisibility, primality, irreducibility, minimal
+ -   degree) are all equivalent for a nonzero `p` annihilating `a`.
+ -}
 \lemma minPoly-char {K : DiscreteField} {E : ImpotentCRing} (f : RingHom K E) (a : E) (p : Poly K) (pe : polyMapEval f p a = 0) (p/=0 : p /= 0)
   : TFAE (\Pi {q : Poly f.Dom} -> polyEval (polyMap f q) a = 0 -> TruncP (Monoid.LDiv p q),
           Prime p,
@@ -134,24 +173,32 @@
        \lam ip q/=0 => irr_minPoly.aux f a ip pe id<suc q/=0,
        (minPoly_degree-char f a p pe p/=0).1)
 
+{- | When the subring `S ⊆ E` containing `f(K)` and `a` is a finite-dimensional `K`-module via a basis `l`, produces the
+ -   (unique) monic minimal polynomial of `a` as an h-proposition-level Σ-type.
+ -}
 \lemma finDim_minPoly {K : DiscreteField} {E : CRing} (f : RingHom K E) (S : SubRing E) (SR : \Pi (x : K) -> S (f x)) {l : Array (IRing S)} (lb : LModule.IsBasis {homLModule (IRing.corestrict f SR)} l) {a : E} (Sa : S a)
   : \Sigma (p : Poly K) (isMonicMinPoly f a p) \level \lam s t => ext (isMonicMinPoly.unique s.2 t.2)
   => \case finDim_minDegree f S SR {l} lb Sa \with {
        | inP (p,p/=0,pe,d) => (_, isMonicMinPoly.fromMinPoly p/=0 (pe, (minPoly_degree-char f a p pe p/=0).1 d))
      }
   \where
+    {- | Over a Smith domain, weakens the field hypothesis: there exists a nonzero polynomial annihilating `a` that has
+     -   minimal degree among such polynomials.
+     -}
     \lemma finDim_minDegree {R : SmithDomain} {E : CRing} (f : RingHom R E) (S : SubRing E) (SR : \Pi (x : R) -> S (f x)) {l : Array (IRing S)} (lb : LModule.IsBasis {homLModule (IRing.corestrict f SR)} l) {a : E} (Sa : S a)
       : ∃ (p : Poly R) (p /= 0) (polyMapEval f p a = 0) ∀ {q : Poly R} (q /= 0 -> polyEval (polyMap f q) a = 0 -> degree p <= degree q)
       => \case module-integral f a S SR (inP (l,lb.2)) Sa \with {
            | inP (p,pm,pe) => minimize p (\lam p=0 => zro/=ide $ monic/=0 pm p=0) pe (suc (degree p)) $ degree<=_degree< (degree_degree<= <=-refl)
          }
       \where {
+        -- | Decidability of the existence of a nonzero annihilating polynomial of degree less than `n`.
         \lemma poly-dec (n : Nat) : Dec (∃ (p : Poly R) (p /= 0) (degree< p n) (polyMapEval f p a = 0))
           => \case dependency-dec {R} {\new FinModule { | LModule => homLModule (IRing.corestrict f SR) | isFinModule => inP (l,lb) }} (mkArray \lam (i : Fin n) => later (E.pow a i, S.contains_pow Sa)) \with {
                | inl (inP (c,p,j,q)) => yes $ inP (Poly.fromArray c, \lam c=0 => q $ inv polyCoef_fromArray *> pmap (polyCoef __ j) c=0, fromArray_degree<, polyMapEval_fromArray *> inv IRing.embed.func-BigSum *> pmap __.1 p)
                | inr g => no \lam (inP (p,p/=0,p<n,pe)) => p/=0 $ fromArray_polyCoef p<n *> pmap Poly.fromArray (exts $ g (\lam j => polyCoef p j) $ ext $ IRing.embed.func-BigSum *> inv polyMapEval_fromArray *> pmap (polyMapEval f __ a) (inv (fromArray_polyCoef p<n)) *> pe) *> fromArray_polyCoef.fromArray0 {_} {n}
              }
 
+        -- | Given any nonzero annihilator of bounded degree, produces a degree-minimal one by descent.
         \lemma minimize (p : Poly R) (p/=0 : p /= 0) (pe : polyMapEval f p a = 0) (n : Nat) (d : degree< p n)
           : ∃ (p : Poly R) (p /= 0) (polyMapEval f p a = 0) ∀ {q : Poly R} (q /= 0 -> polyEval (polyMap f q) a = 0 -> degree p <= degree q) \elim n
           | 0 => absurd $ p/=0 (degree<0 d)
@@ -164,10 +211,16 @@
           }
       }
 
+{- | When `E` itself is finite-free as a `K`-module (with explicit basis `l`), every `a : E` has a monic minimal
+ -   polynomial.
+ -}
 \lemma finExt_minPoly {K : DiscreteField} {E : CRing} (f : RingHom K E) {l : Array E} (lb : LModule.IsBasis {homLModule f} l) {a : E}
   : \Sigma (p : Poly K) (isMonicMinPoly f a p)
   => finDim_minPoly f SubRing.max (\lam _ => ()) {map SubRing.maxHom l} (\lam c p j => lb.1 c (inv (IRing.embed.func-BigSum {\lam j => SubRing.maxHom (f (c j) * l j)}) *> pmap __.1 p) j, \lam x => TruncP.map (lb.2 x.1) \lam s => (s.1, ext $ s.2 *> inv IRing.embed.func-BigSum)) ()
 
+{- | Existence of a monic minimal polynomial of `a` is equivalent to the polynomial subalgebra `K[a] ⊆ E` being
+ -   finite-free as a `K`-module.
+ -}
 \lemma minPoly-exists {K : DiscreteField} {E : CRing} (f : RingHom K E) {a : E}
   : ∃ (p : Poly K) (isMonicMinPoly f a p) <-> ∃ (l : Array (IRing (polyImage f a))) (LModule.IsBasis {homLModule (polyImageHom f a)} l)
   => (\lam (inP (p,pm)) => inP (mkArray \lam (j : Fin (degree p)) => later (E.pow a j, polyImage-pow f a), (\lam c s j =>

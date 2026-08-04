@@ -1,3 +1,14 @@
+{- | Topological Riesz spaces: Riesz spaces equipped with a compatible topological abelian group structure where lattice
+ -   operations and absolute value are uniformly continuous.
+ -
+ -   This module merges the order-theoretic structure of a Riesz space (vector lattice) with the topological structure
+ -   of a topological abelian group, requiring that the topology has a basis of solid neighborhoods at zero. The
+ -   solidity condition ensures that the lattice operations (join, meet, absolute value) interact well with the topology
+ -   — specifically, they become uniformly continuous maps. Scalar multiplication by rationals is also required to be a
+ -   topological abelian group map, providing the foundation for working with continuous linear functionals and
+ -   convergence in spaces of integrable functions or continuous functions on compact sets.
+ -}
+
 \import Algebra.Group
 \import Algebra.Ordered.RieszSpace
 \import Arith.Int
@@ -19,9 +30,16 @@
 \import Topology.UniformSpace
 \import Topology.UniformSpace.Product
 
+{- | A class extending `TopAbGroup` and `RieszSpace`, requiring that the underlying topology admits a base of solid
+ -   neighborhoods of zero and that the lattice/scalar operations are uniformly continuous.
+ -}
 \class TopRieszSpace \extends TopAbGroup, RieszSpace {
+  {- | For any neighborhood `U` of `0` (i.e., `single 0 <=< U`), there exists a solid set `V` that is also a
+   -   neighborhood of `0` and contained in `U`. This ensures the topology is compatible with the order structure.
+   -}
   | solid-neighborhood {U : Set E} : single 0 <=< U -> ∃ (V : IsSolid) (single 0 <=< V) (V ⊆ U)
 
+  -- | The absolute value map `abs : E -> E` is a `UniformMap` from the space to itself.
   \lemma abs-uniform : UniformMap \this \this abs \cowith
     | func-uniform Eu => \case neighborhood-uniform.1 Eu \with {
       | inP (V,Vo,V0,h) => \case solid-neighborhood (open-char.1 Vo V0) \with {
@@ -31,12 +49,16 @@
       }
     }
 
+  -- | For any rational `q`, scalar multiplication `q *q : E -> E` is a `TopAbGroupMap`.
   \protected \lemma *q-right-uniform {q : Rat} : TopAbGroupMap \this \this (q *q) \cowith
     | func-+ => toRatModule.*c-ldistr
     | func-uniform Eu =>
       \have cu => *i-uniform ∘ *q_<=1-right-uniform (RatField.finv>=0 fromNat_>=0) (RatField.finv_<= idp $ fromInt_<= $ pos<=pos $ suc_<_<= $ nonZero>0 ratDenom/=0)
       \in uniform-subset (cu.func-uniform Eu) \lam t => TruncP.map t \lam s => later (s.1, s.2, s.3 *> ext \lam x => pmap s.1 $ inv *q_*i *> inv *q-assoc *> pmap (*q x) (inv rat-split))
     \where {
+      {- | Helper specialization for the case `0 <= q <= 1`, providing uniform continuity of contraction by a rational
+       -   in the unit interval.
+       -}
       \private \lemma *q_<=1-right-uniform {q : Rat} (q>=0 : RatField.zro RatField.<= q) (q<=1 : q RatField.<= 1) : TopAbGroupMap \this \this (q *q) \cowith
         | func-+ => toRatModule.*c-ldistr
         | func-uniform Eu => \case neighborhood-uniform.1 Eu \with {
@@ -60,9 +82,11 @@
     }
   -}
 
+  -- | The binary join `(s.1, s.2) ↦ s.1 ∨ s.2` is a `UniformMap` from the product space `E × E` to `E`.
   \lemma join-uniform : UniformMap (ProductTopAbGroup \this \this) \this (\lam s => s.1 ∨ s.2)
     => transportInv (UniformMap _ _) (later $ ext \lam s => join_abs) $ *q-right-uniform ∘ +-uniform ∘ tuple +-uniform (abs-uniform ∘ subtract-uniform)
 
+  -- | The binary meet `(s.1, s.2) ↦ s.1 ∧ s.2` is a `UniformMap` from the product space `E × E` to `E`.
   \lemma meet-uniform : UniformMap (ProductTopAbGroup \this \this) \this (\lam s => s.1 ∧ s.2)
     => transportInv (UniformMap _ _) (later $ ext \lam s => meet_abs) $ *q-right-uniform ∘ subtract-uniform ∘ tuple +-uniform (abs-uniform ∘ subtract-uniform)
 } \where {

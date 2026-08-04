@@ -2,6 +2,18 @@
      J. Daniel Christensen, Morgan Opie, Egbert Rijke, and Luis Scoccola, Localization in Homotopy Type Theory, https://arxiv.org/pdf/1807.04155
  -}
 
+{- | Constructs the separated universe associated to a universe of local types, where a type is "separated" if all its
+ -   identity types are local.
+ -
+ -   This module implements the standard construction that turns any universe `U` into a new universe `Separated U`
+ -   whose locality predicate requires all path spaces to be `U`-local. Starting from a reflective universe, it builds
+ -   the reflection into separated types using the image factorization of the Yoneda-like map `a ↦ LType (a = -)`:
+ -   surjectivity of the image map combined with locality of each identity type yields the separated localization. The
+ -   technical core is `pathEquiv`, which identifies the fibers of this map with the localized identity types via a
+ -   chain of equivalences passing through univalence, function extensionality, and the embedding property of the Yoneda
+ -   map.
+ -}
+
 \import Equiv
 \import Equiv.Sigma
 \import Equiv.Univalence
@@ -16,9 +28,16 @@
 \import Paths
 \import Paths.Meta
 
+{- | Given a universe `U`, produces the universe `Separated U` whose local types are those `Z` for which every identity
+ -   type `z = z'` is `U`-local. The construction is by `\cowith` extending `Universe`.
+ -}
 \func Separated.{u} (U : Universe.{u}) : Universe.{u} \cowith
   | isLocal Z => \Pi (z z' : Z) -> isLocal (z = z')
 
+{- | Given a reflective universe `U`, produces a reflective universe structure on `Separated U`. The localization of `A`
+ -   is built as the image of the map `a ↦ LType (a = -)`, with locality of identity types transported across
+ -   `pathEquiv`.
+ -}
 \func ReflSeparated.{u} (U : ReflUniverse.{u}) : ReflUniverse \cowith
   | Universe => Separated U
   | localization A =>
@@ -29,6 +48,9 @@
                  (localization (a = a')) right
     \in (separatedLocalization YImage.dom-map-surj (\lam a a' => (p a a', r a a'))).2
   \where {
+    {- | The family `S a a' := LType (a = a')`, the localized identity type. This is the family whose Yoneda-style image
+     -   gives the separated localization.
+     -}
     \func S.{u} {U : ReflUniverse.{u}} {A : \Type u} (a a' : A) : \Type u
       => LType (a = a')
 
@@ -36,6 +58,11 @@
     \func F.{u} {U : ReflUniverse.{u}} {A : \Type u} (a : A) : YImage S
       => YImage.dom-map a
 
+    {- | For all `a a' : A`, the equality `(F a = F a') = LType (a = a')`. This is the central technical lemma
+     -   identifying paths in the image with the localized identity type, established by chaining: embedding-induced
+     -   equivalence on `cod-map`, symmetry of equality, function extensionality, univalence pointwise, and a
+     -   `localizationFactorEmbedding` step using `piLocal` and `equivLocal`.
+     -}
     \func pathEquiv.{u} {U : ReflUniverse.{u}} {A : \Type u} (a a' : A) : (F a = F a') = LType (a = a') => Equiv_= $ =_Equiv
       \let | E => \Pi (x : A) -> Equiv (S a' x) (S a x)
            | emb => transEmbedding (piEmbedding \lam a'' => Equiv.toFunc-embedding {LType (a' = a'')} {LType (a = a'')})
@@ -51,6 +78,10 @@
                                                               (\lam p => Jl (\lam x p' => transport (\lam y => Equiv (S y x) (S a x)) p' (mkEquiv (inP idEquiv)) (lEta idp) = inL p') idp p)) >==
           (LType (a = a') : \Type u)      `qed
 
+    {- | Given a surjection `f : A ↠ B` and, for every pair `a, a'`, a local type `P` together with a localization of
+     -   `a = a'` at `P`, produces a `Local` structure on `B` and a `Localization` of `A` along `f`, both in
+     -   `Separated U`. This is the abstract ingredient assembled by `ReflSeparated` to obtain the reflection.
+     -}
     \lemma separatedLocalization.{u} {U : Universe.{u}} {A B : \Type u} {f : A -> B} (fs : IsSurj f) (p : \Pi (a a' : A) -> \Sigma (P : Local (f a = f a')) (Localization (a = a') P))
       : \Sigma (L : Local {Separated U} B) (Localization {Separated U} A L f)
       => \have B-local (b b' : B) : isLocal (b = b') =>

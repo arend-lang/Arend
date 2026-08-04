@@ -2,6 +2,7 @@
 \import Order.PartialOrder
 \import Set
 
+-- | A predicate `contains : S -> \Prop` on a `BaseSet S`; provides `ISet`, the induced sigma `BaseSet`.
 \class SubSet (S : BaseSet) (\classifying contains : S -> \Prop) {
   \type Total => \Sigma (x : S) (contains x)
 
@@ -9,9 +10,11 @@
     | E => Total
 }
 
+-- | A `SubSet` whose membership is decidable (`isDec`).
 \class DecSubSet \extends SubSet
   | isDec (x : S) : Dec (contains x)
   \where {
+    -- | The total subset (always `\Sigma`), with trivial decidability.
     \func max {S : BaseSet} : DecSubSet S \cowith
       | contains _ => \Sigma
       | isDec _ => yes ()

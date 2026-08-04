@@ -1,3 +1,15 @@
+{- | Graded commutative rings: rings whose elements decompose into homogeneous components indexed by degree.
+ -
+ -   A `GradedCRing` extends `CRing` with a homogeneity predicate `isHomogen : E -> Nat -> \Prop` that is closed under
+ -   zero, addition (within a fixed degree), multiplication (degrees add), and contains `-1` in degree 0. The defining
+ -   axioms require every element to admit a decomposition as a finite sum `BigSum l` where `l n` is homogeneous of
+ -   degree `n`, and that such decompositions are unique up to vanishing components (`homogen-unique`). Uniqueness is
+ -   expressed via the auxiliary `Similar` relation on arrays — a componentwise equality-or-zero relation that absorbs
+ -   trailing zeros — which lets the development reason about decompositions of different lengths uniformly. From these
+ -   axioms the file derives degree uniqueness, splitting lemmas for sums and products, and factorization lemmas used to
+ -   lift homogeneous structure through ring operations.
+ -}
+
 \import Algebra.Group
 \import Algebra.Meta
 \import Algebra.Monoid
@@ -21,6 +33,10 @@
 \import Set.Fin
 \import Set.Fin.Instances
 
+{- | Extends `CRing` with the predicate `isHomogen` and axioms `homogen-zro`, `homogen-negative_ide`, `homogen-+`,
+ -   `homogen-*`, `homogen-decomp` (existence of a homogeneous decomposition), and `homogen-unique` (a homogeneous array
+ -   summing to zero is pointwise zero).
+ -}
 \class GradedCRing \extends CRing {
   | isHomogen : E -> Nat -> \Prop
   | homogen-zro {n : Nat} : isHomogen 0 n
@@ -29,8 +45,10 @@
   | homogen-decomp (x : E) : ∃ (l : Array E) (\Pi (n : Fin l.len) -> isHomogen (l n) n) (BigSum l = x)
   | homogen-unique (l : Array E) : (\Pi (n : Fin l.len) -> isHomogen (l n) n) -> BigSum l = 0 -> ∀ (x : l) (x = 0)
 
+  -- | Predicate that an array `l` has `l n` homogeneous of degree `n` at each index.
   \func isHomogenArray (l : Array E) => \Pi (n : Fin l.len) -> isHomogen (l n) n
 
+  -- | `1` is homogeneous of degree 0.
   \lemma homogen-ide : isHomogen 1 0
     => \case homogen-decomp 1 \with {
       | inP (nil, lh, l=1) => transport (isHomogen __ 0) l=1 homogen-zro
@@ -53,6 +71,7 @@
         \in transportInv (isHomogen __ 0) (inv l=1 *> pmap (_ +) (BigSum_zro \lam j => lj=x0lj *> x0lj=0) *> zro-right) (lh 0)
     }
 
+  -- | Negation preserves homogeneity at each degree.
   \lemma homogen-negative {n : Nat} {x : E} (xh : isHomogen x n) : isHomogen (negative x) n
     => \case homogen-decomp (negative x) \with {
       | inP (l,lh,l=-x) => \case LinearOrder.dec<_<= n l.len \with {
@@ -78,14 +97,17 @@
       }
     }
 
+  -- | `pow a m` is homogeneous of degree `n * m` when `a` has degree `n`.
   \lemma homogen-pow {a : E} {n : Nat} (ah : isHomogen a n) {m : Nat} : isHomogen (pow a m) (n Nat.* m) \elim m
     | 0 => homogen-ide
     | suc m => homogen-* (homogen-pow ah) ah
 
+  -- | Sum of elements all homogeneous of the same degree `n` is homogeneous of degree `n`.
   \lemma homogen-BigSum {l : Array E} {n : Nat} (p : ∀ (a : l) (isHomogen a n)) : isHomogen (BigSum l) n \elim l
     | nil => homogen-zro
     | a :: l => homogen-+ (p 0) (homogen-BigSum (\lam j => p (suc j)))
 
+  -- | Same statement for `FinSum` indexed by a `FinSet`.
   \lemma homogen-FinSum {J : FinSet} {a : J -> E} {n : Nat} (p : \Pi (j : J) -> isHomogen (a j) n) : isHomogen (FinSum a) n
     => \case FinSum_char a \with {
       | inP (e,q) => transportInv (isHomogen __ n) q $ homogen-BigSum \lam j => p (e j)
@@ -103,6 +125,10 @@
   \lemma IsHomogen_pow {a : E} (ah : IsHomogen a) {k : Nat} : IsHomogen (pow a k) \elim ah
     | inP (n,ah) => inP (_, homogen-pow ah)
 
+  {- | Two homogeneous arrays with equal sums are `Similar` — the key strengthening of `homogen-unique` to comparison of
+   -   two decompositions. Inner helpers `diff`, `diff=0->similar`, `diff-sum`, `diff-homogen` build a difference array
+   -   whose vanishing yields similarity.
+   -}
   \lemma homogen-similar {l l' : Array E} (lh : isHomogenArray l) (l'h : isHomogenArray l') (p : BigSum l = BigSum l') : Similar l l'
     => diff=0->similar $ homogen-unique (diff l l') (diff-homogen l l' 0 lh l'h) (diff-sum l l' *> toZero p)
     \where {
@@ -135,6 +161,10 @@
         | a :: l, a' :: l', suc j => diff-homogen l l' (suc k) (\lam j => lh (suc j)) (\lam j => l'h (suc j)) j
     }
 
+  {- | A nonzero element cannot be homogeneous of two distinct degrees: returns `Or (a = 0) (n = m)`. Uses helpers
+   -   `array2` (a length-`(suc n + suc m)` array placing `a` at index `n` and `-a` at index `m`) and
+   -   `sum-lem1`/`sum-lem2` (sums of arrays supported on one or two indices).
+   -}
   \func degree-unique {a : E} {n m : Nat} (ahn : isHomogen a n) (ahm : isHomogen a m) : Or (a = 0) (n = m)
     => \case decideEq n m \with {
       | yes e => inr e
@@ -167,6 +197,9 @@
         | a :: l, suc i, suc j => pmap (+ _) (c 0 (\case __) (\case __)) *> zro-left *> sum-lem2 i j (\lam p => i/=j \lam i => suc (p i)) (\lam k d1 d2 => c (suc k) (fsuc/= d1) (fsuc/= d2))
   }
 
+  {- | If `a = b + c` with `a, b, c` homogeneous of degrees `n, m, k`, then either `b = 0`, `c = 0`, or `m = k`. Helper
+   -   `similar-unique` extracts vanishing entries from a similarity to a single-element decomposition.
+   -}
   \func degree-unique2 {a b c : E} {n m k : Nat} (p : a = b + c) (ah : isHomogen a n) (bh : isHomogen b m) (ch : isHomogen c k) : Or (Or (b = 0) (c = 0)) (m = k)
     => \case decideEq m k \with {
       | yes m=k => inr m=k
@@ -197,6 +230,9 @@
         | a' :: l, suc n, ::-::-similar p s, suc j => similar-unique l a n s j \lam q => n/=j (pmap suc q)
     }
 
+  {- | For a homogeneous array `l` whose sum is itself homogeneous of degree `n`, either some entry `l j` realizes the
+   -   sum with `j = n`, or the sum is zero.
+   -}
   \func homogenSum-unique {l : Array E} (lh : isHomogenArray l) {n : Nat} (h : isHomogen (BigSum l) n)
     : Or (\Sigma (j : Fin l.len) (BigSum l = l j) (j = {Nat} n)) (BigSum l = 0)
     => \case similar-eq (homogen-similar {_} {replicate n zro ++ BigSum l :: nil} (homogen-++ (\lam j => homogen-zro) $ later \lam (0) => h) lh $
@@ -205,6 +241,9 @@
          | inr r => inr (inv ++.++_index-right *> r)
        }
 
+  {- | Concatenation of homogeneous arrays remains homogeneous when the second array's degrees start at `l.len`. Helper
+   -   `aux` generalizes the starting offset.
+   -}
   \lemma homogen-++ {l l' : Array E} (lh : isHomogenArray l) (l'h : \Pi (j : Fin l'.len) -> isHomogen (l' j) (l.len Nat.+ j)) : isHomogenArray (l ++ l')
     => aux 0 lh l'h
     \where
@@ -217,6 +256,10 @@
         | a :: l, 0 => lh 0
         | a :: l, suc j => aux (suc n) (\lam j => lh (suc j)) l'h j
 
+  {- | If `b = a * c` with `b, a` homogeneous, there exists a homogeneous `c'` with `b = a * c'`. Helper `aux` performs
+   -   induction over a `Similar` relation between `b` placed at one index and `a *` applied to a homogeneous
+   -   decomposition.
+   -}
   \lemma homogen-factor {a b : E} (a|b : Monoid.LDiv a b) (bh : IsHomogen b) (ah : IsHomogen a)
     : ∃ (c : E) (k : Nat) (isHomogen c k) (b = a * c) \elim bh, ah
     | inP (n,bh), inP (m,ah) => TruncP.map (homogen-decomp a|b.inv) \lam (l,lh,+l=c) => aux n m 0 lh $ homogen-similar
@@ -234,6 +277,11 @@
         | suc s, suc t, l, ::-::-similar _ q => aux s t n lh q
     }
 
+  {- | Two-factor variant: if `b = a1 * c + a2 * d` with `b, a1, a2` homogeneous, there exist homogeneous `c', d'` with
+   -   `b = a1 * c' + a2 * d'`. Inner `sum`, `sum_nil`, `BigSum_sum`, `homogen-sum` define a pointwise sum on (possibly
+   -   unequal-length) arrays preserving homogeneity, and `aux` performs the analogous similarity induction over two
+   -   factor branches.
+   -}
   \lemma homogen-factor2 {a1 a2 b c d : E} (b=ac : b = a1 * c + a2 * d) {n m1 m2 : Nat} (bh : isHomogen b n) (a1h : isHomogen a1 m1) (a2h : isHomogen a2 m2)
     : ∃ (c' d' : E) (k1 k2 : Nat) (isHomogen c' k1) (isHomogen d' k2) (b = a1 * c' + a2 * d')
     => \case homogen-decomp c, homogen-decomp d \with {
@@ -296,6 +344,10 @@
         | suc s, suc t1, suc t2, l1, l2, ::-::-similar _ q => aux s t1 t2 n1 n2 l1h l2h q
     }
 
+  {- | A `FinSum` of elements each homogeneous of some degree equals `BigSum` of an array indexed by
+   -   `0 .. FinJoin (degrees)` where each entry sums all elements of the matching degree. Helpers `array` and
+   -   `array-homogen` build this array and prove it is homogeneous.
+   -}
   \lemma FinSum-homogen {J : FinSet} {a : J -> E} (p : \Pi (j : J) -> \Sigma (n : Nat) (isHomogen (a j) n)) : FinSum a = BigSum array
     => FinSum_Equiv (later \new QEquiv {
       | f s => s.2.1
@@ -310,6 +362,11 @@
         => \lam n => homogen-FinSum $ later \lam j => transport (isHomogen _) j.2 (p j.1).2
     }
 
+  {- | For an array of pairs `(s, t)` with each `t` homogeneous of some degree, produces a refined decomposition
+   -   expressing `BigSum (s_i * t_i)` as `BigSum_n FinSum_j (g_j * t_{h j})` where each `g_j * t_{h j}` is homogeneous
+   -   of degree `n` — the canonical bigraded regrouping used to lift relations between elements to homogeneous
+   -   relations.
+   -}
   \lemma sum-decomp (l : Array (\Sigma E E)) (c : \Pi (i : Fin l.len) -> ∃ (n : Nat) (isHomogen (l i).2 n))
     : ∃ (N : Nat) (f : \Pi (n : Fin N) -> \Sigma (J : FinSet.{0}) (g : J -> E) (\Pi (j : J) -> \Sigma (n : Nat) (isHomogen (g j) n)) (h : J -> Fin l.len) (\Pi (j : J) -> isHomogen (g j * (l (h j)).2) n))
         (BigSum (map (\lam s => s.1 * s.2) l) = BigSum (\lam n => FinSum (\lam j => (f n).2 j * (l ((f n).4 j)).2)))
@@ -322,16 +379,24 @@
 } \where {
   \open BottomJoinSemilattice
 
+  {- | Inductive relation `Similar l l'` on `Array A` for an `AddPointed` `A`, with constructors `nil-nil-similar`,
+   -   `nil-::-similar` (`a = 0` and tail similar), `::-nil-similar`, and `::-::-similar` (`a = a'` and tails similar).
+   -   Captures equality up to padding by zeros at either end.
+   -}
   \data Similar {A : AddPointed} (l l' : Array A) \elim l, l'
     | nil, nil => nil-nil-similar
     | nil, a :: l' => nil-::-similar (a = 0) (Similar nil l')
     | a :: l, nil => ::-nil-similar (a = 0) (Similar l nil)
     | a :: l, a' :: l' => ::-::-similar (a = a') (Similar l l')
 
+  -- | If `l` is similar to `nil`, every entry of `l` is zero.
   \lemma similar-nil {A : AddPointed} {l : Array A} (s : Similar l nil) (j : Fin l.len) : l j = 0 \elim l, s, j
     | a :: l, ::-nil-similar p s, 0 => p
     | a :: l, ::-nil-similar p s, suc j => similar-nil s j
 
+  {- | For `Similar l l'`, every index `j` of `l` either matches an index `i` of `l'` with `l j = l' i` and `i = j` as
+   -   naturals, or `l j = 0`.
+   -}
   \func similar-eq {A : AddPointed} {l l' : Array A} (s : Similar l l') (j : Fin l.len)
     : Or (\Sigma (i : Fin l'.len) (l j = l' i) (i = {Nat} j)) (l j = 0) \elim l, l', s, j
     | a :: l, nil, ::-nil-similar p s, 0 => inr p

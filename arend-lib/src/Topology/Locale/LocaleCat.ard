@@ -28,6 +28,7 @@
 \open SiteLocale \hiding (<=)
 \open LocaleSite
 
+-- | Category of locales with frame homomorphisms; identity, composition, and univalence supplied.
 \func FrameCat.{u} : Cat Locale.{u} \cowith
   | Hom => FrameHom
   | id => FrameHom.id
@@ -42,6 +43,7 @@
     | Join C => h1.func-Join *> <=-antisymmetric (S2.SJoin-univ \lam Ca => h1.func-<= $ S1.SJoin-cond Ca) (h1.func-<= $ S1.SJoin-univ \lam Ca => h2.func-<= $ S2.SJoin-cond Ca) *> inv h2.func-Join
   }
   \where {
+    -- | Promotes a frame homomorphism that is an `Equiv` of underlying sets to an iso in `FrameCat`.
     \func equiv_iso.{u} {L M : Locale.{u}} {f : FrameHom L M} (e : QEquiv f) : Iso {FrameCat.{u}} f \cowith
       | hinv => \new FrameHom {
         | func => e.ret
@@ -74,6 +76,7 @@
       (\lam x<=U => transport (isBasicCover x) SetIm_id $ h2.func-basicCover x<=U)
   }
 
+-- | Reflective inclusion `FrameCat -> FramePresCat` with reflector `PresentedFrame`.
 \func FrameReflectiveSubcat.{u} : ReflectiveSubPrecat FrameCat.{u} PreorderSiteCat.{u} \cowith
   | F L => LocaleSite L
   | Func {X Y : Locale.{u}} (f : FrameHom X Y) : PreorderSiteHom (LocaleSite X) (LocaleSite Y) f \cowith {
@@ -110,6 +113,9 @@
     | f_sec f => exts \lam x => <=-antisymmetric (SJoin-univ \lam c => locale_cover (f.func-Cover c) <=∘ SJoin-univ \lam p => later $ =_<= $ pmap f (inv p)) (SJoin-cond $ Cover.cover-refl idp)
   }
 
+{- | Opposite category, the bicomplete category of locales. The terminal locale is `discrete (\Sigma)`; the terminal map
+ -   sends `P` to `pHat (P ())`.
+ -}
 \instance LocaleCat.{u} : Cat Locale.{u}
   => FrameCat.op
 
@@ -165,11 +171,13 @@
       => Join \lam (j : Nucleus L) => \Pi (x : M) -> j (f x) = j (g x)
   }
 
+-- | Regular monos in `LocaleCat` correspond to surjective frame homomorphisms.
 \lemma regular_surj.{u} {L M : Locale.{u}} {f : LocaleHom L M} (reg : IsRegularMono {LocaleCat.{u}} f) : IsSurj f \elim reg
   | inP E =>
     \let E' => localeEqualizer E.f E.g
     \in transport IsSurj (path \lam i => (E'.eqBeta {L} i).func) $ IsSurj.comp Nucleus.map.surjective (FrameCat.iso_equiv (Equalizer.unique E E').op).isSurj
 
+-- | Surjective frame maps are regular monos.
 \lemma surj_regular.{u} {L M : Locale.{u}} {f : LocaleHom L M} (sur : IsSurj f) : IsRegularMono {LocaleCat.{u}} f
   => inP \new Equalizer {
     | Y => PushoutLocale f f
@@ -188,6 +196,9 @@
                }, ext (exts \lam x => lem))
   }
 
+{- | For surjective `f`, the factor through the image is an iso of locales; **`surj_equiv.map-comm`** shows it commutes
+ -   with `image.map`.
+ -}
 \func surj_equiv.{u} {L M : Locale.{u}} {f : FrameHom L M} (sur : IsSurj f) : Iso {FrameCat.{u}} {f.image.locale} {M}
   => FrameCat.equiv_iso {f.image.locale} {M}
       {\new FrameHom {
@@ -205,6 +216,7 @@
       => f.surjective-split sur (f x)
   }
 
+-- | Orthogonal factorization system on `LocaleCat`: dense maps vs. closed surjections.
 \func dense_closed_ofs.{u} : OFS {LocaleCat.{u}} \cowith
   | L f => FrameHom.IsDense {f}
   | R f => \Sigma f.image.isClosed (IsSurj f)
@@ -231,6 +243,7 @@
          }, exts \lam x => lem)
   \where \open FrameHom
 
+-- | Orthogonal factorization system: strongly dense vs. weakly closed maps.
 \func sdense_wclosed_ofs.{u} : OFS {LocaleCat.{u}} \cowith
   | L f => IsStronglyDense {f}
   | R f => IsWeaklyClosed {f}

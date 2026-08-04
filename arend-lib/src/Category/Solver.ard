@@ -1,56 +1,98 @@
+{- | A reflection-based solver for equalities of morphisms in a precategory, normalizing composition expressions to a
+ -   canonical right-associated form.
+ -
+ -   This module provides the syntactic infrastructure for proving equations between composites of morphisms by
+ -   normalization. Categorical terms (built from variables, identity, and composition) are reified as the inductive
+ -   type `CatTerm`, then reduced to a flat list-like normal form `CatNF` that eliminates identities and reassociates
+ -   compositions. The `HData` class packages an interpretation back into a concrete precategory, together with the
+ -   soundness lemmas needed to turn syntactic equality of normal forms into semantic equality of morphisms — the
+ -   standard pattern for tactic-style proof automation in dependent type theory.
+ -}
+
 \import Category
 \import Function.Meta
 \import Paths
 \import Paths.Meta
 
+{- | Reified categorical expressions over a vertex set `V` and an edge family `H : V -> V -> \Type`, with constructors
+ -   `var` (a generator), `:id` (identity, parameterized by an equality of endpoints), and `:o` (composition through an
+ -   intermediate object).
+ -}
 \data CatTerm {V : \Type} (a b : V) (H : V -> V -> \Type)
   | \protected var (H a b)
   | :id (a = b)
   | :o (c : V) (CatTerm c b H) (CatTerm a c H)
 
+{- | Normal forms as right-associated lists of generators, built from `:nil` (an identity coerced along an endpoint
+ -   equation) and `:cons` (prepending a generator).
+ -}
 \data CatNF {V : \Type} (a b : V) (H : V -> V -> \Type)
   | :nil (a = b)
   | \infixl 7 :cons {c : V} (H c b) (CatNF a c H)
 
+-- | Converts a `CatTerm a b H` into a `CatNF a b H` by flattening compositions and erasing identities.
 \protected \func normalize {V : \Type} {a b : V} {H : V -> V -> \Type} (t : CatTerm a b H) : CatNF a b H
   => aux t (:nil idp)
   \where
+    {- | Tail-recursive worker that accumulates the result, processing the right operand of each composition before the
+     -   left so that the output is right-associated.
+     -}
     \func aux {V : \Type} {a b c : V} {H : V -> V -> \Type} (t : CatTerm b c H) (acc : CatNF a b H) : CatNF a c H \elim t
       | var h => h :cons acc
       | :id idp => acc
       | :o _ t s => aux t (aux s acc)
 
+{- | Bundles a precategory `C`, a vertex map `f : V -> C`, a generator family `H`, and an interpretation `g` of
+ -   generators as morphisms `Hom (f x) (f y)`. Provides the bridge between syntax and the target precategory.
+ -}
 \class HData \noclassifying {C : Precat} {V : \Set} (f : V -> C) (H : V -> V -> \Set) (g : \Pi {x y : V} -> H x y -> Hom (f x) (f y)) {
+  -- | Evaluates a `CatTerm a b H` to a morphism `Hom (f a) (f b)` using `id` and `∘`.
   \protected \func interpret {a b : V} (t : CatTerm a b H) : Hom (f a) (f b) \elim t
     | var h => g h
     | :id idp => id
     | :o _ t s => interpret t ∘ interpret s
 
+  -- | Evaluates a `CatNF a b H` to a morphism, special-casing singleton lists to avoid an extra identity composition.
   \protected \func interpretNF {a b : V} (t : CatNF a b H) : Hom (f a) (f b) \elim t
     | :nil idp => id
     | :cons h (:nil idp) => g h
     | :cons h t => g h ∘ interpretNF t
     \where
+      {- | States that `interpretNF (h :cons l) = g h ∘ interpretNF l`, smoothing over the singleton special case in the
+       -   definition.
+       -}
       \lemma cons {a b c : V} (h : H b c) (l : CatNF a b H) : interpretNF (h :cons l) = g h ∘ interpretNF l \elim l
         | :nil idp => inv id-right
         | :cons a l => idp
 
+  -- | Append on normal forms, corresponding to composition of the represented morphisms.
   \func \infixr 5 :++ {a b c : V} (h : CatNF b c H) (h' : CatNF a b H) : CatNF a c H \elim h
     | :nil idp => h'
     | :cons h t => h :cons (t :++ h')
 
+  -- | Soundness of append: `interpretNF (h :++ h') = interpretNF h ∘ interpretNF h'`.
   \protected \lemma interpretNF_++ {a b c : V} (h : CatNF b c H) (h' : CatNF a b H) : interpretNF (h :++ h') = interpretNF h ∘ interpretNF h' \elim h
     | :nil idp => inv id-left
     | :cons h t => repeat {2} (rewrite interpretNF.cons) $ rewrite interpretNF_++ (inv o-assoc)
 
+  {- | Main soundness lemma — `interpret t = interpretNF (normalize t)`, so a term and its normal form denote the same
+   -   morphism.
+   -}
   \protected \lemma normalize-consistent {a b : V} (t : CatTerm a b H) : interpret t = interpretNF (normalize t)
     => inv id-right *> aux t (:nil idp)
     \where
+      {- | Generalized statement for the accumulator-passing `normalize.aux`, asserting
+       -   `interpret t ∘ interpretNF acc = interpretNF (normalize.aux t acc)`.
+       -}
       \lemma aux {a b c : V} (t : CatTerm b c H) (acc : CatNF a b H) : interpret t ∘ interpretNF acc = interpretNF (normalize.aux t acc) \elim t
         | var h => inv (interpretNF.cons h acc)
         | :id idp => id-left
         | :o _ t s => o-assoc *> pmap (interpret t ∘) (aux s acc) *> aux t (normalize.aux s acc)
 
+  {- | The user-facing solver entry point: given two terms `t, s` whose normal forms are equal, derives
+   -   `interpret t = interpret s`. Used to discharge categorical equations by reducing both sides to the same canonical
+   -   list of generators.
+   -}
   \protected \lemma terms-equality {a b : V} (t s : CatTerm a b H) (p : interpretNF (normalize t) = interpretNF (normalize s)) : interpret t = interpret s
     => normalize-consistent t *> p *> inv (normalize-consistent s)
 }

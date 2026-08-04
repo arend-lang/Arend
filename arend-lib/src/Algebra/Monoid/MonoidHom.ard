@@ -1,3 +1,12 @@
+{- | Homomorphisms between monoids and additive monoids, preserving the unit and the binary operation.
+ -
+ -   This module defines the records `MonoidHom` and `AddMonoidHom` as extensions of their pointed-map counterparts,
+ -   enriched with multiplicativity (resp. additivity) of the underlying function. From these basic preservation laws,
+ -   the module derives the standard consequences a monoid homomorphism must satisfy: it preserves powers, big products
+ -   (or sums), divisibility witnesses, and invertible elements. The `AddMonoidHom` record is connected to `MonoidHom`
+ -   via a coercion, allowing additive homomorphisms to be reused wherever multiplicative ones are expected.
+ -}
+
 \import Algebra.Monoid
 \import Algebra.Pointed.PointedHom
 \import Equiv
@@ -14,21 +23,30 @@
   | func-* {x y : Dom} : func (x * y) = func x * func y
 }
 
+{- | Record extending `PointedHom` with domain and codomain refined to `Monoid` and the multiplicativity law
+ -   `func (x * y) = func x * func y`.
+ -}
 \record MonoidHom \extends PointedHom, SemigroupHom {
   \override Dom : Monoid
   \override Cod : Monoid
 
+  -- | A monoid homomorphism preserves natural-number powers: `func (x ^ n) = (func x) ^ n`.
   \lemma func-pow {x : Dom} {n : Nat} : func (Monoid.pow x n) = Monoid.pow (func x) n \elim n
     | 0 => func-ide
     | suc n => func-* *> pmap (* _) func-pow
 
+  -- | Preservation of the big product over an array: `func (BigProd l) = BigProd (\lam j => func (l j))`.
   \lemma func-BigProd {l : Array Dom} : func (Monoid.BigProd l) = Monoid.BigProd (\lam j => func (l j)) \elim l
     | nil => func-ide
     | a :: l => func-* *> pmap (_ *) func-BigProd
 
+  {- | Transports a left-divisibility witness `LDiv a b` along `func`, producing `LDiv (func a) (func b)` with witness
+   -   `func d.inv`.
+   -}
   \lemma func-LDiv {a b : Dom} (d : Monoid.LDiv a b) : Monoid.LDiv (func a) (func b) (func d.inv) \cowith
     | inv-right => inv func-* *> pmap func d.inv-right
 
+  -- | Transports an invertibility witness, producing `Inv (func a)` from `Inv a` with the image of the inverse.
   \lemma func-Inv {a : Dom} (d : Inv a) : Inv (func a) (func d.inv) \cowith
     | inv-left => inv func-* *> pmap func d.inv-left *> func-ide
     | inv-right => inv func-* *> pmap func d.inv-right *> func-ide
@@ -43,9 +61,11 @@
   \lemma equiv-Inv (e : IsEquiv func) {a : Dom} (ai : Inv (func a)) : Inv a
     => transport Inv (IsEquiv.ret_f e) $ (equiv-hom e).func-Inv ai
 } \where {
+  -- | Extensionality — pointwise equality `\Pi (x : M) -> f x = g x` implies `f = g`.
   \func equals {M N : Monoid} {f g : MonoidHom M N} (p : \Pi (x : M) -> f x = g x) : f = g
     => exts p
 
+  -- | The identity homomorphism `MonoidHom M M`.
   \protected \func id {M : Monoid} : MonoidHom M M \cowith
     | func x => x
     | func-ide => idp
@@ -59,19 +79,25 @@
   \open Monoid(Inv)
 }
 
+{- | Record extending `AddPointedHom` with domain and codomain refined to `AddMonoid` and the additivity law
+ -   `func (x + y) = func x + func y`.
+ -}
 \record AddMonoidHom \extends AddPointedHom {
   \override Dom : AddMonoid
   \override Cod : AddMonoid
   | func-+ {x y : Dom} : func (x + y) = func x + func y
 
+  -- | Preservation of the big sum over an array: `func (BigSum l) = BigSum (\lam j => func (l j))`.
   \lemma func-BigSum {l : Array Dom} : func (AddMonoid.BigSum l) = AddMonoid.BigSum (\lam j => func (l j)) \elim l
     | nil => func-zro
     | a :: l => func-+ *> pmap (_ +) func-BigSum
 
+  -- | Preservation of natural-number scalar multiplication: `func (n *n x) = n *n func x`.
   \lemma func-*n {n : Nat} {x : Dom} : func (n AddMonoid.*n x) = n AddMonoid.*n func x \elim n
     | 0 => func-zro
     | suc n => func-+ *> pmap (+ _) func-*n
 } \where {
+  -- | Coercion turning an `AddMonoidHom` into a `MonoidHom` between the underlying multiplicative monoid structures.
   \use \coerce toMonoidHom (f : AddMonoidHom) : MonoidHom \cowith
     | Dom => f.Dom
     | Cod => f.Cod
@@ -79,6 +105,7 @@
     | func-* => func-+
     | func-ide => func-zro
 
+  -- | The identity additive monoid homomorphism `AddMonoidHom M M`.
   \protected \func id {M : AddMonoid} : AddMonoidHom M M \cowith
     | func x => x
     | func-zro => idp
@@ -89,6 +116,9 @@
     | func-zro => pmap g func-zro *> func-zro
     | func-+ => pmap g func-+ *> func-+
 
+  {- | For abelian monoids, an additive homomorphism preserves indexed finite sums:
+   -   `f (FinSum a) = FinSum (\lam j => f (a j))` over a `FinSet`.
+   -}
   \lemma func-FinSum {A B : AbMonoid} (f : AddMonoidHom A B) {J : FinSet} {a : J -> A} : f (A.FinSum a) = B.FinSum (\lam j => f (a j))
     => \case A.FinSum_char a \with {
          | inP (e,q) => pmap f q *> f.func-BigSum *> inv (B.FinSum_char2 e)

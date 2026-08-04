@@ -2,6 +2,18 @@
      [1] Coquand, Spitters, Constructive Gelfand Duality for C*-algebras, 2009, https://arxiv.org/abs/0808.1518
  -}
 
+{- | Banach algebras: complete normed rings that are simultaneously Banach spaces, with a constructive square root for
+ -   elements near the identity.
+ -
+ -   This module layers algebra structure on top of `BanachSpace`, producing `BanachAlgebra` over a generic complete
+ -   normed field and `RealBanachAlgebra` specialized to `Real`. The centerpiece is a constructive square root `sqrt`
+ -   defined on the closed unit ball around `1` (i.e. `norm (1 - x) <= 1`) via a Newton-style iteration
+ -   `y_{n+1} = (1 - x + y_n^2)/2`, with `z_n = 1 - y_n` converging uniformly to a square root of `x`. The bounding
+ -   sequence `rfunc` over rationals controls the iteration's growth and convergence, letting the construction transfer
+ -   through the cover-space completion. The `BanachAlgebraCompletion` instance lifts the multiplication of a
+ -   `RealPreBanachAlgebra` to its Banach completion using locally uniform extension.
+ -}
+
 \import Algebra.Algebra
 \import Algebra.Group
 \import Algebra.Meta
@@ -47,27 +59,41 @@
 \import Topology.TopSpace
 \import Topology.TopSpace.Product
 
+-- | Extends `BanachSpace`, `QAlgebra`, and `CompleteExNormedRing`; a complete normed unital algebra over the rationals.
 \class BanachAlgebra \extends BanachSpace, QAlgebra, CompleteExNormedRing {
   -- | Norm of `fromRat q` is bounded by the scalar norm of `q`. In a valued ring, this is an equality.
   \lemma norm_fromRat {q : Rat} : norm (fromRat q) <= A.norm q
     => =_<= norm_*q <=∘ ExUpperRealSemigroup.<=_* <=-refl norm_ide_<= <=∘ =_<= (ExUpperRealSemigroup.ide-right norm>=0)
 }
 
+{- | Extends `RealPreBanachSpace` and `ExPseudoNormedRing`; a pre-Banach (not necessarily complete) algebra over the
+ -   reals.
+ -}
 \class RealPreBanachAlgebra \extends RealPreBanachSpace, ExPseudoNormedRing
 
+{- | Extends `RealBanachSpace`, `QPseudoAlgebra`, `ExPseudoNormedPseudoRing`, and `CompleteExNormedAbGroup`; the pseudo
+ -   (possibly non-unital, non-Hausdorff) variant over the reals.
+ -}
 \class RealBanachPseudoAlgebra \extends RealBanachSpace, QPseudoAlgebra, ExPseudoNormedPseudoRing, CompleteExNormedAbGroup {
+  -- | `r *r (a * b) = r *r a * b` — real scalar passes through to the left factor.
   \lemma *r-comm-left {r : Real} {a b : E} : r *r (a * b) = r *r a * b
     => dense-lift-unique rat_real rat_real.dense-coverEmbedding.1 (*r-cover ∘ tuple id (const _)) (*-locally-uniform ∘ tuple (*r-cover ∘ tuple id (const a)) (const b)) (\lam x => *r_*q *> *q-comm-left *> pmap (* b) (inv *r_*q)) r
 
+  -- | `r *r (a * b) = a * (r *r b)` — real scalar passes through to the right factor.
   \lemma *r-comm-right {r : Real} {a b : E} : r *r (a * b) = a * (r *r b)
     => dense-lift-unique rat_real rat_real.dense-coverEmbedding.1 (*r-cover ∘ tuple id (const _)) (*-locally-uniform ∘ tuple (const a) (*r-cover ∘ tuple id (const b))) (\lam x => *r_*q *> *q-comm-right *> pmap (a *) (inv *r_*q)) r
 
+  -- | A nonnegative-real scaling of a square remains a square.
   \lemma *r_>=0-square {r : Real} {a : E} (r>=0 : 0 <= r) (as : IsSquare a) : IsSquare (r *r a) \elim as
     | inP (b,bb=a) => inP (sqrtR r *r b, inv *r-comm-left *> pmap (_ *r) (inv *r-comm-right) *> inv toRealModule.*c-assoc *> pmap2 (*r) (pow_sqrt r>=0) bb=a)
 
+  -- | A nonnegative-rational scaling of a square remains a square.
   \lemma *q_>=0-square {q : Rat} {a : E} (q>=0 : 0 <= q) (as : IsSquare a) : IsSquare (q *q a)
     => transport IsSquare *r_*q $ *r_>=0-square (rat_real_<=.1 q>=0) as
 
+  {- | Reinterprets the structure as a `PseudoAlgebra` over `RealField`, combining `toRealModule` with the existing ring
+   -   structure.
+   -}
   \func toRealAlgebra : PseudoAlgebra RealField \cowith
     | LModule => toRealModule
     | PseudoRing => \this
@@ -78,82 +104,104 @@
   \open ProductCoverSpace
 }
 
+-- | Extends `RealBanachPseudoAlgebra`, `BanachAlgebra`, and `RealPreBanachAlgebra`; the full real Banach algebra.
 \class RealBanachAlgebra \extends RealBanachPseudoAlgebra, BanachAlgebra, RealPreBanachAlgebra {
   -- | [1] Lemma 1
   \sfunc sqrt (x : E) (|1-x|<=1 : norm (1 - x) ExUpperReal.<= RatField.ide) : E
     => zfunc-lim (x,|1-x|<=1)
     \where \protected {
+      -- | The pseudometric subspace of `E` consisting of elements satisfying `norm (1 - x) <= 1`.
       \func UnitBall => ExPseudoMetricTransfer {Set.Total \lam x => norm (1 - x) ExUpperReal.<= RatField.ide} __.1
 
+      -- | The auxiliary sequence with `y_0 = 0` and `y_{n+1} = (1 - x + y_n^2)/2`.
       \sfunc yfunc (n : Nat) (x : E) : E \elim n
         | 0 => 0
         | suc n => ratio 1 2 *q (1 - x + yfunc n x * yfunc n x)
 
+      -- | Bounds `norm (yfunc n s.1) <= rfunc n` uniformly on the unit ball.
       \lemma yfunc<=rfunc {n : Nat} {s : UnitBall} : norm (yfunc n s.1) <= rfunc n \elim n
         | 0 => rewrite (\peval yfunc 0 s.1, \peval rfunc 0, norm_zro) <=-refl
         | suc n => rewrite (\peval yfunc (suc n) s.1, \peval rfunc (suc n), norm_*q, inv $ ExUpperReal.*-rat rat_<=-dec $ RatField.<=_+-positive rat_<=-dec $ RatField.<=_*-positive rfunc>=0 rfunc>=0) $
           ExUpperRealSemigroup.<=_* (ExUpperReal.<=-rat.1 rat_<=-dec) $ transport (_ <=) ExUpperReal.+-rat $ norm_+ <=∘ ExUpperRealAbMonoid.<=_+ s.2 (transport (_ <=) (ExUpperReal.*-rat rfunc>=0 rfunc>=0) $ norm_*_<= <=∘ ExUpperRealSemigroup.<=_* yfunc<=rfunc yfunc<=rfunc)
 
+      -- | If `a` commutes with `x`, it commutes with each iterate.
       \lemma yfunc-comm {a x : E} (p : a * x = x * a) {n : Nat} : yfunc n x * a = a * yfunc n x \elim n
         | 0 => pmap (* a) (\peval yfunc 0 x) *> zro_*-left *> inv (pmap (a *) (\peval yfunc 0 x) *> zro_*-right)
         | suc n => pmap (* _) (\peval yfunc (suc n) x) *> inv *q-comm-left *> pmap (_ *q) (rdistr *> pmap2 (+) (rdistr_- *> pmap2 (-) (ide-left *> inv ide-right) (inv p) *> inv ldistr_-) (*-assoc *> pmap (_ *) (yfunc-comm p) *> inv *-assoc *> pmap (* _) (yfunc-comm p) *> *-assoc) *> inv ldistr) *> *q-comm-right *> inv (pmap (_ *) (\peval yfunc (suc n) x))
 
+      -- | Recurrence `y_{n+2} - y_{n+1} = ((y_{n+1} + y_n)(y_{n+1} - y_n))/2`.
       \lemma yfunc-rec {n : Nat} {x : E} : yfunc (suc (suc n)) x - yfunc (suc n) x = ratio 1 2 *q ((yfunc (suc n) x + yfunc n x) * (yfunc (suc n) x - yfunc n x))
         => pmap2 (-) (\peval yfunc (suc (suc n)) x) (\peval yfunc (suc n) x) *> inv toRatModule.*c-ldistr_- *> pmap (_ *q) (simplify $ inv $ *_sum_diff $ yfunc-comm $ yfunc-comm idp)
 
+      -- | Step-by-step and telescoped bounds `norm (y_{n+k} - y_n) <= rfunc(n+k) - rfunc n`.
       \lemma yfunc_rfunc-diff1 {n : Nat} {s : UnitBall} : norm (yfunc (suc n) s.1 - yfunc n s.1) <= rfunc (suc n) - rfunc n \elim n
         | 0 => rewrite (\peval yfunc 0 s.1, \peval rfunc 0) (simplify yfunc<=rfunc)
         | suc n => rewrite (yfunc-rec, rfunc-rec, norm_*q, inv $ ExUpperReal.*-rat rat_<=-dec $ RatField.<=_*-positive (RatField.<=_+-positive rfunc>=0 rfunc>=0) (RatField.to>=0 rfunc-inc), inv $ ExUpperReal.*-rat (RatField.<=_+-positive rfunc>=0 rfunc>=0) (RatField.to>=0 rfunc-inc), inv ExUpperReal.+-rat) $ ExUpperRealSemigroup.<=_* <=-refl $ norm_*_<= <=∘ ExUpperRealSemigroup.<=_* (norm_+ <=∘ ExUpperRealAbMonoid.<=_+ yfunc<=rfunc yfunc<=rfunc) yfunc_rfunc-diff1
 
+      -- | Step-by-step and telescoped bounds `norm (y_{n+k} - y_n) <= rfunc(n+k) - rfunc n`.
       \lemma yfunc_rfunc-diff {n k : Nat} {s : UnitBall} : norm (yfunc (n Nat.+ k) s.1 - yfunc n s.1) <= rfunc (n Nat.+ k) - rfunc n \elim k
         | 0 => simplify $ rewrite norm_zro <=-refl
         | suc k => transport2 (norm __ <= __) {yfunc (suc (n Nat.+ k)) s.1 - yfunc (n Nat.+ k) s.1 + (yfunc (n Nat.+ k) s.1 - yfunc n s.1)} {_} {rfunc (suc (n Nat.+ k)) - rfunc (n Nat.+ k) RatField.+ (rfunc (n Nat.+ k) - rfunc n)} simplify simplify $ norm_+ <=∘ transport (_ <=) ExUpperReal.+-rat (ExUpperRealAbMonoid.<=_+ yfunc_rfunc-diff1 yfunc_rfunc-diff)
 
+      -- | The shifted iterates `z_n = 1 - y_n`, which converge to `sqrt x`.
       \func zfunc (n : Nat) (x : E) => 1 - yfunc n x
 
+      -- | If `a` commutes with `x`, it commutes with each iterate.
       \lemma zfunc-comm {a x : E} (p : a * x = x * a) {n : Nat} : zfunc n x * a = a * zfunc n x
         => rdistr_- *> pmap2 (-) (ide-left *> inv ide-right) (yfunc-comm p) *> inv ldistr_-
 
+      -- | Same Cauchy-style bound for the `zfunc` sequence.
       \lemma zfunc_rfunc-diff {n k : Nat} (n<=k : n <= k) {s : UnitBall} : norm (zfunc k s.1 - zfunc n s.1) <= rfunc k - rfunc n
         => transport (ExUpperReal.<= _) norm_negative $ simplify $ rewrite (+-comm, inv $ <=_exists n<=k) yfunc_rfunc-diff
 
+      -- | Uniform/functional convergence of `zfunc` on `UnitBall`.
       \lemma zfunc-uni : IsUniFuncConvergent {_} {UnitBall} \lam n s => zfunc n s.1
         => metric-uni-funcConvergent.2 \lam eps>0 => \case convergent-metric-char.1 (limit-conv rfunc-limit) eps>0 \with {
           | inP (N,g) => inP (N, \lam s p => rewrite norm-dist $ zfunc_rfunc-diff p $ RatField.abs>=id <∘r g p)
         }
 
+      -- | Each iterate is a cover map, enabling passage to the completion.
       \lemma yfunc-cover (n : Nat) : CoverMap \this \this (yfunc n) \elim n
         | 0 => transportInv (CoverMap \this \this) (ext \lam x => \peval yfunc 0 x) (CoverMap.const 0)
         | suc n => transportInv (CoverMap \this \this) (path \lam i x => (\peval yfunc (suc n) x) i) $ *q-right-uniform ∘ +-uniform ∘ tuple (subtract-uniform ∘ tuple (const 1) id) (*-locally-uniform ∘ tuple (yfunc-cover n) (yfunc-cover n))
 
+      -- | Each iterate is a cover map, enabling passage to the completion.
       \lemma zfunc-cover (n : Nat) : CoverMap UnitBall \this \lam s => zfunc n s.1
         => subtract-uniform ∘ tuple (const 1) (yfunc-cover n) ∘ CoverTransfer-map __.1
 
+      -- | Uniform/functional convergence of `zfunc` on `UnitBall`.
       \lemma zfunc-funcConv : IsFuncConvergent {_} {UnitBall} \lam n s => zfunc n s.1
         => funcCovergent-uni zfunc-cover zfunc-uni
 
+      -- | Defines `sqrt x` as `funcLimit` of `zfunc` over `UnitBall` using its functional convergence.
       \func zfunc-lim => funcLimit {_} {UnitBall} (\lam n s => zfunc n s.1) zfunc-funcConv
 
+      -- | `sqrt x * sqrt x = x` — the constructed value squares back to `x`.
       \lemma isSquare : sqrt x |1-x|<=1 * sqrt x |1-x|<=1 = x
         => pmap2 (*) (\peval sqrt _ _) (\peval sqrt _ _) *> limit-unique (cont2-limit limit-isLimit limit-isLimit *-cont)
             (limit-metric-char.2 \lam eps>0 => \case convergent-metric-char.double (limit-conv rfunc-limit) (RatField.half>0 eps>0) \with {
               | inP (N,h) => inP (N, \lam {n} N<=n => rewrite (dist-symm, norm-dist, dist-lem n, norm_*q) $ ExUpperRealSemigroup.<=_* <=-refl (yfunc_rfunc-diff1 {_} {_} {x,|1-x|<=1}) $ rewrite (ExUpperReal.*-rat rat_<=-dec $ RatField.to>=0 rfunc-inc) $ transport (< _) RatField.*-comm $ RatField.<_rotate-right-conv rat_<-dec $ RatField.abs>=id <∘r h (N<=n <=∘ id<=suc) N<=n)
             })
         \where {
+          -- | Identity `z_n^2 - x = 2 *q (y_{n+1} - y_n)` driving the limit argument.
           \lemma dist-lem (n : Nat) : zfunc n x * zfunc n x - x = RatField.natCoef 2 *q (yfunc (suc n) x - yfunc n x)
             => rewrite (\peval yfunc (suc n) x, toRatModule.*c-ldistr_-, inv *q-assoc, ide_*q, toRatModule.*c-rdistr {RatField.ide} {RatField.ide}, ide_*q) equation.ring
         }
 
+      -- | If `y * x = x * y`, then `sqrt x` commutes with `y`.
       \lemma comm {y : E} (yx=xy : y * x = x * y) : sqrt x |1-x|<=1 * y = y * sqrt x |1-x|<=1
         => rewrite (\peval sqrt x _) $ limit-apply (*-locally-uniform ∘ tuple id (const y)) *> limit-ext (zfunc __ x * y) (y * zfunc __ x) (\lam i => zfunc-comm yx=xy) *> inv (limit-apply (*-locally-uniform ∘ tuple (const y) id))
     }
 
+  -- | If `norm (1 - x) <= 1`, then `x` is a square (`IsSquare x`).
   \lemma norm-square {x : E} (p : norm (1 - x) <= RatField.ide) : IsSquare x
     => inP (sqrt x p, sqrt.isSquare)
 
+  -- | If `norm x <= 1`, then `1 - x` is a square.
   \lemma norm-square' {x : E} (p : norm x <= RatField.ide) : IsSquare (1 - x)
     => norm-square (simplify p)
 
+  -- | If `norm (q *q 1 - x) <= q` for `q > 0`, then `x` is a square (rescaled version).
   \lemma norm_*q-square {q : Rat} (q>0 : 0 < q) {x : E} (p : norm (q *q 1 - x) <= q) : IsSquare x
     => \let s => sqrt (RatField.finv q *q x) $ transport2 (ExUpperReal.<=) (inv (norm_*q-ofPos $ <=-less $ RatField.finv>0 q>0) *> pmap norm (toRatModule.*c-ldistr_- *> pmap (- _) (inv *q-assoc *> pmap (*q _) (RatField.finv-left $ RatField.>_/= q>0) *> ide_*q))) (ExUpperReal.*-rat (<=-less $ RatField.finv>0 q>0) (<=-less q>0) *> pmap ExUpperReal.fromRat (RatField.finv-left $ RatField.>_/= q>0)) (ExUpperRealSemigroup.<=_* ExUpperRealAbMonoid.<=-refl p)
        \in inP (sqrtR q *r s, inv *r-comm-left *> pmap (_ *r) (inv *r-comm-right) *> inv toRealAlgebra.*c-assoc *> pmap2 (*r) (pow_sqrt $ rat_real_<=.1 $ <=-less q>0) sqrt.isSquare *> *r_*q *> inv *q-assoc *> pmap (*q x) (RatField.finv-right $ RatField.>_/= q>0) *> ide_*q)
@@ -161,31 +209,38 @@
   \open CoverMap
   \open ProductCoverSpace
 
+  -- | Rational sequence with `r_0 = 0` and `r_{n+1} = (1 + r_n^2)/2`, bounding the iterates.
   \sfunc rfunc (n : Nat) : Rat \elim n
     | 0 => 0
     | suc n => ratio 1 2 * (1 + rfunc n * rfunc n)
 
+  -- | `rfunc n` lies in `[0, 1]`.
   \lemma rfunc>=0 {n : Nat} : 0 <= rfunc n \elim n
     | 0 => rewrite (\peval rfunc 0) <=-refl
     | suc n => rewrite (\peval rfunc (suc n)) $ RatField.<=_*-positive rat_<=-dec $ RatField.<=_+-positive rat_<=-dec $ RatField.<=_*-positive rfunc>=0 rfunc>=0
 
+  -- | `rfunc n` lies in `[0, 1]`.
   \lemma rfunc<=1 {n : Nat} : rfunc n <= 1 \elim n
     | 0 => rewrite (\peval rfunc 0) rat_<=-dec
     | suc n => rewrite (\peval rfunc (suc n)) $ RatField.<=_*_positive-right rat_<=-dec $ RatField.<=_+ <=-refl $ RatField.<=_*_positive-left rfunc<=1 rfunc>=0 <=∘ ide-left =<= rfunc<=1
 
+  -- | The sequence is monotone nondecreasing.
   \lemma rfunc-inc {n : Nat} : rfunc n <= rfunc (suc n) \elim n
     | 0 => rewrite (\peval rfunc 0) rfunc>=0
     | suc n => rewrite (\peval rfunc (suc (suc n))) $ RatField.from>=0 $ transport (0 <=) {ratio 1 2 * ((1 - rfunc (suc n)) * (1 - rfunc (suc n)))}
       (later $ rewrite (RatField.ldistr_-, RatField.rdistr_-, RatField.rdistr_-) linarith) -- TODO: equation.ring should work here, but it doesn't support rational coefficients yet
       $ RatField.<=_*-positive rat_<=-dec RatField.square_>=0
 
+  -- | Recurrence `r_{n+2} - r_{n+1} = ((r_{n+1} + r_n)(r_{n+1} - r_n))/2`.
   \lemma rfunc-rec {n : Nat} : rfunc (suc (suc n)) - rfunc (suc n) = ratio 1 2 * ((rfunc (suc n) + rfunc n) * (rfunc (suc n) - rfunc n))
     => rewrite (\peval rfunc (suc (suc n)), \peval rfunc (suc n)) equation.cRing
 
+  -- | Geometric tail estimate `1 - rfunc n <= (1 - eps/2)^n` whenever `rfunc n <= 1 - eps`.
   \lemma rfunc-bound {eps : Rat} (eps>0 : 0 < eps) {n : Nat} (p : rfunc n <= 1 - eps) : 1 - rfunc n <= RatField.pow (1 - ratio 1 2 * eps) n \elim n
     | 0 => rewrite (\peval rfunc 0) <=-refl
     | suc n => transportInv (<= _) {_} {(1 - rfunc n) * (ratio 1 2 * (1 + rfunc n))} (pmap (1 -) (\peval rfunc (suc n)) *> equation.cRing idp) (RatField.<=_*_positive-right (linarith $ rfunc<=1 {n}) (linarith $ rfunc-inc <=∘ p)) <=∘ RatField.<=_*_positive-left (rfunc-bound eps>0 $ rfunc-inc <=∘ p) (linarith rfunc>=0)
 
+  -- | `rfunc` converges to `1` in the topological sense.
   \lemma rfunc-limit : TopSpace.IsLimit rfunc 1
     => limit-metric-char.2 \lam {eps} eps>0 =>
       \have B => rat_<1_pow-bound {1 - ratio 1 2 * eps} linarith eps>0
@@ -198,6 +253,10 @@
 
 \class RealBanachCAlgebra \extends RealBanachAlgebra, CRing
 
+{- | Instance promoting any `RealPreBanachAlgebra X` to a `RealBanachAlgebra` on its `BanachCompletion`, with
+ -   multiplication, unit (`pointCF 1`), associativity, distributivity, identity laws, and submultiplicative norm bounds
+ -   inherited from the locally uniform lift.
+ -}
 \instance BanachAlgebraCompletion (X : RealPreBanachAlgebra) : RealBanachAlgebra
   | BanachSpace => BanachCompletion X
   | * => *-func
@@ -218,8 +277,12 @@
     \open CoverMap
     \open TopAbGroupCompletion
 
+    {- | The product cover map `Completion X ⨯ Completion X -> Completion X` obtained by `lift2` of locally uniform
+     -   multiplication.
+     -}
     \func *-cover : CoverMap (Completion X `ProductCoverSpace` Completion X) (Completion X)
       => lift2 *-locally-uniform
 
+    -- | The induced binary multiplication on regular Cauchy filters.
     \func *-func (x y : RegularCauchyFilter X) => *-cover (x,y)
   }

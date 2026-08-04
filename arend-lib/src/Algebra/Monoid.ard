@@ -1,3 +1,16 @@
+{- | Algebraic hierarchy of semigroups, monoids, and their commutative and cancellative variants, together with
+ -   divisibility and invertibility records.
+ -
+ -   This module sets up the foundational multiplicative structures used throughout the algebra library. `Semigroup` and
+ -   `Monoid` are introduced as classes that other algebraic structures extend, with parallel `AddMonoid`/`AbMonoid`
+ -   versions for additive notation (the `op` constructor and `fromMonoid`/`toMonoid` coercions let one switch sides
+ -   freely). Divisibility is captured by witness records `LDiv`/`RDiv` carrying the explicit cofactor, and
+ -   invertibility (`Inv`, `LInv`, `RInv`) is built on top of them as the special case where the elem is `ide`; this
+ -   presentation makes inverses propositional and easy to manipulate. Iterated operations (`pow`, `*n`, `BigProd`,
+ -   `BigSum`, and the `FinProd`/`FinSum` versions over finite sets) collect the standard combinatorial lemmas
+ -   (associativity, splitting, permutation invariance) needed by the rest of the library.
+ -}
+
 \import Algebra.Meta
 \import Algebra.Pointed
 \import Arith.Nat
@@ -26,72 +39,92 @@
 \import Set.Fin.Instances
 \import Set.Fin.Pigeonhole
 
+-- | Class extending `BaseSet` with associative binary `*`.
 \class Semigroup \extends BaseSet {
   | \infixl 7 * : E -> E -> E
   | *-assoc {x y z : E} : (x * y) * z = x * (y * z)
 
+  -- | Predicate `∃ y, y * y = x`.
   \func IsSquare (x : E) => ∃ (y : E) (y * y = x)
 
+  -- | Opposite semigroup with arguments flipped.
   \protected \func op : Semigroup E \cowith
     | * x y => y * x
     | *-assoc => inv *-assoc
 }
 
+-- | Class extending `Pointed` and `Semigroup`, with left and right identity laws for `ide`.
 \class Monoid \extends Pointed, Semigroup {
   | ide-left {x : E} : ide * x = x
   | ide-right {x : E} : x * ide = x
 
+  -- | Iterated product `pow a n = a * ... * a` (n times).
   \func pow (a : E) (n : Nat) : E \elim n
     | 0 => ide
     | suc n => pow a n * a
 
+  -- | `pow a (n+m) = pow a n * pow a m` and `pow a (n*m) = pow (pow a n) m`.
   \lemma pow_+ {a : E} {n m : Nat} : pow a (n + m) = pow a n * pow a m \elim m
     | 0 => inv ide-right
     | suc m => pmap (* a) pow_+ *> *-assoc
 
+  -- | `pow a (n+m) = pow a n * pow a m` and `pow a (n*m) = pow (pow a n) m`.
   \lemma pow_* {a : E} {n m : Nat} : pow a (n Nat.* m) = pow (pow a n) m \elim m
     | 0 => idp
     | suc m => pow_+ *> pmap (* _) pow_*
 
+  -- | Commutation lemmas for powers when the bases commute.
   \lemma pow-comm1 {a b : E} (p : a * b = b * a) {n : Nat} : pow a n * b = b * pow a n \elim n
     | 0 => ide-left *> inv ide-right
     | suc n => equation.monoid {p, pow-comm1 p}
 
+  -- | Commutation lemmas for powers when the bases commute.
   \lemma pow-comm2 {a b : E} (p : a * b = b * a) {n m : Nat} : pow a n * pow b m = pow b m * pow a n
     => pow-comm1 $ inv $ pow-comm1 (inv p)
 
+  -- | Commutation lemmas for powers when the bases commute.
   \lemma pow-comm {a b : E} (p : a * b = b * a) {n : Nat} : pow (a * b) n = pow a n * pow b n \elim n
     | 0 => inv ide-left
     | suc n => equation.monoid {pow-comm p, pow-comm1 (inv p)}
 
+  -- | `pow ide n = ide` and `a * pow a n = pow a n * a`.
   \lemma pow_ide {n : Nat} : pow ide n = ide \elim n
     | 0 => idp
     | suc n => ide-right *> pow_ide
 
+  -- | `pow ide n = ide` and `a * pow a n = pow a n * a`.
   \lemma pow-left {a : E} {n : Nat} : a * pow a n = pow a n * a
     => inv (pow-comm1 idp)
 
+  -- | `BigProd l = l 0 * l 1 * ... * ide` over an array.
   \func BigProd (l : Array E) => Big (*) ide l
 
+  -- | Extensionality in the entries.
   \lemma BigProd-ext {n : Nat} {l l' : Array E n} (p : \Pi (i : Fin n) -> l i = l' i) : BigProd l = BigProd l'
     => pmap BigProd (arrayExt p)
 
+  -- | Vanishes to `ide` when all entries are `ide`.
   \lemma BigProd_ide {l : Array E} (p : \Pi (j : Fin l.len) -> l j = ide) : BigProd l = ide
     => AddMonoid.BigSum_zro {AddMonoid.fromMonoid \this} p
 
+  -- | Reduces to `l i` when all other entries equal `1`.
   \lemma BigProd-unique {l : Array E} (i : Fin l.len) (p : \Pi (j : Fin l.len) -> i /= j -> l j = 1) : BigProd l = l i
     => AddMonoid.BigSum-unique {AddMonoid.fromMonoid \this} i p
 
+  -- | Splitting on concatenation and on the last entry.
   \lemma BigProd_++ {l l' : Array E} : BigProd (l ++ l') = BigProd l * BigProd l'
     => AddMonoid.BigSum_++ {AddMonoid.fromMonoid \this}
 
+  -- | Splitting on concatenation and on the last entry.
   \lemma BigProd_suc {n : Nat} {l : Array E (suc n)} : BigProd l = BigProd (\new Array E n (\lam i => l i)) * l (n Nat.mod suc n)
     => AddMonoid.BigSum_suc {AddMonoid.fromMonoid \this}
 
+  -- | `BigProd (replicate n x) = pow x n` and the `ide` variant.
   \lemma BigProd_replicate {x : E} {n : Nat} : BigProd (replicate n x) = pow x n \elim n
     | 0 => idp
     | suc n => pmap (x *) BigProd_replicate *> pow-left
 
+  -- | `BigProd (replicate n x) = pow x n` and the `ide` variant.
   \lemma BigProd_replicate1 {n : Nat} : BigProd (replicate n ide) = ide
     => BigProd_replicate *> pow_ide
 
@@ -108,6 +141,7 @@
     | 0 => IsCentral_ide
     | suc n => IsCentral_* (IsCentral_pow xc) xc
 
+  -- | Opposite monoid with `*` reversed.
   \protected \func op : Monoid E \cowith
     | ide => ide
     | * x y => y * x
@@ -115,6 +149,7 @@
     | ide-right => ide-left
     | *-assoc => inv *-assoc
 } \where {
+  -- | Extensionality for monoids — two monoids agree once their carriers, identities, and operations agree.
   \protected \func equals.{u} {M N : Monoid.{u}} (p : M = {\Set u} N) (q : \let f x => coe (p @) x right \in \Pi (x y : M) -> f (x * y) = f x * f y) : M = {Monoid.{u}} N
     => exts (p, ide-equality, q)
     \where {
@@ -130,24 +165,29 @@
                ide               `qed
     }
 
+  -- | Carrier record with `val`, `elem`, and a candidate cofactor `inv`.
   \record DivBase {M : Monoid} (\coerce val : M) (elem inv : M)
 
   -- | The type of left divisors of an element
   \record LDiv \extends DivBase
     | inv-right : val * inv = elem
     \where {
+      -- | Constructor and product-stability of `LDiv`.
       \func make {M : Monoid} {a b : M} (c : M) (p : a * c = b) : LDiv a b
         => \new LDiv { | inv => c | inv-right => p }
 
+      -- | Constructor and product-stability of `LDiv`.
       \lemma product {M : CMonoid} {x y z w : M} (x|y : LDiv x y) (z|w : LDiv z w) : LDiv (x * z) (y * w) (z|w.inv * x|y.inv) \cowith
         | inv-right => *-assoc *> pmap (x *) (inv *-assoc *> pmap (* _) z|w.inv-right *> *-comm) *> inv *-assoc *> pmap (* w) x|y.inv-right
 
+      -- | Constructor and product-stability of `LDiv`.
       \lemma product-left {M : Monoid} (x : M) {y z : M} (y|z : LDiv y z) : LDiv (x * y) (x * z) y|z.inv \cowith
         | inv-right =>
             (x * y) * y|z.inv ==< *-assoc >==
             x * (y * y|z.inv) ==< pmap (x *) y|z.inv-right >==
             x * z             `qed
 
+      -- | Constructor and product-stability of `LDiv`.
       \lemma product-right {M : CMonoid} (z : M) {x y : M} (x|y : LDiv x y) : LDiv (x * z) (y * z) x|y.inv \cowith
         | inv-right =>
             (x * z) * x|y.inv ==< pmap (* x|y.inv) *-comm >==
@@ -156,18 +196,22 @@
             z * y             ==< *-comm >==
             y * z             `qed
 
+      -- | `x | y` implies `x | (y * z)` (left/right placement).
       \lemma factor-left {M : Monoid} {x y z : M} (x|y : LDiv x y) : LDiv x (y * z) (x|y.inv * z) \cowith
         | inv-right => inv *-assoc *> pmap (* z) x|y.inv-right
 
+      -- | `x | y` implies `x | (y * z)` (left/right placement).
       \lemma factor-right {M : CMonoid} {x y z : M} (x|z : LDiv x z) : LDiv x (y * z) (x|z.inv * y) \cowith
         | inv-right => inv *-assoc *> pmap (* y) x|z.inv-right *> *-comm
 
+      -- | Cancel a common factor in cancellative monoids.
       \lemma cancel-left {M : CancelMonoid} (x : M) {y z : M} (x*y|x*z : LDiv (x * y) (x * z)) : LDiv y z x*y|x*z.inv \cowith
         | inv-right => M.cancel_*-left x (
             x * (y * x*y|x*z.inv) ==< inv *-assoc >==
             (x * y) * x*y|x*z.inv ==< x*y|x*z.inv-right >==
             x * z                 `qed)
 
+      -- | Cancel a common factor in cancellative monoids.
       \lemma cancel-right {M : CancelCMonoid} {x y : M} (z : M) (x*z|y*z : LDiv (x * z) (y * z)) : LDiv x y x*z|y*z.inv \cowith
         | inv-right => M.cancel_*-right z (
             (x * x*z|y*z.inv) * z ==< *-comm >==
@@ -176,6 +220,7 @@
             (x * z) * x*z|y*z.inv ==< x*z|y*z.inv-right >==
             y * z                 `qed)
 
+      -- | Transitivity of divisibility.
       \lemma trans {M : Monoid} {x y z : M} (x|y : LDiv x y) (y|z : LDiv y z) : LDiv x z (x|y.inv * y|z.inv) \cowith
         | inv-right =>
             x * (x|y.inv * y|z.inv) ==< inv *-assoc >==
@@ -183,27 +228,34 @@
             y * y|z.inv             ==< y|z.inv-right >==
             z                       `qed
 
+      -- | `ide | x` and `x | x`.
       \lemma ide-div {M : Monoid} {x : M} : LDiv ide x x \cowith
         | inv-right => ide-left
 
+      -- | `ide | x` and `x | x`.
       \lemma id-div {M : Monoid} {x : M} : LDiv x x ide \cowith
         | inv-right => ide-right
 
+      -- | Swap `val` and `inv` in a commutative monoid.
       \lemma swap {M : CMonoid} (l : LDiv {M}) : LDiv l.inv l.elem l.val \cowith
         | inv-right => *-comm *> l.inv-right
 
+      -- | Idempotence consequence `l * l.elem = l.elem` when `l * l = l`.
       \lemma idempt {M : Monoid} (l : LDiv {M}) (p : l * l = l) : l * l.elem = l.elem
         => inv (*-assoc *> pmap (l *) l.inv-right) *> pmap (* _) p *> l.inv-right
 
+      -- | Propositional level of `LDiv` in the presence of cancellation.
       \use \lemma cancelProp {M : Monoid} (x : M) (q : \Pi {a b : M} -> x * a = x * b -> a = b) (y : M) : isProp (LDiv x y) =>
         \lam (d1 d2 : LDiv x y) =>
             \have p => q (d1.inv-right *> inv d2.inv-right)
             \in path (\lam i => \new LDiv x y (p @ i) (prop-dpi (x * (p @ __) = y) d1.inv-right d2.inv-right @ i))
 
+      -- | Propositional level of `LDiv` in the presence of cancellation.
       \lemma fromTruncP {M : Monoid} {x y : M} (q : \Pi {a b : M} -> x * a = x * b -> a = b) (t : TruncP (LDiv x y))
         : LDiv x y \level cancelProp x q y \elim t
         | inP x|y => x|y
 
+      -- | Propositional level of `LDiv` in the presence of cancellation.
       \use \level levelProp {M : CancelMonoid} (x y : M) : isProp (LDiv x y) => cancelProp x (M.cancel_*-left x) y
     }
 
@@ -270,6 +322,7 @@
       | inv-left => inv-right
       | inv-right => inv-left
   } \where {
+      -- | Inverses are unique and `Inv x` is propositional.
       \use \lemma inv-isUnique {M : Monoid} (j j' : Inv {M}) (p : j.val = j'.val) : j.inv = j'.inv =>
         j.inv                 ==< inv ide-left >==
         ide * j.inv           ==< pmap (* j.inv) (inv j'.inv-left) >==
@@ -279,17 +332,20 @@
         j'.inv * ide          ==< ide-right >==
         j'.inv                `qed
 
+      -- | Inverses are unique and `Inv x` is propositional.
       \use \level levelProp {M : Monoid} {x : M} (j j' : Inv x) : j = j' =>
         \have p => inv-isUnique j j' idp
         \in path (\lam i => \new Inv x (p @ i)
                                      (prop-dpi ((p @ __) * x = ide) j.inv-left j'.inv-left @ i)
                                      (prop-dpi (x * (p @ __) = ide) j.inv-right j'.inv-right @ i))
 
+      -- | `ide` is invertible.
       \lemma ide-isInv {M : Monoid} : Inv {M} ide \cowith
         | inv => ide
         | inv-left => ide-left
         | inv-right => ide-left
 
+      -- | Product of invertibles is invertible with explicit cofactor `j.inv * i.inv`.
       \lemma product {M : Monoid} (i j : Inv {M}) : Inv (i * j) => func
         \where {
           \func func : Inv (i * j) \cowith
@@ -313,8 +369,10 @@
       | 0 => ide-isInv
       | suc n => Inv_* (Inv_pow xi) xi
 
+    -- | Product of invertibles is invertible with explicit cofactor `j.inv * i.inv`.
     \lemma prod {M : Monoid} (i j : Inv {M}) : Inv (i * j) (j.inv * i.inv) => product.func
 
+      -- | Factor an `Inv (x * y)` into `Inv x` (resp. `Inv y`) given a one-sided inverse on the other side.
       \lemma factor-right {M : Monoid} {x y : M} (i : LInv x) (j : Inv (x * y)) : Inv y \cowith
         | inv => j.inv * x
         | inv-left => *-assoc *> j.inv-left
@@ -329,29 +387,36 @@
           i.inv * x                       ==< i.inv-left >==
           ide                             `qed
 
+      -- | Factor an `Inv (x * y)` into `Inv x` (resp. `Inv y`) given a one-sided inverse on the other side.
       \lemma factor-left {M : Monoid} {x y : M} (i : RInv y) (j : Inv (x * y)) : Inv x =>
         \have t : Inv {M.op} x => factor-right {M.op} (\new LInv y i.inv i.inv-right) (\new Inv (x * y) j.inv j.inv-right j.inv-left)
         \in \new Inv t.val t.inv t.inv-right t.inv-left
 
+      -- | Convenient constructors in commutative monoids from one-sided equations or divisibility witnesses.
       \lemma lmake {M : CMonoid} {x : M} (y : M) (p : y * x = ide) : Inv x y \cowith
         | inv-left => p
         | inv-right => *-comm *> p
 
+      -- | Convenient constructors in commutative monoids from one-sided equations or divisibility witnesses.
       \lemma rmake {M : CMonoid} {x : M} (y : M) (p : x * y = ide) : Inv x y \cowith
         | inv-left => *-comm *> p
         | inv-right => p
 
+      -- | Convenient constructors in commutative monoids from one-sided equations or divisibility witnesses.
       \lemma ldiv {M : CMonoid} {x : M} (d : LDiv x ide) : Inv x d.inv \cowith
         | inv-left => *-comm *> d.inv-right
         | inv-right => d.inv-right
 
+      -- | Convenient constructors in commutative monoids from one-sided equations or divisibility witnesses.
       \lemma rdiv {M : CMonoid} {x : M} (d : RDiv x ide) : Inv x d.inv \cowith
         | inv-left => d.inv-left
         | inv-right => *-comm *> d.inv-left
 
+      -- | In a `CMonoid`, invertibility of a product gives invertibility of each factor.
       \lemma cfactor-right {M : CMonoid} {x y : M} (i : Inv (x * y)) : Inv y
         => lmake (i.inv * x) (*-assoc *> i.inv-left)
 
+      -- | In a `CMonoid`, invertibility of a product gives invertibility of each factor.
       \lemma cfactor-left {M : CMonoid} {x y : M} (i : Inv (x * y)) : Inv x
         => cfactor-right (transport (Inv __) *-comm i)
 
@@ -360,104 +425,130 @@
     }
 }
 
+-- | `x` and `y` differ by an invertible factor: `Σ (u : Inv) (x = u * y)`.
 \func associates {M : Monoid} (x y : M) => \Sigma (u : Monoid.Inv {M}) (x = u * y)
   \where {
+    -- | In a `CancelMonoid`, being associates is propositional.
     \use \level levelProp {M : CancelMonoid} (x y : M) (t t' : associates x y) : t = t'
       => \have eq => cancel_*-right y (inv t.2 *> t'.2)
          \in ext (ext (eq, Monoid.Inv.inv-isUnique t.1 t'.1 eq))
   }
 
+-- | Symmetry of the associates relation.
 \func associates-sym {M : Monoid} {x y : M} (a : associates x y) : associates y x
   => (Monoid.Inv.reverse {a.1}, inv $ pmap (_ *) a.2 *> inv *-assoc *> pmap (* y) a.1.inv-left *> ide-left)
 
+-- | Additive analogue of `Monoid`, extending `AddPointed` with `+`, `zro`, identity laws, and `+-assoc`.
 \class AddMonoid \extends AddPointed {
   | \infixl 6 + : E -> E -> E
   | zro-left {x : E} : zro + x = x
   | zro-right {x : E} : x + zro = x
   | +-assoc {x y z : E} : (x + y) + z = x + (y + z)
 
+  -- | Two-sided inverses for `+` are unique.
   \lemma negative-unique {x z : E} (y : E) (p : x + y = zro) (q : y + z = zro) : x = z
     => inv (+-assoc *> pmap (x +) q *> zro-right) *> pmap (+ z) p *> zro-left
 
+  -- | Iterated addition `n *n a`.
   \func \infixl 7 *n (n : Nat) (a : E) : E \elim n
     | 0 => zro
     | suc n => n *n a + a
 
+  -- | Relate `*n` to `pow` and prove distributivity/associativity in `n,m`.
   \protected \lemma *n_pow {n : Nat} {a : E} : n *n a = \this.pow a n \elim n
     | 0 => idp
     | suc n => pmap (+ a) *n_pow
 
+  -- | Relate `*n` to `pow` and prove distributivity/associativity in `n,m`.
   \lemma *n-rdistr {n m : Nat} {a : E} : (n Nat.+ m) *n a = n *n a + m *n a
     => *n_pow *> \this.pow_+ *> inv (pmap2 (+) *n_pow *n_pow)
 
+  -- | Relate `*n` to `pow` and prove distributivity/associativity in `n,m`.
   \lemma *n-assoc {n m : Nat} {a : E} : (n Nat.* m) *n a = n *n (m *n a)
     => pmap (*n a) NatSemiring.*-comm *> *n_pow *> \this.pow_* *> inv *n_pow *> pmap (n *n) (inv *n_pow)
 
+  -- | Sum of an array, dual to `BigProd`.
   \func BigSum (l : Array E) => Big (+) zro l
 
+  -- | Extensionality.
   \lemma BigSum-ext {n : Nat} {l l' : Array E n} (p : \Pi (i : Fin n) -> l i = l' i) : BigSum l = BigSum l'
     => pmap BigSum (arrayExt p)
 
+  -- | Splitting on concatenation, including a flattening lemma over arrays of arrays.
   \lemma BigSum_++ {l l' : Array E} : BigSum (l ++ l') = BigSum l + BigSum l' \elim l
     | nil => inv zro-left
     | :: a l => unfold BigSum (rewrite BigSum_++ (inv +-assoc))
 
+  -- | Splitting on concatenation, including a flattening lemma over arrays of arrays.
   \lemma BigSum_Big++ {ls : Array (Array E)} : BigSum (Big (++) nil ls) = BigSum (map BigSum ls) \elim ls
     | nil => idp
     | l :: ls => BigSum_++ *> pmap (_ +) BigSum_Big++
 
+  -- | Splitting on concatenation, including a flattening lemma over arrays of arrays.
   \lemma BigSum_++' {l : Array E} {n : Nat} {l' : Array E n} : BigSum (l ++' l') = BigSum l + BigSum l' \elim l
     | nil => inv zro-left
     | a :: l => pmap (a +) BigSum_++' *> inv +-assoc
 
+  -- | Splits a sum of length `n + m` into two sub-sums via `fin-inc` and `fin-raise`.
   \lemma BigSum-split {n m : Nat} {l : Array E (n Nat.+ m)}
     : BigSum l = BigSum (\lam (i : Fin n) => l (fin-inc i)) + BigSum (\lam (j : Fin m) => l (fin-raise j)) \elim n, l
     | 0, l => inv zro-left
     | suc n, a :: l => pmap (a +) BigSum-split *> inv +-assoc
 
+  -- | Pull the last summand out.
   \lemma BigSum_suc {n : Nat} {l : Array E (suc n)} : BigSum l = BigSum (\new Array E n (\lam i => l i)) + l (n Nat.mod suc n) \elim n, l
     | 0, :: a nil => simplify
     | suc n, :: a l => pmap (a +) (BigSum_suc {_} {n} {l} *> pmap (_ + (a :: l) __) (fin_nat-inj (pmap suc (mod_< id<suc) *> inv (mod_< id<suc)))) *> inv +-assoc
 
+  -- | Pull the last summand out.
   \lemma BigSum_suc-nat {n : Nat} {f : Nat -> E} : BigSum (\new Array E (suc n) (f __)) = BigSum (\new Array E n (f __)) + f n
     => BigSum_suc {_} {n} {f __} *> pmap (_ + f __) (mod_< id<suc)
 
+  -- | Vanishing when entries are `0`.
   \lemma BigSum_zro {l : Array E} (p : \Pi (j : Fin l.len) -> l j = zro) : BigSum l = zro \elim l
     | nil => idp
     | :: a arr => pmap2 (+) (p 0) (BigSum_zro (\lam j => p (suc j))) *> zro-left
 
+  -- | Reduce to one or two non-zero entries.
   \lemma BigSum-unique {l : Array E} (i : Fin l.len) (p : \Pi (j : Fin l.len) -> i /= j -> l j = 0) : BigSum l = l i \elim l, i
     | a :: l, 0 => pmap (a +) (BigSum_zro \lam j => p (suc j) (\case __)) *> zro-right
     | a :: l, suc i => pmap (a +) (BigSum-unique i \lam j q => p (suc j) (fsuc/= q)) *> pmap (+ l i) (p 0 (\case __)) *> zro-left
 
+  -- | Reduce to one or two non-zero entries.
   \lemma BigSum-unique2 {l : Array E} {i j : Fin l.len} (i<j : i NatOrder.< j) (p : \Pi (k : Fin l.len) -> k /= i -> k /= j -> l k = 0) : BigSum l = l i + l j \elim l, i, j, i<j
     | a :: l, 0, suc j, _ => pmap (a +) $ BigSum-unique j \lam k j/=k => p (suc k) (\case __) $ fsuc/= \lam q => j/=k (inv q)
     | a :: l, suc i, suc j, NatOrder.suc<suc i<j => pmap (+ _) (p 0 (\case __) (\case __)) *> zro-left *> BigSum-unique2 i<j (\lam k k/=i k/=j => p (suc k) (fsuc/= k/=i) (fsuc/= k/=j))
 
+  -- | A predicate closed under `0` and `+` is preserved by `BigSum`.
   \lemma BigSum-pred {P : E -> \Prop} (P0 : P 0) (P+ : \Pi {x y : E} -> P x -> P y -> P (x + y)) {l : Array E} (p : \Pi (j : Fin l.len) -> P (l j)) : P (BigSum l) \elim l
     | nil => P0
     | a :: l => P+ (p 0) $ BigSum-pred P0 P+ \lam j => p (suc j)
 
+  -- | Vanishing when entries are `0`.
   \lemma BigSum_replicate0 {n : Nat} : BigSum (replicate n zro) = 0 \elim n
     | 0 => idp
     | suc n => zro-left *> BigSum_replicate0
 
+  -- | Equate two sums when one array is a prefix-style subset of the other (extra entries zero).
   \lemma BigSum-subset {l l' : Array E} (p : l.len <= l'.len) (q1 : \Pi (j : Fin l.len) -> l j = l' (toFin j $ fin_< j <∘l p)) (q2 : \Pi (j : Fin l'.len) -> l.len <= j -> l' j = 0) : BigSum l = BigSum l' \elim l, l'
     | nil, l => inv $ BigSum_zro \lam j => q2 j zero<=_
     | a :: l, nil => absurd linarith
     | a :: l, a' :: l' => pmap2 (+) (q1 0) $ BigSum-subset (suc<=suc.conv p) (\lam j => q1 (suc j)) (\lam j p => q2 (suc j) (suc<=suc p))
 
+  -- | Truncate trailing zeros and transpose `fit`-padded sums.
   \lemma fit_BigSum {n : Nat} {l : Array E} (p : \Pi (j : Fin l.len) -> n <= j -> l j = 0) : BigSum (fit 0 {n} l) = BigSum l \elim n, l
     | 0, l => inv $ BigSum_zro \lam j => p j zero<=_
     | suc n, nil => BigSum_replicate0 {_} {suc n}
     | suc n, a :: l => pmap (a +) $ fit_BigSum \lam j n<=j => p (suc j) (suc<=suc n<=j)
 
+  -- | Truncate trailing zeros and transpose `fit`-padded sums.
   \lemma fit-transpose {n m : Nat} (l : Array (Array E m) n) : BigSum (\lam j => fit zro (l j) j) = BigSum (\lam k => fit zro (l __ k) k) \elim n, m, l
     | 0, 0, nil => idp
     | 0, suc m, nil => inv $ BigSum_replicate0 {_} {suc m}
     | suc n, 0, c :: l => BigSum_replicate0 {_} {suc n}
     | suc n, suc m, c :: l => pmap (c 0 +) $ fit-transpose \lam i => \lam j => l i (suc j)
 
+  -- | Opposite additive monoid.
   \protected \func op : AddMonoid E \cowith
     | zro => 0
     | + a b => b + a
@@ -465,90 +556,115 @@
     | zro-right => zro-left
     | +-assoc => inv +-assoc
 } \where {
+    -- | Coercions between additive and multiplicative presentations.
     \use \coerce fromMonoid (M : Monoid) => \new AddMonoid M.E M.ide (M.*) M.ide-left M.ide-right M.*-assoc
+    -- | Coercions between additive and multiplicative presentations.
     \use \coerce toMonoid (M : AddMonoid) => \new Monoid M.E M.zro (M.+) M.+-assoc M.zro-left M.zro-right
   }
 
+-- | Commutative semigroup, adds `*-comm`.
 \class CSemigroup \extends Semigroup
   | *-comm {x y : E} : x * y = y * x
 
+-- | Commutative monoid extending `Monoid` and `CSemigroup`; derives `ide-left`/`ide-right` from commutativity.
 \class CMonoid \extends Monoid, CSemigroup {
   \default ide-left => *-comm *> ide-right
   \default ide-right => *-comm *> ide-left
 
+  -- | From `LDiv (x * y) x` deduce `Inv y` (using cancellation or commutativity).
   \lemma divInv {x y : E} (cancel : \Pi {a b : E} -> x * a = x * b -> a = b) (xy|x : LDiv (x * y) x) : Inv y
     => Inv.lmake xy|x.inv (*-comm *> cancel (inv *-assoc *> xy|x.inv-right *> inv ide-right))
 
   \lemma pow_*-comm {a b : E} {n : Nat} : pow (a * b) n = pow a n * pow b n
     => pow-comm *-comm
 
+  {- | Property that every descending chain of divisibilities `a (suc i) | a i` eventually stabilizes
+   -   (`LDiv (a j) (a (suc j))`).
+   -}
   \func DivChain : \Prop
     => \Pi (a : Nat -> E) -> (\Pi (i : Nat) -> TruncP (LDiv (a (suc i)) (a i))) -> ∃ (j : Nat) (LDiv (a j) (a (suc j)))
 
+  -- | Products distribute pointwise over `*` and over `pow`.
   \lemma BigProd_* {n : Nat} {l l' : Array E n} : BigProd (\lam i => l i * l' i) = BigProd l * BigProd l'
     => AbMonoid.BigSum_+ {AbMonoid.fromCMonoid \this}
 
+  -- | Products distribute pointwise over `*` and over `pow`.
   \lemma BigProd_pow {k : Nat} {l : Array E} : BigProd (\lam i => pow (l i) k) = pow (BigProd l) k \elim k
     | 0 => BigProd_replicate1
     | suc k => BigProd_* {_} {_} {\lam i => pow (l i) k} *> pmap (* _) BigProd_pow
 
+  -- | Permutation invariance.
   \lemma BigProd_EPerm {l l' : Array E} (e : EPerm l l') : BigProd l = BigProd l'
     => AbMonoid.BigSum_EPerm {AbMonoid.fromCMonoid \this} e
 
+  -- | Permutation invariance.
   \lemma BigProd_Perm {n : Nat} {l l' : Array E n} (p : Perm l l') : BigProd l = BigProd l'
     => AbMonoid.BigSum_Perm {AbMonoid.fromCMonoid \this} p
 
+  -- | Each factor divides the product, and pointwise divisibility lifts to the product.
   \func LDiv_BigProd {l : Array E} (j : Fin l.len) : LDiv (l j) (BigProd l) \elim l, j
     | a :: l, 0 => LDiv.factor-left LDiv.id-div
     | a :: l, suc j => LDiv.trans (LDiv_BigProd j) (LDiv.factor-right LDiv.id-div)
 
+  -- | Each factor divides the product, and pointwise divisibility lifts to the product.
   \func LDiv_BigProd-coord {n : Nat} {l l' : Array E n} (p : \Pi (j : Fin n) -> LDiv (l j) (l' j)) : LDiv (BigProd l) (BigProd l') \elim n, l, l'
     | 0, nil, nil => LDiv.ide-div
     | suc n, a :: l, a' :: l' => LDiv.product (p 0) $ LDiv_BigProd-coord \lam j => p (suc j)
 
+  -- | Each factor divides the product, and pointwise divisibility lifts to the product.
   \lemma LDiv_BigProd_TruncP {n : Nat} {l l' : Array E n} (p : \Pi (j : Fin n) -> TruncP (LDiv (l j) (l' j))) : TruncP (LDiv (BigProd l) (BigProd l'))
     => TruncP.map (FinSet.finiteAC p) LDiv_BigProd-coord
 
+  -- | An element `a` is regular if `a * x = a * y` implies `x = y`.
   \func IsRegularElem (a : E) => \Pi {x y : E} -> a * x = a * y -> x = y
 
+  -- | Divisors of regular elements are regular.
   \lemma LDiv_IsRegular {a b : E} (d : LDiv a b) (c : IsRegularElem b) : IsRegularElem a
     => \lam p => c $ pmap (* _) (inv d.inv-right *> *-comm) *> *-assoc *> pmap (d.inv *) p *> inv *-assoc *> pmap (* _) (*-comm *> d.inv-right)
 } \where \open Monoid
 
+-- | Commutative additive monoid extending `AddMonoid` with `+-comm`; derives `zro-left`/`zro-right` from commutativity.
 \class AbMonoid \extends AddMonoid {
   | +-comm {x y : E} : x + y = y + x
   \default zro-left => +-comm *> zro-right
   \default zro-right => +-comm *> zro-left
 
+  -- | Left distributivity `n *n (a + b) = n *n a + n *n b`.
   \lemma *n-ldistr {n : Nat} {a b : E} : n *n (a + b) = n *n a + n *n b \elim n
     | 0 => inv zro-left
     | suc n => inv +-assoc *> pmap (+ b) (pmap (+ a) *n-ldistr *> +-assoc *> pmap (_ +) +-comm *> inv +-assoc) *> +-assoc
 
+  -- | Pointwise additivity.
   \lemma BigSum_+ {n : Nat} {l l' : Array E n} : BigSum (\lam i => l i + l' i) = BigSum l + BigSum l' \elim n, l, l'
     | 0, _, _ => inv zro-left
     | suc n, :: a l, :: a' l' => unfold BigSum $ rewrite (BigSum_+ {_} {n} {l}) equation.abMonoid
 
+  -- | Swap order of nested sums.
   \lemma BigSum-transpose {m n : Nat} (f : Fin m -> Fin n -> E)
     : BigSum (\lam i => BigSum (f i)) = BigSum (\lam j => BigSum (f __ j)) \elim n
     | 0 => BigSum_zro (\lam _ => idp)
     | suc _ => BigSum_+ *> pmap (_ +) (BigSum-transpose _)
 
+  -- | Reindex nested/sigma-indexed and `Or`-indexed sums.
   \lemma BigSum-double-dep {n : Nat} (m : Fin n -> Nat) (y : (\Sigma (i : Fin n) (Fin (m i))) -> E)
     : BigSum (\lam i => BigSum (\lam j => y (i,j))) = BigSum (\lam k => y (SigmaFin.aux.f k)) \elim n
     | 0 => idp
     | suc n => pmap (_ +) (BigSum-double-dep (\lam i => m (suc i)) (\lam p => y (suc p.1, p.2))) *> inv (FinSum_Or *> pmap2 (+) FinSum=BigSum FinSum=BigSum) *> FinSum_Equiv OrFin.aux {\lam k => y (\case k \with {| inl s => (0,s) | inr t => (suc (SigmaFin.aux.f t).1, (SigmaFin.aux.f t).2) })} *> FinSum=BigSum
 
+  -- | Reindex nested/sigma-indexed and `Or`-indexed sums.
   \lemma BigSum_Or {n m : Nat} (x : Or (Fin n) (Fin m) -> E)
     : BigSum (\lam j => x (OrFin.aux j)) = BigSum (\lam j => x (inl j)) + BigSum (\lam j => x (inr j)) \elim n
     | 0 => inv zro-left
     | suc n => pmap (_ +) (BigSum_Or (\lam a => x (Or.map a fsuc id))) *> inv +-assoc
 
+  -- | Permutation invariance.
   \lemma BigSum_EPerm {l l' : Array E} (e : EPerm l l') : BigSum l = BigSum l' \elim l, l', e
     | nil, nil, eperm-nil => idp
     | x :: l1, y :: l2, eperm-:: p e => pmap2 (+) p (BigSum_EPerm e)
     | x :: (x' :: l1), y :: (y' :: l2), eperm-swap idp idp r => equation.abMonoid {pmap BigSum r}
     | l, l', eperm-trans e1 e2 => BigSum_EPerm e1 *> BigSum_EPerm e2
 
+  -- | Permutation invariance.
   \lemma BigSum_Perm {n : Nat} {l l' : Array E n} (p : Perm l l') : BigSum l = BigSum l'
     => BigSum_EPerm (EPerm.Perm_EPerm p)
 
@@ -569,6 +685,7 @@
             }))
     }
 
+  -- | Sum indexed by an arbitrary `FinSet`.
   \sfunc FinSum {A : FinSet} (x : A -> E) : E
     => aux.1
     \where {
@@ -579,29 +696,35 @@
             => BigSum_Perm $ transport (Perm _) (arrayExt \lam j => pmap x $ e.f_ret _) $ Perm.equiv_perm $ transQEquiv e' (symQEquiv e)
     }
 
+  -- | Characterization via `BigSum` along an equivalence `Fin A.finCard ≃ A`.
   \lemma FinSum_char {A : FinSet} (x : A -> E) : ∃ (e : QEquiv {Fin A.card} {A}) (FinSum {_} {A} x = BigSum (\lam j => x (e j)))
     => TruncP.map FinSum.aux.2 \lam t => (t.1, (\peval FinSum {_} {A} x) *> inv t.2)
 
+  -- | Characterization via `BigSum` along an equivalence `Fin A.finCard ≃ A`.
   \lemma FinSum_char2 {A : FinSet} {x : A -> E} (e : QEquiv {Fin A.card} {A}) : FinSum x = BigSum (\lam j => x (e j))
     => \case FinSum_char x \with {
       | inP p => p.2 *> FinSum.aux.aux {_} {_} {x} p.1 e
     }
 
+  -- | Basic algebraic identities.
   \lemma FinSum_zro {J : FinSet} {x : J -> E} (p : \Pi (j : J) -> x j = 0) : FinSum x = 0
     => \case FinSum_char x \with {
       | inP (e,q) => q *> BigSum_zro (\lam j => p (e j))
     }
 
+  -- | Basic algebraic identities.
   \lemma FinSum_+ {J : FinSet} {x : J -> E} {y : J -> E} : FinSum (\lam j => x j + y j) = FinSum x + FinSum y
     => \case FinSum_char x \with {
       | inP (e,xp) => FinSum_char2 e *> BigSum_+ *> inv (pmap2 (+) xp (FinSum_char2 e))
     }
 
+  -- | Basic algebraic identities.
   \lemma FinSum-const {A : FinSet} {x : E} : FinSum {_} {A} (\lam _ => x) = BigSum (\new Array E A.card (\lam j => x))
     => \case FinSum_char {_} {A} (\lam _ => x) \with {
          | inP p => p.2
        }
 
+  -- | Reduce nested `FinSum`s to a single sum over a sigma/product.
   \lemma FinSum-double-dep {A : FinSet} (B : A -> FinSet) {x : (\Sigma (a : A) (B a)) -> E}
     : FinSum (\lam a => FinSum (\lam b => x (a,b))) = FinSum {_} {SigmaFin A B} x
     => \case FinSum_char _, FinSet.choice (\lam a => FinSum_char (\lam b => x (a,b))) \with {
@@ -613,25 +736,30 @@
     : FinSum (\lam a => FinSum (x a)) = FinSum {_} {SigmaFin A B} \lam s => x s.1 s.2
     => FinSum-double-dep B
 
+  -- | Reduce nested `FinSum`s to a single sum over a sigma/product.
   \lemma FinSum-double {A B : FinSet} {x : A -> B -> E}
     : FinSum (\lam a => FinSum (\lam b => x a b)) = FinSum (\lam (p : \Sigma A B) => x p.1 p.2)
     => FinSum-double-dep (\lam _ => B) *> pmap {FinSet (\Sigma A B)} (FinSum {_} {__} _) prop-pi
 
+  -- | Agreement with `BigSum` for `Fin n` indices.
   \lemma FinSum=BigSum {n : Nat} {x : Fin n -> E} : FinSum x = BigSum x
     => FinSum_char2 idEquiv
 
   \lemma FinSum-ext {A : FinSet} {x y : A -> E} (p : \Pi (a : A) -> x a = y a) : FinSum x = FinSum y
     => pmap FinSum (ext p)
 
+  -- | Reindexing along an equivalence.
   \lemma FinSum_Equiv {A B : FinSet} (e : QEquiv {A} {B}) {x : B -> E} : FinSum x = FinSum (\lam a => x (e a))
     => \case FinSum_char _ \with {
       | inP p => \let A' => \new FinSet A B.card { | finEq => TruncP.map B.finEq \lam e' => transQEquiv e' (symQEquiv e)}
                  \in FinSum_char2 (transQEquiv p.1 e) *> inv p.2 *> pmap {FinSet A} (FinSum {_} {__} _) (FinSet.levelProp A' A)
     }
 
+  -- | Reindexing along an equivalence.
   \lemma FinSum_Equiv2 {A B : FinSet} (e : QEquiv {A} {B}) {x : A -> E} {y : B -> E} (p : \Pi (a : A) -> x a = y (e a)) : FinSum x = FinSum y
     => pmap FinSum (ext p) *> inv (FinSum_Equiv e)
 
+  -- | Reindex along an injection, dropping summands not in the image.
   \lemma FinSum-inj {A B : FinSet} (f : A -> B) (inj : IsInj f) {x : B -> E} (p : \Pi (b : B) -> (\Pi (a : A) -> f a /= b) -> x b = 0) : FinSum x = FinSum (\lam a => x (f a))
     => FinSum_Equiv (later equiv)
     *> FinSum_Or {_} {SigmaFin B \lam b => DecFin (decide {dec b})} {SigmaFin B \lam b => DecFin (decide {NotDecide (dec b)})}
@@ -665,16 +793,19 @@
                      {y : A -> E} (q : \Pi (a : A) -> x (f a) = y a) : FinSum x = FinSum y
     => FinSum-inj f inj p *> FinSum-ext q
 
+  -- | Split a sum over `Or A B` into `A` and `B` parts.
   \lemma FinSum_Or {A B : FinSet} {x : Or A B -> E} : FinSum x = FinSum (\lam a => x (inl a)) + FinSum (\lam b => x (inr b))
     => \case FinSum_char _, FinSum_char _ \with {
       | inP p, inP q => FinSum_char2 (transQEquiv (OrFin.aux {A.card} {B.card}) (Or.Or_QEquiv p.1 q.1)) *> BigSum_Or (\lam a => x (Or.map a p.1 q.1)) *> inv (pmap2 (+) p.2 q.2)
     }
 
+  -- | Reduce to one or two non-zero summands.
   \lemma FinSum-unique {J : FinSet} {a : J -> E} (j : J) (p : \Pi (j' : J) -> j' /= j -> a j' = 0) : FinSum a = a j
     => \case FinSum_char a \with {
          | inP (e,q) => q *> BigSum-unique (e.ret j) (\lam i c => p (e i) \lam s => c $ inv $ e.adjoint s) *> pmap a (e.f_ret j)
        }
 
+  -- | Reduce to one or two non-zero summands.
   \lemma FinSum-unique2 {J : FinSet} {i j : J} (i/=j : i /= j) {x : J -> E} (p : \Pi (k : J) -> k /= i -> k /= j -> x k = 0) : FinSum x = x i + x j
     => \case FinSum_char x \with {
       | inP (e,q) => q *> \case LinearOrder.dec<_<= {NatSemiring} (e.ret i) (e.ret j) \with {
@@ -686,23 +817,29 @@
       }
     }
 
+  -- | Predicate-preservation analogue of `BigSum-pred`.
   \lemma FinSum-pred {P : E -> \Prop} (P0 : P 0) (P+ : \Pi {x y : E} -> P x -> P y -> P (x + y)) {J : FinSet} {a : J -> E} (p : \Pi (j : J) -> P (a j)) : P (AbMonoid.FinSum a)
     => \case FinSum_char a \with {
       | inP (e,q) => transportInv P q $ AddMonoid.BigSum-pred P0 P+ \lam i => p (e i)
     }
 }
   \where {
+    -- | Coercions to/from `CMonoid`.
     \use \coerce fromCMonoid (M : CMonoid) => \new AbMonoid M.E M.ide (M.*) M.ide-left M.ide-right M.*-assoc M.*-comm
+    -- | Coercions to/from `CMonoid`.
     \use \coerce toCMonoid (M : AbMonoid) => \new CMonoid M.E M.zro (M.+) M.+-assoc M.zro-left M.zro-right M.+-comm
   }
 
+-- | Monoid with left and right cancellation.
 \class CancelMonoid \extends Monoid
   | cancel_*-left (x : E) {y z : E} (p : x * y = x * z) : y = z
   | cancel_*-right (z : E) {x y : E} (p : x * z = y * z) : x = y
 
+-- | Cancellative commutative monoid; right cancellation derived from commutativity and left cancellation.
 \class CancelCMonoid \extends CancelMonoid, CMonoid {
   | cancel_*-right z {x} {y} x*z=y*z => cancel_*-left z (*-comm *> x*z=y*z *> *-comm)
 
+  -- | From `LDiv (x * y) x` deduce `Inv y` (using cancellation or commutativity).
   \lemma divInv {x y : E} (xy|x : Monoid.LDiv (x * y) x) : Monoid.Inv y
     => CMonoid.divInv (cancel_*-left x) xy|x
 }

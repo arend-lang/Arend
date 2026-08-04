@@ -1,3 +1,14 @@
+{- | Universal property of group quotients and the First Isomorphism Theorem.
+ -
+ -   This module formalizes the standard package of results connecting normal subgroups, quotient groups, and
+ -   homomorphisms. The central abstraction `UniversalGroupQuotient` packages a homomorphism `f : G → H` together with a
+ -   normal subgroup `N ⊆ ker f`, and constructs the induced morphism `G/N → H` factoring `f` through the quotient. This
+ -   is then specialized to `FirstIsomorphismTheorem`, where taking `N = ker f` and assuming surjectivity yields an
+ -   isomorphism `G/ker f ≅ H`. Auxiliary classes like `GroupTriangle` capture the commutative-triangle data used in the
+ -   2-out-of-3 surjectivity argument, and the corollaries transport the result along an equality `N = ker f` for cases
+ -   where the kernel is presented indirectly.
+ -}
+
 \import Algebra.Group
 \import Algebra.Group.GroupHom
 \import Algebra.Group.SubGroup
@@ -9,6 +20,7 @@
 \import Paths
 \import Relation.Equivalence
 
+-- | Infix notation for the quotient group `G // H = H.quotient`, where `H : NormalSubGroup G`.
 \func \infix 7 // (G : Group) (H : NormalSubGroup G) : Group
   => H.Quot
 
@@ -19,6 +31,7 @@
   }
   | func-* {in~ x} {in~ y} => f.func-*
 
+-- | For surjective `f`, `univ` is a group isomorphism.
 \lemma FirstIsoTheorem {G H : Group} (f : GroupHom G H) (p : IsSurj f) : (kerQuotHom f).IsIsomorphism
   => (Kernel-trivial-char.1 $ later \lam {in~ a} q => inv $ ~-pequiv $ pmap f equation.group *> q,
       IsSurj.factor {G} {_} {H} {NormalSubGroup.quotHom} p)

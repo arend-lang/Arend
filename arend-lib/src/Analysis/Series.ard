@@ -1,3 +1,14 @@
+{- | Infinite series in topological abelian groups, with notions of convergence, absolute convergence, and standard
+ -   convergence tests.
+ -
+ -   A `Series` is just a sequence `Nat -> A`, with convergence defined via the limit of partial sums. The module
+ -   distinguishes ordinary convergence (`IsConvSeries`, in any `TopAbGroup`) from absolute convergence
+ -   (`IsAbsConvSeries`, defined through an upper-real-valued series of norms in an `ExPseudoNormedAbGroup`). Mid-sums
+ -   (`midSum b n m` = sum of `b n, ..., b (m-1)`) provide the Cauchy-style criterion that powers most lemmas, including
+ -   the ratio test, the Weierstrass M-test, and comparison results. The `Partial`-valued `seriesSum` packages the limit
+ -   in a complete topological abelian group, returning `defined l` exactly when the series sums to `l`.
+ -}
+
 \import Algebra.Group
 \import Algebra.Meta
 \import Algebra.Monoid
@@ -46,8 +57,10 @@
 \import Topology.TopSpace.Product
 \open Monoid
 
+-- | A series in `A` is a function `Nat -> A`.
 \func Series (A : \Set) => Nat -> A
 
+-- | `partialSum S n` = `S 0 + S 1 + ... + S (n-1)` via `BigSum`.
 \sfunc partialSum {A : AddMonoid} (S : Series A) (n : Nat) : A
   => A.BigSum \new Array A n \lam j => S j
   \where {
@@ -55,15 +68,18 @@
       => (\peval partialSum S n) *> inv A.FinSum=BigSum
   }
 
+-- | `partialSum S 0 = 0`.
 \lemma partialSum-empty {A : AddMonoid} {S : Series A} : partialSum S 0 = 0
   => \peval partialSum S 0
 
 \lemma partialSum_1 {A : AddMonoid} {S : Series A} : partialSum S 1 = S 0
   => (\peval partialSum S 1) *> zro-right
 
+-- | Pointwise `<=` lifts to partial sums in a `PosetAddMonoid`.
 \lemma partialSum_<= {A : PosetAddMonoid} {S T : Series A} {n : Nat} (p : \Pi (k : Nat) -> S k <= T k) : partialSum S n <= partialSum T n
   => transport2 (<=) (inv \peval partialSum S n) (inv \peval partialSum T n) (A.BigSum_<= \lam j => p j)
 
+-- | `AddMonoidHom`s commute with `partialSum`.
 \lemma partialSum_hom {A B : AddMonoid} (f : AddMonoidHom A B) {S : Series A} {n : Nat} : f (partialSum S n) = partialSum (\lam i => f (S i)) n
   => pmap f (\peval partialSum S n) *> f.func-BigSum *> inv \peval partialSum _ n
 
@@ -76,25 +92,32 @@
   | 0 => pmap negative partialSum-empty *> A.negative_zro *> inv partialSum-empty
   | suc N => pmap negative partialSum_suc *> A.negative_+-comm *> pmap (+ _) partialSum_negative *> inv partialSum_suc
 
+-- | `S` is convergent iff its partial sums converge in a `TopAbGroup`.
 \func IsConvSeries {A : TopAbGroup} (S : Series A) : \Prop
   => IsConvergent (partialSum S)
 
+-- | `S` sums to `l` iff `partialSum S` has limit `l`.
 \func IsSeriesSum {A : AddMonoid} {T : TopSpace A} (S : Series A) (l : A) : \Prop
   => T.IsLimit (partialSum S) l
 
+-- | A series eventually zero (from index `n`) sums to its finite `BigSum`.
 \lemma seriesSum-fin {A : AddMonoid} {T : TopSpace A} {S : Series A} (n : Nat) (p : \Pi {j : Nat} -> n <= j -> S j = 0)
   : IsSeriesSum S (A.BigSum \new Array A n \lam j => S j)
   => \lam {U} Uo US => inP (n, \lam {k} n<=k => transport U (A.BigSum-subset n<=k (\lam j => pmap S $ inv toFin=id) (\lam j => p) *> inv (\peval partialSum S k)) US)
 
+-- | Having a sum implies convergence.
 \lemma seriesSum-conv {A : TopAbGroup} {S : Series A} {l : A} (Sl : IsSeriesSum S l) : IsConvSeries S
   => limit-conv Sl
 
+-- | In a `CompleteTopAbGroup`, returns the sum as a `Partial A`.
 \func seriesSum {A : CompleteTopAbGroup} (S : Series A) : Partial A
   => limit (partialSum S)
 
+-- | A convergent series's `seriesSum` is its actual sum.
 \lemma seriesConv-sum {A : CompleteTopAbGroup} {S : Series A} (Sc : IsConvSeries S) : IsSeriesSum S (seriesSum S Sc)
   => limit-isLimit
 
+-- | `seriesSum S = defined l` iff `IsSeriesSum S l`.
 \lemma seriesSum-char {A : CompleteTopAbGroup} {S : Series A} {l : A} : (seriesSum S = defined l) <-> IsSeriesSum S l
   => limit-char
 
@@ -117,6 +140,7 @@
   : IsSeriesSum (\lam n => f n - g n) (a - b)
   => IsSeriesSum_+ fa (IsSeriesSum_negative gb)
 
+-- | Recursive definition of partial sum from index `n` to `m`; `midSum S 0 m = partialSum S m`.
 \func midSum {A : AddMonoid} (S : Series A) (n m : Nat) : A \elim n, m
   | 0, m => partialSum S m
   | suc n, 0 => 0
@@ -147,33 +171,41 @@
       }) \lam s => idp
   }
 
+-- | Homomorphisms commute with `midSum`.
 \lemma midSum_hom {A B : AddMonoid} (f : AddMonoidHom A B) {S : Series A} {n m : Nat} : f (midSum S n m) = midSum (\lam i => f (S i)) n m \elim n, m
   | 0, m => partialSum_hom f
   | suc n, 0 => f.func-zro
   | suc n, suc m => midSum_hom f
 
+-- | Cauchy-style convergence for `ExUpperReal`-valued series via mid-sums.
 \func IsConvUpperSeries (S : Series ExUpperReal) : \Prop
   => ∀ {eps : Rat} (0 < eps) ∃ (N : Nat) ∀ {n} (N <= n -> (midSum S N n).U eps)
 
+-- | Series with `IsConvUpperSeries (norm ∘ S)` in an `ExPseudoNormedAbGroup`.
 \func IsAbsConvSeries {A : ExPseudoNormedAbGroup} (S : Series A) : \Prop
   => IsConvUpperSeries \lam j => norm (S j)
 
+-- | Alternative definition: `partialSum (\lam k => S (n + k)) m`.
 \func midSum' {A : AddMonoid} (S : Series A) (n m : Nat) : A
   => partialSum (\lam k => S (n + k)) m
 
+-- | Conversion between the two forms.
 \lemma midSum'_midSum {A : AddMonoid} {S : Series A} {n m : Nat} : midSum' S n m = midSum S n (n + m) \elim n
   | 0 => idp
   | suc n => midSum'_midSum
 
+-- | Conversion between the two forms.
 \lemma midSum_midSum' {A : AddMonoid} {S : Series A} {n m : Nat} : midSum S n m = midSum' S n (m -' n) \elim n, m
   | 0, 0 => idp
   | 0, suc m => idp
   | suc n, 0 => inv partialSum-empty
   | suc n, suc m => midSum_midSum'
 
+-- | The zero series sums to `0`.
 \lemma zeroSeries-sum {A : TopAbGroup} : IsSeriesSum (\lam _ => A.zro) 0
   => \lam {U} _ U0 => inP (0, \lam _ => rewrite (\peval partialSum _ _) $ transportInv U A.BigSum_replicate0 U0)
 
+-- | Convergence is preserved by dropping the head.
 \lemma series-shift-conv {A : TopAbGroup} {S : Series A} : IsConvSeries S <-> IsConvSeries \lam n => S (suc n)
   => (\lam Sc => convergent-topAbGroup-char 2 0 \lam {U} Uo U0 => \case convergent-topAbGroup-char 0 1 Sc Uo U0 \with {
     | inP (N,g) => inP (N, \lam p => transport U (inv (midSum-diff $ suc<=suc p) *> midSum-diff p) $ g id<=suc $ suc<=suc p)
@@ -184,6 +216,7 @@
     })
   })
 
+-- | Shift invariance for non-negative upper-real series, by one or by `N` steps.
 \lemma upperSeries-shift-conv {S : Series ExUpperReal} (S>=0 : \Pi (j : Nat) -> 0 <= S j) : IsConvUpperSeries S <-> IsConvUpperSeries \lam n => S (suc n)
   => (\lam c eps>0 => \case c eps>0 \with {
     | inP (M,h) => inP (M, \lam M<=n => midSum_<=-left id<=suc S>=0 $ h (M<=n <=∘ id<=suc))
@@ -198,20 +231,25 @@
       }
   }
 
+-- | Shift invariance for non-negative upper-real series, by one or by `N` steps.
 \lemma upperSeries-shifts-conv {S : Series ExUpperReal} (S>=0 : \Pi (j : Nat) -> 0 <= S j) (N : Nat) : IsConvUpperSeries S <-> IsConvUpperSeries \lam n => S (n + N) \elim N
   | 0 => <->refl
   | suc N => <->trans (upperSeries-shifts-conv S>=0 N) $ upperSeries-shift-conv \lam j => S>=0 (j + N)
 
+-- | Same for absolute convergence.
 \lemma series-shift-absConv {A : ExPseudoNormedAbGroup} {S : Series A} : IsAbsConvSeries S <-> IsAbsConvSeries \lam n => S (suc n)
   => upperSeries-shift-conv \lam j => norm>=0
 
+-- | Same for absolute convergence.
 \lemma series-shifts-absConv {A : ExPseudoNormedAbGroup} {S : Series A} (N : Nat) : IsAbsConvSeries S <-> IsAbsConvSeries \lam n => S (n + N)
   => upperSeries-shifts-conv (\lam j => norm>=0) N
 
+-- | `midSum S n (suc n) = S n` (single-term sum).
 \lemma midSum_suc {A : AddMonoid} {S : Series A} {n : Nat} : midSum S n (suc n) = S n \elim n
   | 0 => (\peval partialSum _ _) *> zro-right
   | suc n => midSum_suc
 
+-- | In an `AbGroup`, `midSum S n m = partialSum S m - partialSum S n` (when `n <= m`).
 \lemma midSum-diff {A : AbGroup} {S : Series A} {n m : Nat} (p : n <= m) : midSum S n m = partialSum S m - partialSum S n \elim n, m
   | 0, m => inv $ rewrite (\peval partialSum S _, \peval partialSum S _) $ pmap (_ +) A.negative_zro *> zro-right
   | suc n, 0 => absurd $ p NatOrder.zero<suc
@@ -226,11 +264,15 @@
   : partialSum S m = partialSum S n + midSum S n m
   => rewriteI (<=_exists p) $ partialSum-split-shifted *> pmap (partialSum S n +) midSum'_midSum
 
+-- | `norm (midSum S n m) <= midSum (norm ∘ S) n m` (triangle inequality).
 \lemma midSum_norm {A : ExPseudoNormedAbGroup} {S : Series A} {n m : Nat} : norm (midSum S n m) <= midSum (\lam j => norm (S j)) n m \elim n, m
   | 0, m => rewrite (\peval partialSum _ _, \peval partialSum _ _) A.norm_BigSum
   | suc n, 0 => A.norm_BigSum {nil}
   | suc n, suc m => midSum_norm
 
+{- | Left distributivity `midSum (x * b) n m <= x * midSum b n m` for `ExUpperReal`; `BigSum_<=-ldistr` is the
+ -   finite-sum version.
+ -}
 \lemma midSum_<=-ldistr {x : ExUpperReal} {b : Series ExUpperReal} (b>=0 : \Pi (j : Nat) -> 0 <= b j) {n m : Nat}
   : midSum (\lam j => x * b j) n m <= x * midSum b n m \elim n, m
   | 0, m => rewrite (\peval partialSum _ _, \peval partialSum _ _) $ BigSum_<=-ldistr \lam j => b>=0 j
@@ -242,6 +284,7 @@
       | a :: l => transportInv (_ <=) (ExUpperRealSemigroup.ldistr (l>=0 0) $ ExUpperRealAbMonoid.BigSum_>=0 \lam j => l>=0 (suc j)) $ <=_+ <=-refl $ BigSum_<=-ldistr \lam j => l>=0 (suc j)
   }
 
+-- | `midSum b n k = midSum b n m + midSum b m k` for `n <= m <= k`.
 \lemma midSum-split {A : AddMonoid} {b : Series A} {n m k : Nat} (p : n <= m) (q : m <= k) : midSum b n k = midSum b n m + midSum b m k \elim n, m, k
   | 0, 0, k => rewrite (\peval partialSum _ _, \peval partialSum _ _) (inv zro-left)
   | _, suc m, 0 => absurd (q NatOrder.zero<suc)
@@ -249,29 +292,35 @@
   | suc n, 0, _ => absurd (p NatOrder.zero<suc)
   | suc n, suc m, suc k => midSum-split (suc<=suc.conv p) (suc<=suc.conv q)
 
+-- | `midSum b n m = 0` when `m < n`.
 \lemma midSum-degenerate {A : AddMonoid} {b : Series A} {n m : Nat} (m<n : m < n) : midSum b n m = 0 \elim n, m, m<n
   | suc n, 0, NatOrder.zero<suc => idp
   | suc n, suc m, NatOrder.suc<suc m<n => midSum-degenerate m<n
 
+-- | Monotonicity in starting index and pointwise comparison.
 \lemma midSum_<=-left {A : PosetAddMonoid} {b : Series A} {n m k : Nat} (p : n <= m) (s : \Pi (j : Nat) -> 0 <= b j) : midSum b m k <= midSum b n k
   => \case LinearOrder.dec<_<= k m \with {
     | inl k<m => transportInv (<= _) (midSum-degenerate k<m) (midSum>=0 s)
     | inr m<=k => transport2 (<=) zro-left (inv $ midSum-split p m<=k) $ <=_+ (midSum>=0 s) <=-refl
   }
 
+-- | Monotonicity in starting index and pointwise comparison.
 \lemma midSum_<= {A : PosetAddMonoid} {b c : Series A} {n m : Nat} (s : \Pi {j : Nat} -> n <= j -> j < m -> b j <= c j) : midSum b n m <= midSum c n m \elim n, m
   | 0, m => rewrite (\peval partialSum _ _, \peval partialSum _ _) $ A.BigSum_<= \lam j => s zero<=_ (fin_< j)
   | suc n, 0 => <=-refl
   | suc n, suc m => midSum_<= \lam p q => s (suc<=suc p) (NatOrder.suc<suc q)
 
+-- | Mid-sum of the zero series is `0`.
 \lemma midSum_0 {A : AddMonoid} {n m : Nat} : midSum (\lam _ => A.zro) n m = 0 \elim n, m
   | 0, m => (\peval partialSum _ _) *> A.BigSum_replicate0
   | suc n, 0 => idp
   | suc n, suc m => midSum_0
 
+-- | Non-negative summands give non-negative mid-sum.
 \lemma midSum>=0 {A : PosetAddMonoid} {b : Series A} {n m : Nat} (s : \Pi (j : Nat) -> 0 <= b j) : 0 <= midSum b n m
   => transport (<= _) midSum_0 (midSum_<= \lam _ _ => s _)
 
+-- | Convergence iff Cauchy condition on `norm (midSum S N n)` against rational `eps`.
 \lemma series-conv {A : ExPseudoNormedAbGroup} {S : Series A}
   : IsConvSeries S <-> ∀ {eps : Rat} (0 < eps) ∃ (N : Nat) ∀ {n} (N <= n -> (norm (midSum S N n)).U eps)
   => (\lam p eps>0 => \case convergent-metric-char.1 p eps>0 \with {
@@ -280,6 +329,7 @@
     | inP (N,g) => inP (N, \lam q => rewrite (norm-dist, inv (midSum-diff q)) (g q))
   })
 
+-- | Same with real `eps` in a `PseudoNormedAbGroup`.
 \lemma series-conv-real {A : PseudoNormedAbGroup} {S : Series A}
   : IsConvSeries S <-> ∀ {eps : Real} (0 < eps) ∃ (N : Nat) ∀ {n} (N <= n -> A.norm (midSum S N n) < eps)
   => <->trans series-conv $ later (\lam sc eps>0 => \case real_<-rat-char.1 eps>0 \with {
@@ -290,6 +340,9 @@
     | inP (N,h) => inP (N, \lam p => real_<_U.1 $ h p)
   })
 
+{- | Sum equals `defined a` from a Cauchy-style estimate `norm (a - partialSum S n)`; inner `conv` extracts that
+ -   estimate from a known sum.
+ -}
 \lemma seriesSum_defined {A : ExPseudoNormedAbGroup} {S : Series A} {a : A}
                          (p : ∀ {eps : Rat} (0 < eps) ∃ (N : Nat) ∀ {n} (N <= n -> (norm (a - partialSum S n)).U eps))
   : IsSeriesSum S a
@@ -306,16 +359,19 @@
       }
   }
 
+-- | Absolute convergence implies convergence.
 \lemma absConv-isConv {A : ExPseudoNormedAbGroup} {S : Series A} (Sc : IsAbsConvSeries S) : IsConvSeries S
   => series-conv.2 \lam eps>0 => \case Sc eps>0 \with {
     | inP (N,g) => inP (N, \lam p => midSum_norm (g p))
   }
 
+-- | Convergent series have terms tending to `0`.
 \lemma series-limit {A : TopAbGroup} {S : Series A} (Sc : IsConvSeries S) : A.IsLimit S 0
   => \lam {U} Uo U0 => \case convergent-topAbGroup-char 0 1 Sc Uo U0 \with {
     | inP (N,g) => inP (N, \lam {n} p => transport U (inv (midSum-diff {_} {S} id<=suc) *> midSum_suc) (g p id<=suc))
   }
 
+-- | For non-negative real series, pointwise `<=` plus convergence of the majorant gives convergence.
 \lemma real-series_<= {b c : Series Real} (b>=0 : \Pi (j : Nat) -> 0 <= b j) (s : \Pi (j : Nat) -> b j <= c j) (cc : IsConvSeries c) : IsConvSeries b
   => series-conv-real.2 \lam eps>0 => \case series-conv-real.1 cc eps>0 \with {
     | inP (N,g) => inP (N, \lam p => transport2 (<=)
@@ -324,11 +380,15 @@
         (midSum_<= \lam {j} _ _ => s j) <∘r g p)
   }
 
+-- | Comparison test for upper-real series.
 \lemma series_<= {b c : Series ExUpperReal} (s : \Pi (j : Nat) -> b j <= c j) (cc : IsConvUpperSeries c) : IsConvUpperSeries b
   => \lam eps>0 => \case cc eps>0 \with {
     | inP (N,h) => inP (N, \lam p => midSum_<= {ExUpperRealAbMonoid} (\lam _ _ => s _) (h p))
   }
 
+{- | Existence of a rational bound `B` for every term; `shifted` gives boundedness from a bound holding only past index
+ -   `N`.
+ -}
 \func IsBoundedUpperSeries (S : Series ExUpperReal) : \Prop
   => ∃ (B : Rat) ∀ n ((S n).U B)
   \where {
@@ -348,12 +408,15 @@
       \lam {n} N0<=n => transport (<= _) midSum_suc (midSum_<=-left N0<=n S>=0) $ g (N0<=n <=∘ id<=suc)
   }
 
+-- | Boundedness propagates downward via pointwise `<=`.
 \lemma upperSeries-bounded_<= {a b : Series ExUpperReal} (a<=b : \Pi (n : Nat) -> a n <= b n) (bB : IsBoundedUpperSeries b) : IsBoundedUpperSeries a \elim bB
   | inP (B,bB) => inP (B, \lam n => a<=b n (bB n))
 
+-- | Boundedness of `norm ∘ S` in an `ExPseudoNormedAbGroup`.
 \func IsBoundedSeries {A : ExPseudoNormedAbGroup} (S : Series A) : \Prop
   => IsBoundedUpperSeries \lam n => norm (S n)
 
+-- | A series with a limit in a bounded normed group is bounded.
 \lemma series-lim-bound {A : BoundedExPseudoNormedAbGroup} {b : Series A} {l : A} (bl : A.IsLimit b l) : IsBoundedSeries b
   => \case limit-metric-char.1 bl idp, norm-bounded l \with {
     | inP (N,h), inP (B,l<B) => IsBoundedUpperSeries.shifted (\lam _ => norm-bounded _) \lam {j} N<=j =>
@@ -361,6 +424,7 @@
       \in t $ ExUpperReal.+_U_<=.2 $ inP (1, rewriteI (norm_-, A.norm-dist) (h N<=j), B, l<B, <=-refl)
   }
 
+-- | A bounded series times a convergent non-negative series is convergent.
 \lemma series_*-bounded {b c : Series ExUpperReal} (c>=0 : \Pi (j : Nat) -> 0 <= c j) (bB : IsBoundedUpperSeries b) (cc : IsConvUpperSeries c) : IsConvUpperSeries \lam n => b n * c n \elim bB
   | inP (B, bB) =>
     \let | B1 => B ∨ 1
@@ -380,6 +444,7 @@
   : IsConvUpperSeries (\lam n => c n * a)
   => transport IsConvUpperSeries (ext \lam n => *-comm) (upperSeries-ldistr c>=0 cc ab)
 
+-- | `IsConvUpperSeries (pow r)` for `0 <= r` with `r.U 1` (i.e., `r < 1`).
 \lemma geometric-upper-series-conv {r : ExUpperReal} (r>=0 : 0 <= r) (r<1 : r.U 1) : IsConvUpperSeries (ExUpperRealSemigroup.pow r)
   => \case U-rounded r<1 \with {
     | inP (q,r<q,q<1) => series_<= {_} {pow q __} (\lam j => transport (_ <=) (ExUpperRealSemigroup.rat-pow $ <=-less $ r>=0 r<q) $ ExUpperRealSemigroup.pow_<= (ExUpperReal.<_<= r<q)) \lam {eps} eps>0 =>
@@ -389,9 +454,13 @@
             RatField.<=_*_positive-left (<=-less B.2) (RatField.BigSum_>=0 \lam j => RatField.pow>=0 $ <=-less $ r>=0 r<q) <∘r transport2 (<) (inv *-assoc) ide-right (RatField.<_*_positive-right eps>0 $ transportInv (< _) RatField.geometric-partial-sum $ linarith $ RatField.pow>0 $ r>=0 r<q))
   }
 
+-- | Geometric series `pow x` is absolutely convergent when `norm x < 1` in an `ExPseudoNormedRing`.
 \lemma geometric-series-absConv {X : ExPseudoNormedRing} {x : X} (|x|<1 : (norm x).U 1) : IsAbsConvSeries (pow x)
   => series_<= (\lam j => X.norm_<=_pow) $ geometric-upper-series-conv norm>=0 |x|<1
 
+{- | Ratio test for upper-real series with limit `l < 1` of the ratio sequence; `iter-bound` and `S-bounded` are the key
+ -   auxiliary bounds.
+ -}
 \lemma upper-ratio-test {S : Series ExUpperReal} (S>=0 : \Pi (n : Nat) -> 0 <= S n) (S0b : (S 0).IsBounded)
                         (b : Series Real) (bp : \Pi (n : Nat) -> S (suc n) <= S n * b n)
                         {l : Real} (l<1 : l < 1) (bl : RealNormed.IsLimit b l) : IsConvUpperSeries S
@@ -418,10 +487,16 @@
       }
   }
 
+{- | Ratio test in a `BoundedExPseudoNormedAbGroup`: limit `l < 1` of `b` with `norm (S (suc n)) <= norm (S n) * b n`
+ -   gives absolute convergence.
+ -}
 \lemma ratio-test {X : BoundedExPseudoNormedAbGroup} {S : Series X} (b : Series Real) (bp : \Pi (n : Nat) -> norm (S (suc n)) <= norm (S n) * b n)
                   {l : Real} (l<1 : l < 1) (bl : RealNormed.IsLimit b l) : IsAbsConvSeries S
   => upper-ratio-test (\lam j => norm>=0) (norm-bounded (S 0)) b bp l<1 bl
 
+{- | Weierstrass M-test — uniform convergence of partial sums of `f n : X -> Y` from a convergent dominating upper-real
+ -   series `M`.
+ -}
 \lemma MTest {X : \Set} {Y : ExPseudoNormedAbGroup} (f : Nat -> X -> Y) (M : Series ExUpperReal)
              (Mp : \Pi (n : Nat) (x : X) -> norm (f n x) <= M n) (Mc : IsConvUpperSeries M) : IsUniFuncConvergent \lam n x => partialSum (f __ x) n
   => metric-uni-funcConvergent.2 \lam eps>0 => \case Mc eps>0 \with {
@@ -437,6 +512,7 @@
       (\lam n => later $ rewrite (RealField.*-upper (b>=0 n) eps>=0) (ExUpperRealSemigroup.<=_* (bp n) <=-refl <=∘ =_<= equation.cSemigroup))
       l<1 (cont2-limit bl const-limit *-locally-uniform)
 
+-- | Partial sums of cover maps `X -> Y` form a cover map.
 \lemma partialSum-cover {X : CoverSpace} {Y : TopAbGroup} (f : Nat -> CoverMap X Y) (n : Nat) : CoverMap X Y \lam x => partialSum (f __ x) n
   => transportInv (CoverMap X Y) (ext \lam x => \peval partialSum _ _) $ BigSum-cover \lam (j : Fin n) => f j
 

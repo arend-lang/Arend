@@ -3,6 +3,18 @@
  -   Guillaume Cano, Cyril Cohen, Maxime Dénès, Anders Mörtberg, Vincent Siles, Formalized linear algebra over Elementary Divisor Rings in Coq, 2016, https://arxiv.org/abs/1601.07472
  -}
 
+{- | Smith normal form for matrices over Bezout-like rings: equivalence under invertible row/column operations and
+ -   existence/uniqueness of a diagonal canonical form whose successive diagonal entries divide one another.
+ -
+ -   This module formalizes the classical Smith normal form theorem in the constructive setting of strict Bezout rings
+ -   satisfying Kaplansky's condition. The matrix equivalence relation `M~` quotients by left/right multiplication by
+ -   invertible matrices, and `IsSmith` captures the canonical shape: diagonal with each entry dividing the next. The
+ -   main result is `SmithRing.toSmith`, proved via `Smith-char` which gives a TFAE characterization reducing the
+ -   general case to a 2×2 diagonalization step plus an inductive elimination of the first row and column. Uniqueness up
+ -   to associates is established for reduced commutative integral domains via the divisor characterization of products
+ -   of diagonal entries as determinants of submatrices (`diag-sub`, `prod-div`).
+ -}
+
 \import Algebra.Domain
 \import Algebra.Domain.Bezout
 \import Algebra.Group
@@ -44,19 +56,26 @@
 \open Monoid
 \open AddMonoid
 
+{- | Equivalence of matrices `A B : Matrix R n m` by `B = C * A * D` for invertible `C : Matrix R n n` and
+ -   `D : Matrix R m m`.
+ -}
 \type \infix 4 M~ {R : Ring} {n m : Nat} (A B : Matrix R n m) : \Prop
   => ∃ (C : Inv {MatrixRing R n}) (D : Inv {MatrixRing R m}) (B = C.val MatrixRing.product A MatrixRing.product D.val)
   \where
+    -- | Equivalence is preserved by transposition (over a commutative ring).
     \lemma transposed {R : CRing} {n m : Nat} {A B : Matrix R n m} (p : A M~ B) : transpose A M~ transpose B \elim p
       | inP (C : Inv, D : Inv, p) => inP (transpose.isInv D, transpose.isInv C, pmap transpose p *> transpose_*.product {_} {_} {_} {_} {C.val MatrixRing.product A} *> pmap (transpose D.val MatrixRing.product) transpose_*.product *> inv (MatrixRing.product-assoc (transpose D.val) (transpose A) (transpose C.val)))
 
+-- | Scalar multiplication preserves `M~`.
 \lemma *c_M~ {R : CRing} {n m : Nat} {a : R} {A B : Matrix R n m} (A~B : A M~ B) : a *c A M~ a *c B \elim A~B
   | inP (C : Inv, D, p) => inP (C, D, pmap (a *c) p *> MatrixAlgebra.product_*c-comm-left (C.val MatrixRing.product A) *> cong MatrixAlgebra.product_*c-comm-right)
 
+-- | Block-diagonal construction respects `M~` componentwise.
 \lemma blockMatrix_M~ {R : CRing} {n m n' m' : Nat} {A B : Matrix R n m} {C D : Matrix R n' m'} (A~B : A M~ B) (C~D : C M~ D)
   : blockMatrix A C M~ blockMatrix B D \elim A~B, C~D
   | inP (P1 : Inv, Q1 : Inv, A~B), inP (P2 : Inv, Q2 : Inv, C~D) => inP (blockMatrix_Inv.2 (P1,P2), blockMatrix_Inv.2 (Q1,Q2), pmap2 blockMatrix A~B C~D *> inv (pmap (MatrixRing.product blockMatrix Q1.val Q2.val) (blockMatrix_* _ _ _ _) *> blockMatrix_* (P1.val MatrixRing.product A) (P2.val MatrixRing.product C) _ _))
 
+-- | `Equivalence` instance witnessing reflexivity, symmetry, and transitivity of `M~`.
 \instance M~-equiv {R : Ring} {n m : Nat} : Equivalence (Matrix R n m) (M~)
   | ~-reflexive {A} => inP (Inv.ide-isInv, Inv.ide-isInv, inv $ product_ide-right *> product_ide-left)
   | ~-symmetric {A} {B} => TruncP.map __ $ later \lam s => (Inv.reverse {s.1}, Inv.reverse {s.2}, inv $ pmap (\lam z => Inv.inv {s.1} product z product Inv.inv {s.2}) (s.3 *> product-assoc _ _ _) *>
@@ -65,12 +84,15 @@
   | ~-transitive {P} {Q} {S} (inP s) (inP t) => inP (Inv.product t.1 s.1, Inv.product s.2 t.2, t.3 *> pmap (_ product __ product _) s.3 *> pmap (product _) {_ product (_ product P product _)} {_ * _ product P product _} (pmap (_ product) (product-assoc _ _ _) *> inv (product-assoc _ _ (P product _)) *> inv (product-assoc (_ * _) _ _)) *> product-assoc (_ * _ product P) _ _)
   \where \open MatrixRing
 
+-- | A matrix is in Smith form iff it is diagonal and each diagonal entry `A_{i,i}` left-divides the next `A_{i+1,i+1}`.
 \type IsSmith {R : Semiring} {n m : Nat} (A : Matrix R n m) : \Prop
   => \Sigma (IsDiagonal A) (\Pi (i : Nat) (p : suc i < n) (q : suc i < m) -> TruncP (LDiv (A ((\lam {k} => toFin k) $ id<suc <∘ p) ((\lam {k} => toFin k) $ id<suc <∘ q)) (A (toFin _ p) (toFin _ q))))
   \where {
+    -- | Smith form is preserved by transpose.
     \lemma transposed {R : Semiring} {n m : Nat} {A : Matrix R n m} (s : IsSmith A) : IsSmith (transpose A)
       => (IsDiagonal.transposed s.1, \lam i p q => s.2 i q p)
 
+    -- | Any entry `A i j` with `i = j` (as `Nat`) and `i ≤ i'` divides `A i' j'` along the diagonal extension.
     \lemma smith-diag {R : CRing} {n m : Nat} {A : Matrix R n m} (As : IsSmith A) {i i' : Fin n} {j j' : Fin m} (p : i = {Nat} j) (q : (i : Nat) <= i') : TruncP (LDiv (A i j) (A i' j'))
       => \case decideEq (i' : Nat) j' \with {
         | yes r => transport2 (\lam x y => TruncP (LDiv _ (A x y))) (fin_nat-inj $ toFin=id *> <=_exists q) (fin_nat-inj $ toFin=id *> later (rewriteI p $ <=_exists q *> r)) $ aux As p {i' -' i} (transportInv (< n) (<=_exists q) (fin_< i')) $ rewriteI p $ transportInv (< m) (<=_exists q *> r) (fin_< j')
@@ -84,12 +106,14 @@
             | inP d1, inP d2 => inP $ LDiv.trans d1 $ transport2 (\lam x y => LDiv (A _ x) (A _ y)) (fin_nat-inj $ toFin=id *> pmap (Nat.+ k) i=j *> inv toFin=id) (fin_nat-inj $ toFin=id *> pmap (\lam x => suc (x Nat.+ k)) (later i=j) *> inv toFin=id) d2
           }
 
+    -- | Functional/uncurried packaging of `smith-diag` under truncation.
     \lemma smith-diag-func {R : CRing} {n m : Nat} {A : Matrix R n m} (As : IsSmith A)
                            : TruncP (\Pi {i i' : Fin n} {j j' : Fin m} (p : i = {Nat} j) (q : i NatSemiring.<= i') -> LDiv (A i j) (A i' j'))
       => \case (SigmaFin (FinFin n) \lam i => SigmaFin (FinFin n) \lam i' => SigmaFin (FinFin m) \lam j => SigmaFin (FinFin m) \lam j' => ProdFin (DecFin (decideEq (i : Nat) j)) (DecFin (LinearOrder.dec<= (i : Nat) i'))).choice (\lam s => smith-diag As {_} {_} {_} {s.2.2.2.1} s.2.2.2.2.1 s.2.2.2.2.2) \with {
            | inP f => inP (\lam p q => f (_, (_, (_, (_, (p,q))))))
          }
 
+    -- | The top-left entry `A 0 0` divides every entry `A i j` of a Smith matrix.
     \lemma div00 {R : Semiring} {n m : Nat} {A : Matrix R (suc n) (suc m)} (As : IsSmith A) (i : Fin (suc n)) (j : Fin (suc m)) : TruncP (LDiv (A 0 0) (A i j))
       => \case decideEq (i : Nat) j \with {
         | yes i=j => transport2 (\lam x y => TruncP (LDiv (A 0 0) (A x y))) toFin=fin (fin_nat-inj $ toFin=id {i} {suc m} {rewrite i=j (fin_< j)} *> i=j) $ aux (fin_< i) $ rewrite i=j (fin_< j)
@@ -105,14 +129,22 @@
         }
   }
 
+{- | Class extending `StrictBezoutRing` with Kaplansky's condition `isKaplansky`; provides `toSmith` reducing any matrix
+ -   to Smith form via `M~`.
+ -}
 \class SmithRing \extends StrictBezoutRing {
   | isKaplansky : IsKaplansky \this
 
+  -- | Existence theorem — every matrix over a Smith ring is `M~`-equivalent to one in Smith form.
   \lemma toSmith {n m : Nat} (A : Matrix E n m) : ∃ (B : Matrix E n m) (IsSmith B) (A M~ B)
     => Smith-char 0 3 (isStrictBezout,isKaplansky) A
 } \where {
+  -- | Kaplansky's property: for any coprime triple `(a, b, c)`, there exist `t, s` with `t*a` and `t*b + s*c` coprime.
   \type IsKaplansky (R : CRing) => \Pi (a b c : R) -> IsCoprimeArray (a,b,c) -> ∃ (t s : R) (IsCoprime (t * a) (t * b + s * c))
 
+  {- | TFAE characterization of Smith rings — Bezout+Kaplansky ⇔ 2×2 lower-triangular coprime diagonalization ⇔
+   -   diagonalization for `n ≤ m ≤ 2` ⇔ full Smith reduction.
+   -}
   \lemma Smith-char {R : CRing} : TFAE (
     \Sigma R.IsStrictBezout (IsKaplansky R),
     \Sigma R.IsStrictBezout (\Pi (A : Matrix R 2 2) -> A 1 0 = 0 -> IsCoprimeArray (A 0 0, A 0 1, A 1 1) -> ∃ (B : Matrix R 2 2) (IsDiagonal B) (A M~ B)),
@@ -181,6 +213,7 @@
     \lemma transposed {R : CRing} {n m : Nat} {A : Matrix R n m} (p : ∃ (B : Matrix R m n) (IsSmith B) (transpose A M~ B)) : ∃ (B : Matrix R n m) (IsSmith B) (A M~ B) \elim p
       | inP (B,s,e) => inP (transpose B, IsSmith.transposed s, M~.transposed {_} {_} {_} {transpose A} e)
 
+    -- | Diagonalizing every `1 × 2` matrix already implies the strict Bezout property.
     \lemma smith-isBezout {R : CRing} (S : \Pi (A : Matrix R 1 2) -> ∃ (B : Matrix R 1 2) (IsDiagonal B) (A M~ B)) : R.IsStrictBezout
       => \lam a b => \case S (makeMatrix ((a,b) :: nil)) \with {
         | inP (B, Bd, inP (C : Inv, D : Inv, e)) =>
@@ -190,6 +223,7 @@
                    equation {usingOnly (rewrite determinant22 in detD-inv.inv-left)})
       }
 
+    -- | Reduction of 2×2 diagonalization to the lower-triangular coprime case.
     \lemma diagonalize_normed {R : CRing} (bez : R.IsStrictBezout) (diag : \Pi (A : Matrix R 2 2) -> A 1 0 = 0 -> IsCoprimeArray (A 0 0, A 0 1, A 1 1) -> ∃ (B : Matrix R 2 2) (IsDiagonal B) (A M~ B))
       (A : Matrix R 2 2) (A10=0 : A 1 0 = 0) : ∃ (B : Matrix R 2 2) (IsDiagonal B) (A M~ B)
       => \let | (inP (s,u,p,d,f)) => StrictBezoutRing.bezoutArray {\new StrictBezoutRing { | CRing => R | isStrictBezout => bez }} (A 0 0, A 0 1, A 1 1)
@@ -276,6 +310,9 @@
         \in inP (K, Ks, A~C `~-transitive` C~H `~-transitive` H~K)
   }
 
+  {- | Given `A 0 0` divides each `A (suc i) 0`, produce `B M~ A` with zeros below the pivot column and the top row
+   -   unchanged, via multiplication by an explicit lower-triangular invertible matrix.
+   -}
   \sfunc elimRow {R : CRing} {n m : Nat} (A : Matrix R (suc n) (suc m)) (d : \Pi (i : Fin n) -> LDiv (A 0 0) (A (suc i) 0))
     : \Sigma (B : Matrix R (suc n) (suc m)) (A M~ B) (\Pi (i : Fin n) -> B (suc i) 0 = 0) (\Pi (j : Fin (suc m)) -> B 0 j = A 0 j)
     => \let C => addColumn (ide :: \lam i => negative (LDiv.inv {d i})) (addRow {R} (replicate n zro) ide)
@@ -295,11 +332,15 @@
               | suc k => \lam _ => zro_*-left
             }) *> ide-left)
 
+  -- | Dual of `elimRow` — clears the top row to the right of the pivot using transposition.
   \sfunc elimColumn {R : CRing} {n m : Nat} (A : Matrix R (suc n) (suc m)) (d : \Pi (j : Fin m) -> LDiv (A 0 0) (A 0 (suc j)))
     : \Sigma (B : Matrix R (suc n) (suc m)) (A M~ B) (\Pi (j : Fin m) -> B 0 (suc j) = 0) (\Pi (i : Fin (suc n)) -> B i 0 = A i 0)
     => \have (B,At~B,c,d) => elimRow (transpose A) d
        \in (transpose B, M~.transposed {_} {_} {_} {transpose A} At~B, c, d)
 
+  {- | Combined elimination producing a matrix with `B 0 0 = A 0 0` and zeros throughout the rest of the first row and
+   -   column.
+   -}
   \sfunc elimRowColumn {R : CRing} {n m : Nat} (A : Matrix R (suc n) (suc m))
                        (d1 : \Pi (i : Fin n) -> LDiv (A 0 0) (A (suc i) 0))
                        (d2 : \Pi (j : Fin m) -> LDiv (A 0 0) (A 0 (suc j)))
@@ -308,12 +349,16 @@
              | (C,B~C,c',d') => elimColumn B \lam j => transport2 LDiv (inv (d 0)) (inv (d (suc j))) (d2 j)
        \in (C, ~-transitive A~B B~C, d' 0 *> d 0, \lam i => d' (suc i) *> c i, c')
 
+  -- | Divisibility of all entries by a fixed `a` is invariant under `M~`.
   \lemma M~_LDiv {R : CRing} {a : R} {n m : Nat} {A B : Matrix R n m} (A~B : A M~ B)
                  (d : \Pi (i : Fin n) (j : Fin m) -> TruncP (LDiv a (A i j)))
                  (i : Fin n) (j : Fin m) : TruncP (LDiv a (B i j)) \elim A~B
     | inP (C : Inv, D : Inv, A~B) => rewrite A~B $ TruncP.map (FinSet.choice {_} {\lam (s : \Sigma (Fin n) (Fin m)) => LDiv a (A s.1 s.2)} \lam s => d s.1 s.2)
                                          \lam f => R.LDiv_BigSum \lam k => LDiv.factor-left {_} {_} {BigSum \lam j => C.val i j * A j k} {D.val k j} $ R.LDiv_BigSum \lam j => later $ LDiv.factor-right $ f (j,k)
 
+  {- | Inductive core of `toSmith`: extends a Smith reduction on `n × m` to `(suc n) × (suc m)` matrices whose top-left
+   -   entry divides every other entry.
+   -}
   \lemma ind-step {R : CRing} {n m : Nat} (A : Matrix R (suc n) (suc m))
                   (IH : \Pi (B : Matrix R n m) -> ∃ (C : Matrix R n m) (IsSmith C) (B M~ C))
                   (d00 : \Pi (i : Fin (suc n)) (j : Fin (suc m)) -> TruncP (LDiv (A 0 0) (A i j)))
@@ -346,21 +391,28 @@
        }), A~C)
 }
 
+{- | Embeds a `2 × 2` matrix `A` into a `(suc n) × (suc n)` identity-based matrix at coordinates `0` and `k`, used to
+ -   apply 2×2 row/column operations within larger matrices.
+ -}
 \func embed22 {R : Ring} (A : Matrix R 2 2) {n : Nat} (k : Fin (suc n)) : Matrix R (suc n) (suc n)
   => makeMatrix $ replace2 (MatrixRing.ide {R} {suc n}) 0 k
                             (replace2 (replicate (suc n) zro) 0 k (A 0 0) (A 1 0))
                             (replace2 (replicate (suc n) zro) 0 k (A 0 1) (A 1 1))
   \where {
+    -- | Helpers for double substitution into arrays.
     \func replace2 {A : \Type} (l : Array A) (i j : Fin l.len) (a b : A) : Array A l.len
       => replace (replace l i a) j b
 
+    -- | Helpers for double substitution into arrays.
     \func replace2-first {A : \Type} {l : Array A} {i j : Fin l.len} {a b : A} (i/=j : i /= {Nat} j) : replace2 l i j a b i = a
       => replace-notIndex {A} {replace l i a} (/=-sym i/=j) *> replace-index
 
+    -- | Helpers for double substitution into arrays.
     \func replace2-second {A : \Type} {l : Array A} {i j : Fin l.len} {a b : A} : replace2 l i j a b j = b
       => replace-index
   }
 
+-- | `determinant (embed22 A k) = determinant A` for `k ≠ 0`, ensuring such embeddings preserve invertibility.
 \lemma embed22_determinant {R : CRing} {A : Matrix R 2 2} {n : Nat} {k : Fin (suc n)} (k/=0 : k /= {Nat} 0)
   : determinant (embed22 A k) = determinant A \elim k
   | 0 => absurd (k/=0 idp)
@@ -374,9 +426,11 @@
     \open embed22
     \open determinant
 
+    -- | Auxiliary minor and permutation computations supporting the determinant identity.
     \lemma embed22_00 {R : Ring} {A : Matrix R 2 2} {n : Nat} {k : Fin (suc n)} (k/=0 : k /= {Nat} 0) : embed22 A k 0 0 = A 0 0
       => pmap {Array R (suc n)} (__ 0) (replace2-first {Array R (suc n)} {MatrixRing.ide} {0} (/=-sym k/=0)) *> replace2-first {_} {replicate (suc n) zro} (/=-sym k/=0)
 
+    -- | Auxiliary minor and permutation computations supporting the determinant identity.
     \lemma embed22_minor00 {R : Ring} {A : Matrix R 2 2} {n : Nat} {k : Fin n}
       : minor (embed22 A (suc k)) 0 0 = diagonal1 k (A 1 1)
       => minor00 (embed22 A (suc k)) *> matrixExt \lam i j => \case decideEq i k \with {
@@ -390,12 +444,15 @@
         }
       }
 
+    -- | A diagonal matrix with a single non-identity entry, with determinant equal to that entry.
     \func diagonal1 {R : Ring} {n : Nat} (k : Fin n) (a : R) : Matrix R n n
       => diagonal (replace (replicate n ide) k a)
 
+    -- | A diagonal matrix with a single non-identity entry, with determinant equal to that entry.
     \lemma determinant_diagonal1 {R : CRing} {n : Nat} {k : Fin n} {a : R} : determinant (diagonal1 k a) = a
       => determinant_diagonal *> BigProd-unique k (\lam j k/=j => replace-notIndex $ fin_nat-ineq $ later k/=j) *> replace-index
 
+    -- | Auxiliary minor and permutation computations supporting the determinant identity.
     \lemma embed22_minor_k0 {R : Ring} {A : Matrix R 2 2} {n : Nat} {k : Fin (suc n)}
       : minor (embed22 A (suc k)) (suc k) 0 = diagonal1 k (A 1 0) k :: skip {Array R (suc n)} (diagonal1 k (A 1 0)) k
       => matrixExt \lam i j => \case \elim i \with {
@@ -411,22 +468,27 @@
             })
       }
 
+    -- | Auxiliary minor and permutation computations supporting the determinant identity.
     \sfunc embed22_minor_k0_perm {R : Ring} {A : Matrix R 2 2} {n : Nat} {k : Fin (suc n)}
       : \Sigma (p : Perm (diagonal1 k (A 1 0)) (minor (embed22 A (suc k)) (suc k) 0)) (Perm.inversions p = k)
       => rewrite embed22_minor_k0 (determinantN.alternating.permutation1 k (diagonal1 k (A 1 0)), determinantN.alternating.permutation1_inversions)
   }
 
+-- | Class extending `BezoutDomain.Dec` and `SmithRing`.
 \class SmithDomain \extends BezoutDomain.Dec, SmithRing
 
+-- | Over a strict integral domain, two `M~`-equivalent Smith matrices have associate corresponding entries.
 \lemma smith-unique {R : StrictIntegralDomain} {n m : Nat} {A B : Matrix R n m} (As : IsSmith A) (Bs : IsSmith B) (A~B : A M~ B)
                     (i : Fin n) (j : Fin m) : TruncP (associates (A i j) (B i j))
   => \case smith-div-equiv As Bs A~B i j \with {
        | (inP d, inP d') => R.div-associates d d'
      }
   \where {
+    -- | Selects a submatrix by index arrays `li` (rows) and `lj` (columns).
     \func subMatrix {R : \Type} {n m : Nat} (A : Matrix R n m) (li : Array (Fin n)) (lj : Array (Fin m)) : Matrix R li.len lj.len
       => mkMatrix \lam i j => A (li i) (lj j)
 
+    -- | Permuting the row index array induces a permutation on the submatrix rows.
     \func subMatrix_perm {R : \Type} {n m : Nat} {A : Matrix R n m} {k : Nat} {li li' : Array (Fin n) k} {lj : Array (Fin m)} (p : Perm li li')
       : Perm (subMatrix A li lj) (subMatrix A li' lj) \elim k, li, li', p
       | 0, nil, nil, perm-nil => perm-nil
@@ -436,6 +498,7 @@
 
     \open isMultiLinear
 
+    -- | Divisibility of all `l × l` minors of `A` by `d` propagates through products `B · A · C` (Cauchy–Binet style).
     \lemma subMatrix-div {R : CRing} {n m k s : Nat} {B : Matrix R n m} {A : Matrix R m k} {C : Matrix R k s} {d : R}
                          {l : Nat} (p : \Pi (li : Array (Fin m) l) (lj : Array (Fin k) l) -> TruncP (LDiv d (determinant (subMatrix A li lj))))
                          (li : Array (Fin n) l) (lj : Array (Fin s) l) : TruncP (LDiv d (determinant (subMatrix (B MatrixRing.product A MatrixRing.product C) li lj)))
@@ -443,6 +506,7 @@
           subMatrix-div-left (transpose C) (transpose (B MatrixRing.product A)) lj li \lam lk => transportInv (\lam x => TruncP (LDiv d x)) (determinant_transpose (subMatrix (B MatrixRing.product A) li lk)) $
           subMatrix-div-left B A li lk \lam lm => p lm lk
       \where
+        -- | One-sided variant of `subMatrix-div`.
         \lemma subMatrix-div-left {R : CRing} {n m k : Nat} (B : Matrix R n m) (A : Matrix R m k) {d : R}
                                   {l : Nat} (li : Array (Fin n) l) (lj : Array (Fin k) l)
                                   (p : \Pi (li : Array (Fin m) l) -> TruncP (LDiv d (determinant (subMatrix A li lj))))
@@ -454,21 +518,26 @@
                       => rewrite q in multiLinear-comb {R} {ArrayFinModule l} {RingLModule R} args (\lam l => determinant l) determinant.multilinear
              \in linearComb-div c \lam j => p j
 
+    -- | First `k` diagonal entries (as a finite product) of a matrix.
     \func index {n k : Nat} (p : k <= n) (i : Fin k) => toFin i (fin_< i NatSemiring.<∘l p)
 
+    -- | First `k` diagonal entries (as a finite product) of a matrix.
     \func diagProd {M : Monoid} {n m k : Nat} (A : Matrix M n m) (p : k <= n) (q : k <= m) : M
       => BigProd \lam (j : Fin k) => A (index p j) (index q j)
 
+    -- | Recursive expansion `diagProd_{k+1} = diagProd_k * A_{k,k}`.
     \lemma diagProd_suc {M : Monoid} {n m k : Nat} {A : Matrix M n m} {p : suc k <= n} {q : suc k <= m}
       : diagProd A p q = diagProd A (id<=suc <=∘ p) (id<=suc <=∘ q) * A (toFin k $ id<suc <∘l p) (toFin k $ id<suc <∘l q)
       => M.BigProd_suc {k} {\lam j => A (index p j) (index q j)} *> pmap2 (_ * A __ __)
           (nat_fin_= $ toFin=id *> later (mod_< id<suc) *> inv toFin=id)
           (nat_fin_= $ toFin=id *> later (mod_< id<suc) *> inv toFin=id)
 
+    -- | For diagonal `A`, the leading `k`-diagonal product equals the determinant of the leading `k × k` submatrix.
     \lemma diag-sub {R : CRing} {n m k : Nat} {A : Matrix R n m} (Ad : IsDiagonal A) (p : k <= n) (q : k <= m)
       : diagProd A p q = determinant (subMatrix A (index p) (index q))
       => inv $ determinant_IsDiagonal {_} {_} {subMatrix A (index p) (index q)} \lam i/=j => Ad \lam p => i/=j $ inv toFin=id *> p *> toFin=id
 
+    -- | Determinant of a sorted-index submatrix of a diagonal matrix is the product of selected diagonal entries.
     \func determinant_subMatrix {R : CRing} {n m k : Nat} {A : Matrix R n m} (Ad : IsDiagonal A) {li : Array (Fin n) k} {lj : Array (Fin m) k}
                                 (lis : sort.IsSorted li) (ljs : sort.IsSorted lj) (inj : IsInj li)
       : determinant (subMatrix A li lj) = BigProd \lam j => A (li j) (lj j)
@@ -480,6 +549,7 @@
                      \in R.BigProd_zro s.1 $ later (Ad s.2)
       }) *> R.zro_*-right) *> pmap (* _) sign_ide *> ide-left
 
+    -- | For Smith `A`, the leading diagonal product `diagProd A p q` divides every `k × k` submatrix determinant.
     \lemma diag-div {R : CRing} {n m k : Nat} {A : Matrix R n m} (As : IsSmith A) (p : k <= n) (q : k <= m) (li : Array (Fin n) k) (lj : Array (Fin m) k)
       : TruncP (LDiv (diagProd A p q) (determinant (subMatrix A li lj)))
       => rewrite (isAlternating.alternating_perm {R} determinant.alternatingT {subMatrix (transpose A) lj li} (subMatrix_perm {_} {_} {_} {transpose A} sort.sort-perm),
@@ -492,6 +562,7 @@
            }
          }) LDiv.factor-right) LDiv.factor-right
       \where {
+        -- | A sorted injective `Fin`-array satisfies `j ≤ l j` pointwise.
         \lemma sorted-monotone {n : Nat} {l : Array (Fin n)} (s : sort.IsSorted l) (inj : IsInj l) {j : Fin l.len} : j NatSemiring.<= l j
           => aux (\lam _ => zero<=_) \lam {i} {j} p => \case LinearOrder.dec<_<= (l i) (l j) \with {
             | inl r => r
@@ -504,10 +575,14 @@
           }
       }
 
+    -- | Leading diagonal products are divisibility-comparable for `M~`-equivalent Smith matrices.
     \lemma prod-div {R : CRing} {n m k : Nat} {A B : Matrix R n m} (As : IsSmith A) (Bs : IsSmith B) (A~B : A M~ B) (p : k <= n) (q : k <= m)
                     : TruncP (LDiv (diagProd A p q) (diagProd B p q)) \elim A~B
       | inP (C,D,B=CAD) => rewrite (diag-sub Bs.1 p q, B=CAD) $ subMatrix-div (diag-div As p q) (index p) (index q)
 
+    {- | Over a reduced commutative ring, corresponding entries of `M~`-equivalent Smith matrices divide each other (so
+     -   are associate).
+     -}
     \lemma smith-div {R : ReducedCRing} {n m : Nat} {A B : Matrix R n m} (As : IsSmith A) (Bs : IsSmith B) (A~B : A M~ B)
                      (i : Fin n) (j : Fin m) : TruncP (LDiv (A i j) (B i j))
       => \case decideEq (i : Nat) j \with {
@@ -525,6 +600,9 @@
              \in inP $ R.div_pow_div-cancel {diagProd A i<=n i<=m} (rewriteI BigProd_replicate d1) (LDiv.trans A|B $ rewriteI BigProd_replicate d2) $ LDiv.trans d $ LDiv.product-right (B i j) B|A
          }
 
+    {- | Over a reduced commutative ring, corresponding entries of `M~`-equivalent Smith matrices divide each other (so
+     -   are associate).
+     -}
     \lemma smith-div-equiv {R : ReducedCRing} {n m : Nat} {A B : Matrix R n m} (As : IsSmith A) (Bs : IsSmith B) (A~B : A M~ B)
                            (i : Fin n) (j : Fin m) : \Sigma (TruncP (LDiv (A i j) (B i j))) (TruncP (LDiv (B i j) (A i j)))
       => (smith-div As Bs A~B i j, smith-div Bs As (~-symmetric A~B) i j)

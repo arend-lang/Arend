@@ -1,9 +1,22 @@
+{- | Category structures on pointed and additively pointed sets, together with kernel and image constructions for their
+ -   morphisms.
+ -
+ -   This module assembles `Pointed` and `AddPointed` into categories using the corresponding pointed homomorphisms as
+ -   arrows. It also provides the standard factorization data for an additively pointed map `f`: its kernel (fiber over
+ -   `0`) and its image, each equipped with the appropriate pointed structure and the canonical inclusion / projection
+ -   morphisms. The accompanying `IsInj` / `IsSurj` lemmas certify that kernels embed and images surject, giving the
+ -   basic building blocks for an exact-sequence vocabulary in later algebraic developments.
+ -}
+
 \import Algebra.Pointed
 \import Algebra.Pointed.PointedHom
 \import Category
 \import Category.Meta
 \import Paths.Meta
 
+{- | The category of pointed types `Pointed` with `PointedHom` as morphisms, identity `PointedHom.id`, and composition
+ -   `PointedHom.∘`.
+ -}
 \instance PointedCat.{u} : Cat Pointed.{u}
   | Hom X Y => PointedHom X Y
   | id => PointedHom.id
@@ -13,6 +26,9 @@
   | o-assoc => idp
   | univalence => sip \lam p1 p2 => ext (func-ide {p1})
 
+{- | The category of additively pointed types `AddPointed` with `AddPointedHom` as morphisms, identity
+ -   `AddPointedHom.id`, and composition `AddPointedHom.∘`.
+ -}
 \instance AddPointedCat.{u} : Cat AddPointed.{u}
   | Hom X Y => AddPointedHom X Y
   | id => AddPointedHom.id

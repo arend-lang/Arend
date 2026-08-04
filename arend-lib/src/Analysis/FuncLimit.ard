@@ -1,3 +1,15 @@
+{- | Convergence of parametrized families of functions and limit operators in cover/uniform/metric/topological-group
+ -   settings.
+ -
+ -   This module defines what it means for a family `f : I -> X -> Y` indexed by a directed set `I` to converge as a
+ -   function, by reducing to continuity of the uncurried map on the product of `I` (viewed as a directed cover space)
+ -   with `X`. From this single notion `IsFuncConvergent` it derives the pointwise limit, the limiting cover map into a
+ -   complete codomain, and characterizations specialized to uniform spaces, (extended pseudo)metric spaces, and
+ -   topological abelian groups via Cauchy-style ε/N conditions. It also formalizes uniform convergence and a more
+ -   general "limit along a directed set" predicate `IsCoverLimit`, including its instantiation to limits at a point in
+ -   a topological space via the directed set of open neighborhoods.
+ -}
+
 \import Algebra.Group
 \import Algebra.Meta
 \import Algebra.Pointed
@@ -27,18 +39,27 @@
 \open ProductCoverSpace
 \open CoverMap
 
+{- | A family `f : I -> X -> Y` (with `I` directed, `X Y` cover spaces) is convergent iff its uncurrying is a `CoverMap`
+ -   from `DirectedCoverSpace I ⨯ X` to `Y`.
+ -}
 \func IsFuncConvergent {I : DirectedSet} {X Y : CoverSpace} (f : I -> X -> Y) : \Prop
   => CoverMap (DirectedCoverSpace I `ProductCoverSpace` X) Y \lam s => f s.1 s.2
 
+-- | Functional convergence implies pointwise convergence: for each `x : X`, `f __ x : I -> Y` is convergent.
 \lemma funcConv-pointwise {I : DirectedSet} {X Y : CoverSpace} (f : I -> X -> Y) (fc : IsFuncConvergent f) {x : X} : IsConvergent (f __ x)
   => fc ∘ tuple id (const x)
 
+-- | When `Y` is a `CompleteCoverSpace`, the pointwise limit `\lam x => limit (f __ x) ...` is itself a `CoverMap X Y`.
 \lemma funcLimit {I : DirectedSet} {X : CoverSpace} {Y : CompleteCoverSpace} (f : I -> X -> Y) (fc : IsFuncConvergent f)
   : CoverMap X Y \lam x => limit (f __ x) (funcConv-pointwise f fc)
   => \have | de => prod.isDenseEmbedding completion.isDenseEmbedding id-denseEmbedding
            | lift => dense-lift (prod completion id) de fc
      \in transport (CoverMap X Y) (ext \lam x => dense-lift-unique completion completion.isDenseEmbedding.1 (lift ∘ tuple id (const x)) (completion-lift $ funcConv-pointwise f fc) (\lam n => dense-lift-char de {fc} (n,x) *> inv (completion-lift-char {_} {_} {funcConv-pointwise f fc} n)) limit.infPoint) $ lift ∘ tuple (const limit.infPoint) id
 
+{- | Convergence of `f : I -> CoverMap X Y` is equivalent to: every cauchy cover `D` of `Y` is refined by a cauchy cover
+ -   of `X` whose elements `U` admit some tail index `N` and `V ∈ D` with `f n x ∈ V` for all `n ≥ N`, `x ∈ U`. Includes
+ -   the reverse direction `conv`.
+ -}
 \lemma funcConvergent-char {I : DirectedSet} {X Y : CoverSpace} (f : I -> CoverMap X Y)
                            (fc : ∀ {D : Y.isCauchy} (X.isCauchy \lam U => ∃ (N : I) (V : D) ∀ {n} {x} (N <= n -> U x -> V (f n x))))
   : IsFuncConvergent (\lam n => f n)
@@ -55,6 +76,9 @@
             \lam (inP (N, _, inP (_, inP (V,DV,idp), idp), h)) => inP $ later (N, V, DV, h)
   }
 
+{- | Uniform-space variant: replaces cauchy covers of `Y` with uniform covers `E`, requiring per-point witnesses `W ∈ E`
+ -   containing `f n x` for `n ≥ N`. Includes `split` (a regular-preuniform refinement form) and `conv`.
+ -}
 \lemma funcConvergent-uniform-char {I : DirectedSet} {X : CoverSpace} {Y : UniformSpace} (f : I -> CoverMap X Y)
                                    (fc : ∀ {E : Y.isUniform} (X.isCauchy \lam U => ∃ (N : I) ∀ {x : U} ∃ (W : E) ∀ {n} (N <= n -> W (f n x))))
   : IsFuncConvergent (\lam n => f n)
@@ -87,6 +111,9 @@
       => \lam Eu => cauchy-subset (funcConvergent-char.conv f fc $ Y.makeCauchy Eu) \lam (inP (N,V,EV,h)) => inP $ later (N, \lam Ux => inP (V, EV, h __ Ux))
   }
 
+{- | Metric variant: convergence is equivalent to the Cauchy condition `dist (f n x) (f N x) < eps` holding uniformly on
+ -   a cauchy cover, for every rational `eps > 0`. Includes `conv`.
+ -}
 \lemma funcCovergent-metric-char {I : DirectedSet} {X : CoverSpace} {Y : ExPseudoMetricSpace} {f : I -> X -> Y} (fa : \Pi (i : I) -> CoverMap X Y (f i))
                                  (fc : \Pi {eps : Rat} -> 0 < eps -> X.isCauchy \lam U => ∃ (N : I) ∀ {x : U} ∀ {n} (N <= n -> (dist (f n x) (f N x)).U eps))
   : IsFuncConvergent f
@@ -103,6 +130,9 @@
       })
   }
 
+{- | Topological abelian group variant: uses neighborhoods `U` of `0` and the difference `f n x - f N x ∈ U`. Includes
+ -   `conv`.
+ -}
 \lemma funcCovergent-topAb-char {I : DirectedSet} {X : CoverSpace} {Y : TopAbGroup} (f : I -> CoverMap X Y)
                                 (fc : ∀ {U : Y.isOpen} (U 0) (X.isCauchy \lam V => ∃ (N : I) ∀ {x : V} ∀ {n} (N <= n -> U (f n x - f N x))))
   : IsFuncConvergent (\lam n => f n)
@@ -121,14 +151,21 @@
       }
   }
 
+{- | Uniform functional convergence: for every uniform cover `D` of `Y` there is an `N : I` such that for all `x` some
+ -   `V ∈ D` contains `f n x` for all `n ≥ N`.
+ -}
 \func IsUniFuncConvergent {I : DirectedSet} {X : \Set} {Y : PreuniformSpace} (f : I -> X -> Y) : \Prop
   => ∀ {D : Y.isUniform} ∃ (N : I) ∀ x ∃ (V : D) ∀ {n} (N <= n -> V (f n x))
 
+-- | Uniform convergence of cover maps into a uniform space implies functional convergence.
 \lemma funcCovergent-uni {I : DirectedSet} {X : CoverSpace} {Y : UniformSpace} (f : I -> CoverMap X Y) (fc : IsUniFuncConvergent \lam n => f n) : IsFuncConvergent \lam n => f n
   => funcConvergent-uniform-char f \lam Eu => top-cauchy \case fc Eu \with {
     | inP (N,h) => inP $ later (N, \lam {x} _ => h x)
   }
 
+{- | In an extended pseudometric codomain, `IsUniFuncConvergent f` is equivalent to the standard ε/N Cauchy condition
+ -   uniformly in `x`.
+ -}
 \lemma metric-uni-funcConvergent {I : DirectedSet} {X : \Set} {Y : ExPseudoMetricSpace} {f : I -> X -> Y}
   : IsUniFuncConvergent f <-> ∀ {eps : > 0} ∃ (N : I) ∀ x {n} (N <= n -> (dist (f n x) (f N x)).U eps)
   => (\lam fc eps>0 => \case fc $ Y.metricUniform $ RatField.half>0 eps>0 \with {
@@ -143,9 +180,16 @@
     }
   })
 
+{- | Predicate that `L : Set.Total T -> Y` is the limit of a partial family `f : Set.Total S -> Y` (with `S ⊆ I × X`)
+ -   into a topological abelian group: for every neighborhood `V` of `0`, a cauchy cover of `X` witnesses that
+ -   `L x - f (n, x)` lies in `V` for sufficiently large `n` whenever `(n, x) ∈ S`.
+ -}
 \type IsCoverLimit {I : DirectedSet} {X : CoverSpace} {Y : TopAbGroup} (S : Set (\Sigma I X)) (f : Set.Total S -> Y) {T : Set X} (L : Set.Total T -> Y) : \Prop
   => ∀ {V : Y.isOpen} (V 0) (X.isCauchy \lam U => ∃ (N : I) ∀ {x : U} (Tx : T x) {n} (N <= n) (Sh : S (n,x)) (V (L (x,Tx) - f ((n,x),Sh))))
   \where {
+    {- | In a Hausdorff topological abelian group, two such limits agree on points `x` for which `S` contains
+     -   arbitrarily-late indices over `x`.
+     -}
     \lemma unique {Y : HausdorffTopAbGroup} {f : Set.Total S -> Y} {T : Set X} {L L' : Set.Total T -> Y} (Ll : IsCoverLimit S f L) (L'l : IsCoverLimit S f L')
                   {x : Set.Total T} (Sh : ∀ N ∃ (n : I) (N <= n) (S (n,x.1))) : L x = L' x
       => Y.isHausdorff \lam {V} {V'} Vo V'o VLx V'L'x =>
@@ -156,6 +200,9 @@
           \in inP (f ((K',x.1),SK'), (simplify in g Ux x.2 (N<=K <=∘ K<=K') SK', simplify in g' U'x x.2 (M<=K <=∘ K<=K') SK'))
   }
 
+{- | The directed set of pointed open neighborhoods of `a : X` together with a chosen point in each, ordered by reverse
+ -   inclusion of the neighborhood; expresses "filter towards `a`" as a directed set.
+ -}
 \func PointDirectedSet {X : TopSpace} (a : X) : DirectedSet \cowith
   | E => Given (V : isOpen) (V a) (b : X) (V b)
   | <= S T => T.1 ⊆ S.1
@@ -164,14 +211,22 @@
   | isInhabitted => inP (top, open-top, (), a, ())
   | isDirected (V,Vo,Va,_,_) (W,Wo,Wa,_,_) => inP ((V ∧ W, open-inter Vo Wo, (Va,Wa), a, (Va,Wa)), meet-left, meet-right)
 
+{- | `L` is the limit of `f` as the first coordinate approaches `c : Z`, defined as `IsCoverLimit` over
+ -   `PointDirectedSet c`.
+ -}
 \func IsOpenLimit {Z : TopSpace} (c : Z) {X : CoverSpace} {Y : TopAbGroup} (S : Set (\Sigma Z X)) (f : Set.Total S -> Y) {T : Set X} (L : Set.Total T -> Y) : \Prop
   => IsCoverLimit {PointDirectedSet c} (\lam h => S (h.1.4,h.2)) (\lam x => f (_,x.2)) L
 
+{- | Equivalent characterization of `IsOpenLimit` directly in terms of open neighborhoods `W` of `c`: for every
+ -   neighborhood `V` of `0 : Y`, a cauchy cover of `X` witnesses `L x - f (z, x) ∈ V` for all `z ∈ W` with
+ -   `(z, x) ∈ S`.
+ -}
 \lemma openLimit-char {Z : TopSpace} {c : Z} {X : CoverSpace} {Y : TopAbGroup} {S : Set (\Sigma Z X)} {f : Set.Total S -> Y} {T : Set X} {L : Set.Total T -> Y}
   : IsOpenLimit c S f L <-> ∀ {V : Y.isOpen} (V 0) (X.isCauchy \lam U => ∃ (W : Z.isOpen) (W c) ∀ {x : U} (Tx : T x) {z : W} (Sh : S (z,x)) (V (L (x,Tx) - f ((z,x),Sh))))
   => (\lam fc Vo V0 => cauchy-subset (fc Vo V0) \lam (inP (N,g)) => inP $ later (N.1, N.2, N.3, \lam Ux Tx {z} Nz Sz => g Ux Tx {N.1,N.2,N.3,z,Nz} <=-refl Sz),
       \lam fc Vo V0 => cauchy-subset (fc Vo V0) \lam (inP (W,Wo,Wc,g)) => inP $ later ((W,Wo,Wc,c,Wc), \lam Ux Tx {h} p Sh => g Ux Tx (p h.5) Sh))
   \where {
+    -- | Hausdorff uniqueness of the open limit on points where `S` is dense over `c` along open neighborhoods.
     \lemma unique {Y : HausdorffTopAbGroup} {f : Set.Total S -> Y} {L L' : Set.Total T -> Y} (Ll : IsOpenLimit c S f L) (L'l : IsOpenLimit c S f L')
                   {x : Set.Total T} (Sh : ∀ {W : Z.isOpen} ∃ (z : W) (S (z,x.1))) : L x = L' x
       => IsCoverLimit.unique Ll L'l \lam N => \case Sh N.2 \with {

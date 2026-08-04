@@ -1,3 +1,15 @@
+{- | The Eckmann–Hilton argument: two unital binary operations satisfying the interchange law on a single set must
+ -   coincide and be commutative.
+ -
+ -   This module provides both an abstract algebraic version and a concrete homotopical application. The class
+ -   `Algebraic-Eckmann-Hilton` axiomatizes the classical algebraic statement — given two unital operations `o` and `#`
+ -   on a set `X` related by the interchange law `(a # b) o (c # d) = (a o c) # (b o d)`, the two units agree, the
+ -   operations coincide, and the resulting single operation is commutative and associative. The class
+ -   `Omega^2-Commutative` instantiates this pattern in homotopy theory: the two ways of horizontally composing 2-paths
+ -   (vertical-then-horizontal vs horizontal-then-vertical, via left/right whiskering) play the role of `o` and `#`,
+ -   yielding commutativity of the second loop space `Ω²X`.
+ -}
+
 \import Function.Meta
 \import Homotopy.Loop
 \import Homotopy.Pointed \using  (Pointed \as HPointed)
@@ -21,36 +33,50 @@
 
   | rel {a b c d : X} : (a # b) o (c # d) = (a o c) # (b o d)
 
+  -- | `id_o = id_#` — the two units agree, derived from interchange and unit laws.
   \func units-coincide : id_o = id_#
     => rewrite (inv id_o-right, pmap (id_o o) (inv $ id_#-left),
                 pmap (o (id_# # id_o)) (inv $ id_#-right), rel, id_o-left, id_o-right) id_#-right
 
+  -- | `a o b = b # a` — relates the two operations via swap.
   \func binop_rels_1 {a b : X} : a o b = b # a
     => rewrite (pmap (\lam z => z o b) (inv id_#-left),
                 pmap (\lam z => (id_# # a) o z) (inv id_#-right), rel, inv units-coincide,
                 id_o-left, id_o-right) idp
 
+  -- | `b # a = b o a` — the converse relation.
   \func binop_rels_2 {a b : X} : b # a = b o a
     => rewrite (pmap (\lam z => z # a) (inv id_o-right),
                 pmap (\lam z => (b o id_o) # z) (inv id_o-left), inv rel,
                 units-coincide, id_#-right, id_#-left) idp
 
+  -- | `a o b = b o a` — commutativity of `o`, obtained by chaining the two binop relations.
   \func comm {a b : X} : a o b = b o a => binop_rels_1 *> binop_rels_2
 
+  -- | `a o b = a # b` — the two operations are equal.
   \func binops_coincide {a b : X} : a o b = a # b => comm *> binop_rels_1
 
+  -- | `a # b = b # a` — commutativity of `#`.
   \func comm-# {a b : X} : a # b = b # a => rewrite (inv binops_coincide, binop_rels_1) idp
 
+  -- | `(a o b) o (c o d) = (a o c) o (b o d)` — interchange law restated for `o` alone.
   \func rel-o {a b c d : X} : (a o b) o (c o d) = (a o c) o (b o d) =>
     rewrite (binops_coincide {_} {a} {b}, binops_coincide {_} {c} {d}, rel, inv binops_coincide) idp
 
+  -- | `(a o b) o c = a o (b o c)` — associativity of `o`, derived from `rel-o` plus units.
   \func assoc {a b c : X} : (a o b) o c = a o (b o c)
     => rewrite (inv $ id_o-left {_} {c}, rel-o, id_o-left, id_o-right) idp
 }
 
+{- | Given `alp : p = q` between paths `p, q : a = b` and `r : b = c`, produces `p *> r = q *> r` by whiskering on the
+ -   right.
+ -}
 \func RightHorizontalWhiskering {X : \Type} {a b c : X} {p q : a = b} (alp : p = q) (r : b = c) : p *> r = q *> r
   => path (\lam i => alp i *> r)
 
+{- | Given `q : a = b` and `bet : r = s` between paths `r, s : b = c`, produces `q *> r = q *> s` by whiskering on the
+ -   left.
+ -}
 \func LeftHorizontalWhiskering {X : \Type} {a b c : X} (q : a = b) {r s : b = c} (bet : r = s) : q *> r = q *> s
   => path (\lam i => q *> bet i)
 
@@ -59,8 +85,12 @@
  - It has some minor changes that are possible with Arend features.
  - -}
 \class Omega^2-Commutative (X : HPointed) {
+  -- | Abbreviation for `Omega^ 2 X`, the second loop space of `X`.
   \func Omega^2_X => Loop (Loop X)
 
+  {- | Computes `LeftHorizontalWhiskering idp bet` as `idp_*> r *> bet *> inv (idp_*> s)`, identifying left-whiskering
+   -   on the trivial path with conjugation by the left-unit isomorphism.
+   -}
   \func LeftHorizontalWhiskering-relation {b c : X} {r s : b = c} (bet : r = s)
     : LeftHorizontalWhiskering (idp {X} {b}) bet = idp_*> r *> bet *> inv (idp_*> s) \elim bet
     | idp => unfold LeftHorizontalWhiskering (rewrite (inv $ *>-assoc (idp_*> r) idp (inv (idp_*> r)), aux) idp)
@@ -69,12 +99,15 @@
         | idp => idp
     }
 
+  -- | First star-product of 2-cells: right-whisker `alp` then left-whisker `bet`, giving `p *> r = q *> s`.
   \protected \func \infix 7 st1 {a b c : X} {p q : a = b} {r s : b = c} (alp : p = q) (bet : r = s) : p *> r = q *> s
     => RightHorizontalWhiskering alp r *> LeftHorizontalWhiskering q bet
 
+  -- | Second star-product of 2-cells: left-whisker `bet` then right-whisker `alp`, giving `p *> r = q *> s`.
   \protected \func \infix 7 st2 {a b c : X} {p q : a = b} {r s : b = c} (alp : p = q) (bet : r = s) : p *> r = q *> s
     => LeftHorizontalWhiskering p bet *> RightHorizontalWhiskering alp s
 
+  -- | `alp st1 bet = alp st2 bet` — the two star-products agree (proved by path induction on both arguments).
   \protected \func Relation {a b c : X} {p q : a = b} {r s : b = c} (alp : p = q) (bet : r = s) : alp st1 bet = alp st2 bet \elim alp, bet
     | idp, idp => helper
     \where {
@@ -82,6 +115,9 @@
         | idp, idp => idp
     }
 
+  {- | For 2-loops `alp bet : Omega^2_X`, `alp *> bet = bet *> alp`. The proof identifies `st1` with `alp *> bet`
+   -   (`Relation1`), `st2` with `bet *> alp` (`Relation2`), and combines them via `Relation` (`Relation3`).
+   -}
   \protected \func Commutative (alp bet : Omega^2_X) : alp *> bet = bet *> alp => rewrite (inv Relation1, Relation3, Relation2) idp
     \where \protected {
       \func Relation1 : alp st1 bet = alp *> bet

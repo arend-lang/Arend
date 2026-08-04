@@ -1,3 +1,16 @@
+{- | Subsets of a type encoded as predicates `X -> \Prop`, with their lattice/locale structure and tools for refinements
+ -   and covers.
+ -
+ -   This module identifies a subset of `X` with a propositional predicate, so set-theoretic operations (intersection,
+ -   union, complement, preimage) become logical operations on predicates. The powerset `Set X` is given the structure
+ -   of a `Locale` (`SetLattice`), where `<=` is pointwise implication `⊆`, joins are existential quantifiers, and meets
+ -   are pairwise conjunctions; this lets the rest of the library reuse frame/locale machinery on plain subsets. The
+ -   module also develops the language of *covers* (sets of subsets) with a refinement preorder and the `CoverInter`
+ -   operation, which is the key combinatorial primitive used by topology/locale-style proofs in the library. Finally,
+ -   `extend`/`restrict` mediate between subsets of `X` lying inside a fixed `U` and subsets of the total space
+ -   `Total U`, and `^-1` packages preimage as a frame homomorphism.
+ -}
+
 \import Data.Array
 \import Function.Meta
 \import Logic
@@ -9,45 +22,61 @@
 \import Paths.Meta
 \import Topology.Locale
 
+-- | A subset of `X` is a predicate `X -> \Prop`.
 \func Set (X : \Type) => X -> \Prop
   \where {
+    -- | Union of a family `S : Set X -> \hType` of subsets, `∃ (U : S) (U a)`.
     \func Union {X : \Type} (S : Set X -> \Type) : Set X
       => \lam a => ∃ (U : S) (U a)
 
     \lemma Union-cond {X : \Type} {S : Set X -> \Type} {U : Set X} (SU : S U) : U ⊆ Union S
       => \lam Ux => inP (U,SU,Ux)
 
+    -- | Same as `Elem`, packaged inside the `Set` namespace.
     \func Total {X : \Type} (U : Set X) => \Sigma (x : X) (\property U x)
 
+    -- | Restriction of a subset `V` to the total space `Total U`.
     \func restrict {X : \Type} {U : Set X} (V : Set X) : Set (Total U)
       => \lam s => V s.1
 
+    -- | Product of subsets `U ⊆ X`, `V ⊆ Y` as a subset of `\Sigma X Y`.
     \func Prod {X Y : \Type} (U : Set X) (V : Set Y) : Set (\Sigma X Y)
       => \lam s => \Sigma (U s.1) (V s.2)
 
+    -- | Pairwise intersection of two covers: all `U ∧ V` with `U ∈ C`, `V ∈ D`.
     \func CoverInter {X : \Type} (C : Set (Set X)) (D : Set (Set X)) : Set (Set X)
       => \lam W => ∃ (U : C) (V : D) (W = U ∧ {SetLattice X} V)
 
+    -- | Iterated `CoverInter` over an array of covers, starting from `single top`.
     \func CoverInterBig {X : \Type} (Cs : Array (Set (Set X))) : Set (Set X)
       => Big CoverInter (single (top {SetLattice X})) Cs
   }
 
+-- | The total space of a subset: `\Sigma (x : X) (U x)`, the type of elements satisfying `U`.
 \type Elem {X : \Type} (U : Set X) => \Sigma (x : X) (\property U x)
 
+-- | The singleton subset `single a = (a =)`.
 \func single {X : \Set} (a : X) : Set X
   => a =
 
+-- | `single a ⊆ U` whenever `U a`.
 \lemma single_<= {X : \Set} {a : X} {U : Set X} (Ua : U a) : single a ⊆ U
   => \lam p => rewriteI p Ua
 
+-- | Preimage of a subset along a function `f : X -> Y`.
 \func \infix 8 ^-1 {X Y : \Type} (f : X -> Y) (S : Set Y) : Set X
   => \lam a => S (f a)
 
+-- | Inclusion of subsets, defined as pointwise implication.
 \type Subset \alias \infix 4 ⊆ {X : \Type} (U V : Set X) => \Pi {x : X} -> U x -> V x
 
+-- | Pointwise complement: `Compl U x = Not (U x)`.
 \func Compl {X : \Type} (U : Set X) : Set X
   => \lam x => Not (U x)
 
+{- | Instance making `Set A` into a `Locale`: `<=` is `⊆`, `meet` is pointwise conjunction, `top` is the full set,
+ -   `Join` is the existential quantifier; distributivity makes it a frame.
+ -}
 \instance SetLattice (A : \Type) : Locale (Set A)
   | <= => ⊆
   | <=-refl p => p
@@ -70,6 +99,7 @@
 \lemma empty-univ {A : \Type} {U : Set A} : empty ⊆ U
   => absurd __
 
+-- | An element of the bottom subset gives any proposition (ex falso).
 \lemma bottom-empty {A : \Type} {E : \Prop} {x : A} (b : (SetLattice A).bottom x) : E \elim b
   | inP (_,(),_)
 
@@ -82,23 +112,28 @@
     | byRight Vx => inP (V, byRight idp, Vx)
   }
 
+-- | `C` refines `D` iff every `U ∈ C` is contained in some `V ∈ D`.
 \func Refines {P : Preorder} (C D : Set P) : \Prop
   => ∀ {x : C} ∃ (y : D) (x <= y)
 
 \lemma <=_Refines {P : Preorder} {C D : Set P} (C<=D : C ⊆ D) : Refines C D
   => \lam Cx => inP (_, C<=D Cx, <=-refl)
 
+-- | A refinement transports pointwise coverage: if some `U ∈ C` contains `x`, so does some `V ∈ D`.
 \lemma Refines-cover {X : \Type} {C D : Set (Set X)} (r : Refines C D) {x : X} (p : ∃ (U : C) (U x)) : ∃ (V : D) (V x) \elim p
   | inP (U,CU,Ux) => \case r CU \with {
     | inP (V,DV,U<=V) => inP (V, DV, U<=V Ux)
   }
 
+-- | Every cover refines the trivial cover `{top}`.
 \lemma Refines-single_top {X : \Type} {C : Set (Set X)} : Refines C (single top)
   => \lam _ => inP (top, idp, top-univ)
 
+-- | Refinement is reflexive.
 \lemma Refines-refl {P : Preorder} {C : Set P} : Refines C C
   => \lam CU => inP (_, CU, <=-refl)
 
+-- | Refinement is transitive.
 \lemma Refines-trans {X : \Type} {C D E : Set (Set X)} (r1 : Refines C D) (r2 : Refines D E) : Refines C E
   => \lam CU => \case r1 CU \with {
     | inP (V,DV,U<=V) => \case r2 DV \with {
@@ -106,21 +141,26 @@
     }
   }
 
+-- | `CoverInter C D` refines both `C` and `D`.
 \lemma Refines-inter-left {X : \Type} {C D : Set (Set X)} : Refines (Set.CoverInter C D) C
   => \lam {_} (inP (U,CU,_,_,idp)) => inP (U, CU, meet-left)
 
+-- | `CoverInter C D` refines both `C` and `D`.
 \lemma Refines-inter-right {X : \Type} {C D : Set (Set X)} : Refines (Set.CoverInter C D) D
   => \lam {_} (inP (_,_,V,DV,idp)) => inP (V, DV, meet-right)
 
+-- | `CoverInterBig Cs` refines each component cover `Cs j`.
 \lemma Refines-inter-big {X : \Type} (Cs : Array (Set (Set X))) (j : Fin Cs.len) : Refines (Set.CoverInterBig Cs) (Cs j) \elim Cs, j
   | C :: Cs, 0 => Refines-inter-left
   | C :: Cs, suc j => Refines-trans Refines-inter-right (Refines-inter-big Cs  j)
 
+-- | Refinement is monotone under `CoverInter`: `C ≤ D`, `C' ≤ D'` implies `CoverInter C C' ≤ CoverInter D D'`.
 \lemma Refines-inter {X : \Type} {C D C' D' : Set (Set X)} (r : Refines C D) (r' : Refines C' D') : Refines (Set.CoverInter C C') (Set.CoverInter D D')
   => \lam {W} (inP (U,CU,U',C'U',W=UU')) => \case r CU, r' C'U' \with {
     | inP (V,DV,U<=V), inP (V',D'V',U'<=V') => inP (V ∧ V', inP (V, DV, V', D'V', idp), rewrite W=UU' $ MeetSemilattice.meet-monotone U<=V U'<=V')
   }
 
+-- | Characterizes elements of `CoverInterBig Cs` as big meets `Big ∧ top Us` of choices `Us j ∈ Cs j`.
 \lemma CoverInterBig-char {X : \Type} {Cs : Array (Set (Set X))} : Set.CoverInterBig Cs = \lam W => ∃ (Us : Array (Set X) Cs.len) (\Pi (j : Fin Cs.len) -> Cs j (Us j)) (W = Big {Set X} (∧) top Us) \elim Cs
   | nil => exts \lam W => ext (\lam p => inP (nil, \case __ \with {}, inv p), \lam (inP t) => inv t.3)
   | C :: Cs => pmap (Set.CoverInter C) CoverInterBig-char *> exts \lam W => ext (
@@ -130,27 +170,35 @@
       }, p *> pmap (U ∧) q),
       \lam (inP (Us,CsUs,p)) => inP (Us 0, CsUs 0, _, inP (\lam j => Us (suc j), \lam j => CsUs (suc j), idp), p))
 
+-- | Extends a subset `V` of `Total U` to a subset of `X` (those `x` in `U` whose pair lies in `V`).
 \func extend {X : \Type} {U : Set X} (V : Set (Set.Total U)) : Set X
   => \lam x => \Sigma (Ux : U x) (V (x,Ux))
 
+-- | `extend V ⊆ U`: extending stays inside `U`.
 \lemma extend-sub {X : \Type} {U : Set X} {V : Set (Set.Total U)} : extend V ⊆ U
   => __.1
 
+-- | `extend` is monotone in `V`.
 \lemma extend-mono {X : \Type} {U : Set X} {V W : Set (Set.Total U)} (p : V ⊆ W) : extend V ⊆ extend W
   => \lam {x} (Ux,Vx) => (Ux, p Vx)
 
+-- | `extend` preserves meets: `extend (V ∧ W) = extend V ∧ extend W`.
 \lemma extend_meet {X : \Type} {U : Set X} {V W : Set (Set.Total U)} : extend (V ∧ W) = extend V ∧ extend W
   => <=-antisymmetric (\lam e => ((e.1, e.2.1), (e.1, e.2.2))) (\lam e => (e.1.1, (e.1.2, transport W (ext idp) e.2.2)))
 
+-- | `restrict (extend V) = V` — `extend` is a section of `restrict`.
 \lemma restrict_extend {X : \Type} {U : Set X} {V : Set (Set.Total U)} : Set.restrict (extend V) = V
   => <=-antisymmetric (\lam r => transport V (ext idp) r.2) (\lam {x} Vx => (x.2,Vx))
 
+-- | `extend (restrict V) ⊆ V` — the other composite is a retraction up to inclusion.
 \lemma extend_restrict {X : \Type} {U : Set X} {V : Set X} : extend (Set.restrict {X} {U} V) ⊆ V
   => __.2
 
+-- | Preimage is monotone: `U ⊆ V` implies `f ^-1 U ⊆ f ^-1 V`.
 \lemma ^-1_<= {A B : \Type} (f : A -> B) {U V : Set B} (p : U ⊆ V) : f ^-1 U ⊆ f ^-1 V
   => p __
 
+-- | Packages `f ^-1` as a `FrameHom (SetLattice B) (SetLattice A)`: it preserves order, top, meets, and joins.
 \func ^-1_FrameHom {A B : \Type} (f : A -> B) : FrameHom (SetLattice B) (SetLattice A) \cowith
   | func => f ^-1
   | func-<= p {_} => p

@@ -1,3 +1,14 @@
+{- | The simplex category Δ, whose objects are natural numbers and morphisms are monotone maps between finite linear
+ -   orders.
+ -
+ -   This module formalizes the simplex category by taking objects as natural numbers `n` (representing the finite
+ -   linear order `Fin n`) and morphisms as poset homomorphisms between these orders. The construction proceeds in
+ -   stages: first a `Precat` instance is built from monotone maps, then key rigidity lemmas establish that monotone
+ -   bijections between finite linear orders are unique (forced to be the identity), which yields `Iso`-propositionality
+ -   and ultimately a univalent `Cat` structure. The diagonal-fixpoint argument `monotone-diagonal-fin` is the technical
+ -   core, ensuring that strictly monotone self-maps of `Fin (suc n)` satisfy `k ≤ f k`.
+ -}
+
 \import Arith.Fin.Order
 \import Arith.Nat
 \import Category
@@ -16,6 +27,9 @@
 \import Set.SetHom
 \import Set.Fin
 
+{- | An injective monotone map between a biordered set and a decidable linear order is strictly monotone — promotes a
+ -   `PosetHom` to a `StrictPosetHom` given injectivity.
+ -}
 \lemma monotone-inj {P1 : BiorderedSet} {P2 : LinearOrder.Dec} (f : PosetHom P1 P2) (f-inj : IsInj f) : StrictPosetHom P1 P2 (func {f}) \cowith
   | func-< {a} {b} p => \case P2.trichotomy (f a) (f b) \with {
     | less p1 => p1
@@ -23,10 +37,18 @@
     | greater p1 => absurd (LinearOrder.notLess (func-<= {f} (<=-less p)) p1)
   }
 
+{- | For `f : Fin (suc n) -> Fin (suc n)` strictly monotone on successors (`f k < f (suc k)`), every index satisfies
+ -   `k <= f k`. Key rigidity lemma underlying uniqueness of monotone automorphisms of finite linear orders.
+ -}
 \lemma monotone-diagonal-fin {n : Nat} (f : Fin (suc n) -> Fin (suc n)) (mon : \Pi (k : Fin n) -> f k < f (suc k)) {k : Fin (suc n)} : k <= f k \elim k
   | 0 => \let A1 => zero<=_ {f 0} \in \lam Q => A1 Q
   | suc k => \let | A1 => suc_<_<= {k} {f (suc k)} ((FinOrder (suc n)).<-transitive-right {k} {f k} {f (suc k)} (monotone-diagonal-fin {n} f mon {k}) (mon k)) \in \lam Q => A1 Q
 
+{- | Given mutually inverse poset homomorphisms `f, g` on `FinOrder (suc n)`, both must equal the identity. Returns the
+ -   pair of equalities `id = func f` and `id = func g`. The proof combines `monotone-inj` (to get strict monotonicity
+ -   from injectivity, derived from invertibility) with `monotone-diagonal-fin` applied to both `f` and `g`, then uses
+ -   antisymmetry to pin both maps to the identity.
+ -}
 \func fin_monotone_iso_unique {n : Nat} (f : PosetHom (FinOrder (suc n)) (FinOrder (suc n)))
                               (g : PosetHom (FinOrder (suc n)) (FinOrder (suc n)))
                               (fg-comp : f Function.o g = Function.id {Fin (suc n)})
@@ -48,6 +70,9 @@
   \in (ext (\lam k => inv (<-connectedness k<=fk (rewrite (pmap (\lam f => f k) gf-comp) in k<=gk {f k}))),
        ext (\lam k => inv (<-connectedness k<=gk (rewrite (pmap (\lam f => f k) fg-comp) in k<=fk {g k}))))
 
+{- | The precategory Δ with `Ob = Nat`, morphisms given by `PosetHom (FinOrder n) (FinOrder m)`, identity as the
+ -   identity poset map, and composition as functional composition (preserving monotonicity).
+ -}
 \instance SimplexPrecat : Precat
   | Ob => Nat
   | Hom n m => hom n m
@@ -62,9 +87,13 @@
   | id-left => idp
   | id-right => idp
   | o-assoc => idp \where {
+  -- | Abbreviation for the morphism type `PosetHom (FinOrder n) (FinOrder m)`.
   \func hom (n m : Nat) => PosetHom (FinOrder n) (FinOrder m)
 }
 
+{- | An isomorphism `n ≅ m` in `SimplexPrecat` forces `n = m` — objects are determined up to equality by their
+ -   isomorphism class.
+ -}
 \lemma Simplex_iso {n m : Nat} (iso : Iso {SimplexPrecat} {n} {m}) : n = m
   => FinSet.FinCardBij \new QEquiv {
     | f => iso.f
@@ -73,10 +102,17 @@
     | f_sec y => pmap {SimplexPrecat.hom m m} (__ y) iso.f_hinv
   }
 
+{- | Extracts from an iso `f : suc n ≅ suc n` the pair of identity equalities for `Iso.f` and `f.hinv`, by applying
+ -   `fin_monotone_iso_unique` to the two halves of the iso.
+ -}
 \func iso_iso {n : Nat} (f : Iso {SimplexPrecat} {suc n} {suc n}) => fin_monotone_iso_unique {n} (Iso.f {f}) f.hinv
     (ext (\lam y => pmap {SimplexPrecat.hom (suc n) (suc n)} {Fin (suc n)} (\lam h => func {h} y) f.f_hinv))
     (ext (\lam y => pmap {SimplexPrecat.hom (suc n) (suc n) } {Fin (suc n)} (\lam h => func {h} y) f.hinv_f))
 
+{- | The type `Iso {SimplexPrecat} {n} {n}` is a proposition. Handled by case analysis: for `n = 0` both sides are
+ -   trivially equal on the empty `Fin 0`; for `suc n` it is shown contractible with the identity iso as center, using
+ -   `iso_iso` for the contraction.
+ -}
 \func iso_isProp {n : Nat} : isProp (Iso {SimplexPrecat} {n} {n}) \elim n
   | 0 => \lam _ _ => ext (ext (ext \lam k => \case k), ext (ext \lam k => \case k))
   | suc n => isContr=>isProp \new Contr {
@@ -89,6 +125,9 @@
     | contraction f => ext (\let (p, q) => iso_iso {n} f \in (ext p, ext q))
   }
 
+{- | The full category Δ extending `SimplexPrecat` with a univalence proof, making `SimplexCat` a univalent category
+ -   (`Cat`) in which isomorphism coincides with equality of objects.
+ -}
 \instance SimplexCat : Cat
   | Precat => SimplexPrecat
   | univalence {n} {_} => inP \new QEquiv {

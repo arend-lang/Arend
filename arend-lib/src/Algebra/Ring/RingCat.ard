@@ -1,3 +1,14 @@
+{- | Category-theoretic structure on rings and commutative rings, with forgetful functors and a model-theoretic
+ -   presentation.
+ -
+ -   This module assembles `Ring` and `CRing` into categories, equips them with the standard forgetful functors (to
+ -   abelian groups, monoids, and sets), and characterizes isomorphisms in terms of bijectivity. The commutative case is
+ -   presented twice: directly as a subcategory of `RingCat`, and as the category of models of an algebraic theory with
+ -   five operation symbols (`0`, `1`, `+`, `*`, `negative`). The latter equivalence (`catEquiv`) transfers
+ -   (co)completeness from `ModelCat` to `CRingCat`, yielding `BicompleteCat` for free, and shows that the forgetful
+ -   functor to `Set` creates limits.
+ -}
+
 \import Algebra.Group
 \import Algebra.Group.GroupCat
 \import Algebra.Group.GroupHom
@@ -32,6 +43,7 @@
 \import Set.Fin
 \import Set.Fin.Instances
 
+-- | The category of rings with `RingHom` morphisms.
 \instance RingCat.{u} : Cat Ring.{u}
   | Hom M N => RingHom M N
   | id => RingHom.id
@@ -41,22 +53,26 @@
   | o-assoc => idp
   | univalence => sip \lam {X} {R} {S} p1 _ => exts (p1.func-zro, \lam _ _ => p1.func-+, \lam _ _ => p1.func-*, AddGroup.negative-equality R S p1.func-zro p1.func-+, p1.func-ide, natCoefUnique R S p1)
   \where {
+    -- | For ring homomorphisms equal to the identity on the underlying set, the natural-number coefficient maps agree.
     \lemma natCoefUnique {X : \Set} (R S : Ring X) (h : RingHom R S (\lam x => x)) (n : Nat) : R.natCoef n = S.natCoef n \elim n
       | 0 => R.natCoefZero *> h.func-zro *> inv S.natCoefZero
       | suc n => R.natCoefSuc n *> h.func-+ *> pmap2 (S.+) (natCoefUnique R S h n) h.func-ide *> inv (S.natCoefSuc n)
 
+    -- | Functor `RingCat -> AbGroupCat` discarding multiplicative structure.
     \func forgetToAbGroup.{u} : Functor RingCat.{u} AbGroupCat \cowith
       | F R => R
       | Func f => f
       | Func-id => idp
       | Func-o => idp
 
+    -- | Functor `RingCat -> MonoidCat` discarding additive structure.
     \func forgetToMonoid.{u} : Functor RingCat.{u} MonoidCat \cowith
       | F R => R
       | Func f => f
       | Func-id => idp
       | Func-o => idp
 
+    -- | Functor `RingCat -> SetCat` to underlying sets.
     \func forget.{u} : Functor RingCat.{u} SetCat \cowith
       | F R => R
       | Func f => f
@@ -83,6 +99,7 @@
       | f_hinv => exts \lam e i => f_iso.f_hinv i e
     }
 
+    -- | A ring homomorphism is an iso iff it is injective and surjective.
     \lemma Iso<->Inj+Surj.{u} {G H : Ring.{u}} (f : RingHom G H) : Iso {RingCat} f <-> (\Sigma (IsInj f) (IsSurj f)) =>
       (\lam p => (GroupCat.Iso<->Inj+Surj (AddGroupHom.toGroupHom f)).1 \new Iso {
         | hinv => AddGroupHom.toGroupHom hinv
@@ -94,12 +111,16 @@
       => (\lam e => \have t => (Iso<->Inj+Surj f).1 e \in IsEquiv.fromInjSurj t.1 t.2,
           \lam e => (Iso<->Inj+Surj f).2 (IsEquiv.isInj e, IsEquiv.isSurj e))
 
+    -- | For a surjective `f : RingHom`, the image ring is iso to the codomain.
     \func image-iso.{u} {R S : Ring.{u}} {f : RingHom R S} (p : IsSurj f) : Iso {RingCat} {ImRing f} {S}
       => (RingCat.Iso<->Inj+Surj $ IRing.embed {ImageRing f}).2 (IAddPointed.embed-inj, \lam y => \case p y \with {
         | inP (x,fx=y) => inP (ImRingLeftHom f x, fx=y)
       })
   }
 
+{- | The category of commutative rings, built as a `subCat` of `RingCat` via the embedding that forgets `*-comm` (using
+ -   `prop-dpi` to handle the propositional commutativity field).
+ -}
 \instance CRingCat.{u} : Cat CRing.{u}
   => subCat (\new Embedding {CRing.{u}} {Ring.{u}} {
     | f R => R
@@ -112,6 +133,7 @@
     }
   })
   \where {
+    -- | Functor `CRingCat -> RingCat`.
     \func forgetToRing.{u} : Functor CRingCat.{u} RingCat \cowith
       | F R => R
       | Func f => f
@@ -124,12 +146,14 @@
       | Func-id => idp
       | Func-o => idp
 
+    -- | Functor `CRingCat -> SetCat`.
     \func forget.{u} : Functor CRingCat.{u} SetCat \cowith
       | F R => R
       | Func f => f
       | Func-id => idp
       | Func-o => idp
       \where {
+        -- | The forgetful functor reflects limits, derived from `CRingBicat.createsLimits`.
         \sfunc reflectsLimit.{u} {J : Precat} (H : Functor J CRingCat.{u}) : ReflectsLimit forget.{u} H
           => \lam C Cl R => IsEquiv.fromInjSurj (\lam {h} {h'} p => ext $ IsEquiv.isInj (Cl R) $ exts \lam j => path \lam i => (p i).coneMap j) \lam C' =>
               \have | (inP (h,p)) => IsEquiv.isSurj (Cl R) (Cone.map forget C')
@@ -141,6 +165,7 @@
                          | func-* => SetBicat.limit-elem-equals Cl \lam j => q *> func-* *> inv (pmap2 (*) q q) *> inv func-*
                        }, exts \lam j => ext $ path \lam i => (p i).coneMap j)
 
+        -- | The forgetful functor preserves limits.
         \lemma preservesLimit.{u} {J : Precat} (H : Functor J CRingCat.{u}) : PreservesLimit forget.{u} H
           => (Adjunction.comp (ModelCat.ForgetToSetAdjunction {CRingBicat.theory}) CRingBicat.catEquiv.reverse).preservesLimits
       }
@@ -181,6 +206,7 @@
       => LimitMonoid.inv-char {J} {Comp CRingCat.forgetToMonoid F}
   }
 
+-- | `CRingCat` as a `BicompleteCat`; (co)limits are transported from `ModelCat theory` along `catEquiv`.
 \instance CRingBicat.{u} : BicompleteCat.{u}
   | Cat => CRingCat
   | limit => CRingLimit
@@ -194,6 +220,10 @@
       | limBeta c j => idp
       | limUnique p => exts \lam x => exts \lam j => path \lam i => p j i x
 
+    {- | The single-sorted algebraic theory of commutative rings, with five operation symbols (`0` arity 0, `1` arity 0,
+     -   `+` arity 2, `*` arity 2, `negative` arity 1) and the standard ring axioms (associativity, commutativity,
+     -   units, inverse, distributivity).
+     -}
     \instance theory : Theory
       | Sort => \Sigma
       | Symb _ => Fin 5
@@ -217,6 +247,9 @@
           (\lam _ => Fin 3,  finSet, nil, equality (apply 3 (var 0 :: apply 2 (var 1 :: var 2 :: nil) :: nil)) (apply 2 (apply 3 (var 0 :: var 1 :: nil) :: apply 3 (var 0 :: var 2 :: nil) :: nil))) ::
           nil)
 
+    {- | A categorical equivalence `ModelCat theory ≃ CRingCat` with `modToRing` as the underlying object map and
+     -   `ringtoMod.functor` as the left adjoint; both unit and counit are identity-on-carriers.
+     -}
     \func catEquiv.{u} : CatEquiv CRingCat.{u} (ModelCat theory) \cowith
       | LAdj => ringtoMod.functor
       | RAdj => modToRing.functor
@@ -261,6 +294,7 @@
         | f_hinv => idp
       }
 
+    -- | Builds a `CRing` from a model of `theory` by interpreting each operation symbol.
     \func modToRing (M : Model theory) : CRing (M ()) \cowith
       | zro => operation 0 nil
       | ide => operation 1 nil
@@ -288,6 +322,7 @@
           | Func-o => idp
       }
 
+    -- | Builds a model of `theory` from a `CRing` by reading off `0`, `1`, `+`, `*`, `negative`.
     \func ringtoMod (R : CRing) : Model theory (\lam _ => R) \cowith
       | operation => \case \elim __ \with {
         | 0 => \lam _ => 0
@@ -308,6 +343,7 @@
         | _, inP (7,idp) => \lam rho _ => ldistr
       }
       \where {
+        -- | Promotes `ringtoMod` to a functor `CRingCat -> ModelCat theory`.
         \func functor.{u} : Functor CRingCat.{u} (ModelCat theory) (ringtoMod __) \cowith
           | Func f => \new ModelHom {
             | funcs => f
@@ -324,6 +360,9 @@
           | Func-o => idp
       }
 
+    {- | For any small diagram `F : J -> CRingCat`, the forgetful functor to `Set` creates the limit, transported
+     -   through the equivalence with `ModelCat theory`.
+     -}
     \sfunc createsLimits.{u} {J : Precat.{u,u}} (F : Functor J CRingCat.{u}) : CreatesLimit CRingCat.forget F
       => \lam _ => (CRingBicat.limit F, CRingCat.forget.preservesLimit F, CRingCat.forget.reflectsLimit F)
   }

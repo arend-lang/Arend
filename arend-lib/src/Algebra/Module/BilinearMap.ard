@@ -7,6 +7,9 @@
 \import Paths
 \import Paths.Meta
 
+{- | Record of bilinear maps `A → B → C` requiring linearity in each argument separately (`linear-left`,
+ -   `linear-right`).
+ -}
 \record BilinearMap {R : Ring} (A B C : LModule R) (\coerce func : A -> B -> C)
   | linear-left {b : B} : LinearMap A C (func __ b)
   | linear-right {a : A} : LinearMap B C (func a)

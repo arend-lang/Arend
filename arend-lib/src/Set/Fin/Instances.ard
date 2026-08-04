@@ -1,3 +1,15 @@
+{- | Constructions showing that finite sets are closed under sigma-types, products, and dependent function spaces, with
+ -   cardinality computed by the corresponding sums and products.
+ -
+ -   This module assembles the standard closure properties of `FinSet` under type-theoretic constructors. Sigma-types
+ -   over a finite indexed family of finite sets are finite, with cardinality given by `BigSum` of the fiber
+ -   cardinalities; binary products specialize this via replication into multiplication; dependent products yield
+ -   `BigProd` cardinalities. The proofs build explicit equivalences between `Fin`-indexed enumerations and the
+ -   structured types (using `OrFin.aux` for inductive disjoint-union splits), then transfer these along finiteness
+ -   witnesses, leveraging `Semiring.FinSum_replicate` and `BigSum_replicate` to convert between `BigSum` and
+ -   multiplication.
+ -}
+
 \import Algebra.Monoid
 \import Algebra.Semiring
 \import Arith.Nat
@@ -13,6 +25,9 @@
 \import Set.SubSet
 \import Set.Fin
 
+{- | Given `S : FinSet` and a family `Q : S -> FinSet`, makes `\Sigma (i : S) (Q i)` a `FinSet` with cardinality
+ -   `AbMonoid.FinSum (\lam i => (Q i).finCard)`.
+ -}
 \lemma SigmaFin (S : FinSet) (Q : S -> FinSet) : FinSet (\Sigma (i : S) (Q i)) (AbMonoid.FinSum (\lam i => (Q i).card))
   => \case AbMonoid.FinSum_char (\lam i => (Q i).card) \with {
     | inP p => rewrite p.2 \new FinSet {
@@ -24,6 +39,9 @@
   \where {
     \open AddMonoid
 
+    {- | Core `QEquiv` between `Fin (BigSum Q)` and `\Sigma (i : Fin n) (Fin (Q i))`, built by induction on `n` via
+     -   `OrFin.aux` to split the sum into the first fiber and the recursive remainder.
+     -}
     \func aux {n : Nat} {Q : Fin n -> Nat} : QEquiv {Fin (BigSum Q)} {\Sigma (i : Fin n) (Fin (Q i))} \cowith
       | f (k : Fin (BigSum Q)) : \Sigma (i : Fin n) (Fin (Q i)) \elim n {
         | suc n => \case OrFin.aux.f k \with {
@@ -48,6 +66,7 @@
         | suc n, (suc i, j) => rewrite OrFin.ret_inr-lem (rewrite (f_sec {n} {\lam i => Q (suc i)} (i,j)) idp)
       }
 
+    -- | Any decidable subset of a finite set is itself a `FinSet`.
     \lemma DecSubSet-isFin (S : FinSet) (D : DecSubSet S) : FinSet D.ISet
       => FinSet-transport (SigmaFin S \lam x => DecFin (D.isDec x)) $ later \new QEquiv {
         | f s => s
@@ -57,9 +76,15 @@
       }
   }
 
+{- | Binary product instance: `\Sigma A B` is a `FinSet` with cardinality `A.finCard Nat.* B.finCard`, derived from
+ -   `SigmaFin` with the constant family `B` together with `Semiring.FinSum_replicate`.
+ -}
 \instance ProdFin (A B : FinSet) : FinSet (\Sigma A B) (A.card Nat.* B.card)
   => transport (FinSet _) Semiring.FinSum_replicate $ SigmaFin A (\lam _ => B)
   \where {
+    {- | Equivalence `Fin (n Nat.* m) ≃ \Sigma (Fin n) (Fin m)`, obtained by transporting `SigmaFin.aux` along
+     -   `Semiring.BigSum_replicate`.
+     -}
     \func prod_equiv {n m : Nat} : QEquiv {Fin (n Nat.* m)} {\Sigma (Fin n) (Fin m)}
       => transport (\lam x => QEquiv {Fin x} {_}) Semiring.BigSum_replicate $ SigmaFin.aux {n} {\lam _ => m}
   }

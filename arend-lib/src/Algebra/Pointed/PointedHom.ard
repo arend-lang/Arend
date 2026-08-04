@@ -1,21 +1,40 @@
+{- | Homomorphisms between pointed sets, preserving the distinguished basepoint.
+ -
+ -   This module defines the morphism layer for the category of pointed sets, extending `SetHom` with a preservation law
+ -   for the distinguished element. Two parallel variants are provided: `PointedHom` for multiplicative pointed
+ -   structures (preserving `ide`) and `AddPointedHom` for additive ones (preserving `zro`). Each comes equipped with
+ -   identity and composition operations, supplying the basic categorical infrastructure used downstream by group,
+ -   monoid, and ring homomorphism hierarchies.
+ -}
+
 \import Algebra.Pointed
 \import Paths
 \import Set.SetHom
 
+{- | Record extending `SetHom` with domain and codomain restricted to `Pointed`, plus the law
+ -   `func-ide : func ide = ide` that the underlying function preserves the distinguished identity element.
+ -}
 \record PointedHom \extends SetHom {
   \override Dom : Pointed
   \override Cod : Pointed
   | func-ide : func ide = ide
 } \where {
+  -- | The identity homomorphism `PointedHom X X` on a pointed set `X`, given by the identity function.
   \func id {X : Pointed} : PointedHom X X \cowith
     | func x => x
     | func-ide => idp
 
+  {- | Composition of pointed homomorphisms `g ∘ f : PointedHom X Z` from `f : PointedHom X Y` and `g : PointedHom Y Z`,
+   -   with the preservation law inherited via composition.
+   -}
   \func \fixl 8 compose \alias \infixl 8 ∘ {X Y Z : Pointed} (g : PointedHom Y Z) (f : PointedHom X Y) : PointedHom X Z \cowith
     | func x => g (f x)
     | func-ide => pmap g f.func-ide *> g.func-ide
 }
 
+{- | Record extending `SetHom` with domain and codomain restricted to `AddPointed`, plus the law
+ -   `func-zro : func zro = zro` that the underlying function preserves the distinguished zero element.
+ -}
 \record AddPointedHom \extends SetHom {
   \override Dom : AddPointed
   \override Cod : AddPointed
@@ -24,10 +43,14 @@
   \protected \func IsZero : \Prop
     => \Pi (x : Dom) -> func x = 0
 } \where {
+  -- | The identity homomorphism `AddPointedHom X X` on an additive pointed set, given by the identity function.
   \func id {X : AddPointed} : AddPointedHom X X \cowith
     | func x => x
     | func-zro => idp
 
+  {- | Composition of additive pointed homomorphisms producing an `AddPointedHom A C` from `f : AddPointedHom A B` and
+   -   `g : AddPointedHom B C`.
+   -}
   \func \fixl 8 compose \alias \infixl 8 ∘ {A B C : AddPointed} (g : AddPointedHom B C) (f : AddPointedHom A B) : AddPointedHom A C \cowith
     | func x => g (f x)
     | func-zro => pmap g f.func-zro *> g.func-zro

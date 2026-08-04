@@ -1,3 +1,13 @@
+{- | Completions of topological abelian groups as complete topological abelian groups.
+ -
+ -   This module combines the completion construction for uniform spaces with the abelian group structure to produce the
+ -   completion of a topological abelian group. The completion is built on regular Cauchy filters: addition is defined
+ -   via a cover map on the product of completions, and subtraction is obtained by composing addition with negation. The
+ -   universal property is provided by `dense-topAb-lift`, which extends a continuous group homomorphism along a dense
+ -   embedding into a complete target, while `completion-topAb` packages the unit map of the completion as a topological
+ -   group homomorphism.
+ -}
+
 \import Algebra.Group
 \import Algebra.Meta
 \import Algebra.Monoid
@@ -22,8 +32,13 @@
 \import Topology.UniformSpace.Complete
 \open Completion
 
+-- | A topological abelian group that is also a complete uniform space. Extends `TopAbGroup` and `CompleteUniformSpace`.
 \class CompleteTopAbGroup \extends TopAbGroup, CompleteUniformSpace
 
+{- | Extension of a topological abelian group homomorphism `g : X -> Z` along a dense topological embedding `f : X -> Y`
+ -   into a complete topological abelian group `Z`, yielding a `TopAbGroupMap Y Z`. The continuous map part is obtained
+ -   from `dense-uniform-lift` and additivity is preserved.
+ -}
 \func dense-topAb-lift {X Y : TopAbGroup} {Z : CompleteTopAbGroup} (f : TopAbGroupMap X Y) (fd : f.IsDenseTopEmbedding) (g : TopAbGroupMap X Z) : TopAbGroupMap Y Z \cowith
   | ContMap => dense-uniform-lift f (f.embedding->uniformEmbedding fd) g
   | func-+ {y} {y'} =>
@@ -35,6 +50,9 @@
     \open ContMap
   }
 
+{- | Instance making `UniformCompletion X` into a `CompleteTopAbGroup` for any `TopAbGroup X`. Equips the space of
+ -   regular Cauchy filters with the abelian group structure inherited from `X` and proves continuity of the operations.
+ -}
 \instance TopAbGroupCompletion (X : TopAbGroup) : CompleteTopAbGroup
   | CompleteUniformSpace => UniformCompletion X
   | AbGroup => abGroup
@@ -68,6 +86,9 @@
     \open ProductCoverSpace
     \open CoverMap
 
+    {- | The abelian group `AbGroup (RegularCauchyFilter X)` with zero given by `pointCF 0`, addition by `+-func`, and
+     -   negation by `negative-cover`.
+     -}
     \private \func abGroup : AbGroup (RegularCauchyFilter X) \cowith
       | zro => pointCF 0
       | + => +-func
@@ -78,31 +99,47 @@
       | negative-left => unique1 (+-cover ∘ tuple negative-cover id) (const _) \lam x => pmap (+-func __ _) negative-char *> +-char *> pmap pointCF negative-left
       | +-comm => unique2 +-cover (+-cover ∘ tuple proj2 proj1) \lam x y => +-char *> pmap pointCF +-comm *> inv +-char
 
+    {- | Cover map `Completion X ⨯ Completion X -> Completion X` implementing subtraction, defined as
+     -   `lift2 (+-uniform ∘ prod id negative-uniform)`.
+     -}
     \func subtract-cover : CoverMap (Completion X `ProductCoverSpace` Completion X) (Completion X)
       => lift2 (+-uniform ∘ prod id negative-uniform)
 
+    -- | Identifies `subtract-cover (F, G)` with the abelian group difference `F - G` in `abGroup`.
     \lemma subtract_- {F G : RegularCauchyFilter X} : subtract-cover (F,G) = F - {abGroup} G
       => unique2 subtract-cover (+-cover ∘ prod id negative-cover) \lam x y => lift2-char *> inv +-char *> pmap (+-func _) (inv negative-char)
 
+    -- | Cover map for addition, obtained as `subtract-cover ∘ prod id negative-cover`.
     \sfunc +-cover : CoverMap (Completion X `ProductCoverSpace` Completion X) (Completion X)
       => subtract-cover ∘ prod id negative-cover
 
+    -- | The addition function on regular Cauchy filters, applying `+-cover` pointwise.
     \func +-func (x y : RegularCauchyFilter X) => +-cover (x,y)
 
+    -- | Compatibility of completion with addition: `+-cover (pointCF x, pointCF y) = pointCF (x + y)`.
     \lemma +-char {x y : X} : +-cover (pointCF x, pointCF y) = pointCF (x + y)
       => rewrite (\peval +-cover) $ pmap (\lam z => subtract-cover (pointCF x, z)) negative-char *> lift2-char *> simplify
 
+    -- | Cover map implementing negation on the completion, defined as subtraction from zero.
     \sfunc negative-cover : CoverMap (Completion X) (Completion X)
       => subtract-cover ∘ tuple (const $ pointCF 0) id
 
+    -- | Compatibility of completion with negation: `negative-cover (pointCF x) = pointCF (negative x)`.
     \lemma negative-char {x : X} : negative-cover (pointCF x) = pointCF (negative x)
       => rewrite (\peval negative-cover) $ lift2-char *> simplify
 
+    {- | Characterization of neighborhoods of `F - G` in the completion: `single (F - G) <=< U` iff there exist a
+     -   refining cover `U'`, sets `V1 ∈ F`, `V2 ∈ G`, and pointwise membership `U' (pointCF (x - y))` for `x ∈ V1`,
+     -   `y ∈ V2`. Used to prove continuity of the group operations.
+     -}
     \lemma topAb-neighborhood {F G : RegularCauchyFilter X} {U : Set (Completion X)} : single (F - {abGroup} G) <=< U <->
       ∃ (U' : Set (Completion X)) (U' <=< U) (V1 : Set X) (F V1) (V2 : Set X) (G V2) ∀ {x : V1} {y : V2} (U' (pointCF (x - y)))
       => rewrite (inv subtract_-, \peval lift2 (+-uniform ∘ prod id negative-uniform)) $ completion-lift-neighborhood2 (completion ∘ +-uniform ∘ prod id negative-uniform) F G U
   }
 
+{- | The canonical topological abelian group homomorphism `X -> TopAbGroupCompletion X`, lifting `uniform-completion`
+ -   with proof of additivity. Provides the dense embedding through which `dense-topAb-lift` extends maps.
+ -}
 \func completion-topAb {X : TopAbGroup} : TopAbGroupMap X (TopAbGroupCompletion X) \cowith
   | UniformMap => uniform-completion
   | func-+ => inv TopAbGroupCompletion.+-char

@@ -1,3 +1,13 @@
+{- | The natural numbers as a metric space, with a metric making `atTop` (the eventual filter) a Cauchy filter.
+ -
+ -   The metric is defined via the embedding `n ↦ 1/(n+1)` into the rationals, so `dist n m = |1/(n+1) - 1/(m+1)|`.
+ -   Under this metric, large naturals become close to each other (and to a hypothetical "point at infinity"), which
+ -   makes `Nat` totally bounded and characterizes its uniform/Cauchy covers in a finite combinatorial way: any cover
+ -   must contain a tail `(N <=)` together with singletons covering each smaller index. This setup lets `atTop` be
+ -   realized as a genuine Cauchy filter on `Nat` and supports completion-style arguments for sequences indexed by
+ -   `Nat`.
+ -}
+
 \import Algebra.Group
 \import Algebra.Meta
 \import Algebra.Monoid
@@ -31,6 +41,9 @@
 \open RatField (finv)
 \open NatOrder \hiding (<)
 
+{- | `MetricSpace` instance on `Nat` with `dist n m = |1/(n+1) - 1/(m+1)|` (using `finv` in `RatField` and lattice
+ -   absolute value). Provides reflexivity, symmetry, triangle inequality, and separation (`dist-ext`).
+ -}
 \instance NatMetricSpace : MetricSpace Nat
   | dist n m => LatticeAbGroup.abs (finv (suc n) - finv (suc m))
   | dist-refl => RatNormed.dist-refl
@@ -38,9 +51,14 @@
   | dist-triang => RatNormed.dist-triang {_} {_} {finv (suc _)}
   | dist-ext p => pmap pred $ pmap ratDenom $ RatNormed.dist-ext {_} {finv (suc _)} p
   \where {
+    {- | Predicate on a set of subsets `C : Set (Set Nat)` stating that some `U ∈ C` contains a tail `{n | N <= n}` for
+     -   some `N`, and each index `j < N` is contained in some member of `C`. This is the finite combinatorial shape of
+     -   any cover compatible with the metric.
+     -}
     \func Cover (C : Set (Set Nat)) : \Prop
       => ∃ (U : C) (N : Nat) (\Pi {n : Nat} -> N <= n -> U n) (\Pi (j : Fin N) -> Given (V : C) (V j))
 
+    -- | `NatMetricSpace.isUniform C <-> Cover C` — uniform covers are exactly those of the `Cover` shape.
     \lemma uniform-char {C : Set (Set Nat)} : NatMetricSpace.isUniform C <-> Cover C
       => (\lam Cu => \case NatMetricSpace.dist-uniform.1 Cu \with {
         | inP (eps,eps>0,h) => \case Real.natBounded {finv (eps * ratio 1 2) : Real} \with {
@@ -81,6 +99,7 @@
             })
           }))
 
+    -- | `IsTotallyBounded NatMetricSpace` — `Nat` is totally bounded under this metric.
     \lemma totallyBounded : IsTotallyBounded NatMetricSpace
       => totallyBounded-uniform-char \lam Cu => later \case uniform-char.1 Cu \with {
         | inP (U,CU,N,g,h) => inP (U :: \lam j => (h j).1, uniform-cover $ uniform-char.2 $ inP $ later (U, inP (0,idp), N, g, \lam j => ((h j).1, inP (suc j, idp), (h j).3)), \case \elim __ \with {
@@ -89,17 +108,28 @@
         })
       }
 
+    -- | `NatMetricSpace.isCauchy C <-> Cover C` — Cauchy covers coincide with uniform covers here.
     \lemma cauchy-char {C : Set (Set Nat)} : NatMetricSpace.isCauchy C <-> Cover C
       => (\lam Cc => uniform-char.1 $ totallyBounded-cauchy-uniform NatMetricSpace.metricProperUniform totallyBounded Cc,
           \lam Cc => uniform-cauchy.1 $ ClosurePrecoverSpace.closure $ uniform-char.2 Cc)
 
+    {- | For any `N : Nat`, the family consisting of the tail `(N <=)` together with the singletons `{n}` for `n < N` is
+     -   uniform.
+     -}
     \lemma makeUniform (N : Nat) : NatMetricSpace.isUniform \lam U => (U = (N <=)) || (\Sigma (n : Nat) (n < N) (U = single n))
       => uniform-char.2 $ inP $ later (N <=, byLeft idp, N, \lam p => p, \lam n => (_, byRight (n, fin_< n, idp), idp))
 
+    {- | Same family is Cauchy. Use these to produce concrete witnesses when reasoning about uniform/Cauchy properties
+     -   at a chosen threshold `N`.
+     -}
     \lemma makeCover (N : Nat) : NatMetricSpace.isCauchy \lam U => (U = (N <=)) || (\Sigma (n : Nat) (n < N) (U = single n))
       => NatMetricSpace.makeCauchy (makeUniform N)
   }
 
+{- | `CauchyFilter NatMetricSpace` whose sets are those `U` containing all sufficiently large naturals
+ -   (`∃ N, ∀ n ≥ N, U n`). Provides monotonicity, top, finite meets, properness, and the Cauchy condition, making it
+ -   the canonical "limit at infinity" filter on `Nat`.
+ -}
 \func atTop : CauchyFilter NatMetricSpace \cowith
   | F U => ∃ (N : Nat) ∀ {n} (N <= n -> U n)
   | filter-mono (inP (N,f)) p => inP (N, \lam q => p $ f q)

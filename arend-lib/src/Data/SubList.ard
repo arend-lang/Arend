@@ -1,3 +1,18 @@
+{- | A datatype representing the sublist relation, witnessing that one list embeds into another while preserving order.
+ -
+ -   `SubList l r` is an inductive predicate constructed from three cases: empty-empty (`sublist-nil`), matching heads
+ -   (`sublist-match`), or skipping an element on the right (`sublist-skip`). The module develops a calculus around this
+ -   relation — identity, composition, and various extension lemmas (left/right, single/both sides) — that mirror the
+ -   categorical structure of order-preserving embeddings between lists. Substantial machinery handles transport
+ -   coherence, since constructions like associativity of `++` produce equalities of lists that must be transported
+ -   through the `SubList` family; the `Transports` submodule packages these naturality lemmas. Contractibility results
+ -   (`trivial-sublist-contractible`, `identity-sublist-contractible`) show that sublists into `nil` and identity
+ -   sublists are propositional.
+ -
+ -   Transports Submodule: Lemmas describing how `sublist-skip` and `sublist-match` interact with `transport` along list
+ -   equalities, used to handle coherence under associativity and unit laws of `++`.
+ -}
+
 \import Data.List
 \import Logic
 \import Logic.Meta
@@ -11,40 +26,50 @@
   | :: x xs, :: y ys => sublist-match (x = y) (SubList xs ys)
   | l, :: y ys => sublist-skip (SubList l ys)
   \where {
+    -- | Reflexivity — every list is a sublist of itself.
     \func identity {A : \Type} {list : List A} : SubList list list \elim list
       | nil => sublist-nil
       | :: a list => sublist-match idp identity
 
+    -- | `SubList nil list` for any `list` — the empty list embeds into anything.
     \func sublist-nil-free {A : \Type} {list : List A} : SubList nil list \elim list
       | nil => sublist-nil
       | :: a list => sublist-skip sublist-nil-free
 
+    -- | Prepending the same list `add` to both sides preserves the sublist relation.
     \func extend-left-both {A : \Type} {l r : List A} (sublist : SubList l r) {add : List A} : SubList (add ++ l) (add ++ r) \elim add
       | nil => sublist
       | :: a add => sublist-match idp (extend-left-both sublist)
 
+    -- | Appending the same list `add` to both sides preserves the sublist relation.
     \func extend-right-both {A : \Type} {l r : List A} (sublist : SubList l r) {add : List A} : SubList (l ++ add) (r ++ add) \elim l, r, sublist
       | nil, nil, sublist-nil => SubList.identity
       | :: x l, :: y r, sublist-match p sublist => sublist-match p (extend-right-both sublist)
       | l, :: y r, sublist-skip sublist => sublist-skip (extend-right-both sublist)
 
+    -- | `SubList l r -> SubList l (r ++ add)` — extending only the larger list on the right.
     \func extend-right-single {A : \Type} {l r : List A} (sublist : SubList l r) {add : List A} : SubList l (r ++ add) \elim l, r, sublist
       | nil, nil, sublist-nil => sublist-nil-free
       | :: x xs, :: y ys, sublist-match p sublist => sublist-match p (extend-right-single sublist)
       | l, :: y ys, sublist-skip sublist => sublist-skip (extend-right-single sublist)
 
+    -- | `SubList l r -> SubList l (add ++ r)` — extending only the larger list on the left.
     \func extend-left-single {A : \Type} {l r : List A} (sublist : SubList l r) {add : List A} : SubList l (add ++ r) \elim add
       | nil => sublist
       | :: a add => sublist-skip (extend-left-single sublist)
 
+    -- | From `SubList (a :: list) list'` derive `SubList list list'` — drop the head of the smaller list.
     \func shrink {A : \Type} {a : A} {list list' : List A} (sublist : SubList (a :: list) list') : SubList list list' \elim list', sublist
       | :: y list', sublist-match p sublist => sublist-skip sublist
       | :: y list', sublist-skip sublist => sublist-skip (shrink sublist)
 
+    -- | `SubList i (i ++ r)` — a list embeds into itself extended on the right.
     \func id+right {A : \Type} {i r : List A} : SubList i (i ++ r) => SubList.extend-right-single SubList.identity
 
+    -- | `SubList i (l ++ i)` — a list embeds into itself extended on the left.
     \func id+left {A : \Type} {i l : List A} : SubList i (l ++ i) => SubList.extend-left-single SubList.identity
 
+    -- | Transitivity: `SubList a b -> SubList b c -> SubList a c`.
     \func compose {A : \Type} {a b c : List A} (sl : SubList a b) (sl' : SubList b c) : SubList a c \elim a, b, c, sl, sl'
       | nil, nil, nil, sublist-nil, sublist-nil => sublist-nil
       | nil, nil, :: y c, sublist-nil, sublist-skip sl' => sublist-skip (compose sublist-nil sl')
@@ -53,10 +78,12 @@
       | a, :: x b, :: y c, sublist-skip sl, sublist-match p sl' => sublist-skip (compose sl sl')
       | a, :: y b, :: y1 c, sublist-skip sl, sublist-skip sl' => sublist-skip (compose sl (SubList.shrink sl'))
       \where {
+        -- | Composition of identity sublists is identity.
         \func identity {A : \Type} {a : List A} : compose {A} {a} SubList.identity SubList.identity = SubList.identity \elim a
           | nil => idp
           | :: a a1 => pmap (sublist-match idp) identity
 
+        -- | Composition commutes with right-extension on both sides (for `\Set` types).
         \func over-right-both {A : \Set} {a b c d : List A} (sl : SubList a b) (sl' : SubList b c)
           : compose (SubList.extend-right-both sl {d}) (SubList.extend-right-both sl') = SubList.extend-right-both (compose sl sl') \elim a, b, c, d, sl, sl'
           | nil, nil, nil, d, sublist-nil, sublist-nil => compose.identity
@@ -82,6 +109,7 @@
           }
           | :: a a1, :: y b, :: y1 c, d, sublist-skip sl, sublist-skip sl' => pmap sublist-skip (over-right-both _ _)
 
+        -- | Coherence between `extend-right-single` of identity and `extend-right-both` under composition.
         \func over-right-single {A : \Set} {a b c : List A} (sublist : SubList a b)
           : SubList.compose (SubList.extend-right-single SubList.identity {c}) (SubList.extend-right-both sublist) = SubList.compose sublist (SubList.extend-right-single SubList.identity) \elim a, b, c, sublist
           | nil, nil, nil, sublist-nil => idp
@@ -94,10 +122,12 @@
       }
   }
 
+-- | Any two proofs of `SubList nil a` are equal.
 \func trivial-sublist-contractible {A : \Type} {a : List A} (sl sl' : SubList nil a) : sl = sl' \elim a, sl, sl'
   | nil, sublist-nil, sublist-nil => idp
   | :: y a, sublist-skip sl, sublist-skip sl' => pmap sublist-skip (trivial-sublist-contractible sl sl')
 
+-- | Any two proofs of `SubList a a` are equal (for `\Set` types).
 \func identity-sublist-contractible {A : \Set} {a : List A} (sl sl' : SubList a a) : sl = sl' \elim a, sl, sl'
   | nil, sublist-nil, sublist-nil => idp
   | :: y a, sublist-match p sl, sublist-match p1 sl' => rewrite (prop-isProp p p1) (pmap (sublist-match p1) (identity-sublist-contractible sl sl'))
@@ -105,15 +135,18 @@
   | :: y a, sublist-skip sl, sublist-match p sl' => contradiction {impossible-sublist sl}
   | :: y a, sublist-skip sl, sublist-skip sl' => contradiction {impossible-sublist sl'}
 
+-- | `SubList (x :: a) a` is empty — a list cannot be a sublist of its own tail.
 \func impossible-sublist  {A : \Set} {x : A} {a : List A} (sl : SubList (x :: a) a) : Empty \elim a, sl
   | :: y a, sublist-match p sl => impossible-sublist sl
   | :: y a, sublist-skip sl => impossible-sublist (SubList.shrink sl)
 
+-- | `extend-right-both` of `identity` equals `identity` on the extended list.
 \func identity-invariant-over-right-extension {A : \Type} {a b : List A}
   : SubList.extend-right-both (SubList.identity {_} {a}) = SubList.identity {_} {a ++ b} \elim a
   | nil => idp
   | :: a a1 => pmap (sublist-match idp) identity-invariant-over-right-extension
 
+-- | `sublist-skip` commutes with `extend-right-both`.
 \func skip-over-extend-right {A : \Set} {x : A} {a b c : List A} (sl : SubList a b)
   : sublist-skip {_} {_} {x} (SubList.extend-right-both sl {c}) = SubList.extend-right-both (sublist-skip sl) \elim a, b, sl
   | nil, nil, sublist-nil => idp
@@ -121,42 +154,53 @@
   | nil, :: y b, sublist-skip sl => idp
   | :: a a1, :: y b, sublist-skip sl => idp
 
+-- | `shrink` commutes with `extend-right-both`.
 \func shrink-over-extend-right {A : \Set} {x : A} {a b c : List A} (sl : SubList (x :: a) b)
   : SubList.shrink (SubList.extend-right-both sl {c}) = SubList.extend-right-both (SubList.shrink sl) \elim a, b, sl
   | a, :: y b, sublist-match p sl => rewriteI skip-over-extend-right (pmap sublist-skip idp)
   | a, :: y b, sublist-skip sl => rewriteI skip-over-extend-right (pmap sublist-skip (shrink-over-extend-right _))
 
 \module Transports \where {
+  -- | `sublist-skip` commutes with transport in the right argument of `SubList`.
   \func sublist-skip-over-transport-right {A : \Type} {x : A} {a b c : List A} (eq : a = b) (sl : SubList c a)
     : SubList.sublist-skip (transport (SubList c) eq sl) = transport (SubList c) (pmap (x ::) eq) (sublist-skip sl) \elim eq
     | idp => idp
 
+  -- | `sublist-skip` commutes with transport in the left argument.
   \func sublist-skip-over-transport-left {A : \Type} {x : A} {a b c : List A} (eq : a = b) (sl : SubList a c)
     : SubList.sublist-skip (transport (SubList __ c) eq sl) = transport (SubList __ (x :: c)) eq (sublist-skip sl) \elim eq
     | idp => idp
 
+  -- | `sublist-match idp` commutes with (inverse) transport in the right argument.
   \func sublist-match-over-transport-right-inv {A : \Type} {x : A} {a b c : List A} (eq : c = b) (sl : SubList a b)
     : SubList.sublist-match idp (transport (SubList a) (inv eq) sl) = transport (SubList (x :: a)) (inv (pmap (x ::) eq)) (sublist-match idp sl) \elim eq
     | idp => idp
 
+  -- | `sublist-match idp` commutes with (inverse) transport in the right argument.
   \func sublist-match-over-transport-right {A : \Type} {x : A} {a b c : List A} (eq : b = c) (sl : SubList a b)
     : SubList.sublist-match idp (transport (SubList a) eq sl) = transport (SubList (x :: a)) (pmap (x ::) eq) (sublist-match idp sl) \elim eq
     | idp => idp
 
+  -- | `sublist-match idp` commutes with transport in the left argument.
   \func sublist-match-over-transport-left {A : \Type} {x : A} {a b c : List A} (eq : b = c) (sl : SubList b a)
     : SubList.sublist-match idp (transport (SubList __ a) eq sl) = transport (SubList __ (x :: a)) (pmap (x ::) eq) (sublist-match idp sl) \elim eq
     | idp => idp
 
+  -- | `extend-right-single identity` equals `identity` transported along `inv ++_nil`.
   \func extension-to-nil-right {A : \Type} {a : List A}
     : SubList.extend-right-single SubList.identity = transport (SubList a) (inv ++_nil) SubList.identity \elim a
     | nil => idp
     | :: a a1 => rewrite (extension-to-nil-right {_} {a1}) (Transports.sublist-match-over-transport-right-inv ++_nil SubList.identity)
 
+  -- | `sublist-nil-free` on `a ++ nil` equals `extend-left-single sublist-nil`.
   \func extension-to-nil-left {A : \Type} {a : List A}
     : SubList.sublist-nil-free {_} {a ++ nil} = SubList.extend-left-single sublist-nil {a} \elim a
     | nil => idp
     | :: a a1 => pmap sublist-skip extension-to-nil-left
 
+  {- | Coherence — right-extending a left-extended identity equals a left-extended identity transported along
+   -   `inv ++-assoc`. Includes companion `inv'` giving the reverse direction.
+   -}
   \func lb-ls-to-ls {A : \Type} {context-a context-b context-c : List A}
     : SubList.extend-right-both (SubList.extend-left-single (SubList.identity {_} {context-b}) {context-a}) {context-c} = transport (SubList (context-b ++ context-c)) (inv ++-assoc) (SubList.extend-left-single SubList.identity) \elim context-a, context-b, context-c
     | nil, nil, context-c => idp
@@ -186,6 +230,9 @@
         inv (transport_id_inv (SubList (context-b ++ context-c)) ++-assoc _) *> pmap (transport (SubList (context-b ++ context-c)) ++-assoc) (inv lb-ls-to-ls)
     }
 
+  {- | Iterated `extend-right-single` of identity coheres with associativity of `++` via transport. Includes `inv'` and
+   -   `inv'2` reformulations using composition.
+   -}
   \func rs-rs-to-rs {A : \Type} {context-a context-b context-c : List A}
     : SubList.extend-right-single (SubList.extend-right-single (SubList.identity {_} {context-a}) {context-b}) {context-c} = transport (SubList context-a) (inv ++-assoc) (SubList.extend-right-single SubList.identity) \elim context-a, context-b, context-c
     | nil, context-b, context-c => extension-lemma
@@ -206,6 +253,9 @@
         | :: a a1, b, c => \have inductive => inv'2 {_} {a1} {b} {c} \in rewrite (inductive, Transports.sublist-match-over-transport-right) idp
     }
 
+  {- | `sublist-nil-free` on a triple concatenation is the right-extended `sublist-nil-free` transported along
+   -   `++-assoc`.
+   -}
   \func nil-to-right-nil {A : \Type} {context-a context-b context-c : List A}
     : SubList.sublist-nil-free {_} {context-a ++ context-b ++ context-c} = transport (SubList nil) ++-assoc (SubList.extend-right-single (SubList.sublist-nil-free {_} {context-a ++ context-b}) {context-c}) \elim context-a, context-b, context-c
     | nil, nil, context-c => idp
@@ -217,6 +267,7 @@
         | idp => idp
     }
 
+  -- | Iterated `extend-right-both` coheres with `++-assoc` via transport on both arguments.
   \func rb-rb-to-rb {A : \Type} {context-a context-b context-c context-d : List A} (sublist : SubList context-c context-d)
     : SubList.extend-right-both (SubList.extend-right-both sublist {context-b}) {context-a} = transport (SubList __ ((context-d ++ context-b) ++ context-a)) (inv ++-assoc) (transport (SubList (context-c ++ context-b ++ context-a)) (inv ++-assoc) (SubList.extend-right-both sublist {context-b ++ context-a})) \elim context-b, context-c, context-d, sublist
     | context-b, nil, nil, sublist-nil => identity-invariant-over-right-extension

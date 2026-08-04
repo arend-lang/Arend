@@ -1,3 +1,16 @@
+{- | Convergence and limits of nets indexed by directed sets in cover spaces, with specializations to topological
+ -   abelian groups and metric spaces.
+ -
+ -   The module defines convergence as a `CoverMap` from the directed cover space of an index set, unifying nets,
+ -   sequences, and limits along filter bases. In a `CompleteCoverSpace`, every convergent net has a canonical `limit`
+ -   (a partial function), constructed via the universal property of the completion applied to the eventuality filter on
+ -   the index set. The Cauchy-style characterizations specialize the abstract definition to uniform spaces, topological
+ -   abelian groups (where convergence reduces to differences entering neighborhoods of zero), and metric spaces (with
+ -   rational and real `eps` formulations). The auxiliary `SubPointDirectedSet` and `InvDirectedSet` constructions
+ -   provide directed-set indexing for limits at a point of a topological space, supporting limits of partial functions
+ -   and pointwise limits at zero in near-skew-fields.
+ -}
+
 \import Algebra.Group
 \import Algebra.Meta
 \import Algebra.Monoid
@@ -35,9 +48,13 @@
 \import Topology.TopSpace
 \import Topology.UniformSpace
 
+-- | A net `f : I -> X` is convergent iff it is a `CoverMap` from `DirectedCoverSpace I` to `X`.
 \func IsConvergent {I : DirectedSet} {X : CoverSpace} (f : I -> X) : \Prop
   => CoverMap (DirectedCoverSpace I) X f
 
+{- | Cauchy-style characterization: `f` is convergent iff for every cauchy cover `C`, some element `U : C` eventually
+ -   contains `f n`.
+ -}
 \lemma convergent-char {I : DirectedSet} {X : CoverSpace} {f : I -> X} (p : ∀ {C : X.isCauchy} ∃ (U : C) (N : I) ∀ {n} (N <= n -> U (f n))) : IsConvergent f
   => regPrecoverSpace-extend-coverMap \new PrecoverMap {
     | func => f
@@ -48,11 +65,13 @@
     }
   }
   \where
+    -- | The reverse implication, extracting the eventual-membership property from convergence.
     \protected \lemma conv {I : DirectedSet} {X : CoverSpace} {f : I -> X} (fc : IsConvergent f) : ∀ {C : X.isCauchy} ∃ (U : C) (N : I) ∀ {n} (N <= n -> U (f n))
       => \lam Cc => \case (func-cover {regPrecoverSpace} $ func-cover {fc} Cc).1 \with {
         | inP (_, inP (_, inP (U, CU, idp), idp), N, g) => inP (U, CU, N, g)
       }
 
+-- | A net with a limit (`X.IsLimit f l`) is convergent.
 \lemma limit-conv {I : DirectedSet} {X : CoverSpace} {f : I -> X} {l : X} (fl : X.IsLimit f l) : IsConvergent f
   => convergent-char \lam Cc => \case X.cauchy-regular-cover Cc l \with {
     | inP (U,CU,l<=<U) => \case fl (X.interior {U}) l<=<U \with {
@@ -60,21 +79,28 @@
     }
   }
 
+{- | For `X : CompleteCoverSpace`, the partial function `I -> X` defined on convergent nets, returning the value
+ -   obtained by lifting to the completion and evaluating at the eventuality filter point.
+ -}
 \func limit {I : DirectedSet} {X : CompleteCoverSpace} (f : I -> X) : Partial X \cowith
   | isDefined => IsConvergent f
   | value fc => completion-lift fc infPoint
   \where {
+    -- | The completion point built from the eventuality filter on the directed set.
     \func infPoint {I : DirectedSet} : Completion (DirectedCoverSpace I)
       => CompleteCoverSpace.filter-point $ completion.func-cauchy EventualityFilter
 
+    -- | Identifies the limit value with the filter-point of the cauchy filter induced by `f`.
     \protected \lemma char (fc : CoverMap (DirectedCoverSpace I) X)
       : limit fc fc = CompleteCoverSpace.filter-point (fc.func-cauchy EventualityFilter)
       => completion-lift-natural EventualityFilter
   }
 
+-- | The computed `limit f fc` is indeed a limit of `f` in the sense of `X.IsLimit`.
 \lemma limit-isLimit {I : DirectedSet} {X : CompleteCoverSpace} {f : I -> X} {fc : IsConvergent f} : X.IsLimit f (limit f fc)
   => rewrite (limit.char fc) \lam Uo Ul => CompleteCoverSpace.filter-point-sub (X.open-char.1 Uo Ul)
 
+-- | `limit f = defined l` iff `X.IsLimit f l`.
 \lemma limit-char {I : DirectedSet} {X : CompleteCoverSpace} {f : I -> X} {l : X} : (limit f = defined l) <-> X.IsLimit f l
   => (\lam p => rewriteI (defined-ext.value {_} {limit f} p) limit-isLimit,
       \lam fl => defined-ext {_} {limit f} (limit-conv fl) $ inv $ isSeparatedCoverSpace $ SeparatedCoverSpace.separated-char 4 7 \lam {U} l<=<U => \case <=<-inter l<=<U \with {
@@ -83,13 +109,16 @@
         }
       })
 
+-- | Limits commute with cover-continuous maps: `g (limit f) = limit (g ∘ f)`.
 \lemma limit-apply {I : DirectedSet} {X Y : CompleteCoverSpace} {f : I -> X} {fc : IsConvergent f} {g : X -> Y} (gc : CoverMap X Y g)
   : g (limit f fc) = limit (\lam i => g (f i)) (gc CoverMap.∘ fc)
   => Y.limit-unique (cont-limit limit-isLimit gc) limit-isLimit
 
+-- | Pointwise-equal nets have equal limits.
 \lemma limit-ext {I : DirectedSet} {X : CompleteCoverSpace} (f g : I -> X) {fc : IsConvergent f} {gc : IsConvergent g} (p : \Pi (i : I) -> f i = g i) : limit f fc = limit g gc
   => X.limit-unique limit-isLimit $ transportInv (X.IsLimit __ (limit g gc)) (ext p) limit-isLimit
 
+-- | For regular preuniform spaces, convergence is characterized by eventual entry into uniform-cover elements.
 \lemma convergent-uniform-char {I : DirectedSet} {X : RegularPreuniformSpace} {f : I -> X} (p : ∀ {C : X.isUniform} ∃ (U : C) (N : I) ∀ {n} (N <= n -> U (f n))) : IsConvergent f
   => convergent-char \lam Cc => \case ClosurePrecoverSpace.closure-filter (\new SetFilter X {
     | F U => ∃ (N : I) ∀ {n} (N <= n -> U (f n))
@@ -106,9 +135,13 @@
     | inP (U, CU, inP (N,g)) => inP (U, CU, N, g)
   }
   \where
+    -- | The reverse direction.
     \protected \lemma conv {I : DirectedSet} {X : RegularPreuniformSpace} {f : I -> X} (fc : IsConvergent f) : ∀ {C : X.isUniform} ∃ (U : C) (N : I) ∀ {n} (N <= n -> U (f n))
       => \lam Cu => convergent-char.conv fc (X.makeCauchy Cu)
 
+{- | For topological abelian groups, three equivalent forms (TFAE): `IsConvergent f`, the Cauchy condition
+ -   `U (f m - f n)` eventually for `n <= m`, and `U (f n - f N)` eventually with a fixed `N`.
+ -}
 \lemma convergent-topAbGroup-char {I : DirectedSet} {X : TopAbGroup} {f : I -> X} : TFAE (
     IsConvergent f,
     ∀ {U : X.isOpen} (U 0) ∃ (N : I) ∀ {n m} (N <= n -> n <= m -> U (f m - f n)),
@@ -130,6 +163,7 @@
       }
     })
 
+-- | For extended pseudo-metric spaces, convergence is `∀ eps > 0, ∃ N, ∀ n >= N, (dist (f n) (f N)).U eps`.
 \lemma convergent-metric-char {I : DirectedSet} {X : ExPseudoMetricSpace} {f : I -> X}
   : IsConvergent f <-> ∀ {eps : Rat} (0 < eps) ∃ (N : I) ∀ {n} (N <= n -> (dist (f n) (f N)).U eps)
   => (\lam fc eps>0 => \case convergent-uniform-char.conv fc $ X.metricUniform (RatField.half>0 eps>0) \with {
@@ -143,12 +177,14 @@
     }
   })
   \where {
+    -- | Two-sided Cauchy version: `(dist (f n) (f m)).U eps` for `n, m >= N`.
     \protected \lemma double (fc : IsConvergent f) {eps : Rat} (eps>0 : 0 < eps) : ∃ (N : I) ∀ {n m} (N <= n -> N <= m -> (dist (f n) (f m)).U eps)
       => \case convergent-metric-char.1 fc (RatField.half>0 eps>0) \with {
         | inP (N,h) => inP (N, \lam N<=n N<=m => X.halving1/2 (rewrite dist-symm in h N<=n) (rewrite dist-symm in h N<=m))
       }
   }
 
+-- | Real-valued `eps` variant for ordinary pseudo-metric spaces.
 \lemma convergent-metric-real {I : DirectedSet} {X : PseudoMetricSpace} {f : I -> X}
   : IsConvergent f <-> ∀ {eps : Real} (0 < eps) ∃ (N : I) ∀ {n} (N <= n -> X.dist (f n) (f N) < eps)
   => <->trans convergent-metric-char $ later (\lam fc eps>0 => \case real_<-rat-char.1 eps>0 \with {
@@ -159,6 +195,7 @@
     | inP (N,h) => inP (N, \lam p => real_<_U.1 $ h p)
   })
 
+-- | `X.IsLimit f l` iff `∀ eps > 0, ∃ N, (dist l (f n)).U eps` eventually (extended pseudo-metric form).
 \lemma limit-metric-char {I : DirectedSet} {X : ExPseudoMetricSpace} {f : I -> X} {l : X}
   : X.IsLimit f l <-> ∀ {eps} (0 < eps) ∃ (N : I) ∀ {n} (N <= n -> (dist l (f n)).U eps)
   => (\lam fl eps>0 => fl OBall-open (OBall-center eps>0),
@@ -168,6 +205,9 @@
         }
       })
 
+{- | Geometric convergence: if `dist l (f (suc n)) <= d * dist l (f n)` with `0 <= d < 1` and `dist l (f 0)` bounded,
+ -   then `f` converges to `l`.
+ -}
 \lemma nat-limit-metric {X : ExPseudoMetricSpace} {f : Nat -> X} {l : X} (fb : (dist l (f 0)).IsBounded) {d : ExUpperReal} (d>=0 : 0 <= d) (d<1 : d.U 1) (dp : \Pi (n : Nat) -> dist l (f (suc n)) <= d * dist l (f n)) : X.IsLimit f l \elim fb
   | inP (B,lf0<B) => \case U-rounded d<1 \with {
     | inP (q,d<q,q<1) => limit-metric-char.2 \lam {eps} eps>0 =>
@@ -175,11 +215,13 @@
       \in inP (N.1, \lam {n} p => induction lf0<B {q} (<=-less $ d>=0 d<q) (\lam k => dp k <=∘ ExUpperRealSemigroup.<=_* (ExUpperReal.<_<= d<q) <=-refl) n $ RatField.<=_*_positive-left (RatField.pow_<=-degree (<=-less $ d>=0 d<q) (<=-less q<1) p) (<=-less $ dist>=0 lf0<B) <∘r RatField.<_rotate-right-conv (dist>=0 lf0<B) N.2)
   }
   \where {
+    -- | Inductive bound `dist l (f n) <= q^n * B` driving the convergence proof.
     \private \lemma induction {B : Rat} (fB : (dist l (f 0)).U B) {q : Rat} (q>=0 : 0 <= q) (dq : \Pi (n : Nat) -> dist l (f (suc n)) <= ExUpperReal.fromRat q * dist l (f n)) (n : Nat) : dist l (f n) <= RatField.pow q n * B \elim n
       | 0 => ExUpperReal.<_<= fB <=∘ =_<= (inv $ pmap ExUpperReal.fromRat ide-left)
       | suc n => dq n <=∘ ExUpperRealSemigroup.<=_* <=-refl (induction fB q>=0 dq n) <=∘ =_<= (ExUpperReal.*-rat q>=0 (RatField.<=_*-positive (RatField.pow>=0 q>=0) $ <=-less $ dist>=0 fB) *> pmap ExUpperReal.fromRat (inv *-assoc *> pmap (* B) RatField.pow-left))
   }
 
+-- | Real `eps` variant of the above.
 \lemma limit-metric-real {I : DirectedSet} {X : PseudoMetricSpace} {f : I -> X} {l : X}
   : X.IsLimit f l <-> ∀ {eps} (0 < eps) ∃ (N : I) ∀ {n} (N <= n -> X.dist l (f n) < eps)
   => <->trans limit-metric-char $ later (\lam fc eps>0 => \case real_<-rat-char.1 eps>0 \with {
@@ -190,9 +232,14 @@
     | inP (N,h) => inP (N, \lam p => real_<_U.1 $ h p)
   })
 
+-- | Convergence is preserved under composition with a `CoverMap`.
 \lemma convergent-compose {I : DirectedSet} {X Y : CoverSpace} {f : I -> X} (fc : IsConvergent f) (g : CoverMap X Y) : IsConvergent \lam n => g (f n)
   => g CoverMap.∘ fc
 
+{- | For a limit point `a` of a set `U` in a topological space, the directed set of tuples `(V, Va, x, Vx, Ux)` ordered
+ -   by reverse inclusion of the open neighborhood `V`. Used to take limits of partial functions defined on `U` as
+ -   `x -> a`.
+ -}
 \func SubPointDirectedSet {X : TopSpace} {U : Set X} (a : X) (Ua : X.IsLimitPoint a U) : DirectedSet \cowith
   | E => Given (V : isOpen) (V a) (x : X) (V x) (U x)
   | <= S T => T.1 ⊆ S.1
@@ -205,6 +252,9 @@
     | inP (z,Uz,(Vz,Wz)) => inP ((V ∧ W, open-inter Vo Wo, (Va,Wa), z, (Vz,Wz), Uz), meet-left, meet-right)
   }
   \where {
+    {- | Composition lemma: a limit of `g` along `SubPointDirectedSet` transfers to a limit of `g ∘ f` along any net `f`
+     -   converging to `lx` and staying in `S`.
+     -}
     \lemma limit-comp {I : DirectedSet} {X Y : TopSpace} {S : Set X} {lx : X} (Sa : X.IsLimitPoint lx S)
                       {f : I -> X} (Sf : \Pi (n : I) -> S (f n)) (fl : X.IsLimit f lx) {g : Set.Total S -> Y}
                       {ly : Y} (gl : Y.IsLimit {SubPointDirectedSet lx Sa} (\lam h => g (h.4,h.6)) ly) : Y.IsLimit (\lam n => g (f n, Sf n)) ly
@@ -214,16 +264,21 @@
         }
       }
 
+    -- | Functoriality: continuous maps with sections induce maps of `SubPointDirectedSet`s.
     \protected \func map {X Y : TopSpace} (f : ContMap X Y) (g : Y -> X) (h : \Pi (y : Y) -> f (g y) = y) (a : Y)
                          {U : Set Y} (Ua : Y.IsLimitPoint a U) {b : X} (p : g a = b) {V : Set X} (Vb : X.IsLimitPoint b V)
                          (UV : \Pi {y : Y} -> U y -> V (g y)) (d : SubPointDirectedSet a Ua) : SubPointDirectedSet b Vb
       => (f ^-1 d.1, f.func-cont d.2, transportInv d.1 (pmap f (inv p) *> h a) d.3, g d.4, transportInv d.1 (h d.4) d.5, UV d.6)
 
+    -- | The projection `h.4` (the `x` component) tends to `a`.
     \lemma limit-id {X : TopSpace} {U : Set X} {a : X} (Ua : X.IsLimitPoint a U) : X.IsLimit {SubPointDirectedSet a Ua} (\lam h => h.4) a
       => \lam {V} Vo Va => \case Ua Vo Va \with {
         | inP (b,Ub,Vb) => inP ((V, Vo, Va, b, Vb, Ub), \lam {h} p => p h.5)
       }
 
+    {- | Characterization of limits along `SubPointDirectedSet` in `(open V, V y) <-> (open U, U a, ...)` form — the
+     -   standard ε-δ-style continuity at a limit point.
+     -}
     \lemma limit-char {X Y : TopSpace} {S : Set X} {a : X} (Sa : X.IsLimitPoint a S) (f : (\Sigma (x : X) (S x)) -> Y) {y : Y}
       : Y.IsLimit {SubPointDirectedSet a Sa} (\lam h => f (h.4,h.6)) y <-> ∀ {V : Y.isOpen} (V y) ∃ (U : X.isOpen) (Ua : U a) ∀ {h : U} (Sh : S h) (V (f (h,Sh)))
       => (\lam fc {V} Vo Vy => \case fc Vo Vy \with {
@@ -235,17 +290,25 @@
       })
   }
 
+{- | For an open `S` containing `0` in a near-skew-field, the directed set of nonzero invertible elements approaching
+ -   `0` within `S`. Built as a `SubPointDirectedSet` with predicate `Inv ∧ S`.
+ -}
 \func InvDirectedSet {R : NearSkewField} {S : Set R} (So : isOpen S) (S0 : S 0) : DirectedSet
   => SubPointDirectedSet {R} {(\lam h => Monoid.Inv h) ∧ S} 0 (aux So S0)
   \where {
+    -- | `0` is a limit point of `Inv ∧ S` whenever `S` is open and contains `0`.
     \private \lemma aux (So : isOpen S) (S0 : S 0) : R.IsLimitPoint 0 ((\lam h => Monoid.Inv h) ∧ S)
       => \lam Vo V0 => \case inv-dense (open-inter So Vo) (S0,V0) \with {
         | inP (y,yi,(Sy,Vy)) => inP (y,(yi,Sy),Vy)
       }
 
+    -- | The element itself tends to `0`.
     \lemma limit-id (So : isOpen S) (S0 : S 0) : R.IsLimit {InvDirectedSet So S0} (\lam h => h.4) 0
       => SubPointDirectedSet.limit-id (aux So S0)
 
+    {- | Open-neighborhood characterization of limits indexed by `InvDirectedSet`, used for limits like `f(h)/h` as
+     -   `h -> 0` through invertible elements.
+     -}
     \lemma limit-char {Y : TopSpace} (So : isOpen S) (S0 : S 0) {f : \Pi (h : Monoid.Inv {R}) -> S h -> Y} {y : Y}
       : Y.IsLimit {InvDirectedSet So S0} (\lam h => f h.6.1 h.6.2) y <-> ∀ {V : Y.isOpen} (V y) ∃ (U : R.isOpen) (Ua : U 0) ∀ {h : U} (s : \Sigma (Monoid.Inv h) (S h)) (V (f s.1 s.2))
       => SubPointDirectedSet.limit-char (aux So S0) \lam h => f h.2.1 h.2.2

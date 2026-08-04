@@ -1,3 +1,13 @@
+{- | Loop spaces of pointed types and their iterations, with connections to suspensions and spheres.
+ -
+ -   This module defines the loop space construction `Loop X = (base = base)` as a pointed type, providing the
+ -   foundational building block for higher homotopy groups. The key results connect loop spaces to suspensions via the
+ -   adjunction `(Susp A ->* B) = (A ->* Loop B)` and use this to derive that pointed maps from spheres correspond to
+ -   iterated loops. Loop-level lemmas relate the h-level of a type to contractibility of its iterated loop spaces,
+ -   mirroring the standard characterization of n-types via homotopy groups. The iterated loop space `Omega^ n` is
+ -   defined by recursion on `n` using the generic iteration combinator.
+ -}
+
 \import Equiv
 \import Equiv.Sigma
 \import Function.Iterate
@@ -13,19 +23,25 @@
 \import Paths
 \import Paths.Meta
 
+-- | Instance making `(base = base)` a `Pointed` type with `idp` as basepoint.
 \instance Loop (X : Pointed) : Pointed
   | E => base = {X} base
   | base => idp
 
+{- | Functorial action on pointed maps: lifts `f : X ->* Y` to `Loop X ->* Loop Y` by conjugation
+ -   `\lam z => inv f.2 *> pmap f.1 z *> f.2`.
+ -}
 \func Loop-Func {X Y : Pointed} (f : X ->* Y) : Loop X ->* Loop Y
   => (\lam z => inv f.2 *> pmap f.1 z *> f.2, pmap (_ *>) (idp_*> _) *> inv_*> _)
 
+-- | If every loop space `x0 = x0` has h-level `-1+n`, then `X` has h-level `-1+suc n`.
 \lemma loop-level {X : \Type}
                   (n : Nat)
                   (p : \Pi (x0 : X) -> (x0 = x0) ofHLevel_-1+ n)
   : X ofHLevel_-1+ suc n
   => \lam x x' => hLevel-inh n (later rewriteI __ (p x))
 
+-- | If the n-fold iterated loop space at every basepoint is contractible, then `X` has h-level `-1+n`.
 \lemma loop-level-iter.{u} {X : \Type u}
                            (n : Nat)
                            (c : \Pi (x0 : X) -> Contr (iterl {Pointed.{u}} (Loop __) n (\new Pointed X x0)))
@@ -33,11 +49,15 @@
   | 0 => toProp (isContr'=>isProp c)
   | suc n => \lam x x' => loop-level-iter n (\lam x=x' => Jl (\lam x'' x=x'' => Contr (iterl {Pointed.{u}} (Loop __) n (\new Pointed (x = x'') x=x''))) (c x) x=x')
 
+-- | Converse: from h-level `-1+n` of `X` derives contractibility of the n-fold iterated loop space at any basepoint.
 \lemma loop-level-iter-inv.{u} {X : \Type u} (n : Nat) (h : X ofHLevel_-1+ n) (x0 : X)
   : Contr (iterl {Pointed.{u}} (Loop __) n (\new Pointed X x0)) \elim n
   | 0 => isProp=>isContr (ToProp.fromProp h) x0
   | suc n => loop-level-iter-inv n (h x0 x0) idp
 
+{- | The fundamental loop-suspension adjunction as a path: `(Susp.pointed A ->* B) = (A ->* Loop B)`. Proved by a chain
+ -   of equivalences using pushout universal property, sigma manipulations, and contractibility of based path spaces.
+ -}
 \func SuspLoopEquiv.{u} (A B : Pointed.{u}) : (Susp.pointed A ->* B) = (A ->* Loop B) =>
   \let S => Square { | Y => B | U => A | V => \Sigma | X => \Sigma | uv _ => () | ux _ => () } \in
   (\Sigma (f : Susp A -> B) (f north = base))                                              ==< sigma-left.path-func (QEquiv_= (IsEquiv.toQEquiv (Susp.pushout A).pushout-univ)) >==
@@ -56,6 +76,10 @@
   (\Sigma (p : \Sigma (b2 : B) (base = b2)) (\Sigma (g : A -> base = p.1) (g base = p.2))) ==< QEquiv_= (contr-left (lsigma base)) >==
   (\Sigma (g : A -> Loop B) (g base = base))                                               `qed
 
+{- | Pointed maps from the n-sphere are equivalent to n-fold iterated loops:
+ -   `(Sphere.pointed n ->* B) = iterl Loop n B`. Base case constructs the equivalence directly via case analysis on
+ -   `Sphere 0`; inductive step composes `SuspLoopEquiv` with the recursive equivalence.
+ -}
 \func SphereLoopEquiv.{u} (n : Nat) (B : Pointed.{u}) : (Sphere.pointed n ->* B) = iterl {Pointed.{u}} (Loop __) n B \elim n
   | 0 => \let smap (b : B) (s : Sphere 0) : B => \case s \with { | pinl _ => base | pinr _ => b | pglue () _ }
          \in path (iso {Sphere.pointed 0 ->* B} {B}
@@ -70,9 +94,11 @@
                        (\lam b => idp))
   | suc n => SuspLoopEquiv (Sphere.pointed n) B *> SphereLoopEquiv n (Loop B)
 
+-- | The n-fold loop space `Omega^ n X` defined as `iterr Loop n X`, packaged as a `Pointed`.
 \func Omega^.{u} (n : Nat) (X : Pointed.{u}) : Pointed.{u}
   => iterr {Pointed.{u}} (Loop __) n X
 
+-- | Functorial action of `Omega^ n` on pointed maps, defined recursively by iterating `Loop-Func`.
 \func Omega^-Func.{u} (n : Nat) {X Y : Pointed.{u}} (f : X ->* Y) : Omega^ n X ->* Omega^ n Y \elim n
   | 0 => f
   | suc n => Loop-Func (Omega^-Func n f)

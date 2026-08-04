@@ -1,3 +1,14 @@
+{- | Abstract framework for localization of types at a universe of "local" types in homotopy type theory.
+ -
+ -   A `Universe` is a predicate `isLocal` selecting a class of types, and a `Localization` of a type `S` is a local
+ -   type `S'` with a unit `inL : S -> S'` satisfying the universal property that precomposition with `inL` gives an
+ -   equivalence `(S' -> Z) ≃ (S -> Z)` for every local `Z`. A `ReflUniverse` provides a chosen localization for every
+ -   type, yielding a reflector `LType` with unit `lEta`. The module develops the calculus of this reflector: lifting
+ -   maps along `inL`, proving uniqueness of localizations, and showing that locality is preserved under standard
+ -   type-theoretic constructions (products, pullbacks, paths, Π-types, equivalences). It also establishes Yoneda-style
+ -   elimination principles into local type families.
+ -}
+
 \import Equiv
 \import Equiv.BiEquiv
 \import Equiv.Path
@@ -10,6 +21,7 @@
 \import Paths
 \import Paths.Meta
 
+-- | A class carrying a predicate `isLocal : \hType -> \Prop` distinguishing the local types.
 \class Universe.{u}
   | isLocal : \Type u -> \Prop
 
@@ -22,21 +34,30 @@
   | inL : S -> S'
   | local-univ (Z : Local) : IsEquiv {S' -> Z} {S -> Z} (-o inL)
 
+  -- | Given `f : S -> Z` with `Z` local, produces the unique extension `S' -> Z` via the universal property.
   \func lift {Z : Local {U}} (f : S -> Z) (x' : S') : Z => IsEquiv.ret (local-univ Z) f x'
     \where
       -- | The lift of a constant map is constant
       \func const {Z : Local {U}} (z : Z) (x' : S') : lift (\lam _ => z) x' = z
         => remove_inL (lift (\lam _ => z)) (\lam _ => z) (lift-prop (\lam _ => z)) x'
 
+  -- | Computation rule: `lift f (inL x) = f x`.
   \func lift-prop {Z : Local {U}} (f : S -> Z) (x : S) : lift f (inL x) = f x
     => path \lam i => IsEquiv.f_ret (local-univ Z) i x
 
+  {- | Function extensionality at `inL`: two maps `f, g : S' -> Z` into a local type that agree on the image of `inL`
+   -   are equal pointwise.
+   -}
   \func remove_inL {Z : Local {U}} (f g : S' -> Z) (p : \Pi (x : S) -> f (inL x) = g (inL x)) (x : S') : f x = g x
     => path \lam i => IsEquiv.ret (pmapIsEquiv (local-univ Z)) (path \lam i x => p x i) i x
 
+  -- | Coherence: `remove_inL` recovers the input pointwise equality on points of the form `inL x`.
   \func remove_inL-coh {Z : Local {U}} (f g : S' -> Z) (p : \Pi (x : S) -> f (inL x) = g (inL x)) (x : S) : remove_inL f g p (inL x) = p x
     => pmap (\lam q => path (q __ x)) $ IsEquiv.f_ret $ pmapIsEquiv (local-univ Z)
 } \where {
+  {- | Localizations of a fixed type are unique up to canonical equality, exhibiting `Localization X` as a
+   -   (propositional) attribute.
+   -}
   \sfunc levelProp.{u} {U : Universe.{u}} (X : \Type u) (l1 l2 : Localization X) : l1 = l2
     => \let p : l1.S' = {\Type u} l2.S' => path (iso (l1.lift l2.inL)
                                                      (l2.lift l1.inL)
@@ -56,17 +77,21 @@
 
 \open Localization (lift,lift-prop,remove_inL,remove_inL-coh)
 
+-- | Extends `Universe` with a chosen `localization` for every `\hType`, making the universe reflective.
 \class ReflUniverse.{u} \extends Universe.{u}
   | localization (A : \Type u) : Localization A
 
 -- | The localization functor
 \func LType.{u} {U : ReflUniverse.{u}} (A : \Type u) => (localization A).S'
 
+-- | The unit of the reflector: `lEta a = inL a` for the canonical localization.
 \func lEta.{u} {U : ReflUniverse.{u}} {A : \Type u} (a : A) => (localization A).inL a
 
+-- | Functorial action on maps: `(A -> B) -> (LType A -> LType B)`, defined by lifting `inL `o` f`.
 \func lmap.{u} {U : ReflUniverse.{u}} {A B : \Type u} (f : A -> B) (la : LType A) : LType B
   => lift (inL `o` f) la
   \where {
+    -- | `lmap id` is the identity on `LType A`.
     \func id-prop.{u} {U : ReflUniverse.{u}} {A : \Type u} (la : LType A) : lmap id la = la
       => remove_inL (lmap id) id (lift-prop inL) la
   }
@@ -275,6 +300,7 @@
       => inP $ sigma-left $ IsEquiv.toQEquiv $ (localization A).local-univ totalIsLocal
   }
 
+-- | A local Yoneda lemma: `(\Pi (a' : A) -> LType (a = a') -> P a') ≃ P a` whenever each `P a'` is local.
 \lemma localYoneda.{u} {U : ReflUniverse.{u}} {A : \Type u} (a : A) (P : A -> Local)
   : IsEquiv {\Pi (a' : A) -> LType (a = a') -> P a'} {P a} (\lam f => f a (inL idp))
   => \let e a' => (localization (a = a')).local-univ (P a')
@@ -287,6 +313,9 @@
        | f_sec h => path \lam i a' => IsEquiv.f_ret (e a') {h a'} i
      }) (pi-contr-left a (\lam a' _ => P a'))
 
+{- | Builds a quasi-equivalence `LType A ≃ LType B` from maps `f : A -> LType B`, `g : B -> LType A` together with
+ -   proofs that the round-trips agree with the units, using `lift` and `remove_inL` to discharge coherence.
+ -}
 \func localization-equiv.{u}
   {U : ReflUniverse.{u}} {A B : \Type u}
   (f : A -> LType B)

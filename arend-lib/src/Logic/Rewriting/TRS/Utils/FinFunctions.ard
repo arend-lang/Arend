@@ -1,3 +1,15 @@
+{- | Utilities for working with finite-domain functions `Fin n -> C i` and indices into list concatenations, geared
+ -   toward inductive arguments over rewriting systems.
+ -
+ -   The module provides two complementary toolkits. First, it handles indices into appended lists (`a ++ b`) by giving
+ -   canonical embeddings of `Index a` and `Index b` together with a decision procedure that lets one do case analysis
+ -   on which side an index lands. Second, it formalizes pointwise "hybrid" functions: `modular-function f g delim`
+ -   agrees with `f` before `delim` and with `g` from `delim` onward, while `pointed-function f index point` overrides
+ -   `f` at a single index. These hybrids enable a stepwise induction principle (`modular-induction`) that bridges from
+ -   `f` to `g` one position at a time, which is the standard pattern for proving properties that are stable under
+ -   single-coordinate updates.
+ -}
+
 \import Data.Fin
 \import Data.List
 \import Data.Or
@@ -7,27 +19,33 @@
 \import Paths.Meta
 \import Set.Fin
 
+-- | Abbreviation `Fin (length list)` for indices into a `List A`.
 \func Index {A : \Type} (list : List A) : \Set0
   => Fin (length list)
 
+-- | Embeds `Index a` into `Index (a ++ b)` via the prefix.
 \func expand-fin-left {A : \Type} {a b : List A} (i : Index a) : Index (a ++ b) \elim a, i
   | :: a _, 0 => 0
   | :: _ _, suc i => suc (expand-fin-left i)
   \where {
+    -- | `(a ++ b) !! expand-fin-left i = a !! i`; the embedding preserves lookup.
     \func correct {A : \Type} {a b : List A} (i : Index a) : (a ++ b) !! expand-fin-left i = a !! i \elim a, i
       | :: a a1, 0 => idp
       | :: a a1, suc i => correct i
   }
 
+-- | Embeds `Index b` into `Index (a ++ b)` via the suffix (offset by `length a`).
 \func expand-fin-right {A : \Type} {a b : List A} (i : Index b) : Index (a ++ b) \elim a
   | nil => i
   | :: a a1 => suc (expand-fin-right i)
   \where {
+    -- | `(a ++ b) !! expand-fin-right i = b !! i`; suffix embedding preserves lookup.
     \func correct {A : \Type} {a b : List A} (i : Index b) : (a ++ b) !! expand-fin-right i = b !! i \elim a
       | nil => idp
       | :: a a1 => correct i
   }
 
+-- | Eliminator for `Index (a ++ b)`: given proofs on the prefix and suffix images, derives a proof for any index.
 \func partial-fin-induction
   {A : \Type} {a b : List A} (C : Index (a ++ b) -> \Type)
   (proof-for-prefix : \Pi (i : Index a) -> C (expand-fin-left i))
@@ -38,6 +56,9 @@
     | inr (j, p) => rewrite p (proof-for-suffix j)
   }
   \where {
+    {- | Decides whether a given `Index (a ++ b)` factors through `expand-fin-left` or `expand-fin-right`, returning the
+     -   corresponding witness equation.
+     -}
     \func fin-list-decide {A : \Type} {a b : List A} (index : Index (a ++ b)) :
       (\Sigma (i : Index a) (index = expand-fin-left i)) `Or` (\Sigma (j : Index b) (index = expand-fin-right j))
     \elim a, index
@@ -49,6 +70,9 @@
       }
   }
 
+{- | `modular-function f g delim i` returns `f i` when `i < delim` and `g i` otherwise; the boundary
+ -   `delim : Fin (suc n)` ranges over all split points including the extremes.
+ -}
 \func modular-function
   {n : Nat}
   {C : Fin n -> \Type}
@@ -61,12 +85,16 @@
   | suc n, suc delim, 0 => g 0
   | suc n, suc delim, suc i => modular-function (\lam i => f (suc i)) (\lam i => g (suc i)) delim i
   \where {
+    {- | At `delim = 0`, the hybrid equals `g`'s "complement" — actually `modular-function f g 0 = f` (the left-pure
+     -   case).
+     -}
     \func pure-left-modular
       {n : Nat}
       {C : Fin n -> \Type}
       (f g : \Pi (i : Fin n) -> C i)
       : modular-function f g 0 = f => ext (unext f g)
       \where {
+        -- | Pointwise version of `pure-left-modular`.
         \func unext
           {n : Nat}
           {C : Fin n -> \Type}
@@ -75,6 +103,9 @@
           | suc n, i => idp
       }
 
+    {- | If `f delim = g delim`, then advancing the boundary by one is invisible:
+     -   `modular-function f g delim = modular-function f g (suc delim)`.
+     -}
     \func modular-bridge
       {n : Nat}
       {C : Fin n -> \Type}
@@ -83,6 +114,7 @@
       (eq : f delim = g delim) : modular-function f g delim = modular-function f g (suc delim) =>
       ext (unext f g delim eq)
       \where {
+        -- | Pointwise version of `modular-bridge`.
         \func unext
           {n : Nat}
           {C : Fin n -> \Type}
@@ -98,11 +130,13 @@
           | suc n, suc delim, suc j => unext (\lam i => f (suc i)) (\lam i => g (suc i)) delim eq j
       }
 
+    -- | At `delim = finLast n`, the hybrid equals `g`.
     \func pure-right-modular
       {n : Nat}
       {C : Fin n -> \Type}
       (f g : \Pi (i : Fin n) -> C i) : modular-function f g (finLast n) = g => ext (unext C f g)
       \where {
+        -- | Pointwise version of `pure-right-modular`.
         \func unext
           {n : Nat}
           (C : Fin n -> \Type)
@@ -114,6 +148,9 @@
       }
   }
 
+{- | Bridge induction principle: to transfer a predicate `Q` from `f` to `g`, supply `Q f` and a step that promotes
+ -   `Q (modular-function f g delim)` to `Q (modular-function f g (suc delim))`.
+ -}
 \func modular-induction
   {n : Nat} {C : Fin n -> \Type}
   (Q : (\Pi (i : Fin n) -> C i) -> \Type)
@@ -123,6 +160,9 @@
   : Q g =>
   transport Q (modular-function.pure-right-modular f g) (progressive-induction-lemma {n} Q f g step (finLast n) start)
   \where {
+    {- | The recursion that walks the boundary from `0` up to `finLast n`, producing `Q (modular-function f g delim)`
+     -   for every `delim`.
+     -}
     \func progressive-induction-lemma
       {n : Nat} {C : Fin n -> \Type}
       (Q : (\Pi (i : Fin n) -> C i) -> \Type)
@@ -136,6 +176,9 @@
       | suc n, suc delim => step delim (progressive-induction-lemma {suc n} Q f g step delim start)
   }
 
+{- | `pointed-function f index point` overrides `f` at a single coordinate `index`, returning `point` there and `f j`
+ -   elsewhere.
+ -}
 \func pointed-function {n : Nat} {C : Fin n -> \Type}
                        (f : \Pi (i : Fin n) -> C i)
                        (index : Fin n)
@@ -147,6 +190,7 @@
   | suc n, suc index, 0 => f 0
   | suc n, suc index, suc j => pointed-function (\lam i => f (suc i)) index point j
   \where {
+    -- | The override holds at the chosen coordinate: `pointed-function f index point index = point`.
     \func at-index
       {n : Nat} {C : Fin n -> \Type}
       (f : \Pi (i : Fin n) -> C i)
@@ -156,6 +200,9 @@
       | suc n, 0 => idp
       | suc n, suc index => at-index (\lam i => f (suc i)) index point
 
+    {- | Off the chosen coordinate, the function is unchanged: `pointed-function f index point j = f j` whenever
+     -   `j ≠ index`.
+     -}
     \func not-at-index
       {n : Nat} {C : Fin n -> \Type}
       (f : \Pi (i : Fin n) -> C i)
@@ -171,6 +218,9 @@
       => not-at-index (\lam i => f (suc i)) index point j (\lam p => j-not-index (pmap fsuc p))
   }
 
+{- | Eliminator for predicates over `pointed-function`: given the predicate at the override site (`Q index point`) and
+ -   at every other site (`Q j (f j)` for `j ≠ index`), derive `Q i (pointed-function f index point i)` for all `i`.
+ -}
 \func pointed-induction
   {n : Nat} {C : Fin n -> \Type}
   (Q : \Pi (i : Fin n) -> C i -> \Type)
@@ -192,6 +242,9 @@
       (\lam j ne => eq2 (suc j)
         (\lam p => ne (FinSet.suc-isInj _ _ p))) i
 
+{- | Re-expresses `modular-function f g delim` as a `pointed-function` whose distinguished value at `delim` is
+ -   `f delim`.
+ -}
 \func modular-to-pointed
   {n : Nat} {C : Fin n -> \Type}
   (f g : \Pi (i : Fin n) -> C i)
@@ -199,6 +252,7 @@
   : modular-function f g delim = pointed-function (modular-function f g delim) delim (f delim) =>
   ext (unext f g delim)
   \where {
+    -- | Pointwise version of `modular-to-pointed`.
     \func unext
       {n : Nat} {C : Fin n -> \Type}
       (f g : \Pi (i : Fin n) -> C i)
@@ -212,6 +266,9 @@
       | suc n, suc delim, suc i => unext (\lam i => f (suc i)) (\lam j => g (suc j)) delim i
   }
 
+{- | Re-expresses `modular-function f g (suc delim)` as a `pointed-function` over `modular-function f g delim` with
+ -   override value `g delim` at `delim`; this is the natural "single-coordinate update" view of the bridge step.
+ -}
 \func modular-to-pointed-forward
   {n : Nat} {C : Fin n -> \Type}
   (f g : \Pi (i : Fin n) -> C i)
@@ -219,6 +276,7 @@
   : modular-function f g (suc delim) = pointed-function (modular-function f g delim) delim (g delim) =>
   ext (unext f g delim)
   \where {
+    -- | Pointwise version of `modular-to-pointed-forward`.
     \func unext
       {n : Nat} {C : Fin n -> \Type}
       (f g : \Pi (i : Fin n) -> C i)

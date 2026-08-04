@@ -1,3 +1,14 @@
+{- | Category-theoretic structure on groups, abelian groups, and additive groups, together with kernels, images, and
+ -   quotients as functorial constructions.
+ -
+ -   This module assembles the categories `GroupCat`, `AddGroupCat`, and `AbGroupCat`, with `AbGroupCat` realized as a
+ -   subcategory of `AddGroupCat` via an embedding. It characterizes isomorphisms in `GroupCat` in two equivalent
+ -   algebraic forms (injective+surjective, or trivial-kernel+surjective) by transferring to set-isomorphisms in
+ -   `SetCat`. Kernels, images, and quotients of group homomorphisms are packaged as group instances together with the
+ -   canonical projection/inclusion homomorphisms, providing the building blocks for diagram chasing and homological
+ -   reasoning. Forgetful functors to `SetCat`, `AddMonoidCat`, and `AddGroupCat` are also provided.
+ -}
+
 \import Algebra.Group
 \import Algebra.Group.GroupHom
 \import Algebra.Group.SubGroup
@@ -21,6 +32,7 @@
 \import Paths.Meta
 \import Set.SetCategory
 
+-- | The category of groups with `GroupHom` as morphisms; instance of `Cat Group`.
 \instance GroupCat.{u} : Cat Group.{u}
   | Hom => GroupHom
   | id => GroupHom.id
@@ -30,6 +42,7 @@
   | o-assoc => idp
   | univalence => sip \lam f _ => exts (f.func-ide, \lam _ _ => f.func-*, \lam _ => f.func-inverse)
   \where {
+    -- | The forgetful functor `GroupCat -> SetCat`, shown to be faithful.
     \func ForgetSet.{u} : FaithfulFunctor GroupCat.{u} SetCat \cowith
       | F G => G
       | Func f => f
@@ -38,6 +51,9 @@
       | isFaithful => \lam p => ext p
 
     -- TODO: Prove this more generally for algebraic theories?
+    {- | A group homomorphism `f : G -> H` is an iso in `GroupCat` iff it is both injective and surjective
+     -   (`f.IsIsomorphism`).
+     -}
     \lemma Iso<->Inj+Surj.{u} {G H : Group.{u}} (f : GroupHom G H) : Iso {GroupCat.{u}} f <-> f.IsIsomorphism
       => (\lam p => SetIso->Inj+Surj (ForgetSet.Func-iso p),
           \lam p => \new Iso {
@@ -57,11 +73,14 @@
         \lemma this_inv_ap (p : f.IsIsomorphism) (h : H) : h = f (inve p h)
           => inv (path \lam i => (Iso.f_hinv {this_iso p} i) h)
 
+        -- | The inverse equation `h = f (inve p h)` and `g = inve p (f g)`.
         \lemma inv_this_ap (p : f.IsIsomorphism) (g : G) : g = inve p (f g)
           => inv (path \lam i => (Iso.hinv_f {this_iso p} i) g)
 
+        -- | Builds the inverse set-isomorphism from the injective+surjective data.
         \func this_iso (p : f.IsIsomorphism) => IsEquiv->SetIso (IsEquiv.fromInjSurj p.1 p.2)
 
+        -- | Builds the inverse set-isomorphism from the injective+surjective data.
         \func inve (p : f.IsIsomorphism) => Iso.hinv {this_iso p}
 
         \lemma aux.{u} {A B : \Set u} (f : Iso {_} {A} {B}) {a : A} {b : B} (p : f.f a = b) : f.hinv b = a
@@ -73,20 +92,24 @@
         \lemma aux''.{u} {A B : \Set u} (f : Iso {_} {A} {B}) {b : B} : b = f.f (f.hinv b)
           => inv (path (\lam i => (f.f_hinv i) b))
 
+        -- | Conversion between set-isomorphism data and injectivity+surjectivity.
         \lemma SetIso->Inj+Surj.{u} (f : Iso {SetCat.{u}}) : \Sigma (IsInj f.f) (IsSurj f.f)
           => ((SetIso->QEquiv f).isInj, (SetIso->QEquiv f).isSurj )
 
+        -- | Equivalence between `Equiv` and `Iso {SetCat}` for maps of sets.
         \lemma IsEquiv->SetIso.{u} {X Y : \Set u} {f : X -> Y} (eq : IsEquiv f) : Iso {SetCat} f \cowith
           | hinv => IsEquiv.ret eq
           | hinv_f => ext \lam _ => IsEquiv.ret_f eq
           | f_hinv => ext \lam _ => IsEquiv.f_ret eq
 
+        -- | Equivalence between `Equiv` and `Iso {SetCat}` for maps of sets.
         \lemma SetIso->QEquiv.{u} {X Y : \Set u} {f : X -> Y} (p : Iso {SetCat} f) : QEquiv f p.hinv \cowith
           | ret_f x => inv (aux' p)
           | f_sec y => inv (aux'' p)
       }
   }
 
+-- | The category of additive groups (`AddGroup`) with `AddGroupHom` morphisms.
 \instance AddGroupCat.{u} : Cat AddGroup.{u}
   | Hom G H => AddGroupHom G H
   | id => AddGroupHom.id
@@ -96,12 +119,14 @@
   | o-assoc => idp
   | univalence => sip \lam {X} {A} {B} p1 p2 => exts (p1.func-zro, \lam _ _ => p1.func-+, AddGroup.negative-equality A B p1.func-zro p1.func-+)
   \where {
+    -- | Forgetful functor `AddGroupCat -> AddMonoidCat`.
     \func forgetToAddMonoid.{u} : Functor AddGroupCat.{u} AddMonoidCat \cowith
       | F A => A
       | Func f => f
       | Func-id => idp
       | Func-o => idp
 
+    -- | Forgetful functor `AddGroupCat -> SetCat`.
     \func forget.{u} : Functor AddGroupCat.{u} SetCat \cowith
       | F R => R
       | Func f => f
@@ -109,6 +134,7 @@
       | Func-o => idp
   }
 
+-- | The category of abelian groups, defined as a `subCat` of `AddGroupCat` via the obvious embedding.
 \instance AbGroupCat.{u} : Cat AbGroup.{u}
   => subCat \new Embedding {AbGroup.{u}} {AddGroup.{u}} {
     | f A => A
@@ -117,12 +143,14 @@
       | f_sec => idpe
     }
   } \where {
+    -- | Forgetful functor `AbGroupCat -> AddGroupCat`.
     \func forgetToAddGroup.{u} : Functor AbGroupCat.{u} AddGroupCat \cowith
       | F A => A
       | Func f => f
       | Func-id => idp
       | Func-o => idp
 
+    -- | Forgetful functor `AbGroupCat -> SetCat`.
     \func forget.{u} : Functor AbGroupCat.{u} SetCat \cowith
       | F R => R
       | Func f => f

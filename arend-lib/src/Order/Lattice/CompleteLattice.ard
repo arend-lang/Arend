@@ -8,6 +8,11 @@
 \import Paths
 \import Paths.Meta
 
+{- | A `BoundedLattice` with arbitrary set-indexed joins (`Join`) and meets (`Meet`) and their universal properties
+ -   (`Join-cond`, `Join-univ`, `Meet-cond`, `Meet-univ`). Extends `CompleteCat`, with limits built from `Meet` and
+ -   pullbacks from binary meets. Binary `join`/`meet`, `top`, `bottom` come with default implementations derived from
+ -   `Join`/`Meet` over `Bool` or empty/singleton index sets.
+ -}
 \class CompleteLattice \extends BoundedLattice, CompleteCat.{0} {
   | Join : (E -> \Prop) -> E
   | Join-cond {C : E -> \Prop} {x : E} : C x -> x <= Join C
@@ -73,15 +78,18 @@
   \lemma IJoin-univ {A : \Type} {f : A -> E} {e : E} (p : \Pi (a : A) -> f a <= e) : IJoin f <= e
     => Join-univ (TSetIm-elim p)
 
+  -- | Join over a subset given by a predicate `U : E -> \Prop`, summed over its total space.
   \func SJoin {A : \Type} (f : A -> E) (P : A -> \Type) : E
     => Join (SetIm f P)
 
+  -- | Universal property of `SJoin`.
   \lemma SJoin-cond {A : \Type} {f : A -> E} {P : A -> \Type} {a : A} (Pa : P a) : f a <= SJoin f P
     => Join-cond (SetIm-con Pa)
 
   \lemma SJoin-conde {A : \Type} {f : A -> E} {P : A -> \Type} (a : A) (Pa : P a) : f a <= SJoin f P
     => SJoin-cond Pa
 
+  -- | Universal property of `SJoin`.
   \lemma SJoin-univ {A : \Type} {f : A -> E} {P : A -> \Type} {e : E} (p : ∀ {a : P} (f a <= e)) : SJoin f P <= e
     => Join-univ (SetIm-elim p)
 
@@ -103,12 +111,14 @@
   \lemma SMeet-univ {A : \Type} {f : A -> E} {P : A -> \Prop} {e : E} (p : ∀ {a : P} (e <= f a)) : e <= SMeet f P
     => Meet-univ (SetIm-elim p)
 
+  -- | Binary join expressed as a `Join` over `Bool`.
   \lemma join_Join {x y : E} : x ∨ y = Join \lam z => (z = x) || (z = y)
     => <=-antisymmetric (join-univ (Join-cond $ byLeft idp) (Join-cond $ byRight idp)) $ Join-univ \case \elim __ \with {
       | byLeft p => transportInv (<= _) p join-left
       | byRight p => transportInv (<= _) p join-right
     }
 
+  -- | The dual complete lattice obtained by swapping `Join` ↔ `Meet`.
   \protected \func op : CompleteLattice => \new CompleteLattice {
     | Lattice => Lattice.op
     | Join => Meet

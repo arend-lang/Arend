@@ -1,3 +1,14 @@
+{- | Color-indexed structure for unions of term rewriting systems sharing a common sort signature.
+ -
+ -   This module sets up the framework for combining multiple TRSs by tagging each system with a "color" drawn from a
+ -   decidable set. A `TheoremContext` bundles per-color signatures and linear rule registries, and the union signature
+ -   is built via `SumFSignature` / `SumRegistry` so that every function symbol in the combined system carries its
+ -   originating color. Predicates like `HasColoredRoot` and `HasExcludedColoredRoot` track which subsystem a term's
+ -   head belongs to, which is essential for stating and proving modular theorems (e.g. confluence by colored
+ -   decompositions). Conversion lemmas show how linear terms from a single colored signature embed coherently into the
+ -   unified term language.
+ -}
+
 \import Data.List \hiding (Sort)
 \import Logic
 \import Logic.Rewriting.TRS.Utils.FinFunctions
@@ -9,31 +20,48 @@
 \import Logic.Rewriting.TRS.MetaContexts
 \import Logic.Rewriting.TRS.Union
 
+{- | Class parameterizing a TRS union by a decidable set of colors `Color`, a shared sort set `Sort'`, per-color
+ -   signatures `envs : Color -> FSignature Sort'`, and per-color linear rule registries `rules`.
+ -}
 \class TheoremContext \noclassifying
   (Color : DecSet)
   (Sort' : \Set)
   (envs : Color -> FSignature Sort')
   (rules : \Pi (c : Color) -> LinearRegistry (envs c)) {
 
+  {- | The combined `FSignature` instance, defined as `SumFSignature envs`, whose function symbols are dependent pairs
+   -   of a color and a symbol from that color's signature.
+   -}
   \instance env : FSignature => SumFSignature envs
 
+  {- | One-step rewrite relation `A B : Term (envs c) ...` confined to a single color `c`, given by
+   -   `RewriteRelation {envs c} (rules c)`.
+   -}
   \func monochrome-reduction (c : Color) {context : List Sort'} {s : Sort'} {mc : MetaContext Sort'} (A B : Term (envs c) context s mc) : \Set
     => RewriteRelation {envs c} (rules c) A B
 
+  -- | The combined `RuleRegistry` over `env`, assembled as `SumRegistry envs rules`.
   \func JRegistry : RuleRegistry env => SumRegistry envs rules
 
+  -- | Retrieves the linear left-hand-side pattern of rule `idx` in color `c`.
   \func get-rule-pattern {s : Sort'} {c : Color} (idx : rule-J {rules c} s) : LinearPattern (envs c) nil s =>
     LinearRegistry.rule-pattern {rules c} idx
 
+  -- | The `MetaContext` induced by the linear pattern of a rule, used to type its right-hand side.
   \func rule-linear-mc {s : Sort'} {c : Color} (idx : rule-J {rules c} s) : MetaContext Sort' =>
       LinearMetaContext {envs c} (get-rule-pattern idx)
 
+  -- | The right-hand side of rule `idx` in color `c`, as a term over `rule-linear-mc idx`.
   \func rule-right-linear {s : Sort'} {c : Color} (idx : rule-J {rules c} s) : Term (envs c) nil s (rule-linear-mc idx) =>
     LinearRegistry.rule-r {rules c} idx
 
+  {- | Inductive predicate asserting that a term's head function symbol has color `color`; introduced by `func-root`
+   -   requiring `f.1 = color` for `func f _`.
+   -}
   \data HasColoredRoot (color : Color) {context : List Sort'} {s : Sort'} {mc : MetaContext Sort'} (term : Term env context s mc) \elim term
     | func f _ => func-root (f.1 = color)
     \where {
+      -- | If two terms with the same head symbol both have colored roots `color` and `color'`, then `color = color'`.
       \lemma equalize-colors (color color' : Color) {context : List Sort'} {s : Sort'} {mc : MetaContext Sort'}
                              (f : symbol s)
                              (arguments arguments' : DArray {env.arity f} (\lam (index : Index (domain f)) => Term env (context ++ f env.!!domain index) (f env.!!sort index) mc))
@@ -42,6 +70,7 @@
         : color = color' \elim hcl1, hcl2
         | func-root p, func-root q => inv p *> q
 
+      -- | Extracts the underlying equality `f.1 = color` from a `HasColoredRoot` proof on `func f arguments`.
       \lemma reorganize (color : Color) {context : List Sort'} {s : Sort'} {mc : MetaContext Sort'}
                         {f : symbol s}
                         {arguments : DArray {env.arity f} (\lam (index : Index (domain f)) => Term env (context ++ f env.!!domain index) (f env.!!sort index) mc)}
@@ -50,12 +79,19 @@
         | func-root p => p
     }
 
+  {- | Dual predicate stating that a term's root symbol does not have color `color`; introduced by `ex-func-root` with
+   -   `Not (f.1 = color)`.
+   -}
   \data HasExcludedColoredRoot (color : Color) {context : List Sort'} {s : Sort'} {mc : MetaContext Sort'} (term : Term env context s mc) \elim term
     | func f _ => ex-func-root (Not (f.1 = color))
 }
 
 \open TheoremContext
 
+{- | Converts a `GenericLinearTerm` over a single color's signature `envs color` into a `Term` over the union signature
+ -   `env`, paired with the appropriate `LinearMetaContext`. Handles function applications (tagging the head with
+ -   `color`), full metavariables, and variables.
+ -}
 \func convert-to-injected-term
   {tc : TheoremContext} {allow-variables : \Prop}
   (color : Color) {context : List Sort'} {s : Sort'}
@@ -65,12 +101,18 @@
   | l-full-metavar => metavar idp (\lam i => var i idp)
   | l-var index p _ => var index p
 
+{- | Coherence lemma showing that injecting a converted linear term equals directly converting it to an injected term:
+ -   `inject-term envs (Linear.convert-to-term t) = convert-to-injected-term color t`.
+ -}
 \lemma unwrap-injection {tc : TheoremContext} {color : Color} {context : List Sort'} {s : Sort'} {allow-variables : \Prop} (t : GenericLinearTerm (envs color) context s allow-variables)
   : inject-term envs (Linear.convert-to-term {envs color} t) = convert-to-injected-term color {context} {s} t \elim t
   | l-func f arguments => Term.fext (\lam index => rewriteI (unwrap-injection (arguments index)) (swap color (\lam i => LinearMetaContext {envs color} (arguments i)) (Linear.convert-to-term {envs color} (arguments index))) )
   | l-full-metavar => idp
   | l-var index p _ => idp
   \where {
+    {- | Auxiliary lemma showing that `inject-term` commutes with `ModularMetaContext.upgrade-metavariables`, allowing
+     -   metacontext upgrades to be performed before or after injection into the union signature.
+     -}
     \lemma swap {tc : TheoremContext} (color : Color) {context : List Sort'} {s : Sort'} {n : Nat} {j : Fin n} (msigs : Fin n -> MetaContext Sort') (t : Term (envs color) context s (msigs j))
       : inject-term envs (ModularMetaContext.upgrade-metavariables {envs color} msigs t) = ModularMetaContext.upgrade-metavariables msigs (inject-term envs t) \elim t
       | var index p => idp

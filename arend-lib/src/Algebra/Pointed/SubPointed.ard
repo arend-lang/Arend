@@ -1,3 +1,13 @@
+{- | Sub-pointed-sets: subsets of pointed (or additively pointed) sets that are closed under the distinguished element.
+ -
+ -   This module defines the notion of a subset of a pointed set that contains the basepoint, yielding an induced
+ -   pointed structure on the subset itself. The multiplicative variant (`SubPointed`) carries `1`, while the additive
+ -   variant (`SubAddPointed`) carries `0`; each provides a constructor (`IPointed` / `IAddPointed`) that promotes the
+ -   underlying `ISet` of the `SubSet` to a `Pointed`/`AddPointed` by pairing the basepoint with its closure proof. The
+ -   `max` constructions give the trivial maximal sub-pointed-set (the whole ambient set), and `DecSubPointed` adds
+ -   decidability of membership.
+ -}
+
 \import Algebra.Pointed
 \import Algebra.Pointed.PointedHom
 \import Function
@@ -8,10 +18,16 @@
 \import Paths.Meta
 \import Set.SubSet
 
+{- | Class extending `SubSet` with `S : Pointed`, requiring `contains_ide : contains 1`. Represents a subset of a
+ -   pointed set that is closed under the unit element.
+ -}
 \class SubPointed \extends SubSet {
   \override S : Pointed
   | contains_ide : contains 1
 } \where {
+  {- | The maximal `SubPointed` over a `Pointed A`, built on top of `DecSubSet.max` (the full subset), with the
+   -   basepoint trivially contained.
+   -}
   \func max {X : Pointed} : SubPointed \cowith
     | SubSet => DecSubSet.max {X}
     | contains_ide => ()
@@ -21,6 +37,7 @@
     | func-ide => idp
 }
 
+-- | Promotes the induced `ISet` of the subset to a `Pointed` structure, with unit `(1, contains_ide)`.
 \instance IPointed (S : SubPointed {}) : Pointed
   | BaseSet => S.ISet
   | ide => (1, contains_ide)
@@ -33,12 +50,17 @@
       => \lam p => ext p
   }
 
+-- | Class extending both `SubPointed` and `DecSubSet`; a sub-pointed-set with decidable membership.
 \class DecSubPointed \extends SubPointed, DecSubSet
 
+{- | Class extending `SubSet` with `S : AddPointed`, requiring `contains_zro : contains 0`. The additive analogue of
+ -   `SubPointed`, for subsets closed under the zero element.
+ -}
 \class SubAddPointed \extends SubSet {
   \override S : AddPointed
   | contains_zro : contains 0
 } \where {
+  -- | The maximal `SubAddPointed` over an `AddPointed A`, built on `DecSubSet.max`, with zero trivially contained.
   \func max {A : AddPointed} : SubAddPointed \cowith
     | SubSet => DecSubSet.max {A}
     | contains_zro => ()
@@ -48,6 +70,7 @@
     | func-zro => idp
 }
 
+-- | Promotes the induced `ISet` to an `AddPointed` structure, with zero `(0, contains_zro)`.
 \instance IAddPointed (S : SubAddPointed {}) : AddPointed
   | BaseSet => S.ISet
   | zro => (0, contains_zro)
@@ -60,6 +83,7 @@
       => \lam p => ext p
   }
 
+-- | For `f : AddPointedHom`, the type `\Sigma (a : f.Dom) (f a = 0)` of elements mapped to zero.
 \func Kernel (f : PointedHom) : SubPointed f.Dom \cowith
   | contains x => f x = 1
   | contains_ide => func-ide
@@ -76,6 +100,9 @@
   => \Pi {x : f.Dom} -> AddKernel f x -> x = zro
 
 
+{- | Equips `Image f` with a `Pointed` structure for `f : PointedHom`, with unit witnessed by
+ -   `(ide, inP (ide, func-ide))`.
+ -}
 \func ImagePointed (f : PointedHom) : SubPointed f.Cod \cowith
   | contains y => ∃ (x : f.Dom) (f x = y)
   | contains_ide => inP (1, func-ide)
@@ -87,10 +114,14 @@
   | func a => (f a, inP (a, idp))
   | func-ide => ext func-ide
 
+-- | The corestriction `ImageAddPointedLeftHom f` is surjective (`IsSurj`).
 \lemma image-surj {f : PointedHom} : IsSurj (ImPointedLeftHom f)
   => \lam y => TruncP.map y.2 \lam s => (s.1, ext s.2)
 
 
+{- | Equips `Image f` with an `AddPointed` structure for `f : AddPointedHom`, with zero witnessed by
+ -   `(0, inP (0, func-zro))`.
+ -}
 \func ImageAddPointed (f : AddPointedHom) : SubAddPointed f.Cod \cowith
   | contains y => ∃ (x : f.Dom) (f x = y)
   | contains_zro => inP (0, func-zro)

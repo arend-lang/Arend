@@ -1,3 +1,15 @@
+{- | Semirings: additive abelian monoids with a multiplicative monoid structure connected by distributivity.
+ -
+ -   This module builds the semiring hierarchy in stages: `PseudoSemiring` adds distributivity and zero-absorption to a
+ -   non-unital multiplicative semigroup over an abelian monoid, while `Semiring` adds a multiplicative identity
+ -   together with a natural-number coefficient map `natCoef : Nat -> E` whose recursive definition is exposed as
+ -   overridable defaults so subclasses can replace it with a more efficient or more lawful implementation. Commutative
+ -   variants (`PseudoCSemiring`, `CSemiring`) derive one distributivity law from the other via commutativity, avoiding
+ -   redundant proof obligations. The bulk of the API consists of distributivity-driven lemmas about finite sums
+ -   (`BigSum`, `FinSum`), divisibility (`LDiv`), powers, and the interaction of `natCoef` with the iterated-addition
+ -   operator `*n`.
+ -}
+
 \import Algebra.Monoid
 \import Algebra.Monoid.GCD
 \import Data.Array
@@ -11,6 +23,9 @@
 \import Relation.Equivalence
 \import Set.Fin
 
+{- | Extends `AbMonoid` and `Semigroup`; adds left/right distributivity (`ldistr`, `rdistr`) and zero-absorption laws
+ -   (`zro_*-left`, `zro_*-right`). The `op` field gives the opposite pseudo-semiring (multiplication reversed).
+ -}
 \class PseudoSemiring \extends AbMonoid, Semigroup {
   | ldistr {x y z : E} : x * (y + z) = x * y + x * z
   | rdistr {x y z : E} : (x + y) * z = x * z + y * z
@@ -26,6 +41,10 @@
     | zro_*-right => zro_*-left
 }
 
+{- | Extends `PseudoSemiring` and `Monoid`. Adds a natural-number coefficient embedding `natCoef : Nat -> E` with
+ -   default implementation by recursion, plus equations `natCoefZero` and `natCoefSuc` characterizing it. The `op`
+ -   field gives the opposite semiring.
+ -}
 \class Semiring \extends PseudoSemiring, Monoid {
   | natCoef : Nat -> E
   \default natCoef \as natCoefImpl n \with {
@@ -37,48 +56,61 @@
   | natCoefSuc (n : Nat) : natCoef (suc n) = natCoef n + ide
   \default natCoefSuc \as natCoefSucImpl n : natCoefImpl (suc n) = natCoefImpl n + ide => idp
 
+  -- | `LDiv x 0 0` — every element divides zero with quotient zero.
   \lemma zero-div {x : E} : LDiv x 0 0 \cowith
     | inv-right => zro_*-right
 
+  -- | If `LDiv x y` and `x = 0`, then `y = 0`.
   \lemma ldiv=0 {x y : E} (l : LDiv x y) (p : x = 0) : y = 0
     => Paths.inv l.inv-right *> pmap (* _) p *> zro_*-left
 
+  -- | If `y /= 0` and `x` divides `y`, then `x /= 0`.
   \lemma ldiv/=0 {x y : E} (y/=0 : y /= 0) (x|y : LDiv x y) : x /= 0
     => \lam x=0 => y/=0 (ldiv=0 x|y x=0)
 
+  -- | If `a | b` and `a | c`, then `a | b + c`, with quotient the sum of quotients.
   \func LDiv_+ {a b c : E} (a|b : LDiv a b) (a|c : LDiv a c) : LDiv a (b + c) \cowith
     | inv => a|b.inv + a|c.inv
     | inv-right => ldistr *> pmap2 (+) a|b.inv-right a|c.inv-right
 
+  -- | If `a` divides each entry of an array `l`, then `a` divides `BigSum l`.
   \func LDiv_BigSum {a : E} {l : Array E} (p : \Pi (j : Fin l.len) -> LDiv a (l j)) : LDiv a (BigSum l) \cowith
     | inv => BigSum (\lam j => LDiv.inv {p j})
     | inv-right => BigSum-ldistr *> pmap BigSum (later $ exts \lam j => LDiv.inv-right {p j})
 
+  -- | `natCoef n * a = n *n a` — multiplying by `natCoef n` equals `n`-fold addition.
   \lemma natCoef_*_*n {n : Nat} {a : E} : natCoef n * a = n *n a \elim n
     | 0 => pmap (* a) natCoefZero *> zro_*-left
     | suc n => pmap (* a) (natCoefSuc n) *> rdistr *> pmap2 (+) natCoef_*_*n ide-left
 
+  -- | Right-multiplication version: `a * natCoef n = n *n a`.
   \lemma natCoef_*_*n-right {n : Nat} {a : E} : a * natCoef n = n *n a \elim n
     | 0 => pmap (a *) natCoefZero *> zro_*-right
     | suc n => pmap (a *) (natCoefSuc n) *> ldistr *> pmap2 (+) natCoef_*_*n-right ide-right
 
+  -- | `natCoef n = n *n 1`.
   \lemma natCoef_*n {n : Nat} : natCoef n = n *n 1
     => inv ide-right *> natCoef_*_*n
 
+  -- | `n *n (a * b) = (n *n a) * b`.
   \lemma *n-comm-left {n : Nat} {a b : E} : n *n (a * b) = (n *n a) * b
     => inv natCoef_*_*n *> inv *-assoc *> pmap (* b) natCoef_*_*n
 
+  -- | `n *n (a * b) = a * (n *n b)`.
   \lemma *n-comm-right {n : Nat} {a b : E} : n *n (a * b) = a * (n *n b)
     => inv natCoef_*_*n-right *> *-assoc *> pmap (a *) natCoef_*_*n-right
 
+  -- | `natCoef (n + m) = natCoef n + natCoef m` (additive homomorphism).
   \lemma natCoef_+ {n m : Nat} : natCoef (n Nat.+ m) = natCoef n + natCoef m \elim m
     | 0 => inv (pmap (_ +) natCoefZero *> zro-right)
     | suc m => natCoefSuc _ *> pmap (+ 1) natCoef_+ *> +-assoc *> inv (pmap (_ +) (natCoefSuc m))
 
+  -- | `natCoef n * a = a * natCoef n` — natural coefficients are central.
   \lemma natCoef-comm {n : Nat} {a : E} : natCoef n * a = a * natCoef n \elim n
     | 0 => pmap (* a) natCoefZero *> zro_*-left *> inv (pmap (a *) natCoefZero *> zro_*-right)
     | suc n => pmap (* a) (natCoefSuc n) *> rdistr *> pmap2 (+) natCoef-comm ide-left *> inv (pmap (a *) (natCoefSuc n) *> ldistr *> pmap (_ +) ide-right)
 
+  -- | `natCoef (n * m) = natCoef n * natCoef m` (multiplicative homomorphism).
   \lemma natCoef_* {n m : Nat} : natCoef (n Nat.* m) = natCoef n * natCoef m \elim m
     | 0 => natCoefZero *> inv (pmap (_ *) natCoefZero *> zro_*-right)
     | suc m => natCoef_+ *> pmap (+ _) natCoef_* *> inv (pmap (_ *) (natCoefSuc m) *> ldistr *> pmap (_ +) ide-right)
@@ -92,47 +124,61 @@
   \lemma Inv_zro : Monoid.Inv zro <-> (zro = ide)
     => (\lam zi => inv zro_*-left *> zi.inv-right, \lam t => \new Monoid.Inv zro zro (trivial t) (trivial t))
 
+  -- | `x * BigSum l = BigSum (map (x *) l)`.
   \lemma BigSum-ldistr {x : E} {l : Array E} : x * BigSum l = BigSum (map (x *) l) \elim l
     | nil => zro_*-right
     | :: a l => ldistr *> pmap (x * a +) BigSum-ldistr
 
+  -- | Left distributivity over finite indexed sums.
   \lemma FinSum-ldistr {A : FinSet} {x : E} {y : A -> E} : x * FinSum y = FinSum (x * y __)
     => \case FinSum_char y \with {
       | inP p => pmap (x *) p.2 *> BigSum-ldistr *> inv (FinSum_char2 p.1)
     }
 
+  -- | `BigSum l * z = BigSum (\lam i => l i * z)`.
   \lemma BigSum-rdistr {l : Array E} {z : E} : BigSum l * z = BigSum (\lam i => l i * z) \elim l
     | nil => zro_*-left
     | :: a arr => rdistr *> pmap (_ +) BigSum-rdistr
 
+  -- | Right distributivity over finite indexed sums.
   \lemma FinSum-rdistr {A : FinSet} {x : E} {y : A -> E} : FinSum y * x = FinSum (y __ * x)
     => \case FinSum_char y \with {
       | inP p => pmap (* x) p.2 *> BigSum-rdistr *> inv (FinSum_char2 p.1)
     }
 
+  {- | `FinSum x * FinSum y = FinSum (\lam s => x s.1 * y s.2)` — product of finite sums as a sum over the product index
+   -   set.
+   -}
   \lemma FinSum-distr {A B : FinSet} {x : A -> E} {y : B -> E} : FinSum x * FinSum y = FinSum (\lam (s : \Sigma A B) => x s.1 * y s.2)
     => FinSum-rdistr *> path (\lam i => FinSum (\lam a => FinSum-ldistr {_} {_} {x a} i)) *> FinSum-double
 
+  -- | `BigSum (replicate n x) = natCoef n * x`.
   \lemma BigSum_replicate {x : E} {n : Nat} : BigSum (replicate n x) = natCoef n * x \elim n
     | 0 => rewrite natCoefZero (inv zro_*-left)
     | suc n => rewrite natCoefSuc $ pmap (x +) BigSum_replicate *> +-comm *> inv (rdistr *> pmap (_ +) ide-left)
 
+  -- | `BigSum (replicate n ide) = natCoef n`.
   \lemma BigSum_replicate1 {n : Nat} : BigSum (replicate n ide) = natCoef n
     => BigSum_replicate *> ide-right
 
+  -- | Constant `FinSum` over a finite set equals `natCoef (card) * x`.
   \lemma FinSum_replicate {A : FinSet} {x : E} : FinSum {_} {A} (\lam _ => x) = natCoef A.card * x
     => FinSum-const *> BigSum_replicate
 
+  -- | A finite product containing a zero entry equals zero.
   \lemma BigProd_zro {l : Array E} (j : Fin l.len) (p : l j = 0) : BigProd l = 0 \elim l, j
     | a :: l, 0 => pmap (* _) p *> zro_*-left
     | a :: l, suc j => pmap (_ *) (BigProd_zro j p) *> zro_*-right
 
+  -- | If `0 = 1`, then any two elements are equal — the semiring is trivial.
   \lemma trivial (p : 0 = {E} 1) {x y : E} : x = y
     => inv ide-right *> inv (pmap (x *) p) *> zro_*-right *> inv zro_*-right *> pmap (y *) p *> ide-right
 
+  -- | If `a` and `b` are associates and `a = 0`, then `b = 0`.
   \lemma associates0 {a b : E} (c : associates a b) (p : a = 0) : b = 0
     => (associates-sym c).2 *> pmap (_ *) p *> zro_*-right
 
+  -- | `0^n = 0` for `n /= 0`.
   \lemma pow_0 {n : Nat} (n/=0 : n /= 0) : pow 0 n = 0 \elim n
     | 0 => absurd (n/=0 idp)
     | suc n => zro_*-right
@@ -144,6 +190,7 @@
     \open Monoid(LDiv)
   }
 
+-- | A `Semiring` with `zro/=ide`; provides `inv-nonZero` showing any invertible element is nonzero.
 \class NonZeroSemiring \extends Semiring {
   | zro/=ide : zro /= ide
 
@@ -151,6 +198,9 @@
     => \lam a=0 => zro/=ide (inv zro_*-right *> pmap (_ *) (inv a=0) *> i.inv-left)
 }
 
+{- | Extends `PseudoSemiring` and `CSemigroup`; supplies all distributivity/zero-absorption laws automatically from
+ -   commutativity, requiring only one direction in instances.
+ -}
 \class PseudoCSemiring \extends PseudoSemiring, CSemigroup {
   \default ldistr => *-comm *> rdistr *> pmap2 (+) *-comm *-comm
   \default rdistr => *-comm *> ldistr *> pmap2 (+) *-comm *-comm
@@ -158,6 +208,9 @@
   \default zro_*-right => *-comm *> zro_*-left
 }
 
+{- | Extends `Semiring`, `PseudoCSemiring`, and `CMonoid`. Provides `divQuotient_un0` lifting equality in the
+ -   divisibility quotient back to equality with zero.
+ -}
 \class CSemiring \extends Semiring, PseudoCSemiring, CMonoid {
   \lemma divQuotient_un0 {a : E} (p : in~ a = {DivQuotient \this} in~ 0) : a = 0
     => \case (DivQuotient.make~ p).1 \with {

@@ -1,3 +1,13 @@
+{- | Order-theoretic lattices: meet/join semilattices, distributive and bounded variants, and complete lattices.
+ -
+ -   This module builds the lattice hierarchy on top of `Poset`, layering meet and join operations with their universal
+ -   properties as classes that mirror categorical (co)products. Each semilattice exposes a `\protected \func op`
+ -   dualizing meet ↔ join, so dual results come for free. Bounded variants add `top`/`bottom` as terminal/initial
+ -   objects and coerce into commutative (additive) monoids; bounded distributive lattices coerce further to
+ -   `CSemiring`. `CompleteLattice` provides arbitrary `Join`/`Meet` indexed by `\Set`, with finite operations and
+ -   limits/pullbacks derived as defaults so the categorical `CompleteCat` structure follows automatically.
+ -}
+
 \import Algebra.Monoid
 \import Algebra.Semiring
 \import Category.Limit
@@ -16,6 +26,9 @@
 \import Paths.Meta
 \import Set.Fin
 
+{- | A `Poset` with binary meet `∧` satisfying `meet-left`, `meet-right`, and `meet-univ`. Extends `PrecatWithBprod` so
+ -   `∧` is the categorical binary product.
+ -}
 \class MeetSemilattice \extends Poset, PrecatWithBprod, PrecatWithPullbacks {
   | meet \alias \infixl 7 ∧ : E -> E -> E
   | meet-left {x y : E} : x ∧ y <= x
@@ -41,45 +54,57 @@
     | pbBeta2 => prop-pi
     | pbEta _ _ => prop-pi
   }
+  -- | Iterated meet over a non-empty array.
   \func Big_meet \alias Big_∧ {n : Nat} (l : Array E (suc n)) : E \elim l
     | a :: l => Big (∧) a l
 
+  -- | `Big_∧ l <= l j` for any index.
   \lemma Big_meet-cond {n : Nat} {l : Array E (suc n)} {j : Fin (suc n)} : Big_∧ l <= l j \elim l, j
     | a :: l, 0 => Big_<=_meet0
     | a :: l, suc j => Big_<=_meet1 j
 
+  -- | Standard algebraic laws for `∧`.
   \lemma meet-idemp {x : E} : x ∧ x = x =>
     <=-antisymmetric meet-left (meet-univ <=-refl <=-refl)
 
+  -- | Standard algebraic laws for `∧`.
   \lemma meet-comm {x y : E} : x ∧ y = y ∧ x =>
     <=-antisymmetric (meet-univ meet-right meet-left)
                      (meet-univ meet-right meet-left)
 
+  -- | `∧` is monotone in both arguments.
   \lemma meet-monotone {x y x' y' : E} (p : x <= x') (q : y <= y') : x ∧ y <= x' ∧ y'
     => meet-univ (meet-left <=∘ p) (meet-right <=∘ q)
 
+  -- | Standard algebraic laws for `∧`.
   \lemma meet-assoc {x y z : E} : (x ∧ y) ∧ z = x ∧ (y ∧ z) =>
     <=-antisymmetric (meet-univ (meet-left <=∘ meet-left) (meet-monotone meet-right <=-refl))
                      (meet-univ (meet-monotone <=-refl meet-left) (meet-right <=∘ meet-right))
 
+  -- | `x <= y -> x ∧ y = x` (absorption form).
   \lemma meet_<= {x y : E} (x<=y : x <= y) : x ∧ y = x
     => <=-antisymmetric meet-left (meet-univ <=-refl x<=y)
 
+  -- | Converse: `x ∧ y = x -> x <= y`.
   \lemma meet_<=' {x y : E} (p : x ∧ y = x) : x <= y
     => transport (<= y) p meet-right
 
+  -- | Big-meet bounds: below the seed and below each entry.
   \lemma Big_<=_meet0 {l : Array E} {x : E} : Big (∧) x l <= x \elim l
     | nil => <=-refl
     | :: a l => meet-right <=∘ Big_<=_meet0
 
+  -- | Big-meet bounds: below the seed and below each entry.
   \lemma Big_<=_meet1 {l : Array E} {x : E} (i : Fin l.len) : Big (∧) x l <= l i \elim l, i
     | :: a l, 0 => meet-left
     | :: a l, suc i => meet-right <=∘ Big_<=_meet1 i
 
+  -- | Universal property for big meets indexed by an array.
   \lemma Big_meet-univ {l : Array E} {x y : E} (p : y <= x) (f : \Pi (i : Fin l.len) -> y <= l i) : y <= Big (∧) x l \elim l
     | nil => p
     | :: a l => meet-univ (f 0) (Big_meet-univ p (\lam i => f (suc i)))
 
+  -- | The dual `JoinSemilattice` on the opposite order.
   \protected \func op : JoinSemilattice \cowith {
     | Poset => Poset.op
     | join => meet
@@ -96,57 +121,71 @@
       ext (<=-antisymmetric (p2.4 p1.1 p1.2 p1.3) (p1.4 p2.1 p2.2 p2.3))
 }
 
+-- | A `Poset` with binary join `∨` satisfying `join-left`, `join-right`, and `join-univ`.
 \class JoinSemilattice \extends Poset {
   | join \alias \infixl 6 ∨ : E -> E -> E
   | join-left {x y : E} : x <= x ∨ y
   | join-right {x y : E} : y <= x ∨ y
   | join-univ {x y z : E} : x <= z -> y <= z -> x ∨ y <= z
 
+  -- | Iterated join over a non-empty array.
   \func Big_join \alias Big_∨ {n : Nat} (l : Array E (suc n)) : E \elim l
     | a :: l => Big (∨) a l
 
+  -- | `l j <= Big_∨ l`.
   \lemma Big_join-cond {n : Nat} {l : Array E (suc n)} {j : Fin (suc n)} : l j <= Big_∨ l \elim l, j
     | a :: l, 0 => Big_<=_join0
     | a :: l, suc j => Big_<=_join1 j
 
+  -- | Algebraic laws for `∨`.
   \lemma join-monotone {x y x' y' : E} (p : x <= x') (q : y <= y') : x ∨ y <= x' ∨ y'
     => join-univ (p <=∘ join-left) (q <=∘ join-right)
 
+  -- | Algebraic laws for `∨`.
   \lemma join-idemp {x : E} : x ∨ x = x =>
     <=-antisymmetric (join-univ <=-refl <=-refl) join-left
 
+  -- | Algebraic laws for `∨`.
   \lemma join-comm {x y : E} : x ∨ y = y ∨ x =>
     <=-antisymmetric (join-univ join-right join-left)
                      (join-univ join-right join-left)
 
+  -- | Algebraic laws for `∨`.
   \lemma join-assoc {x y z : E} : (x ∨ y) ∨ z = x ∨ (y ∨ z) =>
     <=-antisymmetric (join-univ (join-univ join-left (join-left >> join-right))
                                 (join-right >> join-right))
                      (join-univ (join-left >> join-left)
                                 (join-univ (join-right >> join-left) join-right))
 
+  -- | Reflect `x <= y` as `x ∨ y = y` and back.
   \lemma join_<= {x y : E} (x<=y : x <= y) : x ∨ y = y
     => <=-antisymmetric (join-univ x<=y <=-refl) join-right
 
+  -- | Reflect `x <= y` as `x ∨ y = y` and back.
   \lemma join_<=' {x y : E} (p : x ∨ y = y) : x <= y
     => transport (x <=) p join-left
 
+  -- | Lower-bound lemmas for big joins (seed, indexed entry, and length-`suc n` variant).
   \lemma Big_<=_join0 {l : Array E} {x : E} : x <= Big (∨) x l \elim l
     | nil => <=-refl
     | :: a l => Big_<=_join0 <=∘ join-right
 
+  -- | Lower-bound lemmas for big joins (seed, indexed entry, and length-`suc n` variant).
   \lemma Big_<=_join1 {l : Array E} {x : E} (i : Fin l.len) : l i <= Big (∨) x l \elim l, i
     | :: a l, 0 => join-left
     | :: a l, suc i => Big_<=_join1 i <=∘ join-right
 
+  -- | Lower-bound lemmas for big joins (seed, indexed entry, and length-`suc n` variant).
   \lemma Big_<=_join {n : Nat} {l : Array E (suc n)} (i : Fin (suc n)) : l i <= Big (∨) (l 0) (tail l) \elim l, i
     | :: a l, 0 => Big_<=_join0
     | :: a l, suc i => Big_<=_join1 i
 
+  -- | Universal property for big joins.
   \lemma Big_join-univ {l : Array E} {x y : E} (p : x <= y) (f : \Pi (i : Fin l.len) -> l i <= y) : Big (∨) x l <= y \elim l
     | nil => p
     | :: a l => join-univ (f 0) (Big_join-univ p (\lam i => f (suc i)))
 
+  -- | The dual `MeetSemilattice`.
   \protected \func op : MeetSemilattice \cowith
     | Poset => Poset.op
     | meet => join
@@ -162,33 +201,44 @@
       ext (<=-antisymmetric (p1.4 p2.1 p2.2 p2.3) (p2.4 p1.1 p1.2 p1.3))
 }
 
+-- | Combines `MeetSemilattice` and `JoinSemilattice` on the same poset.
 \class Lattice \extends MeetSemilattice, JoinSemilattice {
+  -- | One direction of distributivity always holds: `(x ∧ y) ∨ (x ∧ z) <= x ∧ (y ∨ z)`.
   \lemma ldistr<= {x y z : E} : (x ∧ y) ∨ (x ∧ z) <= x ∧ (y ∨ z)
     => join-univ (meet-monotone <=-refl join-left) (meet-monotone <=-refl join-right)
 
+  -- | The dual lattice obtained by swapping meet and join.
   \protected \func op : Lattice \cowith
     | MeetSemilattice => JoinSemilattice.op
     | JoinSemilattice => MeetSemilattice.op
 }
 
+-- | A `Lattice` with the converse distributive inequality `ldistr>=`.
 \class DistributiveLattice \extends Lattice {
   | ldistr>= {x y z : E} : x ∧ (y ∨ z) <= (x ∧ y) ∨ (x ∧ z)
 
+  -- | Full distributivity equalities `x ∧ (y ∨ z) = (x ∧ y) ∨ (x ∧ z)` and the right-handed dual.
   \lemma meet-ldistr {x y z : E} : x ∧ (y ∨ z) = (x ∧ y) ∨ (x ∧ z)
     => <=-antisymmetric ldistr>= ldistr<=
 
+  -- | Full distributivity equalities `x ∧ (y ∨ z) = (x ∧ y) ∨ (x ∧ z)` and the right-handed dual.
   \lemma meet-rdistr {x y z : E} : (y ∨ z) ∧ x = (y ∧ x) ∨ (z ∧ x)
     => meet-comm *> meet-ldistr *> pmap2 (∨) meet-comm meet-comm
 
+  -- | Right-handed distributive inequality.
   \lemma rdistr>= {x y z : E} : (y ∨ z) ∧ x <= (y ∧ x) ∨ (z ∧ x)
     => =_<= meet-rdistr
 
+  -- | Codistributivity `x ∨ (y ∧ z) = (x ∨ y) ∧ (x ∨ z)`, derivable in any distributive lattice.
   \lemma lcodistr {x y z : E} : x ∨ (y ∧ z) = (x ∨ y) ∧ (x ∨ z) => inv $
     meet-ldistr *>
     pmap2 (∨) (meet-comm *> meet_<= join-left) (meet-comm *> meet-ldistr)  *>
     inv join-assoc *> pmap2 (∨) (join-comm *> join_<= meet-right) meet-comm
 }
 
+{- | A `MeetSemilattice` with a top element `top` (universal upper bound). Extends `CartesianPrecat`, presenting `top`
+ -   as the terminal object.
+ -}
 \class TopMeetSemilattice \extends MeetSemilattice, CartesianPrecat {
   | top : E
   | top-univ {x : E} : x <= top
@@ -200,28 +250,35 @@
     | tupleEq _ => prop-pi
   }
 
+  -- | Identity laws `top ∧ x = x` and `x ∧ top = x`.
   \use \lemma top-left {x : E} : top ∧ x = x
     => <=-antisymmetric meet-right (meet-univ top-univ <=-refl)
 
+  -- | Identity laws `top ∧ x = x` and `x ∧ top = x`.
   \lemma top-right {x : E} : x ∧ top = x
     => <=-antisymmetric meet-left (meet-univ <=-refl top-univ)
 
+  -- | Iterated meet of an array, seeded with `top` (works for empty arrays).
   \func BigMeet (l : Array E) : E
     => Big (∧) top l
 
+  -- | Pointwise bound and universal property.
   \lemma BigMeet-cond {l : Array E} (j : Fin l.len) : BigMeet l <= l j \elim l, j
     | a :: l, 0 => meet-left
     | a :: l, suc j => meet-right <=∘ BigMeet-cond j
 
+  -- | Pointwise bound and universal property.
   \lemma BigMeet-univ {l : Array E} {x : E} (p : \Pi (j : Fin l.len) -> x <= l j) : x <= BigMeet l \elim l
     | nil => top-univ
     | a :: l => meet-univ (p 0) $ BigMeet-univ \lam j => p (suc j)
 
+  -- | Dual `BottomJoinSemilattice` with `bottom = top`.
   \protected \func op : BottomJoinSemilattice \cowith
     | JoinSemilattice => MeetSemilattice.op
     | bottom => top
     | bottom-univ => top-univ
 } \where {
+  -- | Coerces a `TopMeetSemilattice` to a `CMonoid` with `ide = top`, `* = meet`.
   \use \coerce toMonoid (L : TopMeetSemilattice) : CMonoid L \cowith
     | ide => top
     | * => meet
@@ -230,6 +287,9 @@
     | *-comm => L.meet-comm
 }
 
+{- | A `JoinSemilattice` with a bottom element. Extends `DirectedSet`, with `bottom` witnessing inhabitedness and `∨`
+ -   witnessing directedness.
+ -}
 \class BottomJoinSemilattice \extends JoinSemilattice, DirectedSet {
   | bottom : E
   | bottom-univ {x : E} : bottom <= x
@@ -237,58 +297,73 @@
   | isInhabitted => inP bottom
   | isDirected x y => inP (x ∨ y, join-left, join-right)
 
+  -- | Identity laws for `∨`.
   \use \lemma bottom-left {x : E} : bottom ∨ x = x
     => <=-antisymmetric (join-univ bottom-univ <=-refl) join-right
 
+  -- | Identity laws for `∨`.
   \lemma bottom-right {x : E} : x ∨ bottom = x
     => <=-antisymmetric (join-univ <=-refl bottom-univ) join-left
 
+  -- | Iterated join of an array, seeded with `bottom`.
   \func BigJoin (l : Array E) : E
     => Big (∨) bottom l
 
+  -- | Pointwise bound and universal property.
   \lemma BigJoin-cond {l : Array E} (j : Fin l.len) : l j <= BigJoin l \elim l, j
     | a :: l, 0 => join-left
     | a :: l, suc j => BigJoin-cond j <=∘ join-right
 
+  -- | Pointwise bound and universal property.
   \lemma BigJoin-univ {l : Array E} {x : E} (p : \Pi (j : Fin l.len) -> l j <= x) : BigJoin l <= x \elim l
     | nil => bottom-univ
     | a :: l => join-univ (p 0) $ BigJoin-univ \lam j => p (suc j)
 
+  -- | Join indexed by an arbitrary `FinSet`, defined via the `FinSum` of the underlying additive structure.
   \sfunc FinJoin {J : FinSet} (a : J -> E) : E
     => \this.FinSum a
 
+  -- | Universal properties for `FinJoin`.
   \lemma FinJoin-cond {J : FinSet} (j : J) {a : J -> E} : a j <= FinJoin a
     => \case AbMonoid.FinSum.aux.2 \with {
          | inP (e,q) => \have t => (\peval FinJoin a) *> (\peval AbMonoid.FinSum a) *> inv q
                         \in transport2 (<=) (pmap a (e.f_ret j)) (inv t) (BigJoin-cond (e.ret j))
        }
 
+  -- | Universal properties for `FinJoin`.
   \lemma FinJoin-univ {J : FinSet} {a : J -> E} {x : E} (p : \Pi (j : J) -> a j <= x) : FinJoin a <= x
     => \case AbMonoid.FinSum.aux.2 \with {
          | inP (e,q) => \have t => (\peval FinJoin a) *> (\peval AbMonoid.FinSum a) *> inv q
                         \in transportInv (<= x) t $ BigJoin-univ \lam j => p (e j)
        }
 
+  -- | Invariance of `FinJoin` under bijective reindexing.
   \lemma FinJoin_Equiv {A B : FinSet} (e : QEquiv {A} {B}) {x : B -> E} : FinJoin x = FinJoin (\lam a => x (e a))
     => (\peval FinJoin x) *> \this.FinSum_Equiv e *> inv (\peval FinJoin _)
 
+  -- | Agreement of `FinJoin` and `BigJoin` on `Fin n`.
   \lemma FinJoin=BigJoin {n : Nat} {x : Fin n -> E} : FinJoin x = BigJoin x
     => (\peval FinJoin x) *> \this.FinSum=BigSum
 
+  -- | Permutation invariance of `BigJoin`.
   \lemma BigJoin_EPerm {l l' : Array E} (e : EPerm l l') : BigJoin l = BigJoin l'
     => \this.BigSum_EPerm e
 
+  -- | `BigJoin (l ++ l') = BigJoin l ∨ BigJoin l'`.
   \lemma BigJoin_++ {l l' : Array E} : BigJoin (l ++ l') = BigJoin l ∨ BigJoin l'
     => \this.BigSum_++
 
+  -- | Pointwise-join distributes through `BigJoin` of equal-length arrays.
   \lemma BigJoin_join {n : Nat} {l l' : Array E n} : BigJoin (\lam i => l i ∨ l' i) = BigJoin l ∨ BigJoin l'
     => \this.BigSum_+
 
+  -- | Dual `TopMeetSemilattice`.
   \protected \func op : TopMeetSemilattice \cowith
     | MeetSemilattice => JoinSemilattice.op
     | top => bottom
     | top-univ => bottom-univ
 } \where {
+  -- | Coerces a `BottomJoinSemilattice` to an `AbMonoid` with `zro = bottom`, `+ = join`.
   \use \coerce toMonoid (L : BottomJoinSemilattice) : AbMonoid L \cowith
     | zro => bottom
     | + => join
@@ -297,6 +372,7 @@
     | +-comm => L.join-comm
 }
 
+-- | A `Lattice` that is both `TopMeetSemilattice` and `BottomJoinSemilattice`. **`op`** swaps top/bottom and meet/join.
 \class BoundedLattice \extends Lattice, TopMeetSemilattice, BottomJoinSemilattice {
   \protected \func op : BoundedLattice => \new BoundedLattice {
     | TopMeetSemilattice => BottomJoinSemilattice.op
@@ -304,24 +380,31 @@
   }
 }
 
+-- | A `DistributiveLattice` with `bottom`.
 \class BottomDistributiveLattice \extends DistributiveLattice, BottomJoinSemilattice {
+  -- | `x ∧ bottom = bottom` and the symmetric form.
   \lemma bottom-ldistr {x : E} : x ∧ bottom = bottom
     => <=-antisymmetric meet-right bottom-univ
 
+  -- | `x ∧ bottom = bottom` and the symmetric form.
   \lemma bottom-rdistr {x : E} : bottom ∧ x = bottom
     => <=-antisymmetric meet-left bottom-univ
 
+  -- | Meet distributes over `BigJoin` on either side.
   \lemma BigJoin-ldistr {l : Array E} {x : E} : x ∧ BigJoin l = BigJoin \lam j => x ∧ l j \elim l
     | nil => bottom-ldistr
     | a :: l => meet-ldistr *> pmap (_ ∨) BigJoin-ldistr
 
+  -- | Meet distributes over `BigJoin` on either side.
   \lemma BigJoin-rdistr {l : Array E} {x : E} : BigJoin l ∧ x = BigJoin \lam j => l j ∧ x \elim l
     | nil => bottom-rdistr
     | a :: l => meet-rdistr *> pmap (_ ∨) BigJoin-rdistr
 }
 
+-- | Combines `BottomDistributiveLattice` and `BoundedLattice`.
 \class BoundedDistributiveLattice \extends BottomDistributiveLattice, BoundedLattice
   \where {
+    -- | Coerces to a `CSemiring` with `+ = join`, `* = meet`, `zro = bottom`, `ide = top`.
     \use \coerce toSemiring (L : BoundedDistributiveLattice) : CSemiring L \cowith
       | zro => bottom
       | + => join

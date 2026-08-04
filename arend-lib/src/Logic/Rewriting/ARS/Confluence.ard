@@ -1,3 +1,13 @@
+{- | Confluence properties of abstract reduction systems and the equivalences between them.
+ -
+ -   This module formalizes the standard hierarchy of confluence-style properties for `SimpleARS`: confluence,
+ -   Church-Rosser, local confluence, strong confluence, the normal form property, and unique normal forms. The core
+ -   results establish the classical equivalences and implications — Church-Rosser ⇔ confluence, strong confluence ⇒
+ -   confluence, confluence ⇒ normal form property ⇒ unique normal forms — culminating in Newman's lemma, which states
+ -   that for terminating systems local confluence coincides with confluence. Auxiliary `\where` lemmas factor inductive
+ -   arguments over conversion sequences (`<~>*`) and reduction sequences (`~>_*`) used in the main proofs.
+ -}
+
 \import Logic.Rewriting.ARS.AbstractReductionSystem
 \import Logic
 \import Paths
@@ -5,36 +15,49 @@
 \import Relation.Truncated
 \import Logic.Rewriting.ARS.Termination
 
+{- | Strong joinability of `b` and `c`: there exists `d` with `b ~>_= d` (zero or one step) and `c ~>_* d` (any number
+ -   of steps). Used to formulate strong confluence.
+ -}
 \truncated \data StrongJoin {A : SimpleARS} (b c : A) : \Prop
   | strong-join (d : A) (b ~>_= d) (c ~>_* d)
 
+-- | For any peak `a ~> b`, `a ~> c` of single steps, `b` and `c` are strongly joinable.
 \func isStronglyConfluent (A : SimpleARS) : \Prop =>
   \Pi {a b c : A} (p : a ~> b) (q : a ~> c) -> StrongJoin b c
 
+-- | Any two convertible terms (`a <~>* b`) have a common reduct (`Join a b`).
 \func isChurchRosser (A : SimpleARS) : \Prop =>
   \Pi {a b : A} (a <~>* b) -> Join a b
 
+-- | Any peak of multi-step reductions `a ~>_* b`, `a ~>_* c` can be joined.
 \func isConfluent (A : SimpleARS) : \Prop =>
   \Pi {a b c : A} (a ~>_* b) (a ~>_* c) -> Join b c
 
+-- | Any peak of single steps `a ~> b`, `a ~> c` can be joined (weak confluence).
 \func isLocallyConfluent (A : SimpleARS) : \Prop =>
   \Pi {a b c : A} (a ~> b) (a ~> c) -> Join b c
 
+-- | Two normal forms reachable from a common ancestor are equal.
 \func hasUniqueNormalFormsWrtReduction (A : SimpleARS) : \Prop =>
   \Pi {a b c : A} (a ~>_* b) (a ~>_* c) (isNormalForm b) (isNormalForm c) -> b = c
 
+-- | Any two convertible normal forms are equal.
 \func hasUniqueNormalForms (A : SimpleARS) : \Prop =>
   \Pi {a b : A} (a <~>* b) (isNormalForm a) (isNormalForm b) -> a = b
 
+-- | If `a` is convertible to a normal form `b`, then `a` reduces to `b`.
 \func hasNormalFormProperty (A : SimpleARS) : \Prop =>
   \Pi {a b : A} (a <~>* b) (isNormalForm b) -> a ~>_* b
 
+-- | Church-Rosser implies confluence (a peak is a special conversion).
 \lemma ChurchRosser=>Confluence {A : SimpleARS} (cr : isChurchRosser A) : isConfluent A =>
   \lam {a} {b} {c} a~>*b a~>*c => cr {b} {c} (<~>*-compose a (<~>*-reverse (~>*=><~>* a~>*b)) (~>*=><~>* a~>*c))
 
+-- | Confluence implies Church-Rosser, by induction on the conversion sequence.
 \lemma Confluence=>ChurchRosser {A : SimpleARS} (conf : isConfluent A) : isChurchRosser A =>
   \lam {a} {b} a<~>*b => conf=>rc-helper a b a<~>*b
   \where {
+    -- | Inductive helper producing a `Join a b` from a conversion `a <~>* b` under the confluence hypothesis.
     \lemma conf=>rc-helper (a b : A) (a<~>*b : a <~>* b) : Join a b \elim a<~>*b
       | trc-direct p => join a trc-direct' (trc-direct (inv p))
       | trc-connect c a<~>c c<~>*b => \let join-c-b : Join c b => conf=>rc-helper c b c<~>*b \in \case join-c-b, a<~>c \with {
@@ -44,12 +67,15 @@
       }
   }
 
+-- | Propositional equality `isChurchRosser A = isConfluent A`.
 \lemma ChurchRosser=Confluence {A : SimpleARS} : isChurchRosser A = isConfluent A =>
   propExt ChurchRosser=>Confluence Confluence=>ChurchRosser
 
+-- | Strong confluence implies confluence.
 \lemma StrongConfluence=>Confluence {A : SimpleARS} (sconf : isStronglyConfluent A) : isConfluent A =>
   strong-join=>Confluence
   \where {
+    -- | From `a ~>_* b` and `a ~> c`, produces a `StrongJoin b c` by induction on the multi-step reduction.
     \lemma SCR=>strong-join {a b c : A} (a~>*b : a ~>_* b) (a~>c : a ~> c) : StrongJoin b c \elim a~>*b
       | trc-direct p => strong-join c (rc-rel (rewriteI p a~>c)) trc-direct'
       | trc-connect c' a~>c' c'~>*b => \let strong-join-c-c' => sconf a~>c' a~>c \in \case strong-join-c-c' \with {
@@ -62,6 +88,7 @@
         }
       }
 
+    -- | Lifts strong joining to full confluence on multi-step peaks.
     \lemma strong-join=>Confluence {x y z : A} (x~>*y : x ~>_* y) (x~>*z : x ~>_* z) : Join y z \elim x~>*z
       | trc-direct p => join y trc-direct' (rewriteI p x~>*y)
       | trc-connect c x~>c c~>*z => \let partial => SCR=>strong-join x~>*y x~>c \in \case partial \with {
@@ -72,12 +99,15 @@
       }
   }
 
+-- | Every confluent system is locally confluent (single steps are reductions).
 \lemma Confluence=>LocalConfluence {A : SimpleARS} (conf : isConfluent A) : isLocallyConfluent A =>
   \lam {a} {b} {c} a~>b a~>c => conf (trc-unary a~>b) (trc-unary a~>c)
 
+-- | Confluent systems satisfy the normal form property.
 \lemma Confluence=>NormalFormProperty {A : SimpleARS} (conf : isConfluent A) : hasNormalFormProperty A =>
   \lam {a} {b} a<~>*b bnf => conf=>nfp-helper a b a<~>*b bnf
   \where {
+    -- | From a conversion `a <~>* b` with `b` a normal form, builds the reduction `a ~>_* b`.
     \lemma conf=>nfp-helper (a b : A) (a<~>*b : a <~>* b) (bnf : isNormalForm b) : a ~>_* b \elim a<~>*b
       | trc-direct a=b => trc-direct a=b
       | trc-connect c a<~>c c<~>*b => \let c~>*b => conf=>nfp-helper c b c<~>*b bnf \in \case \elim a<~>c \with {
@@ -91,15 +121,18 @@
       }
   }
 
+-- | The normal form property implies unique normal forms (up to convertibility).
 \lemma NormalFormProperty=>UniqueNormalForms {A : SimpleARS} (nfp : hasNormalFormProperty A) : hasUniqueNormalForms A =>
   \lam {a} {b} a<~>*b anf bnf => \case (nfp a<~>*b bnf) \with {
     | trc-direct a=b => a=b
     | trc-connect c r t => absurd (anf r)
   }
 
+-- | Unique normal forms (w.r.t. conversion) implies the weaker reduction-based version.
 \lemma UniqueNormalForms=>UniqueNormalFormsWrtReduction {A : SimpleARS} (unf : hasUniqueNormalForms A) : hasUniqueNormalFormsWrtReduction A =>
   \lam {a} {b} {c} a~>*b a~>*c bnf cnf => unf (<~>*-compose a (<~>*-reverse (~>*=><~>* a~>*b)) (~>*=><~>* a~>*c)) bnf cnf
 
+-- | A normalizing system with unique normal forms is confluent.
 \lemma Normalization+UniqueNormalForms=>Confluence {A : SimpleARS} (norm : isNormalizing A) (unf : hasUniqueNormalForms A) : isConfluent A =>
   \lam {a} {b} {c} a~>*b a~>*c => \case (norm b), (norm c) \with {
     | normal-form b' b'nf b~>*b', normal-form c' c'nf c~>*c' =>
@@ -107,6 +140,7 @@
       \in join b' b~>*b' (rewrite b'=c' c~>*c')
   }
 
+-- | Newman's lemma: a terminating, locally confluent system is confluent.
 \lemma Termination+LocalConfluence=>Confluence {A : SimpleARS} (term : isTerminating A) (lconf : isLocallyConfluent A): isConfluent A =>
   \lam {a} => well-founded-induction-transitive
       (\lam a => \Pi {b c : A} (p1 : a ~>_* b) (p2 : a ~>_* c) -> Join b c) -- we want to prove confluence for each element
@@ -124,6 +158,7 @@
       a
       (Acc=>AccTrans (term a))
 
+-- | For terminating systems, local confluence and confluence are propositionally equal.
 \lemma Termination=>[LocalConfluence=Confluence] \alias Newman {A : SimpleARS} (term : isTerminating A) :
   isLocallyConfluent A = isConfluent A =>
   propExt (Termination+LocalConfluence=>Confluence term __) Confluence=>LocalConfluence

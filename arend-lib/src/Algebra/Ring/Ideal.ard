@@ -1,3 +1,16 @@
+{- | Ideals of (commutative) rings, their lattice structure, multiplication, and constructions of generated and maximal
+ -   ideals.
+ -
+ -   The module layers ideal notions on top of `SubAddGroup`: left, right, two-sided, and (for commutative rings) plain
+ -   ideals are records adding the appropriate absorption axioms. For a `CRing` an ideal is automatically two-sided and
+ -   carries an `LModule` structure on its underlying subgroup. Generation is handled by an explicit `closure`
+ -   construction whose elements are finite linear combinations, giving uniform definitions of principal, finitely
+ -   generated, sum, and product ideals. The `IdealLattice` and `IdealMonoid` instances assemble these into a bounded
+ -   lattice (with intersection as meet, closure of the union as join) and a commutative monoid under ideal
+ -   multiplication, while `countable-maximal` shows that over a countable ring with decidable membership every proper
+ -   finitely generated ideal extends to a maximal one.
+ -}
+
 \import Algebra.Group
 \import Algebra.Group.SubGroup
 \import Algebra.Module
@@ -56,6 +69,7 @@
   \override S : CRing
   | ideal-right s => transport contains *-comm (ideal-left s)
 
+  -- | The radical ideal `√I = { a | ∃ n, aⁿ ∈ I }`, packaged as an `Ideal S`.
   \func radical : Ideal S \cowith
     | contains a => ∃ (n : Nat) (contains (Monoid.pow a n))
     | contains_zro => inP (1, transportInv contains ide-left contains_zro)
@@ -67,6 +81,7 @@
         })
     | ideal-left (inP (n,s)) => inP (n, transportInv contains CMonoid.pow_*-comm (ideal-left s))
 
+  -- | The underlying `LModule S` of the ideal, with scalar action by ring multiplication.
   \func module : LModule S \cowith
     | AbGroup => IAbGroup \this
     | *c a s => (a * s.1, ideal-left s.2)
@@ -75,34 +90,41 @@
     | *c-rdistr => ext rdistr
     | ide_*c => ext ide-left
     \where {
+      -- | A finitely generated ideal yields a finitely generated module.
       \lemma finitelyGenerated (p : IsFinitelyGenerated) : module.IsFinitelyGenerated \elim p
         | inP (l,lg) => inP (mkArray \lam j => later (l j, lg.1 j), \lam s => TruncP.map (lg.2 s.2) \lam t => (t.1, ext $ t.2 *> inv sub-BigSum))
     }
 
+  -- | `I ⊆ √I`.
   \lemma radical-superset {x : S} (s : contains x) : radical x
     => inP (1, transportInv contains ide-left s)
 
+  -- | `xⁿ ∈ √I ⇒ x ∈ √I`.
   \lemma radical_pow {x : S} {n : Nat} (s : radical (Monoid.pow x n)) : radical x \elim s
     | inP (m,p) => inP (n * m, transportInv contains Monoid.pow_* p)
 
   \lemma radical_square {x : S} (s : radical (x * x)) : radical x
     => radical_pow {_} {x} {2} $ transportInv radical (*-assoc *> ide-left) s
 
+  -- | Universal property of the radical with respect to ideals containing `I`.
   \lemma radical-univ {I : Ideal S} (p : \Pi {x : S} -> I x -> radical x) {x : S} (s : I.radical x) : radical x \elim s
     | inP (n,Ix^n) => radical_pow (p Ix^n)
 
   \lemma radical_ide (p : radical 1) : contains 1 \elim p
     | inP (n,p) => transport contains Monoid.pow_ide p
 
+  -- | Closure of an ideal under finite array sums.
   \lemma bigSum (l : Array S) (p : \Pi (i : Fin l.len) -> contains (l i)) : contains (BigSum l) \elim l
     | nil => contains_zro
     | :: a l => contains_+ (p 0) (bigSum l (\lam i => p (suc i)))
 
+  -- | Closure under sums indexed by a `FinSet`.
   \lemma finSum {J : FinSet} {a : J -> S} (p : \Pi (j : J) -> contains (a j)) : contains (FinSum a)
     => \case FinSum_char a \with {
          | inP (e,q) => transportInv contains q $ bigSum _ \lam i => p (e i)
        }
 
+  -- | An array `l` generates the ideal: each `l i` lies in it and every element is a linear combination of `l`.
   \func IsGeneratedBy (l : Array S)
     => \Sigma (∀ (a : l) (contains a)) (\Pi {a : S} -> contains a -> ∃ (l' : Array S l.len) (a = BigSum (\lam j => l' j * l j)))
 
@@ -110,36 +132,47 @@
     => (\lam s => exts \lam a => ext (\lam Ia => closureN-lem.2 $ s.2 Ia, closure-univ s.1),
         \lam p => rewrite p closure-generated)
 
+  -- | Existence of some generating array.
   \protected \func IsFinitelyGenerated => ∃ (l : Array S) (IsGeneratedBy l)
 
+  -- | Generation by a single element `a`, equivalent to `a` left-dividing every member.
   \func IsGeneratedBy1 (a : S) => \Sigma (contains a) (\Pi {b : S} -> contains b -> TruncP (Monoid.LDiv a b))
 
+  -- | Existence of a single generator.
   \func IsPrincipal => ∃ (a : S) (IsGeneratedBy1 a)
 
+  -- | Principal ideals are finitely generated.
   \lemma principal->finitelyGenerated (p : IsPrincipal) : IsFinitelyGenerated
     | inP s => inP (s.1 :: nil, (\lam _ => s.2.1, \lam {a} c => TruncP.map (s.2.2 c) \lam (d : Monoid.LDiv s.1 a) => (d.inv :: nil, simplify $ inv d.inv-right *> *-comm)))
 
+  -- | `1 ∉ I` and for every `x` either `x ∈ I` or `1 - y·x ∈ I` for some `y` (constructive maximality).
   \func IsMaximal => \Sigma (Not (contains 1)) (\Pi (x : S) -> contains x || (\Sigma (y : S) (contains (1 - y * x))))
 } \where {
   \open Ideal
 
+  -- | Ideal generated by a family `g : J -> R`; elements are `∑ pᵢ · g(jᵢ)`.
   \func closure {R : CRing} {J : \Set} (g : J -> R) : Ideal R \cowith
     | contains e => ∃ (l : Array (\Sigma R J)) (e = BigSum (map (\lam p => p.1 * g p.2) l))
     | contains_zro => inP (nil,idp)
     | contains_+ (inP (l,p)) (inP (l',p')) => inP (l ++ l', pmap2 (+) p p' *> inv (pmap BigSum (map_++ (later (\lam (c,j) => c * g j))) *> BigSum_++))
     | ideal-left {r} (inP (l,p)) => inP (map (\lam (c,j) => (r * c, j)) l, pmap (r *) p *> R.BigSum-ldistr *> path (\lam i => BigSum (map (\lam (c,j) => inv (R.*-assoc {r} {c} {g j}) @ i) l)))
 
+  -- | Closure of a subset `U : R -> \Prop`, viewing `U` as an indexed family.
   \func sclosure {R : CRing} (U : R -> \Prop) => closure (\lam (p : \Sigma (x : R) (U x)) => p.1)
 
+  -- | Generators belong to their closure.
   \lemma closure-superset {R : CRing} {J : \Set} {g : J -> R} (j : J) : closure g (g j)
     => inP ((1,j) :: nil, simplify)
 
+  -- | Generators belong to their closure.
   \lemma sclosure-superset {R : CRing} {U : R -> \Prop} {x : R} (Ux : U x) : sclosure U x
     => inP ((1,(x,Ux)) :: nil, inv $ zro-right *> ide-left)
 
+  -- | Universal property — any ideal containing the generators contains the closure.
   \lemma closure-univ {R : CRing} {J : \Set} {g : J -> R} {I : Ideal R} (c : \Pi (j : J) -> I (g j)) {x : R} (d : closure g x) : I x \elim d
     | inP (l,p) => transportInv I p $ bigSum _ \lam i => later $ ideal-left (c (l i).2)
 
+  -- | Universal property — any ideal containing the generators contains the closure.
   \lemma sclosure-univ {R : CRing} {U : R -> \Prop} {I : Ideal R} (c : \Pi {x : R} -> U x -> I x) {x : R} (d : sclosure U x) : I x
     => closure-univ {R} {\Sigma (x : R) (U x)} {__.1} (\lam j => c j.2) d
 
@@ -167,21 +200,27 @@
       | _, inr (j,idp) => rewrite ++.++_index-right $ lclosure_++-right $ lclosure_++-right (lclosure-superset j)
     }) c
 
+  -- | Principal ideal generated by `a`, i.e. closure over the unit type at `a`.
   \func closure1 {R : CRing} (a : R) : Ideal R
     => closure (\lam (_ : \Sigma) => a)
 
+  -- | `closure1 a b ↔ ∃ c, b = a · c`.
   \lemma closure1-lem {R : CRing} {a b : R} : closure1 a b <-> ∃ (c : R) (b = a * c)
     => (\lam (inP (l,b=sl)) => inP (BigSum (map __.1 l), b=sl *> inv (R.BigSum-rdistr {map __.1 l})  *> *-comm), \lam (inP (c,b=ac)) => inP ((c,()) :: nil, b=ac *> *-comm *> inv zro-right))
 
+  -- | `closure1 a b ↔ a ∣ b` (truncated).
   \lemma closure1_LDiv {R : CRing} {a b : R} : closure1 a b <-> TruncP (Monoid.LDiv a b)
     => (\lam c => TruncP.map (closure1-lem.1 c) \lam s => \new Monoid.LDiv a b s.1 (inv s.2), \lam c => closure1-lem.2 $ TruncP.map c \lam (d : Monoid.LDiv a b) => (d.inv, inv d.inv-right))
 
+  -- | `closure1 a` is principal, generated by `a`.
   \lemma closure1-principal {R : CRing} {a : R} : IsPrincipal {closure1 a}
     => inP (a, generated)
     \where
+      -- | `closure1 a` is principal, generated by `a`.
       \lemma generated {R : CRing} {a : R} : IsGeneratedBy1 {closure1 a} a
         => (closure-superset {R} {_} {\lam _ => a} (), \lam {a} => closure1_LDiv.1)
 
+  -- | Membership in a closure indexed by `Bool` is a two-term combination.
   \lemma closure2-lem {R : CRing} {a : R} (f : Bool -> R)
     : closure f a <-> ∃ (c d : R) (a = f true * c + f false * d)
     => \have (g,h) => fin-closure-lem f
@@ -197,6 +236,7 @@
       | false => inP ((1, (y, byRight idp)) :: nil, inv ide-left *> inv zro-right)
     }) $ closure2-lem (if __ x y)
 
+  -- | Membership for `FinSet`-indexed closures via `FinSum`.
   \lemma fin-closure-lem {D : FinSet} {R : CRing} {a : R} (f : D -> R)
     : closure f a <-> ∃ (c : D -> R) (a = FinSum (\lam i => c i * f i))
     => \case D.finEq \with {
@@ -213,6 +253,9 @@
                  TruncP.map (h (inP (\lam i => c (eq i), a=fc *> FinSum_char2 eq))) (\lam (l, a=fl) => (map (\lam (r, i) => (r, eq i)) l, a=fl)))
        }
 
+  {- | Membership for closures of an array of generators via `BigSum`. Uses helpers `singleton-lem` (indicator-sum
+   -   collapses to one term) and `suc-eq` (decidable `Nat` equality on successors).
+   -}
   \lemma closureN-lem {R : CRing} {a : R} {B : Array R}
     : closure B a <-> ∃ (c : Array R B.len) (a = BigSum (\lam i => c i * B i)) =>
     (TruncP.map __ (\lam q =>
@@ -238,15 +281,21 @@
         })
     }
 
+  -- | Closures of arrays are (finitely) generated by them.
   \lemma closure-generated {R : CRing} {l : Array R} : IsGeneratedBy {closure l} l
     => (closure-superset, \lam c => closureN-lem.1 c)
 
+  -- | Closures of arrays are (finitely) generated by them.
   \lemma closure-finGenerated {R : CRing} {l : Array R} : Ideal.IsFinitelyGenerated {closure l}
     => inP (l, closure-generated)
 
+  -- | For an ascending chain `I : Nat -> Ideal R`, eventually `I (suc n) ⊆ I n`.
   \func ChainCondition {R : CRing} (I : Nat -> Ideal R) =>
     (\Pi (n : Nat) {a : R} -> I n a -> I (suc n) a) -> ∃ (n : Nat) ∀ {a} (I (suc n) a -> I n a)
 
+  {- | Derives the ideal chain condition for chains of principal ideals from a divisibility chain condition on the
+   -   `DivQuotient` monoid.
+   -}
   \lemma fromMonoidChainCondition {R : CRing} (cc : CMonoid.DivChain {DivQuotient.DivQuotientMonoid R})
     (I : Nat -> Ideal R) (p : \Pi (n : Nat) -> Ideal.IsPrincipal {I n}) : ChainCondition I
     => \lam f =>
@@ -260,17 +309,23 @@
           }
         })
 
+  -- | Ideal `⋃ Iₙ` of an ascending chain (with `inc` witnessing inclusion); membership is existence of an `n`.
   \func direct-union {R : CRing} (I : Nat -> Ideal R) (\property inc : \Pi {n : Nat} {a : R} -> I n a -> I (suc n) a) : Ideal R \cowith
     | contains a => ∃ (n : Nat) (I n a)
     | contains_zro => inP (0, contains_zro)
     | contains_+ (inP (n,c)) (inP (m,d)) => inP (n + m, contains_+ (include c) $ rewrite +-comm (include d))
     | ideal-left (inP (n,c)) => inP (n, ideal-left c)
     \where {
+      -- | Membership is preserved when bumping the index by any `m`.
       \lemma include {n m : Nat} {a : R} (Ia : I n a) : I (n + m) a \elim m
         | 0 => Ia
         | suc m => inc (include Ia)
     }
 
+  {- | For a countable `CRing` with decidable membership in finitely generated ideals, every proper finitely generated
+   -   ideal `I` extends to a maximal ideal `M ⊇ I`. Built by enumerating ring elements and inductively adjoining each
+   -   one when it does not produce `1`. Internal helpers:
+   -}
   \func countable-maximal {R : CRing} (c : Countable R)
                           (Id : \Pi (I : Ideal R) -> I.IsFinitelyGenerated -> \Pi (x : R) -> Dec (I x))
                           {I : Ideal R} (Ig : I.IsFinitelyGenerated) (Ip : Not (I 1))
@@ -285,18 +340,21 @@
       }
     }), \lam c => inP (0,c))
     \where {
+      -- | Given an FG ideal `I` and ring element indexed by `n`, the FG ideal `I + (eₙ)`.
       \func next (n : Nat) (I : \Sigma (I : Ideal R) I.IsFinitelyGenerated) : Ideal R \cowith
         | contains z => ∃ (x y : R) (I.1 x) (z = x + y * pointed-countable R.zro c n)
         | contains_zro => inP (0, 0, contains_zro, simplify)
         | contains_+ (inP (x1,y1,Ix1,p1)) (inP (x2,y2,Ix2,p2)) => inP (x1 + x2, y1 + y2, contains_+ Ix1 Ix2, equation)
         | ideal-left {r} (inP (x,y,Ix,p)) => inP (r * x, r * y, ideal-left Ix, equation)
 
+      -- | `next` preserves finite generation.
       \lemma next-fg (n : Nat) (I : \Sigma (I : Ideal R) I.IsFinitelyGenerated) : Ideal.IsFinitelyGenerated {next n I}
         => TruncP.map I.2 \lam (l,lg) => (pointed-countable R.zro c n :: l, (\case \elim __ \with {
              | 0 => inP (0, 1, contains_zro, equation)
              | suc j => inP (l j, 0, lg.1 j, equation)
            }, \lam (inP (x,y,I1x,p)) => TruncP.map (lg.2 I1x) \lam (l',q) => (y :: l', equation)))
 
+      -- | The inductively defined chain of FG ideals.
       \func ideal (n : Nat) : \Sigma (I : Ideal R) I.IsFinitelyGenerated \elim n
         | 0 => (I,Ig)
         | suc n => \case Id (next n (ideal n)) (next-fg n (ideal n)) 1 \with {
@@ -304,6 +362,7 @@
                      | no r => (next n (ideal n), next-fg n (ideal n))
                    }
 
+      -- | Each stage avoids containing `1`.
       \lemma ideal-proper (n : Nat) (c : (ideal n).1 1) : Empty \elim n
         | 0 => Ip c
         | suc n => mcases c _ \with {
@@ -313,11 +372,13 @@
     }
 }
 
+-- | `BoundedLattice (Ideal R)` with:
 \instance IdealLattice {R : CRing} : BoundedLattice (Ideal R)
   | <= I J => \Pi {a : R} -> I a -> J a
   | <=-refl c => c
   | <=-transitive p q c => q (p c)
   | <=-antisymmetric p q => exts \lam a => ext (p,q)
+  -- | Intersection — `(I ∧ J) x = I x × J x`.
   | meet (I J : Ideal R) : Ideal R \cowith {
     | contains x => \Sigma (I x) (J x)
     | contains_zro => (contains_zro, contains_zro)
@@ -327,6 +388,7 @@
   | meet-left => __.1
   | meet-right => __.2
   | meet-univ f g c => (f c, g c)
+  -- | The unit ideal (contains everything).
   | top : Ideal R \cowith {
     | contains _ => \Sigma
     | contains_zro => ()
@@ -341,6 +403,7 @@
     | inl c => f c.2
     | inr c => g c.2
   }
+  -- | Zero ideal `{0}`.
   | bottom : Ideal R \cowith {
     | contains a => a = 0
     | contains_zro => idp
@@ -349,6 +412,7 @@
   }
   | bottom-univ p => rewrite p contains_zro
 
+-- | `CMonoid (Ideal R)` under ideal multiplication, with `ide = top`.
 \instance IdealMonoid {R : CRing} : CMonoid (Ideal R)
   | ide => IdealLattice.top
   | * => product
@@ -367,16 +431,21 @@
         \lam s => transport (product J I) *-comm $ Ideal.closure-superset {R} {\Sigma (a b : R) (J a) (I b)} {func J I} (s.2,s.1,s.4,s.3)
     \in <=-antisymmetric lem lem
   \where {
+    -- | The family `(a, b, _, _) ↦ a · b` over pairs from `I × J`.
     \func func {R : CRing} (I J : Ideal R) => \lam (s : \Sigma (a b : R) (I a) (J b)) => s.1 * s.2
 
+    -- | `I · J = closure (func I J)`.
     \func product {R : CRing} (I J : Ideal R) => Ideal.closure (func I J)
 
+    -- | `I · J ⊆ I` and `I · J ⊆ J`.
     \lemma product-left {R : CRing} {I J : Ideal R} : product I J <= I
       => Ideal.closure-univ {R} {_} {func I J} (\lam s => ideal-right s.3)
 
+    -- | `I · J ⊆ I` and `I · J ⊆ J`.
     \lemma product-right {R : CRing} {I J : Ideal R} : product I J <= J
       => Ideal.closure-univ {R} {_} {func I J} (\lam s => ideal-left s.4)
 
+    -- | `I · J ⊆ I ∧ J`.
     \lemma product_meet {R : CRing} {I J : Ideal R} : product I J <= I ∧ J
       => meet-univ product-left product-right
   }

@@ -1,3 +1,15 @@
+{- | Boolean rings equipped with a measure valued in the extended upper reals, viewed as topological abelian groups
+ -   whose topology is induced by the measure.
+ -
+ -   A `PremeasureRing` combines a `BooleanRing` with a `TopAbGroup` structure, where the topology comes from "measure
+ -   balls" `OBall a eps c` consisting of elements `z` such that `meas (a * (c + z)) < eps`. The measure is required to
+ -   be non-negative, vanish on `0`, be monotone, and additive on disjoint elements (so countable subadditivity for `+`
+ -   follows). A `MeasureRing` adds a separation axiom (zero measure implies zero), making the induced uniform structure
+ -   Hausdorff, and a `CompleteMeasureRing` further requires Cauchy filters (characterized in terms of measure balls) to
+ -   converge. The construction yields canonical extended (pseudo)normed abelian group structures, bridging measure
+ -   theory with the library's normed/cover-space infrastructure.
+ -}
+
 \import Algebra.Group
 \import Algebra.Meta
 \import Algebra.Monoid
@@ -26,13 +38,23 @@
 \import Topology.UniformSpace.Complete
 \open BooleanRing \hiding (<=)
 
+{- | Class extending `BooleanRing` and `TopAbGroup`. Carries a measure `meas : E -> ExUpperReal` satisfying `meas_zro`,
+ -   non-negativity, disjoint additivity, and induces the topology via measure balls. Monotonicity (`meas-mono`) and
+ -   subadditivity (`meas_+`) are derivable defaults.
+ -}
 \class PremeasureRing \extends BooleanRing, TopAbGroup {
+  -- | The measure function `E -> ExUpperReal`.
   | meas : E -> ExUpperReal
+  -- | `meas 0 = 0`.
   | meas_zro : meas 0 = 0
+  -- | Non-negativity of the measure.
   | meas>=0 {x : E} : 0 ExUpperReal.<= meas x
+  -- | For `x * y = 0`, `meas (x ∨ y) = meas x + meas y`.
   | meas-disjoint {x y : E} : x * y = 0 -> meas (x ∨ y) = meas x ExUpperReal.+ meas y
+  -- | Monotonicity in the Boolean order: `x <= y -> meas x <= meas y`.
   | meas-mono {x y : E} : x <= y -> meas x ExUpperReal.<= meas y
   | meas-mono p => transport2 (ExUpperReal.<=) ExUpperRealAbMonoid.zro-left (inv (meas-disjoint (rdistr *> pmap (_ +) (*-assoc *> pmap (_ *) isBooleanRing) *> double=0)) *> pmap meas (inv (split_<= p))) (<=_+ meas>=0 ExUpperRealAbMonoid.<=-refl)
+  -- | Subadditivity: `meas (x + y) <= meas x + meas y`.
   | meas_+ {x y : E} : meas (x + y) ExUpperReal.<= meas x ExUpperReal.+ meas y
   | meas_+ => transportInv (ExUpperReal.<= _) (pmap meas +_diff *> meas-disjoint diff_*_diff) $ <=_+ (meas-mono diff_<=) (meas-mono diff_<=)
   | isOpen U => ∀ {x : U} ∃ (a : E) (eps : > 0) ∀ {y : E} ((meas (a * (x + y))).U eps -> U y)
@@ -57,18 +79,25 @@
     }
   }
 
+  {- | The measure ball `OBall a eps c = { z | meas (a * (c + z)) < eps }`, parameterized by a "scaling" element `a`,
+   -   radius `eps : Rat`, and center `c`.
+   -}
   \func OBall (a : E) (eps : Rat) (c : E) : Set E => \lam z => (meas (a * (c + z))).U eps
 
+  -- | Each ball is open in the induced topology.
   \lemma OBall-open (a : E) {eps : Rat} {c : E} : isOpen (OBall a eps c) => \lam {x} => \case U-rounded __ \with {
       | inP (q,cx<q,q<eps) => inP (a, _, RatField.to>0 q<eps, \lam xy => transport2 (\lam x y => ExUpperReal.U {meas x} y) (inv ldistr *> pmap (a *) (equation.addMonoid {double=0 {_} {x}})) linarith $ ExUpperReal.<=_+-char meas_+ cx<q xy)
     }
 
+  -- | For `eps > 0`, the center belongs to its own ball.
   \lemma OBall-center {a : E} {eps : Rat} (eps>0 : 0 < eps) {c : E} : OBall a eps c c
     => transportInv (ExUpperReal.U {__} _) (pmap meas (pmap (a *) double=0 *> zro_*-right) *> meas_zro) eps>0
 
+  -- | The singleton at the center is way-below (`<=<`) the ball, expressing that balls are uniform neighborhoods.
   \lemma OBall-center_<=< {a : E} {eps : Rat} (eps>0 : 0 < eps) {x : E} : single x <=< OBall a eps x
     => open-char.1 (OBall-open a) (OBall-center eps>0)
 
+  -- | Reinterprets a `PremeasureRing` as an `ExPseudoNormedAbGroup` with `norm = meas`.
   \func toPseudoNormed : ExPseudoNormedAbGroup \cowith
     | AbGroup => \this
     | norm => meas
@@ -77,12 +106,19 @@
     | norm_+ => meas_+
 }
 
+{- | Conversely, every uniform neighborhood `U` of `x` contains some `OBall a eps x` — measure balls form a base for the
+ -   uniformity.
+ -}
 \lemma meas-<=<-ball {X : PremeasureRing} {x : X} {U : Set X} (x<=<U : single x <=< U) : ∃ (a : X) (eps : > 0) (X.OBall a eps x ⊆ U)
   => \case X.interior x<=<U \with {
     | inP (a,eps,eps>0,h) => inP (a, eps, eps>0, \lam {y} p => <=<_<= (h p) idp)
   }
 
+{- | Class extending `PremeasureRing` and `SeparatedCoverSpace`. Adds the separation axiom `meas-ext`: zero measure
+ -   implies zero. Both axioms are interderivable here, and the cover-space separation is established via measure balls.
+ -}
 \class MeasureRing \extends PremeasureRing, SeparatedCoverSpace {
+  -- | `meas x = 0 -> x = 0`.
   | meas-ext {x : E} : meas x = ExUpperRealAbMonoid.zro -> x = 0
 
   \default isSeparatedCoverSpace {x} {y} f => fromZero $ meas-ext $ ExUpperRealAbMonoid.<=-antisymmetric (\lam {b} b>0 => \case f $ makeCauchy $ topAbUniform (OBall-open (x - y)) $ OBall-center (RatField.half>0 b>0) \with {
@@ -92,14 +128,19 @@
     | inP (a,eps,eps>0,h) => h $ transportInv (ExUpperReal.U {__} _) {_} {0} (ExUpperRealAbMonoid.<=-antisymmetric (meas-mono meet-right ExUpperRealAbMonoid.<=∘ =_<= (pmap meas zro-right *> p)) meas>=0) eps>0
   }
 
+  -- | Promotes a `MeasureRing` to an `ExNormedAbGroup` via `toPseudoNormed`, using `meas-ext` for `norm-ext`.
   \func toNormed : ExNormedAbGroup \cowith
     | ExPseudoNormedAbGroup => toPseudoNormed
     | norm-ext => meas-ext
 }
 
+-- | Inclusion–exclusion / modularity law: `meas x + meas y = meas (x ∨ y) + meas (x ∧ y)`.
 \lemma meas-modular {X : PremeasureRing} {x y : X} : meas x + meas y = meas (x ∨ y) + meas (x ∧ y)
   => pmap (_ +) (pmap meas (later $ split *> pmap (_ ∨) *-comm) *> meas-disjoint (inv *-assoc *> pmap (* y) diff_* *> X.zro_*-left)) *> inv +-assoc *> inv (pmap (+ _) $ pmap meas (<=-antisymmetric (join-univ join-left $ transportInv (<= _) split $ join-univ join-right $ meet-right <=∘ join-left) $ join-univ join-left $ diff_<= <=∘ join-right) *> X.meas-disjoint (*-comm *> diff_*))
 
+{- | A filter `F` is Cauchy iff for every `a` and every `eps > 0`, some measure ball `OBall a eps x` lies in `F` — a
+ -   measure-theoretic restatement of the Cauchy condition.
+ -}
 \lemma cauchyFilter-measure-char {X : PremeasureRing} {F : SetFilter X} : IsCauchyFilter F <-> ∀ a {eps : > 0} ∃ (x : X) (F (X.OBall a eps x))
   => <->trans cauchyFilter-uniform-char $ later (\lam f a eps>0 => \case f $ X.topAbUniform (X.OBall-open a) (X.OBall-center eps>0) \with {
     | inP (_, inP (x, idp), FB) => inP (x, transport F (ext \lam y => pmap (\lam z => ExUpperReal.U {meas (a * z)} _) $ zro-left *> pmap (x +) negative=id) FB)
@@ -113,7 +154,13 @@
     }
   })
 
+{- | Class extending `MeasureRing` and `CompleteTopAbGroup`. Completeness is equivalently formulated as
+ -   `isCompleteMeasure`, the existence of a limit point witnessed uniformly across all measure balls.
+ -}
 \class CompleteMeasureRing \extends MeasureRing, CompleteTopAbGroup {
+  {- | For any proper filter `F` satisfying the measure-ball Cauchy condition, there exists `x` such that every
+   -   `OBall a eps x` (for `eps > 0`) belongs to `F`.
+   -}
   | isCompleteMeasure (F : ProperFilter E) : ∀ a {eps : > 0} ∃ (x : E) (F (OBall a eps x)) -> ∃ (x : E) ∀ a {eps : > 0} (F (OBall a eps x))
 
   \default isComplete F => \case isCompleteMeasure F (cauchyFilter-measure-char.1 F.isCauchyFilter) \with {
@@ -130,6 +177,7 @@
       | inP (x,xF) => inP (x, \lam a eps>0 => regCF_<= {_} {F'} $ xF $ OBall-center_<=< eps>0)
     }
 
+  -- | Packages the result as a `CompleteExNormedAbGroup` built on `toNormed`.
   \func toCompleteNormed : CompleteExNormedAbGroup \cowith
     | ExNormedAbGroup => toNormed
     | isCompleteMetric F Fc => \case isCompleteMeasure F (\lam a eps>0 => TruncP.map (Fc eps>0) \lam (x,Fx) => (x, filter-mono Fx \lam {y} => meas-mono $ meet-right <=∘ =_<= (pmap (x +) $ inv negative=id))) \with {

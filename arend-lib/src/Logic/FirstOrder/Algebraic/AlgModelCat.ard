@@ -1,3 +1,13 @@
+{- | The category of models of a first-order algebraic theory, equipped with all small limits and colimits.
+ -
+ -   For a fixed theory `T`, models and model homomorphisms form a bicomplete category `ModelCat T`. Limits are computed
+ -   pointwise on the underlying carriers — a tuple of compatible elements indexed by the diagram, with operations and
+ -   relations interpreted componentwise. Colimits are constructed presentation-style: extend the signature with a
+ -   constant for every element of every model in the diagram, add axioms forcing those constants to respect operations,
+ -   relations, and transition maps, and take the quotient term model of the resulting theory. The universal property of
+ -   the colimit is then witnessed by interpreting these added constants in any cocone.
+ -}
+
 \import Algebra.Meta
 \import Category
 \import Category.Adjoint
@@ -19,6 +29,10 @@
 \import Set.SetCategory
 \import Set.Fin
 
+{- | Record of a homomorphism between two `T`-models `Dom` and `Cod`. Carries a sort-indexed family `funcs` of
+ -   underlying functions, a `func-op` law witnessing preservation of operations, and a `func-rel` law witnessing that
+ -   relations are reflected forward (preserved).
+ -}
 \record ModelHom {T : Theory} (Dom Cod : Model T) {
   | \coerce funcs {s : Sort} : Dom s -> Cod s
   | func-op {r : Sort} (h : Symb r) (d : DArray (\lam j => Dom (domain h j))) : funcs (operation h d) = operation h (\lam j => funcs (d j))
@@ -29,6 +43,9 @@
     | apply f d => func-op f _ *> pmap (operation f) (exts \lam j => funcs-interpret (d j))
 }
 
+{- | Instance making `Model T` a `BicompleteCat`. Combines the underlying precategory with proofs of univalence, all
+ -   small limits, and all small colimits.
+ -}
 \instance ModelCat.{u} (T : Theory.{u,u,u}) : BicompleteCat.{u} (Model.{u} T)
   | Precat => ModelPrecat T
   | univalence => Cat.makeUnivalence $ later \lam (e : Iso) =>
@@ -67,6 +84,9 @@
     \open FreeStructure
     \open ColimitData \hiding (T,thExt,ColimitStr)
 
+    {- | `\Sigma S Empty` is finite of cardinality 0; used to build the empty-context sequents that express the new
+     -   colimit axioms.
+     -}
     \func emptyFin {S : \Set} : FinSet (\Sigma S Empty) \cowith
       | card => 0
       | finEq => inP \new QEquiv {
@@ -76,6 +96,9 @@
         | f_sec => \case __.2
       }
 
+    {- | Underlying `Precat` structure on `Model T` with `ModelHom` as morphisms, identity homomorphisms, and
+     -   composition that combines `func-op`/`func-rel` laws.
+     -}
     \instance ModelPrecat.{u} (T : Theory) : Precat (Model.{u} T)
       | Hom M N => ModelHom M N
       | id => \new ModelHom {
@@ -130,7 +153,15 @@
         }
       }) ForgetAdjunction
 
+    {- | Class packaging the colimit construction for a diagram `G : J -> ModelPrecat T`. Internally extends `T`'s
+     -   signature with a constant for every element of every `G j` and adds axioms that make those constants behave
+     -   like the diagram demands.
+     -}
     \class ColimitData.{u} \noclassifying {J : Precat.{u,u}} {T : Theory.{u,u,u}} (G : Functor J (ModelPrecat.{u} T)) {
+      {- | Extended signature whose function symbols are `Or (T.Symb s) (Trunc0 (Σ (j : J) (G j s)))` — original symbols
+       -   on the left, new constants (one per diagram element) on the right; predicates and predicate domains are
+       -   inherited.
+       -}
       \func sigExt : Signature \cowith
         | Sort => T.Sort
         | Symb s => Or (T.Symb s) (Trunc0 (\Sigma (j : J) (G j s)))
@@ -141,17 +172,24 @@
         | PredSymb => T.PredSymb
         | predDomain => T.predDomain
 
+      -- | Embed terms, formulas, and sequents from `T` into the extended signature by tagging old symbols with `inl`.
       \func liftTerm {V : Sort -> \Set u} {s : Sort} (t : Term V s) : Term {sigExt} V s \elim t
         | var v => var v
         | apply f d => apply (inl f) (\new DArray { | at j => liftTerm (d j) })
 
+      -- | Embed terms, formulas, and sequents from `T` into the extended signature by tagging old symbols with `inl`.
       \func liftFormula {V : Sort -> \Set u} (phi : Formula V) : Formula {sigExt} V \elim phi
         | equality t t' => equality (liftTerm t) (liftTerm t')
         | predicate P d => predicate P (\new DArray { | at j => liftTerm (d j) })
 
+      -- | Embed terms, formulas, and sequents from `T` into the extended signature by tagging old symbols with `inl`.
       \func liftSequent (S : Sequent) : Sequent {sigExt}
         => (S.1, S.2, map liftFormula S.3, liftFormula S.4)
 
+      {- | Extended theory. Axioms are the disjunction of: (1) lifted axioms of `T`, (2) the new constants commute with
+       -   operations, (3) they witness the relations holding in their model, and (4) they identify along every morphism
+       -   `h : Hom j j'`.
+       -}
       \instance thExt : Theory
         | Signature => sigExt
         | axioms S => OneOf (∃ (S' : Sequent) (T.axioms S') (S = liftSequent S'),
@@ -159,6 +197,9 @@
             ∃ (j : J) (P : PredSymb) (vars : DArray (\lam i => G j (predDomain P i))) (relation P vars) (S = (\lam _ => Empty, emptyFin, nil, predicate P (\new DArray { | at i => apply (inr (in0 (j, vars i))) nil }))),
             ∃ (j j' : J) (h : J.Hom j j') (s : Sort) (x : G j s) (S = (\lam _ => Empty, emptyFin, nil, equality (apply (inr (in0 (j', G.Func h x))) nil) (apply (inr (in0 (j, x))) nil))))
 
+      {- | `T`-structure on the quotient term algebra `thExt.QTerm`. Operations are formal `qapply`; a predicate holds
+       -   iff it is a theorem on some preimage tuple of `T`-terms.
+       -}
       \instance ColimitStr : Structure T
         | E => QTerm (\lam _ => Empty)
         | operation h args => qapply (inl h) args
@@ -166,11 +207,17 @@
                                (IsTheorem nil (predicate P args'))
                                (\Pi (i : Fin (predDomain P).len) -> qinj (args' i) = args i)
 
+      {- | Bridge lemmas relating interpretation in `ColimitStr` under a substitution to provability in `thExt`, used to
+       -   verify `Colimit` is a model.
+       -}
       \lemma substInterpT {V : Sort -> \Set u} (rho : \Pi {s : Sort} -> V s -> Term (\lam _ => Empty) s) {s : Sort} (t : Term {T} V s)
         : ColimitStr.interpret (\lam v => qinj (rho v)) t = qinj (subst (liftTerm t) rho) \elim t
         | var v => idp
         | apply f d => unfold $ cong (ext (\lam j => substInterpT rho (d j))) *> inv (path (qmerge _))
 
+      {- | Bridge lemmas relating interpretation in `ColimitStr` under a substitution to provability in `thExt`, used to
+       -   verify `Colimit` is a model.
+       -}
       \lemma substInterpF {V : Sort -> \Set u} (rho : \Pi {s : Sort} -> V s -> Term (\lam _ => Empty) s) (phi : Formula {T} V)
         : IsFormulaTrue (\lam v => qinj (rho v)) phi <-> IsTheorem nil (substF (liftFormula phi) (\lam {s} v => rho {s} v))
         \elim phi
@@ -178,6 +225,7 @@
         | predicate P d => (\lam (inP (d',q,e)) => congruenceP (\lam j => qinj-equality.1 (e j *> substInterpT rho (d j))) q,
                             \lam q => inP (\new DArray { | at j => subst (liftTerm (d j)) (\lam {s} => rho) }, q, \lam i => inv (substInterpT rho (d i))))
 
+      -- | The colimit `T`-model, packaging `ColimitStr` with the proof that it satisfies `T`'s axioms.
       \func Colimit : Model T \cowith
         | Structure => ColimitStr
         | isModel S ax => \lam rho phiT =>
@@ -187,6 +235,9 @@
                       => rewrite (path (\lam i {s'} v => inv (p (s',v)) i)) (substInterpF tau)
             \in (eq S.4).2 $ axiom (liftSequent S) (inP (0, inP (S,ax,idp))) tau (\lam j => (eq (S.3 j)).1 (phiT j)) idp
 
+      {- | For each `j : J`, the canonical homomorphism `G j -> Colimit` sending `x` to the constant
+       -   `qapply (inr (in0 (j, x))) nil`.
+       -}
       \func colimitMap (j : J) : ModelHom {T} (G j) Colimit \cowith
         | funcs x => qapply (inr (in0 (j,x))) nil
         | func-op {s} h d =>
@@ -195,11 +246,15 @@
                 path (qmerge args) *> path (\lam i => qapply (inl h) (\new DArray _ (\lam k => qmerge {_} {_} {_} {inr (in0 (j, d k))} nil i)))
         | func-rel P d r => inP (\new DArray { | at i => apply (inr (in0 (j, d i))) nil }, axiom (\lam _ => Empty, emptyFin, nil, _) (inP (2, inP (j,P,d,r,idp))) (\lam {_} => absurd) (\case __) idp, \lam i => path (qmerge _))
 
+      -- | Bundles the `colimitMap`s into a `Cone` over `G.op` with apex `Colimit`.
       \func colimitCone : Cone G.op \cowith
         | apex => Colimit
         | coneMap => colimitMap
         | coneCoh {j} {j'} h => exts (\lam {s} x => unfold (inv (path (qmerge nil)) *> path (qquot (axiom _ (inP (3, inP (j',j,h,s,x,idp))) (absurd __) (\case __) idp)) *> path (qmerge nil)))
 
+      {- | Given a cone `C : Cone G.op M` over a `T`-model `M`, extends `M`'s structure to the enlarged signature
+       -   `thExt` by interpreting each new constant as the corresponding image under `C.coneMap`.
+       -}
       \func strExt {M : Model.{u} T} (C : Cone G.op M) : Structure thExt M \cowith
         | operation => \case \elim __ \with {
           | inl h => operation h
@@ -207,16 +262,23 @@
         }
         | relation => relation
 
+      {- | Interpreting a lifted term/formula in `strExt C` agrees with interpreting the original in `M` — the extension
+       -   is conservative on `T`-data.
+       -}
       \lemma strExtT {V : Sort -> \Set u} (C : Cone G.op) {rho : Env {C} V} {s : Sort} (t : Term {T} V s)
         : interpret {strExt C} rho (liftTerm t) = interpret {C} rho t \elim t
         | var v => idp
         | apply f d => unfold $ cong $ ext (\lam j => strExtT C (d j))
 
+      {- | Interpreting a lifted term/formula in `strExt C` agrees with interpreting the original in `M` — the extension
+       -   is conservative on `T`-data.
+       -}
       \lemma strExtF {V : Sort -> \Set u} (C : Cone G.op) {rho : Env {C} V} (phi : Formula {T} V)
         : IsFormulaTrue {strExt C} rho (liftFormula phi) = IsFormulaTrue {C} rho phi \elim phi
         | equality t t' => pmap2 (=) (strExtT C t) (strExtT C t')
         | predicate P d => cong (ext (\lam j => strExtT C (d j)))
 
+      -- | Promotes `strExt C` to a `Model thExt`; the cone's coherence supplies the new axioms.
       \func modelExt {M : Model.{u} T} (C : Cone G.op M) : Model thExt M \cowith
         | Structure => strExt C
         | isModel => \case \elim __, __ \with {
@@ -226,22 +288,32 @@
           | _, inP (3, inP (j,j',h,s,x,idp)) => \lam rho _ => cong (path (\lam i => funcs {C.coneCoh h  @ i} x))
         }
 
+      -- | The induced homomorphism `Colimit -> M` from a cone `C`, defined by `qinterpret` in `modelExt C`.
       \func modelExtHom {M : Model.{u} T} (C : Cone G.op M) : ModelHom {T} Colimit C \cowith
         | funcs => qinterpret0 {thExt} {modelExt C}
         | func-op h d => idp
         | func-rel P d (inP (d',t,p)) => coe (\lam i => relation P (\new DArray _ (\lam j => qinterpret0 {thExt} {modelExt C} (p j @ i)))) (Model.theoremIsTrue {modelExt C} t (\lam {s} => absurd {modelExt C s}) (\case __)) right
 
+      {- | Any homomorphism `f : Colimit -> M` agrees with the interpretation map of the cone `f` pulls back from
+       -   `colimitCone`, which forces uniqueness in the colimit universal property.
+       -}
       \lemma interpret=map {M : Model.{u} T} (f : ModelHom {T} Colimit M) {s : Sort} (t : Term (\lam _ => Empty) s)
         : Model.interpret {modelExt (conePullback {_} {_} {G.op} colimitCone M f)} (\lam {_} => absurd) t = f (qinj t) \elim t
         | var ()
         | apply (inl h) d => unfold (cong (ext (\lam j => interpret=map f (d j)))) *> inv (f.func-op h (\new DArray _ (\lam j => qinj (d j)))) *> pmap (f __) (inv (path (qmerge d)))
         | apply (inr (in0 (j,x))) nil => pmap (f __) (inv (path (qmerge nil)))
 
+      {- | Any homomorphism `f : Colimit -> M` agrees with the interpretation map of the cone `f` pulls back from
+       -   `colimitCone`, which forces uniqueness in the colimit universal property.
+       -}
       \lemma qinterpret=map {M : Model.{u} T} (f : ModelHom {T} Colimit M) {s : Sort} (t : QTerm (\lam _ => Empty) s) : qinterpret0 {thExt} {modelExt (conePullback {_} {_} {G.op} colimitCone M f)} t = f t \elim t
         | qinj t => interpret=map f t
         | qapply (inl h) d => unfold qinterpret0 (unfold $ cong $ ext \lam j => qinterpret=map f (d j)) *> inv (f.func-op h d)
         | qapply (inr (in0 (j,x))) d => idp
 
+      {- | The map `conePullback colimitCone M : Hom Colimit M -> Cone G.op M` is an equivalence — i.e. `Colimit` is the
+       -   colimit of `G`.
+       -}
       \lemma isColimit (M : Model.{u} T) : IsEquiv (conePullback {_} {_} {G.op} colimitCone M) => inP \new QEquiv {
         | ret => modelExtHom
         | ret_f f => exts (qinterpret=map f)
@@ -249,16 +321,26 @@
       }
     }
 
+    {- | Given a diagram `G : J -> ModelPrecat T`, builds the limit `T`-structure whose carrier at sort `s` is the type
+     -   of compatible families `(P : ∏ j, G j s)` together with a coherence proof for every morphism `h : Hom j j'`.
+     -   Operations act pointwise; a relation holds iff it holds in every component.
+     -}
     \func limitStructure.{u} (T : Theory.{u,u,u}) {J : Precat.{u,u}} (G : Functor J (ModelPrecat.{u} T)) : Structure T \cowith
       | E s => \Sigma (P : \Pi (j : J) -> G j s) (\Pi {j j' : J} (h : Hom j j') -> G.Func h (P j) = P j')
       | operation h d => (\lam j => operation h (\lam k => (d k).1 j), \lam {j} {j'} f => func-op {G.Func f} h (\lam k => (d k).1 j) *> cong (ext (\lam k => (d k).2 f)))
       | relation P d => \Pi (j : J) -> relation P (\lam k => (d k).1 j)
 
+    {- | Term interpretation in the limit structure projects componentwise:
+     -   `(interpret rho t).1 j = interpret (rho · proj j) t`.
+     -}
     \lemma limitStructureInterp.{u} {T : Theory.{u,u,u}} {J : Precat.{u,u}} {G : Functor J (ModelPrecat.{u} T)} {V : Sort -> \Set u} {rho : Env {limitStructure T G} V} {s : Sort} (t : Term V s) {j : J}
       : (interpret rho t).1 j = interpret (\lam v => (rho v).1 j) t \elim t
       | var v => idp
       | apply f d => unfold $ cong $ ext (\lam k => limitStructureInterp (d k))
 
+    {- | Formula truth in the limit equals the conjunction of truth in every component, justifying that the limit
+     -   structure is a model.
+     -}
     \lemma limitStructureTruth.{u} {T : Theory.{u,u,u}} {J : Precat.{u,u}} {G : Functor J (ModelPrecat.{u} T)} {V : Sort -> \Set u} {rho : Env {limitStructure T G} V} (phi : Formula V)
       : IsFormulaTrue rho phi = (\Pi (j : J) -> IsFormulaTrue (\lam v => (rho v).1 j) phi) \elim phi
       | equality t t' => ext (\lam ft j => inv (limitStructureInterp t) *> rewrite ft idp *> limitStructureInterp t', \lam ft => exts (\lam j => limitStructureInterp t *> ft j *> inv (limitStructureInterp t')))

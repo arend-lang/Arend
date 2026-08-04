@@ -1,3 +1,13 @@
+{- | Fields and discrete fields as the top of the commutative-algebra hierarchy.
+ -
+ -   A `Field` is presented as a local commutative ring in which apartness `#` coincides with invertibility,
+ -   automatically yielding a GCD domain (every nonzero pair has gcd 1 via the inverse). A `DiscreteField` strengthens
+ -   this with a decidable inversion operation `finv` satisfying `x ≠ 0 → x * finv x = 1`, which forces decidable
+ -   equality, makes the ring Euclidean (with trivial division), and is equivalent to the constructive disjunction
+ -   `(x = 0) ∨ Inv x`. The `\where` block also provides transport of the discrete-field structure across a ring
+ -   isomorphism.
+ -}
+
 \import Algebra.Domain.Euclidean
 \import Algebra.Domain.GCD
 \import Algebra.Group
@@ -45,9 +55,13 @@
 
 -- | A discrete field is a commutative ring such that every element is either {zro} or invertible.
 \class DiscreteField \extends Field, EuclideanDomain {
+  -- | Total inversion function on `E`; returns `0` on zero and a multiplicative inverse otherwise.
   | finv : E -> E
+  -- | `finv 0 = 0`.
   | finv_zro : finv 0 = 0
+  -- | `x ≠ 0 → x * finv x = 1` (right inverse law).
   | finv-right {x : E} (x/=0 : x /= 0) : x * finv x = 1
+  -- | Field axiom: every element is either zero or invertible (propositional `||`).
   \field eitherZeroOrInv (x : E) : (x = 0) || Inv x
 
   | isEuclidean => inP \new EuclideanRingData {
@@ -66,14 +80,17 @@
     }
   }
 
+  -- | Default `finv` derived from `eitherZeroOrInv` via the strict-disjunction lemma `aux`.
   \default finv \as finv-impl x => \case aux zro/=ide x (eitherZeroOrInv x) \with {
     | inl _ => 0
     | inr (j : Inv) => j.inv
   }
+  -- | Default proofs that the canonical `finv-impl` satisfies `finv_zro` and `finv-right`.
   \default finv_zro \as finv_zroImpl : finv-impl 0 = 0 => unfold finv-impl (mcases \with {
     | inl _ => idp
     | inr (j : Inv) => absurd (zro/=ide (inv zro_*-left *> j.inv-right))
   })
+  -- | Default proofs that the canonical `finv-impl` satisfies `finv_zro` and `finv-right`.
   \default finv-right \as id_finvImpl {x} x/=0 : x * finv-impl x = 1 => unfold finv-impl (mcases \with {
     | inl x=0 => absurd (x/=0 x=0)
     | inr (j : Inv) => j.inv-right
@@ -96,24 +113,30 @@
     | byRight x#0 => x#0
   }
 
+  -- | `x ≠ 0 → finv x * x = 1` (left inverse law).
   \lemma finv-left {x : E} (x/=0 : x /= 0) : finv x * x = 1
     => *-comm *> finv-right x/=0
 
+  -- | Witness that `finv x` is a left/right inverse of `x`, packaged as `Inv (finv x) x`.
   \lemma finv-Inv {x : E} (x/=0 : x /= 0) : Inv (finv x) x
     => Inv.lmake x (finv-right x/=0)
 
+  -- | Witness that `x` is invertible with inverse `finv x` (`Inv x (finv x)`).
   \lemma nonZero-Inv {x : E} (x/=0 : x /= 0) : Inv x (finv x)
     => Inv.rmake (finv x) (finv-right x/=0)
 
+  -- | `x ≠ 0 → finv x ≠ 0`; the inverse of a nonzero element is nonzero.
   \lemma finv/=0 {x : E} (x/=0 : x /= 0) : finv x /= 0
     => inv-nonZero (finv-Inv x/=0)
 
+  -- | `finv 1 = 1`.
   \lemma finv_ide : finv ide = ide
     => inv ide-right *> \case decideEq ide zro \with {
       | yes e => pmap (_ *) e *> zro_*-right *> inv e
       | no p => finv-left p
     }
 
+  -- | `finv (x * y) = finv y * finv x`; antimultiplicativity of inversion.
   \lemma finv_* {x y : E} : finv (x * y) = finv y * finv x
     => \case decideEq x 0, decideEq y 0 \with {
       | yes x=0, _ => rewrite (x=0,zro_*-left,finv_zro) (inv zro_*-right)
@@ -122,31 +145,40 @@
           (Inv.lmake (finv y * finv x) (equation {usingOnly (finv-left x/=0, finv-left y/=0)})) idp
     }
 
+  -- | `finv (x ^ n) = (finv x) ^ n`; commutes with natural-number powers.
   \lemma finv_pow {x : E} {n : Nat} : finv (pow x n) = pow (finv x) n \elim n
     | 0 => finv_ide
     | suc n => finv_* *> pmap (_ *) finv_pow *> *-comm
 
+  -- | Involutivity: `finv (finv x) = x`.
   \lemma finv_finv {x : E} : finv (finv x) = x
     => \case decideEq x 0 \with {
       | yes x=0 => rewrite (x=0,finv_zro) finv_zro
       | no x/=0 => Inv.inv-isUnique (nonZero-Inv (finv/=0 x/=0)) (Inv.lmake x (finv-right x/=0)) idp
     }
 
+  -- | A discrete field has Krull dimension zero (`IsZeroDimensional`).
   \lemma zeroDimensional : IsZeroDimensional
     => \lam a => \case eitherZeroOrInv a \with {
       | byLeft a=0 => inP (0, 1, rewrite a=0 simplify)
       | byRight (r : Inv) => inP (r.inv, 0, simplify $ inv r.inv-right)
     }
 
+  -- | Decides `(x = 0) Or Inv x` using the strict `Or` rather than the propositional `||`.
   \lemma decideZeroOrInv (x : E) : (x = 0) `Or` Inv x
     => aux zro/=ide x (eitherZeroOrInv x)
 
+  -- | Telescoping identity `finv x - finv (x+1) = finv (x * (x+1))` for nonzero `x`, `x+1`.
   \lemma finv-diff {x : E} (xi : x /= 0) (x+1i : x + 1 /= 0) : finv x - finv (x + 1) = finv (x * (x + 1))
     => equation {usingOnly (finv-right xi, finv-right x+1i, finv-right $ nonZero_* xi x+1i)}
 
+  -- | The inverse of a square is a square.
   \lemma finv-square {x : E} (xs : IsSquare x) : IsSquare (finv x) \elim xs
     | inP (y,yy=x) => inP (finv y, inv finv_* *> pmap finv yy=x)
 } \where {
+  {- | Upgrades the propositional `(x = 0) || Inv x` to the strict disjunction `Or`, using `0 ≠ 1` to show the two cases
+   -   are mutually exclusive.
+   -}
   \private \lemma aux {R : CRing} (p : R.zro /= R.ide) (x : R) (q : (x = 0) || Inv x) : (x = 0) `Or` Inv x
     \level Or.levelProp (\lam x=0 (j : Inv x) => p $ inv R.zro_*-left *> pmap (* _) (inv x=0) *> j.inv-right)
     => \case q \with {
@@ -154,6 +186,7 @@
          | byRight r => inr r
        }
 
+  -- | Transports a `DiscreteField` structure on `f.Cod` back to `f.Dom` along a ring-hom equivalence `e : Equiv f`.
   \func backwards (f : RingHom) (e : IsEquiv f) (D : DiscreteField { | Ring => f.Cod }) : DiscreteField { | Ring => f.Dom } \cowith
     | *-comm => IsEquiv.isInj e $ f.func-* *> *-comm *> inv f.func-*
     | zro/=ide q => D.zro/=ide $ inv f.func-zro *> pmap f q *> f.func-ide
@@ -163,6 +196,9 @@
       | inv-right => IsEquiv.isInj e $ f.func-* *> pmap (_ *) (IsEquiv.f_ret e) *> fai.inv-right *> inv f.func-ide
     }) (D.eitherZeroOrInv (f a))
 
+  {- | Transports a `DiscreteField` structure on `f.Dom` to `f.Cod` along an equivalence, by applying `backwards` to the
+   -   inverse ring homomorphism.
+   -}
   \func forward {f : RingHom} (e : IsEquiv f) (D : DiscreteField { | Ring => f.Dom }) : DiscreteField { | Ring => f.Cod }
     => backwards (\new RingHom f.Cod f.Dom (IsEquiv.ret e) {
       | func-+ => IsEquiv.isInj e $ IsEquiv.f_ret e *> inv (f.func-+ *> pmap2 (+) (IsEquiv.f_ret e) (IsEquiv.f_ret e))

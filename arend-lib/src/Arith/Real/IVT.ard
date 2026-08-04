@@ -1,3 +1,14 @@
+{- | Intermediate Value Theorem for strictly monotone continuous real-valued functions on a closed interval, with
+ -   applications to constructing inverse functions.
+ -
+ -   This module formalizes the IVT constructively: given a strictly monotone continuous function `f` on an
+ -   interval-like subset of the reals with `f(a) <= y <= f(b)`, it builds the unique preimage point as a Dedekind cut
+ -   whose lower and upper sets describe rationals approximating it from below and above. The construction uses the
+ -   `IntervalSubset` abstraction — a subset of `Real` containing a closed interval `[a, b]` — and characterizes the cut
+ -   point via continuity at every internal location. As a corollary, strictly monotone continuous functions yield
+ -   equivalences onto their image, giving constructive inverses.
+ -}
+
 \import Algebra.Group
 \import Algebra.Meta
 \import Algebra.Monoid
@@ -31,10 +42,13 @@
 -- | A subset of {Real} containing a closed interval.
 \func IntervalSubset => \Sigma (U : Set Real) (a b : Real) (a < b) (\Pi {x : Real} -> a <= x -> x <= b -> U x)
   \where {
+    -- | The left endpoint as an element of `S.1`.
     \func left (S : IntervalSubset) : Elem S.1 => (S.2, S.5 <=-refl (<=-less S.4))
 
+    -- | The right endpoint as an element of `S.1`.
     \func right (S : IntervalSubset) : Elem S.1 => (S.3, S.5 (<=-less S.4) <=-refl)
 
+    -- | The closed interval `[a, b]` as a `Set Real`.
     \func inside (S : IntervalSubset) : Set Real => \lam x => \Sigma (S.2 <= x) (x <= S.3)
   }
 
@@ -44,6 +58,9 @@
   : Contr (\Sigma (x : Elem S.1) (f x = y))
   => isProp=>isContr (\lam s t => ext $ monotone-injective f fm $ s.2 *> inv t.2) (elem fm, image fm $ cont-char.1 fc _)
   \where {
+    {- | The preimage of `y` constructed as a `Real` (Dedekind cut). Its lower set consists of rationals `q` such that
+     -   some `x` in `[a, b]` exceeds `q` and satisfies `f x <= y`; its upper set is dual.
+     -}
     \func point (fm : IsStrictlyMonotone f) : Real \cowith
       | L q => ∃ (x : Real) (x.L q) (p1 : S.2 <= x) (p2 : x <= S.3) (f (x, S.5 p1 p2) <= y)
       | L-inh => \case S.2.L-inh \with {
@@ -84,16 +101,21 @@
               }
         }
 
+    -- | The cut point lies in `[a, b]`.
     \lemma point>=left (fm : IsStrictlyMonotone f) : S.2 <= point fm
       => \lam p<a => \case real_<-rat-char.1 p<a \with {
         | inP (e, inP (x,x<e,a<=x,_,_), e<a) => a<=x $ real_<_U.2 x<e <∘ real_<_L.2 e<a
       }
 
+    -- | The cut point lies in `[a, b]`.
     \lemma point<=right (fm : IsStrictlyMonotone f) : point fm <= S.3
       => \lam b<p => \case real_<-rat-char.1 b<p \with {
         | inP (e, b<e, inP (x,e<x,_,x<=b,_)) => x<=b $ real_<_U.2 b<e <∘ real_<_L.2 e<x
       }
 
+    {- | Characterize `x < point` and `point < x` in terms of existence of an interval point witnessing `f <= y` or
+     -   `y <= f`.
+     -}
     \lemma point<-char (fm : IsStrictlyMonotone f) {x : Real} : x < point fm <-> ∃ (x' : Real) (x < x') (p : S.2 <= x') (q : x' <= S.3) (f (x', S.5 p q) <= y)
       => (\lam x<p => \case real_<-rat-char.1 x<p \with {
         | inP (q, x<q, inP (x',q<x',p1,p2,fx'<=y)) => inP (x', real_<-rat-char.2 $ inP (q,x<q,q<x'), p1, p2, fx'<=y)
@@ -101,6 +123,9 @@
         | inP (q,x<q,q<x') => real_<-rat-char.2 $ inP (q, x<q, inP $ later (x', q<x', p1, p2, fx'<=y))
       })
 
+    {- | Characterize `x < point` and `point < x` in terms of existence of an interval point witnessing `f <= y` or
+     -   `y <= f`.
+     -}
     \lemma point>-char (fm : IsStrictlyMonotone f) {x : Real} : point fm < x <-> ∃ (x' : Real) (x' < x) (p : S.2 <= x') (q : x' <= S.3) (y <= f (x', S.5 p q))
       => (\lam p<x => \case real_<-rat-char.1 p<x \with {
         | inP (q, inP (x',x'<q,p1,p2,y<=fx'), q<x) => inP (x', real_<-rat-char.2 $ inP (q, x'<q, q<x), p1, p2, y<=fx')
@@ -108,9 +133,11 @@
         | inP (q,x'<q,q<x) => real_<-rat-char.2 $ inP (q, inP $ later (x', x'<q, p1, p2, y<=fx'), q<x)
       })
 
+    -- | Packages `point` together with its membership in `S.1` as an `Elem S.1`.
     \protected \func elem (fm : IsStrictlyMonotone f) : Elem S.1
       => (point fm, S.5 (point>=left fm) (point<=right fm))
 
+    -- | Continuity-based criteria: if `f x < y` (resp. `y < f x`) at a point `x`, then `x < point` (resp. `point < x`).
     \lemma point<-cont-char (fm : IsStrictlyMonotone f) {x : Real} (a<=x : S.2 <= x) (x<b : x < S.3) (fc : IsContAt f (x, S.5 a<=x (<=-less x<b))) (fx<y : f (x, S.5 a<=x (<=-less x<b)) < y) : x < point fm
       => \let | eps => y - f (x, S.5 a<=x (<=-less x<b))
               | eps>0 : 0 < eps => hiding fm linarith
@@ -120,6 +147,7 @@
               | a<=x' => a<=x <=∘ x<=x'
          \in (point<-char fm).2 $ hiding fm $ inP (x', <_meet-univ linarith x<b, a<=x', meet-right, linarith $ RealAbGroup.abs>=neg <∘r g {x', S.5 a<=x' meet-right} (RealAbGroup.abs_-_< linarith $ linarith RealAbGroup.meet-left))
 
+    -- | Continuity-based criteria: if `f x < y` (resp. `y < f x`) at a point `x`, then `x < point` (resp. `point < x`).
     \lemma point>-cont-char (fm : IsStrictlyMonotone f) {x : Real} (a<x : S.2 < x) (x<=b : x <= S.3) (fc : IsContAt f (x, S.5 (<=-less a<x) x<=b)) (fx<y : y < f (x, S.5 (<=-less a<x) x<=b)) : point fm < x
       => \let | eps => f (x, S.5 (<=-less a<x) x<=b) - y
               | eps>0 : 0 < eps => hiding fm linarith
@@ -129,23 +157,30 @@
               | x'<=b => x'<=x <=∘ x<=b
          \in (point>-char fm).2 $ hiding fm $ inP (x', <_join-univ linarith a<x, join-right, x'<=b, linarith $ RealAbGroup.abs>=id <∘r g {x', S.5 join-right x'<=b} (RealAbGroup.abs_-_< (linarith $ RealAbGroup.join-left {x - RealField.half delta}) linarith))
 
+    -- | Conversely, if `point <= x` (resp. `x <= point`), then `y <= f x` (resp. `f x <= y`).
     \lemma point>=-cont-char (fm : IsStrictlyMonotone f) {x : Real} (a<=x : S.2 <= x) (x<=b : x <= S.3) (fc : IsContAt f (x, S.5 a<=x x<=b)) (p<=x : point fm <= x) : y <= f (x, S.5 a<=x x<=b)
       => \lam fx<y => negated-dec (x < S.3) \case __ \with {
         | yes x<b => p<=x $ point<-cont-char fm a<=x x<b fc fx<y
         | no b<=x => y<=fb $ transport (f __ < y) (ext $ <=-antisymmetric x<=b b<=x) fx<y
       }
 
+    -- | Conversely, if `point <= x` (resp. `x <= point`), then `y <= f x` (resp. `f x <= y`).
     \lemma point<=-cont-char (fm : IsStrictlyMonotone f) {x : Real} (a<=x : S.2 <= x) (x<=b : x <= S.3) (fc : IsContAt f (x, S.5 a<=x x<=b)) (x<=p : x <= point fm) : f (x, S.5 a<=x x<=b) <= y
       => \lam y<fx => negated-dec (S.2 < x) \case __ \with {
         | yes a<x => x<=p $ point>-cont-char fm a<x x<=b fc y<fx
         | no x<=a => fa<=y $ transport (y < f __) (ext $ <=-antisymmetric x<=a a<=x) y<fx
       }
 
+    -- | The defining property: `f (elem fm) = y`, established using continuity of `f` at the cut point.
     \protected \lemma image (fm : IsStrictlyMonotone f) (fc : IsContAt f (elem fm)) : f (elem fm) = y
       => <=-antisymmetric (point<=-cont-char fm (point>=left fm) (point<=right fm) fc RealAbGroup.<=-refl)
                           (point>=-cont-char fm (point>=left fm) (point<=right fm) fc RealAbGroup.<=-refl)
   }
 
+{- | Builds an `Equiv` between `Elem U` and `Elem V` from a strictly monotone continuous `f : Elem U -> Real` whose
+ -   image lands in `V`, provided every `v : V` is sandwiched by `f` on some sub-interval inside `U`. Uses
+ -   `IVT-monotone` pointwise to invert `f`.
+ -}
 \lemma monotone-inverse {U V : Set Real} (f : Elem U -> Real) (fm : IsStrictlyMonotone f) (fc : IsCont f) (fV : \Pi (x : Elem U) -> V (f x))
   (fU : ∀ {v : V} ∃ (a b : Real) (p : a < b) (q : \Pi {x : Real} -> a <= x -> x <= b -> U x) (f (a, q <=-refl (<=-less p)) <= v) (v <= f (b, q (<=-less p) <=-refl)))
   : IsEquiv {Elem U} {Elem V} \lam u => (f u, fV u)
@@ -154,11 +189,17 @@
                                        \in inP (p.1, ext p.2)
   }
 
+{- | For `f` continuous at `x`, `f x < f y` implies `x < y || y < x` — order can be reflected through continuous maps
+ -   disjunctively.
+ -}
 \lemma real-cont_<-inv {f : Real -> Real} {x y : Real} (fc : IsContAt f x) (fx<fy : f x < f y) : x < y || y < x
   => real-dist>0 \case metric-contAt-real.1 fc (RealAbGroup.to>0 fx<fy) \with {
     | inP (delta,delta>0,h) => delta>0 <∘l \lam xy<delta => <-irreflexive $ RealAbGroup.abs>=_- <∘r h xy<delta
   }
 
+{- | Strengthens the above: if additionally `y < x` would force `f y <= f x` (a monotonicity hypothesis), then
+ -   `f x < f y` implies `x < y`.
+ -}
 \lemma real-cont_<-inv-mono {f : Real -> Real} {x y : Real} (fm : y < x -> f y <= f x) (fc : IsContAt f x) (fx<fy : f x < f y) : x < y
   => \case real-cont_<-inv fc fx<fy \with {
     | byLeft x<y => x<y

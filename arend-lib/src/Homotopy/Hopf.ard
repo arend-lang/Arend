@@ -1,3 +1,13 @@
+{- | The H-space structure and the Hopf fibration construction in homotopy type theory.
+ -
+ -   This module formalizes H-spaces (pointed types with a unital binary operation up to homotopy) and uses them to
+ -   build the Hopf fibration as a type family over the suspension `Susp A` of a connected H-space `A`. The key
+ -   construction encodes the Hopf bundle's classifying property: connectivity of `A` upgrades the unit laws into
+ -   genuine equivalences `(x *)` and `(* x)`, which serve as the gluing data for the dependent type `hopf`. The total
+ -   space is then identified with the join `A * A` via a flattening lemma for pushouts, recovering the classical fact
+ -   that the total space of the Hopf fibration `S¹ → S³ → S²` is `S³`.
+ -}
+
 \import Equiv
 \import Equiv.HalfAdjoint
 \import Homotopy.Connected
@@ -12,11 +22,15 @@
 \import Paths
 \import Paths.Meta
 
+{- | Class extending `Pointed` with a binary operation `*` and left/right unit laws (`base-left`, `base-right`) up to
+ -   homotopy.
+ -}
 \class HSpace \extends Pointed
   | \infixl 7 * : E -> E -> E
   | base-left (x : E) : base * x = x
   | base-right (x : E) : x * base = x
 
+-- | Class extending `HSpace` and `Connected0`; an H-space whose underlying type is 0-connected.
 \class HSpaceConn \extends HSpace, Connected0
 
 -- | For every point {x} in a connected H-space, ``(x *)`` is an equivalence.
@@ -35,6 +49,9 @@
       | inP base=x => rewriteI (path (\lam i y => (inv (base-right y) *> pmap (y *) base=x) @ i)) (inP idEquiv)
   }
 
+{- | Instance making `Sphere1` (the circle as a HIT) into a connected H-space, with `base1` as unit and a multiplication
+ -   built from a self-loop on the circle.
+ -}
 \instance Circle_HSpace : HSpaceConn Sphere1
   | base => base1
   | * => mult
@@ -44,44 +61,67 @@
   \where {
     \open Sphere1(ploop)
 
+    {- | For each `y : Sphere1`, a loop `y = y`; defined by circle-induction using `Cube2.map` to handle the `loop` case
+     -   via path algebra on `ploop`.
+     -}
     \func circle-loop (y : Sphere1) : y = y
       | base1 => path loop
       | loop => Cube2.map ploop ploop ploop ploop (inv (<*_idp ploop) *> pmap (ploop <*) (inv (*>_inv ploop)))
 
+    -- | The multiplication on `Sphere1`, defined by induction: `base1 * y = y` and the `loop` case uses `circle-loop`.
     \func mult (x y : Sphere1) : Sphere1 \elim x
       | base1 => y
       | loop => circle-loop y
 
+    -- | The right unit law `mult x base1 = x`, by circle induction.
     \func mult-right (x : Sphere1) : mult x base1 = x
       | base1 => idp
       | loop i => idp
   }
 
+{- | Transport of `Circle_HSpace` along the equivalence `Sphere1 ≃ Sphere 1`, giving the standard sphere `Sphere 1` an
+ -   H-space structure.
+ -}
 \instance Sphere1_HSpace : HSpaceConn (Sphere 1) => rewriteI (path (QEquiv_= Sphere1-equiv)) Circle_HSpace
 
+{- | The Hopf type family `Susp A -> \Type` over the suspension of a connected H-space `A`. Both poles map to `A`, and
+ -   the meridian `pglue a` is sent to the equivalence-to-path of `HSpaceConn-left a`. This is the dependent type whose
+ -   total space is the Hopf fibration.
+ -}
 \func hopf.{u} {A : HSpaceConn.{u}} (x : Susp A) : \Type u \elim x
   | north => A
   | south => A
   | pglue a => QEquiv_= (IsEquiv.toQEquiv (HSpaceConn-left a))
   \where
+    {- | The total space `\Sigma (x : Susp A), hopf x` equals `Join A A`. Proved by combining `PushoutData.flattening`
+     -   for `hopf` with an explicit equivalence `total_join-equiv`.
+     -}
     \func total-equiv.{u} {A : HSpaceConn.{u}} : (\Sigma (x : Susp A) (hopf x)) = Join A A
       => inv (PushoutData.flattening hopf) *> QEquiv_= {total A} total_join-equiv
       \where {
         \open PushoutData(ppglue)
 
+        {- | The pushout presentation of the total space, with maps `(p.1, p.2) ↦ ((), p.2)` and
+         -   `(p.1, p.2) ↦ ((), p.1 * p.2)`.
+         -}
         \func total (A : HSpace) => PushoutData {\Sigma A A} {\Sigma (\Sigma) A} {\Sigma (\Sigma) A} (\lam p => ((),p.2)) (\lam p => ((), p.1 * p.2))
 
+        -- | Quasi-equivalence between `total A` and `Join A A`.
         \func total_join-equiv {A : HSpaceConn} : QEquiv {total A} {Join A A} \cowith
           | f => totalJoin
           | ret => joinTotal
           | ret_f => totalJoinTotal
           | f_sec => joinTotalJoin
 
+        -- | Forward map sending the pushout's gluing `(a, a')` to the join's gluing `(a', a * a')`.
         \func totalJoin {A : HSpace} (x : total A) : Join A A
           | pinl (_,a) => jinl a
           | pinr (_,a) => jinr a
           | pglue (a,a') i => pglue (a', a * a') i
 
+        {- | Inverse map; on the join's gluing it uses the section of `(* a)` from `HSpaceConn-right` to find a preimage
+         -   under right-multiplication.
+         -}
         \func joinTotal {A : HSpaceConn} (x : Join A A) : total A
           | jinl a => pinl ((),a)
           | jinr a => pinr ((),a)
@@ -89,6 +129,9 @@
             \let e : HAEquiv (* a) => IsEquiv.toQEquiv (HSpaceConn-right a)
             \in ppglue (e.sec a', a) *> pmap (\lam x => pinr ((),x)) (e.f_sec a')
 
+        {- | One round-trip identity, with the gluing case discharged via half-adjoint coherence (`f_sec`) and
+         -   `Jl`-induction.
+         -}
         \func joinTotalJoin {A : HSpaceConn} (x : Join A A) : totalJoin (joinTotal x) = x
           | jinl a => idp
           | jinr a => idp
@@ -100,6 +143,7 @@
                     jglue a a'                                                                         `qed
             \in path (p @ __ @ i)
 
+        -- | The other round-trip; uses the half-adjoint coherence `f_ret_f=f_sec_f` to align the two sections.
         \func totalJoinTotal {A : HSpaceConn} (x : total A) : joinTotal (totalJoin x) = x \elim x
           | pinl (_,a) => idp
           | pinr (_,a) => idp
@@ -113,8 +157,13 @@
             \in path (p @ __ @ i)
       }
 
+-- | Specialization `hopf x` for `x : Sphere 2`, using the H-space structure on `Sphere 1`.
 \func hopfS2 (x : Sphere 2) => hopf x
   \where
+    {- | Equational chain identifying the total space with `Sphere 3`:
+     -   `(\Sigma (x : Sphere 2) (hopfS2 x)) = Join (Sphere 1) (Sphere 1) = Sphere 3`. This is the classical Hopf
+     -   fibration `S¹ → S³ → S²`, formalized in HoTT.
+     -}
     \func total-equiv =>
       (\Sigma (x : Sphere 2) (hopfS2 x)) ==< hopf.total-equiv >==
       Join (Sphere 1) (Sphere 1)         ==< Join_Sphere (Sphere 1) 1 >==

@@ -1,12 +1,27 @@
+{- | A worked example formalizing untyped λ-calculus as a higher-order term rewriting system with β-reduction as its
+ -   sole rewrite rule.
+ -
+ -   This module instantiates the generic HRS framework from `Logic.Rewriting.TRS.HRS` to encode the untyped λ-calculus.
+ -   It uses a single sort `lc-term` and two function symbols, `abstraction` (binding one variable) and `application`
+ -   (binary, no binding), with β-reduction expressed as a rewrite rule using metavariables to capture the body and
+ -   argument. The example demonstrates the full workflow: signature declaration, meta-context for rule schemas,
+ -   registering rules into the system, and exhibiting a concrete reduction step `(λx.x) (λx.x) → λx.x`.
+ -}
+
 \import Logic.Rewriting.TRS.HRS
 \import Logic.Rewriting.TRS.MetaContexts
 \import Logic.Rewriting.TRS.Utils
 \import Data.List (nil, ::)
 
+-- | One-element sort type with constructor `lc-term`, since untyped λ-calculus is single-sorted.
 \data SingularSort | lc-term
 
+-- | The two function symbols of the calculus: `abstraction` and `application`.
 \data LC-Symbols : \Set | abstraction | application
 
+{- | `FSignature` instance over `SingularSort`. `abstraction` takes one argument that binds one `lc-term` variable;
+ -   `application` takes two non-binding `lc-term` arguments.
+ -}
 \instance LC-FSignature : FSignature SingularSort \cowith
   | symbol sort => LC-Symbols
   | domain symb => \case \elim symb \with {
@@ -14,8 +29,12 @@
     | application => (nil, lc-term) :: (nil, lc-term) :: nil
   }
 
+{- | Two metavariables `metavar-a` (binding one variable, representing the abstraction body) and `metavar-b` (no
+ -   binding, representing the argument).
+ -}
 \data MetaVariables | metavar-a | metavar-b
 
+-- | `MetaContext` mapping `metavar-a` to arity `[lc-term]` and `metavar-b` to arity `[]`.
 \func BetaRedexContext : MetaContext SingularSort \cowith
   | metaname sort => MetaVariables
   | m-domain var => \case \elim var \with {
@@ -23,6 +42,7 @@
     | metavar-b => nil
   }
 
+-- | The redex pattern `(λx. a[x]) b` as a `Term` over `LC-FSignature` in `BetaRedexContext`.
 \func BetaRedex : Term LC-FSignature nil lc-term BetaRedexContext =>
   func application
       (\lam i => \case \elim i \with {
@@ -30,19 +50,25 @@
         | 1 => metavar metavar-b impossible-lambda
       })
 
+-- | The contractum `a[b]`, obtained by substituting `metavar-b` into `metavar-a`.
 \func BetaResult : Term LC-FSignature nil lc-term BetaRedexContext =>
   metavar metavar-a (\lam 0 => metavar metavar-b impossible-lambda)
 
+-- | `RewriteRule lc-term` packaging `BetaRedex ⇒ BetaResult` with `BetaRedexContext`.
 \func beta-reduction : RewriteRule lc-term \cowith
   | rr-mc => BetaRedexContext
   | rr-l => BetaRedex
   | rr-r => BetaResult
   | rr-l-func-root => T-has-functional-root {LC-FSignature}
 
+-- | `RuleRegistry` for `LC-FSignature` indexing the single rule `beta-reduction` by the unit type at sort `lc-term`.
 \func LC-rules : RuleRegistry LC-FSignature \cowith
   | rule-J (lc-term) => \Sigma
   | rule-container {(lc-term)} () => beta-reduction
 
+{- | `SimpleHigherOrderTermRewritingSystem` instance combining `LC-FSignature`, `LC-rules`, and an empty meta-context
+ -   for closed-term rewriting.
+ -}
 \instance UntypedLambdaCalculus  : SimpleHigherOrderTermRewritingSystem \cowith
   | env => LC-FSignature
   | set-of-rules => LC-rules
@@ -50,25 +76,34 @@
 
 
 -- \x.\y.x
+-- | The combinator `λx.λy.x` as a pure (closed) term.
 \func K : Term LC-FSignature nil lc-term (EmptyMetaContext {LC-FSignature})
   => func abstraction
       (\lam 0 => func abstraction (\lam 0 => var 0 idp))
 
 -- \x.x
+-- | The identity combinator `λx.x` as a pure term.
 \func I : Term LC-FSignature nil lc-term (EmptyMetaContext {LC-FSignature})
   => func abstraction
       (\lam 0 => var 0 idp)
 
 -- (\x.x) (\x.x)
+-- | The application `I I` as a `PureTerm`.
 \func I_I : PureTerm LC-FSignature nil lc-term =>
   func application (\lam i => \case \elim i \with { | 0 => I | 1 => I })
 
+{- | `MetaSubstitution` mapping `metavar-a` to the bound variable `var 0` and `metavar-b` to `I`, instantiating the
+ -   β-redex schema to match `I I`.
+ -}
 \func suitable-substitution : MetaSubstitution LC-FSignature nil BetaRedexContext (EmptyMetaContext {LC-FSignature}) =>
   \lam {(lc-term)} mvar => \case \elim mvar \with {
     | metavar-a => var 0 idp
     | metavar-b => I
   }
 
+{- | A `RewriteRelation` proof that `I I` rewrites to `I` by applying `beta-reduction` with `suitable-substitution`,
+ -   witnessing the system in action.
+ -}
 \func I_I~>I : RewriteRelation LC-rules I_I I =>
   rewrite-with-rule () suitable-substitution (Term.fext (\lam index => \case \elim index \with {
     | 0 => Term.fext (\lam 0 => idp)

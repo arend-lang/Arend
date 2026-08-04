@@ -1,3 +1,15 @@
+{- | Completion of ordered C*-algebras into Stone C*-algebras and the universal property of dense isometric embeddings.
+ -
+ -   This module bridges the gap between (possibly incomplete) ordered C*-algebras and their completions as Stone
+ -   C*-algebras (commutative real C*-algebras with bounded suprema). The central construction takes an
+ -   `OrderedC*Algebra` and produces its Banach-algebra completion, equipping it with the additional Stone C*-algebra
+ -   structure (commutativity, the C*-identity, and the sum-of-squares positivity axiom). The universal property is
+ -   realized by `dense-c*-lift`, which extends a homomorphism along a dense isometric embedding by lifting the
+ -   underlying normed-space map and verifying multiplicativity via density of the product. Order-preserving C*-algebra
+ -   homomorphisms are shown to be automatically norm-bounded, linking the algebraic/order side with the
+ -   metric/topological side.
+ -}
+
 \import Algebra.Group
 \import Algebra.Module
 \import Algebra.Monoid
@@ -37,22 +49,33 @@
 \open QModule
 \open PosetQModule
 
+{- | Extends `RingHom` and `PosetHom` between `OrderedC*Algebra`s — a ring homomorphism that also preserves the order.
+ -   Carries the hooks `IsDense`, `IsIsometric`, and conversion lemmas to the underlying normed map.
+ -}
 \record OrderedC*AlgebraHom \extends RingHom, PosetHom {
   \override Dom : OrderedC*Algebra
   \override Cod : OrderedC*Algebra
 
+  {- | For every `eps > 0` and target `y`, there exists `x` in the domain with `func x` within `eps · 1` of `y` on both
+   -   sides — order-theoretic density via the unit `1`.
+   -}
   \func IsDense : \Prop
     => ∀ {eps} (0 < eps) y ∃ (x : Dom) (func x - y <= eps *q 1) (y - func x <= eps *q 1)
 
+  {- | If `func x` is bounded by `1` in absolute value, then `x ≤ q · 1` for every rational `q > 1` — an order-theoretic
+   -   formulation of being norm-non-expanding.
+   -}
   \func IsIsometric : \Prop
     => \Pi {x : Dom} -> func x <= 1 -> negative (func x) <= 1 -> \Pi {q : Rat} -> 1 < q -> x <= q *q 1
 
+  -- | Reinterprets the homomorphism as a `NormedAbGroupMap` between the underlying Banach spaces.
   \lemma toNormed : NormedAbGroupMap toBanach toBanach func \cowith
     | func-+ => func-+
     | func-norm (inP (a,a<b,a>0,x<=a,-x<=a)) => inP (a, a<b, a>0,
         transport (_ <=) (func-*q *> pmap (a *q) func-ide) (func-<= x<=a),
         transport2 (<=) func-negative (func-*q *> pmap (a *q) func-ide) (func-<= -x<=a))
 
+  -- | `IsDense` is equivalent to density of `toNormed` as a normed-space map.
   \lemma dense-toNormed : IsDense <-> toNormed.IsDense
     => (\lam d {y} Uo Uy => \case (dist_open {toBanach}).1 Uo Uy \with {
       | inP (eps,eps>0,Up) => \case d (RatField.half>0 eps>0) y \with {
@@ -62,6 +85,7 @@
       | inP (_, inP (x,idp), inP (delta,delta<eps,_,y-x<=delta,x-y<=delta)) => inP (x, (rewrite AddGroup.negative_- in x-y<=delta) <=∘ <=_*q-left (RatField.<=-less delta<eps) OrderedC*Algebra.zro<=ide, y-x<=delta <=∘ <=_*q-left (RatField.<=-less delta<eps) OrderedC*Algebra.zro<=ide)
     })
 
+  -- | `IsIsometric` is equivalent to the literal norm equality `‖func x‖ = ‖x‖`.
   \lemma isometry-toNormed : IsIsometric <-> (\Pi {x : Dom} -> toBanach.norm (func x) = toBanach.norm x)
     => (\lam c {x} => <=-antisymmetric toNormed.func-norm \lam {b} (inP (a',a'<b,a'>0,fx<=a',-fx<=a')) => \case isDense a'<b \with {
       | inP (a,a'<a,a<b) =>
@@ -75,12 +99,16 @@
       | inP (r,r<q,_,x<=r,_) => x<=r <=∘ <=_*q-left (RatField.<=-less r<q) OrderedC*Algebra.zro<=ide
     })
 
+  -- | Promotes an `IsIsometric` homomorphism to a `NormedIsometricMap`.
   \lemma toIsometry (p : IsIsometric) : NormedIsometricMap toBanach toBanach func \cowith
     | NormedAbGroupMap => toNormed
     | func-norm-isometry => isometry-toNormed.1 p
 } \where {
   \open OrderedC*Algebra
 
+  {- | Builds an `OrderedC*AlgebraHom` from a ring homomorphism `f : X -> Y` (with `Y` a `StoneC*Algebra`) given the
+   -   norm-domination hypothesis `‖f x‖ ≤ ‖x‖`. Uses the C*-norm to recover the order condition.
+   -}
   \lemma fromNormed {X : OrderedC*Algebra} {Y : StoneC*Algebra} (f : RingHom X Y) (fn : \Pi {x : X} -> norm (f x) <= X.toBanach.norm x) : OrderedC*AlgebraHom X Y f \cowith
     | RingHom => f
     | func-<= =>
@@ -90,6 +118,10 @@
       \in \lam x<=y => Y.from>=0 $ transport (0 <=) f.func-minus $ lem (X.to>=0 x<=y)
 }
 
+{- | Extends `OrderedC*AlgebraHom` and `BoundedLinearMap` for maps between `StoneC*Algebra`s. The order-preserving and
+ -   bounded-linear data are derived automatically: `func-<=` follows by writing `y - x` as a square, and `isBounded`
+ -   uses the C*-norm characterization to give bound `1`.
+ -}
 \record StoneC*AlgebraHom \extends OrderedC*AlgebraHom, BoundedLinearMap {
   \override Dom : StoneC*Algebra
   \override Cod : StoneC*Algebra
@@ -98,10 +130,18 @@
   | isBounded => inP (1, idp, \lam x => transportInv (_ <=) (ExUpperRealSemigroup.ide-left norm>=0) $
       transport2 (<=) (inv StoneC*Algebra.norm-char) (inv StoneC*Algebra.norm-char) toNormed.func-norm)
 } \where {
+  {- | Any ring homomorphism between Stone C*-algebras is automatically a Stone C*-algebra homomorphism (orders and
+   -   norms are determined algebraically).
+   -}
   \lemma fromRingHom {X Y : StoneC*Algebra} (f : RingHom X Y) : StoneC*AlgebraHom X Y f \cowith
     | RingHom => f
 }
 
+{- | Given `f : X -> Y` a dense isometric `OrderedC*AlgebraHom` and `g : X -> Z` into a Stone C*-algebra, produces a
+ -   Stone-target homomorphism `Y -> Z` extending `g`. Built by first lifting `g.toNormed` along the normed dense
+ -   isometry and then transferring multiplicativity using density of the product `X × X` in `Y × Y` together with
+ -   continuity of `*`.
+ -}
 \sfunc dense-c*-lift {X Y : OrderedC*Algebra} {Z : StoneC*Algebra} (f : OrderedC*AlgebraHom X Y) (fd : f.IsDense) (fi : f.IsIsometric) (g : OrderedC*AlgebraHom X Z) : OrderedC*AlgebraHom Y Z
   => \let | map => dense-normed-lift (f.toIsometry fi) (f.dense-toNormed.1 fd) g.toNormed
           | map-char => dense-normed-lift.char (f.toIsometry fi) (f.dense-toNormed.1 fd) g.toNormed
@@ -112,10 +152,16 @@
        | func-* {x} {y} => dense-lift-unique (ProductTopSpace.prod f.toNormed f.toNormed) (ProductTopSpace.prod.isDense (f.dense-toNormed.1 fd) (f.dense-toNormed.1 fd)) (map ContMap.∘ *-locally-uniform) (*-locally-uniform ContMap.∘ ProductTopSpace.prod map map) (\lam s => pmap map (inv f.func-*) *> map-char *> g.func-* *> inv (pmap2 (*) map-char map-char)) (x,y)
      } map.func-norm
   \where {
+    -- | The lifted map satisfies `dense-c*-lift f fd fi g (f x) = g x` — confirms it extends `g` along `f`.
     \protected \lemma char {X Y : OrderedC*Algebra} {Z : StoneC*Algebra} (f : OrderedC*AlgebraHom X Y) (fd : f.IsDense) (fi : f.IsIsometric) (g : OrderedC*AlgebraHom X Z) {x : X} : dense-c*-lift f fd fi g (f x) = g x
       => rewrite (\peval dense-c*-lift f fd fi g) $ dense-normed-lift.char (f.toIsometry fi) (f.dense-toNormed.1 fd) g.toNormed
   }
 
+{- | Instance turning the Banach-algebra completion of an `OrderedC*Algebra X` into a `StoneC*Algebra`. Inherits the
+ -   Banach algebra structure from `BanachAlgebraCompletion X.toBanach` and supplies the missing axioms `*-comm`,
+ -   `c*-sum`, and `c*-square` by extending the corresponding properties of `X` along the dense embedding into the
+ -   completion.
+ -}
 \instance StoneC*AlgebraCompletion (X : OrderedC*Algebra) : StoneC*Algebra
   | RealBanachAlgebra => BanachAlgebraCompletion X.toBanach
   | *-comm => unique2 *-cover (*-cover ∘ tuple proj2 proj1)

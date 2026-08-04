@@ -1,3 +1,14 @@
+{- | Completeness, cocompleteness, and subobject structure for presheaf categories.
+ -
+ -   This module establishes that the category of (V-)presheaves on a small precategory inherits limits and colimits
+ -   from the target category, computed pointwise. Limits in `VPresheafCat D C` are built by taking, for each object
+ -   `c : C`, the limit in `D` of the diagram evaluated at `c`, and assembling these into a presheaf via the universal
+ -   property — the functorial action on morphisms `f : Y → X` is the unique mediating map between the pointwise limits.
+ -   The cone and limit-map natural transformations are constructed by pointwise application, with naturality verified
+ -   through `limUnique`. This pointwise construction is the standard tool for showing presheaf categories form
+ -   bicomplete toposes, with `PresheafCat C` as the special case `D = Set`.
+ -}
+
 \import Category
 \import Category.Functor
 \import Category.Limit
@@ -15,6 +26,7 @@
   \func toPresheaf.{u} (U : Functor D SetCat.{u}) : Presheaf C \cowith
     | F => Comp U F
 } \where {
+    -- | For each `c : C`, the diagram `J → D` obtained by evaluating `G` at `c`.
     \func functor-at-point {D : Cat} {C : Precat} {J : Precat} (G : Functor J (VPresheafCat D C)) (c : C) : Functor J D \cowith
       | F j => G j c
       | Func f => G.Func f c
@@ -25,6 +37,7 @@
 -- | Presheaves valued in sets
 \func Presheaf.{u} (C : Precat) => VPresheaf SetCat.{u} C
 
+-- | The category of `VPresheaf D C`, built as a full subcategory of `FunctorCat C.op D` via an `Embedding`.
 \instance VPresheafCat (D : Cat) (C : Precat) : Cat
   => subCat {FunctorCat C.op D} {VPresheaf D C} (\new Embedding {
     | f P => P
@@ -34,9 +47,13 @@
     }
   })
 
+-- | `VPresheafCat SetCat C` — the category of presheaves of sets on `C`.
 \instance PresheafCat.{u} (C : Precat) : Cat
   => VPresheafCat SetCat.{u} C
 
+{- | Instance proving that `VPresheafCat D C` is complete whenever `D` is, for `C` a small precategory. Limits are
+ -   computed pointwise in `D`.
+ -}
 \instance VPresheafComplete.{u} (D : CompleteCat.{u}) (C : Precat) : CompleteCat.{u}
   | Cat => VPresheafCat D C
   | limit => limit
@@ -75,6 +92,9 @@
     | tupleEq c => exts \lam a => D.pair-unique (path \lam i => c 0 i a) (path \lam i => c 1 i a)
   }
   \where {
+    {- | Constructs the limit of a functor `G : J → VPresheafCat D C` by assembling pointwise limits into a presheaf,
+     -   with cone and limit maps given as natural transformations.
+     -}
     \protected \func limit.{u} {D : CompleteCat.{u}} {C : Precat} {J : Precat.{u,u}} (G : Functor J (VPresheafCat D C)) : Limit G \cowith
       | apex => apex
       | coneMap => cone-nat-map
@@ -83,14 +103,21 @@
       | limBeta {z} z-cone _ => exts \lam X => rewrite (limBeta {L X} (cone-at-point X z z-cone)) idp
       | limUnique j-unique => exts \lam X => limUnique $ \lam j => path (\lam i => j-unique j i X)
       \where {
+        -- | The pointwise limit `D.limit (functor-at-point c)` in `D`.
         \func L (c : C) => D.limit {J} (VPresheaf.functor-at-point G c)
 
+        {- | For `f : Hom Y X` in `C`, the cone over `functor-at-point Y` with apex `L X`, used to define the functorial
+         -   action on morphisms.
+         -}
         \func cone {X Y : C} (f : Hom Y X) : Cone (VPresheaf.functor-at-point G Y) \cowith
           | apex => Cone.apex {L X}
           | coneMap j => Func f ∘ coneMap {L X} j
           | coneCoh h => rewriteI (coneCoh {L X} h, o-assoc, o-assoc)
               (rewrite (natural {Func {G} h} f) idp)
 
+        {- | The presheaf whose value at `c` is `L c`, with `Func f` defined as the mediating map `limMap (cone f)`;
+         -   functoriality follows from `limUnique`.
+         -}
         \func apex : VPresheaf D C \cowith
           | F => \new Functor {
             | F c => L c
@@ -101,15 +128,20 @@
                 (rewrite (Func-o {G j}, o-assoc, o-assoc) (rewrite (limBeta {L Y} (cone f) j) (unfold coneMap idp)))))
           }
 
+        -- | The cone projection `apex → G j` as a natural transformation, with components given by pointwise cone maps.
         \func cone-nat-map (j : J) : Hom apex (G j) => \new NatTrans {
           | trans c => coneMap {L c} j
           | natural {_} {Y} f => rewrite (limBeta {L Y} (cone f) j) idp
         }
 
+        -- | Restricts a cone over `G` with apex a presheaf `H` to a cone over `functor-at-point X` with apex `H X`.
         \func cone-at-point (X : C) (H : VPresheaf D C) (z-cone : Cone {J} G H) : Cone (VPresheaf.functor-at-point G X) (H X) \cowith
           | coneMap j => coneMap {z-cone} j X
           | coneCoh h => path (\lam i => ((coneCoh {z-cone} h) i) X)
 
+        {- | The universal mediating natural transformation from a cone apex to `apex`, with components defined via
+         -   pointwise `limMap`.
+         -}
         \func lim-nat-map {z : VPresheaf D C} (z-cone : Cone G z) : Hom z apex => \new NatTrans {
           | trans X => limMap $ cone-at-point X z z-cone
           | natural {X} {Y} f => limUnique \lam j =>
