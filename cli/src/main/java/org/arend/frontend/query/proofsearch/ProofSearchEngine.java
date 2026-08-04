@@ -11,7 +11,7 @@ import org.arend.server.ArendServer;
 import org.arend.server.ProgressReporter;
 import org.arend.server.impl.DefinitionData;
 import org.arend.term.concrete.Concrete;
-import org.arend.typechecking.computation.UnstoppableCancellationIndicator;
+import org.arend.typechecking.computation.CancellationIndicator;
 import org.arend.util.Triple;
 
 import java.util.ArrayList;
@@ -39,15 +39,17 @@ final class ProofSearchEngine {
   /**
    * Every definition in {@code searchLibs} (and their resolved dependencies on {@code server})
    * whose signature matches {@code query}. {@code self} restricts matches to {@code searchLibs};
-   * {@code limit} caps the returned list but not the reported total.
+   * {@code limit} caps the returned list but not the reported total. {@code cancellation} aborts
+   * the resolve pass, which is the long half of the search.
    */
   static Result find(ProofSearchQuery query, List<SourceLibrary> searchLibs, ArendServer server,
-                     Set<String> excludeLibraries, boolean self, int limit) {
+                     Set<String> excludeLibraries, boolean self, int limit,
+                     CancellationIndicator cancellation) {
     ArendExpressionMatcher matcher = new ArendExpressionMatcher(query);
     Set<String> scopeNames = new HashSet<>();
     for (SourceLibrary library : searchLibs) scopeNames.add(library.getLibraryName());
 
-    resolveLibraries(searchLibs, server);
+    resolveLibraries(searchLibs, server, cancellation);
 
     List<ProofMatch> matches = new ArrayList<>();
     int total = 0;
@@ -71,14 +73,15 @@ final class ProofSearchEngine {
     return new Result(matches, total);
   }
 
-  private static void resolveLibraries(List<SourceLibrary> searchLibs, ArendServer server) {
+  private static void resolveLibraries(List<SourceLibrary> searchLibs, ArendServer server,
+                                       CancellationIndicator cancellation) {
     // searchLibs is already exclude-free, so no exclusion check is needed here.
     for (SourceLibrary library : searchLibs) {
       System.out.println("[INFO] Resolving " + library.getLibraryName());
       long time = System.currentTimeMillis();
       server.getCheckerFor(library.findModules(false).stream()
               .map(modulePath -> new ModuleLocation(library.getLibraryName(), ModuleLocation.LocationKind.SOURCE, modulePath)).toList())
-          .resolveAll(UnstoppableCancellationIndicator.INSTANCE, ProgressReporter.empty());
+          .resolveAll(cancellation, ProgressReporter.empty());
       System.out.println("[INFO] Resolved " + library.getLibraryName() + " ("
           + TimedProgressReporter.timeToString(System.currentTimeMillis() - time) + ")");
     }

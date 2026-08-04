@@ -19,6 +19,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
+import java.util.function.IntConsumer;
 
 /**
  * On-disk + in-memory cache of (name, file:line, signature) triples per library.
@@ -116,10 +117,24 @@ public final class SymbolIndex {
    */
   public static @NotNull SymbolIndex refreshLibrary(
       @NotNull SourceLibrary library, @NotNull ArendServer server, boolean withTests) {
+    return refreshLibrary(library, server, withTests, null);
+  }
+
+  /**
+   * As {@link #refreshLibrary(SourceLibrary, ArendServer, boolean)}, additionally handing
+   * {@code reparsed} the number of modules whose cached stamp was stale and so had to be
+   * re-parsed. The {@code -ai} pipeline reports that figure per library; ordinary query runs
+   * pass {@code null} and ignore it.
+   */
+  public static @NotNull SymbolIndex refreshLibrary(
+      @NotNull SourceLibrary library, @NotNull ArendServer server, boolean withTests,
+      @Nullable IntConsumer reparsed) {
     SymbolIndex idx = loadOrCreate(library);
+    int stale = 0;
     for (ModulePath mp : library.findModules(false)) {
       if (idx.isStale(library, mp)) {
         server.findModule(mp, library.getLibraryName(), false, false);
+        stale++;
       }
     }
     if (withTests) {
@@ -129,6 +144,7 @@ public final class SymbolIndex {
     }
     idx.refresh(library, server, false);
     idx.save();
+    if (reparsed != null) reparsed.accept(stale);
     return idx;
   }
 
