@@ -1051,14 +1051,14 @@ public class BuildVisitor extends ArendBaseVisitor<Object> {
   private List<Concrete.Parameter> visitNameTele(NameTeleContext tele, boolean allowNullRefs, boolean forceCovariant) {
     List<Concrete.Parameter> parameters = new ArrayList<>();
     if (tele instanceof NameIdContext) {
-      parameters.add(new Concrete.NameParameter(tokenPosition(tele.start), true, visitIdOrUnknown(((NameIdContext) tele).idOrUnknown(), allowNullRefs, tele)));
+      parameters.add(new Concrete.NameParameter(tokenPosition(tele.start), true, visitIdOrUnknown(((NameIdContext) tele).idOrUnknown(), allowNullRefs, tele), forceCovariant ? BindingVariance.COVARIANT : BindingVariance.INVARIANT));
     } else {
       boolean explicit = tele instanceof NameExplicitContext;
       List<IdOrUnknownContext> ids = explicit ? ((NameExplicitContext) tele).idOrUnknown() : ((NameImplicitContext) tele).idOrUnknown();
       ExprContext type = explicit ? ((NameExplicitContext) tele).expr() : ((NameImplicitContext) tele).expr();
       if (type == null) {
         for (IdOrUnknownContext id : ids) {
-          parameters.add(new Concrete.NameParameter(tokenPosition(id.start), explicit, visitIdOrUnknown(id, allowNullRefs, tele)));
+          parameters.add(new Concrete.NameParameter(tokenPosition(id.start), explicit, visitIdOrUnknown(id, allowNullRefs, tele), forceCovariant ? BindingVariance.COVARIANT : BindingVariance.INVARIANT));
         }
       } else {
         List<Referable> vars = new ArrayList<>(ids.size());

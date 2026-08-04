@@ -458,7 +458,8 @@ public class ConcreteBuilder implements AbstractDefinitionVisitor<Concrete.Resol
     if (type == null) {
       if (referableList.size() == 1) {
         Abstract.AbstractReferable referable = referableList.getFirst();
-        return new Concrete.NameParameter(parameter.getData(), parameter.isExplicit(), referable == null && !allowNullRefs ? new DataLocalReferable(parameter, null) : makeLocalRef(referable));
+        BindingVariance variance = forcedVariance != null ? forcedVariance : parameter.getVariance();
+        return new Concrete.NameParameter(parameter.getData(), parameter.isExplicit(), referable == null && !allowNullRefs ? new DataLocalReferable(parameter, null) : makeLocalRef(referable), variance);
       } else {
         myErrorLevel = GeneralError.Level.ERROR;
         cType = new Concrete.ErrorHoleExpression(parameter.getData(), null);

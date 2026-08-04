@@ -2226,7 +2226,7 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
     InferenceVariable inferenceVariable = new LambdaInferenceVariable(name == null ? "_" : "type-of-" + name, UniverseExpression.OMEGA, param.getReferable(), false, sourceNode, getAllBindings());
     inferenceVariable.setType(new UniverseExpression(new SortExpression.InfVar(inferenceVariable)));
     Expression argType = InferenceReferenceExpression.make(inferenceVariable, myEquations);
-    TypedSingleDependentLink link = new TypedSingleDependentLink(param.isExplicit(), name, argType);
+    TypedSingleDependentLink link = new TypedSingleDependentLink(param.isExplicit(), name, argType, false, param.getVariance());
     addBinding(referable, link);
     return link;
   }
@@ -2459,7 +2459,7 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
             errorReporter.report(new ImplicitLambdaError(referable, -1, param));
           }
 
-          SingleDependentLink link = new TypedSingleDependentLink(piParam.isExplicit(), referable == null ? null : referable.textRepresentation(), piParam.getType(), false, piParam.getVariance());
+          SingleDependentLink link = new TypedSingleDependentLink(piParam.isExplicit(), referable == null ? null : referable.textRepresentation(), piParam.getType(), false, checkLambdaVariance(param, piParam));
           addBinding(referable, link);
           newProvider.subst(piParam, new ReferenceExpression(link));
           return new Pair<>(bodyToLam(link, visitLam(parameters.subList(1, parameters.size()), expr, newProvider)), true);

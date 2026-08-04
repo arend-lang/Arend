@@ -64,10 +64,12 @@ public final class Concrete {
 
   public static abstract class Parameter extends SourceNodeImpl implements ConcreteParameter {
     private boolean myExplicit;
+    private final BindingVariance myVariance;
 
-    public Parameter(Object data, boolean explicit) {
+    public Parameter(Object data, boolean explicit, BindingVariance variance) {
       super(data);
       myExplicit = explicit;
+      myVariance = variance;
     }
 
     @Override
@@ -95,7 +97,7 @@ public final class Concrete {
     }
 
     public BindingVariance getVariance() {
-      return BindingVariance.INVARIANT;
+      return myVariance;
     }
 
     public abstract @NotNull List<? extends Referable> getReferableList();
@@ -130,9 +132,13 @@ public final class Concrete {
   public static class NameParameter extends Parameter {
     private Referable myReferable;
 
-    public NameParameter(Object data, boolean explicit, Referable referable) {
-      super(data, explicit);
+    public NameParameter(Object data, boolean explicit, Referable referable, BindingVariance variance) {
+      super(data, explicit, variance);
       myReferable = referable;
+    }
+
+    public NameParameter(Object data, boolean explicit, Referable referable) {
+      this(data, explicit, referable, BindingVariance.INVARIANT);
     }
 
     @Nullable
@@ -152,7 +158,7 @@ public final class Concrete {
 
     @Override
     public NameParameter copy(Object data) {
-      return new NameParameter(data, isExplicit(), myReferable);
+      return new NameParameter(data, isExplicit(), myReferable, getVariance());
     }
 
     @Override
@@ -163,14 +169,12 @@ public final class Concrete {
 
   public static class TypeParameter extends Parameter {
     private final boolean myProperty;
-    private final BindingVariance myVariance;
     public Expression type;
 
     public TypeParameter(Object data, boolean explicit, Expression type, boolean isProperty, BindingVariance variance) {
-      super(data, explicit);
+      super(data, explicit, variance);
       this.type = type;
       myProperty = isProperty;
-      myVariance = variance;
     }
 
     public TypeParameter(boolean explicit, Expression type, boolean isProperty, BindingVariance variance) {
@@ -188,11 +192,6 @@ public final class Concrete {
     @Override
     public boolean isProperty() {
       return myProperty;
-    }
-
-    @Override
-    public BindingVariance getVariance() {
-      return myVariance;
     }
 
     @Override

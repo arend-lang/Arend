@@ -672,7 +672,7 @@ public class ToAbstractVisitor extends BaseExpressionVisitor<Void, Concrete.Expr
         SingleDependentLink params = lamExpr.getParameters();
         Set<Variable> freeVars = myFreeVariablesCollector.getFreeVariables(params.getNextTyped(null));
         for (SingleDependentLink link = params; link.hasNext(); link = link.getNext()) {
-          parameters.add(cName(link, link.isExplicit(), makeLocalReference(link, freeVars, false)));
+          parameters.add(new Concrete.NameParameter(link, link.isExplicit(), makeLocalReference(link, freeVars, false), link.getVariance()));
         }
       }
       expr = lamExpr.getBody();

@@ -112,7 +112,7 @@ public class SubstConcreteVisitor extends BaseConcreteExpressionVisitor<Void> im
   protected <T extends Concrete.Parameter> T visitParameter(T parameter) {
     var data = myData != null ? myData : parameter.getData();
     if (Concrete.NameParameter.class.equals(parameter.getClass())) {
-      return (T) new Concrete.NameParameter(data, parameter.isExplicit(), ((Concrete.NameParameter) parameter).getReferable());
+      return (T) new Concrete.NameParameter(data, parameter.isExplicit(), ((Concrete.NameParameter) parameter).getReferable(), parameter.getVariance());
     } else if (Concrete.TypeParameter.class.equals(parameter.getClass())) {
       return (T) new Concrete.TypeParameter(data, parameter.isExplicit(), nullableMap(parameter.getType()), parameter.isProperty(), parameter.getVariance());
     } else if (Concrete.TelescopeParameter.class.equals(parameter.getClass())) {

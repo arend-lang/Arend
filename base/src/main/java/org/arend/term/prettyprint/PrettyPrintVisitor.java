@@ -549,7 +549,15 @@ public class PrettyPrintVisitor implements ConcreteExpressionVisitor<Precedence,
 
       @Override
       String getOpText() {
-        return "=>";
+        List<Concrete.Parameter> parameters = expr.getParameters();
+        boolean allCovariant = !parameters.isEmpty();
+        for (Concrete.Parameter parameter : parameters) {
+          if (parameter.getVariance() != BindingVariance.COVARIANT) {
+            allCovariant = false;
+            break;
+          }
+        }
+        return allCovariant ? "=>⁺" : "=>";
       }
     }.doPrettyPrint(this, noIndent);
 
