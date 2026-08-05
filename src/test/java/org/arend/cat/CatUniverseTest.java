@@ -18,8 +18,21 @@ public class CatUniverseTest extends TypeCheckingTestCase {
 
   @Test
   public void idTest() {
-    typeCheckDef("""
-      \\func test {C : \\Cat} (c : C) => c
-      """);
+    typeCheckDef("\\func test {C : \\Cat} (c : C) => c");
+  }
+
+  @Test
+  public void setUniverseTest() {
+    typeCheckDef("\\func test.{u} : \\1-Type (\\suc u) => \\Set u");
+  }
+
+  @Test
+  public void typeUniverseTest() {
+    typeCheckDef("\\func test.{u} : \\Type (\\suc u) => \\Type u");
+  }
+
+  @Test
+  public void catUniverseTest() {
+    typeCheckDef("\\func test.{u} : \\Type (\\suc u) => \\Cat u");
   }
 }

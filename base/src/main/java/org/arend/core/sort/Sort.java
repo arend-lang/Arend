@@ -57,7 +57,7 @@ public class Sort implements CoreSort {
   }
 
   public Sort succ() {
-    return isProp() ? SET0 : new Sort(getPLevel().add(BigInteger.ONE), getHLevel().add(BigInteger.ONE));
+    return isProp() ? SET0 : new Sort(getPLevel().add(BigInteger.ONE), getHLevel().succ());
   }
 
   public Sort max(Sort sort) {

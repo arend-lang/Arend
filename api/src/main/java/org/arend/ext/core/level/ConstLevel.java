@@ -50,6 +50,10 @@ public record ConstLevel(BigInteger value, boolean isCat) {
     return value == null ? this : new ConstLevel(value.add(val), isCat);
   }
 
+  public ConstLevel succ() {
+    return new ConstLevel(value == null ? null : value.add(BigInteger.ONE), false);
+  }
+
   @Override
   public @NotNull String toString() {
     return value == null ? (isCat ? "Cat∞" : "∞") : value.toString();
