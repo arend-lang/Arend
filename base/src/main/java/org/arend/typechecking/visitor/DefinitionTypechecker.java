@@ -1832,7 +1832,7 @@ public class DefinitionTypechecker extends BaseDefinitionTypechecker implements 
 
   private Expression addAts(Expression expression, DependentLink param, Expression type) {
     while (type instanceof DataCallExpression && ((DataCallExpression) type).getDefinition() == Prelude.PATH) {
-      expression = AtExpression.make(expression, new ReferenceExpression(param), false);
+      expression = AtExpression.make(expression, new ReferenceExpression(param), false, false);
       type = ((LamExpression) ((DataCallExpression) type).getDefCallArguments().getFirst()).getBody();
       param = param.getNext();
     }
@@ -1984,7 +1984,7 @@ public class DefinitionTypechecker extends BaseDefinitionTypechecker implements 
               Expression expr = clause.getExpression();
               if (expr == null) continue;
               for (DependentLink param : newParams) {
-                expr = AtExpression.make(expr.normalize(NormalizationMode.WHNF), new ReferenceExpression(param), true);
+                expr = AtExpression.make(expr.normalize(NormalizationMode.WHNF), new ReferenceExpression(param), true, false);
               }
               clause.setExpression(expr);
             }

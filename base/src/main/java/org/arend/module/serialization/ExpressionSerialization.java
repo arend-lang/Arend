@@ -767,6 +767,7 @@ class ExpressionSerialization implements ExpressionVisitor<Void, ExpressionProto
     ExpressionProtos.Expression.Path.Builder builder = ExpressionProtos.Expression.Path.newBuilder();
     builder.setArgumentType(writeExpr(expr.getArgumentType()));
     builder.setArgument(writeExpr(expr.getArgument()));
+    builder.setDirected(expr.isDirected());
     return ExpressionProtos.Expression.newBuilder().setPath(builder.build()).build();
   }
 
@@ -775,6 +776,7 @@ class ExpressionSerialization implements ExpressionVisitor<Void, ExpressionProto
     ExpressionProtos.Expression.At.Builder builder = ExpressionProtos.Expression.At.newBuilder();
     builder.setPathArgument(writeExpr(expr.getPathArgument()));
     builder.setIntervalArgument(writeExpr(expr.getIntervalArgument()));
+    builder.setDirected(expr.isDirected());
     return ExpressionProtos.Expression.newBuilder().setAt(builder.build()).build();
   }
 

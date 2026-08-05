@@ -15,10 +15,7 @@ import org.arend.core.sort.SortExpression;
 import org.arend.core.subst.Levels;
 import org.arend.error.DummyErrorReporter;
 import org.arend.ext.ArendPrelude;
-import org.arend.ext.core.definition.CoreClassDefinition;
-import org.arend.ext.core.definition.CoreClassField;
-import org.arend.ext.core.definition.CoreDataDefinition;
-import org.arend.ext.core.definition.CoreFunctionDefinition;
+import org.arend.ext.core.definition.*;
 import org.arend.ext.core.level.ConstLevel;
 import org.arend.ext.module.ModulePath;
 import org.arend.ext.reference.ArendRef;
@@ -58,6 +55,14 @@ public class Prelude implements ArendPrelude {
   public static DataDefinition INTERVAL;
   public static Constructor LEFT, RIGHT;
   public static FunctionDefinition SQUEEZE, SQUEEZE_R;
+
+  public static DataDefinition DI;
+  public static Constructor DLEFT, DRIGHT;
+  public static FunctionDefinition DCOE;
+
+  public static DataDefinition DPATH;
+  public static Constructor DPATH_CON;
+  public static FunctionDefinition DAT;
 
   public static DataDefinition NAT;
   public static Constructor ZERO, SUC;
@@ -158,6 +163,20 @@ public class Prelude implements ArendPrelude {
         SQUEEZE_R = (FunctionDefinition) definition;
         SQUEEZE_R.setStatus(Definition.TypeCheckingStatus.NO_ERRORS);
       }
+      case "DI" -> {
+        DI = (DataDefinition) definition;
+        DLEFT = DI.getConstructor("dleft");
+        DRIGHT = DI.getConstructor("dright");
+      }
+      case "dcoe" -> {
+        DCOE = (FunctionDefinition) definition;
+        DCOE.setStatus(Definition.TypeCheckingStatus.NO_ERRORS);
+      }
+      case "~>" -> {
+        DPATH = (DataDefinition) definition;
+        DPATH_CON = DPATH.getConstructor("dpath");
+      }
+      case "d@" -> DAT = (FunctionDefinition) definition;
       case "Path" -> {
         PATH = (DataDefinition) definition;
         PATH.setSortExpression(new SortExpression.Prev(new SortExpression.Var(0, Collections.emptyList(), ConstLevel.CAT_INFINITY)));
@@ -181,7 +200,7 @@ public class Prelude implements ArendPrelude {
         IDP.setStatus(Definition.TypeCheckingStatus.NO_ERRORS);
         PathExpression pathExpr = (PathExpression) IDP.getBody();
         assert pathExpr != null;
-        IDP.setBody(new PathExpression(new LamExpression(UnusedIntervalDependentLink.INSTANCE, args.getFirst()), new LamExpression(UnusedIntervalDependentLink.INSTANCE, ((LamExpression) pathExpr.getArgument()).getBody())));
+        IDP.setBody(new PathExpression(new LamExpression(UnusedIntervalDependentLink.INSTANCE, args.getFirst()), new LamExpression(UnusedIntervalDependentLink.INSTANCE, ((LamExpression) pathExpr.getArgument()).getBody()), false));
       }
       case "@" -> {
         AT = (FunctionDefinition) definition;
@@ -258,6 +277,13 @@ public class Prelude implements ArendPrelude {
     consumer.accept(RIGHT);
     consumer.accept(SQUEEZE);
     consumer.accept(SQUEEZE_R);
+    consumer.accept(DI);
+    consumer.accept(DLEFT);
+    consumer.accept(DRIGHT);
+    consumer.accept(DCOE);
+    consumer.accept(DPATH);
+    consumer.accept(DPATH_CON);
+    consumer.accept(DAT);
     consumer.accept(PATH);
     consumer.accept(PATH_CON);
     consumer.accept(PATH_INFIX);
@@ -323,6 +349,41 @@ public class Prelude implements ArendPrelude {
   @Override
   public FunctionDefinition getSqueezeR() {
     return SQUEEZE_R;
+  }
+
+  @Override
+  public DataDefinition getDI() {
+    return DI;
+  }
+
+  @Override
+  public Constructor getDLeft() {
+    return DLEFT;
+  }
+
+  @Override
+  public Constructor getDRight() {
+    return DRIGHT;
+  }
+
+  @Override
+  public FunctionDefinition getDCoe() {
+    return DCOE;
+  }
+
+  @Override
+  public DataDefinition getDPath() {
+    return DPATH;
+  }
+
+  @Override
+  public Constructor getDPathCon() {
+    return DPATH_CON;
+  }
+
+  @Override
+  public FunctionDefinition getDAt() {
+    return DAT;
   }
 
   @Override
@@ -503,6 +564,41 @@ public class Prelude implements ArendPrelude {
   @Override
   public ArendRef getSqueezeRRef() {
     return SQUEEZE_R == null ? null : SQUEEZE_R.getRef();
+  }
+
+  @Override
+  public ArendRef getDIRef() {
+    return DI == null ? null : DI.getRef();
+  }
+
+  @Override
+  public ArendRef getDLeftRef() {
+    return DLEFT == null ? null : DLEFT.getRef();
+  }
+
+  @Override
+  public ArendRef getDRightRef() {
+    return DRIGHT == null ? null : DRIGHT.getRef();
+  }
+
+  @Override
+  public ArendRef getDCoeRef() {
+    return DCOE == null ? null : DCOE.getRef();
+  }
+
+  @Override
+  public ArendRef getDPathRef() {
+    return DPATH == null ? null : DPATH.getRef();
+  }
+
+  @Override
+  public ArendRef getDPathConRef() {
+    return DPATH_CON == null ? null : DPATH_CON.getRef();
+  }
+
+  @Override
+  public ArendRef getDAtRef() {
+    return DAT == null ? null : DAT.getRef();
   }
 
   @Override

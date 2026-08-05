@@ -10,10 +10,12 @@ import org.jetbrains.annotations.NotNull;
 public class PathExpression extends Expression implements CorePathExpression {
   private final Expression myArgumentType;
   private final Expression myArgument;
+  private final boolean myDirected;
 
-  public PathExpression(Expression argumentType, Expression argument) {
+  public PathExpression(Expression argumentType, Expression argument, boolean directed) {
     myArgumentType = argumentType;
     myArgument = argument;
+    myDirected = directed;
   }
 
   @Override
@@ -24,6 +26,10 @@ public class PathExpression extends Expression implements CorePathExpression {
   @Override
   public @NotNull Expression getArgument() {
     return myArgument;
+  }
+
+  public boolean isDirected() {
+    return myDirected;
   }
 
   @Override

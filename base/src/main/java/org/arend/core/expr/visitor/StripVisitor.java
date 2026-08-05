@@ -376,12 +376,12 @@ public class StripVisitor implements ExpressionVisitor<Void, Expression> {
   @Override
   public Expression visitPath(PathExpression expr, Void params) {
     Expression arg = expr.getArgument().accept(this, null);
-    return new PathExpression(expr.getArgumentType().accept(this, null), arg);
+    return new PathExpression(expr.getArgumentType().accept(this, null), arg, expr.isDirected());
   }
 
   @Override
   public Expression visitAt(AtExpression expr, Void params) {
-    return AtExpression.make(expr.getPathArgument().accept(this, null), expr.getIntervalArgument().accept(this, null), true);
+    return AtExpression.make(expr.getPathArgument().accept(this, null), expr.getIntervalArgument().accept(this, null), true, expr.isDirected());
   }
 
   @Override

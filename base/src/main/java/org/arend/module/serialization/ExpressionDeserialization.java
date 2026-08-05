@@ -613,11 +613,11 @@ class ExpressionDeserialization {
   }
 
   private Expression readPath(ExpressionProtos.Expression.Path proto) throws DeserializationException {
-    return new PathExpression(proto.hasArgumentType() ? readExpr(proto.getArgumentType()) : null, readExpr(proto.getArgument()));
+    return new PathExpression(proto.hasArgumentType() ? readExpr(proto.getArgumentType()) : null, readExpr(proto.getArgument()), proto.getDirected());
   }
 
   private Expression readAt(ExpressionProtos.Expression.At proto) throws DeserializationException {
-    return AtExpression.make(readExpr(proto.getPathArgument()), readExpr(proto.getIntervalArgument()), false);
+    return AtExpression.make(readExpr(proto.getPathArgument()), readExpr(proto.getIntervalArgument()), false, proto.getDirected());
   }
 
   private String validName(String name) {

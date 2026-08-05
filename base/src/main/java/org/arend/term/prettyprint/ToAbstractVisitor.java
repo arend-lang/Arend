@@ -1064,12 +1064,12 @@ public class ToAbstractVisitor extends BaseExpressionVisitor<Void, Concrete.Expr
 
   @Override
   public Concrete.Expression visitPath(PathExpression expr, Void params) {
-    return Concrete.AppExpression.make(null, new Concrete.ReferenceExpression(null, Prelude.PATH_CON.getRef()), convertExpr(expr.getArgument()), true);
+    return Concrete.AppExpression.make(null, new Concrete.ReferenceExpression(null, (expr.isDirected() ? Prelude.DPATH_CON : Prelude.PATH_CON).getRef()), convertExpr(expr.getArgument()), true);
   }
 
   @Override
   public Concrete.Expression visitAt(AtExpression expr, Void params) {
-    return Concrete.AppExpression.make(null, Concrete.AppExpression.make(null, new Concrete.ReferenceExpression(null, Prelude.AT.getRef()), convertExpr(expr.getPathArgument()), true), convertExpr(expr.getIntervalArgument()), true);
+    return Concrete.AppExpression.make(null, Concrete.AppExpression.make(null, new Concrete.ReferenceExpression(null, (expr.isDirected() ? Prelude.DAT : Prelude.AT).getRef()), convertExpr(expr.getPathArgument()), true), convertExpr(expr.getIntervalArgument()), true);
   }
 
   private FunctionKind visitFunctionKind(CoreFunctionDefinition.Kind kind) {

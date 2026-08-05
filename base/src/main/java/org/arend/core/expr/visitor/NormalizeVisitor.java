@@ -1102,7 +1102,7 @@ public class NormalizeVisitor extends ExpressionTransformer<NormalizationMode>  
   @Override
   public Expression visitPath(PathExpression expr, NormalizationMode mode) {
     if (mode == NormalizationMode.WHNF) return expr;
-    return new PathExpression(expr.getArgumentType().accept(this, mode), expr.getArgument().accept(this, mode));
+    return new PathExpression(expr.getArgumentType().accept(this, mode), expr.getArgument().accept(this, mode), expr.isDirected());
   }
 
   @Override
@@ -1112,13 +1112,15 @@ public class NormalizeVisitor extends ExpressionTransformer<NormalizationMode>  
       return AppExpression.make(((PathExpression) pathArg).getArgument(), expr.getIntervalArgument(), true).accept(this, mode);
     }
     Expression intervalArg = expr.getIntervalArgument().normalize(NormalizationMode.WHNF);
-    if (intervalArg instanceof ConCallExpression && (((ConCallExpression) intervalArg).getDefinition() == Prelude.LEFT || ((ConCallExpression) intervalArg).getDefinition() == Prelude.RIGHT)) {
+    boolean directed = expr.isDirected();
+    if (intervalArg instanceof ConCallExpression conCall && (directed ? conCall.getDefinition() == Prelude.DLEFT || conCall.getDefinition() == Prelude.DRIGHT : conCall.getDefinition() == Prelude.LEFT || conCall.getDefinition() == Prelude.RIGHT)) {
       Expression pathType = pathArg.getType().normalize(NormalizationMode.WHNF);
-      if (pathType instanceof DataCallExpression && ((DataCallExpression) pathType).getDefinition() == Prelude.PATH) {
-        return (((ConCallExpression) intervalArg).getDefinition() == Prelude.LEFT ? ((DataCallExpression) pathType).getDefCallArguments().get(1) : ((DataCallExpression) pathType).getDefCallArguments().get(2)).accept(this, mode);
+      if (pathType instanceof DataCallExpression dataCall && dataCall.getDefinition() == (directed ? Prelude.DPATH : Prelude.PATH)) {
+        boolean isLeft = conCall.getDefinition() == (directed ? Prelude.DLEFT : Prelude.LEFT);
+        return (isLeft ? dataCall.getDefCallArguments().get(1) : dataCall.getDefCallArguments().get(2)).accept(this, mode);
       }
     }
-    return mode == NormalizationMode.WHNF ? AtExpression.make(pathArg, intervalArg, false) : AtExpression.make(pathArg.accept(this, mode), intervalArg.accept(this, mode), false);
+    return mode == NormalizationMode.WHNF ? AtExpression.make(pathArg, intervalArg, false, directed) : AtExpression.make(pathArg.accept(this, mode), intervalArg.accept(this, mode), false, directed);
   }
 
   @Override

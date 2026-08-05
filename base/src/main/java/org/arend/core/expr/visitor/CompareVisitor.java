@@ -17,6 +17,7 @@ import org.arend.core.sort.Level;
 import org.arend.core.sort.Sort;
 import org.arend.core.sort.SortExpression;
 import org.arend.core.subst.*;
+import org.arend.ext.core.context.BindingVariance;
 import org.arend.ext.core.level.LevelSubstitution;
 import org.arend.ext.core.definition.CoreFunctionDefinition;
 import org.arend.ext.core.ops.CMP;
@@ -560,11 +561,14 @@ public class CompareVisitor implements ExpressionVisitor2<Expression, Expression
   }
 
   private Boolean comparePathEta(PathExpression pathExpr1, Expression expr2, Expression type, boolean correctOrder) {
-    SingleDependentLink param = new TypedSingleDependentLink(true, "i", ExpressionFactory.Interval());
+    boolean directed = pathExpr1.isDirected();
+    SingleDependentLink param = directed
+      ? new TypedSingleDependentLink(true, "i", ExpressionFactory.DI(), false, BindingVariance.COVARIANT)
+      : new TypedSingleDependentLink(true, "i", ExpressionFactory.Interval());
     ReferenceExpression paramRef = new ReferenceExpression(param);
     Expression argumentType = pathExpr1.getArgumentType();
-    LamExpression lamExpr = new LamExpression(param, AtExpression.make(expr2, paramRef, false));
-    Expression argType = new PiExpression(param, AppExpression.make(argumentType, paramRef, true));
+    LamExpression lamExpr = new LamExpression(param, AtExpression.make(expr2, paramRef, false, directed));
+    Expression argType = new PiExpression(param, directed ? argumentType : AppExpression.make(argumentType, paramRef, true));
     if (!(correctOrder ? compare(pathExpr1.getArgument(), lamExpr, argType, true) : compare(lamExpr, pathExpr1.getArgument(), argType, true))) {
       initResult(pathExpr1, expr2, correctOrder);
       return false;
@@ -619,8 +623,8 @@ public class CompareVisitor implements ExpressionVisitor2<Expression, Expression
       if (myResult == null) {
         initResult(expr1, expr2);
       } else {
-        myResult.wholeExpr1 = AtExpression.make(myResult.wholeExpr1, expr1.getIntervalArgument(), false);
-        myResult.wholeExpr2 = AtExpression.make(myResult.wholeExpr2, atExpr2.getIntervalArgument(), false);
+        myResult.wholeExpr1 = AtExpression.make(myResult.wholeExpr1, expr1.getIntervalArgument(), false, expr1.isDirected());
+        myResult.wholeExpr2 = AtExpression.make(myResult.wholeExpr2, atExpr2.getIntervalArgument(), false, atExpr2.isDirected());
       }
       return false;
     }
@@ -628,8 +632,8 @@ public class CompareVisitor implements ExpressionVisitor2<Expression, Expression
       if (myResult == null) {
         initResult(expr1, expr2);
       } else {
-        myResult.wholeExpr1 = AtExpression.make(expr1.getPathArgument(), myResult.wholeExpr1, false);
-        myResult.wholeExpr2 = AtExpression.make(atExpr2.getPathArgument(), myResult.wholeExpr2, false);
+        myResult.wholeExpr1 = AtExpression.make(expr1.getPathArgument(), myResult.wholeExpr1, false, expr1.isDirected());
+        myResult.wholeExpr2 = AtExpression.make(atExpr2.getPathArgument(), myResult.wholeExpr2, false, atExpr2.isDirected());
       }
       return false;
     }
@@ -2277,8 +2281,8 @@ public class CompareVisitor implements ExpressionVisitor2<Expression, Expression
       if (myResult == null) {
         initResult(expr, expr2);
       } else {
-        myResult.wholeExpr1 = new PathExpression(expr.getArgumentType(), myResult.wholeExpr1);
-        myResult.wholeExpr2 = new PathExpression(pathExpr2.getArgumentType(), myResult.wholeExpr2);
+        myResult.wholeExpr1 = new PathExpression(expr.getArgumentType(), myResult.wholeExpr1, expr.isDirected());
+        myResult.wholeExpr2 = new PathExpression(pathExpr2.getArgumentType(), myResult.wholeExpr2, pathExpr2.isDirected());
       }
       return false;
     }

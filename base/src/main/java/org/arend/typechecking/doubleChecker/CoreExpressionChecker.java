@@ -947,19 +947,27 @@ public class CoreExpressionChecker implements ExpressionVisitor<Expression, Expr
 
   @Override
   public Expression visitPath(PathExpression expr, Expression expectedType) {
-    expr.getArgumentType().accept(this, new PiExpression(UnusedIntervalDependentLink.INSTANCE, UniverseExpression.OMEGA));
-    TypedSingleDependentLink param = new TypedSingleDependentLink(true, "i", ExpressionFactory.Interval());
-    expr.getArgument().accept(this, new PiExpression(param, AppExpression.make(expr.getArgumentType(), new ReferenceExpression(param), true)));
-    return check(expectedType, expr.getType(), expr);
+    if (expr.isDirected()) {
+      expr.getArgumentType().accept(this, UniverseExpression.OMEGA);
+      TypedSingleDependentLink param = new TypedSingleDependentLink(true, "i", ExpressionFactory.DI(), false, BindingVariance.COVARIANT);
+      expr.getArgument().accept(this, new PiExpression(param, expr.getArgumentType()));
+      return check(expectedType, expr.getType(), expr);
+    } else {
+      expr.getArgumentType().accept(this, new PiExpression(UnusedIntervalDependentLink.INSTANCE, UniverseExpression.OMEGA));
+      TypedSingleDependentLink param = new TypedSingleDependentLink(true, "i", ExpressionFactory.Interval());
+      expr.getArgument().accept(this, new PiExpression(param, AppExpression.make(expr.getArgumentType(), new ReferenceExpression(param), true)));
+      return check(expectedType, expr.getType(), expr);
+    }
   }
 
   @Override
   public Expression visitAt(AtExpression expr, Expression expectedType) {
+    boolean directed = expr.isDirected();
     Expression type = expr.getPathArgument().accept(this, null).normalize(NormalizationMode.WHNF);
-    if (!(type instanceof DataCallExpression && ((DataCallExpression) type).getDefinition() == Prelude.PATH)) {
-      throw new CoreException(CoreErrorWrapper.make(new TypeMismatchError(DocFactory.refDoc(Prelude.PATH.getRef()), type, mySourceNode), expr.getPathArgument()));
+    if (!(type instanceof DataCallExpression dataCall && dataCall.getDefinition() == (directed ? Prelude.DPATH : Prelude.PATH))) {
+      throw new CoreException(CoreErrorWrapper.make(new TypeMismatchError(DocFactory.refDoc((directed ? Prelude.DPATH : Prelude.PATH).getRef()), type, mySourceNode), expr.getPathArgument()));
     }
-    expr.getIntervalArgument().accept(this, Interval());
-    return check(expectedType, AppExpression.make(((DataCallExpression) type).getDefCallArguments().getFirst(), expr.getIntervalArgument(), true), expr);
+    expr.getIntervalArgument().accept(this, directed ? ExpressionFactory.DI() : Interval());
+    return check(expectedType, directed ? dataCall.getDefCallArguments().getFirst() : AppExpression.make(dataCall.getDefCallArguments().getFirst(), expr.getIntervalArgument(), true), expr);
   }
 }

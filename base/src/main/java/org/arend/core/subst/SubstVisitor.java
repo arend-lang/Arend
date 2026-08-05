@@ -341,12 +341,12 @@ public class SubstVisitor extends ExpressionTransformer<Void> {
 
   @Override
   public Expression visitPath(PathExpression expr, Void params) {
-    return new PathExpression(expr.getArgumentType().accept(this, null), expr.getArgument().accept(this, null));
+    return new PathExpression(expr.getArgumentType().accept(this, null), expr.getArgument().accept(this, null), expr.isDirected());
   }
 
   @Override
   public Expression visitAt(AtExpression expr, Void params) {
     Expression intervalArg = expr.getIntervalArgument().accept(this, null);
-    return AtExpression.make(expr.getPathArgument().accept(this, null), intervalArg, !expr.getIntervalArgument().getClass().equals(intervalArg.getClass()));
+    return AtExpression.make(expr.getPathArgument().accept(this, null), intervalArg, !expr.getIntervalArgument().getClass().equals(intervalArg.getClass()), expr.isDirected());
   }
 }

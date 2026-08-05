@@ -38,6 +38,21 @@
   | left => A
   | right => B
 
+\data DI
+  | dleft
+  | dright
+
+\func dcoe (A : DI ->⁺ \Cat) (a : A dleft) (i : DI) : A i \elim i
+  | dleft => a
+
+\data \infix 1 ~> {C : \Cat} (a : C) (b :⁺ C) : \Type
+  | dpath (DI ->⁺ C)
+
+\func \infixl 9 d@ {C : \Cat} {a b : C} (p : a ~> b) (i :⁺ DI) : C \elim p, i
+  | dpath f, i => f i
+  | _, dleft => a
+  | _, dright => b
+
 \data Nat
   | zero
   | suc Nat
