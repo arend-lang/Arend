@@ -42,7 +42,7 @@
   | dleft
   | dright
 
-\func dcoe (A : DI ->⁺ \Cat) (a : A dleft) (i : DI) : A i \elim i
+\func dcoe (A : DI ->⁺ \Cat) (a : A dleft) (i :⁺ DI) : A i \elim i
   | dleft => a
 
 \data \infix 1 ~> {C : \Cat} (a : C) (b :⁺ C) : \Type
