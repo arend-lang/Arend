@@ -17,6 +17,7 @@ import org.arend.core.expr.visitor.*;
 import org.arend.core.pattern.*;
 import org.arend.core.subst.ExprSubstitution;
 import org.arend.core.subst.Levels;
+import org.arend.ext.core.context.BindingVariance;
 import org.arend.ext.core.definition.CoreFunctionDefinition;
 import org.arend.ext.core.level.ConstLevel;
 import org.arend.ext.core.level.LevelSubstitution;
@@ -243,8 +244,8 @@ public class PatternTypechecking {
             }
 
             for (int j = intervalBindings.size() - 1, k = 0; j > i; j--, k++) {
-              leftArg = new PathExpression(new LamExpression(lamBindings.get(j), exprTypes.get(k).subst(lamBindings.get(i), Left())), new LamExpression(lamBindings.get(j), leftArg));
-              rightArg = new PathExpression(new LamExpression(lamBindings.get(j), exprTypes.get(k).subst(lamBindings.get(i), Right())), new LamExpression(lamBindings.get(j), rightArg));
+              leftArg = new PathExpression(new LamExpression(lamBindings.get(j), exprTypes.get(k).subst(lamBindings.get(i), Left())), new LamExpression(lamBindings.get(j), leftArg), false);
+              rightArg = new PathExpression(new LamExpression(lamBindings.get(j), exprTypes.get(k).subst(lamBindings.get(i), Right())), new LamExpression(lamBindings.get(j), rightArg), false);
             }
 
             intervalSubst.add(intervalBinding, new ReferenceExpression(lamBindings.get(i)));
@@ -261,7 +262,7 @@ public class PatternTypechecking {
           if (!(errorExpr != null && errorExpr.isGoal())) {
             Expression resultExpr = tcResult.expression;
             for (Binding binding : intervalBindings) {
-              resultExpr = AtExpression.make(resultExpr, new ReferenceExpression(binding), false);
+              resultExpr = AtExpression.make(resultExpr, new ReferenceExpression(binding), false, false);
             }
             tcResult = new TypecheckingResult(resultExpr, expectedType);
           }
@@ -877,6 +878,10 @@ public class PatternTypechecking {
       }
       if (!myMode.allowInterval() && dataCall != null && dataCall.getDefinition() == Prelude.INTERVAL) {
         myErrorReporter.report(new TypecheckingError("Pattern matching on the interval is not allowed here", pattern));
+        return null;
+      }
+      if (dataCall != null && dataCall.getDefinition() == Prelude.DI && parameters.getVariance() != BindingVariance.INVARIANT) {
+        myErrorReporter.report(new TypecheckingError("Pattern matching on DI is allowed only for invariant parameters", pattern));
         return null;
       }
 

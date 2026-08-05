@@ -12,6 +12,12 @@ public interface ArendPrelude {
   CoreConstructor getRight();
   CoreFunctionDefinition getSqueeze();
   CoreFunctionDefinition getSqueezeR();
+  CoreDataDefinition getDI();
+  CoreConstructor getDLeft();
+  CoreConstructor getDRight();
+  CoreDataDefinition getDPath();
+  CoreConstructor getDPathCon();
+  CoreFunctionDefinition getDAt();
   CoreDataDefinition getNat();
   CoreConstructor getZero();
   CoreConstructor getSuc();
@@ -49,6 +55,12 @@ public interface ArendPrelude {
   ArendRef getRightRef();
   ArendRef getSqueezeRef();
   ArendRef getSqueezeRRef();
+  ArendRef getDIRef();
+  ArendRef getDLeftRef();
+  ArendRef getDRightRef();
+  ArendRef getDPathRef();
+  ArendRef getDPathConRef();
+  ArendRef getDAtRef();
   ArendRef getNatRef();
   ArendRef getZeroRef();
   ArendRef getSucRef();

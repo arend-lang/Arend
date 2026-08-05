@@ -56,10 +56,12 @@ public class DefCallResult implements TResult {
 
   private Expression getCoreDefCall() {
     return myDefinition == Prelude.PATH_CON
-      ? new PathExpression(myArguments.get(0), myArguments.get(1))
-      : myDefinition == Prelude.AT
-        ? AtExpression.make(myArguments.get(3), myArguments.get(4), true)
-        : myDefinition.getDefCall(myLevels, myArguments);
+      ? new PathExpression(myArguments.get(0), myArguments.get(1), false)
+      : myDefinition == Prelude.DPATH_CON
+        ? new PathExpression(myArguments.get(0), myArguments.get(1), true)
+        : myDefinition == Prelude.AT || myDefinition == Prelude.DAT
+          ? AtExpression.make(myArguments.get(3), myArguments.get(4), true, myDefinition == Prelude.DAT)
+          : myDefinition.getDefCall(myLevels, myArguments);
   }
 
   @Override
@@ -149,20 +151,20 @@ public class DefCallResult implements TResult {
     return expressions.size() < size ? this : new TypecheckingResult(getCoreDefCall(), getType(equations));
   }
 
-  public TResult applyPathArgument(Expression argument, CheckTypeVisitor visitor, Concrete.SourceNode sourceNode) {
-    assert myDefinition == Prelude.PATH_CON && !myArguments.isEmpty();
-    Expression leftExpr = AppExpression.make(argument, ExpressionFactory.Left(), true);
-    Expression rightExpr = AppExpression.make(argument, ExpressionFactory.Right(), true);
+  public TResult applyPathArgument(boolean isDirected, Expression argument, CheckTypeVisitor visitor, Concrete.SourceNode sourceNode) {
+    assert myDefinition == (isDirected ? Prelude.DPATH_CON : Prelude.PATH_CON) && !myArguments.isEmpty();
+    Expression leftExpr = AppExpression.make(argument, ExpressionFactory.Left(isDirected), true);
+    Expression rightExpr = AppExpression.make(argument, ExpressionFactory.Right(isDirected), true);
     ExprSubstitution subst = new ExprSubstitution();
     if (myArguments.size() >= 2) {
-      if (!CompareVisitor.compare(visitor.getEquations(), CMP.EQ, leftExpr, myArguments.get(1), AppExpression.make(myArguments.get(0), ExpressionFactory.Left(), true), sourceNode)) {
+      if (!CompareVisitor.compare(visitor.getEquations(), CMP.EQ, leftExpr, myArguments.get(1), isDirected ? myArguments.get(0) : AppExpression.make(myArguments.get(0), ExpressionFactory.Left(), true), sourceNode)) {
         visitor.getErrorReporter().report(new PathEndpointMismatchError(visitor.getExpressionPrettifier(), true, myArguments.get(1), leftExpr, sourceNode));
       }
     } else {
       subst.add(myParameters.getFirst(), leftExpr);
     }
     if (myArguments.size() >= 3) {
-      if (!CompareVisitor.compare(visitor.getEquations(), CMP.EQ, rightExpr, myArguments.get(2), AppExpression.make(myArguments.get(0), ExpressionFactory.Right(), true), sourceNode)) {
+      if (!CompareVisitor.compare(visitor.getEquations(), CMP.EQ, rightExpr, myArguments.get(2), isDirected ? myArguments.get(0) : AppExpression.make(myArguments.get(0), ExpressionFactory.Right(), true), sourceNode)) {
         visitor.getErrorReporter().report(new PathEndpointMismatchError(visitor.getExpressionPrettifier(), false, myArguments.get(2), rightExpr, sourceNode));
       }
     } else {

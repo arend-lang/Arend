@@ -3,6 +3,8 @@ package org.arend.cat;
 import org.arend.typechecking.TypeCheckingTestCase;
 import org.junit.Test;
 
+import static org.arend.Matchers.typecheckingError;
+
 public class CatPiTest extends TypeCheckingTestCase {
   @Test
   public void piCatTest() {
@@ -63,5 +65,16 @@ public class CatPiTest extends TypeCheckingTestCase {
       \\func def (X :+ \\Cat) (x : X) => 0
       \\func test (X :+ \\Cat) => def X
       """, 1);
+  }
+
+  @Test
+  public void covariantParamInTypeTest() {
+    typeCheckDef("\\func test {C : \\Cat} {a : C} (x :+ C) (p :+ a ~> x) => 0");
+  }
+
+  @Test
+  public void covariantParamInTypeError() {
+    typeCheckDef("\\func test {C : \\Cat} {a : C} (x :+ C) (p : a ~> x) => 0", 1);
+    assertThatErrorsAre(typecheckingError());
   }
 }

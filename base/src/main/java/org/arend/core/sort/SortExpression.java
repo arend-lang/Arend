@@ -171,7 +171,7 @@ public sealed interface SortExpression extends CoreSortExpression permits SortEx
         arg = piExpr.getCodomain().normalize(NormalizationMode.WHNF);
       }
       SortExpression result = arg.toSortExpression();
-      return result == null ? new Const(new Sort(Level.INFINITY, hLevel)) : result;
+      return result == null ? new Const(new Sort(Level.INFINITY, hLevel)) : !hLevel.isCat() && result instanceof Const(Sort sort) && sort.getHLevel().isCat() ? new Const(new Sort(sort.getPLevel(), new ConstLevel(sort.getHLevel().value(), false))) : result;
     }
 
     @Override

@@ -29,7 +29,7 @@ public class PathsTest extends TypeCheckingTestCase {
     FunctionDefinition function = (FunctionDefinition) typeCheckDef("\\func test => \\lam {A : \\Type0} (a : A) => path (\\lam _ => a)");
     SingleDependentLink A = singleParam(false, Collections.singletonList("A"), new UniverseExpression(Sort.TypeOfLevel(0)));
     SingleDependentLink a = singleParam("a", Ref(A));
-    Expression pathCall = new PathExpression(Lam(singleParam(null, Interval()), Ref(A)), Lam(UnusedIntervalDependentLink.INSTANCE, Ref(a)));
+    Expression pathCall = new PathExpression(Lam(singleParam(null, Interval()), Ref(A)), Lam(UnusedIntervalDependentLink.INSTANCE, Ref(a)), false);
     assertEquals(Lam(A, Lam(a, pathCall)).normalize(NormalizationMode.NF), function.getBody());
     assertEquals(Pi(A, Pi(a, FunCall(Prelude.PATH_INFIX, Levels.EMPTY, Ref(A), Ref(a), Ref(a)))).normalize(NormalizationMode.NF), function.getResultType().normalize(NormalizationMode.NF));
   }

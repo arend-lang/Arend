@@ -158,10 +158,12 @@ message Expression {
     message Path {
         Expression argumentType = 3;
         Expression argument = 4;
+        bool directed = 5;
     }
     message At {
         Expression pathArgument = 3;
         Expression intervalArgument = 4;
+        bool directed = 5;
     }
     message New {
         ClassCall class_call = 1;

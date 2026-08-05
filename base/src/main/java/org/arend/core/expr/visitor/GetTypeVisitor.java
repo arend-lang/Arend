@@ -293,19 +293,20 @@ public class GetTypeVisitor implements ExpressionVisitor<Void, Expression> {
 
   @Override
   public Expression visitPath(PathExpression expr, Void params) {
-    Expression left = AppExpression.make(expr.getArgument(), ExpressionFactory.Left(), true);
-    Expression right = AppExpression.make(expr.getArgument(), ExpressionFactory.Right(), true);
-    return DataCallExpression.make(Prelude.PATH, Levels.EMPTY, Arrays.asList(expr.getArgumentType(), left, right));
+    boolean isDirected = expr.isDirected();
+    Expression left = AppExpression.make(expr.getArgument(), ExpressionFactory.Left(isDirected), true);
+    Expression right = AppExpression.make(expr.getArgument(), ExpressionFactory.Right(isDirected), true);
+    return ExpressionFactory.Path(isDirected, expr.getArgumentType(), left, right);
   }
 
   @Override
   public Expression visitAt(AtExpression expr, Void params) {
     Expression type = expr.getPathArgument().accept(this, null);
     type = myNormalizing ? type.normalize(NormalizationMode.WHNF) : type.getUnderlyingExpression();
-    if (!(type instanceof DataCallExpression && ((DataCallExpression) type).getDefinition() == Prelude.PATH)) {
+    if (!(type instanceof DataCallExpression dataCall && dataCall.getDefinition() == (expr.isDirected() ? Prelude.DPATH : Prelude.PATH))) {
       return type instanceof ErrorExpression ? type : new ErrorExpression();
     }
-    return AppExpression.make(((DataCallExpression) type).getDefCallArguments().getFirst(), expr.getIntervalArgument(), true);
+    return expr.isDirected() ? dataCall.getDefCallArguments().getFirst() : AppExpression.make(dataCall.getDefCallArguments().getFirst(), expr.getIntervalArgument(), true);
   }
 
   @Override

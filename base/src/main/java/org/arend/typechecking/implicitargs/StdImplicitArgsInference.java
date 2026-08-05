@@ -17,7 +17,6 @@ import org.arend.core.sort.SortExpression;
 import org.arend.core.subst.ExprSubstitution;
 import org.arend.core.subst.Levels;
 import org.arend.ext.core.context.BindingVariance;
-import org.arend.ext.core.level.ConstLevel;
 import org.arend.ext.core.level.LevelSubstitution;
 import org.arend.ext.concrete.expr.ConcreteArgument;
 import org.arend.ext.core.ops.CMP;
@@ -186,7 +185,21 @@ public class StdImplicitArgsInference implements ImplicitArgsInference {
         } else {
           argResult = myVisitor.checkArgument(arg, new PiExpression(lamParam, AppExpression.make(defCallResult.getArguments().getFirst(), new ReferenceExpression(lamParam), true)), result, null);
         }
-        return argResult == null ? null : ((DefCallResult) result).applyPathArgument(argResult.expression, myVisitor, arg);
+        return argResult == null ? null : ((DefCallResult) result).applyPathArgument(false, argResult.expression, myVisitor, arg);
+      }
+      if (result instanceof DefCallResult defCallResult && defCallResult.getDefinition() == Prelude.DPATH_CON) {
+        SingleDependentLink lamParam = new TypedSingleDependentLink(true, "i", DI(), false, BindingVariance.COVARIANT);
+        TypecheckingResult argResult;
+        if (defCallResult.getArguments().isEmpty()) {
+          InferenceVariable infVar = new FunctionInferenceVariable(Prelude.DPATH_CON, Prelude.DPATH_CON.getDataTypeParameters(), 1, UniverseExpression.OMEGA, fun, myVisitor.getAllBindings());
+          infVar.setType(new UniverseExpression(new SortExpression.InfVar(infVar)));
+          Expression binding = InferenceReferenceExpression.make(infVar, myVisitor.getEquations());
+          result = result.applyExpression(binding, true, myVisitor, fun);
+          argResult = myVisitor.checkArgument(arg, new PiExpression(lamParam, binding), result, null);
+        } else {
+          argResult = myVisitor.checkArgument(arg, new PiExpression(lamParam, defCallResult.getArguments().getFirst()), result, null);
+        }
+        return argResult == null ? null : ((DefCallResult) result).applyPathArgument(true, argResult.expression, myVisitor, arg);
       }
 
       result = fixImplicitArgs(result, result.getImplicitParameters(), fun, false, null);
@@ -205,9 +218,10 @@ public class StdImplicitArgsInference implements ImplicitArgsInference {
       if (!param.hasNext()) {
         TypecheckingResult tcResult = ((TypecheckingResult) result).normalizeType();
         result = tcResult;
-        if (tcResult.type instanceof DataCallExpression && ((DataCallExpression) tcResult.type).getDefinition() == Prelude.PATH) {
-          List<Expression> args = ((DataCallExpression) tcResult.type).getDefCallArguments();
-          result = DefCallResult.makeTResult(new Concrete.ReferenceExpression(fun.getData(), Prelude.AT.getRef()), Prelude.AT, ((DataCallExpression) tcResult.type).getLevels())
+        if (tcResult.type instanceof DataCallExpression dataCall && (dataCall.getDefinition() == Prelude.PATH || dataCall.getDefinition() == Prelude.DPATH)) {
+          List<Expression> args = dataCall.getDefCallArguments();
+          FunctionDefinition at = dataCall.getDefinition() == Prelude.DPATH ? Prelude.DAT : Prelude.AT;
+          result = DefCallResult.makeTResult(new Concrete.ReferenceExpression(fun.getData(), at.getRef()), at, dataCall.getLevels())
             .applyExpression(args.get(0), false, myVisitor, fun)
             .applyExpression(args.get(1), false, myVisitor, fun)
             .applyExpression(args.get(2), false, myVisitor, fun)

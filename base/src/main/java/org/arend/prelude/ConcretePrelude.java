@@ -40,6 +40,36 @@ public class ConcretePrelude implements ArendPrelude {
   }
 
   @Override
+  public CoreDataDefinition getDI() {
+    return Prelude.DI;
+  }
+
+  @Override
+  public CoreConstructor getDLeft() {
+    return Prelude.DLEFT;
+  }
+
+  @Override
+  public CoreConstructor getDRight() {
+    return Prelude.DRIGHT;
+  }
+
+  @Override
+  public CoreDataDefinition getDPath() {
+    return Prelude.DPATH;
+  }
+
+  @Override
+  public CoreConstructor getDPathCon() {
+    return Prelude.DPATH_CON;
+  }
+
+  @Override
+  public CoreFunctionDefinition getDAt() {
+    return Prelude.DAT;
+  }
+
+  @Override
   public CoreDataDefinition getNat() {
     return Prelude.NAT;
   }
@@ -222,6 +252,42 @@ public class ConcretePrelude implements ArendPrelude {
   public ArendRef getSqueezeRRef() {
     if (Prelude.SQUEEZE_R != null) return Prelude.SQUEEZE_R.getRef();
     return Scope.resolveName(myPreludeScope, Arrays.asList("I", "squeezeR"));
+  }
+
+  @Override
+  public ArendRef getDIRef() {
+    if (Prelude.DI != null) return Prelude.DI.getRef();
+    return myPreludeScope.resolveName("DI");
+  }
+
+  @Override
+  public ArendRef getDLeftRef() {
+    if (Prelude.DLEFT != null) return Prelude.DLEFT.getRef();
+    return myPreludeScope.resolveName("dleft");
+  }
+
+  @Override
+  public ArendRef getDRightRef() {
+    if (Prelude.DRIGHT != null) return Prelude.DRIGHT.getRef();
+    return myPreludeScope.resolveName("dright");
+  }
+
+  @Override
+  public ArendRef getDPathRef() {
+    if (Prelude.DPATH != null) return Prelude.DPATH.getRef();
+    return myPreludeScope.resolveName("~>");
+  }
+
+  @Override
+  public ArendRef getDPathConRef() {
+    if (Prelude.DPATH_CON != null) return Prelude.DPATH_CON.getRef();
+    return myPreludeScope.resolveName("dpath");
+  }
+
+  @Override
+  public ArendRef getDAtRef() {
+    if (Prelude.DAT != null) return Prelude.DAT.getRef();
+    return myPreludeScope.resolveName("d@");
   }
 
   @Override

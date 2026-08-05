@@ -540,7 +540,7 @@ public class ElimBindingVisitor extends ExpressionTransformer<Void> {
     Expression argumentType = acceptSelf(expr.getArgumentType(), true);
     if (argumentType == null) return null;
     Expression argument = acceptSelf(expr.getArgument(), true);
-    return argument == null ? null : new PathExpression(argumentType, argument);
+    return argument == null ? null : new PathExpression(argumentType, argument, expr.isDirected());
   }
 
   @Override
@@ -548,6 +548,6 @@ public class ElimBindingVisitor extends ExpressionTransformer<Void> {
     Expression pathArg = acceptSelf(expr.getPathArgument(), true);
     if (pathArg == null) return null;
     Expression intervalArg = acceptSelf(expr.getIntervalArgument(), true);
-    return intervalArg == null ? null : AtExpression.make(pathArg, intervalArg, false);
+    return intervalArg == null ? null : AtExpression.make(pathArg, intervalArg, false, expr.isDirected());
   }
 }

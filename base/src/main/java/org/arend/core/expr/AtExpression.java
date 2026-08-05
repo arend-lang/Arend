@@ -13,26 +13,33 @@ import org.jetbrains.annotations.NotNull;
 public class AtExpression extends Expression implements CoreAtExpression {
   private final Expression myPathArgument;
   private final Expression myIntervalArgument;
+  private final boolean myDirected;
 
-  private AtExpression(Expression pathArgument, Expression intervalArgument) {
+  private AtExpression(Expression pathArgument, Expression intervalArgument, boolean directed) {
     myPathArgument = pathArgument;
     myIntervalArgument = intervalArgument;
+    myDirected = directed;
   }
 
-  public static Expression make(Expression pathArgument, Expression intervalArgument, boolean checkInterval) {
+  public static Expression make(Expression pathArgument, Expression intervalArgument, boolean checkInterval, boolean directed) {
     if (pathArgument instanceof PathExpression) {
       return AppExpression.make(((PathExpression) pathArgument).getArgument(), intervalArgument, true);
     }
     if (checkInterval && intervalArgument instanceof ConCallExpression) {
       Constructor constructor = ((ConCallExpression) intervalArgument).getDefinition();
-      if (constructor == Prelude.LEFT || constructor == Prelude.RIGHT) {
+      if (!directed && (constructor == Prelude.LEFT || constructor == Prelude.RIGHT)) {
         Expression type = pathArgument.getType().normalize(NormalizationMode.WHNF);
-        if (type instanceof DataCallExpression && ((DataCallExpression) type).getDefinition() == Prelude.PATH) {
-          return constructor == Prelude.LEFT ? ((DataCallExpression) type).getDefCallArguments().get(1) : ((DataCallExpression) type).getDefCallArguments().get(2);
+        if (type instanceof DataCallExpression dataCall && dataCall.getDefinition() == Prelude.PATH) {
+          return constructor == Prelude.LEFT ? dataCall.getDefCallArguments().get(1) : dataCall.getDefCallArguments().get(2);
+        }
+      } else if (directed && (constructor == Prelude.DLEFT || constructor == Prelude.DRIGHT)) {
+        Expression type = pathArgument.getType().normalize(NormalizationMode.WHNF);
+        if (type instanceof DataCallExpression dataCall && dataCall.getDefinition() == Prelude.DPATH) {
+          return constructor == Prelude.DLEFT ? dataCall.getDefCallArguments().get(1) : dataCall.getDefCallArguments().get(2);
         }
       }
     }
-    return new AtExpression(pathArgument, intervalArgument);
+    return new AtExpression(pathArgument, intervalArgument, directed);
   }
 
   @Override
@@ -43,6 +50,10 @@ public class AtExpression extends Expression implements CoreAtExpression {
   @Override
   public @NotNull Expression getIntervalArgument() {
     return myIntervalArgument;
+  }
+
+  public boolean isDirected() {
+    return myDirected;
   }
 
   @Override
@@ -63,7 +74,7 @@ public class AtExpression extends Expression implements CoreAtExpression {
   @Override
   public Decision isWHNF() {
     ConCallExpression conCall = myIntervalArgument.cast(ConCallExpression.class);
-    if (conCall != null && (conCall.getDefinition() == Prelude.LEFT || conCall.getDefinition() == Prelude.RIGHT) || myPathArgument.isInstance(PathExpression.class)) {
+    if (conCall != null && (myDirected ? conCall.getDefinition() == Prelude.DLEFT || conCall.getDefinition() == Prelude.DRIGHT : conCall.getDefinition() == Prelude.LEFT || conCall.getDefinition() == Prelude.RIGHT) || myPathArgument.isInstance(PathExpression.class)) {
       return Decision.NO;
     }
     Decision decision = myIntervalArgument.isWHNF();
@@ -80,7 +91,7 @@ public class AtExpression extends Expression implements CoreAtExpression {
   @Override
   public Expression getStuckExpression() {
     ConCallExpression conCall = myIntervalArgument.cast(ConCallExpression.class);
-    if (conCall != null && (conCall.getDefinition() == Prelude.LEFT || conCall.getDefinition() == Prelude.RIGHT) || myPathArgument.isInstance(PathExpression.class)) {
+    if (conCall != null && (myDirected ? conCall.getDefinition() == Prelude.DLEFT || conCall.getDefinition() == Prelude.DRIGHT : conCall.getDefinition() == Prelude.LEFT || conCall.getDefinition() == Prelude.RIGHT) || myPathArgument.isInstance(PathExpression.class)) {
       return null;
     }
 

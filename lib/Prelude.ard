@@ -15,7 +15,7 @@
       | i, right => right
   }
 
-\data Path (A : I -> \Cat) (a : A left) (a' : A right)
+\data Path (A : I -> \Cat) (a : A left) (a' : A right) : \Type
   | path (\Pi (i : I) -> A i)
 
 \func \infix 1 = {A : \Cat} (a a' : A) => Path (\lam _ => A) a a'
@@ -27,16 +27,28 @@
   | _, left => a
   | _, right => a'
 
-\func coe (A : I -> \Cat) (a :⁺ A left) (i : I) : A i \elim i
+\func coe (A :⁺ I -> \Cat) (a :⁺ A left) (i : I) : A i \elim i
   | left => a
 
-\func coe2 (A : I -> \Cat) (i : I) (a :⁺ A i) (j : I) : A j \elim i, j
+\func coe2 (A :⁺ I -> \Cat) (i : I) (a :⁺ A i) (j : I) : A j \elim i, j
   | left, j => coe A a j
   | i, right => coe (\lam k => A (I.squeezeR i k)) a right
 
 \func iso {A B : \Type} (f : A -> B) (g : B -> A) (p : \Pi (x : A) -> g (f x) = x) (q : \Pi (y : B) -> f (g y) = y) (i : I) : \Type \elim i
   | left => A
   | right => B
+
+\data DI
+  | dleft
+  | dright
+
+\data \infix 1 ~> {C :⁺ \Cat} (a b :⁺ C) : \Type
+  | dpath (f :⁺ DI ->⁺ C)
+
+\func \infixl 9 d@ {C :⁺ \Cat} {a b :⁺ C} (p :⁺ a ~> b) (i :⁺ DI) : C \elim p, i
+  | dpath f, i => f i
+  | _, dleft => a
+  | _, dright => b
 
 \data Nat
   | zero

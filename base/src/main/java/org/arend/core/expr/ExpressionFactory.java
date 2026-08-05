@@ -7,6 +7,7 @@ import org.arend.ext.core.context.BindingVariance;
 import org.arend.prelude.Prelude;
 import org.arend.util.SingletonList;
 
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
@@ -25,6 +26,22 @@ public class ExpressionFactory {
 
   public static ConCallExpression Right() {
     return (ConCallExpression) ConCallExpression.make(Prelude.RIGHT, Levels.EMPTY, Collections.emptyList(), Collections.emptyList());
+  }
+
+  public static DataCallExpression DI() {
+    return DataCallExpression.make(Prelude.DI, Levels.EMPTY, Collections.emptyList());
+  }
+
+  public static ConCallExpression Left(boolean isDirected) {
+    return (ConCallExpression) ConCallExpression.make(isDirected ? Prelude.DLEFT : Prelude.LEFT, Levels.EMPTY, Collections.emptyList(), Collections.emptyList());
+  }
+
+  public static ConCallExpression Right(boolean isDirected) {
+    return (ConCallExpression) ConCallExpression.make(isDirected ? Prelude.DRIGHT : Prelude.RIGHT, Levels.EMPTY, Collections.emptyList(), Collections.emptyList());
+  }
+
+  public static DataCallExpression Path(boolean isDirected, Expression type, Expression left, Expression right) {
+    return DataCallExpression.make(isDirected ? Prelude.DPATH : Prelude.PATH, Levels.EMPTY, Arrays.asList(type, left, right));
   }
 
   public static TypedDependentLink parameter(String var, Expression type) {
