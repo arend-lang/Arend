@@ -3,6 +3,8 @@ package org.arend.cat;
 import org.arend.typechecking.TypeCheckingTestCase;
 import org.junit.Test;
 
+import static org.arend.Matchers.typecheckingError;
+
 public class CatPiTest extends TypeCheckingTestCase {
   @Test
   public void piCatTest() {
@@ -17,6 +19,11 @@ public class CatPiTest extends TypeCheckingTestCase {
   @Test
   public void piCovariantTest() {
     typeCheckDef("\\func test (X :+ \\Prop) => X -> Nat", 1);
+  }
+
+  @Test
+  public void piContravariantTest() {
+    typeCheckDef("\\func test (X :- \\Prop) => X -> Nat", 1);
   }
 
   @Test

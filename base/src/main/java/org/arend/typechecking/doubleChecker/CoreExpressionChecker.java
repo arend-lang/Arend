@@ -1,6 +1,5 @@
 package org.arend.typechecking.doubleChecker;
 
-import org.arend.core.context.Utils;
 import org.arend.core.context.binding.*;
 import org.arend.core.context.binding.inference.InferenceVariable;
 import org.arend.core.context.param.*;
@@ -46,6 +45,8 @@ public class CoreExpressionChecker implements ExpressionVisitor<Expression, Expr
   private final Concrete.SourceNode mySourceNode;
   private List<? extends LevelVariable> myLevelParameters;
   private boolean myCheckLevelVariables;
+  private Set<Binding> myCovariantContext = new HashSet<>();
+  private Set<Binding> myContravariantContext = new HashSet<>();
 
   public CoreExpressionChecker(Set<Binding> context, Equations equations, Concrete.SourceNode sourceNode) {
     myContext = context;
@@ -57,6 +58,8 @@ public class CoreExpressionChecker implements ExpressionVisitor<Expression, Expr
     if (myContext != null) myContext.clear();
     myLevelParameters = null;
     myCheckLevelVariables = false;
+    myCovariantContext = new HashSet<>();
+    myContravariantContext = new HashSet<>();
   }
 
   void setDefinition(Definition definition) {
@@ -73,11 +76,7 @@ public class CoreExpressionChecker implements ExpressionVisitor<Expression, Expr
 
   private void checkList(List<? extends Expression> args, DependentLink parameters, ExprSubstitution substitution, LevelSubstitution levelSubst) {
     for (Expression arg : args) {
-      if (parameters.getVariance() == BindingVariance.INVARIANT) {
-        try (var ignored = clearCategoricalContext()) {
-          arg.accept(this, parameters.getType().subst(substitution, levelSubst));
-        }
-      } else {
+      try (var ignored = enterVarianceContext(parameters.getVariance())) {
         arg.accept(this, parameters.getType().subst(substitution, levelSubst));
       }
       substitution.add(parameters, arg);
@@ -256,11 +255,7 @@ public class CoreExpressionChecker implements ExpressionVisitor<Expression, Expr
       throw new CoreException(CoreErrorWrapper.make(new TypeMismatchError(DocFactory.text("a pi type with " + (expr.isExplicit() ? "explicit" : "implicit") + " parameter"), piType, mySourceNode), expr.getFunction()));
     }
 
-    if (piType.getParameters().getVariance() == BindingVariance.INVARIANT) {
-      try (var ignored = clearCategoricalContext()) {
-        expr.getArgument().accept(this, piType.getParameters().getType());
-      }
-    } else {
+    try (var ignored = enterVarianceContext(piType.getParameters().getVariance())) {
       expr.getArgument().accept(this, piType.getParameters().getType());
     }
     return check(expectedType, piType.applyExpression(expr.getArgument()), expr);
@@ -274,7 +269,14 @@ public class CoreExpressionChecker implements ExpressionVisitor<Expression, Expr
     if (myContext != null && !myContext.contains(expr.getBinding())) {
       throw new CoreException(CoreErrorWrapper.make(new TypecheckingError("Variable '" + expr.getBinding().getName() + "' is not bound", mySourceNode), expr));
     }
+    checkVarianceReference(expr.getBinding(), expr);
     return check(expectedType, expr.getBinding().getType(), expr);
+  }
+
+  private void checkVarianceReference(Binding binding, Expression expr) {
+    if (binding instanceof DependentLink dl && dl.getVariance() != BindingVariance.INVARIANT && !myCovariantContext.contains(binding)) {
+      throw new CoreException(CoreErrorWrapper.make(new TypecheckingError("Variable '" + binding.getName() + "' is used in an incorrect variance position", mySourceNode), expr));
+    }
   }
 
   @Override
@@ -287,6 +289,7 @@ public class CoreExpressionChecker implements ExpressionVisitor<Expression, Expr
       if (myContext != null && !myContext.contains(bound)) {
         throw new CoreException(CoreErrorWrapper.make(new TypecheckingError("Variable '" + bound.getName() + "' is not bound", mySourceNode), expr));
       }
+      checkVarianceReference(bound, expr);
     }
     return check(expectedType, infVar.getType(), expr);
   }
@@ -300,17 +303,72 @@ public class CoreExpressionChecker implements ExpressionVisitor<Expression, Expr
     if (binding != UnusedIntervalDependentLink.INSTANCE && !(myContext == null || myContext.add(binding))) {
       throw new CoreException(CoreErrorWrapper.make(new TypecheckingError("Binding '" + binding.getName() + "' is already bound", mySourceNode), expr));
     }
+    if (binding instanceof DependentLink dl) {
+      if (dl.getVariance() == BindingVariance.COVARIANT) {
+        myCovariantContext.add(binding);
+      } else if (dl.getVariance() == BindingVariance.CONTRAVARIANT) {
+        myContravariantContext.add(binding);
+      }
+    }
   }
 
   void removeBinding(Binding binding) {
     if (myContext != null) myContext.remove(binding);
+    myCovariantContext.remove(binding);
+    myContravariantContext.remove(binding);
   }
 
-  private Utils.CompleteSetContextSaver<Binding> clearCategoricalContext() {
-    Set<Binding> context = myContext != null ? myContext : new HashSet<>();
-    Utils.CompleteSetContextSaver<Binding> saver = new Utils.CompleteSetContextSaver<>(context);
-    context.removeIf(binding -> binding instanceof DependentLink dl && dl.getVariance() != BindingVariance.INVARIANT);
-    return saver;
+  // Narrower than AutoCloseable so try-with-resources doesn't force callers to handle a checked Exception.
+  private interface VarianceContext extends AutoCloseable {
+    @Override
+    void close();
+  }
+
+  private class ClearedCategoricalContext implements VarianceContext {
+    private final Set<Binding> mySavedCovariant;
+    private final Set<Binding> mySavedContravariant;
+
+    private ClearedCategoricalContext(Set<Binding> savedCovariant, Set<Binding> savedContravariant) {
+      mySavedCovariant = savedCovariant;
+      mySavedContravariant = savedContravariant;
+    }
+
+    @Override
+    public void close() {
+      myCovariantContext = mySavedCovariant;
+      myContravariantContext = mySavedContravariant;
+    }
+  }
+
+  private ClearedCategoricalContext clearCategoricalContext() {
+    Set<Binding> savedCovariant = myCovariantContext;
+    Set<Binding> savedContravariant = myContravariantContext;
+    myCovariantContext = new HashSet<>();
+    myContravariantContext = new HashSet<>();
+    return new ClearedCategoricalContext(savedCovariant, savedContravariant);
+  }
+
+  private class SwappedVarianceContext implements VarianceContext {
+    @Override
+    public void close() {
+      Set<Binding> tmp = myCovariantContext;
+      myCovariantContext = myContravariantContext;
+      myContravariantContext = tmp;
+    }
+  }
+
+  private SwappedVarianceContext swapVarianceContext() {
+    Set<Binding> tmp = myCovariantContext;
+    myCovariantContext = myContravariantContext;
+    myContravariantContext = tmp;
+    return new SwappedVarianceContext();
+  }
+
+  // INVARIANT clears both pools, COVARIANT is a no-op, CONTRAVARIANT swaps them; null-safe in try-with-resources.
+  private VarianceContext enterVarianceContext(BindingVariance variance) {
+    if (variance == BindingVariance.INVARIANT) return clearCategoricalContext();
+    if (variance == BindingVariance.CONTRAVARIANT) return swapVarianceContext();
+    return null;
   }
 
   private SortExpression toSort(Expression type) {
@@ -327,11 +385,7 @@ public class CoreExpressionChecker implements ExpressionVisitor<Expression, Expr
       addBinding(link, expr);
       if (link instanceof TypedDependentLink) {
         Expression paramType;
-        if (link.getVariance() == BindingVariance.INVARIANT) {
-          try (var ignored = clearCategoricalContext()) {
-            paramType = link.getType().accept(this, type);
-          }
-        } else {
+        try (var ignored = enterVarianceContext(link.getVariance())) {
           paramType = link.getType().accept(this, type);
         }
         SortExpression sort = toSort(paramType);
@@ -361,11 +415,7 @@ public class CoreExpressionChecker implements ExpressionVisitor<Expression, Expr
     for (; link.hasNext(); link = link.getNext()) {
       addBinding(link, expr);
       if (link instanceof TypedDependentLink) {
-        if (link.getVariance() == BindingVariance.INVARIANT) {
-          try (var ignored = clearCategoricalContext()) {
-            checkInf(link.getType(), type, allowInf);
-          }
-        } else {
+        try (var ignored = enterVarianceContext(link.getVariance())) {
           checkInf(link.getType(), type, allowInf);
         }
       }
@@ -378,11 +428,7 @@ public class CoreExpressionChecker implements ExpressionVisitor<Expression, Expr
       addBinding(link, expr);
       if (link instanceof TypedDependentLink) {
         SortExpression sort;
-        if (link.getVariance() == BindingVariance.INVARIANT) {
-          try (var ignored = clearCategoricalContext()) {
-            sort = link.getType().accept(this, UniverseExpression.OMEGA).toSortExpression();
-          }
-        } else {
+        try (var ignored = enterVarianceContext(link.getVariance())) {
           sort = link.getType().accept(this, UniverseExpression.OMEGA).toSortExpression();
         }
         if (sort == null) {

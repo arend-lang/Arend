@@ -470,7 +470,7 @@ public class PrettyPrintVisitor implements ConcreteExpressionVisitor<Precedence,
         myBuilder.append(referable == null ? "_" : referable.textRepresentation()).append(' ');
       }
 
-      myBuilder.append(parameter.getVariance() == BindingVariance.COVARIANT ? ":⁺ " : ": ");
+      myBuilder.append(parameter.getVariance() == BindingVariance.COVARIANT ? ":⁺ " : parameter.getVariance() == BindingVariance.CONTRAVARIANT ? ":⁻ " : ": ");
       printExpr(((Concrete.TypeParameter) parameter).getType(), new Precedence(Concrete.Expression.PREC));
       if (parameter.isExplicit()) {
         myBuilder.append(')');
@@ -551,13 +551,16 @@ public class PrettyPrintVisitor implements ConcreteExpressionVisitor<Precedence,
       String getOpText() {
         List<Concrete.Parameter> parameters = expr.getParameters();
         boolean allCovariant = !parameters.isEmpty();
+        boolean allContravariant = !parameters.isEmpty();
         for (Concrete.Parameter parameter : parameters) {
           if (parameter.getVariance() != BindingVariance.COVARIANT) {
             allCovariant = false;
-            break;
+          }
+          if (parameter.getVariance() != BindingVariance.CONTRAVARIANT) {
+            allContravariant = false;
           }
         }
-        return allCovariant ? "=>⁺" : "=>";
+        return allCovariant ? "=>⁺" : allContravariant ? "=>⁻" : "=>";
       }
     }.doPrettyPrint(this, noIndent);
 
@@ -591,7 +594,12 @@ public class PrettyPrintVisitor implements ConcreteExpressionVisitor<Precedence,
 
       @Override
       String getOpText() {
-        return expr.getParameters().size() == 1 && !(expr.getParameters().getFirst() instanceof Concrete.TelescopeParameter) && expr.getParameters().getFirst().getVariance() == BindingVariance.COVARIANT ? "->⁺" : "->";
+        if (expr.getParameters().size() == 1 && !(expr.getParameters().getFirst() instanceof Concrete.TelescopeParameter)) {
+          BindingVariance variance = expr.getParameters().getFirst().getVariance();
+          if (variance == BindingVariance.COVARIANT) return "->⁺";
+          if (variance == BindingVariance.CONTRAVARIANT) return "->⁻";
+        }
+        return "->";
       }
 
       @Override

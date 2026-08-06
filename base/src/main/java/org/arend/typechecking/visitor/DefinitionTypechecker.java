@@ -424,7 +424,7 @@ public class DefinitionTypechecker extends BaseDefinitionTypechecker implements 
     Expression resultType = fieldType == null ? null : isClassCoclause ? fieldType : fieldType.getCodomain();
     ExprSubstitution substitution = fieldType == null ? null : new ExprSubstitution();
     int skip = def instanceof Concrete.CoClauseFunctionDefinition ? ((Concrete.CoClauseFunctionDefinition) def).getNumberOfExternalParameters() : 0;
-    boolean allowCovariant = def instanceof Concrete.DataDefinition || def instanceof Concrete.Constructor || def instanceof Concrete.BaseFunctionDefinition;
+    boolean allowVariance = def instanceof Concrete.DataDefinition || def instanceof Concrete.Constructor || def instanceof Concrete.BaseFunctionDefinition;
 
     boolean first = true;
     for (Concrete.Parameter parameter : def.getParameters()) {
@@ -432,10 +432,10 @@ public class DefinitionTypechecker extends BaseDefinitionTypechecker implements 
         resultType = resultType.normalize(NormalizationMode.WHNF).getUnderlyingExpression();
       }
 
-      BindingVariance variance = typechecker.checkVariance(parameter, allowCovariant);
+      BindingVariance variance = typechecker.checkVariance(parameter, allowVariance);
       List<Expression> paramResults = new ArrayList<>();
       if (parameter.getType() != null) {
-        try (var ignored = variance == BindingVariance.INVARIANT ? typechecker.clearCategoricalContext() : null) {
+        try (var ignored = typechecker.enterVarianceContext(variance)) {
           if (def instanceof Concrete.Constructor) {
             TypeExpression paramType = typechecker.checkType(parameter.getType(), UniverseExpression.OMEGA);
             if (paramType != null) {

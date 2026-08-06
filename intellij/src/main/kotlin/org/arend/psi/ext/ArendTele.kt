@@ -31,7 +31,7 @@ class ArendNameTele(node: ASTNode): ArendLamParam(node), Abstract.Parameter {
     override fun isProperty() = propertyKw != null
 
     override fun getVariance(): BindingVariance =
-        if (hasChildOfType(COLON_PLUS)) BindingVariance.COVARIANT else BindingVariance.INVARIANT
+        if (hasChildOfType(COLON_PLUS)) BindingVariance.COVARIANT else if (hasChildOfType(COLON_MINUS)) BindingVariance.CONTRAVARIANT else BindingVariance.INVARIANT
 }
 
 class ArendNameTeleUntyped(node: ASTNode): ArendSourceNodeImpl(node), Abstract.Parameter {

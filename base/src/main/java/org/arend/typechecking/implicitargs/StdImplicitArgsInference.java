@@ -247,11 +247,7 @@ public class StdImplicitArgsInference implements ImplicitArgsInference {
     }
 
     TypecheckingResult argResult;
-    if (param.hasNext() && param.getVariance() == BindingVariance.INVARIANT) {
-      try (var ignored = myVisitor.clearCategoricalContext()) {
-        argResult = myVisitor.checkArgument(arg, param.getType(), result, null);
-      }
-    } else {
+    try (var ignored = param.hasNext() ? myVisitor.enterVarianceContext(param.getVariance()) : null) {
       argResult = myVisitor.checkArgument(arg, param.hasNext() ? param.getType() : null, result, null);
     }
     if (argResult == null) {

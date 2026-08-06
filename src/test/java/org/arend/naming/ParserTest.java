@@ -102,6 +102,36 @@ public class ParserTest extends NameResolverTestCase {
   }
 
   @Test
+  public void parserDashedPi() {
+    Concrete.Expression expr = resolveNamesExpr("\\Pi (x :- \\Type0) (y : \\Type0) -> \\Type0");
+    Concrete.PiExpression pi = (Concrete.PiExpression) expr;
+    assertEquals(2, pi.getParameters().size());
+    assertEquals(BindingVariance.CONTRAVARIANT, pi.getParameters().get(0).getVariance());
+    assertEquals(BindingVariance.INVARIANT, pi.getParameters().get(1).getVariance());
+  }
+
+  @Test
+  public void parserSuperscriptDashedPi() {
+    Concrete.Expression expr = resolveNamesExpr("\\Pi (x :⁻ \\Type0) (y : \\Type0) -> \\Type0");
+    Concrete.PiExpression pi = (Concrete.PiExpression) expr;
+    assertEquals(BindingVariance.CONTRAVARIANT, pi.getParameters().get(0).getVariance());
+  }
+
+  @Test
+  public void parserDashedArrow() {
+    Concrete.Expression expr = resolveNamesExpr("\\Type0 ->- \\Type0");
+    Concrete.PiExpression pi = (Concrete.PiExpression) expr;
+    assertEquals(BindingVariance.CONTRAVARIANT, pi.getParameters().getFirst().getVariance());
+  }
+
+  @Test
+  public void parserDashedLam() {
+    Concrete.Expression expr = resolveNamesExpr("\\lam (x :- \\Type0) =>- x");
+    Concrete.LamExpression lam = (Concrete.LamExpression) expr;
+    assertEquals(BindingVariance.CONTRAVARIANT, lam.getParameters().getFirst().getVariance());
+  }
+
+  @Test
   public void parserDottedSigmaParses() {
     Concrete.Expression expr = parseExpr("\\Sigma (x :+ \\Type0)");
     Concrete.SigmaExpression sigma = (Concrete.SigmaExpression) expr;
@@ -109,10 +139,24 @@ public class ParserTest extends NameResolverTestCase {
   }
 
   @Test
+  public void parserDashedSigmaParses() {
+    Concrete.Expression expr = parseExpr("\\Sigma (x :- \\Type0)");
+    Concrete.SigmaExpression sigma = (Concrete.SigmaExpression) expr;
+    assertEquals(BindingVariance.CONTRAVARIANT, sigma.getParameters().getFirst().getVariance());
+  }
+
+  @Test
   public void parserDottedLetParses() {
     Concrete.Expression expr = parseExpr("\\let f (x :+ \\Type0) => x \\in f");
     Concrete.LetExpression let = (Concrete.LetExpression) expr;
     assertEquals(BindingVariance.COVARIANT, let.getClauses().getFirst().getParameters().getFirst().getVariance());
+  }
+
+  @Test
+  public void parserDashedLetParses() {
+    Concrete.Expression expr = parseExpr("\\let f (x :- \\Type0) => x \\in f");
+    Concrete.LetExpression let = (Concrete.LetExpression) expr;
+    assertEquals(BindingVariance.CONTRAVARIANT, let.getClauses().getFirst().getParameters().getFirst().getVariance());
   }
 
   @Test

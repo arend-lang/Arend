@@ -20,8 +20,11 @@ class ArendLamExpr(node: ASTNode) : ArendExpr(node), Abstract.LamParametersHolde
     val fatArrowPlus: PsiElement?
         get() = findChildByType(ArendElementTypes.FAT_ARROW_PLUS)
 
+    val fatArrowMinus: PsiElement?
+        get() = findChildByType(ArendElementTypes.FAT_ARROW_MINUS)
+
     override fun <P, R> accept(visitor: AbstractExpressionVisitor<in P, out R>, params: P?): R =
-        visitor.visitLam(this, lamParamList, if (fatArrowPlus != null) BindingVariance.COVARIANT else null, body, params)
+        visitor.visitLam(this, lamParamList, if (fatArrowPlus != null) BindingVariance.COVARIANT else if (fatArrowMinus != null) BindingVariance.CONTRAVARIANT else null, body, params)
 
     override fun getParameters() = lamParamList.filterIsInstance<ArendNameTele>()
 

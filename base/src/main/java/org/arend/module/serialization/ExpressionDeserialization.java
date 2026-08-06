@@ -181,7 +181,7 @@ class ExpressionDeserialization {
         unfixedNames.add(name.isEmpty() ? null : name);
       }
       Expression type = readExpr(proto.getType());
-      BindingVariance variance = proto.getIsCovariant() ? BindingVariance.COVARIANT : BindingVariance.INVARIANT;
+      BindingVariance variance = proto.getIsCovariant() ? BindingVariance.COVARIANT : proto.getIsContravariant() ? BindingVariance.CONTRAVARIANT : BindingVariance.INVARIANT;
       DependentLink tele = proto.getIsHidden() && unfixedNames.size() == 1
         ? new TypedDependentLink(!proto.getIsNotExplicit(), unfixedNames.getFirst(), type, true, variance, EmptyDependentLink.getInstance())
         : ExpressionFactory.parameter(!proto.getIsNotExplicit(), proto.getIsProperty(), unfixedNames, type, variance);
@@ -213,7 +213,7 @@ class ExpressionDeserialization {
       unfixedNames.add(name.isEmpty() ? null : name);
     }
     Expression type = readExpr(proto.getType());
-    BindingVariance variance = proto.getIsCovariant() ? BindingVariance.COVARIANT : BindingVariance.INVARIANT;
+    BindingVariance variance = proto.getIsCovariant() ? BindingVariance.COVARIANT : proto.getIsContravariant() ? BindingVariance.CONTRAVARIANT : BindingVariance.INVARIANT;
     SingleDependentLink tele = proto.getIsHidden() && unfixedNames.size() == 1
       ? new TypedSingleDependentLink(!proto.getIsNotExplicit(), unfixedNames.getFirst(), type, true, variance)
       : ExpressionFactory.singleParams(!proto.getIsNotExplicit(), unfixedNames, type, variance);
@@ -233,7 +233,7 @@ class ExpressionDeserialization {
     }
     DependentLink link;
     if (proto.hasType()) {
-      BindingVariance variance = proto.getIsCovariant() ? BindingVariance.COVARIANT : BindingVariance.INVARIANT;
+      BindingVariance variance = proto.getIsCovariant() ? BindingVariance.COVARIANT : proto.getIsContravariant() ? BindingVariance.CONTRAVARIANT : BindingVariance.INVARIANT;
       link = new TypedDependentLink(!proto.getIsNotExplicit(), proto.getName(), readExpr(proto.getType()), proto.getIsHidden(), variance, EmptyDependentLink.getInstance());
     } else {
       link = new UntypedDependentLink(proto.getName());

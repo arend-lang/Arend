@@ -138,8 +138,8 @@ associativity : '\\infix'               # nonAssocInfix
 letKw : HAVE | LET | HAVES | LETS;
 
 expr  : appPrefix? appExpr (implementStatements argument*)? withBody?     # app
-      | <assoc=right> expr (ARROW | ARROW_PLUS) expr                       # arr
-      | '\\Pi' tele+ (ARROW | ARROW_PLUS) expr                             # pi
+      | <assoc=right> expr (ARROW | ARROW_PLUS | ARROW_MINUS) expr          # arr
+      | '\\Pi' tele+ (ARROW | ARROW_PLUS | ARROW_MINUS) expr                # pi
       | '\\Sigma' tele*                                                   # sigma
       | lamExpr                                                           # lam
       | letExpr                                                           # let
@@ -147,10 +147,10 @@ expr  : appPrefix? appExpr (implementStatements argument*)? withBody?     # app
       ;
 
 expr2 : appPrefix? appExpr (implementStatements argument*)?               # app2
-      | <assoc=right> expr2 (ARROW | ARROW_PLUS) expr2                     # arr2
-      | '\\Pi' tele+ (ARROW | ARROW_PLUS) expr2                            # pi2
+      | <assoc=right> expr2 (ARROW | ARROW_PLUS | ARROW_MINUS) expr2        # arr2
+      | '\\Pi' tele+ (ARROW | ARROW_PLUS | ARROW_MINUS) expr2               # pi2
       | '\\Sigma' tele*                                                   # sigma2
-      | '\\lam' lamParam+ (('=>' | FAT_ARROW_PLUS) expr2?)?               # lam2
+      | '\\lam' lamParam+ (('=>' | FAT_ARROW_PLUS | FAT_ARROW_MINUS) expr2?)?  # lam2
       | letKw '|'? letClause ('|' letClause)* ('\\in' expr2?)?            # let2
       | caseExpr                                                          # case2
       ;
@@ -159,7 +159,7 @@ lamParam : nameTele     # lamTele
          | atomPattern  # lamPattern
          ;
 
-lamExpr : '\\lam' lamParam+ (('=>' | FAT_ARROW_PLUS) expr?)?;
+lamExpr : '\\lam' lamParam+ (('=>' | FAT_ARROW_PLUS | FAT_ARROW_MINUS) expr?)?;
 
 caseExpr : (EVAL | PEVAL)? (CASE | SCASE) caseArg (',' caseArg)* ('\\return' returnExpr2)? withBody?;
 
@@ -276,11 +276,11 @@ tele : '(' typedExpr ')'                # explicit
 
 paramAttr : (STRICT | PROPERTY)?;
 
-typedExpr : paramAttr expr ((COLON | COLON_PLUS) expr)? ;
+typedExpr : paramAttr expr ((COLON | COLON_PLUS | COLON_MINUS) expr)? ;
 
 nameTele : idOrUnknown                                                    # nameId
-         | '(' paramAttr idOrUnknown+ (COLON | COLON_PLUS) expr ')'        # nameExplicit
-         | '{' paramAttr idOrUnknown (idOrUnknown* (COLON | COLON_PLUS) expr)? '}' # nameImplicit
+         | '(' paramAttr idOrUnknown+ (COLON | COLON_PLUS | COLON_MINUS) expr ')'        # nameExplicit
+         | '{' paramAttr idOrUnknown (idOrUnknown* (COLON | COLON_PLUS | COLON_MINUS) expr)? '}' # nameImplicit
          ;
 
 idOrUnknown : ID            # iuId
@@ -326,9 +326,12 @@ fragment HEX_DIGIT : [0-9a-fA-F];
 fragment OCT_DIGIT : [0-8];
 COLON : ':';
 COLON_PLUS : ':+' | ':⁺';
+COLON_MINUS : ':-' | ':⁻';
 ARROW : '->';
 ARROW_PLUS : '->+' | '->⁺';
+ARROW_MINUS : '->-' | '->⁻';
 FAT_ARROW_PLUS : '=>+' | '=>⁺';
+FAT_ARROW_MINUS : '=>-' | '=>⁻';
 APPLY_HOLE : '__';
 UNDERSCORE : '_';
 DOT : '.';

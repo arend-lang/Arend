@@ -173,6 +173,29 @@ public class PrettyPrintingParserTest extends TypeCheckingTestCase {
   }
 
   @Test
+  public void prettyPrintingParserDashedPi() {
+    SingleDependentLink x = new TypedSingleDependentLink(true, "x", Universe(1), false, BindingVariance.CONTRAVARIANT);
+    Expression expr = Pi(x, Ref(x));
+    Concrete.Expression result = ToAbstractVisitor.convert(expr, new PrettyPrinterConfig() {
+      @NotNull
+      @Override
+      public EnumSet<PrettyPrinterFlag> getExpressionFlags() {
+        return EnumSet.of(PrettyPrinterFlag.SHOW_TYPES_IN_LAM, PrettyPrinterFlag.SHOW_IMPLICIT_ARGS);
+      }
+
+      @Override
+      public NormalizationMode getNormalizationMode() {
+        return null;
+      }
+    });
+    assertTrue(result instanceof Concrete.PiExpression);
+    assertEquals(BindingVariance.CONTRAVARIANT, ((Concrete.PiExpression) result).getParameters().getFirst().getVariance());
+    StringBuilder builder = new StringBuilder();
+    result.accept(new PrettyPrintVisitor(builder, 0), new Precedence(Concrete.Expression.PREC));
+    assertTrue(builder.toString().contains(":⁻"));
+  }
+
+  @Test
   public void prettyPrintingParserDottedLam() {
     SingleDependentLink x = new TypedSingleDependentLink(true, "x", Universe(1), false, BindingVariance.COVARIANT);
     Expression expr = Lam(x, Ref(x));
@@ -193,6 +216,29 @@ public class PrettyPrintingParserTest extends TypeCheckingTestCase {
     StringBuilder builder = new StringBuilder();
     result.accept(new PrettyPrintVisitor(builder, 0), new Precedence(Concrete.Expression.PREC));
     assertTrue(builder.toString().contains("=>⁺"));
+  }
+
+  @Test
+  public void prettyPrintingParserDashedLam() {
+    SingleDependentLink x = new TypedSingleDependentLink(true, "x", Universe(1), false, BindingVariance.CONTRAVARIANT);
+    Expression expr = Lam(x, Ref(x));
+    Concrete.Expression result = ToAbstractVisitor.convert(expr, new PrettyPrinterConfig() {
+      @NotNull
+      @Override
+      public EnumSet<PrettyPrinterFlag> getExpressionFlags() {
+        return EnumSet.noneOf(PrettyPrinterFlag.class);
+      }
+
+      @Override
+      public NormalizationMode getNormalizationMode() {
+        return null;
+      }
+    });
+    assertTrue(result instanceof Concrete.LamExpression);
+    assertEquals(BindingVariance.CONTRAVARIANT, ((Concrete.LamExpression) result).getParameters().getFirst().getVariance());
+    StringBuilder builder = new StringBuilder();
+    result.accept(new PrettyPrintVisitor(builder, 0), new Precedence(Concrete.Expression.PREC));
+    assertTrue(builder.toString().contains("=>⁻"));
   }
 
   @Test

@@ -165,6 +165,7 @@ public class Prelude implements ArendPrelude {
       }
       case "DI" -> {
         DI = (DataDefinition) definition;
+        DI.setSort(new Sort(new Level(BigInteger.ZERO), ConstLevel.CAT_INFINITY));
         DLEFT = DI.getConstructor("dleft");
         DRIGHT = DI.getConstructor("dright");
       }

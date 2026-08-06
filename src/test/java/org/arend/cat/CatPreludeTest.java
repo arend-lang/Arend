@@ -85,6 +85,11 @@ public class CatPreludeTest extends TypeCheckingTestCase {
   }
 
   @Test
+  public void contravariantSourceTest() {
+    typeCheckDef("\\func test {C : \\Cat} {b : C} (x :- C) => x ~> b");
+  }
+
+  @Test
   public void pathEtaTest() {
     typeCheckModule("""
       \\func test {C : \\Cat} {a b : C} (p : a ~> b) : dpath (\\lam i => p i) = p

@@ -203,6 +203,7 @@ class ExpressionSerialization implements ExpressionVisitor<Void, ExpressionProto
     tBuilder.setType(writeExpr(typed.getType()));
     tBuilder.setIsProperty(typed.isProperty());
     tBuilder.setIsCovariant(typed.getVariance() == BindingVariance.COVARIANT);
+    tBuilder.setIsContravariant(typed.getVariance() == BindingVariance.CONTRAVARIANT);
     for (; link != typed; link = link.getNext()) {
       registerBinding(link);
     }
@@ -229,6 +230,7 @@ class ExpressionSerialization implements ExpressionVisitor<Void, ExpressionProto
     }
     builder.setIsHidden(link.isHidden());
     builder.setIsCovariant(link.getVariance() == BindingVariance.COVARIANT);
+    builder.setIsContravariant(link.getVariance() == BindingVariance.CONTRAVARIANT);
     registerBinding(link);
     return builder.build();
   }

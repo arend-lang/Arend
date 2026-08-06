@@ -96,12 +96,18 @@ OCT_DIGIT           = [0-8]
     ":"                     { return COLON; }
     ":+"                    { return COLON_PLUS; }
     ":⁺"                    { return COLON_PLUS; }
+    ":-"                    { return COLON_MINUS; }
+    ":⁻"                    { return COLON_MINUS; }
     "->"                    { return ARROW; }
     "->+"                   { return ARROW_PLUS; }
     "->⁺"                   { return ARROW_PLUS; }
+    "->-"                   { return ARROW_MINUS; }
+    "->⁻"                   { return ARROW_MINUS; }
     "=>"                    { return FAT_ARROW; }
     "=>+"                   { return FAT_ARROW_PLUS; }
     "=>⁺"                   { return FAT_ARROW_PLUS; }
+    "=>-"                   { return FAT_ARROW_MINUS; }
+    "=>⁻"                   { return FAT_ARROW_MINUS; }
     "."                     { return DOT; }
     ","                     { return COMMA; }
     "__"                    { return APPLY_HOLE; }

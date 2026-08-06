@@ -221,6 +221,7 @@ message SingleParameter {
     // with function/case parameters.
     int32 existing_ref = 5;
     bool is_covariant = 6;
+    bool is_contravariant = 7;
 }
 
 message Telescope {
@@ -233,6 +234,7 @@ message Telescope {
     // instead of defining a new one. Used to preserve object identity across Pi/Lambda param sharing.
     int32 existing_ref = 6;
     bool is_covariant = 7;
+    bool is_contravariant = 8;
 }
 
 message TypedBinding {
