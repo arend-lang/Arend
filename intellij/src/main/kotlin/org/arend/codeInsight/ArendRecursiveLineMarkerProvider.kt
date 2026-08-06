@@ -288,7 +288,7 @@ class ArendRecursiveLineMarkerProvider : LineMarkerProviderDescriptor() {
   }
 
   private fun getNameDefinition(vertex: Definition): String? {
-    return (vertex.referable.data as? ArendDefFunction?)?.fullNameText
+    return (vertex.referable.data as? ArendDefFunction?)?.fullName.toString()
   }
 
   private fun getEdges(

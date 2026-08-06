@@ -1,6 +1,7 @@
 package org.arend.psi
 
 import com.intellij.ide.util.EditSourceUtil
+import com.intellij.openapi.application.runReadActionBlocking
 import com.intellij.openapi.components.service
 import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.editor.ex.util.EditorUtil
@@ -72,7 +73,9 @@ inline fun <reified T : PsiElement> PsiElement.leftSibling(): T? {
 }
 
 fun PsiElement.navigate(requestFocus: Boolean = true) {
-    val descriptor = EditSourceUtil.getDescriptor(this)
+    val descriptor = runReadActionBlocking {
+      EditSourceUtil.getDescriptor(this)
+    }
     if (descriptor?.canNavigate() == true) {
         descriptor.navigate(requestFocus)
     }

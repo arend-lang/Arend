@@ -54,6 +54,8 @@ import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.openapi.fileEditor.FileEditorManager
 import com.intellij.openapi.application.ReadAction
 import com.intellij.openapi.application.ModalityState
+import com.intellij.openapi.application.WriteIntentReadAction
+import com.intellij.openapi.application.runReadActionBlocking
 
 class ArendServerStateView(private val project: Project, toolWindow: ToolWindow) {
     private var suppressSelectionEvents: Boolean = false
@@ -292,9 +294,10 @@ class ArendServerStateView(private val project: Project, toolWindow: ToolWindow)
         when (obj) {
             is DefinitionNode -> {
                 val tcRef = obj.definition
-                val ok = runReadAction {
+                var ok = false
+                WriteIntentReadAction.run {
                     val psi = tcRef.data as? PsiElement
-                    if (psi != null && psi.isValid) {
+                    ok = if (psi != null && psi.isValid) {
                         psi.navigationElement.navigate(true)
                         true
                     } else {
@@ -315,7 +318,9 @@ class ArendServerStateView(private val project: Project, toolWindow: ToolWindow)
                 file?.navigate(true)
             }
             is FileNode -> {
-                PsiManager.getInstance(project).findFile(obj.file)?.navigate(true)
+                runReadActionBlocking {
+                  PsiManager.getInstance(project).findFile(obj.file)
+                }?.navigate(true)
             }
         }
     }

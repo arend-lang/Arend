@@ -14,6 +14,7 @@ import com.intellij.icons.AllIcons
 import com.intellij.ide.actions.BigPopupUI
 import com.intellij.openapi.actionSystem.*
 import com.intellij.openapi.actionSystem.toolbarLayout.ToolbarLayoutStrategy
+import com.intellij.openapi.application.WriteIntentReadAction
 import com.intellij.openapi.application.invokeAndWaitIfNeeded
 import com.intellij.openapi.application.invokeLater
 import com.intellij.openapi.application.runInEdt
@@ -448,7 +449,9 @@ class ProofSearchUI(private val project: Project, private val caret: Caret?) : B
             val i = myResultsList.locationToIndex(e.point)
             if (i > -1) {
                 myResultsList.selectedIndex = i
-                onEntrySelected(model.getElementAt(i))
+                WriteIntentReadAction.run {
+                  onEntrySelected(model.getElementAt(i))
+                }
             }
         }
     }

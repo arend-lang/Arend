@@ -94,10 +94,14 @@ abstract class InjectedArendEditor(
     private var lastLineLength = MAX_LEN
 
     init {
-        val psi = ArendPsiFactory(project, name).injected("")
+        val psi = runReadActionBlocking {
+          ArendPsiFactory(project, name).injected("")
+        }
         val virtualFile = psi.virtualFile
         editor = if (virtualFile != null) {
-            PsiDocumentManager.getInstance(project).getDocument(psi)?.let { document ->
+            runReadActionBlocking {
+              PsiDocumentManager.getInstance(project).getDocument(psi)
+            }?.let { document ->
                 document.setReadOnly(true)
                 EditorFactory.getInstance().createEditor(document, project, virtualFile, false).apply {
                     settings.setGutterIconsShown(false)
