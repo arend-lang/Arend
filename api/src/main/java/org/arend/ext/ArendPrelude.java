@@ -16,6 +16,7 @@ public interface ArendPrelude {
   CoreConstructor getDLeft();
   CoreConstructor getDRight();
   CoreFunctionDefinition getDCoe();
+  CoreFunctionDefinition getICoe();
   CoreDataDefinition getDPath();
   CoreConstructor getDPathCon();
   CoreFunctionDefinition getDAt();
@@ -60,6 +61,7 @@ public interface ArendPrelude {
   ArendRef getDLeftRef();
   ArendRef getDRightRef();
   ArendRef getDCoeRef();
+  ArendRef getICoeRef();
   ArendRef getDPathRef();
   ArendRef getDPathConRef();
   ArendRef getDAtRef();

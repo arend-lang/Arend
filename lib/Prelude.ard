@@ -45,6 +45,9 @@
 \func dcoe (A : DI ->⁺ \Cat) (a : A dleft) (i :⁺ DI) : A i \elim i
   | dleft => a
 
+\func icoe (A : DI ->⁻ \Cat) (a : A dright) (i :⁻ DI) : A i \elim i
+  | dright => a
+
 \data \infix 1 ~> {C : \Cat} (a :⁻ C) (b :⁺ C) : \Type
   | dpath (DI ->⁺ C)
 

@@ -60,6 +60,11 @@ public class ConcretePrelude implements ArendPrelude {
   }
 
   @Override
+  public CoreFunctionDefinition getICoe() {
+    return Prelude.ICOE;
+  }
+
+  @Override
   public CoreDataDefinition getDPath() {
     return Prelude.DPATH;
   }
@@ -281,6 +286,12 @@ public class ConcretePrelude implements ArendPrelude {
   public ArendRef getDCoeRef() {
     if (Prelude.DCOE != null) return Prelude.DCOE.getRef();
     return myPreludeScope.resolveName("dcoe");
+  }
+
+  @Override
+  public ArendRef getICoeRef() {
+    if (Prelude.ICOE != null) return Prelude.ICOE.getRef();
+    return myPreludeScope.resolveName("icoe");
   }
 
   @Override

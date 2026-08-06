@@ -59,6 +59,7 @@ public class Prelude implements ArendPrelude {
   public static DataDefinition DI;
   public static Constructor DLEFT, DRIGHT;
   public static FunctionDefinition DCOE;
+  public static FunctionDefinition ICOE;
 
   public static DataDefinition DPATH;
   public static Constructor DPATH_CON;
@@ -173,6 +174,10 @@ public class Prelude implements ArendPrelude {
         DCOE = (FunctionDefinition) definition;
         DCOE.setStatus(Definition.TypeCheckingStatus.NO_ERRORS);
       }
+      case "icoe" -> {
+        ICOE = (FunctionDefinition) definition;
+        ICOE.setStatus(Definition.TypeCheckingStatus.NO_ERRORS);
+      }
       case "~>" -> {
         DPATH = (DataDefinition) definition;
         DPATH_CON = DPATH.getConstructor("dpath");
@@ -282,6 +287,7 @@ public class Prelude implements ArendPrelude {
     consumer.accept(DLEFT);
     consumer.accept(DRIGHT);
     consumer.accept(DCOE);
+    consumer.accept(ICOE);
     consumer.accept(DPATH);
     consumer.accept(DPATH_CON);
     consumer.accept(DAT);
@@ -370,6 +376,11 @@ public class Prelude implements ArendPrelude {
   @Override
   public FunctionDefinition getDCoe() {
     return DCOE;
+  }
+
+  @Override
+  public FunctionDefinition getICoe() {
+    return ICOE;
   }
 
   @Override
@@ -585,6 +596,11 @@ public class Prelude implements ArendPrelude {
   @Override
   public ArendRef getDCoeRef() {
     return DCOE == null ? null : DCOE.getRef();
+  }
+
+  @Override
+  public ArendRef getICoeRef() {
+    return ICOE == null ? null : ICOE.getRef();
   }
 
   @Override
