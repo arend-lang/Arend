@@ -58,21 +58,23 @@ class ArendTypedHandler : TypedHandlerDelegate() {
         document.insertString(editor.selectionModel.selectionEnd, "}")
     }
 
-    private fun replaceWithSuperscriptPlus(project: Project, editor: Editor, file: PsiFile) {
+    private fun replaceWithSuperscript(project: Project, editor: Editor, file: PsiFile, oldChar: Char, newChar: Char): Boolean {
         PsiDocumentManager.getInstance(project).commitDocument(editor.document)
         val offset = editor.caretModel.offset
-        val element = file.findElementAt(offset - 1) ?: return
-        if (element.elementType !in PLUS_TOKEN_TYPES) {
-            return
+        val element = file.findElementAt(offset - 1) ?: return false
+        if (element.elementType !in PLUS_MINUS_TOKEN_TYPES) {
+            return false
         }
         val text = element.text
-        if (!text.endsWith('+')) {
-            return
+        if (!text.endsWith(oldChar)) {
+            return false
         }
 
         val start = element.startOffset
-        editor.document.replaceString(start, start + text.length, text.dropLast(1) + '⁺')
+        editor.document.replaceString(start, start + text.length, text.dropLast(1) + newChar)
         editor.caretModel.moveToOffset(start + text.length)
+
+        return true
     }
 
     override fun beforeSelectionRemoved(c: Char, project: Project, editor: Editor, file: PsiFile): Result {
@@ -111,11 +113,15 @@ class ArendTypedHandler : TypedHandlerDelegate() {
         }
 
         if (c == '+') {
-            replaceWithSuperscriptPlus(project, editor, file)
+            replaceWithSuperscript(project, editor, file, '+', '⁺')
             return Result.CONTINUE
         }
 
         if (c != '-') {
+            return Result.CONTINUE
+        }
+
+        if (replaceWithSuperscript(project, editor, file, '-', '⁻')) {
             return Result.CONTINUE
         }
 
@@ -147,4 +153,4 @@ class ArendTypedHandler : TypedHandlerDelegate() {
 
 private val BRACKETS = listOf("(", "{", ")", "}")
 
-private val PLUS_TOKEN_TYPES = setOf(COLON_PLUS, ARROW_PLUS, FAT_ARROW_PLUS)
+private val PLUS_MINUS_TOKEN_TYPES = setOf(COLON_PLUS, ARROW_PLUS, FAT_ARROW_PLUS, COLON_MINUS, ARROW_MINUS, FAT_ARROW_MINUS)
