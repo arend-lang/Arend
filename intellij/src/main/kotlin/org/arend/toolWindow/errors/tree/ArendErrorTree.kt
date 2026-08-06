@@ -2,6 +2,7 @@ package org.arend.toolWindow.errors.tree
 
 import com.intellij.codeInsight.hints.presentation.MouseButton
 import com.intellij.codeInsight.hints.presentation.mouseButton
+import com.intellij.openapi.application.WriteIntentReadAction
 import com.intellij.openapi.application.runReadAction
 import com.intellij.psi.PsiElement
 import com.intellij.ui.treeStructure.Tree
@@ -46,8 +47,15 @@ class ArendErrorTree(treeModel: DefaultTreeModel) : Tree(treeModel) {
         })
     }
 
-    fun navigate(focus: Boolean) =
-        ((selectionPath?.lastPathComponent as? DefaultMutableTreeNode)?.userObject as? ArendErrorTreeElement)?.let { BasePass.getImprovedCause(it.sampleError) }?.navigate(focus)
+    // Called from the mouse listener above and from ArendErrorTreeAutoScrollToSource, i.e. from raw
+    // AWT handlers that no longer hold the write-intent lock. getImprovedCause walks the PSI, so the
+    // lock has to cover it as well as the navigation itself.
+    fun navigate(focus: Boolean) {
+        WriteIntentReadAction.run {
+            val element = (selectionPath?.lastPathComponent as? DefaultMutableTreeNode)?.userObject as? ArendErrorTreeElement ?: return@run
+            BasePass.getImprovedCause(element.sampleError)?.navigate(focus)
+        }
+    }
 
     fun select(error: GeneralError) = selectNode(error)
 

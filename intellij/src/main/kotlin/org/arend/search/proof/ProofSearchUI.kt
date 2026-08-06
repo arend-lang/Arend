@@ -14,6 +14,7 @@ import com.intellij.icons.AllIcons
 import com.intellij.ide.actions.BigPopupUI
 import com.intellij.openapi.actionSystem.*
 import com.intellij.openapi.actionSystem.toolbarLayout.ToolbarLayoutStrategy
+import com.intellij.openapi.application.WriteIntentReadAction
 import com.intellij.openapi.application.invokeAndWaitIfNeeded
 import com.intellij.openapi.application.invokeLater
 import com.intellij.openapi.application.runInEdt
@@ -453,21 +454,27 @@ class ProofSearchUI(private val project: Project, private val caret: Caret?) : B
         }
     }
 
-    private fun onEntrySelected(element: ProofSearchUIEntry) = when (element) {
-        is DefElement -> {
-            SlowOperations.allowSlowOperations("arend.proof.search.preview").use {
-                previewAction.performForContext({
-                    when (it) {
-                        CommonDataKeys.PROJECT.name -> project
-                        CommonDataKeys.PSI_ELEMENT.name -> element.entry.def
-                        else -> null
+    // Reached both from the mouse listener above — a raw AWT handler, which no longer holds the
+    // write-intent lock — and from the Enter action, so take the lock here rather than per call site.
+    private fun onEntrySelected(element: ProofSearchUIEntry) {
+        WriteIntentReadAction.run {
+            when (element) {
+                is DefElement -> {
+                    SlowOperations.allowSlowOperations("arend.proof.search.preview").use {
+                        previewAction.performForContext({
+                            when (it) {
+                                CommonDataKeys.PROJECT.name -> project
+                                CommonDataKeys.PSI_ELEMENT.name -> element.entry.def
+                                else -> null
+                            }
+                        }, false)
                     }
-                }, false)
+                }
+                is MoreElement -> {
+                    model.remove(element)
+                    runProofSearch(element.alreadyProcessed, element.sequence)
+                }
             }
-        }
-        is MoreElement -> {
-            model.remove(element)
-            runProofSearch(element.alreadyProcessed, element.sequence)
         }
     }
 
