@@ -110,21 +110,49 @@ public class ContravariantBindersTest extends TypeCheckingTestCase {
 
   @Test
   public void singleSwapTest() {
-    // T's own parameter is covariant, so applying T to `a` doesn't add a second swap: checking
-    // f's type `T a` swaps once (f is contravariant), so `a` (contravariant) is referenceable there.
     typeCheckModule("""
-      \\func T (n :+ Nat) : \\Type => Nat
-      \\func test (a :- Nat) (f :- T a) => 0
+      \\func T (n :- Nat) => 0
+      \\func test (a :- Nat) => T a
       """);
   }
 
   @Test
-  public void doubleSwapComposesBackError() {
-    // T's own parameter is contravariant too, so applying T to `a` swaps a second time, landing
-    // back at the unswapped state - `a` (contravariant) is not referenceable there, same as at top level.
+  public void singleSwapError() {
     typeCheckModule("""
-      \\func T (n :- Nat) : \\Type => Nat
-      \\func test (a :- Nat) (f :- T a) => 0
+      \\func T (n :- Nat) => 0
+      \\func test (a :+ Nat) => T a
+      """, 1);
+  }
+
+  @Test
+  public void doubleSwapTest() {
+    typeCheckModule("""
+      \\func T (n :- Nat) => 0
+      \\func test (a :+ Nat) => T (T a)
+      """);
+  }
+
+  @Test
+  public void doubleSwapError() {
+    typeCheckModule("""
+      \\func T (n :- Nat) => 0
+      \\func test (a :- Nat) => T (T a)
+      """, 1);
+  }
+
+  @Test
+  public void tripleSwapTest() {
+    typeCheckModule("""
+      \\func T (n :- Nat) => 0
+      \\func test (a :- Nat) => T (T (T a))
+      """);
+  }
+
+  @Test
+  public void tripleSwapError() {
+    typeCheckModule("""
+      \\func T (n :- Nat) => 0
+      \\func test (a :+ Nat) => T (T (T a))
       """, 1);
   }
 

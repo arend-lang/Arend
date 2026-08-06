@@ -293,6 +293,39 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
     return null;
   }
 
+  public class HiddenVarianceContext implements VarianceContext {
+    private final boolean myCovariantHidden;
+    private final Set<Binding> mySaved;
+
+    private HiddenVarianceContext(boolean covariantHidden, Set<Binding> saved) {
+      myCovariantHidden = covariantHidden;
+      mySaved = saved;
+    }
+
+    @Override
+    public void close() {
+      if (myCovariantHidden) {
+        covariantContext = mySaved;
+      } else {
+        contravariantContext = mySaved;
+      }
+    }
+  }
+
+  // Used when checking the declared type of a binder
+  public VarianceContext enterBinderTypeContext(BindingVariance variance) {
+    if (variance == BindingVariance.INVARIANT) return clearCategoricalContext();
+    if (variance == BindingVariance.COVARIANT) {
+      Set<Binding> saved = contravariantContext;
+      contravariantContext = new HashSet<>();
+      return new HiddenVarianceContext(false, saved);
+    } else {
+      Set<Binding> saved = covariantContext;
+      covariantContext = new HashSet<>();
+      return new HiddenVarianceContext(true, saved);
+    }
+  }
+
   public BindingVariance checkVariance(Concrete.Parameter parameter, boolean allowed) {
     if (parameter.getVariance() != BindingVariance.INVARIANT && !allowed) {
       errorReporter.report(new TypecheckingError(parameter.getVariance() == BindingVariance.COVARIANT ? "Covariant parameters are not allowed here" : "Contravariant parameters are not allowed here", parameter));
@@ -2366,7 +2399,7 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
 
   private SingleDependentLink visitTypeParameter(Concrete.TypeParameter param, List<SortExpression> sorts, Expression expectedType, BindingVariance variance) {
     TypeExpression argResult;
-    try (var ignored = enterVarianceContext(variance)) {
+    try (var ignored = enterBinderTypeContext(variance)) {
       argResult = checkType(param.getType(), UniverseExpression.OMEGA);
     }
     if (argResult == null) return null;
@@ -2402,7 +2435,7 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
     }
     BindingVariance variance = checkVariance(arg, false);
     TypecheckingResult result;
-    try (var ignored = enterVarianceContext(variance)) {
+    try (var ignored = enterBinderTypeContext(variance)) {
       result = checkExpr(arg.getType(), UniverseExpression.OMEGA);
     }
     if (result == null) return false;

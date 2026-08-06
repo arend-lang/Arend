@@ -71,4 +71,50 @@ public class CatPiTest extends TypeCheckingTestCase {
       \\func test (X :+ \\Cat) => def X
       """, 1);
   }
+
+  @Test
+  public void covariantParamInTypeTest() {
+    typeCheckDef("\\func test {C : \\Cat} {a : C} (x :+ C) (p :+ a ~> x) => 0");
+  }
+
+  @Test
+  public void covariantParamInTypeTest2() {
+    typeCheckDef("\\func test {C : \\Cat} {a : C} (x :- C) (p :- x ~> a) => 0");
+  }
+
+  @Test
+  public void covariantParamInTypeError() {
+    typeCheckDef("\\func test {C : \\Cat} {a : C} (x :+ C) (p : a ~> x) => 0", 1);
+    assertThatErrorsAre(typecheckingError());
+  }
+
+  @Test
+  public void covariantParamInTypeError2() {
+    typeCheckDef("\\func test {C : \\Cat} {a : C} (x :+ C) (p :- a ~> x) => 0", 1);
+    assertThatErrorsAre(typecheckingError());
+  }
+
+  @Test
+  public void covariantParamInTypeError3() {
+    typeCheckDef("\\func test {C : \\Cat} {a : C} (x :+ C) (p :- x ~> a) => 0", 1);
+    assertThatErrorsAre(typecheckingError());
+  }
+
+  @Test
+  public void covariantParamInTypeError4() {
+    typeCheckDef("\\func test {C : \\Cat} {a : C} (x :- C) (p :- a ~> x) => 0", 1);
+    assertThatErrorsAre(typecheckingError());
+  }
+
+  @Test
+  public void covariantParamInTypeError5() {
+    typeCheckDef("\\func test {C : \\Cat} {a : C} (x :- C) (p : a ~> x) => 0", 1);
+    assertThatErrorsAre(typecheckingError());
+  }
+
+  @Test
+  public void covariantParamInTypeError6() {
+    typeCheckDef("\\func test {C : \\Cat} {a : C} (x :- C) (p : x ~> a) => 0", 1);
+    assertThatErrorsAre(typecheckingError());
+  }
 }

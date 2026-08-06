@@ -371,6 +371,38 @@ public class CoreExpressionChecker implements ExpressionVisitor<Expression, Expr
     return null;
   }
 
+  private class HiddenVarianceContext implements VarianceContext {
+    private final boolean myCovariantHidden;
+    private final Set<Binding> mySaved;
+
+    private HiddenVarianceContext(boolean covariantHidden, Set<Binding> saved) {
+      myCovariantHidden = covariantHidden;
+      mySaved = saved;
+    }
+
+    @Override
+    public void close() {
+      if (myCovariantHidden) {
+        myCovariantContext = mySaved;
+      } else {
+        myContravariantContext = mySaved;
+      }
+    }
+  }
+
+  // Used when checking the declared type of a binder
+  private VarianceContext enterBinderTypeContext(BindingVariance variance) {
+    if (variance == BindingVariance.INVARIANT) return clearCategoricalContext();
+    if (variance == BindingVariance.COVARIANT) {
+      Set<Binding> saved = myContravariantContext;
+      myContravariantContext = new HashSet<>();
+      return new HiddenVarianceContext(false, saved);
+    }
+    Set<Binding> saved = myCovariantContext;
+    myCovariantContext = new HashSet<>();
+    return new HiddenVarianceContext(true, saved);
+  }
+
   private SortExpression toSort(Expression type) {
     SortExpression sort = type.toSortExpression();
     if (sort == null) {
@@ -385,7 +417,7 @@ public class CoreExpressionChecker implements ExpressionVisitor<Expression, Expr
       addBinding(link, expr);
       if (link instanceof TypedDependentLink) {
         Expression paramType;
-        try (var ignored = enterVarianceContext(link.getVariance())) {
+        try (var ignored = enterBinderTypeContext(link.getVariance())) {
           paramType = link.getType().accept(this, type);
         }
         SortExpression sort = toSort(paramType);
@@ -415,7 +447,7 @@ public class CoreExpressionChecker implements ExpressionVisitor<Expression, Expr
     for (; link.hasNext(); link = link.getNext()) {
       addBinding(link, expr);
       if (link instanceof TypedDependentLink) {
-        try (var ignored = enterVarianceContext(link.getVariance())) {
+        try (var ignored = enterBinderTypeContext(link.getVariance())) {
           checkInf(link.getType(), type, allowInf);
         }
       }
@@ -428,7 +460,7 @@ public class CoreExpressionChecker implements ExpressionVisitor<Expression, Expr
       addBinding(link, expr);
       if (link instanceof TypedDependentLink) {
         SortExpression sort;
-        try (var ignored = enterVarianceContext(link.getVariance())) {
+        try (var ignored = enterBinderTypeContext(link.getVariance())) {
           sort = link.getType().accept(this, UniverseExpression.OMEGA).toSortExpression();
         }
         if (sort == null) {

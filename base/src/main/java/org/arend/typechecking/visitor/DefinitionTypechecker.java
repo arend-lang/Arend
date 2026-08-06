@@ -435,7 +435,7 @@ public class DefinitionTypechecker extends BaseDefinitionTypechecker implements 
       BindingVariance variance = typechecker.checkVariance(parameter, allowVariance);
       List<Expression> paramResults = new ArrayList<>();
       if (parameter.getType() != null) {
-        try (var ignored = typechecker.enterVarianceContext(variance)) {
+        try (var ignored = typechecker.enterBinderTypeContext(variance)) {
           if (def instanceof Concrete.Constructor) {
             TypeExpression paramType = typechecker.checkType(parameter.getType(), UniverseExpression.OMEGA);
             if (paramType != null) {
