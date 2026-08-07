@@ -1,0 +1,237 @@
+\import Algebra.Group
+\import Algebra.Meta
+\import Algebra.Monoid
+\import Algebra.Pointed
+\import Algebra.Ordered
+\import Arith.Nat
+\import Arith.Real
+\import Arith.Real.Field
+\import Arith.Real.UpperReal
+\import Data.Array
+\import Data.Bool
+\import Function.Meta
+\import Logic
+\import Logic.Meta
+\import Meta
+\import Order.Biordered
+\import Order.Lattice
+\import Order.PartialOrder
+\import Paths
+\import Paths.Meta
+\import Set
+\import Set.Fin
+\import Topology.MetricSpace
+\import Topology.MetricSpace.Complete
+\open JoinSemilattice (Big_<=_join0, Big_<=_join1, Big_join-univ, join-comm, join-idemp, join-univ)
+\open MeetSemilattice (Big_<=_meet1, Big_meet-univ)
+
+{- | **The matching (bottleneck) pseudometric on `n`-element arrays.**
+
+     For a pseudometric space `X`, `Array X n` carries
+     $d(r,s) = \min_{\sigma \in S_n} \max_i d(r_i, s_{\sigma i})$,
+     which is a *pseudo*metric whose kernel is exactly "permutations of one another". Feeding it to
+     `MetricCompletion` therefore performs the $S_n$ quotient and the completion in one step, so the
+     result is the space of *completed `n`-multisets* over `X` with no quotient type involved.
+
+     This is the carrier for Richman's spectrum of a monic degree-`n` polynomial
+     (Pacific J. Math. 196 (2000) 213-230): the multiset of roots is *unique*, so approximate
+     factorisations shrink in this metric and generate a Cauchy filter — unlike approximate single
+     roots, whose solution sets stay a union of one blob per root.
+
+     # Section 1: enumerating the symmetric group
+
+     `min` over $S_n$ needs $S_n$ as an explicit array, and arend-lib has no finiteness for function
+     spaces (no `FinSet (A -> B)`, no `FinSet (Array A n)`). Rather than build permutations
+     directly, enumerate *all* maps `Fin m -> Fin n` — a clean induction on `m` — and filter to the
+     injective ones, which on `Fin n -> Fin n` are exactly the permutations (`perm-fin`).
+
+     These two definitions are general array facts and belong in `Data/Array/`; they are kept here
+     only to keep the edit loop on one leaf module. -}
+-- | Maps are represented as plain functions, not as `Array (Fin n) m`: `::` does not carry the
+-- length index through `map` / `++`, so the array representation makes the element type of the
+-- enumeration collapse to the unindexed `Array (Fin n)`.
+\func fcons {m n : Nat} (j : Fin n) (g : Fin m -> Fin n) (i : Fin (suc m)) : Fin n \elim i
+  | 0 => j
+  | suc i => g i
+
+\func allMaps (m n : Nat) : Array (Fin m -> Fin n) \elim m
+  | 0 => (\lam (i : Fin 0) => \case i \with {}) :: nil
+  | suc m => Big (++) nil
+      (\new Array (Array (Fin (suc m) -> Fin n)) n (\lam j => map (fcons j) (allMaps m n)))
+
+-- | Every map `Fin m -> Fin n` occurs in `allMaps m n`. Truncated on purpose: every consumer is an
+-- inequality, hence a `\Prop`, so an index under `∃` is enough.
+\lemma allMaps-complete {m n : Nat} (f : Fin m -> Fin n)
+  : ∃ (k : Fin (allMaps m n).len) (allMaps m n k = f) \elim m
+  | 0 => inP (0, ext (\lam (i : Fin 0) => \case i \with {}))
+  | suc m => \case allMaps-complete (\lam i => f (suc i)) \with {
+    | inP (k, p) => inP (++.index-big (f 0) k,
+        ++.Big++-index *> pmap (fcons (f 0)) p
+        *> ext (\lam (i : Fin (suc m)) => \case \elim i \with { | 0 => idp | suc i => idp }))
+  }
+
+-- | `Dec` for an implication between decidable propositions. Belongs in `Set.ard` beside `Dec_||`.
+\func Dec_-> {A B : \Prop} (d : Dec A) (e : Dec B) : Dec (A -> B) \elim d, e
+  | _, yes b => yes (\lam _ => b)
+  | yes a, no q => no (\lam h => q (h a))
+  | no q, _ => yes (\lam a => absurd (q a))
+
+\func IsInjFin {n : Nat} (f : Fin n -> Fin n) : \Prop => \Pi (i j : Fin n) -> f i = f j -> i = j
+
+-- | Injectivity of a self-map of `Fin n` is decidable: bounded quantification (`FinDec.fin-dec`)
+-- over `Fin n`'s decidable equality.
+\func injDec {n : Nat} (f : Fin n -> Fin n) : Dec (IsInjFin f)
+  => FinDec.fin-dec (\lam i => dec_decide (FinDec.fin-dec
+       (\lam j => dec_decide (Dec_-> (decideEq (f i) (f j)) (decideEq i j)))))
+
+{- | **The symmetric group as an explicit array.** Injective self-maps of `Fin n` are exactly the
+     permutations (`perm-fin`: injectivity forces surjectivity by pigeonhole), so filtering
+     `allMaps n n` by `injDec` enumerates $S_n$. -}
+\func perms (n : Nat) : Array (Fin n -> Fin n)
+  => filter (\lam f => decToBool (injDec f)) (allMaps n n)
+
+-- | Every injective self-map of `Fin n` occurs in `perms n`. This is what makes the `Big_∧` below
+-- bound `matchDist` above by *any* particular permutation, which is how the triangle inequality and
+-- symmetry get their witnesses (`\sigma\circ\tau`, `\sigma^{-1}`).
+\lemma perms-complete {n : Nat} {f : Fin n -> Fin n} (fi : IsInjFin f) : ∃ (Index f (perms n))
+  => \case allMaps-complete f \with {
+    | inP (k, p) => inP (transport (\lam g => Index g (perms n)) p
+        (filter-index (\lam g => decToBool (injDec g)) (allMaps n n) k
+           (pmap decToBool (dec_yes_reduce (transportInv IsInjFin p fi)))))
+  }
+
+-- | Every element of `perms n` really is injective (`filter-sat` plus `decToBool`-reflection).
+\lemma fromDecToBool {E : \Prop} {d : Dec E} (p : decToBool d = true) : E \elim d
+  | yes e => e
+  | no q => absurd (true/=false (inv p))
+
+\lemma perms-inj {n : Nat} (i : Fin (perms n).len) : IsInjFin (perms n i)
+  => fromDecToBool (filter-sat (\lam f => decToBool (injDec f)) (allMaps n n) i)
+
+\lemma id-inj {n : Nat} : IsInjFin {n} (\lam i => i) => \lam i j p => p
+
+\lemma comp-inj {n : Nat} {f g : Fin n -> Fin n} (fi : IsInjFin f) (gi : IsInjFin g)
+  : IsInjFin (\lam i => g (f i)) => \lam i j p => fi i j (gi (f i) (f j) p)
+
+{- | # Section 2: the matching pseudometric
+
+     `Real`-specialised wrappers around the lattice `Big` bounds. They exist so the array can be
+     passed as the *first* implicit: with the generic lemmas the unifier solves `Big`'s array from
+     the index's type `Fin l.len`, and picks `perms n` over the cost array below — they have the same
+     length, so both are valid solutions and the wrong one is chosen. -}
+\lemma bigMeet-cond {l : Array Real} {x : Real} (i : Fin l.len) : Big (∧) x l <= l i
+  => Big_<=_meet1 i
+
+\lemma bigMeet-univ {l : Array Real} {x y : Real} (p : y <= x) (f : \Pi (i : Fin l.len) -> y <= l i)
+  : y <= Big (∧) x l => Big_meet-univ p f
+
+\lemma bigJoin-base {l : Array Real} {x : Real} : x <= Big (∨) x l => Big_<=_join0
+
+\lemma bigJoin-cond {l : Array Real} {x : Real} (i : Fin l.len) : l i <= Big (∨) x l
+  => Big_<=_join1 i
+
+\lemma bigJoin-univ {l : Array Real} {x y : Real} (p : x <= y) (f : \Pi (i : Fin l.len) -> l i <= y)
+  : Big (∨) x l <= y => Big_join-univ p f
+
+-- | The `n` pairwise distances induced by a pairing `f`, and their maximum: the cost of `f`.
+\func pairCosts {X : PseudoMetricSpace} {n : Nat} (r s : Array X n) (f : Fin n -> Fin n) : Array Real n
+  => \new Array Real n (\lam i => ldist (r i) (s (f i)))
+
+-- | Base value `0` rather than `l 0`, so `maxDist` is defined at `n = 0` and nonnegative for free.
+\func maxDist {X : PseudoMetricSpace} {n : Nat} (r s : Array X n) (f : Fin n -> Fin n) : Real
+  => Big (∨) 0 (pairCosts r s f)
+
+\lemma maxDist>=0 {X : PseudoMetricSpace} {n : Nat} {r s : Array X n} {f : Fin n -> Fin n}
+  : 0 <= maxDist r s f => bigJoin-base {pairCosts r s f}
+
+\lemma maxDist-cond {X : PseudoMetricSpace} {n : Nat} {r s : Array X n} {f : Fin n -> Fin n} (i : Fin n)
+  : ldist (r i) (s (f i)) <= maxDist r s f => bigJoin-cond {pairCosts r s f} i
+
+\lemma maxDist-univ {X : PseudoMetricSpace} {n : Nat} {r s : Array X n} {f : Fin n -> Fin n} {c : Real}
+                    (c>=0 : 0 <= c) (h : \Pi (i : Fin n) -> ldist (r i) (s (f i)) <= c)
+  : maxDist r s f <= c => bigJoin-univ {pairCosts r s f} c>=0 h
+
+-- | Triangle inequality for pairings: composing the pairings bounds the composite cost.
+\lemma maxDist-triang {X : PseudoMetricSpace} {n : Nat} {r s t : Array X n} (f g : Fin n -> Fin n)
+  : maxDist r t (\lam i => g (f i)) <= maxDist r s f + maxDist s t g
+  => maxDist-univ (linarith (maxDist>=0 {X} {n} {r} {s} {f}, maxDist>=0 {X} {n} {s} {t} {g}))
+       (\lam i => ldist-triang <=∘ <=_+ (maxDist-cond i) (maxDist-cond (f i)))
+
+-- | The costs of all the permutations, and their minimum: the one-sided matching cost. The `Big (∧)`
+-- base value is the identity pairing, so no nonemptiness side condition is needed.
+\func permCosts {X : PseudoMetricSpace} {n : Nat} (r s : Array X n) : Array Real (perms n).len
+  => \new Array Real (perms n).len (\lam i => maxDist r s (perms n i))
+
+\func rawDist {X : PseudoMetricSpace} {n : Nat} (r s : Array X n) : Real
+  => Big (∧) (maxDist r s (\lam i => i)) (permCosts r s)
+
+\lemma rawDist>=0 {X : PseudoMetricSpace} {n : Nat} {r s : Array X n} : 0 <= rawDist r s
+  => bigMeet-univ {permCosts r s} maxDist>=0 (\lam i => maxDist>=0)
+
+-- | `rawDist` is below the cost of *any* permutation — this is where `perms-complete` is spent.
+\lemma rawDist-cond {X : PseudoMetricSpace} {n : Nat} {r s : Array X n} {f : Fin n -> Fin n}
+                    (fi : IsInjFin f) : rawDist r s <= maxDist r s f
+  => \case perms-complete fi \with {
+       | inP (j, p) => bigMeet-cond {permCosts r s} j <=∘ =_<= (pmap (maxDist r s) p)
+     }
+
+-- | ...and it is the *greatest* such bound, over injective pairings only.
+\lemma rawDist-univ {X : PseudoMetricSpace} {n : Nat} {r s : Array X n} {c : Real}
+                    (h : \Pi (f : Fin n -> Fin n) -> IsInjFin f -> c <= maxDist r s f)
+  : c <= rawDist r s
+  => bigMeet-univ {permCosts r s} (h _ id-inj) (\lam i => h _ (perms-inj i))
+
+{- | Triangle inequality for `rawDist`. The minima are **not attained** constructively — that would
+     need a decidable comparison of reals — so instead of composing two optimal permutations the
+     proof strips one minimum at a time: bound `rawDist r t - maxDist r s f` by every `maxDist s t g`
+     to get `rawDist s t`, then bound `rawDist r t - rawDist s t` by every `maxDist r s f`. -}
+\lemma rawDist-triang-step {X : PseudoMetricSpace} {n : Nat} {r s t : Array X n}
+                           (f : Fin n -> Fin n) (fi : IsInjFin f)
+  : rawDist r t - maxDist r s f <= rawDist s t
+  => rawDist-univ \lam g gi =>
+       linarith (rawDist-cond {X} {n} {r} {t} (comp-inj fi gi) <=∘ maxDist-triang f g)
+
+\lemma rawDist-triang {X : PseudoMetricSpace} {n : Nat} {r s t : Array X n}
+  : rawDist r t <= rawDist r s + rawDist s t
+  => linarith (rawDist-univ {X} {n} {r} {s} {rawDist r t - rawDist s t}
+                 (\lam f fi => linarith (rawDist-triang-step {X} {n} {r} {s} {t} f fi)))
+
+{- | Symmetrised: **the matching pseudometric**. Symmetrising with `∨` avoids having to invert an
+     injective self-map of `Fin n` (which would need pigeonhole surjectivity), and the triangle
+     inequality survives because it holds in each direction separately. -}
+\func matchDist {X : PseudoMetricSpace} {n : Nat} (r s : Array X n) : Real
+  => rawDist r s ∨ rawDist s r
+
+\lemma matchDist>=0 {X : PseudoMetricSpace} {n : Nat} {r s : Array X n} : 0 <= matchDist r s
+  => rawDist>=0 <=∘ join-left
+
+\lemma matchDist-refl {X : PseudoMetricSpace} {n : Nat} {r : Array X n} : matchDist r r = 0
+  => \have raw0 : rawDist r r = 0
+              => <=-antisymmetric
+                   (rawDist-cond id-inj <=∘ maxDist-univ <=-refl (\lam i => =_<= ldist-refl))
+                   rawDist>=0
+     \in pmap2 (∨) raw0 raw0 *> join-idemp
+
+\lemma matchDist-symm {X : PseudoMetricSpace} {n : Nat} {r s : Array X n}
+  : matchDist r s = matchDist s r => join-comm
+
+\lemma matchDist-triang {X : PseudoMetricSpace} {n : Nat} {r s t : Array X n}
+  : matchDist r t <= matchDist r s + matchDist s t
+  => join-univ (rawDist-triang <=∘ <=_+ join-left join-left)
+               (rawDist-triang <=∘ <=_+ join-right join-right <=∘ =_<= +-comm)
+
+{- | **`n`-element arrays over `X` under the matching pseudometric.** The `dist` kernel is
+     "permutations of one another", so `MetricCompletion` of this space is the space of completed
+     `n`-multisets over `X`: the $S_n$ quotient and the completion happen in one step. -}
+\instance MultisetPseudoMetric {X : PseudoMetricSpace} (n : Nat) : PseudoMetricSpace (Array X n)
+  | dist => matchDist
+  | dist-refl => Real.=-upper.1 matchDist-refl
+  | dist-symm => Real.=-upper.1 matchDist-symm
+  | dist-triang => PseudoMetricSpace.from-ldist-triang matchDist-triang
+
+{- | **Completed `n`-multisets over `X`.** `MetricCompletion` takes a *pseudo*metric space to a
+     genuine *metric* space, so it identifies arrays at distance `0` — i.e. permutations of one
+     another — while completing. This is Richman's "completion of the space of `n`-multisets", and it
+     is filter-based (`RegularCauchyFilter`), hence choice-free: no Cauchy sequences are involved. -}
+\func Multiset (X : PseudoMetricSpace) (n : Nat) : CompleteMetricSpace
+  => MetricCompletion (MultisetPseudoMetric {X} n)

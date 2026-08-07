@@ -1,6 +1,7 @@
 .idea
 /meta/build/
 bin
+.arend
 *.iml
 *DS_Store*
 

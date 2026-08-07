@@ -48,3 +48,41 @@
                  }
              }
   }
+
+{- | **Dependent choice over `Nat`.** Given a family `A` indexed by `Nat`, a relation `R` between
+     consecutive fibres, a starting point in `A 0`, and the knowledge that every `a : A i` has
+     *some* `R`-successor, there is a sequence stepping along `R` forever.
+
+     Strictly weaker than `achoice`: that one is choice over an arbitrary `\Set` and yields
+     excluded middle through `achoice.lemFromChoice`, whereas `adchoice` does not, so a development
+     using only `adchoice` stays intuitionistic. It is also strictly stronger than
+     `finiteDependentChoice` (`Set/Fin.ard`), which produces finite prefixes only. -}
+\axiom adchoice {A : Nat -> \Set} (R : \Pi {i : Nat} -> A i -> A (suc i) -> \Prop) (a0 : A 0)
+                (total : \Pi (i : Nat) (a : A i) -> TruncP (\Sigma (b : A (suc i)) (R a b)))
+  : TruncP (\Sigma (s : \Pi (i : Nat) -> A i) (\Pi (i : Nat) -> R (s i) (s (suc i))))
+  \where {
+    {- | `adchoice` is a **consequence** of `achoice`, hence a strict weakening rather than new
+         strength: one application of `achoice` over the set of states `\Sigma (i : Nat) (A i)`
+         picks a successor for every state at once, and plain recursion then iterates it.
+
+         It is nevertheless stated as its own axiom, because the converse fails where it matters:
+         `achoice` also yields excluded middle (`achoice.lemFromChoice`, by Diaconescu over a
+         `Bool`-quotient) and dependent choice does not. Instantiating `achoice` at `Nat` instead
+         is no good either — that is countable choice, which does not commute `\Pi (a : A i)` past
+         `TruncP` and so cannot produce the successor-picking function below. -}
+    \lemma fromChoice {A : Nat -> \Set} (R : \Pi {i : Nat} -> A i -> A (suc i) -> \Prop) (a0 : A 0)
+                      (total : \Pi (i : Nat) (a : A i) -> TruncP (\Sigma (b : A (suc i)) (R a b)))
+      : TruncP (\Sigma (s : \Pi (i : Nat) -> A i) (\Pi (i : Nat) -> R (s i) (s (suc i))))
+      => \case achoice {\Sigma (i : Nat) (A i)} (\lam p => \Sigma (b : A (suc p.1)) (R p.2 b))
+                 (\lam p => total p.1 p.2) \with {
+           | inP g => inP (iter A R g a0, \lam i => (g (i, iter A R g a0 i)).2)
+         }
+      \where
+        -- | Iterate the chosen successor function from `a0`. `A` and `R` are explicit: both occur
+        -- only inside `g`'s type, where unification cannot recover them.
+        \func iter (A : Nat -> \Set) (R : \Pi {i : Nat} -> A i -> A (suc i) -> \Prop)
+                   (g : \Pi (p : \Sigma (i : Nat) (A i)) -> \Sigma (b : A (suc p.1)) (R p.2 b))
+                   (a0 : A 0) (i : Nat) : A i \elim i
+          | 0 => a0
+          | suc i => (g (i, iter A R g a0 i)).1
+  }

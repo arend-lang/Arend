@@ -1,0 +1,413 @@
+\import Algebra.Group
+\import Algebra.Meta
+\import Algebra.Monoid
+\import Algebra.Ordered
+\import Algebra.Pointed
+\import Algebra.Ring
+\import Algebra.Ring.Poly
+\import Algebra.Ring.RingHom
+\import Algebra.Semiring
+\import Algebra.StrictlyOrdered
+\import Analysis.Limit
+\import Analysis.PowerSeries
+\import Analysis.Series
+\import Arith.Complex.Banach
+\import Arith.Rat
+\import Arith.Real.UpperReal
+\import Topology.CoverSpace.Complete
+\import Topology.MetricSpace
+\import Topology.TopSpace
+\import Topology.NormedAbGroup
+\import Topology.NormedRing
+\import Arith.Complex
+\import Arith.Complex.Norm
+\import Arith.Nat
+\import Arith.Real
+\import Arith.Real.Field
+\import Arith.Real.KneserLemma
+\import Arith.Real.Root
+\import Function.Meta
+\import Logic
+\import Logic.Classical (adchoice)
+\import Logic.Meta
+\import Meta
+\import Order.Biordered
+\import Order.Directed
+\import Order.Lattice
+\import Order.PartialOrder
+\import Order.StrictOrder
+\import Paths
+\import Paths.Meta
+\open Monoid (pow)
+
+-- | Translation: `polyTranslate a f` is $f(X + a)$, obtained by substituting the polynomial
+-- `padd 1 a` = $X + a$ for the variable.
+\func polyTranslate {R : CRing} (a : R) (f : Poly R) : Poly R
+  => polyMapEval polyHom f (padd 1 a)
+
+-- | The recursion equation for `polyTranslate`, needed so that the induction below can fold
+-- the result back into a `polyTranslate` call and apply its hypothesis.
+\private \lemma polyTranslate_padd {R : CRing} (a : R) (f : Poly R) (e : R)
+  : polyTranslate a (padd f e) = polyTranslate a f * padd 1 a + padd pzero e
+  => idp
+
+-- | Translating and then evaluating at `z` is evaluating at `z + a`.
+\lemma polyEval_polyTranslate {R : CRing} (a : R) (f : Poly R) (z : R)
+  : polyEval (polyTranslate a f) z = polyEval f (z + a) \elim f
+  | pzero => idp
+  | padd f e => rewrite (polyTranslate_padd a f e) $
+      rewrite (polyEvalRingHom.func-+, polyEvalRingHom.func-*, polyEval_polyTranslate a f z) simplify
+
+-- | Translation does not raise the degree: substituting the degree-1 polynomial $X + a$ into
+-- a polynomial of degree $< n$ again gives one of degree $< n$.
+\lemma degree<-suc {R : AddPointed} {p : Poly R} {n : Nat} (d : degree< p n)
+  : degree< p (suc n) => \lam s => d linarith
+
+\private \lemma degree<_*-right {R : Ring} {a : R} {p : Poly R} {n : Nat} (d : degree< p n)
+  : degree< (p * padd pzero a) n
+  => \lam s => polyCoef_*-right *> pmap (`* a) (d s) *> zro_*-left
+
+-- | $pX = $ `padd p 0`: multiplying by the variable is exactly the `padd` constructor.
+\private \lemma mul_X {R : Ring} (p : Poly R) : p * padd 1 0 = padd p 0
+  => inv (padd-expand *> pmap (p * padd 1 0 +) peq *> zro-right)
+
+-- | $p(X+a) = pX + pa$, splitting the product into the two cases whose degrees are known.
+\lemma mul_padd1 {R : CRing} (a : R) (p : Poly R)
+  : p * padd 1 a = padd p 0 + p * padd pzero a
+  => pmap (p *) (inv (pmap2 padd zro-right zro-left)) *> ldistr *> pmap (+ _) (mul_X p)
+
+\lemma degree<_*padd1 {R : CRing} (a : R) {p : Poly R} {n : Nat} (d : degree< p n)
+  : degree< (p * padd 1 a) (suc n)
+  => rewrite (mul_padd1 a p) $ degree<_+ (degree<_padd d) (degree<-suc (degree<_*-right d))
+
+\lemma polyTranslate_degree< {R : CRing} (a : R) {f : Poly R} {n : Nat} (d : degree< f n)
+  : degree< (polyTranslate a f) n \elim f, n
+  | pzero, n => \lam _ => idp
+  | padd f e, 0 =>
+    \have t => padd=pzero (degree<0 d)
+    \in rewrite (t.1, t.2) $ transportInv (\lam q => degree< (polyTranslate a q) 0) peq \lam _ => idp
+  | padd f e, suc m => rewrite (polyTranslate_padd a f e) $
+      degree<_+ (degree<_*padd1 a (polyTranslate_degree< a (degree<_padd.conv d)))
+                (degree<_padd (\lam _ => idp))
+
+-- | Translation preserves the leading coefficient, hence monicity.
+\lemma polyTranslate_polyCoef {R : CRing} (a : R) {f : Poly R} {n : Nat} (d : degree< f (suc n))
+  : polyCoef (polyTranslate a f) n = polyCoef f n \elim f, n
+  | pzero, n => idp
+  | padd f e, 0 => rewrite (degree<0 (degree<_padd.conv d)) idp
+  | padd f e, suc m =>
+    \have | dA : degree< (polyTranslate a f) (suc m) => polyTranslate_degree< a (degree<_padd.conv d)
+    \in rewrite (polyTranslate_padd a f e, mul_padd1 a (polyTranslate a f)) $
+        rewrite (polyCoef_+, polyCoef_+, polyCoef_*-right, dA Preorder.<=-refl,
+                 polyTranslate_polyCoef a (degree<_padd.conv d)) simplify
+
+-- # One step of the iteration
+
+{- | One Kneser step at the point `w0`: if $|f(w_0)| < d$ then some `w` with $|w|^n < d$ moves
+     the value below $qd$. This is `KneserLemma-poly` applied to the translate $f(X + w_0)$,
+     whose value at `w` is $f(w + w_0)$ by `polyEval_polyTranslate`. -}
+\lemma fta-step {n : Nat} (n>0 : 0 < n) (f : Poly ComplexField)
+                (deg : degree< f (suc n)) (monic : polyCoef f n = 1)
+                (w0 : Complex) {d : Real} (fw0<d : cabs (polyEval f w0) < d)
+  : ∃ (w : Complex) (pow (cabs w) n < d) (cabs (polyEval f (w + w0)) < kneser-q n * d)
+  => \case KneserLemma-poly n>0 (polyTranslate w0 f)
+             (polyTranslate_degree< w0 deg)
+             (polyTranslate_polyCoef w0 deg *> monic)
+             (rewrite (polyEval_polyTranslate w0 f 0, zro-left) fw0<d) \with {
+       | inP (w, |w|^n<d, |fw|<qd) =>
+         inP (w, |w|^n<d, rewriteI (polyEval_polyTranslate w0 f w) |fw|<qd)
+     }
+
+-- # Approximate roots
+
+{- | Iterating `fta-step` drives the value below $q^i c$ for every `i`: monic polynomials have
+     approximate roots of every accuracy. This is the constructive core of the theorem, and
+     unlike the sequence of the informal proof it needs no choice — each step goes from one
+     truncated existential to the next, which is fine because the goal is a proposition. -}
+\lemma fta-approx {n : Nat} (n>0 : 0 < n) (f : Poly ComplexField)
+                  (deg : degree< f (suc n)) (monic : polyCoef f n = 1)
+                  {c : Real} (f0<c : cabs (polyEval f 0) < c) (i : Nat)
+  : ∃ (z : Complex) (cabs (polyEval f z) < pow (kneser-q n) i * c) \elim i
+  | 0 => inP (0, rewrite ide-left f0<c)
+  | suc i => \case fta-approx n>0 f deg monic f0<c i \with {
+    | inP (z, fz<qic) => \case fta-step n>0 f deg monic z fz<qic \with {
+      | inP (w, _, fwz<) => inP (w + z, transport (cabs (polyEval f (w + z)) <) equation.cRing fwz<)
+    }
+  }
+
+-- # Continuity of polynomial evaluation
+
+-- | A polynomial's coefficients form an everywhere-convergent power series: past the degree
+-- every term vanishes, so the tails are exactly zero.
+\lemma polyPowerSeriesConv {f : Poly ComplexField} {m : Nat} (d : degree< f m)
+  : IsPowerSeriesConv {ComplexCompleteRing} (\lam i => polyCoef f i)
+  => \lam {a} a>=0 {eps} eps>0 => inP (m, \lam {n} m<=n => rewrite (tail-zro d a) eps>0)
+  \where {
+    \private \lemma term-zro {f : Poly ComplexField} {m : Nat} (d : degree< f m) (a : Rat)
+                            {j : Nat} (p : m <= j)
+      : norm {ComplexCompleteRing} (polyCoef f j) * pow a j = 0
+      => rewrite (d p, norm_zro) (ExUpperRealSemigroup.zro_*-left ExUpperReal.fromRat-bounded)
+
+    -- No `midSum` congruence exists, so squeeze between the zero series on both sides.
+    \private \lemma tail-zro {f : Poly ComplexField} {m : Nat} (d : degree< f m) (a : Rat) {n : Nat}
+      : midSum (\lam j => norm {ComplexCompleteRing} (polyCoef f j) * pow a j) m n = 0
+      => Poset.<=-antisymmetric
+           (transport (_ <=) midSum_0 (midSum_<= {ExUpperRealAbMonoid} {series d a} {\lam _ => 0}
+              (\lam {j} p _ => rewrite (term-zro d a p) Preorder.<=-refl)))
+           (transport (`<= _) midSum_0 (midSum_<= {ExUpperRealAbMonoid} {\lam _ => 0} {series d a}
+              (\lam {j} p _ => rewrite (term-zro d a p) Preorder.<=-refl)))
+      \where \func series {f : Poly ComplexField} {m : Nat} (d : degree< f m) (a : Rat) (j : Nat)
+                => norm {ComplexCompleteRing} (polyCoef f j) * pow a j
+  }
+
+-- | `polyEval f` is a cover map, hence continuous enough for `limit-apply`: a polynomial is an
+-- everywhere-convergent power series, and `powerSeriesSum-total-cover` covers those.
+\func polyEvalCover {f : Poly ComplexField} {m : Nat} (d : degree< f m)
+  : CoverMap ComplexCompleteRing ComplexCompleteRing (polyEval f)
+  => transportInv (CoverMap ComplexCompleteRing ComplexCompleteRing)
+       (ext \lam z => inv (polyEval_powerSeriesSum d z))
+       (powerSeriesSum-total-cover (polyPowerSeriesConv d))
+  \where {
+    -- Abstract on purpose: at concrete `Complex` the product unfolds into `re`/`im` components
+    -- and `zro_*-left` no longer matches.
+    \private \lemma coef-zro_* {R : Ring} {c : R} (p : c = 0) (x : R) (k : Nat) : c * pow x k = 0
+      => rewrite p zro_*-left
+
+    -- Finitely many nonzero terms, so the series sum is the finite sum `polyEval` computes.
+    \private \lemma polySeriesSum {f : Poly ComplexField} {m : Nat} (d : degree< f m) (z : Complex)
+      : IsSeriesSum (powerSeries (\lam i => polyCoef f i) z) (polyEval f z)
+      => transport (IsSeriesSum (powerSeries (\lam i => polyCoef f i) z))
+           (inv (polyEval_polyCoef d))
+           (seriesSum-fin m (\lam {j} q => coef-zro_* (d q) z j))
+
+    \private \lemma polyEval_powerSeriesSum {f : Poly ComplexField} {m : Nat} (d : degree< f m) (z : Complex)
+      : powerSeriesSum-total (\lam i => polyCoef f i) (polyPowerSeriesConv d) z = polyEval f z
+      => HausdorffTopSpace.limit-unique powerSeriesSum-total-isSum (polySeriesSum d z)
+  }
+
+
+-- # The sequence (classical: see the note on `fta-seq`)
+
+-- | Stated over an abstract group on purpose: at concrete `Complex` the operations compute on
+-- `re`/`im` and defeat `equation` (see arend-quirks on concrete-record arithmetic).
+\lemma add-sub-cancel {G : AddGroup} (x y : G) : (x + y) - y = x => simplify
+
+{- | The sequence of the informal proof: $z_0 = 0$ and $z_{i+1} = z_i + w_i$ with $w_i$ from
+     `fta-step`, giving $|f(z_i)| < q^i c$ (3) and $|z_{i+1} - z_i|^n < q^i c$ (4). The states
+     carry their own (3)-bound, so `adchoice`'s relation only has to record (4). -}
+\lemma fta-seq {n : Nat} (n>0 : 0 < n) (f : Poly ComplexField)
+               (deg : degree< f (suc n)) (monic : polyCoef f n = 1)
+               {c : Real} (f0<c : cabs (polyEval f 0) < c)
+  : ∃ (z : Nat -> Complex)
+      (\Pi (i : Nat) -> cabs (polyEval f (z i)) < pow (kneser-q n) i * c)
+      (\Pi (i : Nat) -> pow (cabs (z (suc i) - z i)) n < pow (kneser-q n) i * c)
+  => \case adchoice
+             {\lam i => \Sigma (z : Complex) (cabs (polyEval f z) < pow (kneser-q n) i * c)}
+             (\lam {i} a b => pow (cabs (b.1 - a.1)) n < pow (kneser-q n) i * c)
+             (0, rewrite ide-left f0<c)
+             (\lam i a => \case fta-step n>0 f deg monic a.1 a.2 \with {
+               | inP (w, |w|^n<d, fwz<) => inP ((w + a.1, transport (cabs (polyEval f (w + a.1)) <) equation.cRing fwz<), rewrite (add-sub-cancel w a.1) |w|^n<d)
+             })
+           \with {
+       | inP (s, r) => inP (\lam i => (s i).1, \lam i => (s i).2, r)
+     }
+
+-- # Geometric decay
+
+-- | Rational geometric decay against a positive constant: `rat_<1_pow-bound` at `e / C`.
+\private \lemma rat-pow-decay {b : Rat} (b<1 : b < 1) (C : Rat) (C>0 : 0 < C) {e : Rat} (e>0 : 0 < e)
+  : ∃ (N : Nat) (RatField.pow b N * C < e)
+  => \case rat_<1_pow-bound b<1 (RatField.<_*_positive_positive e>0 (RatField.finv>0 C>0)) \with {
+       | (N, p) => inP (N, RatField.<_*_positive-left p C>0 <∘l =_<=
+           (*-assoc *> pmap (e *) (RatField.*-comm *> RatField.finv-right (RatField.>_/= C>0)) *> ide-right))
+     }
+
+-- | One rational bound, transported to `Real`: `s <= b` and `A <= C` push `s^N * A` under `b^N * C`,
+-- and `RealField.pow-rat` / `RealField.*-rat` identify the latter with its rational value.
+\private \lemma real-pow-step {s : Real} (s>=0 : 0 <= s) (b : Rat) (s<=b : s <= b)
+                              {A : Real} (C : Rat) (A<=C : A <= C) (C>=0 : 0 <= C)
+                              {N : Nat} {e : Rat} (h : RatField.pow b N * C < e)
+  : pow s N * A < e
+  => (<=_*_positive-right (RealField.pow>=0 s>=0) A<=C
+      <=∘ <=_*_positive-left (RealField.pow_<=-monotone s>=0 s<=b) (rat_real_<=.1 C>=0)
+      <=∘ =_<= (pmap (`* (C : Real)) RealField.pow-rat *> RealField.*-rat))
+     <∘r rat_real_<.1 h
+
+{- | **Geometric decay over `Real`.** For `0 <= s < 1`, some power of `s` scales any `A` below any
+     positive `eps`. arend-lib has only the rational `rat_<1_pow-bound` (`Arith/Rat.ard:451`), so
+     this descends to `Rat` — a rational `b` above `s`, a rational `C` above `A` forced positive by
+     `∨ 1`, a rational `e` below `eps` — and returns through `real-pow-step`.
+
+     `eps` is a `Real` rather than a `Rat` because `increments-uniform-cauchy` applies this at
+     `(1 - r) * eps`. Belongs in `Arith/Real/Field.ard` next to `pow-rat`. -}
+\lemma pow_<1-decay {s : Real} (s>=0 : 0 <= s) (s<1 : s < 1) (A : Real) {eps : Real} (eps>0 : 0 < eps)
+  : ∃ (N : Nat) (pow s N * A < eps)
+  => \case real_<-char.1 s<1, real_<-char.1 (linarith : A < A + 1), real_<-char.1 eps>0 \with {
+       | inP (b, s<b, b<1), inP (C, A<C, _), inP (e, zro<e, e<eps) =>
+         \have | C>0 : (0 : Rat) < C ∨ 1 => RatField.zro<ide <∘l join-right
+               | e>0 : (0 : Rat) < e => rat_real_<.2 zro<e
+         \in \case rat-pow-decay (rat_real_<.2 b<1) (C ∨ 1) C>0 e>0 \with {
+           | inP (N, h) => inP (N, real-pow-step s>=0 b (<=-less s<b) (C ∨ 1)
+               (<=-less (A<C <∘l rat_real_<=.1 join-left)) (<=-less C>0) h <∘ e<eps)
+         }
+     }
+
+-- # The theorem
+
+-- | `Nat` is directed by `max`. Belongs in `Order/Directed.ard` or `Arith/Nat.ard`; kept local
+-- only to avoid re-typechecking those modules' cones while iterating.
+\private \instance NatDirectedSet : DirectedSet Nat
+  | Preorder => NatSemiring
+  | isInhabitted => inP 0
+  | isDirected x y => inP (x ∨ y, join-left, join-right)
+
+-- | Abstract on purpose: at concrete `Complex` the group operations compute on `re`/`im`
+-- (see arend-quirks §4), so `simplify` only fires over an abstract `AddGroup`.
+\lemma zro-minus {G : AddGroup} (x : G) : 0 - x = negative x => simplify
+
+-- | The metric side of `limit-metric-char` / `convergent-metric-char` at `Complex`: `dist` is
+-- `cabs` of the difference, and `Real`'s upper cut `U` is `<` against a rational.
+-- `x`/`y` are explicit because they occur only under a concrete-`Complex` `-`, where unification
+-- cannot recover them (arend-quirks §4).
+\private \lemma dist_U (x y : Complex) {eps : Rat} (p : cabs (x - y) < eps)
+  : (dist {ComplexCompleteRing} x y).U eps
+  => rewrite norm-dist (real_<_U.1 p)
+
+-- | `dist 0 x` is `cabs x`: the shape `values-limit-zro` needs, the limit being `0`.
+\private \lemma dist_zro_U (x : Complex) {eps : Rat} (p : cabs x < eps)
+  : (dist {ComplexCompleteRing} 0 x).U eps
+  => dist_U 0 x (transportInv (`< (eps : Real)) (pmap cabs (zro-minus x) *> cabs_negative) p)
+
+{- | Estimate (3) drives the values to zero: $|f(z_i)| < q^i c$ with $0 < q < 1$.
+
+     `limit-metric-char.2` reduces this to "for every `eps > 0` some `N` has
+     `(dist 0 (polyEval f (z m))).U eps` for all `m >= N`". `pow_<1-decay` supplies that `N`, and
+     for `m >= N` the bound only improves because `pow` decreases in the exponent for a base
+     below 1 (`pow_<=-degree`). Positivity of `c` is not a hypothesis — it follows from
+     `bound3 0`. -}
+\lemma values-limit-zro {n : Nat} (n>0 : 0 < n) (f : Poly ComplexField) {c : Real} (z : Nat -> Complex)
+                        (bound3 : \Pi (i : Nat) -> cabs (polyEval f (z i)) < pow (kneser-q n) i * c)
+  : ComplexCompleteRing.IsLimit (\lam i => polyEval f (z i)) 0
+  => \have | q>=0 : 0 <= kneser-q n => <=-less (kneser-q>0 n>0)
+           | c>0 : 0 < c => linarith (cabs>=0 {polyEval f (z 0)},
+                                      transport (cabs (polyEval f (z 0)) <) ide-left (bound3 0))
+     \in limit-metric-char.2 \lam {eps} eps>0 =>
+       \case pow_<1-decay q>=0 kneser-q<1 c (rat_real_<.1 eps>0) \with {
+         | inP (N, h) => inP (N, \lam {m} N<=m => dist_zro_U (polyEval f (z m)) $
+             (bound3 m <∘l <=_*_positive-left
+                 (RealField.pow_<=-degree q>=0 (<=-less kneser-q<1) N<=m) (<=-less c>0)) <∘ h)
+       }
+
+-- | `pow · n` reflects the strict order on nonnegatives. Belongs in `Arith/Real/Root.ard`.
+\lemma pow_<-cancel {n : Nat} (n/=0 : n /= 0) {x y : Real} (x>=0 : 0 <= x) (y>=0 : 0 <= y)
+                             (p : pow x n < pow y n) : x < y
+  => transport2 (<) (root_pow n/=0 x>=0) (root_pow n/=0 y>=0)
+       (root-monotone n/=0 (RealField.pow>=0 x>=0) p)
+
+-- | $(r^i K)^n = q^i c$ for $r = \sqrt[n]{q}$, $K = \sqrt[n]{c}$ — the identity behind `incr-bound`.
+\private \lemma pow-geom {n : Nat} (n/=0 : n /= 0) {q c : Real} (q>=0 : 0 <= q) (c>=0 : 0 <= c) (i : Nat)
+  : pow (pow (root n q) i * root n c) n = pow q i * c
+  => CMonoid.pow_*-comm *> pmap2 (*)
+       (inv Monoid.pow_* *> pmap (pow (root n q)) NatSemiring.*-comm *> Monoid.pow_*
+        *> pmap (\lam t => pow t i) (pow_root n/=0 q>=0))
+       (pow_root n/=0 c>=0)
+
+{- | Bound (4) as a plain geometric bound. With $r = \sqrt[n]{q}$ and $K = \sqrt[n]{c}$, (4) reads
+     $|z_{i+1} - z_i|^n < (r^i K)^n$, and `pow_<-cancel` strips the exponent. -}
+\private \lemma incr-bound {n : Nat} (n/=0 : n /= 0) {c : Real} (c>=0 : 0 <= c) (z : Nat -> Complex)
+                           (q>=0 : 0 <= kneser-q n)
+                           (bound4 : \Pi (i : Nat) -> pow (cabs (z (suc i) - z i)) n < pow (kneser-q n) i * c)
+                           (i : Nat)
+  : cabs (z (suc i) - z i) < pow (root n (kneser-q n)) i * root n c
+  => pow_<-cancel n/=0 (cabs>=0 {z (suc i) - z i})
+       (RealField.<=_*_positive_positive (RealField.pow>=0 root>=0) root>=0)
+       (bound4 i <∘l =_<= (inv (pow-geom n/=0 q>=0 c>=0 i)))
+
+-- | Abstract on purpose (arend-quirks §4): regroup a difference through an intermediate point.
+\private \lemma split3 {G : AddGroup} (x y w : G) : x - w = (x - y) + (y - w)
+  => inv (+-assoc *> pmap (x +)
+       (inv +-assoc *> pmap (\lam t => t + negative w) negative-left *> zro-left))
+
+-- | Abstract on purpose (arend-quirks §4).
+\private \lemma sub-self {G : AddGroup} (x : G) : x - x = 0 => AddGroup.toZero idp
+
+{- | Summed triangle inequality against the geometric bound, in division-free form:
+     $(1-r)\,|z_{N+k} - z_N| \leq (r^N - r^{N+k})\,K$. Induction on `k`; the step peels off one
+     increment and closes on $(1-r)r^{N+k} = r^{N+k} - r^{N+k+1}$. -}
+\private \lemma tail-bound {r K : Real} (r<=1 : r <= 1) (K>=0 : 0 <= K) (z : Nat -> Complex)
+                           (bd : \Pi (i : Nat) -> cabs (z (suc i) - z i) < pow r i * K)
+                           (N k : Nat)
+  : (1 - r) * cabs (z (N + k) - z N) <= (pow r N - pow r (N + k)) * K \elim k
+  | 0 => =_<= (pmap (\lam t => (1 - r) * cabs t) (sub-self (z N))
+               *> pmap (\lam t => (1 - r) * t) cabs_zro *> equation.cRing)
+  | suc k =>
+    \have d>=0 : (0 : Real) <= 1 - r => linarith
+    \in =_<= (pmap (\lam t => (1 - r) * cabs t) (split3 (z (N + suc k)) (z (N + k)) (z N)))
+        <=∘ <=_*_positive-right d>=0
+              (cabs_+ {z (N + suc k) - z (N + k)} {z (N + k) - z N})
+        <=∘ =_<= ldistr
+        <=∘ <=_+ (<=_*_positive-right d>=0 (<=-less (bd (N + k))))
+                 (tail-bound r<=1 K>=0 z bd N k)
+        <=∘ =_<= equation.cRing
+
+{- | Estimate (4) makes the increments geometrically dominated, hence `z` Cauchy.
+
+     `convergent-metric-char.2` reduces this to "for every `eps > 0` some `N` has
+     `(dist (z m) (z N)).U eps` for all `m >= N`". With $r = \sqrt[n]{q}$ and $K = \sqrt[n]{c}$,
+     `incr-bound` turns (4) into $|z_{i+1}-z_i| < r^i K$ and `tail-bound` sums it, so the tail from
+     `N` is under $r^N K/(1-r)$; `pow_<1-decay` applied at $(1-r)\varepsilon$ picks `N`, and the
+     positive factor $1-r$ cancels at the end. `root-monotone` is what makes $r < 1$ *strict*. -}
+\lemma increments-uniform-cauchy {n : Nat} (n>0 : 0 < n) {c : Real} (z : Nat -> Complex)
+                                 (bound4 : \Pi (i : Nat) -> pow (cabs (z (suc i) - z i)) n < pow (kneser-q n) i * c)
+  : IsConvergent z
+  => \have | n/=0 : n /= 0 => NatSemiring.>_/= n>0
+           | q>=0 : 0 <= kneser-q n => <=-less (kneser-q>0 n>0)
+           | c>0 : 0 < c => linarith (RealField.pow>=0 {cabs (z 1 - z 0)} {n} (cabs>=0 {z 1 - z 0}),
+                                      transport (_ <) ide-left (bound4 0))
+           | r<1 : root n (kneser-q n) < 1
+              => transport (root n (kneser-q n) <) (root_ide n/=0)
+                   (root-monotone n/=0 q>=0 kneser-q<1)
+     \in convergent-metric-char.2 \lam {eps} eps>0 =>
+       \case pow_<1-decay root>=0 r<1 (root n c)
+               (RealField.<_*_positive_positive (linarith : (0 : Real) < 1 - root n (kneser-q n))
+                                                (rat_real_<.1 eps>0)) \with {
+         | inP (N, h) => inP (N, \lam {m} N<=m => dist_U (z m) (z N) $
+             \case RealField.<_*-cancel-left
+                 ((transport (\lam j => (1 - root n (kneser-q n)) * cabs (z j - z N)
+                                     <= (pow (root n (kneser-q n)) N - pow (root n (kneser-q n)) j) * root n c)
+                             (<=_exists N<=m)
+                             (tail-bound (<=-less r<1) root>=0 z
+                                (incr-bound n/=0 (<=-less c>0) z q>=0 bound4) N (m -' N))
+                   <=∘ <=_*_positive-left
+                         (linarith (RealField.pow>=0 {root n (kneser-q n)} {m} root>=0)) root>=0)
+                  <∘r h) \with {
+               | byLeft (_, p) => p
+               | byRight (p, _) => absurd linarith
+             })
+       }
+
+{- | The analytic core: the sequence converges, `polyEvalCover` carries `polyEval f` through the
+     limit, and estimate (3) forces the value there to be zero. -}
+\lemma cauchy-limit-root {n : Nat} (n>0 : 0 < n) (f : Poly ComplexField)
+                         (deg : degree< f (suc n)) (monic : polyCoef f n = 1)
+                         {c : Real} (z : Nat -> Complex)
+                         (bound3 : \Pi (i : Nat) -> cabs (polyEval f (z i)) < pow (kneser-q n) i * c)
+                         (bound4 : \Pi (i : Nat) -> pow (cabs (z (suc i) - z i)) n < pow (kneser-q n) i * c)
+  : ∃ (r : Complex) (polyEval f r = 0)
+  => \have conv : IsConvergent z => increments-uniform-cauchy n>0 z bound4
+     \in inP (limit z conv,
+               limit-apply (polyEvalCover deg)
+               *> ComplexCompleteRing.limit-unique limit-isLimit (values-limit-zro n>0 f z bound3))
+
+{- | **The fundamental theorem of algebra**, intuitionistic modulo dependent choice: every monic
+     polynomial of degree $n > 0$ over $\mathbb{C}$ has a root.
+
+     Take $c = |f(0)| + 1$, iterate `fta-step` along `adchoice` to get the sequence (`fta-seq`),
+     and pass it to `cauchy-limit-root`. The only non-constructive ingredient is `adchoice`; in
+     particular this does *not* go through `achoice`, which would import excluded middle. -}
+\lemma FTA {n : Nat} (n>0 : 0 < n) (f : Poly ComplexField)
+           (deg : degree< f (suc n)) (monic : polyCoef f n = 1)
+  : ∃ (z : Complex) (polyEval f z = 0)
+  => \case fta-seq n>0 f deg monic (linarith : cabs (polyEval f 0) < cabs (polyEval f 0) + 1) \with {
+       | inP (z, bound3, bound4) => cauchy-limit-root n>0 f deg monic z bound3 bound4
+     }

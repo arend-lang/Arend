@@ -1,0 +1,433 @@
+\import Algebra.Group
+\import Algebra.Meta
+\import Algebra.Monoid
+\import Algebra.Ordered
+\import Algebra.Pointed
+\import Algebra.Ring
+\import Algebra.Ring.Poly
+\import Algebra.Ring.RingHom
+\import Algebra.Semiring
+\import Algebra.StrictlyOrdered
+\import Arith.Complex
+\import Arith.Complex.ApproxFactor
+\import Arith.Complex.FTA
+\import Arith.Complex.Norm
+\import Arith.Nat
+\import Arith.Rat
+\import Arith.Real
+\import Arith.Real.Field
+\import Arith.Real.Root
+\import Data.Array
+\import Data.Or
+\import Function.Meta
+\import Logic
+\import Logic.Meta
+\import Meta
+\import Order.Biordered
+\import Order.Lattice
+\import Order.LinearOrder
+\import Order.PartialOrder
+\import Order.StrictOrder
+\import Paths
+\import Paths.Meta
+\import Topology.MetricSpace
+\import Topology.MetricSpace.Multiset
+\import Topology.NormedAbGroup
+\open Monoid (pow, BigProd)
+
+{- | **A3: the shrinking lemma for approximate factorisations.**
+
+     Two near-factorisations of the same monic `p` are close in the matching metric of
+     `Topology.MetricSpace.Multiset`. Together with `approx-factor` (A2) this makes the
+     approximate-factorisation sets a *Cauchy* filter, which is what `MetricCompletion` needs to
+     produce Richman's spectrum. It is also the precise sense in which multisets fix what single
+     roots cannot: the multiset of roots is unique, so its approximate-solution sets shrink, whereas
+     `{z : cabs (polyEval p z) < eps}` stays a union of one blob per root at every accuracy. -}
+
+-- | $\prod_{i<n}(z - r_i)$ — the value of `prodLin r` at `z`, as a product rather than a polynomial.
+-- Recursion on `n` mirroring `prodLin`, rather than `BigProd` over `\new Array`: `Big` eliminates on
+-- the `nil`/`::` constructors, which a `\new Array` is not syntactically.
+\func linProd {n : Nat} (r : Array Complex n) (z : Complex) : Complex \elim n
+  | 0 => 1
+  | suc n => linProd (\new Array Complex n (\lam i => r (suc i))) z * (z - r 0)
+
+-- | Abstract on purpose (arend-quirks §4): `equation.cRing` cannot see this at concrete `Complex`.
+\private \lemma evalOne {R : CRing} (z : R) : 0 * z + 1 = 1 => simplify
+
+\private \lemma evalLin {R : CRing} (z b : R) : (0 * z + 1) * z + negative b = z - b => equation.cRing
+
+\lemma polyEval_prodLin {n : Nat} (r : Array Complex n) (z : Complex)
+  : polyEval (prodLin r) z = linProd r z \elim n
+  | 0 => evalOne z
+  | suc n =>
+    polyEvalRingHom.func-*
+    *> pmap2 (*) (polyEval_prodLin (\new Array Complex n (\lam i => r (suc i))) z)
+                 (evalLin z (r 0))
+
+-- | Each `r i` is a root of `prodLin r`: its own factor vanishes.
+\lemma linProd-root {n : Nat} (r : Array Complex n) (i : Fin n) : linProd r (r i) = 0 \elim n, i
+  | suc n, 0 => pmap (linProd (\new Array Complex n (\lam i => r (suc i))) (r 0) *)
+                     (AddGroup.toZero idp) *> zro_*-right
+  | suc n, suc i => pmap (`* (r (suc i) - r 0))
+                        (linProd-root (\new Array Complex n (\lam i => r (suc i))) i) *> zro_*-left
+
+\lemma prodLin-root {n : Nat} (r : Array Complex n) (i : Fin n) : polyEval (prodLin r) (r i) = 0
+  => polyEval_prodLin r (r i) *> linProd-root r i
+
+{- | # Shared foundation: bounding a polynomial's value by its coefficients
+
+     `cabs (polyEval q z) <= Σ_{k<m} cabs (coef q k) * cabs z ^ k`, straight off `polyEval_polyCoef`
+     and the triangle inequality for finite sums. Both A3.1 and A3.2 rest on this. -}
+\lemma cabs_polyEval-bound {q : Poly ComplexField} {m : Nat} (d : degree< q m) (z : Complex)
+  : cabs (polyEval q z)
+  <= RealAbGroup.BigSum (\new Array Real m (\lam k => cabs (polyCoef q k) * pow (cabs z) k))
+  => rewrite (polyEval_polyCoef d) $
+     cabs_BigSum <=∘ RealAbGroup.BigSum_<= (\lam k => =_<= (cabs_* {polyCoef q k} {pow z k}
+                                                *> pmap (cabs (polyCoef q k) *) cabs_pow))
+
+{- | # A3.2 machinery: the product of distances, and extracting the minimum
+
+     `absProd s z` is $\prod_j |z - s_j|$, mirroring `linProd`'s recursion. -}
+\func absProd {n : Nat} (r : Array Complex n) (z : Complex) : Real \elim n
+  | 0 => 1
+  | suc n => absProd (\new Array Complex n (\lam i => r (suc i))) z * cabs (z - r 0)
+
+\lemma cabs_linProd {n : Nat} (r : Array Complex n) (z : Complex) : cabs (linProd r z) = absProd r z
+  \elim n
+  | 0 => cabs_ide
+  | suc n => cabs_* {linProd (\new Array Complex n (\lam i => r (suc i))) z} {z - r 0}
+             *> pmap (`* cabs (z - r 0)) (cabs_linProd (\new Array Complex n (\lam i => r (suc i))) z)
+
+\lemma absProd>=0 {n : Nat} (r : Array Complex n) (z : Complex) : 0 <= absProd r z \elim n
+  | 0 => <=-less RealAbGroup.zro<ide
+  | suc n => RealField.<=_*_positive_positive
+               (absProd>=0 (\new Array Complex n (\lam i => r (suc i))) z) (cabs>=0 {z - r 0})
+
+{- | The minimum distance from `z` to the entries of `s`. The base value of the `Big (∧)` is the
+     entry at a *given* index, so no nonemptiness side condition is needed — and at `n = 0` there is
+     no index to supply, which is exactly when the statement is vacuous. -}
+\func minDist {n : Nat} (s : Array Complex n) (z : Complex) (i : Fin n) : Real
+  => Big (∧) (cabs (z - s i)) (\new Array Real n (\lam j => cabs (z - s j)))
+
+\lemma minDist>=0 {n : Nat} (s : Array Complex n) (z : Complex) (i : Fin n) : 0 <= minDist s z i
+  => bigMeet-univ {\new Array Real n (\lam j => cabs (z - s j))} (cabs>=0 {z - s i})
+       (\lam j => cabs>=0 {z - s j})
+
+\lemma minDist-cond {n : Nat} (s : Array Complex n) (z : Complex) (i j : Fin n)
+  : minDist s z i <= cabs (z - s j)
+  => bigMeet-cond {\new Array Real n (\lam k => cabs (z - s k))} j
+
+{- | `c^n` is below the product whenever `c` is below every factor. Generalised over `c` rather than
+     stated for `minDist` directly: the recursion shrinks the array, so a fixed index `i` would fall
+     out of range. -}
+\lemma pow<=absProd {n : Nat} (s : Array Complex n) (z : Complex) {c : Real} (c>=0 : 0 <= c)
+                    (h : \Pi (j : Fin n) -> c <= cabs (z - s j)) : pow c n <= absProd s z \elim n
+  | 0 => <=-refl
+  | suc n =>
+    RealField.<=_*_positive-left
+      (pow<=absProd (\new Array Complex n (\lam i => s (suc i))) z c>=0 (\lam j => h (suc j))) c>=0
+    <=∘ RealField.<=_*_positive-right
+          (absProd>=0 (\new Array Complex n (\lam i => s (suc i))) z) (h 0)
+
+-- | `min^n` is below the product: the minimum is below every factor.
+\lemma pow_minDist<=absProd {n : Nat} (s : Array Complex n) (z : Complex) (i : Fin n)
+  : pow (minDist s z i) n <= absProd s z
+  => pow<=absProd s z (minDist>=0 s z i) (\lam j => minDist-cond s z i j)
+
+{- | **From a small product to a small minimum.** `min^n <= ∏_j |z - s_j| < eta^n` gives
+     `min < eta` by `pow_<-cancel` — the order-reflection of `pow` proved for the FTA. This is the
+     constructively safe form of "some factor is small": the disjunction `∃ j, |z - s_j| < eta` is not
+     directly extractable from a bound on the product, but the minimum is. -}
+\lemma minDist-small {n : Nat} (n/=0 : n /= 0) (s : Array Complex n) (z : Complex) (i : Fin n)
+                     {eta : Real} (eta>0 : 0 < eta) (h : absProd s z < pow eta n)
+  : minDist s z i < eta
+  => pow_<-cancel n/=0 (minDist>=0 s z i) (<=-less eta>0)
+       (pow_minDist<=absProd s z i <∘r h)
+
+{- | # Shared content: the monic difference, and its value at a root
+
+     Two monic polynomials of degree `n` differ in degree `< n`: the leading terms cancel. This is
+     what makes the whole estimate close — without it the difference would still have a `z^n` term
+     and the bound below would be vacuous. -}
+{- | The coefficients of a monic difference vanish from index `n` on. Indices are written `n + d`
+     rather than case-split on `n <= k`: `linarith` cannot bridge `n < k < suc n` (it works over an
+     ordered *field*, so it cannot use integrality), and `<=_exists` supplies the `d` directly. -}
+\private \lemma monic-diff-coef {a b : Poly ComplexField} {n : Nat}
+                                (da : degree< a (suc n)) (db : degree< b (suc n))
+                                (ma : polyCoef a n = 1) (mb : polyCoef b n = 1) (d : Nat)
+  : polyCoef (a - b) (n + d) = 0 \elim d
+  | 0 => polyCoef-minus a b n *> pmap2 (-) ma mb *> AddGroup.toZero idp
+  | suc d => polyCoef-minus a b (n + suc d)
+             *> pmap2 (-) (da linarith) (db linarith) *> AddGroup.toZero idp
+
+\lemma degree<-monic-diff {a b : Poly ComplexField} {n : Nat}
+                          (da : degree< a (suc n)) (db : degree< b (suc n))
+                          (ma : polyCoef a n = 1) (mb : polyCoef b n = 1) : degree< (a - b) n
+  => \lam {k} n<=k => rewriteI (<=_exists n<=k) (monic-diff-coef da db ma mb (k -' n))
+
+-- | Pulling a constant out of a finite sum. `map f as` is `\cowith | len => as.len | at i => f (as i)`,
+-- so record eta makes it interchangeable with the explicit `\new Array` form.
+\lemma BigSum-scale {m : Nat} (c : Real) (a : Array Real m)
+  : RealAbGroup.BigSum (\new Array Real m (\lam k => c * a k)) = c * RealAbGroup.BigSum a
+  => inv RealField.BigSum-ldistr
+
+-- | Abstract on purpose (arend-quirks §4): regroup a difference through an intermediate point.
+\private \lemma split3 {G : AddGroup} (x y w : G) : x - w = (x - y) + (y - w)
+  => inv (+-assoc *> pmap (x +)
+       (inv +-assoc *> pmap (\lam t => t + negative w) negative-left *> zro-left))
+
+-- | `cabs` is symmetric in a difference.
+\lemma cabs_-comm (x y : Complex) : cabs (x - y) = cabs (y - x)
+  => inv (cabs_negative {x - y}) *> pmap cabs (negative-sub x y)
+  \where
+    -- | Abstract on purpose (arend-quirks §4).
+    \private \lemma negative-sub {G : AddGroup} (x y : G) : negative (x - y) = y - x => simplify
+
+-- | Reverse triangle inequality. Uses `add-sub-cancel` from `Arith.Complex.FTA` (abstract `AddGroup`,
+-- since at concrete `Complex` the group operations compute on `re`/`im`).
+\lemma cabs-rev-triang (x y : Complex) : cabs x - cabs y <= cabs (x + y)
+  => linarith (transport (\lam t => cabs t <= cabs (x + y) + cabs y)
+                 (add-sub-cancel x y) (cabs_- (x + y) y))
+
+{- | At a root of `a`, the difference `a - b` carries all of `b`'s value: `|polyEval b z|` equals
+     `|polyEval (a - b) z|`. Both A3.1 and A3.2 use this at `z = r i`, where `prodLin r` vanishes. -}
+\lemma cabs_polyEval-diff-at-root {a b : Poly ComplexField} {z : Complex} (h : polyEval a z = 0)
+  : cabs (polyEval b z) = cabs (polyEval (a - b) z)
+  => inv (pmap cabs ((polyEvalRingHom z).func-minus *> pmap (`- polyEval b z) h)
+          *> cabs_negative-zro)
+  \where
+    -- | `cabs (0 - w) = cabs w`, over the abstract group so `simplify` fires.
+    \private \lemma cabs_negative-zro {w : Complex} : cabs (0 - w) = cabs w
+      => pmap cabs (zro-minus w) *> cabs_negative
+
+{- | # A3.1 — an a priori root bound
+
+     Unlike A2, `delta` must be fixed *before* `r` and `s` are known, so the sub-accuracy trick does
+     not apply and a Cauchy-style bound is unavoidable. -}
+
+-- | A uniform bound on the first `m` coefficients of `q`.
+\func coefMax (q : Poly ComplexField) (m : Nat) : Real
+  => Big (∨) 0 (\new Array Real m (\lam k => cabs (polyCoef q k)))
+
+\lemma coefMax>=0 {q : Poly ComplexField} {m : Nat} : 0 <= coefMax q m
+  => bigJoin-base {\new Array Real m (\lam k => cabs (polyCoef q k))}
+
+\lemma coefMax-cond {q : Poly ComplexField} {m : Nat} (k : Fin m)
+  : cabs (polyCoef q k) <= coefMax q m
+  => bigJoin-cond {\new Array Real m (\lam k => cabs (polyCoef q k))} k
+
+\lemma cabs_polyEval-coefMax {q : Poly ComplexField} {m : Nat} (d : degree< q m) (z : Complex)
+  : cabs (polyEval q z) <= coefMax q m * powSum (cabs z) m
+  => cabs_polyEval-bound d z
+     <=∘ RealAbGroup.BigSum_<= (\lam k => RealField.<=_*_positive-left (coefMax-cond k)
+                                            (RealField.pow>=0 cabs>=0))
+     <=∘ =_<= (BigSum-scale (coefMax q m) (\new Array Real m (\lam k => pow (cabs z) k)))
+
+\lemma cabs_polyEval-bound1 {q : Poly ComplexField} {m : Nat} (d : degree< q m)
+    (h : \Pi (k : Nat) -> cabs (polyCoef q k) <= 1) (z : Complex)
+  : cabs (polyEval q z) <= powSum (cabs z) m
+  => cabs_polyEval-bound d z
+     <=∘ RealAbGroup.BigSum_<= (\lam k => RealField.<=_*_positive-left (h k)
+                                            (RealField.pow>=0 cabs>=0) <=∘ =_<= ide-left)
+
+\private \lemma boundB>=1 {q : Poly ComplexField} {m : Nat} : 1 <= 2 + (coefMax q m + 1) * natCoef m
+  => linarith (RealField.<=_*_positive_positive
+                 (linarith (coefMax>=0 {q} {m}) : (0 : Real) <= coefMax q m + 1)
+                 (RealField.natCoef>=0 {m}))
+
+-- | Cancel a positive right factor from a `<=`. Direct, because `<=` on `Real` *is* `Not (>)`.
+\private \lemma le-cancel-right {a b c : Real} (c>0 : 0 < c) (p : a * c <= b * c) : a <= b
+  => \lam b<a => RealField.<-irreflexive (RealField.<_*_positive-left b<a c>0 <∘l p)
+
+{- | The estimate at positive degree. `|r i|^{m+1} <= (C+1)·(m+1)·|r i|^m` where `C` bounds `p`'s
+     lower coefficients, then cancel `|r i|^m > 0`. The `|r i| <= 1` versus `>= 1` split is not
+     decidable, so `<-comparison` supplies the *overlapping* dichotomy `1 < w || w < 2` instead. -}
+\private \lemma nearFactor-bound-suc {m : Nat} (p : Poly ComplexField)
+    (deg : degree< p (suc (suc m))) (monic : polyCoef p (suc m) = 1) (r : Array Complex (suc m))
+    (hr : \Pi (j : Nat) -> cabs (polyCoef (prodLin r) j - polyCoef p j) < 1) (i : Fin (suc m))
+  : cabs (r i) <= 2 + (coefMax (p - monomial 1 (suc m)) (suc m) + 1) * natCoef (suc m)
+  => \have | C>=0 : 0 <= coefMax (p - monomial 1 (suc m)) (suc m)
+              => coefMax>=0 {p - monomial 1 (suc m)} {suc m}
+           | prod>=0 : 0 <= (coefMax (p - monomial 1 (suc m)) (suc m) + 1) * natCoef (suc m)
+              => RealField.<=_*_positive_positive linarith RealField.natCoef>=0
+     \in \case RealAbGroup.<-comparison (cabs (r i)) {1} {2}
+                (rat_real_<.1 (linarith : (1 : Rat) < 2)) \with {
+       | byRight w<2 => <=-less (w<2 <∘l linarith)
+       | byLeft w>1 =>
+         \have | w>=1 : 1 <= cabs (r i) => <=-less w>1
+               | up : cabs (polyEval p (r i)) <= powSum (cabs (r i)) (suc m)
+                  => rewrite (cabs_polyEval-diff-at-root (prodLin-root r i))
+                       (cabs_polyEval-bound1
+                          (degree<-monic-diff (prodLin-degree r) deg (prodLin-monic r) monic)
+                          (\lam k => <=-less (transportInv (\lam t => cabs t < 1)
+                                                (polyCoef-minus (prodLin r) p k) (hr k)))
+                          (r i))
+               | qb => cabs_polyEval-coefMax
+                          (degree<-monic-diff deg (degree<_monomial 1 (suc m)) monic
+                             polyCoef_monomial) (r i)
+               | low => cabs_polyEval-monic-lower monic (r i)
+               | ps : powSum (cabs (r i)) (suc m) <= natCoef (suc m) * pow (cabs (r i)) m
+                  => powSum-bound w>=1 m
+               | ps' => RealField.<=_*_positive-right C>=0 ps
+         \in le-cancel-right (RealField.pow>0 (linarith : 0 < cabs (r i)))
+               (=_<= (equation.cRing
+                        : cabs (r i) * pow (cabs (r i)) m = pow (cabs (r i)) (suc m))
+                <=∘ linarith (low, up, qb, ps, ps')
+                <=∘ =_<= (equation.cRing
+                            : coefMax (p - monomial 1 (suc m)) (suc m)
+                              * (natCoef (suc m) * pow (cabs (r i)) m)
+                              + natCoef (suc m) * pow (cabs (r i)) m
+                            = (coefMax (p - monomial 1 (suc m)) (suc m) + 1)
+                              * natCoef (suc m) * pow (cabs (r i)) m))
+             <=∘ linarith
+     }
+
+\lemma nearFactor-bound {n : Nat} (p : Poly ComplexField) (deg : degree< p (suc n))
+                        (monic : polyCoef p n = 1)
+  : ∃ (B : Real) (1 <= B) (\Pi (r : Array Complex n)
+      -> (\Pi (j : Nat) -> cabs (polyCoef (prodLin r) j - polyCoef p j) < 1)
+      -> \Pi (i : Fin n) -> cabs (r i) <= B)
+  \elim n
+  | 0 => inP (1, <=-refl, \lam r hr i => \case i \with {})
+  | suc m => inP (2 + (coefMax (p - monomial 1 (suc m)) (suc m) + 1) * natCoef (suc m),
+                  boundB>=1, \lam r hr i => nearFactor-bound-suc p deg monic r hr i)
+
+{- | # A3.2 — the product bound
+
+     `absProd s (r i) = |polyEval (prodLin r - prodLin s) (r i)|` because `prodLin r` vanishes at
+     `r i`; that difference is monic-cancelled (degree `< n`) with every coefficient below `2*delta`,
+     and `cabs_polyEval-bound` turns it into a finite sum which A3.1's bound `B` caps. -}
+\private \lemma coefDiff-bound {n : Nat} (p : Poly ComplexField) (r s : Array Complex n)
+    {delta : Real}
+    (hr : \Pi (j : Nat) -> cabs (polyCoef (prodLin r) j - polyCoef p j) < delta)
+    (hs : \Pi (j : Nat) -> cabs (polyCoef (prodLin s) j - polyCoef p j) < delta) (k : Nat)
+  : cabs (polyCoef (prodLin r - prodLin s) k) <= 2 * delta
+  => transportInv (\lam t => cabs t <= 2 * delta)
+       (polyCoef-minus (prodLin r) (prodLin s) k
+        *> split3 (polyCoef (prodLin r) k) (polyCoef p k) (polyCoef (prodLin s) k))
+       (cabs_+ {polyCoef (prodLin r) k - polyCoef p k} {polyCoef p k - polyCoef (prodLin s) k}
+        <=∘ linarith (hr k, transport (\lam t => t < delta)
+                               (cabs_-comm (polyCoef (prodLin s) k) (polyCoef p k)) (hs k)))
+
+-- | `Σ_{k<n} B^k`, a top-level definition rather than a `\have`-bound one: a `\have` with a type
+-- annotation is opaque to unification (arend-quirks §7) and would not match `absProd-bound`'s bound.
+\func powSum (B : Real) (n : Nat) : Real
+  => RealAbGroup.BigSum (\new Array Real n (\lam k => pow B k))
+
+\lemma powSum>=0 {B : Real} (B>=0 : 0 <= B) (n : Nat) : 0 <= powSum B n
+  => RealAbGroup.BigSum_>=0 {\new Array Real n (\lam k => pow B k)}
+       (\lam k => RealField.pow>=0 B>=0)
+
+\private \lemma absProd-bound {n : Nat} (p : Poly ComplexField) (deg : degree< p (suc n))
+    (monic : polyCoef p n = 1) (r s : Array Complex n)
+    {B : Real} (hrB : \Pi (i : Fin n) -> cabs (r i) <= B)
+    {delta : Real}
+    (hr : \Pi (j : Nat) -> cabs (polyCoef (prodLin r) j - polyCoef p j) < delta)
+    (hs : \Pi (j : Nat) -> cabs (polyCoef (prodLin s) j - polyCoef p j) < delta)
+    (i : Fin n)
+  : absProd s (r i) <= delta * (2 * powSum B n)
+  => \have B>=0 : 0 <= B => cabs>=0 <=∘ hrB i
+     \in =_<= (inv (cabs_linProd s (r i))
+               *> pmap cabs (inv (polyEval_prodLin s (r i)))
+               *> cabs_polyEval-diff-at-root (prodLin-root r i))
+         <=∘ cabs_polyEval-bound
+               (degree<-monic-diff (prodLin-degree r) (prodLin-degree s)
+                  (prodLin-monic r) (prodLin-monic s)) (r i)
+         <=∘ RealAbGroup.BigSum_<= (\lam k =>
+               RealField.<=_*_positive-right (cabs>=0 {polyCoef (prodLin r - prodLin s) k})
+                 (RealField.pow_<=-monotone cabs>=0 (hrB i))
+               <=∘ RealField.<=_*_positive-left (coefDiff-bound p r s hr hs k)
+                     (RealField.pow>=0 B>=0))
+         <=∘ =_<= (BigSum-scale (2 * delta) (\new Array Real n (\lam k => pow B k))
+                   *> equation.cRing)
+
+{- | **A3.2.** For every `eta > 0` there is a `delta > 0` such that any two `delta`-near
+     factorisations of `p` put every `r i` within `eta` of the `s`-multiset — stated as a bound on
+     `minDist`, not as `∃ j`: a bound on a product does not constructively say *which* factor is
+     small (see `minDist-small`).
+
+     Uses A3.1 (`nearFactor-bound`) for the root bound `B`. -}
+\lemma nearFactor-proximity {n : Nat} (p : Poly ComplexField) (deg : degree< p (suc n))
+                            (monic : polyCoef p n = 1) {eta : Real} (eta>0 : 0 < eta)
+  : ∃ (delta : Real) (0 < delta) (\Pi (r s : Array Complex n)
+      -> (\Pi (j : Nat) -> cabs (polyCoef (prodLin r) j - polyCoef p j) < delta)
+      -> (\Pi (j : Nat) -> cabs (polyCoef (prodLin s) j - polyCoef p j) < delta)
+      -> \Pi (i : Fin n) -> minDist s (r i) i < eta)
+  => \case nearFactor-bound p deg monic \with {
+       | inP (B, B>=1, hB) =>
+         \have | B>=0 : (0 : Real) <= B => linarith
+               | S>=0 : 0 <= 2 * powSum B n => linarith (powSum>=0 B>=0 n)
+         \in \case split-eps (RealField.pow>0 eta>0 : 0 < pow eta n)
+                     (linarith (powSum>=0 B>=0 n) : (0 : Real) < 2 * powSum B n + 1) \with {
+           | inP (d, d>0, dS) =>
+             inP (d ∧ 1, <_meet-univ d>0 RealAbGroup.zro<ide, \lam r s hr hs i =>
+                 minDist-small (NatSemiring.>_/= (linarith (fin_< i) : 0 < n)) s (r i) i eta>0
+                   (absProd-bound p deg monic r s (hB r (\lam j => hr j <∘l meet-right)) hr hs i
+                    <∘r (RealField.<=_*_positive-left (meet-left {_} {d} {1}) S>=0
+                         <=∘ RealField.<=_*_positive-right (<=-less d>0) linarith)
+                        <∘r dS))
+         }
+     }
+
+{- | # A3.3 — from proximity to a matching
+
+     **Two-sided proximity is not enough**, so this cannot be proved from `nearFactor-proximity`
+     alone. Counterexample: `r = {0,0,1}` and `s = {0,1,1}` have every `r i` at distance `0` from
+     some `s j` *and* every `s j` at distance `0` from some `r i`, yet their matching distance is `1`.
+     Multiplicities have to be counted, so the argument must be a *greedy deflation induction*: match
+     `r 0` to its nearest `s j`, remove both, and recurse on the deflated factorisations — which needs
+     array surgery (`remove`-at-index, and `prodLin` of the result) plus the fact that deflating by
+     two nearby linear factors keeps the two polynomials close. -}
+\lemma nearFactor-match {n : Nat} (p : Poly ComplexField) (deg : degree< p (suc n))
+                        (monic : polyCoef p n = 1) {eps : Real} (eps>0 : 0 < eps)
+  : ∃ (delta : Real) (0 < delta) (\Pi (r s : Array Complex n)
+      -> (\Pi (j : Nat) -> cabs (polyCoef (prodLin r) j - polyCoef p j) < delta)
+      -> (\Pi (j : Nat) -> cabs (polyCoef (prodLin s) j - polyCoef p j) < delta)
+      -> matchDist {ComplexNormed} r s < eps) => {?}
+
+{- | # A3.1 machinery
+
+     `k < suc m -> k <= m`. Neither `linarith` (it reasons over an ordered *field*, so `m < k < suc m`
+     looks satisfiable) nor `suc<=suc.conv` (which wants `suc k <= suc m`, not `k < suc m`) bridges
+     this; `NatOrder.<` is a data type, so induction does. -}
+\private \lemma nat<suc {k m : Nat} (p : k < suc m) : k <= m \elim k, m, p
+  | 0, m, _ => zero<=_
+  | suc k, 0, NatOrder.suc<suc p => \case p \with {}
+  | suc k, suc m, NatOrder.suc<suc p => suc<=suc (nat<suc p)
+
+-- | For `w >= 1` every term of `powSum` is below the top one, so the sum is below `n` copies of it.
+-- `BigSum_replicate` does the counting.
+\lemma powSum-bound {w : Real} (w>=1 : 1 <= w) (m : Nat)
+  : powSum w (suc m) <= natCoef (suc m) * pow w m
+  => RealAbGroup.BigSum_<= {suc m} {\new Array Real (suc m) (\lam k => pow w k)}
+       {replicate (suc m) (pow w m)}
+       (\lam k => RealField.pow_<=-degree_>=1 w>=1 (nat<suc (fin_< k)))
+     <=∘ =_<= (RealField.BigSum_replicate {pow w m} {suc m})
+
+-- | Neither of these exists in arend-lib; both belong in `Algebra/Ring/Poly.ard`.
+\lemma degree<_monomial {R : AddPointed} (c : R) (m : Nat) : degree< (monomial c m) (suc m) \elim m
+  | 0 => degree<_padd (\lam _ => idp)
+  | suc m => degree<_padd (degree<_monomial c m)
+
+\lemma polyEval_monomial {R : Ring} (c : R) (m : Nat) (z : R) : polyEval (monomial c m) z = c * pow z m
+  \elim m
+  | 0 => simplify
+  | suc m => pmap (\lam t => t * z + 0) (polyEval_monomial c m z) *> zro-right *> *-assoc
+
+-- | Abstract on purpose (arend-quirks §4).
+\private \lemma add-sub-split {R : Ring} (x y : R) : x = y + (x - y) => simplify
+
+{- | **The monic lower bound.** Splitting off the leading monomial, `|p(z)| >= |z|^n - |q(z)|` where
+     `q = p - X^n` has degree `< n`. This is the half of A3.1 that forces large roots to be
+     impossible: `|z|^n` grows faster than anything `q` contributes. -}
+\lemma cabs_polyEval-monic-lower {p : Poly ComplexField} {n : Nat} (monic : polyCoef p n = 1)
+                                 (z : Complex)
+  : pow (cabs z) n - cabs (polyEval (p - monomial 1 n) z) <= cabs (polyEval p z)
+  => \have e : polyEval p z = pow z n + polyEval (p - monomial 1 n) z
+             => pmap (\lam t => polyEval t z) (add-sub-split p (monomial 1 n))
+                *> (polyEvalRingHom z).func-+
+                *> pmap (\lam t => t + polyEval (p - monomial 1 n) z)
+                     (polyEval_monomial 1 n z *> ide-left)
+     \in rewrite e $ rewriteI (cabs_pow {z} {n})
+         $ cabs-rev-triang (pow z n) (polyEval (p - monomial 1 n) z)
+

@@ -1,0 +1,268 @@
+\import Algebra.Group
+\import Algebra.Meta
+\import Algebra.Monoid
+\import Algebra.Ordered
+\import Algebra.Pointed
+\import Algebra.Ring
+\import Algebra.Ring.Poly
+\import Algebra.Semiring
+\import Algebra.StrictlyOrdered
+\import Arith.Complex
+\import Arith.Complex.FTA
+\import Arith.Complex.Norm
+\import Arith.Nat
+\import Arith.Rat
+\import Arith.Real
+\import Arith.Real.Field
+\import Arith.Real.KneserLemma
+\import Data.Array
+\import Topology.MetricSpace
+\import Topology.MetricSpace.Complete
+\import Topology.MetricSpace.Multiset
+\import Topology.CoverSpace.StronglyComplete
+\import Topology.NormedAbGroup
+\import Function.Meta
+\import Logic
+\import Logic.Meta
+\import Meta
+\import Order.Biordered
+\import Order.PartialOrder
+\import Order.StrictOrder
+\import Paths
+\import Paths.Meta
+\open Monoid (pow)
+
+{- | **Approximate factorisation (Richman's spectrum, step A2), with no choice.**
+
+     For a monic `p` of degree `n` and every `eps > 0` there is an `n`-array `r` of complex numbers
+     with $\prod_i (X - r_i)$ within `eps` of `p` coefficientwise. This is the input to Richman's
+     spectrum: together with the shrinking lemma (A3) it makes the approximate-factorisation sets a
+     Cauchy filter in the matching metric of `Topology.MetricSpace.Multiset`.
+
+     **Choice-free.** The only analytic input is `fta-approx` (`Arith.Complex.FTA`), which is proved
+     without any axiom — each of its steps goes from one truncated existential to the next, which is
+     fine because the goal is a proposition. `adchoice` is *not* used here, and neither is `FTA`
+     itself; deriving the factorisation from `FTA` would be much shorter but would import the axiom.
+
+     No a priori root bound is needed. The naive plan — fix the sub-accuracy before choosing the
+     approximate root — would need a Cauchy-style bound on `|z|`. Because everything happens inside
+     the truncation, the sub-accuracy can instead be chosen *after* `z` is known, as
+     `eps / (2 * (1 + cabs z))`. -}
+
+-- | $\prod_{i<n}(X - r_i)$. Defined by recursion on `n` so that the degree and leading-coefficient
+-- inductions below follow the same shape.
+\func prodLin {n : Nat} (r : Array Complex n) : Poly ComplexField \elim n
+  | 0 => 1
+  | suc n => prodLin (\new Array Complex n (\lam i => r (suc i))) * padd 1 (negative (r 0))
+
+-- | The leading coefficient of `p * (X + a)` in degree `suc n` is `p`'s in degree `n`. Extracted
+-- from the corresponding step of `polyTranslate_polyCoef`; belongs in `Algebra/Ring/Poly.ard`.
+\lemma polyCoef_*padd1 {R : CRing} (a : R) {p : Poly R} {n : Nat} (d : degree< p (suc n))
+  : polyCoef (p * padd 1 a) (suc n) = polyCoef p n
+  => rewrite (mul_padd1 a p, polyCoef_+, polyCoef_*-right, d Preorder.<=-refl) simplify
+
+\lemma prodLin-degree {n : Nat} (r : Array Complex n) : degree< (prodLin r) (suc n) \elim n
+  | 0 => degree<_padd (\lam _ => idp)
+  | suc n => degree<_*padd1 (negative (r 0)) (prodLin-degree (\new Array Complex n (\lam i => r (suc i))))
+
+\lemma prodLin-monic {n : Nat} (r : Array Complex n) : polyCoef (prodLin r) n = 1 \elim n
+  | 0 => idp
+  | suc n =>
+    \have rest => \new Array Complex n (\lam i => r (suc i))
+    \in polyCoef_*padd1 (negative (r 0)) (prodLin-degree rest) *> prodLin-monic rest
+
+-- # Deflation
+
+{- | Synthetic division by `X - z`, from `degree1PolyDivision`:
+     `p = rootDiv p z * (X - z) + p z`. `rootDiv` is `\level`-unique, so this is *the* quotient. -}
+\lemma rootDiv-eq {R : CRing} (p : Poly R) (z : R)
+  : p = rootDiv p z * padd 1 (negative z) + padd pzero (polyEval p z)
+  => (degree1PolyDivision p z).2
+
+{- | **Structural deflation.** Rather than descend `rootDiv`'s coefficients from a degree bound, do
+     synthetic division along `Poly`'s own `padd` recursion: if `p = q'(X-z) + c'` then
+     `pX + e = (q'X + c')(X-z) + (c'z + e)`, so the quotient of `padd p e` is `padd q' (polyEval p z)`.
+     Degree and monicity then follow by the *same* structural induction, with no descent at all.
+
+     `Poly` has the path constructor `peq : padd pzero 0 = pzero`, so the recursion owes a `peq`
+     clause; here both branches are `padd pzero 0` versus `pzero`, i.e. `peq` itself. -}
+\func deflate {R : Ring} (p : Poly R) (z : R) : Poly R \elim p
+  | pzero => pzero
+  | padd p e => padd (deflate p z) (polyEval p z)
+  | peq => peq
+
+-- | The ring identity behind the induction step, stated over an abstract `CRing` with every operand
+-- a variable so `equation.cRing` can see it: `pX + e = (qX + c)(X - z) + (cz + e)` given
+-- `p = q(X - z) + c`.
+\private \lemma deflate-step {R : CRing} (P Q C E Z X : Poly R) (ih : P = Q * (X - Z) + C)
+  : P * X + E = (Q * X + C) * (X - Z) + (C * Z + E)
+  => rewrite ih equation.cRing
+
+-- | Deflation really is division by `X - z` with remainder `p z`.
+\lemma deflate-eq {R : CRing} (p : Poly R) (z : R)
+  : p = deflate p z * padd 1 (negative z) + padd pzero (polyEval p z) \elim p
+  | pzero => inv (pmap (`+ padd pzero (polyEval pzero z)) (zro_*-left {_} {padd 1 (negative z)})
+                  *> zro-left *> peq)
+  | padd p e =>
+    \have | L1 : 1 * padd 1 0 = {Poly R} padd 1 0 => ide-left
+          | L2 : padd pzero (negative z) = {Poly R} negative (padd pzero z) => polyHom.func-negative
+          | L : padd 1 (negative z) = padd 1 0 - padd pzero z
+             => padd-expand *> pmap2 (+) L1 L2
+          | ih : p = deflate p z * (padd 1 0 - padd pzero z) + padd pzero (polyEval p z)
+             => deflate-eq p z *> pmap (\lam t => deflate p z * t + padd pzero (polyEval p z)) L
+          | cst : padd pzero (polyEval p z) * padd pzero z + padd pzero e
+                = padd pzero (polyEval p z * z + e)
+             => pmap (`+ padd pzero e) (inv polyHom.func-*)
+    \in padd-expand
+        *> deflate-step p (deflate p z) (padd pzero (polyEval p z)) (padd pzero e)
+             (padd pzero z) (padd 1 0) ih
+        *> pmap2 (\lam a b => a * (padd 1 0 - padd pzero z) + b)
+             (inv (padd-expand {_} {deflate p z} {polyEval p z})) cst
+        *> pmap (\lam t => padd (deflate p z) (polyEval p z) * t
+                         + padd pzero (polyEval p z * z + e)) (inv L)
+
+-- | `degree1PolyDivision` is `\level`-unique, so `deflate` *is* `rootDiv`.
+\lemma deflate=rootDiv {R : CRing} (p : Poly R) (z : R) : deflate p z = rootDiv p z
+  => degree1PolyDivision-unique p z (deflate-eq p z) (rootDiv-eq p z)
+
+\lemma deflate-degree {R : Ring} {p : Poly R} {n : Nat} (d : degree< p (suc n)) (z : R)
+  : degree< (deflate p z) n \elim p, n
+  | pzero, n => \lam _ => idp
+  | padd p e, 0 => \lam {k} _ => rewrite (degree<0 (degree<_padd.conv d))
+      (\case \elim k \with { | 0 => idp | suc k => idp })
+  | padd p e, suc m => degree<_padd (deflate-degree (degree<_padd.conv d) z)
+
+\lemma deflate-monic {R : CRing} {p : Poly R} {n : Nat} (d : degree< p (suc (suc n)))
+                     (monic : polyCoef p (suc n) = 1) (z : R)
+  : polyCoef (deflate p z) n = 1 \elim p, n
+  | pzero, n => monic
+  | padd p e, 0 => polyEval_polyCoef (degree<_padd.conv d) *> simplify *> monic
+  | padd p e, suc m => deflate-monic (degree<_padd.conv d) monic z
+
+\lemma rootDiv-degree {p : Poly ComplexField} {n : Nat} (d : degree< p (suc n)) (z : Complex)
+  : degree< (rootDiv p z) n => rewriteI (deflate=rootDiv p z) (deflate-degree d z)
+
+\lemma rootDiv-monic {p : Poly ComplexField} {n : Nat} (d : degree< p (suc (suc n)))
+                     (monic : polyCoef p (suc n) = 1) (z : Complex)
+  : polyCoef (rootDiv p z) n = 1 => rewriteI (deflate=rootDiv p z) (deflate-monic d monic z)
+
+-- # Error propagation
+
+{- | Multiplying by `X - z` amplifies a coefficientwise error by at most `1 + |z|`: the `j`-th
+     coefficient of `e * (X - z)` is `e_{j-1} - z e_j`. -}
+\lemma coefErr_*padd1 {e : Poly ComplexField} {z : Complex} {d : Real}
+                      (h : \Pi (j : Nat) -> cabs (polyCoef e j) <= d) (j : Nat)
+  : cabs (polyCoef (e * padd 1 (negative z)) j) <= d * (1 + cabs z)
+  => \have eq : polyCoef (e * padd 1 (negative z)) j
+              = polyCoef (padd e 0) j + polyCoef e j * negative z
+             => pmap (\lam q => polyCoef q j) (mul_padd1 (negative z) e) *> polyCoef_+
+                *> pmap (polyCoef (padd e 0) j +) polyCoef_*-right
+     \in rewrite eq $
+         cabs_+ {polyCoef (padd e 0) j} {polyCoef e j * negative z}
+         <=∘ <=_+ (coefShift-bound h j)
+                         (=_<= (cabs_* {polyCoef e j} {negative z}
+                                *> pmap (cabs (polyCoef e j) *) (cabs_negative {z}))
+                          <=∘ <=_*_positive-left (h j) cabs>=0)
+         <=∘ =_<= equation.cRing
+
+-- | The `padd e 0` shift only moves coefficients, so the same bound holds.
+\private \lemma coefShift-bound {e : Poly ComplexField} {d : Real}
+                               (h : \Pi (j : Nat) -> cabs (polyCoef e j) <= d) (j : Nat)
+  : cabs (polyCoef (padd e 0) j) <= d \elim j
+  | 0 => rewrite cabs_zro (cabs>=0 <=∘ h 0)
+  | suc k => h k
+
+-- # The theorem
+
+-- # Assembly helpers
+
+-- | `cabs` of a difference. Explicit operands: at concrete `Complex` the `-` unfolds, so `cabs_+`
+-- cannot infer its implicits (arend-quirks §16).
+\lemma cabs_- (x y : Complex) : cabs (x - y) <= cabs x + cabs y
+  => cabs_+ {x} {negative y} <=∘ =_<= (pmap (cabs x +) (cabs_negative {y}))
+
+-- | `polyCoef` is additive, so it commutes with subtraction. `polyCoefHom` states this but as
+-- `func {polyCoefHom} (x - y)`, which `rewrite` cannot match against a bare `polyCoef`.
+\lemma polyCoef-minus {R : Ring} (a b : Poly R) (j : Nat)
+  : polyCoef (a - b) j = polyCoef a j - polyCoef b j
+  => polyCoef_+ *> pmap (polyCoef a j +) polyCoef_negative
+
+-- | Stated over an abstract `CRing` so `equation.cRing` applies: at `Poly ComplexField` it would
+-- still work, but the operands must be variables for the solver to see the identity.
+\private \lemma poly-diff {R : CRing} (A Q L C : Poly R) : A * L - (Q * L + C) = (A - Q) * L - C
+  => equation.cRing
+
+-- | A constant polynomial's coefficients are bounded by the constant.
+\private \lemma constCoef-bound (c : Complex) (j : Nat) : cabs (polyCoef (padd pzero c) j) <= cabs c \elim j
+  | 0 => <=-refl
+  | suc k => rewrite cabs_zro cabs>=0
+
+{- | Split a positive `eps` past a positive factor: some `d > 0` has `d * w < eps`. Avoids dividing
+     in `Real` (which has no total `finv`) by taking a *rational* bound `B > w` and dividing there,
+     the same descent `pow_<1-decay` uses. -}
+\lemma split-eps {eps : Real} (eps>0 : 0 < eps) {w : Real} (w>0 : 0 < w)
+  : ∃ (d : Real) (0 < d) (d * w < eps)
+  => \case real_<-char.1 (linarith : w < w + 1) \with {
+       | inP (B, w<B, _) =>
+         \have | B>0 : (0 : Rat) < B => rat_real_<.2 (w>0 <∘ w<B)
+               | fB>0 : (0 : Real) < RatField.finv B => rat_real_<.1 (RatField.finv>0 B>0)
+               | prod : (RatField.finv B : Real) * B = 1
+                  => RealField.*-rat *> pmap (Real.fromRat)
+                       (RatField.*-comm *> RatField.finv-right (RatField.>_/= B>0))
+         \in inP (eps * RatField.finv B, RealField.<_*_positive_positive eps>0 fB>0,
+                  RealField.<_*_positive-right (RealField.<_*_positive_positive eps>0 fB>0) w<B
+                  <∘l =_<= (*-assoc *> pmap (eps *) prod *> ide-right))
+     }
+
+-- # The theorem
+
+{- | **Every monic polynomial factors into linear factors to any accuracy.** Induction on `n`: at
+     `n = 0` the empty product is `1 = p` exactly; at `suc n` take an approximate root `z` accurate
+     to `eps/2` (`fta-approx` at an index supplied by `pow_<1-decay`), deflate by `X - z`, and recurse
+     at an accuracy chosen *after* `z` is known, small enough that `coefErr_*padd1`'s amplification by
+     `1 + cabs z` still leaves `eps/2`. -}
+\lemma approx-factor {n : Nat} (p : Poly ComplexField) (deg : degree< p (suc n))
+                     (monic : polyCoef p n = 1) {eps : Real} (eps>0 : 0 < eps)
+  : ∃ (r : Array Complex n) (\Pi (j : Nat) -> cabs (polyCoef (prodLin r) j - polyCoef p j) < eps)
+  \elim n
+  | 0 => inP (nil, \lam j => \case \elim j \with {
+      | 0 => rewrite (AddGroup.toZero (inv monic), cabs_zro) eps>0
+      | suc k => rewrite (AddGroup.toZero (inv (deg (suc<=suc zero<=_))),
+                          cabs_zro) eps>0
+    })
+  | suc m =>
+    \case pow_<1-decay (<=-less (kneser-q>0 NatOrder.zero<suc)) (kneser-q<1 {suc m})
+            (cabs (polyEval p 0) + 1) (linarith : (0 : Real) < eps * ratio 1 2) \with {
+      | inP (i, hi) =>
+        \case fta-approx NatOrder.zero<suc p deg monic
+                (linarith : cabs (polyEval p 0) < cabs (polyEval p 0) + 1) i \with {
+          | inP (z, hz) =>
+            \case split-eps (linarith : (0 : Real) < eps * ratio 1 2)
+                    (linarith (cabs>=0 {z}) : (0 : Real) < 1 + cabs z) \with {
+              | inP (d, d>0, dw) =>
+                \case approx-factor (rootDiv p z) (rootDiv-degree deg z) (rootDiv-monic deg monic z) d>0 \with {
+                  | inP (r', hr') => inP (z :: r', \lam j =>
+                      \have | hd (k : Nat) : cabs (polyCoef (prodLin r' - rootDiv p z) k) <= d
+                               => transportInv (\lam t => cabs t <= d)
+                                    (polyCoef-minus (prodLin r') (rootDiv p z) k) (<=-less (hr' k))
+                            | c'small : cabs (polyEval p z) < eps * ratio 1 2 => hz <∘ hi
+                            | eq : polyCoef (prodLin r' * padd 1 (negative z)) j - polyCoef p j
+                                 = polyCoef ((prodLin r' - rootDiv p z) * padd 1 (negative z)) j
+                                 - polyCoef (padd pzero (polyEval p z)) j
+                               => inv (polyCoef-minus (prodLin r' * padd 1 (negative z)) p j)
+                                  *> pmap (\lam t => polyCoef (prodLin r' * padd 1 (negative z) - t) j)
+                                       (rootDiv-eq p z)
+                                  *> pmap (\lam t => polyCoef t j)
+                                       (poly-diff (prodLin r') (rootDiv p z) (padd 1 (negative z))
+                                          (padd pzero (polyEval p z)))
+                                  *> polyCoef-minus ((prodLin r' - rootDiv p z) * padd 1 (negative z))
+                                       (padd pzero (polyEval p z)) j
+                      \in rewrite eq $
+                          (cabs_- (polyCoef ((prodLin r' - rootDiv p z) * padd 1 (negative z)) j)
+                                  (polyCoef (padd pzero (polyEval p z)) j)
+                           <=∘ <=_+ (coefErr_*padd1 hd j) (constCoef-bound (polyEval p z) j))
+                          <∘r linarith)
+                }
+            }
+        }
+    }
