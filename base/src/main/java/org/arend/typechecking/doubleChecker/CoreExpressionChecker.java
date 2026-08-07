@@ -75,9 +75,20 @@ public class CoreExpressionChecker implements ExpressionVisitor<Expression, Expr
   }
 
   private void checkList(List<? extends Expression> args, DependentLink parameters, ExprSubstitution substitution, LevelSubstitution levelSubst) {
+    checkList(args, parameters, substitution, levelSubst, false);
+  }
+
+  // isSigmaTuple: the last field of a tuple has no meaningful variance, so it's always checked
+  // in the full context, regardless of what variance is stored on its (ignored) parameter.
+  private void checkList(List<? extends Expression> args, DependentLink parameters, ExprSubstitution substitution, LevelSubstitution levelSubst, boolean isSigmaTuple) {
     for (Expression arg : args) {
-      try (var ignored = enterVarianceContext(parameters.getVariance())) {
+      boolean isLast = isSigmaTuple && !parameters.getNext().hasNext();
+      if (isLast) {
         arg.accept(this, parameters.getType().subst(substitution, levelSubst));
+      } else {
+        try (var ignored = enterVarianceContext(parameters.getVariance())) {
+          arg.accept(this, parameters.getType().subst(substitution, levelSubst));
+        }
       }
       substitution.add(parameters, arg);
       parameters = parameters.getNext();
@@ -412,13 +423,24 @@ public class CoreExpressionChecker implements ExpressionVisitor<Expression, Expr
   }
 
   private List<SortExpression> checkDependentLinkWithResult(DependentLink link, Expression type, Expression expr) {
+    return checkDependentLinkWithResult(link, type, expr, false);
+  }
+
+  // isSigma: the last group of a \Sigma has no meaningful variance, so its type is checked in the
+  // full context (like a \Pi codomain), regardless of what variance is stored on its (ignored) link.
+  private List<SortExpression> checkDependentLinkWithResult(DependentLink link, Expression type, Expression expr, boolean isSigma) {
     List<SortExpression> result = new ArrayList<>();
     for (; link.hasNext(); link = link.getNext()) {
       addBinding(link, expr);
       if (link instanceof TypedDependentLink) {
         Expression paramType;
-        try (var ignored = enterBinderTypeContext(link.getVariance())) {
+        boolean isLast = isSigma && !link.getNext().hasNext();
+        if (isLast) {
           paramType = link.getType().accept(this, type);
+        } else {
+          try (var ignored = enterBinderTypeContext(link.getVariance())) {
+            paramType = link.getType().accept(this, type);
+          }
         }
         SortExpression sort = toSort(paramType);
         result.add(sort);
@@ -518,7 +540,7 @@ public class CoreExpressionChecker implements ExpressionVisitor<Expression, Expr
 
   @Override
   public Expression visitSigma(SigmaExpression expr, Expression expectedType) {
-    List<SortExpression> sorts = checkDependentLinkWithResult(expr.getParameters(), expectedType, expr);
+    List<SortExpression> sorts = checkDependentLinkWithResult(expr.getParameters(), expectedType, expr, true);
     freeDependentLink(expr.getParameters());
     return check(expectedType, new UniverseExpression(SortExpression.makeMax(sorts)), expr);
   }
@@ -556,7 +578,7 @@ public class CoreExpressionChecker implements ExpressionVisitor<Expression, Expr
   @Override
   public Expression visitTuple(TupleExpression expr, Expression expectedType) {
     visitSigma(expr.getSigmaType(), null);
-    checkList(expr.getFields(), expr.getSigmaType().getParameters(), new ExprSubstitution(), LevelSubstitution.EMPTY);
+    checkList(expr.getFields(), expr.getSigmaType().getParameters(), new ExprSubstitution(), LevelSubstitution.EMPTY, true);
     return check(expectedType, expr.getSigmaType(), expr);
   }
 

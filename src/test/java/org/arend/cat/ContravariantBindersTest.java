@@ -2,6 +2,7 @@ package org.arend.cat;
 
 import org.arend.core.definition.FunctionDefinition;
 import org.arend.core.expr.LamExpression;
+import org.arend.core.expr.SigmaExpression;
 import org.arend.ext.core.context.BindingVariance;
 import org.arend.typechecking.TypeCheckingTestCase;
 import org.junit.Test;
@@ -175,8 +176,63 @@ public class ContravariantBindersTest extends TypeCheckingTestCase {
   }
 
   @Test
-  public void sigmaError() {
-    typeCheckDef("\\func test => \\Sigma (x :- Nat) Nat", 1);
+  public void sigmaTest() {
+    FunctionDefinition def = (FunctionDefinition) typeCheckDef("\\func test => \\Sigma (x :- Nat) Nat");
+    assertEquals(BindingVariance.CONTRAVARIANT, ((SigmaExpression) Objects.requireNonNull(def.getBody())).getParameters().getVariance());
+  }
+
+  @Test
+  public void sigmaLastFieldWarning() {
+    // The last field's variance is ignored; since it's the sole name in its group, this warns.
+    typeCheckDef("\\func test => \\Sigma (x : Nat) (_ :- Nat)", 1);
+  }
+
+  @Test
+  public void sigmaLastGroupMultiNameNoWarning() {
+    // The last group has two names, so the annotation still matters for the non-last one (x):
+    // no warning, and both names keep the declared variance.
+    FunctionDefinition def = (FunctionDefinition) typeCheckDef("\\func test => \\Sigma (x y :- Nat)");
+    SigmaExpression sigma = (SigmaExpression) Objects.requireNonNull(def.getBody());
+    assertEquals(BindingVariance.CONTRAVARIANT, sigma.getParameters().getVariance());
+    assertEquals(BindingVariance.CONTRAVARIANT, sigma.getParameters().getNext().getVariance());
+  }
+
+  @Test
+  public void sigmaTypeDependsOnInvariantTest() {
+    typeCheckModule("""
+      \\func T (n : Nat) : \\Type => Nat
+      \\func test (a : Nat) => \\Sigma (f :- T a) Nat
+      """);
+  }
+
+  @Test
+  public void sigmaTypeDependsOnCovariantError() {
+    typeCheckModule("""
+      \\func T (n :+ Nat) : \\Type => Nat
+      \\func test (a :+ Nat) => \\Sigma (f :- T a) Nat
+      """, 1);
+  }
+
+  @Test
+  public void tupleFieldContravariantTest() {
+    typeCheckDef("\\func test (a :- Nat) : \\Sigma (x :- Nat) Nat Nat => (a, 0, 0)");
+  }
+
+  @Test
+  public void tupleFieldClearError() {
+    typeCheckDef("\\func test (a :- Nat) : \\Sigma (x : Nat) Nat Nat => (a, 0, 0)", 1);
+  }
+
+  @Test
+  public void tupleLastFieldFullContextTest() {
+    // `a` is only accessible after an odd number of swaps (as in singleSwapTest); T's contravariant
+    // parameter swaps once around the whole tuple argument. Without the last-field exemption, the
+    // tuple's own field-checking loop would additionally clear the (already-swapped) pool for the
+    // last field and reject `a`.
+    typeCheckModule("""
+      \\func T (n :- \\Sigma Nat Nat Nat) => 0
+      \\func test (a :- Nat) => T (0, 0, a)
+      """);
   }
 
   @Test
