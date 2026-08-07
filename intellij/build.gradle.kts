@@ -272,7 +272,7 @@ tasks.register<Test>("formatterStressTest") {
 }
 
 tasks.register<Copy>("prelude") {
-    from(projectDir.resolve("lib/Prelude.ard"))
+    from(rootProject.file("lib/Prelude.ard"))
     into("src/main/resources/lib")
     // dependsOn(task(":cli:buildPrelude"))
 }
