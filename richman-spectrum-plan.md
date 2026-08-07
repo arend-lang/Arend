@@ -34,15 +34,23 @@ implies a weak countable-choice principle about antipodal pairs on the circle, a
 where countable choice fails, a root of `X² − a` would be a continuous local square root, which does
 not exist. So the goal is **not** to prove `FTA` without axioms — that is impossible.
 
-**AC_ω cannot simply replace `adchoice` in the existing proof.** The Kneser iteration's state is a
-point of `ℂ` and each step depends on the previous point, so pre-choosing a successor function needs
-choice over a subset of `ℂ`, not over `Nat`. AC_ω ⇏ DC is independent in ZF (Jensen). See §5.
+**AC_ω cannot replace `adchoice` in the *existing* proof.** The Kneser iteration's state is a point of
+`ℂ` and each step depends on the previous point, so pre-choosing a successor function needs choice over
+a subset of `ℂ`, not over `Nat`. AC_ω ⇏ DC is independent in ZF (Jensen). This is a fact about that
+*proof*, not about the theorem: §5 gives a **different** route to the same statement that needs only
+AC_ω, and the reason it works is precisely that A3 makes coherence a theorem instead of a construction
+obligation.
 
-What *is* achievable, and is what Phase A does, is Richman's **reformulated** theorem: the spectrum of
-a monic degree-`n` polynomial exists as a point of the completion of the space of `n`-multisets, with
-**no axiom at all**. That is a strictly weaker statement than "there is a root" — if the multiset
-space were complete you could read a root off it, and the sheaf model shows you cannot — but it is a
-genuine theorem and it is the right target.
+Phase A therefore aims at Richman's **reformulated** theorem: the spectrum of a monic degree-`n`
+polynomial exists as a point of the completion of the space of `n`-multisets, with **no axiom at all**.
+That is strictly weaker than "there is a root" — if the multiset space were complete you could read a
+root off it, and the sheaf model shows you cannot — but it is a genuine theorem, and it is the most
+that is available axiom-free.
+
+It also has a second payoff, which is the practical reason to finish it. Phase A's shrinking lemma
+turns the existing `FTA` statement into a consequence of **plain countable choice** rather than
+dependent choice (§5) — strictly weaker than what `FTA.ard` assumes today, and weaker than `achoice`,
+which additionally gives excluded middle.
 
 ---
 
@@ -56,7 +64,7 @@ genuine theorem and it is the right target.
 | A3.2 product bound | `src/Arith/Complex/Spectrum.ard` | — | 0 | none |
 | **A3.3 matching** | `src/Arith/Complex/Spectrum.ard` | — | **1** | none |
 | **A4 the spectrum** | not started | — | — | — |
-| Phase B (extract a root) | not started; see §5 | — | — | — |
+| Phase B — `FTA` from AC_ω | not started; route in §5 | — | — | — |
 
 `Spectrum.ard` totals 433 lines. Phase A is 938 lines so far. The library typechecks with 0 errors;
 the only goals anywhere are `nearFactor-match` and the pre-existing `Topology.Locale.HausdorffLocale`
@@ -205,10 +213,84 @@ but the `completion-lift` plumbing is unfamiliar territory in this development.
 
 ---
 
-## 5. Phase B — extracting an actual root (open)
+## 5. Phase B — `FTA` from AC_ω instead of `adchoice`
 
-Getting from `spectrum p` to `∃ (z : Complex) (polyEval p z = 0)` **without `adchoice`** is the open
-problem, and I do not have a route I trust. Recorded here so the two obstructions are not rediscovered.
+This is the payoff that makes Phase A worth finishing for its own sake, beyond Richman's theorem.
+
+`FTA.ard` currently gets its sequence from `adchoice` (dependent choice over `Nat`). **A2 + A3 plus
+plain countable choice look sufficient instead** — a strictly weaker axiom, and the one every school of
+constructive mathematics already assumes. Note that A4 (the spectrum as a point of the completion) is
+*not* needed for this; A2 and A3 are.
+
+Assume only
+
+```arend
+\axiom acomega {A : Nat -> \Set} (h : \Pi (i : Nat) -> TruncP (A i)) : TruncP (\Pi (i : Nat) -> A i)
+```
+
+### The chain
+
+| Step | | Choice? |
+|---|---|---|
+| 1 | for each `k`, `∃ (r : Array Complex n), ‖∏(X − rᵢ) − p‖ < 2^{-k}` | free — **A2, proved** |
+| 2 | `acomega` on that family gives a *sequence* `r : Nat -> ℂⁿ` of approximating multisets | **AC_ω** |
+| 3 | `r` is Cauchy in `matchDist`: for `k, l >= K` with `2^{-K} < delta eps`, both are `delta`-near, so `matchDist (r k) (r l) < eps` | free — **A3** |
+| 4 | for each `k`, the set of permutations aligning `r k` to `r (suc k)` within `eps` is inhabited | free (see below) |
+| 5 | `acomega` on *that* family gives alignment permutations `sigma k` in `S_n` | **AC_ω** |
+| 6 | compose `tau k := sigma 0 ∘ … ∘ sigma (k−1)`; the relabelled sequence `k ↦ r k ∘ tau k` is **componentwise** Cauchy in ℂⁿ | free (computed, not chosen) |
+| 7 | ℂⁿ is complete (tail filter + `ComplexComplete`), so the relabelled sequence has a limit `rInf` | free |
+| 8 | continuity of `r ↦ ∏(X − rᵢ)` gives `∏(X − rInf i) = p`, hence `polyEval p (rInf 0) = 0` | free |
+
+**Step 4 in detail**, since it is the step whose constructivity is not obvious. From
+`Big (∧) l < eps'` with `eps' < eps` one *can* extract an index with `l j < eps`. Two-element case:
+`<-comparison a {eps'} {eps}` gives `a < eps || eps' < a`, and likewise for `b`; if `eps' < a` **and**
+`eps' < b` then `<_meet-univ` gives `eps' < a ∧ b`, contradicting the hypothesis. So the disjunction is
+genuine, and induction lifts it to a finite `Big (∧)`. The slack `eps' < eps` is what pays for this —
+you never get "the minimum is attained", only "something is below a slightly larger bound", which is
+all that is needed. (`rawDist` is `Big (∧) (maxDist … id) (permCosts …)`, so both the base value and
+the array entries yield an injective permutation.)
+
+### Why this works where the Kneser route does not
+
+The Kneser route genuinely needs DC, and §1's claim about it stands. The difference is structural:
+
+> In the Kneser route, coherence between consecutive approximations must be **built into the
+> construction** — that is estimate (4) — which makes the choices dependent, hence DC. With multisets,
+> coherence is a **theorem** (A3, from uniqueness of the root multiset), so the family in step 1 is
+> non-dependent and AC_ω applies.
+
+A3 converts an obligation on the construction into a fact about *any two* approximations. That is the
+whole trick, and it is why the multiset reformulation buys something beyond Richman's own choice-free
+statement.
+
+Two corollaries worth recording:
+
+- **AC_ω's role is precisely to turn the filter into a sequence.** The filter that A2 + A3 give is
+  choice-free but cannot be aligned; a sequence can. That is the entire content of the two `acomega`
+  applications.
+- The obstructions recorded under *The choice-free variant* below both dissolve: the incoherence of an AC_ω choice function is
+  *repaired* by step 5's alignment, and nothing in the chain ever decides whether a diameter is zero.
+
+### Status and risks
+
+Worked out on paper in one pass, **not formalised** — treat as a strong conjecture. In decreasing
+order of risk:
+
+1. **Step 3 depends on A3.3, still open.** Everything here is contingent on §3.
+2. **Step 6's bookkeeping.** Composing permutations and showing the relabelled sequence is
+   componentwise Cauchy is where the epsilons could fail to line up. `matchDist` controls `max_i`, so
+   it should transfer, but it is not free.
+3. **Step 8's continuity.** `ℂⁿ -> Poly` is polynomial in the coordinates, so continuity is
+   unsurprising, but nothing in Phase A proves it yet.
+
+Cost: a third route to `FTA` beside the existing `adchoice` one, reusing A2 + A3. Finish A3.3
+(150–250 lines), then steps 4–8 (perhaps 200–300 lines).
+
+### The choice-free variant — still open
+
+Getting from `spectrum p` to `∃ (z : Complex) (polyEval p z = 0)` with **no** axiom at all is a
+different and harder question, and I have no route I trust. Recorded so the obstructions are not
+rediscovered.
 
 The natural architecture is induction on `n` using the diameter of the spectrum: if `diam mu = 0` the
 single point is `avg mu = −a_{n−1}/n` (canonical, choice-free); if `diam mu > 0` split into separated
@@ -217,25 +299,20 @@ clusters and recurse. `Real.LU-located` gives, at each scale `k`, the decision
 
 Two things go wrong, and they are two faces of one obstruction:
 
-- **Incoherence.** AC_ω hands you `s k ∈ A k` with no coherence. Past the transition the `A k` are
-  equal but `s` may hop between distinct members of `mu`, so it is not Cauchy and has no limit. Making
-  the family nested turns `⋂ A k` into the goal itself (circular); asking for a coherent tail is
-  unprovable below the transition; and chasing nested *clusters* instead of points reintroduces exactly
-  the dependence that made this DC in the first place.
+- **Incoherence.** A choice function hands you `s k ∈ A k` with no coherence. Past the transition the
+  `A k` are equal but `s` may hop between distinct members of `mu`, so it is not Cauchy and has no
+  limit. Making the family nested turns `⋂ A k` into the goal itself (circular); asking for a coherent
+  tail is unprovable below the transition; and chasing nested *clusters* instead of points reintroduces
+  exactly the dependence that made this DC in the first place. (§5's route escapes this by aligning
+  with a *second* choice, which is unavailable if no choice at all is assumed.)
 - **Omniscience, not choice.** The clean argument wants `diam mu = 0 ∨ diam mu > 0` so it can branch
   once. That is an omniscience principle; **no amount of choice supplies it**. The binary scale exists
   to dodge it, and dodging it is what produces the incoherence above.
 
-Richman's antipodal principle establishes that FTA *implies* a weak countable-choice principle; he
-never proves the converse, and the literature I checked (Ruitenburg, Schuster, Lubarsky) is about
-*avoiding* choice by weakening the statement, not about calibrating AC_ω against DC for the plain
-existential. Schuster's choice-free theorem needs "at most one root, uniformly" — which is exactly the
-`n = 1` / `diam = 0` case that is already easy here.
-
-**So "does AC_ω suffice for Arend's `FTA` statement?" is, as far as I can tell, open.** If it is ever
-attempted, the honest staging is: state the missing principle explicitly as an axiom, prove `FTA` from
-it, and *then* try to derive that principle from `acomega`. That keeps the reduction auditable and
-leaves Phase A axiom-free underneath.
+This is consistent with Richman: his antipodal principle shows FTA *implies* a weak countable-choice
+principle, so a fully choice-free proof of the plain existential is impossible. Schuster's choice-free
+theorem needs "at most one root, uniformly" — exactly the `n = 1` / `diam = 0` case that is already
+easy here.
 
 ---
 
