@@ -14,6 +14,9 @@ import org.arend.server.ArendLibrary;
 import org.arend.server.ArendServer;
 import org.arend.server.ArendServerRequester;
 import org.arend.server.impl.ArendLibraryImpl;
+import org.arend.server.impl.ArendServerImpl;
+import org.arend.typechecking.order.dependency.DependencyCollector;
+import org.arend.typechecking.order.dependency.DependencyListener;
 import org.arend.source.PersistableBinarySource;
 import org.arend.source.Source;
 import org.arend.source.StreamBinarySource;
@@ -33,6 +36,8 @@ public class CliServerRequester implements ArendServerRequester {
   private final LibraryManager myLibraryManager;
   private boolean myRecompile = false;
   private final Set<ModuleLocation> myBinaryCacheLoaded = new HashSet<>();
+  /** Modules seen in an earlier pass; only first sight may load from {@code .arc}. */
+  private final Set<ModuleLocation> mySeenModules = new HashSet<>();
   private AiOutputRouter myOutputRouter;
 
   public CliServerRequester(LibraryManager libraryManager) {
@@ -99,6 +104,9 @@ public class CliServerRequester implements ArendServerRequester {
       if (!module.getLibraryName().equals(library.getLibraryName())) continue;
       if (module.getLocationKind() != ModuleLocation.LocationKind.SOURCE) continue;
 
+      // Before any early exit below, so "seen" holds whichever branch the earlier pass took.
+      boolean firstSight = mySeenModules.add(module);
+
       PersistableBinarySource binarySource = library.getBinarySource(module.getModulePath());
       if (binarySource == null) continue;
       long arcTimestamp = binarySource.getTimeStamp();
@@ -108,36 +116,19 @@ public class CliServerRequester implements ArendServerRequester {
       if (rawSource != null) {
         long rawTimestamp = rawSource.getTimeStamp();
         if (rawTimestamp > 0 && arcTimestamp < rawTimestamp) {
-          // A previous loadBinaryCache call may have already filled in typechecked
-          // Definitions on this module's group AND added it to myBinaryCacheLoaded.
-          // Without these two cleanups, the typecheck pipeline sees the module in
-          // the skip set and silently retains the stale in-memory state — every
-          // downstream module that references it then trips on a partially-coherent
-          // ClassDefinition, producing phantom errors.
-          ConcreteGroup group = server.getRawGroup(module);
-          if (group != null) clearTypechecked(group);
           myBinaryCacheLoaded.remove(module);
           continue;
         }
       }
 
-      // Keep already-loaded definitions. If this module's typechecked definitions
-      // are already in memory and its .arc is not stale (checked above), do NOT
-      // re-deserialize: reuse the existing in-memory Definition objects so their
-      // identity stays stable across passes. Re-deserializing unchanged modules
-      // on every pass mints fresh Definition objects, which breaks identity-based
-      // checks held by long-lived consumers across passes — most visibly a meta's
-      // @Dependency-captured class fields (bound once when the meta definition was
-      // typechecked) versus a freshly deserialized AddPointed, which makes
-      // ClassCallExpression.isSubClassOf fail and crashes linarith/equation
-      // (IllegalArgumentException: "Expected an expression of type 'AddPointed'").
-      // Bootstrap (nothing in memory yet) still loads from .arc, so the orphan-shell
-      // / missing-defs / stale-mtime guards below remain active; edited modules hit
-      // the stale-mtime clear branch above and are re-typechecked from source.
       {
         ConcreteGroup memGroup = server.getRawGroup(module);
         if (memGroup != null && hasTypechecked(memGroup)) {
           myBinaryCacheLoaded.add(module);
+          continue;
+        }
+        if (memGroup != null && !firstSight && hasTypecheckableDefinitions(memGroup)) {
+          myBinaryCacheLoaded.remove(module);
           continue;
         }
       }
@@ -189,7 +180,7 @@ public class CliServerRequester implements ArendServerRequester {
       try {
         load.deserialization.readModule(
             server.getModuleScopeProvider(load.module.getLibraryName(), false),
-            new org.arend.typechecking.order.dependency.DependencyCollector(null));
+            dependencyListener(server));
         loaded++;
         myBinaryCacheLoaded.add(load.module);
         loadedLoads.add(load);
@@ -259,6 +250,24 @@ public class CliServerRequester implements ArendServerRequester {
     return found[0];
   }
 
+  /**
+   * True if anything reachable from {@code group} is typecheckable, whether it holds a core.
+   * Separates a module that <em>lost</em> its definitions from one that never had any.
+   */
+  private static boolean hasTypecheckableDefinitions(ConcreteGroup group) {
+    if (group.referable() instanceof TCDefReferable ref && ref.getKind().isTypecheckable()) return true;
+    for (InternalReferable internalRef : group.getInternalReferables()) {
+      if (internalRef instanceof TCDefReferable ref && ref.getKind().isTypecheckable()) return true;
+    }
+    for (ConcreteStatement statement : group.statements()) {
+      if (statement.group() != null && hasTypecheckableDefinitions(statement.group())) return true;
+    }
+    for (ConcreteGroup dynamicGroup : group.dynamicGroups()) {
+      if (hasTypecheckableDefinitions(dynamicGroup)) return true;
+    }
+    return false;
+  }
+
   private static boolean hasOrphanShellReference(ConcreteGroup group) {
     OrphanShellFinder finder = new OrphanShellFinder();
     walkDefinitions(group, def -> {
@@ -305,6 +314,16 @@ public class CliServerRequester implements ArendServerRequester {
     for (ConcreteGroup dynGroup : group.dynamicGroups()) {
       clearTypechecked(dynGroup);
     }
+  }
+
+  /**
+   * The server's own dependency graph, so edges recorded while deserializing survive the call.
+   * Falls back to a throwaway for servers that expose none (test doubles), which consume no edges.
+   */
+  private static DependencyListener dependencyListener(ArendServer server) {
+    return server instanceof ArendServerImpl impl
+        ? impl.getDependencyCollector()
+        : new DependencyCollector(null);
   }
 
   private static void reportBinaryCacheError(ErrorReporter errorReporter, ModuleLocation module, String phase, Exception e) {
