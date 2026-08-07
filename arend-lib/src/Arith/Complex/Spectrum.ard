@@ -30,6 +30,7 @@
 \import Order.StrictOrder
 \import Paths
 \import Paths.Meta
+\import Set.Fin
 \import Topology.MetricSpace
 \import Topology.MetricSpace.Multiset
 \import Topology.NormedAbGroup
@@ -116,6 +117,18 @@
 \lemma minDist-cond {n : Nat} (s : Array Complex n) (z : Complex) (i j : Fin n)
   : minDist s z i <= cabs (z - s j)
   => bigMeet-cond {\new Array Real n (\lam k => cabs (z - s k))} j
+
+{- | **Which entry is nearest** — recoverable from a bound on `minDist`, given slack. `minDist` is a
+     `Big (∧)`, so this is `bigMeet-lt`; the base value is the entry at `i`, which is itself a
+     legitimate witness, so both branches produce an index. See `bigMeet-lt` for why the hypothesis
+     is `<=` against a strictly smaller threshold. -}
+\lemma minDist-index {n : Nat} (s : Array Complex n) (z : Complex) (i : Fin n) {c' c : Real}
+                     (h : minDist s z i <= c') (lt : c' < c)
+  : ∃ (j : Fin n) (cabs (z - s j) < c)
+  => \case bigMeet-lt {\new Array Real n (\lam j => cabs (z - s j))} h lt \with {
+       | byLeft p => inP (i, p)
+       | byRight (inP (j, p)) => inP (j, p)
+     }
 
 {- | `c^n` is below the product whenever `c` is below every factor. Generalised over `c` rather than
      stated for `minDist` directly: the recursion shrinks the array, so a fixed index `i` would fall
@@ -318,6 +331,45 @@
   => RealAbGroup.BigSum_>=0 {\new Array Real n (\lam k => pow B k)}
        (\lam k => RealField.pow>=0 B>=0)
 
+-- | Monotone in the base — same length, so `BigSum_<=` applies termwise. Used to replace the
+-- `powSum |z| _` that `deflate-coefBound` produces by a `powSum B _` depending only on the a priori
+-- root bound, so the deflation estimate is uniform in the arrays.
+\lemma powSum-mono {B C : Real} (B>=0 : 0 <= B) (B<=C : B <= C) (n : Nat)
+  : powSum B n <= powSum C n
+  => RealAbGroup.BigSum_<= (\lam k => RealField.pow_<=-monotone B>=0 B<=C)
+
+{- | `degree<` passes to the tail of a `padd` **without shrinking the bound**. `degree<_padd.conv`
+     gives the sharp `degree< p n` from `degree< (padd p e) (suc n)`, but it forces the bound to be
+     a `suc`; here the coefficients of `p` are those of `padd p e` shifted down, so the same `m`
+     works. Keeping `m` fixed is what lets `deflate-coefBound` recurse with no monotonicity lemma
+     for `powSum`. -}
+\lemma degree<_padd-tail {R : AddPointed} {p : Poly R} {e : R} {m : Nat} (d : degree< (padd p e) m)
+  : degree< p m => \lam {k} h => d {suc k} linarith
+
+-- | `cabs_polyEval-coefMax` with the bound supplied rather than computed: a uniform `c` over the
+-- first `m` coefficients bounds `|q(z)|` by `c * powSum |z| m`.
+\lemma cabs_polyEval-boundD {q : Poly ComplexField} {m : Nat} (d : degree< q m) {c : Real}
+    (h : \Pi (k : Nat) -> cabs (polyCoef q k) <= c) (z : Complex)
+  : cabs (polyEval q z) <= c * powSum (cabs z) m
+  => cabs_polyEval-bound d z
+     <=∘ RealAbGroup.BigSum_<= (\lam k => RealField.<=_*_positive-left (h k)
+                                            (RealField.pow>=0 cabs>=0))
+     <=∘ =_<= (BigSum-scale c (\new Array Real m (\lam k => pow (cabs z) k)))
+
+{- | **Dividing by a monic linear factor costs a factor of `powSum |z| m`.** This is the direction
+     `coefErr_*padd1` does not give: from a coefficient bound on `D` deduce one on `D / (X - z)`.
+
+     `deflate`'s recursion writes the `k`-th coefficient of the quotient as `polyEval` of the part
+     of `D` above `k`, so the whole statement is one `cabs_polyEval-boundD` at the head plus the
+     structural recursion — no descending coefficient recurrence to set up. The `peq` clause is
+     discharged automatically because `<=` on `Real` is a proposition. -}
+\lemma deflate-coefBound {p : Poly ComplexField} {m : Nat} (deg : degree< p m) {z : Complex}
+    {c : Real} (c>=0 : 0 <= c) (h : \Pi (j : Nat) -> cabs (polyCoef p j) <= c) (k : Nat)
+  : cabs (polyCoef (deflate p z) k) <= c * powSum (cabs z) m \elim p, k
+  | pzero, k => rewrite cabs_zro (RealField.<=_*_positive_positive c>=0 (powSum>=0 cabs>=0 m))
+  | padd p e, 0 => cabs_polyEval-boundD (degree<_padd-tail deg) (\lam j => h (suc j)) z
+  | padd p e, suc k => deflate-coefBound (degree<_padd-tail deg) c>=0 (\lam j => h (suc j)) k
+
 \private \lemma absProd-bound {n : Nat} (p : Poly ComplexField) (deg : degree< p (suc n))
     (monic : polyCoef p n = 1) (r s : Array Complex n)
     {B : Real} (hrB : \Pi (i : Fin n) -> cabs (r i) <= B)
@@ -369,21 +421,240 @@
          }
      }
 
+{- | `absProd-bound` without the polynomial: `p`, `deg` and `monic` enter that proof only through
+     `coefDiff-bound`, and the degree/monicity facts it really uses are `prodLin`'s own. Taking the
+     coefficient bound on `prodLin r - prodLin s` as the hypothesis drops `p` and the factor of two
+     at once. -}
+\private \lemma absProd-bound' {n : Nat} (r s : Array Complex n)
+    {B : Real} (hrB : \Pi (i : Fin n) -> cabs (r i) <= B)
+    {delta : Real} (hd : \Pi (k : Nat) -> cabs (polyCoef (prodLin r - prodLin s) k) <= delta)
+    (i : Fin n)
+  : absProd s (r i) <= delta * powSum B n
+  => \have B>=0 : 0 <= B => cabs>=0 <=∘ hrB i
+     \in =_<= (inv (cabs_linProd s (r i))
+               *> pmap cabs (inv (polyEval_prodLin s (r i)))
+               *> cabs_polyEval-diff-at-root (prodLin-root r i))
+         <=∘ cabs_polyEval-bound
+               (degree<-monic-diff (prodLin-degree r) (prodLin-degree s)
+                  (prodLin-monic r) (prodLin-monic s)) (r i)
+         <=∘ RealAbGroup.BigSum_<= (\lam k =>
+               RealField.<=_*_positive-right (cabs>=0 {polyCoef (prodLin r - prodLin s) k})
+                 (RealField.pow_<=-monotone cabs>=0 (hrB i))
+               <=∘ RealField.<=_*_positive-left (hd k) (RealField.pow>=0 B>=0))
+         <=∘ =_<= (BigSum-scale delta (\new Array Real n (\lam k => pow B k)))
+
+{- | **A3.2, uniformly in the polynomial.** `nearFactor-proximity` chooses its `delta` after seeing
+     `p`, which a deflation induction cannot afford — the deflated polynomial depends on the arrays.
+     Its `delta` in fact depends on `p` only through the root bound `B` that `nearFactor-bound`
+     extracts, so taking `B` as given makes the statement uniform, and the proof is the same
+     `split-eps` with `nearFactor-bound` deleted. -}
+\lemma proximity-bounded {n : Nat} {B : Real} (B>=1 : 1 <= B) {eta : Real} (eta>0 : 0 < eta)
+  : ∃ (delta : Real) (0 < delta) (\Pi (r s : Array Complex n)
+      -> (\Pi (i : Fin n) -> cabs (r i) <= B)
+      -> (\Pi (k : Nat) -> cabs (polyCoef (prodLin r) k - polyCoef (prodLin s) k) < delta)
+      -> \Pi (i : Fin n) -> minDist s (r i) i < eta)
+  => \have | B>=0 : (0 : Real) <= B => linarith
+           | S>=0 : (0 : Real) <= powSum B n => powSum>=0 B>=0 n
+     \in \case split-eps (RealField.pow>0 eta>0 : 0 < pow eta n)
+                 (linarith : (0 : Real) < powSum B n + 1) \with {
+       | inP (d, d>0, dS) =>
+         inP (d, d>0, \lam r s hrB hd i =>
+             minDist-small (NatSemiring.>_/= (linarith (fin_< i) : 0 < n)) s (r i) i eta>0
+               (absProd-bound' r s hrB
+                  (\lam k => <=-less (transportInv (\lam t => cabs t < d)
+                                        (polyCoef-minus (prodLin r) (prodLin s) k) (hd k))) i
+                <∘r (RealField.<=_*_positive-right (<=-less d>0) linarith <∘r dS)))
+     }
+
+{- | **The deflation estimate.** If the two products are `delta`-close and `r 0` is matched to `s j`
+     within `eta`, then after removing both the products are still close, with the loss controlled
+     by `eta` times a bound on the deflated `s`-product's coefficients.
+
+     Three ingredients: `prodLin-deflate-id` turns the deflated difference (multiplied back by
+     `X - r 0`) into the original difference plus one constant-multiple correction;
+     `prodLin-coefBound` bounds that correction by `eta * (1 + B)^m`; and `deflate-coefBound`
+     divides `X - r 0` back out at a cost of `powSum |r 0| (suc m)`, which `powSum-mono` replaces by
+     the `r`-independent `powSum B (suc m)`. -}
+\lemma prodLin-deflate-close {m : Nat} (r s : Array Complex (suc m)) (j : Fin (suc m))
+    {B : Real} (hrB : \Pi (i : Fin (suc m)) -> cabs (r i) <= B)
+    (hsB : \Pi (i : Fin (suc m)) -> cabs (s i) <= B)
+    {delta eta : Real} (eta>=0 : 0 <= eta)
+    (hd : \Pi (i : Nat) -> cabs (polyCoef (prodLin r) i - polyCoef (prodLin s) i) <= delta)
+    (hj : cabs (r 0 - s j) <= eta) (k : Nat)
+  : cabs (polyCoef (prodLin (skip r 0)) k - polyCoef (prodLin (skip s j)) k)
+      <= (delta + eta * pow (1 + B) m) * powSum B (suc m)
+  => \have
+     | B>=0 : (0 : Real) <= B => cabs>=0 <=∘ hrB 0
+     | M>=0 : (0 : Real) <= pow (1 + B) m => RealField.pow>=0 linarith
+     | c>=0 : (0 : Real) <= delta + eta * pow (1 + B) m
+                => linarith (cabs>=0 {polyCoef (prodLin r) 0 - polyCoef (prodLin s) 0} <=∘ hd 0,
+                             RealField.<=_*_positive_positive eta>=0 M>=0)
+     | hsB' : \Pi (i : Fin m) -> cabs (skip s j i) <= B
+                => \lam i => transportInv (\lam t => cabs t <= B) (skip-sface s j i)
+                               (hsB (sface j i))
+     | hj' : cabs (s j - r 0) <= eta => transport (`<= eta) (cabs_-comm (r 0) (s j)) hj
+     | degE : degree< (prodLin (skip r 0) - prodLin (skip s j)) m
+                => degree<-monic-diff (prodLin-degree _) (prodLin-degree _)
+                                      (prodLin-monic _) (prodLin-monic _)
+     | hD : \Pi (i : Nat)
+              -> cabs (polyCoef ((prodLin (skip r 0) - prodLin (skip s j))
+                                 * padd {ComplexField} 1 (negative (r 0))) i)
+                 <= delta + eta * pow (1 + B) m
+          => \lam i => rewrite (prodLin-deflate-id r s j) $
+               transportInv (\lam t => cabs t <= delta + eta * pow (1 + B) m)
+                 (polyCoef-minus (prodLin r - prodLin s)
+                                 (prodLin (skip s j) * padd pzero (s j - r 0)) i)
+                 (cabs_- _ _ <=∘ <=_+
+                    (transportInv (\lam t => cabs t <= delta)
+                       (polyCoef-minus (prodLin r) (prodLin s) i) (hd i))
+                    (transportInv (\lam t => cabs t <= eta * pow (1 + B) m) polyCoef_*-right
+                       (=_<= (cabs_* {polyCoef (prodLin (skip s j)) i} {s j - r 0})
+                        <=∘ RealField.<=_*_positive-left
+                              (prodLin-coefBound (skip s j) B>=0 hsB' i) (cabs>=0 {s j - r 0})
+                        <=∘ RealField.<=_*_positive-right M>=0 hj'
+                        <=∘ =_<= *-comm)))
+     \in transport (\lam t => cabs t <= (delta + eta * pow (1 + B) m) * powSum (cabs (r 0)) (suc m))
+           (pmap (polyCoef __ k) (deflate_*padd1 _ (r 0))
+            *> polyCoef-minus (prodLin (skip r 0)) (prodLin (skip s j)) k)
+           (deflate-coefBound (degree<_*padd1 (negative (r 0)) degE) c>=0 hD k)
+         <=∘ RealField.<=_*_positive-right c>=0 (powSum-mono cabs>=0 (hrB 0) (suc m))
+
+{- | # A3.3 — the shrinking lemma, in the form that carries an induction
+
+     **The polynomial is not in the statement.** Deflating replaces `p` by `deflate p (r 0)`, which
+     depends on `r`, so a `p`-indexed induction hypothesis cannot be instantiated before `r` is in
+     hand — that is what forces the explicit `n`-level epsilon chase. Dropping `p` and keeping only
+     what the argument actually uses — *the two products are close to each other, and both root
+     arrays are bounded* — makes `delta` depend on `(n, B, eps)` alone, all fixed before `r` and `s`
+     are seen. The `n`-fold root degradation of the modulus is then produced by the existential
+     rather than computed by hand.
+
+     One-sided (`rawDist`), because the hypotheses are symmetric in `r` and `s`: `matchDist` is
+     `rawDist r s ∨ rawDist s r`, so `join-univ` and a second application cover it.
+
+     The induction step is the greedy deflation: take the entry of `s` nearest to `r 0`
+     (`minDist-index`), `skip` both, and recurse. The counterexample below is what rules out getting
+     here from `nearFactor-proximity` alone. -}
+\lemma match-bounded {n : Nat} {B : Real} (B>=1 : 1 <= B) {eps : Real} (eps>0 : 0 < eps)
+  : ∃ (delta : Real) (0 < delta) (\Pi (r s : Array Complex n)
+      -> (\Pi (i : Fin n) -> cabs (r i) <= B)
+      -> (\Pi (i : Fin n) -> cabs (s i) <= B)
+      -> (\Pi (k : Nat) -> cabs (polyCoef (prodLin r) k - polyCoef (prodLin s) k) < delta)
+      -> rawDist {ComplexNormed} r s < eps)
+  \elim n
+  -- At `n = 0` there is nothing to match: `rawDist` bottoms out at the empty pairing's cost, `0`.
+  | 0 => inP (1, RealAbGroup.zro<ide, \lam r s _ _ _ => meet-right <∘r eps>0)
+  | suc m => \case shrink eps>0 \with {
+    | inP (e1, e1>0, e1<eps) => \case match-bounded {m} B>=1 e1>0 \with {
+      | inP (delta', delta'>0, IH) =>
+        \have | B>=0 : (0 : Real) <= B => linarith
+              | P>=0 : (0 : Real) <= powSum B (suc m) => powSum>=0 B>=0 (suc m)
+              | M>=0 : (0 : Real) <= pow (1 + B) m => RealField.pow>=0 linarith
+        \in \case split-eps delta'>0 (linarith : (0 : Real) < powSum B (suc m) + 1) \with {
+          | inP (q, q>0, qP) =>
+            \case split-eps q>0 (linarith : (0 : Real) < 1 + pow (1 + B) m) \with {
+              | inP (e0, e0>0, e0M) =>
+                \have | eta>0 : (0 : Real) < e0 ∧ e1 => <_meet-univ e0>0 e1>0
+                      | e0M' : e0 + e0 * pow (1 + B) m < q
+                        => transport (`< q) (equation.cRing
+                             : e0 * (1 + pow (1 + B) m) = e0 + e0 * pow (1 + B) m) e0M
+                      -- the deflation loss, bounded independently of the arrays
+                      | loss : (e0 + (e0 ∧ e1) * pow (1 + B) m) * powSum B (suc m) < delta'
+                        => (RealField.<=_*_positive-left
+                              (linarith (RealField.<=_*_positive-left
+                                           (meet-left {_} {e0} {e1}) M>=0, e0M')) P>=0
+                            <=∘ RealField.<=_*_positive-right (<=-less q>0)
+                                  (linarith : powSum B (suc m) <= powSum B (suc m) + 1))
+                           <∘r qP
+                \in \case shrink eta>0 \with {
+                  | inP (eta', eta'>0, eta'<eta) =>
+                    \case proximity-bounded {suc m} B>=1 eta'>0 \with {
+                      | inP (delta0, delta0>0, PROX) =>
+                        inP (delta0 ∧ e0, <_meet-univ delta0>0 e0>0, \lam r s hrB hsB hd =>
+                          \case minDist-index {suc m} s (r 0) 0
+                                  (<=-less (PROX r s hrB (\lam k => hd k <∘l meet-left) 0))
+                                  eta'<eta \with {
+                            | inP (j, hj) =>
+                              \have
+                              | hrB' : \Pi (i : Fin m) -> cabs (skip r 0 i) <= B
+                                 => \lam i => transportInv (\lam t => cabs t <= B)
+                                                (skip_0 {Complex} {m} {r} {i}) (hrB (suc i))
+                              | hsB' : \Pi (i : Fin m) -> cabs (skip s j i) <= B
+                                 => \lam i => transportInv (\lam t => cabs t <= B)
+                                                (skip-sface s j i) (hsB (sface j i))
+                              | close : \Pi (k : Nat)
+                                  -> cabs (polyCoef (prodLin (skip r 0)) k
+                                           - polyCoef (prodLin (skip s j)) k) < delta'
+                                 => \lam k => prodLin-deflate-close r s j hrB hsB
+                                                (<=-less eta>0)
+                                                (\lam i => <=-less (hd i <∘l meet-right))
+                                                (<=-less hj) k
+                                              <∘r loss
+                              \in \case rawDist-lt {ComplexNormed} {m} {skip r 0} {skip s j}
+                                          (<=-less (IH (skip r 0) (skip s j) hrB' hsB' close))
+                                          e1<eps \with {
+                                | inP (f, finj, hf) =>
+                                  rawDist-cond {ComplexNormed} {suc m} {r} {s} {extendMatch j f}
+                                    (extendMatch-inj finj)
+                                  <∘r maxDist-extend {ComplexNormed} r s j f
+                                        ((hj <∘l meet-right) <∘ e1<eps) hf
+                              }
+                          })
+                    }
+                }
+            }
+        }
+    }
+  }
+  \where
+    -- | Some positive real strictly below a given one, without naming a half: `split-eps` at `2`.
+    \private \lemma shrink {x : Real} (x>0 : 0 < x) : ∃ (d : Real) (0 < d) (d < x)
+      => \case split-eps x>0 (linarith : (0 : Real) < 2) \with {
+           | inP (d, d>0, dd) => inP (d, d>0, linarith)
+         }
+
 {- | # A3.3 — from proximity to a matching
 
      **Two-sided proximity is not enough**, so this cannot be proved from `nearFactor-proximity`
      alone. Counterexample: `r = {0,0,1}` and `s = {0,1,1}` have every `r i` at distance `0` from
      some `s j` *and* every `s j` at distance `0` from some `r i`, yet their matching distance is `1`.
-     Multiplicities have to be counted, so the argument must be a *greedy deflation induction*: match
-     `r 0` to its nearest `s j`, remove both, and recurse on the deflated factorisations — which needs
-     array surgery (`remove`-at-index, and `prodLin` of the result) plus the fact that deflating by
-     two nearby linear factors keeps the two polynomials close. -}
+     Multiplicities have to be counted, so the argument is a *greedy deflation induction*: match
+     `r 0` to its nearest `s j`, remove both (`Data/Array.ard`'s length-indexed `skip`), and recurse
+     on the deflated factorisations, which stay close by `prodLin-deflate-close`.
+
+     The induction itself is `match-bounded`, which drops `p` from the statement so that the
+     hypothesis can be instantiated before the arrays are known; this lemma just feeds it the root
+     bound from A3.1 and the triangle inequality through `p`, and symmetrises the `∨` in
+     `matchDist`. -}
 \lemma nearFactor-match {n : Nat} (p : Poly ComplexField) (deg : degree< p (suc n))
                         (monic : polyCoef p n = 1) {eps : Real} (eps>0 : 0 < eps)
   : ∃ (delta : Real) (0 < delta) (\Pi (r s : Array Complex n)
       -> (\Pi (j : Nat) -> cabs (polyCoef (prodLin r) j - polyCoef p j) < delta)
       -> (\Pi (j : Nat) -> cabs (polyCoef (prodLin s) j - polyCoef p j) < delta)
-      -> matchDist {ComplexNormed} r s < eps) => {?}
+      -> matchDist {ComplexNormed} r s < eps)
+  => \case nearFactor-bound p deg monic \with {
+    | inP (B, B>=1, hB) => \case match-bounded {n} B>=1 eps>0 \with {
+      | inP (d, d>0, MB) => \case split-eps d>0 (linarith : (0 : Real) < 2) \with {
+        | inP (d1, d1>0, d1d) =>
+          inP (d1 ∧ 1, <_meet-univ d1>0 RealAbGroup.zro<ide, \lam r s hr hs =>
+            \have
+            | brB : \Pi (i : Fin n) -> cabs (r i) <= B => hB r (\lam j => hr j <∘l meet-right)
+            | bsB : \Pi (i : Fin n) -> cabs (s i) <= B => hB s (\lam j => hs j <∘l meet-right)
+            -- `coefDiff-bound` is the triangle inequality through `p`; the factor of two is what
+            -- `split-eps` at `2` was reserved for.
+            | d2<d : 2 * (d1 ∧ 1) < d => linarith (meet-left {_} {d1} {1})
+            | drs : \Pi (k : Nat) -> cabs (polyCoef (prodLin r) k - polyCoef (prodLin s) k) < d
+               => \lam k => transport (\lam t => cabs t < d)
+                    (polyCoef-minus (prodLin r) (prodLin s) k)
+                    (coefDiff-bound p r s hr hs k <∘r d2<d)
+            | dsr : \Pi (k : Nat) -> cabs (polyCoef (prodLin s) k - polyCoef (prodLin r) k) < d
+               => \lam k => transport (\lam t => cabs t < d)
+                    (polyCoef-minus (prodLin s) (prodLin r) k)
+                    (coefDiff-bound p s r hs hr k <∘r d2<d)
+            \in <_join-univ (MB r s brB bsB drs) (MB s r bsB brB dsr))
+      }
+    }
+  }
 
 {- | # A3.1 machinery
 

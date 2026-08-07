@@ -58,20 +58,24 @@ which additionally gives excluded middle.
 
 | Piece | File | Lines | Goals | Axioms |
 |---|---|---|---|---|
-| A1 matching pseudometric | `src/Topology/MetricSpace/Multiset.ard` | 237 | 0 | none |
-| A2 approximate factorisation | `src/Arith/Complex/ApproxFactor.ard` | 268 | 0 | none |
+| A1 matching pseudometric | `src/Topology/MetricSpace/Multiset.ard` | 312 | 0 | none |
+| A2 approximate factorisation | `src/Arith/Complex/ApproxFactor.ard` | 352 | 0 | none |
 | A3.1 root bound | `src/Arith/Complex/Spectrum.ard` | — | 0 | none |
 | A3.2 product bound | `src/Arith/Complex/Spectrum.ard` | — | 0 | none |
-| **A3.3 matching** | `src/Arith/Complex/Spectrum.ard` | — | **1** | none |
+| **A3.3 matching** | `src/Arith/Complex/Spectrum.ard` | — | **0** | none |
 | **A4 the spectrum** | not started | — | — | — |
 | Phase B — `FTA` from AC_ω | not started; route in §5 | — | — | — |
 
-`Spectrum.ard` totals 433 lines. Phase A is 938 lines so far. The library typechecks with 0 errors;
-the only goals anywhere are `nearFactor-match` and the pre-existing `Topology.Locale.HausdorffLocale`
-one.
+**Phase A is complete.** `Spectrum.ard` totals 709 lines; Phase A is 1373 lines. The library
+typechecks with 0 errors and the only goal anywhere is the pre-existing
+`Topology.Locale.HausdorffLocale` one — `nearFactor-match` is proved.
 
 Verified independently of the warm daemon and of the binary caches by `arend --no-daemon -r`
-(full from-source rebuild, 394 modules): **0 errors, 1m46s**, 2 modules with goals.
+(full from-source rebuild, 397 modules): **0 errors, 2m15s**, 1 module with goals.
+
+> **Toolchain note.** `--serialize` no longer exists: serialization is on by default in CLI 1.12 and
+> the opt-out is `--no-serialize`. §7 below and the `arend-formalize` / `arend-prove` skills still
+> describe the old opt-in flag.
 
 ### Already proved, by file
 
@@ -96,7 +100,7 @@ of the `s`-multiset, for any two `delta`-near factorisations. Stated as a bound 
 
 ---
 
-## 3. A3.3 — the remaining lemma
+## 3. A3.3 — the shrinking lemma (**proved**)
 
 ```arend
 \lemma nearFactor-match {n : Nat} (p : Poly ComplexField) (deg : degree< p (suc n))
@@ -104,14 +108,39 @@ of the `s`-multiset, for any two `delta`-near factorisations. Stated as a bound 
   : ∃ (delta : Real) (0 < delta) (\Pi (r s : Array Complex n)
       -> (\Pi (j : Nat) -> cabs (polyCoef (prodLin r) j - polyCoef p j) < delta)
       -> (\Pi (j : Nat) -> cabs (polyCoef (prodLin s) j - polyCoef p j) < delta)
-      -> matchDist {ComplexNormed} r s < eps) => {?}
+      -> matchDist {ComplexNormed} r s < eps)
 ```
 
-This is the shrinking lemma: two near-factorisations of the same `p` are close **in the matching
-metric**. It is what makes the approximate-factorisation sets a *Cauchy* filter, and it is the precise
-sense in which multisets fix what single roots cannot — the multiset of roots is unique, so its
-approximate-solution sets shrink, whereas `{z : cabs (polyEval p z) < eps}` stays a union of one blob
-per root at every accuracy.
+Two near-factorisations of the same `p` are close **in the matching metric**. It is what makes the
+approximate-factorisation sets a *Cauchy* filter, and it is the precise sense in which multisets fix
+what single roots cannot — the multiset of roots is unique, so its approximate-solution sets shrink,
+whereas `{z : cabs (polyEval p z) < eps}` stays a union of one blob per root at every accuracy.
+
+### The key move: drop `p` from the induction
+
+The plan below (greedy deflation) is what was done, but the accuracy bookkeeping of item 3 never had
+to be paid. Deflating replaces `p` by `deflate p (r 0)`, which depends on `r`, so a `p`-indexed
+induction hypothesis cannot be instantiated before `r` is in hand — *that* is what forces an explicit
+`n`-level epsilon chase. Keeping only what the argument actually uses gives
+
+```arend
+\lemma match-bounded {n : Nat} {B : Real} (B>=1 : 1 <= B) {eps : Real} (eps>0 : 0 < eps)
+  : ∃ (delta : Real) (0 < delta) (\Pi (r s : Array Complex n)
+      -> (\Pi (i : Fin n) -> cabs (r i) <= B)
+      -> (\Pi (i : Fin n) -> cabs (s i) <= B)
+      -> (\Pi (k : Nat) -> cabs (polyCoef (prodLin r) k - polyCoef (prodLin s) k) < delta)
+      -> rawDist {ComplexNormed} r s < eps)
+```
+
+— no polynomial anywhere, only "the two products are close **to each other**, and both root arrays
+are bounded". `delta` now depends on `(n, B, eps)` alone, all fixed before `r` and `s` are seen, so
+the induction closes over itself and the `n`-fold root degradation of the modulus is *produced by
+the existential* rather than computed by hand. Two simplifications fall out: `rawDist` rather than
+`matchDist` (the hypotheses are symmetric, so `<_join-univ` plus a second application covers it),
+and A3.2 applies after the same `p`-ectomy (`proximity-bounded`).
+
+`nearFactor-match` is then ten lines: A3.1 gives `B` for both arrays and `coefDiff-bound` turns
+two-sided `delta`-nearness to `p` into `2*delta`-nearness to each other.
 
 ### Dead route — do not re-attempt
 
@@ -124,26 +153,44 @@ The classical product argument (`∏_j |r_i − s_j| = |polyEval (prodLin s) (r 
 minimum factor is small) delivers exactly proximity and nothing more. Multiplicities must be counted.
 This counterexample is recorded in the lemma's doc comment.
 
-### The viable route
+### The route taken
 
 A **greedy deflation induction** on `n`: match `r 0` to its nearest `s j`, remove both entries, and
-recurse on the deflated factorisations. Concretely it needs:
+recurse on the deflated factorisations. What it needed, as built (440 lines across four files):
 
-1. **Array surgery.** Remove an entry at a given index from `Array Complex (suc m)`, yielding
-   `Array Complex m`, and relate `prodLin` of the result to `prodLin` of the original. `Data/Array.ard`
-   has `remove`/`keep`/`filter` but they are predicate-driven and length-unindexed; a
-   remove-at-`Fin`-index with a length index is probably new.
-2. **Deflation keeps things close.** If `|r 0 − s j|` is small, then `prodLin (r minus r 0)` and
-   `prodLin (s minus s j)` are still near-factorisations of a common polynomial, with a controlled
-   loss of accuracy. This is the substantive estimate.
-3. **Accuracy bookkeeping.** The loss compounds over `n` levels and each level's proximity bound comes
-   from A3.2 with a root extraction, so the modulus degrades like a repeated `n`-th root. `delta` must
-   be chosen at the top for the whole induction.
-4. **Assembly into `matchDist`.** The greedy matching is a permutation; feed it to
-   `rawDist-cond` (already proved: `rawDist r s <= maxDist r s f` for any injective `f`), then
-   `join-univ` for the symmetrised `matchDist`.
+1. **Array surgery — mostly already in the library.** `Data/Array.ard:566` already has the
+   length-indexed `skip (l : Array A (suc n)) (k : Fin (suc n)) : Array A n`, with `skip.newIndex`,
+   `skip-index`, `skip_0`, `skipExt`; `Set/Fin.ard` has the companion index maps `sface` / `skip`
+   with `sface-inj`, `sface-skip`, `sface_skip`. Only the bridge `skip-sface : skip l k i =
+   l (sface k i)` was new (4 lines). The `prodLin` side is `prodLin-skip`, by induction on the index:
+   one `*-comm` at the head, one `*-assoc` per level.
+2. **Deflation keeps things close** — `prodLin-deflate-close`, the substantive estimate.
+   `prodLin-deflate-id` turns the deflated difference (multiplied back by `X - r 0`) into the
+   original difference plus one *constant-multiple* correction `prodLin (skip s j) * padd pzero
+   (s j - r 0)`, whose coefficients `polyCoef_*-right` reduces to `|r 0 - s j|` times a coefficient
+   bound; `prodLin-coefBound` supplies that bound as `(1 + B)^m`; and `deflate-coefBound` divides
+   `X - r 0` back out at a cost of `powSum |r 0| (suc m)`, which `powSum-mono` replaces by the
+   array-independent `powSum B (suc m)`.
+3. **Accuracy bookkeeping — not needed.** See *the key move* above: the existential in
+   `match-bounded` does it. The step is four nested `split-eps`/`shrink` calls choosing, in order,
+   the IH threshold, the IH's `delta'`, the loss budget `q`, and the matching accuracy `eta`.
+4. **Assembly into `matchDist`.** `extendMatch j f` sends `0 ↦ j` and `suc i ↦ sface j (f i)`;
+   `extendMatch-inj` is injectivity (three cases, `sface-skip` for the two mixed ones) and
+   `maxDist-extend` bounds its cost by the matched pair's distance and the shortened pairing's cost.
+   Then `rawDist-cond`, and `<_join-univ` for the symmetrised `matchDist`.
 
-Estimate: 150–250 lines. This is the hardest single piece in Phase A.
+Two shared extraction lemmas underpin the whole thing, both instances of one induction:
+
+```arend
+\lemma bigMeet-lt {l : Array Real} {x c' c : Real} (h : Big (∧) x l <= c') (lt : c' < c)
+  : (x < c) || ∃ (i : Fin l.len) (l i < c)
+```
+
+`rawDist-lt` (extract an injective pairing from a small `rawDist`) and `minDist-index` (extract the
+nearest index from a small `minDist`) are both corollaries. The `<=`-hypothesis against a *strictly*
+larger target is what lets the recursion reuse one gap; with a strict hypothesis each entry would
+need its own threshold and the slack would have to be split `l.len` ways. **This is also §5's
+step 4**, the step whose constructivity was flagged as non-obvious — it is now proved.
 
 ### What is already available for it
 
@@ -276,7 +323,9 @@ Two corollaries worth recording:
 Worked out on paper in one pass, **not formalised** — treat as a strong conjecture. In decreasing
 order of risk:
 
-1. **Step 3 depends on A3.3, still open.** Everything here is contingent on §3.
+1. ~~**Step 3 depends on A3.3, still open.**~~ A3.3 is proved (§3), and step 4's extraction is
+   `bigMeet-lt`, also proved. Step 3 itself should now be a direct application of
+   `nearFactor-match`.
 2. **Step 6's bookkeeping.** Composing permutations and showing the relabelled sequence is
    componentwise Cauchy is where the epsilons could fail to line up. `matchDist` controls `max_i`, so
    it should transfer, but it is not free.
@@ -331,6 +380,11 @@ All parked on leaf modules to keep the edit loop fast. None is blocking.
 | `NatDirectedSet` | `FTA.ard` | `Order/Directed.ard` or `Arith/Nat.ard` |
 | `nat<suc` | `Spectrum.ard` | `Arith/Nat.ard` |
 | `zro-minus`, `add-sub-cancel`, `split3`, `add-sub-split` | `FTA.ard`, `ApproxFactor.ard`, `Spectrum.ard` | `Algebra/Group.ard` |
+| `bigMeet-lt`, `bigJoin-lt` | `Multiset.ard` | `Order/Lattice.ard` or `Order/Biordered.ard` |
+| `extendMatch`, `extendMatch-inj` | `Multiset.ard` | `Data/Array/` or `Set/Fin.ard` |
+| `degree<_padd-tail`, `cabs_polyEval-boundD` | `Spectrum.ard` | `Algebra/Ring/Poly.ard` (the first) |
+| `padd1-root`, `padd1-diff`, `deflate_*padd1` | `ApproxFactor.ard` | `Algebra/Ring/Poly.ard` |
+| `powSum`, `powSum>=0`, `powSum-mono`, `powSum-bound` | `Spectrum.ard` | `Arith/Real/Field.ard` |
 
 Several were un-privated during this work purely so a second module could use them; the `\private`
 markers should be revisited when they move.

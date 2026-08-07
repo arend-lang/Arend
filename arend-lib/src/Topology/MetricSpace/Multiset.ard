@@ -9,13 +9,16 @@
 \import Arith.Real.UpperReal
 \import Data.Array
 \import Data.Bool
+\import Data.Fin (fsuc)
 \import Function.Meta
 \import Logic
 \import Logic.Meta
 \import Meta
 \import Order.Biordered
 \import Order.Lattice
+\import Order.LinearOrder
 \import Order.PartialOrder
+\import Order.StrictOrder
 \import Paths
 \import Paths.Meta
 \import Set
@@ -24,6 +27,7 @@
 \import Topology.MetricSpace.Complete
 \open JoinSemilattice (Big_<=_join0, Big_<=_join1, Big_join-univ, join-comm, join-idemp, join-univ)
 \open MeetSemilattice (Big_<=_meet1, Big_meet-univ)
+\open BiorderedLattice (Big_<_join-univ)
 
 {- | **The matching (bottleneck) pseudometric on `n`-element arrays.**
 
@@ -125,6 +129,26 @@
 \lemma bigMeet-univ {l : Array Real} {x y : Real} (p : y <= x) (f : \Pi (i : Fin l.len) -> y <= l i)
   : y <= Big (∧) x l => Big_meet-univ p f
 
+{- | **A small minimum has a small entry — given slack.** A bound on `Big (∧)` does not say *which*
+     entry realises it: the minimum is not attained constructively, and deciding which factor is
+     small would need a comparison of reals. It *is* extractable once the target `c` is strictly
+     above the bound `c'`: `<-comparison` splits each entry against that gap, and in the "entry is
+     above `c'`" branch `<_meet-univ` pushes the bound onto the remaining minimum.
+
+     The hypothesis is `<= c'` rather than `< c'` precisely so the recursive call can reuse the
+     *same* gap `c' < c`; with a strict hypothesis each entry would need its own intermediate
+     threshold and the slack would have to be split `l.len` ways. -}
+\lemma bigMeet-lt {l : Array Real} {x c' c : Real} (h : Big (∧) x l <= c') (lt : c' < c)
+  : (x < c) || ∃ (i : Fin l.len) (l i < c) \elim l
+  | nil => byLeft (h <∘r lt)
+  | :: a l => \case <-comparison a lt \with {
+    | byRight a<c => byRight (inP (0, a<c))
+    | byLeft c'<a => \case bigMeet-lt (\lam q => h (<_meet-univ c'<a q)) lt \with {
+      | byLeft x<c => byLeft x<c
+      | byRight (inP (i, p)) => byRight (inP (suc i, p))
+    }
+  }
+
 \lemma bigJoin-base {l : Array Real} {x : Real} : x <= Big (∨) x l => Big_<=_join0
 
 \lemma bigJoin-cond {l : Array Real} {x : Real} (i : Fin l.len) : l i <= Big (∨) x l
@@ -132,6 +156,9 @@
 
 \lemma bigJoin-univ {l : Array Real} {x y : Real} (p : x <= y) (f : \Pi (i : Fin l.len) -> l i <= y)
   : Big (∨) x l <= y => Big_join-univ p f
+
+\lemma bigJoin-lt {l : Array Real} {x y : Real} (p : x < y) (f : \Pi (i : Fin l.len) -> l i < y)
+  : Big (∨) x l < y => Big_<_join-univ p f
 
 -- | The `n` pairwise distances induced by a pairing `f`, and their maximum: the cost of `f`.
 \func pairCosts {X : PseudoMetricSpace} {n : Nat} (r s : Array X n) (f : Fin n -> Fin n) : Array Real n
@@ -181,6 +208,20 @@
   : c <= rawDist r s
   => bigMeet-univ {permCosts r s} (h _ id-inj) (\lam i => h _ (perms-inj i))
 
+{- | **A cheap matching from a small `rawDist`** — the converse of `rawDist-cond`, and the reason
+     `bigMeet-lt` is stated the way it is. `rawDist` is a minimum over `perms n` with the identity
+     as base value, and *both* candidates it can return are injective, so the extraction lands on an
+     injective pairing either way with no case analysis at the call site.
+
+     The slack `c' < c` is unavoidable: the optimal permutation does not exist constructively. -}
+\lemma rawDist-lt {X : PseudoMetricSpace} {n : Nat} {r s : Array X n} {c' c : Real}
+                  (h : rawDist r s <= c') (lt : c' < c)
+  : ∃ (f : Fin n -> Fin n) (IsInjFin f) (maxDist r s f < c)
+  => \case bigMeet-lt {permCosts r s} h lt \with {
+       | byLeft p => inP (\lam i => i, id-inj, p)
+       | byRight (inP (i, p)) => inP (perms n i, perms-inj i, p)
+     }
+
 {- | Triangle inequality for `rawDist`. The minima are **not attained** constructively — that would
      need a decidable comparison of reals — so instead of composing two optimal permutations the
      proof strips one minimum at a time: bound `rawDist r t - maxDist r s f` by every `maxDist s t g`
@@ -195,6 +236,40 @@
   : rawDist r t <= rawDist r s + rawDist s t
   => linarith (rawDist-univ {X} {n} {r} {s} {rawDist r t - rawDist s t}
                  (\lam f fi => linarith (rawDist-triang-step {X} {n} {r} {s} {t} f fi)))
+
+{- | # Section 3: growing a pairing by one matched entry
+
+     The greedy step of a deflation induction produces a pairing of the two *shortened* arrays plus
+     one matched pair `(0, j)`; this assembles them. `sface j` is the order-preserving injection
+     `Fin m -> Fin (suc m)` that misses `j`, so it is exactly the reindexing that `skip _ j` undoes,
+     and `sface-skip` is what keeps the new pairing injective. -}
+\func extendMatch {m : Nat} (j : Fin (suc m)) (f : Fin m -> Fin m) (i : Fin (suc m)) : Fin (suc m)
+  \elim i
+  | 0 => j
+  | suc i => sface j (f i)
+
+\lemma extendMatch-inj {m : Nat} {j : Fin (suc m)} {f : Fin m -> Fin m} (fi : IsInjFin f)
+  : IsInjFin (extendMatch j f)
+  => \lam i i' => \case \elim i, \elim i' \with {
+    | 0, 0 => \lam _ => idp
+    | 0, suc i' => \lam p => absurd (sface-skip (inv p))
+    | suc i, 0 => \lam p => absurd (sface-skip p)
+    | suc i, suc i' => \lam p => pmap fsuc (fi i i' (sface-inj p))
+  }
+
+-- | The extended pairing costs no more than the two things it is built from: the matched pair's own
+-- distance, and the cost of the pairing on what is left. `skip_0` and `skip-sface` are what turn an
+-- index of the shortened array into an index of the original.
+\lemma maxDist-extend {X : PseudoMetricSpace} {m : Nat} (r s : Array X (suc m)) (j : Fin (suc m))
+                      (f : Fin m -> Fin m) {c : Real}
+                      (h0 : ldist (r 0) (s j) < c)
+                      (h1 : maxDist (skip r 0) (skip s j) f < c)
+  : maxDist r s (extendMatch j f) < c
+  => bigJoin-lt {pairCosts r s (extendMatch j f)} (maxDist>=0 <∘r h1)
+       (\lam i => \case \elim i \with {
+         | 0 => h0
+         | suc i => rewriteI (skip_0 {X} {m} {r} {i}, skip-sface s j (f i)) (maxDist-cond i <∘r h1)
+       })
 
 {- | Symmetrised: **the matching pseudometric**. Symmetrising with `∨` avoids having to invert an
      injective self-map of `Fin n` (which would need pigeonhole surjectivity), and the triangle

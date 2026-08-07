@@ -5,6 +5,7 @@
 \import Algebra.Pointed
 \import Algebra.Ring
 \import Algebra.Ring.Poly
+\import Algebra.Ring.RingHom
 \import Algebra.Semiring
 \import Algebra.StrictlyOrdered
 \import Arith.Complex
@@ -75,6 +76,23 @@
 
 {- | Synthetic division by `X - z`, from `degree1PolyDivision`:
      `p = rootDiv p z * (X - z) + p z`. `rootDiv` is `\level`-unique, so this is *the* quotient. -}
+{- | **Pulling out an arbitrary linear factor.** `prodLin`'s own recursion only exposes the factor
+     at index `0`, but the greedy deflation behind A3.3 removes a *matched* index, so it needs the
+     general form. Induction on the index: one `*-comm` at the head, one `*-assoc` per level.
+     `skip` is `Data/Array.ard`'s length-indexed remove-at-index.
+
+     The array is eliminated along with the index: `skip`'s clauses match on a `::`, and while
+     `Array` has definitional eta, the reducer will not eta-expand the *variable* `r` to fire them —
+     with `r` left whole both `skip r 0` and `skip r (suc k)` stay stuck and neither `*-comm` nor
+     `*-assoc` sees a match. -}
+\lemma prodLin-skip {n : Nat} (r : Array Complex (suc n)) (k : Fin (suc n))
+  : prodLin r = padd {ComplexField} 1 (negative (r k)) * prodLin (skip r k) \elim n, r, k
+  | 0, a :: nil, 0 => *-comm {_} {1} {padd {ComplexField} 1 (negative a)}
+  | suc n, a :: l, 0 => *-comm
+  | suc n, a :: l, suc k =>
+    pmap (`* padd {ComplexField} 1 (negative a)) (prodLin-skip l k)
+    *> *-assoc {_} {padd {ComplexField} 1 (negative (l k))} {prodLin (skip l k)}
+
 \lemma rootDiv-eq {R : CRing} (p : Poly R) (z : R)
   : p = rootDiv p z * padd 1 (negative z) + padd pzero (polyEval p z)
   => (degree1PolyDivision p z).2
@@ -124,6 +142,56 @@
 -- | `degree1PolyDivision` is `\level`-unique, so `deflate` *is* `rootDiv`.
 \lemma deflate=rootDiv {R : CRing} (p : Poly R) (z : R) : deflate p z = rootDiv p z
   => degree1PolyDivision-unique p z (deflate-eq p z) (rootDiv-eq p z)
+
+-- | `X - z` vanishes at `z`. Both `+` and `*` on `Poly` reduce once the operands are `padd`
+-- literals, so the goal is already a plain `R`-identity by the time the solver sees it.
+\private \lemma padd1-root {R : CRing} (z : R) : polyEval (padd 1 (negative z)) z = 0
+  => equation.cRing
+
+{- | **`deflate` inverts multiplication by `X - z`.** `deflate-eq` exhibits `deflate q z` as *a*
+     quotient of `q` by `X - z`, and `degree1PolyDivision` is `\level`-unique, so it agrees with any
+     other. Here the other one is the trivial exhibition of `e * (X - z)`, whose remainder
+     `polyEval` vanishes by `padd1-root`. -}
+\lemma deflate_*padd1 {R : CRing} (e : Poly R) (z : R) : deflate (e * padd 1 (negative z)) z = e
+  => \have root : polyEval (e * padd 1 (negative z)) z = 0
+                    => RingHom.func-* {polyEvalRingHom z}
+                       *> pmap (polyEval e z *) (padd1-root z) *> zro_*-right
+     \in degree1PolyDivision-unique (e * padd 1 (negative z)) z
+           (deflate-eq (e * padd 1 (negative z)) z)
+           (inv (pmap (e * padd 1 (negative z) +) (pmap (padd pzero) root *> peq) *> zro-right))
+
+-- | Deflating a product of linear factors at one of its roots removes exactly that factor.
+\lemma deflate-prodLin {n : Nat} (r : Array Complex (suc n)) (k : Fin (suc n))
+  : deflate (prodLin r) (r k) = prodLin (skip r k)
+  => pmap (deflate __ (r k)) (prodLin-skip r k *> *-comm) *> deflate_*padd1 _ (r k)
+
+-- | `(X - x) - (X - y)` is the constant `y - x`. Everything reduces; the two residues are
+-- `1 + negative 1 = 0` (then `peq`) and one `+-comm`.
+\private \lemma padd1-diff {R : Ring} (x y : R)
+  : padd 1 (negative x) - padd 1 (negative y) = padd pzero (y - x)
+  => \have | h1 : padd {R} pzero (1 + negative 1) = pzero
+                    => pmap (padd pzero) negative-right *> path peq
+           | h2 : negative x + negative (negative y) = y - x => equation
+     \in pmap2 padd h1 h2
+
+-- | The rearrangement behind `prodLin-deflate-id`, over an abstract `CRing` with every operand a
+-- variable so the solver can see it (`Poly ComplexField` products reduce and it cannot).
+\private \lemma deflate-id-alg {R : CRing} (A Bq L0 Lj : Poly R)
+  : (A - Bq) * L0 = (L0 * A - Lj * Bq) - Bq * (L0 - Lj) => equation.cRing
+
+{- | **The greedy deflation identity.** Removing `r 0` from `r` and its match `s j` from `s` leaves
+     two products whose difference, multiplied back by `X - r 0`, is the original difference
+     corrected by one term — and that term is the *constant* `s j - r 0` times the deflated `s`
+     product, so its coefficients are controlled by `|r 0 - s j|` alone (`polyCoef_*-right`).
+
+     This is what makes the deflation step quantitative: the two deflated products stay close, with
+     a loss proportional to how well `r 0` was matched. -}
+\lemma prodLin-deflate-id {m : Nat} (r s : Array Complex (suc m)) (j : Fin (suc m))
+  : (prodLin (skip r 0) - prodLin (skip s j)) * padd 1 (negative (r 0))
+    = (prodLin r - prodLin s) - prodLin (skip s j) * padd pzero (s j - r 0)
+  => deflate-id-alg _ _ _ (padd {ComplexField} 1 (negative (s j)))
+     *> pmap2 (-) (pmap2 (-) (inv (prodLin-skip r 0)) (inv (prodLin-skip s j)))
+                  (pmap (prodLin (skip s j) *) (padd1-diff (r 0) (s j)))
 
 \lemma deflate-degree {R : Ring} {p : Poly R} {n : Nat} (d : degree< p (suc n)) (z : R)
   : degree< (deflate p z) n \elim p, n
@@ -221,6 +289,22 @@
      to `eps/2` (`fta-approx` at an index supplied by `pow_<1-decay`), deflate by `X - z`, and recurse
      at an accuracy chosen *after* `z` is known, small enough that `coefErr_*padd1`'s amplification by
      `1 + cabs z` still leaves `eps/2`. -}
+{- | **A coefficient bound for `prodLin` from a bound on its roots.** Each factor multiplies the
+     coefficient size by at most `1 + |r i|`, so `n` factors give `(1 + B)^n` — the crude form of
+     "the coefficients are the elementary symmetric functions", and enough for A3.3, which only
+     needs *some* bound depending on `B` and `n` alone.
+
+     `coefErr_*padd1` is the single-factor step; the induction is `prodLin`'s own. -}
+\lemma prodLin-coefBound {n : Nat} (r : Array Complex n) {B : Real} (B>=0 : 0 <= B)
+                         (hr : \Pi (i : Fin n) -> cabs (r i) <= B) (j : Nat)
+  : cabs (polyCoef (prodLin r) j) <= pow (1 + B) n \elim n
+  | 0 => constCoef-bound 1 j <=∘ =_<= cabs_ide
+  | suc n =>
+    coefErr_*padd1 (\lam j' => prodLin-coefBound (\new Array Complex n (\lam i => r (suc i)))
+                                 B>=0 (\lam i => hr (suc i)) j') j
+    <=∘ RealField.<=_*_positive-right (RealField.pow>=0 (linarith : (0 : Real) <= 1 + B))
+          (linarith (hr 0))
+
 \lemma approx-factor {n : Nat} (p : Poly ComplexField) (deg : degree< p (suc n))
                      (monic : polyCoef p n = 1) {eps : Real} (eps>0 : 0 < eps)
   : ∃ (r : Array Complex n) (\Pi (j : Nat) -> cabs (polyCoef (prodLin r) j - polyCoef p j) < eps)

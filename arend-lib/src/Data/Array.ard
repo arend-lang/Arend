@@ -641,6 +641,16 @@
   | suc n, a :: l, suc i, 0 => idp
   | suc n, a :: l, suc i, suc j => skip-index
 
+-- | `skip` reindexes by `sface`: dropping entry `k` and then reading index `i` is reading the
+-- original at `sface k i`. The `newIndex` phrasing above goes the other way, from an index of `l`
+-- that is known to differ from `k`; this one is the direction needed when the index of the
+-- shortened array is what you have in hand.
+\func skip-sface {A : \Type} {n : Nat} (l : Array A (suc n)) (k : Fin (suc n)) (i : Fin n)
+  : skip l k i = l (sface k i) \elim n, l, k, i
+  | suc n, a :: l, 0, i => idp
+  | suc n, a :: l, suc k, 0 => idp
+  | suc n, a :: l, suc k, suc i => skip-sface l k i
+
 \func skip_replicate {A : \Type} {n : Nat} (a : A) {k : Fin (suc n)} : skip (replicate (suc n) a) k = replicate n a \elim n, k
   | 0, 0 => idp
   | suc n, 0 => idp
