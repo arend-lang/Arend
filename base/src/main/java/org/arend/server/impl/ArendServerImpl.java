@@ -418,7 +418,10 @@ public class ArendServerImpl implements ArendServer {
         removed = true;
       }
     }
-    if (removed) notifyModuleRemoved(module);
+    if (removed) {
+      myErrorService.removeModule(module);
+      notifyModuleRemoved(module);
+    }
   }
 
   @Override
