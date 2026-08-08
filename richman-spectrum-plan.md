@@ -47,10 +47,21 @@ That is strictly weaker than "there is a root" — if the multiset space were co
 root off it, and the sheaf model shows you cannot — but it is a genuine theorem, and it is the most
 that is available axiom-free.
 
-It also has a second payoff, which is the practical reason to finish it. Phase A's shrinking lemma
-turns the existing `FTA` statement into a consequence of **plain countable choice** rather than
-dependent choice (§5) — strictly weaker than what `FTA.ard` assumes today, and weaker than `achoice`,
-which additionally gives excluded middle.
+It also has a second payoff, which is the practical reason to finish it, and which is **now delivered**:
+Phase A's shrinking lemma turns the existing `FTA` statement into a consequence of **plain countable
+choice** rather than dependent choice (§5, `FTA-choice`) — strictly weaker than what `FTA.ard` assumes
+today, and weaker than `achoice`, which additionally gives excluded middle.
+
+So the development now records three statements at three strengths, which is the point of the exercise:
+
+| Statement | Axiom |
+|---|---|
+| `spectrum p : ComplexMultiset n`, and `mem (spectrum p) z ↔ polyEval p z = 0` | **none** |
+| `FTA-choice` — `∃ (z : Complex) (polyEval p z = 0)` | `acomega` (AC_ω) |
+| `FTA` — the same statement | `adchoice` (DC) |
+
+The second line is the interesting one: it is the same theorem as the third from a strictly weaker
+hypothesis, and by §1's first framing fact no line of this table can be pushed below the first.
 
 ---
 
@@ -62,16 +73,33 @@ which additionally gives excluded middle.
 | A2 approximate factorisation | `src/Arith/Complex/ApproxFactor.ard` | 352 | 0 | none |
 | A3.1 root bound | `src/Arith/Complex/Spectrum.ard` | — | 0 | none |
 | A3.2 product bound | `src/Arith/Complex/Spectrum.ard` | — | 0 | none |
-| **A3.3 matching** | `src/Arith/Complex/Spectrum.ard` | — | **0** | none |
-| **A4 the spectrum** | not started | — | — | — |
-| Phase B — `FTA` from AC_ω | not started; route in §5 | — | — | — |
+| A3.3 matching | `src/Arith/Complex/Spectrum.ard` | — | 0 | none |
+| A4 the spectrum | `src/Arith/Complex/Spectrum/Point.ard` | 396 | 0 | none |
+| **Phase B — `FTA` from AC_ω** | `src/Arith/Complex/FTA/Choice.ard` | 256 | **0** | `acomega` only |
 
-**Phase A is complete.** `Spectrum.ard` totals 709 lines; Phase A is 1373 lines. The library
-typechecks with 0 errors and the only goal anywhere is the pre-existing
-`Topology.Locale.HausdorffLocale` one — `nearFactor-match` is proved.
+**Both phases are complete.** Phase A is 1764 lines (`Spectrum.ard` alone is 704):
+`spectrum p deg monic : ComplexMultiset n` is constructed and `spectrum-char` proves
+`mem (spectrum p) z ↔ polyEval p z = 0`, both **axiom-free**. Phase B is 256 lines: `FTA-choice`
+proves `FTA`'s exact statement from `acomega` (countable choice) alone.
 
-Verified independently of the warm daemon and of the binary caches by `arend --no-daemon -r`
-(full from-source rebuild, 397 modules): **0 errors, 2m15s**, 1 module with goals.
+Axiom use is mechanically checked, not assumed. `arend -fu adchoice` gives exactly one usage
+(`FTA.ard:204`, in `fta-seq`), `arend -fu fta-seq` exactly one (`FTA`), and `arend -fu FTA` reports
+`No usages.` So the whole `adchoice` cone is a dead end reachable only from `FTA` itself — nothing in
+A1–A4 or in Phase B can touch it, even though `Choice.ard` imports `FTA.ard` for its analytic
+infrastructure. `arend -fu acomega` gives exactly two usages, both in `Choice.ard`: the two
+applications. `achoice` occurs only inside `Logic/Classical.ard`.
+
+Verified independently of the warm daemon and of the binary caches by `arend --daemon-stop &&
+arend --no-daemon -r` (full from-source rebuild, 397 modules): **0 errors, 2m2s**, 1 module with goals
+(the pre-existing `Topology.Locale.HausdorffLocale` one).
+
+> **A stale-cache sighting, for the record.** Before that rebuild, every warm-daemon run reported a
+> `DiscreteField.{u}` type mismatch at `Algebra.Field.Splitting:87` plus fallout at 88–93 — a module
+> that imports nothing from `Arith.Complex` and that nothing here touches. It is the classic stale-`.arc`
+> symptom (a bogus mismatch naming what looks like the same type twice, on a definition you never
+> edited). The cold `-r` pass shows it does not exist in the sources, and re-persisting the caches
+> cleared it from the warm runs too. `-r` now re-serialises by default, so plain `arend -r` is the fix;
+> the skills' `-r --serialize` advice is stale in the flag but right in the remedy.
 
 > **Toolchain note.** `--serialize` no longer exists: serialization is on by default in CLI 1.12 and
 > the opt-out is `--no-serialize`. §7 below and the `arend-formalize` / `arend-prove` skills still
@@ -224,78 +252,156 @@ from anyway. Keep this shape in A3.3.
 
 ---
 
-## 4. A4 — the spectrum
+## 4. A4 — the spectrum (**proved**)
 
-Not started. The interface is already verified to elaborate (probes in `ApproxFactor.ard`):
+All in `src/Arith/Complex/Spectrum/Point.ard`, 402 lines, no axioms.
 
 ```arend
-\func ComplexMultiset (n : Nat) : CompleteMetricSpace => Multiset ComplexNormed n
-\lemma ldist_cabs (x y : Complex) : ldist {ComplexNormed} x y = cabs (x - y) => idp
-\func multisetOf {n : Nat} (r : Array Complex n) : ComplexMultiset n => pointSCF r
+\func spectrum {n : Nat} (p : Poly ComplexField) (deg : degree< p (suc n))
+               (monic : polyCoef p n = 1) : ComplexMultiset n
+  => sregCF (specFilter p deg monic)
+
+\lemma spectrum-char {m : Nat} (p : Poly ComplexField) (deg : degree< p (suc (suc m)))
+    (monic : polyCoef p (suc m) = 1) (z : Complex)
+  : mem (spectrum p deg monic) z <-> polyEval p z = 0
 ```
 
-No `ComplexPseudoMetric` needs building: `PseudoNormedAbGroup` carries
+No `ComplexPseudoMetric` needed to be built: `PseudoNormedAbGroup` carries
 `\default dist x y : Real => norm (x - y)` and `\extends PseudoMetricSpace`, so `ComplexNormed` already
-*is* one, and the base distance is `cabs` of the difference **definitionally** (hence no
-`norm`↔`cabs` bridging and no `ExUpperReal` detour anywhere in A1–A3).
+*is* one, and the base distance is `cabs` of the difference **definitionally** — so
+`ldist-triang {ComplexNormed}` *is* the complex triangle inequality with no bridging, and no
+`ExUpperReal` detour appears anywhere in A1–A4. (The `ComplexMultiset` / `ldist_cabs` / `multisetOf`
+probes this section used to cite were removed from `ApproxFactor.ard` long ago; don't look for them.
+`ComplexMultiset` now lives in `Point.ard`.)
 
-### Steps
+### The key move: membership is a predicate on filters, not a lifted function
 
-1. **The filter.** Generate a `SetFilter (Array Complex n)` from
-   `S_delta := {r | ∀ j, cabs (polyCoef (prodLin r) j − polyCoef p j) < delta}`. Inhabited by A2
-   (`approx-factor`), nested in `delta`. Filter, not sequence — no choice.
-2. **Cauchy.** `cauchyFilter-metric-char` (`Topology/MetricSpace.ard:334`) reduces `IsCauchyFilter` to:
-   for every `eps > 0` some element of the filter sits inside an `eps`-ball. That is exactly A3.3.
-3. **The spectrum.** `MetricCompletion`'s completeness turns the Cauchy filter into a point
-   `spectrum p : ComplexMultiset n`. `MetricCompletion.dist-char` says `pointSCF` is isometric, so the
-   embedding of each near-factorisation is within `eps` of the spectrum.
-4. **Membership.** Define `z ∈ mu` by extending `dist_min r z := minDist r z` (1-Lipschitz in `r` w.r.t.
-   `matchDist`) to the completion via `completion-lift` / `dense-lift`, and setting
-   `z ∈ mu := (dist_min mu z = 0)`. Similarly extend `diam` if Phase B is ever attempted.
-5. **The characterisation.** `z ∈ spectrum p ↔ polyEval p z = 0`. Both directions are quantitative
-   consequences of `cabs_polyEval-bound` plus A3.1's root bound; neither should need new machinery.
+The plan below said step 4 needed `completion-lift` / `dense-lift`. **It does not, and that was the
+whole risk in this section.** Points of `Multiset X n = MetricCompletion (MultisetPseudoMetric X n)`
+*are* `StronglyRegularCauchyFilter (Array X n)`, so any predicate on filters is automatically
+well-defined on the completion — no lift, no invariance obligation, no 1-Lipschitz side condition to
+discharge before the definition can even be made:
 
-Estimate: 150–250 lines, mostly steps 4 and 5. Lower risk than A3.3 — no new mathematical content,
-but the `completion-lift` plumbing is unfamiliar territory in this development.
+```arend
+\func mem {m : Nat} (mu : ComplexMultiset (suc m)) (z : Complex) : \Prop
+  => \Pi {eps : Real} -> 0 < eps -> mu (nearRootSet z eps)
+```
+
+This is equivalent to "the extension of `minDist _ z` to the completion vanishes at `mu`", but that
+equivalence is never needed.
+
+### Steps, as built
+
+1. **The filter** — `specSetFilter p`, generated by `nearFactorSet p delta`. `filter-meet` is where
+   nesting in `delta` is used (a meet of thresholds is a threshold); the rest is trivial. ~8 lines.
+2. **Proper and Cauchy** — `specFilter`: `isProper` is A2 (`approx-factor`), `isCauchyFilter` is
+   `cauchyFilter-metric-char.2` fed A3.3 (`nearFactor-match`) — the ball around any single
+   `delta`-near factorisation. ~14 lines.
+3. **The spectrum** — `sregCF (specFilter …)`, typed at `ComplexMultiset n`. One line, and the fact
+   that it typechecks *is* the carrier identification: `MetricCompletion`'s own completeness is never
+   invoked, so nothing analytic is spent here.
+4. **`minDist-lip`** — `minDist _ z` is 1-Lipschitz for `rawDist`. For an injective pairing `f`,
+   `bigMeet-cond` + `ldist-triang` + `maxDist-cond` bound `minDist r z` by `|z − s j| + maxDist s r f`
+   for every `j` *including the base index*, so `bigMeet-univ` gives the bound by `minDist s z`, and
+   `rawDist-univ` passes to the infimum. Two `linarith`s, ~15 lines. `minDist-lipM` symmetrises with
+   `join-right`. Also `minDist-indep`: the base index of `minDist` is redundant, which is what licenses
+   pinning it at `0` in `mem`.
+5. **`absProd-factor`** — `prodLin-skip` splits `∏(z − sᵢ)` as `(z − s_j)` times the deflated product
+   at `z`, bounded by `prodLin-coefBound` through `cabs_polyEval-boundD`. The upper bound complementing
+   `pow<=absProd`. Needed again by Phase B step 8 (see §5). ~14 lines.
+6. **The characterisation.** `root-nearRoot` (⟸ core): a root makes `∏(z − rᵢ) = |p(z) −
+   ∏(X−rᵢ)(z)|` small, and `minDist-small` converts a small product to a small minimum — *no root
+   bound needed*, only `powSum |z| n`. `nearRoot-root` (⟹): split `p = (p − ∏) + ∏`,
+   `cabs_polyEval-boundD` on the first summand and `absProd-factor` on the second, both under `c/2`,
+   with `c` arbitrary via `below-all-positive`. Then `root-mem` / `mem-witness` move these across the
+   regularisation, and `spectrum-char` is the pair. `spectrum-prodLin` is the sanity check that each
+   `r i` is a member of `spectrum (prodLin r)`.
+
+### The one nontrivial obstacle, and how it was dodged
+
+`spectrum p` is `sregCF (specFilter p)`, which is *smaller* than `specFilter p`. The ⟹ direction only
+needs `sregCF_<=` and is free; the ⟸ direction has to prove membership in the **regularisation**, and
+`nearRootSet` is not one of the filter's generators. Doing that through `s<=<` directly would require
+`nearFactorSet delta' s<=* nearFactorSet delta`, i.e. continuity of `r ↦ ∏(X − rᵢ)` — a lemma we
+otherwise do not need. The way around is a *ball* criterion:
+
+```arend
+\lemma sregCF-mem {X : PseudoMetricSpace} {F : WeaklyCauchyFilter X} {U : Set X} {eps : Rat}
+                  (eps>0 : 0 < eps) (h : \Pi (x : X) -> F (OBall eps x) -> OBall eps x ⊆ U)
+  : sregCF F U
+  => \lam {G} G<=F => \case (cauchyFilter-metric-char {X} {G}).1 G.isCauchyFilter eps>0 \with {
+       | inP (x, Gb) => filter-mono Gb (h x (G<=F Gb))
+     }
+```
+
+Every `G ⊆ F` is still Cauchy, hence contains *some* `eps`-ball, and that ball is one of `F`'s own
+sets — so it suffices that every `eps`-ball belonging to `F` already sits inside `U`. Four lines, no
+`s<=<` reasoning, and it belongs beside `sregCF_<=` in
+`Topology/CoverSpace/StronglyComplete.ard` (see §6). In `root-mem` the ball radius is a rational
+`e < eps/3`, because `minDist-lipM` plus `matchDist-triang` costs two radii to move from the witness
+`r1` to an arbitrary point of the ball.
 
 ---
 
-## 5. Phase B — `FTA` from AC_ω instead of `adchoice`
+## 5. Phase B — `FTA` from AC_ω instead of `adchoice` (**proved**)
 
-This is the payoff that makes Phase A worth finishing for its own sake, beyond Richman's theorem.
+All in `src/Arith/Complex/FTA/Choice.ard`, 256 lines, `acomega` the only axiom.
 
-`FTA.ard` currently gets its sequence from `adchoice` (dependent choice over `Nat`). **A2 + A3 plus
-plain countable choice look sufficient instead** — a strictly weaker axiom, and the one every school of
-constructive mathematics already assumes. Note that A4 (the spectrum as a point of the completion) is
-*not* needed for this; A2 and A3 are.
+```arend
+\lemma FTA-choice {n : Nat} (n>0 : 0 < n) (p : Poly ComplexField)
+                  (deg : degree< p (suc n)) (monic : polyCoef p n = 1)
+  : ∃ (z : Complex) (polyEval p z = 0)
+```
 
-Assume only
+— character for character `FTA`'s statement, from a strictly weaker hypothesis. This is the payoff
+that makes Phase A worth finishing for its own sake, beyond Richman's theorem.
+
+### AC_ω had to be formulated
+
+The library had **no** countable choice. `achoice` is choice over an arbitrary `\Set`; `adchoice` is
+*full dependent choice* — the `Nat` in its signature indexes the family, it does not weaken the
+principle, and its doc comment's "dependent choice over `Nat`" invites exactly that misreading. So
+`acomega` is new (`Logic/Classical.ard`), with `acomega.fromChoice` deriving it from `achoice` to show
+it is a weakening rather than new strength:
 
 ```arend
 \axiom acomega {A : Nat -> \Set} (h : \Pi (i : Nat) -> TruncP (A i)) : TruncP (\Pi (i : Nat) -> A i)
 ```
 
-### The chain
+The three now sit in strict order `acomega < adchoice < achoice`, and each gap is load-bearing:
+`achoice` yields excluded middle (`achoice.lemFromChoice`) and the other two do not; `adchoice` lets
+each choice depend on the previous one and `acomega` does not (AC_ω ⇏ DC, Jensen).
+
+### The chain, as built
 
 | Step | | Choice? |
 |---|---|---|
-| 1 | for each `k`, `∃ (r : Array Complex n), ‖∏(X − rᵢ) − p‖ < 2^{-k}` | free — **A2, proved** |
-| 2 | `acomega` on that family gives a *sequence* `r : Nat -> ℂⁿ` of approximating multisets | **AC_ω** |
-| 3 | `r` is Cauchy in `matchDist`: for `k, l >= K` with `2^{-K} < delta eps`, both are `delta`-near, so `matchDist (r k) (r l) < eps` | free — **A3** |
-| 4 | for each `k`, the set of permutations aligning `r k` to `r (suc k)` within `eps` is inhabited | free (see below) |
-| 5 | `acomega` on *that* family gives alignment permutations `sigma k` in `S_n` | **AC_ω** |
-| 6 | compose `tau k := sigma 0 ∘ … ∘ sigma (k−1)`; the relabelled sequence `k ↦ r k ∘ tau k` is **componentwise** Cauchy in ℂⁿ | free (computed, not chosen) |
-| 7 | ℂⁿ is complete (tail filter + `ComplexComplete`), so the relabelled sequence has a limit `rInf` | free |
-| 8 | continuity of `r ↦ ∏(X − rᵢ)` gives `∏(X − rInf i) = p`, hence `polyEval p (rInf 0) = 0` | free |
+| 1 | `StepA p k` — at accuracy `2^{ -k}`, a near factorisation (**A2**) *together with* a threshold `K` past which any two near factorisations are `2^{ -k}`-close (**A3.3**) | free per `k` |
+| 2 | `acomega (StepA-inh …)` → `s : \Pi k -> StepA p k`, giving both the sequence and the thresholds | **AC_ω** |
+| 3 | `idx K` — `idx K 0 = K 0`, `idx K (suc k) = suc (idx K k) ∨ K (suc k)`: strictly increasing and past every threshold, so stage `k`'s coherence applies to `(idx K k, idx K (suc k))` | free (computed) |
+| 4 | `StepB s k` — an injective pairing of `seqR s k` with `seqR s (suc k)` costing `< 2^{ -k}`, from `rawDist-lt` at `rawDist <= matchDist < 2^{ -k}` | free per `k` |
+| 5 | `acomega (StepB-inh s)` → the alignment permutations `sigma k` | **AC_ω** |
+| 6 | `tau sig (suc k) i = sig k (tau sig k i)`; `thread A k = seqR s k (tau … k 0)` has `\|thread (suc k) − thread k\| < 2^{ -k}` | free (computed) |
+| 7 | `geom-increments-cauchy` → `IsConvergent (thread A)`, then `limit` | free |
+| 8 | `thread-root` = **A4's `nearRoot-root`**, fed `tRoots A k` for `k` past both moduli | free |
 
-**Step 4 in detail**, since it is the step whose constructivity is not obvious. From
-`Big (∧) l < eps'` with `eps' < eps` one *can* extract an index with `l j < eps`. Two-element case:
-`<-comparison a {eps'} {eps}` gives `a < eps || eps' < a`, and likewise for `b`; if `eps' < a` **and**
-`eps' < b` then `<_meet-univ` gives `eps' < a ∧ b`, contradicting the hypothesis. So the disjunction is
-genuine, and induction lifts it to a finite `Big (∧)`. The slack `eps' < eps` is what pays for this —
-you never get "the minimum is attained", only "something is below a slightly larger bound", which is
-all that is needed. (`rawDist` is `Big (∧) (maxDist … id) (permCosts …)`, so both the base value and
-the array entries yield an injective permutation.)
+**Step 3 is what keeps the count at two applications of `acomega`.** Bundling the threshold into
+step 1's family — rather than choosing it separately after seeing the sequence — is the only reason a
+third application is not needed. Both components of `StepA p k` are available choice-free at each `k`
+(A2 gives the factorisation, A3.3 the threshold), so they can be chosen simultaneously.
+
+**Step 6 was §5's top predicted risk and turned out to be free.** The worry was that composing the
+permutations and re-indexing would make the epsilons drift. It does not, because `tau` is defined by
+recursion on the *outside*: `tau sig (suc k) 0` **reduces** to `sig k (tau sig k 0)`, which is exactly
+the index stage `k`'s pairing sends `tau sig k 0` to. So the increment bound is a single instance of
+`maxDist-cond` at that index, with no index arithmetic at all. Had `tau` been defined the other way
+round (`tau sig (suc k) i = tau sig k (sig … i)`) this would not reduce and the step would have cost
+real work.
+
+**Step 8 cost nothing.** A4's `nearRoot-root` takes precisely "for every pair of accuracies, some
+factorisation that is `delta`-near `p` and has an entry within `eta` of `z`", and `tRoots A k` for `k`
+past both thresholds is that, its near entry being `thread A k`. So Phase A's estimate is reused
+verbatim and the continuity lemma §5 originally budgeted for is never needed.
 
 ### Why this works where the Kneser route does not
 
@@ -318,22 +424,46 @@ Two corollaries worth recording:
 - The obstructions recorded under *The choice-free variant* below both dissolve: the incoherence of an AC_ω choice function is
   *repaired* by step 5's alignment, and nothing in the chain ever decides whether a diameter is zero.
 
-### Status and risks
+Also worth recording, now that both are formalised: **A4 is not needed for Phase B, but A4's estimates
+are.** The spectrum as a point of the completion plays no role — `Choice.ard` never mentions
+`spectrum` — yet `nearRoot-root` and `absProd-factor`, written for A4's characterisation, are exactly
+what closes step 8. The two phases share the analysis and not the object.
 
-Worked out on paper in one pass, **not formalised** — treat as a strong conjecture. In decreasing
-order of risk:
+**Never needed: ℂⁿ's completeness.** Step 7 of the original plan wanted the product space complete.
+Only one root is wanted, so only the `0`-th thread has to converge, and that is a sequence in ℂ.
 
-1. ~~**Step 3 depends on A3.3, still open.**~~ A3.3 is proved (§3), and step 4's extraction is
-   `bigMeet-lt`, also proved. Step 3 itself should now be a direct application of
-   `nearFactor-match`.
-2. **Step 6's bookkeeping.** Composing permutations and showing the relabelled sequence is
-   componentwise Cauchy is where the epsilons could fail to line up. `matchDist` controls `max_i`, so
-   it should transfer, but it is not free.
-3. **Step 8's continuity.** `ℂⁿ -> Poly` is polynomial in the coordinates, so continuity is
-   unsurprising, but nothing in Phase A proves it yet.
+### Changes to `FTA.ard`
 
-Cost: a third route to `FTA` beside the existing `adchoice` one, reusing A2 + A3. Finish A3.3
-(150–250 lines), then steps 4–8 (perhaps 200–300 lines).
+- **`geom-increments-cauchy` factored out** of `increments-uniform-cauchy`:
+  `{r K : Real} (0 <= r) (r < 1) (0 <= K) (∀ i, cabs (z (suc i) − z i) < pow r i * K) : IsConvergent z`.
+  The last ~15 lines of the existing proof with `r`, `K` abstracted; `increments-uniform-cauchy` is now
+  a 3-line instantiation at `r = ⁿ√q`, `K = ⁿ√c`, and Phase B uses `r = 1/2`, `K = 1`.
+- **`dist_U` un-privated**, and `dist_U-conv` added beside it (reading a `Complex` limit statement back
+  as a bound on `cabs`).
+- **`NatDirectedSet` un-privated** — needed wherever `IsConvergent` is used on a `Nat`-indexed sequence.
+
+### Formalisation notes worth keeping
+
+- **Bundle the two choices in a record.** `m` and `p` occur in `seq`'s type only *under* a `\Pi`, so
+  nothing downstream can infer them from `seq`; every consumer failed with `Cannot infer parameter`.
+  Making `Threading` a `\record` with `m`, `p` as fields turns them into projections of a variable and
+  all inference becomes immediate. Cheaper than threading four explicit arguments everywhere.
+- **`rawDist-lt` needs its implicits pinned.** Supplying `h` as a typed `\have` is not enough: the
+  annotation gets normalised to `Big (∧) … <= …`, which no longer matches `rawDist {?X} {len {?r}} ?r ?s`.
+  Pass `{ComplexNormed} {suc m} {r} {s}` explicitly.
+- **`2^{ -k}` in a doc comment, always with the space.** `2^{-k}` opens a nested block comment
+  (arend-quirks §19) and silently swallowed everything from `StepB` to `thread-conv`; the diagnostics
+  were thirteen `Cannot resolve reference` errors ~40 lines below the cause.
+
+**Two `acomega` applications suffice** if the first family is bundled: choose, for each `m`
+simultaneously, a `2^{-m}`-near factorisation `r m` (A2) *and* a threshold index `K m` beyond which any
+two near factorisations are `2^{-m}`-close (A3.3) — both choice-free per `m`, so one family. Then
+compute a strictly increasing `idx` with `idx m >= K m`, and use a second `acomega` for the alignment
+permutations, each inhabited by `rawDist-lt` at `h : rawDist <= matchDist`, `lt : matchDist < 2^{-m}`
+— exactly the `<=`-against-strictly-larger shape `bigMeet-lt` was stated for.
+
+Cost: a third route to `FTA` beside the existing `adchoice` one, reusing A2 + A3 + A4's
+`absProd-factor`. Prerequisites ~25 lines, then steps 1–8 perhaps 250 lines.
 
 ### The choice-free variant — still open
 
@@ -381,6 +511,15 @@ All parked on leaf modules to keep the edit loop fast. None is blocking.
 | `nat<suc` | `Spectrum.ard` | `Arith/Nat.ard` |
 | `zro-minus`, `add-sub-cancel`, `split3`, `add-sub-split` | `FTA.ard`, `ApproxFactor.ard`, `Spectrum.ard` | `Algebra/Group.ard` |
 | `bigMeet-lt`, `bigJoin-lt` | `Multiset.ard` | `Order/Lattice.ard` or `Order/Biordered.ard` |
+| `sregCF-mem` | `Spectrum/Point.ard` | `Topology/CoverSpace/StronglyComplete.ard`, beside `sregCF_<=` |
+| `below-all-positive` | `Spectrum/Point.ard` | `Arith/Real/Field.ard` (or generic, on `LinearOrder` with a zero) |
+| `polyEval_padd1` | `Spectrum/Point.ard` | `Algebra/Ring/Poly.ard` |
+| `sub-add` (`x = (x − y) + y`) | `Spectrum/Point.ard` | `Algebra/Group.ard`, with `split3` etc. |
+| `minDist-indep`, `minDist-lip`, `minDist-lipM` | `Spectrum/Point.ard` | fine where they are; `minDist` is next door |
+| `geo`, `geo>0`, `geo-mono`, `geo<=1`, `geo-small` | `FTA/Choice.ard` | `Arith/Real/Field.ard` — a general `2^{-k}` schedule |
+| `idx`, `idx>=self`, `idx>=K`, `idx>=K'` | `FTA/Choice.ard` | `Arith/Nat.ard` — nothing complex-specific about it |
+| `geom-increments-cauchy`, `dist_U`, `dist_U-conv` | `FTA.ard` (now public) | `Analysis/Limit.ard` / `Topology/NormedAbGroup.ard` |
+| `NatDirectedSet` | `FTA.ard` (now public) | `Order/Directed.ard` or `Arith/Nat.ard` — same row as above, now blocking less |
 | `extendMatch`, `extendMatch-inj` | `Multiset.ard` | `Data/Array/` or `Set/Fin.ard` |
 | `degree<_padd-tail`, `cabs_polyEval-boundD` | `Spectrum.ard` | `Algebra/Ring/Poly.ard` (the first) |
 | `padd1-root`, `padd1-diff`, `deflate_*padd1` | `ApproxFactor.ard` | `Algebra/Ring/Poly.ard` |
@@ -398,6 +537,17 @@ markers should be revisited when they move.
 warm vs 20.5 s cold**. Two quirks: goals surface on the *next* request, never with `Expected type:` /
 `Context:` lines, so the loop is edit → check errors → check again for goals; and never hand-delete a
 `.arc` to force re-elaboration (it poisons unrelated importers — use `-r`).
+
+**Do not trust a scoped `arend <Module>` run on a *new* module — it gives false negatives.** Hit
+repeatedly while building A4: `arend Arith.Complex.Spectrum.Point` reported the module clean for
+several rounds while `skip`, `skip-sface` and `sface` were used with **no `\import Data.Array` and no
+`\import Set.Fin`**. The full-library `arend` (no positional) immediately reported seven
+`Cannot resolve reference` errors, and behind them two genuine `Cannot infer parameter` errors in
+`absProd-factor` that the scoped runs had never surfaced either. Whatever scope the daemon caches for
+a freshly created module is wrong, and "wrong" here means *permissive*. So: iterate with
+`arend <Module>` for speed if you like, but **the run that decides whether a module is done must be a
+full-library `arend`**, and the run that decides whether a milestone is done is still
+`arend --daemon-stop && arend --no-daemon -r`.
 
 **Verify cold before believing a milestone.** `arend --daemon-stop` then `arend --no-daemon -r`
 (~2 min, re-persists everything). A plain `--no-daemon` run with current caches just deserialises in

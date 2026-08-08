@@ -256,7 +256,7 @@
 
 -- | `Nat` is directed by `max`. Belongs in `Order/Directed.ard` or `Arith/Nat.ard`; kept local
 -- only to avoid re-typechecking those modules' cones while iterating.
-\private \instance NatDirectedSet : DirectedSet Nat
+\instance NatDirectedSet : DirectedSet Nat
   | Preorder => NatSemiring
   | isInhabitted => inP 0
   | isDirected x y => inP (x ∨ y, join-left, join-right)
@@ -269,9 +269,14 @@
 -- `cabs` of the difference, and `Real`'s upper cut `U` is `<` against a rational.
 -- `x`/`y` are explicit because they occur only under a concrete-`Complex` `-`, where unification
 -- cannot recover them (arend-quirks §4).
-\private \lemma dist_U (x y : Complex) {eps : Rat} (p : cabs (x - y) < eps)
+\lemma dist_U (x y : Complex) {eps : Rat} (p : cabs (x - y) < eps)
   : (dist {ComplexCompleteRing} x y).U eps
   => rewrite norm-dist (real_<_U.1 p)
+
+-- | The converse of `dist_U`: reading a `Complex` limit statement back as a bound on `cabs`.
+\lemma dist_U-conv (x y : Complex) {eps : Rat} (p : (dist {ComplexCompleteRing} x y).U eps)
+  : cabs (x - y) < eps
+  => real_<_U.2 (rewrite norm-dist in p)
 
 -- | `dist 0 x` is `cabs x`: the shape `values-limit-zro` needs, the limit being `0`.
 \private \lemma dist_zro_U (x : Complex) {eps : Rat} (p : cabs x < eps)
@@ -367,19 +372,31 @@
            | r<1 : root n (kneser-q n) < 1
               => transport (root n (kneser-q n) <) (root_ide n/=0)
                    (root-monotone n/=0 q>=0 kneser-q<1)
-     \in convergent-metric-char.2 \lam {eps} eps>0 =>
-       \case pow_<1-decay root>=0 r<1 (root n c)
-               (RealField.<_*_positive_positive (linarith : (0 : Real) < 1 - root n (kneser-q n))
+     \in geom-increments-cauchy root>=0 r<1 root>=0 z
+           (incr-bound n/=0 (<=-less c>0) z q>=0 bound4)
+
+{- | **Geometrically dominated increments make a sequence Cauchy.** The content of
+     `increments-uniform-cauchy` with the base and the constant abstracted: `tail-bound` sums the
+     increments, so the tail from `N` is under `r^N K / (1 - r)`; `pow_<1-decay` applied at
+     `(1 - r) * eps` picks `N`, and the positive factor `1 - r` cancels at the end.
+
+     Split out because Phase B (`Arith/Complex/FTA/Choice.ard`) needs it at `r = 1/2`, `K = 1`, where
+     no `n`-th root is involved. -}
+\lemma geom-increments-cauchy {r K : Real} (r>=0 : 0 <= r) (r<1 : r < 1) (K>=0 : 0 <= K)
+                              (z : Nat -> Complex)
+                              (bd : \Pi (i : Nat) -> cabs (z (suc i) - z i) < pow r i * K)
+  : IsConvergent z
+  => convergent-metric-char.2 \lam {eps} eps>0 =>
+       \case pow_<1-decay r>=0 r<1 K
+               (RealField.<_*_positive_positive (linarith : (0 : Real) < 1 - r)
                                                 (rat_real_<.1 eps>0)) \with {
          | inP (N, h) => inP (N, \lam {m} N<=m => dist_U (z m) (z N) $
              \case RealField.<_*-cancel-left
-                 ((transport (\lam j => (1 - root n (kneser-q n)) * cabs (z j - z N)
-                                     <= (pow (root n (kneser-q n)) N - pow (root n (kneser-q n)) j) * root n c)
+                 ((transport (\lam j => (1 - r) * cabs (z j - z N) <= (pow r N - pow r j) * K)
                              (<=_exists N<=m)
-                             (tail-bound (<=-less r<1) root>=0 z
-                                (incr-bound n/=0 (<=-less c>0) z q>=0 bound4) N (m -' N))
+                             (tail-bound (<=-less r<1) K>=0 z bd N (m -' N))
                    <=∘ <=_*_positive-left
-                         (linarith (RealField.pow>=0 {root n (kneser-q n)} {m} root>=0)) root>=0)
+                         (linarith (RealField.pow>=0 {r} {m} r>=0)) K>=0)
                   <∘r h) \with {
                | byLeft (_, p) => p
                | byRight (p, _) => absurd linarith

@@ -86,3 +86,28 @@
           | 0 => a0
           | suc i => (g (i, iter A R g a0 i)).1
   }
+
+{- | **Countable choice, $AC_\omega$.** A `Nat`-indexed family of inhabited sets has a section. New
+     here: the library had no formulation of countable choice before — `achoice` is choice over an
+     arbitrary `\Set` and `adchoice` is full dependent choice (its `Nat` indexes the family, it does
+     not weaken the principle), so neither is this.
+
+     The three sit in strict order, `acomega < adchoice < achoice`, and each gap is what makes naming
+     the middle one worthwhile:
+
+     * `achoice` yields excluded middle (`achoice.lemFromChoice`, by Diaconescu over a `Bool`-quotient);
+       neither of the other two does, so a development using only `acomega` stays intuitionistic.
+     * `adchoice` lets each choice depend on the previous one; `acomega` does not, and $AC_\omega
+       \nRightarrow DC$ is independent of ZF (Jensen). Dependent choice is therefore genuinely more
+       than this axiom, which is why deriving a theorem from `acomega` alone says something that
+       deriving it from `adchoice` does not.
+
+     $AC_\omega$ is the choice principle *every* school of constructive mathematics already assumes,
+     which is what makes it the interesting hypothesis. See `Arith/Complex/FTA/Choice.ard` for the
+     fundamental theorem of algebra derived from it alone, replacing `FTA`'s use of `adchoice`. -}
+\axiom acomega {A : Nat -> \Set} (h : \Pi (i : Nat) -> TruncP (A i)) : TruncP (\Pi (i : Nat) -> A i)
+  \where
+    -- | A **consequence** of `achoice`, at the index set `Nat` — hence a strict weakening rather than
+    -- new strength, exactly as `adchoice.fromChoice` is for dependent choice.
+    \lemma fromChoice {A : Nat -> \Set} (h : \Pi (i : Nat) -> TruncP (A i))
+      : TruncP (\Pi (i : Nat) -> A i) => achoice {Nat} A h

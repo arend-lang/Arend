@@ -1,0 +1,256 @@
+\import Algebra.Group
+\import Algebra.Meta
+\import Algebra.Monoid
+\import Algebra.Ordered
+\import Algebra.Pointed
+\import Algebra.Ring
+\import Algebra.Ring.Poly
+\import Analysis.Limit
+\import Arith.Complex
+\import Arith.Complex.ApproxFactor
+\import Arith.Complex.Banach
+\import Arith.Complex.FTA
+\import Arith.Complex.Norm
+\import Arith.Complex.Spectrum \hiding (polyEval_monomial)
+\import Arith.Complex.Spectrum.Point
+\import Arith.Nat
+\import Arith.Rat
+\import Arith.Real
+\import Arith.Real.Field
+\import Function.Meta
+\import Logic
+\import Logic.Classical
+\import Logic.Meta
+\import Meta
+\import Order.Biordered
+\import Order.Lattice
+\import Order.LinearOrder
+\import Order.PartialOrder
+\import Order.StrictOrder
+\import Paths
+\import Paths.Meta
+\import Set.Fin
+\import Topology.MetricSpace
+\import Topology.MetricSpace.Multiset
+\import Topology.NormedAbGroup
+\open Monoid (pow)
+
+{- | **Phase B: the fundamental theorem of algebra from countable choice.**
+
+     `Arith/Complex/FTA.ard`'s `FTA` uses `adchoice` — full dependent choice. This module proves the
+     same statement from `acomega` (countable choice, `Logic/Classical.ard`) alone, which is strictly
+     weaker: dependent choice is what you need when each choice constrains the next, and
+     $AC_\omega \nRightarrow DC$ is independent of ZF.
+
+     **Why the weakening is possible.** In the Kneser iteration the coherence between consecutive
+     approximations has to be *built into the construction* — the state is a point of $\mathbb{C}$ and
+     each step depends on the previous one — so the choices are dependent. With multisets, coherence
+     is a **theorem**: A3.3 (`nearFactor-match`) says *any two* sufficiently near factorisations of the
+     same `p` are close in the matching metric, so the family chosen from is non-dependent and
+     $AC_\omega$ applies. Converting an obligation on the construction into a fact about arbitrary
+     approximations is the whole trick.
+
+     Two applications of `acomega`, and the estimate at the end is A4's `nearRoot-root` verbatim.
+
+     This module imports `Arith.Complex.FTA` for its analytic infrastructure (`approx-factor`'s
+     ancestor `fta-approx`, `geom-increments-cauchy`, `pow_<1-decay`). Importing the module does not
+     import the axiom: dependency in Arend is per-definition, and `arend -fu adchoice` shows its only
+     use is `fta-seq`, which nothing here calls. -}
+
+-- | `2^{ -k}`, the accuracy schedule. A top-level `\func` so that `linarith` treats it as an atom
+-- rather than trying to expand a `pow` (arend-prove §11b).
+\func geo (k : Nat) : Real => pow (ratio 1 2 : Real) k
+
+\lemma geo>0 (k : Nat) : 0 < geo k => RealField.pow>0 (linarith : (0 : Real) < ratio 1 2) {k}
+
+-- | Decreasing in the exponent, which is what makes the schedule usable as a modulus.
+\lemma geo-mono {a b : Nat} (a<=b : a <= b) : geo b <= geo a
+  => RealField.pow_<=-degree (linarith : (0 : Real) <= ratio 1 2)
+       (linarith : (ratio 1 2 : Real) <= 1) a<=b
+
+\lemma geo<=1 (k : Nat) : geo k <= 1 => geo-mono (zero<=_ : 0 <= k)
+
+-- | Some index past which the schedule is below any given positive real.
+\lemma geo-small {d : Real} (d>0 : 0 < d) : ∃ (N : Nat) (geo N < d)
+  => \case pow_<1-decay (linarith : (0 : Real) <= ratio 1 2)
+             (linarith : (ratio 1 2 : Real) < 1) 1 d>0 \with {
+       | inP (N, h) => inP (N, transport (`< d) ide-right h)
+     }
+
+-- # The first choice: near factorisations together with a coherence threshold
+
+{- | What is chosen at stage `k`: a `2^{ -k}`-near factorisation of `p`, **and** an index `K` past
+     which the schedule is fine enough for A3.3 to force any two near factorisations within `2^{ -k}`
+     of each other. Bundling the two into one family is what keeps the count at two `acomega`
+     applications rather than three — both components are available choice-free at each `k`, so they
+     can be chosen simultaneously. -}
+\func StepA {m : Nat} (p : Poly ComplexField) (k : Nat) : \Set
+  => \Sigma (r : Array Complex (suc m)) (nearFactorSet p (geo k) r) (K : Nat)
+            (\Pi (a b : Nat) -> K <= a -> K <= b -> \Pi (r' s' : Array Complex (suc m))
+               -> nearFactorSet p (geo a) r' -> nearFactorSet p (geo b) s'
+               -> matchDist {ComplexNormed} r' s' < geo k)
+
+\lemma StepA-inh {m : Nat} (p : Poly ComplexField) (deg : degree< p (suc (suc m)))
+                 (monic : polyCoef p (suc m) = 1) (k : Nat)
+  : TruncP (StepA {m} p k)
+  => \case nearFactor-match p deg monic (geo>0 k) \with {
+       | inP (delta, delta>0, MATCH) => \case geo-small delta>0 \with {
+         | inP (K, hK) => \case approx-factor p deg monic (geo>0 k) \with {
+           | inP (r, hr) => inP (r, hr, K, \lam a b K<=a K<=b r' s' hr' hs' =>
+               MATCH r' s' (\lam j => hr' j <∘l (geo-mono K<=a <=∘ <=-less hK))
+                           (\lam j => hs' j <∘l (geo-mono K<=b <=∘ <=-less hK)))
+         }
+       }
+     }
+
+-- # Interleaving the thresholds
+
+{- | A strictly increasing reindexing that outruns the thresholds: `idx K k` is past `K k`, and
+     `idx K (suc k)` is past it too, so stage `k`'s coherence statement applies to the pair
+     `(idx K k, idx K (suc k))`. Computed from the chosen `K`, not chosen — this is the step that
+     would otherwise need a third application of choice. -}
+\func idx (K : Nat -> Nat) (k : Nat) : Nat \elim k
+  | 0 => K 0
+  | suc k => suc (idx K k) ∨ K (suc k)
+
+\lemma idx>=self (K : Nat -> Nat) (k : Nat) : k <= idx K k \elim k
+  | 0 => zero<=_
+  | suc k => suc<=suc (idx>=self K k) <=∘ join-left
+
+\lemma idx>=K (K : Nat -> Nat) (k : Nat) : K k <= idx K k \elim k
+  | 0 => <=-refl
+  | suc k => join-right
+
+\lemma idx>=K' (K : Nat -> Nat) (k : Nat) : K k <= idx K (suc k)
+  => idx>=K K k <=∘ (linarith : idx K k <= suc (idx K k)) <=∘ join-left
+
+
+-- | The chosen thresholds, and the near factorisations read off at the interleaved indices.
+\func seqK {m : Nat} {p : Poly ComplexField} (s : \Pi (k : Nat) -> StepA {m} p k) (a : Nat) : Nat
+  => (s a).3
+
+\func seqR {m : Nat} {p : Poly ComplexField} (s : \Pi (k : Nat) -> StepA {m} p k) (k : Nat)
+  : Array Complex (suc m) => (s (idx (seqK {m} {p} s) k)).1
+
+-- # The second choice: alignment permutations
+
+{- | What is chosen at stage `k`: an injective pairing of `seqR s k` with `seqR s (suc k)` costing less
+     than `2^{ -k}`. Inhabited because the two are within `2^{ -k}` in the matching metric, and
+     `rawDist-lt` extracts a pairing from a bound on the infimum — the hypothesis being
+     `rawDist <= matchDist` against the strictly larger `2^{ -k}`, which is exactly the shape
+     `bigMeet-lt` was stated for. This is §5's step 4, and it is where the *sequence* of permutations
+     needs choice: one `∃` per stage is free, a coherent thread through all of them is not. -}
+\func StepB {m : Nat} {p : Poly ComplexField} (s : \Pi (k : Nat) -> StepA {m} p k) (k : Nat) : \Set
+  => \Sigma (f : Fin (suc m) -> Fin (suc m)) (IsInjFin f)
+            (maxDist {ComplexNormed} (seqR {m} {p} s k) (seqR {m} {p} s (suc k)) f < geo k)
+
+\lemma StepB-inh {m : Nat} {p : Poly ComplexField} (s : \Pi (k : Nat) -> StepA {m} p k) (k : Nat)
+  : TruncP (StepB {m} {p} s k)
+  => \have | close : matchDist {ComplexNormed} (seqR {m} {p} s k) (seqR {m} {p} s (suc k)) < geo k
+              => (s k).4 (idx (seqK {m} {p} s) k) (idx (seqK {m} {p} s) (suc k))
+                   (idx>=K (seqK {m} {p} s) k) (idx>=K' (seqK {m} {p} s) k)
+                   (seqR {m} {p} s k) (seqR {m} {p} s (suc k))
+                   (s (idx (seqK {m} {p} s) k)).2 (s (idx (seqK {m} {p} s) (suc k))).2
+           | raw : rawDist {ComplexNormed} (seqR {m} {p} s k) (seqR {m} {p} s (suc k))
+                <= matchDist {ComplexNormed} (seqR {m} {p} s k) (seqR {m} {p} s (suc k))
+              => join-left
+     \in rawDist-lt {ComplexNormed} {suc m} {seqR {m} {p} s k} {seqR {m} {p} s (suc k)} raw close
+
+-- # Threading the permutations
+
+{- | Both choices bundled. A record rather than loose parameters because `m` and `p` occur in `seq`'s
+     type only *under* a `\Pi`, so nothing downstream can infer them from `seq` — as fields of a
+     variable they are projections and inference is immediate. -}
+\record Threading (m : Nat) (p : Poly ComplexField)
+  | seq : \Pi (k : Nat) -> StepA {m} p k
+  | align : \Pi (k : Nat) -> StepB {m} {p} seq k
+
+\func tRoots (A : Threading) (k : Nat) : Array Complex (suc A.m) => seqR {A.m} {A.p} A.seq k
+
+\func tSig (A : Threading) (k : Nat) : Fin (suc A.m) -> Fin (suc A.m) => (A.align k).1
+
+-- | `sigma 0 ∘ … ∘ sigma (k-1)`, the relabelling that lines the chosen multisets up. Computed, not
+-- chosen — this is why the second `acomega` suffices and no third one is needed.
+\func tau {m : Nat} (sig : \Pi (k : Nat) -> Fin (suc m) -> Fin (suc m)) (k : Nat) (i : Fin (suc m))
+  : Fin (suc m) \elim k
+  | 0 => i
+  | suc k => sig k (tau sig k i)
+
+{- | Following the `0`-th entry along the relabelling. `tau sig (suc k) 0` reduces to
+     `sig k (tau sig k 0)`, which is exactly the index stage `k`'s pairing sends `tau sig k 0` to — so
+     the increment bound is one instance of `maxDist-cond` and there is no index bookkeeping at all.
+     That was §5's top remaining risk; the reduction behaviour of `tau` is what dissolves it. -}
+\func thread (A : Threading) (k : Nat) : Complex => tRoots A k (tau {A.m} (tSig A) k 0)
+
+\lemma thread-incr (A : Threading) (k : Nat)
+  : cabs (thread A (suc k) - thread A k) < pow (ratio 1 2 : Real) k * 1
+  => \have step : cabs (thread A k - thread A (suc k)) < geo k
+        => maxDist-cond {ComplexNormed} {suc A.m} {tRoots A k} {tRoots A (suc k)} {tSig A k}
+             (tau {A.m} (tSig A) k 0) <∘r (A.align k).3
+     \in transport (`< pow (ratio 1 2 : Real) k * 1)
+           (cabs_-comm (thread A k) (thread A (suc k)))
+           (step <∘l =_<= (inv ide-right))
+
+\lemma thread-conv (A : Threading) : IsConvergent (thread A)
+  => geom-increments-cauchy (linarith : (0 : Real) <= ratio 1 2)
+       (linarith : (ratio 1 2 : Real) < 1) (linarith : (0 : Real) <= 1)
+       (thread A) (thread-incr A)
+
+-- # The root
+
+{- | **The limit of the thread is a root.** This is where Phase A is cashed in: the estimate is A4's
+     `nearRoot-root` with nothing added. All that has to be supplied is, for every pair of accuracies,
+     one near factorisation that is `delta`-near `p` *and* has an entry within `eta` of `z` — and
+     `tRoots A k` for `k` past both thresholds is exactly that, its near entry being `thread A k`.
+
+     No continuity of `r ↦ ∏(X − rᵢ)` is needed, which is what §5 originally budgeted for step 8.
+     `z` is a parameter rather than `limit (thread A) …` so that the proof can name it. -}
+\lemma thread-root (A : Threading) (deg : degree< A.p (suc (suc A.m)))
+                   (monic : polyCoef A.p (suc A.m) = 1) (z : Complex)
+                   (zl : ComplexCompleteRing.IsLimit (thread A) z)
+  : polyEval A.p z = 0
+  => nearRoot-root A.p deg monic \lam {delta} {eta} delta>0 eta>0 =>
+       \case geo-small delta>0, real_<-rat-char.1 eta>0 \with {
+         | inP (N1, hN1), inP (e, e>0, e<eta) =>
+           \case limit-metric-char.1 zl (rat_real_<.2 (real_<_U.2 e>0)) \with {
+             | inP (N2, hN2) =>
+               inP (tRoots A (N1 ∨ N2),
+                    \lam j => (A.seq (idx (seqK {A.m} {A.p} A.seq) (N1 ∨ N2))).2 j
+                              <∘l (geo-mono (join-left
+                                             <=∘ idx>=self (seqK {A.m} {A.p} A.seq) (N1 ∨ N2))
+                                   <=∘ <=-less hN1),
+                    \lam j => (A.seq (idx (seqK {A.m} {A.p} A.seq) (N1 ∨ N2))).2 j <∘l geo<=1 _,
+                    minDist-cond {suc A.m} (tRoots A (N1 ∨ N2)) z 0
+                      (tau {A.m} (tSig A) (N1 ∨ N2) 0)
+                    <∘r (dist_U-conv z (thread A (N1 ∨ N2)) (hN2 join-right)
+                         <∘ real_<_L.2 e<eta))
+           }
+       }
+
+{- | **The fundamental theorem of algebra from countable choice.** Every monic polynomial of degree
+     $n > 0$ over $\mathbb{C}$ has a root, using `acomega` and nothing else — strictly weaker than
+     `FTA`'s `adchoice`, and weaker still than `achoice`, which additionally yields excluded middle.
+
+     Two applications of `acomega`, in this order: `StepA-inh` picks a near factorisation *and* a
+     coherence threshold at every accuracy (both free at each stage, by A2 and A3.3); `StepB-inh` then
+     picks the alignment permutations along the interleaved subsequence. Everything between and after
+     is computed: `idx` outruns the thresholds, `tau` composes the permutations, `thread` follows the
+     `0`-th entry, `geom-increments-cauchy` converges it, and `thread-root` is A4. -}
+\lemma FTA-acomega {m : Nat} (p : Poly ComplexField) (deg : degree< p (suc (suc m)))
+                   (monic : polyCoef p (suc m) = 1)
+  : ∃ (z : Complex) (polyEval p z = 0)
+  => \case acomega (StepA-inh p deg monic) \with {
+       | inP s => \case acomega (StepB-inh {m} {p} s) \with {
+         | inP t =>
+           \have A : Threading => \new Threading m p s t
+           \in inP (limit (thread A) (thread-conv A),
+                    thread-root A deg monic (limit (thread A) (thread-conv A)) limit-isLimit)
+       }
+     }
+
+-- | `FTA-acomega` in `FTA`'s own shape, for a side-by-side comparison of the hypotheses.
+\lemma FTA-choice {n : Nat} (n>0 : 0 < n) (p : Poly ComplexField)
+                  (deg : degree< p (suc n)) (monic : polyCoef p n = 1)
+  : ∃ (z : Complex) (polyEval p z = 0) \elim n
+  | 0 => absurd (<-irreflexive n>0)
+  | suc m => FTA-acomega p deg monic
