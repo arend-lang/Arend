@@ -114,9 +114,9 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
   private Definition myDefinition;
   private Set<TCDefReferable> myRecursiveDefinitions = Collections.emptySet();
   private boolean myAllowDeferredMetas = true;
-  private final Deque<Map<Referable, Binding>> myClearedCategoricalBindings = new ArrayDeque<>();
+  private Set<Binding> myCovariantContext = new HashSet<>();
 
-  private record DeferredMeta(MetaDefinition meta, Map<Referable, Binding> context, LocalExpressionPrettifier localPrettifier, ContextDataImpl contextData, InferenceVariable inferenceVar, MyErrorReporter errorReporter) {}
+  private record DeferredMeta(MetaDefinition meta, Map<Referable, Binding> context, LocalExpressionPrettifier localPrettifier, ContextDataImpl contextData, InferenceVariable inferenceVar, MyErrorReporter errorReporter, Set<Binding> covariantContext) {}
 
   public static class MyErrorReporter implements ErrorReporter {
     private final CountingErrorReporter myErrorReporter;
@@ -171,8 +171,18 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
     return myArendExtension;
   }
 
+  private boolean isVarianceAccessible(Binding binding) {
+    return !(binding instanceof DependentLink dl) || dl.getVariance() == BindingVariance.INVARIANT || myCovariantContext.contains(binding);
+  }
+
   public TypecheckingContext saveTypecheckingContext() {
-    return new TypecheckingContext(new LinkedHashMap<>(context), new LocalExpressionPrettifier(myLocalPrettifier), myInstancePool, myArendExtension, myResolveListener, copyUserData(), myLevelContext);
+    Map<Referable, Binding> filtered = new LinkedHashMap<>();
+    for (Map.Entry<Referable, Binding> entry : context.entrySet()) {
+      if (isVarianceAccessible(entry.getValue())) {
+        filtered.put(entry.getKey(), entry.getValue());
+      }
+    }
+    return new TypecheckingContext(filtered, new LocalExpressionPrettifier(myLocalPrettifier), myInstancePool, myArendExtension, myResolveListener, copyUserData(), myLevelContext);
   }
 
   public Definition getDefinition() {
@@ -191,54 +201,51 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
     CheckTypeVisitor visitor = new CheckTypeVisitor(typecheckingContext.localContext(), typecheckingContext.localPrettifier(), errorReporter, null, typecheckingContext.arendExtension(), typecheckingContext.resolveListener(), typecheckingContext.userDataHolder());
     visitor.setInstancePool(typecheckingContext.instancePool().copy(visitor));
     visitor.setLevelContext(typecheckingContext.levelContext());
+    for (Binding binding : typecheckingContext.localContext().values()) {
+      if (binding instanceof DependentLink dl && dl.getVariance() != BindingVariance.INVARIANT) {
+        visitor.myCovariantContext.add(binding);
+      }
+    }
     return visitor;
   }
 
   public Referable addBinding(@Nullable Referable referable, Binding binding) {
     Referable ref = referable != null ? referable : new FakeLocalReferable(binding.getName() != null ? binding.getName() : "_");
     context.put(ref, binding);
+    registerVarianceBinding(binding);
     return ref;
   }
 
   public void addBindings(Map<Referable, Binding> bindings) {
     context.putAll(bindings);
+    for (Binding binding : bindings.values()) {
+      registerVarianceBinding(binding);
+    }
+  }
+
+  private void registerVarianceBinding(Binding binding) {
+    if (binding instanceof DependentLink dl && dl.getVariance() == BindingVariance.COVARIANT) {
+      myCovariantContext.add(binding);
+    }
   }
 
   public class ClearedCategoricalContext implements AutoCloseable {
-    private final Utils.CompleteMapContextSaver<Referable, Binding> mySaver;
+    private final Set<Binding> mySaved;
 
-    private ClearedCategoricalContext(Utils.CompleteMapContextSaver<Referable, Binding> saver) {
-      mySaver = saver;
+    private ClearedCategoricalContext(Set<Binding> saved) {
+      mySaved = saved;
     }
 
     @Override
     public void close() {
-      myClearedCategoricalBindings.pop();
-      mySaver.close();
+      myCovariantContext = mySaved;
     }
   }
 
   public ClearedCategoricalContext clearCategoricalContext() {
-    var saver = new Utils.CompleteMapContextSaver<>(context);
-    Map<Referable, Binding> removed = new LinkedHashMap<>();
-    context.entrySet().removeIf(entry -> {
-      if (entry.getValue() instanceof DependentLink dl && dl.getVariance() != BindingVariance.INVARIANT) {
-        removed.put(entry.getKey(), entry.getValue());
-        return true;
-      }
-      return false;
-    });
-    myClearedCategoricalBindings.push(removed);
-    return new ClearedCategoricalContext(saver);
-  }
-
-  private boolean isClearedCategoricalBinding(Referable ref) {
-    for (Map<Referable, Binding> removed : myClearedCategoricalBindings) {
-      if (removed.containsKey(ref)) {
-        return true;
-      }
-    }
-    return false;
+    Set<Binding> saved = myCovariantContext;
+    myCovariantContext = new HashSet<>();
+    return new ClearedCategoricalContext(saved);
   }
 
   public BindingVariance checkVariance(Concrete.Parameter parameter, boolean allowed) {
@@ -266,6 +273,7 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
     Binding binding = context.remove(ref);
     if (binding != null) {
       myLocalPrettifier.removeBinding(binding);
+      myCovariantContext.remove(binding);
     }
   }
 
@@ -294,6 +302,7 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
   public Set<Binding> getAllBindings() {
     Set<Binding> result = new HashSet<>();
     for (Binding binding : context.values()) {
+      if (!isVarianceAccessible(binding)) continue;
       result.add(binding);
       if (binding instanceof EvaluatingBinding) {
         Expression expr = ((EvaluatingBinding) binding).getExpression();
@@ -315,7 +324,7 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
   public @NotNull List<CoreBinding> getFreeBindingsList() {
     List<CoreBinding> result = new ArrayList<>();
     for (Map.Entry<Referable, Binding> entry : context.entrySet()) {
-      if (!(entry.getKey() instanceof VeryFakeLocalReferable)) {
+      if (!(entry.getKey() instanceof VeryFakeLocalReferable) && isVarianceAccessible(entry.getValue())) {
         result.add(entry.getValue());
       }
     }
@@ -327,7 +336,8 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
     if (!(ref instanceof Referable)) {
       throw new IllegalArgumentException();
     }
-    return context.get(ref);
+    Binding binding = context.get(ref);
+    return binding != null && isVarianceAccessible(binding) ? binding : null;
   }
 
   @Override
@@ -1109,6 +1119,7 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
       MyErrorReporter originalErrorReporter = errorReporter;
       Map<Referable, Binding> originalContext = context;
       LocalExpressionPrettifier originalLocalPrettifier = myLocalPrettifier;
+      Set<Binding> originalCovariantContext = myCovariantContext;
       if (afterLevels) {
         for (Binding binding : deferredMeta.context.values()) {
           Expression bindingType = binding.getType();
@@ -1117,11 +1128,13 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
         checkTypeVisitor = copy(deferredMeta.context, deferredMeta.localPrettifier, deferredMeta.errorReporter, null, myArendExtension, myResolveListener, this);
         checkTypeVisitor.setInstancePool(myInstancePool.copy(checkTypeVisitor));
         checkTypeVisitor.setLevelContext(myLevelContext);
+        checkTypeVisitor.myCovariantContext = deferredMeta.covariantContext;
       } else {
         checkTypeVisitor = this;
         errorReporter = deferredMeta.errorReporter;
         context = deferredMeta.context;
         myLocalPrettifier = deferredMeta.localPrettifier;
+        myCovariantContext = deferredMeta.covariantContext;
       }
 
       int numberOfErrors = checkTypeVisitor.getNumberOfErrors();
@@ -1138,6 +1151,7 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
       errorReporter = originalErrorReporter;
       context = originalContext;
       myLocalPrettifier = originalLocalPrettifier;
+      myCovariantContext = originalCovariantContext;
       if (result == null && checkTypeVisitor.getNumberOfErrors() == numberOfErrors) {
         deferredMeta.errorReporter.report(new TypecheckingError(refExpr == null ? "Cannot check deferred expression" : "Meta '" + refExpr.getReferent().getRefName() + "' failed", marker));
       }
@@ -2063,11 +2077,11 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
 
     Binding def = context.get(ref);
     if (def == null) {
-      if (isClearedCategoricalBinding(ref)) {
-        errorReporter.report(new TypecheckingError("Covariant variable '" + ref.textRepresentation() + "' is used in an invariant position", sourceNode));
-      } else {
-        errorReporter.report(new IncorrectReferenceError(ref, sourceNode));
-      }
+      errorReporter.report(new IncorrectReferenceError(ref, sourceNode));
+      return null;
+    }
+    if (def instanceof DependentLink dl && dl.getVariance() != BindingVariance.INVARIANT && !myCovariantContext.contains(def)) {
+      errorReporter.report(new TypecheckingError("Covariant variable '" + ref.textRepresentation() + "' is used in an invariant position", sourceNode));
       return null;
     }
     Expression type = def.getType();
@@ -3150,7 +3164,7 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
 
     ContextDataImpl contextDataImpl = new ContextDataImpl((Concrete.Expression) marker, contextData.getArguments(), contextData.getCoclauses(), contextData.getClauses(), expectedType, contextData.getUserData());
     InferenceVariable inferenceVar = new MetaInferenceVariable(marker instanceof Concrete.ReferenceExpression ? ((Concrete.ReferenceExpression) marker).getReferent().getRefName() : "deferred", expectedType, (Concrete.Expression) marker, getAllBindings());
-    (afterLevels ? myDeferredMetasAfterLevels : myDeferredMetasBeforeSolver).add(new DeferredMeta(meta, new LinkedHashMap<>(context), new LocalExpressionPrettifier(myLocalPrettifier), contextDataImpl, inferenceVar, errorReporter));
+    (afterLevels ? myDeferredMetasAfterLevels : myDeferredMetasBeforeSolver).add(new DeferredMeta(meta, new LinkedHashMap<>(context), new LocalExpressionPrettifier(myLocalPrettifier), contextDataImpl, inferenceVar, errorReporter, new HashSet<>(myCovariantContext)));
     return new TypecheckingResult(new InferenceReferenceExpression(inferenceVar), expectedType);
   }
 
