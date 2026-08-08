@@ -30,6 +30,23 @@ public class ErrorService implements ErrorReporter {
     }
   }
 
+  /**
+   * The name-resolution errors currently recorded for {@code module}. They are pushed to the
+   * registered error reporters only once, by {@link #setResolverErrors}, i.e. only when the
+   * module is actually (re-)resolved; a long-lived server that resolves a module once has to
+   * read them back from here to report them again.
+   */
+  public List<GeneralError> getResolverErrors(ModuleLocation module) {
+    List<GeneralError> errors = myResolverErrors.get(module);
+    return errors == null ? Collections.emptyList() : errors;
+  }
+
+  /** Forget everything recorded for a module that no longer exists. */
+  public void removeModule(ModuleLocation module) {
+    myResolverErrors.remove(module);
+    clearTypecheckingErrors(module);
+  }
+
   public void clear() {
     myResolverErrors.clear();
     myTypecheckingErrors.clear();

@@ -86,6 +86,7 @@ public final class CliDispatcher {
     ctx.bufferedErrors.clear();
     ctx.bufferErrors = false;
     ctx.requestedModules.clear();
+    ctx.clearEmittedErrors();
   }
 
   /**
