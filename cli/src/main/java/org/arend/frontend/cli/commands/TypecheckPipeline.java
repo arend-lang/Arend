@@ -25,7 +25,9 @@ import org.arend.naming.reference.TCDefReferable;
 import org.arend.prelude.Prelude;
 import org.arend.server.ArendServer;
 import org.arend.server.ProgressReporter;
+import org.arend.server.impl.ArendServerImpl;
 import org.arend.server.impl.DefinitionData;
+import org.arend.server.impl.ErrorService;
 import org.arend.source.PersistableBinarySource;
 import org.arend.term.concrete.Concrete;
 import org.arend.term.group.ConcreteGroup;
@@ -39,6 +41,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -102,21 +105,28 @@ public final class TypecheckPipeline {
     }
     ctx.cancellation.checkCanceled();
 
+    Set<String> requestedLibraryNames = requestedLibraryNames(ctx.requestedLibraries);
+    Map<String, Set<ModulePath>> liveModules = liveSourceModules(ctx.requestedLibraries);
+    // Diagnostics raised while resolving, held back so they land after the
+    // "--- Typechecking ... ---" banner instead of before it. Otherwise a per-module
+    // filter such as `arend M | grep -A20 'Typechecking M'` — the natural thing to write
+    // while iterating on one module — never shows a resolution error.
+    List<GeneralError> deferredErrors = new ArrayList<>();
+
     // Pre-load binary caches (unless --recompile is set)
     if (!ctx.recompile) {
       // Typecheck Prelude first — binary cache loading needs Prelude definitions to be available
       ctx.server.getCheckerFor(Collections.singletonList(Prelude.MODULE_LOCATION))
           .typecheck(ctx.cancellation, ProgressReporter.empty());
-      Set<String> requestedLibraryNames = requestedLibraryNames(ctx.requestedLibraries);
       boolean resolvedRequestedScope = false;
       if (ctx.requestedModules.isEmpty()) {
         // Whole-library typechecking: resolve every module of each requested library.
         for (SourceLibrary library : ctx.requestedLibraries) {
-          List<ModuleLocation> allModules = library.findModules(false).stream()
+          List<ModuleLocation> allModules = liveModules.get(library.getLibraryName()).stream()
               .map(mp -> new ModuleLocation(library.getLibraryName(), ModuleLocation.LocationKind.SOURCE, mp))
               .toList();
           if (!allModules.isEmpty()) {
-            ctx.server.getCheckerFor(allModules).resolveAll(ctx.cancellation, ProgressReporter.empty());
+            resolveDeferringErrors(ctx, allModules, deferredErrors);
             resolvedRequestedScope = true;
           }
         }
@@ -129,7 +139,7 @@ public final class TypecheckPipeline {
           if (module != null) targets.add(module);
         }
         if (!targets.isEmpty()) {
-          ctx.server.getCheckerFor(targets).resolveAll(ctx.cancellation, ProgressReporter.empty());
+          resolveDeferringErrors(ctx, targets, deferredErrors);
           resolvedRequestedScope = true;
         }
       }
@@ -141,11 +151,11 @@ public final class TypecheckPipeline {
           }
         }
       }
-      reportCachedGoals(ctx, ctx.requester.getBinaryCacheLoaded(), requestedLibraryNames);
-      // Re-report errors that were detected on a previous typecheck pass and
-      // whose modules are still in memory but won't be re-typechecked this run.
-      reportInMemoryErrors(ctx, requestedLibraryNames);
     }
+
+    // The targeted branch below prints one banner per requested module but replays the
+    // whole scope's stored diagnostics; this keeps it to the first banner.
+    boolean storedReplayed = false;
 
     if (ctx.requestedModules.isEmpty()) {
       for (SourceLibrary library : ctx.requestedLibraries) {
@@ -153,8 +163,11 @@ public final class TypecheckPipeline {
         ctx.outputRouter.stage("");
         ctx.outputRouter.stage("--- Typechecking " + library.getLibraryName() + " ---");
         long time = System.currentTimeMillis();
+        storedReplayed = true;
+        replayStoredDiagnostics(ctx, Collections.singleton(library.getLibraryName()), liveModules);
+        flushDeferredErrors(ctx, deferredErrors);
 
-        for (ModulePath modulePath : library.findModules(false)) {
+        for (ModulePath modulePath : liveModules.get(library.getLibraryName())) {
           ctx.cancellation.checkCanceled();
           ctx.server.getCheckerFor(Collections.singletonList(
                   new ModuleLocation(library.getLibraryName(), ModuleLocation.LocationKind.SOURCE, modulePath)))
@@ -167,7 +180,8 @@ public final class TypecheckPipeline {
         int numWithGoals = 0;
         for (ModuleLocation module : ctx.server.getModules()) {
           if (module.getLocationKind() == ModuleLocation.LocationKind.SOURCE
-              && module.getLibraryName().equals(library.getLibraryName())) {
+              && module.getLibraryName().equals(library.getLibraryName())
+              && isLive(liveModules, module)) {
             GeneralError.Level result = ctx.moduleResults.get(module);
             reportTypeCheckResult(ctx.outputRouter, module, result);
             if (result == GeneralError.Level.ERROR) numWithErrors++;
@@ -209,7 +223,8 @@ public final class TypecheckPipeline {
             CoreModuleChecker checker = new CoreModuleChecker(ctx.errorReporter);
             for (ModuleLocation module : ctx.server.getModules()) {
               if (module.getLocationKind() == ModuleLocation.LocationKind.SOURCE
-                  && module.getLibraryName().equals(library.getLibraryName())) {
+                  && module.getLibraryName().equals(library.getLibraryName())
+                  && isLive(liveModules, module)) {
                 ConcreteGroup group = ctx.server.getRawGroup(module);
                 if (group != null) {
                   checker.checkGroup(group);
@@ -222,7 +237,7 @@ public final class TypecheckPipeline {
           }
         }
 
-        if (ctx.serialize) persistLibrary(ctx, library);
+        if (ctx.serialize) persistLibrary(ctx, library, liveModules);
       }
     } else {
       for (Pair<ModulePath, LongName> requested : ctx.requestedModules) {
@@ -252,6 +267,11 @@ public final class TypecheckPipeline {
           ctx.outputRouter.stage("");
           ctx.outputRouter.stage("--- Typechecking " + fullName + " ---");
           long time = System.currentTimeMillis();
+          if (!storedReplayed) {
+            storedReplayed = true;
+            replayStoredDiagnostics(ctx, requestedLibraryNames, liveModules);
+          }
+          flushDeferredErrors(ctx, deferredErrors);
 
           ctx.server.getCheckerFor(Collections.singletonList(module))
               .typecheck(Collections.singletonList(fullName), ctx.errorReporter,
@@ -262,6 +282,11 @@ public final class TypecheckPipeline {
           ctx.outputRouter.stage("");
           ctx.outputRouter.stage("--- Typechecking " + module + " ---");
           long time = System.currentTimeMillis();
+          if (!storedReplayed) {
+            storedReplayed = true;
+            replayStoredDiagnostics(ctx, requestedLibraryNames, liveModules);
+          }
+          flushDeferredErrors(ctx, deferredErrors);
 
           ctx.server.getCheckerFor(Collections.singletonList(module))
               .typecheck(ctx.cancellation, progressReporter);
@@ -287,9 +312,15 @@ public final class TypecheckPipeline {
         }
       }
       for (SourceLibrary library : ctx.requestedLibraries) {
-        if (ctx.serialize) persistLibrary(ctx, library);
+        if (ctx.serialize) persistLibrary(ctx, library, liveModules);
       }
     }
+    // No banner was printed at all (no libraries, or every requested module was
+    // unresolvable): the stored diagnostics still have to reach the user.
+    if (!storedReplayed) {
+      replayStoredDiagnostics(ctx, requestedLibraryNames, liveModules);
+    }
+    flushDeferredErrors(ctx, deferredErrors);
 
     if (aiMode) {
       ctx.cancellation.checkCanceled();
@@ -391,6 +422,58 @@ public final class TypecheckPipeline {
         ctx.bufferedErrors.subList(oldBufferedSize, ctx.bufferedErrors.size()).clear();
       }
     }
+  }
+
+  /**
+   * Resolve {@code modules}, holding back whatever is reported so the caller can print it
+   * after the {@code "--- Typechecking ... ---"} banner. Everything is preserved: the
+   * name-resolution errors are additionally recorded in the server's {@code ErrorService},
+   * so {@link #replayStoredDiagnostics} prints those and {@link #flushDeferredErrors} then
+   * prints whatever else showed up (parse errors, missing imports, ...) — the per-run
+   * de-duplication in {@link CommandContext} keeps the overlap to one line each.
+   */
+  private static void resolveDeferringErrors(CommandContext ctx, List<ModuleLocation> modules, List<GeneralError> deferred) {
+    boolean oldBufferErrors = ctx.bufferErrors;
+    int mark = ctx.bufferedErrors.size();
+    ctx.bufferErrors = true;
+    try {
+      ctx.server.getCheckerFor(modules).resolveAll(ctx.cancellation, ProgressReporter.empty());
+    } finally {
+      ctx.bufferErrors = oldBufferErrors;
+      List<GeneralError> collected = ctx.bufferedErrors.subList(mark, ctx.bufferedErrors.size());
+      deferred.addAll(collected);
+      collected.clear();
+    }
+  }
+
+  /** Print (once) the diagnostics {@link #resolveDeferringErrors} held back. */
+  private static void flushDeferredErrors(CommandContext ctx, List<GeneralError> deferred) {
+    if (deferred.isEmpty()) return;
+    for (GeneralError error : deferred) ctx.printError(error);
+    deferred.clear();
+  }
+
+  /**
+   * The source modules each requested library currently has on disk, keyed by library name
+   * and in {@code findModules} order.
+   *
+   * <p>A warm daemon keeps a module in the server after its source file is deleted — nothing
+   * rescans the library between runs — so without this filter every later run keeps listing
+   * the module, replaying its stored diagnostics and trying to persist it.
+   */
+  private static Map<String, Set<ModulePath>> liveSourceModules(List<SourceLibrary> libraries) {
+    Map<String, Set<ModulePath>> result = new HashMap<>();
+    for (SourceLibrary library : libraries) {
+      result.put(library.getLibraryName(), new LinkedHashSet<>(library.findModules(false)));
+    }
+    return result;
+  }
+
+  /** False only for a source module of a requested library whose file is gone. */
+  private static boolean isLive(Map<String, Set<ModulePath>> liveModules, ModuleLocation module) {
+    if (module.getLocationKind() != ModuleLocation.LocationKind.SOURCE) return true;
+    Set<ModulePath> live = liveModules.get(module.getLibraryName());
+    return live == null || live.contains(module.getModulePath());
   }
 
   private static Set<String> requestedLibraryNames(List<SourceLibrary> requestedLibraries) {
@@ -547,16 +630,43 @@ public final class TypecheckPipeline {
   // ───────── reporting helpers ─────────
 
   /**
-   * Scans definitions loaded from binary cache for goals ({@code {?}}) and reports them.
-   * The goal flag ({@code isGoal}) is preserved in .arc files, so we can detect goals
-   * without re-typechecking.
+   * Re-emit every diagnostic that is already known to the server but that this run's
+   * typechecking will not produce again:
+   *
+   * <ul>
+   *   <li>goals ({@code {?}}) of modules restored from a binary cache — the {@code isGoal}
+   *       flag survives in the {@code .arc}, so they are detectable without re-typechecking;</li>
+   *   <li>name-resolution errors, which {@code ErrorService.setResolverErrors} pushes to the
+   *       reporters exactly once, when the module is (re-)resolved;</li>
+   *   <li>typechecking errors of modules that are not re-typechecked.</li>
+   * </ul>
+   *
+   * <p>Only a warm server ever has any of these — a cold process resolves and typechecks
+   * everything itself. Without this step the daemon called a broken library clean and exited
+   * 0 from the second run on (arend-lang/Arend#138): persist skips a module that has errors
+   * and the cache load therefore never sees it, so nothing re-emitted its diagnostics and
+   * neither {@code moduleResults} nor the exit code knew about them.
    */
-  private static void reportCachedGoals(CommandContext ctx, Set<ModuleLocation> cachedModules, Set<String> requestedLibraryNames) {
-    for (ModuleLocation module : cachedModules) {
-      if (!requestedLibraryNames.contains(module.getLibraryName())) continue;
+  private static void replayStoredDiagnostics(CommandContext ctx, Set<String> libraryNames, Map<String, Set<ModulePath>> liveModules) {
+    for (ModuleLocation module : ctx.requester.getBinaryCacheLoaded()) {
+      if (!libraryNames.contains(module.getLibraryName()) || !isLive(liveModules, module)) continue;
       ConcreteGroup group = ctx.server.getRawGroup(module);
       if (group == null) continue;
       reportGoalsInGroup(ctx, group, module);
+    }
+
+    if (!(ctx.server instanceof ArendServerImpl impl)) return;
+    ErrorService errorService = impl.getErrorService();
+    for (ModuleLocation module : ctx.server.getModules()) {
+      if (module.getLocationKind() != ModuleLocation.LocationKind.SOURCE
+          || !libraryNames.contains(module.getLibraryName())
+          || !isLive(liveModules, module)) continue;
+      for (GeneralError error : errorService.getResolverErrors(module)) {
+        ctx.errorReporter.report(error);
+      }
+      for (GeneralError error : errorService.getTypecheckingErrors(module)) {
+        ctx.errorReporter.report(error);
+      }
     }
   }
 
@@ -584,7 +694,7 @@ public final class TypecheckPipeline {
     }
   }
 
-  private static void persistLibrary(CommandContext ctx, SourceLibrary library) {
+  private static void persistLibrary(CommandContext ctx, SourceLibrary library, Map<String, Set<ModulePath>> liveModules) {
     if (!library.supportsPersisting()) return;
     int persisted = 0;
     int skipped = 0;
@@ -593,7 +703,8 @@ public final class TypecheckPipeline {
     Set<ModuleLocation> skipModules = ctx.requester.getBinaryCacheLoaded();
     for (ModuleLocation module : ctx.server.getModules()) {
       if (module.getLocationKind() == ModuleLocation.LocationKind.SOURCE
-          && module.getLibraryName().equals(library.getLibraryName())) {
+          && module.getLibraryName().equals(library.getLibraryName())
+          && isLive(liveModules, module)) {
         if (skipModules.contains(module)) {
           skipped++;
           continue;
@@ -653,27 +764,6 @@ public final class TypecheckPipeline {
       if (groupHasTypecheckingErrors(dynGroup)) return true;
     }
     return false;
-  }
-
-  /**
-   * Re-reports typechecking errors stored in the server's {@code ErrorService} for
-   * source modules. Without this step, a daemon that bootstrapped with HAS_ERRORS
-   * modules would silently drop the error reports on the second and later client
-   * requests: persist now skips those modules, load doesn't see them in the binary
-   * cache, and the typechecker skips already-typechecked defs — so the per-request
-   * {@code moduleResults} map never gets an ERROR entry. Walking the ErrorService
-   * here restores the per-invocation "Number of modules with errors" summary that
-   * the old re-typecheck cycle incidentally provided.
-   */
-  private static void reportInMemoryErrors(CommandContext ctx, Set<String> requestedLibraryNames) {
-    if (!(ctx.server instanceof org.arend.server.impl.ArendServerImpl impl)) return;
-    org.arend.server.impl.ErrorService errorService = impl.getErrorService();
-    for (ModuleLocation module : ctx.server.getModules()) {
-      if (module.getLocationKind() != ModuleLocation.LocationKind.SOURCE || !requestedLibraryNames.contains(module.getLibraryName())) continue;
-      for (GeneralError error : errorService.getTypecheckingErrors(module)) {
-        ctx.errorReporter.report(error);
-      }
-    }
   }
 
   private static void reportTypeCheckResult(AiOutputRouter router, ModuleLocation module, GeneralError.Level result) {
