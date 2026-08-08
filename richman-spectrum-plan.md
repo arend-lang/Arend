@@ -538,16 +538,25 @@ warm vs 20.5 s cold**. Two quirks: goals surface on the *next* request, never wi
 `Context:` lines, so the loop is edit → check errors → check again for goals; and never hand-delete a
 `.arc` to force re-elaboration (it poisons unrelated importers — use `-r`).
 
-**Do not trust a scoped `arend <Module>` run on a *new* module — it gives false negatives.** Hit
-repeatedly while building A4: `arend Arith.Complex.Spectrum.Point` reported the module clean for
-several rounds while `skip`, `skip-sface` and `sface` were used with **no `\import Data.Array` and no
-`\import Set.Fin`**. The full-library `arend` (no positional) immediately reported seven
-`Cannot resolve reference` errors, and behind them two genuine `Cannot infer parameter` errors in
-`absProd-factor` that the scoped runs had never surfaced either. Whatever scope the daemon caches for
-a freshly created module is wrong, and "wrong" here means *permissive*. So: iterate with
-`arend <Module>` for speed if you like, but **the run that decides whether a module is done must be a
-full-library `arend`**, and the run that decides whether a milestone is done is still
-`arend --daemon-stop && arend --no-daemon -r`.
+**The daemon reports a resolution error only once — filed as
+[arend-lang/Arend#138](https://github.com/arend-lang/Arend/issues/138).** Run 1 after a file's mtime
+changes reports `Cannot resolve reference` / `Duplicate name`, marks the module `[✗]` and counts it.
+Every run after that lists it as `[ ]` — the *healthy* marker — prints nothing, omits the
+`Number of modules with errors:` line and **exits 0**, while the source is still broken. Typechecking
+errors are re-reported every run, so the two classes disagree. `arend -r` inside the daemon does not
+recover; `touch` re-arms it for exactly one run; `arend --no-daemon` is always right and exits 1.
+
+**And never filter typecheck output by the `--- Typechecking <Module> ---` banner.** Resolution errors
+are printed *before* it, so `arend M 2>&1 | grep -A20 'Typechecking M'` hides even the one report you
+get. This is what actually happened while building A4: a new module used `skip`, `skip-sface` and
+`sface` with neither `Data.Array` nor `Set.Fin` imported, and several rounds looked clean — first
+because the banner-grep cut the errors off, then because the daemon had stopped emitting them. The
+full-library run showed seven `Cannot resolve reference` errors and, behind them, two genuine
+`Cannot infer parameter` errors in `absProd-factor`.
+
+So: iterate with the daemon for speed, but never conclude "this module is finished" from a run that
+followed an earlier run on the same content, and read the whole output rather than a slice of it. The
+run that decides a milestone is still `arend --daemon-stop && arend --no-daemon -r`.
 
 **Verify cold before believing a milestone.** `arend --daemon-stop` then `arend --no-daemon -r`
 (~2 min, re-persists everything). A plain `--no-daemon` run with current caches just deserialises in
