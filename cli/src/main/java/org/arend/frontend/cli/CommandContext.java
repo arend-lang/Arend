@@ -21,7 +21,9 @@ import org.arend.util.FileUtils;
 
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.EnumSet;
+import java.util.IdentityHashMap;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -90,6 +92,15 @@ public class CommandContext {
   public boolean bufferErrors;
   public final List<GeneralError> bufferedErrors = new ArrayList<>();
 
+  /**
+   * Diagnostics already printed during this invocation. A warm daemon re-emits stored
+   * resolver/typechecking errors from the server so that every run reports them, and the
+   * same object may also arrive live from the pass that produced it; this set makes the
+   * two paths idempotent. Identity-based: {@link GeneralError} has no {@code equals}, and
+   * two structurally equal diagnostics from different definitions must both be shown.
+   */
+  private final Set<GeneralError> emittedErrors = Collections.newSetFromMap(new IdentityHashMap<>());
+
   /** Plain stderr reporter; flips {@link #exitWithError}. */
   public final ErrorReporter systemErrErrorReporter = error -> {
     System.err.println(error);
@@ -116,6 +127,11 @@ public class CommandContext {
     }
   };
 
+  /** Drop the "already printed" marks; called when a new command starts on a warm context. */
+  public void clearEmittedErrors() {
+    emittedErrors.clear();
+  }
+
   public void updateSourceResult(ModuleLocation module, GeneralError.Level result) {
     if (module == null) return;
     GeneralError.Level prevResult = moduleResults.get(module);
@@ -129,9 +145,10 @@ public class CommandContext {
     dispatchError(error);
   }
 
-  /** Render one diagnostic to stdout/stderr, goal-aware. */
+  /** Render one diagnostic to stdout/stderr, goal-aware, at most once per invocation. */
   private void dispatchError(GeneralError error) {
     if (error.level == GeneralError.Level.ERROR) exitWithError = true;
+    if (!emittedErrors.add(error)) return;
     PrettyPrinterConfigWithRenamer ppConfig = new PrettyPrinterConfigWithRenamer(EmptyScope.INSTANCE);
     if (error instanceof GoalError) {
       ppConfig.expressionFlags = EnumSet.of(PrettyPrinterFlag.SHOW_LOCAL_FIELD_INSTANCE);
