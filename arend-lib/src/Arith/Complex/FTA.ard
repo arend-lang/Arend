@@ -28,7 +28,6 @@
 \import Arith.Real.Root
 \import Function.Meta
 \import Logic
-\import Logic.Classical (adchoice)
 \import Logic.Meta
 \import Meta
 \import Order.Biordered
@@ -192,26 +191,6 @@
 -- `re`/`im` and defeat `equation` (see arend-quirks on concrete-record arithmetic).
 \lemma add-sub-cancel {G : AddGroup} (x y : G) : (x + y) - y = x => simplify
 
-{- | The sequence of the informal proof: $z_0 = 0$ and $z_{i+1} = z_i + w_i$ with $w_i$ from
-     `fta-step`, giving $|f(z_i)| < q^i c$ (3) and $|z_{i+1} - z_i|^n < q^i c$ (4). The states
-     carry their own (3)-bound, so `adchoice`'s relation only has to record (4). -}
-\lemma fta-seq {n : Nat} (n>0 : 0 < n) (f : Poly ComplexField)
-               (deg : degree< f (suc n)) (monic : polyCoef f n = 1)
-               {c : Real} (f0<c : cabs (polyEval f 0) < c)
-  : ∃ (z : Nat -> Complex)
-      (\Pi (i : Nat) -> cabs (polyEval f (z i)) < pow (kneser-q n) i * c)
-      (\Pi (i : Nat) -> pow (cabs (z (suc i) - z i)) n < pow (kneser-q n) i * c)
-  => \case adchoice
-             {\lam i => \Sigma (z : Complex) (cabs (polyEval f z) < pow (kneser-q n) i * c)}
-             (\lam {i} a b => pow (cabs (b.1 - a.1)) n < pow (kneser-q n) i * c)
-             (0, rewrite ide-left f0<c)
-             (\lam i a => \case fta-step n>0 f deg monic a.1 a.2 \with {
-               | inP (w, |w|^n<d, fwz<) => inP ((w + a.1, transport (cabs (polyEval f (w + a.1)) <) equation.cRing fwz<), rewrite (add-sub-cancel w a.1) |w|^n<d)
-             })
-           \with {
-       | inP (s, r) => inP (\lam i => (s i).1, \lam i => (s i).2, r)
-     }
-
 -- # Geometric decay
 
 -- | Rational geometric decay against a positive constant: `rat_<1_pow-bound` at `e / C`.
@@ -355,26 +334,6 @@
                  (tail-bound r<=1 K>=0 z bd N k)
         <=∘ =_<= equation.cRing
 
-{- | Estimate (4) makes the increments geometrically dominated, hence `z` Cauchy.
-
-     `convergent-metric-char.2` reduces this to "for every `eps > 0` some `N` has
-     `(dist (z m) (z N)).U eps` for all `m >= N`". With $r = \sqrt[n]{q}$ and $K = \sqrt[n]{c}$,
-     `incr-bound` turns (4) into $|z_{i+1}-z_i| < r^i K$ and `tail-bound` sums it, so the tail from
-     `N` is under $r^N K/(1-r)$; `pow_<1-decay` applied at $(1-r)\varepsilon$ picks `N`, and the
-     positive factor $1-r$ cancels at the end. `root-monotone` is what makes $r < 1$ *strict*. -}
-\lemma increments-uniform-cauchy {n : Nat} (n>0 : 0 < n) {c : Real} (z : Nat -> Complex)
-                                 (bound4 : \Pi (i : Nat) -> pow (cabs (z (suc i) - z i)) n < pow (kneser-q n) i * c)
-  : IsConvergent z
-  => \have | n/=0 : n /= 0 => NatSemiring.>_/= n>0
-           | q>=0 : 0 <= kneser-q n => <=-less (kneser-q>0 n>0)
-           | c>0 : 0 < c => linarith (RealField.pow>=0 {cabs (z 1 - z 0)} {n} (cabs>=0 {z 1 - z 0}),
-                                      transport (_ <) ide-left (bound4 0))
-           | r<1 : root n (kneser-q n) < 1
-              => transport (root n (kneser-q n) <) (root_ide n/=0)
-                   (root-monotone n/=0 q>=0 kneser-q<1)
-     \in geom-increments-cauchy root>=0 r<1 root>=0 z
-           (incr-bound n/=0 (<=-less c>0) z q>=0 bound4)
-
 {- | **Geometrically dominated increments make a sequence Cauchy.** The content of
      `increments-uniform-cauchy` with the base and the constant abstracted: `tail-bound` sums the
      increments, so the tail from `N` is under `r^N K / (1 - r)`; `pow_<1-decay` applied at
@@ -402,29 +361,3 @@
                | byRight (p, _) => absurd linarith
              })
        }
-
-{- | The analytic core: the sequence converges, `polyEvalCover` carries `polyEval f` through the
-     limit, and estimate (3) forces the value there to be zero. -}
-\lemma cauchy-limit-root {n : Nat} (n>0 : 0 < n) (f : Poly ComplexField)
-                         (deg : degree< f (suc n)) (monic : polyCoef f n = 1)
-                         {c : Real} (z : Nat -> Complex)
-                         (bound3 : \Pi (i : Nat) -> cabs (polyEval f (z i)) < pow (kneser-q n) i * c)
-                         (bound4 : \Pi (i : Nat) -> pow (cabs (z (suc i) - z i)) n < pow (kneser-q n) i * c)
-  : ∃ (r : Complex) (polyEval f r = 0)
-  => \have conv : IsConvergent z => increments-uniform-cauchy n>0 z bound4
-     \in inP (limit z conv,
-               limit-apply (polyEvalCover deg)
-               *> ComplexCompleteRing.limit-unique limit-isLimit (values-limit-zro n>0 f z bound3))
-
-{- | **The fundamental theorem of algebra**, intuitionistic modulo dependent choice: every monic
-     polynomial of degree $n > 0$ over $\mathbb{C}$ has a root.
-
-     Take $c = |f(0)| + 1$, iterate `fta-step` along `adchoice` to get the sequence (`fta-seq`),
-     and pass it to `cauchy-limit-root`. The only non-constructive ingredient is `adchoice`; in
-     particular this does *not* go through `achoice`, which would import excluded middle. -}
-\lemma FTA {n : Nat} (n>0 : 0 < n) (f : Poly ComplexField)
-           (deg : degree< f (suc n)) (monic : polyCoef f n = 1)
-  : ∃ (z : Complex) (polyEval f z = 0)
-  => \case fta-seq n>0 f deg monic (linarith : cabs (polyEval f 0) < cabs (polyEval f 0) + 1) \with {
-       | inP (z, bound3, bound4) => cauchy-limit-root n>0 f deg monic z bound3 bound4
-     }

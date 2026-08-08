@@ -239,8 +239,8 @@
 \lemma FTA-acomega {m : Nat} (p : Poly ComplexField) (deg : degree< p (suc (suc m)))
                    (monic : polyCoef p (suc m) = 1)
   : ∃ (z : Complex) (polyEval p z = 0)
-  => \case acomega (StepA-inh p deg monic) \with {
-       | inP s => \case acomega (StepB-inh {m} {p} s) \with {
+  => \case acchoice (StepA-inh p deg monic) \with {
+       | inP s => \case acchoice (StepB-inh {m} {p} s) \with {
          | inP t =>
            \have A : Threading => \new Threading m p s t
            \in inP (limit (thread A) (thread-conv A),

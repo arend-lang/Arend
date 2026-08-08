@@ -6,108 +6,80 @@
 \import Relation.Equivalence
 \import Set
 
-\axiom alem (P : \Prop) : Dec P
-
+{- | Axiom of choice -}
 \axiom achoice {A : \Set} (B : A -> \Set) : (\Pi (x : A) -> TruncP (B x)) -> TruncP (\Pi (x : A) -> B x)
-  \where {
-    \lemma lemFromChoice (P : \Prop) : Dec P
-      => \let | R (x y : Bool) : \Prop => \case x, y \with {
-                                       | true, true => \Sigma
-                                       | true, false => P
-                                       | false, true => P
-                                       | false, false => \Sigma
-                                     }
-              | E => \new Equivalence Bool {
-                | ~ => R
-                | ~-reflexive {b} => \case \elim b \with {
-                  | true => ()
-                  | false => ()
-                }
-                | ~-symmetric {a} {b} p => \case \elim a, \elim b, p \with {
-                  | true, true, _ => ()
-                  | true, false, p => p
-                  | false, true, p => p
-                  | false, false, _ => ()
-                }
-                | ~-transitive {a} {b} {c} p q => \case \elim a, \elim b, \elim c, p, q \with {
-                  | true, _, true, _, _ => ()
-                  | false, _, false, _, _ => ()
-                  | true, true, false, p, q => q
-                  | true, false, false, p, q => p
-                  | false, true, true, p, q => p
-                  | false, false, true, p, q => q
-                }
-              }
-         \in \case achoice (\lam q => \Sigma (x : Bool) (in~ x = q)) (\lam (in~ x) => inP (x,idp)) \with {
-               | inP f =>
-                 \case (f (in~ true)).1 \as x, idp : (f (in~ true)).1 = x, (f (in~ false)).1 \as y, idp : (f (in~ false)).1 = y \with {
-                   | true, p, true, q => yes (Quotient.equalityEquiv E (pmap in~ (inv q) *> (f (in~ false)).2))
-                   | true, p, false, q => no (\lam a => true/=false (inv p *> path (\lam i => (f (~-equiv true false a i)).1) *> q))
-                   | false, p, true, q => no (\lam a => true/=false (inv q *> path (\lam i => (f (~-equiv false true a i)).1) *> p))
-                   | false, p, false, q => yes (Quotient.equalityEquiv E (inv (f (in~ true)).2 *> pmap in~ p))
-                 }
-             }
-  }
 
-{- | **Dependent choice over `Nat`.** Given a family `A` indexed by `Nat`, a relation `R` between
-     consecutive fibres, a starting point in `A 0`, and the knowledge that every `a : A i` has
-     *some* `R`-successor, there is a sequence stepping along `R` forever.
+{- | Law of excluded middle -}
+\axiom alem (P : \Prop) : Dec P \where
+  {- | Diaconsecu's theorem, AC implies LEM -}
+  \lemma fromChoice (P : \Prop) : Dec P =>
+    \let | R (x y : Bool) : \Prop => \case x, y \with {
+      | true, true => \Sigma
+      | true, false => P
+      | false, true => P
+      | false, false => \Sigma
+    }
+         | E => \new Equivalence Bool {
+           | ~ => R
+           | ~-reflexive {b} => \case \elim b \with {
+             | true => ()
+             | false => ()
+           }
+           | ~-symmetric {a} {b} p => \case \elim a, \elim b, p \with {
+             | true, true, _ => ()
+             | true, false, p => p
+             | false, true, p => p
+             | false, false, _ => ()
+           }
+           | ~-transitive {a} {b} {c} p q => \case \elim a, \elim b, \elim c, p, q \with {
+             | true, _, true, _, _ => ()
+             | false, _, false, _, _ => ()
+             | true, true, false, p, q => q
+             | true, false, false, p, q => p
+             | false, true, true, p, q => p
+             | false, false, true, p, q => q
+           }
+         }
+    \in \case achoice (\lam q => \Sigma (x : Bool) (in~ x = q)) (\lam (in~ x) => inP (x,idp)) \with {
+      | inP f =>
+        \case (f (in~ true)).1 \as x, idp : (f (in~ true)).1 = x, (f (in~ false)).1 \as y, idp : (f (in~ false)).1 = y \with {
+          | true, p, true, q => yes (Quotient.equalityEquiv E (pmap in~ (inv q) *> (f (in~ false)).2))
+          | true, p, false, q => no (\lam a => true/=false (inv p *> path (\lam i => (f (~-equiv true false a i)).1) *> q))
+          | false, p, true, q => no (\lam a => true/=false (inv q *> path (\lam i => (f (~-equiv false true a i)).1) *> p))
+          | false, p, false, q => yes (Quotient.equalityEquiv E (inv (f (in~ true)).2 *> pmap in~ p))
+        }
+    }
 
-     Strictly weaker than `achoice`: that one is choice over an arbitrary `\Set` and yields
-     excluded middle through `achoice.lemFromChoice`, whereas `adchoice` does not, so a development
-     using only `adchoice` stays intuitionistic. It is also strictly stronger than
-     `finiteDependentChoice` (`Set/Fin.ard`), which produces finite prefixes only. -}
+{- | Dependent choice over `Nat`, strictly weaker than full choice -}
 \axiom adchoice {A : Nat -> \Set} (R : \Pi {i : Nat} -> A i -> A (suc i) -> \Prop) (a0 : A 0)
-                (total : \Pi (i : Nat) (a : A i) -> TruncP (\Sigma (b : A (suc i)) (R a b)))
-  : TruncP (\Sigma (s : \Pi (i : Nat) -> A i) (\Pi (i : Nat) -> R (s i) (s (suc i))))
+                (total : \Pi (i : Nat) (a : A i) -> TruncP (\Sigma (b : A (suc i)) (R a b))) :
+  TruncP (\Sigma (s : \Pi (i : Nat) -> A i) (\Pi (i : Nat) -> R (s i) (s (suc i))))
   \where {
-    {- | `adchoice` is a **consequence** of `achoice`, hence a strict weakening rather than new
-         strength: one application of `achoice` over the set of states `\Sigma (i : Nat) (A i)`
-         picks a successor for every state at once, and plain recursion then iterates it.
-
-         It is nevertheless stated as its own axiom, because the converse fails where it matters:
-         `achoice` also yields excluded middle (`achoice.lemFromChoice`, by Diaconescu over a
-         `Bool`-quotient) and dependent choice does not. Instantiating `achoice` at `Nat` instead
-         is no good either — that is countable choice, which does not commute `\Pi (a : A i)` past
-         `TruncP` and so cannot produce the successor-picking function below. -}
     \lemma fromChoice {A : Nat -> \Set} (R : \Pi {i : Nat} -> A i -> A (suc i) -> \Prop) (a0 : A 0)
-                      (total : \Pi (i : Nat) (a : A i) -> TruncP (\Sigma (b : A (suc i)) (R a b)))
-      : TruncP (\Sigma (s : \Pi (i : Nat) -> A i) (\Pi (i : Nat) -> R (s i) (s (suc i))))
+                      (total : \Pi (i : Nat) (a : A i) -> TruncP (\Sigma (b : A (suc i)) (R a b))) :
+      TruncP (\Sigma (s : \Pi (i : Nat) -> A i) (\Pi (i : Nat) -> R (s i) (s (suc i))))
       => \case achoice {\Sigma (i : Nat) (A i)} (\lam p => \Sigma (b : A (suc p.1)) (R p.2 b))
                  (\lam p => total p.1 p.2) \with {
-           | inP g => inP (iter A R g a0, \lam i => (g (i, iter A R g a0 i)).2)
-         }
+        | inP g => inP (iter A R g a0, \lam i => (g (i, iter A R g a0 i)).2)
+      }
       \where
-        -- | Iterate the chosen successor function from `a0`. `A` and `R` are explicit: both occur
-        -- only inside `g`'s type, where unification cannot recover them.
-        \func iter (A : Nat -> \Set) (R : \Pi {i : Nat} -> A i -> A (suc i) -> \Prop)
-                   (g : \Pi (p : \Sigma (i : Nat) (A i)) -> \Sigma (b : A (suc p.1)) (R p.2 b))
-                   (a0 : A 0) (i : Nat) : A i \elim i
+        \private \func iter (A : Nat -> \Set) (R : \Pi {i : Nat} -> A i -> A (suc i) -> \Prop)
+                            (g : \Pi (p : \Sigma (i : Nat) (A i)) -> \Sigma (b : A (suc p.1)) (R p.2 b))
+                            (a0 : A 0) (i : Nat) : A i \elim i
           | 0 => a0
           | suc i => (g (i, iter A R g a0 i)).1
   }
 
-{- | **Countable choice, $AC_\omega$.** A `Nat`-indexed family of inhabited sets has a section. New
-     here: the library had no formulation of countable choice before — `achoice` is choice over an
-     arbitrary `\Set` and `adchoice` is full dependent choice (its `Nat` indexes the family, it does
-     not weaken the principle), so neither is this.
-
-     The three sit in strict order, `acomega < adchoice < achoice`, and each gap is what makes naming
-     the middle one worthwhile:
-
-     * `achoice` yields excluded middle (`achoice.lemFromChoice`, by Diaconescu over a `Bool`-quotient);
-       neither of the other two does, so a development using only `acomega` stays intuitionistic.
-     * `adchoice` lets each choice depend on the previous one; `acomega` does not, and $AC_\omega
-       \nRightarrow DC$ is independent of ZF (Jensen). Dependent choice is therefore genuinely more
-       than this axiom, which is why deriving a theorem from `acomega` alone says something that
-       deriving it from `adchoice` does not.
-
-     $AC_\omega$ is the choice principle *every* school of constructive mathematics already assumes,
-     which is what makes it the interesting hypothesis. See `Arith/Complex/FTA/Choice.ard` for the
-     fundamental theorem of algebra derived from it alone, replacing `FTA`'s use of `adchoice`. -}
-\axiom acomega {A : Nat -> \Set} (h : \Pi (i : Nat) -> TruncP (A i)) : TruncP (\Pi (i : Nat) -> A i)
+{- | Countable choice $AC_\mathbb{N}$, strictly weaker than adchoice. -}
+\axiom acchoice {A : Nat -> \Set} (h : \Pi (i : Nat) -> TruncP (A i)) : TruncP (\Pi (i : Nat) -> A i)
   \where
-    -- | A **consequence** of `achoice`, at the index set `Nat` — hence a strict weakening rather than
-    -- new strength, exactly as `adchoice.fromChoice` is for dependent choice.
-    \lemma fromChoice {A : Nat -> \Set} (h : \Pi (i : Nat) -> TruncP (A i))
-      : TruncP (\Pi (i : Nat) -> A i) => achoice {Nat} A h
+    \lemma fromDepChoice.{l} {A : Nat -> \Set l} (h : \Pi (i : Nat) -> TruncP (A i)) : TruncP (\Pi (i : Nat) -> A i)
+      => \case adchoice {A_shifted} (\lam {_} _ _ => \Sigma) () (\lam i _ => \case h i \with {
+        | inP c => inP (c, ())
+      }) \with {
+        | inP b => inP (\lam i => b.1 (suc i))
+      } \where
+      \private \func A_shifted.{l} {A : Nat -> \Set l} (n : Nat) : \Set l \elim n
+        | zero => \Sigma
+        | suc n => A n
+
