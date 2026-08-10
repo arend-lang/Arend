@@ -72,8 +72,13 @@ public class CoreExpressionChecker implements ExpressionVisitor<Expression, Expr
   }
 
   private void checkList(List<? extends Expression> args, DependentLink parameters, ExprSubstitution substitution, LevelSubstitution levelSubst) {
+    checkList(args, parameters, substitution, levelSubst, false);
+  }
+
+  private void checkList(List<? extends Expression> args, DependentLink parameters, ExprSubstitution substitution, LevelSubstitution levelSubst, boolean isSigmaTuple) {
     for (Expression arg : args) {
-      if (parameters.getVariance() == BindingVariance.INVARIANT) {
+      boolean isLast = isSigmaTuple && !parameters.getNext().hasNext();
+      if (!isLast && parameters.getVariance() == BindingVariance.INVARIANT) {
         try (var ignored = clearCategoricalContext()) {
           arg.accept(this, parameters.getType().subst(substitution, levelSubst));
         }
@@ -322,12 +327,17 @@ public class CoreExpressionChecker implements ExpressionVisitor<Expression, Expr
   }
 
   private List<SortExpression> checkDependentLinkWithResult(DependentLink link, Expression type, Expression expr) {
+    return checkDependentLinkWithResult(link, type, expr, false);
+  }
+
+  private List<SortExpression> checkDependentLinkWithResult(DependentLink link, Expression type, Expression expr, boolean isSigma) {
     List<SortExpression> result = new ArrayList<>();
     for (; link.hasNext(); link = link.getNext()) {
       addBinding(link, expr);
       if (link instanceof TypedDependentLink) {
         Expression paramType;
-        if (link.getVariance() == BindingVariance.INVARIANT) {
+        boolean isLast = isSigma && !link.getNext().hasNext();
+        if (!isLast && link.getVariance() == BindingVariance.INVARIANT) {
           try (var ignored = clearCategoricalContext()) {
             paramType = link.getType().accept(this, type);
           }
@@ -440,7 +450,7 @@ public class CoreExpressionChecker implements ExpressionVisitor<Expression, Expr
 
   @Override
   public Expression visitSigma(SigmaExpression expr, Expression expectedType) {
-    List<SortExpression> sorts = checkDependentLinkWithResult(expr.getParameters(), expectedType, expr);
+    List<SortExpression> sorts = checkDependentLinkWithResult(expr.getParameters(), expectedType, expr, true);
     freeDependentLink(expr.getParameters());
     return check(expectedType, new UniverseExpression(SortExpression.makeMax(sorts)), expr);
   }
@@ -478,7 +488,7 @@ public class CoreExpressionChecker implements ExpressionVisitor<Expression, Expr
   @Override
   public Expression visitTuple(TupleExpression expr, Expression expectedType) {
     visitSigma(expr.getSigmaType(), null);
-    checkList(expr.getFields(), expr.getSigmaType().getParameters(), new ExprSubstitution(), LevelSubstitution.EMPTY);
+    checkList(expr.getFields(), expr.getSigmaType().getParameters(), new ExprSubstitution(), LevelSubstitution.EMPTY, true);
     return check(expectedType, expr.getSigmaType(), expr);
   }
 

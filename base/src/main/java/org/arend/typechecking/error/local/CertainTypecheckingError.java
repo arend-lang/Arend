@@ -21,7 +21,8 @@ public class CertainTypecheckingError extends TypecheckingError {
     COULD_BE_LEMMA(Level.WARNING, "Function can be declared as a lemma"),
     AXIOM_WITH_BODY(Level.WARNING, "An axiom should not have a body"),
     INSTANCE_TYPE("The type of an instance must be a class"),
-    NO_CLASSIFYING_IGNORED(Level.WARNING_UNUSED, "\\noclassifying is ignored");
+    NO_CLASSIFYING_IGNORED(Level.WARNING_UNUSED, "\\noclassifying is ignored"),
+    VARIANCE_IGNORED(Level.WARNING_UNUSED, "Variance is ignored for the last parameter of a \\Sigma type");
 
     private final Level level;
     private final String message;

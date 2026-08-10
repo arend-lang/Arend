@@ -2688,19 +2688,33 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
     LinkList list = new LinkList();
 
     try (var ignored = new Utils.RefContextSaver(context, myLocalPrettifier)) {
+      int i = 0;
+      int size = parameters.size();
       for (Concrete.TypeParameter parameter : parameters) {
-        if (!visitSigmaParameter(parameter, expectedType, resultSorts, list)) {
+        if (!visitSigmaParameter(parameter, expectedType, resultSorts, list, i == size - 1)) {
           return null;
         }
+        i++;
       }
     }
 
     return list.getFirst();
   }
 
-  private boolean visitSigmaParameter(Concrete.TypeParameter arg, Expression expectedType, List<SortExpression> resultSorts, LinkList list) {
-    checkVariance(arg, false);
-    TypeExpression result = checkType(arg.getType(), expectedType == null ? UniverseExpression.OMEGA : expectedType);
+  private boolean visitSigmaParameter(Concrete.TypeParameter arg, Expression expectedType, List<SortExpression> resultSorts, LinkList list, boolean isLast) {
+    BindingVariance variance = isLast ? arg.getVariance() : checkVariance(arg, true);
+    if (isLast && variance != BindingVariance.INVARIANT && arg.getReferableList().size() == 1) {
+      errorReporter.report(new CertainTypecheckingError(CertainTypecheckingError.Kind.VARIANCE_IGNORED, arg));
+    }
+
+    TypeExpression result;
+    if (!isLast && variance == BindingVariance.INVARIANT) {
+      try (var ignored = clearCategoricalContext()) {
+        result = checkType(arg.getType(), expectedType == null ? UniverseExpression.OMEGA : expectedType);
+      }
+    } else {
+      result = checkType(arg.getType(), expectedType == null ? UniverseExpression.OMEGA : expectedType);
+    }
     if (result == null) return false;
 
     SortExpression sort = result.sort();
@@ -2711,14 +2725,14 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
     }
     if (arg instanceof Concrete.TelescopeParameter) {
       List<? extends Referable> referableList = arg.getReferableList();
-      DependentLink link = ExpressionFactory.parameter(true, isProp, arg.getNames(), result.expression());
+      DependentLink link = ExpressionFactory.parameter(true, isProp, arg.getNames(), result.expression(), variance);
       list.append(link);
       int i = 0;
       for (DependentLink link1 = link; link1.hasNext(); link1 = link1.getNext(), i++) {
         addBinding(referableList.get(i), link1);
       }
     } else {
-      DependentLink link = ExpressionFactory.parameter(true, isProp, Collections.singletonList(null), result.expression());
+      DependentLink link = ExpressionFactory.parameter(true, isProp, Collections.singletonList(null), result.expression(), variance);
       list.append(link);
       addBinding(null, link);
     }
@@ -2782,7 +2796,15 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
       ExprSubstitution substitution = new ExprSubstitution();
       for (Concrete.Expression field : expr.getFields()) {
         Expression expType = sigmaParams.getType().subst(substitution);
-        TypecheckingResult result = checkExpr(field, expType);
+        boolean isLast = !sigmaParams.getNext().hasNext();
+        TypecheckingResult result;
+        if (!isLast && sigmaParams.getVariance() == BindingVariance.INVARIANT) {
+          try (var ignored = clearCategoricalContext()) {
+            result = checkExpr(field, expType);
+          }
+        } else {
+          result = checkExpr(field, expType);
+        }
         if (result == null) return new Pair<>(null, false);
         fields.add(result.expression);
         substitution.add(sigmaParams, result.expression);
