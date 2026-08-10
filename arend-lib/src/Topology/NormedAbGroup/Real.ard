@@ -1,6 +1,7 @@
 \import Algebra.Group
 \import Algebra.Meta
 \import Algebra.Monoid
+\import Algebra.Monoid.Localization
 \import Algebra.Ordered
 \import Algebra.StrictlyOrdered
 \import Algebra.Pointed
@@ -22,9 +23,8 @@
 \import Order.StrictOrder
 \import Paths
 \import Paths.Meta
-\import Relation.Equivalence
 \import Set.Filter
-\import Set.Subset
+\import Set.Set
 \import Topology.CoverSpace
 \import Topology.CoverSpace.Complete
 \import Topology.CoverSpace.Product
@@ -69,7 +69,7 @@
       \lam F => inP (fromCF F, \lam {U} => \case <=<-ball __ \with {
         | inP (eps,eps>0,p) =>
           \let | x => fromCF F
-               | x<x+eps => transport (RealAbGroup.`< _) zro-right $ <_+-right x $ rat_real_<.1 eps>0
+               | x<x+eps => transport (RealAbGroup.< _) zro-right $ <_+-right x $ rat_real_<.1 eps>0
                | (inP (a, x-eps<a, inP (y1,eps1,eps1>0,Fy1,a<y1-eps1))) => (real_<-rat-char {x - eps} {x}).1 $ RealAbGroup.<-diff-mid-conv x<x+eps
                | (inP (b, inP (y2,eps2,eps2>0,Fy2,y2+eps2<b), b<x+eps)) => (real_<-rat-char {x} {x + eps}).1 x<x+eps
           \in filter-mono (filter-meet Fy1 Fy2) $ (\lam {z} (|y1-z|<eps1,|y2-z|<eps2) => real_<_U.1 $ later $ RealAbGroup.abs_-_<
@@ -122,7 +122,7 @@
       => RealNormed.makeCauchy $ inP (RatField.half $ RatField.half eps, linarith, \lam x => \case rat_real.dense (OBall-open {RealNormed}) (OBall-center {RealNormed} $ RatField.half>0 $ RatField.half>0 eps>0) \with {
         | inP (_, inP (q,idp), p) => inP $ later (_, inP (q - eps * ratio 1 2, idp), \lam d =>
           \have qy<eps/2 => real_<_U.2 (RealNormedAbGroup.halving1/2 p d)
-          \in (real_<_L.1 $ transport (`< _) RealAbGroup.minus-rat $ RealAbGroup.<-diff-left $ abs>=id <∘r qy<eps/2,
+          \in (real_<_L.1 $ transport (< _) RealAbGroup.minus-rat $ RealAbGroup.<-diff-left $ abs>=id <∘r qy<eps/2,
                real_<_U.1 $ transport (_ <) (RealAbGroup.+-rat *> pmap Real.fromRat linarith) $ RealAbGroup.<-diff-mid $ abs>=_- <∘r qy<eps/2))
       })
 
@@ -137,7 +137,7 @@
 
 \lemma <=<-open-int {x : Real} {U : Set Real} (p : single x <=< U) : ∃ (a b : Rat) (x.L a) (x.U b) ∀ (y : Real) (y.L a -> y.U b -> U y)
   => \case <=<-ball p \with {
-    | inP (eps,eps>0,q) => \case (real_<-rat-char {x - eps} {x}).1 $ transport (_ <) zro-right $ <_+-right x $ RealAbGroup.positive_negative $ rat_real_<.1 eps>0, (real_<-rat-char {x} {x + eps}).1 $ transport (`< _) zro-right $ <_+-right x $ rat_real_<.1 eps>0 \with {
+    | inP (eps,eps>0,q) => \case (real_<-rat-char {x - eps} {x}).1 $ transport (_ <) zro-right $ <_+-right x $ RealAbGroup.positive_negative $ rat_real_<.1 eps>0, (real_<-rat-char {x} {x + eps}).1 $ transport (< _) zro-right $ <_+-right x $ rat_real_<.1 eps>0 \with {
       | inP (a,x-eps<a,a<x), inP (b,x<b,b<x+eps) => inP (a, b, a<x, x<b, \lam y a<y y<b => q $ real_<_U.1 $ abs_-_< (RealAbGroup.<-diff-left $ real_<_U.2 x-eps<a <∘ real_<_L.2 a<y) $ RealAbGroup.<-diff-mid-conv $ transport (_ <) +-comm $ real_<_U.2 y<b <∘ real_<_L.2 b<x+eps)
     }
   }
@@ -156,10 +156,10 @@
           \lam s => q s.1 s.2, RatherBelow.<=<_meet-same (<=<-right (later \lam s => pmap __.1 s) $ <=<_^-1 {_} {_} {proj1} $ dense-lift-real-char.point_<=< c1<x x<d1) (<=<-right (later \lam s => pmap __.2 s) $ <=<_^-1 {_} {_} {proj2} $ dense-lift-real-char.point_<=< c2<y y<d2)))
 
 \lemma real-dist>0 {x y : Real} (xy>0 : 0 < ldist x y) : x < y || y < x
-  => \case real-located {y} {x} {x + ldist x y} $ transport (`< _) zro-right $ <_+-right x xy>0 \with {
+  => \case real-located {y} {x} {x + ldist x y} $ transport (< _) zro-right $ <_+-right x xy>0 \with {
     | byLeft x<y => byLeft x<y
     | byRight y<x+d => byRight
-      \have d=x-y => LinearOrder.join/=right {RealAbGroup} \lam p => <-irreflexive $ (rewriteI p in y<x+d) <∘l transportInv (`<= _) (pmap (x +) RealAbGroup.negative_- *> +-comm *> +-assoc *> pmap (y +) negative-left *> zro-right) <=-refl
+      \have d=x-y => LinearOrder.join/=right {RealAbGroup} \lam p => <-irreflexive $ (rewriteI p in y<x+d) <∘l transportInv (<= _) (pmap (x +) RealAbGroup.negative_- *> +-comm *> +-assoc *> pmap (y +) negative-left *> zro-right) <=-refl
       \in RealAbGroup.from>0 (rewrite d=x-y in xy>0)
   }
 
@@ -175,7 +175,7 @@
   => transport2 RealNormed.IsLimit {_} {\lam n => Real.fromRat $ suc (suc n) RatField.* RatField.finv (suc n)}
       (later $ ext \lam n => RealAbGroup.+-rat
         *> pmap Real.fromRat (RatField.+=+' *> rat_alt-inj (rat_alt_makeRat {_} {_} {_} {idp}
-          *> path (~-equiv _ _ $ pmap2 (\lam x y => suc (suc x) IntRing.* suc y) ide-left ide-left)
+          *> ~-lequiv1 (pmap2 (\lam x y => suc (suc x) IntRing.* suc y) ide-left ide-left)
           *> inv (rat_alt_makeRat {_} {_} {_} {idp}))))
       zro-left
       (cont2-limit {_} {RealNormed} {_} {_} {\lam n => RatField.finv (suc n)} {\lam _ => 1} harmonic-limit const-limit +-uniform)

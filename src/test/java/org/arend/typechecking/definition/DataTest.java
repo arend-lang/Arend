@@ -61,7 +61,7 @@ public class DataTest extends TypeCheckingTestCase {
     link = link.getNext();
     substitution.add(link, Ref(b));
     List<DependentLink> con1Params = new ArrayList<>();
-    Expression con1Type = typedDef.getConstructors().get(0).getTypeWithParams(con1Params, Levels.EMPTY);
+    Expression con1Type = typedDef.getConstructors().getFirst().getTypeWithParams(con1Params, Levels.EMPTY);
     I.setExplicit(false);
     a.setExplicit(false);
     b.setExplicit(false);
@@ -143,10 +143,11 @@ public class DataTest extends TypeCheckingTestCase {
 
   @Test
   public void constructorTest() {
-    typeCheckModule(
-      "\\data D (n : Nat) (f : Nat -> Nat) | con1 (f n = n) | con2 (f 0 = n)\n" +
-      "\\func f (x : Nat) : D x (\\lam y => y) => con1 idp\n" +
-      "\\func g : D 0 (\\lam y => y) => con2 idp");
+    typeCheckModule("""
+      \\data D (n : Nat) (f : Nat -> Nat) | con1 (f n = n) | con2 (f 0 = n)
+      \\func f (x : Nat) : D x (\\lam y => y) => con1 idp
+      \\func g : D 0 (\\lam y => y) => con2 idp
+      """);
   }
 
   @Test
@@ -158,81 +159,89 @@ public class DataTest extends TypeCheckingTestCase {
 
   @Test
   public void truncatedDataElimError() {
-    typeCheckModule(
-      "\\data S | base | loop I { | left => base | right => base }\n"+
-      "\\truncated \\data MS : \\Prop | con1 | con2 S\n"+
-      "\\sfunc f (x : MS) : Nat | con1 => 0 | con2_ => 1", 1);
+    typeCheckModule("""
+      \\data S | base | loop I { | left => base | right => base }
+      \\truncated \\data MS : \\Prop | con1 | con2 S
+      \\sfunc f (x : MS) : Nat | con1 => 0 | con2_ => 1
+      """, 1);
     assertThatErrorsAre(Matchers.typecheckingError(TruncatedDataError.class));
   }
 
   @Test
   public void constructorsOrderTest() {
-    typeCheckModule(
-      "\\data D\n" +
-      "  | con1 I \\with {\n" +
-      "    | left => con2" +
-      "  }\n" +
-      "  | con2", 1);
+    typeCheckModule("""
+      \\data D
+        | con1 I \\with {
+          | left => con2\
+        }
+        | con2
+      """, 1);
   }
 
   @Test
   public void inductionRecursion() {
     typeCheckModule(
-      "\\func f (d : D) : \\Set | d1 => Nat | d2 x y => \\Pi (a : f x) -> f (y a)\n" +
+      "\\func f (d : D) : \\Set0 | d1 => Nat | d2 x y => \\Pi (a : f x) -> f (y a)\n" +
       "\\data D : \\Set | d1 | d2 (x : D) (f x -> D)");
   }
 
   @Test
   public void propWithConstructors() {
-    typeCheckModule(
-      "\\data D (n : Nat) \\with\n" +
-      "  | 0 => con1\n" +
-      "  | suc _ => con2\n" +
-      "\\func f (n : Nat) : \\Prop => D n");
+    typeCheckModule("""
+      \\data D (n : Nat) \\with
+        | 0 => con1
+        | suc _ => con2
+      \\func f (n : Nat) : \\Prop => D n
+      """);
   }
 
   @Test
   public void propWithConstructorsError() {
-    typeCheckModule(
-      "\\data D (n : Nat) \\with\n" +
-      "  | 0 => con1\n" +
-      "  | _ => con2\n" +
-      "\\func f (n : Nat) : \\Prop => D n", 1);
+    typeCheckModule("""
+      \\data D (n : Nat) \\with
+        | 0 => con1
+        | _ => con2
+      \\func f (n : Nat) : \\Prop => D n
+      """, 1);
     assertThatErrorsAre(typeMismatchError());
   }
 
   @Test
   public void propWithConstructorsError2() {
-    typeCheckModule(
-      "\\data D (n : Nat) \\with\n" +
-      "  | 0 => con1\n" +
-      "  | 0 => con2\n" +
-      "\\func f (n : Nat) : \\Prop => D n", 1);
+    typeCheckModule("""
+      \\data D (n : Nat) \\with
+        | 0 => con1
+        | 0 => con2
+      \\func f (n : Nat) : \\Prop => D n
+      """, 1);
     assertThatErrorsAre(typeMismatchError());
   }
 
   @Test
   public void propTruncatedData() {
-    typeCheckModule(
-      "\\truncated \\data D (A B : \\Prop) : \\Prop\n" +
-      "  | inl A\n" +
-      "  | inr B");
+    typeCheckModule("""
+      \\truncated \\data D (A B : \\Prop) : \\Prop
+        | inl A
+        | inr B
+      """);
   }
 
   @Test
   public void propSum() {
-    typeCheckModule(
-      "\\data D (A B : \\Prop) : \\Prop\n" +
-      "  | inl A\n" +
-      "  | inr B", 1);
+    typeCheckModule("""
+      \\data D (A B : \\Prop) : \\Prop
+        | inl A
+        | inr B
+      """, 1);
   }
 
   @Test
   public void covariantTest() {
-    typeCheckModule(
-      "\\data D (A B : \\Type)\n" +
-      "  | con1 A\n" +
-      "  | con2 B");
+    typeCheckModule("""
+      \\data D (A B : \\Type)
+        | con1 A
+        | con2 B
+      """);
     DataDefinition d = (DataDefinition) getDefinition("D");
     assertTrue(d.isCovariant(0));
     assertTrue(d.isCovariant(1));
@@ -240,10 +249,11 @@ public class DataTest extends TypeCheckingTestCase {
 
   @Test
   public void covariantSigmaTest() {
-    typeCheckModule(
-      "\\data D (A B : \\Type)\n" +
-        "  | con1 (\\Sigma A B)\n" +
-        "  | con2 B");
+    typeCheckModule("""
+      \\data D (A B : \\Type)
+        | con1 (\\Sigma A B)
+        | con2 B
+      """);
     DataDefinition d = (DataDefinition) getDefinition("D");
     assertTrue(d.isCovariant(0));
     assertTrue(d.isCovariant(1));
@@ -251,10 +261,11 @@ public class DataTest extends TypeCheckingTestCase {
 
   @Test
   public void recursiveCovariantTest() {
-    typeCheckModule(
-      "\\data D (A : \\Type)\n" +
-      "  | con1\n" +
-      "  | con2 A (D A)");
+    typeCheckModule("""
+      \\data D (A : \\Type)
+        | con1
+        | con2 A (D A)
+      """);
     DataDefinition d = (DataDefinition) getDefinition("D");
     assertTrue(d.isCovariant(0));
   }
@@ -262,10 +273,11 @@ public class DataTest extends TypeCheckingTestCase {
   @Ignore
   @Test
   public void recursiveCovariantTest2() {
-    typeCheckModule(
-      "\\data D (A B : \\Type)\n" +
-      "  | con1\n" +
-      "  | con2 A (D B A)");
+    typeCheckModule("""
+      \\data D (A B : \\Type)
+        | con1
+        | con2 A (D B A)
+      """);
     DataDefinition d = (DataDefinition) getDefinition("D");
     assertTrue(d.isCovariant(0));
     assertTrue(d.isCovariant(1));
@@ -273,10 +285,11 @@ public class DataTest extends TypeCheckingTestCase {
 
   @Test
   public void nonCovariantTest() {
-    typeCheckModule(
-      "\\data D (A B : \\Type)\n" +
-      "  | con1 (A -> B)\n" +
-      "  | con2 B");
+    typeCheckModule("""
+      \\data D (A B : \\Type)
+        | con1 (A -> B)
+        | con2 B
+      """);
     DataDefinition d = (DataDefinition) getDefinition("D");
     assertFalse(d.isCovariant(0));
     assertTrue(d.isCovariant(1));
@@ -284,20 +297,22 @@ public class DataTest extends TypeCheckingTestCase {
 
   @Test
   public void recursiveNonCovariantTest() {
-    typeCheckModule(
-      "\\data D (A : \\Set)\n" +
-      "  | con1\n" +
-      "  | con2 (D (A -> Nat))");
+    typeCheckModule("""
+      \\data D (A : \\Set)
+        | con1
+        | con2 (D (A -> Nat))
+      """);
     DataDefinition d = (DataDefinition) getDefinition("D");
     assertFalse(d.isCovariant(0));
   }
 
   @Test
   public void recursiveNonCovariantTest2() {
-    typeCheckModule(
-      "\\data D (A B : \\Set)\n" +
-      "  | con1\n" +
-      "  | con2 A (D B (A -> Nat))");
+    typeCheckModule("""
+      \\data D (A B : \\Set)
+        | con1
+        | con2 A (D B (A -> Nat))
+      """);
     DataDefinition d = (DataDefinition) getDefinition("D");
     assertFalse(d.isCovariant(0));
     assertFalse(d.isCovariant(1));
@@ -305,10 +320,11 @@ public class DataTest extends TypeCheckingTestCase {
 
   @Test
   public void recursiveNonCovariantTest3() {
-    typeCheckModule(
-      "\\data D (A B : \\Set)\n" +
-      "  | con1\n" +
-      "  | con2 B (D (B -> Nat) A)");
+    typeCheckModule("""
+      \\data D (A B : \\Set)
+        | con1
+        | con2 B (D (B -> Nat) A)
+      """);
     DataDefinition d = (DataDefinition) getDefinition("D");
     assertFalse(d.isCovariant(0));
     assertFalse(d.isCovariant(1));
@@ -323,36 +339,40 @@ public class DataTest extends TypeCheckingTestCase {
 
   @Test
   public void constructorAndTypeClass() {
-    typeCheckModule(
-      "\\class C | x : Nat\n" +
-      "\\data D (c : C) | con Nat\n" +
-      "\\func f (c : C) => con 0");
+    typeCheckModule("""
+      \\class C | x : Nat
+      \\data D (c : C) | con Nat
+      \\func f (c : C) => con 0
+      """);
   }
 
   @Test
   public void constructorWithPatternsAndTypeClass() {
-    typeCheckModule(
-      "\\class C | x : Nat\n" +
-      "\\data D (c : C) (n : Nat) \\elim n | zero => con Nat\n" +
-      "\\func f (c : C) => con 0");
+    typeCheckModule("""
+      \\class C | x : Nat
+      \\data D (c : C) (n : Nat) \\elim n | zero => con Nat
+      \\func f (c : C) => con 0
+      """);
   }
 
   @Test
   public void constructorWithPatternsAndTypeClass2() {
-    typeCheckModule(
-      "\\class C | x : Nat\n" +
-      "\\data D (n : Nat) (c : C) \\elim n | zero => con Nat\n" +
-      "\\func f (c : C) => con 0");
+    typeCheckModule("""
+      \\class C | x : Nat
+      \\data D (n : Nat) (c : C) \\elim n | zero => con Nat
+      \\func f (c : C) => con 0
+      """);
   }
 
   @Test
   public void recordPositiveTest() {
-    typeCheckModule(
-      "\\record R (A : \\Set) (field : Nat -> A)\n" +
-      "\\data D | con1 (R D) | con2\n" +
-      "\\func test (d : D) : Nat\n" +
-      "  | con1 (r : R) => test (r.field 0)\n" +
-      "  | con2 => 1");
+    typeCheckModule("""
+      \\record R (A : \\Type) (field : Nat -> A)
+      \\data D | con1 (R D) | con2
+      \\func test (d : D) : Nat
+        | con1 r => test (r.field 0)
+        | con2 => 1
+      """);
   }
 
   @Test
@@ -366,7 +386,13 @@ public class DataTest extends TypeCheckingTestCase {
   @Test
   public void truncatedLevelTest2() {
     typeCheckModule(
-      "\\truncated \\data D \\plevels p1 >= p2 (A : \\hType p1) : \\Set\n" +
+      "\\truncated \\data D.{p1,p2} (A : \\Type p1) : \\Set\n" +
       "  | con A");
+  }
+
+  @Test
+  public void constructorTypeTest() {
+    typeCheckDef("\\data D (F : Nat -> \\Set0) | con F", 1);
+    assertThatErrorsAre(typeMismatchError());
   }
 }

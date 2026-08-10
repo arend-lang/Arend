@@ -2,9 +2,10 @@
 \import Logic
 \import Logic.Meta
 \import Order.Lattice
+\import Order.Lattice.CompleteLattice
 \import Order.PartialOrder
 \import Paths.Meta
-\import Set.Subset
+\import Set.Set
 
 \record Filter (A : TopMeetSemilattice) (\coerce F : A -> \Prop)
   | filter-mono {a b : A} : F a -> a <= b -> F b
@@ -20,11 +21,21 @@
 
 \record CompleteFilter \extends Filter {
   \override A : CompleteLattice
-  | filter-Join {J : \Set} {f : J -> A} : F (Join f) -> ∃ (j : J) (F (f j))
+  | filter-Join {C : A -> \Prop} : F (Join C) -> ∃ (w : C) (F w)
+
+  \lemma filter-SJoin {I : \Type} {f : I -> A} {C : I -> \Prop} (FJ : F (CompleteLattice.SJoin f C)) : ∃ (i : C) (F (f i))
+    => \case filter-Join FJ \with {
+      | inP (_, inP ((i,Ci),idp), Ffi) => inP (i, Ci, Ffi)
+    }
+
+  \lemma filter-IJoin {I : \Type} {f : I -> A} (FJ : F (CompleteLattice.IJoin f)) : ∃ (i : I) (F (f i))
+    => \case filter-Join FJ \with {
+      | inP (_, inP (i,idp), Ffi) => inP (i,Ffi)
+    }
 
   \lemma isProper (p : F CompleteLattice.bottom) : Empty
-    => \case filter-Join {_} {Empty} {absurd} (filter-mono p CompleteLattice.bottom-univ) \with {
-      | inP (e,_) => e
+    => \case filter-Join {_} {\lam _ => Empty} (filter-mono p bottom-univ) \with {
+      | inP (_,(),_)
     }
 }
 
@@ -43,7 +54,7 @@
 \record ProperFilter \extends WeaklyProperFilter
   | isProper {U : Set X} : F U -> ∃ U
   | isWeaklyProper Fb => \case isProper Fb \with {
-    | inP (x, inP ((),_))
+    | inP (x, inP (_,(),_))
   }
 
 \func pointFilter {X : \Set} (x : X) : ProperFilter X \cowith
@@ -55,7 +66,7 @@
 
 \func WeaklyProperFilter-map {X Y : \Set} (f : X -> Y) (F : WeaklyProperFilter X) : WeaklyProperFilter Y \cowith
   | SetFilter => SetFilter-map f F
-  | isWeaklyProper d => F.isWeaklyProper $ F.filter-mono d \lam (inP ((),_))
+  | isWeaklyProper d => F.isWeaklyProper $ F.filter-mono d \lam (inP (_,(),_))
 
 \func ProperFilter-map {X Y : \Set} (f : X -> Y) (F : ProperFilter X) : ProperFilter Y \cowith
   | SetFilter => SetFilter-map f F

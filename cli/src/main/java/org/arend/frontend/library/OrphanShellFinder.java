@@ -26,7 +26,7 @@ import java.util.Map;
  * in because its owning module's phase 2b threw partway through. Holding such a
  * shell makes later normalization NPE in {@code GetTypeVisitor.visitFunCall} when
  * {@code FunctionDefinition.getTypeWithParams} short-circuits to null.
- *
+
  * Stops early once {@link #found} flips to true.
  */
 final class OrphanShellFinder extends VoidExpressionVisitor<Void> {
@@ -71,7 +71,7 @@ final class OrphanShellFinder extends VoidExpressionVisitor<Void> {
 
   private void scanParameters(DependentLink link) {
     while (link.hasNext() && !found) {
-      Expression t = link.getTypeExpr();
+      Expression t = link.getType();
       if (t != null) t.accept(this, null);
       link = link.getNext();
     }
@@ -89,7 +89,7 @@ final class OrphanShellFinder extends VoidExpressionVisitor<Void> {
     // fresh, structurally-equal-but-non-identical Definition object.  Any module
     // that captured the original would diverge in object-identity comparisons
     // against the fresh one.  Treat that as an orphan too.
-    Definition live = def.getRef() == null ? null : def.getRef().getTypechecked();
+    Definition live = def.getRef().getTypechecked();
     if (live != def) {
       found = true;
     }
@@ -116,15 +116,13 @@ final class OrphanShellFinder extends VoidExpressionVisitor<Void> {
   @Override
   public Void visitFieldCall(FieldCallExpression expr, Void params) {
     // ClassField is not itself a Definition with status, but its parent class is.
-    ClassField field = expr.getDefinition();
-    if (field != null) check(field.getParentClass());
+    check(expr.getDefinition().getParentClass());
     return found ? null : super.visitFieldCall(expr, params);
   }
 
   @Override
   public Void visitConCall(ConCallExpression expr, Void params) {
-    Constructor c = expr.getDefinition();
-    if (c != null) check(c.getDataType());
+    check(expr.getDefinition().getDataType());
     return found ? null : super.visitConCall(expr, params);
   }
 }

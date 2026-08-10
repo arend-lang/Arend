@@ -2,6 +2,7 @@ package org.arend.psi.ext
 
 import com.intellij.lang.ASTNode
 import com.intellij.psi.PsiElement
+import com.intellij.psi.util.elementType
 import org.arend.psi.ArendElementTypes
 import org.arend.psi.childOfType
 import org.arend.psi.childOfTypeStrict
@@ -22,7 +23,7 @@ class ArendNsId(node: ASTNode) : ArendSourceNodeImpl(node), Abstract.NameRenamin
     val asKw: PsiElement?
         get() = findChildByType(ArendElementTypes.AS_KW)
 
-    override fun getScopeContext() = ArendStatCmd.getScopeContext(firstRelevantChild)
+    override fun isStatic() = firstRelevantChild?.elementType != ArendElementTypes.DOT
 
     override fun getOldReference() = refIdentifier.referent
 

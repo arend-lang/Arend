@@ -6,6 +6,7 @@ import org.arend.core.context.binding.inference.TypeClassInferenceVariable;
 import org.arend.core.expr.Expression;
 import org.arend.core.expr.FieldCallExpression;
 import org.arend.core.sort.Level;
+import org.arend.core.sort.SortExpression;
 import org.arend.ext.core.level.LevelSubstitution;
 import org.arend.ext.core.ops.CMP;
 import org.arend.term.concrete.Concrete;
@@ -27,9 +28,10 @@ public interface Equations {
    */
   void solveEquationsFor(InferenceVariable var);
   boolean addEquation(Level level1, Level level2, CMP cmp, Concrete.SourceNode sourceNode);
+  boolean addEquation(SortExpression sort1, SortExpression sort2, CMP cmp, Concrete.SourceNode sourceNode);
   boolean addVariable(InferenceLevelVariable var);
-  void bindVariables(InferenceLevelVariable pVar, InferenceLevelVariable hVar);
   boolean remove(Equation equation);
+  boolean isUniverseVariable(InferenceVariable var);
   Boolean solveInstance(TypeClassInferenceVariable variable, FieldCallExpression fieldCall, Expression expr);
   void solveEquations();
   LevelEquationsSolver makeLevelEquationsSolver();

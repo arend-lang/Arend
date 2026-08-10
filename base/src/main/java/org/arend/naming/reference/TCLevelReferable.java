@@ -23,7 +23,7 @@ public class TCLevelReferable implements LocatedReferable, LevelReferable {
 
   @Override
   public @NotNull RefKind getRefKind() {
-    return myParent.isPLevels() ? RefKind.PLEVEL : RefKind.HLEVEL;
+    return RefKind.LEVEL;
   }
 
   public LevelDefinition getDefParent() {

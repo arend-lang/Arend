@@ -7,7 +7,7 @@
 \import Paths
 \import Paths.Meta
 \import Set.Filter
-\import Set.Subset
+\import Set.Set
 \import Topology.CoverSpace
 \import Topology.CoverSpace.Complete
 \import Topology.RatherBelow
@@ -117,7 +117,7 @@
 
 \func OpenCompleteCoverSpace {X : CompleteCoverSpace} {S : Set X} (So : X.isOpen S) : CompleteCoverSpace (Total S) \cowith
   | CoverSpace => OpenCoverSpace So
-  | isSeparatedCoverSpace => (Separated-char (OpenCoverSpace So) 3 0 $ inP (X, func So, \lam p => ext p)).isSeparatedCoverSpace
+  | isSeparatedCoverSpace c => Separated-char.fromInj (func So) (\lam p => ext p) c
   | isComplete F =>
     \let | F' => cauchy-filter-extend So F
          | x => X.filter-point F'

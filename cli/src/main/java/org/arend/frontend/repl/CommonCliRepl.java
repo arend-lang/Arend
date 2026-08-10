@@ -4,6 +4,8 @@ import com.fasterxml.jackson.dataformat.yaml.YAMLMapper;
 import org.antlr.v4.runtime.BaseErrorListener;
 import org.antlr.v4.runtime.CharStreams;
 import org.antlr.v4.runtime.CommonTokenStream;
+import org.arend.frontend.ConsoleMain;
+import org.arend.frontend.query.ConsoleQueryTool;
 import org.arend.ext.core.ops.NormalizationMode;
 import org.arend.ext.error.ErrorReporter;
 import org.arend.ext.error.GeneralError;
@@ -38,7 +40,10 @@ import org.jetbrains.annotations.Nls;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.PrintStream;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
@@ -66,6 +71,8 @@ public abstract class CommonCliRepl extends Repl {
   protected String prompt = ">";
   private FileSourceLibrary myReplLibrary;
   private final Map<String, SourceLibrary> myReplLibraries = new HashMap<>();
+  /** Library search path from the {@code -L} option, used to resolve libraries referenced by name. */
+  private final @NotNull List<Path> myLibDirs;
 
   //region Tricky constructors (expand to read more...)
   // These two constructors are used for convincing javac that the
@@ -74,21 +81,31 @@ public abstract class CommonCliRepl extends Repl {
   // and one cannot introduce them as variable before the `this` or
   // `super` call because that's the rule of javac.
   public CommonCliRepl(@NotNull ArendServer server) {
-    this(server, new ListErrorReporter(new ArrayList<>()));
+    this(server, Collections.emptyList());
+  }
+
+  public CommonCliRepl(@NotNull ArendServer server, @NotNull Collection<? extends Path> libDirs) {
+    this(server, libDirs, new ListErrorReporter(new ArrayList<>()));
   }
 
   private CommonCliRepl(
       @NotNull ArendServer server,
+      @NotNull Collection<? extends Path> libDirs,
       @NotNull ListErrorReporter errorReporter) {
     super(
       errorReporter,
       server
     );
+    myLibDirs = List.copyOf(libDirs);
     Path configFile = pwd.resolve(FileUtils.LIBRARY_CONFIG_FILE);
     myReplLibrary = getNewFileSourceLibrary();
-    FileSourceLibrary sourceLibrary = FileSourceLibrary.fromConfigFile(configFile, false, errorReporter);
-    if (sourceLibrary != null) {
-      loadLibrary(sourceLibrary);
+    // Only auto-load the current directory as a project when it actually is one; otherwise starting
+    // the REPL from a directory without an arend.yaml would report a spurious read error.
+    if (Files.isRegularFile(configFile)) {
+      FileSourceLibrary sourceLibrary = FileSourceLibrary.fromConfigFile(configFile, false, errorReporter);
+      if (sourceLibrary != null) {
+        loadLibrary(sourceLibrary);
+      }
     }
     try {
       if (Files.exists(config)) {
@@ -179,6 +196,9 @@ public abstract class CommonCliRepl extends Repl {
   protected void loadCommands() {
     super.loadCommands();
     registerAction("prompt", new ChangePromptCommand());
+    // NOTE: staging registers each org.arend.frontend.query ConsoleQueryTool as a REPL command
+    // here, via ConsoleMain.QUERY_TOOLS. This branch keeps its own CLI wiring (see ConsoleMain),
+    // which has no such registry, so that loop is left out until the query tools are ported.
   }
 
   @Override
@@ -220,7 +240,49 @@ public abstract class CommonCliRepl extends Repl {
       myReplLibraries.put(libraryName, sourceLibrary);
       return sourceLibrary;
     }
+    // Fall back to the library search path (-L) for named libraries not found under pwd.
+    for (Path libDir : myLibDirs) {
+      Path candidate = libDir.resolve(libraryName).resolve(FileUtils.LIBRARY_CONFIG_FILE);
+      if (Files.exists(candidate)) {
+        SourceLibrary sourceLibrary = FileSourceLibrary.fromConfigFile(candidate, false, errorReporter);
+        myReplLibraries.put(libraryName, sourceLibrary);
+        return sourceLibrary;
+      }
+    }
     return null;
+  }
+
+  /**
+   * Loads the libraries requested on the command line together with their declared dependencies, then
+   * for each requested module both loads it (making its definitions available, as {@code :load} does)
+   * and imports it (bringing its names into scope, as {@code :import} does). Errors are reported but
+   * never abort startup — the user can inspect the result or run {@code :reset_context} afterwards.
+   */
+  public void loadStartupTargets(@NotNull Collection<? extends ArendLibrary> libraries, @NotNull Collection<? extends ModulePath> modules) {
+    Set<String> loaded = new HashSet<>();
+    for (ArendLibrary library : libraries) {
+      loadLibraryWithDependencies(library, loaded);
+    }
+    for (ModulePath module : modules) {
+      loadModule(module);
+      checkStatements("\\import " + module);
+      checkErrors();
+    }
+  }
+
+  private void loadLibraryWithDependencies(@NotNull ArendLibrary library, @NotNull Set<String> loaded) {
+    if (!loaded.add(library.getLibraryName())) return;
+    for (String dependency : library.getLibraryDependencies()) {
+      if (loaded.contains(dependency) || myServer.getLibrary(dependency) != null) continue;
+      ArendLibrary dependencyLibrary = createLibrary(dependency);
+      if (dependencyLibrary != null) {
+        loadLibraryWithDependencies(dependencyLibrary, loaded);
+      } else {
+        eprintln("[ERROR] Cannot find dependency library '" + dependency + "' required by '" + library.getLibraryName() + "'.");
+      }
+    }
+    loadLibrary(library);
+    checkErrors();
   }
 
   @Override
@@ -289,6 +351,65 @@ public abstract class CommonCliRepl extends Repl {
     }
     myServer.getModules().stream().filter(module -> module.getLocationKind() == ModuleLocation.LocationKind.GENERATED).map(ModuleLocation::getModulePath).forEach(result::add);
     return result;
+  }
+
+  /**
+   * Body of a REPL search command: receives the resolved library manager, the
+   * search scope (every registered library except the synthetic {@code Repl}
+   * mirror), and the capture stream the tool should write to.
+   */
+  @FunctionalInterface
+  public interface SearchInvocation {
+    void run(@NotNull LibraryManager manager, @NotNull List<SourceLibrary> libs, @NotNull PrintStream capture);
+  }
+
+  /**
+   * Shared scaffolding for the {@code :ss}/{@code :ps}/{@code :fu}/{@code :ch}/{@code :sc}
+   * handlers. Resolves the library manager (printing {@code unavailableMsg} and bailing
+   * if absent), builds the search scope (dropping the synthetic {@code Repl} mirror,
+   * whose duplicate source files would otherwise double hits / make bare-name resolution
+   * ambiguous), then captures everything the tool writes to {@code System.out}/{@code
+   * System.err} and forwards it through the REPL's own stream — so it works for both the
+   * plain and jline REPL. No {@code --json} in the REPL.
+   */
+  public void runSearchCommand(@NotNull String unavailableMsg, @NotNull SearchInvocation body) {
+    @Nullable LibraryManager manager = null;
+    if (myServer instanceof ArendServerImpl arendServer
+        && arendServer.getRequester() instanceof DelegateServerRequester delegate
+        && delegate.requester instanceof CliServerRequester cliServerRequester) {
+      manager = cliServerRequester.getLibraryManager();
+    }
+    if (manager == null) {
+      eprintln(unavailableMsg);
+      return;
+    }
+    List<SourceLibrary> libs = new ArrayList<>();
+    for (String name : manager.getLibraries()) {
+      if (name.equals(REPL_NAME)) continue;
+      SourceLibrary lib = manager.getLibrary(name);
+      if (lib != null) libs.add(lib);
+    }
+    ByteArrayOutputStream buffer = new ByteArrayOutputStream();
+    PrintStream capture = new PrintStream(buffer, true, StandardCharsets.UTF_8);
+    PrintStream realOut = System.out, realErr = System.err;
+    System.setOut(capture);
+    System.setErr(capture);
+    try {
+      body.run(manager, libs, capture);
+    } finally {
+      System.setOut(realOut);
+      System.setErr(realErr);
+    }
+    print(buffer.toString(StandardCharsets.UTF_8));
+  }
+
+  /**
+   * The {@link ConsoleQueryTool.QueryContext} for a REPL query command: the REPL's hot
+   * {@code myServer}, output captured into the command buffer, never JSON, and the
+   * synthetic {@code Repl} library excluded from the search scope.
+   */
+  public ConsoleQueryTool.QueryContext replQueryContext(LibraryManager manager, List<SourceLibrary> libs, PrintStream capture) {
+    return new ConsoleQueryTool.QueryContext(libs, manager, myServer, errorReporter, capture, false, Set.of(REPL_NAME));
   }
 
   private final class ChangePromptCommand implements ReplCommand {

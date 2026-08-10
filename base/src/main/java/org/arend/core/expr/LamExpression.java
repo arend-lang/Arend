@@ -3,8 +3,6 @@ package org.arend.core.expr;
 import org.arend.core.context.param.SingleDependentLink;
 import org.arend.core.expr.visitor.ExpressionVisitor;
 import org.arend.core.expr.visitor.ExpressionVisitor2;
-import org.arend.core.sort.Sort;
-import org.arend.ext.core.level.LevelSubstitution;
 import org.arend.ext.core.expr.AbstractedExpression;
 import org.arend.ext.core.expr.CoreExpressionVisitor;
 import org.arend.ext.core.expr.CoreLamExpression;
@@ -13,26 +11,12 @@ import org.arend.util.Decision;
 import org.jetbrains.annotations.NotNull;
 
 public class LamExpression extends Expression implements CoreLamExpression {
-  private Sort myResultSort;
   private final SingleDependentLink myLink;
   private final Expression myBody;
 
-  public LamExpression(Sort resultSort, SingleDependentLink link, Expression body) {
-    myResultSort = resultSort;
+  public LamExpression(SingleDependentLink link, Expression body) {
     myLink = link;
     myBody = body;
-  }
-
-  public Sort getResultSort() {
-    return myResultSort;
-  }
-
-  public void setResultSort(Sort sort) {
-    myResultSort = sort;
-  }
-
-  public void substSort(LevelSubstitution substitution) {
-    myResultSort = myResultSort.subst(substitution);
   }
 
   @NotNull
@@ -61,7 +45,7 @@ public class LamExpression extends Expression implements CoreLamExpression {
         throw new IllegalArgumentException();
       }
     }
-    return new LamExpression(myResultSort, link, myBody);
+    return new LamExpression(link, myBody);
   }
 
   @Override
@@ -87,11 +71,5 @@ public class LamExpression extends Expression implements CoreLamExpression {
   @Override
   public Expression getStuckExpression() {
     return null;
-  }
-
-  public Expression substArgument(Expression argument) {
-    SingleDependentLink link = myLink.getNext();
-    Expression body = myBody.subst(myLink, argument);
-    return link.hasNext() ? new LamExpression(myResultSort, link, body) : body;
   }
 }

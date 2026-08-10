@@ -13,7 +13,6 @@ import org.arend.psi.*
 import org.arend.psi.ArendElementTypes.*
 import org.arend.psi.ext.*
 import org.arend.server.impl.MultiFileReferenceResolver
-import org.arend.server.impl.SingleFileReferenceResolver
 import org.arend.term.abs.Abstract
 import org.arend.term.abs.Abstract.ClassDefinition
 import org.arend.term.abs.Abstract.ParametersHolder
@@ -26,13 +25,7 @@ data class ArendChangeInfo (
     val locatedReferable: PsiLocatedReferable,
     val multiResolver: MultiFileReferenceResolver
 ) : ChangeInfo {
-
-    private val pLevelsKw = locatedReferable.childrenWithLeaves.firstOrNull {it.elementType == PLEVELS_KW}
-    private val pLevelParam = (locatedReferable as? ArendDefinition<*>)?.pLevelParameters
-    private val pLevelsText = if (pLevelsKw != null && pLevelParam is PsiElement) " ${pLevelsKw.text} ${pLevelParam.text}" else ""
-    private val hLevelsKw = locatedReferable.childrenWithLeaves.firstOrNull {it.elementType == HLEVELS_KW}
-    private val hLevelParam = (locatedReferable as? ArendDefinition<*>)?.hLevelParameters
-    private val hLevelsText = if (hLevelsKw != null && hLevelParam is PsiElement) " ${hLevelsKw.text} ${hLevelParam.text}" else ""
+    private val levelsText = (locatedReferable as? ArendDefinition<*>)?.levelParameters?.let { " .{${it.text}}" } ?: ""
     private val precText = (locatedReferable as? ReferableBase<*>)?.prec?.let { "${it.text} " } ?: ""
     private val aliasText = (locatedReferable as? ReferableBase<*>)?.alias?.let{ " ${it.text}" } ?: ""
     private val extendsText = (locatedReferable as? ClassDefinition)?.let { class1 ->
@@ -55,19 +48,19 @@ data class ArendChangeInfo (
         is ArendConstructor ->
             "${precText}${name}${aliasText}${parametersInfo.parameterText()}${returnPart()}"
         is ArendDefClass ->
-            "${if (d.isRecord) RECORD_KW else CLASS_KW} ${precText}${name}${pLevelsText}${hLevelsText}${aliasText}${parametersInfo.parameterText()}${extendsText}"
+            "${if (d.isRecord) RECORD_KW else CLASS_KW} ${precText}${name}${aliasText}${levelsText}${parametersInfo.parameterText()}${extendsText}"
         is ArendDefData ->
-            "${d.truncatedKw?.text?.let { "$it " } ?: ""}${DATA_KW} ${precText}${name}${pLevelsText}${hLevelsText}${aliasText}${parametersInfo.parameterText()}${returnPart()}"
+            "${d.truncatedKw?.text?.let { "$it " } ?: ""}${DATA_KW} ${precText}${name}${aliasText}${levelsText}${parametersInfo.parameterText()}${returnPart()}"
         is ArendDefFunction ->
-            "${d.functionKw.text} ${precText}${name}${pLevelsText}${hLevelsText}${aliasText}${parametersInfo.parameterText()}${returnPart()}"
+            "${d.functionKw.text} ${precText}${name}${aliasText}${levelsText}${parametersInfo.parameterText()}${returnPart()}"
         is ArendDefInstance ->
-            "$INSTANCE_KW ${precText}${name}${pLevelsText}${hLevelsText}${aliasText}${parametersInfo.parameterText()}${returnPart()}"
+            "$INSTANCE_KW ${precText}${name}${aliasText}${levelsText}${parametersInfo.parameterText()}${returnPart()}"
         else -> throw NotImplementedError()
     }
 
     fun getSignatureEndPositionPsi(): PsiElement? = when (val d = locatedReferable) {
         is ArendConstructor -> d.elim
-        is ArendDefClass -> d.lbrace ?: d.childrenWithLeaves.filter { it.elementType == PIPE }.firstOrNull() ?: d.where
+        is ArendDefClass -> d.lbrace ?: d.childrenWithLeaves.firstOrNull { it.elementType == PIPE } ?: d.where
         is ArendDefData -> d.dataBody ?: d.where
         is ArendFunctionDefinition<*> -> d.body ?: d.where
         else -> null
@@ -101,7 +94,9 @@ data class ArendChangeInfo (
         val returnExpr = getReturnExpr(locatedReferable)
         var colonWhitespace = ""
         var pointer: PsiElement? = returnExpr?.prevSibling
-        while (pointer != null && !locatedReferable.children.contains(pointer)) {
+        // Stop at RBRACE, which is the closing brace of the (inlined) level parameters `.{...}`;
+        // it is a leaf sibling of the returnExpr and would otherwise leak into the reconstructed colon text.
+        while (pointer != null && pointer.elementType != RBRACE && !locatedReferable.children.contains(pointer)) {
             colonWhitespace = pointer.text + colonWhitespace
             pointer = pointer.prevSibling
         }

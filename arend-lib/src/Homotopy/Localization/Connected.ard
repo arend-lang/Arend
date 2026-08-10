@@ -1,6 +1,6 @@
 \import Equiv
 \import Equiv.Sigma
-\import Equiv.Univalence
+\import Function.Meta
 \import Logic.Unique
 \import Homotopy.Fibration
 \import Homotopy.Join
@@ -14,50 +14,53 @@
 \open Localization
 
 -- | A type {X} is connected if, for every local type Z, the constant map (\Sigma -> Z) -> (X -> Z) is an equivalence
-\func isConnectedType {U : Universe} (X : \hType) => \Pi (Z : Local) -> isLocal {nullTypeUniverse X} Z
+\func isConnectedType.{u} {U : Universe.{u}} (X : \Type u)
+  => \Pi (Z : Local) -> (nullTypeUniverse X).isLocal Z
 
 -- | If a type {X} is connected, then its localization is contractible
-\lemma isConnected=>contr {U : ReflUniverse} (X : \hType) (c : isConnectedType X) : Contr (LType X) =>
-  \have c' : Equiv (\lam z _ => z) => propExt.dir (nullTypeUniverse.localDesc X (LType X)) (c (LType X))
-  \in \new Contr {
-    | center => c'.sec lEta
-    | contraction => remove_inL (\lam _ => c'.sec lEta) (\lam x => x) (\lam a => path (\lam i => (c'.f_sec lEta @ i) a))
+\lemma isConnected=>contr.{u} {U : ReflUniverse.{u}} (X : \Type u) (c : isConnectedType X) : Contr (LType X)
+  => \case propExt.dir (nullTypeUniverse.localDesc X (LType X)) (c (LType X)) \with {
+    | inP c' => \new Contr {
+      | center => c'.sec lEta
+      | contraction => remove_inL (\lam _ => c'.sec lEta) (\lam x => x) (\lam a => path (\lam i => (c'.f_sec lEta @ i) a))
+    }
   }
 
 -- | If the localization of a type {X} is contractible, then {X} is connected
-\lemma contr=>isConnected {U : ReflUniverse} (X : \hType) (c : Contr (LType X)) : isConnectedType X
-  => \lam Z => propExt.conv (nullTypeUniverse.localDesc X Z) (\new QEquiv {
+\lemma contr=>isConnected.{u} {U : ReflUniverse.{u}} (X : \Type u) (c : Contr (LType X)) : isConnectedType X
+  => \lam Z => propExt.conv (nullTypeUniverse.localDesc X Z) (inP \new QEquiv {
     | ret g => lift g c.center
     | ret_f z => lift.const z c.center
     | f_sec g => path (\lam i x => (pmap (lift g) (c.contraction (inL x)) *> lift-prop g x) @ i)
   })
 
-\class Connected {U : Universe} (X : \hType) {
+\class Connected.{u} {U : Universe.{u}} (X : \Type u) {
   | connected : isConnectedType X
 
-  \lemma equiv (Z : Local {U}) : Equiv {Z} {X -> Z} (\lam z _ => z) => propExt.dir (nullTypeUniverse.localDesc X Z) (connected Z)
+  \lemma equiv (Z : Local {U}) : IsEquiv {Z} {X -> Z} (\lam z _ => z) => propExt.dir (nullTypeUniverse.localDesc X Z) (connected Z)
 }
 
 -- | Theorem 6.8, Egbert Rijke, The join construction, https://arxiv.org/pdf/1701.07538.pdf
-\lemma connected_join (X Y M N : \hType)
-                      (X-conn : isConnectedType {nullTypeUniverse M} X)
-                      (Y-conn : isConnectedType {nullTypeUniverse N} Y)
+\lemma connected_join.{u}
+  (X Y M N : \Type u)
+  (X-conn : isConnectedType {nullTypeUniverse M} X)
+  (Y-conn : isConnectedType {nullTypeUniverse N} Y)
   : isConnectedType {nullTypeUniverse (Join M N)} (Join X Y)
   => \lam Z => connected_local_join-right Z Y X N Y-conn (connected_local_join-left X Z M N X-conn (local {Z}))
   \where {
     -- | Lemma 6.4
-    \lemma local_join (A A' B : \hType) : (\Pi (f : A' -> B) -> isLocal {nullTypeUniverse A} (\Sigma (b : B) (\Pi (a : A') -> f a = b)))
-                                       = isLocal {nullTypeUniverse (Join A A')} B
+    \lemma local_join.{u} (A A' B : \Type u)
+      : (\Pi (f : A' -> B) -> isLocal {nullTypeUniverse A} (\Sigma (b : B) (\Pi (a : A') -> f a = b))) = (nullTypeUniverse (Join A A')).isLocal B
       => \let | C (f : A' -> B) => \Sigma (b : B) (\Pi (a : A') -> b = f a)
               | F (p : \Sigma (f : A' -> B) (C f)) : \Sigma (f : A' -> B) (A -> C f) => (p.1, \lam _ => p.2)
-              | eq1 => transEquiv (symQEquiv (contr-right (\lam b => lsigma (\lam _ => b))))
+              | eq1 => inP $ transQEquiv (symQEquiv (contr-right (\lam b => lsigma (\lam _ => b))))
                                   (\new QEquiv {\Sigma (b : B) (\Sigma (f : A' -> B) ((\lam _ => b) = f))} {\Sigma (f : A' -> B) (C f)} {
                                     | f p => (p.2.1, (p.1, \lam a => path ((p.2.2 @ __) a)))
                                     | ret p => (p.2.1, (p.1, path (\lam i a => p.2.2 a @ i)))
                                     | ret_f => idpe
                                     | f_sec => idpe
                                   })
-              | eq2 => transEquiv (PushoutData.rec.equiv B)
+              | eq2 => inP $ transQEquiv (PushoutData.rec.equiv B)
                                   (\new QEquiv {\Sigma (f : A -> B) (g : A' -> B) (\Pi (q : \Sigma A A') -> f q.1 = g q.2)} {\Sigma (f : A' -> B) (A -> C f)} {
                                     | f p => (p.2, \lam a => (p.1 a, \lam a' => p.3 (a,a')))
                                     | ret p => ((p.2 __).1, p.1, \lam q => (p.2 q.1).2 q.2)
@@ -66,8 +69,8 @@
                                   })
          \in (\Pi (f : A' -> B) -> isLocal {nullTypeUniverse A} (\Sigma (b : B) (\Pi (a : A') -> f a = b))) ==< path (\lam i => \Pi (f : A' -> B) -> isLocal {nullTypeUniverse A} (\Sigma (b : B) (\Pi (a : A') -> path-sym (f a) b @ i))) >==
              (\Pi (f : A' -> B) -> isLocal {nullTypeUniverse A} (C f))                                      ==< path (\lam i => \Pi (f : A' -> B) -> nullTypeUniverse.localDesc A (C f) @ i) >==
-             (\Pi (f : A' -> B) -> Equiv {C f} {A -> C f} (\lam c _ => c))                                  ==< totalEquiv (\lam f c _ => c) >==
-             Equiv F                                                                                        ==< inv (TwoOutOfThree.parallelEquiv (\lam b _ => b) F eq1 eq2 (\lam _ => idp)) >==
+             (\Pi (f : A' -> B) -> IsEquiv {C f} {A -> C f} (\lam c _ => c))                                ==< totalEquiv (\lam f c _ => c) >==
+             IsEquiv F                                                                                      ==< inv (IsEquiv.parallelEquiv eq1 eq2 (\lam _ => idp)) >==
              {- The left and right maps are equivalences,
                 so the top one is an equivalence iff the bottom one is.
                             \lam b _ => b
@@ -77,22 +80,25 @@
                      v                               v
                 \Sigma (f : A' -> B) (C f) ---> \Sigma (f : A' -> B) (A -> C f)
                                             F   -}
-             Equiv {B} {Join A A' -> B} (\lam b _ => b)                                                     ==< inv (nullTypeUniverse.localDesc (Join A A') B) >==
+             IsEquiv {B} {Join A A' -> B} (\lam b _ => b)                                                   ==< inv (nullTypeUniverse.localDesc (Join A A') B) >==
              isLocal {nullTypeUniverse (Join A A')} B                                                       `qed
 
     -- | Lemma 6.5
-    \lemma connected_local_join-left (X Y M N : \hType)
-                                     (X-conn : isConnectedType {nullTypeUniverse M} X)
-                                     (Y-local : isLocal {nullTypeUniverse (Join M N)} Y)
-      : isLocal {nullTypeUniverse (Join X N)} Y
+    \lemma connected_local_join-left.{u}
+      (X Y M N : \Type u)
+      (X-conn : isConnectedType {nullTypeUniverse M} X)
+      (Y-local : (nullTypeUniverse (Join M N)).isLocal Y)
+      : (nullTypeUniverse (Join X N)).isLocal Y
       => propExt.dir (local_join X N Y) (\lam f => X-conn (\new Local { | S => _ | local => propExt.conv (local_join M N Y) Y-local f }))
 
-    \lemma connected_local_join-right (X Y M N : \hType)
-                                      (Y-conn : isConnectedType {nullTypeUniverse N} Y)
-                                      (X-local : isLocal {nullTypeUniverse (Join M N)} X)
-      : isLocal {nullTypeUniverse (Join M Y)} X
-      => rewriteI (Equiv-to-= (Join-sym Y M))
-                  (connected_local_join-left Y X N M Y-conn (rewriteI (Equiv-to-= (Join-sym M N)) X-local))
+    \lemma connected_local_join-right.{u}
+      (X Y M N : \Type u)
+      (Y-conn : isConnectedType {nullTypeUniverse N} Y)
+      (X-local : (nullTypeUniverse (Join M N)).isLocal X)
+      : (nullTypeUniverse (Join M Y)).isLocal X
+      => rewriteI (path (QEquiv_= (Join-sym Y M)))
+                  (connected_local_join-left Y X N M Y-conn (rewriteI (path (QEquiv_= (Join-sym M N))) X-local))
   }
 
-\func isConnectedMap {U : Universe} {A B : \hType} (f : A -> B) => \Pi (b : B) -> isConnectedType (Fib f b)
+\func isConnectedMap.{u} {U : Universe.{u}} {A B : \Type u} (f : A -> B)
+  => \Pi (b : B) -> isConnectedType (Fib f b)

@@ -1,13 +1,11 @@
 package org.arend.core.subst;
 
-import org.arend.core.context.binding.LevelVariable;
 import org.arend.core.definition.Definition;
 import org.arend.core.sort.Level;
 import org.arend.ext.core.definition.CoreDefinition;
 import org.arend.ext.core.level.CoreLevels;
 import org.arend.ext.core.level.LevelSubstitution;
 import org.arend.ext.core.ops.CMP;
-import org.arend.prelude.Prelude;
 import org.arend.term.concrete.Concrete;
 import org.arend.typechecking.implicitargs.equations.Equations;
 import org.jetbrains.annotations.NotNull;
@@ -26,11 +24,6 @@ public interface Levels extends CoreLevels {
   @Override
   default LevelSubstitution makeSubstitution(@NotNull CoreDefinition definition) {
     return makeSubstitution((Definition) definition);
-  }
-
-  default LevelPair toLevelPair() {
-    LevelSubstitution levelSubst = makeSubstitution(Prelude.DEP_ARRAY);
-    return new LevelPair((Level) levelSubst.get(LevelVariable.PVAR), (Level) levelSubst.get(LevelVariable.HVAR));
   }
 
   Levels EMPTY = new Levels() {
@@ -62,6 +55,11 @@ public interface Levels extends CoreLevels {
     @Override
     public int size() {
       return 0;
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+      return obj instanceof Levels levels && levels.size() == 0;
     }
   };
 }

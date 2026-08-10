@@ -32,7 +32,7 @@ public class SubExprBugsTest extends TypeCheckingTestCase {
 
   @Test
   public void issue180() {
-    Concrete.FunctionDefinition concreteDef = (Concrete.FunctionDefinition) resolveNamesDef("\\func test => \\Pi (A : \\Set) -> A -> A");
+    Concrete.FunctionDefinition concreteDef = (Concrete.FunctionDefinition) resolveNamesDef("\\func test => \\Pi (A : \\Set0) -> A -> A");
     assertNotNull(concreteDef);
     var concrete = (Concrete.PiExpression) concreteDef.getBody().getTerm();
     assertNotNull(concrete);

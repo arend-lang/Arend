@@ -1,0 +1,228 @@
+\import Algebra.Domain
+\import Algebra.Group
+\import Algebra.Meta
+\import Algebra.Monoid
+\import Algebra.Ordered
+\import Algebra.Pointed
+\import Algebra.Semiring
+\import Algebra.StrictlyOrdered
+\import Arith.Complex
+\import Arith.Complex.Euler
+\import Arith.Complex.Norm
+\import Arith.Rat
+\import Arith.Real
+\import Arith.Real.Field
+\import Arith.Trig.ArcTan
+\import Function.Meta
+\import Logic
+\import Logic.Meta
+\import Meta
+\import Order.Biordered
+\import Order.PartialOrder
+\import Order.StrictOrder
+\import Paths
+\import Paths.Meta
+\open Complex \using (iunit \as i)
+\open LatticeAbGroup
+\open OrderedField (pinv, pinv-left, pinv-right, pinv>0)
+\open LinearlyOrderedSemiring (<_*_positive-cancel-right)
+
+{- | Arguments on the unit circle.
+
+     The main results are `unit-arg` — every $u$ with $|u| = 1$ is $e^{i\theta}$
+     for some real $\theta$ — and its polar form `complex-arg`. The latter is
+     what `Arith.Complex.Root.complex-root` turns into $k$-th roots.
+
+     Surjectivity of $\theta \mapsto e^{i\theta}$ is obtained *without* a total
+     inverse trigonometric function: the stereographic parameter `stereo`,
+     $t = \Im u / (1 + \Re u)$, turns `cos-double-arctan` and `sin-double-arctan`
+     into a chart for the open right half of the circle (`arg-right`,
+     `e^i*_arg-right`), and four rotations of that chart — by $1$,
+     $v = \tfrac35 + \tfrac45 i$, $-1$ and $-v$ — cover the whole circle. Picking
+     a chart needs the sign of a real number, which `square>0_sign` extracts from
+     a strictly positive square via locatedness; the identity
+     $25(\Re u)^2 + (3\Re u + 4\Im u)^2 = 10 + 6(2\Re u + \Im u)^2$
+     keeps the two test quantities from vanishing simultaneously.
+
+     `arg-right` is as far as an `atan2`-style *function* can go here. A total
+     argument would need a decision between the charts, but `real-located` and
+     `square>0_sign` deliver that only as a `\Prop`-valued `||`, which cannot be
+     eliminated into `Real`; and no continuous choice exists on the punctured
+     plane in any case. Untruncating via `TruncP.remove` fails too: existence of
+     $\theta$ is constructive on the closed $[-\pi,\pi]$, where uniqueness fails
+     at both endpoints, and unique on the half-open $(-\pi,\pi]$, where existence
+     fails near $u = -1$. So the gluing keeps only the truncated `∃`.
+
+     Still open (see `cos-strict-anti`, which is stated relative to them): the
+     two numeric facts $0 < \pi$ and $\sin > 0$ on $(0,\pi)$. Both need a
+     power-series remainder bound — $|\sin t - t| \leq t^2$ for small $t$, plus
+     an `arctan` tail bound to place $\pi$ below $4$ — which this module does
+     not develop. `sin-double-arctan>0` gives the positivity of $\sin$ only on
+     the chart's image. Nothing else here depends on them. -}
+
+
+-- | $1 + \Re u > 0$ — the denominator of `stereo` is positive.
+\private \lemma denom>0 {u : Complex} (re>0 : u.re > 0) : (0 : Real) < 1 + u.re => linarith
+
+{- | The stereographic (half-angle tangent) parameter $t = \Im u/(1+\Re u)$.
+
+     On the unit circle $t^2 = \tfrac{1-\Re u}{1+\Re u}$, so $|t| < 1$ holds
+     exactly on the open right half plane (`stereo<1`) — which is precisely the
+     domain of `arctan`. This is why the chart below is a half-angle one: the
+     full tangent $\Im u/\Re u$ stays inside $(-1,1)$ only on the horizontal
+     octants. -}
+\func stereo (u : Complex) (re>0 : u.re > 0) : Real => u.im * pinv (1 + u.re) (denom>0 re>0)
+
+-- | $t\,(1 + \Re u) = \Im u$: the denominator of `stereo` cleared.
+\private \lemma stereo-clear {u : Complex} (re>0 : u.re > 0) : stereo u re>0 * (1 + u.re) = u.im
+  => unfold stereo $ *-assoc *> pmap (u.im *) (pinv-left (denom>0 re>0)) *> ide-right
+
+{- | $|t| < 1$ for a unit `u` in the open right half plane, so `arctan` accepts
+     it. By `square_<-cancel` it suffices that $(\Im u)^2 < (1+\Re u)^2$, which
+     on the circle reads $1 - (\Re u)^2 < 1 + 2\Re u + (\Re u)^2$. -}
+\lemma stereo<1 {u : Complex} (unit : OnUnitCircle u) (re>0 : u.re > 0) : abs (stereo u re>0) < 1
+  => \let
+      | d => 1 + u.re
+      | t => stereo u re>0
+     \in \have
+      | resq>0 : u.re * u.re > 0 => RealField.<_*_positive_positive re>0 re>0
+      | unit-im : u.im * u.im = 1 - u.re * u.re => linarith
+      | dd : d * d = 1 + 2 * u.re + u.re * u.re => equation.cRing
+      | td : t * d = u.im => stereo-clear re>0
+      | ntd : negative t * d = negative u.im
+        => (equation.cRing : negative t * d = negative (t * d)) *> pmap negative td
+      | absim<d : abs u.im < d
+        => RealField.square_<-cancel RealAbGroup.abs>=0 (<=-less (denom>0 re>0))
+             (transportInv (`< _) RealField.abs-square (linarith : u.im * u.im < d * d))
+      | cancel-d {s s' : Real} (e : s = s' * d) (b : s < d) : s' < 1
+        => <_*_positive-cancel-right (<=-less (denom>0 re>0)) $ transport2 (<) e (inv ide-left) b
+     \in <_join-univ (cancel-d (inv td) (RealAbGroup.abs>=id <∘r absim<d))
+                     (cancel-d (inv ntd) (RealAbGroup.abs>=neg <∘r absim<d))
+
+{- | The argument of a unit `u` in the open right half plane, $2\arctan t$.
+
+     This is the constructively available analogue of `atan2`: a genuine
+     `Real`-valued function, but only on a chart. There is no total argument
+     function — picking a branch on all of $\mathbb C \setminus \{0\}$ needs a
+     decision that `real-located` can only deliver inside a `\Prop`, and no
+     continuous choice exists anyway. `unit-arg` glues four rotated copies of
+     this chart, and only the truncated `∃` survives the gluing. -}
+\func arg-right {u : Complex} (unit : OnUnitCircle u) (re>0 : u.re > 0) : Real
+  => 2 * arctan (stereo u re>0) (stereo<1 unit re>0)
+
+{- | The chart's defining property: $e^{i\,\mathrm{argRight}(u)} = u$.
+
+     Everything is cleared by scaling with $d^2$, where $d = 1 + \Re u > 0$: on
+     the circle $(1+t^2)d^2 = 2d$, $(1-t^2)d^2 = \Re u\,(2d)$ and
+     $2t\,d^2 = \Im u\,(2d)$, so the two double-angle identities collapse
+     against a single cancellation of $2d$. -}
+\lemma exp^i*_arg-right {u : Complex} (unit : OnUnitCircle u) (re>0 : u.re > 0) : exp^i* (arg-right unit re>0) = u
+  => \let
+      | d => 1 + u.re
+      | t => stereo u re>0
+     \in \have
+      | unit-im : u.im * u.im = 1 - u.re * u.re => linarith
+      | dd : d * d = 1 + 2 * u.re + u.re * u.re => equation.cRing
+      | red : u.re * d = u.re + u.re * u.re => equation.cRing
+      | td : t * d = u.im => stereo-clear re>0
+      | e-plus : (1 + t * t) * (d * d) = 2 * d
+        => (equation.cRing : (1 + t * t) * (d * d) = d * d + (t * d) * (t * d))
+           *> rewrite td (linarith : d * d + u.im * u.im = 2 * d)
+      | e-minus : (1 - t * t) * (d * d) = u.re * (2 * d)
+        => (equation.cRing : (1 - t * t) * (d * d) = d * d - (t * d) * (t * d))
+           *> rewrite td ((linarith : d * d - u.im * u.im = 2 * (u.re * d))
+                          *> (equation.cRing : 2 * (u.re * d) = u.re * (2 * d)))
+      | e-lin : (2 * t) * (d * d) = u.im * (2 * d)
+        => (equation.cRing : (2 * t) * (d * d) = 2 * ((t * d) * d)) *> rewrite td equation.cRing
+      | c>0 : (0 : Real) < 2 * d => linarith
+     \in unfold arg-right $
+         euler
+         *> pmap2 (\lam c s => Complex.fromReal c + i * Complex.fromReal s)
+              (cancel-via c>0 e-plus (cos-double-arctan (stereo<1 unit re>0)) e-minus)
+              (cancel-via c>0 e-plus (sin-double-arctan (stereo<1 unit re>0)) e-lin)
+         *> inv (complex-decomp u)
+  \where {
+    {- | The scaling step shared by the real and imaginary halves of the chart:
+         given $X\,dd = c$ with $c > 0$, $X F = T$ and $T\,dd = R\,c$, conclude
+         $F = R$. Instantiated at $X = 1+t^2$, $dd = d^2$, $c = 2d$. -}
+    \private \lemma cancel-via {X F T R c dd : Real} (c>0 : 0 < c)
+                               (eX : X * dd = c) (eF : X * F = T) (eT : T * dd = R * c) : F = R
+      => Domain.nonZero-cancel-right (StrictPoset.>_/= c>0) $
+           pmap (F *) (inv eX) *> (equation.cRing : F * (X * dd) = (X * F) * dd)
+           *> pmap (`* dd) eF *> eT
+  }
+
+{- | Every point of the unit circle has an argument: $u = e^{i\theta}$.
+
+     The circle is covered by the right half plane and its rotations by $v$,
+     $-1$ and $-v$; `square>0_sign` applied to $\Re u$ and to
+     $B = 3\Re u + 4\Im u$ picks one, and the identity in `key` bounds
+     $25(\Re u)^2 + B^2$ below by $10$, so the two located comparisons against
+     $4 < 5$ always leave a usable branch. -}
+\lemma unit-arg {u : Complex} (unit : OnUnitCircle u) : ∃ (theta : Real) (exp^i* theta = u)
+  => \let | bv => 3 * u.re + 4 * u.im
+          | w => u * conj vrot
+     \in \have
+      | key : 25 * (u.re * u.re) + bv * bv = 10 + 6 * ((2 * u.re + u.im) * (2 * u.re + u.im))
+        => linarith (rewrite unit in
+             (equation.cRing : 25 * (u.re * u.re) + bv * bv
+                             - (10 + 6 * ((2 * u.re + u.im) * (2 * u.re + u.im)))
+                             = 10 * (u.re * u.re + u.im * u.im - 1)))
+      | bound : 25 * (u.re * u.re) + bv * bv >= 10 => linarith (RealField.square_>=0 {2 * u.re + u.im})
+      | unit-w : OnUnitCircle w => OnUnitCircle_* unit (OnUnitCircle_conj vrot-unit)
+      | w-re5 : 5 * w.re = bv => linarith
+      | u-decomp : u = w * vrot => OnUnitCircle-rotate vrot-unit
+     \in \case real-located {25 * (u.re * u.re)} {4} {5} (linarith : (4 : Real) < 5) \with {
+       | byLeft resq-big => \case RealField.square>0-cancel (linarith : (0 : Real) < u.re * u.re) \with {
+         | byLeft re>0 => arg-shift u unit re>0 exp^i*_zro (inv ide-right)
+         | byRight re<0 =>
+           arg-shift (ComplexField.negative u) (OnUnitCircle_negative {u} unit)
+             (linarith : negative u.re > 0) exp^i*_pi (inv complex-ext)
+       }
+       | byRight resq-small =>
+         \have v-eq : exp^i* (arg-right vrot-unit vrot-re>0) = vrot => exp^i*_arg-right vrot-unit vrot-re>0
+         \in \case RealField.square>0-cancel (linarith : (0 : Real) < bv * bv) \with {
+           | byLeft bv>0 => arg-shift w unit-w (linarith : w.re > 0) v-eq u-decomp
+           | byRight bv<0 =>
+             arg-shift (ComplexField.negative w) (OnUnitCircle_negative {w} unit-w)
+                       (linarith : negative w.re > 0)
+                       (exp^i*_+ *> pmap2 (*) exp^i*_pi v-eq
+                        *> (complex-ext : ComplexField.negative 1 * vrot = ComplexField.negative vrot))
+                       (u-decomp *> inv complex-ext)
+         }
+     }
+  \where {
+    {- | Glue for the four charts: if `w` is a unit in the right half plane,
+         $\rho = e^{i\psi}$ and $u = w\rho$, then `u` has an argument too. All
+         four branches of `unit-arg` go through this — the right half plane
+         itself is the case $\rho = 1$, $\psi = 0$. -}
+    \private \lemma arg-shift {u : Complex} (w : Complex) (unit-w : OnUnitCircle w) (w-re>0 : w.re > 0)
+                              {rho : Complex} {psi : Real}
+                              (rho-eq : exp^i* psi = rho) (u-eq : u = w * rho)
+      : ∃ (theta : Real) (exp^i* theta = u)
+      => inP (arg-right unit-w w-re>0 + psi,
+              exp^i*_+ *> pmap2 (*) (exp^i*_arg-right unit-w w-re>0) rho-eq *> inv u-eq)
+
+    -- | The explicit rotation $v = \tfrac35 + \tfrac45 i$, a unit in the right half plane.
+    \private \func vrot : Complex => \new Complex (ratio 3 5) (ratio 4 5)
+
+    \private \lemma vrot-unit : OnUnitCircle vrot => linarith
+
+    \private \lemma vrot-re>0 : vrot.re > 0 => linarith
+  }
+
+-- | Polar decomposition: every nonzero `z` is $|z|\,e^{i\theta}$.
+\lemma complex-arg {z : Complex} (rho>0 : 0 < cabs z)
+  : ∃ (theta : Real) (z = Complex.fromReal (cabs z) * exp^i* theta)
+  => \let u => Complex.fromReal (pinv (cabs z) rho>0) * z
+     \in \have
+      | cabs-u=1 : cabs u = 1
+        => cabs_* *> pmap (`* cabs z) (cabs_fromReal *> LatticeAbGroup.abs-ofPos (<=-less (pinv>0 rho>0)))
+           *> pinv-left rho>0
+      | z-eq : Complex.fromReal (cabs z) * u = z
+        => inv *-assoc
+           *> pmap (`* z) (inv Complex.fromReal_* *> pmap Complex.fromReal (pinv-right rho>0))
+           *> ide-left
+     \in \case unit-arg {u} (cabs=1_OnUnitCircle {u} cabs-u=1) \with {
+       | inP (theta, u-eq) => inP (theta, inv (pmap (Complex.fromReal (cabs z) *) u-eq *> z-eq))
+     }

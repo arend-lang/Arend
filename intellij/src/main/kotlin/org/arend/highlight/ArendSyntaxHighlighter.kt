@@ -24,11 +24,11 @@ class ArendSyntaxHighlighter : SyntaxHighlighterBase() {
             ArendElementTypes.ID -> ArendHighlightingColors.IDENTIFIER
             ArendElementTypes.NUMBER, ArendElementTypes.NEGATIVE_NUMBER -> ArendHighlightingColors.NUMBER
             ArendElementTypes.STRING -> ArendHighlightingColors.STRING
-            ArendElementTypes.PROP_KW, ArendElementTypes.SET, ArendElementTypes.UNIVERSE, ArendElementTypes.TRUNCATED_UNIVERSE -> ArendHighlightingColors.UNIVERSE
+            ArendElementTypes.PROP_KW, ArendElementTypes.SET_KW, ArendElementTypes.SET, ArendElementTypes.UNIVERSE, ArendElementTypes.TRUNCATED_UNIVERSE -> ArendHighlightingColors.UNIVERSE
             in AREND_KEYWORDS -> ArendHighlightingColors.KEYWORD
             ArendElementTypes.UNDERSCORE, ArendElementTypes.APPLY_HOLE -> ArendHighlightingColors.IMPLICIT
 
-            ArendElementTypes.INFIX, ArendElementTypes.POSTFIX, ArendElementTypes.LESS_OR_EQUALS, ArendElementTypes.GREATER_OR_EQUALS -> ArendHighlightingColors.OPERATORS
+            ArendElementTypes.INFIX, ArendElementTypes.POSTFIX -> ArendHighlightingColors.OPERATORS
             ArendElementTypes.DOT -> ArendHighlightingColors.DOT
             ArendElementTypes.COMMA -> ArendHighlightingColors.COMMA
             ArendElementTypes.COLON -> ArendHighlightingColors.COLON

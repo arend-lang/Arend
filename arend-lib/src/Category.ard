@@ -1,4 +1,3 @@
-\import Algebra.Meta
 \import Equiv
 \import Equiv.Path
 \import Function.Meta ($)
@@ -8,14 +7,12 @@
 \import Paths.Meta
 \import Set
 
-\plevels obj >= hom
-
-\class Precat (Ob : \hType obj) {
-  | Hom : Ob -> Ob -> \Set hom
-  | id (X : Ob) : Hom X X
+\class Precat (Ob : \Type) {
+  | Hom : Ob -> Ob -> \Set
+  | id {X : Ob} : Hom X X
   | \fixl 8 o \alias \infixl 8 ∘ {X Y Z : Ob} : Hom Y Z -> Hom X Y -> Hom X Z
-  | id-left {X Y : Ob} {f : Hom X Y} : id Y ∘ f = f
-  | id-right {X Y : Ob} {f : Hom X Y} : f ∘ id X = f
+  | id-left {X Y : Ob} {f : Hom X Y} : id ∘ f = f
+  | id-right {X Y : Ob} {f : Hom X Y} : f ∘ id = f
   | o-assoc {X Y Z W : Ob} {h : Hom Z W} {g : Hom Y Z} {f : Hom X Y} : (h ∘ g) ∘ f = h ∘ (g ∘ f)
 
   \func \infixl 8 >> {x y z : Ob} (f : Hom x y) (g : Hom y z) => g ∘ f
@@ -23,7 +20,7 @@
   \protected \func op : Precat \cowith
     | Ob => Ob
     | Hom x y => Hom y x
-    | id x => id x
+    | id => id
     | o g f => o f g
     | id-left => id-right
     | id-right => id-left
@@ -31,9 +28,21 @@
 
   \func idtoiso {a b : Ob} (p : a = b) : Iso {_} {a} {b} \elim p
     | idp => idIso
-}
 
-\meta SmallPrecat => Precat \lp
+  \func =_hom {a b : Ob} (p : a = b) : Hom a b
+    => (idtoiso p).f
+
+  \lemma transport_Hom {x1 y1 x2 y2 : Ob} (p1 : x1 = y1) (p2 : x2 = y2) {g : Hom x1 x2} {f : Hom y1 y2}
+                       (h : transport (Hom x2) p2 id ∘ g = f ∘ transport (Hom x1) p1 id)
+    : coe (\lam i => Hom (p1 @ i) (p2 @ i)) g right = f \elim p1, p2
+    | idp, idp => inv id-left *> h *> id-right
+
+  \lemma transport_Hom-left {x y z : Ob} (p : x = y) {g : Hom x z} {f : Hom y z} (h : g = f ∘ transport (Hom x) p id) : transport (Hom __ z) p g = f \elim p
+    | idp => h *> id-right
+
+  \lemma transport_Hom-right {x y z : Ob} (p : x = y) {g : Hom z x} {f : Hom z y} (h : transport (Hom x) p id ∘ g = f) : transport (Hom z) p g = f \elim p
+    | idp => inv id-left *> h
+}
 
 \open Precat (>>)
 
@@ -46,46 +55,46 @@
       | isMono p => f.isMono (g.isMono (inv o-assoc *> p *> o-assoc))
   }
 
-\func isEpi {C : Precat} {x y : C} (f : Hom x y) => \Pi {z : C} {g h : Hom y z} -> g ∘ f = h ∘ f -> g = h
+\func IsEpi {C : Precat} {x y : C} (f : Hom x y) => \Pi {z : C} {g h : Hom y z} -> g ∘ f = h ∘ f -> g = h
 
 \record SplitMono \extends Mono {
   | hinv : Hom cod dom
-  | hinv_f : hinv ∘ f = id dom
+  | hinv_f : hinv ∘ f = id
   | isMono {_} {g} {h} gf=hf =>
     g               ==< inv id-left >==
-    g >> id dom     ==< pmap (g >>) (inv hinv_f) >==
+    g >> id         ==< pmap (g >>) (inv hinv_f) >==
     g >> (f >> hinv) ==< o-assoc >==
     (g >> f) >> hinv ==< pmap (o hinv) gf=hf >==
     (h >> f) >> hinv ==< inv o-assoc >==
     h >> (f >> hinv) ==< pmap (h >>) hinv_f >==
-    h >> id dom     ==< id-left >==
+    h >> id         ==< id-left >==
     h               `qed
 
   \lemma adjointMap {z : C} {g : Hom z dom} {h : Hom z cod} (p : f ∘ g = h) : g = hinv ∘ h
-    => inv id-left *> pmap (`∘ g) (inv hinv_f) *> o-assoc *> pmap (hinv ∘) p
+    => inv id-left *> pmap (∘ g) (inv hinv_f) *> o-assoc *> pmap (hinv ∘) p
 }
 
 \record Iso \extends SplitMono {
-  | f_hinv : f ∘ hinv = id cod
+  | f_hinv : f ∘ hinv = id
 
   \lemma adjointMapInv {z : C} {g : Hom z dom} {h : Hom z cod} (p : g = hinv ∘ h) : f ∘ g = h
-    => pmap (f ∘) p *> inv o-assoc *> pmap (`∘ h) f_hinv *> id-left
+    => pmap (f ∘) p *> inv o-assoc *> pmap (∘ h) f_hinv *> id-left
 
   \lemma adjointMap' {z : C} {g : Hom cod z} {h : Hom dom z} (p : g ∘ f = h) : g = h ∘ hinv
-    => inv id-right *> pmap (g ∘) (inv f_hinv) *> inv o-assoc *> pmap (`∘ hinv) p
+    => inv id-right *> pmap (g ∘) (inv f_hinv) *> inv o-assoc *> pmap (∘ hinv) p
 
-  \lemma -o_Equiv {z : C} : Equiv {Hom cod z} {Hom dom z} (__ ∘ f)
-    => \new QEquiv {
+  \lemma -o_Equiv {z : C} : IsEquiv {Hom cod z} {Hom dom z} (__ ∘ f)
+    => inP \new QEquiv {
          | ret h => h ∘ hinv
          | ret_f h => o-assoc *> pmap (h ∘) f_hinv *> id-right
          | f_sec h => o-assoc *> pmap (h ∘) hinv_f *> id-right
        }
 
-  \lemma o-_Equiv {z : C} : Equiv {Hom z dom} {Hom z cod} (f ∘ __)
-    => \new QEquiv {
+  \lemma o-_Equiv {z : C} : IsEquiv {Hom z dom} {Hom z cod} (f ∘ __)
+    => inP \new QEquiv {
          | ret h => hinv ∘ h
-         | ret_f h => inv o-assoc *> pmap (`∘ _) hinv_f *> id-left
-         | f_sec h => inv o-assoc *> pmap (`∘ _) f_hinv *> id-left
+         | ret_f h => inv o-assoc *> pmap (∘ _) hinv_f *> id-left
+         | f_sec h => inv o-assoc *> pmap (∘ _) f_hinv *> id-left
        }
 
   \protected \func reverse : Iso => \new Iso hinv f f_hinv hinv_f
@@ -98,39 +107,39 @@
     \use \level levelProp {C : Precat} {x y : C} (f : Hom x y) (e e' : Iso f) => equals e e' idp
 
     \lemma hinv-unique {C : Precat} {x y : C} (e : SplitMono {C} {x} {y}) (e' : Iso {C} {x} {y}) (p : e.f = e'.f) : e.hinv = e'.hinv
-      => inv (o-assoc *> pmap (_ ∘) (pmap (`∘ _) p *> e'.f_hinv) *> id-right) *> pmap (`∘ _) e.hinv_f *> id-left
+      => inv (o-assoc *> pmap (_ ∘) (pmap (∘ _) p *> e'.f_hinv) *> id-right) *> pmap (∘ _) e.hinv_f *> id-left
 
     \lemma rightFactor {C : Precat} {x y z : C} (f : Hom x y) (e2 : Mono {C} {y} {z}) (e3 : Iso (e2.f ∘ f)) : Iso f \cowith
       | hinv => e3.hinv ∘ e2
       | hinv_f => o-assoc *> e3.hinv_f
-      | f_hinv => e2.isMono (rewriteEq e3.f_hinv (inv (rewriteEq id-right idp)))
+      | f_hinv => e2.isMono $ inv o-assoc *> inv o-assoc *> pmap (∘ _) e3.f_hinv *> id-left *> inv id-right
 
-    \lemma leftFactor {C : Precat} {x y z : C} {f : Hom x y} (e : isEpi f) (g : Hom y z) (e3 : Iso (g ∘ f)) : Iso g
+    \lemma leftFactor {C : Precat} {x y z : C} {f : Hom x y} (e : IsEpi f) (g : Hom y z) (e3 : Iso (g ∘ f)) : Iso g
       => Iso.op {rightFactor {C.op} g (\new Mono f e) e3.op}
 
     \lemma composite {C : Precat} {x y z : C} (f : Iso {C} {x} {y}) (g : Iso {C} {y} {z}) : Iso (g.f ∘ f.f) \cowith
       | hinv => f.hinv ∘ g.hinv
-      | hinv_f => rewriteEq g.hinv_f (rewriteEq f.hinv_f idp)
-      | f_hinv => rewriteEq f.f_hinv (rewriteEq g.f_hinv idp)
+      | hinv_f => o-assoc *> pmap (_ ∘) (inv o-assoc *> pmap (∘ _) g.hinv_f *> id-left) *> f.hinv_f
+      | f_hinv => o-assoc *> pmap (_ ∘) (inv o-assoc *> pmap (∘ _) f.f_hinv *> id-left) *> g.f_hinv
 }
 
-\func idIso {C : Precat} {x : C} : Iso (id x) \cowith
-  | hinv => id x
+\func idIso {C : Precat} {x : C} : Iso (id {_} {x}) \cowith
+  | hinv => id
   | f_hinv => id-left
   | hinv_f => id-right
 
 \func oIso {C : Precat} {x y z : C} (e : Iso {C} {x} {y}) (f : Iso {C} {y} {z}) : Iso {C} {x} {z} \cowith
   | f => f.f ∘ e.f
   | hinv => e.hinv ∘ f.hinv
-  | f_hinv => o-assoc *> pmap (_ ∘) (inv o-assoc *> pmap (`∘ _) e.f_hinv *> id-left) *> f.f_hinv
-  | hinv_f => o-assoc *> pmap (_ ∘) (inv o-assoc *> pmap (`∘ _) f.hinv_f *> id-left) *> e.hinv_f
+  | f_hinv => o-assoc *> pmap (_ ∘) (inv o-assoc *> pmap (∘ _) e.f_hinv *> id-left) *> f.f_hinv
+  | hinv_f => o-assoc *> pmap (_ ∘) (inv o-assoc *> pmap (∘ _) f.hinv_f *> id-left) *> e.hinv_f
 
 \class Cat \extends Precat {
-  | univalence {a b : Ob} : Equiv (idtoiso {_} {a} {b})
+  | univalence {a b : Ob} : IsEquiv (idtoiso {_} {a} {b})
 
   \protected \func op : Cat \cowith
     | Precat => Precat.op
-    | univalence => univalenceFromEquiv {Precat.op} (\lam {a} {b} => transEquiv univalence $ later \new QEquiv {
+    | univalence => univalenceFromQEquiv {Precat.op} (\lam {a} {b} => transQEquiv (IsEquiv.toQEquiv univalence) $ later \new QEquiv {
       | f (e : Iso) => e.op.reverse
       | ret (e : Iso) => e.op.reverse
       | ret_f => idpe
@@ -138,55 +147,48 @@
     }) (\lam {c} => idp)
 
   \func isotoid {a b : Ob} (e : Iso {\this} {a} {b}) : a = b
-    => univalence.ret e
+    => IsEquiv.ret univalence e
 
-  \lemma transport_iso (e : Iso {\this}) : transport (Hom e.dom) (isotoid e) (id e.dom) = e
-    => Jl (\lam b p => transport (Hom e.dom) p (id e.dom) = idtoiso p) idp (isotoid e) *> path (\lam i => Iso.f {univalence.f_ret e i})
+  \lemma idtoiso_isotoid {a b : Ob} {e : Iso {\this} {a} {b}} : (idtoiso (isotoid e)).f = e.f
+    => path \lam i => (IsEquiv.f_ret univalence i).f
 
-  \func univalenceToTransport (e : Iso {\this}) : \Sigma (p : e.dom = e.cod) (transport (Hom e.dom) p (id e.dom) = e)
+  \lemma transport_iso (e : Iso {\this}) : transport (Hom e.dom) (isotoid e) id = e
+    => Jl (\lam b p => transport (Hom e.dom) p id = idtoiso p) idp (isotoid e) *> path (\lam i => (IsEquiv.f_ret univalence i).f)
+
+  \func univalenceToTransport (e : Iso {\this}) : \Sigma (p : e.dom = e.cod) (transport (Hom e.dom) p id = e)
     => (isotoid e, transport_iso e)
-
-  \lemma transport_Hom {x1 y1 x2 y2 : Ob} (p1 : x1 = y1) (p2 : x2 = y2) {g : Hom x1 x2} {f : Hom y1 y2}
-                       (h : g >> transport (Hom x2) p2 (id x2) = transport (Hom x1) p1 (id x1) >> f)
-    : coe (\lam i => Hom (p1 @ i) (p2 @ i)) g right = f \elim p1, p2
-    | idp, idp => inv id-left *> h *> id-right
-
-  \lemma transport_Hom-left {x y z : Ob} (p : x = y) {g : Hom x z} {f : Hom y z} (h : g = transport (Hom x) p (id x) >> f) : transport (`Hom z) p g = f \elim p
-    | idp => h *> id-right
-
-  \lemma transport_Hom-right {x y z : Ob} (p : x = y) {g : Hom z x} {f : Hom z y} (h : g >> transport (Hom x) p (id x) = f) : transport (Hom z) p g = f \elim p
-    | idp => inv id-left *> h
 
 
   \lemma transport_Hom_iso (e1 e2 : Iso {\this}) {g : Hom e1.dom e2.dom} {f : Hom e1.cod e2.cod}
                            (h : g >> e2.f = e1.f >> f)
     : coe (\lam i => Hom (isotoid e1 @ i) (isotoid e2 @ i)) g right = f
-    => transport_Hom (isotoid e1) (isotoid e2) (pmap (g >>) (transport_iso e2) *> h *> pmap (`>> f) (inv (transport_iso e1)))
+    => transport_Hom (isotoid e1) (isotoid e2) (pmap (g >>) (transport_iso e2) *> h *> pmap (>> f) (inv (transport_iso e1)))
 
-  \lemma transport_Hom_iso-left (e : Iso {\this}) {z : Ob} (g : Hom e.dom z) {f : Hom e.cod z} (h : g = e.f >> f) : transport (`Hom z) (isotoid e) g = f
-    => transport_Hom-left (isotoid e) (h *> pmap (`>> f) (inv (transport_iso e)))
+  \lemma transport_Hom_iso-left (e : Iso {\this}) {z : Ob} (g : Hom e.dom z) {f : Hom e.cod z} (h : g = e.f >> f) : transport (Hom __ z) (isotoid e) g = f
+    => transport_Hom-left (isotoid e) (h *> pmap (>> f) (inv (transport_iso e)))
 
   \lemma transport_Hom_iso-right (e : Iso {\this}) {z : Ob} (g : Hom z e.dom) {f : Hom z e.cod} (h : g >> e.f = f) : transport (Hom z) (isotoid e) g = f
     => transport_Hom-right (isotoid e) (pmap (g >>) (transport_iso e) *> h)
 } \where {
-  \lemma univalenceFromEquiv {C : Precat} (e : \Pi {a b : C} -> Equiv {a = b} {Iso {C} {a} {b}}) (i : \Pi {a : C} -> Iso.f {e (idpe a)} = id a) {a b : C} : Equiv (C.idtoiso {a} {b})
-    => \let t : e.f = C.idtoiso {a} {b} => ext (\case \elim b, \elim __ \with {
+  \lemma univalenceFromQEquiv {C : Precat} (e : \Pi {a b : C} -> QEquiv {a = b} {Iso {C} {a} {b}}) (i : \Pi {a : C} -> (e (idpe a)).f = id) {a b : C} : IsEquiv (C.idtoiso {a} {b})
+    => \have t : e.f = C.idtoiso {a} {b} => ext (\case \elim b, \elim __ \with {
       | b, idp => Iso.equals _ _ i
-    }) \in transport (Equiv __) t e
+    }) \in transport (IsEquiv __) t (inP e)
 
-  \lemma makeUnivalence {C : Precat} (c : \Pi (e : Iso {C}) -> \Sigma (p : e.dom = e.cod) (transport (Hom e.dom) p (id e.dom) = e)) {a b : C} : Equiv (C.idtoiso {a} {b})
-    => pathEquiv (\lam a b => Iso {C} {a} {b}) (\lam {a} {b} => \new Retraction {
+  \lemma makeUnivalence {C : Precat} (c : \Pi (e : Iso {C}) -> \Sigma (p : e.dom = e.cod) (transport (Hom e.dom) p id = e)) {a b : C} : IsEquiv (C.idtoiso {a} {b})
+    => inP $ pathEquiv (\lam a b => Iso {C} {a} {b}) (\lam {a} {b} => \new Retraction {
       | f => C.idtoiso
       | sec e => (c e).1
-      | f_sec (e : Iso) => Iso.equals _ _ (Jl (\lam b p => Iso.f {C.idtoiso p} = transport (Hom e.dom) p (id e.dom)) idp (c e).1 *> (c e).2)
+      | f_sec (e : Iso) => Iso.equals _ _ (Jl (\lam b p => C.=_hom p = transport (Hom e.dom) p id) idp (c e).1 *> (c e).2)
     })
-}
 
-\meta SmallCat => Cat \lp
+  \lemma makeUnivalenceFromPath {C : Precat} (c : \Pi (e : Iso {C}) -> \Sigma (p : e.dom = e.cod) (Path (\lam i => Hom e.dom (p i)) id e)) {a b : C} : IsEquiv (C.idtoiso {a} {b})
+    => makeUnivalence \lam e => ((c e).1, pathOver.conv (c e).2)
+}
 
 \func DiscretePrecat (X : \Type) : Precat X \cowith
   | Hom x y => Trunc0 (x = y)
-  | id x => in0 idp
+  | id => in0 idp
   | o {x y z : X} (t : Trunc0 (y = z)) (s : Trunc0 (x = y)) : Trunc0 (x = z) \elim t, s {
     | in0 y=z, in0 x=y => in0 (x=y *> y=z)
   }
@@ -195,16 +197,42 @@
   | o-assoc {_} {_} {_} {_} {p} {q} {r} => cases (p,q,r) (pmap in0 (inv (*>-assoc _ _ _)))
   \where {
     \func map {X : \Type} {D : Precat} (f : X -> D) {x y : X} (h : Hom {DiscretePrecat X} x y) : Hom (f x) (f y) \elim h
-      | in0 idp => id _
+      | in0 idp => id
   }
 
-\sfunc SIP (C : Cat) (Str : C -> \hType (\suc \lp)) (isHom : \Pi {x y : C} -> Str x -> Str y -> Hom x y -> \hType (\suc \lp))
-           (st : \Pi {X : C} {S1 S2 : Str X} -> isHom S1 S2 (id X) -> isHom S2 S1 (id X) -> S1 = S2)
-           {X Y : C} (e : Iso {C} {X} {Y}) (S1 : Str X) (S2 : Str Y) (p : isHom S1 S2 e) (q : isHom S2 S1 e.hinv)
-  : \Sigma (p : X = Y) (Path (\lam i => Str (p @ i)) S1 S2) (transport (Hom X) p (id X) = e)
-  => \case \elim Y, \elim e, \elim S2, p, q, Cat.univalenceToTransport e \with {
-    | Y, e : Iso, S2, p, q, (idp,s) => (idp, st (transportInv (isHom S1 S2) s p) (transport (isHom S2 S1) (inv id-right *> pmap (∘ e.hinv) s *> e.hinv_f) q), s)
+\sfunc SIP (C : Cat) (Str : C -> \Type) (isHom : \Pi {x y : C} -> Str x -> Str y -> Hom x y -> \Type)
+           (st : \Pi {x : C} {S1 S2 : Str x} -> isHom S1 S2 id -> isHom S2 S1 id -> S1 = S2)
+           {x y : C} (e : Iso {C} {x} {y}) (S1 : Str x) (S2 : Str y) (p : isHom S1 S2 e) (q : isHom S2 S1 e.hinv)
+  : \Sigma (p : x = y) (Path (\lam i => Str (p i)) S1 S2) (transport (Hom x) p id = e)
+  => \case \elim y, \elim e, \elim S2, p, q, Cat.univalenceToTransport e \with {
+    | y, (_,g,gf,fg), S2, p, q, (idp,idp) => (idp, st p $ transport (isHom S2 S1) (inv id-right *> gf) q, idp)
   }
+
+\sfunc SIP-gen (C : Cat)
+  (Str : C -> \Type) (dHom : \Pi {x y : C} -> Str x -> Str y -> Hom x y -> \Type) (dHom_id : \Pi {x : C} {S : Str x} -> dHom S S id)
+  (isIso : \Pi {x y : C} {S1 : Str x} {S2 : Str y} {f : Hom x y} -> dHom S1 S2 f -> \Type)
+  (st : \Pi {x : C} {S1 S2 : Str x} {f : dHom S1 S2 id} -> isIso f -> \Sigma (p : S1 = S2) (Path (\lam i => dHom S1 (p i) id) dHom_id f))
+  {x y : C} (e : Iso {C} {x} {y}) (S1 : Str x) (S2 : Str y) (p : dHom S1 S2 e) (pi : isIso p)
+  : \Sigma (r1 : x = y) (r2 : Path (\lam i => Str (r1 i)) S1 S2) (r3 : Path (\lam i => Hom x (r1 i)) id e) (Path (\lam i => dHom S1 (r2 i) (r3 i)) dHom_id p)
+  => \case \elim y, \elim e, \elim S2, \elim p, \elim pi, Cat.univalenceToTransport e \with {
+    | y, (_,g,g=id,_), S2, p, pi, (idp,idp) => (idp, (st pi).1, idp, (st pi).2)
+  }
+
+\sfunc SIP-comb (C : Cat) (D : C -> Cat)
+  (Str : C -> \Type) (dHom : \Pi {x y : C} -> Str x -> Str y -> Hom x y -> \Type)
+  (isIso : \Pi {x y : C} {S1 : Str x} {S2 : Str y} {f : Hom x y} -> dHom S1 S2 f -> \Type)
+  (dHom_id : \Pi {x : C} {S : Str x} -> dHom S S id) (dHom_idIso : \Pi {x : C} {S : Str x} -> isIso (dHom_id {x} {S}))
+  (do : \Pi {x : C} -> Embedding {Str x} {D x}) (dh : \Pi {x : C} {S1 S2 : Str x} (f : dHom S1 S2 id) (fi : isIso f) -> Iso {D x} {do S1} {do S2})
+  (dh_id : \Pi {x : C} {S : Str x} -> (dh (dHom_id {x} {S}) dHom_idIso).f = id)
+  (dhi : \Pi {x : C} {S1 S2 : Str x} (f g : dHom S1 S2 id) (fi : isIso f) (gi : isIso g) -> (dh f fi).f = (dh g gi).f -> f = g)
+  {x y : C} (e : Iso {C} {x} {y}) (S1 : Str x) (S2 : Str y) (p : dHom S1 S2 e) (pi : isIso p)
+  : \Sigma (r1 : x = y) (r2 : Path (\lam i => Str (r1 i)) S1 S2) (r3 : Path (\lam i => Hom x (r1 i)) id e) (Path (\lam i => dHom S1 (r2 i) (r3 i)) dHom_id p)
+  => SIP-gen C Str dHom dHom_id isIso (\lam {x} {S1} fi =>
+    \let | S1=S2 => do.pmap-isEquiv.ret $ Cat.isotoid (dh _ fi)
+         | g {S : Str x} (p : S1 = S) => transport (dHom S1 __ id) p dHom_id
+         | gi {S : Str x} (p : S1 = S) => Jl (\lam S S1=S => isIso (g S1=S)) dHom_idIso p
+    \in (S1=S2, pathOver $ dhi (g S1=S2) _ (gi S1=S2) fi $ Jl (\lam S p => (dh (g p) (gi p)).f = transport (Hom (do S1)) (do.pmap-isEquiv p) id) dh_id S1=S2 *>
+                  pmap (transport (Hom _) __ _) (do.pmap-isEquiv.f_ret _) *> Cat.transport_iso _)) e S1 S2 p pi
 
 \class Graph (\coerce V : \Set) (E : V -> V -> \Set) {
   \data Paths (x y : V)
@@ -225,7 +253,7 @@
 
   \func FreeCat : Cat V \cowith
     | Hom => Paths
-    | id x => empty idp
+    | id => empty idp
     | o q p => concat p q
     | id-left => concat_idp
     | id-right => idp
@@ -236,4 +264,4 @@
     }
 }
 
-\func TrivialCat : Cat => Graph.FreeCat {\new Graph (\Sigma) (\lam _ _ => Empty)}
+\func TrivialCat : Cat => (\new Graph (\Sigma) (\lam _ _ => Empty)).FreeCat

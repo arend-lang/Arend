@@ -20,7 +20,7 @@
 \import Paths
 \import Paths.Meta
 \import Set.Filter
-\import Set.Subset
+\import Set.Set
 \import Topology.CoverSpace
 \import Topology.CoverSpace.Complete
 \import Topology.TopSpace
@@ -252,7 +252,7 @@
       })
 
   \lemma makeLocallyUniformMap2 {X Y Z : ExPseudoMetricSpace} (f : X -> Y -> Z) (fc : ∀ {eps : Rat} (0 < eps) ∃ (delta : Rat) (0 < delta) ∀ x0 y0 ∃ (gamma : Rat) (0 < gamma) ∀ {x x'} {y y'} ((dist x0 x).U delta -> (dist y0 y).U delta -> (dist x x').U gamma -> (dist y y').U gamma -> (dist (f x y) (f x' y')).U eps))
-    : LocallyUniformMap (X ⨯ Y) Z (\lam s => f s.1 s.2) \cowith
+    : LocallyUniformMap (ProductUniformSpace X Y) Z (\lam s => f s.1 s.2) \cowith
     | func-locally-uniform Eu => \case dist-uniform.1 Eu \with {
       | inP (eps,eps>0,h) => \case fc eps>0 \with {
         | inP (delta,delta>0,g) => inP (_, ProductUniformSpace.prodCover (metricUniform delta>0) (metricUniform delta>0), \lam {_} (inP (_, inP (x0,idp), _, inP (y0,idp), idp)) => \case g x0 y0 \with {

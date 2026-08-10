@@ -44,12 +44,17 @@
           => \lam (b, inP (a,fa=b)) (b', inP (a',fa'=b')) => ext $ inv fa=b *> p a a' *> fa'=b'
       }
 
+    \lemma rec-set-eval {A : \Type} {B : \Set} (a : A) {f : A -> B} {p : \Pi (a a' : A) -> f a = f a'} : (rec-set (inP a) f p).1 = f a
+      => \case (rec-set (inP a) f p).2 \with {
+        | inP (a',q) => inv q *> p a' a
+      }
+
     \func map {A B : \Type} (t : TruncP A) (f : A -> B) : TruncP B \elim t
       | inP a => inP (f a)
   }
 
 \lemma prop-pi {A : \Prop} {a a' : A} : a = a'
-  => \case truncP (inP a) (inP a') __ \with {
+  => path \case truncP (inP a) (inP a') __ \with {
     | inP x => x
   }
 
@@ -61,6 +66,9 @@
 
 \lemma prop-dpi (A : I -> \Prop) (a : A left) (a' : A right) : Path A a a'
   => pathOver (prop-isProp (coe A a right) a')
+
+\lemma setPair-unext2 {A : \Set} {B : A -> \Set} {a : A} {b : B a} {b' : B a} (p : (a,b) = {\Sigma (a : A) (B a)} (a,b')) : b = b'
+  => pmap (\lam x => transport B x b) (prop-pi : idp = pmap __.1 p) *> pmapd __.2 p
 
 \data ToProp (A : \Type) (p : isProp A)
   | toProp A
@@ -115,9 +123,12 @@
 \lemma <->sym {P Q : \Prop} (f : P <-> Q) : Q <-> P
   => (f.2,f.1)
 
--- | `TSetIm f` is the set `{ f a | a : A }`.
+-- | `Image f` is the set `{ f a | a : A }`.
 \type TSetIm {A B : \Type} (f : A -> B) (b : B)
   => ∃ (a : A) (f a = b)
+
+\lemma TSetIm-con {A B : \Type} {f : A -> B} (a : A) : TSetIm f (f a)
+  => inP (a,idp)
 
 \lemma TSetIm-elim {A B : \Type} {C : B -> \Prop} {f : A -> B} (c : \Pi (a : A) -> C (f a)) {b : B} (s : TSetIm f b) : C b \elim s
   | inP (a,p) => transport C p (c a)
@@ -135,9 +146,18 @@
 \lemma SetIm-elim {A B : \Type} {C : B -> \Prop} {f : A -> B} {P : A -> \Type} (c : \Pi {a : A} -> P a -> C (f a)) {b : B} (s : SetIm f P b) : C b
   => TSetIm-elim (\lam t => c t.2) s
 
-\func OneOf (l : Array \Type) => ∃ (P : l) P
+\lemma SetIm_id {A : \Type} {P : A -> \Prop} : SetIm (\lam x => x) P = P
+  => ext \lam a => propExt (SetIm-elim \lam p => p) SetIm-con
 
-\func ElemOf (l : Array \Type) => Given (P : l) P
+\lemma SetIm_o {A B C : \Type} {f : A -> B} {g : B -> C} {P : A -> \Prop} : SetIm (\lam x => g (f x)) P = SetIm g (SetIm f P)
+  => ext \lam c => ext (SetIm-elim \lam p => SetIm-con $ SetIm-con p, SetIm-elim $ SetIm-elim SetIm-con)
+
+\lemma SetIm_TSetIm {A B C : \Type} {f : A -> B} {g : B -> C} : SetIm g (TSetIm f) = TSetIm (\lam a => g (f a))
+  => ext \lam c => propExt (SetIm-elim $ TSetIm-elim TSetIm-con) (TSetIm-elim \lam a => SetIm-con $ TSetIm-con a)
+
+\func OneOf (l : Array \Prop) => ∃ (P : l) P
+
+\func ElemOf (l : Array \Prop) => Given (P : l) P
 
 \type arraySubset {X : \Type} (l : Array X) (x : X) => ∃ (y : l) (y = x)
 

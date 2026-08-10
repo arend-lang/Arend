@@ -7,19 +7,18 @@ import org.arend.core.context.param.EmptyDependentLink;
 import org.arend.core.expr.ClassCallExpression;
 import org.arend.core.expr.Expression;
 import org.arend.core.sort.Level;
-import org.arend.core.subst.LevelPair;
 import org.arend.core.subst.Levels;
 import org.arend.core.subst.ListLevels;
 import org.arend.ext.core.definition.CoreDefinition;
 import org.arend.ext.util.Pair;
 import org.arend.extImpl.userData.UserDataHolderImpl;
-import org.arend.naming.reference.LocatedReferable;
 import org.arend.naming.reference.TCDefReferable;
 import org.arend.term.concrete.Concrete;
 import org.arend.typechecking.implicitargs.equations.Equations;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.math.BigInteger;
 import java.util.*;
 
 public abstract class Definition extends UserDataHolderImpl implements CoreDefinition {
@@ -52,25 +51,9 @@ public abstract class Definition extends UserDataHolderImpl implements CoreDefin
     return Collections.emptySet();
   }
 
-  public LocatedReferable getPLevelsParent() {
-    return null;
-  }
-
-  public LocatedReferable getHLevelsParent() {
-    return null;
-  }
-
-  public boolean arePLevelsDerived() {
-    return false;
-  }
-
-  public boolean areHLevelsDerived() {
-    return false;
-  }
-
   public abstract TopLevelDefinition getTopLevelDefinition();
 
-  public List<? extends LevelVariable> getLevelParameters() {
+  public @NotNull List<? extends LevelVariable> getLevelParameters() {
     return getTopLevelDefinition().getLevelParameters();
   }
 
@@ -86,56 +69,23 @@ public abstract class Definition extends UserDataHolderImpl implements CoreDefin
     return Collections.emptyList();
   }
 
-  public int getNumberOfPLevelParameters() {
-    List<? extends LevelVariable> vars = getLevelParameters();
-    if (vars == null) return 1;
-    int result = 0;
-    for (LevelVariable param : vars) {
-      if (param.getType() != LevelVariable.LvlType.PLVL) {
-        break;
-      }
-      result++;
-    }
-    return result;
-  }
-
-  public boolean hasNonTrivialPLevelParameters() {
-    List<? extends LevelVariable> params = getLevelParameters();
-    return params != null && (params.isEmpty() || params.getFirst() != LevelVariable.PVAR);
-  }
-
-  public boolean hasNonTrivialHLevelParameters() {
-    List<? extends LevelVariable> params = getLevelParameters();
-    return params != null && (params.isEmpty() || params.getLast() != LevelVariable.HVAR);
-  }
-
   public boolean isIdLevels(Levels levels) {
     List<? extends LevelVariable> vars = getLevelParameters();
-    if (vars == null) {
-      if (!(levels instanceof LevelPair)) {
-        return false;
-      }
-      Level pLevel = ((LevelPair) levels).getPLevel();
-      Level hLevel = ((LevelPair) levels).getHLevel();
-      return pLevel != null && pLevel.isVarOnly() && pLevel.getVar().equals(LevelVariable.PVAR) && hLevel != null && hLevel.isVarOnly() && hLevel.getVar().equals(LevelVariable.HVAR);
-    } else {
-      List<? extends Level> list = levels.toList();
-      if (list.size() != vars.size()) {
-        return false;
-      }
-      for (int i = 0; i < vars.size(); i++) {
-        Level level = list.get(i);
-        if (!(level.isVarOnly() && level.getVar().equals(vars.get(i)))) {
-          return false;
-        }
-      }
-      return true;
+    List<? extends Level> list = levels.toList();
+    if (list.size() != vars.size()) {
+      return false;
     }
+    for (int i = 0; i < vars.size(); i++) {
+      Level level = list.get(i);
+      if (!vars.get(i).equals(level.getSingleVar())) {
+        return false;
+      }
+    }
+    return true;
   }
 
   public Levels makeIdLevels() {
     List<? extends LevelVariable> vars = getLevelParameters();
-    if (vars == null) return LevelPair.STD;
     List<Level> result = new ArrayList<>(vars.size());
     for (LevelVariable var : vars) {
       result.add(new Level(var));
@@ -145,28 +95,22 @@ public abstract class Definition extends UserDataHolderImpl implements CoreDefin
 
   public Levels makeMinLevels() {
     List<? extends LevelVariable> vars = getLevelParameters();
-    if (vars == null) return LevelPair.PROP;
     List<Level> result = new ArrayList<>(vars.size());
-    for (LevelVariable var : vars) {
-      result.add(new Level(var.getMinValue()));
+    for (LevelVariable ignored : vars) {
+      result.add(new Level(BigInteger.ZERO));
     }
     return new ListLevels(result);
   }
 
-  public Levels generateInferVars(Equations equations, boolean isUniverseLike, Concrete.SourceNode sourceNode) {
+  public Levels generateInferVars(Equations equations, Concrete.SourceNode sourceNode, boolean isGenerated) {
     List<? extends LevelVariable> vars = getLevelParameters();
-    if (vars == null) return LevelPair.generateInferVars(equations, isUniverseLike, sourceNode);
     List<Level> result = new ArrayList<>(vars.size());
-    for (LevelVariable var : vars) {
-      InferenceLevelVariable infVar = new InferenceLevelVariable(var.getType(), isUniverseLike, sourceNode);
+    for (LevelVariable ignored : vars) {
+      InferenceLevelVariable infVar = new InferenceLevelVariable(sourceNode, isGenerated);
       equations.addVariable(infVar);
       result.add(new Level(infVar));
     }
     return new ListLevels(result);
-  }
-
-  public Levels generateInferVars(Equations equations, Concrete.SourceNode sourceNode) {
-    return generateInferVars(equations, getUniverseKind() != UniverseKind.NO_UNIVERSES, sourceNode);
   }
 
   @NotNull
@@ -187,14 +131,6 @@ public abstract class Definition extends UserDataHolderImpl implements CoreDefin
     return false;
   }
 
-  public boolean isOmegaParameter(int index) {
-    return false;
-  }
-
-  public void setOmegaParameters(List<Boolean> omegaParameters) {
-    throw new IllegalStateException();
-  }
-
   public boolean hasEnclosingClass() {
     return false;
   }
@@ -205,7 +141,7 @@ public abstract class Definition extends UserDataHolderImpl implements CoreDefin
       if (!parameters.hasNext()) {
         return null;
       }
-      Expression type = parameters.getTypeExpr();
+      Expression type = parameters.getType();
       return type instanceof ClassCallExpression ? ((ClassCallExpression) type).getDefinition() : null;
     } else {
       return null;
@@ -262,8 +198,6 @@ public abstract class Definition extends UserDataHolderImpl implements CoreDefin
   public void setTypeClassParameters(List<TypeClassParameterKind> typeClassParameters) {
 
   }
-
-  public abstract UniverseKind getUniverseKind();
 
   public List<? extends ParametersLevel> getParametersLevels() {
     return Collections.emptyList();

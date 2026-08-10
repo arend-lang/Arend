@@ -3,7 +3,7 @@
 \import Algebra.Monoid
 \import Algebra.Monoid.MonoidHom
 \import Algebra.Monoid.GCD
-\import Algebra.Monoid.Sub
+\import Algebra.Monoid.SubMonoid
 \import Algebra.Ring
 \import Algebra.Ring.Reduced
 \import Algebra.Semiring
@@ -19,6 +19,7 @@
 \import Relation.Equivalence
 \import Set
 \import Set.Fin
+\import Set.SubSet
 \open Monoid
 
 {- | Domain is a ring with a tight apartness relation such that elements apart from {zro} are closed under finite products.
@@ -54,8 +55,13 @@
   \lemma nonZero-cancel-right {x y z : E} (z/=0 : z /= zro) (x*z=y*z : x * z = y * z) : x = y
     => fromZero (nonZero-right z/=0 (rdistr_- *> toZero x*z=y*z))
 
+  \func subMonoid : SubMonoid \this \cowith
+    | contains => #0
+    | contains_ide => zro#ide
+    | contains_* => #0-*
+
   \func nonZeroMonoid : CancelMonoid \cowith
-    | E => \Sigma (x : E) (x `#0)
+    | E => subMonoid.Total
     | ide => (ide, zro#ide)
     | * x y => (x.1 * y.1, #0-* x.2 y.2)
     | ide-left => ext ide-left
@@ -63,11 +69,6 @@
     | *-assoc => ext *-assoc
     | cancel_*-left x {y} {z} x*y=x*z => ext (nonZero-cancel-left (apartNonZero x.2) (pmap __.1 x*y=x*z))
     | cancel_*-right z {x} {y} x*z=y*z => ext (nonZero-cancel-right (apartNonZero z.2) (pmap __.1 x*z=y*z))
-
-  \func subMonoid : SubMonoid \this \cowith
-    | contains => #0
-    | contains_ide => zro#ide
-    | contains_* => #0-*
 
   \lemma ldiv_nonZero {a b : nonZeroMonoid} (a|b : Monoid.LDiv a.1 b.1) : Monoid.LDiv {nonZeroMonoid} a b \cowith
     | inv => (a|b.inv, #0-*-right (transportInv #0 a|b.inv-right b.2))
@@ -131,16 +132,16 @@
     | res|val2 => nonZero_ldiv gcd.res|val2
     | res-univ g (g|a : LDiv g a.1) g|b => nonZero_ldiv {_} {g, #0-*-left $ transportInv #0 g|a.inv-right a.2} $ gcd.res-univ _ (ldiv_nonZero g|a) (ldiv_nonZero g|b)
 
-  \lemma divQuotient_LDiv {x y : DivQuotient nonZeroCMonoid} : TruncP (LDiv {DivQuotientMonoid \this} (map subMonoid.embedMonoid x) (map subMonoid.embedMonoid y)) <-> TruncP (LDiv {DivQuotientMonoid nonZeroCMonoid} x y) \elim x, y
+  \lemma divQuotient_LDiv {x y : DivQuotient nonZeroCMonoid} : TruncP (LDiv {DivQuotientMonoid \this} (map IMonoid.embed x) (map IMonoid.embed y)) <-> TruncP (LDiv {DivQuotientMonoid nonZeroCMonoid} x y) \elim x, y
     | in~ x, in~ y => (\case __ \with {
-      | inP (in~ z, p) => TruncP.map (make~ p).2 \lam s => div-to~ $ ldiv_nonZero $ LDiv.trans (LDiv.factor-left LDiv.id-div) s
+      | inP (in~ z, p) => TruncP.map (make~ p).2 \lam s => div-to~ {nonZeroCMonoid} $ ldiv_nonZero $ LDiv.trans (LDiv.factor-left LDiv.id-div) s
     }, \case __ \with {
-      | inP (in~ z, p) => TruncP.map (make~ p).2 \lam (xz|y : LDiv (x nonZeroCMonoid.* z) y) =>
-          \new LDiv (map subMonoid.embedMonoid (inD {nonZeroCMonoid} x)) (map subMonoid.embedMonoid (inD {nonZeroCMonoid} y)) (inD (z.1 * xz|y.inv.1)) $ pmap inD $ inv *-assoc *> pmap __.1 xz|y.inv-right
+      | inP (in~ z, p) => TruncP.map {LDiv (x nonZeroCMonoid.* z) y} (make~ p).2 \lam xz|y =>
+          \new LDiv (map IMonoid.embed (inD {nonZeroCMonoid} x)) (map IMonoid.embed (inD {nonZeroCMonoid} y)) (inD (z.1 * xz|y.inv.1)) $ pmap inD $ inv *-assoc *> pmap __.1 xz|y.inv-right
     })
 
   \lemma toNonZeroDivChain (cc : CMonoid.DivChain {DivQuotientMonoid \this}) : CMonoid.DivChain {DivQuotientMonoid nonZeroCMonoid}
-    => \lam a d => \have | (inP s) => cc (\lam i => map subMonoid.embedMonoid (a i)) \lam i => divQuotient_LDiv.2 (d i)
+    => \lam a d => \have | (inP s) => cc (\lam i => map IMonoid.embed (a i)) \lam i => divQuotient_LDiv.2 (d i)
                          | (inP d) => divQuotient_LDiv.1 (inP s.2)
                    \in inP (s.1, d)
 
@@ -157,12 +158,12 @@
 
     \lemma fromNonZeroDivChain (cc : CMonoid.DivChain {DivQuotientMonoid nonZeroCMonoid}) : CMonoid.DivChain {DivQuotientMonoid \this}
       => \lam a ac =>
-          \have | f => map {SubMonoid.cStruct subMonoid} subMonoid.embedMonoid
+          \have | f => map IMonoid.embed
                 | f-inj : IsInj f => \lam {x} {y} => \case \elim x, \elim y \with {
                   | in~ x, in~ y => \lam p => \have t => make~ p \in ~-pequiv (TruncP.map t.1 ldiv_nonZero, TruncP.map t.2 ldiv_nonZero)
                 }
                 | r n (q : Not (∃ (j : Fin (suc (suc n))) (a (suc j) = in~ 0))) => TruncP.rec {_} {\Sigma (x : DivQuotient nonZeroCMonoid) (f x = a (suc n))} (\lam s s' => ext $ f-inj $ s.2 *> inv s'.2) (Quotient.in-surj (a (suc n)))
-                   \lam s => (in~ (s.1, nonZeroApart \lam s=0 => q $ inP (n, pmap (\lam x => a (suc x)) (toFin'=id $ id<suc <∘ id<suc) *> inv s.2 *> pmap in~ s=0)), s.2)
+                   \lam s => (in~ (s.1, nonZeroApart \lam s=0 => q $ inP (n Nat.mod suc (suc n), pmap (\lam x => a (suc x)) (toFin'=id $ id<suc <∘ id<suc) *> inv s.2 *> pmap in~ s=0)), s.2)
                 | t => cc (\lam n => \case FinSet.search {FinFin (suc (suc n))} _ (\lam j => divQuotient_dec0 (a (suc j))) \with {
                          | yes e => in~ (1,zro#ide)
                          | no q => (r n q).1
@@ -244,7 +245,7 @@
 
 \class StrictIntegralDomain \extends StrictDomain, ImpotentCRing {
   \lemma div-associates {a b : E} (a|b : LDiv a b) (b|a : LDiv b a) : TruncP (associates a b)
-    => \case zeroOrCancel-left $ inv *-assoc *> pmap (`* _) a|b.inv-right *> b|a.inv-right *> inv ide-right \with {
+    => \case zeroOrCancel-left $ inv *-assoc *> pmap (* _) a|b.inv-right *> b|a.inv-right *> inv ide-right \with {
       | byLeft a=0 => inP (Inv.ide-isInv, a=0 *> inv (ldiv=0 a|b a=0) *> inv ide-left)
       | byRight r => inP (Inv.lmake _ r, inv b|a.inv-right *> *-comm)
     }

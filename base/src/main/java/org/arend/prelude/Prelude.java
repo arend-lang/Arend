@@ -1,6 +1,5 @@
 package org.arend.prelude;
 
-import org.arend.core.context.binding.LevelVariable;
 import org.arend.core.context.param.DependentLink;
 import org.arend.core.context.param.EmptyDependentLink;
 import org.arend.core.context.param.TypedDependentLink;
@@ -12,7 +11,7 @@ import org.arend.core.pattern.ConstructorExpressionPattern;
 import org.arend.core.pattern.ExpressionPattern;
 import org.arend.core.sort.Level;
 import org.arend.core.sort.Sort;
-import org.arend.core.subst.LevelPair;
+import org.arend.core.sort.SortExpression;
 import org.arend.core.subst.Levels;
 import org.arend.error.DummyErrorReporter;
 import org.arend.ext.ArendPrelude;
@@ -20,6 +19,7 @@ import org.arend.ext.core.definition.CoreClassDefinition;
 import org.arend.ext.core.definition.CoreClassField;
 import org.arend.ext.core.definition.CoreDataDefinition;
 import org.arend.ext.core.definition.CoreFunctionDefinition;
+import org.arend.ext.core.level.ConstLevel;
 import org.arend.ext.module.ModulePath;
 import org.arend.ext.reference.ArendRef;
 import org.arend.ext.reference.Precedence;
@@ -38,6 +38,7 @@ import org.arend.typechecking.visitor.ArendCheckerFactory;
 import org.arend.util.SingletonList;
 import org.arend.util.Version;
 
+import java.math.BigInteger;
 import java.util.*;
 import java.util.function.Consumer;
 
@@ -65,7 +66,6 @@ public class Prelude implements ArendPrelude {
   public static DataDefinition FIN;
   public static Constructor FIN_ZERO;
   public static Constructor FIN_SUC;
-  public static FunctionDefinition FIN_FROM_NAT;
 
   public static DataDefinition INT;
   public static Constructor POS, NEG;
@@ -109,7 +109,7 @@ public class Prelude implements ArendPrelude {
         NAT = (DataDefinition) definition;
         ZERO = NAT.getConstructor("zero");
         SUC = NAT.getConstructor("suc");
-        DIV_MOD_TYPE = new SigmaExpression(Sort.SET0, parameter(true, Arrays.asList(null, null), Nat()));
+        DIV_MOD_TYPE = new SigmaExpression(parameter(true, Arrays.asList(null, null), Nat()));
       }
       case "Fin" -> {
         FIN = (DataDefinition) definition;
@@ -146,7 +146,7 @@ public class Prelude implements ArendPrelude {
       case "String" -> STRING = (DataDefinition) definition;
       case "I" -> {
         INTERVAL = (DataDefinition) definition;
-        INTERVAL.setSort(new Sort(new Level(0), Level.INFINITY));
+        INTERVAL.setSort(new Sort(new Level(BigInteger.ZERO), ConstLevel.INFINITY));
         LEFT = INTERVAL.getConstructor("left");
         RIGHT = INTERVAL.getConstructor("right");
       }
@@ -160,30 +160,28 @@ public class Prelude implements ArendPrelude {
       }
       case "Path" -> {
         PATH = (DataDefinition) definition;
-        PATH.setSort(new Sort(new Level(LevelVariable.PVAR), new Level(LevelVariable.HVAR, -1)));
+        PATH.setSortExpression(new SortExpression.Prev(new SortExpression.Var(0, Collections.emptyList())));
         PATH.setCovariant(1, false);
         PATH.setCovariant(2, false);
         PATH_CON = PATH.getConstructor("path");
       }
       case "=" -> {
         PATH_INFIX = (FunctionDefinition) definition;
-        PATH_INFIX.setResultType(new UniverseExpression(new Sort(new Level(LevelVariable.PVAR), new Level(LevelVariable.HVAR, -1))));
         DataCallExpression dataCall = (DataCallExpression) PATH_INFIX.getBody();
         assert dataCall != null;
-        PATH_INFIX.setBody(DataCallExpression.make(dataCall.getDefinition(), dataCall.getLevels(), Arrays.asList(new LamExpression(new Sort(new Level(LevelVariable.PVAR, 1), Level.INFINITY), UnusedIntervalDependentLink.INSTANCE, ((LamExpression) dataCall.getDefCallArguments().get(0)).getBody()), dataCall.getDefCallArguments().get(1), dataCall.getDefCallArguments().get(2))));
+        PATH_INFIX.setBody(DataCallExpression.make(dataCall.getDefinition(), dataCall.getLevels(), Arrays.asList(new LamExpression(UnusedIntervalDependentLink.INSTANCE, ((LamExpression) dataCall.getDefCallArguments().get(0)).getBody()), dataCall.getDefCallArguments().get(1), dataCall.getDefCallArguments().get(2))));
       }
       case "idp" -> {
         IDP = (DConstructor) definition;
         List<Expression> args = new ArrayList<>(2);
         args.add(new ReferenceExpression(IDP.getParameters()));
         args.add(new ReferenceExpression(IDP.getParameters().getNext()));
-        IDP.setPattern(new ConstructorExpressionPattern(FunCallExpression.makeFunCall(IDP, LevelPair.STD, args), Collections.emptyList()));
+        IDP.setPattern(new ConstructorExpressionPattern(FunCallExpression.makeFunCall(IDP, Levels.EMPTY, args), Collections.emptyList()));
         IDP.setNumberOfParameters(2);
         IDP.setStatus(Definition.TypeCheckingStatus.NO_ERRORS);
         PathExpression pathExpr = (PathExpression) IDP.getBody();
         assert pathExpr != null;
-        Sort sort = new Sort(new Level(LevelVariable.PVAR), Level.INFINITY);
-        IDP.setBody(new PathExpression(pathExpr.getLevels(), new LamExpression(sort, UnusedIntervalDependentLink.INSTANCE, args.getFirst()), new LamExpression(sort, UnusedIntervalDependentLink.INSTANCE, ((LamExpression) pathExpr.getArgument()).getBody())));
+        IDP.setBody(new PathExpression(new LamExpression(UnusedIntervalDependentLink.INSTANCE, args.getFirst()), new LamExpression(UnusedIntervalDependentLink.INSTANCE, ((LamExpression) pathExpr.getArgument()).getBody())));
       }
       case "@" -> {
         AT = (FunctionDefinition) definition;
@@ -199,11 +197,8 @@ public class Prelude implements ArendPrelude {
       }
       case "iso" -> {
         ISO = (FunctionDefinition) definition;
+        ISO.setResultType(new UniverseExpression(SortExpression.makeMax(Arrays.asList(new SortExpression.Var(0, Collections.emptyList()), new SortExpression.Var(1, Collections.emptyList())))));
         ISO.setStatus(Definition.TypeCheckingStatus.NO_ERRORS);
-      }
-      case "fromNat" -> {
-        FIN_FROM_NAT = (FunctionDefinition) definition;
-        FIN_FROM_NAT.setStatus(Definition.TypeCheckingStatus.NO_ERRORS);
       }
       case "divMod" -> {
         DIV_MOD = (FunctionDefinition) definition;
@@ -230,12 +225,12 @@ public class Prelude implements ArendPrelude {
       case "Array" -> ARRAY = (FunctionDefinition) definition;
       case "nil" -> {
         EMPTY_ARRAY = (DConstructor) definition;
-        EMPTY_ARRAY.setPattern(new ConstructorExpressionPattern(FunCallExpression.makeFunCall(EMPTY_ARRAY, LevelPair.STD, Collections.emptyList()), Collections.singletonList(new BindingPattern(EMPTY_ARRAY.getParameters()))));
+        EMPTY_ARRAY.setPattern(new ConstructorExpressionPattern(FunCallExpression.makeFunCall(EMPTY_ARRAY, Levels.EMPTY, Collections.emptyList()), Collections.singletonList(new BindingPattern(EMPTY_ARRAY.getParameters()))));
         EMPTY_ARRAY.setStatus(Definition.TypeCheckingStatus.NO_ERRORS);
       }
       case "::" -> {
         ARRAY_CONS = (DConstructor) definition;
-        ARRAY_CONS.setPattern(new ConstructorExpressionPattern(FunCallExpression.makeFunCall(ARRAY_CONS, LevelPair.STD, Collections.emptyList()), Arrays.asList(new BindingPattern(ARRAY_CONS.getParameters()), new BindingPattern(ARRAY_CONS.getParameters().getNext()), new BindingPattern(ARRAY_CONS.getParameters().getNext().getNext()), new BindingPattern(ARRAY_CONS.getParameters().getNext().getNext().getNext()))));
+        ARRAY_CONS.setPattern(new ConstructorExpressionPattern(FunCallExpression.makeFunCall(ARRAY_CONS, Levels.EMPTY, Collections.emptyList()), Arrays.asList(new BindingPattern(ARRAY_CONS.getParameters()), new BindingPattern(ARRAY_CONS.getParameters().getNext()), new BindingPattern(ARRAY_CONS.getParameters().getNext().getNext()), new BindingPattern(ARRAY_CONS.getParameters().getNext().getNext().getNext()))));
         ARRAY_CONS.setStatus(Definition.TypeCheckingStatus.NO_ERRORS);
       }
       case "!!" -> {
@@ -254,7 +249,6 @@ public class Prelude implements ArendPrelude {
     consumer.accept(ZERO);
     consumer.accept(SUC);
     consumer.accept(FIN);
-    consumer.accept(FIN_FROM_NAT);
     consumer.accept(INT);
     consumer.accept(POS);
     consumer.accept(NEG);
@@ -293,6 +287,11 @@ public class Prelude implements ArendPrelude {
   public static void initialize(ConcreteGroup group) {
     PRELUDE_GROUP = group;
     IS_INITIALIZED = true;
+  }
+  
+  public static void reset() {
+    PRELUDE_GROUP = null;
+    IS_INITIALIZED = false;
   }
 
   public static class PreludeTypechecking extends TypecheckingOrderingListener {
@@ -349,11 +348,6 @@ public class Prelude implements ArendPrelude {
   @Override
   public DataDefinition getFin() {
     return FIN;
-  }
-
-  @Override
-  public FunctionDefinition getFinFromNat() {
-    return FIN_FROM_NAT;
   }
 
   @Override
@@ -549,11 +543,6 @@ public class Prelude implements ArendPrelude {
   @Override
   public ArendRef getFinRef() {
     return FIN == null ? null : FIN.getRef();
-  }
-
-  @Override
-  public ArendRef getFinFromNatRef() {
-    return FIN_FROM_NAT == null ? null : FIN_FROM_NAT.getRef();
   }
 
   @Override

@@ -136,8 +136,8 @@ public final class ReferableScope {
       // Print each context section in turn.
       matched += dumpSection(scope, ScopeContext.STATIC,  "STATIC",  pattern);
       matched += dumpSection(scope, ScopeContext.DYNAMIC, "DYNAMIC", pattern);
-      matched += dumpSection(scope, ScopeContext.PLEVEL,  "PLEVEL",  pattern);
-      matched += dumpSection(scope, ScopeContext.HLEVEL,  "HLEVEL",  pattern);
+      // Upstream collapsed the separate PLEVEL/HLEVEL contexts into a single LEVEL.
+      matched += dumpSection(scope, ScopeContext.LEVEL,   "LEVEL",   pattern);
       total = scope.getElements(null).size();
     } else {
       ScopeContext ctx = options.context == Ctx.DYNAMIC ? ScopeContext.DYNAMIC : ScopeContext.STATIC;
@@ -191,7 +191,7 @@ public final class ReferableScope {
 
     List<Map<String, String>> entries = new ArrayList<>();
     List<ScopeContext> contexts = options.context == Ctx.ALL
-        ? List.of(ScopeContext.STATIC, ScopeContext.DYNAMIC, ScopeContext.PLEVEL, ScopeContext.HLEVEL)
+        ? List.of(ScopeContext.STATIC, ScopeContext.DYNAMIC, ScopeContext.LEVEL)
         : List.of(options.context == Ctx.DYNAMIC ? ScopeContext.DYNAMIC : ScopeContext.STATIC);
 
     for (ScopeContext ctx : contexts) {

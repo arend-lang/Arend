@@ -30,22 +30,8 @@ public interface CoreExpression extends CoreBody, UncheckedExpression, Abstracte
 
   /**
    * Computes the type of this expression.
-   *
-   * @param minimal if true, the levels of the expression will be minimized.
-   */
-  @NotNull CoreExpression computeType(boolean minimal);
-
-  /**
-   * Computes the type of this expression.
    */
   @NotNull CoreExpression computeType();
-
-  /**
-   * Computes the type of this expression and returns the expression with the type.
-   *
-   * @param minimal if true, the levels of the expression will be minimized before computing the type.
-   */
-  @NotNull TypedExpression computeTyped(boolean minimal);
 
   /**
    * Computes the type of this expression and returns the expression with the type.
@@ -53,14 +39,12 @@ public interface CoreExpression extends CoreBody, UncheckedExpression, Abstracte
   @NotNull TypedExpression computeTyped();
 
   /**
-   * @return an equivalent expression with minimized levels
-   */
-  @NotNull CoreExpression minimizeLevels();
-
-  /**
    * Normalizes expression.
    */
   @Override @NotNull CoreExpression normalize(@NotNull NormalizationMode mode);
+
+
+  boolean isInfinityLevel();
 
   /**
    * Normalizes and unfolds \type expressions.

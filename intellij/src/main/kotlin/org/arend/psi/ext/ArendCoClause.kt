@@ -21,8 +21,4 @@ class ArendCoClause(node: ASTNode) : ArendLocalCoClause(node), Abstract.CoClause
     override fun getGroup(): ArendCoClauseDef? = childOfType()
 
     override fun getNamespaceCommand() = null
-
-    override fun getPLevelsDefinition() = null
-
-    override fun getHLevelsDefinition() = null
 }

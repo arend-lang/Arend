@@ -1,4 +1,5 @@
 \import Equiv
+\import Logic
 \import Paths
 
 {- | The type of squares
@@ -9,18 +10,18 @@
      V --> Y
      ```
 -}
-\record Square (U V X Y : \Type)
-               (ux : U -> X) (vy : V -> Y) (uv : U -> V) (xy : X -> Y)
-               (sqcomm : \Pi (u : U) -> vy (uv u) = xy (ux u))
+\record Square.{u} (U V X Y : \Type u)
+                   (ux : U -> X) (vy : V -> Y) (uv : U -> V) (xy : X -> Y)
+                   (sqcomm : \Pi (u : U) -> vy (uv u) = xy (ux u))
   \where {
-    \func pull (s : Square) {U' : \Type} (f : U' -> s.U) : Square => \new s {
+    \func pull.{u} (s : Square.{u}) {U' : \Type u} (f : U' -> s.U) : Square => \new s {
       | U => U'
       | ux u' => s.ux (f u')
       | uv u' => s.uv (f u')
       | sqcomm z => s.sqcomm (f z)
     }
 
-    \func push (s : Square) {Y' : \Type} (f : s.Y -> Y') : Square => \new s {
+    \func push.{u} (s : Square.{u}) {Y' : \Type u} (f : s.Y -> Y') : Square => \new s {
       | Y => Y'
       | vy v => f (s.vy v)
       | xy x => f (s.xy x)
@@ -30,10 +31,10 @@
 
 \open Square(pull,push)
 
-\class Pullback (square : Square)
-  | pullback-univ {Z : \Type} : Equiv {Z -> square.U} {Square { | U => Z | V => square.V | X => square.X | Y => square.Y | vy => square.vy | xy => square.xy }} (pull square)
+\class Pullback.{u} (square : Square.{u})
+  | pullback-univ {Z : \Type u} : IsEquiv {Z -> square.U} {Square { | U => Z | V => square.V | X => square.X | Y => square.Y | vy => square.vy | xy => square.xy }} (pull square)
 
-\func sigmaPullback {V X Y : \Type} (vy : V -> Y) (xy : X -> Y) : Pullback \cowith
+\func sigmaPullback.{u} {V X Y : \Type u} (vy : V -> Y) (xy : X -> Y) : Pullback \cowith
   | square {
     | U => \Sigma (v : V) (x : X) (p : vy v = xy x)
     | V => V
@@ -45,13 +46,13 @@
     | xy => xy
     | sqcomm p => p.3
   }
-  | pullback-univ {Z} => \new QEquiv {
+  | pullback-univ => inP \new QEquiv {
     | ret (s : Square) z => (s.uv z, s.ux z, s.sqcomm z)
     | ret_f _ => idp
     | f_sec _ => idp
   }
 
-\func productPullback (A B : \Type) : Pullback \cowith
+\func productPullback.{u} (A B : \Type u) : Pullback \cowith
   | square {
     | U => \Sigma A B
     | V => A
@@ -63,13 +64,13 @@
     | xy _ => ()
     | sqcomm _ => idp
   }
-  | pullback-univ {Z} => \new QEquiv {
+  | pullback-univ => inP \new QEquiv {
     | ret (s : Square) z => (s.uv z, s.ux z)
     | ret_f _ => idp
     | f_sec _ => idp
   }
 
-\func pathPullback {A : \Type} (x y : A) : Pullback \cowith
+\func pathPullback.{u} {A : \Type u} (x y : A) : Pullback \cowith
   | square {
     | U => x = y
     | V => \Sigma
@@ -81,7 +82,7 @@
     | xy _ => y
     | sqcomm p => p
   }
-  | pullback-univ {Z} => \new QEquiv {
+  | pullback-univ => inP \new QEquiv {
     | ret (s : Square) => s.sqcomm
     | ret_f _ => idp
     | f_sec _ => idp

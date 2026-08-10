@@ -1,5 +1,6 @@
 package org.arend.repl;
 
+import org.arend.core.definition.Definition;
 import org.arend.core.expr.Expression;
 import org.arend.ext.core.ops.NormalizationMode;
 import org.arend.ext.error.GeneralError;
@@ -209,12 +210,16 @@ public abstract class Repl {
     if (!checkErrors()) {
       typecheckStatements(group);
       updateReplModule(group, false);
+      removeErroneousStatements(group.statements());
     }
   }
 
   public void updateReplModule(ConcreteGroup group, Boolean newGroup) {
     ConcreteGroup replGroup = myServer.getRawGroup(replModuleLocation);
     if (replGroup != null && !newGroup) {
+      // Redefining an existing name replaces the previous definition rather than
+      // producing a duplicate-name error (see issue #128).
+      removeShadowedStatements(replGroup, group.statements());
       replGroup.statements().addAll(group.statements());
     } else {
       replGroup = group;
@@ -224,6 +229,76 @@ public abstract class Repl {
     typecheckModules(new SingletonList<>(replModuleLocation));
   }
 
+  /**
+   * Removes from {@param replGroup} the statements whose top-level definition name
+   * clashes with a name introduced by {@param newStatements}, so that the new
+   * definition supersedes the old one instead of being reported as a duplicate.
+   */
+  private void removeShadowedStatements(ConcreteGroup replGroup, List<ConcreteStatement> newStatements) {
+    Set<String> newNames = definedNames(newStatements);
+    if (newNames.isEmpty()) return;
+    replGroup.statements().removeIf(statement -> {
+      ConcreteGroup group = statement.group();
+      return group != null && newNames.contains(group.referable().getRefName());
+    });
+  }
+
+  private static Set<String> definedNames(List<ConcreteStatement> statements) {
+    Set<String> names = new HashSet<>();
+    for (ConcreteStatement statement : statements) {
+      ConcreteGroup group = statement.group();
+      if (group != null) names.add(group.referable().getRefName());
+    }
+    return names;
+  }
+
+  /**
+   * Drops the just-added statements whose definitions failed to typecheck from the
+   * REPL context (see issue #128), so that erroneous definitions neither pollute the
+   * namespace nor get their errors re-reported on every subsequent input. Definitions
+   * that only contain goals ({@code {?}}) are kept, since a goal is not an error.
+   */
+  private void removeErroneousStatements(List<ConcreteStatement> newStatements) {
+    ConcreteGroup replGroup = myServer.getRawGroup(replModuleLocation);
+    if (replGroup == null) return;
+    Set<String> newNames = definedNames(newStatements);
+    List<ConcreteStatement> erroneous = new ArrayList<>();
+    for (ConcreteStatement statement : replGroup.statements()) {
+      ConcreteGroup group = statement.group();
+      if (group != null && newNames.contains(group.referable().getRefName()) && hasTypecheckingErrors(group)) {
+        erroneous.add(statement);
+      }
+    }
+    if (!erroneous.isEmpty()) {
+      replGroup.statements().removeAll(erroneous);
+      updateReplModule(replGroup, true);
+    }
+  }
+
+  /**
+   * @return {@code true} if any typecheckable definition reachable from {@param group}
+   * is in the {@link Definition.TypeCheckingStatus#HAS_ERRORS} state. Both resolving and
+   * typechecking errors put the definition into this state, whereas goals do not.
+   */
+  private static boolean hasTypecheckingErrors(ConcreteGroup group) {
+    if (group.referable() instanceof TCDefReferable tcRef && tcRef.getKind().isTypecheckable()) {
+      Definition def = tcRef.getTypechecked();
+      if (def != null && def.status().hasErrors()) return true;
+    }
+    for (InternalReferable internalRef : group.getInternalReferables()) {
+      if (internalRef instanceof TCDefReferable tcRef && tcRef.getKind().isTypecheckable()) {
+        Definition def = tcRef.getTypechecked();
+        if (def != null && def.status().hasErrors()) return true;
+      }
+    }
+    for (ConcreteStatement statement : group.statements()) {
+      if (statement.group() != null && hasTypecheckingErrors(statement.group())) return true;
+    }
+    for (ConcreteGroup dynGroup : group.dynamicGroups()) {
+      if (hasTypecheckingErrors(dynGroup)) return true;
+    }
+    return false;
+  }
 
   protected void removeNotLoadedStatements(ConcreteGroup group, Boolean logInfo) {
     Set<ModulePath> loadedModules = getLoadedModules();

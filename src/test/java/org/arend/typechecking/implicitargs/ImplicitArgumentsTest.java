@@ -2,17 +2,17 @@ package org.arend.typechecking.implicitargs;
 
 import org.arend.Matchers;
 import org.arend.core.context.binding.Binding;
-import org.arend.core.context.binding.LevelVariable;
 import org.arend.core.context.binding.TypedBinding;
 import org.arend.core.context.param.SingleDependentLink;
 import org.arend.core.expr.Expression;
 import org.arend.core.expr.PiExpression;
-import org.arend.core.sort.Level;
+import org.arend.core.sort.Sort;
 import org.arend.ext.core.ops.NormalizationMode;
 import org.arend.typechecking.TypeCheckingTestCase;
 import org.arend.typechecking.error.local.PathEndpointMismatchError;
 import org.arend.ext.error.ArgInferenceError;
 import org.arend.typechecking.result.TypecheckingResult;
+import org.junit.Before;
 import org.junit.Test;
 
 import java.util.ArrayList;
@@ -26,6 +26,12 @@ import static org.hamcrest.Matchers.nullValue;
 import static org.junit.Assert.assertEquals;
 
 public class ImplicitArgumentsTest extends TypeCheckingTestCase {
+  @Before
+  public void initializePrelude() {
+    typeCheckModule("");
+    incModification();
+  }
+
   @Test
   public void inferId() {
     // f : {A : Type0} -> A -> A |- f 0 : N
@@ -237,7 +243,7 @@ public class ImplicitArgumentsTest extends TypeCheckingTestCase {
 
     String term = """
       \\let
-        | x {A : \\oo-Type0} (y : A -> A) => f y
+        | x {A : \\Type0} (y : A -> A) => f y
         | z (x : Nat) => x
       \\in x z""";
     TypecheckingResult result = typeCheckExpr(context, term, null);
@@ -265,8 +271,8 @@ public class ImplicitArgumentsTest extends TypeCheckingTestCase {
     context.add(new TypedBinding("f", type));
 
     TypecheckingResult result = typeCheckExpr(context, "\\lam x1 x2 x3 => f x1 x2 x3", null);
-    A.setType(Universe(new Level(0), new Level(LevelVariable.HVAR)));
-    B.setType(Pi(Ref(A), Universe(new Level(0), new Level(LevelVariable.HVAR))));
+    A.setType(Universe(Sort.PROP));
+    B.setType(Pi(Ref(A), Universe(Sort.PROP)));
     assertEquals(type, result.type);
   }
 
@@ -392,13 +398,13 @@ public class ImplicitArgumentsTest extends TypeCheckingTestCase {
   @Test
   public void differentLevels() {
     typeCheckModule(
-        "\\func F (X : \\Type \\lp) (B : X -> \\Type \\lp) => zero\n" +
-        "\\func g (X : \\Type \\lp) => F X (\\lam _ => X = X)");
+        "\\func F.{u} (X : \\Type u) (B : X -> \\Type u) => zero\n" +
+        "\\func g.{u} (X : \\Type u) => F X (\\lam _ => X = X)");
   }
 
   @Test
   public void piTest() {
-    typeCheckDef("\\func f (A : \\Type \\lp) (B : A -> \\Type \\lp) (f g : \\Pi (x : A) -> B x) => f = g");
+    typeCheckDef("\\func f.{u} (A : \\Type u) (B : A -> \\Type u) (f g : \\Pi (x : A) -> B x) => f = g");
   }
 
   @Test

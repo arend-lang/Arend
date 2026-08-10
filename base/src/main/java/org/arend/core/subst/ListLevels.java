@@ -28,7 +28,7 @@ public class ListLevels implements Levels {
   @Override
   public LevelSubstitution makeSubstitution(@NotNull Definition definition) {
     List<? extends LevelVariable> vars = definition.getLevelParameters();
-    if (vars == null || vars.size() != myLevels.size()) {
+    if (vars.size() > myLevels.size()) {
       throw new IllegalStateException();
     }
     SimpleLevelSubstitution result = new SimpleLevelSubstitution();
@@ -49,7 +49,8 @@ public class ListLevels implements Levels {
 
   @Override
   public boolean compare(Levels other, CMP cmp, Equations equations, Concrete.SourceNode sourceNode) {
-    if (myLevels.size() != other.size()) return false;
+    if (myLevels.isEmpty() && other.size() == 0) return true;
+    if (!(other instanceof ListLevels) || myLevels.size() != other.size()) return false;
     List<? extends Level> otherList = other.toList();
     for (int i = 0; i < myLevels.size(); i++) {
       if (!Level.compare(myLevels.get(i), otherList.get(i), cmp, equations, sourceNode)) {

@@ -29,7 +29,7 @@ public class MemoryRawSource extends StreamRawSource {
 
   @NotNull
   @Override
-  protected InputStream getInputStream() {
+  public InputStream getInputStream() {
     return new ByteArrayInputStream(myText.getBytes(StandardCharsets.UTF_8));
   }
 

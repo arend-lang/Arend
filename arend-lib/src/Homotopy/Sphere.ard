@@ -3,6 +3,6 @@
 \import Homotopy.Suspension
 \import Logic
 
-\func Sphere (n : Nat) => Susp (iterr Susp n Empty)
+\func Sphere (n : Nat) : \Type0 => Susp (iterr {\Type0} (Susp __) n Empty)
   \where
     \func pointed (n : Nat) => \new Pointed (Sphere n) north

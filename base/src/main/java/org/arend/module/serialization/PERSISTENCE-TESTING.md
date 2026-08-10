@@ -16,7 +16,7 @@ originals.
 
 ### Round-trip test
 
-**File:** `src/test/java/org/arend/library/ArendLibRoundTripTest.java`
+**File:** `src/slowTest/java/org/arend/library/ArendLibRoundTripTest.java`
 
 The test has four phases:
 
@@ -321,7 +321,7 @@ creates a `FieldCallExpression` without unfolding.  Changed
 
 | File | Role |
 |---|---|
-| `src/test/java/org/arend/library/ArendLibRoundTripTest.java` | Round-trip test |
+| `src/slowTest/java/org/arend/library/ArendLibRoundTripTest.java` | Round-trip test |
 | `base/.../serialization/ExpressionSerialization.java` | Expression → protobuf |
 | `base/.../serialization/ExpressionDeserialization.java` | Protobuf → expression |
 | `base/.../serialization/DefinitionSerialization.java` | Definition → protobuf |

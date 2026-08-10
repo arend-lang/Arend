@@ -1,0 +1,53 @@
+\import Algebra.Group
+\import Algebra.Module
+\import Algebra.Module.LinearMap
+\import Algebra.Monoid.MonoidHom
+\import Algebra.Ring
+\import Algebra.Ring.RingHom
+\import Paths
+\import Paths.Meta
+
+\instance LinearMapAbGroup {R : Ring} (A B : LModule R) : AbGroup (LinearMap A B)
+  | zro => linearMap_zro
+  | + => linearMap_+
+  | zro-left => exts \lam _ => LModule.zro-left
+  | zro-right => exts \lam _ => LModule.zro-right
+  | +-assoc => exts \lam _ => LModule.+-assoc
+  | negative => linearMap_negative
+  | negative-left => exts \lam _ => LModule.negative-left
+  | +-comm => exts \lam _ => LModule.+-comm
+
+\instance LinearMapLModule {R : CRing} (A B : LModule R) : LModule R \cowith
+  | AbGroup => LinearMapAbGroup A B
+  | *c r f => linearMap_*c {R} {A} {B} {r} f
+  | *c-assoc => exts \lam _ => B.*c-assoc
+  | *c-ldistr => exts \lam _ => B.*c-ldistr
+  | *c-rdistr => exts \lam _ => B.*c-rdistr
+  | ide_*c => exts \lam _ => B.ide_*c
+
+\instance LinearMapRing {R : Ring} (U : LModule R) : Ring (LinearMap U U)
+  | zro => linearMap_zro
+  | + => linearMap_+
+  | zro-left => exts \lam _ => U.zro-left
+  | +-assoc => exts \lam _ => U.+-assoc
+  | +-comm => exts \lam _ => U.+-comm
+  | negative => linearMap_negative
+  | negative-left => exts \lam _ => U.negative-left
+  | ide => LinearMap.id
+  | * f g => g LinearMap.∘ f
+  | ide-left => idp
+  | ide-right => idp
+  | *-assoc => idp
+  | ldistr => idp
+  | rdistr => exts \lam _ => func-+
+  \where {
+    \func *c-hom {R : CRing} {U : LModule R} : RingHom R (LinearMapRing U) \cowith
+      | func (r : R) : LinearMap U U \cowith {
+        | func u => r *c u
+        | func-+ => *c-ldistr
+        | func-*c => inv *c-assoc *> pmap (*c _) R.*-comm *> *c-assoc
+      }
+      | func-+ => exts \lam _ => *c-rdistr
+      | func-ide => exts \lam _ => ide_*c
+      | func-* => exts \lam u => pmap (*c u) R.*-comm *> *c-assoc
+  }

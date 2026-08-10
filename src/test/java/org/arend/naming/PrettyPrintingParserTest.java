@@ -12,7 +12,6 @@ import org.arend.term.prettyprint.ToAbstractVisitor;
 import org.arend.core.pattern.BindingPattern;
 import org.arend.core.pattern.ConstructorPattern;
 import org.arend.core.pattern.Pattern;
-import org.arend.core.sort.Sort;
 import org.arend.ext.core.ops.NormalizationMode;
 import org.arend.ext.prettyprinting.PrettyPrinterConfig;
 import org.arend.ext.prettyprinting.PrettyPrinterFlag;
@@ -158,7 +157,7 @@ public class PrettyPrintingParserTest extends TypeCheckingTestCase {
     LocalReferable y = ref("y");
     LocalReferable z = ref("z");
     LocatedReferableImpl reference = new LocatedReferableImpl(null, AccessModifier.PUBLIC, Precedence.DEFAULT, "f", Precedence.DEFAULT, null, MODULE_REF, GlobalReferable.Kind.FUNCTION);
-    Concrete.FunctionDefinition def = new Concrete.FunctionDefinition(FunctionKind.FUNC, reference, cargs(cTele(false, cvars(x), cUniverseStd(1)), cTele(cvars(A), cPi(cUniverseStd(1), cUniverseStd(0)))), cPi(cApps(cVar(A), cVar(x)), cPi(cPi(cUniverseStd(1), cUniverseStd(1)), cPi(cUniverseStd(1), cUniverseStd(1)))), null, body(cLam(cargs(cName(t), cName(y), cName(z)), cApps(cVar(y), cVar(z)))));
+    Concrete.FunctionDefinition def = new Concrete.FunctionDefinition(FunctionKind.FUNC, reference, cargs(cTele(false, cvars(x), cUniverse(1)), cTele(cvars(A), cPi(cUniverse(1), cUniverse(0)))), cPi(cApps(cVar(A), cVar(x)), cPi(cPi(cUniverse(1), cUniverse(1)), cPi(cUniverse(1), cUniverse(1)))), null, body(cLam(cargs(cName(t), cName(y), cName(z)), cApps(cVar(y), cVar(z)))));
     testDef(def, def);
   }
 
@@ -189,7 +188,7 @@ public class PrettyPrintingParserTest extends TypeCheckingTestCase {
     List<ElimClause<Pattern>> clauses = new ArrayList<>();
     clauses.add(new ElimClause<>(Collections.singletonList(ConstructorPattern.make(Prelude.ZERO, Collections.emptyList())), Zero()));
     clauses.add(new ElimClause<>(Collections.singletonList(ConstructorPattern.make(Prelude.SUC, Collections.singletonList(new BindingPattern(y)))), Ref(y)));
-    Expression cExpr = new LamExpression(Sort.SET0, x, new CaseExpression(false, x, Nat(), null, new ElimBody(clauses, null), Collections.singletonList(Ref(x))));
+    Expression cExpr = new LamExpression(x, new CaseExpression(false, x, Nat(), null, new ElimBody(clauses, null), Collections.singletonList(Ref(x))));
 
     LocalReferable cx = ref("x");
     LocalReferable cy = ref("y");

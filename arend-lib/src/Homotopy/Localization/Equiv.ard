@@ -1,6 +1,5 @@
 \import Equiv
 \import Equiv.Fiber
-\import Equiv.Univalence
 \import Function
 \import Homotopy.HLevel
 \import Homotopy.Fibration
@@ -12,13 +11,13 @@
 \import Paths
 \import Paths.Meta
 
-\func isLocalEquiv {U : Universe} {A B : \hType} (f : A -> B) => \Pi (Z : Local) -> Equiv {B -> Z} {A -> Z} (-o f)
+\func IsLocalEquiv.{u} {U : Universe.{u}} {A B : \Type u} (f : A -> B) => \Pi (Z : Local.{u}) -> IsEquiv {B -> Z} {A -> Z} (-o f)
 
 \module Extension \where {
   -- | The type of extensions of {g} along {f}
-  \func ext {A B C : \hType} (f : A -> B) (g : A -> C) => Fib (-o f) g
+  \func ext {A B C : \Type} (f : A -> B) (g : A -> C) => Fib (-o f) g
 
-  \func ext-equiv {A B C : \hType} (f : A -> B) (g : A -> C) : QEquiv {ext f g} {\Pi (b : B) -> \Sigma (c : C) (\Pi (a : A) -> f a = b -> g a = c)} \cowith
+  \func ext-equiv {A B C : \Type} (f : A -> B) (g : A -> C) : QEquiv {ext f g} {\Pi (b : B) -> \Sigma (c : C) (\Pi (a : A) -> f a = b -> g a = c)} \cowith
     | f p b => (p.1 b, \lam a fa=b => inv (path ((p.2 @ __) a)) *> pmap p.1 fa=b)
     | ret K => ((K __).1, path (\lam i a => inv ((K (f a)).2 a idp) @ i))
     | ret_f b => path (\lam j => (b.1, path (\lam i a => inv_inv (path ((b.2 @ __) a)) @ j @ i)))
@@ -27,12 +26,12 @@
              Jl (\lam b' q' => inv (inv ((K (f a)).2 a idp)) *> pmap (K __).1 q' = (K b').2 a q') (inv_inv ((K (f a)).2 a idp)) q
       \in path (\lam i b => ((K b).1, p b __ __ @ i))
 
-  \lemma contr-equiv {A B C : \hType} (f : A -> B) (p : \Pi (g : A -> C) (b : B) -> Contr (\Sigma (c : C) (\Pi (a : A) -> f a = b -> g a = c)))
-    : Equiv {B -> C} {A -> C} (-o f)
-    => contrFibers=>Equiv (\lam g => rewrite (QEquiv-to-= (ext-equiv f g)) (HLevels_-2-pi (\lam b => \Sigma (c : C) (\Pi (a : A) -> f a = b -> g a = c)) {0} (p g)))
+  \lemma contr-equiv.{u} {A B C : \Type u} (f : A -> B) (p : \Pi (g : A -> C) (b : B) -> Contr (\Sigma (c : C) (\Pi (a : A) -> f a = b -> g a = c)))
+    : IsEquiv {B -> C} {A -> C} (-o f)
+    => contrFibers=>IsEquiv (\lam g => rewrite (path (QEquiv_= (ext-equiv f g))) (HLevels_-2-pi (\lam b => \Sigma (c : C) (\Pi (a : A) -> f a = b -> g a = c)) {0} (p g)))
 }
 
-\lemma connected_isLocalEquiv {U : Universe} {A B : \hType} (f : A -> B) (conn : isConnectedMap f) : isLocalEquiv f
+\lemma connected_isLocalEquiv.{u} {U : Universe.{u}} {A B : \Type u} (f : A -> B) (conn : isConnectedMap f) : IsLocalEquiv f
   => \lam C => Extension.contr-equiv f (\lam g b =>
        \let | G (x : Fib f b) => g x.1
             | p c => \new QEquiv {(\lam _ => c) = G} {\Pi (a : A) -> f a = b -> g a = c} {
@@ -41,34 +40,32 @@
               | ret_f q => inv_inv q
               | f_sec h => path (\lam k a r => path (\lam i => (inv_inv (path (\lam j (x : Fib f b) => h x.1 x.2 @ j)) @ k @ i) (a,r)))
             }
-       \in rewriteI (path (\lam i => \Sigma (c : C) (QEquiv-to-= (p c) @ i)))
-                    (Equiv=>contrFibers (propExt.dir (nullTypeUniverse.localDesc (Fib f b) C) (conn b C)) G))
+       \in rewriteI (path (\lam i => \Sigma (c : C) (QEquiv_= (p c) i)))
+                    (IsEquiv=>contrFibers (propExt.dir (nullTypeUniverse.localDesc (Fib f b) C) (conn b C)) G))
 
 -- | A map between local types is a local equivalence if and only if it is an equivalence
-\lemma localTypesEquiv {U : Universe} {A B : Local} (f : A -> B) : isLocalEquiv f = Equiv f
-  => propExt (dir f) (\lam e C => -o_Equiv {C} e)
+\lemma localTypesEquiv.{u} {U : Universe.{u}} {A B : Local.{u}} (f : A -> B) : IsLocalEquiv f = IsEquiv f
+  => propExt (dir f) (\lam e C => -o_IsEquiv e)
   \where {
     -- | A local equivalence between local types is an equivalence
-    \lemma dir {U : Universe} {A B : Local} (f : A -> B) (p : isLocalEquiv f) : Equiv f
-      => \let | g => sec {p A} id
-              | g_f => f_sec {p A} id
-              | H => ret {p B}
-         \in \new QEquiv {
+    \lemma dir.{u} {U : Universe.{u}} {A B : Local.{u}} (f : A -> B) (p : IsLocalEquiv f) : IsEquiv f
+      => \let | g => IsEquiv.ret (p A) id
+              | g_f => IsEquiv.f_ret (p A)
+              | H => IsEquiv.ret (p B)
+         \in inP \new QEquiv {
                | ret => g
-               | ret_f a => path ((g_f @ __) a)
-               | f_sec b => path (\lam i => ((
-                   f `o` g           ==< inv (ret_f {p B} (f `o` g)) >==
+               | ret_f a => path (g_f __ a)
+               | f_sec b => path \lam i => (
+                   f `o` g           ==< inv (IsEquiv.ret_f (p B)) >==
                    H (f `o` g `o` f) ==< pmap (\lam t => H (f `o` t)) g_f >==
-                   H f               ==< ret_f {p B} id >==
-                   id                `qed) @ i) b)
+                   H f               ==< IsEquiv.ret_f (p B) >==
+                   id                `qed) i b
              }
   }
 
-\lemma localEquivMap {U : ReflUniverse} {A B : \hType} (f : A -> B) : isLocalEquiv f = Equiv (lmap f)
-  => \have p (C : Local) : Equiv {LType B -> C} {LType A -> C} (-o (lmap f)) = Equiv {B -> C} {A -> C} (-o f)
-            => TwoOutOfThree.parallelEquiv (-o (lmap f))
-                                           (-o f)
-                                           (local-univ {localization B} C)
-                                           (local-univ {localization A} C)
-                                           (\lam h => path (\lam i a => h (Localization.lift-prop (inL `o` f) a @ i)))
-     \in path (\lam i => \Pi (C : Local) -> inv (p C) @ i) *> localTypesEquiv (lmap f)
+\lemma localEquivMap.{u} {U : ReflUniverse.{u}} {A B : \Type u} (f : A -> B) : IsLocalEquiv f = IsEquiv (lmap f)
+  => \have p (C : Local) : IsEquiv {LType B -> C} {LType A -> C} (-o (lmap f)) = IsEquiv {B -> C} {A -> C} (-o f)
+            => IsEquiv.parallelEquiv ((localization B).local-univ C)
+                                     ((localization A).local-univ C)
+                                     (\lam h => path (\lam i a => h (Localization.lift-prop (inL `o` f) a @ i)))
+     \in path (\lam i => \Pi (C : Local) -> inv (p C) i) *> localTypesEquiv (lmap f)

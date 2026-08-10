@@ -18,7 +18,7 @@
 \import Paths
 \import Paths.Meta
 \import Set.Filter
-\import Set.Subset
+\import Set.Set
 \import Topology.CoverSpace
 \import Topology.CoverSpace.Complete
 \import Topology.CoverSpace.CompletionTools
@@ -71,7 +71,7 @@
     \open ProductCoverSpace
     \open CoverMap
 
-    \sfunc dist-cover : CoverMap (StrongCompletion X ⨯ StrongCompletion X) RealNormed
+    \sfunc dist-cover : CoverMap (StrongCompletion X `ProductCoverSpace` StrongCompletion X) RealNormed
       => weaklyDense-lift {_} {ProductStronglyRegularCoverSpace (StrongCompletion X) (StrongCompletion X)} (prod strongCompletion strongCompletion) (prod.isWeaklyDenseEmbedding strongCompletion.isDenseEmbedding strongCompletion.isDenseEmbedding) ldist-uniform-map
 
     \lemma dist-char {x y : X} : dist-cover (pointSCF x, pointSCF y) = ldist x y

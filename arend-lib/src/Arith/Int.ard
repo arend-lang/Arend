@@ -109,10 +109,10 @@
     | pos n, pos m, neg k => pmap neg Monoid.*-assoc
     | pos n, neg m, pos k => neg*pos *> pmap neg Monoid.*-assoc *> pmap (pos n *) (inv (neg*pos {m} {k}))
     | pos n, neg m, neg k => neg*neg *> pmap pos Monoid.*-assoc *> pmap (pos n *) (inv neg*neg)
-    | neg n, pos m, pos k => pmap (`* pos k) (neg*pos {n} {m}) *> neg*pos *> pmap neg Monoid.*-assoc *> inv neg*pos
-    | neg n, pos m, neg k => pmap (`* neg k) (neg*pos {n} {m}) *> neg*neg *> pmap pos Monoid.*-assoc *> inv neg*neg
-    | neg n, neg m, pos k => pmap (`* pos k) neg*neg *> pmap pos Monoid.*-assoc *> inv (pmap (neg n *) neg*pos *> neg*neg)
-    | neg n, neg m, neg k => pmap (`* neg k) neg*neg *> pmap neg Monoid.*-assoc *> inv (pmap (neg n *) neg*neg *> neg*pos)
+    | neg n, pos m, pos k => pmap (* pos k) (neg*pos {n} {m}) *> neg*pos *> pmap neg Monoid.*-assoc *> inv neg*pos
+    | neg n, pos m, neg k => pmap (* neg k) (neg*pos {n} {m}) *> neg*neg *> pmap pos Monoid.*-assoc *> inv neg*neg
+    | neg n, neg m, pos k => pmap (* pos k) neg*neg *> pmap pos Monoid.*-assoc *> inv (pmap (neg n *) neg*pos *> neg*neg)
+    | neg n, neg m, neg k => pmap (* neg k) neg*neg *> pmap neg Monoid.*-assoc *> inv (pmap (neg n *) neg*neg *> neg*pos)
   }
   | ldistr {x y z : Int} : x * (y + z) = x * y + x * z \elim x, y, z {
     | pos n, pos m, pos k => pmap pos NatSemiring.ldistr
@@ -170,7 +170,7 @@
       | n, suc m, suc k => lldistr n m k
 
     \lemma lrdistr (n m k : Nat) : (n Nat.+ m) - k = (n - k) + pos m =>
-      (n Nat.+ m) - k ==< pmap (`- k) AbMonoid.+-comm >==
+      (n Nat.+ m) - k ==< pmap (- k) AbMonoid.+-comm >==
       (m Nat.+ n) - k ==< lldistr m n k >==
       pos m + (n - k) ==< +-comm >==
       (n - k) + pos m `qed
@@ -382,6 +382,12 @@
 \lemma id<isuc {x : Int} : x < isuc x \elim x
   | pos n => pos<pos id<suc
   | neg (suc n) => neg<neg id<suc
+
+\lemma isuc_<_<= {x y : Int} (p : x < y) : isuc x <= y \elim x, y
+  | pos n, pos m => pos<=pos $ suc_<_<= $ pos<pos.conv p
+  | pos n, neg (suc m) => absurd $ neg<=pos p
+  | neg (suc n), pos m => neg<=pos
+  | neg (suc n), neg (suc m) => neg<=neg $ <_suc_<= $ neg<neg.conv p
 
 \lemma pos_iabs {x y : Nat} (y<=x : y <= x) : pos (iabs (x Nat.- y)) = x Nat.- y
   => cases ((x Nat.- y) arg addPath) \with {

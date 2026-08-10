@@ -30,6 +30,6 @@ tasks.compileJava {
     dependsOn(generateVersion)
 }
 
-tasks.sourcesJar {
+tasks.named<Jar>("sourcesJar") {
     dependsOn(generateVersion)
 }

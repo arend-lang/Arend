@@ -60,7 +60,7 @@
 
   \lemma cert-toRingTerm-correct (l : Array (RingTerm C V)) (c : Cert l.len) : AlgData.interpret (cert-toTerm l c) = certSum l c \elim l, c
     | nil, nil => idp
-    | t :: l, k :: c => pmap2 (+) (pmap (`* _) alg.func-natCoef) (cert-toRingTerm-correct l c)
+    | t :: l, k :: c => pmap2 (+) (pmap (* _) alg.func-natCoef) (cert-toRingTerm-correct l c)
 
   \lemma interpretCert_certSum (l : Array (RingTerm C V)) {c : Cert l.len} : interpretCert l c = certSum l c
     => inv (normalize-consistent (cert-toTerm l c)) *> cert-toRingTerm-correct l c
@@ -97,11 +97,11 @@
   \func CorrectCert (p : Problem) => \Sigma (c : Cert p.len) (f : Nat) (interpretCert (map __.1 p) c = interpretCert (:ide :: map __.3 p) (f :: c)) (hasNegative p c or isSuc f = true)
 
   \lemma certToLeq (p : Problem) (c : CorrectCert p) : certSum (map __.3 p) c.1 <= certSum (map __.1 p) c.1
-    => transport2 (<=) zro-left (inv aux) $ <=_+ (transport (`<= _) ide-right $ <=_*_positive-left natCoef>=0 (LinearOrder.<_<= zro<ide)) <=-refl
+    => transport2 (<=) zro-left (inv aux) $ <=_+ (transport (<= _) ide-right $ <=_*_positive-left natCoef>=0 (LinearOrder.<_<= zro<ide)) <=-refl
     \where \lemma aux => inv (interpretCert_certSum (map __.1 p)) *> c.3 *> interpretCert_certSum (:ide :: map __.3 p) {c.2 :: c.1}
 
   \lemma certToLess (p : Problem) (c : CorrectCert p) (q : isSuc c.2 = true) : certSum (map __.3 p) c.1 < certSum (map __.1 p) c.1
-    => transport2 (<) zro-left (inv certToLeq.aux) $ LinearlyOrderedAbMonoid.<=_+-right (transport (`< _) ide-right $ <_*_positive-left (natCoef>0 (isSuc.correct q)) zro<ide) <=-refl
+    => transport2 (<) zro-left (inv certToLeq.aux) $ LinearlyOrderedAbMonoid.<=_+-right (transport (< _) ide-right $ <_*_positive-left (natCoef>0 (isSuc.correct q)) zro<ide) <=-refl
 
   \lemma solveContrProblem (p : Problem) (c : CorrectCert p) (h : DArray (\lam j => interpretEq (p j))) : Empty
     => \case or.toOr c.4 \with {
@@ -117,7 +117,7 @@
       \lemma aux (p : Problem) (c : Cert p.len) (cc : ∃ (j : Fin p.len) (0 < c j) ((p j).2 = Less)) (h : ∀ (e : p) (interpretEq e))
         : certSum (map __.1 p) c < certSum (map __.3 p) c \elim p, c, cc
         | nil, nil, inP ((),_,_)
-        | e :: p, k :: c, inP (0, k>0, p0=less) => <=_+-right (<_*_positive-right (transport (`< _) natCoefZero $ OrderedSemiring.natCoef_< k>0) (transport (\lam r => interpretEq (e.1,r,e.3)) p0=less (h 0))) (aux_<= p c (\lam j => h (suc j)))
+        | e :: p, k :: c, inP (0, k>0, p0=less) => <=_+-right (<_*_positive-right (transport (< _) natCoefZero $ OrderedSemiring.natCoef_< k>0) (transport (\lam r => interpretEq (e.1,r,e.3)) p0=less (h 0))) (aux_<= p c (\lam j => h (suc j)))
         | e :: p, k :: c, inP (suc j, cj>0, pj=less) => <=_+-left (<=_*_positive-right natCoef>=0 (interpretEq_<= e (h 0))) (aux p c (inP (j, cj>0, pj=less)) (\lam j => h (suc j)))
     }
 

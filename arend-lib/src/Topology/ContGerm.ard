@@ -15,7 +15,7 @@
 \import Paths
 \import Paths.Meta
 \import Relation.Equivalence
-\import Set.Subset
+\import Set.Set
 \import Topology.TopAbGroup
 \import Topology.TopModule
 \import Topology.TopRing
@@ -39,7 +39,7 @@
         | inP (V,Vo,Vx,p,q,r) => ~-cgequiv Vo Vx p q \lam Vx => pmap h (r Vx)
       }
 
-    \func tuple {X Y Z : TopSpace} {x : X} (f : ContGerm X Y x) (g : ContGerm X Z x) : ContGerm X (Y ⨯ Z) x \elim f, g
+    \func tuple {X Y Z : TopSpace} {x : X} (f : ContGerm X Y x) (g : ContGerm X Z x) : ContGerm X (ProductTopSpace Y Z) x \elim f, g
       | in~ (U,Uo,Ux,f), in~ (V,Vo,Vx,g) => inCG (open-inter Uo Vo) (Ux,Vx) $ ProductTopSpace.tuple (f ∘ TopSub-inc meet-left) (g ∘ TopSub-inc meet-right)
       | in~ (U,Uo,Ux,f), ~-equiv y z r => \case \elim r \with {
         | inP (V,Vo,Vx,p,q,r) => ~-cgequiv (open-inter Uo Vo) (Ux,Vx) (meet-monotone <=-refl p) (meet-monotone <=-refl q) \lam s => ext (pmap f $ ext idp, pmap y.4 (ext idp) *> r s.2 *> pmap z.4 (ext idp))
@@ -77,7 +77,7 @@
     | in~ (U,Uo,Ux,f) => ~-cgequiv Uo Ux (\lam u => ((),u)) <=-refl \lam Ux => zro-left *> pmap f (ext idp)
   }
   | +-assoc {f} {g} {h} => \case \elim f, \elim g, \elim h \with {
-    | in~ (U,Uo,Ux,f), in~ (V,Vo,Vx,g), in~ (W,Wo,Wx,h) => ~-cgequiv (open-inter Uo (open-inter Vo Wo)) (Ux,(Vx,Wx)) (\lam (u,(v,w)) => ((u,v),w)) <=-refl
+    | in~ (U,Uo,Ux,f), in~ (V,Vo,Vx,g), in~ (W,Wo,Wx,h) => ~-cgequiv (open-inter Uo (open-inter Vo Wo)) (Ux,(Vx,Wx)) (later \lam (u,(v,w)) => ((u,v),w)) <=-refl
                                                             \lam _ => +-assoc *> pmap2 (f __ +) (ext idp) (pmap2 (g __ + h __) (ext idp) (ext idp))
   }
   | negative f => ContGerm.comp-right f negative-cont
@@ -100,7 +100,7 @@
     | in~ (U,Uo,Ux,f) => ~-cgequiv Uo Ux (\lam u => (u,())) <=-refl \lam Ux => ide-right *> pmap f (ext idp)
   }
   | *-assoc {f} {g} {h} => \case \elim f, \elim g, \elim h \with {
-    | in~ (U,Uo,Ux,f), in~ (V,Vo,Vx,g), in~ (W,Wo,Wx,h) => ~-cgequiv (open-inter Uo (open-inter Vo Wo)) (Ux,(Vx,Wx)) (\lam (u,(v,w)) => ((u,v),w)) <=-refl
+    | in~ (U,Uo,Ux,f), in~ (V,Vo,Vx,g), in~ (W,Wo,Wx,h) => ~-cgequiv (open-inter Uo (open-inter Vo Wo)) (Ux,(Vx,Wx)) (later \lam (u,(v,w)) => ((u,v),w)) <=-refl
                                                             \lam _ => *-assoc *> pmap2 (f __ *) (ext idp) (pmap2 (g __ * h __) (ext idp) (ext idp))
   }
   | ldistr {f} {g} {h} => \case \elim f, \elim g, \elim h \with {
@@ -108,7 +108,7 @@
                                                             \lam _ => ldistr *> pmap2 (+) (pmap2 (f __ * g __) (ext idp) (ext idp)) (pmap2 (f __ * h __) (ext idp) (ext idp))
   }
   | rdistr {f} {g} {h} => \case \elim f, \elim g, \elim h \with {
-    | in~ (U,Uo,Ux,f), in~ (V,Vo,Vx,g), in~ (W,Wo,Wx,h) => ~-cgequiv (open-inter Uo (open-inter Vo Wo)) (Ux,(Vx,Wx)) (\lam (u,(v,w)) => ((u,v),w)) (\lam (u,(v,w)) => ((u,w),(v,w)))
+    | in~ (U,Uo,Ux,f), in~ (V,Vo,Vx,g), in~ (W,Wo,Wx,h) => ~-cgequiv (open-inter Uo (open-inter Vo Wo)) (Ux,(Vx,Wx)) (later \lam (u,(v,w)) => ((u,v),w)) (\lam (u,(v,w)) => ((u,w),(v,w)))
                                                             \lam _ => rdistr *> pmap2 (+) (pmap2 (f __ * h __) (ext idp) (ext idp)) (pmap2 (g __ * h __) (ext idp) (ext idp))
   }
 
@@ -120,7 +120,7 @@
     | ~-equiv y z r i, in~ b => ContGerm.comp-right (ContGerm.tuple (~-equiv y z r i) (in~ b)) *c-cont
   }
   | *c-assoc {f} {g} {h} => \case \elim f, \elim g, \elim h \with {
-    | in~ (U,Uo,Ux,f), in~ (V,Vo,Vx,g), in~ (W,Wo,Wx,h) => ~-cgequiv (open-inter Uo (open-inter Vo Wo)) (Ux,(Vx,Wx)) (\lam (u,(v,w)) => ((u,v),w)) <=-refl
+    | in~ (U,Uo,Ux,f), in~ (V,Vo,Vx,g), in~ (W,Wo,Wx,h) => ~-cgequiv (open-inter Uo (open-inter Vo Wo)) (Ux,(Vx,Wx)) (later \lam (u,(v,w)) => ((u,v),w)) <=-refl
         \lam _ => *c-assoc *> pmap2 (f __ LModule. *c) (ext idp) (pmap2 (g __ LModule.*c h __) (ext idp) (ext idp))
   }
   | *c-ldistr {f} {g} {h} => \case \elim f, \elim g, \elim h \with {
@@ -128,7 +128,7 @@
         \lam _ => *c-ldistr *> pmap2 (+) (pmap2 (f __ LModule.*c g __) (ext idp) (ext idp)) (pmap2 (f __ LModule.*c h __) (ext idp) (ext idp))
   }
   | *c-rdistr {f} {g} {h} => \case \elim f, \elim g, \elim h \with {
-    | in~ (U,Uo,Ux,f), in~ (V,Vo,Vx,g), in~ (W,Wo,Wx,h) => ~-cgequiv (open-inter Uo (open-inter Vo Wo)) (Ux,(Vx,Wx)) (\lam (u,(v,w)) => ((u,v),w)) (\lam (u,(v,w)) => ((u,w),(v,w)))
+    | in~ (U,Uo,Ux,f), in~ (V,Vo,Vx,g), in~ (W,Wo,Wx,h) => ~-cgequiv (open-inter Uo (open-inter Vo Wo)) (Ux,(Vx,Wx)) (later \lam (u,(v,w)) => ((u,v),w)) (\lam (u,(v,w)) => ((u,w),(v,w)))
         \lam _ => *c-rdistr *> pmap2 (+) (pmap2 (f __ LModule.*c h __) (ext idp) (ext idp)) (pmap2 (g __ LModule.*c h __) (ext idp) (ext idp))
   }
   | ide_*c {f} => \case \elim f \with {

@@ -6,7 +6,6 @@ import org.arend.core.definition.ClassDefinition;
 import org.arend.core.definition.FunctionDefinition;
 import org.arend.core.expr.*;
 import org.arend.core.expr.let.LetClause;
-import org.arend.core.sort.Sort;
 import org.arend.core.subst.Levels;
 import org.arend.ext.core.expr.CoreExpression;
 import org.arend.ext.core.ops.NormalizationMode;
@@ -94,7 +93,7 @@ public class PrettyPrintingTest extends TypeCheckingTestCase {
     List<Concrete.Parameter> arguments = new ArrayList<>(2);
     LocalReferable X = ref("X");
     LocalReferable x = ref("X");
-    arguments.add(cTele(cvars(X), cUniverseStd(0)));
+    arguments.add(cTele(cvars(X), cUniverse(0)));
     arguments.add(cTele(cvars(x), cVar(X)));
     LocatedReferableImpl reference = new LocatedReferableImpl(null, AccessModifier.PUBLIC, Precedence.DEFAULT, "f", Precedence.DEFAULT, null, MODULE_REF, GlobalReferable.Kind.FUNCTION);
     Concrete.FunctionDefinition def = new Concrete.FunctionDefinition(FunctionKind.FUNC, reference, arguments, cVar(X), null, body(cVar(x)));
@@ -202,7 +201,7 @@ public class PrettyPrintingTest extends TypeCheckingTestCase {
   public void boundRenamedTest() {
     FunctionDefinition def = (FunctionDefinition) typeCheckDef("\\func f (x y : Nat) => x");
     SingleDependentLink lamParam = singleParam("f", Nat());
-    Expression expr = new LamExpression(Sort.SET0, lamParam, FunCallExpression.make(def, Levels.EMPTY, Arrays.asList(new ReferenceExpression(lamParam), new ReferenceExpression(lamParam))));
+    Expression expr = new LamExpression(lamParam, FunCallExpression.make(def, Levels.EMPTY, Arrays.asList(new ReferenceExpression(lamParam), new ReferenceExpression(lamParam))));
     assertEquals("\\lam (f1 : Nat) => f f1 f1", expr.toString());
   }
 
@@ -239,7 +238,7 @@ public class PrettyPrintingTest extends TypeCheckingTestCase {
       "\\module M \\where { \\func foo (x y : Nat) => x }\n" +
       "\\module N \\where { \\func foo => 1 }");
     SingleDependentLink lamParam = singleParam("foo", Nat());
-    Expression expr = new LamExpression(Sort.SET0, lamParam, FunCallExpression.make((FunctionDefinition) getDefinition("M.foo"), Levels.EMPTY, Arrays.asList(new ReferenceExpression(lamParam), FunCallExpression.make((FunctionDefinition) getDefinition("N.foo"), Levels.EMPTY, Collections.emptyList()))));
+    Expression expr = new LamExpression(lamParam, FunCallExpression.make((FunctionDefinition) getDefinition("M.foo"), Levels.EMPTY, Arrays.asList(new ReferenceExpression(lamParam), FunCallExpression.make((FunctionDefinition) getDefinition("N.foo"), Levels.EMPTY, Collections.emptyList()))));
     assertEquals("\\lam (foo : Nat) => M.foo foo N.foo", expr.toString());
   }
 
@@ -369,5 +368,37 @@ public class PrettyPrintingTest extends TypeCheckingTestCase {
   @Test
   public void lamPatternsTest4() {
     testLamPatterns("\\lam n m => n");
+  }
+
+  @Test
+  public void typeLevelsTest() {
+    FunctionDefinition function = (FunctionDefinition) typeCheckDef("\\func test.{u} => \\Type u");
+    assertEquals("\\Type u", Objects.requireNonNull(function.getBody()).toString());
+  }
+
+  @Test
+  public void setLevelTest() {
+    FunctionDefinition function = (FunctionDefinition) typeCheckDef("\\func test.{u} => \\Set u");
+    assertEquals("\\Set u", Objects.requireNonNull(function.getBody()).toString());
+  }
+
+  @Test
+  public void definitionLevelTest() {
+    typeCheckModule("""
+      \\func foo.{u} => \\Type u
+      \\func test.{u} => foo.{u}
+      """);
+    FunctionDefinition function = (FunctionDefinition) getDefinition("test");
+    assertEquals("foo.{u}", Objects.requireNonNull(function.getBody()).toString());
+  }
+
+  @Test
+  public void definitionConstantLevelTest() {
+    typeCheckModule("""
+      \\func foo.{u} => \\Type u
+      \\func test => foo.{3}
+      """);
+    FunctionDefinition function = (FunctionDefinition) getDefinition("test");
+    assertEquals("foo.{3}", Objects.requireNonNull(function.getBody()).toString());
   }
 }

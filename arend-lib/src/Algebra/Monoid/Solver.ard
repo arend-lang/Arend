@@ -76,7 +76,7 @@
   \protected \lemma perm-consistent {l l' : List V} (p : Perm l l') : interpretNF l = interpretNF l' \elim l, l', p
     | nil, nil, perm-nil => idp
     | :: a1 l1, :: a2 l2, perm-:: idp p => repeat {2} (rewrite interpretNF.cons) (pmap (vars a1 *) (perm-consistent p))
-    | :: a1 (:: a1' l1), :: a2 (:: a2' l2), perm-swap idp idp idp => repeat {2} (rewrite interpretNF.cons) (inv *-assoc *> pmap (`* interpretNF l1) *-comm *> *-assoc)
+    | :: a1 (:: a1' l1), :: a2 (:: a2' l2), perm-swap idp idp idp => repeat {2} (rewrite interpretNF.cons) (inv *-assoc *> pmap (* interpretNF l1) *-comm *> *-assoc)
     | l1, l2, perm-trans p1 p2 => perm-consistent p1 *> perm-consistent p2
 
   \protected \lemma normalize-consistent (t : MonoidTerm V) : interpret t = interpretNF (sort (normalize t))
@@ -90,7 +90,7 @@
 
   \protected \lemma replace-consistent (l : List V) (is : List Nat) (r : List V) (p : interpretNF (indices is l) = interpretNF r)
     : interpretNF l = interpretNF (r ++ removeIndices is l)
-    => replace-consistent-lem is l *> interpretNF_++ _ _ *> pmap (`* interpretNF (removeIndices is l)) p *> inv (interpretNF_++ _ _)
+    => replace-consistent-lem is l *> interpretNF_++ _ _ *> pmap (* interpretNF (removeIndices is l)) p *> inv (interpretNF_++ _ _)
 
   \protected \lemma replace-consistent-lem (is : List Nat) (l : List V) : interpretNF l = interpretNF (indices is l ++ removeIndices is l)
     | nil, l => idp
@@ -132,7 +132,7 @@
     | :: a nil => idp
     | :: a (:: a1 l) => mcases \with {
       | yes p => rewrite (p, inv (removeDuplicates-consistent (a1 :: l)), interpretNF.cons) $
-                  inv M.*-assoc *> pmap (`∧ interpretNF l) (<=-antisymmetric meet-left (meet-univ <=-refl <=-refl))
+                  inv M.*-assoc *> pmap (∧ interpretNF l) (<=-antisymmetric meet-left (meet-univ <=-refl <=-refl))
       | no _ => rewrite {2} interpretNF.cons $ pmap (vars a ∧) (removeDuplicates-consistent (a1 :: l))
     }
 

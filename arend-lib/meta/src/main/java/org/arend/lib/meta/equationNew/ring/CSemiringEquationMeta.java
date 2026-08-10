@@ -8,6 +8,7 @@ import org.arend.lib.ring.Monomial;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.ArrayList;
 import java.util.List;
 
 public class CSemiringEquationMeta extends BaseSemiringEquationMeta {
@@ -43,6 +44,11 @@ public class CSemiringEquationMeta extends BaseSemiringEquationMeta {
     }
 
     var divRem = Monomial.divideAndRemainder(nf, hint.leftNF);
-    return divRem.proj1.isEmpty() ? null : new AbstractNFResult(divRem.proj1, null, divRem.proj2, normalizeNF(addNF(divRem.proj2, hint.rightNF)));
+    if (divRem.proj1.isEmpty()) return null;
+    // The Arend apply-axiom lemma proves `mul * normalize(t) + add = mul * normalize(s) + add`,
+    // so the new NF must be `mul * rightNF + add`, not `rightNF + add`.
+    List<Monomial> mulRight = new ArrayList<>();
+    Monomial.multiplyComm(divRem.proj1, hint.rightNF, mulRight);
+    return new AbstractNFResult(divRem.proj1, null, divRem.proj2, normalizeNF(addNF(divRem.proj2, mulRight)));
   }
 }

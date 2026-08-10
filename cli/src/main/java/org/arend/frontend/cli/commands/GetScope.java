@@ -117,7 +117,7 @@ public final class GetScope {
         if (entry.getValue().isHidden()) continue;
         String name = entry.getKey() != null ? entry.getKey().getRefName() : "_";
         Expression typeExpr = goal.bindingTypes.get(entry.getValue());
-        if (typeExpr == null) typeExpr = entry.getValue().getTypeExpr();
+        if (typeExpr == null) typeExpr = entry.getValue().getType();
         String type = typeExpr != null ? typeExpr.toString() : "{?}";
         locals.add(Map.of("name", name, "type", type));
       }

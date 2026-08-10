@@ -4,13 +4,16 @@
 \class Pointed \extends BaseSet
   | ide : E
   \where {
-    \func equals {X Y : Pointed} (p : X = {\Set} Y) (q : coe (p @) ide right = ide) : X = Y
+    \func equals.{u} {X Y : Pointed.{u}} (p : X = {\Set u} Y) (q : coe (p @) ide right = ide) : X = {Pointed.{u}} Y
       => path (\lam i => \new Pointed (p @ i) (pathOver {p @} q @ i))
   }
 
-\class AddPointed \extends BaseSet
+\class AddPointed \extends BaseSet {
   | zro : E
-  \where {
+
+  \protected \func IsZero : \Prop
+    => \Pi (x : E) -> x = 0
+} \where {
     \use \coerce fromPointed (P : Pointed) => \new AddPointed P.E P.ide
     \use \coerce toPointed (P : AddPointed) => \new Pointed P.E P.zro
   }

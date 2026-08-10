@@ -173,7 +173,7 @@ public class LinearSolver {
   }
 
   private Hypothesis<CoreExpression> bindingToHypothesis(CoreBinding binding, boolean reportError) {
-    return binding == null ? null : typeToEquation(binding.getTypeExpr().normalize(NormalizationMode.WHNF), binding, reportError);
+    return binding == null ? null : typeToEquation(binding.getType().normalize(NormalizationMode.WHNF), binding, reportError);
   }
 
   private List<BigInteger> solveEquations(List<? extends Equation<CompiledTerm>> equations, int var) {
@@ -282,16 +282,6 @@ public class LinearSolver {
         result.add(new Hypothesis<>(factory.app(factory.ref(meta.eqToLeq), true, factory.app(factory.ref(meta.inv), true, hypothesis.proof)), hypothesis.instance, Equation.Operation.LESS_OR_EQUALS, terms.term2, terms.term1, terms.lcm));
       } else {
         result.add(new Hypothesis<>(hypothesis.proof, hypothesis.instance, hypothesis.operation, terms.term1, terms.term2, terms.lcm));
-        if (hypothesis.operation == Equation.Operation.LESS) {
-          // Tighten the bounds for discrete types: x < y implies x + 1 <= y
-          if (compiler.isNat() || compiler.isInt()) {
-            List<BigInteger> newCoefs = new ArrayList<>(terms.term1.coefficients());
-            newCoefs.set(0, newCoefs.get(0).add(BigInteger.ONE));
-            ConcreteExpression proof = compiler.isNat() ? factory.app(factory.ref(meta.sucLleq), true, hypothesis.proof) :
-              factory.app(factory.ref(meta.fromIntLE), true, factory.app(factory.ref(meta.fromIntL), true, factory.app(factory.ref(meta.idLisuc), true, hypothesis.proof)));
-            result.add(new Hypothesis<>(proof, hypothesis.instance, Equation.Operation.LESS_OR_EQUALS, new CompiledTerm(factory.app(factory.ref(meta.addTerm), true, terms.term1.concrete(), factory.ref(meta.ideTerm)), newCoefs, terms.term1.vars()), terms.term2, terms.lcm));
-          }
-        }
       }
     }
   }

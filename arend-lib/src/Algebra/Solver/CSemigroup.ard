@@ -31,7 +31,7 @@
     \lemma swap-head {n : Nat} {S : CSemigroup} {env : Fin n -> S} {x y : Fin n} {l : List (Fin n)}
       : interpretNE env x (y :: l) = interpretNE env y (x :: l) \elim l
       | nil => *-comm
-      | z :: l => inv *-assoc *> pmap (`* interpretNE env z l) *-comm *> *-assoc
+      | z :: l => inv *-assoc *> pmap (* interpretNE env z l) *-comm *> *-assoc
 
     -- | The interpretation of a non-empty word is invariant under permutations.
     \lemma interpretNE-perm {n : Nat} {S : CSemigroup} {env : Fin n -> S} {x : Fin n} {l : List (Fin n)} {y : Fin n} {m : List (Fin n)}

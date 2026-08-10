@@ -23,45 +23,49 @@ public class ProductsTest extends TypeCheckingTestCase {
 
   @Test
   public void embeddedTupleTest() {
-    typeCheckModule(
-      "\\func f (p : \\Sigma Nat Nat) : Nat\n" +
-      "  | (zero , zero ) => 0\n" +
-      "  | (zero , suc _) => 1\n" +
-      "  | (suc _, zero ) => 2\n" +
-      "  | (suc x, suc _) => x\n" +
-      "\\func g1 : f (0,0) = 0 => idp\n" +
-      "\\func g2 : f (0,5) = 1 => idp\n" +
-      "\\func g3 : f (5,0) = 2 => idp\n" +
-      "\\func g4 : f (7,2) = 6 => idp");
+    typeCheckModule("""
+      \\func f (p : \\Sigma Nat Nat) : Nat
+        | (zero , zero ) => 0
+        | (zero , suc _) => 1
+        | (suc _, zero ) => 2
+        | (suc x, suc _) => x
+      \\func g1 : f (0,0) = 0 => idp
+      \\func g2 : f (0,5) = 1 => idp
+      \\func g3 : f (5,0) = 2 => idp
+      \\func g4 : f (7,2) = 6 => idp
+      """);
   }
 
   @Test
   public void embeddedTupleTest2() {
-    typeCheckModule(
-      "\\data D | con (\\Sigma Nat Nat) | con'\n" +
-      "\\func f (d : D) : Nat\n" +
-      "  | con (zero , y) => y\n" +
-      "  | con (suc x, _) => x\n" +
-      "  | con' => 0");
+    typeCheckModule("""
+      \\data D | con (\\Sigma Nat Nat) | con'
+      \\func f (d : D) : Nat
+        | con (zero , y) => y
+        | con (suc x, _) => x
+        | con' => 0
+      """);
   }
 
   @Test
   public void embeddedTupleTestError() {
-    typeCheckModule(
-      "\\func f (p : \\Sigma Nat Nat) : Nat\n" +
-      "  | (zero, zero) => 0\n" +
-      "  | (zero, suc _) => 1\n" +
-      "  | (suc _, zero) => 2\n" +
-      "  | (suc (suc x), suc _) => x", 1);
+    typeCheckModule("""
+      \\func f (p : \\Sigma Nat Nat) : Nat
+        | (zero, zero) => 0
+        | (zero, suc _) => 1
+        | (suc _, zero) => 2
+        | (suc (suc x), suc _) => x
+      """, 1);
     assertThatErrorsAre(missingClauses(1));
   }
 
   @Test
   public void classTest() {
-    typeCheckModule(
-      "\\class A (n m : Nat)\n" +
-      "\\func f (p : A) : \\Sigma Nat Nat\n" +
-      "  | (n,m) => (n,m)");
+    typeCheckModule("""
+      \\class A (n m : Nat)
+      \\func f (p : A) : \\Sigma Nat Nat
+        | (n,m) => (n,m)
+      """);
   }
 
   /*
@@ -126,61 +130,67 @@ public class ProductsTest extends TypeCheckingTestCase {
 
   @Test
   public void dependentRecordTest() {
-    typeCheckModule(
-      "\\record Pair (A B : \\Type) | fst : A | snd : B\n" +
-      "\\func swap {A' B' : \\Type} (p : Pair A' B') : Pair B' A'\n" +
-      "  | (a, b) => \\new Pair { | fst => b | snd => a }");
+    typeCheckModule("""
+      \\record Pair (A B : \\Type) | fst : A | snd : B
+      \\func swap {A' B' : \\Type} (p : Pair A' B') : Pair B' A'
+        | (a, b) => \\new Pair { | fst => b | snd => a }
+      """);
   }
 
   @Test
   public void extensionRecordTest() {
-    typeCheckModule(
-      "\\record R (a : Nat)\n" +
-      "\\record S \\extends R | b : Nat\n" +
-      "\\func f (s : S) : Nat\n" +
-      "  | (a,b) => a Nat.+ b");
+    typeCheckModule("""
+      \\record R (a : Nat)
+      \\record S \\extends R | b : Nat
+      \\func f (s : S) : Nat
+        | (a,b) => a Nat.+ b
+      """);
   }
 
   @Ignore
   @Test
   public void singleFieldTest() {
-    typeCheckModule(
-      "\\record S (a : Nat)\n" +
-      "\\func f (s : S) : Nat\n" +
-      "  | 0 => 0\n" +
-      "  | suc n => n\n" +
-      "\\func g : f (\\new S 2) = 1 => idp");
+    typeCheckModule("""
+      \\record S (a : Nat)
+      \\func f (s : S) : Nat
+        | 0 => 0
+        | suc n => n
+      \\func g : f (\\new S 2) = 1 => idp
+      """);
   }
 
   @Test
   public void implRecordTest() {
-    typeCheckModule(
-      "\\record R (A : \\hType) (a : A)\n" +
-      "\\record S \\extends R | A => Nat | b : Nat\n" +
-      "\\func f (s : S) : Nat\n" +
-      "  | (0, m) => m\n" +
-      "  | (suc n, _) => n");
+    typeCheckModule("""
+      \\record R (A : \\Type) (a : A)
+      \\record S \\extends R | A => Nat | b : Nat
+      \\func f (s : S) : Nat
+        | (0, m) => m
+        | (suc n, _) => n
+      """);
   }
 
   @Test
   public void swapTest() {
-    typeCheckModule(
-      "\\record Pair (A B : \\Type)\n" +
-      "  | fst : A\n" +
-      "  | snd : B\n" +
-      "\\func swap {A B : \\Type} (p : Pair A B) : Pair B A \\cowith\n" +
-      "  | fst => p.snd\n" +
-      "  | snd => p.fst\n" +
-      "\\func swap-involutive {A B : \\Type} (p : Pair A B) : swap (swap p) = p\n" +
-      "  | (a,b) => idp");
+    typeCheckModule("""
+      \\record Pair (A B : \\Type)
+        | fst : A
+        | snd : B
+      \\func swap {A B : \\Type} (p : Pair A B) : Pair B A \\cowith
+        | fst => p.snd
+        | snd => p.fst
+      \\func swap-involutive {A B : \\Type} (p : Pair A B) : swap (swap p) = p
+        | (a,b) => idp
+      """);
   }
 
   @Test
   public void etaTest() {
-    typeCheckModule(
-      "\\record R (x y : Nat)\n" +
-      "\\func f (r : R) : Nat\n" +
-      "  | (t,_) => t\n" +
-      "\\func g (r : R) : f r = r.x => idp");
+    typeCheckModule("""
+      \\record R (x y : Nat)
+      \\func f (r : R) : Nat
+        | (t,_) => t
+      \\func g (r : R) : f r = r.x => idp
+      """);
   }
 }

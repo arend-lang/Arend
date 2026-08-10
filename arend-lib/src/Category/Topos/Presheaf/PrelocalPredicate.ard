@@ -1,0 +1,72 @@
+\import Category
+\import Category.Functor
+\import Category.Limit
+\import Category.Subobj
+\import Category.Topos.Presheaf
+\import Category.Yoneda
+\import Equiv
+\import Function.Meta
+\import Logic
+\import Logic.Meta
+\import Meta
+\import Order.PartialOrder
+\import Paths
+\import Paths.Meta
+\import Relation.Equivalence
+\import Set.SetCategory
+
+\record PrelocalPredicate.{u} {C : Precat} (S : Presheaf.{u} C) (\coerce pred : \Pi {a : C} -> S a -> \Prop) {
+  | isPrelocalPredicate {a b : C} {f : Hom a b} {x : S b} : pred x -> pred (S.F.Func f x)
+
+  \func toSubFunctor : Functor C.op SetCat \cowith
+    | F a => \Sigma (x : S a) (pred x)
+    | Func f s => (S.F.Func f s.1, isPrelocalPredicate s.2)
+    | Func-id => ext \lam s => ext $ path \lam i => S.F.Func-id i s.1
+    | Func-o => ext \lam s => ext $ path \lam i => S.F.Func-o i s.1
+
+  \func toSubPresheaf : Presheaf C \cowith
+    | F => toSubFunctor
+
+  \func embedding : NatTrans toSubFunctor S \cowith
+    | trans a s => s.1
+    | natural _ => idp
+} \where {
+  \func fromSubobj.{u} {C : Precat} {S : Presheaf.{u} C} (T : Subobj S) : PrelocalPredicate S \elim T
+    | in~ m => \new PrelocalPredicate {
+      | pred {a} x => ∃ (y : m.dom a) (m.f a y = x)
+      | isPrelocalPredicate {a} {b} {f} (inP s) => inP (m.dom.F.Func f s.1, path (\lam i => m.f.natural f i s.1) *> pmap (S.F.Func f) s.2)
+    }
+    | ~-equiv m1 m2 r => exts \lam {a} x => propExt
+      (\lam (inP d) => inP (r.1 a d.1, path (\lam i => r.2 i a d.1) *> d.2))
+      (\lam (inP d) => inP (r.3 a d.1, path (\lam i => r.4 i a d.1) *> d.2))
+  \where
+    \lemma extract.{o,h} {C : Precat.{o,h}} {S : Presheaf.{h} C} {m : Mono {PresheafCat C} { | cod => S }} {a : C} {x : S a} (p : fromSubobj (inso~ m) x) : \Sigma (y : m.dom a) (m.f a y = x)
+      => TruncP.remove (\lam s s' => ext $ presheaf-mono-char.1 m $ s.2 *> inv s'.2) p
+}
+
+\func PrelocalPredicate_Subobj.{o,h} {C : Precat.{o,h}} (S : Presheaf.{h} C) : QEquiv {PrelocalPredicate S} {Subobj S} \cowith
+  | f P => inso~ \new Mono {
+    | dom => P.toSubPresheaf
+    | f => P.embedding
+    | isMono p => exts \lam a => ext \lam x => ext $ path \lam i => p i a x
+  }
+  | ret => PrelocalPredicate.fromSubobj
+  | ret_f T => exts \lam {a} x => propExt (\lam (inP ((y,Ty),p)) => transport (T {a}) p Ty) \lam Tx => inP ((x,Tx), idp)
+  | f_sec => \case \elim __ \with {
+    | in~ m => <=-antisymmetric (inP (\new NatTrans {
+        | trans a d => (PrelocalPredicate.fromSubobj.extract.{o} d.2).1
+        | natural f => ext \lam d => presheaf-mono-char.1 m $ (PrelocalPredicate.fromSubobj.extract _).2 *>
+          inv (path (\lam i => m.f.natural f i _) *> pmap (S.F.Func f) (PrelocalPredicate.fromSubobj.extract d.2).2)
+      }, exts \lam a => ext \lam d => (PrelocalPredicate.fromSubobj.extract d.2).2)) (inP (\new NatTrans {
+        | trans a x => (m.f a x, inP (x,idp))
+        | natural f => exts \lam x => ext $ path \lam i => m.f.natural f i x
+      }, idp))
+  }
+
+\lemma exists-prelocalPredicate.{u} {C : Precat} {S T : Presheaf.{u} C} (P : PrelocalPredicate (VPresheafComplete.BprodPresheaf {SetBicat} S T))
+  : PrelocalPredicate S \lam {a} x => ∃ (y : T a) (P (x,y)) \cowith
+  | isPrelocalPredicate {a} {b} {f} (inP (y,Pxy)) => inP (T.F.Func f y, P.isPrelocalPredicate Pxy)
+
+\lemma equality-prelocalPredicate.{u} {C : Precat} (S : Presheaf.{u} C)
+  : PrelocalPredicate (VPresheafComplete.BprodPresheaf {SetBicat} S S) (\lam s => s.1 = s.2) \cowith
+  | isPrelocalPredicate {a} {b} {f} p => pmap (S.F.Func f) p

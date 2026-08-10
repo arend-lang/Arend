@@ -24,8 +24,8 @@ import org.arend.ext.core.ops.NormalizationMode
 import org.arend.ext.prettyprinting.DefinitionRenamer
 import org.arend.ext.prettyprinting.PrettyPrinterConfig
 import org.arend.intention.checkNotGeneratePreview
+import org.arend.naming.reference.GlobalReferable
 import org.arend.naming.resolving.ResolverListener
-import org.arend.naming.resolving.typing.TypingInfo
 import org.arend.naming.resolving.visitor.DefinitionResolveNameVisitor
 import org.arend.psi.*
 import org.arend.psi.ext.*
@@ -33,12 +33,12 @@ import org.arend.resolving.util.parseBinOp
 import org.arend.server.ArendServerService
 import org.arend.server.ProgressReporter
 import org.arend.server.impl.ArendLibraryImpl
-import org.arend.server.impl.ArendServerImpl
 import org.arend.settings.ArendProjectSettings
 import org.arend.term.Fixity
 import org.arend.term.abs.Abstract
 import org.arend.term.abs.ConcreteBuilder
 import org.arend.term.concrete.Concrete
+import org.arend.term.concrete.ReplaceDataVisitor
 import org.arend.term.prettyprint.ToAbstractVisitor
 import org.arend.typechecking.ProgressCancellationIndicator
 import org.arend.typechecking.computation.ComputationRunner
@@ -75,7 +75,7 @@ data class SubExprResult(
             && subConcrete is Concrete.LetExpression
             && subCore is LetExpression) binding(subPsi, selected)?.let {
         it to FindBinding.visitLet(it, subConcrete, subCore)
-    } else findTeleBinding(selected)?.let { (id, link) -> id to link?.typeExpr }
+    } else findTeleBinding(selected)?.let { (id, link) -> id to link?.type }
 
     @Suppress("MemberVisibilityCanBePrivate")
     fun findTeleBinding(selected: TextRange) = if (subPsi is ArendLamExpr
@@ -139,10 +139,21 @@ fun correspondedSubExpr(range: TextRange, file: PsiFile, project: Project): SubE
     }
     val concreteDef = psiDef.tcReferable?.let { arendServer.getResolvedDefinition(it) }?.definition as? Concrete.Definition
 
-    val extension = concreteDef?.data?.getLocation()?.libraryName?.let { arendServer.getLibrary(it) as? ArendLibraryImpl }?.extension
-    getReferableConcreteGroup(psiDef)?.let { concreteGroup ->
-        DefinitionResolveNameVisitor(SimpleConcreteProvider(ArendServerImpl.updateDefinitions(concreteGroup)), TypingInfo.EMPTY, DummyErrorReporter.INSTANCE, extension?.literalTypechecker, resolver)
-            .resolveGroup(concreteGroup, getReferableScope(psiDef), ArendInstances(), LinkedHashMap())
+    // Metas with a resolver rewrite the concrete expression during resolution, so the resolved definition
+    // above no longer mentions them and `subExpr`, which is built from the PSI, cannot be found in it.
+    // Resolve once more with a listener to learn what such a meta expanded to; `resolver` records both the
+    // expansion and the concrete spanning the whole meta call. Resolution rewrites definitions in place,
+    // so hand the visitor copies of them -- `concreteGroup` is the raw group the server keeps cached.
+    if (resolver != null) {
+        val extension = concreteDef?.data?.getLocation()?.libraryName?.let { arendServer.getLibrary(it) as? ArendLibraryImpl }?.extension
+        getReferableConcreteGroup(psiDef)?.let { concreteGroup ->
+            val definitions = HashMap<GlobalReferable, Concrete.GeneralDefinition>()
+            concreteGroup.traverseGroup { group ->
+                group.definition()?.let { definitions[group.referable()] = it.accept(ReplaceDataVisitor(true), null) }
+            }
+            DefinitionResolveNameVisitor(SimpleConcreteProvider(definitions), arendServer.typingInfo, DummyErrorReporter.INSTANCE, extension?.literalTypechecker, resolver)
+                .resolveGroup(concreteGroup, getReferableScope(psiDef), ArendInstances(), LinkedHashMap())
+        }
     }
     val body = concreteDef?.let { it to psiDef }
 

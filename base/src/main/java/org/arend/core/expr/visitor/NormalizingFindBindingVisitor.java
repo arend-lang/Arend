@@ -142,7 +142,7 @@ public class NormalizingFindBindingVisitor extends SearchVisitor<Void> {
   private boolean visitDependentLink(DependentLink link) {
     for (; link.hasNext(); link = link.getNext()) {
       link = link.getNextTyped(null);
-      if (findBinding(link.getTypeExpr(), true)) {
+      if (findBinding(link.getType(), true)) {
         return true;
       }
     }

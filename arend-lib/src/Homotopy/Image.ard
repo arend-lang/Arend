@@ -5,6 +5,7 @@
 \import Data.SeqColimit
 \import Equiv
 \import Equiv.Univalence
+\import Function
 \import Logic.Unique
 \import Homotopy.Fibration
 \import Homotopy.Pushout
@@ -14,8 +15,8 @@
 
 \func MJoin {A B : \Type} (R : A -> B -> \Type) => PushoutData {\Sigma (x : A) (y : B) (R x y)} __.1 __.2
   \where
-    \class MData \noclassifying {A : \Type} {B : \Type (\suc \lp)} (f : A -> B) (R : B -> B -> \Type) (ret : \Pi (b b' : B) -> R b b' -> b = b') {
-      \func MImageAppr (n : Nat) : \Sigma (X : \hType) (X -> B) \elim n
+    \class MData.{u} \noclassifying {A : \Type u} {B : \Type (\suc u)} (f : A -> B) (R : B -> B -> \Type u) (ret : \Pi (b b' : B) -> R b b' -> b = b') {
+      \func MImageAppr (n : Nat) : \Sigma (X : \Type u) (X -> B) \elim n
         | 0 => (A,f)
         | suc n =>
           \let (X,g) => MImageAppr n
@@ -29,23 +30,21 @@
 
       \func dom-map (a : A) : MImage => inSC {seq} {0} a
 
-      \lemma dom-map-surj (refl : \Pi {b : B} -> R b b) : Surjection dom-map =>
-        seqColimit-surj seq (\lam n => \new Surjection {
-          | isSurjMap y => \case \elim y \with {
-            | pinl a => inP (\case \elim n \with {
-              | 0 => (a, inv (path (pglue ((a,a,refl) : \Sigma (a : A) (a' : A) (R (f a) (f a'))))))
-              | suc n => (pinl a, inv (path (pglue ((a, pinl a, refl) : \Sigma (a : A) (x : (MImageAppr (suc n)).1) (R (f a) ((MImageAppr (suc n)).2 x))))))
-            })
-            | pinr x => inP (x,idp)
+      \lemma dom-map-surj (refl : \Pi {b : B} -> R b b) : IsSurj dom-map
+        => seqColimit-surj seq \lam n => \case \elim __ \with {
+          | pinl a => inP \case \elim n \with {
+            | 0 => (a, inv (path (pglue ((a,a,refl) : \Sigma (a : A) (a' : A) (R (f a) (f a'))))))
+            | suc n => (pinl a, inv (path (pglue ((a, pinl a, refl) : \Sigma (a : A) (x : (MImageAppr (suc n)).1) (R (f a) ((MImageAppr (suc n)).2 x))))))
           }
-        })
+          | pinr x => inP (x,idp)
+        }
 
       \func cod-map (x : MImage) : B \elim x
         | inSC {n} x => (MImageAppr n).2 x
         | quotSC {n} x => idp
 
       \lemma cod-map-emb (refl : \Pi {b : B} -> R b b) (refl-idp : \Pi {b : B} -> ret b b refl = idp) : Embedding cod-map =>
-        Embedding.fibers cod-map (\lam b => isContr'=>isProp (\lam (r : Fib cod-map b) => \case isSurjMap {dom-map-surj refl} r.1 \with {
+        Embedding.fibers cod-map (\lam b => isContr'=>isProp (\lam (r : Fib cod-map b) => \case dom-map-surj refl r.1 \with {
           | inP r' => rewriteI (pmap cod-map r'.2 *> r.2) (fibers-contr refl refl-idp r'.1)
         }))
         \where
@@ -59,25 +58,25 @@
                                        transport_path-left (ret (f a) ((MImageAppr n).2 p.1) (sec (inv p.2))) idp *> pmap inv (sec-ret (inv p.2)) *> inv_inv p.2)))))
     }
 
-\func YImage {A B : \Type} (S : A -> B -> \Type) => data.MImage
+\func YImage.{u} {A B : \Type u} (S : A -> B -> \Type u) => data.MImage
   \where {
     \open MJoin
 
     \instance data : MData S \cowith
-      | R F G => \Pi (b : B) -> Equiv {F b} {G b}
-      | ret F G r => path (\lam i b => Equiv-to-= (r b) @ i)
+      | R F G => \Pi (b : B) -> Equiv (F b) (G b)
+      | ret F G r => path (\lam i b => Equiv_= (r b) i)
 
     \func dom-map (a : A) : YImage S
       => MData.dom-map a
 
-    \lemma dom-map-surj : Surjection dom-map
-      => MData.dom-map-surj (\lam {F} b => idEquiv {F b})
+    \lemma dom-map-surj : IsSurj dom-map
+      => MData.dom-map-surj \lam {F} b => mkEquiv (inP idEquiv)
 
-    \func cod-map (y : YImage S) (b : B) : \Type
+    \func cod-map (y : YImage S) (b : B)
       => MData.cod-map y b
 
     \lemma cod-map-emb : Embedding cod-map
-      => MData.cod-map-emb (\lam {F} b => idEquiv {F b}) (\lam {F} =>
-          \have p b : Equiv-to-= (idEquiv {F b}) = idp => univalence.ret_f idp
-          \in path (\lam i => path (\lam j b => p b @ i @ j)))
+      => MData.cod-map-emb (\lam {F} b => mkEquiv (inP idEquiv)) \lam {F} =>
+          \have p b : Equiv_= (mkEquiv (inP (idEquiv {F b}))) = idp => typeUnivalence.ret_f idp
+          \in path \lam i => path \lam j b => p b i j
   }

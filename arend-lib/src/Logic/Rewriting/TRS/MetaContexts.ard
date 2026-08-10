@@ -58,7 +58,8 @@
   | metaname m => Empty
   | m-domain e => contradiction
 
-\func PureTerm (env : FSignature) (context : List Sort) (s : Sort) : \Type => Term env context s EmptyMetaContext
+\func PureTerm (env : FSignature) (context : List Sort) (s : Sort) : \Set
+  => Term env context s EmptyMetaContext
 
 \lemma apply-modularity {env : FSignature} {context subst-context pattern-context : List Sort} {s : Sort} {mc : MetaContext Sort} {n : Nat} {index : Fin n}
                         (producer : Fin n -> MetaContext Sort)

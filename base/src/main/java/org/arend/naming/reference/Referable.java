@@ -7,7 +7,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 public interface Referable extends ArendRef {
-  enum RefKind { EXPR, PLEVEL, HLEVEL }
+  enum RefKind { EXPR, LEVEL }
 
   @NotNull String textRepresentation();
 

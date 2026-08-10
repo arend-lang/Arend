@@ -16,7 +16,6 @@ import org.arend.naming.reference.*;
 import org.arend.naming.scope.EmptyScope;
 import org.arend.naming.scope.Scope;
 import org.arend.prelude.Prelude;
-import org.arend.term.concrete.Concrete;
 import org.arend.term.group.*;
 import org.arend.typechecking.order.dependency.DependencyListener;
 import org.arend.ext.util.Pair;
@@ -30,6 +29,7 @@ public class ModuleDeserialization {
   private final List<Pair<DefinitionProtos.Definition, Definition>> myDefinitions = new ArrayList<>();
   private final SerializableKeyRegistryImpl myKeyRegistry;
   private final DefinitionListener myDefinitionListener;
+  private DeferredBoxFixes myDeferredBoxFixes;
 
   public ModuleDeserialization(ModuleProtos.Module moduleProto, SerializableKeyRegistryImpl keyRegistry, DefinitionListener definitionListener) {
     myModuleProto = moduleProto;
@@ -39,6 +39,16 @@ public class ModuleDeserialization {
 
   public ModuleProtos.Module getModuleProto() {
     return myModuleProto;
+  }
+
+  /**
+   * Shares one {@link DeferredBoxFixes} across a multi-module load, so that box fixing is
+   * replayed only after <em>every</em> module has been filled in. Callers that load a single
+   * module (and recursively its dependencies) can leave this unset: {@link #readModule} then
+   * uses a private instance and applies it before returning.
+   */
+  public void setDeferredBoxFixes(DeferredBoxFixes deferredBoxFixes) {
+    myDeferredBoxFixes = deferredBoxFixes;
   }
 
   public void readModule(ModuleScopeProvider moduleScopeProvider, DependencyListener dependencyListener) throws DeserializationException {
@@ -58,11 +68,21 @@ public class ModuleDeserialization {
       }
     }
 
-    DefinitionDeserialization defDeserialization = new DefinitionDeserialization(myCallTargetProvider, dependencyListener, myKeyRegistry, myDefinitionListener);
+    // Without a caller-supplied instance this load stands alone, so its callees are already
+    // filled and the replay can happen right here.
+    boolean ownBoxFixes = myDeferredBoxFixes == null;
+    if (ownBoxFixes) myDeferredBoxFixes = new DeferredBoxFixes();
+
+    DefinitionDeserialization defDeserialization = new DefinitionDeserialization(myCallTargetProvider, dependencyListener, myKeyRegistry, myDefinitionListener, myDeferredBoxFixes);
     for (Pair<DefinitionProtos.Definition, Definition> pair : myDefinitions) {
       defDeserialization.fillInDefinition(pair.proj1, pair.proj2);
     }
     myDefinitions.clear();
+
+    if (ownBoxFixes) {
+      myDeferredBoxFixes.apply();
+      myDeferredBoxFixes = null;
+    }
   }
 
   private void fillInCallTargetTree(String parentName, ModuleProtos.CallTargetTree callTargetTree, Scope scope, ModulePath module, Scope parentScope, TCDefReferable parent) throws DeserializationException {
@@ -287,44 +307,19 @@ public class ModuleDeserialization {
     List<ConcreteGroup> dynamicSubgroups = new ArrayList<>(groupProto.getDynamicSubgroupCount());
     ConcreteGroup group = new ConcreteGroup(DocFactory.nullDoc(), referable, null, statements, dynamicSubgroups, Collections.emptyList());
     for (ModuleProtos.Group subgroup : groupProto.getSubgroupList()) {
-      statements.add(new ConcreteStatement(readGroup(subgroup, group, modulePath), null, null, null));
+      statements.add(new ConcreteStatement(readGroup(subgroup, group, modulePath), null));
     }
     for (ModuleProtos.Group dynSubgroup : groupProto.getDynamicSubgroupList()) {
       dynamicSubgroups.add(readGroup(dynSubgroup, group, modulePath));
     }
 
-    // Reconstruct plevels/hlevels declarations so they are visible in scope.
-    for (ModuleProtos.LevelsDeclaration decl : groupProto.getPlevelsDeclarationList()) {
-      statements.add(new ConcreteStatement(null, null, buildLevelsDeclaration(decl, true, referable), null));
-    }
-    for (ModuleProtos.LevelsDeclaration decl : groupProto.getHlevelsDeclarationList()) {
-      statements.add(new ConcreteStatement(null, null, null, buildLevelsDeclaration(decl, false, referable)));
-    }
-
     return group;
   }
 
-  private static Concrete.LevelsDefinition buildLevelsDeclaration(
-      ModuleProtos.LevelsDeclaration decl, boolean isPLevels, LocatedReferable parent) {
-    List<TCLevelReferable> refs = new ArrayList<>(decl.getNameCount());
-    LevelDefinition levelDef = new LevelDefinition(isPLevels, decl.getIncreasing(), refs, parent);
-    for (String name : decl.getNameList()) {
-      refs.add(new TCLevelReferable(null, name, levelDef));
-    }
-    return new Concrete.LevelsDefinition(null, refs, decl.getIncreasing(), isPLevels);
-  }
-
-  private List<LevelVariable> readLevelParameters(List<DefinitionProtos.Definition.LevelParameter> parameters, boolean isStd) {
-    if (isStd) return null;
+  private List<LevelVariable> readLevelParameters(List<DefinitionProtos.Definition.LevelParameter> parameters) {
     List<LevelVariable> result = new ArrayList<>(parameters.size());
     for (DefinitionProtos.Definition.LevelParameter parameter : parameters) {
-      LevelVariable base = parameter.getIsPlevel() ? LevelVariable.PVAR : LevelVariable.HVAR;
-      int size = parameter.getSize();
-      if (size == -1) {
-        result.add(base);
-      } else {
-        result.add(new ParamLevelVariable(base.getType(), parameter.getName(), parameter.getIndex(), size));
-      }
+      result.add(new ParamLevelVariable(parameter.getName(), parameter.getIndex()));
     }
     return result;
   }
@@ -374,9 +369,9 @@ public class ModuleDeserialization {
       default -> throw new DeserializationException("Unknown Definition kind: " + defProto.getDefinitionDataCase());
     }
     if (def instanceof TopLevelDefinition) {
-      ((TopLevelDefinition) def).setLevelParameters(readLevelParameters(defProto.getLevelParamList(), defProto.getIsStdLevels()));
+      ((TopLevelDefinition) def).setLevelParameters(readLevelParameters(defProto.getLevelParamList()));
     } else {
-      ((MetaTopDefinition) def).setLevelParameters(readLevelParameters(defProto.getLevelParamList(), defProto.getIsStdLevels()));
+      ((MetaTopDefinition) def).setLevelParameters(readLevelParameters(defProto.getLevelParamList()));
     }
     return def;
   }

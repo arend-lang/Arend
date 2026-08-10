@@ -4,9 +4,9 @@ import java.util.Collection;
 import java.util.Map;
 
 public class MapDFS<T> extends DFS<T,Void> {
-  private final Map<T, ? extends Collection<? extends T>> myMap;
+  private final Map<? extends T, ? extends Collection<? extends T>> myMap;
 
-  public MapDFS(Map<T, ? extends Collection<? extends T>> map) {
+  public MapDFS(Map<? extends T, ? extends Collection<? extends T>> map) {
     myMap = map;
   }
 

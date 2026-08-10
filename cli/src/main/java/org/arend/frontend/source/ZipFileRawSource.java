@@ -27,7 +27,7 @@ public class ZipFileRawSource extends StreamRawSource {
   }
 
   @Override
-  protected @NotNull InputStream getInputStream() throws IOException {
+  public @NotNull InputStream getInputStream() throws IOException {
     ZipFile zipFile = new ZipFile(myFile);
     try {
       ZipEntry entry = zipFile.getEntry(myEntry);

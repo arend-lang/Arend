@@ -32,19 +32,19 @@
 }
 
 \func LinearMetaContext {env : FSignature} {context : List Sort} {s : Sort} {allowVariables : \Prop}
-                        (term : GenericLinearTerm env context s allowVariables) : MetaContext Sort \elim term
+                        (term : GenericLinearTerm env context s allowVariables) : MetaContext.{0} Sort \elim term
   | l-func f arguments => ModularMetaContext (\lam i => LinearMetaContext (arguments i))
   | l-var index p _ => EmptyMetaContext
   | l-full-metavar => SingularMetaContext s context
 
-\func LinearTerm (env : FSignature) (context : List Sort) (termSort : Sort) : \Type
+\func LinearTerm (env : FSignature) (context : List Sort) (termSort : Sort) : \Set
   => GenericLinearTerm env context termSort (\Sigma)
 
 \cons lt-var {env : FSignature} {context : List Sort} {termSort : Sort} (index : Index context) (p : termSort = context !! index)
 : LinearTerm env context termSort
 => l-var index p ()
 
-\func LinearPattern (env : FSignature) (context : List Sort) (termSort : Sort) : \Type
+\func LinearPattern (env : FSignature) (context : List Sort) (termSort : Sort) : \Set
   => GenericLinearTerm env context termSort Empty
 
 \lemma modular-commutation {env : FSignature} {subcontext context : List Sort} {s : Sort} {msig : MetaContext Sort}

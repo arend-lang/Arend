@@ -2,11 +2,11 @@ package org.arend.gradle
 
 import org.gradle.api.tasks.*
 
-class BuildPreludeTask extends JavaExec {
+abstract class BuildPreludeTask extends JavaExec {
     {
         description = "Builds the prelude cache"
         group = "build"
-        main = "${project.group}.frontend.PreludeBinaryGenerator"
+        mainClass.set("${project.group}.frontend.PreludeBinaryGenerator".toString())
         args = [".", "--recompile"]
 
         dependsOn(project.tasks.getByName("classes"))

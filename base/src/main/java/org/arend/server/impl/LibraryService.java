@@ -132,15 +132,24 @@ public class LibraryService {
     return new DefaultArendExtension();
   }
 
-  private void setupExtension(ArendLibraryImpl library, ArendLibrary origLibrary) {
+  private Map<String, ArendExtension> dependencyExtensions(ArendLibraryImpl library) {
     Map<String, ArendExtension> dependencies = new LinkedHashMap<>();
     for (String dependency : library.getLibraryDependencies()) {
       ArendLibraryImpl dependencyLib = myLibraries.get(dependency);
-      ArendExtension dependencyExt = dependencyLib == null ? null : dependencyLib.getExtension();
+      if (dependencyLib == null) {
+        myLogger.warning(() -> "Library '" + library.getLibraryName() + "' is loaded before its dependency '" + dependency + "'; the extension of '" + dependency + "' will not be available in '" + library.getLibraryName() + "'");
+        continue;
+      }
+      ArendExtension dependencyExt = dependencyLib.getExtension();
       if (dependencyExt != null) {
         dependencies.put(dependency, dependencyExt);
       }
     }
+    return dependencies;
+  }
+
+  private void setupExtension(ArendLibraryImpl library, ArendLibrary origLibrary) {
+    Map<String, ArendExtension> dependencies = dependencyExtensions(library);
 
     ArendExtension extension = library.getExtension();
     SerializableKeyRegistryImpl keyRegistry = new SerializableKeyRegistryImpl();

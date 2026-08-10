@@ -1,0 +1,67 @@
+\import Algebra.Algebra
+\import Algebra.Meta
+\import Algebra.Module.BilinearMap
+\import Algebra.Module.LinearMap
+\import Algebra.Module.TensorProduct
+\import Algebra.Monoid
+\import Algebra.Monoid.MonoidHom
+\import Algebra.Pointed
+\import Algebra.Ring
+\import Data.Array.EPerm
+\import Data.Array.Pairs
+\import Function.Meta
+\import Logic
+\import Meta
+\import Paths
+\import Paths.Meta
+
+\instance TensorProductAAlgebra {R : CRing} (A B : AAlgebra R) : AAlgebra R (TensorProduct A B)
+  | LModule => TensorProductModule A B
+  | * x => tensorLift (tensorLift *-bilinear x)
+  | *-assoc {x} {y} {z} => tensorLift-unique (tensorLift _) (tensorLift _ LinearMap.∘ tensorLift _) \lam a b => \case \elim x, \elim y \with {
+    | tensorSum lx, tensorSum ly => simplify $ pmap (\lam (x : BilinearMap A B _) => x a b) (tensorLift _).func-BigSum
+      *> BigSum-char a b *> pmap AddMonoid.BigSum (exts \lam j => simplify $ pmap (tensorLift *-bilinear __ a b) (BigSum-char (ly j).1 _)
+        *> pmap (\lam (x : BilinearMap A B _) => x a b) (tensorLift *-bilinear).func-BigSum *> BigSum-char a b
+        *> pmap AddMonoid.BigSum (exts \lam i => pmap2 tensor *-assoc *-assoc) *> inv (BigSum-char (_ * a) _))
+      *> inv (tensorLift _).func-BigSum *> pmap tensorLift.func (inv (BigSum-char a b))
+  }
+  | ldistr => (tensorLift (tensorLift *-bilinear _)).func-+
+  | rdistr => pmap (tensorLift {R} __ _) func-+ *> tensorLift_+ (tensorLift *-bilinear _) (tensorLift *-bilinear _)
+  | *c-comm-left => inv $ pmap (tensorLift {R} __ _) func-*c *> tensorLift_*c (tensorLift *-bilinear _)
+  | *c-comm-right => inv (tensorLift _).func-*c
+  | ide => tensor 1 1
+  | ide-left => tensorLift-unique (tensorLift (tensorLift *-bilinear (tensor 1 1))) LinearMap.id \lam a b => simplify
+  | ide-right {x} => zro-right *> \case \elim x, tensor-repr x \with {
+    | _, inP (l,idp) => rewrite (tensorLift *-bilinear).func-BigSum $ BigSum-char A.ide B.ide *> pmap AddMonoid.BigSum (exts \lam j => simplify)
+  }
+  \where {
+    \open BilinearMapModule (BigSum-char)
+
+    \func *-bilinear : BilinearMap A B (BilinearMapModule A B (TensorProductModule A B)) \cowith
+      | func (a : A) (b : B) : BilinearMap A B (TensorProductModule A B) \cowith {
+        | func a' b' => tensor (a * a') (b * b')
+        | linear-left => tensor-linear-left LinearMap.∘ {R} *alg-linear-right
+        | linear-right => tensor-linear-right LinearMap.∘ {R} *alg-linear-right
+      }
+      | linear-left => \new LinearMap {
+        | func-+ => exts \lam a' b' => pmap (tensor __ _) A.rdistr *> tensor_+-left
+        | func-*c => exts \lam a' b' => pmap (tensor __ _) (inv *c-comm-left)
+      }
+      | linear-right => \new LinearMap {
+        | func-+ => exts \lam a' b' => pmap (tensor _) B.rdistr *> tensor_+-right
+        | func-*c => exts \lam a' b' => pmap (tensor _) (inv *c-comm-left) *> tensor_*c-right
+      }
+
+    \lemma *-char {l l' : Array (\Sigma A B)}
+      : tensorSum l * {TensorProductAAlgebra A B} tensorSum l' = tensorSum (pairs (\lam s t => (t.1 * s.1, t.2 * s.2)) l' l) \elim l'
+      | nil => idp
+      | s :: l' => pmap2 (+) (later $ BigSum-char s.1 s.2 *> inv tensorSum_BigSum) *-char
+  }
+
+\instance TensorProductCAlgebra {R : CRing} (A B : CAlgebra R) : CAlgebra R (TensorProduct A B)
+  | AAlgebra => TensorProductAAlgebra A B
+  | *-comm {x} {y} => \case \elim x, \elim y \with {
+    | tensorSum l, tensorSum l' => TensorProductAAlgebra.*-char
+      *> path (tensorSum-perm $ transport (\lam x => EPerm _ $ pairs x l l') (ext \lam s t => ext (*-comm, *-comm)) pairs.pairs-flip)
+      *> inv TensorProductAAlgebra.*-char
+  }

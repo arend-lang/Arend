@@ -39,7 +39,7 @@ public class HaveClause extends NamedBinding {
   }
 
   @Override
-  public Expression getTypeExpr() {
+  public Expression getType() {
     return myExpression.getType();
   }
 

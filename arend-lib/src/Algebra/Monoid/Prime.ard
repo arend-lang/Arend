@@ -28,8 +28,8 @@
 \class Prime \extends Irr
   | isPrime {x y : M} : LDiv e (x * y) -> LDiv e x || LDiv e y
   | isIrr {x} {y} e=x*y => \case isPrime (\new LDiv e (x * y) ide (ide-right *> e=x*y)) \with {
-    | byLeft (e|x : LDiv e x) => byRight (Inv.lmake e|x.inv (isCancelable-left (inv (ide-right *> e=x*y *> pmap (`* y) (inv e|x.inv-right) *> *-assoc))))
-    | byRight (e|y : LDiv e y) => byLeft (Inv.lmake e|y.inv (isCancelable-left (inv (ide-right *> e=x*y *> *-comm *> pmap (`* x) (inv e|y.inv-right) *> *-assoc))))
+    | byLeft (e|x : LDiv e x) => byRight (Inv.lmake e|x.inv (isCancelable-left (inv (ide-right *> e=x*y *> pmap (* y) (inv e|x.inv-right) *> *-assoc))))
+    | byRight (e|y : LDiv e y) => byLeft (Inv.lmake e|y.inv (isCancelable-left (inv (ide-right *> e=x*y *> *-comm *> pmap (* x) (inv e|y.inv-right) *> *-assoc))))
   }
 
 \lemma irr-isPrime {M : GCDMonoid} (p : Irr {M}) : Prime p p.notInv \cowith
@@ -53,15 +53,15 @@
             \in Inv.rmake (gi.inv * z|g.inv) (
               z * (gi.inv * z|g.inv) ==< pmap (z *) *-comm >==
               z * (z|g.inv * gi.inv) ==< inv *-assoc >==
-              (z * z|g.inv) * gi.inv ==< pmap (`* gi.inv) z|g.inv-right >==
+              (z * z|g.inv) * gi.inv ==< pmap (* gi.inv) z|g.inv-right >==
               g * gi.inv             ==< gi.inv-right >==
               ide                    `qed))
         | byRight (xi : Inv x) => byLeft (\new LDiv p a (xi.inv * g|a.inv) (
             p * (xi.inv * g|a.inv)       ==< inv *-assoc >==
             (p * xi.inv) * g|a.inv       ==< pmap ((__ * xi.inv) * g|a.inv) (inv g|p.inv-right) >==
-            ((g * x) * xi.inv) * g|a.inv ==< pmap (`* g|a.inv) *-assoc >==
+            ((g * x) * xi.inv) * g|a.inv ==< pmap (* g|a.inv) *-assoc >==
             (g * (x * xi.inv)) * g|a.inv ==< pmap ((g * __) * g|a.inv) xi.inv-right >==
-            (g * ide) * g|a.inv          ==< pmap (`* g|a.inv) ide-right >==
+            (g * ide) * g|a.inv          ==< pmap (* g|a.inv) ide-right >==
             g * g|a.inv                  ==< g|a.inv-right >==
             a                            `qed))
       }

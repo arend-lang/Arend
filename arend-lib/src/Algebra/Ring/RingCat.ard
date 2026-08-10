@@ -1,0 +1,329 @@
+\import Algebra.Group
+\import Algebra.Group.GroupCat
+\import Algebra.Group.GroupHom
+\import Algebra.Monoid
+\import Algebra.Monoid.MonoidCat
+\import Algebra.Monoid.MonoidHom
+\import Algebra.Pointed
+\import Algebra.Pointed.PointedHom
+\import Algebra.Pointed.SubPointed
+\import Algebra.Ring
+\import Algebra.Ring.RingHom
+\import Algebra.Ring.SubRing
+\import Algebra.Semiring
+\import Category
+\import Category.Adjoint
+\import Category.Functor
+\import Category.Limit
+\import Category.Meta
+\import Category.Subcat
+\import Equiv
+\import Function (IsInj, IsSurj)
+\import Function.Meta
+\import Logic
+\import Logic.FirstOrder.Algebraic
+\import Logic.FirstOrder.Algebraic.AlgModelCat
+\import Logic.FirstOrder.Term
+\import Logic.Meta
+\import Meta
+\import Paths
+\import Paths.Meta
+\import Set.SetCategory
+\import Set.Fin
+\import Set.Fin.Instances
+
+\instance RingCat.{u} : Cat Ring.{u}
+  | Hom M N => RingHom M N
+  | id => RingHom.id
+  | o => RingHom.∘
+  | id-left => idp
+  | id-right => idp
+  | o-assoc => idp
+  | univalence => sip \lam {X} {R} {S} p1 _ => exts (p1.func-zro, \lam _ _ => p1.func-+, \lam _ _ => p1.func-*, AddGroup.negative-equality R S p1.func-zro p1.func-+, p1.func-ide, natCoefUnique R S p1)
+  \where {
+    \lemma natCoefUnique {X : \Set} (R S : Ring X) (h : RingHom R S (\lam x => x)) (n : Nat) : R.natCoef n = S.natCoef n \elim n
+      | 0 => R.natCoefZero *> h.func-zro *> inv S.natCoefZero
+      | suc n => R.natCoefSuc n *> h.func-+ *> pmap2 (S.+) (natCoefUnique R S h n) h.func-ide *> inv (S.natCoefSuc n)
+
+    \func forgetToAbGroup.{u} : Functor RingCat.{u} AbGroupCat \cowith
+      | F R => R
+      | Func f => f
+      | Func-id => idp
+      | Func-o => idp
+
+    \func forgetToMonoid.{u} : Functor RingCat.{u} MonoidCat \cowith
+      | F R => R
+      | Func f => f
+      | Func-id => idp
+      | Func-o => idp
+
+    \func forget.{u} : Functor RingCat.{u} SetCat \cowith
+      | F R => R
+      | Func f => f
+      | Func-id => idp
+      | Func-o => idp
+
+    {- | A function that lifts an isomorphism between the additive groups of two rings
+         to an isomorphism between the rings themselves**. `Group-Iso->Ring-Iso` -}
+    \lemma Group-Iso->Ring-Iso.{u} {G H : Ring.{u}} {f : RingHom G H} (f_iso : Iso {GroupCat.{u}} (AddGroupHom.toGroupHom f)) : Iso {RingCat.{u}} f \cowith {
+      | hinv => \new RingHom {
+        | AddGroupHom => AddGroupHom.fromGroupHom f_iso.hinv
+        | func-ide => rewrite (inv f.func-ide, path \lam i => f_iso.hinv_f i ide) idp
+        | func-* {x} {y} =>
+          \let | x' => f_iso.hinv x
+               | y' => f_iso.hinv y
+          \in rewrite (inv $ path \lam i => f_iso.f_hinv i x,
+                       inv $ path \lam i => f_iso.f_hinv i y,
+                       inv f.func-*,
+                       path \lam i => f_iso.hinv_f i y',
+                       path \lam i => f_iso.hinv_f i x') $
+              path \lam i => f_iso.hinv_f i _
+      }
+      | hinv_f => exts \lam e i => f_iso.hinv_f i e
+      | f_hinv => exts \lam e i => f_iso.f_hinv i e
+    }
+
+    \lemma Iso<->Inj+Surj.{u} {G H : Ring.{u}} (f : RingHom G H) : Iso {RingCat} f <-> (\Sigma (IsInj f) (IsSurj f)) =>
+      (\lam p => (GroupCat.Iso<->Inj+Surj (AddGroupHom.toGroupHom f)).1 \new Iso {
+        | hinv => AddGroupHom.toGroupHom hinv
+        | hinv_f => exts \lam e i => p.hinv_f i e
+        | f_hinv => exts \lam e i => p.f_hinv i e
+      }, \lam p => Group-Iso->Ring-Iso ((GroupCat.Iso<->Inj+Surj (AddGroupHom.toGroupHom f)).2 p))
+
+    \lemma Iso<->IsEquiv.{u} {G H : Ring.{u}} {f : RingHom G H} : Iso {RingCat} f <-> IsEquiv f
+      => (\lam e => \have t => (Iso<->Inj+Surj f).1 e \in IsEquiv.fromInjSurj t.1 t.2,
+          \lam e => (Iso<->Inj+Surj f).2 (IsEquiv.isInj e, IsEquiv.isSurj e))
+
+    \func image-iso.{u} {R S : Ring.{u}} {f : RingHom R S} (p : IsSurj f) : Iso {RingCat} {ImRing f} {S}
+      => (RingCat.Iso<->Inj+Surj $ IRing.embed {ImageRing f}).2 (IAddPointed.embed-inj, \lam y => \case p y \with {
+        | inP (x,fx=y) => inP (ImRingLeftHom f x, fx=y)
+      })
+  }
+
+\instance CRingCat.{u} : Cat CRing.{u}
+  => subCat (\new Embedding {CRing.{u}} {Ring.{u}} {
+    | f R => R
+    | isEmb R S => \new Retraction {
+      | sec p => path (\lam i => \new CRing {
+        | Ring => p @ i
+        | *-comm => prop-dpi (\Pi {x y : p @ __} -> x * y = y * x) R.*-comm S.*-comm @ i
+      })
+      | f_sec => idpe
+    }
+  })
+  \where {
+    \func forgetToRing.{u} : Functor CRingCat.{u} RingCat \cowith
+      | F R => R
+      | Func f => f
+      | Func-id => idp
+      | Func-o => idp
+
+    \func forgetToMonoid.{u} : Functor CRingCat.{u} MonoidCat \cowith
+      | F R => R
+      | Func f => f
+      | Func-id => idp
+      | Func-o => idp
+
+    \func forget.{u} : Functor CRingCat.{u} SetCat \cowith
+      | F R => R
+      | Func f => f
+      | Func-id => idp
+      | Func-o => idp
+      \where {
+        \sfunc reflectsLimit.{u} {J : Precat} (H : Functor J CRingCat.{u}) : ReflectsLimit forget.{u} H
+          => \lam C Cl R => IsEquiv.fromInjSurj (\lam {h} {h'} p => ext $ IsEquiv.isInj (Cl R) $ exts \lam j => path \lam i => (p i).coneMap j) \lam C' =>
+              \have | (inP (h,p)) => IsEquiv.isSurj (Cl R) (Cone.map forget C')
+                    | q {j} {x} => path \lam i => (p i).coneMap j x
+              \in inP (\new RingHom {
+                         | func => h
+                         | func-+ => SetBicat.limit-elem-equals Cl \lam j => q *> func-+ *> inv (pmap2 (+) q q) *> inv func-+
+                         | func-ide => SetBicat.limit-elem-equals Cl \lam j => q *> func-ide *> inv func-ide
+                         | func-* => SetBicat.limit-elem-equals Cl \lam j => q *> func-* *> inv (pmap2 (*) q q) *> inv func-*
+                       }, exts \lam j => ext $ path \lam i => (p i).coneMap j)
+
+        \lemma preservesLimit.{u} {J : Precat} (H : Functor J CRingCat.{u}) : PreservesLimit forget.{u} H
+          => (Adjunction.comp (ModelCat.ForgetToSetAdjunction {CRingBicat.theory}) CRingBicat.catEquiv.reverse).preservesLimits
+      }
+
+    \lemma Iso<->IsEquiv.{u} {R S : CRing.{u}} {f : RingHom R S} : Iso {CRingCat.{u}} f <-> IsEquiv f
+      => <->trans (forgetToRing.Func-iso __, \lam e => later \new Iso e.f e.hinv e.hinv_f e.f_hinv) RingCat.Iso<->IsEquiv
+
+    \lemma Iso_QEquiv.{u} (e : Iso {CRingCat.{u}}) : QEquiv e.f e.hinv \cowith
+      | ret_f x => path \lam i => e.hinv_f i x
+      | f_sec y => path \lam i => e.f_hinv i y
+  }
+
+\instance LimitCRing.{u} {J : Precat.{u,u}} (F : Functor J CRingCat.{u}) : CRing
+  | Monoid => LimitMonoid (Comp CRingCat.forgetToMonoid F)
+  | zro => (\lam _ => zro, \lam h => func-zro)
+  | + f g => (\lam j => f.1 j + g.1 j, \lam h => func-+ *> pmap2 (+) (f.2 h) (g.2 h))
+  | +-assoc => exts \lam j => +-assoc
+  | +-comm => exts \lam j => +-comm
+  | negative f => (\lam j => negative (f.1 j), \lam h => AddGroupHom.func-negative *> pmap negative (f.2 h))
+  | negative-left => exts \lam j => negative-left
+  | *-comm => exts \lam j => *-comm
+  | ldistr => exts \lam j => ldistr
+  | zro-left => exts \lam j => zro-left
+  \where {
+    \func limProj.{u} {J : Precat.{u,u}} {F : Functor J CRingCat.{u}} (j : J) : RingHom (LimitCRing F) (F j) \cowith
+      | func l => l.1 j
+      | func-ide => idp
+      | func-* => idp
+      | func-+ => idp
+
+    \func limMap.{u} {J : Precat.{u,u}} {F : Functor J CRingCat.{u}} {M : CRing.{u}} (c : Cone F M) : RingHom M (LimitCRing F) \cowith
+      | func x => (\lam j => c.coneMap j x, \lam h => path \lam i => c.coneCoh h i x)
+      | func-ide => exts \lam j => func-ide
+      | func-* => exts \lam j => func-*
+      | func-+ => exts \lam j => func-+
+
+    \lemma inv-char.{u} {J : Precat.{u,u}} {F : Functor J CRingCat.{u}} {x : LimitCRing F} : Monoid.Inv {LimitCRing F} x <-> ∀ j (Monoid.Inv (x.1 j))
+      => LimitMonoid.inv-char {J} {Comp CRingCat.forgetToMonoid F}
+  }
+
+\instance CRingBicat.{u} : BicompleteCat.{u}
+  | Cat => CRingCat
+  | limit => CRingLimit
+  | colimit => CocompletePrecat.applyEquiv catEquiv
+  \where {
+    \func CRingLimit.{u} {J : Precat.{u,u}} (F : Functor J CRingCat.{u}) : Limit F \cowith
+      | apex => LimitCRing F
+      | coneMap => LimitCRing.limProj
+      | coneCoh h => exts \lam l => l.2 h
+      | limMap => LimitCRing.limMap
+      | limBeta c j => idp
+      | limUnique p => exts \lam x => exts \lam j => path \lam i => p j i x
+
+    \instance theory : Theory
+      | Sort => \Sigma
+      | Symb _ => Fin 5
+      | domain => \case __ \with {
+        | 0 => nil
+        | 1 => nil
+        | 2 => () :: () :: nil
+        | 3 => () :: () :: nil
+        | 4 => () :: nil
+      }
+      | PredSymb => Empty
+      | predDomain => absurd
+      | axioms => arraySubset {Sequent {\this}} (
+          (\lam _ => \Sigma, finSet, nil, equality (apply 2 (apply 0 nil :: var () :: nil)) (var ())) ::
+          (\lam _ => Fin 3,  finSet, nil, equality (apply 2 (apply 2 (var 0 :: var 1 :: nil) :: var 2 :: nil)) (apply 2 (var 0 :: apply 2 (var 1 :: var 2 :: nil) :: nil))) ::
+          (\lam _ => \Sigma, finSet, nil, equality (apply 3 (apply 1 nil :: var () :: nil)) (var ())) ::
+          (\lam _ => Fin 3,  finSet, nil, equality (apply 3 (apply 3 (var 0 :: var 1 :: nil) :: var 2 :: nil)) (apply 3 (var 0 :: apply 3 (var 1 :: var 2 :: nil) :: nil))) ::
+          (\lam _ => Fin 2,  finSet, nil, equality (apply 2 (var 0 :: var 1 :: nil)) (apply 2 (var 1 :: var 0 :: nil))) ::
+          (\lam _ => Fin 2,  finSet, nil, equality (apply 3 (var 0 :: var 1 :: nil)) (apply 3 (var 1 :: var 0 :: nil))) ::
+          (\lam _ => \Sigma, finSet, nil, equality (apply 2 (apply 4 (var () :: nil) :: var () :: nil)) (apply 0 nil)) ::
+          (\lam _ => Fin 3,  finSet, nil, equality (apply 3 (var 0 :: apply 2 (var 1 :: var 2 :: nil) :: nil)) (apply 2 (apply 3 (var 0 :: var 1 :: nil) :: apply 3 (var 0 :: var 2 :: nil) :: nil))) ::
+          nil)
+
+    \func catEquiv.{u} : CatEquiv CRingCat.{u} (ModelCat theory) \cowith
+      | LAdj => ringtoMod.functor
+      | RAdj => modToRing.functor
+      | eta {
+        | trans M => RingHom.id
+        | natural f => idp
+      }
+      | eta-iso {X} => \new Iso {
+        | hinv => RingHom.id
+        | hinv_f => idp
+        | f_hinv => idp
+      }
+      | epsilon {
+        | trans M => \new ModelHom {
+          | funcs x => x
+          | func-op => \case \elim __ \with {
+            | 0 => \lam d => idp
+            | 1 => \lam d => idp
+            | 2 => \lam d => idp
+            | 3 => \lam d => idp
+            | 4 => \lam d => idp
+          }
+          | func-rel => \case __
+        }
+        | natural f => idp
+      }
+      | eta_epsilon-left => idp
+      | eta_epsilon-right => idp
+      | epsilon-iso {Y} => \new Iso {
+        | hinv => \new ModelHom {
+          | funcs y => y
+          | func-op => \case \elim __ \with {
+            | 0 => \lam d => idp
+            | 1 => \lam d => idp
+            | 2 => \lam d => idp
+            | 3 => \lam d => idp
+            | 4 => \lam d => idp
+          }
+          | func-rel => \case __
+        }
+        | hinv_f => idp
+        | f_hinv => idp
+      }
+
+    \func modToRing (M : Model theory) : CRing (M ()) \cowith
+      | zro => operation 0 nil
+      | ide => operation 1 nil
+      | + x y => operation 2 (x :: y :: nil)
+      | * x y => operation 3 (x :: y :: nil)
+      | negative x => operation 4 (x :: nil)
+      | zro-left {x} => M.isModel _ (inP (0,idp)) (\lam _ => x) (\case __)
+      | +-assoc {x} {y} {z} => M.isModel _ (inP (1,idp)) (\lam {_} => x :: y :: z :: nil) (\case __)
+      | ide-left {x} => M.isModel _ (inP (2,idp)) (\lam _ => x) (\case __)
+      | *-assoc {x} {y} {z} => M.isModel _ (inP (3,idp)) (\lam {_} => x :: y :: z :: nil) (\case __)
+      | +-comm {x} {y} => M.isModel _ (inP (4,idp)) (\lam {_} => x :: y :: nil) (\case __)
+      | *-comm {x} {y} => M.isModel _ (inP (5,idp)) (\lam {_} => x :: y :: nil) (\case __)
+      | negative-left {x} => M.isModel _ (inP (6,idp)) (\lam {_} _ => x) (\case __)
+      | ldistr {x} {y} {z} => M.isModel _ (inP (7,idp)) (\lam {_} => x :: y :: z :: nil) (\case __)
+      \where {
+        \func functor.{u} : Functor (ModelCat.{u} theory) CRingCat (modToRing __) \cowith
+          | Func f => \new RingHom {
+            | func => f.funcs
+            | func-zro => f.func-op 0 nil
+            | func-ide => f.func-op 1 nil
+            | func-+ {x} {y} => f.func-op 2 (x :: y :: nil)
+            | func-* {x} {y} => f.func-op 3 (x :: y :: nil)
+          }
+          | Func-id => idp
+          | Func-o => idp
+      }
+
+    \func ringtoMod (R : CRing) : Model theory (\lam _ => R) \cowith
+      | operation => \case \elim __ \with {
+        | 0 => \lam _ => 0
+        | 1 => \lam _ => 1
+        | 2 => \lam l => l 0 + l 1
+        | 3 => \lam l => l 0 * l 1
+        | 4 => \lam l => negative (l 0)
+      }
+      | relation => \case __
+      | isModel => \case \elim __, __ \with {
+        | _, inP (0,idp) => \lam rho _ => zro-left
+        | _, inP (1,idp) => \lam rho _ => +-assoc
+        | _, inP (2,idp) => \lam rho _ => ide-left
+        | _, inP (3,idp) => \lam rho _ => *-assoc
+        | _, inP (4,idp) => \lam rho _ => +-comm
+        | _, inP (5,idp) => \lam rho _ => *-comm
+        | _, inP (6,idp) => \lam rho _ => negative-left
+        | _, inP (7,idp) => \lam rho _ => ldistr
+      }
+      \where {
+        \func functor.{u} : Functor CRingCat.{u} (ModelCat theory) (ringtoMod __) \cowith
+          | Func f => \new ModelHom {
+            | funcs => f
+            | func-op => \case \elim __ \with {
+              | 0 => \lam _ => f.func-zro
+              | 1 => \lam _ => f.func-ide
+              | 2 => \lam _ => f.func-+
+              | 3 => \lam _ => f.func-*
+              | 4 => \lam _ => f.func-negative
+            }
+            | func-rel => \case __
+          }
+          | Func-id => idp
+          | Func-o => idp
+      }
+
+    \sfunc createsLimits.{u} {J : Precat.{u,u}} (F : Functor J CRingCat.{u}) : CreatesLimit CRingCat.forget F
+      => \lam _ => (CRingBicat.limit F, CRingCat.forget.preservesLimit F, CRingCat.forget.reflectsLimit F)
+  }

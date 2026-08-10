@@ -1,0 +1,82 @@
+\import Algebra.Monoid
+\import Algebra.Monoid.MonoidHom
+\import Algebra.Pointed
+\import Algebra.Pointed.PointedHom
+\import Algebra.Ring.RingCat
+\import Category
+\import Category.Functor
+\import Category.Limit
+\import Category.Topos.Presheaf
+\import Category.Topos.Presheaf.PrelocalPredicate
+\import Category.Topos.Sheaf
+\import Category.Topos.Sheaf.Site
+\import Equiv
+\import Function.Meta
+\import Logic
+\import Logic.Meta
+\import Meta
+\import Order.Lattice
+\import Order.PartialOrder
+\import Paths
+\import Paths.Meta
+\import Set.SetCategory
+\import Set.Set
+\import Topology.Locale
+\import Topology.Locale.PreorderSite
+
+\record LocalPredicate.{u} \extends PrelocalPredicate.{u} {
+  \override C : Site
+
+  | isLocalPredicate {a : C} {U : Presieve a} (a<=U : isCover a U) {x : S a} : ∀ {y : U} (pred (S.F.Func y.2 x)) -> pred x
+
+  \lemma byCovering {a : C} {U : Presieve a} (a<=U : Covering a U) {x : S a} (Ux : ∀ {y : U} (pred (S.F.Func y.2 x))) : pred x \elim a<=U
+    | covering-inj s p q Uy =>
+      \have r => inv S.F.Func-o *> pmap S.F.Func q *> S.F.Func-id
+      \in transport pred (path \lam i => r i x) $ isPrelocalPredicate (Ux Uy)
+    | covering-trans a<=T T<=U => isLocalPredicate a<=T \lam Ty => byCovering (T<=U Ty) \lam {z} (inP (b,Ub,f,f_z)) =>
+      \have r => inv S.F.Func-o *> pmap S.F.Func f_z *> S.F.Func-o
+      \in transport pred (path \lam i => r i x) $ isPrelocalPredicate (Ux Ub)
+} \where {
+  \lemma localPredicate_localeAt.{u} {L : Locale.{u}} (P : LocalPredicate.{u} {L}) {a : L} {U : Set L} (aU : a <= L.Join U) {x : P.S a}
+                                     (Ux : ∀ {y} (Uy : U y) {z} (z <= y) (za : z <= a) (P (P.S.F.Func za x))) : P x
+    => P.byCovering {_} {\lam b => ∃ (y : U) (b.1 <= y)}
+        (Covering.covering-basic $ meet-univ <=-refl aU <=∘ Join-ldistr>= <=∘ L.SJoin-univ \lam {y} Uy => L.Join-cond $ later (meet-left, inP (y, Uy, meet-right)))
+        (\lam {z} (inP (y,Uy,zy)) => transport (\lam r => P.pred (P.S.F.Func r x)) prop-pi (Ux Uy zy z.2))
+
+  \lemma localPredicate_locale.{u} {L : Locale.{u}} (P : LocalPredicate.{u} {L}) {U : Set L} {x : P.S (L.Join U)}
+                                   (Ux : ∀ {y} (Uy : U y) {z} (zy : z <= y) (P (P.S.F.Func (zy <=∘ L.Join-cond Uy) x))) : P x
+    => localPredicate_localeAt P <=-refl \lam Uy zy zU => transport (\lam t => P (P.S.F.Func t x)) prop-pi (Ux Uy zy)
+
+  \lemma localPredicate_preorder.{u} {S : PreorderSite.{u}} (P : LocalPredicate.{u} {S}) {a : S} {U : Set S} (aU : Cover a U) {x : P.S a}
+                                     (Ux : ∀ {y} (Uy : U y) {z} (z <= y) (za : z <= a) (P (P.S.F.Func za x))) : P x
+    => P.byCovering {_} {\lam b => ∃ (y : U) (b.1 <= y)} (Cover.toCovering aU)
+        \lam {z} (inP (y,Uy,zy)) => transport (\lam r => P.pred (P.S.F.Func r x)) prop-pi (Ux Uy zy z.2)
+}
+
+\lemma exists-localPredicate.{u} {C : Site} {S : Presheaf.{u} C} {T : Sheaf.{u} C} (P : LocalPredicate (VPresheafComplete.BprodPresheaf {SetBicat} S T))
+  (unique : \Pi {a : C} {x : S a} {y y' : T a} -> P (x,y) -> P (x,y') -> y = y') : LocalPredicate S \lam {a} x => ∃ (y : T a) (P (x,y)) \cowith
+  | PrelocalPredicate => exists-prelocalPredicate P
+  | isLocalPredicate {a} {U} a<=U {x} c =>
+    \have | c' {y} (Uy : U y) => TruncP.remove (\lam s s' => ext $ unique s.2 s'.2) (c Uy)
+          | (inP e) => T.isSheaf a<=U {\Sigma}
+          | ss => IsEquiv.splitSurj (inP e) (\new MatchingFamily {
+            | family j => \lam _ => (c' j.2).1
+            | isMatching {j} {j'} {z} {g} {g'} gg' => ext \lam _ => unique
+              (transportInv (\lam r => P (r,_)) (pmap (S.F.Func __ x) (inv gg') *> path (\lam i => S.F.Func-o i x)) $ P.isPrelocalPredicate (c' j.2).2)
+              (transportInv (\lam r => P (r,_)) (path \lam i => S.F.Func-o i x) $ P.isPrelocalPredicate (c' j'.2).2)
+          })
+    \in inP (ss.1 (), P.isLocalPredicate a<=U \lam {y} Uy => transportInv (\lam r => P (_,r)) (path \lam i => ss.2 i (y,Uy) ()) (c' Uy).2)
+
+\lemma equality-localPredicate.{u} {C : Site} (S : SeparatedVPresheaf SetCat.{u} C)
+  : LocalPredicate (VPresheafComplete.BprodPresheaf {SetBicat} S S) (\lam s => s.1 = s.2) \cowith
+  | PrelocalPredicate => equality-prelocalPredicate S
+  | isLocalPredicate a<=U c => path \lam i => S.isSeparated a<=U (exts \lam j => ext \lam _ => c j.2) i ()
+
+\lemma inv-localPredicate.{u} {C : Site.{u,u}} {S : VSheaf CRingCat.{u} C} : LocalPredicate (S.toPresheaf CRingCat.forget) Monoid.Inv
+  => \have Ss => sheaf-preserve CRingCat.forget (\lam {J} => CRingCat.forget.preservesLimit {J}) S
+     \in transport {\Pi {a : C} -> S a -> \Prop} (LocalPredicate (S.toPresheaf CRingCat.forget)) (later $ ext \lam x => propExt (\lam (inP (y,xy=1)) => Monoid.Inv.lmake y xy=1) (\lam xi => inP (xi.inv,xi.inv-left))) $
+      exists-localPredicate {C} {S.toPresheaf CRingCat.forget} {\new Sheaf { | F => Comp CRingCat.forget S.F | isSheaf => Ss }} (\new LocalPredicate {
+        | pred s => s.2 * s.1 = ide
+        | isPrelocalPredicate p => inv func-* *> pmap (S.F.Func _) p *> func-ide
+        | isLocalPredicate a<=U {x} c => path \lam i => IsEquiv.isInj (Ss a<=U {\Sigma}) (exts \lam j => ext \lam _ => func-* *> c j.2 *> inv func-ide) i ()
+      }) \lam p q => Monoid.Inv.inv-isUnique (Monoid.Inv.lmake _ p) (Monoid.Inv.lmake _ q) idp

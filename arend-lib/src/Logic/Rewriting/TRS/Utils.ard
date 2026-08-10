@@ -16,5 +16,5 @@
   | metavar m arguments1 => nothing
   | func f1 arguments1 => just (f1, arguments1)
 
-\func sigma-set-equalizer {A : \Set} {B : A -> \Type} {a : A} {b b' : B a} (p : (a,b) = {\Sigma (x : A) (B x)} (a,b')) : b = b' =>
-  pmap (transport B __ b) (prop-isProp idp (pmap __.1 p)) *> pmapd __.2 p
+\func sigma-set-equalizer {A : \Set} {B : A -> \Type} {a : A} {b b' : B a} (p : (a,b) = {\Sigma (x : A) (B x)} (a,b')) : b = b'
+  => pmap (transport B __ b) (prop-isProp idp (pmap __.1 p)) *> pmapd __.2 p

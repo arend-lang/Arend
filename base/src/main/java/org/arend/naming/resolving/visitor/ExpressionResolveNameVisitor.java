@@ -1,7 +1,6 @@
 package org.arend.naming.resolving.visitor;
 
 import org.arend.core.context.Utils;
-import org.arend.core.context.binding.LevelVariable;
 import org.arend.core.context.param.EmptyDependentLink;
 import org.arend.error.CountingErrorReporter;
 import org.arend.ext.LiteralTypechecker;
@@ -39,7 +38,7 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
 
-public class ExpressionResolveNameVisitor extends BaseConcreteExpressionVisitor<Void> implements ExpressionResolver, ConcreteLevelExpressionVisitor<LevelVariable, Concrete.LevelExpression> {
+public class ExpressionResolveNameVisitor extends BaseConcreteExpressionVisitor<Void> implements ExpressionResolver, ConcreteLevelExpressionVisitor<Void, Concrete.LevelExpression> {
   private final Scope myParentScope;
   private final Scope myScope;
   private final List<TypedReferable> myContext;
@@ -58,12 +57,12 @@ public class ExpressionResolveNameVisitor extends BaseConcreteExpressionVisitor<
     myResolverListener = resolverListener;
   }
 
-  public ExpressionResolveNameVisitor(Scope parentScope, List<TypedReferable> context, TypingInfo typingInfo, ErrorReporter errorReporter, LiteralTypechecker literalTypechecker, ResolverListener resolverListener, List<? extends Referable> pLevels, List<? extends Referable> hLevels) {
-    this(parentScope, context == null && pLevels.isEmpty() && hLevels.isEmpty() ? parentScope : new ContextScope(parentScope, context == null ? Collections.emptyList() : context, pLevels, hLevels), context, typingInfo, errorReporter, literalTypechecker, resolverListener);
+  public ExpressionResolveNameVisitor(Scope parentScope, List<TypedReferable> context, TypingInfo typingInfo, ErrorReporter errorReporter, LiteralTypechecker literalTypechecker, ResolverListener resolverListener, List<? extends Referable> pLevels) {
+    this(parentScope, context == null && pLevels.isEmpty() ? parentScope : new ContextScope(parentScope, context == null ? Collections.emptyList() : context, pLevels), context, typingInfo, errorReporter, literalTypechecker, resolverListener);
   }
 
   public ExpressionResolveNameVisitor(Scope parentScope, List<TypedReferable> context, TypingInfo typingInfo, ErrorReporter errorReporter, LiteralTypechecker literalTypechecker, ResolverListener resolverListener) {
-    this(parentScope, context, typingInfo, errorReporter, literalTypechecker, resolverListener, Collections.emptyList(), Collections.emptyList());
+    this(parentScope, context, typingInfo, errorReporter, literalTypechecker, resolverListener, Collections.emptyList());
   }
 
   @Override
@@ -240,11 +239,8 @@ public class ExpressionResolveNameVisitor extends BaseConcreteExpressionVisitor<
   }
 
   private void resolveLevels(Concrete.ReferenceExpression expr) {
-    if (expr.getPLevels() != null) {
-      expr.getPLevels().replaceAll(levelExpression -> levelExpression.accept(this, LevelVariable.PVAR));
-    }
-    if (expr.getHLevels() != null) {
-      expr.getHLevels().replaceAll(levelExpression -> levelExpression.accept(this, LevelVariable.HVAR));
+    if (expr.getLevels() != null) {
+      expr.getLevels().replaceAll(levelExpression -> levelExpression.accept(this, null));
     }
   }
 
@@ -477,19 +473,19 @@ public class ExpressionResolveNameVisitor extends BaseConcreteExpressionVisitor<
       elem.setComponent(elem.getComponent().accept(this, null));
       return;
     }
-    if (resolvedReference.originalReference == null) {
+    if (resolvedReference.originalReference() == null) {
       return;
     }
 
-    if (resolvedReference.refExpr.getReferent() instanceof UnresolvedReference) {
-      resolve(resolvedReference.refExpr, myScope, false, null, myResolverListener);
-      if (resolvedReference.refExpr.getReferent() instanceof ErrorReference) {
-        myErrorReporter.report(((ErrorReference) resolvedReference.refExpr.getReferent()).getError());
+    if (resolvedReference.refExpr().getReferent() instanceof UnresolvedReference) {
+      resolve(resolvedReference.refExpr(), myScope, false, null, myResolverListener);
+      if (resolvedReference.refExpr().getReferent() instanceof ErrorReference) {
+        myErrorReporter.report(((ErrorReference) resolvedReference.refExpr().getReferent()).getError());
       }
     }
 
-    if (resolvedReference.resolvedList != null && myResolverListener != null) {
-      myResolverListener.referenceResolved(elem.getComponent(), resolvedReference.originalReference, resolvedReference.refExpr, resolvedReference.resolvedList);
+    if (resolvedReference.resolvedList() != null && myResolverListener != null) {
+      myResolverListener.referenceResolved(elem.getComponent(), resolvedReference.originalReference(), resolvedReference.refExpr(), resolvedReference.resolvedList());
     }
   }
 
@@ -998,60 +994,37 @@ public class ExpressionResolveNameVisitor extends BaseConcreteExpressionVisitor<
   }
 
   @Override
-  public Concrete.Expression visitUniverse(Concrete.UniverseExpression expr, Void params) {
+  public Concrete.UniverseExpression visitUniverse(Concrete.UniverseExpression expr, Void params) {
     Concrete.LevelExpression pLevel = expr.getPLevel();
-    if (pLevel != null) {
-      pLevel = pLevel.accept(this, LevelVariable.PVAR);
-    }
-    Concrete.LevelExpression hLevel = expr.getHLevel();
-    if (hLevel != null) {
-      hLevel = hLevel.accept(this, LevelVariable.HVAR);
-    }
-    return new Concrete.UniverseExpression(expr.getData(), pLevel, hLevel);
+    return pLevel == null ? expr : new Concrete.UniverseExpression(expr.getData(), pLevel.accept(this, null), expr.getHLevel(), expr.getKind());
   }
 
   @Override
-  public Concrete.LevelExpression visitInf(Concrete.InfLevelExpression expr, LevelVariable param) {
+  public Concrete.LevelExpression visitNumber(Concrete.NumberLevelExpression expr, Void param) {
     return expr;
   }
 
   @Override
-  public Concrete.LevelExpression visitLP(Concrete.PLevelExpression expr, LevelVariable param) {
-    return expr;
-  }
-
-  @Override
-  public Concrete.LevelExpression visitLH(Concrete.HLevelExpression expr, LevelVariable param) {
-    return expr;
-  }
-
-  @Override
-  public Concrete.LevelExpression visitNumber(Concrete.NumberLevelExpression expr, LevelVariable param) {
-    return expr;
-  }
-
-  @Override
-  public Concrete.LevelExpression visitVar(Concrete.VarLevelExpression expr, LevelVariable type) {
-    Scope.ScopeContext scopeContext = type == LevelVariable.HVAR ? Scope.ScopeContext.HLEVEL : Scope.ScopeContext.PLEVEL;
-    Referable ref = resolve(expr.getReferent(), myScope, scopeContext, myResolverListener);
+  public Concrete.LevelExpression visitVar(Concrete.VarLevelExpression expr, Void param) {
+    Referable ref = resolve(expr.getReferent(), myScope, Scope.ScopeContext.LEVEL, myResolverListener);
     if (ref instanceof ErrorReference) {
       myErrorReporter.report(((ErrorReference) ref).getError());
     }
-    Concrete.VarLevelExpression result = new Concrete.VarLevelExpression(expr.getData(), ref, type.getType());
+    Concrete.VarLevelExpression result = new Concrete.VarLevelExpression(expr.getData(), ref);
     if (myResolverListener != null) {
-      myResolverListener.levelResolved(expr.getReferent(), result, ref, new ArrayList<>(myScope.getElements(scopeContext)));
+      myResolverListener.levelResolved(expr.getReferent(), result, ref, new ArrayList<>(myScope.getElements(Scope.ScopeContext.LEVEL)));
     }
     expr.setReferent(ref);
     return result;
   }
 
   @Override
-  public Concrete.LevelExpression visitSuc(Concrete.SucLevelExpression expr, LevelVariable type) {
-    return new Concrete.SucLevelExpression(expr.getData(), expr.getExpression().accept(this, type));
+  public Concrete.LevelExpression visitSuc(Concrete.SucLevelExpression expr, Void param) {
+    return new Concrete.SucLevelExpression(expr.getData(), expr.getExpression().accept(this, param));
   }
 
   @Override
-  public Concrete.LevelExpression visitMax(Concrete.MaxLevelExpression expr, LevelVariable type) {
-    return new Concrete.MaxLevelExpression(expr.getData(), expr.getLeft().accept(this, type), expr.getRight().accept(this, type));
+  public Concrete.LevelExpression visitMax(Concrete.MaxLevelExpression expr, Void param) {
+    return new Concrete.MaxLevelExpression(expr.getData(), expr.getLeft().accept(this, param), expr.getRight().accept(this, param));
   }
 }

@@ -26,7 +26,7 @@
 \import Order.StrictOrder
 \import Paths
 \import Paths.Meta
-\import Set.Subset
+\import Set.Set
 \import Topology.CoverSpace
 \import Topology.CoverSpace.Complete
 \import Topology.CoverSpace.Directed
@@ -46,7 +46,7 @@
   => cs n * pow x n
 
 \func convRadius {X : ExPseudoNormedRing} (cs : Nat -> X) : LowerReal \cowith
-  | L a => ∃ (b : `> a) (IsConvUpperSeries \lam j => X.norm (cs j) * pow b j)
+  | L a => ∃ (b : > a) (IsConvUpperSeries \lam j => X.norm (cs j) * pow b j)
   | L-inh => inP (-1, inP (0, idp, powerSeries_0))
   | L-closed (inP (b,q<b,h)) q'<q => inP (b, q'<q <∘ q<b, h)
   | L-rounded {a} (inP (b,a<b,h)) => inP (RatField.mid a b, inP (b, RatField.mid<right a<b, h), RatField.mid>left a<b)
@@ -80,7 +80,7 @@
                 (later $ ext \lam n => *-assoc *> pmap (_ *) (pmap (_ *) (ExUpperRealSemigroup.rat-pow bc'>=0) *> ExUpperReal.*-rat (<=-less $ RatField.pow>0 $ a>=0 <∘r a<c) (RatField.pow>=0 bc'>=0) *> pmap ExUpperReal.fromRat (inv RatField.pow_*-comm *> pmap (pow __ n) (*-comm *> *-assoc *> pmap (b *) (RatField.finv-left $ RatField.>_/= $ a>=0 <∘r a<c) *> ide-right))))
                 (series_*-bounded (\lam j => ExUpperRealSemigroup.pow_>=0) (upperSeries-bounded_<= {_} {\lam n => norm (cs n * pow x n)}
                     (\lam n => ExUpperRealSemigroup.<=_* {_} {_} {pow c n} <=-refl (transport2 (<=) (ExUpperRealSemigroup.rat-pow $ <=-less $ a>=0 <∘r a<c) (inv norm_pow) $ ExUpperRealSemigroup.pow_<= c<=|x|) <=∘ =_<= (inv X.norm_*)) $ series-lim-bound $ series-limit p) $
-                  geometric-upper-series-conv (ExUpperReal.<=-rat.1 bc'>=0) $ transport (`< _) *-comm $ RatField.<_rotate-left (a>=0 <∘r a<c) $ transportInv (b <) ide-right b<c))
+                  geometric-upper-series-conv (ExUpperReal.<=-rat.1 bc'>=0) $ transport (< _) *-comm $ RatField.<_rotate-left (a>=0 <∘r a<c) $ transportInv (b <) ide-right b<c))
     }
   }
 

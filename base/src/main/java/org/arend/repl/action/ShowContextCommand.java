@@ -10,6 +10,8 @@ import org.arend.term.group.ConcreteStatement;
 import org.jetbrains.annotations.Nls;
 import org.jetbrains.annotations.NotNull;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.function.Supplier;
 
 public class ShowContextCommand implements ReplCommand {
@@ -22,15 +24,16 @@ public class ShowContextCommand implements ReplCommand {
 
   @Override
   public void invoke(@NotNull String line, @NotNull Repl api, @NotNull Supplier<@NotNull String> scanner) throws QuitReplException {
-    StringBuilder builder = new StringBuilder();
+    List<String> blocks = new ArrayList<>();
     for (ConcreteStatement statement: api.getStatements()) {
       ConcreteNamespaceCommand command = statement.command();
       ConcreteGroup group = statement.group();
       Concrete.ResolvableDefinition definition = group == null ? null : group.definition();
+      StringBuilder builder = new StringBuilder();
       if (command != null) command.prettyPrint(builder, PrettyPrinterConfig.DEFAULT);
       if (definition != null) definition.prettyPrint(builder, PrettyPrinterConfig.DEFAULT);
-      builder.append("\n");
+      if (builder.length() > 0) blocks.add(builder.toString());
     }
-    api.print(builder.toString());
+    if (!blocks.isEmpty()) api.println(String.join("\n\n", blocks));
   }
 }

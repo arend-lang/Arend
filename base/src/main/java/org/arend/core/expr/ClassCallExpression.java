@@ -6,15 +6,13 @@ import org.arend.core.context.param.DependentLink;
 import org.arend.core.context.param.EmptyDependentLink;
 import org.arend.core.context.param.TypedDependentLink;
 import org.arend.core.definition.*;
-import org.arend.core.expr.type.Type;
-import org.arend.core.expr.type.TypeExpression;
 import org.arend.core.expr.visitor.ExpressionVisitor;
 import org.arend.core.expr.visitor.ExpressionVisitor2;
-import org.arend.core.expr.visitor.NormalizeVisitor;
 import org.arend.core.expr.visitor.StripVisitor;
 import org.arend.core.pattern.ConstructorExpressionPattern;
-import org.arend.core.sort.Sort;
+import org.arend.core.sort.Level;
 import org.arend.core.subst.*;
+import org.arend.ext.core.definition.CoreClassDefinition;
 import org.arend.ext.core.definition.CoreClassField;
 import org.arend.ext.core.expr.CoreClassCallExpression;
 import org.arend.ext.core.expr.CoreExpression;
@@ -30,13 +28,12 @@ import org.arend.ext.util.Wrapper;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.math.BigInteger;
 import java.util.*;
 
-public class ClassCallExpression extends LeveledDefCallExpression implements Type, CoreClassCallExpression {
+public class ClassCallExpression extends LeveledDefCallExpression implements CoreClassCallExpression {
   private final ClassCallBinding myThisBinding = new ClassCallBinding();
   private final Map<ClassField, Expression> myImplementations;
-  private Sort mySort;
-  private UniverseKind myUniverseKind;
 
   public class ClassCallBinding implements Binding {
     @Override
@@ -46,12 +43,7 @@ public class ClassCallExpression extends LeveledDefCallExpression implements Typ
 
     @NotNull
     @Override
-    public ClassCallExpression getTypeExpr() {
-      return ClassCallExpression.this;
-    }
-
-    @Override
-    public Type getType() {
+    public ClassCallExpression getType() {
       return ClassCallExpression.this;
     }
 
@@ -74,16 +66,12 @@ public class ClassCallExpression extends LeveledDefCallExpression implements Typ
   public ClassCallExpression(ClassDefinition definition, Levels levels) {
     super(definition, levels);
     myImplementations = Collections.emptyMap();
-    mySort = definition.getSort().subst(levels.makeSubstitution(definition));
-    myUniverseKind = definition.getUniverseKind();
   }
 
-  public ClassCallExpression(ClassDefinition definition, Levels levels, Map<ClassField, Expression> implementations, Sort sort, UniverseKind universeKind) {
+  public ClassCallExpression(ClassDefinition definition, Levels levels, Map<ClassField, Expression> implementations) {
     super(definition, levels);
     assert implementations instanceof LinkedHashMap || implementations.size() <= 1;
     myImplementations = implementations;
-    mySort = sort;
-    myUniverseKind = universeKind.max(definition.getBaseUniverseKind());
   }
 
   @NotNull
@@ -97,6 +85,43 @@ public class ClassCallExpression extends LeveledDefCallExpression implements Typ
     return getDefinition().castLevels(superClass, getLevels());
   }
 
+  @Override
+  public @NotNull ClassCallExpression toSuperClass(@NotNull CoreClassDefinition superClass) {
+    if (!(superClass instanceof ClassDefinition superClassDef && getDefinition().isSubClassOf(superClass))) throw new IllegalArgumentException();
+    Levels levels = getLevels(superClassDef);
+    int s = getDefinition().getLevelParameters().size();
+    int m = getLevels().size() - s;
+    if (m > 0) {
+      List<ClassField> infiniteFields = getDefinition().getOverridableInfiniteFields(myImplementations.keySet());
+      List<ClassField> superInfiniteFields = superClassDef.getOverridableInfiniteFields(myImplementations.keySet());
+      int n = 0;
+      for (; n < superInfiniteFields.size() && n < infiniteFields.size() && n < m; n++) {
+        if (superInfiniteFields.get(n) != infiniteFields.get(n)) break;
+      }
+      if (n > 0) {
+        List<Level> newLevels = new ArrayList<>();
+        newLevels.addAll(levels.toList());
+        newLevels.addAll(getLevels().toList().subList(s, s + n));
+        levels = new ListLevels(newLevels);
+      }
+    }
+
+    Map<ClassField, Expression> implementations = new LinkedHashMap<>();
+    if (!myImplementations.isEmpty()) {
+      for (ClassField field : superClassDef.getNotImplementedFields()) {
+        if (getDefinition().isImplemented(field)) {
+          break;
+        }
+        Expression impl = myImplementations.get(field);
+        if (impl != null) {
+          implementations.put(field, impl);
+        }
+      }
+    }
+
+    return new ClassCallExpression(superClassDef, levels, implementations);
+  }
+
   public void fixOrderOfImplementations() {
     if (myImplementations.size() <= 1) return;
     Map<ClassField, Expression> newImpls = new LinkedHashMap<>();
@@ -108,31 +133,6 @@ public class ClassCallExpression extends LeveledDefCallExpression implements Typ
     }
     myImplementations.clear();
     myImplementations.putAll(newImpls);
-  }
-
-  public void updateHasUniverses() {
-    if (getDefinition().getUniverseKind() == UniverseKind.NO_UNIVERSES) {
-      myUniverseKind = UniverseKind.NO_UNIVERSES;
-      return;
-    }
-    if (myImplementations.isEmpty()) {
-      myUniverseKind = getDefinition().getUniverseKind();
-      return;
-    }
-
-    myUniverseKind = getDefinition().getBaseUniverseKind();
-    if (myUniverseKind == UniverseKind.WITH_UNIVERSES) {
-      return;
-    }
-
-    for (ClassField field : getDefinition().getNotImplementedFields()) {
-      if (field.getUniverseKind().ordinal() > myUniverseKind.ordinal() && !myImplementations.containsKey(field)) {
-        myUniverseKind = field.getUniverseKind();
-        if (myUniverseKind == UniverseKind.WITH_UNIVERSES) {
-          return;
-        }
-      }
-    }
   }
 
   public void removeDependencies(Set<? extends ClassField> originalSet) {
@@ -202,8 +202,26 @@ public class ClassCallExpression extends LeveledDefCallExpression implements Typ
     return impl == null ? null : impl.apply((Expression) thisExpr, getLevelSubstitution());
   }
 
-  public LevelSubstitution getLevelSubstitution(ClassDefinition superClass) {
-    return getLevels(superClass).makeSubstitution(superClass);
+  public @NotNull Expression getFieldType(@NotNull ClassField field, @NotNull Levels levels) {
+    Expression type = getDefinition().getFieldType(field, levels, new ReferenceExpression(myThisBinding));
+    Level overrideLevel = getDefinition().getFieldLevelOverride(field, levels, myImplementations.keySet());
+    return overrideLevel == null ? type : type.replaceInfinityLevel(overrideLevel);
+  }
+
+  public @NotNull Expression getFieldType(@NotNull ClassField field) {
+    return getFieldType(field, getLevels());
+  }
+
+  public @NotNull Expression getFieldType(@NotNull ClassField field, @NotNull Expression thisExpr) {
+    Expression type = getDefinition().getFieldType(field, getLevels(), thisExpr);
+    Level overrideLevel = getFieldLevelOverride(field);
+    return overrideLevel == null ? type : type.replaceInfinityLevel(overrideLevel);
+  }
+
+  public @NotNull PiExpression getFieldPiType(@NotNull ClassField field) {
+    PiExpression type = getDefinition().getFieldType(field, getLevels());
+    Level overrideLevel = getFieldLevelOverride(field);
+    return overrideLevel == null ? type : type.replaceInfinityLevel(overrideLevel);
   }
 
   private static void checkImplementation(CoreClassField field, Expression type) {
@@ -274,6 +292,20 @@ public class ClassCallExpression extends LeveledDefCallExpression implements Typ
     return field instanceof ClassField && (myImplementations.containsKey(field) || getDefinition().isImplemented(field));
   }
 
+  @Override
+  public boolean isInfinityLevel() {
+    for (ClassField field : getDefinition().getNotImplementedFields()) {
+      if (field.isInfiniteField() && !myImplementations.containsKey(field) && getFieldLevelOverride(field) == null) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  public @Nullable Level getFieldLevelOverride(ClassField field) {
+    return getDefinition().getFieldLevelOverride(field, getLevels(), myImplementations.keySet());
+  }
+
   public boolean isUnit() {
     return myImplementations.size() == getDefinition().getNumberOfNotImplementedFields();
   }
@@ -306,7 +338,7 @@ public class ClassCallExpression extends LeveledDefCallExpression implements Typ
   @Override
   public @NotNull DependentLink getClassFieldParameters() {
     Map<ClassField, Expression> implementations = new LinkedHashMap<>();
-    NewExpression newExpr = new NewExpression(null, new ClassCallExpression(getDefinition(), getLevels(), implementations, Sort.PROP, UniverseKind.NO_UNIVERSES));
+    NewExpression newExpr = new NewExpression(null, new ClassCallExpression(getDefinition(), getLevels(), implementations));
     newExpr.getClassCall().copyImplementationsFrom(this);
 
     Set<? extends ClassField> fields = getDefinition().getNotImplementedFields();
@@ -320,7 +352,7 @@ public class ClassCallExpression extends LeveledDefCallExpression implements Typ
         continue;
       }
 
-      PiExpression piExpr = getDefinition().getFieldType(field, getLevels(field.getParentClass()));
+      PiExpression piExpr = getFieldPiType(field);
       Binding thisBinding = piExpr.getBinding();
       Expression type = piExpr.getCodomain().accept(new SubstVisitor(new ExprSubstitution(thisBinding, newExpr), LevelSubstitution.EMPTY) {
         private Expression makeNewExpression(Expression arg, Expression type) {
@@ -336,7 +368,7 @@ public class ClassCallExpression extends LeveledDefCallExpression implements Typ
             type = type.normalize(NormalizationMode.WHNF);
             if (type instanceof ClassCallExpression classCall && getDefinition().isSubClassOf(classCall.getDefinition())) {
               Map<ClassField, Expression> subImplementations = new LinkedHashMap<>(classCall.getImplementedHere());
-              ClassCallExpression resultClassCall = new ClassCallExpression(classCall.getDefinition(), getLevels(((ClassCallExpression) type).getDefinition()), subImplementations, Sort.PROP, UniverseKind.NO_UNIVERSES);
+              ClassCallExpression resultClassCall = new ClassCallExpression(classCall.getDefinition(), getLevels(classCall.getDefinition()), subImplementations);
               Expression resultRef = new ReferenceExpression(resultClassCall.myThisBinding);
               for (ClassField field : classCall.getDefinition().getNotImplementedFields()) {
                 Expression impl = getImplementation(field, resultRef);
@@ -358,7 +390,7 @@ public class ClassCallExpression extends LeveledDefCallExpression implements Typ
         private List<Expression> visitArgs(List<? extends Expression> args, DependentLink params) {
           List<Expression> newArgs = new ArrayList<>(args.size());
           for (Expression arg : args) {
-            Expression newArg = makeNewExpression(arg, params.getTypeExpr());
+            Expression newArg = makeNewExpression(arg, params.getType());
             newArgs.add(newArg != null ? newArg : arg.accept(this, null));
             params = params.getNext();
           }
@@ -403,7 +435,7 @@ public class ClassCallExpression extends LeveledDefCallExpression implements Typ
           constructorArgMap = Collections.emptyMap();
           DependentLink param = expr.getDefinition().getParameters();
           for (Expression arg : expr.getDefCallArguments()) {
-            Expression newExpr = makeNewExpression(arg, param.getTypeExpr());
+            Expression newExpr = makeNewExpression(arg, param.getType());
             if (newExpr != null) {
               if (constructorArgMap.isEmpty()) constructorArgMap = new HashMap<>();
               constructorArgMap.put(new Wrapper<>(arg), newExpr);
@@ -436,7 +468,7 @@ public class ClassCallExpression extends LeveledDefCallExpression implements Typ
         @Override
         public Expression visitClassCall(ClassCallExpression expr, Void params) {
           Map<ClassField, Expression> fieldSet = new LinkedHashMap<>();
-          ClassCallExpression result = new ClassCallExpression(expr.getDefinition(), expr.getLevels().subst(getLevelSubstitution()), fieldSet, expr.getSort(), expr.getUniverseKind());
+          ClassCallExpression result = new ClassCallExpression(expr.getDefinition(), expr.getLevels().subst(getLevelSubstitution()), fieldSet);
           getExprSubstitution().add(expr.getThisBinding(), new ReferenceExpression(result.getThisBinding()));
           for (Map.Entry<ClassField, Expression> entry : expr.getImplementedHere().entrySet()) {
             Expression newArg = makeNewExpression(entry.getValue(), entry.getKey().getType().getCodomain());
@@ -447,7 +479,7 @@ public class ClassCallExpression extends LeveledDefCallExpression implements Typ
         }
       }, null);
 
-      DependentLink link = new TypedDependentLink(true, Renamer.getNameFromType(type, field.getName()), type instanceof Type ? (Type) type : new TypeExpression(type, piExpr.getResultSort()), EmptyDependentLink.getInstance());
+      DependentLink link = new TypedDependentLink(true, Renamer.getNameFromType(type, field.getName()), type, EmptyDependentLink.getInstance());
       implementations.put(field, new ReferenceExpression(link));
       list.append(link);
     }
@@ -456,7 +488,7 @@ public class ClassCallExpression extends LeveledDefCallExpression implements Typ
   }
 
   @Override
-  public Integer getUseLevel() {
+  public BigInteger getUseLevel() {
     return getDefinition().getUseLevel(myImplementations, myThisBinding, false);
   }
 
@@ -464,50 +496,6 @@ public class ClassCallExpression extends LeveledDefCallExpression implements Typ
   @Override
   public ClassDefinition getDefinition() {
     return (ClassDefinition) super.getDefinition();
-  }
-
-  @Override
-  public Expression getExpr() {
-    return this;
-  }
-
-  @Override
-  public Sort getSortOfType() {
-    return mySort.subst(getLevelSubstitution());
-  }
-
-  @Override
-  public void subst(InPlaceLevelSubstVisitor substVisitor) {
-    substVisitor.visitClassCall(this, null);
-  }
-
-  @Override
-  public ClassCallExpression strip(StripVisitor visitor) {
-    return visitor.visitClassCall(this, null);
-  }
-
-  @NotNull
-  @Override
-  public ClassCallExpression normalize(@NotNull NormalizationMode mode) {
-    return NormalizeVisitor.INSTANCE.visitClassCall(this, mode);
-  }
-
-  public Sort getSort() {
-    return mySort;
-  }
-
-  public void setSort(Sort sort) {
-    mySort = sort;
-  }
-
-  @Override
-  public UniverseKind getUniverseKind() {
-    return myUniverseKind;
-  }
-
-  @Override
-  public @NotNull Expression minimizeLevels() {
-    return new ClassCallExpression(getDefinition(), getMinimizedLevels(), myImplementations, mySort, myUniverseKind);
   }
 
   @Override
@@ -527,15 +515,13 @@ public class ClassCallExpression extends LeveledDefCallExpression implements Typ
 
   private static class ConstructorWithDataArgumentsImpl implements ConstructorWithDataArguments {
     private final DConstructor myConstructor;
-    private final LevelPair myLevels;
     private final Expression myLength;
     private final Binding myThisBinding;
     private final Expression myElementsType;
     private DependentLink myParameters;
 
-    private ConstructorWithDataArgumentsImpl(DConstructor constructor, LevelPair levels, Expression length, Binding thisBinding, Expression elementsType) {
+    private ConstructorWithDataArgumentsImpl(DConstructor constructor, Expression length, Binding thisBinding, Expression elementsType) {
       myConstructor = constructor;
-      myLevels = levels;
       myLength = length;
       myThisBinding = thisBinding;
       myElementsType = elementsType;
@@ -554,7 +540,7 @@ public class ClassCallExpression extends LeveledDefCallExpression implements Typ
     @Override
     public @NotNull DependentLink getParameters() {
       if (myParameters == null) {
-        myParameters = myConstructor.getArrayParameters(myLevels, myLength, myThisBinding, myElementsType);
+        myParameters = myConstructor.getArrayParameters(myLength, myThisBinding, myElementsType);
       }
       return myParameters;
     }
@@ -573,14 +559,13 @@ public class ClassCallExpression extends LeveledDefCallExpression implements Typ
     if (getDefinition() != Prelude.DEP_ARRAY) return null;
     List<ConstructorWithDataArguments> result = new ArrayList<>(2);
     Boolean isEmpty = ConstructorExpressionPattern.isArrayEmpty(this);
-    LevelPair levels = getLevels().toLevelPair();
     Expression length = getAbsImplementationHere(Prelude.ARRAY_LENGTH);
     Expression elementsType = getAbsImplementationHere(Prelude.ARRAY_ELEMENTS_TYPE);
     if (isEmpty == null || isEmpty.equals(true)) {
-      result.add(new ConstructorWithDataArgumentsImpl(Prelude.EMPTY_ARRAY, levels, length, myThisBinding, elementsType));
+      result.add(new ConstructorWithDataArgumentsImpl(Prelude.EMPTY_ARRAY, length, myThisBinding, elementsType));
     }
     if (isEmpty == null || isEmpty.equals(false)) {
-      result.add(new ConstructorWithDataArgumentsImpl(Prelude.ARRAY_CONS, levels, length, myThisBinding, elementsType));
+      result.add(new ConstructorWithDataArgumentsImpl(Prelude.ARRAY_CONS, length, myThisBinding, elementsType));
     }
     return result;
   }

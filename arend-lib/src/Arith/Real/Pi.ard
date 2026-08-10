@@ -20,7 +20,7 @@
     -- | $\left|\tfrac{1}{m+2}\right| < 1$ — domain witness for $\arctan\tfrac{1}{m+2}$.
     \lemma ratio-norm-<1 (m : Nat)
       : RealAbGroup.abs (ratio 1 (suc (suc m))) < 1
-      => transportInv (`< 1)
+      => transportInv (< 1)
           (RealAbGroup.abs-ofPos (rat_real_<=.1 (RatField.<=-char linarith)))
           (rat_real_<.1 (RatField.<-char linarith))
   }
@@ -44,9 +44,9 @@
               | b => arctan (ratio 1 239) (pi.ratio-norm-<1 237)
          \in \have
               | tan_a : 5 * sin a = cos a
-                      => pmap (5 *) (tan-arctan _) *> inv *-assoc *> pmap (`* _) RealField.*-rat *> ide-left
+                      => pmap (5 *) (tan-arctan _) *> inv *-assoc *> pmap (* _) RealField.*-rat *> ide-left
               | tan_b : 239 * sin b = cos b
-                      => pmap (239 *) (tan-arctan _) *> inv *-assoc *> pmap (`* _) RealField.*-rat *> ide-left
+                      => pmap (239 *) (tan-arctan _) *> inv *-assoc *> pmap (* _) RealField.*-rat *> ide-left
               | A : 4 * a - b = (a + a) + (a + a) - b
                   => linarith
             \in unfold pi/4 $ rewrite A $

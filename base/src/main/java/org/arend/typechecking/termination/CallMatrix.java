@@ -140,7 +140,7 @@ public class CallMatrix extends BaseCallMatrix<Definition> {
 
   @Nullable public static DependentLink tryUnfoldDependentLink(DependentLink parameter) {
     if (!parameter.hasNext()) return null;
-    Expression type = parameter.getType().getExpr();
+    Expression type = parameter.getType();
     if (type instanceof SigmaExpression) {
       DependentLink params = ((SigmaExpression) type).getParameters();
       return params.hasNext() ? params : null;
@@ -149,9 +149,6 @@ public class CallMatrix extends BaseCallMatrix<Definition> {
   }
 
   @Nullable public static List<? extends Expression> tryUnfoldExpression(Expression expr) {
-    if (expr instanceof TupleExpression) {
-      return ((TupleExpression) expr).getFields();
-    }
-    return null;
+    return expr instanceof TupleExpression tuple ? tuple.getFields() : null;
   }
 }

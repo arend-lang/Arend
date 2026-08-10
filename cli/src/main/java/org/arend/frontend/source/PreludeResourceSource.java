@@ -15,7 +15,7 @@ public class PreludeResourceSource extends StreamRawSource {
   }
 
   @Override
-  protected @NotNull InputStream getInputStream() throws IOException {
+  public @NotNull InputStream getInputStream() throws IOException {
     InputStream stream = Prelude.class.getResourceAsStream(RESOURCE_PATH);
     if (stream == null) {
       throw new IOException("Cannot find the prelude resource");

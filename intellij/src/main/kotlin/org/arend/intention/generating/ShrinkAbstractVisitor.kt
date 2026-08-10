@@ -19,10 +19,8 @@ class ShrinkAbstractVisitor(val textRange: TextRange) : AbstractExpressionVisito
         private const val DOTS = "…"
     }
 
-    override fun visitReference(data: Any?, referent: Referable, fixity: Fixity?, pLevels: MutableCollection<out Abstract.LevelExpression>?, hLevels: MutableCollection<out Abstract.LevelExpression>?, params: Unit?): String =
+    override fun visitReference(data: Any?, referent: Referable, fixity: Fixity?, pLevels: MutableCollection<out Abstract.LevelExpression>?, params: Unit?): String =
             referent.refName
-
-    override fun visitReference(data: Any?, referent: Referable, lp: Int, lh: Int, params: Unit?): String = referent.refName
 
     override fun visitThis(data: Any?, params: Unit?): String = "\\this"
 
@@ -32,8 +30,11 @@ class ShrinkAbstractVisitor(val textRange: TextRange) : AbstractExpressionVisito
     override fun visitPi(data: Any?, parameters: MutableCollection<out Abstract.Parameter>, codomain: Abstract.Expression?, params: Unit?): String =
             """\Pi $DOTS -> ${codomain?.accept(this, Unit) ?: "INVALID"}"""
 
-    override fun visitUniverse(data: Any?, pLevelNum: Int?, hLevelNum: Int?, pLevel: Abstract.LevelExpression?, hLevel: Abstract.LevelExpression?, params: Unit?): String =
+    override fun visitUniverse(data: Any?, pLevelNum: BigInteger?, hLevelNum: BigInteger?, pLevel: Abstract.LevelExpression?, params: Unit?): String =
             """\Type"""
+
+    override fun visitCatUniverse(data: Any?, pLevelNum: BigInteger?, pLevel: Abstract.LevelExpression?, params: Unit?): String =
+            """\Cat"""
 
     override fun visitApplyHole(data: Any?, params: Unit?): String = "_"
 
@@ -51,8 +52,8 @@ class ShrinkAbstractVisitor(val textRange: TextRange) : AbstractExpressionVisito
     override fun visitSigma(data: Any?, parameters: MutableCollection<out Abstract.Parameter>, params: Unit?): String =
             """\Sigma $DOTS $DOTS"""
 
-    override fun visitBinOpSequence(data: Any?, left: Abstract.Expression, sequence: Collection<Abstract.BinOpSequenceElem>, params: Unit?): String {
-        val parsed = parseBinOp(left, sequence)
+    override fun visitBinOpSequence(data: Any?, left: Abstract.Expression, leftIsVariable: Boolean, sequence: Collection<Abstract.BinOpSequenceElem>, params: Unit?): String {
+        val parsed = parseBinOp(left, leftIsVariable, sequence)
         var requiredConcrete = parsed
         forEachRange(parsed) { range, expr -> if (textRange.contains(range)) requiredConcrete = expr; false }
         return if (requiredConcrete is Concrete.AppExpression) {

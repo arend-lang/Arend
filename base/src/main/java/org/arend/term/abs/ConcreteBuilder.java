@@ -1,10 +1,10 @@
 package org.arend.term.abs;
 
-import org.arend.core.context.binding.LevelVariable;
 import org.arend.error.CountingErrorReporter;
 import org.arend.error.DummyErrorReporter;
 import org.arend.error.ParsingError;
 import org.arend.ext.concrete.definition.FunctionKind;
+import org.arend.ext.concrete.expr.ConcreteUniverseExpression;
 import org.arend.ext.error.ErrorReporter;
 import org.arend.ext.error.GeneralError;
 import org.arend.extImpl.DefaultMetaTypechecker;
@@ -16,7 +16,6 @@ import org.arend.term.group.ConcreteStatement;
 import org.arend.term.Fixity;
 import org.arend.term.concrete.Concrete;
 import org.arend.typechecking.error.local.LocalErrorReporter;
-import org.arend.util.SingletonList;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -24,7 +23,7 @@ import java.math.BigInteger;
 import java.util.*;
 
 @SuppressWarnings("WeakerAccess")
-public class ConcreteBuilder implements AbstractDefinitionVisitor<Concrete.ResolvableDefinition>, AbstractExpressionVisitor<Void, Concrete.Expression>, AbstractLevelExpressionVisitor<LevelVariable, Concrete.LevelExpression> {
+public class ConcreteBuilder implements AbstractDefinitionVisitor<Concrete.ResolvableDefinition>, AbstractExpressionVisitor<Void, Concrete.Expression>, AbstractLevelExpressionVisitor<Void, Concrete.LevelExpression> {
   private final LocalErrorReporter myErrorReporter;
   private final LocatedReferable myParent;
   private final TCDefReferable myDefinition;
@@ -128,7 +127,7 @@ public class ConcreteBuilder implements AbstractDefinitionVisitor<Concrete.Resol
     List<ConcreteStatement> statements = new ArrayList<>();
     for (Abstract.Statement statement : group.getStatements()) {
       Abstract.Group subgroup = statement.getGroup();
-      statements.add(new ConcreteStatement(subgroup == null ? null : buildGroup(subgroup, module, referable, concrete instanceof Concrete.Definition def ? def : null, enclosingClass, errorReporter, resolved), buildNamespaceCommand(statement.getNamespaceCommand()), buildLevelsDefinition(statement.getPLevelsDefinition(), true, referable), buildLevelsDefinition(statement.getHLevelsDefinition(), false, referable)));
+      statements.add(new ConcreteStatement(subgroup == null ? null : buildGroup(subgroup, module, referable, concrete instanceof Concrete.Definition def ? def : null, enclosingClass, errorReporter, resolved), buildNamespaceCommand(statement.getNamespaceCommand())));
     }
 
     if (concrete instanceof Concrete.Definition cDef && parentDef instanceof Concrete.ClassDefinition && cDef.getUseParent() == parentDef.getData()) {
@@ -146,7 +145,7 @@ public class ConcreteBuilder implements AbstractDefinitionVisitor<Concrete.Resol
       }
     }
 
-    if (concrete instanceof Concrete.Definition def && enclosingClass != null) {
+    if (concrete instanceof Concrete.Definition def && enclosingClass != null && !(concrete instanceof Concrete.ClassDefinition)) {
       def.enclosingClass = enclosingClass;
     }
 
@@ -160,26 +159,15 @@ public class ConcreteBuilder implements AbstractDefinitionVisitor<Concrete.Resol
 
     List<ConcreteNamespaceCommand.NameRenaming> renamings = new ArrayList<>();
     for (Abstract.NameRenaming renaming : command.getRenamings()) {
-      renamings.add(new ConcreteNamespaceCommand.NameRenaming(renaming, renaming.getScopeContext(), renaming.getOldReference(), renaming.getPrecedence(), renaming.getNewName()));
+      renamings.add(new ConcreteNamespaceCommand.NameRenaming(renaming, renaming.isStatic(), renaming.getOldReference(), renaming.getPrecedence(), renaming.getNewName()));
     }
 
     List<ConcreteNamespaceCommand.NameHiding> hidings = new ArrayList<>();
     for (Abstract.NameHiding hiding : command.getHidings()) {
-      hidings.add(new ConcreteNamespaceCommand.NameHiding(hiding, hiding.getScopeContext(), hiding.getHiddenReference()));
+      hidings.add(new ConcreteNamespaceCommand.NameHiding(hiding, hiding.isStatic(), hiding.getHiddenReference()));
     }
 
     return new ConcreteNamespaceCommand(command, command.isImport(), reference instanceof LongUnresolvedReference ? (LongUnresolvedReference) reference : new LongUnresolvedReference(reference.getData(), Collections.singletonList(reference.getData() instanceof AbstractReference ref ? ref : null), Collections.singletonList(reference.getRefName())), command.isUsing(), renamings, hidings);
-  }
-
-  private static Concrete.LevelsDefinition buildLevelsDefinition(Abstract.LevelParameters parameters, boolean isPLevels, LocatedReferable parent) {
-    if (parameters == null) return null;
-    boolean isIncreasing = parameters.isIncreasing();
-    List<TCLevelReferable> referables = new ArrayList<>();
-    LevelDefinition levelDefinition = new LevelDefinition(isPLevels, isIncreasing, referables, parent);
-    for (Abstract.AbstractReferable referable : parameters.getReferables()) {
-      referables.add(new TCLevelReferable(referable, referable.getRefName(), levelDefinition));
-    }
-    return new Concrete.LevelsDefinition(parameters.getData(), referables, isIncreasing, isPLevels);
   }
 
   private static List<ParameterReferable> buildExternalParameters(Concrete.Definition definition) {
@@ -211,33 +199,23 @@ public class ConcreteBuilder implements AbstractDefinitionVisitor<Concrete.Resol
 
   // Definition
 
-  private static List<LevelReferable> getLevelParametersRefs(Abstract.LevelParameters params, boolean isPLevels) {
+  private static List<LevelReferable> getLevelParametersRefs(Abstract.LevelParameters params) {
     if (params == null) return null;
     List<LevelReferable> result = new ArrayList<>();
     for (Abstract.AbstractReferable ref : params.getReferables()) {
-      result.add(new DataLevelReferable(ref, ref.getRefName(), isPLevels));
+      result.add(new DataLevelReferable(ref, ref.getRefName()));
     }
     return result;
   }
 
-  private Concrete.LevelParameters visitLevelParameters(Abstract.LevelParameters params, boolean isPLevels) {
-    if (params == null) return null;
-    Boolean increasing = null;
-    for (Abstract.Comparison comparison : params.getComparisonList()) {
-      boolean inc = comparison == Abstract.Comparison.LESS_OR_EQUALS;
-      if (increasing == null) {
-        increasing = inc;
-      } else if (increasing != inc) {
-        myErrorReporter.report(new AbstractExpressionError(GeneralError.Level.ERROR, "Level parameters must be linearly ordered", comparison));
-      }
-    }
-    return new Concrete.LevelParameters(params.getData(), getLevelParametersRefs(params, isPLevels), increasing == null || increasing);
+  private Concrete.LevelParameters visitLevelParameters(Abstract.LevelParameters params) {
+    return params == null ? null : new Concrete.LevelParameters(params.getData(), getLevelParametersRefs(params));
   }
 
   @Override
   public Concrete.MetaDefinition visitMeta(Abstract.MetaDefinition def) {
     Abstract.Expression term = def.getTerm();
-    return new Concrete.MetaDefinition((MetaReferable) myDefinition, visitLevelParameters(def.getPLevelParameters(), true), visitLevelParameters(def.getHLevelParameters(), false), buildParameters(def.getParameters(), false, true), term != null ? term.accept(this, null) : null);
+    return new Concrete.MetaDefinition((MetaReferable) myDefinition, visitLevelParameters(def.getLevelParameters()), buildParameters(def.getParameters(), false, true), term != null ? term.accept(this, null) : null);
   }
 
   @Override
@@ -279,7 +257,7 @@ public class ConcreteBuilder implements AbstractDefinitionVisitor<Concrete.Resol
       Abstract.Reference implementedField = def.getImplementedField();
       result = new Concrete.CoClauseFunctionDefinition(kind, myDefinition, (TCDefReferable) myParent, implementedField == null ? null : implementedField.getReferent(), parameters, type, typeLevel, body);
     } else {
-      result = new Concrete.FunctionDefinition(def.getFunctionKind(), myDefinition, visitLevelParameters(def.getPLevelParameters(), true), visitLevelParameters(def.getHLevelParameters(), false), parameters, type, typeLevel, body);
+      result = new Concrete.FunctionDefinition(def.getFunctionKind(), myDefinition, visitLevelParameters(def.getLevelParameters()), parameters, type, typeLevel, body);
     }
     return result;
   }
@@ -318,7 +296,7 @@ public class ConcreteBuilder implements AbstractDefinitionVisitor<Concrete.Resol
       clauses.add(new Concrete.ConstructorClause(clause.getData(), patterns.isEmpty() ? null : buildPatterns(patterns), constructors));
     }
 
-    return new Concrete.DataDefinition(myDefinition, visitLevelParameters(def.getPLevelParameters(), true), visitLevelParameters(def.getHLevelParameters(), false), typeParameters, elimExpressions == null ? null : buildReferences(elimExpressions), def.isTruncated(), universe instanceof Concrete.UniverseExpression ? (Concrete.UniverseExpression) universe : null, clauses);
+    return new Concrete.DataDefinition(myDefinition, visitLevelParameters(def.getLevelParameters()), typeParameters, elimExpressions == null ? null : buildReferences(elimExpressions), def.isTruncated(), universe instanceof Concrete.UniverseExpression ? (Concrete.UniverseExpression) universe : null, clauses);
   }
 
   public void buildClassParameters(Collection<? extends Abstract.FieldParameter> absParameters, Concrete.ClassDefinition classDef, List<Concrete.ClassElement> elements) {
@@ -354,7 +332,7 @@ public class ConcreteBuilder implements AbstractDefinitionVisitor<Concrete.Resol
   @Override
   public Concrete.Definition visitClass(Abstract.ClassDefinition def) {
     List<Concrete.ClassElement> elements = new ArrayList<>();
-    Concrete.ClassDefinition classDef = new Concrete.ClassDefinition(myDefinition, visitLevelParameters(def.getPLevelParameters(), true), visitLevelParameters(def.getHLevelParameters(), false), def.isRecord(), def.withoutClassifying(), buildReferenceExpressions(def.getSuperClasses()), elements);
+    Concrete.ClassDefinition classDef = new Concrete.ClassDefinition(myDefinition, visitLevelParameters(def.getLevelParameters()), def.isRecord(), def.withoutClassifying(), buildReferenceExpressions(def.getSuperClasses()), elements);
     buildClassParameters(def.getParameters(), classDef, elements);
 
     for (Abstract.ClassElement element : def.getClassElements()) {
@@ -411,7 +389,7 @@ public class ConcreteBuilder implements AbstractDefinitionVisitor<Concrete.Resol
   public List<Concrete.ReferenceExpression> buildReferenceExpressions(Collection<? extends Abstract.ReferenceExpression> absElimExpressions) {
     List<Concrete.ReferenceExpression> elimExpressions = new ArrayList<>(absElimExpressions.size());
     for (Abstract.ReferenceExpression expr : absElimExpressions) {
-      elimExpressions.add(new Concrete.ReferenceExpression(expr.getData(), expr.getReferent(), visitLevels(expr.getPLevels(), LevelVariable.PVAR), visitLevels(expr.getHLevels(), LevelVariable.HVAR)));
+      elimExpressions.add(new Concrete.ReferenceExpression(expr.getData(), expr.getReferent(), visitLevels(expr.getLevels())));
     }
     return elimExpressions;
   }
@@ -620,23 +598,18 @@ public class ConcreteBuilder implements AbstractDefinitionVisitor<Concrete.Resol
 
   // Expression
 
-  private List<Concrete.LevelExpression> visitLevels(Collection<? extends Abstract.LevelExpression> levels, LevelVariable base) {
+  private List<Concrete.LevelExpression> visitLevels(Collection<? extends Abstract.LevelExpression> levels) {
     if (levels == null) return null;
     List<Concrete.LevelExpression> result = new ArrayList<>(levels.size());
     for (Abstract.LevelExpression level : levels) {
-      result.add(level.accept(this, base));
+      result.add(level.accept(this, null));
     }
     return result;
   }
 
   @Override
-  public Concrete.ReferenceExpression visitReference(@Nullable Object data, @NotNull Referable referent, @Nullable Fixity fixity, @Nullable Collection<? extends Abstract.LevelExpression> pLevels, @Nullable Collection<? extends Abstract.LevelExpression> hLevels, Void params) {
-    return Concrete.FixityReferenceExpression.make(data, referent, fixity, visitLevels(pLevels, LevelVariable.PVAR), visitLevels(hLevels, LevelVariable.HVAR));
-  }
-
-  @Override
-  public Concrete.ReferenceExpression visitReference(@Nullable Object data, @NotNull Referable referent, int lp, int lh, Void params) {
-    return new Concrete.ReferenceExpression(data, referent, new SingletonList<>(new Concrete.NumberLevelExpression(data, lp)), new SingletonList<>(new Concrete.NumberLevelExpression(data, lh)));
+  public Concrete.ReferenceExpression visitReference(@Nullable Object data, @NotNull Referable referent, @Nullable Fixity fixity, @Nullable Collection<? extends Abstract.LevelExpression> pLevels, Void params) {
+    return Concrete.FixityReferenceExpression.make(data, referent, fixity, visitLevels(pLevels));
   }
 
   @Override
@@ -689,21 +662,22 @@ public class ConcreteBuilder implements AbstractDefinitionVisitor<Concrete.Resol
   }
 
   @Override
-  public Concrete.UniverseExpression visitUniverse(@Nullable Object data, @Nullable Integer pLevelNum, @Nullable Integer hLevelNum, @Nullable Abstract.LevelExpression pLevel, @Nullable Abstract.LevelExpression hLevel, Void params) {
-    if (pLevelNum != null && hLevel == null) {
-      hLevel = pLevel;
+  public Concrete.UniverseExpression visitUniverse(@Nullable Object data, @Nullable BigInteger pLevelNum, @Nullable BigInteger hLevelNum, @Nullable Abstract.LevelExpression pLevel, Void params) {
+    if (pLevelNum != null) {
       pLevel = null;
-    }
-    if (pLevelNum != null && pLevel != null) {
-      myErrorReporter.report(new AbstractExpressionError(GeneralError.Level.ERROR, "p-level is already specified", pLevel.getData()));
-    }
-    if (hLevelNum != null && hLevel != null) {
-      myErrorReporter.report(new AbstractExpressionError(GeneralError.Level.ERROR, "h-level is already specified", hLevel.getData()));
     }
 
     return new Concrete.UniverseExpression(data,
-            pLevelNum != null ? new Concrete.NumberLevelExpression(data, pLevelNum) : pLevel != null ? pLevel.accept(this, LevelVariable.PVAR) : null,
-            hLevelNum != null ? (hLevelNum == Abstract.INFINITY_LEVEL ? new Concrete.InfLevelExpression(data) : new Concrete.NumberLevelExpression(data, hLevelNum)) : hLevel != null ? hLevel.accept(this, LevelVariable.HVAR) : null);
+            pLevelNum != null ? new Concrete.NumberLevelExpression(data, pLevelNum) : pLevel != null ? pLevel.accept(this, null) : null,
+            hLevelNum, ConcreteUniverseExpression.Kind.TYPE);
+  }
+
+  @Override
+  public Concrete.Expression visitCatUniverse(@Nullable Object data, @Nullable BigInteger pLevelNum, Abstract.@Nullable LevelExpression pLevel, Void params) {
+    if (pLevelNum != null && pLevel != null) {
+      myErrorReporter.report(new AbstractExpressionError(GeneralError.Level.ERROR, "p-level is already specified", pLevel.getData()));
+    }
+    return new Concrete.UniverseExpression(data, pLevelNum != null ? new Concrete.NumberLevelExpression(data, pLevelNum) : pLevel != null ? pLevel.accept(this, null) : null, null, ConcreteUniverseExpression.Kind.CAT);
   }
 
   @Override
@@ -734,7 +708,7 @@ public class ConcreteBuilder implements AbstractDefinitionVisitor<Concrete.Resol
     return new Concrete.SigmaExpression(data, buildTypeParameters(parameters, false));
   }
 
-  private Concrete.Expression makeBinOpSequence(Object data, Concrete.Expression left, Collection<? extends Abstract.BinOpSequenceElem> sequence, Abstract.FunctionClauses clauses) {
+  private Concrete.Expression makeBinOpSequence(Object data, Concrete.Expression left, boolean leftIsVariable, Collection<? extends Abstract.BinOpSequenceElem> sequence, Abstract.FunctionClauses clauses) {
     if (sequence.isEmpty() && clauses == null) {
       return left;
     }
@@ -744,7 +718,7 @@ public class ConcreteBuilder implements AbstractDefinitionVisitor<Concrete.Resol
     }
 
     List<Concrete.BinOpSequenceElem<Concrete.Expression>> elems = new ArrayList<>();
-    elems.add(new Concrete.BinOpSequenceElem<>(left));
+    elems.add(new Concrete.BinOpSequenceElem<>(left, leftIsVariable ? Fixity.UNKNOWN : Fixity.NONFIX, true));
     for (Abstract.BinOpSequenceElem elem : sequence) {
       Abstract.Expression arg = elem.getExpression();
       if (arg != null) {
@@ -756,8 +730,8 @@ public class ConcreteBuilder implements AbstractDefinitionVisitor<Concrete.Resol
   }
 
   @Override
-  public Concrete.Expression visitBinOpSequence(@Nullable Object data, @NotNull Abstract.Expression left, @NotNull Collection<? extends Abstract.BinOpSequenceElem> sequence, Void params) {
-    return makeBinOpSequence(data, left.accept(this, null), sequence, null);
+  public Concrete.Expression visitBinOpSequence(@Nullable Object data, @NotNull Abstract.Expression left, boolean leftIsVariable, @NotNull Collection<? extends Abstract.BinOpSequenceElem> sequence, Void params) {
+    return makeBinOpSequence(data, left.accept(this, null), leftIsVariable, sequence, null);
   }
 
   @Override
@@ -827,6 +801,18 @@ public class ConcreteBuilder implements AbstractDefinitionVisitor<Concrete.Resol
       result = infixName != null ? new Concrete.FixityReferenceExpression(data, referable, fixity == Fixity.INFIX ? Fixity.INFIX : Fixity.POSTFIX) : new Concrete.ReferenceExpression(data, referable);
     }
 
+    if (i < fieldAccs.size() && result instanceof Concrete.ReferenceExpression refExpr) {
+      Collection<? extends Abstract.LevelExpression> levelArgs = fieldAccs.get(i).getLevels();
+      if (!levelArgs.isEmpty()) {
+        if (refExpr.getLevels() == null) {
+          refExpr.setLevels(visitLevels(levelArgs));
+        } else {
+          myErrorReporter.report(new AbstractExpressionError(GeneralError.Level.ERROR, "The levels are already specified", fieldAccs.get(i)));
+        }
+        i++;
+      }
+    }
+
     for (; i < fieldAccs.size(); i ++) {
       Integer number = fieldAccs.get(i).getNumber();
       if (number != null) {
@@ -835,6 +821,11 @@ public class ConcreteBuilder implements AbstractDefinitionVisitor<Concrete.Resol
         Referable fieldRef = fieldAccs.get(i).getFieldRef();
         if (fieldRef != null) {
           result = new Concrete.FieldCallExpression(data, fieldRef, Fixity.UNKNOWN, result);
+        } else {
+          Collection<? extends Abstract.LevelExpression> levels = fieldAccs.get(i).getLevels();
+          if (!levels.isEmpty()) {
+            myErrorReporter.report(new AbstractExpressionError(GeneralError.Level.WARNING_UNUSED, "Level arguments are ignored", levels.iterator().next()));
+          }
         }
       }
     }
@@ -860,7 +851,7 @@ public class ConcreteBuilder implements AbstractDefinitionVisitor<Concrete.Resol
       result = new Concrete.NewExpression(data, result);
     }
 
-    return makeBinOpSequence(data, result, sequence, clauses);
+    return makeBinOpSequence(data, result, false, sequence, clauses);
   }
 
   @Override
@@ -913,56 +904,41 @@ public class ConcreteBuilder implements AbstractDefinitionVisitor<Concrete.Resol
   // LevelExpression
 
   @Override
-  public Concrete.InfLevelExpression visitInf(@Nullable Object data, LevelVariable base) {
-    return new Concrete.InfLevelExpression(data);
-  }
-
-  @Override
-  public Concrete.PLevelExpression visitLP(@Nullable Object data, LevelVariable base) {
-    return new Concrete.PLevelExpression(data);
-  }
-
-  @Override
-  public Concrete.HLevelExpression visitLH(@Nullable Object data, LevelVariable base) {
-    return new Concrete.HLevelExpression(data);
-  }
-
-  @Override
-  public Concrete.NumberLevelExpression visitNumber(@Nullable Object data, int number, LevelVariable base) {
+  public Concrete.NumberLevelExpression visitNumber(@Nullable Object data, @NotNull BigInteger number, Void param) {
     return new Concrete.NumberLevelExpression(data, number);
   }
 
   @Override
-  public Concrete.LevelExpression visitId(@Nullable Object data, Referable ref, LevelVariable base) {
-    return new Concrete.VarLevelExpression(data, ref, base.getType());
+  public Concrete.LevelExpression visitId(@Nullable Object data, Referable ref, Void param) {
+    return new Concrete.VarLevelExpression(data, ref);
   }
 
   @Override
-  public Concrete.LevelExpression visitSuc(@Nullable Object data, @Nullable Abstract.LevelExpression expr, LevelVariable base) {
+  public Concrete.LevelExpression visitSuc(@Nullable Object data, @Nullable Abstract.LevelExpression expr, Void param) {
     if (expr == null) {
       myErrorLevel = GeneralError.Level.ERROR;
-      return base == LevelVariable.PVAR ? new Concrete.PLevelExpression(data) : new Concrete.HLevelExpression(data);
+      return new Concrete.NumberLevelExpression(data, BigInteger.ZERO);
     }
-    return new Concrete.SucLevelExpression(data, expr.accept(this, base));
+    return new Concrete.SucLevelExpression(data, expr.accept(this, param));
   }
 
   @Override
-  public Concrete.LevelExpression visitMax(@Nullable Object data, @Nullable Abstract.LevelExpression left, @Nullable Abstract.LevelExpression right, LevelVariable base) {
+  public Concrete.LevelExpression visitMax(@Nullable Object data, @Nullable Abstract.LevelExpression left, @Nullable Abstract.LevelExpression right, Void param) {
     if (left == null || right == null) {
       myErrorLevel = GeneralError.Level.ERROR;
     }
     return left == null && right == null
-            ? (base == LevelVariable.PVAR ? new Concrete.PLevelExpression(data) : new Concrete.HLevelExpression(data))
-            : left == null
-            ? right.accept(this, base)
-            : right == null
-            ? left.accept(this, base)
-            : new Concrete.MaxLevelExpression(data, left.accept(this, base), right.accept(this, base));
+      ? (new Concrete.NumberLevelExpression(data, BigInteger.ZERO))
+      : left == null
+        ? right.accept(this, param)
+        : right == null
+          ? left.accept(this, param)
+          : new Concrete.MaxLevelExpression(data, left.accept(this, param), right.accept(this, param));
   }
 
   @Override
-  public Concrete.LevelExpression visitError(@Nullable Object data, LevelVariable base) {
+  public Concrete.LevelExpression visitError(@Nullable Object data, Void param) {
     myErrorLevel = GeneralError.Level.ERROR;
-    return base == LevelVariable.PVAR ? new Concrete.PLevelExpression(data) : new Concrete.HLevelExpression(data);
+    return new Concrete.NumberLevelExpression(data, BigInteger.ZERO);
   }
 }

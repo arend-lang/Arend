@@ -26,36 +26,36 @@ public class FindBindingTest extends TypeCheckingTestCase {
   @Test
   public void multiParamLam() {
     Concrete.LamExpression xyx = (Concrete.LamExpression) resolveNamesExpr("\\lam x y => x");
-    Expression pi = typeCheckExpr(resolveNamesExpr("\\Pi (x y : \\Type) -> \\Type"), null).expression;
+    Expression pi = typeCheckExpr(resolveNamesExpr("\\Pi (x y : \\Type0) -> \\Type0"), null).expression;
     DependentLink link = FindBinding.visitLam(
         xyx.getParameters().get(1).getReferableList().getFirst(),
         c(xyx), c(typeCheckExpr(xyx, pi).expression)
     );
     assertNotNull(link);
-    assertEquals("\\Type", link.getTypeExpr().toString());
+    assertEquals("\\Type0", link.getType().toString());
   }
 
   @Test
   public void simpleLam() {
     Concrete.LamExpression xx = (Concrete.LamExpression) resolveNamesExpr("\\lam x => x");
-    Expression pi = typeCheckExpr(resolveNamesExpr("\\Pi (x : \\Type) -> \\Type"), null).expression;
+    Expression pi = typeCheckExpr(resolveNamesExpr("\\Pi (x : \\Type0) -> \\Type0"), null).expression;
     DependentLink link = FindBinding.visitLam(
         xx.getParameters().getFirst().getReferableList().getFirst(),
         c(xx), c(typeCheckExpr(xx, pi).expression)
     );
     assertNotNull(link);
-    assertEquals("\\Type", link.getTypeExpr().toString());
+    assertEquals("\\Type0", link.getType().toString());
   }
 
   @Test
   public void pi() {
-    Concrete.PiExpression xyx = (Concrete.PiExpression) resolveNamesExpr("\\Pi (A B : \\Type) (x y : A) -> B");
+    Concrete.PiExpression xyx = (Concrete.PiExpression) resolveNamesExpr("\\Pi (A B : \\Type0) (x y : A) -> B");
     DependentLink link = FindBinding.visitPi(
         xyx.getParameters().get(1).getReferableList().get(1),
         xyx, c(typeCheckExpr(xyx, null).expression)
     );
     assertNotNull(link);
-    assertEquals("A", link.getTypeExpr().toString());
+    assertEquals("A", link.getType().toString());
   }
 
   @Test
@@ -75,12 +75,12 @@ public class FindBindingTest extends TypeCheckingTestCase {
         xyx.getClauses().getFirst().getParameters().getFirst().getReferableList().getFirst(),
         xyx, c(typeCheckExpr(xyx, null).expression));
     assertNotNull(let);
-    assertEquals("Nat", let.getTypeExpr().toString());
+    assertEquals("Nat", let.getType().toString());
   }
 
   @Test
   public void sigma() {
-    Concrete.SigmaExpression xyx = (Concrete.SigmaExpression) resolveNamesExpr("\\Sigma (A B : \\Type) (x y : A) A");
+    Concrete.SigmaExpression xyx = (Concrete.SigmaExpression) resolveNamesExpr("\\Sigma (A B : \\Type0) (x y : A) A");
     Expression sig = typeCheckExpr(xyx, null).expression;
     {
       DependentLink link = FindBinding.visitSigma(
@@ -88,7 +88,7 @@ public class FindBindingTest extends TypeCheckingTestCase {
           xyx, c(sig)
       );
       assertNotNull(link);
-      assertEquals("\\Type", link.getTypeExpr().toString());
+      assertEquals("\\Type0", link.getType().toString());
     }
     {
       DependentLink link = FindBinding.visitSigma(
@@ -96,7 +96,7 @@ public class FindBindingTest extends TypeCheckingTestCase {
           xyx, c(sig)
       );
       assertNotNull(link);
-      assertEquals("A", link.getTypeExpr().toString());
+      assertEquals("A", link.getType().toString());
     }
   }
 
@@ -116,7 +116,7 @@ public class FindBindingTest extends TypeCheckingTestCase {
           case_, c(core)
       );
       assertNotNull(link);
-      assertEquals("Nat", link.getTypeExpr().toString());
+      assertEquals("Nat", link.getType().toString());
       assertEquals("x", link.getName());
     }
     {
@@ -125,7 +125,7 @@ public class FindBindingTest extends TypeCheckingTestCase {
           case_, c(core)
       );
       assertNotNull(link);
-      assertEquals("Nat", link.getTypeExpr().toString());
+      assertEquals("Nat", link.getType().toString());
       assertEquals("a", link.getName());
     }
   }

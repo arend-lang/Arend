@@ -5,10 +5,12 @@ import org.arend.core.expr.Expression;
 import org.arend.core.expr.NewExpression;
 import org.arend.core.expr.TupleExpression;
 import org.arend.core.sort.Level;
-import org.arend.core.subst.LevelPair;
+import org.arend.core.subst.Levels;
+import org.arend.core.subst.ListLevels;
 import org.arend.typechecking.TypeCheckingTestCase;
 import org.junit.Test;
 
+import java.math.BigInteger;
 import java.util.Objects;
 
 import static org.junit.Assert.assertEquals;
@@ -76,9 +78,17 @@ public class NewInstanceExtensionTest extends TypeCheckingTestCase {
   @Test
   public void levelTest() {
     typeCheckModule(
+      "\\record C.{u} (A : \\Type u) (a : A)\n" +
+      "\\func f : \\Sigma C Nat => (\\new C.{1} Nat 0, 0)");
+    assertEquals(new ListLevels(new Level(BigInteger.ONE)), ((Expression) Objects.requireNonNull(((FunctionDefinition) getDefinition("f")).getBody())).cast(TupleExpression.class).getFields().getFirst().cast(NewExpression.class).getClassCall().getLevels());
+  }
+
+  @Test
+  public void levelTest2() {
+    typeCheckModule(
       "\\record C (A : \\Type) (a : A)\n" +
-      "\\func f : \\Sigma C Nat => (\\new C \\levels 1 1 Nat 0, 0)");
-    assertEquals(new LevelPair(new Level(1), new Level(1)), ((Expression) Objects.requireNonNull(((FunctionDefinition) getDefinition("f")).getBody())).cast(TupleExpression.class).getFields().getFirst().cast(NewExpression.class).getClassCall().getLevels());
+      "\\func f : \\Sigma C Nat => (\\new C.{1} Nat 0, 0)");
+    assertEquals(Levels.EMPTY, ((Expression) Objects.requireNonNull(((FunctionDefinition) getDefinition("f")).getBody())).cast(TupleExpression.class).getFields().getFirst().cast(NewExpression.class).getClassCall().getLevels());
   }
 
   @Test

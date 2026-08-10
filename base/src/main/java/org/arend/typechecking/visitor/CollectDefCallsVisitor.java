@@ -222,7 +222,7 @@ public class CollectDefCallsVisitor extends VoidConcreteVisitor<Void> {
           } else if (instance.getTypechecked() instanceof FunctionDefinition fnDef) {
             // Fallback for deserialized instances: scan core parameters for class-typed params.
             for (DependentLink link = fnDef.getParameters(); link.hasNext(); link = link.getNext()) {
-              Expression type = link.getTypeExpr();
+              Expression type = link.getType();
               if (type instanceof ClassCallExpression classCall) {
                 TCDefReferable cr = classCall.getDefinition().getReferable();
                 if (!mySuperClasses.contains(cr)) {
@@ -471,7 +471,7 @@ public class CollectDefCallsVisitor extends VoidConcreteVisitor<Void> {
         argIdx = arguments.size();
       }
       // Check if this parameter's type is a class
-      Expression type = link.getTypeExpr();
+      Expression type = link.getType();
       if (type instanceof ClassCallExpression classCall) {
         TCDefReferable classRef = classCall.getDefinition().getReferable();
         if (!mySuperClasses.contains(classRef)) {
@@ -483,7 +483,7 @@ public class CollectDefCallsVisitor extends VoidConcreteVisitor<Void> {
     // For constructors, also scan the constructor's own parameters.
     if (isConstructor && ref.getTypechecked() instanceof Constructor constructor) {
       for (DependentLink link = constructor.getParameters(); link.hasNext(); link = link.getNext()) {
-        Expression type = link.getTypeExpr();
+        Expression type = link.getType();
         if (type instanceof ClassCallExpression classCall) {
           TCDefReferable classRef = classCall.getDefinition().getReferable();
           if (!mySuperClasses.contains(classRef)) {

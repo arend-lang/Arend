@@ -17,6 +17,7 @@ import org.arend.core.expr.let.TypedHaveClause;
 import org.arend.core.expr.let.TypedLetClause;
 import org.arend.core.pattern.Pattern;
 import org.arend.core.sort.Sort;
+import org.arend.core.sort.SortExpression;
 import org.arend.ext.error.ErrorReporter;
 import org.arend.ext.error.ListErrorReporter;
 import org.arend.ext.error.LocalError;
@@ -188,22 +189,20 @@ public class StripVisitor implements ExpressionVisitor<Void, Expression> {
   public void visitParameters(DependentLink link) {
     for (; link.hasNext(); link = link.getNext()) {
       DependentLink link1 = link.getNextTyped(null);
-      link1.setType(link1.getType().strip(this));
+      link1.setType(link1.getType().accept(this, null));
     }
   }
 
   @Override
   public LamExpression visitLam(LamExpression expr, Void params) {
-    expr.setResultSort(visitSort(expr.getResultSort()));
     visitParameters(expr.getParameters());
-    return new LamExpression(expr.getResultSort(), expr.getParameters(), expr.getBody().accept(this, null));
+    return new LamExpression(expr.getParameters(), expr.getBody().accept(this, null));
   }
 
   @Override
   public PiExpression visitPi(PiExpression expr, Void params) {
-    expr.setResultSort(visitSort(expr.getResultSort()));
     visitParameters(expr.getParameters());
-    return new PiExpression(expr.getResultSort(), expr.getParameters(), expr.getCodomain().accept(this, null));
+    return new PiExpression(expr.getParameters(), expr.getCodomain().accept(this, null));
   }
 
   @Override
@@ -212,13 +211,37 @@ public class StripVisitor implements ExpressionVisitor<Void, Expression> {
     return expr;
   }
 
-  private Sort visitSort(Sort sort) {
-    return sort.getHLevel().isProp() ? Sort.PROP : sort;
+  private SortExpression visitSort(SortExpression sort) {
+    return switch (sort) {
+      case SortExpression.Const aConst -> aConst;
+      case SortExpression.Var var -> var;
+      case SortExpression.RecursiveData var -> var;
+      case SortExpression.InfVar infVar -> {
+        infVar.withInfLevel();
+        SortExpression simplified = infVar.simplify();
+        if (simplified instanceof SortExpression.InfVar infVar1) {
+          myErrorReporter.report(infVar1.getVariable().getErrorInfer());
+          yield new SortExpression.Const(Sort.INFINITY);
+        } else {
+          yield visitSort(simplified);
+        }
+      }
+      case SortExpression.Max max -> {
+        List<SortExpression> result = new ArrayList<>(max.getSorts().size());
+        for (SortExpression aSort : max.getSorts()) {
+          result.add(visitSort(aSort));
+        }
+        yield SortExpression.makeMax(result);
+      }
+      case SortExpression.Pi pi -> SortExpression.makePi(visitSort(pi.getDomain()), visitSort(pi.getCodomain()));
+      case SortExpression.Prev prev -> SortExpression.makePrev(visitSort(prev.getSort()));
+      case SortExpression.Succ succ -> SortExpression.makeSucc(visitSort(succ.getSort()));
+    };
   }
 
   @Override
   public UniverseExpression visitUniverse(UniverseExpression expr, Void params) {
-    return new UniverseExpression(visitSort(expr.getSort()));
+    return new UniverseExpression(visitSort(expr.getSortExpression()));
   }
 
   @Override
@@ -347,13 +370,13 @@ public class StripVisitor implements ExpressionVisitor<Void, Expression> {
   public Expression visitArray(ArrayExpression expr, Void params) {
     List<Expression> elements = new ArrayList<>(expr.getElements());
     elements.replaceAll(expression -> expression.accept(this, null));
-    return ArrayExpression.make(expr.getLevels(), expr.getElementsType().accept(this, null), elements, expr.getTail() == null ? null : expr.getTail().accept(this, null));
+    return ArrayExpression.make(expr.getElementsType().accept(this, null), elements, expr.getTail() == null ? null : expr.getTail().accept(this, null));
   }
 
   @Override
   public Expression visitPath(PathExpression expr, Void params) {
     Expression arg = expr.getArgument().accept(this, null);
-    return new PathExpression(expr.getLevels(), expr.getArgumentType().accept(this, null), arg);
+    return new PathExpression(expr.getArgumentType().accept(this, null), arg);
   }
 
   @Override

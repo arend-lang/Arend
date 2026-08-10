@@ -68,13 +68,13 @@
   => pmap f (\peval partialSum S n) *> f.func-BigSum *> inv \peval partialSum _ n
 
 \lemma partialSum_suc {A : AddMonoid} {S : Series A} {n : Nat} : partialSum S (suc n) = partialSum S n + S n
-  => (\peval partialSum S (suc n)) *> A.BigSum_suc-nat {n} {S} *> pmap (`+ _) (inv \peval partialSum S n)
+  => (\peval partialSum S (suc n)) *> A.BigSum_suc-nat {n} {S} *> pmap (+ _) (inv \peval partialSum S n)
 
 -- | $\sum_{n<N} (-f_n) = -\sum_{n<N} f_n$.
 \lemma partialSum_negative {A : AbGroup} {f : Series A} {N : Nat}
   : negative (partialSum f N) = partialSum (\lam n => negative (f n)) N  \elim N
   | 0 => pmap negative partialSum-empty *> A.negative_zro *> inv partialSum-empty
-  | suc N => pmap negative partialSum_suc *> A.negative_+-comm *> pmap (`+ _) partialSum_negative *> inv partialSum_suc
+  | suc N => pmap negative partialSum_suc *> A.negative_+-comm *> pmap (+ _) partialSum_negative *> inv partialSum_suc
 
 \func IsConvSeries {A : TopAbGroup} (S : Series A) : \Prop
   => IsConvergent (partialSum S)
@@ -127,7 +127,7 @@
         | f i => (i + n, <=_+ zero<=_ <=-refl, NatSemiring.<_+-left n (fin_< i) <∘l =_<= (+-comm *> <=_exists (<=-less $ -'_< $ zero<=_ <∘r fin_< i)))
         | ret s => toFin (s.1 -' n) $ -'_<-monotone-left s.3 (s.2 <∘r s.3)
         | ret_f i => fin_nat-inj $ toFin=id *> -'+
-        | f_sec s => ext $ pmap (`+ n) toFin=id *> +-comm *> <=_exists s.2
+        | f_sec s => ext $ pmap (+ n) toFin=id *> +-comm *> <=_exists s.2
       }
 
     \protected \lemma =FinSum {A : AbMonoid} {S : Series A} {n m : Nat}
@@ -141,7 +141,7 @@
       | suc n, 0 => inv $ A.FinSum_zro $ later \lam s => \case s.2 <∘r s.3
       | suc n, suc m => =FinSum *> A.FinSum_Equiv2 (later \new QEquiv {
         | f s => (suc s.1, suc<=suc s.2, NatOrder.suc<suc s.3)
-        | ret s => (s.1 -' 1, transport (`<= _) -'0 $ -'-monotone-left s.2, transport (_ <) -'0 $ -'_<-monotone-left s.3 $ suc<=suc zero<=_ <∘r s.2 <∘r s.3)
+        | ret s => (s.1 -' 1, transport (<= _) -'0 $ -'-monotone-left s.2, transport (_ <) -'0 $ -'_<-monotone-left s.3 $ suc<=suc zero<=_ <∘r s.2 <∘r s.3)
         | ret_f s => ext -'0
         | f_sec s => ext $ <=_exists {1} $ suc<=suc zero<=_ <=∘ s.2
       }) \lam s => idp
@@ -220,7 +220,7 @@
 \lemma partialSum-split-shifted {A : AddMonoid} {S : Series A} {n q : Nat}
   : partialSum S (n + q) = partialSum S n + partialSum (\lam k => S (n + k)) q \elim q
   | 0 => inv zro-right *> pmap (_ +) (inv partialSum-empty)
-  | suc q => partialSum_suc *> pmap (`+ _) partialSum-split-shifted *> +-assoc *> pmap (_ +) (inv partialSum_suc)
+  | suc q => partialSum_suc *> pmap (+ _) partialSum-split-shifted *> +-assoc *> pmap (_ +) (inv partialSum_suc)
 
 \lemma partialSum-split {A : AddMonoid} {S : Series A} {n m : Nat} (p : n <= m)
   : partialSum S m = partialSum S n + midSum S n m
@@ -245,7 +245,7 @@
 \lemma midSum-split {A : AddMonoid} {b : Series A} {n m k : Nat} (p : n <= m) (q : m <= k) : midSum b n k = midSum b n m + midSum b m k \elim n, m, k
   | 0, 0, k => rewrite (\peval partialSum _ _, \peval partialSum _ _) (inv zro-left)
   | _, suc m, 0 => absurd (q NatOrder.zero<suc)
-  | 0, suc m, suc k => (\peval partialSum _ _) *> pmap (_ +) (inv \peval partialSum (\lam j => b (suc j)) _) *> pmap (_ +) (midSum-split zero<=_ $ suc<=suc.conv q) *> pmap (_ + (__ + _)) (\peval partialSum (\lam j => b (suc j)) _) *> inv +-assoc *> pmap (`+ _) (inv \peval partialSum _ _)
+  | 0, suc m, suc k => (\peval partialSum _ _) *> pmap (_ +) (inv \peval partialSum (\lam j => b (suc j)) _) *> pmap (_ +) (midSum-split zero<=_ $ suc<=suc.conv q) *> pmap (_ + (__ + _)) (\peval partialSum (\lam j => b (suc j)) _) *> inv +-assoc *> pmap (+ _) (inv \peval partialSum _ _)
   | suc n, 0, _ => absurd (p NatOrder.zero<suc)
   | suc n, suc m, suc k => midSum-split (suc<=suc.conv p) (suc<=suc.conv q)
 
@@ -255,7 +255,7 @@
 
 \lemma midSum_<=-left {A : PosetAddMonoid} {b : Series A} {n m k : Nat} (p : n <= m) (s : \Pi (j : Nat) -> 0 <= b j) : midSum b m k <= midSum b n k
   => \case LinearOrder.dec<_<= k m \with {
-    | inl k<m => transportInv (`<= _) (midSum-degenerate k<m) (midSum>=0 s)
+    | inl k<m => transportInv (<= _) (midSum-degenerate k<m) (midSum>=0 s)
     | inr m<=k => transport2 (<=) zro-left (inv $ midSum-split p m<=k) $ <=_+ (midSum>=0 s) <=-refl
   }
 
@@ -270,7 +270,7 @@
   | suc n, suc m => midSum_0
 
 \lemma midSum>=0 {A : PosetAddMonoid} {b : Series A} {n m : Nat} (s : \Pi (j : Nat) -> 0 <= b j) : 0 <= midSum b n m
-  => transport (`<= _) midSum_0 (midSum_<= \lam _ _ => s _)
+  => transport (<= _) midSum_0 (midSum_<= \lam _ _ => s _)
 
 \lemma series-conv {A : ExPseudoNormedAbGroup} {S : Series A}
   : IsConvSeries S <-> ∀ {eps : Rat} (0 < eps) ∃ (N : Nat) ∀ {n} (N <= n -> (norm (midSum S N n)).U eps)
@@ -345,7 +345,7 @@
   : IsBoundedUpperSeries S
   => \case Sc RatField.zro<ide \with {
     | inP (N0, g) => IsBoundedUpperSeries.shifted (\lam {n} _ => Sb n)
-      \lam {n} N0<=n => transport (`<= _) midSum_suc (midSum_<=-left N0<=n S>=0) $ g (N0<=n <=∘ id<=suc)
+      \lam {n} N0<=n => transport (<= _) midSum_suc (midSum_<=-left N0<=n S>=0) $ g (N0<=n <=∘ id<=suc)
   }
 
 \lemma upperSeries-bounded_<= {a b : Series ExUpperReal} (a<=b : \Pi (n : Nat) -> a n <= b n) (bB : IsBoundedUpperSeries b) : IsBoundedUpperSeries a \elim bB
@@ -369,7 +369,7 @@
       | inP (N,h) => inP (N, \lam {n} N<=n =>
         \have t : midSum (\lam k => b k * c k) N n <= B1 ExUpperReal.* midSum c N n
                 => midSum_<= (\lam {j} jp _ => ExUpperRealSemigroup.<=_* (ExUpperReal.<_<= $ ExUpperReal.U_<= (bB j) join-left) <=-refl) <=∘ midSum_<=-ldistr c>=0
-        \in t $ transport ExUpperReal.U (inv *-assoc *> pmap (`* eps) (RatField.finv-right $ RatField.>_/= B1>0) *> ide-left) $ later $ ExUpperRealSemigroup.<_*_U-right B1>0 (RatField.<_*_positive_positive (RatField.finv>0 B1>0) eps>0) (h N<=n))
+        \in t $ transport ExUpperReal.U (inv *-assoc *> pmap (* eps) (RatField.finv-right $ RatField.>_/= B1>0) *> ide-left) $ later $ ExUpperRealSemigroup.<_*_U-right B1>0 (RatField.<_*_positive_positive (RatField.finv>0 B1>0) eps>0) (h N<=n))
     }
 
 \lemma upperSeries-ldistr {c : Series ExUpperReal} (c>=0 : \Pi (n : Nat) -> 0 <= c n) (cc : IsConvUpperSeries c) {a : ExUpperReal} (ab : a.IsBounded)
@@ -385,8 +385,8 @@
     | inP (q,r<q,q<1) => series_<= {_} {pow q __} (\lam j => transport (_ <=) (ExUpperRealSemigroup.rat-pow $ <=-less $ r>=0 r<q) $ ExUpperRealSemigroup.pow_<= (ExUpperReal.<_<= r<q)) \lam {eps} eps>0 =>
       \have B => rat_<1_pow-bound q<1 {eps * (1 - q)} $ RatField.<_*_positive_positive eps>0 linarith
       \in inP (B.1, \lam {n} B<=n => rewrite midSum_midSum' $ ExUpperRealAbMonoid.<-rat.1 $ transport {Series ExUpperReal} (partialSum __ _ < eps) {\lam k => pow q B.1 * pow q k} (later $ ext \lam k => pmap ExUpperReal.fromRat $ inv pow_+) $
-            transport (ExUpperRealAbMonoid.`< _) (partialSum_hom rat-upperReal) $ ExUpperRealAbMonoid.<-rat.2 $ transportInv (`< _) (\peval partialSum _ _) $ later $ transport (`< _) (RatField.BigSum-ldistr {pow q B.1} {\new Array Rat (n -' B.1) (pow q __)}) $
-            RatField.<=_*_positive-left (<=-less B.2) (RatField.BigSum_>=0 \lam j => RatField.pow>=0 $ <=-less $ r>=0 r<q) <∘r transport2 (<) (inv *-assoc) ide-right (RatField.<_*_positive-right eps>0 $ transportInv (`< _) RatField.geometric-partial-sum $ linarith $ RatField.pow>0 $ r>=0 r<q))
+            transport (ExUpperRealAbMonoid.< _) (partialSum_hom rat-upperReal) $ ExUpperRealAbMonoid.<-rat.2 $ transportInv (< _) (\peval partialSum _ _) $ later $ transport (< _) (RatField.BigSum-ldistr {pow q B.1} {\new Array Rat (n -' B.1) (pow q __)}) $
+            RatField.<=_*_positive-left (<=-less B.2) (RatField.BigSum_>=0 \lam j => RatField.pow>=0 $ <=-less $ r>=0 r<q) <∘r transport2 (<) (inv *-assoc) ide-right (RatField.<_*_positive-right eps>0 $ transportInv (< _) RatField.geometric-partial-sum $ linarith $ RatField.pow>0 $ r>=0 r<q))
   }
 
 \lemma geometric-series-absConv {X : ExPseudoNormedRing} {x : X} (|x|<1 : (norm x).U 1) : IsAbsConvSeries (pow x)
@@ -414,7 +414,7 @@
     \private \lemma S-bounded (n : Nat) : ∃ (B : Rat) ((S n).U B) \elim n
       | 0 => S0b
       | suc n => \case S-bounded n, (b n).U-inh \with {
-        | inP (B,Sn<B), inP (C,bn<C) => inP (B * (C ∨ 0) + 1, ExUpperRealAbMonoid.<-rat.1 $ bp n <∘r ExUpperRealSemigroup.<=_* (ExUpperReal.<_<= Sn<B) (ExUpperReal.<_<= bn<C <=∘ ExUpperReal.<=-rat.1 join-left) <∘r transportInv (ExUpperRealAbMonoid.`< _) (ExUpperReal.*-rat (<=-less $ S>=0 n Sn<B) join-right) (ExUpperRealAbMonoid.<-rat.2 linarith))
+        | inP (B,Sn<B), inP (C,bn<C) => inP (B * (C ∨ 0) + 1, ExUpperRealAbMonoid.<-rat.1 $ bp n <∘r ExUpperRealSemigroup.<=_* (ExUpperReal.<_<= Sn<B) (ExUpperReal.<_<= bn<C <=∘ ExUpperReal.<=-rat.1 join-left) <∘r transportInv (ExUpperRealAbMonoid.< _) (ExUpperReal.*-rat (<=-less $ S>=0 n Sn<B) join-right) (ExUpperRealAbMonoid.<-rat.2 linarith))
       }
   }
 
@@ -440,7 +440,7 @@
 \lemma partialSum-cover {X : CoverSpace} {Y : TopAbGroup} (f : Nat -> CoverMap X Y) (n : Nat) : CoverMap X Y \lam x => partialSum (f __ x) n
   => transportInv (CoverMap X Y) (ext \lam x => \peval partialSum _ _) $ BigSum-cover \lam (j : Fin n) => f j
 
-{- | Monotonicity of $\mathrm{partialSum}$ for non-negative `ExUpperReal`
+{- | Monotonicity of $\mathrm{partialSum}$ for non-negative {ExUpperReal}
      series: $n \leq m \implies \mathrm{partialSum}\,S\,n \leq
      \mathrm{partialSum}\,S\,m$. -}
 \lemma partialSum-monotone {S : Series ExUpperReal} (S>=0 : \Pi (n : Nat) -> 0 <= S n) {n m : Nat} (p : n <= m)

@@ -14,7 +14,6 @@
 \import Data.Or
 \import Equiv
 \import Equiv.Sigma
-\import Equiv.Univalence
 \import Function
 \import Function.Meta
 \import Logic.Unique
@@ -31,15 +30,15 @@
 \import Set.Fin.Instances
 \import Set.Fin.Pigeonhole
 
-\type Sym (n : Nat) => Equiv {Fin n} {Fin n}
+\type Sym (n : Nat) => QEquiv {Fin n} {Fin n}
   \where {
-    \func fromEquiv {n : Nat} (e : Equiv {Fin n} {Fin n}) : Sym n => e
+    \func fromEquiv {n : Nat} (e : QEquiv {Fin n} {Fin n}) : Sym n => e
 
     \lemma equals {n : Nat} {x y : Sym n} (p : \Pi (j : Fin n) -> x j = y j) : x = y
-      => pmap fromEquiv (Equiv.equals (ext p))
+      => pmap fromEquiv (QEquiv.equals {_} {_} {x} {y} p)
 
     \func reduce {n : Nat} (e : Sym (suc n)) : Sym n
-      => PigeonholeSet.isEquiv (\lam j => FinSet.skip (e 0) (e (suc j)) \lam p => \case Equiv.isInj p) \lam p => unfsuc $ Equiv.isInj (FinSet.skip-isInj p)
+      => IsEquiv.toQEquiv $ PigeonholeSet.isEquiv (\lam j => FinSet.skip (e 0) (e (suc j)) \lam p => \case QEquiv.isInj p) \lam p => unfsuc $ QEquiv.isInj (FinSet.skip-isInj p)
 
     \lemma reduce_id {n : Nat} : reduce {n} idEquiv = idEquiv
       => Sym.equals \lam j => cases (n,j) idp
@@ -65,12 +64,12 @@
 
 \instance SymmetricGroup (n : Nat) : Group (Sym n)
   | ide => idEquiv
-  | * e1 e2 => transEquiv e1 e2
+  | * e1 e2 => transQEquiv e1 e2
   | ide-left => Sym.equals \lam j => idp
   | ide-right => Sym.equals \lam j => idp
   | *-assoc => Sym.equals \lam j => idp
   | inverse e => symQEquiv e
-  | inverse-left => Sym.equals Equiv.f_ret
+  | inverse-left => Sym.equals QEquiv.f_ret
   | inverse-right => Sym.equals ret_f
   \where {
     \func inv-isEquiv {n : Nat} : QEquiv {Sym n} {Sym n} \cowith
@@ -139,7 +138,7 @@
 
 \func cycle {n k : Nat} (l : Array (Fin n) k) (inj : IsInj l) : Sym n \elim k
   | 0 => ide
-  | suc k => PigeonholeSet.isEquiv (func l) (func-inj inj)
+  | suc k => IsEquiv.toQEquiv $ PigeonholeSet.isEquiv (func l) (func-inj inj)
   \where {
     \func func {n k : Nat} (l : Array (Fin n) (suc k)) (j : Fin n) : Fin n
       => \case index-dec l j \with {
@@ -173,7 +172,7 @@
       }
 
     \lemma steps {n k : Nat} {m : Fin (suc k)} {l : Array (Fin n) (suc k)} {inj : IsInj l}
-      : Monoid.pow {SymmetricGroup n} (PigeonholeSet.isEquiv (func l) (func-inj inj)) m (l 0) = l m \elim m
+      : Monoid.pow {SymmetricGroup n} (IsEquiv.toQEquiv $ PigeonholeSet.isEquiv (func l) (func-inj inj)) m (l 0) = l m \elim m
       | 0 => idp
       | suc m => unfold $ rewrite (steps {n} {k} {m} {l} {inj}) $ step NatOrder.zero<suc inj m *> pmap l (nat_fin_= $ mod_< $ NatOrder.suc<suc $ fin_< m)
 
@@ -263,7 +262,7 @@
 
 \func symmetric-rec {n : Nat} : QEquiv {Sym (suc n)} {\Sigma (Fin (suc n)) (Sym n)} \cowith
   | f e => (e 0, Sym.reduce e)
-  | ret s => PigeonholeSet.isEquiv {FinFin (suc n)}
+  | ret s => IsEquiv.toQEquiv $ PigeonholeSet.isEquiv {FinFin (suc n)}
       (\case __ \with {
         | 0 => s.1
         | suc j => sface s.1 (s.2 j)
@@ -271,7 +270,7 @@
         | 0, 0 => \lam _ => idp
         | 0, suc j' => \lam p => absurd $ sface-skip (inv p)
         | suc j, 0 => \lam p => absurd $ sface-skip p
-        | suc j, suc j' => \lam p => pmap fsuc $ Equiv.isInj {s.2} (sface-inj p)
+        | suc j, suc j' => \lam p => pmap fsuc $ s.2.isInj (sface-inj p)
       })
   | ret_f e => Sym.equals \case \elim __ \with {
     | 0 => idp
@@ -285,40 +284,42 @@
 \instance SymFin (n : Nat) : FinSet (Sym n) (fac n)
   | finEq => inP fin_equiv
   \where {
-    \func fin_equiv {n : Nat} : Equiv {Fin (fac n)} {Sym n} \elim n
+    \func fin_equiv {n : Nat} : QEquiv {Fin (fac n)} {Sym n} \elim n
       | 0 => \new QEquiv {
         | f _ => idEquiv
         | ret _ => 0
         | ret_f (0) => idp
         | f_sec e => Sym.equals (\case __)
       }
-      | suc n => ProdFin.prod_equiv `transEquiv` sigma-right (\lam _ => fin_equiv) `transEquiv` symQEquiv symmetric-rec
+      | suc n => ProdFin.prod_equiv `transQEquiv` sigma-right (\lam _ => fin_equiv) `transQEquiv` symQEquiv symmetric-rec
   }
 
-\instance EquivFin (A B : FinSet) : FinSet (Equiv {A} {B})
-  => \case decideEq A.finCard B.finCard, A.finEq, B.finEq \with {
-    | yes e, inP Ae, inP Be => transport FinSet (QEquiv-to-= (later \new QEquiv {
-      | f e => e
-      | ret e => e
-      | ret_f => idpe
-      | f_sec => idpe
-    }) *> pmap2 (Equiv {__} {__}) (Equiv-to-= $ transport (\lam x => Equiv {Fin x} {A}) e Ae) (Equiv-to-= Be)) (SymFin B.finCard)
+\instance EquivFin (A B : FinSet) : FinSet (QEquiv {A} {B})
+  => \case decideEq A.card B.card, A.finEq, B.finEq \with {
+    | yes e, inP Ae, inP Be =>
+      flip (coe \lam i => FinSet (QEquiv {A} {QEquiv_= Be i})) right $
+      flip (coe \lam i => FinSet (QEquiv {QEquiv_= Ae i} {_})) right $
+      \have r => equiv_fin {A.card} {B.card}
+      \in \new FinSet {
+        | card => r.1
+        | finEq => inP (symQEquiv r.2)
+      }
     | no q, _, _ => \new FinSet {
-      | finCard => 0
+      | card => 0
       | finEq => inP $ emptyEquiv (later \case __) \lam e => q \case A.finEq, B.finEq \with {
-        | inP p1, inP p2 => FinSet.FinCardBij $ p1 `transEquiv` e `transEquiv` symQEquiv p2
+        | inP p1, inP p2 => FinSet.FinCardBij $ p1 `transQEquiv` e `transQEquiv` symQEquiv p2
       }
     }
   }
   \where {
-    \sfunc equiv_fin {n m : Nat} : \Sigma (k : Nat) (Equiv {Equiv {Fin n} {Fin m}} {Fin k})
+    \sfunc equiv_fin {n m : Nat} : \Sigma (k : Nat) (QEquiv {QEquiv {Fin n} {Fin m}} {Fin k})
       => \case decideEq n m \with {
            | yes p => (fac m, rewrite p $ later \new QEquiv {
              | f e => e
              | ret e => e
              | ret_f => idpe
              | f_sec => idpe
-           } `transEquiv` symQEquiv SymFin.fin_equiv)
+           } `transQEquiv` symQEquiv SymFin.fin_equiv)
            | no q => (0, emptyEquiv (\lam e => q $ FinSet.FinCardBij e) (later \case __))
          }
   }
@@ -326,7 +327,7 @@
 \func lift {n : Nat} (e : Sym n) : Sym (suc n)
   => aux e
   \where
-    \func aux {n m : Nat} (e : Equiv {Fin n} {Fin m}) : Equiv {Fin (suc n)} {Fin (suc m)}
+    \protected \func aux {n m : Nat} (e : QEquiv {Fin n} {Fin m}) : QEquiv {Fin (suc n)} {Fin (suc m)}
       => \new QEquiv {
         | f => \case __ \with {
           | 0 => 0
@@ -366,7 +367,8 @@
 
 \lemma lift_transposition {n : Nat} {a b : Fin n} {a/=b : a /= b} : lift (transposition a/=b) = transposition (fsuc/= a/=b)
   => pmap lift (\peval transposition a/=b) *> lift_cycle {n} {2}
-  *> cycle.ext (map fsuc (a :: b :: nil)) (suc a :: suc b :: nil) idp
+  *> cycle.ext (map fsuc (a :: b :: nil)) (suc a :: suc b :: nil) {_} {transposition.inj {_} {_} {_} {fsuc/= a/=b}} idp
+  *> Sym.equals (\lam j => pmap (cycle.func __ j) $ later idp)
   *> inv (\peval transposition (fsuc/= a/=b))
 
 \lemma lift_transposition1 {n : Nat} {a : Fin n} : lift (transposition1 a) = transposition1 (suc a)
@@ -383,7 +385,7 @@
   | 0 => (nil, Sym.equals \lam (0) => cases (e 0) idp)
   | suc n => \have r => transposition1-decomp (reduce e)
              \in (map fsuc r.1 ++ \new Array (Fin (suc n)) (e 0) (\lam j => j Nat.mod suc n),
-                  aux NatOrder.zero<suc *> pmap (`* _) {lift (reduce e)} (pmap lift r.2 *> lift_BigProd *> path (\lam i => BigProd (map (\lam a => lift_transposition1 {n} {a} i) r.1))) *> inv (pmap BigProd (map_++ transposition1) *> BigProd_++))
+                  aux NatOrder.zero<suc *> pmap (* _) {lift (reduce e)} (pmap lift r.2 *> lift_BigProd *> path (\lam i => BigProd (map (\lam a => lift_transposition1 {n} {a} i) r.1))) *> inv (pmap BigProd (map_++ transposition1) *> BigProd_++))
   \where {
     \open Monoid
     \open NatOrder
@@ -407,7 +409,7 @@
                       \in inv $ BigProd-fixed (\lam i => transposition1.transposition1_> $ transportInv (suc __ < _) (mod_Fin_< $ fin_< i <∘l <_suc_<= (fin_< (e 0))) $ suc_<_<= (fin_< i) NatSemiring.<∘r transportInv (_ <) t1 s) *> nat_fin_= t1
           | Tri.equals s => \case e.isInj (nat_fin_= s)
           | greater s =>
-            \have | r => pmap (transposition1 __ _) (nat_fin_= $ mod_Fin_< (transportInv (`< n) (toFin'=id s) $ s NatSemiring.<∘l <_suc_<= (fin_< (e 0))) *> toFin'=id s *> inv (FinSet.skip-left s)) *> transposition1.transposition1-right *> nat_fin_= (FinSet.skip-left s)
+            \have | r => pmap (transposition1 __ _) (nat_fin_= $ mod_Fin_< (transportInv (< n) (toFin'=id s) $ s NatSemiring.<∘l <_suc_<= (fin_< (e 0))) *> toFin'=id s *> inv (FinSet.skip-left s)) *> transposition1.transposition1-right *> nat_fin_= (FinSet.skip-left s)
                   | t i => inv $ mod_Fin_< $ fin_< i <∘l <_suc_<= (fin_< (e 0))
             \in inv $ BigProd-unique (toFin' s) (\lam i p => transposition1.transposition1_> $ later $ NatOrder.suc<suc $ transport2 (<) (t i) (toFin'=id s *> inv (FinSet.skip-left s)) p) (\lam i p => pmap (transposition1 _) r *> transposition1.transposition1_< (transport2 (<) (toFin'=id s) (t i) p) *> inv r) *> r
         }
@@ -436,14 +438,14 @@
     \func InversionsFin {n : Nat} (e : Sym n) : FinSet (Inversions e) (inversions e) \cowith
       | finEq => inP (aux e)
       \where
-        \func aux {n : Nat} (e : Sym n) : Equiv {Fin (inversions e)} {Inversions e} \elim n
+        \private \func aux {n : Nat} (e : Sym n) : QEquiv {Fin (inversions e)} {Inversions e} \elim n
           | 0 => \new QEquiv {
             | f => \case __
             | ret t => t.1
             | ret_f => \case __
             | f_sec t => \case t.1
           }
-          | suc n => OrFin.aux `transEquiv` Or.Or_Equiv idEquiv (aux (reduce e)) `transEquiv` later (
+          | suc n => OrFin.aux `transQEquiv` Or.Or_QEquiv idEquiv (aux (reduce e)) `transQEquiv` later (
             \have lem (a : Fin (e 0)) : e (e.ret (a Nat.mod suc n)) = {Nat} a => e.f_ret _ *> mod_< (fin_< a <∘ fin_< (e 0))
             \in \new QEquiv {
               | f => \case __ \with {
@@ -481,7 +483,7 @@
     \open NatSemiring (<-irreflexive)
 
     \sfunc Inverstions_transposition_> {n : Nat} {e : Sym (suc n)} {a : Fin n} (ea<ea+1 : e a < e (suc a))
-      : Equiv {Or (Inversions e) (Fin 1)} {Inversions (transposition1 a * e)}
+      : QEquiv {Or (Inversions e) (Fin 1)} {Inversions (transposition1 a * e)}
       => \have | lem1 {i j : Fin (suc n)} (i<j : i < j) (p : i /= a) : transposition1 a i < transposition1 a j
                  => \case decideEq i (suc a) \with {
                       | yes q => rewrite (q, transposition1-right, transposition1_/= (\lam r => <-irreflexive $ id<suc <∘ transport2 {Nat} {Nat} (<) q r i<j) \lam r => <-irreflexive $ transport2 {Nat} {Nat} (<) q r i<j) $ NatSemiring.<-transitive (rewrite q id<suc) i<j
@@ -504,18 +506,18 @@
                       }
                       | no q => lem1 i<j q
                     }
-         \in Equiv.fromInjSurj (later \case __ \with {
+         \in QEquiv.fromInjSurj {_} {_} {later \case __ \with {
               | inl r => (transposition1 a r.1, transposition1 a r.2, \case decideEq r.1 a, decideEq r.2 (suc a) \with {
                 | yes e1, yes e2 => absurd $ <-irreflexive $ ea<ea+1 <∘ transport2 {Nat} {Nat} (<) (pmap e e2) (pmap e e1) r.4
                 | no q, _ => lem1 r.3 q
                 | _, no q => lem2 r.3 q
               }, transport2 (e __ < e __) (inv transposition1-isInv) (inv transposition1-isInv) r.4)
               | inr _ => (a, suc a, id<suc, transport2 (e __ < e __) (inv transposition1-right) (inv transposition1-left) ea<ea+1)
-        }) (\lam {x} {y} =>
+        }} (\lam {x} {y} =>
             \have lem3 {i j : Fin (suc n)} (i<j : i < j) (p : transposition1 a i = a) (q : transposition1 a j = suc a) : Empty
                   => <-irreflexive $ id<suc <∘ transport2 {Nat} {Nat} (<) (inv transposition1-isInv *> pmap (transposition1 a) p *> transposition1-left) (inv transposition1-isInv *> pmap (transposition1 a) q *> transposition1-right) i<j
             \in \case \elim x, \elim y \with {
-              | inl r, inl r' => \lam s => pmap inl $ ext (Equiv.isInj {transposition1 a} $ pmap __.1 s, Equiv.isInj {transposition1 a} $ pmap __.2 s)
+              | inl r, inl r' => \lam s => pmap inl $ ext ((transposition1 a).isInj $ pmap __.1 s, (transposition1 a).isInj $ pmap __.2 s)
               | inl r, inr _ => \lam s => absurd $ lem3 r.3 (pmap __.1 s) (pmap __.2 s)
               | inr _, inl r => \lam s => absurd $ lem3 r.3 (inv $ pmap __.1 s) (inv $ pmap __.2 s)
               | inr (0), inr (0) => \lam _ => idp
@@ -526,8 +528,8 @@
                  }
 
     \sfunc Inverstions_transposition_< {n : Nat} {e : Sym (suc n)} {a : Fin n} (ea+1<ea : e (suc a) < e a)
-      : Equiv {Or (Inversions (transposition1 a * e)) (Fin 1)} {Inversions e}
-      => transEquiv (Inverstions_transposition_> {n} {transposition1 a * e} (unfold $ rewrite (transposition1-left, transposition1-right) ea+1<ea)) $ later
+      : QEquiv {Or (Inversions (transposition1 a * e)) (Fin 1)} {Inversions e}
+      => transQEquiv (Inverstions_transposition_> {n} {transposition1 a * e} (unfold $ rewrite (transposition1-left, transposition1-right) ea+1<ea)) $ later
         \new QEquiv {
           | f s => (s.1, s.2, s.3, transport2 (e __ < e __) transposition1-isInv transposition1-isInv s.4)
           | ret s => (s.1, s.2, s.3, transport2 (e __ < e __) (inv transposition1-isInv) (inv transposition1-isInv) s.4)
@@ -537,11 +539,11 @@
 
     \lemma inverstions_transposition_> {n : Nat} {e : Sym (suc n)} {a : Fin n} (ea<ea+1 : e a < e (suc a))
       : suc (inversions e) = inversions (transposition1 a * e)
-      => finCard_Equiv {OrFin (InversionsFin e) (FinFin 1)} {InversionsFin (transposition1 a * e)} (Inverstions_transposition_> ea<ea+1)
+      => card_Equiv {OrFin (InversionsFin e) (FinFin 1)} {InversionsFin (transposition1 a * e)} (Inverstions_transposition_> ea<ea+1)
 
     \lemma inverstions_transposition_< {n : Nat} {e : Sym (suc n)} {a : Fin n} (ea+1<ea : e (suc a) < e a)
       : suc (inversions (transposition1 a * e)) = inversions e
-      => finCard_Equiv {OrFin (InversionsFin (transposition1 a * e)) (FinFin 1)} {InversionsFin e} (Inverstions_transposition_< ea+1<ea)
+      => card_Equiv {OrFin (InversionsFin (transposition1 a * e)) (FinFin 1)} {InversionsFin e} (Inverstions_transposition_< ea+1<ea)
 
     \open Nat(mod)
 
@@ -578,7 +580,7 @@
   \where {
     \open Monoid(pow,BigProd)
 
-    \func aux {k n : Nat} (e : Sym n) (p : finCard {Sym.SupportFin e} < k)
+    \func aux {k n : Nat} (e : Sym n) (p : (Sym.SupportFin e).card < k)
       : \Sigma (l : Array (Sym n))
                (∀ (e' : l) (isCycle e'))
                (\Pi (i1 i2 : Fin l.len) {i : Fin n} -> Support (l i1) i -> Support (l i2) i -> i1 = i2)
@@ -604,10 +606,10 @@
           \in \have
             | c-supp {i} (s : Support c i) => Support_cycle inj s
             | c=e {i : Fin n} (s : Support c i) : c i = e i => inv (pmap c (c-supp s).2) *> cycle.step t.2.1 inj _ *> pmap (pow e __ d.1) mod_Fin=mod *> pow_mod {n} {suc (c-supp s).1} {t.1} {e} {d.1} t.2.2 *> pmap e (c-supp s).2
-            | r-supp {k : Fin t.1} (s : Support (inverse c * e) (pow e k d.1)) => s $ inv (c=e $ Support_ret $ cycle_Support t1>1) *> Equiv.f_ret _
+            | r-supp {k : Fin t.1} (s : Support (inverse c * e) (pow e k d.1)) => s $ inv (c=e $ Support_ret $ cycle_Support t1>1) *> QEquiv.f_ret _
           \in \let supp-f (x : Or (Fin t.1) (\Sigma (i : Fin n) (Support (inverse c * e) i))) : \Sigma (i : Fin n) (Support e i) => \case \elim x \with {
-              | inl j => (pow e j d.1, \lam p => d.2 $ Equiv.isInj (inv pow-rotate *> p))
-              | inr p => (p.1, \lam q => p.2 $ unfold $ pmap e (inv $ Equiv.adjoint \case decideEq (c p.1) p.1 \with {
+              | inl j => (pow e j d.1, \lam p => d.2 $ QEquiv.isInj (inv pow-rotate *> p))
+              | inr p => (p.1, \lam q => p.2 $ unfold $ pmap e (inv $ QEquiv.adjoint \case decideEq (c p.1) p.1 \with {
                 | yes r => r
                 | no s => c=e s *> q
               }) *> q)
@@ -619,7 +621,7 @@
               | inr p, inl j => \lam s => absurd $ r-supp $ rewriteI (pmap __.1 s) p.2
               | inr p, inr p' => \lam s => pmap inr $ ext (pmap __.1 s)
             }
-            | r => aux (inverse c * e) $ NatSemiring.<_+-left _ t.2.1 <∘l finCard_inj {OrFin (FinFin t.1) (SupportFin (inverse c * e))} {SupportFin e} supp-f supp-f-inj <∘l <_suc_<= p
+            | r => aux (inverse c * e) $ NatSemiring.<_+-left _ t.2.1 <∘l card_inj {OrFin (FinFin t.1) (SupportFin (inverse c * e))} {SupportFin e} supp-f supp-f-inj <∘l <_suc_<= p
           \in (c :: r.1, \case \elim __ \with {
             | 0 => cycle-isCycle t1>1
             | suc j => r.2 j
@@ -628,7 +630,7 @@
             | 0, suc j2 => \lam s1 s2 => absurd $ r-supp $ rewrite (inv r.4, inv (c-supp s1).2) in independent_Support_BigProd r.3 s2
             | suc j1, 0 => \lam s1 s2 => absurd $ r-supp $ rewrite (inv r.4, inv (c-supp s2).2) in independent_Support_BigProd r.3 s1
             | suc j1, suc j2 => \lam s1 s2 => pmap fsuc (r.3 j1 j2 s1 s2)
-          }, inv (pmap (`* e) inverse-right *> ide-left) *> *-assoc {SymmetricGroup n} {c} {inverse c} *> pmap (c *) r.4)
+          }, inv (pmap (* e) inverse-right *> ide-left) *> *-assoc {SymmetricGroup n} {c} {inverse c} *> pmap (c *) r.4)
         | inr r => (nil, (\case __), (\case __), Sym.equals \lam j => tightness (r j))
       }
 

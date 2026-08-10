@@ -7,7 +7,8 @@
 \import Paths.Meta
 \import Set.Fin
 
-\func Index {A : \Type} (list : List A) : \Type => Fin (length list)
+\func Index {A : \Type} (list : List A) : \Set0
+  => Fin (length list)
 
 \func expand-fin-left {A : \Type} {a b : List A} (i : Index a) : Index (a ++ b) \elim a, i
   | :: a _, 0 => 0

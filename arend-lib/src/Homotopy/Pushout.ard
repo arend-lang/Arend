@@ -1,32 +1,32 @@
 \import Algebra.Meta
 \import Equiv
 \import Equiv.Sigma
-\import Equiv.Univalence
 \import Function
 \import Homotopy.Pointed
 \import Homotopy.Square
+\import Logic
 \import Paths
 
-\class Pushout (square : Square)
-  | pushout-univ {Z : \Type} : Equiv {square.Y -> Z} {Square { | Y => Z | U => square.U | V => square.V | X => square.X | uv => square.uv | ux => square.ux }} (Square.push square)
+\class Pushout.{u} (square : Square.{u})
+  | pushout-univ {Z : \Type u} : IsEquiv {square.Y -> Z} {Square { | Y => Z | U => square.U | V => square.V | X => square.X | uv => square.uv | ux => square.ux }} (Square.push square)
   \where {
     -- | Pushouts are functorial
-    \func map (p : Pushout) (s : Square)
+    \func map.{u} (p : Pushout.{u}) (s : Square.{u})
               (f : p.square.U -> s.U)
               (g : p.square.V -> s.V)
               (h : p.square.X -> s.X)
               (e1 : \Pi (u : p.square.U) -> s.uv (f u) = g (p.square.uv u))
               (e2 : \Pi (u : p.square.U) -> s.ux (f u) = h (p.square.ux u))
               : p.square.Y -> s.Y
-      => p.pushout-univ.ret (\new Square {
+      => IsEquiv.ret p.pushout-univ (\new Square {
         | vy v => s.vy (g v)
         | xy x => s.xy (h x)
         | sqcomm u => pmap s.vy (inv (e1 u)) <* s.sqcomm (f u) *> pmap s.xy (e2 u)
       })
 
     -- | {map} preserves identity maps
-    \func map_id (p : Pushout) (y : p.square.Y) : map p p.square id id id (\lam _ => idp) (\lam _ => idp) = id
-      => p.pushout-univ.ret_f (\lam x => x)
+    \func map_id.{u} (p : Pushout.{u}) (y : p.square.Y) : map p p.square id id id (\lam _ => idp) (\lam _ => idp) = id
+      => IsEquiv.ret_f p.pushout-univ
   }
 
 \data PushoutData {A B C : \Type} (f : A -> B) (g : A -> C)
@@ -48,23 +48,21 @@
           | pglue a i => idp
 
         \func equiv {A B C : \Type} {f : A -> B} {g : A -> C} (Z : \Type)
-          : Equiv {PushoutData f g -> Z} {\Sigma (lm : B -> Z) (rm : C -> Z) (gm : \Pi (a : A) -> lm (f a) = rm (g a))}
-          => \new QEquiv {
+          : QEquiv {PushoutData f g -> Z} {\Sigma (lm : B -> Z) (rm : C -> Z) (gm : \Pi (a : A) -> lm (f a) = rm (g a))} \cowith
             | f h => (\lam b => h (pinl b), \lam c => h (pinr c), \lam a => path (\lam i => h (pglue a i)))
             | ret p => rec p.1 p.2 p.3
-            | ret_f h => path (\lam i x => (\case \elim x \return rec (\lam b => h (pinl b)) (\lam c => h (pinr c)) (\lam a => path (\lam i => h (pglue a i))) x = h x \with {
+            | ret_f h => path \lam i x => (\case \elim x \return rec (\lam b => h (pinl b)) (\lam c => h (pinr c)) (\lam a => path (\lam i => h (pglue a i))) x = h x \with {
               | pinl b => idp
               | pinr c => idp
               | pglue a i => idp
-            }) @ i)
+            }) i
             | f_sec => idpe
-          }
       }
 
     -- | The total space of a fibration over a pushout is equivalent to a pushout of fibers of this fibration.
-    \func flattening {A B C : \Type} {f : A -> B} {g : A -> C} (F : PushoutData f g -> \Type)
+    \func flattening.{u} {A B C : \Type u} {f : A -> B} {g : A -> C} (F : PushoutData f g -> \Type u)
       : total = (\Sigma (w : PushoutData f g) (F w))
-      => QEquiv-to-= totalPushoutLeft *> path TotalPushout *> QEquiv-to-= totalPushoutRight
+      => QEquiv_= totalPushoutLeft *> path TotalPushout *> QEquiv_= totalPushoutRight
       \where {
         \func total
           => PushoutData {\Sigma (x : A) (F (pinl (f x)))}
@@ -135,10 +133,10 @@
 
 \open PushoutData
 
-\instance PushoutPointed {A B C : \Type} {P : Pointed B} {f : A -> B} {g : A -> C} : Pointed (PushoutData f g)
+\instance PushoutPointed.{u} {A B C : \Type u} {P : Pointed B} {f : A -> B} {g : A -> C} : Pointed (PushoutData f g)
   | base => pinl base
 
-\func pushoutData {A B C : \Type} (f : A -> B) (g : A -> C) : Pushout \cowith
+\func pushoutData.{u} {A B C : \Type u} (f : A -> B) (g : A -> C) : Pushout \cowith
   | square {
     | U => A
     | V => B
@@ -150,7 +148,7 @@
     | xy => pinr
     | sqcomm a => path (pglue a)
   }
-  | pushout-univ {Z} => \new QEquiv {
+  | pushout-univ {Z} => inP \new QEquiv {
     | ret (s : Square) => rec s.vy s.xy s.sqcomm
     | ret_f h => path (\lam i p => (\case \elim p \return rec (h `o` pinl) (h `o` pinr) (\lam a => path (\lam j => h (pglue a j))) p = h p \with {
       | pinl _ => idp
@@ -161,15 +159,15 @@
   }
 
 -- | A pushout of an embedding is an embedding and such a pushout square is also a pullback square
-\class EmbeddingPushout \noclassifying (A B C : \Type) (f : A -> B) (g : Embedding {A} {C}) {
+\class EmbeddingPushout.{u} \noclassifying (A B C : \Type u) (f : A -> B) (g : Embedding {A} {C}) {
   \func PO => PushoutData f g
 
-  \func code (b0 : B) (w : PO) : \hType \elim w
+  \func code (b0 : B) (w : PO) : \Type u \elim w
     | pinl b => b0 = b
     | pinr c => \Sigma (a : A) (b0 = f a) (c = g a)
-    | pglue a => QEquiv-to-= (equiv b0 a)
+    | pglue a i => QEquiv_= (equiv b0 a) i
 
-  \protected \lemma equiv (b0 : B) (a : A) : Equiv {b0 = f a} {\Sigma (a' : A) (b0 = f a') (g a = g a')} (a, __, idp) => equation
+  \protected \func equiv (b0 : B) (a : A) : QEquiv {b0 = f a} {\Sigma (a' : A) (b0 = f a') (g a = g a')} (a, __, idp) => equation
                                                               {symQEquiv (contr-left (lsigma a))}
     (\Sigma (p : \Sigma (a' : A) (a = a')) (b0 = f p.1))      {sigma-left (sigma-right (g.pmap-isEquiv {a} {__}))}
     (\Sigma (p : \Sigma (a' : A) (g a = g a')) (b0 = f p.1))  {\new QEquiv { | B => \Sigma (a' : A) (b0 = f a') (g a = g a') | f p => (p.1.1, p.2, p.1.2) | ret q => ((q.1,q.3),q.2) | ret_f => idpe | f_sec => idpe }}
@@ -199,10 +197,8 @@
       | f_sec => decode_enode b
     }
 
-  \lemma pullback-path-equiv (b : B) (c : C) : Equiv {\Sigma (a : A) (b = f a) (c = g a)} {pinl b = {PO} pinr c} (decode b)
-    => \new QEquiv {
-      | ret => encode b
-      | ret_f => encode_decode-right b c
-      | f_sec => decode_enode b
-    }
+  \func pullback-path-equiv (b : B) (c : C) : QEquiv {\Sigma (a : A) (b = f a) (c = g a)} {pinl b = {PO} pinr c} (decode b) \cowith
+    | ret => encode b
+    | ret_f => encode_decode-right b c
+    | f_sec => decode_enode b
 }

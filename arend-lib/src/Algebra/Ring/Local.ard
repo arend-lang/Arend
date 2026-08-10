@@ -13,18 +13,10 @@
 \open Monoid(Inv,LInv)
 
 \class LocalRing \extends Ring, NonZeroRing {
-  | locality (x : E) : Inv x || Inv (x + ide)
+  | locality : IsLocal
 
-  \lemma locality_- (x : E) : Inv x || Inv (ide - x)
-    => \case locality (negative x) \with {
-      | byLeft p => byLeft $ transport Inv negative-isInv (Ring.negative_inv p)
-      | byRight p => byRight $ transport Inv +-comm p
-    }
-
-  \lemma sum1=>eitherInv {x y : E} (x+y=1 : x + y = ide) : Inv x || Inv y => \case locality (negative x) \with {
-    | byLeft -x_inv => byLeft (rewriteI negative-isInv (Ring.negative_inv -x_inv))
-    | byRight [-x+1]_inv => byRight $ transport Inv (equation.abGroup { -1 x+y=1 }) [-x+1]_inv
-  }
+  \lemma sum1=>eitherInv {x y : E} (x+y=1 : x + y = ide) : Inv x || Inv y
+    => isLocal-sum-char.1 locality x+y=1
 
   \lemma sumInv=>eitherInv {x y : E} (q : Inv (x + y)) : Inv x || Inv y =>
     \case sum1=>eitherInv (inv ldistr *> q.inv-left) \with {
@@ -48,8 +40,8 @@
   \lemma local=>connected {R : Ring} (loc : \Pi (a : R) -> Inv a || Inv (a + 1)) : R.IsConnected
     => \lam a p => \have q : a * (negative a + 1) = 0 => ldistr *> +-comm *> pmap (_ +) R.negative_*-right *> R.toZero (ide-right *> inv p)
                    \in \case loc (negative a) \with {
-                     | byLeft (r : Inv) => byRight $ inv $ R.fromZero $ +-comm *> inv ide-left *> pmap (`* _) (inv r.inv-left) *> *-assoc *> pmap (r.inv *) (R.negative_*-left *> pmap negative q *> R.negative_zro) *> zro_*-right
-                     | byRight (r : Inv) => byLeft $ inv ide-right *> pmap (a *) (inv r.inv-right) *> inv *-assoc *> pmap (`* r.inv) q *> zro_*-left
+                     | byLeft (r : Inv) => byRight $ inv $ R.fromZero $ +-comm *> inv ide-left *> pmap (* _) (inv r.inv-left) *> *-assoc *> pmap (r.inv *) (R.negative_*-left *> pmap negative q *> R.negative_zro) *> zro_*-right
+                     | byRight (r : Inv) => byLeft $ inv ide-right *> pmap (a *) (inv r.inv-right) *> inv *-assoc *> pmap (* r.inv) q *> zro_*-left
                    }
 }
 

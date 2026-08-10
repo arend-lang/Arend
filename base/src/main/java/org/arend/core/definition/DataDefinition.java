@@ -4,23 +4,28 @@ import org.arend.core.context.param.DependentLink;
 import org.arend.core.context.param.EmptyDependentLink;
 import org.arend.core.elimtree.IntervalElim;
 import org.arend.core.expr.*;
+import org.arend.core.pattern.ExpressionPattern;
 import org.arend.core.sort.Sort;
+import org.arend.core.sort.SortExpression;
 import org.arend.core.subst.ExprSubstitution;
 import org.arend.core.subst.Levels;
+import org.arend.error.DummyErrorReporter;
 import org.arend.ext.core.definition.CoreConstructor;
 import org.arend.ext.core.definition.CoreDataDefinition;
 import org.arend.ext.core.level.LevelSubstitution;
 import org.arend.naming.reference.GlobalReferable;
 import org.arend.naming.reference.TCDefReferable;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
+import java.math.BigInteger;
 import java.util.*;
 
 public class DataDefinition extends TopLevelDefinition implements CoreDataDefinition {
   private final List<Constructor> myConstructors;
   private DependentLink myParameters;
-  private Sort mySort = Sort.SET0;
-  private int myTruncatedLevel = -2;
+  private SortExpression mySort = new SortExpression.Const(Sort.INFINITY);
+  private BigInteger myTruncatedLevel;
   private boolean mySquashed;
   private FunctionDefinition mySquasher;
   private final Set<Integer> myCovariantParameters = new HashSet<>();
@@ -31,7 +36,6 @@ public class DataDefinition extends TopLevelDefinition implements CoreDataDefini
   private final ParametersLevels<ParametersLevel> myParametersLevels = new ParametersLevels<>();
   private Set<TopLevelDefinition> myRecursiveDefinitions = Collections.emptySet();
   private boolean myHasEnclosingClass;
-  private List<Boolean> myOmegaParameters = Collections.emptyList();
 
   public DataDefinition(TCDefReferable referable) {
     super(referable, TypeCheckingStatus.NEEDS_TYPE_CHECKING);
@@ -40,31 +44,26 @@ public class DataDefinition extends TopLevelDefinition implements CoreDataDefini
   }
 
   @Override
-  public Sort getSort() {
+  public @NotNull SortExpression getSortExpression() {
     return mySort;
   }
 
-  public void setSort(Sort sort) {
+  @Override
+  public @Nullable Sort getSort() {
+    return mySort instanceof SortExpression.Const(Sort sort) ? sort : null;
+  }
+
+  public void setSortExpression(SortExpression sort) {
     mySort = sort;
+  }
+
+  public void setSort(Sort sort) {
+    setSortExpression(new SortExpression.Const(sort));
   }
 
   @Override
   public @NotNull Set<? extends TopLevelDefinition> getRecursiveDefinitions() {
     return myRecursiveDefinitions;
-  }
-
-  @Override
-  public boolean isOmegaParameter(int index) {
-    return index < myOmegaParameters.size() && myOmegaParameters.get(index);
-  }
-
-  public List<Boolean> getOmegaParameters() {
-    return myOmegaParameters;
-  }
-
-  @Override
-  public void setOmegaParameters(List<Boolean> parameters) {
-    myOmegaParameters = parameters;
   }
 
   public void setRecursiveDefinitions(Set<TopLevelDefinition> recursiveDefinitions) {
@@ -75,6 +74,19 @@ public class DataDefinition extends TopLevelDefinition implements CoreDataDefini
     for (Constructor constructor : myConstructors) {
       if (constructor.getBody() instanceof IntervalElim) {
         return true;
+      }
+    }
+    return false;
+  }
+
+  public boolean hasMultipleConstructors() {
+    for (int i = 0; i < myConstructors.size(); i++) {
+      List<ExpressionPattern> patterns1 = myConstructors.get(i).getPatterns();
+      for (int j = i + 1; j < myConstructors.size(); j++) {
+        List<ExpressionPattern> patterns2 = myConstructors.get(j).getPatterns();
+        if (patterns1 == null || patterns2 == null || ExpressionPattern.unify(patterns1, patterns2, null, null, null, DummyErrorReporter.INSTANCE, null)) {
+          return true;
+        }
       }
     }
     return false;
@@ -98,11 +110,11 @@ public class DataDefinition extends TopLevelDefinition implements CoreDataDefini
   }
 
   @Override
-  public int getTruncatedLevel() {
+  public @Nullable BigInteger getTruncatedLevel() {
     return myTruncatedLevel;
   }
 
-  public void setTruncatedLevel(int level) {
+  public void setTruncatedLevel(BigInteger level) {
     myTruncatedLevel = level;
   }
 

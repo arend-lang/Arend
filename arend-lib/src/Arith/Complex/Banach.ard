@@ -27,7 +27,7 @@
 \import Arith.Rat
 \import Order.Lattice
 \import Set.Filter
-\import Set.Subset
+\import Set.Set
 \import Topology.CoverSpace
 \import Topology.CoverSpace.Complete
 \import Topology.MetricSpace
@@ -58,8 +58,8 @@
                         = abs c.re * abs c.re + 2 * (abs c.re * abs c.im) + abs c.im * abs c.im
               => equation.cRing
            | sq-bound : cabs c * cabs c <= (abs c.re + abs c.im) * (abs c.re + abs c.im)
-              => transport (`<= _) (inv cabs-square) linarith
-     \in square_<=-cancel cabs>=0 sum>=0 sq-bound
+              => transport (<= _) (inv cabs-square) linarith
+     \in RealField.square_<=-cancel cabs>=0 sum>=0 sq-bound
 
 {- | Completeness of $\mathbb{C}$ via $\Re$ / $\Im$ pushforward to $\mathbb{R}$
      (which is complete). For a Complex Cauchy filter $F$: push forward via
@@ -112,16 +112,17 @@
      `ComplexCompleteRing` plus `isDivisible` (componentwise via
      `complex-div-cancel`) and `norm-double` (Real-form `abs_+-double` lifted
      to `ExUpperReal`). -}
-\instance ComplexBanach : RealBanachAlgebra Complex
+\instance ComplexBanach : RealBanachCAlgebra Complex
   | CompleteExNormedRing => ComplexCompleteRing
   | isDivisible a {n} n/=0 => inP (\new Complex (RatField.finv n *c a.re) (RatField.finv n *c a.im), complex-div-cancel n/=0)
   | norm-double {c} => =_<= (inv RealAbGroup.+-upper *> Real.=-upper.1 cabs_+-double)
+  | *-comm => ComplexField.*-comm
   \where {
     {- | Divisibility helper for `RealPreBanachSpace.isDivisible` on $\mathbb{C}$:
          dividing each component by $n$ in $\mathbb{R}$ and then $n \cdot n$-ing
          recovers the original. -}
     \lemma real-div-cancel {x : Real} {n : Nat} (n/=0 : n /= 0) : n *n (RatField.finv n *c x) = x
-      => inv RealField.natCoef_*c *> inv *c-assoc *> pmap (`*c x) (RatField.finv-right $ natRat/=0 n/=0) *> ide_*c
+      => inv RealField.natCoef_*c *> inv *c-assoc *> pmap (*c x) (RatField.finv-right $ natRat/=0 n/=0) *> ide_*c
 
     {- | Componentwise extension to $\mathbb{C}$: dividing each component of $a$
          by $n$ and then applying $n \cdot n$ recovers $a$. The action $n \cdot n\,c$

@@ -3,12 +3,12 @@
 \import Algebra.Monoid.MonoidHom
 \import Category
 \import Category.Functor
-\import Equiv (Equiv)
+\import Equiv
 \import Paths.Meta
 
 -- TODO: when limits in presheaves are added, write that category of actions is bicomplete whenever the underlying category is bicomplete
 
-\class MonoidCatAction {C : Precat} (M : Monoid) (\classifying  c : C){
+\class MonoidCatAction {C : Precat} (M : Monoid) (\classifying c : C) {
   | act : MonoidHom M (End c)
 
   \func functor : Functor (DeloopM M) C \cowith
@@ -21,7 +21,7 @@
 \instance DeloopM (M : Monoid) : Precat
   | Ob => \Sigma
   | Hom _ _ => M
-  | id _ => M.ide
+  | id => M.ide
   | o => *
   | id-left => ide-left
   | id-right => ide-right
@@ -35,9 +35,8 @@
     | func-* => Func-o
   }
 
-\func Action<->Functor {C : Precat} {M : Monoid} : Equiv {MonoidCatAction M} {Functor (DeloopM M) C} \cowith
-  | f (c : MonoidCatAction) => c.functor
+\func Action<->Functor {C : Precat} {M : Monoid} : QEquiv {MonoidCatAction M} {Functor (DeloopM M) C} \cowith
+  | f c => c.functor
   | ret => functor->action
   | ret_f c => ext (idp, idp)
-  | sec => functor->action
   | f_sec f => idp

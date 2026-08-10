@@ -32,7 +32,7 @@ class ArendUsageTypeProvider: UsageTypeProviderEx {
             element.rightSibling<ArendRefIdentifier>() != null || parent is ArendLongName && (pParent as? ArendLiteral)?.ipName != null -> return leftUsage
         }
 
-        var expr: ArendExpr = ((pParent as? ArendLongNameExpr)?.parent as? ArendArgumentAppExpr)?.parent as? ArendNewExpr ?: pParent as? ArendLiteral ?: return defaultUsage
+        var expr: ArendExpr = pParent as? ArendLiteral ?: return defaultUsage
         if (isParameter((expr as? ArendLiteral)?.parent as? ArendTypeTele)) {
             return parameters
         }
@@ -51,7 +51,7 @@ class ArendUsageTypeProvider: UsageTypeProviderEx {
             val argList = appExpr.argumentList
             val cExpr =
                 if (argList.isNotEmpty()) {
-                    (appExpr.atomFieldsAcc ?: appExpr.longNameExpr)?.let { func -> parseBinOp(func, argList) }
+                    parseBinOp(appExpr.atomFieldsAcc, argList)
                 } else {
                     null
                 }

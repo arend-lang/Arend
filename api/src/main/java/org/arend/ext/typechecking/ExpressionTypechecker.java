@@ -20,7 +20,6 @@ import org.arend.ext.core.expr.AbstractedExpression;
 import org.arend.ext.core.expr.CoreExpression;
 import org.arend.ext.core.expr.CoreInferenceReferenceExpression;
 import org.arend.ext.core.expr.UncheckedExpression;
-import org.arend.ext.core.level.CoreSort;
 import org.arend.ext.core.level.LevelSubstitution;
 import org.arend.ext.core.ops.CMP;
 import org.arend.ext.core.ops.SubstitutionPair;
@@ -289,13 +288,6 @@ public interface ExpressionTypechecker extends UserDataHolder {
    * @return a reference expression with a new inference variable.
    */
   @NotNull CoreInferenceReferenceExpression generateNewInferenceVariable(@NotNull String name, @NotNull CoreExpression type, @NotNull ConcreteSourceNode marker, boolean isSolvableFromEquations);
-
-  /**
-   * Creates a sort from a pair of fresh level inference variables.
-   *
-   * @param marker                    a marker that is used to report errors related to generated variables.
-   */
-  @NotNull CoreSort generateSort(@NotNull ConcreteSourceNode marker);
 
   /**
    * Searches for an instance of the specified class.

@@ -10,7 +10,7 @@
 \import Order.PartialOrder
 \import Paths
 \import Paths.Meta
-\import Set.Subset
+\import Set.Set
 \import Topology.CoverSpace
 \import Topology.MetricSpace
 \import Topology.NormedAbGroup.Real
@@ -31,18 +31,18 @@
       }
     }
 
-  \lemma *q-right-uniform {q : Rat} : TopAbGroupMap \this \this (q *q) \cowith
+  \protected \lemma *q-right-uniform {q : Rat} : TopAbGroupMap \this \this (q *q) \cowith
     | func-+ => toRatModule.*c-ldistr
     | func-uniform Eu =>
       \have cu => *i-uniform ∘ *q_<=1-right-uniform (RatField.finv>=0 fromNat_>=0) (RatField.finv_<= idp $ fromInt_<= $ pos<=pos $ suc_<_<= $ nonZero>0 ratDenom/=0)
-      \in uniform-subset (cu.func-uniform Eu) \lam t => TruncP.map t \lam s => $ later (s.1, s.2, s.3 *> ext \lam x => pmap s.1 $ inv *q_*i *> inv *q-assoc *> pmap (`*q x) (inv rat-split))
+      \in uniform-subset (cu.func-uniform Eu) \lam t => TruncP.map t \lam s => later (s.1, s.2, s.3 *> ext \lam x => pmap s.1 $ inv *q_*i *> inv *q-assoc *> pmap (*q x) (inv rat-split))
     \where {
       \private \lemma *q_<=1-right-uniform {q : Rat} (q>=0 : RatField.zro RatField.<= q) (q<=1 : q RatField.<= 1) : TopAbGroupMap \this \this (q *q) \cowith
         | func-+ => toRatModule.*c-ldistr
         | func-uniform Eu => \case neighborhood-uniform.1 Eu \with {
           | inP (V,Vo,V0,h) => \case solid-neighborhood (open-char.1 Vo V0) \with {
             | inP (U,US,U0,U<=V) => neighborhood-uniform.2 $ inP (_, interior, U0, \lam x => \case h (q *q x) \with {
-              | inP (W,EW,g) => inP (_, inP $ later (W,EW,idp), \lam Uxy => g (U<=V $ transport U toRatModule.*c-ldistr_- $ US (<=<_<= Uxy idp) $ =_<= (abs_*q q>=0) <=∘ <=_*q-left q<=1 abs>=0 <=∘ =_<= ide_*q))
+              | inP (W,EW,g) => inP (_, inP $ later (W,EW,idp), \lam Uxy => g (U<=V $ transport U toRatModule.*c-ldistr_- $ US (<=<_<= Uxy idp) $ abs_*q q>=0 =<= <=_*q-left q<=1 abs>=0 <=∘ =_<= ide_*q))
             })
           }
         }
@@ -66,6 +66,6 @@
   \lemma meet-uniform : UniformMap (ProductTopAbGroup \this \this) \this (\lam s => s.1 ∧ s.2)
     => transportInv (UniformMap _ _) (later $ ext \lam s => meet_abs) $ *q-right-uniform ∘ subtract-uniform ∘ tuple +-uniform (abs-uniform ∘ subtract-uniform)
 } \where {
-  \open UniformMap
+  \open UniformMap (∘)
   \open ProductUniformSpace
 }

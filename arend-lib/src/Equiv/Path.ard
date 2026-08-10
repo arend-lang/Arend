@@ -1,5 +1,7 @@
 \import Equiv
 \import Equiv.HalfAdjoint
+\import Function.Meta
+\import Logic
 \import Paths
 
 -- | If ``a = a'`` is a retract of ``R a a'``, then ``a = a'`` is equivalent to ``R a a'``.
@@ -8,34 +10,35 @@
   | ret_f => Jl (\lam _ q' => p.sec (p q') = q') (
     \let | h {a a' : A} (q : a = a') => p.sec (p q)
          | h-idemp {a a' : A} (q : a = a') : h (h q) = h q => pmap p.sec (p.f_sec (p q))
-    \in Jl (\lam _ q => h idp = h q *> inv q) idp (h idp) *> pmap (`*> inv (h idp)) (h-idemp idp) *> *>_inv (h idp)
+    \in Jl (\lam _ q => h idp = h q *> inv q) idp (h idp) *> pmap (*> inv (h idp)) (h-idemp idp) *> *>_inv (h idp)
   )
   | f_sec => p.f_sec
 
 \func pathConcatEquiv {A : \Type} {a b c : A} (p : a = b) : QEquiv {a = c} {b = c} \cowith
   | f => inv p *>
   | ret => p *>
-  | ret_f q => inv (*>-assoc _ _ _) *> pmap (`*> q) (*>_inv p) *> idp_*> q
-  | f_sec q => inv (*>-assoc _ _ _) *> pmap (`*> q) (inv_*> p) *> idp_*> q
+  | ret_f q => inv (*>-assoc _ _ _) *> pmap (*> q) (*>_inv p) *> idp_*> q
+  | f_sec q => inv (*>-assoc _ _ _) *> pmap (*> q) (inv_*> p) *> idp_*> q
 
 -- | If ``f : A -> B`` is an equivalence, then ``pmap f`` is also an equivalence.
-\func pmapEquiv (e : Equiv) {a a' : e.A} : QEquiv {a = a'} => pathEquiv (e __ = e __) (\lam {a} {a'} => \new Retraction {
-  | f => pmap e
-  | sec p => inv (e.ret_f a) *> pmap e.ret p *> e.ret_f a'
-  | f_sec p => \let hae : HAEquiv => e \in
-    pmap e (inv (e.ret_f a) *> pmap e.ret p *> e.ret_f a')                   ==< pmap_*>-comm e (inv (e.ret_f a)) (pmap e.ret p *> e.ret_f a') >==
-    pmap e (inv (e.ret_f a)) *> pmap e (pmap e.ret p *> e.ret_f a')          ==< pmap2 (*>) (pmap_inv-comm e (e.ret_f a)) (pmap_*>-comm e (pmap e.ret p) (e.ret_f a')) >==
-    inv (pmap e (e.ret_f a)) *> pmap e (pmap e.ret p) *> pmap e (e.ret_f a') ==< rotatePathLeft (
-        pmap e (pmap e.ret p) *> pmap e (e.ret_f a') ==< pmap (pmap e (pmap e.ret p) *> __) (hae.f_ret_f=f_sec_f a') >==
-        pmap e (pmap e.ret p) *> hae.f_sec (e a')    ==< homotopy-isNatural (\lam y => e (e.ret y)) (\lam y => y) hae.f_sec p >==
-        hae.f_sec (e a) *> p                         ==< inv (pmap (`*> p) (hae.f_ret_f=f_sec_f a)) >==
-        pmap e (e.ret_f a) *> p                      `qed) >==
-    p `qed
-  })
+\lemma pmapIsEquiv {A B : \Type} {f : A -> B} (e : IsEquiv f) {a a' : A} : IsEquiv (pmap f {a} {a'}) \elim e
+  | inP e => inP $ pathEquiv (f __ = f __) \lam {a} {a'} => \new Retraction {
+    | f => pmap f
+    | sec p => inv (e.ret_f a) *> pmap e.ret p *> e.ret_f a'
+    | f_sec p => \let hae : HAEquiv f => e \in
+      pmap f (inv (e.ret_f a) *> pmap e.ret p *> e.ret_f a')                   ==< pmap_*>-comm f (inv (e.ret_f a)) (pmap e.ret p *> e.ret_f a') >==
+      pmap f (inv (e.ret_f a)) *> pmap f (pmap e.ret p *> e.ret_f a')          ==< pmap2 (*>) (pmap_inv-comm f (e.ret_f a)) (pmap_*>-comm f (pmap e.ret p) (e.ret_f a')) >==
+      inv (pmap f (e.ret_f a)) *> pmap f (pmap e.ret p) *> pmap f (e.ret_f a') ==< rotatePathLeft (
+        pmap f (pmap e.ret p) *> pmap f (e.ret_f a') ==< pmap (pmap f (pmap e.ret p) *> __) (hae.f_ret_f=f_sec_f a') >==
+        pmap f (pmap e.ret p) *> hae.f_sec (f a')    ==< homotopy-isNatural (\lam y => f (e.ret y)) (\lam y => y) hae.f_sec p >==
+        hae.f_sec (f a) *> p                         ==< inv (pmap (*> p) (hae.f_ret_f=f_sec_f a)) >==
+        pmap f (e.ret_f a) *> p                      `qed) >==
+      p `qed
+  }
 
 -- | If ``f : A -> B`` is an embedding, then ``pmap f`` is also an embedding.
 \func pmapEmbedding (e : Embedding) {a a' : e.A} : Embedding {a = a'} (pmap e) \cowith
-  | isEmb _ _ => pmapEquiv (e.pmap-isEquiv {a} {a'})
+  | isEmb _ _ => IsEquiv.toQEquiv $ pmapIsEquiv $ inP (e.pmap-isEquiv {a} {a'})
 
 -- | If ``f : A -> B`` is a section, then ``pmap f`` is also a section.
 \func pmapSection (s : Section) {a a' : s.A} : Section {a = a'} (pmap s) \cowith

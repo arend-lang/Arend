@@ -5,6 +5,7 @@ import org.arend.core.definition.ClassField;
 import org.arend.core.expr.Expression;
 import org.arend.core.expr.InferenceReferenceExpression;
 import org.arend.ext.core.context.CoreInferenceVariable;
+import org.arend.ext.core.level.ConstLevel;
 import org.arend.ext.variable.Variable;
 import org.arend.naming.renamer.Renamer;
 import org.arend.term.concrete.Concrete;
@@ -21,6 +22,7 @@ import java.util.Set;
 public abstract class InferenceVariable implements Variable, CoreInferenceVariable {
   private final String myName;
   private Expression myType;
+  private ConstLevel myHLevel;
   private final Set<Binding> myBounds;
   private final Concrete.SourceNode mySourceNode;
   private InferenceReferenceExpression myReference;
@@ -60,6 +62,14 @@ public abstract class InferenceVariable implements Variable, CoreInferenceVariab
     myType = type;
   }
 
+  public ConstLevel getHLevel() {
+    return myHLevel;
+  }
+
+  public void setHLevel(ConstLevel level) {
+    myHLevel = level;
+  }
+
   public Set<Binding> getBounds() {
     return myBounds;
   }
@@ -84,6 +94,10 @@ public abstract class InferenceVariable implements Variable, CoreInferenceVariab
     if (!myListeners.isEmpty()) {
       myListeners.remove(listener);
     }
+  }
+
+  public boolean canBeInfinite() {
+    return false;
   }
 
   public void solve(CheckTypeVisitor checker, Expression solution) {

@@ -42,10 +42,19 @@ class ReloadLibrariesService(private val project: Project, private val coroutine
     val libraries = server.libraries.filter { !onlyInternal || server.getLibrary(it)?.isExternalLibrary == false }
     runReadAction {
       server.unloadLibraries(onlyInternal)
-      for (libraryName in libraries) {
-        val library = project.findLibrary(libraryName) ?: continue
-        server.updateLibrary(library, NotificationErrorReporter(project))
+      val configs = libraries.associateWith { project.findLibrary(it) }
+      val reloaded = HashSet<String>()
+
+      fun reload(libraryName: String) {
+        if (!reloaded.add(libraryName)) return
+        val config = configs[libraryName] ?: return
+        for (dependency in config.libraryDependencies) {
+          if (configs.containsKey(dependency)) reload(dependency)
+        }
+        server.updateLibrary(config, NotificationErrorReporter(project))
       }
+
+      for (libraryName in libraries) reload(libraryName)
     }
   }
 }

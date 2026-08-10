@@ -36,6 +36,4 @@ message Group {
     repeated Group subgroup = 3;
     repeated Group dynamic_subgroup = 4;
     repeated int32 invisible_internal_referable = 5;
-    repeated LevelsDeclaration plevels_declaration = 6;
-    repeated LevelsDeclaration hlevels_declaration = 7;
 }

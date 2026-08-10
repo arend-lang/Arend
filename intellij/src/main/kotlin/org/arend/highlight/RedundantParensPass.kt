@@ -71,7 +71,7 @@ class RedundantParensPass(file: ArendFile, editor: Editor):
             val childAppExpr =
                 if (tupleExpression is ArendNewExpr && isAtomic(tupleExpression)) tupleExpression.argumentAppExpr
                 else null
-            return childAppExpr != null && hasNoLevelArguments(childAppExpr) && !isBinOpApp(childAppExpr)
+            return childAppExpr != null && !isBinOpApp(childAppExpr)
         }
         return false
     }

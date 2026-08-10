@@ -6,12 +6,10 @@ import org.jetbrains.annotations.Nullable;
 public class DataLevelReferable implements LevelReferable {
   private final Object myData;
   private final String myName;
-  private final boolean myPLevels;
 
-  public DataLevelReferable(Object data, String name, boolean isPLevels) {
+  public DataLevelReferable(Object data, String name) {
     myData = data;
     myName = name;
-    myPLevels = isPLevels;
   }
 
   @Override
@@ -21,7 +19,7 @@ public class DataLevelReferable implements LevelReferable {
 
   @Override
   public @NotNull Referable.RefKind getRefKind() {
-    return myPLevels ? RefKind.PLEVEL : RefKind.HLEVEL;
+    return RefKind.LEVEL;
   }
 
   @Override

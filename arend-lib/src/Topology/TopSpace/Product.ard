@@ -7,11 +7,11 @@
 \import Order.Lattice
 \import Order.PartialOrder
 \import Paths.Meta
-\import Set.Subset
+\import Set.Set
 \import Topology.TopSpace
 
-\instance TopSpaceHasProduct : HasProduct TopSpace
-  | Product => ProductTopSpace
+\instance TopSpaceHasProduct.{u} : HasProduct TopSpace.{u}
+  | Product X Y => ProductTopSpace X Y
 
 \instance ProductTopSpace (X Y : TopSpace) : TopSpace (\Sigma X Y)
   | isOpen W => ∀ {s : W} ∃ (U : X.isOpen) (U s.1) (V : Y.isOpen) (V s.2) ∀ {x : U} {y : V} (W (x,y))
@@ -25,21 +25,21 @@
   \where {
     \open ContMap
 
-    \func proj1 {X Y : TopSpace} : ContMap (X ⨯ Y) X \cowith
+    \func proj1 {X Y : TopSpace} : ContMap (ProductTopSpace X Y) X \cowith
       | func s => s.1
       | func-cont Uo => \lam Ux => inP (_, Uo, Ux, top, open-top, (), \lam Ux _ => Ux)
 
-    \func proj2 {X Y : TopSpace} : ContMap (X ⨯ Y) Y \cowith
+    \func proj2 {X Y : TopSpace} : ContMap (ProductTopSpace X Y) Y \cowith
       | func s => s.2
       | func-cont Uo => \lam Uy => inP (top, open-top, (), _, Uo, Uy, \lam _ Uy => Uy)
 
-    \func tuple {X Y Z : TopSpace} (f : ContMap X Y) (g : ContMap X Z) : ContMap X (Y ⨯ Z) \cowith
+    \func tuple {X Y Z : TopSpace} (f : ContMap X Y) (g : ContMap X Z) : ContMap X (ProductTopSpace Y Z) \cowith
       | func x => (f x, g x)
       | func-cont {W} Wo => X.cover-open \lam w => \case Wo w \with {
         | inP (U,Uo,Ufx,V,Vo,Vgx,h) => inP (_, open-inter (f.func-cont Uo) (g.func-cont Vo), (Ufx,Vgx), \lam (Ufx,Vgx) => h Ufx Vgx)
       }
 
-    \func prod {X X' Y Y' : TopSpace} (f : ContMap X Y) (f' : ContMap X' Y') : ContMap (X ⨯ X') (Y ⨯ Y')
+    \func prod {X X' Y Y' : TopSpace} (f : ContMap X Y) (f' : ContMap X' Y') : ContMap (ProductTopSpace X X') (ProductTopSpace Y Y')
       => tuple (f ∘ proj1) (f' ∘ proj2)
       \where {
         \lemma isDense {X X' Y Y' : TopSpace} {f : ContMap X Y} {g : ContMap X' Y'} (fd : f.IsDense) (gd : g.IsDense) : ContMap.IsDense {prod f g}
@@ -87,22 +87,22 @@
   }
 
 \lemma cont2-limit {I : DirectedSet} {X Y Z : TopSpace} {f : I -> X} {g : I -> Y} {lx : X} {ly : Y}
-                   (px : X.IsLimit f lx) (py : Y.IsLimit g ly) (h : ContMap (X ⨯ Y) Z) : Z.IsLimit (\lam n => h (f n, g n)) (h (lx,ly))
+                   (px : X.IsLimit f lx) (py : Y.IsLimit g ly) (h : ContMap (ProductTopSpace X Y) Z) : Z.IsLimit (\lam n => h (f n, g n)) (h (lx,ly))
   => cont-limit (limit-tuple px py) h
 
-\lemma denseSet_<= {X : TopSpace} {Y : HausdorffTopSpace} {P : JoinSemilattice Y} (jc : ContMap (Y ⨯ Y) Y \lam s => s.1 ∨ s.2)
+\lemma denseSet_<= {X : TopSpace} {Y : HausdorffTopSpace} {P : JoinSemilattice Y} (jc : ContMap (ProductTopSpace Y Y) Y \lam s => s.1 ∨ s.2)
                    {S : Set X} (Sd : IsDenseSet S) (f g : ContMap X Y) (p : \Pi {x : X} -> S x -> f x <= g x) {x : X} : f x <= g x
   => join-left <=∘ =_<= (denseSet-lift-unique Sd (jc ContMap.∘ ProductTopSpace.tuple f g) g \lam Sx => <=-antisymmetric (join-univ (p Sx) <=-refl) join-right)
 
-\lemma dense_<= {X Y : TopSpace} {Z : HausdorffTopSpace} {P : JoinSemilattice Z} (jc : ContMap (Z ⨯ Z) Z \lam s => s.1 ∨ s.2)
+\lemma dense_<= {X Y : TopSpace} {Z : HausdorffTopSpace} {P : JoinSemilattice Z} (jc : ContMap (ProductTopSpace Z Z) Z \lam s => s.1 ∨ s.2)
                 (f : ContMap X Y) (fd : f.IsDense) (g h : ContMap Y Z) (p : \Pi (x : X) -> g (f x) <= h (f x)) (y : Y) : g y <= h y
   => denseSet_<= jc fd g h \lam (inP (x,q)) => rewriteI q (p x)
 
-\lemma weaklyDenseSet_<= {X : TopSpace} {Y : StronglyHausdorffTopSpace} {P : JoinSemilattice Y} (jc : ContMap (Y ⨯ Y) Y \lam s => s.1 ∨ s.2)
+\lemma weaklyDenseSet_<= {X : TopSpace} {Y : StronglyHausdorffTopSpace} {P : JoinSemilattice Y} (jc : ContMap (ProductTopSpace Y Y) Y \lam s => s.1 ∨ s.2)
                          {S : Set X} (Sd : IsWeaklyDenseSet S) (f g : ContMap X Y) (p : \Pi {x : X} -> S x -> f x <= g x) {x : X} : f x <= g x
   => join-left <=∘ =_<= (weaklyDenseSet-lift-unique Sd (jc ContMap.∘ ProductTopSpace.tuple f g) g \lam Sx => <=-antisymmetric (join-univ (p Sx) <=-refl) join-right)
 
-\lemma weaklyDense_<= {X Y : TopSpace} {Z : StronglyHausdorffTopSpace} {P : JoinSemilattice Z} (jc : ContMap (Z ⨯ Z) Z \lam s => s.1 ∨ s.2)
+\lemma weaklyDense_<= {X Y : TopSpace} {Z : StronglyHausdorffTopSpace} {P : JoinSemilattice Z} (jc : ContMap (ProductTopSpace Z Z) Z \lam s => s.1 ∨ s.2)
                       (f : ContMap X Y) (fd : f.IsWeaklyDense) (g h : ContMap Y Z) (p : \Pi (x : X) -> g (f x) <= h (f x)) (y : Y) : g y <= h y
   => weaklyDenseSet_<= jc fd g h \lam (inP (x,q)) => rewriteI q (p x)
 

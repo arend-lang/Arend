@@ -40,7 +40,20 @@ fun exprToConcrete1(appExpr: ArendExpr): List<Concrete.SourceNode> {
 }
 
 fun appExprToConcrete(appExpr: ArendExpr): Concrete.Expression? {
-    return exprToConcrete1(appExpr).firstOrNull() as? Concrete.Expression
+    val matches = exprToConcrete1(appExpr)
+    // An application normally reuses its function's data as its own (e.g. a chain of field calls
+    // `a.f.g` naturally nests applications this way, and the outermost one -- matches.first() -- is
+    // the one consumers want). But when the function is a complete-value expression with its own PSI
+    // (e.g. the lambda produced for a `__` section) rather than a reference/field-call/application,
+    // some resolving code still reuses that data for the synthetic application wrapper around it,
+    // making the wrapper collide with its function in `matches`. That wrapper carries no information
+    // beyond what its function already has, so skip it and prefer the function.
+    val matchIdentitySet = java.util.Collections.newSetFromMap(java.util.IdentityHashMap<Concrete.SourceNode, Boolean>())
+    matchIdentitySet.addAll(matches)
+    fun isCollisionWrapper(node: Concrete.SourceNode) =
+        node is Concrete.AppExpression && matchIdentitySet.contains(node.function) &&
+        node.function !is Concrete.ReferenceExpression && node.function !is Concrete.FieldCallExpression && node.function !is Concrete.AppExpression
+    return matches.firstOrNull { !isCollisionWrapper(it) } as? Concrete.Expression
 }
 
 /**

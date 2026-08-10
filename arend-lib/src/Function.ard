@@ -10,7 +10,8 @@
 
 \func \infixr 8 o {A B C : \Type} (g : B -> C) (f : A -> B) => \lam x => g (f x)
 
-\func IsInj {A B : \Set} (f : A -> B) => \Pi {a a' : A} -> f a = f a' -> a = a'
+\func IsInj {A B : \Set} (f : A -> B)
+  => \Pi {a a' : A} -> f a = f a' -> a = a'
   \where {
     \lemma comp {A B C : \Set} {f : A -> B} (fi : IsInj f) {g : B -> C} (gi : IsInj g) : IsInj (g o f)
       => \lam p => fi (gi p)
@@ -19,13 +20,22 @@
       => \lam {a} {a'} q => inv (p a) *> pmap g q *> p a'
   }
 
-\func IsSurj {A B : \Type} (f : A -> B) => \Pi (y : B) -> ∃ (x : A) (f x = y)
+\func IsSurj {A B : \Type} (f : A -> B)
+  => \Pi (y : B) -> ∃ (x : A) (f x = y)
   \where {
     \lemma comp {A B C : \Type} {f : A -> B} (fs : IsSurj f) {g : B -> C} (gs : IsSurj g) : IsSurj (g o f)
       => \lam z => \have | (inP (y,gy=z)) => gs z
                          | (inP (x,fx=y)) => fs y
                    \in inP (x, pmap g fx=y *> gy=z)
+
+    \lemma factor {A B C : \Type} {f : A -> B} {g : B -> C} (hs : IsSurj (\lam x => g (f x))) : IsSurj g
+      => \lam z => \case hs z \with {
+        | inP (x,p) => inP (f x, p)
+      }
   }
+
+\func IsSplitSurj {A B : \Type} (f : A -> B)
+  => ∃ (g : B -> A) ∀ y (f (g y) = y)
 
 \func assuming {A B : \Type} (f : (A -> B) -> B) (g : A -> B) => f g
 

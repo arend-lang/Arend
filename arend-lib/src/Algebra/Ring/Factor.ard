@@ -4,9 +4,9 @@
 \import Algebra.Meta
 \import Algebra.Monoid
 \import Algebra.Monoid.Prime
-\import Algebra.Monoid.Sub
+\import Algebra.Monoid.SubMonoid
 \import Algebra.Pointed
-\import Algebra.Pointed.Sub
+\import Algebra.Pointed.SubPointed
 \import Algebra.Ring
 \import Algebra.Ring.Ideal
 \import Algebra.Ring.RingHom

@@ -85,7 +85,7 @@
         | inl (k,p) => rewrite (arctan-coef-Rat.even p) zro<=ide
         | inr (k,p) => rewrite (arctan-coef-Rat.odd p, RatField.abs_*) $ RatField.<=_*_positive-left
           (transport2 (<=) (inv RatField.abs_pow) (RatField.pow_ide {k}) $ RatField.pow_<=-monotone abs>=0 $ later <=-refl) abs>=0
-          <=∘ transportInv (`<= 1) (ide-left *> abs-ofPos (RatField.finv>=0 $ fromInt_<= $ pos<=pos zero<=_))
+          <=∘ transportInv (<= 1) (ide-left *> abs-ofPos (RatField.finv>=0 $ fromInt_<= $ pos<=pos zero<=_))
                 (RatField.finv_<= {1} idp $ fromInt_<= $ pos<=pos $ <=_+ zero<=_ <=-refl <=∘ =_<= (inv p))
       }
 
@@ -102,7 +102,7 @@
 
     \lemma convertProof (|x|<1 : (norm x).U 1) : dist 0 x <LU convRadius (\lam n => A.fromRat (arctan-coef-Rat n))
       => \case U-rounded |x|<1 \with {
-        | inP (a,x<a,a<1) => transport (`<LU _) norm_dist $ convRadius.<LU-char x<a (arctan-conv-at-s (<=-less $ norm>=0 x<a) a<1)
+        | inP (a,x<a,a<1) => transport (<LU _) norm_dist $ convRadius.<LU-char x<a (arctan-conv-at-s (<=-less $ norm>=0 x<a) a<1)
       }
   }
 
@@ -172,13 +172,13 @@
             *> pmap (c *) (negative-right {_} {1})
             *> zro_*-right
             *> inv (pmap (2 * _ * Complex.fromReal __ * _) (arctan-coef-Rat.even p)
-              *> pmap (`* _) (ComplexField.zro_*-right {2 * i}) *> zro_*-left)
+              *> pmap (* _) (ComplexField.zro_*-right {2 * i}) *> zro_*-left)
           | inr (k, p) => *-comm *> inv *-assoc *> pmap (_ *) ComplexField.pow_*-comm *> inv *-assoc
-            *> pmap (`* _) {(1 - pow -1 n) * _ * _} {2 * i * Complex.fromReal _} (*-assoc {_} {1 - pow -1 n}
+            *> pmap (* _) {(1 - pow -1 n) * _ * _} {2 * i * Complex.fromReal _} (*-assoc {_} {1 - pow -1 n}
               *> pmap (_ *) *-comm *> inv *-assoc *> pmap2 (*) (pmap2 (*) {1 - pow -1 n}
                   (pmap (1 +) (pmap (\lam x => negative (pow -1 x)) p *> pmap negative ComplexField.negative_ide-right
                     *> ComplexField.negative-isInv *> pow_*2 *> pmap (pow __ k) (ComplexField.negative_* *> ide-left)
-                    *> ComplexField.pow_ide *> inv zro-left *> pmap (`+ 1) (inv natCoefZero)
+                    *> ComplexField.pow_ide *> inv zro-left *> pmap (+ 1) (inv natCoefZero)
                     *> inv (natCoefSuc 0)) *> +-comm *> inv (natCoefSuc 1))
                   (pmap (pow i) p *> *-comm *> pmap (i *) (pow_*2 *> pmap (pow __ k) Complex.iunit-square
                     *> pmap (pow __ k) (inv Complex.fromReal_negative *> pmap Complex.fromReal (RealAbGroup.negative-rat {1}))
@@ -209,7 +209,7 @@
 -- | $(1 + ix)(1 - ix) = 1 + x^2$ in $\mathbb{C}$.
 \private \lemma one-plus-ix-times-one-minus-ix {x : Real}
   : (1 + i * x) * (1 - i * x) = {Complex} 1 + x * x
-  => ext (equation.cRing, equation.cRing)
+  => complex-ext
 
 -- | $(1 + x^2)\,\exp(2i\,\arctan x) = (1 + ix)^2$ in $\mathbb{C}$, for $|x| < 1$.
 \private \lemma exp-complex-identity {x : Real} (|x|<1 : abs x < 1)
@@ -224,8 +224,8 @@
                | eqN : exp N = 1 - ix
                   => exp-log1p (negative ix) (\lam z => *-comm {_} {negative ix}) pnix
                | exp-arg : exp (2 * i * arctan x |x|<1) = exp P * exp (negative N)
-                  => pmap exp (inv (arctan-log-bridge |x|<1)) *> exp_+ (ComplexField.*-comm {P} {ComplexField.negative N})
-               | mul-cancel-helper {M : CMonoid} {A b c : M} (bc : b * c = 1) : (A * b) * (A * c) = A * A
+                  => pmap exp (inv (arctan-log-bridge |x|<1)) *> exp_+
+               | mul-cancel-helper {M : CMonoid.{0}} {A b c : M} (bc : b * c = 1) : (A * b) * (A * c) = A * A
                  => equation.cMonoid {bc}
           \in pmap (_ *) exp-arg
               *> pmap (__ * (exp P * exp (negative N))) (inv one-plus-ix-times-one-minus-ix *> pmap (_ *) (inv eqN))
@@ -266,7 +266,7 @@
   \where {
     -- | $2i\,y = i\,(2y)$ in $\mathbb{C}$.
     \private \lemma two-i-fromReal-comm {y : Real} : 2 * i * y = i * (2 * y)
-      => ext (equation.cRing, equation.cRing)
+      => complex-ext
 
     -- | Real part of the complex identity: $(1 + x^2)\,\cos(2\arctan x) = 1 - x^2$.
     \private \lemma Re-of-complex-identity {x : Real} (|x|<1 : abs x < 1)
@@ -294,7 +294,7 @@
   }
 
 -- | $(1 + x^2)\,\cos^2(\arctan x) = 1$.
-\private \lemma cos-arctan-sq {x : Real} (|x|<1 : abs x < 1)
+\lemma cos-arctan-sq {x : Real} (|x|<1 : abs x < 1)
   : (1 + x * x) * (cos (arctan x |x|<1) * cos (arctan x |x|<1)) = 1
   => equation.cRing *> pmap (\lam s => _ * _ + s * s) (inv (tan-arctan |x|<1)) *> pythagoras
 
@@ -312,6 +312,20 @@
   => pmap (\lam y => (1 + x * x) * y) (pmap cos linarith *> cos_+)
      *> Ring.ldistr_-
      *> pmap2 {Real} (-) (cos-arctan-sq |x|<1) (sin-arctan-sq |x|<1)
+
+{- | $(1 + x^2)\,\sin(2\arctan x) = 2x$ — product form of
+     $\sin(2\arctan x) = \tfrac{2x}{1+x^2}$, and the sine companion to
+     `cos-double-arctan`. Derived the same way, from `tan-arctan` and
+     `cos-arctan-sq`. -}
+\lemma sin-double-arctan {x : Real} (|x|<1 : abs x < 1)
+  : (1 + x * x) * sin (2 * arctan x |x|<1) = 2 * x
+  => \have
+      | double : sin (2 * arctan x |x|<1)
+               = cos (arctan x |x|<1) * sin (arctan x |x|<1)
+               + sin (arctan x |x|<1) * cos (arctan x |x|<1)
+        => pmap sin (linarith : 2 * arctan x |x|<1 = arctan x |x|<1 + arctan x |x|<1) *> sin_+
+      | tan : sin (arctan x |x|<1) = x * cos (arctan x |x|<1) => tan-arctan |x|<1
+     \in rewrite (double, tan) $ equation.cRing *> pmap (2 * x *) (cos-arctan-sq |x|<1) *> ide-right
 
 {- | Arctan addition formula, product (division-free) form:
      $\sin(\arctan a + \arctan b)\,(1 - ab) = (a + b)\,\cos(\arctan a + \arctan b)$. -}

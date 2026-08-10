@@ -24,6 +24,7 @@ public class ParametersCovarianceChecker extends CovarianceChecker {
       @Override
       public Void visitFieldCall(FieldCallExpression expr, Void params) {
         myVariables.remove(expr.getDefinition());
+        expr.getArgument().accept(this, null);
         return null;
       }
     };

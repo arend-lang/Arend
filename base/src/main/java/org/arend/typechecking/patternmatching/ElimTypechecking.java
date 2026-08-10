@@ -3,7 +3,6 @@ package org.arend.typechecking.patternmatching;
 import org.arend.core.constructor.*;
 import org.arend.core.context.Utils;
 import org.arend.core.context.binding.Binding;
-import org.arend.core.context.binding.LevelVariable;
 import org.arend.core.context.binding.TypedBinding;
 import org.arend.core.context.binding.inference.InferenceLevelVariable;
 import org.arend.core.context.param.DependentLink;
@@ -14,9 +13,10 @@ import org.arend.core.expr.visitor.NormalizeVisitor;
 import org.arend.core.pattern.*;
 import org.arend.core.sort.Level;
 import org.arend.core.sort.Sort;
+import org.arend.core.sort.SortExpression;
 import org.arend.core.subst.ExprSubstitution;
-import org.arend.core.subst.LevelPair;
-import org.arend.ext.core.ops.CMP;
+import org.arend.core.subst.Levels;
+import org.arend.ext.core.level.ConstLevel;
 import org.arend.ext.core.ops.NormalizationMode;
 import org.arend.ext.error.ErrorReporter;
 import org.arend.ext.error.MissingClausesError;
@@ -32,6 +32,7 @@ import org.arend.ext.util.Pair;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.math.BigInteger;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -43,9 +44,9 @@ public class ElimTypechecking {
   private Set<Integer> myUnusedClauses;
   private final PatternTypechecking.Mode myMode;
   private final Expression myExpectedType;
-  private final Integer myLevel;
-  private final Level myActualLevel;
-  private final int myActualLevelSub;
+  private final BigInteger myLevel;
+  private final ConstLevel myActualLevel;
+  private final BigInteger myActualLevelSub;
   private boolean myOK;
   private Stack<Util.ClauseElem> myContext;
   private List<Pair<List<Util.ClauseElem>, Boolean>> myMissingClauses;
@@ -55,13 +56,13 @@ public class ElimTypechecking {
   private List<ExtElimClause> myCoreClauses;
   private final int myNumberOfExternalParameters;
 
-  private static Integer getMinPlus1(Integer level1, Level l2, int sub) {
-    Integer level2 = !l2.isInfinity() && l2.isClosed() ? l2.getConstant() : null;
-    Integer result = level1 != null && level2 != null ? Integer.valueOf(Math.min(level1, level2 - sub)) : level2 != null ? Integer.valueOf(level2 - sub) : level1;
-    return result == null ? null : result + 1;
+  private static BigInteger getMinPlus1(BigInteger level1, ConstLevel l2, BigInteger sub) {
+    BigInteger level2 = l2.value();
+    BigInteger result = level1 != null && level2 != null ? level1.min(level2.subtract(sub)) : level2 != null ? level2.subtract(sub) : level1;
+    return result == null ? null : result.add(BigInteger.ONE);
   }
 
-  public ElimTypechecking(@Nullable ErrorReporter errorReporter, Equations equations, Expression expectedType, PatternTypechecking.Mode mode, @Nullable Integer level, @NotNull Level actualLevel, boolean isSFunc, List<? extends Concrete.FunctionClause> clauses, int numberOfExternalParameters, Concrete.SourceNode sourceNode) {
+  public ElimTypechecking(@Nullable ErrorReporter errorReporter, Equations equations, Expression expectedType, PatternTypechecking.Mode mode, @Nullable BigInteger level, @NotNull ConstLevel actualLevel, boolean isSFunc, List<? extends Concrete.FunctionClause> clauses, int numberOfExternalParameters, Concrete.SourceNode sourceNode) {
     myErrorReporter = errorReporter;
     myEquations = equations;
     myExpectedType = expectedType;
@@ -70,13 +71,13 @@ public class ElimTypechecking {
     myNumberOfExternalParameters = numberOfExternalParameters;
     mySourceNode = sourceNode;
 
-    int actualLevelSub = 0;
+    BigInteger actualLevelSub = BigInteger.ZERO;
     if (!actualLevel.isProp() && expectedType != null) {
       Expression pathType = expectedType.getPiParameters(null, false);
       for (DataCallExpression dataCall = pathType.cast(DataCallExpression.class); dataCall != null; dataCall = pathType.cast(DataCallExpression.class)) {
         if (dataCall.getDefinition() == Prelude.PATH) {
-          actualLevelSub++;
-          pathType = dataCall.getDefCallArguments().get(0).normalize(NormalizationMode.WHNF);
+          actualLevelSub = actualLevelSub.add(BigInteger.ONE);
+          pathType = dataCall.getDefCallArguments().getFirst().normalize(NormalizationMode.WHNF);
           LamExpression lam = pathType.cast(LamExpression.class);
           if (lam == null) {
             pathType = AppExpression.make(pathType, new ReferenceExpression(new TypedBinding("i", ExpressionFactory.Interval())), true);
@@ -88,20 +89,21 @@ public class ElimTypechecking {
         }
       }
 
-      Sort pathSort = pathType.getSortOfType();
+      SortExpression pathSortExpr = pathType.getSortExpressionOfType();
+      Sort pathSort = pathSortExpr == null ? null : pathSortExpr.withInfLevel();
       if (pathSort != null && !pathSort.getHLevel().isInfinity()) {
         actualLevel = pathSort.getHLevel();
-        if (!actualLevel.isInfinity() && actualLevel.isClosed() && actualLevel.getConstant() - actualLevelSub < -1) {
-          actualLevelSub = actualLevel.getConstant() + 1;
+        if (!actualLevel.isInfinity() && actualLevel.value().subtract(actualLevelSub).compareTo(ConstLevel.PROP.value()) < 0) {
+          actualLevelSub = actualLevel.value().add(BigInteger.ONE);
         }
       } else {
-        actualLevelSub = 0;
+        actualLevelSub = BigInteger.ZERO;
       }
     }
 
     myLevel = getMinPlus1(level, actualLevel, actualLevelSub);
     myActualLevel = isSFunc ? null : actualLevel;
-    myActualLevelSub = isSFunc ? 0 : actualLevelSub;
+    myActualLevelSub = isSFunc ? BigInteger.ZERO : actualLevelSub;
   }
 
   public ElimTypechecking(@Nullable ErrorReporter errorReporter, Equations equations, Expression expectedType, PatternTypechecking.Mode mode, List<? extends Concrete.FunctionClause> clauses, Concrete.SourceNode sourceNode) {
@@ -110,8 +112,8 @@ public class ElimTypechecking {
     myExpectedType = expectedType;
     myMode = mode;
     myLevel = null;
-    myActualLevel = Level.INFINITY;
-    myActualLevelSub = 0;
+    myActualLevel = ConstLevel.INFINITY;
+    myActualLevelSub = BigInteger.ZERO;
     myClauses = clauses;
     myNumberOfExternalParameters = 0;
     mySourceNode = sourceNode;
@@ -252,7 +254,7 @@ public class ElimTypechecking {
           clauses.remove(i--);
         }
       }
-      if (errorClause != null) {
+      if (errorClause != null && myErrorReporter != null) {
         myErrorReporter.report(new TypecheckingError("Non-interval clauses must be placed before the interval ones", errorClause));
       }
     } else {
@@ -288,7 +290,7 @@ public class ElimTypechecking {
       if (elimParams.isEmpty()) {
         for (DependentLink link = parameters; link.hasNext(); link = link.getNext()) {
           link = link.getNextTyped(null);
-          List<ConCallExpression> conCalls = getMatchedConstructors(TypeConstructorExpression.unfoldType(link.getTypeExpr()));
+          List<ConCallExpression> conCalls = getMatchedConstructors(TypeConstructorExpression.unfoldType(link.getType()));
           if (conCalls != null && conCalls.isEmpty()) {
             emptyLink = link;
             break;
@@ -296,7 +298,7 @@ public class ElimTypechecking {
         }
       } else {
         for (DependentLink link : elimParams) {
-          List<ConCallExpression> conCalls = getMatchedConstructors(TypeConstructorExpression.unfoldType(link.getTypeExpr()));
+          List<ConCallExpression> conCalls = getMatchedConstructors(TypeConstructorExpression.unfoldType(link.getType()));
           if (conCalls != null && conCalls.isEmpty()) {
             emptyLink = link;
             break;
@@ -398,7 +400,7 @@ public class ElimTypechecking {
     List<ConCallExpression> conCalls = paramSpec2.get(link);
     Expression type = null;
     if (conCalls == null) {
-      type = TypeConstructorExpression.unfoldType(link.getTypeExpr().subst(substitution));
+      type = TypeConstructorExpression.unfoldType(link.getType().subst(substitution));
       conCalls = type instanceof DataCallExpression ? ((DataCallExpression) type).getMatchedConstructors() : null;
     }
 
@@ -413,12 +415,12 @@ public class ElimTypechecking {
       Boolean isEmpty = ConstructorExpressionPattern.isArrayEmpty(type);
       conPatterns = new ArrayList<>(2);
       if (isEmpty == null || isEmpty.equals(true)) {
-        conPatterns.add(new ConstructorExpressionPattern(new FunCallExpression(Prelude.EMPTY_ARRAY, LevelPair.STD, null, elementsType), null, isEmpty, Collections.emptyList()));
+        conPatterns.add(new ConstructorExpressionPattern(new FunCallExpression(Prelude.EMPTY_ARRAY, Levels.EMPTY, null, elementsType), null, isEmpty, Collections.emptyList()));
       }
       if (isEmpty == null || isEmpty.equals(false)) {
         Expression length = ((ClassCallExpression) type).getAbsImplementationHere(Prelude.ARRAY_LENGTH);
         ClassCallExpression.ClassCallBinding thisBinding = ((ClassCallExpression) type).getThisBinding();
-        conPatterns.add(new ConstructorExpressionPattern(new FunCallExpression(Prelude.ARRAY_CONS, LevelPair.STD, length == null ? FieldCallExpression.make(Prelude.ARRAY_LENGTH, new ReferenceExpression(thisBinding)) : length, elementsType), thisBinding, isEmpty, Collections.emptyList()));
+        conPatterns.add(new ConstructorExpressionPattern(new FunCallExpression(Prelude.ARRAY_CONS, Levels.EMPTY, length == null ? FieldCallExpression.make(Prelude.ARRAY_LENGTH, new ReferenceExpression(thisBinding)) : length, elementsType), thisBinding, isEmpty, Collections.emptyList()));
       }
     } else {
       conPatterns = null;
@@ -448,7 +450,7 @@ public class ElimTypechecking {
           boolean hasEmpty = false;
           if (result.size() == 1) {
             boolean onlyVars = true;
-            for (ExpressionPattern pattern : result.get(0)) {
+            for (ExpressionPattern pattern : result.getFirst()) {
               if (!(pattern instanceof BindingPattern || pattern instanceof EmptyPattern)) {
                 onlyVars = false;
                 break;
@@ -476,7 +478,7 @@ public class ElimTypechecking {
         substitution.remove(link);
 
         if (firstHasEmpty && totalResult.size() > 1) {
-          totalResult.remove(0);
+          totalResult.removeFirst();
         }
       }
       return totalResult;
@@ -489,16 +491,16 @@ public class ElimTypechecking {
     }
   }
 
-  private static int numberOfIntervals(List<? extends ExpressionPattern> patterns) {
-    int result = 0;
+  private static BigInteger numberOfIntervals(List<? extends ExpressionPattern> patterns) {
+    BigInteger result = BigInteger.ZERO;
     for (ExpressionPattern pattern : patterns) {
       if (pattern.getDefinition() instanceof Constructor) {
         Body body = ((Constructor) pattern.getDefinition()).getBody();
         if (body instanceof IntervalElim) {
-          result += ((IntervalElim) body).getNumberOfTotalElim();
+          result = result.add(BigInteger.valueOf(((IntervalElim) body).getNumberOfTotalElim()));
         }
       }
-      result += numberOfIntervals(pattern.getSubPatterns());
+      result = result.add(numberOfIntervals(pattern.getSubPatterns()));
     }
     return result;
   }
@@ -549,7 +551,7 @@ public class ElimTypechecking {
     }
 
     if (parameters.hasNext() && !parameters.getNext().hasNext()) {
-      DataCallExpression dataCall = parameters.getTypeExpr().cast(DataCallExpression.class);
+      DataCallExpression dataCall = parameters.getType().cast(DataCallExpression.class);
       if (dataCall != null && dataCall.getDefinition() == Prelude.INTERVAL) {
         myErrorReporter.report(new TypecheckingError("Pattern matching on the interval is not allowed here", mySourceNode));
         return null;
@@ -567,7 +569,7 @@ public class ElimTypechecking {
       if (!elimParams.isEmpty() && !elimParams.contains(param)) {
         continue;
       }
-      DataCallExpression dataCall = param.getTypeExpr().normalize(NormalizationMode.WHNF).cast(DataCallExpression.class);
+      DataCallExpression dataCall = param.getType().normalize(NormalizationMode.WHNF).cast(DataCallExpression.class);
       if (dataCall != null) {
         Map<DependentLink, List<Pair<ExpressionPattern, Map<DependentLink, Constructor>>>> newParamSpec = computeParamSpec(param, dataCall, elimParams, paramSpec2, parameters);
         if (newParamSpec == null) {
@@ -609,7 +611,7 @@ public class ElimTypechecking {
     }
 
     if (myLevel != null) {
-      missingClauses.removeIf(clause -> numberOfIntervals(clause) > myLevel);
+      missingClauses.removeIf(clause -> numberOfIntervals(clause).compareTo(myLevel) > 0);
     }
 
     if (missingClauses.isEmpty()) {
@@ -630,7 +632,7 @@ public class ElimTypechecking {
         if (patterns.get(i) instanceof BindingPattern && !paramSpec.containsKey(param)) {
           ConstructorExpressionPattern newPattern;
           List<ExpressionPattern> subPatterns;
-          Expression type = ((BindingPattern) patterns.get(i)).getBinding().getTypeExpr().getUnderlyingExpression();
+          Expression type = ((BindingPattern) patterns.get(i)).getBinding().getType().getUnderlyingExpression();
           if (type instanceof SigmaExpression) {
             subPatterns = new ArrayList<>();
             newPattern = new ConstructorExpressionPattern((SigmaExpression) type, subPatterns);
@@ -691,7 +693,7 @@ public class ElimTypechecking {
         }
         for (; link.hasNext(); link = link.getNext()) {
           link = link.getNextTyped(null);
-          List<ConCallExpression> conCalls = getMatchedConstructors(link.getTypeExpr().subst(substitution));
+          List<ConCallExpression> conCalls = getMatchedConstructors(link.getType().subst(substitution));
           if (conCalls != null && conCalls.isEmpty()) {
             continue loop;
           }
@@ -714,7 +716,7 @@ public class ElimTypechecking {
 
   private List<IntervalElim.CasePair> clausesToIntervalElim(List<? extends ElimClause<? extends Pattern>> clauses, int prefix, DependentLink parameters) {
     List<IntervalElim.CasePair> result = new ArrayList<>();
-    for (int i = 0; i < clauses.get(0).getPatterns().size(); i++) {
+    for (int i = 0; i < clauses.getFirst().getPatterns().size(); i++) {
       Expression left = null;
       Expression right = null;
 
@@ -793,10 +795,10 @@ public class ElimTypechecking {
     try (Utils.ContextSaver ignored = new Utils.ContextSaver(myContext)) {
       int index = 0;
       loop:
-      for (; index < clauses.get(0).getPatterns().size(); index++) {
+      for (; index < clauses.getFirst().getPatterns().size(); index++) {
         for (ExtElimClause clause : clauses) {
           if (!(clause.getPatterns().get(index) instanceof BindingPattern)) {
-            if (clauses.get(0).getPatterns().get(index) instanceof BindingPattern && clause.getPatterns().get(index) instanceof ConstructorPattern) {
+            if (clauses.getFirst().getPatterns().get(index) instanceof BindingPattern && clause.getPatterns().get(index) instanceof ConstructorPattern) {
               Definition definition = clause.getPatterns().get(index).getDefinition();
               if (definition == Prelude.LEFT || definition == Prelude.RIGHT) {
                 final int finalIndex = index;
@@ -810,8 +812,8 @@ public class ElimTypechecking {
       }
 
       // If all patterns are variables
-      if (index == clauses.get(0).getPatterns().size()) {
-        ExtElimClause clause = clauses.get(0);
+      if (index == clauses.getFirst().getPatterns().size()) {
+        ExtElimClause clause = clauses.getFirst();
         myUnusedClauses.remove(clause.index);
         List<Integer> indices = clause.argIndices;
         if (index > clause.numberOfFakeVars) {
@@ -824,7 +826,7 @@ public class ElimTypechecking {
       }
 
       for (int i = 0; i < index; i++) {
-        myContext.push(new Util.PatternClauseElem(clauses.get(0).getPatterns().get(i)));
+        myContext.push(new Util.PatternClauseElem(clauses.getFirst().getPatterns().get(i)));
       }
 
       ExtElimClause conClause = null;
@@ -851,7 +853,7 @@ public class ElimTypechecking {
         if (dataType.hasIndexedConstructors() || dataType == Prelude.PATH) {
           DataCallExpression dataCall;
           if (constructor == Prelude.FIN_ZERO || constructor == Prelude.FIN_SUC) {
-            dataCall = Fin(Suc(((ConCallExpression) someConPattern.getDataExpression()).getDataTypeArguments().get(0).subst(conClause.substitution)));
+            dataCall = Fin(Suc(((ConCallExpression) someConPattern.getDataExpression()).getDataTypeArguments().getFirst().subst(conClause.substitution)));
           } else {
             dataCall = (DataCallExpression) someConPattern.getDataExpression().subst(conClause.substitution).getType();
           }
@@ -905,34 +907,34 @@ public class ElimTypechecking {
       }
 
       if (dataType != null && dataType.isSquashed() && myErrorReporter != null) {
-        if (myActualLevel != null && !Level.compare(myActualLevel, dataType.getSort().getHLevel().add(myActualLevelSub), CMP.LE, myEquations, getClause(conClause.index, someConPattern))) {
-          myErrorReporter.report(new SquashedDataError(dataType, myActualLevel, myActualLevelSub, getClause(conClause.index, someConPattern)));
+        Sort dataSort = dataType.getSortExpression().withInfLevel();
+        if (myActualLevel != null && !myActualLevel.isLessOrEquals(dataSort.getHLevel().add(myActualLevelSub))) {
+          myErrorReporter.report(new SquashedDataError(dataType, getClause(conClause.index, someConPattern)));
         }
 
-        boolean ok = !dataType.isTruncated() || myLevel != null && myLevel <= dataType.getTruncatedLevel() + 1;
+        boolean ok = !dataType.isTruncated() || myLevel != null && myLevel.compareTo(dataType.getTruncatedLevel().add(BigInteger.ONE)) <= 0;
         if (!ok) {
           Expression type = myExpectedType.getType();
           if (type != null) {
             type = type.normalize(NormalizationMode.WHNF);
-            UniverseExpression universe = type.cast(UniverseExpression.class);
-            if (universe != null) {
-              ok = Level.compare(universe.getSort().getHLevel(), dataType.getSort().getHLevel(), CMP.LE, myEquations, getClause(conClause.index, someConPattern));
+            if (type instanceof UniverseExpression universe && universe.getSortExpression() instanceof SortExpression.Const(Sort typeSort)) {
+              ok = typeSort.getHLevel().isLessOrEquals(dataSort.getHLevel());
             } else {
-              InferenceLevelVariable pl = new InferenceLevelVariable(LevelVariable.LvlType.PLVL, false, getClause(conClause.index, someConPattern));
+              InferenceLevelVariable pl = new InferenceLevelVariable(getClause(conClause.index, someConPattern), true);
               myEquations.addVariable(pl);
-              ok = type.isLessOrEquals(new UniverseExpression(new Sort(new Level(pl), dataType.getSort().getHLevel())), myEquations, getClause(conClause.index, someConPattern));
+              ok = type.isLessOrEquals(new UniverseExpression(new Sort(new Level(pl), dataSort.getHLevel())), myEquations, getClause(conClause.index, someConPattern));
             }
           }
         }
         if (!ok) {
-          myErrorReporter.report(new TruncatedDataError(dataType, myExpectedType, getClause(conClause.index, someConPattern)));
+          myErrorReporter.report(new TruncatedDataError(dataType, dataSort, myExpectedType, getClause(conClause.index, someConPattern)));
           myOK = false;
         }
       }
 
-      if (myLevel != null && !branchKeys.isEmpty() && !(branchKeys.get(0) instanceof SingleConstructor)) {
+      if (myLevel != null && !branchKeys.isEmpty() && !(branchKeys.getFirst() instanceof SingleConstructor)) {
         //noinspection ConstantConditions
-        branchKeys.removeIf(key -> numberOfIntervals + (key.getBody() instanceof IntervalElim ? ((IntervalElim) key.getBody()).getNumberOfTotalElim() : 0) > myLevel);
+        branchKeys.removeIf(key -> BigInteger.valueOf(numberOfIntervals + (key.getBody() instanceof IntervalElim ? ((IntervalElim) key.getBody()).getNumberOfTotalElim() : 0)).compareTo(myLevel) > 0);
       }
 
       boolean hasVars = false;
@@ -946,8 +948,8 @@ public class ElimTypechecking {
         } else {
           Definition def = clause.getPatterns().get(index).getDefinition();
           BranchKey key = def instanceof Constructor ? (Constructor) def : def == Prelude.EMPTY_ARRAY || def == Prelude.ARRAY_CONS ? new ArrayConstructor((DConstructor) def, arrayElementsType != null, arrayLength != null) : null;
-          if (key == null && !branchKeys.isEmpty() && branchKeys.get(0) instanceof SingleConstructor) {
-            key = branchKeys.get(0);
+          if (key == null && !branchKeys.isEmpty() && branchKeys.getFirst() instanceof SingleConstructor) {
+            key = branchKeys.getFirst();
           }
           if (key != null) {
             branchKeyMap.computeIfAbsent(key, k -> new ArrayList<>()).add(clause);
@@ -1018,7 +1020,7 @@ public class ElimTypechecking {
                     link = link.getNext();
                   }
                 }
-                substExpr = new NewExpression(null, new ClassCallExpression(classCall.getDefinition(), classCall.getLevels(), implementations, Sort.PROP, UniverseKind.NO_UNIVERSES));
+                substExpr = new NewExpression(null, new ClassCallExpression(classCall.getDefinition(), classCall.getLevels(), implementations));
               } else if (someExpr instanceof SigmaExpression) {
                 substExpr = new TupleExpression(arguments, (SigmaExpression) someExpr);
                 conParameters = DependentLink.Helper.copy(conParameters);
@@ -1041,7 +1043,7 @@ public class ElimTypechecking {
               if (arrayElementsType != null) {
                 arguments.add(arrayElementsType);
               }
-              substExpr = FunCallExpression.make(((ArrayConstructor) branchKey).getConstructor(), someConPattern.getLevels(), arguments);
+              substExpr = FunCallExpression.make(((ArrayConstructor) branchKey).getConstructor(), Levels.EMPTY, arguments);
               conParameters = branchKey.getParameters(someConPattern);
             } else {
               throw new IllegalStateException();
@@ -1065,14 +1067,14 @@ public class ElimTypechecking {
               ExpressionPattern pattern = oldPatterns.get(index + 2);
               if (pattern instanceof BindingPattern) {
                 Binding binding = pattern.getBinding();
-                Expression type = binding.getTypeExpr().normalize(NormalizationMode.WHNF);
+                Expression type = binding.getType().normalize(NormalizationMode.WHNF);
                 if (type instanceof ClassCallExpression classCall && classCall.getDefinition() == Prelude.DEP_ARRAY) {
                   Expression length = classCall.getImplementationHere(Prelude.ARRAY_LENGTH, new ReferenceExpression(binding));
                   if (length != null) {
                     length = length.normalize(NormalizationMode.WHNF);
                     if (length instanceof ReferenceExpression && ((ReferenceExpression) length).getBinding() == patternBinding) {
                       Expression elementsType = classCall.getImplementationHere(Prelude.ARRAY_ELEMENTS_TYPE, new ReferenceExpression(binding));
-                      newSubstitution.addSubst(binding, new FunCallExpression(Prelude.EMPTY_ARRAY, classCall.getLevels(), null, elementsType != null ? elementsType : FieldCallExpression.make(Prelude.ARRAY_ELEMENTS_TYPE, new ReferenceExpression(classCall.getThisBinding()))));
+                      newSubstitution.addSubst(binding, new FunCallExpression(Prelude.EMPTY_ARRAY, Levels.EMPTY, null, elementsType != null ? elementsType : FieldCallExpression.make(Prelude.ARRAY_ELEMENTS_TYPE, new ReferenceExpression(classCall.getThisBinding()))));
                     }
                   }
                 }

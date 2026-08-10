@@ -77,7 +77,7 @@ public class UnfoldVisitor extends SubstVisitor {
   public Expression visitFieldCall(FieldCallExpression expr, Void params) {
     if (!expr.getDefinition().isProperty() && (myUnfoldFields == UnfoldFields.ALL_FIELDS || myUnfoldFields == UnfoldFields.ONLY_PARAMETERS && expr.getDefinition().getReferable().isParameterField() || myVariables.contains(expr.getDefinition()))) {
       Expression result = NormalizeVisitor.INSTANCE.evalFieldCall(expr.getDefinition(), expr.getArgument());
-      if (result != null) {
+      if (result != null && !NormalizeVisitor.compareFieldCalls(expr, result)) {
         if (myUnfolded != null) {
           myUnfolded.add(expr.getDefinition());
         }

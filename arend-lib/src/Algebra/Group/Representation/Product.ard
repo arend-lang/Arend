@@ -1,5 +1,5 @@
 \import Algebra.Group
-\import Algebra.Group.Representation.Category
+\import Algebra.Group.Representation.InterwiningMap
 \import Algebra.Group.Representation
 \import Algebra.Meta
 \import Algebra.Module
@@ -14,15 +14,15 @@
   | LModule => ProductLModule R A B
   | ** g (a, b) => (g A.** a, g B.** b)
   | **-assoc => rewrite (A.**-assoc, B.**-assoc) idp
-  | id-action => rewrite (A.id-action, B.id-action) idp
+  | **_ide => rewrite (A.**_ide, B.**_ide) idp
   | **-ldistr => rewrite (A.**-ldistr, B.**-ldistr) idp
-  | **-*c => rewrite (A.**-*c, B.**-*c) idp
+  | **_*c => rewrite (A.**_*c, B.**_*c) idp
   \where {
     \func in_1 {R : Ring} {G : Group} (A B : LinRepres R G) : InterwiningMap A (ProductLRepres A B) \cowith
       | func a => (a, 0)
       | func-+ {a}{b} => rewrite (pmap (\lam z => (a A.+ b, z)) (inv B.zro-right)) idp
       | func-*c{r} {_} => rewrite (inv $ B.*c_zro-right {r}, inv aux, B.*c_zro-right) idp
-      | func-** {e} {g} => rewrite (pmap (\lam z => (g A.** e, z) )(inv $ B.g**-zro {g})) idp
+      | func-** {e} {g} => rewrite (pmap (\lam z => (g A.** e, z) )(inv $ B.**_zro {g})) idp
       \where {
         \func aux {r : R}{a : A}{b : B} : r *c (a, b) = (r *c a, r *c b) => idp
       }
@@ -30,7 +30,7 @@
       | func b => (0, b)
       | func-+ {a}{b} => rewrite (pmap (\lam z => (z, a B.+ b)) (inv A.zro-right)) idp
       | func-*c {r} {_} => rewrite (inv $ A.*c_zro-right {r}, inv aux, A.*c_zro-right) idp
-      | func-** {e} {g} => rewrite (pmap (\lam z => (z, g B.** e) )(inv $ A.g**-zro {g})) idp
+      | func-** {e} {g} => rewrite (pmap (\lam z => (z, g B.** e) )(inv $ A.**_zro {g})) idp
       \where {
         \func aux {r : R}{a : A}{b : B} : r *c (a, b) = (r *c a, r *c b) => idp
       }

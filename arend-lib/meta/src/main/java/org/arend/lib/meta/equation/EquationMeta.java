@@ -25,11 +25,11 @@ import java.util.*;
 public class EquationMeta extends BaseEquationMeta {
   public final StdExtension ext;
 
-  @Dependency                                   CoreClassDefinition Equiv;
-  @Dependency(name = "Map.A")                   CoreClassField equivLeft;
-  @Dependency(name = "Map.B")                   CoreClassField equivRight;
+  @Dependency                                   CoreClassDefinition QEquiv;
+  @Dependency(name = "TypeMap.A")               CoreClassField equivLeft;
+  @Dependency(name = "TypeMap.B")               CoreClassField equivRight;
   @Dependency                                   ArendRef idEquiv;
-  @Dependency                                   ArendRef transEquiv;
+  @Dependency                                   ArendRef transQEquiv;
 
   public record TransitivityInstanceCache(CoreFunctionDefinition instance, CoreClassField relationField) {}
 

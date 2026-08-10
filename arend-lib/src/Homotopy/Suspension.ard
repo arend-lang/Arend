@@ -10,7 +10,7 @@
 
     \func pointed (A : \Type) => \new Pointed (Susp A) north
 
-    \func pushout (A : \Type) => pushoutData {A} (\lam _ => ()) (\lam _ => ())
+    \func pushout.{u} (A : \Type u) => pushoutData {A} (\lam _ => ()) (\lam _ => ())
   }
 
 \cons north {A : \Type} : Susp A => pinl ()

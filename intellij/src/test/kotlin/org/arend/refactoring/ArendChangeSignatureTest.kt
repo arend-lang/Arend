@@ -83,9 +83,9 @@ class ArendChangeSignatureTest: ArendChangeSignatureTestBase() {
     """, listOf(1, -2, 3))
 
     fun testLevelsInSignature() = changeSignature("""
-           \func \infix 1 foo{-caret-} \plevels p1 <= p2 \hlevels h1 >= h2 >= h3 \alias fubar : Nat => 101
+           \func \infix 1 foo{-caret-} \alias fubar .{p1, p2} : Nat => 101
     """, """
-           \func \infix 1 foobar \plevels p1 <= p2 \hlevels h1 >= h2 >= h3 \alias fubar (A : \Type) : Nat => 101
+           \func \infix 1 foobar \alias fubar .{p1, p2} (A : \Type) : Nat => 101
     """, listOf("A"), listOf(Pair("A", Pair(true, "\\Type"))), "foobar")
 
     fun testRenameParameters() = changeSignature("""
@@ -208,32 +208,32 @@ class ArendChangeSignatureTest: ArendChangeSignatureTestBase() {
          | suc n' => \infixl 1 consSuc (MyData {X} {Y} x y n') (MyData {X} {Y} x y n')
 
        \func usage (n : Nat) (d : M.MyData Nat Nat n) : M.MyData 1 1 n \with
-         | zero, M.consZero p => M.MyData.consZero {_} {_} {1} {1} idp
-         | suc n', M.consSuc d d2 => M.MyData.consSuc (usage n' d) (usage n' d)
+         | zero, M.consZero p => (M.MyData.consZero) {_} {_} {1} {1} idp
+         | suc n', M.consSuc d d2 => (M.MyData.consSuc) (usage n' d) (usage n' d)
 
 
        \module M2 \where {
          \open M (consZero, consSuc, MyData)
-         \func bar : MyData {Nat} {Nat} 1 1 1 => consZero idp consSuc (consZero) {_} {_} {1} {1} idp
+         \func bar : MyData {Nat} {Nat} 1 1 1 => (consZero) idp consSuc (consZero) {_} {_} {1} {1} idp
        }
 
-       \func bar2 => M.consZero idp M.MyData.consSuc (M.consZero) {_} {_} {1} {1} idp
+       \func bar2 => (M.consZero) idp M.MyData.consSuc (M.consZero) {_} {_} {1} {1} idp
     """, """
        \module M \where \data MyData2 (X : \Type) (n : Nat) (y x : X) \elim n
          | zero => \infixl 2 consZero (x = x)
          | suc n' => \infixl 1 consSuc (MyData2 X n' y x) (MyData2 X n' y x)
 
        \func usage (n : Nat) (d : M.MyData2 _ n Nat Nat) : M.MyData2 _ n 1 1 \with
-         | zero, M.consZero p => M.consZero {_} {1} {1} idp
+         | zero, M.consZero p => (M.consZero) {_} {1} {1} idp
          | suc n', d M.consSuc d2 => (usage n' d) M.consSuc (usage n' d)
 
 
        \module M2 \where {
          \open M (consZero, consSuc, MyData2)
-         \func bar : MyData2 Nat 1 1 1 => consZero idp consSuc (consZero) {_} {1} {1} idp
+         \func bar : MyData2 Nat 1 1 1 => (consZero) idp consSuc (consZero) {_} {1} {1} idp
        }
 
-       \func bar2 => M.consZero idp M.consSuc (M.consZero) {_} {1} {1} idp
+       \func bar2 => (M.consZero) idp M.consSuc (M.consZero) {_} {1} {1} idp
     """, listOf(Pair(-1, "X"),
                 Pair(5, "n"),
                 Pair(4, "y"),
@@ -465,13 +465,13 @@ class ArendChangeSignatureTest: ArendChangeSignatureTestBase() {
         \func usage1 (a b c : Nat) => a +++ b +++ c
       }
 
-      \func usage2 (a b c : Nat) => foo.+++ {_} {0} (foo.+++ {_} {0} a b) c
+      \func usage2 (a b c : Nat) => (a foo.+++ {_} {0} b) foo.+++ {_} {0} c
     }
 
     \class Bar \extends Foo {
-      \func lol1 => Foo.foo.+++ {_} {0} 101 102
+      \func lol1 => 101 Foo.foo.+++ {_} {0} 102
     } \where {
-      \func lol2 => Foo.foo.+++ {\new Foo {101} 102} {0} 101 102
+      \func lol2 => 101 Foo.foo.+++ {\new Foo {101} 102} {0} 102
     }
     """, """
     \class Foo {u : Nat} {

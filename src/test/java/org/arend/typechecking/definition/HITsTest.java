@@ -28,118 +28,128 @@ public class HITsTest extends TypeCheckingTestCase {
 
   @Test
   public void s1Test() {
-    typeCheckModule(
-      "\\data S1 | base | loop : base = base\n" +
-      "\\func f : base = base => loop\n" +
-      "\\func g (x : S1) : S1\n" +
-      "  | base => base\n" +
-      "  | loop => f");
+    typeCheckModule("""
+      \\data S1 | base | loop : base = base
+      \\func f : base = base => loop
+      \\func g (x : S1) : S1
+        | base => base
+        | loop => f
+      """);
   }
 
   @Test
   public void goalTest() {
-    typeCheckModule(
-      "\\data S1 | base | loop : base = base\n" +
-      "\\func f : base = base => loop\n" +
-      "\\func g (x : S1) : S1\n" +
-      "  | base => base\n" +
-      "  | loop => {?}", 1);
+    typeCheckModule("""
+      \\data S1 | base | loop : base = base
+      \\func f : base = base => loop
+      \\func g (x : S1) : S1
+        | base => base
+        | loop => {?}
+      """, 1);
     assertThatErrorsAre(Matchers.goal(0));
   }
 
   @Test
   public void depTest() {
-    typeCheckModule(
-      "\\data S1 | base | loop : base = base\n" +
-      "\\func f : base = base => loop\n" +
-      "\\func g (x : S1) : x = x\n" +
-      "  | base => idp\n" +
-      "  | loop => path (\\lam i => idp)");
+    typeCheckModule("""
+      \\data S1 | base | loop : base = base
+      \\func f : base = base => loop
+      \\func g (x : S1) : x = x
+        | base => idp
+        | loop => path (\\lam i => idp)
+      """);
   }
 
   @Test
   public void s1TestError() {
-    typeCheckModule(
-      "\\data S1 | base | base' | loop : base = base\n" +
-      "\\func g (x : S1) : S1\n" +
-      "  | base => base'\n" +
-      "  | base' => base'\n" +
-      "  | loop => loop", 2);
+    typeCheckModule("""
+      \\data S1 | base | base' | loop : base = base
+      \\func g (x : S1) : S1
+        | base => base'
+        | base' => base'
+        | loop => loop
+      """, 2);
   }
 
   @Test
   public void s1TestError2() {
-    typeCheckModule(
-      "\\data S1 | base | loop I : base = base\n" +
-      "\\func f : base = base => loop left\n" +
-      "\\func g (x : S1) : S1\n" +
-      "  | base => base\n" +
-      "  | loop => f", 1);
+    typeCheckModule("""
+      \\data S1 | base | loop I : base = base
+      \\func f : base = base => loop left
+      \\func g (x : S1) : S1
+        | base => base
+        | loop => f
+      """, 1);
     assertThatErrorsAre(Matchers.typecheckingError(NotEnoughPatternsError.class));
   }
 
   @Test
   public void constructorWithConditions() {
-    typeCheckModule(
-      "\\data S1 | base | loop : base = base\n" +
-      "\\data S1' | base' | loop' Nat : base' = base' \\with { | zero => idp }\n" +
-      "\\func f : base' = base' => loop' 0\n" +
-      "\\func f' => loop'\n" +
-      "\\func f'' : Nat -> base' = base' => \\lam n => f' n\n" +
-      "\\func fTest : f = idp => idp\n" +
-      "\\func g (x : S1') : S1\n" +
-      "  | base' => base\n" +
-      "  | loop' 0 => idp\n" +
-      "  | loop' (suc _) => loop");
+    typeCheckModule("""
+      \\data S1 | base | loop : base = base
+      \\data S1' | base' | loop' Nat : base' = base' \\with { | zero => idp }
+      \\func f : base' = base' => loop' 0
+      \\func f' => loop'
+      \\func f'' : Nat -> base' = base' => \\lam n => f' n
+      \\func fTest : f = idp => idp
+      \\func g (x : S1') : S1
+        | base' => base
+        | loop' 0 => idp
+        | loop' (suc _) => loop
+      """);
   }
 
   @Test
   public void constructorWithConditionsError() {
-    typeCheckModule(
-      "\\data S1 | base | loop : base = base\n" +
-      "\\data S1' | base' | loop' Nat : base' = base' \\with { | zero => idp }\n" +
-      "\\func g (x : S1') : S1\n" +
-      "  | base' => base\n" +
-      "  | loop' _ => loop", 1);
+    typeCheckModule("""
+      \\data S1 | base | loop : base = base
+      \\data S1' | base' | loop' Nat : base' = base' \\with { | zero => idp }
+      \\func g (x : S1') : S1
+        | base' => base
+        | loop' _ => loop
+      """, 1);
   }
 
   @Test
   public void s2Test() {
-    typeCheckModule(
-      "\\func idpe {A : \\Type} (a : A) : a = a => idp\n" +
-      "\\data S2 | base | loop : idpe base = idpe base\n" +
-      "\\func f : idpe base = idpe base => loop\n" +
-      "\\func fLeft : loop @ left = idpe base => idp\n" +
-      "\\func fRight : loop @ right = idpe base => idp\n" +
-      "\\func fTop : path (\\lam i => loop @ i @ left) = idpe base => idp\n" +
-      "\\func fBottom : path (\\lam i => loop @ i @ right) = idpe base => idp\n" +
-      "\\func g (x : S2) : S2\n" +
-      "  | base => base\n" +
-      "  | loop => path (\\lam i => path (\\lam j => loop @ j @ i))");
+    typeCheckModule("""
+      \\func idpe {A : \\Type} (a : A) : a = a => idp
+      \\data S2 | base | loop : idpe base = idpe base
+      \\func f : idpe base = idpe base => loop
+      \\func fLeft : loop @ left = idpe base => idp
+      \\func fRight : loop @ right = idpe base => idp
+      \\func fTop : path (\\lam i => loop @ i @ left) = idpe base => idp
+      \\func fBottom : path (\\lam i => loop @ i @ right) = idpe base => idp
+      \\func g (x : S2) : S2
+        | base => base
+        | loop => path (\\lam i => path (\\lam j => loop @ j @ i))
+      """);
   }
 
   @Test
   public void mixedS2Test() {
-    typeCheckModule(
-      "\\func idpe {A : \\Type} (a : A) : a = a => idp\n" +
-      "\\data S2 | base | loop I : base = base \\with { | left => idp | right => idp }\n" +
-      "\\func f : I -> base = base => \\lam i => loop i\n" +
-      "\\func f' (i : I) : base = base => loop i\n" +
-      "\\func fLeft : loop left = idpe base => idp\n" +
-      "\\func fRight : loop right = idpe base => idp\n" +
-      "\\func fTop : path (\\lam i => loop i @ left) = idpe base => idp\n" +
-      "\\func fBottom : path (\\lam i => loop i @ right) = idpe base => idp\n" +
-      "\\func g (x : S2) : S2\n" +
-      "  | base => base\n" +
-      "  | loop i => path (\\lam j => loop j @ i)");
+    typeCheckModule("""
+      \\func idpe {A : \\Type} (a : A) : a = a => idp
+      \\data S2 | base | loop I : base = base \\with { | left => idp | right => idp }
+      \\func f : I -> base = base => \\lam i => loop i
+      \\func f' (i : I) : base = base => loop i
+      \\func fLeft : loop left = idpe base => idp
+      \\func fRight : loop right = idpe base => idp
+      \\func fTop : path (\\lam i => loop i @ left) = idpe base => idp
+      \\func fBottom : path (\\lam i => loop i @ right) = idpe base => idp
+      \\func g (x : S2) : S2
+        | base => base
+        | loop i => path (\\lam j => loop j @ i)
+      """);
   }
 
   @Test
   public void typed0() {
-    typeCheckModule(
-      "\\data D1 | con1 : D1\n" +
-      "\\data D2 (n : Nat) | con2 : D2 n\n" +
-      "\\data D3 (n : Nat) \\with | 0 => con3 : D3 0 | suc m => con3' : D3 (suc m)");
+    typeCheckModule("""
+      \\data D1 | con1 : D1
+      \\data D2 (n : Nat) | con2 : D2 n
+      \\data D3 (n : Nat) \\with | 0 => con3 : D3 0 | suc m => con3' : D3 (suc m)
+      """);
   }
 
   @Test
@@ -159,10 +169,11 @@ public class HITsTest extends TypeCheckingTestCase {
 
   @Test
   public void typed1() {
-    typeCheckModule(
-      "\\data D | con | con' : con = con\n" +
-      "\\func f : con = con => con'\n" +
-      "\\func g (d : D) : Nat | con => 0 | con' => path (\\lam _ => 0)");
+    typeCheckModule("""
+      \\data D | con | con' : con = con
+      \\func f : con = con => con'
+      \\func g (d : D) : Nat | con => 0 | con' => path (\\lam _ => 0)
+      """);
   }
 
   @Test
@@ -174,63 +185,68 @@ public class HITsTest extends TypeCheckingTestCase {
 
   @Test
   public void square() {
-    typeCheckModule(
-      "\\data Square\n" +
-      "  | v00 | v01 | v10 | v11\n" +
-      "  | v-0 : v00 = v10 | v-1 : v01 = v11 | v0- : v00 = v01 | v1- : v10 = v11\n" +
-      "  | square : Path (\\lam i => v-0 @ i = v-1 @ i) v0- v1-\n" +
-      "\\func f : Path (\\lam i => v-0 @ i = v-1 @ i) v0- v1- => square\n" +
-      "\\func g {A : \\Type} (a : A) (s : Square) (p : a = a) : A \\elim s\n" +
-      "  | v00 => a | v01 => a | v10 => a | v11 => a\n" +
-      "  | v0- => p | v1- => p | v-0 => idp | v-1 => idp\n" +
-      "  | square => idp {_} {p}");
+    typeCheckModule("""
+      \\data Square
+        | v00 | v01 | v10 | v11
+        | v-0 : v00 = v10 | v-1 : v01 = v11 | v0- : v00 = v01 | v1- : v10 = v11
+        | square : Path (\\lam i => v-0 @ i = v-1 @ i) v0- v1-
+      \\func f : Path (\\lam i => v-0 @ i = v-1 @ i) v0- v1- => square
+      \\func g {A : \\Type} (a : A) (s : Square) (p : a = a) : A \\elim s
+        | v00 => a | v01 => a | v10 => a | v11 => a
+        | v0- => p | v1- => p | v-0 => idp | v-1 => idp
+        | square => idp {_} {p}
+      """);
   }
 
   @Test
   public void threeArgs() {
-    typeCheckModule(
-      "\\data S1 | base | loop : base = base\n" +
-      "\\func f : base = base => loop\n" +
-      "\\func g (x y z : S1) (p : Path (\\lam i => loop i = loop i) (path loop) (path loop))\n" +
-      "         (q : Path (\\lam i => Path (\\lam j => p i j = p i j) (p i) (p i)) p p) : S1 \\elim x, y, z\n" +
-      "  | base, base, base => base\n" +
-      "  | loop, base, base => loop\n" +
-      "  | base, loop, base => loop\n" +
-      "  | base, base, loop => loop\n" +
-      "  | base, loop, loop => p\n" +
-      "  | loop, base, loop => p\n" +
-      "  | loop, loop, base => p\n" +
-      "  | loop, loop, loop => q");
+    typeCheckModule("""
+      \\data S1 | base | loop : base = base
+      \\func f : base = base => loop
+      \\func g (x y z : S1) (p : Path (\\lam i => loop i = loop i) (path loop) (path loop))
+               (q : Path (\\lam i => Path (\\lam j => p i j = p i j) (p i) (p i)) p p) : S1 \\elim x, y, z
+        | base, base, base => base
+        | loop, base, base => loop
+        | base, loop, base => loop
+        | base, base, loop => loop
+        | base, loop, loop => p
+        | loop, base, loop => p
+        | loop, loop, base => p
+        | loop, loop, loop => q
+      """);
   }
 
   @Test
   public void recursiveFunction() {
-    typeCheckModule(
-      "\\data D | con1 | con2 D | con3 D | con4 (d : D) : con2 (con3 d) = con3 (con2 d)\n" +
-      "\\func test (d : D) : Nat\n" +
-      "  | con1 => 0\n" +
-      "  | con2 d => test d\n" +
-      "  | con3 d => test d\n" +
-      "  | con4 d => idp");
+    typeCheckModule("""
+      \\data D | con1 | con2 D | con3 D | con4 (d : D) : con2 (con3 d) = con3 (con2 d)
+      \\func test (d : D) : Nat
+        | con1 => 0
+        | con2 d => test d
+        | con3 d => test d
+        | con4 d => idp
+      """);
   }
 
   @Test
   public void sideNotConstructor() {
-    typeCheckModule(
-      "\\data D | con1 | con2 D | con3 (d : D) : con2 d = d \n" +
-      "\\func test (d : D) : Nat\n" +
-      "  | con1 => 0\n" +
-      "  | con2 d => test d\n" +
-      "  | con3 d => idp");
+    typeCheckModule("""
+      \\data D | con1 | con2 D | con3 (d : D) : con2 d = d\s
+      \\func test (d : D) : Nat
+        | con1 => 0
+        | con2 d => test d
+        | con3 d => idp
+      """);
   }
 
   @Test
   public void freeVarTest() {
-    typeCheckModule(
-      "\\data D | con1 | con2 | con3 : con1 = con2\n" +
-      "\\func test (d : D) (s : d = con1) : Nat \\elim d\n" +
-      "  | con1 => 0\n" +
-      "  | con2 => 0\n" +
-      "  | con3 => idp", 1);
+    typeCheckModule("""
+      \\data D | con1 | con2 | con3 : con1 = con2
+      \\func test (d : D) (s : d = con1) : Nat \\elim d
+        | con1 => 0
+        | con2 => 0
+        | con3 => idp
+      """, 1);
   }
 }

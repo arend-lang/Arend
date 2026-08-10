@@ -32,7 +32,7 @@ import org.arend.term.concrete.Concrete
             else -> null
         }
 
-        val refExpr = Concrete.FixityReferenceExpression.make(data, referent, fixity, null, null)
+        val refExpr = Concrete.FixityReferenceExpression.make(data, referent, fixity, null)
 
         var resolved: Concrete.Expression? = null
         var isCachedValue = true
@@ -68,8 +68,7 @@ import org.arend.term.concrete.Concrete
 
 @Deprecated("Obsolete") private fun getExpression(expr: Abstract.Expression?): Concrete.Expression {
     val ref = expr?.accept(object : BaseAbstractExpressionVisitor<Void, Concrete.Expression?>(null) {
-        override fun visitReference(data: Any?, referent: Referable, lp: Int, lh: Int, params: Void?) = resolveReference(data, referent, null)
-        override fun visitReference(data: Any?, referent: Referable, fixity: Fixity?, pLevels: Collection<Abstract.LevelExpression>?, hLevels: Collection<Abstract.LevelExpression>?, params: Void?) = resolveReference(data, referent, fixity)
+        override fun visitReference(data: Any?, referent: Referable, fixity: Fixity?, pLevels: Collection<Abstract.LevelExpression>?, params: Void?) = resolveReference(data, referent, fixity)
         override fun visitFieldAccs(data: Any?, expression: Abstract.Expression, fieldAccs: List<Abstract.FieldAcc?>, infixReference: AbstractReference?, infixName: String?, fixity: Fixity?, params: Void?): Concrete.Expression? {
           return fieldAccs.lastOrNull()?.let { fieldAcc -> fieldAcc.fieldRef?.let { resolveReference(data, it, fixity) } }
         }
@@ -81,9 +80,12 @@ import org.arend.term.concrete.Concrete
 @Deprecated("Obsolete") fun parseBinOp(left: Abstract.Expression, sequence: Collection<Abstract.BinOpSequenceElem>): Concrete.Expression =
         parseBinOp(null, left, sequence)
 
-@Deprecated("Obsolete") fun parseBinOp(data: Any?, left: Abstract.Expression, sequence: Collection<Abstract.BinOpSequenceElem>, errorReporter: ErrorReporter = DummyErrorReporter.INSTANCE, scope: Scope? = null): Concrete.Expression {
+@Deprecated("Obsolete") fun parseBinOp(left: Abstract.Expression, leftIsVariable: Boolean, sequence: Collection<Abstract.BinOpSequenceElem>): Concrete.Expression =
+        parseBinOp(null, left, sequence, leftIsVariable = leftIsVariable)
+
+@Deprecated("Obsolete") fun parseBinOp(data: Any?, left: Abstract.Expression, sequence: Collection<Abstract.BinOpSequenceElem>, errorReporter: ErrorReporter = DummyErrorReporter.INSTANCE, scope: Scope? = null, leftIsVariable: Boolean = left is ArendAtomFieldsAcc && left.isVariable): Concrete.Expression {
     val concreteSeq = mutableListOf<Concrete.BinOpSequenceElem<Concrete.Expression>>()
-    concreteSeq.add(Concrete.BinOpSequenceElem(getExpression(left)))
+    concreteSeq.add(Concrete.BinOpSequenceElem(getExpression(left), if (leftIsVariable) Fixity.UNKNOWN else Fixity.NONFIX, true))
     for (elem in sequence) {
         concreteSeq.add(Concrete.BinOpSequenceElem(getExpression(elem.expression), if (elem.isVariable) Fixity.UNKNOWN else Fixity.NONFIX, elem.isExplicit))
     }

@@ -5,10 +5,8 @@ import org.arend.core.context.param.TypedSingleDependentLink;
 import org.arend.core.definition.ClassField;
 import org.arend.core.definition.Definition;
 import org.arend.core.definition.FunctionDefinition;
-import org.arend.core.definition.UniverseKind;
 import org.arend.core.expr.*;
 import org.arend.core.sort.Sort;
-import org.arend.core.subst.LevelPair;
 import org.arend.core.subst.Levels;
 import org.arend.prelude.Prelude;
 import org.arend.typechecking.TypeCheckingTestCase;
@@ -41,9 +39,7 @@ public class ArrayTest extends TypeCheckingTestCase {
     assertTrue(((ClassCallExpression) ((FunctionDefinition) getDefinition("test2")).getResultType()).isImplemented(Prelude.ARRAY_AT));
     assertEquals(Sort.PROP, ((FunctionDefinition) getDefinition("test2")).getResultType().getSortOfType());
     assertFalse(((ClassCallExpression) Prelude.EMPTY_ARRAY.getResultType()).isImplemented(Prelude.ARRAY_AT));
-    assertEquals(Sort.STD, Prelude.EMPTY_ARRAY.getResultType().getSortOfType());
     assertFalse(((ClassCallExpression) Prelude.ARRAY_CONS.getResultType()).isImplemented(Prelude.ARRAY_AT));
-    assertEquals(Sort.STD, Prelude.ARRAY_CONS.getResultType().getSortOfType());
   }
 
   @Test
@@ -96,21 +92,6 @@ public class ArrayTest extends TypeCheckingTestCase {
   }
 
   @Test
-  public void nilEtaTest() {
-    typeCheckModule("""
-      \\lemma test1 (a b : Array Nat 0) : a = b => idp
-      \\func test2 (a : DArray { | len => 0 }) : a = nil => idp
-      \\func test3 (a : DArray { | len => 0 }) : nil = a => idp
-      """);
-  }
-
-  @Test
-  public void nilEtaError() {
-    typeCheckDef("\\func test (a b : DArray { | len => 0 }) : a = b => idp", 1);
-    assertThatErrorsAre(Matchers.typecheckingError(NotEqualExpressionsError.class));
-  }
-
-  @Test
   public void newConsTest() {
     typeCheckModule(
       "\\lemma test1 : (\\new Array Nat 2 (\\case __ \\with { | 0 => 5 | 1 => 7 })) = 5 :: 7 :: nil => idp\n" +
@@ -134,12 +115,6 @@ public class ArrayTest extends TypeCheckingTestCase {
   @Test
   public void etaTest() {
     typeCheckDef("\\func test {A : \\Type} {n : Nat} (g : Fin n -> Array A 3) : (\\new Array (Array A) n g) = {Array (Array A)} \\new Array (Array A 3) n g => idp");
-  }
-
-  @Test
-  public void etaError() {
-    typeCheckDef("\\func test {A : \\Type} {n : Nat} (g : Fin n -> Array A 3) : (\\new Array (Array A) n g) = {DArray} \\new Array (Array A 3) n g => idp", 1);
-    assertThatErrorsAre(Matchers.typecheckingError(NotEqualExpressionsError.class));
   }
 
   @Test
@@ -278,95 +253,12 @@ public class ArrayTest extends TypeCheckingTestCase {
       \\func test (l : Array) : Nat
         | nil => 0
         | a :: {n} l => n
-      """);
-  }
-
-  @Test
-  public void patternMatchingTest10() {
-    typeCheckModule("""
-      \\func test (l : Array) : Nat
-        | nil => 0
-        | a :: {n} nil => n
-        | a :: a' :: l => 1
-      """, 1);
-    assertThatErrorsAre(Matchers.typecheckingError(ImpossibleEliminationError.class));
-  }
-
-  @Test
-  public void patternMatchingTest11() {
-    typeCheckModule("""
-      \\func test (l : Array) : Nat
-        | nil => 0
-        | a :: {0} nil => 1
-        | a :: a' :: l => 2
-      """);
-  }
-
-  @Test
-  public void patternMatchingTest12() {
-    typeCheckModule("""
-      \\func test (l : Array) : Nat
-        | nil => 0
-        | a :: nil => 1
-        | a :: {suc n} a' :: l => n
-      """);
-  }
-
-  @Test
-  public void patternMatchingTest13() {
-    typeCheckModule("""
-      \\func test (l : Array) : Nat
-        | nil => 0
-        | a :: nil => 1
-        | a :: {n} a' :: l => n
-      """, 1);
-    assertThatErrorsAre(Matchers.typecheckingError(ImpossibleEliminationError.class));
-  }
-
-  @Test
-  public void patternMatchingTest14() {
-    typeCheckModule("""
-      \\func test (l : Array) : Nat
-        | nil => 0
-        | a :: nil => 1
-        | a :: a' :: {n} l => n
-      """, 1);
-    assertThatErrorsAre(Matchers.typecheckingError(CertainTypecheckingError.Kind.EXPECTED_EXPLICIT_PATTERN));
-  }
-
-  @Test
-  public void patternMatchingTest15() {
-    typeCheckModule("""
-      \\func test (l : Array) : Nat
-        | nil => 0
-        | a :: {suc n} l => 1
-      """, 1);
-    assertThatErrorsAre(Matchers.missingClauses(1));
-  }
-
-  @Test
-  public void patternMatchingTest16() {
-    typeCheckModule("""
-      \\func test (l : Array) : Nat
-        | nil => 0
-        | :: a => 1
-      """, 1);
-    assertThatErrorsAre(Matchers.typecheckingError(NotEnoughPatternsError.class));
-  }
-
-  @Test
-  public void patternMatchingTest17() {
-    typeCheckModule("""
-      \\func test (l : Array) : Nat
-        | nil => 0
-        | a :: => 1
-      """, 1);
-    assertThatErrorsAre(Matchers.typecheckingError(NotEnoughPatternsError.class));
+      """, 2);
   }
 
   @Test
   public void test() {
-    typeCheckModule("\\func test => :: 0");
+    typeCheckModule("\\func test => 0 ::");
   }
 
   @Test
@@ -448,19 +340,9 @@ public class ArrayTest extends TypeCheckingTestCase {
   @Test
   public void tuplePatternTest() {
     typeCheckModule("""
-      \\func test1 (x : DArray) : Fin x.len -> \\Type
-        | (_, A, _) => A
-      \\func test2 (x : DArray) : Nat
-        | (n, _, _) => n
-      \\func test2' {A : \\Type} (x : Array A) : Nat
+      \\func test1 {A : \\Type} (x : Array A) : Nat
         | (n, _) => n
-      \\func test3 (x : DArray) : \\Pi (j : Fin x.len) -> x.A j
-        | (_, _, f) => f
-      \\func test3' {A : \\Type} (x : Array A) : Fin x.len -> A
-        | (_, f) => f
-      \\func test6 {n : Nat} (x : DArray { | len => n }) : Fin n -> \\Type
-        | (A, _) => A
-      \\func test7 {n : Nat} (x : DArray { | len => n }) : \\Pi (j : Fin n) -> x.A j
+      \\func test2 {A : \\Type} (x : Array A) : Fin x.len -> A
         | (_, f) => f
       """);
   }
@@ -472,43 +354,13 @@ public class ArrayTest extends TypeCheckingTestCase {
   }
 
   @Test
-  public void extractType() {
-    typeCheckModule("""
-      \\func f (x : DArray) : Fin x.len -> \\Type
-        | nil {A} => A
-        | :: {_} {A} _ _ => A
-      \\func test : f (1 :: nil) = (\\lam _ => Nat) => idp
-      """);
-  }
-
-  @Test
-  public void extractType2() {
-    typeCheckModule("""
-      \\func f (n : Nat) (x : DArray {n}) : Fin x.len -> \\Type
-        | 0, nil {A} => A
-        | suc _, :: {A} _ _ => A
-      \\func test : f 1 (1 :: nil) = (\\lam _ => Nat) => idp
-      """);
-  }
-
-  @Test
-  public void extractType3() {
-    typeCheckModule("""
-      \\func f (n : Nat) (x : DArray {n}) : Fin n -> \\Type
-        | 0, nil {A} => A
-        | suc _, :: {A} _ _ => A
-      \\func test : f 1 (1 :: nil) = (\\lam _ => Nat) => idp
-      """);
-  }
-
-  @Test
   public void goalTest() {
     Definition def = typeCheckDef("\\func test (n : Nat) : Array Nat (suc n) => {?} :: {?}", 2);
     Map<ClassField, Expression> impls = new LinkedHashMap<>();
     Expression length = new ReferenceExpression(def.getParameters());
     impls.put(Prelude.ARRAY_LENGTH, length);
-    impls.put(Prelude.ARRAY_ELEMENTS_TYPE, new LamExpression(Sort.SET0, new TypedSingleDependentLink(true, null, DataCallExpression.make(Prelude.FIN, Levels.EMPTY, new SingletonList<>(length))), Nat()));
-    assertThatErrorsAre(Matchers.goal(1), Matchers.goal(new ClassCallExpression(Prelude.DEP_ARRAY, LevelPair.SET0, impls, Sort.STD, UniverseKind.NO_UNIVERSES)));
+    impls.put(Prelude.ARRAY_ELEMENTS_TYPE, new LamExpression(new TypedSingleDependentLink(true, null, DataCallExpression.make(Prelude.FIN, Levels.EMPTY, new SingletonList<>(length))), Nat()));
+    assertThatErrorsAre(Matchers.goal(1), Matchers.goal(new ClassCallExpression(Prelude.DEP_ARRAY, Levels.EMPTY, impls)));
   }
 
   @Test
@@ -517,8 +369,8 @@ public class ArrayTest extends TypeCheckingTestCase {
     Map<ClassField, Expression> impls = new LinkedHashMap<>();
     Expression length = new SmallIntegerExpression(5);
     impls.put(Prelude.ARRAY_LENGTH, length);
-    impls.put(Prelude.ARRAY_ELEMENTS_TYPE, new LamExpression(Sort.SET0, new TypedSingleDependentLink(true, null, DataCallExpression.make(Prelude.FIN, Levels.EMPTY, new SingletonList<>(length))), Nat()));
-    assertThatErrorsAre(Matchers.goal(0), Matchers.goal(0), Matchers.goal(new ClassCallExpression(Prelude.DEP_ARRAY, LevelPair.SET0, impls, Sort.STD, UniverseKind.NO_UNIVERSES)));
+    impls.put(Prelude.ARRAY_ELEMENTS_TYPE, new LamExpression(new TypedSingleDependentLink(true, null, DataCallExpression.make(Prelude.FIN, Levels.EMPTY, new SingletonList<>(length))), Nat()));
+    assertThatErrorsAre(Matchers.goal(0), Matchers.goal(0), Matchers.goal(new ClassCallExpression(Prelude.DEP_ARRAY, Levels.EMPTY, impls)));
   }
 
   @Test
@@ -537,9 +389,9 @@ public class ArrayTest extends TypeCheckingTestCase {
   @Test
   public void inferTypeTest() {
     typeCheckModule("""
-      \\func test1 : Fin 2 -> Fin 7 => DArray.at {3 :: 5 :: nil}
-      \\func test2 : Fin 2 -> Fin 7 => (3 :: 5 :: nil) DArray.!!
-      \\func test3 : Fin 2 -> Fin 7 => 3 :: 5 :: nil
+      \\func test1 : Fin 2 -> Fin 7 => DArray.at {3 :: {_} {\\lam _ => Fin 7} 5 :: nil}
+      \\func test2 : Fin 2 -> Fin 7 => (3 :: {_} {\\lam _ => Fin 7} 5 :: nil) DArray.!!
+      \\func test3 : Fin 2 -> Fin 7 => 3 :: {_} {\\lam _ => Fin 7} 5 :: nil
       """);
   }
 
@@ -571,7 +423,7 @@ public class ArrayTest extends TypeCheckingTestCase {
   @Test
   public void fixedLength() {
     typeCheckModule("""
-      \\func f {n : Nat} (l : DArray { | len => suc n }) : l.A 0 \\elim l
+      \\func f {A : \\Type} {n : Nat} (l : Array A (suc n)) : l.A 0 \\elim l
         | :: a _ => a
       \\func test : f (1 :: {_} {\\lam _ => Nat} 2 :: nil) = 1 => idp
       """);
@@ -580,7 +432,7 @@ public class ArrayTest extends TypeCheckingTestCase {
   @Test
   public void fixedLength2() {
     typeCheckModule("""
-      \\func f (l : DArray { | len => 0 }) : Nat \\elim l
+      \\func f {A : \\Type} (l : Array A 0) : Nat \\elim l
         | nil => 1
       \\func test : f (nil {\\lam _ => Nat}) = 1 => idp
       """);
@@ -598,7 +450,7 @@ public class ArrayTest extends TypeCheckingTestCase {
   @Test
   public void fixedLength4() {
     typeCheckModule("""
-      \\func f {n : Nat} (l : DArray { | len => n }) : Nat \\elim n, l
+      \\func f {A : \\Type } {n : Nat} (l : Array A n) : Nat \\elim n, l
         | 0, nil => 0
         | suc _, :: _ _ => 1
       \\func test : f (3 :: nil) = 1 => idp

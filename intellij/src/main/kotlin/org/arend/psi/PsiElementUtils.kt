@@ -1,6 +1,7 @@
 package org.arend.psi
 
 import com.intellij.ide.util.EditSourceUtil
+import com.intellij.openapi.application.WriteIntentReadAction
 import com.intellij.openapi.components.service
 import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.editor.ex.util.EditorUtil
@@ -72,9 +73,14 @@ inline fun <reified T : PsiElement> PsiElement.leftSibling(): T? {
 }
 
 fun PsiElement.navigate(requestFocus: Boolean = true) {
-    val descriptor = EditSourceUtil.getDescriptor(this)
-    if (descriptor?.canNavigate() == true) {
-        descriptor.navigate(requestFocus)
+    val element = this
+    // Callers include raw AWT input handlers, which no longer hold the write-intent lock.
+    // Both building the descriptor (it validates the PSI) and navigating need it.
+    WriteIntentReadAction.run {
+        val descriptor = EditSourceUtil.getDescriptor(element)
+        if (descriptor?.canNavigate() == true) {
+            descriptor.navigate(requestFocus)
+        }
     }
 }
 

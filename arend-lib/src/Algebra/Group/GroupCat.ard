@@ -1,0 +1,131 @@
+\import Algebra.Group
+\import Algebra.Group.GroupHom
+\import Algebra.Group.SubGroup
+\import Algebra.Meta
+\import Algebra.Monoid
+\import Algebra.Monoid.MonoidCat
+\import Algebra.Monoid.MonoidHom
+\import Algebra.Pointed
+\import Algebra.Pointed.PointedHom
+\import Category
+\import Category.Functor
+\import Category.Meta
+\import Category.Subcat
+\import Equiv
+\import Function (IsInj, IsSurj)
+\import Function.Meta
+\import Logic
+\import Logic.Meta
+\import Meta
+\import Paths
+\import Paths.Meta
+\import Set.SetCategory
+
+\instance GroupCat.{u} : Cat Group.{u}
+  | Hom => GroupHom
+  | id => GroupHom.id
+  | o => GroupHom.∘
+  | id-left => idp
+  | id-right => idp
+  | o-assoc => idp
+  | univalence => sip \lam f _ => exts (f.func-ide, \lam _ _ => f.func-*, \lam _ => f.func-inverse)
+  \where {
+    \func ForgetSet.{u} : FaithfulFunctor GroupCat.{u} SetCat \cowith
+      | F G => G
+      | Func f => f
+      | Func-id => idp
+      | Func-o => idp
+      | isFaithful => \lam p => ext p
+
+    -- TODO: Prove this more generally for algebraic theories?
+    \lemma Iso<->Inj+Surj.{u} {G H : Group.{u}} (f : GroupHom G H) : Iso {GroupCat.{u}} f <-> f.IsIsomorphism
+      => (\lam p => SetIso->Inj+Surj (ForgetSet.Func-iso p),
+          \lam p => \new Iso {
+            | hinv => \new GroupHom {
+              | func => inve p
+              | func-ide => aux (this_iso p) f.func-ide
+              | func-* {x y : H} => rewrite (this_inv_ap p x, this_inv_ap p y,
+                                             inv f.func-*, inv $ inv_this_ap p (inve p x G.* inve p y),
+                                             inv $ this_inv_ap p x, inv $ this_inv_ap p y ) idp
+            }
+            | hinv_f => exts \lam e => inv (inv_this_ap p e)
+            | f_hinv => exts \lam e => inv (this_inv_ap p e)
+          })
+      \where \private {
+      {- | some  set theoretic lemmas -}
+
+        \lemma this_inv_ap (p : f.IsIsomorphism) (h : H) : h = f (inve p h)
+          => inv (path \lam i => (Iso.f_hinv {this_iso p} i) h)
+
+        \lemma inv_this_ap (p : f.IsIsomorphism) (g : G) : g = inve p (f g)
+          => inv (path \lam i => (Iso.hinv_f {this_iso p} i) g)
+
+        \func this_iso (p : f.IsIsomorphism) => IsEquiv->SetIso (IsEquiv.fromInjSurj p.1 p.2)
+
+        \func inve (p : f.IsIsomorphism) => Iso.hinv {this_iso p}
+
+        \lemma aux.{u} {A B : \Set u} (f : Iso {_} {A} {B}) {a : A} {b : B} (p : f.f a = b) : f.hinv b = a
+          => inv $ rewrite (aux' f, p) idp
+
+        \lemma aux'.{u} {A B : \Set u} (f : Iso {_} {A} {B}) {a : A} : a = f.hinv (f.f a)
+          => inv (path (\lam i => (f.hinv_f i) a))
+
+        \lemma aux''.{u} {A B : \Set u} (f : Iso {_} {A} {B}) {b : B} : b = f.f (f.hinv b)
+          => inv (path (\lam i => (f.f_hinv i) b))
+
+        \lemma SetIso->Inj+Surj.{u} (f : Iso {SetCat.{u}}) : \Sigma (IsInj f.f) (IsSurj f.f)
+          => ((SetIso->QEquiv f).isInj, (SetIso->QEquiv f).isSurj )
+
+        \lemma IsEquiv->SetIso.{u} {X Y : \Set u} {f : X -> Y} (eq : IsEquiv f) : Iso {SetCat} f \cowith
+          | hinv => IsEquiv.ret eq
+          | hinv_f => ext \lam _ => IsEquiv.ret_f eq
+          | f_hinv => ext \lam _ => IsEquiv.f_ret eq
+
+        \lemma SetIso->QEquiv.{u} {X Y : \Set u} {f : X -> Y} (p : Iso {SetCat} f) : QEquiv f p.hinv \cowith
+          | ret_f x => inv (aux' p)
+          | f_sec y => inv (aux'' p)
+      }
+  }
+
+\instance AddGroupCat.{u} : Cat AddGroup.{u}
+  | Hom G H => AddGroupHom G H
+  | id => AddGroupHom.id
+  | o => AddGroupHom.∘
+  | id-left => idp
+  | id-right => idp
+  | o-assoc => idp
+  | univalence => sip \lam {X} {A} {B} p1 p2 => exts (p1.func-zro, \lam _ _ => p1.func-+, AddGroup.negative-equality A B p1.func-zro p1.func-+)
+  \where {
+    \func forgetToAddMonoid.{u} : Functor AddGroupCat.{u} AddMonoidCat \cowith
+      | F A => A
+      | Func f => f
+      | Func-id => idp
+      | Func-o => idp
+
+    \func forget.{u} : Functor AddGroupCat.{u} SetCat \cowith
+      | F R => R
+      | Func f => f
+      | Func-id => idp
+      | Func-o => idp
+  }
+
+\instance AbGroupCat.{u} : Cat AbGroup.{u}
+  => subCat \new Embedding {AbGroup.{u}} {AddGroup.{u}} {
+    | f A => A
+    | isEmb A B => \new Retraction {
+      | sec => AbGroup.equals A B
+      | f_sec => idpe
+    }
+  } \where {
+    \func forgetToAddGroup.{u} : Functor AbGroupCat.{u} AddGroupCat \cowith
+      | F A => A
+      | Func f => f
+      | Func-id => idp
+      | Func-o => idp
+
+    \func forget.{u} : Functor AbGroupCat.{u} SetCat \cowith
+      | F R => R
+      | Func f => f
+      | Func-id => idp
+      | Func-o => idp
+  }

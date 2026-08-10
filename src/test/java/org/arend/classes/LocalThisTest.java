@@ -45,7 +45,7 @@ public class LocalThisTest extends TypeCheckingTestCase {
   @Test
   public void thisRecursive2() {
     typeCheckModule("""
-      \\record S (X : \\hType) (x : X -> X) {
+      \\record S (X : \\Type) (x : X -> X) {
         \\func f (n : Nat) : X -> X \\elim n
           | 0 => x
           | suc n => f n
@@ -60,7 +60,7 @@ public class LocalThisTest extends TypeCheckingTestCase {
   @Test
   public void thisRecursiveAlt() {
     typeCheckModule("""
-      \\record S (X : \\Type) (x : X -> X) {
+      \\record S (X : \\Type0) (x : X -> X) {
         \\func f (n : Nat) : X -> X \\elim n
           | 0 => x
           | suc n => f n
@@ -87,7 +87,7 @@ public class LocalThisTest extends TypeCheckingTestCase {
   @Test
   public void thisRecursiveErrorAlt() {
     typeCheckModule("""
-      \\record R (X : \\Type) (x : X -> X) {
+      \\record R (X : \\Type0) (x : X -> X) {
         \\func f (n : Nat) : X -> X \\elim n
           | 0 => x
           | suc n => f n
@@ -100,7 +100,7 @@ public class LocalThisTest extends TypeCheckingTestCase {
   @Test
   public void thisRecursiveExt() {
     typeCheckModule("""
-      \\record S (X : \\hType) (x : X -> X)
+      \\record S (X : \\Type) (x : X -> X)
       \\record R \\extends S
         | y : X -> X
       \\record T \\extends R { | X => Nat | y => S.x }
@@ -121,7 +121,7 @@ public class LocalThisTest extends TypeCheckingTestCase {
   @Test
   public void thisRecursiveExtError() {
     typeCheckModule("""
-      \\record S (X : \\hType) (x : X -> X) {
+      \\record S (X : \\Type) (x : X -> X) {
         \\func f (n : Nat) : X -> X \\elim n
           | 0 => x
           | suc n => f n
@@ -179,7 +179,7 @@ public class LocalThisTest extends TypeCheckingTestCase {
   @Test
   public void explicitThisRecursive2() {
     typeCheckModule("""
-      \\record S (X : \\hType) (x : X -> X)
+      \\record S (X : \\Type) (x : X -> X)
       \\func f (s : S) (n : Nat) : s.X -> s.X \\elim n
         | 0 => s.x
         | suc n => f s n
@@ -193,7 +193,7 @@ public class LocalThisTest extends TypeCheckingTestCase {
   @Test
   public void explicitThisRecursiveAlt() {
     typeCheckModule("""
-      \\record S (X : \\Type) (x : X -> X)
+      \\record S (X : \\Type0) (x : X -> X)
       \\func f (s : S) (n : Nat) : s.X -> s.X \\elim n
         | 0 => s.x
         | suc n => f s n
@@ -206,7 +206,7 @@ public class LocalThisTest extends TypeCheckingTestCase {
   @Test
   public void explicitThisRecursiveExtError() {
     typeCheckModule("""
-      \\record S (X : \\hType) (x : X -> X)
+      \\record S (X : \\Type) (x : X -> X)
       \\func f (s : S) (n : Nat) : s.X -> s.X \\elim n
         | 0 => s.x
         | suc n => f s n
@@ -221,7 +221,7 @@ public class LocalThisTest extends TypeCheckingTestCase {
   @Test
   public void thisBadRecursiveArgument() {
     typeCheckModule("""
-      \\record S (X : \\Type) (x : X -> X)
+      \\record S (X : \\Type0) (x : X -> X)
       \\func f (s : S) (n : Nat) : s.X -> s.X \\elim n
         | 0 => s.x
         | suc n => f (\\let s' => s \\in s') n
@@ -235,8 +235,8 @@ public class LocalThisTest extends TypeCheckingTestCase {
   @Test
   public void thisClassExt() {
     typeCheckModule("""
-      \\record S (X : \\Type)
-      \\record R (Y : \\Type) \\extends S
+      \\record S (X : \\Type0)
+      \\record R (Y : \\Type0) \\extends S
       \\record D (s : S)
       \\func test => R { | Y => D (\\this : R) }
       """);
@@ -245,8 +245,8 @@ public class LocalThisTest extends TypeCheckingTestCase {
   @Test
   public void thisClassExtError() {
     typeCheckModule("""
-      \\record S (X : \\Type)
-      \\record R (Y : \\Type) \\extends S
+      \\record S (X : \\Type0)
+      \\record R (Y : \\Type0) \\extends S
       \\record D (s : S)
       \\func test => R { | X => D (\\this : R) }
       """, 1);
@@ -256,7 +256,7 @@ public class LocalThisTest extends TypeCheckingTestCase {
   @Test
   public void thisTest() {
     typeCheckModule("""
-      \\record S (X : \\Type) (x : X -> X)
+      \\record S (X : \\Type0) (x : X -> X)
       \\record R \\extends S
         | y : X -> X
       \\func f (s : S) => s.x
@@ -267,7 +267,7 @@ public class LocalThisTest extends TypeCheckingTestCase {
   @Test
   public void thisError() {
     typeCheckModule("""
-      \\record S (X : \\Type) (x : X -> X)
+      \\record S (X : \\Type0) (x : X -> X)
       \\record R \\extends S
         | y : X -> X
       \\func f (s : S) => s.x
@@ -278,7 +278,7 @@ public class LocalThisTest extends TypeCheckingTestCase {
   @Test
   public void thisBadArgument() {
     typeCheckModule("""
-      \\record S (X : \\Type) (x : X -> X)
+      \\record S (X : \\Type0) (x : X -> X)
       \\func f (s : S) => S.x {\\let s' => s \\in s'}
       \\record R \\extends S
         | y : X -> X
@@ -289,9 +289,9 @@ public class LocalThisTest extends TypeCheckingTestCase {
   @Test
   public void thisBadField() {
     typeCheckModule("""
-      \\record S (X : \\Type) (x : X -> X)
+      \\record S (X : \\Type0) (x : X -> X)
       \\record F (s : S) | f (t : s.X) : S.x {\\let s' => s \\in s'} t = t
-      \\record R (Y : \\Type) \\extends S
+      \\record R (Y : \\Type0) \\extends S
       \\func test => R { | Y => F \\this }
       """, 1);
   }
@@ -299,10 +299,10 @@ public class LocalThisTest extends TypeCheckingTestCase {
   @Test
   public void thisBadFieldSubclass() {
     typeCheckModule("""
-      \\record S (X : \\Type) (x : X -> X)
+      \\record S (X : \\Type0) (x : X -> X)
       \\record F (s : S)
       \\record G \\extends F | f (t : s.X) : S.x {\\let s' => s \\in s'} t = t
-      \\record R (Y : \\Type) \\extends S
+      \\record R (Y : \\Type0) \\extends S
       \\func test => R { | Y => G \\this }
       """, 1);
   }
@@ -310,10 +310,10 @@ public class LocalThisTest extends TypeCheckingTestCase {
   @Test
   public void thisBadFieldSuperclass() {
     typeCheckModule("""
-      \\record S (X : \\Type) (x : X -> X)
+      \\record S (X : \\Type0) (x : X -> X)
       \\record F (s : S) | f (t : s.X) : S.x {\\let s' => s \\in s'} t = t
       \\record G \\extends F
-      \\record R (Y : \\Type) \\extends S
+      \\record R (Y : \\Type0) \\extends S
       \\func test => R { | Y => G \\this }
       """, 1);
   }

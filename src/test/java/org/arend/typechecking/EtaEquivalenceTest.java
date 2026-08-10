@@ -195,4 +195,9 @@ public class EtaEquivalenceTest extends TypeCheckingTestCase {
       \\func f : x = (x.1, x.2) => idp
       """);
   }
+
+  @Test
+  public void piUnitTest() {
+    typeCheckDef("\\func test {A : \\Type} (f g : A -> \\Sigma) (p : g = f) : p = idp => idp");
+  }
 }

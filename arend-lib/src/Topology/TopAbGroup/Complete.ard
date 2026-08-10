@@ -10,7 +10,7 @@
 \import Paths
 \import Paths.Meta
 \import Set.Filter
-\import Set.Subset
+\import Set.Set
 \import Topology.CoverSpace
 \import Topology.CoverSpace.Complete
 \import Topology.CoverSpace.CompletionTools
@@ -78,13 +78,13 @@
       | negative-left => unique1 (+-cover ∘ tuple negative-cover id) (const _) \lam x => pmap (+-func __ _) negative-char *> +-char *> pmap pointCF negative-left
       | +-comm => unique2 +-cover (+-cover ∘ tuple proj2 proj1) \lam x y => +-char *> pmap pointCF +-comm *> inv +-char
 
-    \func subtract-cover : CoverMap (Completion X ⨯ Completion X) (Completion X)
+    \func subtract-cover : CoverMap (Completion X `ProductCoverSpace` Completion X) (Completion X)
       => lift2 (+-uniform ∘ prod id negative-uniform)
 
     \lemma subtract_- {F G : RegularCauchyFilter X} : subtract-cover (F,G) = F - {abGroup} G
       => unique2 subtract-cover (+-cover ∘ prod id negative-cover) \lam x y => lift2-char *> inv +-char *> pmap (+-func _) (inv negative-char)
 
-    \sfunc +-cover : CoverMap (Completion X ⨯ Completion X) (Completion X)
+    \sfunc +-cover : CoverMap (Completion X `ProductCoverSpace` Completion X) (Completion X)
       => subtract-cover ∘ prod id negative-cover
 
     \func +-func (x y : RegularCauchyFilter X) => +-cover (x,y)

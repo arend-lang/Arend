@@ -30,7 +30,7 @@ import static org.arend.psi.ArendElementTypes.*;
     private int originalState = YYINITIAL;
 %}
 
-%state BLOCK_COMMENT_INNER, LEVEL_PARAMETERS
+%state BLOCK_COMMENT_INNER
 
 EOL                 = \R
 WHITE_SPACE         = [ \t\r\n]+
@@ -55,7 +55,7 @@ INFIX               = `{ID}`
 
 SET                 = \\Set[0-9]*
 UNIVERSE            = \\Type[0-9]*
-TRUNCATED_UNIVERSE  = \\([0-9]+-|oo-|h)Type[0-9]*
+TRUNCATED_UNIVERSE  = \\[0-9]+-Type[0-9]*
 
 STRING              = \"{STRING_CONTENT}*\"
 STRING_CONTENT      = [^\"\\\r\n] | \\[btnfr\"\'\\] | {OCT_ESCAPE} | {UNICODE_ESCAPE}
@@ -66,7 +66,7 @@ OCT_DIGIT           = [0-8]
 
 %%
 
-<YYINITIAL,LEVEL_PARAMETERS> {
+<YYINITIAL> {
     {WHITE_SPACE}           { return WHITE_SPACE; }
 
     {LINE_COMMENT}          { return LINE_COMMENT; }
@@ -85,9 +85,7 @@ OCT_DIGIT           = [0-8]
                                 commentStart = getTokenStart();
                             }
     {LINE_DOC}              { return DOC_COMMENT; }
-}
 
-<YYINITIAL> {
     "{"                     { return LBRACE; }
     "}"                     { return RBRACE; }
     "{?}"                   { return TGOAL; }
@@ -131,6 +129,7 @@ OCT_DIGIT           = [0-8]
     "\\fixl"                { return LEFT_ASSOC_KW; }
     "\\fixr"                { return RIGHT_ASSOC_KW; }
     "\\Prop"                { return PROP_KW; }
+    "\\SET"                 { return SET_KW; }
     "\\this"                { return THIS_KW; }
     "\\where"               { return WHERE_KW; }
     "\\with"                { return WITH_KW; }
@@ -161,16 +160,8 @@ OCT_DIGIT           = [0-8]
     "\\strict"              { return STRICT_KW; }
     "\\private"             { return PRIVATE_KW; }
     "\\protected"           { return PROTECTED_KW; }
-    "\\lp"                  { return LP_KW; }
-    "\\lh"                  { return LH_KW; }
-    "\\oo"                  { return OO_KW; }
     "\\suc"                 { return SUC_KW; }
     "\\level"               { return LEVEL_KW; }
-    "\\levels"              { return LEVELS_KW; }
-    "\\plevel"              { return PLEVEL_KW; }
-    "\\hlevel"              { return HLEVEL_KW; }
-    "\\plevels"             { yybegin(LEVEL_PARAMETERS); return PLEVELS_KW; }
-    "\\hlevels"             { yybegin(LEVEL_PARAMETERS); return HLEVELS_KW; }
     "\\max"                 { return MAX_KW; }
 
     {STRING}                { return STRING; }
@@ -191,16 +182,6 @@ OCT_DIGIT           = [0-8]
     {ID}                    { return ID; }
 
     [^]                     { return BAD_CHARACTER; }
-}
-
-<LEVEL_PARAMETERS> {
-    "<="                    { return LESS_OR_EQUALS; }
-    ">="                    { return GREATER_OR_EQUALS; }
-    ","                     { return COMMA; }
-    "|" | ":" | "_"         { yypushback(1); yybegin(YYINITIAL); }
-    "=>" | "->" | "__"      { yypushback(2); yybegin(YYINITIAL); }
-    {ID}                    { return ID; }
-    [^]                     { yypushback(1); yybegin(YYINITIAL); }
 }
 
 <BLOCK_COMMENT_INNER> {

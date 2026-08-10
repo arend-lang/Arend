@@ -2,7 +2,7 @@
 \import Algebra.Meta
 \import Algebra.Monoid
 \import Arith.Rat
-\import Category \hiding (Map)
+\import Category
 \import Data.Array
 \import Data.Bool
 \import Data.Or
@@ -13,26 +13,34 @@
 \import Meta
 \import Order.Biordered
 \import Order.Lattice
+\import Order.Lattice.CompleteLattice
 \import Order.LinearOrder
 \import Order.PartialOrder
 \import Order.StrictOrder
 \import Paths
 \import Paths.Meta
 \import Set.Filter
+\import Set.Set
 \import Topology.Locale
 \import Topology.Locale.Points
-\open PresentedFrame(embed)
+\import Topology.Locale.PreorderSite
+\open SiteLocale
 \open Locale
+\open CompleteLattice
+\open Cover
+\open MeetSemilattice
+\open JoinSemilattice
+\open LinearOrder(dec<_<=)
 
-\type Interval (Q : Poset) => \Sigma Q Q
+\type Interval (Q : StrictPoset) => \Sigma (a b : Q) (a < b)
 
-\instance IntervalPoset (Q : Poset) : Poset (Interval Q)
+\instance IntervalPoset (Q : BiorderedSet) : Poset (Interval Q)
   | <= => <=
   | <=-refl => (<=-refl, <=-refl)
   | <=-transitive t s => (<=-transitive s.1 t.1, <=-transitive t.2 s.2)
   | <=-antisymmetric t s => ext (<=-antisymmetric s.1 t.1, <=-antisymmetric t.2 s.2)
   \where {
-    \type \infix 4 <= {Q : Poset} (x y : Interval Q) => \Sigma (y.1 Q.<= x.1) (x.2 Q.<= y.2)
+    \type \infix 4 <= {Q : BiorderedSet} (x y : Interval Q) => \Sigma (y.1 Q.<= x.1) (x.2 Q.<= y.2)
   }
 
 \instance IntervalBiordered (Q : BiorderedSet) : BiorderedSet (Interval Q)
@@ -47,288 +55,226 @@
     \type \infix 4 < {Q : BiorderedSet} (x y : Interval Q) => \Sigma (y.1 Q.< x.1) (x.2 Q.< y.2)
   }
 
-\instance IntervalSemilattice (Q : Lattice) : MeetSemilattice (Interval Q)
-  | Poset => IntervalPoset Q
-  | meet a b => (a.1 ∨ b.1, a.2 ∧ b.2)
-  | meet-left => (join-left, meet-left)
-  | meet-right => (join-right, meet-right)
-  | meet-univ t s => (join-univ t.1 s.1, meet-univ t.2 s.2)
-
-\instance RealPres (Q : LinearOrder.Dec) : FramePres (Interval Q)
-  | conj => meet
-  | BasicCover => FramePres.Indexing
-      {\Sigma (x : Bool) (if x (\Sigma (p r q s : Q) (p < r) (r < q) (q < s)) (\Sigma Q Q))} {Interval Q}
-      \case __ \with {
-        | (true,(p,r,q,s,_,_,_)) => (Fin 2, (p,s), \case __ \with { | 0 => (p,q) | 1 => (r,s) })
-        | (false,(p,q)) => (\Sigma (r s : Q) (p < r) (r < s) (s < q), (p,q), \lam t => (t.1,t.2))
-      }
+\instance RealPres (Q : LinearOrder.Dec) : PreorderSite (Interval Q)
+  | Preorder => IntervalPoset Q
+  | isBasicCover a U =>
+    (\Sigma (b c : Q) (a1<b : a.1 < b) (b<c : b < c) (c<a2 : c < a.2) (U = \lam x => (x = (a.1, c, a1<b <∘ b<c)) || (x = (b, a.2, b<c <∘ c<a2)))) ||
+    (U = \lam x => \Sigma (a.1 < x.1) (x.2 < a.2))
+  | basic-cover-stable {x} {y} x<=y {U} => \case \elim U, \elim __ \with {
+    | _, byLeft (b,c,y1<b,b<c,c<y2,idp) => \case dec<_<= x.1 b, dec<_<= c x.2 \with {
+      | inl x1<b, inl c<x2 => inP (_, byLeft (b, c, x1<b, b<c, c<x2, idp), \lam {z} => \case \elim z, \elim __ \with {
+        | _, byLeft idp => inP (_, byLeft idp, (x<=y.1, <=-refl))
+        | _, byRight idp => inP (_, byRight idp, (<=-refl, x<=y.2))
+      }, \lam {t} => \case \elim t, \elim __ \with {
+        | _, byLeft idp => (<=-refl, <=-less c<x2)
+        | _, byRight idp => (<=-less x1<b, <=-refl)
+      })
+      | _, inr x2<=c => inP (_, byRight idp, \lam {z} s => inP (_, byLeft idp, (x<=y.1 <=∘ <=-less s.1, <=-less s.2 <=∘ x2<=c)), \lam s => (<=-less s.1, <=-less s.2))
+      | inr b<=x1, _ => inP (_, byRight idp, \lam {z} s => inP (_, byRight idp, (b<=x1 <=∘ <=-less s.1, <=-less s.2 <=∘ x<=y.2)), \lam s => (<=-less s.1, <=-less s.2))
+    }
+    | _, byRight idp => inP (_, byRight idp, \lam {x} (a1<x1,x2<a2) => inP (x, (x<=y.1 <∘r a1<x1, x2<a2 <∘l x<=y.2), <=-refl), \lam s => (<=-less s.1, <=-less s.2))
+  }
   \where {
-    \open JoinSemilattice
-    \open MeetSemilattice
     \open Topology.Locale.Real (RealPres)
 
-    \lemma <=-cover {Q : LinearOrder.Dec} {x y : Interval Q} (p : x <= y) : Cover1 x y
-      => Cover.cover-proj2 {_} {_} {_} {_} {x} {y} (ext (inv (join-comm *> join_<= p.1), inv (meet_<= p.2))) () idp
-
-    \lemma cover-empty {Q : LinearOrder.Dec} {x : Interval Q} (p : x.2 <= x.1) {J : \Set} {g : J -> Interval Q} : Cover x g
-      => cover-trans (cover-basic {RealPres Q} {_} {\Sigma (r s : Q) (x.1 < r) (r < s) (s < x.2)} {\lam t => (t.1,t.2)} (inP ((false,x), idEquiv, idp, \lam _ => idp)))
-          \lam t => absurd (p (t.3 <∘ t.4 <∘ t.5))
-
-    \lemma cover-pair {Q : LinearOrder.Dec} {x : Interval Q} {z1 z2 : Q} (s : z1 < z2) : Cover x {Fin 2} \case __ \with { | 0 => (x.1,z2) | 1 => (z1,x.2) }
-      => \case dec<_<= x.1 z1, dec<_<= z2 x.2 \with {
-        | inl r, inl t => cover-basic (FramePres.indexing-make (later (true,(x.1,z1,z2,x.2,r,s,t))))
-        | _, inr t => cover-trans (<=-cover {_} {x} {x.1,z2} (<=-refl, t)) (\lam _ => cover-inj 0 idp)
-        | inr r, _ => cover-trans (<=-cover {_} {x} {z1,x.2} (r, <=-refl)) (\lam _ => cover-inj 1 idp)
-      }
-
-    \func point {Q : Poset} (x : Q) : Interval Q => (x,x)
-
-    \lemma toPointwiseCover {Q : DenseLinearOrder.Dec} {a : Interval Q} {J : \Set} {g : J -> Interval Q} (c : Cover a g) {x : Q} (b : point x < a) : ∃ (j : J) (point x < g j) \elim c
-      | cover-basic (inP ((true,(p,q,r,s,p<r,q<r,q<s)),e,idp,f)) => \case dec<_<= q x \with {
-        | inl q<x => inP (e 1, rewriteI f (q<x, b.2))
-        | inr x<=q => inP (e 0, rewriteI f (b.1, x<=q <∘r q<r))
-      }
-      | cover-basic (inP ((false,y),e,idp,f)) => \case isDense b.1, isDense b.2 \with {
-        | inP (z1,y1<z1,z1<x), inP (z2,x<z2,z2<y2) => inP (e (z1, z2, y1<z1, z1<x <∘ x<z2, z2<y2), rewriteI f (z1<x, x<z2))
-      }
-      | cover-inj j idp => inP (j,b)
-      | cover-trans c f => \case toPointwiseCover c b \with {
-        | inP (i,x<fi) => toPointwiseCover (f i) x<fi
-      }
-      | cover-proj1 {_} {z} idp j idp => inP (j, b <∘l meet-left)
-      | cover-idemp j p => inP (j, rewrite p (b <∘l meet-univ <=-refl <=-refl))
-      | cover-comm idp j p => inP (j, rewrite p (b <∘l transport (_ <=) meet-comm <=-refl))
-      | cover-ldistr {a} idp {f} c h => \case toPointwiseCover c {x} (b <∘l meet-right) \with {
-        | inP (j,x<fj) => inP (j, rewrite h (\case TotalOrder.join-isMax a.1 (f j).1 \with {
-          | byLeft p => transportInv (`< _) p (join-left <∘r b.1)
-          | byRight p => transportInv (`< _) p x<fj.1
-        }, \case TotalOrder.meet-isMin a.2 (f j).2 \with {
-          | byLeft p => transportInv (_ <) p (b.2 <∘l meet-left)
-          | byRight p => transportInv (_ <) p x<fj.2
-        }))
-      }
-
-    \open LinearOrder(dec<_<=)
-
-    \sfunc cover-factor-left {Q : LinearOrder.Dec} {a : Interval Q} (z : Interval Q) (a1<z1 : a.1 < z.1) (z1<a2 : z.1 < a.2) (l : Array (Interval Q)) (pc : \Pi {x : Q} -> point x < a -> ∃ (j : Fin (suc l.len)) (point x < (z :: l) j))
-      : \Sigma (b : Q) (z.1 < b) (\Pi {x : Q} -> point x < (a.1,b) -> ∃ (j : Fin l.len) (point x < l j))
-      => \let fun => \case LinearOrder.trichotomy z.1 __ \return Bool \with { | less _ => true | _ => false }
-         \in (Big (∧) a.2 (filter fun (map __.2 l)),
-              BiorderedLattice.Big_<_meet-univ z1<a2 \lam i => run {
-                \have t => filter-sat fun (map __.2 l) i,
-                unfold fun at t,
-                cases (LinearOrder.trichotomy z.1 (filter fun (map __.2 l) i), t) \with {
-                  | less r, _ => r
-                }
-              },
-              \lam x<a1b => \case pc (a1<z1, unfold point z1<a2), pc (x<a1b.1, x<a1b.2 <∘l Big_<=_meet0) \with {
-                | inP (0, z1<z), _ => absurd (<-irreflexive z1<z.1)
-                | inP (suc j, z1<gj+1), inP (0, x<z) =>
-                  \have (k,q) => filter-index fun (map __.2 l) j (unfold fun (rewrite (LinearOrder.trichotomy<_reduce z1<gj+1.2) idp))
-                  \in inP (j, (z1<gj+1.1 <∘ x<z.1, x<a1b.2 <∘l transport (_ <=) q (Big_<=_meet1 k)))
-                | _, inP (suc i, p) => inP (i,p)
-              })
-
-    \sfunc cover-factor-right {Q : LinearOrder.Dec} {a : Interval Q} (z : Interval Q) (a1<z2 : a.1 < z.2) (z2<a2 : z.2 < a.2) (l : Array (Interval Q)) (pc : \Pi {x : Q} -> point x < a -> ∃ (j : Fin (suc l.len)) (point x < (z :: l) j))
-      : \Sigma (c : Q) (c < z.2) (\Pi {x : Q} -> point x < (c,a.2) -> ∃ (j : Fin l.len) (point x < l j))
-      => \have (b,p,q) => cover-factor-left {Q.op} {a.2,a.1} (z.2,z.1) z2<a2 a1<z2 (mkArray {Interval Q.op} (\lam i => ((l i).2, (l i).1))) \lam s => \case pc (s.2,s.1) \with {
-        | inP (0, t) => inP (0, (t.2,t.1))
-        | inP (suc j, t) => inP (suc j, (t.2,t.1))
-      } \in (b, p, \lam s => TruncP.map (q (s.2,s.1)) \lam t => (t.1,(t.2.2,t.2.1)))
-
-    \lemma fromPointwiseCover {Q : DenseLinearOrder.Dec} {a : Interval Q} {l : Array (Interval Q)} (c : \Pi {x : Q} -> point x < a -> ∃ (j : Fin l.len) (point x < l j)) : Cover a l \elim l
-      | nil => cover-trans (cover-basic (FramePres.indexing-make (later (false,a)))) $ later \lam t => \case c {t.1} (t.3, t.4 <∘ t.5) \with {
-        | inP ((),_)
-      }
-      | :: z l =>
-        \have deg (d : \Pi {x : Q} -> point x < z -> point x < a -> Empty) : Cover a (z :: l)
-              => cover-trans (fromPointwiseCover (\lam x<a => \case c x<a \with {
-                   | inP (0, x<z) => absurd (d x<z x<a)
-                   | inP (suc j, x<lj) => inP (j,x<lj)
-                 })) (\lam i => cover-inj (suc i) idp)
-        \in \case dec<_<= z.1 a.2, dec<_<= a.1 z.2 \with {
-          | inl z1<a2, inl a1<z2 => \case dec<_<= a.1 z.1, dec<_<= z.2 a.2 \with {
-            | inl a1<z1, inl z2<a2 =>
-              \have | (b,z1<b,a1b<=l+1) => cover-factor-left z a1<z1 z1<a2 l c
-                    | (c,c<z2,ca2<=l+1) => cover-factor-right z a1<z2 z2<a2 l c
-              \in cover-trans (cover-pair z1<b) \case \elim __ \with {
-                | 0 => cover-trans (fromPointwiseCover a1b<=l+1) (\lam i => cover-inj (suc i) idp)
-                | 1 => cover-trans (cover-pair c<z2) \case \elim __ \with {
-                  | 0 => cover-inj 0 idp
-                  | 1 => cover-trans (fromPointwiseCover ca2<=l+1) (\lam i => cover-inj (suc i) idp)
-                }
-              }
-            | inl a1<z1, inr a2<=z2 =>
-              \have (b,z1<b,a1b<=l+1) => cover-factor-left z a1<z1 z1<a2 l c
-              \in cover-trans (<=-cover {_} {a} {a.1,z.2} (<=-refl,a2<=z2)) \lam _ => cover-trans (cover-pair z1<b) \case \elim __ \with {
-                | 0 => cover-trans (fromPointwiseCover a1b<=l+1) (\lam i => cover-inj (suc i) idp)
-                | 1 => cover-inj 0 idp
-              }
-            | inr z1<=a1, inl z2<a2 =>
-              \have (c,c<z2,ca2<=l+1) => cover-factor-right z a1<z2 z2<a2 l c
-              \in cover-trans (<=-cover {_} {a} {z.1,a.2} (z1<=a1,<=-refl)) \lam _ => cover-trans (cover-pair c<z2) \case \elim __ \with {
-                | 0 => cover-inj 0 idp
-                | 1 => cover-trans (fromPointwiseCover ca2<=l+1) (\lam i => cover-inj (suc i) idp)
-              }
-            | inr z1<=a1, inr a2<=z2 => cover-trans (<=-cover (z1<=a1,a2<=z2)) (\lam _ => cover-inj 0 idp)
-          }
-          | _, inr z2<=a1 => deg \lam x<z x<a => <-irreflexive $ x<a.1 <∘ x<z.2 <∘l z2<=a1
-          | inr a2<=z1, _ => deg \lam x<z x<a => <-irreflexive $ x<z.1 <∘ x<a.2 <∘l a2<=z1
+    \lemma subcanonical {Q : DenseLinearOrder.Dec} : (RealPres Q).IsSubcanonical
+      => \lam {x} {U} x<=U {y} => \case \elim U, \elim x<=U \with {
+        | _, byLeft (a,b,x1<a,a<b,b<x2,idp) => \lam h => \case dec<_<= x.1 y.1, dec<_<= y.2 x.2 \with {
+          | inl x1<y1, _ => absurd $ (h $ byLeft idp).1 x1<y1
+          | _, inl y2<x2 => absurd $ (h $ byRight idp).2 y2<x2
+          | inr y1<=x1, inr x2<=y2 => (y1<=x1,x2<=y2)
         }
-
-    \lemma wayBelow {Q : DenseLinearOrder.Dec} {x y : Interval Q} (r : x < y) : x FramePres.<< y
-      => \lam c => wayBelowPredicate (<) r c
-          (\lam {x'} {y'} => wayBelowPredicate.indexing-basic (<) $ later \case \elim __ \with {
-            | (true,(p,r,q,s,_,_,_) \as arg) => \lam x'<ps => inP (0 :: 1 :: nil, cover-trans (<=-cover (<=-less x'<ps)) \lam _ => cover-basic (inP ((true,arg), idEquiv, idp, \lam _ => mcases {1} idp)))
-            | (false,(p,q)) => \lam x'<pq => inP \case dec<_<= x'.1 x'.2 \with {
-              | inl s => ((x'.1, x'.2, x'<pq.1, s, x'<pq.2) :: nil, cover-inj 0 idp)
-              | inr x'-empty => (nil, cover-empty x'-empty)
+        | _, byRight idp => \lam h => \case dec<_<= x.1 y.1, dec<_<= y.2 x.2 \with {
+          | inl x1<y1, _ => \case isDense (<_meet-univ x1<y1 x.3) \with {
+            | inP (b,x1<b,b<y1x2) => \case isDense x1<b \with {
+              | inP (a,x1<a,a<b) => absurd $ (h {a,b,a<b} (x1<a, b<y1x2 <∘l meet-right)).1 $ a<b <∘ b<y1x2 <∘l meet-left
             }
-          })
-          (\lam {x'} {y'} x'<<y' => <=-cover (<=-less x'<<y'))
-          (\lam {x'} {z'} x'<<z' => \case isDense x'<<z'.1, isDense x'<<z'.2 \with {
-            | inP (y1,z'1<y1,y1<x'1), inP (y2,x'2<y2,y2<z'2) => inP ((y1,y2), (y1<x'1,x'2<y2), (z'1<y1,y2<z'2))
-          })
-          \lam {x'} {y'} x'<y' z l y'<=z+l =>
-            \have deg (d : \Pi {q : Q} -> point q < z -> point q < y' -> Empty) : ∃ (l' : Array (Interval Q)) (\Pi (j : Fin l'.len) -> l' j < z) (Cover x' (l' ++ l))
-                  => \case dec<_<= z.1 z.2 \with {
-                       | inl z1<z2 =>
-                         \have | (inP (z1',z1<z1',z1'<z2)) => isDense z1<z2
-                               | (inP (z2',z1'<z2',z2'<z2)) => isDense z1'<z2
-                         \in inP ((z1',z2') :: nil, \lam 0 => (z1<z1', z2'<z2), fromPointwiseCover \lam q<x' => \case toPointwiseCover y'<=z+l (q<x' <∘ x'<y') \with {
-                               | inP (0, q<z) => absurd (d q<z (q<x' <∘ x'<y'))
-                               | inP (suc j, r) => inP (suc j, r)
-                             })
-                       | inr z2<=z1 => inP (nil, \case __ \with {}, fromPointwiseCover \lam q<x' => \case toPointwiseCover y'<=z+l (q<x' <∘ x'<y') \with {
-                         | inP (0, q<z) => absurd (<-irreflexive (q<z.1 <∘ q<z.2 <∘l z2<=z1))
-                         | inP (suc j, r) => inP (j, r)
-                       })
-                     }
-            \in \case dec<_<= z.1 y'.2, dec<_<= y'.1 z.2 \with {
-              | inl z1<y'2, inl y'1<z2 => \case dec<_<= y'.1 z.1, dec<_<= z.2 y'.2 \with {
-                | inl y'1<z1, inl z2<y'2 =>
-                  \have | (b,z1<b,y'1b<=l) => cover-factor-left z y'1<z1 z1<y'2 l (toPointwiseCover y'<=z+l)
-                        | (c,c<z2,cy'2<=l) => cover-factor-right z y'1<z2 z2<y'2 l (toPointwiseCover y'<=z+l)
-                        | (inP (b',z1<b',b'<b)) => isDense z1<b
-                        | (inP (c',c<c',c'<z2)) => isDense c<z2
-                  \in inP ((b',c') :: nil, \lam 0 => (z1<b',c'<z2), cover-trans (cover-pair b'<b) \case \elim __ \with {
-                        | 0 => cover-trans (<=-cover {_} {x'.1,b} {y'.1,b} (<=-less x'<y'.1, <=-refl)) \lam _ => cover-trans (fromPointwiseCover y'1b<=l) (\lam i => cover-inj (suc i) idp)
-                        | 1 => cover-trans (cover-pair c<c') \case \elim __ \with {
-                          | 0 => cover-inj 0 idp
-                          | 1 => cover-trans (<=-cover {_} {c,x'.2} {c,y'.2} (<=-refl, <=-less x'<y'.2)) \lam _ => cover-trans (fromPointwiseCover cy'2<=l) (\lam i => cover-inj (suc i) idp)
-                        }
-                      })
-                | inl y'1<z1, inr y'2<=z2 =>
-                  \have | (b,z1<b,y'1b<=l) => cover-factor-left z y'1<z1 z1<y'2 l (toPointwiseCover y'<=z+l)
-                        | (inP (b',z1<b',b'<b)) => isDense z1<b
-                  \in inP ((b',x'.2) :: nil, \lam 0 => (z1<b', x'<y'.2 <∘l y'2<=z2), cover-trans (cover-pair b'<b) \case \elim __ \with {
-                        | 0 => cover-trans (<=-cover {_} {x'.1,b} {y'.1,b} (<=-less x'<y'.1, <=-refl)) \lam _ => cover-trans (fromPointwiseCover y'1b<=l) (\lam i => cover-inj (suc i) idp)
-                        | 1 => cover-inj 0 idp
-                      })
-                | inr z1<=y'1, inl z2<y'2 =>
-                  \have | (c,c<z2,cy'2<=l) => cover-factor-right z y'1<z2 z2<y'2 l (toPointwiseCover y'<=z+l)
-                        | (inP (c',c<c',c'<z2)) => isDense c<z2
-                  \in inP ((x'.1,c') :: nil, \lam 0 => (z1<=y'1 <∘r x'<y'.1, c'<z2), cover-trans (cover-pair c<c') \case \elim __ \with {
-                        | 0 => cover-inj 0 idp
-                        | 1 => cover-trans (<=-cover {_} {c,x'.2} {c,y'.2} (<=-refl, <=-less x'<y'.2)) \lam _ => cover-trans (fromPointwiseCover cy'2<=l) (\lam i => cover-inj (suc i) idp)
-                      })
-                | inr z1<=y'1, inr y'2<=z2 => inP (x' :: nil, \lam 0 => (z1<=y'1 <∘r x'<y'.1, x'<y'.2 <∘l y'2<=z2), cover-inj 0 idp)
-              }
-              | _, inr z2<=y'1 => deg \lam x<z x<y' => <-irreflexive (x<y'.1 <∘ x<z.2 <∘l z2<=y'1)
-              | inr y'2<=z1, _ => deg \lam x<z x<y' => <-irreflexive (x<z.1 <∘ x<y'.2 <∘l y'2<=z1)
+          }
+          | _, inl y2<x2 => \case isDense (<_join-univ x.3 y2<x2) \with {
+            | inP (a,x1y2<a,a<x2) => \case isDense a<x2 \with {
+              | inP (b,a<b,b<x2) => absurd $ (h {a,b,a<b} (join-left <∘r x1y2<a, b<x2)).2 $ join-right <∘r x1y2<a <∘ a<b
             }
+          }
+          | inr y1<=x1, inr x2<=y2 => (y1<=x1,x2<=y2)
+        }
+      }
 
-    \lemma locallyCompact {Q : DenseLinearOrder.Dec} : FramePres.isLocallyCompact {RealPres Q}
-      => \lam x => cover-trans (cover-basic (FramePres.indexing-make (later (false,x)))) $ later \lam (r,s,x1<r,_,s<x2) => cover-inj ((r,s), wayBelow $ later (x1<r,s<x2)) idp
+    \lemma embed-char {Q : DenseLinearOrder.Dec} {a b : Interval Q} : (embed a).1 b <-> b <= a
+      => (PreorderSite.subcanonical-cover1 RealPres.subcanonical, cover-inj __ idp)
+
+    \lemma toPointwiseCover {Q : DenseLinearOrder.Dec} {a : Interval Q} {U : Set (Interval Q)} (a<=U : Cover a U) {x : Q} (a1<x : a.1 < x) (x<a2 : x < a.2) : ∃ (b : U) (b.1 < x) (x < b.2) \elim a<=U
+      | cover-inj {b} a<=b Ub => inP (b, Ub, a<=b.1 <∘r a1<x, x<a2 <∘l a<=b.2)
+      | cover-trans (byLeft (b,c,a1<b,b<c,c<a2,idp)) T<=U => \case dec<_<= x c \with {
+        | inl x<c => toPointwiseCover (T<=U (byLeft idp)) a1<x x<c
+        | inr c<=x => toPointwiseCover (T<=U (byRight idp)) (b<c <∘l c<=x) x<a2
+      }
+      | cover-trans (byRight idp) T<=U => \case isDense a1<x, isDense x<a2 \with {
+        | inP (y1,a1<y1,y1<x), inP (y2,x<y2,y2<a2) => toPointwiseCover (T<=U {y1, y2, y1<x <∘ x<y2} (a1<y1, y2<a2)) y1<x x<y2
+      }
+
+    \lemma <<-intervals {Q : DenseLinearOrder.Dec} {x y : Interval Q} (r : x < y) : x PreorderSite.<< y
+      => <<-char <=-less (\lam {a} {b} a<b {U} b<=U => \case \elim U, \elim b<=U \with {
+        | _, byLeft (c,d,b1<c,c<d,d<b2,idp) => \case isDense (<_meet-univ a<b.1 b1<c), isDense (<_join-univ a<b.2 d<b2), isDense c<d \with {
+          | inP (b1',b1<b1',b1'<a1c), inP (b2',a2d<b2',b2'<b2), inP (c',c<c',c'<d) => \case isDense c'<d \with {
+            | inP (d',c'<d',d'<d) => inP (
+              (b1', d', b1'<a1c <∘ meet-right <∘r c<c' <∘ c'<d') :: (c', b2', c'<d <∘ join-right <∘r a2d<b2') :: nil,
+              cover-left {_} {_} {b1', b2', b1'<a1c <∘ meet-right <∘r c<d <∘ join-right <∘r a2d<b2'} (<=-less b1'<a1c <=∘ meet-left, join-left <=∘ <=-less a2d<b2') $
+                cover-sub (cover-basic $ byLeft (c', d', b1'<a1c <∘ meet-right <∘r c<c', c'<d', d'<d <∘ join-right <∘r a2d<b2', idp)) \case \elim __ \with {
+                  | byLeft p => inP (0, inv p)
+                  | byRight p => inP (1, inv p)
+                },
+              \case \elim __ \with {
+                | 0 => inP (_, byLeft idp, (b1<b1', d'<d))
+                | 1 => inP (_, byRight idp, (c<c', b2'<b2))
+              })
+          }
+        }
+        | _, byRight idp => \case isDense a<b.1, isDense a<b.2 \with {
+          | inP (b1',b1<b1',b1'<a1), inP (b2',a2<b2',b2'<b2) => inP (a :: nil, cover-refl $ TSetIm-con (later 0), \lam (0) => inP ((b1', b2', b1'<a1 <∘ a.3 <∘ a2<b2'), (b1<b1', b2'<b2), (b1'<a1, a2<b2')))
+        }
+      }) r
+
+    \lemma locallyCompact {Q : DenseLinearOrder.Dec} : (RealPres Q).IsLocallyCompact
+      => \lam x => cover-sub (cover-basic $ byRight idp) \lam s => <<-intervals s
   }
 
-\func RealLocale : Locale => PresentedFrame (RealPres RatField)
+\func RealLocale : Locale => SiteLocale (RealPres RatField)
   \where {
-    \lemma locallyCompact : RealLocale.isLocallyCompact
-      => locallyCompact-fromPres RealPres.locallyCompact
+    \lemma locallyCompact : RealLocale.IsLocallyCompact
+      => PreorderSite.locallyCompact-locale.1 RealPres.locallyCompact
 
-    \lemma wellInside {x y : Interval RatField} (r : x < y) : embed x <=< embed y
-      => \lam {a} _ => cover-trans (RealPres.cover-pair r.1) \case \elim __ \with {
-        | 0 => cover-inj (true, (a.1,x.1), cover-inj ((embed (later (a.1,x.1)), cover-trans __ \lam i => cover-trans (Cover.cover-conj1 i.3 i.4) \lam _ => RealPres.cover-empty $ unfold $ meet-left <=∘ join-right), (a.1,x.1), cover-inj () idp) idp) idp
-        | 1 => cover-trans (RealPres.cover-pair r.2) \case \elim __ \with {
-          | 0 => cover-inj (false, y, cover-inj () idp) idp
-          | 1 => cover-inj (true, (x.2,a.2), cover-inj ((embed (later (x.2,a.2)), cover-trans __ \lam i => cover-trans (Cover.cover-conj1 i.3 i.4) \lam _ => RealPres.cover-empty $ unfold $ meet-right <=∘ join-left), (x.2,a.2), cover-inj () idp) idp) idp
-        }
-      }
+    \lemma <=<-intervals {x y : Interval RatField} (r : x < y) : embed x <=< embed y
+      => make<=< $ halves3-cover r.1 r.2 <=∘ join-monotone (join-univ (RealLocale.<=-curry {_} {embed x} $ lowerHalf.lowerHalf_embed<=0 <=-refl) (RealLocale.<=-curry {_} {embed x} $ upperHalf.upperHalf_embed<=0 <=-refl)) <=-refl
 
     \lemma regular : RealLocale.IsRegularLocale
-      => regular-fromPres \lam x => cover-trans (cover-basic (FramePres.indexing-make (later (false,x)))) $ later \lam (r,s,x1<r,_,s<x2) => cover-inj ((r,s), wellInside $ later (x1<r,s<x2)) idp
+      => regular-site \lam x => later $ cover-trans (byRight idp) \lam r => cover-refl (<=<-intervals r)
 
     \func ratPoint (x : Rat) : CompleteFilter RealLocale
-      => framePres-point {RealPres RatField} (\lam (a,b) => \Sigma (a < x) (x < b)) (inP ((x - 1, x + 1), (linarith, linarith)))
-          (\lam {a} {b} => (\lam (c,d) => ((join-left <∘r c, d <∘l meet-left), (join-right <∘r c, d <∘l meet-right)), \lam ((c1,c2),(d1,d2)) => (<_join-univ c1 d1, <_meet-univ c2 d2))) $
-          FramePres.indexing-transport _ $ unfold_let \case \elim __ \with {
-            | (true,(p,r,q,s,p<r,r<q,q<s)) => \lam (p<x,x<s) => \case LinearOrder.dec<_<= r x \with {
-              | inl r<x => inP (1, (r<x, x<s))
-              | inr x<=r => inP (0, (p<x, x<=r <∘r r<q))
+      => site-point (sitePoint x)
+      \where
+        \func sitePoint (p : Rat) : SitePoint (RealPres RatField) \cowith
+          | F a => \Sigma (a.1 < p) (p < a.2)
+          | sitePoint-mono (x1<p,p<x2) x<=y => (x<=y.1 <∘r x1<p, p<x2 <∘l x<=y.2)
+          | sitePoint-top => inP ((p - 1, p + 1, linarith), (linarith, linarith))
+          | sitePoint-meet {x} {y} (x1<p,p<x2) (y1<p,p<y2) =>
+            \have | x1y1<p => <_join-univ x1<p y1<p
+                  | p<x2y2 => <_meet-univ p<x2 p<y2
+            \in inP ((x.1 ∨ y.1, x.2 ∧ y.2, x1y1<p <∘ p<x2y2), (x1y1<p, p<x2y2), RealPres.embed-char.2 (join-left, meet-left), RealPres.embed-char.2 (join-right, meet-right))
+          | sitePoint-cover {x} {U} x<=U (x1<p,p<x2) => \case \elim U, \elim x<=U \with {
+            | _, byLeft (b,c,x1<b,b<c,c<x2,idp) => \case dec<_<= p c \with {
+              | inl p<c => inP (_, byLeft idp, (x1<p, p<c))
+              | inr c<=p => inP (_, byRight idp, (b<c <∘l c<=p, p<x2))
             }
-            | (false,(p,q)) => \lam (p<x,x<q) => \case isDense p<x, isDense x<q \with {
-              | inP (r,p<r,r<x), inP (s,x<s,s<q) => inP ((r, s, p<r, r<x <∘ x<s, s<q), (r<x, x<s))
+            | _, byRight idp => \case isDense x1<p, isDense p<x2 \with {
+              | inP (y1,x1<y1,y1<p), inP (y2,p<y2,y2<x2) => inP ((y1, y2, y1<p <∘ p<y2), (x1<y1, y2<x2), (y1<p, p<y2))
             }
           }
 
     \lemma hasStronglyDensePoints : HasStronglyDensePoints RealLocale
-      => hasStronglyDensePoints-fromPres $ later \lam a => \case LinearOrder.dec<_<= a.1 a.2 \with {
-        | inl r => \case isDense r \with {
-          | inP (x,a1<x,x<a2) => cover-inj (inP (ratPoint x, inP (a, cover-inj () idp, (a1<x,x<a2)))) idp
-        }
-        | inr r => RealPres.cover-empty r
+      => hasStronglyDensePoints-site $ later \lam a => \case isDense a.3 \with {
+        | inP (x,a1<x,x<a2) => cover-refl $ inP (ratPoint.sitePoint x, (a1<x, x<a2))
       }
   }
 
-\func lowerHalf (x : Rat) : RealLocale
-  => Join {_} {\Sigma (a b : Rat) (b <= x)} (\lam (a,b,_) => embed (later (a,b)))
+\sfunc lowerHalf (x : Rat) : RealLocale
+  => SJoin {_} {Interval RatField} embed \lam s => s.2 <= x
+  \where {
+    \lemma lowerHalf-char {x : Rat} {a : Interval RatField} : (lowerHalf x).1 a <-> a.2 <= x
+      => rewrite (\peval lowerHalf x) (\lam p => \case dec<_<= x a.2 \with {
+        | inl x<a2 => absurd \case isDense (<_join-univ a.3 x<a2) \with {
+          | inP (y,a1x<y,y<a2) => \case RealPres.toPointwiseCover p (join-left <∘r a1x<y) y<a2 \with {
+            | inP (b, inP (_, inP ((c,c2<=x),idp), b<=c), b1<y, y<b2) => c2<=x $ join-right <∘r a1x<y <∘ y<b2 <∘l (RealPres.embed-char.1 b<=c).2
+          }
+        }
+        | inr a2<=x => a2<=x
+      }, \lam p => cover-refl $ inP (_, SetIm-con p, cover-refl idp))
 
-\func upperHalf (x : Rat) : RealLocale
-  => Join {_} {\Sigma (a b : Rat) (x <= a)} (\lam (a,b,_) => embed (later (a,b)))
+    \lemma lowerHalf-cover {b x : Rat} {c : Interval RatField} (c1<x : c.1 < x) (b<=c2 : b <= c.2) : lowerHalf b <= lowerHalf x ∨ embed c
+      => meet-univ <=-refl (top-univ <=∘ halves-cover c1<x) <=∘ ldistr>= <=∘ join-monotone meet-right (meet-comm =<= halves-inter <=-refl b<=c2)
 
-\func closedInterval (x y : Rat) => Nucleus.locale {nucleus x y}
+    \lemma lowerHalf_embed<=embed {x : Rat} {c : Interval RatField} (c1<x : c.1 < x) : lowerHalf x ∧ embed c <= embed (c.1, x, c1<x)
+      => \lam {y} s => RealPres.embed-char.2 $ later ((RealPres.embed-char.1 s.2).1, lowerHalf.lowerHalf-char.1 s.1)
+
+    \lemma lowerHalf_embed<=0 {x : Rat} {c : Interval RatField} (x<=c1 : x <= c.1) : lowerHalf x ∧ embed c <= bottom
+      => \lam {y} s => absurd $ x<=c1 $ (RealPres.embed-char.1 s.2).1 <∘r y.3 <∘l lowerHalf.lowerHalf-char.1 s.1
+  }
+
+\sfunc upperHalf (x : Rat) : RealLocale
+  => SJoin {_} {Interval RatField} embed \lam s => x <= s.1
+  \where {
+    \lemma upperHalf-char {x : Rat} {a : Interval RatField} : (upperHalf x).1 a <-> x <= a.1
+      => rewrite (\peval upperHalf x) (\lam p => \case dec<_<= a.1 x \with {
+        | inl a1<x => absurd \case isDense (<_meet-univ a.3 a1<x) \with {
+          | inP (y,a1<y,y<a2x) => \case RealPres.toPointwiseCover p a1<y (y<a2x <∘l meet-left) \with {
+            | inP (b, inP (_, inP ((c,x<=c1),idp), b<=c), b1<y, y<b2) => x<=c1 $ (RealPres.embed-char.1 b<=c).1 <∘r b1<y <∘ y<a2x <∘l meet-right
+          }
+        }
+        | inr x<=a1 => x<=a1
+      }, \lam p => cover-refl $ inP (_, SetIm-con p, cover-refl idp))
+
+    \lemma upperHalf-cover {a x : Rat} {c : Interval RatField} (c1<=a : c.1 <= a) (x<c2 : x < c.2) : upperHalf a <= embed c ∨ upperHalf x
+      => meet-univ <=-refl (top-univ <=∘ halves-cover x<c2) <=∘ ldistr>= <=∘ join-monotone (halves-inter c1<=a <=-refl) meet-right
+
+    \lemma upperHalf_embed<=embed {x : Rat} {c : Interval RatField} (x<c2 : x < c.2) : upperHalf x ∧ embed c <= embed (x, c.2, x<c2)
+      => \lam {y} s => RealPres.embed-char.2 $ later (upperHalf.upperHalf-char.1 s.1, (RealPres.embed-char.1 s.2).2)
+
+    \lemma upperHalf_embed<=0 {x : Rat} {c : Interval RatField} (c2<=x : c.2 <= x) : upperHalf x ∧ embed c <= bottom
+      => \lam {y} s => absurd $ c2<=x $ upperHalf.upperHalf-char.1 s.1 <∘r y.3 <∘l (RealPres.embed-char.1 s.2).2
+  }
+
+\lemma halves-cover {x y : Rat} (x<y : x < y) : top <= lowerHalf y ∨ upperHalf x
+  => rewrite (\peval lowerHalf y, \peval upperHalf x) \lam {z} _ => \case dec<_<= z.1 x, dec<_<= y z.2 \with {
+    | inl z1<x, inl y<z2 => cover-trans (byLeft (x,y,z1<x,x<y,y<z2,idp)) \lam {t} => \case \elim t, \elim __ \with {
+      | _, byLeft idp => cover-refl $ inP (_, byLeft idp, cover-refl $ inP (_, SetIm-con <=-refl, cover-refl idp))
+      | _, byRight idp => cover-refl $ inP (_, byRight idp, cover-refl $ inP (_, SetIm-con <=-refl, cover-refl idp))
+    }
+    | _, inr z2<=y => cover-refl $ inP (_, byLeft idp, cover-refl $ inP (_, SetIm-con z2<=y, cover-refl idp))
+    | inr x<=z1, _ => cover-refl $ inP (_, byRight idp, cover-refl $ inP (_, SetIm-con x<=z1, cover-refl idp))
+  }
+
+\lemma halves3-cover {x y : Rat} {a : Interval RatField} (a1<x : a.1 < x) (y<a2 : y < a.2) : top <= lowerHalf x ∨ upperHalf y ∨ embed a
+  => halves-cover a1<x <=∘ join-monotone <=-refl (upperHalf.upperHalf-cover <=-refl y<a2 <=∘ =_<= join-comm) <=∘ =_<= (inv join-assoc)
+
+\lemma halves-inter {x y : Rat} {c : Interval RatField} (c1<=x : c.1 <= x) (y<=c2 : y <= c.2) : upperHalf x ∧ lowerHalf y <= embed c
+  => rewrite (\peval lowerHalf y, \peval upperHalf x) \lam {z} (z<=x,z<=y) => cover-refine (cover-inter z<=x z<=y)
+      \lam {t} (inP (a, inP (_, inP ((a',x<=a'1),idp), a<=a'), b, inP (_, inP ((b',b'2<=y),idp), b<=b'), t<=a, t<=b)) =>
+        inP (_, idp, (c1<=x <=∘ x<=a'1 <=∘ (RealPres.embed-char.1 a<=a').1 <=∘ t<=a.1, t<=b.2 <=∘ (RealPres.embed-char.1 b<=b').2 <=∘ b'2<=y <=∘ y<=c2))
+
+\func closedInterval (x y : Rat) => (nucleus x y).locale
   \where {
     \func nucleus (x y : Rat) : Nucleus
       => closed (lowerHalf x ∨ upperHalf y)
 
-    \lemma compact (x y : Rat) : isCompact {closedInterval x y}
-      => \case withoutLowerBound x, withoutUpperBound y \with {
-           | inP (x',x'<x), inP (y',y<y') => generalized x'<x y<y'
-         }
-      \where
-        \lemma generalized {x y a b : Rat} (p : a < x) (q : y < b) : isCompact {Nucleus.locale {nucleus x y}}
-          => \case isDense p, isDense q \with {
-               | inP (a',a<a',a'<x), inP (b',y<b',b'<b) => closed-compact
-                   (closed-isClosed _)
-                   (<<-left (<<-fromPres (RealPres.wayBelow {_} {a',b'} {a,b} (a<a',b'<b))) top-univ)
-                   $ closed>=open {_} {_} {PresentedFrame.embed (later (a',b'))} \lam {z} _ => cover-trans (RealPres.cover-pair a'<x) \case \elim __ \with {
-                     | 0 => cover-inj (true, (z.1,x), later $ cover-inj (true, (z.1,x), cover-inj ((z.1,x,<=-refl), (z.1,x), cover-inj () idp) idp) idp) idp
-                     | 1 => cover-trans (RealPres.cover-pair y<b') \case \elim __ \with {
-                       | 0 => cover-inj (false, (a',b'), cover-inj () idp) idp
-                       | 1 => cover-inj (true, (y,z.2), later $ cover-inj (false, (y,z.2), cover-inj ((y,z.2,<=-refl), (y,z.2), cover-inj () idp) idp) idp) idp
-                     }
-                   }
-             }
+    \lemma compact (x y : Rat) : (closedInterval x y).IsCompact
+      => \case withoutLowerBound x, withoutUpperBound (x ∨ y) \with {
+           | inP (a,a<x), inP (b,xy<b) => \case isDense a<x, isDense xy<b \with {
+             | inP (a',a<a',a'<x), inP (b',xy<b',b'<b) =>
+               \have a'<b' => a'<x <∘ join-left <∘r xy<b'
+               \in closed-compact (closed-isClosed _) (<<-left (PreorderSite.<<-site.1 (RealPres.<<-intervals {_} {a',b',a'<b'} {a, b, a<a' <∘ a'<b' <∘ b'<b} (a<a',b'<b))) top-univ) $ closed<=open $ halves3-cover a'<x (join-right <∘r xy<b')
+           }
+      }
   }
 
-\func rat_real : Hom (discrete Rat) RealLocale
-  => FrameReflectiveSubcat.adjointMap $ later \new FramePresHom {
+\func rat_real : LocaleHom (discreteLocale Rat) RealLocale
+  => LocaleSite.adjointMap $ later \new PreorderSiteHom {
     | func p x => \Sigma (p.1 < x) (x < p.2)
-    | func-conj {x} {y} => ext \lam e => ext (\lam p => ((join-left <∘r p.1, p.2 <∘l meet-left), (join-right <∘r p.1, p.2 <∘l meet-right)),
-                                              \lam c => (TotalOrder.join-prop (`< e) c.1.1 c.2.1, TotalOrder.meet-prop (e <) c.1.2 c.2.2))
-    | func-basicCover => FramePres.indexing-transport _ $ later \case \elim __ \with {
-      | (true,(p,r,q,s,p<r,r<q,q<s)) => \lam {e} t => inP \case LinearOrder.dec<_<= e q \with {
-        | inl e<q => (0, (t.1, e<q))
-        | inr q<=e => (1, (r<q <∘l q<=e, t.2))
+    | func-<= x<=y {z} (x1<z,z<x2) => (x<=y.1 <∘r x1<z, z<x2 <∘l x<=y.2)
+    | func-basicCover {x} {U} => \case \elim U, \elim __ \with {
+      | _, byLeft (b,c,x1<b,b<c,c<x2,idp) => \lam {z} (x1<z,z<x2) => \case dec<_<= z c \with {
+        | inl z<c => inP (_, SetIm-con (byLeft idp), (x1<z, z<c))
+        | inr c<=z => inP (_, SetIm-con (byRight idp), (b<c <∘l c<=z, z<x2))
       }
-      | (false,(p,q)) => \lam {e} t => \case isDense t.1, isDense t.2 \with {
-        | inP (r,p<r,r<e), inP (s,e<s,s<q) => inP ((r, s, p<r, r<e <∘ e<s, s<q), (r<e, e<s))
+      | _, byRight idp => \lam {z} (x1<z,z<x2) => \case isDense x1<z, isDense z<x2 \with {
+        | inP (y1,x1<y1,y1<z), inP (y2,z<y2,y2<x2) => inP (_, SetIm-cone (later (y1, y2, y1<z <∘ z<y2)) (x1<y1, y2<x2), (y1<z, z<y2))
       }
     }
-    | func-image {U} => cover-basic \lam {x} _ => \case withoutLowerBound x, withoutUpperBound x \with {
-      | inP (l,l<x), inP (u,x<u) => inP ((l,u),(l<x,x<u))
-    }
+    | func-flat-top {U} => cover-basic \lam {x} Ux => inP (_, TSetIm-con $ later (x - 1, x + 1, linarith), (linarith, linarith))
+    | func-flat-meet {x} {y} {U} U<=x U<=y => cover-basic \lam {z} Uz =>
+      \have | (x1<z,z<x2) => U<=x Uz
+            | (y1<z,z<y2) => U<=y Uz
+            | x1y1<z => <_join-univ x1<z y1<z
+            | z<x2y2 => <_meet-univ z<x2 z<y2
+      \in inP (_, TSetIm-con $ later ((x.1 ∨ y.1, x.2 ∧ y.2, x1y1<z <∘ z<x2y2), ((join-left, meet-left), (join-right, meet-right))), (x1y1<z, z<x2y2))
   }
 
 {-

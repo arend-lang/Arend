@@ -12,10 +12,7 @@ import org.arend.typechecking.implicitargs.equations.Equations;
 import org.arend.util.Decision;
 import org.jetbrains.annotations.NotNull;
 
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 public class InferenceReferenceExpression extends Expression implements CoreInferenceReferenceExpression {
   private final InferenceVariable myVar;
@@ -47,13 +44,19 @@ public class InferenceReferenceExpression extends Expression implements CoreInfe
 
     ClassCallExpression classCall = type.cast(ClassCallExpression.class);
     if (classCall != null && !classCall.getDefinition().getNotImplementedFields().isEmpty()) {
-      type = new ClassCallExpression(classCall.getDefinition(), classCall.getLevels());
+      boolean hasAdditionalLevels = classCall.getLevels().size() > classCall.getDefinition().getLevelParameters().size();
+      Map<ClassField, Expression> newImplementations = new LinkedHashMap<>();
+      type = new ClassCallExpression(classCall.getDefinition(), classCall.getLevels(), newImplementations);
       binding.setType(type);
       result.myImplementedFields = new HashSet<>();
       for (Map.Entry<ClassField, Expression> entry : classCall.getImplementedHere().entrySet()) {
         ClassField field = entry.getKey();
         if (field.isProperty()) continue;
-        equations.addEquation(FieldCallExpression.make(field, result), entry.getValue().normalize(NormalizationMode.WHNF), classCall.getDefinition().getFieldType(field, classCall.getLevels(field.getParentClass()), result), CMP.EQ, binding.getSourceNode(), binding, entry.getValue().getStuckInferenceVariable(), false);
+        if (hasAdditionalLevels && field.isInfiniteField()) {
+          newImplementations.put(entry.getKey(), entry.getValue());
+          continue;
+        }
+        equations.addEquation(FieldCallExpression.make(field, result), entry.getValue().normalize(NormalizationMode.WHNF), classCall.getFieldType(field, result), CMP.EQ, binding.getSourceNode(), binding, entry.getValue().getStuckInferenceVariable(), false);
         if (result.getSubstExpression() != null) {
           Expression solution = result.getSubstExpression();
           binding.setType(classCall);
@@ -79,10 +82,6 @@ public class InferenceReferenceExpression extends Expression implements CoreInfe
   @Override
   public InferenceVariable getVariable() {
     return mySubstExpression == null ? myVar : null;
-  }
-
-  public InferenceVariable getOriginalVariable() {
-    return myVar;
   }
 
   public boolean isFieldImplemented(ClassField field) {

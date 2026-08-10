@@ -13,7 +13,7 @@
 \import Paths
 \import Paths.Meta
 \import Set.Filter
-\import Set.Subset
+\import Set.Set
 \import Topology.CoverSpace
 \import Topology.CoverSpace.Complete
 \import Topology.CoverSpace.Subspace
@@ -142,7 +142,7 @@
 
 \func OpenBallCompleteCoverSpace {X : CompleteExMetricSpace} (c : X) (r : LowerReal) : CompleteCoverSpace (Total (LBall r c)) \cowith
   | CoverSpace => OpenBallCoverSpace c r
-  | isSeparatedCoverSpace => (Separated-char (OpenBallCoverSpace c r) 3 0 $ inP (X, func, \lam p => ext p)).isSeparatedCoverSpace
+  | isSeparatedCoverSpace c => Separated-char.fromInj func (\lam p => ext p) c
   | isComplete F =>
     \let | F' => cauchy-filter-extend F
          | x => X.filter-point F'

@@ -63,7 +63,7 @@ public class DefaultMetaDefinition implements MetaDefinition {
     return checkArguments(contextData.getArguments(), contextData.getCoclauses(), errorReporter, contextData.getMarker());
   }
 
-  protected @Nullable ConcreteExpression getConcreteRepresentation(@Nullable Object data, @Nullable List<Concrete.LevelExpression> pLevels, @Nullable List<Concrete.LevelExpression> hLevels, @NotNull List<? extends ConcreteArgument> arguments, @Nullable ConcreteCoclauses coclauses) {
+  protected @Nullable ConcreteExpression getConcreteRepresentation(@Nullable Object data, @Nullable List<Concrete.LevelExpression> pLevels, @NotNull List<? extends ConcreteArgument> arguments, @Nullable ConcreteCoclauses coclauses) {
     if (myDefinition.body == null) return null;
     List<Referable> refs = new ArrayList<>();
     for (Concrete.Parameter parameter : myDefinition.getParameters()) {
@@ -79,8 +79,7 @@ public class DefaultMetaDefinition implements MetaDefinition {
       }
     }
 
-    binLevelParameters(subst, pLevels, myDefinition.getPLevelParameters());
-    binLevelParameters(subst, hLevels, myDefinition.getHLevelParameters());
+    binLevelParameters(subst, pLevels, myDefinition.getLevelParameters());
     Concrete.Expression result = myDefinition.body.accept(subst, null);
     if (result == null) return null;
     if (arguments.size() > refs.size()) {
@@ -109,7 +108,7 @@ public class DefaultMetaDefinition implements MetaDefinition {
     if (!(refExpr instanceof Concrete.ReferenceExpression)) {
       throw new IllegalStateException();
     }
-    ConcreteExpression result = getConcreteRepresentation(refExpr.getData(), ((Concrete.ReferenceExpression) refExpr).getPLevels(), ((Concrete.ReferenceExpression) refExpr).getHLevels(), contextData.getArguments(), contextData.getCoclauses());
+    ConcreteExpression result = getConcreteRepresentation(refExpr.getData(), ((Concrete.ReferenceExpression) refExpr).getLevels(), contextData.getArguments(), contextData.getCoclauses());
     if (result == null) {
       typechecker.getErrorReporter().report(new TypecheckingError("Meta '" + myDefinition.getData().getRefName() + "' is not defined", contextData.getMarker()));
       return null;

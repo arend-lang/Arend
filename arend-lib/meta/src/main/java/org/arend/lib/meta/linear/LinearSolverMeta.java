@@ -17,10 +17,8 @@ public class LinearSolverMeta extends BaseAlgebraicMeta {
   @Dependency(name = "zero<=_")                       ArendRef zeroLE_;
   @Dependency(name = "pos<=pos")                      ArendRef posLEpos;
   @Dependency(name = "pos<pos")                       ArendRef posLpos;
-  @Dependency(name = "suc_<_<=")                      ArendRef sucLleq;
   @Dependency(name = "fromInt_<=")                    ArendRef fromIntLE;
   @Dependency(name = "fromInt_<")                     ArendRef fromIntL;
-  @Dependency(name = "id<isuc")                       ArendRef idLisuc;
   @Dependency(name = "Rat.fromInt")                   ArendRef fromInt;
   @Dependency(name = "=_<=")                          ArendRef eqToLeq;
   @Dependency(name = "OrderedAAlgebra.coef_<")        ArendRef coefMapL;

@@ -15,7 +15,7 @@ import java.util.List;
 import java.util.Set;
 
 public class MetaTopDefinition extends Definition {
-  private List<? extends LevelVariable> myLevelParameters;
+  private List<? extends LevelVariable> myLevelParameters = Collections.emptyList();
   private DependentLink myParameters = EmptyDependentLink.getInstance();
   private List<? extends Boolean> myTypedParameters = Collections.emptyList();
 
@@ -34,11 +34,11 @@ public class MetaTopDefinition extends Definition {
   }
 
   @Override
-  public List<? extends LevelVariable> getLevelParameters() {
+  public @NotNull List<? extends LevelVariable> getLevelParameters() {
     return myLevelParameters;
   }
 
-  public void setLevelParameters(List<? extends LevelVariable> params) {
+  public void setLevelParameters(@NotNull List<? extends LevelVariable> params) {
     myLevelParameters = params;
   }
 
@@ -81,11 +81,6 @@ public class MetaTopDefinition extends Definition {
     LevelSubstitution levelSubst = levels.makeSubstitution(this);
     params.addAll(DependentLink.Helper.toList(DependentLink.Helper.subst(myParameters, subst, levelSubst)));
     return null;
-  }
-
-  @Override
-  public UniverseKind getUniverseKind() {
-    return UniverseKind.WITH_UNIVERSES;
   }
 
   @Override

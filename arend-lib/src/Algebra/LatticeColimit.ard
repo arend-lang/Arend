@@ -1,14 +1,14 @@
 \import Algebra.Field
 \import Algebra.Group
-\import Algebra.Group.GroupCategory
+\import Algebra.Group.GroupCat
 \import Algebra.Group.GroupHom
 \import Algebra.Monoid
-\import Algebra.Monoid.MonoidCategory
+\import Algebra.Monoid.MonoidCat
 \import Algebra.Monoid.MonoidHom
 \import Algebra.Pointed
 \import Algebra.Pointed.PointedHom
 \import Algebra.Ring
-\import Algebra.Ring.RingCategory
+\import Algebra.Ring.RingCat
 \import Algebra.Ring.RingHom
 \import Algebra.Semiring
 \import Category
@@ -24,7 +24,7 @@
 \import Set.SetCategory
 \open SetColimit
 
-\instance MonoidLatticeColimit {D : BottomJoinSemilattice} (F : Functor D MonoidCat) : Monoid (SetColimit (Comp MonoidCat.forget F))
+\instance MonoidLatticeColimit.{u} {D : BottomJoinSemilattice} (F : Functor D MonoidCat.{u}) : Monoid (SetColimit (Comp MonoidCat.forget F))
   | ide => in~ (D.bottom, ide)
   | * (x y : SetColimit (Comp MonoidCat.forget F)) : SetColimit (Comp MonoidCat.forget F) \with {
     | in~ a, in~ b => in~ (a.1 ∨ b.1, F.Func join-left a.2 Monoid.* F.Func join-right b.2)
@@ -54,16 +54,16 @@
     \private \lemma poset-id {j : D} {p : j <= j} {a : F j} : F.Func p a = a
       => SetColimit.poset-id {D} {Comp MonoidCat.forget F}
 
-    \func inMap {F : Functor D MonoidCat} (d : D) : MonoidHom (F d) (MonoidLatticeColimit F) \cowith
+    \func inMap (d : D) : MonoidHom (F d) (MonoidLatticeColimit F) \cowith
       | func a => in~ (d,a)
       | func-ide => inv $ ~-cequiv D.bottom-univ func-ide
       | func-* => ~-cequiv join-left func-*
 
-    \lemma inMap-coh {d d' : D} (p : d <= d') : inMap d = inMap d' ∘ F.Func p
+    \lemma inMap-coh {d d' : D} (p : d <= d') : inMap d = inMap d' MonoidHom.∘ F.Func p
       => exts \lam a => ~-cequiv p idp
   }
 
-\instance AddMonoidLatticeColimit {D : BottomJoinSemilattice} (F : Functor D AddMonoidCat) : AddMonoid (SetColimit (Comp AddMonoidCat.forget F))
+\instance AddMonoidLatticeColimit.{u} {D : BottomJoinSemilattice} (F : Functor D AddMonoidCat.{u}) : AddMonoid (SetColimit (Comp AddMonoidCat.forget F))
   | zro => in~ (D.bottom, zro)
   | + (x y : SetColimit (Comp AddMonoidCat.forget F)) : SetColimit (Comp AddMonoidCat.forget F) \with {
     | in~ a, in~ b => in~ (a.1 ∨ b.1, F.Func join-left a.2 AddMonoid.+ F.Func join-right b.2)
@@ -93,16 +93,16 @@
     \private \lemma poset-id {j : D} {p : j <= j} {a : F j} : F.Func p a = a
       => SetColimit.poset-id {D} {Comp AddMonoidCat.forget F}
 
-    \func inMap {F : Functor D AddMonoidCat} (d : D) : AddMonoidHom (F d) (AddMonoidLatticeColimit F) \cowith
+    \func inMap (d : D) : AddMonoidHom (F d) (AddMonoidLatticeColimit F) \cowith
       | func a => in~ (d,a)
       | func-zro => inv $ ~-cequiv D.bottom-univ func-zro
       | func-+ => ~-cequiv join-left func-+
 
-    \lemma inMap-coh {d d' : D} (p : d <= d') : inMap d = inMap d' ∘ F.Func p
+    \lemma inMap-coh {d d' : D} (p : d <= d') : inMap d = inMap d' AddMonoidHom.∘ F.Func p
       => exts \lam a => ~-cequiv p idp
   }
 
-\instance AddGroupLatticeColimit {D : BottomJoinSemilattice} (F : Functor D AddGroupCat) : AddGroup (SetColimit (Comp AddGroupCat.forget F))
+\instance AddGroupLatticeColimit.{u} {D : BottomJoinSemilattice} (F : Functor D AddGroupCat.{u}) : AddGroup (SetColimit (Comp AddGroupCat.forget F))
   | AddMonoid => AddMonoidLatticeColimit (Comp AddGroupCat.forgetToAddMonoid F)
   | negative (x : SetColimit (Comp AddGroupCat.forget F)) : SetColimit (Comp AddGroupCat.forget F) \with {
     | in~ a => in~ (a.1, AddGroup.negative a.2)
@@ -114,31 +114,31 @@
   | negative-right {x} => \case \elim x \with {
     | in~ a => inv $ ~-cequiv D.bottom-univ $ func-zro *> inv func-zro *> pmap (F.Func _) (inv negative-right) *> func-+
   } \where {
-    \func inMap {F : Functor D AddGroupCat} (d : D) : AddGroupHom (F d) (AddGroupLatticeColimit F) \cowith
+    \func inMap (d : D) : AddGroupHom (F d) (AddGroupLatticeColimit F) \cowith
       | func a => in~ (d,a)
       | func-zro => inv $ ~-cequiv D.bottom-univ func-zro
       | func-+ => ~-cequiv join-left func-+
 
-    \lemma inMap-coh {d d' : D} (p : d <= d') : inMap d = inMap d' ∘ F.Func p
+    \lemma inMap-coh {d d' : D} (p : d <= d') : inMap d = inMap d' AddGroupHom.∘ F.Func p
       => exts \lam a => ~-cequiv p idp
   }
 
-\instance AbGroupLatticeColimit {D : BottomJoinSemilattice} (F : Functor D AbGroupCat) : AbGroup (SetColimit (Comp AbGroupCat.forget F))
+\instance AbGroupLatticeColimit.{u} {D : BottomJoinSemilattice} (F : Functor D AbGroupCat.{u}) : AbGroup (SetColimit (Comp AbGroupCat.forget F))
   | AddGroup => AddGroupLatticeColimit (Comp AbGroupCat.forgetToAddGroup F)
   | +-comm {x} {y} => \case \elim x, \elim y \with {
     | in~ a, in~ b => ~-cequiv (=_<= D.join-comm) $ func-+ *> +-comm *> pmap2 (+) (inv (Func-app (Comp AbGroupCat.forget F)) *> poset-app) (inv (Func-app (Comp AbGroupCat.forget F)) *> poset-app)
   }
   \where {
-    \func inMap {F : Functor D AbGroupCat} (d : D) : AddGroupHom (F d) (AddGroupLatticeColimit F) \cowith
+    \func inMap (d : D) : AddGroupHom (F d) (AbGroupLatticeColimit F) \cowith
       | func a => in~ (d,a)
       | func-zro => inv $ ~-cequiv D.bottom-univ func-zro
       | func-+ => ~-cequiv join-left func-+
 
-    \lemma inMap-coh {d d' : D} (p : d <= d') : inMap d = inMap d' ∘ F.Func p
+    \lemma inMap-coh {d d' : D} (p : d <= d') : inMap d = inMap d' AddGroupHom.∘ F.Func p
       => exts \lam a => ~-cequiv p idp
   }
 
-\instance RingLatticeColimit {D : BottomJoinSemilattice} (F : Functor D RingCat) : Ring (SetColimit (Comp RingCat.forget F))
+\instance RingLatticeColimit.{u} {D : BottomJoinSemilattice} (F : Functor D RingCat.{u}) : Ring (SetColimit (Comp RingCat.forget F))
   | AbGroup => AbGroupLatticeColimit (Comp RingCat.forgetToAbGroup F)
   | Monoid => MonoidLatticeColimit (Comp RingCat.forgetToMonoid F)
   | ldistr {x} {y} {z} => \case \elim x, \elim y, \elim z \with {
@@ -167,17 +167,17 @@
       | func-ide => inv $ ~-cequiv D.bottom-univ func-ide
       | func-* => ~-cequiv join-left func-*
 
-    \lemma inMap-coh {d d' : D} (p : d <= d') : inMap d = inMap d' ∘ F.Func p
+    \lemma inMap-coh {d d' : D} (p : d <= d') : inMap d = inMap d' RingHom.∘ F.Func p
       => exts \lam a => ~-cequiv p idp
   }
 
-\instance CRingLatticeColimit {D : BottomJoinSemilattice} (F : Functor D CRingCat) : CRing (SetColimit (Comp CRingCat.forget F))
+\instance CRingLatticeColimit.{u} {D : BottomJoinSemilattice} (F : Functor D CRingCat.{u}) : CRing (SetColimit (Comp CRingCat.forget F))
   | Ring => RingLatticeColimit (Comp CRingCat.forgetToRing F)
   | *-comm {x} {y} => \case \elim x, \elim y \with {
     | in~ a, in~ b => ~-cequiv (=_<= D.join-comm) $ func-* *> *-comm *> pmap2 (*) (inv (Func-app (Comp CRingCat.forget F)) *> poset-app) (inv (Func-app (Comp CRingCat.forget F)) *> poset-app)
   }
 
-\func DiscreteFieldLatticeColimit {D : BottomJoinSemilattice} (F : Functor D CRingCat) (p : \Pi (d : D) -> DiscreteField { | CRing => F d }) : DiscreteField (SetColimit (Comp CRingCat.forget F)) \cowith
+\func DiscreteFieldLatticeColimit.{u} {D : BottomJoinSemilattice} (F : Functor D CRingCat.{u}) (p : \Pi (d : D) -> DiscreteField { | CRing => F d }) : DiscreteField (SetColimit (Comp CRingCat.forget F)) \cowith
   | CRing => CRingLatticeColimit F
   | zro/=ide q => \case unext-ub q \with {
     | inP s => zro/=ide {p s.1} $ inv func-zro *> s.4 *> func-ide

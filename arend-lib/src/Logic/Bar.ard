@@ -1,0 +1,118 @@
+\import Arith.Nat
+\import Data.Array
+\import Function
+\import Function.Meta
+\import Logic
+\import Logic.Meta
+\import Paths
+\import Paths.Meta
+
+\truncated \data Bar {A : \Set} (P : Array A -> \Prop) (l : Array A) : \Prop
+  | bar-stop (P l)
+  | bar-ask (h : \Pi (a : A) -> Bar P (a :: l))
+
+\lemma bounded-bar {A : \Set} {P : Array A -> \Prop} (n : Nat) (b : \Pi (l : Array A n) -> P l) : Bar P nil
+  => induction n b n idp
+  \where {
+    \protected \lemma induction (n : Nat) (b : \Pi (l : Array A n) -> P l) {l : Array A} (k : Nat) (p : l.len Nat.+ k = n) : Bar P l \elim k
+      | 0 => bar-stop \case \elim n, \elim p, \elim b \with {
+        | _, idp, b => b \new l
+      }
+      | suc k => bar-ask \lam a => induction n b k p
+  }
+
+\data IsInvPrefix {A : \Set} (l : Array A) (s : Nat -> A) \elim l
+  | nil => invPrefix-nil
+  | a :: l => invPrefix-:: (a = s l.len) (IsInvPrefix l s)
+  \where {
+    \lemma toIndex {l : Array A} (p : IsInvPrefix l s) {i : Fin l.len} : l i = s (l.len -' suc i) \elim l, p, i
+      | a :: l, invPrefix-:: p q, 0 => p *> pmap s (inv -'0)
+      | a :: l, invPrefix-:: p q, suc i => toIndex q
+  }
+
+\lemma bar-stream {A : \Set} {P : Array A -> \Prop} (b : Bar P nil) (s : Nat -> A)
+  : ∃ (r : Array A) (IsInvPrefix r s) (P r)
+  => induction b invPrefix-nil
+  \where
+    \protected \lemma induction {l : Array A} (b : Bar P l) {s : Nat -> A} (sp : IsInvPrefix l s)
+      : ∃ (r : Array A) (IsInvPrefix r s) (P r) \elim b
+      | bar-stop p => inP (l,sp,p)
+      | bar-ask h => induction (h (s l.len)) (invPrefix-:: idp sp)
+
+\lemma bar-surj {A B : \Set} (f : A -> B) (fs : IsSurj f) {P : Array B -> \Prop} (b : Bar (\lam as => P (map f as)) nil) : Bar P nil
+  => induction fs b
+  \where
+    \protected \lemma induction (fs : IsSurj f) {P : Array B -> \Prop} {l : Array A} (b : Bar (\lam as => P (map f as)) l) : Bar P (map f l) \elim b
+      | bar-stop Pl => bar-stop Pl
+      | bar-ask h => bar-ask \lam b => \case fs b \with {
+        | inP (a,fa=b) => rewriteI fa=b $ induction fs (h a)
+      }
+
+\lemma bar-map {A B : \Set} (f : A -> B) {P : Array B -> \Prop} (l : Array A) (b : Bar P (map f l)) : Bar (\lam as => P (map f as)) l \elim b
+  | bar-stop Pl => bar-stop Pl
+  | bar-ask h => bar-ask \lam a => bar-map f (a :: l) $ h (f a)
+
+\lemma bar-impl {A : \Set} {P Q : Array A -> \Prop} (PQ : ∀ {l : P} (Q l)) {l : Array A} (b : Bar P l) : Bar Q l \elim b
+  | bar-stop p => bar-stop (PQ p)
+  | bar-ask h => bar-ask \lam a => bar-impl PQ (h a)
+
+\lemma bar-rel {A B : \Set} (R : A -> B -> \Prop) (Rs : ∀ b ∃ (a : A) (R a b)) {P : Array A -> \Prop} {Q : Array B -> \Prop}
+               (PQ : \Pi (as : Array A) (bs : Array B as.len) -> ∀ j (R (as j) (bs j)) -> P as -> Q bs) (b : Bar P nil) : Bar Q nil
+  => induction b \case __
+  \where
+    \protected \lemma induction {as : Array A} (b : Bar P as) {bs : Array B as.len} (c : ∀ j (R (as j) (bs j))) : Bar Q bs \elim b
+      | bar-stop p => bar-stop (PQ as bs c p)
+      | bar-ask h => bar-ask \lam b => \case Rs b \with {
+        | inP (a,Rab) => induction (h a) \case \elim __ \with {
+          | 0 => Rab
+          | suc j => c j
+        }
+      }
+
+\lemma bar-shift-left {A : \Set} {P : Array A -> \Prop} {l : Array A} (b : Bar P l) : Bar (\lam l' => P (l' ++ l)) nil
+  => induction b
+  \where {
+    \protected \lemma induction {l r : Array A} (b : Bar P (l ++ r)) : Bar (\lam l' => P (l' ++ r)) l \elim b
+      | bar-stop p => bar-stop p
+      | bar-ask h => bar-ask \lam a => induction (h a)
+  }
+
+\lemma bar-shift-right {A : \Set} {P : Array A -> \Prop} {l : Array A} (b : Bar (\lam l' => P (l' ++ l)) nil) : Bar P l
+  => induction b
+  \where {
+    \protected \lemma induction {l r : Array A} (b : Bar (\lam x => P (x ++ r)) l) : Bar P (l ++ r) \elim b
+      | bar-stop p => bar-stop p
+      | bar-ask h => bar-ask \lam a => induction (h a)
+  }
+
+\func IsBarMonotone {A : \Type} (P : Array A -> \Prop) : \Prop
+  => \Pi {a : A} {l : Array A} -> P l -> P (a :: l)
+
+\lemma barMonotone_++ {A : \Set} {P : Array A -> \Prop} (Pm : IsBarMonotone P) {r : Array A} : IsBarMonotone (\lam l => P (l ++ r))
+  => Pm __
+
+\lemma barMonotone_map {A B : \Set} (f : A -> B) {P : Array B -> \Prop} (Pm : IsBarMonotone P) : IsBarMonotone (\lam l => P (map f l))
+  => Pm __
+
+\lemma bar-monotone {A : \Set} {P : Array A -> \Prop} (Pm : IsBarMonotone P) : IsBarMonotone (Bar P)
+  => induction
+  \where {
+    \private \lemma induction {a : A} {l : Array A} (b : Bar P l) : Bar P (a :: l) \elim b
+      | bar-stop p => bar-stop (Pm p)
+      | bar-ask h => bar-ask \lam a' => induction (h a)
+  }
+
+\lemma bar-conj {A : \Set} {P Q : Array A -> \Prop} (Pm : IsBarMonotone P) (Qm : IsBarMonotone Q)
+                {l : Array A} (b1 : Bar P l) (b2 : Bar Q l) : Bar (\lam l' => \Sigma (P l') (Q l')) l \elim b1
+  | bar-stop p1 => aux p1 b2
+  | bar-ask h1 => bar-ask \lam a => bar-conj Pm Qm (h1 a) (bar-monotone Qm b2)
+  \where {
+    \private \lemma aux {l : Array A} (Pl : P l) (b : Bar Q l) : Bar (\lam l' => \Sigma (P l') (Q l')) l \elim b
+      | bar-stop Ql => bar-stop (Pl,Ql)
+      | bar-ask h => bar-ask \lam a => aux (Pm Pl) (h a)
+  }
+
+\lemma bar-++-insert {A : \Set} {P : Array A -> \Prop} (h : \Pi {l m r : Array A} -> P (l ++ r) -> P (l ++ m ++ r))
+  {l m r : Array A} (b : Bar P (l ++ r)) : Bar P (l ++ m ++ r) \elim b
+  | bar-stop p => bar-stop (h p)
+  | bar-ask p => bar-ask \lam a => bar-++-insert h {a :: l} (p a)

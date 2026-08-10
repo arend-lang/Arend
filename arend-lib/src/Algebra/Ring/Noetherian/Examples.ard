@@ -1,0 +1,111 @@
+\import Algebra.Meta
+\import Algebra.Monoid
+\import Algebra.Monoid.Localization
+\import Algebra.Monoid.SubMonoid
+\import Algebra.Ring
+\import Algebra.Ring.Ideal
+\import Algebra.Ring.Localization
+\import Algebra.Ring.Noetherian
+\import Algebra.Ring.Product
+\import Algebra.Ring.RingHom
+\import Algebra.Semiring
+\import Data.Array
+\import Data.Or
+\import Function
+\import Function.Meta
+\import Logic
+\import Logic.Bar
+\import Logic.Meta
+\import Meta
+\import Paths
+\import Paths.Meta
+\import Set.Fin
+\open Ideal
+
+\lemma SurjNoetherian {R S : CRing} (RN : IsNoetherian R) {f : RingHom R S} (fs : IsSurj f) : IsNoetherian S
+  => bar-surj f fs $ bar-impl pauses-map RN
+  \where {
+    \lemma pauses-map {l : Array R} (p : PausesElem l) : PausesElem (map f l) \elim l, p
+      | a :: l, pauses-here p => pauses-here (PseudoRingHom.func-Ideal_closure f {_} {l} p)
+      | a :: l, pauses-there p => pauses-there (pauses-map p)
+  }
+
+\lemma LocalizationNoetherian (L : RingLocalization {}) (RN : IsNoetherian L.B) : IsNoetherian L.L
+  => bar-rel (\lam r t => ∃ (s : L.B) (L.S s) (t * L s = L r)) (\lam b => \case L.localization-surj b \with {
+    | inP (y,c,Sc,p) => inP (y, inP (c,Sc,p))
+  }) pauses-loc RN
+  \where {
+    \lemma pauses-loc (as : Array L.B) (bs : Array L.L as.len) (c : ∀ j ∃ (s : L.B) (L.S s) (bs j * L s = L (as j))) (p : PausesElem as) : PausesElem bs \elim as, bs, p
+      | a :: as, b :: bs, pauses-here p => pauses-here \case FinSet.finiteAC c, closureN-lem.1 p \with {
+        | inP h, inP (l,p) => closureN-lem.2 $ inP (\lam j => L (l j) * L (h (suc j)).1 * (L.localization-inv (h 0).2).inv,
+          (L.localization-inv (h 0).2).inv-cancel-right $ (h 0).3 *> pmap L p *> RingHom.func-BigSum *>
+          pmap AddMonoid.BigSum (exts \lam j => RingHom.func-* *> equation.cMonoid {(L.localization-inv (h 0).2).inv-right, (h (suc j)).3}) *> inv Semiring.BigSum-rdistr)
+      }
+      | a :: as, b :: bs, pauses-there p => pauses-there $ pauses-loc as bs (\lam j => c (suc j)) p
+  }
+
+\lemma ProductNoetherian {R S : CRing} (RN : IsNoetherian R) (SN : IsNoetherian S) : IsNoetherian (ProductCRing R S)
+  => transport (Bar __ nil) (ext \lam l => pmap PausesElem ++_nil) (induction RN SN)
+  \where {
+    \private \lemma induction {as : Array R} {bs : Array S} (Rb : Bar PausesElem as) (Sb : Bar PausesElem bs)
+      : Bar (\lam l => PausesElem (l ++ map homl as ++ map homr bs)) nil \elim Rb, Sb
+      | bar-stop p, _ => bar-stop $ PausesElem.++-left (PausesElem.map homl p)
+      | _, bar-stop p => bar-stop $ PausesElem.++-right (PausesElem.map homr p)
+      | bar-ask ha, bar-ask hb => bar-ask \lam s => bar-shift-right $
+        bar-impl (\lam hh => transportInv PausesElem ++-assoc $ aux hh.1 hh.2) $
+        bar-conj (barMonotone_++ Pauses.isBarMonotone) (barMonotone_++ Pauses.isBarMonotone) (induction (ha s.1) (bar-ask hb)) (induction (bar-ask ha) (hb s.2))
+      \where {
+        \func homl : PseudoRingHom R (ProductCRing R S) \cowith
+          | func a => (a,S.zro)
+          | func-+ => ext (idp, inv zro-left)
+          | func-* => ext (idp, inv zro_*-left)
+
+        \func homr : PseudoRingHom S (ProductCRing R S) \cowith
+          | func b => (R.zro,b)
+          | func-+ => ext (inv zro-left, idp)
+          | func-* => ext (inv zro_*-left, idp)
+
+        \lemma aux1 {as : Array R} {b : S} {bs : Array S} (p : PausesElem (map homl as ++ map homr (b :: bs)))
+          : PausesElem ((R.zro,b) :: map homl as ++ map homr bs) \elim as, p
+          | nil, pauses-here p => pauses-here p
+          | nil, pauses-there p => pauses-there p
+          | a' :: as, pauses-here p => pauses-there $ pauses-here $ lclosure_++-left $ PseudoRingHom.func-Ideal_lclosure homl {as} $
+            lclosure-univ (lclosure as) {map ProductCRing.proj1 (map homl as ++ map homr (b :: bs))} (\lam j => \case \elim j, ++.split-index j \with {
+              | _, inl (j,idp) => rewrite ++.++_index-left (lclosure-superset j)
+              | _, inr (j,idp) => rewrite ++.++_index-right (lclosure as).contains_zro
+            }) (PseudoRingHom.func-Ideal_lclosure ProductCRing.proj1 p)
+          | a' :: as, pauses-there p => PausesElem.++-insert {_} {homr b :: nil} {homl a' :: nil} (aux1 p)
+
+        \lemma aux {l : Array (\Sigma R S)} {a : R} {as : Array R} {b : S} {bs : Array S}
+                   (p1 : PausesElem (l ++ map homl (a :: as) ++ map homr bs))
+                   (p2 : PausesElem (l ++ map homl as ++ map homr (b :: bs)))
+          : PausesElem (l ++ (a,b) :: map homl as ++ map homr bs) \elim l, p1, p2
+          | nil, pauses-here p1, p2 => \case aux1 p2 \with {
+            | pauses-here p2 => pauses-here $ transport (lclosure _) (pmap2 (__,__) zro-right zro-left) (contains_+ p1 p2)
+            | pauses-there p2 => pauses-there p2
+          }
+          | nil, pauses-there p, _ => pauses-there p
+          | x :: l, pauses-here p, _ => pauses-here $ lclosure-univ (lclosure _) (\lam i => later \case \elim i, ++.split-index i \with {
+            | _, inl (i,idp) => rewrite ++.++_index-left $ lclosure_++-left (lclosure-superset i)
+            | _, inr (i,idp) => rewrite ++.++_index-right $ lclosure_++-right \case \elim i \with {
+              | 0 => transport (lclosure _) (pmap2 (__,__) ide-left zro_*-left) $ ideal-left {_} {R.ide,S.zro} (lclosure-superset 0)
+              | suc i => later $ lclosure_++-right {_} {(a,b) :: nil} $ later \case \elim i, ++.split-index i \with {
+                | _, inl (i,idp) => rewrite ++.++_index-left $ lclosure_++-left $ later $ lclosure-superset {_} {map homl as} i
+                | _, inr (i,idp) => rewrite ++.++_index-right $ lclosure_++-right $ later $ lclosure-superset {_} {map homr bs} i
+              }
+            }
+          }) p
+          | x :: l, _, pauses-here p => pauses-here $ lclosure-univ (lclosure _) (\lam i => later \case \elim i, ++.split-index i \with {
+            | _, inl (i,idp) => rewrite ++.++_index-left $ lclosure_++-left (lclosure-superset i)
+            | _, inr (i,idp) => rewrite ++.++_index-right $ lclosure_++-right $ later \case \elim i, ++.split-index i \with {
+              | _, inl (i,idp) => rewrite ++.++_index-left $ lclosure_++-right {_} {_ :: nil} $ lclosure_++-left $ later $ lclosure-superset {_} {map homl as} i
+              | _, inr (i,idp) => rewrite ++.++_index-right \case \elim i \with {
+                | 0 => \let l => (a,b) :: map homl as ++ map homr bs
+                       \in transport (lclosure l) (pmap2 (__,__) zro_*-left ide-left) $ ideal-left {_} {R.zro,S.ide} $ lclosure-superset {_} {l} 0
+                | suc i => lclosure_++-right {_} {_ :: nil} $ lclosure_++-right $ later $ lclosure-superset {_} {map homr bs} i
+              }
+            }
+          }) p
+          | x :: l, pauses-there p1, pauses-there p2 => pauses-there (aux p1 p2)
+      }
+  }

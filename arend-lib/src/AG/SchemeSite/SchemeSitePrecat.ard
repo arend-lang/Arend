@@ -1,0 +1,35 @@
+\import AG.SchemeSite
+\import AG.SchemeSite.SchemeSiteHom
+\import Category
+\import Category.Subcat
+\import Logic
+\import Order.PartialOrder
+\import Paths
+\import Relation.Equivalence
+\open SchemeSitePrehom
+
+\func SchemeSitePrehomPrecat.{u} : Precat SchemeSite.{u} \cowith
+  | Hom => SchemeSitePrehom
+  | id => SchemeSitePrehom.id
+  | o => SchemeSitePrehom.∘
+  | id-left {_} {_} {f} => SchemeSitePrehom.equals (\lam b a => (\lam (inP (b',b<=b',b'<=a)) => <=f*-right b<=b' b'<=a, \lam b<=a => inP (a, b<=a, <=-refl)))
+    \lam a b (inP (a',b<=a',a'<=a)) b<=ga x => compose.f#-eval *> f.f#_f*-right *> pmap (f.f# __ x) prop-pi
+  | id-right {_} {_} {f} => SchemeSitePrehom.equals (\lam b a => (\lam (inP (b',b<=b',b'<=a)) => <=f*-left b<=b' b'<=a, \lam b<=a => inP (b, <=-refl, b<=a)))
+    \lam a b (inP (b',b<=b',b'<=a)) b<=ga x => compose.f#-eval *> f.f#_f*-left *> pmap (f.f# __ x) prop-pi
+  | o-assoc {_} {_} {_} {_} {h} {g} {f} => SchemeSitePrehom.equals
+    (\lam x w => (\lam (inP (y, x<=y, inP (z,y<=z,z<=w))) => inP (z, inP (y, x<=y, y<=z), z<=w),
+                  \lam (inP (z, inP (y,x<=y,y<=z), z<=w)) => inP (y, x<=y, inP (z, y<=z, z<=w))))
+    \lam a b (inP (y, b<=y, inP (z,y<=z,z<=a))) (inP (z', inP (y',b<=y',y'<=z'), z'<=a)) x => compose.f#-eval *>
+      compose.f#-coh {_} {_} {_} {h SchemeSitePrehom.∘ g} {f} {_} {_} {_} {_} {_} {_} {_} {inP (z',y'<=z',z'<=a)} *>
+      pmap (SchemeSitePrehom.f# _) compose.f#-eval *> inv compose.f#-eval *> inv compose.f#-eval
+
+\instance SchemeSitePrecat.{u} : Precat SchemeSite.{u}
+  | Hom => SchemeSiteHom
+  | id => SchemeSiteHom.id
+  | o g f => g SchemeSiteHom.∘ f
+  | id-left => SchemeSiteHom.satPrehom_o-left *> pmap satPrehom SchemeSitePrehomPrecat.id-left *> satPrehom.isIdempotent
+  | id-right => SchemeSiteHom.satPrehom_o-right *> pmap satPrehom SchemeSitePrehomPrecat.id-right *> satPrehom.isIdempotent
+  | o-assoc => SchemeSiteHom.satPrehom_o-left *> pmap satPrehom SchemeSitePrehomPrecat.o-assoc *> inv SchemeSiteHom.satPrehom_o-right
+
+\instance SatSchemeSitePrecat.{u} : Precat SatSchemeSite.{u}
+  => subPrecat {SchemeSitePrecat} \lam X => X

@@ -1,12 +1,12 @@
 \import Algebra.Group
-\import Algebra.Group.Sub
+\import Algebra.Group.SubGroup
 \import Algebra.Module
 \import Algebra.Meta
 \import Algebra.Monoid
 \import Algebra.Monoid.GCD
-\import Algebra.Monoid.Sub
+\import Algebra.Monoid.SubMonoid
 \import Algebra.Pointed
-\import Algebra.Pointed.Sub
+\import Algebra.Pointed.SubPointed
 \import Algebra.Ring
 \import Algebra.Semiring
 \import Arith.Int
@@ -68,7 +68,7 @@
     | ideal-left (inP (n,s)) => inP (n, transportInv contains CMonoid.pow_*-comm (ideal-left s))
 
   \func module : LModule S \cowith
-    | AbGroup => SubAddGroup.abStruct \this
+    | AbGroup => IAbGroup \this
     | *c a s => (a * s.1, ideal-left s.2)
     | *c-assoc => ext *-assoc
     | *c-ldistr => ext ldistr
@@ -85,8 +85,14 @@
   \lemma radical_pow {x : S} {n : Nat} (s : radical (Monoid.pow x n)) : radical x \elim s
     | inP (m,p) => inP (n * m, transportInv contains Monoid.pow_* p)
 
+  \lemma radical_square {x : S} (s : radical (x * x)) : radical x
+    => radical_pow {_} {x} {2} $ transportInv radical (*-assoc *> ide-left) s
+
   \lemma radical-univ {I : Ideal S} (p : \Pi {x : S} -> I x -> radical x) {x : S} (s : I.radical x) : radical x \elim s
     | inP (n,Ix^n) => radical_pow (p Ix^n)
+
+  \lemma radical_ide (p : radical 1) : contains 1 \elim p
+    | inP (n,p) => transport contains Monoid.pow_ide p
 
   \lemma bigSum (l : Array S) (p : \Pi (i : Fin l.len) -> contains (l i)) : contains (BigSum l) \elim l
     | nil => contains_zro
@@ -99,6 +105,10 @@
 
   \func IsGeneratedBy (l : Array S)
     => \Sigma (∀ (a : l) (contains a)) (\Pi {a : S} -> contains a -> ∃ (l' : Array S l.len) (a = BigSum (\lam j => l' j * l j)))
+
+  \lemma generatedBy-char {l : Array S} : IsGeneratedBy l <-> (\this = {Ideal S} closure l)
+    => (\lam s => exts \lam a => ext (\lam Ia => closureN-lem.2 $ s.2 Ia, closure-univ s.1),
+        \lam p => rewrite p closure-generated)
 
   \protected \func IsFinitelyGenerated => ∃ (l : Array S) (IsGeneratedBy l)
 
@@ -125,13 +135,37 @@
     => inP ((1,j) :: nil, simplify)
 
   \lemma sclosure-superset {R : CRing} {U : R -> \Prop} {x : R} (Ux : U x) : sclosure U x
-    => inP ((1,(x,Ux)) :: nil, equation)
+    => inP ((1,(x,Ux)) :: nil, inv $ zro-right *> ide-left)
 
   \lemma closure-univ {R : CRing} {J : \Set} {g : J -> R} {I : Ideal R} (c : \Pi (j : J) -> I (g j)) {x : R} (d : closure g x) : I x \elim d
     | inP (l,p) => transportInv I p $ bigSum _ \lam i => later $ ideal-left (c (l i).2)
 
-  \lemma sclosure-univ {R : CRing} {U : R -> \Prop} {I : Ideal R} (c : \Pi (x : R) -> U x -> I x) {x : R} (d : sclosure U x) : I x
-    => closure-univ {R} {\Sigma (x : R) (U x)} {__.1} (\lam j => c j.1 j.2) d
+  \lemma sclosure-univ {R : CRing} {U : R -> \Prop} {I : Ideal R} (c : \Pi {x : R} -> U x -> I x) {x : R} (d : sclosure U x) : I x
+    => closure-univ {R} {\Sigma (x : R) (U x)} {__.1} (\lam j => c j.2) d
+
+  \lemma sclosure-mono {R : CRing} {U V : R -> \Prop} (c : \Pi {x : R} -> U x -> V x) {x : R} (d : sclosure U x) : sclosure V x
+    => sclosure-univ {_} {_} {sclosure V} (\lam Ux => sclosure-superset (c Ux)) d
+
+  \func lclosure {R : CRing} (l : Array R) : Ideal R
+    => closure l
+
+  \lemma lclosure-superset {R : CRing} {l : Array R} (j : Fin l.len) : lclosure l (l j)
+    => closure-superset j
+
+  \lemma lclosure-univ {R : CRing} (I : Ideal R) {l : Array R} (c : \Pi (j : Fin l.len) -> I (l j)) {x : R} (d : lclosure l x) : I x
+    => closure-univ c d
+
+  \lemma lclosure_++-left {R : CRing} {l r : Array R} {a : R} (c : lclosure l a) : lclosure (l ++ r) a
+    => lclosure-univ (lclosure _) (\lam j => transport (lclosure (l ++ r)) (++.++_index-left j) $ lclosure-superset _) c
+
+  \lemma lclosure_++-right {R : CRing} {l r : Array R} {a : R} (c : lclosure r a) : lclosure (l ++ r) a
+    => lclosure-univ (lclosure _) (\lam j => transport (lclosure (l ++ r)) ++.++_index-right $ lclosure-superset _) c
+
+  \lemma lclosure_++-insert {R : CRing} {l m r : Array R} {a : R} (c : lclosure (l ++ r) a) : lclosure (l ++ m ++ r) a
+    => lclosure-univ (lclosure _) (\lam j => later \case \elim j, ++.split-index j \with {
+      | _, inl (j,idp) => rewrite ++.++_index-left $ lclosure_++-left (lclosure-superset j)
+      | _, inr (j,idp) => rewrite ++.++_index-right $ lclosure_++-right $ lclosure_++-right (lclosure-superset j)
+    }) c
 
   \func closure1 {R : CRing} (a : R) : Ideal R
     => closure (\lam (_ : \Sigma) => a)
@@ -154,10 +188,19 @@
        \in (\lam s => TruncP.map (g s) (\lam (c, a=fc) => (c true, c false, a=fc *> FinSum_char2 BoolFin.equiv *> equation)),
             \lam (inP (c, d, a=fc)) => h (inP (if __ c d, a=fc *> inv (FinSum_char2 BoolFin.equiv *> equation))))
 
+  \lemma sclosure2-lem {R : CRing} {a x y : R} : sclosure (\lam z => (x = z) || (y = z)) a <-> ∃ (c d : R) (a = x * c + y * d)
+    => <->trans (sclosure-univ {_} {_} {closure (if __ x y)} \lam {z} => later \case \elim __ \with {
+      | byLeft p => inP ((1,true) :: nil, inv p *> inv ide-left *> inv zro-right)
+      | byRight p => inP ((1,false) :: nil, inv p *> inv ide-left *> inv zro-right)
+    }, closure-univ {_} {_} {if __ x y} {sclosure _} $ later \case \elim __ \with {
+      | true => inP ((1, (x, byLeft idp)) :: nil, inv ide-left *> inv zro-right)
+      | false => inP ((1, (y, byRight idp)) :: nil, inv ide-left *> inv zro-right)
+    }) $ closure2-lem (if __ x y)
+
   \lemma fin-closure-lem {D : FinSet} {R : CRing} {a : R} (f : D -> R)
     : closure f a <-> ∃ (c : D -> R) (a = FinSum (\lam i => c i * f i))
     => \case D.finEq \with {
-         | inP (eq : Equiv) =>
+         | inP eq =>
            \have (g,h) => closureN-lem {_} {_} {\lam i => f (eq i)}
            \in (
              \lam (inP (l, a=fl)) =>
@@ -217,7 +260,7 @@
           }
         })
 
-  \func union {R : CRing} (I : Nat -> Ideal R) (\property inc : \Pi {n : Nat} {a : R} -> I n a -> I (suc n) a) : Ideal R \cowith
+  \func direct-union {R : CRing} (I : Nat -> Ideal R) (\property inc : \Pi {n : Nat} {a : R} -> I n a -> I (suc n) a) : Ideal R \cowith
     | contains a => ∃ (n : Nat) (I n a)
     | contains_zro => inP (0, contains_zro)
     | contains_+ (inP (n,c)) (inP (m,d)) => inP (n + m, contains_+ (include c) $ rewrite +-comm (include d))
@@ -232,7 +275,7 @@
                           (Id : \Pi (I : Ideal R) -> I.IsFinitelyGenerated -> \Pi (x : R) -> Dec (I x))
                           {I : Ideal R} (Ig : I.IsFinitelyGenerated) (Ip : Not (I 1))
     : \Sigma (M : Ideal R) M.IsMaximal (\Pi {a : R} -> I a -> M a)
-    => (union (\lam n => (ideal n).1) \lam {_} {a} c => mcases \with {
+    => (direct-union (\lam n => (ideal n).1) \lam {_} {a} c => mcases \with {
       | yes _ => c
       | no _ => inP (a, 0, c, simplify)
     }, (\lam (inP c) => ideal-proper c.1 c.2, \lam a => \case pointed-countable-surj R.zro c a \with {

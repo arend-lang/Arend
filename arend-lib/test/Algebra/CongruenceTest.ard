@@ -30,7 +30,7 @@
 \lemma dependentFail (f : \Pi (n : Nat) -> depFunc n) {x : Nat} (p : 0 = suc x)
   => fails {f 0 = f (suc x)} cong
   \where {
-    \func depFunc (n : Nat) : \Set
+    \func depFunc (n : Nat) : \Set0
       | 0 => Nat
       | suc _ => Nat
   }

@@ -1,0 +1,176 @@
+\import Algebra.Meta
+\import Algebra.Module
+\import Algebra.Module.BilinearMap
+\import Algebra.Module.LinearMap
+\import Algebra.Monoid
+\import Algebra.Pointed
+\import Algebra.Ring
+\import Data.Array
+\import Data.Array.EPerm
+\import Function.Meta
+\import Logic
+\import Logic.Meta
+\import Meta
+\import Paths
+\import Paths.Meta
+\open EPerm
+
+\truncated \data TensorProduct {R : CRing} (A B : LModule R) : \Set
+  | tensorSum (Array (\Sigma A B))
+  | tensorSum-perm {l l' : Array (\Sigma A B)} (EPerm l l') : tensorSum l = tensorSum l'
+  | tensorSum_zro {l : Array (\Sigma A B)} : tensorSum ((0,0) :: l) = tensorSum l
+  | tensorSum_+-left {a a' : A} {b : B} {l : Array (\Sigma A B)} : tensorSum ((a + a', b) :: l) = tensorSum ((a,b) :: (a',b) :: l)
+  | tensorSum_+-right {a : A} {b b' : B} {l : Array (\Sigma A B)} : tensorSum ((a, b + b') :: l) = tensorSum ((a,b) :: (a,b') :: l)
+  | tensorSum-scalar {r : R} {a : A} {b : B} {l : Array (\Sigma A B)} : tensorSum ((r *c a, b) :: l) = tensorSum ((a, r *c b) :: l)
+
+\lemma tensorSum_zro-left {R : CRing} {A B : LModule R} (b : B) {l : Array (\Sigma A B)} : tensorSum ((0,b) :: l) = tensorSum l
+  => pmap (\lam x => tensorSum ((x,b) :: l)) (inv A.*c_zro-left) *> path tensorSum-scalar
+  *> pmap (\lam x => tensorSum ((0,x) :: l)) B.*c_zro-left *> tensorSum_zro
+
+\lemma tensorSum_zro-right {R : CRing} {A B : LModule R} (a : A) {l : Array (\Sigma A B)} : tensorSum ((a,0) :: l) = tensorSum l
+  => pmap (\lam x => tensorSum ((a,x) :: l)) (inv B.*c_zro-left) *> inv (path tensorSum-scalar)
+  *> pmap (\lam x => tensorSum ((x,0) :: l)) A.*c_zro-left *> tensorSum_zro
+
+\func tensor {R : CRing} {A B : LModule R} (a : A) (b : B) : TensorProduct A B
+  => tensorSum ((a,b) :: nil)
+
+\instance TensorProductModule {R : CRing} (A B : LModule R) : LModule R (TensorProduct A B)
+  | zro => tensorSum nil
+  | + (x y : TensorProduct A B) : TensorProduct A B \with {
+    | tensorSum l, tensorSum l' => tensorSum (l ++ l')
+    | tensorSum l0, tensorSum-perm e => path $ tensorSum-perm (eperm-++-right e)
+    | tensorSum l, tensorSum_zro {l'} => path (tensorSum-perm EPerm_++-swap) *> path tensorSum_zro
+    | tensorSum l, tensorSum_+-left => path (tensorSum-perm eperm-++-comm) *> path tensorSum_+-left *> inv (path $ tensorSum-perm eperm-++-comm)
+    | tensorSum l, tensorSum_+-right => path (tensorSum-perm eperm-++-comm) *> path tensorSum_+-right *> inv (path $ tensorSum-perm eperm-++-comm)
+    | tensorSum l, tensorSum-scalar => path (tensorSum-perm eperm-++-comm) *> path tensorSum-scalar *> inv (path $ tensorSum-perm eperm-++-comm)
+    | tensorSum-perm e, tensorSum l0 => path $ tensorSum-perm (eperm-++-left e)
+    | tensorSum_zro, tensorSum l' => path tensorSum_zro
+    | tensorSum_+-left, tensorSum l' => path tensorSum_+-left
+    | tensorSum_+-right, tensorSum l' => path tensorSum_+-right
+    | tensorSum-scalar, tensorSum l' => path tensorSum-scalar
+  }
+  | zro-left {x} => \case \elim x \with {
+    | tensorSum l => idp
+  }
+  | +-assoc {x} {y} {z} => \case \elim x, \elim y, \elim z \with {
+    | tensorSum l1, tensorSum l2, tensorSum l3 => pmap tensorSum ++-assoc
+  }
+  | +-comm {x} {y} => \case \elim x, \elim y \with {
+    | tensorSum l, tensorSum l' => path (tensorSum-perm eperm-++-comm)
+  }
+  | negative (x : TensorProduct A B) : TensorProduct A B \with {
+    | tensorSum l => tensorSum $ map (\lam s => (A.negative s.1, s.2)) l
+    | tensorSum-perm e => path $ tensorSum-perm $ EPerm_map (\lam s => (A.negative s.1, s.2)) e
+    | tensorSum_zro => pmap (\lam x => tensorSum $ (x,0) :: _) A.negative_zro *> path tensorSum_zro
+    | tensorSum_+-left => pmap tensorSum (exts \case \elim __ \with {
+      | 0 => ext (A.negative_+ *> +-comm, idp)
+      | suc j => idp
+    }) *> path tensorSum_+-left
+    | tensorSum_+-right => path tensorSum_+-right
+    | tensorSum-scalar => pmap tensorSum (exts \case \elim __ \with {
+      | 0 => ext (inv A.*c_negative-right, idp)
+      | suc j => idp
+    }) *> path tensorSum-scalar
+  }
+  | negative-left {x} => \case \elim x \with {
+    | tensorSum l => negative-induction
+  }
+  | *c (r : R) (x : TensorProduct A B) : TensorProduct A B \elim x {
+    | tensorSum l => tensorSum $ map (\lam s => (r A.*c s.1, s.2)) l
+    | tensorSum-perm e => path $ tensorSum-perm $ EPerm_map (\lam s => (r A.*c s.1, s.2)) e
+    | tensorSum_zro => pmap (\lam x => tensorSum $ (x,0) :: _) A.*c_zro-right *> path tensorSum_zro
+    | tensorSum_+-left => pmap tensorSum (exts \case \elim __ \with {
+      | 0 => ext (*c-ldistr, idp)
+      | suc j => idp
+    }) *> path tensorSum_+-left
+    | tensorSum_+-right => path tensorSum_+-right
+    | tensorSum-scalar => pmap tensorSum (exts \case \elim __ \with {
+      | 0 => ext (inv *c-assoc *> pmap (A.*c _) *-comm *> *c-assoc, idp)
+      | suc j => idp
+    }) *> path tensorSum-scalar
+  }
+  | *c-assoc {r} {r'} {x} => \case \elim x \with {
+    | tensorSum l => pmap tensorSum $ exts \lam j => ext (*c-assoc, idp)
+  }
+  | *c-ldistr {r} {x} {y} => \case \elim x, \elim y \with {
+    | tensorSum l, tensorSum l' => pmap tensorSum $ map_++ \lam (s : \Sigma A B) => (r A.*c s.1, s.2)
+  }
+  | *c-rdistr {r} {s} {x} => \case \elim x \with {
+    | tensorSum l => *c-induction
+  }
+  | ide_*c {x} => \case \elim x \with {
+    | tensorSum l => pmap tensorSum $ exts \lam j => ext (ide_*c, idp)
+  }
+  \where {
+    \private \lemma negative-induction {l : Array (\Sigma A B)} : tensorSum (map (\lam s => (A.negative s.1, s.2)) l ++ l) = tensorSum nil \elim l
+      | nil => idp
+      | s :: l => path (tensorSum-perm $ EPerm_++-swap {_} {map (\lam s => (A.negative s.1, s.2)) (s :: l)})
+        *> inv (path tensorSum_+-left) *> pmap tensorSum (pmap (:: _ ++ l) $ ext (A.negative-right, idp))
+        *> tensorSum_zro-left s.2 *> negative-induction
+
+    \private \lemma *c-induction {r r' : R} {l : Array (\Sigma A B)}
+      : tensorSum (map (\lam s => ((r R.+ r') A.*c s.1, s.2)) l)
+          = tensorSum (map (\lam s => (r A.*c s.1, s.2)) l ++ map (\lam s => (r' A.*c s.1, s.2)) l) \elim l
+      | nil => idp
+      | s :: l => pmap2 (tensor __ _ + __) (*c-rdistr *> +-comm) *c-induction *> path tensorSum_+-left
+                  *> inv (path $ tensorSum-perm $ EPerm_++-swap {_} {map (\lam s => (r A.*c s.1, s.2)) (s :: l)})
+  }
+
+\lemma tensor_+-left {R : CRing} {A B : LModule R} {a a' : A} {b : B} : tensor (a + a') b = tensor a b + tensor a' b
+  => path $ mkcon tensorSum_+-left {_} {_} {_} {nil}
+
+\lemma tensor_+-right {R : CRing} {A B : LModule R} {a : A} {b b' : B} : tensor a (b + b') = tensor a b + tensor a b'
+  => path $ mkcon tensorSum_+-right {_} {_} {_} {nil}
+
+\lemma tensor_*c-right {R : CRing} {A B : LModule R} {r : R} {a : A} {b : B} : tensor a (r *c b) = r *c tensor a b
+  => inv (path tensorSum-scalar)
+
+\lemma tensor-linear-left {R : CRing} {A B : LModule R} {b : B} : LinearMap A (TensorProductModule A B) (tensor __ b) \cowith
+  | func-+ => tensor_+-left
+  | func-*c => idp
+
+\lemma tensor-linear-right {R : CRing} {A B : LModule R} {a : A} : LinearMap B (TensorProductModule A B) (tensor a) \cowith
+  | func-+ => tensor_+-right
+  | func-*c => tensor_*c-right
+
+\lemma tensorSum_BigSum {R : CRing} {A B : LModule R} {l : Array (\Sigma A B)}
+  : tensorSum l = AddMonoid.BigSum (map (\lam s => tensor s.1 s.2) l) \elim l
+  | nil => idp
+  | s :: l => pmap (_ +) tensorSum_BigSum
+
+\lemma tensor-repr {R : CRing} {A B : LModule R} (x : TensorProduct A B)
+  : ∃ (l : Array (\Sigma A B)) (x = AddMonoid.BigSum (map (\lam s => tensor s.1 s.2) l)) \elim x
+  | tensorSum l => inP (l, tensorSum_BigSum)
+
+\func tensorLift {R : CRing} {A B C : LModule R} (f : BilinearMap A B C) : LinearMap (TensorProductModule A B) C \cowith
+  | func (x : TensorProduct A B) : C \with {
+    | tensorSum l => AddMonoid.BigSum $ map (\lam s => f s.1 s.2) l
+    | tensorSum-perm e => AbMonoid.BigSum_EPerm $ EPerm_map (\lam s => f s.1 s.2) e
+    | tensorSum_zro => pmap (+ _) f.linear-left.func-zro *> zro-left
+    | tensorSum_+-left => pmap (+ _) f.linear-left.func-+ *> +-assoc
+    | tensorSum_+-right => pmap (+ _) f.linear-right.func-+ *> +-assoc
+    | tensorSum-scalar => pmap (+ _) $ f.linear-left.func-*c *> inv f.linear-right.func-*c
+  }
+  | func-+ {x} {y} => \case \elim x, \elim y \with {
+    | tensorSum l, tensorSum l' => pmap AddMonoid.BigSum (map_++ \lam s => f s.1 s.2) *> AddMonoid.BigSum_++
+  }
+  | func-*c {r} {x} => \case \elim x \with {
+    | tensorSum l => pmap AddMonoid.BigSum (exts \lam j => f.linear-left.func-*c) *> inv LModule.*c_BigSum-ldistr
+  }
+
+\lemma tensorLift_tensor {R : CRing} {A B C : LModule R} {f : BilinearMap A B C} {a : A} {b : B} : tensorLift f (tensor a b) = f a b
+  => zro-right
+
+\lemma tensorLift-unique {R : CRing} {A B C : LModule R} (f g : LinearMap (TensorProductModule A B) C)
+                         (p : \Pi (a : A) (b : B) -> f (tensor a b) = g (tensor a b)) {x : TensorProduct A B} : f x = g x
+  => \case tensor-repr x \with {
+    | inP (l,q) => pmap f q *> f.func-BigSum *> pmap AddMonoid.BigSum (exts \lam j => p _ _) *> inv g.func-BigSum *> pmap g (inv q)
+  }
+
+\lemma tensorLift_+ {R : CRing} {A B C : LModule R} (f g : BilinearMap A B C) {x : TensorProduct A B}
+  : tensorLift (f + g) x = tensorLift f x + tensorLift g x
+  => tensorLift-unique (tensorLift (f + g)) (linearMap_+ {R} (tensorLift f) (tensorLift g)) \lam a b => simplify
+
+\lemma tensorLift_*c {R : CRing} {A B C : LModule R} (f : BilinearMap A B C) {r : R} {x : TensorProduct A B}
+  : tensorLift (r *c f) x = r *c tensorLift f x
+  => tensorLift-unique (tensorLift (r *c f)) (linearMap_*c {R} (tensorLift f)) \lam a b => simplify

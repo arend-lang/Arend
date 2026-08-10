@@ -1,0 +1,184 @@
+\import Algebra.Monoid
+\import Algebra.Monoid.MonoidHom
+\import Algebra.Pointed
+\import Algebra.Pointed.PointedHom
+\import Category
+\import Category.Adjoint
+\import Category.Functor
+\import Category.Limit
+\import Category.Meta
+\import Logic
+\import Logic.FirstOrder.Algebraic
+\import Logic.FirstOrder.Algebraic.AlgModelCat
+\import Logic.FirstOrder.Term
+\import Logic.Meta
+\import Paths
+\import Paths.Meta
+\import Set.SetCategory
+\import Set.Fin
+\import Set.Fin.Instances
+
+\instance MonoidCat.{u} : Cat Monoid.{u}
+  | Hom M N => MonoidHom M N
+  | id => MonoidHom.id
+  | o => MonoidHom.∘
+  | id-left => idp
+  | id-right => idp
+  | o-assoc => idp
+  | univalence => sip \lam p1 p2 => exts (p1.func-ide, \lam _ _ => p1.func-*)
+  \where {
+    \func forget.{u} : Functor MonoidCat.{u} SetCat.{u} \cowith
+      | F R => R
+      | Func f => f
+      | Func-id => idp
+      | Func-o => idp
+  }
+
+\instance LimitMonoid.{u} {J : Precat.{u,u}} (F : Functor J MonoidCat.{u}) : Monoid (SetBicat.LimitSet (Comp MonoidCat.forget F))
+  | ide => (\lam _ => ide, \lam h => func-ide)
+  | * f g => (\lam j => f.1 j * g.1 j, \lam h => func-* *> pmap2 (*) (f.2 h) (g.2 h))
+  | *-assoc => exts \lam j => *-assoc
+  | ide-left => exts \lam j => ide-left
+  | ide-right => exts \lam j => ide-right
+  \where {
+    \func limProj (j : J) : MonoidHom (LimitMonoid F) (F j) \cowith
+      | func l => l.1 j
+      | func-ide => idp
+      | func-* => idp
+
+    \func limMap.{u} {J : Precat.{u,u}} {F : Functor J MonoidCat.{u}} {M : Monoid.{u}} (c : Cone F M) : MonoidHom M (LimitMonoid F) \cowith
+      | func x => (\lam j => c.coneMap j x, \lam h => path \lam i => c.coneCoh h i x)
+      | func-ide => exts \lam j => func-ide
+      | func-* => exts \lam j => func-*
+
+    \lemma inv-char {x : LimitMonoid F} : Monoid.Inv {LimitMonoid F} x <-> ∀ j (Monoid.Inv (x.1 j))
+      => (\lam xi j => (limProj j).func-Inv xi, \lam xi => \new Monoid.Inv {
+        | inv => (\lam j => (xi j).inv, \lam {j} {j'} h => (F.Func h).func-InvElem (xi j) (xi j') (x.2 h))
+        | inv-left => exts \lam j => (xi j).inv-left
+        | inv-right => exts \lam j => (xi j).inv-right
+      })
+  }
+
+\instance MonoidBicat.{u} : BicompleteCat.{u}
+  | Cat => MonoidCat.{u}
+  | limit F => \new Limit {
+    | apex => LimitMonoid F
+    | coneMap => LimitMonoid.limProj
+    | coneCoh h => exts \lam l => l.2 h
+    | limMap => LimitMonoid.limMap
+    | limBeta c j => idp
+    | limUnique p => exts \lam x => exts \lam j => path \lam i => p j i x
+  }
+  | colimit => CocompletePrecat.applyEquiv catEquiv
+  \where {
+    \instance theory : Theory
+      | Sort => \Sigma
+      | Symb _ => Fin 2
+      | domain => \case __ \with {
+        | 0 => nil
+        | 1 => () :: () :: nil
+      }
+      | PredSymb => Empty
+      | predDomain => absurd
+      | axioms => arraySubset {Sequent {\this}} (
+          (\lam _ => \Sigma, finSet, nil, equality (apply 1 (apply 0 nil :: var () :: nil)) (var ())) ::
+          (\lam _ => \Sigma, finSet, nil, equality (apply 1 (var () :: apply 0 nil :: nil)) (var ())) ::
+          (\lam _ => Fin 3,  finSet, nil, equality (apply 1 (apply 1 (var 0 :: var 1 :: nil) :: var 2 :: nil)) (apply 1 (var 0 :: apply 1 (var 1 :: var 2 :: nil) :: nil))) ::
+          nil)
+
+    \func catEquiv.{u} : CatEquiv MonoidCat.{u} (ModelCat theory) \cowith
+      | LAdj => monoidToMod.functor
+      | RAdj => modToMonoid.functor
+      | eta {
+        | trans M => id
+        | natural f => idp
+      }
+      | eta-iso {X} => \new Iso {
+        | hinv => id
+        | hinv_f => idp
+        | f_hinv => idp
+      }
+      | epsilon {
+        | trans M => \new ModelHom {
+          | funcs x => x
+          | func-op => \case \elim __ \with {
+            | 0 => \lam d => idp
+            | 1 => \lam d => idp
+          }
+          | func-rel => \case __
+        }
+        | natural f => idp
+      }
+      | eta_epsilon-left => idp
+      | eta_epsilon-right => idp
+      | epsilon-iso {Y} => \new Iso {
+        | hinv => \new ModelHom {
+          | funcs y => y
+          | func-op => \case \elim __ \with {
+            | 0 => \lam d => idp
+            | 1 => \lam d => idp
+          }
+          | func-rel => \case __
+        }
+        | hinv_f => idp
+        | f_hinv => idp
+      }
+
+    \func modToMonoid (M : Model theory) : Monoid (M ()) \cowith
+      | ide => operation 0 nil
+      | * x y => operation 1 (x :: y :: nil)
+      | ide-left {x} => M.isModel _ (inP (0,idp)) (\lam _ => x) (\case __)
+      | ide-right {x} => M.isModel _ (inP (1,idp)) (\lam _ => x) (\case __)
+      | *-assoc {x} {y} {z} => M.isModel _ (inP (2,idp)) (\lam {_} => x :: y :: z :: nil) (\case __)
+      \where {
+        \func functor.{u} : Functor (ModelCat.{u} theory) MonoidCat.{u} (modToMonoid __) \cowith
+          | Func f => \new MonoidHom {
+            | func => f.funcs
+            | func-ide => f.func-op 0 nil
+            | func-* {x} {y} => f.func-op 1 (x :: y :: nil)
+          }
+          | Func-id => idp
+          | Func-o => idp
+      }
+
+    \func monoidToMod (M : Monoid) : Model theory (\lam _ => M) \cowith
+      | operation => \case \elim __ \with {
+        | 0 => \lam _ => M.ide
+        | 1 => \lam l => l 0 * l 1
+      }
+      | relation => \case __
+      | isModel => \case \elim __, __ \with {
+        | _, inP (0,idp) => \lam rho _ => ide-left
+        | _, inP (1,idp) => \lam rho _ => ide-right
+        | _, inP (2,idp) => \lam rho _ => *-assoc
+      }
+      \where {
+        \func functor.{u} : Functor MonoidCat.{u} (ModelCat.{u} theory) (monoidToMod __) \cowith
+          | Func f => \new ModelHom {
+            | funcs => f
+            | func-op => \case \elim __ \with {
+              | 0 => \lam _ => f.func-ide
+              | 1 => \lam d => f.func-*
+            }
+            | func-rel => \case __
+          }
+          | Func-id => idp
+          | Func-o => idp
+      }
+  }
+
+\instance AddMonoidCat.{u} : Cat AddMonoid.{u}
+  | Hom M N => AddMonoidHom M N
+  | id => AddMonoidHom.id
+  | o => AddMonoidHom.∘
+  | id-left => idp
+  | id-right => idp
+  | o-assoc => idp
+  | univalence => sip \lam p1 p2 => exts (p1.func-zro, \lam _ _ => p1.func-+)
+  \where {
+    \func forget.{u} : Functor AddMonoidCat.{u} SetCat.{u} \cowith
+      | F R => R
+      | Func f => f
+      | Func-id => idp
+      | Func-o => idp
+  }

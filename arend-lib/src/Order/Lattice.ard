@@ -9,7 +9,6 @@
 \import Logic.Unique
 \import Homotopy.Fibration
 \import Logic
-\import Logic.Meta
 \import Meta
 \import Order.Directed
 \import Paths
@@ -17,7 +16,7 @@
 \import Paths.Meta
 \import Set.Fin
 
-\class MeetSemilattice \extends Poset, PrecatWithBprod (\lp, \lp) {
+\class MeetSemilattice \extends Poset, PrecatWithBprod, PrecatWithPullbacks {
   | meet \alias \infixl 7 ∧ : E -> E -> E
   | meet-left {x y : E} : x ∧ y <= x
   | meet-right {x y : E} : x ∧ y <= y
@@ -31,6 +30,16 @@
     | tupleMap f => meet-univ (f 0) (f 1)
     | tupleBeta => prop-pi
     | tupleEq _ => prop-pi
+  }
+  | pullback {x} {y} f g => \new Pullback {
+    | apex => x ∧ y
+    | pbProj1 => meet-left
+    | pbProj2 => meet-right
+    | pbCoh => prop-pi
+    | pbMap w<=x w<=y _ => meet-univ w<=x w<=y
+    | pbBeta1 => prop-pi
+    | pbBeta2 => prop-pi
+    | pbEta _ _ => prop-pi
   }
   \func Big_meet \alias Big_∧ {n : Nat} (l : Array E (suc n)) : E \elim l
     | a :: l => Big (∧) a l
@@ -57,7 +66,7 @@
     => <=-antisymmetric meet-left (meet-univ <=-refl x<=y)
 
   \lemma meet_<=' {x y : E} (p : x ∧ y = x) : x <= y
-    => transport (`<= y) p meet-right
+    => transport (<= y) p meet-right
 
   \lemma Big_<=_meet0 {l : Array E} {x : E} : Big (∧) x l <= x \elim l
     | nil => <=-refl
@@ -180,7 +189,7 @@
     inv join-assoc *> pmap2 (∨) (join-comm *> join_<= meet-right) meet-comm
 }
 
-\class TopMeetSemilattice \extends MeetSemilattice, CartesianPrecat (\lp,\lp) {
+\class TopMeetSemilattice \extends MeetSemilattice, CartesianPrecat {
   | top : E
   | top-univ {x : E} : x <= top
   | terminal => \new Product {
@@ -209,7 +218,7 @@
     | a :: l => meet-univ (p 0) $ BigMeet-univ \lam j => p (suc j)
 
   \protected \func op : BottomJoinSemilattice \cowith
-    | Order.Lattice.JoinSemilattice => Order.Lattice.MeetSemilattice.op
+    | JoinSemilattice => MeetSemilattice.op
     | bottom => top
     | bottom-univ => top-univ
 } \where {
@@ -250,17 +259,17 @@
 
   \lemma FinJoin-cond {J : FinSet} (j : J) {a : J -> E} : a j <= FinJoin a
     => \case AbMonoid.FinSum.aux.2 \with {
-         | inP (e : Equiv, q) => \have t => (\peval FinJoin a) *> (\peval AbMonoid.FinSum a) *> inv q
-                                 \in transport2 (<=) (pmap a (e.f_ret j)) (inv t) (BigJoin-cond (e.ret j))
+         | inP (e,q) => \have t => (\peval FinJoin a) *> (\peval AbMonoid.FinSum a) *> inv q
+                        \in transport2 (<=) (pmap a (e.f_ret j)) (inv t) (BigJoin-cond (e.ret j))
        }
 
   \lemma FinJoin-univ {J : FinSet} {a : J -> E} {x : E} (p : \Pi (j : J) -> a j <= x) : FinJoin a <= x
     => \case AbMonoid.FinSum.aux.2 \with {
          | inP (e,q) => \have t => (\peval FinJoin a) *> (\peval AbMonoid.FinSum a) *> inv q
-                        \in transportInv (`<= x) t $ BigJoin-univ \lam j => p (e j)
+                        \in transportInv (<= x) t $ BigJoin-univ \lam j => p (e j)
        }
 
-  \lemma FinJoin_Equiv {A B : FinSet} (e : Equiv {A} {B}) {x : B -> E} : FinJoin x = FinJoin (\lam a => x (e a))
+  \lemma FinJoin_Equiv {A B : FinSet} (e : QEquiv {A} {B}) {x : B -> E} : FinJoin x = FinJoin (\lam a => x (e a))
     => (\peval FinJoin x) *> \this.FinSum_Equiv e *> inv (\peval FinJoin _)
 
   \lemma FinJoin=BigJoin {n : Nat} {x : Fin n -> E} : FinJoin x = BigJoin x
@@ -276,7 +285,7 @@
     => \this.BigSum_+
 
   \protected \func op : TopMeetSemilattice \cowith
-    | Order.Lattice.MeetSemilattice => Order.Lattice.JoinSemilattice.op
+    | MeetSemilattice => JoinSemilattice.op
     | top => bottom
     | top-univ => bottom-univ
 } \where {
@@ -327,90 +336,3 @@
       | zro_*-left {x} => <=-antisymmetric meet-left bottom-univ
       | *-comm => L.meet-comm
   }
-
-\class CompleteLattice \extends BoundedLattice, CompleteCat (\lp,\lp) {
-  | Join {J : \Set} : (J -> E) -> E
-  | Join-cond {J : \Set} (j : J) {f : J -> E} : f j <= Join f
-  | Join-univ {J : \Set} {f : J -> E} {e : E} : (\Pi (j : J) -> f j <= e) -> Join f <= e
-
-  | bottom => Join absurd
-  | bottom-univ {x} => Join-univ \case __
-
-  | Meet {J : \Set} : (J -> E) -> E
-  | Meet-cond {J : \Set} (j : J) {f : J -> E} : Meet f <= f j
-  | Meet-univ {J : \Set} {f : J -> E} {e : E} : (\Pi (j : J) -> e <= f j) -> e <= Meet f
-
-  \default join \as join-impl x y => Join (if __ x y)
-  \default join-left \as join-left-impl {x} {y} : x <= join-impl x y => Join-cond true
-  \default join-right \as join-right-impl {x} {y} : y <= join-impl x y => Join-cond false
-  \default join-univ \as join-univ-impl {x} {y} {z} x<=z y<=z : join-impl x y <= z => Join-univ \case \elim __ \with {
-    | true => x<=z
-    | false => y<=z
-  }
-
-  \default Meet \as Meet-impl {J} g => Join (\lam (t : Total (\Pi (j : J) -> __ <= g j)) => t.1)
-  \default Meet-cond \as Meet-cond-impl {J} j {f} : Meet-impl f <= f j => Join-univ (__.2 j)
-  \default Meet-univ \as Meet-univ-impl {J} {f} {e} p : e <= Meet-impl f => Join-cond (later (e,p))
-
-  \default meet \as meet-impl x y => Meet (if __ x y)
-  \default meet-left \as meet-left-impl {x} {y} : meet-impl x y <= x => Meet-cond true
-  \default meet-right \as meet-right-impl {x} {y} : meet-impl x y <= y => Meet-cond false
-  \default meet-univ \as meet-univ-impl {x} {y} {z} z<=x z<=y : z <= meet-impl x y => Meet-univ \case \elim __ \with {
-    | true => z<=x
-    | false => z<=y
-  }
-
-  \default top \as top-impl => Meet absurd
-  \default top-univ \as top-univ-impl {x} : x <= top-impl => Meet-univ \case __
-
-  | limit {J} G => \new Limit {
-    | apex => Meet (Total.proj (\lam x => ∃ (j : J) (G j = x)))
-    | coneMap j => Meet-cond (later (G j, inP (j, idp)))
-    | coneCoh _ => prop-pi
-    | isLimit x => \new QEquiv {
-      | ret (c : Cone) => Meet-univ (\lam (y, inP (j,p)) => transport (x <=) p (c.coneMap j))
-      | ret_f h => prop-pi
-      | f_sec c => exts (\lam j => prop-pi)
-    }
-  }
-  | pullback {x} {y} f g => \new Pullback {
-    | apex => x ∧ y
-    | pbProj1 => meet-left
-    | pbProj2 => meet-right
-    | pbCoh => prop-pi
-    | pbMap p1 p2 _ => meet-univ p1 p2
-    | pbBeta1 => prop-pi
-    | pbBeta2 => prop-pi
-    | pbEta _ _ => prop-pi
-  }
-
-  \lemma Join-double {I J : \Set} {f : I -> J -> E} : Join (\lam i => Join (\lam j => f i j)) = Join (\lam (p : \Sigma I J) => f p.1 p.2)
-    => <=-antisymmetric (Join-univ (\lam i => Join-univ (\lam j => Join-cond (i,j)))) (Join-univ (\lam p => Join-cond p.2 <=∘ Join-cond p.1))
-
-  \lemma Join_= {J : \Set} {f g : J -> E} (p : \Pi (j : J) -> f j = g j) : Join f = Join g
-    => path (\lam i => Join (p __ i))
-
-  \func SJoin (U : E -> \Prop) => Join (\lam (t : Total U) => t.1)
-
-  \lemma SJoin-cond {U : E -> \Prop} {x : E} (Ux : U x) : x <= SJoin U
-    => Join-cond {_} {Total U} (x,Ux)
-
-  \lemma SJoin-univ {U : E -> \Prop} {e : E} (c : \Pi {x : E} -> U x -> x <= e) : SJoin U <= e
-    => Join-univ \lam s => c s.2
-
-  \lemma join_Join {x y : E} : x ∨ y = Join (\lam b => if b x y)
-    => <=-antisymmetric (join-univ (Join-cond true) (Join-cond false)) $ Join-univ \case \elim __ \with {
-      | true => join-left
-      | false => join-right
-    }
-
-  \protected \func op : CompleteLattice => \new CompleteLattice {
-    | Order.Lattice.Lattice => Order.Lattice.Lattice.op
-    | Join => Meet
-    | Join-cond => Meet-cond
-    | Join-univ => Meet-univ
-    | Meet => Join
-    | Meet-cond => Join-cond
-    | Meet-univ => Join-univ
-  }
-}

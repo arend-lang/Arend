@@ -20,17 +20,7 @@ import java.util.List;
  * This class extracts and invokes meta resolvers from a binOp sequences and replaces corresponding subsequences with results
  */
 public class MetaBinOpParser {
-  public static final class ResolvedReference {
-    public final Concrete.ReferenceExpression refExpr;
-    public final UnresolvedReference originalReference;
-    public final List<Referable> resolvedList;
-
-    public ResolvedReference(Concrete.ReferenceExpression refExpr, UnresolvedReference originalReference, List<Referable> resolvedList) {
-      this.refExpr = refExpr;
-      this.originalReference = originalReference;
-      this.resolvedList = resolvedList;
-    }
-  }
+  public record ResolvedReference(Concrete.ReferenceExpression refExpr, UnresolvedReference originalReference, List<Referable> resolvedList) {}
 
   private final ExpressionResolveNameVisitor myVisitor;
   private Concrete.BinOpSequenceExpression myExpression;
@@ -53,10 +43,10 @@ public class MetaBinOpParser {
 
   public Concrete.Expression parse(Object data) {
     List<Concrete.BinOpSequenceElem<Concrete.Expression>> sequence = myExpression.getSequence();
-    Concrete.BinOpSequenceElem<Concrete.Expression> first = sequence.get(0);
+    Concrete.BinOpSequenceElem<Concrete.Expression> first = sequence.getFirst();
     if (first.fixity == Fixity.INFIX || first.fixity == Fixity.POSTFIX) {
       LocalReferable firstArg = new LocalReferable(Renamer.UNNAMED);
-      myResolvedReferences.add(0, null);
+      myResolvedReferences.addFirst(null);
       List<Concrete.BinOpSequenceElem<Concrete.Expression>> newSequence = new ArrayList<>(sequence.size() + 1);
       newSequence.add(new Concrete.BinOpSequenceElem<>(new Concrete.ReferenceExpression(myExpression.getData(), firstArg)));
       newSequence.addAll(sequence);
@@ -66,7 +56,7 @@ public class MetaBinOpParser {
 
     myClausesHandled = false;
     parse(0, sequence.size());
-    Concrete.Expression result = myResult.size() == 1 ? myResult.get(0).getComponent() : new Concrete.BinOpSequenceExpression(myExpression.getData(), myResult, myClausesHandled ? null : myExpression.getClauses());
+    Concrete.Expression result = myResult.size() == 1 ? myResult.getFirst().getComponent() : new Concrete.BinOpSequenceExpression(myExpression.getData(), myResult, myClausesHandled ? null : myExpression.getClauses());
     return myClausesHandled ? result : myVisitor.visitClassExt(data, result, myCoclauses);
   }
 
@@ -204,7 +194,7 @@ public class MetaBinOpParser {
   public void resetReference(Concrete.BinOpSequenceElem<Concrete.Expression> elem, MetaBinOpParser.ResolvedReference resolvedReference) {
     if (resolvedReference != null && resolvedReference.originalReference != null) {
       resolvedReference.originalReference.reset();
-      elem.setComponent(new Concrete.ReferenceExpression(resolvedReference.refExpr.getData(), resolvedReference.originalReference, resolvedReference.refExpr.getPLevels(), resolvedReference.refExpr.getHLevels()));
+      elem.setComponent(new Concrete.ReferenceExpression(resolvedReference.refExpr.getData(), resolvedReference.originalReference, resolvedReference.refExpr.getLevels()));
     }
   }
 }

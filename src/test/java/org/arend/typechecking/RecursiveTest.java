@@ -22,7 +22,7 @@ public class RecursiveTest extends TypeCheckingTestCase {
 
   @Test
   public void dataRightError() {
-    Definition def = typeCheckDef("\\data List (B : \\oo-Type0 -> \\Type0) (A : \\Type0) | nil | cons (B (List B A))", 1);
+    Definition def = typeCheckDef("\\data List (B : \\Type0 -> \\Type0) (A : \\Type0) | nil | cons (B (List B A))", 1);
     assertEquals(Definition.TypeCheckingStatus.HAS_ERRORS, def.status());
   }
 
@@ -116,8 +116,8 @@ public class RecursiveTest extends TypeCheckingTestCase {
   @Test
   public void parametersTypeTest() {
     typeCheckModule(
-      "\\func f (x : \\let t => g 0 \\in Nat) : \\hType | 0 => Nat | suc x => g x\n" +
-      "\\func g (x : Nat) : \\hType | 0 => Nat | suc x => f x", 1);
+      "\\func f (x : \\let t => g 0 \\in Nat) : \\Type0 | 0 => Nat | suc x => g x\n" +
+      "\\func g (x : Nat) : \\Type0 | 0 => Nat | suc x => f x", 1);
   }
 
   @Test
@@ -138,8 +138,8 @@ public class RecursiveTest extends TypeCheckingTestCase {
   @Test
   public void bodyBodyElimTest() {
     typeCheckModule(
-      "\\func f (x : Nat) : \\hType | 0 => g 0 | suc _ => Nat\n" +
-      "\\func g (x : Nat) : \\hType | 0 => f 0 | suc _ => Nat", 4);
+      "\\func f (x : Nat) : \\Type0 | 0 => g 0 | suc _ => Nat\n" +
+      "\\func g (x : Nat) : \\Type0 | 0 => f 0 | suc _ => Nat", 4);
     assertThatErrorsAre(instanceOf(TerminationCheckError.class), instanceOf(TerminationCheckError.class), instanceOf(TerminationCheckError.class), instanceOf(TerminationCheckError.class));
   }
 
@@ -172,22 +172,22 @@ public class RecursiveTest extends TypeCheckingTestCase {
   public void dataFunctionError2() {
     typeCheckModule(
       "\\data D (n : Nat) : \\Set | con1 (f 1) | con2\n" +
-      "\\func f (n : Nat) : \\Set | 0 => Nat | suc n => D n", 1);
+      "\\func f (n : Nat) : \\Set0 | 0 => Nat | suc n => D n", 1);
   }
 
   @Test
   public void dataFunctionError3() {
     typeCheckModule(
-      "\\data D : \\Type | con1 | con2 (f (\\lam x => x))\n" +
-      "\\func f (g : D -> D) : \\Type => g con1 = g con1", 2);
+      "\\data D | con1 | con2 (f (\\lam x => x))\n" +
+      "\\func f (g : D -> D) : \\Type0 => g con1 = g con1", 2);
   }
 
   @Test
   public void mutualRecursionOrder() {
     typeCheckModule("""
       \\func g => D'
-      \\data D : \\Set | con1 | con2 (d : D) (D' d)
-      \\data D' (d : D) : \\Set \\with
+      \\data D : \\Set0 | con1 | con2 (d : D) (D' d)
+      \\data D' (d : D) : \\Set0 \\with
         | con1 => con1'
         | con2 _ _ => con2'
       """);
@@ -210,38 +210,38 @@ public class RecursiveTest extends TypeCheckingTestCase {
   @Test
   public void levelsTest() {
     typeCheckModule("""
-      \\func test (n : Nat) : Nat
+      \\func test.{u} (n : Nat) : Nat
         | 0 => 0
-        | suc n => test \\lp n
+        | suc n => test.{u} n
       """);
   }
 
   @Test
   public void levelsError() {
     typeCheckModule("""
-      \\func test (n : Nat) : Nat
+      \\func test.{u} (n : Nat) : Nat
         | 0 => 0
-        | suc n => test (\\suc \\lp) n
+        | suc n => test.{\\suc u} n
       """, 1);
   }
 
   @Test
   public void recursiveLevels() {
-    typeCheckDef("\\func test \\plevels lvl (n : Nat) : Nat | 0 => 0 | suc n => test \\levels (\\suc lvl) _ n", 1);
+    typeCheckDef("\\func test.{lvl} (n : Nat) : Nat | 0 => 0 | suc n => test.{\\suc lvl} n", 1);
   }
 
   @Test
   public void recursiveLevels2() {
     typeCheckModule(
-      "\\func f \\plevels lvl (n : Nat) : Nat | 0 => 0 | suc n => g \\levels lvl _ n\n" +
-      "\\func g \\plevels lvl (n : Nat) : Nat | 0 => 0 | suc n => f \\levels (\\suc lvl) _ n", 1);
+      "\\func f.{lvl} (n : Nat) : Nat | 0 => 0 | suc n => g.{lvl} n\n" +
+      "\\func g.{lvl} (n : Nat) : Nat | 0 => 0 | suc n => f.{\\suc lvl} n", 1);
   }
 
   @Test
   public void recursiveLevels3() {
     typeCheckModule(
-      "\\data D \\hlevels lvl : \\Set | con (d : D) (E \\levels _ lvl d)\n" +
-      "\\func E \\hlevels lvl (d : D \\levels _ (\\suc lvl)) : \\Set | con _ _ => Nat", 2);
+      "\\data D.{u} : \\Set | con (d : D) (E.{u} d)\n" +
+      "\\func E.{u} (d : D.{\\suc u}) : \\Set u | con _ _ => Nat", 2);
   }
 
   @Test

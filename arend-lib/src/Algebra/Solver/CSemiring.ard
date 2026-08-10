@@ -32,7 +32,7 @@
       \where {
         \private \lemma apply-axiom' {R : CSemiring} {d : Data R} (t s : Term C env.len) (p : interpret t = interpret s) (mul add : NF)
           : interpretNF (sortMonomials (multiply mul (normalize t)) ++ add) = interpretNF (sortMonomials (multiply mul (normalize s)) ++ add)
-          => interpretNF-correct *> interpretNF_++ *> pmap (`+ _) (interpretNF_sort *> interpretNF_multiply *> pmap (_ *) (normalize-consistent *> p *> inv normalize-consistent) *> inv interpretNF_multiply *> inv interpretNF_sort) *> inv (interpretNF-correct *> interpretNF_++)
+          => interpretNF-correct *> interpretNF_++ *> pmap (+ _) (interpretNF_sort *> interpretNF_multiply *> pmap (_ *) (normalize-consistent *> p *> inv normalize-consistent) *> inv interpretNF_multiply *> inv interpretNF_sort) *> inv (interpretNF-correct *> interpretNF_++)
           \where \open SemiringSolverModel.Data
       }
   }

@@ -34,6 +34,13 @@
     \func pairs_++-right {A B C : \Type} {f : A -> B -> C} {l : Array A} {l1 l2 : Array B} : EPerm (pairs f l (l1 ++ l2)) (pairs f l l1 ++ pairs f l l2)
       => pairs-flip `eperm-trans` rewrite pairs_++-left (eperm-++ pairs-flip pairs-flip)
 
+    \func pairs_EPerm-left {A B C : \Type} {f : A -> B -> C} {l1 l2 : Array A} {l : Array B} (e : EPerm l1 l2) : EPerm (pairs f l1 l) (pairs f l2 l)
+      => pairs-flip `eperm-trans` pairs_EPerm-right e `eperm-trans` pairs-flip
+
+    \func pairs_EPerm-right {A B C : \Type} {f : A -> B -> C} {l : Array A} {l1 l2 : Array B} (e : EPerm l1 l2) : EPerm (pairs f l l1) (pairs f l l2) \elim l
+      | nil => EPerm.eperm-refl
+      | a :: l => EPerm.eperm-++ (EPerm.EPerm_map (f a) e) (pairs.pairs_EPerm-right e)
+
     \func pairs_map-left {A : \Type} {f : A -> A -> A} (p : \Pi {x y z : A} -> f (f x y) z = f x (f y z)) {a : A} {l l' : Array A}
       : pairs f (map (f a) l) l' = map (f a) (pairs f l l') \elim l
       | nil => idp
@@ -71,9 +78,9 @@
         | inr r => TruncP.map (pairs-index-surj r.1) \lam t => ((suc t.1.1, t.1.2), pmap ++.index-right t.2 *> inv r.2)
       }
 
-    \lemma pairs-index-equiv {A B C : \Type} {f : A -> B -> C} {l : Array A} {l' : Array B}
-      : Equiv {\Sigma (Fin l.len) (Fin l'.len)} {Fin (DArray.len {pairs f l l'})} (\lam s => (pairs-index s.1 s.2).1)
-      => Equiv.fromInjSurj _ (\lam p => ext (pairs-index-inj p)) pairs-index-surj
+    \sfunc pairs-index-equiv {A B C : \Type} {f : A -> B -> C} {l : Array A} {l' : Array B}
+      : QEquiv {\Sigma (Fin l.len) (Fin l'.len)} {Fin (DArray.len {pairs f l l'})} (\lam s => (pairs-index s.1 s.2).1)
+      => QEquiv.fromInjSurj (\lam p => ext (pairs-index-inj p)) pairs-index-surj
 
     \lemma pairs-distr {A : \Type} {R : Semiring} {f : A -> A -> A} (g : A -> R) {l l' : Array A} (p : \Pi {a b : A} -> g (f a b) = g a R.* g b)
       : R.BigSum (map g (pairs f l l')) = R.BigSum (map g l) R.* R.BigSum (map g l')

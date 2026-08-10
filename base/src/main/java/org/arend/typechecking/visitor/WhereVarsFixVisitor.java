@@ -167,9 +167,7 @@ public class WhereVarsFixVisitor extends BaseConcreteExpressionVisitor<Void> {
         levelRefs.removeIf(ref -> ref instanceof TCLevelReferable);
         if (!levelRefs.isEmpty()) {
           Concrete.LevelParameters pLevels = null;
-          Concrete.LevelParameters hLevels = null;
           Set<TCDefReferable> pLevelsDefs = new HashSet<>();
-          Set<TCDefReferable> hLevelsDefs = new HashSet<>();
           for (var varData : parametersOriginalDefinitions) {
             Concrete.ExternalParameters params = definition.getExternalParameters().get(varData.proj1);
             if (params != null) {
@@ -177,20 +175,11 @@ public class WhereVarsFixVisitor extends BaseConcreteExpressionVisitor<Void> {
                 pLevelsDefs.add(varData.proj1);
                 if (pLevels == null) pLevels = params.pLevelParameters();
               }
-              if (params.hLevelParameters() != null) {
-                hLevelsDefs.add(varData.proj1);
-                if (hLevels == null) hLevels = params.hLevelParameters();
-              }
             }
           }
-          ErrorReporter localErrorReporter = new LocalErrorReporter(definition.getData(), errorReporter);
-          checkLevels(pLevelsDefs, definition.getPLevelParameters(), localErrorReporter, "p", definition);
-          checkLevels(hLevelsDefs, definition.getHLevelParameters(), localErrorReporter, "h", definition);
-          if (pLevels != null && definition.getPLevelParameters() == null) {
-            definition.setPLevelParameters(pLevels);
-          }
-          if (hLevels != null && definition.getHLevelParameters() == null) {
-            definition.setHLevelParameters(hLevels);
+          checkLevels(pLevelsDefs, definition.getLevelParameters(), new LocalErrorReporter(definition.getData(), errorReporter), definition);
+          if (pLevels != null && definition.getLevelParameters() == null) {
+            definition.setLevelParameters(pLevels);
           }
         }
       }
@@ -258,9 +247,9 @@ public class WhereVarsFixVisitor extends BaseConcreteExpressionVisitor<Void> {
     clause.getPatterns().addAll(0, newPatterns);
   }
 
-  private static void checkLevels(Set<TCDefReferable> defs, Concrete.LevelParameters parameters, ErrorReporter errorReporter, String kind, Concrete.SourceNode sourceNode) {
+  private static void checkLevels(Set<TCDefReferable> defs, Concrete.LevelParameters parameters, ErrorReporter errorReporter, Concrete.SourceNode sourceNode) {
     if (defs.size() > 1 || !defs.isEmpty() && parameters != null) {
-      errorReporter.report(new TypecheckingError("Definition refers to different " + kind + "-levels", parameters != null ? parameters : sourceNode));
+      errorReporter.report(new TypecheckingError("Definition refers to different levels", parameters != null ? parameters : sourceNode));
     }
   }
 

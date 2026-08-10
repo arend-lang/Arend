@@ -52,14 +52,14 @@ An $A$-linear operation $A[[X]] \to A[[X]]$ satisfying:
 \lemma deriv-leibniz {A : Ring} {a b : FSeries A}
   : deriv (a * b) = deriv a * b + a * deriv b
   => ext \lam n => later $ A.FinSum-ldistr
-  *> A.FinSum-ext (later \lam s => pmap (`* _) (pmap natCoef (inv s.3) *> A.natCoef_+) *> rdistr)
+  *> A.FinSum-ext (later \lam s => pmap (* _) (pmap natCoef (inv s.3) *> A.natCoef_+) *> rdistr)
   *> A.FinSum_+
   *> pmap2 (+)
       (A.FinSum-inj2
         (later \lam s => (suc s.1, s.2, pmap suc s.3))
         (\lam {s} {s'} p => ext (pmap (\lam x => pred x.1) p, pmap __.2 p))
         (later \lam s c => cases (s.1 arg addPath) \with {
-          | 0, _ => pmap (`* _) natCoefZero *> zro_*-left
+          | 0, _ => pmap (* _) natCoefZero *> zro_*-left
           | suc k, q => absurd $ c (k, s.2, pmap (\lam x => pred (x + _)) (inv q) *> pmap pred s.3) $ ext (inv q, idp)
         })
         (\lam s => inv *-assoc))
@@ -67,7 +67,7 @@ An $A$-linear operation $A[[X]] \to A[[X]]$ satisfying:
         (later \lam s => (s.1, suc s.2, pmap suc s.3))
         (\lam {s} {s'} p => ext (pmap __.1 p, pmap (\lam x => pred x.2) p))
         (later \lam s c => cases (s.2 arg addPath) \with {
-          | 0, _ => pmap (`* _) natCoefZero *> zro_*-left
+          | 0, _ => pmap (* _) natCoefZero *> zro_*-left
           | suc k, q => absurd $ c (s.1, k, pmap (\lam x => pred (_ + x)) (inv q) *> pmap pred s.3) $ ext (idp, inv q)
         })
         (\lam s => equation.monoid {A.natCoef-comm {suc s.2} {a s.1}}))
@@ -75,14 +75,14 @@ An $A$-linear operation $A[[X]] \to A[[X]]$ satisfying:
 -- | Power rule in a commutative ring: $D(B^{n+1}) = (n+1) \cdot B^{n} \cdot DB$.
 \lemma deriv-pow-conv-suc {A : CRing} (b : FSeries A) (n : Nat)
   : deriv (pow b (suc n)) = natCoef (suc n) *c (pow b n * deriv b) \elim n
-  | 0 => pmap deriv ide-left *> inv (pmap (`*c (1 * deriv b)) (natCoefSuc 0 *> pmap (`+ 1) natCoefZero *> zro-left) *> ide_*c *> ide-left)
+  | 0 => pmap deriv ide-left *> inv (pmap (*c (1 * deriv b)) (natCoefSuc 0 *> pmap (+ 1) natCoefZero *> zro-left) *> ide_*c *> ide-left)
   | suc n =>
     \let | c => pow b (suc n) * deriv b
          | d => pow b n * deriv b
     \in deriv-leibniz {_} {pow b (suc n)} *> pmap (__ * b + c) (deriv-pow-conv-suc b n) *>
-      inv (pmap (`*c c) (natCoefSuc _) *> *c-rdistr {_} {_} {_} {c}
+      inv (pmap (*c c) (natCoefSuc _) *> *c-rdistr {_} {_} {_} {c}
         *> pmap2 (+) {natCoef _ *c c} {natCoef _ *c d * b} (pmap (natCoef _ *c) {c} {d * b}
-          (pmap (`* deriv b) {pow b (suc n)} {b * pow b n} (inv Ring.pow-left) *> *-assoc {_} {_} {_} {deriv b} *> *-comm {_} {_} {d})
+          (pmap (* deriv b) {pow b (suc n)} {b * pow b n} (inv Ring.pow-left) *> *-assoc {_} {_} {_} {deriv b} *> *-comm {_} {_} {d})
             *> *c-comm-left {_} {_} {d}) {1 *c c} {c} ide_*c)
 
 {- | Chain rule for {fcompose}. For $b$ with $b_0 = 0$:
@@ -102,20 +102,20 @@ An $A$-linear operation $A[[X]] \to A[[X]]$ satisfying:
     \private \lemma lhs-equals-M {A : CRing} (a b : FSeries A) (k : Nat)
       : deriv (fcompose a b) k = M-form a b k
       => A.BigSum-ldistr {_} {\new Array A (suc (suc k)) \lam n => a n * pow b n (suc k)}
-         *> pmap (`+ _) (pmap (* _) zro_*-right *> zro_*-right)
+         *> pmap (+ _) (pmap (_ *) zro_*-right *> zro_*-right)
          *> zro-left
          *> inv (A.FinSum=BigSum {_} {\lam m => natCoef (suc k) * (a (suc m) * pow b (suc m) (suc k))})
          *> A.FinSum-ext \lam m => equation.cRing {path \lam i => deriv-pow-conv-suc b m i k}
 
     \private \lemma rhs-equals-M {A : CRing} (a b : FSeries A) (b_0 : b 0 = A.zro) (k : Nat)
       : (fcompose (deriv a) b * deriv b) k = M-form a b k
-      => A.FinSum-ext (later \lam s => pmap (`* _) (fcompose.=FinSum {_} {deriv a}) *> A.FinSum-rdistr)
+      => A.FinSum-ext (later \lam s => pmap (* _) (fcompose.=FinSum {_} {deriv a}) *> A.FinSum-rdistr)
       *> A.FinSum-double-dep' (later \lam s => FinFin (suc s.1))
       *> inv (A.FinSum-inj2 {_} {ProdFin (FinFin (suc k)) (FSeriesRing.PairsFinSet k)}
           (later \lam s => (toFin s.2 $ fin_< s.2 <∘l suc<=suc (<=_+ <=-refl zero<=_ <=∘ =_<= s.1.3), s.1))
           (IsInj.fromSplit
             (later \lam s => (s.2, toFin (s.1 ∧ s.2.1) $ <=_<_suc meet-right))
-            (\lam s => ext (idp, fin_nat-inj $ toFin=id *> pmap (`∧ _) toFin=id *> MeetSemilattice.meet_<= (<_suc_<= $ fin_< s.2))))
+            (\lam s => ext (idp, fin_nat-inj $ toFin=id *> pmap (∧ _) toFin=id *> MeetSemilattice.meet_<= (<_suc_<= $ fin_< s.2))))
           (later \lam s c => \case LinearOrder.dec<_<= s.2.1 s.1 \with {
             | inl q => equation.cRing {pow-conv-zero-below b_0 q}
             | inr q => absurd $ c (s.2, toFin s.1 $ <=_<_suc q) $ ext (fin_nat-inj $ toFin=id *> toFin=id, idp)

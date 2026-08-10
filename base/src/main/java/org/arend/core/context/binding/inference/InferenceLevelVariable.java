@@ -5,24 +5,16 @@ import org.arend.ext.core.ops.CMP;
 import org.arend.term.concrete.Concrete;
 
 public class InferenceLevelVariable implements LevelVariable {
-  private final LvlType myType;
-  private final boolean myUniverseLike;
   private final Concrete.SourceNode mySourceNode;
+  private final boolean myGenerated;
 
-  public InferenceLevelVariable(LvlType type, boolean isUniverseLike, Concrete.SourceNode sourceNode) {
-    myType = type;
-    myUniverseLike = isUniverseLike;
+  public InferenceLevelVariable(Concrete.SourceNode sourceNode, boolean isGenerated) {
     mySourceNode = sourceNode;
+    myGenerated = isGenerated;
   }
 
-  @Override
-  public LvlType getType() {
-    return myType;
-  }
-
-  @Override
-  public LevelVariable max(LevelVariable other) {
-    return this == other ? this : null;
+  public boolean isGenerated() {
+    return myGenerated;
   }
 
   @Override
@@ -35,16 +27,12 @@ public class InferenceLevelVariable implements LevelVariable {
     return this == other;
   }
 
-  public boolean isUniverseLike() {
-    return myUniverseLike;
-  }
-
   public Concrete.SourceNode getSourceNode() {
     return mySourceNode;
   }
 
   @Override
   public String toString() {
-    return myType == LvlType.PLVL ? "?p" : "?h";
+    return "?p";
   }
 }

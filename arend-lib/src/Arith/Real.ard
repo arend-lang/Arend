@@ -112,7 +112,7 @@
   | + => +
   | zro-left => Real.real-lower-ext $ +-lower *> {LowerReal} zro-left
   | +-comm => Real.real-lower-ext $ +-lower *> {LowerReal} +-comm *> {LowerReal} inv {LowerReal} +-lower
-  | +-assoc => Real.real-lower-ext $ +-lower *> {LowerReal} pmap {LowerReal} (LowerRealAbMonoid.`+ _) +-lower *> {LowerReal} LowerRealAbMonoid.+-assoc *> {LowerReal} pmap (_ LowerRealAbMonoid.+) (inv {LowerReal} +-lower) *> {LowerReal} inv {LowerReal} +-lower
+  | +-assoc => Real.real-lower-ext $ +-lower *> {LowerReal} pmap {LowerReal} (LowerRealAbMonoid.+ _) +-lower *> {LowerReal} LowerRealAbMonoid.+-assoc *> {LowerReal} pmap (_ LowerRealAbMonoid.+) (inv {LowerReal} +-lower) *> {LowerReal} inv {LowerReal} +-lower
   | negative => negative
   | negative-left {x : Real} => exts (
       \lam a => ext (\lam r => \case +_L.1 r \with {
@@ -204,7 +204,7 @@
 
     \lemma *n-upper {n : Nat} {x : Real} : n RealAbGroup.*n x = n ExUpperRealAbMonoid.*n x \elim n
       | 0 => idp
-      | suc n => +-upper *> pmap (ExUpperReal.`+ x) *n-upper
+      | suc n => +-upper *> pmap (ExUpperReal.+ x) *n-upper
 
     \sfunc negative (x : Real) : Real \cowith
       | L a => x.U (RatField.negative a)

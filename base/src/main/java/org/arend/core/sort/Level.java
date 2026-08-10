@@ -2,7 +2,6 @@ package org.arend.core.sort;
 
 import org.arend.core.context.binding.LevelVariable;
 import org.arend.core.context.binding.inference.InferenceLevelVariable;
-import org.arend.ext.core.context.CoreInferenceVariable;
 import org.arend.term.prettyprint.ToAbstractVisitor;
 import org.arend.ext.core.level.LevelSubstitution;
 import org.arend.ext.core.level.CoreLevel;
@@ -12,87 +11,110 @@ import org.arend.term.concrete.Concrete;
 import org.arend.term.prettyprint.PrettyPrintVisitor;
 import org.arend.typechecking.implicitargs.equations.DummyEquations;
 import org.arend.typechecking.implicitargs.equations.Equations;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
+
+import java.math.BigInteger;
+import java.util.*;
 
 public class Level implements CoreLevel {
-  private final int myConstant;
-  private final LevelVariable myVar;
-  private final int myMaxConstant;
+  private final Map<LevelVariable,BigInteger> myVars;
+  private final BigInteger myConstant;
 
   public static final Level INFINITY = new Level();
 
+  public Level(Map<LevelVariable,BigInteger> vars, BigInteger maxConstant) {
+    myVars = vars;
+    myConstant = maxConstant;
+  }
+
   private Level() {
-    myVar = null;
-    myConstant = Integer.MAX_VALUE;
-    myMaxConstant = 0;
+    myVars = null;
+    myConstant = BigInteger.ZERO;
   }
 
   // max(var + constant, maxConstant)
-  public Level(LevelVariable var, int constant, int maxConstant) {
-    assert constant >= (var == null ? -1 : var.getMinValue());
-    myVar = var;
-    myConstant = constant;
-    myMaxConstant = var == null
-      ? (constant == -1 ? -1 : 0)
-      : maxConstant > constant + var.getMinValue()
-        ? maxConstant
-        : var.getMinValue();
+  public Level(LevelVariable var, BigInteger constant, BigInteger maxConstant) {
+    if (var == null) {
+      myVars = Collections.emptyMap();
+      myConstant = constant.max(maxConstant);
+    } else {
+      myVars = Collections.singletonMap(var, constant);
+      myConstant = maxConstant.compareTo(constant) > 0 ? maxConstant : BigInteger.ZERO;
+    }
   }
 
   public Level(LevelVariable var, int constant) {
-    this(var, constant, -1);
+    this(var, BigInteger.valueOf(constant), BigInteger.ZERO);
   }
 
   public Level(LevelVariable var) {
-    this(var, 0);
+    this(var, BigInteger.ZERO, BigInteger.ZERO);
   }
 
-  public Level(int constant) {
-    this(null, constant);
+  public Level(BigInteger constant) {
+    this(Collections.emptyMap(), constant);
   }
 
-  public LevelVariable getVar() {
-    return myVar;
+  public boolean hasVars() {
+    return myVars != null && !myVars.isEmpty();
+  }
+
+  public Set<? extends LevelVariable> getVars() {
+    return myVars == null ? Collections.emptySet() : myVars.keySet();
   }
 
   @Override
-  public int getConstant() {
-    return myConstant;
+  public @NotNull Set<? extends Map.Entry<LevelVariable,BigInteger>> getVarPairs() {
+    return myVars == null ? Collections.emptySet() : myVars.entrySet();
   }
 
-  public int getMaxConstant() {
-    return myMaxConstant;
+  @Override
+  public @NotNull BigInteger getConstant() {
+    return myConstant;
   }
 
   @Override
   public boolean isInfinity() {
-    return this == INFINITY;
+    return myVars == null;
   }
 
   @Override
   public boolean isClosed() {
-    return myVar == null;
+    return myVars == null || myVars.isEmpty();
   }
 
-  @Override
-  public boolean hasInferenceVar() {
-    return myVar instanceof CoreInferenceVariable;
-  }
-
-  public boolean isProp() {
-    return isClosed() && myConstant == -1;
+  public boolean isZero() {
+    return myVars != null && myVars.isEmpty() && myConstant.equals(BigInteger.ZERO);
   }
 
   public boolean withMaxConstant() {
-    return myVar != null && myMaxConstant > myVar.getMinValue();
+    return myVars != null && !myVars.isEmpty() && myConstant.compareTo(BigInteger.ZERO) > 0;
   }
 
-  public boolean isVarOnly() {
-    return myVar != null && myConstant == 0 && !withMaxConstant();
+  public boolean hasInferenceVariables() {
+    if (myVars == null) return false;
+    for (LevelVariable variable : myVars.keySet()) {
+      if (variable instanceof InferenceLevelVariable) return true;
+    }
+    return false;
   }
 
-  public Level add(int constant) {
-    assert constant >= 0;
-    return constant == 0 || isInfinity() ? this : new Level(myVar, myConstant + constant, myMaxConstant + constant);
+  public @Nullable LevelVariable getSingleVar() {
+    if (myVars == null || myVars.size() != 1) return null;
+    var entry = myVars.entrySet().iterator().next();
+    return entry.getValue().equals(BigInteger.ZERO) && myConstant.equals(BigInteger.ZERO) ? entry.getKey() : null;
+  }
+
+  public Level add(BigInteger constant) {
+    if (myVars == null || constant.equals(BigInteger.ZERO)) return this;
+    Map<LevelVariable,BigInteger> vars = new HashMap<>(myVars.size());
+    boolean keepConstant = false;
+    for (Map.Entry<LevelVariable, BigInteger> entry : myVars.entrySet()) {
+      if (myConstant.compareTo(entry.getValue()) <= 0) keepConstant = true;
+      vars.put(entry.getKey(), entry.getValue().add(constant));
+    }
+    return new Level(vars, keepConstant ? myConstant : myConstant.add(constant));
   }
 
   public Level max(Level level) {
@@ -100,48 +122,54 @@ public class Level implements CoreLevel {
       return INFINITY;
     }
 
-    if (myVar != null && level.myVar != null) {
-      LevelVariable var = myVar.max(level.myVar);
-      if (var != null) {
-        return new Level(var, Math.max(myConstant, level.myConstant), Math.max(myMaxConstant, level.myMaxConstant));
-      } else {
-        return null;
-      }
+    if (myVars.isEmpty() && level.myVars.isEmpty()) {
+      return new Level(myConstant.max(level.myConstant));
     }
 
-    if (myVar == null && level.myVar == null) {
-      return new Level(Math.max(myConstant, level.myConstant));
+    if (myVars.isEmpty()) {
+      return new Level(level.myVars, myConstant.max(level.myConstant));
     }
 
-    int constant = myVar == null ? myConstant : level.myConstant;
-    Level lvl = myVar == null ? level : this;
-    return new Level(lvl.myVar, lvl.myConstant, Math.max(constant, lvl.myMaxConstant));
+    if (level.myVars.isEmpty()) {
+      return new Level(myVars, myConstant.max(level.myConstant));
+    }
+
+    Map<LevelVariable,BigInteger> vars = new HashMap<>(myVars);
+    for (Map.Entry<LevelVariable, BigInteger> entry : level.myVars.entrySet()) {
+      vars.compute(entry.getKey(), (k,v) -> v == null ? entry.getValue() : v.max(entry.getValue()));
+    }
+    return new Level(vars, myConstant.max(level.myConstant));
   }
 
   public Level subst(LevelSubstitution subst) {
-    if (myVar == null || this == INFINITY) {
+    if (myVars == null || myVars.isEmpty()) {
       return this;
-    }
-    Level level = (Level) subst.get(myVar);
-    if (level == null) {
-      return this;
-    }
-    if (level == INFINITY || isVarOnly()) {
-      return level;
     }
 
-    int constant = myConstant == -1 && level.myConstant == -1 ? -1 : level.myConstant + myConstant;
-    if (level.myVar != null) {
-      return new Level(level.myVar, constant, Math.max(level.myMaxConstant + myConstant, myMaxConstant));
-    } else {
-      return new Level(Math.max(constant, myMaxConstant));
+    List<Level> substLevels = new ArrayList<>();
+    Map<LevelVariable,BigInteger> rest = new HashMap<>();
+    for (Map.Entry<LevelVariable, BigInteger> entry : myVars.entrySet()) {
+      Level level = (Level) subst.get(entry.getKey());
+      if (level == null) {
+        rest.put(entry.getKey(), entry.getValue());
+      } else {
+        substLevels.add(level.add(entry.getValue()));
+      }
     }
+
+    Level result = new Level(rest, myConstant);
+    for (Level substLevel : substLevels) {
+      result = result.max(substLevel);
+    }
+    return result;
   }
 
   @Override
   public String toString() {
     StringBuilder builder = new StringBuilder();
-    ToAbstractVisitor.convert(this).accept(new PrettyPrintVisitor(builder, 0), new Precedence(Concrete.Expression.PREC));
+    Concrete.LevelExpression level = ToAbstractVisitor.convert(this);
+    if (level == null) return "∞";
+    level.accept(new PrettyPrintVisitor(builder, 0), new Precedence(Concrete.Expression.PREC));
     return builder.toString();
   }
 
@@ -153,53 +181,67 @@ public class Level implements CoreLevel {
   public static boolean compare(Level level1, Level level2, CMP cmp, Equations equations, Concrete.SourceNode sourceNode) {
     if (cmp == CMP.GE) {
       return compare(level2, level1, CMP.LE, equations, sourceNode);
+    } else if (cmp == CMP.EQ) {
+      return compare(level1, level2, CMP.LE, equations, sourceNode) && compare(level2, level1, CMP.LE, equations, sourceNode);
     }
 
-    if (level1.isInfinity()) {
-      return level2.isInfinity() || !level2.isClosed() && (equations == null || equations.addEquation(INFINITY, level2, CMP.LE, sourceNode));
-    }
     if (level2.isInfinity()) {
-      return cmp == CMP.LE || !level1.isClosed() && (equations == null || equations.addEquation(INFINITY, level1, CMP.LE, sourceNode));
+      return true;
+    }
+    if (level1.isInfinity()) {
+      return level2.hasInferenceVariables() && (equations == null || equations.addEquation(INFINITY, level2, CMP.LE, sourceNode));
     }
 
-    if (level2.myVar == null && level1.myVar != null && !(level1.myVar instanceof InferenceLevelVariable)) {
-      return false;
-    }
-
-    if (level1.myVar == null) {
-      if (level2.myVar == null) {
-        return cmp == CMP.LE ? level1.myConstant <= level2.myConstant : level1.myConstant == level2.myConstant;
-      }
-      if (cmp == CMP.EQ) {
-        // c == max(l + c', m') can be true only if l is an inference var and c >= m' and c >= c' + l.minValue
-        if (!(level2.myVar instanceof InferenceLevelVariable) || level1.myConstant < level2.myMaxConstant || level1.myConstant < level2.myConstant + level2.myVar.getMinValue()) {
-          return false;
+    if (level1.myConstant.compareTo(level2.myConstant) > 0) {
+      boolean ok = false;
+      boolean add = false;
+      for (Map.Entry<LevelVariable, BigInteger> entry : level2.myVars.entrySet()) {
+        if (level1.myConstant.compareTo(entry.getValue()) <= 0) {
+          ok = true;
+          break;
         }
-      } else {
-        // c <= max(l + c', m') always can be true if l is an inference var
-        if (!(level2.myVar instanceof InferenceLevelVariable)) {
-          // If l is not an inference var, then c <= max(l + c', m') is true if and only if either c <= m' or c <= c' + l.minValue
-          return level1.myConstant <= level2.myMaxConstant || level1.myConstant <= level2.myConstant + level2.myVar.getMinValue();
+        if (entry.getKey() instanceof InferenceLevelVariable) {
+          add = true;
         }
       }
-    }
-
-    if (level1.myVar != null && level2.myVar != null) {
-      if (level1.myVar.compare(level2.myVar, cmp)) {
-        if (cmp == CMP.EQ && level1.myConstant != level2.myConstant || cmp == CMP.LE && level1.myConstant > level2.myConstant) {
+      if (!ok) {
+        if (add) {
+          return equations == null || equations.addEquation(level1, level2, CMP.LE, sourceNode);
+        } else {
           return false;
         }
-        if (level1.myMaxConstant == level2.myMaxConstant || cmp == CMP.LE && (level1.myMaxConstant <= level2.myMaxConstant || level1.myMaxConstant <= level2.myConstant + level2.myVar.getMinValue())) {
-          return true;
-        }
-        if (!(level1.myVar instanceof InferenceLevelVariable)) {
-          return false;
-        }
-      } else if (!(level1.myVar instanceof InferenceLevelVariable) && !(level2.myVar instanceof InferenceLevelVariable)) {
-        return false;
       }
     }
 
-    return equations == null || equations.addEquation(level1, level2, cmp, sourceNode);
+    for (Map.Entry<LevelVariable, BigInteger> entry1 : level1.myVars.entrySet()) {
+      boolean ok = false;
+      boolean add = entry1.getKey() instanceof InferenceLevelVariable && entry1.getValue().compareTo(level2.myConstant) <= 0;
+      for (Map.Entry<LevelVariable, BigInteger> entry2 : level2.myVars.entrySet()) {
+        if (entry1.getKey().compare(entry2.getKey(), CMP.LE) && entry1.getValue().compareTo(entry2.getValue()) <= 0) {
+          ok = true;
+          break;
+        }
+        if (!add && (entry2.getKey() instanceof InferenceLevelVariable || entry1.getKey() instanceof InferenceLevelVariable && entry1.getValue().compareTo(entry2.getValue()) <= 0)) {
+          add = true;
+        }
+      }
+      if (!ok) {
+        if (add) {
+          return equations == null || equations.addEquation(level1, level2, CMP.LE, sourceNode);
+        } else {
+          return false;
+        }
+      }
+    }
+
+    if (equations != null && level1.isClosed()) {
+      for (LevelVariable var : level2.getVars()) {
+        if (var instanceof InferenceLevelVariable infVar) {
+          equations.addEquation(new Level(BigInteger.ZERO), new Level(infVar), CMP.LE, sourceNode);
+        }
+      }
+    }
+
+    return true;
   }
 }

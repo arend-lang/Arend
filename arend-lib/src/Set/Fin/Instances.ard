@@ -10,14 +10,14 @@
 \import Meta
 \import Paths
 \import Paths.Meta
-\import Set
+\import Set.SubSet
 \import Set.Fin
 
-\lemma SigmaFin (S : FinSet) (Q : S -> FinSet) : FinSet (\Sigma (i : S) (Q i)) (AbMonoid.FinSum (\lam i => (Q i).finCard))
-  => \case AbMonoid.FinSum_char (\lam i => (Q i).finCard) \with {
+\lemma SigmaFin (S : FinSet) (Q : S -> FinSet) : FinSet (\Sigma (i : S) (Q i)) (AbMonoid.FinSum (\lam i => (Q i).card))
+  => \case AbMonoid.FinSum_char (\lam i => (Q i).card) \with {
     | inP p => rewrite p.2 \new FinSet {
-      | finEq => \case FinSet.finiteAC (\lam i => finEq {Q (p.1 i)}) \with {
-        | inP d => inP $ aux `transEquiv` sigma-right d `transEquiv` sigma-left p.1
+      | finEq => \case FinSet.finiteAC (\lam i => (Q (p.1 i)).finEq) \with {
+        | inP d => inP $ aux `transQEquiv` sigma-right d `transQEquiv` sigma-left p.1
       }
     }
   }
@@ -49,12 +49,17 @@
       }
 
     \lemma DecSubSet-isFin (S : FinSet) (D : DecSubSet S) : FinSet D.ISet
-      => SigmaFin S (\lam x => DecFin (D.isDec x))
+      => FinSet-transport (SigmaFin S \lam x => DecFin (D.isDec x)) $ later \new QEquiv {
+        | f s => s
+        | ret s => s
+        | ret_f => idpe
+        | f_sec => idpe
+      }
   }
 
-\instance ProdFin (A B : FinSet) : FinSet (\Sigma A B) (A.finCard Nat.* B.finCard)
+\instance ProdFin (A B : FinSet) : FinSet (\Sigma A B) (A.card Nat.* B.card)
   => transport (FinSet _) Semiring.FinSum_replicate $ SigmaFin A (\lam _ => B)
   \where {
-    \func prod_equiv {n m : Nat} : Equiv {Fin (n Nat.* m)} {\Sigma (Fin n) (Fin m)}
-      => transport (\lam x => Equiv {Fin x} {_}) Semiring.BigSum_replicate $ SigmaFin.aux {n} {\lam _ => m}
+    \func prod_equiv {n m : Nat} : QEquiv {Fin (n Nat.* m)} {\Sigma (Fin n) (Fin m)}
+      => transport (\lam x => QEquiv {Fin x} {_}) Semiring.BigSum_replicate $ SigmaFin.aux {n} {\lam _ => m}
   }

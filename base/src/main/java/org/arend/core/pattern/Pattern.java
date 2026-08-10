@@ -72,7 +72,7 @@ public interface Pattern extends CorePattern {
     Binding binding = getBinding();
     if (binding == null) return null;
     String name = binding.getName();
-    return name == null ? Renamer.getNameFromType(binding.getTypeExpr(), null) : name;
+    return name == null ? Renamer.getNameFromType(binding.getType(), null) : name;
   }
 
   static DependentLink getFirstBinding(Collection<? extends Pattern> patterns) {
@@ -111,7 +111,7 @@ public interface Pattern extends CorePattern {
       if (pattern instanceof ExpressionPattern) {
         exprPattern = (ExpressionPattern) pattern;
       } else if (pattern instanceof ConstructorPattern) {
-        exprPattern = pattern.toExpressionPattern(TypeConstructorExpression.unfoldType(link.getTypeExpr().subst(substitution)));
+        exprPattern = pattern.toExpressionPattern(TypeConstructorExpression.unfoldType(link.getType().subst(substitution)));
         if (exprPattern == null) {
           return null;
         }

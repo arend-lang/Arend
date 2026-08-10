@@ -230,7 +230,7 @@ class RenameReferenceAction (private val element: ArendReferenceElement,
 
         private fun getLongNameData(element: ArendReferenceElement): LongNameData? {
             val parent = element.parent
-            var atomFieldsAcc : ArendAtomFieldsAcc? = null;
+            var atomFieldsAcc : ArendAtomFieldsAcc? = null
             var longName: ArendLongName? = null
             var pattern: ArendPattern? = null
 
@@ -381,7 +381,7 @@ fun addIdToUsing(groupMember: PsiElement?,
                  renamings: List<Pair<String, String?>>,
                  factory: ArendPsiFactory,
                  relativePosition: RelativePosition): Pair<List<ArendNsId>, Boolean> {
-    (groupMember?.ancestor<ArendGroup>())?.statements?.map { stat ->
+    (groupMember?.ancestor<ArendGroup>())?.statements?.forEach { stat ->
         val statCmd = stat.namespaceCommand
         if (statCmd != null) {
             val ref = statCmd.longName?.refIdentifierList?.lastOrNull()
@@ -649,7 +649,7 @@ fun transformPostfixToPrefix1(argumentOrFieldsAcc: PsiElement,
                               ipName: ArendIPName,
                               operatorConcrete: Concrete.Expression,
                               psiElements: List<PsiElement>,
-                              textGetter: (PsiElement) -> String = { it -> it.text }): Pair<String, Boolean> {
+                              textGetter: (PsiElement) -> String = { it.text }): Pair<String, Boolean> {
     var resultingExpr = "${LongName(ipName.longName)} "
     val leadingElements = java.util.ArrayList<PsiElement>()
     val trailingElements = java.util.ArrayList<PsiElement>()
@@ -834,13 +834,15 @@ private const val APP_PREC = 10
 private const val MIN_PREC = 0
 
 private object PrecVisitor : AbstractExpressionVisitor<Void?, Int> {
-    override fun visitReference(data: Any?, referent: Referable, fixity: Fixity?, pLevels: Collection<Abstract.LevelExpression>?, hLevels: Collection<Abstract.LevelExpression>?, params: Void?) =
-        if (pLevels != null || hLevels != null) APP_PREC else MAX_PREC
+    override fun visitReference(data: Any?, referent: Referable, fixity: Fixity?, pLevels: Collection<Abstract.LevelExpression>?, params: Void?) =
+        if (!pLevels.isNullOrEmpty()) APP_PREC else MAX_PREC
 
-    override fun visitUniverse(data: Any?, pLevelNum: Int?, hLevelNum: Int?, pLevel: Abstract.LevelExpression?, hLevel: Abstract.LevelExpression?, params: Void?) =
-        if (pLevel != null || hLevel != null) APP_PREC else MAX_PREC
+    override fun visitUniverse(data: Any?, pLevelNum: BigInteger?, hLevelNum: BigInteger?, pLevel: Abstract.LevelExpression?, params: Void?) =
+        if (pLevel != null) APP_PREC else MAX_PREC
 
-    override fun visitReference(data: Any?, referent: Referable, lp: Int, lh: Int, params: Void?) = APP_PREC
+    override fun visitCatUniverse(data: Any?, pLevelNum: BigInteger?, pLevel: Abstract.LevelExpression?, params: Void?): Int? =
+        if (pLevel != null) APP_PREC else MAX_PREC
+
     override fun visitThis(data: Any?, params: Void?) = MAX_PREC
     override fun visitLam(data: Any?, parameters: Collection<Abstract.LamParameter>, body: Abstract.Expression?, params: Void?) = MIN_PREC
     override fun visitPi(data: Any?, parameters: Collection<Abstract.Parameter>, codomain: Abstract.Expression?, params: Void?) = MIN_PREC
@@ -849,7 +851,7 @@ private object PrecVisitor : AbstractExpressionVisitor<Void?, Int> {
     override fun visitGoal(data: Any?, name: String?, expression: Abstract.Expression?, params: Void?) = MAX_PREC
     override fun visitTuple(data: Any?, fields: Collection<Abstract.Expression>, trailingComma: Any?, params: Void?) = MAX_PREC
     override fun visitSigma(data: Any?, parameters: Collection<Abstract.Parameter>, params: Void?) = MIN_PREC
-    override fun visitBinOpSequence(data: Any?, left: Abstract.Expression, sequence: Collection<Abstract.BinOpSequenceElem>, params: Void?) = APP_PREC
+    override fun visitBinOpSequence(data: Any?, left: Abstract.Expression, leftIsVariable: Boolean, sequence: Collection<Abstract.BinOpSequenceElem>, params: Void?) = APP_PREC
     override fun visitCase(data: Any?, isSFunc: Boolean, evalKind: Abstract.EvalKind?, arguments: Collection<Abstract.CaseArgument>, resultType: Abstract.Expression?, resultTypeLevel: Abstract.Expression?, clauses: Collection<Abstract.FunctionClause>, params: Void?) = MIN_PREC
     override fun visitFieldAccs(data: Any?, expression: Abstract.Expression, fieldAccs: List<Abstract.FieldAcc>, infixReference: AbstractReference?, infixName: String?, fixity: Fixity?, params: Void?) = MAX_PREC
     override fun visitClassExt(data: Any?, isNew: Boolean, evalKind: Abstract.EvalKind?, baseClass: Abstract.Expression?, coclausesData: Any?, implementations: MutableCollection<out Abstract.ClassFieldImpl>?, sequence: MutableCollection<out Abstract.BinOpSequenceElem>, clauses: Abstract.FunctionClauses?, params: Void?) = MIN_PREC
@@ -861,10 +863,10 @@ private object PrecVisitor : AbstractExpressionVisitor<Void?, Int> {
 
 private object ConcretePrecVisitor : ConcreteExpressionVisitor<Void?, Int> {
     override fun visitReference(expr: Concrete.ReferenceExpression, params: Void?) =
-        if (expr.pLevels != null || expr.hLevels != null) APP_PREC else MAX_PREC
+        if (!expr.levels.isNullOrEmpty()) APP_PREC else MAX_PREC
 
     override fun visitUniverse(expr: Concrete.UniverseExpression, params: Void?) =
-        if ((expr.pLevel == null || expr.pLevel is Concrete.NumberLevelExpression) && (expr.hLevel == null || expr.hLevel is Concrete.NumberLevelExpression || expr.hLevel is Concrete.InfLevelExpression)) MAX_PREC else APP_PREC
+        if (expr.pLevel == null || expr.pLevel is Concrete.NumberLevelExpression) MAX_PREC else APP_PREC
 
     override fun visitApp(expr: Concrete.AppExpression, params: Void?) = APP_PREC
     override fun visitFieldCall(expr: Concrete.FieldCallExpression, params: Void?) = MAX_PREC

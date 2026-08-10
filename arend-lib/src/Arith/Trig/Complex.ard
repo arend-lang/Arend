@@ -5,7 +5,7 @@
 \import Algebra.Semiring
 \import Arith.Complex
 \import Arith.Complex.Banach
-\import Arith.Complex.Euler (euler \as reuler)
+\import Arith.Complex.Euler \using (euler \as reuler)
 \import Arith.Complex.Norm
 \import Arith.Exp
 \import Arith.Rat
@@ -26,7 +26,8 @@
      Extends the real `Arith.Trig.Real.sin` to all of $\mathbb{C}$. -}
 \sfunc sin (z : Complex) : Complex => i * (exp (i * negative z) - exp (i * z)) * ratio 1 2
 
-\private \lemma half2 : ratio 1 2 ComplexField.+ ratio 1 2 = {Complex} 1 => ext (linarith, linarith)
+\private \lemma half2 : ratio 1 2 ComplexField.+ ratio 1 2 = {Complex} 1
+  => ext (linarith, linarith)
 
 \private \lemma half-sq : ratio 1 2 ComplexField.* ratio 1 2 + ratio 1 2 ComplexField.* ratio 1 2 = {Complex} ratio 1 2
   => rewriteI ComplexField.rdistr (rewrite half2 ide-left)
@@ -36,24 +37,19 @@
 \private \lemma half-sq-re => pmap (\lam (z : Complex) => z.re) half-sq
 
 \private \lemma exp_i_+ {x y : Complex} : exp (i * (x + y)) = exp (i * x) * exp (i * y)
-  => pmap exp ldistr *> exp_+ (*-comm {_} {i * x} {i * y})
+  => pmap exp ldistr *> exp_+
 
 \private \lemma exp_i_neg_+ {x y : Complex} : exp (i * negative (x + y)) = exp (i * negative x) * exp (i * negative y)
-  => pmap exp (pmap (i *) AbGroup.negative_+-comm *> ldistr {_} {i} {negative x} {negative y})
-     *> exp_+ (*-comm {_} {i * negative x} {i * negative y})
-
-\private \lemma exp_i_0 : exp (i * 0) = {Complex} 1
-  => pmap exp zro_*-right *> exp_zro
+  => pmap exp (pmap (i *) AbGroup.negative_+-comm *> ldistr {_} {i} {negative x} {negative y}) *> exp_+
 
 -- | $\cos 0 = 1$.
 \lemma cos_zro : cos 0 = {Complex} 1
-  => rewrite (\peval cos 0, exp_i_0, pmap (\lam z => exp (i * z)) ComplexField.negative_zro *> exp_i_0) $
+  => rewrite (\peval cos 0, exp^i*_zro, pmap (\lam z => exp (i * z)) ComplexField.negative_zro *> exp^i*_zro) $
       ext (linarith, equation.cRing)
 
 -- | $\sin 0 = 0$.
 \lemma sin_zro : sin 0 = {Complex} 0
-  => rewrite (\peval sin 0, exp_i_0, pmap (\lam z => exp (i * z)) ComplexField.negative_zro *> exp_i_0) $
-      ext (equation.cRing, equation.cRing)
+  => rewrite (\peval sin 0, exp^i*_zro, pmap (\lam z => exp (i * z)) ComplexField.negative_zro *> exp^i*_zro) complex-ext
 
 -- | Cosine addition formula: $\cos(x+y) = \cos x \cos y - \sin x \sin y$.
 \lemma cos_+ {x y : Complex} : cos (x + y) = cos x * cos y - sin x * sin y
@@ -70,13 +66,13 @@
 -- | $\cos(-z) = \cos z$ — cosine is even.
 \lemma cos_negative {z : Complex} : cos (negative z) = cos z
   => (\peval cos _)
-     *> later (rewrite (pmap (\lam z => exp (i * z)) ComplexField.negative-isInv) $ ext (equation.cRing, equation.cRing))
+     *> later (rewrite (pmap (\lam z => exp (i * z)) ComplexField.negative-isInv) complex-ext)
      *> inv (\peval cos z)
 
 -- | $\sin(-z) = -\sin z$ — sine is odd.
 \lemma sin_negative {z : Complex} : sin (negative z) = negative (sin z)
   => (\peval sin _)
-     *> later (rewrite (pmap (\lam z => exp (i * z)) ComplexField.negative-isInv) $ ext (equation.cRing, equation.cRing))
+     *> later (rewrite (pmap (\lam z => exp (i * z)) ComplexField.negative-isInv) complex-ext)
      *> pmap negative (inv \peval sin z)
 
 {- | Euler's formula on $\mathbb{C}$: $\exp(i z) = \cos z + i \sin z$. -}
@@ -89,11 +85,11 @@
 
 -- | $\cos(x-y) = \cos x \cos y + \sin x \sin y$.
 \lemma cos_minus {x y : Complex} : cos (x - y) = cos x * cos y + sin x * sin y
-  => cos_+ *> rewrite (cos_negative, sin_negative) (ext (equation.cRing, equation.cRing))
+  => cos_+ *> rewrite (cos_negative, sin_negative) complex-ext
 
 -- | $\sin(x-y) = \sin x \cos y - \cos x \sin y$.
 \lemma sin_minus {x y : Complex} : sin (x - y) = sin x * cos y - cos x * sin y
-  => sin_+ {x} {negative y} *> rewrite (cos_negative, sin_negative) (ext (equation.cRing, equation.cRing))
+  => sin_+ {x} {negative y} *> rewrite (cos_negative, sin_negative) complex-ext
 
 -- | $(x+y)/2 + (x-y)/2 = x$. Helper for the sum-to-product identities.
 \private \lemma half-decomp-plus {x y : Complex} : (x + y) * ratio 1 2 + (x - y) * ratio 1 2 = x
@@ -110,7 +106,7 @@
   => \have
        | cosX => pmap cos (inv half-decomp-plus) *> cos_+ {(x + y) * ratio 1 2} {(x - y) * ratio 1 2}
        | cosY => pmap cos (inv (half-decomp-minus {x} {y})) *> cos_minus
-     \in rewrite (cosX, cosY) (ext (equation.cRing, equation.cRing))
+     \in rewrite (cosX, cosY) complex-ext
 
 {- | Sum-to-product for sines:
      $\sin x - \sin y = 2 \cos\tfrac{x+y}2 \sin\tfrac{x-y}2$. -}
@@ -119,11 +115,7 @@
   => \let
        | sinX => pmap sin (inv half-decomp-plus) *> sin_+ {(x + y) * ratio 1 2} {(x - y) * ratio 1 2}
        | sinY => pmap sin (inv (half-decomp-minus {x} {y})) *> sin_minus
-     \in rewrite (sinX, sinY) (ext (equation.cRing, equation.cRing))
-
--- | $E(\mathrm{fromReal}\,x) = \mathrm{fromReal}(\cos x) + i\,\mathrm{fromReal}(\sin x)$ — real Euler.
-\private \lemma exp_i_fromReal {x : Real} : exp (i * x) = rcos x ComplexField.+ i * rsin x
-  => reuler
+     \in rewrite (sinX, sinY) complex-ext
 
 -- | $E(-\mathrm{fromReal}\,x) = \mathrm{fromReal}(\cos x) - i\,\mathrm{fromReal}(\sin x)$.
 \private \lemma exp_i_negative_fromReal {x : Real} : exp (i * ComplexField.negative x) = Complex.fromReal (rcos x) - i * rsin x
@@ -136,9 +128,9 @@
 {- | The complex cosine agrees with the real cosine on $\mathbb{R}$:
      $\cos(\mathrm{fromReal}\,x) = \mathrm{fromReal}(\cos x)$. -}
 \lemma cos-fromReal {x : Real} : cos x = {Complex} rcos x
-  => (\peval cos _) *> rewrite (exp_i_fromReal, exp_i_negative_fromReal) (ext (equation.cRing {half2-re}, equation.cRing))
+  => (\peval cos _) *> rewrite (reuler, exp_i_negative_fromReal) (ext (equation.cRing {half2-re}, equation.cRing))
 
 {- | The complex sine agrees with the real sine on $\mathbb{R}$:
      $\sin(\mathrm{fromReal}\,x) = \mathrm{fromReal}(\sin x)$. -}
 \lemma sin-fromReal {x : Real} : sin x = {Complex} rsin x
-  => (\peval sin _) *> rewrite (exp_i_fromReal, exp_i_negative_fromReal) (ext (equation.cRing {half2-re}, equation.cRing))
+  => (\peval sin _) *> rewrite (reuler, exp_i_negative_fromReal) (ext (equation.cRing {half2-re}, equation.cRing))

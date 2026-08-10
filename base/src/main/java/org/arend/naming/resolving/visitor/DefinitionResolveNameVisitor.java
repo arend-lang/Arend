@@ -57,10 +57,11 @@ public class DefinitionResolveNameVisitor implements ConcreteResolvableDefinitio
     scope = new PrivateFilteredScope(scope);
     myLocalErrorReporter = new ConcreteProxyErrorReporter(def);
 
+    copyClassLevelParameters(def);
     checkNameAndPrecedence(def, def.getData());
 
     List<TypedReferable> context = new ArrayList<>();
-    var exprVisitor = new ExpressionResolveNameVisitor(scope, context, myTypingInfo, myLocalErrorReporter, myLiteralTypechecker, myResolverListener, visitLevelParameters(def.getPLevelParameters()), visitLevelParameters(def.getHLevelParameters()));
+    var exprVisitor = new ExpressionResolveNameVisitor(scope, context, myTypingInfo, myLocalErrorReporter, myLiteralTypechecker, myResolverListener, visitLevelParameters(def.getLevelParameters()));
     for (Concrete.Parameter parameter : def.getParameters()) {
       if (parameter.getType() == null && !parameter.isExplicit()) {
         myErrorReporter.report(new NameResolverError("Untyped parameters must be explicit", parameter));
@@ -191,39 +192,44 @@ public class DefinitionResolveNameVisitor implements ConcreteResolvableDefinitio
     }
   }
 
+  private void copyClassLevelParameters(Concrete.ResolvableDefinition definition) {
+    if (definition.getEnclosingClass() == null || !(myConcreteProvider.getConcrete(definition.getEnclosingClass()) instanceof Concrete.ResolvableDefinition enclosingClass) || enclosingClass.getLevelParameters() == null) return;
+    if (definition.getLevelParameters() == null) {
+      definition.setLevelParameters(Concrete.LevelParameters.copyLevelParameters(definition.getData(), enclosingClass.getLevelParameters()));
+    } else {
+      List<LevelReferable> newLevels = new ArrayList<>();
+      newLevels.addAll(enclosingClass.getLevelParameters().referables);
+      newLevels.addAll(definition.getLevelParameters().referables);
+      definition.setLevelParameters(new Concrete.LevelParameters(definition.getLevelParameters().getData(), newLevels));
+    }
+  }
+
   private ExpressionResolveNameVisitor resolveFunctionHeader(Concrete.BaseFunctionDefinition def, Scope scope) {
     myLocalErrorReporter = new ConcreteProxyErrorReporter(def);
 
+    copyClassLevelParameters(def);
     if (def instanceof Concrete.FunctionDefinition funDef && (funDef.getKind().isUse() || funDef.getKind().isCoclause())) {
       if (def.getUseParent() == null) {
         myErrorReporter.report(new NameResolverError("This function must be declared with \\use", def));
         funDef.setKind(FunctionKind.FUNC);
-      } else {
+      } else if (def instanceof Concrete.CoClauseFunctionDefinition function) {
         Concrete.GeneralDefinition enclosingDef = myConcreteProvider.getConcrete(def.getUseParent());
-        if (enclosingDef instanceof Concrete.Definition) {
-          if (def.getPLevelParameters() == null && ((Concrete.Definition) enclosingDef).getPLevelParameters() != null) {
-            def.setPLevelParameters(((Concrete.Definition) enclosingDef).getPLevelParameters());
-          }
-          if (def.getHLevelParameters() == null && ((Concrete.Definition) enclosingDef).getHLevelParameters() != null) {
-            def.setHLevelParameters(((Concrete.Definition) enclosingDef).getHLevelParameters());
-          }
+        if (enclosingDef instanceof Concrete.Definition && def.getLevelParameters() == null && ((Concrete.Definition) enclosingDef).getLevelParameters() != null) {
+          def.setLevelParameters(Concrete.LevelParameters.copyLevelParameters(def.getData(), ((Concrete.Definition) enclosingDef).getLevelParameters()));
         }
-
-        if (def instanceof Concrete.CoClauseFunctionDefinition function) {
-          resolveCoclauseImplementedField(function, scope);
-          if (function.getNumberOfExternalParameters() == 0 && enclosingDef instanceof Concrete.BaseFunctionDefinition) {
-            List<Concrete.Parameter> parameters = new SubstConcreteVisitor(def.getData()).visitParameters(((Concrete.BaseFunctionDefinition) enclosingDef).getParameters());
-            for (Concrete.Parameter parameter : parameters) {
-              parameter.setExplicit(false);
-            }
-            def.getParameters().addAll(0, parameters);
-            function.setNumberOfExternalParameters(parameters.size());
+        resolveCoclauseImplementedField(function, scope);
+        if (function.getNumberOfExternalParameters() == 0 && enclosingDef instanceof Concrete.BaseFunctionDefinition) {
+          List<Concrete.Parameter> parameters = new SubstConcreteVisitor(def.getData()).visitParameters(((Concrete.BaseFunctionDefinition) enclosingDef).getParameters());
+          for (Concrete.Parameter parameter : parameters) {
+            parameter.setExplicit(false);
           }
+          def.getParameters().addAll(0, parameters);
+          function.setNumberOfExternalParameters(parameters.size());
         }
       }
     }
 
-    ExpressionResolveNameVisitor exprVisitor = new ExpressionResolveNameVisitor(scope, new ArrayList<>(), myTypingInfo, myLocalErrorReporter, myLiteralTypechecker, myResolverListener, visitLevelParameters(def.getPLevelParameters()), visitLevelParameters(def.getHLevelParameters()));
+    ExpressionResolveNameVisitor exprVisitor = new ExpressionResolveNameVisitor(scope, new ArrayList<>(), myTypingInfo, myLocalErrorReporter, myLiteralTypechecker, myResolverListener, visitLevelParameters(def.getLevelParameters()));
     exprVisitor.visitParameters(def.getParameters(), null);
     return exprVisitor;
   }
@@ -258,7 +264,6 @@ public class DefinitionResolveNameVisitor implements ConcreteResolvableDefinitio
       } else {
         instanceTypeOK = false;
         myLocalErrorReporter.report(def.getResultType() != null ? new NameResolverError("Expected a class", def.getResultType()) : new NameResolverError("The type of a function defined by copattern matching must be specified explicitly", def));
-        body.getCoClauseElements().clear();
       }
     }
     if (body instanceof Concrete.ElimFunctionBody) {
@@ -391,8 +396,12 @@ public class DefinitionResolveNameVisitor implements ConcreteResolvableDefinitio
   private ExpressionResolveNameVisitor resolveDataHeader(Concrete.DataDefinition def, Scope scope) {
     myLocalErrorReporter = new ConcreteProxyErrorReporter(def);
 
-    ExpressionResolveNameVisitor exprVisitor = new ExpressionResolveNameVisitor(scope, new ArrayList<>(), myTypingInfo, myLocalErrorReporter, myLiteralTypechecker, myResolverListener, visitLevelParameters(def.getPLevelParameters()), visitLevelParameters(def.getHLevelParameters()));
+    copyClassLevelParameters(def);
+    ExpressionResolveNameVisitor exprVisitor = new ExpressionResolveNameVisitor(scope, new ArrayList<>(), myTypingInfo, myLocalErrorReporter, myLiteralTypechecker, myResolverListener, visitLevelParameters(def.getLevelParameters()));
     exprVisitor.visitParameters(def.getParameters(), null);
+    if (def.getUniverse() != null) {
+      def.setUniverse(exprVisitor.visitUniverse(def.getUniverse(), null));
+    }
     return exprVisitor;
   }
 
@@ -400,8 +409,7 @@ public class DefinitionResolveNameVisitor implements ConcreteResolvableDefinitio
   public Void visitData(Concrete.DataDefinition def, Scope scope) {
     scope = new PrivateFilteredScope(scope);
     ExpressionResolveNameVisitor exprVisitor = resolveDataHeader(def, scope);
-    List<? extends Referable> pLevels = visitLevelParameters(def.getPLevelParameters());
-    List<? extends Referable> hLevels = visitLevelParameters(def.getHLevelParameters());
+    List<? extends Referable> pLevels = visitLevelParameters(def.getLevelParameters());
     List<TypedReferable> context = exprVisitor.getContext();
     checkNameAndPrecedence(def, def.getData());
 
@@ -424,7 +432,7 @@ public class DefinitionResolveNameVisitor implements ConcreteResolvableDefinitio
     } else {
       for (Concrete.ConstructorClause clause : def.getConstructorClauses()) {
         for (Concrete.Constructor constructor : clause.getConstructors()) {
-          visitConstructor(constructor, scope, context, pLevels, hLevels);
+          visitConstructor(constructor, scope, context, pLevels);
         }
       }
     }
@@ -436,7 +444,7 @@ public class DefinitionResolveNameVisitor implements ConcreteResolvableDefinitio
         try (Utils.ContextSaver ignore = new Utils.ContextSaver(context)) {
           visitConstructorClause(clause, exprVisitor);
           for (Concrete.Constructor constructor : clause.getConstructors()) {
-            visitConstructor(constructor, scope, context, pLevels, hLevels);
+            visitConstructor(constructor, scope, context, pLevels);
           }
         }
       }
@@ -450,10 +458,10 @@ public class DefinitionResolveNameVisitor implements ConcreteResolvableDefinitio
     return null;
   }
 
-  private void visitConstructor(Concrete.Constructor def, Scope parentScope, List<TypedReferable> context, List<? extends Referable> pLevels, List<? extends Referable> hLevels) {
+  private void visitConstructor(Concrete.Constructor def, Scope parentScope, List<TypedReferable> context, List<? extends Referable> pLevels) {
     checkNameAndPrecedence(def, def.getData());
 
-    ExpressionResolveNameVisitor exprVisitor = new ExpressionResolveNameVisitor(parentScope, context, myTypingInfo, myLocalErrorReporter, myLiteralTypechecker, myResolverListener, pLevels, hLevels);
+    ExpressionResolveNameVisitor exprVisitor = new ExpressionResolveNameVisitor(parentScope, context, myTypingInfo, myLocalErrorReporter, myLiteralTypechecker, myResolverListener, pLevels);
     try (Utils.ContextSaver ignored = new Utils.ContextSaver(context)) {
       exprVisitor.visitParameters(def.getParameters(), null);
       if (def.getResultType() != null) {
@@ -475,12 +483,12 @@ public class DefinitionResolveNameVisitor implements ConcreteResolvableDefinitio
     }
   }
 
-  private void resolveSuperClasses(Concrete.ClassDefinition def, Scope scope, boolean resolveLevels) {
+  private void resolveSuperClasses(Concrete.ClassDefinition def, Scope scope, boolean resolveLevels, boolean reportErrors) {
     if (def.getSuperClasses().isEmpty()) {
       return;
     }
 
-    ExpressionResolveNameVisitor exprVisitor = new ExpressionResolveNameVisitor(scope, new ArrayList<>(), myTypingInfo, myErrorReporter, myLiteralTypechecker, myResolverListener, visitLevelParameters(def.getPLevelParameters()), visitLevelParameters(def.getHLevelParameters()));
+    ExpressionResolveNameVisitor exprVisitor = new ExpressionResolveNameVisitor(scope, new ArrayList<>(), myTypingInfo, myErrorReporter, myLiteralTypechecker, myResolverListener, visitLevelParameters(def.getLevelParameters()));
     for (int i = 0; i < def.getSuperClasses().size(); i++) {
       Concrete.ReferenceExpression superClass = def.getSuperClasses().get(i);
       Concrete.Expression resolved = exprVisitor.visitReference(superClass, true, resolveLevels);
@@ -488,10 +496,9 @@ public class DefinitionResolveNameVisitor implements ConcreteResolvableDefinitio
       if (resolved == superClass && myTypingInfo.getBodyDynamicScopeProvider(ref) != null && ref instanceof GlobalReferable globalRef && globalRef.getKind().isRecord()) {
         superClass.setReferent(ref);
       } else {
-        if (!(ref instanceof ErrorReference)) {
+        if ((reportErrors || resolved != superClass) && !(ref instanceof ErrorReference)) {
           myLocalErrorReporter.report(new NameResolverError("Expected a class", superClass));
         }
-        def.getSuperClasses().remove(i--);
       }
     }
   }
@@ -501,6 +508,7 @@ public class DefinitionResolveNameVisitor implements ConcreteResolvableDefinitio
     scope = new PrivateFilteredScope(scope);
     myLocalErrorReporter = new ConcreteProxyErrorReporter(def);
 
+    copyClassLevelParameters(def);
     checkNameAndPrecedence(def, def.getData());
 
     if (def.isRecord() && def.withoutClassifying()) {
@@ -523,10 +531,10 @@ public class DefinitionResolveNameVisitor implements ConcreteResolvableDefinitio
       }
     }
 
-    resolveSuperClasses(def, scope, true);
+    resolveSuperClasses(def, scope, true, true);
 
     List<TypedReferable> context = new ArrayList<>();
-    ExpressionResolveNameVisitor exprVisitor = new ExpressionResolveNameVisitor(scope, context, myTypingInfo, myLocalErrorReporter, myLiteralTypechecker, myResolverListener, visitLevelParameters(def.getPLevelParameters()), visitLevelParameters(def.getHLevelParameters()));
+    ExpressionResolveNameVisitor exprVisitor = new ExpressionResolveNameVisitor(scope, context, myTypingInfo, myLocalErrorReporter, myLiteralTypechecker, myResolverListener, visitLevelParameters(def.getLevelParameters()));
     Concrete.Expression previousType = null;
     for (int i = 0; i < classFields.size(); i++) {
       Concrete.ClassField field = classFields.get(i);
@@ -600,7 +608,7 @@ public class DefinitionResolveNameVisitor implements ConcreteResolvableDefinitio
         newParams.add(defParam);
       }
     }
-    myExternalParameters.put(def.getData(), new Concrete.ExternalParameters(newParams, def instanceof Concrete.Definition ? ((Concrete.Definition) def).getPLevelParameters() : null, def instanceof Concrete.Definition ? ((Concrete.Definition) def).getHLevelParameters() : null));
+    myExternalParameters.put(def.getData(), new Concrete.ExternalParameters(newParams, def instanceof Concrete.Definition ? ((Concrete.Definition) def).getLevelParameters() : null));
     return true;
   }
 
@@ -621,7 +629,7 @@ public class DefinitionResolveNameVisitor implements ConcreteResolvableDefinitio
     LocalErrorReporter localErrorReporter = new LocalErrorReporter(groupRef, myErrorReporter);
     myLocalErrorReporter = localErrorReporter;
     if (def instanceof Concrete.ClassDefinition) {
-      resolveSuperClasses((Concrete.ClassDefinition) def, new PrivateFilteredScope(cachedScope), false);
+      resolveSuperClasses((Concrete.ClassDefinition) def, new PrivateFilteredScope(cachedScope), false, false);
     }
 
     for (ParameterReferable parameter : group.externalParameters()) {
@@ -694,12 +702,12 @@ public class DefinitionResolveNameVisitor implements ConcreteResolvableDefinitio
         for (Referable element : curScope.getElements()) {
           if (element instanceof TCDefReferable defRef && defRef.getKind() == GlobalReferable.Kind.INSTANCE) {
             for (ConcreteNamespaceCommand.NameHiding hiding : namespaceCommand.hidings()) {
-              if (hiding.scopeContext() == Scope.ScopeContext.STATIC && hiding.reference().getRefName().equals(defRef.getRefName())) continue loop;
+              if (hiding.isStatic() && hiding.reference().getRefName().equals(defRef.getRefName())) continue loop;
             }
             boolean ok = namespaceCommand.isUsing();
             if (!ok) {
               for (ConcreteNamespaceCommand.NameRenaming renaming : namespaceCommand.renamings()) {
-                if (renaming.scopeContext() == Scope.ScopeContext.STATIC && renaming.reference().getRefName().equals(defRef.getRefName())) {
+                if (renaming.isStatic() && renaming.reference().getRefName().equals(defRef.getRefName())) {
                   ok = true;
                   break;
                 }
@@ -828,15 +836,15 @@ public class DefinitionResolveNameVisitor implements ConcreteResolvableDefinitio
       }
     }
 
-    class NamespaceStruct {
-      final Scope.ScopeContext context;
-      final ConcreteNamespaceCommand command;
-      final Map<String, Referable> refMap;
-
-      NamespaceStruct(Scope.ScopeContext context, ConcreteNamespaceCommand command, Map<String, Referable> refMap) {
-        this.context = context;
-        this.command = command;
-        this.refMap = refMap;
+    record NamespaceStruct(boolean isStatic, ConcreteNamespaceCommand command, Map<String, Referable> refMap) {
+      static void addNamespaceStruct(Scope.ScopeContext context, ConcreteNamespaceCommand cmd, Scope namespaceScope, List<NamespaceStruct> result) {
+        Collection<? extends Referable> elements = NamespaceCommandNamespace.resolveNamespace(cmd.isImport() ? namespaceScope.getImportedSubscope() : namespaceScope, cmd).getElements(context);
+        if (elements.isEmpty()) return;
+        Map<String, Referable> map = new LinkedHashMap<>();
+        for (Referable element : elements) {
+          map.put(element.getRefName(), element);
+        }
+        result.add(new NamespaceStruct(context != Scope.ScopeContext.DYNAMIC, cmd, map));
       }
     }
 
@@ -851,27 +859,20 @@ public class DefinitionResolveNameVisitor implements ConcreteResolvableDefinitio
       } else {
         checkNamespaceCommand(cmd, referables.keySet());
       }
-      for (Scope.ScopeContext context : Scope.ScopeContext.values()) {
-        Collection<? extends Referable> elements = NamespaceCommandNamespace.resolveNamespace(cmd.isImport() ? namespaceScope.getImportedSubscope() : namespaceScope, cmd).getElements(context);
-        if (!elements.isEmpty()) {
-          Map<String, Referable> map = new LinkedHashMap<>();
-          for (Referable element : elements) {
-            map.put(element.getRefName(), element);
-          }
-          namespaces.add(new NamespaceStruct(context, cmd, map));
-        }
-      }
+
+      NamespaceStruct.addNamespaceStruct(Scope.ScopeContext.STATIC, cmd, namespaceScope, namespaces);
+      NamespaceStruct.addNamespaceStruct(Scope.ScopeContext.DYNAMIC, cmd, namespaceScope, namespaces);
     }
 
     for (int i = 0; i < namespaces.size(); i++) {
       NamespaceStruct struct = namespaces.get(i);
       for (Map.Entry<String, Referable> entry : struct.refMap.entrySet()) {
-        if (!(struct.context == Scope.ScopeContext.STATIC || struct.context == Scope.ScopeContext.DYNAMIC) || referables.containsKey(entry.getKey())) {
+        if (referables.containsKey(entry.getKey())) {
           continue;
         }
 
         for (int j = i + 1; j < namespaces.size(); j++) {
-          if (!struct.context.equals(namespaces.get(j).context)) continue;
+          if (!struct.isStatic == namespaces.get(j).isStatic) continue;
           Referable ref = namespaces.get(j).refMap.get(entry.getKey());
           if (ref != null && !ref.equals(entry.getValue())) {
             ConcreteNamespaceCommand nsCmd = namespaces.get(j).command;
@@ -883,7 +884,7 @@ public class DefinitionResolveNameVisitor implements ConcreteResolvableDefinitio
                 break;
               }
             }
-            localErrorReporter.report(new DuplicateOpenedNameError(struct.context, ref, nsCmd, struct.command, cause));
+            localErrorReporter.report(new DuplicateOpenedNameError(struct.isStatic, ref, nsCmd, struct.command, cause));
             if (ref instanceof LocatedReferable) {
               referables.putIfAbsent(ref.getRefName(), (LocatedReferable) ref);
             }

@@ -17,12 +17,7 @@ public class BaseAbstractExpressionVisitor<P, R> implements AbstractExpressionVi
   }
 
   @Override
-  public R visitReference(@Nullable Object data, @NotNull Referable referent, @Nullable Fixity fixity, @Nullable Collection<? extends Abstract.LevelExpression> pLevels, @Nullable Collection<? extends Abstract.LevelExpression> hLevels, P params) {
-    return defaultValue;
-  }
-
-  @Override
-  public R visitReference(@Nullable Object data, @NotNull Referable referent, int lp, int lh, P params) {
+  public R visitReference(@Nullable Object data, @NotNull Referable referent, @Nullable Fixity fixity, @Nullable Collection<? extends Abstract.LevelExpression> pLevels, P params) {
     return defaultValue;
   }
 
@@ -42,7 +37,12 @@ public class BaseAbstractExpressionVisitor<P, R> implements AbstractExpressionVi
   }
 
   @Override
-  public R visitUniverse(@Nullable Object data, @Nullable Integer pLevelNum, @Nullable Integer hLevelNum, @Nullable Abstract.LevelExpression pLevel, @Nullable Abstract.LevelExpression hLevel, P params) {
+  public R visitUniverse(@Nullable Object data, @Nullable BigInteger pLevelNum, @Nullable BigInteger hLevelNum, @Nullable Abstract.LevelExpression pLevel, P params) {
+    return defaultValue;
+  }
+
+  @Override
+  public R visitCatUniverse(@Nullable Object data, @Nullable BigInteger pLevelNum, Abstract.@Nullable LevelExpression pLevel, P params) {
     return defaultValue;
   }
 
@@ -72,7 +72,7 @@ public class BaseAbstractExpressionVisitor<P, R> implements AbstractExpressionVi
   }
 
   @Override
-  public R visitBinOpSequence(@Nullable Object data, @NotNull Abstract.Expression left, @NotNull Collection<? extends Abstract.BinOpSequenceElem> sequence, P params) {
+  public R visitBinOpSequence(@Nullable Object data, @NotNull Abstract.Expression left, boolean leftIsVariable, @NotNull Collection<? extends Abstract.BinOpSequenceElem> sequence, P params) {
     return defaultValue;
   }
 

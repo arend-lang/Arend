@@ -19,15 +19,17 @@
   -- | For each functional symbols, a signature of its arguments: the sort of the argument and the domain of the argument
   | domain : \Pi {s : Sort} (symbol s) -> List (\Sigma (List Sort) Sort)
 
-  \func \infix 7 !!domain {s : Sort} (m : symbol s) (index : Index (domain m)) : List Sort =>
-    (domain m !! index).1
+  \func \infix 7 !!domain {s : Sort} (m : symbol s) (index : Index (domain m)) : List Sort
+    => (domain m !! index).1
 
-  \func \infix 7 !!sort {s : Sort} (m : symbol s) (index : Index (domain m)) : Sort =>
-    (domain m !! index).2
+  \func \infix 7 !!sort {s : Sort} (m : symbol s) (index : Index (domain m)) : Sort
+    => (domain m !! index).2
 
-  \func arity {s : Sort} (f : symbol s) : Nat => length (domain f)
+  \func arity {s : Sort} (f : symbol s) : Nat
+    => length (domain f)
 
-  \func index-in {s : Sort} (f : symbol s) : \Type => Index (domain f)
+  \func index-in {s : Sort} (f : symbol s) : \Set0
+    => Index (domain f)
 }
 
 \open FSignature
@@ -38,7 +40,8 @@
 
   \func arity {s : Sort} (m : metaname s) : Nat => length (m-domain m)
 
-  \func index-in {s : Sort} (m : metaname s) : \Type => Index (m-domain m)
+  \func index-in {s : Sort} (m : metaname s) : \Set0
+    => Index (m-domain m)
 }
 
 -- | Term of higher-order TRS

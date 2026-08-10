@@ -25,7 +25,6 @@ class ArendServerService(val project: Project) : Disposable {
         serverField?.let { return it }
         synchronized(this) {
             val server = ArendServerImpl(ArendServerRequesterImpl(project), true, false, !ApplicationManager.getApplication().isUnitTestMode)
-            serverField = server
             val preludeFileName = Prelude.MODULE_PATH.toString() + FileUtils.EXTENSION
             val preludeText = String(
                 ArendServerService::class.java.getResourceAsStream("/lib/$preludeFileName")!!.readBytes(),
@@ -43,6 +42,7 @@ class ArendServerService(val project: Project) : Disposable {
                 }
                 prelude
             }
+            serverField = server
             return server
         }
     }

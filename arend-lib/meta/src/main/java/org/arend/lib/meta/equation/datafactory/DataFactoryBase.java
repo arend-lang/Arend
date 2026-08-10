@@ -67,4 +67,10 @@ public abstract class DataFactoryBase implements DataFactory {
     letClauses.set(0, factory.letClause(dataRef, Collections.emptyList(), null, factory.newExpr(getDataClass(instanceArg, dataArg))));
     return factory.letExpr(false, false, letClauses, expression);
   }
+
+  public ConcreteExpression wrapArrayAsNatFunction(ConcreteExpression expr, int length) {
+    ArendRef natParam = factory.local("k");
+    return factory.lam(Collections.singletonList(factory.param(natParam)),
+      factory.app(expr, true, factory.app(factory.ref(prelude.getModRef()), true, factory.ref(natParam), factory.number(length))));
+  }
 }

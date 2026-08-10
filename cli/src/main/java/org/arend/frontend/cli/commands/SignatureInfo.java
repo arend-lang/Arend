@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.arend.core.context.param.DependentLink;
 import org.arend.core.definition.*;
 import org.arend.core.expr.Expression;
+import org.arend.core.sort.Sort;
 import org.arend.core.expr.PiExpression;
 import org.arend.ext.module.FullName;
 import org.arend.ext.module.LongName;
@@ -169,7 +170,7 @@ public final class SignatureInfo {
           for (; cLink.hasNext(); cLink = cLink.getNext()) {
             Map<String, Object> cp = new LinkedHashMap<>();
             cp.put("name", cLink.getName() != null ? cLink.getName() : "_");
-            Expression cType = cLink.getTypeExpr();
+            Expression cType = cLink.getType();
             cp.put("type", cType != null ? cType.toString() : "?");
             cp.put("explicit", cLink.isExplicit());
             constrParams.add(cp);
@@ -188,13 +189,15 @@ public final class SignatureInfo {
     Map<String, Object> paramInfo = new LinkedHashMap<>();
     paramInfo.put("name", link.getName() != null ? link.getName() : "_");
 
-    Expression typeExpr = link.getTypeExpr();
+    Expression typeExpr = link.getType();
     paramInfo.put("type", typeExpr != null ? typeExpr.toString() : "?");
     paramInfo.put("explicit", link.isExplicit());
 
     boolean propositional = false;
     if (typeExpr != null) {
-      if (typeExpr.isPropType()) {
+      // Expression.isPropType() was removed upstream; this is its former body.
+      Sort typeSort = typeExpr.getSortOfType();
+      if (typeSort != null && typeSort.isProp()) {
         propositional = true;
       }
       if (!propositional) {

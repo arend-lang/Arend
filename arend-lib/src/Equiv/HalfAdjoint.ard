@@ -1,7 +1,7 @@
 \import Equiv
 \import Equiv.Fiber
-\import Equiv.Univalence
 \import Function.Meta
+\import Logic
 \import Logic.Unique
 \import Homotopy.Fibration
 \import Paths
@@ -24,7 +24,7 @@
       | f_sec => coh_f_sec e e.f_sec
       | f_ret_f=f_sec_f => coh_f_ret_f=f_sec_f e e.f_sec
 
-    \lemma levelProp {A B : \Type} {f : A -> B} : isProp (HAEquiv f)
+    \lemma levelProp.{u} {A B : \Type u} {f : A -> B} : isProp (HAEquiv f)
       => \lam e e' =>
           \let -- HAEquiv = Retraction + T1' = Retraction + T1
            | T1' (r : Retraction f) (x : A) =>
@@ -32,9 +32,9 @@
            | T1 (r : Retraction f) (x : A) =>
               \Sigma (p : r.sec (f x) = x) (pmap f p = r.f_sec (f x))
            | T1'=T1 (r : Retraction f) (x : A) : T1' r x = T1 r x =>
-              Equiv-to-= (Fib.equiv (f x) (r.sec (f x), r.f_sec (f x)) (x,idp))
+              QEquiv_= (Fib.equiv (f x) (r.sec (f x), r.f_sec (f x)) (x,idp))
            | T1'-isContr (r : Retraction f) (x : A) : Contr (T1' r x) =>
-              isProp=>PathContr (Fib f (f x)) (isContr=>isProp (Equiv=>contrFibers e (f x))) _ _
+              isProp=>PathContr (Fib f (f x)) (isContr=>isProp (IsEquiv=>contrFibers (inP e) (f x))) _ _
            | T1-isContr (r : Retraction f) (x : A) : Contr (T1 r x) =>
               rewriteI (T1'=T1 r x) (T1'-isContr r x)
            | T2 => \Sigma (r : Retraction f) (\Pi (x : A) -> T1 r x)

@@ -8,7 +8,7 @@
 \import Order.Lattice
 \import Paths
 \import Paths.Meta
-\import Set.Subset
+\import Set.Set
 \import Topology.TopAbGroup
 \import Topology.TopAbGroup.Complete
 \import Topology.TopAbGroup.Product
@@ -50,5 +50,5 @@
     }
   }
 
-\instance TopLModuleHasProduct (R : TopRing) : HasProduct (TopLModule R)
-  | Product => ProductTopLModule {R}
+\instance TopLModuleHasProduct.{u} (R : TopRing) : HasProduct (TopLModule.{u} R)
+  | Product A B => ProductTopLModule A B

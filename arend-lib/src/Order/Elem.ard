@@ -3,7 +3,7 @@
 \import Order.PartialOrder
 \import Order.StrictOrder
 \import Paths.Meta
-\import Set.Subset
+\import Set.Set
 
 \instance ElemStrictPoset {X : StrictPoset} (U : Set X) : StrictPoset (Elem U)
   | < x y => x.1 < y.1

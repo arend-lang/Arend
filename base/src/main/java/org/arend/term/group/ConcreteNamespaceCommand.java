@@ -23,17 +23,25 @@ import static org.arend.ext.prettyprinting.doc.DocFactory.*;
 import static org.arend.ext.prettyprinting.doc.DocFactory.text;
 
 public record ConcreteNamespaceCommand(@Nullable Object data, boolean isImport, @NotNull LongUnresolvedReference module, boolean isUsing, @NotNull List<NameRenaming> renamings, @NotNull List<NameHiding> hidings) implements ConcreteSourceNode {
-  public record NameRenaming(@Nullable Object data, @NotNull Scope.ScopeContext scopeContext, @NotNull NamedUnresolvedReference reference, @Nullable Precedence newPrecedence, @Nullable String newName) implements DataContainer {
+  public record NameRenaming(@Nullable Object data, boolean isStatic, @NotNull NamedUnresolvedReference reference, @Nullable Precedence newPrecedence, @Nullable String newName) implements DataContainer {
     @Override
     public @Nullable Object getData() {
       return data;
     }
+
+    public @NotNull Scope.ScopeContext scopeContext() {
+      return isStatic ? Scope.ScopeContext.STATIC : Scope.ScopeContext.DYNAMIC;
+    }
   }
 
-  public record NameHiding(@Nullable Object data, @NotNull Scope.ScopeContext scopeContext, @NotNull Referable reference) implements DataContainer {
+  public record NameHiding(@Nullable Object data, boolean isStatic, @NotNull Referable reference) implements DataContainer {
     @Override
     public @Nullable Object getData() {
       return data;
+    }
+
+    public @NotNull Scope.ScopeContext scopeContext() {
+      return isStatic ? Scope.ScopeContext.STATIC : Scope.ScopeContext.DYNAMIC;
     }
   }
 
@@ -42,8 +50,8 @@ public record ConcreteNamespaceCommand(@Nullable Object data, boolean isImport, 
     return data;
   }
 
-  private static String scopeContextToString(Scope.ScopeContext context) {
-    return context == Scope.ScopeContext.DYNAMIC ? "." : context == Scope.ScopeContext.PLEVEL ? "\\plevel " : context == Scope.ScopeContext.HLEVEL ? "\\hlevel " : "";
+  private static String scopeContextToString(boolean isStatic) {
+    return isStatic ? "" : ".";
   }
 
   @Override
@@ -66,7 +74,7 @@ public record ConcreteNamespaceCommand(@Nullable Object data, boolean isImport, 
     if (!using || !renamings.isEmpty()) {
       List<LineDoc> renamingDocs = new ArrayList<>(renamings.size());
       for (NameRenaming renaming : renamings) {
-        LineDoc renamingDoc = hList(text(scopeContextToString(renaming.scopeContext())), refDoc(renaming.reference()));
+        LineDoc renamingDoc = hList(text(scopeContextToString(renaming.isStatic)), refDoc(renaming.reference()));
         String newName = renaming.newName();
         if (newName != null) {
           Precedence precedence = renaming.newPrecedence();
@@ -91,7 +99,7 @@ public record ConcreteNamespaceCommand(@Nullable Object data, boolean isImport, 
 
     if (!hidings.isEmpty()) {
       docs.add(text("\\hiding"));
-      docs.add(hList(text("("), hSep(text(", "), hidings.stream().map(nh -> hList(text(scopeContextToString(nh.scopeContext())), refDoc(nh.reference()))).collect(Collectors.toList())), text(")")));
+      docs.add(hList(text("("), hSep(text(", "), hidings.stream().map(nh -> hList(text(scopeContextToString(nh.isStatic)), refDoc(nh.reference()))).collect(Collectors.toList())), text(")")));
     }
 
     DocStringBuilder.build(builder, hSep(text(" "), docs));

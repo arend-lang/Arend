@@ -3,13 +3,13 @@ package org.arend.core.expr;
 import org.arend.core.context.param.DependentLink;
 import org.arend.core.definition.CallableDefinition;
 import org.arend.core.definition.ParametersLevel;
-import org.arend.core.definition.UniverseKind;
 import org.arend.core.subst.ExprSubstitution;
 import org.arend.ext.core.expr.CoreDefCallExpression;
 import org.arend.ext.core.level.LevelSubstitution;
 import org.arend.util.Decision;
 import org.jetbrains.annotations.NotNull;
 
+import java.math.BigInteger;
 import java.util.Collections;
 import java.util.List;
 
@@ -38,17 +38,13 @@ public abstract class DefCallExpression extends Expression implements CoreDefCal
     return myDefinition;
   }
 
-  public Integer getUseLevel() {
+  public BigInteger getUseLevel() {
     for (ParametersLevel parametersLevel : myDefinition.getParametersLevels()) {
       if (parametersLevel.checkExpressionsTypes(getDefCallArguments())) {
         return parametersLevel.level;
       }
     }
     return null;
-  }
-
-  public UniverseKind getUniverseKind() {
-    return myDefinition.getUniverseKind();
   }
 
   public void fixBoxes() {
@@ -79,7 +75,7 @@ public abstract class DefCallExpression extends Expression implements CoreDefCal
       if (!param.hasNext()) break;
       Expression arg = args.get(i);
       if (param.isProperty()) {
-        args.set(i, BoxExpression.make(args.get(i), param.getTypeExpr().subst(substitution, levelSubst)));
+        args.set(i, BoxExpression.make(args.get(i), param.getType().subst(substitution, levelSubst)));
       }
       substitution.add(param, arg);
       param = param.getNext();

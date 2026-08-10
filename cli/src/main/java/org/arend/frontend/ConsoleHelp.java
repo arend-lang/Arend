@@ -11,7 +11,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-final class ConsoleHelp {
+public final class ConsoleHelp {
   private ConsoleHelp() {}
 
   static boolean containsHelpToken(String[] values) {
@@ -261,24 +261,48 @@ final class ConsoleHelp {
         arend -L libs my-lib -sc 'Algebra.Monoid:Monoid' context=all
       """;
 
-  static void printSymbolSearch() {
+  public static void printSymbolSearch() {
     printTopicHelp(SYMBOL_SEARCH_HELP);
   }
 
-  static void printProofSearch() {
+  public static void printProofSearch() {
     printTopicHelp(PROOF_SEARCH_HELP);
   }
 
-  static void printFindUsages() {
+  public static void printFindUsages() {
     printTopicHelp(FIND_USAGES_HELP);
   }
 
-  static void printClassHierarchy() {
+  public static void printClassHierarchy() {
     printTopicHelp(CLASS_HIERARCHY_HELP);
   }
 
-  static void printScope() {
+  public static void printScope() {
     printTopicHelp(SCOPE_HELP);
+  }
+
+  // The org.arend.frontend.query tools that came from staging ask for their help text through
+  // these accessors. That package is not wired into this branch's CLI yet (see ConsoleMain), so
+  // these keep it compiling and hand back this branch's help text; staging additionally
+  // distinguishes CLI from REPL phrasing, which this branch's single-string topics do not.
+  public static String symbolSearchReplHelp() {
+    return SYMBOL_SEARCH_HELP;
+  }
+
+  public static String proofSearchReplHelp() {
+    return PROOF_SEARCH_HELP;
+  }
+
+  public static String findUsagesReplHelp() {
+    return FIND_USAGES_HELP;
+  }
+
+  public static String classHierarchyHelp() {
+    return CLASS_HIERARCHY_HELP;
+  }
+
+  public static String scopeHelp() {
+    return SCOPE_HELP;
   }
 
 

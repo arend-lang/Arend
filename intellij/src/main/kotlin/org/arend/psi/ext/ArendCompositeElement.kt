@@ -4,7 +4,6 @@ import com.intellij.extapi.psi.ASTWrapperPsiElement
 import com.intellij.extapi.psi.StubBasedPsiElementBase
 import com.intellij.lang.ASTNode
 import com.intellij.openapi.application.runReadAction
-import com.intellij.openapi.components.service
 import com.intellij.psi.PsiDocumentManager
 import com.intellij.psi.PsiElement
 import com.intellij.psi.stubs.IStubElementType
@@ -57,7 +56,6 @@ fun getTopmostEquivalentSourceNode(sourceNode: ArendSourceNode): ArendSourceNode
             parent is ArendArgumentAppExpr && parent.argumentList.isEmpty() -> parent
             parent is ArendLongName && parent.refIdentifierList.size == 1 -> parent
             parent is ArendAtomLevelExpr && parent.lparen != null -> parent
-            parent is ArendOnlyLevelExpr && current is ArendOnlyLevelExpr -> parent
             //parent is ArendIPName -> parent
             else -> return current
         }

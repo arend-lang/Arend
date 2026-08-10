@@ -75,11 +75,6 @@ public class ConcretePrelude implements ArendPrelude {
   }
 
   @Override
-  public CoreFunctionDefinition getFinFromNat() {
-    return Prelude.FIN_FROM_NAT;
-  }
-
-  @Override
   public CoreDataDefinition getInt() {
     return Prelude.INT;
   }
@@ -269,12 +264,6 @@ public class ConcretePrelude implements ArendPrelude {
   public ArendRef getFinRef() {
     if (Prelude.FIN != null) return Prelude.FIN.getRef();
     return myPreludeScope.resolveName("Fin");
-  }
-
-  @Override
-  public ArendRef getFinFromNatRef() {
-    if (Prelude.FIN_FROM_NAT != null) return Prelude.FIN_FROM_NAT.getRef();
-    return Scope.resolveName(myPreludeScope, Arrays.asList("Fin", "fromNat"));
   }
 
   @Override

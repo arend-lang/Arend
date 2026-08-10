@@ -1,25 +1,19 @@
+\import Function.Meta
+\import Logic
+\import Meta
 \import Paths
 \import Paths.Meta
 \import Equiv
 \import Equiv.Path
 
-\func =-to-Equiv {A B : \Type} (p : A = B) : Equiv {A} {B} => rewriteI p idEquiv
+\func =_Equiv.{u} {A B : \Type u} (p : A = B) : Equiv A B
+  => transport (Equiv A __) p $ mkEquiv (inP idEquiv)
 
-\func =-to-QEquiv {A B : \Type} (p : A = B) : QEquiv {A} {B} \cowith
-  | f => transport (\lam X => X) p
-  | ret => transport (\lam X => X) (inv p)
-  | ret_f a => inv (transport_*> _ p (inv p) a) *> pmap (transport _ __ a) (*>_inv p)
-  | f_sec b => inv (transport_*> _ (inv p) p b) *> pmap (transport _ __ b) (inv_*> p)
+\func Equiv_=.{u} {A B : \Type u} (e : Equiv A B) : A = B => QEquiv_= (Equiv.toQEquiv e)
 
-\func QEquiv-to-= {A B : \Type} (e : QEquiv {A} {B}) : A = B => path (iso e.f e.ret e.ret_f e.f_sec)
-
-\func Equiv-to-= {A B : \Type} (e : Equiv {A} {B}) : A = B => QEquiv-to-= (QEquiv.fromEquiv e)
-
-\func univalence {X Y : \Type} : QEquiv {X = Y} {Equiv {X} {Y}}
-  => pathEquiv (Equiv {__} {__}) (\lam {A} {B} =>
-      \new Retraction {
-        | f => =-to-Equiv
-        | sec => Equiv-to-=
-        | f_sec e => Equiv.equals (Jl (\lam _ p => Equiv.f {=-to-Equiv p} = (\lam a => coe (p @) a right)) idp (Equiv-to-= e))
-      })
-
+\sfunc typeUnivalence.{u} {A B : \Type u} : QEquiv {A = B} {Equiv A B} =_Equiv Equiv_=
+  => pathEquiv (Equiv __ __) \lam {A} {B} => \new Retraction {
+    | f => =_Equiv
+    | sec => Equiv_=
+    | f_sec e => Equiv.equals $ Jl (\lam _ p => Equiv.toFunc (=_Equiv p) = \lam a => coe p a right) idp (Equiv_= e)
+  }

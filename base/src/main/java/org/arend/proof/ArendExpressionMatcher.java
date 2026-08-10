@@ -39,11 +39,11 @@ public class ArendExpressionMatcher {
         Map<String, List<Referable>> qualifiedReferables = set.stream()
                 .collect(Collectors.groupingBy(Referable::getRefName));
 
-        List<Concrete.Expression> codomainResult = matchDisjunct(query.codomain, codomain, cachingScope, qualifiedReferables);
+        List<Concrete.Expression> codomainResult = matchConjunction(query.codomain, codomain, cachingScope, qualifiedReferables);
         if (codomainResult == null) {
             if (!parameters.isEmpty() && query.parameters.isEmpty()) {
                 for (Concrete.Expression matchParameter : parameters) {
-                    List<Concrete.Expression> match = matchDisjunct(query.codomain, matchParameter, cachingScope, qualifiedReferables);
+                    List<Concrete.Expression> match = matchConjunction(query.codomain, matchParameter, cachingScope, qualifiedReferables);
                     if (match != null) {
                         return new ProofSearchMatchingResult(List.of(new Pair<>(matchParameter, match)), new ArrayList<>());
                     }
@@ -67,7 +67,7 @@ public class ArendExpressionMatcher {
                 if (usedParameters.contains(matchParameter)) {
                     continue;
                 }
-                List<Concrete.Expression> match = matchDisjunct(patternParameter, matchParameter, cachingScope, qualifiedReferables);
+                List<Concrete.Expression> match = matchConjunction(patternParameter, matchParameter, cachingScope, qualifiedReferables);
                 if (match != null) {
                     usedParameters.add(matchParameter);
                     parameterResults.add(new Pair<>(matchParameter, match));
@@ -79,22 +79,24 @@ public class ArendExpressionMatcher {
         return new ProofSearchMatchingResult(parameterResults, codomainResult);
     }
 
-    private List<Concrete.Expression> matchDisjunct(ProofSearchQuery.ProofSearchJointPattern jointPattern, Concrete.Expression codomain, Scope scope, Map<String, List<Referable>> referables) {
+    /**
+     * Matches one joint pattern -- a {@code \and}-conjoined clause -- against a single
+     * expression (a parameter or the codomain). Per the documented {@code \and} semantics
+     * every conjunct must match the SAME expression, so the clause fails (returns null) as
+     * soon as one conjunct cannot be built or does not match; on success the result is the
+     * concatenation of every conjunct's matched sub-terms (used only for highlighting). A
+     * lone pattern with no {@code \and} is just a one-element conjunction.
+     */
+    private List<Concrete.Expression> matchConjunction(ProofSearchQuery.ProofSearchJointPattern jointPattern, Concrete.Expression codomain, Scope scope, Map<String, List<Referable>> referables) {
         List<Concrete.Expression> result = new ArrayList<>();
-        boolean added = false;
         for (PatternTree patternTree : jointPattern.patterns) {
             Concrete.Expression patternExpr = reassembleConcrete(patternTree, scope, referables);
-            if (patternExpr == null) continue;
+            if (patternExpr == null) return null;
             List<Concrete.Expression> matched = performMatch(patternExpr, codomain);
-            if (matched != null) {
-                added = true;
-                result.addAll(matched);
-            }
+            if (matched == null) return null;
+            result.addAll(matched);
         }
-        if (added) {
-            return result;
-        }
-        return null;
+        return result;
     }
 
     private List<Concrete.Expression> performMatch(Concrete.Expression pattern, Concrete.Expression matched) {
@@ -181,7 +183,7 @@ public class ArendExpressionMatcher {
             Referable referable = Scope.resolveName(scope, referenceName);
             if (referable == null) referable = disambiguate(references.get(referenceName.getLast()), referenceName);
             if (referable != null) {
-                return Concrete.FixityReferenceExpression.make(null, referable, Fixity.UNKNOWN, null, null);
+                return Concrete.FixityReferenceExpression.make(null, referable, Fixity.UNKNOWN, null);
             } else if (!referenceName.isEmpty()) {
                 try {
                     int number = Integer.parseInt(referenceName.getFirst());

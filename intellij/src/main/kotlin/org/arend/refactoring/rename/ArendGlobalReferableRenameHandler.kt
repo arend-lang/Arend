@@ -128,7 +128,7 @@ class ArendGlobalReferableRenameHandler : MemberInplaceRenameHandler() {
                         ArendNameKind.NSID_NAME -> elementAtCaret?.text
                     } ?: "???"
 
-                    WriteIntentReadAction.run<RuntimeException> {
+                    WriteIntentReadAction.run {
                         val dialog = object: RenameDialog(project, elementToRename, elementToRename, editor) {
                             override fun getSuggestedNames(): Array<String> = arrayOf(nameInDialog)
 

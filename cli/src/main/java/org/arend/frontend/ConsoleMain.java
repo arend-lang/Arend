@@ -8,6 +8,8 @@ import org.arend.frontend.repl.PlainCliRepl;
 import org.arend.frontend.repl.jline.JLineCliRepl;
 import org.arend.prelude.Prelude;
 
+import java.util.List;
+
 public class ConsoleMain {
   private static boolean containsHelpToken(String[] values) {
     if (values == null) return false;
@@ -550,11 +552,14 @@ public class ConsoleMain {
     if (cmdLine.hasOption("i")) {
       String replKind = cmdLine.getOptionValue("i", "jline");
       switch (replKind.toLowerCase()) {
+        // Upstream's launch() also takes the requested libraries and autoload modules now;
+        // this short-circuit collects neither, so both are empty. The dropped first argument
+        // was `recompile`, which was already false here.
         case "plain":
-          PlainCliRepl.launch(false, ctx.libDirs, ctx.server);
+          PlainCliRepl.launch(List.of(), List.of(), ctx.libDirs, ctx.server);
           break;
         case "jline":
-          JLineCliRepl.launch(false, ctx.libDirs, ctx.server);
+          JLineCliRepl.launch(List.of(), List.of(), ctx.libDirs, ctx.server);
           break;
         default:
           System.err.println("[ERROR] Unrecognized repl type: " + replKind);
@@ -591,5 +596,29 @@ public class ConsoleMain {
     if (!new ConsoleMain().run(args)) {
       System.exit(1);
     }
+  }
+
+  /**
+   * True if {@code group} or anything nested inside it has a definition that failed to typecheck.
+   * Used to decide whether a module may be persisted to its binary cache.
+   */
+  static boolean groupHasTypecheckingErrors(org.arend.term.group.ConcreteGroup group) {
+    if (group.referable() instanceof org.arend.naming.reference.TCDefReferable tcRef && tcRef.getKind().isTypecheckable()) {
+      org.arend.core.definition.Definition def = tcRef.getTypechecked();
+      if (def != null && def.status() == org.arend.core.definition.Definition.TypeCheckingStatus.HAS_ERRORS) return true;
+    }
+    for (org.arend.naming.reference.InternalReferable internalRef : group.getInternalReferables()) {
+      if (internalRef instanceof org.arend.naming.reference.TCDefReferable tcRef && tcRef.getKind().isTypecheckable()) {
+        org.arend.core.definition.Definition def = tcRef.getTypechecked();
+        if (def != null && def.status() == org.arend.core.definition.Definition.TypeCheckingStatus.HAS_ERRORS) return true;
+      }
+    }
+    for (org.arend.term.group.ConcreteStatement statement : group.statements()) {
+      if (statement.group() != null && groupHasTypecheckingErrors(statement.group())) return true;
+    }
+    for (org.arend.term.group.ConcreteGroup dynGroup : group.dynamicGroups()) {
+      if (groupHasTypecheckingErrors(dynGroup)) return true;
+    }
+    return false;
   }
 }

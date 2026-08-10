@@ -105,19 +105,19 @@
       \lemma mulCoef-consistent {c : C} {l : List (Fin env.len)} : mulCoef c l = alg c * MonoidSolverModel.interpretNF env l \elim l
         | nil => inv ide-right
         | a :: l => mcases \with {
-          | yes p => inv $ pmap (`* _) (pmap alg p *> func-ide) *> ide-left
+          | yes p => inv $ pmap (* _) (pmap alg p *> func-ide) *> ide-left
           | no _ => idp
         }
 
       \lemma interpretNF_:: {x : \Sigma (List (Fin env.len)) C} {l : NF}
         : interpretNF' (x :: l) = alg x.2 * MonoidSolverModel.interpretNF env x.1 + interpretNF' l \elim l
         | nil => mulCoef-consistent *> inv zro-right
-        | :: a l => pmap (`+ _) mulCoef-consistent
+        | :: a l => pmap (+ _) mulCoef-consistent
 
       \lemma remove0-consistent {l : NF} : interpretNF' (remove0 l) = interpretNF' l \elim l
         | nil => idp
         | :: a l => rewrite interpretNF_:: $ mcases \with {
-          | yes e => rewrite e $ remove0-consistent *> inv (pmap (__ * _ + _) func-zro *> pmap (`+ _) R.zro_*-left *> zro-left)
+          | yes e => rewrite e $ remove0-consistent *> inv (pmap (__ * _ + _) func-zro *> pmap (+ _) R.zro_*-left *> zro-left)
           | no q => interpretNF_:: *> pmap (_ +) remove0-consistent
         }
 
@@ -125,7 +125,7 @@
         : interpretNF' (collapse1 c m l) = alg c * MonoidSolverModel.interpretNF env m + interpretNF' l \elim l
         | nil => mulCoef-consistent *> inv zro-right
         | :: a l => mcases \with {
-          | yes p => rewrite (interpretNF_::,p) $ collapse1-consistent *> pmap (`+ _) (pmap (`* _) func-+ *> rdistr) *> +-assoc
+          | yes p => rewrite (interpretNF_::,p) $ collapse1-consistent *> pmap (+ _) (pmap (* _) func-+ *> rdistr) *> +-assoc
           | no _ => rewrite (interpretNF_::,interpretNF_::) $ pmap (_ +) collapse1-consistent
         }
 
@@ -136,7 +136,7 @@
       \lemma perm-consistent {l l' : NF} (p : Perm l l') : interpretNF' l = interpretNF' l' \elim l, l', p
         | nil, nil, perm-nil => idp
         | :: a1 l1, :: a2 l2, perm-:: idp p => repeat {2} (rewrite interpretNF_::) (pmap (_ +) (perm-consistent p))
-        | :: a1 (:: a1' l1), :: a2 (:: a2' l2), perm-swap idp idp idp => repeat {2} (rewrite interpretNF_::) (inv +-assoc *> pmap (`+ _) +-comm *> +-assoc *> pmap2 (__ + (__ + _)) (inv mulCoef-consistent) mulCoef-consistent)
+        | :: a1 (:: a1' l1), :: a2 (:: a2' l2), perm-swap idp idp idp => repeat {2} (rewrite interpretNF_::) (inv +-assoc *> pmap (+ _) +-comm *> +-assoc *> pmap2 (__ + (__ + _)) (inv mulCoef-consistent) mulCoef-consistent)
         | l1, l2, perm-trans p1 p2 => perm-consistent p1 *> perm-consistent p2
 
       \lemma sort-consistent {l : NF} : interpretNF' (RedBlack.sort l) = interpretNF' l
@@ -156,7 +156,7 @@
 
       \lemma interpretNF_map {a1 : C} {a2 a3 : List (Fin env.len)} {l : NF}
         : interpretNF' (map (\lam b => (a2 ++ b.1 ++ a3, a1 * b.2)) l) = alg a1 * MonoidSolverModel.interpretNF env a2 * interpretNF' l * MonoidSolverModel.interpretNF env a3 \elim l
-        | nil => inv (pmap (`* _) R.zro_*-right *> R.zro_*-left)
+        | nil => inv (pmap (* _) R.zro_*-right *> R.zro_*-left)
         | :: a l => rewrite (interpretNF_::,interpretNF_::,MonoidSolverModel.interpretNF_++,MonoidSolverModel.interpretNF_++,alg.func-*,ldistr,rdistr) $
             pmap2 (+) (equation.monoid {alg-comm a.2 (MonoidSolverModel.interpretNF env a2)}) interpretNF_map
 
@@ -170,7 +170,7 @@
         | :: a l1 => run {
           rewrite (interpretNF_multiply', interpretNF_++),
           rewriteI +-assoc,
-          pmap (`+ _),
+          pmap (+ _),
           later,
           rewrite (interpretNF_::, rdistr, interpretNF_map-left),
           +-comm
@@ -196,7 +196,7 @@
 
       \lemma apply-axiom2 (t s : Term C env.len) (p : interpret t = interpret s) (left right add : NF)
         : interpretNF (multiply left (multiply (normalize t) right) ++ add) = interpretNF (multiply left (multiply (normalize s) right) ++ add)
-        => interpretNF-correct *> interpretNF_++ *> pmap (`+ _) (interpretNF_multiply *> pmap (_ *) (interpretNF_multiply *> pmap (`* _) (normalize-consistent *> p *> inv normalize-consistent) *> inv interpretNF_multiply) *> inv interpretNF_multiply) *> inv (interpretNF-correct *> interpretNF_++)
+        => interpretNF-correct *> interpretNF_++ *> pmap (+ _) (interpretNF_multiply *> pmap (_ *) (interpretNF_multiply *> pmap (* _) (normalize-consistent *> p *> inv normalize-consistent) *> inv interpretNF_multiply) *> inv interpretNF_multiply) *> inv (interpretNF-correct *> interpretNF_++)
     }
 
     \func natCoef (x : Nat) : R
@@ -206,14 +206,14 @@
 
     \lemma natCoef-correct {n : Nat} : R.natCoef n = natCoef n \elim n
       | 0 => R.natCoefZero
-      | 1 => R.natCoefSuc 0 *> pmap (`+ 1) R.natCoefZero *> zro-left
+      | 1 => R.natCoefSuc 0 *> pmap (+ 1) R.natCoefZero *> zro-left
       | suc (suc n) => idp
 
     \lemma natMap' : SemiringHom NatSemiring R natCoef
       => transport (SemiringHom NatSemiring R) (path \lam i n => natCoef-correct {_} {n} i) natMap
 
     \func SemiringData (env : Array R) : Data R NatSemiring NatSemiring natMap' env \cowith
-      | alg-comm n a => inv (pmap (`* a) natCoef-correct) *> natComm n a *> pmap (a *) natCoef-correct
+      | alg-comm n a => inv (pmap (* a) natCoef-correct) *> natComm n a *> pmap (a *) natCoef-correct
 
     \lemma apply-axiom (env : Array R) (t s : Term Nat env.len) (p : (SemiringData env).interpret t = (SemiringData env).interpret s) (left right add : NF Nat env.len)
       => (SemiringData env).apply-axiom2 t s p left right add

@@ -105,7 +105,7 @@ public class RewriteMeta extends BaseMetaDefinition {
       return null;
     }
 
-    ConcreteExpression transportExpr = factory.ref(isInverse ? transportInv : transport, refExpr.getPLevels(), refExpr.getHLevels());
+    ConcreteExpression transportExpr = factory.ref(isInverse ? transportInv : transport, refExpr.getLevels());
     CoreExpression value = eq.getDefCallArguments().get(isInverse == isForward ? 2 : 1);
 
     // This case won't happen often, but sill possible

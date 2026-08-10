@@ -19,6 +19,7 @@ import com.intellij.openapi.observable.properties.PropertyGraph
 
 import com.jetbrains.edu.learning.courseFormat.tasks.Task
 import com.jetbrains.edu.coursecreator.actions.studyItem.NewStudyItemInfo
+import com.jetbrains.edu.learning.ModalityStateProvider
 import com.jetbrains.edu.learning.newproject.CourseProjectGenerator
 
 class ArendCourseBuilder : EduCourseBuilder<ArendEduProjectSettings> {
@@ -42,7 +43,7 @@ class ArendLanguageSettings : LanguageSettings<ArendEduProjectSettings>() {
 
     override fun getSettings(): ArendEduProjectSettings = ArendEduProjectSettings()
 
-    override fun getLanguageSettingsComponents(course: Course, disposable: CheckedDisposable, context: UserDataHolder?): List<LabeledComponent<JComponent>> {
+    override fun getLanguageSettingsComponents(course: Course, modalityStateProvider: ModalityStateProvider, disposable: CheckedDisposable, context: UserDataHolder?): List<LabeledComponent<JComponent>> {
         val sdkModel = ProjectSdksModel()
         sdkModel.reset(null)
         val sdkComboBox = JdkComboBox(null, sdkModel, { isSuitableSdkType(it) }, null, null, null)

@@ -51,7 +51,7 @@ public abstract class LocalSimplificationRuleBase implements SimplificationRule 
           if (subexpr.computeType() instanceof CorePiExpression type) {
             var params = type.getParameters();
             while (true) {
-              if (!params.getBinding().getTypeExpr().compare(expression.getType(), CMP.EQ)) {
+              if (!params.getBinding().getType().compare(expression.getType(), CMP.EQ)) {
                 return CoreExpression.FindAction.SKIP;
               }
               if (params.hasNext()) break;

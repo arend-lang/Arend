@@ -36,7 +36,7 @@
       | TruncP.inP (0,c) => byLeft $ LDiv.trans (lem gcd.res|val1 c) bez.4
       | TruncP.inP (1,c) => byRight $ LDiv.trans (lem gcd.res|val2 c) bez.3
       | TruncP.inP (2, c : Inv) => \have gcd=0 : zro = gcd => equation {usingOnly (gcd.res|val1.inv-right,gcd.res|val2.inv-right,c.inv-left)}
-                                   \in byLeft \new LDiv { | inv => 0 | inv-right => zro_*-right *> inv zro_*-left *> pmap (`* _) gcd=0 *> LDiv.inv-right {bez.4} }
+                                   \in byLeft \new LDiv { | inv => 0 | inv-right => zro_*-right *> inv zro_*-left *> pmap (* _) gcd=0 *> LDiv.inv-right {bez.4} }
     }
 
   \func ValuationMonoid : OrderedCMonoid

@@ -4,6 +4,7 @@ import com.intellij.lang.ASTNode
 import com.intellij.psi.PsiElement
 import org.arend.psi.ArendElementTypes
 import org.arend.psi.childOfType
+import org.arend.psi.getChildrenOfType
 import org.arend.term.abs.Abstract
 
 class ArendFieldAcc(node: ASTNode) : ArendSourceNodeImpl(node), Abstract.FieldAcc {
@@ -18,4 +19,6 @@ class ArendFieldAcc(node: ASTNode) : ArendSourceNodeImpl(node), Abstract.FieldAc
     override fun getNumber() = number?.text?.toInt()
 
     override fun getFieldRef() = refIdentifier?.referent
+
+    override fun getLevels(): List<ArendLevelExpr> = getChildrenOfType()
 }

@@ -1,0 +1,17 @@
+\import Arith.Nat
+\import Function.Meta
+\import Order.Biordered
+\import Order.StrictOrder
+
+\data Acc {A : \Set} (R : A -> A -> \Prop) (a : A)
+  | acc (\Pi {b : A} -> R b a -> Acc R b)
+
+\lemma nat-acc {n : Nat} : Acc (<) n
+  => induction id<suc
+  \where {
+    \private \lemma induction {n k : Nat} (k<n : k < n) : Acc (<) k \elim n
+      | suc n => acc \lam b<k => induction $ b<k <∘l <_suc_<= k<n
+  }
+
+\lemma map-acc {A B : \Set} (f : A -> B) {R : B -> B -> \Prop} {a : A} (acc : Acc R (f a)) : Acc (\lam a1 a2 => R (f a1) (f a2)) a \elim acc
+  | acc r => acc \lam {a'} fa'<fa => map-acc f (r fa'<fa)

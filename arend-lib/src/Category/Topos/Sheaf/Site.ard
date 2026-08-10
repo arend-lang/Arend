@@ -1,106 +1,86 @@
 \import Category
 \import Category.Functor
-\import Category.Limit
 \import Category.Slice
-\import Category.Subcat
-\import Equiv (QEquiv)
 \import Function.Meta
 \import Logic
 \import Logic.Meta
 \import Meta
+\import Order.PartialOrder
 \import Paths
 \import Paths.Meta
+\import Set.Set (Set, ⊆)
 
-\record Presieve {C : Precat} (x : C) (\coerce S : \Pi {y : C} -> Hom y x -> \Prop) {
-  \func diagram : Functor
-    => Comp (SlicePrecat.forget x) (subPrecat.embedding {SlicePrecat x} (\lam (p : \Sigma (y : SlicePrecat x) (S y.2)) => p.1))
+\func Presieve {C : Precat} (x : C)
+  => Set (ObOver x)
+  \where {
+    \func Refines (P Q : Presieve x) : \Prop
+      => ∀ {y : P} ∃ (z : Q) (f : Hom y.1 z.1) (z.2 ∘ f = y.2)
 
-  \func cone : Cone diagram.op x \cowith
-    | coneMap => __.1.2
-    | coneCoh => __.2
+    \lemma <=_Refines {P Q : Presieve x} (P<=Q : P ⊆ Q) : Refines P Q
+      => \lam {y} Py => inP (y, P<=Q Py, id, id-right)
 
-  \protected \func pullback {y : C} (h : Hom y x) : Presieve y \cowith
-    | S g => S (h ∘ g)
+    \protected \func pushforward (F : Functor) {x : F.C} (P : Presieve x) : Presieve (F x)
+      => \lam py => ∃ (px : P) (py = (F px.1, Func px.2)) -- (f : Hom py.1 (F px.1)) (py.2 = Func px.2 ∘ f)
+  }
 
-  \protected \lemma pullback_id : pullback (id x) = {Presieve x} \this
-    => exts \lam h => pmap S id-left
+\class Site \extends Precat {
+  | isCover (x : Ob) : Presieve x -> \Prop
+  | cover-stable {x y : Ob} (h : Hom x y) : ∀ {S : isCover y} ∃ (T : isCover x) ∀ {px : T} ∃ (py : S) (f : Hom px.1 py.1) (py.2 ∘ f = h ∘ px.2)
+
+  \func IsCoverFam {J : \Type} {x : Ob} (f : J -> ObOver x) : \Prop
+    => isCover x \lam px => ∃ (j : J) (px = f j)
+
+  \func isCover_IsCoverFam {x : Ob} {P : Presieve x} : isCover x P <-> IsCoverFam {_} {Given P} __.1
+    => <->_=.2 $ pmap (isCover x) $ ext \lam px => ext (\lam Ppx => inP ((px,Ppx),idp), \lam (inP (j,p)) => transportInv P p j.2)
 } \where {
-  \lemma idLimit {C D : Precat} {F : Functor C.op D} {x : C} (S : Presieve x) (xS : S (id x)) : Limit { | Cone => Cone.map F S.cone } \cowith
-    | isLimit z => \new QEquiv {
-      | ret (c : Cone) => c.coneMap ((x, id x), xS)
-      | ret_f h => pmap (`∘ _) Func-id *> id-left
-      | f_sec (c : Cone) => exts \lam ((y,Hyx),yS) => c.coneCoh (Hyx, id-left)
-    }
+  \func pushforwardFam.{o1,h1,o2,h2} {C : Site.{o1,h1}} {D : Site.{o2,h2}} (F : Functor C D) {J : \Type} {x : C} (P : J -> ObOver x) : J -> ObOver (F x)
+    => \lam j => (F (P j).1, Func (P j).2)
+}
 
-  \open Limit
+\truncated \data Covering {C : Site} (x : C) (U : Presieve x) : \Prop
+  | covering-inj {y : C} (s : Hom x y) (p : Hom y x) (p ∘ s = id) (U (y,p))
+  | covering-trans {T : Presieve x} (isCover x T)
+                   (∀ {y : T} (Covering y.1 \lam z => ∃ (u : U) (f : Hom z.1 u.1) (u.2 ∘ f = y.2 ∘ z.2)))
+  \where {
+    \lemma covering-id {x : C} {U : Presieve x} (Uid : U ObOver.id) : Covering x U
+      => covering-inj id id id-left Uid
 
-  \lemma transLimit {C : SmallPrecat} {D : Precat} {F : Functor C.op D} {a : C} (S1 S2 : Presieve a)
-                    (L1 : \Pi {b : C} (h : Hom b a) -> Limit { | Cone => Cone.map F (Presieve.cone {S1.pullback h}) })
-                    (L2 : \Pi {b : C} {h : Hom b a} -> S1 h -> Limit { | Cone => Cone.map F (Presieve.cone {S2.pullback h}) })
-    : Limit { | Cone => Cone.map F S2.cone } \cowith
-    | isLimit z =>
-      \have | L : Limit { | Cone => Cone.map F S1.cone } => rewriteI S1.pullback_id (L1 (id a))
-            | cm (c : Cone (Comp F S2.diagram.op) z) : Cone L.G z =>
-              \new Cone {
-                | coneMap ((x,Hxa),xS1) => limMap {L2 xS1} (\new Cone {
-                  | coneMap ((y,Hyx),yS2) => c.coneMap ((y, Hxa ∘ Hyx), yS2)
-                  | coneCoh {((y,Hyx),yS2)} {((y',Hy'x),y'S2)} h => c.coneCoh {((y, Hxa ∘ Hyx), yS2)} {((y', Hxa ∘ Hy'x), y'S2)} (h.1, o-assoc *> pmap (Hxa ∘) h.2)
-                })
-                | coneCoh {k} {k'} h => limUnique {L2 k'.2} \lam j =>
-                    inv o-assoc *> pmap (`∘ _) (inv Func-o) *> limBeta {L2 k.2} _ ((j.1.1, h.1 ∘ j.1.2), transport (S2 __) (pmap (`∘ j.1.2) (inv h.2) *> o-assoc) j.2) *>
-                        path (\lam i => c.coneMap ((j.1.1, (inv o-assoc *> pmap (`∘ j.1.2) h.2) @ i), prop-dpi _ _ _ @ i)) *> inv (limBeta {L2 k'.2} _ j)
-              }
-      \in \new QEquiv {
-        | ret c => L.limMap (cm c)
-        | ret_f h => L.limUniqueBeta \lam j => limUniqueBeta {L2 j.2} (\lam k => pmap (`∘ h) Func-o *> o-assoc)
-        | f_sec c => exts \lam j => limUnique {L1 j.1.2} \lam k =>
-            inv o-assoc *> pmap (`∘ _) (inv Func-o) *> L.limBeta (cm c) ((k.1.1, j.1.2 ∘ k.1.2), k.2) *> limUnique {L2 k.2} (\lam m => unfold $ limBeta {L2 k.2} _ m *>
-                inv (coneCoh {c} {j} {(m.1.1, j.1.2 ∘ k.1.2 ∘ m.1.2), m.2} (k.1.2 ∘ m.1.2, inv o-assoc)) *> pmap (`∘ _) F.Func-o *> o-assoc)
+    \lemma covering-basic {x : C} {U : Presieve x} (x<=U : isCover x U) : Covering x U
+      => covering-trans x<=U \lam {y} Uy => covering-id $ inP (y, Uy, id, idp)
+
+    \lemma covering-sub {x : C} {V U : Presieve x} (x<=V : Covering x V) (V<=U : V ⊆ U) : Covering x U \elim x<=V
+      | covering-inj s p ps=id Vy => covering-inj s p ps=id (V<=U Vy)
+      | covering-trans x<=T T<=V => covering-trans x<=T \lam Ty => covering-sub (T<=V Ty) \lam {z} (inP (v,Vv,f,q)) => inP (v, V<=U Vv, f, q)
+
+    \lemma covering-stable {x : C} {y : C} (h : Hom x y) {V : Presieve y} (y<=V : Covering y V)
+      : Covering x (\lam px => ∃ (py : V) (f : Hom px.1 py.1) (py.2 ∘ f = h ∘ px.2)) \elim y<=V
+      | covering-inj {z} s p ps=id Vp => covering-id $ inP ((z,p), Vp, s ∘ h, inv o-assoc *> pmap (∘ h) ps=id *> id-left *> inv id-right)
+      | covering-trans y<=T R => \case cover-stable h y<=T \with {
+        | inP (pT,x<=pT,pT<=T) => covering-trans x<=pT \lam {pt} pTpt => \case pT<=T pTpt \with {
+          | inP (t,Tt,pt>t,pt>t_h) => covering-sub (covering-stable pt>t (R Tt)) \lam {pz} (inP (z, inP (v,Vv,z>v,z>v_t), pz>z,pz>z_pt>t)) =>
+            inP ((pz.1, pt.2 ∘ pz.2), inP (v, Vv, z>v ∘ pz>z, inv o-assoc *> pmap (∘ _) z>v_t *> o-assoc *> pmap (_ ∘) pz>z_pt>t *> inv o-assoc *> pmap (∘ _) pt>t_h *> o-assoc), id, id-right)
+        }
       }
-}
 
-\record Sieve \extends Presieve {
-  | isSieve : \Pi {z y : C} (g : Hom z y) {f : Hom y x} -> S f -> S (f ∘ g)
+    \lemma covering-stable-retract {x : C} {y : C} (g : Hom y x) (h : Hom x y) (h_g : h ∘ g = id) {V : Presieve y}
+      (c : Covering x (\lam px => ∃ (py : V) (f : Hom px.1 py.1) (py.2 ∘ f = h ∘ px.2))) : Covering y V
+      => covering-refine (covering-stable g c) \lam {py} (inP (px, inP (v,Vv,px_v,px_v_h), py_px, py_px_g)) =>
+        inP (v, Vv, px_v ∘ py_px, inv o-assoc *> pmap (∘ _) px_v_h *> o-assoc *> pmap (h ∘) py_px_g *> inv o-assoc *> pmap (∘ _) h_g *> id-left)
 
-  \protected \func pullback {y : C} (h : Hom y x) : Sieve y \cowith
-    | S g => S (h ∘ g)
-    | isSieve g hfS => transport S o-assoc (isSieve g hfS)
-} \where {
-  \func map {C D : Precat} (F : Functor C D) (s : Sieve {C}) : Sieve {D} \cowith
-    | x => F s.x
-    | S {y} h => ∃ (z : C) (f : Hom y (F z)) (g : Hom z s.x) (h = F.Func g ∘ f) (s g)
-    | isSieve h (inP (w,k,g,p,sg)) => inP (w, k ∘ h, g, rewrite p o-assoc, sg)
-}
+    \lemma covering-refine {x : C} {V U : Presieve x} (x<=V : Covering x V) (V<=U : Presieve.Refines V U) : Covering x U \elim x<=V
+      | covering-inj s p ps=id Vp => \case V<=U Vp \with {
+        | inP (z,Uz,f,zf=p) => covering-inj (f ∘ s) z.2 (inv o-assoc *> pmap (∘ s) zf=p *> ps=id) Uz
+      }
+      | covering-trans x<=T T<=V => covering-trans x<=T \lam Ty => covering-sub (T<=V Ty) \lam {z} (inP (v,Vv,f,c)) => \case V<=U Vv \with {
+        | inP (u,Uu,g,d) => inP (u, Uu, g ∘ f, inv o-assoc *> pmap (∘ f) d *> c)
+      }
 
-\class Site \extends Precat \lp
-  | isCover (x : Ob) : Sieve x -> \Prop
-  | cover-stable {x y : Ob} (h : Hom x y) {s : Sieve y} (c : isCover y s) : isCover x (s.pullback h)
-
-\record SitePrehom \extends Functor \lp {
-  \override C : Site
-  \override D : Site
-  | F-cover {x : C} {s : Sieve x} : isCover x s -> isCover (F x) (Sieve.map \this s)
-}
-
-\func inducedSite {C : SmallPrecat} {D : Site} (F : Functor C D) : Site \cowith
-  | Precat => C
-  | isCover x s => ∃ (s' : Sieve (F x)) (isCover (F x) s') ∀ {y} (h : Hom y x) (s h = s' (F.Func h))
-  | cover-stable h {s} (inP (s' : Sieve, c, p)) => inP (s'.pullback (F.Func h), cover-stable (F.Func h) c, \lam g => p (h ∘ g) *> pmap (s' __) Func-o)
-
-\class SiteWithBasis \extends Site, PrecatWithPullbacks (\lp,\lp) {
-  | isBasicCover (x : Ob) {J : \Set} (g : J -> SlicePrecat x) : \Prop
-  | basicCover-stable {x y : Ob} (f : Hom x y) {J : \Set} {g : J -> SlicePrecat y} : isBasicCover y g -> isBasicCover x (\lam j => pullbackFunctor f (g j))
-  | isCover x s => ∃ (J : \Set) (g : J -> SlicePrecat x) (isBasicCover x g) (\Pi (j : J) -> s (g j).2)
-  | cover-stable h {s} (inP (J,g,c,d)) => inP (J, \lam j => pullbackFunctor h (g j), basicCover-stable h c, \lam j => transportInv (s {_}) (Pullback.pbCoh {pullback h (g j).2}) (isSieve _ (d j)))
-
-  \lemma genSieve (a : Ob) {J : \Set} (g : J -> SlicePrecat a) : Sieve a (\lam {b} f => ∃ (j : J) (h : Hom b (g j).1) ((g j).2 ∘ h = f)) \cowith
-    | isSieve {z} {y} f (inP (j,h,s)) => inP (j, h ∘ f, inv o-assoc *> pmap (`∘ f) s)
-}
-
-\record SiteWithBasisPrehom \extends Functor \lp {
-  \override C : SiteWithBasis
-  \override D : SiteWithBasis
-  | F-basicCover {x : C} {J : \Set} {g : J -> SlicePrecat x} : isBasicCover x g -> isBasicCover (F x) (\lam j => (F (g j).1, Func (g j).2))
-  | F-pullback {x y z : C} {f : Hom x z} {g : Hom y z} : Iso {D} {F (pullback f g)} {pullback (Func f) (Func g)} $
-      pbMap (Func pbProj1) (Func pbProj2) $ inv Func-o *> pmap Func pbCoh *> Func-o
-}
+    \lemma covering-trans* {x : C} {U V : Presieve x} (x<=V : Covering x V)
+                           (R : ∀ {y : V} (Covering y.1 \lam z => ∃ (u : U) (f : Hom z.1 u.1) (u.2 ∘ f = y.2 ∘ z.2)))
+      : Covering x U \elim x<=V
+      | covering-inj s p ps=id Tp => covering-refine (covering-stable s (R Tp)) \lam {px} (inP (py, inP (u,Uu,py>u,py>u_p), px>py, px>py_s)) =>
+        inP (u, Uu, py>u ∘ px>py, inv o-assoc *> pmap (∘ _) py>u_p *> o-assoc *> pmap (p ∘) px>py_s *> inv o-assoc *> pmap (∘ _) ps=id *> id-left)
+      | covering-trans x<=T T<=V => covering-trans x<=T \lam {z} Tz => covering-trans* (T<=V Tz) \lam {w} (inP (v,Vv,w>v,w>v_z)) =>
+        covering-sub (covering-stable w>v (R Vv)) \lam {a} (inP (b, inP (u,Uu,b>u,b>u_v), a>b, a>b_w>v)) =>
+          inP ((a.1, w.2 ∘ a.2), inP (u, Uu, b>u ∘ a>b, inv o-assoc *> pmap (∘ _) b>u_v *> o-assoc *> pmap (_ ∘) a>b_w>v *> inv o-assoc *> pmap (∘ _) w>v_z *> o-assoc), id, id-right)
+  }

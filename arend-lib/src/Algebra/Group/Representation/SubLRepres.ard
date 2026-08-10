@@ -1,0 +1,42 @@
+\import Algebra.Group.GSet
+\import Algebra.Group.GSet.SubGSet
+\import Algebra.Group.Representation
+\import Algebra.Group.Representation.InterwiningMap
+\import Algebra.Module.SubLModule
+\import Algebra.Pointed
+\import Logic
+\import Logic.Meta
+\import Paths
+\import Paths.Meta
+\import Set.SubSet
+
+\class SubLRepres \extends SubLModule, SubGSet {
+  \override S : LinRepres R G
+
+  \func IsTrivial => ∀ {x} (contains x -> x = 0) || ∀ x (contains x)
+}
+
+\instance ILinRepres (S : SubLRepres {}) : LinRepres
+  | LModule => IModule S
+  | GSet => IGSet S
+  | **-ldistr => ext **-ldistr
+  | **_*c => ext **_*c
+  \where
+    \func embed : InterwiningMap (ILinRepres S) S.S \cowith
+      | LinearMap => IModule.embed
+      | func-** => idp
+
+\func KernelLRepres (f : InterwiningMap {}) : SubLRepres f.R f.G f.Dom \cowith
+  | SubLModule => KernelLModule f
+  | contains_** fa=0 => f.func-** *> pmap (_ **) fa=0 *> LinRepres.**_zro
+
+\func ImageLRepres (f : InterwiningMap {}) : SubLRepres f.R f.G f.Cod \cowith
+  | SubLModule => ImageLModule f
+  | SubGSet => ImageGSet f
+
+\func ImLRepres (f : InterwiningMap {}) : LinRepres
+  => ILinRepres (ImageLRepres f)
+
+\func ImLRepresLeftHom (f : InterwiningMap {}) : InterwiningMap f.Dom (ImLRepres f) \cowith
+  | LinearMap => ImLModuleLeftHom f
+  | EquivariantMap => ImGSetLeftHom f

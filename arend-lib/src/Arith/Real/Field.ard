@@ -60,14 +60,14 @@
         | inP (b,bc<x,x<b) => \case L-rounded bc<x, L-rounded x>0 \with {
           | inP (a',a'<x,bc<a'), inP (a'',a''<x,a''>0) =>
             \have b>0 => Real.LU-less x>0 x<b
-            \in inP (finv b, a' ∨ a'', finv>0 b>0, a''>0 <∘l join-right, byRight $ transportInv x.U RatField.finv_finv x<b, real_join_L a'<x a''<x, transport (`< _) (inv Monoid.*-assoc *> pmap (`*' c) (RatField.finv-left $ RatField.>_/= b>0) *> Monoid.ide-left) (RatField.<_*_positive-right (finv>0 b>0) bc<a') <∘l LinearlyOrderedSemiring.<=_*_positive-right (<_<= $ finv>0 b>0) join-left)
+            \in inP (finv b, a' ∨ a'', finv>0 b>0, a''>0 <∘l join-right, byRight $ transportInv x.U RatField.finv_finv x<b, real_join_L a'<x a''<x, transport (< _) (inv Monoid.*-assoc *> pmap (*' c) (RatField.finv-left $ RatField.>_/= b>0) *> Monoid.ide-left) (RatField.<_*_positive-right (finv>0 b>0) bc<a') <∘l LinearlyOrderedSemiring.<=_*_positive-right (<_<= $ finv>0 b>0) join-left)
         }
       }),
        \lam d => ext (\lam u => \case (*_positive-U (real-pos-inv>0 x>0) x>0).1 u \with {
-         | inP (b,b',(b>0,b1<x),x<b',bb'<d) => transport (`< _) (RatField.finv-right $ RatField.>_/= b>0) (RatField.<_*_positive-right b>0 $ Real.LU-less b1<x x<b') <∘ bb'<d
+         | inP (b,b',(b>0,b1<x),x<b',bb'<d) => transport (< _) (RatField.finv-right $ RatField.>_/= b>0) (RatField.<_*_positive-right b>0 $ Real.LU-less b1<x x<b') <∘ bb'<d
        }, \lam d>1 => (*_positive-U (real-pos-inv>0 x>0) x>0).2 \case Real.LU_*-focus-right x>0 d>1 \with {
          | inP (a,a>0,a<x,x<ad) => \case U-rounded x<ad \with {
-           | inP (b',x<b',b'<ad) => inP (finv a, b', (finv>0 a>0, transportInv x.L RatField.finv_finv a<x), x<b', transport (_ <) (inv Monoid.*-assoc *> pmap (`*' _) (RatField.finv-left $ RatField.>_/= a>0) *> Monoid.ide-left) $ <_*_positive-right (finv>0 a>0) b'<ad)
+           | inP (b',x<b',b'<ad) => inP (finv a, b', (finv>0 a>0, transportInv x.L RatField.finv_finv a<x), x<b', transport (_ <) (inv Monoid.*-assoc *> pmap (*' _) (RatField.finv-left $ RatField.>_/= a>0) *> Monoid.ide-left) $ <_*_positive-right (finv>0 a>0) b'<ad)
          }
        }))
   | #0=>eitherPosOrNeg {x} (xi : Monoid.Inv x) => \case U-inh {x * xi.inv} \with {
@@ -84,7 +84,7 @@
     }
   }
   | *c a x => Real.fromRat a * x
-  | *c-assoc => pmap (`* _) (inv *-rat) *> *-assoc
+  | *c-assoc => pmap (* _) (inv *-rat) *> *-assoc
   | *c-ldistr => ldistr
   | *c-rdistr => *-comm *> pmap (_ *) (inv RealAbGroup.+-rat) *> ldistr *> pmap2 (+) *-comm *-comm
   | ide_*c => ide-left
@@ -126,28 +126,28 @@
 
     \lemma pow-rat {x : Rat} {n : Nat} : RealField.pow x n = {Real} RatField.pow x n \elim n
       | 0 => idp
-      | suc n => pmap (`* x) pow-rat *> *-rat
+      | suc n => pmap (* x) pow-rat *> *-rat
 
     \lemma *_>=0-char {x y : Real} (x>=0 : 0 <= x) (y>=0 : 0 <= y) {d : Rat} : (x * y).U d <-> ∃ (a : x.U) (b : y.U) (a *' b <= d)
       => (\lam xy<d => \case y.LU-located {0} {1} idp \with {
         | byLeft y>0 => *_>0-char2 x>=0 (real_<_L.2 y>0) xy<d
         | byRight y<1 => \case x.LU-located {0} {d} $ rat_real_<.2 $ RealField.<=_*-positive x>=0 y>=0 <∘r real_<_U.2 xy<d \with {
           | byLeft x>0 => \case *_>0-char2 y>=0 (real_<_L.2 x>0) (rewrite *-comm xy<d) \with {
-            | inP (b,y<b,a,x<a,ba<=d) => inP (a, x<a, b, y<b, transport (`<= _) RatField.*-comm ba<=d)
+            | inP (b,y<b,a,x<a,ba<=d) => inP (a, x<a, b, y<b, transport (<= _) RatField.*-comm ba<=d)
           }
           | byRight x<d => inP (d, x<d, 1, y<1, =_<= ide-right)
         }
       }, \lam (inP (a,x<a,b,y<b,ab<d)) => real_<_U.1 $ RealField.<=_*_positive-left (<=-less $ real_<_U.2 x<a) y>=0 <∘r transport (_ <) *-rat (RealField.<_*_positive-right (x>=0 <∘r real_<_U.2 x<a) (real_<_U.2 y<b)) <∘l rat_real_<=.1 ab<d)
       \where {
         \lemma *_>0-char {x y d : Real} (y>0 : 0 < y) (xy<d : x * y < d) : ∃ (a : x.U) (a * y < d)
-          => \case real_<-rat-char.1 $ transport (`< _) (*-assoc *> pmap (_ *) (RealField.pinv-right y>0) *> RealField.ide-right) $ RealField.<_*_positive-left xy<d (RealField.pinv>0 y>0) \with {
+          => \case real_<-rat-char.1 $ transport (< _) (*-assoc *> pmap (_ *) (RealField.pinv-right y>0) *> RealField.ide-right) $ RealField.<_*_positive-left xy<d (RealField.pinv>0 y>0) \with {
             | inP (a,x<a,p) => inP (a, x<a, transport (_ <) (*-assoc *> pmap (d *) (RealField.pinv-left y>0) *> RealField.ide-right) $ RealField.<_*_positive-left (real_<_L.2 p) y>0)
           }
 
         \lemma *_>0-char2 {x y : Real} (x>=0 : 0 <= x) (y>0 : 0 < y) {d : Rat} (xy<d : (x * y).U d) : ∃ (a : x.U) (b : y.U) (a *' b <= d)
           => \case *_>0-char y>0 (real_<_U.2 xy<d) \with {
-            | inP (a,x<a,ay<d) => \case *_>0-char (x>=0 <∘r real_<_U.2 x<a) $ transport (`< _) *-comm ay<d \with {
-              | inP (b,y<b,ba<d) => inP (a, x<a, b, y<b, <=-less $ rat_real_<.2 $ transport (`< _) (*-comm *> *-rat) ba<d)
+            | inP (a,x<a,ay<d) => \case *_>0-char (x>=0 <∘r real_<_U.2 x<a) $ transport (< _) *-comm ay<d \with {
+              | inP (b,y<b,ba<d) => inP (a, x<a, b, y<b, <=-less $ rat_real_<.2 $ transport (< _) (*-comm *> *-rat) ba<d)
             }
           }
       }
@@ -159,7 +159,7 @@
 
     \lemma pow-upper {x : Real} (x>=0 : 0 <= x) {n : Nat} : RealField.pow x n = ExUpperRealSemigroup.pow x n \elim n
       | 0 => idp
-      | suc n => *-upper (RealField.pow>=0 x>=0) x>=0 *> pmap (ExUpperReal.`* _) (pow-upper x>=0)
+      | suc n => *-upper (RealField.pow>=0 x>=0) x>=0 *> pmap (ExUpperReal.* _) (pow-upper x>=0)
 
     \lemma *-cover : CoverMap (ProductCoverSpace RealNormed RealNormed) RealNormed (\lam s => s.1 * s.2)
       => transportInv (CoverMap _ _) (ext \lam s => \peval s.1 * s.2) *-cover-def

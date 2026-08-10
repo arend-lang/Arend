@@ -5,7 +5,7 @@ import org.arend.core.context.binding.TypedBinding;
 import org.arend.core.definition.Definition;
 import org.arend.core.expr.*;
 import org.arend.core.sort.Sort;
-import org.arend.core.subst.LevelPair;
+import org.arend.core.subst.Levels;
 import org.arend.prelude.Prelude;
 import org.arend.typechecking.TypeCheckingTestCase;
 import org.arend.typechecking.error.local.TruncatedDataError;
@@ -198,7 +198,7 @@ public class CaseTest extends TypeCheckingTestCase {
   public void propertyLevelTest() {
     typeCheckModule("""
       \\truncated \\data Trunc (A : \\Type) : \\Prop | in A
-      \\record R | field {A : \\Set} (p : \\Pi (a a' : A) -> a = a') (t : Trunc A) : \\level A p
+      \\record R | field {A : \\Set0} (p : \\Pi (a a' : A) -> a = a') (t : Trunc A) : \\level A p
       \\func test : R \\cowith | field _ t => \\case t \\with { | in a => a }
       """);
   }
@@ -207,7 +207,7 @@ public class CaseTest extends TypeCheckingTestCase {
   public void propertyLevelError() {
     typeCheckModule("""
       \\truncated \\data Trunc (A : \\Type) : \\Prop | in A
-      \\record R | field {A : \\Set} (p : \\Pi (a a' : A) -> a = a') (t : Trunc A) : A
+      \\record R | field {A : \\Set0} (p : \\Pi (a a' : A) -> a = a') (t : Trunc A) : A
       \\func test : R \\cowith | field _ t => \\scase t \\with { | in a => a }
       """, 1);
     assertThatErrorsAre(Matchers.typecheckingError(TruncatedDataError.class));
@@ -217,7 +217,7 @@ public class CaseTest extends TypeCheckingTestCase {
   public void propertyExtendsLevelTest() {
     typeCheckModule("""
       \\truncated \\data Trunc (A : \\Type) : \\Prop | in A
-      \\record R | field {A : \\Set} (p : \\Pi (a a' : A) -> a = a') (t : Trunc A) : \\level A p
+      \\record R | field {A : \\Set0} (p : \\Pi (a a' : A) -> a = a') (t : Trunc A) : \\level A p
       \\record S \\extends R | field _ t => \\case t \\with { | in a => a }
       """);
   }
@@ -230,7 +230,7 @@ public class CaseTest extends TypeCheckingTestCase {
   @Test
   public void elimTypeTest() {
     TypedBinding n = new TypedBinding("n", ExpressionFactory.Nat());
-    Expression type = FunCallExpression.make(Prelude.PATH_INFIX, LevelPair.SET0, Arrays.asList(ExpressionFactory.Nat(), new ReferenceExpression(n), new SmallIntegerExpression(0)));
+    Expression type = FunCallExpression.make(Prelude.PATH_INFIX, Levels.EMPTY, Arrays.asList(ExpressionFactory.Nat(), new ReferenceExpression(n), new SmallIntegerExpression(0)));
     typeCheckExpr(Arrays.asList(n, new TypedBinding("p", type)), """
       \\case \\elim n, p \\with {
         | 0, _ => idp
@@ -242,7 +242,7 @@ public class CaseTest extends TypeCheckingTestCase {
   @Test
   public void elimTypeTest2() {
     TypedBinding n = new TypedBinding("n", ExpressionFactory.Nat());
-    Expression type = FunCallExpression.make(Prelude.PATH_INFIX, LevelPair.SET0, Arrays.asList(ExpressionFactory.Nat(), new ReferenceExpression(n), new SmallIntegerExpression(0)));
+    Expression type = FunCallExpression.make(Prelude.PATH_INFIX, Levels.EMPTY, Arrays.asList(ExpressionFactory.Nat(), new ReferenceExpression(n), new SmallIntegerExpression(0)));
     typeCheckExpr(Arrays.asList(n, new TypedBinding("p", type)), """
       \\case \\elim n, p \\return n = 0 \\with {
         | 0, _ => idp
@@ -274,7 +274,7 @@ public class CaseTest extends TypeCheckingTestCase {
 
   @Test
   public void typeTest() {
-    Definition def = typeCheckDef("\\func test (n : Nat) (x : \\case n \\with { | 0 => Nat | suc _ => Nat }) : Nat => 0");
+    Definition def = typeCheckDef("\\func test (n : Nat) (x : \\case n \\return \\Set0 \\with { | 0 => Nat | suc _ => Nat }) : Nat => 0");
     assertEquals(Sort.SET0, def.getParameters().getNext().getType().getSortOfType());
   }
 
@@ -314,7 +314,7 @@ public class CaseTest extends TypeCheckingTestCase {
   @Test
   public void elimWithTypeTest() {
     typeCheckModule("""
-      \\func Type-isSet4 {A : \\hType} {x : A} (p : x = x) : p = idp
+      \\func Type-isSet4 {A : \\Type} {x : A} (p : x = x) : p = idp
         => \\case x \\as x_, \\elim p : x_ = x \\with {
           | x, idp => idp
         }

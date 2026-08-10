@@ -15,7 +15,6 @@ import org.arend.module.Reason
 import org.arend.module.showDownloadNotification
 import org.arend.util.FileUtils
 import org.arend.util.findExternalLibrary
-import org.arend.util.refreshLibrariesDirectory
 import org.arend.yaml.YamlFileService
 
 class ArendCourseProjectGenerator(
@@ -30,8 +29,8 @@ class ArendCourseProjectGenerator(
             dependencies: [arend-lib]
         """.trimIndent()))
 
-    override fun afterProjectGenerated(project: Project, settings: ArendEduProjectSettings, courseModeToCreate: Map<String, String>, onProjectGenerated: () -> Unit) {
-        super.afterProjectGenerated(project, settings, courseModeToCreate, onProjectGenerated)
+    override suspend fun afterProjectGenerated(project: Project, projectSettings: ArendEduProjectSettings, openCourseParams: Map<String, String>, onConfigurationFinished: () -> Unit) {
+        super.afterProjectGenerated(project, projectSettings, openCourseParams, onConfigurationFinished)
         val arendYaml = project.guessProjectDir()?.findChild(FileUtils.LIBRARY_CONFIG_FILE) ?: return
         val module = ModuleUtilCore.findModuleForFile(arendYaml, project) ?: return
         module.setModuleType("AREND_MODULE")

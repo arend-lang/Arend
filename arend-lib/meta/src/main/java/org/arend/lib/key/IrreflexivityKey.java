@@ -25,11 +25,11 @@ public class IrreflexivityKey extends FieldKey implements DefinitionListener {
   protected boolean checkField(CoreClassField field) {
     List<CoreParameter> parameters = new ArrayList<>();
     CoreExpression codomain = field.getResultType().getPiParameters(parameters);
-    if (!(parameters.size() == 2 && ContradictionMeta.isEmpty(codomain) && isBaseSetCall(parameters.get(0).getTypeExpr(), field))) {
+    if (!(parameters.size() == 2 && ContradictionMeta.isEmpty(codomain) && isBaseSetCall(parameters.get(0).getType(), field))) {
       return false;
     }
 
-    CoreClassField relation = getFieldApplied(parameters.get(1).getTypeExpr(), parameters.get(0).getBinding(), parameters.get(0).getBinding(), field);
+    CoreClassField relation = getFieldApplied(parameters.get(1).getType(), parameters.get(0).getBinding(), parameters.get(0).getBinding(), field);
     if (relation == null) {
       return false;
     }

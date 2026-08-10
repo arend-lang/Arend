@@ -44,6 +44,7 @@ import org.arend.term.group.ConcreteGroup
 import org.arend.term.prettyprint.PrettyPrintVisitor
 import org.arend.typechecking.ArendExtensionChangeService
 import org.arend.typechecking.error.NotificationErrorReporter
+import org.arend.yaml.dependencies
 import org.jetbrains.yaml.psi.YAMLFile
 import java.nio.file.Path
 import java.nio.file.Paths
@@ -103,12 +104,36 @@ fun Project.findExternalLibrary(root: Path, libName: String): ExternalLibraryCon
 private fun Project.addDependencies(server: ArendServer, library: ArendLibrary, loaded: HashSet<String>) {
     for (dependency in library.libraryDependencies) {
         if (!loaded.add(dependency) || server.getLibrary(dependency) != null) continue
-        val config = findExternalLibrary(dependency)
-        if (config != null) {
-            server.updateLibrary(config, NotificationErrorReporter(this))
-            addDependencies(server, config, loaded)
-        }
+        val config = findExternalLibrary(dependency) ?: continue
+        addDependencies(server, config, loaded)
+        server.updateLibrary(config, NotificationErrorReporter(this))
     }
+}
+
+/**
+ * Orders Arend [modules] so that every module comes after the modules it depends on.
+ */
+fun orderModules(modules: List<Module>): List<Module> {
+    val arendModules = modules.filter { ArendModuleType.has(it) }
+    if (arendModules.size < 2) return arendModules
+
+    val byName = arendModules.associateBy { it.name }
+    val result = ArrayList<Module>(arendModules.size)
+    val visited = HashSet<String>()
+
+    fun visit(module: Module) {
+        if (!visited.add(module.name)) return
+        val dependencies = runReadAction {
+            ArendModuleConfigService.getInstance(module)?.yamlFile?.dependencies.orEmpty().map { it.name }
+        }
+        for (dependency in dependencies) {
+            byName[dependency]?.let { visit(it) }
+        }
+        result.add(module)
+    }
+
+    arendModules.forEach(::visit)
+    return result
 }
 
 fun Module.register(modules: List<Module> = emptyList()) {
@@ -129,8 +154,8 @@ fun Module.register(modules: List<Module> = emptyList()) {
     val loaded = modules.mapNotNullTo(HashSet()) { if (ArendModuleType.has(it)) it.name else null }
     runReadAction {
         loaded.addAll(project.arendModules.map { it.name })
-        server.updateLibrary(config, NotificationErrorReporter(project))
         project.addDependencies(server, config, loaded)
+        server.updateLibrary(config, NotificationErrorReporter(project))
     }
 
     project.service<ArendExtensionChangeService>().initializeModule(config)
@@ -152,8 +177,8 @@ fun Project.registerStudyLibrary() {
     val loaded = HashSet<String>()
     loaded.addAll(arendModules.map { it.name })
     runReadAction {
-        server.updateLibrary(studyLibrary, NotificationErrorReporter(this))
         addDependencies(server, studyLibrary, loaded)
+        server.updateLibrary(studyLibrary, NotificationErrorReporter(this))
     }
 }
 

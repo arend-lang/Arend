@@ -1,0 +1,31 @@
+\import Algebra.Ring
+\import Algebra.Ring.RingHom
+\import Paths.Meta
+
+\instance ProductCRing (R S : CRing) : CRing (\Sigma R S)
+  | zro => (R.zro, S.zro)
+  | + s t => (s.1 R.+ t.1, s.2 S.+ t.2)
+  | +-assoc => ext (R.+-assoc, S.+-assoc)
+  | +-comm => ext (R.+-comm, S.+-comm)
+  | * s t => (s.1 R.* t.1, s.2 S.* t.2)
+  | *-assoc => ext (R.*-assoc, S.*-assoc)
+  | negative s => (R.negative s.1, S.negative s.2)
+  | negative-left => ext (R.negative-left, S.negative-left)
+  | ide => (R.ide, S.ide)
+  | *-comm => ext (R.*-comm, S.*-comm)
+  | ide-left => ext (R.ide-left, S.ide-left)
+  | ldistr => ext (R.ldistr, S.ldistr)
+  | zro-left => ext (R.zro-left, S.zro-left)
+  \where {
+    \func proj1 : RingHom (ProductCRing R S) R \cowith
+      | func s => s.1
+      | func-+ => idp
+      | func-* => idp
+      | func-ide => idp
+
+    \func proj2 : RingHom (ProductCRing R S) S \cowith
+      | func s => s.2
+      | func-+ => idp
+      | func-* => idp
+      | func-ide => idp
+  }

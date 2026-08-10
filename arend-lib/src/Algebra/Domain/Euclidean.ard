@@ -8,13 +8,15 @@
 \import Algebra.Monoid.GCD
 \import Algebra.Pointed
 \import Algebra.Ring
+\import Algebra.Ring.Ideal
+\import Algebra.Ring.Noetherian
 \import Algebra.Semiring
 \import Arith.Int
 \import Arith.Nat
 \import Data.Or
 \import Function.Meta
 \import Logic
-\import Logic.Classical
+\import Logic.Bar
 \import Logic.Meta
 \import Meta
 \import Order.Biordered
@@ -80,7 +82,7 @@
           *-comm *> inv (pmap (_ +) mod=0 *> zro-right) *> isDivMod a b
         }
         | no mod/=0 => rdistr *> pmap2 (+)
-            (pmap (`* _) *-comm *> *-assoc *> *-comm *> pmap (`* _) (reduce*fueled-left s b (divMod a b).2 (isEuclideanMap a b b/=0 mod/=0 <∘l <_suc_<= b<=s)))
+            (pmap (* _) *-comm *> *-assoc *> *-comm *> pmap (* _) (reduce*fueled-left s b (divMod a b).2 (isEuclideanMap a b b/=0 mod/=0 <∘l <_suc_<= b<=s)))
             (reduce*fueled-right s b (divMod a b).2 (isEuclideanMap a b b/=0 mod/=0 <∘l <_suc_<= b<=s)) *> isDivMod a b
       }
     }
@@ -102,7 +104,7 @@
     | 0 => g|a
     | suc s => mcases \with {
       | yes _ => g|a
-      | no b/=0 => gcd-isGCD-fueled s g|b (summandDiv (ldiv/=0 b/=0 g|b) (pmap (`+ _) (inv *-assoc) *> pmap (__ * _ + _) g|b.inv-right *> isDivMod a b *> inv g|a.inv-right))
+      | no b/=0 => gcd-isGCD-fueled s g|b (summandDiv (ldiv/=0 b/=0 g|b) (pmap (+ _) (inv *-assoc) *> pmap (__ * _ + _) g|b.inv-right *> isDivMod a b *> inv g|a.inv-right))
     }
 
   \func gcd-isGCD (a b : E) : GCD a b \cowith
@@ -140,7 +142,7 @@
           })
           | no q => inr
             \have b|m : LDiv b (divMod b a).2 => summandDiv {_} {b|a.inv * (divMod b a).1} (ldiv/=0 a/=0 b|a) $
-                pmap (`+ _) (inv *-assoc *> later (rewrite b|a.inv-right idp)) *> isDivMod b a *> inv ide-right
+                pmap (+ _) (inv *-assoc *> later (rewrite b|a.inv-right idp)) *> isDivMod b a *> inv ide-right
             \in \case aux b q b|m (isEuclideanMap b a a/=0 q <∘l <_suc_<= p) \with {
               | inl m|b => ((divMod b a).2, b|m, m|b, isEuclideanMap b a a/=0 q)
               | inr (b',b'|b,b|b',s) => (b', b'|b, b|b', s <∘ isEuclideanMap b a a/=0 q)
@@ -173,7 +175,7 @@
 \class EuclideanRingData \extends EuclideanSemiringData, CRing {
   | summandDiv {x} {y} {z} {d} _ p => \new LDiv {
     | inv => z - x
-    | inv-right => ldistr *> +-comm *> pmap (+ _) (inv p) *> simplify
+    | inv-right => ldistr *> +-comm *> pmap (_ +) (inv p) *> simplify
   }
 
   \func bezout-fueled (s : Nat) (a b : E) : \Sigma E E \elim s
@@ -198,7 +200,7 @@
     => bezoutIdentity-fueled (suc' (euclideanMap b)) a b
 }
 
-\class EuclideanDomain \extends PID
+\class EuclideanDomain \extends PID, NoetherianCRing
   | isEuclidean : TruncP (EuclideanRingData { | CRing => \this | decideEq => decideEq })
   | isBezout a b => TruncP.map isEuclidean \lam (d : EuclideanRingData { | CRing => \this }) =>
       ((d.bezout a b).1, (d.bezout a b).2,
@@ -208,8 +210,8 @@
     | inP d => cases (a 0 arg addPath) \with {
       | in~ a0, ap =>
         \let n => suc (euclideanMap {d} a0.1)
-        \in \case Choice.liftSurj {FinFin (suc n)} Quotient.in-surj (\lam j => a j) \with {
-          | inP (b,bp) => TruncP.map (aux {d} n (\lam i => ((b i).1, AddGroup.With#.apartNonZero (b i).2))
+        \in \case (FinFin (suc n)).liftSurj Quotient.in-surj (\lam j => a j) \with {
+          | inP (b,bp) => TruncP.map (divChain-induction {d} n (\lam i => ((b i).1, AddGroup.With#.apartNonZero (b i).2))
               (\lam i => TruncP.map (c i) \lam ci => nonZero_ldiv {_} {b (suc i)} {b i} $ div-from~ {nonZeroCMonoid} $ rewrite (bp (suc i), bp i) ci) a0.1
               (nonZero_ldiv {_} {b 0} {a0} $ div-from~ {nonZeroCMonoid} $ rewrite (bp 0, ap) LDiv.id-div)
               (nonZero_ldiv {_} {a0} {b 0} $ div-from~ {nonZeroCMonoid} $ rewrite (bp 0, ap) LDiv.id-div)
@@ -217,17 +219,35 @@
         }
     }
   }
+  | isNoetherian => bar-ask \lam a => \case decideEq a 0 \with {
+    | yes a=0 => bar-stop $ pauses-here $ inP (nil, a=0)
+    | no a/=0 => \case isEuclidean \with {
+        | inP d => isNoetherian-induction {d} _ a/=0 id<suc $ Ideal.closure-superset {_} {Fin 1} {a :: nil} 0
+      }
+  }
   \where {
     \open DivQuotient
 
-    \lemma aux {R : EuclideanRingData} (n : Nat) (a : Fin (suc n) -> \Sigma (x : R) (x /= 0)) (c : \Pi (i : Fin n) -> TruncP (LDiv (a (suc i)).1 (a i).1)) (b : R) (a0|b : LDiv (a 0).1 b) (b|a0 : LDiv b (a 0).1) (p : euclideanMap b < n) : ∃ (i : Fin n) (LDiv (a i).1 (a (suc i)).1) \elim n
+    \private \lemma divChain-induction {R : EuclideanRingData} (n : Nat) (a : Fin (suc n) -> \Sigma (x : R) (x /= 0)) (c : \Pi (i : Fin n) -> TruncP (LDiv (a (suc i)).1 (a i).1)) (b : R) (a0|b : LDiv (a 0).1 b) (b|a0 : LDiv b (a 0).1) (p : euclideanMap b < n) : ∃ (i : Fin n) (LDiv (a i).1 (a (suc i)).1) \elim n
       | 0 => \case p
       | suc n => \case c 0 \with {
         | inP c0 => \case isPseudonorm {_} {b} {(a 1).1} (R.ldiv/=0 (a 0).2 b|a0) (LDiv.trans c0 a0|b) \with {
           | inl b|a1 => inP (0, LDiv.trans a0|b b|a1)
-          | inr (a1',a1|a1',a1'|a1,a1'<b) => TruncP.map (aux n (\lam i => a (suc i)) (\lam i => c (suc i)) a1' a1|a1' a1'|a1 (a1'<b <∘l <_suc_<= p)) \lam s => (suc s.1, s.2)
+          | inr (a1',a1|a1',a1'|a1,a1'<b) => TruncP.map (divChain-induction n (\lam i => a (suc i)) (\lam i => c (suc i)) a1' a1|a1' a1'|a1 (a1'<b <∘l <_suc_<= p)) \lam s => (suc s.1, s.2)
         }
       }
+
+    \private \lemma isNoetherian-induction {R : EuclideanRingData} (n : Nat) {a : R} (a/=0 : a /= 0) (a<n : euclideanMap a < n)
+                                           {l : Array R} (a<=l : Ideal.closure l a) : Bar PausesElem l \elim n
+      | suc n => bar-ask \lam b =>
+        \have gcd|a => transportInv (LDiv __ a) (R.bezoutIdentity a b) (R.gcd-isGCD a b).res|val1
+        \in \case isPseudonorm a/=0 gcd|a \with {
+          | inl r => \have a|b : LDiv a b => LDiv.trans r $ transportInv (LDiv __ b) (R.bezoutIdentity a b) (R.gcd-isGCD a b).res|val2
+                     \in bar-stop $ pauses-here $ (Ideal.closure l).ldiv a|b a<=l
+          | inr (a',gcd|a',a'|gcd,a'<a) => isNoetherian-induction n (R.ldiv/=0 (R.ldiv/=0 a/=0 gcd|a) a'|gcd) (a'<a <∘l <_suc_<= a<n) $
+            (Ideal.closure (b :: l)).ldiv gcd|a' $ Ideal.contains_+ (ideal-left $ Ideal.closure-univ {_} {_} {l} {Ideal.closure (b :: l)}
+              (\lam j => Ideal.closure-superset {_} {_} {b :: l} (suc j)) a<=l) (ideal-left $ Ideal.closure-superset {_} {Fin (suc l.len)} {b :: l} 0)
+        }
   }
 
 \instance NatEuclidean : EuclideanSemiringData
@@ -243,8 +263,8 @@
   | summandDiv {x y z d : Nat} (d/=0 : d /= 0) (dx+y=dz : d * x + y = d * z) : Monoid.LDiv d y \elim d {
     | 0 => absurd (d/=0 idp)
     | suc _ \as d => \new Monoid.LDiv {
-      | inv => div y d
-      | inv-right => pmap (d * y div d +) (mod-unique {d} {z} {0} {x + y div d} {y mod d} NatOrder.zero<suc (fin_< (y mod d)) (inv (pmap (`+ _) ldistr *> +-assoc *> pmap (_ +) (divModProp y d) *> dx+y=dz))) *> divModProp y d
+      | inv => y div d
+      | inv-right => pmap (d * y div d +) (mod-unique {d} {z} {0} {x + y div d} {y mod d} NatOrder.zero<suc (fin_< (y mod d)) (inv (pmap (+ _) ldistr *> +-assoc *> pmap (_ +) (divModProp y d) *> dx+y=dz))) *> divModProp y d
     }
   }
   \where {
@@ -281,7 +301,7 @@
       | yes x=0 => rewrite x=0 (nonZero>0 |y|/=0)
       | no x/=0 =>
         \have t : iabs (pos (iabs x Nat.mod iabs y) * signum x) = iabs x Nat.mod iabs y => iabs_* *> pmap (_ *) (iabs.signum_/=0 (x/=0 $ pmap signum __))
-        \in transport (`< iabs y) (inv t) $ isEuclideanMap (iabs x) (iabs y) |y|/=0 \lam e => r/=0 $ pmap (pos __ * _) e *> zro_*-left
+        \in transport (< iabs y) (inv t) $ isEuclideanMap (iabs x) (iabs y) |y|/=0 \lam e => r/=0 $ pmap (pos __ * _) e *> zro_*-left
     }
   \where {
     \func modToNat (m : Int) (p : \Sigma Int Int) : \Sigma Int Nat \elim p
@@ -303,11 +323,11 @@
         | no e => IntEuclidean.isEuclideanMap x (suc n) (\case __) e
       }
 
-    \lemma natMod<right (x : Int) (n : Nat) : x mod suc n < suc n
+    \lemma natMod<right {x : Int} {n : Nat} : x mod suc n < suc n
       => \let (q,r) => IntEuclidean.divMod x (suc n)
          \in \case r \as r, idp : r = (IntEuclidean.divMod x (suc n)).2 \return (modToNat (suc n) (q,r)).2 < suc n \with {
-               | pos m, p => transportInv (`< suc n) (pmap iabs p) (intMod<right x n)
-               | neg (suc m), p => pos<=pos.conv (transportInv (`<= pos n) (pos_iabs (<=-less (transportInv (`< suc n) (pmap iabs p) (intMod<right x n)))) (IntRing.<=_+ {pos n} {n} {neg m} {0} <=-refl (signum.signum_neg/=1 __))) <∘r id<suc
+               | pos m, p => transportInv (< suc n) (pmap iabs p) (intMod<right x n)
+               | neg (suc m), p => pos<=pos.conv (transportInv (<= pos n) (pos_iabs (<=-less (transportInv (< suc n) (pmap iabs p) (intMod<right x n)))) (IntRing.<=_+ {pos n} {n} {neg m} {0} <=-refl (signum.signum_neg/=1 __))) <∘r id<suc
              }
 
     \lemma divModProp (x y : Int) (y/=0 : y /= 0) : y * x div y + x mod y = x
@@ -320,11 +340,11 @@
                        | yes x=0 => rewrite x=0 idp
                        | no x/=0 => iabs_* *> pmap (_ *) (iabs.signum_/=0 x/=0)
                      }
-                 \in pmap (_ +) (pos_iabs $ transportInv (`<= iabs y) (pmap iabs p) $ transportInv (`<= iabs y) t $ <=-less $ mod<right \lam |y|=0 => y/=0 $ iabs.equals0 |y|=0) *>
-                     pmap (`+ _) Ring.ldistr_- *>
+                 \in pmap (_ +) (pos_iabs $ transportInv (<= iabs y) (pmap iabs p) $ transportInv (<= iabs y) t $ <=-less $ mod<right \lam |y|=0 => y/=0 $ iabs.equals0 |y|=0) *>
+                     pmap (+ _) Ring.ldistr_- *>
                      pmap ((_ + negative __) + _) (inv iabs.signum_*) *>
                      +-assoc *>
-                     pmap (_ +) (inv (+-assoc {_} {_} {pos (iabs y)} {neg (suc n)}) *> pmap (`+ _) (IntRing.negative-right {iabs y})) *>
+                     pmap (_ +) (inv (+-assoc {_} {_} {pos (iabs y)} {neg (suc n)}) *> pmap (+ _) (IntRing.negative-right {iabs y})) *>
                      pmap (_ +) p *>
                      IntEuclidean.isDivMod x y
              }
@@ -332,10 +352,14 @@
     \lemma natDivModProp (x : Int) (n : Nat) : pos (suc n) * x div suc n + x mod suc n = x
       => divModProp x (suc n) (\case __)
 
+    \func equal-mod_LDiv {x y m : Int} (m/=0 : m /= 0) (p : x mod m = y mod m) : LDiv m (x - y) \cowith
+      | inv => x div m - y div m
+      | inv-right => IntRing.ldistr_- *> linarith (divModProp x m m/=0, divModProp y m m/=0)
+
     \lemma mod-unique {q q' : Int} {n r r' : Nat} (r<n : r < n) (r'<n : r' < n) (p : pos n * q + r = pos n * q' + r') : r = r' \elim q, q'
       | pos q, pos q' => Arith.Nat.mod-unique r<n r'<n (pmap iabs p)
-      | pos q, neg q' => Arith.Nat.mod-unique {n} {q' + q} {r} {0} r<n r'<n (pmap iabs (pmap (`+ pos r) (IntRing.ldistr {n} {q'} {q}) *> aux (pos (n * q)) r (pos (n * q')) r' p))
-      | neg q, pos q' => inv (Arith.Nat.mod-unique {n} {q + q'} {r'} {0} r'<n r<n (pmap iabs (pmap (`+ pos r') (IntRing.ldistr {n} {q} {q'}) *> aux (pos (n * q')) r' (pos (n * q)) r (inv p))))
+      | pos q, neg q' => Arith.Nat.mod-unique {n} {q' + q} {r} {0} r<n r'<n (pmap iabs (pmap (+ pos r) (IntRing.ldistr {n} {q'} {q}) *> aux (pos (n * q)) r (pos (n * q')) r' p))
+      | neg q, pos q' => inv (Arith.Nat.mod-unique {n} {q + q'} {r'} {0} r'<n r<n (pmap iabs (pmap (+ pos r') (IntRing.ldistr {n} {q} {q'}) *> aux (pos (n * q')) r' (pos (n * q)) r (inv p))))
       | neg q, neg q' => inv (Arith.Nat.mod-unique r'<n r<n (pmap iabs (aux 0 r' (n * q) (n * q' + r) (inv (aux (neg (n * q)) r (n * q') r' p) *> IntRing.+-assoc {neg (n * q)} {n * q'} {r}) )))
       \where
         \lemma aux (x y x' y' : Int) (p : x + y = negative x' + y') : (x' + x) + y = y'
@@ -389,7 +413,7 @@
     \have abs_g'|g : LDiv (iabs g') g => g.res-univ (iabs g') (ldiv_int_nat g'|a) (ldiv_int_nat g'|b)
     \in \new LDiv {
       | inv => signum g' * abs_g'|g.inv
-      | inv-right => inv *-assoc *> pmap (`* _) (inv iabs.signum_*) *> pmap pos abs_g'|g.inv-right
+      | inv-right => inv *-assoc *> pmap (* _) (inv iabs.signum_*) *> pmap pos abs_g'|g.inv-right
     }
 
 \func gcd_int_nat (g : GCD {IntRing}) : GCD (iabs g.val1) (iabs g.val2) (iabs g) \cowith

@@ -1,12 +1,15 @@
 package org.arend.core.expr;
 
 import org.arend.core.context.binding.Binding;
+import org.arend.core.definition.ClassField;
 import org.arend.core.definition.Constructor;
 import org.arend.core.elimtree.ElimBody;
 import org.arend.core.elimtree.ElimClause;
 import org.arend.core.elimtree.IntervalElim;
 import org.arend.core.pattern.ConstructorExpressionPattern;
 import org.arend.core.pattern.Pattern;
+import org.arend.core.sort.Level;
+import org.arend.core.sort.SortExpression;
 import org.arend.core.subst.UnfoldVisitor;
 import org.arend.ext.concrete.ConcreteSourceNode;
 import org.arend.ext.core.expr.*;
@@ -17,8 +20,6 @@ import org.arend.core.context.binding.inference.InferenceVariable;
 import org.arend.core.context.param.DependentLink;
 import org.arend.core.context.param.SingleDependentLink;
 import org.arend.core.elimtree.Body;
-import org.arend.core.expr.type.Type;
-import org.arend.core.expr.type.TypeExpression;
 import org.arend.core.expr.visitor.*;
 import org.arend.core.sort.Sort;
 import org.arend.core.subst.ExprSubstitution;
@@ -44,7 +45,6 @@ import org.arend.typechecking.implicitargs.equations.Equations;
 import org.arend.typechecking.patternmatching.ExpressionMatcher;
 import org.arend.typechecking.result.TypecheckingResult;
 import org.arend.typechecking.visitor.FindSubexpressionVisitor;
-import org.arend.typechecking.visitor.FixLevelParameters;
 import org.arend.util.Decision;
 import org.arend.util.GraphClosure;
 import org.jetbrains.annotations.NotNull;
@@ -98,9 +98,6 @@ public abstract class Expression implements Body, CoreExpression {
 
   @Override
   public void prettyPrint(@NotNull StringBuilder builder, ExpressionPrettifier prettifier, @NotNull PrettyPrinterConfig config) {
-    if (config.getNormalizationMode() != null) {
-      FixLevelParameters.fix(this); // Expressions created in errors might have not fixed levels, so we fix them here
-    }
     ToAbstractVisitor.convert(this, prettifier, config).accept(new PrettyPrintVisitor(builder, 0, !config.isSingleLine(), config.getLineLength()), new Precedence(Concrete.Expression.PREC));
   }
 
@@ -110,7 +107,7 @@ public abstract class Expression implements Body, CoreExpression {
   }
 
   public boolean isLessOrEquals(Expression type, Equations equations, Concrete.SourceNode sourceNode) {
-    return CompareVisitor.compare(equations, CMP.LE, this, type, Type.OMEGA, sourceNode);
+    return CompareVisitor.compare(equations, CMP.LE, this, type, UniverseExpression.OMEGA, sourceNode);
   }
 
   @Override
@@ -122,9 +119,23 @@ public abstract class Expression implements Body, CoreExpression {
     return null;
   }
 
-  public Sort toSort() {
+  public boolean isOmega() {
+    return false;
+  }
+
+  public SortExpression toSortExpression() {
     UniverseExpression universe = normalize(NormalizationMode.WHNF).cast(UniverseExpression.class);
-    return universe == null ? null : universe.getSort();
+    return universe == null ? null : universe.getSortExpression();
+  }
+
+  public Sort toSort() {
+    SortExpression sortExpr = toSortExpression();
+    return sortExpr == null ? null : sortExpr.simplify() instanceof SortExpression.Const(Sort sort) ? sort : null;
+  }
+
+  public SortExpression getSortExpressionOfType() {
+    Expression type = getType();
+    return type == null ? null : type.toSortExpression();
   }
 
   public Sort getSortOfType() {
@@ -132,43 +143,26 @@ public abstract class Expression implements Body, CoreExpression {
     return type == null ? null : type.toSort();
   }
 
-  public boolean isPropType() {
-    Sort sort = getSortOfType();
+  public boolean isTypeProp() {
+    Expression type = getType();
+    if (type == null) return false;
+    SortExpression sort = type.toSortExpression();
     return sort != null && sort.isProp();
   }
 
-  public Expression getType(boolean minimal) {
-    return accept(minimal ? GetTypeVisitor.MIN_INSTANCE : GetTypeVisitor.INSTANCE, null);
-  }
-
   public Expression getType() {
-    return getType(false);
-  }
-
-  @Override
-  public @NotNull Expression computeType(boolean minimal) {
-    Expression type = getType(minimal);
-    return type != null ? type : new ErrorExpression(new TypeComputationError(null, null, this, null));
+    return accept(GetTypeVisitor.INSTANCE, null);
   }
 
   @Override
   public @NotNull Expression computeType() {
-    return computeType(false);
-  }
-
-  @Override
-  public @NotNull TypecheckingResult computeTyped(boolean minimal) {
-    return new TypecheckingResult(this, computeType(minimal));
+    Expression type = getType();
+    return type != null ? type : new ErrorExpression(new TypeComputationError(null, null, this, null));
   }
 
   @Override
   public @NotNull TypecheckingResult computeTyped() {
-    return computeTyped(false);
-  }
-
-  @Override
-  public @NotNull Expression minimizeLevels() {
-    return this;
+    return new TypecheckingResult(this, computeType());
   }
 
   public boolean findBinding(Variable binding) {
@@ -230,7 +224,7 @@ public abstract class Expression implements Body, CoreExpression {
       @Override
       public Expression visitUniverse(UniverseExpression expr, Void params) {
         Expression result = super.visitUniverse(expr, params);
-        return result == expr ? new UniverseExpression(expr.getSort()) : result;
+        return result == expr ? new UniverseExpression(expr.getSortExpression()) : result;
       }
 
       @Override
@@ -270,19 +264,6 @@ public abstract class Expression implements Body, CoreExpression {
 
   public Expression subst(ExprSubstitution exprSubst, LevelSubstitution levelSubst) {
     return exprSubst.isEmpty() && levelSubst.isEmpty() ? this : accept(new SubstVisitor(exprSubst, levelSubst), null);
-  }
-
-  public Type subst(SubstVisitor substVisitor) {
-    Expression result = substVisitor.isEmpty() ? this : accept(substVisitor, null);
-    if (result instanceof Type) {
-      return (Type) result;
-    }
-
-    Sort sort = result.getSortOfType();
-    if (sort == null) {
-      throw new SubstVisitor.SubstException();
-    }
-    return new TypeExpression(result, sort);
   }
 
   @NotNull
@@ -355,11 +336,11 @@ public abstract class Expression implements Body, CoreExpression {
   @Override
   public @Nullable Expression lambdaToPi() {
     Expression expr = getUnderlyingExpression();
-    if (expr instanceof LamExpression) {
-      Expression cod = ((LamExpression) expr).getBody().lambdaToPi();
-      return cod == null ? null : new PiExpression(((LamExpression) expr).getResultSort(), ((LamExpression) expr).getParameters(), cod);
+    if (expr instanceof LamExpression lamExpr) {
+      Expression cod = lamExpr.getBody().lambdaToPi();
+      return cod == null ? null : new PiExpression(lamExpr.getParameters(), cod);
     } else {
-      return expr.getSortOfType() == null ? null : expr;
+      return expr;
     }
   }
 
@@ -577,7 +558,7 @@ public abstract class Expression implements Body, CoreExpression {
         n--;
       }
       if (n == 0) {
-        return link.hasNext() ? new PiExpression(piCod.getResultSort(), link, piCod.getCodomain()) : piCod.getCodomain();
+        return link.hasNext() ? new PiExpression(link, piCod.getCodomain()) : piCod.getCodomain();
       }
       cod = piCod.getCodomain().normalize(NormalizationMode.WHNF);
     }
@@ -613,7 +594,7 @@ public abstract class Expression implements Body, CoreExpression {
     }
 
     for (int i = piExprs.size() - 1; i >= 0; i--) {
-      expr = new PiExpression(piExprs.get(i).getResultSort(), piExprs.get(i).getParameters(), expr);
+      expr = new PiExpression(piExprs.get(i).getParameters(), expr);
     }
     return expr;
   }
@@ -629,6 +610,48 @@ public abstract class Expression implements Body, CoreExpression {
       body = lamBody.getBody();
     }
     return body;
+  }
+
+  @Override
+  public boolean isInfinityLevel() {
+    Expression expr = this;
+    while (expr instanceof PiExpression piExpr) {
+      expr = piExpr.getCodomain();
+    }
+
+    if (expr instanceof UniverseExpression universe) {
+      return universe.getSortExpression().isInfinite();
+    }
+
+    if (expr instanceof ClassCallExpression classCall) {
+      return classCall.isInfinityLevel();
+    }
+
+    return false;
+  }
+
+  public boolean isPiInfinityLevel() {
+    Expression expr = this;
+    while (expr instanceof PiExpression piExpr) {
+      expr = piExpr.getCodomain();
+    }
+    return expr instanceof UniverseExpression universe && universe.getSortExpression().isInfinite();
+  }
+
+  public Expression replaceInfinityLevel(InferenceVariable variable) {
+    return null;
+  }
+
+  public Expression replaceInferenceVariable() {
+    return this;
+  }
+
+  public Expression replaceInfinityLevel(int index, List<ClassField> fields) {
+    return null;
+  }
+
+  public Expression replaceInfinityLevel(Level level) {
+    return null;
   }
 
   public Expression applyExpression(Expression expression) {

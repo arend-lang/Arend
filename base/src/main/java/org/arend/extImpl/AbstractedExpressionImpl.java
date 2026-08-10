@@ -46,14 +46,12 @@ public class AbstractedExpressionImpl implements AbstractedExpression {
     if (expression instanceof Expression) {
       return ((Expression) expression).accept(visitor, null);
     }
-    if (expression instanceof AbstractedDependentLinkType) {
-      AbstractedDependentLinkType abs = (AbstractedDependentLinkType) expression;
-      return AbstractedExpressionImpl.make(abs.getParameters().subst(visitor, abs.getSize(), false), DependentLink.Helper.get(abs.getParameters(), abs.getSize()).getTypeExpr().accept(visitor, null));
+    if (expression instanceof AbstractedDependentLinkType abs) {
+      return AbstractedExpressionImpl.make(abs.getParameters().subst(visitor, abs.getSize(), false), DependentLink.Helper.get(abs.getParameters(), abs.getSize()).getType().accept(visitor, null));
     }
-    if (!(expression instanceof AbstractedExpressionImpl)) {
+    if (!(expression instanceof AbstractedExpressionImpl abs)) {
       throw new IllegalArgumentException();
     }
-    AbstractedExpressionImpl abs = (AbstractedExpressionImpl) expression;
     List<Binding> newBindings = new ArrayList<>(abs.myParameters.size());
     for (Binding binding : abs.myParameters) {
       Binding newBinding = binding.subst(visitor);
@@ -67,19 +65,17 @@ public class AbstractedExpressionImpl implements AbstractedExpression {
     if (abstracted instanceof Expression) {
       return (Expression) abstracted;
     }
-    if (abstracted instanceof AbstractedDependentLinkType) {
-      AbstractedDependentLinkType abs = (AbstractedDependentLinkType) abstracted;
+    if (abstracted instanceof AbstractedDependentLinkType abs) {
       DependentLink link = abs.getParameters();
       for (int i = 0; i < abs.getSize(); i++) {
         bindings.add(link);
         link = link.getNext();
       }
-      return link.getTypeExpr();
+      return link.getType();
     }
-    if (!(abstracted instanceof AbstractedExpressionImpl)) {
+    if (!(abstracted instanceof AbstractedExpressionImpl abs)) {
       throw new IllegalArgumentException();
     }
-    AbstractedExpressionImpl abs = (AbstractedExpressionImpl) abstracted;
     bindings.addAll(abs.myParameters);
     return getExpression(abs.myExpression, bindings);
   }
@@ -93,7 +89,7 @@ public class AbstractedExpressionImpl implements AbstractedExpression {
   public @Nullable CoreBinding findFreeBinding(@NotNull Set<? extends CoreBinding> bindings) {
     if (bindings.isEmpty()) return null;
     for (Binding param : myParameters) {
-      CoreBinding free = param.getTypeExpr().findFreeBinding(bindings);
+      CoreBinding free = param.getType().findFreeBinding(bindings);
       if (free != null) return free;
     }
     return myExpression.findFreeBinding(bindings);

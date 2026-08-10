@@ -92,33 +92,49 @@ public final class CommandHandler implements ReplHandler {
       api.println(replCommand.help(api));
     }
 
+    /**
+     * The {@code :?} listing, as an aligned three-column table: full command name, short
+     * name(s), description. Aliasable commands (whose several names would otherwise be joined
+     * into one long {@code ":long, :short"} prefix and push their description out of the shared
+     * column) contribute their longest alias to the name column and the rest to the short
+     * column, so every description lines up regardless of how many aliases a command has.
+     */
     private void noArg(@NotNull Repl api) {
-      IntSummaryStatistics statistics = commandMap.entrySet()
-          .stream()
-          .filter(it -> !(it.getValue() instanceof AliasableCommand))
-          .map(Map.Entry::getKey)
-          .mapToInt(String::length)
-          .summaryStatistics();
-      int maxWidth = statistics.getMax() + 1;
+      record Row(String name, String shortForm, String description) {}
+      List<Row> rows = new ArrayList<>();
+      Set<AliasableCommand> seen = new HashSet<>();
+      for (var entry : commandMap.entrySet()) {
+        ReplCommand cmd = entry.getValue();
+        if (cmd instanceof AliasableCommand ac) {
+          // A command is registered under each alias, so dedup by the command instance.
+          if (!seen.add(ac)) continue;
+          // Longest alias is the full name; the shorter ones are the short forms.
+          List<String> byLength = ac.aliases.stream()
+              .sorted(Comparator.comparingInt(String::length).reversed().thenComparing(Comparator.naturalOrder()))
+              .toList();
+          String name = byLength.isEmpty() ? entry.getKey() : byLength.get(0);
+          String shortForm = byLength.size() > 1
+              ? byLength.subList(1, byLength.size()).stream().map(a -> ":" + a).collect(Collectors.joining(", "))
+              : "";
+          rows.add(new Row(":" + name, shortForm, cmd.description()));
+        } else {
+          rows.add(new Row(":" + entry.getKey(), "", cmd.description()));
+        }
+      }
+
+      int nameWidth = rows.stream().mapToInt(r -> r.name().length()).max().orElse(0);
+      int shortWidth = rows.stream().mapToInt(r -> r.shortForm().length()).max().orElse(0);
+
       api.println("Enter Arend expression, statement (e. g. an \\import-command) or a REPL command");
-      api.println("There are " + statistics.getCount() + " commands available.");
-      var set = new HashSet<AliasableCommand>();
-      for (var replCommand : commandMap.entrySet()) {
-        var commandValue = replCommand.getValue();
-        var description = commandValue.description();
-        String command = replCommand.getKey();
-        if (commandValue instanceof AliasableCommand) {
-          if (!set.contains(commandValue)) {
-            var aliasableCommand = (AliasableCommand) commandValue;
-            set.add(aliasableCommand);
-            String prefix = aliasableCommand.aliases
-                .stream()
-                .map(it -> ":" + it)
-                .collect(Collectors.joining(", "));
-            api.println(prefix + " ".repeat(1 + Math.max(0, maxWidth - prefix.length())) + description);
-          }
-        } else
-          api.println(":" + command + " ".repeat(maxWidth - command.length()) + description);
+      api.println("There are " + rows.size() + " commands available.");
+      for (Row r : rows) {
+        StringBuilder sb = new StringBuilder();
+        sb.append(r.name()).append(" ".repeat(nameWidth - r.name().length() + 2));
+        if (shortWidth > 0) {
+          sb.append(r.shortForm()).append(" ".repeat(shortWidth - r.shortForm().length() + 2));
+        }
+        sb.append(r.description());
+        api.println(sb.toString().stripTrailing());
       }
       api.println("Note: to use an Arend symbol beginning with `:`, start the line with a whitespace.");
     }

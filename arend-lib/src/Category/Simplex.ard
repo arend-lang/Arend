@@ -1,7 +1,7 @@
 \import Arith.Fin.Order
 \import Arith.Nat
 \import Category
-\import Equiv (Equiv, QEquiv)
+\import Equiv
 \import Function (IsInj)
 \import Logic.Unique
 \import Logic
@@ -51,7 +51,7 @@
 \instance SimplexPrecat : Precat
   | Ob => Nat
   | Hom n m => hom n m
-  | id _ => \new PosetHom {
+  | id => \new PosetHom {
     | func x => x
     | func-<= eq => eq
   }
@@ -65,13 +65,13 @@
   \func hom (n m : Nat) => PosetHom (FinOrder n) (FinOrder m)
 }
 
-\lemma Simplex_iso {n m : Nat} (iso : Iso {SimplexPrecat} {n} {m}) : n = m => FinSet.FinCardBij (\new Equiv {
-  | f => Iso.f {iso}
-  | ret => Iso.hinv {iso}
-  | sec => Iso.hinv {iso}
-  | ret_f y => pmap {SimplexPrecat.hom n n} {Fin n} (\lam h => func {h} y) (Iso.hinv_f {iso})
-  | f_sec y => pmap {SimplexPrecat.hom m m} {Fin m} (\lam h => func {h} y) (Iso.f_hinv {iso})
-})
+\lemma Simplex_iso {n m : Nat} (iso : Iso {SimplexPrecat} {n} {m}) : n = m
+  => FinSet.FinCardBij \new QEquiv {
+    | f => iso.f
+    | ret => iso.hinv
+    | ret_f y => pmap {SimplexPrecat.hom n n} (__ y) iso.hinv_f
+    | f_sec y => pmap {SimplexPrecat.hom m m} (__ y) iso.f_hinv
+  }
 
 \func iso_iso {n : Nat} (f : Iso {SimplexPrecat} {suc n} {suc n}) => fin_monotone_iso_unique {n} (Iso.f {f}) f.hinv
     (ext (\lam y => pmap {SimplexPrecat.hom (suc n) (suc n)} {Fin (suc n)} (\lam h => func {h} y) f.f_hinv))
@@ -81,8 +81,8 @@
   | 0 => \lam _ _ => ext (ext (ext \lam k => \case k), ext (ext \lam k => \case k))
   | suc n => isContr=>isProp \new Contr {
     | center => \new Iso {SimplexPrecat} {suc n} {suc n} {
-      | f => PosetCat.id (FinOrder (suc n))
-      | hinv => PosetCat.id (FinOrder (suc n))
+      | f => PosetCat.id
+      | hinv => PosetCat.id
       | hinv_f => idp
       | f_hinv => idp
     }
@@ -91,7 +91,7 @@
 
 \instance SimplexCat : Cat
   | Precat => SimplexPrecat
-  | univalence {n} {_} => \new QEquiv {
+  | univalence {n} {_} => inP \new QEquiv {
     | ret iso => Simplex_iso iso
     | ret_f _ => set-pi
     | f_sec iso => transport (\lam k => isProp (Iso {SimplexPrecat} {n} {k})) (Simplex_iso iso) (iso_isProp {n}) _ _

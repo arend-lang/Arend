@@ -222,11 +222,6 @@ public class Constructor extends CallableDefinition implements Function, BranchK
   }
 
   @Override
-  public UniverseKind getUniverseKind() {
-    return myDataType.getUniverseKind();
-  }
-
-  @Override
   public <P, R> R accept(DefinitionVisitor<? super P, ? extends R> visitor, P params) {
     return visitor.visitConstructor(this, params);
   }

@@ -279,8 +279,8 @@ public class TypeTest extends TypeCheckingTestCase {
   @Test
   public void levelsTest() {
     typeCheckModule(
-      "\\type Type => \\Set\n" +
-      "\\func test (A : Type \\levels 2 _) : Type \\levels 1 _ => A", 1);
+      "\\type Type.{u} => \\Set u\n" +
+      "\\func test (A : Type.{2}) : Type.{1} => A", 1);
     assertThatErrorsAre(Matchers.typeMismatchError());
   }
 
@@ -289,5 +289,17 @@ public class TypeTest extends TypeCheckingTestCase {
     typeCheckModule(
       "\\data D : \\Set | con f\n" +
       "\\type f : \\Set => D -> Nat", 1);
+  }
+
+  @Test
+  public void elimTest() {
+    typeCheckModule("""
+      \\type T => \\Sigma Nat Nat
+      \\func foo (t : T) : Nat
+        | (0, n) => n
+        | (suc n, _) => n
+      \\lemma test1 : foo (0, 3) = 3 => idp
+      \\lemma test2 : foo (7, 3) = 6 => idp
+      """);
   }
 }

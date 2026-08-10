@@ -1,0 +1,70 @@
+\import Algebra.Group
+\import Algebra.Group.SubGroup
+\import Algebra.Monoid
+\import Algebra.Monoid.SubMonoid
+\import Algebra.Pointed
+\import Algebra.Ring
+\import Algebra.Ring.RingHom
+\import Algebra.Semiring.SubSemiring
+\import Logic.Unique
+\import Logic
+\import Logic.Meta
+\import Paths
+\import Paths.Meta
+
+\class SubPseudoRing \extends SubPseudoSemiring, SubAddGroup {
+  \override S : PseudoRing
+}
+
+\instance IPseudoRing (S : SubPseudoRing {}) : PseudoRing
+  | PseudoSemiring => IPseudoSemiring S
+  | AbGroup => IAbGroup S
+
+\instance IPseudoCRing {R : PseudoCRing} (S : SubPseudoRing R) : PseudoCRing
+  | PseudoRing => IPseudoRing S
+  | *-comm => ext *-comm
+
+\class SubRing \extends SubPseudoRing, SubSemiring {
+  \override S : Ring
+} \where {
+  \func max {R : Ring} : SubRing \cowith
+    | SubSemiring => SubSemiring.max {R}
+    | SubAddGroup => SubAddGroup.max
+
+  \func maxHom {R : Ring} : RingHom R (IRing max) \cowith
+    | AddGroupHom => SubAddGroup.maxHom
+    | MonoidHom => SubMonoid.maxHom
+}
+
+\instance IRing (S : SubRing {}) : Ring
+  | Semiring => ISemiring S
+  | AbGroup => IAbGroup S
+  \where {
+    \func corestrict {R : Ring} (f : RingHom R S.S) (p : \Pi (x : R) -> S (f x)) : RingHom R (IRing S) \cowith
+      | func x => (f x, p x)
+      | func-+ => ext f.func-+
+      | func-ide => ext f.func-ide
+      | func-* => ext f.func-*
+
+    \func embed : RingHom (IRing S) S.S \cowith
+      | func => __.1
+      | func-+ => idp
+      | func-ide => idp
+      | func-* => idp
+  }
+
+\instance ICRing {R : CRing} (S : SubRing R) : CRing
+  | Ring => IRing S
+  | PseudoCRing => IPseudoCRing S
+
+
+\func ImageRing (f : RingHom) : SubRing f.Cod \cowith
+  | SubSemiring => ImageSemiring f
+  | SubAddGroup => ImageAddGroup f
+
+\func ImRing (f : RingHom) : Ring
+  => IRing (ImageRing f)
+
+\func ImRingLeftHom (f : RingHom) : RingHom f.Dom (ImRing f) \cowith
+  | SemiringHom => ImSemiringLeftHom f
+  | AddGroupHom => ImAddGroupLeftHom f

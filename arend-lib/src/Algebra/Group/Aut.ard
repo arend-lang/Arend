@@ -6,8 +6,8 @@
 
 \instance Aut {A : \Type} (a : A) : Group (Trunc0 (a = a))
   | ide => in0 idp
-  | * p q => \case \elim p \with {
-    | in0 p' => Trunc0.map q \lam q' => p' *> q'
+  | * (p q : Trunc0 (a = a)) : Trunc0 (a = a) \with {
+    | in0 p', in0 q' => in0 (p' *> q')
   }
   | ide-left {x} => \case \elim x \with {
     | in0 a1 => pmap in0 (idp_*> a1)
@@ -16,12 +16,12 @@
     | in0 a1, in0 a2, in0 a3 => pmap in0 (*>-assoc a1 a2 a3)
   }
   | inverse x => Trunc0.map x inv
-  | inverse-left {x} => \case \elim x \with{
+  | inverse-left {x} => \case \elim x \with {
     | in0 a1 => pmap in0 (inv_*> a1)
   }
 
 \func End {C : Precat} (c : C) : Monoid (Hom c c) \cowith
-  | ide => id c
+  | ide => id
   | * => ∘
   | ide-left => id-left
   | ide-right => id-right

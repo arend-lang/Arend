@@ -1,5 +1,4 @@
 \import Equiv
-\import Equiv.Univalence
 \import Homotopy.Sphere.Circle
 \import Meta
 \import Paths
@@ -34,10 +33,10 @@
       | face i j => (loop i, loop j)
   }
 
-\func coordinate : Path (Torus=Sphere @) point (base1, base1) =>
-  path (coe (Torus=Sphere @) point)
+\func coordinate : Path Torus=Sphere point (base1, base1)
+  => path (coe Torus=Sphere point)
   \where {
-    \func Torus=Sphere => QEquiv-to-= TorusSphere-equiv
+    \func Torus=Sphere : Torus = (\Sigma Sphere1 Sphere1) => QEquiv_= TorusSphere-equiv
   }
 
 \func OmegaTorus => point = point
@@ -46,6 +45,6 @@
   \let | sigmaEta => sigmaEquiv (\lam _ => Sphere1) (base1, base1) (base1, base1)
        | loopBase => (base1, base1) = (base1, base1)
   \in OmegaTorus           ==< path (\lam i => coordinate @ i = coordinate @ i) >==
-  loopBase                 ==< QEquiv-to-= sigmaEta >==
+  loopBase                 ==< QEquiv_= sigmaEta >==
   (\Sigma OmegaS1 OmegaS1) ==< path (\lam i => \Sigma (Loop_S1 @ i) (Loop_S1 @ i)) >==
   (\Sigma Int Int)         `qed

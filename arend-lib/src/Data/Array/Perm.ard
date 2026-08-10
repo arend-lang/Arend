@@ -87,13 +87,13 @@
               \lam {i} {j} p => remove1-inj l-inj $ inv (fsuc_fpred (remove/=0 i)) *> pmap fsuc p *> fsuc_fpred (remove/=0 j)
       }
 
-    \func equiv_perm {A : \Type} {n : Nat} {l : Array A n} (e : Equiv {Fin n} {Fin n}) : Perm l (\lam j => l (e j))
+    \func equiv_perm {A : \Type} {n : Nat} {l : Array A n} (e : QEquiv {Fin n} {Fin n}) : Perm l (\lam j => l (e j))
       => perm-map l $ perm-sym $ perm-fin (\lam j => e j) e.isInj
 
-    \func perm_equiv {A : \Type} {n : Nat} {l l' : Array A n} (p : Perm l l') : \Sigma (e : Equiv {Fin n} {Fin n}) (\Pi (j : Fin n) -> l' j = l (e j))
+    \func perm_equiv {A : \Type} {n : Nat} {l l' : Array A n} (p : Perm l l') : \Sigma (e : QEquiv {Fin n} {Fin n}) (\Pi (j : Fin n) -> l' j = l (e j))
       => EPerm.eperm_equiv (EPerm.Perm_EPerm p)
       \where {
-        \func conv {A : \Type} {n : Nat} {l l' : Array A n} (s : \Sigma (e : Equiv {Fin n} {Fin n}) (\Pi (j : Fin n) -> l' j = l (e j))) : Perm l l'
+        \func conv {A : \Type} {n : Nat} {l l' : Array A n} (s : \Sigma (e : QEquiv {Fin n} {Fin n}) (\Pi (j : Fin n) -> l' j = l (e j))) : Perm l l'
           => transportInv (Perm l) (exts s.2) (equiv_perm s.1)
       }
   }

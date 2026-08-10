@@ -1,21 +1,21 @@
 \import Algebra.Group
-\import Algebra.Group.Representation.Category
 \import Algebra.Group.Representation
-\import Algebra.Group.Representation.Sub
-\import Algebra.Module.ModuleCategory
-\import Algebra.Module.LinearMap
+\import Algebra.Group.Representation.InterwiningMap
+\import Algebra.Group.Representation.SubLRepres
+\import Algebra.Group.SubGroup
 \import Algebra.Ring
-\import Category
+\import Equiv
+\import Function.Meta
 \import Logic
 
-\func Irreducible {R : Ring}{G : Group} (E : LinRepres R G) => \Pi (A : SubLRepres E) -> A.isTrivial
+\func IsIrreducible {R : Ring} {G : Group} (E : LinRepres R G) : \Prop
+  => \Pi (A : SubLRepres R G E) -> A.IsTrivial
 
-\class Hom-between-Irreducible \noclassifying {R : Ring}{G : Group} {A B : LinRepres R G} (p : Irreducible A) (q : Irreducible B) {
-  \func Schur's-Lemma (f : InterwiningMap A B) : IsZeroMap f || Iso f => \case q (ImageSubLRepres f) \with {
-    | byLeft zero-image => byLeft (ZeroIm=>Zero-func zero-image)
-    | byRight full-image => \case p (KernelSubLRepres f) \with {
-      | byLeft zero-ker => byRight (repr+module-iso=>repr-iso (iso<->zeroKer-FullIm.2 (zero-ker, full-image)))
-      | byRight full-ker => byLeft (FullKer=>Zero-func full-ker)
+\lemma SchurLemma {R : Ring} {G : Group} {A B : LinRepres R G} (p : IsIrreducible A) (q : IsIrreducible B) (f : InterwiningMap A B) : f.IsZero || IsEquiv f
+  => \case q (ImageLRepres f) \with {
+    | byLeft iz => byLeft \lam x => iz $ inP (x, idp)
+    | byRight if => \case p (KernelLRepres f) \with {
+      | byLeft kz => byRight $ IsEquiv.fromInjSurj (AddKernel-trivial-char.1 kz) if
+      | byRight kf => byLeft kf
     }
   }
-}

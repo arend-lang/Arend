@@ -22,7 +22,8 @@ public interface PrettyPrinterConfig {
       PrettyPrinterFlag.SHOW_IMPLICIT_ARGS,
       PrettyPrinterFlag.SHOW_LOCAL_FIELD_INSTANCE,
       PrettyPrinterFlag.SHOW_TYPES_IN_LAM,
-      PrettyPrinterFlag.SHOW_CON_PARAMS);
+      PrettyPrinterFlag.SHOW_CON_PARAMS,
+      PrettyPrinterFlag.SHOW_LEVELS);
   }
 
   @Nullable

@@ -109,7 +109,7 @@ public class FindMissingBindingVisitor extends SearchVisitor<Void> {
   protected boolean visitDependentLink(DependentLink parameters, Void params) {
     for (DependentLink link = parameters; link.hasNext(); link = link.getNext()) {
       DependentLink link1 = link.getNextTyped(null);
-      if (link1.getTypeExpr().accept(this, null)) {
+      if (link1.getType().accept(this, null)) {
         for (; parameters != link; parameters = parameters.getNext()) {
           myBindings.remove(parameters);
         }

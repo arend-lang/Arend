@@ -9,6 +9,5 @@ import java.util.List;
 
 public interface ConcreteReferenceExpression extends ConcreteExpression {
   @NotNull ArendRef getReferent();
-  @Nullable List<? extends ConcreteLevel> getPLevels();
-  @Nullable List<? extends ConcreteLevel> getHLevels();
+  @Nullable List<? extends ConcreteLevel> getLevels();
 }

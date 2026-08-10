@@ -68,8 +68,8 @@ class ArendNoVariantsDelegator : CompletionContributor() {
         val project = editor.project
         
         val bpm = object: BetterPrefixMatcher(result.prefixMatcher, Int.MIN_VALUE) {
-            override fun prefixMatchesEx(name: String?): MatchingOutcome {
-                if (name?.startsWith(myPrefix) == true) return MatchingOutcome.BETTER_MATCH
+            override fun prefixMatchesEx(name: String): MatchingOutcome {
+                if (name.startsWith(myPrefix)) return MatchingOutcome.BETTER_MATCH
                 return super.prefixMatchesEx(name)
             }
         }

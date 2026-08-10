@@ -85,7 +85,7 @@ public class CasesMeta extends BaseMetaDefinition {
       boolean isElim = isLocalRef && !argParams.addPath && argParams.name == null && defaultExpr == null && !(typechecker.getFreeBinding(((ConcreteReferenceExpression) argParams.expression).getReferent()) instanceof CoreEvaluatingBinding) && argType == null && searchPairs.isEmpty();
       ArendRef caseArgRef = argParams.name != null ? argParams.name : !isElim ? factory.local("x") : null;
       if (!isElim) {
-        TypedExpression typed = typedArgs != null ? typedArgs.get(i) : typechecker.typecheck(argParams.expression, null);
+        TypedExpression typed = typedArgs != null ? typedArgs.get(i) : typechecker.typecheck(argParams.expression instanceof ConcreteReferenceExpression refExpr && refExpr.getReferent() == typechecker.getPrelude().getIdpRef() ? factory.app(argParams.expression, false, factory.hole()) : argParams.expression, null);
         if (typed == null) return null;
         if (!isLocalRef) {
           argExpr = factory.core(typed);

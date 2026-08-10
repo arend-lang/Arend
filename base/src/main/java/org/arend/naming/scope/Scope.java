@@ -13,7 +13,7 @@ import java.util.function.Predicate;
 
 // Minimal definition: (find or getElements) and resolveNamespace
 public interface Scope {
-  enum ScopeContext { STATIC, DYNAMIC, PLEVEL, HLEVEL }
+  enum ScopeContext { STATIC, DYNAMIC, LEVEL }
 
   default @Nullable Referable find(Predicate<Referable> pred, @Nullable ScopeContext context) {
     for (Referable referable : getElements(context)) {

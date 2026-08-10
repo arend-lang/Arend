@@ -8,6 +8,6 @@ import org.arend.ext.variable.Variable;
  * Represents a local binding.
  */
 public interface CoreBinding extends Variable {
-  CoreExpression getTypeExpr();
+  CoreExpression getType();
   CoreReferenceExpression makeReference();
 }

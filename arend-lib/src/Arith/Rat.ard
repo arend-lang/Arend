@@ -4,7 +4,8 @@
 \import Algebra.Meta
 \import Algebra.Monoid
 \import Algebra.Monoid.GCD
-\import Algebra.Monoid.Sub
+\import Algebra.Monoid.Localization
+\import Algebra.Monoid.SubMonoid
 \import Algebra.Ordered
 \import Algebra.StrictlyOrdered
 \import Algebra.Ring
@@ -86,7 +87,7 @@
       => NatSemiring.ldiv/=0 (\case __) (LDiv.swap (GCD.res|val1 {gcd-isGCD (suc a) b}))
 
     \lemma reduce2/=0 (a b : Nat) (b/=0 : Not (b = 0)) : Not ((reduce a b).2 = 0)
-      => \lam b'=0 => b/=0 (inv (reduce*gcd-right _ _) *> pmap (`* gcd _ _) b'=0 *> zro_*-left)
+      => \lam b'=0 => b/=0 (inv (reduce*gcd-right _ _) *> pmap (* gcd _ _) b'=0 *> zro_*-left)
 
     \lemma div0 {x : Nat} (a|b : LDiv 0 x) : x = 0
       => inv a|b.inv-right *> zro_*-left
@@ -122,7 +123,7 @@
                                (nat_gcd_*_div (\new LDiv { | inv => iabs (ratNom x) | inv-right => *-comm *> |x0|*y1=|y0|*x1 }) (nat_gcd-comm *> ratReduced y))
 
 \lemma rat_alt_makeRat {nom : Int} {denom : Nat} {denom/=0 : Not (denom = 0)} {p : signum (pos denom) = 1} : rat_alt (makeRat nom denom denom/=0) = in~ (nom, denom, p)
-  => LocRing.equals1 aux
+  => ~-lequiv1 aux
   \where {
     \lemma aux {a : Int} {b : Nat} {b/=0 : Not (b = 0)} : ratNom (makeRat a b b/=0) * b = a * ratDenom (makeRat a b b/=0) \elim b
       | 0 => absurd (b/=0 idp)
@@ -135,7 +136,7 @@
 
     \lemma aux2 {a b : Nat} (b/=0 : Not (b = 0)) : (reduce a b).1 * b = a * (reduce a b).2
       => NatSemiring.cancel_*-left (Semiring.ldiv/=0 b/=0 (GCD.res|val2 {gcd-isGCD a b}))
-          (inv *-assoc *> pmap (`* b) (LDiv.inv-right {GCD.res|val1 {gcd-isGCD a b}}) *> pmap (a *) (inv (LDiv.inv-right {GCD.res|val2 {gcd-isGCD a b}}) *> *-comm) *> inv *-assoc *> *-comm)
+          (inv *-assoc *> pmap (* b) (LDiv.inv-right {GCD.res|val1 {gcd-isGCD a b}}) *> pmap (a *) (inv (LDiv.inv-right {GCD.res|val2 {gcd-isGCD a b}}) *> *-comm) *> inv *-assoc *> *-comm)
 
     \lemma alt : rat_alt (makeRat nom denom denom/=0) = in~ (nom, denom, signum.signum_pos denom/=0)
       => rat_alt_makeRat
@@ -148,7 +149,7 @@
     | rat xNom xDenom xDenom/=0 _, rat yNom yDenom yDenom/=0 _ => makeRat (xNom IntRing.* yDenom IntRing.+ yNom IntRing.* xDenom) (xDenom Nat.* yDenom) (productNonZero xDenom/=0 yDenom/=0)
   }
   | zro-left {x} => rat_alt-inj $ +_alt *> AltRat.zro-left {rat_alt x}
-  | +-assoc {x} {y} {z} => rat_alt-inj $ +_alt *> pmap (AltRat.`+ rat_alt z) +_alt *> AltRat.+-assoc {rat_alt x} {rat_alt y} {rat_alt z} *> inv (+_alt *> pmap (rat_alt x AltRat.+) +_alt)
+  | +-assoc {x} {y} {z} => rat_alt-inj $ +_alt *> pmap (AltRat.+ rat_alt z) +_alt *> AltRat.+-assoc {rat_alt x} {rat_alt y} {rat_alt z} *> inv (+_alt *> pmap (rat_alt x AltRat.+) +_alt)
   | +-comm {x} {y} => rat_alt-inj $ +_alt *> AltRat.+-comm {rat_alt x} {rat_alt y} *> inv +_alt
   | ide => rat 1 1 (\case __) idp
   | * (x y : Rat) : Rat \with {
@@ -160,7 +161,7 @@
   | negative (x : Rat) : Rat \with {
     rat xNom xDenom xDenom/=0 xReduced => rat (IntRing.negative xNom) xDenom xDenom/=0 (rewrite iabs.negative-comm xReduced)
   }
-  | negative-left {x} => rat_alt-inj $ +_alt *> pmap (AltRat.`+ rat_alt x) negative_alt *> AltRat.negative-left {rat_alt x} *> LocRing.equals1 idp
+  | negative-left {x} => rat_alt-inj $ +_alt *> pmap (AltRat.+ rat_alt x) negative_alt *> AltRat.negative-left {rat_alt x} *> ~-lequiv1 idp
   | *-comm {x} {y} => rat_alt-inj $ *_alt *> AltRat.*-comm {rat_alt x} {rat_alt y} *> inv *_alt
   | isPos x => isPos (ratNom x)
   | zro/>0 => \case __
@@ -178,11 +179,11 @@
   | finv_zro => idp
   | finv-right {x} x/=0 =>
     \have t : ratNom x IntRing.* ratNom (finv x) = ratDenom x Nat.* ratDenom (finv x) => \case \elim x, \elim x/=0 \with {
-      | rat 0 b _ r, x/=0 => absurd (x/=0 (rat_alt-inj (LocRing.equals1 (later simplify))))
+      | rat 0 b _ r, x/=0 => absurd (x/=0 (rat_alt-inj (~-lequiv1 (later simplify))))
       | rat (pos (suc n)) b b/=0 reduced, _ => pmap pos *-comm
       | rat (neg (suc n)) b b/=0 reduced, _ => pmap pos *-comm
     }
-    \in rat_alt-inj $ *_alt *> LocRing.equals1 (ide-right *> t *> inv ide-left)
+    \in rat_alt-inj $ *_alt *> ~-lequiv1 (ide-right *> t *> inv ide-left)
   | decideEq x y => \case decideEq (ratNom x) (ratNom y), decideEq (ratDenom x) (ratDenom y) \with {
     | yes p, yes q => yes (Rat.ext p q)
     | no p, _ => no \lam x=y => p $ pmap ratNom x=y
@@ -337,13 +338,13 @@
   => intRat/=0 \lam p => n/=0 (pmap iabs p)
 
 \lemma rat*denom-right {q : Rat} : q * ratDenom q = ratNom q
-  => rat_alt-inj $ RatField.*_alt *> ~-pequiv *-assoc
+  => rat_alt-inj $ RatField.*_alt *> ~-lequiv1 *-assoc
 
 \lemma rat*denom-left {q : Rat} : ratDenom q RatField.* q = ratNom q
   => *-comm *> rat*denom-right
 
 \lemma rat-split {q : Rat} : q = ratNom q RatField.* RatField.finv (ratDenom q)
-  => inv (*-assoc *> pmap (q *) (RatField.finv-right $ natRat/=0 ratDenom/=0) *> ide-right) *> pmap (`* _) rat*denom-right
+  => inv (*-assoc *> pmap (q *) (RatField.finv-right $ natRat/=0 ratDenom/=0) *> ide-right) *> pmap (* _) rat*denom-right
 
 \func ratio (nom : Int) (denom : Nat) : Rat \elim denom
   | 0 => 0
@@ -367,15 +368,15 @@
               \in =_<= $ Rat.ext (later $ rewrite d=1 idp) (inv d=1)
     | suc _, _ => \lam c => (unfolds, rewrite RatField.+=+' in, inv makeRat.signum_nom *>, unfold) at c $
       \have | s : n Nat.- n Nat.div d * d = n Nat.mod d
-                => IntRing.cancel-right (n Nat.div d * d) $ IntRing.+-assoc {n} {neg _} *> pmap (pos n +) IntRing.minus__ *> pmap pos (inv (Nat.divModProp n d) *> pmap (`+ _) *-comm *> +-comm)
+                => IntRing.cancel-right (n Nat.div d * d) $ IntRing.+-assoc {n} {neg _} *> pmap (pos n +) IntRing.minus__ *> pmap pos (inv (Nat.divModProp n d) *> pmap (+ _) *-comm *> +-comm)
             | t : n Nat.- suc (n Nat.div d) Nat.* d = n Nat.mod d Nat.- d
-                => pmap (n Nat.-) (rdistr {_} {1}) *> rewrite NatSemiring.ide-left (pmap (pos n +) (IntRing.negative_+ {d} {n Nat.div d * d}) *> inv (IntRing.+-assoc {n} {neg _}) *> pmap (`- pos d) s)
+                => pmap (n Nat.-) (rdistr {_} {1}) *> rewrite NatSemiring.ide-left (pmap (pos n +) (IntRing.negative_+ {d} {n Nat.div d * d}) *> inv (IntRing.+-assoc {n} {neg _}) *> pmap (- pos d) s)
       \in \case (inv (pmap signum t *> signum.signum_- {n Nat.mod d} {d} *> pmap negative (pos<pos (mod<right d/=0))) *> c : neg 1 = 1)
   }
 
 \lemma rat_floor-univ {r : Rat} {x : Int} (x<=r : Rat.fromInt x <= r) : x <= rat_floor r \elim r, x
   | rat (pos _) _ _ _, neg (suc x) => neg<=pos
-  | rat (pos n) d d/=0 _, pos x => pos<=pos $ transport (`<= _) (*_div=id d/=0) $ div-monotone $ pos<=pos.conv $ RatField.<=-char-conv x<=r
+  | rat (pos n) d d/=0 _, pos x => pos<=pos $ transport (<= _) (*_div=id d/=0) $ div-monotone $ pos<=pos.conv $ RatField.<=-char-conv x<=r
   | rat (neg (suc _ \as n)) d _ _, pos x => \case pos/<=neg (RatField.<=-char-conv x<=r)
   | rat (neg (suc n' \as n)) d d/=0 _, neg (suc x' \as x) =>
     \have t => neg<=neg.conv (RatField.<=-char-conv x<=r)
@@ -400,7 +401,7 @@
   => negative (rat_floor (negative r))
 
 \lemma rat_ceiling>=id {r : Rat} : r <= rat_ceiling r
-  => transport (`<= _) RatField.negative-isInv $ RatField.negative_<= {_} {negative r} rat_floor<=id
+  => transport (<= _) RatField.negative-isInv $ RatField.negative_<= {_} {negative r} rat_floor<=id
 
 \lemma rat_ceiling-univ {r : Rat} {x : Int} (r<=x : r <= x) : rat_ceiling r <= x
   => transport (_ <=) IntRing.negative-isInv $ IntRing.negative_<= $ rat_floor-univ $ RatField.negative_<= {r} {x} r<=x
@@ -413,8 +414,8 @@
 
 \lemma rat_round-dist {r : Rat} : RatField.abs (Rat.fromInt (rat_round r) - r) <= ratio 1 2
   => rewrite (\peval rat_round r) $ mcases {1} \with {
-    | inl p => transportInv (`<= _) (RatField.abs_- *> RatField.abs-ofPos (linarith rat_floor<=id)) (<=-less p)
-    | inr p => transportInv (`<= _) (RatField.abs-ofPos $ linarith $ rat_floor>id-1 {r}) linarith
+    | inl p => transportInv (<= _) (RatField.abs_- *> RatField.abs-ofPos (linarith rat_floor<=id)) (<=-less p)
+    | inr p => transportInv (<= _) (RatField.abs-ofPos $ linarith $ rat_floor>id-1 {r}) linarith
   }
 
 \lemma rat_<=-dec {r q : Rat} {so : So (rat_<=_Bool r q)} : r <= q
@@ -439,12 +440,12 @@
   => \have | R => rat_natBound $ B * RatField.finv (q - 1)
            | q-1>0 : 0 RatField.< q - 1 => linarith
            | t => rewrite (linarith : 1 RatField.+ (q - 1) = q) $ aux (<=-less q-1>0) {R.1}
-           | s => transport (`< _) (*-assoc *> pmap (B *) (RatField.finv-left $ RatField.>_/= q-1>0) *> ide-right) $ <_*_positive-left R.2 q-1>0
+           | s => transport (< _) (*-assoc *> pmap (B *) (RatField.finv-left $ RatField.>_/= q-1>0) *> ide-right) $ <_*_positive-left R.2 q-1>0
      \in (R.1, linarith)
   \where {
     \protected \lemma aux {eps : Rat} (eps>=0 : 0 RatField.<= eps) {n : Nat} : 1 RatField.+ n RatField.* eps <= RatField.pow (1 RatField.+ eps) n \elim n
       | 0 => =_<= $ pmap (_ +) zro_*-left *> zro-right
-      | suc n => later (rewrite (ldistr,ide-right,+-assoc) $ <=_+ <=-refl $ transportInv (`<= _) (RatField.rdistr {n} {1}) $ <=_+ <=-refl $ RatField.<=_*_positive-left (RatField.<=_+ {_} {_} {0} <=-refl $ RatField.<=_*-positive fromNat_>=0 eps>=0) eps>=0) <=∘ RatField.<=_*_positive-left (aux eps>=0) (RatField.<=_+-positive (<=-less RatField.zro<ide) eps>=0)
+      | suc n => later (rewrite (ldistr,ide-right,+-assoc) $ <=_+ <=-refl $ transportInv (<= _) (RatField.rdistr {n} {1}) $ <=_+ <=-refl $ RatField.<=_*_positive-left (RatField.<=_+ {_} {_} {0} <=-refl $ RatField.<=_*-positive fromNat_>=0 eps>=0) eps>=0) <=∘ RatField.<=_*_positive-left (aux eps>=0) (RatField.<=_+-positive (<=-less RatField.zro<ide) eps>=0)
   }
 
 \sfunc rat_<1_pow-bound {q : Rat} (q<1 : q < 1) {eps : Rat} (eps>0 : 0 RatField.< eps) : \Sigma (n : Nat) (RatField.pow q n < eps)
@@ -452,5 +453,5 @@
     | inl q>0 =>
       \have R => rat_>1_pow-bound (RatField.finv>1 q>0 q<1) (RatField.finv eps)
       \in (R.1, RatField.finv_<-conv eps>0 $ transportInv (_ <) RatField.finv_pow R.2)
-    | inr q<=0 => (1, transportInv (`<= _) ide-left q<=0 <∘r eps>0)
+    | inr q<=0 => (1, transportInv (<= _) ide-left q<=0 <∘r eps>0)
   }

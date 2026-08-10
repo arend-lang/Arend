@@ -1,18 +1,26 @@
 \import Algebra.Monoid
 \import Algebra.Pointed.PointedHom
+\import Equiv
+\import Function.Meta
 \import Logic
 \import Paths
 \import Paths.Meta
 \import Set.Fin
+\import Set.SetHom
 
-\record MonoidHom \extends PointedHom {
+\record SemigroupHom \extends SetHom {
+  \override Dom : Semigroup
+  \override Cod : Semigroup
+  | func-* {x y : Dom} : func (x * y) = func x * func y
+}
+
+\record MonoidHom \extends PointedHom, SemigroupHom {
   \override Dom : Monoid
   \override Cod : Monoid
-  | func-* {x y : Dom} : func (x * y) = func x * func y
 
   \lemma func-pow {x : Dom} {n : Nat} : func (Monoid.pow x n) = Monoid.pow (func x) n \elim n
     | 0 => func-ide
-    | suc n => func-* *> pmap (`* _) func-pow
+    | suc n => func-* *> pmap (* _) func-pow
 
   \lemma func-BigProd {l : Array Dom} : func (Monoid.BigProd l) = Monoid.BigProd (\lam j => func (l j)) \elim l
     | nil => func-ide
@@ -21,31 +29,34 @@
   \lemma func-LDiv {a b : Dom} (d : Monoid.LDiv a b) : Monoid.LDiv (func a) (func b) (func d.inv) \cowith
     | inv-right => inv func-* *> pmap func d.inv-right
 
-  \lemma func-Inv {a : Dom} (d : Monoid.Inv a) : Monoid.Inv (func a) (func d.inv) \cowith
+  \lemma func-Inv {a : Dom} (d : Inv a) : Inv (func a) (func d.inv) \cowith
     | inv-left => inv func-* *> pmap func d.inv-left *> func-ide
     | inv-right => inv func-* *> pmap func d.inv-right *> func-ide
+
+  \lemma func-InvElem (e : Inv {Dom}) (e' : Inv {Cod}) (p : func e = e') : func e.inv = e'.inv
+    => inv ide-left *> pmap (* _) (inv (pmap (_ *) p *> e'.inv-left)) *> *-assoc *> pmap (_ *) (inv func-* *> pmap func e.inv-right *> func-ide) *> ide-right
+
+  \lemma equiv-hom (e : IsEquiv func) : MonoidHom Cod Dom (IsEquiv.ret e) \cowith
+    | func-ide => IsEquiv.isInj e $ IsEquiv.f_ret e *> inv func-ide
+    | func-* => IsEquiv.isInj e $ IsEquiv.f_ret e *> inv (func-* *> pmap2 (*) (IsEquiv.f_ret e) (IsEquiv.f_ret e))
+
+  \lemma equiv-Inv (e : IsEquiv func) {a : Dom} (ai : Inv (func a)) : Inv a
+    => transport Inv (IsEquiv.ret_f e) $ (equiv-hom e).func-Inv ai
 } \where {
   \func equals {M N : Monoid} {f g : MonoidHom M N} (p : \Pi (x : M) -> f x = g x) : f = g
     => exts p
 
-  \func id {M : Monoid} : MonoidHom M M \cowith
+  \protected \func id {M : Monoid} : MonoidHom M M \cowith
     | func x => x
     | func-ide => idp
     | func-* => idp
 
+  \protected \func \fixl 8 compose \alias \infixl 8 ∘ {M N K : Monoid} (g : MonoidHom N K) (f : MonoidHom M N) : MonoidHom M K \cowith
+    | func x => g (f x)
+    | func-ide => pmap g f.func-ide *> g.func-ide
+    | func-* => pmap g f.func-* *> g.func-*
+
   \open Monoid(Inv)
-
-  \func presInv (h : MonoidHom) (e : Inv {h.Dom}) : Inv (h e) \cowith
-    | inv => h e.inv
-    | inv-left => inv h.func-* *> pmap h e.inv-left *> h.func-ide
-    | inv-right => inv h.func-* *> pmap h e.inv-right *> h.func-ide
-
-  \lemma presInvElem (h : MonoidHom) (e : Inv {h.Dom}) (e' : Inv (h e)) : h e.inv = e'.inv
-    => pmap (\lam (j : Inv) => j.inv) (Inv.levelProp (\new Inv (h e) {
-      | inv => h e.inv
-      | inv-left => inv h.func-* *> pmap h e.inv-left *> h.func-ide
-      | inv-right => inv h.func-* *> pmap h e.inv-right *> h.func-ide
-    }) e')
 }
 
 \record AddMonoidHom \extends AddPointedHom {
@@ -59,7 +70,7 @@
 
   \lemma func-*n {n : Nat} {x : Dom} : func (n AddMonoid.*n x) = n AddMonoid.*n func x \elim n
     | 0 => func-zro
-    | suc n => func-+ *> pmap (`+ _) func-*n
+    | suc n => func-+ *> pmap (+ _) func-*n
 } \where {
   \use \coerce toMonoidHom (f : AddMonoidHom) : MonoidHom \cowith
     | Dom => f.Dom
@@ -68,10 +79,15 @@
     | func-* => func-+
     | func-ide => func-zro
 
-  \func id {M : AddMonoid} : AddMonoidHom M M \cowith
+  \protected \func id {M : AddMonoid} : AddMonoidHom M M \cowith
     | func x => x
     | func-zro => idp
     | func-+ => idp
+
+  \protected \func \fixl 8 compose \alias \infixl 8 ∘ {A B C : AddMonoid} (g : AddMonoidHom B C) (f : AddMonoidHom A B) : AddMonoidHom A C \cowith
+    | func x => g (f x)
+    | func-zro => pmap g func-zro *> func-zro
+    | func-+ => pmap g func-+ *> func-+
 
   \lemma func-FinSum {A B : AbMonoid} (f : AddMonoidHom A B) {J : FinSet} {a : J -> A} : f (A.FinSum a) = B.FinSum (\lam j => f (a j))
     => \case A.FinSum_char a \with {

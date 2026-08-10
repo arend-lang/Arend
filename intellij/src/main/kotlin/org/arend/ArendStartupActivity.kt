@@ -14,7 +14,6 @@ import com.intellij.openapi.project.*
 import com.intellij.openapi.startup.ProjectActivity
 import org.arend.educational.ArendConfigurator
 import org.arend.module.AREND_LIB
-import org.arend.module.ArendModuleType
 import org.arend.module.ModuleSynchronizer
 import org.arend.module.checkForUpdates
 import org.arend.module.config.ArendModuleConfigService
@@ -23,6 +22,7 @@ import org.arend.server.ArendServerListener
 import org.arend.server.ArendServerService
 import org.arend.util.ArendBundle
 import org.arend.util.arendModules
+import org.arend.util.orderModules
 import org.arend.util.findExternalLibrary
 import org.arend.util.register
 import org.arend.util.registerStudyLibrary
@@ -37,10 +37,8 @@ class ArendStartupActivity : ProjectActivity {
 
         project.messageBus.connect(service).subscribe(ModuleListener.TOPIC, object : ModuleListener {
             override fun modulesAdded(project: Project, modules: List<Module>) {
-                for (module in modules) {
-                    if (ArendModuleType.has(module)) {
-                        module.register(modules)
-                    }
+                for (module in orderModules(modules)) {
+                    module.register(modules)
                 }
             }
 
@@ -67,14 +65,16 @@ class ArendStartupActivity : ProjectActivity {
             .queueTask(object : DumbModeTask() {
                 override fun performInDumbMode(indicator: ProgressIndicator) {
                     ApplicationManager.getApplication().executeOnPooledThread {
-                        val modules = project.arendModules
+                        val modules = orderModules(project.arendModules)
                         indicator.text = ArendBundle.message("arend.startup.loading.arend.modules")
                         indicator.isIndeterminate = false
                         indicator.fraction = 0.0
+                        var frac = 0.0
                         val progressFraction = 1.0 / modules.size.toDouble()
                         for (module in modules) {
                             module.register()
-                            indicator.fraction += progressFraction
+                            frac += progressFraction
+                            indicator.fraction = frac
                         }
                         if (runReadAction { StudyTaskManager.getInstance(project).course } != null) {
                             project.registerStudyLibrary()

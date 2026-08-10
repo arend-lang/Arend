@@ -7,9 +7,12 @@ import org.arend.core.context.param.TypedSingleDependentLink;
 import org.arend.core.definition.*;
 import org.arend.core.elimtree.ElimClause;
 import org.arend.core.expr.*;
+import org.arend.core.expr.visitor.GetInfiniteTypeVisitor;
 import org.arend.core.expr.visitor.VoidExpressionVisitor;
+import org.arend.core.pattern.BindingPattern;
 import org.arend.core.pattern.ExpressionPattern;
 import org.arend.core.sort.Sort;
+import org.arend.core.sort.SortExpression;
 import org.arend.error.CountingErrorReporter;
 import org.arend.ext.ArendExtension;
 import org.arend.ext.core.definition.CoreFunctionDefinition;
@@ -63,7 +66,7 @@ public class TypecheckingOrderingListener extends BooleanComputationRunner imple
   private List<TCDefReferable> myCurrentDefinitions = new ArrayList<>();
   private boolean myHeadersAreOK = true;
 
-  private record Suspension(CheckTypeVisitor typechecker, UniverseKind universeKind) {}
+  private record Suspension(CheckTypeVisitor typechecker) {}
 
   public TypecheckingOrderingListener(ArendCheckerFactory factory, InstanceScopeProvider instanceScopeProvider, Map<TCDefReferable, List<TCDefReferable>> instanceDependencies, ConcreteProvider concreteProvider, ErrorReporter errorReporter, DependencyListener dependencyListener, PartialComparator<TCDefReferable> comparator, ArendExtensionProvider extensionProvider, ArendServerResolveListener resolveListener, boolean clearLemmas) {
     myCheckerFactory = factory;
@@ -169,7 +172,7 @@ public class TypecheckingOrderingListener extends BooleanComputationRunner imple
         }
         for (Concrete.ClassElement element : def.getElements()) {
           if (element instanceof Concrete.ClassField) {
-            ClassField classField = new ClassField(((Concrete.ClassField) element).getData(), (ClassDefinition) typechecked, new PiExpression(Sort.PROP, new TypedSingleDependentLink(false, "this", new ClassCallExpression((ClassDefinition) typechecked, typechecked.makeIdLevels()), true), new ErrorExpression()), null);
+            ClassField classField = new ClassField(((Concrete.ClassField) element).getData(), (ClassDefinition) typechecked, new PiExpression(new TypedSingleDependentLink(false, "this", new ClassCallExpression((ClassDefinition) typechecked, typechecked.makeIdLevels()), true), new ErrorExpression()), null);
             classField.setStatus(Definition.TypeCheckingStatus.HAS_ERRORS);
             ((ClassDefinition) typechecked).addPersonalField(classField);
             ((ClassDefinition) typechecked).addField(classField);
@@ -260,14 +263,14 @@ public class TypecheckingOrderingListener extends BooleanComputationRunner imple
       }
 
       setParametersOriginalDefinitionsDependency(typechecked);
-      if (!(definition instanceof Concrete.FunctionDefinition && ((Concrete.FunctionDefinition) definition).getKind().isCoclause()) && typechecked instanceof TopLevelDefinition) {
-        FixLevelParameters.fix(Collections.singleton((TopLevelDefinition) typechecked), Collections.singleton(typechecked));
-      }
       if (recursive && typechecked instanceof FunctionDefinition) {
         ((FunctionDefinition) typechecked).setRecursiveDefinitions(Collections.singleton((FunctionDefinition) typechecked));
       }
-      if (recursive && typechecked instanceof DataDefinition) {
-        ((DataDefinition) typechecked).setRecursiveDefinitions(Collections.singleton((DataDefinition) typechecked));
+      if (typechecked instanceof DataDefinition dataDef) {
+        if (recursive) {
+          dataDef.setRecursiveDefinitions(Collections.singleton(dataDef));
+        }
+        fixDataSorts(Collections.singletonList(dataDef));
       }
       findAxiomsAndGoals(Collections.singletonList(definition), Collections.singleton(typechecked));
       if (definition instanceof Concrete.Definition def && def.isRecursive() && typechecked instanceof FunctionDefinition) {
@@ -293,6 +296,59 @@ public class TypecheckingOrderingListener extends BooleanComputationRunner imple
       }
       UseTypechecking.typecheck(funcDefinitions, errorReporter);
     }
+  }
+
+  private void fixDataSorts(List<? extends DataDefinition> dataDefinitions) {
+    if (dataDefinitions.size() != 1) return;
+    DataDefinition dataDefinition = dataDefinitions.getFirst();
+    if (!dataDefinition.getSortExpression().isInfinite()) return;
+
+    GetInfiniteTypeVisitor visitor = new GetInfiniteTypeVisitor(DefinitionTypechecker.parametersIndices(dataDefinition.getParameters()), dataDefinition.getRecursiveDefinitions().isEmpty() ? null : dataDefinition);
+    List<SortExpression> sortExpressions = new ArrayList<>();
+
+    for (Constructor constructor : dataDefinition.getConstructors()) {
+      GetInfiniteTypeVisitor visitor1;
+      List<ExpressionPattern> patterns = constructor.getPatterns();
+      if (patterns != null) {
+        Map<DependentLink, Integer> map = new HashMap<>();
+        int i = 0;
+        for (DependentLink param = dataDefinition.getParameters(); param.hasNext(); param = param.getNext()) {
+          if (patterns.get(i) instanceof BindingPattern bindingPattern && bindingPattern.getBinding().getType().isInfinityLevel()) {
+            map.put(bindingPattern.getBinding(), i);
+          }
+          i++;
+        }
+        visitor1 = new GetInfiniteTypeVisitor(map, dataDefinition.getRecursiveDefinitions().isEmpty() ? null : dataDefinition);
+      } else {
+        visitor1 = visitor;
+      }
+      for (DependentLink param = constructor.getParameters(); param.hasNext(); param = param.getNext()) {
+        param = param.getNextTyped(null);
+        if (param.getType().accept(visitor1, null) instanceof UniverseExpression universe) {
+          sortExpressions.add(universe.getSortExpression());
+        } else {
+          return;
+        }
+      }
+    }
+
+    if (dataDefinition.isHIT()) {
+      sortExpressions.add(new SortExpression.Const(Sort.TypeOfLevel(0)));
+    } else if (dataDefinition.hasMultipleConstructors()) {
+      sortExpressions.add(new SortExpression.Const(Sort.SET0));
+    }
+
+    SortExpression sortMax = SortExpression.makeMax(sortExpressions);
+    if (dataDefinition.getTruncatedLevel() != null) {
+      sortMax = SortExpression.makeTrunc(sortMax, dataDefinition.getTruncatedLevel());
+    }
+
+    SortExpression dataSort = sortMax.replaceRecursiveData(new UniverseExpression(Sort.PROP));
+    if (!dataDefinition.getRecursiveDefinitions().isEmpty()) {
+      dataSort = sortMax.replaceRecursiveData(new UniverseExpression(dataSort));
+    }
+
+    dataDefinition.setSortExpression(dataSort);
   }
 
   private void addUseDependencies(Concrete.ResolvableDefinition definition) {
@@ -403,12 +459,8 @@ public class TypecheckingOrderingListener extends BooleanComputationRunner imple
     Definition typechecked = typechecker.typecheckHeader(new GlobalInstancePool(getInstances(definition.getData()), visitor), definition);
     if (typechecked == null) return;
 
-    UniverseKind universeKind = typechecked.getUniverseKind();
-    if (typechecked instanceof TopLevelDefinition) {
-      ((TopLevelDefinition) typechecked).setUniverseKind(UniverseKind.WITH_UNIVERSES);
-    }
     if (typechecked.status() == Definition.TypeCheckingStatus.TYPE_CHECKING) {
-      mySuspensions.put(definition.getData(), new Suspension(visitor, universeKind));
+      mySuspensions.put(definition.getData(), new Suspension(visitor));
     }
 
     if (!typechecked.status().headerIsOK()) {
@@ -446,15 +498,6 @@ public class TypecheckingOrderingListener extends BooleanComputationRunner imple
 
     Set<Definition> newDefs = new HashSet<>();
     List<Pair<Definition, DefinitionListener>> listeners = new ArrayList<>();
-    for (Concrete.ResolvableDefinition definition : orderedDefinitions) {
-      Definition def = definition.getData().getTypechecked();
-      if (def instanceof TopLevelDefinition) {
-        Suspension suspension = mySuspensions.get(definition.getData());
-        if (suspension != null) {
-          ((TopLevelDefinition) def).setUniverseKind(suspension.universeKind);
-        }
-      }
-    }
 
     for (Concrete.ResolvableDefinition definition : orderedDefinitions) {
       Definition def = definition.getData().getTypechecked();
@@ -484,26 +527,22 @@ public class TypecheckingOrderingListener extends BooleanComputationRunner imple
     }
     myHeadersAreOK = true;
 
-    boolean fixLevels = true;
     Set<TopLevelDefinition> allDefinitions = new LinkedHashSet<>();
+    List<DataDefinition> dataDefs = new ArrayList<>();
     for (Concrete.ResolvableDefinition definition : orderedDefinitions) {
       Definition typechecked = definition.getData().getTypechecked();
       if (!newDefs.contains(typechecked)) continue;
       if (typechecked instanceof FunctionDefinition) {
         ((FunctionDefinition) typechecked).setRecursiveDefinitions(allDefinitions);
         allDefinitions.add((FunctionDefinition) typechecked);
-      } else if (typechecked instanceof DataDefinition) {
-        ((DataDefinition) typechecked).setRecursiveDefinitions(allDefinitions);
-        allDefinitions.add((DataDefinition) typechecked);
-      }
-      if (definition instanceof Concrete.FunctionDefinition && ((Concrete.FunctionDefinition) definition).getKind().isCoclause()) {
-        fixLevels = false;
+      } else if (typechecked instanceof DataDefinition dataDef) {
+        dataDef.setRecursiveDefinitions(allDefinitions);
+        allDefinitions.add(dataDef);
+        dataDefs.add(dataDef);
       }
     }
 
-    if (fixLevels) {
-      FixLevelParameters.fix(allDefinitions, newDefs);
-    }
+    fixDataSorts(dataDefs);
 
     if (!functionDefinitions.isEmpty()) {
       FindDefCallVisitor<DataDefinition> visitor = new FindDefCallVisitor<>(dataDefinitions, false);
@@ -600,7 +639,7 @@ public class TypecheckingOrderingListener extends BooleanComputationRunner imple
 
       for (DependentLink link = entry.getKey().getParameters(); link.hasNext(); link = link.getNext()) {
         link = link.getNextTyped(null);
-        if (FindDefCallVisitor.findDefinition(link.getTypeExpr(), definitions.keySet()) != null) {
+        if (FindDefCallVisitor.findDefinition(link.getType(), definitions.keySet()) != null) {
           myErrorReporter.report(new TypecheckingError("Mutually recursive functions are not allowed in parameters", entry.getValue()).withDefinition(entry.getKey().getReferable()));
           ok = false;
         }

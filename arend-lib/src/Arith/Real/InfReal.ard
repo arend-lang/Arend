@@ -60,7 +60,7 @@
                   | c>0 => fromInt_<.conv $ pr>0 <∘l rat_ceiling>=id
                   | s : (r' - q') * (finv eps * (r - q)) < r - q
                   => <_*_positive-right (r-q>0 Lq' Ur') (rat_ceiling>=id <∘r fromInt_<= (=_<= $ inv $ iabs.ofPos $ LinearOrder.<_<= c>0) <∘r pow>id _) <∘l p
-                  | t => transport (_ <) (pmap (_ *) RatField.finv_* *> inv *-assoc *> pmap (`* _) (finv-right $ RatField.>_/= $ r-q>0 Lq Ur) *> ide-left *> RatField.finv_finv) (RatField.<_rotate-right pr>0 s)
+                  | t => transport (_ <) (pmap (_ *) RatField.finv_* *> inv *-assoc *> pmap (* _) (finv-right $ RatField.>_/= $ r-q>0 Lq Ur) *> ide-left *> RatField.finv_finv) (RatField.<_rotate-right pr>0 s)
             \in linarith (usingOnly t))
       }
   }
@@ -84,10 +84,10 @@
     | suc (suc (suc n)) => linarith <∘r <_*_positive-left (pow>id (suc (suc n))) idp
 
   \lemma focus-iter (rat : Rat) (rat>=0 : 0 <= rat) (P : Rat -> Rat -> \Prop) (f : \Pi (q r : Rat) -> P q r -> ∃ (q' r' : P) ((r' - q') * rat <= r - q)) (n : Nat) (q r : Rat) (Pqr : P q r) : ∃ (q' r' : P) ((r' - q') * Monoid.pow rat n <= r - q) \elim n
-    | 0 => inP (q, r, Pqr, transportInv (`<= _) ide-right <=-refl)
+    | 0 => inP (q, r, Pqr, transportInv (<= _) ide-right <=-refl)
     | suc n => \case f q r Pqr \with {
       | inP (q',r',Pq'r',c) => \case focus-iter rat rat>=0 P f n q' r' Pq'r' \with {
-        | inP (q'',r'',Pq''r'',d) => inP (q'', r'', Pq''r'', =_<= (inv *-assoc) <=∘ RatField.<=_*_positive-left d rat>=0 <=∘ c)
+        | inP (q'',r'',Pq''r'',d) => inP (q'', r'', Pq''r'', inv *-assoc =<= RatField.<=_*_positive-left d rat>=0 <=∘ c)
       }
     }
 
@@ -110,7 +110,7 @@
   | + => +
   | zro-left => InfReal.real-lower-ext $ +-lower *> {LowerReal} zro-left
   | +-comm => InfReal.real-lower-ext $ +-lower *> {LowerReal} +-comm *> {LowerReal} inv {LowerReal} +-lower
-  | +-assoc => InfReal.real-lower-ext $ +-lower *> {LowerReal} pmap {LowerReal} (LowerRealAbMonoid.`+ _) +-lower *> {LowerReal} +-assoc *> {LowerReal} pmap (_ LowerRealAbMonoid.+) (inv {LowerReal} +-lower) *> {LowerReal} inv {LowerReal} +-lower
+  | +-assoc => InfReal.real-lower-ext $ +-lower *> {LowerReal} pmap {LowerReal} (LowerRealAbMonoid.+ _) +-lower *> {LowerReal} +-assoc *> {LowerReal} pmap (_ LowerRealAbMonoid.+) (inv {LowerReal} +-lower) *> {LowerReal} inv {LowerReal} +-lower
   | < => <
   | <-irreflexive (inP (a,x<a,a<x)) => LU-disjoint a<x x<a
   | <-transitive (inP (a,x<a,a<y)) (inP (b,y<b,b<z)) => inP (a, x<a, L-closed b<z $ InfReal.LU-less a<y y<b)
@@ -205,7 +205,7 @@
       => (\lam p a<x => \case L-rounded a<x \with {
         | inP (b,b<x,a<b) => \case y.LU-located a<b \with {
           | byLeft a<y => a<y
-          | byRight y<b => $ absurd $ p $ inP (b,y<b,b<x)
+          | byRight y<b => absurd $ p $ inP (b,y<b,b<x)
         }
       }, \lam p (inP (a,y<a,x<a)) => y.LU-disjoint (p x<a) y<a)
 

@@ -1,0 +1,36 @@
+\import Category
+\import Category.Limit
+\import Data.Or
+\import Function.Meta
+\import Logic
+\import Paths.Meta
+
+\record WidePullback {D : Precat} {J : \Set} {z : D} {objs : J -> D} (maps : \Pi (j : J) -> Hom (objs j) z)
+  | wpbLim : LimitDiagram { | Diagram => diagram maps }
+  \where {
+    \instance Shape (J : \Set) : Graph \cowith
+      | V => Or (\Sigma) J
+      | E => \case __, __ \with {
+        | inr i, inl _ => \Sigma
+        | _, _ => Empty
+      }
+
+    \func diagram {D : Precat} {J : \Set} {z : D} {objs : J -> D} (maps : \Pi (j : J) -> Hom (objs j) z) : Diagram (Shape J) D \cowith
+      | F x => \case x \with {
+        | inl _ => z
+        | inr i => objs i
+      }
+      | Func {a} {b} e => \case \elim a, \elim b, \elim e \with {
+        | inr i, inl _, e => maps i
+      }
+
+    \func widepullback-of-mono {D : Precat} {J : \Set} {z : D} {objs : J -> D} (monomaps : \Pi (j : J) -> Mono {D} {objs j} {z})
+                               (wpb : WidePullback {D} {J} {z} (\lam (j : J) => Mono.f {monomaps j})) : Mono (coneMap {wpb.wpbLim} (inl ())) \cowith
+      | isMono {_} {g} {h} p => limUnique \case \elim __ \with {
+        | inl () => p
+        | inr i =>
+          \have eq : ((monomaps i).f ∘ wpb.wpbLim.coneMap (inr i)) ∘ g = ((monomaps i).f ∘ wpb.wpbLim.coneMap (inr i)) ∘ h
+                   => rewrite (wpb.wpbLim.diagramCoh {inr i} {inl ()} ()) p
+          \in (monomaps i).isMono $ rewriteI (o-assoc, o-assoc) eq
+      }
+  }

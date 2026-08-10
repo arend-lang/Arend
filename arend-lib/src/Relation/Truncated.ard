@@ -1,8 +1,8 @@
 \func Rel (A : \Set) : \Set => A -> A -> \Prop
 
-\truncated \data transitive-closure {A : \Set} (R : Rel A) (a b : A) : \Prop
+\truncated \data TransClosure {A : \Set} (R : Rel A) (a b : A) : \Prop
   | tc-direct (a `R` b)
-  | tc-connect (c : A) (a `R` c) (transitive-closure R c b)
+  | tc-connect {c : A} (TransClosure R a c) (R c b)
 
 \truncated \data transitive-refl-closure {A : \Set} (R : Rel A) (a b : A) : \Prop
   | trc-direct (a = b)

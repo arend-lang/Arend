@@ -2,6 +2,7 @@ package org.arend.graph.call
 
 import com.intellij.codeInsight.daemon.impl.HighlightInfoType
 import com.intellij.ide.highlighter.JavaHighlightingColors
+import com.intellij.openapi.application.WriteIntentReadAction
 import com.intellij.openapi.editor.DefaultLanguageHighlighterColors
 import com.intellij.openapi.editor.colors.EditorColorsManager
 import com.intellij.openapi.fileEditor.FileEditorManager
@@ -73,6 +74,27 @@ fun getCallMatrix(textInfo: String): RSyntaxTextArea {
   }
 }
 
+private fun navigateToCall(project: Project, concrete: Concrete.Expression) {
+  val element = concrete.data as? PsiElement ?: return
+  val virtualFile = element.containingFile.virtualFile
+  val startOffset = element.startOffset
+  val endOffset = element.endOffset
+
+  val fileEditorManager = FileEditorManager.getInstance(project)
+
+  if (!fileEditorManager.openFiles.contains(virtualFile) || fileEditorManager.selectedTextEditor?.virtualFile != virtualFile) {
+    fileEditorManager.openFile(virtualFile, true)
+  }
+  val editor = fileEditorManager.selectedTextEditor ?: return
+  editor.selectionModel.setSelection(startOffset, endOffset)
+  editor.caretModel.moveToOffset(startOffset)
+
+  val editorComponent = editor.contentComponent
+  val editorWindow = SwingUtilities.getWindowAncestor(editorComponent) ?: return
+  editorWindow.toFront()
+  editorWindow.requestFocus()
+}
+
 fun addEdgeListener(
   project: Project,
   graphComponent: mxGraphComponent,
@@ -99,22 +121,7 @@ fun addEdgeListener(
               rowPanel.add(JButton(ArendBundle.message("arend.termination.checker.show.call")).apply {
                 alignmentX = Component.CENTER_ALIGNMENT
                 addActionListener {
-                  val element = concrete.data as? PsiElement ?: return@addActionListener
-                  val virtualFile = element.containingFile.virtualFile
-
-                  val fileEditorManager = FileEditorManager.getInstance(project)
-
-                  if (!fileEditorManager.openFiles.contains(virtualFile) || fileEditorManager.selectedTextEditor?.virtualFile != virtualFile) {
-                    fileEditorManager.openFile(virtualFile, true)
-                  }
-                  val editor = fileEditorManager.selectedTextEditor ?: return@addActionListener
-                  editor.selectionModel.setSelection(element.startOffset, element.endOffset)
-                  editor.caretModel.moveToOffset(element.startOffset)
-
-                  val editorComponent = editor.contentComponent
-                  val editorWindow = SwingUtilities.getWindowAncestor(editorComponent) ?: return@addActionListener
-                  editorWindow.toFront()
-                  editorWindow.requestFocus()
+                  WriteIntentReadAction.run { navigateToCall(project, concrete) }
                 }
               })
             }

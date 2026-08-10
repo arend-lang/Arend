@@ -15,5 +15,5 @@
 
       \func of-1 : chi G.ide = R.natCoef lv.len => unfold chi (unfold Character (rewrite (Matrix-of-1, Trace-ide) idp))
 
-      \func Matrix-of-1 : LinearMap.toMatrix lv bv (E.toLinearMap G.ide) = MatrixRing.ide => rewrite (E.toLinearMap-ide, LinearMap.toMatrix_ide) idp
+      \func Matrix-of-1 : LinearMap.toMatrix lv bv (E.toLinearMap G.ide) = MatrixRing.ide => rewrite (E.toLinearMap_ide, LinearMap.toMatrix_ide) idp
     }

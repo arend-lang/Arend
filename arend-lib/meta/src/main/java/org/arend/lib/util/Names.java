@@ -21,10 +21,8 @@ public class Names {
   public static final FullName IDE = fullName(getPointedModule(), new LongName("Pointed", "ide"));
   public static final FullName NEGATIVE = fullName(getGroupModule(), new LongName("AddGroup", "negative"));
   public static final FullName NAT_COEF = fullName(getSemiringModule(), new LongName("Semiring", "natCoef"));
-  public static final FullName EQUIV = fullName(getEquivModule(), new LongName("Equiv"));
-  public static final FullName Q_EQUIV = fullName(getEquivModule(), new LongName("QEquiv"));
+  public static final FullName IS_EQUIV = fullName(getEquivModule(), new LongName("IsEquiv"));
   public static final FullName SET_HOM = fullName(getSetHomModule(), new LongName("SetHom"));
-  public static final FullName EQUIV_MAP = fullName(getEquivModule(), new LongName("Map"));
   public static final FullName CAT_MAP = fullName(getCategoryModule(), new LongName("Map"));
   public static final FullName PRECAT = fullName(getCategoryModule(), new LongName("Precat"));
   public static final FullName LINEAR_ORDER = fullName(getLinearOrderModule(), new LongName("LinearOrder"));
@@ -32,6 +30,7 @@ public class Names {
   public static final FullName ORDERED_ASSOC_ALGEBRA = fullName(getOrderedModule(), new LongName("OrderedAAlgebra"));
   public static final FullName LEFT_MODULE = fullName(getModuleModule(), new LongName("LModule"));
   public static final FullName INT_RING = fullName(getIntModule(), new LongName("IntRing"));
+  public static final FullName NAT_SEMIRING = fullName(getNatModule(), new LongName("NatSemiring"));
   public static final FullName RAT_FIELD = fullName(getRatModule(), new LongName("RatField"));
 
   private static FullName fullName(ModulePath modulePath, LongName longName) {
@@ -73,10 +72,6 @@ public class Names {
 
   public static String getNil() {
     return "nil";
-  }
-
-  public static String getEquivB() {
-    return "B";
   }
 
   public static String getSetHomFunc() {

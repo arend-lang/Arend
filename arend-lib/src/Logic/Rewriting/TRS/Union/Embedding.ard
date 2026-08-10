@@ -11,7 +11,6 @@
 \import Data.SubList
 \import Logic.Rewriting.TRS.HRS
 \import Logic.Rewriting.TRS.Linearity
-\import Data.Maybe
 \import Logic.Rewriting.TRS.MetaContexts
 \import Logic.Rewriting.TRS.Substitutions
 \import Logic.Rewriting.TRS.Union
@@ -162,7 +161,7 @@
                      {A B : Term env context s mc}
                      (A=>B : TopLevelColoredReduction color A B)
     : RewriteRelation JRegistry A B \elim A, B, A=>B
-    | A, B, rewrite-with-rule-colored h idx substitution left-coherence right-coherence => \let q : Sort = tc.Sort' => idp \in
+    | A, B, rewrite-with-rule-colored h idx substitution left-coherence right-coherence =>
       rewrite-with-rule (color,idx) substitution (rewrite (unwrap-injection {_} {color}) left-coherence) right-coherence
     | func f-A arguments-A, func f-B arguments-B, rewrite-with-parameter-f-colored idp p1 index A=>B eq =>
       rewrite-with-parameter-f idp index (unembed-tlcr color A=>B) eq

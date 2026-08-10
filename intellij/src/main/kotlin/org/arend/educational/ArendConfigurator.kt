@@ -5,8 +5,6 @@ import com.intellij.openapi.project.guessProjectDir
 import com.jetbrains.edu.learning.EduCourseBuilder
 import com.jetbrains.edu.learning.checker.TaskCheckerProvider
 import com.jetbrains.edu.learning.configuration.EduConfigurator
-import com.jetbrains.edu.learning.courseFormat.Course
-import com.intellij.openapi.projectRoots.Sdk
 import com.intellij.psi.PsiManager
 import com.jetbrains.edu.learning.StudyTaskManager
 import com.jetbrains.edu.learning.newproject.EduProjectSettings
@@ -65,8 +63,6 @@ class ArendConfigurator : EduConfigurator<ArendEduProjectSettings> {
             courseViewVisibility(CourseViewVisibility.INVISIBLE_FOR_ALL)
         }
     }
-
-    override fun getMockFileName(course: Course, text: String): String = "Solution.ard"
 
     override val logo: Icon
         get() = ArendIcons.AREND

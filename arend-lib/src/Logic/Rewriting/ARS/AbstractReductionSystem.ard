@@ -17,7 +17,7 @@
 
 \func \infix 4 ~>_= {A : ARS} : Rel A => reflexive-closure (~>)
 
-\func \infix 4 ~>_+ {A : ARS} : Rel A => transitive-closure (~>)
+\func \infix 4 ~>_+ {A : ARS} : Rel A => TransClosure (~>)
 
 \func \infix 4 ~>_* {A : ARS} : Rel A => transitive-refl-closure (~>)
 

@@ -1,0 +1,165 @@
+-- | The constructive version of the fan theorem is proved in Daniel Fridlender, An Interpretation of the Fan Theorem in Type Theory, 1998.
+
+\import Arith.Nat
+\import Data.Array
+\import Data.Fin
+\import Function.Meta
+\import Logic
+\import Logic.Bar
+\import Logic.Meta
+\import Meta
+\import Paths
+\import Paths.Meta
+\import Set
+\import Set.Fin
+\import Set.Fin.Instances
+
+\lemma fanTheorem {A : \Set} {P : Array A -> \Prop} (Pm : IsBarMonotone P) (b : Bar P nil) : Bar (AllPaths P) nil
+  => coe (\lam i => Bar (AllPaths \lam l => P (++_nil {_} {l} i)) nil) (induction b) right
+  \where {
+    \func APath (ls : Array (Array A))
+      => \Pi (i : Fin ls.len) -> Fin (ls i).len
+
+    \func walk {ls : Array (Array A)} (p : APath ls) : Array A ls.len
+      => \lam i => ls i (p i)
+
+    {- | A path through a sequence of lists [l_1, ..., l_n] is a list [a_1, ..., a_n] such that a_i belongs to l_i for each i.
+     -   {AllPaths} says that {P} holds for every path through {ls}.
+     -}
+    \type AllPaths (P : Array A -> \Prop) (ls : Array (Array A))
+      => ∀ (js : APath ls) (P (walk js))
+
+    \lemma allPaths_:: {P : Array A -> \Prop} {l : Array A} {ls : Array (Array A)} : AllPaths P (l :: ls) <-> ∀ (a : l) (AllPaths (\lam r => P (a :: r)) ls)
+      => (\lam ap k js => ap \case \elim __ \with {
+        | 0 => k
+        | suc i => js i
+      }, \lam ap js => ap (js 0) \lam i => js (suc i))
+
+    \lemma allPaths_++ {P : Array A -> \Prop} {ls : Array (Array A)} {r : Array A}
+      : AllPaths P (ls ++ map {A} {Array A} (:: nil) r) <-> AllPaths (\lam l => P (l ++ r)) ls \elim ls
+      | nil => (\lam c _ => c \lam _ => 0,
+                \lam c js => transport P (exts \lam i => cases (js i) idp) $ c \case __)
+      | l1 :: ls => (\lam c => allPaths_::.2 \lam k => allPaths_++.1 $ allPaths_::.1 c k,
+                     \lam c => allPaths_::.2 \lam k => allPaths_++.2 $ allPaths_::.1 c k)
+
+    \lemma allPaths-monotone {P : Array A -> \Prop} (Pm : IsBarMonotone P) {r : Array (Array A)} : IsBarMonotone (\lam ls => AllPaths P (ls ++ r))
+      => \lam {l} {ls} ls_r js => Pm $ ls_r \lam i => js (suc i)
+
+    \lemma allPaths-empty {P : Array A -> \Prop} {ls r : Array (Array A)} : AllPaths P (ls ++ nil :: r) \elim ls
+      | nil => \lam js => \case js 0
+      | l :: ls => allPaths_::.2 \lam k => allPaths-empty
+
+    \lemma allPaths-split {P : Array A -> \Prop} {ls r : Array (Array A)} {a : A} {m : Array A}
+                          (ap1 : AllPaths P (ls ++ (a :: nil) :: r)) (ap2 : AllPaths P (ls ++ m :: r)) : AllPaths P (ls ++ (a :: m) :: r) \elim ls
+      | nil => \lam js => cases (js 0 arg addPath) \with {
+        | 0, p => transport P (exts \case \elim __ \with {
+            | 0 => rewrite p idp
+            | suc i => idp
+          }) $ ap1 \case \elim __ \with {
+            | 0 => 0
+            | suc i => js (suc i)
+          }
+        | suc j, p => transport P (exts \case \elim __ \with {
+            | 0 => rewrite p idp
+            | suc i => idp
+          }) $ ap2 \case \elim __ \with {
+            | 0 => j
+            | suc i => js (suc i)
+          }
+      }
+      | l :: ls => allPaths_::.2 \lam k => allPaths-split (allPaths_::.1 ap1 k) (allPaths_::.1 ap2 k)
+
+    \lemma allPaths-bar-shift {ls : Array (Array A)} {l r : Array A}
+      (h : ∀ (a : l) (Bar (AllPaths \lam l' => P (l' ++ a :: r)) ls)) : Bar (AllPaths P) (ls ++ l :: map (:: nil) r) \elim l
+      | nil => bar-stop allPaths-empty
+      | a :: l => bar-shift-right $
+        bar-impl (\lam {ls'} c => transport (AllPaths P) ++-assoc $ allPaths-split (allPaths_++.2 c.1) $ transportInv (AllPaths P) ++-assoc c.2) $
+        bar-conj (allPaths-monotone $ barMonotone_++ Pm) (allPaths-monotone Pm) (bar-shift-left (h 0)) $ bar-shift-left $ allPaths-bar-shift \lam j => h (suc j)
+
+    \lemma induction {l : Array A} (b : Bar P l) : Bar (AllPaths \lam l' => P (l' ++ l)) nil \elim b
+      | bar-stop p => bar-stop \lam _ => p
+      | bar-ask h => bar-ask \lam l' => bar-shift-right $
+        bar-impl (\lam {ls} c => allPaths_++.1 $ transportInv (AllPaths P) (++-assoc {_} {ls} {l' :: nil}) c) $
+        bar-shift-left $ allPaths-bar-shift \lam j => induction $ h (l' j)
+  }
+
+\lemma indexedFanTheorem {A : \Set} {P : Array A -> \Prop} (Pm : IsBarMonotone P) (b : Bar P nil)
+                         (Q : \Pi (l : Array A) -> Fin l.len -> \Prop) (PQ : ∀ {l : P} ∃ (i : Fin l.len) (Q l i))
+  : Bar IsFan nil
+  => bar-impl (\lam {ls} ap => \case FinSet.search (\lam i => (ls i).len = 0) (\lam i => decideEq _ 0) \with {
+    | yes (inP (i,p)) => inP (i, \lam j => \case rewrite p in j)
+    | no q => \case iterate ap (initialState \lam i => toFin 0 $ nonZero>0 \lam p => q $ inP (i,p)) _ \with {
+      | byLeft r => r
+      | byRight s => absurd (finalState s)
+    }
+  }) (fanTheorem Pm b)
+  \where {
+    \open fanTheorem (APath, walk, AllPaths)
+
+    \func IsFan (ls : Array (Array A))
+      => ∃ (i : Fin ls.len) ∀ (j : Fin (ls i).len) Given (js : APath ls) (js i = j) (Q (walk js) i)
+
+    \private \func pathAt {ls : Array (Array A)} (p : APath ls) (i : Fin ls.len) : \Sigma (i : Fin ls.len) (Fin (ls i).len)
+      => (i, p i)
+
+    \protected \record State (ls : Array (Array A)) (n : Nat)
+      | apath : APath ls
+      | good : Array (\Sigma (js : APath ls) (i : Fin ls.len) (Q (walk js) i)) n
+      | apath-bad (i : Fin ls.len) (k : Fin n) : pathAt apath i /= pathAt (good k).1 (good k).2
+      | good-diff (k m : Fin n) : pathAt (good k).1 (good k).2 = pathAt (good m).1 (good m).2 -> k = m
+
+    \private \func initialState {ls : Array (Array A)} (js : APath ls) : State ls 0 \cowith
+      | apath => js
+      | good => nil
+      | apath-bad _ => \case __
+      | good-diff => \case __
+
+    \private \lemma finalState {ls : Array (Array A)} (state : State ls (suc (NatSemiring.FinSum \lam i => (ls i).len))) : Empty
+      => \case (SigmaFin (FinFin ls.len) \lam i => FinFin (ls i).len).boundedPigeonhole (\lam k => pathAt (state.good k).1 (state.good k).2) \with {
+        | inP (i,j,i/=j,p) => i/=j (state.good-diff i j p)
+      }
+
+    \private \lemma step {ls : Array (Array A)} (ap : AllPaths P ls) {n : Nat} (state : State ls n) : IsFan ls || State ls (suc n)
+      => \case PQ (ap state.apath) \with {
+        | inP (i,Qi) =>
+          \let | good' => (state.apath, i, Qi) :: state.good
+               | pat k => pathAt (good' k).1 (good' k).2
+               | pat-dec k j => (SigmaDecSet \lam i => FinFin (ls i).len).decideEq (pat k) (i,j)
+          \in \case FinSet.search (\lam j => ∀ k (pat k /= (i,j))) (\lam j => FinSet.forall-dec _ \lam k => NotDec $ pat-dec k j) \with {
+            | yes (inP (j,bad)) => byRight \new indexedFanTheorem.State {
+              | apath i' => \case decideEq i i' \with {
+                | yes e => rewriteI e j
+                | no q => state.apath i'
+              }
+              | good => good'
+              | apath-bad i' k => unfold pathAt $ mcases \with {
+                | yes e => \case \elim i', \elim e \with {
+                  | _, idp => \lam p => bad k (inv p)
+                }
+                | no q => \case \elim k \with {
+                  | 0 => \lam p => q $ inv $ pmap __.1 p
+                  | suc k => state.apath-bad i' k
+                }
+              }
+              | good-diff => \case \elim __, \elim __ \with {
+                | 0, 0 => \lam _ => idp
+                | 0, suc m => \lam p => absurd $ state.apath-bad i m p
+                | suc k, 0 => \lam p => absurd $ state.apath-bad i k (inv p)
+                | suc k, suc m => \lam p => pmap fsuc (state.good-diff k m p)
+              }
+            }
+            | no q => byLeft \case FinSet.finiteAC (\lam j => \case FinSet.search (\lam k => pat k = (i,j)) (pat-dec __ j) \with {
+              | yes (inP (k,p)) => inP $ later ((good' k).1, setPair-unext2 $ pmap (\lam x => pathAt (good' k).1 x.1) (inv p) *> p,
+                                                transport (Q _) (later $ pmap __.1 p) $ (good' k).3)
+              | no c => absurd $ q $ inP (j, \lam k p => c $ inP (k,p))
+            }) \with { | inP r => inP (i, r) }
+          }
+      }
+
+    \private \lemma iterate {ls : Array (Array A)} (ap : AllPaths P ls) {n : Nat} (state : State ls n) (k : Nat) : IsFan ls || State ls (n Nat.+ k) \elim k
+      | 0 => byRight state
+      | suc k => \case step ap state \with {
+        | byLeft r => byLeft r
+        | byRight state' => iterate ap state' k
+      }
+  }

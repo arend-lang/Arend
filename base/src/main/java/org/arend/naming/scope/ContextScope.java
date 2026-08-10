@@ -11,27 +11,24 @@ import java.util.function.Predicate;
 public class ContextScope extends DelegateScope {
   private final List<? extends TypedReferable> myContext;
   private final List<? extends Referable> myPLevels;
-  private final List<? extends Referable> myHLevels;
 
-  public ContextScope(Scope parent, List<? extends TypedReferable> context, List<? extends Referable> pLevels, List<? extends Referable> hLevels) {
+  public ContextScope(Scope parent, List<? extends TypedReferable> context, List<? extends Referable> pLevels) {
     super(parent);
     myContext = context;
     myPLevels = pLevels;
-    myHLevels = hLevels;
   }
 
   public ContextScope(List<? extends TypedReferable> context) {
     super(EmptyScope.INSTANCE);
     myContext = context;
     myPLevels = Collections.emptyList();
-    myHLevels = Collections.emptyList();
   }
 
   @NotNull
   @Override
   public Collection<? extends Referable> getElements(@Nullable ScopeContext context) {
     if (parent == EmptyScope.INSTANCE && context != null) {
-      return context == ScopeContext.STATIC ? myContext.stream().map(TypedReferable::getReferable).toList() : context == ScopeContext.PLEVEL ? myPLevels : myHLevels;
+      return context == ScopeContext.STATIC ? myContext.stream().map(TypedReferable::getReferable).toList() : myPLevels;
     }
     List<Referable> result = new ArrayList<>();
     Set<String> names = new HashSet<>();
@@ -43,15 +40,9 @@ public class ContextScope extends DelegateScope {
         names.add(referable.getReferable().getRefName());
       }
     }
-    if (context == null || context == ScopeContext.PLEVEL) {
+    if (context == null || context == ScopeContext.LEVEL) {
       result.addAll(myPLevels);
       for (Referable referable : myPLevels) {
-        names.add(referable.getRefName());
-      }
-    }
-    if (context == null || context == ScopeContext.HLEVEL) {
-      result.addAll(myHLevels);
-      for (Referable referable : myHLevels) {
         names.add(referable.getRefName());
       }
     }
@@ -72,17 +63,10 @@ public class ContextScope extends DelegateScope {
         }
       }
     }
-    if (context == null || context == ScopeContext.PLEVEL) {
+    if (context == null || context == ScopeContext.LEVEL) {
       for (int i = myPLevels.size() - 1; i >= 0; i--) {
         if (pred.test(myPLevels.get(i))) {
           return myPLevels.get(i);
-        }
-      }
-    }
-    if (context == null || context == ScopeContext.HLEVEL) {
-      for (int i = myHLevels.size() - 1; i >= 0; i--) {
-        if (pred.test(myHLevels.get(i))) {
-          return myHLevels.get(i);
         }
       }
     }
@@ -102,10 +86,9 @@ public class ContextScope extends DelegateScope {
         }
       }
     } else {
-      List<? extends Referable> list = context == ScopeContext.PLEVEL ? myPLevels : myHLevels;
-      for (int i = list.size() - 1; i >= 0; i--) {
-        if (list.get(i).getRefName().equals(name)) {
-          return list.get(i);
+      for (int i = myPLevels.size() - 1; i >= 0; i--) {
+        if (myPLevels.get(i).getRefName().equals(name)) {
+          return myPLevels.get(i);
         }
       }
     }

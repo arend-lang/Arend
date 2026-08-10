@@ -4,7 +4,6 @@ import com.intellij.lang.ASTNode
 import org.arend.psi.childOfType
 import org.arend.psi.childOfTypeStrict
 import org.arend.psi.getChildrenOfType
-import org.arend.term.Fixity
 import org.arend.term.abs.AbstractExpressionVisitor
 
 
@@ -18,7 +17,7 @@ class ArendAtomFieldsAcc(node: ASTNode) : ArendExpr(node) {
     val ipName: ArendIPName?
         get() = childOfType()
 
-    override fun <P : Any?, R : Any?> accept(visitor: AbstractExpressionVisitor<in P, out R>, params: P?): R {
+    override fun <P, R> accept(visitor: AbstractExpressionVisitor<in P, out R>, params: P?): R {
         val fieldAccs = fieldAccList
         val ipName = ipName
         return if (fieldAccs.isEmpty() && ipName == null) {
@@ -27,4 +26,16 @@ class ArendAtomFieldsAcc(node: ASTNode) : ArendExpr(node) {
             visitor.visitFieldAccs(this, atom, fieldAccs, ipName, ipName?.referenceName, ipName?.fixity, params)
         }
     }
+
+    val isVariable: Boolean
+        get() {
+            for (fieldAcc in fieldAccList) {
+                if (fieldAcc.refIdentifier == null) {
+                    return false
+                }
+            }
+
+            val literal = atom.literal ?: return false
+            return literal.refIdentifier != null || literal.ipName != null
+        }
 }

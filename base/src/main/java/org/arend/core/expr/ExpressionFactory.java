@@ -2,8 +2,6 @@ package org.arend.core.expr;
 
 import org.arend.core.context.param.*;
 import org.arend.core.definition.ClassField;
-import org.arend.core.expr.type.Type;
-import org.arend.core.sort.Sort;
 import org.arend.core.subst.Levels;
 import org.arend.prelude.Prelude;
 import org.arend.util.SingletonList;
@@ -28,32 +26,32 @@ public class ExpressionFactory {
     return (ConCallExpression) ConCallExpression.make(Prelude.RIGHT, Levels.EMPTY, Collections.emptyList(), Collections.emptyList());
   }
 
-  public static TypedDependentLink parameter(String var, Type type) {
+  public static TypedDependentLink parameter(String var, Expression type) {
     return new TypedDependentLink(true, var, type, EmptyDependentLink.getInstance());
   }
 
-  public static DependentLink parameter(boolean explicit, boolean isProperty, String name, Type type, boolean isHidden) {
+  public static DependentLink parameter(boolean explicit, boolean isProperty, String name, Expression type, boolean isHidden) {
     return isProperty ? new PropertyTypedDependentLink(explicit, name, type, isHidden, EmptyDependentLink.getInstance()) : new TypedDependentLink(explicit, name, type, isHidden, EmptyDependentLink.getInstance());
   }
 
-  public static DependentLink parameter(boolean explicit, boolean isProperty, List<String> names, Type type) {
-    DependentLink link = isProperty ? new PropertyTypedDependentLink(explicit, names.get(names.size() - 1), type, EmptyDependentLink.getInstance()) : new TypedDependentLink(explicit, names.get(names.size() - 1), type, EmptyDependentLink.getInstance());
+  public static DependentLink parameter(boolean explicit, boolean isProperty, List<String> names, Expression type) {
+    DependentLink link = isProperty ? new PropertyTypedDependentLink(explicit, names.getLast(), type, EmptyDependentLink.getInstance()) : new TypedDependentLink(explicit, names.getLast(), type, EmptyDependentLink.getInstance());
     for (int i = names.size() - 2; i >= 0; i--) {
       link = new UntypedDependentLink(names.get(i), link);
     }
     return link;
   }
 
-  public static DependentLink parameter(boolean explicit, List<String> names, Type type) {
-    DependentLink link = new TypedDependentLink(explicit, names.get(names.size() - 1), type, EmptyDependentLink.getInstance());
+  public static DependentLink parameter(boolean explicit, List<String> names, Expression type) {
+    DependentLink link = new TypedDependentLink(explicit, names.getLast(), type, EmptyDependentLink.getInstance());
     for (int i = names.size() - 2; i >= 0; i--) {
       link = new UntypedDependentLink(names.get(i), link);
     }
     return link;
   }
 
-  public static SingleDependentLink singleParams(boolean explicit, List<String> names, Type type) {
-    SingleDependentLink link = new TypedSingleDependentLink(explicit, names.get(names.size() - 1), type);
+  public static SingleDependentLink singleParams(boolean explicit, List<String> names, Expression type) {
+    SingleDependentLink link = new TypedSingleDependentLink(explicit, names.getLast(), type);
     for (int i = names.size() - 2; i >= 0; i--) {
       link = new UntypedSingleDependentLink(names.get(i), link);
     }
@@ -76,8 +74,8 @@ public class ExpressionFactory {
     return DataCallExpression.make(Prelude.STRING, Levels.EMPTY, Collections.emptyList());
   }
 
-  public static SigmaExpression divModType(Type type) {
-    return new SigmaExpression(Sort.SET0, new TypedDependentLink(true, null, Nat(), new TypedDependentLink(true, null, type, EmptyDependentLink.getInstance())));
+  public static SigmaExpression divModType(Expression type) {
+    return new SigmaExpression(new TypedDependentLink(true, null, Nat(), new TypedDependentLink(true, null, type, EmptyDependentLink.getInstance())));
   }
 
   public static SigmaExpression finDivModType(Expression expr) {

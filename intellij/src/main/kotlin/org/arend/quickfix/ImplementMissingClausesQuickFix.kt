@@ -115,7 +115,7 @@ class ImplementMissingClausesQuickFix(private val missingClausesError: MissingCl
                     val pattern = iterator.next()
                     val recTypeUsagesInPattern = HashSet<CorePattern>()
                     val sampleParameter = if (elimMode) missingClausesError.eliminatedParameters[i] else parameter?.binding
-                    previewResults.add(previewPattern(pattern, filters, if (parameter == null || parameter.isExplicit) Braces.NONE else Braces.BRACES, recTypeUsagesInPattern, (sampleParameter?.typeExpr as? DefCallExpression)?.definition))
+                    previewResults.add(previewPattern(pattern, filters, if (parameter == null || parameter.isExplicit) Braces.NONE else Braces.BRACES, recTypeUsagesInPattern, (sampleParameter?.type as? DefCallExpression)?.definition))
                     recursiveTypeUsagesInBindings.add(recTypeUsagesInPattern.size)
                     parameter = if (parameter != null && parameter.hasNext()) parameter.next else null
                     i++
@@ -279,7 +279,7 @@ class ImplementMissingClausesQuickFix(private val missingClausesError: MissingCl
             if (!pattern.isAbsurd) {
                 val binding = pattern.binding
                 if (binding != null) {
-                    val bindingType = binding.typeExpr
+                    val bindingType = binding.type
                     if (recursiveTypeDefinition != null && bindingType is DefCallExpression && bindingType.definition == recursiveTypeDefinition && binding.name == null) {
                         recursiveTypeUsages.add(pattern)
                     }
@@ -335,7 +335,7 @@ class ImplementMissingClausesQuickFix(private val missingClausesError: MissingCl
             var containsEmptyPattern = false
 
             val parameterName: String? = sampleParameter.name
-            val recursiveTypeDefinition: Definition? = (sampleParameter.typeExpr as? DefCallExpression)?.definition
+            val recursiveTypeDefinition: Definition? = (sampleParameter.type as? DefCallExpression)?.definition
 
             fun getFreshName(binding: CoreBinding): String {
                 val renamer = StringRenamer()
@@ -359,7 +359,7 @@ class ImplementMissingClausesQuickFix(private val missingClausesError: MissingCl
                     val infixMode = definition?.referable?.precedence?.isInfix ?: false
                     val integralNumber = getIntegralNumber(pattern)
                     val patternMatchingOnIdp = if (missingClausesError.generateIdpPatterns) {
-                        admitsPatternMatchingOnIdp(sampleParameter.typeExpr, if (cause is ArendCaseExpr) missingClausesError.parameters else null, eliminatedBindings)
+                        admitsPatternMatchingOnIdp(sampleParameter.type, if (cause is ArendCaseExpr) missingClausesError.parameters else null, eliminatedBindings)
                     } else PatternMatchingOnIdpResult.INAPPLICABLE
                     if (patternMatchingOnIdp != PatternMatchingOnIdpResult.INAPPLICABLE) {
                         if (patternMatchingOnIdp == PatternMatchingOnIdpResult.IDP)

@@ -2,7 +2,6 @@ package org.arend.ext.core.context;
 
 import org.arend.ext.core.expr.AbstractedExpression;
 import org.arend.ext.core.expr.CoreExpression;
-import org.arend.ext.typechecking.TypedExpression;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.Map;
@@ -20,15 +19,9 @@ public interface CoreParameter {
 
   /**
    * Returns the type of the parameter.
-   * Equivalent to {@code getBinding().getTypeExpr()}
+   * Equivalent to {@code getBinding().getType()}
    */
-  @NotNull CoreExpression getTypeExpr();
-
-  /**
-   * Returns the type of the parameter.
-   * Equivalent to {@code getTypeExpr().computeTyped()}
-   */
-  @NotNull TypedExpression getTypedType();
+  @NotNull CoreExpression getType();
 
   /**
    * Checks if this parameter is the last one.

@@ -8,7 +8,7 @@
 \import Paths
 \import Paths.Meta
 \import Set.Partial \using (defined-ext)
-\import Set.Subset
+\import Set.Set
 \import Topology.TopSpace
 \import Topology.TopSpace.Product
 
@@ -55,7 +55,7 @@
     | byRight (V,Vo,d,Vx,g) => byRight (f ^-1 V, func-cont Vo, d, Vx, g __)
   }
 
-\lemma plift2-cont {X Y Z : TopSpace} (f : ContMap (X ⨯ Y) Z) : ContMap (PartialTopSpace X ⨯ PartialTopSpace Y) (PartialTopSpace Z) (\lam s => plift2 (\lam x y => f (x,y)) s.1 s.2) \cowith
+\lemma plift2-cont {X Y Z : TopSpace} (f : ContMap (ProductTopSpace X Y) Z) : ContMap (PartialTopSpace X `ProductTopSpace` PartialTopSpace Y) (PartialTopSpace Z) (\lam s => plift2 (\lam x y => f (x,y)) s.1 s.2) \cowith
   | func-cont {W} h => \lam {s} Ws => \case h Ws \with {
     | byLeft p => inP (top, open-top {PartialTopSpace X}, (), top, open-top {PartialTopSpace Y}, (), \lam _ _ => rewrite p ())
     | byRight (W',W'o,d,W's,g) => \case f.func-cont W'o W's \with {

@@ -10,12 +10,13 @@
 \import Relation.Equivalence
 \import Set
 \import Set.Fin
+\import Set.Fin.BoundedPigeonhole
 \import Set.Fin.Pigeonhole
 
 \class KFinSet \extends BoundedPigeonholeSet {
-  | finSurj : ∃ (f : Fin finCard -> E) (IsSurj f)
+  | finSurj : ∃ (f : Fin card -> E) (IsSurj f)
   | boundedPigeonhole => \case finSurj \with {
-    | inP (f,s) => boundedPigeonhole {pigeonhole-surj (\new BoundedPigeonholeSet (Fin finCard) finCard (pigeonhole-fin __ id<suc)) f s}
+    | inP (f,s) => boundedPigeonhole {pigeonhole-surj (\new BoundedPigeonholeSet (Fin card) card (pigeonhole-fin __ id<suc)) f s}
   }
 
   \lemma search (A : E -> \Prop) (d : \Pi (e : E) -> Dec (A e)) : Dec (∃ (e : E) (A e))
@@ -44,8 +45,14 @@
   \lemma search_no_reduce {A : E -> \Prop} (d : \Pi (e : E) -> Dec (A e)) (q : Not (∃ (e : E) (A e))) : search A d = no q
     => prop-pi
 
+  \lemma forall-dec (A : E -> \Prop) (d : \Pi (e : E) -> Dec (A e)) : Dec (∀ e (A e))
+    => \case search (\lam e => Not (A e)) (\lam e => NotDec (d e)) \with {
+      | yes (inP (e,q)) => no \lam f => q (f e)
+      | no q => yes \lam e => dec-separated (d e) \lam p => q $ inP (e,p)
+    }
+
   \lemma dec : Dec (TruncP E)
-    => cases (finCard,finSurj) \with {
+    => cases (card,finSurj) \with {
       | 0, inP (f,fs) => no \lam (inP x) => \case fs x \with {
         | inP ((),_)
       }
@@ -68,5 +75,5 @@
       }
 }
 
-\lemma QuotientKFin {A : KFinSet} {R : A -> A -> \Type} : KFinSet (Quotient R) A.finCard \cowith
+\lemma QuotientKFin {A : KFinSet} {R : A -> A -> \Type} : KFinSet (Quotient R) A.card \cowith
   | finSurj => TruncP.map A.finSurj \lam s => (\lam j => in~ (s.1 j), \lam (in~ x) => TruncP.map (s.2 x) \lam r => (r.1, pmap in~ r.2))

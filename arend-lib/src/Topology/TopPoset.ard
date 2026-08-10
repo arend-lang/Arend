@@ -17,7 +17,7 @@
   | isHausdorff => \have P => ProductTopSpace \this \this \in
     hausdorff-char.2 $ transport P.IsClosed (ext \lam s => ext (\lam p => <=-antisymmetric p.1 p.2, \lam p => (=_<= p, =_<= (inv p)))) $ P.closed-inter <=-closed $ cont-closed (tuple proj2 proj1) <=-closed
 
-  \lemma <=-closed-left {b : E} : IsClosed (`<= b)
+  \lemma <=-closed-left {b : E} : IsClosed (<= b)
     => cont-closed (tuple id (const b)) <=-closed
 
   \lemma <=-closed-right {a : E} : IsClosed (a <=)

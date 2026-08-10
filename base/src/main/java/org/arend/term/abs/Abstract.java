@@ -7,7 +7,6 @@ import org.arend.ext.concrete.definition.ClassFieldKind;
 import org.arend.ext.concrete.definition.FunctionKind;
 import org.arend.naming.reference.NamedUnresolvedReference;
 import org.arend.naming.reference.UnresolvedReference;
-import org.arend.naming.scope.Scope;
 import org.arend.term.Fixity;
 import org.arend.term.group.AccessModifier;
 import org.jetbrains.annotations.NotNull;
@@ -114,14 +113,14 @@ public final class Abstract {
   }
 
   public interface NameRenaming extends SourceNode {
-    @NotNull Scope.ScopeContext getScopeContext();
+    boolean isStatic();
     @NotNull NamedUnresolvedReference getOldReference();
     @Nullable Precedence getPrecedence();
     @Nullable String getNewName();
   }
 
   public interface NameHiding extends SourceNode {
-    @NotNull Scope.ScopeContext getScopeContext();
+    boolean isStatic();
     @NotNull NamedUnresolvedReference getHiddenReference();
   }
 
@@ -139,8 +138,6 @@ public final class Abstract {
   public interface Statement {
     @Nullable Group getGroup();
     @Nullable NamespaceCommand getNamespaceCommand();
-    @Nullable LevelParameters getPLevelsDefinition();
-    @Nullable LevelParameters getHLevelsDefinition();
   }
 
   public interface AbstractReferable {
@@ -170,8 +167,6 @@ public final class Abstract {
 
   public enum EvalKind { EVAL, PEVAL, BOX }
 
-  public static final int INFINITY_LEVEL = -33;
-
   public interface Expression extends SourceNode {
     @Nullable Object getData();
     <P, R> R accept(@NotNull AbstractExpressionVisitor<? super P, ? extends R> visitor, @Nullable P params);
@@ -181,13 +176,13 @@ public final class Abstract {
     @Nullable Object getData();
     @Nullable Integer getNumber();
     @Nullable UnresolvedReference getFieldRef();
+    @NotNull Collection<? extends LevelExpression> getLevels();
   }
 
   public interface ReferenceExpression extends SourceNode {
     @Nullable Object getData();
     @NotNull UnresolvedReference getReferent();
-    @Nullable Collection<? extends LevelExpression> getPLevels();
-    @Nullable Collection<? extends LevelExpression> getHLevels();
+    @Nullable Collection<? extends LevelExpression> getLevels();
   }
 
   public interface CaseArgument extends SourceNode {
@@ -252,20 +247,15 @@ public final class Abstract {
     /* @NotNull */ @Nullable Abstract.AbstractLocatedReferable getReferable();
   }
 
-  public enum Comparison { LESS_OR_EQUALS, GREATER_OR_EQUALS }
-
   public interface LevelParameters {
     @Nullable Object getData();
     @NotNull Collection<? extends AbstractReferable> getReferables();
-    @NotNull Collection<Comparison> getComparisonList();
-    boolean isIncreasing();
   }
 
   public interface Definition extends ReferableDefinition {
     @Override @NotNull Abstract.AbstractLocatedReferable getReferable();
     <R> R accept(AbstractDefinitionVisitor<? extends R> visitor);
-    @Nullable LevelParameters getPLevelParameters();
-    @Nullable LevelParameters getHLevelParameters();
+    @Nullable LevelParameters getLevelParameters();
     boolean withUse();
   }
 

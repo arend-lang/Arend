@@ -1,7 +1,6 @@
 package org.arend.term.expr.visitor;
 
 import org.arend.core.context.binding.Binding;
-import org.arend.core.context.binding.LevelVariable;
 import org.arend.core.context.binding.TypedBinding;
 import org.arend.core.context.param.DependentLink;
 import org.arend.core.context.param.SingleDependentLink;
@@ -10,8 +9,8 @@ import org.arend.core.expr.*;
 import org.arend.core.expr.let.LetClause;
 import org.arend.core.sort.Level;
 import org.arend.core.sort.Sort;
-import org.arend.core.subst.LevelPair;
 import org.arend.core.subst.Levels;
+import org.arend.ext.core.level.ConstLevel;
 import org.arend.ext.core.ops.NormalizationMode;
 import org.arend.naming.reference.LocalReferable;
 import org.arend.prelude.Prelude;
@@ -21,6 +20,7 @@ import org.arend.typechecking.result.TypecheckingResult;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -219,13 +219,13 @@ public class NormalizationTest extends TypeCheckingTestCase {
 
   @Test
   public void normalizeLetElimNoStuck() {
-    // normalize (\let | x (y : N) : \oo-Type2 => \Type0 \in x zero) = \Type0
+    // normalize (\let | x (y : N) : \Type2 => \Type0 \in x zero) = \Type0
     LocalReferable y = ref("y");
     LocalReferable x = ref("x");
-    Concrete.LetClause xClause = clet(x, cargs(cTele(cvars(y), cNat())), cUniverseInf(2), cUniverseStd(0));
+    Concrete.LetClause xClause = clet(x, cargs(cTele(cvars(y), cNat())), cUniverseInf(2), cUniverse(0));
     incModification();
     TypecheckingResult result = typeCheckExpr(cLet(clets(xClause), cApps(cVar(x), cZero())), null);
-    assertEquals(Universe(new Level(0), new Level(LevelVariable.HVAR)), result.expression.normalize(NormalizationMode.NF));
+    assertEquals(Universe(new Level(BigInteger.ZERO), ConstLevel.INFINITY), result.expression.normalize(NormalizationMode.NF));
   }
 
   @Test
@@ -262,17 +262,17 @@ public class NormalizationTest extends TypeCheckingTestCase {
     DependentLink g = param("g", Pi(Ref(B), Ref(A)));
     SingleDependentLink a = singleParam("a", Ref(A));
     SingleDependentLink b = singleParam("b", Ref(B));
-    Expression linvType = FunCall(Prelude.PATH_INFIX, LevelPair.SET0,
+    Expression linvType = FunCall(Prelude.PATH_INFIX, Levels.EMPTY,
         Ref(A),
         Apps(Ref(g), Apps(Ref(f), Ref(a))),
         Ref(a));
     DependentLink linv = param("linv", Pi(a, linvType));
-    Expression rinvType = FunCall(Prelude.PATH_INFIX, LevelPair.SET0,
+    Expression rinvType = FunCall(Prelude.PATH_INFIX, Levels.EMPTY,
         Ref(B),
         Apps(Ref(f), Apps(Ref(g), Ref(b))),
         Ref(b));
     DependentLink rinv = param("rinv", Pi(b, rinvType));
-    Expression iso_expr = FunCall(Prelude.ISO, LevelPair.SET0,
+    Expression iso_expr = FunCall(Prelude.ISO, Levels.EMPTY,
         Ref(A), Ref(B),
         Ref(f), Ref(g),
         Ref(linv), Ref(rinv),
@@ -282,23 +282,23 @@ public class NormalizationTest extends TypeCheckingTestCase {
 
   @Test
   public void testIsoRight() {
-    DependentLink A = param("A", Universe(new Level(LevelVariable.PVAR), new Level(LevelVariable.HVAR)));
-    DependentLink B = param("B", Universe(new Level(LevelVariable.PVAR), new Level(LevelVariable.HVAR)));
+    DependentLink A = param("A", Universe(Sort.TypeOfLevel(0)));
+    DependentLink B = param("B", Universe(Sort.TypeOfLevel(0)));
     DependentLink f = param("f", Pi(Ref(A), Ref(B)));
     DependentLink g = param("g", Pi(Ref(B), Ref(A)));
     SingleDependentLink a = singleParam("a", Ref(A));
     SingleDependentLink b = singleParam("b", Ref(B));
-    Expression linvType = FunCall(Prelude.PATH_INFIX, LevelPair.STD,
+    Expression linvType = FunCall(Prelude.PATH_INFIX, Levels.EMPTY,
         Ref(A),
         Apps(Ref(g), Apps(Ref(f), Ref(a))),
         Ref(a));
     DependentLink linv = param("linv", Pi(a, linvType));
-    Expression rinvType = FunCall(Prelude.PATH_INFIX, LevelPair.STD,
+    Expression rinvType = FunCall(Prelude.PATH_INFIX, Levels.EMPTY,
         Ref(B),
         Apps(Ref(f), Apps(Ref(g), Ref(b))),
         Ref(b));
     DependentLink rinv = param("rinv", Pi(b, rinvType));
-    Expression iso_expr = FunCall(Prelude.ISO, LevelPair.STD,
+    Expression iso_expr = FunCall(Prelude.ISO, Levels.EMPTY,
         Ref(A), Ref(B),
         Ref(f), Ref(g),
         Ref(linv), Ref(rinv),
@@ -315,23 +315,23 @@ public class NormalizationTest extends TypeCheckingTestCase {
     SingleDependentLink a = singleParam("a", Ref(A));
     SingleDependentLink b = singleParam("b", Ref(B));
     SingleDependentLink k = singleParam("k", Interval());
-    Expression linvType = FunCall(Prelude.PATH_INFIX, LevelPair.SET0,
+    Expression linvType = FunCall(Prelude.PATH_INFIX, Levels.EMPTY,
         Ref(A),
         Apps(Ref(g), Apps(Ref(f), Ref(a))),
         Ref(a));
     DependentLink linv = param("linv", Pi(a, linvType));
-    Expression rinvType = FunCall(Prelude.PATH_INFIX, LevelPair.SET0,
+    Expression rinvType = FunCall(Prelude.PATH_INFIX, Levels.EMPTY,
         Ref(B),
         Apps(Ref(f), Apps(Ref(g), Ref(b))),
         Ref(b));
     DependentLink rinv = param("rinv", Pi(b, rinvType));
     DependentLink aleft = param("aleft", Ref(A));
-    Expression iso_expr = FunCall(Prelude.ISO, LevelPair.SET0,
+    Expression iso_expr = FunCall(Prelude.ISO, Levels.EMPTY,
         Ref(A), Ref(B),
         Ref(f), Ref(g),
         Ref(linv), Ref(rinv),
         Ref(k));
-    Expression expr = FunCall(Prelude.COERCE, LevelPair.SET0,
+    Expression expr = FunCall(Prelude.COERCE, Levels.EMPTY,
         Lam(k, iso_expr),
         Ref(aleft),
         Right());
@@ -342,27 +342,26 @@ public class NormalizationTest extends TypeCheckingTestCase {
   public void testCoeIsoFreeVar() {
     SingleDependentLink k = singleParam("k", Interval());
     SingleDependentLink i = singleParam("i", Interval());
-    LevelPair levels = new LevelPair(new Level(0), Level.INFINITY);
-    DataCallExpression A = DataCall(Prelude.PATH, levels, Lam(i, Interval()), Ref(k), Ref(k));
+    DataCallExpression A = DataCall(Prelude.PATH, Levels.EMPTY, Lam(i, Interval()), Ref(k), Ref(k));
     DependentLink B = param("B", Universe(Sort.SET0));
     DependentLink f = param("f", Pi(A, Ref(B)));
     DependentLink g = param("g", Pi(Ref(B), A));
     SingleDependentLink a = singleParam("a", A);
     SingleDependentLink b = singleParam("b", Ref(B));
-    Expression linvType = FunCall(Prelude.PATH_INFIX, levels,
+    Expression linvType = FunCall(Prelude.PATH_INFIX, Levels.EMPTY,
         A,
         Apps(Ref(g), Apps(Ref(f), Ref(a))),
         Ref(a));
     DependentLink linv = param("linv", Pi(a, linvType));
-    Expression rinvType = FunCall(Prelude.PATH_INFIX, levels,
+    Expression rinvType = FunCall(Prelude.PATH_INFIX, Levels.EMPTY,
         Ref(B),
         Apps(Ref(f), Apps(Ref(g), Ref(b))),
         Ref(b));
     DependentLink rinv = param("rinv", Pi(b, rinvType));
     DependentLink aleft = paramExpr("aleft", A.subst(k, Right()));
-    Expression expr = FunCall(Prelude.COERCE, levels,
-        Lam(k, FunCall(Prelude.ISO, levels,
-            DataCall(Prelude.PATH, levels,
+    Expression expr = FunCall(Prelude.COERCE, Levels.EMPTY,
+        Lam(k, FunCall(Prelude.ISO, Levels.EMPTY,
+            DataCall(Prelude.PATH, Levels.EMPTY,
                 Lam(i, Interval()),
                 Ref(k),
                 Ref(k)),
@@ -380,7 +379,7 @@ public class NormalizationTest extends TypeCheckingTestCase {
   @Test
   public void testAppProj() {
     SingleDependentLink x = singleParam("x", Nat());
-    Expression expr = Apps(ProjExpression.make(Tuple(new SigmaExpression(Sort.SET0, param("_", Pi(Nat(), Nat()))), Lam(x, Ref(x))), 0, false), Zero());
+    Expression expr = Apps(ProjExpression.make(Tuple(new SigmaExpression(param("_", Pi(Nat(), Nat()))), Lam(x, Ref(x))), 0, false), Zero());
     assertEquals(Zero(), expr.normalize(NormalizationMode.NF));
   }
 

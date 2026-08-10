@@ -8,7 +8,6 @@ import org.arend.ext.prettyprinting.doc.TermDoc;
 import org.arend.ext.reference.Precedence;
 import org.arend.naming.renamer.ReferableRenamer;
 import org.arend.term.concrete.Concrete;
-import org.arend.typechecking.visitor.FixLevelParameters;
 
 public class TermWithSubtermDoc extends TermDoc {
   private final Expression mySubterm;
@@ -47,9 +46,6 @@ public class TermWithSubtermDoc extends TermDoc {
     StringBuilder builder = new StringBuilder();
     Expression term = (Expression) getTerm();
     PrettyPrinterConfig ppConfig = getPPConfig();
-    if (ppConfig.getNormalizationMode() != null) {
-      FixLevelParameters.fix(term); // Expressions created in errors might have not fixed levels, so we fix them here
-    }
     PrettyPrintWithSubexprVisitor visitor = new PrettyPrintWithSubexprVisitor(builder, 0, !ppConfig.isSingleLine());
     ToAbstractVisitor.convert(term, mySubterm, myLevels, getPrettifier(), ppConfig, new ReferableRenamer()).accept(visitor, new Precedence(Concrete.Expression.PREC));
     String result = builder.toString();

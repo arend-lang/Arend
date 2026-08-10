@@ -1,7 +1,7 @@
 package org.arend.typechecking.constructions;
 
 import org.arend.core.context.param.SingleDependentLink;
-import org.arend.core.subst.LevelPair;
+import org.arend.core.subst.Levels;
 import org.arend.prelude.Prelude;
 import org.arend.typechecking.TypeCheckingTestCase;
 import org.arend.typechecking.result.TypecheckingResult;
@@ -98,7 +98,7 @@ public class LambdaTest extends TypeCheckingTestCase {
   @Test
   public void lambda2() {
     SingleDependentLink param = singleParams(true, vars("x", "y"), Nat());
-    TypecheckingResult result = typeCheckExpr("\\lam (x y z w : Nat) => path (\\lam _ => y)", Pi(Nat(), Pi(param, Pi(Nat(), FunCall(Prelude.PATH_INFIX, LevelPair.SET0, Nat(), Ref(param), Ref(param))))));
+    TypecheckingResult result = typeCheckExpr("\\lam (x y z w : Nat) => path (\\lam _ => y)", Pi(Nat(), Pi(param, Pi(Nat(), FunCall(Prelude.PATH_INFIX, Levels.EMPTY, Nat(), Ref(param), Ref(param))))));
     assertNotNull(result);
   }
 
@@ -124,7 +124,7 @@ public class LambdaTest extends TypeCheckingTestCase {
 
   @Test
   public void lambdaUniverse() {
-    TypecheckingResult result = typeCheckExpr("\\lam (x : \\oo-Type1 -> \\oo-Type2) (y : \\oo-Type0) => x y", null);
+    TypecheckingResult result = typeCheckExpr("\\lam (x : \\Type1 -> \\Type2) (y : \\Type0) => x y", null);
     assertEquals(result.type, Pi(singleParam(null, Pi(Universe(1), Universe(2))), Pi(singleParam(null, Universe(0)), Universe(2))));
   }
 
