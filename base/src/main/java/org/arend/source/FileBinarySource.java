@@ -8,8 +8,10 @@ import org.jetbrains.annotations.Nullable;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.nio.file.AtomicMoveNotSupportedException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.nio.file.StandardOpenOption;
 
 public class FileBinarySource extends StreamBinarySource {
@@ -39,11 +41,39 @@ public class FileBinarySource extends StreamBinarySource {
     return Files.newInputStream(myFile);
   }
 
+  /**
+   * Scratch file the new cache is built in before it replaces {@link #myFile}. Deliberately a
+   * fixed name rather than a unique one: a run killed mid-write leaves it behind, and a fixed
+   * name is reused by the next attempt instead of littering the binaries directory.
+   */
+  private Path tempFile() {
+    return myFile.resolveSibling(myFile.getFileName() + ".tmp");
+  }
+
   @Nullable
   @Override
   protected OutputStream getOutputStream() throws IOException {
     Files.createDirectories(myFile.getParent());
-    return Files.newOutputStream(myFile, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING, StandardOpenOption.WRITE);
+    return Files.newOutputStream(tempFile(), StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING, StandardOpenOption.WRITE);
+  }
+
+  @Override
+  protected void commitOutput() throws IOException {
+    try {
+      Files.move(tempFile(), myFile, StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING);
+    } catch (AtomicMoveNotSupportedException e) {
+      // Some filesystems (and some network mounts) cannot do this; a plain replace still beats
+      // writing the destination in place, since the window in which it is invalid is far shorter.
+      Files.move(tempFile(), myFile, StandardCopyOption.REPLACE_EXISTING);
+    }
+  }
+
+  @Override
+  protected void discardOutput() {
+    try {
+      Files.deleteIfExists(tempFile());
+    } catch (IOException ignored) {
+    }
   }
 
   @Override
