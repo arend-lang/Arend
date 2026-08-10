@@ -37,9 +37,18 @@ public class ModuleLocation {
       myModulePath.equals(that.myModulePath);
   }
 
+  /**
+   * Uses the kind's {@code ordinal()} rather than the constant itself, because {@code
+   * Enum.hashCode()} is the identity hash: it differs between JVM runs, and within one run it
+   * depends on how many objects were hashed on this thread before the constant was. Modules are
+   * kept in hash-ordered collections that get iterated (notably {@code ArendServer.getModules()},
+   * a {@code ConcurrentHashMap}), so an unstable hash makes that iteration order unstable too —
+   * which is how the same command over the same files could take a different code path depending
+   * on whether an unrelated startup probe ran first.
+   */
   @Override
   public int hashCode() {
-    return Objects.hash(myLibraryName, myLocationKind, myModulePath);
+    return Objects.hash(myLibraryName, myLocationKind.ordinal(), myModulePath);
   }
 
   @Override
