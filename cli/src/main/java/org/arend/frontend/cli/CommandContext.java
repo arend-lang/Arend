@@ -101,11 +101,18 @@ public class CommandContext {
    */
   private final Set<GeneralError> emittedErrors = Collections.newSetFromMap(new IdentityHashMap<>());
 
-  /** Plain stderr reporter; flips {@link #exitWithError}. */
+  /**
+   * Plain stderr reporter; flips {@link #exitWithError} on an ERROR, like {@link #dispatchError}.
+   *
+   * <p>It used to fail the run on <em>anything</em> reported through it, which is how a warning
+   * about a discarded binary cache — a condition the very same run then repairs — could exit 1 on
+   * a library that typechecks. Callers that must fail on a non-ERROR diagnostic (a library that
+   * would not load, say) set the flag themselves.
+   */
   public final ErrorReporter systemErrErrorReporter = error -> {
     System.err.println(error);
     System.err.flush();
-    exitWithError = true;
+    if (error.level == GeneralError.Level.ERROR) exitWithError = true;
   };
 
   /** Goal-aware reporter that buffers when {@link #bufferErrors} is set. */

@@ -12,6 +12,7 @@ import org.arend.frontend.parser.ArendParser;
 import org.arend.frontend.parser.BuildVisitor;
 import org.arend.frontend.repl.CommonCliRepl;
 import org.arend.frontend.source.PreludeResourceSource;
+import org.arend.module.error.CorruptBinaryCacheError;
 import org.arend.naming.reference.FullModuleReferable;
 import org.arend.naming.reference.TCDefReferable;
 import org.arend.prelude.Prelude;
@@ -23,11 +24,13 @@ import org.arend.source.FileBinarySource;
 import org.arend.source.GZIPStreamBinarySource;
 import org.arend.term.group.ConcreteGroup;
 import org.arend.typechecking.computation.UnstoppableCancellationIndicator;
+import org.arend.util.FileUtils;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
 import java.io.IOException;
+import java.io.OutputStream;
 import java.nio.file.FileVisitResult;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -340,5 +343,151 @@ public class CachingTest {
     ConcreteGroup aGroup = srv2.getRawGroup(moduleLoc("A"));
     assertNotNull(aGroup);
     assertThat(getDef(aGroup, "C").getTypechecked().status(), is(equalTo(Definition.TypeCheckingStatus.NO_ERRORS)));
+  }
+
+  // ───────── unreadable and half-written .arc files ─────────
+  //
+  // A cache that cannot be read back is recoverable — the module is simply recompiled — and the
+  // two halves below keep it that way: an unreadable file is dropped with a warning instead of
+  // failing the build with a deserializer stack trace, and a write that does not finish leaves
+  // the previous cache in place instead of a truncated one for the next run to trip over.
+
+  private Path arcFile(String name) {
+    return FileUtils.binaryFile(tempDir, new ModulePath(name));
+  }
+
+  private GZIPStreamBinarySource binarySource(String name) {
+    return new GZIPStreamBinarySource(new FileBinarySource(tempDir, moduleLoc(name)));
+  }
+
+  private void persistAndTruncate(String name) throws IOException {
+    addModule(name, "\\func a : Nat => 0");
+    typecheck(name);
+    assertTrue("the fixture must start from a valid cache", persistModule(name));
+
+    byte[] full = Files.readAllBytes(arcFile(name));
+    Files.write(arcFile(name), Arrays.copyOf(full, full.length / 2));
+    errorList.clear();
+  }
+
+  private void assertReportedAsRecoverable(String name) {
+    assertThat(errorList, hasSize(1));
+    GeneralError error = errorList.get(0);
+    assertThat(error, is(instanceOf(CorruptBinaryCacheError.class)));
+    assertThat("an unreadable cache must not fail the run", error.level, is(GeneralError.Level.WARNING));
+    assertFalse("the unreadable cache must be dropped, not rediscovered by every later run",
+        Files.exists(arcFile(name)));
+  }
+
+  private List<Path> scratchFiles() throws IOException {
+    try (var files = Files.list(tempDir)) {
+      return files.filter(path -> path.getFileName().toString().endsWith(".tmp")).toList();
+    }
+  }
+
+  @Test
+  public void aTruncatedCacheIsAWarningAndTheFileIsDropped() throws IOException {
+    persistAndTruncate("A");
+
+    assertNull("a truncated .arc cannot yield a deserializer", binarySource("A").parseProtobuf(errorReporter));
+    assertReportedAsRecoverable("A");
+  }
+
+  @Test
+  public void aTruncatedCacheIsAWarningOnAFullLoadToo() throws IOException {
+    persistAndTruncate("A");
+
+    assertNull("a truncated .arc cannot yield a group", binarySource("A").load(createServer(), errorReporter));
+    assertReportedAsRecoverable("A");
+  }
+
+  @Test
+  public void aSuccessfulWriteLeavesNoScratchFileBehind() throws IOException {
+    addModule("A", "\\func a : Nat => 0");
+    typecheck("A");
+    assertTrue(persistModule("A"));
+
+    assertThat(scratchFiles(), is(empty()));
+  }
+
+  /** A write that dies partway is the case {@code persist}'s own {@code catch} can still see. */
+  @Test
+  public void aFailedWriteLeavesThePreviousCacheIntact() throws IOException {
+    addModule("A", "\\func a : Nat => 0");
+    typecheck("A");
+    assertTrue(persistModule("A"));
+    byte[] before = Files.readAllBytes(arcFile("A"));
+
+    errorList.clear();
+    // 20 bytes is past the gzip header and into the deflated payload, so the failure lands in the
+    // middle of the module rather than before any of it is written.
+    assertFalse("a write that cannot complete must report failure",
+        new GZIPStreamBinarySource(new FailingBinarySource(tempDir, moduleLoc("A"), 20))
+            .persist(server, errorReporter));
+
+    assertArrayEquals("a failed write must not touch the destination", before, Files.readAllBytes(arcFile("A")));
+    assertThat(scratchFiles(), is(empty()));
+    assertNotNull("the surviving cache must still be loadable", binarySource("A").parseProtobuf(errorReporter));
+  }
+
+  /**
+   * The case that motivated writing atomically at all: a killed process never reaches any
+   * {@code catch}, so the only thing that can protect the destination is never having opened it.
+   */
+  @Test
+  public void anInterruptedWriteLeavesThePreviousCacheIntact() throws IOException {
+    addModule("A", "\\func a : Nat => 0");
+    typecheck("A");
+    assertTrue(persistModule("A"));
+    byte[] before = Files.readAllBytes(arcFile("A"));
+
+    ExposedBinarySource source = new ExposedBinarySource(tempDir, moduleLoc("A"));
+    try (OutputStream out = source.openOutputStream()) {
+      out.write(new byte[]{1, 2, 3});
+    }
+
+    assertArrayEquals("an abandoned write must not touch the destination", before, Files.readAllBytes(arcFile("A")));
+    assertNotNull("the previous cache must still be loadable", binarySource("A").parseProtobuf(errorReporter));
+  }
+
+  /** A {@link FileBinarySource} whose output stream dies after {@code limit} bytes. */
+  private static class FailingBinarySource extends FileBinarySource {
+    private final int myLimit;
+
+    FailingBinarySource(Path basePath, ModuleLocation module, int limit) {
+      super(basePath, module);
+      myLimit = limit;
+    }
+
+    @Override
+    protected OutputStream getOutputStream() throws IOException {
+      OutputStream out = super.getOutputStream();
+      assertNotNull(out);
+      return new OutputStream() {
+        private int written;
+
+        @Override
+        public void write(int b) throws IOException {
+          if (++written > myLimit) throw new IOException("simulated write failure");
+          out.write(b);
+        }
+
+        @Override
+        public void close() throws IOException {
+          out.close();
+        }
+      };
+    }
+  }
+
+  /** Opens the write the way {@code persist} does, so a test can abandon it. */
+  private static class ExposedBinarySource extends FileBinarySource {
+    ExposedBinarySource(Path basePath, ModuleLocation module) {
+      super(basePath, module);
+    }
+
+    OutputStream openOutputStream() throws IOException {
+      return getOutputStream();
+    }
   }
 }
