@@ -24,7 +24,7 @@ import java.util.List;
  * mismatch} between types that look the same) point at whichever definition later consumes the
  * term, with nothing tying them back to the cache.
  *
- * <p>{@code BinaryLoader} loads a whole library at once and cannot guarantee that every callee
+ * <p>The binary-cache loader loads a whole library at once and cannot guarantee that every callee
  * is filled before its callers — import cycles make some orderings impossible in principle. So
  * rather than depend on order, the deserializer records each defcall it builds against an
  * unfilled callee and re-runs {@code fixBoxes} on exactly those once every module is filled.

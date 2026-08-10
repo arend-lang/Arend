@@ -92,7 +92,7 @@ import static org.junit.Assert.fail;
  * secondary errors: the same target, the same 22/369 cone split (touched mode), a
  * per-module Phase 3 driver ({@link #PHASE3_PER_MODULE}), and CLI-matching
  * {@link #CLEAR_LEMMAS}. What remains is that Phase 3 hand-rolls its own ARD+ARC overlay
- * rather than calling {@link org.arend.frontend.library.BinaryLoader#loadBinaryCache} — so
+ * rather than calling {@link org.arend.frontend.library.CliServerRequester#loadBinaryCache} — so
  * this test measures round-trip <em>fidelity</em> of the serialized data, and is blind to
  * defects in how the production loader sequences {@code readDefinitions} / {@code readModule}
  * and cascades failures. That narrowing is the useful result: the data round-trips fine, the
@@ -405,7 +405,7 @@ public class ArendLibPartialRoundTripTest {
   /**
    * Returns {@code seeds} plus every module in {@code all} that transitively imports one of
    * them, following the same import edges {@link #topoSortByImports} reads. This mirrors the
-   * cascade {@code BinaryLoader} discovers by exception: a stale {@code .arc} makes every
+   * cascade {@code CliServerRequester} discovers by exception: a stale {@code .arc} makes every
    * {@code .arc} referencing it fail to deserialize, transitively.
    */
   private static Set<ModuleLocation> collectDependents(

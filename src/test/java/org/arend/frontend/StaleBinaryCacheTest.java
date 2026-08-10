@@ -297,6 +297,55 @@ public class StaleBinaryCacheTest {
     assertNoErrors("after changing leaf's signature");
   }
 
+  /**
+   * Filling a definition in inspects its callees, and a callee that is still a shell answers
+   * wrongly instead of failing — {@code FieldCallExpression.make} unfolds a property field it is
+   * told is not one, {@code fixBoxes} boxes nothing when the parameter list comes back empty.
+   * Nothing throws, so the module loads and the damage surfaces much later as a type error in an
+   * unrelated definition typechecked from source. Deserializing dependencies first is what keeps
+   * that from happening, so the order is part of the loader's contract rather than an incidental
+   * property of whatever order {@code server.getModules()} happens to return.
+   */
+  @Test
+  public void modulesAreDeserializedDependenciesFirst() throws IOException {
+    buildCachesThenRestart();
+    pass();
+
+    List<ModuleLocation> order = requester.getLoadOrder();
+    assertTrue("Leaf must be filled in before Mid, which links against it",
+        order.indexOf(moduleLoc("Leaf")) < order.indexOf(moduleLoc("Mid")));
+    assertTrue("Mid must be filled in before Top",
+        order.indexOf(moduleLoc("Mid")) < order.indexOf(moduleLoc("Top")));
+    assertTrue("Importer imports Leaf, so it comes after it too",
+        order.indexOf(moduleLoc("Leaf")) < order.indexOf(moduleLoc("Importer")));
+    assertEquals("every candidate has to be in the order, not just the ones with imports",
+        5, order.size());
+  }
+
+  /**
+   * An import cycle admits no dependencies-first order at all. The loader has to break it and
+   * carry on rather than drop a module or spin, since arend-lib has such cycles
+   * ({@code Algebra.StrictlyOrdered} ↔ {@code Arith.Nat}).
+   */
+  @Test
+  public void anImportCycleStillLoads() throws IOException {
+    writeLibrary();
+    // The imports form a cycle; the definitions do not (base <- cb <- ca), since mutual
+    // recursion across modules is rejected outright and would test nothing about loading.
+    writeModule("CycleA", "\\import CycleB()\n\\func base : Nat => 3\n\\func ca : Nat => CycleB.cb\n");
+    writeModule("CycleB", "\\import CycleA()\n\\func cb : Nat => CycleA.base\n");
+    newServer();
+    pass();
+    assertNoErrors("cold build with an import cycle");
+    newServer();
+    pass();
+
+    assertNoBinaryCacheErrors("reload with an import cycle");
+    assertNoErrors("reload with an import cycle");
+    assertLoadedFromCache("reload with an import cycle", "CycleA");
+    assertLoadedFromCache("reload with an import cycle", "CycleB");
+  }
+
   /** With no cache at all there are no candidates, so nothing may be skipped or reported. */
   @Test
   public void aColdBuildWithNoCacheIsSilent() throws IOException {
