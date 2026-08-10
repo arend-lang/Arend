@@ -35,6 +35,16 @@ public class GZIPStreamBinarySource extends StreamBinarySource {
     return stream == null ? null : new GZIPOutputStream(stream);
   }
 
+  @Override
+  protected void commitOutput() throws IOException {
+    mySource.commitOutput();
+  }
+
+  @Override
+  protected void discardOutput() {
+    mySource.discardOutput();
+  }
+
   @NotNull
   @Override
   public ModuleLocation getModule() {
@@ -44,5 +54,10 @@ public class GZIPStreamBinarySource extends StreamBinarySource {
   @Override
   public long getTimeStamp() {
     return mySource.getTimeStamp();
+  }
+
+  @Override
+  public boolean delete() {
+    return mySource.delete();
   }
 }
