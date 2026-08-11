@@ -16,6 +16,7 @@ import org.arend.core.sort.Sort;
 import org.arend.core.sort.SortExpression;
 import org.arend.core.subst.ExprSubstitution;
 import org.arend.core.subst.Levels;
+import org.arend.ext.core.context.BindingVariance;
 import org.arend.ext.core.level.ConstLevel;
 import org.arend.ext.core.ops.NormalizationMode;
 import org.arend.ext.error.ErrorReporter;
@@ -231,7 +232,7 @@ public class ElimTypechecking {
           }
           if (pattern instanceof ConstructorPattern) {
             Definition constructor = pattern.getDefinition();
-            if (constructor == Prelude.LEFT || constructor == Prelude.RIGHT) {
+            if (constructor == Prelude.LEFT || constructor == Prelude.RIGHT || constructor == Prelude.DLEFT || constructor == Prelude.DRIGHT) {
               intervals++;
               continue;
             }
@@ -284,8 +285,23 @@ public class ElimTypechecking {
       }
     }
 
+    boolean intervalClausesCoverEverything = false;
+    if (cases != null && !cases.isEmpty()) {
+      intervalClausesCoverEverything = true;
+      DependentLink link = DependentLink.Helper.get(parameters, DependentLink.Helper.size(parameters) - cases.size());
+      for (IntervalElim.CasePair casePair : cases) {
+        if (casePair.proj1 == null || casePair.proj2 == null || !casePair.isDirected() || link.getVariance() != BindingVariance.INVARIANT) {
+          intervalClausesCoverEverything = false;
+          break;
+        }
+        link = link.getNext();
+      }
+    }
+
     ElimTree elimTree;
-    if (nonIntervalClauses.isEmpty()) {
+    if (nonIntervalClauses.isEmpty() && intervalClausesCoverEverything) {
+      elimTree = null;
+    } else if (nonIntervalClauses.isEmpty()) {
       DependentLink emptyLink = null;
       if (elimParams.isEmpty()) {
         for (DependentLink link = parameters; link.hasNext(); link = link.getNext()) {
@@ -719,6 +735,7 @@ public class ElimTypechecking {
     for (int i = 0; i < clauses.getFirst().getPatterns().size(); i++) {
       Expression left = null;
       Expression right = null;
+      boolean directed = DependentLink.Helper.get(parameters, i).getType().normalize(NormalizationMode.WHNF) instanceof DataCallExpression dataCall && dataCall.getDefinition() == Prelude.DI;
 
       for (int j = 0; j < clauses.size(); j++) {
         ElimClause<? extends Pattern> clause = clauses.get(j);
@@ -728,11 +745,11 @@ public class ElimTypechecking {
 
         boolean found = false;
         Definition constructor = clause.getPatterns().get(i).getDefinition();
-        if (constructor == Prelude.LEFT) {
+        if (constructor == Prelude.LEFT || constructor == Prelude.DLEFT) {
           if (left == null) {
             found = true;
           }
-        } else if (constructor == Prelude.RIGHT) {
+        } else if (constructor == Prelude.RIGHT || constructor == Prelude.DRIGHT) {
           if (right == null) {
             found = true;
           }
@@ -754,7 +771,7 @@ public class ElimTypechecking {
             oldLink = oldLink.getNext();
           }
 
-          if (constructor == Prelude.LEFT) {
+          if (constructor == Prelude.LEFT || constructor == Prelude.DLEFT) {
             left = clause.getExpression().subst(substitution);
           } else {
             right = clause.getExpression().subst(substitution);
@@ -771,13 +788,13 @@ public class ElimTypechecking {
         int j = 0;
         for (DependentLink link = parameters; link.hasNext(); link = link.getNext(), j++) {
           missingClause.add(new Util.PatternClauseElem(j == i
-            ? new ConstructorExpressionPattern(left == null ? Left() : Right(), Collections.emptyList())
+            ? new ConstructorExpressionPattern(left == null ? Left(directed) : Right(directed), Collections.emptyList())
             : new BindingPattern(link)));
         }
         addMissingClause(missingClause, true);
       }
 
-      result.add(new IntervalElim.CasePair(left, right));
+      result.add(new IntervalElim.CasePair(left, right, directed));
     }
     return result;
   }
@@ -800,7 +817,7 @@ public class ElimTypechecking {
           if (!(clause.getPatterns().get(index) instanceof BindingPattern)) {
             if (clauses.getFirst().getPatterns().get(index) instanceof BindingPattern && clause.getPatterns().get(index) instanceof ConstructorPattern) {
               Definition definition = clause.getPatterns().get(index).getDefinition();
-              if (definition == Prelude.LEFT || definition == Prelude.RIGHT) {
+              if (definition == Prelude.LEFT || definition == Prelude.RIGHT || definition == Prelude.DLEFT || definition == Prelude.DRIGHT) {
                 final int finalIndex = index;
                 clauses = clauses.stream().filter(clauseData1 -> clauseData1.getPatterns().get(finalIndex) instanceof BindingPattern).collect(Collectors.toList());
                 continue loop;

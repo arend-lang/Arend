@@ -134,4 +134,80 @@ public class CatPreludeTest extends TypeCheckingTestCase {
       """, 1);
     assertThatErrorsAre(Matchers.typeMismatchError());
   }
+
+  @Test
+  public void intervalElimDI() {
+    typeCheckModule("""
+      \\func f (n : Nat) (i : DI) : Nat
+        | zero, _ => 0
+        | suc _, _ => 0
+        | _, dleft => 0
+        | _, dright => 0
+      \\func g (n : Nat) : f n dleft = 0 => idp
+      """);
+  }
+
+  @Test
+  public void intervalElimDIError() {
+    typeCheckModule("""
+      \\func f (n : Nat) (i :+ DI) : Nat
+        | zero, _ => 0
+        | suc _, _ => 0
+        | _, dleft => 0
+        | _, dright => 0
+      """, 2);
+  }
+
+  @Test
+  public void intervalElimDICoverageError() {
+    typeCheckModule("""
+      \\func f (n : Nat) (i : DI) : Nat
+        | zero, _ => 0
+        | _, dleft => 0
+        | _, dright => 0
+      """, 1);
+  }
+
+  @Test
+  public void intervalElimDAt() {
+    typeCheckModule("""
+      \\func myDAt {C : DI ->+ \\Cat} {a : C dleft} {b : C dright} (p : DPath C a b) (i : DI) : C i \\elim p, i
+        | dpath f, i => f i
+        | _, dleft => a
+        | _, dright => b
+      \\func g (p : 0 ~> 1) : myDAt p dright = 1 => idp
+      """);
+  }
+
+  @Test
+  public void intervalElimDAtConditionsError() {
+    typeCheckModule("""
+      \\func myDAt {A : \\Type} (a a' : A) (p : a ~> a') (i : DI) : A \\elim p, i
+        | dpath f, i => f i
+        | _, dleft => a'
+        | _, dright => a
+      """, 2);
+  }
+
+  @Test
+  public void intervalElimMixedIAndDI() {
+    typeCheckModule("""
+      \\func mixed (i : I) (j : DI) : Nat
+        | _, _ => 0
+        | left, _ => 0
+        | right, _ => 0
+        | _, dleft => 0
+        | _, dright => 0
+      \\func testMixed : mixed left dleft = 0 => idp
+      """);
+  }
+
+  @Test
+  public void intervalElimDIConstructor() {
+    typeCheckModule("""
+      \\data D | con1 | con2 | dseg (d : D) (i : DI) \\elim i { | dleft => d | dright => con2 }
+      \\func testLeft (d : D) : dseg d dleft = d => idp
+      \\func testRight (d : D) : dseg d dright = con2 => idp
+      """);
+  }
 }

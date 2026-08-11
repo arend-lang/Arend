@@ -21,7 +21,6 @@ import org.arend.core.sort.SortExpression;
 import org.arend.ext.error.ErrorReporter;
 import org.arend.ext.error.ListErrorReporter;
 import org.arend.ext.error.LocalError;
-import org.arend.ext.util.Pair;
 import org.arend.prelude.Prelude;
 
 import java.util.*;
@@ -320,8 +319,8 @@ public class StripVisitor implements ExpressionVisitor<Void, Expression> {
       case IntervalElim intervalElim -> {
         List<IntervalElim.CasePair> cases = intervalElim.getCases();
         for (int i = 0; i < cases.size(); i++) {
-          Pair<Expression, Expression> pair = cases.get(i);
-          cases.set(i, new IntervalElim.CasePair(pair.proj1 == null ? null : pair.proj1.accept(this, null), pair.proj2 == null ? null : pair.proj2.accept(this, null)));
+          IntervalElim.CasePair pair = cases.get(i);
+          cases.set(i, new IntervalElim.CasePair(pair.proj1 == null ? null : pair.proj1.accept(this, null), pair.proj2 == null ? null : pair.proj2.accept(this, null), pair.isDirected()));
         }
         if (intervalElim.getOtherwise() != null) {
           visitElimBody(intervalElim.getOtherwise());

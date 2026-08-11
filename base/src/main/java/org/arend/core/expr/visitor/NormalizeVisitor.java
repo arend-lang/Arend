@@ -404,9 +404,9 @@ public class NormalizeVisitor extends ExpressionTransformer<NormalizationMode>  
           }
 
           Expression result;
-          if (conCall.getDefinition() == Prelude.LEFT) {
+          if (conCall.getDefinition() == Prelude.LEFT || conCall.getDefinition() == Prelude.DLEFT) {
             result = thisCase.proj1;
-          } else if (conCall.getDefinition() == Prelude.RIGHT) {
+          } else if (conCall.getDefinition() == Prelude.RIGHT || conCall.getDefinition() == Prelude.DRIGHT) {
             result = thisCase.proj2;
             if (definition == Prelude.COERCE2 && i == 1) { // Just a shortcut
               ConCallExpression arg3 = defCallArgs.get(3).accept(this, NormalizationMode.WHNF).cast(ConCallExpression.class);

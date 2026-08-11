@@ -26,8 +26,16 @@ public class IntervalElim implements Body, CoreIntervalElim {
   }
 
   public static class CasePair extends Pair<Expression, Expression> implements CoreIntervalElim.CasePair {
-    public CasePair(Expression proj1, Expression proj2) {
+    private final boolean myDirected;
+
+    public CasePair(Expression proj1, Expression proj2, boolean directed) {
       super(proj1, proj2);
+      myDirected = directed;
+    }
+
+    @Override
+    public boolean isDirected() {
+      return myDirected;
     }
 
     @Nullable
@@ -79,7 +87,7 @@ public class IntervalElim implements Body, CoreIntervalElim {
     for (int i = 0; i < myCases.size(); i++) {
       Expression arg = arguments.get(offset + i);
       ConCallExpression conCall = arg.cast(ConCallExpression.class);
-      if (conCall != null && (conCall.getDefinition() == Prelude.LEFT && myCases.get(i).proj1 != null || conCall.getDefinition() == Prelude.RIGHT && myCases.get(i).proj2 != null)) {
+      if (conCall != null && ((conCall.getDefinition() == Prelude.LEFT || conCall.getDefinition() == Prelude.DLEFT) && myCases.get(i).proj1 != null || (conCall.getDefinition() == Prelude.RIGHT || conCall.getDefinition() == Prelude.DRIGHT) && myCases.get(i).proj2 != null)) {
         return Decision.NO;
       }
 
@@ -99,7 +107,7 @@ public class IntervalElim implements Body, CoreIntervalElim {
     int offset = getOffset();
     for (int i = 0; i < myCases.size(); i++) {
       ConCallExpression conCall = arguments.get(offset + i).cast(ConCallExpression.class);
-      if (conCall != null && (conCall.getDefinition() == Prelude.LEFT && myCases.get(i).proj1 != null || conCall.getDefinition() == Prelude.RIGHT && myCases.get(i).proj2 != null)) {
+      if (conCall != null && ((conCall.getDefinition() == Prelude.LEFT || conCall.getDefinition() == Prelude.DLEFT) && myCases.get(i).proj1 != null || (conCall.getDefinition() == Prelude.RIGHT || conCall.getDefinition() == Prelude.DRIGHT) && myCases.get(i).proj2 != null)) {
         return null;
       }
     }

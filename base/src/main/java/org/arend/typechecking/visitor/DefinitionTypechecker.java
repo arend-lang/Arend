@@ -1948,7 +1948,7 @@ public class DefinitionTypechecker extends BaseDefinitionTypechecker implements 
         if (constructor.getBody() instanceof IntervalElim) {
           pairs = ((IntervalElim) constructor.getBody()).getCases();
           for (int i = 0; i < pairs.size(); i++) {
-            pairs.set(i, new IntervalElim.CasePair(addAts(pairs.get(i).proj1, newParam, constructorType), addAts(pairs.get(i).proj2, newParam, constructorType)));
+            pairs.set(i, new IntervalElim.CasePair(addAts(pairs.get(i).proj1, newParam, constructorType), addAts(pairs.get(i).proj2, newParam, constructorType), pairs.get(i).isDirected()));
           }
           elimBody = ((IntervalElim) constructor.getBody()).getOtherwise();
         } else {
@@ -1963,7 +1963,7 @@ public class DefinitionTypechecker extends BaseDefinitionTypechecker implements 
           LamExpression lamExpr = (LamExpression) pathArgs.getFirst();
           type = lamExpr.getBody();
           DependentLink param = newParams.get(i++);
-          pairs.add(new IntervalElim.CasePair(addAts(pathArgs.get(1), param, type.subst(lamExpr.getParameters(), Left())), addAts(pathArgs.get(2), param, type.subst(lamExpr.getParameters(), Right()))));
+          pairs.add(new IntervalElim.CasePair(addAts(pathArgs.get(1), param, type.subst(lamExpr.getParameters(), Left())), addAts(pathArgs.get(2), param, type.subst(lamExpr.getParameters(), Right())), false));
           type = type.subst(lamExpr.getParameters(), new ReferenceExpression(newParam));
           newParam = newParam.getNext();
         }

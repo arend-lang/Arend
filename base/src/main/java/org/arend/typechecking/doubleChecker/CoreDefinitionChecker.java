@@ -11,6 +11,7 @@ import org.arend.core.sort.Level;
 import org.arend.core.sort.Sort;
 import org.arend.core.sort.SortExpression;
 import org.arend.core.subst.Levels;
+import org.arend.ext.core.context.BindingVariance;
 import org.arend.ext.core.definition.CoreFunctionDefinition;
 import org.arend.ext.core.level.ConstLevel;
 import org.arend.ext.core.ops.CMP;
@@ -164,16 +165,21 @@ public class CoreDefinitionChecker extends BaseDefinitionTypechecker {
         link = link.getNext();
       }
 
-      for (IntervalElim.CasePair ignored : intervalElim.getCases()) {
+      boolean allDIAndTotal = true;
+      for (IntervalElim.CasePair casePair : intervalElim.getCases()) {
         if (!link.hasNext()) {
           errorReporter.report(new TypecheckingError("Interval elim has too many parameters", null));
           return false;
         }
 
+        DataDefinition expectedType = casePair.isDirected() ? Prelude.DI : Prelude.INTERVAL;
         DataCallExpression dataCall = link.getType().normalize(NormalizationMode.WHNF).cast(DataCallExpression.class);
-        if (!(dataCall != null && dataCall.getDefinition() == Prelude.INTERVAL)) {
-          errorReporter.report(new TypeMismatchError(DataCallExpression.make(Prelude.INTERVAL, Levels.EMPTY, Collections.emptyList()), link.getType(), null));
+        if (dataCall == null || dataCall.getDefinition() != expectedType) {
+          errorReporter.report(new TypeMismatchError(DataCallExpression.make(expectedType, Levels.EMPTY, Collections.emptyList()), link.getType(), null));
           return false;
+        }
+        if (expectedType != Prelude.DI || link.getVariance() != BindingVariance.INVARIANT || casePair.getLeftCase() == null || casePair.getRightCase() == null) {
+          allDIAndTotal = false;
         }
 
         link = link.getNext();
@@ -181,7 +187,7 @@ public class CoreDefinitionChecker extends BaseDefinitionTypechecker {
 
       // TODO[double_check]: Check interval conditions
 
-      if (intervalElim.getOtherwise() == null) {
+      if (intervalElim.getOtherwise() == null && !allDIAndTotal) {
         errorReporter.report(new TypecheckingError("Missing non-interval clauses", null));
         return false;
       }
@@ -201,7 +207,9 @@ public class CoreDefinitionChecker extends BaseDefinitionTypechecker {
       throw new IllegalStateException();
     }
 
-    myChecker.checkElimBody(definition, elimBody, definition.getParameters(), definition.getResultType(), level, null, definition.isSFunc(), PatternTypechecking.Mode.FUNCTION);
+    if (elimBody != null) {
+      myChecker.checkElimBody(definition, elimBody, definition.getParameters(), definition.getResultType(), level, null, definition.isSFunc(), PatternTypechecking.Mode.FUNCTION);
+    }
     return true;
   }
 

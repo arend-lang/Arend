@@ -1102,7 +1102,7 @@ public class PatternTypechecking {
       if (ok) {
         for (; parameters.hasNext() && addedIntervalVars < addIntervalVars; parameters = parameters.getNext()) {
           Expression paramType = parameters.getType().normalize(NormalizationMode.WHNF);
-          if (paramType instanceof DataCallExpression && ((DataCallExpression) paramType).getDefinition() == Prelude.INTERVAL) {
+          if (paramType instanceof DataCallExpression && (((DataCallExpression) paramType).getDefinition() == Prelude.INTERVAL || ((DataCallExpression) paramType).getDefinition() == Prelude.DI)) {
             DependentLink newParam = parameters.subst(new SubstVisitor(paramsSubst, LevelSubstitution.EMPTY), 1, false);
             myLinkList.append(newParam);
             result.add(new BindingPattern(newParam));
