@@ -294,6 +294,20 @@
       | suc n => ProdFin.prod_equiv `transQEquiv` sigma-right (\lam _ => fin_equiv) `transQEquiv` symQEquiv symmetric-rec
   }
 
+{- | $S_n$ as an explicit array of self-maps of `Fin n`, of length `n!`. By the pigeonhole principle
+     an injective self-map of `Fin n` is a permutation, so this enumerates exactly the injections
+     (`perms-inj`, `perms-complete`). -}
+\func perms (n : Nat) : Array (Fin n -> Fin n) (fac n)
+  => \new Array (Fin n -> Fin n) (fac n) (\lam k i => SymFin.fin_equiv k i)
+
+\lemma perms-inj {n : Nat} (i : Fin (perms n).len) : IsInj (perms n i)
+  => QEquiv.isInj {SymFin.fin_equiv i}
+
+\lemma perms-complete {n : Nat} {f : Fin n -> Fin n} (fi : IsInj f) : ∃ (Index f (perms n))
+  => \have e => IsEquiv.toQEquiv (PigeonholeSet.isEquiv f fi)
+     \in inP (SymFin.fin_equiv.ret e,
+              pmap (\lam (s : Sym n) (i : Fin n) => s i) (SymFin.fin_equiv.f_ret e))
+
 \instance EquivFin (A B : FinSet) : FinSet (QEquiv {A} {B})
   => \case decideEq A.card B.card, A.finEq, B.finEq \with {
     | yes e, inP Ae, inP Be =>

@@ -1,0 +1,100 @@
+\import Algebra.Monoid
+\import Algebra.Ordered
+\import Algebra.Pointed
+\import Algebra.Ring.Poly
+\import Algebra.Semiring
+\import Analysis.PowerSeries
+\import Analysis.Series
+\import Arith.Nat
+\import Arith.Rat
+\import Arith.Real
+\import Arith.Real.Field
+\import Arith.Real.UpperReal
+\import Data.Array
+\import Function.Meta
+\import Logic
+\import Order.Lattice
+\import Order.PartialOrder
+\import Paths
+\import Paths.Meta
+\import Topology.CoverSpace.Complete
+\import Topology.NormedAbGroup
+\import Topology.NormedRing
+\import Topology.TopSpace
+\open Monoid (pow)
+\open JoinSemilattice (Big_<=_join0, Big_<=_join1)
+
+{- | **Norm estimates for polynomial evaluation**, and the continuity of `polyEval` that follows
+     from reading a polynomial as a terminating power series. -}
+
+-- # Bounding a polynomial's value by its coefficients
+
+-- | `‖q(z)‖ <= Σ_{k<m} ‖coef q k‖ * ‖z‖^k`.
+\lemma lnorm_polyEval-bound {X : PseudoNormedRing} {q : Poly X} {m : Nat} (d : degree< q m) (z : X)
+  : lnorm (polyEval q z)
+  <= RealAbGroup.BigSum (\new Array Real m (\lam k => lnorm (polyCoef q k) * pow (lnorm z) k))
+  => rewrite (polyEval_polyCoef d) $
+     lnorm_BigSum <=∘ RealAbGroup.BigSum_<= (\lam _ =>
+       lnorm_*_<= <=∘ RealField.<=_*_positive-right lnorm>=0 lnorm_<=_pow)
+
+-- | The norms of the first `m` coefficients of `q`.
+\func coefNorms {X : PseudoNormedRing} (q : Poly X) (m : Nat) : Array Real m
+  => \new Array Real m (\lam k => lnorm (polyCoef q k))
+
+-- | A uniform bound on the first `m` coefficients of `q`.
+\func coefMax {X : PseudoNormedRing} (q : Poly X) (m : Nat) : Real
+  => Big (∨) 0 (coefNorms q m)
+
+\lemma coefMax>=0 {X : PseudoNormedRing} {q : Poly X} {m : Nat} : 0 <= coefMax q m
+  => Big_<=_join0 {_} {coefNorms q m}
+
+\lemma coefMax-cond {X : PseudoNormedRing} {q : Poly X} {m : Nat} (k : Fin m)
+  : lnorm (polyCoef q k) <= coefMax q m
+  => Big_<=_join1 {_} {coefNorms q m} k
+
+-- | A uniform bound `c` on the first `m` coefficients bounds `‖q(z)‖` by `c * powSum ‖z‖ m`.
+\lemma lnorm_polyEval-boundD {X : PseudoNormedRing} {q : Poly X} {m : Nat} (d : degree< q m)
+    {c : Real} (h : \Pi (k : Fin m) -> lnorm (polyCoef q k) <= c) (z : X)
+  : lnorm (polyEval q z) <= c * powSum (lnorm z) m
+  => lnorm_polyEval-bound d z
+     <=∘ RealAbGroup.BigSum_<= (\lam k => RealField.<=_*_positive-left (h k)
+                                            (RealField.pow>=0 lnorm>=0))
+     <=∘ =_<= (inv RealField.BigSum-ldistr)
+
+{- | **Dividing by a monic linear factor costs a factor of `powSum ‖z‖ m`**: a coefficient bound `c`
+     on `p` gives the bound `c * powSum ‖z‖ m` on `deflate p z`. -}
+\lemma deflate-coefBound {X : PseudoNormedRing} {p : Poly X} {m : Nat} (deg : degree< p m) {z : X}
+    {c : Real} (c>=0 : 0 <= c) (h : \Pi (j : Nat) -> lnorm (polyCoef p j) <= c) (k : Nat)
+  : lnorm (polyCoef (deflate p z) k) <= c * powSum (lnorm z) m \elim p, k
+  | pzero, k => rewrite lnorm_zro (RealField.<=_*_positive_positive c>=0 (powSum>=0 lnorm>=0 m))
+  | padd p e, 0 => lnorm_polyEval-boundD (degree<_padd-tail deg) (\lam j => h (suc j)) z
+  | padd p e, suc k => deflate-coefBound (degree<_padd-tail deg) c>=0 (\lam j => h (suc j)) k
+
+-- # Continuity of polynomial evaluation
+
+-- | A polynomial's coefficients form an everywhere-convergent power series.
+\lemma polyPowerSeriesConv {X : CompleteExNormedRing} {f : Poly X} {m : Nat} (d : degree< f m)
+  : IsPowerSeriesConv (polyCoef f)
+  => \lam {a} _ {_} eps>0 =>
+       inP (m, \lam {_} _ => rewrite (midSum_zro \lam p _ => term-zro d a p) eps>0)
+  \where
+    -- | Past the degree bound the coefficient series vanishes term by term.
+    \private \lemma term-zro {X : CompleteExNormedRing} {f : Poly X} {m : Nat} (d : degree< f m)
+                             (a : Rat) {j : Nat} (p : m <= j)
+      : norm (polyCoef f j) * pow a j = 0
+      => rewrite (d p, norm_zro) (ExUpperRealSemigroup.zro_*-left ExUpperReal.fromRat-bounded)
+
+-- | `polyEval f` is a cover map, hence continuous.
+\func polyEvalCover {X : CompleteExNormedRing} {f : Poly X} {m : Nat} (d : degree< f m)
+  : CoverMap X X (polyEval f)
+  => transportInv (CoverMap X X)
+       (ext \lam z => HausdorffTopSpace.limit-unique (polySeriesSum d z)
+                        powerSeriesSum-total-isSum)
+       (powerSeriesSum-total-cover (polyPowerSeriesConv d))
+  \where
+    -- | `polyEval f z` is the sum of the coefficient power series at `z`.
+    \private \lemma polySeriesSum {X : CompleteExNormedRing} {f : Poly X} {m : Nat}
+                                  (d : degree< f m) (z : X)
+      : IsSeriesSum (powerSeries (polyCoef f) z) (polyEval f z)
+      => transport (IsSeriesSum (powerSeries (polyCoef f) z)) (inv (polyEval_polyCoef d))
+           (seriesSum-fin m \lam {j} q => pmap (`* pow z j) (d q) *> zro_*-left)

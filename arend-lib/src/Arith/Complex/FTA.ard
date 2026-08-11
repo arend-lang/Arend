@@ -1,0 +1,340 @@
+\import Algebra.Group
+\import Algebra.Meta
+\import Algebra.Monoid
+\import Algebra.Ordered
+\import Algebra.Pointed
+\import Algebra.Ring.Poly
+\import Algebra.Ring.Poly.LinearFactors
+\import Algebra.Semiring
+\import Arith.Complex
+\import Arith.Complex.FTA.Approximation
+\import Arith.Complex.FTA.Moduli
+\import Arith.Complex.Norm
+\import Arith.Rat
+\import Arith.Real
+\import Arith.Real.Field
+\import Data.Array
+\import Function.Meta
+\import Logic
+\import Logic.Meta
+\import Meta
+\import Order.Biordered
+\import Order.Lattice
+\import Order.PartialOrder
+\import Order.StrictOrder
+\import Paths
+\import Paths.Meta
+\import Set.Filter
+\import Set.Set
+\import Topology.CoverSpace.Complete
+\import Topology.CoverSpace.StronglyComplete
+\import Topology.MetricSpace
+\import Topology.MetricSpace.Complete
+\import Topology.MetricSpace.Multiset
+\import Topology.NormedAbGroup
+\open Monoid (pow)
+
+{- | **Richman's reformulated fundamental theorem.** The multiset of roots of a monic degree-`n`
+     polynomial exists as a point of the *completion* of the space of `n`-multisets over
+     $\mathbb{C}$, it determines the polynomial, and it depends continuously on it. No axiom is
+     used anywhere in this module or its import cone: the spectrum is
+     built as a filter rather than a sequence, which is what keeps the construction choice-free.
+     `Logic.Choice` is imported by exactly one module in the library — the sibling
+     `Arith.Complex.FTA.Choice` — so the absence of axioms here is a property of the import graph
+     rather than a claim to be taken on trust.
+
+     - `spectrum`         — the root multiset exists.
+     - `spectrum-char`    — its members are exactly the roots of `p`. This sees only the *support*,
+                            so on its own it cannot separate $X^2(X-1)$ from $X(X-1)^2$.
+     - `spectrum_prodLin` — `spectrum (prodLin r) = r`, an equality of points of the completion,
+                            so multiplicities are included.
+     - `spectrum-factors` — `prodLin (spectrum p) = p`, stated as "the spectrum is concentrated on
+                            arrays whose product matches `p`", since `prodLin` is only locally
+                            uniformly continuous and so has no global extension to the completion.
+     - `spectrum-inj`     — the spectrum determines `p`. With `spectrum_prodLin` this makes
+                            `spectrum` injective with `prodLin` as a section. Surjectivity onto the
+                            whole completion is *not* proved: that needs `prodLin` extended to the
+                            completion, which it has no global uniform extension for.
+     - `spectrum-cont`    — `p |-> spectrum p` is continuous.
+
+     This is strictly weaker than "there is a root": extracting a single point of the multiset needs
+     choice, which is what `Arith.Complex.FTA.Choice.FTA` spends `acchoice` on. No individual root
+     is continuous in the coefficients, but the whole multiset is — that asymmetry is the theorem. -}
+
+-- | The space of completed `n`-multisets of complex numbers.
+\func ComplexMultiset (n : Nat) : CompleteMetricSpace => MultisetCompletion ComplexNormed n
+
+{- | **The spectrum filter.** `U` is large iff it contains every `delta`-near factorisation of `p`
+     for some `delta > 0`. -}
+\func specSetFilter {n : Nat} (p : Poly ComplexField) : SetFilter (Array Complex n) \cowith
+  | F U => ∃ (delta : Real) (0 < delta) (nearFactorSet p delta ⊆ U)
+  | filter-mono (inP (d, d>0, h)) q => inP (d, d>0, h <=∘ q)
+  | filter-top => inP (1, RealAbGroup.zro<ide, \lam _ => ())
+  | filter-meet (inP (d1, d1>0, h1)) (inP (d2, d2>0, h2))
+  => inP (d1 ∧ d2, <_meet-univ d1>0 d2>0,
+          \lam hr => (h1 (\lam j => hr j <∘l meet-left), h2 (\lam j => hr j <∘l meet-right)))
+
+-- | The spectrum filter is proper and Cauchy
+\func specFilter {n : Nat} (p : Poly ComplexField) (deg : degree< p (suc n))
+                 (monic : polyCoef p n = 1)
+  : CauchyFilter (MultisetPseudoMetric {ComplexNormed} n) \cowith
+  | SetFilter => specSetFilter p
+  | isProper (inP (d, d>0, h)) => \let (inP (r, hr)) => approx-factor p deg monic d>0
+                                  \in inP (r, h hr)
+  | isCauchyFilter =>
+      (cauchyFilter-metric-char {MultisetPseudoMetric {ComplexNormed} n} {specSetFilter p}).2
+        \lam {_} eps>0 =>
+          \let | (inP (d, d>0, MATCH)) => nearFactor-match p deg monic (rat_real_<.1 eps>0)
+               | (inP (r, hr)) => approx-factor p deg monic d>0
+          \in inP (r, inP (d, d>0, \lam {s} hs => real_<_U.1 (MATCH r s hr hs)))
+
+{- | **Richman's spectrum.** The root multiset of a monic degree-`n` polynomial, as a point of the
+     completion of the `n`-multiset space. No axiom is used. -}
+\func spectrum {n : Nat} (p : Poly ComplexField) (deg : degree< p (suc n))
+               (monic : polyCoef p n = 1)
+  : ComplexMultiset n
+  => sregCF (specFilter p deg monic)
+
+-- # Membership
+-- | Arrays having an entry within $\varepsilon$ of $z$.
+\func nearRootSet {m : Nat} (z : Complex) (eps : Real) : Set (Array Complex (suc m))
+  => \lam r => minDist {ComplexNormed} r z < eps
+
+-- | `z` is a member of the multiset `mu`: it has an entry arbitrarily close to `z`.
+\func multiset-mem {m : Nat} (mu : ComplexMultiset (suc m)) (z : Complex) : \Prop
+  => \Pi {eps : Real} -> 0 < eps -> mu (nearRootSet z eps)
+
+-- | A positive real has a positive rational strictly below it.
+\private \lemma rat-below {x : Real} (x>0 : 0 < x) : ∃ (a : Rat) (0 < a) ((a : Real) < x)
+  => \let (inP (a, a0U, aL)) => real_<-rat-char.1 x>0
+     \in inP (a, rat_real_<.2 (real_<_U.2 a0U), real_<_L.2 aL)
+
+-- | **A root of `p` belongs to the spectrum.**
+\lemma root-mem {m : Nat} (p : Poly ComplexField) (deg : degree< p (suc (suc m)))
+    (monic : polyCoef p (suc m) = 1) {z : Complex} (root : polyEval p z = 0)
+  : multiset-mem (spectrum p deg monic) z
+  => \lam {eps} _ =>
+       \let (inP (e, e>0, eR<eps/3)) => rat-below (linarith : (0 : Real) < eps * ratio 1 3)
+       \in sregCF-mem {MultisetPseudoMetric {ComplexNormed} (suc m)} {specFilter p deg monic} e>0
+             \lam r0 (inP (d, d>0, hd)) =>
+             \let | (inP (d2, d2>0, hd2)) => root-nearRoot p deg monic root
+                                               (rat_real_<.1 e>0 : (0 : Real) < e)
+                  | (inP (r1, hr1)) => approx-factor p deg monic (<_meet-univ d>0 d2>0 : 0 < d ∧ d2)
+             \in \have | m0 : matchDist {ComplexNormed} r0 r1 < e
+                          => real_<_U.2 (hd (\lam j => hr1 j <∘l meet-left))
+                       | m1 : minDist {ComplexNormed} r1 z < e
+                          => hd2 r1 (\lam j => hr1 j <∘l meet-right)
+                 \in \lam {s} bs =>
+                       usingOnly (m0, m1, eR<eps/3, real_<_U.2 bs,
+                                  minDist-lipM {ComplexNormed} s r1 z,
+                                  matchDist-triang {ComplexNormed} {suc m} {s} {r0} {r1},
+                                  matchDist-symm {ComplexNormed} {suc m} {s} {r0}) linarith
+
+\lemma spectrum-char {m : Nat} (p : Poly ComplexField) (deg : degree< p (suc (suc m)))
+    (monic : polyCoef p (suc m) = 1) (z : Complex)
+  : multiset-mem (spectrum p deg monic) z <-> polyEval p z = 0
+  => (\lam h => nearRoot-root p deg monic (mem-witness h), root-mem p deg monic)
+  \where
+    -- | The hypothesis `nearRoot-root` wants, read off membership in the spectrum.
+    \lemma mem-witness (h : multiset-mem (spectrum p deg monic) z)
+                       {delta eta : Real} (delta>0 : 0 < delta) (eta>0 : 0 < eta)
+      : ∃ (r : Array Complex (suc m)) (nearFactorSet p delta r) (nearFactorSet p 1 r)
+          (minDist {ComplexNormed} r z < eta)
+      => \let | (inP (d, d>0, hd)) => sregCF_<= (h eta>0)
+              | (inP (r, hr)) => approx-factor p deg monic
+                  (<_meet-univ d>0 (<_meet-univ delta>0 RealAbGroup.zro<ide) : 0 < d ∧ (delta ∧ 1))
+         \in inP (r, \lam j => hr j <∘l (meet-right <=∘ meet-left),
+                  \lam j => hr j <∘l (meet-right <=∘ meet-right),
+                  hd (\lam j => hr j <∘l meet-left))
+
+-- | Every entry of `r` is a member of the spectrum of `prodLin r`.
+\lemma root-mem-prodLin {m : Nat} (r : Array Complex (suc m)) (i : Fin (suc m))
+  : multiset-mem (spectrum (prodLin r) (prodLin-degree r) (prodLin-monic r)) (r i)
+  => root-mem (prodLin r) (prodLin-degree r) (prodLin-monic r) (prodLin-root r i)
+
+-- # Localisation
+{- | Everything below rests on one observation: once a near factorisation `r` is accurate enough for
+     the matching modulus of `p`, the whole spectrum of `p` is trapped in a small ball around `r`.
+     `spectrum-char` only sees the support of the spectrum; this sees its position. -}
+
+{- | A near factorisation accurate enough for the matching modulus is a centre of the spectrum
+     filter: every other equally accurate factorisation is within `c` of it. -}
+\private \lemma nearFactor-centre {n : Nat} (p : Poly ComplexField) {c : Rat} {delta : Real}
+    (delta>0 : 0 < delta) (r : Array Complex n) (hr : nearFactorSet p delta r)
+    (MATCH : \Pi (r' s' : Array Complex n) -> nearFactorSet p delta r' -> nearFactorSet p delta s'
+             -> matchDist {ComplexNormed} r' s' < c)
+  : specSetFilter p (OBall c r)
+  => inP (delta, delta>0, \lam {s} hs => real_<_U.1 (MATCH r s hr hs))
+
+{- | **The spectrum is localised.** If the near factorisations of `p` eventually sit inside the
+     `c`-ball around `r`, then the spectrum itself lies in the `e`-ball around `r` for `e >= 3c`. -}
+\private \lemma spectrum-ball {n : Nat} (p : Poly ComplexField) (deg : degree< p (suc n))
+    (monic : polyCoef p n = 1) {c e : Rat} (c>0 : 0 < c) (hce : c + c + c <= e)
+    (r : Array Complex n) (hb : specSetFilter p (OBall c r))
+  : spectrum p deg monic (OBall e r)
+  => \let (inP (d1, d1>0, hd1)) => hb
+     \in sregCF-mem {MultisetPseudoMetric {ComplexNormed} n} {specFilter p deg monic} c>0
+           \lam x (inP (d2, d2>0, hd2)) {y} hxy =>
+       \let (inP (s, hs)) => approx-factor p deg monic (<_meet-univ d1>0 d2>0 : 0 < d1 ∧ d2)
+       \in real_<_U.1 $ usingOnly
+             (real_<_U.2 (hd1 (\lam j => hs j <∘l meet-left)),
+              real_<_U.2 (hd2 (\lam j => hs j <∘l meet-right)),
+              real_<_U.2 hxy,
+              matchDist-triang {ComplexNormed} {n} {r} {s} {y},
+              matchDist-triang {ComplexNormed} {n} {s} {x} {y},
+              matchDist-symm {ComplexNormed} {n} {s} {x},
+              rat-3c hce) linarith
+  \where
+    -- | `c + c + c <= e`, transported from `Rat` to `Real` so `linarith` can use it.
+    \private \lemma rat-3c {c e : Rat} (h : c + c + c <= e) : (c : Real) + c + c <= e
+      => =_<= (pmap (`+ (c : Real)) RealAbGroup.+-rat *> RealAbGroup.+-rat) <=∘ rat_real_<=.1 h
+
+{- | **`spectrum` inverts `prodLin`.** The spectrum of a split polynomial is precisely the multiset
+     of its factors — an equality of points of the completion, so multiplicities are included.
+     This is what `spectrum-char` cannot see: it distinguishes `X^2(X-1)` from `X(X-1)^2`. -}
+\lemma spectrum_prodLin {n : Nat} (r : Array Complex n)
+  : spectrum (prodLin r) (prodLin-degree r) (prodLin-monic r) = pointSCF r
+  => metric-ext \lam {eps} eps>0 =>
+     \let | e => RatField.half (RatField.half eps)
+          | c => e * ratio 1 4
+     \in \have | e>0 : (0 : Rat) < e => RatField.half>0 (RatField.half>0 eps>0)
+               | c>0 : (0 : Rat) < c => linarith
+     \in \let (inP (d, d>0, MATCH)) =>
+                nearFactor-match (prodLin r) (prodLin-degree r) (prodLin-monic r) (rat_real_<.1 c>0)
+     \in MetricCompletion.dist-neighborhood {MultisetPseudoMetric {ComplexNormed} n} _ _ eps>0
+           (spectrum-ball (prodLin r) (prodLin-degree r) (prodLin-monic r) c>0
+              (linarith : c + c + c <= e) r (nearFactor-centre (prodLin r) d>0 r (exact d>0) MATCH))
+           (OBall-center_<=< e>0)
+  \where
+    -- | `r` is a `delta`-near factorisation of `prodLin r` for every `delta > 0` — exactly, in fact.
+    \private \lemma exact {delta : Real} (delta>0 : 0 < delta) : nearFactorSet (prodLin r) delta r
+      => \lam j => rewrite (AddGroup.toZero (idp {_} {polyCoef (prodLin r) j}), cabs_zro) delta>0
+
+{- | **Continuity of the spectrum.** For every accuracy `eps` there is a coefficient tolerance
+     `delta`, depending only on `p` and `eps`, inside which every monic degree-`n` polynomial has
+     its spectrum within `eps` of that of `p`. Compare the choice-based
+     `Arith.Complex.FTA.Choice.FTA`: no individual root is continuous in the coefficients, but the
+     whole multiset is, and that is what makes this version axiom-free. -}
+\lemma spectrum-cont {n : Nat} (p : Poly ComplexField) (dp : degree< p (suc n))
+                     (mp : polyCoef p n = 1) {eps : Real} (eps>0 : 0 < eps)
+  : ∃ (delta : Real) (0 < delta) (\Pi (q : Poly ComplexField) (dq : degree< q (suc n))
+        (mq : polyCoef q n = 1)
+        -> (\Pi (j : Nat) -> cabs (polyCoef p j - polyCoef q j) < delta)
+        -> dist {ComplexMultiset n} (spectrum p dp mp) (spectrum q dq mq) < eps)
+  => \let | (inP (a, a>0, a<eps)) => rat-below eps>0
+          | e => RatField.half (RatField.half a)
+          | c => e * ratio 1 4
+     \in \have | e>0 : (0 : Rat) < e => RatField.half>0 (RatField.half>0 a>0)
+               | c>0 : (0 : Rat) < c => linarith
+     \in \let (inP (dp1, dp1>0, MATCHp)) => nearFactor-match p dp mp (rat_real_<.1 c>0)
+     \in inP (dp1 * ratio 1 2, linarith, \lam q dq mq gap =>
+          \let | (inP (dq1, dq1>0, MATCHq)) => nearFactor-match q dq mq (rat_real_<.1 c>0)
+               | (inP (r, hr)) => approx-factor q dq mq
+                    (<_meet-univ (linarith : (0 : Real) < dp1 * ratio 1 2) dq1>0
+                       : 0 < dp1 * ratio 1 2 ∧ dq1)
+          \in \have hrp : nearFactorSet p dp1 r
+                       => \lam j => cabs_-triang {_} {polyCoef q j}
+                            <∘r linarith (hr j <∘l meet-left,
+                                          transport (`< dp1 * ratio 1 2)
+                                            (cabs_-comm {polyCoef p j} {polyCoef q j}) (gap j))
+          \in real_<_U.2
+                (MetricCompletion.dist-neighborhood {MultisetPseudoMetric {ComplexNormed} n} _ _ a>0
+                   (spectrum-ball p dp mp c>0 (linarith : c + c + c <= e) r
+                      (nearFactor-centre p dp1>0 r hrp MATCHp))
+                   (spectrum-ball q dq mq c>0 (linarith : c + c + c <= e) r
+                      (nearFactor-centre q dq1>0 r (\lam j => hr j <∘l meet-right) MATCHq)))
+              <∘ a<eps)
+
+{- | The spectrum is a factorisation of `p`.** For every accuracy the spectrum is concentrated
+     on arrays whose monic product matches `p` — i.e. `prodLin (spectrum p) = p`, stated without
+     having to extend `prodLin` to the completion (it is only locally uniformly continuous, so it
+     has no global uniform extension). -}
+\lemma spectrum-factors {n : Nat} (p : Poly ComplexField) (deg : degree< p (suc n))
+    (monic : polyCoef p n = 1) {eps : Real} (eps>0 : 0 < eps)
+  : spectrum p deg monic (nearFactorSet p eps)
+  => \let (inP (B, B>=1, hB)) => nearFactor-bound p deg monic
+     \in \have | B>=0 : (0 : Real) <= B => linarith
+               | K>=0 : (0 : Real) <= natCoef n * pow (1 + B + 1) n
+                  => RealField.<=_*_positive_positive RealField.natCoef>=0
+                       (RealField.pow>=0 (linarith : (0 : Real) <= 1 + B + 1))
+     \in \let | (inP (dd, dd>0, ddK)) => split-eps (linarith : (0 : Real) < eps * ratio 1 4)
+                   (linarith : (0 : Real) < natCoef n * pow (1 + B + 1) n + 1)
+              | (inP (aa, aa>0, aaR)) => rat-below (<_meet-univ dd>0 (linarith : (0 : Real) < 1))
+     \in \have | aa>=0 : (0 : Real) <= aa => <=-less (rat_real_<.1 aa>0)
+               | aa<1 : (aa : Real) <= 1 => <=-less (aaR <∘l meet-right)
+               | small : natCoef n * pow (1 + B + 1) n * aa < eps * ratio 1 4
+                  => (RealField.<=_*_positive-right K>=0 (<=-less (aaR <∘l meet-left))
+                      <=∘ =_<= *-comm
+                      <=∘ RealField.<=_*_positive-right (<=-less dd>0)
+                            (linarith : natCoef n * pow (1 + B + 1) n
+                                     <= natCoef n * pow (1 + B + 1) n + 1))
+                     <∘r ddK
+     \in sregCF-mem {MultisetPseudoMetric {ComplexNormed} n} {specFilter p deg monic}
+           (linarith : (0 : Rat) < aa * ratio 1 2) \lam x (inP (d0, d0>0, hd0)) {y} hxy =>
+       \let (inP (s, hs)) => approx-factor p deg monic
+              (<_meet-univ d0>0 (<_meet-univ (linarith : (0 : Real) < 1)
+                 (linarith : (0 : Real) < eps * ratio 1 2)))
+       \in \have | hsB => hB s (\lam j => hs j <∘l (meet-right <=∘ meet-left))
+                 | hse : nearFactorSet p (eps * ratio 1 2) s
+                    => \lam j => hs j <∘l (meet-right <=∘ meet-right)
+                 | sy : matchDist {ComplexNormed} s y < aa
+                    => usingOnly (real_<_U.2 (hd0 (\lam j => hs j <∘l meet-left)),
+                                  real_<_U.2 hxy,
+                                  matchDist-symm {ComplexNormed} {n} {s} {x},
+                                  matchDist-triang {ComplexNormed} {n} {s} {x} {y},
+                                  rat-2c (linarith : aa * ratio 1 2 + aa * ratio 1 2 <= aa))
+                         linarith
+       \in \let (inP (f, finj, hf)) => rawDist-lt {ComplexNormed} {n} {s} {y} join-left sy
+       \in \have | hd : \Pi (i : Fin n) -> cabs (y (f i) - s i) <= (aa : Real)
+                    => \lam i => <=-less (transport (`< (aa : Real))
+                         (lnorm-ldist {ComplexNormed} {s i} {y (f i)}
+                          *> cabs_-comm {s i} {y (f i)})
+                         (maxDist-cond {ComplexNormed} {n} {s} {y} {f} i <∘r hf))
+                 | close => prodLin-close (\lam i => y (f i)) s B>=0 hsB aa>=0 hd
+       \in \lam j =>
+         \have t1 : cabs (polyCoef (prodLin y) j - polyCoef (prodLin s) j)
+                  <= natCoef n * pow (1 + B + 1) n * aa
+                => =_<= (pmap cabs (inv polyCoef_-)
+                         *> pmap (\lam t => cabs (polyCoef (t - prodLin s) j))
+                              (inv (prodLin-perm y f finj)))
+                   <=∘ close j
+                   <=∘ RealField.<=_*_positive-left
+                         (RealField.<=_*_positive-right RealField.natCoef>=0
+                            (RealField.pow_<=-monotone (linarith : (0 : Real) <= 1 + B + aa)
+                               (linarith : 1 + B + (aa : Real) <= 1 + B + 1)))
+                         aa>=0
+         \in cabs_-triang {polyCoef (prodLin y) j} {polyCoef (prodLin s) j} {polyCoef p j}
+             <∘r usingOnly (t1, hse j, small, eps>0) linarith
+  \where
+    -- | `c + c <= e`, transported from `Rat` to `Real` so `linarith` can use it.
+    \private \lemma rat-2c {c e : Rat} (h : c + c <= e) : (c : Real) + c <= e
+      => =_<= RealAbGroup.+-rat <=∘ rat_real_<=.1 h
+
+{- | **The spectrum determines the polynomial.** Together with `spectrum_prodLin` — which says
+     `prodLin` is a section of `spectrum` — this makes `spectrum` injective with `prodLin` inverting
+     it on split polynomials. -}
+\lemma spectrum-inj {n : Nat} (p q : Poly ComplexField) (dp : degree< p (suc n))
+    (mp : polyCoef p n = 1) (dq : degree< q (suc n)) (mq : polyCoef q n = 1)
+    (h : spectrum p dp mp = spectrum q dq mq) : p = q
+  => fromArray_polyCoef dp
+     *> pmap Poly.fromArray
+          (arrayExt {Complex} {suc n}
+             {\new Array Complex (suc n) (\lam j => polyCoef p j)}
+             {\new Array Complex (suc n) (\lam j => polyCoef q j)}
+             \lam j => coefEq j)
+     *> inv (fromArray_polyCoef dq)
+  \where
+    -- | Two monic polynomials with the same spectrum agree coefficientwise.
+    \private \lemma coefEq (j : Nat) : polyCoef p j = polyCoef q j
+      => AddGroup.fromZero $ cabs_zro-ext $
+         below-all-positive (cabs>=0 {polyCoef p j - polyCoef q j}) \lam {c} c>0 =>
+           \let | (inP (delta, delta>0, hdel)) =>
+                    sregCF_<= (transport (\lam (mu : ComplexMultiset n) =>
+                                    mu (nearFactorSet p (c * ratio 1 2)))
+                         h (spectrum-factors p dp mp (linarith : (0 : Real) < c * ratio 1 2)))
+                | (inP (r, hr)) => approx-factor q dq mq
+                     (<_meet-univ delta>0 (linarith : (0 : Real) < c * ratio 1 2))
+           \in usingOnly (hdel (\lam k => hr k <∘l meet-left) j,
+                          hr j <∘l meet-right,
+                          cabs_-triang {polyCoef p j} {polyCoef (prodLin r) j} {polyCoef q j},
+                          cabs_-comm {polyCoef p j} {polyCoef (prodLin r) j}) linarith

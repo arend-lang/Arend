@@ -7,11 +7,13 @@
 \import Algebra.Pointed
 \import Algebra.Ring
 \import Algebra.Semiring
+\import Arith.Nat
 \import Arith.Rat
 \import Arith.Real
 \import Arith.Real.InfReal
 \import Arith.Real.LowerReal
 \import Arith.Real.UpperReal
+\import Data.Array
 \import Data.Or
 \import Function.Meta
 \import Logic
@@ -39,6 +41,7 @@
 \open ProductCoverSpace
 \open DiscreteOrderedField
 \open LinearOrder \hiding (<=)
+\open Monoid (pow)
 
 \instance RealField : OrderedFieldAlgebra RatField Real
   | LinearlyOrderedAbGroup => RealAbGroup
@@ -245,3 +248,84 @@
 
     \func half (x : Real) => x * ratio 1 2
   }
+
+-- | Rational geometric decay against a positive constant.
+\private \lemma rat-pow-decay {b : Rat} (b<1 : b < 1) (C : Rat) (C>0 : 0 < C) {e : Rat} (e>0 : 0 < e)
+  : ∃ (N : Nat) (pow b N * C < e)
+  => \let (N, p) => rat_<1_pow-bound b<1 (RatField.<_*_positive_positive e>0 (RatField.finv>0 C>0))
+     \in inP (N, <_*_positive-left p C>0 <∘l =_<=
+                   (*-assoc *> pmap (e *) (*-comm *> finv-right (RatField.>_/= C>0)) *> ide-right))
+
+-- | A rational geometric bound transported to `Real`.
+\private \lemma real-pow-step {s : Real} (s>=0 : 0 <= s) (b : Rat) (s<=b : s <= b) {A : Real}
+                              (C : Rat) (A<=C : A <= C) (C>=0 : 0 <= C) {N : Nat} {e : Rat}
+                              (h : pow b N * C < e)
+  : pow s N * A < e
+  => (<=_*_positive-right (RealField.pow>=0 s>=0) A<=C
+      <=∘ <=_*_positive-left (RealField.pow_<=-monotone s>=0 s<=b) (rat_real_<=.1 C>=0)
+      <=∘ =_<= (pmap (`* (C : Real)) RealField.pow-rat *> RealField.*-rat))
+     <∘r rat_real_<.1 h
+
+{- | **Geometric decay over `Real`.** For `0 <= s < 1`, some power of `s` scales any `A` below any
+     positive `eps`. -}
+\lemma pow_<1-decay {s : Real} (s>=0 : 0 <= s) (s<1 : s < 1) (A : Real) {eps : Real} (eps>0 : 0 < eps)
+  : ∃ (N : Nat) (pow s N * A < eps)
+  => \let | (inP (b, s<b, b<1)) => real_<-char.1 s<1
+          | (inP (C, A<C, _)) => real_<-char.1 (linarith : A < A + 1)
+          | (inP (e, zro<e, e<eps)) => real_<-char.1 eps>0
+          | C>0 : (0 : Rat) < C ∨ 1 => zro<ide <∘l join-right
+          | (inP (N, h)) => rat-pow-decay (rat_real_<.2 b<1) (C ∨ 1) C>0 (rat_real_<.2 zro<e)
+     \in inP (N, real-pow-step s>=0 b (<=-less s<b) (C ∨ 1)
+                   (<=-less (A<C <∘l rat_real_<=.1 join-left)) (<=-less C>0) h `<∘ e<eps)
+
+-- | Split a positive `eps` past a positive factor: some `d > 0` has `d * w < eps`.
+\lemma split-eps {eps : Real} (eps>0 : 0 < eps) {w : Real} (w>0 : 0 < w)
+  : ∃ (d : Real) (0 < d) (d * w < eps)
+  => \let | (inP (B, w<B, _)) => real_<-char.1 (linarith : w < w + 1)
+          | B>0 : (0 : Rat) < B => rat_real_<.2 (w>0 <∘ w<B)
+          | d>0 : (0 : Real) < eps * RatField.finv B
+             => RealField.<_*_positive_positive eps>0 (rat_real_<.1 (RatField.finv>0 B>0))
+     \in inP (eps * RatField.finv B, d>0,
+              <_*_positive-right d>0 w<B <∘l =_<=
+                (*-assoc *> pmap (eps *) (RealField.*-rat *> pmap Real.fromRat
+                   (*-comm *> finv-right (RatField.>_/= B>0))) *> ide-right))
+
+\lemma powSum>=0 {B : Real} (B>=0 : 0 <= B) (n : Nat) : 0 <= powSum B n
+  => RealAbGroup.BigSum_>=0 (\lam k => RealField.pow>=0 B>=0)
+
+-- | `powSum` is monotone in the base.
+\lemma powSum-mono {B C : Real} (B>=0 : 0 <= B) (B<=C : B <= C) (n : Nat)
+  : powSum B n <= powSum C n
+  => RealAbGroup.BigSum_<= (\lam k => RealField.pow_<=-monotone B>=0 B<=C)
+
+{- | Given a non-empty finite array of reals `c : Array Real n` and a positive number $\varepsilon$,
+     there exists an index `k` such that every entry of the array is $< c_k + \varepsilon$.
+     So $c_k$ is an “almost maximum”: it may not be the exact maximum, but it is within $\varepsilon$ of all entries.
+-}
+\lemma array-eps-max {n : Nat} (n>0 : n > 0) {eps : Real} (eps>0 : eps > 0) (c : Array Real n)
+  : ∃ (k : Fin n) ∀ (i : Fin n) (c i < c k + eps) \elim n, c
+  | 0, _ => \case n>0
+  | 1, c => inP (0, \lam (0) => linarith)
+  | suc (suc n), c0 :: cs =>
+    \let
+      | eps/2 => eps * ratio 1 2
+      | eps2>0 : eps/2 > 0 => OrderedSemiring.<_*_positive_positive eps>0 (rat_real_<.1 idp)
+      | (inP (k, Pk)) => array-eps-max {suc n} NatOrder.zero<suc eps2>0 cs
+    \in \case real-located {c0} {cs k - eps/2} {cs k + eps} linarith \with {
+      | byLeft a => inP (0, \lam i => \case \elim i \with {
+        | 0 => linarith
+        | suc i => linarith (Pk i)
+      })
+      | byRight b => inP (suc k, \lam i => \case \elim i \with {
+        | 0 => b
+        | suc i => linarith (Pk i)
+      })
+    }
+
+-- | For `w >= 1`, `powSum w (suc m) <= (suc m) * w^m`.
+\lemma powSum-bound {w : Real} (w>=1 : 1 <= w) (m : Nat)
+  : powSum w (suc m) <= natCoef (suc m) * pow w m
+  => RealAbGroup.BigSum_<= {suc m} {\new Array Real (suc m) (\lam k => pow w k)}
+       {replicate (suc m) (pow w m)}
+       (\lam k => RealField.pow_<=-degree_>=1 w>=1 (<_suc_<= (fin_< k)))
+     <=∘ =_<= (RealField.BigSum_replicate {pow w m} {suc m})

@@ -1127,3 +1127,157 @@
     \lemma finitelyGenerated {R : Ring} {U : LModule R} {f : LinearMap U U} (fg : U.IsFinitelyGenerated) : LModule.IsFinitelyGenerated {polyModule f} \elim fg
       | inP (l,lg) => inP (l, \lam x => TruncP.map (lg x) \lam s => (map (padd pzero) s.1, s.2 *> pmap U.BigSum (exts \lam j => inv $ pmap (+ _) f.func-zro *> zro-left)))
   }
+
+-- | $f(X + a)$.
+\func polyTranslate {R : CRing} (a : R) (f : Poly R) : Poly R
+  => polyMapEval polyHom f (padd 1 a)
+
+-- | A degree bound weakens to the next one.
+\lemma degree<-suc {R : AddPointed} {p : Poly R} {n : Nat} (d : degree< p n)
+  : degree< p (suc n) => \lam _ => d linarith
+
+\private \lemma degree<_*-right {R : Ring} {a : R} {p : Poly R} {n : Nat} (d : degree< p n)
+  : degree< (p * padd pzero a) n
+  => \lam s => polyCoef_*-right *> pmap (`* a) (d s) *> zro_*-left
+
+-- | $pX = $ `padd p 0`.
+\private \lemma mul_X {R : Ring} (p : Poly R) : p * padd 1 0 = padd p 0
+  => inv (padd-expand *> pmap (p * padd 1 0 +) peq *> zro-right)
+
+-- | $p(X+a) = pX + pa$.
+\lemma mul_padd1 {R : CRing} (a : R) (p : Poly R)
+  : p * padd 1 a = padd p 0 + p * padd pzero a
+  => pmap (p *) (inv (pmap2 padd zro-right zro-left)) *> ldistr *> pmap (+ _) (mul_X p)
+
+\lemma degree<_*padd1 {R : CRing} (a : R) {p : Poly R} {n : Nat} (d : degree< p n)
+  : degree< (p * padd 1 a) (suc n)
+  => rewrite (mul_padd1 a p) $ degree<_+ (degree<_padd d) (degree<-suc (degree<_*-right d))
+
+-- | The leading coefficient of `p * (X + a)` in degree `suc n` is `p`'s in degree `n`.
+\lemma polyCoef_*padd1 {R : CRing} (a : R) {p : Poly R} {n : Nat} (d : degree< p (suc n))
+  : polyCoef (p * padd 1 a) (suc n) = polyCoef p n
+  => rewrite (mul_padd1 a p, polyCoef_+, polyCoef_*-right, d <=-refl) simplify
+
+{- | **Division by `X - z`**, by synthetic division: structural recursion on `p`, so that
+     `deflate (padd p e) z` reduces. See `deflate-eq` for the division property and
+     `degree1PolyDivision` for its uniqueness. -}
+\func deflate {R : Ring} (p : Poly R) (z : R) : Poly R \elim p
+  | pzero => pzero
+  | padd p e => padd (deflate p z) (polyEval p z)
+  | peq => peq
+
+-- | `pX + e = (qX + c)(X - z) + (cz + e)` given `p = q(X - z) + c`.
+\private \lemma deflate-step {R : CRing} (P Q C E Z X : Poly R) (ih : P = Q * (X - Z) + C)
+  : P * X + E = (Q * X + C) * (X - Z) + (C * Z + E)
+  => rewrite ih equation.cRing
+
+-- | Deflation really is division by `X - z` with remainder `p z`.
+\lemma deflate-eq {R : CRing} (p : Poly R) (z : R)
+  : p = deflate p z * padd 1 (negative z) + padd pzero (polyEval p z) \elim p
+  | pzero => inv (pmap (`+ padd pzero (polyEval pzero z)) (zro_*-left {_} {padd 1 (negative z)})
+                  *> zro-left *> peq)
+  | padd p e =>
+    \have | L : padd 1 (negative z) = padd 1 0 - padd pzero z
+             => padd-expand *> pmap2 (+) (ide-left : 1 * padd 1 0 = {Poly R} padd 1 0)
+                                         polyHom.func-negative
+          | ih => deflate-eq p z
+                  *> pmap (\lam t => deflate p z * t + padd pzero (polyEval p z)) L
+    \in padd-expand
+        *> deflate-step p (deflate p z) (padd pzero (polyEval p z)) (padd pzero e)
+             (padd pzero z) (padd 1 0) ih
+        *> pmap2 (\lam a b => a * (padd 1 0 - padd pzero z) + b)
+             (inv padd-expand) (pmap (`+ padd pzero e) (inv polyHom.func-*))
+        *> pmap (\lam t => padd (deflate p z) (polyEval p z) * t
+                         + padd pzero (polyEval p z * z + e)) (inv L)
+
+-- | `polyEval (X - w) z = z - w`.
+\lemma polyEval_padd1 {R : CRing} (w z : R) : polyEval (padd 1 (negative w)) z = z - w
+  => equation.cRing
+
+-- | `X - z` vanishes at `z`.
+\private \lemma padd1-root {R : CRing} (z : R) : polyEval (padd 1 (negative z)) z = 0
+  => polyEval_padd1 z z *> negative-right
+
+-- | **`deflate` inverts multiplication by `X - z`.**
+\lemma deflate_*padd1 {R : CRing} (e : Poly R) (z : R) : deflate (e * padd 1 (negative z)) z = e
+  => \have root : polyEval (e * padd 1 (negative z)) z = 0
+                    => RingHom.func-* {polyEvalRingHom z}
+                       *> pmap (polyEval e z *) (padd1-root z) *> zro_*-right
+     \in degree1PolyDivision-unique (e * padd 1 (negative z)) z
+           (deflate-eq (e * padd 1 (negative z)) z)
+           (inv (pmap (e * padd 1 (negative z) +) (pmap (padd pzero) root *> peq) *> zro-right))
+
+-- | Dividing by `X - z` drops the degree bound by one.
+\lemma deflate-degree {R : Ring} {p : Poly R} {n : Nat} (d : degree< p (suc n)) (z : R)
+  : degree< (deflate p z) n \elim p, n
+  | pzero, n => \lam _ => idp
+  | padd p e, 0 => \lam {k} _ => rewrite (degree<0 (degree<_padd.conv d))
+      (\case \elim k \with { | 0 => idp | suc k => idp })
+  | padd p e, suc m => degree<_padd (deflate-degree (degree<_padd.conv d) z)
+
+-- | Dividing a monic polynomial by `X - z` leaves it monic.
+\lemma deflate-monic {R : CRing} {p : Poly R} {n : Nat} (d : degree< p (suc (suc n)))
+                     (monic : polyCoef p (suc n) = 1) (z : R)
+  : polyCoef (deflate p z) n = 1 \elim p, n
+  | pzero, n => monic
+  | padd p e, 0 => polyEval_polyCoef (degree<_padd.conv d) *> simplify *> monic
+  | padd p e, suc m => deflate-monic (degree<_padd.conv d) monic z
+
+-- | `polyCoef` commutes with subtraction.
+\lemma polyCoef_- {R : Ring} {a b : Poly R} {j : Nat}
+  : polyCoef (a - b) j = polyCoef a j - polyCoef b j
+  => polyCoef_+ *> pmap (polyCoef a j +) polyCoef_negative
+
+-- | `degree<` passes to the tail of a `padd` **without shrinking the bound**.
+\lemma degree<_padd-tail {R : AddPointed} {p : Poly R} {e : R} {m : Nat} (d : degree< (padd p e) m)
+  : degree< p m => \lam {k} _ => d {suc k} linarith
+
+-- | The coefficients of a monic difference vanish from index `n` on.
+\private \lemma monic-diff-coef {R : Ring} {a b : Poly R} {n : Nat}
+                                (da : degree< a (suc n)) (db : degree< b (suc n))
+                                (ma : polyCoef a n = 1) (mb : polyCoef b n = 1) (d : Nat)
+  : polyCoef (a - b) (n + d) = 0 \elim d
+  | 0 => polyCoef_- *> AddGroup.toZero (ma *> inv mb)
+  | suc d => polyCoef_- *> AddGroup.toZero (da linarith *> inv (db linarith))
+
+-- | Two monic polynomials of degree `n` differ in degree `< n`.
+\lemma degree<-monic-diff {R : Ring} {a b : Poly R} {n : Nat}
+                          (da : degree< a (suc n)) (db : degree< b (suc n))
+                          (ma : polyCoef a n = 1) (mb : polyCoef b n = 1) : degree< (a - b) n
+  => \lam {k} n<=k => rewriteI (<=_exists n<=k) (monic-diff-coef da db ma mb (k -' n))
+
+{- | **Kneser's step, and approximate roots.** Iterating `KneserLemma-poly` at a translated
+polynomial drives the value of a monic `p` below any prescribed bound: `fta-approx` produces,
+for every accuracy, a point where `|p|` is small. Choice-free — the iteration is a plain
+recursion, not a sequence of choices. -}
+\lemma polyTranslate_degree< {R : CRing} (a : R) {f : Poly R} {n : Nat} (d : degree< f n)
+  : degree< (polyTranslate a f) n \elim f, n
+  | pzero, n => \lam _ => idp
+  | padd f e, 0 =>
+    \have t => padd=pzero (degree<0 d)
+    \in rewrite (t.1, t.2) $ transportInv (\lam q => degree< (polyTranslate a q) 0) peq \lam _ => idp
+  | padd f e, suc m => rewrite (polyTranslate_padd a f e) $
+  degree<_+ (degree<_*padd1 a (polyTranslate_degree< a (degree<_padd.conv d)))
+    (degree<_padd (\lam _ => idp))
+
+-- | Translation preserves the leading coefficient.
+\lemma polyTranslate_polyCoef {R : CRing} (a : R) {f : Poly R} {n : Nat} (d : degree< f (suc n))
+  : polyCoef (polyTranslate a f) n = polyCoef f n \elim f, n
+  | pzero, n => idp
+  | padd f e, 0 => rewrite (degree<0 (degree<_padd.conv d)) idp
+  | padd f e, suc m =>
+    rewrite (polyTranslate_padd a f e, mul_padd1 a (polyTranslate a f), polyCoef_+, polyCoef_+,
+             polyCoef_*-right, polyTranslate_degree< a (degree<_padd.conv d) <=-refl,
+             polyTranslate_polyCoef a (degree<_padd.conv d)) simplify
+
+-- | The recursion equation for `polyTranslate`.
+\lemma polyTranslate_padd {R : CRing} (a : R) (f : Poly R) (e : R)
+  : polyTranslate a (padd f e) = polyTranslate a f * padd 1 a + padd pzero e
+  => idp
+
+-- | Translating and then evaluating at `z` is evaluating at `z + a`.
+\lemma polyEval_polyTranslate {R : CRing} (a : R) (f : Poly R) (z : R)
+  : polyEval (polyTranslate a f) z = polyEval f (z + a) \elim f
+  | pzero => idp
+  | padd f e => rewrite (polyTranslate_padd a f e, polyEvalRingHom.func-+,
+                         polyEvalRingHom.func-*, polyEval_polyTranslate a f z) simplify

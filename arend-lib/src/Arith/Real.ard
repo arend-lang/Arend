@@ -509,3 +509,8 @@
       | inP (q,B<q) => inP (q, U-closed x<a $ InfReal.LU-less a<B B<q)
     }
   }
+
+-- | A nonnegative real below every positive real is zero.
+\lemma below-all-positive {x : Real} (x>=0 : 0 <= x)
+                          (h : \Pi {c : Real} -> 0 < c -> x < c) : x = 0
+  => <-connectedness x>=0 \lam pos => <-irreflexive (h pos)

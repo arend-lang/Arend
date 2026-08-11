@@ -342,6 +342,20 @@
       | byLeft q => rewrite (LinearOrder.join/=left $ <_/= q) y<z
       | byRight q => q
     }
+
+  {- | **A small minimum has a small entry — given slack.** From `Big (∧) x l <= c'` and `c' < c`,
+       either the base value or some entry is below `c`. The slack `c' < c` is necessary: the
+       minimum is not attained constructively. -}
+  \lemma Big_meet-lt {l : Array E} {x c' c : E} (h : Big (∧) x l <= c') (lt : c' < c)
+    : (x < c) || ∃ (i : Fin l.len) (l i < c) \elim l
+    | nil => byLeft (h <∘r lt)
+    | :: a l => \case <-comparison a lt \with {
+      | byRight a<c => byRight (inP (0, a<c))
+      | byLeft c'<a => \case Big_meet-lt (\lam q => h (<_meet-univ c'<a q)) lt \with {
+        | byLeft x<c => byLeft x<c
+        | byRight (inP (i, p)) => byRight (inP (suc i, p))
+      }
+    }
 }
 
 \class DenseLinearOrder \extends LinearOrder

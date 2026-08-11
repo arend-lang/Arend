@@ -1,0 +1,116 @@
+\import Algebra.Group
+\import Algebra.Meta
+\import Algebra.Monoid
+\import Algebra.Ordered
+\import Algebra.Pointed
+\import Algebra.Ring
+\import Algebra.Ring.Poly
+\import Algebra.Ring.Poly.LinearFactors
+\import Arith.Complex
+\import Arith.Complex.FTA.Kneser
+\import Arith.Complex.Norm
+\import Arith.Nat
+\import Arith.Rat
+\import Arith.Real
+\import Arith.Real.Field
+\import Function.Meta
+\import Logic
+\import Logic.Meta
+\import Order.Biordered
+\import Order.PartialOrder
+\import Order.StrictOrder
+\import Paths
+\import Paths.Meta
+\import Set.Set
+\open Monoid (pow)
+
+-- | The `delta`-near factorisations of `p`: root arrays whose monic product matches `p` coefficientwise to within `delta`.
+\func nearFactorSet {n : Nat} (p : Poly ComplexField) (delta : Real) : Set (Array Complex n)
+  => \lam r => \Pi (j : Nat) -> cabs (polyCoef (prodLin r) j - polyCoef p j) < delta
+
+{- | **Approximate factorisation (Richman's spectrum), with no choice.**
+
+     For a monic `p` of degree `n` and every `eps > 0` there is an `n`-array `r` of complex numbers
+     with $\prod_i (X - r_i)$ within `eps` of `p` coefficientwise. -}
+
+-- # Error propagation
+
+-- | Multiplying by `X - z` amplifies a coefficientwise bound by at most `1 + |z|`.
+\lemma coefErr_*padd1 {e : Poly ComplexField} {z : Complex} {d : Real}
+                      (h : \Pi (j : Nat) -> cabs (polyCoef e j) <= d) (j : Nat)
+  : cabs (polyCoef (e * padd 1 (negative z)) j) <= d * (1 + cabs z)
+  => rewrite (mul_padd1 (negative z) e, polyCoef_+, polyCoef_*-right) $
+     cabs_+ {_} {polyCoef e j * negative z}
+     <=∘ <=_+ (coefShift-bound h j)
+              (=_<= (cabs_* {_} {negative z} *> pmap (cabs (polyCoef e j) *) cabs_negative)
+               <=∘ <=_*_positive-left (h j) cabs>=0)
+     <=∘ =_<= equation.cRing \where {
+  \private \lemma coefShift-bound {e : Poly ComplexField} {d : Real}
+                                  (h : \Pi (j : Nat) -> cabs (polyCoef e j) <= d) (j : Nat)
+    : cabs (polyCoef (padd e 0) j) <= d \elim j
+    | 0 => rewrite cabs_zro (cabs>=0 <=∘ h 0)
+    | suc k => h k
+}
+
+-- | One Kneser step at `w0`: if $|f(w_0)| < d$ then some `w` with $|w|^n < d$ moves the value below $qd$.
+\private \lemma fta-step {n : Nat} (n>0 : 0 < n) (f : Poly ComplexField)
+                (deg : degree< f (suc n)) (monic : polyCoef f n = 1) (w0 : Complex) {d : Real} (fw0<d : cabs (polyEval f w0) < d)
+  : ∃ (w : Complex) (pow (cabs w) n < d) (cabs (polyEval f (w + w0)) < kneser-q n * d)
+  => \let (inP (w, |w|^n<d, |fw|<qd)) =>
+    KneserLemma-poly n>0 (polyTranslate w0 f) (polyTranslate_degree< w0 deg)
+      (polyTranslate_polyCoef w0 deg *> monic)
+      (rewrite (polyEval_polyTranslate w0 f 0, zro-left) fw0<d)
+     \in inP (w, |w|^n<d, rewriteI (polyEval_polyTranslate w0 f w) |fw|<qd)
+
+-- | **Monic polynomials have approximate roots of every accuracy**: for every `i` some `z` has $|f(z)| < q^i c$. Choice-free.
+\private \lemma fta-approx {n : Nat} (n>0 : 0 < n) (f : Poly ComplexField)
+                  (deg : degree< f (suc n)) (monic : polyCoef f n = 1) {c : Real} (f0<c : cabs (polyEval f 0) < c) (i : Nat)
+  : ∃ (z : Complex) (cabs (polyEval f z) < pow (kneser-q n) i * c) \elim i
+  | 0 => inP (0, rewrite ide-left f0<c)
+  | suc i => \let | (inP (z, fz<qic)) => fta-approx n>0 f deg monic f0<c i
+                  | (inP (w, _, fwz<)) => fta-step n>0 f deg monic z fz<qic
+             \in inP (w + z, transport (cabs (polyEval f (w + z)) <) equation.cRing fwz<)
+
+-- | A constant polynomial's coefficients are bounded by the constant.
+\lemma constCoef-bound (c : Complex) (j : Nat) : cabs (polyCoef (padd pzero c) j) <= cabs c \elim j
+  | 0 => <=-refl
+  | suc k => rewrite cabs_zro cabs>=0
+
+-- | `eps > 0` some `r` has $\prod_i (X - r_i)$ within `eps` of `p` coefficientwise.
+\lemma approx-factor {n : Nat} (p : Poly ComplexField) (deg : degree< p (suc n))
+                     (monic : polyCoef p n = 1) {eps : Real} (eps>0 : 0 < eps)
+  : ∃ (r : Array Complex n) (nearFactorSet p eps r)
+  \elim n
+  | 0 => inP (nil, \lam j => \case \elim j \with {
+      | 0 => rewrite (AddGroup.toZero (inv monic), cabs_zro) eps>0
+      | suc k => rewrite (AddGroup.toZero (inv (deg (suc<=suc zero<=_))),
+                          cabs_zro) eps>0
+    })
+  | suc m =>
+    \let | (inP (i, hi)) => pow_<1-decay (<=-less (kneser-q>0 NatOrder.zero<suc)) (kneser-q<1 {suc m})
+                              (cabs (polyEval p 0) + 1) (linarith : (0 : Real) < eps * ratio 1 2)
+         | (inP (z, hz)) => fta-approx NatOrder.zero<suc p deg monic
+                              (linarith : cabs (polyEval p 0) < cabs (polyEval p 0) + 1) i
+         | (inP (d, d>0, dw)) => split-eps (linarith : (0 : Real) < eps * ratio 1 2)
+                                   (linarith (cabs>=0 {z}) : (0 : Real) < 1 + cabs z)
+         | (inP (r', hr')) => approx-factor (deflate p z) (deflate-degree deg z)
+                                (deflate-monic deg monic z) d>0
+    \in inP (z :: r', \lam j =>
+          \have eq : polyCoef (prodLin r' * padd 1 (negative z)) j - polyCoef p j
+                   = polyCoef ((prodLin r' - deflate p z) * padd 1 (negative z)) j
+                     - polyCoef (padd pzero (polyEval p z)) j
+                  => inv polyCoef_-
+                     *> pmap (\lam t => polyCoef (prodLin r' * padd 1 (negative z) - t) j)
+                          (deflate-eq p z)
+                     *> pmap (polyCoef __ j)
+                          (poly-diff (prodLin r') (deflate p z) (padd 1 (negative z))
+                             (padd pzero (polyEval p z)))
+                     *> polyCoef_-
+          \in rewrite eq $
+              (cabs_- <=∘ <=_+ (coefErr_*padd1 (\lam k => rewrite polyCoef_- (<=-less (hr' k))) j)
+                               (constCoef-bound (polyEval p z) j))
+              <∘r linarith (hz <∘ hi)) \where {
+  \private \lemma poly-diff {R : CRing} (A Q L C : Poly R) : A * L - (Q * L + C) = (A - Q) * L - C
+    => equation.cRing
+
+}

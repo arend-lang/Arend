@@ -14,6 +14,7 @@
 \import Logic.Meta
 \import Meta
 \import Order.Biordered
+\import Order.LinearOrder
 \import Order.PartialOrder
 \import Order.StrictOrder
 \import Paths
@@ -381,6 +382,65 @@
   }
 
 \func finSet {A : FinSet} => A
+
+{- | Stabilization Lemma (Pigeonhole Principle)
+     A non-increasing sequence in a finite set of cardinality $n+1$ must have three consecutive equal values
+     if the sequence is at least $2n+3$ elements long. -}
+\lemma three-consecutive-equals {n N : Nat} (N>2n : N > 2 * n)
+                                (k : Fin (N + 2) -> Fin (suc n))
+                                (monotone : \Pi (j : Fin (suc N)) -> k (suc j) <= {NatSemiring} k j)
+  : ∃ (j : Fin N) (k j = k (suc j)) (k (suc j) = k (suc (suc j)))
+  => helper n N N>2n k (<_suc_<= (fin_< (k 0))) monotone
+  \where {
+    \private \lemma helper {n : Nat} (b N : Nat) (N>2b : N > 2 * b)
+                           (k : Fin (suc (suc N)) -> Fin (suc n))
+                           (k0<=b : (k 0 : Nat) <= b)
+                           (monotone : \Pi (j : Fin (suc N)) -> k (suc j) <= {NatSemiring} k j)
+      : ∃ (j : Fin N) (k j = k (suc j)) (k (suc j) = k (suc (suc j))) \elim b, N, N>2b
+      | _, 0, ()
+      | 0, suc N', _ =>
+        \have | k0=0 : (k 0 : Nat) = 0 => <=-antisymmetric k0<=b zero<=_
+              | k1<=0 : (k 1 : Nat) <= 0 => <=-transitive (monotone 0) k0<=b
+              | k1=0 : (k 1 : Nat) = 0 => <=-antisymmetric k1<=0 zero<=_
+              | k2<=0 : (k 2 : Nat) <= 0 => <=-transitive (monotone 1) k1<=0
+              | k2=0 : (k 2 : Nat) = 0 => <=-antisymmetric k2<=0 zero<=_
+        \in inP (0, fin_nat-inj (k0=0 *> inv k1=0), fin_nat-inj (k1=0 *> inv k2=0))
+      | suc b', 1, NatOrder.suc<suc p => \case p
+      | suc b', suc (suc N'), N>2b =>
+        \case LinearOrder.Dec.trichotomy (k 0) (k 1) \with {
+          | less k0<k1 => absurd (monotone 0 k0<k1)
+          | equals k0=k1 =>
+            \case LinearOrder.Dec.trichotomy (k 1) (k 2) \with {
+              | less k1<k2 => absurd (monotone 1 k1<k2)
+              | equals k1=k2 => inP (0, k0=k1, k1=k2)
+              | greater k1>k2 =>
+                \let | k1<=suc-b' : (k 1 : Nat) <= suc b' => transport (\lam x => (x : Nat) <= suc b') k0=k1 k0<=b
+                     | k2<k1 : (k 2 : Nat) < (k 1 : Nat) => k1>k2
+                     | k2<=b' : (k 2 : Nat) <= b' => <_suc_<= (k2<k1 NatSemiring.<∘l k1<=suc-b')
+                     | k'' : Fin (suc (suc N')) -> Fin (suc n) => \lam j => k (suc (suc j))
+                     | N'>2b' : N' > 2 * b' => NatOrder.unsuc< (NatOrder.unsuc< N>2b)
+                     | (inP (j, eq1, eq2)) => helper {n} b' N' N'>2b' k'' k2<=b' (\lam j => monotone (suc (suc j)))
+                \in inP (suc (suc j), eq1, eq2)
+            }
+          | greater k0>k1 =>
+            \let | k1<k0 : (k 1 : Nat) < (k 0 : Nat) => k0>k1
+                 | k1<=b' : (k 1 : Nat) <= b' => <_suc_<= (k1<k0 NatSemiring.<∘l k0<=b)
+                 | k' : Fin (suc (suc (suc N'))) -> Fin (suc n) => \lam j => k (suc j)
+                 | N'>2b' : suc N' > 2 * b' => <-transitive id<suc (NatOrder.unsuc< N>2b)
+                 | (inP (j, eq1, eq2)) => helper {n} b' (suc N') N'>2b' k' k1<=b' (\lam j => monotone (suc j))
+            \in inP (suc j, eq1, eq2)
+        }
+  }
+
+-- | If a function on natural numbers preserves successor, then that function must be the identity.
+\lemma sucPreserving-isId {n : Nat} (f : Fin (suc n) -> Nat)
+                          (plus1 : \Pi (x : Fin n) -> f (suc x) = suc (f x))
+                          (f0 : f 0 = 0) (x : Fin (suc n)) : f x = x \elim x
+  | 0 => f0
+  | suc x => plus1 x *> pmap suc (sucPreserving-isId f plus1 f0 x)
+
+\lemma suc_fromNat {n : Nat} (i : Nat) (p : i < suc n) : suc (i Nat.mod suc n) = {Fin (n + 2)} (suc i) Nat.mod suc (suc n)
+  => nat_fin_= $ rewrite (mod_< {i} {suc n} linarith, mod_< {suc i} {suc (suc n)} linarith) idp
 
 \lemma finiteDependentChoice {A : \Type} (R : A -> A -> \Type) (a0 : A) (step : \Pi (a : A) -> ∃ (b : A) (R a b)) (n : Nat)
   : ∃ (f : Fin (suc n) -> A) (f 0 = a0) (\Pi (i : Fin n) -> R (f i) (f (suc i)))

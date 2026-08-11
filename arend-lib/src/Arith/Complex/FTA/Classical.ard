@@ -1,0 +1,162 @@
+\import Algebra.Meta
+\import Algebra.Monoid
+\import Algebra.Pointed
+\import Algebra.Ring.Poly
+\import Analysis.Limit
+\import Arith.Complex
+\import Arith.Complex.Banach
+\import Arith.Complex.FTA.Approximation
+\import Arith.Complex.FTA.Moduli
+\import Arith.Complex.Norm
+\import Arith.Nat
+\import Arith.Rat
+\import Arith.Real
+\import Arith.Real.Field
+\import Function (IsInj)
+\import Function.Meta
+\import Logic
+\import Logic.Choice(acchoice)
+\import Logic.Meta
+\import Order.Biordered
+\import Order.Lattice
+\import Order.PartialOrder
+\import Order.StrictOrder
+\import Paths
+\import Paths.Meta
+\import Topology.MetricSpace
+\import Topology.MetricSpace.Multiset
+\import Topology.NormedAbGroup
+\open Monoid (pow)
+
+{- | **The fundamental theorem of algebra from countable choice.**
+     Every monic polynomial of degree $m+1$ over $\mathbb{C}$ has a root.
+
+     This is the classical single-root statement, obtained by threading a convergent sequence
+     through the approximate factorisations of `Arith.Complex.FTA.Factorisation` and
+     `Arith.Complex.FTA.Matching`.
+     Extracting one root out of the root *multiset* is what costs `acchoice`.
+
+     For the axiom-free theorem — the whole root multiset, as a point of the completion of the
+     multiset space, which determines `p` and depends continuously on it — see
+     `Arith.Complex.FTA`. That development shares the machinery below this module but does not
+     depend on this one, and nothing here is used to prove it. -}
+
+\private \func geo (k : Nat) : Real => pow (ratio 1 2 : Real) k
+
+\private \lemma geo>0 (k : Nat) : 0 < geo k => RealField.pow>0 (linarith : (0 : Real) < ratio 1 2) {k}
+
+\private \lemma geo-mono {a b : Nat} (a<=b : a <= b) : geo b <= geo a
+  => RealField.pow_<=-degree (linarith : (0 : Real) <= ratio 1 2)
+    (linarith : (ratio 1 2 : Real) <= 1) a<=b
+
+\private \lemma geo<=1 (k : Nat) : geo k <= 1 => geo-mono (zero<=_ : 0 <= k)
+
+\private \lemma geo-small {d : Real} (d>0 : 0 < d) : ∃ (N : Nat) (geo N < d)
+  => \let (inP (N, h)) => pow_<1-decay (linarith : (0 : Real) <= ratio 1 2)
+    (linarith : (ratio 1 2 : Real) < 1) 1 d>0
+     \in inP (N, transport (`< d) ide-right h)
+
+\private \func StepA {m : Nat} (p : Poly ComplexField) (k : Nat) : \Set
+  => \Sigma (r : Array Complex (suc m)) (nearFactorSet p (geo k) r) (K : Nat)
+            (\Pi (a b : Nat) -> K <= a -> K <= b -> \Pi (r' s' : Array Complex (suc m))
+            -> nearFactorSet p (geo a) r' -> nearFactorSet p (geo b) s'
+              -> matchDist {ComplexNormed} r' s' < geo k)
+
+\private \lemma StepA-inh {m : Nat} (p : Poly ComplexField) (deg : degree< p (suc (suc m)))
+                          (monic : polyCoef p (suc m) = 1) (k : Nat)
+  : TruncP (StepA {m} p k)
+  => \let | (inP (delta, delta>0, MATCH)) => nearFactor-match p deg monic (geo>0 k)
+          | (inP (K, hK)) => geo-small delta>0
+          | (inP (r, hr)) => approx-factor p deg monic (geo>0 k)
+     \in inP (r, hr, K, \lam _ _ K<=a K<=b r' s' hr' hs' =>
+      MATCH r' s' (\lam j => hr' j <∘l (geo-mono K<=a <=∘ <=-less hK))
+        (\lam j => hs' j <∘l (geo-mono K<=b <=∘ <=-less hK)))
+
+\private \func idx (K : Nat -> Nat) (k : Nat) : Nat \elim k
+  | 0 => K 0
+  | suc k => suc (idx K k) ∨ K (suc k)
+
+\private \lemma idx>=self (K : Nat -> Nat) (k : Nat) : k <= idx K k \elim k
+  | 0 => zero<=_
+  | suc k => suc<=suc (idx>=self K k) <=∘ join-left
+
+\private \lemma idx>=K (K : Nat -> Nat) (k : Nat) : K k <= idx K k \elim k
+  | 0 => <=-refl
+  | suc k => join-right
+
+\private \lemma idx>=K' (K : Nat -> Nat) (k : Nat) : K k <= idx K (suc k)
+  => idx>=K K k <=∘ (linarith : idx K k <= suc (idx K k)) <=∘ join-left
+
+-- | A full first choice: one near factorisation of `p` per accuracy `2^{ -k}`.
+\record NearSeq (m : Nat) (p : Poly ComplexField)
+  | seq : \Pi (k : Nat) -> StepA {m} p k
+
+-- | The chosen thresholds, and the near factorisations read off at the interleaved indices.
+\private \func seqK (S : NearSeq) (a : Nat) : Nat => (S.seq a).3
+
+\private \func seqR (S : NearSeq) (k : Nat) : Array Complex (suc S.m) => (S.seq (idx (seqK S) k)).1
+
+\private \lemma seqR-near (S : NearSeq) (k : Nat)
+  : nearFactorSet S.p (geo (idx (seqK S) k)) (seqR S k) => (S.seq (idx (seqK S) k)).2
+
+\private \func StepB (S : NearSeq) (k : Nat) : \Set
+  => \Sigma (f : Fin (suc S.m) -> Fin (suc S.m)) (IsInj f)
+            (maxDist {ComplexNormed} (seqR S k) (seqR S (suc k)) f < geo k)
+
+\private \lemma StepB-inh (S : NearSeq) (k : Nat) : TruncP (StepB S k)
+  => rawDist-lt {ComplexNormed} {suc S.m} {seqR S k} {seqR S (suc k)} join-left
+    ((S.seq k).4 (idx (seqK S) k) (idx (seqK S) (suc k))
+      (idx>=K (seqK S) k) (idx>=K' (seqK S) k) (seqR S k) (seqR S (suc k))
+      (seqR-near S k) (seqR-near S (suc k)))
+
+\record Threading \extends NearSeq
+  | align : \Pi (k : Nat) -> StepB \this k
+
+\private \func tau {m : Nat} (sig : \Pi (k : Nat) -> Fin (suc m) -> Fin (suc m)) (k : Nat) (i : Fin (suc m))
+  : Fin (suc m) \elim k
+  | 0 => i
+  | suc k => sig k (tau sig k i)
+
+\private \func tSig (A : Threading) (k : Nat) : Fin (suc A.m) -> Fin (suc A.m) => (A.align k).1
+
+-- | The `0`-th entry of the chosen multisets, followed along the relabelling.
+\private \func thread (A : Threading) (k : Nat) : Complex => seqR A k (tau (tSig A) k 0)
+
+-- | **The limit of the thread is a root.**
+\private \lemma thread-root (A : Threading) (deg : degree< A.p (suc (suc A.m)))
+                            (monic : polyCoef A.p (suc A.m) = 1) (z : Complex)
+                            (zl : ComplexCompleteRing.IsLimit (thread A) z)
+  : polyEval A.p z = 0
+  => nearRoot-root A.p deg monic \lam {_} {_} delta>0 eta>0 =>
+    \let | (inP (N1, hN1)) => geo-small delta>0
+         | (inP (e, e>0, e<eta)) => real_<-rat-char.1 eta>0
+         | (inP (N2, hN2)) => limit-metric-char.1 zl (rat_real_<.2 (real_<_U.2 e>0))
+    \in inP (seqR A (N1 ∨ N2),
+             \lam j => seqR-near A (N1 ∨ N2) j
+               <∘l (geo-mono (join-left <=∘ idx>=self (seqK A) (N1 ∨ N2))
+               <=∘ <=-less hN1),
+             \lam j => seqR-near A (N1 ∨ N2) j <∘l geo<=1 _,
+             minDist-cond {ComplexNormed} (seqR A (N1 ∨ N2)) z (tau (tSig A) (N1 ∨ N2) 0)
+               <∘r ((dist_U z (thread A (N1 ∨ N2))).2 (hN2 join-right) <∘ real_<_L.2 e<eta))
+
+-- | Consecutive thread points are within `2^{ -k}`.
+\private \lemma thread-incr (A : Threading) (k : Nat)
+  : ldist {ComplexNormed} (thread A k) (thread A (suc k)) < pow (ratio 1 2 : Real) k * 1
+  => rewrite (lnorm-ldist {ComplexNormed} {thread A k} {thread A (suc k)}) $
+  (maxDist-cond {ComplexNormed} {suc A.m} {seqR A k} {seqR A (suc k)} {tSig A k}
+    (tau (tSig A) k 0) <∘r (A.align k).3)
+    <∘l =_<= (inv ide-right)
+
+-- | The thread converges.
+\private \lemma thread-conv (A : Threading) : IsConvergent (thread A)
+  => nat-convergent-metric (linarith : (0 : Real) <= ratio 1 2)
+    (linarith : (ratio 1 2 : Real) < 1) (thread A) (thread-incr A)
+
+\lemma FTA {m : Nat} (p : Poly ComplexField) (deg : degree< p (suc (suc m)))
+           (monic : polyCoef p (suc m) = 1)
+  : ∃ (z : Complex) (polyEval p z = 0)
+  => \let | (inP s) => acchoice (StepA-inh p deg monic)
+          | (inP t) => acchoice (StepB-inh (\new NearSeq m p s))
+     \in \have A : Threading => \new Threading m p s t
+         \in inP (limit (thread A) (thread-conv A),
+                  thread-root A deg monic (limit (thread A) (thread-conv A)) limit-isLimit)

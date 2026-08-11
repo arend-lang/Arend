@@ -144,6 +144,10 @@
     \open Monoid(LDiv)
   }
 
+-- | $\sum_{j<n} x^j$, the `n`-th partial sum of the geometric series.
+\func powSum {R : Semiring} (x : R) (n : Nat) : R
+  => R.BigSum (\new Array R n (\lam j => R.pow x j))
+
 \class NonZeroSemiring \extends Semiring {
   | zro/=ide : zro /= ide
 

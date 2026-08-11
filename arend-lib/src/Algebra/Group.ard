@@ -238,6 +238,9 @@
     z + ((negative y + y) - x) ==< pmap (z + (__ - x)) negative-left >==
     z + (zro - x)              ==< pmap (z +) zro-left >==
     z - x                      `qed
+
+  \lemma diff+ {x y : E} : (x - y) + y = x
+    => +-assoc *> pmap (x +) negative-left *> zro-right
 } \where {
     \use \coerce fromGroup (G : Group) => \new AddGroup G.E G.ide (G.*) G.ide-left G.ide-right G.*-assoc G.inverse G.inverse-left G.inverse-right
     \use \coerce toGroup (G : AddGroup) => \new Group G.E G.zro (G.+) G.+-assoc G.zro-left G.zro-right G.negative G.negative-left G.negative-right

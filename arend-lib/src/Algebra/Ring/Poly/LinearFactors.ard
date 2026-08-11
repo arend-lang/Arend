@@ -1,0 +1,101 @@
+\import Algebra.Group
+\import Algebra.Meta
+\import Algebra.Monoid
+\import Algebra.Pointed
+\import Algebra.Ring
+\import Algebra.Ring.Poly
+\import Algebra.Semiring
+\import Data.Array
+\import Data.Array.Perm
+\import Function (IsInj)
+\import Paths
+
+{- | **Products of monic linear factors**: $\prod_{i<n}(X - r_i)$ for a finite array of roots `r`,
+     its value at a point, and the identities needed to pull one factor out. -}
+
+-- | $\prod_{i<n}(X - r_i)$.
+\func prodLin {R : CRing} {n : Nat} (r : Array R n) : Poly R \elim n, r
+  | 0, nil => 1
+  | suc n, a :: l => prodLin l * padd 1 (negative a)
+
+\lemma prodLin-degree {R : CRing} {n : Nat} (r : Array R n) : degree< (prodLin r) (suc n) \elim n, r
+  | 0, nil => degree<_padd (\lam _ => idp)
+  | suc n, a :: l => degree<_*padd1 (negative a) (prodLin-degree l)
+
+\lemma prodLin-monic {R : CRing} {n : Nat} (r : Array R n) : polyCoef (prodLin r) n = 1 \elim n, r
+  | 0, nil => idp
+  | suc n, a :: l => polyCoef_*padd1 (negative a) (prodLin-degree l) *> prodLin-monic l
+
+-- # The value of the product
+
+-- | $\prod_{i<n}(z - r_i)$, the value of `prodLin r` at `z`.
+\func linProd {R : CRing} {n : Nat} (r : Array R n) (z : R) : R \elim n, r
+  | 0, nil => 1
+  | suc n, a :: l => linProd l z * (z - a)
+
+-- | `prodLin r` evaluates to `linProd r`.
+\lemma polyEval_prodLin {R : CRing} {n : Nat} (r : Array R n) (z : R)
+  : polyEval (prodLin r) z = linProd r z \elim n, r
+  | 0, nil => simplify
+  | suc n, a :: l => polyEvalRingHom.func-*
+                     *> pmap2 (*) (polyEval_prodLin l z) (polyEval_padd1 a z)
+
+-- | Each `r i` is a root of `linProd r`.
+\lemma linProd-root {R : CRing} {n : Nat} (r : Array R n) (i : Fin n) : linProd r (r i) = 0 \elim n, r, i
+  | suc n, a :: l, 0 => pmap (linProd l a *) (AddGroup.toZero idp) *> zro_*-right
+  | suc n, a :: l, suc i => pmap (`* (l i - a)) (linProd-root l i) *> zro_*-left
+
+\lemma prodLin-root {R : CRing} {n : Nat} (r : Array R n) (i : Fin n) : polyEval (prodLin r) (r i) = 0
+  => polyEval_prodLin r (r i) *> linProd-root r i
+
+-- # Pulling out a factor
+
+-- | **Pulling out an arbitrary linear factor**: $\prod_i (X - r_i) = (X - r_k) \prod_{i \neq k}
+-- (X - r_i)$.
+\lemma prodLin-skip {R : CRing} {n : Nat} (r : Array R (suc n)) (k : Fin (suc n))
+  : prodLin r = padd {R} 1 (negative (r k)) * prodLin (skip r k) \elim n, r, k
+  | 0, a :: nil, 0 => *-comm {_} {1} {padd {R} 1 (negative a)}
+  | suc n, a :: l, 0 => *-comm
+  | suc n, a :: l, suc k =>
+    pmap (`* padd {R} 1 (negative a)) (prodLin-skip l k)
+    *> *-assoc {_} {padd {R} 1 (negative (l k))} {prodLin (skip l k)}
+
+{- | **The greedy deflation identity.** Removing `r 0` from `r` and `s j` from `s` leaves two
+     products whose difference, multiplied back by `X - r 0`, is the original difference corrected
+     by the constant `s j - r 0` times the deflated `s`-product. -}
+\lemma prodLin-deflate-id {R : CRing} {m : Nat} (r s : Array R (suc m)) (j : Fin (suc m))
+  : (prodLin (skip r 0) - prodLin (skip s j)) * padd 1 (negative (r 0))
+    = (prodLin r - prodLin s) - prodLin (skip s j) * padd pzero (s j - r 0)
+  => deflate-id-alg _ _ _ (padd {R} 1 (negative (s j)))
+     *> pmap2 (-) (pmap2 (-) (inv (prodLin-skip r 0)) (inv (prodLin-skip s j)))
+                  (pmap (prodLin (skip s j) *) (padd1-diff (r 0) (s j))) \where {
+  \private \lemma padd1-diff {R : Ring} (x y : R)
+    : padd 1 (negative x) - padd 1 (negative y) = padd pzero (y - x)
+    => pmap2 padd (pmap (padd pzero) negative-right *> path peq)
+                  (equation : negative x + negative (negative y) = y - x)
+
+  \private \lemma deflate-id-alg {R : CRing} (A Bq L0 Lj : Poly R)
+    : (A - Bq) * L0 = (L0 * A - Lj * Bq) - Bq * (L0 - Lj) => equation.cRing
+}
+
+{- | **`prodLin` is permutation invariant.** Reindexing along an injection of `Fin n` leaves the
+     monic product unchanged; the content is `CMonoid.BigProd_Perm` plus `Perm.perm-fin`. -}
+\lemma prodLin-perm {R : CRing} {n : Nat} (s : Array R n) (f : Fin n -> Fin n) (finj : IsInj f)
+  : prodLin (\lam i => s (f i)) = prodLin s
+  => asBigProd (\lam i => s (f i)) *> CMonoid.BigProd_Perm (linPerm s f finj) *> inv (asBigProd s)
+  \where {
+    -- | `prodLin` as a product over the array of its linear factors.
+    \private \lemma asBigProd {R : CRing} {n : Nat} (r : Array R n)
+      : prodLin r = CMonoid.BigProd (\new Array (Poly R) n (\lam i => padd 1 (negative (r i))))
+      \elim n, r
+      | 0, nil => idp
+      | suc n, a :: l => pmap (`* padd 1 (negative a)) (asBigProd l) *> *-comm
+
+    {- | Reindexing the array of linear factors along `f` is a permutation of it. Both arrays must be
+         spelled as explicit `\new Array`s: `map g l` will not unify against them here. -}
+    \private \func linPerm {R : CRing} {n : Nat} (s : Array R n) (f : Fin n -> Fin n) (finj : IsInj f)
+      : Perm (\new Array (Poly R) n (\lam i => padd 1 (negative (s (f i)))))
+             (\new Array (Poly R) n (\lam i => padd 1 (negative (s i))))
+      => Perm.perm-map (\lam i => padd 1 (negative (s i)))
+           (Perm.perm-fin (\new Array (Fin n) n f) finj)
+  }

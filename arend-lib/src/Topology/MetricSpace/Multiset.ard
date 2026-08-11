@@ -1,0 +1,212 @@
+\import Algebra.Group
+\import Algebra.Group.Symmetric
+\import Algebra.Meta
+\import Algebra.Monoid
+\import Algebra.Pointed
+\import Algebra.Ordered
+\import Arith.Real
+\import Arith.Real.Field
+\import Arith.Real.UpperReal
+\import Data.Array
+\import Data.Fin (fsuc)
+\import Function (IsInj)
+\import Logic
+\import Logic.Meta
+\import Order.Biordered
+\import Order.Lattice
+\import Order.LinearOrder
+\import Order.PartialOrder
+\import Order.StrictOrder
+\import Paths
+\import Paths.Meta
+\import Set.Fin
+\import Topology.MetricSpace
+\import Topology.MetricSpace.Complete
+\open JoinSemilattice (Big_<=_join0, Big_<=_join1, Big_join-univ, join-comm, join-idemp)
+\open MeetSemilattice (Big_<=_meet1, Big_meet-univ)
+\open BiorderedLattice (Big_<_join-univ)
+\open LinearLattice (Big_meet-lt)
+
+{- | For a pseudometric space `X`, `Array X n` carries
+     $d(r,s) = \min_{\sigma \in S_n} \max_i d(r_i, s_{\sigma i})$.
+     Its kernel is "permutations of one another", so the metric completion
+    `MultisetCompletion X n` is the space of completed `n`-multisets over `X`.
+
+     This is the carrier for Richman's spectrum of a monic polynomial
+     (Pacific J. Math. 196 (2000) 213-230). -}
+
+-- # Section 1: the matching pseudometric
+
+-- | The `n` pairwise distances induced by a pairing `f`.
+\func pairCosts {X : PseudoMetricSpace} {n : Nat} (r s : Array X n) (f : Fin n -> Fin n) : Array Real n
+  => \new Array Real n (\lam i => ldist (r i) (s (f i)))
+
+-- | The cost of a pairing `f`: the largest distance it induces, or `0` when `n = 0`.
+\func maxDist {X : PseudoMetricSpace} {n : Nat} (r s : Array X n) (f : Fin n -> Fin n) : Real
+  => Big (∨) 0 (pairCosts r s f)
+
+\lemma maxDist>=0 {X : PseudoMetricSpace} {n : Nat} {r s : Array X n} {f : Fin n -> Fin n}
+  : 0 <= maxDist r s f => Big_<=_join0 {_} {pairCosts r s f}
+
+\lemma maxDist-cond {X : PseudoMetricSpace} {n : Nat} {r s : Array X n} {f : Fin n -> Fin n} (i : Fin n)
+  : ldist (r i) (s (f i)) <= maxDist r s f => Big_<=_join1 {_} {pairCosts r s f} i
+
+\lemma maxDist-univ {X : PseudoMetricSpace} {n : Nat} {r s : Array X n} {f : Fin n -> Fin n} {c : Real}
+                    (c>=0 : 0 <= c) (h : \Pi (i : Fin n) -> ldist (r i) (s (f i)) <= c)
+  : maxDist r s f <= c => Big_join-univ {_} {pairCosts r s f} c>=0 h
+
+-- | Triangle inequality for pairings, along the composite pairing.
+\lemma maxDist-triang {X : PseudoMetricSpace} {n : Nat} {r s t : Array X n} (f g : Fin n -> Fin n)
+  : maxDist r t (\lam i => g (f i)) <= maxDist r s f + maxDist s t g
+  => maxDist-univ (linarith (maxDist>=0 {X} {n} {r} {s} {f}, maxDist>=0 {X} {n} {s} {t} {g}))
+       (\lam i => ldist-triang <=∘ <=_+ (maxDist-cond i) (maxDist-cond (f i)))
+
+-- | The costs of all the permutations.
+\func permCosts {X : PseudoMetricSpace} {n : Nat} (r s : Array X n) : Array Real (perms n).len
+  => \new Array Real (perms n).len (\lam i => maxDist r s (perms n i))
+
+-- | The one-sided matching cost: the least cost of a permutation, or of the identity pairing.
+\func rawDist {X : PseudoMetricSpace} {n : Nat} (r s : Array X n) : Real
+  => Big (∧) (maxDist r s (\lam i => i)) (permCosts r s)
+
+\lemma rawDist>=0 {X : PseudoMetricSpace} {n : Nat} {r s : Array X n} : 0 <= rawDist r s
+  => Big_meet-univ {_} {permCosts r s} maxDist>=0 (\lam i => maxDist>=0)
+
+-- | `rawDist` is below the cost of any injective pairing.
+\lemma rawDist-cond {X : PseudoMetricSpace} {n : Nat} {r s : Array X n} {f : Fin n -> Fin n}
+                    (fi : IsInj f) : rawDist r s <= maxDist r s f
+  => \let (inP (j, p)) => perms-complete fi
+     \in Big_<=_meet1 {_} {permCosts r s} j <=∘ =_<= (pmap (maxDist r s) p)
+
+-- | ...and it is the greatest such bound.
+\lemma rawDist-univ {X : PseudoMetricSpace} {n : Nat} {r s : Array X n} {c : Real}
+                    (h : \Pi (f : Fin n -> Fin n) -> IsInj f -> c <= maxDist r s f)
+  : c <= rawDist r s
+  => Big_meet-univ {_} {permCosts r s} (h _ (\lam p => p)) (\lam i => h _ (perms-inj i))
+
+{- | **A cheap matching from a small `rawDist`**, the converse of `rawDist-cond`. The slack `c' < c`
+     is unavoidable: the optimal permutation does not exist constructively. -}
+\lemma rawDist-lt {X : PseudoMetricSpace} {n : Nat} {r s : Array X n} {c' c : Real}
+                  (h : rawDist r s <= c') (lt : c' < c)
+  : ∃ (f : Fin n -> Fin n) (IsInj f) (maxDist r s f < c)
+  => \case Big_meet-lt {_} {permCosts r s} h lt \with {
+       | byLeft p => inP (\lam i => i, \lam p => p, p)
+       | byRight (inP (i, p)) => inP (perms n i, perms-inj i, p)
+     }
+
+-- | One minimum stripped off the triangle inequality for `rawDist`.
+\private \lemma rawDist-triang-step {X : PseudoMetricSpace} {n : Nat} {r s t : Array X n}
+                           (f : Fin n -> Fin n) (fi : IsInj f)
+  : rawDist r t - maxDist r s f <= rawDist s t
+  => rawDist-univ \lam g gi =>
+       linarith (rawDist-cond {X} {n} {r} {t} (IsInj.comp fi gi) <=∘ maxDist-triang f g)
+
+\lemma rawDist-triang {X : PseudoMetricSpace} {n : Nat} {r s t : Array X n}
+  : rawDist r t <= rawDist r s + rawDist s t
+  => linarith (rawDist-univ {X} {n} {r} {s} {rawDist r t - rawDist s t}
+                 (\lam f fi => linarith (rawDist-triang-step {X} {n} {r} {s} {t} f fi)))
+
+-- # Section 2: growing a pairing by one matched entry
+
+-- | A pairing of the arrays shortened at `0` and at `j`, extended by the matched pair `(0, j)`.
+\func extendMatch {m : Nat} (j : Fin (suc m)) (f : Fin m -> Fin m) (i : Fin (suc m)) : Fin (suc m)
+  \elim i
+  | 0 => j
+  | suc i => sface j (f i)
+
+\lemma extendMatch-inj {m : Nat} {j : Fin (suc m)} {f : Fin m -> Fin m} (fi : IsInj f)
+  : IsInj (extendMatch j f)
+  => \lam {i} {i'} => \case \elim i, \elim i' \with {
+    | 0, 0 => \lam _ => idp
+    | 0, suc i' => \lam p => absurd (sface-skip (inv p))
+    | suc i, 0 => \lam p => absurd (sface-skip p)
+    | suc i, suc i' => \lam p => pmap fsuc (fi (sface-inj p))
+  }
+
+-- | The extended pairing costs no more than the matched pair's distance and the shortened pairing's
+-- cost.
+\lemma maxDist-extend {X : PseudoMetricSpace} {m : Nat} (r s : Array X (suc m)) (j : Fin (suc m))
+                      (f : Fin m -> Fin m) {c : Real}
+                      (h0 : ldist (r 0) (s j) < c)
+                      (h1 : maxDist (skip r 0) (skip s j) f < c)
+  : maxDist r s (extendMatch j f) < c
+  => Big_<_join-univ {_} {pairCosts r s (extendMatch j f)} (maxDist>=0 <∘r h1)
+       (\lam i => \case \elim i \with {
+         | 0 => h0
+         | suc i => rewriteI (skip_0 {X} {m} {r} {i}, skip-sface s j (f i)) (maxDist-cond i <∘r h1)
+       })
+
+-- | **The matching pseudometric**: `rawDist` symmetrised with `∨`.
+\func matchDist {X : PseudoMetricSpace} {n : Nat} (r s : Array X n) : Real
+  => rawDist r s ∨ rawDist s r
+
+\lemma matchDist-refl {X : PseudoMetricSpace} {n : Nat} {r : Array X n} : matchDist r r = 0
+  => \have raw0 : rawDist r r = 0
+              => <=-antisymmetric
+                   (rawDist-cond (\lam p => p) <=∘ maxDist-univ <=-refl (\lam i => =_<= ldist-refl))
+                   rawDist>=0
+     \in pmap2 (∨) raw0 raw0 *> join-idemp
+
+\lemma matchDist-symm {X : PseudoMetricSpace} {n : Nat} {r s : Array X n}
+  : matchDist r s = matchDist s r => join-comm
+
+\lemma matchDist-triang {X : PseudoMetricSpace} {n : Nat} {r s t : Array X n}
+  : matchDist r t <= matchDist r s + matchDist s t
+  => join-univ (rawDist-triang <=∘ <=_+ join-left join-left)
+               (rawDist-triang <=∘ <=_+ join-right join-right <=∘ =_<= +-comm)
+
+-- # Section 3: distance from a point to an array
+
+-- | The `n` distances from `z` to the entries of `s`.
+\func pointCosts {X : PseudoMetricSpace} {n : Nat} (s : Array X n) (z : X) : Array Real n
+  => \new Array Real n (\lam j => ldist z (s j))
+
+-- | The distance from `z` to the nearest entry of `s`.
+\func minDist {X : PseudoMetricSpace} {n : Nat} (s : Array X (suc n)) (z : X) : Real
+  => Big (∧) (ldist z (s 0)) (pointCosts s z)
+
+\lemma minDist>=0 {X : PseudoMetricSpace} {n : Nat} (s : Array X (suc n)) (z : X)
+  : 0 <= minDist s z
+  => Big_meet-univ {_} {pointCosts s z} ldist>=0 (\lam j => ldist>=0)
+
+\lemma minDist-cond {X : PseudoMetricSpace} {n : Nat} (s : Array X (suc n)) (z : X)
+                    (j : Fin (suc n))
+  : minDist s z <= ldist z (s j)
+  => Big_<=_meet1 {_} {pointCosts s z} j
+
+-- | **Which entry is nearest**, recoverable from a bound on `minDist` given slack.
+\lemma minDist-index {X : PseudoMetricSpace} {n : Nat} (s : Array X (suc n)) (z : X)
+                     {c' c : Real} (h : minDist s z <= c') (lt : c' < c)
+  : ∃ (j : Fin (suc n)) (ldist z (s j) < c)
+  => \case Big_meet-lt {_} {pointCosts s z} h lt \with {
+       | byLeft p => inP (0, p)
+       | byRight (inP (j, p)) => inP (j, p)
+     }
+
+-- | **`minDist _ z` is 1-Lipschitz for `rawDist`.**
+\lemma minDist-lip {X : PseudoMetricSpace} {n : Nat} (r s : Array X (suc n)) (z : X)
+  : minDist r z <= minDist s z + rawDist s r
+  => linarith (rawDist-univ {X} {suc n} {s} {r} {minDist r z - minDist s z} \lam f fi =>
+       \have step (j : Fin (suc n)) : minDist r z - maxDist s r f <= ldist z (s j)
+               => linarith (minDist-cond r z (f j),
+                            ldist-triang {X} {z} {s j} {r (f j)},
+                            maxDist-cond {X} {suc n} {s} {r} {f} j)
+       \in linarith (Big_meet-univ {_} {pointCosts s z} (step 0) step))
+
+-- | The same for the symmetrised `matchDist`.
+\lemma minDist-lipM {X : PseudoMetricSpace} {n : Nat} (r s : Array X (suc n)) (z : X)
+  : minDist r z <= minDist s z + matchDist r s
+  => minDist-lip r s z <=∘ RealAbGroup.<=_+ <=-refl join-right
+
+-- | **`n`-element arrays over `X` under the matching pseudometric.**
+\instance MultisetPseudoMetric {X : PseudoMetricSpace} (n : Nat) : PseudoMetricSpace (Array X n)
+  | dist => matchDist
+  | dist-refl => Real.=-upper.1 matchDist-refl
+  | dist-symm => Real.=-upper.1 matchDist-symm
+  | dist-triang => PseudoMetricSpace.from-ldist-triang matchDist-triang
+
+{- | **Completed `n`-multisets over `X`.** Completing the matching pseudometric identifies arrays at
+     distance `0`, i.e. permutations of one another, so the $S_n$ quotient and the completion happen
+     in one step. Filter-based, hence choice-free. -}
+\func MultisetCompletion (X : PseudoMetricSpace) (n : Nat) : CompleteMetricSpace
+  => MetricCompletion (MultisetPseudoMetric {X} n)

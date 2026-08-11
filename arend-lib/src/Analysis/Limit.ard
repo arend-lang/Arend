@@ -159,6 +159,41 @@
     | inP (N,h) => inP (N, \lam p => real_<_U.1 $ h p)
   })
 
+-- | **Geometrically dominated increments make a sequence convergent.**
+--   If consecutive terms of `z` are within `r^i K` with `0 <= r < 1`, then `z` converges.
+\lemma nat-convergent-metric {X : PseudoMetricSpace} {r K : Real}
+                             (r>=0 : 0 <= r) (r<1 : r < 1)
+                             (z : Nat -> X)
+                             (bd : \Pi (i : Nat) -> ldist (z i) (z (suc i)) < RealField.pow r i * K)
+  : IsConvergent z
+  => \have K>=0 : (0 : Real) <= K
+          => <=-less (ldist>=0 <∘r transport (\lam t => ldist (z 0) (z 1) < t) ide-left (bd 0))
+     \in convergent-metric-real.2 \lam {_} eps>0 =>
+       \let (inP (N, h)) => pow_<1-decay r>=0 r<1 K
+              (RealField.<_*_positive_positive (linarith : (0 : Real) < 1 - r) eps>0)
+       \in inP (N, \lam {m} N<=m => rewrite (ldist-symm {X} {z m} {z N}) $
+             \case RealField.<_*-cancel-left
+                     ((transport (\lam j => (1 - r) * ldist (z N) (z j) <= (RealField.pow r N - RealField.pow r j) * K)
+                                 (<=_exists N<=m) (tail-bound N (m -' N))
+                       <=∘ <=_*_positive-left (linarith (RealField.pow>=0 {r} {m} r>=0)) K>=0)
+                      <∘r h) \with {
+               | byLeft (_, p) => p
+               | byRight (p, _) => absurd linarith
+             })
+  \where
+    -- | Summed triangle inequality against a geometric bound, in division-free form:
+    --   $(1-r)\,d(z_N, z_{N+k}) \leq (r^N - r^{N+k})\,K$.
+    \private \lemma tail-bound (N k : Nat)
+      : (1 - r) * ldist (z N) (z (N + k)) <= (RealField.pow r N - RealField.pow r (N + k)) * K \elim k
+      | 0 => =_<= (pmap (\lam t => (1 - r) * t) ldist-refl *> equation.cRing)
+      | suc k =>
+        \have d>=0 : (0 : Real) <= 1 - r => linarith (<=-less r<1)
+        \in <=_*_positive-right d>=0 (ldist-triang {X} {z N} {z (N + k)} {z (N + suc k)})
+            <=∘ =_<= RealField.ldistr
+            <=∘ <=_+ (tail-bound N k)
+                     (<=_*_positive-right d>=0 (<=-less (bd (N + k))))
+            <=∘ =_<= equation.cRing
+
 \lemma limit-metric-char {I : DirectedSet} {X : ExPseudoMetricSpace} {f : I -> X} {l : X}
   : X.IsLimit f l <-> ∀ {eps} (0 < eps) ∃ (N : I) ∀ {n} (N <= n -> (dist l (f n)).U eps)
   => (\lam fl eps>0 => fl OBall-open (OBall-center eps>0),
