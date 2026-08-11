@@ -5,7 +5,6 @@ import com.intellij.openapi.application.runReadAction
 import com.intellij.openapi.components.service
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
-import com.intellij.psi.util.PsiModificationTracker
 import org.arend.core.expr.Expression
 import org.arend.ext.core.ops.NormalizationMode
 import org.arend.ext.error.ListErrorReporter
@@ -23,13 +22,11 @@ import org.arend.repl.action.LoadLibraryCommand
 import org.arend.server.ArendLibrary
 import org.arend.server.ArendServer
 import org.arend.server.ArendServerService
-import org.arend.server.ProgressReporter
 import org.arend.settings.ArendProjectSettings
 import org.arend.term.abs.ConcreteBuilder
 import org.arend.term.concrete.Concrete
 import org.arend.term.group.ConcreteGroup
 import org.arend.toolWindow.repl.action.SetPromptCommand
-import org.arend.typechecking.ModificationCancellationIndicator
 import org.arend.typechecking.computation.ComputationRunner
 import org.arend.typechecking.computation.UnstoppableCancellationIndicator
 import org.arend.typechecking.result.TypecheckingResult
@@ -162,11 +159,8 @@ abstract class IntellijRepl private constructor(
     }
 
     override fun checkExpr(expr: Concrete.Expression, expectedType: Expression?, continuation: Consumer<TypecheckingResult>) {
-        val moduleLocation = expr.underlyingReferable.modulePath?.let { myServer.findModule(it, null, true, true) }
-        moduleLocation?.let { myServer.getCheckerFor(listOf(it)).typecheck(UnstoppableCancellationIndicator.INSTANCE, ProgressReporter.empty()) }
         ApplicationManager.getApplication().executeOnPooledThread {
-            val indicator = ModificationCancellationIndicator(PsiModificationTracker.getInstance(project))
-            ComputationRunner<Unit>().run(indicator) {
+            ComputationRunner<Unit>().run(UnstoppableCancellationIndicator.INSTANCE) {
                 super.checkExpr(expr, expectedType, continuation)
             }
         }

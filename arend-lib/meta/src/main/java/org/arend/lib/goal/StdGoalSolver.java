@@ -31,8 +31,8 @@ public class StdGoalSolver implements GoalSolver {
     Object exprData = expr.getData();
     ConcreteFactory factory = typechecker.getFactory().withData(exprData);
     ErrorReporter errorReporter = typechecker.getErrorReporter();
-    List<ConcreteExpression> args = Utils.addArguments(expr, typechecker, factory, expectedParams, true);
-    ConcreteExpression extExpr = args.isEmpty() ? expr : factory.app(expr, true, args);
+    List<ConcreteArgument> args = Utils.addArguments(expr, typechecker, factory, expectedParams, true);
+    ConcreteExpression extExpr = factory.app(expr, args);
     TypedExpression result = typechecker.withErrorReporter(error -> {
       if (!(error.level == GeneralError.Level.GOAL && error.getCause() == exprData)) {
         errorReporter.report(error);
@@ -41,7 +41,7 @@ public class StdGoalSolver implements GoalSolver {
 
     ConcreteExpression cExpr = goalExpression.getOriginalExpression();
     if (cExpr != null) {
-      cExpr = args.isEmpty() ? cExpr : factory.app(cExpr, true, args);
+      cExpr = factory.app(cExpr, args);
     }
     return new CheckGoalResult(result == null || cExpr == null ? cExpr : Utils.addArguments(cExpr, factory, Utils.numberOfExplicitPiParameters(result.getType()) - expectedParams, true), result);
   }

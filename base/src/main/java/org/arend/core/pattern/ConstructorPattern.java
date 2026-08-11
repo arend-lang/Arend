@@ -7,8 +7,8 @@ import org.arend.core.definition.DConstructor;
 import org.arend.core.definition.Definition;
 import org.arend.core.definition.FunctionDefinition;
 import org.arend.core.expr.*;
-import org.arend.core.sort.Sort;
 import org.arend.core.subst.ExprSubstitution;
+import org.arend.core.subst.Levels;
 import org.arend.ext.core.body.CorePattern;
 import org.arend.ext.core.context.CoreBinding;
 import org.arend.ext.prettyprinting.PrettyPrinterConfig;
@@ -36,11 +36,10 @@ public abstract class ConstructorPattern<T> implements Pattern {
       return ((ExpressionPattern) pattern).toPatternExpression();
     }
 
-    if (!(pattern instanceof ConstructorPattern)) {
+    if (!(pattern instanceof ConstructorPattern<?> conPattern)) {
       throw new IllegalStateException();
     }
 
-    ConstructorPattern<?> conPattern = (ConstructorPattern<?>) pattern;
     List<Expression> args = new ArrayList<>();
     for (Pattern subPattern : conPattern.getSubPatterns()) {
       args.add(toExpression(subPattern));
@@ -51,7 +50,7 @@ public abstract class ConstructorPattern<T> implements Pattern {
     if (conPattern.data instanceof FunctionDefinition) {
       return FunCallExpression.make((FunctionDefinition) conPattern.data, ((FunctionDefinition) conPattern.data).makeMinLevels(), args);
     }
-    return new TupleExpression(args, new SigmaExpression(Sort.PROP, EmptyDependentLink.getInstance()));
+    return new TupleExpression(args, new SigmaExpression(EmptyDependentLink.getInstance()));
   }
 
   public static ConstructorPattern<Definition> make(Definition definition, List<? extends Pattern> subPatterns) {
@@ -84,10 +83,7 @@ public abstract class ConstructorPattern<T> implements Pattern {
 
   @Override
   public ConstructorExpressionPattern toExpressionPattern(Expression type) {
-    if (type instanceof DataCallExpression && getDefinition() instanceof Constructor) {
-      Constructor constructor = (Constructor) getDefinition();
-      DataCallExpression dataCall = (DataCallExpression) type;
-
+    if (type instanceof DataCallExpression dataCall && getDefinition() instanceof Constructor constructor) {
       List<Expression> args = constructor.matchDataTypeArguments(dataCall.getDefCallArguments());
       if (args == null) {
         return null;
@@ -105,13 +101,12 @@ public abstract class ConstructorPattern<T> implements Pattern {
         return null;
       }
       return new ConstructorExpressionPattern(FunCallExpression.makeFunCall(Prelude.IDP, equality.getLevels(), Arrays.asList(equality.getDefCallArguments().get(0), equality.getDefCallArguments().get(1))), Collections.emptyList());
-    } else if (type instanceof ClassCallExpression) {
-      ClassCallExpression classCall = (ClassCallExpression) type;
+    } else if (type instanceof ClassCallExpression classCall) {
       if (classCall.getDefinition() == Prelude.DEP_ARRAY) {
         Definition def = getDefinition();
         if (def == Prelude.EMPTY_ARRAY || def == Prelude.ARRAY_CONS) {
           Expression length = classCall.getAbsImplementationHere(Prelude.ARRAY_LENGTH);
-          return new ConstructorExpressionPattern(new FunCallExpression((DConstructor) def, classCall.getLevels(), length, classCall.getAbsImplementationHere(Prelude.ARRAY_ELEMENTS_TYPE)), classCall.getThisBinding(), length, Pattern.toExpressionPatterns(mySubPatterns, ((DConstructor) def).getArrayParameters(classCall)));
+          return new ConstructorExpressionPattern(new FunCallExpression((DConstructor) def, Levels.EMPTY, length, classCall.getAbsImplementationHere(Prelude.ARRAY_ELEMENTS_TYPE)), classCall.getThisBinding(), length, Pattern.toExpressionPatterns(mySubPatterns, ((DConstructor) def).getArrayParameters(classCall)));
         }
       }
 
@@ -120,8 +115,7 @@ public abstract class ConstructorPattern<T> implements Pattern {
         return null;
       }
       return new ConstructorExpressionPattern(classCall, subPatterns);
-    } else if (type instanceof SigmaExpression) {
-      SigmaExpression sigma = (SigmaExpression) type;
+    } else if (type instanceof SigmaExpression sigma) {
       List<ExpressionPattern> subPatterns = Pattern.toExpressionPatterns(mySubPatterns, sigma.getParameters());
       if (subPatterns == null) {
         return null;

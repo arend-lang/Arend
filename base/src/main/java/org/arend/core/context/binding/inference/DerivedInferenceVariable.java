@@ -20,6 +20,11 @@ public class DerivedInferenceVariable extends InferenceVariable {
   }
 
   @Override
+  public boolean canBeInfinite() {
+    return true;
+  }
+
+  @Override
   public LocalError getErrorInfer(Expression... candidates) {
     return myVar.getErrorInfer(candidates);
   }

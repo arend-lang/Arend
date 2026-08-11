@@ -3,7 +3,6 @@ package org.arend.classes;
 import org.arend.core.context.param.DependentLink;
 import org.arend.core.definition.*;
 import org.arend.core.expr.*;
-import org.arend.core.subst.LevelPair;
 import org.arend.core.subst.Levels;
 import org.arend.ext.core.ops.NormalizationMode;
 import org.arend.prelude.Prelude;
@@ -508,7 +507,7 @@ public class DynamicTest extends TypeCheckingTestCase {
     ClassField xField = (ClassField) getDefinition("A.x");
     ClassField aField = (ClassField) getDefinition("B.a");
     ClassField yField = (ClassField) getDefinition("B.y");
-    PiExpression piType = yField.getType(LevelPair.SET0);
+    PiExpression piType = yField.getType();
     assertEquals(FieldCall(xField, FieldCall(aField, Ref(piType.getParameters()))), piType.getCodomain());
   }
 
@@ -537,22 +536,22 @@ public class DynamicTest extends TypeCheckingTestCase {
     ClassDefinition aClass = (ClassDefinition) getDefinition("A");
     assertTrue(aClass.getNotImplementedFields().isEmpty() && aClass.getImplemented().isEmpty());
     FunctionDefinition pFun = (FunctionDefinition) getDefinition("A.p");
-    assertEquals(Nat(), pFun.getTypeWithParams(new ArrayList<>(), LevelPair.SET0));
+    assertEquals(Nat(), pFun.getTypeWithParams(new ArrayList<>(), Levels.EMPTY));
     assertEquals(Zero(), pFun.getBody());
     FunctionDefinition qFun = (FunctionDefinition) getDefinition("A.q");
     List<DependentLink> qParams = new ArrayList<>();
-    Expression qType = qFun.getTypeWithParams(qParams, LevelPair.SET0);
+    Expression qType = qFun.getTypeWithParams(qParams, Levels.EMPTY);
     assertEquals(Pi(false, ClassCall(aClass), Nat()), fromPiParameters(qType, qParams));
     assertEquals(FunCall(pFun, Levels.EMPTY), qFun.getBody());
 
     ClassDefinition bClass = (ClassDefinition) getDefinition("A.B");
     assertTrue(bClass.getNotImplementedFields().isEmpty() && bClass.getImplemented().isEmpty());
     FunctionDefinition fFun = (FunctionDefinition) getDefinition("A.B.f");
-    assertEquals(Nat(), fFun.getTypeWithParams(new ArrayList<>(), LevelPair.SET0));
+    assertEquals(Nat(), fFun.getTypeWithParams(new ArrayList<>(), Levels.EMPTY));
     assertEquals(FunCall(pFun, Levels.EMPTY), fFun.getBody());
     FunctionDefinition gFun = (FunctionDefinition) getDefinition("A.B.g");
     List<DependentLink> gParams = new ArrayList<>();
-    Expression gType = gFun.getTypeWithParams(gParams, LevelPair.SET0);
+    Expression gType = gFun.getTypeWithParams(gParams, Levels.EMPTY);
     assertEquals(Pi(false, ClassCall(bClass), Nat()), fromPiParameters(gType, gParams));
     assertEquals(FunCall(plus, Levels.EMPTY, FunCall(fFun, Levels.EMPTY), FunCall(pFun, Levels.EMPTY)), gFun.getBody());
 
@@ -562,13 +561,13 @@ public class DynamicTest extends TypeCheckingTestCase {
     assertNotNull(cParent);
     FunctionDefinition hFun = (FunctionDefinition) getDefinition("A.C.h");
     List<DependentLink> hParams = new ArrayList<>();
-    Expression hType = hFun.getTypeWithParams(hParams, LevelPair.SET0);
+    Expression hType = hFun.getTypeWithParams(hParams, Levels.EMPTY);
     assertEquals(Pi(false, ClassCall(aClass), Nat()), fromPiParameters(hType, hParams));
     DependentLink hFunParam = param("\\this", ClassCall(aClass));
     assertEquals(FunCall(plus, Levels.EMPTY, FunCall(pFun, Levels.EMPTY), FunCall(qFun, Levels.EMPTY, Ref(hFunParam))), hFun.getBody());
     FunctionDefinition kFun = (FunctionDefinition) getDefinition("A.C.k");
     List<DependentLink> kParams = new ArrayList<>();
-    Expression kType = kFun.getTypeWithParams(kParams, LevelPair.SET0);
+    Expression kType = kFun.getTypeWithParams(kParams, Levels.EMPTY);
     assertEquals(Pi(false, ClassCall(cClass), Nat()), fromPiParameters(kType, kParams));
     DependentLink kFunParam = param("\\this", ClassCall(cClass));
     Expression aRef = FieldCall(cParent, Ref(kFunParam));
@@ -704,13 +703,13 @@ public class DynamicTest extends TypeCheckingTestCase {
   @Test
   public void classPolyParams() {
     typeCheckModule("""
-      \\class A {
-         | X : \\0-Type \\lp
-         \\func f (x : \\0-Type \\lp) => x
-         \\data D (x : \\0-Type \\lp)
-         \\class B {a : A} {
-             | Y : a.X -> \\0-Type \\lp
-             \\func g : \\0-Type \\lp => a.X
+      \\class A.{u} {
+         | X : \\0-Type u
+         \\func f (x : \\0-Type u) => x
+         \\data D (x : \\0-Type u)
+         \\class B.{u} {a : A.{u}} {
+             | Y : a.X -> \\0-Type u
+             \\func g : \\0-Type u => a.X
          }
       }
       """);
@@ -744,7 +743,7 @@ public class DynamicTest extends TypeCheckingTestCase {
     assertEquals(Ref(testFun.getParameters()), arg1.getDataTypeArguments().getFirst());
     assertEquals(foo, arg1.getDefinition());
 
-    Expression domFunction = arguments.getFirst().cast(LamExpression.class).getBody().cast(PiExpression.class).getParameters().getTypeExpr().normalize(NormalizationMode.WHNF);
+    Expression domFunction = arguments.getFirst().cast(LamExpression.class).getBody().cast(PiExpression.class).getParameters().getType().normalize(NormalizationMode.WHNF);
     assertEquals(Prelude.PATH, domFunction.cast(DataCallExpression.class).getDefinition());
     List<? extends Expression> domArguments = domFunction.cast(DataCallExpression.class).getDefCallArguments();
     assertEquals(3, domArguments.size());
@@ -765,7 +764,7 @@ public class DynamicTest extends TypeCheckingTestCase {
       """);
     FunctionDefinition testFun = (FunctionDefinition) getDefinition("test");
     Expression xCall = FieldCall((ClassField) getDefinition("A.x"), Ref(testFun.getParameters()));
-    Expression function = testFun.getResultType().cast(PiExpression.class).getParameters().getTypeExpr().normalize(NormalizationMode.NF);
+    Expression function = testFun.getResultType().cast(PiExpression.class).getParameters().getType().normalize(NormalizationMode.NF);
     assertEquals(Prelude.PATH, function.cast(DataCallExpression.class).getDefinition());
     List<? extends Expression> arguments = function.cast(DataCallExpression.class).getDefCallArguments();
     assertEquals(3, arguments.size());

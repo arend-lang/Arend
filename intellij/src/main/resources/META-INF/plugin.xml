@@ -9,6 +9,7 @@
          on how to target different products -->
     <depends>org.jetbrains.plugins.yaml</depends>
     <depends>com.intellij.java</depends>
+    <depends>com.jetbrains.edu</depends>
     <depends optional="true" config-file="plugin-json.xml">com.intellij.modules.json</depends>
 
     <extensions defaultExtensionNs="com.intellij">
@@ -48,6 +49,8 @@
 
         <fileType language="Arend" implementationClass="org.arend.ArendFileType" name="Arend" extensions="ard;ars" />
         <internalFileTemplate name="Arend File"/>
+        <internalFileTemplate name="Solution.ard"/>
+        <internalFileTemplate name="Test.ard"/>
 
         <!-- Parser -->
 
@@ -81,8 +84,11 @@
 
         <!-- Documentation -->
 
-        <lang.documentationProvider language="Arend"
-                                    implementationClass="org.arend.documentation.ArendDocumentationProvider"/>
+        <platform.backend.documentation.psiTargetProvider
+                implementation="org.arend.documentation.ArendDocumentationTargetProvider"/>
+
+        <platform.backend.documentation.linkHandler
+                implementation="org.arend.documentation.ArendDocumentationLinkHandler"/>
 
         <lang.documentationProvider language="INJECTION_TEXT"
                                     implementationClass="org.arend.injection.PsiInjectionTextDocumentationProvider"/>
@@ -342,7 +348,11 @@
         <runLineMarkerContributor language="Arend"
                                   implementationClass="org.arend.typechecking.execution.TypeCheckRunLineMarkerContributor"/>
 
-        <codeInsight.lineMarkerProvider language="Arend" implementationClass="org.arend.codeInsight.ArendLineMarkerProvider"/>
+        <!-- TODO
+        <codeInsight.lineMarkerProvider language="Arend" implementationClass="org.arend.codeInsight.ArendRecursiveLineMarkerProvider"/>
+
+        <codeInsight.lineMarkerProvider language="Arend" implementationClass="org.arend.codeInsight.ArendSuperclassesLineMarkerProvider"/>
+        -->
 
         <!-- Color Settings -->
 
@@ -447,11 +457,9 @@
         <highlightingPassFactory implementation="org.arend.highlight.ArendHighlightingPassFactory"/>
         <highlightingPassFactory implementation="org.arend.highlight.ErrorHighlightingPassFactory"/>
         <highlightingPassFactory implementation="org.arend.injection.InjectionHighlightingPassFactory"/>
-        <highlightingPassFactory implementation="org.arend.highlight.PartiallyInfixOperatorPrefixFormPassFactory"/>
         <highlightingPassFactory implementation="org.arend.highlight.NameShadowingHighlighterPassFactory"/>
-        <!-- TODO[server2]
+        <highlightingPassFactory implementation="org.arend.highlight.ArendSubclassesPassFactory"/>
         <highlightingPassFactory implementation="org.arend.highlight.ArendUnusedImportHighlightingPassFactory"/>
-        -->
         <highlightingPassFactory implementation="org.arend.highlight.RedundantParensPassFactory"/>
 
         <!-- Tool Windows -->
@@ -474,6 +482,12 @@
         <!-- Starters -->
         <appStarter id="generateArendLib" implementation="org.arend.documentation.GenerateArendLibStarter"/>
 
+    </extensions>
+
+    <extensions defaultExtensionNs="Educational">
+        <configurator implementationClass="org.arend.educational.ArendConfigurator"
+                          language="Arend"
+                          displayName="Arend"/>
     </extensions>
 
     <projectListeners>

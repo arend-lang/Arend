@@ -97,11 +97,11 @@ public class GivenMeta implements MetaDefinition {
         }
         int i = 0;
         for (ArendRef ref : paramRefList) {
-          sigmaRefs.add(ref != null ? ref : factory.local(typechecker.getVariableRenameFactory().getNameFromType(piParams.get(i % piParams.size()).getTypeExpr(), null)));
+          sigmaRefs.add(ref != null ? ref : factory.local(typechecker.getVariableRenameFactory().getNameFromType(piParams.get(i % piParams.size()).getType(), null)));
           i++;
         }
         if (sigmaRefs.size() % piParams.size() != 0) {
-          typechecker.getErrorReporter().report(new TypecheckingError("Expected (" + piParams.size() + " * n) parameters", param));
+          typechecker.getErrorReporter().report(new TypecheckingError("The number of parameters should be divisible by " + piParams.size(), param));
           return null;
         }
 
@@ -112,7 +112,7 @@ public class GivenMeta implements MetaDefinition {
           for (i = j; i < sigmaRefs.size(); i += piParams.size()) {
             curRef.add(sigmaRefs.get(i));
           }
-          ConcreteParameter varParam = produceParam(param.isExplicit(), curRef, factory.withData(cType.getData()).core(piParam.getTypedType()), null);
+          ConcreteParameter varParam = produceParam(param.isExplicit(), curRef, factory.withData(cType.getData()).core(piParam.getType().computeTyped()), null);
           sigmaParams.add(varParam);
           varParams.add(varParam);
           j++;

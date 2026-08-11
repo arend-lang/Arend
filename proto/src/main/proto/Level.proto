@@ -5,20 +5,60 @@ option java_package = "org.arend.module.serialization";
 option java_outer_classname = "LevelProtos";
 
 
+// A level of the form max(max_v (v + coefficient_v), constant), or infinity.
 message Level {
-    int32 constant = 1;
-    int32 max_constant = 3;
-    int32 variable = 4;
+    bool is_infinity = 1;
+    // BigInteger, big-endian two's complement; empty => 0. Meaningful only when !is_infinity.
+    bytes constant = 2;
+    repeated Var var = 3;
+
+    message Var {
+        // Index into the definition's level parameters.
+        int32 index = 1;
+        // BigInteger, big-endian two's complement; empty => 0.
+        bytes coefficient = 2;
+    }
 }
 
 message Levels {
   repeated Level pLevel = 1;
-  repeated Level hLevel = 2;
-  bool is_std = 3;
+}
+
+// A constant level (the h-level of a sort): infinity, or a BigInteger (-1 means \Prop).
+message ConstLevel {
+    bool is_infinity = 1;
+    // BigInteger, big-endian two's complement; empty => 0. Meaningful only when !is_infinity.
+    bytes value = 2;
 }
 
 message Sort {
     Level p_level = 1;
-    Level h_level = 2;
+    ConstLevel h_level = 2;
 }
 
+// The sort of a universe/data/class definition; mirrors org.arend.core.sort.SortExpression.
+message SortExpression {
+    oneof kind {
+        Sort const_sort = 1;
+        VarSort var_sort = 2;
+        bool recursive_data = 3;
+        MaxSort max_sort = 4;
+        PiSort pi_sort = 5;
+        SortExpression prev_sort = 6;
+        SortExpression succ_sort = 7;
+    }
+
+    message VarSort {
+        int32 index = 1;
+        repeated int32 field = 2;
+    }
+
+    message MaxSort {
+        repeated SortExpression sort = 1;
+    }
+
+    message PiSort {
+        SortExpression domain = 1;
+        SortExpression codomain = 2;
+    }
+}

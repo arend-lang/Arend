@@ -1,47 +1,48 @@
-\import Category.Adjoint
 \import Category.CartesianClosed
 \import Category.Functor
+\import Equiv
 \import Function.Meta
+\import Logic
 \import Order.Lattice
 \import Order.PartialOrder
 \import Paths
 
-\lemma \infixr 9 =<= {E : Preorder} {x y z : E}
-                     (p : x = y) (q : y <= z) : x <= z => transport (__ <= z) (inv p) q
-
-\class HeytingAlebra \extends BoundedDistributiveLattice, CartesianClosedPrecat (\lp, \lp) {
-  | implies \alias \infixr 5 --> : E -> E -> E
-  | exponent-left {x a b : E} : x ∧ a <= b -> x <= a --> b
-  | exponent-right {x a b : E} : x <= a --> b -> x ∧ a <= b
+\class HeytingAlebra \extends BoundedDistributiveLattice {
+  | \infixr 5 --> : E -> E -> E
+  | <=-curry {x a b : E} : x ∧ a <= b -> x <= a --> b
+  | <=-uncurry {x a b : E} : x <= a --> b -> x ∧ a <= b
 
   \default top \as top-impl => bottom --> bottom
-  \default top-univ {x : E} : x <= top-impl => exponent-left meet-right
-  \default ldistr>= {x y z : E} : x ∧ (y ∨ z) <= (x ∧ y) ∨ (x ∧ z) => meet-comm =<= exponent-right (join-univ (exponent-left (meet-comm =<= join-left)) (exponent-left (meet-comm =<= join-right)))
+  \default top-univ {x : E} : x <= top-impl => <=-curry meet-right
+  \default ldistr>= {x y z : E} : x ∧ (y ∨ z) <= (x ∧ y) ∨ (x ∧ z) => meet-comm =<= <=-uncurry (join-univ (<=-curry (meet-comm =<= join-left)) (<=-curry (meet-comm =<= join-right)))
 
-  \use \lemma eval {x y : E} : (x --> y) ∧ x <= y
-    => exponent-right <=-refl
+  \lemma <=-eval {x y : E} : (x --> y) ∧ x <= y
+    => <=-uncurry <=-refl
 
   \lemma modus-ponens {x y : E} : x ∧ (x --> y) <= y
-    => meet-comm =<= eval
+    => meet-comm =<= <=-eval
 
   \lemma composition-law {x y z : E} : (x --> y) ∧ (y --> z) <= x --> z
-    => exponent-left $ (meet-assoc *> meet-comm *> meet-assoc) =<= meet-monotone <=-refl modus-ponens <=∘ eval
+    => <=-curry $ (meet-assoc *> meet-comm *> meet-assoc) =<= meet-monotone <=-refl modus-ponens <=∘ <=-eval
 
   \func continuation (y : E) (x : E) => (x --> y) --> y
 
   \func neg (x : E) => x --> bottom
 
+  \lemma neg-inverse {x y : E} (p : x <= y) : neg y <= neg x
+    => <=-curry $ meet-monotone <=-refl p <=∘ <=-eval
+
   \lemma neg_bottom : neg bottom = top
-    => <=-antisymmetric TopMeetSemilattice.top-univ (exponent-left meet-right)
+    => <=-antisymmetric TopMeetSemilattice.top-univ (<=-curry meet-right)
 
   \lemma neg_top : neg top = bottom
-    => <=-antisymmetric (meet-univ <=-refl TopMeetSemilattice.top-univ <=∘ eval) bottom-univ
+    => <=-antisymmetric (meet-univ <=-refl TopMeetSemilattice.top-univ <=∘ <=-eval) bottom-univ
 
   \lemma id<=neg_neg {x : E} : x <= neg (neg x)
-    => double-->-increasing
+    => double-exponent-increasing
 
   \lemma neg_join {x y : E} : neg (x ∨ y) = neg x ∧ neg y
-    => -->_join
+    => exponent_join
 
   \func IsNegated (x : E) : \Prop
     => neg (neg x) <= x
@@ -50,61 +51,52 @@
     => =_<= $ pmap neg neg_bottom *> neg_top
 
   \lemma meet-negated {x y : E} (xn : IsNegated x) (yn : IsNegated y) : IsNegated (x ∧ y)
-    => meet-univ (double-->-monotone meet-left <=∘ xn) (double-->-monotone meet-right <=∘ yn)
+    => meet-univ (double-exponent-monotone meet-left <=∘ xn) (double-exponent-monotone meet-right <=∘ yn)
 
   \lemma neg-negated {x : E} : IsNegated (neg x)
-    => _-->-antimonotone double-->-increasing
+    => exponent-monotone double-exponent-increasing <=-refl
 
-  \func double-neg => continuation bottom
+  \protected \func curry {x y z : E} : x ∧ y --> z = x --> (y --> z)
+    => <=-antisymmetric (<=-curry $ <=-curry $ meet-assoc =<= <=-eval) (<=-curry $ inv meet-assoc =<= meet-monotone <=-eval <=-refl <=∘ <=-eval)
 
-  \func curry {x y z : E} : x ∧ y --> z <= x --> (y --> z) =>
-    exponent-left (exponent-left (meet-assoc =<= eval))
+  \lemma top_exponent {x y : E} (p : x <= y) : top <= x --> y
+    => <=-curry (meet-right <=∘ p)
 
-  \use \func -->-monotone {x y z : E} (p : y <= z) : x --> y <= x --> z => exponent-left (eval <=∘ p)
+  \lemma exponent-monotone {x y x' y' : E} (p : x' <= x) (q : y <= y') : x --> y <= x' --> y'
+    => <=-curry $ meet-monotone <=-refl p <=∘ <=-eval <=∘ q
 
-  \func -->-increasing {x y : E} : y <= x --> y => exponent-left meet-left
+  \lemma exponent_meet {x y z : E} : x --> y ∧ z = (x --> y) ∧ (x --> z)
+    => <=-antisymmetric (meet-univ (exponent-monotone <=-refl meet-left) (exponent-monotone <=-refl meet-right)) (<=-curry (meet-univ (meet-monotone meet-left <=-refl <=∘ <=-eval) (meet-monotone meet-right <=-refl <=∘ <=-eval)))
 
-  \use \lemma meet-monotone-partial {x y z : E} (p : y <= z) : x ∧ y <= x ∧ z => meet-monotone <=-refl p
+  \lemma exponent_join {x y z : E} : x ∨ y --> z = (x --> z) ∧ (y --> z)
+    => <=-antisymmetric (meet-univ (exponent-monotone join-left <=-refl) (exponent-monotone join-right <=-refl)) $ <=-curry $
+        ldistr>= <=∘ join-univ (meet-monotone meet-left <=-refl <=∘ <=-eval) (meet-monotone meet-right <=-refl <=∘ <=-eval)
 
-  \use \lemma meet-monotone-partial' {x y z : E} (p : x <= y) : x ∧ z <= y ∧ z =>
-    meet-comm =<= meet-monotone-partial p <=∘ (=_<= meet-comm)
+  \lemma double-exponent-increasing {x y : E} : x <= (x --> y) --> y
+    => <=-curry modus-ponens
 
-  \lemma _-->-antimonotone {x y z : E} (p : y <= z) : z --> x <= y --> x
-    => exponent-left (meet-monotone-partial p <=∘ eval)
+  \lemma double-exponent-idempotent {x y : E} : (((x --> y) --> y) --> y) --> y <= (x --> y) --> y
+    => <=-curry (meet-monotone <=-refl double-exponent-increasing <=∘ <=-eval)
 
-  \lemma -->_join {x y z : E} : x ∨ y --> z = (x --> z) ∧ (y --> z)
-    => <=-antisymmetric (meet-univ (_-->-antimonotone join-left) (_-->-antimonotone join-right)) $ exponent-left $
-        ldistr>= <=∘ join-univ (meet-monotone meet-left <=-refl <=∘ eval) (meet-monotone meet-right <=-refl <=∘ eval)
+  \lemma double-exponent-monotone {x y z : E} (p : y <= z) : continuation x y <= continuation x z
+    => <=-curry (meet-monotone <=-refl (exponent-monotone p <=-refl) <=∘ <=-eval)
 
-  \lemma double-->-increasing {x y : E} : x <= (x --> y) --> y => exponent-left modus-ponens
+  \lemma exponent-unit {x y : E} : x <= y --> x ∧ y
+    => <=-curry <=-refl
 
-  \lemma double-->-idempotent {x y : E} : (((x --> y) --> y) --> y) --> y <= (x --> y) --> y
-    => exponent-left (meet-monotone-partial double-->-increasing <=∘ eval)
-
-  \lemma double-->-monotone {x y z : E} (p : y <= z) : continuation x y <= continuation x z
-    => exponent-left (meet-monotone-partial (_-->-antimonotone p) <=∘ eval)
-
-  \use \lemma exponent-adj-unit {x y : E} : x <= y --> x ∧ y => exponent-left <=-refl
-
-  \use \lemma adj-lemma {x y z : E} (f : x <= z --> y) : x ∧ z <= y => meet-monotone-partial' f <=∘ eval
-
-  \use \func exponent-functor (X : E) : Functor \this \this \cowith
-    | F Y => X --> Y
-    | Func f => -->-monotone f
+  \func exponent-functor (x : E) : Functor \this \this \cowith
+    | F y => x --> y
+    | Func f => exponent-monotone <=-refl f
     | Func-id => idp
     | Func-o => idp
 
-  \default exp (Y : E) : RightAdjoint \this \this \cowith
-    | LAdj => bprodFunctorRight Y
-    | Functor => exponent-functor Y
-    | eta {
-      | trans X => exponent-adj-unit
-      | natural f => idp
+  \func toCCC : CartesianClosedPrecat \cowith
+    | CartesianPrecat => \this
+    | CHom => -->
+    | CHom-eval => <=-eval
+    | CHom-univ => inP \new QEquiv {
+      | ret => <=-curry
+      | ret_f p => prop-pi
+      | f_sec p => prop-pi
     }
-    | epsilon {
-      | trans X => eval
-      | natural f => idp
-    }
-    | eta_epsilon-left => idp
-    | eta_epsilon-right => idp
 }

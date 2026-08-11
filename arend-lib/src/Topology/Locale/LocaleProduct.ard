@@ -1,0 +1,113 @@
+\import Algebra.Meta
+\import Function.Meta
+\import Logic
+\import Logic.Meta
+\import Meta
+\import Operations
+\import Order.Lattice
+\import Order.Lattice.CompleteLattice
+\import Order.PartialOrder
+\import Paths
+\import Paths.Meta
+\import Set.Set
+\import Topology.Locale
+\import Topology.Locale.PreorderSite
+\open CompleteLattice
+\open SiteLocale
+\open Cover
+
+\instance LocaleHasProduct.{u} : HasProduct Locale.{u}
+  | Product L M => ProductLocale L M
+
+\func ProductLocale (X Y : Locale) : Locale
+  => SiteLocale site
+  \where {
+    \func site : PreorderSite (\Sigma X Y) \cowith
+      | Preorder => ProductPreorder X Y
+      | isBasicCover xy U => (\Sigma (V : Set X) (xy.1 <= Join V) (U = SetIm (__,xy.2) V)) || (\Sigma (V : Set Y) (xy.2 <= Join V) (U = SetIm (xy.1,__) V))
+      | basic-cover-stable {a} {b} a<=b {U} => \case \elim U, \elim __ \with {
+        | _, byLeft (V,b<=V,idp) => inP
+          (_, byLeft (\lam x => Given (x <= a.1) ∃ (v : V) (x <= v), meet-univ <=-refl (a<=b.1 <=∘ b<=V) <=∘ Join-ldistr>= <=∘ SJoin-univ \lam {v} Vv => Join-cond $ later (meet-left, inP (v, Vv, meet-right)), idp),
+           SetIm-elim $ later \lam {x} (x<=a, inP (v,Vv,x<=v)) => inP (_, SetIm-con Vv, (x<=v, a<=b.2)), SetIm-elim $ later \lam s => (s.1, <=-refl))
+        | _, byRight (V,b<=V,idp) => inP
+          (_, byRight (\lam y => Given (y <= a.2) ∃ (v : V) (y <= v), meet-univ <=-refl (a<=b.2 <=∘ b<=V) <=∘ Join-ldistr>= <=∘ SJoin-univ \lam {v} Vv => Join-cond $ later (meet-left, inP (v, Vv, meet-right)), idp),
+           SetIm-elim $ later \lam {y} (y<=a, inP (v,Vv,y<=v)) => inP (_, SetIm-con Vv, (a<=b.1, y<=v)), SetIm-elim $ later \lam s => (<=-refl, s.1))
+      }
+
+    \func proj1 : LocaleHom (ProductLocale X Y) X \cowith
+      | func x => closure \lam s => s.1 = x
+      | func-<= {x} {x'} x<=x' => closure-univ \lam {s} p => mkcon cover-inj {x',top} (later (p =<= x<=x', top-univ)) idp
+      | func-top>= {s} _ => mkcon cover-inj {top,top} (later (top-univ,top-univ)) idp
+      | func-meet>= {x} {x'} {s} (c1,c2) => cover-refine (cover-inter c1 c2)
+        \lam {t} (inP ((_,a),idp,(_,b),idp,t<=x,t<=x')) => inP ((_,top), idp, (meet-univ t<=x.1 t<=x'.1, top-univ))
+      | func-Join>= {C} => closure-univ $ later \lam {(_,y)} (idp) => cover-sub (cover-basic $ byLeft (C, <=-refl, idp)) $
+        unfolds $ SetIm-elim \lam {x} Cx => inP $ later (_, SetIm-con Cx, cover-refl idp)
+
+    \func proj2 : LocaleHom (ProductLocale X Y) Y \cowith
+      | func y => closure \lam s => s.2 = y
+      | func-<= {y} {y'} y<=y' => closure-univ \lam {s} p => mkcon cover-inj {top,y'} (later (top-univ, p =<= y<=y')) idp
+      | func-top>= {s} _ => mkcon cover-inj {top,top} (later (top-univ,top-univ)) idp
+      | func-meet>= {y} {y'} {s} (c1,c2) => cover-refine (cover-inter c1 c2)
+        \lam {t} (inP ((a,_),idp,(b,_),idp,t<=y,t<=y')) => inP ((top,_), idp, (top-univ, meet-univ t<=y.2 t<=y'.2))
+      | func-Join>= {C} => closure-univ $ later \lam {(x,_)} (idp) => cover-sub (cover-basic $ byRight (C, <=-refl, idp)) $
+        unfolds $ SetIm-elim \lam {y} Cy => inP $ later (_, SetIm-con Cy, cover-refl idp)
+
+    \lemma coverMap {Z : Locale} (f : FrameHom X Z) (g : FrameHom Y Z) {s : \Sigma X Y} {U : Set (\Sigma X Y)} (x<=U : Cover {site} s U)
+      : f s.1 ∧ g s.2 <= SJoin (\lam t => f t.1 ∧ g t.2) U \elim x<=U
+      | cover-inj s<=t Ut => Z.meet-monotone (func-<= s<=t.1) (func-<= s<=t.2) <=∘ SJoin-cond Ut
+      | cover-trans (byLeft (V,s<=V,idp)) T<=U => Z.meet-monotone (func-<= s<=V <=∘ func-Join>=) <=-refl <=∘
+        Z.SJoin-rdistr>= <=∘ SJoin-univ \lam Va => coverMap f g (T<=U $ SetIm-con Va)
+      | cover-trans (byRight (V,s<=V,idp)) T<=U => Z.meet-monotone <=-refl (func-<= s<=V <=∘ func-Join>=) <=∘
+        Z.SJoin-ldistr>= <=∘ SJoin-univ \lam Va => coverMap f g (T<=U $ SetIm-con Va)
+
+    \func tuple {Z : Locale} (f : LocaleHom Z X) (g : LocaleHom Z Y) : LocaleHom Z (ProductLocale X Y) \cowith
+      | func U => SJoin (\lam s => f s.1 ∧ g s.2) U.1
+      | func-<= {U} {V} U<=V => SJoin-univ \lam Ua => SJoin-cond (U<=V Ua)
+      | func-top>= => Join-cond $ inP (((top,top), ()), <=-antisymmetric top-univ $ meet-univ func-top>= func-top>=)
+      | func-meet>= {U} {V} => Z.SJoin-distr>= <=∘ SJoin-univ (later \lam {s} (Us,Vs) =>
+        \have lem {a b c d : Z} : (a ∧ b) ∧ (c ∧ d) = (a ∧ c) ∧ (b ∧ d) => equation
+        \in lem =<= Z.meet-monotone func-meet>= func-meet>= <=∘ Z.SJoin-conde (s.1.1 ∧ s.2.1, s.1.2 ∧ s.2.2)
+          (U.2 $ cover-inj (meet-left,meet-left) Us, V.2 $ cover-inj (meet-right,meet-right) Vs))
+      | func-Join>= => SJoin-univ \lam {s} c => coverMap f g c <=∘ SJoin-univ (later \lam (inP (U,CU,Ua)) => SJoin-cond Ua <=∘ SJoin-cond CU)
+
+    \lemma beta1 {Z : Locale} {f : LocaleHom Z X} {g : LocaleHom Z Y} : proj1 LocaleHom.∘ tuple f g = f
+      => exts \lam x => <=-antisymmetric
+          (SJoin-univ \lam c => coverMap f g c <=∘ SJoin-univ \lam p => meet-left <=∘ func-<= (=_<= p))
+          (meet-univ <=-refl (top-univ <=∘ func-top>=) <=∘ SJoin-conde (x,top) (cover-refl idp))
+
+    \lemma beta2 {Z : Locale} {f : LocaleHom Z X} {g : LocaleHom Z Y} : proj2 LocaleHom.∘ tuple f g = g
+      => exts \lam y => <=-antisymmetric
+          (SJoin-univ \lam c => coverMap f g c <=∘ SJoin-univ \lam p => meet-right <=∘ func-<= (=_<= p))
+          (meet-univ (top-univ <=∘ func-top>=) <=-refl <=∘ SJoin-conde (top,y) (cover-refl idp))
+
+    \lemma tupleEq {Z : Locale} {f g : LocaleHom Z (ProductLocale X Y)} (p1 : proj1 LocaleHom.∘ f = proj1 LocaleHom.∘ g) (p2 : proj2 LocaleHom.∘ f = proj2 LocaleHom.∘ g) : f = g
+      => SiteLocale.func-equality_ext \lam s =>
+        \have | fg => f.func-meet *> pmap2 (∧) (pmap {FrameHom X Z} (FrameHom.func {__} s.1) p1) (pmap {FrameHom Y Z} (FrameHom.func {__} s.2) p2) *> inv g.func-meet
+              | e : embed s = proj1 s.1 ∧ proj2 s.2 => <=-antisymmetric (embed-univ (cover-refl idp, cover-refl idp))
+                \lam {u} (u1,u2) => cover-refine (cover-inter u1 u2) \lam {t} (inP ((_,y),idp,(x,_),idp,t<=s1,t<=s2)) => inP (s, idp, (t<=s1.1, t<=s2.2))
+        \in pmap f e *> fg *> pmap g (inv e)
+
+    \lemma eta : tuple proj1 proj2 = LocaleHom.id
+      => tupleEq {_} {_} {_} {tuple proj1 proj2} (beta1 {_} {_} {_} {proj1} {proj2}) (beta2 {_} {_} {_} {proj1} {proj2})
+
+    \lemma doubleCover {x : X} {U : Set X} (x<=U : x <= Join U) {y : Y} {V : Set Y} (y<=V : y <= Join V)
+      : Cover {site} (x,y) (\lam s => \Sigma (U s.1) (V s.2))
+      => cover-trans* (cover-basic $ byLeft (U,x<=U,idp)) $ SetIm-elim \lam Ua => later $ cover-sub (cover-basic $ byRight (V,y<=V,idp)) \lam {_} => SetIm-elim \lam {b} Vb => (Ua,Vb)
+
+    \lemma binCover-left {x a b : X} (x<=ab : x <= a ∨ b) {y : Y} {U : Set (\Sigma X Y)} (ay<=U : Cover {site} (a,y) U) (by<=U : Cover {site} (b,y) U) : Cover {site} (x,y) U
+      => cover-trans* (cover-basic $ byLeft (\lam c => (c = a) || (c = b), x<=ab <=∘ join-univ (Join-cond $ byLeft idp) (Join-cond $ byRight idp), idp))
+          \lam {s} => SetIm-elim \lam {c} => later \case \elim c, \elim __ \with {
+            | _, byLeft idp => ay<=U
+            | _, byRight idp => by<=U
+          }
+
+    \lemma binCover-right {x : X} {y a b : Y} (y<=ab : y <= a ∨ b) {U : Set (\Sigma X Y)} (xa<=U : Cover {site} (x,a) U) (xb<=U : Cover {site} (x,b) U) : Cover {site} (x,y) U
+      => cover-trans* (cover-basic $ byRight (\lam c => (c = a) || (c = b), y<=ab <=∘ join-univ (Join-cond $ byLeft idp) (Join-cond $ byRight idp), idp))
+          \lam {s} => SetIm-elim \lam {c} => later \case \elim c, \elim __ \with {
+            | _, byLeft idp => xa<=U
+            | _, byRight idp => xb<=U
+          }
+  }
+
+\func localeDiagonal {L : Locale} : LocaleHom L (ProductLocale L L)
+  => ProductLocale.tuple LocaleHom.id LocaleHom.id

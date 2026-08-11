@@ -29,18 +29,18 @@
 
   | cancel_*-left x {y} {z} p =>
       y                   ==< inv ide-left >==
-      ide * y             ==< pmap (`* y) (inv inverse-left) >==
+      ide * y             ==< pmap (* y) (inv inverse-left) >==
       (inverse x * x) * y ==< *-assoc >==
       inverse x * (x * y) ==< pmap (inverse x *) p >==
       inverse x * (x * z) ==< inv *-assoc >==
-      (inverse x * x) * z ==< pmap (`* z) inverse-left >==
+      (inverse x * x) * z ==< pmap (* z) inverse-left >==
       ide * z             ==< ide-left >==
       z                   `qed
   | cancel_*-right z {x} {y} p =>
       x                   ==< inv ide-right >==
       x * ide             ==< pmap (x *) (inv inverse-right) >==
       x * (z * inverse z) ==< inv *-assoc >==
-      (x * z) * inverse z ==< pmap (`* inverse z) p >==
+      (x * z) * inverse z ==< pmap (* inverse z) p >==
       (y * z) * inverse z ==< *-assoc >==
       y * (z * inverse z) ==< pmap (y *) inverse-right >==
       y * ide             ==< ide-right >==
@@ -108,17 +108,6 @@
     | inverse => inverse
     | inverse-left => inverse-right
     | inverse-right => inverse-left
-
-  \lemma check-for-inv {x y : E} (p : x * y = ide) : y = inverse x
-    => simplify in pmap (inverse x *) p
-
-  \lemma equality-check {g h : E} (p : inverse g * h = ide) : g = h
-    => inv $ simplify in pmap (g *) p
-
-  \lemma equality-corrolary (g h : E) (p : g = h) : inverse g * h = ide =>
-    inverse g * h ==< pmap (inverse g *) (inv p) >==
-    inverse g * g ==< inverse-left >==
-    ide `qed
 } \where {
   \open Monoid(Inv)
 
@@ -127,19 +116,20 @@
         (\new Inv e (G.inverse e) G.inverse-left G.inverse-right)
         (\new Inv e (H.inverse e) (m *> H.inverse-left *> inv z) (m *> H.inverse-right *> inv z)))
 
-  \func equals (G H : Group) (p : G = {Monoid} H) : G = H
+  \func equals.{u} (G H : Group.{u}) (p : G = {Monoid.{u}} H) : G = {Group.{u}} H
     => exts Group {
          | Monoid => p
-         | inverse => inverse-equality
+         | inverse => inverse-equality p
        }
     \where {
-      \lemma inverse-equality (e : G) : coe (p @ __) (inverse e) right = inverse (coe (p @ __) e right)
-        => \let | h' {H' : Monoid} (q : G = {Monoid} H') => transport (\lam (H' : Monoid) => MonoidHom G H') q MonoidHom.id
-                | h => transport (MonoidHom G H __) (Jl (\lam (H' : Monoid) q => (h' q).func = (\lam x => coe (q @ __) x right)) idp p) (h' p)
+      \lemma inverse-equality.{u} {G H : Group.{u}} (p : G = {Monoid.{u}} H) (e : G) : coe (p @ __) (inverse e) right = inverse (coe (p @ __) e right)
+        => \let | h' {H' : Monoid.{u}} (q : G = {Monoid.{u}} H') => transport (\lam (H' : Monoid.{u}) => MonoidHom G H') q MonoidHom.id
+                | h => transport (MonoidHom G H __) (Jl (\lam (H' : Monoid.{u}) q => (h' q).func = (\lam x => coe (q @ __) x right)) idp p) (h' p)
                 | e' => coe (p @ __) e right
-           \in MonoidHom.presInvElem h
+           \in h.func-InvElem
                 (\new Inv e (inverse e) inverse-left inverse-right)
                 (\new Inv e' (inverse e') inverse-left inverse-right)
+                idp
     }
 
   \private \lemma make-inverse-left {M : Semigroup} {ide : M} (ide-right : \Pi {x : M} -> x * ide = x) (inverse : M -> M) (inverse-right : \Pi {x : M} -> x * inverse x = ide) {x : M} : inverse x * x = ide
@@ -159,9 +149,9 @@
                 ide                 `qed
        \in idempotent-is-trivial inverse-x-idempotent
 
-  \private \lemma make-ide-left {M : Semigroup} {ide : M} (ide-right : \Pi {x : M} -> * x ide = x) (inverse : M -> M)
-    (inverse-right : \Pi {x : M} -> x * inverse x = ide) (inverse-left : \Pi {x : M} -> inverse x * x = ide) {x : M} : * ide x = x
-    => ide * x              ==< pmap (`* x) (inv inverse-right) >==
+  \private \lemma make-ide-left {M : Semigroup} {ide : M} (ide-right : \Pi {x : M} -> x * ide = x) (inverse : M -> M)
+    (inverse-right : \Pi {x : M} -> x * inverse x = ide) (inverse-left : \Pi {x : M} -> inverse x * x = ide) {x : M} : ide * x = x
+    => ide * x              ==< pmap (* x) (inv inverse-right) >==
        (x * inverse x) * x  ==< *-assoc >==
        x * (inverse x * x)  ==< cong inverse-left >==
        x * ide              ==< ide-right >==
@@ -206,7 +196,7 @@
     => Group.inverse_* {toGroup \this}
 
   \lemma negative_- {x y : E} : negative (x - y) = y - x
-    => negative_+ *> pmap (`- x) negative-isInv
+    => negative_+ *> pmap (- x) negative-isInv
 
   \lemma negative_zro : negative zro = zro
     => inv zro-right *> negative-left
@@ -218,7 +208,7 @@
     x                    ==< inv zro-right >==
     x + zro              ==< pmap (x +) (inv negative-left) >==
     x + (negative y + y) ==< inv +-assoc >==
-    x - y + y            ==< pmap (`+ y) x-y=0 >==
+    x - y + y            ==< pmap (+ y) x-y=0 >==
     zro + y              ==< zro-left >==
     y                    `qed
 
@@ -236,7 +226,7 @@
     | neg n => *n_pow
 
   \lemma *i-assoc {x y : Int} {a : E} : (x * y) *i a = x *i (y *i a)
-    => pmap (`*i _) *-comm *> *i_ipow *> \this.ipow_* *> inv (pmap (_ *i) *i_ipow *> *i_ipow)
+    => pmap (*i _) *-comm *> *i_ipow *> \this.ipow_* *> inv (pmap (_ *i) *i_ipow *> *i_ipow)
     \where \open Arith.Int.IntRing(*,*-comm)
 
   \lemma *i-rdistr {x y : Int} {a : E} : (x Arith.Int.IntRing.+ y) *i a = x *i a + y *i a
@@ -265,7 +255,7 @@
 
     | # x y => (x - y) `#0
     | #-irreflexive x-x#0 => #0-zro (transport #0 negative-right x-x#0)
-    | #-symmetric x-y#0 => transport #0 (negative_+ *> pmap (`+ negative _) negative-isInv) (#0-negative x-y#0)
+    | #-symmetric x-y#0 => transport #0 (negative_+ *> pmap (+ negative _) negative-isInv) (#0-negative x-y#0)
     | #-comparison x y z x-z#0 => #0-+ (transport #0 (inv diff_+) x-z#0)
     | tightness x-y/#0 => fromZero (#0-tight x-y/#0)
 
@@ -362,14 +352,27 @@
     | nil => negative_zro
     | a :: l => negative_+ *> +-comm *> pmap (_ +) BigSum_negative
 
+  {- | `BigSum` of pointwise differences equals the difference of `BigSum`s, in
+  an `AbGroup`: $\sum_k l_k - \sum_k l'_k = \sum_k (l_k - l'_k)$. -}
+  \lemma BigSum_- {n : Nat} {l l' : Array E n} : BigSum (\lam k => l k - l' k) = BigSum l - BigSum l'
+    => BigSum_+ *> inv (pmap (_ +) BigSum_negative)
+
+  -- | `FinSum` analog of `BigSum_negative` on `Fin n`.
+  \lemma FinSum_negative {n : Nat} {x : Fin n -> E} : negative (FinSum x) = FinSum (\lam k => negative (x k))
+    => pmap negative FinSum=BigSum *> BigSum_negative *> inv FinSum=BigSum
+
+  -- | `FinSum` analog of `BigSum_-` on `Fin n`.
+  \lemma FinSum_- {n : Nat} {x y : Fin n -> E} : FinSum (\lam k => x k - y k) = FinSum x - FinSum y
+    => FinSum=BigSum *> BigSum_- *> pmap2 (-) (inv FinSum=BigSum) (inv FinSum=BigSum)
+
   \lemma sum-cancel-left {x y z : E} : x + z - (x + y) = z - y
-    => pmap (_ +) negative_+ *> pmap2 (+) +-comm +-comm *> +-assoc *> pmap (z +) (inv +-assoc *> pmap (`- y) negative-right *> zro-left)
+    => pmap (_ +) negative_+ *> pmap2 (+) +-comm +-comm *> +-assoc *> pmap (z +) (inv +-assoc *> pmap (- y) negative-right *> zro-left)
 
   \lemma sum-cancel-right {x y z : E} : z + x - (y + x) = z - y
     => rewrite (+-comm {_} {z}, +-comm {_} {y}) sum-cancel-left
 
   \lemma diff-cancel-left {x y z : E} : x - z - (x - y) = y - z
-    => sum-cancel-left *> +-comm *> pmap (`- z) negative-isInv
+    => sum-cancel-left *> +-comm *> pmap (- z) negative-isInv
 
   \lemma negative_+-comm {x y : E} : negative (x + y) = negative x - y
     => negative_+ *> +-comm
@@ -383,7 +386,7 @@
     \use \coerce fromCGroup (G : CGroup) => \new AbGroup G.E G.ide (G.*) G.ide-left G.ide-right G.*-assoc G.inverse G.inverse-left G.*-comm
     \use \coerce toCGroup (G : AbGroup) => \new CGroup G.E G.zro (G.+) G.+-assoc G.zro-left G.zro-right G.negative G.negative-left G.+-comm
 
-    \func equals (A B : AbGroup) (p : A = {AddGroup} B) : A = B
+    \func equals.{u} (A B : AbGroup.{u}) (p : A = {AddGroup.{u}} B) : A = {AbGroup.{u}} B
       => path (\lam i => \new AbGroup {
         | AddGroup => p @ i
         | +-comm => prop-dpi (\Pi {x y : p @ __} -> x + y = y + x) A.+-comm B.+-comm @ i

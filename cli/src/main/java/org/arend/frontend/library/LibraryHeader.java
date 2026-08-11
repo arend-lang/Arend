@@ -12,12 +12,13 @@ import org.arend.util.VersionRange;
 
 import java.util.*;
 
-public record LibraryHeader(Set<ModulePath> modules, List<String> dependencies, Version version,
+public record LibraryHeader(Set<ModulePath> modules, List<String> dependencies, Version version, Range<Version> langVersion,
                             String sourcesDir, String binariesDir, String testDir, String extDir, String extMainClass) {
 
   public static LibraryHeader fromConfig(LibraryConfig config, String fileName, ErrorReporter errorReporter) {
+    Range<Version> languageVersion = null;
     if (config.getLangVersion() != null) {
-      Range<Version> languageVersion = VersionRange.parseVersionRange(config.getLangVersion());
+      languageVersion = VersionRange.parseVersionRange(config.getLangVersion());
       if (languageVersion == null) {
         errorReporter.report(new LibraryIOError(fileName, "Cannot parse language version: " + config.getLangVersion()));
         return null;
@@ -63,6 +64,6 @@ public record LibraryHeader(Set<ModulePath> modules, List<String> dependencies, 
       modules = null;
     }
 
-    return new LibraryHeader(modules, dependencies, version, config.getSourcesDir(), config.getBinariesDir(), config.getTestsDir(), config.getExtensionsDir(), config.getExtensionMainClass());
+    return new LibraryHeader(modules, dependencies, version, languageVersion, config.getSourcesDir(), config.getBinariesDir(), config.getTestsDir(), config.getExtensionsDir(), config.getExtensionMainClass());
   }
 }

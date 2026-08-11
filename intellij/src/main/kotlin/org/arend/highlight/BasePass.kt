@@ -68,15 +68,37 @@ import org.arend.term.group.ConcreteNamespaceCommand
 import org.arend.typechecking.error.local.inference.FunctionArgInferenceError
 import org.arend.typechecking.error.local.inference.LambdaInferenceError
 import org.arend.typechecking.error.local.inference.RecursiveInstanceInferenceError
+import org.arend.util.ComputationInterruptedException
+import com.intellij.openapi.progress.ProcessCanceledException
 import java.util.*
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.ConcurrentLinkedQueue
 
 abstract class BasePass(protected open val file: IArendFile, editor: Editor, name: String, protected val textRange: TextRange)
     : ProgressableTextEditorHighlightingPass(file.project, editor.document, name, file, editor, textRange, false, null), ErrorReporter, HighlightingCollector {
 
-    private val highlights = ArrayList<HighlightInfo>()
-    private val errorList = ArrayList<GeneralError>()
+    private val highlights = ConcurrentHashMap<Triple<Int, Int, String?>, HighlightInfo>()
+    private val errorList = ConcurrentLinkedQueue<GeneralError>()
+    private val errorTooltips = ConcurrentHashMap<GeneralError, String>()
 
-    fun getHighlights() = highlights
+    fun getHighlights() = highlights.values
+
+    protected fun precalculateTooltips(errors: Collection<GeneralError>) {
+        val ppConfig = PrettyPrinterConfigWithRenamer(EmptyScope.INSTANCE)
+        ppConfig.expressionFlags = EnumSet.of(PrettyPrinterFlag.SHOW_LOCAL_FIELD_INSTANCE)
+        for (error in errors) {
+            if (!errorTooltips.containsKey(error)) {
+                try {
+                    errorTooltips[error] = XmlStringUtil.escapeString(DocStringBuilder.build(vHang(error.getShortHeaderDoc(ppConfig), error.getBodyDoc(ppConfig)))).replace("\n", "<br>")
+                } catch (e: Exception) {
+                    if (e is ComputationInterruptedException || e is ProcessCanceledException) {
+                        return
+                    }
+                    throw e
+                }
+            }
+        }
+    }
 
     override fun applyInformationWithProgress() {
         ApplicationManager.getApplication().invokeLater({
@@ -84,7 +106,7 @@ abstract class BasePass(protected open val file: IArendFile, editor: Editor, nam
         }, if (file is ArendExpressionCodeFragment) ModalityState.defaultModalityState() else ModalityState.stateForComponent(editor.component))
     }
 
-    open fun applyInformationLater() {
+    protected fun collectHighlights() {
         runReadAction {
             for (error in errorList) {
                 val list = error.cause?.let { it as? Collection<*> ?: listOf(it) }?.mapSmartNotNull { getCauseElement(it)?.validOrNull() }
@@ -101,9 +123,13 @@ abstract class BasePass(protected open val file: IArendFile, editor: Editor, nam
                     }
                 }
             }
+        }
+    }
 
+    open fun applyInformationLater() {
+        runReadAction {
             if (isValid) {
-                UpdateHighlightersUtil.setHighlightersToEditor(myProject, document, textRange.startOffset, textRange.endOffset, highlights, colorsScheme, id)
+                UpdateHighlightersUtil.setHighlightersToEditor(myProject, document, textRange.startOffset, textRange.endOffset, highlights.values, colorsScheme, id)
             }
         }
     }
@@ -111,7 +137,7 @@ abstract class BasePass(protected open val file: IArendFile, editor: Editor, nam
     fun addHighlightInfo(builder: HighlightInfo.Builder) {
         val info = builder.create()
         if (info != null) {
-            highlights.add(info)
+            highlights[Triple(info.startOffset, info.endOffset, info.description)] = info
         }
     }
 
@@ -120,8 +146,11 @@ abstract class BasePass(protected open val file: IArendFile, editor: Editor, nam
     }
 
     private fun createHighlightInfoBuilder(error: GeneralError, range: TextRange, type: HighlightInfoType? = null): HighlightInfo.Builder {
-        val ppConfig = PrettyPrinterConfigWithRenamer(EmptyScope.INSTANCE)
-        ppConfig.expressionFlags = EnumSet.of(PrettyPrinterFlag.SHOW_LOCAL_FIELD_INSTANCE)
+        val tooltip = errorTooltips[error] ?: run {
+            val ppConfig = PrettyPrinterConfigWithRenamer(EmptyScope.INSTANCE)
+            ppConfig.expressionFlags = EnumSet.of(PrettyPrinterFlag.SHOW_LOCAL_FIELD_INSTANCE)
+            XmlStringUtil.escapeString(DocStringBuilder.build(vHang(error.getShortHeaderDoc(ppConfig), error.getBodyDoc(ppConfig)))).replace("\n", "<br>")
+        }
         return HighlightInfo.newHighlightInfo(type ?: levelToHighlightInfoType(error.level))
             .range(range)
             .severity(levelToSeverity(error.level))
@@ -130,7 +159,7 @@ abstract class BasePass(protected open val file: IArendFile, editor: Editor, nam
                     error.shortMessage ?: ""
                 }
             )
-            .escapedToolTip(XmlStringUtil.escapeString(DocStringBuilder.build(vHang(error.getShortHeaderDoc(ppConfig), error.getBodyDoc(ppConfig)))).replace("\n", "<br>"))
+            .escapedToolTip(tooltip)
     }
 
     fun registerFix(builder: HighlightInfo.Builder, fix: IntentionAction) {
@@ -192,12 +221,9 @@ abstract class BasePass(protected open val file: IArendFile, editor: Editor, nam
 
                 if (error.errors.all { it.level != GeneralError.Level.ERROR }) when {
                     error.goalSolver != null -> cause.ancestor<ArendExpr>()?.let {
-                        val expr = when (it) {
-                            is ArendLongNameExpr -> it.parent as? ArendArgumentAppExpr ?: it
-                            is ArendLiteral -> (it.topmostEquivalentSourceNode as? ArendAtomFieldsAcc)?.parent as? ArendArgumentAppExpr
-                                ?: it
-                            else -> it
-                        }
+                        val expr = if (it is ArendLiteral) {
+                            (it.topmostEquivalentSourceNode as? ArendAtomFieldsAcc)?.parent as? ArendArgumentAppExpr ?: it
+                        } else it
                         val action: (Editor, Concrete.Expression, String) -> Unit = { editor, concrete, text ->
                             if (incomplete) {
                                 var offset = cause.textRange.endOffset
@@ -475,10 +501,12 @@ abstract class BasePass(protected open val file: IArendFile, editor: Editor, nam
     }
 
     override fun report(error: GeneralError) {
+        precalculateTooltips(listOf(error))
         errorList.add(error)
     }
 
     fun reportAll(errors: List<GeneralError>) {
+        precalculateTooltips(errors)
         errorList.addAll(errors)
     }
 

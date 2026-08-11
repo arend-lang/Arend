@@ -6,10 +6,18 @@ import org.arend.psi.ArendFile
 import org.arend.psi.ancestor
 import org.arend.term.abs.Abstract
 import org.arend.ext.module.FullName
+import org.arend.term.group.AccessModifier
 
 
 interface PsiLocatedReferable : Abstract.AbstractLocatedReferable, PsiReferable {
     val defIdentifier: ArendDefIdentifier?
+
+    /**
+     * Returns the element's own access modifier without considering parent's access modifier.
+     * This is used for stub creation and serialization.
+     */
+    val ownAccessModifier: AccessModifier
+        get() = AccessModifier.PUBLIC
 
     companion object {
         fun fromReferable(referable: GlobalReferable) = referable.abstractReferable as? PsiLocatedReferable

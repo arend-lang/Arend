@@ -74,8 +74,11 @@ class ArendFieldDefIdentifier : ArendClassFieldBase<ArendClassFieldParamStub>, A
     override val rangeInElement: TextRange
         get() = TextRange(0, text.length)
 
+    override val ownAccessModifier: AccessModifier
+        get() = stub?.accessModifier ?: AccessModifier.PUBLIC
+
     override fun getAccessModifier(): AccessModifier =
-        super.getAccessModifier().max(classAccessModifier)
+        ownAccessModifier.max(classAccessModifier)
 
     private val classAccessModifier: AccessModifier
         get() = ancestor<ArendDefClass>()?.accessModifier ?: AccessModifier.PUBLIC

@@ -9,11 +9,11 @@
 \type isDFin (A : \Set) : \Prop
   => \Pi (f : A -> A) -> IsInj f -> IsSurj f
   \where {
-    \lemma isEquiv {A : \Set} (p : isDFin A) (f : A -> A) (inj : IsInj f) : Equiv f
-      => Equiv.fromInjSurj f inj (p f inj)
+    \lemma isEquiv {A : \Set} (p : isDFin A) (f : A -> A) (inj : IsInj f) : IsEquiv f
+      => IsEquiv.fromInjSurj inj (p f inj)
 
     \func isSplit {A : \Set} (p : isDFin A) (f : A -> A) (inj : IsInj f) (a : A) : \Sigma (a' : A) (f a' = a)
-      => (ret {isEquiv p f inj} a, Equiv.f_ret a)
+      => (IsEquiv.ret (isEquiv p f inj) a, IsEquiv.f_ret (isEquiv p f inj))
 
     \lemma fromPigeonhole (A : PigeonholeSet) : isDFin A
       => \lam f inj a => TruncP.map (A.pigeonhole< (\lam i => iterr f i a))

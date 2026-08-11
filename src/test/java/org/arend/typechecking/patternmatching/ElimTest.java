@@ -36,7 +36,7 @@ public class ElimTest extends TypeCheckingTestCase {
   public void elim2() {
     typeCheckModule("""
       \\data D Nat (x y : Nat) | con1 Nat | con2 (Nat -> Nat) (a b c : Nat)
-      \\func P (a1 b1 c1 : Nat) (d1 : D a1 b1 c1) (a2 b2 c2 : Nat) (d2 : D a2 b2 c2) : \\oo-Type0 \\elim d1
+      \\func P (a1 b1 c1 : Nat) (d1 : D a1 b1 c1) (a2 b2 c2 : Nat) (d2 : D a2 b2 c2) : \\Type0 \\elim d1
         | con2 _ _ _ _ => Nat -> Nat
         | con1 _ => Nat
       \\func test (q w : Nat) (e : D w 0 q) (r : D q w 1) : P w 0 q e q w 1 r \\elim e, r
@@ -188,7 +188,7 @@ public class ElimTest extends TypeCheckingTestCase {
   public void elim10() {
     typeCheckModule("""
       \\data Bool | true | false
-      \\func tp : \\Pi (x : Bool) -> \\oo-Type0 => \\lam x => \\case x \\with {
+      \\func tp : \\Pi (x : Bool) -> \\Type0 => \\lam x => \\case x \\with {
         | true => Bool
         | false => Nat
       }
@@ -412,7 +412,7 @@ public class ElimTest extends TypeCheckingTestCase {
   public void dependentElim() {
     typeCheckModule("""
       \\data Bool | true | false
-      \\func if (b : Bool) : \\Set | true => Nat | false => Nat -> Nat
+      \\func if (b : Bool) : \\Set0 | true => Nat | false => Nat -> Nat
       \\func test (b : Bool) (x : if b) : Nat | true, zero => 0 | true, suc n => n | false, _ => 0
       """);
   }

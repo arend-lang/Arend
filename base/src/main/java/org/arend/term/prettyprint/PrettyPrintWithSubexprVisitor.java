@@ -11,7 +11,7 @@ public class PrettyPrintWithSubexprVisitor extends PrettyPrintVisitor {
   }
 
   @Override
-  void printExpr(Concrete.Expression expr, Precedence prec) {
+  public void printExpr(Concrete.Expression expr, Precedence prec) {
     if (expr.getData() instanceof ToAbstractWithSubexprVisitor.Marker) {
       myBuilder.append(MAGIC);
     }

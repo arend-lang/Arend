@@ -1,0 +1,80 @@
+-- | The proof mostly follows Dominique Larchey-Wendling, Bar Inductive Predicates for Constructive Algebra in Rocq, 2026.
+
+\import Algebra.Group
+\import Algebra.Monoid
+\import Algebra.Ring
+\import Algebra.Ring.Ideal
+\import Algebra.Ring.Noetherian
+\import Algebra.Ring.Poly
+\import Algebra.Ring.RingHom
+\import Arith.Nat
+\import Data.Array
+\import Function.Meta
+\import Logic
+\import Logic.Accessible
+\import Logic.Bar
+\import Logic.Meta
+\import Meta
+\import Order.LinearOrder
+\import Order.PartialOrder
+\import Order.StrictOrder
+\import Paths
+\import Paths.Meta
+\import Set
+\import Set.Fin
+
+\truncated \data Tailored {A : \Set} (R : A -> A -> \Prop) (as bs : Array A) : \Prop \elim as, bs
+  | a :: as, b :: bs => tailored-in (R a b) (as = bs)
+  | as, b :: bs => tailored-step (Tailored R as bs)
+  \where {
+    \lemma dropped {a : A} {l : Array A} {j : Fin l.len} (r : R a (l j)) : Tailored R (a :: drop (suc j) l) l \elim l, j
+      | a' :: l, 0 => tailored-in r idp
+      | a' :: l, suc j => tailored-step (dropped r)
+  }
+
+\lemma tailored-induction {A : \Set} {R : A -> A -> \Prop} {l : Array A} (P : Array A -> \Prop)
+  (h1 : ∀ {l'} (Tailored R l' l) (P l'))
+  (h2 : \Pi {a : A} -> ∀ {l'} (Tailored R l' (a :: l)) (P l') -> P (a :: l))
+  {a : A} (acc : Acc R a) : P (a :: l) \elim acc
+  | acc r => h2 \lam {l'} => \case \elim l', \elim __ \with {
+    | a' :: l', tailored-in a'<a l'=l => transportInv (\lam x => P (a' :: x)) l'=l $ tailored-induction P h1 h2 (r a'<a)
+    | l', tailored-step l'<l => h1 l'<l
+  }
+
+\lemma HilbertBasisTheorem {R : CRing} (RN : IsNoetherian R) : IsNoetherian (PolyAlgebra R)
+  => bar-surj __.1 (\lam p => \case degree-exists p \with {
+    | inP (n,d) => inP $ later ((p,n,d),idp)
+  }) (induction RN \case __)
+  \where {
+    \func PolyPres => \Sigma (p : Poly R) (n : Nat) (degree<= p n)
+
+    \private \lemma induction {l : Array PolyPres} (b : Bar PausesElem (map (\lam s => polyCoef s.1 s.2) l))
+                              (h : ∀ {l' : Array PolyPres} (Tailored (\lam p q => p.2 < q.2) l' l) (Bar (\lam k => PausesElem (map __.1 k)) l'))
+      : Bar (\lam l' => PausesElem (map __.1 l')) l \elim l, b
+      | nil, bar-stop ()
+      | p :: l, bar-stop (pauses-here r) => \case (FinFin l.len).search (\lam j => p.2 < (l j).2) (\lam j => LinearOrder.dec< _ _) \with {
+        | yes (inP (j,p<j)) => transport (\lam x => Bar _ (p :: x)) (take_drop {_} {suc j}) $ bar-++-insert
+          (later \lam {l} {m} {r} => rewrite (map_++,map_++,map_++) PausesElem.++-insert) {p :: nil} $ h (Tailored.dropped p<j)
+        | no c => cases (p.2 arg addPath) \with {
+          | 0, |p|=0 => bar-stop $ pauses-here $ transport2 (Ideal.lclosure __) {\lam j => polyHom (polyCoef (l j).1 (l j).2)}
+              (exts \lam j => \have |lj|=0 => separatedEq \lam |lj|/=0 => c $ inP (j, rewrite |p|=0 $ nonZero>0 |lj|/=0)
+                              \in rewrite |lj|=0 $ inv $ degree<=0 _ $ rewrite |lj|=0 in (l j).3)
+              (later $ rewrite |p|=0 $ inv $ degree<=0 p.1 $ rewrite |p|=0 in p.3) $
+              PseudoRingHom.func-Ideal_lclosure polyHom {\lam j => polyCoef (l j).1 (l j).2} r
+          | suc k, |p|=k+1 => \case (Ideal.closureN-lem {_} {_} {\lam j => polyCoef (l j).1 (l j).2}).1 r \with {
+            | inP (d,e) =>
+              \have split j => +-comm *> <=_exists {(l j).2} (transport (_ <=) |p|=k+1 \lam t => c $ inP (j,t))
+              \in bar-shift-right $ bar-impl (\lam {s} => rewrite map_++ \lam pe => rewrite map_++ $
+                  PausesElem.lincomb (\lam j => monomial (d j) (suc k -' (l j).2)) pe) $
+                bar-shift-left $ h {(p.1 - AddMonoid.BigSum (\lam j => monomial (d j) (suc k -' (l j).2) * (l j).1), k,
+                  \box degree-reduce _ k (degree<=_+ (rewriteI |p|=k+1 p.3) $ degree<=_negative $ degree<=_BigSum \lam j =>
+                      rewriteI (split j) $ degree<=_* degree<=_monomial (l j).3) $
+                    polyCoef_+ *> pmap (_ +) polyCoef_negative *> R.toZero (pmap (polyCoef _) (inv |p|=k+1) *> e *>
+                      pmap R.BigSum (exts \lam j => inv polyCoef_* *> pmap (polyCoef _) (split j)) *> inv polyCoef_BigSum)) :: l} $
+                tailored-in (rewrite |p|=k+1 id<suc) idp
+          }
+        }
+      }
+      | p :: l, bar-stop (pauses-there r) => bar-monotone (barMonotone_map __.1 Pauses.isBarMonotone) $ induction (bar-stop r) \lam t => h (tailored-step t)
+      | l, bar-ask r => bar-ask \lam p => tailored-induction (Bar _) h (\lam {p'} => induction $ r $ polyCoef p'.1 p'.2) (map-acc __.2 nat-acc)
+  }

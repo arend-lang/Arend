@@ -1,0 +1,36 @@
+\import Algebra.Monoid
+\import Algebra.Ordered
+\import Algebra.Pointed
+\import Algebra.Semiring
+\import Algebra.StrictlyOrdered
+\import Arith.Complex
+\import Arith.Complex.Norm
+\import Arith.Nat
+\import Arith.Real
+\import Arith.Real.Field
+\import Arith.Real.Root
+\import Arith.Complex.Arg
+\import Arith.Complex.Euler
+\import Logic
+\import Logic.Meta
+\import Order.Biordered
+\import Order.StrictOrder
+\import Paths
+
+{- | Every nonzero complex number has a $k$-th root for $k \geq 1$.
+
+     Take the polar form $z = |z|\,e^{i\theta}$ from `complex-arg` and assemble
+     $w = \sqrt[k]{|z|}\,e^{i\theta/k}$ from the real `root` and `e^i*`. -}
+\lemma complex-root {z : Complex} (rho>0 : 0 < cabs z) {k : Nat} (k>0 : 0 NatOrder.< k)
+  : ∃ (w : Complex) (Monoid.pow w k = z) \elim k
+  | 0 => absurd \case k>0
+  | suc k-1 \as k =>
+    \let | kc>0 : 0 RealAbGroup.< k => RealField.natCoef>0 k>0
+         | (inP (theta, z-eq)) => complex-arg rho>0
+         | b => RealField.pinv k kc>0 * theta
+    \in inP (Complex.fromReal (root k (cabs z)) * exp^i* b,
+               ComplexField.pow_*-comm {_} {_} {k}
+               *> pmap2 (*)
+                    (inv (Complex.fromReal_pow {_} {k}) *> pmap Complex.fromReal (pow_root suc/=0 (<=-less rho>0)))
+                    (pow_exp^i* *> pmap exp^i* (inv *-assoc *> pmap (* theta) (RealField.pinv-right kc>0) *> ide-left))
+               *> inv z-eq)

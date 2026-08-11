@@ -4,6 +4,7 @@ import com.intellij.codeInsight.lookup.LookupManager
 import com.intellij.openapi.actionSystem.DataContext
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.application.WriteIntentReadAction
+import com.intellij.openapi.application.runReadAction
 import com.intellij.openapi.components.service
 import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.project.Project
@@ -27,6 +28,7 @@ import com.intellij.refactoring.util.TextOccurrencesUtil
 import com.intellij.usageView.UsageInfo
 import org.arend.intention.checkNotGeneratePreview
 import org.arend.naming.reference.RedirectingReferableImpl
+import org.arend.naming.reference.Referable
 import org.arend.psi.ArendElementTypes.*
 import org.arend.psi.ArendFile
 import org.arend.psi.ext.*
@@ -35,7 +37,6 @@ import org.arend.refactoring.rename.ArendGlobalReferableRenameHandler.Util.isMor
 import org.arend.server.ArendServerService
 import org.arend.server.ProgressReporter
 import org.arend.typechecking.computation.UnstoppableCancellationIndicator
-import java.awt.EventQueue.invokeLater
 
 class ArendGlobalReferableRenameHandler : MemberInplaceRenameHandler() {
     override fun createMemberRenamer(element: PsiElement, elementToRename: PsiNameIdentifierOwner, editor: Editor): MemberInplaceRenamer {
@@ -127,7 +128,7 @@ class ArendGlobalReferableRenameHandler : MemberInplaceRenameHandler() {
                         ArendNameKind.NSID_NAME -> elementAtCaret?.text
                     } ?: "???"
 
-                    WriteIntentReadAction.run<RuntimeException> {
+                    WriteIntentReadAction.run {
                         val dialog = object: RenameDialog(project, elementToRename, elementToRename, editor) {
                             override fun getSuggestedNames(): Array<String> = arrayOf(nameInDialog)
 
@@ -152,7 +153,12 @@ class ArendGlobalReferableRenameHandler : MemberInplaceRenameHandler() {
             val psiFile = PsiDocumentManager.getInstance(project).getPsiFile(editor.document)
             val caretElement = if (psiFile != null) findElementAtCaret(psiFile, editor) else null
             val caretElementText = getArendNameText(caretElement)
-            val redirectingReferable = (caretElement?.parent as? ArendReferenceElement)?.resolve()
+            var redirectingReferable: Referable? = null
+            ApplicationManager.getApplication().executeOnPooledThread {
+                runReadAction {
+                    redirectingReferable = (caretElement?.parent as? ArendReferenceElement)?.resolve()
+                }
+            }.get()
 
             if (elementToRename is ReferableBase<*>) {
                 val nameUnderCaret = when {

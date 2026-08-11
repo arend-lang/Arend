@@ -27,14 +27,14 @@ public class ExpressionMatcher {
       return funCall.getDefinition() == Prelude.IDP ? expression : FunCallExpression.make(funCall.getDefinition(), funCall.getLevels(), newArgs);
     }
 
-    if (data instanceof ConCallExpression conCall && ((ConCallExpression) data).getDefinition() != Prelude.SUC) {
+    if (data instanceof ConCallExpression conCall && conCall.getDefinition() != Prelude.SUC) {
       return ConCallExpression.make(conCall.getDefinition(), conCall.getLevels(), conCall.getDataTypeArguments(), newArgs);
     }
 
     if (data instanceof ConCallExpression || data instanceof SmallIntegerExpression) {
       ConCallExpression conCall = expression.cast(ConCallExpression.class);
       IntegerExpression intExpr = expression.cast(IntegerExpression.class);
-      return conCall != null && conCall.getDefinition() == Prelude.SUC || intExpr != null && !intExpr.isZero() ? ExpressionFactory.Suc(newArgs.get(0)) : expression;
+      return conCall != null && conCall.getDefinition() == Prelude.SUC || intExpr != null && !intExpr.isZero() ? ExpressionFactory.Suc(newArgs.getFirst()) : expression;
     }
 
     NewExpression newExpr = expression.cast(NewExpression.class);
@@ -56,7 +56,7 @@ public class ExpressionMatcher {
     }
 
     ClassCallExpression classCall = newExpr.getClassCall();
-    return new NewExpression(null, new ClassCallExpression(classCall.getDefinition(), classCall.getLevels(), newImpls, classCall.getSort(), classCall.getUniverseKind()));
+    return new NewExpression(null, new ClassCallExpression(classCall.getDefinition(), classCall.getLevels(), newImpls));
   }
 
   /**

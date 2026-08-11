@@ -12,7 +12,6 @@ import com.intellij.psi.PsiFile
 import com.intellij.psi.impl.source.tree.LeafPsiElement
 import com.intellij.psi.util.endOffset
 import org.arend.codeInsight.hints.ArendParametersInlaySettingsProvider.Companion.SHOW_TYPE_SETTINGS
-import org.arend.core.context.binding.LevelVariable
 import org.arend.core.context.binding.ParamLevelVariable
 import org.arend.core.context.param.DependentLink
 import org.arend.core.definition.ClassDefinition
@@ -29,7 +28,7 @@ class ArendParametersInlayProvider : InlayHintsProvider {
     override fun createCollector(
         file: PsiFile,
         editor: Editor
-    ): InlayHintsCollector? {
+    ): InlayHintsCollector {
         return object : SharedBypassCollector {
             override fun collectFromElement(
                 element: PsiElement,
@@ -38,21 +37,15 @@ class ArendParametersInlayProvider : InlayHintsProvider {
                 if (element !is ArendDefIdentifier) return
                 val arendDef = element.parent as? ArendDefinition<*> ?: return
                 val def = arendDef.tcReferable?.typechecked ?: return
-                val levelParams = def.levelParameters
-                if ((levelParams == null || levelParams.isEmpty()) && def.parametersOriginalDefinitions.isEmpty()) return
+                val levelParams = if (arendDef.isDynamic) null else def.levelParameters
+                if (levelParams.isNullOrEmpty() && def.parametersOriginalDefinitions.isEmpty()) return
                 val builder = StringBuilder()
 
-                if (levelParams != null && levelParams.isNotEmpty()) {
-                    if (levelParams[0].type == LevelVariable.LvlType.PLVL && levelParams[0] is ParamLevelVariable && arendDef.pLevelParameters == null) {
-                        builder.append(" ")
+                if (!levelParams.isNullOrEmpty() && levelParams[0] is ParamLevelVariable && arendDef.levelParameters == null) {
+                    val cLevelParams = ToAbstractVisitor.visitLevelParameters(levelParams)
+                    if (cLevelParams != null) {
                         val ppv = PrettyPrintVisitor(builder, 0)
-                        ppv.prettyPrintLevelParameters(ToAbstractVisitor.visitLevelParameters(levelParams.subList(0, def.numberOfPLevelParameters), true), true)
-                    }
-                    val lastVar = levelParams[levelParams.size - 1]
-                    if (lastVar.type == LevelVariable.LvlType.HLVL && lastVar is ParamLevelVariable && arendDef.hLevelParameters == null) {
-                        builder.append(" ")
-                        val ppv = PrettyPrintVisitor(builder, 0)
-                        ppv.prettyPrintLevelParameters(ToAbstractVisitor.visitLevelParameters(levelParams.subList(def.numberOfPLevelParameters, levelParams.size), false), false)
+                        ppv.prettyPrintLevelParameters(cLevelParams, true)
                     }
                 }
 

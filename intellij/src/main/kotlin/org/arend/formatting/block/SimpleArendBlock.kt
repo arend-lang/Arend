@@ -69,8 +69,10 @@ class SimpleArendBlock(node: ASTNode, settings: CommonCodeStyleSettings?, wrap: 
                         !AREND_COMMENTS.contains(child1node.elementType) && child2node.fatArrow != null) return oneSpaceNoWrap
             } else if (child1 is AbstractArendBlock && child2 is AbstractArendBlock) {
                 val child1et = child1.node.elementType
+                val child2et = child2.node.elementType
                 val child2psi = child2.node.psi
-                if (child1et == COLON && child2psi is ArendExpr) return oneSpaceWrap
+                if (child1et == COLON && (child2psi is ArendExpr || child2et == RETURN_EXPR)) return oneSpaceNoWrap
+                if (child2et == COLON) return oneSpaceNoWrap
             }
         }
 
@@ -305,6 +307,7 @@ class SimpleArendBlock(node: ASTNode, settings: CommonCodeStyleSettings?, wrap: 
         var child: ASTNode? = myNode.firstChildNode
         val alignment = Alignment.createAlignment()
         val alignment2 = Alignment.createAlignment()
+        val returnTypeWrap = Wrap.createWrap(WrapType.NORMAL, false)
 
         val nodePsi = myNode.psi
         val nodeET = myNode.elementType
@@ -334,8 +337,11 @@ class SimpleArendBlock(node: ASTNode, settings: CommonCodeStyleSettings?, wrap: 
                             else -> Indent.getNoneIndent()
                         }
 
-                val wrap: Wrap? =
-                        if (nodeET == FUNCTION_BODY && childPsi is ArendExpr) Wrap.createWrap(WrapType.NORMAL, false) else null
+                val wrap: Wrap? = when (nodeET) {
+                    DEF_FUNCTION if childPsi is ArendFunctionBody && childPsi.fatArrow != null -> returnTypeWrap
+                    DEF_FUNCTION if (childET == COLON || childET == RETURN_EXPR) -> returnTypeWrap
+                    else -> null
+                }
 
                 val align = when (myNode.elementType) {
                     LET_EXPR ->

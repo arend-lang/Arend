@@ -13,7 +13,7 @@ public class TypedBinding extends NamedBinding {
   }
 
   @Override
-  public Expression getTypeExpr() {
+  public Expression getType() {
     return myType;
   }
 

@@ -26,7 +26,6 @@ import org.arend.util.appExprToConcrete
 class RedundantParensPass(file: ArendFile, editor: Editor):
     BasePass(file, editor, "Arend redundant parens annotator", TextRange(0, editor.document.textLength)){
     override fun collectInformationWithProgress(progress: ProgressIndicator) {
-        super.applyInformationWithProgress()
         val tuples = file.descendantsOfType<ArendTuple>().toList()
         for (element in tuples) {
             progress.checkCanceled()
@@ -72,7 +71,7 @@ class RedundantParensPass(file: ArendFile, editor: Editor):
             val childAppExpr =
                 if (tupleExpression is ArendNewExpr && isAtomic(tupleExpression)) tupleExpression.argumentAppExpr
                 else null
-            return childAppExpr != null && hasNoLevelArguments(childAppExpr) && !isBinOpApp(childAppExpr)
+            return childAppExpr != null && !isBinOpApp(childAppExpr)
         }
         return false
     }

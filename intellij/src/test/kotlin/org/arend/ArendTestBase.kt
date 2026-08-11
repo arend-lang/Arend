@@ -1,5 +1,6 @@
 package org.arend
 
+import com.intellij.codeInsight.template.impl.TemplateManagerImpl
 import com.intellij.openapi.application.runWriteAction
 import com.intellij.openapi.components.service
 import com.intellij.openapi.editor.LogicalPosition
@@ -9,6 +10,7 @@ import com.intellij.openapi.roots.ContentEntry
 import com.intellij.openapi.roots.ModifiableRootModel
 import com.intellij.openapi.roots.ModuleRootModificationUtil
 import com.intellij.openapi.roots.libraries.LibraryTablesRegistrar
+import com.intellij.openapi.util.Disposer
 import com.intellij.openapi.vfs.LocalFileSystem
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.psi.PsiElement
@@ -33,6 +35,7 @@ import org.arend.module.config.ArendModuleConfigService
 import org.arend.module.config.ExternalLibraryConfig
 import org.arend.naming.reference.FullModuleReferable
 import org.arend.naming.reference.MetaReferable
+import org.arend.prelude.Prelude
 import org.arend.psi.parentOfType
 import org.arend.server.ArendServerService
 import org.arend.server.ProgressReporter
@@ -61,6 +64,18 @@ abstract class ArendTestBase : BasePlatformTestCase(), ArendTestCase {
     override fun setUp() {
         super.setUp()
 
+        if (lastProject !== project) {
+            lastProject = project
+            Disposer.register(project) { Prelude.reset() }
+        }
+
+        // Without this, a template started by a test (e.g. the inplace renamer that the generate-function
+        // intentions open on the definition they have just created) does not show its lookup but silently
+        // inserts its first item instead. That item comes from the name suggestion providers, and the
+        // spell checker among them happily "corrects" Arend identifiers -- turning a generated `foo-lemma'`
+        // back into `foo-lemma`. Templates behave as in production once testing mode is on.
+        TemplateManagerImpl.setTemplateTesting(testRootDisposable)
+
         service<ArendSettings>().isBackgroundTypechecking = true
 
         project.service<ReloadLibrariesService>().doReload(true)
@@ -83,7 +98,7 @@ abstract class ArendTestBase : BasePlatformTestCase(), ArendTestCase {
     protected fun makeMeta(name: String, resolver: MetaResolver?, definition: MetaDefinition?): Concrete.MetaDefinition =
         Concrete.MetaDefinition(MetaReferable(AccessModifier.PUBLIC, Precedence.DEFAULT, name, TrivialMetaTypechecker(definition), resolver, FullModuleReferable(
             ModuleLocation(module.name, ModuleLocation.LocationKind.GENERATED, ModulePath("Meta"))
-        )), null, null, emptyList(), null)
+        )), null, emptyList(), null)
 
     protected fun addGeneratedModules(filler: DefinitionContributor.() -> Unit) {
         addGeneratedModules(this.library.name, filler)
@@ -198,6 +213,9 @@ abstract class ArendTestBase : BasePlatformTestCase(), ArendTestCase {
     companion object {
         const val CARET_MARKER = "{-caret-}"
 
+        /** The project the JVM-global [Prelude] was last built from; see the reset in [setUp]. */
+        private var lastProject: com.intellij.openapi.project.Project? = null
+
         @JvmStatic
         fun camelOrWordsToSnake(name: String): String {
             if (' ' in name) return name.replace(" ", "_")
@@ -271,9 +289,9 @@ abstract class ArendTestBase : BasePlatformTestCase(), ArendTestCase {
     private fun setupLibraryManager(config: ExternalLibraryConfig, libName: String) {
         project.service<ArendServerService>().server.updateLibrary(config, NotificationErrorReporter(project))
         addGeneratedModules(libName) {
-            declare(DocFactory.nullDoc(), Concrete.MetaDefinition(MetaReferable(AccessModifier.PUBLIC, Precedence.DEFAULT, "using", TrivialMetaTypechecker(null), null, FullModuleReferable(ModuleLocation(libName, ModuleLocation.LocationKind.GENERATED, ModulePath("Meta")))), null, null, emptyList(), null))
-            declare(DocFactory.nullDoc(), Concrete.MetaDefinition(MetaReferable(AccessModifier.PUBLIC, Precedence.DEFAULT, "$", TrivialMetaTypechecker(null), null, FullModuleReferable(ModuleLocation(libName, ModuleLocation.LocationKind.GENERATED, ModulePath("Function", "Meta")))), null, null, emptyList(), null))
-            declare(DocFactory.nullDoc(), Concrete.MetaDefinition(MetaReferable(AccessModifier.PUBLIC, Precedence.DEFAULT, "rewrite", TrivialMetaTypechecker(null), null, FullModuleReferable(ModuleLocation(libName, ModuleLocation.LocationKind.GENERATED, ModulePath("Paths", "Meta")))), null, null, emptyList(), null))
+            declare(DocFactory.nullDoc(), Concrete.MetaDefinition(MetaReferable(AccessModifier.PUBLIC, Precedence.DEFAULT, "using", TrivialMetaTypechecker(null), null, FullModuleReferable(ModuleLocation(libName, ModuleLocation.LocationKind.GENERATED, ModulePath("Meta")))), null, emptyList(), null))
+            declare(DocFactory.nullDoc(), Concrete.MetaDefinition(MetaReferable(AccessModifier.PUBLIC, Precedence.DEFAULT, "$", TrivialMetaTypechecker(null), null, FullModuleReferable(ModuleLocation(libName, ModuleLocation.LocationKind.GENERATED, ModulePath("Function", "Meta")))), null, emptyList(), null))
+            declare(DocFactory.nullDoc(), Concrete.MetaDefinition(MetaReferable(AccessModifier.PUBLIC, Precedence.DEFAULT, "rewrite", TrivialMetaTypechecker(null), null, FullModuleReferable(ModuleLocation(libName, ModuleLocation.LocationKind.GENERATED, ModulePath("Paths", "Meta")))), null, emptyList(), null))
         }
         TestModeFlags.set(stdLib, config, testRootDisposable)
     }

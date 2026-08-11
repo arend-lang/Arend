@@ -1,5 +1,5 @@
-langVersion: 1.11
-version: 1.11
+langVersion: 1.12
+version: 1.12
 sourcesDir: src
 testsDir: test
 binariesDir: bin

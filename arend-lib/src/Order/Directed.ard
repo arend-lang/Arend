@@ -16,5 +16,5 @@
     | inP (x,p,q), inP (y,p',q') => inP ((x,y), (p,p'), (q,q'))
   }
 
-\instance DirectedSetHasProduct : HasProduct DirectedSet
-  | Product => ProductDirectedSet
+\instance DirectedSetHasProduct.{u} : HasProduct DirectedSet.{u}
+  | Product X Y => ProductDirectedSet X Y

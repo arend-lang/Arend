@@ -5,24 +5,15 @@ import org.arend.core.context.param.DependentLink;
 import org.arend.core.context.param.EmptyDependentLink;
 import org.arend.core.context.param.TypedDependentLink;
 import org.arend.core.expr.Expression;
-import org.arend.core.expr.type.Type;
-import org.arend.core.expr.type.TypeExpression;
 import org.arend.ext.concrete.ConcreteSourceNode;
 import org.arend.ext.core.context.CoreParameter;
 import org.arend.ext.core.context.CoreParameterBuilder;
 import org.arend.ext.core.expr.CoreExpression;
 import org.arend.term.concrete.Concrete;
-import org.arend.typechecking.visitor.CheckTypeVisitor;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 public class CoreParameterBuilderImpl extends LinkList implements CoreParameterBuilder {
-  private final CheckTypeVisitor myTypechecker;
-
-  public CoreParameterBuilderImpl(CheckTypeVisitor typechecker) {
-    myTypechecker = typechecker;
-  }
-
   @Override
   public @NotNull DependentLink addCopyFirst(@NotNull CoreParameter parameter) {
     if (!(parameter instanceof DependentLink)) {
@@ -64,7 +55,7 @@ public class CoreParameterBuilderImpl extends LinkList implements CoreParameterB
     if (!(type instanceof Expression && marker instanceof Concrete.SourceNode)) {
       throw new IllegalArgumentException();
     }
-    return new TypedDependentLink(isExplicit, name, type instanceof Type ? (Type) type : new TypeExpression((Expression) type, myTypechecker.getSortOfType((Expression) type, (Concrete.SourceNode) marker)), EmptyDependentLink.getInstance());
+    return new TypedDependentLink(isExplicit, name, (Expression) type, EmptyDependentLink.getInstance());
   }
 
   @Override

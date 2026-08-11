@@ -1,6 +1,5 @@
 package org.arend.typechecking.doubleChecker;
 
-import org.arend.core.context.binding.LevelVariable;
 import org.arend.core.context.param.DependentLink;
 import org.arend.core.context.param.SingleDependentLink;
 import org.arend.core.definition.*;
@@ -8,11 +7,12 @@ import org.arend.core.elimtree.Body;
 import org.arend.core.elimtree.ElimBody;
 import org.arend.core.elimtree.IntervalElim;
 import org.arend.core.expr.*;
-import org.arend.core.expr.type.Type;
 import org.arend.core.sort.Level;
 import org.arend.core.sort.Sort;
+import org.arend.core.sort.SortExpression;
 import org.arend.core.subst.Levels;
 import org.arend.ext.core.definition.CoreFunctionDefinition;
+import org.arend.ext.core.level.ConstLevel;
 import org.arend.ext.core.ops.CMP;
 import org.arend.ext.core.ops.NormalizationMode;
 import org.arend.ext.error.ErrorReporter;
@@ -29,6 +29,7 @@ import org.arend.typechecking.patternmatching.PatternTypechecking;
 import org.arend.typechecking.visitor.BaseDefinitionTypechecker;
 import org.arend.typechecking.visitor.DefinitionTypechecker;
 
+import java.math.BigInteger;
 import java.util.*;
 
 public class CoreDefinitionChecker extends BaseDefinitionTypechecker {
@@ -47,7 +48,7 @@ public class CoreDefinitionChecker extends BaseDefinitionTypechecker {
     myChecker.clear();
     myChecker.setDefinition(definition);
     try {
-      myChecker.checkDependentLink(definition.getParameters(), Type.OMEGA, null);
+      myChecker.checkDependentLink(definition.getParameters(), UniverseExpression.OMEGA, null, definition instanceof FunctionDefinition || definition instanceof DataDefinition);
 
       // TODO[double_check]: Check (mutual) recursion
       // TODO[double_check]: Check definition.hasUniverses()
@@ -76,7 +77,7 @@ public class CoreDefinitionChecker extends BaseDefinitionTypechecker {
     if (body instanceof NewExpression && ((NewExpression) body).getRenewExpression() == null && definition.getResultType() instanceof ClassCallExpression typeClassCall && definition.getResultTypeLevel() == null) {
       Map<ClassField, Expression> newImpls = new LinkedHashMap<>();
       ClassCallExpression bodyClassCall = ((NewExpression) body).getClassCall();
-      ClassCallExpression newClassCall = new ClassCallExpression(bodyClassCall.getDefinition(), typeClassCall.getLevels(), newImpls, Sort.PROP, UniverseKind.NO_UNIVERSES);
+      ClassCallExpression newClassCall = new ClassCallExpression(bodyClassCall.getDefinition(), typeClassCall.getLevels(), newImpls);
       Expression newThisBinding = new ReferenceExpression(newClassCall.getThisBinding());
       boolean ok = true;
       for (ClassField field : typeClassCall.getDefinition().getNotImplementedFields()) {
@@ -102,14 +103,14 @@ public class CoreDefinitionChecker extends BaseDefinitionTypechecker {
       }
     }
 
-    Expression typeType = checkType ? definition.getResultType().accept(myChecker, Type.OMEGA) : null;
-    Integer level = definition.getResultTypeLevel() == null ? null : myChecker.checkLevelProof(definition.getResultTypeLevel(), definition.getResultType());
+    Expression typeType = checkType ? (definition.getResultType() instanceof UniverseExpression && body instanceof Expression ? definition.getResultType() : definition.getResultType().accept(myChecker, UniverseExpression.OMEGA)) : null;
+    BigInteger level = definition.getResultTypeLevel() == null ? null : myChecker.checkLevelProof(definition.getResultTypeLevel(), definition.getResultType());
 
-    if (definition.getKind() == CoreFunctionDefinition.Kind.LEMMA && (level == null || level != -1)) {
+    if (definition.getKind() == CoreFunctionDefinition.Kind.LEMMA && !Objects.equals(level, ConstLevel.PROP.value())) {
       if (!DefinitionTypechecker.isBoxed(definition)) {
         DefCallExpression resultDefCall = definition.getResultType().cast(DefCallExpression.class);
-        if (resultDefCall == null || !Objects.equals(resultDefCall.getUseLevel(), -1)) {
-          Sort sort = typeType == null ? definition.getResultType().getSortOfType() : typeType.toSort();
+        if (resultDefCall == null || !Objects.equals(resultDefCall.getUseLevel(), ConstLevel.PROP.value())) {
+          SortExpression sort = typeType == null ? definition.getResultType().getSortExpressionOfType() : typeType.toSortExpression();
           if (sort == null) {
             errorReporter.report(CoreErrorWrapper.make(new TypecheckingError("Cannot infer the sort of the type", null), definition.getResultType()));
             return false;
@@ -132,10 +133,20 @@ public class CoreDefinitionChecker extends BaseDefinitionTypechecker {
     }
 
     if (body instanceof Expression) {
+      Expression resultType = definition.getResultType();
+      if (resultType instanceof UniverseExpression universe && !(universe.getSortExpression() instanceof SortExpression.Const)) {
+        for (DependentLink param = definition.getParameters(); param.hasNext(); param = param.getNext()) {
+          param = param.getNextTyped(null);
+          if (param.getType().isInfinityLevel()) {
+            resultType = UniverseExpression.OMEGA;
+            break;
+          }
+        }
+      }
       if (body instanceof CaseExpression) {
-        myChecker.checkCase((CaseExpression) body, definition.getResultType(), level);
+        myChecker.checkCase((CaseExpression) body, resultType, level);
       } else {
-        ((Expression) body).accept(myChecker, checkType ? definition.getResultType() : null);
+        ((Expression) body).accept(myChecker, checkType ? resultType : null);
       }
       return true;
     }
@@ -159,9 +170,9 @@ public class CoreDefinitionChecker extends BaseDefinitionTypechecker {
           return false;
         }
 
-        DataCallExpression dataCall = link.getTypeExpr().normalize(NormalizationMode.WHNF).cast(DataCallExpression.class);
+        DataCallExpression dataCall = link.getType().normalize(NormalizationMode.WHNF).cast(DataCallExpression.class);
         if (!(dataCall != null && dataCall.getDefinition() == Prelude.INTERVAL)) {
-          errorReporter.report(new TypeMismatchError(DataCallExpression.make(Prelude.INTERVAL, Levels.EMPTY, Collections.emptyList()), link.getTypeExpr(), null));
+          errorReporter.report(new TypeMismatchError(DataCallExpression.make(Prelude.INTERVAL, Levels.EMPTY, Collections.emptyList()), link.getType(), null));
           return false;
         }
 
@@ -215,8 +226,8 @@ public class CoreDefinitionChecker extends BaseDefinitionTypechecker {
 
     if (!definition.isTruncated() && definition.getSquasher() == null) {
       for (Constructor constructor : definition.getConstructors()) {
-        if (constructor.getBody() instanceof IntervalElim && !definition.getSort().getHLevel().isInfinity()) {
-          errorReporter.report(new TypecheckingError("A higher inductive type must have sort " + new Sort(new Level(LevelVariable.PVAR), Level.INFINITY), null));
+        if (constructor.getBody() instanceof IntervalElim && definition.getSortExpression().getSortHLevel() != null) {
+          errorReporter.report(new TypecheckingError("A higher inductive type must have sort " + new Sort(Level.INFINITY, ConstLevel.INFINITY), null));
           return false;
         }
       }
@@ -231,25 +242,27 @@ public class CoreDefinitionChecker extends BaseDefinitionTypechecker {
       // TODO[double_check]: Check patterns
 
       myChecker.addDependentLink(constructor.getDataTypeParameters());
-      Sort sort = myChecker.checkDependentLink(constructor.getParameters(), null);
+      SortExpression sort = myChecker.checkDependentLink(constructor.getParameters(), null);
       myChecker.freeDependentLink(constructor.getParameters());
       myChecker.freeDependentLink(constructor.getDataTypeParameters());
 
-      if (!checkDefinitionSort(definition.isTruncated() || definition.getSquasher() != null, constructor, sort, definition.getSort())) {
+      /* TODO[double_check]: Check sort
+      if (!checkDefinitionSort(definition.isTruncated() || definition.getSquasher() != null, constructor, sort, definition.getSortExpression())) {
         return false;
       }
+      */
 
       // TODO[double_check]: Check clauses/body
     }
 
-    return checkSquasher(definition.getSquasher(), definition, definition.getSort());
+    return checkSquasher(definition.getSquasher(), definition, definition.getSortExpression().getSortHLevel());
   }
 
   private boolean check(MetaTopDefinition definition) {
     return true;
   }
 
-  private boolean checkSquasher(FunctionDefinition squasher, Definition definition, Sort sort) {
+  private boolean checkSquasher(FunctionDefinition squasher, Definition definition, BigInteger defLevel) {
     if (squasher == null) {
       return true;
     }
@@ -263,9 +276,13 @@ public class CoreDefinitionChecker extends BaseDefinitionTypechecker {
       return false;
     }
 
-    Level hLevel = new Level(parametersLevel.level);
-    if (!Level.compare(hLevel, sort.getHLevel(), CMP.LE, DummyEquations.getInstance(), null)) {
-      errorReporter.report(new TypecheckingError("The h-level " + sort.getHLevel() + " of '" + definition.getName() + "' does not fit into the h-level " + hLevel + " of \\use \\level " + squasher.getName(), null));
+    if (defLevel == null) {
+      errorReporter.report(new TypecheckingError("Squashed definition does not have a fixed sort", null));
+      return false;
+    }
+
+    if (parametersLevel.level == null || parametersLevel.level.compareTo(defLevel) > 0) {
+      errorReporter.report(new TypecheckingError("The h-level " + defLevel + " of '" + definition.getName() + "' does not fit into the h-level " + new ConstLevel(parametersLevel.level) + " of \\use \\level " + squasher.getName(), null));
       return false;
     }
 
@@ -321,8 +338,8 @@ public class CoreDefinitionChecker extends BaseDefinitionTypechecker {
       }
     }
 
-    for (Map.Entry<ClassDefinition, Levels> entry : definition.getSuperLevels().entrySet()) {
-      myChecker.checkLevels(entry.getValue(), entry.getKey(), null);
+    for (Levels levels : definition.getSuperLevels().values()) {
+      myChecker.checkLevels(levels, null);
     }
 
     for (ClassField field : definition.getPersonalFields()) {
@@ -333,10 +350,10 @@ public class CoreDefinitionChecker extends BaseDefinitionTypechecker {
 
       PiExpression fieldType = definition.getFieldType(field);
       myChecker.addBinding(fieldType.getParameters(), fieldType.getCodomain());
-      Expression typeType = fieldType.getCodomain().accept(myChecker, Type.OMEGA);
+      Expression typeType = myChecker.checkInf(fieldType.getCodomain(), UniverseExpression.OMEGA, true);
       myChecker.removeBinding(fieldType.getParameters());
 
-      Integer level;
+      BigInteger level;
       if (field.getTypeLevel() != null) {
         List<DependentLink> parameters = new ArrayList<>();
         Expression type = fieldType;
@@ -352,7 +369,7 @@ public class CoreDefinitionChecker extends BaseDefinitionTypechecker {
           }
           type = piType.getCodomain();
           if (link.hasNext()) {
-            type = new PiExpression(piType.getResultSort(), link, type);
+            type = new PiExpression(link, type);
           }
         }
 
@@ -370,31 +387,33 @@ public class CoreDefinitionChecker extends BaseDefinitionTypechecker {
         return false;
       }
 
-      Sort sort = typeType.toSort();
+      SortExpression sort = typeType.toSortExpression();
       if (sort == null) {
         errorReporter.report(CoreErrorWrapper.make(new TypecheckingError("Cannot infer the sort of the type of field '" + field.getName() + "'", null), fieldType));
         return false;
       }
 
-      if (!definition.isImplemented(field) && !checkDefinitionSort(definition.getSquasher() != null, field, sort, definition.getSort())) {
+      /* TODO[double_check]: Check sort
+      if (!definition.isImplemented(field) && !checkDefinitionSort(definition.getSquasher() != null, field, sort.withInfLevel(), definition.getSortExpression())) {
         return false;
       }
+      */
 
       boolean propertyOK = !field.isProperty();
       if (level != null) {
-        if (field.isProperty() && level == -1) {
+        if (field.isProperty() && level.equals(ConstLevel.PROP.value())) {
           propertyOK = true;
         }
-        if (field.getResultTypeLevel() != level) {
-          errorReporter.report(CoreErrorWrapper.make(new TypecheckingError("The level (" + field.getResultTypeLevel() + ") of the type of the field does not match the level (" + level + ") inferred from the proof", null), fieldType));
+        if (!Objects.equals(field.getResultTypeLevel(), level)) {
+          errorReporter.report(CoreErrorWrapper.make(new TypecheckingError("The level (" + new ConstLevel(field.getResultTypeLevel()) + ") of the type of the field does not match the level (" + level + ") inferred from the proof", null), fieldType));
         }
       }
 
       if (!propertyOK) {
         DefCallExpression defCall = fieldType.getCodomain().cast(DefCallExpression.class);
         if (defCall != null) {
-          Integer defCallLevel = defCall.getUseLevel();
-          propertyOK = defCallLevel != null && defCallLevel == -1;
+          BigInteger defCallLevel = defCall.getUseLevel();
+          propertyOK = defCallLevel != null && defCallLevel.equals(ConstLevel.PROP.value());
         }
       }
 
@@ -406,9 +425,11 @@ public class CoreDefinitionChecker extends BaseDefinitionTypechecker {
       // TODO[double_check]: Check covariance
     }
 
-    if (!checkSquasher(definition.getSquasher(), definition, definition.getSort())) {
+    /* TODO[double_check]: Check sort
+    if (!checkSquasher(definition.getSquasher(), definition, definition.getSortExpression())) {
       return false;
     }
+    */
 
     // TODO[double_check]: Check occurrences of fields in other fields
     // TODO[double_check]: Check implemented

@@ -25,7 +25,7 @@
     => \let U x => ∃ (l : Array I.S) (isHomogenArray l) (i : Fin l.len) (l i = x) (I (BigSum l))
        \in (U, \lam x => TruncP.map __ \lam (l,f,n,p,c) => (n, rewriteI p (f n)),
             \lam x => (\lam Ix => TruncP.map (homogen-decomp x) \lam (l,f,p) => (mkArray \lam j => later (1, (l j, inP (l, f, j, idp, rewrite p Ix))), inv p *> pmap BigSum (exts \lam j => inv ide-left)),
-                       Ideal.sclosure-univ $ later \lam y (inP (l,f,i,p,c)) => transport I p (isHomogenIdeal f c i)))
+                       Ideal.sclosure-univ $ later \lam (inP (l,f,i,p,c)) => transport I p (isHomogenIdeal f c i)))
 
   -- | If an ideal has a set of homogeneous generators, then it is homogeneous
   \func fromGen {R : GradedCRing} (I : Ideal R) (h : TruncP (hasHomogenGen I)) : HomogenIdeal \cowith

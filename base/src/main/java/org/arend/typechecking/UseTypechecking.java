@@ -3,10 +3,10 @@ package org.arend.typechecking;
 import org.arend.core.context.param.DependentLink;
 import org.arend.core.definition.*;
 import org.arend.core.expr.*;
-import org.arend.core.expr.type.Type;
-import org.arend.core.sort.Level;
 import org.arend.core.sort.Sort;
+import org.arend.core.sort.SortExpression;
 import org.arend.core.subst.ExprSubstitution;
+import org.arend.ext.core.level.ConstLevel;
 import org.arend.ext.core.ops.CMP;
 import org.arend.ext.core.ops.NormalizationMode;
 import org.arend.ext.error.ErrorReporter;
@@ -21,6 +21,7 @@ import org.arend.typechecking.dfs.DFS;
 import org.arend.typechecking.visitor.CheckTypeVisitor;
 import org.arend.ext.util.Pair;
 
+import java.math.BigInteger;
 import java.util.*;
 
 public class UseTypechecking {
@@ -112,7 +113,7 @@ public class UseTypechecking {
     Definition useParent = def.getUseParent().getTypechecked();
     if ((useParent instanceof DataDefinition || useParent instanceof ClassDefinition) && !def.getParameters().isEmpty()) {
       DependentLink lastParam = DependentLink.Helper.getLast(typedDef.getParameters());
-      Expression paramType = lastParam.hasNext() ? lastParam.getTypeExpr() : null;
+      Expression paramType = lastParam.hasNext() ? lastParam.getType() : null;
       DefCallExpression paramDefCall = paramType == null ? null : paramType.cast(DefCallExpression.class);
       Definition paramDef = paramDefCall == null ? null : paramDefCall.getDefinition();
       DefCallExpression resultDefCall = typedDef.getResultType() == null ? null : typedDef.getResultType().cast(DefCallExpression.class);
@@ -153,7 +154,7 @@ public class UseTypechecking {
           ok = false;
           break;
         }
-        if (!Expression.compare(link.getTypeExpr(), defLink.getTypeExpr().subst(substitution), Type.OMEGA, CMP.EQ)) {
+        if (!Expression.compare(link.getType(), defLink.getType().subst(substitution), UniverseExpression.OMEGA, CMP.EQ)) {
           if (parameters == null) {
             parameters = DependentLink.Helper.take(typedDef.getParameters(), DependentLink.Helper.size(defLink));
           }
@@ -177,16 +178,16 @@ public class UseTypechecking {
       DependentLink classCallLink = link;
       for (; classCallLink.hasNext(); classCallLink = classCallLink.getNext()) {
         classCallLink = classCallLink.getNextTyped(null);
-        classCall = classCallLink.getTypeExpr().cast(ClassCallExpression.class);
-        if (classCall != null && classCall.getDefinition() == useParent && (classCall.getUniverseKind() == UniverseKind.NO_UNIVERSES || typedDef.isIdLevels(classCall.getLevels()))) {
+        classCall = classCallLink.getType().cast(ClassCallExpression.class);
+        if (classCall != null && classCall.getDefinition() == useParent && typedDef.isIdLevels(classCall.getLevels())) {
           break;
         }
       }
       if (!classCallLink.hasNext() && resultType != null) {
         PiExpression piType = resultType.normalize(NormalizationMode.WHNF).cast(PiExpression.class);
         if (piType != null) {
-          classCall = piType.getParameters().getTypeExpr().normalize(NormalizationMode.WHNF).cast(ClassCallExpression.class);
-          if (classCall != null && classCall.getDefinition() == useParent && (classCall.getUniverseKind() == UniverseKind.NO_UNIVERSES || typedDef.isIdLevels(classCall.getLevels()))) {
+          classCall = piType.getParameters().getType().normalize(NormalizationMode.WHNF).cast(ClassCallExpression.class);
+          if (classCall != null && classCall.getDefinition() == useParent && typedDef.isIdLevels(classCall.getLevels())) {
             classCallLink = piType.getParameters();
           }
         }
@@ -209,9 +210,9 @@ public class UseTypechecking {
               break;
             }
             levelFields.add(classField);
-            Expression fieldType = classCall.getDefinition().getFieldType(classField, classCall.getLevels(classField.getParentClass()), thisExpr);
-            Expression paramType = link.getTypeExpr();
-            if (!Expression.compare(fieldType, paramType, Type.OMEGA, CMP.EQ)) {
+            Expression fieldType = classCall.getFieldType(classField, thisExpr);
+            Expression paramType = link.getType();
+            if (!Expression.compare(fieldType, paramType, UniverseExpression.OMEGA, CMP.EQ)) {
               if (parameters == null) {
                 int numberOfClassParameters = 0;
                 for (DependentLink link1 = link; link1 != classCallLink && link1.hasNext(); link1 = link1.getNext()) {
@@ -222,7 +223,7 @@ public class UseTypechecking {
 
               ClassCallExpression fieldClassCall = fieldType.cast(ClassCallExpression.class);
               ClassCallExpression paramClassCall = paramType.cast(ClassCallExpression.class);
-              if (strictList != null && paramClassCall != null && fieldClassCall != null && paramClassCall.getDefinition().isSubClassOf(fieldClassCall.getDefinition()) && paramClassCall.getLevels(fieldClassCall.getDefinition()).equals(fieldClassCall.getLevels()) && paramClassCall.getUniverseKind().ordinal() <= fieldClassCall.getUniverseKind().ordinal()) {
+              if (strictList != null && paramClassCall != null && fieldClassCall != null && paramClassCall.getDefinition().isSubClassOf(fieldClassCall.getDefinition()) && paramClassCall.getLevels(fieldClassCall.getDefinition()).equals(fieldClassCall.getLevels())) {
                 strictList.add(new Pair<>(paramClassCall.getDefinition(), paramClassCall.getImplementedHere().keySet()));
               } else {
                 strictList = null;
@@ -237,11 +238,11 @@ public class UseTypechecking {
       }
     }
 
-    Integer level = CheckTypeVisitor.getExpressionLevel(link, resultType, ok ? type : null, DummyEquations.getInstance(), def, errorReporter);
+    BigInteger level = CheckTypeVisitor.getExpressionLevel(link, resultType, ok ? type : null, DummyEquations.getInstance(), def, errorReporter);
     if (level == null) {
       return null;
     }
-    if (def != null && useParent instanceof DataDefinition && parameters == null && Level.compare(((DataDefinition) useParent).getSort().getHLevel(), new Level(level), CMP.LE, DummyEquations.getInstance(), def)) {
+    if (def != null && useParent instanceof DataDefinition && parameters == null && ((DataDefinition) useParent).getSortExpression() instanceof SortExpression.Const(Sort sort) && sort.getHLevel().isLessOrEquals(new ConstLevel(level))) {
       errorReporter.report(new CertainTypecheckingError(CertainTypecheckingError.Kind.USELESS_LEVEL, def));
     }
 
@@ -251,13 +252,13 @@ public class UseTypechecking {
   private static void registerParametersLevel(FunctionDefinition useDefinition, Definition useParent, ParametersLevel parametersLevel) {
     if (useParent instanceof DataDefinition dataDef) {
       if (parametersLevel.parameters == null) {
-        Sort newSort = parametersLevel.level == -1 ? Sort.PROP : new Sort(dataDef.getSort().getPLevel(), new Level(parametersLevel.level));
-        if (!dataDef.getSort().isLessOrEquals(newSort)) {
-          if (!(parametersLevel.level == -1 && dataDef.getSort().isSet() && dataDef.getRecursiveDefinitions().isEmpty())) {
+        BigInteger dataHLevel = dataDef.getSortExpression().getSortHLevel();
+        if (dataHLevel == null || dataHLevel.compareTo(parametersLevel.level) > 0) {
+          if (!(parametersLevel.level.equals(ConstLevel.PROP.value()) && BigInteger.ZERO.equals(dataHLevel) && dataDef.getRecursiveDefinitions().isEmpty())) {
             dataDef.setSquashed(true);
           }
           dataDef.setSquasher(useDefinition);
-          dataDef.setSort(newSort);
+          dataDef.setSortExpression(parametersLevel.level.equals(ConstLevel.PROP.value()) ? new SortExpression.Const(Sort.PROP) : SortExpression.makeTrunc(dataDef.getSortExpression(), parametersLevel.level));
         }
       } else {
         dataDef.addParametersLevel(parametersLevel);
@@ -265,14 +266,7 @@ public class UseTypechecking {
     } else if (useParent instanceof FunctionDefinition) {
       ((FunctionDefinition) useParent).addParametersLevel(parametersLevel);
     } else {
-      ClassDefinition classDef = (ClassDefinition) useParent;
-      ClassDefinition.ParametersLevel classParametersLevel = (ClassDefinition.ParametersLevel) parametersLevel;
-      if (classParametersLevel.fields == null) {
-        classDef.setSquasher(useDefinition);
-        classDef.setSort(parametersLevel.level == -1 ? Sort.PROP : new Sort(classDef.getSort().getPLevel(), new Level(parametersLevel.level)));
-      } else {
-        classDef.addParametersLevel(classParametersLevel);
-      }
+      ((ClassDefinition) useParent).addParametersLevel((ClassDefinition.ParametersLevel) parametersLevel);
     }
   }
 }

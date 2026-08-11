@@ -42,6 +42,9 @@ message Expression {
     message Abs {
         TypedBinding binding = 1;
         Expression expression = 2;
+        // When > 0, reuse the already-registered binding at (existing_binding_ref - 1)
+        // instead of creating a new one from the TypedBinding field.
+        int32 existing_binding_ref = 3;
     }
     message App {
         Expression function = 1;
@@ -56,8 +59,8 @@ message Expression {
         int32 class_ref = 1;
         Levels levels = 7;
         repeated ImplEntry field_impl = 8;
-        Sort sort = 5;
-        UniverseKind universe_kind = 6;
+        // When > 0, reuse the already-registered ClassCallBinding at (existing_this_binding_ref - 1).
+        int32 existing_this_binding_ref = 9;
     }
     message ConCalls {
       repeated ConCall con_call = 1;
@@ -89,7 +92,6 @@ message Expression {
         repeated Expression argument = 4;
     }
     message Lam {
-        Sort resultSort = 1;
         Telescope param = 2;
         Expression body = 3;
     }
@@ -104,6 +106,10 @@ message Expression {
             string name = 1;
             Pattern pattern = 2;
             Expression expression = 3;
+            // When > 0, reuse the already-registered binding at (existing_ref - 1)
+            // instead of creating a new clause.  Used when the same LetExpression
+            // object appears in multiple places in a shared expression tree (DAG).
+            int32 existing_ref = 5;
         }
 
         message Pattern {
@@ -145,15 +151,11 @@ message Expression {
         Expression argument = 6;
     }
     message Array {
-      Level pLevel = 5;
-      Level hLevel = 6;
       Expression elementsType = 2;
       repeated Expression element = 3;
       Expression tail = 4;
     }
     message Path {
-        Level pLevel = 1;
-        Level hLevel = 2;
         Expression argumentType = 3;
         Expression argument = 4;
     }
@@ -166,7 +168,6 @@ message Expression {
         Expression renew = 2;
     }
     message Pi {
-        Sort resultSort = 1;
         Telescope param = 2;
         Expression codomain = 3;
     }
@@ -183,8 +184,6 @@ message Expression {
         Expression expression = 2;
     }
     message Sigma {
-        Level pLevel = 1;
-        Level hLevel = 2;
         repeated Telescope param = 3;
     }
     message Tuple {
@@ -192,7 +191,7 @@ message Expression {
         Sigma type = 2;
     }
     message Universe {
-        Sort sort = 1;
+        SortExpression sort = 1;
     }
     message SmallInteger {
         int32 value = 1;
@@ -205,12 +204,6 @@ message Expression {
     }
 }
 
-enum UniverseKind {
-    NO_UNIVERSES = 0;
-    ONLY_COVARIANT = 1;
-    WITH_UNIVERSES = 2;
-}
-
 message Type {
     Expression expr = 1;
     Sort sort = 2;
@@ -219,16 +212,23 @@ message Type {
 message SingleParameter {
     string name = 1;
     bool is_not_explicit = 2;
-    Type type = 3;
+    Expression type = 3;
     bool is_hidden = 4;
+    // When > 0, reuse the already-registered binding at (existing_ref - 1)
+    // instead of creating a new one. Used when pattern bindings share identity
+    // with function/case parameters.
+    int32 existing_ref = 5;
 }
 
 message Telescope {
     repeated string name = 1;
     bool is_not_explicit = 2;
-    Type type = 3;
+    Expression type = 3;
     bool is_hidden = 4;
     bool is_property = 5;
+    // When > 0, this telescope reuses an already-registered binding (at index existing_ref - 1)
+    // instead of defining a new one. Used to preserve object identity across Pi/Lambda param sharing.
+    int32 existing_ref = 6;
 }
 
 message TypedBinding {

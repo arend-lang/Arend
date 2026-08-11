@@ -1,0 +1,64 @@
+\import Category
+\import Category.Functor
+\import Category.Slice
+\import Category.Topos.Sheaf.Site
+\import Function.Meta
+\import Logic
+\import Logic.Meta
+\import Meta
+\import Paths
+\import Paths.Meta
+\open Covering
+
+\record SitePrehom \extends Functor {
+  \override C : Site
+  \override D : Site
+
+  | Func-cover {x : C} {P : Presieve x} : isCover x P -> Covering (F x) (Presieve.pushforward \this P)
+
+  \lemma Func-covering {x : C} {P : Presieve x} (x<=P : Covering x P) : Covering (F x) (Presieve.pushforward \this P) \elim x<=P
+    | covering-inj x>y y>x x>y>x Py => covering-inj (Func x>y) (Func y>x) (inv Func-o *> pmap Func x>y>x *> Func-id) $ inP (_, Py, idp)
+    | covering-trans x<=T T<=P => Covering.covering-trans* (Func-cover x<=T) \lam {_} (inP (px,Tpx,idp)) => Covering.covering-sub (Func-covering (T<=P Tpx))
+      \lam {_} (inP (z, inP (u,Pu,z>u,z>u_px), idp)) => inP (_, inP (u, Pu, idp), Func z>u, inv Func-o *> pmap Func z>u_px *> Func-o)
+}
+
+\record SiteHom \extends SitePrehom {
+  | Func-flat-terminal {u : D} : Covering u \lam v => ∃ (w : C) (Hom v.1 (F w))
+  | Func-flat-pullback {x y1 y2 : C} {p1 : Hom y1 x} {p2 : Hom y2 x} {u : D} {f : Hom u (F y1)} {g : Hom u (F y2)} (f_g : Func p1 ∘ f = Func p2 ∘ g)
+    : Covering u \lam v => ∃ (w : C) (f' : Hom w y1) (g' : Hom w y2) (p1 ∘ f' = p2 ∘ g') (h : Hom v.1 (F w)) (Func f' ∘ h = f ∘ v.2) (Func g' ∘ h = g ∘ v.2)
+} \where {
+  \func id {C : Site} : SiteHom C C \cowith
+    | Functor => Id
+    | Func-cover {x} {P} c => covering-basic $ transport (isCover x) (ext \lam px => ext (\lam Ppx => inP (px,Ppx,idp), \lam (inP (py,Ppy,q)) => transportInv P q Ppy)) c
+    | Func-flat-terminal {u} => covering-id $ inP (u, C.id)
+    | Func-flat-pullback {x} {y1} {y2} {p1} {p2} {u} {f} {g} f_g => covering-id $ inP (u, f, g, f_g, C.id, idp, idp)
+}
+
+\record SiteDensePrehom \extends SitePrehom {
+  | Func-dense-image {u : D} : Covering u \lam v => ∃ (x : C) (Iso {D} {v.1} {F x})
+  | Func-dense-map {a b : C} (g : Hom (F a) (F b)) : Covering a \lam v => ∃ (h : Hom v.1 b) (g ∘ Func v.2 = Func h)
+
+  \lemma Func-dense-map-image {a : D} {b : C} (g : Hom a (F b))
+    : Covering a (\lam u => ∃ (x : C) (e : Iso {D} {F x} {u.1}) (h : Hom x b) (g ∘ u.2 ∘ e.f = Func h))
+    => covering-trans* Func-dense-image \lam {pa} (inP (x,pa=Fx)) => covering-stable-retract pa=Fx.f pa=Fx.hinv pa=Fx.hinv_f $
+        covering-sub (Func-covering $ Func-dense-map $ g ∘ pa.2 ∘ pa=Fx.hinv) \lam {_} (inP (px, inP (px>b,pxc), idp)) =>
+          inP ((_,_), inP ((_,_), inP (px.1, idIso, px>b, id-right *> inv o-assoc *> inv o-assoc *> pxc), id, id-right), id, id-right)
+
+  \lemma Func-dense-map2-image {a : D} {b b' : C} (g : Hom a (F b)) (g' : Hom a (F b'))
+    : Covering a (\lam u => ∃ (x : C) (e : Iso {D} {F x} {u.1}) (h : Hom x b) (g ∘ u.2 ∘ e.f = Func h) (h' : Hom x b') (g' ∘ u.2 ∘ e.f = Func h'))
+    => covering-trans* (Func-dense-map-image g) \lam {pa} (inP (x,Fx=pa,x>b,xbc)) => covering-stable-retract Fx=pa.hinv Fx=pa.f Fx=pa.f_hinv $
+        covering-sub (Func-covering $ Func-dense-map $ g' ∘ pa.2 ∘ Fx=pa.f) \lam {_} (inP (y, inP (y>b',yb'c), idp)) =>
+          inP ((_,_), inP ((_,_), inP (y.1, idIso, x>b ∘ y.2, id-right *> inv o-assoc *> inv o-assoc *> pmap (∘ _) xbc *> inv Func-o, y>b', id-right *> inv o-assoc *> inv o-assoc *> yb'c), id, id-right), id, id-right)
+}
+
+\record SiteDenseHom \extends SiteDensePrehom, SiteHom
+  | Func-dense-cover {x : C} {P : Presieve x} : Covering (F x) (Presieve.pushforward \this P) -> Covering x P
+  | Func-dense-equal {a b : C} (f g : Hom a b) : Func f = Func g -> Covering a \lam pa => f ∘ pa.2 = g ∘ pa.2
+
+  | Func-flat-terminal => covering-sub Func-dense-image \lam {v} (inP (x,v=Fx)) => inP (x,v=Fx)
+  | Func-flat-pullback {y0} {y1} {y2} {p1} {p2} {u} {f} {g} f_g => covering-trans* (Func-dense-map2-image f g)
+    \lam {pu} (inP (x,Fx=pu,x>y1,f_x>y1,x>y2,g_x>y2)) => covering-stable-retract Fx=pu.hinv Fx=pu.f Fx=pu.f_hinv $
+      covering-sub (Func-covering $ Func-dense-equal (p1 ∘ x>y1) (p2 ∘ x>y2) $ Func-o *> pmap (_ ∘) (inv f_x>y1) *> inv o-assoc *> pmap (∘ _) (inv o-assoc *> pmap (∘ _) f_g *> o-assoc) *> o-assoc *> pmap (_ ∘) g_x>y2 *> inv Func-o)
+      \lam {_} (inP (px,q,idp)) => inP ((_,_), inP ((_,_), inP (px.1, x>y1 ∘ px.2, x>y2 ∘ px.2, inv o-assoc *> q *> o-assoc, id,
+        id-right *> Func-o *> pmap (∘ _) (inv f_x>y1) *> o-assoc *> o-assoc,
+        id-right *> Func-o *> pmap (∘ _) (inv g_x>y2) *> o-assoc *> o-assoc), id, id-right), id, id-right)

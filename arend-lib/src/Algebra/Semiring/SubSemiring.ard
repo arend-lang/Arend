@@ -1,0 +1,54 @@
+\import Algebra.Monoid
+\import Algebra.Monoid.SubMonoid
+\import Algebra.Ring.RingHom
+\import Algebra.Semiring
+\import Paths.Meta
+
+\class SubPseudoSemiring \extends SubAddMonoid, SubSemigroup {
+  \override S : PseudoSemiring
+}
+
+\instance IPseudoSemiring (S : SubPseudoSemiring {}) : PseudoSemiring
+  | AbMonoid => IAbMonoid S
+  | Semigroup => ISemigroup S
+  | ldistr => ext ldistr
+  | rdistr => ext rdistr
+  | zro_*-left => ext zro_*-left
+  | zro_*-right => ext zro_*-right
+
+\instance IPseudoCSemiring {R : PseudoCSemiring} (S : SubPseudoSemiring R) : PseudoCSemiring \cowith
+  | PseudoSemiring => IPseudoSemiring S
+  | *-comm => ext *-comm
+
+\class SubSemiring \extends SubPseudoSemiring, SubMonoid {
+  \override S : Semiring
+} \where {
+  \func max {A : Semiring} : SubSemiring \cowith
+    | SubAddMonoid => SubAddMonoid.max {A}
+    | SubMonoid => SubMonoid.max
+}
+
+\instance ISemiring (S : SubSemiring {}) : Semiring \cowith
+  | PseudoSemiring => IPseudoSemiring S
+  | Monoid => IMonoid S
+  \where {
+    \func embed : SemiringHom (ISemiring S) S.S \cowith
+      | AddMonoidHom => IAddMonoid.embed
+      | MonoidHom => IMonoid.embed
+  }
+
+\instance ICSemiring {R : CSemiring} (S : SubSemiring R) : CSemiring
+  | Semiring => ISemiring S
+  | PseudoCSemiring => IPseudoCSemiring S
+
+
+\func ImageSemiring (f : SemiringHom) : SubSemiring f.Cod \cowith
+  | SubAddMonoid => ImageAddMonoid f
+  | SubMonoid => ImageMonoid f
+
+\func ImSemiring (f : SemiringHom) : Semiring
+  => ISemiring (ImageSemiring f)
+
+\func ImSemiringLeftHom (f : SemiringHom) : SemiringHom f.Dom (ImSemiring f) \cowith
+  | AddMonoidHom => ImAddMonoidLeftHom f
+  | MonoidHom => ImMonoidLeftHom f

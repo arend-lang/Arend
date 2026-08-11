@@ -19,7 +19,8 @@ public class TypeClassesGlobalTest extends TypeCheckingTestCase {
         | B : A -> \\Type0
       }
       \\instance Nat-X : X | A => Nat | B => \\lam n => Nat
-      \\func f => B 0""");
+      \\func f => B 0
+      """);
   }
 
   @Test
@@ -29,7 +30,8 @@ public class TypeClassesGlobalTest extends TypeCheckingTestCase {
         | B : A -> \\Type0
       }
       \\instance Nat-X : X Nat | B => \\lam n => Nat
-      \\func f => B 0""");
+      \\func f => B 0
+      """);
   }
 
   @Test
@@ -39,7 +41,8 @@ public class TypeClassesGlobalTest extends TypeCheckingTestCase {
         | B : A -> \\Type0
       }
       \\func f : \\Type1 => Nat
-      \\instance Nat-X : X | A => f | B => \\lam n => Nat""", 1);
+      \\instance Nat-X : X | A => f | B => \\lam n => Nat
+      """, 1);
     assertThatErrorsAre(typeMismatchError());
   }
 
@@ -52,7 +55,8 @@ public class TypeClassesGlobalTest extends TypeCheckingTestCase {
       \\instance Nat-X : X | A => Nat | B => \\lam n => Nat
       \\instance I-X : X | A => I | B => \\lam n => Nat -> Nat
       \\func f => B 0
-      \\func g => B left""");
+      \\func g => B left
+      """);
   }
 
   @Test
@@ -63,7 +67,8 @@ public class TypeClassesGlobalTest extends TypeCheckingTestCase {
       }
       \\instance Nat-X : X | A => Nat | B => \\lam n => Nat -> Nat
       \\func f (y : X { | A => Nat }) => B 0
-      \\func test : Nat = Nat => path (\\lam _ => f (\\new X { | A => Nat | B => \\lam _ => Nat }))""");
+      \\func test : Nat = Nat => path (\\lam _ => f (\\new X { | A => Nat | B => \\lam _ => Nat }))
+      """);
   }
 
   @Test
@@ -74,7 +79,8 @@ public class TypeClassesGlobalTest extends TypeCheckingTestCase {
       }
       \\instance Nat-X : X | A => Nat | B => \\lam n => Nat -> Nat
       \\func f {A : \\Type0} {y : X { | A => A } } (a : A) => B a
-      \\func g => f 0""");
+      \\func g => f 0
+      """);
   }
 
   @Test
@@ -85,7 +91,8 @@ public class TypeClassesGlobalTest extends TypeCheckingTestCase {
       }
       \\instance Nat-X : X | A => Nat | B => \\lam n => Nat -> Nat
       \\func f {x : X} (a : x.A) => B a
-      \\func g => f 0""");
+      \\func g => f 0
+      """);
   }
 
   @Test
@@ -98,7 +105,8 @@ public class TypeClassesGlobalTest extends TypeCheckingTestCase {
       \\instance D-X : X | A => D | B => \\lam _ => f
       \\class X (A : \\Type0) {
         | B : A -> \\Type0
-      }""");
+      }
+      """);
   }
 
   @Test
@@ -111,7 +119,8 @@ public class TypeClassesGlobalTest extends TypeCheckingTestCase {
       \\func f : \\Set0 => g
       \\class X (A : \\Type0) {
         | B : A -> \\Type0
-      }""", 2);
+      }
+      """, 2);
     assertThatErrorsAre(cycle(get("D-X"), get("f")), cycle(get("D-X"), get("f")));
   }
 
@@ -124,7 +133,8 @@ public class TypeClassesGlobalTest extends TypeCheckingTestCase {
       }
       \\data D
       \\instance D-X : X | A => D | B => \\lam n => D
-      \\instance D-Y : X | A => D | B => \\lam n => D -> D""");
+      \\instance D-Y : X | A => D | B => \\lam n => D -> D
+      """);
     // assertThatErrorsAre(duplicateInstanceError());
   }
 
@@ -142,7 +152,8 @@ public class TypeClassesGlobalTest extends TypeCheckingTestCase {
       \\class A { | n : Nat }
       \\instance a0 : A | n => 0
       \\instance a1 : A | n => 1
-      \\func f : n = n => path (\\lam _ => 0)""");
+      \\func f : n = n => path (\\lam _ => 0)
+      """);
   }
 
   @Test
@@ -153,7 +164,8 @@ public class TypeClassesGlobalTest extends TypeCheckingTestCase {
       \\data D'
       \\class B (X : \\Set) { | foo : X -> X }
       \\instance B-inst : B (Data D) | foo => \\lam x => x
-      \\func f (x : Data D') => foo x""", 1);
+      \\func f (x : Data D') => foo x
+      """, 1);
     assertThatErrorsAre(argInferenceError());
   }
 
@@ -170,7 +182,8 @@ public class TypeClassesGlobalTest extends TypeCheckingTestCase {
       \\class A { | x : Nat }
       \\class B \\extends A
       \\instance B-inst : B | x => 0
-      \\func f => x""");
+      \\func f => x
+      """);
   }
 
   @Test
@@ -179,7 +192,8 @@ public class TypeClassesGlobalTest extends TypeCheckingTestCase {
       \\class A (C : \\Set) { | c : C }
       \\class B \\extends A
       \\instance B-inst : B Nat | c => 0
-      \\func f : Nat => c""");
+      \\func f : Nat => c
+      """);
   }
 
   @Test
@@ -189,7 +203,8 @@ public class TypeClassesGlobalTest extends TypeCheckingTestCase {
       \\class B \\extends A
       \\data Nat'
       \\instance B-inst : B Nat | c => 0
-      \\func f : Nat' => c""", 1);
+      \\func f : Nat' => c
+      """, 1);
     assertThatErrorsAre(instanceInference(get("A"), DataCall((DataDefinition) getDefinition("Nat'"), Levels.EMPTY)));
   }
 
@@ -199,7 +214,8 @@ public class TypeClassesGlobalTest extends TypeCheckingTestCase {
       \\class A (C : \\Type) { | c : C }
       \\data D : \\Prop
       \\instance aaa : A \\Prop | c => D
-      \\func test : \\Prop => c""");
+      \\func test : \\Prop => c
+      """);
   }
 
   @Test
@@ -208,7 +224,8 @@ public class TypeClassesGlobalTest extends TypeCheckingTestCase {
       \\class A (C : \\Type) { | c : C }
       \\data D : \\Prop
       \\instance aaa : A \\Prop | c => D
-      \\func test : \\Set => c""", 1);
+      \\func test : \\Set => c
+      """, 1);
     assertThatErrorsAre(argInferenceError());
   }
 
@@ -218,7 +235,8 @@ public class TypeClassesGlobalTest extends TypeCheckingTestCase {
       \\class A (C : \\Type) { | c : C }
       \\data D : \\Prop
       \\instance aaa : A \\Prop | c => D
-      \\func test : \\Type => c""", 1);
+      \\func test : \\Type => c
+      """, 1);
     assertThatErrorsAre(argInferenceError());
   }
 
@@ -226,9 +244,9 @@ public class TypeClassesGlobalTest extends TypeCheckingTestCase {
   public void instanceSet() {
     typeCheckModule("""
       \\class A (C : \\Type) { | c : C }
-      \\instance a : A \\Set | c => Nat
-      \\func f1 : \\Set => c
-      \\func f2 : \\Type => c""");
+      \\instance a : A \\Set0 | c => Nat
+      \\func f1 : \\Set0 => c
+      """);
   }
 
   @Test
@@ -236,16 +254,18 @@ public class TypeClassesGlobalTest extends TypeCheckingTestCase {
     typeCheckModule("""
       \\class A (C : \\Type) { | c : C }
       \\data D | con \\Set0
-      \\instance a : A \\Type1 | c => D
-      \\func f : \\1-Type => c""");
+      \\instance a : A \\1-Type1 | c => D
+      \\func f : \\1-Type1 => c
+      """);
   }
 
   @Test
   public void instanceTypeError() {
     typeCheckModule("""
       \\class A (C : \\Type) { | c : C }
-      \\instance a : A \\Set | c => Nat
-      \\func f : \\Prop => c""", 1);
+      \\instance a : A \\Set0 | c => Nat
+      \\func f : \\Prop => c
+      """, 1);
     assertThatErrorsAre(argInferenceError());
   }
 
@@ -254,7 +274,8 @@ public class TypeClassesGlobalTest extends TypeCheckingTestCase {
     typeCheckModule("""
       \\class A (C : \\Type) { | c : C }
       \\data D | con \\Set0
-      \\instance a : A \\0-Type1 | c => D""", 1);
+      \\instance a : A \\0-Type1 | c => D
+      """, 1);
     assertThatErrorsAre(typeMismatchError());
   }
 
@@ -264,7 +285,8 @@ public class TypeClassesGlobalTest extends TypeCheckingTestCase {
       \\class A (C : \\Type) { | c : C }
       \\data D | con \\Set0
       \\instance a : A \\1-Type1 | c => D
-      \\func f : \\1-Type0 => c""", 1);
+      \\func f : \\1-Type0 => c
+      """, 1);
     assertThatErrorsAre(argInferenceError());
   }
 
@@ -272,49 +294,53 @@ public class TypeClassesGlobalTest extends TypeCheckingTestCase {
   public void instanceTypeCheckTest() {
     typeCheckModule("""
       \\class A (C : \\Type) { | c : C | n : Nat }
-      \\instance a : A \\Set | c => Nat | n => 0
-      \\func f {c : A { | C => \\Set | n => 1 }} => 2
-      \\func g => f""", 1);
+      \\instance a : A \\Set0 | c => Nat | n => 0
+      \\func f {c : A { | C => \\Set0 | n => 1 }} => 2
+      \\func g => f
+      """, 1);
     assertThatErrorsAre(instanceInference(get("A")));
   }
 
   @Test
   public void classifyingFieldLambda() {
     typeCheckModule("""
-      \\class B (F : \\Set -> \\Set) | foo : F Nat | bar : F Nat -> Nat
+      \\class B.{u} (F : \\Set u -> \\Set u) | foo : F Nat | bar : F Nat -> Nat
       \\data Maybe (A : \\Type) | nothing | just A
       \\func fromMaybe {A : \\Type} (a : A) (m : Maybe A) : A \\elim m
         | nothing => a
         | just a' => a'
-      \\instance B-inst : B Maybe | foo => just 3 | bar => fromMaybe 7
+      \\instance B-inst : B.{0} (\\lam A => Maybe A) | foo => just 3 | bar => fromMaybe 7
       \\func test1 => fromMaybe 4 foo
       \\func test2 => bar (just 5)
-      \\func test3 => \\let x : Maybe Nat => foo \\in bar x""");
+      \\func test3 => \\let x : Maybe Nat => foo \\in bar x
+      """);
   }
 
   @Test
   public void classifyingFieldLambdaError() {
     typeCheckModule("""
-      \\class B (F : \\Set -> \\Set) | foo : F Nat | bar : F Nat -> Nat
+      \\class B.{u} (F : \\Set u -> \\Set u) | foo : F Nat | bar : F Nat -> Nat
       \\data Maybe (A : \\Type) | nothing | just A
       \\func fromMaybe {A : \\Type} (a : A) (m : Maybe A) : A \\elim m
         | nothing => a
         | just a' => a'
-      \\instance B-inst : B Maybe | foo => just 3 | bar => fromMaybe 7
-      \\func test => bar (just (\\lam (x : Nat) => x))""", 1);
+      \\instance B-inst : B.{0} (\\lam A => Maybe A) | foo => just 3 | bar => fromMaybe 7
+      \\func test => bar (just (\\lam (x : Nat) => x))
+      """, 1);
     assertThatErrorsAre(typeMismatchError());
   }
 
   @Test
   public void classifyingFieldLambdaClass() {
     typeCheckModule("""
-      \\class B (F : \\Set -> \\Set) | foo : F Nat | bar : F Nat -> Nat
+      \\class B.{u} (F : \\Set u -> \\Set u) | foo : F Nat | bar : F Nat -> Nat
       \\record R {A : \\Type} | rrr : A
       \\func proj {A : \\Type} (r : R {A}) => r.rrr
-      \\instance B-inst : B (\\lam A => R {A}) | foo => \\new R 3 | bar => proj
+      \\instance B-inst : B.{0} (\\lam A => R {A}) | foo => \\new R 3 | bar => proj
       \\func test1 => proj foo
       \\func test2 => bar (\\new R 5)
-      \\func test3 => \\let x : R {Nat} => foo \\in bar x""");
+      \\func test3 => \\let x : R {Nat} => foo \\in bar x
+      """);
   }
 
   @Test
@@ -323,7 +349,8 @@ public class TypeClassesGlobalTest extends TypeCheckingTestCase {
       \\class X (A : \\Type) | xxx : A
       \\instance IntX : X Nat | xxx => 0
       \\instance NatX : X Int | xxx => foo
-        \\where \\func foo => pos xxx""");
+        \\where \\func foo => pos xxx
+      """);
   }
 
   @Test
@@ -332,7 +359,8 @@ public class TypeClassesGlobalTest extends TypeCheckingTestCase {
       \\class X (A : \\Type) | xxx : A
       \\instance NatX : X Nat | xxx => 0
       \\instance IntX : X Int | xxx => foo
-      \\func foo => pos NatX.xxx""");
+      \\func foo => pos NatX.xxx
+      """);
   }
 
   @Test
@@ -340,7 +368,8 @@ public class TypeClassesGlobalTest extends TypeCheckingTestCase {
     typeCheckModule("""
       \\class C (A : \\Type) | a : A
       \\instance NatC : C Nat { | a => 0 }
-      \\func f : Nat => a""");
+      \\func f : Nat => a
+      """);
   }
 
   @Test
@@ -349,7 +378,8 @@ public class TypeClassesGlobalTest extends TypeCheckingTestCase {
       \\class C | x : Nat
       \\func f {c : C} => x {c}
       \\func g : Nat => f
-        \\where \\instance ccc : C | x => 1""");
+        \\where \\instance ccc : C | x => 1
+      """);
   }
 
   @Test
@@ -358,7 +388,8 @@ public class TypeClassesGlobalTest extends TypeCheckingTestCase {
       \\class C | x : Nat
       \\func f {c : (C,C).1} => x {c}
       \\func g : Nat => f
-        \\where \\instance ccc : C | x => 1""", 1);
+        \\where \\instance ccc : C | x => 1
+      """, 1);
   }
 
   @Test
@@ -367,7 +398,8 @@ public class TypeClassesGlobalTest extends TypeCheckingTestCase {
       \\class C (X : \\Type) | x : X
       \\func f {c : (C Nat, C Nat).1} => x {c}
       \\func g : Nat => f
-        \\where \\instance ccc : C Nat | x => 1""", 1);
+        \\where \\instance ccc : C Nat | x => 1
+      """, 1);
   }
 
   @Test
@@ -375,15 +407,17 @@ public class TypeClassesGlobalTest extends TypeCheckingTestCase {
     typeCheckModule("""
       \\class C (X : \\Type) | f : X -> X
       \\instance C_Nat : C Nat | f => suc
-      \\func g => f {_} 1""");
+      \\func g => f {_} 1
+      """);
   }
 
   @Test
   public void classifyingFieldImpl() {
     typeCheckModule("""
-      \\class C (X : \\hType)
+      \\class C (X : \\Type)
       \\class D \\extends C | X => Nat -> Nat
-      \\instance ddd : D""");
+      \\instance ddd : D
+      """);
   }
 
   @Test
@@ -394,7 +428,8 @@ public class TypeClassesGlobalTest extends TypeCheckingTestCase {
       \\instance inst1 : D Nat Int | b => 1
       \\instance inst2 : D (\\Sigma Nat Nat) Int | b => (2,2)
       \\func test1 : Nat => b
-      \\func test2 : \\Sigma Nat Nat => b""");
+      \\func test2 : \\Sigma Nat Nat => b
+      """);
     ClassDefinition classD = (ClassDefinition) getDefinition("D");
     ClassField fieldB = (ClassField) getDefinition("D.B");
     assertEquals(classD.getClassifyingField(), fieldB);
@@ -409,7 +444,8 @@ public class TypeClassesGlobalTest extends TypeCheckingTestCase {
       \\instance inst1 : E Nat 0 | a => 1
       \\instance inst2 : E (\\Sigma Nat Nat) 0 | a => (2,2)
       \\func test1 : Nat => a
-      \\func test2 : \\Sigma Nat Nat => a""");
+      \\func test2 : \\Sigma Nat Nat => a
+      """);
     ClassDefinition classE = (ClassDefinition) getDefinition("E");
     ClassField fieldA = (ClassField) getDefinition("C.A");
     assertEquals(fieldA, classE.getClassifyingField());
@@ -425,7 +461,8 @@ public class TypeClassesGlobalTest extends TypeCheckingTestCase {
           | 0 => x
           | suc n => n
         }
-        \\where \\instance inst : C => \\new C Nat 0""");
+        \\where \\instance inst : C => \\new C Nat 0
+      """);
   }
 
   @Test
@@ -435,7 +472,8 @@ public class TypeClassesGlobalTest extends TypeCheckingTestCase {
       \\instance c : C
         | f => 0
         \\where
-          \\func test => f""", 1);
+          \\func test => f
+      """, 1);
   }
 
   @Test
@@ -446,7 +484,8 @@ public class TypeClassesGlobalTest extends TypeCheckingTestCase {
       \\record R (f : Nat -> Nat)
       \\record S \\extends R {
         \\default f (n : Nat) : Nat => x
-      }""");
+      }
+      """);
   }
 
   @Test

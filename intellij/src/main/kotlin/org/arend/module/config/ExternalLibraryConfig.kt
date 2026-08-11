@@ -7,7 +7,7 @@ import org.arend.yaml.*
 import org.jetbrains.yaml.psi.YAMLFile
 
 
-class ExternalLibraryConfig(override val name: String, yaml: YAMLFile) : LibraryConfig(yaml.project) {
+class ExternalLibraryConfig(override val name: String, val yaml: YAMLFile) : LibraryConfig(yaml.project) {
     override val sourcesDir = yaml.sourcesDir ?: ""
     override val binariesDir = yaml.binariesDir
     override val testsDir = yaml.testsDir

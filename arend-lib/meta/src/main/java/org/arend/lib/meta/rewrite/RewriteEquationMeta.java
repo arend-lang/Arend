@@ -276,7 +276,7 @@ public class RewriteEquationMeta extends BaseEquationMeta {
       return null;
     }
 
-    ConcreteExpression transportExpr = factory.ref(isInverse ? transportInv : transport, refExpr.getPLevels(), refExpr.getHLevels());
+    ConcreteExpression transportExpr = factory.ref(isInverse ? transportInv : transport, refExpr.getLevels());
     CoreExpression value = eq.getDefCallArguments().get(1);
 
     // This case won't happen often, but sill possible

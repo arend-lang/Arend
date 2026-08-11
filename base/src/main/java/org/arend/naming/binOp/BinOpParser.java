@@ -71,7 +71,7 @@ class BinOpParser<T extends Concrete.SourceNode> {
       return;
     }
 
-    StackElem<T> topElem = myStack.get(myStack.size() - 1);
+    StackElem<T> topElem = myStack.getLast();
     if (topElem.precedence == null || !isExplicit) {
       topElem.component = myEngine.wrapSequence(topElem.component.getData(), topElem.component, List.of(Pair.create(component, isExplicit)));
     } else {
@@ -86,7 +86,7 @@ class BinOpParser<T extends Concrete.SourceNode> {
     }
 
     while (true) {
-      StackElem<T> topElem = myStack.get(myStack.size() - 1);
+      StackElem<T> topElem = myStack.getLast();
       if (topElem.precedence != null) {
         myErrorReporter.report(new NameResolverError("Expected " + myEngine.getPresentableComponentName() + " after an infix operator", topElem.component));
         return;
@@ -111,14 +111,14 @@ class BinOpParser<T extends Concrete.SourceNode> {
   }
 
   private void foldTop() {
-    StackElem<T> topElem = myStack.remove(myStack.size() - 1);
+    StackElem<T> topElem = myStack.removeLast();
     if (topElem.precedence != null && myStack.size() > 1) {
       StackElem<T> nextElem = myStack.get(myStack.size() - 2);
       myErrorReporter.report(new NameResolverError("The operator " + myEngine.getReferable(topElem.component) + " [" + topElem.precedence + "] of a section must have lower precedence than that of the operand, namely " + myEngine.getReferable(nextElem.component) + " [" + nextElem.precedence + "]", topElem.component));
-      topElem = myStack.remove(myStack.size() - 1);
+      topElem = myStack.removeLast();
     }
-    StackElem<T> midElem = myStack.remove(myStack.size() - 1);
-    StackElem<T> botElem = myStack.isEmpty() ? null : myStack.remove(myStack.size() - 1);
+    StackElem<T> midElem = myStack.removeLast();
+    StackElem<T> botElem = myStack.isEmpty() ? null : myStack.removeLast();
 
     if (botElem == null) {
       if (topElem.precedence != null) {
@@ -142,7 +142,7 @@ class BinOpParser<T extends Concrete.SourceNode> {
       foldTop();
     }
 
-    T result = myStack.get(0).component;
+    T result = myStack.getFirst().component;
     myStack.clear();
     return result;
   }

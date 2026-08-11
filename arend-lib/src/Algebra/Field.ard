@@ -39,7 +39,7 @@
     }
     | res-univ g g|x g|y => \new Monoid.LDiv {
       | inv => Monoid.LDiv.inv {g|x} * Inv.inv {x#0}
-      | inv-right => inv *-assoc *> pmap (`* _) Monoid.LDiv.inv-right *> Inv.inv-right
+      | inv-right => inv *-assoc *> pmap (* _) Monoid.LDiv.inv-right *> Inv.inv-right
     }
   }
 
@@ -148,25 +148,25 @@
     | inP (y,yy=x) => inP (finv y, inv finv_* *> pmap finv yy=x)
 } \where {
   \private \lemma aux {R : CRing} (p : R.zro /= R.ide) (x : R) (q : (x = 0) || Inv x) : (x = 0) `Or` Inv x
-    \level Or.levelProp (\lam x=0 (j : Inv x) => p $ inv R.zro_*-left *> pmap (`* _) (inv x=0) *> j.inv-right)
+    \level Or.levelProp (\lam x=0 (j : Inv x) => p $ inv R.zro_*-left *> pmap (* _) (inv x=0) *> j.inv-right)
     => \case q \with {
          | byLeft r => inl r
          | byRight r => inr r
        }
 
-  \func backwards (f : RingHom) (e : Equiv f) (D : DiscreteField { | Ring => f.Cod }) : DiscreteField { | Ring => f.Dom } \cowith
-    | *-comm => e.isInj $ f.func-* *> *-comm *> inv f.func-*
+  \func backwards (f : RingHom) (e : IsEquiv f) (D : DiscreteField { | Ring => f.Cod }) : DiscreteField { | Ring => f.Dom } \cowith
+    | *-comm => IsEquiv.isInj e $ f.func-* *> *-comm *> inv f.func-*
     | zro/=ide q => D.zro/=ide $ inv f.func-zro *> pmap f q *> f.func-ide
-    | eitherZeroOrInv a => ||.map (\lam q => e.isInj $ q *> inv f.func-zro) (\lam (fai : Inv (f a)) => \new Inv a {
-      | inv => e.ret fai.inv
-      | inv-left => e.isInj $ f.func-* *> pmap (`* _) (e.f_ret _) *> fai.inv-left *> inv f.func-ide
-      | inv-right => e.isInj $ f.func-* *> pmap (_ *) (e.f_ret _) *> fai.inv-right *> inv f.func-ide
+    | eitherZeroOrInv a => ||.map (\lam q => IsEquiv.isInj e $ q *> inv f.func-zro) (\lam (fai : Inv (f a)) => \new Inv a {
+      | inv => IsEquiv.ret e fai.inv
+      | inv-left => IsEquiv.isInj e $ f.func-* *> pmap (* _) (IsEquiv.f_ret e) *> fai.inv-left *> inv f.func-ide
+      | inv-right => IsEquiv.isInj e $ f.func-* *> pmap (_ *) (IsEquiv.f_ret e) *> fai.inv-right *> inv f.func-ide
     }) (D.eitherZeroOrInv (f a))
 
-  \func forward {f : RingHom} (e : Equiv f) (D : DiscreteField { | Ring => f.Dom }) : DiscreteField { | Ring => f.Cod }
-    => backwards (\new RingHom f.Cod f.Dom e.ret {
-      | func-+ => e.isInj $ e.f_ret _ *> inv (f.func-+ *> pmap2 (+) (e.f_ret _) (e.f_ret _))
-      | func-ide => e.isInj $ e.f_ret _ *> inv f.func-ide
-      | func-* => e.isInj $ e.f_ret _ *> inv (f.func-* *> pmap2 (*) (e.f_ret _) (e.f_ret _))
-    }) (symQEquiv e) D
+  \func forward {f : RingHom} (e : IsEquiv f) (D : DiscreteField { | Ring => f.Dom }) : DiscreteField { | Ring => f.Cod }
+    => backwards (\new RingHom f.Cod f.Dom (IsEquiv.ret e) {
+      | func-+ => IsEquiv.isInj e $ IsEquiv.f_ret e *> inv (f.func-+ *> pmap2 (+) (IsEquiv.f_ret e) (IsEquiv.f_ret e))
+      | func-ide => IsEquiv.isInj e $ IsEquiv.f_ret e *> inv f.func-ide
+      | func-* => IsEquiv.isInj e $ IsEquiv.f_ret e *> inv (f.func-* *> pmap2 (*) (IsEquiv.f_ret e) (IsEquiv.f_ret e))
+    }) (IsEquiv.ret-equiv e) D
 }

@@ -1,28 +1,27 @@
 \import Homotopy.Fibration
+\import Logic
 \import Paths
 \import Logic.Unique
 \import Equiv
 \import Equiv.HalfAdjoint
 
-\func hasContrFibers {A B : \Type} (f : A -> B) => \Pi (b : B) -> Contr (\Sigma (a : A) (f a = b))
-  \where
-    \lemma levelProp : isProp (hasContrFibers f)
-      => pi-isProp (\lam b0 => Contr (Fib f b0)) (\lam b0 => Contr.levelProp (Fib f b0))
+\func HasContrFibers {A B : \Type} (f : A -> B) : \Prop
+  => \Pi (b : B) -> Contr (\Sigma (a : A) (f a = b))
 
-\func contrFibers=>Equiv {A B : \Type} {f : A -> B} (p : hasContrFibers f) : QEquiv f =>
-  \let sec y => Contr.center {p y}
-  \in \new QEquiv {
-    | ret y => (sec y).1
-    | ret_f x => pmap (\lam (r : Fib f (f x)) => r.1) (Contr.contraction {p (f x)} (x,idp))
-    | f_sec y => (sec y).2
-  }
+\func contrFibers=>QEquiv {A B : \Type} {f : A -> B} (p : HasContrFibers f) : QEquiv f \cowith
+  | ret y => (p y).center.1
+  | ret_f x => pmap (\lam (r : Fib f (f x)) => r.1) ((p (f x)).contraction (x,idp))
+  | f_sec y => (p y).center.2
 
-\lemma Equiv=>contrFibers (e : Equiv) : hasContrFibers e
-  => fromSection e e
+\lemma contrFibers=>IsEquiv {A B : \Type} {f : A -> B} (p : HasContrFibers f) : IsEquiv f
+  => inP (contrFibers=>QEquiv p)
+
+\lemma IsEquiv=>contrFibers {A B : \Type} {f : A -> B} (e : IsEquiv f) : HasContrFibers f \elim e
+  | inP e => fromSection e e
   \where {
-    \protected \lemma fromSection (s : Section) (r : Retraction s) : hasContrFibers s
+    \protected \lemma fromSection (s : Section f) (r : Retraction f) : HasContrFibers f
       => \lam b0 =>
-          \let | r' y => pmap (\lam y => s (s.ret y)) (inv (r.f_sec y)) *> pmap s (s.ret_f (r.sec y)) *> r.f_sec y
+          \let | r' y => pmap (\lam y => f (s.ret y)) (inv (r.f_sec y)) *> pmap f (s.ret_f (r.sec y)) *> r.f_sec y
                | f_sec => HAEquiv.coh_f_sec s r'
                | x0 => Fib.make (s.ret b0) (f_sec b0)
           \in Contr.make x0 (\lam x =>
@@ -30,9 +29,9 @@
                    | p0 => pmap s.ret (inv x.2) *> s.ret_f x.1
                    -- q0 proves that the second compontents are equal: pmap f p0 *> x.basePath = x0.basePath.
                    | q0 =>
-                     pmap s p0 *> x.2                                               ==< pmap (`*> x.2) (pmap_*>-comm s _ _) >==
-                     (pmap s (pmap s.ret (inv x.2)) *> pmap s (s.ret_f x.1)) *> x.2 ==< pmap ((pmap s (pmap s.ret (inv x.2)) *> __) *> x.2) (HAEquiv.coh_f_ret_f=f_sec_f s r' x.1) >==
-                     (pmap s (pmap s.ret (inv x.2)) *> f_sec (s x.1)) *> x.2      ==< pmap (`*> x.2) (homotopy-isNatural (\lam x => s (s.ret x)) (\lam x => x) f_sec (inv x.2)) >==
+                     pmap f p0 *> x.2                                               ==< pmap (*> x.2) (pmap_*>-comm f _ _) >==
+                     (pmap f (pmap s.ret (inv x.2)) *> pmap f (s.ret_f x.1)) *> x.2 ==< pmap ((pmap f (pmap s.ret (inv x.2)) *> __) *> x.2) (HAEquiv.coh_f_ret_f=f_sec_f s r' x.1) >==
+                     (pmap f (pmap s.ret (inv x.2)) *> f_sec (f x.1)) *> x.2      ==< pmap (*> x.2) (homotopy-isNatural (\lam x => f (s.ret x)) (\lam x => x) f_sec (inv x.2)) >==
                      (f_sec b0 *> inv x.2) *> x.2                                 ==< *>-assoc _ _ _ >==
                      f_sec b0 *> (inv x.2 *> x.2)                                 ==< pmap (f_sec b0 *>) (inv_*> x.2) >==
                      f_sec b0                                                     `qed

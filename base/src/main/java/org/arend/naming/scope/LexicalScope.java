@@ -3,7 +3,6 @@ package org.arend.naming.scope;
 import org.arend.ext.module.ModulePath;
 import org.arend.ext.module.ModuleLocation;
 import org.arend.naming.reference.*;
-import org.arend.term.concrete.Concrete;
 import org.arend.term.group.*;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -85,18 +84,6 @@ public class LexicalScope implements Scope {
               checkReferable(field, pred);
             }
           }
-        }
-      }
-      Concrete.LevelsDefinition pDef = statement.pLevelsDefinition();
-      if (pDef != null && (context == null || context == ScopeContext.PLEVEL)) {
-        for (Referable referable : pDef.getReferables()) {
-          if (pred.test(referable)) return referable;
-        }
-      }
-      Concrete.LevelsDefinition hDef = statement.hLevelsDefinition();
-      if (hDef != null && (context == null || context == ScopeContext.HLEVEL)) {
-        for (Referable referable : hDef.getReferables()) {
-          if (pred.test(referable)) return referable;
         }
       }
     }
@@ -217,26 +204,6 @@ public class LexicalScope implements Scope {
           GlobalReferable result = resolveInternal(subgroup, name, true);
           if (result != null && result.getAccessModifier() == AccessModifier.PUBLIC) {
             return result;
-          }
-        }
-      }
-      if (context == null || context == ScopeContext.PLEVEL) {
-        Concrete.LevelsDefinition levelParams = statement.pLevelsDefinition();
-        if (levelParams != null) {
-          for (Referable ref : levelParams.getReferables()) {
-            if (name.equals(ref.getRefName())) {
-              return ref;
-            }
-          }
-        }
-      }
-      if (context == null || context == ScopeContext.HLEVEL) {
-        Concrete.LevelsDefinition levelParams = statement.hLevelsDefinition();
-        if (levelParams != null) {
-          for (Referable ref : levelParams.getReferables()) {
-            if (name.equals(ref.getRefName())) {
-              return ref;
-            }
           }
         }
       }

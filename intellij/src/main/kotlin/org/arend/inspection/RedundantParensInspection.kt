@@ -6,7 +6,6 @@ import com.intellij.openapi.project.Project
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiElementVisitor
 import com.intellij.psi.PsiFile
-import com.intellij.psi.util.childrenOfType
 import com.intellij.psi.util.elementType
 import com.intellij.psi.util.endOffset
 import com.intellij.psi.util.startOffset
@@ -31,9 +30,9 @@ class RedundantParensInspection : ArendInspectionBase() {
         return object : PsiElementVisitor() {
             override fun visitElement(element: PsiElement) {
                 super.visitElement(element)
-                if (element !is ArendTuple && element !is ArendTypeTele && element !is ArendMaybeAtomLevelExprs) return
-                if (element is ArendMaybeAtomLevelExprs) {
-                    if (isRedundantParensInArendMaybeAtomLevelExprs(element)) {
+                if (element !is ArendTuple && element !is ArendTypeTele && element !is ArendAtomLevelExpr) return
+                if (element is ArendAtomLevelExpr) {
+                    if (isRedundantParensInLevelExpr(element)) {
                         registerFix(element)
                     }
                     return
@@ -60,15 +59,16 @@ private fun hasTypeTeleParens(element: ArendTypeTele): Boolean {
     return element.lparen != null
 }
 
-private fun isRedundantParensInArendMaybeAtomLevelExprs(element: ArendMaybeAtomLevelExprs): Boolean {
-    return element.childrenOfType<ArendAtomLevelExpr>().size == 1 &&
-            element.childOfType(LPAREN) != null &&
-            element.childOfType(RPAREN) != null
+private fun isRedundantParensInLevelExpr(element: ArendAtomLevelExpr): Boolean {
+    // A parenthesized level expression like `(0)` or `(l)` is redundant when it wraps an atomic
+    // level expression (a number, a reference, or another parenthesized level), since an atom
+    // fits directly into any level-argument position without the parentheses.
+    return element.lparen != null && element.levelExpr is ArendAtomLevelExpr
 }
 
 private fun neverNeedsParens(expression: ArendExpr): Boolean {
     val childAppExpr = if (expression is ArendNewExpr && isAtomic(expression)) expression.argumentAppExpr else null
-    return childAppExpr != null && isAtomic(childAppExpr) && !isBinOp(childAppExpr.atomFieldsAcc!!)
+    return childAppExpr != null && isAtomic(childAppExpr) && !isBinOp(childAppExpr.atomFieldsAcc)
 }
 
 private fun typeTeleDoesntNeedParens(expression: ArendExpr): Boolean {
@@ -86,15 +86,7 @@ fun isAtomic(expression: ArendNewExpr) =
             expression.withBody == null
 
 private fun isAtomic(argumentAppExpr: ArendArgumentAppExpr): Boolean =
-    argumentAppExpr.argumentList.isEmpty() &&
-            hasNoLevelArguments(argumentAppExpr) &&
-            argumentAppExpr.atomFieldsAcc != null
-
-fun hasNoLevelArguments(argumentAppExpr: ArendArgumentAppExpr): Boolean {
-    val longNameExpr = argumentAppExpr.longNameExpr
-    // Excludes cases like `f (Path \levels 0 0) 1`, `f (Path \lp \lh) 1`
-    return longNameExpr == null || longNameExpr.levelsExpr == null && longNameExpr.pLevelExpr == null
-}
+    argumentAppExpr.argumentList.isEmpty()
 
 private fun isBinOp(atomFieldsAcc: ArendAtomFieldsAcc): Boolean {
     if (atomFieldsAcc.fieldAccList.isNotEmpty()) {
@@ -226,8 +218,8 @@ fun doUnwrapParens(startElement: PsiElement) {
             spaceRight = startElement.tupleExprList.last().getWhitespace(SpaceDirection.TrailingSpace) + spaceRight
             contents = startElement.containingFile.text.substring(startElement.tupleExprList.first().startOffset, startElement.tupleExprList.last().endOffset)
         }
-        is ArendMaybeAtomLevelExprs -> {
-            contents = startElement.childOfType<ArendAtomLevelExpr>()?.text ?: ""
+        is ArendAtomLevelExpr -> {
+            contents = startElement.levelExpr?.text ?: ""
         }
         else -> {
             contents = unwrapParens(startElement)?.text ?: ""

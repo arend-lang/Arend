@@ -1,0 +1,28 @@
+\import Equiv
+\import Equiv.Path
+\import Function.Meta
+\import Paths
+\import Paths.Meta
+
+\func =-to-QEquiv.{u} {A B : \Set u} (p : A = B) : QEquiv {A} {B} \cowith
+  | f => transport (\lam X => X) p
+  | ret => transport (\lam X => X) (inv p)
+  | ret_f a => inv (transport_*> _ p (inv p) a) *> pmap (transport _ __ a) (*>_inv p)
+  | f_sec b => inv (transport_*> _ (inv p) p b) *> pmap (transport _ __ b) (inv_*> p)
+
+\func QEquiv-to-=.{u} {A B : \Set u} (e : QEquiv {A} {B}) : A = B => path (iso e.f e.ret e.ret_f e.f_sec)
+
+\lemma setUnivalence.{u} {X Y : \Set u} : QEquiv {X = Y} {QEquiv {X} {Y}} =-to-QEquiv QEquiv-to-=
+  => pathEquiv (QEquiv {__} {__}) \lam {A} {B} => \new Retraction {
+       | f => =-to-QEquiv
+       | sec => QEquiv-to-=
+       | f_sec e => QEquiv.equals {A} {B} {_} {e} \lam a => Jl (\lam _ p => =-to-QEquiv p a = coe p a right) idp (QEquiv-to-= e)
+     }
+
+\lemma =-to-QEquiv-functorial.{u} {A B C : \Set u} {p : A = B} {q : B = C}
+  : =-to-QEquiv (p *> q) = =-to-QEquiv p `transQEquiv` =-to-QEquiv q \elim q
+  | idp => QEquiv.equals {A} {B} {_} {transQEquiv (=-to-QEquiv p) (=-to-QEquiv idp)} \lam a => idp
+
+\lemma QEquiv-to-=-functorial.{u} {A B C : \Set u} (e1 : QEquiv {A} {B}) (e2 : QEquiv {B} {C})
+  : QEquiv-to-= e1 *> QEquiv-to-= e2 = QEquiv-to-= (e1 `transQEquiv` e2)
+  => setUnivalence.isInj $ =-to-QEquiv-functorial *> pmap2 transQEquiv (setUnivalence.f_ret e1) (setUnivalence.f_ret e2) *> inv (setUnivalence.f_ret (transQEquiv e1 e2))

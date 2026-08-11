@@ -1,8 +1,6 @@
 package org.arend.core.expr;
 
 import org.arend.core.definition.CallableDefinition;
-import org.arend.core.expr.visitor.GetTypeVisitor;
-import org.arend.core.subst.LevelPair;
 import org.arend.core.subst.Levels;
 import org.arend.ext.core.level.LevelSubstitution;
 import org.jetbrains.annotations.NotNull;
@@ -12,7 +10,6 @@ public abstract class LeveledDefCallExpression extends DefCallExpression {
 
   public LeveledDefCallExpression(CallableDefinition definition, Levels levels) {
     super(definition);
-    assert definition.status().needsTypeChecking() || (definition.getLevelParameters() == null) == (levels instanceof LevelPair);
     myLevels = levels;
   }
 
@@ -32,9 +29,5 @@ public abstract class LeveledDefCallExpression extends DefCallExpression {
 
   public void substSort(LevelSubstitution substitution) {
     myLevels = myLevels.subst(substitution);
-  }
-
-  public Levels getMinimizedLevels() {
-    return GetTypeVisitor.MIN_INSTANCE.minimizeLevels(this);
   }
 }

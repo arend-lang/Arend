@@ -6,6 +6,7 @@ import org.arend.core.context.binding.inference.TypeClassInferenceVariable;
 import org.arend.core.expr.Expression;
 import org.arend.core.expr.FieldCallExpression;
 import org.arend.core.sort.Level;
+import org.arend.core.sort.SortExpression;
 import org.arend.ext.core.level.LevelSubstitution;
 import org.arend.ext.core.ops.CMP;
 import org.arend.term.concrete.Concrete;
@@ -19,10 +20,18 @@ public interface Equations {
   boolean solve(Expression expr1, Expression expr2, Expression type, CMP cmp, Concrete.SourceNode sourceNode);
   boolean solve(InferenceVariable var, Expression expr);
   void solveLowerBounds(InferenceVariable var);
+  /**
+   * Runs the equation solver on the subset of pending equations that mention {@code var}
+   * on either side. Unlike {@link #solveEquations()}, this does not touch unrelated equations,
+   * so it is safe to call mid-elaboration (e.g. from a meta/tactic that wants to make
+   * inference progress on a specific variable without committing other in-flight equations).
+   */
+  void solveEquationsFor(InferenceVariable var);
   boolean addEquation(Level level1, Level level2, CMP cmp, Concrete.SourceNode sourceNode);
+  boolean addEquation(SortExpression sort1, SortExpression sort2, CMP cmp, Concrete.SourceNode sourceNode);
   boolean addVariable(InferenceLevelVariable var);
-  void bindVariables(InferenceLevelVariable pVar, InferenceLevelVariable hVar);
   boolean remove(Equation equation);
+  boolean isUniverseVariable(InferenceVariable var);
   Boolean solveInstance(TypeClassInferenceVariable variable, FieldCallExpression fieldCall, Expression expr);
   void solveEquations();
   LevelEquationsSolver makeLevelEquationsSolver();

@@ -1,9 +1,9 @@
 package org.arend.typechecking.error.local;
 
-import org.arend.core.context.binding.LevelVariable;
 import org.arend.core.expr.UniverseExpression;
 import org.arend.core.sort.Sort;
 import org.arend.ext.concrete.ConcreteSourceNode;
+import org.arend.ext.core.level.ConstLevel;
 import org.arend.ext.error.TypecheckingError;
 import org.arend.ext.prettyprinting.PrettyPrinterConfig;
 import org.arend.ext.prettyprinting.doc.Doc;
@@ -31,7 +31,7 @@ public class LevelMismatchError extends TypecheckingError {
   public LevelMismatchError(TargetKind kind, Sort sort, @Nullable ConcreteSourceNode cause) {
     super("The type of " + kind.representation + " must be a proposition", cause);
     this.kind = kind;
-    actualSort = sort != null ? sort : new Sort(new org.arend.core.sort.Level(LevelVariable.PVAR), org.arend.core.sort.Level.INFINITY);
+    actualSort = sort != null ? sort : new Sort(org.arend.core.sort.Level.INFINITY, ConstLevel.INFINITY);
   }
 
   @Override

@@ -15,7 +15,7 @@
 \import Set
 \import Set.Fin
 \import Set.Fin.Instances
-\import Set.Subset
+\import Set.Set
 \import Topology.CoverSpace
 \import Topology.CoverSpace.Complete
 \import Topology.MetricSpace
@@ -89,7 +89,7 @@
       }
       | closure-trans {D} Dc {E} Ec idp => \case totallyBounded-closure base Dc \with {
         | inP (V,Vc,DV) => \case FinSet.finiteAC (\lam j => totallyBounded-closure base $ Ec (DV j)) \with {
-          | inP W => \have e : QEquiv => SigmaFin.aux {_} {\lam i => (W i).1.len} \in inP
+          | inP W => \have e => SigmaFin.aux {_} {\lam i => (W i).1.len} \in inP
             (\lam k => V (e k).1 ∧ (W (e k).1).1 (e k).2,
              \lam x => \case Vc x \with {
                | inP (_, inP (i,idp), Vx) => \case (W i).2 x \with {
@@ -174,7 +174,7 @@
   => ∃ (C : X.isUniform) ∀ {E : X.isCauchy} (IsLocallyUniform C E)
 
 \lemma locallyUniform-cauchy {X : PreuniformSpace} {C : Set (Set X)} (Cc : isCauchy C) (E : Set (Set X)) (lu : IsLocallyUniform C E) : isCauchy E
-  => cauchy-refine (cauchy-glue Cc {\lam U V => ∃ (W : E) (U ∧ V ⊆ W)} \lam CU => X.makeCauchy $ lu CU) (\lam {_} (inP (U, V, CU, inP (W,EW,p), idp)) => inP (W, EW, p))
+  => cauchy-glue-refine Cc \lam CU => X.makeCauchy (lu CU)
 
 \lemma locallyUniform-cover-char {X : StronglyRegularUniformSpace} {C : Set (Set X)} (Cb : ∀ {U : C} (IsTotallyBoundedSet U)) (Cp : ∀ {U : C} ∃ U) {E : Set (Set X)} (Ec : isCauchy E) : IsLocallyUniform C E
   => \lam {U} CU =>

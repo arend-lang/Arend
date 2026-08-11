@@ -10,8 +10,12 @@ import org.arend.library.classLoader.ClassLoaderDelegate;
 import org.arend.library.classLoader.FileClassLoaderDelegate;
 import org.arend.library.error.LibraryIOError;
 import org.arend.ext.module.ModuleLocation;
+import org.arend.source.FileBinarySource;
+import org.arend.source.GZIPStreamBinarySource;
+import org.arend.source.PersistableBinarySource;
 import org.arend.source.Source;
 import org.arend.util.FileUtils;
+import org.arend.util.Range;
 import org.arend.util.Version;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -28,8 +32,8 @@ public class FileSourceLibrary extends SourceLibrary {
   private final Set<ModulePath> myModules;
   private final ClassLoaderDelegate myClassLoaderDelegate;
 
-  public FileSourceLibrary(String name, boolean isExternalLibrary, long modificationStamp, List<String> dependencies, Version version, String extensionMainClass, @Nullable Set<ModulePath> modules, Path sourceBasePath, Path binaryBasePath, Path testBasePath, ClassLoaderDelegate classLoaderDelegate) {
-    super(name, isExternalLibrary, modificationStamp, dependencies, version, extensionMainClass);
+  public FileSourceLibrary(String name, boolean isExternalLibrary, long modificationStamp, List<String> dependencies, Version version, Range<Version> langVersion, String extensionMainClass, @Nullable Set<ModulePath> modules, Path sourceBasePath, Path binaryBasePath, Path testBasePath, ClassLoaderDelegate classLoaderDelegate) {
+    super(name, isExternalLibrary, modificationStamp, dependencies, version, langVersion, extensionMainClass);
     this.sourceBasePath = sourceBasePath;
     this.binaryBasePath = binaryBasePath;
     this.testBasePath = testBasePath;
@@ -56,7 +60,7 @@ public class FileSourceLibrary extends SourceLibrary {
       LibraryHeader header = LibraryHeader.fromConfig(new YAMLMapper().readValue(configFile.toFile(), LibraryConfig.class), configFile.toString(), errorReporter);
 
       return header == null ? null : new FileSourceLibrary(libName, isExternalLibrary, Files.getLastModifiedTime(configFile).toMillis(),
-          header.dependencies(), header.version(), header.extMainClass(), header.modules(),
+          header.dependencies(), header.version(), header.langVersion(), header.extMainClass(), header.modules(),
           header.sourcesDir() == null ? basePath : basePath.resolve(header.sourcesDir()),
           header.binariesDir() == null ? null : basePath.resolve(header.binariesDir()),
           header.testDir() == null ? null : basePath.resolve(header.testDir()),
@@ -80,6 +84,20 @@ public class FileSourceLibrary extends SourceLibrary {
     List<ModulePath> result = new ArrayList<>();
     FileUtils.getModules(inTests ? testBasePath : sourceBasePath, FileUtils.EXTENSION, result, DummyErrorReporter.INSTANCE);
     return result;
+  }
+
+  @Override
+  public @Nullable PersistableBinarySource getBinarySource(@NotNull ModulePath modulePath) {
+    if (binaryBasePath == null) return null;
+    return new GZIPStreamBinarySource(new FileBinarySource(binaryBasePath, new ModuleLocation(getLibraryName(), ModuleLocation.LocationKind.SOURCE, modulePath)));
+  }
+
+  public @Nullable Path getBinaryBasePath() {
+    return binaryBasePath;
+  }
+
+  public @Nullable Path getSourceBasePath() {
+    return sourceBasePath;
   }
 
   @Override

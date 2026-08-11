@@ -16,21 +16,21 @@
   | isBooleanRing {x : E} : x * x = x
   | <= => BooleanRing.<=
   | <=-refl => isBooleanRing
-  | <=-transitive xy=x yz=y => pmap (`* _) (inv xy=x) *> *-assoc *> pmap (_ *) yz=y *> xy=x
+  | <=-transitive xy=x yz=y => pmap (* _) (inv xy=x) *> *-assoc *> pmap (_ *) yz=y *> xy=x
   | <=-antisymmetric xy=x yx=y => inv xy=x *> *-comm *> yx=y
   | meet => *
-  | meet-left => *-comm *> inv *-assoc *> pmap (`* _) isBooleanRing
+  | meet-left => *-comm *> inv *-assoc *> pmap (* _) isBooleanRing
   | meet-right => *-assoc *> pmap (_ *) isBooleanRing
-  | meet-univ zx=z zy=z => inv *-assoc *> pmap (`* _) zx=z *> zy=z
+  | meet-univ zx=z zy=z => inv *-assoc *> pmap (* _) zx=z *> zy=z
   | join x y => x + y + x * y
   | join-left => ldistr *> pmap2 (+) ldistr (inv *-assoc) *> +-assoc *> pmap2 (+) isBooleanRing (pmap (_ + __ * _) isBooleanRing *> sum2 isBooleanRing) *> zro-right
-  | join-right => ldistr *> pmap2 (__ + _ * __) ldistr *-comm *> +-comm *> inv +-assoc *> pmap2 (+) (pmap (`+ _) (inv *-assoc *> pmap (`* _) isBooleanRing) *> sum2 isBooleanRing) isBooleanRing *> zro-left
+  | join-right => ldistr *> pmap2 (__ + _ * __) ldistr *-comm *> +-comm *> inv +-assoc *> pmap2 (+) (pmap (+ _) (inv *-assoc *> pmap (* _) isBooleanRing) *> sum2 isBooleanRing) isBooleanRing *> zro-left
   | join-univ xz=x yz=y => rdistr *> pmap2 (+) (rdistr *> pmap2 (+) xz=x yz=y) (*-assoc *> pmap (_ *) yz=y)
   | bottom => 0
   | bottom-univ => zro_*-left
-  | ldistr>= => pmap (_ *) (inv $ ldistr *> pmap2 (+) ldistr (pmap (`* _) (inv isBooleanRing) *> *-assoc *> pmap (_ *) (inv *-assoc *> pmap (`* _) *-comm *> *-assoc) *> inv *-assoc)) *> isBooleanRing
+  | ldistr>= => pmap (_ *) (inv $ ldistr *> pmap2 (+) ldistr (pmap (* _) (inv isBooleanRing) *> *-assoc *> pmap (_ *) (inv *-assoc *> pmap (* _) *-comm *> *-assoc) *> inv *-assoc)) *> isBooleanRing
 
-  \default *-comm {x} {y} => inv zro-left *> pmap (`+ _) (cancel-right y $ zro-left *> cancel-left x (inv isBooleanRing *> ldistr *> pmap2 (+) rdistr rdistr *> pmap2 (__ + _ + (_ + __)) isBooleanRing isBooleanRing *> +-assoc) *> inv +-assoc) *> +-assoc *> pmap (_ +) (sum2 isBooleanRing) *> zro-right
+  \default *-comm {x} {y} => inv zro-left *> pmap (+ _) (cancel-right y $ zro-left *> cancel-left x (inv isBooleanRing *> ldistr *> pmap2 (+) rdistr rdistr *> pmap2 (__ + _ + (_ + __)) isBooleanRing isBooleanRing *> +-assoc) *> inv +-assoc) *> +-assoc *> pmap (_ +) (sum2 isBooleanRing) *> zro-right
 
   \lemma double=0 {x : E} : x + x = 0
     => sum2 isBooleanRing
@@ -44,13 +44,13 @@
   \func diff (x y : E) => x + x * y
 
   \lemma diff_<= {x y : E} : diff x y <= x
-    => rdistr *> pmap2 (+) isBooleanRing (*-comm *> inv *-assoc *> pmap (`* y) isBooleanRing)
+    => rdistr *> pmap2 (+) isBooleanRing (*-comm *> inv *-assoc *> pmap (* y) isBooleanRing)
 
   \lemma diff_* {x y : E} : diff x y * y = 0
     => rdistr *> pmap (_ +) (*-assoc *> pmap (x *) isBooleanRing) *> double=0
 
   \lemma diff-univ {x y z : E} (p : x <= y) (q : x * z = 0) : x <= diff y z
-    => ldistr *> pmap2 (+) p (pmap (x *) *-comm *> inv *-assoc *> pmap (`* y) q *> zro_*-left) *> zro-right
+    => ldistr *> pmap2 (+) p (pmap (x *) *-comm *> inv *-assoc *> pmap (* y) q *> zro_*-left) *> zro-right
 
   \lemma diff-mono {x y x' y' : E} (p : x <= x') (q : y' <= y) : diff x y <= diff x' y'
     => diff-univ (diff_<= <=∘ p) $ <=-antisymmetric (meet-monotone <=-refl q <=∘ =_<= diff_*) bottom-univ
@@ -65,10 +65,10 @@
     => inv $ +-assoc *> +-assoc *> pmap (x +) (inv +-assoc *> pmap2 (+) (pmap (_ +) (<=-antisymmetric (meet-univ p <=-refl) meet-right) *> double=0) diff_* *> zro-right) *> zro-right
 
   \lemma split {x y : E} : x = diff x y ∨ x * y
-    => split_<= meet-left *> pmap (`∨ _) (pmap (x +) (inv *-assoc *> pmap (`* y) isBooleanRing))
+    => split_<= meet-left *> pmap (∨ _) (pmap (x +) (inv *-assoc *> pmap (* y) isBooleanRing))
 
   \lemma diff-trans {x y z : E} : diff x z <= diff x y ∨ diff y z
-    => =_<= split <=∘ join-monotone (diff-mono diff_<= <=-refl) (diff-univ meet-right $ *-assoc *> pmap (_ *) *-comm *> inv *-assoc *> pmap (`* y) diff_* *> zro_*-left)
+    => split =<= join-monotone (diff-mono diff_<= <=-refl) (diff-univ meet-right $ *-assoc *> pmap (_ *) *-comm *> inv *-assoc *> pmap (* y) diff_* *> zro_*-left)
 
   \lemma diff_BigJoin {l : Array E} {x : E} : diff (BigJoin l) x = BigJoin \lam j => diff (l j) x \elim l
     | nil => equation.bRing
@@ -85,7 +85,7 @@
   | top-univ => ide-right
   | compl a => a + 1
   | compl-meet => zro_*-right *> inv (ldistr *> pmap2 (+) isBooleanRing ide-right *> double=0)
-  | compl-join => unfold $ ide-left *> pmap2 (+) (inv +-assoc *> pmap (`+ 1) double=0 *> zro-left) (ldistr *> pmap2 (+) isBooleanRing ide-right *> double=0) *> zro-right
+  | compl-join => unfold $ ide-left *> pmap2 (+) (inv +-assoc *> pmap (+ 1) double=0 *> zro-left) (ldistr *> pmap2 (+) isBooleanRing ide-right *> double=0) *> zro-right
   \where {
     \open MeetSemilattice
     \open JoinSemilattice

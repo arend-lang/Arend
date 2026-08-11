@@ -11,6 +11,7 @@ import org.arend.library.error.LibraryIOError;
 import org.arend.ext.module.ModuleLocation;
 import org.arend.source.Source;
 import org.arend.util.FileUtils;
+import org.arend.util.Range;
 import org.arend.util.Version;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -30,8 +31,8 @@ public class ZipSourceLibrary extends SourceLibrary {
   private final ClassLoaderDelegate myClassLoaderDelegate;
   private final Set<ModulePath> myModules;
 
-  public ZipSourceLibrary(String name, List<String> dependencies, Version version, String extensionMainClass, File zipFile, String sourceDir, String extDir, Set<ModulePath> modules) {
-    super(name, true, -1, dependencies, version, extensionMainClass);
+  public ZipSourceLibrary(String name, List<String> dependencies, Version version, Range<Version> langVersion, String extensionMainClass, File zipFile, String sourceDir, String extDir, Set<ModulePath> modules) {
+    super(name, true, -1, dependencies, version, langVersion, extensionMainClass);
     myFile = zipFile;
     mySourcesDir = sourceDir;
     myClassLoaderDelegate = extDir == null ? null : new ZipClassLoaderDelegate(zipFile, extDir);
@@ -68,7 +69,7 @@ public class ZipSourceLibrary extends SourceLibrary {
           .filter(FileUtils::isCorrectModulePath)
           .collect(Collectors.toSet());
 
-      return new ZipSourceLibrary(libName, header.dependencies(), header.version(), header.extMainClass(), file, sourcesDir, header.extDir(), modules);
+      return new ZipSourceLibrary(libName, header.dependencies(), header.version(), header.langVersion(), header.extMainClass(), file, sourcesDir, header.extDir(), modules);
     } catch (IOException e) {
       errorReporter.report(new LibraryIOError(fileName, "Cannot read file", e.getLocalizedMessage()));
       return null;

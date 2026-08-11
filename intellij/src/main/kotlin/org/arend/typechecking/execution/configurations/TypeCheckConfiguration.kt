@@ -1,5 +1,6 @@
 package org.arend.typechecking.execution.configurations
 
+import com.intellij.execution.ExecutionException
 import com.intellij.execution.Executor
 import com.intellij.execution.configurations.*
 import com.intellij.execution.jar.JarApplicationConfiguration
@@ -20,6 +21,7 @@ import org.arend.typechecking.execution.TypeCheckRunConfigurationEditor
 import org.arend.util.arendModules
 import org.arend.util.findLibrary
 import org.jdom.Element
+import java.io.File
 
 class TypeCheckConfiguration(
         project: Project,
@@ -58,6 +60,9 @@ class TypeCheckConfiguration(
 
     override fun getState(executor: Executor, environment: ExecutionEnvironment): RunProfileState {
         if (environment.runnerSettings is DebuggingRunnerData) {
+            if (arendSettings.pathToArendJar.isEmpty() || !File(arendSettings.pathToArendJar).exists()) {
+                throw ExecutionException("Path to Arend jar is not configured. Please set it in Settings | Languages & Frameworks | Arend.")
+            }
             val libraries = if (arendTypeCheckCommand.library.isEmpty()) project.service<ArendServerService>().server.libraries else listOf(arendTypeCheckCommand.library)
             val libPaths = libraries.mapNotNull { libName -> project.findLibrary(libName)?.localFSRoot?.let { it.path } }
             val projectPath = if (libPaths.isEmpty()) project.basePath else libPaths.joinToString(" ")
@@ -66,7 +71,7 @@ class TypeCheckConfiguration(
             jarConfiguration.jarPath = arendSettings.pathToArendJar
             jarConfiguration.programParameters = projectPath +
                     (if (arendTypeCheckCommand.modulePath.isEmpty()) ""
-                    else ("=" + arendTypeCheckCommand.modulePath +
+                    else (" " + arendTypeCheckCommand.modulePath +
                             if (arendTypeCheckCommand.definitionFullName.isEmpty()) ""
                             else ":" + arendTypeCheckCommand.definitionFullName)) + " -L " + librariesRoot
             val jarAppState = jarConfiguration.getState(executor, environment)

@@ -5,14 +5,15 @@ import com.intellij.codeInsight.editorActions.TypedHandlerDelegate
 import com.intellij.ide.AppLifecycleListener
 import com.intellij.openapi.actionSystem.ActionManager
 import com.intellij.openapi.application.ApplicationManager
+import com.intellij.openapi.application.runReadAction
 import com.intellij.openapi.components.service
 import com.intellij.openapi.editor.EditorFactory
 import com.intellij.openapi.module.Module
 import com.intellij.openapi.progress.ProgressIndicator
 import com.intellij.openapi.project.*
 import com.intellij.openapi.startup.ProjectActivity
+import org.arend.educational.ArendConfigurator
 import org.arend.module.AREND_LIB
-import org.arend.module.ArendModuleType
 import org.arend.module.ModuleSynchronizer
 import org.arend.module.checkForUpdates
 import org.arend.module.config.ArendModuleConfigService
@@ -21,10 +22,13 @@ import org.arend.server.ArendServerListener
 import org.arend.server.ArendServerService
 import org.arend.util.ArendBundle
 import org.arend.util.arendModules
+import org.arend.util.orderModules
 import org.arend.util.findExternalLibrary
 import org.arend.util.register
+import org.arend.util.registerStudyLibrary
 import org.arend.util.unregister
 import org.arend.yaml.YAMLFileListener
+import com.jetbrains.edu.learning.StudyTaskManager
 
 
 class ArendStartupActivity : ProjectActivity {
@@ -33,10 +37,8 @@ class ArendStartupActivity : ProjectActivity {
 
         project.messageBus.connect(service).subscribe(ModuleListener.TOPIC, object : ModuleListener {
             override fun modulesAdded(project: Project, modules: List<Module>) {
-                for (module in modules) {
-                    if (ArendModuleType.has(module)) {
-                        module.register(modules)
-                    }
+                for (module in orderModules(modules)) {
+                    module.register(modules)
                 }
             }
 
@@ -63,14 +65,19 @@ class ArendStartupActivity : ProjectActivity {
             .queueTask(object : DumbModeTask() {
                 override fun performInDumbMode(indicator: ProgressIndicator) {
                     ApplicationManager.getApplication().executeOnPooledThread {
-                        val modules = project.arendModules
+                        val modules = orderModules(project.arendModules)
                         indicator.text = ArendBundle.message("arend.startup.loading.arend.modules")
                         indicator.isIndeterminate = false
                         indicator.fraction = 0.0
+                        var frac = 0.0
                         val progressFraction = 1.0 / modules.size.toDouble()
                         for (module in modules) {
                             module.register()
-                            indicator.fraction += progressFraction
+                            frac += progressFraction
+                            indicator.fraction = frac
+                        }
+                        if (runReadAction { StudyTaskManager.getInstance(project).course } != null) {
+                            project.registerStudyLibrary()
                         }
                     }
                 }
@@ -79,6 +86,7 @@ class ArendStartupActivity : ProjectActivity {
         ApplicationManager.getApplication().messageBus.connect(service)
             .subscribe<AppLifecycleListener>(AppLifecycleListener.TOPIC, object : AppLifecycleListener {
                 override fun appWillBeClosed(isRestart: Boolean) {
+                    if (project.isDisposed) return
                     for (module in project.arendModules) {
                         ArendModuleConfigService.getInstance(module)?.saveSettings()
                     }
@@ -90,6 +98,11 @@ class ArendStartupActivity : ProjectActivity {
         EditorFactory.getInstance().eventMulticaster.addDocumentListener(yamlFileListener, project)
 
         ModuleSynchronizer(project).install()
+        ArendConfigurator.registerArendLanguage()
+
+        if (runReadAction { StudyTaskManager.getInstance(project).course } != null) {
+            project.registerStudyLibrary()
+        }
 
         service.server.addListener(object : ArendServerListener {
             override fun onLibraryUpdated(libraryName: String) {

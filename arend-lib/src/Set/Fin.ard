@@ -1,17 +1,16 @@
+\import Algebra.Meta
 \import Algebra.Monoid
 \import Algebra.Ordered
 \import Arith.Fin.Order
 \import Arith.Nat \using (pred \as pred')
 \import Data.Bool
-\import Data.Fin (fpred, fsuc, fsuc/=, nat_fin_=)
+\import Data.Fin
 \import Data.Or
 \import Equiv
-\import Equiv.Univalence
 \import Function
 \import Function.Meta ($)
 \import Logic.Unique
 \import Logic
-\import Logic.Classical
 \import Logic.Meta
 \import Meta
 \import Order.Biordered
@@ -22,16 +21,14 @@
 \import Set
 \import Set.Fin.KFin
 
-\class FinSet \extends KFinSet, Choice, DecSet {
-  | finEq : TruncP (Equiv {Fin finCard} {E})
-  | finSurj => TruncP.map finEq \lam (e : Equiv {Fin finCard} {E}) => (e, isSurjMap {ESEquiv.fromEquiv e})
-
-  | choice {B} => \case finEq \with {
-    | inP e => (rewrite (Equiv-to-= e) in finiteAC {finCard}) {B}
+\class FinSet \extends KFinSet, DecSet {
+  | finEq : TruncP (QEquiv {Fin card} {E})
+  | finSurj => \case finEq \with {
+    | inP e => inP (e, e.isSurj)
   }
 
   \default decideEq x y => \case finEq \with {
-    | inP (e : Equiv) => \case (FinOrder _).decideEq (e.ret x) (e.ret y) \with {
+    | inP e => \case (FinOrder _).decideEq (e.ret x) (e.ret y) \with {
       | yes q => yes ((symQEquiv e).isInj q)
       | no q => no \lam p => q (pmap e.ret p)
     }
@@ -49,10 +46,26 @@
     | yes x=y => x=y
     | no x/=y => absurd (x//=y x/=y)
   }
+
+  \lemma choice {B : E -> \Type} (p : \Pi (x : E) -> TruncP (B x)) : TruncP (\Pi (x : E) -> B x)
+    => \case finEq \with {
+      | inP e => \case finiteAC (\lam j => p (e j)) \with {
+        | inP h => inP \lam x => transport B (e.f_ret x) $ h (e.ret x)
+      }
+    }
+
+  \lemma liftDepSurj {A B : E -> \Type} {f : \Pi {x : E} -> A x -> B x} (isSur : \Pi {x : E} (y : B x) -> ∃ (a : A x) (f a = y)) (g : \Pi (x : E) -> B x) : ∃ (g' : \Pi (x : E) -> A x) ∀ x (f (g' x) = g x)
+    => TruncP.map (choice (\lam x => isSur (g x))) (\lam h => (\lam x => (h x).1, \lam x => (h x).2))
+
+  \lemma liftSurj {A B : \Type} {f : A -> B} (isSur : IsSurj f) (g : E -> B) : ∃ (g' : E -> A) ∀ x (f (g' x) = g x)
+    => liftDepSurj (\lam {_} => isSur) g
+
+  \lemma splitSurj {A : \Type} {f : A -> E} (isSur : IsSurj f) : IsSplitSurj f
+    => liftSurj isSur id
 } \where {
     \use \level levelProp {A : \Set} (X Y : FinSet A) : X = Y
       => ext (\case X.finEq, Y.finEq \with {
-        | inP Xcard=A, inP Ycard=A => FinCardBij (Xcard=A `transEquiv` symQEquiv Ycard=A)
+        | inP Xcard=A, inP Ycard=A => FinCardBij (Xcard=A `transQEquiv` symQEquiv Ycard=A)
       })
 
   \lemma ||-finiteAC {n : Nat} {A : \Type} {B : Fin n -> \Type} (f : \Pi (i : Fin n) -> A || B i) : A || (\Pi (i : Fin n) -> B i) \elim n
@@ -89,7 +102,7 @@
         }
       }
 
-  \func searchFin-equiv {B : \Type} {n : Nat} (e : Equiv {Fin n} {B}) (A : B -> \Prop) (d : \Pi (b : B) -> Dec (A b))
+  \func searchFin-equiv {B : \Type} {n : Nat} (e : QEquiv {Fin n} {B}) (A : B -> \Prop) (d : \Pi (b : B) -> Dec (A b))
     : Or (\Sigma (b : B) (A b)) (\Pi (b : B) -> Not (A b))
     => \case searchFin (\lam j => A (e j)) (\lam j => d (e j)) \with {
          | inl p => inl (e p.1, p.2)
@@ -112,11 +125,8 @@
     \lemma suc-isInj {n : Nat} (x y : Fin n) (p : suc x = suc y) : x = y \elim n
       | suc n => pmap pred p
 
-    \lemma FinCardBij {n m : Nat} (p : Equiv {Fin n} {Fin m}) : n = m =>
-      \have | e  : ESEquiv => p
-            | e' : ESEquiv => ESEquiv.fromEquiv (symQEquiv p)
-      \in <=-antisymmetric (FinCardInj e  (\lam {x} {y} => sec {e.isEmb  x y}))
-                           (FinCardInj e' (\lam {x} {y} => sec {e'.isEmb x y}))
+    \lemma FinCardBij {n m : Nat} (p : QEquiv {Fin n} {Fin m}) : n = m
+      => <=-antisymmetric (FinCardInj p p.isInj) (FinCardInj p.ret (symQEquiv p).isInj)
 
     \lemma FinCardInj {n m : Nat} (f : Fin n -> Fin m) (f-inj : IsInj f) : n <= m \elim n, m
       | 0, _ => zero<=_
@@ -178,17 +188,22 @@
       | suc n, suc x0, suc x, suc<suc p => pmap suc (skip-right p) *> suc_pred (/=-sym $ NatSemiring.<_/= $ zero<=_ <∘r p)
 
     \lemma fromArray {A : \Set} (l : Array A) (p : \Pi (a : A) -> ∃ (i : Fin l.len) (l i = a)) (q : \Pi {i j : Fin l.len} -> l i = l j -> i = j) : FinSet A l.len \cowith
-      | finEq => inP (Equiv.fromInjSurj l q p)
+      | finEq => IsEquiv.fromInjSurj q p
   }
 
-\lemma finCard_Equiv {A B : FinSet} (e : Equiv {A} {B}) : A.finCard = B.finCard
+\lemma card_Equiv {A B : FinSet} (e : QEquiv {A} {B}) : A.card = B.card
   => \case A.finEq, B.finEq \with {
-    | inP e1, inP e2 => FinSet.FinCardBij $ e1 `transEquiv` e `transEquiv` symQEquiv e2
+    | inP e1, inP e2 => FinSet.FinCardBij $ e1 `transQEquiv` e `transQEquiv` symQEquiv e2
   }
 
-\lemma finCard_inj {A B : FinSet} (f : A -> B) (inj : IsInj f) : A.finCard <= B.finCard
+\lemma card_inj {A B : FinSet} (f : A -> B) (inj : IsInj f) : A.card <= B.card
   => \case A.finEq, B.finEq \with {
-    | inP (e1 : Equiv), inP (e2 : Equiv) => FinSet.FinCardInj (\lam x => e2.ret (f (e1 x))) \lam p => e1.isInj $ inj $ Equiv.isInj {symQEquiv e2} p
+    | inP e1, inP e2 => FinSet.FinCardInj (\lam x => e2.ret (f (e1 x))) \lam p => e1.isInj $ inj $ (symQEquiv e2).isInj p
+  }
+
+\lemma FinSet-transport (A : FinSet) {B : \Set} (e : QEquiv {A} {B}) : FinSet B A.card \cowith
+  | finEq => \case A.finEq \with {
+    | inP e' => inP (transQEquiv e' e)
   }
 
 \lemma transport_zero {n m : Nat} (p : n = m) : transport Fin (pmap suc p) 0 = 0 \elim p
@@ -211,20 +226,24 @@
       | suc n, 0 => idp
       | suc n, suc i => pmap suc char
 
-    \lemma char_nat {n : Nat} (i : Nat) : fin-inc {suc i} {n} i = {Nat} i
+    \lemma char_nat {n : Nat} (i : Nat) : fin-inc {suc i} {n} (i Nat.mod suc i) = {Nat} i
       => char *> mod_< id<suc
   }
 
 \func fin-inc-right {n m : Nat} (i : Fin m) : Fin (n + m)
   => fin-inc_<= (<=_+ zero<=_ <=-refl) i
   \where {
-    \lemma char_nat {n : Nat} (i : Nat) : fin-inc-right {n} {suc i} i = {Nat} i
+    \lemma char_nat {n : Nat} (i : Nat) : fin-inc-right {n} {suc i} (i Nat.mod suc i) = {Nat} i
       => toFin=id *> mod_< id<suc
   }
 
 \func fin-raise {n k : Nat} (i : Fin n) : Fin (k + n) \elim k
   | 0 => i
   | suc k => suc (fin-raise i)
+  \where
+    \lemma char {n k : Nat} {i : Fin n} : fin-raise {n} {k} i = {Nat} k Nat.+ i \elim k
+      | 0 => idp
+      | suc k => pmap suc char
 
 \func sface {n : Nat} (k : Fin (suc n)) (i : Fin n) : Fin (suc n) \elim n, k, i
   | suc n, 0, i => suc i
@@ -244,7 +263,7 @@
   | suc n, suc k, suc i, suc i' => pmap fsuc $ sface-inj $ pmap (fpred k) p
 
 \instance EmptyFin : FinSet Empty
-  | finCard => 0
+  | card => 0
   | finEq => inP \new QEquiv {
     | f => \case __
     | ret => \case __
@@ -253,7 +272,7 @@
   }
 
 \instance UnitFin : FinSet (\Sigma)
-  | finCard => 1
+  | card => 1
   | finEq => inP \new QEquiv {
     | f _ => ()
     | ret _ => 0
@@ -280,12 +299,12 @@
       | f_sec => cases __ idp
 
 \instance FinFin (n : Nat) : FinSet (Fin n)
-  | finCard => n
+  | card => n
   | finEq => inP idEquiv
   | decideEq => decideEq
 
 \func DecFin {P : \Prop} (d : Dec P) : FinSet P \cowith
-  | finCard => Dec.rec (\lam _ => 1) (\lam _ => 0) d
+  | card => Dec.rec (\lam _ => 1) (\lam _ => 0) d
   | finEq => inP $ \case \elim d \with {
     | yes e => \new QEquiv {
                  | f _ => e
@@ -303,7 +322,7 @@
 
 \func FinDec {A : FinSet} (B : A -> Decide) : Decide (\Pi (a : A) -> B a) \cowith
   | decide => \case A.finEq \with {
-    | inP (e : Equiv) => \case fin-dec (\lam j => B (e j)) \with {
+    | inP e => \case fin-dec (\lam j => B (e j)) \with {
       | yes p => yes \lam a => transport (B __) (e.f_ret a) $ p (e.ret a)
       | no q => no \lam f => q \lam j => f (e j)
     }
@@ -322,9 +341,9 @@
   }
 
 \instance OrFin (S T : FinSet) : FinSet (Or S T)
-  | finCard => S.finCard + T.finCard
+  | card => S.card + T.card
   | finEq => \case S.finEq, T.finEq \with {
-    | inP Se, inP Te => inP $ =-to-Equiv $ QEquiv-to-= (aux {S.finCard} {T.finCard}) *> pmap2 Or (Equiv-to-= Se) (Equiv-to-= Te)
+    | inP Se, inP Te => inP $ transQEquiv (aux {S.card} {T.card}) (Or.Or_QEquiv Se Te)
   }
   \where {
     \func aux {n m : Nat} : QEquiv {Fin (n + m)} {Or (Fin n) (Fin m)} \cowith
@@ -362,3 +381,45 @@
   }
 
 \func finSet {A : FinSet} => A
+
+\lemma finiteDependentChoice {A : \Type} (R : A -> A -> \Type) (a0 : A) (step : \Pi (a : A) -> ∃ (b : A) (R a b)) (n : Nat)
+  : ∃ (f : Fin (suc n) -> A) (f 0 = a0) (\Pi (i : Fin n) -> R (f i) (f (suc i)))
+  \elim n
+  | 0 => inP (\lam _ => a0, idp, \case __)
+  | suc n => \case finiteDependentChoice R a0 step n \with {
+    | inP (f, f0=a0, chain) => \case step (f (finLast n)) \with {
+      | inP (b, Rfnb) => inP (extendSeq f b, extendSeq-0 f b *> f0=a0, extendChain R f b chain Rfnb)
+    }
+  }
+  \where {
+    \func extendSeq {A : \Type} {n : Nat} (f : Fin (suc n) -> A) (b : A) (i : Fin (suc (suc n))) : A \elim n, i
+      | n, 0 => f 0
+      | 0, 1 => b
+      | suc n, suc i => extendSeq (\lam j => f (suc j)) b i
+
+    \func extendSeq-0 {A : \Type} {n : Nat} (f : Fin (suc n) -> A) (b : A) : extendSeq f b 0 = f 0 \elim n
+      | 0 => idp
+      | suc n => idp
+
+    \func extendSeq-last {A : \Type} {n : Nat} (f : Fin (suc n) -> A) (b : A) : extendSeq f b (finLast (suc n)) = b \elim n
+      | 0 => idp
+      | suc n => extendSeq-last (\lam j => f (suc j)) b
+
+    \func extendSeq-agree {A : \Type} {n : Nat} (f : Fin (suc n) -> A) (b : A) (i : Fin (suc n))
+      : extendSeq f b i = f i \elim n, i
+      | 0, 0 => idp
+      | suc n, 0 => idp
+      | suc n, suc i => extendSeq-agree (\lam j => f (suc j)) b i
+
+    \func extendChain {A : \Type} (R : A -> A -> \Type) {n : Nat}
+                      (f : Fin (suc n) -> A) (b : A)
+                      (chain : \Pi (i : Fin n) -> R (f i) (f (suc i)))
+                      (Rfnb : R (f (finLast n)) b)
+                      (i : Fin (suc n)) : R (extendSeq f b i) (extendSeq f b (suc i)) \elim n, i
+      | 0, 0 => transport2 R (inv (extendSeq-0 f b)) (inv (extendSeq-last f b)) Rfnb
+      | suc n, 0 =>
+        \have | p1 : extendSeq f b 0 = f 0 => extendSeq-0 f b
+              | p2 : extendSeq f b 1 = f 1 => extendSeq-agree f b (fsuc fzero)
+        \in transport2 R (inv p1) (inv p2) (chain 0)
+      | suc n, suc i => extendChain R (\lam j => f (suc j)) b (\lam j => chain (suc j)) Rfnb i
+  }

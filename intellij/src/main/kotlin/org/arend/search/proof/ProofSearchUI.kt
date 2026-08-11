@@ -14,6 +14,7 @@ import com.intellij.icons.AllIcons
 import com.intellij.ide.actions.BigPopupUI
 import com.intellij.openapi.actionSystem.*
 import com.intellij.openapi.actionSystem.toolbarLayout.ToolbarLayoutStrategy
+import com.intellij.openapi.application.WriteIntentReadAction
 import com.intellij.openapi.application.invokeAndWaitIfNeeded
 import com.intellij.openapi.application.invokeLater
 import com.intellij.openapi.application.runInEdt
@@ -49,10 +50,12 @@ import com.intellij.ui.components.JBList
 import com.intellij.ui.components.fields.ExtendableTextField
 import com.intellij.ui.scale.JBUIScale
 import com.intellij.util.Alarm
+import com.intellij.util.SlowOperations
 import com.intellij.util.concurrency.annotations.RequiresEdt
 import com.intellij.util.ui.*
 import net.miginfocom.swing.MigLayout
 import org.arend.ArendIcons
+import org.arend.proof.ProofSearchQuery
 import org.arend.psi.ext.ArendDefinition
 import org.arend.psi.ArendFile
 import org.arend.psi.ext.ArendCompositeElement
@@ -260,14 +263,15 @@ class ProofSearchUI(private val project: Project, private val caret: Caret?) : B
                         .filter { it.hasSuffixGroupStructure(modules.subList(0, modules.size - 1)) }
                     container.addAll(groups.flatMap { group -> group.statements.mapNotNull { (it.group as? ReferableBase<*>)?.takeIf { ref -> ref is ArendDefinition && matcher.prefixMatches(ref.refName) } } })
                 } else {
-                    StubIndex.getInstance().processAllKeys(ArendDefinitionIndex.KEY, project) { name ->
+                    val keys = StubIndex.getInstance().getAllKeys(ArendDefinitionIndex.KEY, project)
+                    for (name in keys) {
+                        if (!matcher.prefixMatches(name)) continue
                         StubIndex.getInstance().processElements(ArendDefinitionIndex.KEY, name, project, null, PsiReferable::class.java) {
-                            if (it is ReferableBase<*> && matcher.prefixMatches(name)) {
+                            if (it is ReferableBase<*>) {
                                 container.add(it)
                             }
                             true
                         }
-                        true
                     }
                 }
                 container
@@ -326,18 +330,19 @@ class ProofSearchUI(private val project: Project, private val caret: Caret?) : B
             tryHighlightKeyword(i, text, markupModel, "\\and")
             tryHighlightKeyword(i, text, markupModel, "->")
         }
-        val parsingResult = ProofSearchQuery.fromString(text) as? ParsingResult.Error<ProofSearchQuery>
+        val parsingResult = ProofSearchQuery.fromString(text) as? ProofSearchQuery.ParsingResult.Error<ProofSearchQuery>
         hasErrors = parsingResult != null
         if (parsingResult == null) return true
-        val (msg, range) = parsingResult
+        val msg = parsingResult.message
+        val range = parsingResult.range
         this.progressIndicator?.cancel()
         val info = HighlightInfo.newHighlightInfo(HighlightInfoType.ERROR)
             .descriptionAndTooltip(msg)
             .textAttributes(CodeInsightColors.ERRORS_ATTRIBUTES)
-            .range(range.first, range.last)
+            .range(range.proj1, range.proj2)
             .create()
 
-        UpdateHighlightersUtil.setHighlightersToEditor(project, editor.document, range.first, range.last, listOf(info), null, -1)
+        UpdateHighlightersUtil.setHighlightersToEditor(project, editor.document, range.proj1, range.proj2, listOf(info), null, -1)
         if (text.isNotEmpty()) {
             adjustLoadingIcon(LoadingIconState.SYNTAX_ERROR, msg)
         } else {
@@ -410,7 +415,9 @@ class ProofSearchUI(private val project: Project, private val caret: Caret?) : B
                 val element = model.getElementAt(indices[0])
                 if (element is DefElement) {
                     close()
-                    insertDefinition(project, element.entry.def, caret)
+                    SlowOperations.allowSlowOperations("arend.proof.search.insert").use {
+                        insertDefinition(project, element.entry.def, caret)
+                    }
                 }
             }
         }.registerCustomShortcutSet(CommonShortcuts.getCtrlEnter(), this, this)
@@ -447,26 +454,36 @@ class ProofSearchUI(private val project: Project, private val caret: Caret?) : B
         }
     }
 
-    private fun onEntrySelected(element: ProofSearchUIEntry) = when (element) {
-        is DefElement -> {
-            previewAction.performForContext({
-                when (it) {
-                    CommonDataKeys.PROJECT.name -> project
-                    CommonDataKeys.PSI_ELEMENT.name -> element.entry.def
-                    else -> null
+    // Reached both from the mouse listener above — a raw AWT handler, which no longer holds the
+    // write-intent lock — and from the Enter action, so take the lock here rather than per call site.
+    private fun onEntrySelected(element: ProofSearchUIEntry) {
+        WriteIntentReadAction.run {
+            when (element) {
+                is DefElement -> {
+                    SlowOperations.allowSlowOperations("arend.proof.search.preview").use {
+                        previewAction.performForContext({
+                            when (it) {
+                                CommonDataKeys.PROJECT.name -> project
+                                CommonDataKeys.PSI_ELEMENT.name -> element.entry.def
+                                else -> null
+                            }
+                        }, false)
+                    }
                 }
-            }, false)
-        }
-        is MoreElement -> {
-            model.remove(element)
-            runProofSearch(element.alreadyProcessed, element.sequence)
+                is MoreElement -> {
+                    model.remove(element)
+                    runProofSearch(element.alreadyProcessed, element.sequence)
+                }
+            }
         }
     }
 
     private fun goToDeclaration(element: ProofSearchUIEntry) = when (element) {
         is DefElement -> {
             close()
-            element.entry.def.navigationElement.navigate()
+            SlowOperations.allowSlowOperations("arend.proof.search.goto").use {
+                element.entry.def.navigationElement.navigate()
+            }
         }
         else -> Unit
     }

@@ -4,32 +4,29 @@
 \import Category
 \import Category.Limit
 \import Equiv (QEquiv)
-\import Equiv.Univalence (QEquiv-to-=)
 \import Function.Meta
 \import Paths
 \import Paths.Meta
 
-\class PreAdditivePrecat \extends Precat{
-  | AbHom {X Y : Ob} : AbGroup(Hom X Y)
-  | l-bilinear {X Y Z : Ob}{g h : Hom X Y}{f : Hom Y Z} : (g AbHom.+ h) >> f = g >> f AbHom.+  h >> f
-  | r-bilinear {X Y Z : Ob}{g h : Hom Y Z}{f : Hom X Y} : f >> (g AbHom.+ h) = f >> g AbHom.+  f >> h
-}
+\class PreAdditivePrecat \extends Precat
+  | AbHom {X Y : Ob} : AbGroup (Hom X Y)
+  | l-bilinear {X Y Z : Ob} {g h : Hom X Y} {f : Hom Y Z} : (g AbHom.+ h) >> f = g >> f AbHom.+ h >> f
+  | r-bilinear {X Y Z : Ob} {g h : Hom Y Z} {f : Hom X Y} : f >> (g AbHom.+ h) = f >> g AbHom.+ f >> h
 
-\func Ring=OneObjectPreAdd : PreAdditivePrecat (\Sigma) = Ring => QEquiv-to-= \new QEquiv {
-  | f => PreAdditiveCategory-OneObject
-  | ret => Ring_toCat
+\func Ring=OneObjectPreAdd.{u} : QEquiv {PreAdditivePrecat.{u} (\Sigma)} {Ring.{u}} \cowith
+  | f X => PreAdditiveCategory-OneObject X
+  | ret R => Ring_toCat R
   | ret_f _ => idp
   | f_sec _ => exts (idp, idp, \lam _ _ => idp, \lam _ _ => idp, \lam _ => idp, idp, \lam n => natCoefCoincide)
-}
   \where {
-    \func natCoefCoincide {b : Ring}{n : Nat} : natCoef {PreAdditiveCategory-OneObject (Ring_toCat b)} n = b.natCoef n \elim n
+    \func natCoefCoincide {b : Ring} {n : Nat} : natCoef {PreAdditiveCategory-OneObject (Ring_toCat b)} n = b.natCoef n \elim n
       | 0 => rewrite b.natCoefZero idp
       | suc n => rewrite (b.natCoefSuc, inv $ natCoefCoincide {b} {n} ) idp
 
     {- | PreAdditiveCategory with one object is a ring -}
     \func PreAdditiveCategory-OneObject (X : PreAdditivePrecat (\Sigma)) : Ring (X.Hom () ()) \cowith
-      | AbGroup => X.AbHom {()}{()}
-      | ide => X.id ()
+      | AbGroup => X.AbHom {()} {()}
+      | ide => X.id
       | * => X.∘
       | ide-left => X.id-left
       | ide-right => X.id-right
@@ -38,8 +35,8 @@
       | rdistr => X.r-bilinear
 
     \func Ring_toCat (R : Ring) : PreAdditivePrecat (\Sigma) \cowith
-      | Hom () () => R
-      | id () => R.ide
+      | Hom _ _ => R
+      | id => R.ide
       | o => R.*
       | id-left => R.ide-left
       | id-right => R.ide-right

@@ -1,0 +1,19 @@
+\import Algebra.Group
+\import Algebra.Group.GSet
+\import Algebra.Group.GSet.EquivariantMap
+\import Algebra.Group.Representation
+\import Algebra.Module.LinearMap
+\import Algebra.Ring
+
+\record InterwiningMap \extends LinearMap, EquivariantMap {
+  \override Dom : LinRepres R G
+  \override Cod : LinRepres R G
+} \where {
+  \protected \func id {R : Ring} {G : Group} {X : LinRepres R G} : InterwiningMap X X \cowith
+    | LinearMap => LinearMap.id
+    | func-** => idp
+
+  \protected \func \fixl 8 compose \alias \infixl 8 ∘ {R : Ring} {G : Group} {X Y Z : LinRepres R G} (g : InterwiningMap Y Z) (f : InterwiningMap X Y) : InterwiningMap X Z \cowith
+    | LinearMap => g LinearMap.∘ f
+    | EquivariantMap => g EquivariantMap.∘ f
+}

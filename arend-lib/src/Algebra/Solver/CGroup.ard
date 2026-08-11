@@ -66,15 +66,15 @@
       | t :* s => mkArray \lam j => normalize t j + normalize s j
 
     \lemma terms-equality (env : Array G) (t s : Term env.len) (p : interpretNF env (normalize (t :* :inverse s)) = G.ide) : interpret env t = interpret env s
-      => inv (*-assoc *> pmap (_ *) inverse-left *> G.ide-right) *> pmap (`* _) (inv (interpretNF-consistent (t :* :inverse s)) *> p) *> G.ide-left
+      => inv (*-assoc *> pmap (_ *) inverse-left *> G.ide-right) *> pmap (* _) (inv (interpretNF-consistent (t :* :inverse s)) *> p) *> G.ide-left
 
     \lemma terms-equality-conv (env : Array G) (t s : Term env.len) (p : interpret env t = interpret env s) : interpretNF env (normalize (t :* :inverse s)) = G.ide
-      => interpretNF-consistent (t :* :inverse s) *> pmap (`* _) p *> inverse-right
+      => interpretNF-consistent (t :* :inverse s) *> pmap (* _) p *> inverse-right
 
     \lemma apply-axioms' {n : Nat} (env : Array G n) (l : Array (\Sigma Int (t s : Term n) (interpret env t = interpret env s)))
       : interpretNF' (mkArray \lam j => IntRing.BigSum \lam i => (l i).1 * (normalize (l i).2 j - normalize (l i).3 j)) env = G.ide
       => interpretNF_BigSum (\lam i => mkArray \lam j => (l i).1 * (normalize (l i).2 j - normalize (l i).3 j)) *> G.BigProd_ide \lam i => later $
-          interpretNF-coef *> pmap (G.ipow __ _) (interpretNF_+ {G} {n} *> pmap (_ *) interpretNF_negative *> pmap (`* _) (interpretNF-consistent' *> (l i).4 *> inv interpretNF-consistent') *> inverse-right) *> G.ipow_ide
+          interpretNF-coef *> pmap (G.ipow __ _) (interpretNF_+ {G} {n} *> pmap (_ *) interpretNF_negative *> pmap (* _) (interpretNF-consistent' *> (l i).4 *> inv interpretNF-consistent') *> inverse-right) *> G.ipow_ide
       \where {
         \lemma interpretNF_+ {n : Nat} {env : Array G n} {l l' : Array Int n} : interpretNF' (mkArray \lam j => l j + l' j) env = interpretNF' l env * interpretNF' l' env
           => G.BigProd-ext (\lam j => G.ipow_+) *> G.BigProd_*
@@ -92,7 +92,7 @@
 
     \lemma apply-axioms {n : Nat} (env : Array G n) (l : Array (\Sigma Int (t s : Term n) (interpret env t = interpret env s))) (right : Array Int n)
       : interpretNF env (mkArray \lam j => IntRing.BigSum (\lam i => (l i).1 * (normalize (l i).2 j - normalize (l i).3 j)) + right j) = interpretNF env right
-      => interpretNF-correct (mkArray _) *> apply-axioms'.interpretNF_+ *> pmap (`* _) (apply-axioms' env l) *> ide-left *> inv (interpretNF-correct right)
+      => interpretNF-correct (mkArray _) *> apply-axioms'.interpretNF_+ *> pmap (* _) (apply-axioms' env l) *> ide-left *> inv (interpretNF-correct right)
   }
 
 \func AbGroupSolverModel (A : AbGroup) : SolverModel A

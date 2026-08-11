@@ -30,7 +30,7 @@ public class CorrespondedSubExprTest extends TypeCheckingTestCase {
   @Test
   public void multiParamLam() {
     var xyx = (Concrete.LamExpression) resolveNamesExpr("\\lam x y => x");
-    Expression pi = typeCheckExpr(resolveNamesExpr("\\Pi (x y : \\Type) -> \\Type"), null).expression;
+    Expression pi = typeCheckExpr(resolveNamesExpr("\\Pi (x y : \\Type0) -> \\Type0"), null).expression;
     var accept = xyx.accept(new CorrespondedSubExprVisitor(xyx.getBody()), typeCheckExpr(xyx, pi).expression);
     assertNotNull(accept);
     assertEquals("x", accept.proj1.cast(ReferenceExpression.class).getBinding().getName());
@@ -39,7 +39,7 @@ public class CorrespondedSubExprTest extends TypeCheckingTestCase {
   @Test
   public void simpleLam() {
     var xx = (Concrete.LamExpression) resolveNamesExpr("\\lam x => x");
-    Expression pi = typeCheckExpr(resolveNamesExpr("\\Pi (x : \\Type) -> \\Type"), null).expression;
+    Expression pi = typeCheckExpr(resolveNamesExpr("\\Pi (x : \\Type0) -> \\Type0"), null).expression;
     var accept = xx.accept(new CorrespondedSubExprVisitor(xx.getBody()), typeCheckExpr(xx, pi).expression);
     assertNotNull(accept);
     assertEquals("x", accept.proj1.cast(ReferenceExpression.class).getBinding().getName());
@@ -47,7 +47,7 @@ public class CorrespondedSubExprTest extends TypeCheckingTestCase {
 
   @Test
   public void simplePi() {
-    var xyx = (Concrete.PiExpression) resolveNamesExpr("\\Pi (A : \\Type) (x y : A) -> A");
+    var xyx = (Concrete.PiExpression) resolveNamesExpr("\\Pi (A : \\Type0) (x y : A) -> A");
     Expression pi = typeCheckExpr(xyx, null).expression;
     var accept = xyx.accept(new CorrespondedSubExprVisitor(xyx.getParameters().get(1).getType()), pi);
     assertNotNull(accept);
@@ -56,7 +56,7 @@ public class CorrespondedSubExprTest extends TypeCheckingTestCase {
 
   @Test
   public void complexPi() {
-    var xyx = (Concrete.PiExpression) resolveNamesExpr("\\Pi (A B : \\Type) (x y : A) -> B");
+    var xyx = (Concrete.PiExpression) resolveNamesExpr("\\Pi (A B : \\Type0) (x y : A) -> B");
     Expression pi = typeCheckExpr(xyx, null).expression;
     var accept = xyx.accept(new CorrespondedSubExprVisitor(xyx.getParameters().get(1).getType()), pi);
     assertNotNull(accept);
@@ -65,7 +65,7 @@ public class CorrespondedSubExprTest extends TypeCheckingTestCase {
 
   @Test
   public void complexSigma() {
-    var xyx = (Concrete.SigmaExpression) resolveNamesExpr("\\Sigma (A B : \\Type) (x y : A) A");
+    var xyx = (Concrete.SigmaExpression) resolveNamesExpr("\\Sigma (A B : \\Type0) (x y : A) A");
     Expression sig = typeCheckExpr(xyx, null).expression;
     {
       var accept = xyx.accept(new CorrespondedSubExprVisitor(xyx.getParameters().get(1).getType()), sig);
@@ -81,7 +81,7 @@ public class CorrespondedSubExprTest extends TypeCheckingTestCase {
 
   @Test
   public void simpleAppExpr() {
-    var expr = (Concrete.LamExpression) resolveNamesExpr("\\lam {A : \\Type} (f : A -> A -> A) (a b : A) => f b a");
+    var expr = (Concrete.LamExpression) resolveNamesExpr("\\lam {A : \\Type0} (f : A -> A -> A) (a b : A) => f b a");
     Expression core = typeCheckExpr(expr, null).expression;
     var body = (Concrete.AppExpression) expr.getBody();
     {
@@ -251,7 +251,7 @@ public class CorrespondedSubExprTest extends TypeCheckingTestCase {
   public void appExprImplicitArgs() {
     resolveNamesModule("""
       \\func test => const 114 514 \\where {
-        \\func const => \\lam {A : \\Type} (a b : A) => a
+        \\func const => \\lam {A : \\Type0} (a b : A) => a
       }
       """);
     Concrete.FunctionDefinition concreteDef = (Concrete.FunctionDefinition) getConcrete("test");

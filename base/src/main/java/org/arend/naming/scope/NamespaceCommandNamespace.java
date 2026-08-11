@@ -137,7 +137,7 @@ public class NamespaceCommandNamespace implements Scope {
     }
 
     for (ConcreteNamespaceCommand.NameRenaming renaming : myNamespaceCommand.renamings()) {
-      if (renaming.scopeContext() != ScopeContext.STATIC) {
+      if (!renaming.isStatic()) {
         continue;
       }
 

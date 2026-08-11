@@ -30,7 +30,7 @@ class ArendProjectSettingsState {
     var showParsing = false
 
     var isShowImplicitGoals = false
-    var isShowErrorsPanel = true
+    var isShowErrorsOrInfoPanel = true
     var isShowGoalsInErrorsPanel = false
 
     // Printing options
@@ -69,4 +69,5 @@ class ArendPrintingOptions {
     var showCaseResultType = false
     var showLevels = false
     var showProofs = false
+    var enableWrap = false
 }

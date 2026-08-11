@@ -26,7 +26,7 @@ import java.util.List;
  */
 public interface ConcreteFactory {
   @NotNull ConcreteReferenceExpression ref(@NotNull ArendRef ref);
-  @NotNull ConcreteReferenceExpression ref(@NotNull ArendRef ref, @Nullable List<? extends ConcreteLevel> pLevels, @Nullable List<? extends ConcreteLevel> hLevels);
+  @NotNull ConcreteReferenceExpression ref(@NotNull ArendRef ref, @Nullable List<? extends ConcreteLevel> pLevels);
   @NotNull ConcreteReferenceExpression ref(@NotNull CoreBinding ref);
   @NotNull ConcreteExpression core(@NotNull TypedExpression expr);
   @NotNull ConcreteExpression core(@Nullable String name, @NotNull TypedExpression expr);
@@ -36,7 +36,7 @@ public interface ConcreteFactory {
   @NotNull ConcreteExpression lam(@NotNull Collection<? extends ConcreteParameter> parameters, @NotNull ConcreteExpression body);
   @NotNull ConcreteExpression pi(@NotNull Collection<? extends ConcreteParameter> parameters, @NotNull ConcreteExpression codomain);
   @NotNull ConcreteExpression arr(@NotNull ConcreteExpression domain, @NotNull ConcreteExpression codomain);
-  @NotNull ConcreteExpression universe(@Nullable ConcreteLevel pLevel, @Nullable ConcreteLevel hLevel);
+  @NotNull ConcreteExpression universe(@Nullable ConcreteLevel pLevel, @Nullable BigInteger hLevel, ConcreteUniverseExpression.Kind kind);
   @NotNull ConcreteExpression hole();
   @NotNull ConcreteExpression error(@Nullable GeneralError error);
   @NotNull ConcreteExpression goal();
@@ -73,13 +73,13 @@ public interface ConcreteFactory {
   @NotNull ConcreteFunctionBody body(@NotNull ConcreteExpression term);
   @NotNull ConcreteFunctionBody body(@NotNull Collection<? extends ConcreteReferenceExpression> elim, @NotNull Collection<? extends ConcreteClause> clauses);
   @NotNull ConcreteFunctionBody body(@NotNull Collection<? extends ConcreteClassElement> coclauses);
-  @NotNull ConcreteDefinition data(@NotNull ArendRef ref, @NotNull Collection<? extends ConcreteParameter> parameters, boolean isTruncated, @Nullable ConcreteLevel pLevel, @Nullable ConcreteLevel hLevel, @NotNull Collection<? extends ConcreteConstructorClause> clauses);
+  @NotNull ConcreteDefinition data(@NotNull ArendRef ref, @NotNull Collection<? extends ConcreteParameter> parameters, boolean isTruncated, @Nullable ConcreteLevel pLevel, @Nullable BigInteger hLevel, @NotNull Collection<? extends ConcreteConstructorClause> clauses);
   @NotNull ConcreteConstructorClause clause(@Nullable Collection<? extends ConcretePattern> patterns, @NotNull Collection<? extends ConcreteConstructor> constructors);
   @NotNull ConcreteConstructor constructor(@NotNull ArendRef ref, @NotNull Collection<? extends ConcreteParameter> parameters, @NotNull Collection<? extends ConcreteReferenceExpression> elimRefs, @NotNull Collection<? extends ConcreteClause> clauses, boolean isCoerce);
   @NotNull ConcreteDefinition classDef(@NotNull ArendRef ref, boolean isRecord, boolean withoutClassifying, @NotNull Collection<? extends ConcreteReferenceExpression> superClasses, @NotNull Collection<? extends ConcreteClassElement> elements);
   @NotNull ConcreteClassElement field(@NotNull ArendRef ref, @NotNull ClassFieldKind kind, @NotNull Collection<? extends ConcreteParameter> parameters, @NotNull ConcreteExpression resultType, @Nullable ConcreteExpression resultTypeLevel, boolean isCoerce);
   @NotNull ConcreteClassElement override(@NotNull ArendRef ref, @NotNull Collection<? extends ConcreteParameter> parameters, @NotNull ConcreteExpression resultType, @Nullable ConcreteExpression resultTypeLevel);
-  @NotNull ConcreteLevelParameters levelParameters(boolean isPLevels, @NotNull List<String> names, boolean isIncreasing);
+  @NotNull ConcreteLevelParameters levelParameters(@NotNull List<String> names);
   @NotNull ConcreteMetaDefinition metaDef(@NotNull MetaRef ref, @NotNull Collection<? extends ConcreteParameter> parameters, @Nullable ConcreteExpression body);
 
   @NotNull ArendRef moduleRef(@NotNull ModulePath modulePath);
@@ -122,10 +122,7 @@ public interface ConcreteFactory {
   @NotNull ConcretePattern conPattern(@NotNull ArendRef constructor, @NotNull ConcretePattern... subpatterns);
   @NotNull ConcretePattern conPattern(@NotNull ArendRef constructor, @NotNull Collection<? extends ConcretePattern> subpatterns);
 
-  @NotNull ConcreteLevel inf();
-  @NotNull ConcreteLevel lp();
-  @NotNull ConcreteLevel lh();
-  @NotNull ConcreteLevel numLevel(int level);
+  @NotNull ConcreteLevel numLevel(@NotNull BigInteger level);
   @NotNull ConcreteLevel sucLevel(@NotNull ConcreteLevel level);
   @NotNull ConcreteLevel maxLevel(@NotNull ConcreteLevel level1, @NotNull ConcreteLevel level2);
 

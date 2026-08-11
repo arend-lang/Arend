@@ -1,0 +1,106 @@
+\import Algebra.Pointed
+\import Algebra.Pointed.PointedHom
+\import Function
+\import Function.Meta
+\import Logic
+\import Logic.Meta
+\import Paths
+\import Paths.Meta
+\import Set.SubSet
+
+\class SubPointed \extends SubSet {
+  \override S : Pointed
+  | contains_ide : contains 1
+} \where {
+  \func max {X : Pointed} : SubPointed \cowith
+    | SubSet => DecSubSet.max {X}
+    | contains_ide => ()
+
+  \func maxHom {X : Pointed} : PointedHom X (IPointed max) \cowith
+    | func x => (x,())
+    | func-ide => idp
+}
+
+\instance IPointed (S : SubPointed {}) : Pointed
+  | BaseSet => S.ISet
+  | ide => (1, contains_ide)
+  \where {
+    \func embed : PointedHom (IPointed S) S.S \cowith
+      | func x => x.1
+      | func-ide => idp
+
+    \lemma embed-inj : IsInj embed
+      => \lam p => ext p
+  }
+
+\class DecSubPointed \extends SubPointed, DecSubSet
+
+\class SubAddPointed \extends SubSet {
+  \override S : AddPointed
+  | contains_zro : contains 0
+} \where {
+  \func max {A : AddPointed} : SubAddPointed \cowith
+    | SubSet => DecSubSet.max {A}
+    | contains_zro => ()
+
+  \func maxHom {A : AddPointed} : AddPointedHom A (IAddPointed max) \cowith
+    | func x => (x,())
+    | func-zro => idp
+}
+
+\instance IAddPointed (S : SubAddPointed {}) : AddPointed
+  | BaseSet => S.ISet
+  | zro => (0, contains_zro)
+  \where {
+    \func embed : AddPointedHom (IAddPointed S) S.S \cowith
+      | func x => x.1
+      | func-zro => idp
+
+    \lemma embed-inj : IsInj embed
+      => \lam p => ext p
+  }
+
+\func Kernel (f : PointedHom) : SubPointed f.Dom \cowith
+  | contains x => f x = 1
+  | contains_ide => func-ide
+
+\func IsKernelTrivial (f : PointedHom) : \Prop
+  => \Pi {x : f.Dom} -> Kernel f x -> x = ide
+
+
+\func AddKernel (f : AddPointedHom) : SubAddPointed f.Dom \cowith
+  | contains x => f x = 0
+  | contains_zro => func-zro
+
+\func IsAddKernelTrivial (f : AddPointedHom) : \Prop
+  => \Pi {x : f.Dom} -> AddKernel f x -> x = zro
+
+
+\func ImagePointed (f : PointedHom) : SubPointed f.Cod \cowith
+  | contains y => ∃ (x : f.Dom) (f x = y)
+  | contains_ide => inP (1, func-ide)
+
+\func ImPointed (f : PointedHom) : Pointed
+  => IPointed (ImagePointed f)
+
+\func ImPointedLeftHom (f : PointedHom) : PointedHom f.Dom (ImPointed f) \cowith
+  | func a => (f a, inP (a, idp))
+  | func-ide => ext func-ide
+
+\lemma image-surj {f : PointedHom} : IsSurj (ImPointedLeftHom f)
+  => \lam y => TruncP.map y.2 \lam s => (s.1, ext s.2)
+
+
+\func ImageAddPointed (f : AddPointedHom) : SubAddPointed f.Cod \cowith
+  | contains y => ∃ (x : f.Dom) (f x = y)
+  | contains_zro => inP (0, func-zro)
+
+\func ImAddPointed (f : AddPointedHom) : AddPointed
+  => IAddPointed (ImageAddPointed f)
+
+\func ImAddPointedLeftHom (f : AddPointedHom) : AddPointedHom f.Dom (ImAddPointed f) \cowith
+  | func a => (f a, inP (a, idp))
+  | func-zro => ext func-zro
+
+\lemma addImage-surj {f : AddPointedHom} : IsSurj (ImAddPointedLeftHom f)
+  => \lam y => TruncP.map y.2 \lam s => (s.1, ext s.2)

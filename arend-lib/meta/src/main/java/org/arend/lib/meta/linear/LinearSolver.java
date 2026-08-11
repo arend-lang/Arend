@@ -54,6 +54,12 @@ public class LinearSolver {
   }
 
   private CoreExpression findInstance(CoreExpression type, boolean reportError) {
+    if (type instanceof CoreInferenceReferenceExpression infRef && infRef.getSubstExpression() == null && infRef.getVariable() != null) {
+      typechecker.solveEquationsFor(infRef.getVariable());
+      if (infRef.getSubstExpression() != null) {
+        type = infRef.getSubstExpression().normalize(NormalizationMode.WHNF);
+      }
+    }
     TypedExpression instance = type == null ? null : typechecker.findInstance(getInstanceClass(), type, null, marker);
     if (instance == null) {
       if (reportError) errorReporter.report(new InstanceInferenceError(typechecker.getExpressionPrettifier(), getInstanceClass().getRef(), type, marker));
@@ -167,7 +173,7 @@ public class LinearSolver {
   }
 
   private Hypothesis<CoreExpression> bindingToHypothesis(CoreBinding binding, boolean reportError) {
-    return binding == null ? null : typeToEquation(binding.getTypeExpr().normalize(NormalizationMode.WHNF), binding, reportError);
+    return binding == null ? null : typeToEquation(binding.getType().normalize(NormalizationMode.WHNF), binding, reportError);
   }
 
   private List<BigInteger> solveEquations(List<? extends Equation<CompiledTerm>> equations, int var) {

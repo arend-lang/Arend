@@ -1,0 +1,52 @@
+\import Algebra.Group
+\import Algebra.Module
+\import Algebra.Module.LinearMap
+\import Algebra.Monoid
+\import Algebra.Ring
+\import Data.Array
+\import Paths
+\import Paths.Meta
+
+\record BilinearMap {R : Ring} (A B C : LModule R) (\coerce func : A -> B -> C)
+  | linear-left {b : B} : LinearMap A C (func __ b)
+  | linear-right {a : A} : LinearMap B C (func a)
+
+\lemma *-bilinear {R : CRing} : BilinearMap (RingLModule R) (RingLModule R) (RingLModule R) (*) \cowith
+  | linear-left => *-linear-left
+  | linear-right => *-linear-right
+
+\instance BilinearMapModule {R : CRing} (A B C : LModule R) : LModule R (BilinearMap A B C)
+  | zro : BilinearMap A B C \cowith {
+    | func _ _ => C.zro
+    | linear-left => linearMap_zro
+    | linear-right => linearMap_zro
+  }
+  | + (f g : BilinearMap A B C) : BilinearMap A B C \cowith {
+    | func a b => f a b C.+ g a b
+    | linear-left => linearMap_+ f.linear-left g.linear-left
+    | linear-right => linearMap_+ f.linear-right g.linear-right
+  }
+  | zro-left => exts \lam a b => zro-left
+  | +-assoc => exts \lam a b => +-assoc
+  | negative (f : BilinearMap A B C) : BilinearMap A B C \cowith {
+    | func a b => C.negative (f a b)
+    | linear-left => linearMap_negative f.linear-left
+    | linear-right => linearMap_negative f.linear-right
+  }
+  | negative-left => exts \lam a b => negative-left
+  | +-comm => exts \lam a b => +-comm
+  | *c (r : R) (f : BilinearMap A B C) : BilinearMap A B C \cowith {
+    | func a b => r C.*c f a b
+    | linear-left => linearMap_*c f.linear-left
+    | linear-right => linearMap_*c f.linear-right
+  }
+  | *c-assoc => exts \lam a b => *c-assoc
+  | *c-ldistr => exts \lam a b => *c-ldistr
+  | *c-rdistr => exts \lam a b => *c-rdistr
+  | ide_*c => exts \lam a b => ide_*c
+  \where {
+    \lemma BigSum-char {l : Array (BilinearMap A B C)} (a : A) (b : B)
+      : (BilinearMapModule A B C).BigSum l a b = C.BigSum (map (\lam (f : BilinearMap A B C) => f a b) l) \elim l
+      | nil => idp
+      | f :: l => pmap (_ C.+) (BigSum-char a b)
+  }

@@ -31,7 +31,7 @@
 
     \lemma diffNF (env : Array R) (left right : NF Int env.len) (p : (RingData env).interpretNF' (left ++ Data.List.map (\lam s => (s.1, negative s.2)) right) = 0)
       : (RingData env).interpretNF' left = (RingData env).interpretNF' right
-      => AddGroup.fromZero $ inv (inv p *> (RingData env).interpretNF_++ {left} {Data.List.map (\lam s => (s.1, negative s.2)) right} *> pmap ((+) ((RingData env).interpretNF' left)) (interpretNF_negative {_} {_} {right}))
+      => AddGroup.fromZero $ inv (inv p *> (RingData env).interpretNF_++ {left} {Data.List.map (\lam s => (s.1, negative s.2)) right} *> pmap ((RingData env).interpretNF' left +) (interpretNF_negative {_} {_} {right}))
 
     \lemma apply-axioms (env : Array R) (l : Array (\Sigma (NF Int env.len) (t s : Term Int env.len) (p : interpret env t = interpret env s))) (add : NF Int env.len)
       : ringInterpretNF env (sortMonomials (Big (++) add (map (\lam s => multiply s.1 (normalize (s.2 :+ :negative s.3))) l))) = ringInterpretNF' add

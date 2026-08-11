@@ -57,7 +57,7 @@ public class PiTreeMaker {
         substitution.add(new SubstitutionPair(param.getBinding(), factory.ref(lamRef)));
 
         if (codomainFreeVars.contains(param.getBinding())) {
-          if (isRoot && param.getTypeExpr().findFreeBindings(substBindings) == null) {
+          if (isRoot && param.getType().findFreeBindings(substBindings) == null) {
             indices1.add(k);
           } else {
             break loop;
@@ -87,8 +87,9 @@ public class PiTreeMaker {
         params.clear();
         codomain = expr;
       }
-      concrete = factory.core(codomain.computeTyped());
-      useLet = !(expr instanceof CoreReferenceExpression);
+      TypedExpression typedCodomain = codomain.computeTyped();
+      concrete = factory.core(typedCodomain);
+      useLet = !(expr instanceof CoreReferenceExpression || typedCodomain.getType().isInfinityLevel());
     } else {
       List<ConcreteParameter> redLamParams;
       List<SubstitutionPair> redSubstitution;
@@ -107,7 +108,7 @@ public class PiTreeMaker {
       TypedExpression result = typechecker.typecheck(factory.lam(redLamParams, factory.meta("ext_sigma_pi_param", new SubstitutionMeta(codomain, redSubstitution))), null);
       if (result == null) return null;
       concrete = factory.core(result);
-      useLet = !(result.getExpression() instanceof CoreReferenceExpression);
+      useLet = !(result.getExpression() instanceof CoreReferenceExpression || result.getType().isInfinityLevel());
     }
 
     ConcreteExpression altHead;
@@ -123,7 +124,7 @@ public class PiTreeMaker {
 
     List<PiTreeNode> subtrees = new ArrayList<>(params.size());
     for (CoreParameter param : params) {
-      PiTreeNode subtree = (PiTreeNode) make(false, param, param.getTypeExpr());
+      PiTreeNode subtree = (PiTreeNode) make(false, param, param.getType());
       if (subtree == null) return null;
       subtrees.add(subtree);
     }
@@ -137,7 +138,7 @@ public class PiTreeMaker {
     for (int i = 0; i < parameters.size(); i++) {
       CoreParameter parameter = parameters.get(i);
       ArendRef ref = factory.local("x" + (i + 1));
-      lamParams.add(factory.param(true, Collections.singletonList(ref), factory.core(parameter.getTypedType())));
+      lamParams.add(factory.param(true, Collections.singletonList(ref), factory.core(parameter.getType().computeTyped())));
       substitution.add(new SubstitutionPair(parameter.getBinding(), factory.ref(ref)));
       substBindings.add(parameter.getBinding());
     }

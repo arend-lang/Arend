@@ -344,8 +344,8 @@ fun renameParameters(project: Project, changeInfo: ArendChangeInfo, parametersHo
     for (p in processors)
         p.second.executeEx(p.first.mapNotNull {
             it.element as? ArendRefIdentifier
-        }.map {
-            MoveRenameUsageInfo(it.reference, p.second.element)
+        }.mapNotNull {
+            it.reference?.let { reference -> MoveRenameUsageInfo(reference, p.second.element) }
         }.toTypedArray())
 }
 

@@ -24,12 +24,15 @@ public abstract class StreamRawSource implements Source {
   }
 
   /**
-   * Gets an input stream from which the source will be loaded.
+   * Gets an input stream over this module's raw source bytes (UTF-8, matching the encoding
+   * {@link #loadGroup} feeds to the parser). Public so the console query tools (e.g. {@code -fu})
+   * can read source text through the {@link Source} abstraction — working for both file- and
+   * zip-backed libraries — rather than reaching for the filesystem, which zip sources lack.
    *
    * @return an input stream from which the source will be loaded or null if some error occurred.
    */
   @NotNull
-  protected abstract InputStream getInputStream() throws IOException;
+  public abstract InputStream getInputStream() throws IOException;
 
   @Override
   public @NotNull ModuleLocation getModule() {

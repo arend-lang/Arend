@@ -11,13 +11,15 @@
 \import Meta
 \import Order.Biordered
 \import Order.Lattice
+\import Order.Lattice.CompleteLattice
 \import Order.LinearOrder
 \import Order.PartialOrder
 \import Order.StrictOrder
 \import Paths
 \import Paths.Meta
 
-\record ExtendedLowerReal (L : Rat -> \Prop) {
+\record ExtendedLowerReal {
+  | \protected L : Rat -> \Prop
   | L-closed {q q' : Rat} : L q -> q' < q -> L q'
   | L-rounded {q : Rat} : L q -> ∃ (r : L) (q < r)
 
@@ -28,7 +30,7 @@
     }
 } \where {
   \use \coerce fromRat (x : Rat) : ExtendedLowerReal \cowith
-    | L => `< x
+    | L => < x
     | L-closed s t => t <∘ s
     | L-rounded q<x => TruncP.map (isDense q<x) (\lam t => (t.1,t.3,t.2))
 }
@@ -39,6 +41,12 @@
     \use \coerce fromRat (x : Rat) : LowerReal \cowith
       | ExtendedLowerReal => ExtendedLowerReal.fromRat x
       | L-inh => inP (x - 1, linarith)
+
+    \func infinity : LowerReal \cowith
+      | L a => \Sigma
+      | L-closed _ _ => ()
+      | L-rounded {q} _ => inP (q + 1, (), linarith)
+      | L-inh => inP (0,())
 
     \func BJoin (b : LowerReal) {J : \Set} (f : J -> ExtendedLowerReal) : LowerReal \cowith
       | L q => b.L q || Given (j : J) ((f j).L q)
@@ -236,12 +244,12 @@
   | <=-refl a<x => a<x
   | <=-transitive p q a<x => q (p a<x)
   | <=-antisymmetric p q => exts \lam a => ext (p,q)
-  | Join {J : \Set} (f : J -> ExtendedLowerReal) : ExtendedLowerReal \cowith {
-    | L q => ∃ (j : J) ((f j).L q)
-    | L-closed (inP (j,q<fj)) q'<q => inP (j, L-closed q<fj q'<q)
-    | L-rounded (inP (j,q<fj)) => \case L-rounded q<fj \with {
-      | inP (r,r<fj,q<r) => inP (r, inP (j, r<fj), q<r)
+  | Join (C : ExtendedLowerReal -> \Prop) : ExtendedLowerReal \cowith {
+    | L q => ∃ (r : C) (r.L q)
+    | L-closed (inP (r,Cr,q<r)) q'<q => inP (r, Cr, L-closed q<r q'<q)
+    | L-rounded (inP (r,Cr,q<r)) => \case L-rounded q<r \with {
+      | inP (r',r'<r,q<r') => inP (r', inP (r,Cr,r'<r), q<r')
     }
   }
-  | Join-cond j a<fj => inP (j,a<fj)
-  | Join-univ c (inP (j,a<fj)) => c j a<fj
+  | Join-cond {C} {q} Cq a<q => inP (q,Cq,a<q)
+  | Join-univ c (inP (r,Cr,a<r)) => c Cr a<r

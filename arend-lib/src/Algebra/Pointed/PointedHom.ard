@@ -20,8 +20,11 @@
   \override Dom : AddPointed
   \override Cod : AddPointed
   | func-zro : func zro = zro
+
+  \protected \func IsZero : \Prop
+    => \Pi (x : Dom) -> func x = 0
 } \where {
-  \func id (X : AddPointed) : AddPointedHom X X \cowith
+  \func id {X : AddPointed} : AddPointedHom X X \cowith
     | func x => x
     | func-zro => idp
 

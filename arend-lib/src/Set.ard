@@ -19,6 +19,10 @@
       | no q => n q
   }
 
+\lemma dec-separated {E : \Prop} (d : Dec E) (q : Not (Not E)) : E \elim d
+  | yes e => e
+  | no p => absurd (q p)
+
 \lemma negated-dec (E : \Prop) {P : NegatedProp} (f : Dec E -> P) : P
   => isNegated \lam g => g $ f $ no \lam e => g $ f (yes e)
 
@@ -65,19 +69,6 @@
   | decide => NotDec A.decide
 
 \class BaseSet (E : \Set)
-
-\class SubSet (S : BaseSet) (\classifying contains : S -> \Prop) {
-  \func ISet : BaseSet \cowith
-    | E => \Sigma (x : S) (contains x)
-}
-
-\class DecSubSet \extends SubSet
-  | isDec (x : S) : Dec (contains x)
-  \where {
-    \func max {S : BaseSet} : DecSubSet S \cowith
-      | contains _ => \Sigma
-      | isDec _ => yes ()
-  }
 
 \class SeparatedSet \extends BaseSet
   | separatedEq {x y : E} : Not (Not (x = y)) -> x = y

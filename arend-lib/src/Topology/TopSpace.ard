@@ -11,7 +11,7 @@
 \import Set
 \import Set.SetHom
 \import Set.Filter
-\import Set.Subset
+\import Set.Set
 
 \class TopSpace \extends BaseSet {
   | isOpen : Set E -> \Prop
@@ -23,7 +23,7 @@
     => \have uo => open-Union {_} {\lam V => \Sigma (isOpen V) (V ⊆ U)} __.1
        \in transport isOpen (ext \lam x => ext (\lam (inP (V,(_,V<=U),Vx)) => V<=U Vx, \lam Ux => TruncP.map (c Ux) \lam (V,Vo,Vx,V<=U) => (V, (Vo, V<=U), Vx))) uo
 
-  \lemma open-IUnion {J : \hType} (g : J -> Given isOpen) : isOpen \lam x => ∃ (j : J) ((g j).1 x)
+  \lemma open-IUnion {J : \Type} (g : J -> Given isOpen) : isOpen \lam x => ∃ (j : J) ((g j).1 x)
     => \have uo => open-Union {_} {\lam U => ∃ (j : J) ((g j).1 = U)} \lam (inP (j,p)) => transport isOpen p (g j).2
        \in transport isOpen (ext \lam x => ext (\lam (inP (U, inP (j,p), Ux)) => inP (j, rewrite p Ux), \lam (inP (j,c)) => inP ((g j).1, inP (j, idp), c))) uo
 
@@ -32,8 +32,8 @@
 
   \lemma open-union {U V : Set E} (Uo : isOpen U) (Vo : isOpen V) : isOpen (U ∨ V)
     => cover-open $ later \case \elim __ \with {
-      | inP (true,Ux) => inP (U, Uo, Ux, join-left)
-      | inP (false,Vx) => inP (V, Vo, Vx, join-right)
+      | inP (_, byLeft idp, Ux) => inP (U, Uo, Ux, join-left)
+      | inP (_, byRight idp, Vx) => inP (V, Vo, Vx, join-right)
     }
 
   \type \infix 4 <=<T (V U : Set E) : \Prop
@@ -234,6 +234,9 @@
 
 \func TopSub {X : TopSpace} (S : Set X) : TopSpace (Set.Total S)
   => TopTransfer __.1
+
+\lemma TopSub-map {X : TopSpace} {S : Set X} : ContMap (TopSub S) X __.1
+  => TopTransfer-map __.1
 
 \lemma TopSub-func {X Y : TopSpace} (f : ContMap X Y) {U : Set X} {V : Set Y} (p : ∀ {x : U} (V (f x))) : ContMap (TopSub U) (TopSub V) \lam s => (f s.1, p s.2) \cowith
   | func-cont {_} (inP (V,Vo,idp)) => inP (f ^-1 V, func-cont Vo, idp)

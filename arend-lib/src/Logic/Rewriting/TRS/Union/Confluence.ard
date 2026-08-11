@@ -101,11 +101,11 @@
 
 \func TrichromaticParallelReduction
   {tc : TheoremContext} {mc : MetaContext Sort'} {context : List Sort'} {s : Sort'}
-  (A B : Term env context s mc) : \Type =>
+  (A B : Term env context s mc) : \Set =>
   \Sigma (global-color : Color) (color : Maybe Color) (BorderedParallelReduction global-color color A B)
 
-\func ConfluentialSystem (env : FSignature) (rules : RuleRegistry env) : \Type =>
-  \Pi {mc : MetaContext Sort} {context : List Sort} {s : Sort}
+\func ConfluentialSystem (env : FSignature) (rules : RuleRegistry env) : \Set =>
+  \Pi {mc : MetaContext.{0} Sort} {context : List Sort} {s : Sort}
       (A B C : Term env context s mc)
       (Closure (RewriteRelation rules) A B)
       (Closure (RewriteRelation rules) A C) -> StraightJoin B C (Closure (\lam x y => \Sigma (rd : RewriteRelation rules x y) (FunctionalWitness rd)))

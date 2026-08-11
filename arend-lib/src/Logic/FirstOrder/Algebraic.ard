@@ -1,13 +1,20 @@
 \import Algebra.Meta
+\import Arith.Nat
 \import Data.Bool
 \import Data.Or
+\import Function.Meta
 \import Homotopy.Fibration
 \import Logic
-\import Logic.Classical
 \import Logic.FirstOrder.Term
 \import Logic.Meta
+\import Meta
+\import Order.Biordered
+\import Order.LinearOrder
+\import Order.PartialOrder
+\import Order.StrictOrder
 \import Paths
 \import Paths.Meta
+\import Set
 \import Set.Fin
 
 \class Signature \extends TermSig
@@ -22,96 +29,143 @@
   | equality t1 t2 => equality (subst t1 rho) (subst t2 rho)
   | predicate P ts => predicate P (\lam j => subst (ts j) rho)
 
-\func Sequent {S : Signature} => \Sigma (V : S -> \Set) (FinSet (\Sigma (s : S) (V s))) (Array (Formula V)) (Formula V)
+\func substF1 {S : Signature} {U : S -> \Set} {s : S} (phi : Formula \lam s' => Or (U s') (s = s')) (t : Term U s) : Formula U
+  => substF phi \lam {s'} => \case \elim __ \with {
+    | inl u => var u
+    | inr p => transport (Term U) p t
+  }
+
+\func Sequent {S : Signature} => \Sigma (V : S -> \Set0) (FinSet (\Sigma (s : S) (V s))) (Array (Formula V)) (Formula V)
 
 \class Theory \extends Signature {
   | axioms : Sequent -> \Prop
 
-  \truncated \data isTheorem {V : Sort -> \Set} (phi : Array (Formula V)) (psi : Formula V) : \Prop \elim psi
+  \truncated \data IsTheorem {V : Sort -> \Set} (phi : Array (Formula V)) (psi : Formula V) : \Prop \elim psi
     | equality a b => refl (a = b)
     | psi => {
       | assumption (j : Fin phi.len) (psi = phi j)
-      | substPres (U : Sort -> \Set) (chi : Formula U) (rho rho' : \Pi {s : Sort} -> U s -> Term V s)
-                  (\Pi {s : Sort} (u : U s) -> isTheorem phi (equality (rho u) (rho' u)))
-                  (isTheorem phi (substF chi rho))
-                  (psi = substF chi rho')
+      | equalityElim {s : Sort} {a b : Term V s} (chi : Formula \lam s' => Or (V s') (s = s'))
+                     (IsTheorem phi (equality a b)) (IsTheorem phi (substF1 chi a)) (psi = substF1 chi b)
       | axiom (a : Sequent) (axioms a) (rho : \Pi {s : Sort} -> a.1 s -> Term V s)
-              (∀ (chi : a.3) (isTheorem phi (substF chi rho)))
+              (∀ (chi : a.3) (IsTheorem phi (substF chi rho)))
               (psi = substF a.4 rho)
     }
 
+  \lemma symmetry {V : Sort -> \Set} {phi : Array (Formula V)} {s : Sort} {t t' : Term V s} (p : IsTheorem phi (equality t t')) : IsTheorem phi (equality t' t)
+    => equalityElim (equality (var (inr idp)) (subst t \lam v => var (inl v))) p
+        (refl $ inv $ subst-assoc t *> subst_var t)
+        (pmap (equality t') $ inv $ subst-assoc t *> subst_var t)
+
+  \lemma transitivity {V : Sort -> \Set} {phi : Array (Formula V)} {s : Sort} {t1 t2 t3 : Term V s}
+                      (p1 : IsTheorem phi (equality t1 t2)) (p2 : IsTheorem phi (equality t2 t3)) : IsTheorem phi (equality t1 t3)
+    => equalityElim (equality (subst t1 \lam v => var (inl v)) (var (inr idp))) p2
+        (transportInv (\lam x => IsTheorem phi (equality x t2)) (subst-assoc t1 *> subst_var t1) p1)
+        (pmap (equality __ t3) $ inv $ subst-assoc t1 *> subst_var t1)
+
   \lemma congruence {V : Sort -> \Set} {phi : Array (Formula V)} {s : Sort} {f : Symb s} {l l' : DArray (\lam j => Term V (domain f j))}
-                    (e : \Pi (j : Fin (DArray.len {domain f})) -> isTheorem phi (equality (l j) (l' j)))
-                    : isTheorem phi (equality (apply f l) (apply f l'))
-    => substPres (\lam s => Or (V s) (Given (s' : domain f) (s = s')))
-        (equality (subst (apply f l) (\lam v => var (inl v))) (apply f (\lam j => var (inr (j,idp)))))
-        (\case __ \with { | inl v => var v | inr (j,p) => rewrite p (l j) })
-        (\case __ \with { | inl v => var v | inr (j,p) => rewrite p (l' j) })
-        (\lam {s'} u => \case \elim s', \elim u \with {
-          | _, inl v => refl idp
-          | _, inr (j,idp) => e j
-        })
-        (transportInv (\lam x => isTheorem phi (equality (apply f x) (apply f l))) (exts (\lam j => subst-assoc (l j) _ _ *> subst_var (l j))) (refl idp))
-        (cong (exts (\lam j => inv (subst-assoc (l j) _ _ *> subst_var (l j)))))
-
-  \lemma congruenceF {V : Sort -> \Set} {phi : Array (Formula V)} {P : PredSymb} {l l' : DArray (\lam j => Term V (predDomain P j))}
-                     (e : \Pi (j : Fin (DArray.len {predDomain P})) -> isTheorem phi (equality (l j) (l' j))) (th : isTheorem phi (predicate P l))
-    : isTheorem phi (predicate P l')
-    => substPres (\lam s => Given (s' : predDomain P) (s = s')) (predicate P (\lam j => var (j,idp)))
-        (\lam q => rewrite q.2 (l q.1)) (\lam q => rewrite q.2 (l' q.1))
-        (\lam {s'} q => \case \elim s', \elim q \with { | _, (j,idp) => e j }) th idp
-
-  \lemma symmetry {V : Sort -> \Set} {phi : Array (Formula V)} {s : Sort} {t t' : Term V s} (p : isTheorem phi (equality t t')) : isTheorem phi (equality t' t)
-    => substPres (\lam s' => \Sigma (s' = s) Bool) (equality (var (idp,true)) (var (idp,false))) (\lam q => rewrite q.1 t) (\lam q => rewrite q.1 (if q.2 t' t)) (\lam {s'} => \case \elim s', \elim __ \with {
-      | _, (idp,true) => p
-      | _, (idp,false) => refl idp
-    }) (refl idp) idp
-
-  \lemma transitivity {V : Sort -> \Set} {phi : Array (Formula V)} {s : Sort} {t1 t2 t3 : Term V s} (p1 : isTheorem phi (equality t1 t2)) (p2 : isTheorem phi (equality t2 t3)) : isTheorem phi (equality t1 t3)
-    => substPres (\lam s' => \Sigma (s' = s) Bool) (equality (var (idp,true)) (var (idp,false))) (\lam q => rewrite q.1 (if q.2 t1 t2)) (\lam q => rewrite q.1 (if q.2 t1 t3)) (\lam {s'} => \case \elim s', \elim __ \with {
-      | _, (idp,true) => refl idp
-      | _, (idp,false) => p2
-    }) p1 idp
-
-  \truncated \data QTerm (s : Sort) : \Set
-    | qinj (Term (\lam _ => Empty) s)
-    | qapply (f : Symb s) (DArray (\lam j => QTerm (domain f j)))
-    | qquot {t t' : Term (\lam _ => Empty) s} (isTheorem nil (equality t t')) : qinj t = qinj t'
-    | qmerge {f : Symb s} (ds : DArray (\lam j => Term (\lam _ => Empty) (domain f j))) : qinj (apply f ds) = qapply f (\new DArray { | at j => qinj (ds j) })
-
-  \func qinj-surj {s : Sort} (q : QTerm s) : TruncP (Fib qinj q) \elim q
-    | qinj t => inP (t, idp)
-    | qapply f d => TruncP.map (choice (\lam j => qinj-surj (d j)))
-        (\lam g => (apply f (\lam j => (g j).1), path (qmerge _) *> pmap (\lam x => qapply f (\new DArray (\lam j => QTerm (domain f j)) x)) (ext (\lam j => (g j).2))))
-
-  \lemma qinj-equality {s : Sort} {t t' : Term (\lam _ => Empty) s} : (qinj t = qinj t') = isTheorem nil (equality t t')
-    => propExt (transport (code t) __ (refl idp)) (\lam p => path (qquot p))
+                    (e : \Pi (j : Fin (domain f).len) -> IsTheorem phi (equality (l j) (l' j)))
+    : IsTheorem phi (equality (apply f l) (apply f l'))
+    => transport (\lam x => IsTheorem phi (equality _ (apply f x))) (replace_id l l') (induction <=-refl)
     \where {
-      \func code {s : Sort} (t : Term (\lam _ => Empty) s) (q : QTerm s) : \Prop \elim q
-        | qinj t' => isTheorem nil (equality t t')
-        | qapply f d => \Pi (d' : DArray (\lam j => Term (\lam _ => Empty) (domain f j))) -> (\Pi (j : Fin (DArray.len {domain f})) -> code (d' j) (d j)) -> isTheorem nil (equality t (apply f d'))
-        | qquot {t1} {t2} p => ext (transitivity __ p, transitivity __ (symmetry p))
-        | qmerge {f} ds => ext (\lam t~fds ds' ds'~ds => transitivity t~fds (symmetry (congruence ds'~ds)), \lam g => g ds (\lam j => refl idp))
+      \protected \func replace {n : Nat} {A : Fin n -> \Set} (l l' : DArray A) (k : Nat) : DArray A
+        => \lam j => \case LinearOrder.dec<_<= j k \with {
+          | inl _ => l' j
+          | inr _ => l j
+        }
+
+      \protected \lemma replace_id {n : Nat} {A : Fin n -> \Set} (l l' : DArray A) : replace l l' n = l'
+        => exts \lam j => rewrite (LinearOrder.dec<_reduce (fin_< j)) idp
+
+      \protected \lemma replace_0 {n : Nat} {A : Fin n -> \Set} (l l' : DArray A) : replace l l' 0 = l
+        => exts \lam j => rewrite (LinearOrder.dec<=_reduce zero<=_) idp
+
+      \private \lemma induction {k : Nat} (p : k <= (domain f).len) : IsTheorem phi (equality (apply f l) (apply f (replace l l' k))) \elim k
+        | 0 => refl $ pmap (apply f) $ inv (replace_0 l l')
+        | suc k => equalityElim
+          (equality (subst (apply f l) \lam v => var (inl v)) (apply f \lam j => \case LinearOrder.trichotomy j k \with {
+            | less _ => subst (l' j) \lam v => var (inl v)
+            | equals q => var $ inr $ pmap (domain f) $ fin_nat-inj $ toFin=id *> inv q
+            | greater _ => subst (l j) \lam v => var (inl v)
+          }))
+          (e (toFin k $ suc_<=_< p))
+          (transport2 (\lam x y => IsTheorem phi (equality (apply f x) (apply f y)))
+            (exts \lam j => inv $ subst-assoc _ *> subst_var _)
+            (exts \lam j => inv $ cases (LinearOrder.trichotomy j k) \with {
+              | less j<k => rewrite (LinearOrder.dec<_reduce j<k) $ subst-assoc _ *> subst_var _
+              | equals j=k => rewrite (LinearOrder.dec<=_reduce $ =_<= $ inv j=k) $
+                Jl (\lam i q => transport (\lam x => Term V (domain f x)) q (l _) = l i) idp (fin_nat-inj $ toFin=id *> inv j=k)
+              | greater k<j => rewrite (LinearOrder.dec<=_reduce (LinearOrder.<_<= k<j)) $ subst-assoc _ *> subst_var _
+            })
+            (induction $ id<=suc <=∘ p))
+          (inv $ pmap2 (\lam x y => equality (apply f x) (apply f y)) (exts \lam j => subst-assoc _ *> subst_var _) (exts \lam j => cases (LinearOrder.trichotomy j k) \with {
+            | less j<k => rewrite (LinearOrder.dec<_reduce $ j<k <∘ id<suc) $ subst-assoc _ *> subst_var _
+            | equals j=k => rewrite (LinearOrder.dec<_reduce $ =_<= j=k <∘r id<suc) $
+              Jl (\lam i q => transport (\lam x => Term V (domain f x)) q (l' _) = l' i) idp (fin_nat-inj $ toFin=id *> inv j=k)
+            | greater k<j => rewrite (LinearOrder.dec<=_reduce (suc_<_<= k<j)) $ subst-assoc _ *> subst_var _
+          }))
     }
 
-  \truncated \data isPartialTheorem (seq : Sequent) : \Prop \with
-    | (_, _, _, equality (var v) (var v')) => varDef (v = v')
-    | (V, vf, phi, equality a b) => sym (isTheorem phi (equality b a))
-    | (V, vf, phi : Array, psi) => {
+  \lemma congruenceT {V U : Sort -> \Set} {phi : Array (Formula V)} {s : Sort} (t : Term U s) {rho rho' : \Pi {s : Sort} -> U s -> Term V s}
+                     (e : \Pi {s : Sort} (u : U s) -> IsTheorem phi (equality (rho u) (rho' u)))
+    : IsTheorem phi (equality (subst t rho) (subst t rho')) \elim t
+    | var u => e u
+    | apply f d => congruence \lam j => congruenceT (d j) e
+
+  \lemma congruenceP {V : Sort -> \Set} {phi : Array (Formula V)} {P : PredSymb} {l l' : DArray (\lam j => Term V (predDomain P j))}
+                     (e : \Pi (j : Fin (DArray.len {predDomain P})) -> IsTheorem phi (equality (l j) (l' j))) (th : IsTheorem phi (predicate P l))
+    : IsTheorem phi (predicate P l')
+    => transport (\lam x => IsTheorem phi (predicate P x)) (replace_id l l') (induction <=-refl)
+    \where {
+      \open congruence (replace, replace_0, replace_id)
+
+      \private \lemma induction {k : Nat} (p : k <= (predDomain P).len) : IsTheorem phi (predicate P (replace l l' k)) \elim k
+        | 0 => transportInv (\lam x => IsTheorem phi (predicate P x)) (replace_0 l l') th
+        | suc k => equalityElim
+            (predicate P \lam j => \case LinearOrder.trichotomy j k \with {
+              | less _ => subst (l' j) \lam v => var (inl v)
+              | equals q => var $ inr $ pmap (predDomain P) $ fin_nat-inj $ toFin=id *> inv q
+              | greater _ => subst (l j) \lam v => var (inl v)
+            })
+            (e (toFin k $ suc_<=_< p))
+            (transport (\lam x => IsTheorem phi (predicate P x)) (exts \lam j => inv $ cases (LinearOrder.trichotomy j k) \with {
+              | less j<k => rewrite (LinearOrder.dec<_reduce j<k) $ subst-assoc _ *> subst_var _
+              | equals j=k => rewrite (LinearOrder.dec<=_reduce $ =_<= $ inv j=k) $
+                Jl (\lam i q => transport (\lam x => Term V (predDomain P x)) q (l _) = l i) idp (fin_nat-inj $ toFin=id *> inv j=k)
+              | greater k<j => rewrite (LinearOrder.dec<=_reduce (LinearOrder.<_<= k<j)) $ subst-assoc _ *> subst_var _
+            }) (induction $ id<=suc <=∘ p))
+            (pmap (predicate P) $ exts \lam j => inv $ cases (LinearOrder.trichotomy j k) \with {
+              | less j<k => rewrite (LinearOrder.dec<_reduce $ j<k <∘ id<suc) $ subst-assoc _ *> subst_var _
+              | equals j=k => rewrite (LinearOrder.dec<_reduce $ =_<= j=k <∘r id<suc) $
+                Jl (\lam i q => transport (\lam x => Term V (predDomain P x)) q (l' _) = l' i) idp (fin_nat-inj $ toFin=id *> inv j=k)
+              | greater k<j => rewrite (LinearOrder.dec<=_reduce (suc_<_<= k<j)) $ subst-assoc _ *> subst_var _
+            })
+    }
+
+  \lemma substPres {V : Sort -> \Set} {phi : Array (Formula V)}
+                   (U : Sort -> \Set) (psi : Formula U) (rho rho' : \Pi {s : Sort} -> U s -> Term V s)
+                   (cc : \Pi {s : Sort} (u : U s) -> IsTheorem phi (equality (rho u) (rho' u)))
+                   (cd : IsTheorem phi (substF psi rho))
+    : IsTheorem phi (substF psi rho')
+    \elim psi
+    | equality a b => transitivity (transitivity (symmetry (congruenceT a cc)) cd) (congruenceT b cc)
+    | predicate P ts => congruenceP (\lam j => congruenceT (ts j) cc) cd
+
+  \truncated \data IsPartialTheorem {V : Sort -> \Set} (phi : Array (Formula V)) (psi : Formula V) : \Prop \elim psi
+    | equality (var v) (var v') => varDef (v = v')
+    | equality a b => sym (IsTheorem phi (equality b a))
+    | psi => {
       | partProj (j : Fin phi.len) (psi = phi j)
-      | partSubstPres {U : Sort -> \Set} (chi : Formula U) (rho rho' : \Pi {s : Sort} -> U s -> Term V s)
-                      (\Pi {s : Sort} (u : U s) -> isTheorem phi (equality (rho u) (rho' u)))
-                      (isTheorem phi (substF chi rho))
-                      (psi = substF chi rho')
+      | partEqualityElim {s : Sort} {a b : Term V s} (chi : Formula \lam s' => Or (V s') (s = s'))
+                         (IsTheorem phi (equality a b)) (IsTheorem phi (substF1 chi a)) (psi = substF1 chi b)
       | predDef (P : PredSymb) (ts : DArray (\lam j => Term V (predDomain P j)))
-                (isTheorem phi (predicate P ts))
+                (IsTheorem phi (predicate P ts))
                 (Given (t : ts) (psi = equality t t))
       | funcDef {s : Sort} (h : Symb s) (ts : DArray (\lam j => Term V (domain h j)))
-                (isTheorem phi (equality (apply h ts) (apply h ts)))
+                (IsTheorem phi (equality (apply h ts) (apply h ts)))
                 (Given (t : ts) (psi = equality t t))
       | partAxiom (a : Sequent) (axioms a) (rho : \Pi {s : Sort} -> a.1 s -> Term V s)
-                  (\Pi {s : Sort} (v : a.1 s) -> isTheorem phi (equality (rho v) (rho v)))
-                  (∀ (chi : a.3) (isTheorem phi (substF chi rho)))
+                  (\Pi {s : Sort} (v : a.1 s) -> IsTheorem phi (equality (rho v) (rho v)))
+                  (∀ (chi : a.3) (IsTheorem phi (substF chi rho)))
                   (psi = substF a.4 rho)
     }
 }
@@ -131,32 +185,34 @@
     | var v => idp
     | apply f d => cong (ext (\lam j => subst_interpret (d j)))
 
-  \func isFormulaTrue {V : Sort -> \Set} (rho : Env V) (phi : Formula V) : \Prop \elim phi
+  \func IsFormulaTrue {V : Sort -> \Set} (rho : Env V) (phi : Formula V) : \Prop \elim phi
     | equality t t' => interpret rho t = interpret rho t'
     | predicate P d => relation P (\lam j => interpret rho (d j))
 
-  \lemma subst_isFormulaTrue {U V : Sort -> \Set} {rho : Env V} {tau : \Pi {s : T} -> U s -> Term V s} {phi : Formula U}
-    : isFormulaTrue rho (substF phi tau) = isFormulaTrue (\lam u => interpret rho (tau u)) phi \elim phi
+  \lemma subst_IsFormulaTrue {U V : Sort -> \Set} {rho : Env V} {tau : \Pi {s : T} -> U s -> Term V s} {phi : Formula U}
+    : IsFormulaTrue rho (substF phi tau) = IsFormulaTrue (\lam u => interpret rho (tau u)) phi \elim phi
     | equality t t' => pmap2 (=) (subst_interpret t) (subst_interpret t')
     | predicate P d => cong (ext (\lam j => subst_interpret (d j)))
 
-  \func isSequentTrue (S : Sequent) =>
-    \Pi (rho : Env S.1) -> ∀ (phi : S.3) (isFormulaTrue rho phi) -> isFormulaTrue rho S.4
+  \func IsSequentTrue (S : Sequent) =>
+    \Pi (rho : Env S.1) -> ∀ (phi : S.3) (IsFormulaTrue rho phi) -> IsFormulaTrue rho S.4
 }
 
 \class Model \extends Structure {
   \override T : Theory
-  | isModel (S : Sequent) : axioms {T} S -> Structure.isSequentTrue S
+  | isModel (S : Sequent) : axioms {T} S -> Structure.IsSequentTrue S
 
-  \lemma theoremIsTrue {V : Sort -> \Set} {phis : Array (Formula V)} {psi : Formula V} (t : isTheorem phis psi) (rho : Env V) (c : ∀ (phi : phis) (isFormulaTrue rho phi)) : isFormulaTrue rho psi \elim psi, t
+  \lemma theoremIsTrue {V : Sort -> \Set} {phis : Array (Formula V)} {psi : Formula V} (t : IsTheorem phis psi) (rho : Env V) (c : ∀ (phi : phis) (IsFormulaTrue rho phi)) : IsFormulaTrue rho psi \elim psi, t
     | equality a _, refl idp => idp
     | psi, assumption j p => rewrite p (c j)
-    | _, substPres U chi tau1 tau2 tauE t idp => propExt.conv subst_isFormulaTrue (transport (\lam (rho : Env U) => isFormulaTrue rho chi) (ext (\lam u => theoremIsTrue (tauE u) rho c)) (propExt.dir subst_isFormulaTrue (theoremIsTrue t rho c)))
-    | _, axiom S a tau t idp => propExt.conv subst_isFormulaTrue (isModel S a _ (\lam j => propExt.dir subst_isFormulaTrue (theoremIsTrue (t j) rho c)))
-
-  \func qinterpret {s : Sort} (t : QTerm s) : E s \elim t
-    | qinj t => interpret (\lam {_} => absurd) t
-    | qapply f d => operation f (\lam j => qinterpret (d j))
-    | qquot p => theoremIsTrue p (\lam {_} => absurd) (\case __)
-    | qmerge {f} ds _ => operation f (\new DArray _ (\lam j => interpret (\lam {_} => absurd) (ds j)))
+    | _, equalityElim {s} chi e h idp => propExt.conv subst_IsFormulaTrue $
+      transport {Env \lam s' => Or (V s') (s = s')} (IsFormulaTrue __ chi)
+        (later $ ext \lam {s'} u => \case \elim u \with {
+          | inl v => idp
+          | inr s=s' => \case \elim s', \elim s=s' \with {
+            | _, idp => theoremIsTrue e rho c
+          }
+        })
+        (propExt.dir subst_IsFormulaTrue (theoremIsTrue h rho c))
+    | _, axiom S a tau t idp => propExt.conv subst_IsFormulaTrue (isModel S a _ (\lam j => propExt.dir subst_IsFormulaTrue (theoremIsTrue (t j) rho c)))
 } \where \open Theory

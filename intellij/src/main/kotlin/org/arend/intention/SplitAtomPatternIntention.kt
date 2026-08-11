@@ -63,7 +63,7 @@ class SplitAtomPatternIntention : SelfTargetingIntention<PsiElement>(PsiElement:
         if (!(element is ArendPattern && element.sequence.isEmpty())) return this.splitPatternEntries != null
         val type = getElementType(element, element.project, editor)?.let {
             caseClauseParameters = it.second
-            TypeConstructorExpression.unfoldType(it.first)
+            if (it.first == null) null else TypeConstructorExpression.unfoldType(it.first)
         }
         this.splitPatternEntries = when (type) {
             is DataCallExpression -> {
@@ -192,7 +192,7 @@ class SplitAtomPatternIntention : SelfTargetingIntention<PsiElement>(PsiElement:
                         if (concrete == null) return null
                         val patternPart = findPattern(indexList.drop(1), typecheckedPattern, concrete) as? BindingPattern
                             ?: return null
-                        return Pair(patternPart.binding.typeExpr, null)
+                        return Pair(patternPart.binding.type, null)
                     }
                 }
             }

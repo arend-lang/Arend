@@ -31,7 +31,7 @@ public class EquivSolver implements EquationSolver {
 
   @Override
   public boolean isApplicable(CoreExpression type) {
-    if (!(type instanceof CoreClassCallExpression && ((CoreClassCallExpression) type).getDefinition().isSubClassOf(meta.Equiv))) {
+    if (!(type instanceof CoreClassCallExpression && ((CoreClassCallExpression) type).getDefinition().isSubClassOf(meta.QEquiv))) {
       return false;
     }
     classCall = (CoreClassCallExpression) type;
@@ -55,7 +55,7 @@ public class EquivSolver implements EquationSolver {
 
   @Override
   public @Nullable Maybe<CoreExpression> getEqType(@Nullable TypedExpression leftExpr, @Nullable TypedExpression rightExpr) {
-    ConcreteExpression expr = factory.ref(meta.Equiv.getRef());
+    ConcreteExpression expr = factory.ref(meta.QEquiv.getRef());
     if (leftExpr != null || rightExpr != null) {
       List<ConcreteExpression> args = new ArrayList<>(2);
       if (leftExpr != null) {
@@ -77,7 +77,7 @@ public class EquivSolver implements EquationSolver {
 
   @Override
   public ConcreteExpression combineResults(ConcreteExpression expr1, ConcreteExpression expr2) {
-    return factory.app(factory.ref(meta.transEquiv), true, Arrays.asList(expr1, expr2));
+    return factory.app(factory.ref(meta.transQEquiv), true, Arrays.asList(expr1, expr2));
   }
 
   @Override

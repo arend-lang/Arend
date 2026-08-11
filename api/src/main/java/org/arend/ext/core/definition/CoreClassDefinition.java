@@ -1,7 +1,7 @@
 package org.arend.ext.core.definition;
 
 import org.arend.ext.core.expr.CoreAbsExpression;
-import org.arend.ext.core.level.CoreSort;
+import org.arend.ext.core.sort.CoreSortExpression;
 import org.arend.ext.util.Pair;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -20,7 +20,7 @@ public interface CoreClassDefinition extends CoreDefinition {
   @NotNull Collection<? extends Map.Entry<? extends CoreClassField, ? extends Pair<? extends CoreAbsExpression, ? extends CoreClassDefinition>>> getOverriddenFields();
   @Nullable CoreClassDefinition getOverriddenOriginalClass(@NotNull CoreClassField field);
   @Nullable CoreAbsExpression getDefault(@NotNull CoreClassField field);
-  @NotNull CoreSort getSort();
+  @NotNull CoreSortExpression getSortExpression();
   boolean isRecord();
   @Nullable CoreClassField getClassifyingField();
 

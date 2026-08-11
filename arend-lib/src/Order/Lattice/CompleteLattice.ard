@@ -1,0 +1,121 @@
+\import Category.Limit
+\import Equiv
+\import Function.Meta
+\import Logic
+\import Logic.Meta
+\import Meta
+\import Order.Lattice
+\import Paths
+\import Paths.Meta
+
+\class CompleteLattice \extends BoundedLattice, CompleteCat.{0} {
+  | Join : (E -> \Prop) -> E
+  | Join-cond {C : E -> \Prop} {x : E} : C x -> x <= Join C
+  | Join-univ {C : E -> \Prop} {e : E} : ∀ {w : C} (w <= e) -> Join C <= e
+
+  | bottom => Join \lam _ => Empty
+  | bottom-univ {x} => Join-univ \case __
+
+  | Meet : (E -> \Prop) -> E
+  | Meet-cond {C : E -> \Prop} {x : E} : C x -> Meet C <= x
+  | Meet-univ {C : E -> \Prop} {e : E} : ∀ {w : C} (e <= w) -> e <= Meet C
+
+  \default join \as join-impl x y => Join \lam z => (z = x) || (z = y)
+  \default join-left \as join-left-impl {x} {y} : x <= join-impl x y => Join-cond (byLeft idp)
+  \default join-right \as join-right-impl {x} {y} : y <= join-impl x y => Join-cond (byRight idp)
+  \default join-univ \as join-univ-impl {x} {y} {z} x<=z y<=z : join-impl x y <= z => Join-univ \case \elim __ \with {
+    | byLeft p => transportInv (<= z) p x<=z
+    | byRight p => transportInv (<= z) p y<=z
+  }
+
+  \default Meet \as Meet-impl C => Join \lam x => ∀ {y : C} (x <= y)
+  \default Meet-cond \as Meet-cond-impl {C} {x} Cx : Meet-impl C <= x => Join-univ (__ Cx)
+  \default Meet-univ \as Meet-univ-impl {C} {e} p : e <= Meet-impl C => Join-cond p
+
+  \default meet \as meet-impl x y => Meet \lam z => (z = x) || (z = y)
+  \default meet-left \as meet-left-impl {x} {y} : meet-impl x y <= x => Meet-cond (byLeft idp)
+  \default meet-right \as meet-right-impl {x} {y} : meet-impl x y <= y => Meet-cond (byRight idp)
+  \default meet-univ \as meet-univ-impl {x} {y} {z} z<=x z<=y : z <= meet-impl x y => Meet-univ \case \elim __ \with {
+    | byLeft p => transportInv (z <=) p z<=x
+    | byRight p => transportInv (z <=) p z<=y
+  }
+
+  \default top \as top-impl => Meet \lam _ => Empty
+  \default top-univ \as top-univ-impl {x} : x <= top-impl => Meet-univ \case __
+
+  | limit {J} G => \new Limit {
+    | apex => Meet (TSetIm G)
+    | coneMap j => Meet-cond (TSetIm-con j)
+    | coneCoh _ => prop-pi
+    | isLimit x => inP \new QEquiv {
+      | ret c => Meet-univ $ TSetIm-elim c.coneMap
+      | ret_f h => prop-pi
+      | f_sec c => ext
+    }
+  }
+  | pullback {x} {y} f g => \new Pullback {
+    | apex => x ∧ y
+    | pbProj1 => meet-left
+    | pbProj2 => meet-right
+    | pbCoh => prop-pi
+    | pbMap p1 p2 _ => meet-univ p1 p2
+    | pbBeta1 => prop-pi
+    | pbBeta2 => prop-pi
+    | pbEta _ _ => prop-pi
+  }
+
+  \func IJoin {J : \Type} (f : J -> E) : E
+    => Join (TSetIm f)
+
+  \lemma IJoin-cond {J : \Type} {f : J -> E} (j : J) : f j <= IJoin f
+    => Join-cond (TSetIm-con j)
+
+  \lemma IJoin-univ {A : \Type} {f : A -> E} {e : E} (p : \Pi (a : A) -> f a <= e) : IJoin f <= e
+    => Join-univ (TSetIm-elim p)
+
+  \func SJoin {A : \Type} (f : A -> E) (P : A -> \Type) : E
+    => Join (SetIm f P)
+
+  \lemma SJoin-cond {A : \Type} {f : A -> E} {P : A -> \Type} {a : A} (Pa : P a) : f a <= SJoin f P
+    => Join-cond (SetIm-con Pa)
+
+  \lemma SJoin-conde {A : \Type} {f : A -> E} {P : A -> \Type} (a : A) (Pa : P a) : f a <= SJoin f P
+    => SJoin-cond Pa
+
+  \lemma SJoin-univ {A : \Type} {f : A -> E} {P : A -> \Type} {e : E} (p : ∀ {a : P} (f a <= e)) : SJoin f P <= e
+    => Join-univ (SetIm-elim p)
+
+  \lemma Join_SJoin {C : E -> \Prop} : Join C = SJoin (\lam x => x) C
+    => <=-antisymmetric (Join-univ SJoin-cond) (SJoin-univ Join-cond)
+
+  \lemma Join_IJoin {C : E -> \Prop} : Join C = IJoin (\lam (s : Given C) => s.1)
+    => <=-antisymmetric (Join-univ \lam {w} Cw => IJoin-cond $ later (w,Cw)) (IJoin-univ \lam s => Join-cond s.2)
+
+  \func SMeet {A : \Type} (f : A -> E) (P : A -> \Type) : E
+    => Meet (SetIm f P)
+
+  \lemma SMeet-cond {A : \Type} {f : A -> E} {P : A -> \Prop} {a : A} (Pa : P a) : SMeet f P <= f a
+    => Meet-cond (SetIm-con Pa)
+
+  \lemma SMeet-conde {A : \Type} {f : A -> E} {P : A -> \Prop} (a : A) (Pa : P a) : SMeet f P <= f a
+    => Meet-cond (SetIm-con Pa)
+
+  \lemma SMeet-univ {A : \Type} {f : A -> E} {P : A -> \Prop} {e : E} (p : ∀ {a : P} (e <= f a)) : e <= SMeet f P
+    => Meet-univ (SetIm-elim p)
+
+  \lemma join_Join {x y : E} : x ∨ y = Join \lam z => (z = x) || (z = y)
+    => <=-antisymmetric (join-univ (Join-cond $ byLeft idp) (Join-cond $ byRight idp)) $ Join-univ \case \elim __ \with {
+      | byLeft p => transportInv (<= _) p join-left
+      | byRight p => transportInv (<= _) p join-right
+    }
+
+  \protected \func op : CompleteLattice => \new CompleteLattice {
+    | Lattice => Lattice.op
+    | Join => Meet
+    | Join-cond => Meet-cond
+    | Join-univ => Meet-univ
+    | Meet => Join
+    | Meet-cond => Join-cond
+    | Meet-univ => Join-univ
+  }
+}

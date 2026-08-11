@@ -14,6 +14,7 @@ import com.intellij.ui.EditorNotificationPanel
 import com.intellij.ui.EditorNotificationProvider
 import org.arend.module.config.ArendModuleConfigService
 import org.arend.util.ArendBundle
+import org.arend.util.FileUtils
 import org.jetbrains.yaml.YAMLFileType
 import java.util.function.Function
 import javax.swing.JComponent
@@ -22,7 +23,7 @@ class YamlNotificationProvider : EditorNotificationProvider {
 
     override fun collectNotificationData(project: Project, virtualFile: VirtualFile): Function<in FileEditor, out JComponent?>? {
         val yamlFileService = project.service<YamlFileService>()
-        return if (!ProjectFileIndex.getInstance(project).isInProject(virtualFile) || virtualFile.fileType !is YAMLFileType) {
+        return if (!ProjectFileIndex.getInstance(project).isInProject(virtualFile) || virtualFile.fileType !is YAMLFileType || virtualFile.name != FileUtils.LIBRARY_CONFIG_FILE) {
             null
         } else if (yamlFileService.getSameFields().isNotEmpty() || yamlFileService.checkSameFields(virtualFile)) {
             Function<FileEditor, EditorNotificationPanel?> { fileEditor: FileEditor? ->

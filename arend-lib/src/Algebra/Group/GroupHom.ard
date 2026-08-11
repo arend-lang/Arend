@@ -1,14 +1,11 @@
 \import Algebra.Group
-\import Algebra.Group.Sub
+\import Algebra.Meta
 \import Algebra.Monoid
 \import Algebra.Monoid.MonoidHom
 \import Algebra.Pointed
 \import Function
 \import Function.Meta
-\import Logic
-\import Logic.Meta
 \import Paths
-\import Paths.Meta
 
 \record GroupHom \extends MonoidHom {
   \override Dom : Group
@@ -17,49 +14,10 @@
   | func-ide => cancel_*-left (func ide) $ inv func-* *> pmap func ide-left *> inv ide-right
 
   \lemma func-inverse {a : Dom} : func (inverse a) = inverse (func a)
-    => MonoidHom.presInvElem \this (Group.makeInv a) (Group.makeInv (func a))
+    => func-InvElem (Group.makeInv a) (Group.makeInv (func a)) idp
 
-  \func Kernel : NormalSubGroup Dom \cowith
-    | contains x => func x = ide
-    | contains_ide => func-ide
-    | contains_inverse {x : Dom} (p : func x = ide) =>
-      func (inverse x)     ==< func-inverse >==
-      inverse (func x)     ==< pmap inverse p >==
-      inverse ide          ==< Group.inverse_ide >==
-      ide `qed
-
-    | isNormal g {h} p =>
-      func (g * h * inverse g)                ==< func-* >==
-      func (g * h) * func (inverse g)         ==< pmap (`* (func (inverse g))) func-* >==
-      func g * func h * func (inverse g)      ==< pmap (\lam z => func g * z * func (inverse g)) p >==
-      func g * ide * func (inverse g)         ==< pmap (`* (func (inverse g))) ide-right >==
-      func g * func (inverse g)               ==< inv func-* >==
-      func (g * inverse g)                    ==< pmap func inverse-right >==
-      func ide                                ==< func-ide >==
-      ide `qed
-
-    | contains_* {x} {y} p q =>
-      func (x * y)     ==< func-* >==
-      func x * func y  ==< pmap (`* func y) p >==
-      ide * func y     ==< ide-left >==
-      func y           ==< q >==
-      ide `qed
-
-  \func TrivialKernel : \Prop => \Pi {g : Dom} -> Kernel g -> g = ide
-
-  \func same-images-test {a b : Dom} (p : func a = func b) : Kernel (inverse a * b) =>
-    func (inverse a * b)          ==< func-* >==
-    func (inverse a) * func b     ==< pmap (`* func b) func-inverse >==
-    inverse (func a) * func b     ==< Group.equality-corrolary (func a) (func b) p >==
-    ide `qed
-
-  \lemma Kernel-injectivity-test (p : TrivialKernel) : IsInj func =>
-    \lam q => Group.equality-check (p (same-images-test q))
-
-  \lemma Kernel-injectivity-corrolary (p : IsInj func) : TrivialKernel =>
-    \lam q => p (q *> inv func-ide)
-
-  \func IsIsomorphism : \Prop => \Sigma (IsInj func) (IsSurj func)
+  \func IsIsomorphism : \Prop
+    => \Sigma (IsInj func) (IsSurj func)
 } \where {
   \func id {G : Group} : GroupHom G G \cowith
     | func x => x
@@ -69,6 +27,11 @@
     | func x => g (f x)
     | func-* => pmap g f.func-* *> g.func-*
 }
+
+\func conjugateHom {E : Group} (g : E) : GroupHom E E \cowith
+  | func => conjugate g
+  | func-ide => equation.group
+  | func-* => equation.group
 
 \record AddGroupHom \extends AddMonoidHom {
   \override Dom : AddGroup
@@ -87,19 +50,6 @@
   \lemma func-*i {n : Int} {x : Dom} : func (n AddGroup.*i x) = n AddGroup.*i func x \elim n
     | pos n => func-*n
     | neg n => func-*n *> pmap (n AddMonoid.*n) func-negative
-
-  \protected \func Kernel : SubAddGroup Dom \cowith
-    | contains x => func x = zro
-    | contains_zro => func-zro
-    | contains_+ p q => rewrite (func-+, p, q, zro-left) idp
-    | contains_negative p => rewrite (func-negative, p, AddGroup.negative_zro) idp
-
-  \protected \func Image : SubAddGroup Cod \cowith
-    | contains x => ∃ (y : Dom) (func y = x)
-    | contains_zro => inP (zro, func-zro)
-    | contains_+ (inP (a, p)) (inP (b, q)) => inP (a + b, rewrite (func-+,p, q) idp)
-    | contains_negative (inP (a, p)) => inP (negative a, rewrite (AddGroupHom.func-negative, p) idp)
-
 } \where {
   \func toGroupHom {G H : AddGroup} (f : AddGroupHom G H) : GroupHom (AddGroup.toGroup G) (AddGroup.toGroup H) \cowith
     | func x => f x
@@ -112,4 +62,8 @@
   \func id {G : AddGroup} : AddGroupHom G G \cowith
     | func x => x
     | func-+ => idp
+
+  \func \fixl 8 compose \alias \infixl 8 ∘ {A B C : AddGroup} (g : AddGroupHom B C) (f : AddGroupHom A B) : AddGroupHom A C \cowith
+    | func x => g (f x)
+    | func-+ => pmap g f.func-+ *> g.func-+
 }

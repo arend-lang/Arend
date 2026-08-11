@@ -1,0 +1,23 @@
+\import Algebra.Pointed
+\import Algebra.Pointed.PointedHom
+\import Category
+\import Category.Meta
+\import Paths.Meta
+
+\instance PointedCat.{u} : Cat Pointed.{u}
+  | Hom X Y => PointedHom X Y
+  | id => PointedHom.id
+  | o => PointedHom.∘
+  | id-left => idp
+  | id-right => idp
+  | o-assoc => idp
+  | univalence => sip \lam p1 p2 => ext (func-ide {p1})
+
+\instance AddPointedCat.{u} : Cat AddPointed.{u}
+  | Hom X Y => AddPointedHom X Y
+  | id => AddPointedHom.id
+  | o => AddPointedHom.∘
+  | id-left => idp
+  | id-right => idp
+  | o-assoc => idp
+  | univalence => sip \lam p1 p2 => ext (func-zro {p1})

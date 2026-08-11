@@ -57,6 +57,8 @@ class ArendModuleConfigService(val module: Module) : LibraryConfig(module.projec
     override fun getLibraryVersion(): Version? =
         Version.fromString(versionString)
 
+    override fun getLanguageVersion(): Range<Version> = VersionRange.parseVersionRange(langVersionString) ?: Range.unbound()
+
     override val langVersion: Range<Version>
         get() = VersionRange.parseVersionRange(langVersionString) ?: Range.unbound()
 

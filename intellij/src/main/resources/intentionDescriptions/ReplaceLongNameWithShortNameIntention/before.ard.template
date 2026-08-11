@@ -1,7 +1,7 @@
 \module M \where {
-  \func f => 1
+  \func f.{p} => 1
 }
 
 \module M2 \where {
-  \func f2 => <spot>M.f</spot> \levels _ _
+  \func f2 => <spot>M.f</spot>.{0}
 }

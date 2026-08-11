@@ -126,7 +126,7 @@ public class ExpressionTest extends TypeCheckingTestCase {
   public void typeCheckingUniverse() {
     // (f : Type1 -> Type1) -> f Type1
     LocalReferable f = ref("f");
-    Concrete.Expression expr = cPi(f, cPi(cUniverseStd(1), cUniverseStd(1)), cApps(cVar(f), cUniverseStd(1)));
+    Concrete.Expression expr = cPi(f, cPi(cUniverse(1), cUniverse(1)), cApps(cVar(f), cUniverse(1)));
     typeCheckExpr(expr, null, 1, typeMismatchError());
   }
 
@@ -159,7 +159,7 @@ public class ExpressionTest extends TypeCheckingTestCase {
   public void typedLambdaExpectedType() {
     // \(X : Type0) x. x : (X : Type0) (X) -> X
     SingleDependentLink link = singleParam("X", Universe(0));
-    typeCheckExpr("\\lam (X : \\oo-Type0) x => x", Pi(link, Pi(singleParam(null, Ref(link)), Ref(link))));
+    typeCheckExpr("\\lam (X : \\Type0) x => x", Pi(link, Pi(singleParam(null, Ref(link)), Ref(link))));
   }
 
   @Test
@@ -193,7 +193,7 @@ public class ExpressionTest extends TypeCheckingTestCase {
     LocalReferable f = ref("f");
     LocalReferable x = ref("x");
     Concrete.LetClause xClause = clet(x, cZero());
-    Concrete.Expression expr = cLam(cargs(cTele(cvars(F), cPi(cNat(), cUniverseStd(0))), cTele(cvars(f), cPi(ctypeArgs(cTele(cvars(x), cNat())), cApps(cVar(F), cVar(x))))),
+    Concrete.Expression expr = cLam(cargs(cTele(cvars(F), cPi(cNat(), cUniverse(0))), cTele(cvars(f), cPi(ctypeArgs(cTele(cvars(x), cNat())), cApps(cVar(F), cVar(x))))),
             cLet(clets(xClause), cApps(cVar(f), cVar(x))));
     typeCheckExpr(expr, null);
   }

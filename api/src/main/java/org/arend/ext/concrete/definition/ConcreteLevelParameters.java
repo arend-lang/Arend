@@ -8,5 +8,4 @@ import java.util.List;
 
 public interface ConcreteLevelParameters extends ConcreteSourceNode {
   @NotNull List<? extends ArendRef> getReferables();
-  boolean isIncreasing();
 }

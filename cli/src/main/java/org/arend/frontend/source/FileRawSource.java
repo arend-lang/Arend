@@ -29,7 +29,7 @@ public class FileRawSource extends StreamRawSource {
 
   @NotNull
   @Override
-  protected InputStream getInputStream() throws IOException {
+  public InputStream getInputStream() throws IOException {
     return Files.newInputStream(myFile);
   }
 

@@ -1,0 +1,283 @@
+\import Algebra.Group
+\import Algebra.Meta
+\import Algebra.Monoid
+\import Algebra.Ordered
+\import Algebra.Pointed
+\import Algebra.Ring
+\import Algebra.Ring.Reduced
+\import Algebra.Semiring
+\import Algebra.StrictlyOrdered
+\import Arith.Complex
+\import Arith.Nat
+\import Arith.Real
+\import Arith.Real.Field
+\import Arith.Real.Root
+\import Arith.Real.UpperReal
+\import Function.Meta
+\import Logic
+\import Meta
+\import Order.LinearOrder
+\import Order.PartialOrder
+\import Order.StrictOrder
+\import Paths
+\import Paths.Meta
+\import Arith.Rat
+\import Order.Lattice
+\import Set.Filter
+\import Set.Set
+\import Topology.CoverSpace
+\import Topology.CoverSpace.Complete
+\import Topology.MetricSpace
+\import Topology.BanachAlgebra
+\import Topology.BanachSpace
+\import Topology.NormedAbGroup
+\import Topology.NormedAbGroup.Real
+\import Topology.NormedRing
+\open Monoid (pow)
+\open AddMonoid (*n)
+\open Complex \using (iunit \as i)
+
+{- | Squared modulus: $|z|^2 = (\Re z)^2 + (\Im z)^2$. Avoiding the sqrt keeps
+     algebraic identities (multiplicativity, Cauchy–Schwarz) pure polynomial. -}
+\func cabs2 (z : Complex) : Real
+  => z.re * z.re + z.im * z.im
+
+\lemma cabs2>=0 {z : Complex} : (0 : Real) <= cabs2 z
+  => linarith (RealField.square_>=0 {z.re}, RealField.square_>=0 {z.im})
+
+\lemma cabs2_zro : cabs2 (zro : Complex) = (0 : Real)
+  => simplify
+
+\lemma cabs2_ide : cabs2 (ide : Complex) = (1 : Real)
+  => simplify
+
+\lemma cabs2_negative {z : Complex} : cabs2 (negative z) = cabs2 z
+  => simplify
+
+{- | The key polynomial identity: $|xy|^2 = |x|^2 \cdot |y|^2$.
+     Proof reduces to
+     $$(\Re x \cdot \Re y - \Im x \cdot \Im y)^2 + (\Re x \cdot \Im y + \Im x \cdot \Re y)^2
+       = ((\Re x)^2 + (\Im x)^2)((\Re y)^2 + (\Im y)^2)$$
+     which holds by ring algebra. -}
+\lemma cabs2_* {x y : Complex} : cabs2 (x * y) = cabs2 x * cabs2 y
+  => equation.cRing
+
+{- | Brahmagupta–Fibonacci / 2-square identity, in the form needed for Cauchy–Schwarz:
+     $$((\Re x)^2 + (\Im x)^2)((\Re y)^2 + (\Im y)^2) - (\Re x \cdot \Re y + \Im x \cdot \Im y)^2
+       = (\Re x \cdot \Im y - \Im x \cdot \Re y)^2.$$ -}
+\lemma cabs2_*_CS {x y : Complex}
+  : cabs2 x * cabs2 y - (x.re * y.re + x.im * y.im) * (x.re * y.re + x.im * y.im) =
+    (x.re * y.im - x.im * y.re) * (x.re * y.im - x.im * y.re)
+  => equation.cRing
+
+{- | Cauchy–Schwarz at the squared level:
+     $(\Re x \cdot \Re y + \Im x \cdot \Im y)^2 \leq |x|^2 \cdot |y|^2$. -}
+\lemma CS_<= {x y : Complex}
+  : (x.re * y.re + x.im * y.im) * (x.re * y.re + x.im * y.im) <= cabs2 x * cabs2 y
+  => linarith (cabs2_*_CS {x} {y}, RealField.square_>=0 {x.re * y.im - x.im * y.re})
+
+{- | Modulus: $|z| = \sqrt{(\Re z)^2 + (\Im z)^2}$. -}
+\func cabs (z : Complex) : Real
+  => sqrt (cabs2 z)
+
+\lemma cabs>=0 {z : Complex} : 0 <= cabs z
+  => sqrt>=0
+
+\lemma cabs_zro : cabs 0 = 0
+  => pmap sqrt cabs2_zro *> sqrt_zro
+
+\lemma cabs_ide : cabs 1 = 1
+  => pmap sqrt cabs2_ide *> sqrt_ide
+
+\lemma cabs_negative {z : Complex} : cabs (negative z) = cabs z
+  => pmap sqrt cabs2_negative
+
+\lemma cabs-square {z : Complex} : cabs z * cabs z = cabs2 z
+  => pow_sqrt cabs2>=0
+
+{- | $|\mathrm{fromReal}\ x| = |x|$. The complex modulus of a real-line embedding
+     reduces to the real absolute value via $|\mathrm{fromReal}\ x|^2 = x^2$ plus
+     $\sqrt{x^2} = |x|$. -}
+\lemma cabs_fromReal {x : Real} : cabs x = RealField.abs x
+  => simplify *> sqrt_pow_abs
+
+{- | Modulus is multiplicative: $|xy| = |x| \cdot |y|$. Reduce to the squared version
+     $|xy|^2 = (|x| \cdot |y|)^2$ and use that both sides are nonneg square roots of the
+     same value. -}
+\lemma cabs_* {x y : Complex} : cabs (x * y) = cabs x * cabs y
+  => sqrt-cancel (cabs>=0 {x * y}) (RealField.<=_*_positive_positive cabs>=0 cabs>=0) $ cabs-square {x * y}
+      *> cabs2_*
+      *> pmap2 (*) (inv cabs-square) (inv cabs-square)
+      *> {Real} equation.cRing
+
+{- | Cauchy–Schwarz, linear form: $\Re x \cdot \Re y + \Im x \cdot \Im y \leq |x| \cdot |y|$.
+     Goes through $|s|$ (real abs of the inner product), which has
+     $|s|^2 = s^2 \leq (|x| \cdot |y|)^2$, then sqrt-cancels. -}
+\private \lemma CS-linear {x y : Complex} : x.re * y.re + x.im * y.im <= cabs x * cabs y
+  => \have | t>=0 : 0 <= cabs x * cabs y => RealField.<=_*_positive_positive cabs>=0 cabs>=0
+           | abs_s_sq : RealField.abs (x.re * y.re + x.im * y.im) * RealField.abs (x.re * y.re + x.im * y.im)
+                          = (x.re * y.re + x.im * y.im) * (x.re * y.re + x.im * y.im)
+              => inv RealField.abs_* *> RealField.abs-ofPos RealField.square_>=0
+           | tt-eq : cabs x * cabs y * (cabs x * cabs y) = cabs2 x * cabs2 y
+              => equation.cRing *> {Real} pmap2 (*) cabs-square cabs-square
+           | sq<=tt : RealField.abs (x.re * y.re + x.im * y.im) * RealField.abs (x.re * y.re + x.im * y.im)
+                        <= cabs x * cabs y * (cabs x * cabs y)
+              => transport2 (<=) (inv abs_s_sq) (inv tt-eq) CS_<=
+           | abs_s<=t : RealField.abs (x.re * y.re + x.im * y.im) <= cabs x * cabs y
+              => RealField.square_<=-cancel RealField.abs>=0 t>=0 sq<=tt
+     \in RealField.abs>=id <=∘ abs_s<=t
+
+{- | Triangle inequality $|x + y| \leq |x| + |y|$. Squared form:
+     $$|x+y|^2 = |x|^2 + 2(\Re x \cdot \Re y + \Im x \cdot \Im y) + |y|^2
+       \leq |x|^2 + 2|x||y| + |y|^2 = (|x|+|y|)^2.$$ -}
+\lemma cabs_+ {x y : Complex} : cabs (x + y) <= cabs x + cabs y
+  => \have | sum>=0 : 0 <= cabs x + cabs y => linarith (cabs>=0 {x}, cabs>=0 {y})
+           | lhs_sq : cabs (x + y) * cabs (x + y) = cabs2 x + cabs2 y + 2 * (x.re * y.re + x.im * y.im)
+              => cabs-square {x + y} *> {Real} equation.cRing
+           | rhs_sq : (cabs x + cabs y) * (cabs x + cabs y) = cabs2 x + cabs2 y + 2 * (cabs x * cabs y)
+              => equation.cRing *> {Real} pmap2 (__ + __ + _) cabs-square cabs-square
+           | inner-bound : cabs2 x + cabs2 y + 2 * (x.re * y.re + x.im * y.im)
+                        <= cabs2 x + cabs2 y + 2 * (cabs x * cabs y)
+              => linarith (CS-linear {x} {y})
+           | sq-bound : cabs (x + y) * cabs (x + y) <= (cabs x + cabs y) * (cabs x + cabs y)
+              => transport2 (<=) (inv lhs_sq) (inv rhs_sq) inner-bound
+     \in RealField.square_<=-cancel (cabs>=0 {x + y}) sum>=0 sq-bound
+
+{- | Reverse of {cabs_zro}: $|c| = 0 \implies c = 0$. Since $|c|^2 = (\Re c)^2 + (\Im c)^2$
+     and both squares are nonneg, the sum vanishing forces each to vanish, then field
+     reducedness forces each component to zero. -}
+\lemma cabs_zro-ext {c : Complex} (p : cabs c = 0) : c = 0
+  => \have | abs2_c=0 : c.re * c.re + c.im * c.im = (0 : Real)
+              => inv cabs-square *> pmap (* cabs c) p *> RealField.zro_*-left
+           | re2=0 : c.re * c.re = (0 : Real)
+              => linarith (RealField.square_>=0 {c.im}, RealField.square_>=0 {c.re})
+           | im2=0 : c.im * c.im = (0 : Real)
+              => linarith (RealField.square_>=0 {c.im}, RealField.square_>=0 {c.re})
+     \in ext (RealField.isReduced re2=0, RealField.isReduced im2=0)
+
+{- | Complex numbers as a normed abelian group, with norm
+     $|c| = \sqrt{(\Re c)^2 + (\Im c)^2}$. The metric, uniform, and topological
+     structure are auto-derived from the norm. -}
+\instance ComplexNormed : NormedAbGroup Complex
+  | AbGroup => ComplexField
+  | norm => cabs
+  | norm_zro => Real.=-upper.1 cabs_zro
+  | norm_negative => Real.=-upper.1 cabs_negative
+  | norm_+ => transport (_ ExUpperRealAbMonoid.<=) RealAbGroup.+-upper $ Real.<=-upper.1 cabs_+
+  | norm-ext {c} p => cabs_zro-ext $ (Real.=-upper {cabs c} {0}).2 p
+
+{- | Complex numbers as a pseudo-valued ring: multiplicative modulus
+     $|xy| = |x| \cdot |y|$ plus $|1| = 1$. The ExPseudoNormedRing plumbing
+     (`norm_*_<=`, `norm_ide_<=`, `*-cont` via the bilinear-locally-uniform
+     default) all follow from these. -}
+\instance ComplexValuedRing : PseudoValuedRing Complex
+  | PseudoNormedAbGroup => ComplexNormed
+  | Ring => ComplexField
+  | norm_* => Real.=-upper.1 cabs_* *> RealField.*-upper cabs>=0 cabs>=0
+  | norm_ide => Real.=-upper.1 cabs_ide
+
+-- | Modulus of a power: $|z^k| = |z|^k$ — the {lnorm_pow} law at {ComplexValuedRing}.
+\lemma cabs_pow {z : Complex} {k : Nat} : cabs (pow z k) = pow (cabs z) k
+  => lnorm_pow {ComplexValuedRing}
+
+{- | Triangle inequality for finite sums: $|\sum_i z_i| \leq \sum_i |z_i|$ — the {lnorm_BigSum}
+     law at {ComplexNormed}. -}
+\lemma cabs_BigSum {l : Array Complex} : cabs (ComplexField.BigSum l) <= RealAbGroup.BigSum (\lam i => cabs (l i))
+  => lnorm_BigSum {ComplexNormed}
+
+{- | Real part dominated by modulus: $|\Re c| \leq |c|$. Proved by squaring:
+     $(|\Re c|)^2 = (\Re c)^2 \leq (\Re c)^2 + (\Im c)^2 = |c|^2$, then `RealField.square_<=-cancel`. -}
+\lemma cabs_re_<= {c : Complex} : RealField.abs c.re <= cabs c
+  => RealField.square_<=-cancel abs>=0 cabs>=0 $ transport2 (<=)
+      (zro-right *> inv (RealField.abs-ofPos RealField.square_>=0) *> RealField.abs_*)
+      (inv cabs-square)
+      (<=_+ <=-refl RealField.square_>=0)
+
+\lemma cabs_im_<= {c : Complex} : RealField.abs c.im <= cabs c
+  => RealField.square_<=-cancel RealField.abs>=0 cabs>=0 $ transport2 (<=)
+      (zro-left *> inv (RealField.abs-ofPos RealField.square_>=0) *> RealField.abs_*)
+      (inv cabs-square)
+      (<=_+ RealField.square_>=0 <=-refl)
+
+{- | The real-part projection $\Re : \mathbb{C} \to \mathbb{R}$ as a
+     non-expansive (1-Lipschitz) normed-group map. -}
+\func Re : NormedAbGroupMap ComplexNormed RealNormed \cowith
+  | func c => c.re
+  | func-+ => idp
+  | func-norm => Real.<=-upper.1 cabs_re_<=
+
+{- | The imaginary-part projection $\Im : \mathbb{C} \to \mathbb{R}$ as a
+     non-expansive (1-Lipschitz) normed-group map. -}
+\func Im : NormedAbGroupMap ComplexNormed RealNormed \cowith
+  | func c => c.im
+  | func-+ => idp
+  | func-norm => Real.<=-upper.1 cabs_im_<=
+
+{- | $\mathrm{fromReal} : \mathbb{R} \to \mathbb{C}$ as an isometric normed-group
+     map. Preserves addition (`fromReal_+`) and norm exactly (`abs_fromReal`),
+     hence in particular a `CoverMap`. -}
+\func fromRealMap : NormedIsometricMap RealNormed ComplexNormed Complex.fromReal \cowith
+  | func-+ => fromReal_+
+  | func-norm-isometry => Real.=-upper.1 cabs_fromReal
+
+{- | $|i|^2 = 1$. By definition of `i` and ring arithmetic. -}
+\lemma cabs2_i : cabs2 i = 1
+  => simplify
+
+{- | $|i| = 1$. The imaginary unit has unit modulus. -}
+\lemma abs_i : cabs i = 1
+  => pmap sqrt cabs2_i *> sqrt_ide
+
+{- | $|i \cdot z| = |z|$. Follows from `abs_*` and $|i| = 1$. -}
+\lemma cabs_i_* {z : Complex} : cabs (i * z) = cabs z
+  => cabs_* *> pmap (* _) abs_i *> ide-left
+
+{- | Multiplication by $i$ as an isometric normed-group map. -}
+\func mulIMap : NormedIsometricMap ComplexNormed ComplexNormed (i *) \cowith
+  | func-+ => ldistr
+  | func-norm-isometry => Real.=-upper.1 cabs_i_*
+
+{- | $|\overline{z}|^2 = |z|^2$. The imaginary part gets negated, but $(-x)^2 = x^2$. -}
+\lemma cabs2_conj {z : Complex} : cabs2 (conj z) = cabs2 z
+  => pmap (z.re * z.re +) (Ring.negative_*-left *> pmap negative Ring.negative_*-right *> AddGroup.negative-isInv)
+
+{- | $|\overline{z}| = |z|$. The complex modulus is invariant under conjugation. -}
+\lemma cabs_conj {z : Complex} : cabs (conj z) = cabs z
+  => pmap sqrt cabs2_conj
+
+{- | $z\overline{z} = |z|^2$, viewed inside $\mathbb{C}$: the product of a number with
+     its conjugate is the real number $|z|^2$. This is what turns a division by a
+     complex number into a division by the real $|z|^2$. -}
+\lemma mul-conj {z : Complex} : z * conj z = Complex.fromReal (cabs2 z)
+  => complex-ext
+
+{- | Conjugation $\overline{\cdot} : \mathbb{C} \to \mathbb{C}$ as an isometric
+     normed-group map. -}
+\func conjMap : NormedIsometricMap ComplexNormed ComplexNormed conj \cowith
+  | func-+ => conj_+
+  | func-norm-isometry => Real.=-upper.1 cabs_conj
+
+-- | `OnUnitCircle u` says that `u` lies on the unit circle, in the sqrt-free form $|u|^2 = 1$.
+\func OnUnitCircle (u : Complex) : \Prop
+  => cabs2 u = 1
+
+\lemma cabs=1_OnUnitCircle {u : Complex} (p : cabs u = 1) : OnUnitCircle u
+  => inv cabs-square *> pmap (\lam c => c * c) p *> ide-left
+
+\lemma OnUnitCircle_* {u w : Complex} (pu : OnUnitCircle u) (pw : OnUnitCircle w) : OnUnitCircle (u * w)
+  => cabs2_* *> pmap2 (*) pu pw *> ide-left
+
+\lemma OnUnitCircle_negative {u : Complex} (pu : OnUnitCircle u) : OnUnitCircle (ComplexField.negative u)
+  => cabs2_negative *> pu
+
+\lemma OnUnitCircle_conj {u : Complex} (pu : OnUnitCircle u) : OnUnitCircle (conj u)
+  => cabs2_conj *> pu
+
+{- | For a unit `v`, $\overline v\,v = 1$: `mul-conj` reads $v\overline v$ as the
+     real scalar $|v|^2$, which is $1$. -}
+\lemma OnUnitCircle_conj-inv {v : Complex} (unit : OnUnitCircle v) : conj v * v = 1
+  => *-comm *> mul-conj *> pmap Complex.fromReal unit
+
+-- | Rotating by a unit `v` and back is the identity, $u = (u\overline v)\,v$.
+\lemma OnUnitCircle-rotate {u v : Complex} (unit : OnUnitCircle v) : u = (u * conj v) * v
+  => inv (*-assoc *> pmap (u *) (OnUnitCircle_conj-inv unit) *> ide-right)

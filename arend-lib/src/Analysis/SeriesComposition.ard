@@ -1,0 +1,383 @@
+\import Algebra.Group
+\import Algebra.Meta
+\import Algebra.Monoid
+\import Algebra.Monoid.MonoidHom
+\import Algebra.Ordered
+\import Algebra.Pointed
+\import Algebra.QModule
+\import Algebra.Ring
+\import Algebra.Ring.FormalSeries
+\import Algebra.Ring.FormalSeries.Composition
+\import Algebra.Semiring
+\import Analysis.CauchyProduct
+\import Analysis.Limit
+\import Analysis.PowerSeries
+\import Analysis.Series
+\import Arith.Int
+\import Arith.Nat
+\import Arith.Rat
+\import Arith.Real
+\import Arith.Real.Field
+\import Arith.Real.UpperReal
+\import Function.Meta
+\import Logic
+\import Logic.Meta
+\import Meta
+\import Order.Lattice
+\import Order.PartialOrder
+\import Order.StrictOrder
+\import Paths
+\import Paths.Meta
+\import Set.Fin
+\import Topology.BanachAlgebra
+\import Topology.MetricSpace
+\import Topology.NormedAbGroup
+\import Topology.NormedRing
+\import Topology.TopRing
+\import Topology.TopSpace
+\import Topology.TopSpace.Product
+\open AddMonoid (BigSum)
+
+{- | The $n$-fold self-convolution of a series, representing the
+     coefficient sequence of $A(x)^n$ where $A(x) = \sum_k a_k x^k$.
+     If $B(x) = \sum_m b_m x^m$ then $B(x)^n$ has coefficients
+     `pow-conv b n`, so this is the building block for series substitution.
+
+ - `pow-conv a 0`        = $(1, 0, 0, \ldots)$ (the multiplicative identity).
+ - `pow-conv a (suc n)`  = `conv (pow-conv a n) a`. -}
+\func pow-conv {A : Ring} (a : FSeries A) (n : Nat) : FSeries A
+  => Monoid.pow a n
+
+{- | If $m$ terms each have norm strictly bounded by $c$, then
+     $\|\sum_{k < m} S_k\| < (m + 1) \cdot c$. -}
+\private \lemma partialSum-norm-bounded {A : ExPseudoNormedAbGroup}
+    {S : Series A} (m : Nat) {c : Rat} (c>0 : 0 < c)
+    (bound : \Pi (k : Nat) -> k < m -> (A.norm (S k)).U c)
+  : (A.norm (partialSum S m)).U (Rat.fromInt (pos (suc m)) * c)
+  => rewrite partialSum.=FinSum $ A.norm_FinSum $ ExUpperRealAbMonoid.FinSum_<= (\lam j => ExUpperReal.<_<= $ bound j (fin_< j)) $
+      rewriteI (AddMonoidHom.func-FinSum rat-upperReal) $ transportInv (< _) RatField.FinSum_replicate $ RatField.<_*_positive-left linarith c>0
+
+{- | If $a$ is absolutely convergent, so is `pow-conv a n`.  By induction on $n$
+     using `conv-absConv` at the inductive step. -}
+\lemma pow-conv-absConv {A : ExPseudoNormedRing} {a : Series A} (ac : IsAbsConvSeries a) (n : Nat)
+  : IsAbsConvSeries (pow-conv a n) \elim n
+  | 0 => constSeries-abs-conv
+  | suc m => conv-absConv (pow-conv-absConv ac m) ac
+
+{- | If $a$ sums to $s_a$ absolutely, then `pow-conv a n` sums to $s_a^n$.
+     By induction on $n$ using the Cauchy product theorem `conv-sum`. -}
+\lemma pow-conv-sum {A : ExPseudoNormedRing} {a : Series A} {sa : A}
+                    (ac : IsSeriesSum a sa) (ac-abs : IsAbsConvSeries a) (n : Nat)
+  : IsSeriesSum (pow-conv a n) (Monoid.pow sa n) \elim n
+  | 0 => constSeries-seriesSum
+  | suc m => conv-sum (pow-conv-sum ac ac-abs m) ac (pow-conv-absConv ac-abs m) ac-abs
+
+\lemma powerSeries-const-eq {A : ExPseudoNormedRing} {a x : A}
+  : (\lam k => powerSeries (FSeriesRing.coef a) x k) = FSeriesRing.coef a
+  => ext \case \elim __ \with {
+      | 0 => ide-right
+      | suc m => zro_*-left
+    }
+
+{- | If `powerSeries b x` is absolutely convergent then so is
+     `powerSeries (pow-conv b n) x` for every $n$.  By induction on $n$
+     using {conv-absConv} + `conv-powerSeries-eq`. -}
+\lemma pow-conv-powerSeries-absConv {A : ExPseudoNormedRing} {b : Series A} {x : A} (xc : A.IsCentral x)
+                                    (b-abs : IsAbsConvSeries (powerSeries b x)) (n : Nat)
+  : IsAbsConvSeries (\lam k => powerSeries (pow-conv b n) x k) \elim n
+  | 0 => transport IsAbsConvSeries (inv powerSeries-const-eq) constSeries-abs-conv
+  | suc m => transport IsAbsConvSeries
+                (ext \lam n => conv-powerSeries {A} {pow-conv b m} {b} xc)
+                (conv-absConv (pow-conv-powerSeries-absConv xc b-abs m) b-abs)
+
+{- | The power-series form of $B^n$: if $B = \sum_k b_k x^k$ converges and $b$
+     is absolutely convergent at $x$, then
+     $$B^n = \sum_k (b^n)_k \cdot x^k.$$ -}
+\lemma pow-B-as-powerSeries {A : ExPseudoNormedRing} {b : Series A} {x : A} {B : A} (xc : A.IsCentral x)
+  (b-abs : IsAbsConvSeries (powerSeries b x)) (B-sum : IsSeriesSum (powerSeries b x) B) (n : Nat)
+  : IsSeriesSum (\lam k => powerSeries (pow-conv b n) x k) (Monoid.pow B n) \elim n
+  | 0 => transport (IsSeriesSum __ 1) (inv powerSeries-const-eq) constSeries-seriesSum
+  | suc m => transport (IsSeriesSum __ _) (ext \lam n => conv-powerSeries {A} {pow-conv b m} {b} xc) $
+      conv-sum (pow-B-as-powerSeries xc b-abs B-sum m) B-sum (pow-conv-powerSeries-absConv xc b-abs m) b-abs
+
+{- | When $b_0 = 0$, $\mathrm{partialSum}_M$ of `powerSeries (pow-conv b M) x`
+     is $0$: every term in the partial sum has $(\text{pow-conv}\,b\,M)_k = 0$
+     for $k < M$ by `pow-conv-zero-below`. -}
+\lemma pow-conv-partialSum-M-zero {A : ExPseudoNormedRing} {b : Series A} {x : A} (b_0 : b 0 = 0) (M : Nat)
+  : partialSum (\lam k => powerSeries (pow-conv b M) x k) M = 0
+  => partialSum.=FinSum *> A.FinSum_zro \lam j => pmap (* _) (pow-conv-zero-below b_0 (fin_< j)) *> zro_*-left
+
+{- | Structural identity bridging the formal and analytic partial sums:
+     for every $N$,
+     $$\sum_{k < N} [x^k]A(B(x)) \cdot x^k = \sum_{n < N} a_n \cdot \sum_{k < N} (\mathrm{\text{pow-conv}}\,b\,n)_k \cdot x^k.$$
+
+     Hypothesis $b_0 = 0$ is used to discard the (triangular) excess terms on
+     the right where $k < n$, via `pow-conv-zero-below`.  This identity is the
+     reindexing step that lets `compose-converges` reduce the substitution
+     theorem to Tannery's dominated-convergence lemma. -}
+\lemma compose-partialSum-decomp {A : ExPseudoNormedRing} {a b : Series A} {x : A}
+                                 (b_0 : b 0 = 0) (N : Nat)
+  : partialSum (\lam k => fcompose a b k * Monoid.pow x k) N
+  = partialSum (\lam n => a n * partialSum (\lam k => powerSeries (pow-conv b n) x k) N) N
+  \elim N
+  | 0 => partialSum-empty *> inv partialSum-empty
+  | suc M =>
+     \let | inner : Nat -> Series A => \lam n => \lam k => powerSeries (pow-conv b n) x k
+          | g : Series A => \lam n => a n * partialSum (inner n) M
+          | h : Series A => \lam n => a n * pow-conv b n M * Monoid.pow x M
+          | f : Series A => \lam n => a n * partialSum (inner n) (suc M)
+     \in \have
+        | f-eq : f = (\lam n => g n + h n)
+           => ext (\lam n => pmap (_ *) partialSum_suc *> ldistr *> pmap (_ +) (inv *-assoc))
+        | g-suc-eq : partialSum g (suc M) = partialSum g M
+           => partialSum_suc
+              *> pmap (partialSum g M +) (pmap (a M *) (pow-conv-partialSum-M-zero b_0 M)
+                                          *> zro_*-right)
+              *> zro-right
+     \in compose-partialSum-lhs-suc {A} {a} {b} {x} M
+         *> pmap (+ _) (compose-partialSum-decomp b_0 M)
+         *> pmap (_ +) (inv \peval partialSum h (suc M))
+         *> pmap (+ _) (inv g-suc-eq)
+         *> inv partialSum_+
+         *> pmap (partialSum __ _) (inv f-eq)
+  \where {
+    {- | Successor decomposition of the formal partial sum:
+    $\sum_{k \leq M} c_k \cdot x^k = \sum_{k < M} c_k \cdot x^k + (\sum_{n < M + 1} a_n \cdot (\text{pow-conv}\,b\,n)_M) \cdot x^M$,
+    where $c_k = [x^k]\,A(B(x))$. -}
+    \lemma compose-partialSum-lhs-suc {A : ExPseudoNormedRing} {a b : Series A} {x : A} (M : Nat)
+      : partialSum (\lam k => fcompose a b k * Monoid.pow x k) (suc M)
+      = partialSum (\lam k => fcompose a b k * Monoid.pow x k) M
+          + BigSum (\new Array A (suc M) (\lam n => a n * pow-conv b n M * Monoid.pow x M))
+      => partialSum_suc *> pmap (_ +) (A.BigSum-rdistr {\new Array A (suc M) (\lam n => a n * pow-conv b n M)})
+  }
+
+{- | Tannery's theorem — dominated convergence for series with summand
+     varying in the upper bound.  If $F_{n,N}$ converges pointwise to $L_n$
+     as $N \to \infty$, each $\|F_{n,N}\|$ is bounded uniformly in $N$ by
+     a summable $D_n$, and $\sum L_n = s_L$, then
+     $$\lim_{N \to \infty} \sum_{n < N} F_{n,N} \;=\; s_L.$$
+
+     This is the analytic interchange-of-limits lemma used by
+     `compose-converges`. -}
+\lemma tannery-converges {A : ExPseudoNormedRing}
+                         (F : Nat -> Nat -> A) (L : Series A)
+                         {sL : A} (sL-sum : IsSeriesSum L sL)
+                         (D : Series ExUpperReal) (D-conv : IsConvUpperSeries D)
+                         (F-bound : \Pi (n N : Nat) -> A.norm (F n N) ExUpperRealAbMonoid.<= D n)
+                         (F-conv : \Pi (n : Nat) -> A.IsLimit (\lam N => F n N) (L n))
+  : A.IsLimit (\lam N => partialSum (\lam n => F n N) N) sL
+  => limit-metric-char.2 \lam {eps} eps>0 =>
+       \have | eps/3>0 : (0 : Rat) < eps * ratio 1 3
+                => RatField.<_*_positive_positive eps>0 linarith
+             | (inP (N0_D, hD)) => D-conv eps/3>0
+             | (inP (N*, hL)) => limit-metric-char.1 sL-sum eps/3>0
+       \in \let N0 => N0_D ∨ N* \in
+       \have | N0_D<=N0 : N0_D <= N0 => join-left
+             | N*<=N0 : N* <= N0 => join-right
+             | D>=0 j : (0 : ExUpperReal) ExUpperRealAbMonoid.<= D j
+                => norm>=0 <=∘ F-bound j 0
+             | sucN0-pos : 0 RatField.< suc N0
+                => fromInt_< (pos<pos NatOrder.zero<suc)
+             | finv-sucN0>0 : 0 < RatField.finv (suc N0)
+                => RatField.finv>0 sucN0-pos
+             | eps/k>0 : 0 < eps * ratio 1 3 * RatField.finv (suc N0)
+                => RatField.<_*_positive_positive (RatField.<_*_positive_positive eps>0 linarith) finv-sucN0>0
+             | per-k (k : Fin N0) : ∃ (Mk : Nat) ∀ {N'} (Mk <= N') ((dist (L k) (F k N')).U (eps * ratio 1 3 * RatField.finv (suc N0)))
+                => limit-metric-char.1 (F-conv k) eps/k>0
+             | (inP allM) => FinSet.finiteAC per-k
+       \in \let | M_max => NatBSemilattice.BigJoin \new Array Nat N0 \lam k => (allM k).1
+                | N_max => N0 ∨ M_max
+       \in inP (N_max, \lam {N} N_max<=N =>
+         \have | N0<=N : N0 <= N => join-left <=∘ N_max<=N
+               | M_max<=N : M_max <= N => join-right <=∘ N_max<=N
+               | N0_D<=N : N0_D <= N => N0_D<=N0 <=∘ N0<=N
+               | half1 : (dist sL (partialSum L N0)).U (eps * ratio 1 3)
+                  => hL N*<=N0
+               -- Per-Nat-index bound, derived from `allM` via Fin/Nat coercion.
+               | per-k-nat k (k<N0 : k < N0) : (dist (L k) (F k N)).U (eps * ratio 1 3 * RatField.finv (suc N0))
+                  =>  \let | Mk<=Mmax : (allM (toFin k k<N0)).1 <= M_max
+                                => NatBSemilattice.BigJoin-cond (toFin k k<N0)
+                            | Mk<=N : (allM (toFin k k<N0)).1 <= N => Mk<=Mmax <=∘ M_max<=N
+                            | b-fin : (dist (L (toFin k k<N0)) (F (toFin k k<N0) N)).U (eps * ratio 1 3 * RatField.finv (suc N0))
+                                => (allM (toFin k k<N0)).2 Mk<=N
+                       \in transport (\lam k' => (dist (L k') (F k' N)).U (eps * ratio 1 3 * RatField.finv (suc N0))) toFin=id b-fin
+               --  |L k - F k N| = dist (L k) (F k N) (via norm-dist).
+               | norm-LF-bound k (k<N0 : k < N0) : (norm (L k - F k N)).U (eps * ratio 1 3 * RatField.finv (suc N0))
+                  => transport (\lam (x : ExUpperReal) => x.U $ eps * ratio 1 3 * RatField.finv (suc N0)) norm-dist (per-k-nat k k<N0)
+               -- Head bound: norm (partialSum (\lam k => L k - F k N) N0) .U eps · 1/3.
+               --   By partialSum-norm-bounded, the norm is bounded by (suc N0) · c
+               --   where c = eps · 1/3 · finv (suc N0). By finv-right, (suc N0) · c = eps · 1/3.
+               | head-prebound : (norm (partialSum (\lam k => L k - F k N) N0)).U $ suc N0 RatField.* (eps * ratio 1 3 * RatField.finv (suc N0))
+                  => partialSum-norm-bounded N0 eps/k>0 norm-LF-bound
+               | sucN0/=0 : suc N0 /= {Rat} 0
+                  => RatField.>_/= sucN0-pos
+               | cancel-eq : suc N0 RatField.* (eps * ratio 1 3 * RatField.finv (suc N0)) = eps * ratio 1 3
+                  => *-comm *> *-assoc *> pmap (_ *) (RatField.finv-left sucN0/=0) *> ide-right
+               | head-bound : (norm (partialSum (\lam k => L k - F k N) N0)).U (eps * ratio 1 3)
+                  => rewriteI cancel-eq head-prebound
+               -- Translate `norm (partialSum (L - F)) = dist (partialSum L) (partialSum (F·N))`.
+               | partialSum-diff-eq : partialSum (\lam k => L k - F k N) N0 = partialSum L N0 - partialSum (\lam n' => F n' N) N0
+                  => (\peval partialSum _ N0) *> A.BigSum_-
+                     *> pmap2 (-) (inv \peval partialSum L N0) (inv \peval partialSum (\lam n' => F n' N) N0)
+               | dist-head-eq : dist (partialSum L N0) (partialSum (\lam n' => F n' N) N0)
+                              = norm (partialSum (\lam k => L k - F k N) N0)
+                  => norm-dist *> pmap norm (inv partialSum-diff-eq)
+               | head : (dist (partialSum L N0) (partialSum (\lam n' => F n' N) N0)).U (eps * ratio 1 3)
+                  => transport (\lam (x : ExUpperReal) => x.U (eps * ratio 1 3)) (inv dist-head-eq) head-bound
+               -- Tail: dist (partialSum (F·N) N0) (partialSum (F·N) N) = norm (midSum (F·N) N0 N).
+               | pSF-split : partialSum (\lam n' => F n' N) N
+                           = partialSum (\lam n' => F n' N) N0 + midSum (\lam n' => F n' N) N0 N
+                  => partialSum-split N0<=N
+               | tail-norm-eq : dist (partialSum (\lam n' => F n' N) N0) (partialSum (\lam n' => F n' N) N)
+                              = norm (midSum (\lam n' => F n' N) N0 N)
+                  => \have diff-eq : partialSum (\lam n' => F n' N) N0 - partialSum (\lam n' => F n' N) N
+                                   = negative (midSum (\lam n' => F n' N) N0 N)
+                            => pmap (_ -) pSF-split *> pmap (_ +) A.negative_+ *> inv +-assoc
+                            *> pmap (+ _) +-comm *> +-assoc *> pmap (_ +) negative-right *> zro-right
+                     \in norm-dist *> pmap norm diff-eq *> norm_negative
+               | tail-norm-bound : norm (midSum (\lam n' => F n' N) N0 N) ExUpperRealAbMonoid.<= midSum D N0_D N
+                  => midSum_norm <=∘ midSum_<= (\lam {j} _ _ => F-bound j N) <=∘ midSum_<=-left N0_D<=N0 D>=0
+               | tail : (dist (partialSum (\lam n' => F n' N) N0) (partialSum (\lam n' => F n' N) N)).U (eps * ratio 1 3)
+                  => transport (\lam (x : ExUpperReal) => x.U (eps * ratio 1 3)) (inv tail-norm-eq) (tail-norm-bound (hD N0_D<=N))
+               | half2 : (dist (partialSum L N0) (partialSum (\lam n' => F n' N) N)).U
+                         (eps * ratio 1 3 + eps * ratio 1 3)
+                  => ExUpperReal.<=_+-char dist-triang head tail
+               | total : (dist sL (partialSum (\lam n' => F n' N) N)).U
+                         (eps * ratio 1 3 + (eps * ratio 1 3 + eps * ratio 1 3))
+                  => ExUpperReal.<=_+-char dist-triang half1 half2
+         \in ExUpperReal.U_<= total $ transport (<= eps) (inv ide-right *> ldistr *> pmap (_ +) ldistr) <=-refl)
+
+{- | Substitution / composition theorem: if $b_0 = 0$, $B(x) = \sum_m b_m x^m$
+    converges to $B$ absolutely, and $A(B) = \sum_n a_n \cdot B^n$ converges to $s_A$, then $$\sum_k [x^k]\,A(B(x)) \cdot x^k \;=\; s_A.$$
+    The caller supplies the dominating upper-real series $D$ for the Tannery
+    step, with $\|a_n \cdot \mathrm{partialSum}_N(\mathrm{powerSeries}\,(\text{pow-conv}\,b\,n)\,\_\,x)\| \leq D\,n$.
+    For a version that constructs $D$ internally from `IsPowerSeriesConv a`,
+    see `compose-converges-abs`. -}
+\lemma compose-converges {A : ExPseudoNormedRing}
+                         {a b : Series A} {x : A}
+                         (xc : A.IsCentral x)
+                         (b_0 : b 0 = 0)
+                         (b-abs : IsAbsConvSeries (powerSeries b x))
+                         {B : A} (B-sum : IsSeriesSum (powerSeries b x) B)
+                         {sA : A} (sA-sum : IsSeriesSum (\lam n => a n * Monoid.pow B n) sA)
+                         (D : Series ExUpperReal) (D-conv : IsConvUpperSeries D)
+                         (D-bound : \Pi (n N : Nat)
+                                    -> A.norm (a n * partialSum (\lam k => powerSeries (pow-conv b n) x k) N)
+                                       ExUpperRealAbMonoid.<= D n)
+  : IsSeriesSum (\lam k => fcompose a b k * Monoid.pow x k) sA
+  => \let | F : Nat -> Nat -> A => \lam n N => a n * partialSum (\lam k => powerSeries (pow-conv b n) x k) N
+          | L : Series A => \lam n => a n * Monoid.pow B n
+     \in \have | F-conv n : A.IsLimit (\lam N => F n N) (L n)
+                  => \let | inner-limit : A.IsLimit (partialSum (\lam k => powerSeries (pow-conv b n) x k)) (Monoid.pow B n)
+                             => pow-B-as-powerSeries xc b-abs B-sum n
+                          | mult-an : ContMap A A
+                             => *-cont ContMap.∘ ProductTopSpace.tuple (ContMap.const (a n)) ContMap.id
+                     \in cont-limit inner-limit mult-an
+               | tannery-result : A.IsLimit (\lam N => partialSum (\lam n => F n N) N) sA
+                  => tannery-converges F L sA-sum D D-conv D-bound F-conv
+               | bridge-eq : (\lam N => partialSum (\lam k => fcompose a b k * Monoid.pow x k) N)
+                           = (\lam N => partialSum (\lam n => F n N) N)
+                  => ext (compose-partialSum-decomp b_0)
+         \in transportInv (A.IsLimit __ sA) bridge-eq tannery-result
+
+{- | If the norm partial sums of `powerSeries b x` are bounded by $g$,
+     then the partial-sum-norm of the $n$-fold power `pow-conv b n` is
+     bounded by $g^n$.  By induction on $n$ via {conv-norm_<=} + {partialSum-uconv-square}. -}
+\private \lemma partialSum-pow-conv-norm-bound {A : ExPseudoNormedRing}
+                            {b : Series A} {x : A}
+                            (xc : A.IsCentral x)
+                            {g : ExUpperReal} (g>=0 : 0 <= g)
+                            (g-bound : \Pi (N : Nat) -> partialSum (\lam k => A.norm (powerSeries b x k)) N <= g)
+                            (n N : Nat)
+  : partialSum (\lam k => norm (powerSeries (pow-conv b n) x k)) N <= ExUpperRealSemigroup.pow g n \elim n
+  | 0 => partialSum-unitSeries-norm-bound N
+  | suc m =>
+    \let | conv-eq : (\lam k => powerSeries (pow-conv b (suc m)) x k)
+                   = conv (powerSeries (pow-conv b m) x) (powerSeries b x)
+            => inv $ ext \lam n => conv-powerSeries {A} {pow-conv b m} {b} xc
+         | rewrite-eq : partialSum (\lam k => A.norm (powerSeries (pow-conv b (suc m)) x k)) N
+                      = partialSum (\lam k => A.norm (conv (powerSeries (pow-conv b m) x) (powerSeries b x) k)) N
+            => pmap (\lam (S : Series A) => partialSum (\lam k => A.norm (S k)) N) conv-eq
+         | step1 => partialSum_<= (\lam k => conv-norm_<= (powerSeries (pow-conv b m) x) (powerSeries b x) k)
+         | step2 => partialSum-uconv-square (\lam _ => norm>=0) (\lam _ => norm>=0)
+         | step3 => ExUpperRealSemigroup.<=_* (partialSum-pow-conv-norm-bound xc g>=0 g-bound m N) (g-bound N)
+    \in transport (<= _) (inv rewrite-eq) (step1 <=∘ step2 <=∘ step3)
+  \where {
+    {- | Base case ($n = 0$) for `partialSum-pow-conv-norm-bound`: the identity
+         series `pow-conv b 0` is supported only at index $0$, where its norm is
+         at most $1$, so its partial sums are bounded by $1$. -}
+    \private \lemma partialSum-unitSeries-norm-bound {A : ExPseudoNormedRing} {x : A} (N : Nat)
+      : partialSum (\lam k => norm (powerSeries (FSeriesRing A).ide x k)) N <= ExUpperReal.fromRat 1 \elim N
+      | 0 => transportInv (<= _) partialSum-empty (ExUpperReal.<=-rat.1 RatField.zro<=ide)
+      | 1 => transportInv (<= _) (partialSum_1 *> pmap norm ide-left) norm_ide_<=
+      | suc (suc N) => transportInv (<= _) (partialSum_suc *> pmap (_ +) (pmap norm zro_*-left *> norm_zro) *> zro-right) (partialSum-unitSeries-norm-bound (suc N))
+  }
+
+{- | Restricted variant of `compose-converges-abs` that accepts a *radius bound*
+     for the OUTER series rather than full `IsPowerSeriesConv`.
+
+     Used when the OUTER (e.g. $\log(1+\cdot)$) has finite convergence radius
+     and the inner-series-absolute-sum stays within it: caller provides
+     $r \in \overline{\mathbb R}_{\geq 0}$, convergence of $\sum_n \|a_n\|\,r^n$,
+     and a uniform bound $\sum_{k < N} \|b_k\,x^k\| \leq r$.
+
+     The proof is exactly the body of {compose-converges-abs} with $g$
+     replaced by the externally-supplied $r$. -}
+\lemma compose-converges-radius {A : ExPseudoNormedRing}
+                                {a b : Series A} {x : A}
+                                (xc : A.IsCentral x)
+                                (b_0 : b 0 = 0)
+                                {r : ExUpperReal} (r>=0 : 0 <= r)
+                                (a-conv-at-r : IsConvUpperSeries (\lam n => A.norm (a n) * ExUpperRealSemigroup.pow r n))
+                                (b-abs : IsAbsConvSeries (powerSeries b x))
+                                (b-bound-r : \Pi (N : Nat) -> partialSum (\lam k => A.norm (powerSeries b x k)) N <= r)
+                                {B : A} (B-sum : IsSeriesSum (powerSeries b x) B)
+                                {sA : A} (sA-sum : IsSeriesSum (\lam n => a n * Monoid.pow B n) sA)
+  : IsSeriesSum (\lam k => fcompose a b k * Monoid.pow x k) sA
+  => compose-converges xc b_0 b-abs B-sum sA-sum (\lam n => A.norm (a n) * ExUpperRealSemigroup.pow r n) a-conv-at-r
+      \lam n N => norm_*_<= <=∘ ExUpperRealSemigroup.<=_* <=-refl (midSum_norm {_} {_} {0} <=∘ partialSum-pow-conv-norm-bound xc r>=0 b-bound-r n N)
+
+{- | Self-contained version of {compose-converges}: the dominating series $D$
+     is constructed from `IsPowerSeriesConv a` plus a uniform partial-sum
+     bound on $\|b_k\,x^k\|$ extracted from `b-abs` via
+     `partialSum-uniform-bound`.
+
+     Concretely the radius $\gamma$ supplied to `compose-converges-radius`
+     is a rational uniform bound on $\sum_{k < N} \|b_k\,x^k\|$. -}
+\lemma compose-converges-abs {A : ExPseudoNormedRing}
+                             {a b : Series A} {x : A}
+                             (xc : A.IsCentral x)
+                             (b_0 : b 0 = 0)
+                             (a-PS-conv : IsPowerSeriesConv a)
+                             (b-abs : IsAbsConvSeries (powerSeries b x))
+                             {B : A} (B-sum : IsSeriesSum (powerSeries b x) B)
+                             {sA : A} (sA-sum : IsSeriesSum (\lam n => a n * Monoid.pow B n) sA)
+  : IsSeriesSum (\lam k => fcompose a b k * Monoid.pow x k) sA
+  => \let | b-norm-bounded : IsBoundedUpperSeries (\lam k => A.norm (powerSeries b x k))
+              => convUpper-bounded (\lam _ => norm>=0) (\lam k => norm-bounded (powerSeries b x k)) b-abs
+          | (inP (g, h-g)) => partialSum-uniform-bound (\lam _ => norm>=0) b-norm-bounded b-abs
+          | g>=0-rat : 0 <= g => RatField.<=-less (rewrite partialSum-empty in h-g 0)
+          | g-er>=0 : 0 <= ExUpperReal.fromRat g => ExUpperReal.<=-rat.1 g>=0-rat
+          | g-er-bounded : ∃ (B : Rat) ((ExUpperReal.fromRat g).U B)
+              => inP (g + 1, transport (< _) zro-right $ RatField.<_+-right g RatField.zro<ide)
+     \in compose-converges-radius xc b_0 g-er>=0
+           (IsPowerSeriesConv.upper a-PS-conv g-er>=0 g-er-bounded)
+           b-abs (\lam N => ExUpperReal.<_<= (h-g N)) B-sum sA-sum
+
+\lemma fromRat-pow-conv {A : RealBanachAlgebra} {b : Series Rat} {n k : Nat}
+  : pow-conv (\lam m => A.fromRat (b m)) n k = A.fromRat (pow-conv b n k)
+  \elim n, k
+  | 0, 0 => inv QModule.ide_*q
+  | 0, suc k => inv QModule.*q_*n
+  | suc n', k =>
+    \have ih-series : pow-conv (\lam m => A.fromRat (b m)) n' = (\lam j => A.fromRat (pow-conv b n' j))
+                    => ext \lam j => fromRat-pow-conv
+    \in pmap (conv __ (\lam m => A.fromRat (b m)) k) ih-series *> conv_fromRat (pow-conv b n') b k
+
+\lemma compose-coef-fromRat {A : RealBanachAlgebra} (a b : Series Rat) (k : Nat)
+  : fcompose (\lam n => A.fromRat (a n)) (\lam n => A.fromRat (b n)) k = A.fromRat (fcompose a b k)
+  => AddMonoid.BigSum-ext {A} {suc k}
+       {\new Array A (suc k) (\lam n => A.fromRat (a n) * pow-conv (\lam m => A.fromRat (b m)) n k)}
+       {\new Array A (suc k) (\lam n => A.fromRat (a n * pow-conv b n k))}
+       (\lam n => pmap (_ *) fromRat-pow-conv *> A.fromRat_*)
+     *> inv (A.toRatModule.*c_BigSum-rdistr {\new Array Rat (suc k) (\lam n => a n * pow-conv b n k)})

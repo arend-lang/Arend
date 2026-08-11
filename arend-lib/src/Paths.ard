@@ -94,6 +94,10 @@
 
 \func pathOver {A : I -> \Type} {a : A left} {a' : A right} (p : coe A a right = a') : Path A a a'
   => *>.concat (idpOver A a) p
+  \where {
+    \protected \func conv (p : Path A a a') : coe A a right = a'
+      => coe (\lam i => coe A a i = p i) idp right
+  }
 
 \func coe_path {A : \Type} {a1 a2 a3 a4 : A} (p : a2 = a1) (q : a2 = a3) (r : a3 = a4)
   : coe (\lam i => p @ i = r @ i) q right = inv p *> q *> r
@@ -103,7 +107,7 @@
       : coe (\lam i => p @ i = r @ i) (p *> q *> inv r) right = q
       | idp, idp, idp => idp
 
-\func path-sym {A : \Type} (a a' : A) : (a = a') = (a' = a) => path (iso inv inv inv_inv inv_inv)
+\func path-sym.{u} {A : \Type u} (a a' : A) : (a = a') = (a' = a) => path (iso inv inv inv_inv inv_inv)
 
 \func rotatePathLeft {A : \Type} {a a' a'' : A} {p : a' = a} {q : a' = a''} {r : a = a''} (t : q = p *> r)
   : inv p *> q = r \elim p, r, t
@@ -116,7 +120,7 @@
 \func homotopy_app-comm {A : \Type} (f : A -> A) (h : \Pi (a : A) -> f a = a) (a : A) : h (f a) = pmap f (h a) =>
   h (f a)                             ==< pmap (h (f a) *>) (inv (*>_inv (h a))) >==
   h (f a) *> (h a *> inv (h a))       ==< inv (*>-assoc (h (f a)) (h a) (inv (h a))) >==
-  (h (f a) *> h a) *> inv (h a)       ==< pmap (`*> inv (h a)) (inv (homotopy-isNatural f (\lam a => a) h (h a))) >==
+  (h (f a) *> h a) *> inv (h a)       ==< pmap (*> inv (h a)) (inv (homotopy-isNatural f (\lam a => a) h (h a))) >==
   (pmap f (h a) *> h a) *> inv (h a)  ==< *>-assoc (pmap f (h a)) (h a) (inv (h a)) >==
   pmap f (h a) *> (h a *> inv (h a))  ==< pmap (pmap f (h a) *>) (*>_inv (h a)) >==
   pmap f (h a)                        `qed
@@ -150,7 +154,7 @@
   | idp, idp => idp
 
 \func transport_path-left {A : \Type} {a0 a b : A} (p : a = b) (q : a = a0)
-  : transport (`= a0) p q = inv p *> q
+  : transport (= a0) p q = inv p *> q
   | idp, idp => idp
 
 \func transport_path_pmap {A B : \Type} (f g : A -> B) {a a' : A} (p : a = a') (q : f a = g a) (s : f a' = g a') (h : q *> pmap g p = pmap f p *> s) : transport (\lam x => f x = g x) p q = s \elim p

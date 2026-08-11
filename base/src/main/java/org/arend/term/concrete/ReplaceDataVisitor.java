@@ -44,7 +44,7 @@ public class ReplaceDataVisitor implements ConcreteExpressionVisitor<Void,Concre
 
   @Override
   public Concrete.ReferenceExpression visitReference(Concrete.ReferenceExpression expr, Void params) {
-    return expr instanceof Concrete.FixityReferenceExpression fixRef ? new Concrete.FixityReferenceExpression(getData(expr), copyRef(expr.getReferent()), fixRef.fixity) : new Concrete.ReferenceExpression(getData(expr), copyRef(expr.getReferent()), visitLevels(expr.getPLevels()), visitLevels(expr.getHLevels()));
+    return expr instanceof Concrete.FixityReferenceExpression fixRef ? new Concrete.FixityReferenceExpression(getData(expr), copyRef(expr.getReferent()), fixRef.fixity) : new Concrete.ReferenceExpression(getData(expr), copyRef(expr.getReferent()), visitLevels(expr.getLevels()));
   }
 
   @Override
@@ -134,7 +134,7 @@ public class ReplaceDataVisitor implements ConcreteExpressionVisitor<Void,Concre
 
   @Override
   public Concrete.UniverseExpression visitUniverse(Concrete.UniverseExpression expr, Void params) {
-    return new Concrete.UniverseExpression(getData(expr), expr.getPLevel() == null ? null : expr.getPLevel().accept(this, null), expr.getHLevel() == null ? null : expr.getHLevel().accept(this, null));
+    return new Concrete.UniverseExpression(getData(expr), expr.getPLevel() == null ? null : expr.getPLevel().accept(this, null), expr.getHLevel(), expr.getKind());
   }
 
   @Override
@@ -264,28 +264,13 @@ public class ReplaceDataVisitor implements ConcreteExpressionVisitor<Void,Concre
   }
 
   @Override
-  public Concrete.LevelExpression visitInf(Concrete.InfLevelExpression expr, Void param) {
-    return new Concrete.InfLevelExpression(getData(expr));
-  }
-
-  @Override
-  public Concrete.LevelExpression visitLP(Concrete.PLevelExpression expr, Void param) {
-    return new Concrete.PLevelExpression(getData(expr));
-  }
-
-  @Override
-  public Concrete.LevelExpression visitLH(Concrete.HLevelExpression expr, Void param) {
-    return new Concrete.HLevelExpression(getData(expr));
-  }
-
-  @Override
   public Concrete.LevelExpression visitNumber(Concrete.NumberLevelExpression expr, Void param) {
     return new Concrete.NumberLevelExpression(getData(expr), expr.getNumber());
   }
 
   @Override
   public Concrete.LevelExpression visitVar(Concrete.VarLevelExpression expr, Void param) {
-    return new Concrete.VarLevelExpression(getData(expr), expr.getReferent(), expr.isInference(), expr.getLevelType());
+    return new Concrete.VarLevelExpression(getData(expr), expr.getReferent(), expr.isInference());
   }
 
   @Override
@@ -364,7 +349,7 @@ public class ReplaceDataVisitor implements ConcreteExpressionVisitor<Void,Concre
       clauses.add(new Concrete.ConstructorClause(getData(clause), visitPatterns(clause.getPatterns()), constructors));
     }
 
-    Concrete.DataDefinition result = new Concrete.DataDefinition(def.getData(), def.getPLevelParameters(), def.getHLevelParameters(), (List<Concrete.TypeParameter>) (List<?>) visitParameters(def.getParameters()), visitReferenceExpressions(def.getEliminatedReferences()), def.isTruncated(), def.getUniverse() == null ? null : visitUniverse(def.getUniverse(), null), clauses);
+    Concrete.DataDefinition result = new Concrete.DataDefinition(def.getData(), def.getLevelParameters(), (List<Concrete.TypeParameter>) (List<?>) visitParameters(def.getParameters()), visitReferenceExpressions(def.getEliminatedReferences()), def.isTruncated(), def.getUniverse() == null ? null : visitUniverse(def.getUniverse(), null), clauses);
     def.copyData(result);
     return result;
   }
@@ -373,7 +358,7 @@ public class ReplaceDataVisitor implements ConcreteExpressionVisitor<Void,Concre
   @Override
   public Concrete.ClassDefinition visitClass(Concrete.ClassDefinition def, Void params) {
     List<Concrete.ClassElement> elements = new ArrayList<>(def.getElements().size());
-    Concrete.ClassDefinition result = new Concrete.ClassDefinition(def.getData(), def.getPLevelParameters(), def.getHLevelParameters(), def.isRecord(), def.withoutClassifying(), visitReferenceExpressions(def.getSuperClasses()), elements);
+    Concrete.ClassDefinition result = new Concrete.ClassDefinition(def.getData(), def.getLevelParameters(), def.isRecord(), def.withoutClassifying(), visitReferenceExpressions(def.getSuperClasses()), elements);
     Concrete.Expression previousType = null;
     Concrete.Expression previousTypeCopied = null;
     for (Concrete.ClassElement element : def.getElements()) {
@@ -397,7 +382,7 @@ public class ReplaceDataVisitor implements ConcreteExpressionVisitor<Void,Concre
 
   @Override
   public Concrete.MetaDefinition visitMeta(Concrete.MetaDefinition def, Void params) {
-    Concrete.MetaDefinition result = new Concrete.MetaDefinition(def.getData(), def.pLevelParameters, def.hLevelParameters, visitParameters(def.getParameters()), def.body == null ? null : def.body.accept(this, null));
+    Concrete.MetaDefinition result = new Concrete.MetaDefinition(def.getData(), def.levelParameters, visitParameters(def.getParameters()), def.body == null ? null : def.body.accept(this, null));
     result.setStatus(def.getStatus());
     return result;
   }

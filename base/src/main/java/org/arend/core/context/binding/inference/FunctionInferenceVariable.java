@@ -12,15 +12,21 @@ import org.arend.typechecking.error.local.inference.FunctionArgInferenceError;
 import java.util.Set;
 
 public class FunctionInferenceVariable extends InferenceVariable {
+  private final boolean mySolvableFromEquations;
   private final Definition myDefinition;
   private final DependentLink myParameter;
   private final int myIndex;
 
-  public FunctionInferenceVariable(Definition definition, DependentLink parameter, int index, Expression type, Concrete.SourceNode sourceNode, Set<Binding> bounds) {
+  public FunctionInferenceVariable(Definition definition, DependentLink parameter, int index, Expression type, Concrete.SourceNode sourceNode, Set<Binding> bounds, boolean solvableFromEquations) {
     super(parameter.getName(), type, sourceNode, bounds);
     myDefinition = definition;
     myParameter = parameter;
     myIndex = index;
+    mySolvableFromEquations = solvableFromEquations;
+  }
+
+  public FunctionInferenceVariable(Definition definition, DependentLink parameter, int index, Expression type, Concrete.SourceNode sourceNode, Set<Binding> bounds) {
+    this(definition, parameter, index, type, sourceNode, bounds, true);
   }
 
   @Override
@@ -36,5 +42,10 @@ public class FunctionInferenceVariable extends InferenceVariable {
   @Override
   public LocalError getErrorMismatch(Expression expectedType, Expression actualType, Expression candidate) {
     return new FunctionArgInferenceError(myDefinition, myParameter, myIndex, expectedType, actualType, getSourceNode(), candidate);
+  }
+
+  @Override
+  public boolean isSolvableFromEquations() {
+    return mySolvableFromEquations;
   }
 }

@@ -21,7 +21,7 @@ public class ModuleSerialization {
   private final Set<Integer> myCurrentDefinitions = new HashSet<>();
   private boolean myComplete;
 
-  static final int VERSION = 14;
+  static final int VERSION = 16;
 
   public ModuleSerialization(ErrorReporter errorReporter, DependencyListener dependencyListener) {
     myErrorReporter = errorReporter;
@@ -82,6 +82,14 @@ public class ModuleSerialization {
     DefinitionProtos.Referable.Builder refBuilder = DefinitionProtos.Referable.newBuilder();
     refBuilder.setName(referable instanceof ModuleReferable ? ((ModuleReferable) referable).path.getLastName() : referable.textRepresentation());
     refBuilder.setPrecedence(DefinitionSerialization.writePrecedence(referable.getPrecedence()));
+    String aliasName = referable.getAliasName();
+    if (aliasName != null && !aliasName.isEmpty()) {
+      refBuilder.setAliasName(aliasName);
+      refBuilder.setAliasPrecedence(DefinitionSerialization.writePrecedence(referable.getAliasPrecedence()));
+    }
+    // Preserve access modifier — without this, deserialized \protected members become PUBLIC,
+    // which leaks them into dynamic scope walks and triggers spurious duplicate-import warnings.
+    refBuilder.setAccessModifier(DefinitionSerialization.writeAccessModifier(referable.getAccessModifier()));
 
     Definition typechecked = referable instanceof TCDefReferable ? ((TCDefReferable) referable).getTypechecked() : null;
     if (typechecked != null && !(typechecked instanceof Constructor || typechecked instanceof ClassField)) {
@@ -95,7 +103,7 @@ public class ModuleSerialization {
     }
     builder.setReferable(refBuilder.build());
 
-    // Write subgroups
+    // Write subgroups and level declarations
     for (ConcreteStatement statement : group.statements()) {
       ConcreteGroup subgroup = statement.group();
       if (subgroup != null) {

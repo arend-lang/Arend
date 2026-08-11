@@ -28,7 +28,6 @@ import java.awt.event.KeyEvent
 import javax.swing.KeyStroke
 import javax.swing.AbstractAction
 import javax.swing.tree.TreePath
-import com.intellij.openapi.application.runReadAction
 import com.intellij.psi.PsiElement
 import org.arend.psi.navigate
 import org.arend.util.findLibrary
@@ -54,6 +53,7 @@ import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.openapi.fileEditor.FileEditorManager
 import com.intellij.openapi.application.ReadAction
 import com.intellij.openapi.application.ModalityState
+import com.intellij.openapi.application.WriteIntentReadAction
 
 class ArendServerStateView(private val project: Project, toolWindow: ToolWindow) {
     private var suppressSelectionEvents: Boolean = false
@@ -288,34 +288,32 @@ class ArendServerStateView(private val project: Project, toolWindow: ToolWindow)
         if (path != null) selectNode(path)
     }
 
+    // Reachable from raw AWT handlers (the Enter key binding and the double-click listener),
+    // which no longer hold the write-intent lock, so acquire it for the whole navigation.
     private fun navigate(obj: Any?) {
-        when (obj) {
-            is DefinitionNode -> {
-                val tcRef = obj.definition
-                val ok = runReadAction {
+        WriteIntentReadAction.run {
+            when (obj) {
+                is DefinitionNode -> {
+                    val tcRef = obj.definition
                     val psi = tcRef.data as? PsiElement
                     if (psi != null && psi.isValid) {
                         psi.navigationElement.navigate(true)
-                        true
                     } else {
-                        false
+                        val location = tcRef.location
+                        if (location != null) {
+                            val file = project.findLibrary(location.libraryName)?.findArendFile(location)
+                            file?.navigate(true)
+                        }
                     }
                 }
-                if (!ok) {
-                    val location = tcRef.location
-                    if (location != null) {
-                        val file = project.findLibrary(location.libraryName)?.findArendFile(location)
-                        file?.navigate(true)
-                    }
+                is ModuleNode -> {
+                    val loc = obj.location
+                    val file = project.findLibrary(loc.libraryName)?.findArendFile(loc)
+                    file?.navigate(true)
                 }
-            }
-            is ModuleNode -> {
-                val loc = obj.location
-                val file = project.findLibrary(loc.libraryName)?.findArendFile(loc)
-                file?.navigate(true)
-            }
-            is FileNode -> {
-                PsiManager.getInstance(project).findFile(obj.file)?.navigate(true)
+                is FileNode -> {
+                    PsiManager.getInstance(project).findFile(obj.file)?.navigate(true)
+                }
             }
         }
     }

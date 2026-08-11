@@ -1,0 +1,19 @@
+\import Algebra.Group
+\import Algebra.Group.GSet
+\import Function
+\import Paths
+\import Set.SetHom
+
+\record EquivariantMap {G : Group} \extends SetHom {
+  \override Dom : GSet G
+  \override Cod : GSet G
+  | func-** {e : Dom} {g : G} : func (g ** e) = g ** func e
+} \where {
+  \protected \func id {G : Group} {X : GSet G} : EquivariantMap X X \cowith
+    | func x => x
+    | func-** => idp
+
+  \protected \func \fixl 8 compose \alias \infixl 8 ∘ {G : Group} {X Y Z : GSet G} (g : EquivariantMap Y Z) (f : EquivariantMap X Y) : EquivariantMap X Z \cowith
+    | func x => g (f x)
+    | func-** {x} {a} => pmap g func-** *> func-**
+}

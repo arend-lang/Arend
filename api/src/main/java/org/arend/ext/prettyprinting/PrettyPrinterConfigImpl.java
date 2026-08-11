@@ -11,12 +11,14 @@ public class PrettyPrinterConfigImpl implements PrettyPrinterConfig {
   public EnumSet<PrettyPrinterFlag> expressionFlags;
   public NormalizationMode normalizationMode;
   public DefinitionRenamer definitionRenamer;
+  public int lineLength;
 
   public PrettyPrinterConfigImpl(PrettyPrinterConfig config) {
     isSingleLine = config.isSingleLine();
     expressionFlags = config.getExpressionFlags();
     normalizationMode = config.getNormalizationMode();
     definitionRenamer = config.getDefinitionRenamer();
+    lineLength = config.getLineLength();
   }
 
   public PrettyPrinterConfigImpl() {
@@ -41,5 +43,10 @@ public class PrettyPrinterConfigImpl implements PrettyPrinterConfig {
   @Override
   public DefinitionRenamer getDefinitionRenamer() {
     return definitionRenamer;
+  }
+
+  @Override
+  public int getLineLength() {
+    return lineLength;
   }
 }

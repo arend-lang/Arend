@@ -3,7 +3,6 @@ package org.arend.psi.ext
 import com.intellij.lang.ASTNode
 import com.intellij.psi.stubs.IStubElementType
 import com.intellij.psi.stubs.StubElement
-import com.intellij.psi.util.elementType
 import org.arend.psi.*
 import org.arend.psi.ArendElementTypes.*
 import org.arend.psi.stubs.ArendNamedStub
@@ -32,14 +31,13 @@ where StubT : ArendNamedStub, StubT : StubElement<*> {
     protected open val parametersExt: List<Abstract.Parameter>
         get() = emptyList()
 
-    override fun getPLevelParameters(): ArendLevelParamsSeq? =
-        getChild { it.elementType == P_LEVEL_PARAMS_SEQ }
-
-    override fun getHLevelParameters(): ArendLevelParamsSeq? =
-        getChild { it.elementType == H_LEVEL_PARAMS_SEQ }
+    override fun getLevelParameters(): ArendLevelsDef? = childOfType()
 
     override fun getGroupDefinition() = this
 
     override val where: ArendWhere?
         get() = childOfType()
+
+    val isDynamic: Boolean
+        get() = parentGroup?.dynamicSubgroups?.contains(this) == true
 }

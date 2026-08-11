@@ -19,7 +19,7 @@
 
 \instance FinSuppFuncDec (M : DecSet) (R : AddPointed) {D : DecSet R} : DecSet (FinSuppFunc M R)
   | decideEq f g => \case fSupp {f}, fSupp {g} \with {
-    | inP (s : Array, c), inP (s' : Array, c') =>
+    | inP (s, c), inP (s', c') =>
       \case FinSet.search (\lam j => f (s j) /= g (s j)) (\lam j => decide), FinSet.search (\lam j => f (s' j) /= g (s' j)) (\lam j => decide) \with {
         | yes (inP (j,d)), _ => no \lam p => d $ pmap {FinSuppFunc M R} (__ (s j)) p
         | _, yes (inP (j,d)) => no \lam p => d $ pmap {FinSuppFunc M R} (__ (s' j)) p

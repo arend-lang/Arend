@@ -439,7 +439,7 @@ class ArendCodeInsightUtils {
         }
 
         fun ensureIsTypechecked(def: ReferableBase<*>) {
-            if (def.tcReferable == null) {
+            if (def.tcReferable?.typechecked == null) {
                 val moduleLocation = (def.containingFile as? ArendFile)?.moduleLocation
                 if (moduleLocation != null) {
                     val checker = def.project.service<ArendServerService>().server.getCheckerFor(singletonList(moduleLocation))

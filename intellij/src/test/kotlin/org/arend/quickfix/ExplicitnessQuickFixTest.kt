@@ -29,14 +29,14 @@ class ExplicitnessQuickFixTest : QuickFixTestBase() {
     """)
 
     fun testImplicitness() = typedQuickFixTest(ArendBundle.message("arend.argument.implicitness"), """
-        \record record
-            | field {A : \Type} : A
+        \record record.{l}
+            | field {A : \Type l} : A
 
         \func test : record \cowith
             | field \as \fix 5 f t{-caret-} => {?}
     """, """
-        \record record
-            | field {A : \Type} : A
+        \record record.{l}
+            | field {A : \Type l} : A
 
         \func test : record \cowith
             | field \as \fix 5 f {t} => {?}

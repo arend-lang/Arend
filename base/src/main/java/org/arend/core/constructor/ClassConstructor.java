@@ -2,7 +2,6 @@ package org.arend.core.constructor;
 
 import org.arend.core.definition.ClassDefinition;
 import org.arend.core.definition.ClassField;
-import org.arend.core.definition.UniverseKind;
 import org.arend.core.expr.Expression;
 import org.arend.core.expr.FieldCallExpression;
 import org.arend.core.expr.NewExpression;
@@ -68,14 +67,6 @@ public final class ClassConstructor extends SingleConstructor {
       return false;
     }
 
-    if (myClassDef.getUniverseKind() == UniverseKind.NO_UNIVERSES) {
-      return true;
-    }
-    for (ClassField field : myClassDef.getNotImplementedFields()) {
-      if (field.getUniverseKind() != UniverseKind.NO_UNIVERSES && !myImplementedFields.contains(field)) {
-        return myLevels.compare(con.myLevels, CMP.EQ, equations, sourceNode);
-      }
-    }
-    return true;
+    return myLevels.compare(con.myLevels, CMP.EQ, equations, sourceNode);
   }
 }

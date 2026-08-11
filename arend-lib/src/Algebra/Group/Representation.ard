@@ -13,25 +13,25 @@
 -- REPRESENTATION THEORY Tammo tom Dieck
 -- also : https://www.maths.dur.ac.uk/users/jack.g.shotton/repthy/index.html
 
-\class LinRepres \extends LModule, GroupAction {
-  | **-ldistr {g :  G} {e e' : E} : g ** (e + e') = g ** e + g ** e'
-  | **-*c {g :  G} {e : E} {c : R} : g ** (c *c e) = c *c (g ** e)
+\class LinRepres \extends LModule, GSet {
+  | **-ldistr {g : G} {e e' : E} : g ** (e + e') = g ** e + g ** e'
+  | **_*c {g :  G} {e : E} {c : R} : g ** (c *c e) = c *c (g ** e)
 
-  \lemma g**-zro {g : G} : g ** 0 = 0 => rewrite (inv *c_zro-right, **-*c, *c_zro-left, *c_zro-left) idp
+  \lemma **_zro {g : G} : g ** 0 = 0 => rewrite (inv *c_zro-right, **_*c, *c_zro-left, *c_zro-left) idp
 
-  \lemma g**-negative {g : G} {e : E} : g ** negative e = negative (g ** e) => rewrite (inv neg_ide_*c, **-*c, neg_ide_*c) idp
+  \lemma **_negative {g : G} {e : E} : g ** negative e = negative (g ** e) => rewrite (inv neg_ide_*c, **_*c, neg_ide_*c) idp
 
-  \func toLinearMap(g : G) : LinearMap \this \this \cowith
+  \func toLinearMap (g : G) : LinearMap \this \this \cowith
     | func e => g ** e
     | func-+ => **-ldistr
-    | func-*c => **-*c
+    | func-*c => **_*c
 
-  \lemma toLinearMap-ide : toLinearMap ide = LinearMap.id
-    => exts \lam _ => unfold id-action
+  \lemma toLinearMap_ide : toLinearMap ide = LinearMap.id
+    => exts \lam _ => **_ide
 }
 
 \func TrivialAction {R : Ring} (E : LModule R) (G : Group) : LinRepres R G \cowith
   | LModule => E
-  | GroupAction => trivialAction G E
-  | **-*c => idp
+  | GSet => trivialAction G E
+  | **_*c => idp
   | **-ldistr => idp

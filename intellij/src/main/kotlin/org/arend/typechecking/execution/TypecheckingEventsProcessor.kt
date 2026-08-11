@@ -139,7 +139,6 @@ class TypecheckingEventsProcessor(project: Project, typeCheckingRootNode: SMTest
     }
 
     fun onTestStarted(ref: PsiLocatedReferable) {
-        /* TODO[server2]
         addToInvokeLater {
             ApplicationManager.getApplication().run {
                 executeOnPooledThread {
@@ -159,7 +158,7 @@ class TypecheckingEventsProcessor(project: Project, typeCheckingRootNode: SMTest
                             parentSuite.addChild(proxy)
                             definitionToProxy[ref] = proxy
 
-                            val da = deferredActions.remove(ref)
+                            val da = deferredActions.remove(ref as GlobalReferable)
                             if (da != null) for (a in da) a.runAction(proxy)
 
                             if (!isTypeCheckingFinished) {
@@ -174,7 +173,6 @@ class TypecheckingEventsProcessor(project: Project, typeCheckingRootNode: SMTest
                 }
             }
         }
-        */
     }
 
     fun onTestFailure(ref: PsiLocatedReferable) {

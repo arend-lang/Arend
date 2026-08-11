@@ -5,8 +5,6 @@ statements : statement* EOF;
 statement : accessMod? USE? definition                                      # statDef
           | accessMod '{' statement* '}'                                    # statAccessMod
           | nsCmd longName nsUsing? ('\\hiding' '(' scId (',' scId)* ')')?  # statCmd
-          | '\\plevels' ID*                                                 # statPLevels
-          | '\\hlevels' ID*                                                 # statHLevels
           ;
 
 nsCmd : '\\open'                        # openCmd
@@ -19,12 +17,7 @@ accessMod : '\\private'   # privateMod
 
 nsUsing : USING? '(' nsId? (',' nsId)* ')';
 
-scopeContext : DOT          # dynamicContext
-             | '\\plevel'   # plevelContext
-             | '\\hlevel'   # hlevelContext
-             ;
-
-scId : scopeContext? ID;
+scId : DOT? ID;
 
 nsId : scId (AS precedence ID)?;
 
@@ -49,11 +42,11 @@ definition  : funcKw topDefId tele* (':' returnExpr2)? functionBody where?      
             | TRUNCATED? '\\data' topDefId tele* (':' expr2)? dataBody where?                                           # defData
             | classKw topDefId NO_CLASSIFYING? fieldTele* ('\\extends' superClass (',' superClass)*)? classBody where?  # defClass
             | '\\module' ID where?                                                                                      # defModule
-            | '\\meta' defId plevelParams? hlevelParams? COMMA? (tele* '=>' expr)? where?                               # defMeta
+            | '\\meta' defId levelParams? (tele* '=>' expr)? where?                                                     # defMeta
             | instanceKw topDefId tele* (':' returnExpr2)? instanceBody where?                                          # defInstance
             ;
 
-superClass : longName (maybeLevelAtoms maybeLevelAtoms?)?;
+superClass : longName (DOT levelArgs)?;
 
 returnExpr  : expr ('\\level' expr)?                # returnExprExpr
             | '\\level' atomFieldsAcc atomFieldsAcc # returnExprLevel
@@ -122,11 +115,9 @@ atomPattern : (longName DOT)? (INFIX | POSTFIX | ID) # patternID
 
 constructor : accessMod? COERCE? defId tele* (':' expr2)? (elim? '{' clause? ('|' clause)* '}')?;
 
-topDefId : defId plevelParams? hlevelParams? COMMA?;
+topDefId : defId levelParams?;
 
-plevelParams : '\\plevels' ID*;
-
-hlevelParams : '\\hlevels' ID*;
+levelParams : DOT '{' ID (',' ID)* '}';
 
 defId : precedence ID alias?;
 
@@ -184,13 +175,14 @@ caseArgExprAs : '\\elim' (ID | APPLY_HOLE)  # caseArgElim
               | expr2 (AS ID)?              # caseArgExpr
               ;
 
-appExpr : argumentAppExpr                             # appArgument
-        | TRUNCATED_UNIVERSE maybeLevelAtom?          # truncatedUniverse
-        | UNIVERSE (maybeLevelAtom maybeLevelAtom?)?  # universe
-        | SET maybeLevelAtom?                         # setUniverse
+appExpr : argumentAppExpr                         # appArgument
+        | TRUNCATED_UNIVERSE levelAtom?           # truncatedUniverse
+        | UNIVERSE levelAtom?                     # universe
+        | SET levelAtom?                          # setUniverse
+        | CAT_UNIVERSE levelAtom?                 # catUniverse
         ;
 
-argumentAppExpr : atomFieldsAcc onlyLevelAtom* argument*;
+argumentAppExpr : atomFieldsAcc argument*;
 
 argument : atomFieldsAcc                            # argumentExplicit
          | appPrefix appExpr implementStatements?   # argumentNew
@@ -228,11 +220,7 @@ letClause : (ID tele* | atomPattern) typeAnnotation? '=>' expr;
 
 typeAnnotation : ':' expr;
 
-levelAtom : '\\lp'              # pLevel
-          | '\\lh'              # hLevel
-          | '\\oo'              # infLevel
-          | NUMBER              # numLevel
-          | NEGATIVE_NUMBER     # negLevel
+levelAtom : NUMBER              # numLevel
           | ID                  # idLevel
           | '(' levelExpr ')'   # parenLevel
           ;
@@ -241,26 +229,6 @@ levelExpr : levelAtom                     # atomLevel
           | '\\suc' levelAtom             # sucLevel
           | '\\max' levelAtom levelAtom   # maxLevel
           ;
-
-onlyLevelAtom : '\\lp'                                                # pOnlyLevel
-              | '\\lh'                                                # hOnlyLevel
-              | '\\oo'                                                # infOnlyLevel
-              | '\\levels' maybeLevelAtoms maybeLevelAtoms            # levelsOnlyLevel
-              | '(' onlyLevelExpr ')'                                 # parenOnlyLevel
-              ;
-
-maybeLevelAtoms : '(' (levelExpr (',' levelExpr)*)? ')' # multiLevel
-                | maybeLevelAtom                        # singleLevel
-                ;
-
-maybeLevelAtom : levelAtom  # withLevelAtom
-               | '_'        # withoutLevelAtom
-               ;
-
-onlyLevelExpr : onlyLevelAtom                                         # atomOnlyLevel
-              | '\\suc' levelAtom                                     # sucOnlyLevel
-              | '\\max' levelAtom levelAtom                           # maxOnlyLevel
-              ;
 
 tupleExpr : expr (':' expr)?;
 
@@ -275,8 +243,11 @@ atom  : literal                                     # atomLiteral
 
 atomFieldsAcc : atom (DOT fieldAcc)* (DOT (INFIX | POSTFIX))?;
 
-fieldAcc : NUMBER   # fieldAccNumber
-         | ID       # fieldAccId
+levelArgs : '{' levelExpr (',' levelExpr)* '}';
+
+fieldAcc : NUMBER       # fieldAccNumber
+         | ID           # fieldAccId
+         | levelArgs    # fieldAccLevels
          ;
 
 implementStatements : '{' ('|' localCoClause)* '}';
@@ -342,7 +313,7 @@ COERCE : '\\coerce';
 NUMBER : [0-9]+;
 NEGATIVE_NUMBER : '-' [0-9]+;
 UNIVERSE : '\\Type' [0-9]*;
-TRUNCATED_UNIVERSE : '\\' (NUMBER '-' | 'oo-' | 'h') 'Type' [0-9]*;
+TRUNCATED_UNIVERSE : '\\' NUMBER '-Type' [0-9]*;
 SET : '\\Set' [0-9]*;
 STRING : INCOMPLETE_STRING '"';
 INCOMPLETE_STRING : '"' (~["\\\r\n] | ESCAPE_SEQ)* EOF?;

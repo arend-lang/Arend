@@ -77,9 +77,9 @@ public class MetaResolverTest extends TypeCheckingTestCase {
     MetaReferable metaRef = new MetaReferable(AccessModifier.PUBLIC, prec, name, typechecker, resolver, MODULE_REF);
     List<ConcreteStatement> statements = new ArrayList<>(importedModules.size() + 1);
     for (ModulePath modulePath : importedModules) {
-      statements.add(new ConcreteStatement(null, new ConcreteNamespaceCommand(null, true, new LongUnresolvedReference(null, null, modulePath.toList()), true, Collections.emptyList(), Collections.emptyList()), null, null));
+      statements.add(new ConcreteStatement(null, new ConcreteNamespaceCommand(null, true, new LongUnresolvedReference(null, null, modulePath.toList()), true, Collections.emptyList(), Collections.emptyList())));
     }
-    statements.add(new ConcreteStatement(new ConcreteGroup(DocFactory.nullDoc(), metaRef, body == null ? null : new Concrete.MetaDefinition(metaRef, null, null, Collections.emptyList(), body), Collections.emptyList(), Collections.emptyList(), Collections.emptyList()), null, null, null));
+    statements.add(new ConcreteStatement(new ConcreteGroup(DocFactory.nullDoc(), metaRef, body == null ? null : new Concrete.MetaDefinition(metaRef, null, Collections.emptyList(), body), Collections.emptyList(), Collections.emptyList(), Collections.emptyList()), null));
     server.addReadOnlyModule(module, () -> new ConcreteGroup(DocFactory.nullDoc(), new FullModuleReferable(module), null, statements, Collections.emptyList(), Collections.emptyList()));
   }
 
@@ -146,7 +146,7 @@ public class MetaResolverTest extends TypeCheckingTestCase {
     ModuleLocation module = new ModuleLocation(MemoryLibrary.INSTANCE.getLibraryName(), ModuleLocation.LocationKind.SOURCE, new ModulePath(moduleName));
     FullModuleReferable moduleRef = new FullModuleReferable(module);
     LocatedReferableImpl referable = new LocatedReferableImpl(null, AccessModifier.PUBLIC, Precedence.DEFAULT, defName, Precedence.DEFAULT, null, moduleRef, GlobalReferable.Kind.FUNCTION);
-    server.updateModule(modStamp, module, () -> new ConcreteGroup(DocFactory.nullDoc(), moduleRef, null, Collections.singletonList(new ConcreteStatement(new ConcreteGroup(DocFactory.nullDoc(), referable, new Concrete.FunctionDefinition(FunctionKind.FUNC, referable, Collections.emptyList(), null, null, new Concrete.TermFunctionBody(null, expr)), Collections.emptyList(), Collections.emptyList(), Collections.emptyList()), null, null, null)), Collections.emptyList(), Collections.emptyList()));
+    server.updateModule(modStamp, module, () -> new ConcreteGroup(DocFactory.nullDoc(), moduleRef, null, Collections.singletonList(new ConcreteStatement(new ConcreteGroup(DocFactory.nullDoc(), referable, new Concrete.FunctionDefinition(FunctionKind.FUNC, referable, Collections.emptyList(), null, null, new Concrete.TermFunctionBody(null, expr)), Collections.emptyList(), Collections.emptyList(), Collections.emptyList()), null)), Collections.emptyList(), Collections.emptyList()));
   }
 
   @Test

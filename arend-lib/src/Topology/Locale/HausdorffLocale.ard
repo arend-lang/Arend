@@ -1,0 +1,50 @@
+\import Function.Meta
+\import Logic
+\import Logic.Meta
+\import Meta
+\import Operations
+\import Order.Lattice
+\import Order.Lattice.CompleteLattice
+\import Order.PartialOrder
+\import Paths
+\import Set.Set
+\import Topology.Locale
+\import Topology.Locale.LocaleProduct
+\import Topology.Locale.PreorderSite
+\open ProductLocale
+\open Cover
+\open CompleteLattice
+
+\func IsHausdorffLocale (L : Locale)
+  => \Pi (a b : L) (U : Set (\Sigma L L)) -> a ∧ b <= SJoin (\lam s => s.1 ∧ s.2) U -> Cover {site} (a,b) (\lam s => s.1 ∧ s.2 <= bottom || U s)
+  \where {
+    \lemma hausdorff-char {L : Locale} : IsHausdorffLocale L <-> localeDiagonal.image.isClosed
+      => (\lam Lh {U} => cover-trans* __ \lam {s} (inP (V,V<=U,Vs)) => cover-sub (Lh s.1 s.2 U.1 $ SJoin-cond Vs <=∘ V<=U) \lam {t} => \case \elim __ \with {
+        | byLeft e => inP (_, byLeft idp, cover-refl $ inP (SiteLocale.embed t, SJoin-univ (\lam a<=t => coverMap FrameHom.id FrameHom.id a<=t <=∘ SJoin-univ (later \lam {_} (idp) => e)) <=∘ bottom-univ, cover-refl idp))
+        | byRight Ut => inP (_, byRight idp, Ut)
+      }, \lam Dc a b U ab<=U => cover-trans* (Dc {SiteLocale.closure U} $ cover-refl $ inP (SiteLocale.embed (a,b), SJoin-univ \lam {x} x<=ab => coverMap FrameHom.id FrameHom.id x<=ab <=∘ SJoin-univ (later \lam {_} (idp) => ab<=U <=∘ SJoin-univ \lam {c} Uc => SJoin-cond $ cover-refl Uc), cover-refl idp)) \lam {s} => \case \elim __ \with {
+        | inP (_, byLeft idp, sc) => cover-sub sc \lam {t} (inP (V,V<=0,Vt)) => byLeft $ SJoin-cond Vt <=∘ V<=0 <=∘ SJoin-univ \lam c => coverMap FrameHom.id FrameHom.id c <=∘ SJoin-univ (later \case __ \with {
+          | inP (_,(),_)
+        })
+        | inP (_, byRight idp, s<=U) => cover-sub s<=U \lam {u} => byRight
+      })
+  }
+
+\lemma IsRegular_IsHausdorff {L : Locale} (reg : L.IsRegularLocale) : IsHausdorffLocale L
+  => \lam a b U ab<=U =>
+    \let | U+ s => s.1 ∧ s.2 <= bottom || U s
+         | lem1 {a b : L} (c : Cover {site} (a, a ∧ b) U+) : Cover {site} (a,b) U+
+           => cover-trans* (cover-basic $ byLeft  (_, reg a, idp)) $ SetIm-elim $ later \lam {a'} a'<=<a =>
+             binCover-right (inv L.top-left =<= L.meet-monotone a'<=<a <=-refl <=∘ L.rdistr>=) (cover-refl $ byLeft $ L.meet-monotone <=-refl meet-left <=∘ L.meet-comm =<= L.<=-eval) (cover-left (<=<_<= a'<=<a, <=-refl) c)
+         | lem2 {a b : L} (c : Cover {site} (a ∧ b, b) U+) : Cover {site} (a,b) U+
+           => cover-trans* (cover-basic $ byRight (_, reg b, idp)) $ SetIm-elim $ later \lam {b'} b'<=<b =>
+             binCover-left (inv L.top-right =<= L.meet-monotone <=-refl b'<=<b <=∘ ldistr>=) (cover-refl $ byLeft $ L.meet-monotone meet-right <=-refl <=∘ L.<=-eval) (cover-left (<=-refl, <=<_<= b'<=<b) c)
+    \in lem1 $ cover-trans* (cover-basic $ byRight (_, ab<=U, idp)) $ SetIm-elim $ SetIm-elim \lam {u} Uu =>
+        lem2 $ cover-inj (meet-right <=∘ meet-left, meet-right) (byRight Uu)
+
+\type IsWeaklyHausdorff (L : Locale)
+  => (localeDiagonal {L}).IsWeaklyClosed
+
+-- | A weakly regular locale is weakly Hausdorff
+\lemma wregular_wHausdorff {L : Locale} (reg : L.IsWeaklyRegularLocale) : IsWeaklyHausdorff L
+  => {?} -- [4, Corollary 3.4]

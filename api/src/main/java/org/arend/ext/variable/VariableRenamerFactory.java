@@ -19,6 +19,6 @@ public interface VariableRenamerFactory {
 
   default @NotNull String getNameFromBinding(@NotNull CoreBinding binding, @Nullable String def) {
     String name = binding.getName();
-    return name != null ? name : getNameFromType(binding.getTypeExpr(), null);
+    return name != null ? name : getNameFromType(binding.getType(), null);
   }
 }

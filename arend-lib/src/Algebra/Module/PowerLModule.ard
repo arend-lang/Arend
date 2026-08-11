@@ -1,5 +1,5 @@
 \import Algebra.Module
-\import Algebra.Module.ModuleCategory
+\import Algebra.Module.ModuleCat
 \import Algebra.Module.LinearMap
 \import Algebra.Ring
 \import Category.Functor
@@ -21,7 +21,7 @@
   | *c-rdistr => ext (\lam j => *c-rdistr)
   | ide_*c => ext (\lam j => ide_*c)
 
-\func FunctorPowerLMod {R : Ring} : Functor SetCat.op (LModuleCat R) \cowith
+\func FunctorPowerLMod.{u} {R : Ring.{u}} : Functor SetCat.{u}.op (LModuleCat.{u} R) \cowith
   | F I => PowerLModule I (RingLModule R)
   | Func f => \new LinearMap {
     | func r j => r (f j)

@@ -1,0 +1,34 @@
+\import Equiv
+\import Logic
+\import Logic.Unique
+\import Paths
+\import Paths.Meta
+
+\record BiEquiv \extends Section, Retraction
+  \where {
+    \use \coerce fromQEquiv (e : QEquiv) : BiEquiv \cowith
+      | Section => e
+      | Retraction => e
+
+    \use \coerce toQEquiv (e : BiEquiv) : QEquiv \cowith
+      | Section => e
+      | f_sec y => pmap (\lam y => e (ret y)) (inv (f_sec y)) *> pmap e (ret_f (sec y)) *> f_sec y
+
+    \func equals {A B : \Type} {e e' : BiEquiv {A} {B}} (p : e.f = e'.f) : e = e'
+      => path \lam i => \new BiEquiv {
+        | Section => pathOver (Section.levelProp e' (rewriteI p (\new Section e.f e.ret e.ret_f)) (\new Section e'.f e'.ret e'.ret_f)) @ i
+        | Retraction => pathOver (Retraction.levelProp e' (rewriteI p (\new Retraction e.f e.sec e.f_sec)) (\new Retraction e'.f e'.sec e'.f_sec)) @ i
+      }
+
+    \lemma levelProp {A B : \Type} {f : A -> B} : isProp (BiEquiv f)
+      => \lam e e' => path \lam i => \new BiEquiv {
+        | Section => Section.levelProp e e e' i
+        | Retraction => Retraction.levelProp e e e' i
+      }
+  }
+
+\func BiEquiv~Equiv {A B : \Type} : QEquiv {BiEquiv {A} {B}} {Equiv A B} \cowith
+  | f e => mkEquiv (inP e)
+  | ret e => Equiv.toQEquiv e
+  | ret_f e => BiEquiv.equals idp
+  | f_sec e => Equiv.equals idp

@@ -280,7 +280,7 @@ public class SingleFileReferenceResolver {
             }).toList());
             ArrayList<ConcreteNamespaceCommand.NameRenaming> renamings = new ArrayList<>(entry.getKey().renamings());
             renamings.addAll(names.stream().map(name ->
-                    new ConcreteNamespaceCommand.NameRenaming(null, Scope.ScopeContext.STATIC, new NamedUnresolvedReference(null, name), null, null)).toList());
+                    new ConcreteNamespaceCommand.NameRenaming(null, true, new NamedUnresolvedReference(null, name), null, null)).toList());
 
             renamings.sort(Comparator.comparing(nameRenaming -> nameRenaming.reference().getRefName()));
 
@@ -292,7 +292,7 @@ public class SingleFileReferenceResolver {
             ArrayList<ConcreteNamespaceCommand.NameRenaming> renamings;
             HashSet<String> individualImports = entry.getValue();
             if (individualImports != null) renamings = new ArrayList<>(individualImports.stream().map(name ->
-                    new ConcreteNamespaceCommand.NameRenaming(null, Scope.ScopeContext.STATIC, new NamedUnresolvedReference(null, name), null, null)).toList());
+                    new ConcreteNamespaceCommand.NameRenaming(null, true, new NamedUnresolvedReference(null, name), null, null)).toList());
             else renamings = null;
 
             if (renamings != null) renamings.sort(Comparator.comparing(nameRenaming -> nameRenaming.reference().getRefName()));
@@ -312,11 +312,11 @@ public class SingleFileReferenceResolver {
             Set<String> names = itemsToAdd.get(cnc);
             List<ConcreteNamespaceCommand.NameRenaming> renamings = new ArrayList<>();
             if (names != null) for (String name : names)
-                renamings.add(new ConcreteNamespaceCommand.NameRenaming(null, Scope.ScopeContext.STATIC,
+                renamings.add(new ConcreteNamespaceCommand.NameRenaming(null, true,
                         new NamedUnresolvedReference(null, name), null, null));
             ConcreteNamespaceCommand command =
                     new ConcreteNamespaceCommand(null, cnc.isImport(), cnc.module(), false, renamings, emptyList());
-            result.add(new ConcreteStatement(null, command, null, null));
+            result.add(new ConcreteStatement(null, command));
         }
 
         for (ModuleLocation moduleLocation : importsToAdd.keySet()) {
@@ -324,7 +324,7 @@ public class SingleFileReferenceResolver {
             boolean isUsing = false;
             List<ConcreteNamespaceCommand.NameRenaming> renamings = new ArrayList<>();
             if (namesToAdd != null) for (String name : namesToAdd) {
-                renamings.add(new ConcreteNamespaceCommand.NameRenaming(null, Scope.ScopeContext.STATIC,
+                renamings.add(new ConcreteNamespaceCommand.NameRenaming(null, true,
                         new NamedUnresolvedReference(null, name), null, null));
             } else {
                 isUsing = true;
@@ -334,7 +334,7 @@ public class SingleFileReferenceResolver {
                     new ConcreteNamespaceCommand(null, true,
                             new LongUnresolvedReference(null, null, moduleLocation.getModulePath().toList()),
                             isUsing, renamings, emptyList());
-            result.add(new ConcreteStatement(null, command, null, null));
+            result.add(new ConcreteStatement(null, command));
         }
 
         ConcreteGroup fakeGroup = new ConcreteGroup(DocFactory.nullDoc(),
@@ -410,7 +410,7 @@ public class SingleFileReferenceResolver {
 
         if (internalReferableFlag) {
           internalReferableFlag = false;
-          possibleNamesPrefix.add(new ArrayList<>()); // allow referencing to a constructor or a classfield without referring to the parent class/datatype
+          possibleNamesPrefix.add(new ArrayList<>()); // allow referencing to a constructor or a class field without referring to the parent class/datatype
         }
 
         @Nullable Set<String> aliases = currentScopeMap != null ? currentScopeMap.apply(currReferable) : null;

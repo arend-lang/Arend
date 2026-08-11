@@ -33,11 +33,11 @@ class ArendServerRequesterImpl(private val project: Project) : ArendServerReques
         if (module.locationKind == ModuleLocation.LocationKind.GENERATED) return
         val repl = project.service<ArendReplService>().getRepl()
         runReadAction {
-            val file = if (server == repl?.getServer()) {
-                repl.replLibraries[module.libraryName]?.findArendFile(module.modulePath, module.locationKind == ModuleLocation.LocationKind.TEST)
+            val file = (if (server == repl?.getServer()) {
+                repl.replLibraries[module.libraryName]
             } else {
-                project.findLibrary(module.libraryName)?.findArendFile(module.modulePath, module.locationKind == ModuleLocation.LocationKind.TEST)
-            }
+                project.findLibrary(module.libraryName)
+            })?.findArendFile(module.modulePath, module.locationKind == ModuleLocation.LocationKind.TEST)
             doUpdateModule(server, module, file ?: return@runReadAction)
         }
     }

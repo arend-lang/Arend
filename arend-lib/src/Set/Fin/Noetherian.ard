@@ -1,0 +1,16 @@
+-- | Noetherian sets are defined in Arnaud Spiwack, Thierry Coquand, Constructively Finite?, 2010
+
+\import Arith.Nat
+\import Function.Meta
+\import Logic
+\import Logic.Bar
+\import Logic.Meta
+\import Paths
+\import Set.Fin.Pigeonhole
+
+\class NoetherianSet \extends PigeonholeSet
+  | isNoetherianSet : Bar {E} (\lam l => ∃ (i j : Fin l.len) (i /= j) (l i = l j)) nil
+  | pigeonhole f => \case bar-stream isNoetherianSet f \with {
+    | inP (r, rp, inP (i,j,i/=j,ri=rj)) => inP (r.len -' suc i, r.len -' suc j, \lam p => i/=j $ fin_nat-inj $ pmap pred $
+      inv (-'-'r_id $ suc_<_<= $ fin_< i) *> pmap (r.len -') p *> -'-'r_id (suc_<_<= $ fin_< j), inv (IsInvPrefix.toIndex rp) *> ri=rj *> IsInvPrefix.toIndex rp)
+  }

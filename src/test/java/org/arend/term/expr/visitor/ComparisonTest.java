@@ -19,11 +19,14 @@ import org.arend.core.subst.Levels;
 import org.arend.ext.core.ops.CMP;
 import org.arend.ext.error.ListErrorReporter;
 import org.arend.prelude.Prelude;
+import org.arend.server.ProgressReporter;
 import org.arend.typechecking.TypeCheckingTestCase;
 import org.arend.typechecking.implicitargs.equations.Equations;
 import org.arend.typechecking.implicitargs.equations.TwoStageEquations;
 import org.arend.typechecking.result.TypecheckingResult;
 import org.arend.typechecking.visitor.CheckTypeVisitor;
+import org.arend.typechecking.computation.UnstoppableCancellationIndicator;
+import org.junit.Before;
 import org.junit.Test;
 
 import java.util.Collections;
@@ -34,6 +37,11 @@ import static org.arend.core.expr.ExpressionFactory.*;
 import static org.junit.Assert.*;
 
 public class ComparisonTest extends TypeCheckingTestCase {
+  @Before
+  public void checkPrelude() {
+    server.getCheckerFor(Collections.singletonList(Prelude.MODULE_LOCATION)).typecheck(UnstoppableCancellationIndicator.INSTANCE, ProgressReporter.empty());
+  }
+
   @Test
   public void lambdas() {
     SingleDependentLink x = singleParam("x", Nat());
@@ -187,7 +195,7 @@ public class ComparisonTest extends TypeCheckingTestCase {
 
   @Test
   public void etaLam() {
-    PiExpression type = Pi(singleParam(null, Nat()), DataCall(Prelude.PATH, LevelPair.SET0,
+    PiExpression type = Pi(singleParam(null, Nat()), DataCall(Prelude.PATH, Levels.EMPTY,
             Lam(singleParam("i", Interval()), Nat()), Zero(), Zero()));
     TypecheckingResult result1 = typeCheckExpr("\\lam a x => path (\\lam i => a x @ i)", Pi(singleParam(null, type), type));
     TypecheckingResult result2 = typeCheckExpr("\\lam a => a", Pi(singleParam(null, type), type));
@@ -196,7 +204,7 @@ public class ComparisonTest extends TypeCheckingTestCase {
 
   @Test
   public void etaLamBody() {
-    PiExpression type = Pi(singleParam(null, Nat()), DataCall(Prelude.PATH, LevelPair.SET0,
+    PiExpression type = Pi(singleParam(null, Nat()), DataCall(Prelude.PATH, Levels.EMPTY,
       Lam(singleParam("i", Interval()), Nat()), Zero(), Zero()));
     TypecheckingResult result1 = typeCheckExpr("\\lam a x => path (\\lam i => a x @ i)", Pi(singleParam(null, type), type));
     TypecheckingResult result2 = typeCheckExpr("\\lam a => \\lam x => a x", Pi(singleParam(null, type), type));
@@ -206,7 +214,7 @@ public class ComparisonTest extends TypeCheckingTestCase {
   @Test
   public void etaPath() {
     SingleDependentLink x = singleParam("x", Nat());
-    DataCallExpression type = DataCall(Prelude.PATH, LevelPair.SET0,
+    DataCallExpression type = DataCall(Prelude.PATH, Levels.EMPTY,
             Lam(singleParam("i", Interval()), Pi(singleParam(null, Nat()), Nat())), Lam(x, Ref(x)), Lam(x, Ref(x)));
     TypecheckingResult result1 = typeCheckExpr("\\lam a => path (\\lam i x => (a @ i) x)", Pi(singleParam(null, type), type));
     TypecheckingResult result2 = typeCheckExpr("\\lam a => a", Pi(singleParam(null, type), type));

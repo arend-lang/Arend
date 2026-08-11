@@ -1,0 +1,143 @@
+\import AG.RingedLocale
+\import Algebra.Monoid
+\import Algebra.Pointed
+\import Algebra.Ring.RingCat
+\import Algebra.Ring.RingHom
+\import Category
+\import Category.Functor
+\import Category.Subcat
+\import Category.Topos.Sheaf
+\import Equiv
+\import Function.Meta
+\import Logic
+\import Meta
+\import Order.Lattice
+\import Order.Lattice.CompleteLattice
+\import Order.PartialOrder
+\import Paths
+\import Paths.Meta
+\import Topology.Locale
+\import Topology.Locale.LocaleCat
+
+\func RingedLocalePrecat.{u} : Precat RingedLocale.{u} \cowith
+  | Hom => RingedLocaleHom
+  | id => RingedLocaleHom.id
+  | o => RingedLocaleHom.∘
+  | id-left => idp
+  | id-right => idp
+  | o-assoc => idp
+  \where {
+    \func forget.{u} : Functor RingedLocalePrecat.{u} LocaleCat.{u} \cowith
+      | F L => L
+      | Func f => f
+      | Func-id => idp
+      | Func-o => idp
+  }
+
+\instance RingedLocaleCat.{u} : Cat RingedLocale.{u}
+  | Precat => RingedLocalePrecat
+  | univalence => Cat.makeUnivalenceFromPath \lam e =>
+    \have sip => SIP-comb LocaleCat (\lam L => (VSheafCat CRingCat L).op) (\lam L => RingedLocale L) (RingedLocaleHom __ __)
+      (\lam h => Iso {RingedLocalePrecat} h) (\lam {L} {R} => RingedLocaleHom.id) (\lam {L} {R} => idIso)
+      (\lam {L} => \new Embedding {
+        | f R => R.R
+        | isEmb R R' => \new Retraction {
+          | sec p => ext p
+          | f_sec => idpe
+        }
+      })
+      (\lam {L} {R1} {R2} f fi => Iso.op {fromIso f $ ring-iso fi})
+      (\lam {L} {R} => idp)
+      (\lam {L} {R1} {R2} f g fi gi p => ext $ exts \lam x => later $ inv id-left *> path (\lam i => p i x) *> id-left)
+      (RingedLocalePrecat.forget.Func-iso e) e.dom e.cod e.f e
+    \in (sip.2, sip.4)
+    \where {
+      \func fromIso.{u} {L : Locale.{u}} {R1 R2 : RingedLocale.{u} L} (f : RingedLocaleHom R1 R2 LocaleHom.id) (e : \Pi (x : L) -> Iso (f.f# x)) : Iso {VSheafCat CRingCat.{u} L} {R2.R} {R1.R}
+        => VSheafCat.functor-iso {_} {_} {R2.R} {R1.R} $ FunctorPrecat.fromIso {_} {_} {R2.R} (later \new NatTrans {
+          | trans => f.f#
+          | natural h => f.f#.natural h *> pmap (Func __ ∘ _) prop-pi
+        }) \lam {x} => e x
+
+      \lemma ring-iso.{u} {L : Locale.{u}} {R1 R2 : RingedLocale.{u} L} {f : RingedLocaleHom R1 R2 LocaleHom.id} (e : Iso {RingedLocalePrecat.{u}} f) (a : R2) : Iso (f.f# a)
+        => \have | ei=id => inv FrameHom.id-left *> path (\lam i => (e.hinv_f i).f*)
+                 | gp : \Sigma (g : RingedLocaleHom R2 R1 LocaleHom.id) (g = e.hinv) => RingedLocaleHom.castOver e.hinv ei=id
+                 | fg => RingedLocaleHom.eqCast $ pmap (f RingedLocalePrecat.∘) gp.2 *> e.f_hinv
+                 | gf => RingedLocaleHom.eqCast $ pmap (RingedLocalePrecat.∘ f) gp.2 *> e.hinv_f
+           \in \new Iso {
+             | hinv => gp.1.f# a
+             | hinv_f => path (\lam i => (fg i).f# a)
+             | f_hinv => path (\lam i => (gf i).f# a)
+           }
+
+      \lemma iso-char.{u} {X Y : RingedLocale.{u}} {f : RingedLocaleHom X Y} : f.IsIso <-> Iso {RingedLocalePrecat.{u}} f
+        => (\lam (inP ef*, ef#) => iso-over-id (FrameCat.isotoid $ FrameCat.equiv_iso ef*) f.f* f.f# FrameCat.idtoiso_isotoid ef#,
+            \lam ef => transport (\lam r => r.IsIso) RingedLocaleCat.idtoiso_isotoid $ iso-from-id (RingedLocaleCat.isotoid ef))
+        \where {
+          \lemma iso-over-id.{u} {L M : Locale.{u}} (p : M = {Locale.{u}} L) {X : RingedLocale L} {Y : RingedLocale M}
+              (f* : FrameHom M L) (f# : NatTrans Y.R (VSheaf.direct_image_locale f* X.R))
+              (pid : FrameCat.idtoiso p = {FrameHom M L} f*) (q : \Pi (b : M) -> IsEquiv (f# b))
+            : Iso {RingedLocalePrecat} (\new RingedLocaleHom X Y f* f#) \elim p, pid
+            | idp, idp => \have e {a} => CRingCat.Iso<->IsEquiv.2 (q a) \in \new Iso {
+              | hinv => \new RingedLocaleHom {
+                | f* => FrameHom.id
+                | f# => \new NatTrans {
+                  | trans a => e.hinv
+                  | natural {a} {b} b<=a => exts \lam x => pmap (\lam r => e.hinv (X.R.F.Func r x)) prop-pi *>
+                    path (\lam i => (f#.iso-inv e).natural b<=a i x) *> pmap (Y.R.F.Func __ _) prop-pi
+                }
+              }
+              | hinv_f => RingedLocaleHom.equals idp \lam a x => path (\lam i => X.R.F.Func-id i x) *> inv (path \lam i => e.f_hinv i x)
+              | f_hinv => RingedLocaleHom.equals idp \lam a y => path (\lam i => Y.R.F.Func-id i y) *> inv (path \lam i => e.hinv_f i y)
+            }
+
+          \lemma iso-from-id.{u} {X Y : RingedLocale.{u}} (p : X = Y) : (RingedLocalePrecat.idtoiso p).f.IsIso \elim p
+            | idp => (inP idEquiv, \lam a => inP idEquiv)
+        }
+    }
+
+\func LocallyRingedLocalePrecat.{u} : Precat LocallyRingedLocale.{u} \cowith
+  | Hom => LocallyRingedLocaleHom
+  | id => LocallyRingedLocaleHom.id
+  | o => LocallyRingedLocaleHom.∘
+  | id-left => idp
+  | id-right => idp
+  | o-assoc => idp
+  \where {
+    \func forget.{u} : FaithfulFunctor LocallyRingedLocalePrecat.{u} RingedLocalePrecat.{u} \cowith
+      | F L => L
+      | Func f => f
+      | Func-id => idp
+      | Func-o => idp
+      | isFaithful {X} {Y} {f} {g} p => path \lam i => \new LocallyRingedLocaleHom {
+        | f* => (p i).f*
+        | f# => (p i).f#
+        | isLRLHomLocal {c} {a} => prop-dpi (\lam i => \Pi (q : c <= p i a) {x : Y.R a} -> Monoid.Inv (X.R.F.Func q ((p i).f# a x)) -> c <= X.SJoin (p i) \lam b => \Sigma (ba : b <= a) (Monoid.Inv (Y.R.F.Func ba x))) f.isLRLHomLocal g.isLRLHomLocal i
+      }
+  }
+
+\instance LocallyRingedLocaleCat.{u} : Cat LocallyRingedLocale.{u}
+  | Hom => LocallyRingedLocaleHom
+  | id => LocallyRingedLocaleHom.id
+  | o => LocallyRingedLocaleHom.∘
+  | id-left => idp
+  | id-right => idp
+  | o-assoc => idp
+  | univalence => subCat.faithful-univalence LocallyRingedLocalePrecat.forget embedding
+  \where {
+    \protected \lemma embedding.{u} : Embedding {LocallyRingedLocale.{u}} {RingedLocale} (\lam L => L) \cowith
+      | isEmb L L' => later \new Retraction {
+        | sec p => path \lam i => \new LocallyRingedLocale {
+          | L => (p i).L
+          | R => (p i).R
+          | isLRLNonTrivial => prop-dpi (\lam i => \Pi (a : p i) -> 0 = {(p i).R a} 1 -> a <= bottom) L.isLRLNonTrivial L'.isLRLNonTrivial i
+          | isLocallyRinged => prop-dpi (\lam i => \Pi (a : p i) (x : (p i).R a) -> a <= Join (\lam b => \Sigma (q : b <= a) (Monoid.Inv ((p i).R.F.Func q x) || Monoid.Inv ((p i).R.F.Func q (x + 1))))) L.isLocallyRinged L'.isLocallyRinged i
+        }
+        | f_sec => idpe
+      }
+
+    \lemma iso-char.{u} {X Y : LocallyRingedLocale.{u}} {f : LocallyRingedLocaleHom X Y} : f.IsIso <-> Iso {LocallyRingedLocalePrecat.{u}} f
+      => <->trans RingedLocaleCat.iso-char $ later (subCat.faithful-reflects-iso LocallyRingedLocalePrecat.forget embedding, LocallyRingedLocalePrecat.forget.Func-iso __)
+
+    \lemma iso-affine.{u} {X Y : LocallyRingedLocale.{u}} (f : LocallyRingedLocaleHom X Y) (iso : f.IsIso) (aff : Y.IsAffineScheme) : X.IsAffineScheme
+      => transportInv (\lam Z => Z.IsAffineScheme) (LocallyRingedLocaleCat.isotoid $ iso-char.1 iso) aff
+  }

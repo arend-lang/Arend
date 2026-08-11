@@ -1,6 +1,28 @@
 package org.arend.formatting
 
+import org.arend.ext.concrete.expr.ConcreteExpression
+import org.arend.ext.prettyprinting.doc.DocFactory.nullDoc
+import org.arend.ext.reference.ExpressionResolver
+import org.arend.ext.typechecking.ContextData
+import org.arend.ext.typechecking.ExpressionTypechecker
+import org.arend.ext.typechecking.MetaDefinition
+import org.arend.ext.typechecking.MetaResolver
+import org.arend.ext.typechecking.TypedExpression
+import org.arend.extImpl.ConcreteFactoryImpl
+
 class ArendReformatTest : ArendFormatterTestBase() {
+    fun testCollapseBlankLinesBeforeColon() = checkReformat(
+            "\\func f\n\n  : Nat => {?}",
+            "\\func f : Nat => {?}")
+
+    fun testWrapReturnTypeWithColon() = checkReformat(
+            "\\func test (aaaaaaaaaa : Nat) (bbbbbbbbbb : Nat) (cccccccccc : Nat) (dddddddddd : Nat) (eeeeeeeeee : Nat) (ffffffffff : Nat) : Nat => 1",
+            "\\func test (aaaaaaaaaa : Nat) (bbbbbbbbbb : Nat) (cccccccccc : Nat) (dddddddddd : Nat) (eeeeeeeeee : Nat) (ffffffffff : Nat)\n  : Nat => 1")
+
+    fun testWrapFatArrowWithBody() = checkReformat(
+            "\\func test => aaaaaaaaaa bbbbbbbbbb cccccccccc dddddddddd eeeeeeeeee ffffffffff gggggggggg hhhhhhhhhh iiiiiiiiii jjjjjjjjjj",
+            "\\func test\n  => aaaaaaaaaa bbbbbbbbbb cccccccccc dddddddddd eeeeeeeeee ffffffffff gggggggggg hhhhhhhhhh iiiiiiiiii jjjjjjjjjj")
+
     // Wrap tests
     fun testWrapAfterComment() = checkReformat(
             "\\func lol -- Lol\n => 1",
@@ -132,4 +154,39 @@ class ArendReformatTest : ArendFormatterTestBase() {
           \let
             x => 1 
           \in 2)""".trimIndent())
+
+    // Reformatting a postfix section applied to further arguments used to throw IllegalStateException
+    // because BinOpParser reused a sub-expression operand's `data` for the synthetic application node.
+    fun testBug() = checkReformat(
+            "\\func test (h : Nat -> Nat) => Nat.`+ (Nat.`+ h 1)  2 ",
+            "\\func test (h : Nat -> Nat) => Nat.`+ (Nat.`+ h 1) 2")
+
+    // Reformatting a `run`-style meta whose first element is a section (`__`) used to throw
+    // IllegalStateException at ArgumentAppExprBlock:89. The resolver applies the section to a
+    // synthetic `later`-wrapped argument via ConcreteFactory.app, which reuses the section's
+    // `data`; the resolved expression is therefore an application `(\lam p0 => f p0 1) (later g)`
+    // whose `data` points at the inner section PSI (`f __ 1`) instead of the ambient application.
+    fun testBug2() {
+        addGeneratedModules {
+            declare(nullDoc(), makeMeta("run", object : MetaResolver {
+                override fun resolvePrefix(resolver: ExpressionResolver, contextData: ContextData): ConcreteExpression {
+                    val factory = ConcreteFactoryImpl(contextData.marker.data)
+                    val laterMeta = object : MetaDefinition {
+                        override fun invokeMeta(typechecker: ExpressionTypechecker, contextData: ContextData): TypedExpression? = null
+                    }
+                    fun later(arg: ConcreteExpression): ConcreteExpression =
+                        factory.app(factory.meta("later", laterMeta), true, listOf(arg))
+                    val args = contextData.arguments
+                    var result: ConcreteExpression = later(args.last().expression)
+                    for (i in args.size - 2 downTo 0)
+                        result = later(factory.app(args[i].expression, true, listOf(result)))
+                    return resolver.resolve(result)
+                }
+            }, null))
+        }
+
+        checkReformat(
+            "\\import Meta\n\\func test (f : Nat -> Nat -> Nat) (g : Nat) => run (f __ 1) g",
+            "\\import Meta\n\n\\func test (f : Nat -> Nat -> Nat) (g : Nat) => run (f __ 1) g")
+    }
 }

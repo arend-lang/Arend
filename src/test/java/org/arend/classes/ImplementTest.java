@@ -1,14 +1,12 @@
 package org.arend.classes;
 
 import org.arend.Matchers;
-import org.arend.core.context.binding.LevelVariable;
 import org.arend.core.context.param.DependentLink;
 import org.arend.core.definition.ClassDefinition;
 import org.arend.core.definition.FunctionDefinition;
 import org.arend.core.expr.Expression;
-import org.arend.core.sort.Level;
 import org.arend.core.sort.Sort;
-import org.arend.core.subst.LevelPair;
+import org.arend.core.subst.Levels;
 import org.arend.typechecking.TypeCheckingTestCase;
 import org.arend.typechecking.error.local.IncorrectImplementationError;
 import org.junit.Ignore;
@@ -228,7 +226,7 @@ public class ImplementTest extends TypeCheckingTestCase {
       }
       \\func f => C { | A => Nat }
       """);
-    assertEquals(new Sort(new Level(LevelVariable.PVAR, 1), new Level(LevelVariable.HVAR, 1)), ((ClassDefinition) getDefinition("C")).getSort());
+    assertEquals(Sort.INFINITY, ((ClassDefinition) getDefinition("C")).getSort());
     assertEquals(new Sort(0, 0), ((FunctionDefinition) getDefinition("f")).getResultType().toSort());
   }
 
@@ -253,7 +251,7 @@ public class ImplementTest extends TypeCheckingTestCase {
       \\func f => D { | x => 1 }
       """);
     List<DependentLink> fParams = new ArrayList<>();
-    Expression fType = getDefinition("f").getTypeWithParams(fParams, LevelPair.STD);
+    Expression fType = getDefinition("f").getTypeWithParams(fParams, Levels.EMPTY);
     assertEquals(new Sort(2, 1), ((ClassDefinition) getDefinition("A")).getSort());
     assertEquals(new Sort(1, 1), ((ClassDefinition) getDefinition("B")).getSort());
     assertEquals(new Sort(2, 1), ((ClassDefinition) getDefinition("C")).getSort());
@@ -478,7 +476,7 @@ public class ImplementTest extends TypeCheckingTestCase {
   @Test
   public void recursiveFunction() {
     typeCheckModule("""
-      \\class A (X : \\hType) {
+      \\class A (X : \\Type) {
         | x : X
       }
       \\func f (a : A Nat) => a.x

@@ -1,0 +1,369 @@
+{- | Preorder sites were defined in the following paper under the name flat sites.
+ -   Steven Vickers, Compactness in Locales and in Formal Topology, https://www.sciencedirect.com/science/article/pii/S0168007205000801
+ -}
+
+\import Category
+\import Category.Topos.Sheaf.Site
+\import Category.Topos.Sheaf.SiteHom
+\import Data.Array
+\import Function.Meta
+\import Logic
+\import Logic.Meta
+\import Meta
+\import Order.Lattice
+\import Order.Lattice.CompleteLattice
+\import Order.PartialOrder
+\import Paths
+\import Paths.Meta
+\import Set.Fin
+\import Set.Fin.KFinSetOf
+\import Set.Set
+\import Topology.Locale
+\open Cover
+\open SiteLocale
+\open CompleteLattice
+
+\class PreorderSite \extends Preorder, Site {
+  | isBasicCover : E -> Set E -> \Prop
+  | basic-cover-stable {a b : E} : a <= b -> ∀ {U : isBasicCover b} ∃ (V : isBasicCover a) (Refines V U) ∀ {t : V} (t <= a)
+  | isCover x S => isBasicCover x \lam y => \Sigma (p : y <= x) (S (y,p))
+  | cover-stable {x} x<=y y<=S => \case basic-cover-stable x<=y y<=S \with {
+    | inP (V,x<=V,V<=S,V<=x) => inP (\lam px => V px.1, transport (isBasicCover x) (ext \lam a => ext (\lam Va => (V<=x Va, Va), __.2)) x<=V, \lam {px} Vpx => \case V<=S Vpx \with {
+      | inP (y',(y'<=y,Sy'),px<=y') => inP (_, Sy', px<=y', prop-pi)
+    })
+  }
+
+  \protected \func IsSubcanonical
+    => \Pi {x : E} {U : Set E} -> isBasicCover x U -> \Pi {y : E} -> ∀ {z : U} (z <= y) -> x <= y
+
+  \lemma subcanonical-cover (c : IsSubcanonical) {x : E} {U : Set E} (x<=U : Cover x U) {y : E} (U<=y : ∀ {z : U} (z <= y)) : x <= y \elim x<=U
+    | cover-inj x<=t Ut => x<=t <=∘ U<=y Ut
+    | cover-trans x<=T T<=U => c x<=T \lam Tz => subcanonical-cover c (T<=U Tz) U<=y
+
+  \lemma subcanonical-cover1 (c : IsSubcanonical) {x y : E} (x<=y : Cover x (single y)) : x <= y
+    => subcanonical-cover c x<=y \lam y=z => =_<= (inv y=z)
+
+
+  \protected \func IsPositive (a : E) => \Pi {P : \Prop} -> Cover a (\lam _ => P) -> P
+
+  \lemma positive-site {a : E} : IsPositive a <-> (SiteLocale \this).IsPositive (embed a)
+    => (\lam a>0 c => a>0 $ cover-sub (c $ cover-refl idp) \lam (inP (_,p,_)) => p,
+        \lam a>0 c => a>0 $ embed-univ $ cover-sub c \lam p => inP ((SiteLocale \this).top, p, ()))
+
+  \lemma positive-locale {U : Opens \this} {a : E} (Ua : U.1 a) (a>0 : IsPositive a) : (SiteLocale \this).IsPositive U
+    => \lam U<=P => a>0 $ cover-sub (U<=P Ua) \lam (inP (_,p,_)) => p
+    \where {
+      \protected \lemma conv (o : IsOvert) {U : Opens \this} (U>0 : (SiteLocale \this).IsPositive U) : ∃ (a : U.1) (IsPositive a)
+        => U>0 \lam {x} Ux => cover-sub (overt-single.1 o x) \lam {_} (x>0,idp) => inP (U, inP $ later (x, Ux, x>0), Ux)
+    }
+
+  \protected \func IsOvert => \Pi (a : E) -> Cover a \lam _ => IsPositive a
+
+  \lemma overt-single : IsOvert <-> (\Pi (a : E) -> Cover a \lam x => \Sigma (IsPositive a) (a = x))
+    => (\lam o a => cover-refine (cover-down (o a)) \lam (inP (y,a>0,_,x<=a)) => inP (a, (a>0,idp), x<=a),
+        \lam o a => cover-sub (o a) __.1)
+
+  \lemma overt-locale : IsOvert <-> (SiteLocale \this).IsOvert
+    => (\lam o U {x} Ux => cover-sub (overt-single.1 o x) \lam {_} (x>0,idp) => inP (embed x, positive-locale Ux x>0, cover-refl idp),
+        \lam o a => cover-sub (o (embed a) (cover-refl idp)) \lam (inP (U,a>0,Ux)) => positive-site.2 a>0)
+
+
+  \protected \type \infix 4 << (x y : E) => ∀ {U : Cover y} ∃ (l : Array E) (∀ (a : l) (U a)) (Cover x (TSetIm l))
+
+  \lemma <<-site {x y : E} : x << y <-> embed x Locale.<< {SiteLocale \this} embed y
+    => (\lam x<<y y<=C => \case x<<y $ y<=C (cover-refl idp) \with {
+      | inP (l,l<=C,x<=l) => \case FinSet.finiteAC l<=C \with {
+        | inP h => inP (\lam j => (h j).1, \lam j => (h j).2, embed-univ $ cover-sub x<=l \lam {y} => TSetIm-elim \lam j => inP $ later (_, TSetIm-con j, (h j).3))
+      }
+    }, \lam x<<y {C} y<=C => \case x<<y {SetIm embed C} $ embed-univ $ cover-sub y<=C (\lam {a} Ca => inP (_, SetIm-con Ca, cover-refl idp)) \with {
+      | inP (l,l<=C,x<=l) => \case FinSet.finiteAC (l<=C __) \with {
+        | inP h => inP (\lam j => (h j).1.1, \lam j => (h j).1.2, cover-trans* (x<=l $ cover-refl idp)
+          \lam {y} (inP (_, inP (j,idp), ljy)) => cover-sub (rewriteI (h j).2 in ljy) \lam {z} q => inP (j,q))
+      }
+    })
+
+  \protected \type IsLocallyCompact => \Pi (x : E) -> Cover x (<< x)
+
+  \lemma locallyCompact-locale : IsLocallyCompact <-> (SiteLocale \this).IsLocallyCompact
+    => (\lam lc U {x} Ux => cover-sub (lc x) \lam {y} y<<x => inP (embed y, <<-left (<<-site.1 y<<x) (embed-univ Ux), cover-refl idp),
+        \lam lc x => cover-sub (lc (embed x) (cover-refl idp)) \lam {y} (inP (U,U<<x,Uy)) => <<-site.2 $ <<-right (embed-univ Uy) U<<x)
+
+  \protected \func IsAlgebraic => ∀ {a} {U : isBasicCover a} ∃ (l : Array E) (∀ (x : l) (U x)) (Cover a (TSetIm l))
+
+  \lemma algebraic-char : IsAlgebraic <-> ∀ a (a << a)
+    => (\lam ca a a<=U => \case induction ca a<=U \with {
+      | inP (V,V<=U,a<=V) => \case V.isFinSubSet \with {
+        | inP (l,lc) => inP (l, \lam j => V<=U $ (lc _).2 $ TSetIm-con j, cover-sub a<=V \lam Vx => (lc _).1 Vx)
+      }
+    }, \lam c {a} a<=U => c a $ cover-basic a<=U)
+    \where {
+      \private \lemma induction (ca : IsAlgebraic) {a : E} {U : Set E} (a<=U : Cover a U) : ∃ (V : KFinSetOf E) (V ⊆ U) (Cover a V) \elim a<=U
+        | cover-inj {t} a<=t Ut => inP (KFinSetOf.single t, single_<= Ut, cover-inj a<=t idp)
+        | cover-trans a<=T T<=U => \case ca a<=T \with {
+          | inP (l,l<=T,a<=l) => \case FinSet.finiteAC (\lam j => induction ca $ T<=U (l<=T j)) \with {
+            | inP g => inP (KFinSetOf.BigUnion \lam j => (g j).1, \lam (inP (j,gx)) => (g j).2 gx, cover-trans* a<=l $ TSetIm-elim \lam j => cover-sub (g j).3 \lam gx => inP $ later (j,gx))
+          }
+        }
+    }
+}
+
+\func Cover1 {P : PreorderSite} (x y : P) => Cover x (single y)
+
+\truncated \data Cover {P : PreorderSite} (x : P) (U : Set P) : \Prop
+  | cover-inj {t : P} (x <= t) (U t)
+  | cover-trans {T : Set P} (isBasicCover x T) (∀ {t : T} (Cover t U))
+  \where {
+    \lemma cover-refl {x : P} {U : Set P} (Ux : U x) : Cover x U
+      => cover-inj <=-refl Ux
+
+    \lemma cover-basic {x : P} {U : Set P} (x<=U : isBasicCover x U) : Cover x U
+      => cover-trans x<=U \lam Ut => cover-refl Ut
+
+    \lemma cover-left {x y : P} (x<=y : x <= y) {U : Set P} (y<=U : Cover y U) : Cover x U \elim y<=U
+      | cover-inj y<=t Ut => cover-inj (x<=y <=∘ y<=t) Ut
+      | cover-trans y<=V V<=U => \case basic-cover-stable x<=y y<=V \with {
+        | inP (V',x<=V',V'<=V,V'<=x) => cover-trans x<=V' \lam V't => \case V'<=V V't \with {
+          | inP (t',Tt',t<=t') => cover-left t<=t' (V<=U Tt')
+        }
+      }
+
+    \lemma cover-trans* {x : P} {U V : Set P} (x<=V : Cover x V) (V<=U : ∀ {t : V} (Cover t U)) : Cover x U \elim x<=V
+      | cover-inj x<=t Vt => cover-left x<=t (V<=U Vt)
+      | cover-trans x<=T T<=V => cover-trans x<=T \lam Tt => cover-trans* (T<=V Tt) V<=U
+
+    \lemma cover-trans1 {x y : P} {U : Set P} (x<=y : Cover1 x y) (y<=U : Cover y U) : Cover x U
+      => cover-trans* x<=y \lam {_} (idp) => y<=U
+
+    \lemma cover-refine {x : P} {U V : Set P} (x<=U : Cover x U) (U<=V : Refines U V) : Cover x V
+      => cover-trans* x<=U \lam Ut => \case U<=V Ut \with {
+        | inP (v,Vv,t<=v) => cover-inj t<=v Vv
+      }
+
+    \lemma cover-sub {x : P} {U V : Set P} (x<=U : Cover x U) (U<=V : U ⊆ V) : Cover x V
+      => cover-refine x<=U (<=_Refines U<=V)
+
+    \lemma cover-down {x : P} {U : Set P} (x<=U : Cover x U) : Cover x (\lam y => ∃ (z : U) (y <= z) (y <= x))
+      => cover-left-down <=-refl x<=U
+      \where {
+        \private \lemma cover-left-down {a x : P} (a<=x : a <= x) {U : Set P} (x<=U : Cover x U) : Cover a (\lam y => ∃ (z : U) (y <= z) (y <= a)) \elim x<=U
+          | cover-inj {t} x<=t Ut => cover-refl $ inP (t, Ut, a<=x <=∘ x<=t, <=-refl)
+          | cover-trans x<=T T<=U => \case basic-cover-stable a<=x x<=T \with {
+            | inP (V,a<=V,V<=T,V<=a) => cover-trans a<=V \lam {v} Vv => \case V<=T Vv \with {
+              | inP (t,Tt,v<=t) => cover-sub (cover-left-down v<=t (T<=U Tt)) \lam {y} (inP (z,Uz,y<=z,y<=v)) => inP (z, Uz, y<=z, y<=v <=∘ V<=a Vv)
+            }
+          }
+      }
+
+    \lemma cover-down-sub {x : P} {U V : Set P} (x<=U : Cover x U) (U<=V : \Pi {y z : P} -> U z -> y <= z -> y <= x -> V y) : Cover x V
+      => cover-sub (cover-down x<=U) \lam {y} (inP (z,Uz,y<=z,y<=x)) => U<=V Uz y<=z y<=x
+
+    \lemma cover-inter {x : P} {U V : Set P} (x<=U : Cover x U) (x<=V : Cover x V) : Cover x (\lam e => ∃ (a : U) (b : V) (e <= a) (e <= b))
+      => cover-trans* (cover-down x<=U) \lam {y} (inP (a,Ua,y<=a,y<=x)) => cover-down-sub (cover-left y<=x x<=V)
+          \lam {z} {b} Vb z<=b z<=y => inP (a, Ua, b, Vb, z<=y <=∘ y<=a, z<=b)
+
+    \lemma cover-interN {x : P} (Vs : Array (Set P)) (x<=Vs : ∀ (V : Vs) (Cover x V))
+      : Cover x (\lam e => ∀ (V : Vs) ∃ (v : V) (e <= v)) \elim Vs
+      | nil => cover-refl \case __
+      | V :: Vs => cover-sub (cover-inter (x<=Vs 0) (cover-interN Vs (\lam j => x<=Vs (suc j)))) \lam {e} (inP (u,Vu,v,c,eu,ev)) => \case \elim __ \with {
+        | 0 => inP (u,Vu,eu)
+        | suc j => \case c j \with {
+          | inP (v',Vv',vv') => inP (v', Vv', ev <=∘ vv')
+        }
+      }
+
+    \lemma cover-interN-down {x : P} (Vs : Array (Set P)) (x<=Vs : ∀ (V : Vs) (Cover x V))
+      : Cover x (\lam e => Given (e <= x) ∀ (V : Vs) ∃ (v : V) (e <= v))
+      => cover-down-sub (cover-interN Vs x<=Vs) \lam h yz yx => (yx, \lam j => TruncP.map (h j) \lam s => (s.1, s.2, yz <=∘ s.3))
+
+    \lemma toCovering {x : P} {U : Set P} (x<=U : Cover x U) : Covering x \lam y => ∃ (z : U) (y.1 <= z) \elim x<=U
+      | cover-inj {t} x<=t Ut => Covering.covering-id $ inP (t,Ut,x<=t)
+      | cover-trans {T} x<=T T<=U => \case basic-cover-stable <=-refl x<=T \with {
+        | inP (S,x<=S,S<=T,S<=x) => Covering.covering-trans*
+          (covering-trans (transport (isBasicCover x) (ext \lam y => ext (\lam Sy => (S<=x Sy, Sy), __.2)) x<=S)
+            \lam {y} Sy => Covering.covering-id $ inP (y, S<=T Sy, <=-refl, prop-pi))
+          \lam {y} (inP (z,Tz,y<=z)) => Covering.covering-sub (Covering.covering-stable y<=z (toCovering (T<=U Tz)))
+            \lam {py} (inP (pz, inP (u,Uu,pz<=u), py<=pz, _)) => inP ((py.1, py.2 <=∘ y.2), inP (u, Uu, py<=pz <=∘ pz<=u), <=-refl, prop-pi)
+      }
+
+    \lemma Cover_Covering {x : P} {U : Presieve x} (x<=U : Cover x \lam y => \Sigma (p : y <= x) (U (y,p))) : Covering x U
+      => Covering.covering-refine (toCovering x<=U) \lam {y} (inP (z,(z<=x,Uz),y<=z)) => inP ((z,z<=x), Uz, y<=z, prop-pi)
+
+    \lemma fromCovering {x : P} {S : Presieve x} (x<=S : Covering x S) : Cover x (SetIm __.1 S) \elim x<=S
+      | covering-inj x<=y _ _ Sy => cover-inj x<=y (SetIm-con Sy)
+      | covering-trans x<=T T<=S => cover-trans x<=T \lam (t<=x,Tt) => cover-refine (fromCovering (T<=S Tt))
+        \lam {_} => SetIm-elim $ later \lam (inP (u,Su,a<=u,_)) => inP (u.1, SetIm-con Su, a<=u)
+  }
+
+{- | The underlying set of {SiteLocale} can be defined as the quotient of the set `P -> \Prop`
+ -   under the relation `\Sigma (U <= V) (V <= U)`, where `U <= V` iff `\Pi (x : P) -> U x -> Cover x V`.
+ -   We use an equivalent definition, namely, as the set of maximal elements of equivalence classes.
+ -   A subset is maximal if every element, which is covered by it, actually belongs to it.
+ -}
+\instance SiteLocale (P : PreorderSite) : Locale (Opens P)
+  | <= => <=
+  | <=-refl u => u
+  | <=-transitive U<=V V<=W xU => V<=W (U<=V xU)
+  | <=-antisymmetric U<=V V<=U => exts (\lam x => ext (U<=V, V<=U))
+  | top => (\lam _ => \Sigma, \lam _ => ())
+  | top-univ _ => ()
+  | meet U V => (U.1 ∧ V.1, \lam x<=UV => (U.2 $ cover-sub x<=UV meet-left, V.2 $ cover-sub x<=UV meet-right))
+  | meet-left => __.1
+  | meet-right => __.2
+  | meet-univ p q e => (p e, q e)
+  | Join C => closure \lam x => ∃ (U : C) (U.1 x)
+  | Join-cond {C} {U} CU {x} Ux => cover-refl $ inP (U,CU,Ux)
+  | Join-univ {C} {W} d => closure-univ $ later \lam (inP (U,CU,Ux)) => d CU Ux
+  | Join-ldistr>= {C} {W} (Wx,x<=C) => cover-down-sub x<=C \lam {y} (inP (U,CU,Uz)) y<=z y<=x => inP (_, SetIm-con CU, (W.2 $ cover-inj y<=x Wx, U.2 $ cover-inj y<=z Uz))
+  \where {
+    \type Opens (P : PreorderSite) => Given (U : P -> \Prop) ∀ {x : P} (Cover x U -> U x)
+
+    \protected \type \infix 4 <= (U V : Opens P) => \Pi {x : P} -> U.1 x -> V.1 x
+
+    \func closure (C : P -> \Prop) : Opens P
+      => (Cover __ C, cover-trans* __ \lam c => c)
+
+    \lemma closure-univ {C : P -> \Prop} {U : Opens P} (p : C ⊆ U.1) : closure C <= U
+      => \lam c => U.2 $ cover-trans* c \lam Ct => cover-refl (p Ct)
+
+    \lemma closure_embed {C D : P -> \Prop} : closure C ∧ {SiteLocale P} closure D = closure (\lam x => ∃ (y : C) (z : D) (x P.<= y) (x P.<= z))
+      => exts \lam a => propExt (\lam (a<=C,a<=D) => cover-inter a<=C a<=D) (\lam ac => (cover-refine ac \lam (inP (y,Cy,_,_,x<=y,_)) => inP (y,Cy,x<=y), cover-refine ac \lam (inP (_,_,z,Dz,_,x<=z)) => inP (z,Dz,x<=z)))
+
+    \func embed (x : P) : Opens P
+      => closure (single x)
+
+    \lemma embed-univ {x : P} {U : Opens P} (Ux : U.1 x) : embed x <= U
+      => closure-univ (single_<= Ux)
+
+    \lemma element_SJoin {U : Opens P} : U = (SiteLocale P).SJoin embed U.1
+      => (SiteLocale P).<=-antisymmetric
+          (\lam {x} Ux => cover-refl $ inP (embed x, SetIm-con Ux, cover-refl idp))
+          ((SiteLocale P).SJoin-univ $ later \lam Ua => embed-univ Ua)
+
+    \lemma element_SJoin_<= {U : Opens P} {a : P} (U<=a : U <= embed a) : U <= (SiteLocale P).SJoin embed (\lam x => \Sigma (U.1 x) (x P.<= a))
+      => \lam Ux => cover-down-sub (U<=a Ux) \lam {y} {_} (idp) y<=a y<=x => inP (_, SetIm-con (U.2 $ cover-inj y<=x Ux, y<=a), cover-refl idp)
+
+    \lemma element_SJoin_<=2 {U : Opens P} {a b : P} (U<=a : U <= embed a) (U<=b : U <= embed b)
+      : U <= (SiteLocale P).SJoin embed (\lam x => \Sigma (U.1 x) (x P.<= a) (x P.<= b))
+      => \lam Ux => cover-trans* (cover-down (U<=a Ux)) \lam {y} (inP (_,idp,y<=a,y<=x)) => cover-down-sub (cover-left y<=x (U<=b Ux))
+          \lam {z} {_} (idp) z<=b z<=y => inP (_, SetIm-cone z (U.2 $ cover-inj (z<=y <=∘ y<=x) Ux, z<=y <=∘ y<=a, z<=b), cover-refl idp)
+
+    \lemma func-equality {L : Locale} {f g : LocaleHom L (SiteLocale P)} (p : \Pi (x : P) -> f (embed x) = g (embed x)) {U : Opens P} : f U = g U
+      => pmap f element_SJoin *> f.func-SJoin *> pmap (SJoin __ U.1) (ext p) *> inv g.func-SJoin *> inv (pmap g element_SJoin)
+
+    \lemma func-equality_ext {L : Locale} {f g : LocaleHom L (SiteLocale P)} (p : \Pi (x : P) -> f (embed x) = g (embed x)) : f = g
+      => exts \lam U => func-equality p
+  }
+
+\func LocaleSite (L : Locale) : PreorderSite L \cowith
+  | <= => <=
+  | <=-refl => <=-refl
+  | <=-transitive => <=-transitive
+  | isBasicCover x U => x <= Join U
+  | basic-cover-stable {a} a<=b {U} b<=U => inP (\lam c => Given (c <= a) ∃ (u : U) (c <= u), meet-univ <=-refl (a<=b <=∘ b<=U) <=∘ Join-ldistr>= <=∘ L.SJoin-univ \lam {u} Uu => Join-cond $ later (meet-left, inP (u, Uu, meet-right)), __.2, __.1)
+  \where {
+    \lemma locale_cover {L : Locale} {x : L} {U : Set L} (x<=U : Cover {LocaleSite L} x U) : x <= Join U \elim x<=U
+      | cover-inj x<=t Ut => x<=t <=∘ Join-cond Ut
+      | cover-trans x<=T T<=U => x<=T <=∘ Join-univ \lam Tw => locale_cover (T<=U Tw)
+
+    \func adjointMap {X : PreorderSite} {Y : Locale} (f : PreorderSiteHom X (LocaleSite Y)) : FrameHom (SiteLocale X) Y \cowith
+      | func U => SJoin f U.1
+      | func-<= {U} {V} U<=V => SJoin-univ \lam Ua => SJoin-cond (U<=V Ua)
+      | func-top>= => locale_cover f.func-flat-top <=∘ IJoin-univ \lam a => SJoin-cond ()
+      | func-meet>= {U} {V} => Y.SJoin-distr>= <=∘ SJoin-univ (later \lam {(a,b)} (Ua,Vb) =>
+        locale_cover (f.func-flat-meet meet-left meet-right) <=∘ SJoin-univ \lam {c} s =>
+          SJoin-cond $ later (U.2 $ cover-inj s.1 Ua, V.2 $ cover-inj s.2 Vb))
+      | func-Join>= => SJoin-univ \lam c => locale_cover (f.func-Cover c) <=∘ SJoin-univ (later \lam {b} (inP (U,CU,Ub)) => SJoin-cond Ub <=∘ SJoin-cond CU)
+
+    \lemma adjointMap_embed {X : PreorderSite} {Y : Locale} {f : PreorderSiteHom X (LocaleSite Y)} {x : X} : adjointMap f (embed x) = f x
+      => <=-antisymmetric (SJoin-univ \lam c => locale_cover (f.func-Cover c) <=∘ SJoin-univ \lam p => func-<= $ =_<= $ inv p) (SJoin-conde x (later $ cover-refl idp))
+
+    \func embedHom {P : PreorderSite} : PreorderSitePredenseHom P (LocaleSite (SiteLocale P)) \cowith
+      | func => embed
+      | func-<= p => embed-univ $ cover-inj p idp
+      | func-basicCover {x} {V} x<=V => embed-univ $ cover-trans x<=V \lam {v} Vv => cover-refl $ inP (embed v, SetIm-con Vv, cover-refl idp)
+      | func-dense-image {V} => cover-basic \lam {x} Vx => cover-refl $ inP (embed x, SetIm-con $ embed-univ Vx, cover-refl idp)
+      | func-dense-map p => p (cover-refl idp)
+  }
+
+\record PreorderSiteHom \extends PreorderHom, SiteHom {
+  \override Dom : PreorderSite
+  \override Cod : PreorderSite
+
+  | func-basicCover {x : Dom} {C : Dom -> \Prop} : isBasicCover x C -> isBasicCover (func x) (SetIm func C)
+  | func-flat-top {u : Cod} : Cover u (TSetIm func)
+  | func-flat-meet {x y : Dom} {u : Cod} : u <= func x -> u <= func y -> Cover u (SetIm func \lam a => \Sigma (a <= x) (a <= y))
+
+  | C => Dom
+  | D => Cod
+  | Func-cover x<=P => Covering.covering-basic $ transport (isBasicCover _)
+    (ext \lam y => propExt
+      (SetIm-elim $ later \lam {y} (y<=x,Py) => (func-<= y<=x, inP ((y,y<=x), Py, idp)))
+      (\lam (y<=fx, inP (px,Ppx,y=Fpx)) => inP ((px.1, (px.2, Ppx)), inv $ pmap __.1 y=Fpx)))
+    (func-basicCover x<=P)
+  | Func-flat-terminal => Cover_Covering $ cover-down-sub func-flat-top \lam {z} => TSetIm-elim \lam a z<=fa z<=u => later (z<=u, inP (a,z<=fa))
+  | Func-flat-pullback {_} {x} {y} {_} {_} {u} {u<=fx} {u<=fy} _ => Cover_Covering $ cover-down-sub (func-flat-meet u<=fx u<=fy)
+    \lam {z} {z'} => SetIm-elim \lam {a} a<=xy z<=fa z<=u => later (z<=u, inP (a, a<=xy.1, a<=xy.2, prop-pi, z<=fa, prop-pi, prop-pi))
+
+  \lemma func-Cover {x : Dom} {U : Set Dom} (x<=U : Cover x U) : Cover (func x) (SetIm func U) \elim x<=U
+    | cover-inj x<=t Ut => cover-inj (func-<= x<=t) (SetIm-con Ut)
+    | cover-trans x<=T T<=U => cover-trans (func-basicCover x<=T) $ SetIm-elim \lam Ta => func-Cover (T<=U Ta)
+} \where {
+  \func id {X : PreorderSite} : PreorderSiteHom X X \cowith
+    | func x => x
+    | func-basicCover {x} c => transportInv (isBasicCover x) SetIm_id c
+    | func-<= p => p
+    | func-flat-top {u} => cover-inj <=-refl (TSetIm-con u)
+    | func-flat-meet u<=x u<=y => cover-inj <=-refl $ SetIm-con (u<=x,u<=y)
+
+  \func compose \alias \infixl 8 ∘ {X Y Z : PreorderSite} (g : PreorderSiteHom Y Z) (f : PreorderSiteHom X Y) : PreorderSiteHom X Z \cowith
+    | func x => g (f x)
+    | func-<= p => func-<= (func-<= p)
+    | func-basicCover x<=C => transportInv (isBasicCover _) SetIm_o $ g.func-basicCover (f.func-basicCover x<=C)
+    | func-flat-top => Cover.cover-trans* g.func-flat-top $ TSetIm-elim \lam y => transport (Cover _) SetIm_TSetIm (g.func-Cover f.func-flat-top)
+    | func-flat-meet u<=gfx u<=gfy => Cover.cover-trans* (g.func-flat-meet u<=gfx u<=gfy) $ SetIm-elim $ later
+        \lam a<=fxfy => transportInv (Cover _) SetIm_o $ g.func-Cover (f.func-flat-meet a<=fxfy.1 a<=fxfy.2)
+}
+
+\record PreorderSitePredenseHom \extends PreorderSiteHom, SiteDensePrehom
+  | func-dense-image {u : Cod} : Cover u (SetIm func \lam x => func x <= u)
+  | func-dense-map {a b : Dom} : func a <= func b -> Cover1 a b
+
+  | Func-dense-image => Cover_Covering $ cover-sub func-dense-image \lam {_} => SetIm-elim \lam {a} fa<=u => later (fa<=u, inP (a, \new Iso {
+    | f => <=-refl
+    | hinv => <=-refl
+    | hinv_f => prop-pi
+    | f_hinv => prop-pi
+  }))
+  | Func-dense-map fa<=fb => Cover_Covering $ cover-down-sub (func-dense-map fa<=fb) \lam {y} {_} (idp) y<=b y<=a => (y<=a, inP (y<=b, prop-pi))
+  | func-flat-top => cover-refine func-dense-image \lam {_} => SetIm-elim \lam {a} fa<=u => inP $ later (func a, TSetIm-con a, <=-refl)
+  | func-flat-meet u<=fx u<=fy => cover-trans* func-dense-image \lam {_} (inP ((a,fa<=u),idp)) => cover-sub
+    (fromCovering $ Func-covering $ toCovering $ cover-inter (func-dense-map (fa<=u <=∘ u<=fx)) (func-dense-map (fa<=u <=∘ u<=fy)))
+    \lam {_} => SetIm-elim $ later \lam {_} (inP (b, inP (c, inP (_,idp,_,idp,c<=x,c<=y), b<=c), idp)) => SetIm-con (b<=c <=∘ c<=x, b<=c <=∘ c<=y)
+
+\lemma sdense-site {P : PreorderSite} {L : Locale} {f : PreorderSiteHom P (LocaleSite L)}
+                   (s : \Pi {Q : \Prop} {x : P} -> f x <= L.pHat Q -> Cover x (\lam _ => Q))
+  : (LocaleSite.adjointMap f).IsStronglyDense
+  => \lam {Q} {U} p Ux => cover-sub (s $ SJoin-cond Ux <=∘ p) \lam {y} q => inP (embed y, q, cover-refl idp)
+
+\lemma sdense-comp {L M K : Locale} (f : LocaleHom L M) (fd : f.IsStronglyDense) (g : LocaleHom M K) (gd : g.IsStronglyDense) : (g LocaleHom.∘ f).IsStronglyDense
+  => \lam p => gd (fd p)
+
+\lemma regular-site {P : PreorderSite} (reg : \Pi (x : P) -> Cover x (embed __ Locale.<=< embed x)) : (SiteLocale P).IsRegularLocale
+  => \lam U {x} Ux => cover-sub (reg x) \lam {y} y<=<x => inP (embed y, LocaleRatherBelow.<=<-left y<=<x (embed-univ Ux), cover-refl idp)
+
+\lemma <<-char {P : PreorderSite} {R : P -> P -> \Prop} (R_<= : ∀ {x y : R} (x <= y))
+               (Rc : ∀ {a b : R} {U : isBasicCover b} ∃ (l : Array P) (Cover a (TSetIm l)) ∀ (x : l) ∃ (y : U) (R x y))
+               {x y : P} (Rxy : R x y) : x P.<< y
+  => \lam y<=C => aux Rxy y<=C
+  \where {
+    \private \lemma aux {a b : P} (Rab : R a b) {U : Set P} (b<=U : Cover b U) : ∃ (l : Array P) (∀ (x : l) (U x)) (Cover a (TSetIm l)) \elim b<=U
+      | cover-inj {t} b<=t Ut => inP (t :: nil, \lam (0) => Ut, cover-inj (R_<= Rab <=∘ b<=t) $ TSetIm-con $ later 0)
+      | cover-trans b<=T T<=U => \case Rc Rab b<=T \with {
+        | inP (l,a<=l,l<=T) => \case FinSet.finiteAC l<=T \with {
+          | inP h => \case FinSet.finiteAC (\lam i => aux (h i).3 (T<=U (h i).2)) \with {
+            | inP g => inP (Big (++) nil (\lam i => (g i).1), ++.Big++-all {_} {U} $ later \lam i => (g i).2,
+                            cover-trans* a<=l $ TSetIm-elim \lam i => cover-sub (g i).3 $ unfolds $ TSetIm-elim \lam j => later $ inP (++.index-big {_} {\lam i => (g i).1} i j, ++.Big++-index))
+          }
+        }
+      }
+  }

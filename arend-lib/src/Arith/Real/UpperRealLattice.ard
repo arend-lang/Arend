@@ -11,23 +11,25 @@
 \import Meta
 \import Order.Biordered
 \import Order.Lattice
+\import Order.Lattice.CompleteLattice
 \import Order.PartialOrder
 \import Order.StrictOrder
 \import Paths
+\import Paths.Meta
 
 \instance ExUpperRealLattice : CompleteLattice ExUpperReal
-  | Order.Lattice.Lattice => ExUpperRealAbMonoid
-  | Meet {J : \Set} (g : J -> ExUpperReal) : ExUpperReal \cowith {
-    | U q => ∃ (j : J) ((g j).U q)
-    | U-closed (inP (j,gj<q)) q<q' => inP (j, U-closed gj<q q<q')
-    | U-rounded (inP (j,gj<q)) => \case U-rounded gj<q \with {
-      | inP (r,gj<r,r<q) => inP (r, inP (j,gj<r), r<q)
+  | Lattice => ExUpperRealAbMonoid
+  | Meet (C : ExUpperReal -> \Prop) : ExUpperReal \cowith {
+    | U q => ∃ (x : C) (x.U q)
+    | U-closed (inP (x,Cx,x<q)) q<q' => inP (x, Cx, U-closed x<q q<q')
+    | U-rounded (inP (x,Cx,x<q)) => \case U-rounded x<q \with {
+      | inP (r,x<r,r<q) => inP (r, inP (x,Cx,x<r), r<q)
     }
   }
-  | Meet-cond j fj<b => inP (j,fj<b)
-  | Meet-univ c (inP (j,fj<b)) => c j fj<b
-  | Join {J : \Set} (g : J -> ExUpperReal) : ExUpperReal \cowith {
-    | U q => ∃ (r : `< q) ∀ (j : J) ((g j).U r)
+  | Meet-cond {C} {x} Cx x<b => inP (x,Cx,x<b)
+  | Meet-univ c (inP (x,Cx,x<b)) => c Cx x<b
+  | Join (C : ExUpperReal -> \Prop) : ExUpperReal \cowith {
+    | U q => ∃ (r : < q) ∀ {x : C} (x.U r)
     | U-closed (inP (r,r<q,c)) q<q' => inP (r, r<q <∘ q<q', c)
     | U-rounded {q} (inP (r,r<q,c)) => inP (RatField.mid r q, inP (r, RatField.mid>left r<q, c), RatField.mid<right r<q)
   }
@@ -36,33 +38,47 @@
     | inP (a,e<a,a<b) => inP (a, a<b, \lam j => c j e<a)
   }
   \where {
-    \lemma *n_Join {n : Nat} (n/=0 : n /= 0) {J : \Set} {g : J -> ExUpperReal} : n AddMonoid.*n Join g = Join (\lam j => n AddMonoid.*n g j)
-      => <=-antisymmetric (\lam (inP (a,a<b,f)) => (ExUpperRealAbMonoid.*n_finv n/=0).2 $ inP $ later
-        (RatField.finv n * a, RatField.<_*_positive-right (RatField.finv>0 $ fromInt_< $ pos<pos $ nonZero>0 n/=0) a<b, \lam j => (ExUpperRealAbMonoid.*n_finv n/=0).1 (f j))) $
-        ExUpperRealLattice.Join-univ \lam j => ExUpperRealAbMonoid.*n_<= (ExUpperRealLattice.Join-cond j)
+    \lemma *n_SJoin {n : Nat} (n/=0 : n /= 0) {A : \Type} {f : A -> ExUpperReal} {P : A -> \Prop} : n AddMonoid.*n ExUpperRealLattice.SJoin f P = ExUpperRealLattice.SJoin (\lam a => n AddMonoid.*n f a) P
+      => <=-antisymmetric
+        (\lam (inP (a,a<b,h)) => (ExUpperRealAbMonoid.*n_finv n/=0).2 $ inP $ later (RatField.finv n * a, RatField.<_*_positive-right (RatField.finv>0 $ fromInt_< $ pos<pos $ nonZero>0 n/=0) a<b, SetIm-elim \lam Pa => (ExUpperRealAbMonoid.*n_finv n/=0).1 $ h $ SetIm-con Pa))
+        (ExUpperRealLattice.SJoin-univ \lam Pa => ExUpperRealAbMonoid.*n_<= $ ExUpperRealLattice.SJoin-cond Pa)
 
-    \lemma *n_Join' {n : Nat} {J : \Set} (j : ∃ J) {g : J -> ExUpperReal} : n AddMonoid.*n Join g = Join (\lam j => n AddMonoid.*n g j) \elim n, j
-      | 0, inP j => <=-antisymmetric (ExUpperRealLattice.Join-cond j {\lam _ => 0}) $ ExUpperRealLattice.Join-univ {_} {\lam _ => 0} \lam _ => ExUpperRealLattice.<=-refl
-      | suc n, _ => *n_Join suc/=0
+    \lemma *n_SJoin' {n : Nat} {A : \Type} {f : A -> ExUpperReal} {P : A -> \Prop} (j : ∃ P) : n AddMonoid.*n ExUpperRealLattice.SJoin f P = ExUpperRealLattice.SJoin (\lam a => n AddMonoid.*n f a) P \elim n, j
+      | 0, inP j => <=-antisymmetric (ExUpperRealLattice.SJoin-cond j.2) (ExUpperRealLattice.SJoin-univ \lam _ => <=-refl)
+      | suc n, _ => *n_SJoin suc/=0
 
-    \lemma +_Join {J : \Set} {g : J -> ExUpperReal} : Join g + Join g = Join (\lam j => g j + g j)
-      => inv (+-assoc *> zro-left) *> *n_Join {2} suc/=0 *> ExUpperRealLattice.Join_= (\lam j => +-assoc *> zro-left)
+    \lemma +_SJoin {A : \Type} {f : A -> ExUpperReal} {P : A -> \Prop} : ExUpperRealLattice.SJoin f P + ExUpperRealLattice.SJoin f P = ExUpperRealLattice.SJoin (\lam a => f a + f a) P
+      => inv (+-assoc *> zro-left) *> *n_SJoin {2} suc/=0 *> pmap (ExUpperRealLattice.SJoin __ P) (ext \lam a => +-assoc *> zro-left)
 
     \lemma *n_join {n : Nat} {x y : ExUpperReal} : n AddMonoid.*n (x ∨ y) = n AddMonoid.*n x ∨ n AddMonoid.*n y
-      => pmap (n AddMonoid.*n) ExUpperRealLattice.join_Join *> *n_Join' (inP true) *> CompleteLattice.Join_= (later \lam b => cases b idp) *> inv ExUpperRealLattice.join_Join
+      => pmap (n AddMonoid.*n) ExUpperRealLattice.join_Join *> pmap (n AddMonoid.*n) ExUpperRealLattice.Join_SJoin *> *n_SJoin' (inP $ later (x, byLeft idp)) *>
+        <=-antisymmetric (ExUpperRealLattice.SJoin-univ $ later \case \elim __ \with {
+          | byLeft p => rewrite p $ Join-cond (byLeft idp)
+          | byRight p => rewrite p $ Join-cond (byRight idp)
+        }) (Join-univ $ later \case \elim __ \with {
+          | byLeft p => rewrite p $ ExUpperRealLattice.SJoin-cond (byLeft idp)
+          | byRight p => rewrite p $ ExUpperRealLattice.SJoin-cond (byRight idp)
+        }) *> inv ExUpperRealLattice.join_Join
 
     \lemma +_join {x y : ExUpperReal} : (x ∨ y) + (x ∨ y) = (x + x) ∨ (y + y)
       => inv (+-assoc *> zro-left) *> *n_join {2} *> pmap2 (∨) (+-assoc *> zro-left) (+-assoc *> zro-left)
 
-    \lemma Join-square {J : \Set} (j : ∃ J) {g : J -> ExUpperReal} : Join g * Join g = Join \lam j => g j * g j \elim j
-      | inP j0 => <=-antisymmetric (\lam (inP (a,a<b,f)) => \case sqrt-rat (<=-less $ ExUpperRealSemigroup.*_>=0 $ f j0) a<b \with {
+    \lemma SJoin-square {A : \Type} {f : A -> ExUpperReal} {P : A -> \Prop} (j : ∃ P) : ExUpperRealLattice.SJoin f P * ExUpperRealLattice.SJoin f P = ExUpperRealLattice.SJoin (\lam a => f a * f a) P \elim j
+      | inP j0 => <=-antisymmetric (\lam (inP (a,a<b,h)) => \case sqrt-rat (<=-less $ ExUpperRealSemigroup.*_>=0 $ h $ SetIm-con j0.2) a<b \with {
         | inP (q,r,q>0,q<r,a<qq,rr<b) =>
-          \have g<r : (Join g).U r => inP (q, q<r, \lam j => \case ExUpperReal.*_U.1 (f j) \with {
+          \have fP<r : (ExUpperRealLattice.SJoin f P).U r => inP (q, q<r, SetIm-elim \lam Pa => later \case ExUpperReal.*_U.1 (h $ SetIm-con Pa) \with {
             | inP (c,gj<c,c>0,d,gj<d,d>0,cd<a) => ExUpperReal.U_<= (real_meet_U gj<c gj<d) \lam q<c_d => <-irreflexive $ a<qq <∘ RatField.<_*_positive-left (q<c_d <∘l meet-left) q>0 <∘ RatField.<_*_positive-right c>0 (q<c_d <∘l meet-right) <∘ cd<a
           })
-          \in ExUpperReal.*_U_<=.2 $ inP (r, g<r, q>0 <∘ q<r, r, g<r, q>0 <∘ q<r, <=-less rr<b)
-      }) $ ExUpperRealLattice.Join-univ \lam j => ExUpperRealSemigroup.<=_* (ExUpperRealLattice.Join-cond j) (ExUpperRealLattice.Join-cond j)
+          \in ExUpperReal.*_U_<=.2 $ inP (r, fP<r, q>0 <∘ q<r, r, fP<r, q>0 <∘ q<r, <=-less rr<b)
+      }) $ ExUpperRealLattice.SJoin-univ \lam Pa => ExUpperRealSemigroup.<=_* (ExUpperRealLattice.SJoin-cond Pa) (ExUpperRealLattice.SJoin-cond Pa)
 
     \lemma join-square {x y : ExUpperReal} : (x ∨ y) * (x ∨ y) = x * x ∨ y * y
-      => pmap2 (*) ExUpperRealLattice.join_Join ExUpperRealLattice.join_Join *> Join-square (inP true) *> ExUpperRealLattice.Join_= (later \lam b => cases b idp) *> inv ExUpperRealLattice.join_Join
+      => pmap2 (*) ExUpperRealLattice.join_Join ExUpperRealLattice.join_Join *> pmap2 (*) ExUpperRealLattice.Join_SJoin ExUpperRealLattice.Join_SJoin *> SJoin-square (inP $ later (x, byLeft idp)) *>
+        <=-antisymmetric (ExUpperRealLattice.SJoin-univ $ later \case \elim __ \with {
+          | byLeft p => rewrite p $ Join-cond (byLeft idp)
+          | byRight p => rewrite p $ Join-cond (byRight idp)
+        }) (Join-univ $ later \case \elim __ \with {
+          | byLeft p => rewrite p $ ExUpperRealLattice.SJoin-cond (byLeft idp)
+          | byRight p => rewrite p $ ExUpperRealLattice.SJoin-cond (byRight idp)
+        }) *> inv ExUpperRealLattice.join_Join
   }

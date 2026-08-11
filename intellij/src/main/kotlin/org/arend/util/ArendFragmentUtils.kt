@@ -205,18 +205,11 @@ class ArendFragmentUtils {
             val statements = ArrayList<ConcreteStatement>()
             for (statement in group.statements) {
                 val group = statement.group?.let { mapGroup(it, groupToInsertInto, groupToInsert) }
-                statements.add(
-                    ConcreteStatement(
-                        group,
-                        statement.command,
-                        statement.pLevelsDefinition(),
-                        statement.hLevelsDefinition()
-                    )
-                )
+                statements.add(ConcreteStatement(group, statement.command))
             }
 
             if (group.referable == groupToInsertInto)
-                statements.add(ConcreteStatement(groupToInsert, null, null, null))
+                statements.add(ConcreteStatement(groupToInsert, null))
 
             val dynamicGroups = ArrayList<ConcreteGroup>()
             for (dynamicGroup in group.dynamicGroups) {

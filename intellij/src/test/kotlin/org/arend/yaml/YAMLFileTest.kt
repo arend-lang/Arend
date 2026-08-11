@@ -6,16 +6,20 @@ import com.intellij.openapi.components.service
 import com.intellij.openapi.module.ModuleUtilCore
 import org.arend.ArendTestBase
 import org.arend.module.config.ArendModuleConfigService
+import org.arend.prelude.GeneratedVersion
+import org.arend.prelude.Prelude
 import org.arend.util.FileUtils.LIBRARY_CONFIG_FILE
 import org.jetbrains.yaml.YAMLFileType
 
 class YAMLFileTest : ArendTestBase() {
     override var dataPath = "org/arend/yaml"
 
+    private val langVersion = GeneratedVersion.VERSION.toString()
+
     fun testDir() {
         val yamlFileService = project.service<YamlFileService>()
         val yamlFile = myFixture.configureByText(YAMLFileType.YML, """
-            langVersion: 1.10
+            langVersion: $langVersion
             sourcesDir: src
             dependencies: []
             binariesDir: bin<caret>
@@ -42,7 +46,7 @@ class YAMLFileTest : ArendTestBase() {
     fun testList() {
         val yamlFileService = project.service<YamlFileService>()
         val yamlFile = myFixture.configureByText(YAMLFileType.YML, """
-            langVersion: 1.10
+            langVersion: $langVersion
             sourcesDir: src
             dependencies: []
             binariesDir: bin
@@ -68,7 +72,7 @@ class YAMLFileTest : ArendTestBase() {
     fun testSameFields() {
         val yamlFileService = project.service<YamlFileService>()
         val yamlFile = myFixture.configureByText(YAMLFileType.YML, """
-            langVersion: 1.10
+            langVersion: $langVersion
             sourcesDir: src
             dependencies: []
             binariesDir: bin

@@ -16,15 +16,21 @@ import com.intellij.util.Processor
 import com.intellij.util.Processors
 import com.intellij.util.containers.mapSmartSet
 import com.intellij.util.indexing.FileBasedIndex
+import org.arend.error.DummyErrorReporter
+import org.arend.ext.concrete.definition.ConcreteDefinition
+import org.arend.ext.module.FullName
+import org.arend.ext.module.ModuleLocation
+import org.arend.naming.reference.LocatedReferable
 import org.arend.psi.ArendFile
 import org.arend.psi.ArendFileScope
+import org.arend.psi.ancestor
 import org.arend.psi.ext.*
 import org.arend.refactoring.rename.ArendGlobalReferableRenameHandler.Util.isDefIdentifierFromNsId
-import org.arend.resolving.ArendReferenceBase
 import org.arend.server.ArendServerService
 import org.arend.server.ProgressReporter
+import org.arend.term.concrete.Concrete
+import org.arend.typechecking.ProgressCancellationIndicator
 import org.arend.typechecking.computation.UnstoppableCancellationIndicator
-import java.util.Collections.singletonList
 
 class ArendCustomSearcher : QueryExecutorBase<PsiReference, ReferencesSearch.SearchParameters>() {
     override fun processQuery(parameters: ReferencesSearch.SearchParameters, consumer: Processor<in PsiReference>) {
@@ -45,6 +51,7 @@ class ArendCustomSearcher : QueryExecutorBase<PsiReference, ReferencesSearch.Sea
         val project = parameters.project
         val tasks = ArrayList<Pair<String, SearchScope>>()
 
+        val modules = LinkedHashSet<ModuleLocation>()
 
         runReadAction {
             val standardName = elementToSearch.refName
@@ -54,6 +61,7 @@ class ArendCustomSearcher : QueryExecutorBase<PsiReference, ReferencesSearch.Sea
                     val arendFile = PsiManager.getInstance(project).findFile(it) as? ArendFile
                     if (arendFile != null) {
                         tasks.add(standardName to LocalSearchScope(arendFile))
+                        arendFile.moduleLocation?.let { module -> modules.add(module) }
                     }
                 }
                 if (aliasName != null) {
@@ -61,6 +69,7 @@ class ArendCustomSearcher : QueryExecutorBase<PsiReference, ReferencesSearch.Sea
                         val arendFile = PsiManager.getInstance(project).findFile(it) as? ArendFile
                         if (arendFile != null) {
                             tasks.add(aliasName to LocalSearchScope(arendFile))
+                            arendFile.moduleLocation?.let { module -> modules.add(module) }
                         }
                     }
                 }
@@ -68,6 +77,74 @@ class ArendCustomSearcher : QueryExecutorBase<PsiReference, ReferencesSearch.Sea
                 tasks.add(Pair(aliasName, scope))
             }
             tasks.add(Pair(standardName, scope))
+        }
+
+        if (modules.isNotEmpty()) {
+            val server = project.getService(ArendServerService::class.java).server
+            val checker = server.getCheckerFor(modules.toList())
+            val indicator = ProgressManager.getInstance().progressIndicator
+            val progressReporter = object : ProgressReporter<ModuleLocation> {
+                override fun beginProcessing(numberOfItems: Int) {
+                    indicator?.isIndeterminate = false
+                    indicator?.fraction = 0.0
+                }
+
+                override fun beginItem(item: ModuleLocation) {
+                    indicator?.text = "Resolving $item"
+                }
+
+                override fun endItem(item: ModuleLocation) {
+                    indicator?.fraction = indicator.fraction + 1.0 / modules.size
+                }
+            }
+
+            checker.resolveModules(if (indicator == null) UnstoppableCancellationIndicator.INSTANCE else ProgressCancellationIndicator(indicator), progressReporter)
+
+            if (elementToSearch is ArendClassField || elementToSearch is ArendFieldDefIdentifier) {
+                // Collect the ambient PsiLocatedReferables for each usage of the class field
+                val searchContext = (UsageSearchContext.IN_CODE.toInt() or UsageSearchContext.IN_FOREIGN_LANGUAGES.toInt()).toShort()
+                val referablesToTypecheck = LinkedHashSet<FullName>()
+                for (task in tasks) {
+                    PsiSearchHelperImpl(project).processElementsWithWord({ element, offsetInElement ->
+                        val refs = runReadAction {
+                            PsiReferenceService.getService().getReferences(element, PsiReferenceService.Hints(elementToSearch, offsetInElement))
+                        }
+                        for (ref in refs) {
+                            if (ReferenceRange.containsOffsetInElement(ref, offsetInElement)) {
+                                val ambient = runReadAction { ref.element.ancestor<PsiLocatedReferable>() }
+                                if (ambient is ReferableBase<*> && ambient.tcReferable?.typechecked == null) {
+                                    val fullName = runReadAction { ambient.fullName }
+                                    if (fullName.module != null) referablesToTypecheck.add(fullName)
+                                }
+                            }
+                        }
+                        true
+                    }, task.second, task.first, searchContext, true)
+                }
+                // Typecheck the collected definitions
+                if (referablesToTypecheck.isNotEmpty()) {
+                    val tcIndicator = if (indicator == null) UnstoppableCancellationIndicator.INSTANCE else ProgressCancellationIndicator(indicator)
+                    val totalCount = referablesToTypecheck.size
+                    val tcProgressReporter = object : ProgressReporter<List<Concrete.ResolvableDefinition>> {
+                        override fun beginProcessing(numberOfItems: Int) {
+                            indicator?.isIndeterminate = false
+                            indicator?.fraction = 0.0
+                        }
+
+                        override fun beginItem(item: List<Concrete.ResolvableDefinition>) {
+                            indicator?.text = "Typechecking ${item.firstOrNull()?.data?.refName ?: ""}"
+                        }
+
+                        override fun endItem(item: List<Concrete.ResolvableDefinition>) {
+                            for (i in item) {
+                                referablesToTypecheck.remove(((i as? ConcreteDefinition)?.ref as? LocatedReferable)?.refFullName)
+                            }
+                            indicator?.fraction = 1 - (referablesToTypecheck.size.toDouble() / totalCount)
+                        }
+                    }
+                    checker.typecheck(referablesToTypecheck.toList(), DummyErrorReporter.INSTANCE, tcIndicator, tcProgressReporter)
+                }
+            }
         }
 
         val searchContext = (UsageSearchContext.IN_CODE.toInt() or UsageSearchContext.IN_FOREIGN_LANGUAGES.toInt()).toShort()
@@ -80,16 +157,6 @@ class ArendCustomSearcher : QueryExecutorBase<PsiReference, ReferencesSearch.Sea
                         }, dI.useScope, dI.name, searchContext, true)
                     }
                     for (ref in PsiReferenceService.getService().getReferences(element, PsiReferenceService.Hints(elementToSearch, offsetInElement))) { // Copypasted from SingleTargetRequestResultProcessor
-                        if (ref is ArendReferenceBase<*> && ref.element.resolve() == null) {
-                            val module = ref.element.referenceModule
-                            if (module != null) {
-                                val checker = project.service<ArendServerService>().server.getCheckerFor(singletonList(module))
-                                if (elementToSearch is ArendClassField)
-                                    checker.typecheck(UnstoppableCancellationIndicator.INSTANCE, ProgressReporter.empty())
-                                else checker.resolveModules(UnstoppableCancellationIndicator.INSTANCE, ProgressReporter.empty())
-                            }
-                        }
-
                         ProgressManager.checkCanceled()
                         if (ReferenceRange.containsOffsetInElement(ref, offsetInElement) && ref.isReferenceTo(elementToSearch)) {
                             if (!consumer.process(ref))

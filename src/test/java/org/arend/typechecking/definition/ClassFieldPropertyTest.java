@@ -1,14 +1,16 @@
 package org.arend.typechecking.definition;
 
-import org.arend.core.context.binding.LevelVariable;
 import org.arend.core.definition.ClassDefinition;
 import org.arend.core.definition.ClassField;
 import org.arend.core.sort.Level;
 import org.arend.core.sort.Sort;
+import org.arend.ext.core.level.ConstLevel;
 import org.arend.typechecking.TypeCheckingTestCase;
 import org.arend.typechecking.error.local.LevelMismatchError;
 import org.arend.typechecking.error.local.NotEqualExpressionsError;
 import org.junit.Test;
+
+import java.math.BigInteger;
 
 import static org.arend.Matchers.typeMismatchError;
 import static org.arend.Matchers.typecheckingError;
@@ -87,17 +89,17 @@ public class ClassFieldPropertyTest extends TypeCheckingTestCase {
   public void propertyLevel() {
     typeCheckModule("""
       \\class A {
-        \\property f (A : \\Type) (p : \\Pi (x y : A) -> x = y) : \\level A p
+        \\property f (A : \\Type0) (p : \\Pi (x y : A) -> x = y) : \\level A p
       }
       """);
-    assertEquals(new Sort(new Level(LevelVariable.PVAR, 1), new Level(LevelVariable.HVAR)), ((ClassDefinition) getDefinition("A")).getSort());
+    assertEquals(new Sort(new Level(BigInteger.ONE), ConstLevel.INFINITY), ((ClassDefinition) getDefinition("A")).getSort());
   }
 
   @Test
   public void propertyLevel2() {
     typeCheckModule("""
       \\class A {
-        | f (A : \\Type) : \\level ((\\Pi (x y : A) -> x = y) -> A) (\\lam (f g : (\\Pi (x y : A) -> x = y) -> A) => path (\\lam i (p : \\Pi (x y : A) -> x = y) => p (f p) (g p) @ i))
+        | f (A : \\Type0) : \\level ((\\Pi (x y : A) -> x = y) -> A) (\\lam (f g : (\\Pi (x y : A) -> x = y) -> A) => path (\\lam i (p : \\Pi (x y : A) -> x = y) => p (f p) (g p) @ i))
       }
       """);
     assertTrue(((ClassField) getDefinition("A.f")).isProperty());
@@ -108,7 +110,7 @@ public class ClassFieldPropertyTest extends TypeCheckingTestCase {
     typeCheckModule("""
       \\data S1 | base | loop : base = base
       \\record R {
-        \\field foo (A : \\Type) (a : A) (p : \\Pi (x y : A) -> x = y) (x : S1) : A
+        \\field foo (A : \\Type0) (a : A) (p : \\Pi (x y : A) -> x = y) (x : S1) : A
           \\level \\lam a a' => path (\\lam i => p a a' @ i)
       }
       \\func test : R \\cowith

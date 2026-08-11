@@ -7,7 +7,6 @@ import org.arend.core.expr.Expression;
 import org.arend.core.expr.ReferenceExpression;
 import org.arend.core.expr.SigmaExpression;
 import org.arend.core.expr.TupleExpression;
-import org.arend.core.sort.Sort;
 import org.arend.core.subst.ExprSubstitution;
 import org.arend.ext.core.level.LevelSubstitution;
 import org.arend.ext.core.body.CorePattern;
@@ -36,7 +35,7 @@ public class EmptyPattern implements ExpressionPattern {
 
   @Override
   public Expression toPatternExpression() {
-    return new TupleExpression(Collections.emptyList(), new SigmaExpression(Sort.PROP, EmptyDependentLink.getInstance()));
+    return new TupleExpression(Collections.emptyList(), new SigmaExpression(EmptyDependentLink.getInstance()));
   }
 
   @Override

@@ -78,7 +78,7 @@ public class ConcreteCompareVisitor implements ConcreteExpressionVisitor<Concret
     } else {
       if (!expr1.getReferent().equals(refExpr2.getReferent())) return false;
     }
-    return compareLevels(expr1.getPLevels(), refExpr2.getPLevels()) && compareLevels(expr1.getHLevels(), refExpr2.getHLevels());
+    return compareLevels(expr1.getLevels(), refExpr2.getLevels());
   }
 
   @Override
@@ -189,7 +189,7 @@ public class ConcreteCompareVisitor implements ConcreteExpressionVisitor<Concret
 
   @Override
   public Boolean visitUniverse(Concrete.UniverseExpression expr1, Concrete.Expression expr2) {
-    return expr2 instanceof Concrete.UniverseExpression uni2 && compareLevel(expr1.getPLevel(), uni2.getPLevel()) && compareLevel(expr1.getHLevel(), uni2.getHLevel());
+    return expr2 instanceof Concrete.UniverseExpression uni2 && compareLevel(expr1.getPLevel(), uni2.getPLevel()) && Objects.equals(expr1.getHLevel(), uni2.getHLevel()) && expr1.getKind() == uni2.getKind();
   }
 
   private boolean compareLevel(Concrete.LevelExpression level1, Concrete.LevelExpression level2) {
@@ -197,17 +197,8 @@ public class ConcreteCompareVisitor implements ConcreteExpressionVisitor<Concret
     if (level1 == null || level2 == null) return false;
     updateData(level1, level2);
     switch (level1) {
-      case Concrete.PLevelExpression ignored -> {
-        return level2 instanceof Concrete.PLevelExpression;
-      }
-      case Concrete.HLevelExpression ignored -> {
-        return level2 instanceof Concrete.HLevelExpression;
-      }
-      case Concrete.InfLevelExpression ignored -> {
-        return level2 instanceof Concrete.InfLevelExpression;
-      }
       case Concrete.NumberLevelExpression numberLevelExpression -> {
-        return level2 instanceof Concrete.NumberLevelExpression && numberLevelExpression.getNumber() == ((Concrete.NumberLevelExpression) level2).getNumber();
+        return level2 instanceof Concrete.NumberLevelExpression && numberLevelExpression.getNumber().equals(((Concrete.NumberLevelExpression) level2).getNumber());
       }
       case Concrete.SucLevelExpression sucLevelExpression -> {
         return level2 instanceof Concrete.SucLevelExpression && compareLevel(sucLevelExpression.getExpression(), ((Concrete.SucLevelExpression) level2).getExpression());
@@ -218,7 +209,7 @@ public class ConcreteCompareVisitor implements ConcreteExpressionVisitor<Concret
       case Concrete.VarLevelExpression var1 -> {
         Referable ref = mySubstitution.get(var1.getReferent());
         if (ref == null) ref = var1.getReferent();
-        return level2 instanceof Concrete.VarLevelExpression var2 && ref.equals(var2.getReferent()) && var1.isInference() == var2.isInference() && var1.getLevelType().equals(var2.getLevelType());
+        return level2 instanceof Concrete.VarLevelExpression var2 && ref.equals(var2.getReferent()) && var1.isInference() == var2.isInference();
       }
       default -> {}
     }
@@ -552,7 +543,7 @@ public class ConcreteCompareVisitor implements ConcreteExpressionVisitor<Concret
     if (params1 == params2) return true;
     if (params1 == null || params2 == null) return false;
     updateData(params1, params2);
-    if (params1.isIncreasing != params2.isIncreasing || params1.referables.size() != params2.referables.size()) return false;
+    if (params1.referables.size() != params2.referables.size()) return false;
     for (int i = 0; i < params1.referables.size(); i++) {
       if (!params1.referables.get(i).getRefName().equals(params2.referables.get(i).getRefName())) return false;
       mySubstitution.put(params1.referables.get(i), params2.referables.get(i));
@@ -561,7 +552,7 @@ public class ConcreteCompareVisitor implements ConcreteExpressionVisitor<Concret
   }
 
   private boolean compareLevelParameters(Concrete.ResolvableDefinition def1, Concrete.ResolvableDefinition def2) {
-    return compareLevelParameters(def1.pLevelParameters, def2.pLevelParameters) && compareLevelParameters(def1.hLevelParameters, def2.hLevelParameters);
+    return compareLevelParameters(def1.levelParameters, def2.levelParameters);
   }
 
   private boolean compareTCReferable(TCDefReferable referable1, TCDefReferable referable2) {

@@ -18,12 +18,12 @@
   | dist s t => dist s.1 t.1 + dist s.2 t.2
   | dist-refl => pmap2 (+) dist-refl dist-refl *> zro-left
   | dist-symm => pmap2 (+) dist-symm dist-symm
-  | dist-triang => transport (_ <=) (+-assoc *> pmap (_ +) (inv +-assoc *> pmap (`+ _) +-comm *> +-assoc) *> inv +-assoc) $ <=_+ dist-triang dist-triang
+  | dist-triang => transport (_ <=) (+-assoc *> pmap (_ +) (inv +-assoc *> pmap (+ _) +-comm *> +-assoc) *> inv +-assoc) $ <=_+ dist-triang dist-triang
   | dist-uniform => (\lam (inP (D,Du,E,Eu,r)) => \case dist-uniform.1 Du, dist-uniform.1 Eu \with {
     | inP (eps,eps>0,h1), inP (delta,delta>0,h2) => inP (eps ∧ delta, <_meet-univ eps>0 delta>0, \lam s => \case h1 s.1, h2 s.2 \with {
       | inP (V,DV,g1), inP (W,EW,g2) => \case r (inP (V,DV,W,EW,idp)) \with {
-        | inP (U,CU,p) => inP (U, CU, \lam d => p (g1 $ transport (`<= _) zro-right (<=_+ <=-refl dist>=0) (ExUpperReal.U_<= d meet-left),
-                                                   g2 $ transport (`<= _) zro-left (<=_+ dist>=0 <=-refl) (ExUpperReal.U_<= d meet-right)))
+        | inP (U,CU,p) => inP (U, CU, \lam d => p (g1 $ transport (<= _) zro-right (<=_+ <=-refl dist>=0) (ExUpperReal.U_<= d meet-left),
+                                                   g2 $ transport (<= _) zro-left (<=_+ dist>=0 <=-refl) (ExUpperReal.U_<= d meet-right)))
       }
     })
   }, \lam (inP (eps,eps>0,h)) => inP (_, X.metricUniform $ RatField.half>0 eps>0, _, Y.metricUniform $ RatField.half>0 eps>0,

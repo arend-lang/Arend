@@ -66,11 +66,11 @@ public class ConcreteFactoryImpl implements ConcreteFactory {
 
   @NotNull
   @Override
-  public ConcreteReferenceExpression ref(@NotNull ArendRef ref, @Nullable List<? extends ConcreteLevel> pLevels, @Nullable List<? extends ConcreteLevel> hLevels) {
+  public ConcreteReferenceExpression ref(@NotNull ArendRef ref, @Nullable List<? extends ConcreteLevel> pLevels) {
     if (!(ref instanceof Referable)) {
       throw new IllegalArgumentException();
     }
-    return new Concrete.ReferenceExpression(myData, (Referable) ref, makeLevels(pLevels), makeLevels(hLevels));
+    return new Concrete.ReferenceExpression(myData, (Referable) ref, makeLevels(pLevels));
   }
 
   @Override
@@ -78,7 +78,7 @@ public class ConcreteFactoryImpl implements ConcreteFactory {
     if (!(ref instanceof Binding)) {
       throw new IllegalArgumentException();
     }
-    return new Concrete.ReferenceExpression(myData, new CoreReferable(ref.getName(), new TypecheckingResult(new ReferenceExpression((Binding) ref), ((Binding) ref).getTypeExpr())));
+    return new Concrete.ReferenceExpression(myData, new CoreReferable(ref.getName(), new TypecheckingResult(new ReferenceExpression((Binding) ref), ((Binding) ref).getType())));
   }
 
   @NotNull
@@ -168,11 +168,11 @@ public class ConcreteFactoryImpl implements ConcreteFactory {
 
   @NotNull
   @Override
-  public Concrete.UniverseExpression universe(@Nullable ConcreteLevel pLevel, @Nullable ConcreteLevel hLevel) {
-    if (!((pLevel == null || pLevel instanceof Concrete.LevelExpression) && (hLevel == null || hLevel instanceof Concrete.LevelExpression))) {
+  public Concrete.UniverseExpression universe(@Nullable ConcreteLevel pLevel, @Nullable BigInteger hLevel, ConcreteUniverseExpression.Kind kind) {
+    if (!(pLevel == null || pLevel instanceof Concrete.LevelExpression)) {
       throw new IllegalArgumentException();
     }
-    return new Concrete.UniverseExpression(myData, (Concrete.LevelExpression) pLevel, (Concrete.LevelExpression) hLevel);
+    return new Concrete.UniverseExpression(myData, (Concrete.LevelExpression) pLevel, hLevel, kind);
   }
 
   @NotNull
@@ -550,7 +550,7 @@ public class ConcreteFactoryImpl implements ConcreteFactory {
   }
 
   @Override
-  public @NotNull Concrete.DataDefinition data(@NotNull ArendRef ref, @NotNull Collection<? extends ConcreteParameter> parameters, boolean isTruncated, @Nullable ConcreteLevel pLevel, @Nullable ConcreteLevel hLevel, @NotNull Collection<? extends ConcreteConstructorClause> clauses) {
+  public @NotNull Concrete.DataDefinition data(@NotNull ArendRef ref, @NotNull Collection<? extends ConcreteParameter> parameters, boolean isTruncated, @Nullable ConcreteLevel pLevel, @Nullable BigInteger hLevel, @NotNull Collection<? extends ConcreteConstructorClause> clauses) {
     if (!(ref instanceof LocatedReferableImpl cRef)) {
       throw new IllegalArgumentException("The reference must be a global reference with a parent");
     }
@@ -564,7 +564,7 @@ public class ConcreteFactoryImpl implements ConcreteFactory {
     }
 
     cRef.setKind(GlobalReferable.Kind.DATA);
-    return new Concrete.DataDefinition(cRef, null, null, typeParameters(parameters), null, isTruncated, pLevel == null && hLevel == null ? null : universe(pLevel, hLevel), constructorClauses);
+    return new Concrete.DataDefinition(cRef, null, typeParameters(parameters), null, isTruncated, pLevel == null && hLevel == null ? null : universe(pLevel, hLevel, ConcreteUniverseExpression.Kind.TYPE), constructorClauses);
   }
 
   @Override
@@ -596,7 +596,7 @@ public class ConcreteFactoryImpl implements ConcreteFactory {
     }
 
     List<Concrete.ClassElement> cElements = new ArrayList<>(elements.size());
-    Concrete.ClassDefinition result = new Concrete.ClassDefinition(cRef, null, null, isRecord, withoutClassifying, refExprs(superClasses), cElements);
+    Concrete.ClassDefinition result = new Concrete.ClassDefinition(cRef, null, isRecord, withoutClassifying, refExprs(superClasses), cElements);
 
     for (ConcreteClassElement element : elements) {
       if (!(element instanceof Concrete.ClassElement)) {
@@ -626,12 +626,12 @@ public class ConcreteFactoryImpl implements ConcreteFactory {
   }
 
   @Override
-  public @NotNull ConcreteLevelParameters levelParameters(boolean isPLevels, @NotNull List<String> names, boolean isIncreasing) {
+  public @NotNull ConcreteLevelParameters levelParameters(@NotNull List<String> names) {
     List<LevelReferable> refs = new ArrayList<>(names.size());
     for (String name : names) {
-      refs.add(new DataLevelReferable(myData, name, isPLevels));
+      refs.add(new DataLevelReferable(myData, name));
     }
-    return new Concrete.LevelParameters(myData, refs, isIncreasing);
+    return new Concrete.LevelParameters(myData, refs);
   }
 
   @Override
@@ -639,7 +639,7 @@ public class ConcreteFactoryImpl implements ConcreteFactory {
     if (!(ref instanceof MetaReferable && (body == null || body instanceof Concrete.Expression))) {
       throw new IllegalArgumentException();
     }
-    return new Concrete.MetaDefinition((MetaReferable) ref, null, null, parameters(parameters), (Concrete.Expression) body);
+    return new Concrete.MetaDefinition((MetaReferable) ref, null, parameters(parameters), (Concrete.Expression) body);
   }
 
   @Override
@@ -876,25 +876,7 @@ public class ConcreteFactoryImpl implements ConcreteFactory {
 
   @NotNull
   @Override
-  public ConcreteLevel inf() {
-    return new Concrete.InfLevelExpression(myData);
-  }
-
-  @NotNull
-  @Override
-  public ConcreteLevel lp() {
-    return new Concrete.PLevelExpression(myData);
-  }
-
-  @NotNull
-  @Override
-  public ConcreteLevel lh() {
-    return new Concrete.HLevelExpression(myData);
-  }
-
-  @NotNull
-  @Override
-  public ConcreteLevel numLevel(int level) {
+  public ConcreteLevel numLevel(@NotNull BigInteger level) {
     return new Concrete.NumberLevelExpression(myData, level);
   }
 

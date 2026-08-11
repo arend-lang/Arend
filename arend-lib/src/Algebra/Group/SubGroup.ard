@@ -1,0 +1,185 @@
+\import Algebra.Group
+\import Algebra.Group.GroupHom
+\import Algebra.Meta
+\import Algebra.Monoid
+\import Algebra.Monoid.MonoidHom
+\import Algebra.Monoid.SubMonoid
+\import Algebra.Pointed
+\import Algebra.Pointed.SubPointed
+\import Function
+\import Function.Meta
+\import Logic
+\import Logic.Meta
+\import Meta
+\import Order.PartialOrder
+\import Paths
+\import Paths.Meta
+\import Relation.Equivalence
+\import Set.Fin
+\import Set.Fin.Instances
+\import Set.SetHom
+\import Set.SubSet
+\import Set.Set
+\open Group \hiding (Dec)
+
+\class SubGroup \extends SubMonoid {
+  \override S : Group
+  | contains_inverse {x : S} : contains x -> contains (inverse x)
+
+  \func equivalence : Equivalence S \cowith
+    | ~ x y => contains (inverse x * y)
+    | ~-reflexive => transportInv contains inverse-left contains_ide
+    | ~-symmetric c => transport contains (inverse_* *> pmap (_ *) inverse-isInv) (contains_inverse c)
+    | ~-transitive {x} {y} c1 c2 => rewriteEq (inverse-right {S} {y}, ide-left) in contains_* c1 c2
+
+  \func Cosets => Quotient (equivalence.~)
+
+  \func inc~ (x : S) : Cosets
+    => in~ x
+
+  \lemma contains_~ {x : S} : contains x <-> 1 equivalence.~ x
+    => (transportInv contains $ pmap (* x) inverse_ide *> ide-left,
+        transport contains $ pmap (* x) inverse_ide *> ide-left)
+
+  \lemma ~-pequiv-left {x y : S} (p : 1 equivalence.~ y) : inc~ x = inc~ (x * y)
+    => ~-pequiv $ transport contains (inv (pmap (* y) inverse-left *> ide-left) *> *-assoc) (contains_~.2 p)
+}
+
+\instance IGroup (S : SubGroup {}) : Group
+  | Monoid => IMonoid S
+  | inverse x => (inverse x.1, contains_inverse x.2)
+  | inverse-left => ext inverse-left
+  | inverse-right => ext inverse-right
+  \where
+    \func embed : GroupHom (IGroup S) S.S \cowith
+      | MonoidHom => IMonoid.embed
+
+\instance ICGroup {G : CGroup} (S : SubGroup G) : CGroup
+  | Group => IGroup S
+  | *-comm => ext *-comm
+
+\class DecSubGroup \extends SubGroup, DecSubMonoid {
+  \override S : Group
+}
+
+\class NormalSubGroup \extends SubGroup {
+  | isNormal (g : S) {h : S} : contains h -> contains (conjugate g h)
+
+  \lemma isNormal' (g : S) {h : S} (c : contains h) : contains (inverse g * h * g)
+    => simplify in isNormal (inverse g) c
+
+  \func Quot : Group Cosets \cowith
+    | ide => in~ 1
+    | * (x y : Cosets) : Cosets \with {
+      | in~ g, in~ g' => in~ (g Group.* g')
+      | in~ g, ~-equiv x y r => ~-pequiv $ transport contains equation.group r
+      | ~-equiv x y r, in~ g => ~-pequiv $ transportInv contains equation.group (isNormal' g r)
+    }
+    | ide-left {x} => cases x \with {
+      | in~ a => pmap in~ ide-left
+    }
+    | ide-right {x} => cases x \with {
+      | in~ a => pmap in~ ide-right
+    }
+    | *-assoc {x} {y} {z} => cases (x,y,z) \with {
+      | in~ x, in~ y, in~ z => pmap in~ *-assoc
+    }
+    | inverse (x : Cosets) : Cosets \with {
+      | in~ g => in~ (Group.inverse g)
+      | ~-equiv x y r => ~-pequiv $ transport contains equation.group $ isNormal x (contains_inverse r)
+    }
+    | inverse-left {x} => cases x \with {
+      | in~ a => pmap in~ inverse-left
+    }
+    | inverse-right {x} => cases x \with {
+      | in~ a => pmap in~ inverse-right
+    }
+
+  \func quotHom : GroupHom S Quot \cowith
+    | func => inc~
+    | func-ide => idp
+    | func-* => idp
+}
+
+\class FinSubGroup \extends DecSubGroup {
+  \override S : FinGroup
+}
+
+\instance IFinGroup (S : FinSubGroup {}) : FinGroup
+  | Group => IGroup S
+  | FinSet => SigmaFin.DecSubSet-isFin S.S S
+
+\instance SubGroupPoset {G : Group} : Poset (SubGroup G)
+  | <= H K => H.contains ⊆ K.contains
+  | <=-refl p => p
+  | <=-transitive p q r => q (p r)
+  | <=-antisymmetric p q => exts \lam g => ext (p,q)
+
+\class SubAddGroup \extends SubAddMonoid {
+  \override S : AddGroup
+  | contains_negative {x : S} : contains x -> contains (negative x)
+
+  \lemma contains_- {x y : S} : contains x -> contains y -> contains (x - y)
+    => \lam cx cy => contains_+ cx (contains_negative cy)
+} \where {
+  \func max {A : AddGroup} : SubAddGroup \cowith
+    | SubAddMonoid => SubAddMonoid.max {A}
+    | contains_negative _ => ()
+
+  \func maxHom {A : AddGroup} : AddGroupHom A (IAddGroup max) \cowith
+    | AddMonoidHom => SubAddMonoid.maxHom
+}
+
+\instance IAddGroup (S : SubAddGroup {}) : AddGroup
+  | AddMonoid => IAddMonoid S
+  | negative x => (negative x.1, contains_negative x.2)
+  | negative-left => ext negative-left
+  | negative-right => ext negative-right
+  \where
+    \func embed : AddGroupHom (IAddGroup S) S.S \cowith
+      | AddMonoidHom => IAddMonoid.embed
+
+\instance IAbGroup {A : AbGroup} (S : SubAddGroup A) : AbGroup
+  | AddGroup => IAddGroup S
+  | +-comm => ext +-comm
+
+
+\func KernelGroup (f : GroupHom) : NormalSubGroup f.Dom \cowith
+  | SubMonoid => KernelMonoid f
+  | contains_inverse p => f.func-inverse *> pmap inverse p *> inverse_ide
+  | isNormal x {y} p => func-* *> pmap2 (*) (func-* *> pmap (_ *) p *> ide-right) f.func-inverse *> inverse-right
+
+\lemma Kernel-trivial-char {f : GroupHom} : IsKernelTrivial f <-> IsInj f
+  => (\lam kt {x} {y} p => (Group.makeInv (inverse y)).inv-cancel-right $
+        kt (func-* *> pmap (_ *) f.func-inverse *> inv ((Group.makeInv (f y)).rotate-inv-right $ ide-left *> inv p)) *> inv inverse-right,
+      \lam fi kx => fi $ kx *> inv f.func-ide)
+
+
+\func KernelAddGroup (f : AddGroupHom) : SubAddGroup f.Dom \cowith
+  | SubAddMonoid => KernelAddMonoid f
+  | contains_negative p => f.func-negative *> pmap negative p *> AddGroup.negative_zro
+
+\lemma AddKernel-trivial-char {f : AddGroupHom} : IsAddKernelTrivial f <-> IsInj f
+  => Kernel-trivial-char {AddGroupHom.toGroupHom f}
+
+
+\func ImageGroup (f : GroupHom) : SubGroup f.Cod \cowith
+  | SubMonoid => ImageMonoid f
+  | contains_inverse (inP (a, p)) => inP (inverse a, f.func-inverse *> pmap inverse p)
+
+\func ImGroup (f : GroupHom) : Group
+  => IGroup (ImageGroup f)
+
+\func ImGroupLeftHom (f : GroupHom) : GroupHom f.Dom (ImGroup f) \cowith
+  | MonoidHom => ImMonoidLeftHom f
+
+
+\func ImageAddGroup (f : AddGroupHom) : SubAddGroup f.Cod \cowith
+  | SubAddMonoid => ImageAddMonoid f
+  | contains_negative (inP (a, p)) => inP (negative a, f.func-negative *> pmap negative p)
+
+\func ImAddGroup (f : AddGroupHom) : AddGroup
+  => IAddGroup (ImageAddGroup f)
+
+\func ImAddGroupLeftHom (f : AddGroupHom) : AddGroupHom f.Dom (ImAddGroup f) \cowith
+  | AddMonoidHom => ImAddMonoidLeftHom f

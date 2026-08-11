@@ -9,6 +9,7 @@ import org.arend.core.definition.FunctionDefinition;
 import org.arend.core.expr.*;
 import org.arend.core.sort.Level;
 import org.arend.core.sort.Sort;
+import org.arend.core.sort.SortExpression;
 import org.arend.core.subst.ExprSubstitution;
 import org.arend.ext.core.ops.NormalizationMode;
 import org.arend.ext.instance.InstanceSearchParameters;
@@ -74,9 +75,8 @@ public class GlobalInstancePool implements InstancePool {
       Pair<Concrete.Expression, ClassDefinition> pair = getInstancePair(classifyingExpression, parameters, sourceNode, recursiveHoleExpression, currentDef);
       if (pair != null) {
         if (expectedType == null) {
-          ClassCallExpression classCall = classifyingExpression == null ? null : new ClassCallExpression(pair.proj2, pair.proj2.generateInferVars(myCheckTypeVisitor.getEquations(), sourceNode));
+          ClassCallExpression classCall = classifyingExpression == null ? null : new ClassCallExpression(pair.proj2, pair.proj2.generateInferVars(myCheckTypeVisitor.getEquations(), sourceNode, true));
           if (classCall != null) {
-            myCheckTypeVisitor.fixClassExtSort(classCall, sourceNode);
             expectedType = classCall;
           }
         }
@@ -106,29 +106,29 @@ public class GlobalInstancePool implements InstancePool {
   }
 
   private boolean compareLevel(Level instanceLevel, Level inferredLevel) {
-    return !(instanceLevel.isClosed() && (inferredLevel.isClosed() && instanceLevel.getConstant() != inferredLevel.getConstant() || !inferredLevel.isClosed() && !(inferredLevel.getVar() instanceof InferenceLevelVariable) || inferredLevel.getConstant() > instanceLevel.getConstant() || inferredLevel.getMaxConstant() > instanceLevel.getConstant()));
+    return !(instanceLevel.isClosed() && (inferredLevel.isClosed() && !instanceLevel.equals(inferredLevel) || inferredLevel.getVarPairs().stream().anyMatch(entry -> !(entry.getKey() instanceof InferenceLevelVariable) || entry.getValue().compareTo(instanceLevel.getConstant()) > 0) || inferredLevel.getConstant().compareTo(instanceLevel.getConstant()) > 0));
   }
 
   private boolean compareClassifying(Expression instanceExpr, Expression inferredExpr, boolean topLevel) {
     if (instanceExpr instanceof UniverseExpression) {
       if (!(inferredExpr instanceof UniverseExpression)) return false;
-      Sort instanceSort = ((UniverseExpression) instanceExpr).getSort();
-      Sort inferredSort = ((UniverseExpression) inferredExpr).getSort();
-      return compareLevel(instanceSort.getPLevel(), inferredSort.getPLevel()) && compareLevel(instanceSort.getHLevel(), inferredSort.getHLevel());
+      SortExpression instanceSortExpr = ((UniverseExpression) instanceExpr).getSortExpression();
+      SortExpression inferredSortExpr = ((UniverseExpression) inferredExpr).getSortExpression();
+      return !(instanceSortExpr instanceof SortExpression.Const(Sort instanceSort)) || !(inferredSortExpr instanceof SortExpression.Const(Sort inferredSort)) || compareLevel(instanceSort.getPLevel(), inferredSort.getPLevel()) && instanceSort.getHLevel().equals(inferredSort.getHLevel());
     } else if (instanceExpr instanceof SigmaExpression) {
       if (!(inferredExpr instanceof SigmaExpression)) return false;
       DependentLink instanceParams = ((SigmaExpression) instanceExpr).getParameters();
       DependentLink inferredParams = ((SigmaExpression) inferredExpr).getParameters();
       if (DependentLink.Helper.size(instanceParams) != DependentLink.Helper.size(inferredParams)) return false;
       for (; instanceParams.hasNext(); instanceParams = instanceParams.getNext(), inferredParams = inferredParams.getNext()) {
-        if (!compareClassifying(instanceParams.getTypeExpr(), inferredParams.getTypeExpr(), false)) return false;
+        if (!compareClassifying(instanceParams.getType(), inferredParams.getType(), false)) return false;
       }
       return true;
     } else if (instanceExpr instanceof PiExpression instancePi) {
       if (!(inferredExpr instanceof PiExpression inferredPi)) return false;
       if (DependentLink.Helper.size(instancePi.getParameters()) != DependentLink.Helper.size(inferredPi.getParameters())) return false;
       for (DependentLink instanceParams = instancePi.getParameters(), inferredParams = inferredPi.getParameters(); instanceParams.hasNext(); instanceParams = instanceParams.getNext(), inferredParams = inferredParams.getNext()) {
-        if (!compareClassifying(instanceParams.getTypeExpr(), inferredParams.getTypeExpr(), false)) return false;
+        if (!compareClassifying(instanceParams.getType(), inferredParams.getType(), false)) return false;
       }
       return compareClassifying(instancePi.getCodomain(), inferredPi.getCodomain(), false);
     } else if (instanceExpr instanceof IntegerExpression instanceIntExpr) {
@@ -211,8 +211,8 @@ public class GlobalInstancePool implements InstancePool {
     Concrete.Expression instanceExpr = new Concrete.ReferenceExpression(data, instance.getRef());
     DependentLink link = instance.getParameters();
     ClassDefinition enclosingClass = currentDef != null ? currentDef.getEnclosingClass() : null;
-    if (myInstancePool != null && !myInstancePool.getLocalInstances().isEmpty() && myInstancePool.getLocalInstances().getFirst().classDef == enclosingClass && instance.getEnclosingClass() == enclosingClass) {
-      instanceExpr = Concrete.AppExpression.make(data, instanceExpr, new Concrete.ReferenceExpression(data, new CoreReferable(null, myInstancePool.getLocalInstances().getFirst().value.computeTyped())), link.isExplicit());
+    if (myInstancePool != null && !myInstancePool.getLocalInstances().isEmpty() && myInstancePool.getLocalInstances().getFirst().classDef() == enclosingClass && instance.getEnclosingClass() == enclosingClass) {
+      instanceExpr = Concrete.AppExpression.make(data, instanceExpr, new Concrete.ReferenceExpression(data, new CoreReferable(null, myInstancePool.getLocalInstances().getFirst().value().computeTyped())), link.isExplicit());
       link = link.getNext();
     }
     for (; link.hasNext(); link = link.getNext()) {

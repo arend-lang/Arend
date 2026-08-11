@@ -9,6 +9,7 @@ import org.arend.ext.core.definition.CoreClassField;
 import org.arend.ext.core.expr.CoreClassCallExpression;
 import org.arend.ext.core.expr.CoreExpression;
 import org.arend.ext.core.expr.CoreFunCallExpression;
+import org.arend.ext.core.expr.CoreInferenceReferenceExpression;
 import org.arend.ext.core.ops.CMP;
 import org.arend.ext.core.ops.NormalizationMode;
 import org.arend.ext.error.*;
@@ -273,7 +274,14 @@ public abstract class BaseEquationMeta<NF> extends BaseMetaDefinition {
       return null;
     }
 
-    Pair<TypedExpression, CoreClassCallExpression> instance = Utils.findInstanceWithClassCall(new SubclassSearchParameters(getClassDef()), carrier, equality.getDefCallArguments().getFirst().normalize(NormalizationMode.WHNF), typechecker, marker, getClassDef());
+    CoreExpression classifyingExpr = equality.getDefCallArguments().getFirst().normalize(NormalizationMode.WHNF);
+    if (classifyingExpr instanceof CoreInferenceReferenceExpression infRef && infRef.getSubstExpression() == null && infRef.getVariable() != null) {
+      typechecker.solveEquationsFor(infRef.getVariable());
+      if (infRef.getSubstExpression() != null) {
+        classifyingExpr = infRef.getSubstExpression().normalize(NormalizationMode.WHNF);
+      }
+    }
+    Pair<TypedExpression, CoreClassCallExpression> instance = Utils.findInstanceWithClassCall(new SubclassSearchParameters(getClassDef()), carrier, classifyingExpr, typechecker, marker, getClassDef());
     if (instance == null) {
       return null;
     }

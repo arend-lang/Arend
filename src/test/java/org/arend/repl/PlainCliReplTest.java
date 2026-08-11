@@ -35,7 +35,7 @@ public class PlainCliReplTest extends ArendTestCase {
 
   @Test
   public void func() {
-    var repl = new PlainCliRepl(server);
+    var repl = new PlainCliRepl(server, List.of());
     repl.initialize();
 
     String funcF = "\\func f => 0";
@@ -81,9 +81,60 @@ public class PlainCliReplTest extends ArendTestCase {
     ));
   }
 
+  // See https://github.com/arend-lang/Arend/issues/128
+  @Test
+  public void errorPropagation() {
+    var repl = new PlainCliRepl(server, List.of());
+    repl.initialize();
+
+    // A definition with an outright error must not be added to the context.
+    feed(repl, "\\func x");
+    Assert.assertEquals(0, countDefinitions(repl, "x"));
+
+    // A subsequent valid definition is added and the earlier error is not resurrected.
+    feed(repl, "\\func y => 0");
+    Assert.assertEquals(1, countDefinitions(repl, "y"));
+
+    // Re-using a name that previously errored is not a duplicate: the new definition is added.
+    feed(repl, "\\func x => 1");
+    Assert.assertEquals(1, countDefinitions(repl, "x"));
+
+    // Redefining a valid definition replaces it instead of reporting a duplicate.
+    feed(repl, "\\func y => 2");
+    Assert.assertEquals(1, countDefinitions(repl, "y"));
+    Assert.assertEquals("2", Objects.requireNonNull(((FunctionDefinition) typecheckedDefinition(repl, "y")).getBody()).toString());
+
+    // A goal is not an error, so a definition containing {?} stays in the context.
+    feed(repl, "\\func g : Nat => {?}");
+    Assert.assertEquals(1, countDefinitions(repl, "g"));
+
+    // Replacing a valid definition with an erroneous one drops it (and the old one) entirely.
+    feed(repl, "\\func y => undefinedReference");
+    Assert.assertEquals(0, countDefinitions(repl, "y"));
+  }
+
+  private static void feed(PlainCliRepl repl, String line) {
+    System.setIn(new ByteArrayInputStream(line.getBytes()));
+    repl.runRepl(System.in);
+  }
+
+  private static long countDefinitions(PlainCliRepl repl, String name) {
+    return repl.getStatements().stream()
+      .filter(statement -> statement.group() != null && statement.group().referable().getRefName().equals(name))
+      .count();
+  }
+
+  private Definition typecheckedDefinition(PlainCliRepl repl, String name) {
+    List<Referable> elements = Repl.getInScopeElements(server, repl.getStatements());
+    return elements.stream()
+      .filter(referable -> referable instanceof LocatedReferableImpl located && located.getRefName().equals(name) && located.isTypechecked())
+      .map(referable -> ((LocatedReferableImpl) referable).getTypechecked())
+      .findAny().orElse(null);
+  }
+
   @Test
   public void importAndGetModules() {
-    var repl = new PlainCliRepl(server);
+    var repl = new PlainCliRepl(server, List.of());
     repl.initialize();
 
     String setUp = ":lib arend-lib\n:load Combinatorics.Factorial\n:import Combinatorics.Factorial\n";

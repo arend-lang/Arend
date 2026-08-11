@@ -1,0 +1,38 @@
+\import Algebra.Group
+\import Algebra.Group.GSet
+\import Algebra.Group.GSet.EquivariantMap
+\import Logic
+\import Logic.Meta
+\import Paths
+\import Paths.Meta
+\import Set.SubSet
+
+\class SubGSet (G : Group) \extends SubSet {
+  \override S : GSet G
+  | contains_** {x : G} {a : S} : contains a -> contains (x ** a)
+}
+
+\instance IGSet (S : SubGSet {}) : GSet S.G \cowith
+  | BaseSet => S.ISet
+  | ** x a => (x ** a.1, contains_** a.2)
+  | **_ide => ext **_ide
+  | **-assoc => ext **-assoc
+  \where
+    \func embed : EquivariantMap (IGSet S) S.S \cowith
+      | func x => x.1
+      | func-** => idp
+
+\func ImageGSet (f : EquivariantMap {}) : SubGSet f.G f.Cod \cowith
+  | contains y => ∃ (x : f.Dom) (f x = y)
+  | contains_** {r} (inP (x,fx=a)) => inP (r ** x, func-** *> pmap (r **) fx=a)
+
+\func ImGSet (f : EquivariantMap {}) : GSet
+  => IGSet (ImageGSet f)
+
+\func ImGSetRightHom (f : EquivariantMap {}) : EquivariantMap (ImGSet f) f.Cod \cowith
+  | func x => x.1
+  | func-** => idp
+
+\func ImGSetLeftHom (f : EquivariantMap {}) : EquivariantMap f.Dom (ImGSet f) \cowith
+  | func x => (f x, inP (x, idp))
+  | func-** => ext func-**

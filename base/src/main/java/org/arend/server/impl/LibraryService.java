@@ -14,6 +14,8 @@ import org.arend.prelude.ConcretePrelude;
 import org.arend.prelude.Prelude;
 import org.arend.server.ArendLibrary;
 import org.arend.term.group.ConcreteGroup;
+import org.arend.util.Range;
+import org.arend.util.Version;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.*;
@@ -29,7 +31,7 @@ public class LibraryService {
 
   public LibraryService(ArendServerImpl server) {
     myServer = server;
-    myLibraries.put(Prelude.LIBRARY_NAME, new ArendLibraryImpl(Prelude.LIBRARY_NAME, Prelude.VERSION, true, 0, Collections.emptyList(), null, null));
+    myLibraries.put(Prelude.LIBRARY_NAME, new ArendLibraryImpl(Prelude.LIBRARY_NAME, Prelude.VERSION, new Range<>(Prelude.VERSION, Prelude.VERSION), true, 0, Collections.emptyList(), null, null));
     server.copyLogger(myLogger);
   }
 
@@ -46,13 +48,19 @@ public class LibraryService {
 
         myServer.clear(libName);
 
+        Range<Version> versionRange = library.getLanguageVersion();
+        if (versionRange != null && !versionRange.inRange(Prelude.VERSION)) {
+          myLogger.info(() -> "Library '" + libName + "' is not updated; library language version " + versionRange + " < current language version " + Prelude.VERSION);
+          return null;
+        }
+
         boolean isExternal = library.isExternalLibrary();
         ClassLoaderDelegate delegate = library.getClassLoaderDelegate();
         if (delegate != null) {
           (isExternal ? myExternalClassLoader : myInternalClassLoader).addDelegate(libName, delegate);
         }
 
-        ArendLibraryImpl result = new ArendLibraryImpl(libName, library.getLibraryVersion(), isExternal, modificationStamp, library.getLibraryDependencies(), loadArendExtension(delegate, name, isExternal, library, errorReporter), library.getGeneratedNames());
+        ArendLibraryImpl result = new ArendLibraryImpl(libName, library.getLibraryVersion(), library.getLanguageVersion(), isExternal, modificationStamp, library.getLibraryDependencies(), loadArendExtension(delegate, name, isExternal, library, errorReporter), library.getGeneratedNames());
         newLibrary[0] = result;
 
         myLogger.info(() -> "Library '" + libName + "' is updated");
@@ -124,19 +132,29 @@ public class LibraryService {
     return new DefaultArendExtension();
   }
 
-  private void setupExtension(ArendLibraryImpl library, ArendLibrary origLibrary) {
+  private Map<String, ArendExtension> dependencyExtensions(ArendLibraryImpl library) {
     Map<String, ArendExtension> dependencies = new LinkedHashMap<>();
     for (String dependency : library.getLibraryDependencies()) {
       ArendLibraryImpl dependencyLib = myLibraries.get(dependency);
-      ArendExtension dependencyExt = dependencyLib == null ? null : dependencyLib.getExtension();
+      if (dependencyLib == null) {
+        myLogger.warning(() -> "Library '" + library.getLibraryName() + "' is loaded before its dependency '" + dependency + "'; the extension of '" + dependency + "' will not be available in '" + library.getLibraryName() + "'");
+        continue;
+      }
+      ArendExtension dependencyExt = dependencyLib.getExtension();
       if (dependencyExt != null) {
         dependencies.put(dependency, dependencyExt);
       }
     }
+    return dependencies;
+  }
+
+  private void setupExtension(ArendLibraryImpl library, ArendLibrary origLibrary) {
+    Map<String, ArendExtension> dependencies = dependencyExtensions(library);
 
     ArendExtension extension = library.getExtension();
     SerializableKeyRegistryImpl keyRegistry = new SerializableKeyRegistryImpl();
     extension.registerKeys(keyRegistry);
+    library.setKeyRegistry(keyRegistry);
     extension.setDependencies(dependencies);
     GroupData preludeData = myServer.getGroupData(Prelude.MODULE_LOCATION);
     extension.setPrelude(preludeData == null ? Prelude.INSTANCE : new ConcretePrelude(preludeData.getFileScope()));

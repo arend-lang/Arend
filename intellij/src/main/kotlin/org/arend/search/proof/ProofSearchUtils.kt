@@ -1,6 +1,5 @@
 package org.arend.search.proof
 
-import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.application.runReadAction
 import com.intellij.openapi.components.service
 import com.intellij.openapi.project.DumbService
@@ -15,23 +14,25 @@ import com.intellij.psi.search.ProjectScope
 import com.intellij.psi.stubs.StubIndex
 import com.intellij.psi.util.PsiUtilCore
 import com.intellij.psi.util.elementType
-import com.intellij.psi.util.parentOfType
-import com.intellij.psi.util.parentsOfType
 import com.intellij.util.SmartList
 import org.arend.documentation.ArendKeyword.Companion.AREND_KEYWORDS
 import org.arend.ext.reference.DataContainer
+import org.arend.naming.reference.LocatedReferableImpl
 import org.arend.naming.reference.TCDefReferable
 import org.arend.naming.scope.EmptyScope
+import org.arend.proof.ArendExpressionMatcher
+import org.arend.proof.ProofSearchQuery
+import org.arend.proof.Utils.getSignatures
 import org.arend.psi.ArendFile
 import org.arend.psi.ext.*
 import org.arend.psi.stubs.index.ArendDefinitionIndex
+import org.arend.refactoring.psiOfConcrete
 import org.arend.refactoring.rangeOfConcrete
 import org.arend.search.collectSearchScopes
 import org.arend.server.ArendServerRequesterImpl
 import org.arend.server.ArendServerService
 import org.arend.server.ProgressReporter
 import org.arend.settings.ArendProjectSettings
-import org.arend.term.abs.Abstract
 import org.arend.term.concrete.Concrete
 import org.arend.typechecking.computation.UnstoppableCancellationIndicator
 import org.arend.util.caching
@@ -48,7 +49,7 @@ fun generateProofSearchResults(
     pattern: String,
 ): Sequence<ProofSearchEntry?> = sequence {
     val settings = ProofSearchUISettings(project)
-    val query = (ProofSearchQuery.fromString(pattern) as? ParsingResult.OK<ProofSearchQuery>)?.value
+    val query = (ProofSearchQuery.fromString(pattern) as? ProofSearchQuery.ParsingResult.OK<ProofSearchQuery>)?.value
         ?: return@sequence
     val matcher = ArendExpressionMatcher(query)
 
@@ -75,24 +76,43 @@ fun generateProofSearchResults(
                 if (!settings.checkAllowed(def)) return@processElements true
                 if (def !is ReferableBase<*>) return@processElements true
 
-                val (parameters, codomain, info) = getSignature(def, query.shouldConsiderParameters()) ?: return@processElements true
-                val scope = def.tcReferable?.let{ server.getReferableScope(it) } ?: EmptyScope.INSTANCE
-
-                val (parameterResults, codomainResults) = matcher.match(parameters, codomain, scope, def)
+                val signatures = getSignatures(getTcDefReferable(def)?.let { server.getResolvedDefinition(it) }?.definition)
                     ?: return@processElements true
+                for (signature in signatures) {
+                    val psi = (signature.first.data as? LocatedReferableImpl)?.data as? ReferableBase<*> ?: continue
+                    val parameters = signature.second
+                    val codomain = signature.third
+                    val info = lazy(LazyThreadSafetyMode.NONE) {
+                        RenderingInfo(parameters.map(::gatherHighlightingData), gatherHighlightingData(codomain))
+                    }
+                    val scope = def.tcReferable?.let { server.getReferableScope(it) } ?: EmptyScope.INSTANCE
 
-                val parameterRangesRegistry = mutableMapOf<Int, List<TextRange>>()
-                val rangeComputer = caching { e : Concrete.Expression -> rangeOfConcrete(e) }
-                for ((parameterConcrete, ranges) in parameterResults) {
-                    val index = parameters.indexOf(parameterConcrete)
-                    val existing = parameterRangesRegistry.getOrDefault(index, emptyList())
-                    parameterRangesRegistry[index] = existing + ranges.map { rangeComputer(it).shiftLeft(rangeComputer(parameterConcrete).startOffset) }
+                    val result = matcher.match(parameters, codomain, scope)
+                        ?: return@processElements true
+                    val parameterResults = result.inPattern
+                    val codomainResults = result.inCodomain
+
+                    val parameterRangesRegistry = mutableMapOf<Int, List<TextRange>>()
+                    val parameterExpressionRegistry = mutableMapOf<Int, Concrete.Expression>()
+                    val rangeComputer = caching { e : Concrete.Expression -> rangeOfConcrete(e) }
+                    for (result in parameterResults) {
+                        val parameterConcrete = result.proj1
+                        val ranges = result.proj2
+                        val index = parameters.indexOf(parameterConcrete)
+                        val existing = parameterRangesRegistry.getOrDefault(index, emptyList())
+                        parameterRangesRegistry[index] = existing + ranges.map { rangeComputer(it).shiftLeft(rangeComputer(parameterConcrete).startOffset) }
+                        parameterExpressionRegistry[index] = parameterConcrete
+                    }
+                    val rangeOfCodomain = rangeComputer(codomain)
+                    val codomainRange = codomainResults.map { rangeComputer(it).shiftLeft(rangeOfCodomain.startOffset) }
+
+                    val text = psi.containingFile.text
+                    list.add(ProofSearchEntry(psi,
+                        info.value.copy(
+                            parameters = info.value.parameters.mapIndexedNotNull { index, data -> data.takeIf { index in parameterRangesRegistry && index in parameterExpressionRegistry }
+                                ?.copy(typeRep = text.substring(rangeComputer(parameterExpressionRegistry[index]!!).startOffset, rangeComputer(parameterExpressionRegistry[index]!!).endOffset), match = parameterRangesRegistry[index]!!) },
+                            codomain = info.value.codomain.copy(typeRep = text.substring(rangeOfCodomain.startOffset, rangeOfCodomain.endOffset), match = codomainRange))))
                 }
-                val codomainRange = codomainResults.map { rangeComputer(it).shiftLeft(rangeComputer(codomain).startOffset) }
-                list.add(ProofSearchEntry(def,
-                    info.value.copy(
-                        parameters = info.value.parameters.mapIndexedNotNull { index, data -> data.takeIf { index in parameterRangesRegistry }?.copy(match = parameterRangesRegistry[index]!!) },
-                        codomain = info.value.codomain.copy(match = codomainRange))))
                 true
             }
         }
@@ -116,12 +136,6 @@ private fun Any?.getPsi() : PsiElement? {
     return null
 }
 
-private data class SignatureWithHighlighting(
-    val parameters: List<Concrete.Expression>,
-    val resultType: Concrete.Expression,
-    val info: Lazy<RenderingInfo>
-)
-
 data class RenderingInfo(val parameters: List<ProofSearchHighlightingData>, val codomain: ProofSearchHighlightingData)
 data class ProofSearchHighlightingData(val typeRep: String, val keywords: List<TextRange>, val match: List<TextRange>)
 
@@ -139,52 +153,6 @@ private fun getTcDefReferable(globalReferable: ReferableBase<*>): TCDefReferable
         arendServer.getCheckerFor(listOf(targetFileLocation)).resolveModules(UnstoppableCancellationIndicator.INSTANCE, ProgressReporter.empty())
     }
     return globalReferable.tcReferable
-}
-
-private fun getSignature(referable: PsiReferable, shouldConsiderParameters: Boolean): SignatureWithHighlighting? {
-    if (referable is ArendClassField) {
-        val classTcDefReferable = referable.parentOfType<ArendDefClass>()?.let{ getTcDefReferable(it) } ?: return null
-        val classConcrete = referable.project.service<ArendServerService>().server.getResolvedDefinition(classTcDefReferable)?.definition as? Concrete.ClassDefinition ?: return null
-        val concrete = classConcrete.elements.find { (it as? Concrete.ClassField)?.data?.data == referable } as? Concrete.ClassField ?: return null
-
-        val parameters = concrete.parameters.mapNotNull { it.type }.toMutableList()
-        val (extraParams, codomain) = deconstructPi(concrete.resultType)
-        parameters.addAll(extraParams)
-        return SignatureWithHighlighting(parameters, codomain, lazy(LazyThreadSafetyMode.NONE) {
-                RenderingInfo(parameters.map(::gatherHighlightingData), gatherHighlightingData(codomain))
-            })
-    }
-    if (referable is ArendConstructor) {
-        val relatedDefinition = referable.parentOfType<ArendDefData>() ?: return null
-        val dataTcDefReferable = getTcDefReferable(relatedDefinition) ?: return null
-        val dataConcrete = referable.project.service<ArendServerService>().server.getResolvedDefinition(dataTcDefReferable)?.definition as? Concrete.DataDefinition ?: return null
-        val concrete = dataConcrete.constructorClauses.flatMap { it.constructors }.find { it.data.data == referable } ?: return null
-
-        val codomain = Concrete.ReferenceExpression(dataTcDefReferable.data, dataTcDefReferable)
-        val parameters = concrete.parameters.mapNotNull { it.type }
-        return SignatureWithHighlighting(parameters, codomain, lazy(LazyThreadSafetyMode.NONE) {
-                RenderingInfo(parameters.map(::gatherHighlightingData), gatherHighlightingData(codomain))
-            })
-    }
-    if (referable !is PsiLocatedReferable) return null
-    if (referable !is ArendCoClauseDef && referable !is ArendDefFunction) return null
-
-    val tcDefReferable = getTcDefReferable(referable) ?: return null
-    val concrete = referable.project.service<ArendServerService>().server.getResolvedDefinition(tcDefReferable)?.definition
-    return when (concrete) {
-        is Concrete.FunctionDefinition -> {
-            val resultType = concrete.resultType ?: return null
-            val (parameters, codomain) = if (shouldConsiderParameters) {
-                val parameters = concrete.parameters.mapNotNull { it.type }
-                deconstructPi(Concrete.PiExpression(null, parameters.map { Concrete.TypeParameter(true, it, false) }, resultType))
-            } else {
-                emptyList<Concrete.Expression>() to resultType
-            }
-            val psiType = (referable as Abstract.FunctionDefinition).resultType as ArendExpr
-            return SignatureWithHighlighting(parameters, codomain, lazy(LazyThreadSafetyMode.NONE) { RenderingInfo(parameters.map(::gatherHighlightingData), getHighlightingData(psiType)) })
-        }
-        else -> null
-    }
 }
 
 private fun gatherHighlightingData(expr: Concrete.Expression) : ProofSearchHighlightingData {
@@ -210,15 +178,6 @@ private fun getHighlightingData(psiType: ArendExpr): ProofSearchHighlightingData
         keywords.map { TextRange(it.startOffset - baseTextOffset, it.endOffset - baseTextOffset) },
         emptyList()
     )
-}
-
-private fun deconstructPi(expr: Concrete.Expression): Pair<List<Concrete.Expression>, Concrete.Expression> {
-    return if (expr is Concrete.PiExpression) {
-        val (piDomain, piCodomain) = deconstructPi(expr.codomain)
-        (expr.parameters.mapNotNull { it.type } + piDomain) to piCodomain
-    } else {
-        emptyList<Concrete.Expression>() to expr
-    }
 }
 
 sealed interface ProofSearchUIEntry

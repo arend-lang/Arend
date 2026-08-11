@@ -5,6 +5,6 @@
   | isModality (A : Local) (B : A -> Local) : Local (\Sigma (a : A) (B a))
 
 -- | An elimination principle for the localization in a modality.
-\lemma modality-elim {U : Modality} {A : \Type} (B : LType A -> Local)
-  : Equiv {\Pi (x : LType A) -> B x} {\Pi (a : A) -> B (lEta a)} (\lam f a => f (lEta a))
+\lemma modality-elim.{u} {U : Modality.{u}} {A : \Type u} (B : LType A -> Local)
+  : IsEquiv {\Pi (x : LType A) -> B x} {\Pi (a : A) -> B (lEta a)} (\lam f a => f (lEta a))
   => universe-elim (B __) (isModality (LType A) B)

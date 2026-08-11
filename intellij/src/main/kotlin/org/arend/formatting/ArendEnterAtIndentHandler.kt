@@ -53,7 +53,7 @@ class ArendEnterAtIndentHandler : EnterHandlerDelegateAdapter() {
                 insertLineBreak(editor, dashIndex, "- ")
                 return EnterHandlerDelegate.Result.Stop
             }
-        } else if (comment?.elementType == DOC_NEWLINE &&
+        } else if ((comment?.elementType == DOC_NEWLINE || comment?.elementType == DOC_NEXT_LINE) &&
                     file.findElementAt(currentOffset - 1)?.elementType == DOC_START) {
             val document = editor.document
             document.insertString(currentOffset, "\n - ")
@@ -62,6 +62,22 @@ class ArendEnterAtIndentHandler : EnterHandlerDelegateAdapter() {
             }
             editor.caretModel.moveToOffset(currentOffset + 4)
             return EnterHandlerDelegate.Result.Stop
+        } else if (comment?.elementType == DOC_NEXT_LINE && comment.nextElement.elementType != DOC_END) {
+            val document = editor.document
+            document.insertString(currentOffset, "\n   ")
+            editor.caretModel.moveToOffset(currentOffset + 4)
+            return EnterHandlerDelegate.Result.Stop
+        } else {
+            var element = comment?.prevElement
+            while (element != null && element.elementType != DOC_NEXT_LINE && element.elementType != DOC_NEWLINE && element.elementType != DOC_LINEBREAK && element.elementType != DOC_PARAGRAPH_SEP) {
+                element = element.prevElement
+            }
+            if (element.elementType == DOC_NEXT_LINE) {
+                val document = editor.document
+                document.insertString(currentOffset, "\n - ")
+                editor.caretModel.moveToOffset(currentOffset + 4)
+                return EnterHandlerDelegate.Result.Stop
+            }
         }
 
         return if (BackspaceHandler.isWhitespaceBeforeCaret(editor)) {
@@ -130,11 +146,11 @@ class ArendEnterAtIndentHandler : EnterHandlerDelegateAdapter() {
         private fun insertTabs(file: PsiFile, editor: Editor, offset: Int) {
             val document = editor.document
             var element = file.findElementAt(offset - LENGTH_DOC_NEWLINE - 1)
-            while (element != null && element.elementType != DOC_NEWLINE && element.elementType != DOC_LINEBREAK && element.elementType != DOC_PARAGRAPH_SEP) {
+            while (element != null && element.elementType != DOC_NEXT_LINE && element.elementType != DOC_NEWLINE && element.elementType != DOC_LINEBREAK && element.elementType != DOC_PARAGRAPH_SEP) {
                 element = element.prevElement
             }
             if (element?.nextElement?.elementType == DOC_TABS) {
-                element = element?.nextElement
+                element = element.nextElement
             }
 
             val nextElement = element?.nextElement ?: return

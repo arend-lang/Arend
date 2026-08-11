@@ -5,7 +5,7 @@ import org.arend.core.definition.Definition;
 import org.arend.core.expr.ErrorExpression;
 import org.arend.core.expr.Expression;
 import org.arend.core.expr.FieldCallExpression;
-import org.arend.core.expr.type.Type;
+import org.arend.core.expr.UniverseExpression;
 import org.arend.core.expr.visitor.CompareVisitor;
 import org.arend.core.subst.ExprSubstitution;
 import org.arend.ext.core.ops.CMP;
@@ -21,17 +21,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class LocalInstancePool implements InstancePool {
-  static class InstanceData {
-    final Expression key;
-    final ClassDefinition classDef;
-    final Expression value;
-
-    InstanceData(Expression key, ClassDefinition classDef, Expression value) {
-      this.key = key;
-      this.classDef = classDef;
-      this.value = value;
-    }
-  }
+  public record InstanceData(Expression key, ClassDefinition classDef, Expression value) {}
 
   private final CheckTypeVisitor myTypechecker;
   private final List<InstanceData> myPool;
@@ -71,7 +61,7 @@ public class LocalInstancePool implements InstancePool {
       return new TypecheckingResult(result, actualType);
     }
 
-    if (!CompareVisitor.compare(myTypechecker.getEquations(), CMP.LE, actualType, expectedType, Type.OMEGA, sourceNode)) {
+    if (!CompareVisitor.compare(myTypechecker.getEquations(), CMP.LE, actualType, expectedType, UniverseExpression.OMEGA, sourceNode)) {
       TypecheckingError error = new TypeMismatchError(expectedType, actualType, sourceNode);
       myTypechecker.getErrorReporter().report(error);
       ErrorExpression errorExpr = new ErrorExpression(error);

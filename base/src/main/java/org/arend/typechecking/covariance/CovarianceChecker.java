@@ -4,7 +4,8 @@ import org.arend.core.context.param.DependentLink;
 import org.arend.core.definition.ClassField;
 import org.arend.core.expr.*;
 import org.arend.core.sort.Sort;
-import org.arend.core.subst.LevelPair;
+import org.arend.core.sort.SortExpression;
+import org.arend.core.subst.ListLevels;
 import org.arend.core.subst.Levels;
 import org.arend.prelude.Prelude;
 
@@ -73,15 +74,14 @@ public abstract class CovarianceChecker {
     }
     expr = expr.getUnderlyingExpression();
 
-    if (expr instanceof UniverseExpression) {
-      Sort sort = ((UniverseExpression) expr).getSort();
-      return checkLevels(new LevelPair(sort.getPLevel(), sort.getHLevel()), null);
+    if (expr instanceof UniverseExpression universe) {
+      return universe.getSortExpression() instanceof SortExpression.Const(Sort sort) && checkLevels(new ListLevels(sort.getPLevel()), null);
     }
 
     if (expr instanceof PiExpression) {
       for (DependentLink link = ((PiExpression) expr).getParameters(); link.hasNext(); link = link.getNext()) {
         link = link.getNextTyped(null);
-        if (checkNonCovariant(link.getTypeExpr())) {
+        if (checkNonCovariant(link.getType())) {
           return true;
         }
       }
@@ -91,7 +91,7 @@ public abstract class CovarianceChecker {
     if (expr instanceof SigmaExpression) {
       for (DependentLink link = ((SigmaExpression) expr).getParameters(); link.hasNext(); link = link.getNext()) {
         link = link.getNextTyped(null);
-        if (check(link.getTypeExpr())) {
+        if (check(link.getType())) {
           return true;
         }
       }
@@ -147,7 +147,7 @@ public abstract class CovarianceChecker {
     }
 
     if (expr instanceof FunCallExpression funCall && funCall.getDefinition() == Prelude.ARRAY) {
-      return checkLevels(funCall.getLevels(), funCall) || check(funCall.getDefCallArguments().get(0));
+      return checkLevels(funCall.getLevels(), funCall) || check(funCall.getDefCallArguments().getFirst());
     }
 
     return checkOtherwise(expr);

@@ -1,20 +1,19 @@
 package org.arend.typechecking.implicitargs.equations;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.math.BigInteger;
+import java.util.*;
 
 public class LevelEquations<Var> {
-  private final List<Var> myVariables = new ArrayList<>();
+  private final Set<Var> myVariables = new HashSet<>();
   private final List<LevelEquation<Var>> myEquations = new ArrayList<>();
-  static final int INFINITY = Integer.MAX_VALUE;
+  private final Set<Var> myLowerBounded = new HashSet<>();
+  private final Set<Var> myUpperBounded = new HashSet<>();
 
   public List<LevelEquation<Var>> getEquations() {
     return myEquations;
   }
 
-  public List<Var> getVariables() {
+  public Set<Var> getVariables() {
     return myVariables;
   }
 
@@ -29,6 +28,8 @@ public class LevelEquations<Var> {
 
   void addEquation(LevelEquation<Var> equation) {
     myEquations.add(equation);
+    if (equation.getVariable1() != null) myVariables.add(equation.getVariable1());
+    if (equation.getVariable2() != null) myVariables.add(equation.getVariable2());
   }
 
   public void clear() {
@@ -40,42 +41,48 @@ public class LevelEquations<Var> {
     return myVariables.isEmpty() && myEquations.isEmpty();
   }
 
-  public List<LevelEquation<Var>> solve(Map<Var, Integer> solution) {
+  public Set<Var> getLowerBounded() {
+    return myLowerBounded;
+  }
+
+  public Set<Var> getUpperBounded() {
+    return myUpperBounded;
+  }
+
+  public List<LevelEquation<Var>> solve(Map<Var, BigInteger> solution) {
     Map<Var, List<LevelEquation<Var>>> paths = new HashMap<>();
 
-    solution.put(null, 0);
+    solution.put(null, BigInteger.ZERO);
     paths.put(null, new ArrayList<>());
     for (Var var : myVariables) {
-      solution.put(var, 0);
+      solution.put(var, BigInteger.ZERO);
       paths.put(var, new ArrayList<>());
     }
 
     for (int i = myVariables.size(); i >= 0; i--) {
       boolean updated = false;
       for (LevelEquation<Var> equation : myEquations) {
-        if (equation.isInfinity()) {
-          Integer prev = solution.put(equation.getVariable(), INFINITY);
-          if (prev == null || prev != INFINITY) {
-            updated = true;
+        BigInteger a = solution.get(equation.getVariable1());
+        BigInteger b = solution.get(equation.getVariable2());
+        BigInteger m = equation.getMaxConstant();
+        if ((m == null || a.add(m).compareTo(BigInteger.ZERO) < 0) && b.compareTo(a.add(equation.getConstant())) > 0) {
+          List<LevelEquation<Var>> newPath = new ArrayList<>(paths.get(equation.getVariable1()));
+          newPath.add(equation);
+          paths.put(equation.getVariable2(), newPath);
+          if (i == 0 || equation.getVariable2() == null) {
+            solution.remove(null);
+            return paths.get(equation.getVariable2());
           }
-        } else {
-          int a = solution.get(equation.getVariable1());
-          int b = solution.get(equation.getVariable2());
-          Integer m = equation.getMaxConstant();
-          if (b != INFINITY && (a == INFINITY || (m == null || a + m < 0) && b > a + equation.getConstant())) {
-            if (a != INFINITY) {
-              List<LevelEquation<Var>> newPath = new ArrayList<>(paths.get(equation.getVariable1()));
-              newPath.add(equation);
-              paths.put(equation.getVariable2(), newPath);
-            }
-            if (i == 0 || equation.getVariable2() == null && a != INFINITY) {
-              solution.remove(null);
-              return paths.get(equation.getVariable2());
-            }
 
-            solution.put(equation.getVariable2(), a == INFINITY ? INFINITY : a + equation.getConstant());
-            updated = true;
-          }
+          solution.put(equation.getVariable2(), a.add(equation.getConstant()));
+          updated = true;
+        }
+
+        if (equation.getVariable2() != null && (equation.getVariable1() == null || myLowerBounded.contains(equation.getVariable1()))) {
+          myLowerBounded.add(equation.getVariable2());
+        }
+        if (equation.getVariable1() != null && (equation.getVariable2() == null || myLowerBounded.contains(equation.getVariable2()))) {
+          myUpperBounded.add(equation.getVariable1());
         }
       }
       if (!updated) {

@@ -66,16 +66,19 @@ public class TerminationCheckTest extends TypeCheckingTestCase {
       """, 0);
   }
 
+  // Nested recursion through the SAME container (List of List): flatten. Baseline for
+  // container nesting; cf. changingIndex_* (different index) and issue130_* (generic).
   @Test
-  public void test36_1() {
+  public void nestedListOfList_flatten() {
     typeCheckModule(list + "\\func flatten {A : \\Type0} (l : List (List A)) : List A \\elim l\n" +
       "| nil => nil\n" +
       "| :-: nil xs => flatten xs\n" +
       "| :-: (:-: y ys) xs => y :-: flatten (ys :-: xs)", 0);
   }
 
+  // Mutual recursion over nested List-of-List (f/g). Same-container nesting, accepted.
   @Test
-  public void test36_2() {
+  public void nestedListOfList_mutual() {
     typeCheckModule(list + "\\func f {A : \\Type0} (l : List (List A)) : List A \\elim l | nil => nil | :-: x xs => g x xs\n" +
       "\\func g {A : \\Type0} (l : List A) (ls : List (List A)) : List A \\elim l | nil => f ls | :-: x xs => x :-: g xs ls", 0);
   }
@@ -97,6 +100,8 @@ public class TerminationCheckTest extends TypeCheckingTestCase {
       "| :-: x xs => x :-: zip-bad l2 xs", 0);
   }
 
+  // Infinitary (function-valued) constructor Lim (Nat -> ord): the recursive call
+  // addord (f z) y descends into an application of the field f. Accepted (W-type child).
   @Test
   public void test310() {
     typeCheckModule("""
@@ -148,12 +153,12 @@ public class TerminationCheckTest extends TypeCheckingTestCase {
   }
 
   @Test
-  public void twoErrors() {
+  public void oneError() {
     typeCheckModule("""
       \\data D Nat | con
       \\func f (x : Nat) (y : D (f x con)) : Nat => x
       \\func g : Nat => f 0 con
-      """, 2);
+      """, 1);
   }
 
   @Test
@@ -198,6 +203,33 @@ public class TerminationCheckTest extends TypeCheckingTestCase {
         | end1 e => bar1 x (e x)
       \\func bar2 (x : Nat) (e : End2 x) : Nat \\elim e
         | end2 y e => bar2 y (e ())
+      """, 0);
+  }
+
+  @Test
+  public void emptySigmaParam() {
+    typeCheckModule("""
+      \\func f (x : \\Sigma) (n : Nat) : Nat \\elim n
+        | 0 => 0
+        | suc n => f x n
+      """, 0);
+  }
+
+  @Test
+  public void emptySigmaParamPair() {
+    typeCheckModule("""
+      \\func f (x : \\Sigma) (y : \\Sigma) (n : Nat) : Nat \\elim n
+        | 0 => 0
+        | suc n => f x y n
+      """, 0);
+  }
+
+  @Test
+  public void emptySigmaParamUnitPattern() {
+    typeCheckModule("""
+      \\func f (x : \\Sigma) (n : Nat) : Nat \\elim x, n
+        | (), 0 => 0
+        | (), suc n => f () n
       """, 0);
   }
 
@@ -250,6 +282,57 @@ public class TerminationCheckTest extends TypeCheckingTestCase {
   @Test
   public void testBug(){
     typeCheckModule("\\data Bool | true | false\n\\func f (p : \\Sigma Bool Nat) => f p\n", 2);
+  }
+
+  private static final String listMaybe =
+    "\\data List (A : \\Type) | nil | \\infixr 5 :: A (List A)\n" +
+    "\\func \\infixl 5 ++ {A : \\Type} (xs ys : List A) : List A \\elim xs | nil => ys | :: x xs => x :: (xs ++ ys)\n" +
+    "\\data Maybe (A : \\Type) | nothing | just A\n";
+
+  // Issue #130: recursion through a generic container instantiated at the recursive type.
+  // Generic-container nesting (GitHub #130): a datatype recurses through a generic
+  // container instantiated at itself (List Pattern, Maybe TE, rose trees). Enabled by
+  // this commit; Agda and Lean accept these directly, Coq needs a reformulation.
+  @Test
+  public void issue130_listOfPattern() {
+    typeCheckModule(listMaybe +
+      "\\data Pattern | PVar Nat | PCons Nat (List Pattern)\n" +
+      "\\func getVars (p : List Pattern) : List Nat\n" +
+      "  | nil => nil\n" +
+      "  | (PVar n) :: ps => n :: getVars ps\n" +
+      "  | (PCons n ps) :: ps' => getVars ps ++ getVars ps'\n" +
+      "\\func getVarsP (p : Pattern) : List Nat\n" +
+      "  | PVar n => n :: nil\n" +
+      "  | PCons n ps => getVarsL ps\n" +
+      "\\func getVarsL (p : List Pattern) : List Nat\n" +
+      "  | nil => nil\n" +
+      "  | p :: ps => getVarsP p ++ getVarsL ps", 0);
+  }
+
+  @Test
+  public void issue130_maybeOfTE() {
+    typeCheckModule(listMaybe +
+      "\\data TE | EMaybe (Maybe TE)\n" +
+      "\\func sc (e : TE) : Maybe (\\Sigma) | EMaybe mt => scM mt\n" +
+      "\\func scM (m : Maybe TE) : Maybe (\\Sigma) | nothing => nothing | just e => sc e\n" +
+      "\\func scMR (e : TE) : Maybe (\\Sigma) | EMaybe (just mt) => scMR mt | EMaybe nothing => nothing", 0);
+  }
+
+  @Test
+  public void issue130_roseTree() {
+    typeCheckModule(listMaybe +
+      "\\data Rose | rose (List Rose)\n" +
+      "\\func size (r : Rose) : Nat | rose rs => sizeL rs\n" +
+      "\\func sizeL (rs : List Rose) : Nat | nil => 0 | r :: rs => size r Nat.+ sizeL rs", 0);
+  }
+
+  // Negative control: rebuilding a larger term must still be rejected.
+  @Test
+  public void issue130_roseRebuildRejected() {
+    typeCheckModule(listMaybe +
+      "\\data Rose | rose (List Rose)\n" +
+      "\\func bad (r : Rose) : Nat | rose rs => badL rs\n" +
+      "\\func badL (rs : List Rose) : Nat | nil => 0 | r :: rs => bad (rose (r :: rs))", -1);
   }
 
   @Test
@@ -420,6 +503,9 @@ public class TerminationCheckTest extends TypeCheckingTestCase {
       """);
   }
 
+  // Impredicative-Prop non-termination (Coquand-Paulin family): Bad is inhabited by the
+  // polymorphic identity, so noBad bad loops. Correctly rejected -- the codomain of f is
+  // a type variable, not a datatype, so the structural-descent guard refuses it.
   @Test
   public void nonRecursiveConstructor() {
     typeCheckModule("""
@@ -458,18 +544,160 @@ public class TerminationCheckTest extends TypeCheckingTestCase {
   @Test
   public void mutualRecursiveConstructor() {
     typeCheckModule("""
-      \\data D : \\hType
+      \\data D
         | con1
         | con2 (Nat -> D)
         | con3 {d1 d2 : D} (E d1 d2) : d1 = d2
-      \\data E (d1 d2 : D) : \\hType
+      \\data E (d1 d2 : D)
         | con4 (f : Nat -> D) (d1 = f 0) (d2 = con2 f)
-      \\func foo {A : D -> \\hType} (B : \\Pi {d1 d2 : D} -> A d1 -> A d2 -> E d1 d2 -> \\hType) (a1 : A con1) (a2 : \\Pi {f : Nat -> D} -> (\\Pi (n : Nat) -> A (f n)) -> A (con2 f)) (a3 : \\Pi {d1 d2 : D} (Ad1 : A d1) (Ad2 : A d2) (e : E d1 d2) -> B Ad1 Ad2 e -> Path (\\lam i => A (con3 e i)) Ad1 Ad2) (a4 : \\Pi {d1 d2 : D} (Ad1 : A d1) (Ad2 : A d2) {f : Nat -> D} (Af : \\Pi (n : Nat) -> A (f n)) (p1 : d1 = f 0) (p2 : d2 = con2 f) -> B Ad1 Ad2 (con4 f p1 p2)) (d : D) : A d \\elim d
+      \\func foo {A : D -> \\Type} (B : \\Pi {d1 d2 : D} -> A d1 -> A d2 -> E d1 d2 -> \\Type) (a1 : A con1) (a2 : \\Pi {f : Nat -> D} -> (\\Pi (n : Nat) -> A (f n)) -> A (con2 f)) (a3 : \\Pi {d1 d2 : D} (Ad1 : A d1) (Ad2 : A d2) (e : E d1 d2) -> B Ad1 Ad2 e -> Path (\\lam i => A (con3 e i)) Ad1 Ad2) (a4 : \\Pi {d1 d2 : D} (Ad1 : A d1) (Ad2 : A d2) {f : Nat -> D} (Af : \\Pi (n : Nat) -> A (f n)) (p1 : d1 = f 0) (p2 : d2 = con2 f) -> B Ad1 Ad2 (con4 f p1 p2)) (d : D) : A d \\elim d
         | con1 => a1
         | con2 f => a2 (\\lam n => foo B a1 a2 a3 a4 (f n))
         | con3 {d1} {d2} e => a3 (foo B a1 a2 a3 a4 d1) (foo B a1 a2 a3 a4 d2) e (bar B a1 a2 a3 a4 (foo B a1 a2 a3 a4 d1) (foo B a1 a2 a3 a4 d2) e)
-      \\func bar {A : D -> \\hType} (B : \\Pi {d1 d2 : D} -> A d1 -> A d2 -> E d1 d2 -> \\hType) (a1 : A con1) (a2 : \\Pi {f : Nat -> D} -> (\\Pi (n : Nat) -> A (f n)) -> A (con2 f)) (a3 : \\Pi {d1 d2 : D} (Ad1 : A d1) (Ad2 : A d2) (e : E d1 d2) -> B Ad1 Ad2 e -> Path (\\lam i => A (con3 e i)) Ad1 Ad2) (a4 : \\Pi {d1 d2 : D} (Ad1 : A d1) (Ad2 : A d2) {f : Nat -> D} (Af : \\Pi (n : Nat) -> A (f n)) (p1 : d1 = f 0) (p2 : d2 = con2 f) -> B Ad1 Ad2 (con4 f p1 p2)) {d1 d2 : D} (Ad1 : A d1) (Ad2 : A d2) (e : E d1 d2) : B Ad1 Ad2 e \\elim e
+      \\func bar {A : D -> \\Type} (B : \\Pi {d1 d2 : D} -> A d1 -> A d2 -> E d1 d2 -> \\Type) (a1 : A con1) (a2 : \\Pi {f : Nat -> D} -> (\\Pi (n : Nat) -> A (f n)) -> A (con2 f)) (a3 : \\Pi {d1 d2 : D} (Ad1 : A d1) (Ad2 : A d2) (e : E d1 d2) -> B Ad1 Ad2 e -> Path (\\lam i => A (con3 e i)) Ad1 Ad2) (a4 : \\Pi {d1 d2 : D} (Ad1 : A d1) (Ad2 : A d2) {f : Nat -> D} (Af : \\Pi (n : Nat) -> A (f n)) (p1 : d1 = f 0) (p2 : d2 = con2 f) -> B Ad1 Ad2 (con4 f p1 p2)) {d1 d2 : D} (Ad1 : A d1) (Ad2 : A d2) (e : E d1 d2) : B Ad1 Ad2 e \\elim e
         | con4 f p1 p2 => a4 Ad1 Ad2 (\\lam n => foo B a1 a2 a3 a4 (f n)) p1 p2
       """);
+  }
+
+  // Changing-index (polymorphic) structural recursion: the recursive call is at a
+  // different type instance (A -> Pair A A). Genuinely terminating; accepted (#130 fix).
+  @Test
+  public void changingIndex_powerTree() {
+    typeCheckModule("""
+      \\data Pair (A B : \\Type) | pair A B
+      \\func mapPair {A B C D : \\Type} (f : A -> C) (g : B -> D) (p : Pair A B) : Pair C D \\elim p
+        | pair x y => pair (f x) (g y)
+      \\data PowerTree (A : \\Type) | leaf A | fork (PowerTree (Pair A A))
+      \\func mapPowerTree {A B : \\Type} (f : A -> B) (t : PowerTree A) : PowerTree B \\elim t
+        | leaf x => leaf (f x)
+        | fork t => fork (mapPowerTree (mapPair f f) t)
+      """, 0);
+  }
+
+  // Power-list / nested changing-index recursion (Bird-Meertens). Accepted (#130 fix).
+  @Test
+  public void changingIndex_powerList() {
+    typeCheckModule("""
+      \\data Pair (A B : \\Type) | pair A B
+      \\func mapPair {A B C D : \\Type} (f : A -> C) (g : B -> D) (p : Pair A B) : Pair C D \\elim p
+        | pair x y => pair (f x) (g y)
+      \\data PowerList (A : \\Type) | pnil | pcons A (PowerList (Pair A A))
+      \\func mapPowerList {A B : \\Type} (f : A -> B) (l : PowerList A) : PowerList B \\elim l
+        | pnil => pnil
+        | pcons x xs => pcons (f x) (mapPowerList (mapPair f f) xs)
+      """, 0);
+  }
+
+  // Non-termination that MUST be rejected (soundness). Agda #6654 (fixed 2.6.4):
+  // Agda <= 2.6.3 accepts this and proves Empty
+  @Test
+  public void largeIndexForcingLoop_rejected() {
+    typeCheckModule("""
+      \\data Empty
+      \\func PolyId => \\Pi (P : \\Type) -> P -> P
+      \\func identity : PolyId => \\lam P x => x
+      \\data Indexed (f : PolyId) | tagged
+      \\func seed : Indexed identity => tagged
+      \\func descend {f : PolyId} (t : Indexed f) : Empty \\elim t
+        | tagged => descend {identity} (f (Indexed identity) seed)
+      """, -1);
+  }
+
+  // Cast/transport "successor" loop: the recursive argument reduces back to suc n (not smaller). Analogue of Agda #7568 (type-based termination). MUST be rejected.
+  @Test
+  public void castSuccessorLoop_rejected() {
+    typeCheckModule("""
+      \\data Empty
+      \\func transport' {A : \\Type} (B : A -> \\Type) {a a' : A} (p : a = a') (b : B a) : B a' => coe (\\lam i => B (p @ i)) b right
+      \\func inv' {A : \\Type} {a a' : A} (p : a = a') : a' = a => transport' (\\lam x => x = a) p idp
+      \\func cast {X Y : \\Type} (e : X = Y) (x : X) : Y => transport' (\\lam T => T) e x
+      \\func succ-through {X : \\Type} (e : X = Nat) (n : X) : X => cast (inv' e) (suc (cast e n))
+      \\func loop (n : Nat) (imp : (n = 0) -> Empty) : Empty \\elim n
+        | 0 => imp idp
+        | suc n => loop (succ-through idp n) imp
+      """, -1);
+  }
+
+  // Cubical HIT forcing loop: view uses coe along a path constructor to fabricate a PairView of any term; crash/peel then loop, cf. Agda #7346 (fixed 2.7.0).
+  // Agda <= 2.6.x accepts and proves Empty.
+  @Test
+  public void hitForcingLoop_rejected() {
+    typeCheckModule("""
+      \\data Empty
+      \\data Term
+        | atom
+        | pair Term Term
+        | left-unit (x : Term) : pair atom x = x
+      \\data PairView (t : Term)
+        | pair-view (x y : Term) (t = pair x y)
+      \\func rp {A : \\Type} {a : A} : a = a => path (\\lam _ => a)
+      \\func view (x : Term) : PairView x => coe (\\lam i => PairView (left-unit x @ i)) (pair-view atom x rp) right
+      \\func crash (t : Term) : Empty => peel t (view t)
+      \\func peel (t : Term) (pv : PairView t) : Empty \\elim pv
+        | pair-view x y p => crash x
+      """, -1);
+  }
+
+  // TODO: Behavior is too stringent (cf. Agda #4702).
+  // The recursion is structural but routed through a user-defined caseOf wrapper, which
+  // Arend's termination checker does not see through.
+  @Test
+  public void caseWrapperRecursion_tooStrict() {
+    typeCheckModule("""
+      \\func caseOf {A B : \\Type} (x : A) (f : A -> B) : B => f x
+      \\func add (m n : Nat) : Nat => caseOf m (\\lam m' => \\case m' \\with { | 0 => n | suc k => suc (add k n) })
+      """, -1);
+  }
+
+  // TODO: Behavior is too stringent (cf. Agda #7615).
+  // Structural recursion whose descent is on the implicit Bag index (g' < g), exposed by consLayer
+  // through \case (grow seed); the syntactic checker does not track it.
+  @Test
+  public void hitImplicitIndexDescent_tooStrict() {
+    typeCheckModule("""
+      \\data Bag (A : \\Type)
+        | emptyBag
+        | consBag A (Bag A)
+        | swapBag (x y : A) (xs : Bag A) : consBag x (consBag y xs) = consBag y (consBag x xs)
+      \\data Layer {A : \\Type} (R : Bag A -> \\Type) (b : Bag A)
+        | emptyLayer (b = emptyBag)
+        | consLayer {g : Bag A} (x : A) (R g) (b = consBag x g)
+      \\data IndexedList {A : \\Type} (b : Bag A)
+        | emptyList (b = emptyBag)
+        | consList {g : Bag A} (x : A) (IndexedList g) (b = consBag x g)
+      \\func unfold {A : \\Type} {R : Bag A -> \\Type} (grow : \\Pi {g2 : Bag A} -> R g2 -> Layer R g2) {g : Bag A} (seed : R g) : IndexedList g
+        => \\case grow seed \\with {
+          | emptyLayer p => emptyList p
+          | consLayer {g'} x s' q => consList x (unfold grow s') q
+        }
+      """, -1);
+  }
+
+  // TODO: Behavior is too stringent
+  // Bush is a valid truly-nested datatype that Agda accepts. Bush (Bush A)), so a mapBush cannot even be written. cf. "Nested Inductive Types".
+  @Test
+  public void bushTrulyNested_tooStrict() {
+    typeCheckModule("""
+      \\data Bush (A : \\Type) | bempty | bpush A (Bush (Bush A))
+      """, -1);
+  }
+
+  // TODO: Behavior is too stringent (cf. Agda #7669).
+  // At u DNat reduces to DNat (positive), but Arend's syntactic positivity check flags the occurrence under the stuck At u _ .
+  @Test
+  public void definitionalEqualityPositivity_tooStrict() {
+    typeCheckModule("""
+      \\data One | unit
+      \\func At (u : One) (X : \\Type) : \\Type \\elim u | unit => X
+      \\data DNat | dzero | dsuc (u : One) (At u DNat)
+      """, -1);
+  }
+
+  @Test
+  public void testClearLemmaBodies() {
+    typeCheckModule("""
+      \\lemma foobar : Nat => foobar
+    """, 1);
+    assertThatErrorsAre(Matchers.typecheckingError(TerminationCheckError.class));
   }
 }

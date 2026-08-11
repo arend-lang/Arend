@@ -1,0 +1,367 @@
+\import Algebra.Algebra
+\import Algebra.Field
+\import Algebra.Group
+\import Algebra.Meta
+\import Algebra.Monoid
+\import Algebra.Ordered
+\import Algebra.Pointed
+\import Algebra.Ring
+\import Algebra.Semiring
+\import Algebra.Ring.FormalSeries
+\import Analysis.Series
+\import Equiv
+\import Arith.Nat
+\import Arith.Rat
+\import Arith.Real
+\import Arith.Real.Field
+\import Arith.Real.UpperReal
+\import Data.Array
+\import Data.Or
+\import Function.Meta
+\import Logic
+\import Logic.Meta
+\import Meta
+\import Order.Biordered
+\import Order.Lattice
+\import Order.LinearOrder
+\import Order.PartialOrder
+\import Order.StrictOrder
+\import Paths
+\import Paths.Meta
+\import Set.Fin
+\import Set.Fin.Instances
+\import Topology.BanachAlgebra
+\import Topology.NormedAbGroup
+\import Topology.NormedRing
+\import Topology.TopAbGroup
+\import Topology.TopSpace
+\open AddMonoid (BigSum)
+\open AbMonoid
+\open ExUpperRealSemigroup (*_>=0)
+\open FSeriesRing (PairsFinSet)
+
+{- | Convolution of two series in a ring:
+ - $(a \star b)_n = \sum_{k=0}^{n} a_k \cdot b_{n - k}$.
+ - Defined as the multiplication in `FSeriesRing A`.
+ - Signatures in this module use either `conv a b n` (= `(FSeriesRing A).* a b n`) or `FinSum {Fin n} ...` rather than `BigSum (\new Array A n ...)`.
+  -}
+\func conv {A : Ring} (a b : Series A) : Series A => (FSeriesRing A).* a b
+
+{- | Convolution of non-negative upper-real series.  Used to control
+ - $\|(a \star b)_n\|$ in a normed ring. -}
+\func uconv (a b : Series ExUpperReal) : Series ExUpperReal
+  => \lam n => FinSum {_} {PairsFinSet n} \lam s => a s.1 * b s.2
+
+{- | Termwise norm bound:
+ -   $\|(a \star b)_n\| \leq \sum_{k=0}^{n} \|a_k\| \cdot \|b_{n - k}\|$.
+ -}
+\lemma conv-norm_<= {A : ExPseudoNormedRing} (a b : Series A) (n : Nat)
+  : norm (conv a b n) <= uconv (\lam j => norm (a j)) (\lam j => norm (b j)) n
+  => A.norm_FinSum <=∘ ExUpperRealAbMonoid.FinSum_<= \lam s => norm_*_<=
+
+{- | Tonelli square: for non-negative $a, b$ the diagonal partial sum is
+     bounded by the product of partial sums,
+     $\sum_{k \leq n} (\mathrm{uconv}\,a\,b)_k \leq
+     \bigl(\sum_{k \leq n} a_k\bigr) \cdot \bigl(\sum_{k \leq n} b_k\bigr)$. -}
+\lemma partialSum-uconv-square {a b : Series ExUpperReal}
+                               (a>=0 : \Pi (n : Nat) -> 0 <= a n) (b>=0 : \Pi (n : Nat) -> 0 <= b n)
+                               {n : Nat}
+  : partialSum (uconv a b) n <= partialSum a n * partialSum b n
+  => transport2 (<=)
+      (inv $ partialSum.=FinSum *> later (FinSum-double-dep _))
+      (inv $ pmap2 (*) partialSum.=FinSum partialSum.=FinSum) $
+      later $ PosetAbMonoid.FinSum_<=-inj2 {_} {_} {ProdFin (FinFin n) (FinFin n)}
+                (later \lam s => (toFin s.2.1 $ <=_+ <=-refl zero<=_ <∘r =_<= s.2.3 <∘r fin_< s.1,
+                                  toFin s.2.2 $ <=_+ zero<=_ <=-refl <∘r =_<= s.2.3 <∘r fin_< s.1))
+                (\lam {s} {s'} p => \have | p1 => inv toFin=id *> pmap __.1 p *> {Nat} toFin=id
+                                          | p2 => inv toFin=id *> pmap __.2 p *> {Nat} toFin=id
+                                    \in ext (fin_nat-inj $ inv s.2.3 *> pmap2 (+) p1 p2 *> s'.2.3, simp_coe (p1, p2)))
+                (\lam s _ => *_>=0)
+                (\lam s => pmap2 (a __ * b __) toFin=id toFin=id)
+                <=∘ ExUpperRealSemigroup.FinSum-distr_<= (a>=0 __) (b>=0 __)
+
+{- | Diagonal-band $\subseteq$ two side-rectangles, when $2M \leq N$. Finiteness
+     hypotheses are needed for the distributivity ({ExUpperReal} multiplication is not
+     distributive at $+\infty$). -}
+\lemma midSum-uconv-bound {a b : Series ExUpperReal}
+                          (a>=0 : \Pi (n : Nat) -> 0 <= a n) (b>=0 : \Pi (n : Nat) -> 0 <= b n)
+                          {N M n : Nat} (MN : 2 Nat.* M <= N)
+                          (ab : \Pi (i : Nat) -> (a i).IsBounded) (bb : \Pi (j : Nat) -> (b j).IsBounded)
+  : midSum (uconv a b) N n <= midSum a M n * partialSum b n + partialSum a n * midSum b M n
+  => transport2 (<=)
+      (inv $ midSum.=FinSum *> FinSum-double-dep' _)
+      (inv $ pmap2 (+)
+        (pmap2 (*) midSum.=FinSum partialSum.=FinSum *> ExUpperRealSemigroup.FinSum-distr
+          (later \lam s => a>=0 s.1) (later \lam s => ab s.1) (later \lam j => b>=0 j) (later \lam j => bb j))
+        (pmap2 (*) partialSum.=FinSum midSum.=FinSum *> ExUpperRealSemigroup.FinSum-distr
+          (later \lam i => a>=0 i) (later \lam i => ab i) (later \lam s => b>=0 s.1) (later \lam s => bb s.1))
+        *> inv (FinSum_Or {_} {_} {_} {Or.rec (later \lam s => a s.1.1 * b s.2) (later \lam s => a s.1 * b s.2.1)}))
+      $ ExUpperRealAbMonoid.FinSum_<=-inj2 {_} {OrFin (ProdFin (midSum.MidFinSet M n) (FinFin n)) (ProdFin (FinFin n) (midSum.MidFinSet M n))}
+          (later \lam s =>
+            \have | i<n => <=_+ <=-refl zero<=_ <∘r =_<= s.2.3 <∘r s.1.3
+                  | j<n => <=_+ zero<=_ <=-refl <∘r =_<= s.2.3 <∘r s.1.3
+            \in \case LinearOrder.dec<_<= s.2.2 M \with {
+            | inl j<M => inl ((s.2.1, \lam i<M => MN $ s.1.2 <∘r transport2 (<) s.2.3 *-comm (NatSemiring.<_+ i<M j<M), i<n), toFin s.2.2 j<n)
+            | inr M<=j => inr (toFin s.2.1 $ i<n, (s.2.2, M<=j, j<n))
+          })
+          (later \lam {s} {s'} => unfold_let $ mcases \with {
+            | inl j<M, inl j'<M => \lam p =>
+              \have | q => uninl p
+                    | r => inv toFin=id *> pmap __.2 q *> toFin=id
+              \in ext (ext $ inv s.2.3 *> pmap2 (__.1.1 + __) q r *> s'.2.3, simp_coe (pmap __.1.1 q, r))
+            | inl j<M, inr M<=j' => \case __
+            | inr M<=j, inl j'<M => \case __
+            | inr M<=j, inr M<=j' => \lam p =>
+              \have | q => uninr p
+                    | r => inv toFin=id *> pmap __.1 q *> {Nat} toFin=id
+              \in ext (ext $ inv s.2.3 *> pmap2 (__ + __.2.1) r q *> s'.2.3, simp_coe (r, pmap __.2.1 q))
+          })
+          (\lam e _ => cases e *_>=0)
+          (later \lam s => unfold_let $ mcases \with {
+            | inl j<M => pmap (_ * b __) toFin=id
+            | inr M<=j => pmap (a __ * _) toFin=id
+          })
+
+{- | Per-$n$ bound: a partial sum of upper-reals each having `.U B` is bounded
+     by some rational. -}
+\lemma partialSum-from-termBound {S : Series ExUpperReal} {B : Rat}
+                                 (hB : \Pi (n : Nat) -> (S n).U B) (n : Nat)
+  : ∃ (C : Rat) ((partialSum S n).U C) \elim n
+  | 0 => inP (1, rewrite partialSum-empty RatField.zro<ide)
+  | suc n => \case partialSum-from-termBound hB n \with {
+    | inP (C, h) => inP (C + B, rewrite partialSum_suc $ ExUpperReal.+_U_<=.2 $ inP (C, h, B, hB n, <=-refl))
+  }
+
+{- | Uniform bound on partial sums of a non-negative, term-bounded, Cauchy
+     upper-real series: $\exists B \in \mathbb{Q}.\ \forall n.\
+     (\mathrm{partialSum}\,S\,n).U\,B$. -}
+\lemma partialSum-uniform-bound {S : Series ExUpperReal}
+                                (S>=0 : \Pi (n : Nat) -> 0 <= S n)
+                                (Sb : IsBoundedUpperSeries S) (Sc : IsConvUpperSeries S)
+  : ∃ (B : Rat) ∀ (n : Nat) ((partialSum S n).U B)
+  => \case Sc RatField.zro<ide, \elim Sb \with {
+    | inP (N0, g), inP (B, hB) => \case partialSum-from-termBound hB N0 \with {
+      | inP (C, headC) => inP (C + 1, \lam n => \case LinearOrder.dec<_<= n N0 \with {
+        | inl n<N0 => partialSum-monotone S>=0 (LinearOrder.<_<= n<N0) $ ExUpperReal.U_<= headC linarith
+        | inr N0<=n => rewrite (partialSum-split N0<=n) $ ExUpperReal.+_U_<=.2 $ inP (C, headC, 1, g N0<=n, <=-refl)
+      })
+    }
+  }
+
+{- | Convolution of two absolutely convergent upper-real series is absolutely
+     convergent, provided each series has uniformly bounded terms. -}
+\lemma uconv-conv {a b : Series ExUpperReal}
+                  (a>=0 : \Pi (n : Nat) -> 0 <= a n) (b>=0 : \Pi (n : Nat) -> 0 <= b n)
+                  (aB : IsBoundedUpperSeries a) (bB : IsBoundedUpperSeries b)
+                  (ac : IsConvUpperSeries a) (bc : IsConvUpperSeries b)
+  : IsConvUpperSeries (uconv a b)
+  => \lam {eps} eps>0 =>
+      \let | (inP (Ba, ha)) => partialSum-uniform-bound a>=0 aB ac
+           | (inP (Bb, hb)) => partialSum-uniform-bound b>=0 bB bc
+           | Ba>0 : 0 < Ba => rewrite partialSum-empty in ha 0
+           | Bb>0 : 0 < Bb => rewrite partialSum-empty in hb 0
+           | D>0 : 0 < Ba + Bb + 1 => linarith
+           | epsR>0 : 0 < eps * finv (Ba + Bb + 1) => RatField.<_*_positive_positive eps>0 (RatField.finv>0 D>0)
+           | epsR*D=eps : (eps * finv (Ba + Bb + 1)) * (Ba + Bb + 1) = eps
+              => *-assoc *> pmap (eps *) (RatField.finv-left $ RatField.>_/= D>0) *> ide-right
+           | epsR*D-expand : (eps * finv (Ba + Bb + 1)) * (Ba + Bb + 1)
+                           = (eps * finv (Ba + Bb + 1)) * Bb + Ba * (eps * finv (Ba + Bb + 1)) + (eps * finv (Ba + Bb + 1))
+              => equation.cRing
+           | sum<=eps : (eps * finv (Ba + Bb + 1)) * Bb + Ba * (eps * finv (Ba + Bb + 1)) <= eps
+              => linarith
+           | (inP (Na, ga)) => ac epsR>0
+           | (inP (Nb, gb)) => bc epsR>0
+           | M => Na ∨ Nb
+      \in inP (2 * M, \lam {n} N<=n =>
+            \have | M<=n : M <= n => linarith
+                  | midA : (midSum a M n).U (eps * finv (Ba + Bb + 1))
+                      => midSum_<=-left join-left a>=0 (ga (join-left <=∘ M<=n))
+                  | midB : (midSum b M n).U (eps * finv (Ba + Bb + 1))
+                      => midSum_<=-left join-right b>=0 (gb (join-right <=∘ M<=n))
+                  | (inP (Ba', haB)) => aB
+                  | (inP (Bb', hbB)) => bB
+            \in midSum-uconv-bound a>=0 b>=0 <=-refl (\lam i => inP (Ba', haB i)) (\lam j => inP (Bb', hbB j)) $
+                  ExUpperReal.+_U_<=.2 (inP
+                    (_, ExUpperReal.*_U_<=.2 (inP (_, midA, epsR>0, Bb, hb n, Bb>0, <=-refl)),
+                     _, ExUpperReal.*_U_<=.2 (inP (Ba, ha n, Ba>0, _, midB, epsR>0, <=-refl)),
+                     sum<=eps)))
+
+{- | Convolution preserves absolute convergence:
+     $a, b \in \ell^1 \implies a \star b \in \ell^1$. -}
+\lemma conv-absConv {A : ExPseudoNormedRing} {a b : Series A} (ac : IsAbsConvSeries a) (bc : IsAbsConvSeries b)
+  : IsAbsConvSeries (conv a b)
+  => series_<= (conv-norm_<= a b) $
+     uconv-conv (\lam _ => norm>=0) (\lam _ => norm>=0)
+       (convUpper-bounded (\lam _ => norm>=0) (\lam n => norm-bounded (a n)) ac)
+       (convUpper-bounded (\lam _ => norm>=0) (\lam n => norm-bounded (b n)) bc)
+       ac bc
+
+{- | Mertens / Cauchy product theorem (symmetric, absolutely-convergent form):
+     the convolution sum converges to the product of the input sums,
+     $$\sum_n (a \star b)_n = \Bigl(\sum_n a_n\Bigr) \cdot \Bigl(\sum_n b_n\Bigr).$$ -}
+\lemma conv-sum {A : ExPseudoNormedRing} {a b : Series A} {sa sb : A}
+                (ac : IsSeriesSum a sa) (bc : IsSeriesSum b sb)
+                (ac-abs : IsAbsConvSeries a) (bc-abs : IsAbsConvSeries b)
+  : IsSeriesSum (conv a b) (sa * sb)
+  => seriesSum_defined (main-bound ac bc ac-abs bc-abs)
+  \where {
+    {- | The convolution at index $n$ decomposes as a partial sum over the
+         strict diagonal plus the final $a_n \cdot b_0$ term:
+         $(a \star b)_n = \sum_{k < n} a_k b_{n -' k} + a_n b_0$. -}
+    \private \lemma conv-decomp {A : Ring} {a b : Series A} {n : Nat}
+      : conv a b n = partialSum (\lam k => a k * b (n -' k)) n + a n * b 0
+      => conv_BigSum a b n
+         *> inv (\peval partialSum (\lam k => a k * b (n -' k)) (suc n))
+         *> partialSum_suc
+         *> pmap (\lam x => partialSum (\lam k => a k * b (n -' k)) n + a n * b x) -'id
+
+    {- | Ring analog of `fubini-inner-eq`.  Distributivity replaces positivity. -}
+    \private \lemma fubini-inner-conv {A : Ring} {a b : Series A} {n : Nat}
+      : partialSum (\lam k => a k * partialSum b (suc n -' k)) n =
+        partialSum (\lam k => a k * partialSum b (n -' k)) n + partialSum (\lam k => a k * b (n -' k)) n
+      => (\peval partialSum (\lam k => a k * partialSum b (suc n -' k)) n)
+         *> AbMonoid.BigSum-ext (\lam i => pmap (\lam x => a i * partialSum b x) (-'_suc (<=-less (fin_< i))) *> pmap (a i *) partialSum_suc *> ldistr)
+         *> BigSum_+
+         *> pmap2 (+)
+              (inv \peval partialSum (\lam k => a k * partialSum b (n -' k)) n)
+              (inv \peval partialSum (\lam k => a k * b (n -' k)) n)
+
+    {- | Ring analog of `fubini-uconv`: the diagonal convolution sum equals the
+         row-sum form, $\sum_{k \leq n} (a \star b)_k = \sum_{k \leq n} a_k \cdot
+         \mathrm{partialSum}\,b\,(n - k)$. Unlike the upper-real version, no
+         positivity is needed. -}
+    \private \lemma fubini-conv {A : Ring} {a b : Series A} {n : Nat}
+      : partialSum (conv a b) n = partialSum (\lam k => a k * partialSum b (n -' k)) n \elim n
+      | 0 => partialSum-empty *> inv partialSum-empty
+      | suc n => partialSum_suc
+          *> pmap2 (+) fubini-conv (conv-decomp {A} {a} {b})
+          *> inv +-assoc
+          *> inv (pmap2 (+) fubini-inner-conv $ pmap (\lam x => a n * partialSum b x) (-'_suc <=-refl *> pmap suc -'id) *> pmap (a n *) partialSum_1)
+          *> inv partialSum_suc
+
+    {- | Key algebraic identity:
+         $A_n s_b - C_n = \sum_k a_k (s_b - B_{n - k})$,
+         where $A_n$, $B_n$, $C_n$ are the $n$-th partial sums of $a$, $b$,
+         $a \star b$.  Stated with `FinSum {Fin n}` (opaque) instead of
+         `BigSum (\new Array A n …)` (which forces `\new Array → ::` peeling
+         at every consumer call site); the body bridges via `FinSum=BigSum`
+         at the boundary. -}
+    \private \lemma An_sb-Cn-eq {A : Ring} {a b : Series A} {sb : A} {n : Nat}
+      : partialSum a n * sb - partialSum (conv a b) n =
+        FinSum (\lam (k : Fin n) => a k * (sb - partialSum b (n -' k)))
+      => pmap (\lam x => x * sb - partialSum (conv a b) n) (\peval partialSum a n)
+         *> pmap2 (-) Semiring.BigSum-rdistr (fubini-conv *> \peval partialSum (\lam k => a k * partialSum b (n -' k)) n)
+         *> inv AbGroup.BigSum_-
+         *> AbMonoid.BigSum-ext (\lam k => inv A.ldistr_-)
+         *> inv FinSum=BigSum
+
+    {- | Full decomposition used in the Mertens proof:
+         $s_a s_b - C_n = (s_a - A_n)\,s_b + \sum_k a_k (s_b - B_{n -' k})$. -}
+    \private \lemma sa_sb-Cn-eq {A : Ring} {a b : Series A} {sa sb : A} {n : Nat}
+      : sa * sb - partialSum (conv a b) n = (sa - partialSum a n) * sb + FinSum (\lam (k : Fin n) => a k * (sb - partialSum b (n -' k)))
+      => equation.ring *> pmap (_ +) (An_sb-Cn-eq {A} {a})
+
+    {- | Uniform bound for $\|s_b - \mathrm{partialSum}\,b\,m\|$: it sits below
+         $\|s_b\| + \sum_{k < m} \|b_k\|$. -}
+    \private \lemma norm_sb_-_psb_<= {A : ExPseudoNormedRing} {b : Series A} {sb : A} {m : Nat}
+      : norm (sb - partialSum b m) <= norm sb + partialSum (\lam k => norm (b k)) m
+      => norm_+ <=∘ <=_+ <=-refl (=_<= norm_negative
+          <=∘ =_<= (pmap norm \peval partialSum b m)
+          <=∘ A.norm_BigSum
+          <=∘ =_<= (inv \peval partialSum (\lam k => norm (b k)) m))
+
+    {- | Head-piece bound (inner sum up to $M$): the norm-product partial sum is
+         bounded by $\varepsilon_2 \cdot \mathrm{partialSum}\,|a|\,M$, via $b$'s
+         convergence past index $N_b$ and the constraint $M + N_b \leq n$
+         (which ensures $N_b \leq n -' k$ for $k < M$). -}
+    \private \lemma head-bound {A : ExPseudoNormedRing} {a b : Series A} {sb : A}
+                               (eps2 : Rat) {M n Nb : Nat} (M+Nb<=n : M + Nb <= n)
+                               (gb : \Pi {m : Nat} -> Nb <= m -> (norm (sb - partialSum b m)).U eps2)
+      : partialSum (\lam k => norm (a k) * norm (sb - partialSum b (n -' k))) M <=
+        eps2 ExUpperRealSemigroup.* partialSum (\lam k => norm (a k)) M
+      => =_<= (\peval partialSum (\lam k => norm (a k) * norm (sb - partialSum b (n -' k))) M)
+          <=∘ ExUpperRealAbMonoid.BigSum_<= (\lam k =>
+              \have hk : k < M => fin_< k
+              \in ExUpperRealSemigroup.<=_* <=-refl $ ExUpperReal.<_<= $ gb $ linarith $ <=_exists {k} {n} linarith)
+          <=∘ =_<= (inv $ ExUpperRealSemigroup.BigSum-rdistr (\lam _ => norm>=0) $ inP (eps2 + 1, linarith))
+          <=∘ =_<= (pmap (ExUpperRealSemigroup.* eps2) (inv \peval partialSum (\lam k => norm (a k)) M))
+          <=∘ =_<= ExUpperRealSemigroup.*-comm
+
+    {- | Tail-piece bound (mid-sum from $M$ to $n$): bounded by
+         $(B_{s_b} + S_b) \cdot \mathrm{midSum}\,|a|\,M\,n$, via the uniform
+         bound on $|s_b - \mathrm{partialSum}\,b\,\_|$. -}
+    \private \lemma tail-bound {A : ExPseudoNormedRing} {a b : Series A} {sb : A}
+                               (C : Rat) {M n : Nat}
+                               (sb-bnd : \Pi (m : Nat) -> (norm (sb - partialSum b m)).U C)
+      : midSum (\lam k => norm (a k) * norm (sb - partialSum b (n -' k))) M n <=
+        C ExUpperRealSemigroup.* midSum (\lam k => norm (a k)) M n
+      => midSum_<= (\lam {k} _ _ => ExUpperRealSemigroup.<=_* <=-refl (ExUpperReal.<_<= (sb-bnd (n -' k))))
+          <=∘ =_<= (pmap (midSum __ M n) $ ext \lam k => ExUpperRealSemigroup.*-comm)
+          <=∘ midSum_<=-ldistr (\lam _ => norm>=0)
+
+    {- | Full bound on the norm of the inner `FinSum`. -}
+    \private \lemma FinSum-bound {A : ExPseudoNormedRing} {a b : Series A} {sb : A}
+                                 (eps2 C : Rat) {M n Nb : Nat} (M<=n : M <= n) (M+Nb<=n : M + Nb <= n)
+                                 (gb : \Pi {m : Nat} -> Nb <= m -> (norm (sb - partialSum b m)).U eps2)
+                                 (sb-bnd : \Pi (m : Nat) -> (norm (sb - partialSum b m)).U C)
+      : norm (FinSum {A} {FinFin n} (\lam k => a k * (sb - partialSum b (n -' k)))) <=
+        eps2 ExUpperRealSemigroup.* partialSum (\lam k => norm (a k)) M
+        + C ExUpperRealSemigroup.* midSum (\lam k => norm (a k)) M n
+      => A.norm_FinSum
+          <=∘ ExUpperRealAbMonoid.FinSum_<= (\lam k => A.norm_*_<=)
+          <=∘ =_<= FinSum=BigSum
+          <=∘ =_<= (inv \peval partialSum (\lam k => norm (a k) * norm (sb - partialSum b (n -' k))) n)
+          <=∘ =_<= (partialSum-split M<=n)
+          <=∘ <=_+ (head-bound eps2 M+Nb<=n gb) (tail-bound C sb-bnd)
+
+    \private \lemma main-bound {A : ExPseudoNormedRing} {a b : Series A} {sa sb : A}
+                               (ac : IsSeriesSum a sa) (bc : IsSeriesSum b sb)
+                               (ac-abs : IsAbsConvSeries a) (bc-abs : IsAbsConvSeries b)
+                               {eps : Rat} (eps>0 : 0 < eps)
+      : ∃ (N : Nat) ∀ {n} (N <= n -> (norm (sa * sb - partialSum (conv a b) n)).U eps)
+      => \let | (inP (Bsb, hsb)) => norm-bounded sb
+              | (inP (Sa, hSa)) => partialSum-uniform-bound (\lam _ => norm>=0) (convUpper-bounded (\lam _ => norm>=0) (\lam n => norm-bounded (a n)) ac-abs) ac-abs
+              | (inP (Sb, hSb)) => partialSum-uniform-bound (\lam _ => norm>=0) (convUpper-bounded (\lam _ => norm>=0) (\lam n => norm-bounded (b n)) bc-abs) bc-abs
+              | D => Bsb + Sa + (Bsb + Sb) + 1
+              | eps2 => eps * finv D
+              | Sa>0 : 0 < Sa => rewrite partialSum-empty in hSa 0
+              | Sb>0 : 0 < Sb => rewrite partialSum-empty in hSb 0
+              | Bsb>0 : 0 < Bsb => norm>=0 hsb
+              | D>0 : 0 < D => linarith
+              | eps2>0 : 0 < eps2 => RatField.<_*_positive_positive eps>0 (RatField.finv>0 D>0)
+              | sum-bound : eps2 * Bsb + (eps2 * Sa + (Bsb + Sb) * eps2) <= eps
+                => \have | identity : eps2 * D = eps
+                            => *-assoc *> pmap (eps *) (RatField.finv-left $ RatField.>_/= D>0) *> ide-right
+                         | expand : eps2 * D = eps2 * Bsb + (eps2 * Sa + (Bsb + Sb) * eps2) + eps2
+                            => equation.cRing
+                  \in linarith
+              | (inP (Na, ga)) => seriesSum_defined.conv ac eps2>0
+              | (inP (Nb, gb)) => seriesSum_defined.conv bc eps2>0
+              | (inP (M, gm)) => ac-abs eps2>0
+         \in inP (Na ∨ (M + Nb), \lam {n} N<=n =>
+              \have | Na<=n : Na <= n => join-left <=∘ N<=n
+                    | M+Nb<=n : M + Nb <= n => join-right <=∘ N<=n
+                    | M<=n : M <= n => <=_+ <=-refl zero<=_ <=∘ join-right <=∘ N<=n
+                    | sb-Bm-bnd m : (norm (sb - partialSum b m)).U (Bsb + Sb)
+                      => norm_sb_-_psb_<= $ ExUpperReal.+_U_<=.2 $ inP (Bsb, hsb, Sb, hSb m, <=-refl)
+                    | term1U : (norm ((sa - partialSum a n) * sb)).U (eps2 * Bsb)
+                      => A.norm_*_<= $ ExUpperReal.*_U_<=.2 $ inP (_, ga Na<=n, eps2>0, Bsb, hsb, Bsb>0, <=-refl)
+                    | normFinSumU : (norm (FinSum (\lam (k : Fin n) => a k * (sb - partialSum b (n -' k))))).U (eps2 * Sa + (Bsb + Sb) * eps2)
+                        => FinSum-bound eps2 (Bsb + Sb) M<=n M+Nb<=n gb sb-Bm-bnd
+                           $ ExUpperReal.+_U_<=.2 $ inP
+                              (eps2 * Sa, ExUpperRealSemigroup.<_*_U-right eps2>0 Sa>0 (hSa M),
+                               (Bsb + Sb) * eps2, ExUpperRealSemigroup.<_*_U-right (linarith : 0 < Bsb + Sb) eps2>0 (gm M<=n),
+                               <=-refl)
+                    | termSumU : (norm ((sa - partialSum a n) * sb + FinSum (\lam (k : Fin n) => a k * (sb - partialSum b (n -' k))))).U eps
+                        => ExUpperReal.U_<= (norm_+ $ ExUpperReal.+_U_<=.2 (inP (_, term1U, _, normFinSumU, <=-refl))) sum-bound
+              \in transport (\lam x => (norm x).U eps) (inv sa_sb-Cn-eq) termSumU)
+  }
+
+{- | Same as `conv-sum`, packaged for the `seriesSum` partial-function API. -}
+\lemma conv-seriesSum {A : CompleteExNormedRing} {a b : Series A} (ac-abs : IsAbsConvSeries a) (bc-abs : IsAbsConvSeries b)
+  : IsSeriesSum (conv a b) (seriesSum a (absConv-isConv ac-abs) * seriesSum b (absConv-isConv bc-abs))
+  => conv-sum (seriesConv-sum (absConv-isConv ac-abs)) (seriesConv-sum (absConv-isConv bc-abs)) ac-abs bc-abs
+
+\lemma conv_fromRat {A : RealBanachAlgebra} (a b : Series Rat) (k : Nat)
+  : conv (\lam n => A.fromRat (a n)) (\lam n => A.fromRat (b n)) k = A.fromRat (conv a b k)
+  => A.FinSum-ext (\lam s => A.fromRat_*) *> inv A.toRatModule.*c_FinSum-rdistr

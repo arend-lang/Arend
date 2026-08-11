@@ -92,7 +92,7 @@ class ArendCompletionContributor : CompletionContributor() {
                         result2 = foundWhere
                         break
                     } else if (ancestor is ArendDefClass) {
-                        if (ancestor.lbrace != null) foundLbrace = true
+                        if (ancestor.dynamicPartContains(o)) foundLbrace = true
                         result2 = if (allowData) foundWhere else !foundWhere && foundLbrace
                         break
                     } else if (ancestor is ArendDefinition<*> && foundWhere) {
@@ -105,7 +105,8 @@ class ArendCompletionContributor : CompletionContributor() {
             }
         }
 
-        basic(and(STATEMENT_END_CONTEXT, definitionWhereModulePattern(false, false)), JointOfStatementsProvider(CLASS_MEMBER_KWS, allowBeforeClassFields = true))
+        basic(and(STATEMENT_END_CONTEXT, definitionWhereModulePattern(false, false), CLASS_MEMBER_START_CONTEXT),
+                JointOfStatementsProvider(CLASS_MEMBER_KWS, allowBeforeClassFields = true))
 
         basic(and(STATEMENT_END_CONTEXT, definitionWhereModulePattern(true, true)), JointOfStatementsProvider(USE_KW_LIST))
 
@@ -192,22 +193,7 @@ class ArendCompletionContributor : CompletionContributor() {
                     super.computePrefix(parameters, resultSet).replace(Regex("\\\\[0-9]+-?"), "")
         })
 
-        basic(LPH_CONTEXT, LPH_KW_LIST) { parameters ->
-            when (val pp = parameters.position.parent.parent) {
-                is ArendSetUniverseAppExpr, is ArendTruncatedUniverseAppExpr ->
-                    pp.children.filterIsInstance<ArendMaybeAtomLevelExpr>().isEmpty()
-                else -> pp.children.filterIsInstance<ArendMaybeAtomLevelExpr>().size <= 1
-            }
-        }
-
-        basic(withParent(ArendLevelExpr::class.java), LPH_KW_LIST) { parameters ->
-            when (parameters.position.parent?.firstChild?.node?.elementType) {
-                MAX_KW, SUC_KW -> true
-                else -> false
-            }
-        }
-
-        basic(LPH_LEVEL_CONTEXT, LPH_LEVEL_KWS)
+        basic(LPH_LEVEL_CONTEXT, LEVEL_KWS)
 
         fun pairingWordCondition(condition: (PsiElement?) -> Boolean, position: PsiElement): Boolean {
             var pos: PsiElement? = position
@@ -344,11 +330,10 @@ class ArendCompletionContributor : CompletionContributor() {
                         withAncestors(*(NEW_EXPR_PREFIX + arrayOf(ArendCaseArg::class.java, ArendCaseExpr::class.java))))), ELIM_KW_LIST)
 
         val isLiteralApp = { argumentAppExpr: ArendArgumentAppExpr ->
-            argumentAppExpr.longNameExpr != null ||
-                    ((argumentAppExpr.children[0] as? ArendAtomFieldsAcc)?.atom?.literal?.refIdentifier != null)
+            ((argumentAppExpr.children[0] as? ArendAtomFieldsAcc)?.atom?.literal?.refIdentifier != null)
         }
 
-        val unifiedLevelCondition = { atomIndex: Int?, forbidLevelExprs: Boolean, threshold: Int ->
+        val unifiedLevelCondition = { atomIndex: Int?, threshold: Int ->
             { cP: CompletionParameters ->
                 var anchor: PsiElement? = if (atomIndex != null) cP.position.ancestors.filterIsInstance<ArendAtomFieldsAcc>().elementAtOrNull(atomIndex) else null
                 var argumentAppExpr: ArendArgumentAppExpr? =
@@ -367,27 +352,16 @@ class ArendCompletionContributor : CompletionContributor() {
                 }
 
                 if (argumentAppExpr != null && anchor != null && isLiteralApp(argumentAppExpr)) {
-                    val longNameExpr = argumentAppExpr.longNameExpr
                     var counter = 0
-                    if (longNameExpr?.pLevelExpr != null) counter++
-                    if (longNameExpr?.hLevelExpr != null) counter++
                     var forbidden = false
-                    val levelsExpr = argumentAppExpr.longNameExpr?.levelsExpr
-                    if (levelsExpr != null) {
-                        if (levelsExpr.pLevelExprs != null) counter++
-                        if (levelsExpr.hLevelExprs != null) counter++
-                        if (forbidLevelExprs) forbidden = true
-                    }
                     for (ch in argumentAppExpr.children) {
                         if (ch == anchor || ch == anchor.parent) break
                         if (ch is ArendAtomArgument) forbidden = true
                     }
                     counter < threshold && !forbidden
-                } else (argumentAppExpr?.longNameExpr?.levelsExpr?.levelsKw != null && isLiteralApp(argumentAppExpr)) || (ATOM_LEVEL_CONTEXT.accepts(cP.position))
+                } else ATOM_LEVEL_CONTEXT.accepts(cP.position)
             }
         }
-
-        basic(or(ARGUMENT_EXPRESSION, ATOM_LEVEL_CONTEXT), LPH_KW_LIST, unifiedLevelCondition.invoke(0, false, 2))
 
         fun trueForPsiOrFragmentContext (condition: (PsiElement) -> Boolean, psi : PsiElement) : Boolean =
             condition(psi) || psi.ancestor<ArendExpressionCodeFragment>()?.context?.let{ condition(it) } == true
@@ -398,15 +372,9 @@ class ArendCompletionContributor : CompletionContributor() {
             trueForPsiOrFragmentContext({psi -> ((psi.parent?.parent as? ArendNewExpr)?.let { it.lbrace != null } ?: true) && (isInDynamicPart(psi) != null)}, cP.position)
         }
 
-        basic(ARGUMENT_EXPRESSION, LEVELS_KW_LIST, unifiedLevelCondition.invoke(0, true, 1))
-        basic(or(ARGUMENT_EXPRESSION_IN_BRACKETS, ATOM_LEVEL_CONTEXT), LPH_LEVEL_KWS, unifiedLevelCondition.invoke(1, false, 2))
+        basic(or(ARGUMENT_EXPRESSION_IN_BRACKETS, ATOM_LEVEL_CONTEXT), LEVEL_KWS, unifiedLevelCondition.invoke(1, 2))
 
-        basic(withAncestors(PsiErrorElement::class.java, ArendArgumentAppExpr::class.java), LPH_LEVEL_KWS, unifiedLevelCondition.invoke(null, false, 2))
-
-        basic(withParent(ArendArgumentAppExpr::class.java), LPH_LEVEL_KWS) { parameters ->
-            val argumentAppExpr: ArendArgumentAppExpr = parameters.position.parent as ArendArgumentAppExpr
-            argumentAppExpr.longNameExpr?.levelsExpr?.levelsKw != null && isLiteralApp(argumentAppExpr)
-        }
+        basic(withAncestors(PsiErrorElement::class.java, ArendArgumentAppExpr::class.java), LEVEL_KWS, unifiedLevelCondition.invoke(null, 2))
 
         basic(afterLeaf(NEW_KW), listOf(EVAL_KW.toString()))
         basic(afterLeaves(EVAL_KW, PEVAL_KW, SCASE_KW), listOf(SCASE_KW.toString()))
@@ -447,17 +415,6 @@ class ArendCompletionContributor : CompletionContributor() {
             cP.position.ancestor<ReferableBase<*>>()?.alias == null
         }
 
-        basic(and(afterLeaf(ID), after(and(withParent(ArendDefIdentifier::class.java), withGrandParents(ArendDefData::class.java, ArendDefInstance::class.java,
-                ArendDefFunction::class.java, ArendDefClass::class.java)))), PH_LEVELS_KW_LIST)
-
-        val levelParamsPattern = withAncestors(ArendLevelIdentifier::class.java, ArendLevelParamsSeq::class.java)
-
-        basic(or(afterLeaf(PLEVELS_KW), after(levelParamsPattern)), HLEVELS_KW_LIST) { cP: CompletionParameters ->
-            val jointData = ArendCompletionParameters(cP)
-            val prevKeyword = jointData.prevElement?.parent?.parent?.findPrevSibling()
-            if (prevKeyword != null) prevKeyword.elementType == PLEVELS_KW else true
-        }
-
         basic(and(afterLeaf(LPAREN), or(withAncestors(ArendNameTele::class.java, ArendDefFunction::class.java),
                 withAncestors(ArendTypeTele::class.java, ArendConstructor::class.java),
                 withAncestors(*(DEF_IDENTIFIER_PREFIX + arrayOf(ArendDefFunction::class.java))),
@@ -473,7 +430,7 @@ class ArendCompletionContributor : CompletionContributor() {
                 and(withAncestors(PsiErrorElement::class.java, ArendArgumentAppExpr::class.java, ArendNewExpr::class.java), after(withParent(ArendAtomLevelExpr::class.java))),
                 after(and(ofType(RBRACE), withParent(ArendNewExpr::class.java)))),
                 elementPattern { o -> o.parentOfType<ArendNewExpr>().let {
-                    it != null && it.withBody == null && (it.argumentAppExpr?.atomFieldsAcc?.atom?.literal?.refIdentifier != null || it.argumentAppExpr?.longNameExpr != null)
+                    it != null && it.withBody == null && (it.argumentAppExpr?.atomFieldsAcc?.atom?.literal?.refIdentifier != null)
                 }}), WITH_KW_LIST, KeywordCompletionBehavior.ADD_BRACES)
 
         basic(after(elementPattern { it.parentOfType<ArendPattern>() != null }), AS_KW_LIST)
@@ -532,7 +489,7 @@ class ArendCompletionContributor : CompletionContributor() {
         private val INSIDE_RETURN_EXPR_CONTEXT = or(withAncestors(*RETURN_EXPR_PREFIX), withAncestors(PsiErrorElement::class.java, ArendAtomFieldsAcc::class.java, ArendReturnExpr::class.java))
 
         private val WHERE_CONTEXT = and(
-                or(STATEMENT_END_CONTEXT, withAncestors(*DEF_IDENTIFIER_PREFIX), withAncestors(ArendLevelIdentifier::class.java, ArendLevelParamsSeq::class.java)),
+                or(STATEMENT_END_CONTEXT, withAncestors(*DEF_IDENTIFIER_PREFIX), withAncestors(ArendLevelIdentifier::class.java)),
                 not(PREC_CONTEXT),
                 not(INSIDE_RETURN_EXPR_CONTEXT),
                 not(afterLeaves(COLON, TRUNCATED_KW, FAT_ARROW, WITH_KW, ARROW, IN_KW, INSTANCE_KW, EXTENDS_KW, DOT, NEW_KW, EVAL_KW, PEVAL_KW, CASE_KW, SCASE_KW, HAVE_KW, LET_KW, HAVES_KW, LETS_KW, WHERE_KW, USE_KW, PIPE, LEVEL_KW, COERCE_KW, PRIVATE_KW, PROTECTED_KW)),
@@ -573,12 +530,9 @@ class ArendCompletionContributor : CompletionContributor() {
                 withAncestors(*(NEW_EXPR_PREFIX + listOf(ArendTupleExpr::class.java, ArendImplicitArgument::class.java, ArendArgumentAppExpr::class.java))))
 
         private val ATOM_LEVEL_CONTEXT =
-               or(withAncestors(*(ATOM_LEVEL_PREFIX + arrayOf(ArendLevelExpr::class.java))),
-                  withAncestors(*(ATOM_LEVEL_PREFIX + arrayOf(ArendMaybeAtomLevelExpr::class.java, ArendExpr::class.java))),
-                  withAncestors(*(ATOM_LEVEL_PREFIX + arrayOf(ArendMaybeAtomLevelExpr::class.java, ArendMaybeAtomLevelExprs::class.java, ArendLevelsExpr::class.java))),
-                  withAncestors(*(ATOM_LEVEL_PREFIX + arrayOf(ArendMaybeAtomLevelExprs::class.java, ArendLevelsExpr::class.java))))
+               withAncestors(*(ATOM_LEVEL_PREFIX + arrayOf(ArendLevelExpr::class.java)))
 
-        private val LPH_CONTEXT = and(withParent(PsiErrorElement::class.java), withGrandParents(ArendSetUniverseAppExpr::class.java, ArendUniverseAppExpr::class.java, ArendTruncatedUniverseAppExpr::class.java))
+        private val LPH_CONTEXT = and(withParent(PsiErrorElement::class.java), withGrandParents(ArendSetUniverseAppExpr::class.java, ArendCatUniverseAppExpr::class.java, ArendUniverseAppExpr::class.java, ArendTruncatedUniverseAppExpr::class.java))
 
         private val LPH_LEVEL_CONTEXT = and(withAncestors(PsiErrorElement::class.java, ArendAtomLevelExpr::class.java))
 
@@ -600,6 +554,16 @@ class ArendCompletionContributor : CompletionContributor() {
             withAncestors(ArendDefIdentifier::class.java, ArendClassField::class.java,  ArendClassStat::class.java, ArendDefClass::class.java),
             withAncestors(ArendRefIdentifier::class.java, ArendLongName::class.java, ArendClassImplement::class.java, ArendDefClass::class.java),
             withAncestors(ArendRefIdentifier::class.java, ArendLongName::class.java, ArendClassImplement::class.java, ArendClassStat::class.java, ArendDefClass::class.java))
+
+        /** Class member keywords may only begin a new class statement, so they are not allowed right after a token
+         *  which must be followed by an expression, by a name or by a modifier of the statement being written */
+        private val CLASS_MEMBER_START_CONTEXT = not(afterLeaves(
+                COLON, ARROW, FAT_ARROW, PIPE, COMMA, LPAREN, DOT,
+                PI_KW, SIGMA_KW, LAM_KW, HAVE_KW, HAVES_KW, LET_KW, LETS_KW, IN_KW, CASE_KW, SCASE_KW, WITH_KW,
+                NEW_KW, EVAL_KW, PEVAL_KW, BOX_KW, ELIM_KW, COWITH_KW, RETURN_KW, AS_KW, LEVEL_KW,
+                FUNC_KW, SFUNC_KW, LEMMA_KW, TYPE_KW, CONS_KW, AXIOM_KW, META_KW, DATA_KW, TRUNCATED_KW,
+                CLASS_KW, RECORD_KW, INSTANCE_KW, EXTENDS_KW, OPEN_KW, MODULE_KW, WHERE_KW, USE_KW,
+                FIELD_KW, PROPERTY_KW, OVERRIDE_KW, DEFAULT_KW, CLASSIFYING_KW, COERCE_KW, PRIVATE_KW, PROTECTED_KW))
 
         private val CLASSFIELD_CONTEXT =
             or(withAncestors(ArendDefIdentifier::class.java, ArendFieldDefIdentifier::class.java, ArendFieldTele::class.java, ArendDefClass::class.java),
@@ -665,7 +629,7 @@ class ArendCompletionContributor : CompletionContributor() {
                 and(or(withAncestors(*RETURN_EXPR_PREFIX), withAncestors(*(NEW_EXPR_PREFIX + arrayOf(ArendReturnExpr::class.java)))), not(allowedInReturnPattern)),
                 after(and(ofType(RBRACE), withParent(ArendWithBody::class.java))), //No keyword completion after \with or } in case expr
                 after(ofType(LAM_KW, HAVE_KW, LET_KW, HAVES_KW, LETS_KW, WITH_KW)), //No keyword completion after \lam or \let
-                after(ofType(SET, PROP_KW, UNIVERSE, TRUNCATED_UNIVERSE, NEW_KW, EVAL_KW, PEVAL_KW)), //No expression keyword completion after universe literals or \new keyword
+                after(ofType(SET, PROP_KW, SET_KW, UNIVERSE, TRUNCATED_UNIVERSE, NEW_KW, EVAL_KW, PEVAL_KW)), //No expression keyword completion after universe literals or \new keyword
                 or(LPH_CONTEXT, LPH_LEVEL_CONTEXT), //No expression keywords when completing levels in universes
                 after(and(ofType(ID), withAncestors(ArendRefIdentifier::class.java, ArendElim::class.java))), //No expression keywords in \elim expression
                 if (allowInBareSigmaOrPiExpressions) PlatformPatterns.alwaysFalse() else after(bareSigmaOrPiPattern), //Only universe expressions allowed inside Sigma or Pi expressions
@@ -674,6 +638,14 @@ class ArendCompletionContributor : CompletionContributor() {
         }
 
         val BASIC_EXPRESSION_KW_PATTERN = and(or(EXPRESSION_CONTEXT), expressionPattern.invoke(false, false))
+
+        /** Checks that [element] belongs to the dynamic part of the class, i.e. lies between its braces.
+         *  Parser error recovery may put the elements which follow the closing brace inside the class itself,
+         *  so the PSI hierarchy alone is not enough to tell the dynamic part from the code after the class */
+        private fun ArendDefClass.dynamicPartContains(element: PsiElement): Boolean {
+            val lbrace = lbrace ?: return false
+            return element.startOffset > lbrace.startOffset && rbrace.let { it == null || element.startOffset < it.startOffset }
+        }
 
         // Contribution to LookupElementBuilder
         fun LookupElementBuilder.withPriority(priority: Double): LookupElement = PrioritizedLookupElement.withPriority(this, priority)

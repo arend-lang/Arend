@@ -1,0 +1,25 @@
+\import Algebra.Group.GroupHom
+\import Algebra.Module
+\import Algebra.Module.Instances
+\import Algebra.Module.LinearMap
+\import Algebra.Monoid.MonoidHom
+\import Algebra.Ring
+\import Category
+\import Category.Meta
+\import Category.PreAdditive
+\import Paths.Meta
+
+\instance LModuleCat.{u} (R : Ring) : Cat (LModule.{u} R)
+  | Hom A B => LinearMap A B
+  | id => LinearMap.id
+  | o => LinearMap.∘
+  | id-left => idp
+  | id-right => idp
+  | o-assoc => idp
+  | univalence => sip \lam f _ => exts (f.func-zro, \lam x x' => f.func-+, \lam x => f.func-negative, \lam e x => f.func-*c)
+
+\instance LModulePreAdditive.{u} (R : Ring) : PreAdditivePrecat (LModule.{u} R) \cowith
+  | Precat => LModuleCat R
+  | AbHom {A} {B} => LinearMapAbGroup A B
+  | l-bilinear => exts \lam _ => func-+
+  | r-bilinear => exts \lam _ => idp

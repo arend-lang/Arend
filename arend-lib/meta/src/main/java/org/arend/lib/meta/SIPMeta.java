@@ -7,8 +7,10 @@ import org.arend.ext.concrete.ConcreteLetClause;
 import org.arend.ext.concrete.expr.ConcreteExpression;
 import org.arend.ext.core.definition.CoreClassDefinition;
 import org.arend.ext.core.definition.CoreClassField;
+import org.arend.ext.core.definition.CoreFunctionDefinition;
 import org.arend.ext.core.expr.CoreClassCallExpression;
 import org.arend.ext.core.expr.CoreExpression;
+import org.arend.ext.core.expr.CoreFunCallExpression;
 import org.arend.ext.core.expr.CoreLamExpression;
 import org.arend.ext.core.ops.NormalizationMode;
 import org.arend.ext.error.TypeMismatchError;
@@ -56,13 +58,12 @@ public class SIPMeta extends BaseMetaDefinition {
   @Override
   public @Nullable TypedExpression invokeMeta(@NotNull ExpressionTypechecker typechecker, @NotNull ContextData contextData) {
     CoreExpression type = contextData.getExpectedType().normalize(NormalizationMode.WHNF);
-    if (!(type instanceof CoreClassCallExpression classCall && classCall.getDefinition().getRef().checkName(Names.EQUIV))) {
+    if (!(type instanceof CoreFunCallExpression funCall && funCall.getDefCallArguments().size() == 3 && funCall.getDefinition().getKind() == CoreFunctionDefinition.Kind.TYPE && funCall.getDefinition().getRef().checkName(Names.IS_EQUIV))) {
       typechecker.getErrorReporter().report(new TypeMismatchError(type, DocFactory.text("an equivalence"), contextData.getMarker()));
       return null;
     }
 
-    CoreExpression isoArg = Names.getAbsImplementation(classCall, Names.EQUIV_MAP, Names.getEquivB());
-    if (isoArg != null) isoArg = isoArg.normalize(NormalizationMode.WHNF);
+    CoreExpression isoArg = funCall.getDefCallArguments().get(1).normalize(NormalizationMode.WHNF);
     CoreExpression cat = isoArg instanceof CoreClassCallExpression ? Names.getClosedImplementation((CoreClassCallExpression) isoArg, Names.CAT_MAP, Names.getMapCat()) : null;
     if (cat == null) {
       typechecker.getErrorReporter().report(new TypeMismatchError(type, DocFactory.text("Iso {_} -> _"), contextData.getMarker()));
@@ -165,7 +166,7 @@ public class SIPMeta extends BaseMetaDefinition {
           .app(factory.core(obTyped), false)
           .app(factory.lam(Arrays.asList(factory.param(jRef1), factory.param(jRef2)), factory.app(factory.ref(typechecker.getPrelude().getEqualityRef()), true, Arrays.asList(
             factory.appBuilder(factory.ref(homFunc.getRef()))
-              .app(factory.app(factory.ref(transport), true, Arrays.asList(factory.lam(Collections.singletonList(factory.param(transportRef)), factory.app(factory.core(homTyped), true, Arrays.asList(eDom, factory.ref(transportRef)))), factory.ref(jRef2), factory.app(factory.core(idTyped), true, Collections.singletonList(eDom)))), false)
+              .app(factory.app(factory.ref(transport), true, Arrays.asList(factory.lam(Collections.singletonList(factory.param(transportRef)), factory.app(factory.core(homTyped), true, Arrays.asList(eDom, factory.ref(transportRef)))), factory.ref(jRef2), factory.core(idTyped))), false)
               .app(factory.ref(extRef))
               .build(),
             factory.app(factory.ref(typechecker.getPrelude().getCoerceRef()), true, Arrays.asList(factory.lam(Collections.singletonList(factory.param(iRef)), factory.app(factory.ref(typechecker.getPrelude().getAtRef()), true, Arrays.asList(factory.ref(jRef2), factory.ref(iRef)))), factory.ref(extRef), factory.ref(typechecker.getPrelude().getRightRef())))))))

@@ -160,9 +160,9 @@
 
     \lemma cycle' {n : Nat} {l : Array \Prop (suc n)} (p : DArray {suc n} (\lam i => l i -> l (suc i Nat.mod suc n))) : TFAE l
       => aux2 (\lam i a => later $ transport l (nat_fin_= $ mod_< $ fin_< (suc i)) (p i a))
-        \lam a => transport l (later $ nat_fin_= $ rewrite (mod_< id<suc) id_mod) (p n a)
+        \lam a => transport l (later $ nat_fin_= $ rewrite (mod_< id<suc) id_mod) (p (n Nat.mod suc n) a)
       \where \private {
-        \lemma aux2 {n : Nat} {l : Array \Prop (suc n)} (p : DArray {n} (\lam i => l i -> l (suc i))) (q : l n -> l 0) : TFAE l \elim n
+        \lemma aux2 {n : Nat} {l : Array \Prop (suc n)} (p : DArray {n} (\lam i => l i -> l (suc i))) (q : l (n Nat.mod suc n) -> l 0) : TFAE l \elim n
           | 0 => \lam (0) (0) a => a
           | suc n =>
             \have t => aux2 {n} {taild l} (\lam i => p (suc i)) \lam a => p 0 $ q $ transport l (nat_fin_= $ pmap suc (mod_< id<suc) *> inv (mod_< id<suc)) a

@@ -84,7 +84,7 @@ abstract class AbstractGenerateFunctionIntention : BaseIntentionAction() {
         val expressions = listOfNotNull(
             selectionResult.expectedType,
             selectionResult.bodyCore,
-            *selectionResult.additionalArguments.map { it.typeExpr }.toTypedArray()
+            *selectionResult.additionalArguments.map { it.type }.toTypedArray()
         )
         val freeVariables = FreeVariablesWithDependenciesCollector.collectFreeVariables(expressions)
             .filter { freeArg -> freeArg.first.name !in selectionResult.additionalArguments.map { it.name } }
@@ -130,7 +130,7 @@ abstract class AbstractGenerateFunctionIntention : BaseIntentionAction() {
             .collapseTelescopes()
             .joinToString(" ") { (bindings, explicitness) ->
                 val bindingsRepresentation = bindings.joinToString(" ") { it.name }
-                val typeRepresentation = prettyPrinter(bindings.first().typeExpr)
+                val typeRepresentation = prettyPrinter(bindings.first().type)
                 " " + "$bindingsRepresentation : $typeRepresentation".let(explicitness::surround)
             }
 
@@ -186,7 +186,7 @@ abstract class AbstractGenerateFunctionIntention : BaseIntentionAction() {
 
     private fun getArgumentConcrete(binding: Pair<Binding, ParameterExplicitnessState>): Concrete.Expression {
         if (binding.first is ClassCallExpression.ClassCallBinding) {
-            val def = binding.first.typeExpr as ClassCallExpression
+            val def = binding.first.type as ClassCallExpression
             return Concrete.TypedExpression(null,
                 Concrete.ThisExpression(null, null),
                 Concrete.ReferenceExpression(null, LocalReferable(def.definition.name))
@@ -201,7 +201,7 @@ abstract class AbstractGenerateFunctionIntention : BaseIntentionAction() {
             return null
         }
         val thisMapping: Map<Variable, Concrete.Expression> = classBindings.associateWithWellTyped {
-            Concrete.ReferenceExpression(null, DataLocalReferable(it.typeExpr, "this"))
+            Concrete.ReferenceExpression(null, DataLocalReferable(it.type, "this"))
         }
         return Supplier { MapReferableRenamer(thisMapping) }
     }
@@ -211,7 +211,7 @@ abstract class AbstractGenerateFunctionIntention : BaseIntentionAction() {
         selection: SelectionResult
     ): List<Pair<Binding, ParameterExplicitnessState>> {
         val mappedAdditionalArguments = selection.additionalArguments.map {
-            TypedBinding(it.name, it.typeExpr) to it.isExplicit.toExplicitnessState()
+            TypedBinding(it.name, it.type) to it.isExplicit.toExplicitnessState()
         }
         return freeVariables + mappedAdditionalArguments
     }

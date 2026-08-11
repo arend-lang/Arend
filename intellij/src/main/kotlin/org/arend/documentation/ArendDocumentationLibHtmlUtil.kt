@@ -1,8 +1,9 @@
 package org.arend.documentation
 
+import com.intellij.codeInsight.daemon.DaemonCodeAnalyzer
+import com.intellij.codeInsight.daemon.impl.DaemonCodeAnalyzerImpl
 import com.intellij.codeInsight.daemon.impl.DaemonProgressIndicator
-import com.intellij.codeInsight.daemon.impl.HighlightingSessionImpl
-import com.intellij.codeInsight.multiverse.anyContext
+import com.intellij.codeInsight.daemon.impl.HighlightInfo
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.application.runReadAction
 import com.intellij.openapi.components.service
@@ -13,7 +14,6 @@ import com.intellij.openapi.fileEditor.OpenFileDescriptor
 import com.intellij.openapi.progress.ProgressManager
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.project.ProjectManager
-import com.intellij.openapi.util.TextRange
 import com.intellij.openapi.vfs.*
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiFile
@@ -25,7 +25,6 @@ import org.arend.error.DummyErrorReporter
 import org.arend.ext.module.ModuleLocation
 import org.arend.ext.module.ModulePath
 import org.arend.highlight.ArendHighlightingColors
-import org.arend.highlight.ArendHighlightingPass
 import org.arend.highlight.ArendSyntaxHighlighter
 import org.arend.module.config.ArendModuleConfigService
 import org.arend.psi.ArendFile
@@ -37,7 +36,6 @@ import org.arend.util.FileUtils.EXTENSION
 import org.arend.util.allModules
 import org.arend.util.register
 import java.io.File
-import java.util.concurrent.atomic.AtomicInteger
 
 const val HTML_EXTENSION = ".html"
 const val HTML_DIR_EXTENSION = "HTML"
@@ -186,20 +184,16 @@ private fun generateHtmlForArend(
     val descriptor = OpenFileDescriptor(project, arendFile.virtualFile)
     val editor = fileEditorManager.openTextEditor(descriptor, false) ?: return maxId
 
-    var highlightingPass: ArendHighlightingPass? = null
     val indicator = DaemonProgressIndicator()
-    val range = TextRange(0, editor.document.textLength)
-    HighlightingSessionImpl.createHighlightingSession(arendFile, anyContext(), editor, scheme, indicator, AtomicInteger())
-    ApplicationManager.getApplication().executeOnPooledThread {
-        ProgressManager.getInstance().runProcess({
-            highlightingPass = ArendHighlightingPass(arendFile, editor, range)
+    val highlightInfos = ApplicationManager.getApplication().executeOnPooledThread<List<HighlightInfo>> {
+        ProgressManager.getInstance().runProcess<List<HighlightInfo>>({
             runReadAction {
-                highlightingPass.collectInformationWithProgress(indicator)
+                (DaemonCodeAnalyzer.getInstance(project) as DaemonCodeAnalyzerImpl).runMainPasses(arendFile, editor.document, indicator)
             }
         }, indicator)
     }.get()
 
-    val highlights = highlightingPass?.getHighlights()?.toList()?.sortedBy { it.startOffset } ?: emptyList()
+    val highlights = highlightInfos.sortedBy { it.startOffset }
     var indexHighlight = 0
 
     val relativePathToCurDir = File(containingDir.virtualFile.path).toRelativeString(File(arendLibProjectBasePath))

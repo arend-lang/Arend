@@ -15,9 +15,9 @@ class ArendShowErrorsPanelAction : ToggleAction(
     override fun getActionUpdateThread(): ActionUpdateThread = ActionUpdateThread.BGT
 
     override fun isSelected(e: AnActionEvent): Boolean =
-            e.project?.service<ArendMessagesService>()?.isShowErrorsPanel?.get() ?: true
+            e.project?.service<ArendMessagesService>()?.isShowErrorsOrInfoPanel?.get() ?: true
 
     override fun setSelected(e: AnActionEvent, state: Boolean) {
-        e.project?.service<ArendMessagesService>()?.isShowErrorsPanel?.set(state)
+        e.project?.service<ArendMessagesService>()?.isShowErrorsOrInfoPanel?.set(state)
     }
 }

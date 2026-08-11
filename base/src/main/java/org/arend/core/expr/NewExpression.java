@@ -1,10 +1,8 @@
 package org.arend.core.expr;
 
 import org.arend.core.definition.ClassField;
-import org.arend.core.definition.UniverseKind;
 import org.arend.core.expr.visitor.ExpressionVisitor;
 import org.arend.core.expr.visitor.ExpressionVisitor2;
-import org.arend.core.sort.Sort;
 import org.arend.ext.core.expr.CoreExpressionVisitor;
 import org.arend.ext.core.expr.CoreNewExpression;
 import org.arend.prelude.Prelude;
@@ -39,7 +37,7 @@ public class NewExpression extends Expression implements CoreNewExpression {
           }
           implementations.put(field, impl);
         }
-        myClassCall = new ClassCallExpression(classCall.getDefinition(), classCall.getLevels(), implementations, Sort.PROP, UniverseKind.NO_UNIVERSES);
+        myClassCall = new ClassCallExpression(classCall.getDefinition(), classCall.getLevels(), implementations);
       } else {
         myRenewExpression = renewExpression;
         myClassCall = classCall;
@@ -120,7 +118,7 @@ public class NewExpression extends Expression implements CoreNewExpression {
       }
       implementations.put(field, impl);
     }
-    return new ClassCallExpression(myClassCall.getDefinition(), myClassCall.getLevels(), implementations, Sort.PROP, UniverseKind.NO_UNIVERSES);
+    return new ClassCallExpression(myClassCall.getDefinition(), myClassCall.getLevels(), implementations);
   }
 
   @Override

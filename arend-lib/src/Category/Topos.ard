@@ -1,411 +1,187 @@
-\import Algebra.Meta
 \import Category
---\import Category.Adjoint
 \import Category.CartesianClosed
-\import Category.Coreflection
 \import Category.Limit
---\import Category.Subobj
---\import Category.SubobjectPoset
+\import Category.Subobj
 \import Equiv
-\import Function (IsInj)
 \import Function.Meta
 \import Logic
+\import Logic.Meta
+\import Logic.Unique
 \import Meta
---\import Order.PartialOrder
+\import Order.PartialOrder
 \import Paths
 \import Paths.Meta
---\import Relation.Equivalence
+\import Relation.Equivalence
 \import Set.SetCategory
---\import Topology.Locale
 \open PrecatWithBprod
 
-\class ToposPrecat \extends FinCompletePrecat, CartesianClosedPrecat {
-  -- subobject classifier map
+\class PrecatWithSubobjClassifier \extends FinCompletePrecat {
+  | Omega : Ob
+  | Omega-true : Subobj Omega
+  | Omega-univ {c : Ob} : IsEquiv {Hom c Omega} {Subobj c} (\lam h => subobjPullback h Omega-true)
 
-  | subobj-classifier \alias omega : Ob
-  | true-map : Hom terminal omega
+  \func Omega-char {c : Ob} (s : Subobj c) : Hom c Omega
+    => IsEquiv.ret Omega-univ s
 
-  -- characteristic maps
+  \lemma Omega-char-unique {c : Ob} {h1 h2 : Hom c Omega} (p : subobjPullback h1 Omega-true = subobjPullback h2 Omega-true) : h1 = h2
+    => IsEquiv.isInj Omega-univ p
 
-  | char-map {S B : Ob} (m : Mono {\this} {S} {B}) : Hom B omega
-  | char-pullback {S B : Ob} (m : Mono {\this} {S} {B}) : Pullback {\this} (char-map m) true-map S m terminalMap
-  | char-unique {S B : Ob} {m : Mono {\this} {S} {B}} {phi : Hom B omega}
-                (phi-pull : Pullback phi true-map S m terminalMap) : phi = char-map m
-
-  -- omega is exponentiable
-
-  | p-exponential : isExponentiable omega
-
-  \default p-exponential => CartesianClosedPrecat.is-exponentiable omega
-
-  \use \func Power (B : Ob) : Ob
-    => p-exponential B
-
-  \use \func belongs {B : Ob} : Hom (Bprod (Power B) B) omega
-    => corefl-map {p-exponential B}
-
-  \use \func p-transpose {A B : Ob} (f : Hom (Bprod A B) omega) : Hom A (Power B)
-    => ret {isCoreflection {p-exponential B}} f
-
-  \use \lemma p-transpose-univ {A B : Ob} (f : Hom (Bprod A B) omega) : f = belongs ∘ (prodMap (p-transpose f) (id B))
-    => inv $ Equiv.f_ret {isCoreflection {p-exponential B}} f
-
-  \use \lemma p-transpose-unique {A B : Ob} {f : Hom (Bprod A B) omega} {g : Hom A (Power B)} (comm : f = belongs ∘ prodMap g (id B)) : g = p-transpose f
-    => Equiv.adjoint {isCoreflection {p-exponential B}} (inv comm)
-
-  \use \func anti-transpose  {A B : Ob} (g : Hom A (Power B)) : Hom (Bprod A B) omega
-    => belongs ∘ (prodMap g (id B))
-
-  \use \lemma antitranspose-eq {A B : Ob} (f : Hom (Bprod B A) omega) : f = anti-transpose (p-transpose f)
-    => p-transpose-univ f
-
-  \use \lemma transpose-inj {A B : Ob} {f g : Hom (Bprod A B) omega} (e : p-transpose f = p-transpose g) : f = g
-    => p-transpose-univ f *> pmap (belongs ∘ prodMap __ (id B)) e *> (inv $ p-transpose-univ g)
-
---  \func subobject-equiv (C : Ob) : Equiv {SubobjectPoset C} {Hom C omega} => \new QEquiv {
---    | f => from-subobj
---    | ret m => in~ (from-char-map m)
---    | ret_f sub =>
---      \let equiv => ~-equiv {SubobjPreorder C} {Preorder.EquivRel.~} \in
---      \case\elim sub \with {
---      | in~ a => \case\elim a \with {
---        | subobj sub m => equiv (from-char-map (from-subobj (in~ (subobj sub m)))) (subobj sub m)
---            $ (inP (Iso.hinv {pb-of-char-iso m}, unfold $ unfold Pullback.unique.p-map $
---                                                          \let s => pbBeta1 {char-pullback m} {sub} {Mono.f {m}} {terminalMap} \in
---                                                          unfold at s $ {?}), {?}) -- this is the same as to say that pullbacks are equal
---      }
---  }
---    | f_sec c => inv $ char-unique $ unfold {?}
---  }
---    \where {
---      \func from-subobj (x : SubobjectPoset C) : Hom C omega
---      \elim x
---        | in~ a => \case\elim a \with {
---          | subobj _ m => char-map m
---        }
---        | ~-equiv x y (r1, r2) => \case\elim x, \elim y, \elim r1, \elim r2 \with {
---          | subobj a m1, subobj b m2, eq1, eq2 =>
---            \let | (h1, eq1') => SubobjPreorder.extractMap {_} {C} m2 eq1
---                 | (h2, eq2') => SubobjPreorder.extractMap {_} {C} m1 eq2
---                 | iso => SubobjPreorder.antisymmetric m2 m1 (inP $ (h2, eq2')) (inP $ (h1, eq1'))
---                 | iso-mono => Iso.isMono {iso}
---            \in
---              char-unique (\new Pullback {
---                | pbCoh => rewriteI (eq2', o-assoc) $ rewrite (pbCoh {char-pullback m1}, o-assoc, terminate) idp
---                | pbMap {w} p1 n coh => h1 ∘ pbMap {char-pullback m1} {w} p1 n coh
---                | pbBeta1 => rewriteI o-assoc $ rewrite (eq1', pbBeta1 {char-pullback m1}) idp
---                | pbBeta2 => terminal-unique
---                | pbEta {w} {g} {h} coh _ =>
---                  \let | c => pbEta {char-pullback m1} {w} {h2 ∘ g} {h2 ∘ h} (rewrite (inv o-assoc, eq2', inv o-assoc, eq2') coh) terminal-unique
---                  \in
---                    iso-mono {w} {g} {h} c
---              })
---        }
-
---      \func pb-of-char-iso {B C : Ob} (m : Mono {\this} {B} {C})
---        => Pullback.unique (char-map m) true-map (char-pullback m) (pullback (char-map m) true-map)
---
---      \func from-char-map (m : Hom C omega) : SubobjPreorder C =>
---        \let
---          | true-mono => global-section true-map
---          | pb-of-mono => Pullback.pullback-of-mono' {_} {_} {_} {_} {_} {true-mono} (pullback m true-map)
---        \in
---          subobj (Pullback.apex {pullback m true-map}) pb-of-mono
---    }
-
-  \use \func internal-equality \alias eq (B : Ob) : Hom (Bprod B B) omega
-    => char-map (diagonal.isSplitMono B)
-
-  \use \func singleton (B : Ob) : Hom B (Power B)
-    => p-transpose (eq B)
-
-  -- 'char-rel' gives the characteristic map of the functional relation corresponding to f.
-
-  \use \func char-rel {B C : Ob} (f : Hom B C) : Hom (Bprod B C) omega
-    => eq C ∘ prodMap f (id C)
-
-  \use \lemma eqq-p-transpose-s {B X : Ob} (b : Hom X B) : singleton B ∘ b = p-transpose (char-rel b)
-    => p-transpose-unique {\this} {_} {_} {char-rel b} $ rewrite (prod-id-right _ _, inv o-assoc, inv $ p-transpose-univ _) idp
-
-  \private \use \lemma pbBeta2' {B X : Ob} {b : Hom X B} (w : Ob) (p1 : Hom w (Bprod X B))
-                 (p2 : Hom w B) (c : prodMap b (id B) ∘ p1 = diagonal B ∘ p2) : b ∘ (proj1 ∘ p1) = p2 =>
-    \let left : proj1 ∘ (diagonal B ∘ p2) = p2 => rewriteI o-assoc $ rewrite (beta1 _ _) equation
-         | right : proj1 ∘ (prodMap b (id B) ∘ p1) = b ∘ (proj1 ∘ p1) =>
-           rewriteI o-assoc $ rewrite (beta1 _ _) o-assoc
-    \in
-      inv right *> pmap (proj1 ∘ __) c *> left
-
-  \private \use \func left-square {B X : Ob} {b : Hom X B} : Pullback (prodMap b (id B)) (diagonal B) X (pair (id X) b) b \cowith
-    | pbCoh => pair-unique
-        (run {
-          rewriteI o-assoc,
-          rewrite (beta1 _ _, o-assoc, beta1 _ _, id-right),
-          rewriteI o-assoc,
-          rewrite (beta1 _ _, id-left),
-          idp
-        })
-        (run {
-          rewriteI o-assoc,
-          rewrite (beta2 _ _),
-          rewriteI o-assoc, rewrite (beta2 _ _, o-assoc, beta2 _ _) equation
-        })
-    | pbMap p1 _ _ => proj1 ∘ p1
-    | pbBeta1 {w} {p1} {p2} {c} =>
-      \let
-        left : proj2 ∘ (diagonal B ∘ p2) = p2 => rewriteI o-assoc $ rewrite (beta2 _ _) equation
-        | right : proj2 ∘ (prodMap b (id B) ∘ p1) = proj2 ∘ p1 => rewriteI o-assoc $ rewrite (beta2 _ _) equation \in
-        pair-unique
-            (run {
-              rewriteI o-assoc,
-              rewrite (beta1 _ _ ),
-              equation
-            })
-            (run {rewriteI o-assoc,
-                  rewrite (beta2 _ _),
-                  pbBeta2' w p1 p2 c *> inv left *> pmap (proj2 ∘ __) (inv c) *> right
-            })
-    | pbBeta2 {w} {p1} {p2} {c} => pbBeta2' w p1 p2 c
-    | pbEta {_} {h1} {h2} c _ =>
-      \let p2 : h1 = proj1 ∘ (pair (id X) b ∘ h1) => rewriteI o-assoc $ rewrite (beta1 _ _) equation
-           | p1 : proj1 ∘ (pair (id X) b ∘ h2) = h2  => rewriteI o-assoc $ rewrite (beta1 _ _) equation
-      \in p2 *> pmap (proj1 ∘ __) c *> p1
-
-  \private \use \func right-square {B : Ob} : Pullback {\this} {Bprod B B} {terminal} {omega} (eq B) true-map B (diagonal B) terminalMap
-    => char-pullback (diagonal.isSplitMono B)
-
-  \private \use \func full-square {B X : Ob} (b : Hom X B) : Pullback {\this} (char-rel b) true-map X (pair (id X) b)
-    => pullback-lemma right-square left-square
-
-  \use \lemma singleton-mono (B : Ob) : Mono (singleton B) \cowith
-    | isMono {X} {b} {b'} sb=sb' =>
-      \let
-        | c : char-rel b = char-rel b' => transpose-inj ((inv $ eqq-p-transpose-s b) *> sb=sb' *> eqq-p-transpose-s b')
-        | b-square => full-square b
-        | b'-square : Pullback {\this} (char-rel b) true-map X (pair (id X) b') =>
-          transport (Pullback {\this} __ true-map X (pair (id X) b')) (inv c) (full-square b')
-        | h-iso : Iso {\this} {X} {X} => Pullback.unique (char-rel b) true-map b-square b'-square
-        | pb~pb*h : pair (id X) b = pair (id X) b' ∘ h-iso => inv (Pullback.unique.p-beta1 b'-square b-square)
-        | c' : proj1 ∘ (pair (id X) b' ∘ h-iso.f) = h-iso.f => rewriteI o-assoc $ rewrite (beta1 _ _) id-left
-        | h~1 : id X = h-iso.f => inv (beta1 _ _) *> pmap (proj1 ∘ __) pb~pb*h *> c'
-        | b~b'h : b = b' ∘ h-iso.f => inv (beta2 _ _) *> pmap (proj2 ∘ __) pb~pb*h *> (rewriteI o-assoc $ rewrite (beta2 _ _) idp)
-      \in b~b'h *> rewriteI h~1 id-right
-
-  \use \func is-singleton {B : Ob} : Hom (Power B) omega => char-map (singleton-mono B)
-
-  \use \func true-over-obj {B : Ob} : Hom B omega => true-map ∘ terminalMap
-
-  \use \lemma monic-is-regular  {X Y : Ob} (m : Mono {\this} {X} {Y}) : Equalizer true-over-obj (char-map m) X m \cowith
-    | equal =>
-      rewrite (pbCoh {char-pullback m}, o-assoc) $
-      rewrite terminal-unique idp
-    | isEqualizer _ => \new QEquiv {
-      | ret (h, com) => pbMap {char-pullback m} h terminalMap
-          (rewriteI com $ rewrite o-assoc $ rewrite terminal-unique idp)
-      | ret_f _ => pbEta {char-pullback m} (rewrite (pbBeta1 {char-pullback m}) $ idp)
-          (rewrite (pbBeta2 {char-pullback m}) terminal-unique)
-      | f_sec (h, com) => exts $ rewrite (pbBeta1 {char-pullback m}) idp
-    }
-
-  \use \lemma monic+epi=iso {X Y : Ob} (m : Mono {\this} {X} {Y}) (m-is-epi : isEpi {\this} {X} {Y} m)
-    : Iso {\this} {X} {Y} m =>
-    \let equalizer => monic-is-regular m
-         | true=char-m : true-over-obj = char-map m => m-is-epi (Equalizer.equal {equalizer} : true-over-obj ∘ m.f = char-map m ∘ m)
-         | equalizer-f : Equalizer (char-map m) (char-map m) => transport (Equalizer __ (char-map m) X m) true=char-m equalizer
-    \in
-      Equalizer.equalizer-iso equalizer-f
-
-  \use \func global (X : Ob) => Hom terminal X
-
-  \use \func namePower {A : Ob} (phi : Hom A omega) : global (Power A) => p-transpose (phi ∘ terminal-prod-left.hinv)
-
-  -- Topos is cartesian closed
-
-  {-
-  Consider Power (B x C) as the type of binary relations between elements of B and C.
-  Then, 'image' takes a relation S and an element b of B and returns the subset of C that corresponds to b.
-  -}
-
-  \use \func image {B C : Ob} : Hom (Bprod (Power $ Bprod B C) B) (Power C) =>
-    p-transpose $ belongs {_} {Bprod B C} ∘ associator-iso.f
-
-  -- 'single-image-test' takes a relation S and element b of B and tests if the image of relation is a singleton subset.
-
-  \use \func is-image-single {B C : Ob} : Hom (Bprod (Power $ Bprod B C) B) omega => is-singleton ∘ image
-
-  {-
-  The idea: a relation S between B and C is functional iff all elements of B have a single image under S.
-  'all-with-single-img' returns the subset consising of elements of B with singleton images.
-  -}
-
-  \use \func all-with-single-img {B C : Ob} : Hom (Power $ Bprod B C) (Power B) => p-transpose is-image-single
-
-  -- Finally, the apex of the pullback gives the type of functional relations between B and C.
-
-  \use \func graphs {B C : Ob} : Pullback (namePower (true-over-obj {\this} {B})) (all-with-single-img {\this} {B} {C})
-    => pullback (namePower (true-over-obj {\this} {B})) (all-with-single-img {\this} {B} {C})
+  \sfunc Omega-true-map : Hom terminal Omega
+    => char.center.1
     \where {
-      \use \func apex (B C : Ob) : Ob => Pullback.apex {graphs {_} {B} {C} }
-
-      \use \func map {B C : Ob} : Hom (graphs.apex B C) (Power $ Bprod B C) => Pullback.pbProj2 {graphs {_} {B} {C}}
+      \protected \lemma char : Contr (\Sigma (t : Hom terminal Omega) (Omega-true = inso~ (point-splitMono {_} {_} {t})))
+        => cases (Omega-true arg addPath) \with {
+          | in~ m, p =>
+            \have term : IsTerminal m.dom => \lam {c} => isProp=>isContr
+                    (\lam h1 h2 => m.isMono $ Omega-char-unique $ subobjPullback_o *> subobjPullback-top (subobjPullback-self p) *> inv (subobjPullback-top (subobjPullback-self p)) *> inv subobjPullback_o) $
+                    (subobjPullback-char {_} {_} {idIso} p $ IsEquiv.f_ret Omega-univ).center.pbProj2
+            \in isProp=>isContr (\lam t t' => ext \case =_<= (inv t.2 *> t'.2) \with {
+              | inP r => inv r.2 *> pmap (_ ∘) terminal-unique *> id-right
+            }) (m.f ∘ term.center, <=-antisymmetric (inP (terminalMap, o-assoc *> pmap (_ ∘) (isContr=>isProp term _ _) *> id-right)) (inP (term.center, idp)))
+        }
     }
 
-  \use \lemma terminate {B C : Ob} {f : Hom B C} : terminalMap ∘ f = terminalMap => terminal-unique
+  \lemma Omega-true_Omega-true-map : Omega-true = inso~ (point-splitMono {_} {_} {Omega-true-map})
+    => rewrite (\peval Omega-true-map) Omega-true-map.char.center.2
 
-  \private \use \lemma eval_comm {B C : Ob} : char-map (singleton-mono C) ∘ (image ∘ prodMap graphs.map (id B)) = true-map ∘ terminalMap =>
-    run {
-      rewriteI o-assoc ,
-      rewrite (antitranspose-eq _ : char-map (singleton-mono C) ∘ image = belongs ∘ prodMap all-with-single-img (id B)),
-      rewrite o-assoc,
-      rewriteI (prod-id-right, pbCoh {graphs}),
-      rewrite prod-id-right,
-      rewriteI (o-assoc, antitranspose-eq _),
-      rewrite (o-assoc, o-assoc, terminate) idp
-    }
+  \sfunc Omega-pullback (m : Mono {\this}) : Pullback (Omega-char (inso~ m)) Omega-true-map m.dom m
+    => (subobjPullback-char {_} {point-splitMono} Omega-true_Omega-true-map $ IsEquiv.f_ret Omega-univ {inso~ m}).center
 
-  \use \func eval {B C : Ob} : Hom (Bprod (graphs.apex B C) B) C
-    => pbMap {char-pullback $ singleton-mono C} (image ∘ prodMap graphs.map (id B)) terminalMap eval_comm
-
-  \private \use \func h {A B C : Ob} (f : Hom (Bprod A B) C) : Hom A (Power $ Bprod B C)
-    => p-transpose (char-rel f ∘ associator-iso.hinv)
-
-  \use \lemma ptranspose-eqq-eq {A B C : Ob} (f : Hom (Bprod A B) C) : p-transpose (char-rel f) = image ∘ prodMap (h f) (id B)
-    => run {
-      inv,
-      p-transpose-unique {\this} {_} {_} {char-rel f} {_},
-      rewrite prod-id-right,
-      rewriteI (o-assoc, antitranspose-eq {\this} _),
-      rewrite o-assoc,
-      rewrite (inv $ associtor-prod _ _ _,  inv o-assoc, prod-id, inv $ antitranspose-eq _),
-      rewrite (o-assoc, Iso.hinv_f {associator-iso}, id-right) idp
-    }
-
-  \use \lemma singleton-is-single {C : Ob} : is-singleton ∘ singleton C = true-over-obj
-    => pbCoh {char-pullback (singleton-mono C)}
-
-  \private \use \func transpose' {A B C : Ob} (f : Hom (Bprod A B) C) : Hom A (graphs.apex B C)
-    => \have | step1 => pmap (`∘ f) (inv singleton-is-single) *> o-assoc
-             | step2 : is-image-single ∘ prodMap (h f) (id B) = is-singleton ∘ (image ∘ prodMap (h f) (id B)) => o-assoc
-             | step3 : all-with-single-img ∘ (h f) = p-transpose (is-image-single ∘ prodMap (h f) (id B))
-                     => p-transpose-unique $ unfold $ rewrite prod-id-right $ rewriteI (o-assoc, antitranspose-eq _) idp
-             | step4 : true-over-obj {_} {B} ∘ proj2 {_} {A} {B} = true-over-obj ∘ f
-                     => unfold true-over-obj $ rewrite (o-assoc, terminate, o-assoc, terminate) idp
-             | step5 => run {
-                          p-transpose-unique {\this} {_} {_} {true-over-obj {_} {B} ∘ proj2 {_} {A} {B}} {namePower (true-over-obj {_} {B}) ∘ terminalMap},
-                          rewrite (prod-id-right, inv o-assoc, inv $ antitranspose-eq _),
-                          rewrite (o-assoc, terminate, o-assoc, o-assoc, terminate),
-                          idp
-                        }
-       \in pbMap terminalMap (h f) $ unfold (Pullback.f, Pullback.g) $ rewrite (step5, step4, step3, step2, step1, eqq-p-transpose-s _, ptranspose-eqq-eq f) idp
-
-  \private \use \lemma transpose-univ' {A B C : Ob} (f : Hom (Bprod A B) C) : f = eval ∘ prodMap (transpose' f) (id B) =>
-    \let lem  : singleton C ∘ f = image ∘ prodMap (graphs.map ∘ transpose' f) (id B) =>
-      rewrite (pbBeta2 {graphs}, eqq-p-transpose-s _) (ptranspose-eqq-eq _)
-    \in
-      pbEta {char-pullback (singleton-mono C)}
-          (rewrite (inv o-assoc, pbBeta1 {char-pullback (singleton-mono C)}) $ rewrite (o-assoc, inv $ prod-id-right _ _) lem)
-          terminal-unique
-
-  \private \use \lemma transpose-unique' {A B C : Ob} {f : Hom (Bprod A B) C} {g : Hom A (graphs.apex B C)} (s : f = eval ∘ prodMap g (id B)) : transpose' f = g
-    => graphs.pbEta terminal-unique $ run {
-      unfold,
-      rewrite (pbBeta2 {graphs}),
-      unfold h, inv,
-      p-transpose-unique {\this} {_} {_} {eq C ∘ prodMap f (id C) ∘ hinv {associator-iso}} {pbProj2 ∘ g},
-      \have | step1 : singleton C ∘ f = image ∘ (prodMap (graphs.map {_} {B} {C} ∘ g) (id B))
-                    => rewrite (s, inv o-assoc, pbBeta1 {char-pullback (singleton-mono C)}, o-assoc, inv $ prod-id-right _ _) idp
-            | step2 : char-rel f = belongs {_} {Bprod B C} ∘ prodMap (graphs.map ∘ g) (id (Bprod B C)) ∘ associator
-                    => run {
-                      transpose-inj,
-                      rewrite (inv $ eqq-p-transpose-s _, step1),
-                      p-transpose-unique {\this} {_} {_} {belongs ∘ prodMap (graphs.map ∘ g) (id (Bprod B C)) ∘ associator} {image ∘ prodMap (graphs.map ∘ g) (id B)},
-                      rewrite {2} (prod-id-right _ _),
-                      rewriteI o-assoc,
-                      rewrite (inv $ antitranspose-eq _ : belongs ∘ prodMap image (id C) = belongs ∘ associator-iso.f),
-                      rewrite {2} o-assoc ,
-                      rewrite (inv $ associtor-prod _ _ _, prod-id),
-                      o-assoc
-                    },
-      rewrite step2,
-      rewrite (o-assoc, associator-iso.f_hinv, id-right),
-      idp
-    }
-
-  \use \func exp-adjoint (B : Ob) : RightAdjointCoreflection \this \this (bprodFunctorRight B) \cowith
-    | coreflection C => \new Coreflection (bprodFunctorRight B) C {
-      | Coreflected => graphs.apex B C
-      | corefl-map => eval
-      | isCoreflection => \new QEquiv {
-        | ret => transpose'
-        | ret_f _ => transpose-unique' idp
-        | f_sec g => inv $ transpose-univ' g
-      }
-    }
-
-  \default exp (B : Ob) : isExponential {\this} B => RightAdjointCoreflection.toAdjoint (exp-adjoint B)
+  \lemma mono-regular (m : Mono {\this}) : IsRegularMono m.f
+    => regularMono_pullback (Omega-pullback m) (splitMono_regular point-splitMono)
 }
 
-\lemma sigma-prop-ext {A : \Prop} (a : A) : A = (\Sigma) => exts (\lam _ => (), \lam _ => a)
+\class PrecatWithPowerObject \extends FinCompletePrecat {
+  | Power : Ob -> Ob
+  | Power-belongs (a : Ob) : Subobj {\this} (Bprod a (Power a))
+  | Power-univ {c a : Ob} : IsEquiv {Hom c (Power a)} {Subobj {\this} (Bprod a c)} (\lam h => subobjPullback (prodMap id h) (Power-belongs a))
 
-\lemma sigma-prop-ext-inv {A : \Prop} (eq : A = (\Sigma)) : A => propExt.conv eq ()
+  \func Power-char {c a : Ob} (s : Subobj (Bprod a c)) : Hom c (Power a)
+    => IsEquiv.ret Power-univ s
 
-\open PrecatWithTerminal
-\open SetCartesianClosed
+  \lemma pullback_Power {c a : Ob} {s : Subobj (Bprod a c)} : subobjPullback (prodMap id (Power-char s)) (Power-belongs a) = s
+    => IsEquiv.f_ret Power-univ
 
-\instance SetTopos : ToposPrecat \Set
-  | FinCompletePrecat => SetBicat
-  | CartesianClosedPrecat => SetCartesianClosed
-  | subobj-classifier => \Prop
-  | true-map => \lam _ => \Sigma
-  | char-map => IsElement
-  | char-pullback m => \new Pullback {
-    | pbCoh => exts (\lam _ => sigma-prop-ext (SetTopos.isContained _ idp))
-    | pbMap {_} p1 _ eq =>
-      \lam w1 => cases (isElement-char {_} {_} {_} {_} {p1} {eq} w1) \with {
-        | SetTopos.isContained a p => a
-      }
-    | pbBeta1 {_} {p1} {_} {eq} => ext (\lam w1 => cases (isElement-char {_} {_} {_} {_} {p1} {eq} w1) \with {
-      | SetTopos.isContained a p => p
-    })
-    | pbBeta2 => terminal-unique {SetBicat}
-    | pbEta {_} {h1} {h2} eq _ => ext (\lam x => \let s : Mono.f {m} (h1 x) = Mono.f {m} (h2 x) => path (\lam i => (eq @ i) x) \in mono-is-inj m s)
-  }
-  | char-unique {S} {_} {m} {phi} pullback =>
-    ext (\lam b =>
-        ext (\lam p =>
-                 \let preimage : terminal.apex -> S => pbMap {pullback} (name' b) (terminalMap {SetBicat}) (unfold (unfold name' $ exts (\lam _ => sigma-prop-ext p))) \in
-                   SetTopos.isContained (unname' preimage)
-                       (\let b-image : Mono.f {m} ∘ {SetBicat} preimage = name' b => pbBeta1 {pullback} \in name-inj
-                           (rewriteI (name-f (Mono.f {m})) $ rewrite (global-elements-iso.f_ret preimage) b-image)),
-             \let ss : phi ∘ {SetBicat} (Mono.f {m}) = terminalMap ∘ {SetBicat} true-map => pbCoh {pullback}
-                  | ss-impl (x : S) : phi (Mono.f {m} x) = (\Sigma) => path (\lam i => (ss @ i) x) \in
-               \lam c => cases c \with {
-                 | SetTopos.isContained a p => rewriteI p $ sigma-prop-ext-inv (ss-impl a)
-               }
-        ))
+  \lemma Power_pullback {c a : Ob} {f : Hom c (Power a)} : Power-char (subobjPullback (prodMap id f) (Power-belongs a)) = f
+    => IsEquiv.ret_f Power-univ
+
+  \lemma Power-char_o {a b c : Ob} {f : Hom a b} {s : Subobj (Bprod c b)} : Power-char s ∘ f = Power-char (subobjPullback (prodMap id f) s)
+    => IsEquiv.isInj Power-univ $ pmap (subobjPullback __ _) (inv prod-id-left) *> subobjPullback_o *> pmap (subobjPullback _) pullback_Power *> inv pullback_Power
+
+  \lemma Power_lift-char {a b c : Ob} {f : Hom a b} {s : Subobj (Bprod c b)}
+    : subobjLifts (prodMap id f) s <-> (Power-char s ∘ f = Power-char subobjTop)
+    => rewrite pullback_Power in revered {_} {_} {_} {_} {f} {Power-char s}
+    \where {
+      \protected \lemma revered {g : Hom b (Power c)}
+        : subobjLifts (prodMap id f) (subobjPullback (prodMap id g) (Power-belongs c)) <-> (g ∘ f = Power-char subobjTop)
+        => <->trans subobjPullback-lifts $ transportInv (subobjLifts __ _ <-> _) prod-id-left $
+            <->trans subobjLifts_top (\lam p => inv Power_pullback *> pmap Power-char p, later \lam p => rewrite p pullback_Power)
+    }
+
+  \lemma Power-char_top {c b a : Ob} {f : Hom c b} : Power-char subobjTop ∘ f = Power-char (subobjTop {_} {Bprod a c})
+    => IsEquiv.isInj Power-univ $ pmap (subobjPullback __ _) (inv prod-id-left) *> subobjPullback_o *> pmap (subobjPullback _) pullback_Power *> subobjPullback_top *> inv pullback_Power
+
+  \func Power-singleton (c : Ob) : Hom c (Power c)
+    => Power-char (subobjEq c)
+
+  \lemma Power-singleton-mono {c : Ob} : Mono (Power-singleton c) \cowith
+    | isMono {_} {g} p => subobjEq-lifts.1 $ transport (subobjLifts _) pullback_Power $ subobjPullback-lifts.2 $ transport (subobjLifts __ _)
+      (pair-unique (inv o-assoc *> pmap (∘ _) (beta1 *> id-left) *> beta1 *> inv (pmap (∘ _) (beta1 *> id-left) *> beta1) *> o-assoc)
+                   (inv o-assoc *> pmap (∘ _) beta2 *> o-assoc *> pmap (_ ∘) beta2 *> p *> inv (pmap (∘ _) beta2 *> o-assoc *> pmap (_ ∘) beta2) *> o-assoc)) $
+      subobjPullback-lifts.1 $ transportInv (subobjLifts _) pullback_Power $ subobjEq-lifts.2 idp
+
+  \sfunc Power-singleton-subobj (c : Ob) : Subobj (Power c)
+    => inso~ Power-singleton-mono
+
+  \sfunc PHom (b c : Ob) : Equalizer (Power-char (subobjPullback psmap (Power-singleton-subobj c))) (Power-char subobjTop)
+    => equalizer
+    \where {
+      \protected \func psmap : Hom (Bprod b (Power (Bprod c b))) (Power c)
+        => Power-char $ subobjPullback associator-iso.hinv (Power-belongs _)
+    }
+
+  \func PHom-eval {b c : Ob} : Hom (Bprod (PHom b c) b) c
+    => char.1
+    \where {
+      \protected \sfunc char : \Sigma (eval : Hom (Bprod (PHom b c) b) c) (Power-singleton c ∘ eval = PHom.psmap ∘ pair proj2 (Equalizer.eql ∘ proj1))
+        => \have (g,p) => subobjLifts.toMap (\peval Power-singleton-subobj c) $ subobjPullback-lifts.1 $ (Power_lift-char {_} {_} {_} {b} {(PHom b c).eql}).2 $ Equalizer.equal *> Power-char_top
+           \in (g ∘ swap, inv o-assoc *> pmap (∘ _) p *> o-assoc *> pmap (_ ∘) (pair-unique
+                (inv o-assoc *> pmap (∘ _) (beta1 *> id-left) *> beta1 *> inv beta1)
+                (inv o-assoc *> pmap (∘ _) beta2 *> o-assoc *> pmap (_ ∘) beta2 *> inv beta2)))
+    }
+
+  \lemma PHom-univ {a b c : Ob} : IsEquiv {Hom a (PHom b c)} {Hom (Bprod a b) c} (\lam g => PHom-eval ∘ prodMap g id)
+    => IsEquiv.fromInjSurj (\lam {g} {g'} p =>
+          \have | t => pmap (subobjPullback (prodMap id swap ∘ associator)) $ subobjPullback_o *> IsEquiv.isInj (IsEquiv.ret-equiv Power-univ)
+                        (inv Power-char_o *> inv o-assoc *> pmap (∘ _) (inv PHom-eval.char.2) *> o-assoc *> pmap (Power-singleton c ∘) p *> inv o-assoc *> pmap (∘ _) PHom-eval.char.2 *> o-assoc *> Power-char_o) *> inv subobjPullback_o
+                | lem g : associator-iso.hinv ∘ prodMap id (pair proj2 (Equalizer.eql ∘ proj1) ∘ prodMap g id) ∘ (prodMap id swap ∘ associator) = prodMap id (Equalizer.eql ∘ g)
+                  => pmap (_ ∘ prodMap _ __ ∘ _) (pair-comp *> pmap2 pair (beta2 *> id-left) (o-assoc *> pmap (_ ∘) beta1)) *> pmap2 (_ ∘ pair __ __ ∘ _) id-left pair-comp *> pmap (∘ _) associator-inv-pair *> pair-comp *> pmap2 pair
+                      (pair-comp *> pmap2 pair (inv o-assoc *> pmap (∘ _) beta1 *> pmap (∘ _) id-left *> beta1) (o-assoc *> pmap (_ ∘) (inv o-assoc *> pmap (∘ _) beta2 *> o-assoc *> pmap (_ ∘) beta2) *> inv o-assoc *> pmap (∘ _) beta2 *> beta1) *> inv pair-comp *> pmap (∘ _) pair-eta)
+                      (o-assoc *> o-assoc *> pmap (_ ∘) (o-assoc *> pmap (_ ∘) (pmap (_ ∘) (inv o-assoc *> pmap (∘ _) beta2 *> o-assoc) *> inv o-assoc *> pmap2 (∘) beta1 beta2 *> beta2)) *> inv o-assoc)
+          \in Equalizer.eqMono $ IsEquiv.isInj Power-univ $ pmap (subobjPullback __ _) (inv (lem g)) *> subobjPullback_o *> t *> inv subobjPullback_o *> pmap (subobjPullback __ _) (lem g'))
+        \lam h => inP (Equalizer.eqMap (Power-char (graph h)) (graph-eq h), Power-singleton-mono.isMono $ inv o-assoc *> pmap (∘ _) PHom-eval.char.2 *> o-assoc *>
+          pmap (_ ∘) (pair-comp *> pmap2 pair (beta2 *> id-left) (o-assoc *> pmap (_ ∘) beta1 *> inv o-assoc *> pmap (∘ _) Equalizer.eqBeta)) *>
+          IsEquiv.isInj Power-univ (pmap (subobjPullback __ _) (inv prod-id-left) *> subobjPullback_o *> pmap (subobjPullback _) pullback_Power *> inv subobjPullback_o *>
+          pmap (subobjPullback __ _) (pmap (_ ∘) (pmap (prodMap _) (inv $ pair-comp *> pmap2 pair (o-assoc *> id-left *> beta1) (o-assoc *> pmap (_ ∘) beta2)) *> inv prod-id-left) *> inv o-assoc *> pmap (∘ _) (inv associator-inv-prod) *> pmap (\lam r => prodMap r _ ∘ _ ∘ _) prod-id *> o-assoc) *>
+          subobjPullback_o *> pmap (subobjPullback _) pullback_Power *> inv subobjPullback_o *> pmap (subobjPullback __ _)
+            (o-assoc *> pmap (_ ∘) (inv o-assoc *> pmap (∘ _) associator-iso.f_hinv *> id-left) *> prod-id-left *> pmap (prodMap _) (o-assoc *> pmap (h ∘) (swap-pair *> pair-eta) *> id-right)) *>
+          pmap (subobjPullback _) (inv pullback_Power) *> inv subobjPullback_o *> pmap (subobjPullback __ _) prod-id-left))
+    \where {
+      \func graph (h : Hom (Bprod a b) c) : Subobj (Bprod (Bprod c b) a)
+        => subobjPullback (prodMap id (h ∘ swap) ∘ associator) (subobjEq c)
+
+      \lemma graph-eq (h : Hom (Bprod a b) c)
+        : Power-char (subobjPullback PHom.psmap (Power-singleton-subobj c)) ∘ Power-char (graph h) = Power-char subobjTop ∘ Power-char (graph h)
+        => Power_lift-char.1 (subobjPullback-lifts.2 $ rewrite (\peval Power-singleton-subobj c) $ inP (h ∘ swap, IsEquiv.isInj Power-univ $
+            pmap (subobjPullback __ _) (inv prod-id-left) *> subobjPullback_o *> pmap (subobjPullback _) pullback_Power *>
+            inv (pmap (subobjPullback __ _) (inv prod-id-left) *> subobjPullback_o *> pmap (subobjPullback _) pullback_Power *>
+            inv subobjPullback_o *> pmap (subobjPullback __ _) (inv associator-inv-prod *> pmap (prodMap __ _ ∘ _) prod-id) *>
+            subobjPullback_o *> pmap (subobjPullback _) pullback_Power *> inv subobjPullback_o *>
+            pmap (subobjPullback __ _) (o-assoc *> pmap (_ ∘) associator-iso.f_hinv *> id-right)))) *> inv Power-char_top
+    }
+}
+
+\class ToposPrecat \extends PrecatWithSubobjClassifier, CartesianClosedPrecat, PrecatWithPowerObject
   \where {
-    \func mono-is-inj {A B : SetBicat} (m : Mono {SetBicat} {A} {B}) : IsInj m.f => \lam {a} {b} p =>
-        run {
-          name-inj,
-          m.isMono,
-          rewrite (name-f m.f a, name-f m.f b),
-          pmap name' p
-        }
+    -- TODO: Make constructor classes
+    \class FromSubobjClassifier \extends ToposPrecat
+      | Power a => CHom a Omega
+      | Power-belongs a => subobjPullback (CHom-eval ∘ pair proj2 proj1) Omega-true
+      | Power-univ {c} {a} => transport IsEquiv
+          (ext \lam h => inv subobjPullback_o *> pmap (subobjPullback __ _) (o-assoc *> pmap (_ ∘) (inv swap-prod) *> inv o-assoc) *> subobjPullback_o) $
+          IsEquiv.trans CHom-univ $ IsEquiv.trans (Omega-univ {\this} {Bprod c a}) $ inP (subobjPullback_Iso-equiv swap-iso)
 
-    \data IsElement {A B : SetBicat} (m : Mono {SetBicat} {A} {B}) (b : B)
-      | isContained (a : A) (m.f a = b)
-      \where {
-        \use \level isProp {A B : SetBicat} (m : Mono {SetBicat} {A} {B}) (b : B) (x y : IsElement m b) : x = y
-        \elim x, y
-          | isContained a p, isContained c p1 =>
-            \let a=c : a = c => mono-is-inj m (p *> inv p1)
-                 | p=p1 : transport {A} (\lam (x : A) => m.f x = b) a=c p = p1 => prop-isProp _ _
-            \in \case\elim a, \elim c, \elim p, \elim p1, \elim a=c, \elim p=p1 \with {
-              | a, c, _, _, idp, idp => idp
-            }
-      }
+    \class FromPowerObject \extends ToposPrecat
+      | Omega => Power terminal
+      | Omega-true => subobjPullback (pair terminalMap id) (Power-belongs terminal)
+      | Omega-univ => transport IsEquiv
+          (ext \lam h => inv subobjPullback_o *> pmap (subobjPullback __ _) (pair-unique terminal-unique $ inv o-assoc *> pmap (∘ _) beta2 *> o-assoc *> pmap (h ∘) beta2 *> id-right *> inv id-left *> pmap (∘ h) (inv beta2) *> o-assoc) *> subobjPullback_o) $
+          IsEquiv.trans Power-univ $ inP (subobjPullback_Iso-equiv Bprod_terminal-left)
+      | CHom b c => PHom b c
+      | CHom-eval => PHom-eval
+      | CHom-univ => PHom-univ
+  }
 
-    \func isElement-char {S B : SetBicat} {m : Mono {SetBicat} {S} {B}} {w : SetBicat} {p1 : w -> B}
-                         {eq : (\lam x => IsElement m (p1 x)) = (\lam _ => \Sigma)} (x : w) : IsElement m (p1 x) =>
-      \let s : IsElement m (p1 x) = (\Sigma) => path (\lam i => (eq @ i) x) \in
-        sigma-prop-ext-inv s
+\instance SetTopos.{u} : ToposPrecat.FromSubobjClassifier (\Set u)
+  | FinCompletePrecat => SetBicat.{u}
+  | CartesianClosedPrecat => SetCartesianClosed.{u}
+  | Omega => \Prop
+  | Omega-true => inso~ \new Mono {
+    | dom => \Sigma
+    | f _ => \Sigma
+    | isMono _ => idpe \lam _ => ()
+  }
+  | Omega-univ {X} => inP \new QEquiv {
+    | ret s x => \case \elim s \with {
+      | in~ m => ∃ (y : m.dom) (m.f y = x)
+      | ~-equiv m1 m2 r => propExt
+        (\lam (inP (y,p)) => inP (r.1 y, path (\lam i => r.2 i y) *> p))
+        (\lam (inP (y,p)) => inP (r.3 y, path (\lam i => r.4 i y) *> p))
+    }
+    | ret_f P => ext \lam x => propExt (\lam (inP s) => transport P s.2 $ propExt.conv s.1.3 ()) \lam Px => inP ((x, (), propExt (\lam _ => ()) (\lam _ => Px)), idp)
+    | f_sec => \case \elim __ \with {
+      | in~ m => <=-antisymmetric (
+        \have me {x} (p : ∃ (y : m.dom) (m.f y = x)) : \Sigma (y : m.dom) (m.f y = x) => TruncP.remove (\lam s s' => ext $ SetCat.mono-char.1 m $ s.2 *> inv s'.2) p
+        \in inP (\lam d => (me $ propExt.conv d.3 ()).1, ext \lam d => (me $ propExt.conv d.3 ()).2)) (inP (\lam d => (m.f d, (), propExt (\lam _ => ()) (\lam _ => inP (d,idp))), idp))
+    }
   }

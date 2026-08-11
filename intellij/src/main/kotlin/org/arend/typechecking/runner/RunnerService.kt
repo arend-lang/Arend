@@ -29,6 +29,16 @@ class RunnerService(private val project: Project, private val coroutineScope: Co
         coroutineScope.launch {
             val message = module?.toString() ?: (library ?: "project")
             val server = project.service<ArendServerService>().server
+            // Snapshot the errors before the run. The resolve phase may clear stale errors (e.g.
+            // errors left under a recreated referable, or cascading errors whose real cause was
+            // fixed elsewhere) without any definition being re-typechecked afterwards (updated == 0).
+            // In that case we still have to refresh the editor highlighting, otherwise the red
+            // underlining of the (now removed) errors would linger until the next edit, even though
+            // the gutter status is already correct.
+            fun errorSnapshot(): Map<ModuleLocation, List<Any>> =
+                if (module == null) server.errorMap.mapValues { ArrayList(it.value) }
+                else server.errorMap[module]?.let { mapOf(module to ArrayList(it)) } ?: emptyMap()
+            val errorsBefore = errorSnapshot()
             withBackgroundProgress(project, "Checking $message") { reportSequentialProgress { reporter ->
                 val checker = reporter.nextStep(if (onlyResolve) 100 else 5, "Resolving $message") { reportRawProgress { reporter ->
                     if (module == null) {
@@ -60,7 +70,8 @@ class RunnerService(private val project: Project, private val coroutineScope: Co
                     } > 0
                 }
 
-                if (updated && checkerFactory == null) {
+                val errorsChanged = checkerFactory == null && errorsBefore != errorSnapshot()
+                if ((updated || errorsChanged) && checkerFactory == null) {
                     if (!ApplicationManager.getApplication().isUnitTestMode) {
                         DaemonCodeAnalyzer.getInstance(project).restart()
                     }

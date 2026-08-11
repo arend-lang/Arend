@@ -5,6 +5,9 @@ import org.arend.core.context.binding.EvaluatingBinding;
 import org.arend.core.context.binding.inference.InferenceVariable;
 import org.arend.core.context.param.TypedSingleDependentLink;
 import org.arend.core.context.param.UnusedIntervalDependentLink;
+import org.arend.core.sort.Level;
+import org.arend.core.sort.Sort;
+import org.arend.core.subst.ListLevels;
 import org.arend.ext.variable.Variable;
 import org.arend.core.context.param.DependentLink;
 import org.arend.core.context.param.SingleDependentLink;
@@ -12,8 +15,6 @@ import org.arend.core.definition.ClassField;
 import org.arend.core.elimtree.ElimBody;
 import org.arend.core.elimtree.ElimClause;
 import org.arend.core.expr.*;
-import org.arend.core.expr.type.Type;
-import org.arend.core.expr.type.TypeExpression;
 import org.arend.core.pattern.Pattern;
 import org.arend.core.subst.ExprSubstitution;
 import org.arend.ext.core.ops.NormalizationMode;
@@ -39,7 +40,7 @@ public class ElimBindingVisitor extends ExpressionTransformer<Void> {
     if (expr == null) {
       return null;
     }
-    Expression result = expr.getParameters().getNext().hasNext() ? new LamExpression(expr.getResultSort(), expr.getParameters().getNext(), expr.getBody()) : expr.getBody();
+    Expression result = expr.getParameters().getNext().hasNext() ? new LamExpression(expr.getParameters().getNext(), expr.getBody()) : expr.getBody();
     return expr.getParameters() == UnusedIntervalDependentLink.INSTANCE ? result : elimBinding(result, expr.getParameters());
   }
 
@@ -125,7 +126,7 @@ public class ElimBindingVisitor extends ExpressionTransformer<Void> {
 
   public ClassCallExpression visitClassCall(ClassCallExpression expr, boolean removeImplementations) {
     Map<ClassField, Expression> newFieldSet = new LinkedHashMap<>();
-    ClassCallExpression result = new ClassCallExpression(expr.getDefinition(), expr.getLevels(), newFieldSet, expr.getSort(), expr.getUniverseKind());
+    ClassCallExpression result = new ClassCallExpression(expr.getDefinition(), expr.getLevels(), newFieldSet);
     if (myKeepVisitor != null) {
       myKeepVisitor.getBindings().add(expr.getThisBinding());
     }
@@ -137,7 +138,7 @@ public class ElimBindingVisitor extends ExpressionTransformer<Void> {
             Expression type = entry.getValue().removeConstLam();
             Expression newType = type == null ? null : acceptSelf(type, true);
             if (newType != null) {
-              newFieldSet.put(Prelude.ARRAY_ELEMENTS_TYPE, new LamExpression(expr.getSort(), new TypedSingleDependentLink(true, null, ExpressionFactory.Fin(ExpressionFactory.FieldCall(Prelude.ARRAY_LENGTH, new ReferenceExpression(result.getThisBinding())))), newType));
+              newFieldSet.put(Prelude.ARRAY_ELEMENTS_TYPE, new LamExpression(new TypedSingleDependentLink(true, null, ExpressionFactory.Fin(ExpressionFactory.FieldCall(Prelude.ARRAY_LENGTH, new ReferenceExpression(result.getThisBinding())))), newType));
             }
           }
           continue;
@@ -162,8 +163,36 @@ public class ElimBindingVisitor extends ExpressionTransformer<Void> {
       myKeepVisitor.getBindings().remove(expr.getThisBinding());
     }
 
-    result.setSort(result.getDefinition().computeSort(result.getImplementedHere(), result.getThisBinding()));
-    result.updateHasUniverses();
+    if (newFieldSet.size() < expr.getImplementedHere().size() && result.isInfinityLevel()) {
+      List<Level> levels = new ArrayList<>(expr.getLevels().toList());
+      for (ClassField field : expr.getDefinition().getNotImplementedFields()) {
+        if (newFieldSet.containsKey(field) || !field.isInfiniteField()) continue;
+        if (!field.getType().isPiInfinityLevel()) {
+          break;
+        }
+        Expression fieldImpl = expr.getImplementationHere(field, new ReferenceExpression(result.getThisBinding()));
+        if (fieldImpl == null) {
+          break;
+        }
+        Expression fieldType = fieldImpl.getType().normalize(NormalizationMode.WHNF);
+        while (fieldType instanceof PiExpression piExpr) {
+          fieldType = piExpr.getCodomain();
+        }
+        if (!(fieldType instanceof UniverseExpression universe)) {
+          break;
+        }
+        Sort sort = universe.getSortExpression().withInfLevel();
+        if (sort.getPLevel().isInfinity()) {
+          break;
+        }
+        levels.add(sort.getPLevel());
+      }
+
+      if (levels.size() > expr.getLevels().size()) {
+        result = new ClassCallExpression(expr.getDefinition(), new ListLevels(levels), newFieldSet);
+      }
+    }
+
     return result;
   }
 
@@ -245,14 +274,14 @@ public class ElimBindingVisitor extends ExpressionTransformer<Void> {
       if (body == null) {
         return null;
       }
-      body = new LamExpression(expr.getResultSort(), parameters, body);
+      body = new LamExpression(parameters, body);
     } else {
       body = acceptSelf(expr.getBody(), true);
       if (body == null) {
         return null;
       }
     }
-    return isUnused ? new LamExpression(expr.getResultSort(), UnusedIntervalDependentLink.INSTANCE, body) : (LamExpression) body;
+    return isUnused ? new LamExpression(UnusedIntervalDependentLink.INSTANCE, body) : (LamExpression) body;
   }
 
   @Override
@@ -266,10 +295,7 @@ public class ElimBindingVisitor extends ExpressionTransformer<Void> {
     if (myKeepVisitor != null) {
       myKeepVisitor.freeParameters(parameters);
     }
-    if (codomain == null) {
-      return null;
-    }
-    return new PiExpression(expr.getResultSort(), parameters, codomain);
+    return codomain == null ? null : new PiExpression(parameters, codomain);
   }
 
   @Override
@@ -313,7 +339,7 @@ public class ElimBindingVisitor extends ExpressionTransformer<Void> {
       if (myKeepVisitor != null) {
         myKeepVisitor.freeParameters(parameters);
       }
-      return new SigmaExpression(expr.getSort(), parameters);
+      return new SigmaExpression(parameters);
     } else {
       return null;
     }
@@ -328,7 +354,7 @@ public class ElimBindingVisitor extends ExpressionTransformer<Void> {
   private boolean visitDependentLink(DependentLink parameters) {
     for (DependentLink link = parameters; link.hasNext(); link = link.getNext()) {
       DependentLink link1 = link.getNextTyped(null);
-      Expression type = acceptSelf(link1.getTypeExpr(), true);
+      Expression type = acceptSelf(link1.getType(), true);
       if (type == null) {
         if (myKeepVisitor != null) {
           for (; parameters != link; parameters = parameters.getNext()) {
@@ -337,7 +363,7 @@ public class ElimBindingVisitor extends ExpressionTransformer<Void> {
         }
         return false;
       }
-      link1.setType(type instanceof Type ? (Type) type : new TypeExpression(type, link1.getType().getSortOfType()));
+      link1.setType(type);
 
       if (myKeepVisitor != null) {
         for (; link != link1; link = link.getNext()) {
@@ -506,7 +532,7 @@ public class ElimBindingVisitor extends ExpressionTransformer<Void> {
     } else {
       tail = null;
     }
-    return ArrayExpression.make(expr.getLevels(), elementsType, elements, tail);
+    return ArrayExpression.make(elementsType, elements, tail);
   }
 
   @Override
@@ -514,7 +540,7 @@ public class ElimBindingVisitor extends ExpressionTransformer<Void> {
     Expression argumentType = acceptSelf(expr.getArgumentType(), true);
     if (argumentType == null) return null;
     Expression argument = acceptSelf(expr.getArgument(), true);
-    return argument == null ? null : new PathExpression(expr.getLevels(), argumentType, argument);
+    return argument == null ? null : new PathExpression(argumentType, argument);
   }
 
   @Override

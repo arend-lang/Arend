@@ -4,16 +4,15 @@
 \import Data.Array
 \import Data.Array.EPerm
 \import Data.Array.Perm
-\import Data.Fin (fsuc, fsuc/=)
+\import Data.Fin (fsuc, fsuc/=, nat_fin_=)
 \import Data.Or
 \import Equiv
 \import Equiv.Sigma
-\import Equiv.Univalence
+\import Equiv.Univalence.Set
 \import Function
 \import Function.Meta
 \import Logic.Unique
 \import Logic
-\import Logic.Classical
 \import Logic.Meta
 \import Meta
 \import Order.Biordered
@@ -23,6 +22,7 @@
 \import Paths.Meta
 \import Set
 \import Set.Fin
+\import Set.Fin.BoundedPigeonhole
 \import Set.Fin.Instances
 \import Set.Fin.Pigeonhole
 
@@ -47,11 +47,11 @@
 
   \lemma pow_+ {a : E} {n m : Nat} : pow a (n + m) = pow a n * pow a m \elim m
     | 0 => inv ide-right
-    | suc m => pmap (`* a) pow_+ *> *-assoc
+    | suc m => pmap (* a) pow_+ *> *-assoc
 
   \lemma pow_* {a : E} {n m : Nat} : pow a (n Nat.* m) = pow (pow a n) m \elim m
     | 0 => idp
-    | suc m => pow_+ *> pmap (`* _) pow_*
+    | suc m => pow_+ *> pmap (* _) pow_*
 
   \lemma pow-comm1 {a b : E} (p : a * b = b * a) {n : Nat} : pow a n * b = b * pow a n \elim n
     | 0 => ide-left *> inv ide-right
@@ -85,7 +85,7 @@
   \lemma BigProd_++ {l l' : Array E} : BigProd (l ++ l') = BigProd l * BigProd l'
     => AddMonoid.BigSum_++ {AddMonoid.fromMonoid \this}
 
-  \lemma BigProd_suc {n : Nat} {l : Array E (suc n)} : BigProd l = BigProd (\new Array E n (\lam i => l i)) * l n
+  \lemma BigProd_suc {n : Nat} {l : Array E (suc n)} : BigProd l = BigProd (\new Array E n (\lam i => l i)) * l (n Nat.mod suc n)
     => AddMonoid.BigSum_suc {AddMonoid.fromMonoid \this}
 
   \lemma BigProd_replicate {x : E} {n : Nat} : BigProd (replicate n x) = pow x n \elim n
@@ -95,6 +95,19 @@
   \lemma BigProd_replicate1 {n : Nat} : BigProd (replicate n ide) = ide
     => BigProd_replicate *> pow_ide
 
+  \func IsCentral (x : E) : \Prop
+    => \Pi (y : E) -> x * y = y * x
+
+  \lemma IsCentral_ide : IsCentral 1
+    => \lam y => ide-left *> inv ide-right
+
+  \lemma IsCentral_* {x y : E} (xc : IsCentral x) (yc : IsCentral y) : IsCentral (x * y)
+    => \lam z => *-assoc *> pmap (x *) (yc z) *> inv *-assoc *> pmap (* y) (xc z) *> *-assoc
+
+  \lemma IsCentral_pow {x : E} (xc : IsCentral x) {n : Nat} : IsCentral (pow x n) \elim n
+    | 0 => IsCentral_ide
+    | suc n => IsCentral_* (IsCentral_pow xc) xc
+
   \protected \func op : Monoid E \cowith
     | ide => ide
     | * x y => y * x
@@ -102,7 +115,7 @@
     | ide-right => ide-left
     | *-assoc => inv *-assoc
 } \where {
-  \protected \func equals {M N : Monoid} (p : M = {\Set} N) (q : \let f x => coe (p @) x right \in \Pi (x y : M) -> f (x * y) = f x * f y) : M = N
+  \protected \func equals.{u} {M N : Monoid.{u}} (p : M = {\Set u} N) (q : \let f x => coe (p @) x right \in \Pi (x y : M) -> f (x * y) = f x * f y) : M = {Monoid.{u}} N
     => exts (p, ide-equality, q)
     \where {
       \lemma ide-equality : coe (p @) ide right = ide
@@ -110,7 +123,7 @@
                 | g y => coe (inv p @) y right
                 | fg y : f (g y) = y => transport_id_inv (\lam Z => Z) p y
            \in f ide             ==< inv ide-left >==
-               ide * f ide       ==< pmap (`* f ide) (inv (fg ide)) >==
+               ide * f ide       ==< pmap (* f ide) (inv (fg ide)) >==
                f (g ide) * f ide ==< inv (q (g ide) ide) >==
                f (g ide * ide)   ==< pmap f ide-right >==
                f (g ide)         ==< fg ide >==
@@ -127,7 +140,7 @@
         => \new LDiv { | inv => c | inv-right => p }
 
       \lemma product {M : CMonoid} {x y z w : M} (x|y : LDiv x y) (z|w : LDiv z w) : LDiv (x * z) (y * w) (z|w.inv * x|y.inv) \cowith
-        | inv-right => *-assoc *> pmap (x *) (inv *-assoc *> pmap (`* _) z|w.inv-right *> *-comm) *> inv *-assoc *> pmap (`* w) x|y.inv-right
+        | inv-right => *-assoc *> pmap (x *) (inv *-assoc *> pmap (* _) z|w.inv-right *> *-comm) *> inv *-assoc *> pmap (* w) x|y.inv-right
 
       \lemma product-left {M : Monoid} (x : M) {y z : M} (y|z : LDiv y z) : LDiv (x * y) (x * z) y|z.inv \cowith
         | inv-right =>
@@ -137,17 +150,17 @@
 
       \lemma product-right {M : CMonoid} (z : M) {x y : M} (x|y : LDiv x y) : LDiv (x * z) (y * z) x|y.inv \cowith
         | inv-right =>
-            (x * z) * x|y.inv ==< pmap (`* x|y.inv) *-comm >==
+            (x * z) * x|y.inv ==< pmap (* x|y.inv) *-comm >==
             (z * x) * x|y.inv ==< *-assoc >==
             z * (x * x|y.inv) ==< pmap (z *) x|y.inv-right >==
             z * y             ==< *-comm >==
             y * z             `qed
 
       \lemma factor-left {M : Monoid} {x y z : M} (x|y : LDiv x y) : LDiv x (y * z) (x|y.inv * z) \cowith
-        | inv-right => inv *-assoc *> pmap (`* z) x|y.inv-right
+        | inv-right => inv *-assoc *> pmap (* z) x|y.inv-right
 
       \lemma factor-right {M : CMonoid} {x y z : M} (x|z : LDiv x z) : LDiv x (y * z) (x|z.inv * y) \cowith
-        | inv-right => inv *-assoc *> pmap (`* y) x|z.inv-right *> *-comm
+        | inv-right => inv *-assoc *> pmap (* y) x|z.inv-right *> *-comm
 
       \lemma cancel-left {M : CancelMonoid} (x : M) {y z : M} (x*y|x*z : LDiv (x * y) (x * z)) : LDiv y z x*y|x*z.inv \cowith
         | inv-right => M.cancel_*-left x (
@@ -159,14 +172,14 @@
         | inv-right => M.cancel_*-right z (
             (x * x*z|y*z.inv) * z ==< *-comm >==
             z * (x * x*z|y*z.inv) ==< inv *-assoc >==
-            (z * x) * x*z|y*z.inv ==< pmap (`* x*z|y*z.inv) *-comm >==
+            (z * x) * x*z|y*z.inv ==< pmap (* x*z|y*z.inv) *-comm >==
             (x * z) * x*z|y*z.inv ==< x*z|y*z.inv-right >==
             y * z                 `qed)
 
       \lemma trans {M : Monoid} {x y z : M} (x|y : LDiv x y) (y|z : LDiv y z) : LDiv x z (x|y.inv * y|z.inv) \cowith
         | inv-right =>
             x * (x|y.inv * y|z.inv) ==< inv *-assoc >==
-            (x * x|y.inv) * y|z.inv ==< pmap (`* y|z.inv) x|y.inv-right >==
+            (x * x|y.inv) * y|z.inv ==< pmap (* y|z.inv) x|y.inv-right >==
             y * y|z.inv             ==< y|z.inv-right >==
             z                       `qed
 
@@ -180,7 +193,7 @@
         | inv-right => *-comm *> l.inv-right
 
       \lemma idempt {M : Monoid} (l : LDiv {M}) (p : l * l = l) : l * l.elem = l.elem
-        => inv (*-assoc *> pmap (l *) l.inv-right) *> pmap (`* _) p *> l.inv-right
+        => inv (*-assoc *> pmap (l *) l.inv-right) *> pmap (* _) p *> l.inv-right
 
       \use \lemma cancelProp {M : Monoid} (x : M) (q : \Pi {a b : M} -> x * a = x * b -> a = b) (y : M) : isProp (LDiv x y) =>
         \lam (d1 d2 : LDiv x y) =>
@@ -201,7 +214,7 @@
       \lemma product-right {M : Monoid} (x y z : M) (x|y : RDiv x y) : RDiv (x * z) (y * z) x|y.inv \cowith
         | inv-left =>
             x|y.inv * (x * z) ==< inv *-assoc >==
-            (x|y.inv * x) * z ==< pmap (`* z) x|y.inv-left >==
+            (x|y.inv * x) * z ==< pmap (* z) x|y.inv-left >==
             y * z             `qed
 
       \lemma cancel-right {M : CancelMonoid} (x y z : M) (x*z|y*z : RDiv (x * z) (y * z)) : RDiv x y x*z|y*z.inv \cowith
@@ -224,34 +237,32 @@
     }
 
   -- | The type of left inverses of an element
-  \record LInv \extends RDiv
+  \record LInv \extends RDiv {
     | elem => ide
-    \where {
-      \lemma cancel {M : Monoid} {x y z : M} (j : LInv x) (p : x * y = x * z) : y = z
-        => y               ==< inv ide-left >==
-           ide * y         ==< inv (pmap (`* y) j.inv-left) >==
-           (j.inv * x) * y ==< *-assoc >==
-           j.inv * (x * y) ==< pmap (j.inv *) p >==
-           j.inv * (x * z) ==< inv *-assoc >==
-           (j.inv * x) * z ==< pmap (`* z) j.inv-left >==
-           ide * z         ==< ide-left >==
-           z               `qed
-    }
+
+    \lemma inv-cancel-left {y z : M} (p : val * y = val * z) : y = z
+      => inv ide-left *> pmap (* _) (inv inv-left) *> *-assoc *> pmap (_ *) p *> inv *-assoc *> pmap (* _) inv-left *> ide-left
+
+    \lemma rotate-inv-left {x y : M} (p : val * x = y) : x = RInv.inv * y
+      => inv ide-left *> pmap (* x) (inv inv-left) *> *-assoc *> pmap (_ *) p
+
+    \lemma rotate-right {x y : M} (p : x * LInv.inv = y) : x = y * val
+      => inv ide-right *> pmap (x *) (inv inv-left) *> inv *-assoc *> pmap (* _) p
+  }
 
   -- | The type of right inverses of an element
-  \record RInv \extends LDiv
+  \record RInv \extends LDiv {
     | elem => ide
-    \where {
-      \lemma cancel {M : Monoid} {x y z : M} (j : RInv z) (p : x * z = y * z) : x = y
-        => x               ==< inv ide-right >==
-           x * ide         ==< inv (pmap (x *) j.inv-right) >==
-           x * (z * j.inv) ==< inv *-assoc >==
-           (x * z) * j.inv ==< pmap (`* j.inv) p >==
-           (y * z) * j.inv ==< *-assoc >==
-           y * (z * j.inv) ==< pmap (y *) j.inv-right >==
-           y * ide         ==< ide-right >==
-           y               `qed
-    }
+
+    \lemma inv-cancel-right {x y : M} (p : x * val = y * val) : x = y
+      => inv ide-right *> pmap (_ *) (inv inv-right) *> inv *-assoc *> pmap (* _) p *> *-assoc *> pmap (_ *) inv-right *> ide-right
+
+    \lemma rotate-inv-right {x y : M} (p : x * val = y) : x = y * RInv.inv
+      => inv ide-right *> pmap (x *) (inv inv-right) *> inv *-assoc *> pmap (* _) p
+
+    \lemma rotate-left {x y : M} (p : LInv.inv * x = y) : x = val * y
+      => inv ide-left *> pmap (* x) (inv inv-right) *> *-assoc *> pmap (_ *) p
+  }
 
   -- | The type of two-sided inverses of an element
   \record Inv \extends LInv, RInv {
@@ -261,7 +272,7 @@
   } \where {
       \use \lemma inv-isUnique {M : Monoid} (j j' : Inv {M}) (p : j.val = j'.val) : j.inv = j'.inv =>
         j.inv                 ==< inv ide-left >==
-        ide * j.inv           ==< pmap (`* j.inv) (inv j'.inv-left) >==
+        ide * j.inv           ==< pmap (* j.inv) (inv j'.inv-left) >==
         (j'.inv * j') * j.inv ==< pmap ((_ * __) * _) (inv p) >==
         (j'.inv * j) * j.inv  ==< *-assoc >==
         j'.inv * (j * j.inv)  ==< pmap (j'.inv *) j.inv-right >==
@@ -295,14 +306,21 @@
             ide                       `qed
         }
 
-      \lemma prod {M : Monoid} (i j : Inv {M}) : Inv (i * j) (j.inv * i.inv) => product.func
+    \lemma Inv_* {M : Monoid} {x y : M} (xi : Inv x) (yi : Inv y) : Inv (x * y)
+      => product xi yi
+
+    \lemma Inv_pow {M : Monoid} {x : M} (xi : Inv x) {n : Nat} : Inv (M.pow x n) \elim n
+      | 0 => ide-isInv
+      | suc n => Inv_* (Inv_pow xi) xi
+
+    \lemma prod {M : Monoid} (i j : Inv {M}) : Inv (i * j) (j.inv * i.inv) => product.func
 
       \lemma factor-right {M : Monoid} {x y : M} (i : LInv x) (j : Inv (x * y)) : Inv y \cowith
         | inv => j.inv * x
         | inv-left => *-assoc *> j.inv-left
         | inv-right =>
           y * (j.inv * x)                 ==< inv ide-left >==
-          ide * (y * (j.inv * x))         ==< pmap (`* (y * (j.inv * x))) (inv i.inv-left) >==
+          ide * (y * (j.inv * x))         ==< pmap (* (y * (j.inv * x))) (inv i.inv-left) >==
           (i.inv * x) * (y * (j.inv * x)) ==< *-assoc >==
           i.inv * (x * (y * (j.inv * x))) ==< pmap (i.inv *) (inv *-assoc) >==
           i.inv * ((x * y) * (j.inv * x)) ==< pmap (i.inv *) (inv *-assoc) >==
@@ -331,11 +349,14 @@
         | inv-left => d.inv-left
         | inv-right => *-comm *> d.inv-left
 
-      \lemma cfactor-right {M : CMonoid} {x y : M} (i : Inv (x * y)) : Inv y =>
-        lmake (i.inv * x) (*-assoc *> i.inv-left)
+      \lemma cfactor-right {M : CMonoid} {x y : M} (i : Inv (x * y)) : Inv y
+        => lmake (i.inv * x) (*-assoc *> i.inv-left)
 
-      \lemma cfactor-left {M : CMonoid} {x y : M} (i : Inv (x * y)) : Inv x =>
-        cfactor-right (transport (Inv __) *-comm i)
+      \lemma cfactor-left {M : CMonoid} {x y : M} (i : Inv (x * y)) : Inv x
+        => cfactor-right (transport (Inv __) *-comm i)
+
+      \lemma Inv_LDiv {M : CMonoid} {x : M} (xi : Inv x) {y : M} (y|x : LDiv y x) : Inv y
+        => cfactor-left $ transportInv Inv y|x.inv-right xi
     }
 }
 
@@ -347,7 +368,7 @@
   }
 
 \func associates-sym {M : Monoid} {x y : M} (a : associates x y) : associates y x
-  => (Monoid.Inv.reverse {a.1}, inv $ pmap (_ *) a.2 *> inv *-assoc *> pmap (`* y) a.1.inv-left *> ide-left)
+  => (Monoid.Inv.reverse {a.1}, inv $ pmap (_ *) a.2 *> inv *-assoc *> pmap (* y) a.1.inv-left *> ide-left)
 
 \class AddMonoid \extends AddPointed {
   | \infixl 6 + : E -> E -> E
@@ -356,7 +377,7 @@
   | +-assoc {x y z : E} : (x + y) + z = x + (y + z)
 
   \lemma negative-unique {x z : E} (y : E) (p : x + y = zro) (q : y + z = zro) : x = z
-    => inv (+-assoc *> pmap (x +) q *> zro-right) *> pmap (`+ z) p *> zro-left
+    => inv (+-assoc *> pmap (x +) q *> zro-right) *> pmap (+ z) p *> zro-left
 
   \func \infixl 7 *n (n : Nat) (a : E) : E \elim n
     | 0 => zro
@@ -364,13 +385,13 @@
 
   \protected \lemma *n_pow {n : Nat} {a : E} : n *n a = \this.pow a n \elim n
     | 0 => idp
-    | suc n => pmap (`+ a) *n_pow
+    | suc n => pmap (+ a) *n_pow
 
   \lemma *n-rdistr {n m : Nat} {a : E} : (n Nat.+ m) *n a = n *n a + m *n a
     => *n_pow *> \this.pow_+ *> inv (pmap2 (+) *n_pow *n_pow)
 
   \lemma *n-assoc {n m : Nat} {a : E} : (n Nat.* m) *n a = n *n (m *n a)
-    => pmap (`*n a) NatSemiring.*-comm *> *n_pow *> \this.pow_* *> inv *n_pow *> pmap (n *n) (inv *n_pow)
+    => pmap (*n a) NatSemiring.*-comm *> *n_pow *> \this.pow_* *> inv *n_pow *> pmap (n *n) (inv *n_pow)
 
   \func BigSum (l : Array E) => Big (+) zro l
 
@@ -394,7 +415,7 @@
     | 0, l => inv zro-left
     | suc n, a :: l => pmap (a +) BigSum-split *> inv +-assoc
 
-  \lemma BigSum_suc {n : Nat} {l : Array E (suc n)} : BigSum l = BigSum (\new Array E n (\lam i => l i)) + l n \elim n, l
+  \lemma BigSum_suc {n : Nat} {l : Array E (suc n)} : BigSum l = BigSum (\new Array E n (\lam i => l i)) + l (n Nat.mod suc n) \elim n, l
     | 0, :: a nil => simplify
     | suc n, :: a l => pmap (a +) (BigSum_suc {_} {n} {l} *> pmap (_ + (a :: l) __) (fin_nat-inj (pmap suc (mod_< id<suc) *> inv (mod_< id<suc)))) *> inv +-assoc
 
@@ -407,11 +428,11 @@
 
   \lemma BigSum-unique {l : Array E} (i : Fin l.len) (p : \Pi (j : Fin l.len) -> i /= j -> l j = 0) : BigSum l = l i \elim l, i
     | a :: l, 0 => pmap (a +) (BigSum_zro \lam j => p (suc j) (\case __)) *> zro-right
-    | a :: l, suc i => pmap (a +) (BigSum-unique i \lam j q => p (suc j) (fsuc/= q)) *> pmap (`+ l i) (p 0 (\case __)) *> zro-left
+    | a :: l, suc i => pmap (a +) (BigSum-unique i \lam j q => p (suc j) (fsuc/= q)) *> pmap (+ l i) (p 0 (\case __)) *> zro-left
 
   \lemma BigSum-unique2 {l : Array E} {i j : Fin l.len} (i<j : i NatOrder.< j) (p : \Pi (k : Fin l.len) -> k /= i -> k /= j -> l k = 0) : BigSum l = l i + l j \elim l, i, j, i<j
     | a :: l, 0, suc j, _ => pmap (a +) $ BigSum-unique j \lam k j/=k => p (suc k) (\case __) $ fsuc/= \lam q => j/=k (inv q)
-    | a :: l, suc i, suc j, NatOrder.suc<suc i<j => pmap (`+ _) (p 0 (\case __) (\case __)) *> zro-left *> BigSum-unique2 i<j (\lam k k/=i k/=j => p (suc k) (fsuc/= k/=i) (fsuc/= k/=j))
+    | a :: l, suc i, suc j, NatOrder.suc<suc i<j => pmap (+ _) (p 0 (\case __) (\case __)) *> zro-left *> BigSum-unique2 i<j (\lam k k/=i k/=j => p (suc k) (fsuc/= k/=i) (fsuc/= k/=j))
 
   \lemma BigSum-pred {P : E -> \Prop} (P0 : P 0) (P+ : \Pi {x y : E} -> P x -> P y -> P (x + y)) {l : Array E} (p : \Pi (j : Fin l.len) -> P (l j)) : P (BigSum l) \elim l
     | nil => P0
@@ -469,7 +490,7 @@
 
   \lemma BigProd_pow {k : Nat} {l : Array E} : BigProd (\lam i => pow (l i) k) = pow (BigProd l) k \elim k
     | 0 => BigProd_replicate1
-    | suc k => BigProd_* {_} {_} {\lam i => pow (l i) k} *> pmap (`* _) BigProd_pow
+    | suc k => BigProd_* {_} {_} {\lam i => pow (l i) k} *> pmap (* _) BigProd_pow
 
   \lemma BigProd_EPerm {l l' : Array E} (e : EPerm l l') : BigProd l = BigProd l'
     => AbMonoid.BigSum_EPerm {AbMonoid.fromCMonoid \this} e
@@ -491,7 +512,7 @@
   \func IsRegularElem (a : E) => \Pi {x y : E} -> a * x = a * y -> x = y
 
   \lemma LDiv_IsRegular {a b : E} (d : LDiv a b) (c : IsRegularElem b) : IsRegularElem a
-    => \lam p => c $ pmap (`* _) (inv d.inv-right *> *-comm) *> *-assoc *> pmap (d.inv *) p *> inv *-assoc *> pmap (`* _) (*-comm *> d.inv-right)
+    => \lam p => c $ pmap (* _) (inv d.inv-right *> *-comm) *> *-assoc *> pmap (d.inv *) p *> inv *-assoc *> pmap (* _) (*-comm *> d.inv-right)
 } \where \open Monoid
 
 \class AbMonoid \extends AddMonoid {
@@ -501,7 +522,7 @@
 
   \lemma *n-ldistr {n : Nat} {a b : E} : n *n (a + b) = n *n a + n *n b \elim n
     | 0 => inv zro-left
-    | suc n => inv +-assoc *> pmap (`+ b) (pmap (`+ a) *n-ldistr *> +-assoc *> pmap (_ +) +-comm *> inv +-assoc) *> +-assoc
+    | suc n => inv +-assoc *> pmap (+ b) (pmap (+ a) *n-ldistr *> +-assoc *> pmap (_ +) +-comm *> inv +-assoc) *> +-assoc
 
   \lemma BigSum_+ {n : Nat} {l l' : Array E n} : BigSum (\lam i => l i + l' i) = BigSum l + BigSum l' \elim n, l, l'
     | 0, _, _ => inv zro-left
@@ -531,20 +552,37 @@
   \lemma BigSum_Perm {n : Nat} {l l' : Array E n} (p : Perm l l') : BigSum l = BigSum l'
     => BigSum_EPerm (EPerm.Perm_EPerm p)
 
+  -- | Reversing an array preserves its BigSum.
+  \lemma BigSum-reverse {k : Nat} (l : Array E (suc k))
+    : BigSum (\new Array E (suc k) (\lam i => l ((k -' i) Nat.mod suc k))) = BigSum l
+    => BigSum_Perm {_} {suc k} reverse-perm
+    \where {
+      -- | The permutation that reverses an array of length `suc k`.
+      \private \func reverse-perm {A : \Set} {k : Nat} {l : Array A (suc k)}
+        : Perm (mkArray (\lam i => l ((k -' i) Nat.mod suc k))) l
+        => Perm.perm-map {Fin (suc k)} {A} l {suc k} {\lam j => (k -' j) Nat.mod suc k} {\lam j => j}
+          (Perm.perm-fin {suc k} (\lam j => (k -' j) Nat.mod suc k)
+            (\lam {a} {a'} p => run {
+              \have a<=k : a <= k => <_suc_<= (fin_< a),
+              \have a'<=k : a' <= k => <_suc_<= (fin_< a'),
+              nat_fin_= (rewrite (mod_< $ suc_<=_< (suc<=suc -'<=id), mod_< $ suc_<=_< (suc<=suc -'<=id), -'_inv a<=k, -'_inv a'<=k) in pmap (k -' __) p)
+            }))
+    }
+
   \sfunc FinSum {A : FinSet} (x : A -> E) : E
     => aux.1
     \where {
-      \lemma aux : \Sigma (r : E) (∃ (e : Equiv {Fin A.finCard} {A}) (BigSum (\lam j => x (e j)) = r))
+      \lemma aux : \Sigma (r : E) (∃ (e : QEquiv {Fin A.card} {A}) (BigSum (\lam j => x (e j)) = r))
         => TruncP.rec-set A.finEq _ aux
         \where
-          \lemma aux (e e' : Equiv {Fin A.finCard} {A}) : BigSum (\lam j => x (e j)) = BigSum (\lam j => x (e' j))
-            => BigSum_Perm $ transport (Perm _) (arrayExt \lam j => pmap x $ e.f_ret _) $ Perm.equiv_perm $ transEquiv e' (symQEquiv e)
+          \lemma aux (e e' : QEquiv {Fin A.card} {A}) : BigSum (\lam j => x (e j)) = BigSum (\lam j => x (e' j))
+            => BigSum_Perm $ transport (Perm _) (arrayExt \lam j => pmap x $ e.f_ret _) $ Perm.equiv_perm $ transQEquiv e' (symQEquiv e)
     }
 
-  \lemma FinSum_char {A : FinSet} (x : A -> E) : ∃ (e : Equiv {Fin A.finCard} {A}) (FinSum {_} {A} x = BigSum (\lam j => x (e j)))
+  \lemma FinSum_char {A : FinSet} (x : A -> E) : ∃ (e : QEquiv {Fin A.card} {A}) (FinSum {_} {A} x = BigSum (\lam j => x (e j)))
     => TruncP.map FinSum.aux.2 \lam t => (t.1, (\peval FinSum {_} {A} x) *> inv t.2)
 
-  \lemma FinSum_char2 {A : FinSet} {x : A -> E} (e : Equiv {Fin A.finCard} {A}) : FinSum x = BigSum (\lam j => x (e j))
+  \lemma FinSum_char2 {A : FinSet} {x : A -> E} (e : QEquiv {Fin A.card} {A}) : FinSum x = BigSum (\lam j => x (e j))
     => \case FinSum_char x \with {
       | inP p => p.2 *> FinSum.aux.aux {_} {_} {x} p.1 e
     }
@@ -559,17 +597,21 @@
       | inP (e,xp) => FinSum_char2 e *> BigSum_+ *> inv (pmap2 (+) xp (FinSum_char2 e))
     }
 
-  \lemma FinSum-const {A : FinSet} {x : E} : FinSum {_} {A} (\lam _ => x) = BigSum (\new Array E A.finCard (\lam j => x))
+  \lemma FinSum-const {A : FinSet} {x : E} : FinSum {_} {A} (\lam _ => x) = BigSum (\new Array E A.card (\lam j => x))
     => \case FinSum_char {_} {A} (\lam _ => x) \with {
          | inP p => p.2
        }
 
   \lemma FinSum-double-dep {A : FinSet} (B : A -> FinSet) {x : (\Sigma (a : A) (B a)) -> E}
     : FinSum (\lam a => FinSum (\lam b => x (a,b))) = FinSum {_} {SigmaFin A B} x
-    => \case FinSum_char _, choice (\lam a => FinSum_char (\lam b => x (a,b))) \with {
-      | inP p, inP f => p.2 *> cong (ext \lam j => (f _).2) *> BigSum-double-dep (\lam j => finCard {B (p.1 j)}) (\lam s => x (p.1 s.1, (f _).1 s.2)) *>
-                          inv (FinSum_char2 (unfold $ =-to-QEquiv (pmap Fin $ FinSum_char2 {NatSemiring} p.1) `transEquiv` SigmaFin.aux `transEquiv` sigma-equiv p.1 (\lam j => (f _).1)) *> pmap BigSum (exts $ (FinSum_char2 {NatSemiring} p.1, \lam j => idp)))
+    => \case FinSum_char _, FinSet.choice (\lam a => FinSum_char (\lam b => x (a,b))) \with {
+      | inP p, inP f => p.2 *> cong (ext \lam j => (f _).2) *> BigSum-double-dep (\lam j => (B (p.1 j)).card) (\lam s => x (p.1 s.1, (f _).1 s.2)) *>
+                          inv (FinSum_char2 (unfold $ =-to-QEquiv (pmap Fin $ FinSum_char2 {NatSemiring} p.1) `transQEquiv` SigmaFin.aux `transQEquiv` sigma-equiv p.1 (\lam j => (f _).1)) *> pmap BigSum (exts $ (FinSum_char2 {NatSemiring} p.1, \lam j => idp)))
     }
+
+  \lemma FinSum-double-dep' {A : FinSet} (B : A -> FinSet) {x : \Pi (a : A) -> B a -> E}
+    : FinSum (\lam a => FinSum (x a)) = FinSum {_} {SigmaFin A B} \lam s => x s.1 s.2
+    => FinSum-double-dep B
 
   \lemma FinSum-double {A B : FinSet} {x : A -> B -> E}
     : FinSum (\lam a => FinSum (\lam b => x a b)) = FinSum (\lam (p : \Sigma A B) => x p.1 p.2)
@@ -578,43 +620,59 @@
   \lemma FinSum=BigSum {n : Nat} {x : Fin n -> E} : FinSum x = BigSum x
     => FinSum_char2 idEquiv
 
-  \lemma FinSum_Equiv {A B : FinSet} (e : Equiv {A} {B}) {x : B -> E} : FinSum x = FinSum (\lam a => x (e a))
+  \lemma FinSum-ext {A : FinSet} {x y : A -> E} (p : \Pi (a : A) -> x a = y a) : FinSum x = FinSum y
+    => pmap FinSum (ext p)
+
+  \lemma FinSum_Equiv {A B : FinSet} (e : QEquiv {A} {B}) {x : B -> E} : FinSum x = FinSum (\lam a => x (e a))
     => \case FinSum_char _ \with {
-      | inP p => \let A' => \new FinSet A B.finCard { | finEq => TruncP.map B.finEq \lam e' => transEquiv e' (symQEquiv e)}
-                 \in FinSum_char2 (transEquiv p.1 e) *> inv p.2 *> pmap {FinSet A} (FinSum {_} {__} _) (FinSet.levelProp A' A)
+      | inP p => \let A' => \new FinSet A B.card { | finEq => TruncP.map B.finEq \lam e' => transQEquiv e' (symQEquiv e)}
+                 \in FinSum_char2 (transQEquiv p.1 e) *> inv p.2 *> pmap {FinSet A} (FinSum {_} {__} _) (FinSet.levelProp A' A)
     }
 
-  \lemma FinSum_Equiv2 {A B : FinSet} (e : Equiv {A} {B}) {x : A -> E} {y : B -> E} (p : \Pi (a : A) -> x a = y (e a)) : FinSum x = FinSum y
+  \lemma FinSum_Equiv2 {A B : FinSet} (e : QEquiv {A} {B}) {x : A -> E} {y : B -> E} (p : \Pi (a : A) -> x a = y (e a)) : FinSum x = FinSum y
     => pmap FinSum (ext p) *> inv (FinSum_Equiv e)
 
   \lemma FinSum-inj {A B : FinSet} (f : A -> B) (inj : IsInj f) {x : B -> E} (p : \Pi (b : B) -> (\Pi (a : A) -> f a /= b) -> x b = 0) : FinSum x = FinSum (\lam a => x (f a))
-    => \have dec (b : B) : Decide (∃ (a : A) (f a = b)) => \new Decide { | decide => FinSet.search (\lam a => f a = b) (\lam a => decideEq (f a) b) }
-       \in FinSum_Equiv (later \new QEquiv {
-         | f => \case __ \with {
-           | inl s => s.1
-           | inr s => s.1
-         }
-         | ret b => \case decide {dec b} \with {
-           | yes e => inl (b,e)
-           | no q => inr (b,q)
-         }
-         | ret_f => \case \elim __ \with {
-           | inl s => rewrite (dec_yes_reduce s.2) idp
-           | inr s => rewrite (dec_no_reduce s.2) idp
-         }
-         | f_sec b => mcases {2} idp
-       }) *> FinSum_Or {_} {SigmaFin B \lam b => DecFin (decide {dec b})} {SigmaFin B \lam b => DecFin (decide {NotDecide (dec b)})} *>
-             pmap2 (+) (FinSum_Equiv $ later $ Equiv.fromInjSurj {A} {\Sigma (b : B) (∃ (a : A) (f a = b))} (\lam a => (f a, inP (a,idp))) (\lam {a} {a'} q => inj $ pmap __.1 q) \lam s => TruncP.map s.2 \lam t => (t.1, ext t.2))
-                       (FinSum_zro $ later \lam j => p j.1 \lam a q => j.2 $ inP (a,q)) *> zro-right
+    => FinSum_Equiv (later equiv)
+    *> FinSum_Or {_} {SigmaFin B \lam b => DecFin (decide {dec b})} {SigmaFin B \lam b => DecFin (decide {NotDecide (dec b)})}
+    *> pmap2 (+) (FinSum_Equiv $ later $ equiv2 inj) (FinSum_zro $ later \lam j => p j.1 \lam a q => j.2 $ inP (a,q)) *> zro-right
+    \where {
+      \protected \lemma dec (b : B) : Decide (∃ (a : A) (f a = b))
+        => \new Decide { | decide => FinSet.search (\lam a => f a = b) (\lam a => decideEq (f a) b) }
+
+      \protected \func equiv : QEquiv {Or (Given (b : B) ∃ (a : A) (f a = b)) (Given (b : B) (Not (∃ (a : A) (f a = b))))} {B} \cowith
+        | f => \case __ \with {
+          | inl s => s.1
+          | inr s => s.1
+        }
+        | ret b => \case decide {dec b} \with {
+          | yes e => inl (b,e)
+          | no q => inr (b,q)
+        }
+        | ret_f => \case \elim __ \with {
+          | inl s => rewrite (dec_yes_reduce s.2) idp
+          | inr s => rewrite (dec_no_reduce s.2) idp
+        }
+        | f_sec b => mcases {2} idp
+
+      \protected \func equiv2 {A B : FinSet} {f : A -> B} (inj : IsInj f)
+        => QEquiv.fromInjSurj {A} {\Sigma (b : B) (∃ (a : A) (f a = b))} {\lam a => (f a, inP (a,idp))}
+            (\lam {a} {a'} q => inj $ pmap __.1 q)
+            (\lam s => TruncP.map s.2 \lam t => (t.1, ext t.2))
+    }
+
+  \lemma FinSum-inj2 {A B : FinSet} (f : A -> B) (inj : IsInj f) {x : B -> E} (p : \Pi (b : B) -> (\Pi (a : A) -> f a /= b) -> x b = 0)
+                     {y : A -> E} (q : \Pi (a : A) -> x (f a) = y a) : FinSum x = FinSum y
+    => FinSum-inj f inj p *> FinSum-ext q
 
   \lemma FinSum_Or {A B : FinSet} {x : Or A B -> E} : FinSum x = FinSum (\lam a => x (inl a)) + FinSum (\lam b => x (inr b))
     => \case FinSum_char _, FinSum_char _ \with {
-      | inP p, inP q => FinSum_char2 (transEquiv (OrFin.aux {A.finCard} {B.finCard}) (Or.Or_Equiv p.1 q.1)) *> BigSum_Or (\lam a => x (Or.map a p.1 q.1)) *> inv (pmap2 (+) p.2 q.2)
+      | inP p, inP q => FinSum_char2 (transQEquiv (OrFin.aux {A.card} {B.card}) (Or.Or_QEquiv p.1 q.1)) *> BigSum_Or (\lam a => x (Or.map a p.1 q.1)) *> inv (pmap2 (+) p.2 q.2)
     }
 
   \lemma FinSum-unique {J : FinSet} {a : J -> E} (j : J) (p : \Pi (j' : J) -> j' /= j -> a j' = 0) : FinSum a = a j
     => \case FinSum_char a \with {
-         | inP (e : Equiv, q) => q *> BigSum-unique (e.ret j) (\lam i c => p (e i) \lam s => c $ inv $ e.adjoint s) *> pmap a (e.f_ret j)
+         | inP (e,q) => q *> BigSum-unique (e.ret j) (\lam i c => p (e i) \lam s => c $ inv $ e.adjoint s) *> pmap a (e.f_ret j)
        }
 
   \lemma FinSum-unique2 {J : FinSet} {i j : J} (i/=j : i /= j) {x : J -> E} (p : \Pi (k : J) -> k /= i -> k /= j -> x k = 0) : FinSum x = x i + x j

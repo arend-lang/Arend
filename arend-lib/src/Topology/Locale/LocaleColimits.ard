@@ -1,0 +1,66 @@
+\import Function.Meta
+\import Logic
+\import Meta
+\import Order.Lattice
+\import Order.Lattice.CompleteLattice
+\import Order.PartialOrder
+\import Paths
+\import Paths.Meta
+\import Topology.Locale
+\open CompleteLattice
+\open LocaleHom
+
+\func InitialLocale : Locale (\Sigma) \cowith
+  | <= _ _ => \Sigma
+  | <=-refl => ()
+  | <=-transitive _ _ => ()
+  | <=-antisymmetric _ _ => idp
+  | Join _ => ()
+  | Join-cond _ => ()
+  | Join-univ _ => ()
+  | Join-ldistr>= => ()
+  \where {
+    \func initialMap {L : Locale} : LocaleHom InitialLocale L \cowith
+      | func _ => ()
+      | func-meet => idp
+      | func-top>= => ()
+      | func-Join>= => ()
+
+    \lemma initialMap-unique {L : Locale} {f g : LocaleHom InitialLocale L} : f = g
+      => ext
+  }
+
+\func PushoutLocale {L M K : Locale} (f : LocaleHom L M) (g : LocaleHom L K) : Locale (\Sigma (x : M) (y : K) (f x = g y)) \cowith
+  | <= s t => \Sigma (s.1 <= t.1) (s.2 <= t.2)
+  | <=-refl => (<=-refl, <=-refl)
+  | <=-transitive p q => (p.1 <=∘ q.1, p.2 <=∘ q.2)
+  | <=-antisymmetric p q => ext (<=-antisymmetric p.1 q.1, <=-antisymmetric p.2 q.2)
+  | top => (top, top, func-top *> inv func-top)
+  | top-univ => (top-univ, top-univ)
+  | meet s t => (s.1 ∧ t.1, s.2 ∧ t.2, func-meet *> pmap2 (∧) s.3 t.3 *> inv func-meet)
+  | meet-left => (meet-left, meet-left)
+  | meet-right => (meet-right, meet-right)
+  | meet-univ s t => (meet-univ s.1 t.1, meet-univ s.2 t.2)
+  | Join C => (SJoin __.1 C, SJoin __.2 C, <=-antisymmetric
+    (f.func-SJoin>= <=∘ SJoin-univ \lam {s} Cs => s.3 =<= func-<= (SJoin-cond Cs))
+    (g.func-SJoin>= <=∘ SJoin-univ \lam {s} Cs => inv s.3 =<= func-<= (SJoin-cond Cs)))
+  | Join-cond Cx => (SJoin-cond Cx, SJoin-cond Cx)
+  | Join-univ h => (SJoin-univ \lam Ca => (h Ca).1, SJoin-univ \lam Ca => (h Ca).2)
+  | Join-ldistr>= => (M.SJoin-ldistr>= <=∘ SJoin-univ \lam Ca => SJoin-cond $ SetIm-con Ca,
+                      K.SJoin-ldistr>= <=∘ SJoin-univ \lam Ca => SJoin-cond $ SetIm-con Ca)
+  \where {
+    \func pinl : LocaleHom M (PushoutLocale f g) \cowith
+      | func s => s.1
+      | func-top => idp
+      | func-meet => idp
+      | func-Join => idp
+
+    \func pinr : LocaleHom K (PushoutLocale f g) \cowith
+      | func s => s.2
+      | func-top => idp
+      | func-meet => idp
+      | func-Join => idp
+
+    \lemma pushoutCoh : pinl ∘ f = pinr ∘ g
+      => exts \lam s => s.3
+  }

@@ -23,11 +23,11 @@
 \class HData \noclassifying {C : Precat} {V : \Set} (f : V -> C) (H : V -> V -> \Set) (g : \Pi {x y : V} -> H x y -> Hom (f x) (f y)) {
   \protected \func interpret {a b : V} (t : CatTerm a b H) : Hom (f a) (f b) \elim t
     | var h => g h
-    | :id idp => id (f a)
+    | :id idp => id
     | :o _ t s => interpret t ∘ interpret s
 
   \protected \func interpretNF {a b : V} (t : CatNF a b H) : Hom (f a) (f b) \elim t
-    | :nil idp => id (f a)
+    | :nil idp => id
     | :cons h (:nil idp) => g h
     | :cons h t => g h ∘ interpretNF t
     \where

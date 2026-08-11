@@ -40,7 +40,10 @@ class ArendClassField : ArendClassFieldBase<ArendClassFieldStub>, StubBasedPsiEl
 
     override fun isCoerce() = hasChildOfType(COERCE_KW)
 
-    override fun getAccessModifier(): AccessModifier = (childOfType<ArendAccessMod>()?.accessModifier ?: AccessModifier.PUBLIC).max(classAccessModifier)
+    override val ownAccessModifier: AccessModifier
+        get() = stub?.accessModifier ?: childOfType<ArendAccessMod>()?.accessModifier ?: AccessModifier.PUBLIC
+
+    override fun getAccessModifier(): AccessModifier = ownAccessModifier.max(classAccessModifier)
 
     override val psiElementType: PsiElement?
         get() = resultType

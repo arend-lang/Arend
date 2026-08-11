@@ -8,6 +8,7 @@ import org.arend.ext.reference.Precedence
 import org.arend.naming.reference.GlobalReferable
 import org.arend.psi.*
 import org.arend.psi.ext.*
+import org.arend.term.group.AccessModifier
 
 class ArendFileStub(file: ArendFile?, override val name: String?) : PsiFileStubImpl<ArendFile>(file), ArendNamedStub {
     constructor (file: ArendFile?) : this(file, file?.name)
@@ -15,10 +16,13 @@ class ArendFileStub(file: ArendFile?, override val name: String?) : PsiFileStubI
     override val precedence: Precedence
         get() = Precedence.DEFAULT
 
+    override val accessModifier: AccessModifier
+        get() = AccessModifier.PUBLIC
+
     override fun getType(): Type = Type
 
     object Type : IStubFileElementType<ArendFileStub>(ArendLanguage.INSTANCE) {
-        override fun getStubVersion() = 6
+        override fun getStubVersion() = 7
 
         override fun getBuilder() = object : DefaultStubBuilder() {
             override fun createStubForFile(file: PsiFile): StubElement<*> =
@@ -53,15 +57,15 @@ fun factory(name: String): ArendStubElementType<*, *> = when (name) {
     else -> error("Unknown anchor $name")
 }
 
-abstract class ArendStub<T : PsiLocatedReferable>(parent: StubElement<*>?, elementType: IStubElementType<*, *>, override val name: String?, open val aliasName: String?)
+abstract class ArendStub<T : PsiLocatedReferable>(parent: StubElement<*>?, elementType: IStubElementType<*, *>, override val name: String?, open val aliasName: String?, override val accessModifier: AccessModifier)
     : StubBase<T>(parent, elementType), ArendNamedStub
 
-class ArendDefClassStub(parent: StubElement<*>?, elementType: IStubElementType<*, *>, name: String?, override val precedence: Precedence?, aliasName: String?)
-    : ArendStub<ArendDefClass>(parent, elementType, name, aliasName) {
+class ArendDefClassStub(parent: StubElement<*>?, elementType: IStubElementType<*, *>, name: String?, override val precedence: Precedence?, aliasName: String?, accessModifier: AccessModifier)
+    : ArendStub<ArendDefClass>(parent, elementType, name, aliasName, accessModifier) {
 
     object Type : ArendStubElementType<ArendDefClassStub, ArendDefClass>("DEF_CLASS") {
-        override fun createStub(parentStub: StubElement<*>?, name: String?, prec: Precedence?, aliasName: String?) =
-            ArendDefClassStub(parentStub, this, name, prec, aliasName)
+        override fun createStub(parentStub: StubElement<*>?, name: String?, prec: Precedence?, aliasName: String?, accessModifier: AccessModifier) =
+            ArendDefClassStub(parentStub, this, name, prec, aliasName, accessModifier)
 
         override fun createPsi(stub: ArendDefClassStub) = ArendDefClass(stub, this)
 
@@ -69,12 +73,12 @@ class ArendDefClassStub(parent: StubElement<*>?, elementType: IStubElementType<*
     }
 }
 
-class ArendClassFieldStub(parent: StubElement<*>?, elementType: IStubElementType<*, *>, name: String?, override val precedence: Precedence?, aliasName: String?)
-    : ArendStub<ArendClassField>(parent, elementType, name, aliasName) {
+class ArendClassFieldStub(parent: StubElement<*>?, elementType: IStubElementType<*, *>, name: String?, override val precedence: Precedence?, aliasName: String?, accessModifier: AccessModifier)
+    : ArendStub<ArendClassField>(parent, elementType, name, aliasName, accessModifier) {
 
     object Type : ArendStubElementType<ArendClassFieldStub, ArendClassField>("CLASS_FIELD") {
-        override fun createStub(parentStub: StubElement<*>?, name: String?, prec: Precedence?, aliasName: String?) =
-            ArendClassFieldStub(parentStub, this, name, prec, aliasName)
+        override fun createStub(parentStub: StubElement<*>?, name: String?, prec: Precedence?, aliasName: String?, accessModifier: AccessModifier) =
+            ArendClassFieldStub(parentStub, this, name, prec, aliasName, accessModifier)
 
         override fun createPsi(stub: ArendClassFieldStub) = ArendClassField(stub, this)
 
@@ -82,12 +86,12 @@ class ArendClassFieldStub(parent: StubElement<*>?, elementType: IStubElementType
     }
 }
 
-class ArendClassFieldParamStub(parent: StubElement<*>?, elementType: IStubElementType<*, *>, name: String?, override val precedence: Precedence?, aliasName: String?)
-    : ArendStub<ArendFieldDefIdentifier>(parent, elementType, name, aliasName) {
+class ArendClassFieldParamStub(parent: StubElement<*>?, elementType: IStubElementType<*, *>, name: String?, override val precedence: Precedence?, aliasName: String?, accessModifier: AccessModifier)
+    : ArendStub<ArendFieldDefIdentifier>(parent, elementType, name, aliasName, accessModifier) {
 
     object Type : ArendStubElementType<ArendClassFieldParamStub, ArendFieldDefIdentifier>("FIELD_DEF_IDENTIFIER") {
-        override fun createStub(parentStub: StubElement<*>?, name: String?, prec: Precedence?, aliasName: String?) =
-            ArendClassFieldParamStub(parentStub, this, name, prec, aliasName)
+        override fun createStub(parentStub: StubElement<*>?, name: String?, prec: Precedence?, aliasName: String?, accessModifier: AccessModifier) =
+            ArendClassFieldParamStub(parentStub, this, name, prec, aliasName, accessModifier)
 
         override fun createPsi(stub: ArendClassFieldParamStub) = ArendFieldDefIdentifier(stub, this)
 
@@ -95,12 +99,12 @@ class ArendClassFieldParamStub(parent: StubElement<*>?, elementType: IStubElemen
     }
 }
 
-class ArendClassImplementStub(parent: StubElement<*>?, elementType: IStubElementType<*, *>, name: String?, override val precedence: Precedence?, aliasName: String?)
-    : ArendStub<ArendClassImplement>(parent, elementType, name, aliasName) {
+class ArendClassImplementStub(parent: StubElement<*>?, elementType: IStubElementType<*, *>, name: String?, override val precedence: Precedence?, aliasName: String?, accessModifier: AccessModifier)
+    : ArendStub<ArendClassImplement>(parent, elementType, name, aliasName, accessModifier) {
 
     object Type : ArendStubElementType<ArendClassImplementStub, ArendClassImplement>("CLASS_IMPLEMENT") {
-        override fun createStub(parentStub: StubElement<*>?, name: String?, prec: Precedence?, aliasName: String?) =
-            ArendClassImplementStub(parentStub, this, name, prec, aliasName)
+        override fun createStub(parentStub: StubElement<*>?, name: String?, prec: Precedence?, aliasName: String?, accessModifier: AccessModifier) =
+            ArendClassImplementStub(parentStub, this, name, prec, aliasName, accessModifier)
 
         override fun createPsi(stub: ArendClassImplementStub) = ArendClassImplement(stub, this)
 
@@ -108,15 +112,15 @@ class ArendClassImplementStub(parent: StubElement<*>?, elementType: IStubElement
     }
 }
 
-class ArendCoClauseDefStub(parent: StubElement<*>?, elementType: IStubElementType<*, *>, name: String?, override val precedence: Precedence?, aliasName: String?)
-    : ArendStub<ArendCoClauseDef>(parent, elementType, name, aliasName) {
+class ArendCoClauseDefStub(parent: StubElement<*>?, elementType: IStubElementType<*, *>, name: String?, override val precedence: Precedence?, aliasName: String?, accessModifier: AccessModifier)
+    : ArendStub<ArendCoClauseDef>(parent, elementType, name, aliasName, accessModifier) {
 
     object Type : ArendStubElementType<ArendCoClauseDefStub, ArendCoClauseDef>("CO_CLAUSE_DEF") {
-        override fun createStub(parentStub: StubElement<*>?, name: String?, prec: Precedence?, aliasName: String?) =
-            ArendCoClauseDefStub(parentStub, this, name, prec, aliasName)
+        override fun createStub(parentStub: StubElement<*>?, name: String?, prec: Precedence?, aliasName: String?, accessModifier: AccessModifier) =
+            ArendCoClauseDefStub(parentStub, this, name, prec, aliasName, accessModifier)
 
         override fun createStub(psi: ArendCoClauseDef, parentStub: StubElement<*>?) =
-            createStub(parentStub, psi.name, (psi as? ArendCoClauseDef)?.parentCoClause?.prec?.let { ReferableBase.calcPrecedence(it) }, (psi as? GlobalReferable)?.aliasName)
+            createStub(parentStub, psi.name, (psi as? ArendCoClauseDef)?.parentCoClause?.prec?.let { ReferableBase.calcPrecedence(it) }, (psi as? GlobalReferable)?.aliasName, psi.ownAccessModifier)
 
         override fun createPsi(stub: ArendCoClauseDefStub) = ArendCoClauseDef(stub, this)
 
@@ -124,12 +128,12 @@ class ArendCoClauseDefStub(parent: StubElement<*>?, elementType: IStubElementTyp
     }
 }
 
-class ArendDefInstanceStub(parent: StubElement<*>?, elementType: IStubElementType<*, *>, name: String?, override val precedence: Precedence?, aliasName: String?)
-    : ArendStub<ArendDefInstance>(parent, elementType, name, aliasName) {
+class ArendDefInstanceStub(parent: StubElement<*>?, elementType: IStubElementType<*, *>, name: String?, override val precedence: Precedence?, aliasName: String?, accessModifier: AccessModifier)
+    : ArendStub<ArendDefInstance>(parent, elementType, name, aliasName, accessModifier) {
 
     object Type : ArendStubElementType<ArendDefInstanceStub, ArendDefInstance>("DEF_INSTANCE") {
-        override fun createStub(parentStub: StubElement<*>?, name: String?, prec: Precedence?, aliasName: String?) =
-            ArendDefInstanceStub(parentStub, this, name, prec, aliasName)
+        override fun createStub(parentStub: StubElement<*>?, name: String?, prec: Precedence?, aliasName: String?, accessModifier: AccessModifier) =
+            ArendDefInstanceStub(parentStub, this, name, prec, aliasName, accessModifier)
 
         override fun createPsi(stub: ArendDefInstanceStub) = ArendDefInstance(stub, this)
 
@@ -137,12 +141,12 @@ class ArendDefInstanceStub(parent: StubElement<*>?, elementType: IStubElementTyp
     }
 }
 
-class ArendConstructorStub(parent: StubElement<*>?, elementType: IStubElementType<*, *>, name: String?, override val precedence: Precedence?, aliasName: String?)
-    : ArendStub<ArendConstructor>(parent, elementType, name, aliasName) {
+class ArendConstructorStub(parent: StubElement<*>?, elementType: IStubElementType<*, *>, name: String?, override val precedence: Precedence?, aliasName: String?, accessModifier: AccessModifier)
+    : ArendStub<ArendConstructor>(parent, elementType, name, aliasName, accessModifier) {
 
     object Type : ArendStubElementType<ArendConstructorStub, ArendConstructor>("CONSTRUCTOR") {
-        override fun createStub(parentStub: StubElement<*>?, name: String?, prec: Precedence?, aliasName: String?) =
-            ArendConstructorStub(parentStub, this, name, prec, aliasName)
+        override fun createStub(parentStub: StubElement<*>?, name: String?, prec: Precedence?, aliasName: String?, accessModifier: AccessModifier) =
+            ArendConstructorStub(parentStub, this, name, prec, aliasName, accessModifier)
 
         override fun createPsi(stub: ArendConstructorStub) = ArendConstructor(stub, this)
 
@@ -151,12 +155,12 @@ class ArendConstructorStub(parent: StubElement<*>?, elementType: IStubElementTyp
 }
 
 
-class ArendDefDataStub(parent: StubElement<*>?, elementType: IStubElementType<*, *>, name: String?, override val precedence: Precedence?, aliasName: String?)
-    : ArendStub<ArendDefData>(parent, elementType, name, aliasName) {
+class ArendDefDataStub(parent: StubElement<*>?, elementType: IStubElementType<*, *>, name: String?, override val precedence: Precedence?, aliasName: String?, accessModifier: AccessModifier)
+    : ArendStub<ArendDefData>(parent, elementType, name, aliasName, accessModifier) {
 
     object Type : ArendStubElementType<ArendDefDataStub, ArendDefData>("DEF_DATA") {
-        override fun createStub(parentStub: StubElement<*>?, name: String?, prec: Precedence?, aliasName: String?) =
-            ArendDefDataStub(parentStub, this, name, prec, aliasName)
+        override fun createStub(parentStub: StubElement<*>?, name: String?, prec: Precedence?, aliasName: String?, accessModifier: AccessModifier) =
+            ArendDefDataStub(parentStub, this, name, prec, aliasName, accessModifier)
 
         override fun createPsi(stub: ArendDefDataStub) = ArendDefData(stub, this)
 
@@ -164,12 +168,12 @@ class ArendDefDataStub(parent: StubElement<*>?, elementType: IStubElementType<*,
     }
 }
 
-class ArendDefFunctionStub(parent: StubElement<*>?, elementType: IStubElementType<*, *>, name: String?, override val precedence: Precedence?, aliasName: String?)
-    : ArendStub<ArendDefFunction>(parent, elementType, name, aliasName) {
+class ArendDefFunctionStub(parent: StubElement<*>?, elementType: IStubElementType<*, *>, name: String?, override val precedence: Precedence?, aliasName: String?, accessModifier: AccessModifier)
+    : ArendStub<ArendDefFunction>(parent, elementType, name, aliasName, accessModifier) {
 
     object Type : ArendStubElementType<ArendDefFunctionStub, ArendDefFunction>("DEF_FUNCTION") {
-        override fun createStub(parentStub: StubElement<*>?, name: String?, prec: Precedence?, aliasName: String?) =
-            ArendDefFunctionStub(parentStub, this, name, prec, aliasName)
+        override fun createStub(parentStub: StubElement<*>?, name: String?, prec: Precedence?, aliasName: String?, accessModifier: AccessModifier) =
+            ArendDefFunctionStub(parentStub, this, name, prec, aliasName, accessModifier)
 
         override fun createPsi(stub: ArendDefFunctionStub) = ArendDefFunction(stub, this)
 
@@ -177,12 +181,12 @@ class ArendDefFunctionStub(parent: StubElement<*>?, elementType: IStubElementTyp
     }
 }
 
-class ArendDefMetaStub(parent: StubElement<*>?, elementType: IStubElementType<*, *>, name: String?, override val precedence: Precedence?, aliasName: String?)
-    : ArendStub<ArendDefMeta>(parent, elementType, name, aliasName) {
+class ArendDefMetaStub(parent: StubElement<*>?, elementType: IStubElementType<*, *>, name: String?, override val precedence: Precedence?, aliasName: String?, accessModifier: AccessModifier)
+    : ArendStub<ArendDefMeta>(parent, elementType, name, aliasName, accessModifier) {
 
     object Type : ArendStubElementType<ArendDefMetaStub, ArendDefMeta>("DEF_META") {
-        override fun createStub(parentStub: StubElement<*>?, name: String?, prec: Precedence?, aliasName: String?) =
-            ArendDefMetaStub(parentStub, this, name, prec, aliasName)
+        override fun createStub(parentStub: StubElement<*>?, name: String?, prec: Precedence?, aliasName: String?, accessModifier: AccessModifier) =
+            ArendDefMetaStub(parentStub, this, name, prec, aliasName, accessModifier)
 
         override fun createPsi(stub: ArendDefMetaStub) = ArendDefMeta(stub, this)
 
@@ -190,8 +194,8 @@ class ArendDefMetaStub(parent: StubElement<*>?, elementType: IStubElementType<*,
     }
 }
 
-class ArendDefModuleStub(parent: StubElement<*>?, elementType: IStubElementType<*, *>, name: String?, override val aliasName: String?)
-    : ArendStub<ArendDefModule>(parent, elementType, name, aliasName) {
+class ArendDefModuleStub(parent: StubElement<*>?, elementType: IStubElementType<*, *>, name: String?, override val aliasName: String?, accessModifier: AccessModifier)
+    : ArendStub<ArendDefModule>(parent, elementType, name, aliasName, accessModifier) {
 
     override val precedence: Precedence?
         get() = null
@@ -200,13 +204,14 @@ class ArendDefModuleStub(parent: StubElement<*>?, elementType: IStubElementType<
         override fun serialize(stub: ArendDefModuleStub, dataStream: StubOutputStream) {
             dataStream.writeName(stub.name)
             dataStream.writeName(stub.aliasName)
+            dataStream.writeVarInt(stub.accessModifier.ordinal)
         }
 
         override fun deserialize(dataStream: StubInputStream, parentStub: StubElement<*>?) =
-            ArendDefModuleStub(parentStub, this, dataStream.readNameString(), dataStream.readNameString())
+            ArendDefModuleStub(parentStub, this, dataStream.readNameString(), dataStream.readNameString(), AccessModifier.entries[dataStream.readVarInt()])
 
-        override fun createStub(parentStub: StubElement<*>?, name: String?, prec: Precedence?, aliasName: String?) =
-            ArendDefModuleStub(parentStub, this, name, aliasName)
+        override fun createStub(parentStub: StubElement<*>?, name: String?, prec: Precedence?, aliasName: String?, accessModifier: AccessModifier) =
+            ArendDefModuleStub(parentStub, this, name, aliasName, accessModifier)
 
         override fun createPsi(stub: ArendDefModuleStub) = ArendDefModule(stub, this)
 

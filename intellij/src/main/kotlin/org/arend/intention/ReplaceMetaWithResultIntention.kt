@@ -20,7 +20,7 @@ import org.arend.util.ArendBundle
 class ReplaceMetaWithResultIntention : BaseArendIntention(ArendBundle.message("arend.expression.replaceMetaWithResult")) {
     override fun isAvailable(project: Project, editor: Editor?, element: PsiElement): Boolean {
         val expr = element.ancestor<ArendExpr>()
-        val refElement = (expr as? ArendLiteral)?.ipName ?: (expr as? ArendLiteral)?.refIdentifier ?: (expr as? ArendLongNameExpr)?.longName?.refIdentifierList?.lastOrNull() ?: return false
+        val refElement = (expr as? ArendLiteral)?.ipName ?: (expr as? ArendLiteral)?.refIdentifier ?: return false
         val ref = refElement.cachedReferable
         return ref is MetaReferable && (ref.definition != null || ref.resolver != null)
     }

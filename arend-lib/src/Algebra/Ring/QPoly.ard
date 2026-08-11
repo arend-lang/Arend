@@ -20,7 +20,7 @@
           => NatSemiring.cancel-left _ (inv len_++ *> pmap (DArray.len {__}) (p *> inv q) *> len_++)
 
         \lemma lists-lem2 {R : AddPointed} {l l' : Array R} {n m : Nat} (p : l ++ replicate n zro = l') (q : l' ++ replicate (suc m) zro = l) : Empty
-          => \have t => ++-cancel-left $ inv ++-assoc *> pmap (`++ _) p *> q *> inv ++_nil
+          => \have t => ++-cancel-left $ inv ++-assoc *> pmap (++ _) p *> q *> inv ++_nil
              \in \case \elim n, \elim t \with { | 0, t => \case pmap (DArray.len {__}) t }
 
         \use \level levelProp {R : AddPointed} {l l' : Array R} (x y : l ~ l') : x = y \elim x, y
@@ -35,7 +35,7 @@
       | ~-reflexive => eq-left 0 ++_nil
       | ~-symmetric => symm
       | ~-transitive => \case __, __ \with {
-        | eq-left n p, eq-left m q => eq-left (n Nat.+ m) (pmap (_ ++) replicate_+ *> inv ++-assoc *> pmap (`++ _) p *> q)
+        | eq-left n p, eq-left m q => eq-left (n Nat.+ m) (pmap (_ ++) replicate_+ *> inv ++-assoc *> pmap (++ _) p *> q)
         | eq-left n p, eq-right m q => \case totality (suc m) n \with {
           | byLeft s => lists-lem1 n (suc m) (p *> inv q) s
           | byRight s => symm (lists-lem1 (suc m) n (q *> inv p) s)
@@ -44,7 +44,7 @@
           | byLeft s => lists-lem2 (suc n) m p q s
           | byRight s => symm (lists-lem2 m (suc n) q p s)
         }
-        | eq-right n p, eq-right m q => eq-right (suc m Nat.+ n) (pmap (_ ++) (replicate_+ {_} {suc m} {suc n}) *> inv ++-assoc *> pmap (`++ zro :: _) q *> p)
+        | eq-right n p, eq-right m q => eq-right (suc m Nat.+ n) (pmap (_ ++) (replicate_+ {_} {suc m} {suc n}) *> inv ++-assoc *> pmap (++ zro :: _) q *> p)
       }
       \where {
         \lemma symm {R : AddPointed} {x y : Array R} (p : x ~ y) : y ~ x \elim p

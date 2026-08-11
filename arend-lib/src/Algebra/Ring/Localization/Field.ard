@@ -2,8 +2,10 @@
 \import Algebra.Group
 \import Algebra.Meta
 \import Algebra.Monoid
-\import Algebra.Monoid.Sub
+\import Algebra.Monoid.Localization
+\import Algebra.Monoid.SubMonoid
 \import Algebra.Ordered
+\import Algebra.Ring.RingHom
 \import Algebra.StrictlyOrdered
 \import Algebra.Pointed
 \import Algebra.Ring
@@ -12,6 +14,7 @@
 \import Algebra.Semiring
 \import Function.Meta
 \import Logic
+\import Logic.Meta
 \import Meta
 \import Order.Lattice
 \import Order.LinearOrder
@@ -20,80 +23,46 @@
 \import Paths.Meta
 \import Relation.Equivalence
 \open Monoid
-\open LocRing
-
-\lemma localization-inv {R : CRing} (S : SubMonoid R) (a : SType S) (r : R) (p : S (a.1 * r)) : Inv (inl~ a) (in~ (a.2 * r, a.1 * r, p))
-  => Inv.lmake (inl~ (a.2 * r, a.1 * r, p)) (equals1 equation)
-  \where {
-    \lemma converse (j : Inv (inl~ a)) : TruncP (\Sigma (r : R) (S (a.1 * r)))
-      => \let | (in~ b \as i) => j.inv
-              | p : inl~ a * i = ide => j.inv-right
-              | (inP (c,cs,q)) => unequals p
-         \in inP (b.1 * (ide * c), rewriteEq q (contains_* (contains_* S.contains_ide (contains_* a.3 b.3)) cs))
-  }
-
-\lemma localization-zro {R : CRing} (S : SubMonoid R) (a : SType S) (s : R) (c : S s) (p : a.1 * s = zro) : inl~ a = zro
-  => equals-lem s c (simplify p)
-
-\lemma localization-nonTrivial {R : CRing} (S : SubMonoid R) (p : Not (S zro)) : 0 /= {LocRing S} 1
-  => \case unequals __ \with {
-    | inP (c, s, q) => p (transport S (
-      c               ==< simplify >==
-      (ide * ide) * c ==< inv q >==
-      (zro * ide) * c ==< simplify >==
-      zro             `qed) s)
-  }
-
-\lemma localization-isLocal {R : CRing} (S : SubMonoid R) (nt : Not (S zro))
-                            (loc : \Pi (x y : R) -> S y -> (\Sigma (r : R) (S (x * r))) || (\Sigma (r : R) (S ((x + y) * r))))
-  : LocalCRing { | CRing => LocRing S } \cowith
-  | zro/=ide => localization-nonTrivial S nt
-  | locality (in~ x) => \case loc x.1 x.2 x.3 \with {
-    | byLeft (r,c) => byLeft (localization-inv S x r c)
-    | byRight (r,c) => byRight (localization-inv S (x.1 * ide + ide * x.2, x.2 * ide, contains_* x.3 S.contains_ide) r (simplify c))
-  }
+\open LocRing(isLocalization \as LR)
 
 \lemma localization-isField {R : CRing} (S : SubMonoid R) (nt : Not (S zro))
-                            (loc : \Pi (x y : R) -> S y -> (\Sigma (r : R) (S (x * r))) || (\Sigma (r : R) (S ((x + y) * r))))
-                            (fp : \Pi (x : R) -> (\Pi (r : R) -> Not (S (x * r))) -> TruncP (\Sigma (s : R) (S s) (x * s = zro)))
+                            (loc : ∀ {x} {y} (S (x + y)) ∃ (r : R) (S (x * r) || S (y * r)))
+                            (fp : ∀ x (∀ r (Not (S (x * r)))) ∃ (s : R) (S s) (x * s = zro))
   : Field { | CRing => LocRing S } \cowith
-  | LocalCRing => localization-isLocal S nt loc
-  | #0-tight {in~ x} x-ni => \case fp x.1 (\lam r c[x*r] => x-ni (localization-inv S x r c[x*r])) \with {
-    | inP (s,c,p) => localization-zro S x s c p
-  }
+  | zro/=ide => \lam p => nt $ LR.loc-trivial-char.1 p
+  | locality => LR.isLocal-char.2 loc
+  | #0-tight {in~ x} x-ni => localization-zro-char.2 $ fp x.1 \lam r Sxr => x-ni $ localiaztion-inv-char.2 $ inP (r,Sxr)
 
 \func localization-isDiscreteField {R : CRing} (S : SubMonoid R) (nt : Not (S zro))
                                    (fp : \Pi (x : R) -> (\Sigma (s : R) (S s) (x * s = zro)) || (\Sigma (r : R) (S (x * r))))
   : DiscreteField { | CRing => LocRing S } \cowith
-  | zro/=ide => localization-nonTrivial S nt
+  | zro/=ide => \lam p => nt $ LR.loc-trivial-char.1 p
   | eitherZeroOrInv (in~ x) => \case fp x.1 \with {
-    | byLeft (s, cs, x*s=0) => byLeft (localization-zro S x s cs x*s=0)
-    | byRight (r, c[x*r]) => byRight (localization-inv S x r c[x*r])
+    | byLeft r => byLeft $ localization-zro-char.2 (inP r)
+    | byRight r => byRight $ localiaztion-inv-char.2 (inP r)
   }
 
 -- | The localization of an ordering commutative ring at the set of positive elements is an ordered field.
 \func localization-isOrderedField (R : OrderedCRing) : OrderedField \cowith
-  | Field => localization-isField (positiveSubset R) zro/>0
-    (\lam x y y>0 => \case <_+-comparison (negative x) (x + y) (transport isPos simplify y>0) \with {
-      | byLeft -x>0 => byLeft (negative ide, simplify -x>0)
-      | byRight x+y>0 => byRight (ide, simplify x+y>0)
-    })
-    (\lam x x-ni => inP (ide, ide>zro, ide-right *> <_+-connectedness (\lam x>0 => x-ni ide (simplify x>0)) (\lam -x>0 => x-ni (negative ide) (simplify -x>0))))
+  | Field => localization-isField (positiveSubset R) zro/>0 (\lam {x} {y} x+y>0 => inP (1, \case <_+-comparison x y x+y>0 \with {
+    | byLeft x>0 => byLeft (transportInv isPos ide-right x>0)
+    | byRight y>0 => byRight (transportInv isPos ide-right y>0)
+  })) \lam x x-ni => inP (ide, ide>zro, ide-right *> <_+-connectedness (\lam x>0 => x-ni ide (simplify x>0)) (\lam -x>0 => x-ni (negative ide) (simplify -x>0)))
   | isPos => isPositive
   | zro/>0 => zro/>0
   | positive_+ {in~ x} {in~ y} x>0 y>0 => positive_+ (positive_* x>0 y.3) (positive_* y>0 x.3)
   | ide>zro => ide>zro
   | <_+-comparison (in~ x) (in~ y) x+y>0 => ||.map (OrderedRing.pos_*-cancel-right __ y.3) (OrderedRing.pos_*-cancel-right __ x.3) (<_+-comparison _ _ x+y>0)
-  | <_+-connectedness {in~ x} x/>0 -x/>0 => localization-zro (positiveSubset R) x ide ide>zro (ide-right *> <_+-connectedness x/>0 -x/>0)
+  | <_+-connectedness {in~ x} x/>0 -x/>0 => localization-zro-char.2 $ inP (1, ide>zro, ide-right *> <_+-connectedness x/>0 -x/>0)
   | positive_* {in~ x} {in~ y} => positive_* {_} {x.1} {y.1}
-  | positive=>#0 {in~ x} x>0 => localization-inv (positiveSubset R) x ide (simplify x>0)
-  | #0=>eitherPosOrNeg {in~ x} => \case localization-inv.converse __ \with {
-    | inP (r, x*r>0) => ||.map __.1 __.1 (positive_*-cancel x*r>0)
+  | positive=>#0 {in~ x} x>0 => localiaztion-inv-char.2 $ inP (1, transportInv isPos ide-right x>0)
+  | #0=>eitherPosOrNeg {in~ x} => \case localiaztion-inv-char.1 __ \with {
+    | inP (c,xc>0) => ||.map __.1 __.1 (positive_*-cancel xc>0)
   }
-  | meet (x y : Type {R} {positiveSubset R}) : Type {R} {positiveSubset R} \with {
+  | meet (x y : LocType (positiveSubset R)) : LocType (positiveSubset R) \with {
     | in~ s, in~ t => in~ ((s.1 * t.2) ∧ (t.1 * s.2), s.2 * t.2, positive_* s.3 t.3)
-    | in~ s, ~-equiv x y r => equals1 $ pmap (_ *) *-comm *> inv *-assoc *> pmap (`* _) (meet_*-right (<_<= $ pos_>0 y.3) *> pmap2 (∧) equation equation *> inv (meet_*-right (<_<= $ pos_>0 x.3))) *> *-assoc *> pmap (_ *) *-comm
-    | ~-equiv x y r, in~ t => equals1 $ inv *-assoc *> pmap (`* _) (meet_*-right (<_<= $ pos_>0 y.3) *> pmap2 (∧) equation equation *> inv (meet_*-right $ <_<= $ pos_>0 x.3)) *> *-assoc
+    | in~ s, ~-equiv x y r => ~-lequiv1 $ pmap (_ *) *-comm *> inv *-assoc *> pmap (* _) (meet_*-right (<_<= $ pos_>0 y.3) *> pmap2 (∧) equation equation *> inv (meet_*-right (<_<= $ pos_>0 x.3))) *> *-assoc *> pmap (_ *) *-comm
+    | ~-equiv x y r, in~ t => ~-lequiv1 $ inv *-assoc *> pmap (* _) (meet_*-right (<_<= $ pos_>0 y.3) *> pmap2 (∧) equation equation *> inv (meet_*-right $ <_<= $ pos_>0 x.3)) *> *-assoc
   }
   | meet-left {x} {y} => \case \elim x, \elim y \with {
     | in~ s, in~ t => \lam p => \case positive_*-cancel $ rewrite (R.*-comm {s.2} {t.2}, inv *-assoc, inv rdistr) in unfolds p \with {
@@ -115,10 +84,10 @@
          \in transport2 (<=) equation equation $ <=_*_positive-left u<=t' $ <_<= $ pos_>0 s.3)
         (rewrite (R.negative_*-left, meet_*-right $ <_<= $ pos_>0 u.3) in unfolds p)
   }
-  | join (x y : Type {R} {positiveSubset R}) : Type {R} {positiveSubset R} \with {
+  | join (x y : LocType (positiveSubset R)) : LocType (positiveSubset R) \with {
     | in~ s, in~ t => in~ ((s.1 * t.2) ∨ (t.1 * s.2), s.2 * t.2, positive_* s.3 t.3)
-    | in~ s, ~-equiv x y r => equals1 $ pmap (_ *) *-comm *> inv *-assoc *> pmap (`* _) (join_*-right (<_<= $ pos_>0 y.3) *> pmap2 (∨) equation equation *> inv (join_*-right $ <_<= $ pos_>0 x.3)) *> *-assoc *> pmap (_ *) *-comm
-    | ~-equiv x y r, in~ t => equals1 $ inv *-assoc *> pmap (`* _) (join_*-right (<_<= $ pos_>0 y.3) *> pmap2 (∨) equation equation *> inv (join_*-right $ <_<= $ pos_>0 x.3)) *> *-assoc
+    | in~ s, ~-equiv x y r => ~-lequiv1 $ pmap (_ *) *-comm *> inv *-assoc *> pmap (* _) (join_*-right (<_<= $ pos_>0 y.3) *> pmap2 (∨) equation equation *> inv (join_*-right $ <_<= $ pos_>0 x.3)) *> *-assoc *> pmap (_ *) *-comm
+    | ~-equiv x y r, in~ t => ~-lequiv1 $ inv *-assoc *> pmap (* _) (join_*-right (<_<= $ pos_>0 y.3) *> pmap2 (∨) equation equation *> inv (join_*-right $ <_<= $ pos_>0 x.3)) *> *-assoc
   }
   | join-left {x} {y} => \case \elim x, \elim y \with {
     | in~ s, in~ t => \lam p => \case positive_*-cancel $ rewrite (R.*-comm {s.2} {t.2}, inv *-assoc, inv rdistr) in unfolds p \with {
@@ -150,7 +119,7 @@
       | contains_ide => ide>zro
       | contains_* => positive_*
 
-    \func isPositive {R : OrderedCRing} (x : Type {R} {positiveSubset R}) : \Prop \elim x
+    \func isPositive {R : OrderedCRing} (x : LocType (positiveSubset R)) : \Prop \elim x
       | in~ x => isPos x.1
       | ~-equiv x y x~y => propExt
           (\lam x>0 => OrderedRing.pos_*-cancel-right (transport isPos x~y (positive_* x>0 y.3)) x.3)

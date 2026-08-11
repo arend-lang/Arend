@@ -33,7 +33,7 @@ public class ConCallExpression extends LeveledDefCallExpression implements CoreC
       dataTypeArguments = Collections.emptyList();
     }
     if (constructor == Prelude.SUC && !arguments.isEmpty()) {
-      IntegerExpression intExpr = arguments.get(0).cast(IntegerExpression.class);
+      IntegerExpression intExpr = arguments.getFirst().cast(IntegerExpression.class);
       if (intExpr != null) {
         return intExpr.suc();
       }
@@ -53,7 +53,7 @@ public class ConCallExpression extends LeveledDefCallExpression implements CoreC
 
   @Override
   public Expression pred() {
-    return getDefinition() == Prelude.SUC ? myArguments.get(0) : null;
+    return getDefinition() == Prelude.SUC ? myArguments.getFirst() : null;
   }
 
   @NotNull
@@ -72,11 +72,6 @@ public class ConCallExpression extends LeveledDefCallExpression implements CoreC
   @Override
   public Constructor getDefinition() {
     return (Constructor) super.getDefinition();
-  }
-
-  @Override
-  public @NotNull Expression minimizeLevels() {
-    return new ConCallExpression(getDefinition(), getMinimizedLevels(), myDataTypeArguments, myArguments);
   }
 
   @Override

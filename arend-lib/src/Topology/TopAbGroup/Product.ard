@@ -8,7 +8,7 @@
 \import Operations
 \import Paths
 \import Paths.Meta
-\import Set.Subset
+\import Set.Set
 \import Topology.CoverSpace
 \import Topology.CoverSpace.Complete
 \import Topology.CoverSpace.Product
@@ -55,18 +55,18 @@
       }
     })
 
-\instance TopAbGroupHasProduct : HasProduct TopAbGroup
-  | Product => ProductTopAbGroup
+\instance TopAbGroupHasProduct.{u} : HasProduct TopAbGroup.{u}
+  | Product X Y => ProductTopAbGroup X Y
 
 \lemma negative-uniform {X : TopAbGroup} : TopAbGroupMap X X negative \cowith
   | func-+ => X.negative_+ *> +-comm
   | func-cont => negative-cont.func-cont
 
-\lemma +-uniform {X : TopAbGroup} : TopAbGroupMap (X ⨯ X) X \lam s => s.1 + s.2 \cowith
+\lemma +-uniform {X : TopAbGroup} : TopAbGroupMap (ProductTopAbGroup X X) X \lam s => s.1 + s.2 \cowith
   | func-+ => equation.abMonoid
   | func-cont => +-cont.func-cont
 
-\lemma subtract-uniform {X : TopAbGroup} : TopAbGroupMap (X ⨯ X) X \lam s => s.1 - s.2 \cowith
+\lemma subtract-uniform {X : TopAbGroup} : TopAbGroupMap (ProductTopAbGroup X X) X \lam s => s.1 - s.2 \cowith
   | func-+ => equation.abGroup
   | func-cont => X.subtract-cont.func-cont
 

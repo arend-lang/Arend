@@ -10,8 +10,7 @@ import org.jetbrains.annotations.Nullable;
 
 import java.io.File;
 import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.*;
 
 import static org.arend.repl.Repl.REPL_NAME;
 
@@ -31,9 +30,11 @@ public class CliServerRequester implements ArendServerRequester {
     if (module.getLocationKind() == ModuleLocation.LocationKind.GENERATED) return;
     SourceLibrary library = myLibraryManager.getLibrary(module.getLibraryName());
     if (library == null) return;
-    Source source = library.getSource(module.getModulePath(), module.getLocationKind() == ModuleLocation.LocationKind.TEST);
-    if (source == null) return;
-    source.load(server, myLibraryManager.getErrorReporter());
+
+    boolean inTests = module.getLocationKind() == ModuleLocation.LocationKind.TEST;
+    Source rawSource = library.getSource(module.getModulePath(), inTests);
+    if (rawSource == null) return;
+    rawSource.load(server, myLibraryManager.getErrorReporter());
   }
 
   @Override

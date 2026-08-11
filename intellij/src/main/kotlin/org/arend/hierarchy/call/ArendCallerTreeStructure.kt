@@ -33,7 +33,7 @@ class ArendCallerTreeStructure(project: Project, baseNode: PsiElement) :
                 callers.add(def)
             }
         }
-        callers.mapTo(result) { ArendHierarchyNodeDescriptor(myProject, descriptor, it, false) }
+        callers.filter { it.isValid }.mapTo(result) { ArendHierarchyNodeDescriptor(myProject, descriptor, it, false) }
         return result.toArray()
     }
 }

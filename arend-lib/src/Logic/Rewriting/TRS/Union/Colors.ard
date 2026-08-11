@@ -17,7 +17,7 @@
 
   \instance env : FSignature => SumFSignature envs
 
-  \func monochrome-reduction (c : Color) {context : List Sort'} {s : Sort'} {mc : MetaContext Sort'} (A B : Term (envs c) context s mc) : \Type
+  \func monochrome-reduction (c : Color) {context : List Sort'} {s : Sort'} {mc : MetaContext Sort'} (A B : Term (envs c) context s mc) : \Set
     => RewriteRelation {envs c} (rules c) A B
 
   \func JRegistry : RuleRegistry env => SumRegistry envs rules
@@ -65,14 +65,13 @@
   | l-full-metavar => metavar idp (\lam i => var i idp)
   | l-var index p _ => var index p
 
-\lemma unwrap-injection {tc : TheoremContext} {color : Color} {context : List Sort'} {s : Sort'} {allow-variables : \Prop} (t : GenericLinearTerm (envs color) context s allow-variables) :
-  inject-term envs (Linear.convert-to-term {envs color} t) = convert-to-injected-term color {context} {s} t \elim t
+\lemma unwrap-injection {tc : TheoremContext} {color : Color} {context : List Sort'} {s : Sort'} {allow-variables : \Prop} (t : GenericLinearTerm (envs color) context s allow-variables)
+  : inject-term envs (Linear.convert-to-term {envs color} t) = convert-to-injected-term color {context} {s} t \elim t
   | l-func f arguments => Term.fext (\lam index => rewriteI (unwrap-injection (arguments index)) (swap color (\lam i => LinearMetaContext {envs color} (arguments i)) (Linear.convert-to-term {envs color} (arguments index))) )
   | l-full-metavar => idp
   | l-var index p _ => idp
   \where {
-    \lemma swap
-      {tc : TheoremContext} (color : Color) {context : List Sort'} {s : Sort'} {n : Nat} {j : Fin n} (msigs : Fin n -> MetaContext Sort') (t : Term (envs color) context s (msigs j))
+    \lemma swap {tc : TheoremContext} (color : Color) {context : List Sort'} {s : Sort'} {n : Nat} {j : Fin n} (msigs : Fin n -> MetaContext Sort') (t : Term (envs color) context s (msigs j))
       : inject-term envs (ModularMetaContext.upgrade-metavariables {envs color} msigs t) = ModularMetaContext.upgrade-metavariables msigs (inject-term envs t) \elim t
       | var index p => idp
       | metavar m arguments => path (\lam i => metavar (j,m) (\new DArray { | at j => swap color msigs (arguments j) @ i}))

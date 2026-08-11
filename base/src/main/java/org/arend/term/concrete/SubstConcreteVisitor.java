@@ -92,12 +92,12 @@ public class SubstConcreteVisitor extends BaseConcreteExpressionVisitor<Void> im
     var data = myData != null ? myData : expr.getData();
     if (Concrete.LongReferenceExpression.class.equals(expr.getClass())) {
       var longRef = (Concrete.LongReferenceExpression) expr;
-      return new Concrete.LongReferenceExpression(data, longRef.getQualifier(), longRef.getLongName(), newRef, visitLevels(longRef.getPLevels()), visitLevels(longRef.getHLevels()));
+      return new Concrete.LongReferenceExpression(data, longRef.getQualifier(), longRef.getLongName(), newRef, visitLevels(longRef.getLevels()));
     } else if (Concrete.FixityReferenceExpression.class.equals(expr.getClass())) {
       var fixityRef = (Concrete.FixityReferenceExpression) expr;
       return new Concrete.FixityReferenceExpression(data, newRef, fixityRef.fixity);
     } else if (Concrete.ReferenceExpression.class.equals(expr.getClass())) {
-      return new Concrete.ReferenceExpression(data, newRef, visitLevels(expr.getPLevels()), visitLevels(expr.getHLevels()));
+      return new Concrete.ReferenceExpression(data, newRef, visitLevels(expr.getLevels()));
     } else {
       throw new IllegalArgumentException("Unhandled reference expr: " + expr.getClass());
     }
@@ -145,7 +145,7 @@ public class SubstConcreteVisitor extends BaseConcreteExpressionVisitor<Void> im
   @Override
   public Concrete.Expression visitUniverse(Concrete.UniverseExpression expr, Void ignored) {
     if (myData == null && myLevelSubstitution.isEmpty()) return expr;
-    return new Concrete.UniverseExpression(myData == null ? expr.getData() : myData, expr.getPLevel() == null ? null : expr.getPLevel().accept(this, null), expr.getHLevel() == null ? null : expr.getHLevel().accept(this, null));
+    return new Concrete.UniverseExpression(myData == null ? expr.getData() : myData, expr.getPLevel() == null ? null : expr.getPLevel().accept(this, null), expr.getHLevel(), expr.getKind());
   }
 
   @Override
@@ -331,21 +331,6 @@ public class SubstConcreteVisitor extends BaseConcreteExpressionVisitor<Void> im
   }
 
   @Override
-  public Concrete.LevelExpression visitInf(Concrete.InfLevelExpression expr, Void param) {
-    return myData == null ? expr : new Concrete.InfLevelExpression(myData);
-  }
-
-  @Override
-  public Concrete.LevelExpression visitLP(Concrete.PLevelExpression expr, Void param) {
-    return myData == null ? expr : new Concrete.PLevelExpression(myData);
-  }
-
-  @Override
-  public Concrete.LevelExpression visitLH(Concrete.HLevelExpression expr, Void param) {
-    return myData == null ? expr : new Concrete.HLevelExpression(myData);
-  }
-
-  @Override
   public Concrete.LevelExpression visitNumber(Concrete.NumberLevelExpression expr, Void param) {
     return myData == null ? expr : new Concrete.NumberLevelExpression(myData, expr.getNumber());
   }
@@ -353,7 +338,7 @@ public class SubstConcreteVisitor extends BaseConcreteExpressionVisitor<Void> im
   @Override
   public Concrete.LevelExpression visitVar(Concrete.VarLevelExpression expr, Void param) {
     Concrete.LevelExpression result = myLevelSubstitution.get(expr.getReferent());
-    return result != null ? (myData == null ? result : result.accept(new SubstConcreteVisitor(myData), null)) : (myData == null ? expr : new Concrete.VarLevelExpression(myData, expr.getReferent(), expr.isInference(), expr.getLevelType()));
+    return result != null ? (myData == null ? result : result.accept(new SubstConcreteVisitor(myData), null)) : (myData == null ? expr : new Concrete.VarLevelExpression(myData, expr.getReferent(), expr.isInference()));
   }
 
   @Override

@@ -2,20 +2,13 @@ package org.arend.core.definition;
 
 import org.arend.core.context.binding.LevelVariable;
 import org.arend.ext.util.Pair;
-import org.arend.naming.reference.LocatedReferable;
 import org.arend.naming.reference.TCDefReferable;
+import org.jetbrains.annotations.NotNull;
 
-import java.util.Collections;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 
 public abstract class TopLevelDefinition extends CallableDefinition {
-  private UniverseKind myUniverseKind = UniverseKind.NO_UNIVERSES;
-  private List<? extends LevelVariable> myLevelParameters;
-  private LocatedReferable myPLevelsParent;
-  private LocatedReferable myHLevelsParent;
-  private boolean myPLevelsDerived;
-  private boolean myHLevelsDerived;
+  private List<? extends LevelVariable> myLevelParameters = Collections.emptyList();
   private List<Pair<TCDefReferable,Integer>> myParametersOriginalDefinitions = Collections.emptyList();
   private Set<? extends FunctionDefinition> myAxioms = Collections.emptySet();
   private Set<? extends Definition> myGoals = Collections.emptySet();
@@ -30,57 +23,12 @@ public abstract class TopLevelDefinition extends CallableDefinition {
   }
 
   @Override
-  public UniverseKind getUniverseKind() {
-    return myUniverseKind;
-  }
-
-  public void setUniverseKind(UniverseKind kind) {
-    myUniverseKind = kind;
-  }
-
-  @Override
-  public List<? extends LevelVariable> getLevelParameters() {
+  public @NotNull List<? extends LevelVariable> getLevelParameters() {
     return myLevelParameters;
   }
 
-  public void setLevelParameters(List<LevelVariable> parameters) {
+  public void setLevelParameters(@NotNull List<LevelVariable> parameters) {
     myLevelParameters = parameters;
-  }
-
-  @Override
-  public LocatedReferable getPLevelsParent() {
-    return myPLevelsParent;
-  }
-
-  @Override
-  public LocatedReferable getHLevelsParent() {
-    return myHLevelsParent;
-  }
-
-  public void setPLevelsParent(LocatedReferable parent) {
-    myPLevelsParent = parent;
-  }
-
-  public void setHLevelsParent(LocatedReferable parent) {
-    myHLevelsParent = parent;
-  }
-
-  @Override
-  public boolean arePLevelsDerived() {
-    return myPLevelsDerived;
-  }
-
-  @Override
-  public boolean areHLevelsDerived() {
-    return myHLevelsDerived;
-  }
-
-  public void setPLevelsDerived(boolean derived) {
-    myPLevelsDerived = derived;
-  }
-
-  public void setHLevelsDerived(boolean derived) {
-    myHLevelsDerived = derived;
   }
 
   @Override

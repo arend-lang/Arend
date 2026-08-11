@@ -3,7 +3,7 @@
 \import Logic.Meta
 \import Order.Lattice
 \import Order.PartialOrder
-\import Set.Subset
+\import Set.Set
 \import Topology.CoverSpace
 \import Topology.TopSpace
 

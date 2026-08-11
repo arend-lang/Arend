@@ -53,9 +53,6 @@ open class ImplementFieldsQuickFix(
             val groups = combinations(possibleBaseArguments.toSet(), groupSize)
             for (group in groups) {
                 val derivedFields = group.toMutableSet()
-                if (derivedFields.mapNotNull { (it as ArendClassField).defIdentifier?.name }.containsAll(setOf("norm_zro", "norm_negative", "norm_+"))) {
-                    println()
-                }
                 while (derivedFields.size < rules.size) {
                     var added = false
                     for ((field, possibleArguments) in rules) {
@@ -167,9 +164,8 @@ open class ImplementFieldsQuickFix(
         }
     }
 
-    private fun getFullClassName(): String {
-        val classReferable = instanceRef.element as? PsiLocatedReferable
-        return classReferable?.fullName?.toString() ?: "FullClassNameIsNotAvailable"
+    private fun getFullClassRefName(): String {
+        return classRef?.element?.fullName?.toString() ?: "FullClassRefNameIsNotAvailable"
     }
 
     private fun showFields(
@@ -196,14 +192,15 @@ open class ImplementFieldsQuickFix(
             return
         }
 
-        val className = getFullClassName()
+        val className = getFullClassRefName()
         val defaultArguments = project.service<ArendProjectStatistics>().state.implementFieldsStatistics[className]
         var suggestDefaultOption = true
         var matchedList: List<LocatedReferable>? = null
         if (defaultArguments != null && variants[0].size == defaultArguments.size) {
             val sortedDefaultArguments = defaultArguments.naturalSorted()
             for (variant in variants) {
-                if (variant == sortedDefaultArguments) {
+                val textVariant = variant.map { it.textRepresentation() }.naturalSorted()
+                if (textVariant == sortedDefaultArguments) {
                     matchedList = variant
                 }
             }
@@ -245,7 +242,7 @@ open class ImplementFieldsQuickFix(
         val fieldsToImplementStep = object : BaseListPopupStep<List<LocatedReferable>>(ArendBundle.message("arend.clause.implementMissing.question"), variants) {
             override fun onChosen(extraFields: List<LocatedReferable>?, finalChoice: Boolean): PopupStep<*>? {
                 if (extraFields != null) {
-                    val name = getFullClassName()
+                    val name = getFullClassRefName()
                     project.service<ArendProjectStatistics>().state.implementFieldsStatistics[name] = extraFields.map { it.textRepresentation() }
                     printFields(project, editor, baseFields, extraFields, allFields)
                 }

@@ -19,7 +19,6 @@ public interface ArendPrelude {
   CoreFunctionDefinition getMul();
   CoreFunctionDefinition getMinus();
   CoreDataDefinition getFin();
-  CoreFunctionDefinition getFinFromNat();
   CoreDataDefinition getInt();
   CoreConstructor getPos();
   CoreConstructor getNeg();
@@ -57,7 +56,6 @@ public interface ArendPrelude {
   ArendRef getMulRef();
   ArendRef getMinusRef();
   ArendRef getFinRef();
-  ArendRef getFinFromNatRef();
   ArendRef getIntRef();
   ArendRef getPosRef();
   ArendRef getNegRef();

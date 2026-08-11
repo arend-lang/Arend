@@ -39,8 +39,10 @@ class ArendConstructor : ReferableBase<ArendConstructorStub>, Abstract.Construct
 
     override fun isCoerce() = hasChildOfType(ArendElementTypes.COERCE_KW)
 
-    override fun getAccessModifier(): AccessModifier =
-        (childOfType<ArendAccessMod>()?.accessModifier ?: AccessModifier.PUBLIC).max(dataAccessModifier)
+    override val ownAccessModifier: AccessModifier
+        get() = stub?.accessModifier ?: childOfType<ArendAccessMod>()?.accessModifier ?: AccessModifier.PUBLIC
+
+    override fun getAccessModifier(): AccessModifier = ownAccessModifier.max(dataAccessModifier)
 
     override fun getIcon(flags: Int): Icon = ArendIcons.CONSTRUCTOR
 

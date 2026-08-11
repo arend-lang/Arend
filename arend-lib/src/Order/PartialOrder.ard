@@ -1,16 +1,18 @@
 \import Category
+\import Category.Functor
 \import Logic
 \import Paths.Meta
 \import Relation.Equivalence
 \import Set
+\import Set.SetHom
 
-\class Preorder \extends BaseSet, Precat (\lp,\lp) {
+\class Preorder \extends BaseSet, Precat {
   | \infix 4 <= : E -> E -> \Prop
   | <=-refl {x : E} : x <= x
   | <=-transitive \alias \infixr 9 <=∘ {x y z : E} : x <= y -> y <= z -> x <= z
   | Ob => E
   | Hom => <=
-  | id _ => <=-refl
+  | id => <=-refl
   | o f g => g <=∘ f
   | id-left => prop-pi
   | id-right => prop-pi
@@ -63,7 +65,10 @@
 \lemma =_<= {P : Preorder} {x y : P} (p : x = y) : x <= y
   | idp => <=-refl
 
-\class Poset \extends Preorder, Cat (\lp,\lp) {
+\lemma \infixr 9 =<= {E : Preorder} {x y z : E} (p : x = y) (q : y <= z) : x <= z
+  => =_<= p <=∘ q
+
+\class Poset \extends Preorder, Cat {
   | <=-antisymmetric {x y : E} : x <= y -> y <= x -> x = y
   | univalence => Cat.makeUnivalence \lam (e : Iso) => (<=-antisymmetric e.f e.hinv, prop-pi)
 
@@ -71,6 +76,12 @@
     | Preorder => Preorder.op
     | <=-antisymmetric p q => <=-antisymmetric q p
 }
+
+\instance TrivialPoset : Poset (\Sigma)
+  | <= _ _ => \Sigma
+  | <=-refl => ()
+  | <=-transitive _ _ => ()
+  | <=-antisymmetric _ _ => idp
 
 \instance ProductPreorder (P Q : Preorder) : Preorder (\Sigma P Q)
   | <= (x,y) (x',y') => \Sigma (x <= x') (y <= y')
@@ -86,3 +97,38 @@
   | <=-refl => <=-refl
   | <=-transitive => <=-transitive
   | <=-antisymmetric p q => ext (<=-antisymmetric p q)
+
+\record PreorderHom \extends SetHom, Functor {
+  \override Dom : Preorder
+  \override Cod : Preorder
+
+  | func-<= {x y : Dom} : x <= y -> func x <= func y
+
+  | C => Dom
+  | D => Cod
+  | F => func
+  | Func => func-<=
+  | Func-id => prop-pi
+  | Func-o => prop-pi
+} \where {
+  \func id {P : Preorder} : PreorderHom P P \cowith
+    | func x => x
+    | func-<= p => p
+
+  \func \fixl 8 compose \alias \infixl 8 ∘ {P Q R : Preorder} (g : PreorderHom Q R) (f : PreorderHom P Q) : PreorderHom P R \cowith
+    | func x => g (f x)
+    | func-<= p => func-<= (func-<= p)
+}
+
+\record PosetHom \extends PreorderHom {
+  \override Dom : Poset
+  \override Cod : Poset
+} \where {
+  \func id {P : Poset} : PosetHom P P \cowith
+    | func x => x
+    | func-<= p => p
+
+  \func \fixl 8 compose \alias \infixl 8 ∘ {P Q R : Poset} (g : PosetHom Q R) (f : PosetHom P Q) : PosetHom P R \cowith
+    | func x => g (f x)
+    | func-<= p => func-<= (func-<= p)
+}

@@ -11,11 +11,12 @@ import org.arend.ext.core.definition.CoreClassDefinition;
 import org.arend.ext.core.definition.CoreClassField;
 import org.arend.ext.core.definition.CoreDefinition;
 import org.arend.ext.core.expr.*;
-import org.arend.ext.core.level.CoreLevel;
+import org.arend.ext.core.level.ConstLevel;
 import org.arend.ext.core.level.LevelSubstitution;
 import org.arend.ext.core.ops.CMP;
 import org.arend.ext.core.ops.NormalizationMode;
 import org.arend.ext.core.ops.SubstitutionPair;
+import org.arend.ext.core.sort.*;
 import org.arend.ext.error.*;
 import org.arend.ext.reference.ArendRef;
 import org.arend.ext.typechecking.*;
@@ -26,11 +27,11 @@ import org.arend.lib.error.SubclassError;
 import org.arend.lib.error.TypeError;
 import org.arend.lib.meta.pi_tree.*;
 import org.arend.lib.meta.util.SubstitutionMeta;
-import org.arend.lib.util.Names;
 import org.arend.lib.util.Utils;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.math.BigInteger;
 import java.util.*;
 import java.util.function.Consumer;
 
@@ -40,12 +41,11 @@ public class ExtMeta extends BaseMetaDefinition {
   @Dependency private ArendRef simp_coe;
   @Dependency private ArendRef later;
   @Dependency private ArendRef propExt;
-  @Dependency private ArendRef Equiv;
+  @Dependency private ArendRef QEquiv;
   @Dependency private ArendRef pathOver;
   @Dependency(name = "prop-isProp") private ArendRef propIsProp;
   @Dependency(name = "prop-dpi") private ArendRef propDPI;
-  @Dependency(name = "Equiv-to-=") private ArendRef equivToEq;
-  @Dependency(name = "QEquiv-to-=") private ArendRef qEquivToEq;
+  @Dependency(name = "QEquiv_=") private ArendRef qEquivToEq;
 
   public ExtMeta(boolean withSimpCoe) {
     this.withSimpCoe = withSimpCoe;
@@ -162,8 +162,8 @@ public class ExtMeta extends BaseMetaDefinition {
               substitution.add(new SubstitutionPair(param.getBinding(), sigmaRefs.get(param.getBinding()).applyAt(coeRef, factory, typechecker.getPrelude())));
             }
           }
-          CoreExpression result = typechecker.substitute((paramType == null ? paramBinding.getTypeExpr() : paramType).normalize(NormalizationMode.WHNF), LevelSubstitution.EMPTY, substitution);
-          return result == null ? null : result.computeTyped(true);
+          CoreExpression result = typechecker.substitute((paramType == null ? paramBinding.getType() : paramType).normalize(NormalizationMode.WHNF), LevelSubstitution.EMPTY, substitution);
+          return result == null ? null : result.computeTyped();
         }
       }));
     }
@@ -184,7 +184,7 @@ public class ExtMeta extends BaseMetaDefinition {
         for (int i = 0; i < piParams.size(); i++) {
           CoreParameter piParam = piParams.get(i);
           ArendRef ref = factory.local(typechecker.getVariableRenameFactory().getNameFromBinding(piParam.getBinding(), null));
-          concretePiParams.add(factory.param(piParam.isExplicit(), Collections.singletonList(ref), factory.meta("ext_param", new SubstitutionMeta(piParam.getTypeExpr(), substitution.subList(0, i)))));
+          concretePiParams.add(factory.param(piParam.isExplicit(), Collections.singletonList(ref), factory.meta("ext_param", new SubstitutionMeta(piParam.getType(), substitution.subList(0, i)))));
           concreteLamParams.add(factory.param(piParam.isExplicit(), ref));
           ConcreteExpression refExpr = factory.ref(ref);
           args.add(factory.arg(refExpr, piParam.isExplicit()));
@@ -234,9 +234,9 @@ public class ExtMeta extends BaseMetaDefinition {
         Map<CoreBinding, CoreExpression> propBindings = new HashMap<>();
         int i = 0;
         for (CoreParameter param = typeParams; param.hasNext(); param = param.getNext(), i++) {
-          CoreExpression propType = classFields != null && classFields.get(i).isProperty() ? param.getTypeExpr() : null;
+          CoreExpression propType = classFields != null && classFields.get(i).isProperty() ? param.getType() : null;
           if (propType == null) {
-            propType = Utils.minimizeToProp(param.getTypeExpr());
+            propType = Utils.minimizeToProp(param.getType());
           }
           if (propType != null) {
             propBindings.put(param.getBinding(), propType);
@@ -273,7 +273,7 @@ public class ExtMeta extends BaseMetaDefinition {
                     return null;
                   }
 
-                  TypedExpression superEquality = typechecker.typecheck(factory.appBuilder(factory.ref(typechecker.getPrelude().getEqualityRef())).app(factory.ref(implClass.getRef()), false).app(left).app(right).build(), null);
+                  TypedExpression superEquality = typechecker.typecheck(factory.appBuilder(factory.ref(typechecker.getPrelude().getEqualityRef())).app(factory.core(classCall.toSuperClass(implClass).computeTyped()), false).app(left).app(right).build(), null);
                   if (superEquality == null) {
                     return null;
                   }
@@ -350,7 +350,7 @@ public class ExtMeta extends BaseMetaDefinition {
           CoreBinding paramBinding = param.getBinding();
           boolean isProp = propBindings.containsKey(paramBinding);
           if (!bindings.isEmpty()) {
-            if (param.getTypeExpr().processSubexpression(e -> {
+            if (param.getType().processSubexpression(e -> {
               if (!(e instanceof CoreReferenceExpression)) {
                 return CoreExpression.FindAction.CONTINUE;
               }
@@ -390,7 +390,7 @@ public class ExtMeta extends BaseMetaDefinition {
           if (!isProp) {
             boolean isPi = false;
             ConcreteExpression leftExpr = makeProj(factory, left, i, classFields);
-            CoreExpression paramType = param.getTypeExpr().normalize(NormalizationMode.WHNF);
+            CoreExpression paramType = param.getType().normalize(NormalizationMode.WHNF);
             if (paramType instanceof CorePiExpression && withSimpCoe) {
               List<CoreParameter> sigmaParameters = new ArrayList<>();
               List<ConcreteExpression> leftProjs = new ArrayList<>();
@@ -426,7 +426,7 @@ public class ExtMeta extends BaseMetaDefinition {
                 List<CoreClassField> fields = paramType instanceof CoreClassCallExpression ? Utils.getNotImplementedField((CoreClassCallExpression) paramType) : null;
                 Set<CoreBinding> bindings1 = new HashSet<>();
                 for (CoreParameter parameter = parameters; parameter.hasNext(); parameter = parameter.getNext()) {
-                  CoreExpression parameterType = parameter.getTypeExpr();
+                  CoreExpression parameterType = parameter.getType();
                   if (!(fields != null && fields.get(i).isProperty() || Utils.isProp(parameterType))) {
                     if (parameterType.findFreeBindings(isSimpCoe ? bindings1 : depBindings) != null) {
                       ok = null;
@@ -450,7 +450,7 @@ public class ExtMeta extends BaseMetaDefinition {
               if (pathExpr == null || !pathExpr.getClass().equals(PathExpression.class)) {
                 leftExpr = factory.app(factory.ref(typechecker.getPrelude().getCoerceRef()), true, Arrays.asList(makeCoeLambda(typeParams, paramBinding, propBindings.get(paramBinding), used, sigmaRefs, factory), leftExpr, factory.ref(typechecker.getPrelude().getRightRef())));
               } else {
-                leftExpr = factory.app(factory.ref(transport), true, Arrays.asList(SubstitutionMeta.makeLambda(paramBinding.getTypeExpr(), binding, factory), pathExpr.pathExpression, leftExpr));
+                leftExpr = factory.app(factory.ref(transport), true, Arrays.asList(SubstitutionMeta.makeLambda(paramBinding.getType(), binding, factory), pathExpr.pathExpression, leftExpr));
               }
             }
 
@@ -668,7 +668,7 @@ public class ExtMeta extends BaseMetaDefinition {
             letClauses.add(factory.letClause(argLetRef, Collections.emptyList(), null, field));
             field = factory.ref(argLetRef);
           }
-          fields.add(addImplicitLambda(fieldWithAt == null ? applyAt(field) : fieldWithAt, paramBinding.getTypeExpr(), factory));
+          fields.add(addImplicitLambda(fieldWithAt == null ? applyAt(field) : fieldWithAt, paramBinding.getType(), factory));
           fieldsMap.put(paramBinding, pathExpr != null ? pathExpr : new PathExpression(field));
           fieldsList.add(field);
         }
@@ -702,10 +702,25 @@ public class ExtMeta extends BaseMetaDefinition {
 
   private enum Kind { PROP, NOT_PROP }
 
+  private static boolean sortAtLeast(CoreSortExpression sort, BigInteger level) {
+    if (sort instanceof ConstSortExpression constSort) {
+      ConstLevel hLevel = constSort.getSort().getHLevel();
+      return hLevel.isInfinity() || hLevel.value().compareTo(level) >= 0;
+    } else if (sort instanceof PreviousSortExpression equalitySort) {
+      return sortAtLeast(equalitySort.getSort(), level.add(BigInteger.ONE));
+    } else if (sort instanceof MaxSortExpression maxSort) {
+      for (CoreSortExpression aSort : maxSort.getSorts()) {
+        if (sortAtLeast(aSort, level)) return true;
+      }
+    } else if (sort instanceof PiSortExpression piSort) {
+      return sortAtLeast(piSort.getCodomain(), level);
+    }
+    return false;
+  }
+
   private static boolean atLeastSet(CoreExpression type) {
     type = type.normalize(NormalizationMode.WHNF);
-    CoreLevel level = type instanceof CoreUniverseExpression ? ((CoreUniverseExpression) type).getSort().getHLevel() : null;
-    return level != null && (level.isClosed() && level.getConstant() >= 0 || level.getMaxConstant() >= 0 || level.getConstant() >= 1);
+    return type instanceof CoreUniverseExpression universe && sortAtLeast(universe.getSortExpression(), BigInteger.ZERO);
   }
 
   private static DefermentChecker.Result checkStuckExpression(CoreExpression expr) {
@@ -731,8 +746,7 @@ public class ExtMeta extends BaseMetaDefinition {
     if (result != null) return result;
 
     if (type instanceof CoreUniverseExpression) {
-      CoreLevel level = ((CoreUniverseExpression) type).getSort().getHLevel();
-      if (level != null && level.isClosed()) return DefermentChecker.Result.DO_NOT_DEFER;
+      if (((CoreUniverseExpression) type).getSortExpression().getSortHLevel() != null) return DefermentChecker.Result.DO_NOT_DEFER;
       if (atLeastSet(equality.getDefCallArguments().get(1).computeType()) || atLeastSet(equality.getDefCallArguments().get(2).computeType())) {
         data.setUserData(Kind.NOT_PROP);
         return DefermentChecker.Result.DO_NOT_DEFER;
@@ -770,7 +784,7 @@ public class ExtMeta extends BaseMetaDefinition {
     if (normType instanceof CoreUniverseExpression) {
       ConcreteExpression left = factory.core(equality.getDefCallArguments().get(1).computeTyped());
       ConcreteExpression right = factory.core(equality.getDefCallArguments().get(2).computeTyped());
-      if (((CoreUniverseExpression) normType).getSort().isProp()) {
+      if (((CoreUniverseExpression) normType).getSortExpression().isProp()) {
         TypedExpression expectedType = typechecker.typecheck(factory.sigma(Arrays.asList(factory.param(true, factory.arr(left, right)), factory.param(true, factory.arr(right, left)))), null);
         if (expectedType == null) return null;
         TypedExpression typedArg = typechecker.typecheck(arg, expectedType.getExpression());
@@ -789,12 +803,11 @@ public class ExtMeta extends BaseMetaDefinition {
         ConcreteExpression result = factory.app(factory.ref(propExt), true, Arrays.asList(factory.proj(concreteResult, 0), factory.proj(concreteResult, 1)));
         return typechecker.typecheck(letRef == null ? result : factory.letExpr(true, false, Collections.singletonList(factory.letClause(letRef, Collections.emptyList(), null, concreteArg)), result), contextData.getExpectedType());
       } else {
-        TypedExpression expectedType = typechecker.typecheck(factory.app(factory.ref(Equiv), false, Arrays.asList(left, right)), null);
+        TypedExpression expectedType = typechecker.typecheck(factory.app(factory.ref(QEquiv), false, Arrays.asList(left, right)), null);
         if (expectedType == null) return null;
         TypedExpression typedArg = typechecker.typecheck(arg, expectedType.getExpression());
         if (typedArg == null) return null;
-        CoreExpression actualType = typedArg.getType().normalize(NormalizationMode.WHNF);
-        return typechecker.typecheck(factory.app(factory.ref(actualType instanceof CoreClassCallExpression && Names.isSubClass(((CoreClassCallExpression) actualType).getDefinition(), Names.Q_EQUIV) ? qEquivToEq : equivToEq), true, Collections.singletonList(factory.core(typedArg))), contextData.getExpectedType());
+        return typechecker.typecheck(factory.path(factory.app(factory.ref(qEquivToEq), true, Collections.singletonList(factory.core(typedArg)))), contextData.getExpectedType());
       }
     }
 

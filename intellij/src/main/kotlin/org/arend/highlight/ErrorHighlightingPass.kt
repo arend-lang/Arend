@@ -15,6 +15,7 @@ class ErrorHighlightingPass(override val file: ArendFile, editor: Editor)
         val module = file.moduleLocation ?: return
         val errors = myProject.service<ArendServerService>().server.errorMap[module] ?: return
         reportAll(errors)
+        collectHighlights()
     }
 
     override fun applyInformationLater() {

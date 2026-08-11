@@ -5,6 +5,7 @@ import org.arend.core.context.param.DependentLink;
 import org.arend.core.expr.*;
 import org.arend.core.expr.let.HaveClause;
 import org.arend.core.expr.visitor.ExpressionVisitor;
+import org.arend.ext.core.definition.CoreFunctionDefinition;
 import org.arend.prelude.Prelude;
 
 import java.util.Collection;
@@ -29,7 +30,7 @@ public class FreeVariablesClassifier implements ExpressionVisitor<Boolean, FreeV
   }
 
   public Result checkBinding(Binding binding) {
-    Result result = binding.getTypeExpr().accept(this, true);
+    Result result = binding.getType().accept(this, true);
     if (result == Result.GOOD) {
       myGoodBindings.add(binding);
     }
@@ -58,7 +59,7 @@ public class FreeVariablesClassifier implements ExpressionVisitor<Boolean, FreeV
 
   @Override
   public Result visitFunCall(FunCallExpression expr, Boolean good) {
-    return visitList(expr.getDefCallArguments(), good && (expr.getDefinition() == Prelude.PATH_INFIX || expr.getDefinition() == Prelude.ARRAY));
+    return visitList(expr.getDefCallArguments(), good && (expr.getDefinition() == Prelude.PATH_INFIX || expr.getDefinition() == Prelude.ARRAY || expr.getDefinition().getKind() == CoreFunctionDefinition.Kind.TYPE));
   }
 
   @Override
@@ -135,7 +136,7 @@ public class FreeVariablesClassifier implements ExpressionVisitor<Boolean, FreeV
   private Result visitParameters(DependentLink link) {
     for (; link.hasNext(); link = link.getNext()) {
       link = link.getNextTyped(null);
-      Result result = link.getTypeExpr().accept(this, false);
+      Result result = link.getType().accept(this, false);
       if (result != Result.NONE) {
         return result;
       }

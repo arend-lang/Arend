@@ -32,7 +32,7 @@
   \where {
     \lemma exact (x : Real) {eps : Real} (eps>0 : 0 < eps) : ∃ (n : Int) (RealNormed.dist n x < Real.fromRat (ratio 1 2) + eps)
       => \case real-rat-approx x eps>0 \with {
-        | inP (q,d) => inP (rat_round q, ldist-triang {RealNormed} <∘r RealAbGroup.<=_+-left (transportInv (`<= _) RealAbGroup.dist-rat $ rat_real_<=.1 rat_round-dist) d)
+        | inP (q,d) => inP (rat_round q, ldist-triang {RealNormed} <∘r RealAbGroup.<=_+-left (transportInv (<= _) RealAbGroup.dist-rat $ rat_real_<=.1 rat_round-dist) d)
       }
   }
 

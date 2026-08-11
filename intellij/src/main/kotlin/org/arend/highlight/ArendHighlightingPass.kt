@@ -38,6 +38,7 @@ class ArendHighlightingPass(file: IArendFile, editor: Editor, textRange: TextRan
                 definitionData.definition.accept(visitor, null)
             }
         }
+        collectHighlights()
     }
 
     override fun applyInformationWithProgress() {

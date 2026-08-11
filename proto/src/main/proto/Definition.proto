@@ -16,26 +16,20 @@ message Definition {
         DConstructorData constructor = 4;
         MetaData meta = 5;
     }
-    UniverseKind universe_kind = 6;
     map<string, bytes> user_data = 7;
     repeated int32 meta_ref = 8;
-    int32 p_levels_parent = 9;
-    int32 h_levels_parent = 10;
-    bool p_levels_derived = 11;
-    bool h_levels_derived = 12;
     repeated LevelParameter level_param = 13;
-    bool is_std_levels = 14;
     repeated ParameterOriginalDef parameter_original_def = 15;
     repeated int32 axiom = 16;
     bool no_errors = 17;
+    bool has_errors = 18;
+    bool has_goals = 19;
 
     message RefList {
         repeated int32 ref = 1;
     }
     message LevelParameter {
-        bool is_plevel = 1;
         string name = 2;
-        int32 size = 3;
         int32 index = 4;
     }
     message ParameterOriginalDef {
@@ -59,7 +53,7 @@ message Definition {
         map<int32, RefList> default_dependencies = 15;
         map<int32, RefList> default_impl_dependencies = 16;
         int32 coercing_field_ref = 5;
-        Sort sort = 6;
+        SortExpression sort = 6;
         bool is_record = 7;
         CoerceData coerce_data = 8;
         repeated int32 good_field = 9;
@@ -67,10 +61,7 @@ message Definition {
         repeated ClassParametersLevel parameters_level = 11;
         map<int32, OverriddenData> overridden_field = 23;
         repeated int32 covariant_field = 20;
-        int32 squasher = 13;
         map<int32, Levels> super_levels = 19;
-        UniverseKind base_universe_kind = 21;
-        repeated int32 omega_field = 22;
 
         message Field {
             Referable referable = 1;
@@ -83,14 +74,14 @@ message Definition {
             bool isRealParameter = 13;
             bool isProperty = 8;
             bool isHideable = 9;
-            UniverseKind universe_kind = 11;
             map<string, bytes> user_data = 12;
         }
     }
     message ParametersLevel {
         bool hasParameters = 1;
         repeated Telescope parameter = 2;
-        int32 level = 3;
+        // BigInteger, big-endian two's complement; empty => null.
+        bytes level = 3;
     }
     message ClassParametersLevel {
         ParametersLevel parameters_level = 1;
@@ -109,16 +100,16 @@ message Definition {
         repeated bool good_this_parameters = 3;
         repeated TypeClassParameterKind type_class_parameters = 4;
         repeated int32 recursive_definition = 14;
-        Sort sort = 5;
+        SortExpression sort = 5;
         repeated Constructor constructor = 6;
-        int32 truncated_level = 15;
+        // BigInteger, big-endian two's complement; empty => null (not truncated).
+        bytes truncated_level = 15;
         bool is_squashed = 8;
         int32 squasher = 10;
         repeated bool covariant_parameter = 11;
         CoerceData coerce_data = 12;
         repeated ParametersLevel parameters_levels = 13;
         bool has_enclosing_class = 16;
-        repeated bool omega_parameter = 19;
 
         message Constructor {
             Referable referable = 1;
@@ -148,7 +139,6 @@ message Definition {
         HiddenStatus body_hidden_status = 16;
         bool has_enclosing_class = 13;
         repeated bool strict_parameters = 15;
-        repeated bool omega_parameter = 19;
         int32 implemented_field = 20;
 
         enum HiddenStatus {
@@ -222,6 +212,17 @@ message Referable {
     string name = 1;
     Precedence precedence = 2;
     int32 index = 3;
+    string alias_name = 4;
+    Precedence alias_precedence = 5;
+    // Access modifier (PUBLIC=0, PROTECTED=1, PRIVATE=2). Default 0 = PUBLIC
+    // preserves backward compatibility with .arc files that don't encode this.
+    AccessModifier access_modifier = 6;
+}
+
+enum AccessModifier {
+    PUBLIC_ACCESS = 0;
+    PROTECTED_ACCESS = 1;
+    PRIVATE_ACCESS = 2;
 }
 
 message Precedence {

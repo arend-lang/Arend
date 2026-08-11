@@ -1,22 +1,22 @@
 package org.arend.search.proof
 
-import junit.framework.TestCase
 import org.arend.ArendTestBase
+import org.arend.proof.ProofSearchQuery
 
 class ParsingTest : ArendTestBase() {
     private fun doTest(pattern: String, serialized: String) {
         val query = ProofSearchQuery.fromString(pattern)
-        TestCase.assertTrue("Expected correct parsing", query is ParsingResult.OK)
-        val result = (query as ParsingResult.OK).value
-        TestCase.assertTrue("Expected: $serialized, got: $result", result.toString() == serialized)
+        assertTrue("Expected correct parsing", query is ProofSearchQuery.ParsingResult.OK)
+        val result = (query as ProofSearchQuery.ParsingResult.OK).value
+        assertTrue("Expected: $serialized, got: $result", result.toString() == serialized)
     }
 
     private fun doTestFail(pattern: String, serialized: String) {
         val query = ProofSearchQuery.fromString(pattern)
-        TestCase.assertTrue("Expected failure", query is ParsingResult.Error)
-        val result = (query as ParsingResult.Error).range
-        val replaced = pattern.replaceRange(IntRange(result.first, result.last - 1), "!".repeat(result.last - result.first))
-        TestCase.assertTrue("Expected: $serialized, got: $replaced", replaced == serialized)
+        assertTrue("Expected failure", query is ProofSearchQuery.ParsingResult.Error)
+        val result = (query as ProofSearchQuery.ParsingResult.Error).range
+        val replaced = pattern.replaceRange(IntRange(result.proj1, result.proj2 - 1), "!".repeat(result.proj2 - result.proj1))
+        assertTrue("Expected: $serialized, got: $replaced", replaced == serialized)
     }
 
     fun test1() = doTest("a -> b", "<a> --> <b>")

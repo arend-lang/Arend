@@ -15,7 +15,7 @@
 \import Algebra.Ring.Poly
 \import Algebra.Ring.Reduced
 \import Algebra.Ring.RingHom
-\import Algebra.Ring.Sub
+\import Algebra.Ring.SubRing
 \import Algebra.Ring.ZeroDimensional
 \import Algebra.Semiring
 \import Arith.Fin
@@ -23,6 +23,7 @@
 \import Category
 \import Data.Array
 \import Data.Array.EPerm
+\import Equiv (IsEquiv)
 \import Function \hiding (id, o)
 \import Function.Meta
 \import Logic
@@ -60,13 +61,13 @@
   }
 
 \func polyImage_field {K : DiscreteField} {E : ImpotentCRing} (f : RingHom K E) (a : E) (ai : isIntegral f a)
-  : DiscreteField { | CRing => SubRing.cStruct (polyImage f a) }
-  => zeroDim->field {ImpotentCRing.subring {SubRing.cStruct (polyImage f a)} SubRing.embed \lam p => ext p} (integralExt-zeroDim (polyImage_integralExt a ai))
+  : DiscreteField { | CRing => ICRing (polyImage f a) }
+  => zeroDim->field {ImpotentCRing.subring {ICRing (polyImage f a)} IRing.embed \lam p => ext p} (integralExt-zeroDim (polyImage_integralExt a ai))
 
 \lemma integral_dom-zeroDim {R S : CRing} (f : RingHom R S) (inj : IsInj f) (fi : isIntegralExt f) (Sd : S.IsZeroDimensional) : R.IsZeroDimensional
   => \lam x => \case Sd (f x) \with {
     | inP (y,k,s) => \case fi y \with {
-      | inP (p, inP (d,pd,pm), pe) => TruncP.map (aux pd pm s 0 $ rewrite (pe,f.func-zro) simplify) \lam s => (s.1, k, inj $ f.func-pow *> s.2 *> pmap (`* _) (pmap (`* _) (inv f.func-pow) *> inv f.func-*) *> inv f.func-*)
+      | inP (p, inP (d,pd,pm), pe) => TruncP.map (aux pd pm s 0 $ rewrite (pe,f.func-zro) simplify) \lam s => (s.1, k, inj $ f.func-pow *> s.2 *> pmap (* _) (pmap (* _) (inv f.func-pow) *> inv f.func-*) *> inv f.func-*)
     }
   }
   \where {
@@ -81,23 +82,25 @@
   }
 
 \func mPoly_integral {K : DiscreteField} {S : CRing} (f : RingHom K S) {a : S} {l : Array S} (p : MPoly (Fin (suc l.len)) K) (p/=0 : p /= 0) (pe : mPolyMapEval f p (a :: l) = 0)
-  : \Sigma (E : CRing) (g : RingHom K E) (l' : Array E l.len) (RingHom.isAlgebraGenerated g l') (h : RingHom E S) (\Pi (j : Fin l.len) -> \Sigma (q : Poly E) (l j = polyMapEval h q a)) (IsInj h) (isIntegral h a) (h RingHom.∘ g = f)
+  : \Sigma (g : RingHom K (ICRing subring)) (l' : Array (ICRing subring) l.len) (RingHom.isAlgebraGenerated g l') (h : RingHom (ICRing subring) S) (\Pi (j : Fin l.len) -> \Sigma (q : Poly (ICRing subring)) (l j = polyMapEval h q a)) (IsInj h) (isIntegral h a) (h RingHom.∘ g = f)
   => \let | d j => pow (suc (mdegree p)) (suc j)
           | l' => mkArray \lam j => l j - pow a (d j)
-          | subring : SubRing S => mPolyImage f l'
           | t => mPolyImage-finGen f l'
-     \in (SubRing.cStruct subring, mPolyImageHom f l', t.1, t.2, subring.embed,
+     \in (mPolyImageHom f l', t.1, t.2, IRing.embed,
           \lam j => (padd pzero (later (l' j, mPolyImage-element f l' j)) + pow (padd 1 0) (d j),
-                     inv $ (polyMapEvalRingHom _ _).func-+ *> pmap (`+ _) (pmap (`+ _) S.zro_*-left *> zro-left) *> +-assoc *> pmap (l j +) (+-comm *> S.toZero ((polyMapEvalRingHom _ _).func-pow *> pmap (pow __ _) equation)) *> zro-right),
+                     inv $ (polyMapEvalRingHom _ _).func-+ *> pmap (+ _) (pmap (+ _) S.zro_*-left *> zro-left) *> +-assoc *> pmap (l j +) (+-comm *> S.toZero ((polyMapEvalRingHom _ _).func-pow *> pmap (pow __ _) equation)) *> zro-right),
           \lam q => ext q,
-          \case MPoly_poly-field (mPolyImageHom f l') p/=0 ((zro, transport (mPolyImage f l') f.func-zro (mPolyImage-ext f l' zro)) :: \lam j => (l' j, mPolyImage-element f l' j)) \with {
+          \case MPoly_poly-field {_} {ICRing (mPolyImage f l')} (mPolyImageHom f l') p/=0 ((zro, transport (mPolyImage f l') f.func-zro (mPolyImage-ext f l' zro)) :: \lam j => (l' j, mPolyImage-element f l' j)) \with {
             | inP s => isIntegral.fromInv s.2 s.3 $ pmap (polyEval __ a) change-vars_map *> change-vars_eval *> pmap2 (mPolyEval __ __) (ext \case \elim __ \with {
               | 0 => simplify
               | suc j => simplify
-            }) (inv (mPoly-map-comp {_} {_} {_} {_} {mPolyImageHom f l'} {subring.embed})) *> pe
+            }) (inv (mPoly-map-comp {_} {_} {ICRing (mPolyImage f l')} {_} {mPolyImageHom f l'} {IRing.embed})) *> pe
           },
           idp)
     \where {
+      \func subring : SubRing S
+        => mPolyImage f $ mkArray \lam j => l j - pow a (pow (suc (mdegree p)) (suc j))
+
       \func change-vars {R : CRing} {n : Nat} (p : MPoly (Fin n) R) (d : Nat) (l : Array R n) : Poly R
         => mPolyMapEval polyHom p \lam j => padd pzero (l j) + pow (padd 1 0) (pow d j)
 
@@ -118,11 +121,11 @@
 
       \lemma change-vars_*c {R : CRing} {n : Nat} {x : R} {p : MPoly (Fin n) R} {d : Nat} {a : Array R n}
         : change-vars (x *c p) d a = x PolyRing.*c change-vars p d a
-        => (mPolyMapEvalRingHom polyHom \lam j => padd pzero (a j) + pow (padd 1 0) (pow d j)).func-* *> simplify (pmap (`+ _) (path peq))
+        => (mPolyMapEvalRingHom polyHom \lam j => padd pzero (a j) + pow (padd 1 0) (pow d j)).func-* *> simplify (pmap (+ _) (path peq))
 
       \lemma change-vars_monomial {R : CRing} {n : Nat} {c : PermSet (Fin n)} {d : Nat} {a : Array R n}
         : change-vars (msMonomial 1 c) d a = permSet-univ (\lam j => padd pzero (a j) + pow (padd 1 0) (pow d j)) c
-        => simplify $ pmap (`+ _) peq *> PolyRing.ide_*c
+        => simplify $ pmap (+ _) peq *> PolyRing.ide_*c
 
       \lemma permSet-univ_monic {R : CRing} {ps : Array (Poly R)} {d : Array Nat ps.len} {c : PermSet (Fin ps.len)}
         (p : \Pi (j : Fin ps.len) -> \Sigma (degree<= (ps j) (d j)) (polyCoef (ps j) (d j) = 1))
@@ -180,9 +183,9 @@
 
       \lemma MPoly_poly-field {K : DiscreteField} {E : CRing} (f : RingHom K E) {n : Nat} {p : MPoly (Fin n) K} (p/=0 : p /= 0) (a : Array E n)
         : ∃ (m : Nat) (degree<= (change-vars (mPoly-map f p) (suc (mdegree p)) a) m) (Inv (polyCoef (change-vars (mPoly-map f p) (suc (mdegree p)) a) m))
-        => unfold mdegree $ cases (monoidSetDec-equiv.ret p arg addPath) \with {
+        => unfold mdegree $ cases (IsEquiv.ret monoidSetDec-equiv p arg addPath) \with {
           | in~ s, sp =>
-            \have sp' => inv (monoidSetDec-equiv.f_ret p) *> pmap decToMonoidSet sp
+            \have sp' => inv (IsEquiv.f_ret monoidSetDec-equiv) *> pmap decToMonoidSet sp
             \in MPoly_poly (map __.2 s.1) s.2 (map (\lam t => f t.1) s.1) (\lam j => f.func-Inv $ K.nonZero-Inv $ s.3 j)
               (\lam j => NatSemiring.Big_<=_join1 {map (\lam t => permSet-length t.2) s.1} j <∘r id<suc) a
               (\lam q => p/=0 $ sp' *> rewrite (len=0 {_} {s.1} q) idp) $ pmap (mPoly-map f) sp' *>
@@ -191,14 +194,18 @@
     }
 
 \func mPoly_integralExt {K : DiscreteField} {S : CRing} (f : RingHom K S) {n : Nat} {l : Array S (suc n)} (gen : RingHom.isAlgebraGenerated f l) (p : MPoly (Fin (suc n)) K) (p/=0 : p /= zro) (pe : mPolyMapEval f p l = 0)
-  : \Sigma (E : CRing) (g : RingHom K E) (l' : Array E n) (RingHom.isAlgebraGenerated g l') (h : RingHom E S) (IsInj h) (isIntegralExt h) (h RingHom.∘ g = f)
+  : \Sigma (g : RingHom K (ICRing subring)) (l' : Array (ICRing subring) n) (RingHom.isAlgebraGenerated g l') (h : RingHom (ICRing subring) S) (IsInj h) (isIntegralExt h) (h RingHom.∘ g = f)
   => \case mPoly_integral f p p/=0 pe \with {
-       | (E,g,l',gen',h,hg,hinj,hint,hg=f) => (E,g,l',gen',h,hinj, integralExt-finite-char (l 0 :: nil) (RingHom.isAlgebraGenerated-poly \lam x =>
+       | (g,l',gen',h,hg,hinj,hint,hg=f) => (g,l',gen',h,hinj, integralExt-finite-char (l 0 :: nil) (RingHom.isAlgebraGenerated-poly \lam x =>
            TruncP.map (gen x) \lam s => (mPolyEval (\lam j => (hg j).1) $ MPoly_Fin-suc' (mPoly-map g s.1), MPoly_Fin-suc'.mapEval-comm h {_} {_} {\lam j => (hg j).1} *> pmap2 (mPolyEval __ __) (exts \case \elim __ \with {
              | 0 => idp
              | suc j => inv (hg j).2
            }) (inv mPoly-map-comp *> rewrite hg=f idp) *> inv s.2)) 1 0 \lam (0) => hint, hg=f)
      }
+  \where {
+    \func subring : SubRing S
+      => mPoly_integral.subring {K} {S} {f} {l 0} {mkArray \lam j => l (suc j)} {p}
+  }
 
 {- | If {K} is a field and `f : K -> E` is finitely generated as an algebra, then {f} is integral if and only if {E} is 0-dimensional.
 
@@ -213,9 +220,9 @@
         \let | (inP (b,m,q)) => Szd a
              | (inP (p,r)) => gen b
              | h : RingHom (MPoly (Fin (suc n)) K) S => mPolyMapEvalRingHom f (a :: l)
-             | h0 : h (mVar zro) = a => simplify $ pmap (`* _) f.func-ide *> ide-left
-             | (E,g,l',gen',h,hinj,hint,hg=f) => mPoly_integralExt f {n} {a :: l} gen (pow (mVar zro) m - pow (mVar zro) (suc m) * p)
+             | h0 : h (mVar zro) = a => simplify $ pmap (* _) f.func-ide *> ide-left
+             | (g,l',gen',h,hinj,hint,hg=f) => mPoly_integralExt f {n} {a :: l} gen (pow (mVar zro) m - pow (mVar zro) (suc m) * p)
                  (\lam q => K.zro/=ide $ inv $ inv K.pow_ide *> inv msCoef_monomial *> pmap (msCoef __ _) (inv msMonomial_pow *> AddGroup.fromZero q) *> msCoef_mVar=0 id<suc)
-                 (h.func-minus *> S.toZero (h.func-pow *> pmap (pow __ m) h0 *> q *> pmap (_ *) r *> inv (h.func-* *> pmap (`* _) (h.func-* *> pmap2 (*) (h.func-pow *> pmap (pow __ m) h0) h0))))
+                 (h.func-minus *> S.toZero (h.func-pow *> pmap (pow __ m) h0 *> q *> pmap (_ *) r *> inv (h.func-* *> pmap (* _) (h.func-* *> pmap2 (*) (h.func-pow *> pmap (pow __ m) h0) h0))))
         \in rewriteI hg=f $ integralExt-comp g h (aux (integral_dom-zeroDim h hinj hint Szd) g {n} gen') hint
   }

@@ -3,6 +3,7 @@ package org.arend.codeInsight
 import com.intellij.psi.PsiElement
 import com.intellij.psi.SmartPointerManager
 import com.intellij.psi.SmartPsiElementPointer
+import com.intellij.psi.PsiInvalidElementAccessException
 import com.intellij.psi.util.elementType
 import com.intellij.psi.util.siblings
 import org.arend.psi.ArendElementTypes.FAT_ARROW
@@ -67,9 +68,9 @@ class ParameterDescriptor private constructor(
     companion object {
         open class Factory {
             open fun<T : PsiElement> typeGetter(psi: T, getter: (T) -> String?): () -> String? {
-                val smartLink = createSmartLink(psi)!!
+                val smartLink = createSmartLink(psi)
                 return {
-                    val psiNew = smartLink.element
+                    val psiNew = smartLink?.element
                     if (psiNew != null) getter.invoke(psiNew) else null
                 }
             }
@@ -276,4 +277,13 @@ class SignatureUsageContext private constructor(
 }
 
 fun <T : PsiElement> createSmartLink(obj : T?): SmartPsiElementPointer<T>? =
-    obj?.let { SmartPointerManager.getInstance(it.project).createSmartPsiElementPointer(it) }
+    obj?.let { el ->
+        // Guard against invalid PSI elements (e.g., after reparse with a different FileViewProvider)
+        val file = el.containingFile
+        if (!el.isValid || file == null || !file.isValid || el.project.isDisposed) return null
+        try {
+            SmartPointerManager.getInstance(el.project).createSmartPsiElementPointer(el)
+        } catch (e: PsiInvalidElementAccessException) {
+            null
+        }
+    }

@@ -1,13 +1,11 @@
 package org.arend.typechecking;
 
-import org.arend.core.context.binding.LevelVariable;
 import org.arend.core.context.binding.TypedBinding;
 import org.arend.core.definition.FunctionDefinition;
 import org.arend.core.elimtree.ElimBody;
 import org.arend.core.expr.*;
-import org.arend.core.sort.Level;
 import org.arend.core.sort.Sort;
-import org.arend.core.subst.LevelPair;
+import org.arend.core.subst.Levels;
 import org.arend.ext.core.ops.NormalizationMode;
 import org.arend.ext.error.GeneralError;
 import org.arend.ext.prettyprinting.PrettyPrinterConfig;
@@ -138,7 +136,7 @@ public class TypeCheckingTest extends TypeCheckingTestCase {
   @Test
   public void parameters() {
     FunctionDefinition def = (FunctionDefinition) typeCheckDef("\\func f (x : Nat Nat) (p : x = {Nat} x) => p", 1);
-    assertEquals(FunCall(Prelude.PATH_INFIX, LevelPair.SET0, Nat(), Ref(def.getParameters()), Ref(def.getParameters())), def.getResultType());
+    assertEquals(FunCall(Prelude.PATH_INFIX, Levels.EMPTY, Nat(), Ref(def.getParameters()), Ref(def.getParameters())), def.getResultType());
   }
 
   @Test
@@ -173,15 +171,15 @@ public class TypeCheckingTest extends TypeCheckingTestCase {
   @Test
   public void functionImplicitPi() {
     typeCheckModule(
-      "\\func ff {A : \\Type} : \\Pi {B : \\Type} -> A -> B -> A => \\lam a _ => a\n" +
-      "\\func g {A : \\Type} (a : A) => ff a a");
+      "\\func ff {A : \\Type0} : \\Pi {B : \\Type0} -> A -> B -> A => \\lam a _ => a\n" +
+      "\\func g {A : \\Type0} (a : A) => ff a a");
   }
 
   @Test
   public void fieldImplicitPi() {
     typeCheckModule(
-      "\\class C | ff : \\Pi {A : \\Type} -> A -> A\n" +
-      "\\func g {c : C} {A : \\Type} (a : A) => ff a");
+      "\\class C | ff : \\Pi {A : \\Type0} -> A -> A\n" +
+      "\\func g {c : C} {A : \\Type0} (a : A) => ff a");
   }
 
   @Test
@@ -197,14 +195,14 @@ public class TypeCheckingTest extends TypeCheckingTestCase {
 
   @Test
   public void isoSet() {
-    typeCheckModule("\\func setExt (A B : \\Set) (f : A -> B) (g : B -> A) (p : \\Pi (x : A) -> g (f x) = x) (q : \\Pi (y : B) -> f (g y) = y) => path {\\lam _ => \\Set} (iso f g p q)");
-    assertEquals(new UniverseExpression(Sort.SetOfLevel(new Level(LevelVariable.PVAR))), ((FunctionDefinition) getDefinition("setExt")).getResultType().normalize(NormalizationMode.WHNF).cast(DataCallExpression.class).getDefCallArguments().getFirst().cast(LamExpression.class).getBody());
+    typeCheckModule("\\func setExt (A B : \\Set0) (f : A -> B) (g : B -> A) (p : \\Pi (x : A) -> g (f x) = x) (q : \\Pi (y : B) -> f (g y) = y) => path {\\lam _ => \\Set0} (iso f g p q)");
+    assertEquals(new UniverseExpression(Sort.SET0), ((FunctionDefinition) getDefinition("setExt")).getResultType().normalize(NormalizationMode.WHNF).cast(DataCallExpression.class).getDefCallArguments().getFirst().cast(LamExpression.class).getBody());
   }
 
   @Test
   public void isoSet2() {
-    typeCheckModule("\\func setExt (A B : \\Set) (f : A -> B) (g : B -> A) (p : \\Pi (x : A) -> g (f x) = x) (q : \\Pi (y : B) -> f (g y) = y) : A = {\\Set} B => path (iso f g p q)");
-    assertEquals(new UniverseExpression(Sort.SetOfLevel(new Level(LevelVariable.PVAR))), ((FunctionDefinition) getDefinition("setExt")).getResultType().cast(FunCallExpression.class).getDefCallArguments().getFirst());
+    typeCheckModule("\\func setExt (A B : \\Set0) (f : A -> B) (g : B -> A) (p : \\Pi (x : A) -> g (f x) = x) (q : \\Pi (y : B) -> f (g y) = y) : A = {\\Set0} B => path (iso f g p q)");
+    assertEquals(new UniverseExpression(Sort.SET0), ((FunctionDefinition) getDefinition("setExt")).getResultType().cast(FunCallExpression.class).getDefCallArguments().getFirst());
   }
 
   @Test
@@ -234,7 +232,7 @@ public class TypeCheckingTest extends TypeCheckingTestCase {
     LetExpression body = (LetExpression) Objects.requireNonNull(((FunctionDefinition) getDefinition("test")).getBody());
     var let = body.getExpression();
     var concrete = ToAbstractVisitor.convert(let, PrettyPrinterConfig.DEFAULT);
-    typeCheckExpr(Map.of(Objects.requireNonNull(((Concrete.LongReferenceExpression) concrete).getQualifier()).getReferent(), new TypedBinding("ccl", body.getClauses().getFirst().getTypeExpr())), concrete, let.getType(), 0);
+    typeCheckExpr(Map.of(Objects.requireNonNull(((Concrete.LongReferenceExpression) concrete).getQualifier()).getReferent(), new TypedBinding("ccl", body.getClauses().getFirst().getType())), concrete, let.getType(), 0);
   }
 
   @Test
@@ -244,7 +242,7 @@ public class TypeCheckingTest extends TypeCheckingTestCase {
     LetExpression body = (LetExpression) Objects.requireNonNull(((FunctionDefinition) getDefinition("test")).getBody());
     var let = body.getExpression();
     var concrete = ToAbstractVisitor.convert(let, PrettyPrinterConfig.DEFAULT);
-    typeCheckExpr(Map.of(Objects.requireNonNull(((Concrete.LongReferenceExpression) concrete).getQualifier()).getReferent(), new TypedBinding("ccl", body.getClauses().getFirst().getTypeExpr())), concrete, let.getType(), 0);
+    typeCheckExpr(Map.of(Objects.requireNonNull(((Concrete.LongReferenceExpression) concrete).getQualifier()).getReferent(), new TypedBinding("ccl", body.getClauses().getFirst().getType())), concrete, let.getType(), 0);
   }
 
   @Test

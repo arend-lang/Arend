@@ -36,7 +36,7 @@ public class Renamer implements VariableRenamer {
 
     Expression typeExpr = null;
     if (var instanceof Binding && !(var instanceof UntypedDependentLink))
-      typeExpr = ((Binding) var).getTypeExpr();
+      typeExpr = ((Binding) var).getType();
     else if (var instanceof ClassField)
       typeExpr = ((ClassField) var).getType().getCodomain();
 

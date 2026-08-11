@@ -1,0 +1,152 @@
+\import Algebra.Group
+\import Algebra.Group.GroupHom
+\import Algebra.Meta
+\import Algebra.Monoid
+\import Algebra.Ordered
+\import Algebra.Pointed
+\import Algebra.QModule
+\import Algebra.Ring
+\import Algebra.Semiring
+\import Order.Biordered
+\import Order.PartialOrder
+\import Order.StrictOrder
+\import Analysis.Series
+\import Analysis.PowerSeries
+\import Arith.Complex
+\import Arith.Complex.Banach
+\import Arith.Complex.Norm
+\import Arith.Exp
+\import Arith.Nat
+\import Arith.Rat
+\import Arith.Real
+\import Arith.Real.Field
+\import Combinatorics.Factorial
+\import Function.Meta
+\import Meta
+\import Paths
+\import Paths.Meta
+\import Topology.BanachAlgebra
+\import Topology.CoverSpace.Complete
+\import Topology.NormedAbGroup
+\import Topology.NormedAbGroup.Real
+\import Topology.TopSpace
+\open CoverMap (∘)
+\open Complex \using (iunit \as i)
+\open Monoid (pow)
+
+-- | $\cos x := \Re\,\exp(i \cdot \mathrm{fromReal}\ x)$.
+\sfunc cos (x : Real) : Real
+  => Re (exp (i * x))
+
+-- | $\sin x := \Im\,\exp(i \cdot \mathrm{fromReal}\ x)$.
+\sfunc sin (x : Real) : Real
+  => Im (exp (i * x))
+
+-- | $\cos 0 = 1$.
+\lemma cos_zro : cos 0 = 1
+  => (\peval cos 0) *> pmap (\lam c => Re (exp c)) zro_*-right *> pmap Re exp_zro
+
+-- | $\sin 0 = 0$.
+\lemma sin_zro : sin 0 = 0
+  => (\peval sin 0) *> pmap (\lam c => Im (exp c)) zro_*-right *> pmap Im exp_zro
+
+-- | $\cos(x+y) = \cos x \cdot \cos y - \sin x \cdot \sin y$. Standard cosine addition formula.
+\lemma cos_+ {x y : Real} : cos (x + y) = cos x * cos y - sin x * sin y
+  => (\peval cos _) *> pmap (\lam z => Re (exp z)) (pmap (i *) fromReal_+ *> ldistr)
+     *> pmap Re exp_+
+     *> inv (path \lam j => (\peval cos x) j * (\peval cos y) j - (\peval sin x) j * (\peval sin y) j)
+
+-- | $\sin(x+y) = \cos x \cdot \sin y + \sin x \cdot \cos y$. Standard sine addition formula.
+\lemma sin_+ {x y : Real} : sin (x + y) = cos x * sin y + sin x * cos y
+  => (\peval sin _) *> pmap (\lam (z : Complex) => Im (exp z)) (pmap (i *) (fromReal_+ {x} {y}) *> ldistr)
+     *> pmap Im exp_+
+     *> inv (path \lam j => (\peval cos x) j * (\peval sin y) j + (\peval sin x) j * (\peval cos y) j)
+
+-- | $\cos$ as a `CoverMap RealNormed RealNormed`.
+\lemma cosMap : CoverMap RealNormed RealNormed cos
+  => transportInv (CoverMap _ _) (ext \lam x => \peval cos x) (Re ∘ expMap {ComplexBanach} ∘ mulIMap ∘ fromRealMap)
+
+-- | $\sin$ as a `CoverMap RealNormed RealNormed`.
+\lemma sinMap : CoverMap RealNormed RealNormed sin
+  => transportInv (CoverMap _ _) (ext \lam x => \peval sin x) (Im ∘ expMap {ComplexBanach} ∘ mulIMap ∘ fromRealMap)
+
+{- | $\overline{\exp z} = \exp(\overline{z})$. Pushes {conj} through
+     the limit defining {exp} using {cont-limit},
+     then rewrites the inner series via {conj_partialSum}, finishing with
+     uniqueness of limits against `exp-IsSeriesSum (conj z)`. -}
+\lemma conj_exp {z : Complex} : conj (exp z) = exp (conj z)
+  => ComplexBanach.limit-unique
+       (transport (\lam f => ComplexBanach.IsLimit f (conj (exp z)))
+         (ext \lam n => conj_partialSum)
+         (cont-limit (exp.seriesSum z) conjMap))
+       (exp.seriesSum (conj z))
+  \where {
+    -- | Per-term identity for the exp series: `conj` rewrites $(c_k \cdot z^k)$ to $(c_k \cdot \overline{z}^k)$.
+    \private \lemma conj_expTerm {z : Complex} (k : Nat)
+      : conj (ComplexBanach.fromRat (RatField.finv (fac k)) * Monoid.pow z k)
+        = ComplexBanach.fromRat (RatField.finv (fac k)) * Monoid.pow (conj z) k
+      => conj_* *> pmap2 (*) conj_fromRat (conj_pow k)
+
+    {- | `conj` commutes with the exp partial sums:
+         $\overline{S_n(z)} = S_n(\overline{z})$. Lifts the per-term identity
+         `conj_expTerm` through `partialSum_hom` (which says any `AddMonoidHom`
+         commutes with `partialSum`). -}
+    \private \lemma conj_partialSum {z : Complex} {n : Nat}
+      : conj (partialSum (powerSeries (\lam k => ComplexBanach.fromRat (RatField.finv (fac k))) z) n)
+        = partialSum (powerSeries (\lam k => ComplexBanach.fromRat (RatField.finv (fac k))) (conj z)) n
+      => partialSum_hom conjAddHom *> path (\lam i => partialSum (conj_expTerm __ i) n)
+  }
+
+-- | $\cos(-x) = \cos x$.
+\lemma cos_negative {x : Real} : cos (negative x) = cos x
+  => (\peval cos _)
+     *> pmap (\lam z => Re (exp z)) (pmap (i *) fromReal_negative *> Ring.negative_*-right *> inv conj_i_*)
+     *> pmap Re (inv conj_exp) *> inv (\peval cos x)
+
+-- | $\sin(-x) = -\sin x$.
+\lemma sin_negative {x : Real} : sin (negative x) = negative (sin x)
+  => (\peval sin _)
+     *> pmap (\lam z => Im (exp z)) (pmap (i *) fromReal_negative *> Ring.negative_*-right *> inv conj_i_*)
+     *> pmap Im (inv conj_exp) *> pmap negative (inv \peval sin x)
+
+-- | The unit-modulus identity: $\exp(ix) \cdot \overline{\exp(ix)} = 1$ for real $x$.
+\lemma exp-conj-cancel {x : Real} : exp (i * x) * conj (exp (i * x)) = 1
+  => pmap (_ *) (conj_exp *> pmap exp conj_i_*) *> exp_negative-right
+
+-- | Pythagorean identity: $\cos^2 x + \sin^2 x = 1$.
+\lemma pythagoras {x : Real} : cos x * cos x + sin x * sin x = 1
+  => pmap2 (\lam c s => c * c + s * s) (\peval cos x) (\peval sin x)
+     *> inv (pmap (_ +) (pmap negative Ring.negative_*-right *> AddGroup.negative-isInv))
+     *> pmap Re (exp-conj-cancel {x})
+
+-- | $\cos(x - y) = \cos x \cdot \cos y + \sin x \cdot \sin y$.
+\lemma cos_minus {x y : Real} : cos (x - y) = cos x * cos y + sin x * sin y
+  => cos_+ {x} {negative y}
+     *> pmap2 (\lam a b => cos x * a - sin x * b) (cos_negative {y}) (sin_negative {y})
+     *> pmap (cos x * cos y -) Ring.negative_*-right
+     *> pmap (cos x * cos y +) AddGroup.negative-isInv
+
+-- | $\sin(x - y) = \sin x \cdot \cos y - \cos x \cdot \sin y$.
+\lemma sin_minus {x y : Real} : sin (x - y) = sin x * cos y - cos x * sin y
+  => sin_+ {x} {negative y}
+     *> pmap2 (\lam a b => cos x * a + sin x * b) (sin_negative {y}) (cos_negative {y})
+     *> pmap (+ sin x * cos y) Ring.negative_*-right
+     *> +-comm
+
+{- | Sum-to-product for cosines:
+     $\cos x - \cos y = -2 \sin\frac{x+y}{2} \sin\frac{x-y}{2}$. -}
+\lemma cos-sum-to-product {x y : Real}
+  : cos x - cos y = negative (2 * sin ((x + y) * ratio 1 2) * sin ((x - y) * ratio 1 2))
+  => \let
+       | cosX => pmap cos (inv linarith) *> cos_+ {(x + y) * ratio 1 2} {(x - y) * ratio 1 2}
+       | cosY => pmap cos (inv (linarith : (x + y) * ratio 1 2 - (x - y) * ratio 1 2 = y)) *> cos_minus
+     \in rewrite (cosX, cosY) equation.cRing
+
+{- | Sum-to-product for sines:
+     $\sin x - \sin y = 2 \cos\frac{x+y}{2} \sin\frac{x-y}{2}$. -}
+\lemma sin-sum-to-product {x y : Real}
+  : sin x - sin y = 2 * cos ((x + y) * ratio 1 2) * sin ((x - y) * ratio 1 2)
+  => \let
+       | sinX => pmap sin (inv linarith) *> sin_+ {(x + y) * ratio 1 2} {(x - y) * ratio 1 2} *> +-comm
+       | sinY => pmap sin (inv (linarith : (x + y) * ratio 1 2 - (x - y) * ratio 1 2 = y)) *> sin_minus
+     \in rewrite (sinX, sinY) equation.cRing

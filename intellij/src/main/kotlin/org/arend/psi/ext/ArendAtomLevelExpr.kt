@@ -9,6 +9,7 @@ import org.arend.psi.firstRelevantChild
 import org.arend.psi.childOfType
 import org.arend.term.abs.AbstractLevelExpressionVisitor
 import org.arend.term.abs.Abstract
+import java.math.BigInteger
 
 
 class ArendAtomLevelExpr(node: ASTNode) : ArendLevelExpr(node), Abstract.LevelExpression {
@@ -23,14 +24,10 @@ class ArendAtomLevelExpr(node: ASTNode) : ArendLevelExpr(node), Abstract.LevelEx
     val lparen: PsiElement?
         get() = findChildByType(LPAREN)
 
-    override fun <P : Any?, R : Any?> accept(visitor: AbstractLevelExpressionVisitor<in P, out R>, params: P?): R {
+    override fun <P, R> accept(visitor: AbstractLevelExpressionVisitor<in P, out R>, params: P?): R {
         val child = firstRelevantChild
         return when (child.elementType) {
-            LP_KW -> visitor.visitLP(this, params)
-            LH_KW -> visitor.visitLH(this, params)
-            OO_KW -> visitor.visitInf(this, params)
-            NUMBER -> visitor.visitNumber(this, child!!.text.toInt(), params)
-            NEGATIVE_NUMBER -> visitor.visitNumber(this, child!!.text.toInt(), params)
+            NUMBER -> visitor.visitNumber(this, BigInteger(child!!.text, 10), params)
             REF_IDENTIFIER -> visitor.visitId(this, NamedUnresolvedReference(refIdentifier, child!!.text), params)
             else -> {
                 levelExpr?.let { return it.accept(visitor, params) }

@@ -3,4 +3,4 @@
 \import Algebra.Ring.Localization
 
 \class IntegrallyClosedDomain \extends IntegralDomain
-  | isIntegrallyClosedDomain : isIntegrallyClosed (locMap {_} {subMonoid})
+  | isIntegrallyClosedDomain : isIntegrallyClosed (locR {_} {subMonoid})

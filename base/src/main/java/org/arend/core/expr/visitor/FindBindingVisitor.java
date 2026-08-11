@@ -60,7 +60,7 @@ public class FindBindingVisitor extends SearchVisitor<Void> {
         return false;
       }
       if (binding instanceof ClassCallExpression.ClassCallBinding) {
-        Expression impl = ((ClassCallExpression.ClassCallBinding) binding).getTypeExpr().getImplementation(expr.getDefinition(), expr.getArgument());
+        Expression impl = ((ClassCallExpression.ClassCallBinding) binding).getType().getImplementation(expr.getDefinition(), expr.getArgument());
         if (impl != null) {
           return impl.accept(this, null);
         }
@@ -106,7 +106,7 @@ public class FindBindingVisitor extends SearchVisitor<Void> {
   @Override
   protected boolean visitDependentLink(DependentLink link, Void param) {
     for (; link.hasNext(); link = link.getNext()) {
-      if (link instanceof TypedDependentLink && link.getTypeExpr().accept(this, param)) {
+      if (link instanceof TypedDependentLink && link.getType().accept(this, param)) {
         return true;
       }
       myAllowedBindings.add(link);

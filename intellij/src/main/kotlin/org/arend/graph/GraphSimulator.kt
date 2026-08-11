@@ -16,7 +16,7 @@ import com.mxgraph.util.mxConstants
 import com.mxgraph.view.mxGraph
 import org.apache.batik.dom.GenericDOMImplementation
 import org.apache.batik.svggen.SVGGraphics2D
-import org.arend.codeInsight.ArendLineMarkerProvider.Companion.DOCUMENTATION_URL
+import org.arend.codeInsight.ArendRecursiveLineMarkerProvider.Companion.DOCUMENTATION_URL
 import org.arend.core.expr.Expression
 import org.arend.graph.call.CALL_GRAPH_FONT_SIZE
 import org.arend.graph.call.addEdgeListener

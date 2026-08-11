@@ -21,7 +21,7 @@
 \class PseudoRing \extends PseudoSemiring, AbGroup {
   | zro_*-left {x} => AddGroup.cancel-left (zro * x) (
     zro * x + zro * x ==< inv rdistr >==
-    (zro + zro) * x   ==< pmap (`* x) zro-left >==
+    (zro + zro) * x   ==< pmap (* x) zro-left >==
     zro * x           ==< inv zro-right >==
     zro * x + zro     `qed
   )
@@ -33,7 +33,7 @@
   )
 
   \lemma negative_*-left {x y : E} : negative x * y = negative (x * y)
-    => negative-unique (x * y) (inv rdistr *> pmap (`* y) negative-left *> zro_*-left) negative-right
+    => negative-unique (x * y) (inv rdistr *> pmap (* y) negative-left *> zro_*-left) negative-right
 
   \lemma negative_*-right {x y : E} : x * negative y = negative (x * y)
     => op.negative_*-left
@@ -51,10 +51,10 @@
     => rdistr *> pmap (_ +) negative_*-left
 
   \lemma *_sum_diff {x y : E} (p : x * y = y * x) : (x + y) * (x - y) = x * x - y * y
-    => rdistr *> pmap2 (+) ldistr_- ldistr_- *> +-assoc *> pmap (_ +) (inv +-assoc *> pmap (`+ _) (pmap (_ +) (inv p) *> negative-left) *> zro-left)
+    => rdistr *> pmap2 (+) ldistr_- ldistr_- *> +-assoc *> pmap (_ +) (inv +-assoc *> pmap (+ _) (pmap (_ +) (inv p) *> negative-left) *> zro-left)
 
   \lemma *_diff_sum {x y : E} (p : x * y = y * x) : (x - y) * (x + y) = x * x - y * y
-    => ldistr *> pmap2 (+) rdistr_- rdistr_- *> +-assoc *> pmap (_ +) (inv +-assoc *> pmap (`+ _) (pmap (_ +) p *> negative-left) *> zro-left)
+    => ldistr *> pmap2 (+) rdistr_- rdistr_- *> +-assoc *> pmap (_ +) (inv +-assoc *> pmap (+ _) (pmap (_ +) p *> negative-left) *> zro-left)
 
   \protected \func op : PseudoRing \cowith
     | AbGroup => \this
@@ -82,11 +82,21 @@
       | inv-right => negative_* *> j.inv-right
     }
 
+  \lemma Inv_negative {x : E} (j : Monoid.Inv (negative x)) : Monoid.Inv x
+    => transport Monoid.Inv negative-isInv (negative_inv j)
+
   \lemma geometric-partial-sum {n : Nat} {x : E} : (1 - x) * BigSum (\new Array E n (\lam j => pow x j)) = 1 - pow x n \elim n
     | 0 => zro_*-right *> inv negative-right
-    | suc n => pmap (_ *) (AddMonoid.BigSum_suc-nat {_} {n} {pow x}) *> ldistr *> pmap2 (+) geometric-partial-sum rdistr *> +-assoc *> pmap (_ +) (inv +-assoc *> pmap (_ +) negative_*-left *> pmap (`+ _) (pmap (_ +) ide-left *> negative-left) *> zro-left *> pmap negative pow-left)
+    | suc n => pmap (_ *) (AddMonoid.BigSum_suc-nat {_} {n} {pow x}) *> ldistr *> pmap2 (+) geometric-partial-sum rdistr *> +-assoc *> pmap (_ +) (inv +-assoc *> pmap (_ +) negative_*-left *> pmap (+ _) (pmap (_ +) ide-left *> negative-left) *> zro-left *> pmap negative pow-left)
 
-  \func IsNilpotent (x : E) => ∃ (n : Nat) (pow x n = 0)
+  \lemma geometric-like-partial-sum {k n : Nat} {x : E}
+    : (1 - x) * AddMonoid.BigSum (\new Array E n (\lam j => pow x (j Nat.+ k))) = pow x k - pow x (n Nat.+ k)
+    => \have A0 : (\lam (j : Fin n) => pow x (j Nat.+ k)) = (\lam j => pow x j * pow x k) => ext (\lam j => Monoid.pow_+)
+       \in rewrite A0 $ rewriteI (Semiring.BigSum-rdistr {_} {\new Array E n \lam j => pow x j}, *-assoc) $
+      rewrite Ring.geometric-partial-sum $ rewrite (rdistr, ide-left, PseudoRing.negative_*-left, inv Monoid.pow_+) idp
+
+  \lemma zro-nilpotent : IsNilpotent zro
+    => inP (1, ide-left)
 
   \lemma pow_-1_+2 {n : Nat} : pow -1 (n Nat.+ 2) = pow -1 n
     => pow_+ {_} { -1} {n} {2} *> pmap (_ *) (*-assoc *> ide-left *> negative_* *> ide-left) *> ide-right
@@ -95,15 +105,31 @@
     | 0 => idp
     | suc n => negative_ide-right *> pmap negative negative_ide-right *> negative-isInv *> pow_-1_even
 
+  -- | $(-1)^{2k+1} = -1$ in any ring.
+  \lemma pow_-1_odd {k : Nat} : Monoid.pow (negative ide) (2 Nat.* k Nat.+ 1) = negative ide
+    => rewrite (NatSemiring.*-comm {2} {k}, pow_-1_even, ide-left) idp
+
   \lemma pow_-1_mod2 {n : Nat} : pow -1 n = pow -1 (n Nat.mod 2)
-    => pmap (pow -1) (inv (Nat.divModProp n 2)) *> pow_+ *> pmap (`* _) (pow_* *> pmap (pow __ _) (*-assoc *> ide-left *> negative_* *> ide-left) *> pow_ide) *> ide-left
+    => pmap (pow -1) (inv (Nat.divModProp n 2)) *> pow_+ *> pmap (* _) (pow_* *> pmap (pow __ _) (*-assoc *> ide-left *> negative_* *> ide-left) *> pow_ide) *> ide-left
 
   \lemma idempotent_LDiv {a b : E} (q : b * b = b) (d : Monoid.LDiv b a) : a = b * a
-    => inv d.inv-right *> pmap (`* _) (inv q) *> *-assoc *> pmap (b *) d.inv-right
+    => inv d.inv-right *> pmap (* _) (inv q) *> *-assoc *> pmap (b *) d.inv-right
 
   \type IsConnected => \Pi (a : E) -> a * a = a -> (a = 0) || (a = 1)
 
   \func IsVonNeumannRegular => \Pi (a : E) -> ∃ (b : E) (a = a * b * a)
+
+  -- | A ring is local if and only if it is non-trivial and satisfies {IsLocal}.
+  \func IsLocal => \Pi (a : E) -> Monoid.Inv a || Monoid.Inv (a + 1)
+
+  \lemma isLocal-sum-char : IsLocal <-> ∀ {x} {y} (x + y = 1) (Monoid.Inv x || Monoid.Inv y)
+    => (\lam l {x} x+y=1 => \case l (negative x) \with {
+      | byLeft [-x]-inv => byLeft $ transport Monoid.Inv negative-isInv (negative_inv [-x]-inv)
+      | byRight [-x+1]-inv => byRight $ transport Monoid.Inv (equation.abGroup { -1 x+y=1 }) [-x+1]-inv
+    }, \lam l x => \case l (inv +-assoc *> pmap (+ 1) negative-left *> zro-left) \with {
+      | byLeft [-x]-inv => byLeft $ transport Monoid.Inv negative-isInv (negative_inv [-x]-inv)
+      | byRight [x+1]-inv => byRight [x+1]-inv
+    })
 
   \protected \func op : Ring \cowith
     | AbGroup => \this
@@ -124,7 +150,7 @@
 
     \lemma #0-FinSum-conv {J : FinSet} {x : J -> E} {i : J} (xi#0 : x i `#0) : FinSum x `#0 || (\Sigma (j : J) (j /= i) (x j `#0))
       => \case FinSum_char x \with {
-        | inP (e, p) => \case #0-BigSum-conv {_} {\new Array E J.finCard \lam j => x (e j)} $ rewrite e.f_ret xi#0 \with {
+        | inP (e, p) => \case #0-BigSum-conv {_} {\new Array E J.card \lam j => x (e j)} $ rewrite e.f_ret xi#0 \with {
           | byLeft r => byLeft $ transportInv #0 p r
           | byRight (j,j/=i,xej#0) => byRight (e j, \lam ej=i => j/=i $ inv (e.ret_f j) *> pmap e.ret ej=i, xej#0)
         }
@@ -134,7 +160,7 @@
   -- | A ring with decidable equality.
   \class Dec \extends AddGroup.Dec, With#
     | #0-*-left {x} {y} x*y#0 => \case decideEq x zro \with {
-      | yes x=0 => absurd (#0-zro (transport #0 (pmap (`* y) x=0 *> zro_*-left) x*y#0))
+      | yes x=0 => absurd (#0-zro (transport #0 (pmap (* y) x=0 *> zro_*-left) x*y#0))
       | no x/=0 => nonZeroApart x/=0
     }
     | #0-*-right {x} {y} x*y#0 => \case decideEq y zro \with {
@@ -153,7 +179,7 @@
   \func IsStrictBezout => \Pi (a b : E) -> ∃ (s t u v : E) (a * u = b * v) (s * u + t * v = 1)
 
   \lemma bezout_finitelyGenerated_principal : IsBezout <-> (\Pi {I : Ideal \this} -> I.IsFinitelyGenerated -> I.IsPrincipal)
-    => (\lam bez {I : Ideal} Ifg =>
+    => (\lam bez {I} Ifg =>
           \have | (inP s) => Ifg
                 | (inP t) => BezoutRing.bezoutArray_LDiv {\new BezoutRing { | CRing => \this | isBezout => bez }} s.1
           \in inP (BigSum (\lam j => t.1 j * s.1 j), (I.bigSum _ \lam j => ideal-left $ later (s.2.1 j), \lam {b} Ib =>

@@ -141,6 +141,12 @@ class ArendProofSearchTest : ArendTestBase() {
         \func foo (b : Nat) : Bool => {?}
     """, "Nat -> Bool")
 
+    fun testParameter4() = assertHasMatch("""
+        \data Bool
+
+        \func foo (b : Nat) : Bool => {?}
+    """, "Nat")
+
     fun testSparseQualifier() = assertHasMatch("""
         \module A \where \module B \where \module C \where \data D
         
@@ -148,13 +154,6 @@ class ArendProofSearchTest : ArendTestBase() {
          
         \func f : D => {?}
     """, "A.C.D")
-
-    fun testPiExprClassField() = assertHasMatch("""
-        \class Bar {
-          | \infix 4 <= : Nat -> Nat -> \Prop
-          | <=-antisymmetric {x y : Nat} : x <= y -> y <= x -> x = y
-        }
-    """, "_ <= _ -> _ <= _ -> _ = _")
 }
 
 

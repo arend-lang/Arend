@@ -64,7 +64,7 @@ public class AssumptionMeta extends BaseMetaDefinition {
     CoreBinding binding = typechecker.withCurrentState(tc -> {
       for (int i = vars.size() - 1; i >= 0; i--) {
         CoreBinding var = vars.get(i);
-        CoreBinding result = Utils.tryWithSavedState(tc, tc2 -> tc2.compare(var.getTypeExpr(), expectedType, CMP.LE, marker, false, true, false) ? var : null);
+        CoreBinding result = Utils.tryWithSavedState(tc, tc2 -> tc2.compare(var.getType(), expectedType, CMP.LE, marker, false, true, false) ? var : null);
         if (result != null) return result;
       }
       return null;

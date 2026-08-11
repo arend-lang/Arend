@@ -53,7 +53,7 @@ public class CollectFreeVariablesVisitor extends VoidExpressionVisitor<Set<Varia
       return;
     }
 
-    Set<Variable> newSet = new HashSet<>();
+    Set<Variable> newSet = new LinkedHashSet<>();
     DependentLink link1 = link.getNextTyped(null);
     visitParameters(link1.getNext(), body, newSet);
     addFreeVariables(link1, newSet);
@@ -63,7 +63,7 @@ public class CollectFreeVariablesVisitor extends VoidExpressionVisitor<Set<Varia
     }
     newSet.remove(link1);
     variables.addAll(newSet);
-    link1.getTypeExpr().accept(this, variables);
+    link1.getType().accept(this, variables);
   }
 
   @Override
@@ -95,7 +95,7 @@ public class CollectFreeVariablesVisitor extends VoidExpressionVisitor<Set<Varia
       return;
     }
 
-    Set<Variable> newSet = new HashSet<>();
+    Set<Variable> newSet = new LinkedHashSet<>();
     visitLetClauses(index + 1, expr, newSet);
     HaveClause clause = expr.getClauses().get(index);
     addFreeVariables(clause, newSet);

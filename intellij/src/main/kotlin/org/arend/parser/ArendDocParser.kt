@@ -29,7 +29,7 @@ class ArendDocParser : PsiParser, LightPsiParser {
                     DOC_INLINE_LATEX_CODE, DOC_NEWLINE_LATEX_CODE, DOC_LATEX_CODE,
                     DOC_ITALICS_CODE_BORDER, DOC_ITALICS_CODE,
                     DOC_BOLD_CODE_BORDER, DOC_BOLD_CODE,
-                    DOC_LINEBREAK, DOC_NEWLINE, DOC_TABS,
+                    DOC_LINEBREAK, DOC_NEWLINE, DOC_NEXT_LINE, DOC_TABS,
                     DOC_UNORDERED_LIST, DOC_ORDERED_LIST,
                     DOC_HEADER_1, DOC_HEADER_2,
                     DOC_BLOCKQUOTES -> builder.advanceLexer()

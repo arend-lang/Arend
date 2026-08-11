@@ -72,7 +72,7 @@ public class FieldsCollector extends VoidExpressionVisitor<Void> {
 
   private void checkArguments(DependentLink link, List<? extends Expression> arguments) {
     for (Expression argument : arguments) {
-      checkArgument(argument, link.getTypeExpr());
+      checkArgument(argument, link.getType());
       link = link.getNext();
     }
   }
@@ -101,9 +101,9 @@ public class FieldsCollector extends VoidExpressionVisitor<Void> {
       DependentLink link = expr.getDefinition().getParameters();
       for (int i = 0; i < expr.getDefCallArguments().size(); i++) {
         if (i != recursiveParam) {
-          checkArgument(expr.getDefCallArguments().get(i), link.getTypeExpr());
+          checkArgument(expr.getDefCallArguments().get(i), link.getType());
         } else {
-          type = link.getTypeExpr();
+          type = link.getType();
         }
         link = link.getNext();
       }
@@ -135,15 +135,15 @@ public class FieldsCollector extends VoidExpressionVisitor<Void> {
       return null;
     }
 
-    ReferenceExpression refExpr = args.get(0).cast(ReferenceExpression.class);
+    ReferenceExpression refExpr = args.getFirst().cast(ReferenceExpression.class);
     if (refExpr != null && refExpr.getBinding() == myThisBinding && (myFields == null || myFields.contains(field))) {
       myResult.add(field);
     }
-    args.get(0).accept(this, null);
+    args.getFirst().accept(this, null);
 
     DependentLink link = expr.getDefinition().getParameters().getNext();
     for (int i = 1; i < args.size(); i++) {
-      checkArgument(args.get(i), link.getTypeExpr());
+      checkArgument(args.get(i), link.getType());
       link = link.getNext();
     }
 

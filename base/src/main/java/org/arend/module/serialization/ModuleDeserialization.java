@@ -11,6 +11,7 @@ import org.arend.ext.typechecking.DefinitionListener;
 import org.arend.extImpl.SerializableKeyRegistryImpl;
 import org.arend.ext.module.ModuleLocation;
 import org.arend.module.scopeprovider.ModuleScopeProvider;
+import org.arend.ext.typechecking.meta.MetaTypechecker;
 import org.arend.naming.reference.*;
 import org.arend.naming.scope.EmptyScope;
 import org.arend.naming.scope.Scope;
@@ -28,6 +29,7 @@ public class ModuleDeserialization {
   private final List<Pair<DefinitionProtos.Definition, Definition>> myDefinitions = new ArrayList<>();
   private final SerializableKeyRegistryImpl myKeyRegistry;
   private final DefinitionListener myDefinitionListener;
+  private DeferredBoxFixes myDeferredBoxFixes;
 
   public ModuleDeserialization(ModuleProtos.Module moduleProto, SerializableKeyRegistryImpl keyRegistry, DefinitionListener definitionListener) {
     myModuleProto = moduleProto;
@@ -37,6 +39,16 @@ public class ModuleDeserialization {
 
   public ModuleProtos.Module getModuleProto() {
     return myModuleProto;
+  }
+
+  /**
+   * Shares one {@link DeferredBoxFixes} across a multi-module load, so that box fixing is
+   * replayed only after <em>every</em> module has been filled in. Callers that load a single
+   * module (and recursively its dependencies) can leave this unset: {@link #readModule} then
+   * uses a private instance and applies it before returning.
+   */
+  public void setDeferredBoxFixes(DeferredBoxFixes deferredBoxFixes) {
+    myDeferredBoxFixes = deferredBoxFixes;
   }
 
   public void readModule(ModuleScopeProvider moduleScopeProvider, DependencyListener dependencyListener) throws DeserializationException {
@@ -56,31 +68,59 @@ public class ModuleDeserialization {
       }
     }
 
-    DefinitionDeserialization defDeserialization = new DefinitionDeserialization(myCallTargetProvider, dependencyListener, myKeyRegistry, myDefinitionListener);
+    // Without a caller-supplied instance this load stands alone, so its callees are already
+    // filled and the replay can happen right here.
+    boolean ownBoxFixes = myDeferredBoxFixes == null;
+    if (ownBoxFixes) myDeferredBoxFixes = new DeferredBoxFixes();
+
+    DefinitionDeserialization defDeserialization = new DefinitionDeserialization(myCallTargetProvider, dependencyListener, myKeyRegistry, myDefinitionListener, myDeferredBoxFixes);
     for (Pair<DefinitionProtos.Definition, Definition> pair : myDefinitions) {
       defDeserialization.fillInDefinition(pair.proj1, pair.proj2);
     }
     myDefinitions.clear();
+
+    if (ownBoxFixes) {
+      myDeferredBoxFixes.apply();
+      myDeferredBoxFixes = null;
+    }
   }
 
   private void fillInCallTargetTree(String parentName, ModuleProtos.CallTargetTree callTargetTree, Scope scope, ModulePath module, Scope parentScope, TCDefReferable parent) throws DeserializationException {
     TCDefReferable referable = null;
     if (callTargetTree.getIndex() > 0) {
-      Referable referable1 = scope.resolveName(callTargetTree.getName(), null);
-      if (referable1 == null) {
-        if (parent == null) {
-          Referable parentRef = parentScope.resolveName(parentName);
-          if (parentRef instanceof TCDefReferable) parent = (TCDefReferable) parentRef;
+      // Ensure parent is resolved early: it is needed to look up personal fields/constructors
+      // before falling back to scope lookup.
+      if (parent == null && parentName != null) {
+        Referable parentRef = parentScope.resolveName(parentName);
+        if (parentRef instanceof TCDefReferable) parent = (TCDefReferable) parentRef;
+      }
+
+      // When the parent is a class/data definition, look up personal fields/constructors
+      // FIRST.  Coclause functions created by "\default foo x => ..." (without \as) are
+      // stored as dynamic subgroups with the same name as the field they implement, so a
+      // plain scope.resolveName() would incorrectly return the function instead of the field.
+      Referable referable1 = null;
+      if (parent != null && parent.getTypechecked() instanceof ClassDefinition parentDef) {
+        for (ClassField field : parentDef.getPersonalFields()) {
+          if (field.getName().equals(callTargetTree.getName())) {
+            referable1 = field.getReferable();
+            break;
+          }
         }
-        if (parent != null && parent.getTypechecked() instanceof ClassDefinition parentDef) {
-          for (ClassField field : parentDef.getPersonalFields()) {
-            if (field.getName().equals(callTargetTree.getName())) {
-              referable1 = field.getReferable();
-              break;
-            }
+      } else if (parent != null && parent.getTypechecked() instanceof DataDefinition parentDef) {
+        for (Constructor constructor : parentDef.getConstructors()) {
+          if (constructor.getName().equals(callTargetTree.getName())) {
+            referable1 = constructor.getReferable();
+            break;
           }
         }
       }
+
+      // Fall back to scope lookup when not found as a personal field/constructor.
+      if (referable1 == null) {
+        referable1 = scope.resolveName(callTargetTree.getName(), null);
+      }
+
       referable = referable1 instanceof TCDefReferable ? (TCDefReferable) referable1 : null;
       if (referable == null && module.equals(Prelude.MODULE_PATH) && "Fin".equals(parentName)) {
         if (callTargetTree.getName().equals("zero")) {
@@ -90,9 +130,17 @@ public class ModuleDeserialization {
         }
       }
       if (referable == null) {
-        throw new DeserializationException("Cannot resolve reference '" + callTargetTree.getName() + "' in " + module);
+        if (referable1 instanceof TCLevelReferable) {
+          // Level-parameter referables (from \plevels/\hlevels) are LocatedReferable but not
+          // TCDefReferable.  Store them directly so that pLevelsParent/hLevelsParent can be
+          // restored during fillInDefinition.
+          myCallTargetProvider.putCallTarget(callTargetTree.getIndex(), (LocatedReferable) referable1);
+        } else {
+          throw new DeserializationException("Cannot resolve reference '" + callTargetTree.getName() + "' in " + module);
+        }
+      } else {
+        myCallTargetProvider.putCallTarget(callTargetTree.getIndex(), referable);
       }
-      myCallTargetProvider.putCallTarget(callTargetTree.getIndex(), referable);
     }
 
     List<ModuleProtos.CallTargetTree> subtreeList = callTargetTree.getSubtreeList();
@@ -142,6 +190,9 @@ public class ModuleDeserialization {
 
           assert def instanceof ClassDefinition;
           ClassField res = new ClassField(absField, (ClassDefinition) def);
+          if (fieldProto.getIsProperty()) {
+            res.setIsProperty();
+          }
           ((ClassDefinition) def).addPersonalField(res);
           absField.setTypechecked(res);
           myCallTargetProvider.putCallTarget(fieldProto.getReferable().getIndex(), res);
@@ -237,7 +288,13 @@ public class ModuleDeserialization {
     DefinitionProtos.Referable referableProto = groupProto.getReferable();
     LocatedReferable referable;
     GlobalReferable.Kind kind = getDefinitionKind(groupProto.getDefinition());
-    referable = parent == null ? new FullModuleReferable(modulePath) : new LocatedReferableImpl(null, AccessModifier.PUBLIC, readPrecedence(referableProto.getPrecedence()), referableProto.getName(), Precedence.DEFAULT, null, parent.referable(), kind);
+    if (parent == null) {
+      referable = new FullModuleReferable(modulePath);
+    } else if (kind == GlobalReferable.Kind.META) {
+      referable = new MetaReferable(null, readAccessModifier(referableProto.getAccessModifier()), readPrecedence(referableProto.getPrecedence()), referableProto.getName(), readAliasPrecedence(referableProto), referableProto.getAliasName().isEmpty() ? null : referableProto.getAliasName(), new MetaTypechecker() {}, null, parent.referable());
+    } else {
+      referable = new LocatedReferableImpl(null, readAccessModifier(referableProto.getAccessModifier()), readPrecedence(referableProto.getPrecedence()), referableProto.getName(), readAliasPrecedence(referableProto), referableProto.getAliasName().isEmpty() ? null : referableProto.getAliasName(), parent.referable(), kind);
+    }
 
     if (referable instanceof TCDefReferable && groupProto.hasDefinition()) {
       Definition def = readDefinition(groupProto.getDefinition(), (TCDefReferable) referable, true);
@@ -247,25 +304,22 @@ public class ModuleDeserialization {
     }
 
     List<ConcreteStatement> statements = new ArrayList<>(groupProto.getSubgroupCount());
-    ConcreteGroup group = new ConcreteGroup(DocFactory.nullDoc(), referable, null, statements, Collections.emptyList(), Collections.emptyList());
+    List<ConcreteGroup> dynamicSubgroups = new ArrayList<>(groupProto.getDynamicSubgroupCount());
+    ConcreteGroup group = new ConcreteGroup(DocFactory.nullDoc(), referable, null, statements, dynamicSubgroups, Collections.emptyList());
     for (ModuleProtos.Group subgroup : groupProto.getSubgroupList()) {
-      statements.add(new ConcreteStatement(readGroup(subgroup, group, modulePath), null, null, null));
+      statements.add(new ConcreteStatement(readGroup(subgroup, group, modulePath), null));
+    }
+    for (ModuleProtos.Group dynSubgroup : groupProto.getDynamicSubgroupList()) {
+      dynamicSubgroups.add(readGroup(dynSubgroup, group, modulePath));
     }
 
     return group;
   }
 
-  private List<LevelVariable> readLevelParameters(List<DefinitionProtos.Definition.LevelParameter> parameters, boolean isStd) {
-    if (isStd) return null;
+  private List<LevelVariable> readLevelParameters(List<DefinitionProtos.Definition.LevelParameter> parameters) {
     List<LevelVariable> result = new ArrayList<>(parameters.size());
     for (DefinitionProtos.Definition.LevelParameter parameter : parameters) {
-      LevelVariable base = parameter.getIsPlevel() ? LevelVariable.PVAR : LevelVariable.HVAR;
-      int size = parameter.getSize();
-      if (size == -1) {
-        result.add(base);
-      } else {
-        result.add(new ParamLevelVariable(base.getType(), parameter.getName(), parameter.getIndex(), size));
-      }
+      result.add(new ParamLevelVariable(parameter.getName(), parameter.getIndex()));
     }
     return result;
   }
@@ -278,8 +332,11 @@ public class ModuleDeserialization {
         for (DefinitionProtos.Definition.ClassData.Field fieldProto : defProto.getClass_().getPersonalFieldList()) {
           DefinitionProtos.Referable fieldReferable = fieldProto.getReferable();
           if (fillInternalDefinitions || fieldProto.getIsRealParameter()) {
-            FieldReferableImpl absField = new FieldReferableImpl(null, AccessModifier.PUBLIC, readPrecedence(fieldReferable.getPrecedence()), fieldReferable.getName(), Precedence.DEFAULT, null, fieldProto.getIsExplicit(), fieldProto.getIsParameter(), fieldProto.getIsRealParameter(), referable);
+            FieldReferableImpl absField = new FieldReferableImpl(null, readAccessModifier(fieldReferable.getAccessModifier()), readPrecedence(fieldReferable.getPrecedence()), fieldReferable.getName(), readAliasPrecedence(fieldReferable), fieldReferable.getAliasName().isEmpty() ? null : fieldReferable.getAliasName(), fieldProto.getIsExplicit(), fieldProto.getIsParameter(), fieldProto.getIsRealParameter(), referable);
             ClassField res = new ClassField(absField, classDef);
+            if (fieldProto.getIsProperty()) {
+              res.setIsProperty();
+            }
             classDef.addPersonalField(res);
             absField.setTypechecked(res);
             myCallTargetProvider.putCallTarget(fieldReferable.getIndex(), res);
@@ -292,7 +349,7 @@ public class ModuleDeserialization {
         if (fillInternalDefinitions) {
           for (DefinitionProtos.Definition.DataData.Constructor constructor : defProto.getData().getConstructorList()) {
             DefinitionProtos.Referable conReferable = constructor.getReferable();
-            InternalReferable absConstructor = new InternalReferableImpl(null, AccessModifier.PUBLIC, readPrecedence(conReferable.getPrecedence()), conReferable.getName(), Precedence.DEFAULT, null, true, referable, LocatedReferableImpl.Kind.CONSTRUCTOR);
+            InternalReferable absConstructor = new InternalReferableImpl(null, readAccessModifier(conReferable.getAccessModifier()), readPrecedence(conReferable.getPrecedence()), conReferable.getName(), readAliasPrecedence(conReferable), conReferable.getAliasName().isEmpty() ? null : conReferable.getAliasName(), true, referable, LocatedReferableImpl.Kind.CONSTRUCTOR);
             Constructor res = new Constructor(absConstructor, dataDef);
             dataDef.addConstructor(res);
             absConstructor.setTypechecked(res);
@@ -312,11 +369,21 @@ public class ModuleDeserialization {
       default -> throw new DeserializationException("Unknown Definition kind: " + defProto.getDefinitionDataCase());
     }
     if (def instanceof TopLevelDefinition) {
-      ((TopLevelDefinition) def).setLevelParameters(readLevelParameters(defProto.getLevelParamList(), defProto.getIsStdLevels()));
+      ((TopLevelDefinition) def).setLevelParameters(readLevelParameters(defProto.getLevelParamList()));
     } else {
-      ((MetaTopDefinition) def).setLevelParameters(readLevelParameters(defProto.getLevelParamList(), defProto.getIsStdLevels()));
+      ((MetaTopDefinition) def).setLevelParameters(readLevelParameters(defProto.getLevelParamList()));
     }
     return def;
+  }
+
+  private static AccessModifier readAccessModifier(DefinitionProtos.AccessModifier proto) {
+    return switch (proto) {
+      case PROTECTED_ACCESS -> AccessModifier.PROTECTED;
+      case PRIVATE_ACCESS -> AccessModifier.PRIVATE;
+      // Default (PUBLIC_ACCESS = 0) preserves backward compatibility with .arc
+      // files that predate the access_modifier field.
+      default -> AccessModifier.PUBLIC;
+    };
   }
 
   private static Precedence readPrecedence(DefinitionProtos.Precedence precedenceProto) throws DeserializationException {
@@ -327,5 +394,13 @@ public class ModuleDeserialization {
       default -> throw new DeserializationException("Unknown associativity: " + precedenceProto.getAssoc());
     };
     return new Precedence(assoc, (byte) precedenceProto.getPriority(), precedenceProto.getInfix());
+  }
+
+  /** Returns the alias precedence, or {@link Precedence#DEFAULT} when none is stored. */
+  private static Precedence readAliasPrecedence(DefinitionProtos.Referable referableProto) throws DeserializationException {
+    if (referableProto.getAliasName().isEmpty()) {
+      return Precedence.DEFAULT;
+    }
+    return readPrecedence(referableProto.getAliasPrecedence());
   }
 }

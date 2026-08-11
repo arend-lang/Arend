@@ -11,15 +11,17 @@ import java.util.Set;
 public class ExpressionInferenceVariable extends InferenceVariable {
   private final boolean mySolvableFromEquations;
   private final boolean myUseSubstExpr;
+  private final boolean myCanBeInfinite;
 
-  public ExpressionInferenceVariable(Expression type, Concrete.SourceNode sourceNode, Set<Binding> bounds, boolean solvableFromEquations, boolean useSubstExpr) {
+  public ExpressionInferenceVariable(Expression type, Concrete.SourceNode sourceNode, Set<Binding> bounds, boolean solvableFromEquations, boolean useSubstExpr, boolean canBeInfinite) {
     super("H", type, sourceNode, bounds);
     mySolvableFromEquations = solvableFromEquations;
     myUseSubstExpr = useSubstExpr;
+    myCanBeInfinite = canBeInfinite;
   }
 
   public ExpressionInferenceVariable(Expression type, Concrete.SourceNode sourceNode, Set<Binding> bounds, boolean solvableFromEquations) {
-    this(type, sourceNode, bounds, solvableFromEquations, false);
+    this(type, sourceNode, bounds, solvableFromEquations, false, false);
   }
 
   @Override
@@ -35,6 +37,11 @@ public class ExpressionInferenceVariable extends InferenceVariable {
   @Override
   public boolean resetClassCall() {
     return false;
+  }
+
+  @Override
+  public boolean canBeInfinite() {
+    return myCanBeInfinite;
   }
 
   @Override

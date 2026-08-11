@@ -1,13 +1,13 @@
 package org.arend.typechecking;
 
 import org.arend.Matchers;
-import org.arend.core.context.binding.LevelVariable;
 import org.arend.core.context.param.DependentLink;
 import org.arend.core.definition.Definition;
 import org.arend.core.expr.UniverseExpression;
 import org.arend.core.sort.Level;
 import org.arend.core.sort.Sort;
 import org.arend.error.DummyErrorReporter;
+import org.arend.ext.core.level.ConstLevel;
 import org.arend.ext.util.Pair;
 import org.arend.naming.reference.TCDefReferable;
 import org.arend.term.concrete.Concrete;
@@ -19,7 +19,6 @@ import java.util.Collections;
 import static org.arend.Matchers.argInferenceError;
 import static org.arend.Matchers.notInScope;
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
 
 public class VarsTest extends TypeCheckingTestCase {
   private Concrete.Definition getConcreteFixed(String path) {
@@ -306,68 +305,53 @@ public class VarsTest extends TypeCheckingTestCase {
   @Test
   public void levelsTest1() {
     typeCheckModule("""
-      \\func foo (A : \\Type) => 3
+      \\func foo.{u} (A : \\Type u) => 3
         \\where
-          \\func bar \\plevels p1 >= p2 (a : A) => a
+          \\func bar (a : A) => a
       """);
-    assertEquals(new UniverseExpression(new Sort(new Level(LevelVariable.PVAR), new Level(LevelVariable.HVAR))), getDefinition("foo.bar").getParameters().getTypeExpr());
+    Definition bar = getDefinition("foo.bar");
+    assertEquals(new UniverseExpression(new Sort(new Level(bar.getLevelParameters().getFirst()), ConstLevel.INFINITY)), bar.getParameters().getType());
   }
 
   @Test
   public void levelsTest2() {
     typeCheckModule("""
-      \\func foo \\plevels p1 >= p2 (A : \\Type p2) => 3
+      \\func foo.{p1,p2} (A : \\Type p2) => 3
         \\where
           \\func bar (a : A) => a
       """);
     Definition bar = getDefinition("foo.bar");
-    assertNotNull(bar.getLevelParameters());
-    assertEquals(3, bar.getLevelParameters().size());
-    assertEquals(new UniverseExpression(new Sort(new Level(LevelVariable.PVAR), new Level(LevelVariable.HVAR))), getDefinition("foo.bar").getParameters().getTypeExpr());
+    assertEquals(2, bar.getLevelParameters().size());
+    assertEquals(new UniverseExpression(new Sort(new Level(bar.getLevelParameters().get(1)), ConstLevel.INFINITY)), getDefinition("foo.bar").getParameters().getType());
   }
 
   @Test
   public void levelsTest3() {
     typeCheckModule("""
-      \\func foo \\plevels p1 >= p2 (A : \\Type p1) => 3
+      \\func foo.{p1,p2} (A : \\Type p1) => 3
         \\where
           \\func bar (a : A) => a
       """);
     Definition bar = getDefinition("foo.bar");
-    assertNotNull(bar.getLevelParameters());
-    assertEquals(3, bar.getLevelParameters().size());
-    assertEquals(new UniverseExpression(new Sort(new Level(bar.getLevelParameters().getFirst()), new Level(LevelVariable.HVAR))), bar.getParameters().getTypeExpr());
+    assertEquals(2, bar.getLevelParameters().size());
+    assertEquals(new UniverseExpression(new Sort(new Level(bar.getLevelParameters().getFirst()), ConstLevel.INFINITY)), bar.getParameters().getType());
   }
 
   @Test
   public void levelsTest4() {
     typeCheckModule("""
-      \\func foo \\plevels p1 >= p2 (A : \\Type p2) => 3
+      \\func foo.{p1,p2} (A : \\Type p2) => 3
         \\where
-          \\func bar \\plevels p3 >= p4 (a : A) => a
+          \\func bar.{p3,p4} (a : A) => a
       """, -1);
-  }
-
-  @Test
-  public void levelsTest5() {
-    typeCheckModule("""
-      \\plevels p1 >= p2
-      \\func foo (A : \\Type p1) => 3
-        \\where
-          \\func bar (a : A) => a
-      """);
-    Definition bar = getDefinition("foo.bar");
-    assertNotNull(bar.getLevelParameters());
-    assertEquals(3, bar.getLevelParameters().size());
-    assertEquals(new UniverseExpression(new Sort(new Level(bar.getLevelParameters().getFirst()), new Level(LevelVariable.HVAR))), bar.getParameters().getTypeExpr());
   }
 
   @Test
   public void levelsTest6() {
     typeCheckModule("""
-      \\func foo \\plevels p1 >= p2 (A : \\Type p2) => 3
+      \\func foo.{p1,p2} (A : \\Type p2) => 3
         \\where
-          \\func bar \\plevels p3 >= p4 (B : \\Type p4) => 4
+          \\func bar.{p3,p4} (B : \\Type p4) => 4
             \\where
               \\func baz (a : A) (b : B) => 5
       """, -1);
@@ -376,9 +360,9 @@ public class VarsTest extends TypeCheckingTestCase {
   @Test
   public void levelsTest7() {
     typeCheckModule("""
-      \\func foo \\plevels p1 >= p2 (A : \\Type) => 3
+      \\func foo.{p1,p2} (A : \\Type) => 3
         \\where
-          \\func bar \\plevels p3 >= p4 (B : \\Type) (x : Nat) => 4
+          \\func bar.{p3,p4} (B : \\Type) (x : Nat) => 4
             \\where
               \\func baz (a : A) => x
       """);
@@ -387,73 +371,27 @@ public class VarsTest extends TypeCheckingTestCase {
   @Test
   public void levelsTest8() {
     typeCheckModule("""
-      \\func foo \\plevels p1 >= p2 (A : \\Type) (x : Nat) => 3
+      \\func foo.{p1,p2} (A : \\Type) (x : Nat) => 3
         \\where
-          \\func bar \\plevels p3 >= p4 (B : \\Type) => 4
+          \\func bar.{p3,p4} (B : \\Type) => 4
             \\where
               \\func baz (b : B) => x
       """);
   }
 
   @Test
-  public void levelsTest9() {
-    typeCheckModule("""
-      \\plevels p1 >= p2
-      \\func foo (A : \\Type p1) => 3
-        \\where
-          \\func bar \\plevels p3 >= p4 (a : A) => a
-      """, 1);
-  }
-
-  @Test
-  public void levelsTest10() {
-    typeCheckModule("""
-      \\plevels p1 >= p2
-      \\func foo (A : \\Type p1) => 3
-        \\where
-          \\func bar (B : \\Type p2) => 4
-            \\where
-              \\func baz (a : A) (b : B) => 5
-      """);
-  }
-
-  @Test
-  public void levelsTest11() {
-    typeCheckModule("""
-      \\plevels p1 >= p2
-      \\plevels p3 >= p4
-      \\func foo (A : \\Type p1) => 3
-        \\where
-          \\func bar (B : \\Type p3) => 4
-            \\where
-              \\func baz (a : A) (b : B) => 5
-      """, 1);
-  }
-
-  @Test
   public void levelsTest12() {
     typeCheckModule("""
-      \\func foo \\plevels p1 >= p2 (A : \\Type p2) => 3
+      \\func foo.{p1,p2} (A : \\Type p2) => 3
         \\where
           \\func bar (a : A) => a
             \\where
               \\func baz => bar
-      """);
+      """, 1);
+    assertThatErrorsAre(Matchers.warning());
     Definition baz = getDefinition("foo.bar.baz");
-    assertNotNull(baz.getLevelParameters());
-    assertEquals(3, baz.getLevelParameters().size());
-    assertEquals(new UniverseExpression(new Sort(new Level(LevelVariable.PVAR), new Level(LevelVariable.HVAR))), getDefinition("foo.bar.baz").getParameters().getTypeExpr());
-  }
-
-  @Test
-  public void levelsTest13() {
-    typeCheckModule("""
-      \\plevels p1 >= p2
-      \\record R (A : \\Type p1)
-      \\func foo (r : R) => 4
-        \\where
-          \\func bar => r
-      """);
+    assertEquals(2, baz.getLevelParameters().size());
+    assertEquals(new UniverseExpression(new Sort(new Level(baz.getLevelParameters().get(1)), ConstLevel.INFINITY)), getDefinition("foo.bar.baz").getParameters().getType());
   }
 
   @Test
@@ -933,6 +871,17 @@ public class VarsTest extends TypeCheckingTestCase {
           | 0 => m
           | suc n => n
       }
+      """);
+  }
+
+  @Test
+  public void levelsCoclauseTest() {
+    typeCheckModule("""
+      \\record R (f : Nat -> Nat)
+      \\func foo.{u} (X : \\Set u) (g : (X -> X) -> Nat) => 0
+        \\where
+          \\func test : R \\cowith
+            | f (n : Nat) : Nat => g (\\lam x => x)
       """);
   }
 }

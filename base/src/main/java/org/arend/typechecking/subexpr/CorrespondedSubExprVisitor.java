@@ -172,9 +172,9 @@ public class CorrespondedSubExprVisitor implements
 
     Concrete.Expression resultType = exprLetClause.getResultType();
     if (resultType == null)
-      return nullWithError(new SubExprError(SubExprError.Kind.ConcreteHasNoTypeBinding, coreLetClause.getTypeExpr()));
+      return nullWithError(new SubExprError(SubExprError.Kind.ConcreteHasNoTypeBinding, coreLetClause.getType()));
 
-    Expression coreResultType = coreLetClause.getTypeExpr();
+    Expression coreResultType = coreLetClause.getType();
     if (coreResultType instanceof PiExpression) {
       return visitPiImpl(exprLetClause.getParameters(), resultType, (PiExpression) coreResultType);
     } else return resultType.accept(this, coreResultType);
@@ -299,7 +299,7 @@ public class CorrespondedSubExprVisitor implements
       if (body instanceof LamExpression coreLamExpr) {
         Concrete.Expression type = parameter.getType();
         if (type != null) {
-          var ty = type.accept(this, coreLamExpr.getParameters().getTypeExpr());
+          var ty = type.accept(this, coreLamExpr.getParameters().getType());
           if (ty != null) return ty;
         }
         body = coreLamExpr.getBody();
@@ -315,7 +315,7 @@ public class CorrespondedSubExprVisitor implements
       @NotNull DependentLink link
   ) {
     Concrete.Expression type = parameter.getType();
-    Expression typeExpr = link.getTypeExpr();
+    Expression typeExpr = link.getType();
     if (type == null)
       return nullWithError(new SubExprError(SubExprError.Kind.ConcreteHasNoTypeBinding, typeExpr));
     return type.accept(this, typeExpr);
@@ -434,7 +434,7 @@ public class CorrespondedSubExprVisitor implements
     Map<ClassField, Expression> implementedHere = coreClassExpr.getImplementedHere();
     var field = visitStatements(implementedHere, expr.getStatements());
     if (field != null) return field;
-    return expr.getBaseClassExpression().accept(this, coreClassExpr.getThisBinding().getTypeExpr());
+    return expr.getBaseClassExpression().accept(this, coreClassExpr.getThisBinding().getType());
   }
 
   private  @Nullable Pair<@NotNull Expression, Concrete.@NotNull Expression>

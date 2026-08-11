@@ -10,9 +10,9 @@
 \import Paths.Meta
 \import Relation.Equivalence
 \import Set.Filter
-\import Set.Subset
+\import Set.Set
 \import Topology.CoverSpace
-\import Topology.CoverSpace.Category
+\import Topology.CoverSpace.CoverSpaceCategory
 \import Topology.CoverSpace.Complete
 \import Topology.CoverSpace.Product
 \import Topology.RatherBelow
@@ -30,7 +30,8 @@
 
 \lemma relativelyCompleteAndSeparated {X Y : CoverSpace} (p : X -> Y) (pc : IsRelativelyComplete p) (ph : IsRelativelyHausdorff p)
                                       (F : CauchyFilter X) {y : Y} (ys : pointCF y ⊆ SetFilter-map p F) : Contr (\Sigma (x : X) (p x = y) (pointCF x ⊆ F))
-  => isProp'=>isContr (\lam s t => ext $ ph (SeparatedCoverSpace.separated-char 1 6 $ ~-transitive {CauchyFilterEquivalence X} (CF~_<= s.3) $ CF~-sym (CF~_<= t.3)) (s.2 *> inv t.2)) (pc F ys)
+  => isProp'=>isContr (\lam s t => ext $ ph (SeparatedCoverSpace.separated-char 1 6 $
+    (CauchyFilterEquivalence X).~-transitive (CF~_<= {X} s.3) $ CF~-sym (CF~_<= {X} t.3)) (s.2 *> inv t.2)) (pc F ys)
   \where {
     \lemma neighborhood (F : CauchyFilter X) {ys : pointCF y ⊆ SetFilter-map p F} {V U : Set X} (V<=<U : V <=< U) (FV : F V) : single (Contr.center {relativelyCompleteAndSeparated p pc ph F ys}).1 <=< U
       => \let | c => Contr.center {relativelyCompleteAndSeparated p pc ph F ys}
@@ -116,10 +117,10 @@
           })
   }
 
-\func CompletionOFS : OFS {CoverSpaceCat} \cowith
+\func CompletionOFS.{u} : OFS {CoverSpaceCat.{u}} \cowith
   | L i => CoverMap.IsDenseEmbedding {i}
   | R p => \Sigma (IsRelativelyHausdorff p) (IsRelativelyComplete p)
   | factors h => (RelativeCompletionCoverSpace h, relativeCompletion h, relativeCompletion-proj h, idp, relativeCompletion.isDenseEmbedding, (relativeCompletion-proj.isHausdorff, relativeCompletion-proj.isCompletion))
-  | unique-lift {X} {Y} {Z} {T} f g fd gc => Equiv.fromInjSurj _ (\lam {l1} {l2} q => exts $ dense-relative-lift-unique g gc.1 f fd.1 l1 l2 (\lam x => pmap (__.1 x) q) \lam {y} => pmap (__.2 y) q) \lam r =>
+  | unique-lift {X} {Y} {Z} {T} f g fd gc => IsEquiv.fromInjSurj (\lam {l1} {l2} q => exts $ dense-relative-lift-unique g gc.1 f fd.1 l1 l2 (\lam x => pmap (__.1 x) q) \lam {y} => pmap (__.2 y) q) \lam r =>
       \have sq x => inv $ pmap {CoverMap X T} (__ x) r.3
       \in inP (dense-relative-lift g gc.2 gc.1 f r.1 r.2 fd sq, ext (exts \lam x => dense-relative-lift-char sq, exts \lam y => dense-relative-lift-proj gc.1 sq))

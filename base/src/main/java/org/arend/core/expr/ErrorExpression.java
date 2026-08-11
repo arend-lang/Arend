@@ -1,15 +1,12 @@
 package org.arend.core.expr;
 
-import org.arend.core.expr.type.Type;
 import org.arend.core.expr.visitor.ExpressionVisitor;
 import org.arend.core.expr.visitor.ExpressionVisitor2;
-import org.arend.core.expr.visitor.StripVisitor;
 import org.arend.core.sort.Sort;
-import org.arend.core.subst.InPlaceLevelSubstVisitor;
+import org.arend.core.sort.SortExpression;
 import org.arend.ext.concrete.ConcreteSourceNode;
 import org.arend.ext.core.expr.CoreErrorExpression;
 import org.arend.ext.core.expr.CoreExpressionVisitor;
-import org.arend.ext.core.ops.NormalizationMode;
 import org.arend.ext.error.ErrorReporter;
 import org.arend.ext.error.GeneralError;
 import org.arend.ext.error.LocalError;
@@ -19,7 +16,7 @@ import org.arend.util.Decision;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-public class ErrorExpression extends Expression implements CoreErrorExpression, Type {
+public class ErrorExpression extends Expression implements CoreErrorExpression {
   private final Expression myExpression;
   private final String myGoalName;
   private LocalError myError;
@@ -116,29 +113,12 @@ public class ErrorExpression extends Expression implements CoreErrorExpression, 
   }
 
   @Override
+  public SortExpression getSortExpressionOfType() {
+    return new SortExpression.Const(getSortOfType());
+  }
+
+  @Override
   public Sort getSortOfType() {
     return Sort.PROP;
-  }
-
-  @Override
-  public Expression getExpr() {
-    return this;
-  }
-
-  @Override
-  public void subst(InPlaceLevelSubstVisitor substVisitor) {
-    if (myExpression != null) {
-      myExpression.accept(substVisitor, null);
-    }
-  }
-
-  @Override
-  public Type strip(StripVisitor visitor) {
-    return myExpression == null ? this : new ErrorExpression(myExpression.accept(visitor, null), myGoalName);
-  }
-
-  @Override
-  public @NotNull ErrorExpression normalize(@NotNull NormalizationMode mode) {
-    return this;
   }
 }

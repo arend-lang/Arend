@@ -35,11 +35,11 @@ class FunctionArgInferenceQuickFixTest : QuickFixTestBase() {
     """)
 
     fun testFixFunction1() = typedQuickFixTest(ArendBundle.message("arend.argument.inference.parameter"), """
-        \func \infixl 6 f6 {A B : \Type0} (a : A) => a
+        \func f6 {A B : \Type0} (a : A) => a
 
         \func f7 => f6{-caret-} 0
     """, """
-        \func \infixl 6 f6 {A B : \Type0} (a : A) => a
+        \func f6 {A B : \Type0} (a : A) => a
 
         \func f7 => f6 {_} {{?}}{-caret-} 0
     """)

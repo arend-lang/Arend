@@ -560,7 +560,7 @@ public class ArendServerImpl implements ArendServer {
     return myErrorService.hasErrors();
   }
 
-  ErrorService getErrorService() {
+  public ErrorService getErrorService() {
     return myErrorService;
   }
 

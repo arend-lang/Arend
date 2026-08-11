@@ -196,22 +196,22 @@ public class OverrideTest extends TypeCheckingTestCase {
   @Test
   public void derivedOverridePi() {
     typeCheckModule("""
-      \\record R (X : \\Set (\\suc \\lp)) (f : X -> X)
-      \\record S \\extends R {
-        \\override X : \\Set \\lp
+      \\record R.{u} (X : \\Set (\\suc u)) (f : X -> X)
+      \\record S.{u} \\extends R.{u} {
+        \\override X : \\Set u
       }
-      \\func test (A : \\Set \\lp) : \\Set \\lp => S \\lp A
+      \\func test.{u} (A : \\Set u) : \\Set u => S.{u} A
       """);
   }
 
   @Test
   public void derivedOverrideSigma() {
     typeCheckModule("""
-      \\record R (X : \\Set (\\suc \\lp)) (f : \\Sigma X X)
-      \\record S \\extends R {
-        \\override X : \\Set \\lp
+      \\record R.{u} (X : \\Set (\\suc u)) (f : \\Sigma X X)
+      \\record S.{u} \\extends R.{u} {
+        \\override X : \\Set u
       }
-      \\func test (A : \\Set \\lp) : \\Set \\lp => S \\lp A
+      \\func test.{u} (A : \\Set u) : \\Set u => S.{u} A
       """);
   }
 
@@ -321,13 +321,13 @@ public class OverrideTest extends TypeCheckingTestCase {
   @Test
   public void levelError() {
     typeCheckModule("""
-      \\class C (X : \\hType (\\suc \\lp))
-      \\class S \\extends C {
-        \\override X : \\hType \\lp
+      \\class C.{u} (X : \\Type (\\suc u))
+      \\class S.{u} \\extends C.{u} {
+        \\override X : \\Type u
       }
-      \\func f (X : \\hType (\\suc \\lp)) : C X \\cowith
-      \\func g (X : \\hType (\\suc \\lp)) : S \\lp \\cowith
-        | C => f \\lp X
+      \\func f.{u} (X : \\Type (\\suc u)) : C X \\cowith
+      \\func g.{u} (X : \\Type (\\suc u)) : S.{u} \\cowith
+        | C => f.{u} X
       """, 1);
     assertThatErrorsAre(Matchers.typeMismatchError());
   }
@@ -335,13 +335,13 @@ public class OverrideTest extends TypeCheckingTestCase {
   @Test
   public void levelTest() {
     typeCheckModule("""
-      \\class C (X : \\hType (\\suc \\lp))
-      \\class S \\extends C {
-        \\override X : \\hType \\lp
+      \\class C.{u} (X : \\Type (\\suc u))
+      \\class S.{u} \\extends C.{u} {
+        \\override X : \\Type u
       }
-      \\func f (X : \\hType (\\suc \\lp)) : C X \\cowith
-      \\func g (X : \\hType) : S \\lp \\cowith
-        | C => f \\lp X
+      \\func f.{u} (X : \\Type (\\suc u)) : C X \\cowith
+      \\func g.{u} (X : \\Type u) : S.{u} \\cowith
+        | C => f.{u} X
       """);
   }
 

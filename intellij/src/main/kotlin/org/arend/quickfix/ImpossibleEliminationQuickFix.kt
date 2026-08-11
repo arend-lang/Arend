@@ -245,7 +245,7 @@ class ImpossibleEliminationQuickFix(val error: ImpossibleEliminationError, val c
                              bindingToCaseArgMap: HashMap<Binding, ArendCaseArg>) {
             val renamer = StringRenamer()
             val ppConfig = object : PrettyPrinterConfig { override fun getDefinitionRenamer(): DefinitionRenamer = PsiLocatedRenamer(caseExprPsi) }
-            val freshName = if (expression is ReferenceExpression) expression.binding.name else renamer.generateFreshName(TypedBinding(null, binding.typeExpr), caseOccupiedLocalNames.map{ VariableImpl(it) })
+            val freshName = if (expression is ReferenceExpression) expression.binding.name else renamer.generateFreshName(TypedBinding(null, binding.type), caseOccupiedLocalNames.map{ VariableImpl(it) })
             caseOccupiedLocalNames.add(freshName)
 
             for (ce in caseExpressions.zip(caseExprPsi.caseArguments))

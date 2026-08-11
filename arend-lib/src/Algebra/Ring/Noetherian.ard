@@ -1,5 +1,129 @@
+\import Algebra.Group
+\import Algebra.Monoid
 \import Algebra.Ring
 \import Algebra.Ring.Ideal
+\import Algebra.Ring.RingHom
+\import Arith.Nat
+\import Data.Array
+\import Data.Or
+\import Function.Meta
+\import Logic
+\import Logic.Bar
+\import Logic.Bar.FanTheorem
+\import Logic.Meta
+\import Meta
+\import Order.PartialOrder
+\import Paths
+\import Paths.Meta
+\import Set.Set
 
-\class NoetherianCRing \extends CRing
-  | isNoetherian (I : Nat -> Ideal \this) : (\Pi (n : Nat) -> Ideal.IsFinitelyGenerated {I n}) -> Ideal.ChainCondition I
+\class WeaklyNoetherianCRing \extends CRing
+  | isWeaklyNoetherian (I : Nat -> Ideal \this) : (\Pi (n : Nat) -> (I n).IsFinitelyGenerated) -> Ideal.ChainCondition I
+
+\truncated \data Pauses {A : \Type} (R : A -> Array A -> \Type) (l : Array A) : \Prop \elim l
+  | a :: l => {
+    | pauses-here (R a l)
+    | pauses-there (Pauses R l)
+  }
+  \where {
+    \lemma isBarMonotone : IsBarMonotone (Pauses R)
+      => pauses-there __
+
+    \lemma fromIndex {l : Array A} (j : Fin l.len) (r : R (l j) (drop (suc j) l)) : Pauses R l \elim l, j
+      | a :: l, 0 => pauses-here r
+      | a :: l, suc j => pauses-there (fromIndex j r)
+
+    \lemma toIndex {l : Array A} (p : Pauses R l) : ∃ (j : Fin l.len) (R (l j) (drop (suc j) l)) \elim l, p
+      | a :: l, pauses-here p => inP (0,p)
+      | a :: l, pauses-there p => \case toIndex p \with {
+        | inP (j,r) => inP (suc j, r)
+      }
+  }
+
+\func PausesElem {R : CRing} (l : Array R) : \Prop
+  => Pauses (\lam a l' => lclosure l' a) l
+  \where {
+    \lemma ++-insert {l m r : Array R} (p : PausesElem (l ++ r)) : PausesElem (l ++ m ++ r) \elim l, p
+      | nil, p => ++-right p
+      | a :: l, pauses-here p => pauses-here (lclosure_++-insert p)
+      | a :: l, pauses-there p => pauses-there (++-insert p)
+
+    \lemma ++-left {l r : Array R} (p : PausesElem l) : PausesElem (l ++ r)
+      => rewrite ++_nil in ++-insert (transportInv PausesElem ++_nil p)
+
+    \lemma ++-right {l r : Array R} (p : PausesElem r) : PausesElem (l ++ r) \elim l
+      | nil => p
+      | a :: l => pauses-there (++-right p)
+
+    \open Data.Array (map \as amap)
+    \open Ideal
+
+    \protected \lemma map {R S : CRing} (f : PseudoRingHom R S) {l : Array R} (p : PausesElem l) : PausesElem (amap f l) \elim l, p
+      | a :: l, pauses-here p => pauses-here (PseudoRingHom.func-Ideal_closure f {_} {l} p)
+      | a :: l, pauses-there p => pauses-there (map f p)
+
+    \lemma lincomb {l r : Array R} {a : R} (c : Array R r.len) (p : PausesElem (l ++ a - R.BigSum (\lam j => c j * r j) :: r)) : PausesElem (l ++ a :: r) \elim l, p
+      | nil, pauses-here p => pauses-here $ transport (lclosure r) (+-assoc *> pmap (a +) negative-left *> zro-right) $
+        Ideal.contains_+ p $ (lclosure r).contains_BigSum \lam j => ideal-left $ later (lclosure-superset j)
+      | nil, pauses-there p => pauses-there p
+      | b :: l, pauses-here p => pauses-here $ lclosure-univ (lclosure _) (\lam j => later \case \elim j, ++.split-index j \with {
+        | _, inl (j,idp) => rewrite ++.++_index-left $ lclosure_++-left (lclosure-superset j)
+        | _, inr (j,idp) => rewrite ++.++_index-right \case \elim j \with {
+          | 0 => lclosure_++-right $ (lclosure _).contains_- (lclosure-superset 0) $
+            (lclosure _).contains_BigSum \lam j => ideal-left $ later $ lclosure-superset {_} {a :: r} (suc j)
+          | suc j => lclosure_++-right $ later $ lclosure-superset {_} {a :: r} (suc j)
+        }
+      }) p
+      | b :: l, pauses-there p => pauses-there (lincomb c p)
+  }
+
+\func PausesIdeal {R : CRing} (l : Array (\Sigma (I : Ideal R) (I.IsFinitelyGenerated))) : \Prop
+  => Pauses (\lam I l' => I.1 ⊆ Ideal.sclosure \lam x => ∃ (J : l') (J.1 x)) l
+
+\lemma idealToElem {R : CRing} {l : Array R} (b : Bar PausesIdeal (map principal l)) : Bar PausesElem l
+  => bar-impl pausesIdealToElem (bar-map principal l b)
+  \where {
+    \func principal (a : R) : \Sigma (I : Ideal R) (I.IsFinitelyGenerated)
+      => (Ideal.closure (a :: nil), Ideal.closure-finGenerated)
+
+    \lemma pausesIdealToElem {l : Array R} (p : PausesIdeal (map principal l)) : PausesElem l \elim l, p
+      | a :: l, pauses-here p => pauses-here $ Ideal.sclosure-univ {_} {\lam x => ∃ (a : l) ((principal a).1 x)} {Ideal.closure l}
+        (\lam {x} (inP (j,lx)) => Ideal.lclosure-univ (Ideal.closure l) {l j :: nil} (\lam (0) => Ideal.closure-superset j) lx) $ p (Ideal.lclosure-superset 0)
+      | a :: l, pauses-there p => pauses-there (pausesIdealToElem p)
+  }
+
+\lemma elemToIdeal {R : CRing} (b : Bar (PausesElem {R}) nil) : Bar (PausesIdeal {R}) nil
+  => bar-surj fgIdeal (\lam (I, inP (l,lg)) => inP (l, ext $ inv $ I.generatedBy-char.1 lg)) $
+      bar-impl (\lam {ls} (inP (i,fan)) => Pauses.fromIndex i $ unfold fgIdeal \lam e =>
+        Ideal.lclosure-univ (Ideal.sclosure _) (\lam j => \case fan j \with {
+          | (js, jsp, inP (c,p)) => transport (Ideal.sclosure _) (inv p *> pmap (ls i) jsp) $ hiding (j,fan,e,jsp,p) $
+            (Ideal.sclosure _).bigSum _ \lam k => ideal-left $ Ideal.sclosure-superset $ inP $ later ((c k).2, rewrite drop_map $
+              rewrite (drop.index,drop.index) $ Ideal.lclosure-superset $ js $ ndrop_Fin (c k).2)
+        }) e) $
+      indexedFanTheorem Pauses.isBarMonotone b (\lam l j => Ideal.closure (drop (suc j) l) (l j)) Pauses.toIndex
+  \where {
+    \open fanTheorem
+    \open drop
+
+    \func fgIdeal (l : Array R) : \Sigma (I : Ideal R) (I.IsFinitelyGenerated)
+      => (Ideal.lclosure l, Ideal.closure-finGenerated)
+  }
+
+\func IsNoetherian (R : CRing) : \Prop
+  => Bar (PausesElem {R}) nil
+
+\class NoetherianCRing \extends WeaklyNoetherianCRing
+  | isNoetherian : IsNoetherian \this
+  | isWeaklyNoetherian I Ifg Ic => \case bar-stream (elemToIdeal isNoetherian) (\lam n => (I (suc n), Ifg (suc n))) \with {
+    | inP (l,p,s) => \case Pauses.toIndex s \with {
+      | inP (j,q) => inP (l.len -' suc j, \lam {a} Ia => Ideal.sclosure-univ (hiding (q,s) $ later \lam (inP (k,lx)) =>
+        transport (I __ _) (pmap suc NatSemiring.+-comm *> NatSemiring.cancel-left (suc j) (later $ rewriteI NatSemiring.+-assoc $
+          pmap (suc __ Nat.+ _) (inv drop.ndrop_Fin_+) *> <=_exists {suc (drop.ndrop_Fin k)} (suc_<_<= $ fin_< _) *> inv (<=_exists $ suc_<_<= $ fin_< j))) $
+        iterate I Ic k $ rewrite (drop.index, IsInvPrefix.toIndex p) in lx) $ q $ transportInv (\lam s => s.1 a) (IsInvPrefix.toIndex p) Ia)
+    }
+  }
+  \where {
+    \protected \lemma iterate {R : CRing} (I : Nat -> Ideal R) (Ic : \Pi (n : Nat) {a : R} -> I n a -> I (suc n) a) {x : R} {n : Nat} (k : Nat) (Ix : I n x) : I (n Nat.+ k) x \elim k
+      | 0 => Ix
+      | suc k => iterate I Ic k (Ic n Ix)
+  }

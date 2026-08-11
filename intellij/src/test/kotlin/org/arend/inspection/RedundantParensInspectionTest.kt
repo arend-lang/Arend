@@ -34,8 +34,9 @@ class RedundantParensInspectionTest : QuickFixTestBase() {
 
        \func test8 => f2 (\Set 0) 1
 
-       \func test9 => f2 (Path \levels 0 0) 1
-       \func test10 {A : \Type \lp \lh} => f2 (Path \lp \lh) 1
+       \func L.{l} => \Type l
+       \func test9 => f2 L.{0} 1
+       \func test10.{l} => f2 L.{l} 1
 
        \func test11 => f2 (\Sigma) 1
        \func test12 => f2 (\Pi (n : Nat) -> Nat) 1
@@ -186,18 +187,17 @@ class RedundantParensInspectionTest : QuickFixTestBase() {
        \func test13 => 0 + suc (suc 1) + 2
        \func test14 => 0 + 1 + suc (suc 2)
 
-       \func test15 {A : \Type} (l : Array A) (a : A) => a :: (:: \levels \lp \lh a l)
-       \func test16 {A : \Type} (l : Array A) (a : A) => a :: (:: \lp \lh a l)
+       \func test15 {A : \Type} (l : Array A) (a : A) => a :: (:: a l)
 
-       \func test17 => + (suc 0) (suc 1)
-       \func test18 => +(suc 0) (suc 1)
+       \func test16 => + (suc 0) (suc 1)
+       \func test17 => +(suc 0) (suc 1)
 
-       \func test19 => (`+ 2) 1 = 3
+       \func test18 => (`+ 2) 1 = 3
 
        \func \infixl 5 +++ (a b : Nat -> Nat) => a 1 + b 1
 
        -- The first parens is actually redundant, this is false negative.
-       \func test20 => (+ 1) +++ (+ 3) 
+       \func test19 => (+ 1) +++ (+ 3) 
     """, true)
 
     fun `test fix for atomic expression in function body`() = doTypedQuickFixTest("""
@@ -287,10 +287,12 @@ class RedundantParensInspectionTest : QuickFixTestBase() {
         \func test => \Sigma \Prop (Nat -> Nat)
     """)
 
-    fun testArendMaybeAtomLevelExprs() = doTypedQuickFixTest("""       
-        \func a : 1 = 1 => idp \levels _ (0){-caret-}
+    fun testArendMaybeAtomLevelExprs() = doTypedQuickFixTest("""
+        \func f.{l1, l2} => \Type (\max l1 l2)
+        \func a => f.{0, (1){-caret-}}
     """, """
-        \func a : 1 = 1 => idp \levels _ 0
+        \func f.{l1, l2} => \Type (\max l1 l2)
+        \func a => f.{0, 1}
     """)
 
     fun `test a tuple with a tuple with case expression`() = doWeakWarningsCheck(myFixture,"""

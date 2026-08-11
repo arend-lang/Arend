@@ -29,8 +29,6 @@ enum class ArendKeywordSection(val sectionName: String) {
     EXTENDS_SECTION("extensions"),
     MODULE_SECTION("modules"),
     INSTANCES_SECTION("instances"),
-    LEVELS_SECTION("level-polymorphism"),
-    PLEVELS_SECTION("level-parameters"),
     WITH_SECTION("pattern-matching"),
     ELIM_SECTION("elim"),
     COWITH_SECTION("copattern-matching"),
@@ -75,9 +73,6 @@ enum class ArendKeyword(val type: IElementType, val section: ArendKeywordSection
     USE(ArendElementTypes.USE_KW, null),
     COERCE(ArendElementTypes.COERCE_KW, null),
     LEVEL(ArendElementTypes.LEVEL_KW, null),
-    LEVELS(ArendElementTypes.LEVELS_KW, LEVELS_SECTION),
-    PLEVELS(ArendElementTypes.PLEVELS_KW, PLEVELS_SECTION),
-    HLEVELS(ArendElementTypes.HLEVELS_KW, PLEVELS_SECTION),
     BOX(ArendElementTypes.BOX_KW, null),
     EVAL(ArendElementTypes.EVAL_KW, SFUNC_SECTION),
     PEVAL(ArendElementTypes.PEVAL_KW, SFUNC_SECTION),
@@ -104,11 +99,8 @@ enum class ArendKeyword(val type: IElementType, val section: ArendKeywordSection
     CASE(ArendElementTypes.CASE_KW, null),
     SCASE(ArendElementTypes.SCASE_KW, SCASE_SECTION),
     RETURN(ArendElementTypes.RETURN_KW, null),
-    LP(ArendElementTypes.LP_KW, LP_SECTION),
-    LH(ArendElementTypes.LH_KW, LP_SECTION),
     SUC(ArendElementTypes.SUC_KW, LP_SECTION),
     MAX(ArendElementTypes.MAX_KW, LP_SECTION),
-    OO(ArendElementTypes.OO_KW, LP_SECTION),
     PROP(ArendElementTypes.PROP_KW, null),
     SET(ArendElementTypes.SET, null),
     UNIVERSE(ArendElementTypes.UNIVERSE, null),
@@ -156,17 +148,17 @@ class ArendKeywordHtml(val chapter: String, val folder: String?) {
         if (element?.id().isNullOrEmpty()) {
             null
         } else {
-            ArendKeywordHtmlSection(element?.id()!!, index)
+            ArendKeywordHtmlSection(element.id(), index)
         }
     }
 
     var paragraphs = initParagraphs(
         try {
             Jsoup.connect(AREND_DOCUMENTATION_BASE_PATH + chapter + (folder ?: "")).get()
-        } catch (e: UnknownHostException) {
+        } catch (_: UnknownHostException) {
             isUnknownHostException = true
             null
-        } catch (e: Throwable) {
+        } catch (_: Throwable) {
             null
         }
     )
@@ -175,7 +167,7 @@ class ArendKeywordHtml(val chapter: String, val folder: String?) {
     fun updateConnection() {
         try {
             Jsoup.connect(AREND_DOCUMENTATION_BASE_PATH + chapter + (folder ?: "")).get()
-        } catch (e: Throwable) {
+        } catch (_: Throwable) {
             null
         }?.let {
             isUnknownHostException = false
@@ -214,7 +206,7 @@ internal fun getArendKeywordHtml(arendKeyword: ArendKeyword?) =
         ALIAS, INFIX, INFIX_LEFT, INFIX_RIGHT, FIX, FIX_LEFT, FIX_RIGHT -> definitionsHtml
         USE, COERCE -> coercionHtml
         LEVEL -> levelHtml
-        LEVELS, PLEVELS, HLEVELS, LP, LH, SUC, MAX, OO, PROP, SET, UNIVERSE, TRUNCATED_UNIVERSE -> universesHtml
+        SUC, MAX, PROP, SET, UNIVERSE, TRUNCATED_UNIVERSE -> universesHtml
         NEW -> classExtHtml
         PI, LAM -> piHtml
         SIGMA -> sigmaHtml

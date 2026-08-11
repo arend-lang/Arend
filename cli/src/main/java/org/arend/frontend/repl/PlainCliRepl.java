@@ -1,8 +1,10 @@
 package org.arend.frontend.repl;
 
 import org.arend.error.DummyErrorReporter;
+import org.arend.ext.module.ModulePath;
 import org.arend.frontend.library.CliServerRequester;
 import org.arend.frontend.library.LibraryManager;
+import org.arend.server.ArendLibrary;
 import org.arend.server.ArendServer;
 import org.arend.server.impl.ArendServerImpl;
 import org.jetbrains.annotations.NotNull;
@@ -14,8 +16,8 @@ import java.util.Collections;
 import java.util.Scanner;
 
 public class PlainCliRepl extends CommonCliRepl {
-  public PlainCliRepl(ArendServer server) {
-    super(server);
+  public PlainCliRepl(ArendServer server, @NotNull Collection<? extends Path> libDirs) {
+    super(server, libDirs);
     prompt = "λ ";
   }
 
@@ -57,20 +59,21 @@ public class PlainCliRepl extends CommonCliRepl {
   }
 
   public static void main(String... args) {
-    launch(false, Collections.emptyList(), new ArendServerImpl(new CliServerRequester(new LibraryManager(DummyErrorReporter.INSTANCE)), false, false, true));
+    launch(Collections.emptyList(), Collections.emptyList(), Collections.emptyList(), new ArendServerImpl(new CliServerRequester(new LibraryManager(DummyErrorReporter.INSTANCE)), false, false, true));
   }
 
   public static void launch(
-    boolean recompile,
+    @NotNull Collection<? extends ArendLibrary> requestedLibraries,
+    @NotNull Collection<? extends ModulePath> autoloadModules,
     @NotNull Collection<? extends Path> libDirs,
     @NotNull ArendServer server
   ) {
-    var repl = new PlainCliRepl(server);
+    var repl = new PlainCliRepl(server, libDirs);
     repl.println(ASCII_BANNER);
     repl.println();
     repl.println("Note: you're using the plain REPL.");
-    // TODO[server2]: if (recompile) repl.getReplLibrary().addFlag(SourceLibrary.Flag.RECOMPILE);
     repl.initialize();
+    repl.loadStartupTargets(requestedLibraries, autoloadModules);
     repl.runRepl(System.in);
   }
 }

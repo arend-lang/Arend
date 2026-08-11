@@ -1,0 +1,24 @@
+\import Logic
+\import Order.PartialOrder
+\import Set
+
+\class SubSet (S : BaseSet) (\classifying contains : S -> \Prop) {
+  \type Total => \Sigma (x : S) (contains x)
+
+  \func ISet : BaseSet \cowith
+    | E => Total
+}
+
+\class DecSubSet \extends SubSet
+  | isDec (x : S) : Dec (contains x)
+  \where {
+    \func max {S : BaseSet} : DecSubSet S \cowith
+      | contains _ => \Sigma
+      | isDec _ => yes ()
+  }
+
+\instance SubsetPoset {X : BaseSet} : Poset (SubSet X)
+  | <= (S S' : SubSet X) => \Pi (x : X) -> S x -> S' x
+  | <=-refl x p => p
+  | <=-transitive S1<=S2 S2<=S3 x p => S2<=S3 x (S1<=S2 x p)
+  | <=-antisymmetric S1<=S2 S2<=S1 => path (\lam i => \new SubSet X (\lam x => propExt (S1<=S2 x) (S2<=S1 x) i))

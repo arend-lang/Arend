@@ -34,7 +34,7 @@ public class AppHoleTest extends TypeCheckingTestCase {
   public void inNestedBinOpWithParen2() {
     typeCheckModule(
       "\\func \\infixl 7 % (x : Nat) (f : Nat -> Nat) => f x" +
-      "\\func test => % 114 (__ Nat.+ 514)");
+      "\\func test => (%) 114 (__ Nat.+ 514)");
   }
 
   @Test
@@ -51,7 +51,7 @@ public class AppHoleTest extends TypeCheckingTestCase {
   public void inNestedAppInOp() {
     Concrete.Expression expression = resolveNamesExpr("suc (suc __) Nat.+ 233");
     assertNotNull(expression);
-    Concrete.Expression sucSuc__ = ((Concrete.AppExpression) expression).getArguments().get(0).expression;
+    Concrete.Expression sucSuc__ = ((Concrete.AppExpression) expression).getArguments().getFirst().expression;
     assertTrue(sucSuc__ instanceof Concrete.AppExpression);
     typeCheckExpr(expression, null, 1);
   }
@@ -78,9 +78,10 @@ public class AppHoleTest extends TypeCheckingTestCase {
   @Test
   public void inCase() {
     checkAsLam("Nat -> Nat -> Nat",
-        "\\case __, 666 Nat.+ __ \\return Nat \\with {\n" +
-            "  | _, _ => 1\n" +
-            "}");
+        """
+            \\case __, 666 Nat.+ __ \\return Nat \\with {
+              | _, _ => 1
+            }""");
   }
 
   @Test
@@ -107,7 +108,7 @@ public class AppHoleTest extends TypeCheckingTestCase {
 
   @Test
   public void implicit() {
-    assertTrue(typeCheckExpr("idp {__} {__}", null)
+    assertTrue(typeCheckExpr("(idp {__} {__} : \\Pi (X : \\Set0) (x : X) -> x = x)", null)
         .expression instanceof LamExpression);
   }
 
@@ -179,27 +180,27 @@ public class AppHoleTest extends TypeCheckingTestCase {
 
   @Test
   public void appPiTest1() {
-    typeCheckDef("\\func test (f : (\\Set -> \\Set) -> \\Set) => f (__ -> Nat) -> Nat");
+    typeCheckDef("\\func test (f : (\\Set0 -> \\Set0) -> \\Set0) => f (__ -> Nat) -> Nat");
   }
 
   @Test
   public void appPiTest2() {
-    typeCheckDef("\\func test (f : (\\Set -> \\Set) -> Nat) => f (__ -> Nat) = 0");
+    typeCheckDef("\\func test (f : (\\Set0 -> \\Set0) -> Nat) => f (__ -> Nat) = 0");
   }
 
   @Test
   public void appPiTest3() {
-    typeCheckDef("\\func test (f : (Nat -> \\Set) -> Nat) => f (__ = 0 -> Nat)");
+    typeCheckDef("\\func test (f : (Nat -> \\Set0) -> Nat) => f (__ = 0 -> Nat)");
   }
 
   @Test
   public void appPiTest4() {
-    typeCheckDef("\\func test (f : (Nat -> \\Set) -> Nat) (g : Nat -> \\Set) => f (g __ -> Nat)");
+    typeCheckDef("\\func test (f : (Nat -> \\Set0) -> Nat) (g : Nat -> \\Set0) => f (g __ -> Nat)");
   }
 
   @Test
   public void appPiTest5() {
-    typeCheckDef("\\func test (f : (Nat -> Nat -> \\Set -> \\Set) -> Nat) (g : Nat -> Nat) => f (g __ = g __ -> __)");
+    typeCheckDef("\\func test (f : (Nat -> Nat -> \\Set0 -> \\Set0) -> Nat) (g : Nat -> Nat) => f (g __ = g __ -> __)");
   }
 
   @Test

@@ -34,10 +34,13 @@ import org.arend.lib.meta.equationNew.group.CommutativeGroupEquationMeta;
 import org.arend.lib.meta.equationNew.group.GroupEquationMeta;
 import org.arend.lib.meta.equationNew.monoid.*;
 import org.arend.lib.meta.equationNew.ring.*;
+import org.arend.lib.meta.equationNew.semigroup.*;
 import org.arend.lib.meta.exists.ExistsMeta;
 import org.arend.lib.meta.exists.GivenMeta;
 import org.arend.lib.meta.exists.ExistsResolver;
 import org.arend.lib.meta.linear.LinearSolverMeta;
+import org.arend.lib.meta.arith.IntArithMeta;
+import org.arend.lib.meta.arith.NatArithMeta;
 import org.arend.lib.meta.rewrite.RewriteEquationMeta;
 import org.arend.lib.meta.rewrite.RewriteMeta;
 import org.arend.lib.meta.simplify.SimplifyMeta;
@@ -192,7 +195,6 @@ public class StdExtension implements ArendExtension {
 
     ModulePath pathsMeta = new ModulePath("Paths", "Meta");
     contributor.declare(pathsMeta, Names.getEquivModule());
-    contributor.declare(pathsMeta, Names.getUnivalenceModule(), "Equiv-to-=", "QEquiv-to-=");
     contributor.declare(pathsMeta, Names.getLogicModule());
     contributor.declare(pathsMeta, meta);
     contributor.declare(pathsMeta, Names.getPathsModule());
@@ -228,7 +230,7 @@ public class StdExtension implements ArendExtension {
         * If the goal is `t = {\\Sigma (x_1 : A_1) ... (x_n : A_n) (y_1 : B_1 x_1 ... x_n) ... (y_k : B_k x_1 ... x_n) (z_1 : C_1) ... (z_m : C_m)} s`, where `C_i : \\Prop` and they can depend on `x_j` and `y_l` for all `i`, `j`, and `l`, then the subgoal is `\\Sigma (p_1 : t.1 = s.1) ... (p_n : t.n = s.n) D_1 ... D_k`, where `D_j` is equal to `coe (\\lam i => B (p_1 @ i) ... (p_n @ i)) t.{k + j - 1} right = s.{k + j - 1}`
         * If the goal is `t = {R} s`, where `R` is a record, then the subgoal is defined in the same way as for \\Sigma-types It is also possible to use the following syntax in this case: `ext R { | f_1 => e_1 ... | f_l => e_l }`, which is equivalent to `ext (e_1, ... e_l)`
         * If the goal is `A = {\\Prop} B`, then the subgoal is `\\Sigma (A -> B) (B -> A)`
-        * If the goal is `A = {\\Type} B`, then the subgoal is `Equiv {A} {B}`
+        * If the goal is `A = {\\Type} B`, then the subgoal is `QEquiv {A} {B}`
         * If the goal is `x = {P} y`, where `P : \\Prop`, then there is no subgoal
         """), extMeta);
     contributor.declare(hList(text("Similar to "), refDoc(extMeta.getRef()), text(", but also applies either "), refDoc(simp_coe.getRef()), text(" or "), refDoc(extMeta.getRef()), text(" when a field of a \\Sigma-type or a record has an appropriate type.")),
@@ -267,6 +269,8 @@ public class StdExtension implements ArendExtension {
     contributor.declare(algebra, Names.getNewMonoidSolverModule());
     contributor.declare(algebra, Names.getNewRingSolverModule());
     contributor.declare(algebra, Names.getNewSemiringSolverModule());
+    contributor.declare(algebra, Names.getSemigroupSolverModule());
+    contributor.declare(algebra, Names.getCSemigroupSolverModule());
     contributor.declare(algebra, Names.getBooleanRingModule());
     contributor.declare(algebra, Names.getBooleanRingSolverModule());
     contributor.declare(algebra, Names.getIntModule());
@@ -293,6 +297,24 @@ public class StdExtension implements ArendExtension {
         In the former case, the meta will prove an equality in a type without using any additional structure on it.
         In the latter case, the meta will prove an equality using only structure available in the specified class.
         """), equation);
+    ConcreteMetaDefinition semigroupSolver = makeDef(equation.getRef(), "semigroup", new DependencyMetaTypechecker(SemigroupEquationMeta.class, () -> new DeferredMetaDefinition(new SemigroupEquationMeta(), true)));
+    contributor.declare(multiline("""
+        The semigroup solver solves goals of the form `e1 = {S} e2` for some semigroup `S`.
+        If `e1` and `e2` represent the same word in the language of semigroups (the same sequence of
+        variables, up to associativity), then the solver proves the equality without any additional arguments.
+        For example, {semigroup} proves `(x * y) * (z * w) = x * (y * (z * w))`.
+        Otherwise it normalizes both sides and expects an argument proving the equality of the normal forms.
+        Unlike {monoid}, it uses no identity element and so applies to bare semigroups.
+        """), semigroupSolver);
+    ConcreteMetaDefinition cSemigroupSolver = makeDef(equation.getRef(), "cSemigroup", new DependencyMetaTypechecker(CSemigroupEquationMeta.class, () -> new DeferredMetaDefinition(new CSemigroupEquationMeta(), true)));
+    contributor.declare(multiline("""
+        The commutative semigroup solver solves goals of the form `e1 = {S} e2` for some commutative semigroup `S`.
+        If `e1` and `e2` represent the same multiset of variables, then the solver proves the equality without
+        any additional arguments. For example, {cSemigroup} proves `(x * y) * z = z * (y * x)`.
+        Otherwise it normalizes both sides and expects an argument proving the equality of the normal forms.
+        Unlike {cMonoid}, it uses no identity element and so applies to bare commutative semigroups
+        (e.g. the multiplicative structure of `ExUpperReal`).
+        """), cSemigroupSolver);
     ConcreteMetaDefinition monoidSolver = makeDef(equation.getRef(), "monoid", new DependencyMetaTypechecker(MonoidEquationMeta.class, () -> new DeferredMetaDefinition(new MonoidEquationMeta(), true)));
     contributor.declare(multiline("""
         The monoid solver solves goals of the form `e1 = {M} e2` for some monoid `M`.
@@ -505,6 +527,10 @@ public class StdExtension implements ArendExtension {
         For example, if `p : a = b + c`, `q : b + b * c = c`, and the goal is `a * b = c`, then `bRing {p,q}` proves the goal.
         """), makeDef(equation.getRef(), "bRing", new DependencyMetaTypechecker(BooleanRingEquationMeta.class, () -> new DeferredMetaDefinition(new BooleanRingEquationMeta(), true))));
     contributor.declare(text("Solve systems of linear equations"), makeDef(algebra, "linarith", new DependencyMetaTypechecker(LinearSolverMeta.class, () -> new DeferredMetaDefinition(new LinearSolverMeta(), true))));
+    contributor.declare(text("Like linarith, but additionally synthesizes hypotheses about div, mod, and truncated minus (-') subterms for Nat"),
+        makeDef(algebra, "natarith", new DependencyMetaTypechecker(NatArithMeta.class, () -> new DeferredMetaDefinition(new NatArithMeta(), true))));
+    contributor.declare(text("Like linarith, but additionally converts strict Int inequalities x < y into isuc x <= y"),
+        makeDef(algebra, "intarith", new DependencyMetaTypechecker(IntArithMeta.class, () -> new DeferredMetaDefinition(new IntArithMeta(), true))));
     contributor.declare(text("Proves an equality by congruence closure of equalities in the context. E.g. derives f a = g b from f = g and a = b"),
         makeDef(algebra, "cong", new DependencyMetaTypechecker(CongruenceMeta.class, () ->  new DeferredMetaDefinition(new CongruenceMeta()))));
     contributor.declare(text("Simplifies the expected type or the type of the argument if the expected type is unknown."),

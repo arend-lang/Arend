@@ -8,6 +8,7 @@ import org.arend.ext.core.expr.CoreInferenceReferenceExpression;
 import org.arend.ext.core.ops.CMP;
 import org.arend.ext.typechecking.ExpressionTypechecker;
 import org.arend.ext.typechecking.TypedExpression;
+import org.arend.lib.util.Utils;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -31,7 +32,7 @@ public class ExpressionFunctionMatcher implements FunctionMatcher {
 
   @Override
   public List<CoreExpression> match(CoreExpression expr) {
-    return typechecker.withCurrentState(tc -> {
+    return Utils.tryTypecheck(typechecker,tc -> {
       List<CoreInferenceReferenceExpression> varExprs = new ArrayList<>(numberOfArguments);
       List<ConcreteExpression> concreteExprs = new ArrayList<>(numberOfArguments);
       for (int i = 0; i < numberOfArguments; i++) {

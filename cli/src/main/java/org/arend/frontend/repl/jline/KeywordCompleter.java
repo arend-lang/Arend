@@ -23,7 +23,7 @@ public final class KeywordCompleter implements Completer {
       "Prop", "where", "with", "use", "cowith", "elim", "new", "pi", "sigma", "lam", "let", "lets",
       "in", "case", "scase", "data", "class", "record", "module", "meta", "extends",
       "return", "coerce", "instance", "truncated",
-      "lp", "lh", "oo", "suc", "max", "level", "oo-Type",
+      "lp", "lh", "oo", "suc", "max", "level",
       "Set", "Type", "this",
       "eval", "peval"
   );

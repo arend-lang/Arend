@@ -55,5 +55,5 @@
 \lemma smartRWtest4 {A : Monoid} (a b c d x : A) (B : A -> \Prop) (p : b * c = x) (t : B (a * x * d)) : B (((a * b) * (ide * c)) * (d * ide))
   => rewriteEq p t
 
-\lemma rewriteCatTest {C : Precat} {a b c d : C} (P : Hom a d -> \Prop) (f : Hom a b) (g : Hom b c) (g' : Hom c b) (h : Hom c d) (p : g ∘ g' = id c) (t : P ((h ∘ g) ∘ (id b ∘ f))) : P ((h ∘ id c ∘ g) ∘ (g' ∘ g ∘ f))
-  => rewriteEq p (rewriteEq (idp {_} {(h ∘ g) ∘ (id b ∘ f)}) t)
+\lemma rewriteCatTest {C : Precat} {a b c d : C} (P : Hom a d -> \Prop) (f : Hom a b) (g : Hom b c) (g' : Hom c b) (h : Hom c d) (p : g ∘ g' = id) (t : P ((h ∘ g) ∘ (id ∘ f))) : P ((h ∘ id ∘ g) ∘ (g' ∘ g ∘ f))
+  => rewriteEq p (rewriteEq (idp {_} {(h ∘ g) ∘ (id ∘ f)}) t)

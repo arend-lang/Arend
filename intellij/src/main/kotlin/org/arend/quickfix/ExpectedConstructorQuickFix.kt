@@ -67,7 +67,8 @@ class ExpectedConstructorQuickFix(val error: ExpectedConstructorError, val cause
 
     override fun getText(): String = ArendBundle.message("arend.pattern.doMatching")
 
-    override fun isAvailable(project: Project, editor: Editor?, file: PsiFile?): Boolean = true
+    override fun isAvailable(project: Project, editor: Editor?, file: PsiFile?): Boolean =
+        (error.referable as? TCDefReferable)?.typechecked is Constructor
 
     override fun invoke(project: Project, editor: Editor?, file: PsiFile?) {
         val server = project.service<ArendServerService>().server
@@ -173,7 +174,7 @@ class ExpectedConstructorQuickFix(val error: ExpectedConstructorError, val cause
                         typecheckedParameters = data.typecheckedParameters
 
                         val context = HashMap<Referable, Binding>()
-                        if (data.parameters != null) for (pair in data.parameters.map { it.referableList }.flatten().zip(DependentLink.Helper.toList(typecheckedParameters))) context[pair.first] = pair.second
+                        if (data.parameters != null) for (pair in data.parameters.flatMap { it.referableList }.zip(DependentLink.Helper.toList(typecheckedParameters))) context[pair.first] = pair.second
                         elimParams = if (data.eliminatedReferences != null)
                             ElimTypechecking.getEliminatedParameters(data.eliminatedReferences, data.clauses, typecheckedParameters, errorReporter, context) else emptyList()
 
@@ -189,7 +190,7 @@ class ExpectedConstructorQuickFix(val error: ExpectedConstructorError, val cause
                             val relevantErrors = errorReporter.errorList.filterIsInstance<ExpectedConstructorError>()
                             if (relevantErrors.size == 1) {
                                 val relevantError = relevantErrors[0]
-                                val constructorTypechecked = (relevantError.referable as InternalReferableImpl).typechecked
+                                val constructorTypechecked = (relevantError.referable as? TCDefReferable)?.typechecked
                                 if (constructorTypechecked is Constructor)
                                     expectedConstructorErrorEntries.add(createClauseEntry(relevantError, clause, substitution, constructorTypechecked))
                             }
@@ -590,7 +591,7 @@ class ExpectedConstructorQuickFix(val error: ExpectedConstructorError, val cause
                 val renamer = StringRenamer()
                 val occupiedVars = caseOccupiedLocalNames.map { VariableImpl(it) }
                 val freshName = if (expression is ReferenceExpression) expression.binding.name else
-                    renamer.generateFreshName(TypedBinding(null, binding.typeExpr), occupiedVars)
+                    renamer.generateFreshName(TypedBinding(null, binding.type), occupiedVars)
                 var replaceKey: Concrete.CaseArgument? = null
                 var replaceValue: Concrete.CaseArgument? = null
                 var foundExpression = false
@@ -762,7 +763,7 @@ class ExpectedConstructorQuickFix(val error: ExpectedConstructorError, val cause
 
                 val typecheckedParameters =
                     DependentLink.Helper.toList(typecheckedDefinition.parameters).filter { !it.isHidden }
-                val concreteParameters = concreteDefinition.parameters.map { p -> p.referableList }.flatten().toList()
+                val concreteParameters = concreteDefinition.parameters.flatMap { p -> p.referableList }.toList()
 
                 val isWithMode = oldEliminatedReferences.isEmpty()
 
@@ -811,14 +812,14 @@ class ExpectedConstructorQuickFix(val error: ExpectedConstructorError, val cause
                 when (concreteDefinition) {
                     is Concrete.Constructor -> return Concrete.Constructor(concreteDefinition.data, concreteDefinition.parameters, newEliminatedReferences, clauses, concreteDefinition.isCoerce)
                     is Concrete.DataDefinition -> {
-                        return Concrete.DataDefinition(concreteDefinition.data, concreteDefinition.pLevelParameters, concreteDefinition.hLevelParameters, concreteDefinition.parameters,
+                        return Concrete.DataDefinition(concreteDefinition.data, concreteDefinition.levelParameters, concreteDefinition.parameters,
                             newEliminatedReferences, concreteDefinition.isTruncated, concreteDefinition.universe, constructorClauses)
                     }
 
                     is Concrete.FunctionDefinition -> {
                         val oldBody = concreteDefinition.body as Concrete.ElimFunctionBody
                         val newBody = Concrete.ElimFunctionBody(oldBody.data, newEliminatedReferences, clauses)
-                        return Concrete.FunctionDefinition(concreteDefinition.kind, concreteDefinition.data, concreteDefinition.pLevelParameters, concreteDefinition.hLevelParameters,
+                        return Concrete.FunctionDefinition(concreteDefinition.kind, concreteDefinition.data, concreteDefinition.levelParameters,
                             concreteDefinition.parameters, concreteDefinition.resultType, concreteDefinition.resultTypeLevel, newBody)
                     }
                 }

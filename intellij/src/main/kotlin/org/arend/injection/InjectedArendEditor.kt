@@ -12,6 +12,7 @@ import com.intellij.openapi.editor.Document
 import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.editor.EditorFactory
 import com.intellij.openapi.editor.ScrollType
+import com.intellij.openapi.editor.colors.EditorFontType
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.Key
 import com.intellij.openapi.util.TextRange
@@ -26,6 +27,7 @@ import org.arend.ext.core.ops.NormalizationMode
 import org.arend.ext.error.GeneralError
 import org.arend.ext.error.LocalError
 import org.arend.ext.prettyprinting.PrettyPrinterConfig
+import org.arend.ext.prettyprinting.PrettyPrinterConfig.MAX_LEN
 import org.arend.ext.prettyprinting.doc.Doc
 import org.arend.ext.prettyprinting.doc.DocFactory
 import org.arend.ext.reference.DataContainer
@@ -47,6 +49,7 @@ import org.arend.server.ArendServerService
 import org.arend.term.concrete.Concrete
 import org.arend.term.prettyprint.PrettyPrinterConfigWithRenamer
 import org.arend.term.prettyprint.TermWithSubtermDoc
+import org.arend.toolWindow.errors.ArendMessagesService
 import org.arend.toolWindow.errors.ArendPrintOptionsFilterAction
 import org.arend.toolWindow.errors.PrintOptionKind
 import org.arend.toolWindow.errors.tree.ArendErrorTreeElement
@@ -54,14 +57,19 @@ import org.arend.typechecking.error.DiffHyperlinkInfo
 import org.arend.typechecking.error.local.TypeMismatchWithSubexprError
 import org.arend.typechecking.error.mapToTypeDiffInfo
 import org.arend.util.ArendBundle
+import com.intellij.ui.JBColor
+import com.intellij.ui.border.CustomLineBorder
 import java.awt.BorderLayout
 import java.awt.Component
+import java.awt.event.ComponentAdapter
+import java.awt.event.ComponentEvent
 import javax.swing.JComponent
 import javax.swing.JPanel
+import javax.swing.Timer
 
 abstract class InjectedArendEditor(
     val project: Project,
-    name: String,
+    val name: String,
     var treeElement: ArendErrorTreeElement?,
 ) {
     protected val editor: Editor?
@@ -77,17 +85,34 @@ abstract class InjectedArendEditor(
     val verboseLevelMap: MutableMap<Expression, Int> = mutableMapOf()
     val verboseLevelParameterMap: MutableMap<DependentLink, Int> = mutableMapOf()
 
+    private val timer = Timer(0) {
+        if (editor != null && !editor.isDisposed) {
+            updateErrorText()
+        }
+    }.apply { isRepeats = false }
+
+    private var lastLineLength = MAX_LEN
+
     init {
-        val psi = ArendPsiFactory(project, name).injected("")
-        val virtualFile = psi.virtualFile
+        // One read action for the whole PSI part: `psi` is not guaranteed to stay valid between
+        // separate ones.
+        val (virtualFile, psiDocument) = runReadActionBlocking {
+            val psi = ArendPsiFactory(project, name).injected("")
+            psi.virtualFile to PsiDocumentManager.getInstance(project).getDocument(psi)
+        }
         editor = if (virtualFile != null) {
-            PsiDocumentManager.getInstance(project).getDocument(psi)?.let { document ->
+            psiDocument?.let { document ->
                 document.setReadOnly(true)
                 EditorFactory.getInstance().createEditor(document, project, virtualFile, false).apply {
                     settings.setGutterIconsShown(false)
                     settings.isRightMarginShown = false
                     putUserData(AREND_GOAL_EDITOR, this@InjectedArendEditor)
                     caretModel.addCaretListener(RevealingInformationCaretListener(this@InjectedArendEditor))
+                    component.addComponentListener(object : ComponentAdapter() {
+                        override fun componentResized(e: ComponentEvent?) {
+                            timer.restart()
+                        }
+                    })
                 }
             }
         } else null
@@ -98,15 +123,20 @@ abstract class InjectedArendEditor(
 
             val toolbar = ActionManager.getInstance().createActionToolbar("ArendEditor.toolbar", actionGroup, false)
             toolbar.targetComponent = panel
-            panel.add(toolbar.component, BorderLayout.WEST)
+            val toolbarComponent = toolbar.component
+            toolbarComponent.border = CustomLineBorder(JBColor.border(), 0, 0, 0, 1)
+            panel.add(toolbarComponent, BorderLayout.WEST)
         } else {
             panel = null
         }
 
-        updateErrorText()
+        if (treeElement != null) {
+            updateErrorText()
+        }
     }
 
     fun release() {
+        timer.stop()
         if (editor != null) {
             editor.putUserData(AREND_GOAL_EDITOR, null)
             EditorFactory.getInstance().releaseEditor(editor)
@@ -117,11 +147,12 @@ abstract class InjectedArendEditor(
         get() = panel
 
 
-    fun addEditorComponent() {
+    open fun addEditorComponent() {
         if (editor != null) {
             panel?.add(editor.component, BorderLayout.CENTER)
         }
     }
+
     fun removeUnnecessaryComponents(collection: Collection<Component>) {
         collection.forEach { panel?.remove(it) }
     }
@@ -138,6 +169,12 @@ abstract class InjectedArendEditor(
         val treeElement = treeElement ?: return
 
         invokeLater {
+            val fontMetrics = editor.component.getFontMetrics(editor.colorsScheme.getFont(EditorFontType.PLAIN))
+            val charWidth = fontMetrics.charWidth(' ')
+            if (charWidth > 0) {
+                lastLineLength = (editor.scrollingModel.visibleArea.width / charWidth).coerceAtLeast(25)
+            }
+
             val builder = StringBuilder()
             val visitor = CollectingDocStringBuilder(builder, treeElement.sampleError)
             var fileScope: Scope = EmptyScope.INSTANCE
@@ -323,7 +360,7 @@ abstract class InjectedArendEditor(
         PsiDocumentManager.getInstance(project).getPsiFile(it) as? PsiInjectionTextFile
     }
 
-    private class ProjectPrintConfig(
+    private inner class ProjectPrintConfig(
         project: Project,
         printOptionsKind: PrintOptionKind,
         scope: Scope?,
@@ -345,6 +382,14 @@ abstract class InjectedArendEditor(
 
         override fun getNormalizationMode(): NormalizationMode? {
             return null
+        }
+
+        override fun getLineLength(): Int {
+            return if (project.service<ArendMessagesService>().isEnabledWrapPanel.get()) {
+                lastLineLength
+            } else {
+                MAX_LEN
+            }
         }
     }
 

@@ -11,7 +11,7 @@
 \import Paths.Meta
 \import Relation.Equivalence
 \import Set.Filter
-\import Set.Subset
+\import Set.Set
 \import Topology.CoverSpace
 \import Topology.RatherBelow
 \import Topology.TopSpace
@@ -201,11 +201,19 @@
     | inP (V, inP (W, f, V<=<W), x<=<V) => inP (V, <=<-left V<=<W $ f (x, (idp, <=<_<= V<=<W $ <=<_<= x<=<V idp)), x<=<V)
   }
 
+\func IsSeparatedCoverSpace (X : PrecoverSpace) : \Prop
+  => \Pi {x y : X} -> (\Pi {C : Set (Set X)} -> isCauchy C -> ∃ (U : C) (\Sigma (U x) (U y))) -> x = y
+
 \class SeparatedCoverSpace \extends CoverSpace, HausdorffTopSpace {
-  | isSeparatedCoverSpace {x y : E} : (\Pi {C : Set (Set E)} -> isCauchy C -> ∃ (U : C) (\Sigma (U x) (U y))) -> x = y
+  | isSeparatedCoverSpace : IsSeparatedCoverSpace \this
 
   \default isHausdorff p => isSeparatedCoverSpace (separated-char 6 7 p)
   \default isSeparatedCoverSpace p => isHausdorff (separated-char 7 6 p)
+
+  \lemma embedding-inj {Y : PrecoverSpace} {f : PrecoverMap \this Y} (fe : f.IsEmbedding) : IsInj f
+    => \lam {x} {x'} fx=fx' => isSeparatedCoverSpace $ separated-char 4 7 \lam x<=<U => \case Y.cauchy-cover (fe x<=<U) (f x) \with {
+      | inP (V, inP (W,h,p), Vfx) => h (x, (idp, p Vfx)) (p $ rewrite fx=fx' in Vfx)
+    }
 } \where {
     \lemma separated-char {S : CoverSpace} {x y : S} : TFAE (
     {- 0 -} pointCF x ⊆ pointCF y,
@@ -459,29 +467,30 @@
     TruncP.map __ \lam (g,p) => (g, p, completion-lift-unique (completion PrecoverMap.∘ g) PrecoverMap.id \lam x => pmap pointCF (p x)),
     \lam (inP (g,p,q)) => \new CompleteCoverSpace {
       | isSeparatedCoverSpace {x} {y} c => inv (p x) *> pmap g (SeparatedCoverSpace.separated-char 7 2 c) *> p y
-      | isComplete F => inP (g F, transportInv {RegularCauchyFilter X} (`⊆ F) (q F) <=-refl)
+      | isComplete F => inP (g F, transportInv {RegularCauchyFilter X} (⊆ F) (q F) <=-refl)
     })
 
-\lemma Separated-char (X : CoverSpace) : TFAE (
-    {- 0 -} SeparatedCoverSpace { | CoverSpace => X },
-    {- 1 -} \Pi {Y : PrecoverSpace} {f : PrecoverMap X Y} -> f.IsEmbedding -> IsInj f,
+\lemma Separated-char.{u} (X : CoverSpace.{u}) : TFAE (
+    {- 0 -} IsSeparatedCoverSpace X,
+    {- 1 -} \Pi {Y : PrecoverSpace.{u}} {f : PrecoverMap X Y} -> f.IsEmbedding -> IsInj f,
     {- 2 -} IsInj (completion {X}),
-    {- 3 -} ∃ (Y : SeparatedCoverSpace) (f : PrecoverMap X Y) (IsInj f)
+    {- 3 -} ∃ (Y : SeparatedCoverSpace.{u}) (f : PrecoverMap X Y) (IsInj f)
   ) => TFAE.cycle (
-    \lam Xs {_} {f} fe {x} {x'} fx=fx' => isSeparatedCoverSpace {Xs} $ SeparatedCoverSpace.separated-char 4 7 \lam x<=<U => \case cauchy-cover (fe x<=<U) (f x) \with {
-      | inP (V, inP (W,h,p), Vfx) => h (x, (idp, p Vfx)) (p $ rewrite fx=fx' in Vfx)
-    },
-    \lam c => c completion.isDenseEmbedding.2,
+    \lam Xs fe => (\new SeparatedCoverSpace { | CoverSpace => X | isSeparatedCoverSpace => Xs }).embedding-inj fe,
+    \lam c => c {Completion X} completion.isDenseEmbedding.2,
     \lam ci => inP (Completion X, completion, ci),
-    \lam (inP (Y,f,fi)) => \new SeparatedCoverSpace {
-      | isSeparatedCoverSpace c => fi $ isSeparatedCoverSpace \lam Cc => \case c (func-cover Cc) \with {
+    \lam (inP (Y,f,fi)) => fromInj f fi
+  )
+  \where {
+    \lemma fromInj {X : PrecoverSpace} {Y : SeparatedCoverSpace} (f : PrecoverMap X Y) (fi : IsInj f) : IsSeparatedCoverSpace X
+      => \lam c => fi $ isSeparatedCoverSpace \lam Cc => \case c (func-cover Cc) \with {
         | inP (U, inP (V,CV,p), (Ux,Uy)) => inP (V, CV, (rewrite p in Ux, rewrite p in Uy))
       }
-    })
+  }
 
 \func regPrecoverCauchyFilter {X : PrecoverSpace} (F : ProperFilter X) (Fc : ∀ {C : isCauchy} ∃ (U : C) (F U)) : CauchyFilter (RegPrecoverSpace X) \cowith
   | ProperFilter => F
-  | isCauchyFilter Cc => ClosurePrecoverSpace.closure-filter F (\lam (inP ((A,A<=X),CAc)) => Fc $ A<=X CAc) Cc
+  | isCauchyFilter Cc => ClosurePrecoverSpace.closure-filter F (\lam {C} (inP (A,A<=X,AC)) => Fc $ SetIm-elim {_} {_} {\lam s => s.isCauchy C -> X.isCauchy C} (\lam p => p) A<=X AC) Cc
 
 \lemma regPrecoverSpace-extend-coverMap {X : PrecoverSpace} {Y : CoverSpace} (f : PrecoverMap X Y) : CoverMap (RegPrecoverSpace X) Y f \cowith
   | PrecoverMap => regPrecoverSpace-extend f

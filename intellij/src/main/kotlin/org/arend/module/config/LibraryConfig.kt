@@ -78,6 +78,8 @@ abstract class LibraryConfig(val project: Project) : ArendLibrary {
 
     override fun getArendUI() = ArendGeneralUI(project)
 
+    override fun getLanguageVersion(): Range<Version> = langVersion
+
     // Extensions
 
     val extensionDirFile: VirtualFile?

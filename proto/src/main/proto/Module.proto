@@ -25,6 +25,11 @@ message CallTargetTree {
     repeated CallTargetTree subtree = 3;
 }
 
+message LevelsDeclaration {
+    repeated string name = 1;
+    bool increasing = 2;
+}
+
 message Group {
     Referable referable = 1;
     Definition definition = 2;

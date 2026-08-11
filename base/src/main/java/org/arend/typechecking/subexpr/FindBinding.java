@@ -124,7 +124,7 @@ public class FindBinding {
     return visitLet(expr, let, (coreLetClause, exprLetClause) ->
         Objects.equals(exprLetClause.getPattern().getData(), patternData)
             || exprLetClause.getPattern() instanceof Concrete.NamePattern namePattern && namePattern.getReferable() != null && Objects.equals(namePattern.getReferable().getAbstractReferable(), patternData)
-            ? coreLetClause.getTypeExpr() : null);
+            ? coreLetClause.getType() : null);
   }
 
   /**
@@ -135,7 +135,7 @@ public class FindBinding {
     Expression expression = visitLetBind(patternData, expr, let);
     if (expression != null) return expression;
     DependentLink link = visitLetParam(patternData, expr, let);
-    if (link != null) return link.getTypeExpr();
+    if (link != null) return link.getType();
     return null;
   }
 

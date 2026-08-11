@@ -355,8 +355,7 @@
               | idp, idp => idp
           }
 
-        \func decompose-transport2
-          {A B : \Type} (C : A -> B -> \Type) {a a' : A} (eq : a = a') {b b' : B} (eq' : b = b') (x : C a b) : transport (C __ b') eq (transport (C a __) eq' x) = transport2 C eq eq' x \elim eq, eq'
+        \func decompose-transport2 {A B : \Type} (C : A -> B -> \Type) {a a' : A} (eq : a = a') {b b' : B} (eq' : b = b') (x : C a b) : transport (C __ b') eq (transport (C a __) eq' x) = transport2 C eq eq' x \elim eq, eq'
           | idp, idp => idp
 
         \func end-over-transport-2

@@ -12,12 +12,13 @@ import org.arend.psi.doc.ArendDocLink
 import org.arend.psi.doc.ArendDocReference
 import org.arend.psi.doc.ArendDocReferenceText
 import org.arend.psi.ext.PsiReferable
+import java.awt.Color
 import java.net.URL
 
 private const val CLOSING_TAG_HTML = "</li>"
 private const val OPENING_TAG_HTML = "<li class=\"row\">"
 
-internal data class ArendDocCommentInfo(var hasLatexCode: Boolean, var wasPrevRow: Boolean, var itemContextLastIndex: Int = -1, val suggestedFont: Float)
+internal data class ArendDocCommentInfo(var hasLatexCode: Boolean, var wasPrevRow: Boolean, var itemContextLastIndex: Int = -1, val suggestedFont: Float, val backgroundColor: Color? = null, val showNotification: Boolean = true)
 
 internal fun hasLatexCode(doc: PsiElement) = doc.childrenWithLeaves.any { it.elementType == DOC_LATEX_CODE }
 
@@ -70,7 +71,7 @@ private fun StringBuilder.processDocCommentElement(
                 append("<div class=\"row\"> ")
             }
         }
-        elementType == TokenType.WHITE_SPACE || elementType == DOC_TABS -> append(" ")
+        elementType == TokenType.WHITE_SPACE || elementType == DOC_TABS || elementType == DOC_NEXT_LINE -> append(" ")
         elementType == DOC_CODE -> append("<code>${docElement.text.htmlEscape()}</code>")
         elementType == DOC_LATEX_CODE ->
             append(getHtmlLatexCode("image${counterLatexImages++}",
@@ -78,7 +79,9 @@ private fun StringBuilder.processDocCommentElement(
                 ref.project,
                 docElement.textOffset,
                 docElements.getOrNull(index - 1).elementType == DOC_NEWLINE_LATEX_CODE,
-                docCommentInfo.suggestedFont
+                docCommentInfo.suggestedFont,
+                docCommentInfo.backgroundColor,
+                docCommentInfo.showNotification
             )
         )
         elementType == DOC_NEWLINE_LATEX_CODE -> {

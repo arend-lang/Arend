@@ -1,0 +1,16 @@
+\import Algebra.Group
+\import Algebra.Group.GSet
+\import Algebra.Group.GSet.EquivariantMap
+\import Category
+\import Category.Meta
+\import Paths.Meta
+
+\instance GSetCategory.{u} (G : Group) : Cat (GSet.{u} G)
+  | Hom A B => EquivariantMap A B
+  | id => EquivariantMap.id
+  | o => EquivariantMap.∘
+  | id-left => idp
+  | id-right => idp
+  | o-assoc => idp
+  | univalence => sip \lam e _ => exts \lam g x => func-** {e}
+

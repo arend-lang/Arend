@@ -1,0 +1,39 @@
+\import Function.Meta
+\import Logic
+\import Logic.Meta
+\import Order.PartialOrder
+\import Paths
+\import Paths.Meta
+
+\instance CoproductPreorder {J : \Type} (P : J -> Preorder) : Preorder (Elem P)
+  | <= => <=
+  | <=-refl {elem i a} => inP (idp, <=-refl)
+  | <=-transitive {elem i a} {elem j b} {elem k c} (inP (p1,q1)) (inP (p2,q2)) => inP (p1 *> p2, rewrite transport_*> $ <=_transport q1 <=∘ q2)
+  \where {
+    \truncated \data Elem (P : J -> Preorder) : \Set
+      | elem (j : J) (P j)
+
+    \protected \type \infix 4 <= (x y : Elem P) : \Prop
+      | elem i a, elem j b => ∃ (p : i = j) (transport (P __) p a Preorder.<= b)
+
+    \lemma <=_transport {i j : J} {p : i = j} {x y : P i} (x<=y : x Preorder.<= y) : transport (P __) p x Preorder.<= transport (P __) p y \elim p
+      | idp => x<=y
+
+    \lemma Elem_= {i j : J} {a : P i} {b : P j} (p : i = j) (q : transport (P __) p a = b) : elem i a = elem j b
+      => decode $ inP (p,q)
+      \where \protected {
+        \func Code (x y : Elem P) : \Prop \elim x, y
+          | elem i a, elem j b => ∃ (p : i = j) (transport (P __) p a = b)
+
+        \lemma decode {x y : Elem P} (c : Code x y) : x = y \elim x, y, c
+          | elem j a, elem k b, inP (p,q) => path \lam i => elem (p i) (pathOver q i)
+
+        \lemma encode {x y : Elem P} (c : x = y) : Code x y \elim x, c
+          | elem j a, idp => inP (idp,idp)
+      }
+
+    \lemma <=-elem-left {x y : Elem P} (x<=y : x <= y) {j : J} {a : P j} (p : y = elem j a) : ∃ (b : P j) (b Preorder.<= a) (x = elem j b) \elim x, y, x<=y
+      | elem i b, elem k c, inP (i=k,b<=c) => \case Elem_=.encode p \with {
+        | inP (k=j,c=a) => inP (transport (P __) (i=k *> k=j) b, rewrite transport_*> $ <=_transport b<=c <=∘ =_<= c=a, Elem_= (i=k *> k=j) idp)
+      }
+  }

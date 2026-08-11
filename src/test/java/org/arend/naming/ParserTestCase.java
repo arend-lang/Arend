@@ -32,7 +32,7 @@ public abstract class ParserTestCase extends ArendTestCase {
   }
 
 
-  Concrete.Expression parseExpr(String text, int errors) {
+  public Concrete.Expression parseExpr(String text, int errors) {
     ListErrorReporter errorReporter = new ListErrorReporter();
     ArendParser.ExprContext ctx = _parse(text, errorReporter).expr();
     Concrete.Expression expr = errorReporter.getErrorList().isEmpty() ? new BuildVisitor(MODULE, errorReporter).visitExpr(ctx) : null;
@@ -51,7 +51,7 @@ public abstract class ParserTestCase extends ArendTestCase {
     ConcreteGroup fileGroup = new ConcreteGroup(DocFactory.nullDoc(), new FullModuleReferable(MODULE), null, statements, Collections.emptyList(), Collections.emptyList());
     ConcreteGroup definition = errorReporter.getErrorList().isEmpty() ? new BuildVisitor(MODULE, errorReporter).visitDefinition(AccessModifier.PUBLIC, ctx, fileGroup, null) : null;
     if (definition != null) {
-      statements.add(new ConcreteStatement(definition, null, null, null));
+      statements.add(new ConcreteStatement(definition, null));
     }
     assertThat(errorReporter.getErrorList(), containsErrors(errors));
     return definition;

@@ -11,27 +11,30 @@ import org.arend.ext.reference.Precedence
 import org.arend.ext.reference.Precedence.Associativity.*
 import org.arend.psi.ext.PsiLocatedReferable
 import org.arend.psi.ext.ReferableBase
+import org.arend.term.group.AccessModifier
 
 abstract class ArendStubElementType<StubT : ArendStub<*>, PsiT : PsiLocatedReferable>(debugName: String)
     : IStubElementType<StubT, PsiT>(debugName, ArendLanguage.INSTANCE) {
 
     final override fun getExternalId(): String = "arend.${super.toString()}"
 
-    abstract fun createStub(parentStub: StubElement<*>?, name: String?, prec: Precedence?, aliasName: String?): StubT
+    abstract fun createStub(parentStub: StubElement<*>?, name: String?, prec: Precedence?, aliasName: String?, accessModifier: AccessModifier): StubT
 
-    override fun createStub(psi: PsiT, parentStub: StubElement<*>?) = createStub(parentStub, psi.name, psi.precedence, (psi as? ReferableBase<*>)?.aliasName)
+    override fun createStub(psi: PsiT, parentStub: StubElement<*>?) = createStub(parentStub, psi.name, psi.precedence, (psi as? ReferableBase<*>)?.aliasName, psi.ownAccessModifier)
 
     override fun serialize(stub: StubT, dataStream: StubOutputStream) {
         dataStream.writeName(stub.name)
         dataStream.writeName(stub.aliasName)
         serializePrecedence(stub.precedence, dataStream)
+        dataStream.writeVarInt(stub.accessModifier.ordinal)
     }
 
     override fun deserialize(dataStream: StubInputStream, parentStub: StubElement<*>?): StubT {
         val name = dataStream.readNameString()
         val aliasName = dataStream.readNameString()
         val prec = deserializePrecedence(dataStream)
-        return createStub(parentStub, name, prec, aliasName)
+        val accessModifier = AccessModifier.entries[dataStream.readVarInt()]
+        return createStub(parentStub, name, prec, aliasName, accessModifier)
     }
 
     private fun createStubIfParentIsStub(node: ASTNode): Boolean {

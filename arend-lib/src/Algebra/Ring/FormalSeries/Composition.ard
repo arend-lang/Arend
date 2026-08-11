@@ -1,0 +1,396 @@
+\import Algebra.Meta
+\import Algebra.Group
+\import Algebra.Monoid
+\import Algebra.Ordered
+\import Algebra.Pointed
+\import Algebra.Semiring
+\import Algebra.Ring
+\import Algebra.Ring.FormalSeries
+\import Arith.Nat
+\import Data.Or
+\import Function
+\import Function.Meta
+\import Logic
+\import Meta
+\import Order.Biordered
+\import Order.Lattice
+\import Order.LinearOrder
+\import Order.PartialOrder
+\import Order.StrictOrder
+\import Paths
+\import Paths.Meta
+\import Set
+\import Set.Fin
+\import Set.Fin.Instances
+\open Monoid(pow)
+\open AddMonoid
+
+{- | Composition coefficient: the coefficient of $x^k$ in $A(B(x))$, where
+     $A(y) = \sum_n a_n y^n$ and $B(x) = \sum_m b_m x^m$.  Defined as
+     $[x^k]\,A(B(x)) = \sum_{n=0}^{k} a_n \cdot (b ^{\star n})_k.$
+
+     When $b_0 = 0$ the inner term vanishes for $n > k$ (see
+     {pow-conv-zero-below}), so the sum is genuinely finite and the formal
+     substitution is well-defined. -}
+\func fcompose {A : Ring} (a b : FSeries A) : FSeries A
+  => \lam k => A.BigSum \new Array A (suc k) \lam n => a n * pow b n k
+  \where {
+    \protected \lemma =FinSum {k : Nat}
+      : fcompose a b k = A.FinSum \lam (n : Fin (suc k)) => a n * pow b n k
+      => inv A.FinSum=BigSum
+  }
+
+{- | If $c_0 = 0$, then for any $j \leq k$, the inner sum
+     $\sum_{m \leq j} f_m \cdot (c^{\star m})_j$ may be extended to range $m \leq k$
+     without changing its value, because $(c^{\star m})_j = 0$ whenever $m > j$
+     ({pow-conv-zero-below}).  This is the form used by {fcompose} when
+     bridging triangular and rectangular finite sums. -}
+\lemma compose-coef-extend {A : Ring} {f c : FSeries A} (c_0 : c 0 = A.zro) (k j : Nat) (j<=k : j <= k)
+  : fcompose f c j = A.BigSum (\new Array A (suc k) \lam m => f m * pow c m j)
+  => A.BigSum-subset {\new Array A (suc j) _} {\new Array A (suc k) \lam m => f m * pow c m j}
+    (suc<=suc j<=k)
+    (\lam m => pmap (\lam (x : Nat) => f x * pow c x j) (inv toFin=id))
+    (\lam m sj<=m => pmap (f m *) (pow-conv-zero-below c_0 (suc_<=_< sj<=m)) *> A.zro_*-right)
+
+{- | Multiplicativity of the `compose-coef(_, c)` operation: in a commutative
+     ring with $c_0 = 0$,
+     $$[x^k]\,((A \cdot B) \circ c) = [x^k]\,((A \circ c) \cdot (B \circ c)).$$
+  -}
+\lemma compose-coef-* {A : CRing} {a b c : FSeries A} (c_0 : c 0 = A.zro) (k : Nat)
+  : fcompose (a * b) c k = (fcompose a c * fcompose b c) k
+  => fcompose.=FinSum {_} {a * b}
+    *> path (\lam i => A.FinSum (\lam n => A.FinSum-rdistr {FSeriesRing.PairsFinSet n} {pow c n k} {\lam s => a s.1 * b s.2} i))
+    *> A.FinSum-double-dep' _
+    *> path (\lam i => A.FinSum $ later \lam s => a s.2.1 * b s.2.2 * (pmap (pow c __ k) (inv s.2.3) *> path (\lam j => (FSeriesRing A).pow_+ j k)) i)
+    *> path (\lam i => A.FinSum $ later \lam s => A.FinSum-ldistr {_} {a s.2.1 * b s.2.2} {later \lam t => pow c s.2.1 t.1 * pow c s.2.2 t.2} i)
+    *> A.FinSum-double-dep' _ {later \lam s t => a s.2.1 * b s.2.2 * (pow c s.2.1 t.1 * pow c s.2.2 t.2)}
+    *> A.FinSum-inj2
+         (later \lam s => ((toFin (s.2.1 + s.2.2) $ <=_<_suc $ <=_+ (<_suc_<= $ fin_< s.2.1) (<_suc_<= $ fin_< s.2.2) <=∘ =_<= s.1.3, (s.2.1, s.2.2, inv toFin=id)), s.1))
+         (IsInj.fromSplit
+           (later \lam s => (s.2, (toFin (s.1.2.1 ∧ s.2.1) $ <=_<_suc meet-right, toFin (s.1.2.2 ∧ s.2.2) $ <=_<_suc meet-right)))
+           (\lam s => ext (idp, ext (fin_nat-inj $ toFin=id *> NatSemiring.meet_<= (<_suc_<= $ fin_< s.2.1),
+                                     fin_nat-inj $ toFin=id *> NatSemiring.meet_<= (<_suc_<= $ fin_< s.2.2)))))
+         (later \lam s c => \case LinearOrder.dec<_<= s.2.1 s.1.2.1, LinearOrder.dec<_<= s.2.2 s.1.2.2 \with {
+           | inl q, _ => equation.cRing {pow-conv-zero-below c_0 q}
+           | _, inl q => equation.cRing {pow-conv-zero-below c_0 q}
+           | inr q1, inr q2 => absurd $ c (s.2, (toFin s.1.2.1 $ <=_<_suc q1, toFin s.1.2.2 $ <=_<_suc q2)) $
+              ext (ext (fin_nat-inj $ toFin=id *> pmap2 (+) toFin=id toFin=id *> s.1.2.3, simp_coe (toFin=id, toFin=id)), idp)
+         })
+         (\lam s => equation.cMonoid)
+    *> inv (A.FinSum-double-dep' (\lam (t : FSeriesRing.PairsFinSet k) => ProdFin (FinFin (suc t.1)) (FinFin (suc t.2))) {\lam s t => a t.1 * pow c t.1 s.1 * (b t.2 * pow c t.2 s.2)})
+    *> inv (path \lam i => A.FinSum $ later \lam s => A.FinSum-distr {FinFin (suc s.1)} {FinFin (suc s.2)} {\lam n => a n * pow c n s.1} {\lam n => b n * pow c n s.2} i)
+    *> inv (path \lam i => A.FinSum $ later \lam s => fcompose.=FinSum {_} {_} {_} {s.1} i * fcompose.=FinSum {_} {_} {_} {s.2} i)
+
+{- | The $n$-fold convolution of $A \circ c$ agrees with the composition of $A^n$ with $c$:
+$$(A \circ c)^n = A^n \circ c.$$
+ -}
+\lemma pow-conv-compose {A : CRing} {b c : FSeries A} (c_0 : c 0 = A.zro) (n k : Nat)
+  : pow (fcompose b c) n k = fcompose (pow b n) c k \elim n
+  | 0 => inv $ AddMonoid.BigSum-unique {A}
+    {\new Array A (suc k) \lam (m : Fin (suc k)) => pow b 0 m * pow c m k} 0
+    (\lam j zero-not-j => pmap (* _) (FSeriesRing.coef_/=0 \lam p => zero-not-j (fin_nat-inj (inv p))) *> A.zro_*-left)
+    *> A.ide-left
+  | suc n => pmap ((*) __ (fcompose b c) k) {(FSeriesRing A).pow _ n} (ext $ pow-conv-compose c_0 n) *> inv (compose-coef-* c_0 k)
+
+{- | Associativity of formal-power-series composition.  With both $b_0 = 0$
+     (so the outer composition is finite/truncated) and $c_0 = 0$ (so the
+     key lemma {pow-conv-compose} applies), in a commutative ring $A$:
+     $$[x^k]\,((a \circ b) \circ c) = [x^k]\,(a \circ (b \circ c)).$$
+
+     Proof outline (after {pow-conv-compose} for the inner step):
+     $ [x^k]\,((a \circ b) \circ c) = \sum_m (a \circ b)_m \cdot (c^{\star m})_k
+     = \sum_m \sum_{n \leq m} a_n (b^{\star n})_m (c^{\star m})_k
+     = \sum_{n} a_n \sum_{m \geq n} b^n_m c^m_k
+     = \sum_n a_n \sum_{m=0}^{k} (b^{\star n})_m (c^{\star m})_k
+     = \sum_n a_n ((b \circ c)^{\star n})_k = [x^k]\,(a \circ (b \circ c)). $
+
+The step $\sum_{n \leq m}$ over $(n, m)$ with $n \leq m$ to $\sum_n \sum_m$
+rectangularly uses Fubini (`BigSum-transpose`) plus the vanishing of
+$(b^{\star n})_m$ for $m < n$ ({pow-conv-zero-below} with $b_0 = 0$). -}
+\lemma compose-coef-assoc {A : CRing} {a b c : FSeries A}
+                          (b_0 : b 0 = A.zro) (c_0 : c 0 = A.zro) (k : Nat)
+  : fcompose (fcompose a b) c k = fcompose a (fcompose b c) k
+  => run {
+    rewrite (A.BigSum-ext {suc k}
+      {\new Array A (suc k) \lam m => fcompose a b m * pow c m k}
+      {\new Array A (suc k) \lam m => A.BigSum \new Array A (suc k) \lam n => a n * pow b n m * pow c m k}
+      (\lam m => pmap (* _) (compose-coef-extend b_0 k m (<_suc_<= (fin_< m)))
+        *> A.BigSum-rdistr {\new Array A (suc k) \lam n => a n * pow b n m})),
+    rewrite (A.BigSum-transpose {suc k} {suc k} \lam m n => a n * pow b n m * pow c m k),
+    A.BigSum-ext {suc k}
+      {\new Array A (suc k) \lam n => A.BigSum \new Array A (suc k) \lam m => a n * pow b n m * pow c m k}
+      {\new Array A (suc k) \lam n => a n * pow (fcompose b c) n k},
+    \lam n,
+    rewrite (A.BigSum-ext \lam m => *-assoc),
+    rewriteI (A.BigSum-ldistr {a n} {\new Array A (suc k) \lam m => pow b n m * pow c m k}),
+    rewriteI (pow-conv-compose c_0 n k),
+    idp
+  }
+
+-- ============================================================================
+-- The monoid of formal substitutions
+-- ============================================================================
+
+-- | The identity for substitution: the series $w = [0, 1, 0, 0, \dots]$, so that $f \circ w = w \circ f = f$.
+\func subst-ide {R : Ring} (n : Nat) : R \elim n
+  | 0 => R.zro
+  | 1 => R.ide
+  | suc (suc _) => R.zro
+
+-- | In $(g \cdot w)_{\text{suc } k'}$ over `PairsFinSet`, the per-pair term vanishes whenever the pair differs from the diagonal $(k', 1, \mathrm{idp})$.
+\private \lemma subst-ide-off-term {R : Ring} {g : FSeries R} {k' : Nat} (s : FSeriesRing.PairsFinSet (suc k'))
+                                   (s/=spec : s /= ((k', 1, idp) : FSeriesRing.PairsFinSet (suc k')))
+  : g s.1 R.* subst-ide s.2 = R.zro
+  \elim s
+  | (i, 0, p) => R.zro_*-right
+  | (i, suc (suc j'), p) => R.zro_*-right
+  | (i, 1, p) => absurd (s/=spec (ext (pmap pred p, idp)))
+
+-- | $(w^k)_k = 1$ in $R[[w]]$.
+\lemma pow-subst-ide-diag {R : Ring} (k : Nat) : pow {FSeriesRing R} subst-ide k k = R.ide
+  \elim k
+  | 0 => idp
+  | suc k' => R.FinSum-unique (later (k', 1, idp)) subst-ide-off-term *> R.ide-right *> pow-subst-ide-diag k'
+
+-- | $(w^n)_k = 0$ when $n \neq k$.
+\lemma pow-subst-ide-off {R : Ring} (n k : Nat) (n/=k : n /= k) : pow {FSeriesRing R} subst-ide n k = R.zro
+  \elim n, k
+  | 0, 0 => absurd (n/=k idp)
+  | 0, suc k' => idp
+  | suc n', 0 => FSeriesRing.Pairs_zero *> R.zro_*-right
+  | suc n', suc k' => R.FinSum-unique (later (k', 1, idp)) subst-ide-off-term
+    *> R.ide-right
+    *> pow-subst-ide-off n' k' (\lam p => n/=k (pmap suc p))
+
+-- | Right identity for substitution: $f \circ w = f$.
+\lemma compose-coef-subst-ide-right {R : Ring} (f : FSeries R) (k : Nat)
+  : fcompose f subst-ide k = f k
+  => AddMonoid.BigSum-unique {R} {\new Array R (suc k) \lam n => f n * pow {FSeriesRing R} subst-ide n k}
+       (toFin k id<suc)
+       (\lam j j/=spec => pmap (f j *) (pow-subst-ide-off j k (\lam p => j/=spec (fin_nat-inj (toFin=id *> inv p))))
+                          *> R.zro_*-right)
+     *> pmap (\lam x => f x * pow {FSeriesRing R} subst-ide x k) toFin=id
+     *> pmap (f k *) (pow-subst-ide-diag k)
+     *> ide-right
+
+-- | Left identity for substitution: $w \circ f = f$ when $f_0 = 0$.
+\lemma compose-coef-subst-ide-left {R : Ring} {f : FSeries R} (f_0 : f 0 = R.zro) (k : Nat)
+  : fcompose subst-ide f k = f k
+  \elim k
+  | 0 => R.zro-right *> R.zro_*-left *> inv f_0
+  | suc k' =>
+    R.BigSum-unique {\new Array R (suc (suc k')) \lam n => subst-ide n * pow f n (suc k')} 1
+       (\lam j j/=spec => pmap (* _) (subst-ide-vanish j \lam p => j/=spec $ fin_nat-inj (inv p)) *> R.zro_*-left)
+     *> ide-left
+     *> fseries-apply ide-left
+  \where {
+    -- | $w_j = 0$ for $j \neq 1$.
+    \private \lemma subst-ide-vanish {R : Ring} (j : Nat) (j/=1 : j /= 1) : subst-ide {R} j = R.zro
+    \elim j
+      | 0 => idp
+      | 1 => absurd (j/=1 idp)
+      | suc (suc j') => idp
+  }
+
+-- | Carrier of the substitution monoid: formal series with vanishing constant term.
+\record FormalSubst (R : Ring) (f : FSeries R) (f_0 : f 0 = R.zro)
+
+-- | Composition of substitutions; preserves vanishing constant term.
+\func subst-compose {R : Ring} (s t : FormalSubst R) : FormalSubst R \cowith
+  | f n => fcompose s.f t.f n
+  | f_0 => R.zro-right *> R.ide-right *> s.f_0
+
+-- | The monoid of formal substitutions $\{f : R[[w]] \mid f_0 = 0\}$ under formal composition, with identity $w$.
+\instance FormalSubstMonoid (R : CRing) : Monoid (FormalSubst R)
+  | ide => \new FormalSubst R subst-ide idp
+  | * => subst-compose
+  | ide-left {s} => exts $ ext (compose-coef-subst-ide-left s.f_0)
+  | ide-right {s} => exts $ ext (compose-coef-subst-ide-right s.f)
+  | *-assoc {s} {t} {u} => exts $ ext (compose-coef-assoc t.f_0 u.f_0)
+
+-- ============================================================================
+-- Right inverse for substitution (accumulator pattern)
+-- ============================================================================
+
+{- | The new coefficient $g_{n}$ as a function of the prefix $g_0, \dots, g_{n - 1}$.
+ -   $n = 0$: $0$. $n = 1$: $f_1^{ -1}$. $n \geq 2$: $-f_1^{ -1} \cdot \sum_{m = 2}^{n} f_m \cdot (\mathrm{prev}^m)_n$.
+ -}
+\func new-coef {R : Ring} (f : FSeries R) (finv1 : Monoid.Inv (f 1)) (n : Nat) (prev : FSeries R) : R \elim n
+  | 0 => R.zro
+  | 1 => finv1.inv
+  | suc (suc n) =>
+    negative finv1.inv * R.BigSum \new Array R (suc n) \lam i => f (suc (suc i)) * pow prev (suc (suc i)) (suc (suc n))
+
+{- | Accumulator: `g-prefix f finv1 n` returns a `FSeries R` whose first $n$ coefficients
+ -   agree with the recursively-defined inverse, and is junk beyond.
+ -}
+\func g-prefix {R : Ring} (f : FSeries R) (finv1 : Monoid.Inv (f 1)) (n : Nat) : FSeries R \elim n
+  | 0 => \lam _ => R.zro
+  | suc n' => \lam k => \case decideEq k n' \with {
+                | yes _ => new-coef f finv1 n' (g-prefix f finv1 n')
+                | no _  => g-prefix f finv1 n' k
+              }
+
+-- | The right inverse of $f$ under formal composition.
+\func subst-rinv {R : Ring} (f : FSeries R) (finv1 : Monoid.Inv (f 1)) (k : Nat) : R
+  => g-prefix f finv1 (suc k) k
+
+-- | g-prefix stabilizes — extending the stage by one doesn't change values below the previous stage.
+\lemma g-prefix-stable {R : Ring} {f : FSeries R} {finv1 : Monoid.Inv (f 1)} (n k : Nat) (k<n : k < n)
+  : g-prefix f finv1 (suc n) k = g-prefix f finv1 n k
+  => mcases \with {
+     | yes p => absurd $ <-irreflexive $ transport (< n) p k<n
+     | no _ => idp
+   }
+
+-- | $\mathrm{subst\text{-}rinv}\ f\ \mathrm{finv1}\ k = \mathrm{g\text{-}prefix}\ f\ \mathrm{finv1}\ n\ k$ when $k < n$.
+\lemma subst-rinv-eq-prefix {R : Ring} {f : FSeries R} {finv1 : Monoid.Inv (f 1)} (n k : Nat) (k<n : k < n)
+  : subst-rinv f finv1 k = g-prefix f finv1 n k
+  \elim n
+  | 0 => \case k<n
+  | suc n' => \case LinearOrder.trichotomy k n' \with {
+      | less k<n' => subst-rinv-eq-prefix n' k k<n' *> inv (g-prefix-stable n' k k<n')
+      | equals k=n' => \case \elim k, \elim k<n, k=n' \with {
+          | _, _, idp => idp
+        }
+      | greater k>n' => absurd $ <-irreflexive $ k>n' <∘l <_suc_<= k<n
+    }
+
+-- | $\mathrm{g\text{-}prefix}\ n\ 0 = 0$ — the prefix always vanishes at index 0.
+\lemma g-prefix_0 {R : Ring} {f : FSeries R} {finv1 : Monoid.Inv (f 1)} (n : Nat)
+  : g-prefix f finv1 n 0 = R.zro
+  \elim n
+  | 0 => idp
+  | suc n' => mcases \with {
+    | yes p => rewriteI p idp
+    | no _ => g-prefix_0 n'
+  }
+
+{- | `g-prefix (suc K) K = new-coef K (g-prefix K)`
+ -   — manually triggering the `decideEq K K = yes _` branch.
+ -}
+\lemma g-prefix-top-eq {R : Ring} {f : FSeries R} {finv1 : Monoid.Inv (f 1)} (K : Nat)
+  : g-prefix f finv1 (suc K) K = new-coef f finv1 K (g-prefix f finv1 K)
+  => mcases \with {
+    | yes _ => idp
+    | no neq => absurd (neq idp)
+  }
+
+\lemma pow-ext {R : Ring} {g g' : FSeries R}
+              (K : Nat) (agree : \Pi (i : Nat) -> i <= K -> g i = g' i)
+              (m K' : Nat) (K'<=K : K' <= K)
+  : pow g m K' = pow g' m K'
+  \elim m
+  | 0 => idp
+  | suc m' => R.FinSum-ext $ later \lam (i,j,p) =>
+    \have | i<=K' => transport (i <=) p (<=_+ <=-refl zero<=_)
+          | j<=K' => transport (j <=) p (<=_+ zero<=_ <=-refl)
+    \in pmap2 (*) (pow-ext K agree m' i (i<=K' <=∘ K'<=K)) (agree j (j<=K' <=∘ K'<=K))
+
+-- | $g^{m+1}\ 0 = 0$ when $g\ 0 = 0$ — convolution at $0$ collapses to a single term containing $g\ 0$.
+\lemma pow-zero-at-zero {R : Ring} {g : FSeries R} (g_0 : g 0 = R.zro) (m' : Nat)
+  : pow g (suc m') 0 = R.zro
+  \elim m'
+  | 0 => FSeriesRing.Pairs_zero *> R.ide-left *> g_0
+  | suc m'' => FSeriesRing.Pairs_zero *> pmap (* g 0) (pow-zero-at-zero g_0 m'') *> R.zro_*-left
+
+{- | $g^{m+2}\ (\mathrm{suc}\ K) = (g')^{m+2}\ (\mathrm{suc}\ K)$ when $g, g'$ both vanish at $0$
+ -   and agree on $[0, K]$. The convolution at $\mathrm{suc}\ K$ for $m \geq 2$ doesn't see index $\mathrm{suc}\ K$.
+ -}
+\lemma pow-tail-eq {R : Ring} {g g' : FSeries R} (g_0 : g 0 = R.zro) (g'_0 : g' 0 = R.zro)
+                  (K : Nat) (agree : \Pi (i : Nat) -> i <= K -> g i = g' i)
+                  (m'' : Nat)
+  : pow g (suc (suc m'')) (suc K) = pow g' (suc (suc m'')) (suc K)
+  => R.FinSum-ext $ later \case \elim __ \with {
+       | (i, 0, _) => pmap (_ *) g_0 *> R.zro_*-right *> inv (pmap (_ *) g'_0 *> R.zro_*-right)
+       | (0, suc j', p) =>
+         pmap (* _) (pow-zero-at-zero g_0 m'') *> R.zro_*-left
+         *> inv (pmap (* _) (pow-zero-at-zero g'_0 m'') *> R.zro_*-left)
+       | (suc i', suc j', p) =>
+         \have | si'<=K : suc i' <= K => suc<=suc.conv $ transport (suc (suc i') <=) p $ <=_+ <=-refl (suc<=suc zero<=_)
+               | sj'<=K : suc j' <= K => suc<=suc.conv $ transport (suc (suc j') <=) p $ <=_+ (suc<=suc zero<=_) <=-refl
+         \in pmap2 (*) (pow-ext K agree (suc m'') (suc i') si'<=K) (agree (suc j') sj'<=K)
+     }
+
+-- | $\mathrm{g\text{-}prefix}\ n\ k = 0$ when $n \leq k$ — the prefix at stage $n$ is zero from index $n$ onwards.
+\lemma g-prefix-vanish-top {R : Ring} {f : FSeries R} {finv1 : Monoid.Inv (f 1)} (n k : Nat) (n<=k : n <= k)
+  : g-prefix f finv1 n k = R.zro
+  \elim n
+  | 0 => idp
+  | suc n' => mcases \with {
+    | yes p => absurd $ <-irreflexive $ transport (< _) (inv p) id<suc <∘l n<=k
+    | no _ => g-prefix-vanish-top n' k $ <=-less id<suc <=∘ n<=k
+  }
+
+-- | $\mathrm{subst\text{-}rinv}\ k = \mathrm{g\text{-}prefix}\ (\mathrm{suc}\ K)\ k$ for all $k \leq K$.
+\lemma subst-rinv-eq-prefix-up-to {R : Ring} {f : FSeries R} {finv1 : Monoid.Inv (f 1)} (K k : Nat) (k<=K : k <= K)
+  : subst-rinv f finv1 k = g-prefix f finv1 (suc K) k
+  => \case LinearOrder.trichotomy k K \with {
+       | less k<K => subst-rinv-eq-prefix (suc K) k (k<K <∘ id<suc)
+       | equals k=K => \case \elim K, \elim k<=K, \elim k=K \with { | _, _, idp => idp }
+       | greater k>K => absurd $ <-irreflexive (k>K <∘l k<=K)
+     }
+
+-- | Main theorem: {subst-rinv} is a right inverse of {f} under formal composition.
+\lemma subst-rinv-correct {R : Ring} {f : FSeries R} (f_0 : f 0 = R.zro) (finv1 : Monoid.Inv (f 1)) (k : Nat)
+  : fcompose f (subst-rinv f finv1) k = subst-ide k
+  \elim k
+  | 0 => R.zro-right *> R.ide-right *> f_0
+  | 1 => compose-coef_1 {R} {f} {subst-rinv f finv1} *> finv1.inv-right
+  | suc (suc k') => run {
+      rewrite (R.BigSum-ext
+        {suc (suc (suc k'))}
+        {\new Array R (suc (suc (suc k'))) (\lam n => f n * pow {FSeriesRing R} (subst-rinv f finv1) n (suc (suc k')))}
+        {\new Array R (suc (suc (suc k'))) (\lam n => f n * pow (g-prefix f finv1 (suc (suc (suc k')))) n (suc (suc k')))}
+        \lam n => pmap (_ *) $ pow-ext (suc (suc k')) (\lam i i<=K => subst-rinv-eq-prefix-up-to (suc (suc k')) i i<=K) n (suc (suc k')) <=-refl),
+      \let | gp => g-prefix f finv1 (suc (suc (suc k')))
+           | gpK =>  g-prefix f finv1 (suc (suc k')),
+      rewrite (pmap (\lam x => x * 0 + _) f_0, zro_*-left, zro-left, fseries-apply (ide-left {_} {gp}), g-prefix-top-eq),
+      rewrite (inv *-assoc, R.negative_*-right, finv1.inv-right, R.negative_*-left, ide-left),
+      rewrite (R.BigSum-ext {suc k'}
+        {\new Array R (suc k') \lam i => f (suc (suc i)) * pow gp (suc (suc i)) (suc (suc k'))}
+        {\new Array R (suc k') \lam i => f (suc (suc i)) * pow gpK (suc (suc i)) (suc (suc k'))}
+        \lam i => pmap (_ *) $ inv $
+          pow-tail-eq (g-prefix_0 (suc (suc k'))) (g-prefix_0 (suc (suc (suc k')))) (suc k')
+            (\lam j j<=K-1 => inv (g-prefix-stable {R} {f} {finv1} (suc (suc k')) j (<=_<_suc j<=K-1))) i),
+      rewrite negative-left,
+      idp
+    }
+
+-- ============================================================================
+-- The group of invertible substitutions
+-- ============================================================================
+
+-- | The composition coefficient at index 1: $[x^1]\,(s \circ t) = s_1 \cdot t_1$.
+\lemma compose-coef_1 {R : Ring} {s t : FSeries R} : fcompose s t 1 = s 1 R.* t 1
+  => pmap (\lam y => _ + (_ * y + 0)) (fseries-apply ide-left) *> pmap (+ _) R.zro_*-right *> R.zro-left *> R.zro-right
+
+-- | Formal line diffeomorphism: a formal substitution whose 1st coefficient is invertible in $R$.
+\record FormalLineDiffeomorphism \extends FormalSubst
+  | f1-inv : Monoid.Inv (f 1)
+
+-- | $w_1 = 1$, so $w$ is invertible.
+\func subst-ide-f1-inv {R : Ring} : Monoid.Inv (subst-ide {R} 1) \cowith
+  | inv => 1
+  | inv-left => ide-left
+  | inv-right => ide-right
+
+-- | The composition of invertible substitutions is invertible (chain rule at index 1).
+\func subst-compose-inv {R : CRing} (s t : FormalLineDiffeomorphism R) : FormalLineDiffeomorphism R \cowith
+  | FormalSubst => subst-compose s t
+  | f1-inv => transport Monoid.Inv (inv compose-coef_1) (Monoid.Inv.product s.f1-inv t.f1-inv)
+
+\func subst-rinv-inv {R : Ring} (s : FormalLineDiffeomorphism R) : FormalLineDiffeomorphism R \cowith
+  | f => subst-rinv s.f s.f1-inv
+  | f_0 => idp
+  | f1-inv => s.f1-inv.reverse
+
+-- | The group of formal line diffeomorphisms.
+\instance FormalLineDiffeomorphismGroup (R : CRing) : Group (FormalLineDiffeomorphism { | R => R })
+  | ide => \new FormalLineDiffeomorphism R subst-ide idp subst-ide-f1-inv
+  | * => subst-compose-inv
+  | ide-left {s} => exts $ ext (compose-coef-subst-ide-left s.f_0)
+  | ide-right {s} => exts $ ext (compose-coef-subst-ide-right s.f)
+  | *-assoc {s} {t} {u} => exts $ ext (compose-coef-assoc t.f_0 u.f_0)
+  | inverse s => subst-rinv-inv s
+  | inverse-right {s} => exts $ ext (subst-rinv-correct s.f_0 s.f1-inv)

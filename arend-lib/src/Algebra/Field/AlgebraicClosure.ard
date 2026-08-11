@@ -9,13 +9,13 @@
 \import Algebra.Pointed
 \import Algebra.Pointed.PointedHom
 \import Algebra.Ring
-\import Algebra.Ring.RingCategory
+\import Algebra.Ring.RingCat
 \import Algebra.Ring.RingHom
 \import Algebra.Ring.Integral
 \import Algebra.Ring.Poly
 \import Algebra.Semiring
 \import Arith.Nat
-\import Category
+\import Category.Functor
 \import Data.Array
 \import Function.Meta
 \import Logic
@@ -29,6 +29,7 @@
 \import Set.SetCategory
 \import Set.SetHom
 \import Set.Countable
+\open RingHom (id, ∘)
 
 -- | A ring {K} is algebraically closed if every monic polynomial over {K} of non-zero degree has a root.
 \type IsAlgebraicallyClosed (K : Ring)
@@ -46,7 +47,7 @@
   ) => TFAE.cycle (
     \lam ac (inP (n,pd,pc)) => aux ac pd pc,
     \lam c n pd pc => \case c (inP (n,pd,pc)) \with {
-      | inP (l : Array, q) => \case decideEq n l.len \with {
+      | inP (l, q) => \case decideEq n l.len \with {
         | yes e => rewrite e $ inP (\new l, q)
         | no r => \have t x => inv $ inv K.zro_*-right *> pmap (x *) (monic-unique r pd pc
                                 (rewrite q $ degree<=_BigProd1 \lam _ => idp)
@@ -56,7 +57,7 @@
     },
     \lam c => \case __ \with {
       | inP (0, n/=0, pd, pc) => absurd (n/=0 idp)
-      | inP (suc n, _, pd, pc) => TruncP.map (c (suc n) pd pc) \lam s => (s.1 0, rewrite s.2 $ (polyEvalRingHom _).func-* {padd 1 (negative (s.1 0))} *> pmap (`* _) simplify *> K.zro_*-left)
+      | inP (suc n, _, pd, pc) => TruncP.map (c (suc n) pd pc) \lam s => (s.1 0, rewrite s.2 $ (polyEvalRingHom _).func-* {padd 1 (negative (s.1 0))} *> pmap (* _) simplify *> K.zro_*-left)
     })
   \where {
     \private \lemma aux {K : CRing} (ac : IsAlgebraicallyClosed K) {p : Poly K} {n : Nat} (pd : degree<= p n) (pc : polyCoef p n = 1) : ∃ (l : Array K n) (p = Monoid.BigProd (map (\lam a => padd 1 (negative a)) l)) \elim n
@@ -65,7 +66,7 @@
         | inP (a,pa) =>
           \have pd' : degree<= (rootDiv p a) n => degree-monic-reduce _ _ n $ rewrite (rootDiv_* pa) in pd
           \in \case aux ac pd' (inv ide-right *> inv (leadCoef-product {_} {_} {_} {n} {1} pd' idp) *> (rewrite (rootDiv_* pa) in pc)) \with {
-            | inP r => inP (a :: r.1, rootDiv_* pa *> pmap (`* _) r.2 *> *-comm)
+            | inP r => inP (a :: r.1, rootDiv_* pa *> pmap (* _) r.2 *> *-comm)
           }
       }
   }
@@ -101,15 +102,15 @@
   }, fi)
 
 -- | Every countable discrete field has an algebraic closure.
-\sfunc countableAlgebraicClosure {k : DiscreteField} (c : Countable k) : \Sigma (K : DiscreteField) (f : RingHom k K) (IsAlgebraicClosure f)
+\sfunc countableAlgebraicClosure.{u} {k : DiscreteField.{u}} (c : Countable k) : \Sigma (K : DiscreteField.{u}) (f : RingHom k K) (IsAlgebraicClosure f)
   => \let | ps n => pointed-countable zro (Poly.poly-countable c) n
           | S => sequence c ps
           | sf n => countableSplittingField (S n).2 {polyMap (S n).3 (ps n)}
           | F => NatFunctor (\lam n => (S n).1) \lam {n} => (sf n).3
           | E => DiscreteFieldLatticeColimit {NatBSemilattice} F \lam n => (S n).1
-          | h n => RingLatticeColimit.inMap {_} {F} n
+          | h n => RingLatticeColimit.inMap {_} {Comp CRingCat.forgetToRing F} n
      \in (E, h 0, algebraicClosure-split {_} {E} _ (later \lam (in~ (n,a)) =>
-        \let t => integral_image-comp (RingLatticeColimit.inMap {_} {F} n) ((S n).4 a)
+        \let t => integral_image-comp (RingLatticeColimit.inMap {_} {Comp CRingCat.forgetToRing F} n) ((S n).4 a)
         \in transportInv {RingHom k E} (isIntegral __ _) (later $ exts \lam a => SetColimit.~-cequiv zero<=_ $ pmap (NatFunctor.natHom {CRingCat} __ _) (NatFunctor.sigma-isProp _ _) *> sequence3) t)
             \lam {p} pm => \case pointed-countable-surj zro (Poly.poly-countable c) p \with {
               | inP (n,q) => \case splitting-monic {_} {_} {polyMap (S n).3 (ps n)} (rewrite q $ polyMap_isMonic pm) (sf n).4 \with {
@@ -119,14 +120,14 @@
               }
             })
   \where \private {
-    \func sequence {k : DiscreteField} (kc : Countable k) (f : Nat -> Poly k) (n : Nat) : \Sigma (K : DiscreteField) (Countable K) (g : RingHom k K) (isIntegralExt g) \elim n
-      | 0 => (k, kc, id k, integralExt_id)
+    \func sequence.{u} {k : DiscreteField.{u}} (kc : Countable k) (f : Nat -> Poly k) (n : Nat) : \Sigma (K : DiscreteField.{u}) (Countable K) (g : RingHom k K) (isIntegralExt g) \elim n
+      | 0 => (k, kc, id, integralExt_id)
       | suc n => \let | (K,Kc,g,gi) => sequence kc f n
                       | t => countableSplittingField Kc {polyMap g (f n)}
-                 \in (t.1, t.2, t.3 RingCat.∘ g, integralExt-comp _ _ gi $ splitting-integral (countableSplittingField Kc).4)
+                 \in (t.1, t.2, t.3 ∘ g, integralExt-comp _ _ gi $ splitting-integral (countableSplittingField Kc).4)
 
-    \lemma sequence3 {k : DiscreteField} {kc : Countable k} {f : Nat -> Poly k} {n : Nat} {a : k}
-      : NatFunctor.natHom {CRingCat} {_} {\lam {n} => (countableSplittingField (sequence kc f n).2 {polyMap (sequence kc f n).3 (f n)}).3} {0} (n,idp) a = (sequence kc f n).3 a \elim n
+    \lemma sequence3.{u} {k : DiscreteField.{u}} {kc : Countable k} {f : Nat -> Poly k} {n : Nat} {a : k}
+      : NatFunctor.natHom {CRingCat.{u}} {_} {\lam {n} => (countableSplittingField (sequence kc f n).2 {polyMap (sequence kc f n).3 (f n)}).3} {0} (n,idp) a = (sequence kc f n).3 a \elim n
       | 0 => idp
       | suc n => pmap (countableSplittingField (sequence kc f n).2).3 sequence3
   }

@@ -209,7 +209,7 @@ public class CoerceTest extends TypeCheckingTestCase {
   @Test
   public void coerceTypeSigma() {
     typeCheckModule(
-      "\\class Class (X : \\Type) (x : X)\n" +
+      "\\class Class (X : \\Type0) (x : X)\n" +
       "\\func f (C : Class) => (\\Sigma (c : C) (c = c)) = (\\Sigma)");
   }
 
@@ -348,9 +348,9 @@ public class CoerceTest extends TypeCheckingTestCase {
   public void coerceFromUniverse() {
     typeCheckModule(
       """
-        \\data D | con \\Type
-          \\where \\use \\coerce fromUniverse (X : \\Type) => con X
-        \\func f (X : \\Type) : D => X
+        \\data D | con \\Type0
+          \\where \\use \\coerce fromUniverse (X : \\Type0) => con X
+        \\func f (X : \\Type0) : D => X
         """);
   }
 
@@ -358,10 +358,10 @@ public class CoerceTest extends TypeCheckingTestCase {
   public void coerceToUniverse() {
     typeCheckModule(
       """
-        \\data D | con \\Type
-          \\where \\use \\coerce toUniverse (d : D) : \\Type
+        \\data D | con \\Type0
+          \\where \\use \\coerce toUniverse (d : D) : \\Type0
             | con X => X
-        \\func f (d : D) : \\Type => d
+        \\func f (d : D) : \\Type0 => d
         """);
   }
 
@@ -369,9 +369,10 @@ public class CoerceTest extends TypeCheckingTestCase {
   public void coerceOverriddenField() {
     typeCheckModule(
       """
-        \\record R (\\coerce f : \\hType)
+        \\record R (\\coerce f : \\Type)
         \\record S \\extends R {
-          \\override f : \\Set}
+          \\override f : \\Set
+        }
         \\func test (s : S) : \\Set => s
         """);
   }
@@ -390,8 +391,8 @@ public class CoerceTest extends TypeCheckingTestCase {
   public void transitiveField2() {
     typeCheckModule(
       """
-        \\class R (X : \\Type)
-        \\class S {n : Nat} (Y : \\case n \\with { | 0 => R | suc _ => \\Sigma })
+        \\class R (X : \\Type0)
+        \\class S {n : Nat} (Y : \\case n \\return \\Type1 \\with { | 0 => R | suc _ => \\Sigma })
         \\func test (s : S {0}) (x : s) => x
         """);
   }
@@ -431,6 +432,14 @@ public class CoerceTest extends TypeCheckingTestCase {
         \\where
           \\use \\coerce fromR (r : R) => con r.n
       \\func test (s : S) : D => s
+      """);
+  }
+
+  @Test
+  public void coerceTypeTest() {
+    typeCheckModule("""
+      \\class R (E : \\Set0)
+      \\func test (X : R) => Nat = X
       """);
   }
 }

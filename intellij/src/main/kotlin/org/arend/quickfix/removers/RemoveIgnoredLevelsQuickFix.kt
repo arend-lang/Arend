@@ -6,9 +6,12 @@ import com.intellij.openapi.project.Project
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiFile
 import com.intellij.psi.SmartPsiElementPointer
-import org.arend.psi.childOfType
-import org.arend.psi.deleteWithWhitespaces
-import org.arend.psi.ext.ArendLevelsExpr
+import com.intellij.psi.util.elementType
+import org.arend.psi.ArendElementTypes.DOT
+import org.arend.psi.ancestor
+import org.arend.psi.ext.ArendAtomFieldsAcc
+import org.arend.psi.ext.ArendFieldAcc
+import org.arend.psi.prevElement
 import org.arend.util.ArendBundle
 
 class RemoveIgnoredLevelsQuickFix(private val cause: SmartPsiElementPointer<PsiElement>) : IntentionAction {
@@ -18,11 +21,15 @@ class RemoveIgnoredLevelsQuickFix(private val cause: SmartPsiElementPointer<PsiE
 
     override fun getFamilyName(): String = text
 
-    override fun isAvailable(project: Project, editor: Editor?, file: PsiFile?): Boolean = cause.element != null
+    override fun isAvailable(project: Project, editor: Editor?, file: PsiFile?): Boolean = findLevelArgs() != null
 
     override fun invoke(project: Project, editor: Editor?, file: PsiFile?) {
-        val parent = cause.element?.parent
-        val levels = parent?.childOfType<ArendLevelsExpr>()
-        levels?.deleteWithWhitespaces()
+        val fieldAcc = findLevelArgs() ?: return
+        val dot = fieldAcc.prevElement?.takeIf { it.elementType == DOT }
+        fieldAcc.delete()
+        dot?.delete()
     }
+
+    private fun findLevelArgs(): ArendFieldAcc? =
+        cause.element?.ancestor<ArendAtomFieldsAcc>()?.fieldAccList?.firstOrNull { it.levels.isNotEmpty() }
 }

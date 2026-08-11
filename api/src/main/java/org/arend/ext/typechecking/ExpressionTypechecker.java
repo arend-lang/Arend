@@ -20,7 +20,6 @@ import org.arend.ext.core.expr.AbstractedExpression;
 import org.arend.ext.core.expr.CoreExpression;
 import org.arend.ext.core.expr.CoreInferenceReferenceExpression;
 import org.arend.ext.core.expr.UncheckedExpression;
-import org.arend.ext.core.level.CoreSort;
 import org.arend.ext.core.level.LevelSubstitution;
 import org.arend.ext.core.ops.CMP;
 import org.arend.ext.core.ops.SubstitutionPair;
@@ -267,6 +266,18 @@ public interface ExpressionTypechecker extends UserDataHolder {
   boolean solveInferenceVariable(@NotNull CoreInferenceVariable variable, @NotNull CoreExpression expression);
 
   /**
+   * Runs the equation solver on pending equations that mention {@code variable}.
+   * Unlike a full solve at the end of elaboration, this scopes the solver to equations
+   * touching {@code variable}, so it is safe to call from a meta/tactic that wants to
+   * push inference progress on a specific variable without prematurely committing other
+   * in-flight equations.
+   *
+   * Note: incidental progress on other variables that appear on the opposite side of a
+   * touched equation may still occur.
+   */
+  void solveEquationsFor(@NotNull CoreInferenceVariable variable);
+
+  /**
    * Creates a new inference variable.
    *
    * @param name                      a name of the variable; used only for printing.
@@ -277,13 +288,6 @@ public interface ExpressionTypechecker extends UserDataHolder {
    * @return a reference expression with a new inference variable.
    */
   @NotNull CoreInferenceReferenceExpression generateNewInferenceVariable(@NotNull String name, @NotNull CoreExpression type, @NotNull ConcreteSourceNode marker, boolean isSolvableFromEquations);
-
-  /**
-   * Creates a sort from a pair of fresh level inference variables.
-   *
-   * @param marker                    a marker that is used to report errors related to generated variables.
-   */
-  @NotNull CoreSort generateSort(@NotNull ConcreteSourceNode marker);
 
   /**
    * Searches for an instance of the specified class.

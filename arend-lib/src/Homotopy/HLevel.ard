@@ -1,21 +1,24 @@
 \import Arith.Nat
 \import Equiv
 \import Equiv.Path
+\import Logic
 \import Logic.Unique
 \import Order.PartialOrder
 \import Paths
 \import Paths.Meta
 
-\func \infix 2 ofHLevel_-1+ (A : \Type) (n : Nat) : \Type \elim n
-  | 0 => isProp A
+\func \infix 2 ofHLevel_-1+ (A : \Type) (n : Nat) : \Prop \elim n
+  | 0 => ToProp (isProp A) (isProp.levelProp A)
   | suc n => \Pi (a a' : A) -> (a = a') ofHLevel_-1+ n
   \where
     \use \level levelProp (A : \Type) (n : Nat) (e e' : A ofHLevel_-1+ n) : e = e' \elim n
-      | 0 => isProp.levelProp A e e'
+      | 0 => \case \elim e, \elim e' \with {
+        | toProp e, toProp e' => pmap toProp (isProp.levelProp A e e')
+      }
       | suc n => path \lam i a a' => levelProp (a = a') n (e a a') (e' a a') i
 
 \func hLevel-inh {A : \Type} (n : Nat) (f : A -> A ofHLevel_-1+ n) : A ofHLevel_-1+ n \elim n
-  | 0 => \lam a => f a a
+  | 0 => toProp \lam a => ToProp.fromProp (f a) a
   | suc n => \lam a => f a a
 
 \func I-isContr : Contr I \cowith
@@ -29,17 +32,17 @@
 -- # Prop-based and Contr-base hLevels are equivalent
 
 \func HLevel_-2+1=>HLevel_-1 (A : \Type) (n : Nat) (p : A ofHLevel_-2+ suc n) : A ofHLevel_-1+ n \elim n
-  | 0 => \lam a a' => Contr.center {p a a'}
+  | 0 => toProp \lam a a' => Contr.center {p a a'}
   | suc n => \lam a a' => HLevel_-2+1=>HLevel_-1 (a = a') n (p a a')
 
 \lemma HLevel_-1=>HLevel_-2+1 (A : \Type) (n : Nat) (p : A ofHLevel_-1+ n) : A ofHLevel_-2+ suc n \elim n
-  | 0 => isProp=>PathContr A p
+  | 0 => isProp=>PathContr A (ToProp.fromProp p)
   | suc n => \lam a a' => HLevel_-1=>HLevel_-2+1 (a = a') n (p a a')
 
 -- # Every k-level is n-level whenever k <= n
 
 \func HLevel_-1_suc {A : \Type} {n : Nat} (p : A ofHLevel_-1+ n) : A ofHLevel_-1+ suc n \elim n
-  | 0 => isProp.=>isSet p
+  | 0 => \lam a a' => toProp (isProp.=>isSet (ToProp.fromProp p) a a')
   | suc n => \lam a a' => HLevel_-1_suc (p a a')
 
 \func HLevel_-1_+ {A : \Type} {k : Nat} (n : Nat) (p : A ofHLevel_-1+ k) : A ofHLevel_-1+ k Nat.+ n \elim n
@@ -57,22 +60,22 @@
 
 -- | hLevels are closed under retracts
 \func HLevel-retracts (s : Section) {n : Nat} (p : s.B ofHLevel_-1+ n) : s.A ofHLevel_-1+ n \elim n
-  | 0 => \lam a a' => inv (s.ret_f a) *> pmap s.ret (p (s a) (s a')) *> s.ret_f a'
+  | 0 => toProp \lam a a' => inv (s.ret_f a) *> pmap s.ret (ToProp.fromProp p (s a) (s a')) *> s.ret_f a'
   | suc n => \lam a a' => HLevel-retracts (pmapSection s) (p (s a) (s a'))
 
 -- | hLevels are closed under pi-types
 \func HLevels-pi {A : \Type} (B : A -> \Type) {n : Nat} (p : \Pi (a : A) -> B a ofHLevel_-1+ n) : (\Pi (a : A) -> B a) ofHLevel_-1+ n \elim n
-  | 0 => pi-isProp B p
+  | 0 => toProp (pi-isProp B \lam a => ToProp.fromProp (p a))
   | suc n => \lam f f' => HLevel-retracts (piEquiv B f f') (HLevels-pi (\lam a => f a = f' a) (\lam a => p a (f a) (f' a)))
 
 -- | hLevels are closed under sigma-types
 \func HLevels-sigma {A : \Type} (B : A -> \Type) {n : Nat} (pA : A ofHLevel_-1+ n) (pB : \Pi (a : A) -> B a ofHLevel_-1+ n) : (\Sigma (a : A) (B a)) ofHLevel_-1+ n \elim n
-  | 0 => \lam p p' => ext (pA p.1 p'.1, pB p'.1 _ _)
+  | 0 => toProp \lam p p' => ext (ToProp.fromProp pA p.1 p'.1, ToProp.fromProp (pB p'.1) _ _)
   | suc n => \lam p p' => HLevel-retracts (sigmaEquiv B p p') (HLevels-sigma (transport B __ p.2 = p'.2) (pA p.1 p'.1) (\lam s => pB _ _ _))
 
 -- | hLevels are closed under embeddings
 \func HLevels-embeddings (e : Embedding) {n : Nat} (p : e.B ofHLevel_-1+ n) : e.A ofHLevel_-1+ n \elim n
-  | 0 => \lam a a' => sec {e.isEmb a a'} (p (e a) (e a'))
+  | 0 => toProp \lam a a' => sec {e.isEmb a a'} (ToProp.fromProp p (e a) (e a'))
   | suc n => \lam a a' => HLevels-embeddings (pmapEmbedding e) (p (e a) (e a'))
 
 -- ## Properties of contr-based hLevels

@@ -17,7 +17,7 @@
     | <-transitive p q => q <∘ p
 
   \lemma <_/= {x y : E} (x<y : x < y) : x /= y
-    => \lam x=y => <-irreflexive (transport (`< y) x=y x<y)
+    => \lam x=y => <-irreflexive (transport (< y) x=y x<y)
 
   \lemma >_/= {x y : E} (y<x : x > y) : x /= y
     => \lam x=y => <-irreflexive (transport (y <) x=y y<x)
@@ -27,7 +27,7 @@
 
     \lemma \infixr 1 >>= {P : StrictPoset} {x y z : P} (x<y : x < y) (y=z : y = z) => transport (x <) y=z x<y
 
-    \lemma \infixr 1 >=> {P : StrictPoset} {x y z : P} (x=y : x = y) (y<z : y < z) => transport (`< z) (inv x=y) y<z
+    \lemma \infixr 1 >=> {P : StrictPoset} {x y z : P} (x=y : x = y) (y<z : y < z) => transport (< z) (inv x=y) y<z
 
     \func \infix 2 <<< {P : StrictPoset} (x : P) {y : P} (p : x < y) => p
   }

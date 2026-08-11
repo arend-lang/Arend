@@ -30,7 +30,6 @@ public class FunctionDefinition extends TopLevelDefinition implements Function, 
   private Set<TopLevelDefinition> myRecursiveDefinitions = Collections.emptySet();
   private boolean myHasEnclosingClass;
   private List<Boolean> myStrictParameters = Collections.emptyList();
-  private List<Boolean> myOmegaParameters = Collections.emptyList();
   private TCDefReferable myImplementedField; // for coclause functions
 
   public enum HiddenStatus { NOT_HIDDEN, HIDDEN, REALLY_HIDDEN }
@@ -55,7 +54,6 @@ public class FunctionDefinition extends TopLevelDefinition implements Function, 
     this.myRecursiveDefinitions = other.myRecursiveDefinitions;
     this.myHasEnclosingClass = other.myHasEnclosingClass;
     this.myStrictParameters = other.myStrictParameters;
-    this.myOmegaParameters = other.myOmegaParameters;
     this.myImplementedField = other.myImplementedField;
   }
 
@@ -105,20 +103,6 @@ public class FunctionDefinition extends TopLevelDefinition implements Function, 
 
   public void setStrictParameters(List<Boolean> parameters) {
     myStrictParameters = parameters;
-  }
-
-  @Override
-  public boolean isOmegaParameter(int index) {
-    return index < myOmegaParameters.size() && myOmegaParameters.get(index);
-  }
-
-  public List<Boolean> getOmegaParameters() {
-    return myOmegaParameters;
-  }
-
-  @Override
-  public void setOmegaParameters(List<Boolean> parameters) {
-    myOmegaParameters = parameters;
   }
 
   @Override

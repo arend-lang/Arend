@@ -22,6 +22,6 @@ public class GroupDataFactory extends DataFactoryBase {
   @Override
   protected ConcreteExpression getDataClass(ConcreteExpression instanceArg, ConcreteExpression dataArg) {
     ConcreteExpression data = factory.ref(groupData);
-    return factory.app(data, Arrays.asList(factory.arg(instanceArg, false), factory.arg(dataArg, true)));
+    return factory.app(data, Arrays.asList(factory.arg(instanceArg, false), factory.arg(wrapArrayAsNatFunction(dataArg, values.getValues().size()), true)));
   }
 }

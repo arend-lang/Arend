@@ -19,6 +19,18 @@ import org.arend.util.appExprToConcreteOnlyTopLevel
 
 abstract class AbstractArendBlock(node: ASTNode, val settings: CommonCodeStyleSettings?, wrap: Wrap?, alignment: Alignment?, private val myIndent: Indent?,
                                   private val parentBlock: AbstractArendBlock?) : AbstractBlock(node, wrap, alignment) {
+    private val moduleResolution: Unit by lazy {
+        parentBlock?.moduleResolution ?: run {
+            val arendServer = node.psi.project.service<ArendServerService>().server
+            val targetFile = node.psi.containingFile as? ArendFile
+            val targetFileLocation = targetFile?.moduleLocation
+
+            if (targetFileLocation != null) {
+                arendServer.getCheckerFor(listOf(targetFileLocation)).resolveModules(UnstoppableCancellationIndicator.INSTANCE, ProgressReporter.empty())
+            }
+        }
+    }
+
     override fun getIndent(): Indent? = myIndent
 
     override fun isLeaf(): Boolean = myNode.firstChildNode == null
@@ -33,19 +45,9 @@ abstract class AbstractArendBlock(node: ASTNode, val settings: CommonCodeStyleSe
         if (childPsi is ArendArgumentAppExpr && childPsi.argumentList.isNotEmpty()) {
             val cExpr = runReadAction {
                 val psi = node.psi
-                val project = psi.project
-                if (psi is ArendExpr/* && !DumbService.isDumb(project)*/) {
-                    val arendServer = project.service<ArendServerService>().server
-                    val targetFile = psi.containingFile as? ArendFile
-                    val targetFileLocation = targetFile?.moduleLocation
-
-                    if (targetFileLocation != null) {
-                        //TODO: This operation may be slow
-                        arendServer.getCheckerFor(listOf(targetFileLocation)).resolveModules(UnstoppableCancellationIndicator.INSTANCE, ProgressReporter.empty())
-                    }
-
-                    val result = appExprToConcreteOnlyTopLevel(psi)
-                    result
+                if (psi is ArendExpr) {
+                    moduleResolution
+                    appExprToConcreteOnlyTopLevel(psi)
                 } else
                     null
             }

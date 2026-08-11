@@ -302,7 +302,7 @@ public class Simplifier {
       return null;
     }
     var proofs = processor.simplificationOccurrences.stream().map(x -> isForward ? x.proj2 : x.proj2.inverse(factory, meta.inv)).collect(Collectors.toList());
-    return RewriteEquationMeta.chainOfTransports(factory.ref(meta.transport, refExpr.getPLevels(), refExpr.getHLevels()),
+    return RewriteEquationMeta.chainOfTransports(factory.ref(meta.transport, refExpr.getLevels()),
             checkedLam.getExpression(), proofs, expression, factory, false);
   }
 }

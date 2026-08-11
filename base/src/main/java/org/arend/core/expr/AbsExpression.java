@@ -2,7 +2,6 @@ package org.arend.core.expr;
 
 import org.arend.core.context.binding.Binding;
 import org.arend.core.subst.ExprSubstitution;
-import org.arend.core.subst.LevelPair;
 import org.arend.ext.core.expr.CoreAbsExpression;
 import org.arend.ext.core.level.LevelSubstitution;
 import org.jetbrains.annotations.NotNull;

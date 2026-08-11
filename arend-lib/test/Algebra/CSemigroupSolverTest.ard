@@ -1,0 +1,28 @@
+\import Algebra.Meta
+\import Algebra.Monoid
+\import Meta
+\import Algebra.Solver.CSemigroup
+\import Arith.Real.UpperReal
+
+\lemma test1 {S : CSemigroup} (x y z : S)
+  : (x * y) * z = z * (y * x)
+  => equation.cSemigroup
+
+\lemma test2 {S : CSemigroup} (x y z w : S)
+  : (x * y) * (z * w) = (w * y) * (x * z)
+  => equation.cSemigroup
+
+\lemma test3 {S : CSemigroup} (x y : S)
+  : x * y = y * x
+  => equation.cSemigroup
+
+\lemma testHint {S : CSemigroup} (x y z w : S) (p : x * (y * z) = w)
+  : (z * y) * x = w
+  => equation.cSemigroup {p}
+
+{- | The motivating case: the multiplicative structure of {ExUpperReal} is a {CSemigroup}
+ -   with no {Monoid} instance, so only {equation.cSemigroup} (not {equation.cMonoid}) applies.
+ -}
+\lemma testExUpperReal (a b c : ExUpperReal)
+  : (a ExUpperRealSemigroup.* b) ExUpperRealSemigroup.* c = c ExUpperRealSemigroup.* (b ExUpperRealSemigroup.* a)
+  => equation.cSemigroup

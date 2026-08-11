@@ -97,11 +97,8 @@ class ArendErrorTreeAutoScrollFromSource(private val project: Project, private v
             e.presentation.isEnabled = enabledByFilters
         }
 
-        override fun isSelected(e: AnActionEvent): Boolean {
-            val settings = project.service<ArendProjectSettings>()
-            return settings.autoScrollFromSource.contains(type) && settings.messagesFilterSet.contains(type) &&
-                (!(type == MessageType.RESOLVING || type == MessageType.PARSING) || settings.autoScrollFromSource.contains(MessageType.SHORT) && settings.messagesFilterSet.contains(MessageType.SHORT))
-        }
+        override fun isSelected(e: AnActionEvent): Boolean =
+            project.service<ArendProjectSettings>().autoScrollFromSource.contains(type)
 
         override fun setSelected(e: AnActionEvent, state: Boolean) {
             val settings = project.service<ArendProjectSettings>()

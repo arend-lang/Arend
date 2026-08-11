@@ -360,7 +360,7 @@ public class SimpCoeMeta extends BaseMetaDefinition {
         List<CoreParameter> parameters = new ArrayList<>();
         while (true) {
           CoreParameter param = ((CorePiExpression) body).getParameters();
-          if (param.getTypeExpr().findFreeBinding(lam.getParameters().getBinding())) {
+          if (param.getType().findFreeBinding(lam.getParameters().getBinding())) {
             return null;
           }
 
@@ -388,7 +388,7 @@ public class SimpCoeMeta extends BaseMetaDefinition {
         Set<CoreBinding> bindings = new HashSet<>();
         int i = 0;
         for (CoreParameter param = parameters; param.hasNext(); param = param.getNext(), i++) {
-          CoreExpression paramType = param.getTypeExpr();
+          CoreExpression paramType = param.getType();
           if (!(classFields != null && classFields.get(i).isProperty() || Utils.isProp(paramType))) {
             if (paramType.findFreeBindings(bindings) != null) {
               return null;
@@ -453,7 +453,7 @@ public class SimpCoeMeta extends BaseMetaDefinition {
         for (CoreParameter param = parameters; param.hasNext(); param = param.getNext(), i++) {
           bindings.add(param.getBinding());
           if (i == proj || classFields != null && classFields.get(i) == field) {
-            CoreExpression paramType = param.getTypeExpr();
+            CoreExpression paramType = param.getType();
             if (paramType.findFreeBindings(bindings) != null) {
               return null;
             }

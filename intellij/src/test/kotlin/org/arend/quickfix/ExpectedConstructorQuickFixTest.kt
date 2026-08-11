@@ -395,10 +395,7 @@ class ExpectedConstructorQuickFixTest : QuickFixTestBase() {
         | cons{-caret-} => c.a 
     """, data11 + """
       \func foo {c : C} (f : Foo c) : Nat \elim c, f
-        | (0, 0), cons => a {\new C {
-          | a => 0
-          | b => 0
-        }}
+        | (0, 0), cons => a {\new C {  | a => 0  | b => 0}}
     """)
 
     fun test69_21() = doTest(data3 + """
@@ -451,6 +448,11 @@ class ExpectedConstructorQuickFixTest : QuickFixTestBase() {
       \func foobar (A : \Type) (n : Nat) (v1 v2 : Vec A n) (sv1 : DVec A n v1) (sv2 : DVec A n v2) : Nat \elim n, v1, v2, sv1, sv2
         | 0, nil, nil, Dnil, Dnil => {?}
         | suc n, cons a v1, cons a1 v2, DCons sv1, DCons sv2 => {?}  
+    """)
+
+    fun test108_DConstructorNotOffered() = typedCheckNoQuickFixes(ArendBundle.message("arend.pattern.doMatching"), """
+      \func lol (x : Nat) : Nat \elim x
+        | nil{-caret-} => 0
     """)
 
     companion object {

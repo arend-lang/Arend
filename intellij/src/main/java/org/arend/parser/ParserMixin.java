@@ -32,6 +32,7 @@ public class ParserMixin {
   public static final ArendTokenType DOC_BOLD_CODE_BORDER = new ArendTokenType("**");
   public static final ArendTokenType DOC_BOLD_CODE = new ArendTokenType("DOC_BOLD_CODE");
   public static final ArendCompositeElementType DOC_NEWLINE = new ArendCompositeElementType("DOC_NEWLINE");
+  public static final ArendCompositeElementType DOC_NEXT_LINE = new ArendCompositeElementType("DOC_NEXT_LINE");
   public static final ArendCompositeElementType DOC_LINEBREAK = new ArendCompositeElementType("DOC_LINEBREAK");
   public static final ArendCompositeElementType DOC_TABS = new ArendCompositeElementType("DOC_TABS");
   public static final ArendCompositeElementType DOC_UNORDERED_LIST = new ArendCompositeElementType("DOC_UNORDERED_LIST");

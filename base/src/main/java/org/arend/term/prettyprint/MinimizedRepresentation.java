@@ -20,6 +20,7 @@ import org.arend.naming.reference.Referable;
 import org.arend.naming.reference.TCDefReferable;
 import org.arend.naming.renamer.ReferableRenamer;
 import org.arend.term.concrete.Concrete;
+import org.arend.term.concrete.ConcreteCompareVisitor;
 import org.arend.term.concrete.SubstConcreteVisitor;
 import org.arend.typechecking.error.local.GoalError;
 import org.arend.ext.error.ArgInferenceError;
@@ -59,9 +60,10 @@ final public class MinimizedRepresentation {
         induceContext(typechecker, verboseRepresentation, incompleteRepresentation, actualExpression);
 
         int limit = 50;
+        ConcreteCompareVisitor visitor = new ConcreteCompareVisitor();
         while (true) {
             var fixedExpression = tryFixError(typechecker, verboseRepresentation, incompleteRepresentation, errorsCollector);
-            if (fixedExpression == null) {
+            if (fixedExpression == null || visitor.compare(fixedExpression, incompleteRepresentation)) {
                 return incompleteRepresentation;
             } else {
                 --limit;
@@ -411,7 +413,7 @@ class ErrorFixingConcreteExpressionVisitor extends BiConcreteVisitor {
             var fullResult = fullIterator.next();
             var incompleteArg = incompleteIterator.next().proj2;
             var param = fullResult.proj1;
-            if (param instanceof DependentLink && ((DependentLink) param).getType() instanceof DefCallExpression && targetError.classRef instanceof TCDefReferable && ((DefCallExpression) ((DependentLink) param).getType()).getDefinition() == ((TCDefReferable) targetError.classRef).getTypechecked()) {
+            if (param instanceof DependentLink link && link.getType() instanceof DefCallExpression defCall && targetError.classRef instanceof TCDefReferable tcRef && defCall.getDefinition() == tcRef.getTypechecked()) {
                 args.add((Concrete.Argument) fullResult.proj2);
                 inserted = true;
             } else if (incompleteArg != null) {

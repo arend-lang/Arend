@@ -19,8 +19,8 @@ public class TypecheckerState {
   public List<Equation> equations;
   public int numberOfLevelVariables;
   public int numberOfLevelEquations;
-  public Set<InferenceVariable> propVars;
-  public int numberOfBoundVars;
+  public int numberOfDeferredMaxLevelEquations;
+  public int numberOfSortExpressionEquations;
   public final ListErrorReporter listErrorReporter;
   public Set<InferenceVariable> notSolvableFromEquationsVars;
   public UserDataHolderImpl userDataHolder;

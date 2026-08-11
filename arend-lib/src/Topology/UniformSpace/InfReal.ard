@@ -19,7 +19,7 @@
 \import Paths
 \import Paths.Meta
 \import Set.Filter
-\import Set.Subset
+\import Set.Set
 \import Topology.CoverSpace
 \import Topology.CoverSpace.StronglyComplete
 \import Topology.UniformSpace
@@ -41,13 +41,13 @@
         }
       }
     \in InfReal.real-ext \lam {a} => (aux Sc, aux \lam Cc => TruncP.map (Sc Cc) \lam (U,CU,s) => (U,CU,(s.2,s.1)))
-  | isStronglyComplete (F : StronglyRegularCauchyFilter) => inP (fromCF F, \lam {U} F<=<U => \case <=<-ball F<=<U \with {
+  | isStronglyComplete F => inP (fromCF F, \lam {U} F<=<U => \case <=<-ball F<=<U \with {
     | byLeft (eps,eps>0,x,x=F,g) => \case real_<-char.1 eps>0 \with {
       | inP (delta,delta>0,delta<eps) => \case (real_<-char {x - delta} {x}).1 linarith, (real_<-char {x} {x + delta}).1 linarith \with {
-        | inP (a,x-delta<a,a<x), inP (b,x<b,b<x+delta) => \case rewrite x=F $ real_<_U.1 $ transport (_ <) RealAbGroup.+-rat (linarith : x < a RealAbGroup.+ delta), rewrite x=F $ real_<_L.1 $ transport (`< _) RealAbGroup.minus-rat (linarith : b - {RealAbGroup} delta < x) \with {
+        | inP (a,x-delta<a,a<x), inP (b,x<b,b<x+delta) => \case rewrite x=F $ real_<_U.1 $ transport (_ <) RealAbGroup.+-rat (linarith : x < a RealAbGroup.+ delta), rewrite x=F $ real_<_L.1 $ transport (< _) RealAbGroup.minus-rat (linarith : b - {RealAbGroup} delta < x) \with {
           | inP (a1,a1<a+delta,V1,FV1,g1), inP (b1,b-delta<b1,V2,FV2,g2) => filter-mono (filter-meet FV1 FV2) \lam {y} (V1y,V2y) =>
               \let y' => inf-real-real y (g1 V1y)
-              \in g {y'} $ RealAbGroup.abs_-_< (linarith ((real_<_InfReal {b1} {y'}).2 $ g2 V2y, transportInv (`< _) RealAbGroup.minus-rat b-delta<b1))
+              \in g {y'} $ RealAbGroup.abs_-_< (linarith ((real_<_InfReal {b1} {y'}).2 $ g2 V2y, transportInv (< _) RealAbGroup.minus-rat b-delta<b1))
                                                (linarith ((real_<_InfReal {y'}).2 $ g1 V1y, transportInv (_ <) RealAbGroup.+-rat a1<a+delta))
         }
       }
@@ -141,7 +141,7 @@
 
     \lemma <=<-ball {x : InfReal} {U : Set InfReal} (x<=<U : single x <=< {InfRealUniformSpace} U) : Given (eps : Real) (0 < eps) (x1 : Real) (x1 = x) ∀ {y : Real} (RealAbGroup.abs (x1 - y) < eps -> U y) || Given (B : Real) (B InfRealAbMonoid.< x) ∀ {y : InfReal} (B InfRealAbMonoid.< y -> U y)
       => \case cauchy-ball (unfolds in x<=<U) x \with {
-        | inP (V, h, byLeft (eps,eps>0,x1,x1=x,g)) => byLeft (eps, eps>0, x1, x1=x, \lam d => h (x, (idp, rewriteI x1=x $ g $ transportInv (`< _) (pmap RealAbGroup.abs negative-right *> RealAbGroup.abs_zro) eps>0)) (g d))
+        | inP (V, h, byLeft (eps,eps>0,x1,x1=x,g)) => byLeft (eps, eps>0, x1, x1=x, \lam d => h (x, (idp, rewriteI x1=x $ g $ transportInv (< _) (pmap RealAbGroup.abs negative-right *> RealAbGroup.abs_zro) eps>0)) (g d))
         | inP (V, h, byRight (B,B<x,g)) => byRight (B, B<x, \lam d => h (x, (idp, g B<x)) (g d))
       }
 

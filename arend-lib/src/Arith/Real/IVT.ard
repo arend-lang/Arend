@@ -21,7 +21,7 @@
 \import Paths
 \import Paths.Meta
 \import Set
-\import Set.Subset
+\import Set.Set
 \import Topology.Elem
 \import Topology.MetricSpace
 \import Topology.NormedAbGroup.Real
@@ -148,8 +148,8 @@
 
 \lemma monotone-inverse {U V : Set Real} (f : Elem U -> Real) (fm : IsStrictlyMonotone f) (fc : IsCont f) (fV : \Pi (x : Elem U) -> V (f x))
   (fU : ∀ {v : V} ∃ (a b : Real) (p : a < b) (q : \Pi {x : Real} -> a <= x -> x <= b -> U x) (f (a, q <=-refl (<=-less p)) <= v) (v <= f (b, q (<=-less p) <=-refl)))
-  : Equiv {Elem U} {Elem V} \lam u => (f u, fV u)
-  => Equiv.fromInjSurj _ (\lam p => monotone-injective f fm $ pmap __.1 p) \lam v => \case fU v.2 \with {
+  : IsEquiv {Elem U} {Elem V} \lam u => (f u, fV u)
+  => IsEquiv.fromInjSurj (\lam p => monotone-injective f fm $ pmap __.1 p) \lam v => \case fU v.2 \with {
     | inP (a,b,a<b,abU,fa<=v,v<=fb) => \have p => (IVT-monotone {U,a,b,a<b,abU} f fm fc v.1 fa<=v v<=fb).center
                                        \in inP (p.1, ext p.2)
   }

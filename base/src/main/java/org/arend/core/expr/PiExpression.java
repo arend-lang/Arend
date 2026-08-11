@@ -1,66 +1,36 @@
 package org.arend.core.expr;
 
-import org.arend.core.context.binding.LevelVariable;
-import org.arend.core.context.binding.inference.InferenceLevelVariable;
+import org.arend.core.context.binding.inference.InferenceVariable;
 import org.arend.core.context.param.SingleDependentLink;
-import org.arend.core.expr.type.Type;
+import org.arend.core.definition.ClassField;
 import org.arend.core.expr.visitor.ExpressionVisitor;
 import org.arend.core.expr.visitor.ExpressionVisitor2;
 import org.arend.core.expr.visitor.NormalizeVisitor;
-import org.arend.core.expr.visitor.StripVisitor;
 import org.arend.core.sort.Level;
 import org.arend.core.sort.Sort;
 import org.arend.core.subst.ExprSubstitution;
-import org.arend.core.subst.InPlaceLevelSubstVisitor;
-import org.arend.ext.core.level.LevelSubstitution;
 import org.arend.ext.core.context.CoreParameter;
 import org.arend.ext.core.expr.*;
-import org.arend.ext.core.ops.CMP;
 import org.arend.ext.core.ops.NormalizationMode;
 import org.arend.extImpl.AbstractedExpressionImpl;
-import org.arend.term.concrete.Concrete;
-import org.arend.typechecking.implicitargs.equations.Equations;
 import org.arend.util.Decision;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
 
-public class PiExpression extends Expression implements Type, CorePiExpression, CoreAbsExpression {
-  private Sort myResultSort;
+public class PiExpression extends Expression implements CorePiExpression, CoreAbsExpression {
   private final SingleDependentLink myLink;
   private final Expression myCodomain;
 
-  public PiExpression(Sort resultSort, SingleDependentLink link, Expression codomain) {
+  public PiExpression(SingleDependentLink link, Expression codomain) {
     assert link.hasNext();
-    myResultSort = resultSort;
     myLink = link;
     myCodomain = codomain;
   }
 
-  public void substSort(LevelSubstitution substitution) {
-    myResultSort = myResultSort.subst(substitution);
-  }
-
-  public static Sort generateUpperBound(Sort domSort, Sort codSort, Equations equations, Concrete.SourceNode sourceNode) {
-    if (domSort.getPLevel().getVar() == null || codSort.getPLevel().getVar() == null || domSort.getPLevel().getVar().max(codSort.getPLevel().getVar()) != null) {
-      return new Sort(domSort.getPLevel().max(codSort.getPLevel()), codSort.getHLevel());
-    }
-
-    InferenceLevelVariable pl = new InferenceLevelVariable(LevelVariable.LvlType.PLVL, false, sourceNode);
-    equations.addVariable(pl);
-    Level pLevel = new Level(pl);
-    equations.addEquation(domSort.getPLevel(), pLevel, CMP.LE, sourceNode);
-    equations.addEquation(codSort.getPLevel(), pLevel, CMP.LE, sourceNode);
-    return new Sort(pLevel, codSort.getHLevel());
-  }
-
-  public Sort getResultSort() {
-    return myResultSort;
-  }
-
-  public void setResultSort(Sort sort) {
-    myResultSort = sort;
+  public static Sort piSort(Sort domSort, Sort codSort) {
+    return new Sort(domSort.getPLevel().max(codSort.getPLevel()), codSort.getHLevel(), domSort.isCat() || codSort.isCat());
   }
 
   @NotNull
@@ -89,7 +59,7 @@ public class PiExpression extends Expression implements Type, CorePiExpression, 
         throw new IllegalArgumentException();
       }
     }
-    return new PiExpression(myResultSort, link, myCodomain);
+    return new PiExpression(link, myCodomain);
   }
 
   @Override
@@ -99,7 +69,7 @@ public class PiExpression extends Expression implements Type, CorePiExpression, 
     link = link.getNext();
     Expression result = myCodomain;
     if (link.hasNext()) {
-      result = new PiExpression(myResultSort, link, result);
+      result = new PiExpression(link, result);
     }
     return result.subst(subst);
   }
@@ -107,6 +77,30 @@ public class PiExpression extends Expression implements Type, CorePiExpression, 
   @Override
   public Expression applyExpression(Expression expression, boolean normalizing) {
     return applyExpression(expression);
+  }
+
+  @Override
+  public PiExpression replaceInfinityLevel(InferenceVariable variable) {
+    Expression codomain = myCodomain.replaceInfinityLevel(variable);
+    return codomain == null ? null : new PiExpression(myLink, codomain);
+  }
+
+  @Override
+  public Expression replaceInferenceVariable() {
+    Expression codomain = myCodomain.replaceInferenceVariable();
+    return codomain == null ? null : new PiExpression(myLink, codomain);
+  }
+
+  @Override
+  public Expression replaceInfinityLevel(int index, List<ClassField> fields) {
+    Expression codomain = myCodomain.replaceInfinityLevel(index, fields);
+    return codomain == null ? null : new PiExpression(myLink, codomain);
+  }
+
+  @Override
+  public PiExpression replaceInfinityLevel(Level level) {
+    Expression codomain = myCodomain.replaceInfinityLevel(level);
+    return codomain == null ? null : new PiExpression(myLink, codomain);
   }
 
   @Override
@@ -122,16 +116,6 @@ public class PiExpression extends Expression implements Type, CorePiExpression, 
   @Override
   public <P, R> R accept(@NotNull CoreExpressionVisitor<? super P, ? extends R> visitor, P params) {
     return visitor.visitPi(this, params);
-  }
-
-  @Override
-  public PiExpression getExpr() {
-    return this;
-  }
-
-  @Override
-  public Sort getSortOfType() {
-    return myResultSort;
   }
 
   @Override
@@ -162,16 +146,6 @@ public class PiExpression extends Expression implements Type, CorePiExpression, 
       cod = piCod.getCodomain().normalize(NormalizationMode.WHNF);
     }
     return cod;
-  }
-
-  @Override
-  public void subst(InPlaceLevelSubstVisitor substVisitor) {
-    substVisitor.visitPi(this, null);
-  }
-
-  @Override
-  public PiExpression strip(StripVisitor visitor) {
-    return visitor.visitPi(this, null);
   }
 
   @NotNull

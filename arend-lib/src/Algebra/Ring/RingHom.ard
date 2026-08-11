@@ -1,6 +1,7 @@
 \import Algebra.Field
 \import Algebra.Group
 \import Algebra.Group.GroupHom
+\import Algebra.Group.SubGroup
 \import Algebra.Meta
 \import Algebra.Monoid
 \import Algebra.Monoid.MonoidHom
@@ -9,16 +10,17 @@
 \import Algebra.Ring.Ideal
 \import Algebra.Ring.MPoly
 \import Algebra.Ring.Poly()
-\import Algebra.Ring.Sub
 \import Algebra.Semiring
 \import Arith.Int
 \import Arith.Nat
 \import Category
+\import Data.Array
 \import Function (IsInj, IsSurj)
 \import Function.Meta
 \import Logic.Unique
 \import Logic
 \import Logic.Meta
+\import Meta
 \import Paths
 \import Paths.Meta
 
@@ -26,7 +28,7 @@
   | func-zro => zro_*-right
   | func-+ => ldistr
 
-\lemma *-addMonoidHom-right {R : PseudoSemiring} {a : R} : AddMonoidHom R R (`* a) \cowith
+\lemma *-addMonoidHom-right {R : PseudoSemiring} {a : R} : AddMonoidHom R R (* a) \cowith
   | func-zro => zro_*-left
   | func-+ => rdistr
 
@@ -42,34 +44,37 @@
 \lemma *-addGroupHom-left {R : PseudoRing} {a : R} : AddGroupHom R R (a *) \cowith
   | func-+ => ldistr
 
-\lemma *-addGroupHom-right {R : PseudoRing} {a : R} : AddGroupHom R R (`* a) \cowith
+\lemma *-addGroupHom-right {R : PseudoRing} {a : R} : AddGroupHom R R (* a) \cowith
   | func-+ => rdistr
 
-\record RingHom \extends SemiringHom, AddGroupHom {
+\record PseudoRingHom \extends AddGroupHom, SemigroupHom {
+  \override Dom : PseudoRing
+  \override Cod : PseudoRing
+} \where {
+  \lemma func-Ideal_closure {R S : CRing} (f : PseudoRingHom R S) {J : \Set} {g : J -> R} {x : R} (gx : Ideal.closure g x) : Ideal.closure (\lam j => f (g j)) (f x) \elim gx
+    | inP (l,p) => inP (map (\lam s => (f s.1, s.2)) l, pmap f p *> f.func-BigSum *> pmap S.BigSum (exts \lam j => f.func-*))
+
+  \lemma func-Ideal_sclosure {R S : CRing} (f : PseudoRingHom R S) {U : R -> \Prop} {x : R} (Ux : Ideal.sclosure U x) : Ideal.sclosure (SetIm f U) (f x) \elim Ux
+    | inP (l,p) => inP (map (\lam s => later (f s.1, (f s.2.1, SetIm-con s.2.2))) l, pmap f p *> f.func-BigSum *> pmap S.BigSum (exts \lam j => f.func-*))
+
+  \lemma func-Ideal_lclosure {R S : CRing} (f : PseudoRingHom R S) {l : Array R} {x : R} (lx : Ideal.lclosure l x) : Ideal.lclosure (\lam j => f (l j)) (f x)
+    => func-Ideal_closure f {_} {l} lx
+
+  \func func-Ideal {R S : CRing} (f : PseudoRingHom R S) (I : Ideal S) : Ideal R \cowith
+    | contains x => I (f x)
+    | contains_zro => transportInv I f.func-zro I.contains_zro
+    | contains_+ Ifx Ify => transportInv I f.func-+ $ I.contains_+ Ifx Ify
+    | ideal-left Ifa => transportInv I f.func-* $ I.ideal-left Ifa
+}
+
+\record RingHom \extends PseudoRingHom, SemiringHom {
   \override Dom : Ring
   \override Cod : Ring
 
   \protected \func Kernel : TIdeal Dom \cowith
-    | SubAddGroup => AddGroupHom.Kernel
+    | SubAddGroup => KernelAddGroup \this
     | ideal-left A0 => rewrite (func-*, A0, zro_*-right) idp
     | ideal-right A0 => rewrite (func-*, A0, zro_*-left) idp
-
-  \protected \func Image : SubRing Cod \cowith
-    | SubRing => ringHomImage _
-
-  \protected \func image : RingHom (SubRing.IRing {Image}) Cod \cowith
-    | func x => x.1
-    | func-+ => idp
-    | func-ide => idp
-    | func-* => idp
-    \where {
-      \lemma isInj : IsInj image => \lam p => ext p
-
-      \lemma isSurj (s : IsSurj func) : IsSurj image
-        => \lam y => \case s y \with {
-        | inP (x, p) => inP ((func x, inP (x, idp)), p)
-      }
-    }
 } \where {
     \func equals {R S : Ring} {f g : RingHom R S} (p : \Pi (x : R) -> f x = g x) : f = g
       => exts p
@@ -86,7 +91,7 @@
       | func-+ => pmap g f.func-+ *> g.func-+
       | func-* => pmap g f.func-* *> g.func-*
 
-    \lemma contr-isTerm {R S : Ring} (c : Contr S) : Contr (RingHom R S) \cowith
+  \lemma contr-isTerm {R S : Ring} (c : Contr S) : Contr (RingHom R S) \cowith
       | center => \new RingHom {
         | func _ => c.center
         | func-+ => c.contraction _
@@ -112,7 +117,7 @@
           \have | (inP (p,pq)) => gg x
                 | (inP ((s : MPoly (Fin l.len) (PolyAlgebra R)),sq)) => MPoly-surj {Fin l.len} (polyMapEvalRingHom f a) fg p
           \in inP (MPoly_Fin-suc'.retHom s, pq *> rewrite (inv sq, MPoly_Fin-suc'.map-comm) (pmap (mPolyEval l)
-              (inv mPoly-map-comp *> pmap (mPoly-map __ s) (exts \lam p => inv polyEval_polyMap *> pmap (polyEval __ _) (polyMap-comp f g)) *> mPoly-map-comp {_} {PolyAlgebra R} {PolyAlgebra S}) *> inv MPoly_Fin-suc'.eval-comm))
+              (inv mPoly-map-comp *> pmap (mPoly-map __ s) (exts \lam p => unfold (inv polyEval_polyMap) *> pmap (polyEval __ _) (polyMap-comp f g)) *> mPoly-map-comp {_} {PolyAlgebra R} {PolyAlgebra S}) *> inv MPoly_Fin-suc'.eval-comm))
 
     \lemma isAlgebraGenerated-poly {R E : CRing} {f : RingHom R E} {a : E}
                                    (fg : \Pi (x : E) -> ∃ (p : Poly R) (polyMapEval f p a = x)) : isAlgebraGenerated f (a :: nil)
@@ -120,27 +125,24 @@
 
   \func KernelC {R : CRing} {S : Ring} (f : RingHom R S) : Ideal R \cowith
     | TIdeal => f.Kernel
-
-  \func ImageC {R : Ring} {S : CRing} (f : RingHom R S) : CSubRing S \cowith
-    | SubRing => ringHomImage f
 }
 
 \func natMap {R : Semiring} : SemiringHom NatSemiring R \cowith
   | func => natCoef
   | func-+ {n m : Nat} : R.natCoef (n + m) = natCoef n + natCoef m \elim m {
     | 0 => inv (pmap (natCoef n +) natCoefZero *> zro-right)
-    | suc m => natCoefSuc (n + m) *> pmap (`+ ide) func-+ *> +-assoc *> pmap (natCoef n +) (inv (natCoefSuc m))
+    | suc m => natCoefSuc (n + m) *> pmap (+ ide) func-+ *> +-assoc *> pmap (natCoef n +) (inv (natCoefSuc m))
   }
   | func-zro => natCoefZero
-  | func-ide => natCoefSuc 0 *> pmap (`+ ide) natCoefZero *> zro-left
+  | func-ide => natCoefSuc 0 *> pmap (+ ide) natCoefZero *> zro-left
   | func-* {n m : Nat} : R.natCoef (n * m) = natCoef n * natCoef m \elim m {
     | 0 => natCoefZero *> inv (pmap (natCoef n *) natCoefZero *> zro_*-right)
-    | suc m => func-+ *> pmap (`+ natCoef n) func-* *> inv (pmap (natCoef n *) (natCoefSuc m) *> ldistr *> pmap (natCoef n * natCoef m +) ide-right)
+    | suc m => func-+ *> pmap (+ natCoef n) func-* *> inv (pmap (natCoef n *) (natCoefSuc m) *> ldistr *> pmap (natCoef n * natCoef m +) ide-right)
   }
 
 \lemma natComm {R : Semiring} (n : Nat) (x : R) : natMap n * x = x * natMap n \elim n
-  | 0 => pmap (`* x) natCoefZero *> zro_*-left *> inv (pmap (x *) natCoefZero *> zro_*-right)
-  | suc n => pmap (`* x) (natCoefSuc n) *> rdistr *> pmap (natCoef n * x +) ide-left *> pmap (`+ x) (natComm n x) *> inv (pmap (x *) (natCoefSuc n) *> ldistr *> pmap (x * natCoef n +) ide-right)
+  | 0 => pmap (* x) natCoefZero *> zro_*-left *> inv (pmap (x *) natCoefZero *> zro_*-right)
+  | suc n => pmap (* x) (natCoefSuc n) *> rdistr *> pmap (natCoef n * x +) ide-left *> pmap (+ x) (natComm n x) *> inv (pmap (x *) (natCoefSuc n) *> ldistr *> pmap (x * natCoef n +) ide-right)
 
 \func intMap {R : Ring} : RingHom IntRing R \cowith
   | func => intCoef
@@ -166,7 +168,7 @@
       | 0, suc _ \as m => inv (pmap (__ - natCoef m) natCoefZero *> zro-left)
       | suc _ \as n, 0 => inv (pmap (natCoef n + negative __) natCoefZero *> pmap (natCoef n +) negative_zro *> zro-right)
       | suc n, suc m => intCoef_diff n m *>
-      pmap (natCoef n +) (inv (pmap (ide +) negative_+ *> inv +-assoc *> pmap (`- natCoef m) negative-right *> zro-left)) *>
+      pmap (natCoef n +) (inv (pmap (ide +) negative_+ *> inv +-assoc *> pmap (- natCoef m) negative-right *> zro-left)) *>
       inv (pmap2 (__ + negative __) (natCoefSuc n) (natCoefSuc m) *> +-assoc)
   }
 
