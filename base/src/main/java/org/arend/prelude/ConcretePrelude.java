@@ -75,6 +75,16 @@ public class ConcretePrelude implements ArendPrelude {
   }
 
   @Override
+  public CoreFunctionDefinition getFill2() {
+    return Prelude.FILL2;
+  }
+
+  @Override
+  public CoreFunctionDefinition getFill3() {
+    return Prelude.FILL3;
+  }
+
+  @Override
   public CoreDataDefinition getNat() {
     return Prelude.NAT;
   }
@@ -299,6 +309,18 @@ public class ConcretePrelude implements ArendPrelude {
   public ArendRef getHomTypeRef() {
     if (Prelude.DPATH_INFIX != null) return Prelude.DPATH_INFIX.getRef();
     return myPreludeScope.resolveName("~>");
+  }
+
+  @Override
+  public ArendRef getFill2Ref() {
+    if (Prelude.FILL2 != null) return Prelude.FILL2.getRef();
+    return myPreludeScope.resolveName("fill2");
+  }
+
+  @Override
+  public ArendRef getFill3Ref() {
+    if (Prelude.FILL3 != null) return Prelude.FILL3.getRef();
+    return myPreludeScope.resolveName("fill3");
   }
 
   @Override

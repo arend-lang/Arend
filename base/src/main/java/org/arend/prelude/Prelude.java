@@ -5,6 +5,7 @@ import org.arend.core.context.param.EmptyDependentLink;
 import org.arend.core.context.param.TypedDependentLink;
 import org.arend.core.context.param.UnusedIntervalDependentLink;
 import org.arend.core.definition.*;
+import org.arend.core.elimtree.IntervalElim;
 import org.arend.core.expr.*;
 import org.arend.core.pattern.BindingPattern;
 import org.arend.core.pattern.ConstructorExpressionPattern;
@@ -63,6 +64,8 @@ public class Prelude implements ArendPrelude {
   public static FunctionDefinition DPATH_INFIX;
   public static Constructor DPATH_CON;
   public static FunctionDefinition DAT;
+
+  public static FunctionDefinition FILL2, FILL3;
 
   public static DataDefinition NAT;
   public static Constructor ZERO, SUC;
@@ -176,7 +179,53 @@ public class Prelude implements ArendPrelude {
         DPATH_CON = DPATH.getConstructor("dpath");
       }
       case "~>" -> DPATH_INFIX = (FunctionDefinition) definition;
-      case "d@" -> DAT = (FunctionDefinition) definition;
+      case "d@" -> {
+        DAT = (FunctionDefinition) definition;
+        DAT.setStatus(Definition.TypeCheckingStatus.NO_ERRORS);
+      }
+      case "fill2" -> {
+        FILL2 = (FunctionDefinition) definition;
+        DependentLink a = FILL2.getParameters().getNext();
+        DependentLink f = a.getNext().getNext().getNext();
+        DependentLink g = f.getNext();
+        DependentLink i = g.getNext();
+        DependentLink j = i.getNext();
+
+        List<IntervalElim.CasePair> cases = new ArrayList<>(2);
+        cases.add(new IntervalElim.CasePair(new ReferenceExpression(a), AtExpression.make(new ReferenceExpression(g), new ReferenceExpression(j), false, true), true));
+        cases.add(new IntervalElim.CasePair(AtExpression.make(new ReferenceExpression(f), new ReferenceExpression(i), false, true), null, true));
+
+        FILL2.setBody(new IntervalElim(8, cases, null));
+        FILL2.setStatus(Definition.TypeCheckingStatus.NO_ERRORS);
+      }
+      case "fill3" -> {
+        FILL3 = (FunctionDefinition) definition;
+        DependentLink aa1 = DependentLink.Helper.get(FILL3.getParameters(), 14);
+        DependentLink topFace = aa1.getNext().getNext().getNext();
+        DependentLink rightFace = topFace.getNext();
+        DependentLink backFace = rightFace.getNext();
+        DependentLink frontFace = backFace.getNext();
+        DependentLink i = frontFace.getNext();
+        DependentLink j = i.getNext();
+        DependentLink k = j.getNext();
+
+        List<IntervalElim.CasePair> cases = new ArrayList<>(3);
+        cases.add(new IntervalElim.CasePair(
+          AtExpression.make(new ReferenceExpression(aa1), new ReferenceExpression(j), false, true),
+          AtExpression.make(AtExpression.make(new ReferenceExpression(rightFace), new ReferenceExpression(k), false, true), new ReferenceExpression(j), false, true),
+          true));
+        cases.add(new IntervalElim.CasePair(
+          AtExpression.make(AtExpression.make(new ReferenceExpression(backFace), new ReferenceExpression(i), false, true), new ReferenceExpression(k), false, true),
+          AtExpression.make(AtExpression.make(new ReferenceExpression(frontFace), new ReferenceExpression(i), false, true), new ReferenceExpression(k), false, true),
+          true));
+        cases.add(new IntervalElim.CasePair(
+          AtExpression.make(AtExpression.make(new ReferenceExpression(topFace), new ReferenceExpression(i), false, true), new ReferenceExpression(j), false, true),
+          null,
+          true));
+
+        FILL3.setBody(new IntervalElim(24, cases, null));
+        FILL3.setStatus(Definition.TypeCheckingStatus.NO_ERRORS);
+      }
       case "Path" -> {
         PATH = (DataDefinition) definition;
         PATH.setSortExpression(new SortExpression.Prev(new SortExpression.Var(0, Collections.emptyList(), ConstLevel.INFINITY)));
@@ -285,6 +334,8 @@ public class Prelude implements ArendPrelude {
     consumer.accept(DPATH_CON);
     consumer.accept(DPATH_INFIX);
     consumer.accept(DAT);
+    consumer.accept(FILL2);
+    consumer.accept(FILL3);
     consumer.accept(PATH);
     consumer.accept(PATH_CON);
     consumer.accept(PATH_INFIX);
@@ -385,6 +436,16 @@ public class Prelude implements ArendPrelude {
   @Override
   public FunctionDefinition getHomType() {
     return DPATH_INFIX;
+  }
+
+  @Override
+  public FunctionDefinition getFill2() {
+    return FILL2;
+  }
+
+  @Override
+  public FunctionDefinition getFill3() {
+    return FILL3;
   }
 
   @Override
@@ -600,6 +661,16 @@ public class Prelude implements ArendPrelude {
   @Override
   public ArendRef getHomTypeRef() {
     return DPATH_INFIX == null ? null : DPATH_INFIX.getRef();
+  }
+
+  @Override
+  public ArendRef getFill2Ref() {
+    return null;
+  }
+
+  @Override
+  public ArendRef getFill3Ref() {
+    return null;
   }
 
   @Override

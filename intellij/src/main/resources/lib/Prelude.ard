@@ -52,6 +52,26 @@
   | _, dleft => a
   | _, dright => b
 
+\func fill2 {C :⁺ \Cat} {a b c :⁺ C} (f :⁺ a ~> b) (g :⁺ b ~> c) (i j :⁺ DI) : C \elim i, j
+  | dleft, j => a
+  | dright, j => g j
+  | i, dleft => f i
+
+\func fill3 {C :⁺ \Cat} {a b c a' b' c' :⁺ C} (_ : \Sigma)
+  {ab : a ~> b} {bc : b ~> c} {ac : a ~> c}
+  {a'b' : a' ~> b'} {b'c' : b' ~> c'} {a'c' : a' ~> c'}
+  {aa' : a ~> a'} {bb' : b ~> b'} {cc' : c ~> c'}
+  (topFace :⁺ DPath (\lam i => ab i ~> a'b' i) aa' bb')
+  (rightFace :⁺ DPath (\lam k => bc k ~> b'c' k) bb' cc')
+  (backFace :⁺ DPath (\lam i => ab i ~> ac i) (dpath \lam _ => a) bc)
+  (frontFace :⁺ DPath (\lam i => a'b' i ~> a'c' i) (dpath \lam _ => a') b'c')
+  (i j k :⁺ DI) : C \elim i, j, k
+  | dleft, j, k => aa' j
+  | dright, j, k => rightFace k j
+  | i, dleft, k => backFace i k
+  | i, dright, k => frontFace i k
+  | i, j, dleft => topFace i j
+
 \data Nat
   | zero
   | suc Nat

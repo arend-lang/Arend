@@ -210,4 +210,16 @@ public class CatPreludeTest extends TypeCheckingTestCase {
       \\func testRight (d : D) : dseg d dright = con2 => idp
       """);
   }
+
+  @Test
+  public void fill2Test() {
+    typeCheckModule("""
+      \\func test1 {C : \\Cat} {a b c : C} (f : a ~> b) (g : b ~> c) : dpath (fill2 f g dleft) = dpath \\lam _ => a
+        => idp
+      \\func test2 {C : \\Cat} {a b c : C} (f : a ~> b) (g : b ~> c) : dpath (fill2 f g dright) = g
+        => idp
+      \\func test3 {C : \\Cat} {a b c : C} (f : a ~> b) (g : b ~> c) : dpath (fill2 f g __ dleft) = f
+        => idp
+      """);
+  }
 }
