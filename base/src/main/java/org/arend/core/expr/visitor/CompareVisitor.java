@@ -568,7 +568,7 @@ public class CompareVisitor implements ExpressionVisitor2<Expression, Expression
     ReferenceExpression paramRef = new ReferenceExpression(param);
     Expression argumentType = pathExpr1.getArgumentType();
     LamExpression lamExpr = new LamExpression(param, AtExpression.make(expr2, paramRef, false, directed));
-    Expression argType = new PiExpression(param, directed ? argumentType : AppExpression.make(argumentType, paramRef, true));
+    Expression argType = new PiExpression(param, AppExpression.make(argumentType, paramRef, true));
     if (!(correctOrder ? compare(pathExpr1.getArgument(), lamExpr, argType, true) : compare(lamExpr, pathExpr1.getArgument(), argType, true))) {
       initResult(pathExpr1, expr2, correctOrder);
       return false;

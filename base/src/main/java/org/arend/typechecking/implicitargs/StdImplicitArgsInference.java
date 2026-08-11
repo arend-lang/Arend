@@ -173,11 +173,13 @@ public class StdImplicitArgsInference implements ImplicitArgsInference {
     }
 
     if (isExplicit) {
-      if (result instanceof DefCallResult defCallResult && defCallResult.getDefinition() == Prelude.PATH_CON) {
-        SingleDependentLink lamParam = new TypedSingleDependentLink(true, "i", Interval());
+      if (result instanceof DefCallResult defCallResult && (defCallResult.getDefinition() == Prelude.PATH_CON || defCallResult.getDefinition() == Prelude.DPATH_CON)) {
+        boolean isDirected = defCallResult.getDefinition() == Prelude.DPATH_CON;
+        Constructor pathCon = isDirected ? Prelude.DPATH_CON : Prelude.PATH_CON;
+        SingleDependentLink lamParam = new TypedSingleDependentLink(true, "i", isDirected ? DI() : Interval(), false, isDirected ? BindingVariance.COVARIANT : BindingVariance.INVARIANT);
         TypecheckingResult argResult;
         if (defCallResult.getArguments().isEmpty()) {
-          InferenceVariable infVar = new FunctionInferenceVariable(Prelude.PATH_CON, Prelude.PATH_CON.getDataTypeParameters(), 1, UniverseExpression.OMEGA, fun, myVisitor.getAllBindings());
+          InferenceVariable infVar = new FunctionInferenceVariable(pathCon, pathCon.getDataTypeParameters(), 1, UniverseExpression.OMEGA, fun, myVisitor.getAllBindings());
           infVar.setType(new UniverseExpression(new SortExpression.InfVar(infVar)));
           Expression binding = InferenceReferenceExpression.make(infVar, myVisitor.getEquations());
           result = result.applyExpression(new LamExpression(lamParam, binding), true, myVisitor, fun);
@@ -185,21 +187,7 @@ public class StdImplicitArgsInference implements ImplicitArgsInference {
         } else {
           argResult = myVisitor.checkArgument(arg, new PiExpression(lamParam, AppExpression.make(defCallResult.getArguments().getFirst(), new ReferenceExpression(lamParam), true)), result, null);
         }
-        return argResult == null ? null : ((DefCallResult) result).applyPathArgument(false, argResult.expression, myVisitor, arg);
-      }
-      if (result instanceof DefCallResult defCallResult && defCallResult.getDefinition() == Prelude.DPATH_CON) {
-        SingleDependentLink lamParam = new TypedSingleDependentLink(true, "i", DI(), false, BindingVariance.COVARIANT);
-        TypecheckingResult argResult;
-        if (defCallResult.getArguments().isEmpty()) {
-          InferenceVariable infVar = new FunctionInferenceVariable(Prelude.DPATH_CON, Prelude.DPATH_CON.getDataTypeParameters(), 1, UniverseExpression.OMEGA, fun, myVisitor.getAllBindings());
-          infVar.setType(new UniverseExpression(new SortExpression.InfVar(infVar)));
-          Expression binding = InferenceReferenceExpression.make(infVar, myVisitor.getEquations());
-          result = result.applyExpression(binding, true, myVisitor, fun);
-          argResult = myVisitor.checkArgument(arg, new PiExpression(lamParam, binding), result, null);
-        } else {
-          argResult = myVisitor.checkArgument(arg, new PiExpression(lamParam, defCallResult.getArguments().getFirst()), result, null);
-        }
-        return argResult == null ? null : ((DefCallResult) result).applyPathArgument(true, argResult.expression, myVisitor, arg);
+        return argResult == null ? null : ((DefCallResult) result).applyPathArgument(isDirected, argResult.expression, myVisitor, arg);
       }
 
       result = fixImplicitArgs(result, result.getImplicitParameters(), fun, false, null);

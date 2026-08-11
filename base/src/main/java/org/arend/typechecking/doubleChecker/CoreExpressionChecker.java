@@ -957,17 +957,11 @@ public class CoreExpressionChecker implements ExpressionVisitor<Expression, Expr
 
   @Override
   public Expression visitPath(PathExpression expr, Expression expectedType) {
-    if (expr.isDirected()) {
-      expr.getArgumentType().accept(this, UniverseExpression.OMEGA);
-      TypedSingleDependentLink param = new TypedSingleDependentLink(true, "i", ExpressionFactory.DI(), false, BindingVariance.COVARIANT);
-      expr.getArgument().accept(this, new PiExpression(param, expr.getArgumentType()));
-      return check(expectedType, expr.getType(), expr);
-    } else {
-      expr.getArgumentType().accept(this, new PiExpression(UnusedIntervalDependentLink.INSTANCE, UniverseExpression.OMEGA));
-      TypedSingleDependentLink param = new TypedSingleDependentLink(true, "i", ExpressionFactory.Interval());
-      expr.getArgument().accept(this, new PiExpression(param, AppExpression.make(expr.getArgumentType(), new ReferenceExpression(param), true)));
-      return check(expectedType, expr.getType(), expr);
-    }
+    boolean isDirected = expr.isDirected();
+    expr.getArgumentType().accept(this, new PiExpression(isDirected ? new TypedSingleDependentLink(true, null, ExpressionFactory.DI()) : UnusedIntervalDependentLink.INSTANCE, UniverseExpression.OMEGA));
+    TypedSingleDependentLink param = new TypedSingleDependentLink(true, "i", isDirected ? ExpressionFactory.DI() : ExpressionFactory.Interval(), false, isDirected ? BindingVariance.COVARIANT : BindingVariance.INVARIANT);
+    expr.getArgument().accept(this, new PiExpression(param, AppExpression.make(expr.getArgumentType(), new ReferenceExpression(param), true)));
+    return check(expectedType, expr.getType(), expr);
   }
 
   @Override
@@ -978,6 +972,6 @@ public class CoreExpressionChecker implements ExpressionVisitor<Expression, Expr
       throw new CoreException(CoreErrorWrapper.make(new TypeMismatchError(DocFactory.refDoc((directed ? Prelude.DPATH : Prelude.PATH).getRef()), type, mySourceNode), expr.getPathArgument()));
     }
     expr.getIntervalArgument().accept(this, directed ? ExpressionFactory.DI() : Interval());
-    return check(expectedType, directed ? dataCall.getDefCallArguments().getFirst() : AppExpression.make(dataCall.getDefCallArguments().getFirst(), expr.getIntervalArgument(), true), expr);
+    return check(expectedType, AppExpression.make(dataCall.getDefCallArguments().getFirst(), expr.getIntervalArgument(), true), expr);
   }
 }

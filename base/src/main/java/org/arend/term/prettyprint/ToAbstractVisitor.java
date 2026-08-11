@@ -234,6 +234,20 @@ public class ToAbstractVisitor extends BaseExpressionVisitor<Void, Concrete.Expr
     return null;
   }
 
+  private Concrete.Expression checkDPath(DataCallExpression expr) {
+    if (expr.getDefinition() != Prelude.DPATH || hasFlag(PrettyPrinterFlag.SHOW_PREFIX_PATH)) {
+      return null;
+    }
+
+    LamExpression expr1 = expr.getDefCallArguments().get(0).cast(LamExpression.class);
+    if (expr1 != null) {
+      if (!expr1.getBody().findBinding(expr1.getParameters())) {
+        return cBinOp(convertExpr(expr.getDefCallArguments().get(1)), Prelude.DPATH_INFIX.getReferable(), hasFlag(PrettyPrinterFlag.SHOW_BIN_OP_IMPLICIT_ARGS) || convertSubexpr(expr1.getBody()) ? convertExpr(expr1.getBody()) : null, convertExpr(expr.getDefCallArguments().get(2)));
+      }
+    }
+    return null;
+  }
+
   private Concrete.Expression checkApp(Concrete.Expression expression, boolean isVerbose) {
     if (isVerbose || hasFlag(PrettyPrinterFlag.SHOW_BIN_OP_IMPLICIT_ARGS) || !(expression instanceof Concrete.AppExpression)) {
       return expression;
@@ -500,6 +514,7 @@ public class ToAbstractVisitor extends BaseExpressionVisitor<Void, Concrete.Expr
   @Override
   public Concrete.Expression visitDataCall(DataCallExpression expr, Void params) {
     Concrete.Expression result = checkPath(expr);
+    if (result == null) result = checkDPath(expr);
     return result != null ? result : visitDefCall(expr, params);
   }
 

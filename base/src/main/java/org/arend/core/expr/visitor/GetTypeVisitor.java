@@ -306,7 +306,7 @@ public class GetTypeVisitor implements ExpressionVisitor<Void, Expression> {
     if (!(type instanceof DataCallExpression dataCall && dataCall.getDefinition() == (expr.isDirected() ? Prelude.DPATH : Prelude.PATH))) {
       return type instanceof ErrorExpression ? type : new ErrorExpression();
     }
-    return expr.isDirected() ? dataCall.getDefCallArguments().getFirst() : AppExpression.make(dataCall.getDefCallArguments().getFirst(), expr.getIntervalArgument(), true);
+    return AppExpression.make(dataCall.getDefCallArguments().getFirst(), expr.getIntervalArgument(), true);
   }
 
   @Override

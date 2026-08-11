@@ -60,6 +60,7 @@ public class Prelude implements ArendPrelude {
   public static Constructor DLEFT, DRIGHT;
 
   public static DataDefinition DPATH;
+  public static FunctionDefinition DPATH_INFIX;
   public static Constructor DPATH_CON;
   public static FunctionDefinition DAT;
 
@@ -167,11 +168,14 @@ public class Prelude implements ArendPrelude {
         DLEFT = DI.getConstructor("dleft");
         DRIGHT = DI.getConstructor("dright");
       }
-      case "~>" -> {
+      case "DPath" -> {
         DPATH = (DataDefinition) definition;
         DPATH.setSort(new Sort(Level.INFINITY, ConstLevel.INFINITY));
+        DPATH.setCovariant(1, false);
+        DPATH.setCovariant(2, false);
         DPATH_CON = DPATH.getConstructor("dpath");
       }
+      case "~>" -> DPATH_INFIX = (FunctionDefinition) definition;
       case "d@" -> DAT = (FunctionDefinition) definition;
       case "Path" -> {
         PATH = (DataDefinition) definition;
@@ -279,6 +283,7 @@ public class Prelude implements ArendPrelude {
     consumer.accept(DRIGHT);
     consumer.accept(DPATH);
     consumer.accept(DPATH_CON);
+    consumer.accept(DPATH_INFIX);
     consumer.accept(DAT);
     consumer.accept(PATH);
     consumer.accept(PATH_CON);
@@ -375,6 +380,11 @@ public class Prelude implements ArendPrelude {
   @Override
   public FunctionDefinition getDAt() {
     return DAT;
+  }
+
+  @Override
+  public FunctionDefinition getHomType() {
+    return DPATH_INFIX;
   }
 
   @Override
@@ -585,6 +595,11 @@ public class Prelude implements ArendPrelude {
   @Override
   public ArendRef getDAtRef() {
     return DAT == null ? null : DAT.getRef();
+  }
+
+  @Override
+  public ArendRef getHomTypeRef() {
+    return DPATH_INFIX == null ? null : DPATH_INFIX.getRef();
   }
 
   @Override

@@ -104,6 +104,14 @@ public class CatPreludeTest extends TypeCheckingTestCase {
   @Test
   public void dPathTypeTest() {
     typeCheckModule("""
+      \\func test {C : DI ->+ \\Cat} {a : C dleft} {b : C dright} : \\Type
+        => DPath C a b
+      """);
+  }
+
+  @Test
+  public void dPathInfixTypeTest() {
+    typeCheckModule("""
       \\func test {C : \\Cat} {a b : C} : \\Type
         => a ~> b
       """);
@@ -111,6 +119,15 @@ public class CatPreludeTest extends TypeCheckingTestCase {
 
   @Test
   public void dPathInfTypeError() {
+    typeCheckModule("""
+      \\func test {C : DI ->+ \\Cat0} {a : C dleft} {b : C dright} : \\Type0
+        => DPath C a b
+      """, 1);
+    assertThatErrorsAre(Matchers.typeMismatchError());
+  }
+
+  @Test
+  public void dPathInfixInfTypeError() {
     typeCheckModule("""
       \\func test {C : \\Cat0} {a b : C} : \\Type0
         => a ~> b

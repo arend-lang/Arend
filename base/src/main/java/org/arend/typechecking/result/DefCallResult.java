@@ -157,14 +157,14 @@ public class DefCallResult implements TResult {
     Expression rightExpr = AppExpression.make(argument, ExpressionFactory.Right(isDirected), true);
     ExprSubstitution subst = new ExprSubstitution();
     if (myArguments.size() >= 2) {
-      if (!CompareVisitor.compare(visitor.getEquations(), CMP.EQ, leftExpr, myArguments.get(1), isDirected ? myArguments.get(0) : AppExpression.make(myArguments.get(0), ExpressionFactory.Left(), true), sourceNode)) {
+      if (!CompareVisitor.compare(visitor.getEquations(), CMP.EQ, leftExpr, myArguments.get(1), AppExpression.make(myArguments.get(0), ExpressionFactory.Left(isDirected), true), sourceNode)) {
         visitor.getErrorReporter().report(new PathEndpointMismatchError(visitor.getExpressionPrettifier(), true, myArguments.get(1), leftExpr, sourceNode));
       }
     } else {
       subst.add(myParameters.getFirst(), leftExpr);
     }
     if (myArguments.size() >= 3) {
-      if (!CompareVisitor.compare(visitor.getEquations(), CMP.EQ, rightExpr, myArguments.get(2), isDirected ? myArguments.get(0) : AppExpression.make(myArguments.get(0), ExpressionFactory.Right(), true), sourceNode)) {
+      if (!CompareVisitor.compare(visitor.getEquations(), CMP.EQ, rightExpr, myArguments.get(2), AppExpression.make(myArguments.get(0), ExpressionFactory.Right(isDirected), true), sourceNode)) {
         visitor.getErrorReporter().report(new PathEndpointMismatchError(visitor.getExpressionPrettifier(), false, myArguments.get(2), rightExpr, sourceNode));
       }
     } else {

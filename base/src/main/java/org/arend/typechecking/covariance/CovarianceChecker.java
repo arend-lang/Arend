@@ -136,7 +136,7 @@ public abstract class CovarianceChecker {
       return false;
     }
 
-    if (expr instanceof FunCallExpression funCall && funCall.getDefinition() == Prelude.PATH_INFIX && allowData()) {
+    if (expr instanceof FunCallExpression funCall && (funCall.getDefinition() == Prelude.PATH_INFIX || funCall.getDefinition() == Prelude.DPATH_INFIX) && allowData()) {
       if (checkLevels(funCall.getLevels(), funCall)) {
         return true;
       }

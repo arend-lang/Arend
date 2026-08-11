@@ -42,10 +42,12 @@
   | dleft
   | dright
 
-\data \infix 1 ~> {C :⁺ \Cat} (a b :⁺ C) : \Type
-  | dpath (f :⁺ DI ->⁺ C)
+\data DPath (C :⁺ DI ->⁺ \Cat) (a :⁺ C dleft) (b :⁺ C dright) : \Type
+  | dpath (f :⁺ \Pi (i : DI) ->⁺ C i)
 
-\func \infixl 9 d@ {C :⁺ \Cat} {a b :⁺ C} (p :⁺ a ~> b) (i :⁺ DI) : C \elim p, i
+\func \infix 1 ~> {C :⁺ \Cat} (a b :⁺ C) => DPath (\lam _ => C) a b
+
+\func \infixl 9 d@ {C :⁺ DI ->⁺ \Cat} {a :⁺ C dleft} {b :⁺ C dright} (p :⁺ DPath C a b) (i :⁺ DI) : C i \elim p, i
   | dpath f, i => f i
   | _, dleft => a
   | _, dright => b
