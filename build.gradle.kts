@@ -120,6 +120,11 @@ idea {
 
 tasks.test {
     maxHeapSize = "4g"
+    // StringLibraryTest loads the real arend-lib, whose extension is picked up from `arend-lib/ext`
+    // -- a symlink to `meta/build/classes/java/main`. Without building StdExtension first the
+    // library loads with no extension, every `*.Meta` module fails to resolve, and the string
+    // literal tests fail on a clean checkout. Same rationale as `:intellij:formatterStressTest`.
+    dependsOn(":arend-lib:meta:classes")
 }
 
 // The slow tests are too expensive for `check` to run, but they must still be *compiled* by it:
