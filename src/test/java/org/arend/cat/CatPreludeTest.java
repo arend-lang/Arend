@@ -222,4 +222,12 @@ public class CatPreludeTest extends TypeCheckingTestCase {
         => idp
       """);
   }
+
+  @Test
+  public void nestedDependentDPathTest() {
+    typeCheckModule("""
+      \\func foo {C :+ \\Cat} (f :+ \\Pi (i j k :+ DI) ->⁺ C) (j :+ DI)
+        => dpath \\lam k => dpath \\lam i => f i j k
+      """);
+  }
 }

@@ -35,6 +35,14 @@ public class PathsTest extends TypeCheckingTestCase {
   }
 
   @Test
+  public void nestedDependentPathTest() {
+    typeCheckModule(
+        "\\func foo (D : I -> I -> \\Type) (g : \\Pi (i j : I) -> D i j)\n" +
+        "  => path \\lam j => path \\lam i => g i j"
+    );
+  }
+
+  @Test
   public void squeezeTest() {
     typeCheckModule(
         "\\func squeeze1 (i j : I) => coe (\\lam x => left = x) idp j @ i\n" +

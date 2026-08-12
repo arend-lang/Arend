@@ -13,7 +13,6 @@ import org.arend.core.expr.visitor.CompareVisitor;
 import org.arend.core.expr.visitor.FreeVariablesCollector;
 import org.arend.core.sort.Level;
 import org.arend.core.sort.Sort;
-import org.arend.core.sort.SortExpression;
 import org.arend.core.subst.ExprSubstitution;
 import org.arend.core.subst.Levels;
 import org.arend.ext.core.context.BindingVariance;
@@ -179,10 +178,16 @@ public class StdImplicitArgsInference implements ImplicitArgsInference {
         SingleDependentLink lamParam = new TypedSingleDependentLink(true, "i", isDirected ? DI() : Interval(), false, isDirected ? BindingVariance.COVARIANT : BindingVariance.INVARIANT);
         TypecheckingResult argResult;
         if (defCallResult.getArguments().isEmpty()) {
-          InferenceVariable infVar = new FunctionInferenceVariable(pathCon, pathCon.getDataTypeParameters(), 1, UniverseExpression.OMEGA, fun, myVisitor.getAllBindings());
-          infVar.setType(new UniverseExpression(new SortExpression.InfVar(infVar)));
-          Expression binding = InferenceReferenceExpression.make(infVar, myVisitor.getEquations());
-          result = result.applyExpression(new LamExpression(lamParam, binding), true, myVisitor, fun);
+          DependentLink dataParam = defCallResult.getParameter();
+          Expression paramType = dataParam.getType();
+          InferenceVariable infVar = new FunctionInferenceVariable(pathCon, dataParam, 1, paramType, fun, myVisitor.getAllBindings());
+          Expression newParamType = paramType.replaceInfinityLevel(infVar);
+          if (newParamType != null) {
+            infVar.setType(newParamType);
+          }
+          Expression famRef = InferenceReferenceExpression.make(infVar, myVisitor.getEquations());
+          result = result.applyExpression(famRef, true, myVisitor, fun);
+          Expression binding = AppExpression.make(famRef, new ReferenceExpression(lamParam), true);
           argResult = myVisitor.checkArgument(arg, new PiExpression(lamParam, binding), result, null);
         } else {
           argResult = myVisitor.checkArgument(arg, new PiExpression(lamParam, AppExpression.make(defCallResult.getArguments().getFirst(), new ReferenceExpression(lamParam), true)), result, null);
