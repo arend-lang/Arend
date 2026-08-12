@@ -77,4 +77,14 @@ public class CatPiTest extends TypeCheckingTestCase {
     typeCheckDef("\\func test {C : \\Cat} {a : C} (x :+ C) (p : a ~> x) => 0", 1);
     assertThatErrorsAre(typecheckingError());
   }
+
+  @Test
+  public void partiallyAppliedLetTest() {
+    typeCheckModule("""
+      \\func foo (n :+ Nat) => n
+      \\func bar (n :+ Nat) =>
+       \\let t => foo
+       \\in t n
+      """);
+  }
 }
