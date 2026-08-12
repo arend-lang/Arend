@@ -715,6 +715,9 @@
 \lemma degree<=_FinSum {R : Ring} {J : FinSet} {a : J -> Poly R} {n : Nat} (d : \Pi (j : J) -> degree<= (a j) n) : degree<= (AbMonoid.FinSum a) n
   => AbMonoid.FinSum-pred {_} {degree<= __ n} () (\lam {p} {q} => degree<=_+) d
 
+\lemma degree<_*c {R : Ring} {a : R} {p : Poly R} {n : Nat} (d : degree< p n) : degree< (a PolyRing.*c p) n
+  => \lam s => polyCoef_*c *> pmap (a *) (d s) *> R.zro_*-right
+
 \lemma degree<=_*c {R : Ring} {a : R} {p : Poly R} {n : Nat} (d : degree<= p n) : degree<= (a PolyRing.*c p) n \elim p, n
   | pzero, n => ()
   | padd p e, 0 => pmap (a PolyRing.*c) d
@@ -860,6 +863,10 @@
     | yes _ => zero<=_
     | no _ => suc<=suc (degree<=_degree d)
   }
+
+-- | A polynomial of positive degree is non-zero, since `degree 0 = 0`.
+\lemma degree-suc/=0 {R : Ring.Dec} {p : Poly R} {n : Nat} (dp : degree p = suc n) : p /= 0
+  => \lam p=0 => \case transport (0 NatOrder.<) (inv dp *> pmap degree p=0) NatOrder.zero<suc \with {}
 
 \lemma degree_polyMap {R S : Ring.Dec} {f : RingHom R S} (inj : IsInj f) {p : Poly R} : degree (polyMap f p) = degree p \elim p
   | pzero => idp
@@ -1206,6 +1213,20 @@
      \in degree1PolyDivision-unique (e * padd 1 (negative z)) z
            (deflate-eq (e * padd 1 (negative z)) z)
            (inv (pmap (e * padd 1 (negative z) +) (pmap (padd pzero) root *> peq) *> zro-right))
+
+{- | **The divided difference.** `deflate p z` is the difference quotient of `p` between `y` and
+     `z`: $p(y) = (\mathrm{deflate}\ p\ z)(y) \cdot (y - z) + p(z)$. Equivalently, the exact
+     first-order Taylor formula of `p` at `z`, with the remainder itself a polynomial value. -}
+\lemma polyEval_deflate {R : CRing} (p : Poly R) (z y : R)
+  : polyEval p y = polyEval (deflate p z) y * (y - z) + polyEval p z
+  => pmap (polyEval __ y) (deflate-eq p z)
+     *> polyEvalRingHom.func-+
+     *> pmap2 (+) (polyEvalRingHom.func-* *> pmap (_ *) (polyEval_padd1 z y)) simplify
+
+-- | The difference-quotient form: $p(y) - p(z) = (\mathrm{deflate}\ p\ z)(y) \cdot (y - z)$.
+\lemma polyEval_deflate-diff {R : CRing} (p : Poly R) (z y : R)
+  : polyEval p y - polyEval p z = polyEval (deflate p z) y * (y - z)
+  => rewrite (polyEval_deflate p z y) equation.cRing
 
 -- | Dividing by `X - z` drops the degree bound by one.
 \lemma deflate-degree {R : Ring} {p : Poly R} {n : Nat} (d : degree< p (suc n)) (z : R)

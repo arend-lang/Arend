@@ -11,9 +11,11 @@
 \import Arith.Real.Field
 \import Arith.Real.UpperReal
 \import Data.Array
+\import Data.Or
 \import Function.Meta
 \import Logic
 \import Order.Lattice
+\import Order.LinearOrder
 \import Order.PartialOrder
 \import Paths
 \import Paths.Meta
@@ -51,6 +53,15 @@
 \lemma coefMax-cond {X : PseudoNormedRing} {q : Poly X} {m : Nat} (k : Fin m)
   : lnorm (polyCoef q k) <= coefMax q m
   => Big_<=_join1 {_} {coefNorms q m} k
+
+{- | Past the degree bound the coefficients vanish, so `coefMax q m` bounds *every* coefficient,
+     not only the first `m`. -}
+\lemma coefMax-cond-all {X : PseudoNormedRing} {q : Poly X} {m : Nat} (d : degree< q m) (j : Nat)
+  : lnorm (polyCoef q j) <= coefMax q m
+  => \case LinearOrder.dec<_<= j m \with {
+    | inl j<m => rewriteI toFin=id (coefMax-cond (toFin j j<m))
+    | inr m<=j => rewrite (d m<=j, lnorm_zro) coefMax>=0
+  }
 
 -- | A uniform bound `c` on the first `m` coefficients bounds `‖q(z)‖` by `c * powSum ‖z‖ m`.
 \lemma lnorm_polyEval-boundD {X : PseudoNormedRing} {q : Poly X} {m : Nat} (d : degree< q m)

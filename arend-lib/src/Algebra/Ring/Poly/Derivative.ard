@@ -1,0 +1,120 @@
+\import Algebra.Group
+\import Algebra.Meta
+\import Algebra.Monoid
+\import Algebra.Pointed
+\import Algebra.Ring
+\import Algebra.Ring.Poly
+\import Algebra.Ring.RingHom
+\import Algebra.Semiring
+\import Arith.Nat
+\import Function.Meta
+\import Order.PartialOrder
+\import Paths
+\import Paths.Meta
+\open PolyRing (*c, zro_*c, *c-ldistr)
+
+{- | **The formal derivative of a polynomial.** Since `padd p e` denotes $pX + e$, the recursion is
+     $(pX + e)' = p + Xp'$, and $Xq$ is `padd q 0`. -}
+\func polyDeriv {R : Ring} (p : Poly R) : Poly R \elim p
+  | pzero => pzero
+  | padd p e => p + padd (polyDeriv p) 0
+  | peq => peq
+
+{- | $X(p + q) = Xp + Xq$ in the `padd` presentation. The right-hand side *reduces* to
+     `padd (p + q) (0 + 0)`, so this is really `R.zro-left` — which is why `polyDeriv_+` cannot hand
+     the two summands to a ring solver. -}
+\private \lemma padd0_+ {R : Ring} {p q : Poly R} : padd (p + q) 0 = padd p 0 + padd q 0
+  => pmap (padd (p + q)) (inv R.zro-left)
+
+{- | The additive rearrangement behind `polyDeriv_+`. Stated over an abstract group with all four
+     operands variables: at `Poly R` the summands `padd _ 0` collapse into a single `padd`, so the
+     solver sees one atom where it needs two. -}
+\private \lemma rearrange {A : AbGroup} (p q x y : A) : p + q + (x + y) = p + x + (q + y)
+  => equation
+
+-- | The derivative is additive.
+\lemma polyDeriv_+ {R : Ring} {p q : Poly R} : polyDeriv (p + q) = polyDeriv p + polyDeriv q
+  \elim p, q
+  | pzero, q => idp
+  | padd p e, pzero => inv zro-right
+  | padd p e, padd q e' =>
+    rewrite (polyDeriv_+ {R} {p} {q}) $
+    pmap ((p + q) +) (padd0_+ {R} {polyDeriv p} {polyDeriv q})
+    *> rearrange p q (padd (polyDeriv p) 0) (padd (polyDeriv q) 0)
+
+-- | `polyDeriv` in coordinates: $(p')_n = (n+1)\,p_{n+1}$.
+\lemma polyCoef_polyDeriv {R : Ring} {p : Poly R} {n : Nat}
+  : polyCoef (polyDeriv p) n = natCoef (suc n) * polyCoef p (suc n)
+  \elim p, n
+  | pzero, n => inv R.zro_*-right
+  | padd p e, 0 =>
+    rewrite (polyCoef_+ {R} {p} {padd (polyDeriv p) 0} {0}, R.natCoefSuc 0, R.natCoefZero) simplify
+  | padd p e, suc m =>
+    rewrite (polyCoef_+ {R} {p} {padd (polyDeriv p) 0} {suc m},
+             polyCoef_polyDeriv {R} {p} {m}, R.natCoefSuc (suc m)) equation
+
+-- | $(Xa)q = X(aq)$.
+\private \lemma padd0_* {R : Ring} {a q : Poly R} : padd a 0 * q = padd (a * q) 0
+  => pmap (padd (a * q) 0 +) zro_*c *> zro-right
+
+-- | The derivative is `R`-linear.
+\lemma polyDeriv_*c {R : Ring} {r : R} {q : Poly R} : polyDeriv (r *c q) = r *c polyDeriv q
+  \elim q
+  | pzero => idp
+  | padd q e =>
+    rewrite (polyDeriv_*c {R} {r} {q}) $
+    pmap ((r *c q) +) (pmap (padd (r *c polyDeriv q)) (inv R.zro_*-right))
+    *> inv *c-ldistr
+
+-- | The four-term rearrangement behind Leibniz, with the `padd _ 0` summands kept opaque.
+\private \lemma rearrange4 {A : AbGroup} (a x y c : A) : a + (x + y) + c = a + x + (y + c)
+  => equation
+
+-- | **The Leibniz rule.** The last step expands the right-hand side; the rest reassociates.
+\lemma polyDeriv_* {R : Ring} {p q : Poly R}
+  : polyDeriv (p * q) = polyDeriv p * q + p * polyDeriv q
+  \elim p
+  | pzero => idp
+  | padd p e =>
+    polyDeriv_+ {R} {padd (p * q) 0} {e *c q}
+    *> pmap2 (+) (pmap (\lam t => p * q + padd t 0) (polyDeriv_* {R} {p} {q})
+                  *> pmap (p * q +) (padd0_+ {R} {polyDeriv p * q} {p * polyDeriv q}))
+                 (polyDeriv_*c {R} {e} {q})
+    *> rearrange4 (p * q) (padd (polyDeriv p * q) 0) (padd (p * polyDeriv q) 0) (e *c polyDeriv q)
+    *> inv (pmap (+ padd p e * polyDeriv q)
+              (rdistr {_} {p} {padd (polyDeriv p) 0} {q} *> pmap (p * q +) padd0_*))
+
+-- | Differentiating drops the degree bound by one.
+\lemma degree<_polyDeriv {R : Ring} {p : Poly R} {n : Nat} (d : degree< p (suc n))
+  : degree< (polyDeriv p) n
+  => \lam {k} n<=k =>
+       polyCoef_polyDeriv *> pmap (natCoef (suc k) *) (d (suc<=suc n<=k)) *> R.zro_*-right
+
+-- | The formal derivative commutes with coefficientwise application of a ring homomorphism.
+\lemma polyDeriv_polyMap {f : RingHom} {p : Poly f.Dom}
+  : polyDeriv (polyMap f p) = polyMap f (polyDeriv p) \elim p
+  | pzero => idp
+  | padd p e =>
+    pmap (\lam t => polyMap f p + padd t 0) polyDeriv_polyMap
+    *> inv (polyMapRingHom.func-+
+            *> pmap (polyMap f p +) (pmap (padd (polyMap f (polyDeriv p))) f.func-zro))
+
+{- | **The derivative is the difference quotient on the diagonal**: `deflate p z` is the quotient
+     $(p(X) - p(z))/(X - z)$, and evaluating it back at `z` gives $p'(z)$. Both sides satisfy the
+     same Horner recursion. -}
+\lemma polyEval_deflate-diag {R : CRing} (p : Poly R) (z : R)
+  : polyEval (deflate p z) z = polyEval (polyDeriv p) z \elim p
+  | pzero => idp
+  | padd p e =>
+    pmap (\lam t => t * z + polyEval p z) (polyEval_deflate-diag p z)
+    *> inv (polyEvalRingHom.func-+ *> equation.cRing)
+
+{- | **Second-order Taylor with an exact remainder, through the deflation.** Applying the divided
+     difference twice at the same base point writes $p(y) - p(z) - p'(z)(y - z)$ as $(y - z)^2$
+     times the value at `y` of the twofold deflation `deflate (deflate p z) z`. -}
+\lemma polyTaylor2 {R : CRing} (p : Poly R) (z y : R)
+  : polyEval p y - polyEval p z - polyEval (polyDeriv p) z * (y - z)
+  = polyEval (deflate (deflate p z) z) y * ((y - z) * (y - z))
+  => rewrite (polyEval_deflate p z y, polyEval_deflate (deflate p z) z y,
+              polyEval_deflate-diag p z) equation.cRing
+

@@ -1,0 +1,93 @@
+\import Algebra.Field
+\import Algebra.Field.Algebraic
+\import Algebra.Meta
+\import Algebra.Monoid
+\import Algebra.Pointed
+\import Algebra.Ring
+\import Algebra.Ring.Integral
+\import Algebra.Ring.Reduced
+\import Algebra.Ring.RingHom
+\import Algebra.Ring.SubRing
+\import Algebra.Ring.ZeroDimensional
+\import Algebra.Semiring
+\import Arith.Complex
+\import Arith.Nat
+\import Arith.Rat
+\import Arith.Real
+\import Arith.Real.Field
+\import Function (IsInj)
+\import Logic
+\import Order.StrictOrder
+\import Paths
+\import Paths.Meta
+\import Set
+
+{- | **The algebraic numbers form a discrete subfield of the complex numbers.**
+
+     This is Theorem VI.1.9 of Mines–Richman–Ruitenburg, instantiated at `Q ⊆ C`, and it is the
+     fact Richman leans on throughout *The fundamental theorem of algebra: a constructive
+     development without choice*: the polynomial witnessing that a number is algebraic carries
+     enough extra information to decide equality, even though the polynomial plays no part in the
+     definition of equality on `C`.
+
+     Everything here is axiom-free, and the general algebra is already in the library:
+     `ImpotentCRing` is exactly "no nilpotents other than `0`, no idempotents other than `0` or
+     `1`", every `Field` is one via `IntegralDomain`, and `polyImage_field` together with
+     `integralExt-zeroDim` does the work. -}
+
+-- | The ring homomorphism `Q -> C`, factored through the reals.
+\func ratToComplex : RingHom RatField ComplexField \cowith
+  | func q => Complex.fromReal (Real.fromRat q)
+  | func-+ => pmap Complex.fromReal (inv RealAbGroup.+-rat) *> Complex.fromReal_+
+  | func-ide => idp
+  | func-* => pmap Complex.fromReal (inv RealField.*-rat) *> Complex.fromReal_*
+
+{- | **$\mathbb{C}$ has characteristic zero**: $\mathrm{natCoef}\ k$ is the image of the real
+     $\mathrm{natCoef}\ k$ along the real-line embedding, and that is positive for $k > 0$. -}
+\lemma complex-char0 (k : Nat) (k>0 : 0 < k) : natCoef {ComplexField} k /= 0
+  => \lam p => linarith (RealField.natCoef>0 k>0,
+                         pmap (\lam (c : Complex) => c.re)
+                           (fromRealRingHom.func-natCoef *> p))
+
+{- | **Any ring that maps to $\mathbb{C}$ has characteristic zero.** A ring homomorphism preserves
+     `natCoef` and `zro`, so $\mathrm{natCoef}\ k = 0$ upstream would force it downstream; no
+     injectivity is needed. -}
+\lemma subfield-char0 {R : Ring} (f : RingHom R ComplexField) (k : Nat) (k>0 : 0 < k)
+  : natCoef {R} k /= 0
+  => \lam p => complex-char0 k k>0 (inv f.func-natCoef *> pmap f p *> f.func-zro)
+
+-- | A complex number is *algebraic* if it is integral over the rationals.
+\func IsAlgebraic (z : Complex) : \Prop => isIntegral ratToComplex z
+
+-- | The algebraic numbers, as a subring of `C`.
+\func AlgebraicSubring : SubRing ComplexField
+  => integralClosure-subring {RatField} {ComplexField} ratToComplex
+
+-- | The algebraic numbers as a commutative ring in their own right.
+\func AlgebraicRing : CRing => ICRing AlgebraicSubring
+
+-- | The inclusion `A -> C`.
+\func algebraicToComplex : RingHom AlgebraicRing ComplexField => IRing.embed {AlgebraicSubring}
+
+-- | The inclusion is injective, so `A` inherits `C`'s lack of nilpotents and idempotents.
+\func algebraicToComplex-inj : IsInj algebraicToComplex
+  => \lam p => ext p
+
+-- | `A` has no nilpotents other than `0` and no idempotents other than `0` and `1`.
+\func AlgebraicImpotent : ImpotentCRing { | CRing => AlgebraicRing }
+  => ImpotentCRing.subring {AlgebraicRing} algebraicToComplex algebraicToComplex-inj
+
+{- | **The algebraic numbers form a discrete field.** The integral closure of `Q` in `C` is an
+     integral extension of `Q`, hence zero-dimensional, and a zero-dimensional impotent ring is a
+     discrete field. -}
+\func AlgebraicNumbers : DiscreteField { | CRing => AlgebraicRing }
+  => zeroDim->field {AlgebraicImpotent} (integralExt-zeroDim (integralClosure-integral ratToComplex))
+
+{- | **Equality of algebraic numbers is decidable**, as a statement about `C` rather than about the
+     abstract ring `A`. This is the form Richman uses: given two algebraic numbers we may decide
+     whether they are equal, so a finite set of them is a genuinely discrete metric space. -}
+\lemma algebraic-dec {a b : Complex} (ai : IsAlgebraic a) (bi : IsAlgebraic b) : Dec (a = b)
+  => \case AlgebraicNumbers.decideEq (a, ai) (b, bi) \with {
+    | yes p => yes (pmap algebraicToComplex p)
+    | no q => no \lam p => q (ext p)
+  }

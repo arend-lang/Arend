@@ -90,6 +90,57 @@
   : cabs (skip s j i) <= B
   => rewrite (skip-sface s j i) (h (sface j i))
 
+{- | **The quantitative core of the root bound.** For a monic `p` of degree $m+1$ whose lower
+     coefficients are bounded by $C$, a point with $|z| \geq 1$ at which
+     $|p(z)| \leq K(m+1)|z|^m$ satisfies $|z| \leq (K + C)(m + 1)$. Both `nearFactor-bound` and
+     `cabs_polyEval-small-disc` are instances, differing only in how they supply $K$. -}
+\private \lemma cabs-large-bound {m : Nat} (p : Poly ComplexField) (deg : degree< p (suc (suc m)))
+    (monic : polyCoef p (suc m) = 1) {C : Real} (C>=0 : 0 <= C)
+    (hC : \Pi (k : Fin (suc m)) -> lnorm {ComplexValuedRing} (polyCoef (p - monomial 1 (suc m)) k) <= C)
+    {K : Real} (z : Complex) (w>=1 : 1 <= cabs z)
+    (up : cabs (polyEval p z) <= K * (natCoef (suc m) * pow (cabs z) m))
+  : cabs z <= (K + C) * natCoef (suc m)
+  => \have | qb => lnorm_polyEval-boundD {ComplexValuedRing}
+                     (degree<-monic-diff deg (degree<=_degree< degree<=_monomial) monic
+                        polyCoef_monomial) hC z
+           | low => cabs_polyEval-monic-lower monic z
+           | ps' => RealField.<=_*_positive-right C>=0 (powSum-bound w>=1 m)
+     \in RealField.<=_*-cancel-right (RealField.pow>0 (linarith : 0 < cabs z))
+           (=_<= (equation.cRing : cabs z * pow (cabs z) m = pow (cabs z) (suc m))
+            <=∘ linarith
+            <=∘ =_<= (equation.cRing
+                  : K * (natCoef (suc m) * pow (cabs z) m)
+                    + C * (natCoef (suc m) * pow (cabs z) m)
+                  = (K + C) * natCoef (suc m) * pow (cabs z) m))
+
+{- | **A monic polynomial small at a point pins that point into an explicit disc**: every `z` with
+     $|p(z)| \leq K$ satisfies $|z| \leq 2 + (K + C)(m + 1)$, where $C$ bounds the lower
+     coefficients. This is the Cauchy root bound, in the form that converts an approximate root
+     produced with no a priori bound on $|z|$ into one confined to a disc. -}
+\lemma cabs_polyEval-small-disc {m : Nat} (p : Poly ComplexField) (deg : degree< p (suc (suc m)))
+    (monic : polyCoef p (suc m) = 1) {C : Real} (C>=0 : 0 <= C)
+    (hC : \Pi (k : Fin (suc m)) -> lnorm {ComplexValuedRing} (polyCoef (p - monomial 1 (suc m)) k) <= C)
+    {K : Real} (K>=0 : 0 <= K) {z : Complex} (hz : cabs (polyEval p z) <= K)
+  : cabs z <= 2 + (K + C) * natCoef (suc m)
+  => \have prod>=0 : (0 : Real) <= (K + C) * natCoef (suc m)
+             => RealField.<=_*_positive_positive linarith RealField.natCoef>=0
+     \in \case RealAbGroup.<-comparison (cabs z) {1} {2}
+                 (rat_real_<.1 (linarith : (1 : Rat) < 2)) \with {
+       | byRight w<2 => <=-less (w<2 <∘l linarith)
+       | byLeft w>1 =>
+         \have | w>=1 : 1 <= cabs z => <=-less w>1
+               | big : (1 : Real) <= natCoef (suc m) * pow (cabs z) m
+                  => RealField.pow>=1 w>=1
+                     <=∘ =_<= (inv ide-left)
+                     <=∘ RealField.<=_*_positive-left
+                           (linarith (RealField.natCoefSuc m, RealField.natCoef>=0 {m})
+                              : (1 : Real) <= natCoef (suc m))
+                           (RealField.pow>=0 (linarith : (0 : Real) <= cabs z))
+         \in cabs-large-bound p deg monic C>=0 hC z w>=1
+               (hz <=∘ =_<= (inv ide-right) <=∘ RealField.<=_*_positive-right K>=0 big)
+             <=∘ linarith
+     }
+
 \lemma nearFactor-bound {n : Nat} (p : Poly ComplexField) (deg : degree< p (suc n))
                         (monic : polyCoef p n = 1)
   : ∃ (B : Real) (1 <= B) (\Pi (r : Array Complex n) -> nearFactorSet p 1 r
@@ -121,25 +172,18 @@
         | byRight w<2 => <=-less (w<2 <∘l linarith)
         | byLeft w>1 =>
           \have | w>=1 : 1 <= cabs (r i) => <=-less w>1
-                | up : cabs (polyEval p (r i)) <= powSum (cabs (r i)) (suc m)
+                | up : cabs (polyEval p (r i))
+                    <= 1 * (natCoef (suc m) * pow (cabs (r i)) m)
                    => rewrite (cabs_polyEval-diff-at-root (prodLin-root r i))
                         (lnorm_polyEval-boundD {ComplexValuedRing}
                            (degree<-monic-diff (prodLin-degree r) deg (prodLin-monic r) monic)
-                           (\lam k => <=-less (rewrite polyCoef_- (hr k))) (r i) <=∘ =_<= ide-left)
-                | qb => lnorm_polyEval-boundD {ComplexValuedRing}
-                          (degree<-monic-diff deg (degree<=_degree< degree<=_monomial) monic
-                             polyCoef_monomial) hC (r i)
-                | low => cabs_polyEval-monic-lower monic (r i)
-                | ps : powSum (cabs (r i)) (suc m) <= natCoef (suc m) * pow (cabs (r i)) m
-                   => powSum-bound w>=1 m
-                | ps' => RealField.<=_*_positive-right C>=0 ps
-          \in RealField.<=_*-cancel-right (RealField.pow>0 (linarith : 0 < cabs (r i)))
-                (=_<= (equation.cRing : cabs (r i) * pow (cabs (r i)) m = pow (cabs (r i)) (suc m))
-                 <=∘ linarith
-                 <=∘ =_<= (equation.cRing
-                       : C * (natCoef (suc m) * pow (cabs (r i)) m)
-                         + natCoef (suc m) * pow (cabs (r i)) m
-                       = (C + 1) * natCoef (suc m) * pow (cabs (r i)) m))
+                           (\lam k => <=-less (rewrite polyCoef_- (hr k))) (r i)
+                         <=∘ =_<= ide-left
+                         <=∘ powSum-bound w>=1 m
+                         <=∘ =_<= (inv ide-left))
+          \in cabs-large-bound p deg monic C>=0 hC (r i) w>=1 up
+              <=∘ =_<= (equation.cRing
+                    : (1 + C) * natCoef (suc m) = (C + 1) * natCoef (suc m))
               <=∘ linarith
       }
 }

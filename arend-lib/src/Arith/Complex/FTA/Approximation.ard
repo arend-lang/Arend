@@ -63,13 +63,25 @@
      \in inP (w, |w|^n<d, rewriteI (polyEval_polyTranslate w0 f w) |fw|<qd)
 
 -- | **Monic polynomials have approximate roots of every accuracy**: for every `i` some `z` has $|f(z)| < q^i c$. Choice-free.
-\private \lemma fta-approx {n : Nat} (n>0 : 0 < n) (f : Poly ComplexField)
+\lemma fta-approx {n : Nat} (n>0 : 0 < n) (f : Poly ComplexField)
                   (deg : degree< f (suc n)) (monic : polyCoef f n = 1) {c : Real} (f0<c : cabs (polyEval f 0) < c) (i : Nat)
   : ∃ (z : Complex) (cabs (polyEval f z) < pow (kneser-q n) i * c) \elim i
   | 0 => inP (0, rewrite ide-left f0<c)
   | suc i => \let | (inP (z, fz<qic)) => fta-approx n>0 f deg monic f0<c i
                   | (inP (w, _, fwz<)) => fta-step n>0 f deg monic z fz<qic
              \in inP (w + z, transport (cabs (polyEval f (w + z)) <) equation.cRing fwz<)
+
+{- | **The same, with the accuracy stated directly** instead of as a power of `kneser-q`: for every
+     $\varepsilon > 0$ some `z` has $|f(z)| < \varepsilon$. -}
+\lemma fta-approx-eps {n : Nat} (n>0 : 0 < n) (f : Poly ComplexField)
+                      (deg : degree< f (suc n)) (monic : polyCoef f n = 1)
+                      {eps : Real} (eps>0 : 0 < eps)
+  : ∃ (z : Complex) (cabs (polyEval f z) < eps)
+  => \let | (inP (i, hi)) => pow_<1-decay (<=-less (kneser-q>0 n>0)) kneser-q<1
+                               (cabs (polyEval f 0) + 1) eps>0
+          | (inP (z, hz)) => fta-approx n>0 f deg monic
+                               (linarith : cabs (polyEval f 0) < cabs (polyEval f 0) + 1) i
+     \in inP (z, hz <∘ hi)
 
 -- | A constant polynomial's coefficients are bounded by the constant.
 \lemma constCoef-bound (c : Complex) (j : Nat) : cabs (polyCoef (padd pzero c) j) <= cabs c \elim j
@@ -87,10 +99,8 @@
                           cabs_zro) eps>0
     })
   | suc m =>
-    \let | (inP (i, hi)) => pow_<1-decay (<=-less (kneser-q>0 NatOrder.zero<suc)) (kneser-q<1 {suc m})
-                              (cabs (polyEval p 0) + 1) (linarith : (0 : Real) < eps * ratio 1 2)
-         | (inP (z, hz)) => fta-approx NatOrder.zero<suc p deg monic
-                              (linarith : cabs (polyEval p 0) < cabs (polyEval p 0) + 1) i
+    \let | (inP (z, hz)) => fta-approx-eps NatOrder.zero<suc p deg monic
+                              (linarith : (0 : Real) < eps * ratio 1 2)
          | (inP (d, d>0, dw)) => split-eps (linarith : (0 : Real) < eps * ratio 1 2)
                                    (linarith (cabs>=0 {z}) : (0 : Real) < 1 + cabs z)
          | (inP (r', hr')) => approx-factor (deflate p z) (deflate-degree deg z)
@@ -109,7 +119,7 @@
           \in rewrite eq $
               (cabs_- <=∘ <=_+ (coefErr_*padd1 (\lam k => rewrite polyCoef_- (<=-less (hr' k))) j)
                                (constCoef-bound (polyEval p z) j))
-              <∘r linarith (hz <∘ hi)) \where {
+              <∘r linarith) \where {
   \private \lemma poly-diff {R : CRing} (A Q L C : Poly R) : A * L - (Q * L + C) = (A - Q) * L - C
     => equation.cRing
 

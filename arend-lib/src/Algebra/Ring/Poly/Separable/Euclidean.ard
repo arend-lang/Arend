@@ -1,0 +1,87 @@
+\import Algebra.Domain.Euclidean
+\import Algebra.Field
+\import Algebra.Meta
+\import Algebra.Monoid
+\import Algebra.Pointed
+\import Algebra.Ring
+\import Algebra.Ring.Poly
+\import Algebra.Ring.Poly.Derivative
+\import Algebra.Ring.Poly.Euclidean
+\import Algebra.Ring.Poly.Separable
+\import Algebra.Semiring
+\import Arith.Nat
+\import Logic
+\import Logic.Meta
+\import Meta
+\import Order.PartialOrder
+\import Order.StrictOrder
+\import Paths
+\import Paths.Meta
+\open EuclideanSemiringData (gcd, gcd-isGCD)
+\open EuclideanRingData (bezout, bezoutIdentity)
+
+{- | **Separability over a discrete field comes from the Euclidean algorithm**, which is what makes
+     $\gcd(p, p')$ and the Bezout coefficients computable in the first place.
+
+     Everything here is over `K : DiscreteField`, deliberately isolated from
+     `Algebra.Ring.Poly.Separable` — with `PolyEuclideanRingData` in scope, elaborating `1 : Poly R`
+     for a mere `R : Ring` fails, because instance search tries to read a `DiscreteField` off `R`. -}
+
+{- | If $\gcd(p, p')$ is a unit then `p` is separable: rescale the Bezout identity produced by the
+     Euclidean algorithm by the inverse of the gcd. -}
+\private \lemma separable-fromGcd {K : DiscreteField} {p : Poly K}
+    (i : Monoid.Inv (gcd p (polyDeriv p))) : IsSeparable p
+  => \let (b1, b2) => bezout p (polyDeriv p)
+     \in inP (i.inv * b1, i.inv * b2,
+              equation.cRing
+              *> pmap (i.inv *) (bezoutIdentity p (polyDeriv p))
+              *> i.inv-left)
+
+-- | $\gcd(p, p')$ divides $p'$, whose degree is one less than $p$'s — so the gcd's degree drops.
+\private \lemma gcd-degree<= {K : DiscreteField}
+    (char0 : \Pi (k : Nat) -> 0 < k -> natCoef {K} k /= 0)
+    {p : Poly K} (p/=0 : p /= 0) {n : Nat} (dp : degree p = suc n)
+  : degree (gcd p (polyDeriv p)) <= n
+  => \have p'/=0 : polyDeriv p /= 0 => polyDeriv/=0 char0 (degree-lead/=0 p/=0 dp)
+     \in degree_LDiv (gcd-isGCD p (polyDeriv p)).res|val2 p'/=0
+         <=∘ <_suc_<= (degree<_degree p'/=0
+                         (degree<_polyDeriv (degree_degree< {_} {p} {suc (suc n)}
+                                               (rewrite dp (linarith : suc n < suc (suc n))))))
+
+{- | When $\gcd(p, p')$ is constant it is a unit — so `p` is already its own separable factor. This
+     is the base case of the reduction, reached from both fuel branches. -}
+\private \lemma separable-self {K : DiscreteField} {p : Poly K} (p/=0 : p /= 0) {n : Nat}
+    (dp : degree p = suc n) (dg : degree (gcd p (polyDeriv p)) = 0)
+  : ∃ (q : Poly K) (0 < degree q) (IsSeparable q) (Monoid.LDiv q p)
+  => inP (p, rewrite dp NatOrder.zero<suc,
+          separable-fromGcd (degree0-Inv dg (LDiv/=0 (gcd-isGCD p (polyDeriv p)).res|val1 p/=0).1),
+          Monoid.LDiv.id-div)
+
+\private \lemma separable-factor-fueled {K : DiscreteField}
+    (char0 : \Pi (k : Nat) -> 0 < k -> natCoef {K} k /= 0)
+    (s : Nat) {p : Poly K} (p/=0 : p /= 0) {n : Nat} (dp : degree p = suc n) (fuel : n <= s)
+  : ∃ (q : Poly K) (0 < degree q) (IsSeparable q) (Monoid.LDiv q p)
+  \elim s
+  | 0 => cases (degree (gcd p (polyDeriv p)) arg addPath) \with {
+    | 0, dg => separable-self p/=0 dp dg
+    | suc k, dg => absurd (linarith (gcd-degree<= char0 p/=0 dp))
+  }
+  | suc s => cases (degree (gcd p (polyDeriv p)) arg addPath) \with {
+    | 0, dg => separable-self p/=0 dp dg
+    | suc k, dg =>
+      \let | g|p => (gcd-isGCD p (polyDeriv p)).res|val1
+           | (inP (q, dq, sq, q|g)) =>
+               separable-factor-fueled char0 s (LDiv/=0 g|p p/=0).1 dg
+                 (linarith (gcd-degree<= char0 p/=0 dp))
+      \in inP (q, dq, sq, Monoid.LDiv.trans q|g g|p)
+  }
+
+{- | **Every nonconstant polynomial over a discrete field of characteristic zero has a nonconstant
+     separable factor.** Recurse on the degree: if $\gcd(p, p')$ is a unit then `p` is already
+     separable; otherwise the gcd is a nonconstant factor of strictly smaller degree. Characteristic
+     zero is what makes the degree drop — see `polyDeriv/=0`. -}
+\lemma separable-factor {K : DiscreteField}
+    (char0 : \Pi (k : Nat) -> 0 < k -> natCoef {K} k /= 0)
+    {p : Poly K} (p/=0 : p /= 0) {n : Nat} (dp : degree p = suc n)
+  : ∃ (q : Poly K) (0 < degree q) (IsSeparable q) (Monoid.LDiv q p)
+  => separable-factor-fueled char0 n p/=0 dp <=-refl

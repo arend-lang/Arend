@@ -1,0 +1,105 @@
+\import Algebra.Group
+\import Algebra.Meta
+\import Algebra.Monoid
+\import Algebra.Ordered
+\import Algebra.Pointed
+\import Algebra.Ring
+\import Algebra.Ring.Poly
+\import Algebra.Ring.Poly.Derivative
+\import Algebra.Ring.Poly.Separable
+\import Algebra.Semiring
+\import Analysis.Poly (coefMax, coefMax-cond, coefMax>=0, lnorm_polyEval-boundD)
+\import Arith.Complex
+\import Arith.Complex.Norm
+\import Arith.Rat
+\import Arith.Real
+\import Arith.Real.Field
+\import Logic
+\import Logic.Meta
+\import Meta
+\import Order.Biordered
+\import Order.LinearOrder
+\import Order.PartialOrder
+\import Order.StrictOrder
+\import Paths
+\import Paths.Meta
+\open PosetSemiring (<=_*_positive-left, <=_*_positive-right, <=_*_positive_positive)
+
+{- | **A separable complex polynomial has its derivative bounded below wherever it is small.**
+
+     The constructive content of "separable" is a Bezout identity $up + vp' = 1$; evaluating it at a
+     point turns "$p$ is small at $z$" into "$p'$ is bounded below at $z$" directly, with no
+     root-separation or resultant theory. `separable-deriv-lower` is the disc-uniform form, and it
+     is what supplies the invertible derivative that Newton's method starts from. -}
+
+{- | On the disc $|z| \leq R$ a complex polynomial is bounded by its coefficient maximum times
+     `powSum R m`, a quantity depending on `q`, `m` and $R$ alone. -}
+\private \lemma polyEval-cabs-bound-disc {q : Poly ComplexField} {m : Nat} (d : degree< q m)
+    {R : Real} {z : Complex} (hz : cabs z <= R)
+  : cabs (polyEval q z) <= coefMax {ComplexValuedRing} q m * powSum R m
+  => lnorm_polyEval-boundD {ComplexValuedRing} d (\lam k => coefMax-cond {ComplexValuedRing} k) z
+     <=∘ <=_*_positive-right (coefMax>=0 {ComplexValuedRing}) (powSum-mono (cabs>=0 {z}) hz m)
+
+-- | Evaluating a Bezout identity at `z`.
+\private \lemma bezout-eval {p u v : Poly ComplexField} (h : u * p + v * polyDeriv p = 1) (z : Complex)
+  : polyEval u z * polyEval p z + polyEval v z * polyEval (polyDeriv p) z = 1
+  => \let e => polyEvalRingHom z
+     \in inv (e.func-+ *> pmap2 (+) e.func-* e.func-*) *> pmap (polyEval __ z) h *> e.func-ide
+
+{- | With $|v(z)| \leq B$ and $|u(z)| \cdot |p(z)| \leq 1/2$, the Bezout identity forces
+     $B \cdot |p'(z)| \geq 1/2$. The three summand bounds go straight into `linarith`'s context;
+     naming them would only repeat their statements. -}
+\private \lemma bezout-deriv-lower {p u v : Poly ComplexField}
+    (h : u * p + v * polyDeriv p = 1) (z : Complex) {B : Real}
+    (hv : cabs (polyEval v z) <= B)
+    (small : cabs (polyEval u z) * cabs (polyEval p z) <= (ratio 1 2 : Real))
+  : (ratio 1 2 : Real) <= B * cabs (polyEval (polyDeriv p) z)
+  => usingOnly (=_<= (inv (pmap cabs (bezout-eval h z) *> cabs_ide))
+                <=∘ cabs_+ {polyEval u z * polyEval p z}
+                           {polyEval v z * polyEval (polyDeriv p) z},
+                =_<= cabs_* <=∘ small,
+                =_<= cabs_* <=∘ <=_*_positive-left hv (cabs>=0 {polyEval (polyDeriv p) z}))
+       linarith
+
+-- | The disc bound is non-negative.
+\private \lemma bound>=0 {q : Poly ComplexField} {m : Nat} {R : Real} (R>=0 : 0 <= R)
+  : 0 <= coefMax {ComplexValuedRing} q m * powSum R m
+  => <=_*_positive_positive (coefMax>=0 {ComplexValuedRing}) (powSum>=0 R>=0 m)
+
+{- | The quantitative core of `separable-deriv-lower`, with the two compound disc bounds passed in as
+     variables — as a `\let`-binding they would be opaque to `linarith`. -}
+\private \lemma separable-deriv-lower-aux {p u v : Poly ComplexField}
+    (h : u * p + v * polyDeriv p = 1)
+    {Bu Bv : Real} (Bu>=0 : 0 <= Bu)
+    {delta : Real} (delta>0 : 0 < delta) (hd : delta * (Bu + 1) < (ratio 1 2 : Real))
+    {z : Complex}
+    (hu : cabs (polyEval u z) <= Bu) (hv : cabs (polyEval v z) <= Bv)
+    (hp : cabs (polyEval p z) <= delta)
+  : (ratio 1 2 : Real) <= (Bv + 1) * cabs (polyEval (polyDeriv p) z)
+  => bezout-deriv-lower h z (hv <=∘ (linarith : Bv <= Bv + 1))
+       (<=_*_positive-left hu (cabs>=0 {polyEval p z})
+        <=∘ <=_*_positive-right Bu>=0 hp
+        <=∘ =_<= *-comm
+        <=∘ <=_*_positive-right (<=-less delta>0) (linarith : Bu <= Bu + 1)
+        <=∘ <=-less hd)
+
+{- | **The disc-uniform lower bound.** For every radius $R$ there are a threshold $\delta > 0$ and a
+     constant $D > 0$, depending on `p` and $R$ alone, such that $|p(z)| \leq \delta$ on the disc
+     $|z| \leq R$ forces $D \cdot |p'(z)| \geq 1/2$. -}
+\lemma separable-deriv-lower {p : Poly ComplexField} (sep : IsSeparable p)
+                             {R : Real} (R>=0 : 0 <= R)
+  : ∃ (delta : Real) (0 < delta) (D : Real) (0 < D)
+      (\Pi (z : Complex) -> cabs z <= R -> cabs (polyEval p z) <= delta
+        -> (ratio 1 2 : Real) <= D * cabs (polyEval (polyDeriv p) z))
+  => \let | (inP (u, v, h)) => sep
+          | (inP (mu, du)) => degree<-exists u
+          | (inP (mv, dv)) => degree<-exists v
+          | Bu>=0 => bound>=0 {u} {mu} {R} R>=0
+          | (inP (delta, delta>0, hd)) =>
+              split-eps (linarith : (0 : Real) < ratio 1 2)
+                (linarith : (0 : Real) < coefMax {ComplexValuedRing} u mu * powSum R mu + 1)
+     \in inP (delta, delta>0, coefMax {ComplexValuedRing} v mv * powSum R mv + 1,
+              linarith (bound>=0 {v} {mv} {R} R>=0),
+              \lam z hz hp => separable-deriv-lower-aux h Bu>=0 delta>0 hd
+                                (polyEval-cabs-bound-disc du hz)
+                                (polyEval-cabs-bound-disc dv hz) hp)

@@ -1,0 +1,117 @@
+\import Algebra.Domain
+\import Algebra.Field
+\import Algebra.Meta
+\import Algebra.Monoid
+\import Algebra.Pointed
+\import Algebra.Ring
+\import Algebra.Ring.Poly
+\import Algebra.Ring.Poly.Derivative
+\import Algebra.Ring.RingHom
+\import Algebra.Semiring
+\import Arith.Nat
+\import Logic
+\import Logic.Meta
+\import Order.PartialOrder
+\import Order.StrictOrder
+\import Paths
+\import Paths.Meta
+
+{- | **Separability of a polynomial, as a Bezout identity.**
+
+     Classically `p` is separable when it shares no root with its derivative. The constructively
+     useful form is the Bezout identity $up + vp' = 1$, which carries the witnesses rather than
+     merely asserting they exist. Over a *discrete* field the Euclidean algorithm computes them —
+     see `Algebra.Ring.Poly.Separable.Euclidean`, a separate module because the
+     `PolyEuclideanRingData` instance, once in scope, makes instance search try to read a
+     `DiscreteField` off every `Poly R`. -}
+
+-- | `p` is separable when `p` and its derivative satisfy a Bezout identity.
+\func IsSeparable {R : Ring} (p : Poly R) : \Prop
+  => ∃ (u v : Poly R) (u * p + v * polyDeriv p = 1)
+
+{- | **Separability transports along a ring homomorphism**: apply `polyMap f` to the Bezout identity.
+     This is what lets a separable factor computed over a discrete field be pushed into `C`. -}
+\lemma IsSeparable_polyMap {f : RingHom} {p : Poly f.Dom} (sep : IsSeparable p)
+  : IsSeparable (polyMap f p)
+  => \let (inP (u, v, h)) => sep
+     \in inP (polyMap f u, polyMap f v,
+              inv ((polyMapRingHom f).func-+
+                   *> pmap2 (+) (polyMapRingHom f).func-*
+                        ((polyMapRingHom f).func-*
+                         *> pmap (polyMap f v *) (inv polyDeriv_polyMap)))
+              *> pmap (polyMap f) h
+              *> (polyMapRingHom f).func-ide)
+
+-- | A root of a divisor of `p` is a root of `p`.
+\lemma polyEval-LDiv {R : CRing} {q p : Poly R} (d : Monoid.LDiv q p) {z : R}
+                     (h : polyEval q z = 0) : polyEval p z = 0
+  => pmap (polyEval __ z) (inv d.inv-right)
+     *> (polyEvalRingHom z).func-*
+     *> pmap (`* polyEval d.inv z) h
+     *> zro_*-left
+
+{- | **Characteristic zero is what makes the separable reduction terminate.** If $p_{n+1} \neq 0$
+     then $(p')_n \neq 0$, since it is $(n+1)\,p_{n+1}$ and $n+1$ is invertible. In positive
+     characteristic this fails — $p'$ can vanish on a nonconstant $p$ — which is why the argument is
+     stated for subfields of $\mathbb{C}$. -}
+\private \lemma polyCoef_polyDeriv/=0 {K : DiscreteField}
+    (char0 : \Pi (n : Nat) -> 0 < n -> natCoef {K} n /= 0)
+    {p : Poly K} {n : Nat} (lead : polyCoef p (suc n) /= 0)
+  : polyCoef (polyDeriv p) n /= 0
+  => rewrite polyCoef_polyDeriv (Domain.nonZero_* (char0 (suc n) NatOrder.zero<suc) lead)
+
+-- | A divisor of a non-zero polynomial is non-zero, as is its cofactor.
+\lemma LDiv/=0 {K : DiscreteField} {q p : Poly K} (d : Monoid.LDiv q p) (p/=0 : p /= 0)
+  : \Sigma (q /= 0) (d.inv /= 0)
+  => (\lam q=0 => p/=0 (Semiring.ldiv=0 d q=0),
+      \lam i=0 => p/=0 (inv d.inv-right *> pmap (q *) i=0 *> zro_*-right))
+
+-- | **Divisibility bounds degree**: a divisor of a non-zero polynomial has no larger degree.
+\lemma degree_LDiv {K : DiscreteField} {q p : Poly K} (d : Monoid.LDiv q p) (p/=0 : p /= 0)
+  : degree q <= degree p
+  => \let (q/=0, i/=0) => LDiv/=0 d p/=0
+     \in linarith (pmap degree (inv d.inv-right) *> degree_* q/=0 i/=0)
+
+{- | **A non-zero constant polynomial is invertible.** The library has the converse (`polyInv`);
+     this direction is what decides whether `gcd p p'` is a unit, which is the case split the
+     separable reduction turns on. -}
+\lemma degree0-Inv {K : DiscreteField} {g : Poly K} (dg : degree g = 0) (g/=0 : g /= 0)
+  : Monoid.Inv g
+  => \have g0 : g = padd pzero (polyCoef g 0)
+              => degree<=0 g (degree<_degree<= (degree_degree< {_} {g} {1}
+                                                  (rewrite dg NatOrder.zero<suc)))
+     \in \case eitherZeroOrInv (polyCoef g 0) \with {
+       | byLeft c=0 => absurd (g/=0 (g0 *> pmap (padd pzero) c=0 *> peq))
+       | byRight ci => Monoid.Inv.rmake (padd pzero ci.inv)
+           (pmap (`* padd pzero ci.inv) g0 *> pmap (padd pzero) (zro-left *> ci.inv-right))
+     }
+
+-- | The leading coefficient of a non-zero polynomial is non-zero.
+\lemma degree-lead/=0 {K : DiscreteField} {p : Poly K} (p/=0 : p /= 0) {n : Nat}
+                      (dp : degree p = suc n) : polyCoef p (suc n) /= 0
+  => \lam c=0 => p/=0 (leadCoef=0-lem (leadCoef_polyCoef *> pmap (polyCoef p) dp *> c=0))
+
+-- | Over a discrete field it is therefore invertible.
+\lemma degree-lead-Inv {K : DiscreteField} {p : Poly K} (p/=0 : p /= 0) {n : Nat}
+                       (dp : degree p = suc n) : Monoid.Inv (polyCoef p (suc n))
+  => \case eitherZeroOrInv (polyCoef p (suc n)) \with {
+    | byLeft lead=0 => absurd (degree-lead/=0 p/=0 dp lead=0)
+    | byRight i => i
+  }
+
+{- | **Scaling to monic.** Over a discrete field the leading coefficient of a nonzero polynomial is
+     invertible, so `p` rescales to leading coefficient `1`. What is returned is the scalar together
+     with its invertibility, not the rescaled polynomial, so that a caller can transport roots back;
+     `degree<_*c` bounds the degree of the rescaled polynomial. -}
+\lemma monic-normalise {K : DiscreteField} {p : Poly K} (p/=0 : p /= 0) {n : Nat}
+                       (dp : degree p = suc n)
+  : ∃ (c : K) (Monoid.Inv c) (polyCoef (c PolyRing.*c p) (suc n) = 1)
+  => \let i => degree-lead-Inv p/=0 dp
+     \in inP (i.inv, Monoid.Inv.lmake (polyCoef p (suc n)) i.inv-right, polyCoef_*c *> i.inv-left)
+
+-- | Hence a nonconstant polynomial in characteristic zero has a non-zero derivative.
+\lemma polyDeriv/=0 {K : DiscreteField}
+    (char0 : \Pi (n : Nat) -> 0 < n -> natCoef {K} n /= 0)
+    {p : Poly K} {n : Nat} (lead : polyCoef p (suc n) /= 0)
+  : polyDeriv p /= 0
+  => \lam h => polyCoef_polyDeriv/=0 char0 lead (pmap (\lam t => polyCoef t n) h)

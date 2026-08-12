@@ -1,0 +1,318 @@
+\import Algebra.Group
+\import Algebra.Meta
+\import Algebra.Monoid
+\import Algebra.Ordered
+\import Algebra.Pointed
+\import Algebra.Ring
+\import Algebra.Ring.Poly
+\import Algebra.Semiring
+\import Algebra.Ring.Poly.Derivative
+\import Algebra.StrictlyOrdered
+\import Analysis.Limit
+\import Analysis.Poly (coefMax, coefMax-cond-all, coefMax>=0, polyEvalCover)
+\import Arith.Complex
+\import Arith.Algebraic.Taylor
+\import Arith.Complex.Banach
+\import Arith.Complex.Norm
+\import Arith.Nat
+\import Arith.Rat
+\import Arith.Real
+\import Arith.Real.Field
+\import Logic
+\import Logic.Meta
+\import Meta
+\import Order.Biordered
+\import Order.PartialOrder
+\import Order.StrictOrder
+\import Paths
+\import Paths.Meta
+\import Topology.TopSpace
+\open Monoid (pow)
+\open PosetSemiring (<=_*_positive-left, <=_*_positive-right, <=_*_positive_positive,
+                     pow>=0, pow<=1, pow_<=-degree)
+\open OrderedSemiring (pow>0, <_*_positive-right)
+
+{- | **A quantitative Newton method over the complex numbers.**
+
+     The iteration is $z_{k+1} = z_k - p(z_k)\,d$ with the inverse derivative $d$ **frozen** at the
+     starting point. Freezing matters constructively: $\mathbb{C}$ is a `Field` but not a discrete
+     one, so an inverse is a datum to be supplied rather than a function to be applied, and a
+     scheme needing the inverse of $p'(z_k)$ at every step would have to produce a new datum at
+     every step.
+
+     The price is that the linear term no longer cancels exactly: the defect $1 - p'(z_k)\,d$ is
+     the derivative's drift from the base point scaled by $d$ (`newton-defect`). It is paid for by
+     the Lipschitz bound `polyEval-diff-bound` and the quadratic remainder bound
+     `polyEval-remainder-bound`, both uniform over a disc, so one set of constants serves every
+     step. -}
+
+-- # Constants
+
+{- | The geometric rate of the iteration, and the budget each of its two error sources gets.
+     `\meta` rather than `\func` so that `linarith` sees the literal — see `Arith.Complex.FTA.Kneser`
+     for the same trick. -}
+\private \meta half => (ratio 1 2 : Real)
+
+\private \meta quarter => (ratio 1 4 : Real)
+
+\private \lemma half>=0 : (0 : Real) <= half => linarith
+
+\private \lemma half<1 : half < (1 : Real) => linarith
+
+\private \lemma half<=1 : half <= (1 : Real) => linarith
+
+\private \lemma geo>=0 {k : Nat} : (0 : Real) <= pow half k => pow>=0 half>=0
+
+{- | The two disc-uniform estimates the iteration runs on, quantified over the ball of radius `B`
+     about `z0` so that one instance serves every step: the derivative's drift from the base point,
+     and the quadratic Taylor remainder. `newton-invariant` and `newton-root-bounds` take exactly
+     these, so they are named once rather than spelled twice. -}
+\private \meta drift-cond p dinv z0 B =>
+  \Pi (z : Complex) -> cabs (z - z0) <= B
+  -> cabs (polyEval (polyDeriv p) z0 - polyEval (polyDeriv p) z) * cabs dinv <= quarter
+
+\private \meta rem-cond p C z0 B =>
+  \Pi (z y : Complex) -> cabs (z - z0) <= B -> cabs (y - z0) <= B
+  -> cabs (polyEval p y - polyEval p z - polyEval (polyDeriv p) z * (y - z))
+     <= C * (cabs (y - z) * cabs (y - z))
+
+-- # The step, as an identity
+
+{- | **The Newton step, exactly.** With $v = p(z)$, $b = p'(z)$ and $s = y - z = -vd$, the value at
+     the new point is the old value times the defect of the frozen inverse, plus the quadratic
+     Taylor remainder. A pure ring identity: invertibility is not needed yet. -}
+\private \lemma newton-step-eq {A : CRing} (v b dinv w s : A) (hs : s = negative (v * dinv))
+  : w = v * (1 - b * dinv) + (w - v - b * s)
+  => rewrite hs equation.cRing
+
+-- | The defect $1 - bd$ of the frozen inverse is the derivative's drift $b_0 - b$, scaled by $d$.
+\private \lemma newton-defect {A : CRing} (b b0 dinv : A) (bd : b0 * dinv = 1)
+  : 1 - b * dinv = (b0 - b) * dinv
+  => pmap (\lam t => t - b * dinv) (inv bd) *> equation.cRing
+
+-- # The iteration
+
+-- | The iteration $z_{k+1} = z_k - p(z_k)\,d$, with $d$ frozen at the starting point.
+\func newton (p : Poly ComplexField) (dinv z0 : Complex) (k : Nat) : Complex \elim k
+  | 0 => z0
+  | suc k => newton p dinv z0 k - polyEval p (newton p dinv z0 k) * dinv
+
+-- | The increment of one step in closed form: $z_{k+1} - z_k = -p(z_k)\,d$.
+\private \lemma newton-incr (p : Poly ComplexField) (dinv z0 : Complex) (k : Nat)
+  : newton p dinv z0 (suc k) - newton p dinv z0 k
+  = negative (polyEval p (newton p dinv z0 k) * dinv)
+  => sub-shift (newton p dinv z0 k) (polyEval p (newton p dinv z0 k) * dinv)
+  \where
+    \private \lemma sub-shift {A : CRing} (z v : A) : z - v - z = negative v => equation.cRing
+
+{- | **One Newton step halves the value.** The two quarters are the two error sources — the frozen
+     inverse's defect and the quadratic remainder — and $1/4 + 1/4 = 1/2$ is the whole quantitative
+     content.
+
+     Stated in the bare quantities it is about — $v = p(z)$, $w = p(y)$, $s = y - z$, the derivative
+     `b` at `z` and `b0` at the base point — rather than in polynomial values: nothing here is about
+     polynomials, and every constant is a parameter and every smallness condition a hypothesis
+     because compound `\let`-bound constants are opaque to `linarith`. `newton-invariant` supplies
+     the six values and discharges the conditions. -}
+\private \lemma newton-step (b0 b dinv v w s : Complex)
+    (bd : b0 * dinv = 1) (hs : s = negative (v * dinv))
+    {e C : Real} (e>=0 : 0 <= e) (C>=0 : 0 <= C)
+    (hv : cabs v <= e)
+    (drift : cabs (b0 - b) * cabs dinv <= quarter)
+    (quad : C * (cabs dinv * cabs dinv) * e <= quarter)
+    (rem : cabs (w - v - b * s) <= C * (cabs s * cabs s))
+  : cabs w <= half * e
+  => \have
+       | t1 : cabs (v * (1 - b * dinv)) <= quarter * e
+          => =_<= (cabs_* {v} {1 - b * dinv})
+             <=∘ <=_*_positive-left hv (cabs>=0 {1 - b * dinv})
+             <=∘ <=_*_positive-right e>=0
+                   (=_<= (pmap cabs (newton-defect b b0 dinv bd) *> cabs_* {b0 - b} {dinv})
+                    <=∘ drift)
+             <=∘ =_<= *-comm
+       | sq : cabs s * cabs s <= e * cabs dinv * (e * cabs dinv)
+          => \have dz : cabs s <= e * cabs dinv
+                     => =_<= (pmap cabs hs *> cabs_negative {v * dinv} *> cabs_* {v} {dinv})
+                        <=∘ <=_*_positive-left hv (cabs>=0 {dinv})
+             \in <=_*_positive-left dz (cabs>=0 {s})
+                 <=∘ <=_*_positive-right (<=_*_positive_positive e>=0 (cabs>=0 {dinv})) dz
+       | t2 : cabs (w - v - b * s) <= quarter * e
+          => rem
+             <=∘ <=_*_positive-right C>=0 sq
+             <=∘ =_<= (equation.cRing : C * (e * cabs dinv * (e * cabs dinv))
+                                      = C * (cabs dinv * cabs dinv) * e * e)
+             <=∘ <=_*_positive-left quad e>=0
+     \in =_<= (pmap cabs (newton-step-eq v b dinv w s hs))
+         <=∘ cabs_+ {v * (1 - b * dinv)} {w - v - b * s}
+         <=∘ <=_+ t1 t2
+         <=∘ linarith
+
+-- # The invariant
+
+{- | **The Newton invariant**, both parts at once by a single induction on `k`: the orbit stays in
+     the ball of radius `B` about $z_0$ — with the shrinking margin $B/2^k$ to spare, which is what
+     makes the induction go through — and the value halves at every step.
+
+     `B` is the travel budget and `hB` says it is at least twice the first increment
+     $|p(z_0)|\,|d|$, the slack a ratio-$1/2$ geometric series needs. `drift` and `rem` are the two
+     disc-uniform estimates, quantified over the ball so that one instance serves every step. -}
+\private \lemma newton-invariant {p : Poly ComplexField} {dinv z0 : Complex}
+    (bd : polyEval (polyDeriv p) z0 * dinv = 1)
+    {e0 C B : Real} (e0>=0 : 0 <= e0) (C>=0 : 0 <= C)
+    (hv0 : cabs (polyEval p z0) <= e0)
+    (hB : e0 * cabs dinv + e0 * cabs dinv <= B)
+    (quad : C * (cabs dinv * cabs dinv) * e0 <= quarter)
+    (drift : drift-cond p dinv z0 B) (rem : rem-cond p C z0 B)
+    (k : Nat)
+  : \Sigma (cabs (newton p dinv z0 k - z0) <= B - pow half k * B)
+           (cabs (polyEval p (newton p dinv z0 k)) <= pow half k * e0)
+  \elim k
+  | 0 => (=_<= (pmap cabs negative-right *> cabs_zro
+                *> inv (equation.cRing : B - pow half 0 * B = 0)),
+          hv0 <=∘ =_<= (inv ide-left))
+  | suc k =>
+    \let | zk => newton p dinv z0 k
+         | zk1 => newton p dinv z0 (suc k)
+    \in \have
+      | ih => newton-invariant bd e0>=0 C>=0 hv0 hB quad drift rem k
+      | d>=0 => cabs>=0 {dinv}
+      | u>=0 : (0 : Real) <= e0 * cabs dinv => <=_*_positive_positive e0>=0 d>=0
+      | B>=0 : (0 : Real) <= B => linarith
+      | geoB>=0 {j : Nat} : (0 : Real) <= pow half j * B
+         => <=_*_positive_positive geo>=0 B>=0
+      | hzk : cabs (zk - z0) <= B => linarith (ih.1, geoB>=0 {k})
+      | incr => newton-incr p dinv z0 k
+      | dz : cabs (zk1 - zk) <= pow half k * (e0 * cabs dinv)
+         => =_<= (pmap cabs incr *> cabs_negative {polyEval p zk * dinv}
+                  *> cabs_* {polyEval p zk} {dinv})
+            <=∘ <=_*_positive-left ih.2 d>=0
+            <=∘ =_<= *-assoc
+      | scaled : pow half k * (e0 * cabs dinv) + pow half k * half * B <= pow half k * B
+         => =_<= (equation.cRing : pow half k * (e0 * cabs dinv) + pow half k * half * B
+                                 = pow half k * (e0 * cabs dinv + half * B))
+            <=∘ <=_*_positive-right geo>=0 (linarith : e0 * cabs dinv + half * B <= B)
+      | part1 : cabs (zk1 - z0) <= B - pow half (suc k) * B
+         => =_<= (pmap cabs (inv (AddGroup.diff_+ {_} {z0} {zk} {zk1})))
+            <=∘ cabs_+ {zk1 - zk} {zk - z0}
+            <=∘ <=_+ dz ih.1
+            <=∘ usingOnly scaled linarith
+      | quad' : C * (cabs dinv * cabs dinv) * (pow half k * e0) <= quarter
+         => =_<= (equation.cRing : C * (cabs dinv * cabs dinv) * (pow half k * e0)
+                                 = C * (cabs dinv * cabs dinv) * e0 * pow half k)
+            <=∘ <=_*_positive-right
+                  (<=_*_positive_positive
+                     (<=_*_positive_positive C>=0 (<=_*_positive_positive d>=0 d>=0)) e0>=0)
+                  (pow<=1 half>=0 half<=1)
+            <=∘ =_<= ide-right
+            <=∘ quad
+    \in (part1,
+         newton-step (polyEval (polyDeriv p) z0) (polyEval (polyDeriv p) zk) dinv
+             (polyEval p zk) (polyEval p zk1) (zk1 - zk) bd incr
+             (<=_*_positive_positive geo>=0 e0>=0) C>=0 ih.2 (drift zk hzk) quad'
+             (rem zk zk1 hzk (linarith (geoB>=0 {suc k})))
+         <=∘ =_<= (equation.cRing : half * (pow half k * e0) = pow half (suc k) * e0))
+
+-- # Convergence, and the root
+
+-- | A complex sequence whose modulus is dominated by $e_0/2^k$ tends to `0`.
+\private \lemma geo-limit-zro (f : Nat -> Complex) {e0 : Real} (e0>=0 : 0 <= e0)
+    (hf : \Pi (k : Nat) -> cabs (f k) <= pow half k * e0)
+  : ComplexCompleteRing.IsLimit f 0
+  => limit-metric-real.2 \lam {eps} eps>0 =>
+       \let (inP (N, hN)) => pow_<1-decay half>=0 half<1 e0 eps>0
+       \in inP (N, \lam {n} N<=n =>
+             (=_<= (pmap cabs (zro-left {_} {negative (f n)}) *> cabs_negative {f n})
+              <=∘ hf n
+              <=∘ <=_*_positive-left (pow_<=-degree half>=0 half<=1 N<=n) e0>=0)
+             <∘r hN)
+
+{- | **Newton's method delivers an exact root.** The increments are dominated by a ratio-$1/2$
+     geometric sequence, so `nat-convergent-metric` gives convergence with no fixed-point theorem;
+     `polyEvalCover` transports the limit through `polyEval`, and the value bound identifies the
+     image limit as `0`.
+
+     The hypotheses are `newton-invariant`'s; `newton-root` discharges them from coefficient
+     data. -}
+\private \lemma newton-root-bounds {p : Poly ComplexField} {m : Nat} (dp : degree< p m) {dinv z0 : Complex}
+    (bd : polyEval (polyDeriv p) z0 * dinv = 1)
+    {e0 C B : Real} (e0>=0 : 0 <= e0) (C>=0 : 0 <= C)
+    (hv0 : cabs (polyEval p z0) <= e0)
+    (hB : e0 * cabs dinv + e0 * cabs dinv <= B)
+    (quad : C * (cabs dinv * cabs dinv) * e0 <= quarter)
+    (drift : drift-cond p dinv z0 B) (rem : rem-cond p C z0 B)
+  : ∃ (z : Complex) (polyEval p z = 0)
+  => \let zs => newton p dinv z0
+     \in \have
+       | invar => newton-invariant bd e0>=0 C>=0 hv0 hB quad drift rem
+       | conv : IsConvergent zs
+          => nat-convergent-metric {_} {half} {e0 * cabs dinv + 1} half>=0 half<1 zs \lam k =>
+               (=_<= (cabs_-comm {zs k} {zs (suc k)}
+                      *> pmap cabs (newton-incr p dinv z0 k)
+                      *> cabs_negative {polyEval p (zs k) * dinv}
+                      *> cabs_* {polyEval p (zs k)} {dinv})
+                <=∘ <=_*_positive-left (invar k).2 (cabs>=0 {dinv})
+                <=∘ =_<= *-assoc)
+               <∘r <_*_positive-right (pow>0 (linarith : (0 : Real) < half))
+                     (linarith : e0 * cabs dinv < e0 * cabs dinv + 1)
+     \in inP (limit zs conv,
+              HausdorffTopSpace.limit-unique
+                (cont-limit limit-isLimit (polyEvalCover dp))
+                (geo-limit-zro (\lam k => polyEval p (zs k)) e0>=0 \lam k => (invar k).2))
+
+{- | **Newton's method run off coefficient data.** Every hypothesis of `newton-root-bounds` is discharged
+     from the disc-uniform estimates of `Arith.Algebraic.Taylor`. The caller supplies
+
+     * a disc $|\cdot| \leq R$ wide enough to contain the ball of radius `B` about $z_0$
+       (`hz0`, `hR`);
+     * a bound `Dd` on $|d|$ — available before $z_0$ is chosen, since a lower bound on $|p'|$
+       gives an upper bound on the inverse;
+     * a bound `e0` on $|p(z_0)|$;
+
+     and the three smallness conditions: `hB` that the travel budget covers a ratio-$1/2$ series,
+     `hL` that the derivative drifts by at most $1/4$ across the ball, and `hC` that the quadratic
+     remainder costs at most $1/4$. All three are met by shrinking `B` and then `e0`. -}
+\lemma newton-root {p : Poly ComplexField} {M : Nat} (dp : degree< p M)
+    {dinv z0 : Complex} (bd : polyEval (polyDeriv p) z0 * dinv = 1)
+    {R R0 B Dd e0 : Real}
+    (hz0 : cabs z0 <= R0) (hR : R0 + B <= R) (B>=0 : 0 <= B)
+    (hdinv : cabs dinv <= Dd)
+    (hv0 : cabs (polyEval p z0) <= e0) (e0>=0 : 0 <= e0)
+    (hB : e0 * Dd + e0 * Dd <= B)
+    (hL : coefMax {ComplexValuedRing} (polyDeriv p) M * powSum R M * powSum R M * B * Dd <= quarter)
+    (hC : coefMax {ComplexValuedRing} p M * powSum R M * powSum R M * powSum R M * (Dd * Dd) * e0
+          <= quarter)
+  : ∃ (z : Complex) (polyEval p z = 0)
+  => \have
+       | Dd>=0 : (0 : Real) <= Dd => cabs>=0 {dinv} <=∘ hdinv
+       | R0>=0 : (0 : Real) <= R0 => cabs>=0 {z0} <=∘ hz0
+       | hz0R : cabs z0 <= R => hz0 <=∘ (linarith : R0 <= R)
+       | R>=0 : (0 : Real) <= R => linarith
+       | P>=0 => powSum>=0 R>=0 M
+       | dp' => degree<_polyDeriv (degree<-suc dp)
+       | ball : \Pi (z : Complex) -> cabs (z - z0) <= B -> cabs z <= R
+          => \lam z hz => =_<= (pmap cabs (inv AddGroup.diff+))
+                          <=∘ cabs_+ {z - z0} {z0}
+                          <=∘ <=_+ hz hz0
+                          <=∘ (linarith : B + R0 <= R)
+       | L>=0 => <=_*_positive_positive
+                   (<=_*_positive_positive (coefMax>=0 {ComplexValuedRing} {polyDeriv p} {M}) P>=0)
+                   P>=0
+       | C>=0 => <=_*_positive_positive (<=_*_positive_positive
+                   (<=_*_positive_positive (coefMax>=0 {ComplexValuedRing} {p} {M}) P>=0) P>=0) P>=0
+     \in newton-root-bounds dp bd e0>=0 C>=0 hv0
+           (linarith (<=_*_positive-right e0>=0 hdinv))
+           (<=_*_positive-left
+              (<=_*_positive-right C>=0 (<=_*_positive-left hdinv (cabs>=0 {dinv})
+                                         <=∘ <=_*_positive-right Dd>=0 hdinv)) e0>=0
+            <=∘ hC)
+           (\lam z hz =>
+              <=_*_positive-left
+                (polyEval-diff-bound dp' (coefMax>=0 {ComplexValuedRing})
+                   (coefMax-cond-all {ComplexValuedRing} dp') (ball z hz) hz0R
+                 <=∘ <=_*_positive-right L>=0 (=_<= (cabs_-comm {z0} {z}) <=∘ hz))
+                (cabs>=0 {dinv})
+              <=∘ <=_*_positive-right (<=_*_positive_positive L>=0 B>=0) hdinv
+              <=∘ hL)
+           (\lam z y hz hy =>
+              polyEval-remainder-bound dp (coefMax>=0 {ComplexValuedRing}) (coefMax-cond-all dp)
+                (ball z hz) (ball y hy))

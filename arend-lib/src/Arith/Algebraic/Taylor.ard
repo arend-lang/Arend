@@ -1,0 +1,74 @@
+\import Algebra.Group
+\import Algebra.Monoid
+\import Algebra.Ordered
+\import Algebra.Pointed
+\import Algebra.Ring.Poly
+\import Algebra.Ring.Poly.Derivative
+\import Algebra.Semiring
+\import Analysis.Poly (lnorm_polyEval-boundD, deflate-coefBound)
+\import Arith.Complex
+\import Arith.Complex.Norm
+\import Arith.Real
+\import Arith.Real.Field
+\import Order.PartialOrder
+\import Paths
+\open PosetSemiring (<=_*_positive-left, <=_*_positive-right, <=_*_positive_positive)
+
+{- | **First- and second-order Taylor estimates for a complex polynomial, uniform on a disc.**
+
+     `polyEval_deflate-diff` and `polyTaylor2` express $p(y)-p(z)$ and
+     $p(y)-p(z)-p'(z)(y-z)$ as $(y-z)$ resp. $(y-z)^2$ times the value of an iterated deflation
+     `deflate`. Bounding that value coefficientwise turns the two identities into the Lipschitz
+     bound `polyEval-diff-bound` and the quadratic remainder bound `polyEval-remainder-bound`, whose
+     constants depend on `p`, its degree bound `m` and the radius $R$ only — not on the base
+     point $z$. -}
+
+-- | $|x u^2| = |x| \, |u|^2$.
+\private \lemma cabs_*sq (x u : Complex) : cabs (x * (u * u)) = cabs x * (cabs u * cabs u)
+  => cabs_* {x} {u * u} *> pmap (cabs x *) (cabs_* {u} {u})
+
+{- | A coefficient bound $c$ for `p` bounds the coefficients of the deflation `deflate p z` by
+     $c \cdot \mathrm{powSum}(R,m)$, uniformly over the disc $|z| \leq R$. -}
+\private \lemma deflate-coefBound-disc {p : Poly ComplexField} {m : Nat} (d : degree< p m)
+    {c : Real} (c>=0 : 0 <= c) (hc : \Pi (j : Nat) -> cabs (polyCoef p j) <= c)
+    {R : Real} {z : Complex} (hz : cabs z <= R) (k : Nat)
+  : cabs (polyCoef (deflate p z) k) <= c * powSum R m
+  => deflate-coefBound {ComplexValuedRing} d c>=0 hc k
+     <=∘ <=_*_positive-right c>=0 (powSum-mono (cabs>=0 {z}) hz m)
+
+-- | Hence $|(\mathrm{deflate}\ p\ z)(y)| \leq c \cdot \mathrm{powSum}(R,m)^2$ for $|z|,|y| \leq R$.
+\private \lemma deflate-eval-bound {p : Poly ComplexField} {m : Nat} (d : degree< p m)
+    {c : Real} (c>=0 : 0 <= c) (hc : \Pi (j : Nat) -> cabs (polyCoef p j) <= c)
+    {R : Real} {z y : Complex} (hz : cabs z <= R) (hy : cabs y <= R)
+  : cabs (polyEval (deflate p z) y) <= c * powSum R m * powSum R m
+  => lnorm_polyEval-boundD {ComplexValuedRing} (deflate-degree (degree<-suc d) z)
+       (\lam k => deflate-coefBound-disc d c>=0 hc hz k) y
+     <=∘ <=_*_positive-right
+           (<=_*_positive_positive c>=0 (powSum>=0 (cabs>=0 {z} <=∘ hz) m))
+           (powSum-mono (cabs>=0 {y}) hy m)
+
+{- | **A complex polynomial is Lipschitz on the disc $|\cdot| \leq R$**, with a constant read off
+     a coefficient bound $c$ for `p`. -}
+\lemma polyEval-diff-bound {p : Poly ComplexField} {m : Nat} (d : degree< p m)
+    {c : Real} (c>=0 : 0 <= c) (hc : \Pi (j : Nat) -> cabs (polyCoef p j) <= c)
+    {R : Real} {z y : Complex} (hz : cabs z <= R) (hy : cabs y <= R)
+  : cabs (polyEval p y - polyEval p z) <= c * powSum R m * powSum R m * cabs (y - z)
+  => =_<= (pmap cabs (polyEval_deflate-diff p z y)
+           *> cabs_* {polyEval (deflate p z) y} {y - z})
+     <=∘ <=_*_positive-left (deflate-eval-bound d c>=0 hc hz hy) (cabs>=0 {y - z})
+
+{- | **The quadratic Taylor remainder, bounded uniformly on the disc $|\cdot| \leq R$**: for
+     $|z|,|y| \leq R$ the error $|p(y)-p(z)-p'(z)(y-z)|$ is at most $|y-z|^2$ times a constant
+     depending on `p`, `m` and $R$ alone. -}
+\lemma polyEval-remainder-bound {p : Poly ComplexField} {m : Nat} (d : degree< p m)
+    {c : Real} (c>=0 : 0 <= c) (hc : \Pi (j : Nat) -> cabs (polyCoef p j) <= c)
+    {R : Real} {z y : Complex} (hz : cabs z <= R) (hy : cabs y <= R)
+  : cabs (polyEval p y - polyEval p z - polyEval (polyDeriv p) z * (y - z))
+  <= c * powSum R m * powSum R m * powSum R m * (cabs (y - z) * cabs (y - z))
+  => =_<= (pmap cabs (polyTaylor2 p z y)
+           *> cabs_*sq (polyEval (deflate (deflate p z) z) y) (y - z))
+     <=∘ <=_*_positive-left
+           (deflate-eval-bound (deflate-degree (degree<-suc d) z)
+              (<=_*_positive_positive c>=0 (powSum>=0 (cabs>=0 {z} <=∘ hz) m))
+              (\lam k => deflate-coefBound-disc d c>=0 hc hz k) hz hy)
+           (<=_*_positive_positive (cabs>=0 {y - z}) (cabs>=0 {y - z}))

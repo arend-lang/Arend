@@ -258,6 +258,28 @@
 \lemma mul-conj {z : Complex} : z * conj z = Complex.fromReal (cabs2 z)
   => complex-ext
 
+{- | **A complex number of positive modulus is invertible.** $\mathbb{C}$ is a `Field` but not a
+     `DiscreteField`, so there is no `finv`; invertibility comes from apartness, and $0 < |z|$ is
+     the apartness witness. The route is `mul-conj`: $|z|^2$ is invertible in $\mathbb{R}$, hence
+     $z\overline z$ is invertible in $\mathbb{C}$, hence so is $z$. -}
+\lemma cabs>0_Inv {z : Complex} (h : 0 < cabs z) : Monoid.Inv z
+  => run { Monoid.Inv.cfactor-left, transportInv Monoid.Inv mul-conj,
+           fromRealRingHom.func-Inv, RealField.positive=>#0, RealField.>0_pos, cabs2>0 h }
+  \where
+    \lemma cabs2>0 {z : Complex} (h : 0 < cabs z) : 0 < cabs2 z
+      => transport (0 <) cabs-square (RealField.<_*_positive_positive h h)
+
+{- | **The converse of `cabs>0_Inv`: an invertible complex number has positive modulus.** Together
+     the two say that for $\mathbb{C}$ invertibility and $0 < |z|$ are the same statement. -}
+\lemma Inv_cabs>0 {z : Complex} (zi : Monoid.Inv z) : 0 < cabs z
+  => \case RealField.<_*-cancel-right
+             (transport2 (<) (inv RealField.zro_*-left)
+                (inv (pmap cabs zi.inv-right *> cabs_ide) *> cabs_* {z} {zi.inv})
+                (linarith : (0 : Real) < 1)) \with {
+    | byLeft (_, p) => p
+    | byRight (p, _) => linarith (cabs>=0 {zi.inv})
+  }
+
 {- | Conjugation $\overline{\cdot} : \mathbb{C} \to \mathbb{C}$ as an isometric
      normed-group map. -}
 \func conjMap : NormedIsometricMap ComplexNormed ComplexNormed conj \cowith
