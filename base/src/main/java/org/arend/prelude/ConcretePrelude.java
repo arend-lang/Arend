@@ -170,6 +170,11 @@ public class ConcretePrelude implements ArendPrelude {
   }
 
   @Override
+  public CoreFunctionDefinition getIdd() {
+    return Prelude.IDD;
+  }
+
+  @Override
   public CoreFunctionDefinition getAt() {
     return Prelude.AT;
   }
@@ -423,6 +428,12 @@ public class ConcretePrelude implements ArendPrelude {
   public ArendRef getIdpRef() {
     if (Prelude.IDP != null) return Prelude.IDP.getRef();
     return myPreludeScope.resolveName("idp");
+  }
+
+  @Override
+  public ArendRef getIddRef() {
+    if (Prelude.IDD != null) return Prelude.IDD.getRef();
+    return myPreludeScope.resolveName("idd");
   }
 
   @Override

@@ -319,6 +319,7 @@ message ElimTree {
             }
 
             message Idp {
+                bool directed = 1;
             }
         }
         message ArrayClause {

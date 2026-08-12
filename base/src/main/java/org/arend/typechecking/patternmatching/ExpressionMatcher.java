@@ -24,7 +24,7 @@ public class ExpressionMatcher {
 
     if (data instanceof FunCallExpression funCall) {
       newArgs.addAll(0, funCall.getDefCallArguments());
-      return funCall.getDefinition() == Prelude.IDP ? expression : FunCallExpression.make(funCall.getDefinition(), funCall.getLevels(), newArgs);
+      return Prelude.isIdpFunction(funCall.getDefinition()) ? expression : FunCallExpression.make(funCall.getDefinition(), funCall.getLevels(), newArgs);
     }
 
     if (data instanceof ConCallExpression conCall && conCall.getDefinition() != Prelude.SUC) {

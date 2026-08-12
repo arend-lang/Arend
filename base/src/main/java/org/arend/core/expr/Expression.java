@@ -3,6 +3,8 @@ package org.arend.core.expr;
 import org.arend.core.context.binding.Binding;
 import org.arend.core.definition.ClassField;
 import org.arend.core.definition.Constructor;
+import org.arend.core.definition.DataDefinition;
+import org.arend.core.definition.FunctionDefinition;
 import org.arend.core.elimtree.ElimBody;
 import org.arend.core.elimtree.ElimClause;
 import org.arend.core.elimtree.IntervalElim;
@@ -373,22 +375,34 @@ public abstract class Expression implements Body, CoreExpression {
   }
 
   @Nullable
-  @Override
-  public FunCallExpression toEquality() {
+  private FunCallExpression toEqualityOrHom(boolean directed) {
+    FunctionDefinition infix = directed ? Prelude.DPATH_INFIX : Prelude.PATH_INFIX;
+    DataDefinition data = directed ? Prelude.DPATH : Prelude.PATH;
     Expression expr = getUnderlyingExpression();
-    if (expr instanceof FunCallExpression && ((FunCallExpression) expr).getDefinition() == Prelude.PATH_INFIX) {
+    if (expr instanceof FunCallExpression && ((FunCallExpression) expr).getDefinition() == infix) {
       return (FunCallExpression) expr;
     }
     DataCallExpression dataCall = expr instanceof DataCallExpression ? (DataCallExpression) expr : expr.normalize(NormalizationMode.WHNF).cast(DataCallExpression.class);
-    if (dataCall != null && dataCall.getDefinition() == Prelude.PATH) {
+    if (dataCall != null && dataCall.getDefinition() == data) {
       List<Expression> args = dataCall.getDefCallArguments();
       Expression type = args.get(0).removeConstLam();
       if (type != null) {
-        return FunCallExpression.makeFunCall(Prelude.PATH_INFIX, dataCall.getLevels(), Arrays.asList(type, args.get(1), args.get(2)));
+        return FunCallExpression.makeFunCall(infix, dataCall.getLevels(), Arrays.asList(type, args.get(1), args.get(2)));
       }
     }
 
     return null;
+  }
+
+  @Nullable
+  @Override
+  public FunCallExpression toEquality() {
+    return toEqualityOrHom(false);
+  }
+
+  @Nullable
+  public FunCallExpression toHom() {
+    return toEqualityOrHom(true);
   }
 
   private static boolean addConstructor(Expression expr, Constructor constructor, GraphClosure<Constructor> closure) {

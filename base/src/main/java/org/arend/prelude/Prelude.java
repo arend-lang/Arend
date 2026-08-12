@@ -87,6 +87,7 @@ public class Prelude implements ArendPrelude {
   public static Constructor PATH_CON;
 
   public static DConstructor IDP;
+  public static DConstructor IDD;
   public static FunctionDefinition AT;
   public static FunctionDefinition ISO;
 
@@ -107,6 +108,10 @@ public class Prelude implements ArendPrelude {
 
   public static boolean isInitialized() {
     return IS_INITIALIZED;
+  }
+
+  public static boolean isIdpFunction(Definition def) {
+    return def == IDP || def == IDD;
   }
 
   private Prelude() {}
@@ -242,15 +247,11 @@ public class Prelude implements ArendPrelude {
       }
       case "idp" -> {
         IDP = (DConstructor) definition;
-        List<Expression> args = new ArrayList<>(2);
-        args.add(new ReferenceExpression(IDP.getParameters()));
-        args.add(new ReferenceExpression(IDP.getParameters().getNext()));
-        IDP.setPattern(new ConstructorExpressionPattern(FunCallExpression.makeFunCall(IDP, Levels.EMPTY, args), Collections.emptyList()));
-        IDP.setNumberOfParameters(2);
-        IDP.setStatus(Definition.TypeCheckingStatus.NO_ERRORS);
-        PathExpression pathExpr = (PathExpression) IDP.getBody();
-        assert pathExpr != null;
-        IDP.setBody(new PathExpression(new LamExpression(UnusedIntervalDependentLink.INSTANCE, args.getFirst()), new LamExpression(UnusedIntervalDependentLink.INSTANCE, ((LamExpression) pathExpr.getArgument()).getBody()), false));
+        setIdpBody(IDP);
+      }
+      case "idd" -> {
+        IDD = (DConstructor) definition;
+        setIdpBody(IDD);
       }
       case "@" -> {
         AT = (FunctionDefinition) definition;
@@ -310,6 +311,18 @@ public class Prelude implements ArendPrelude {
     }
   }
 
+  private static void setIdpBody(DConstructor definition) {
+    List<Expression> args = new ArrayList<>(2);
+    args.add(new ReferenceExpression(definition.getParameters()));
+    args.add(new ReferenceExpression(definition.getParameters().getNext()));
+    definition.setPattern(new ConstructorExpressionPattern(FunCallExpression.makeFunCall(definition, Levels.EMPTY, args), Collections.emptyList()));
+    definition.setNumberOfParameters(2);
+    definition.setStatus(Definition.TypeCheckingStatus.NO_ERRORS);
+    PathExpression pathExpr = (PathExpression) definition.getBody();
+    assert pathExpr != null;
+    definition.setBody(new PathExpression(new LamExpression(UnusedIntervalDependentLink.INSTANCE, args.getFirst()), new LamExpression(UnusedIntervalDependentLink.INSTANCE, ((LamExpression) pathExpr.getArgument()).getBody()), definition == IDD));
+  }
+
   public static void forEach(Consumer<Definition> consumer) {
     consumer.accept(NAT);
     consumer.accept(PLUS);
@@ -340,6 +353,7 @@ public class Prelude implements ArendPrelude {
     consumer.accept(PATH_CON);
     consumer.accept(PATH_INFIX);
     consumer.accept(IDP);
+    consumer.accept(IDD);
     consumer.accept(AT);
     consumer.accept(COERCE);
     consumer.accept(COERCE2);
@@ -531,6 +545,11 @@ public class Prelude implements ArendPrelude {
   @Override
   public DConstructor getIdp() {
     return IDP;
+  }
+
+  @Override
+  public DConstructor getIdd() {
+    return IDD;
   }
 
   @Override
@@ -756,6 +775,11 @@ public class Prelude implements ArendPrelude {
   @Override
   public ArendRef getIdpRef() {
     return IDP == null ? null : IDP.getRef();
+  }
+
+  @Override
+  public ArendRef getIddRef() {
+    return IDD == null ? null : IDD.getRef();
   }
 
   @Override

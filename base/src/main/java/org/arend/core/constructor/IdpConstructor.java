@@ -12,14 +12,24 @@ import java.util.Collections;
 import java.util.List;
 
 public class IdpConstructor extends SingleConstructor {
+  private final boolean directed;
+
+  public IdpConstructor(boolean directed) {
+    this.directed = directed;
+  }
+
+  public boolean isDirected() {
+    return directed;
+  }
+
   @Override
   public List<Expression> getMatchedArguments(Expression argument, boolean normalizing) {
     argument = argument.getUnderlyingExpression();
     if (argument instanceof FunCallExpression) {
-      return ((FunCallExpression) argument).getDefinition() == Prelude.IDP ? Collections.emptyList() : null;
+      return ((FunCallExpression) argument).getDefinition() == (directed ? Prelude.IDD : Prelude.IDP) ? Collections.emptyList() : null;
     }
 
-    if (!normalizing || !(argument instanceof PathExpression)) {
+    if (!normalizing || !(argument instanceof PathExpression) || ((PathExpression) argument).isDirected() != directed) {
       return null;
     }
 
@@ -33,6 +43,6 @@ public class IdpConstructor extends SingleConstructor {
 
   @Override
   public boolean compare(SingleConstructor other, Equations equations, Concrete.SourceNode sourceNode) {
-    return other instanceof IdpConstructor;
+    return other instanceof IdpConstructor idpConstructor && idpConstructor.directed == directed;
   }
 }

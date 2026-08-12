@@ -378,8 +378,8 @@ class ExpressionSerialization implements ExpressionVisitor<Void, ExpressionProto
                 .setLength(tuple.getNumberOfParameters())
                 .addAllPropertyIndex(tuple.getPropertyIndices())
                 .build());
-            } else if (entry.getKey() instanceof IdpConstructor) {
-              singleClauseBuilder.setIdp(ExpressionProtos.ElimTree.Branch.SingleConstructorClause.Idp.newBuilder());
+            } else if (entry.getKey() instanceof IdpConstructor idpConstructor) {
+              singleClauseBuilder.setIdp(ExpressionProtos.ElimTree.Branch.SingleConstructorClause.Idp.newBuilder().setDirected(idpConstructor.isDirected()));
             } else if (entry.getKey() instanceof ClassConstructor classCon) {
               ExpressionProtos.ElimTree.Branch.SingleConstructorClause.Class.Builder conBuilder = ExpressionProtos.ElimTree.Branch.SingleConstructorClause.Class.newBuilder();
               conBuilder.setClassRef(myCallTargetIndexProvider.getDefIndex(classCon.getClassDefinition()));

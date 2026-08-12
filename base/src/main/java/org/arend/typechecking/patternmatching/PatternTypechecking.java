@@ -15,6 +15,7 @@ import org.arend.core.elimtree.IntervalElim;
 import org.arend.core.expr.*;
 import org.arend.core.expr.visitor.*;
 import org.arend.core.pattern.*;
+import org.arend.core.sort.Sort;
 import org.arend.core.subst.ExprSubstitution;
 import org.arend.core.subst.Levels;
 import org.arend.ext.core.context.BindingVariance;
@@ -639,19 +640,28 @@ public class PatternTypechecking {
           ExprSubstitution substitution = new ExprSubstitution();
           List<Expression> args = new ArrayList<>();
 
-          if (constructor == Prelude.IDP) {
+          if (constructor == Prelude.IDP || constructor == Prelude.IDD) {
+            boolean directed = constructor == Prelude.IDD;
             if (!myMode.allowIdp()) {
-              myErrorReporter.report(new TypecheckingError("Pattern matching on idp is not allowed here", pattern));
+              myErrorReporter.report(new TypecheckingError("Pattern matching on " + (directed ? "idd" : "idp") + " is not allowed here", pattern));
               return null;
             }
 
             levels = Levels.EMPTY;
             DataCallExpression dataCall = unfoldedExpr.cast(DataCallExpression.class);
-            LamExpression typeLam = dataCall == null || dataCall.getDefinition() != Prelude.PATH ? null : dataCall.getDefCallArguments().getFirst().normalize(NormalizationMode.WHNF).cast(LamExpression.class);
+            LamExpression typeLam = dataCall == null || dataCall.getDefinition() != (directed ? Prelude.DPATH : Prelude.PATH) ? null : dataCall.getDefCallArguments().getFirst().normalize(NormalizationMode.WHNF).cast(LamExpression.class);
             Expression type = ElimBindingVisitor.elimLamBinding(typeLam);
             if (type == null) {
               myErrorReporter.report(new TypeMismatchError(expr, constructor.getResultType().subst(substitution), conPattern));
               return null;
+            }
+
+            if (directed) {
+              Sort typeSort = type.getSortOfType();
+              if (typeSort == null || typeSort.getHLevel().isCat()) {
+                myErrorReporter.report(new IdpPatternError(myVisitor == null ? null : myVisitor.getExpressionPrettifier(), IdpPatternError.notInType(), dataCall, conPattern));
+                return null;
+              }
             }
 
             Expression expr1 = dataCall.getDefCallArguments().get(2).normalize(NormalizationMode.WHNF);

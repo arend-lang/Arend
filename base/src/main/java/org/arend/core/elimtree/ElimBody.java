@@ -105,8 +105,8 @@ public class ElimBody implements Body, CoreElimBody {
           conPattern = new ConstructorExpressionPattern(new ConCallExpression(constructor, dataCall.getLevels(), dataCall.getDefCallArguments(), Collections.emptyList()), Collections.emptyList());
           clauseElems.add(new Util.ConstructorClauseElem(constructor, dataCall.getLevels(), dataCall.getDefCallArguments()));
           newParams.addAll(DependentLink.Helper.toList(DependentLink.Helper.subst(constructor.getParameters(), new ExprSubstitution().add(constructor.getDataTypeParameters(), conCalls.getFirst().getDataTypeArguments()), conCalls.getFirst().getLevelSubstitution())));
-        } else if (key instanceof IdpConstructor) {
-          conPattern = ConstructorPattern.make(Prelude.IDP, Collections.emptyList()).toExpressionPattern(type);
+        } else if (key instanceof IdpConstructor idpKey) {
+          conPattern = ConstructorPattern.make(idpKey.isDirected() ? Prelude.IDD : Prelude.IDP, Collections.emptyList()).toExpressionPattern(type);
           clauseElems.add(new Util.PatternClauseElem(conPattern));
         } else if (key instanceof ArrayConstructor) {
           if (!(type instanceof ClassCallExpression classCall)) {

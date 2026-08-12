@@ -47,6 +47,8 @@
 
 \func \infix 1 ~> {C :⁺ \Cat} (a b :⁺ C) => DPath (\lam _ => C) a b
 
+\cons idd {C :⁺ \Cat} {a :⁺ C} => dpath \lam _ => a
+
 \func \infixl 9 d@ {C :⁺ DI ->⁺ \Cat} {a :⁺ C dleft} {b :⁺ C dright} (p :⁺ DPath C a b) (i :⁺ DI) : C i \elim p, i
   | dpath f, i => f i
   | _, dleft => a
@@ -63,8 +65,8 @@
   {aa' : a ~> a'} {bb' : b ~> b'} {cc' : c ~> c'}
   (topFace :⁺ DPath (\lam i => ab i ~> a'b' i) aa' bb')
   (rightFace :⁺ DPath (\lam k => bc k ~> b'c' k) bb' cc')
-  (backFace :⁺ DPath (\lam i => ab i ~> ac i) (dpath \lam _ => a) bc)
-  (frontFace :⁺ DPath (\lam i => a'b' i ~> a'c' i) (dpath \lam _ => a') b'c')
+  (backFace :⁺ DPath (\lam i => ab i ~> ac i) idd bc)
+  (frontFace :⁺ DPath (\lam i => a'b' i ~> a'c' i) idd b'c')
   (i j k :⁺ DI) : C \elim i, j, k
   | dleft, j, k => aa' j
   | dright, j, k => rightFace k j

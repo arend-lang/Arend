@@ -697,10 +697,10 @@ public class NormalizeVisitor extends ExpressionTransformer<NormalizationMode>  
   private ElimTree updateStack(Deque<Expression> stack, List<Expression> argList, BranchElimTree branchElimTree) {
     Expression argument = TypeConstructorExpression.unfoldExpression(stack.pop());
     ArrayExpression array = argument instanceof ArrayExpression ? (ArrayExpression) argument : null;
-    BranchKey key = argument instanceof ConCallExpression ? ((ConCallExpression) argument).getDefinition() : argument instanceof IntegerExpression ? (((IntegerExpression) argument).isZero() ? Prelude.ZERO : Prelude.SUC) : array != null ? new ArrayConstructor(array.getElements().isEmpty(), true, true) : argument instanceof PathExpression ? Prelude.PATH_CON : null;
+    BranchKey key = argument instanceof ConCallExpression ? ((ConCallExpression) argument).getDefinition() : argument instanceof IntegerExpression ? (((IntegerExpression) argument).isZero() ? Prelude.ZERO : Prelude.SUC) : array != null ? new ArrayConstructor(array.getElements().isEmpty(), true, true) : argument instanceof PathExpression pathArg ? (pathArg.isDirected() ? Prelude.DPATH_CON : Prelude.PATH_CON) : null;
 
     ElimTree elimTree = key == null ? branchElimTree.getSingleConstructorChild() : branchElimTree.getChild(key);
-    if (elimTree == null && key == Prelude.PATH_CON && branchElimTree.getSingleConstructorKey() instanceof IdpConstructor) {
+    if (elimTree == null && (key == Prelude.PATH_CON || key == Prelude.DPATH_CON) && branchElimTree.getSingleConstructorKey() instanceof IdpConstructor idpKey && idpKey.isDirected() == (key == Prelude.DPATH_CON)) {
       elimTree = branchElimTree.getSingleConstructorChild();
       key = null;
     }

@@ -38,6 +38,7 @@ public interface ArendPrelude {
   CoreFunctionDefinition getEquality();
   CoreConstructor getPathCon();
   CoreFunctionDefinition getIdp();
+  CoreFunctionDefinition getIdd();
   CoreFunctionDefinition getAt();
   CoreFunctionDefinition getIso();
   CoreFunctionDefinition getDivMod();
@@ -84,6 +85,7 @@ public interface ArendPrelude {
   ArendRef getEqualityRef();
   ArendRef getPathConRef();
   ArendRef getIdpRef();
+  ArendRef getIddRef();
   ArendRef getAtRef();
   ArendRef getIsoRef();
   ArendRef getDivModRef();

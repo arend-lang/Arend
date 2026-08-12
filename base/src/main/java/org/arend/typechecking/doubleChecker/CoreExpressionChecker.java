@@ -613,10 +613,18 @@ public class CoreExpressionChecker implements ExpressionVisitor<Expression, Expr
       return true;
     }
 
-    if (pattern instanceof ConstructorPattern && pattern.getDefinition() == Prelude.IDP) {
-      FunCallExpression equality = type.toEquality();
+    if (pattern instanceof ConstructorPattern && Prelude.isIdpFunction(pattern.getDefinition())) {
+      boolean directed = pattern.getDefinition() == Prelude.IDD;
+      FunCallExpression equality = directed ? type.toHom() : type.toEquality();
       if (equality == null || !(type instanceof DataCallExpression)) {
-        throw new CoreException(CoreErrorWrapper.make(new TypeMismatchError(type, DocFactory.text("_ = _"), mySourceNode), errorExpr));
+        throw new CoreException(CoreErrorWrapper.make(new TypeMismatchError(type, DocFactory.text(directed ? "_ ~> _" : "_ = _"), mySourceNode), errorExpr));
+      }
+      if (directed) {
+        Expression famType = equality.getDefCallArguments().getFirst();
+        Sort typeSort = famType.getSortOfType();
+        if (typeSort == null || typeSort.getHLevel().isCat()) {
+          throw new CoreException(CoreErrorWrapper.make(new IdpPatternError(null, IdpPatternError.notInType(), (DataCallExpression) type, mySourceNode), errorExpr));
+        }
       }
       Expression left = equality.getDefCallArguments().get(1).subst(patternSubst).normalize(NormalizationMode.WHNF).subst(patternSubst);
       Expression right = equality.getDefCallArguments().get(2).subst(patternSubst).normalize(NormalizationMode.WHNF).subst(patternSubst);

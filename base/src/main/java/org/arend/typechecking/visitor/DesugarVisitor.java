@@ -331,7 +331,7 @@ public class DesugarVisitor extends BaseConcreteExpressionVisitor<Void> {
 
   private static boolean hasIdp(List<? extends Concrete.Pattern> patterns) {
     for (Concrete.Pattern pattern : patterns) {
-      if (pattern != null && (pattern instanceof Concrete.ConstructorPattern && ((Concrete.ConstructorPattern) pattern).getConstructor() == Prelude.IDP.getRef() || hasIdp(pattern.getPatterns()))) {
+      if (pattern != null && (pattern instanceof Concrete.ConstructorPattern cp && (cp.getConstructor() == Prelude.IDP.getRef() || cp.getConstructor() == Prelude.IDD.getRef()) || hasIdp(pattern.getPatterns()))) {
         return true;
       }
     }

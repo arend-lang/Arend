@@ -867,7 +867,7 @@ public class ElimTypechecking {
       DataDefinition dataType;
       if (someConPattern.getDefinition() instanceof Constructor constructor) {
         dataType = constructor.getDataType();
-        if (dataType.hasIndexedConstructors() || dataType == Prelude.PATH) {
+        if (dataType.hasIndexedConstructors() || dataType == Prelude.PATH || dataType == Prelude.DPATH) {
           DataCallExpression dataCall;
           if (constructor == Prelude.FIN_ZERO || constructor == Prelude.FIN_SUC) {
             dataCall = Fin(Suc(((ConCallExpression) someConPattern.getDataExpression()).getDataTypeArguments().getFirst().subst(conClause.substitution)));
@@ -911,8 +911,8 @@ public class ElimTypechecking {
           }
           branchKeys = Collections.singletonList(new TupleConstructor(someConPattern.getLength(), propertyIndices));
         } else {
-          assert someConPattern.getDefinition() == Prelude.IDP;
-          branchKeys = Collections.singletonList(new IdpConstructor());
+          assert Prelude.isIdpFunction(someConPattern.getDefinition());
+          branchKeys = Collections.singletonList(new IdpConstructor(someConPattern.getDefinition() == Prelude.IDD));
         }
         dataType = null;
       }

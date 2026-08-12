@@ -162,7 +162,7 @@ public class ConstructorExpressionPattern extends ConstructorPattern<Object> imp
     Expression dataExpr = getDataExpression();
     if (dataExpr instanceof ClassCallExpression) {
       return ((ClassCallExpression) dataExpr).getClassFieldParameters();
-    } else if (dataExpr instanceof FunCallExpression && ((FunCallExpression) dataExpr).getDefinition() == Prelude.IDP || dataExpr instanceof SmallIntegerExpression) {
+    } else if (dataExpr instanceof FunCallExpression && Prelude.isIdpFunction(((FunCallExpression) dataExpr).getDefinition()) || dataExpr instanceof SmallIntegerExpression) {
       return EmptyDependentLink.getInstance();
     } else if (dataExpr instanceof SigmaExpression) {
       return ((SigmaExpression) dataExpr).getParameters();
@@ -180,7 +180,7 @@ public class ConstructorExpressionPattern extends ConstructorPattern<Object> imp
     Expression dataExpr = getDataExpression();
     return dataExpr instanceof ClassCallExpression
       ? ((ClassCallExpression) dataExpr).getDefinition().getNumberOfNotImplementedFields()
-      : dataExpr instanceof DefCallExpression && ((DefCallExpression) dataExpr).getDefinition() != Prelude.IDP
+      : dataExpr instanceof DefCallExpression && !Prelude.isIdpFunction(((DefCallExpression) dataExpr).getDefinition())
         ? DependentLink.Helper.size(((DefCallExpression) dataExpr).getDefinition().getParameters())
         : dataExpr instanceof SigmaExpression
           ? DependentLink.Helper.size(((SigmaExpression) dataExpr).getParameters())
@@ -197,7 +197,7 @@ public class ConstructorExpressionPattern extends ConstructorPattern<Object> imp
       return ConCallExpression.make(conCall.getDefinition(), conCall.getLevels(), conCall.getDataTypeArguments(), arguments);
     }
 
-    if (dataExpr instanceof FunCallExpression && ((FunCallExpression) dataExpr).getDefinition() == Prelude.IDP || dataExpr instanceof SmallIntegerExpression) {
+    if (dataExpr instanceof FunCallExpression && Prelude.isIdpFunction(((FunCallExpression) dataExpr).getDefinition()) || dataExpr instanceof SmallIntegerExpression) {
       return dataExpr;
     }
 
@@ -246,7 +246,7 @@ public class ConstructorExpressionPattern extends ConstructorPattern<Object> imp
   @Override
   public Expression toPatternExpression() {
     Expression dataExpr = getDataExpression();
-    if (dataExpr instanceof FunCallExpression && ((FunCallExpression) dataExpr).getDefinition() == Prelude.IDP || dataExpr instanceof SmallIntegerExpression) {
+    if (dataExpr instanceof FunCallExpression && Prelude.isIdpFunction(((FunCallExpression) dataExpr).getDefinition()) || dataExpr instanceof SmallIntegerExpression) {
       return dataExpr;
     }
 
@@ -318,13 +318,13 @@ public class ConstructorExpressionPattern extends ConstructorPattern<Object> imp
         }
         return null;
       }
-      if (function != Prelude.IDP) {
+      if (!Prelude.isIdpFunction(function)) {
         return null;
       }
-      if (expression instanceof FunCallExpression && ((FunCallExpression) expression).getDefinition() == Prelude.IDP) {
+      if (expression instanceof FunCallExpression && ((FunCallExpression) expression).getDefinition() == function) {
         return Collections.emptyList();
       }
-      if (!(expression instanceof PathExpression)) {
+      if (!(expression instanceof PathExpression) || ((PathExpression) expression).isDirected() != (function == Prelude.IDD)) {
         return null;
       }
       Expression arg = ((PathExpression) expression).getArgument();

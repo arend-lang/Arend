@@ -378,7 +378,7 @@ class ExpressionDeserialization {
             result.addChild(new TupleConstructor(tupleProto.getLength(), new HashSet<>(tupleProto.getPropertyIndexList())), elimTree);
           }
           if (singleClause.hasIdp()) {
-            result.addChild(new IdpConstructor(), elimTree);
+            result.addChild(new IdpConstructor(singleClause.getIdp().getDirected()), elimTree);
           }
           if (singleClause.hasClass_()) {
             ExpressionProtos.ElimTree.Branch.SingleConstructorClause.Class classProto = singleClause.getClass_();
