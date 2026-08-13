@@ -24,7 +24,12 @@ import org.arend.ext.typechecking.*;
 import org.arend.ext.util.Pair;
 import org.jetbrains.annotations.Nullable;
 
+import java.io.ByteArrayOutputStream;
 import java.math.BigInteger;
+import java.nio.ByteBuffer;
+import java.nio.charset.CharacterCodingException;
+import java.nio.charset.CodingErrorAction;
+import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.function.Function;
 
@@ -65,6 +70,37 @@ public class Utils {
       errorReporter.report(new TypeMismatchError(DocFactory.text("_ = _"), expression, sourceNode));
     }
     return equality;
+  }
+
+  // Decodes a String whose byte array evaluates to constructor form. Returns null if the array or
+  // one of its bytes is not concrete, or if the bytes are not valid UTF-8.
+  public static @Nullable String decodeString(CoreClassCallExpression stringClassCall) {
+    // A function returning a fully-implemented class (e.g. String's `++`, returning
+    // `\new String {|bytes=>...|}`) has its body folded by the typechecker into a refined result
+    // *type* (String {|bytes=>...|}); the call never reduces to a value carrying the field, so the
+    // `bytes` implementation is read from the type's class-call, not from the value.
+    CoreClassField bytesField = stringClassCall.getDefinition().findField("bytes");
+    CoreExpression bytes = bytesField == null ? null : stringClassCall.getClosedImplementation(bytesField);
+    if (bytes == null) return null;
+
+    if (!(bytes.normalize(NormalizationMode.WHNF) instanceof CoreArrayExpression array) || array.getTail() != null) return null;
+    ByteArrayOutputStream out = new ByteArrayOutputStream(array.getElements().size());
+    for (CoreExpression element : array.getElements()) {
+      if (!(element.normalize(NormalizationMode.WHNF) instanceof CoreIntegerExpression intExpr)) return null;
+      out.write(intExpr.getBigInteger().intValue() & 0xFF);
+    }
+
+    // Decode strictly: `bytes` may hold arbitrary bytes (e.g. via `\new String { | bytes => ... }`),
+    // and a lenient decode would substitute U+FFFD for malformed sequences, producing text that does
+    // not round-trip to the same bytes. Reporting a failure is more honest than returning wrong text.
+    try {
+      return StandardCharsets.UTF_8.newDecoder()
+        .onMalformedInput(CodingErrorAction.REPORT)
+        .onUnmappableCharacter(CodingErrorAction.REPORT)
+        .decode(ByteBuffer.wrap(out.toByteArray())).toString();
+    } catch (CharacterCodingException e) {
+      return null;
+    }
   }
 
   public static CoreExpression getAppArguments(CoreExpression expression, int numberOfArgs, List<CoreExpression> args) {
