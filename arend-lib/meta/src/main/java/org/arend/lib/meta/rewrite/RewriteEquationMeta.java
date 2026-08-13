@@ -271,13 +271,13 @@ public class RewriteEquationMeta extends BaseEquationMeta {
     }
 
     // Check that the first argument is a path
-    CoreFunCallExpression eq = Utils.toEquality(path.getType(), errorReporter, arg0);
+    CorePathTypeExpression eq = Utils.toEquality(path.getType(), errorReporter, arg0);
     if (eq == null) {
       return null;
     }
 
     ConcreteExpression transportExpr = factory.ref(isInverse ? transportInv : transport, refExpr.getLevels());
-    CoreExpression value = eq.getDefCallArguments().get(1);
+    CoreExpression value = eq.getLeftArgument();
 
     // This case won't happen often, but sill possible
     if (!isForward && expectedType instanceof CoreInferenceReferenceExpression) {
@@ -340,8 +340,8 @@ public class RewriteEquationMeta extends BaseEquationMeta {
         var var = factory.local("y" + i);
         occurIndToVarInd.put(i, occurVars.size());
         occurVars.add(var);
-        var left = factory.core(isInverse == isForward ? eq.getDefCallArguments().get(1).computeTyped() : foundOccurs.get(i).proj2.computeTyped());
-        var right = factory.core(isInverse == isForward ? foundOccurs.get(i).proj2.computeTyped() : eq.getDefCallArguments().get(2).computeTyped());
+        var left = factory.core(isInverse == isForward ? eq.getLeftArgument().computeTyped() : foundOccurs.get(i).proj2.computeTyped());
+        var right = factory.core(isInverse == isForward ? foundOccurs.get(i).proj2.computeTyped() : eq.getRightArgument().computeTyped());
         if (isExactMatch) {
           eqProofs.add(new EqProofConcrete(concretePath, left, right));
         } else {

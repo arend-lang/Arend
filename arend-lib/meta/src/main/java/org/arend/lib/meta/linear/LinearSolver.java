@@ -91,11 +91,11 @@ public class LinearSolver {
       }
     }
 
-    CoreFunCallExpression eq = type.toEquality();
+    Pair<CorePathTypeExpression, CoreExpression> eq = Utils.toEqualityWithType(type, null, null);
     if (eq != null) {
-      CoreExpression instance = findInstance(eq.getDefCallArguments().get(0), reportError);
+      CoreExpression instance = findInstance(eq.proj2, reportError);
       if (instance == null) return null;
-      return new Hypothesis<>(expr, instance, Equation.Operation.EQUALS, eq.getDefCallArguments().get(1), eq.getDefCallArguments().get(2), BigInteger.ONE);
+      return new Hypothesis<>(expr, instance, Equation.Operation.EQUALS, eq.proj1.getLeftArgument(), eq.proj1.getRightArgument(), BigInteger.ONE);
     }
 
     RelationData relationData = RelationData.getRelationData(type.normalize(NormalizationMode.WHNF));

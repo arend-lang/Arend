@@ -4,7 +4,6 @@ import org.arend.core.context.binding.Binding;
 import org.arend.core.context.binding.EvaluatingBinding;
 import org.arend.core.context.binding.inference.InferenceVariable;
 import org.arend.core.context.param.TypedSingleDependentLink;
-import org.arend.core.context.param.UnusedIntervalDependentLink;
 import org.arend.core.sort.Level;
 import org.arend.core.sort.Sort;
 import org.arend.core.subst.ListLevels;
@@ -41,7 +40,7 @@ public class ElimBindingVisitor extends ExpressionTransformer<Void> {
       return null;
     }
     Expression result = expr.getParameters().getNext().hasNext() ? new LamExpression(expr.getParameters().getNext(), expr.getBody()) : expr.getBody();
-    return expr.getParameters() == UnusedIntervalDependentLink.INSTANCE ? result : elimBinding(result, expr.getParameters());
+    return expr.getParameters().isUnused() ? result : elimBinding(result, expr.getParameters());
   }
 
   public static Expression elimBinding(Expression expression, Binding binding) {
@@ -258,8 +257,8 @@ public class ElimBindingVisitor extends ExpressionTransformer<Void> {
 
   @Override
   public LamExpression visitLam(LamExpression expr, Void params) {
-    boolean isUnused = expr.getParameters() == UnusedIntervalDependentLink.INSTANCE;
-    SingleDependentLink oldParameters = isUnused ? expr.getParameters().getNext() : expr.getParameters();
+    SingleDependentLink unusedParam = expr.getParameters().isUnused() ? expr.getParameters() : null;
+    SingleDependentLink oldParameters = unusedParam != null ? expr.getParameters().getNext() : expr.getParameters();
     Expression body;
     if (oldParameters.hasNext()) {
       ExprSubstitution substitution = new ExprSubstitution();
@@ -281,7 +280,7 @@ public class ElimBindingVisitor extends ExpressionTransformer<Void> {
         return null;
       }
     }
-    return isUnused ? new LamExpression(UnusedIntervalDependentLink.INSTANCE, body) : (LamExpression) body;
+    return unusedParam != null ? new LamExpression(unusedParam, body) : (LamExpression) body;
   }
 
   @Override

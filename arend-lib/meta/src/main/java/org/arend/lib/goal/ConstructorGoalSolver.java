@@ -78,8 +78,7 @@ public class ConstructorGoalSolver implements InteractiveGoalSolver {
       }
     } else {
       if (type instanceof CorePathTypeExpression pathType && !pathType.isDirected()) {
-        CoreFunCallExpression eq = pathType.toEquality();
-        if (eq != null && eq.getDefCallArguments().get(1).compare(eq.getDefCallArguments().get(2), CMP.EQ)) {
+        if (pathType.getArgumentType().removeConstLam() != null && pathType.getLeftArgument().compare(pathType.getRightArgument(), CMP.EQ)) {
           callback.accept(factory.ref(typechecker.getPrelude().getIdpRef()));
           return;
         }

@@ -22,6 +22,7 @@ import org.arend.ext.reference.ArendRef;
 import org.arend.ext.typechecking.*;
 import org.arend.ext.typechecking.meta.Dependency;
 import org.arend.ext.ui.ArendUI;
+import org.arend.ext.util.Pair;
 import org.arend.lib.error.IgnoredArgumentError;
 import org.arend.lib.error.SubclassError;
 import org.arend.lib.error.TypeError;
@@ -438,7 +439,7 @@ public class ExtMeta extends BaseMetaDefinition {
                   }
                   bindings1.add(parameter.getBinding());
                 }
-              } else if (paramType.toEquality() != null) {
+              } else if (paramType instanceof CorePathTypeExpression pt && !pt.isDirected() && pt.getArgumentType().removeConstLam() != null) {
                 if (!used.isEmpty()) ok = true;
               }
               if (ok != null) simpCoeIndices.put(sigmaParams.size(), ok);
@@ -738,16 +739,16 @@ public class ExtMeta extends BaseMetaDefinition {
       return result;
     }
 
-    CoreFunCallExpression equality = Utils.toEquality(expectedType, typechecker.getErrorReporter(), data.getMarker());
+    Pair<CorePathTypeExpression, CoreExpression> equality = Utils.toEqualityWithType(expectedType, typechecker.getErrorReporter(), data.getMarker());
     if (equality == null) return null;
-    data.setExpectedType(equality);
-    CoreExpression type = equality.getDefCallArguments().getFirst().normalize(NormalizationMode.WHNF);
+    data.setExpectedType(equality.proj1);
+    CoreExpression type = equality.proj2.normalize(NormalizationMode.WHNF);
     result = checkStuckExpression(type);
     if (result != null) return result;
 
     if (type instanceof CoreUniverseExpression) {
       if (((CoreUniverseExpression) type).getSortExpression().getSortHLevel() != null) return DefermentChecker.Result.DO_NOT_DEFER;
-      if (atLeastSet(equality.getDefCallArguments().get(1).computeType()) || atLeastSet(equality.getDefCallArguments().get(2).computeType())) {
+      if (atLeastSet(equality.proj1.getLeftArgument().computeType()) || atLeastSet(equality.proj1.getRightArgument().computeType())) {
         data.setUserData(Kind.NOT_PROP);
         return DefermentChecker.Result.DO_NOT_DEFER;
       }
@@ -760,13 +761,12 @@ public class ExtMeta extends BaseMetaDefinition {
   public @Nullable TypedExpression invokeMeta(@NotNull ExpressionTypechecker typechecker, @NotNull ContextData contextData) {
     ConcreteReferenceExpression marker = contextData.getReferenceExpression();
     ErrorReporter errorReporter = typechecker.getErrorReporter();
-    CoreFunCallExpression equality = Utils.toEquality(contextData.getExpectedType(), errorReporter, marker);
+    Pair<CorePathTypeExpression, CoreExpression> equality = Utils.toEqualityWithType(contextData.getExpectedType(), errorReporter, marker);
     if (equality == null) return null;
 
     List<? extends ConcreteArgument> args = contextData.getArguments();
     ConcreteFactory factory = contextData.getFactory();
-    CoreExpression type = equality.getDefCallArguments().getFirst();
-    if (contextData.getUserData() != Kind.NOT_PROP && Utils.isProp(type)) {
+    if (contextData.getUserData() != Kind.NOT_PROP && Utils.isProp(equality.proj2)) {
       if (!args.isEmpty()) {
         errorReporter.report(new IgnoredArgumentError(args.getFirst().getExpression()));
       }
@@ -778,12 +778,12 @@ public class ExtMeta extends BaseMetaDefinition {
       return null;
     }
 
-    CoreExpression origNormType = type.normalize(NormalizationMode.WHNF);
+    CoreExpression origNormType = equality.proj2.normalize(NormalizationMode.WHNF);
     CoreExpression normType = Utils.unfoldType(origNormType);
     ConcreteExpression arg = args.getFirst().getExpression();
     if (normType instanceof CoreUniverseExpression) {
-      ConcreteExpression left = factory.core(equality.getDefCallArguments().get(1).computeTyped());
-      ConcreteExpression right = factory.core(equality.getDefCallArguments().get(2).computeTyped());
+      ConcreteExpression left = factory.core(equality.proj1.getLeftArgument().computeTyped());
+      ConcreteExpression right = factory.core(equality.proj1.getRightArgument().computeTyped());
       if (((CoreUniverseExpression) normType).getSortExpression().isProp()) {
         TypedExpression expectedType = typechecker.typecheck(factory.sigma(Arrays.asList(factory.param(true, factory.arr(left, right)), factory.param(true, factory.arr(right, left)))), null);
         if (expectedType == null) return null;
@@ -816,7 +816,7 @@ public class ExtMeta extends BaseMetaDefinition {
       @Override
       public @Nullable TypedExpression invokeMeta(@NotNull ExpressionTypechecker typechecker, @NotNull ContextData contextData) {
         ExtGenerator generator = new ExtGenerator(typechecker, factory, marker, iRef);
-        ConcreteExpression result = generator.generate(arg, normType, equality.getDefCallArguments().get(1), equality.getDefCallArguments().get(2));
+        ConcreteExpression result = generator.generate(arg, normType, equality.proj1.getLeftArgument(), equality.proj1.getRightArgument());
         return result == null ? null : generator.goalExpr != null ? generator.goalExpr.computeTyped() : typechecker.typecheck(result, result instanceof ConcreteGoalExpression ? null : origNormType);
       }
     })))), contextData.getExpectedType());

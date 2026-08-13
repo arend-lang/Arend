@@ -446,27 +446,23 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
     expectedType = expectedType.normalize(NormalizationMode.WHNF);
 
     if (result.expression instanceof FunCallExpression idp && idp.getDefinition() == Prelude.IDP) {
-      FunCallExpression equality = expectedType.toEquality();
-      if (equality != null) {
+      PathTypeExpression pathType = expectedType.cast(PathTypeExpression.class);
+      Expression constType = pathType == null ? null : pathType.getArgumentType().removeConstLam();
+      if (pathType != null && constType != null) {
         CompareVisitor visitor = new CompareVisitor(myEquations, CMP.LE, expr);
-        if (!idp.getLevels().compare(equality.getLevels(), CMP.LE, myEquations, expr)) {
+        if (!visitor.compare(idp.getDefCallArguments().get(0), constType, UniverseExpression.OMEGA, false)) {
           Expression resultType = FunCallExpression.make(Prelude.PATH_INFIX, Levels.EMPTY, Arrays.asList(idp.getDefCallArguments().get(0), idp.getDefCallArguments().get(1), idp.getDefCallArguments().get(1)));
-          errorReporter.report(new TypeMismatchWithSubexprError(new CompareVisitor.Result(resultType, equality, resultType, equality, idp.getLevels(), equality.getLevels()), expr));
-          return null;
-        }
-        if (!visitor.compare(idp.getDefCallArguments().get(0), equality.getDefCallArguments().getFirst(), UniverseExpression.OMEGA, false)) {
-          Expression resultType = FunCallExpression.make(Prelude.PATH_INFIX, Levels.EMPTY, Arrays.asList(idp.getDefCallArguments().get(0), idp.getDefCallArguments().get(1), idp.getDefCallArguments().get(1)));
-          errorReporter.report(new TypeMismatchWithSubexprError(new CompareVisitor.Result(resultType, equality, idp.getDefCallArguments().get(0), equality.getDefCallArguments().getFirst(), null, null), expr));
+          errorReporter.report(new TypeMismatchWithSubexprError(new CompareVisitor.Result(resultType, pathType, idp.getDefCallArguments().get(0), constType, null, null), expr));
           return null;
         }
         visitor.setCMP(CMP.EQ);
-        Expression type = equality.getDefCallArguments().get(0);
-        Expression left = equality.getDefCallArguments().get(1).getUnderlyingExpression();
-        Expression right = equality.getDefCallArguments().get(2).getUnderlyingExpression();
+        Expression type = constType;
+        Expression left = pathType.getLeftArgument().getUnderlyingExpression();
+        Expression right = pathType.getRightArgument().getUnderlyingExpression();
         Expression idpArg = idp.getDefCallArguments().get(1).getUnderlyingExpression();
         boolean isNotEqualError = idpArg instanceof InferenceReferenceExpression && ((InferenceReferenceExpression) idpArg).getVariable() != null;
         if (!(visitor.compare(idpArg, left, type, true) && visitor.compare(idpArg, right, type, true))) {
-          errorReporter.report(isNotEqualError ? new NotEqualExpressionsError(getExpressionPrettifier(), left, right, expr) : new TypeMismatchError(equality, result.type, expr));
+          errorReporter.report(isNotEqualError ? new NotEqualExpressionsError(getExpressionPrettifier(), left, right, expr) : new TypeMismatchError(pathType, result.type, expr));
           return null;
         }
         if (left instanceof ArrayExpression) {

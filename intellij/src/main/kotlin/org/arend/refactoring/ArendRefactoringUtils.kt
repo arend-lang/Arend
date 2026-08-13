@@ -16,7 +16,9 @@ import org.arend.ext.core.context.BindingVariance
 import org.arend.ext.core.context.CoreBinding
 import org.arend.ext.core.context.CoreParameter
 import org.arend.ext.core.expr.CoreExpression
+import org.arend.ext.core.expr.CorePathTypeExpression
 import org.arend.ext.core.expr.CoreReferenceExpression
+import org.arend.ext.core.ops.NormalizationMode
 import org.arend.ext.module.LongName
 import org.arend.ext.reference.DataContainer
 import org.arend.ext.variable.Variable
@@ -565,9 +567,10 @@ enum class PatternMatchingOnIdpResult {INAPPLICABLE, DO_NOT_ELIMINATE, IDP}
 fun admitsPatternMatchingOnIdp(expr: CoreExpression,
                                caseParameters: CoreParameter?,
                                eliminatedBindings: Set<CoreBinding>? = null): PatternMatchingOnIdpResult {
-    val equality = expr.toEquality() ?: return PatternMatchingOnIdpResult.INAPPLICABLE
-    val leftBinding = (equality.defCallArguments[1] as? CoreReferenceExpression)?.binding
-    val rightBinding = (equality.defCallArguments[2] as? CoreReferenceExpression)?.binding
+    val equality = (expr.normalize(NormalizationMode.WHNF) as? CorePathTypeExpression)?.takeIf { !it.isDirected && it.argumentType.removeConstLam() != null }
+        ?: return PatternMatchingOnIdpResult.INAPPLICABLE
+    val leftBinding = (equality.leftArgument as? CoreReferenceExpression)?.binding
+    val rightBinding = (equality.rightArgument as? CoreReferenceExpression)?.binding
     val leftNotEliminated = eliminatedBindings == null || !eliminatedBindings.contains(leftBinding)
     val rightNotEliminated = eliminatedBindings == null || !eliminatedBindings.contains(rightBinding)
     var leftSideOk = caseParameters == null && leftBinding != null && leftNotEliminated

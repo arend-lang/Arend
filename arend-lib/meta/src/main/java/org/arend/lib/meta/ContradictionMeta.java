@@ -73,7 +73,7 @@ public class ContradictionMeta extends BaseMetaDefinition {
     final CoreExpression leftExpr;
     final CoreExpression rightExpr;
 
-    EqType(CoreBinding binding, CoreFunCallExpression eqType, CoreExpression leftExpr, CoreExpression rightExpr) {
+    EqType(CoreBinding binding, CorePathTypeExpression eqType, CoreExpression leftExpr, CoreExpression rightExpr) {
       super(binding, eqType);
       this.leftExpr = leftExpr;
       this.rightExpr = rightExpr;
@@ -83,8 +83,8 @@ public class ContradictionMeta extends BaseMetaDefinition {
   private record Negation(List<RType> assumptions, CoreExpression type, Function<Deque<ConcreteExpression>, ConcreteExpression> proof) {}
 
   private static RType makeRType(CoreBinding binding, CoreExpression paramType) {
-    CoreFunCallExpression equality = paramType.toEquality();
-    return equality != null ? new EqType(binding, equality, equality.getDefCallArguments().get(1), equality.getDefCallArguments().get(2)) : new RType(binding, paramType);
+    CorePathTypeExpression equality = Utils.toEquality(paramType, null, null);
+    return equality != null ? new EqType(binding, equality, equality.getLeftArgument(), equality.getRightArgument()) : new RType(binding, paramType);
   }
 
   /**

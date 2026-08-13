@@ -227,9 +227,9 @@ public class ToAbstractVisitor extends BaseExpressionVisitor<Void, Concrete.Expr
 
     LamExpression expr1 = expr.getArgumentType().cast(LamExpression.class);
     if (expr1 != null) {
-      if (!expr1.getBody().findBinding(expr1.getParameters())) {
+      if (expr1.getParameters().isUnused() || !expr1.getBody().findBinding(expr1.getParameters())) {
         Referable infix = (expr.isDirected() ? Prelude.DPATH_INFIX : Prelude.PATH_INFIX).getReferable();
-        return cBinOp(convertExpr(expr.getLeftArgument()), infix, hasFlag(PrettyPrinterFlag.SHOW_BIN_OP_IMPLICIT_ARGS) || convertSubexpr(expr1.getBody()) ? convertExpr(expr1.getBody()) : null, convertExpr(expr.getRightArgument()));
+        return cBinOp(convertExpr(expr.getLeftArgument()), infix, hasFlag(PrettyPrinterFlag.SHOW_BIN_OP_IMPLICIT_ARGS) || convertSubexpr(expr1.getBody()) || getVerboseLevel(expr) > 0 ? convertExpr(expr1.getBody()) : null, convertExpr(expr.getRightArgument()));
       }
     }
     return null;

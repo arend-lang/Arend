@@ -8,6 +8,7 @@ import org.arend.core.definition.Definition;
 import org.arend.core.expr.AppExpression;
 import org.arend.core.expr.DefCallExpression;
 import org.arend.core.expr.Expression;
+import org.arend.core.expr.PathTypeExpression;
 import org.arend.core.expr.ReferenceExpression;
 import org.arend.ext.variable.VariableRenamer;
 import org.arend.prelude.Prelude;
@@ -79,7 +80,9 @@ public class Renamer implements VariableRenamer {
     while (type instanceof AppExpression) {
       type = type.getFunction().getUnderlyingExpression();
     }
-    if (type instanceof DefCallExpression) {
+    if (type instanceof PathTypeExpression) {
+      name = "p";
+    } else if (type instanceof DefCallExpression) {
       name = ((DefCallExpression) type).getDefinition().getName();
 
       if (((DefCallExpression) type).getDefinition() == Prelude.PATH_INFIX) name = "p";

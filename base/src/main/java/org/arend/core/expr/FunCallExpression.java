@@ -1,5 +1,7 @@
 package org.arend.core.expr;
 
+import org.arend.core.context.param.UnusedDirectedIntervalDependentLink;
+import org.arend.core.context.param.UnusedIntervalDependentLink;
 import org.arend.core.definition.DConstructor;
 import org.arend.core.definition.FunctionDefinition;
 import org.arend.core.expr.visitor.ExpressionVisitor;
@@ -49,6 +51,10 @@ public class FunCallExpression extends LeveledDefCallExpression implements CoreF
     }
     if (definition == Prelude.ARRAY_CONS && arguments.size() == 4) {
       return ArrayExpression.make(arguments.get(1), new SingletonList<>(arguments.get(2)), arguments.get(3));
+    }
+    if ((definition == Prelude.PATH_INFIX || definition == Prelude.DPATH_INFIX) && arguments.size() == 3) {
+      boolean directed = definition == Prelude.DPATH_INFIX;
+      return new PathTypeExpression(new LamExpression(directed ? UnusedDirectedIntervalDependentLink.INSTANCE : UnusedIntervalDependentLink.INSTANCE, arguments.get(0)), arguments.get(1), arguments.get(2), directed);
     }
     FunCallExpression result = new FunCallExpression(definition, levels, arguments);
     result.fixBoxes();

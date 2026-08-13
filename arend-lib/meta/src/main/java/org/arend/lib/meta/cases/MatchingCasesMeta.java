@@ -234,17 +234,17 @@ public class MatchingCasesMeta extends BaseMetaDefinition {
               for (CoreElimClause clause : body.getClauses()) {
                 if (clause.getPatterns().get(i).getBinding() == null) {
                   matched.add(param.getBinding());
-                  CoreFunCallExpression funCall = param.getType().toEquality(); // try to take the type immediately
-                  if (funCall == null) { // if it's not an equality, then this may be because we need to substitute patterns
+                  CorePathTypeExpression equality = Utils.toEquality(param.getType(), null, null); // try to take the type immediately
+                  if (equality == null) { // if it's not an equality, then this may be because we need to substitute patterns
                     CoreExpression type = (CoreExpression) typechecker.substituteAbstractedExpression(parameters.abstractType(i), levelSubst, PatternUtils.toExpression(clause.getPatterns().subList(0, i), constructor, factory, null), null);
-                    funCall = type == null ? null : type.toEquality();
-                    if (funCall != null) {
+                    equality = type == null ? null : Utils.toEquality(type, null, null);
+                    if (equality != null) {
                       List<CoreBinding> patternBindings = new ArrayList<>(2);
-                      if (funCall.getDefCallArguments().get(1) instanceof CoreReferenceExpression) {
-                        patternBindings.add(((CoreReferenceExpression) funCall.getDefCallArguments().get(1)).getBinding());
+                      if (equality.getLeftArgument() instanceof CoreReferenceExpression) {
+                        patternBindings.add(((CoreReferenceExpression) equality.getLeftArgument()).getBinding());
                       }
-                      if (funCall.getDefCallArguments().get(2) instanceof CoreReferenceExpression) {
-                        patternBindings.add(((CoreReferenceExpression) funCall.getDefCallArguments().get(2)).getBinding());
+                      if (equality.getRightArgument() instanceof CoreReferenceExpression) {
+                        patternBindings.add(((CoreReferenceExpression) equality.getRightArgument()).getBinding());
                       }
                       if (!patternBindings.isEmpty()) {
                         CoreParameter param1 = parameters;
@@ -257,11 +257,11 @@ public class MatchingCasesMeta extends BaseMetaDefinition {
                       }
                     }
                   } else {
-                    if (funCall.getDefCallArguments().get(1) instanceof CoreReferenceExpression) {
-                      matched.add(((CoreReferenceExpression) funCall.getDefCallArguments().get(1)).getBinding());
+                    if (equality.getLeftArgument() instanceof CoreReferenceExpression) {
+                      matched.add(((CoreReferenceExpression) equality.getLeftArgument()).getBinding());
                     }
-                    if (funCall.getDefCallArguments().get(2) instanceof CoreReferenceExpression) {
-                      matched.add(((CoreReferenceExpression) funCall.getDefCallArguments().get(2)).getBinding());
+                    if (equality.getRightArgument() instanceof CoreReferenceExpression) {
+                      matched.add(((CoreReferenceExpression) equality.getRightArgument()).getBinding());
                     }
                   }
                   break;

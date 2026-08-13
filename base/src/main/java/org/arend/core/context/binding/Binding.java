@@ -16,6 +16,10 @@ public interface Binding extends CoreBinding {
     return false;
   }
 
+  default boolean isUnused() {
+    return false;
+  }
+
   default Binding subst(SubstVisitor visitor) {
     return visitor.isEmpty() ? this : new TypedBinding(getName(), getType().accept(visitor, null));
   }

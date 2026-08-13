@@ -1,6 +1,5 @@
 package org.arend.core.constructor;
 
-import org.arend.core.context.param.UnusedIntervalDependentLink;
 import org.arend.core.expr.*;
 import org.arend.core.expr.visitor.NormalizingFindBindingVisitor;
 import org.arend.ext.core.ops.NormalizationMode;
@@ -38,7 +37,7 @@ public class IdpConstructor extends SingleConstructor {
       return null;
     }
     Expression body = lamExpr.getParameters().getNext().hasNext() ? new LamExpression(lamExpr.getParameters().getNext(), lamExpr.getBody()) : lamExpr.getBody();
-    return lamExpr.getParameters() == UnusedIntervalDependentLink.INSTANCE || !NormalizingFindBindingVisitor.findBinding(body, lamExpr.getParameters()) ? Collections.emptyList() : null;
+    return lamExpr.getParameters().isUnused() || !NormalizingFindBindingVisitor.findBinding(body, lamExpr.getParameters()) ? Collections.emptyList() : null;
   }
 
   @Override

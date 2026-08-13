@@ -16,7 +16,6 @@ import org.arend.core.pattern.ConstructorExpressionPattern;
 import org.arend.core.pattern.ConstructorPattern;
 import org.arend.core.pattern.Pattern;
 import org.arend.core.subst.ExprSubstitution;
-import org.arend.core.subst.Levels;
 import org.arend.ext.core.body.CoreElimBody;
 import org.arend.ext.core.body.CorePattern;
 import org.arend.ext.core.context.CoreParameter;
@@ -27,7 +26,6 @@ import org.arend.util.Decision;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 

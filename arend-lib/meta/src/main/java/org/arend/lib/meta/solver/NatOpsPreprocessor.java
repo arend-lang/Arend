@@ -8,6 +8,7 @@ import org.arend.ext.core.definition.CoreFunctionDefinition;
 import org.arend.ext.core.expr.CoreAppExpression;
 import org.arend.ext.core.expr.CoreExpression;
 import org.arend.ext.core.expr.CoreFunCallExpression;
+import org.arend.ext.core.expr.CorePathTypeExpression;
 import org.arend.ext.core.expr.CoreProjExpression;
 import org.arend.ext.core.ops.CMP;
 import org.arend.ext.reference.ArendRef;
@@ -223,10 +224,10 @@ public class NatOpsPreprocessor {
     ConcreteExpression proof = factory.app(factory.ref(typechecker.getPrelude().getDivModPropRef()), true, aRef, bRef);
     TypedExpression typedProof = Utils.tryTypecheck(typechecker, tc -> tc.typecheck(proof, null));
     if (typedProof == null) return null;
-    CoreFunCallExpression eq = typedProof.getType().toEquality();
+    CorePathTypeExpression eq = Utils.toEquality(typedProof.getType(), null, null);
     if (eq == null) return null;
     return new SyntheticHypothesis(factory.core(typedProof), natSemiringInstance, Equation.Operation.EQUALS,
-        eq.getDefCallArguments().get(1), eq.getDefCallArguments().get(2));
+        eq.getLeftArgument(), eq.getRightArgument());
   }
 
   // -'<=id {a} {b} : a -' b <= a
@@ -301,10 +302,10 @@ public class NatOpsPreprocessor {
           .build();
       TypedExpression typedProof = Utils.tryTypecheck(typechecker, tc -> tc.typecheck(proof, null));
       if (typedProof == null) continue;
-      CoreFunCallExpression eq = typedProof.getType().toEquality();
+      CorePathTypeExpression eq = Utils.toEquality(typedProof.getType(), null, null);
       if (eq == null) continue;
       return new SyntheticHypothesis(factory.core(typedProof), natSemiringInstance, Equation.Operation.EQUALS,
-          eq.getDefCallArguments().get(1), eq.getDefCallArguments().get(2));
+          eq.getLeftArgument(), eq.getRightArgument());
     }
     return null;
   }
@@ -325,10 +326,10 @@ public class NatOpsPreprocessor {
           .build();
       TypedExpression typedProof = Utils.tryTypecheck(typechecker, tc -> tc.typecheck(proof, null));
       if (typedProof == null) continue;
-      CoreFunCallExpression eq = typedProof.getType().toEquality();
+      CorePathTypeExpression eq = Utils.toEquality(typedProof.getType(), null, null);
       if (eq == null) continue;
       return new SyntheticHypothesis(factory.core(typedProof), natSemiringInstance, Equation.Operation.EQUALS,
-          eq.getDefCallArguments().get(1), eq.getDefCallArguments().get(2));
+          eq.getLeftArgument(), eq.getRightArgument());
     }
     return null;
   }
@@ -346,10 +347,10 @@ public class NatOpsPreprocessor {
           .build();
       TypedExpression typedProof = Utils.tryTypecheck(typechecker, tc -> tc.typecheck(proof, null));
       if (typedProof == null) continue;
-      CoreFunCallExpression eq = typedProof.getType().toEquality();
+      CorePathTypeExpression eq = Utils.toEquality(typedProof.getType(), null, null);
       if (eq == null) continue;
       return new SyntheticHypothesis(factory.core(typedProof), natSemiringInstance, Equation.Operation.EQUALS,
-          eq.getDefCallArguments().get(1), eq.getDefCallArguments().get(2));
+          eq.getLeftArgument(), eq.getRightArgument());
     }
     return null;
   }
@@ -367,10 +368,10 @@ public class NatOpsPreprocessor {
           .build();
       TypedExpression typedProof = Utils.tryTypecheck(typechecker, tc -> tc.typecheck(proof, null));
       if (typedProof == null) continue;
-      CoreFunCallExpression eq = typedProof.getType().toEquality();
+      CorePathTypeExpression eq = Utils.toEquality(typedProof.getType(), null, null);
       if (eq == null) continue;
       return new SyntheticHypothesis(factory.core(typedProof), natSemiringInstance, Equation.Operation.EQUALS,
-          eq.getDefCallArguments().get(1), eq.getDefCallArguments().get(2));
+          eq.getLeftArgument(), eq.getRightArgument());
     }
     return null;
   }

@@ -95,12 +95,12 @@ public abstract class ConstructorPattern<T> implements Pattern {
       }
 
       return new ConstructorExpressionPattern(new ConCallExpression(constructor, dataCall.getLevels(), args, Collections.emptyList()), subPatterns);
-    } else if (type instanceof PathTypeExpression && Prelude.isIdpFunction(getDefinition())) {
-      FunCallExpression equality = getDefinition() == Prelude.IDD ? type.toHom() : type.toEquality();
-      if (equality == null) {
+    } else if (type instanceof PathTypeExpression pathType && Prelude.isIdpFunction(getDefinition()) && pathType.isDirected() == (getDefinition() == Prelude.IDD)) {
+      Expression constType = pathType.getArgumentType().removeConstLam();
+      if (constType == null) {
         return null;
       }
-      return new ConstructorExpressionPattern(FunCallExpression.makeFunCall((DConstructor) getDefinition(), equality.getLevels(), Arrays.asList(equality.getDefCallArguments().get(0), equality.getDefCallArguments().get(1))), Collections.emptyList());
+      return new ConstructorExpressionPattern(FunCallExpression.makeFunCall((DConstructor) getDefinition(), Levels.EMPTY, Arrays.asList(constType, pathType.getLeftArgument())), Collections.emptyList());
     } else if (type instanceof ClassCallExpression classCall) {
       if (classCall.getDefinition() == Prelude.DEP_ARRAY) {
         Definition def = getDefinition();

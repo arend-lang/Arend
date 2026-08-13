@@ -3,7 +3,6 @@ package org.arend.core.expr;
 import org.arend.core.context.binding.Binding;
 import org.arend.core.definition.ClassField;
 import org.arend.core.definition.Constructor;
-import org.arend.core.definition.FunctionDefinition;
 import org.arend.core.elimtree.ElimBody;
 import org.arend.core.elimtree.ElimClause;
 import org.arend.core.elimtree.IntervalElim;
@@ -24,7 +23,6 @@ import org.arend.core.elimtree.Body;
 import org.arend.core.expr.visitor.*;
 import org.arend.core.sort.Sort;
 import org.arend.core.subst.ExprSubstitution;
-import org.arend.core.subst.Levels;
 import org.arend.ext.core.level.LevelSubstitution;
 import org.arend.core.subst.SubstVisitor;
 import org.arend.ext.core.context.CoreBinding;
@@ -372,35 +370,6 @@ public abstract class Expression implements Body, CoreExpression {
   @Override
   public Expression removeConstLam() {
     return ElimBindingVisitor.elimLamBinding(normalize(NormalizationMode.WHNF).cast(LamExpression.class));
-  }
-
-  @Nullable
-  private FunCallExpression toEqualityOrHom(boolean directed) {
-    FunctionDefinition infix = directed ? Prelude.DPATH_INFIX : Prelude.PATH_INFIX;
-    Expression expr = getUnderlyingExpression();
-    if (expr instanceof FunCallExpression && ((FunCallExpression) expr).getDefinition() == infix) {
-      return (FunCallExpression) expr;
-    }
-    PathTypeExpression pathType = expr instanceof PathTypeExpression ? (PathTypeExpression) expr : expr.normalize(NormalizationMode.WHNF).cast(PathTypeExpression.class);
-    if (pathType != null && pathType.isDirected() == directed) {
-      Expression type = pathType.getArgumentType().removeConstLam();
-      if (type != null) {
-        return FunCallExpression.makeFunCall(infix, Levels.EMPTY, Arrays.asList(type, pathType.getLeftArgument(), pathType.getRightArgument()));
-      }
-    }
-
-    return null;
-  }
-
-  @Nullable
-  @Override
-  public FunCallExpression toEquality() {
-    return toEqualityOrHom(false);
-  }
-
-  @Nullable
-  public FunCallExpression toHom() {
-    return toEqualityOrHom(true);
   }
 
   private static boolean addConstructor(Expression expr, Constructor constructor, GraphClosure<Constructor> closure) {

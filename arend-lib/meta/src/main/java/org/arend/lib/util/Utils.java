@@ -59,12 +59,23 @@ public class Utils {
     return expr instanceof ConcreteTupleExpression ? ((ConcreteTupleExpression) expr).getFields() : Collections.singletonList(expr);
   }
 
-  public static CoreFunCallExpression toEquality(CoreExpression expression, ErrorReporter errorReporter, ConcreteSourceNode sourceNode) {
-    CoreFunCallExpression equality = expression.toEquality();
-    if (equality == null && errorReporter != null && !expression.reportIfError(errorReporter, sourceNode)) {
+  public static Pair<CorePathTypeExpression, CoreExpression> toEqualityWithType(CoreExpression expression, ErrorReporter errorReporter, ConcreteSourceNode sourceNode) {
+    if (expression.normalize(NormalizationMode.WHNF) instanceof CorePathTypeExpression pathType && !pathType.isDirected()) {
+      CoreExpression argumentType = pathType.getArgumentType().removeConstLam();
+      if (argumentType != null) {
+        return new Pair<>(pathType, argumentType);
+      }
+    }
+
+    if (errorReporter != null && !expression.reportIfError(errorReporter, sourceNode)) {
       errorReporter.report(new TypeMismatchError(DocFactory.text("_ = _"), expression, sourceNode));
     }
-    return equality;
+    return null;
+  }
+
+  public static CorePathTypeExpression toEquality(CoreExpression expression, ErrorReporter errorReporter, ConcreteSourceNode sourceNode) {
+    Pair<CorePathTypeExpression, CoreExpression> pair = toEqualityWithType(expression, errorReporter, sourceNode);
+    return pair == null ? null : pair.proj1;
   }
 
   public static CoreExpression getAppArguments(CoreExpression expression, int numberOfArgs, List<CoreExpression> args) {

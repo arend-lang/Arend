@@ -532,7 +532,7 @@ public class ArrayTest extends TypeCheckingTestCase {
   @Test
   public void inferTest() {
     FunctionDefinition def = (FunctionDefinition) typeCheckDef("\\func test {A : \\Type} {n : Nat} (l : Array A n) : l = l => idp");
-    assertTrue(((ClassCallExpression) ((FunCallExpression) def.getResultType()).getDefCallArguments().getFirst()).isImplemented(Prelude.ARRAY_LENGTH));
+    assertTrue(((ClassCallExpression) ((PathTypeExpression) def.getResultType()).getArgumentType().cast(LamExpression.class).getBody()).isImplemented(Prelude.ARRAY_LENGTH));
   }
 
   @Test

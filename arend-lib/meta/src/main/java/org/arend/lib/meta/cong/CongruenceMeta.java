@@ -12,6 +12,7 @@ import org.arend.ext.error.*;
 import org.arend.ext.reference.ArendRef;
 import org.arend.ext.typechecking.*;
 import org.arend.ext.typechecking.meta.Dependency;
+import org.arend.ext.util.Pair;
 import org.arend.lib.context.Context;
 import org.arend.lib.context.ContextHelper;
 import org.arend.lib.error.IgnoredArgumentError;
@@ -40,10 +41,10 @@ public class CongruenceMeta extends BaseMetaDefinition {
       return path.eqProofOrElement;
     }
     TypedExpression pathChecked = typechecker.typecheck(path.eqProofOrElement, null);
-    CoreDefCallExpression equality = pathChecked != null ? pathChecked.getType().toEquality() : null;
+    Pair<CorePathTypeExpression, CoreExpression> equality = pathChecked == null ? null : Utils.toEqualityWithType(pathChecked.getType(), null, null);
     if (equality != null) {
       ArendRef iParam = factory.local("i");
-      ConcreteExpression funcLam = factory.lam(Collections.singletonList(factory.param(iParam)), factory.core(equality.getDefCallArguments().getFirst().computeTyped()));
+      ConcreteExpression funcLam = factory.lam(Collections.singletonList(factory.param(iParam)), factory.core(equality.proj2.computeTyped()));
       return factory.app(factory.ref(prelude.getAtRef()), Arrays.asList(factory.arg(funcLam, false), factory.arg(path.eqProofOrElement, true), factory.arg(factory.ref(param), true)));
     }
     return factory.app(factory.ref(prelude.getAtRef()), Arrays.asList(factory.arg(path.eqProofOrElement, true), factory.arg(factory.ref(param), true)));
@@ -113,7 +114,7 @@ public class CongruenceMeta extends BaseMetaDefinition {
     }
 
     ConcreteReferenceExpression refExpr = contextData.getReferenceExpression();
-    CoreFunCallExpression expectedType = Utils.toEquality(contextData.getExpectedType(), typechecker.getErrorReporter(), refExpr);
+    CorePathTypeExpression expectedType = Utils.toEquality(contextData.getExpectedType(), typechecker.getErrorReporter(), refExpr);
     if (expectedType == null) {
       return null;
     }
@@ -127,14 +128,14 @@ public class CongruenceMeta extends BaseMetaDefinition {
     CongruenceClosure<CoreExpression> congruenceClosure = new CongruenceClosure<>(typechecker, refExpr, eqProofs -> applyCongruence(typechecker, eqProofs, factory),
         new CongruenceClosure.EqualityIsEquivProof(factory.ref(typechecker.getPrelude().getIdpRef()), factory.ref(inv), factory.ref(concat)), factory);
     for (CoreBinding binding : contextHelper.getAllBindings(typechecker)) {
-      CoreFunCallExpression equality = binding.getType().toEquality();
+      CorePathTypeExpression equality = Utils.toEquality(binding.getType(), null, null);
       if (equality != null) {
-        congruenceClosure.addRelation(equality.getDefCallArguments().get(1), equality.getDefCallArguments().get(2), factory.ref(binding));
+        congruenceClosure.addRelation(equality.getLeftArgument(), equality.getRightArgument(), factory.ref(binding));
       }
     }
 
-    CoreExpression leftEqArg = expectedType.getDefCallArguments().get(1);
-    CoreExpression rightEqArg = expectedType.getDefCallArguments().get(2);
+    CoreExpression leftEqArg = expectedType.getLeftArgument();
+    CoreExpression rightEqArg = expectedType.getRightArgument();
 
     ConcreteExpression goalProof = congruenceClosure.checkRelation(leftEqArg, rightEqArg);
     if (goalProof == null) return null;

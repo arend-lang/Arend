@@ -49,11 +49,15 @@ public class EqualitySolver extends BaseEqualitySolver {
 
   @Override
   public boolean isApplicable(CoreExpression type) {
-    equality = type.toEquality();
-    if (equality == null) {
+    var pair = Utils.toEqualityWithType(type, null, null);
+    if (pair == null) {
+      equality = null;
+      equalityType = null;
       return false;
     }
-    setValuesType(equality.getDefCallArguments().getFirst());
+    equality = pair.proj1;
+    equalityType = pair.proj2;
+    setValuesType(pair.proj2);
     return true;
   }
 
@@ -100,9 +104,9 @@ public class EqualitySolver extends BaseEqualitySolver {
     if (useHypotheses) {
       ContextHelper helper = new ContextHelper(hint);
       for (CoreBinding binding : helper.getAllBindings(typechecker)) {
-        CoreFunCallExpression equality = binding.getType().normalize(NormalizationMode.WHNF).toEquality();
-        if (equality != null && typechecker.compare(equality.getDefCallArguments().get(0), valuesType, CMP.EQ, refExpr, false, true, false)) {
-          closure.addRelation(equality.getDefCallArguments().get(1), equality.getDefCallArguments().get(2), factory.ref(binding));
+        Pair<CorePathTypeExpression, CoreExpression> equality = Utils.toEqualityWithType(binding.getType(), null, null);
+        if (equality != null && typechecker.compare(equality.proj2, valuesType, CMP.EQ, refExpr, false, true, false)) {
+          closure.addRelation(equality.proj1.getLeftArgument(), equality.proj1.getRightArgument(), factory.ref(binding));
         }
       }
     }
@@ -111,8 +115,8 @@ public class EqualitySolver extends BaseEqualitySolver {
 
   private void initializeAlgebraSolver(TypedExpression instance, CoreClassCallExpression classCall) {
     algebraSolver = meta.Semiring != null && classCall.getDefinition().isSubClassOf(meta.Semiring) && (forcedClass == null || forcedClass.isSubClassOf(meta.Semiring)) || meta.BoundedDistributiveLattice != null && classCall.getDefinition().isSubClassOf(meta.BoundedDistributiveLattice) && (forcedClass == null || forcedClass.isSubClassOf(meta.BoundedDistributiveLattice))
-      ? new RingSolver(meta, typechecker, factory, refExpr, equality, instance, classCall, forcedClass, useHypotheses)
-      : new MonoidSolver(meta, typechecker, factory, refExpr, equality, instance, classCall, forcedClass, useHypotheses, meta.catComp, meta.catId);
+      ? new RingSolver(meta, typechecker, factory, refExpr, equality, equalityType, instance, classCall, forcedClass, useHypotheses)
+      : new MonoidSolver(meta, typechecker, factory, refExpr, equality, equalityType, instance, classCall, forcedClass, useHypotheses, meta.catComp, meta.catId);
   }
 
   private boolean initializeAlgebraSolver(CoreExpression type) {
@@ -128,7 +132,7 @@ public class EqualitySolver extends BaseEqualitySolver {
         CoreExpression fun = ((CoreAppExpression) typeFun).getFunction().normalize(NormalizationMode.WHNF);
         if (fun instanceof CoreFieldCallExpression) {
           if (((CoreFieldCallExpression) fun).getDefinition().getRef() == meta.catHom) {
-            algebraSolver = new MonoidSolver(meta, typechecker, factory, refExpr, equality, ((CoreFieldCallExpression) fun).getArgument().computeTyped(), null, null, false, meta.catComp, meta.catId);
+            algebraSolver = new MonoidSolver(meta, typechecker, factory, refExpr, equality, equalityType, ((CoreFieldCallExpression) fun).getArgument().computeTyped(), null, null, false, meta.catComp, meta.catId);
             return true;
           }
           return false;

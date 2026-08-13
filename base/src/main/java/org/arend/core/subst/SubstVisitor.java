@@ -6,7 +6,6 @@ import org.arend.core.context.binding.EvaluatingBinding;
 import org.arend.core.context.binding.PersistentEvaluatingBinding;
 import org.arend.core.context.param.DependentLink;
 import org.arend.core.context.param.SingleDependentLink;
-import org.arend.core.context.param.UnusedIntervalDependentLink;
 import org.arend.core.definition.ClassField;
 import org.arend.core.definition.Constructor;
 import org.arend.core.elimtree.*;
@@ -172,8 +171,8 @@ public class SubstVisitor extends ExpressionTransformer<Void> {
 
   @Override
   public Expression visitLam(LamExpression expr, Void params) {
-    boolean isUnused = expr.getParameters() == UnusedIntervalDependentLink.INSTANCE;
-    SingleDependentLink oldParameters = isUnused ? expr.getParameters().getNext() : expr.getParameters();
+    SingleDependentLink unusedParam = expr.getParameters().isUnused() ? expr.getParameters() : null;
+    SingleDependentLink oldParameters = unusedParam != null ? expr.getParameters().getNext() : expr.getParameters();
     Expression result;
     if (oldParameters.hasNext()) {
       SingleDependentLink parameters = DependentLink.Helper.subst(oldParameters, this);
@@ -182,7 +181,7 @@ public class SubstVisitor extends ExpressionTransformer<Void> {
     } else {
       result = expr.getBody().accept(this, null);
     }
-    return isUnused ? new LamExpression(UnusedIntervalDependentLink.INSTANCE, result) : result;
+    return unusedParam != null ? new LamExpression(unusedParam, result) : result;
   }
 
   @Override

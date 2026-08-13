@@ -323,7 +323,7 @@ public class PrettyPrintingTest extends TypeCheckingTestCase {
     testRevealing("\\func f : idp = {1 = 1} idp => idp",
             (group) -> ((FunctionDefinition) getDefinition(group, "f")).getResultType(),
             "idp {Nat} = idp",
-            (result) -> result.cast(FunCallExpression.class).getDefCallArguments().get(1));
+            (result) -> result.cast(PathTypeExpression.class).getLeftArgument());
   }
 
   @Test
@@ -341,7 +341,7 @@ public class PrettyPrintingTest extends TypeCheckingTestCase {
       "\\func e (q : A) (p : q.f = idp) : q.f = idp => p",
             (group) -> ((FunctionDefinition) getDefinition(group, "e")).getResultType(),
             "q.f {1} = idp",
-            (result) -> result.cast(FunCallExpression.class).getDefCallArguments().get(1).cast(AppExpression.class).getFunction());
+            (result) -> result.cast(PathTypeExpression.class).getLeftArgument().cast(AppExpression.class).getFunction());
   }
 
   private void testLamPatterns(String body) {

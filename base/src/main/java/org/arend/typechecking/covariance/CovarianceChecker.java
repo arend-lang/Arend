@@ -136,14 +136,11 @@ public abstract class CovarianceChecker {
       return false;
     }
 
-    if (expr instanceof FunCallExpression funCall && (funCall.getDefinition() == Prelude.PATH_INFIX || funCall.getDefinition() == Prelude.DPATH_INFIX) && allowData()) {
-      if (checkLevels(funCall.getLevels(), funCall)) {
+    if (expr instanceof PathTypeExpression pathType && allowData()) {
+      if (checkConstructor(pathType.getArgumentType())) {
         return true;
       }
-      if (check(funCall.getDefCallArguments().get(0))) {
-        return true;
-      }
-      return checkNonCovariant(funCall.getDefCallArguments().get(1)) || checkNonCovariant(funCall.getDefCallArguments().get(2));
+      return checkNonCovariant(pathType.getLeftArgument()) || checkNonCovariant(pathType.getRightArgument());
     }
 
     if (expr instanceof FunCallExpression funCall && funCall.getDefinition() == Prelude.ARRAY) {

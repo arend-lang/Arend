@@ -4,7 +4,7 @@ import org.arend.ext.concrete.ConcreteFactory;
 import org.arend.ext.concrete.expr.ConcreteExpression;
 import org.arend.ext.concrete.expr.ConcreteReferenceExpression;
 import org.arend.ext.core.expr.CoreExpression;
-import org.arend.ext.core.expr.CoreFunCallExpression;
+import org.arend.ext.core.expr.CorePathTypeExpression;
 import org.arend.ext.error.ErrorReporter;
 import org.arend.ext.reference.ArendRef;
 import org.arend.ext.typechecking.ExpressionTypechecker;
@@ -23,7 +23,8 @@ public abstract class BaseEqualitySolver implements EquationSolver {
   protected final ExpressionTypechecker typechecker;
   protected final ConcreteFactory factory;
   protected final ConcreteReferenceExpression refExpr;
-  protected CoreFunCallExpression equality;
+  protected CoreExpression equalityType;
+  protected CorePathTypeExpression equality;
   protected final TypedExpression instance;
   protected final Values<CoreExpression> values;
   protected final ArendRef dataRef;
@@ -51,17 +52,17 @@ public abstract class BaseEqualitySolver implements EquationSolver {
 
   @Override
   public CoreExpression getValuesType() {
-    return equality.getDefCallArguments().getFirst();
+    return equalityType;
   }
 
   @Override
   public CoreExpression getLeftValue() {
-    return equality == null ? null : equality.getDefCallArguments().get(1);
+    return equality == null ? null : equality.getLeftArgument();
   }
 
   @Override
   public CoreExpression getRightValue() {
-    return equality == null ? null : equality.getDefCallArguments().get(2);
+    return equality == null ? null : equality.getRightArgument();
   }
 
   @Override

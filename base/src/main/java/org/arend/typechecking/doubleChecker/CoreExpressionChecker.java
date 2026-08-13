@@ -302,7 +302,7 @@ public class CoreExpressionChecker implements ExpressionVisitor<Expression, Expr
   }
 
   void addBinding(Binding binding, Expression expr) {
-    if (binding != UnusedIntervalDependentLink.INSTANCE && !(myContext == null || myContext.add(binding))) {
+    if (!binding.isUnused() && !(myContext == null || myContext.add(binding))) {
       throw new CoreException(CoreErrorWrapper.make(new TypecheckingError("Binding '" + binding.getName() + "' is already bound", mySourceNode), expr));
     }
   }
@@ -579,8 +579,8 @@ public class CoreExpressionChecker implements ExpressionVisitor<Expression, Expr
     Expression proofType = proof.accept(this, null);
 
     List<SingleDependentLink> params = new ArrayList<>();
-    FunCallExpression codomain = proofType.getPiParameters(params, false).toEquality();
-    if (codomain == null || params.isEmpty() || params.size() % 2 == 1) {
+    PathTypeExpression codomain = proofType.getPiParameters(params, false).normalize(NormalizationMode.WHNF).cast(PathTypeExpression.class);
+    if (codomain == null || codomain.isDirected() || codomain.getArgumentType().removeConstLam() == null || params.isEmpty() || params.size() % 2 == 1) {
       throw new CoreException(CoreErrorWrapper.make(new TypecheckingError("\\level has wrong format", mySourceNode), proof));
     }
 
@@ -615,19 +615,19 @@ public class CoreExpressionChecker implements ExpressionVisitor<Expression, Expr
 
     if (pattern instanceof ConstructorPattern && Prelude.isIdpFunction(pattern.getDefinition())) {
       boolean directed = pattern.getDefinition() == Prelude.IDD;
-      FunCallExpression equality = directed ? type.toHom() : type.toEquality();
-      if (equality == null || !(type instanceof PathTypeExpression pathType)) {
+      PathTypeExpression pathType = type instanceof PathTypeExpression pt && pt.isDirected() == directed ? pt : null;
+      Expression constType = pathType == null ? null : pathType.getArgumentType().removeConstLam();
+      if (constType == null) {
         throw new CoreException(CoreErrorWrapper.make(new TypeMismatchError(type, DocFactory.text(directed ? "_ ~> _" : "_ = _"), mySourceNode), errorExpr));
       }
       if (directed) {
-        Expression famType = equality.getDefCallArguments().getFirst();
-        Sort typeSort = famType.getSortOfType();
+        Sort typeSort = constType.getSortOfType();
         if (typeSort == null || typeSort.getHLevel().isCat()) {
           throw new CoreException(CoreErrorWrapper.make(new IdpPatternError(null, IdpPatternError.notInType(), pathType, mySourceNode), errorExpr));
         }
       }
-      Expression left = equality.getDefCallArguments().get(1).subst(patternSubst).normalize(NormalizationMode.WHNF).subst(patternSubst);
-      Expression right = equality.getDefCallArguments().get(2).subst(patternSubst).normalize(NormalizationMode.WHNF).subst(patternSubst);
+      Expression left = pathType.getLeftArgument().subst(patternSubst).normalize(NormalizationMode.WHNF).subst(patternSubst);
+      Expression right = pathType.getRightArgument().subst(patternSubst).normalize(NormalizationMode.WHNF).subst(patternSubst);
       ReferenceExpression refExprLeft = left.cast(ReferenceExpression.class);
       ReferenceExpression refExprRight = right.cast(ReferenceExpression.class);
       Binding refLeft = refExprLeft == null ? null : refExprLeft.getBinding();
