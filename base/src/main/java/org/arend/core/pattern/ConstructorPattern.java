@@ -83,7 +83,7 @@ public abstract class ConstructorPattern<T> implements Pattern {
 
   @Override
   public ConstructorExpressionPattern toExpressionPattern(Expression type) {
-    if (type instanceof DataCallExpression dataCall && getDefinition() instanceof Constructor constructor) {
+    if (type instanceof BaseDataCallExpression dataCall && getDefinition() instanceof Constructor constructor) {
       List<Expression> args = constructor.matchDataTypeArguments(dataCall.getDefCallArguments());
       if (args == null) {
         return null;
@@ -95,7 +95,7 @@ public abstract class ConstructorPattern<T> implements Pattern {
       }
 
       return new ConstructorExpressionPattern(new ConCallExpression(constructor, dataCall.getLevels(), args, Collections.emptyList()), subPatterns);
-    } else if (type instanceof DataCallExpression && Prelude.isIdpFunction(getDefinition())) {
+    } else if (type instanceof PathTypeExpression && Prelude.isIdpFunction(getDefinition())) {
       FunCallExpression equality = getDefinition() == Prelude.IDD ? type.toHom() : type.toEquality();
       if (equality == null) {
         return null;

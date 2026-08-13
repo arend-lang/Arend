@@ -55,10 +55,10 @@ public class DefCallResult implements TResult {
   }
 
   private Expression getCoreDefCall() {
-    return myDefinition == Prelude.PATH_CON
-      ? new PathExpression(myArguments.get(0), myArguments.get(1), false)
-      : myDefinition == Prelude.DPATH_CON
-        ? new PathExpression(myArguments.get(0), myArguments.get(1), true)
+    return myDefinition == Prelude.PATH_CON || myDefinition == Prelude.DPATH_CON
+      ? new PathExpression(myArguments.get(0), myArguments.get(1), myDefinition == Prelude.DPATH_CON)
+      : myDefinition == Prelude.PATH || myDefinition == Prelude.DPATH
+        ? new PathTypeExpression(myArguments.get(0), myArguments.get(1), myArguments.get(2), myDefinition == Prelude.DPATH)
         : myDefinition == Prelude.AT || myDefinition == Prelude.DAT
           ? AtExpression.make(myArguments.get(3), myArguments.get(4), true, myDefinition == Prelude.DAT)
           : myDefinition.getDefCall(myLevels, myArguments);

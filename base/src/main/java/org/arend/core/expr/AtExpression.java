@@ -27,15 +27,10 @@ public class AtExpression extends Expression implements CoreAtExpression {
     }
     if (checkInterval && intervalArgument instanceof ConCallExpression) {
       Constructor constructor = ((ConCallExpression) intervalArgument).getDefinition();
-      if (!directed && (constructor == Prelude.LEFT || constructor == Prelude.RIGHT)) {
+      if (!directed && (constructor == Prelude.LEFT || constructor == Prelude.RIGHT) || directed && (constructor == Prelude.DLEFT || constructor == Prelude.DRIGHT)) {
         Expression type = pathArgument.getType().normalize(NormalizationMode.WHNF);
-        if (type instanceof DataCallExpression dataCall && dataCall.getDefinition() == Prelude.PATH) {
-          return constructor == Prelude.LEFT ? dataCall.getDefCallArguments().get(1) : dataCall.getDefCallArguments().get(2);
-        }
-      } else if (directed && (constructor == Prelude.DLEFT || constructor == Prelude.DRIGHT)) {
-        Expression type = pathArgument.getType().normalize(NormalizationMode.WHNF);
-        if (type instanceof DataCallExpression dataCall && dataCall.getDefinition() == Prelude.DPATH) {
-          return constructor == Prelude.DLEFT ? dataCall.getDefCallArguments().get(1) : dataCall.getDefCallArguments().get(2);
+        if (type instanceof PathTypeExpression pathType && pathType.isDirected() == directed) {
+          return constructor == Prelude.LEFT || constructor == Prelude.DLEFT ? pathType.getLeftArgument() : pathType.getRightArgument();
         }
       }
     }

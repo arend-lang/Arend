@@ -105,8 +105,8 @@ public class CollectCallVisitor extends SearchVisitor<Void> {
         case PathEliminator ignored -> {
           if (type instanceof FunCallExpression funCall && funCall.getDefinition() == Prelude.PATH_INFIX) {
             type = funCall.getDefCallArguments().getFirst();
-          } else if (type instanceof DataCallExpression dataCall && dataCall.getDefinition() == Prelude.PATH) {
-            type = dataCall.getDefCallArguments().getFirst();
+          } else if (type instanceof PathTypeExpression pathType && !pathType.isDirected()) {
+            type = pathType.getArgumentType();
             if (!(type instanceof LamExpression lamExpr)) return null;
             type = lamExpr.getBody();
           } else {
@@ -124,7 +124,7 @@ public class CollectCallVisitor extends SearchVisitor<Void> {
     }
 
     type = normalizeFieldCall(type);
-    return type instanceof DataCallExpression ? expr : null;
+    return type instanceof BaseDataCallExpression ? expr : null;
   }
 
   private sealed interface Eliminator {}

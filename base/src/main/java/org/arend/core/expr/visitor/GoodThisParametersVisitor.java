@@ -3,6 +3,7 @@ package org.arend.core.expr.visitor;
 import org.arend.core.context.binding.Binding;
 import org.arend.core.context.param.DependentLink;
 import org.arend.core.definition.ClassField;
+import org.arend.core.definition.DataDefinition;
 import org.arend.core.elimtree.*;
 import org.arend.core.expr.*;
 import org.arend.core.pattern.BindingPattern;
@@ -193,4 +194,10 @@ public class GoodThisParametersVisitor extends VoidExpressionVisitor<Void> {
     return null;
   }
 
+  @Override
+  public Void visitPathType(PathTypeExpression expr, Void params) {
+    DataDefinition definition = expr.getDefinition();
+    visitArguments(Arrays.asList(expr.getArgumentType(), expr.getLeftArgument(), expr.getRightArgument()), definition.getGoodThisParameters());
+    return null;
+  }
 }

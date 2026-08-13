@@ -240,9 +240,9 @@ public class Prelude implements ArendPrelude {
       }
       case "=" -> {
         PATH_INFIX = (FunctionDefinition) definition;
-        DataCallExpression dataCall = (DataCallExpression) PATH_INFIX.getBody();
-        assert dataCall != null;
-        PATH_INFIX.setBody(DataCallExpression.make(dataCall.getDefinition(), dataCall.getLevels(), Arrays.asList(new LamExpression(UnusedIntervalDependentLink.INSTANCE, ((LamExpression) dataCall.getDefCallArguments().get(0)).getBody()), dataCall.getDefCallArguments().get(1), dataCall.getDefCallArguments().get(2))));
+        PathTypeExpression pathType = (PathTypeExpression) PATH_INFIX.getBody();
+        assert pathType != null;
+        PATH_INFIX.setBody(new PathTypeExpression(new LamExpression(UnusedIntervalDependentLink.INSTANCE, ((LamExpression) pathType.getArgumentType()).getBody()), pathType.getLeftArgument(), pathType.getRightArgument(), false));
         PATH_INFIX.setResultType(new UniverseExpression(new SortExpression.Prev(new SortExpression.Var(0, Collections.emptyList(), ConstLevel.INFINITY))));
       }
       case "idp" -> {

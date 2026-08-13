@@ -49,6 +49,10 @@ public class ExpressionFactory {
     return DataCallExpression.make(definition, levels, Arrays.asList(arguments));
   }
 
+  public static PathTypeExpression PathType(boolean directed, Expression argumentType, Expression left, Expression right) {
+    return new PathTypeExpression(argumentType, left, right, directed);
+  }
+
   public static ClassCallExpression ClassCall(ClassDefinition definition) {
     return new ClassCallExpression(definition, definition.makeIdLevels());
   }

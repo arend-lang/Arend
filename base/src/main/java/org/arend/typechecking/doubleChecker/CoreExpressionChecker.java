@@ -616,14 +616,14 @@ public class CoreExpressionChecker implements ExpressionVisitor<Expression, Expr
     if (pattern instanceof ConstructorPattern && Prelude.isIdpFunction(pattern.getDefinition())) {
       boolean directed = pattern.getDefinition() == Prelude.IDD;
       FunCallExpression equality = directed ? type.toHom() : type.toEquality();
-      if (equality == null || !(type instanceof DataCallExpression)) {
+      if (equality == null || !(type instanceof PathTypeExpression pathType)) {
         throw new CoreException(CoreErrorWrapper.make(new TypeMismatchError(type, DocFactory.text(directed ? "_ ~> _" : "_ = _"), mySourceNode), errorExpr));
       }
       if (directed) {
         Expression famType = equality.getDefCallArguments().getFirst();
         Sort typeSort = famType.getSortOfType();
         if (typeSort == null || typeSort.getHLevel().isCat()) {
-          throw new CoreException(CoreErrorWrapper.make(new IdpPatternError(null, IdpPatternError.notInType(), (DataCallExpression) type, mySourceNode), errorExpr));
+          throw new CoreException(CoreErrorWrapper.make(new IdpPatternError(null, IdpPatternError.notInType(), pathType, mySourceNode), errorExpr));
         }
       }
       Expression left = equality.getDefCallArguments().get(1).subst(patternSubst).normalize(NormalizationMode.WHNF).subst(patternSubst);
@@ -633,7 +633,7 @@ public class CoreExpressionChecker implements ExpressionVisitor<Expression, Expr
       Binding refLeft = refExprLeft == null ? null : refExprLeft.getBinding();
       Binding refRight = refExprRight == null ? null : refExprRight.getBinding();
       if (refLeft == null && refRight == null) {
-        throw new CoreException(CoreErrorWrapper.make(new IdpPatternError(null, IdpPatternError.noVariable(), (DataCallExpression) type, mySourceNode), errorExpr));
+        throw new CoreException(CoreErrorWrapper.make(new IdpPatternError(null, IdpPatternError.noVariable(), pathType, mySourceNode), errorExpr));
       }
 
       Binding var = null;
@@ -645,11 +645,11 @@ public class CoreExpressionChecker implements ExpressionVisitor<Expression, Expr
         }
       }
       if (var == null) {
-        throw new CoreException(CoreErrorWrapper.make(new IdpPatternError(null, IdpPatternError.noParameter(), (DataCallExpression) type, mySourceNode), errorExpr));
+        throw new CoreException(CoreErrorWrapper.make(new IdpPatternError(null, IdpPatternError.noParameter(), pathType, mySourceNode), errorExpr));
       }
       Expression otherExpr = ElimBindingVisitor.elimBinding(var == refLeft ? right : left, var);
       if (otherExpr == null) {
-        throw new CoreException(CoreErrorWrapper.make(new IdpPatternError(null, IdpPatternError.variable(var.getName()), (DataCallExpression) type, mySourceNode), errorExpr));
+        throw new CoreException(CoreErrorWrapper.make(new IdpPatternError(null, IdpPatternError.variable(var.getName()), pathType, mySourceNode), errorExpr));
       }
 
       Set<Binding> freeVars = FreeVariablesCollector.getFreeVariables(otherExpr);
@@ -702,7 +702,7 @@ public class CoreExpressionChecker implements ExpressionVisitor<Expression, Expr
       return checkElimPatterns(constructor.getArrayParameters(classCall), pattern.getSubPatterns(), new ExprSubstitution(), newBindings, idpSubst, patternSubst, reversePatternSubst, errorExpr, null);
     }
 
-    if (!(type instanceof DataCallExpression dataCall)) {
+    if (!(type instanceof BaseDataCallExpression dataCall)) {
       throw new CoreException(CoreErrorWrapper.make(new TypeMismatchError(DocFactory.text("a data type"), type, mySourceNode), errorExpr));
     }
 
@@ -973,13 +973,20 @@ public class CoreExpressionChecker implements ExpressionVisitor<Expression, Expr
   }
 
   @Override
+  public Expression visitPathType(PathTypeExpression expr, Expression expectedType) {
+    DataDefinition definition = expr.getDefinition();
+    checkList(Arrays.asList(expr.getArgumentType(), expr.getLeftArgument(), expr.getRightArgument()), definition.getParameters(), new ExprSubstitution(), Levels.EMPTY.makeSubstitution(definition));
+    return check(expectedType, GetTypeVisitor.INSTANCE.visitPathType(expr, null), expr);
+  }
+
+  @Override
   public Expression visitAt(AtExpression expr, Expression expectedType) {
     boolean directed = expr.isDirected();
     Expression type = expr.getPathArgument().accept(this, null).normalize(NormalizationMode.WHNF);
-    if (!(type instanceof DataCallExpression dataCall && dataCall.getDefinition() == (directed ? Prelude.DPATH : Prelude.PATH))) {
+    if (!(type instanceof PathTypeExpression pathType && pathType.isDirected() == directed)) {
       throw new CoreException(CoreErrorWrapper.make(new TypeMismatchError(DocFactory.refDoc((directed ? Prelude.DPATH : Prelude.PATH).getRef()), type, mySourceNode), expr.getPathArgument()));
     }
     expr.getIntervalArgument().accept(this, directed ? ExpressionFactory.DI() : Interval());
-    return check(expectedType, AppExpression.make(dataCall.getDefCallArguments().getFirst(), expr.getIntervalArgument(), true), expr);
+    return check(expectedType, AppExpression.make(pathType.getArgumentType(), expr.getIntervalArgument(), true), expr);
   }
 }

@@ -344,7 +344,7 @@ public class CompareVisitor implements ExpressionVisitor2<Expression, Expression
     if (expr1 instanceof ErrorExpression) {
       return true;
     }
-    if (!(expr1 instanceof UniverseExpression || expr1 instanceof PiExpression || expr1 instanceof ClassCallExpression || expr1 instanceof DataCallExpression || expr1 instanceof AppExpression || expr1 instanceof SigmaExpression || expr1 instanceof LamExpression)) {
+    if (!(expr1 instanceof UniverseExpression || expr1 instanceof PiExpression || expr1 instanceof ClassCallExpression || expr1 instanceof DataCallExpression || expr1 instanceof PathTypeExpression || expr1 instanceof AppExpression || expr1 instanceof SigmaExpression || expr1 instanceof LamExpression)) {
       myCMP = CMP.EQ;
     }
 
@@ -2283,6 +2283,42 @@ public class CompareVisitor implements ExpressionVisitor2<Expression, Expression
       } else {
         myResult.wholeExpr1 = new PathExpression(expr.getArgumentType(), myResult.wholeExpr1, expr.isDirected());
         myResult.wholeExpr2 = new PathExpression(pathExpr2.getArgumentType(), myResult.wholeExpr2, pathExpr2.isDirected());
+      }
+      return false;
+    }
+    return true;
+  }
+
+  @Override
+  public Boolean visitPathType(PathTypeExpression expr1, Expression expr2, Expression type) {
+    PathTypeExpression pathType2 = expr2.cast(PathTypeExpression.class);
+    if (pathType2 == null || pathType2.isDirected() != expr1.isDirected()) {
+      initResult(expr1, expr2);
+      return false;
+    }
+
+    DataDefinition definition = expr1.getDefinition();
+    List<Expression> args1 = Arrays.asList(expr1.getArgumentType(), expr1.getLeftArgument(), expr1.getRightArgument());
+    List<Expression> args2 = Arrays.asList(pathType2.getArgumentType(), pathType2.getLeftArgument(), pathType2.getRightArgument());
+    if (!compareLists(args1, args2, definition.getParameters(), definition, new ExprSubstitution())) {
+      if (myResult == null) {
+        initResult(expr1, expr2);
+      } else {
+        if (myResult.index >= 0 && myResult.index < args1.size()) {
+          List<Expression> args = new ArrayList<>(args1);
+          args.set(myResult.index, myResult.wholeExpr1);
+          myResult.wholeExpr1 = new PathTypeExpression(args.get(0), args.get(1), args.get(2), expr1.isDirected());
+        } else {
+          myResult.wholeExpr1 = expr1;
+        }
+        if (myResult.index >= 0 && myResult.index < args2.size()) {
+          List<Expression> args = new ArrayList<>(args2);
+          args.set(myResult.index, myResult.wholeExpr2);
+          myResult.wholeExpr2 = new PathTypeExpression(args.get(0), args.get(1), args.get(2), pathType2.isDirected());
+        } else {
+          myResult.wholeExpr2 = expr2;
+        }
+        myResult.index = -1;
       }
       return false;
     }

@@ -1106,6 +1106,12 @@ public class NormalizeVisitor extends ExpressionTransformer<NormalizationMode>  
   }
 
   @Override
+  public Expression visitPathType(PathTypeExpression expr, NormalizationMode mode) {
+    if (mode == NormalizationMode.WHNF) return expr;
+    return new PathTypeExpression(expr.getArgumentType().accept(this, mode), expr.getLeftArgument().accept(this, mode), expr.getRightArgument().accept(this, mode), expr.isDirected());
+  }
+
+  @Override
   public Expression visitAt(AtExpression expr, NormalizationMode mode) {
     Expression pathArg = expr.getPathArgument().normalize(NormalizationMode.WHNF);
     if (pathArg instanceof PathExpression) {
@@ -1115,9 +1121,9 @@ public class NormalizeVisitor extends ExpressionTransformer<NormalizationMode>  
     boolean directed = expr.isDirected();
     if (intervalArg instanceof ConCallExpression conCall && (directed ? conCall.getDefinition() == Prelude.DLEFT || conCall.getDefinition() == Prelude.DRIGHT : conCall.getDefinition() == Prelude.LEFT || conCall.getDefinition() == Prelude.RIGHT)) {
       Expression pathType = pathArg.getType().normalize(NormalizationMode.WHNF);
-      if (pathType instanceof DataCallExpression dataCall && dataCall.getDefinition() == (directed ? Prelude.DPATH : Prelude.PATH)) {
+      if (pathType instanceof PathTypeExpression pathTypeExpr && pathTypeExpr.isDirected() == directed) {
         boolean isLeft = conCall.getDefinition() == (directed ? Prelude.DLEFT : Prelude.LEFT);
-        return (isLeft ? dataCall.getDefCallArguments().get(1) : dataCall.getDefCallArguments().get(2)).accept(this, mode);
+        return (isLeft ? pathTypeExpr.getLeftArgument() : pathTypeExpr.getRightArgument()).accept(this, mode);
       }
     }
     return mode == NormalizationMode.WHNF ? AtExpression.make(pathArg, intervalArg, false, directed) : AtExpression.make(pathArg.accept(this, mode), intervalArg.accept(this, mode), false, directed);

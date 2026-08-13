@@ -9,6 +9,7 @@ import org.arend.ext.core.context.CoreEvaluatingBinding;
 import org.arend.ext.core.context.CoreParameter;
 import org.arend.ext.core.expr.CoreDataCallExpression;
 import org.arend.ext.core.expr.CoreExpression;
+import org.arend.ext.core.expr.CorePathTypeExpression;
 import org.arend.ext.core.expr.CoreReferenceExpression;
 import org.arend.ext.core.level.LevelSubstitution;
 import org.arend.ext.core.ops.NormalizationMode;
@@ -200,10 +201,10 @@ public class CasesMeta extends BaseMetaDefinition {
   }
 
   private List<ArendPattern> getPatterns(CoreExpression type, CoreParameter parameter, ExpressionTypechecker typechecker) {
-    if (type instanceof CoreDataCallExpression && ((CoreDataCallExpression) type).getDefinition() == typechecker.getPrelude().getPath()) {
+    if (type instanceof CorePathTypeExpression pt && !pt.isDirected()) {
       return Collections.singletonList(new ArendPattern(parameter.getBinding(), null, Collections.emptyList(), parameter, typechecker.getVariableRenameFactory()));
     }
-    List<CoreExpression.ConstructorWithDataArguments> constructors = type instanceof CoreDataCallExpression ? type.computeMatchedConstructorsWithDataArguments() : null;
+    List<CoreExpression.ConstructorWithDataArguments> constructors = type instanceof CoreDataCallExpression || type instanceof CorePathTypeExpression ? type.computeMatchedConstructorsWithDataArguments() : null;
     if (constructors == null) return null;
 
     List<ArendPattern> patterns = new ArrayList<>(constructors.size());

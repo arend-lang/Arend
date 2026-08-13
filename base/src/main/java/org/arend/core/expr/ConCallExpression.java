@@ -89,10 +89,6 @@ public class ConCallExpression extends LeveledDefCallExpression implements CoreC
     return visitor.visitConCall(this, params);
   }
 
-  public DataCallExpression getDataTypeExpression() {
-    return getDefinition().getDataTypeExpression(getLevels(), myDataTypeArguments);
-  }
-
   @Override
   public Decision isWHNF() {
     return getDefinition().getBody() != null ? getDefinition().getBody().isWHNF(myArguments) : Decision.YES;

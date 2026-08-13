@@ -131,7 +131,7 @@ public class ContradictionMeta extends BaseMetaDefinition {
       return false;
     }
     CoreDataDefinition dataDef = ((CoreDataCallExpression) type).getDefinition();
-    return dataDef != ext.prelude.getPath() && dataDef != ext.prelude.getInterval() && dataDef.getRecursiveDefinitions().isEmpty();
+    return dataDef != ext.prelude.getInterval() && dataDef.getRecursiveDefinitions().isEmpty();
   }
 
   private void makeNegationData(Deque<CoreParameter> parameters, CoreExpression codomain, NegationData negationData, List<NegationData> result) {
@@ -580,8 +580,8 @@ public class ContradictionMeta extends BaseMetaDefinition {
   }
 
   public static boolean isEmpty(CoreExpression type) {
-    if (type instanceof CoreDataCallExpression) {
-      List<CoreConstructor> constructors = ((CoreDataCallExpression) type).computeMatchedConstructors();
+    if (type instanceof CoreDataCallExpression || type instanceof CorePathTypeExpression) {
+      List<CoreExpression.ConstructorWithDataArguments> constructors = type.computeMatchedConstructorsWithDataArguments();
       return constructors != null && constructors.isEmpty();
     }
     return false;

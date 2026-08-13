@@ -16,6 +16,7 @@ import org.arend.core.pattern.ConstructorExpressionPattern;
 import org.arend.core.pattern.ConstructorPattern;
 import org.arend.core.pattern.Pattern;
 import org.arend.core.subst.ExprSubstitution;
+import org.arend.core.subst.Levels;
 import org.arend.ext.core.body.CoreElimBody;
 import org.arend.ext.core.body.CorePattern;
 import org.arend.ext.core.context.CoreParameter;
@@ -26,6 +27,7 @@ import org.arend.util.Decision;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
@@ -89,7 +91,7 @@ public class ElimBody implements Body, CoreElimBody {
 
         ConstructorExpressionPattern conPattern;
         if (key instanceof Constructor) {
-          if (!(type instanceof DataCallExpression dataCall)) {
+          if (!(type instanceof BaseDataCallExpression dataCall)) {
             throw new IllegalArgumentException();
           }
           boolean isFin = dataCall.getDefinition() == Prelude.FIN;
@@ -102,8 +104,9 @@ public class ElimBody implements Body, CoreElimBody {
             }
             continue;
           }
-          conPattern = new ConstructorExpressionPattern(new ConCallExpression(constructor, dataCall.getLevels(), dataCall.getDefCallArguments(), Collections.emptyList()), Collections.emptyList());
-          clauseElems.add(new Util.ConstructorClauseElem(constructor, dataCall.getLevels(), dataCall.getDefCallArguments()));
+          List<Expression> dataTypeArgs = dataCall.getDefCallArguments();
+          conPattern = new ConstructorExpressionPattern(new ConCallExpression(constructor, dataCall.getLevels(), dataTypeArgs, Collections.emptyList()), Collections.emptyList());
+          clauseElems.add(new Util.ConstructorClauseElem(constructor, dataCall.getLevels(), dataTypeArgs));
           newParams.addAll(DependentLink.Helper.toList(DependentLink.Helper.subst(constructor.getParameters(), new ExprSubstitution().add(constructor.getDataTypeParameters(), conCalls.getFirst().getDataTypeArguments()), conCalls.getFirst().getLevelSubstitution())));
         } else if (key instanceof IdpConstructor idpKey) {
           conPattern = ConstructorPattern.make(idpKey.isDirected() ? Prelude.IDD : Prelude.IDP, Collections.emptyList()).toExpressionPattern(type);

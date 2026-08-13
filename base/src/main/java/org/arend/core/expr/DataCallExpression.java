@@ -11,7 +11,6 @@ import org.arend.core.sort.SortExpression;
 import org.arend.core.subst.ExprSubstitution;
 import org.arend.core.subst.Levels;
 import org.arend.ext.core.context.CoreParameter;
-import org.arend.ext.core.definition.CoreConstructor;
 import org.arend.ext.core.expr.CoreDataCallExpression;
 import org.arend.ext.core.expr.CoreExpressionVisitor;
 import org.arend.ext.core.ops.NormalizationMode;
@@ -24,7 +23,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-public class DataCallExpression extends LeveledDefCallExpression implements CoreDataCallExpression {
+public class DataCallExpression extends LeveledDefCallExpression implements CoreDataCallExpression, BaseDataCallExpression {
   private final List<Expression> myArguments;
 
   private DataCallExpression(DataDefinition definition, Levels levels, List<Expression> arguments) {
@@ -70,30 +69,6 @@ public class DataCallExpression extends LeveledDefCallExpression implements Core
   }
 
   @Override
-  public boolean computeMatchedConstructors(List<? super CoreConstructor> result) {
-    List<ConCallExpression> conCalls = new ArrayList<>();
-    boolean ok = getMatchedConstructors(conCalls);
-    for (ConCallExpression conCall : conCalls) {
-      result.add(conCall.getDefinition());
-    }
-    return ok;
-  }
-
-  @Override
-  public @Nullable List<CoreConstructor> computeMatchedConstructors() {
-    List<ConCallExpression> conCalls = getMatchedConstructors();
-    if (conCalls == null) {
-      return null;
-    }
-
-    List<CoreConstructor> constructors = new ArrayList<>();
-    for (ConCallExpression conCall : conCalls) {
-      constructors.add(conCall.getDefinition());
-    }
-    return constructors;
-  }
-
-  @Override
   public boolean computeMatchedConstructorsWithDataArguments(List<? super ConstructorWithDataArguments> result) {
     List<ConCallExpression> conCalls = new ArrayList<>();
     boolean ok = getMatchedConstructors(conCalls);
@@ -118,10 +93,6 @@ public class DataCallExpression extends LeveledDefCallExpression implements Core
   }
 
   public boolean getMatchedConstructors(List<ConCallExpression> result) {
-    if (getDefinition() == Prelude.PATH && getDefCallArguments().get(0).removeConstLam() != null && getDefCallArguments().get(1).areDisjointConstructors(getDefCallArguments().get(2))) {
-      return true;
-    }
-
     boolean ok = true;
     for (Constructor constructor : getDefinition().getConstructors()) {
       if (!getMatchedConCall(constructor, result)) {
@@ -131,12 +102,9 @@ public class DataCallExpression extends LeveledDefCallExpression implements Core
     return ok;
   }
 
-  public List<ConCallExpression> getMatchedConstructors() {
+  @Override
+  public @Nullable List<ConCallExpression> getMatchedConstructors() {
     DataDefinition definition = getDefinition();
-    if (definition == Prelude.PATH && getDefCallArguments().get(0).removeConstLam() != null && getDefCallArguments().get(1).areDisjointConstructors(getDefCallArguments().get(2))) {
-      return Collections.emptyList();
-    }
-
     List<ConCallExpression> result = new ArrayList<>();
     for (Constructor constructor : definition.getConstructors()) {
       if (!getMatchedConCall(constructor, result)) {
@@ -146,6 +114,7 @@ public class DataCallExpression extends LeveledDefCallExpression implements Core
     return result;
   }
 
+  @Override
   public boolean getMatchedConCall(Constructor constructor, List<ConCallExpression> conCalls) {
     if (constructor.getDataType() != getDefinition()) {
       return false;

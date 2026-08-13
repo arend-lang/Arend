@@ -439,6 +439,7 @@ class ExpressionDeserialization {
       case STRING -> readString(proto.getString());
       case PATH -> readPath(proto.getPath());
       case AT -> readAt(proto.getAt());
+      case PATH_TYPE -> readPathType(proto.getPathType());
       default -> throw new DeserializationException("Unknown Expression kind: " + proto.getKindCase());
     };
   }
@@ -618,6 +619,10 @@ class ExpressionDeserialization {
 
   private Expression readAt(ExpressionProtos.Expression.At proto) throws DeserializationException {
     return AtExpression.make(readExpr(proto.getPathArgument()), readExpr(proto.getIntervalArgument()), false, proto.getDirected());
+  }
+
+  private Expression readPathType(ExpressionProtos.Expression.PathType proto) throws DeserializationException {
+    return new PathTypeExpression(readExpr(proto.getArgumentType()), readExpr(proto.getLeftArgument()), readExpr(proto.getRightArgument()), proto.getDirected());
   }
 
   private String validName(String name) {

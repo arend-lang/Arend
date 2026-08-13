@@ -211,13 +211,12 @@ public class StdImplicitArgsInference implements ImplicitArgsInference {
       if (!param.hasNext()) {
         TypecheckingResult tcResult = ((TypecheckingResult) result).normalizeType();
         result = tcResult;
-        if (tcResult.type instanceof DataCallExpression dataCall && (dataCall.getDefinition() == Prelude.PATH || dataCall.getDefinition() == Prelude.DPATH)) {
-          List<Expression> args = dataCall.getDefCallArguments();
-          FunctionDefinition at = dataCall.getDefinition() == Prelude.DPATH ? Prelude.DAT : Prelude.AT;
-          result = DefCallResult.makeTResult(new Concrete.ReferenceExpression(fun.getData(), at.getRef()), at, dataCall.getLevels())
-            .applyExpression(args.get(0), false, myVisitor, fun)
-            .applyExpression(args.get(1), false, myVisitor, fun)
-            .applyExpression(args.get(2), false, myVisitor, fun)
+        if (tcResult.type instanceof PathTypeExpression pathType) {
+          FunctionDefinition at = pathType.isDirected() ? Prelude.DAT : Prelude.AT;
+          result = DefCallResult.makeTResult(new Concrete.ReferenceExpression(fun.getData(), at.getRef()), at, Levels.EMPTY)
+            .applyExpression(pathType.getArgumentType(), false, myVisitor, fun)
+            .applyExpression(pathType.getLeftArgument(), false, myVisitor, fun)
+            .applyExpression(pathType.getRightArgument(), false, myVisitor, fun)
             .applyExpression(tcResult.expression, true, myVisitor, fun);
           param = result.getParameter();
         } else {
@@ -593,8 +592,7 @@ public class StdImplicitArgsInference implements ImplicitArgsInference {
     }
 
     if (result instanceof DefCallResult defCallResult && expr.getArguments().get(0).isExplicit() && expectedType != null && defCallResult.getDefinition() instanceof Constructor && defCallResult.getArguments().size() < DependentLink.Helper.size(((Constructor) defCallResult.getDefinition()).getDataTypeParameters())) {
-      DataCallExpression dataCall = TypeConstructorExpression.unfoldType(expectedType).cast(DataCallExpression.class);
-      if (dataCall != null) {
+      if (TypeConstructorExpression.unfoldType(expectedType) instanceof BaseDataCallExpression dataCall) {
         if (((Constructor) defCallResult.getDefinition()).getDataType() != dataCall.getDefinition()) {
           myVisitor.getErrorReporter().report(new TypeMismatchError(dataCall, refDoc(((Constructor) defCallResult.getDefinition()).getDataType().getReferable()), fun));
           return null;
@@ -609,7 +607,7 @@ public class StdImplicitArgsInference implements ImplicitArgsInference {
           boolean ok = dataCall.getLevels().compare(defCallResult.getLevels(), CMP.LE, myVisitor.getEquations(), fun);
 
           if (ok && !defCallResult.getArguments().isEmpty()) {
-            ok = new CompareVisitor(myVisitor.getEquations(), CMP.LE, fun).compareLists(defCallResult.getArguments(), dataCall.getDefCallArguments().subList(0, defCallResult.getArguments().size()), dataCall.getDefinition().getParameters(), dataCall.getDefinition(), new ExprSubstitution());
+            ok = new CompareVisitor(myVisitor.getEquations(), CMP.LE, fun).compareLists(defCallResult.getArguments(), args.subList(0, defCallResult.getArguments().size()), dataCall.getDefinition().getParameters(), dataCall.getDefinition(), new ExprSubstitution());
           }
 
           if (!ok) {

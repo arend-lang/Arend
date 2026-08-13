@@ -10,6 +10,7 @@ import org.arend.ext.concrete.expr.ConcreteReferenceExpression;
 import org.arend.ext.core.context.CoreBinding;
 import org.arend.ext.core.context.CoreParameter;
 import org.arend.ext.core.definition.CoreClassField;
+import org.arend.ext.core.definition.CoreDataDefinition;
 import org.arend.ext.core.expr.*;
 import org.arend.ext.core.ops.CMP;
 import org.arend.ext.core.ops.NormalizationMode;
@@ -205,6 +206,22 @@ public class CongVisitor extends BaseCoreExpressionVisitor<CongVisitor.ParamType
     if (pathArg == null) return null;
     Result intervalArg = expr.getIntervalArgument().accept(this, new ParamType(() -> new Result(null), atExpr2.getIntervalArgument()));
     return intervalArg == null ? null : new Result(pathArg.expression == null || intervalArg.expression == null ? null : factory.at(pathArg.expression, intervalArg.expression));
+  }
+
+  @Override
+  public Result visitPathType(@NotNull CorePathTypeExpression expr, ParamType param) {
+    CoreExpression other = param.other.getUnderlyingExpression();
+    if (!(other instanceof CorePathTypeExpression pathType2) || expr.isDirected() != pathType2.isDirected()) {
+      return visit(expr, param);
+    }
+
+    CoreDataDefinition pathDef = expr.isDirected() ? prelude.getDPath() : prelude.getPath();
+    List<ConcreteArgument> args = new ArrayList<>();
+    boolean abstracted = visitArgs(
+      Arrays.asList(expr.getArgumentType(), expr.getLeftArgument(), expr.getRightArgument()),
+      Arrays.asList(pathType2.getArgumentType(), pathType2.getLeftArgument(), pathType2.getRightArgument()),
+      Collections.singletonList(pathDef.getParameters()), true, args);
+    return args.size() == 3 ? new Result(abstracted ? factory.app(factory.ref(expr.isDirected() ? prelude.getDPathRef() : prelude.getPathRef()), args) : null) : null;
   }
 
   private Result visitDefCall(@NotNull CoreDefCallExpression defCall1, ParamType param) {

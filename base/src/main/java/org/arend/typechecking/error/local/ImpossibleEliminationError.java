@@ -15,14 +15,14 @@ import java.util.List;
 import static org.arend.ext.prettyprinting.doc.DocFactory.*;
 
 public class ImpossibleEliminationError extends TypecheckingError {
-  public final LeveledDefCallExpression defCall;
+  public final BaseDefCallExpression defCall;
   public final ExprSubstitution substitution;
   public final DependentLink clauseParameters;
   public final DependentLink myParameters;
   public final List<DependentLink> elimParams;
   public final List<Expression> caseExpressions;
 
-  public ImpossibleEliminationError(LeveledDefCallExpression defCall, @NotNull Concrete.SourceNode cause, @Nullable ExprSubstitution substitution,
+  public ImpossibleEliminationError(BaseDefCallExpression defCall, @NotNull Concrete.SourceNode cause, @Nullable ExprSubstitution substitution,
                                     @Nullable DependentLink clauseParameters, @Nullable DependentLink parameters, @Nullable List<DependentLink> elimParams, @Nullable List<Expression> caseExpressions) {
     super("Elimination is not possible here, cannot determine the set of eligible constructors", cause);
     this.defCall = defCall;
@@ -33,7 +33,7 @@ public class ImpossibleEliminationError extends TypecheckingError {
     this.caseExpressions = caseExpressions;
   }
 
-  public ImpossibleEliminationError(LeveledDefCallExpression defCall, @NotNull Concrete.SourceNode cause) {
+  public ImpossibleEliminationError(BaseDefCallExpression defCall, @NotNull Concrete.SourceNode cause) {
     this(defCall, cause, null, null, null, null, null);
   }
 

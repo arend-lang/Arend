@@ -6,10 +6,10 @@ import org.arend.ext.concrete.expr.ConcreteArgument;
 import org.arend.ext.concrete.expr.ConcreteExpression;
 import org.arend.ext.core.context.CoreParameter;
 import org.arend.ext.core.definition.CoreClassField;
-import org.arend.ext.core.definition.CoreConstructor;
 import org.arend.ext.core.expr.CoreClassCallExpression;
 import org.arend.ext.core.expr.CoreDataCallExpression;
 import org.arend.ext.core.expr.CoreExpression;
+import org.arend.ext.core.expr.CorePathTypeExpression;
 import org.arend.ext.core.expr.CoreSigmaExpression;
 import org.arend.ext.core.ops.NormalizationMode;
 import org.arend.ext.error.ArgumentExplicitnessError;
@@ -118,8 +118,8 @@ public class ConstructorMeta extends BaseMetaDefinition {
       return typechecker.typecheck(factory.newExpr(factory.classExt(factory.ref(classCall.getDefinition().getRef()), elements)), type);
     }
 
-    if (type instanceof CoreDataCallExpression) {
-      List<CoreConstructor> constructors = ((CoreDataCallExpression) type).computeMatchedConstructors();
+    if (type instanceof CoreDataCallExpression || type instanceof CorePathTypeExpression) {
+      List<CoreExpression.ConstructorWithDataArguments> constructors = type.computeMatchedConstructorsWithDataArguments();
       if (constructors == null) {
         typechecker.getErrorReporter().report(new TypeError(typechecker.getExpressionPrettifier(), "Cannot compute constructors of data type", type, contextData.getMarker()));
         return null;
@@ -141,7 +141,7 @@ public class ConstructorMeta extends BaseMetaDefinition {
           args = newArgs;
         }
 
-        if (!args.isEmpty() && !args.getFirst().isExplicit()) {
+        if (!args.isEmpty() && !args.getFirst().isExplicit() && type instanceof CoreDataCallExpression) {
           CoreParameter dataParam = ((CoreDataCallExpression) type).getDefinition().getParameters();
           if (dataParam.hasNext()) {
             List<ConcreteArgument> newArgs = new ArrayList<>();
@@ -153,7 +153,7 @@ public class ConstructorMeta extends BaseMetaDefinition {
           }
         }
 
-        return typechecker.typecheck(factory.app(factory.ref(constructors.getFirst().getRef()), args), type);
+        return typechecker.typecheck(factory.app(factory.ref(constructors.getFirst().getConstructor().getRef()), args), type);
       }
     }
 

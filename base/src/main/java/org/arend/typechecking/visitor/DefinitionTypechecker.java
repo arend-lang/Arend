@@ -1436,7 +1436,7 @@ public class DefinitionTypechecker extends BaseDefinitionTypechecker implements 
             classifyingExpr = classifyingExpr.normalize(NormalizationMode.WHNF);
           }
 
-          if (!(classifyingExpr == null || classifyingExpr instanceof ErrorExpression || classifyingExpr instanceof DataCallExpression || classifyingExpr instanceof ConCallExpression || classifyingExpr instanceof FunCallExpression && ((FunCallExpression) classifyingExpr).getDefinition().getKind() == CoreFunctionDefinition.Kind.TYPE || classifyingExpr instanceof ClassCallExpression || params.isEmpty() && (classifyingExpr instanceof UniverseExpression || classifyingExpr instanceof SigmaExpression || classifyingExpr instanceof PiExpression || classifyingExpr instanceof IntegerExpression))) {
+          if (!(classifyingExpr == null || classifyingExpr instanceof ErrorExpression || classifyingExpr instanceof BaseDataCallExpression || classifyingExpr instanceof ConCallExpression || classifyingExpr instanceof FunCallExpression && ((FunCallExpression) classifyingExpr).getDefinition().getKind() == CoreFunctionDefinition.Kind.TYPE || classifyingExpr instanceof ClassCallExpression || params.isEmpty() && (classifyingExpr instanceof UniverseExpression || classifyingExpr instanceof SigmaExpression || classifyingExpr instanceof PiExpression || classifyingExpr instanceof IntegerExpression))) {
             errorReporter.report(new TypecheckingError("Classifying field must be either a universe, a sigma type, a record, or a partially applied data or constructor", def.getResultType() == null ? def : def.getResultType()));
           }
         } else {
@@ -1802,19 +1802,14 @@ public class DefinitionTypechecker extends BaseDefinitionTypechecker implements 
 
   private Expression normalizePathExpression(Expression type, Constructor constructor, Concrete.SourceNode sourceNode) {
     type = type.normalize(NormalizationMode.WHNF);
-    if (type instanceof DataCallExpression && ((DataCallExpression) type).getDefinition() == Prelude.PATH) {
-      List<Expression> pathArgs = ((DataCallExpression) type).getDefCallArguments();
-      Expression lamExpr = pathArgs.get(0).normalize(NormalizationMode.WHNF);
+    if (type instanceof PathTypeExpression pathType && !pathType.isDirected()) {
+      Expression lamExpr = pathType.getArgumentType().normalize(NormalizationMode.WHNF);
       if (lamExpr instanceof LamExpression lam) {
         Expression newType = normalizePathExpression(lam.getBody(), constructor, sourceNode);
         if (newType == null) {
           return null;
         } else {
-          List<Expression> args = new ArrayList<>(3);
-          args.add(new LamExpression(lam.getParameters(), newType));
-          args.add(pathArgs.get(1));
-          args.add(pathArgs.get(2));
-          return DataCallExpression.make(Prelude.PATH, Levels.EMPTY, args);
+          return new PathTypeExpression(new LamExpression(lam.getParameters(), newType), pathType.getLeftArgument(), pathType.getRightArgument(), false);
         }
       } else {
         type = null;
@@ -1831,9 +1826,9 @@ public class DefinitionTypechecker extends BaseDefinitionTypechecker implements 
   }
 
   private Expression addAts(Expression expression, DependentLink param, Expression type) {
-    while (type instanceof DataCallExpression && ((DataCallExpression) type).getDefinition() == Prelude.PATH) {
+    while (type instanceof PathTypeExpression pathType && !pathType.isDirected()) {
       expression = AtExpression.make(expression, new ReferenceExpression(param), false, false);
-      type = ((LamExpression) ((DataCallExpression) type).getDefCallArguments().getFirst()).getBody();
+      type = ((LamExpression) pathType.getArgumentType()).getBody();
       param = param.getNext();
     }
     return expression;
@@ -1925,7 +1920,7 @@ public class DefinitionTypechecker extends BaseDefinitionTypechecker implements 
     List<DependentLink> newParams = new ArrayList<>();
     if (constructorType != null) {
       int numberOfNewParameters = 0;
-      for (Expression type = constructorType; type instanceof DataCallExpression && ((DataCallExpression) type).getDefinition() == Prelude.PATH; type = ((LamExpression) ((DataCallExpression) type).getDefCallArguments().getFirst()).getBody()) {
+      for (Expression type = constructorType; type instanceof PathTypeExpression pt && !pt.isDirected(); type = ((LamExpression) pt.getArgumentType()).getBody()) {
         numberOfNewParameters++;
       }
 
@@ -1958,12 +1953,11 @@ public class DefinitionTypechecker extends BaseDefinitionTypechecker implements 
 
         int i = 0;
         Expression type = constructorType;
-        while (type instanceof DataCallExpression && ((DataCallExpression) type).getDefinition() == Prelude.PATH) {
-          List<Expression> pathArgs = ((DataCallExpression) type).getDefCallArguments();
-          LamExpression lamExpr = (LamExpression) pathArgs.getFirst();
+        while (type instanceof PathTypeExpression pathType && !pathType.isDirected()) {
+          LamExpression lamExpr = (LamExpression) pathType.getArgumentType();
           type = lamExpr.getBody();
           DependentLink param = newParams.get(i++);
-          pairs.add(new IntervalElim.CasePair(addAts(pathArgs.get(1), param, type.subst(lamExpr.getParameters(), Left())), addAts(pathArgs.get(2), param, type.subst(lamExpr.getParameters(), Right())), false));
+          pairs.add(new IntervalElim.CasePair(addAts(pathType.getLeftArgument(), param, type.subst(lamExpr.getParameters(), Left())), addAts(pathType.getRightArgument(), param, type.subst(lamExpr.getParameters(), Right())), false));
           type = type.subst(lamExpr.getParameters(), new ReferenceExpression(newParam));
           newParam = newParam.getNext();
         }
@@ -2920,13 +2914,13 @@ public class DefinitionTypechecker extends BaseDefinitionTypechecker implements 
       return expr1 instanceof IntegerExpression ? ((IntegerExpression) expr1).compare((IntegerExpression) expr2) : 1;
     }
 
-    if (expr2 instanceof DataCallExpression || expr2 instanceof FunCallExpression && ((FunCallExpression) expr2).getDefinition().getKind() == CoreFunctionDefinition.Kind.TYPE) {
+    if (expr2 instanceof BaseDefCallExpression defCall2 && (expr2 instanceof BaseDataCallExpression || expr2 instanceof FunCallExpression && ((FunCallExpression) expr2).getDefinition().getKind() == CoreFunctionDefinition.Kind.TYPE)) {
       int cmp = 0;
-      if (expr1 instanceof DefCallExpression && ((DefCallExpression) expr1).getDefinition() == ((DefCallExpression) expr2).getDefinition()) {
+      if (expr1 instanceof BaseDefCallExpression defCall1 && defCall1.getDefinition() == defCall2.getDefinition()) {
         ExprSubstitution substitution = new ExprSubstitution();
-        DependentLink link = ((DefCallExpression) expr1).getDefinition().getParameters();
-        List<? extends Expression> args1 = ((DefCallExpression) expr1).getDefCallArguments();
-        List<? extends Expression> args2 = ((DefCallExpression) expr2).getDefCallArguments();
+        DependentLink link = defCall1.getDefinition().getParameters();
+        List<? extends Expression> args1 = defCall1.getDefCallArguments();
+        List<? extends Expression> args2 = defCall2.getDefCallArguments();
         for (int i = 0; i < args1.size(); i++) {
           int argCmp = compareExpressions(args1.get(i), args2.get(i), link.getType().subst(substitution));
           if (argCmp == 1) {
@@ -2945,7 +2939,7 @@ public class DefinitionTypechecker extends BaseDefinitionTypechecker implements 
         }
       }
 
-      for (Expression arg : ((DefCallExpression) expr2).getDefCallArguments()) {
+      for (Expression arg : defCall2.getDefCallArguments()) {
         if (compareExpressions(expr1, arg, null) != 1) {
           return -1;
         }

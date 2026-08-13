@@ -37,6 +37,7 @@ message Expression {
         Array array = 23;
         Path path = 24;
         At at = 25;
+        PathType path_type = 31;
     }
 
     message Abs {
@@ -164,6 +165,12 @@ message Expression {
         Expression pathArgument = 3;
         Expression intervalArgument = 4;
         bool directed = 5;
+    }
+    message PathType {
+        Expression argumentType = 1;
+        Expression leftArgument = 2;
+        Expression rightArgument = 3;
+        bool directed = 4;
     }
     message New {
         ClassCall class_call = 1;

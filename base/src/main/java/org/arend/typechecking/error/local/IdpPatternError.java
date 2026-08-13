@@ -1,6 +1,6 @@
 package org.arend.typechecking.error.local;
 
-import org.arend.core.expr.DataCallExpression;
+import org.arend.core.expr.PathTypeExpression;
 import org.arend.ext.error.TypecheckingError;
 import org.arend.ext.prettifier.ExpressionPrettifier;
 import org.arend.ext.prettyprinting.PrettyPrinterConfig;
@@ -12,9 +12,9 @@ import static org.arend.ext.prettyprinting.doc.DocFactory.*;
 
 public class IdpPatternError extends TypecheckingError {
   private final ExpressionPrettifier myPrettifier;
-  public final DataCallExpression expectedType;
+  public final PathTypeExpression expectedType;
 
-  public IdpPatternError(ExpressionPrettifier prettifier, String message, DataCallExpression expectedType, @NotNull Concrete.SourceNode cause) {
+  public IdpPatternError(ExpressionPrettifier prettifier, String message, PathTypeExpression expectedType, @NotNull Concrete.SourceNode cause) {
     super(message, cause);
     myPrettifier = prettifier;
     this.expectedType = expectedType;

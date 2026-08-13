@@ -301,6 +301,15 @@ public class RecreateExpressionVisitor extends SubstVisitor {
   }
 
   @Override
+  public Expression visitPathType(PathTypeExpression expr, Void params) {
+    Expression result = UncheckedExpressionImpl.extract(myMapper.map(expr));
+    if (result != null) {
+      return result;
+    }
+    return super.visitPathType(expr, params);
+  }
+
+  @Override
   public Expression visitAt(AtExpression expr, Void params) {
     Expression result = UncheckedExpressionImpl.extract(myMapper.map(expr));
     if (result != null) {

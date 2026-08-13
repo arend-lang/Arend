@@ -250,7 +250,7 @@ public class PatternTypechecking {
             }
 
             intervalSubst.add(intervalBinding, new ReferenceExpression(lamBindings.get(i)));
-            exprType = DataCallExpression.make(Prelude.PATH, Levels.EMPTY, Arrays.asList(new LamExpression(lamBindings.get(i), exprType), leftArg, rightArg));
+            exprType = new PathTypeExpression(new LamExpression(lamBindings.get(i), exprType), leftArg, rightArg, false);
           }
         } else {
           intervalBindings = null;
@@ -618,7 +618,7 @@ public class PatternTypechecking {
             }
             return null;
           }
-          if (!unfoldedExpr.isInstance(DataCallExpression.class)) {
+          if (!(unfoldedExpr instanceof BaseDataCallExpression)) {
             if (!expr.reportIfError(myErrorReporter, pattern)) {
               myErrorReporter.report(new TypeMismatchError(DocFactory.text("a data type, a sigma type, or a class"), expr, pattern));
             }
@@ -648,8 +648,8 @@ public class PatternTypechecking {
             }
 
             levels = Levels.EMPTY;
-            DataCallExpression dataCall = unfoldedExpr.cast(DataCallExpression.class);
-            LamExpression typeLam = dataCall == null || dataCall.getDefinition() != (directed ? Prelude.DPATH : Prelude.PATH) ? null : dataCall.getDefCallArguments().getFirst().normalize(NormalizationMode.WHNF).cast(LamExpression.class);
+            PathTypeExpression dataCall = unfoldedExpr.cast(PathTypeExpression.class);
+            LamExpression typeLam = dataCall == null || dataCall.isDirected() != directed ? null : dataCall.getArgumentType().normalize(NormalizationMode.WHNF).cast(LamExpression.class);
             Expression type = ElimBindingVisitor.elimLamBinding(typeLam);
             if (type == null) {
               myErrorReporter.report(new TypeMismatchError(expr, constructor.getResultType().subst(substitution), conPattern));
@@ -664,8 +664,8 @@ public class PatternTypechecking {
               }
             }
 
-            Expression expr1 = dataCall.getDefCallArguments().get(2).normalize(NormalizationMode.WHNF);
-            Expression expr2 = dataCall.getDefCallArguments().get(1).normalize(NormalizationMode.WHNF);
+            Expression expr1 = dataCall.getRightArgument().normalize(NormalizationMode.WHNF);
+            Expression expr2 = dataCall.getLeftArgument().normalize(NormalizationMode.WHNF);
             ReferenceExpression refExpr1 = expr1.cast(ReferenceExpression.class);
             ReferenceExpression refExpr2 = expr2.cast(ReferenceExpression.class);
             if (refExpr1 == null && refExpr2 == null) {
@@ -701,7 +701,7 @@ public class PatternTypechecking {
             }
 
             Expression normType = type.normalize(NormalizationMode.WHNF);
-            if (!(normType instanceof DataCallExpression)) {
+            if (!(normType instanceof BaseDataCallExpression)) {
               if (!CompareVisitor.compare(myVisitor.getEquations(), CMP.EQ, normType, (num == 1 ? refExpr1 : refExpr2).getType(), UniverseExpression.OMEGA, conPattern)) {
                 boolean ok = false;
                 if (both) {
@@ -721,7 +721,7 @@ public class PatternTypechecking {
               myErrorReporter.report(new IdpPatternError(myVisitor == null ? null : myVisitor.getExpressionPrettifier(), IdpPatternError.variable(substVar.getName()), dataCall, conPattern));
               return null;
             }
-            Expression otherExpr2 = ElimBindingVisitor.elimBinding(num == 1 ? dataCall.getDefCallArguments().get(1) : dataCall.getDefCallArguments().get(2), substVar);
+            Expression otherExpr2 = ElimBindingVisitor.elimBinding(num == 1 ? dataCall.getLeftArgument() : dataCall.getRightArgument(), substVar);
             if (otherExpr2 == null) {
               otherExpr2 = otherExpr;
             }
@@ -878,7 +878,7 @@ public class PatternTypechecking {
 
       // Constructor patterns
       Expression underlyingExpr = unfoldedExpr.getUnderlyingExpression();
-      DataCallExpression dataCall = underlyingExpr instanceof DataCallExpression ? (DataCallExpression) underlyingExpr : null;
+      BaseDataCallExpression dataCall = underlyingExpr instanceof BaseDataCallExpression ? (BaseDataCallExpression) underlyingExpr : null;
       ClassCallExpression classCall = underlyingExpr instanceof ClassCallExpression ? (ClassCallExpression) underlyingExpr : null;
       if (!(dataCall != null || classCall != null && classCall.getDefinition() == Prelude.DEP_ARRAY)) {
         if (!expr.reportIfError(myErrorReporter, pattern)) {
@@ -1029,7 +1029,7 @@ public class PatternTypechecking {
       if (dataCall != null) {
         if (!conResult.varSubst.isEmpty()) {
           conCall = (ConCallExpression) new SubstVisitor(conResult.varSubst, LevelSubstitution.EMPTY).visitConCall(conCall, null);
-    }
+        }
         resultPattern = new ConstructorExpressionPattern(conCall, conResult.patterns);
       } else {
         Expression elementsType = classCall.getAbsImplementationHere(Prelude.ARRAY_ELEMENTS_TYPE);

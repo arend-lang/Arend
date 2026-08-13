@@ -1,8 +1,8 @@
 package org.arend.typechecking.error.local;
 
 import org.arend.core.definition.Definition;
+import org.arend.core.expr.BaseDataCallExpression;
 import org.arend.core.expr.ConCallExpression;
-import org.arend.core.expr.DataCallExpression;
 import org.arend.ext.error.TypecheckingError;
 import org.arend.ext.prettyprinting.PrettyPrinterConfig;
 import org.arend.ext.prettyprinting.doc.LineDoc;
@@ -16,10 +16,10 @@ import java.util.stream.Collectors;
 import static org.arend.ext.prettyprinting.doc.DocFactory.*;
 
 public class DataTypeNotEmptyError extends TypecheckingError {
-  public final DataCallExpression dataCall;
+  public final BaseDataCallExpression dataCall;
   public final Collection<? extends Definition> constructors;
 
-  public DataTypeNotEmptyError(DataCallExpression dataCall, Collection<? extends Definition> constructors, Concrete.SourceNode cause) {
+  public DataTypeNotEmptyError(BaseDataCallExpression dataCall, Collection<? extends Definition> constructors, Concrete.SourceNode cause) {
     super("", cause);
     this.dataCall = dataCall;
     this.constructors = constructors;

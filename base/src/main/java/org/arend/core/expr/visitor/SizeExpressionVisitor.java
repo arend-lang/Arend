@@ -50,6 +50,12 @@ public class SizeExpressionVisitor extends VoidExpressionVisitor<Void> {
   }
 
   @Override
+  public Void visitPathType(PathTypeExpression expr, Void params) {
+    mySize++;
+    return super.visitPathType(expr, params);
+  }
+
+  @Override
   public Void visitAt(AtExpression expr, Void params) {
     mySize++;
     return super.visitAt(expr, params);

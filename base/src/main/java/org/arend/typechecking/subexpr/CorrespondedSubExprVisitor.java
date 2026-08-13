@@ -213,6 +213,8 @@ public class CorrespondedSubExprVisitor implements
       return visitClonedApp(expr, ((LamExpression) coreExpr).getBody());
     } else if (coreExpr instanceof DefCallExpression) {
       return visitDefCallArguments((DefCallExpression) coreExpr, arguments);
+    } else if (coreExpr instanceof PathTypeExpression) {
+      return visitPathTypeArguments((PathTypeExpression) coreExpr, arguments);
     } else return nullWithError(SubExprError.mismatch(coreExpr));
   }
 
@@ -257,6 +259,33 @@ public class CorrespondedSubExprVisitor implements
     // In error messages, `Path A a a'` might become `a = a'`,
     // we treat this special case here.
     if (expression.getDefinition() == Prelude.PATH && argumentList.size() == 2) {
+      parameter = parameter.getNext();
+      defCallArgs.next();
+    }
+    for (; parameter.hasNext(); parameter = parameter.getNext()) {
+      assert defCallArgs.hasNext();
+      Expression coreArg = defCallArgs.next();
+      // Take care of implicit application
+      if (parameter.isExplicit() == argument.isExplicit()) {
+        var accepted = argument.getExpression().accept(this, coreArg);
+        if (accepted != null) return accepted;
+        if (arguments.hasNext()) argument = arguments.next();
+      }
+    }
+    return nullWithError(new SubExprError(SubExprError.Kind.Arguments, expression));
+  }
+
+  private @Nullable Pair<@NotNull Expression, Concrete.@NotNull Expression>
+  visitPathTypeArguments(@NotNull PathTypeExpression expression,
+                        @NotNull List<Concrete.Argument> argumentList) {
+    List<Expression> defCallArgList = List.of(expression.getArgumentType(), expression.getLeftArgument(), expression.getRightArgument());
+    Iterator<? extends Expression> defCallArgs = defCallArgList.iterator();
+    var arguments = argumentList.iterator();
+    Concrete.Argument argument = arguments.next();
+    DependentLink parameter = (expression.isDirected() ? Prelude.DPATH : Prelude.PATH).getParameters();
+    // In error messages, `Path A a a'` might become `a = a'`,
+    // we treat this special case here.
+    if (!expression.isDirected() && argumentList.size() == 2) {
       parameter = parameter.getNext();
       defCallArgs.next();
     }

@@ -781,6 +781,16 @@ class ExpressionSerialization implements ExpressionVisitor<Void, ExpressionProto
   }
 
   @Override
+  public ExpressionProtos.Expression visitPathType(PathTypeExpression expr, Void params) {
+    ExpressionProtos.Expression.PathType.Builder builder = ExpressionProtos.Expression.PathType.newBuilder();
+    builder.setArgumentType(writeExpr(expr.getArgumentType()));
+    builder.setLeftArgument(writeExpr(expr.getLeftArgument()));
+    builder.setRightArgument(writeExpr(expr.getRightArgument()));
+    builder.setDirected(expr.isDirected());
+    return ExpressionProtos.Expression.newBuilder().setPathType(builder.build()).build();
+  }
+
+  @Override
   public ExpressionProtos.Expression visitFieldCall(FieldCallExpression expr, Void params) {
     ExpressionProtos.Expression.FieldCall.Builder builder = ExpressionProtos.Expression.FieldCall.newBuilder();
     builder.setFieldRef(myCallTargetIndexProvider.getDefIndex(expr.getDefinition()));

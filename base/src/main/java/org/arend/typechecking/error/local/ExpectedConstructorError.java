@@ -4,9 +4,7 @@ import org.arend.core.context.binding.Binding;
 import org.arend.core.context.param.DependentLink;
 import org.arend.core.context.param.TypedDependentLink;
 import org.arend.core.definition.Constructor;
-import org.arend.core.expr.DataCallExpression;
-import org.arend.core.expr.DefCallExpression;
-import org.arend.core.expr.Expression;
+import org.arend.core.expr.*;
 import org.arend.ext.error.TypecheckingError;
 import org.arend.ext.prettyprinting.PrettyPrinterConfig;
 import org.arend.ext.prettyprinting.doc.LineDoc;
@@ -26,7 +24,7 @@ import static org.arend.ext.prettyprinting.doc.DocFactory.*;
 
 public class ExpectedConstructorError extends TypecheckingError {
   public final GlobalReferable referable;
-  public final DefCallExpression defCall;
+  public final BaseDefCallExpression defCall;
   public final DependentLink parameter;
   public final List<Expression> caseExpressions;
   public final DependentLink patternParameters;
@@ -35,7 +33,7 @@ public class ExpectedConstructorError extends TypecheckingError {
   public final Map<TypedDependentLink, Object> myDataContext = new HashMap<>();
 
   public ExpectedConstructorError(GlobalReferable referable,
-                                  @Nullable DefCallExpression defCall,
+                                  @Nullable BaseDefCallExpression defCall,
                                   @Nullable DependentLink parameter,
                                   Concrete.SourceNode cause,
                                   @Nullable List<Expression> caseExpressions,
@@ -55,8 +53,8 @@ public class ExpectedConstructorError extends TypecheckingError {
           myDataContext.put(typedLink, data.getData());
 
     boolean constructorOfData = false;
-    if (defCall instanceof DataCallExpression) {
-      for (Constructor constructor : ((DataCallExpression) defCall).getDefinition().getConstructors()) {
+    if (defCall instanceof BaseDataCallExpression dataCall) {
+      for (Constructor constructor : dataCall.getDefinition().getConstructors()) {
         if (constructor.getReferable() == referable) {
           constructorOfData = true;
           break;

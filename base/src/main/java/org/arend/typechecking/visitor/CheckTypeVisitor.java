@@ -562,7 +562,7 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
           return checkResultExpr(expectedType, new TypecheckingResult(new NewExpression(null, resultClassCall), resultClassCall), expr);
         }
       }
-    } else if (expectedType instanceof DataCallExpression && ((DataCallExpression) expectedType).getDefinition() == Prelude.PATH && result.type instanceof PiExpression) {
+    } else if (expectedType instanceof PathTypeExpression pt && !pt.isDirected() && result.type instanceof PiExpression) {
       int n1 = 0;
       Expression actualType = result.type;
       while (actualType instanceof PiExpression && ((PiExpression) actualType).getParameters().isExplicit()) {
@@ -572,9 +572,9 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
 
       int n2 = 0;
       Expression eType = expectedType;
-      while (eType instanceof DataCallExpression && ((DataCallExpression) eType).getDefinition() == Prelude.PATH) {
+      while (eType instanceof PathTypeExpression eTypePath && !eTypePath.isDirected()) {
         n2++;
-        eType = AppExpression.make(((DataCallExpression) eType).getDefCallArguments().getFirst(), new ReferenceExpression(new TypedBinding("i", ExpressionFactory.Interval())), true).normalize(NormalizationMode.WHNF);
+        eType = AppExpression.make(eTypePath.getArgumentType(), new ReferenceExpression(new TypedBinding("i", ExpressionFactory.Interval())), true).normalize(NormalizationMode.WHNF);
       }
 
       int n = Math.min(n1, n2);
@@ -598,7 +598,7 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
         }
         return checkExpr(newExpr, expectedType);
       }
-    } else if (expectedType instanceof PiExpression && result.type instanceof DataCallExpression && ((DataCallExpression) result.type).getDefinition() == Prelude.PATH) {
+    } else if (expectedType instanceof PiExpression && result.type instanceof PathTypeExpression pt3 && !pt3.isDirected()) {
       return checkExpr(Concrete.AppExpression.make(expr.getData(), new Concrete.ReferenceExpression(expr.getData(), Prelude.AT.getRef()), new Concrete.ReferenceExpression(expr.getData(), new CoreReferable(null, result)), true), expectedType);
     }
 

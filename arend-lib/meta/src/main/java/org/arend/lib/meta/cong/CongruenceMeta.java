@@ -64,11 +64,11 @@ public class CongruenceMeta extends BaseMetaDefinition {
 
   private TypedExpression mapMode(@NotNull ExpressionTypechecker typechecker, @NotNull ContextData contextData) {
     CoreExpression equality = contextData.getExpectedType().normalize(NormalizationMode.WHNF);
-    if (!(equality instanceof CoreDataCallExpression && ((CoreDataCallExpression) equality).getDefinition() == typechecker.getPrelude().getPath())) {
+    if (!(equality instanceof CorePathTypeExpression pathType) || pathType.isDirected()) {
       return null;
     }
 
-    List<? extends CoreExpression> args = ((CoreDataCallExpression) equality).getDefCallArguments();
+    List<? extends CoreExpression> args = List.of(pathType.getArgumentType(), pathType.getLeftArgument(), pathType.getRightArgument());
     ConcreteFactory factory = contextData.getFactory();
     ArendRef iRef = factory.local("i");
     CongVisitor visitor = new CongVisitor(typechecker.getPrelude(), factory, typechecker, contextData.getMarker(), contextData.getArguments().stream().map(ConcreteArgument::getExpression).collect(Collectors.toList()), iRef);

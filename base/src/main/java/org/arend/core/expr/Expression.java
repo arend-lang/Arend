@@ -3,7 +3,6 @@ package org.arend.core.expr;
 import org.arend.core.context.binding.Binding;
 import org.arend.core.definition.ClassField;
 import org.arend.core.definition.Constructor;
-import org.arend.core.definition.DataDefinition;
 import org.arend.core.definition.FunctionDefinition;
 import org.arend.core.elimtree.ElimBody;
 import org.arend.core.elimtree.ElimClause;
@@ -25,6 +24,7 @@ import org.arend.core.elimtree.Body;
 import org.arend.core.expr.visitor.*;
 import org.arend.core.sort.Sort;
 import org.arend.core.subst.ExprSubstitution;
+import org.arend.core.subst.Levels;
 import org.arend.ext.core.level.LevelSubstitution;
 import org.arend.core.subst.SubstVisitor;
 import org.arend.ext.core.context.CoreBinding;
@@ -377,17 +377,15 @@ public abstract class Expression implements Body, CoreExpression {
   @Nullable
   private FunCallExpression toEqualityOrHom(boolean directed) {
     FunctionDefinition infix = directed ? Prelude.DPATH_INFIX : Prelude.PATH_INFIX;
-    DataDefinition data = directed ? Prelude.DPATH : Prelude.PATH;
     Expression expr = getUnderlyingExpression();
     if (expr instanceof FunCallExpression && ((FunCallExpression) expr).getDefinition() == infix) {
       return (FunCallExpression) expr;
     }
-    DataCallExpression dataCall = expr instanceof DataCallExpression ? (DataCallExpression) expr : expr.normalize(NormalizationMode.WHNF).cast(DataCallExpression.class);
-    if (dataCall != null && dataCall.getDefinition() == data) {
-      List<Expression> args = dataCall.getDefCallArguments();
-      Expression type = args.get(0).removeConstLam();
+    PathTypeExpression pathType = expr instanceof PathTypeExpression ? (PathTypeExpression) expr : expr.normalize(NormalizationMode.WHNF).cast(PathTypeExpression.class);
+    if (pathType != null && pathType.isDirected() == directed) {
+      Expression type = pathType.getArgumentType().removeConstLam();
       if (type != null) {
-        return FunCallExpression.makeFunCall(infix, dataCall.getLevels(), Arrays.asList(type, args.get(1), args.get(2)));
+        return FunCallExpression.makeFunCall(infix, Levels.EMPTY, Arrays.asList(type, pathType.getLeftArgument(), pathType.getRightArgument()));
       }
     }
 

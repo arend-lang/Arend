@@ -2,6 +2,7 @@ package org.arend.core.expr.visitor;
 
 import org.arend.core.context.param.DependentLink;
 import org.arend.core.definition.ClassField;
+import org.arend.core.definition.DataDefinition;
 import org.arend.core.definition.FunctionDefinition;
 import org.arend.core.expr.*;
 import org.arend.core.expr.let.HaveClause;
@@ -95,7 +96,7 @@ public class GetTypeVisitor implements ExpressionVisitor<Void, Expression> {
   }
 
   @Override
-  public DataCallExpression visitConCall(ConCallExpression expr, Void params) {
+  public Expression visitConCall(ConCallExpression expr, Void params) {
     if (expr.getDefinition() == Prelude.SUC) {
       int sucs = 1;
       Expression expression = expr.getDefCallArguments().getFirst();
@@ -296,17 +297,23 @@ public class GetTypeVisitor implements ExpressionVisitor<Void, Expression> {
     boolean isDirected = expr.isDirected();
     Expression left = AppExpression.make(expr.getArgument(), ExpressionFactory.Left(isDirected), true);
     Expression right = AppExpression.make(expr.getArgument(), ExpressionFactory.Right(isDirected), true);
-    return ExpressionFactory.Path(isDirected, expr.getArgumentType(), left, right);
+    return new PathTypeExpression(expr.getArgumentType(), left, right, isDirected);
+  }
+
+  @Override
+  public UniverseExpression visitPathType(PathTypeExpression expr, Void params) {
+    DataDefinition definition = expr.getDefinition();
+    return new UniverseExpression(definition.getSortExpression().subst(Arrays.asList(expr.getArgumentType(), expr.getLeftArgument(), expr.getRightArgument()), Levels.EMPTY.makeSubstitution(definition), this));
   }
 
   @Override
   public Expression visitAt(AtExpression expr, Void params) {
     Expression type = expr.getPathArgument().accept(this, null);
     type = myNormalizing ? type.normalize(NormalizationMode.WHNF) : type.getUnderlyingExpression();
-    if (!(type instanceof DataCallExpression dataCall && dataCall.getDefinition() == (expr.isDirected() ? Prelude.DPATH : Prelude.PATH))) {
+    if (!(type instanceof PathTypeExpression pathType && pathType.isDirected() == expr.isDirected())) {
       return type instanceof ErrorExpression ? type : new ErrorExpression();
     }
-    return AppExpression.make(dataCall.getDefCallArguments().getFirst(), expr.getIntervalArgument(), true);
+    return AppExpression.make(pathType.getArgumentType(), expr.getIntervalArgument(), true);
   }
 
   @Override

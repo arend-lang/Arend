@@ -8,7 +8,7 @@ import org.arend.ext.concrete.expr.ConcreteGoalExpression;
 import org.arend.ext.core.context.CoreBinding;
 import org.arend.ext.core.context.CoreParameter;
 import org.arend.ext.core.definition.CoreClassField;
-import org.arend.ext.core.definition.CoreConstructor;
+import org.arend.ext.core.definition.CoreDefinition;
 import org.arend.ext.core.expr.*;
 import org.arend.ext.core.ops.CMP;
 import org.arend.ext.core.ops.NormalizationMode;
@@ -76,28 +76,27 @@ public class ConstructorGoalSolver implements InteractiveGoalSolver {
       } else {
         result = factory.app(factory.ref(typechecker.getPrelude().getArrayConsRef()), true, Arrays.asList(factory.goal(), factory.goal()));
       }
-    } else if (type instanceof CoreDataCallExpression dataCall) {
-      if (dataCall.getDefinition() == typechecker.getPrelude().getPath()) {
-        CoreFunCallExpression eq = dataCall.toEquality();
+    } else {
+      if (type instanceof CorePathTypeExpression pathType && !pathType.isDirected()) {
+        CoreFunCallExpression eq = pathType.toEquality();
         if (eq != null && eq.getDefCallArguments().get(1).compare(eq.getDefCallArguments().get(2), CMP.EQ)) {
           callback.accept(factory.ref(typechecker.getPrelude().getIdpRef()));
           return;
         }
       }
 
-      List<CoreConstructor> constructors = new ArrayList<>();
-      dataCall.computeMatchedConstructors(constructors);
-      if (constructors.isEmpty()) {
+      List<CoreExpression.ConstructorWithDataArguments> constructors = type == null ? null : type.computeMatchedConstructorsWithDataArguments();
+      if (constructors == null || constructors.isEmpty()) {
         result = null;
       } else if (constructors.size() == 1) {
-        result = Utils.addArguments(factory.ref(constructors.getFirst().getRef()), factory, Utils.numberOfExplicitParameters(constructors.getFirst()), true);
+        result = Utils.addArguments(factory.ref(constructors.getFirst().getConstructor().getRef()), factory, Utils.numberOfExplicitParameters(constructors.getFirst().getConstructor()), true);
       } else {
         ArendSession session = ui.newSession();
         session.setDescription("Goal");
-        ArendQuery<CoreConstructor> query = session.listQuery("Choose constructor", constructors, null);
+        ArendQuery<CoreDefinition> query = session.listQuery("Choose constructor", constructors.stream().map(CoreExpression.ConstructorWithDataArguments::getConstructor).toList(), null);
         session.setCallback(ok -> {
           if (ok) {
-            CoreConstructor constructor = query.getResult();
+            CoreDefinition constructor = query.getResult();
             if (constructor != null) {
               callback.accept(Utils.addArguments(factory.ref(constructor.getRef()), factory, Utils.numberOfExplicitParameters(constructor), true));
             }
@@ -106,8 +105,6 @@ public class ConstructorGoalSolver implements InteractiveGoalSolver {
         session.startSession();
         return;
       }
-    } else {
-      result = null;
     }
 
     if (result != null) {

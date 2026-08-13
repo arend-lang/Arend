@@ -4,8 +4,8 @@ import org.arend.core.context.param.DependentLink;
 import org.arend.core.context.param.EmptyDependentLink;
 import org.arend.core.elimtree.Body;
 import org.arend.core.expr.ConCallExpression;
-import org.arend.core.expr.DataCallExpression;
 import org.arend.core.expr.Expression;
+import org.arend.core.expr.PathTypeExpression;
 import org.arend.core.expr.ReferenceExpression;
 import org.arend.core.pattern.ConstructorExpressionPattern;
 import org.arend.core.pattern.ExpressionPattern;
@@ -17,6 +17,7 @@ import org.arend.ext.core.definition.CoreConstructor;
 import org.arend.core.elimtree.BranchKey;
 import org.arend.ext.core.level.LevelSubstitution;
 import org.arend.naming.reference.InternalReferable;
+import org.arend.prelude.Prelude;
 import org.arend.util.Decision;
 import org.jetbrains.annotations.NotNull;
 
@@ -135,11 +136,11 @@ public class Constructor extends CallableDefinition implements Function, BranchK
     }
   }
 
-  public DataCallExpression getDataTypeExpression(Levels levels) {
+  public Expression getDataTypeExpression(Levels levels) {
     return getDataTypeExpression(levels, null);
   }
 
-  public DataCallExpression getDataTypeExpression(Levels levels, List<? extends Expression> dataTypeArguments) {
+  public Expression getDataTypeExpression(Levels levels, List<? extends Expression> dataTypeArguments) {
     assert myDataType.status().headerIsOK();
 
     List<Expression> arguments;
@@ -160,7 +161,9 @@ public class Constructor extends CallableDefinition implements Function, BranchK
       }
     }
 
-    return myDataType.getDefCall(levels, arguments);
+    return myDataType == Prelude.PATH || myDataType == Prelude.DPATH
+      ? new PathTypeExpression(arguments.get(0), arguments.get(1), arguments.get(2), myDataType == Prelude.DPATH)
+      : myDataType.getDefCall(levels, arguments);
   }
 
   @Override
@@ -227,8 +230,8 @@ public class Constructor extends CallableDefinition implements Function, BranchK
   }
 
   @Override
-  public DataCallExpression getTypeWithParams(List<? super DependentLink> params, Levels levels) {
-    DataCallExpression resultType = getDataTypeExpression(levels);
+  public Expression getTypeWithParams(List<? super DependentLink> params, Levels levels) {
+    Expression resultType = getDataTypeExpression(levels);
     DependentLink parameters = getDataTypeParameters();
     ExprSubstitution substitution = new ExprSubstitution();
     List<DependentLink> paramList = null;
@@ -243,10 +246,10 @@ public class Constructor extends CallableDefinition implements Function, BranchK
     }
     DependentLink conParams = DependentLink.Helper.subst(myParameters, substitution, levelSubst);
     if (paramList != null && !paramList.isEmpty()) {
-      paramList.get(paramList.size() - 1).setNext(conParams);
+      paramList.getLast().setNext(conParams);
     }
     params.addAll(DependentLink.Helper.toList(conParams));
-    resultType = (DataCallExpression) resultType.accept(new SubstVisitor(substitution, levelSubst), null);
+    resultType = resultType.accept(new SubstVisitor(substitution, levelSubst), null);
     return resultType;
   }
 

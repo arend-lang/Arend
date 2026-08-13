@@ -75,10 +75,10 @@ public class ElimTypechecking {
     BigInteger actualLevelSub = BigInteger.ZERO;
     if (!actualLevel.isProp() && expectedType != null) {
       Expression pathType = expectedType.getPiParameters(null, false);
-      for (DataCallExpression dataCall = pathType.cast(DataCallExpression.class); dataCall != null; dataCall = pathType.cast(DataCallExpression.class)) {
-        if (dataCall.getDefinition() == Prelude.PATH) {
+      for (PathTypeExpression dataCall = pathType.cast(PathTypeExpression.class); dataCall != null; dataCall = pathType.cast(PathTypeExpression.class)) {
+        if (!dataCall.isDirected()) {
           actualLevelSub = actualLevelSub.add(BigInteger.ONE);
-          pathType = dataCall.getDefCallArguments().getFirst().normalize(NormalizationMode.WHNF);
+          pathType = dataCall.getArgumentType().normalize(NormalizationMode.WHNF);
           LamExpression lam = pathType.cast(LamExpression.class);
           if (lam == null) {
             pathType = AppExpression.make(pathType, new ReferenceExpression(new TypedBinding("i", ExpressionFactory.Interval())), true);
@@ -376,8 +376,7 @@ public class ElimTypechecking {
   }
 
   private static List<ConCallExpression> getMatchedConstructors(Expression expr) {
-    DataCallExpression dataCall = expr.normalize(NormalizationMode.WHNF).cast(DataCallExpression.class);
-    return dataCall == null ? null : dataCall.getMatchedConstructors();
+    return expr.normalize(NormalizationMode.WHNF) instanceof BaseDataCallExpression dataCall ? dataCall.getMatchedConstructors() : null;
   }
 
   private static List<List<ExpressionPattern>> generateMissingClauses(List<DependentLink> elimParams, int i, ExprSubstitution substitution, Map<DependentLink, List<Pair<ExpressionPattern, Map<DependentLink, Constructor>>>> paramSpec, Map<DependentLink, List<ConCallExpression>> paramSpec2) {
@@ -417,7 +416,7 @@ public class ElimTypechecking {
     Expression type = null;
     if (conCalls == null) {
       type = TypeConstructorExpression.unfoldType(link.getType().subst(substitution));
-      conCalls = type instanceof DataCallExpression ? ((DataCallExpression) type).getMatchedConstructors() : null;
+      conCalls = type instanceof BaseDataCallExpression dataCall ? dataCall.getMatchedConstructors() : null;
     }
 
     List<ConstructorExpressionPattern> conPatterns;
@@ -868,11 +867,11 @@ public class ElimTypechecking {
       if (someConPattern.getDefinition() instanceof Constructor constructor) {
         dataType = constructor.getDataType();
         if (dataType.hasIndexedConstructors() || dataType == Prelude.PATH || dataType == Prelude.DPATH) {
-          DataCallExpression dataCall;
+          BaseDataCallExpression dataCall;
           if (constructor == Prelude.FIN_ZERO || constructor == Prelude.FIN_SUC) {
             dataCall = Fin(Suc(((ConCallExpression) someConPattern.getDataExpression()).getDataTypeArguments().getFirst().subst(conClause.substitution)));
           } else {
-            dataCall = (DataCallExpression) someConPattern.getDataExpression().subst(conClause.substitution).getType();
+            dataCall = (BaseDataCallExpression) someConPattern.getDataExpression().subst(conClause.substitution).getType();
           }
           conCalls = dataCall.getMatchedConstructors();
           if (conCalls == null) {

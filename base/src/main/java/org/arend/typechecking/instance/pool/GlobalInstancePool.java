@@ -133,11 +133,13 @@ public class GlobalInstancePool implements InstancePool {
       return compareClassifying(instancePi.getCodomain(), inferredPi.getCodomain(), false);
     } else if (instanceExpr instanceof IntegerExpression instanceIntExpr) {
       return inferredExpr instanceof IntegerExpression && instanceIntExpr.isEqual((IntegerExpression) inferredExpr) || inferredExpr instanceof ConCallExpression && instanceIntExpr.match(((ConCallExpression) inferredExpr).getDefinition());
-    } else if (instanceExpr instanceof DefCallExpression instanceDefCall && !(instanceExpr instanceof FieldCallExpression)) {
-      if (!(inferredExpr instanceof DefCallExpression inferredDefCall)) return false;
+    } else if (instanceExpr instanceof BaseDefCallExpression instanceDefCall && !(instanceExpr instanceof FieldCallExpression)) {
+      if (!(inferredExpr instanceof BaseDefCallExpression inferredDefCall)) return false;
       if (instanceDefCall.getDefinition() != inferredDefCall.getDefinition()) return false;
-      for (int i = 0; i < instanceDefCall.getDefCallArguments().size(); i++) {
-        if (!compareClassifying(instanceDefCall.getDefCallArguments().get(i), inferredDefCall.getDefCallArguments().get(i), false)) return false;
+      List<Expression> instanceArgs = instanceDefCall.getDefCallArguments();
+      List<Expression> inferredArgs = inferredDefCall.getDefCallArguments();
+      for (int i = 0; i < instanceArgs.size(); i++) {
+        if (!compareClassifying(instanceArgs.get(i), inferredArgs.get(i), false)) return false;
       }
       if (instanceDefCall instanceof ConCallExpression instanceConCall) {
         for (int i = 0; i < instanceConCall.getDataTypeArguments().size(); i++) {
@@ -166,7 +168,7 @@ public class GlobalInstancePool implements InstancePool {
       while (normClassifyingExpression instanceof LamExpression) {
         normClassifyingExpression = ((LamExpression) normClassifyingExpression).getBody().normalize(NormalizationMode.WHNF);
       }
-      if (!(normClassifyingExpression instanceof DefCallExpression || normClassifyingExpression instanceof SigmaExpression || normClassifyingExpression instanceof PiExpression || normClassifyingExpression instanceof UniverseExpression || normClassifyingExpression instanceof IntegerExpression)) {
+      if (!(normClassifyingExpression instanceof BaseDefCallExpression || normClassifyingExpression instanceof SigmaExpression || normClassifyingExpression instanceof PiExpression || normClassifyingExpression instanceof UniverseExpression || normClassifyingExpression instanceof IntegerExpression)) {
         return null;
       }
     }
