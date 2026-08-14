@@ -175,6 +175,26 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
     return !(binding instanceof DependentLink dl) || dl.getVariance() == BindingVariance.INVARIANT || myCovariantContext.contains(binding);
   }
 
+  public boolean hasCategoricalContext() {
+    return !myCovariantContext.isEmpty();
+  }
+
+  public boolean dependsOnCategoricalContext(Expression expr) {
+    if (myCovariantContext.isEmpty()) {
+      return false;
+    }
+    FreeVariablesCollector collector = new FreeVariablesCollector() {
+      @Override
+      public void addBinding(Binding binding) {
+        if (myCovariantContext.contains(binding)) {
+          super.addBinding(binding);
+        }
+      }
+    };
+    expr.accept(collector, null);
+    return !collector.getResult().isEmpty();
+  }
+
   public TypecheckingContext saveTypecheckingContext() {
     Map<Referable, Binding> filtered = new LinkedHashMap<>();
     for (Map.Entry<Referable, Binding> entry : context.entrySet()) {
@@ -2055,7 +2075,7 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
       levels = typecheckLevels(definition, expr, implementedFields);
     }
 
-    return DefCallResult.makeTResult(expr, definition, levels);
+    return DefCallResult.makeTResult(expr, definition, levels, this);
   }
 
   private boolean checkUnresolved(Referable ref, Concrete.SourceNode sourceNode) {

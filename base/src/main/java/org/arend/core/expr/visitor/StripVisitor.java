@@ -375,7 +375,7 @@ public class StripVisitor implements ExpressionVisitor<Void, Expression> {
   @Override
   public Expression visitPath(PathExpression expr, Void params) {
     Expression arg = expr.getArgument().accept(this, null);
-    return new PathExpression(expr.getArgumentType().accept(this, null), arg, expr.isDirected());
+    return new PathExpression(expr.getArgumentType().accept(this, null), arg, expr.isDirected(), expr.isForcedInfinite());
   }
 
   @Override
@@ -383,7 +383,7 @@ public class StripVisitor implements ExpressionVisitor<Void, Expression> {
     Expression argumentType = expr.getArgumentType().accept(this, null);
     Expression leftArgument = expr.getLeftArgument().accept(this, null);
     Expression rightArgument = expr.getRightArgument().accept(this, null);
-    return new PathTypeExpression(argumentType, leftArgument, rightArgument, expr.isDirected());
+    return new PathTypeExpression(argumentType, leftArgument, rightArgument, expr.isDirected(), expr.isForcedInfinite());
   }
 
   @Override

@@ -120,7 +120,7 @@ public class CatPreludeTest extends TypeCheckingTestCase {
   @Test
   public void dPathInfTypeError() {
     typeCheckModule("""
-      \\func test {C : DI ->+ \\Cat0} {a : C dleft} {b : C dright} : \\Type0
+      \\func test {C :+ DI ->+ \\Cat0} {a :+ C dleft} {b :+ C dright} : \\Type0
         => DPath C a b
       """, 1);
     assertThatErrorsAre(Matchers.typeMismatchError());
@@ -129,7 +129,7 @@ public class CatPreludeTest extends TypeCheckingTestCase {
   @Test
   public void dPathInfixInfTypeError() {
     typeCheckModule("""
-      \\func test {C : \\Cat0} {a b : C} : \\Type0
+      \\func test {C :+ \\Cat0} {a b :+ C} : \\Type0
         => a ~> b
       """, 1);
     assertThatErrorsAre(Matchers.typeMismatchError());
@@ -229,5 +229,37 @@ public class CatPreludeTest extends TypeCheckingTestCase {
       \\func foo {C :+ \\Cat} (f :+ \\Pi (i j k :+ DI) ->⁺ C) (j :+ DI)
         => dpath \\lam k => dpath \\lam i => f i j k
       """);
+  }
+
+  @Test
+  public void pathCovariantTest() {
+    typeCheckDef("\\func test (x : Nat) : \\Set0 => x = x");
+  }
+
+
+  @Test
+  public void pathCovariantTest2() {
+    typeCheckDef("\\func test (x :+ Nat) : \\Set0 => x = x", 1);
+  }
+
+  @Test
+  public void pathCovariantTest3() {
+    typeCheckDef("\\func test (x :+ Nat) : \\Type => x = x");
+  }
+
+  @Test
+  public void dPathCovariantTest() {
+    typeCheckDef("\\func test (x : Nat) : \\Type0 => x ~> x");
+  }
+
+
+  @Test
+  public void dPathCovariantTest2() {
+    typeCheckDef("\\func test (x :+ Nat) : \\Type0 => x ~> x", 1);
+  }
+
+  @Test
+  public void dPathCovariantTest3() {
+    typeCheckDef("\\func test (x :+ Nat) : \\Type => x ~> x");
   }
 }

@@ -7,9 +7,12 @@ import org.arend.core.definition.FunctionDefinition;
 import org.arend.core.expr.*;
 import org.arend.core.expr.let.HaveClause;
 import org.arend.core.expr.let.LetClause;
+import org.arend.core.sort.Level;
+import org.arend.core.sort.Sort;
 import org.arend.core.sort.SortExpression;
 import org.arend.core.subst.ExprSubstitution;
 import org.arend.core.subst.Levels;
+import org.arend.ext.core.level.ConstLevel;
 import org.arend.ext.core.level.LevelSubstitution;
 import org.arend.ext.core.ops.NormalizationMode;
 import org.arend.prelude.Prelude;
@@ -297,11 +300,14 @@ public class GetTypeVisitor implements ExpressionVisitor<Void, Expression> {
     boolean isDirected = expr.isDirected();
     Expression left = AppExpression.make(expr.getArgument(), ExpressionFactory.Left(isDirected), true);
     Expression right = AppExpression.make(expr.getArgument(), ExpressionFactory.Right(isDirected), true);
-    return new PathTypeExpression(expr.getArgumentType(), left, right, isDirected);
+    return new PathTypeExpression(expr.getArgumentType(), left, right, isDirected, expr.isForcedInfinite());
   }
 
   @Override
   public UniverseExpression visitPathType(PathTypeExpression expr, Void params) {
+    if (expr.isForcedInfinite()) {
+      return new UniverseExpression(new Sort(Level.INFINITY, ConstLevel.INFINITY));
+    }
     DataDefinition definition = expr.getDefinition();
     return new UniverseExpression(definition.getSortExpression().subst(Arrays.asList(expr.getArgumentType(), expr.getLeftArgument(), expr.getRightArgument()), Levels.EMPTY.makeSubstitution(definition), this));
   }

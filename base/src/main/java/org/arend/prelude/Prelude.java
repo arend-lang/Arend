@@ -178,12 +178,15 @@ public class Prelude implements ArendPrelude {
       }
       case "DPath" -> {
         DPATH = (DataDefinition) definition;
-        DPATH.setSort(new Sort(Level.INFINITY, ConstLevel.INFINITY));
+        DPATH.setSortExpression(new SortExpression.Var(0, Collections.emptyList(), ConstLevel.INFINITY));
         DPATH.setCovariant(1, false);
         DPATH.setCovariant(2, false);
         DPATH_CON = DPATH.getConstructor("dpath");
       }
-      case "~>" -> DPATH_INFIX = (FunctionDefinition) definition;
+      case "~>" -> {
+        DPATH_INFIX = (FunctionDefinition) definition;
+        DPATH_INFIX.setResultType(new UniverseExpression(new SortExpression.Var(0, Collections.emptyList(), ConstLevel.INFINITY)));
+      }
       case "d@" -> {
         DAT = (FunctionDefinition) definition;
         DAT.setStatus(Definition.TypeCheckingStatus.NO_ERRORS);
@@ -242,7 +245,6 @@ public class Prelude implements ArendPrelude {
         PATH_INFIX = (FunctionDefinition) definition;
         PathTypeExpression pathType = (PathTypeExpression) PATH_INFIX.getBody();
         assert pathType != null;
-        PATH_INFIX.setBody(new PathTypeExpression(new LamExpression(UnusedIntervalDependentLink.INSTANCE, ((LamExpression) pathType.getArgumentType()).getBody()), pathType.getLeftArgument(), pathType.getRightArgument(), false));
         PATH_INFIX.setResultType(new UniverseExpression(new SortExpression.Prev(new SortExpression.Var(0, Collections.emptyList(), ConstLevel.INFINITY))));
       }
       case "idp" -> {
@@ -320,7 +322,7 @@ public class Prelude implements ArendPrelude {
     definition.setStatus(Definition.TypeCheckingStatus.NO_ERRORS);
     PathExpression pathExpr = (PathExpression) definition.getBody();
     assert pathExpr != null;
-    definition.setBody(new PathExpression(new LamExpression(UnusedIntervalDependentLink.INSTANCE, args.getFirst()), new LamExpression(UnusedIntervalDependentLink.INSTANCE, ((LamExpression) pathExpr.getArgument()).getBody()), definition == IDD));
+    definition.setBody(new PathExpression(new LamExpression(UnusedIntervalDependentLink.INSTANCE, args.getFirst()), new LamExpression(UnusedIntervalDependentLink.INSTANCE, ((LamExpression) pathExpr.getArgument()).getBody()), definition == IDD, true));
   }
 
   public static void forEach(Consumer<Definition> consumer) {

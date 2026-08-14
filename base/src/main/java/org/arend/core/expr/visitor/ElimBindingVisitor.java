@@ -539,7 +539,7 @@ public class ElimBindingVisitor extends ExpressionTransformer<Void> {
     Expression argumentType = acceptSelf(expr.getArgumentType(), true);
     if (argumentType == null) return null;
     Expression argument = acceptSelf(expr.getArgument(), true);
-    return argument == null ? null : new PathExpression(argumentType, argument, expr.isDirected());
+    return argument == null ? null : new PathExpression(argumentType, argument, expr.isDirected(), expr.isForcedInfinite());
   }
 
   @Override
@@ -549,7 +549,7 @@ public class ElimBindingVisitor extends ExpressionTransformer<Void> {
     Expression leftArgument = acceptSelf(expr.getLeftArgument(), true);
     if (leftArgument == null) return null;
     Expression rightArgument = acceptSelf(expr.getRightArgument(), true);
-    return rightArgument == null ? null : new PathTypeExpression(argumentType, leftArgument, rightArgument, expr.isDirected());
+    return rightArgument == null ? null : new PathTypeExpression(argumentType, leftArgument, rightArgument, expr.isDirected(), expr.isForcedInfinite());
   }
 
   @Override

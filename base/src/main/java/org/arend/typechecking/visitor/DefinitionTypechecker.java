@@ -1495,7 +1495,7 @@ public class DefinitionTypechecker extends BaseDefinitionTypechecker implements 
           }
         }
         TypedSingleDependentLink thisBinding = new TypedSingleDependentLink(false, "this", thisType, true);
-        Expression result = DefCallResult.makeTResult(new Concrete.ReferenceExpression(def.getData().getData(), def.getData()), typedDef, classDef.makeIdLevels()).applyExpression(new ReferenceExpression(thisBinding), false, typechecker, def).toResult(typechecker).expression;
+        Expression result = DefCallResult.makeTResult(new Concrete.ReferenceExpression(def.getData().getData(), def.getData()), typedDef, classDef.makeIdLevels(), typechecker).applyExpression(new ReferenceExpression(thisBinding), false, typechecker, def).toResult(typechecker).expression;
         Expression actualType = result.getType();
         Expression fieldType = ((ClassField) fieldDef).getType().applyExpression(new ReferenceExpression(thisBinding));
         CompareVisitor visitor = new CompareVisitor(DummyEquations.getInstance(), CMP.LE, def);
@@ -1809,7 +1809,7 @@ public class DefinitionTypechecker extends BaseDefinitionTypechecker implements 
         if (newType == null) {
           return null;
         } else {
-          return new PathTypeExpression(new LamExpression(lam.getParameters(), newType), pathType.getLeftArgument(), pathType.getRightArgument(), false);
+          return new PathTypeExpression(new LamExpression(lam.getParameters(), newType), pathType.getLeftArgument(), pathType.getRightArgument(), false, pathType.isForcedInfinite());
         }
       } else {
         type = null;

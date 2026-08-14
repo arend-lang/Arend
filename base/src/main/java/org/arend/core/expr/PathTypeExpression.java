@@ -27,12 +27,14 @@ public class PathTypeExpression extends Expression implements CorePathTypeExpres
   private final Expression myLeftArgument;
   private final Expression myRightArgument;
   private final boolean myDirected;
+  private final boolean myForcedInfinite;
 
-  public PathTypeExpression(Expression argumentType, Expression leftArgument, Expression rightArgument, boolean directed) {
+  public PathTypeExpression(Expression argumentType, Expression leftArgument, Expression rightArgument, boolean directed, boolean forcedInfinite) {
     myArgumentType = argumentType;
     myLeftArgument = leftArgument;
     myRightArgument = rightArgument;
     myDirected = directed;
+    myForcedInfinite = forcedInfinite;
   }
 
   @Override
@@ -53,6 +55,11 @@ public class PathTypeExpression extends Expression implements CorePathTypeExpres
   @Override
   public boolean isDirected() {
     return myDirected;
+  }
+
+  @Override
+  public boolean isForcedInfinite() {
+    return myForcedInfinite;
   }
 
   @Override

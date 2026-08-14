@@ -3,14 +3,19 @@ package org.arend.typechecking.result;
 import org.arend.core.context.param.DependentLink;
 import org.arend.core.context.param.SingleDependentLink;
 import org.arend.core.context.param.TypedDependentLink;
+import org.arend.core.context.param.UnusedDirectedIntervalDependentLink;
+import org.arend.core.context.param.UnusedIntervalDependentLink;
 import org.arend.core.definition.CallableDefinition;
 import org.arend.core.definition.Definition;
 import org.arend.core.expr.*;
 import org.arend.core.expr.visitor.CompareVisitor;
 import org.arend.core.expr.visitor.GetTypeVisitor;
+import org.arend.core.sort.Level;
+import org.arend.core.sort.Sort;
 import org.arend.core.sort.SortExpression;
 import org.arend.core.subst.ExprSubstitution;
 import org.arend.core.subst.Levels;
+import org.arend.ext.core.level.ConstLevel;
 import org.arend.ext.core.level.LevelSubstitution;
 import org.arend.ext.core.ops.CMP;
 import org.arend.ext.error.TypecheckingError;
@@ -18,9 +23,8 @@ import org.arend.ext.util.StringUtils;
 import org.arend.prelude.Prelude;
 import org.arend.term.concrete.Concrete;
 import org.arend.typechecking.error.local.PathEndpointMismatchError;
-import org.arend.typechecking.implicitargs.equations.Equations;
 import org.arend.typechecking.visitor.CheckTypeVisitor;
-import org.jetbrains.annotations.Nullable;
+import org.jetbrains.annotations.NotNull;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -33,6 +37,7 @@ public class DefCallResult implements TResult {
   private final List<Expression> myArguments;
   private List<DependentLink> myParameters;
   private Expression myResultType;
+  private Boolean myForcedInfinite;
 
   private DefCallResult(Concrete.ReferenceExpression defCall, CallableDefinition definition, Levels levels, List<Expression> arguments, List<DependentLink> parameters, Expression resultType) {
     myDefCall = defCall;
@@ -43,31 +48,64 @@ public class DefCallResult implements TResult {
     myResultType = resultType;
   }
 
-  public static TResult makeTResult(Concrete.ReferenceExpression defCall, CallableDefinition definition, Levels levels) {
+  public static TResult makeTResult(Concrete.ReferenceExpression defCall, CallableDefinition definition, Levels levels, CheckTypeVisitor typechecker) {
     List<DependentLink> parameters = new ArrayList<>();
     Expression resultType = definition.getTypeWithParams(parameters, levels);
 
     if (parameters.isEmpty()) {
       return new TypecheckingResult(definition.getDefCall(levels, Collections.emptyList()), resultType);
     } else {
-      return new DefCallResult(defCall, definition, levels, new ArrayList<>(), parameters, resultType);
+      DefCallResult result = new DefCallResult(defCall, definition, levels, new ArrayList<>(), parameters, resultType);
+      if (!typechecker.hasCategoricalContext()) {
+        result.myForcedInfinite = false;
+        result.updateResultPathType();
+      }
+      return result;
     }
   }
 
-  private Expression getCoreDefCall() {
+  private static boolean isPathDefinition(CallableDefinition definition) {
+    return definition == Prelude.PATH || definition == Prelude.DPATH || definition == Prelude.PATH_INFIX || definition == Prelude.DPATH_INFIX || definition == Prelude.PATH_CON || definition == Prelude.DPATH_CON;
+  }
+
+  private void updateResultPathType() {
+    if (!myForcedInfinite && myResultType instanceof PathTypeExpression pathType && pathType.isForcedInfinite()) {
+      myResultType = new PathTypeExpression(pathType.getArgumentType(), pathType.getLeftArgument(), pathType.getRightArgument(), pathType.isDirected(), false);
+    }
+  }
+
+  private boolean isForcedInfinite(CheckTypeVisitor typechecker) {
+    if (myForcedInfinite == null) {
+      myForcedInfinite = false;
+      if (typechecker != null && isPathDefinition(myDefinition)) {
+        for (Expression argument : myArguments) {
+          if (typechecker.dependsOnCategoricalContext(argument)) {
+            myForcedInfinite = true;
+            break;
+          }
+        }
+      }
+      updateResultPathType();
+    }
+    return myForcedInfinite;
+  }
+
+  private Expression getCoreDefCall(CheckTypeVisitor typechecker) {
     return myDefinition == Prelude.PATH_CON || myDefinition == Prelude.DPATH_CON
-      ? new PathExpression(myArguments.get(0), myArguments.get(1), myDefinition == Prelude.DPATH_CON)
+      ? new PathExpression(myArguments.get(0), myArguments.get(1), myDefinition == Prelude.DPATH_CON, isForcedInfinite(typechecker))
       : myDefinition == Prelude.PATH || myDefinition == Prelude.DPATH
-        ? new PathTypeExpression(myArguments.get(0), myArguments.get(1), myArguments.get(2), myDefinition == Prelude.DPATH)
-        : myDefinition == Prelude.AT || myDefinition == Prelude.DAT
-          ? AtExpression.make(myArguments.get(3), myArguments.get(4), true, myDefinition == Prelude.DAT)
-          : myDefinition.getDefCall(myLevels, myArguments);
+        ? new PathTypeExpression(myArguments.get(0), myArguments.get(1), myArguments.get(2), myDefinition == Prelude.DPATH, isForcedInfinite(typechecker))
+        : myDefinition == Prelude.PATH_INFIX || myDefinition == Prelude.DPATH_INFIX
+          ? new PathTypeExpression(new LamExpression(myDefinition == Prelude.DPATH_INFIX ? UnusedDirectedIntervalDependentLink.INSTANCE : UnusedIntervalDependentLink.INSTANCE, myArguments.get(0)), myArguments.get(1), myArguments.get(2), myDefinition == Prelude.DPATH_INFIX, isForcedInfinite(typechecker))
+          : myDefinition == Prelude.AT || myDefinition == Prelude.DAT
+            ? AtExpression.make(myArguments.get(3), myArguments.get(4), true, myDefinition == Prelude.DAT)
+            : myDefinition.getDefCall(myLevels, myArguments);
   }
 
   @Override
   public TypecheckingResult toResult(CheckTypeVisitor typechecker) {
     if (myParameters.isEmpty()) {
-      return new TypecheckingResult(getCoreDefCall(), getType(typechecker.getEquations()));
+      return new TypecheckingResult(getCoreDefCall(typechecker), getType(typechecker));
     }
 
     {
@@ -107,8 +145,8 @@ public class DefCallResult implements TResult {
       }
     }
 
-    Expression expression = getCoreDefCall();
-    Expression resultType = myResultType instanceof UniverseExpression ? getType(typechecker.getEquations()) : myResultType.subst(substitution, LevelSubstitution.EMPTY);
+    Expression expression = getCoreDefCall(typechecker);
+    Expression resultType = myResultType instanceof UniverseExpression ? getType(typechecker) : myResultType.subst(substitution, LevelSubstitution.EMPTY);
     if (parameters.isEmpty()) {
       return new TypecheckingResult(expression, resultType);
     }
@@ -133,10 +171,10 @@ public class DefCallResult implements TResult {
     subst.add(myParameters.getFirst(), expression);
     myParameters = DependentLink.Helper.subst(myParameters.subList(1, size), subst, LevelSubstitution.EMPTY);
     myResultType = myResultType.subst(subst, LevelSubstitution.EMPTY);
-    return size > 1 ? this : new TypecheckingResult(getCoreDefCall(), getType(typechecker.getEquations()));
+    return size > 1 ? this : new TypecheckingResult(getCoreDefCall(typechecker), getType(typechecker));
   }
 
-  public TResult applyExpressions(List<? extends Expression> expressions, @Nullable Equations equations) {
+  public TResult applyExpressions(List<? extends Expression> expressions, @NotNull CheckTypeVisitor typechecker) {
     int size = myParameters.size();
     List<? extends Expression> args = expressions.size() <= size ? expressions : expressions.subList(0, size);
     myArguments.addAll(args);
@@ -148,7 +186,7 @@ public class DefCallResult implements TResult {
     myResultType = myResultType.subst(subst, LevelSubstitution.EMPTY);
 
     assert expressions.size() <= size;
-    return expressions.size() < size ? this : new TypecheckingResult(getCoreDefCall(), getType(equations));
+    return expressions.size() < size ? this : new TypecheckingResult(getCoreDefCall(typechecker), getType(typechecker));
   }
 
   public TResult applyPathArgument(boolean isDirected, Expression argument, CheckTypeVisitor visitor, Concrete.SourceNode sourceNode) {
@@ -177,7 +215,7 @@ public class DefCallResult implements TResult {
 
     myParameters = Collections.emptyList();
     myResultType = myResultType.subst(subst, LevelSubstitution.EMPTY);
-    return new TypecheckingResult(getCoreDefCall(), getType(visitor.getEquations()));
+    return new TypecheckingResult(getCoreDefCall(visitor), getType(visitor));
   }
 
   @Override
@@ -194,16 +232,17 @@ public class DefCallResult implements TResult {
   }
 
   @Override
-  public Expression getType(@Nullable Equations equations) {
+  public Expression getType(@NotNull CheckTypeVisitor typechecker) {
+    if (myResultType instanceof UniverseExpression && isForcedInfinite(typechecker)) {
+      return new UniverseExpression(new Sort(Level.INFINITY, ConstLevel.INFINITY));
+    }
     if (myResultType instanceof UniverseExpression universe && !(universe.getSortExpression() instanceof SortExpression.Const) && !myArguments.isEmpty()) {
-      if (equations != null) {
-        DependentLink param = myDefinition.getParameters();
-        for (Expression argument : myArguments) {
-          if (argument instanceof InferenceReferenceExpression infRefExpr && infRefExpr.getInferenceVariable() != null && param.getType().isInfinityLevel()) {
-            equations.solveLowerBounds(infRefExpr.getInferenceVariable());
-          }
-          param = param.getNext();
+      DependentLink param = myDefinition.getParameters();
+      for (Expression argument : myArguments) {
+        if (argument instanceof InferenceReferenceExpression infRefExpr && infRefExpr.getInferenceVariable() != null && param.getType().isInfinityLevel()) {
+          typechecker.getEquations().solveLowerBounds(infRefExpr.getInferenceVariable());
         }
+        param = param.getNext();
       }
 
       return new UniverseExpression(universe.getSortExpression().subst(myArguments, LevelSubstitution.EMPTY, GetTypeVisitor.INSTANCE));

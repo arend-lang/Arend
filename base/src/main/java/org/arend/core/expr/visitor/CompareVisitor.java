@@ -2281,8 +2281,8 @@ public class CompareVisitor implements ExpressionVisitor2<Expression, Expression
       if (myResult == null) {
         initResult(expr, expr2);
       } else {
-        myResult.wholeExpr1 = new PathExpression(expr.getArgumentType(), myResult.wholeExpr1, expr.isDirected());
-        myResult.wholeExpr2 = new PathExpression(pathExpr2.getArgumentType(), myResult.wholeExpr2, pathExpr2.isDirected());
+        myResult.wholeExpr1 = new PathExpression(expr.getArgumentType(), myResult.wholeExpr1, expr.isDirected(), expr.isForcedInfinite());
+        myResult.wholeExpr2 = new PathExpression(pathExpr2.getArgumentType(), myResult.wholeExpr2, pathExpr2.isDirected(), pathExpr2.isForcedInfinite());
       }
       return false;
     }
@@ -2307,14 +2307,14 @@ public class CompareVisitor implements ExpressionVisitor2<Expression, Expression
         if (myResult.index >= 0 && myResult.index < args1.size()) {
           List<Expression> args = new ArrayList<>(args1);
           args.set(myResult.index, myResult.wholeExpr1);
-          myResult.wholeExpr1 = new PathTypeExpression(args.get(0), args.get(1), args.get(2), expr1.isDirected());
+          myResult.wholeExpr1 = new PathTypeExpression(args.get(0), args.get(1), args.get(2), expr1.isDirected(), expr1.isForcedInfinite());
         } else {
           myResult.wholeExpr1 = expr1;
         }
         if (myResult.index >= 0 && myResult.index < args2.size()) {
           List<Expression> args = new ArrayList<>(args2);
           args.set(myResult.index, myResult.wholeExpr2);
-          myResult.wholeExpr2 = new PathTypeExpression(args.get(0), args.get(1), args.get(2), pathType2.isDirected());
+          myResult.wholeExpr2 = new PathTypeExpression(args.get(0), args.get(1), args.get(2), pathType2.isDirected(), pathType2.isForcedInfinite());
         } else {
           myResult.wholeExpr2 = expr2;
         }

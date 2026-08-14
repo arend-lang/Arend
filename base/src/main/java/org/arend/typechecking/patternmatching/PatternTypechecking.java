@@ -245,12 +245,15 @@ public class PatternTypechecking {
             }
 
             for (int j = intervalBindings.size() - 1, k = 0; j > i; j--, k++) {
-              leftArg = new PathExpression(new LamExpression(lamBindings.get(j), exprTypes.get(k).subst(lamBindings.get(i), Left())), new LamExpression(lamBindings.get(j), leftArg), false);
-              rightArg = new PathExpression(new LamExpression(lamBindings.get(j), exprTypes.get(k).subst(lamBindings.get(i), Right())), new LamExpression(lamBindings.get(j), rightArg), false);
+              Expression leftArgType = new LamExpression(lamBindings.get(j), exprTypes.get(k).subst(lamBindings.get(i), Left()));
+              Expression rightArgType = new LamExpression(lamBindings.get(j), exprTypes.get(k).subst(lamBindings.get(i), Right()));
+              leftArg = new PathExpression(leftArgType, new LamExpression(lamBindings.get(j), leftArg), false, myVisitor.dependsOnCategoricalContext(leftArgType));
+              rightArg = new PathExpression(rightArgType, new LamExpression(lamBindings.get(j), rightArg), false, myVisitor.dependsOnCategoricalContext(rightArgType));
             }
 
             intervalSubst.add(intervalBinding, new ReferenceExpression(lamBindings.get(i)));
-            exprType = new PathTypeExpression(new LamExpression(lamBindings.get(i), exprType), leftArg, rightArg, false);
+            Expression newArgumentType = new LamExpression(lamBindings.get(i), exprType);
+            exprType = new PathTypeExpression(newArgumentType, leftArg, rightArg, false, myVisitor.dependsOnCategoricalContext(newArgumentType));
           }
         } else {
           intervalBindings = null;

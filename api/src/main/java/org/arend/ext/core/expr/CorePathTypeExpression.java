@@ -7,4 +7,5 @@ public interface CorePathTypeExpression extends CoreExpression {
   @NotNull CoreExpression getLeftArgument();
   @NotNull CoreExpression getRightArgument();
   boolean isDirected();
+  boolean isForcedInfinite();
 }

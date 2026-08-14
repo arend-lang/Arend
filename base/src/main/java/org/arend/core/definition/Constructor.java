@@ -162,7 +162,7 @@ public class Constructor extends CallableDefinition implements Function, BranchK
     }
 
     return myDataType == Prelude.PATH || myDataType == Prelude.DPATH
-      ? new PathTypeExpression(arguments.get(0), arguments.get(1), arguments.get(2), myDataType == Prelude.DPATH)
+      ? new PathTypeExpression(arguments.get(0), arguments.get(1), arguments.get(2), myDataType == Prelude.DPATH, true)
       : myDataType.getDefCall(levels, arguments);
   }
 

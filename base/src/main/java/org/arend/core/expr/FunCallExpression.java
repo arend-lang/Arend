@@ -54,7 +54,7 @@ public class FunCallExpression extends LeveledDefCallExpression implements CoreF
     }
     if ((definition == Prelude.PATH_INFIX || definition == Prelude.DPATH_INFIX) && arguments.size() == 3) {
       boolean directed = definition == Prelude.DPATH_INFIX;
-      return new PathTypeExpression(new LamExpression(directed ? UnusedDirectedIntervalDependentLink.INSTANCE : UnusedIntervalDependentLink.INSTANCE, arguments.get(0)), arguments.get(1), arguments.get(2), directed);
+      return new PathTypeExpression(new LamExpression(directed ? UnusedDirectedIntervalDependentLink.INSTANCE : UnusedIntervalDependentLink.INSTANCE, arguments.get(0)), arguments.get(1), arguments.get(2), directed, true);
     }
     FunCallExpression result = new FunCallExpression(definition, levels, arguments);
     result.fixBoxes();
