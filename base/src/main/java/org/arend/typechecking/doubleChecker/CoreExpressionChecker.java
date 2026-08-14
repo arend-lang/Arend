@@ -966,7 +966,7 @@ public class CoreExpressionChecker implements ExpressionVisitor<Expression, Expr
   @Override
   public Expression visitPath(PathExpression expr, Expression expectedType) {
     boolean isDirected = expr.isDirected();
-    expr.getArgumentType().accept(this, new PiExpression(isDirected ? new TypedSingleDependentLink(true, null, ExpressionFactory.DI()) : UnusedIntervalDependentLink.INSTANCE, UniverseExpression.OMEGA));
+    expr.getArgumentType().accept(this, new PiExpression(isDirected ? UnusedDirectedIntervalDependentLink.INSTANCE : UnusedIntervalDependentLink.INSTANCE, UniverseExpression.OMEGA));
     TypedSingleDependentLink param = new TypedSingleDependentLink(true, "i", isDirected ? ExpressionFactory.DI() : ExpressionFactory.Interval(), false, isDirected ? BindingVariance.COVARIANT : BindingVariance.INVARIANT);
     expr.getArgument().accept(this, new PiExpression(param, AppExpression.make(expr.getArgumentType(), new ReferenceExpression(param), true)));
     return check(expectedType, expr.getType(), expr);

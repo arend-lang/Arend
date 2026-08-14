@@ -2,6 +2,7 @@ package org.arend.core.context.param;
 
 import org.arend.core.expr.DataCallExpression;
 import org.arend.core.subst.Levels;
+import org.arend.ext.core.context.BindingVariance;
 import org.arend.prelude.Prelude;
 
 import java.util.Collections;
@@ -10,7 +11,7 @@ public final class UnusedDirectedIntervalDependentLink extends TypedSingleDepend
   public static final UnusedDirectedIntervalDependentLink INSTANCE = new UnusedDirectedIntervalDependentLink();
 
   private UnusedDirectedIntervalDependentLink() {
-    super(true, null, DataCallExpression.make(Prelude.DI, Levels.EMPTY, Collections.emptyList()));
+    super(true, null, DataCallExpression.make(Prelude.DI, Levels.EMPTY, Collections.emptyList()), false, BindingVariance.COVARIANT);
   }
 
   @Override

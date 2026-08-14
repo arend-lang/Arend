@@ -1,9 +1,6 @@
 package org.arend.prelude;
 
-import org.arend.core.context.param.DependentLink;
-import org.arend.core.context.param.EmptyDependentLink;
-import org.arend.core.context.param.TypedDependentLink;
-import org.arend.core.context.param.UnusedIntervalDependentLink;
+import org.arend.core.context.param.*;
 import org.arend.core.definition.*;
 import org.arend.core.elimtree.IntervalElim;
 import org.arend.core.expr.*;
@@ -322,7 +319,8 @@ public class Prelude implements ArendPrelude {
     definition.setStatus(Definition.TypeCheckingStatus.NO_ERRORS);
     PathExpression pathExpr = (PathExpression) definition.getBody();
     assert pathExpr != null;
-    definition.setBody(new PathExpression(new LamExpression(UnusedIntervalDependentLink.INSTANCE, args.getFirst()), new LamExpression(UnusedIntervalDependentLink.INSTANCE, ((LamExpression) pathExpr.getArgument()).getBody()), definition == IDD, true));
+    TypedSingleDependentLink param = definition == IDD ? UnusedDirectedIntervalDependentLink.INSTANCE : UnusedIntervalDependentLink.INSTANCE;
+    definition.setBody(new PathExpression(new LamExpression(param, args.getFirst()), new LamExpression(param, ((LamExpression) pathExpr.getArgument()).getBody()), definition == IDD, true));
   }
 
   public static void forEach(Consumer<Definition> consumer) {
