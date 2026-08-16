@@ -54,7 +54,7 @@ public class PathsTest extends TypeCheckingTestCase {
   public void concatTest() {
     typeCheckModule("""
       \\func transport {A : \\Type} (B : A -> \\Type) {a a' : A} (p : a = a') (b : B a) => coe (\\lam i => B (p @ i)) b right
-      \\func concat {A : I -> \\Type} {a : A left} {a' a'' : A right} (p : Path A a a') (q : a' = a'') => transport (Path A a) q p
+      \\func concat {A : I -> \\Type} {a : A left} {a' a'' : A right} (p : Path A a a') (q : a' = a'') => transport (Path A a __) q p
       \\func *> {A : \\Type} {a a' a'' : A} (p : a = a') (q : a' = a'') => concat p q
       """);
   }

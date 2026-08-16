@@ -1079,7 +1079,8 @@ public class CompareVisitor implements ExpressionVisitor2<Expression, Expression
         type = checkedSubst(type, paramSubst, allowedBindings, null);
         if (type == null) return null;
       }
-      TypedSingleDependentLink param = new TypedSingleDependentLink(pair.proj2, pair.proj1.getName(), type);
+      TypedSingleDependentLink param = new TypedSingleDependentLink(pair.proj2, pair.proj1.getName(), type, false,
+          pair.proj1 instanceof DependentLink ? ((DependentLink) pair.proj1).getVariance() : BindingVariance.INVARIANT);
       params.add(param);
       paramSubst.add(pair.proj1, new ReferenceExpression(param));
       allowedBindings.add(pair.proj1);
@@ -1576,7 +1577,7 @@ public class CompareVisitor implements ExpressionVisitor2<Expression, Expression
   @Override
   public Boolean visitPi(PiExpression expr1, Expression expr2, Expression type) {
     PiExpression piExpr2 = expr2.cast(PiExpression.class);
-    if (piExpr2 == null) {
+    if (piExpr2 == null || expr1.getParameters().getVariance() != piExpr2.getParameters().getVariance()) {
       initResult(expr1, expr2);
       return false;
     }
@@ -1644,7 +1645,7 @@ public class CompareVisitor implements ExpressionVisitor2<Expression, Expression
     for (int i = 0; i < list1.size() && i < list2.size(); ++i) {
       DependentLink param1 = list1.get(i);
       DependentLink param2 = list2.get(i);
-      if (param1.isProperty() != param2.isProperty() || !compare(param1.getType(), param2.getType(), UniverseExpression.OMEGA, false)) {
+      if (param1.isProperty() != param2.isProperty() || param1.getVariance() != param2.getVariance() || !compare(param1.getType(), param2.getType(), UniverseExpression.OMEGA, false)) {
         for (int j = 0; j < i; j++) {
           mySubstitution.remove(list2.get(j));
         }

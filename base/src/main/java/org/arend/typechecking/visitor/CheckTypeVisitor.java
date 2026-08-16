@@ -2322,7 +2322,7 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
 
     domain.accept(collector, null);
     if (!collector.getResult().isEmpty()) {
-      errorReporter.report(new TypecheckingError("A domain of a \\Pi-type living in \\Cat depends on covariant parameters " + collector.getResult(), sourceNode));
+      errorReporter.report(new TypecheckingError("The domain of a \\Pi-type depends on covariant parameters " + collector.getResult(), sourceNode));
     }
   }
 

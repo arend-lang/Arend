@@ -312,4 +312,14 @@ public class CovariantBindersTest extends TypeCheckingTestCase {
   public void lamError() {
     typeCheckModule("\\func test : \\Pi (x : Nat) -> Nat => \\lam (x :+ Nat) => x", 1);
   }
+
+  @Test
+  public void piComparisonTest() {
+    typeCheckDef("\\func test : (\\Pi (x :+ Nat) -> Nat) = (Nat -> Nat) => idp", 1);
+  }
+
+  @Test
+  public void sigmaComparisonTest() {
+    typeCheckDef("\\func test : (\\Sigma (x :+ Nat) Nat) = (\\Sigma Nat Nat) => idp", 1);
+  }
 }
