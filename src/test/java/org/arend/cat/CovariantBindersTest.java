@@ -322,4 +322,12 @@ public class CovariantBindersTest extends TypeCheckingTestCase {
   public void sigmaComparisonTest() {
     typeCheckDef("\\func test : (\\Sigma (x :+ Nat) Nat) = (\\Sigma Nat Nat) => idp", 1);
   }
+
+  @Test
+  public void inferenceTest() {
+    typeCheckModule("""
+      \\func foo {x : Nat} (p :+ x = x) => 0
+      \\func test (x :+ Nat) (p :+ x = x) => foo p
+      """, 1);
+  }
 }

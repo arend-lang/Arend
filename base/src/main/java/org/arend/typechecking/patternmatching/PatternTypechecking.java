@@ -770,10 +770,9 @@ public class PatternTypechecking {
             FreeVariablesCollector collector = new FreeVariablesCollector();
             constructor.getResultType().accept(collector, null);
             if (constructor.getNumberOfParameters() > 0 || !collector.getResult().isEmpty()) {
-              Set<Binding> bindings = myVisitor.getAllBindings();
               int i = 0;
               for (; i < constructor.getNumberOfParameters(); i++) {
-                Expression arg = InferenceReferenceExpression.make(new FunctionInferenceVariable(constructor, link, i + 1, link.getType().subst(substitution, levelSubst), conPattern, bindings), myVisitor.getEquations());
+                Expression arg = InferenceReferenceExpression.make(new FunctionInferenceVariable(constructor, link, i + 1, link.getType().subst(substitution, levelSubst), conPattern, myVisitor.getAllBindings(link.getVariance() == BindingVariance.COVARIANT)), myVisitor.getEquations());
                 args.add(arg);
                 substitution.add(link, arg);
                 collector.getResult().remove(link);
@@ -781,7 +780,7 @@ public class PatternTypechecking {
               }
               if (!collector.getResult().isEmpty()) {
                 for (DependentLink link1 = link; link1.hasNext(); link1 = link1.getNext(), i++) {
-                  substitution.add(link1, InferenceReferenceExpression.make(new FunctionInferenceVariable(constructor, link1, i + 1, link1.getType().subst(substitution, levelSubst), conPattern, bindings), myVisitor.getEquations()));
+                  substitution.add(link1, InferenceReferenceExpression.make(new FunctionInferenceVariable(constructor, link1, i + 1, link1.getType().subst(substitution, levelSubst), conPattern, myVisitor.getAllBindings(link1.getVariance() == BindingVariance.COVARIANT)), myVisitor.getEquations()));
                 }
               }
             }

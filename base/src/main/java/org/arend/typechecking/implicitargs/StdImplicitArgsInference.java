@@ -120,7 +120,7 @@ public class StdImplicitArgsInference implements ImplicitArgsInference {
             }
 
             // Otherwise, generate type class inference variable
-            infVar = new TypeClassInferenceVariable(parameter.getName(), type, classDef, defCallResult.getDefinition() instanceof ClassField, kind == Definition.TypeClassParameterKind.ONLY_LOCAL, defCallResult.getDefCall(), holeExpr, myVisitor.getDefinition(), myVisitor.getAllBindings());
+            infVar = new TypeClassInferenceVariable(parameter.getName(), type, classDef, defCallResult.getDefinition() instanceof ClassField, kind == Definition.TypeClassParameterKind.ONLY_LOCAL, defCallResult.getDefCall(), holeExpr, myVisitor.getDefinition(), myVisitor.getAllBindings(parameter.getVariance() == BindingVariance.COVARIANT));
           }
         }
       }
@@ -138,7 +138,7 @@ public class StdImplicitArgsInference implements ImplicitArgsInference {
         } else {
           definition = null;
         }
-        infVar = new FunctionInferenceVariable(definition, parameter, i + 1, type, expr, myVisitor.getAllBindings());
+        infVar = new FunctionInferenceVariable(definition, parameter, i + 1, type, expr, myVisitor.getAllBindings(parameter.getVariance() == BindingVariance.COVARIANT));
         Expression newType = type.replaceInfinityLevel(infVar);
         if (newType != null) {
           infVar.setType(newType);
@@ -180,7 +180,7 @@ public class StdImplicitArgsInference implements ImplicitArgsInference {
         if (defCallResult.getArguments().isEmpty()) {
           DependentLink dataParam = defCallResult.getParameter();
           Expression paramType = dataParam.getType();
-          InferenceVariable infVar = new FunctionInferenceVariable(pathCon, dataParam, 1, paramType, fun, myVisitor.getAllBindings());
+          InferenceVariable infVar = new FunctionInferenceVariable(pathCon, dataParam, 1, paramType, fun, myVisitor.getAllBindings(dataParam.getVariance() == BindingVariance.COVARIANT));
           Expression newParamType = paramType.replaceInfinityLevel(infVar);
           if (newParamType != null) {
             infVar.setType(newParamType);
@@ -688,7 +688,7 @@ public class StdImplicitArgsInference implements ImplicitArgsInference {
           }
           Expression type = parameter.getType();
           boolean isHole = argument.getExpression() instanceof Concrete.HoleExpression;
-          InferenceVariable var = new FunctionInferenceVariable(definition, parameter, current + numberOfImplicitArguments, type, argument.getExpression(), myVisitor.getAllBindings(), isHole);
+          InferenceVariable var = new FunctionInferenceVariable(definition, parameter, current + numberOfImplicitArguments, type, argument.getExpression(), myVisitor.getAllBindings(parameter.getVariance() == BindingVariance.COVARIANT), isHole);
           Expression newType = type.replaceInfinityLevel(var);
           if (newType != null) {
             var.setType(newType);

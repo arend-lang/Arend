@@ -171,8 +171,8 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
     return myArendExtension;
   }
 
-  private boolean isVarianceAccessible(Binding binding) {
-    return !(binding instanceof DependentLink dl) || dl.getVariance() == BindingVariance.INVARIANT || myCovariantContext.contains(binding);
+  private boolean isVarianceAccessible(Binding binding, boolean withCovariant) {
+    return !(binding instanceof DependentLink dl) || dl.getVariance() == BindingVariance.INVARIANT || withCovariant && myCovariantContext.contains(binding);
   }
 
   public boolean hasCategoricalContext() {
@@ -198,7 +198,7 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
   public TypecheckingContext saveTypecheckingContext() {
     Map<Referable, Binding> filtered = new LinkedHashMap<>();
     for (Map.Entry<Referable, Binding> entry : context.entrySet()) {
-      if (isVarianceAccessible(entry.getValue())) {
+      if (isVarianceAccessible(entry.getValue(), true)) {
         filtered.put(entry.getKey(), entry.getValue());
       }
     }
@@ -319,10 +319,10 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
     myLocalPrettifier.clear();
   }
 
-  public Set<Binding> getAllBindings() {
+  public Set<Binding> getAllBindings(boolean withCovariant) {
     Set<Binding> result = new HashSet<>();
     for (Binding binding : context.values()) {
-      if (!isVarianceAccessible(binding)) continue;
+      if (!isVarianceAccessible(binding, withCovariant)) continue;
       result.add(binding);
       if (binding instanceof EvaluatingBinding) {
         Expression expr = ((EvaluatingBinding) binding).getExpression();
@@ -332,6 +332,10 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
       }
     }
     return result;
+  }
+
+  public Set<Binding> getAllBindings() {
+    return getAllBindings(true);
   }
 
   private static class VeryFakeLocalReferable extends FakeLocalReferable {
@@ -344,7 +348,7 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
   public @NotNull List<CoreBinding> getFreeBindingsList() {
     List<CoreBinding> result = new ArrayList<>();
     for (Map.Entry<Referable, Binding> entry : context.entrySet()) {
-      if (!(entry.getKey() instanceof VeryFakeLocalReferable) && isVarianceAccessible(entry.getValue())) {
+      if (!(entry.getKey() instanceof VeryFakeLocalReferable) && isVarianceAccessible(entry.getValue(), true)) {
         result.add(entry.getValue());
       }
     }
@@ -357,7 +361,7 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
       throw new IllegalArgumentException();
     }
     Binding binding = context.get(ref);
-    return binding != null && isVarianceAccessible(binding) ? binding : null;
+    return binding != null && isVarianceAccessible(binding, true) ? binding : null;
   }
 
   @Override
@@ -1738,7 +1742,7 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
           }
         }
       } else {
-        result = new TypecheckingResult(InferenceReferenceExpression.make(new TypeClassInferenceVariable(field.getName(), type, classDef, false, false, implBody, holeExpr, myDefinition, getAllBindings()), myEquations), type);
+        result = new TypecheckingResult(InferenceReferenceExpression.make(new TypeClassInferenceVariable(field.getName(), type, classDef, false, false, implBody, holeExpr, myDefinition, getAllBindings(false)), myEquations), type);
       }
       return result;
     }
@@ -2150,7 +2154,7 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
     if (!params.isEmpty()) {
       ExprSubstitution substitution = new ExprSubstitution();
       for (SingleDependentLink param : params) {
-        Expression arg = new InferenceReferenceExpression(new ExpressionInferenceVariable(param.getType().subst(substitution), expr, getAllBindings(), true));
+        Expression arg = new InferenceReferenceExpression(new ExpressionInferenceVariable(param.getType().subst(substitution), expr, getAllBindings(param.getVariance() == BindingVariance.COVARIANT), true));
         argResult.expression = AppExpression.make(argResult.expression, arg, param.isExplicit());
         substitution.add(param, arg);
       }
@@ -2889,7 +2893,7 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
       ExprSubstitution subst = new ExprSubstitution();
       while (exprResult.type instanceof PiExpression && !((PiExpression) exprResult.type).getParameters().isExplicit()) {
         for (DependentLink param = ((PiExpression) exprResult.type).getParameters(); param.hasNext(); param = param.getNext()) {
-          Expression arg = new InferenceReferenceExpression(new ExpressionInferenceVariable(param.getType(), expr, getAllBindings(), true));
+          Expression arg = new InferenceReferenceExpression(new ExpressionInferenceVariable(param.getType(), expr, getAllBindings(param.getVariance() == BindingVariance.COVARIANT), true));
           exprResult.expression = AppExpression.make(exprResult.expression, arg, false);
           subst.add(param, arg);
         }
