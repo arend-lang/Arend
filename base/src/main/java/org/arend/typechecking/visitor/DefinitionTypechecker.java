@@ -2150,6 +2150,7 @@ public class DefinitionTypechecker extends BaseDefinitionTypechecker implements 
               ClassField newField = addField(field.getData(), typedDef, previousField.getType(), previousField.getTypeLevel());
               newField.setStatus(previousField.status());
               newField.setNumberOfParameters(previousField.getNumberOfParameters());
+              newField.setVariance(field.getVariance());
               if (field.isCoerce()) {
                 newField.setHideable(true);
               }
@@ -2669,6 +2670,7 @@ public class DefinitionTypechecker extends BaseDefinitionTypechecker implements 
       Concrete.Expression codomain;
       Levels idLevels = parentClass.makeIdLevels();
       TypedSingleDependentLink thisParam = new TypedSingleDependentLink(false, "this", new ClassCallExpression(parentClass, idLevels), true);
+      typechecker.setFieldThisParameter(thisParam);
       if (!def.getParameters().isEmpty()) {
         if (def.getParameters().size() == 1) {
           codomain = def.getResultType();
@@ -2694,6 +2696,7 @@ public class DefinitionTypechecker extends BaseDefinitionTypechecker implements 
 
       if (def instanceof Concrete.ClassField) {
         typedDef = addField(((Concrete.ClassField) def).getData(), parentClass, piType, null);
+        typedDef.setVariance(((Concrete.ClassField) def).getVariance());
       }
 
       if (ok && def.getResultTypeLevel() != null) {
@@ -2723,6 +2726,7 @@ public class DefinitionTypechecker extends BaseDefinitionTypechecker implements 
           }
         }
       }
+      typechecker.setFieldThisParameter(null);
     }
 
     if (typedDef == null) {

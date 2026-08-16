@@ -13,6 +13,7 @@ import org.arend.core.expr.Expression;
 import org.arend.core.pattern.BindingPattern;
 import org.arend.core.pattern.ConstructorExpressionPattern;
 import org.arend.core.pattern.EmptyPattern;
+import org.arend.ext.core.context.BindingVariance;
 import org.arend.core.pattern.ExpressionPattern;
 import org.arend.core.subst.Levels;
 import org.arend.ext.core.definition.CoreDefinition;
@@ -128,6 +129,7 @@ public class DefinitionSerialization implements ArendSerializer {
       fBuilder.setIsRealParameter(field.getReferable().isRealParameterField());
       fBuilder.setIsProperty(field.isProperty());
       fBuilder.setIsHideable(field.isHideable());
+      fBuilder.setIsCovariant(field.getVariance() == BindingVariance.COVARIANT);
       fBuilder.putAllUserData(writeUserData(field));
       builder.addPersonalField(fBuilder.build());
     }

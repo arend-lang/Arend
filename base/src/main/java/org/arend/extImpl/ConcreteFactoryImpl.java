@@ -7,6 +7,7 @@ import org.arend.ext.concrete.*;
 import org.arend.ext.concrete.definition.*;
 import org.arend.ext.concrete.expr.*;
 import org.arend.ext.concrete.pattern.ConcretePattern;
+import org.arend.ext.core.context.BindingVariance;
 import org.arend.ext.core.context.CoreBinding;
 import org.arend.ext.core.expr.AbstractedExpression;
 import org.arend.ext.error.GeneralError;
@@ -614,7 +615,7 @@ public class ConcreteFactoryImpl implements ConcreteFactory {
       throw new IllegalArgumentException("The reference must be a global reference with a parent");
     }
 
-    return new Concrete.ClassField(cRef, cRef.isExplicitField(), kind, typeParameters(parameters), (Concrete.Expression) resultType, (Concrete.Expression) resultTypeLevel, isCoerce);
+    return new Concrete.ClassField(cRef, cRef.isExplicitField(), kind, typeParameters(parameters), (Concrete.Expression) resultType, (Concrete.Expression) resultTypeLevel, isCoerce, BindingVariance.INVARIANT);
   }
 
   @Override

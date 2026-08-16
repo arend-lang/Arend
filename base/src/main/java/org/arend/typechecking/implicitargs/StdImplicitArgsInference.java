@@ -264,6 +264,9 @@ public class StdImplicitArgsInference implements ImplicitArgsInference {
     }
 
     if (result instanceof DefCallResult defCallResult && !isExplicit && defCallResult.getDefinition() instanceof ClassField field) {
+      if (!myVisitor.checkCovariantFieldAccess(field, argResult.expression, arg)) {
+        return null;
+      }
       if (field.isInfiniteField()) {
         Expression fieldExpr = FieldCallExpression.make(field, argResult.expression);
         return new TypecheckingResult(fieldExpr, fieldExpr.getType());

@@ -233,16 +233,19 @@ public class CoreExpressionChecker implements ExpressionVisitor<Expression, Expr
     addBinding(expr.getThisBinding(), expr);
     for (Map.Entry<ClassField, Expression> entry : expr.getImplementedHere().entrySet()) {
       Expression type = expr.getFieldType(entry.getKey());
-      if (entry.getKey().isProperty() || Objects.equals(entry.getKey().getResultTypeLevel(), ConstLevel.PROP.value())) {
-        if (entry.getValue() instanceof LamExpression) {
-          checkLam((LamExpression) entry.getValue(), type, ConstLevel.PROP.value());
-        } else if (entry.getValue() instanceof CaseExpression) {
-          checkCase((CaseExpression) entry.getValue(), type, ConstLevel.PROP.value());
+      boolean invariant = entry.getKey().getVariance() == BindingVariance.INVARIANT;
+      try (var ignored = invariant ? clearCategoricalContext() : null) {
+        if (entry.getKey().isProperty() || Objects.equals(entry.getKey().getResultTypeLevel(), ConstLevel.PROP.value())) {
+          if (entry.getValue() instanceof LamExpression) {
+            checkLam((LamExpression) entry.getValue(), type, ConstLevel.PROP.value());
+          } else if (entry.getValue() instanceof CaseExpression) {
+            checkCase((CaseExpression) entry.getValue(), type, ConstLevel.PROP.value());
+          } else {
+            entry.getValue().accept(this, type);
+          }
         } else {
           entry.getValue().accept(this, type);
         }
-      } else {
-        entry.getValue().accept(this, type);
       }
     }
     if (myContext != null) myContext.remove(expr.getThisBinding());

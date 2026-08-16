@@ -291,7 +291,7 @@ public class SubstConcreteVisitor extends BaseConcreteExpressionVisitor<Void> im
     } else if (Concrete.ClassField.class.equals(element.getClass())) {
       var field = (Concrete.ClassField) element;
       // Ideally we should replace this `field.getData()` too
-      return (T) new Concrete.ClassField(field.getData(), field.isExplicit(), field.getKind(), visitParameters(field.getParameters()), nullableMap(field.getResultType()), nullableMap(field.getResultTypeLevel()), field.isCoerce());
+      return (T) new Concrete.ClassField(field.getData(), field.isExplicit(), field.getKind(), visitParameters(field.getParameters()), nullableMap(field.getResultType()), nullableMap(field.getResultTypeLevel()), field.isCoerce(), field.getVariance());
     } else if (Concrete.OverriddenField.class.equals(element.getClass())) {
       var field = (Concrete.OverriddenField) element;
       return (T) new Concrete.OverriddenField(myData != null ? myData : field.getData(), field.getOverriddenField(), visitParameters(field.getParameters()), field.getResultType().accept(this, null), nullableMap(field.getResultTypeLevel()));

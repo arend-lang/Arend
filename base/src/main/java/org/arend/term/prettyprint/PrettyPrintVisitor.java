@@ -1591,7 +1591,7 @@ public class PrettyPrintVisitor implements ConcreteExpressionVisitor<Precedence,
       myBuilder.append(" ");
       prettyPrintParameters(field.getParameters());
     }
-    myBuilder.append(" : ");
+    myBuilder.append(field.getVariance() == BindingVariance.COVARIANT ? " :⁺ " : " : ");
     printTypeLevel(field.getResultType(), field.getResultTypeLevel());
   }
 

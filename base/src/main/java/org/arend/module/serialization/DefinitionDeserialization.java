@@ -11,6 +11,7 @@ import org.arend.core.elimtree.*;
 import org.arend.core.expr.*;
 import org.arend.core.pattern.*;
 import org.arend.core.subst.Levels;
+import org.arend.ext.core.context.BindingVariance;
 import org.arend.ext.core.definition.CoreDefinition;
 import org.arend.ext.core.definition.CoreFunctionDefinition;
 import org.arend.ext.serialization.ArendDeserializer;
@@ -128,6 +129,7 @@ public class DefinitionDeserialization implements ArendDeserializer {
       field.setNumberOfParameters(fieldProto.getNumberOfParameters());
       // setTypeClassReference(field.getReferable(), EmptyDependentLink.getInstance(), fieldType.getCodomain());
       field.setHideable(fieldProto.getIsHideable());
+      field.setVariance(fieldProto.getIsCovariant() ? BindingVariance.COVARIANT : BindingVariance.INVARIANT);
       field.setStatus(Definition.TypeCheckingStatus.NO_ERRORS);
       loadKeys(fieldProto.getUserDataMap(), field);
     }

@@ -199,7 +199,7 @@ classField ::= accessMod classFieldPrivate | classFieldPrivate {
     elementTypeFactory = "org.arend.psi.stubs.StubImplementationsKt.factory"
 }
 
-private classFieldPrivate ::= [CLASSIFYING_KW | COERCE_KW] prec? defIdentifier_typeTele alias? typeTele* COLON returnExpr {
+private classFieldPrivate ::= [CLASSIFYING_KW | COERCE_KW] prec? defIdentifier_typeTele alias? typeTele* (COLON | COLON_PLUS) returnExpr {
     pin = 6
 }
 
@@ -798,9 +798,9 @@ private nameTele_recover ::= !(ID | UNDERSCORE | LPAREN) & expr_recover
 
 fieldTele ::= fieldTeleExplicit | fieldTeleImplicit | fieldTeleRecovery
 
-private fieldTeleExplicit ::= LPAREN accessMod? [CLASSIFYING_KW | COERCE_KW] fieldDefIdentifier+ COLON expr RPAREN { pin = 1 }
+private fieldTeleExplicit ::= LPAREN accessMod? [CLASSIFYING_KW | COERCE_KW] fieldDefIdentifier+ (COLON | COLON_PLUS) expr RPAREN { pin = 1 }
 
-private fieldTeleImplicit ::= LBRACE accessMod? [CLASSIFYING_KW | COERCE_KW] fieldDefIdentifier+ COLON expr RBRACE { pin = 5 }
+private fieldTeleImplicit ::= LBRACE accessMod? [CLASSIFYING_KW | COERCE_KW] fieldDefIdentifier+ (COLON | COLON_PLUS) expr RBRACE { pin = 5 }
 
 private fieldTeleRecovery ::= fieldTele_recover {
     recoverWhile = fieldTele_recover
@@ -820,7 +820,7 @@ private typedTeleExplicit ::= LPAREN paramAttr? typedExpr RPAREN { pin = 1 }
 
 private typedTeleImplicit ::= LBRACE paramAttr? typedExpr RBRACE { pin = 1 }
 
-private typeTele_recover ::= !(LPAREN | LBRACE | ID | ALIAS_KW | COLON | WITH_KW | ELIM_KW | FAT_ARROW | RPAREN | RBRACE | PIPE | ARROW | ARROW_PLUS | COMMA | IN_KW | SET | UNIVERSE | TRUNCATED_UNIVERSE | CAT_UNIVERSE | PROP_KW | SET_KW | UNDERSCORE | APPLY_HOLE | TGOAL | LGOAL | LEVEL_KW | RETURN_KW) & statement_recover
+private typeTele_recover ::= !(LPAREN | LBRACE | ID | ALIAS_KW | COLON | COLON_PLUS | WITH_KW | ELIM_KW | FAT_ARROW | RPAREN | RBRACE | PIPE | ARROW | ARROW_PLUS | COMMA | IN_KW | SET | UNIVERSE | TRUNCATED_UNIVERSE | CAT_UNIVERSE | PROP_KW | SET_KW | UNDERSCORE | APPLY_HOLE | TGOAL | LGOAL | LEVEL_KW | RETURN_KW) & statement_recover
 
 typedExpr ::= typedExprNamed | expr
 
@@ -833,7 +833,7 @@ fieldDefIdentifier ::= defIdentifier {
     recoverWhile = fieldDefIdentifier_recover
 }
 
-private fieldDefIdentifier_recover ::= !(COLON | ID | EXTENDS_KW | FAT_ARROW | LBRACE | LPAREN) & topStatement_recover
+private fieldDefIdentifier_recover ::= !(COLON | COLON_PLUS | ID | EXTENDS_KW | FAT_ARROW | LBRACE | LPAREN) & topStatement_recover
 
 defIdentifier ::= ID
 

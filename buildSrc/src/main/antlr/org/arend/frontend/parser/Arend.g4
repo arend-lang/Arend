@@ -21,7 +21,7 @@ scId : DOT? ID;
 
 nsId : scId (AS precedence ID)?;
 
-classFieldDef : accessMod? (CLASSIFYING | COERCE)? defId tele* ':' returnExpr;
+classFieldDef : accessMod? (CLASSIFYING | COERCE)? defId tele* (COLON | COLON_PLUS) returnExpr;
 
 classFieldOrImpl : classFieldDef    # classField
                  | localCoClause    # classImpl
@@ -287,8 +287,8 @@ idOrUnknown : ID            # iuId
             | UNDERSCORE    # iuUnknown
             ;
 
-fieldTele : '(' accessMod? (CLASSIFYING | COERCE)? ID+ ':' expr ')'        # explicitFieldTele
-          | '{' accessMod? (CLASSIFYING | COERCE)? ID+ ':' expr '}'        # implicitFieldTele
+fieldTele : '(' accessMod? (CLASSIFYING | COERCE)? ID+ (COLON | COLON_PLUS) expr ')'        # explicitFieldTele
+          | '{' accessMod? (CLASSIFYING | COERCE)? ID+ (COLON | COLON_PLUS) expr '}'        # implicitFieldTele
           ;
 
 LET : '\\let';

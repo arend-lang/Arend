@@ -7,6 +7,7 @@ import com.intellij.psi.stubs.IStubElementType
 import com.intellij.psi.util.elementType
 import org.arend.psi.stubs.ArendClassFieldStub
 import org.arend.ext.concrete.definition.ClassFieldKind
+import org.arend.ext.core.context.BindingVariance
 import org.arend.psi.*
 import org.arend.psi.ArendElementTypes.*
 import org.arend.term.group.AccessModifier
@@ -39,6 +40,9 @@ class ArendClassField : ArendClassFieldBase<ArendClassFieldStub>, StubBasedPsiEl
     override fun isClassifying() = hasChildOfType(CLASSIFYING_KW)
 
     override fun isCoerce() = hasChildOfType(COERCE_KW)
+
+    override fun getVariance(): BindingVariance =
+        if (hasChildOfType(COLON_PLUS)) BindingVariance.COVARIANT else BindingVariance.INVARIANT
 
     override val ownAccessModifier: AccessModifier
         get() = stub?.accessModifier ?: childOfType<ArendAccessMod>()?.accessModifier ?: AccessModifier.PUBLIC

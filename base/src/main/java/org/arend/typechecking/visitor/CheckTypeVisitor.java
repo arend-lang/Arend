@@ -115,8 +115,10 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
   private Set<TCDefReferable> myRecursiveDefinitions = Collections.emptySet();
   private boolean myAllowDeferredMetas = true;
   private Set<Binding> myCovariantContext = new HashSet<>();
+  private int myInvariantDepth = 0;
+  private Binding myFieldThisParameter;
 
-  private record DeferredMeta(MetaDefinition meta, Map<Referable, Binding> context, LocalExpressionPrettifier localPrettifier, ContextDataImpl contextData, InferenceVariable inferenceVar, MyErrorReporter errorReporter, Set<Binding> covariantContext) {}
+  private record DeferredMeta(MetaDefinition meta, Map<Referable, Binding> context, LocalExpressionPrettifier localPrettifier, ContextDataImpl contextData, InferenceVariable inferenceVar, MyErrorReporter errorReporter, Set<Binding> covariantContext, int invariantDepth) {}
 
   public static class MyErrorReporter implements ErrorReporter {
     private final CountingErrorReporter myErrorReporter;
@@ -259,13 +261,32 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
     @Override
     public void close() {
       myCovariantContext = mySaved;
+      myInvariantDepth--;
     }
   }
 
   public ClearedCategoricalContext clearCategoricalContext() {
     Set<Binding> saved = myCovariantContext;
     myCovariantContext = new HashSet<>();
+    myInvariantDepth++;
     return new ClearedCategoricalContext(saved);
+  }
+
+  public boolean isUnderInvariantArgument() {
+    return myInvariantDepth > 0;
+  }
+
+  public void setFieldThisParameter(Binding binding) {
+    myFieldThisParameter = binding;
+  }
+
+  public boolean checkCovariantFieldAccess(ClassField field, Expression argExpr, Concrete.SourceNode sourceNode) {
+    if (field.getVariance() == BindingVariance.COVARIANT && isUnderInvariantArgument() && argExpr.getUnderlyingExpression() instanceof ReferenceExpression refExpr
+        && (refExpr.getBinding() == myFieldThisParameter || refExpr.getBinding() instanceof ClassCallExpression.ClassCallBinding binding && myClassCallBindings.contains(binding))) {
+      errorReporter.report(new TypecheckingError("Covariant field '" + field.getName() + "' is used in an invariant position", sourceNode));
+      return false;
+    }
+    return true;
   }
 
   public BindingVariance checkVariance(Concrete.Parameter parameter, boolean allowed) {
@@ -1140,6 +1161,7 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
       Map<Referable, Binding> originalContext = context;
       LocalExpressionPrettifier originalLocalPrettifier = myLocalPrettifier;
       Set<Binding> originalCovariantContext = myCovariantContext;
+      int originalInvariantDepth = myInvariantDepth;
       if (afterLevels) {
         for (Binding binding : deferredMeta.context.values()) {
           Expression bindingType = binding.getType();
@@ -1149,12 +1171,14 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
         checkTypeVisitor.setInstancePool(myInstancePool.copy(checkTypeVisitor));
         checkTypeVisitor.setLevelContext(myLevelContext);
         checkTypeVisitor.myCovariantContext = deferredMeta.covariantContext;
+        checkTypeVisitor.myInvariantDepth = deferredMeta.invariantDepth;
       } else {
         checkTypeVisitor = this;
         errorReporter = deferredMeta.errorReporter;
         context = deferredMeta.context;
         myLocalPrettifier = deferredMeta.localPrettifier;
         myCovariantContext = deferredMeta.covariantContext;
+        myInvariantDepth = deferredMeta.invariantDepth;
       }
 
       int numberOfErrors = checkTypeVisitor.getNumberOfErrors();
@@ -1172,6 +1196,7 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
       context = originalContext;
       myLocalPrettifier = originalLocalPrettifier;
       myCovariantContext = originalCovariantContext;
+      myInvariantDepth = originalInvariantDepth;
       if (result == null && checkTypeVisitor.getNumberOfErrors() == numberOfErrors) {
         deferredMeta.errorReporter.report(new TypecheckingError(refExpr == null ? "Cannot check deferred expression" : "Meta '" + refExpr.getReferent().getRefName() + "' failed", marker));
       }
@@ -1757,7 +1782,14 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
       implBody = addImplicitLamParams(implBody, type);
     }
 
-    TypecheckingResult result = fieldSetClass.getDefinition().isGoodField(field) ? checkArgument(implBody, type, null, null) : checkExpr(implBody, type);
+    TypecheckingResult result;
+    if (field.getVariance() == BindingVariance.INVARIANT) {
+      try (var ignored = clearCategoricalContext()) {
+        result = fieldSetClass.getDefinition().isGoodField(field) ? checkArgument(implBody, type, null, null) : checkExpr(implBody, type);
+      }
+    } else {
+      result = fieldSetClass.getDefinition().isGoodField(field) ? checkArgument(implBody, type, null, null) : checkExpr(implBody, type);
+    }
     if (result == null) {
       return null;
     }
@@ -2164,6 +2196,10 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
     ClassField field = classCall.getDefinition().findField(field2 -> expr.getFieldName().equals(field2.getName()));
     if (field == null) {
       errorReporter.report(new NotInDynamicScopeError(classCall.getDefinition(), expr.getFieldName(), expr));
+      return null;
+    }
+
+    if (!checkCovariantFieldAccess(field, argResult.expression, expr)) {
       return null;
     }
 
@@ -3206,7 +3242,7 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
 
     ContextDataImpl contextDataImpl = new ContextDataImpl((Concrete.Expression) marker, contextData.getArguments(), contextData.getCoclauses(), contextData.getClauses(), expectedType, contextData.getUserData());
     InferenceVariable inferenceVar = new MetaInferenceVariable(marker instanceof Concrete.ReferenceExpression ? ((Concrete.ReferenceExpression) marker).getReferent().getRefName() : "deferred", expectedType, (Concrete.Expression) marker, getAllBindings());
-    (afterLevels ? myDeferredMetasAfterLevels : myDeferredMetasBeforeSolver).add(new DeferredMeta(meta, new LinkedHashMap<>(context), new LocalExpressionPrettifier(myLocalPrettifier), contextDataImpl, inferenceVar, errorReporter, new HashSet<>(myCovariantContext)));
+    (afterLevels ? myDeferredMetasAfterLevels : myDeferredMetasBeforeSolver).add(new DeferredMeta(meta, new LinkedHashMap<>(context), new LocalExpressionPrettifier(myLocalPrettifier), contextDataImpl, inferenceVar, errorReporter, new HashSet<>(myCovariantContext), myInvariantDepth));
     return new TypecheckingResult(new InferenceReferenceExpression(inferenceVar), expectedType);
   }
 

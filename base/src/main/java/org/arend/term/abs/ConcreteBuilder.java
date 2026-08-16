@@ -311,7 +311,7 @@ public class ConcreteBuilder implements AbstractDefinitionVisitor<Concrete.Resol
             if (forced || explicit) {
               setClassifyingField(classDef, (FieldReferableImpl) referable, parameter, forced);
             }
-            elements.add(new Concrete.ClassField((FieldReferableImpl) referable, explicit, absParameter.getClassFieldKind(), new ArrayList<>(), parameter.getType(), null, absParameter.isCoerce()));
+            elements.add(new Concrete.ClassField((FieldReferableImpl) referable, explicit, absParameter.getClassFieldKind(), new ArrayList<>(), parameter.getType(), null, absParameter.isCoerce(), parameter.getVariance()));
           } else {
             myErrorReporter.report(new AbstractExpressionError(GeneralError.Level.ERROR, "Incorrect field parameter", referable));
           }
@@ -351,7 +351,7 @@ public class ConcreteBuilder implements AbstractDefinitionVisitor<Concrete.Resol
             Concrete.Expression type = resultType.accept(this, null);
             Abstract.Expression resultTypeLevel = field.getResultTypeLevel();
             Concrete.Expression typeLevel = resultTypeLevel == null ? null : resultTypeLevel.accept(this, null);
-            elements.add(new Concrete.ClassField((FieldReferableImpl) fieldRef, true, field.getClassFieldKind(), buildTypeParameters(parameters, false, null), type, typeLevel, field.isCoerce()));
+            elements.add(new Concrete.ClassField((FieldReferableImpl) fieldRef, true, field.getClassFieldKind(), buildTypeParameters(parameters, false, null), type, typeLevel, field.isCoerce(), field.getVariance()));
             if (field.isClassifying()) {
               setClassifyingField(classDef, (FieldReferable) fieldRef, field, true);
             }

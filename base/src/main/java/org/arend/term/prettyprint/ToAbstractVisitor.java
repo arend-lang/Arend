@@ -1209,7 +1209,7 @@ public class ToAbstractVisitor extends BaseExpressionVisitor<Void, Concrete.Expr
         type = ((Concrete.PiExpression) type).getCodomain();
       }
 
-      return new Concrete.ClassField(field.getReferable(), field.getReferable().isExplicitField(), kind, parameters, type, field.getTypeLevel() == null ? null : convertExpr(field.getTypeLevel()), false);
+      return new Concrete.ClassField(field.getReferable(), field.getReferable().isExplicitField(), kind, parameters, type, field.getTypeLevel() == null ? null : convertExpr(field.getTypeLevel()), false, field.getVariance());
     } finally {
       myRenamer.setCanonicalThis(saved);
     }
