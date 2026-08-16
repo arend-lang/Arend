@@ -87,4 +87,12 @@ public class CatPiTest extends TypeCheckingTestCase {
        \\in t n
       """);
   }
+
+  @Test
+  public void partiallyAppliedVarianceChangeTest() {
+    typeCheckModule("""
+      \\func def (X : \\Cat) (x :+ X) => 0
+      \\func test (X : \\Cat) : X -> Nat => def X
+      """);
+  }
 }

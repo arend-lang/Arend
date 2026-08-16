@@ -685,7 +685,7 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
     if (result != null) {
       result = myArgsInference.inferTail(result, expectedType, expr);
     }
-    return result == null ? null : checkResult(expectedType, result.toResult(this), expr);
+    return result == null ? null : checkResult(expectedType, result.toResult(this, expectedType), expr);
   }
 
   @Nullable
@@ -2168,7 +2168,7 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
     }
 
     TResult result = myArgsInference.inferTail(new TypecheckingResult(FieldCallExpression.make(field, argResult.expression), GetTypeVisitor.INSTANCE.getFieldCallType(field, classCall, argResult.expression)), expectedType, expr);
-    return result == null ? null : checkResult(expectedType, result.toResult(this), expr);
+    return result == null ? null : checkResult(expectedType, result.toResult(this, expectedType), expr);
   }
 
   private TypecheckingResult visitReference(Concrete.ReferenceExpression expr, Expression expectedType, boolean inferTailImplicits, boolean checkInfiniteLevel) {

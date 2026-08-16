@@ -15,9 +15,11 @@ import org.arend.core.sort.Sort;
 import org.arend.core.sort.SortExpression;
 import org.arend.core.subst.ExprSubstitution;
 import org.arend.core.subst.Levels;
+import org.arend.ext.core.context.BindingVariance;
 import org.arend.ext.core.level.ConstLevel;
 import org.arend.ext.core.level.LevelSubstitution;
 import org.arend.ext.core.ops.CMP;
+import org.arend.ext.core.ops.NormalizationMode;
 import org.arend.ext.error.TypecheckingError;
 import org.arend.ext.util.StringUtils;
 import org.arend.prelude.Prelude;
@@ -104,6 +106,11 @@ public class DefCallResult implements TResult {
 
   @Override
   public TypecheckingResult toResult(CheckTypeVisitor typechecker) {
+    return toResult(typechecker, null);
+  }
+
+  @Override
+  public TypecheckingResult toResult(CheckTypeVisitor typechecker, Expression expectedType) {
     if (myParameters.isEmpty()) {
       return new TypecheckingResult(getCoreDefCall(typechecker), getType(typechecker));
     }
@@ -123,6 +130,7 @@ public class DefCallResult implements TResult {
     ExprSubstitution substitution = new ExprSubstitution();
     List<String> names = new ArrayList<>();
     DependentLink link0 = null;
+    Expression expectedRemainder = expectedType == null ? null : expectedType.normalize(NormalizationMode.WHNF);
     for (DependentLink link : myParameters) {
       if (link0 == null) {
         link0 = link;
@@ -132,7 +140,29 @@ public class DefCallResult implements TResult {
       if (link instanceof TypedDependentLink) {
         Expression parameterType = link.getType().subst(substitution);
         typechecker.checkCatDomain(parameterType, myDefCall);
-        SingleDependentLink parameter = ExpressionFactory.singleParams(link.isExplicit(), names, parameterType, link.getVariance());
+
+        BindingVariance variance = link.getVariance();
+        if (expectedRemainder != null) {
+          boolean forceInvariant = false;
+          for (int k = 0; k < names.size(); k++) {
+            PiExpression expectedPi = expectedRemainder.cast(PiExpression.class);
+            if (expectedPi == null || expectedPi.getParameters().isExplicit() != link.isExplicit()) {
+              expectedRemainder = null;
+              break;
+            }
+            SingleDependentLink expectedParam = expectedPi.getParameters();
+            if (expectedParam.getVariance() == BindingVariance.INVARIANT) {
+              forceInvariant = true;
+            }
+            SingleDependentLink expectedNext = expectedParam.getNext();
+            expectedRemainder = expectedNext.hasNext() ? new PiExpression(expectedNext, expectedPi.getCodomain()) : expectedPi.getCodomain().normalize(NormalizationMode.WHNF);
+          }
+          if (forceInvariant && variance != BindingVariance.INVARIANT) {
+            variance = BindingVariance.INVARIANT;
+          }
+        }
+
+        SingleDependentLink parameter = ExpressionFactory.singleParams(link.isExplicit(), names, parameterType, variance);
         parameters.add(parameter);
         names.clear();
 
