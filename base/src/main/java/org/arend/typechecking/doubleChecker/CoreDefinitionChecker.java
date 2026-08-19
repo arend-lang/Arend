@@ -49,7 +49,7 @@ public class CoreDefinitionChecker extends BaseDefinitionTypechecker {
     myChecker.clear();
     myChecker.setDefinition(definition);
     try {
-      myChecker.checkDependentLink(definition.getParameters(), UniverseExpression.OMEGA, null, definition instanceof FunctionDefinition || definition instanceof DataDefinition);
+      myChecker.checkDependentLink(definition.getParameters(), UniverseExpression.OMEGA, null, definition instanceof FunctionDefinition || definition instanceof DataDefinition, false);
 
       // TODO[double_check]: Check (mutual) recursion
       // TODO[double_check]: Check definition.hasUniverses()
@@ -104,7 +104,7 @@ public class CoreDefinitionChecker extends BaseDefinitionTypechecker {
       }
     }
 
-    Expression typeType = checkType ? (definition.getResultType() instanceof UniverseExpression && body instanceof Expression ? definition.getResultType() : definition.getResultType().accept(myChecker, UniverseExpression.OMEGA)) : null;
+    Expression typeType = checkType ? (definition.getResultType() instanceof UniverseExpression && body instanceof Expression ? definition.getResultType() : myChecker.checkInf(definition.getResultType(), UniverseExpression.OMEGA, true)) : null;
     BigInteger level = definition.getResultTypeLevel() == null ? null : myChecker.checkLevelProof(definition.getResultTypeLevel(), definition.getResultType());
 
     if (definition.getKind() == CoreFunctionDefinition.Kind.LEMMA && !Objects.equals(level, ConstLevel.PROP.value())) {

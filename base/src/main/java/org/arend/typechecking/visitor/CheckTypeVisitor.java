@@ -1284,6 +1284,25 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
     return new TypeExpression(result.expression, sortExpr);
   }
 
+  private TypeExpression asPiType(TypecheckingResult result, Concrete.SourceNode sourceNode) {
+    if (result == null) return null;
+
+    Expression type = result.type.normalize(NormalizationMode.WHNF);
+    SortExpression sortExpr = type instanceof UniverseExpression universe ? universe.getSortExpression() : null;
+    if (sortExpr == null) {
+      InferenceVariable infVar;
+      if (type instanceof InferenceReferenceExpression infRefExpr) {
+        infVar = infRefExpr.getInferenceVariable();
+      } else {
+        infVar = myArgsInference.newInferenceVariable(UniverseExpression.OMEGA, sourceNode);
+        infVar.setType(new UniverseExpression(new SortExpression.InfVar(infVar)));
+      }
+      sortExpr = new SortExpression.InfVar(infVar, true);
+    }
+
+    return new TypeExpression(result.expression, sortExpr);
+  }
+
   public TypeExpression finalCheckType(Concrete.Expression expr, Expression expectedType) {
     TypeExpression result = checkType(expr, expectedType);
     if (result == null) return null;
@@ -2367,16 +2386,19 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
   }
 
   private SingleDependentLink visitTypeParameter(Concrete.TypeParameter param, List<SortExpression> sorts, Expression expectedType, BindingVariance variance) {
+    return visitTypeParameter(param, sorts, expectedType, variance, false);
+  }
+
+  private SingleDependentLink visitTypeParameter(Concrete.TypeParameter param, List<SortExpression> sorts, Expression expectedType, BindingVariance variance, boolean allowCatDomain) {
     TypeExpression argResult;
-    if (variance == BindingVariance.INVARIANT) {
+    if (allowCatDomain && variance != BindingVariance.INVARIANT) {
+      argResult = checkType(param.getType(), UniverseExpression.OMEGA);
+    } else {
       try (var ignored = clearCategoricalContext()) {
         argResult = checkType(param.getType(), UniverseExpression.OMEGA);
       }
-    } else {
-      argResult = checkType(param.getType(), UniverseExpression.OMEGA);
     }
     if (argResult == null) return null;
-    checkCatDomain(argResult.expression(), param);
     if (expectedType != null) {
       Expression expected = expectedType.normalize(NormalizationMode.WHNF).getUnderlyingExpression();
       if ((expected instanceof ClassCallExpression || expected instanceof PiExpression || expected instanceof SigmaExpression || expected instanceof UniverseExpression)
@@ -2696,6 +2718,10 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
 
   @Override
   public TypecheckingResult visitPi(Concrete.PiExpression expr, Expression expectedType) {
+    return checkPi(expr, expectedType, false);
+  }
+
+  public TypecheckingResult checkPi(Concrete.PiExpression expr, Expression expectedType, boolean allowCatDomain) {
     List<SingleDependentLink> list = new ArrayList<>();
     List<SortExpression> paramSorts = new ArrayList<>(expr.getParameters().size());
 
@@ -2704,14 +2730,18 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
         if (arg.isProperty()) {
           errorReporter.report(new CertainTypecheckingError(CertainTypecheckingError.Kind.PROPERTY_IGNORED, arg));
         }
-        SingleDependentLink link = visitTypeParameter(arg, paramSorts, null, arg.getVariance());
+        SingleDependentLink link = visitTypeParameter(arg, paramSorts, null, arg.getVariance(), allowCatDomain);
         if (link == null) {
           return null;
         }
         list.add(link);
       }
 
-      TypeExpression result = checkType(expr.getCodomain(), expectedType == UniverseExpression.INF_OMEGA ? expectedType : UniverseExpression.OMEGA);
+      Expression codomainExpectedType = expectedType == UniverseExpression.INF_OMEGA ? expectedType : UniverseExpression.OMEGA;
+      Concrete.Expression codomain = expr.getCodomain();
+      TypeExpression result = allowCatDomain && codomain instanceof Concrete.PiExpression codomainPi
+        ? asPiType(checkPi(codomainPi, codomainExpectedType, true), codomain)
+        : checkType(codomain, codomainExpectedType);
       if (result == null) return null;
 
       Expression piExpr = result.expression();

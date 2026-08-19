@@ -72,22 +72,31 @@ public class CoreExpressionChecker implements ExpressionVisitor<Expression, Expr
   }
 
   private void checkList(List<? extends Expression> args, DependentLink parameters, ExprSubstitution substitution, LevelSubstitution levelSubst) {
-    checkList(args, parameters, substitution, levelSubst, false);
+    checkList(args, parameters, substitution, levelSubst, false, false);
   }
 
-  private void checkList(List<? extends Expression> args, DependentLink parameters, ExprSubstitution substitution, LevelSubstitution levelSubst, boolean isSigmaTuple) {
+  private void checkList(List<? extends Expression> args, DependentLink parameters, ExprSubstitution substitution, LevelSubstitution levelSubst, boolean isSigmaTuple, boolean allowCatDomain) {
     for (Expression arg : args) {
       boolean isLast = isSigmaTuple && !parameters.getNext().hasNext();
+      Expression expectedType = parameters.getType().subst(substitution, levelSubst);
       if (!isLast && parameters.getVariance() == BindingVariance.INVARIANT) {
         try (var ignored = clearCategoricalContext()) {
-          arg.accept(this, parameters.getType().subst(substitution, levelSubst));
+          checkArgExpr(arg, expectedType, allowCatDomain);
         }
       } else {
-        arg.accept(this, parameters.getType().subst(substitution, levelSubst));
+        checkArgExpr(arg, expectedType, allowCatDomain);
       }
       substitution.add(parameters, arg);
       parameters = parameters.getNext();
     }
+  }
+
+  private void checkArgExpr(Expression arg, Expression expectedType, boolean allowInf) {
+    if (allowInf && arg.getUnderlyingExpression() instanceof LamExpression lamExpr) {
+      checkLam(lamExpr, expectedType, null, true);
+      return;
+    }
+    arg.accept(this, expectedType);
   }
 
   void checkLevels(Levels levels, Expression expr) {
@@ -112,7 +121,7 @@ public class CoreExpressionChecker implements ExpressionVisitor<Expression, Expr
     checkBoxes(expr);
     ExprSubstitution substitution = new ExprSubstitution();
     List<? extends Expression> args = expr.getDefCallArguments();
-    checkList(args, expr.getDefinition().getParameters(), substitution, expr.getLevelSubstitution());
+    checkList(args, expr.getDefinition().getParameters(), substitution, expr.getLevelSubstitution(), false, true);
     Expression resultType = null;
     if (expr.getDefinition() == Prelude.MOD || expr.getDefinition() == Prelude.DIV_MOD) {
       Expression arg2 = args.get(1);
@@ -193,7 +202,7 @@ public class CoreExpressionChecker implements ExpressionVisitor<Expression, Expr
   public Expression visitDataCall(DataCallExpression expr, Expression expectedType) {
     checkLevels(expr.getLevels(), expr);
     checkBoxes(expr);
-    checkList(expr.getDefCallArguments(), expr.getDefinition().getParameters(), new ExprSubstitution(), expr.getLevelSubstitution());
+    checkList(expr.getDefCallArguments(), expr.getDefinition().getParameters(), new ExprSubstitution(), expr.getLevelSubstitution(), false, true);
     return check(expectedType, GetTypeVisitor.INSTANCE.visitDataCall(expr, null), expr);
   }
 
@@ -329,23 +338,19 @@ public class CoreExpressionChecker implements ExpressionVisitor<Expression, Expr
     return sort;
   }
 
-  private List<SortExpression> checkDependentLinkWithResult(DependentLink link, Expression type, Expression expr) {
-    return checkDependentLinkWithResult(link, type, expr, false);
-  }
-
-  private List<SortExpression> checkDependentLinkWithResult(DependentLink link, Expression type, Expression expr, boolean isSigma) {
+  private List<SortExpression> checkDependentLinkWithResult(DependentLink link, Expression type, Expression expr, boolean isSigma, boolean allowCatDomain) {
     List<SortExpression> result = new ArrayList<>();
     for (; link.hasNext(); link = link.getNext()) {
       addBinding(link, expr);
       if (link instanceof TypedDependentLink) {
         Expression paramType;
         boolean isLast = isSigma && !link.getNext().hasNext();
-        if (!isLast && link.getVariance() == BindingVariance.INVARIANT) {
+        if (isLast || isSigma && link.getVariance() != BindingVariance.INVARIANT || allowCatDomain) {
+          paramType = link.getType().accept(this, type);
+        } else {
           try (var ignored = clearCategoricalContext()) {
             paramType = link.getType().accept(this, type);
           }
-        } else {
-          paramType = link.getType().accept(this, type);
         }
         SortExpression sort = toSort(paramType);
         result.add(sort);
@@ -361,20 +366,21 @@ public class CoreExpressionChecker implements ExpressionVisitor<Expression, Expr
 
   Expression checkInf(Expression expr, Expression expectedType, boolean allowInf) {
     if (allowInf) {
-      if (expr instanceof UniverseExpression universe) {
+      Expression underlyingExpr = expr.getUnderlyingExpression();
+      if (underlyingExpr instanceof UniverseExpression universe) {
         return checkUniverse(universe, expectedType);
-      } else if (expr instanceof PiExpression piExpr) {
+      } else if (underlyingExpr instanceof PiExpression piExpr) {
         return checkPi(piExpr, expectedType, true);
       }
     }
     return expr.accept(this, expectedType);
   }
 
-  void checkDependentLink(DependentLink link, Expression type, Expression expr, boolean allowInf) {
+  void checkDependentLink(DependentLink link, Expression type, Expression expr, boolean allowInf, boolean clearCatContext) {
     for (; link.hasNext(); link = link.getNext()) {
       addBinding(link, expr);
       if (link instanceof TypedDependentLink) {
-        if (link.getVariance() == BindingVariance.INVARIANT) {
+        if (clearCatContext || link.getVariance() == BindingVariance.INVARIANT) {
           try (var ignored = clearCategoricalContext()) {
             checkInf(link.getType(), type, allowInf);
           }
@@ -421,10 +427,14 @@ public class CoreExpressionChecker implements ExpressionVisitor<Expression, Expr
   }
 
   private Expression checkLam(LamExpression expr, Expression expectedType, BigInteger level) {
-    checkDependentLink(expr.getParameters(), UniverseExpression.OMEGA, expr, false);
+    return checkLam(expr, expectedType, level, false);
+  }
+
+  private Expression checkLam(LamExpression expr, Expression expectedType, BigInteger level, boolean allowCatDomain) {
+    checkDependentLink(expr.getParameters(), UniverseExpression.OMEGA, expr, false, !allowCatDomain);
     Expression type;
     if (expr.getBody() instanceof LamExpression) {
-      type = checkLam((LamExpression) expr.getBody(), null, level);
+      type = checkLam((LamExpression) expr.getBody(), null, level, allowCatDomain);
     } else if (expr.getBody() instanceof CaseExpression) {
       type = checkCase((CaseExpression) expr.getBody(), null, level);
     } else {
@@ -440,7 +450,7 @@ public class CoreExpressionChecker implements ExpressionVisitor<Expression, Expr
   }
 
   private Expression checkPi(PiExpression expr, Expression expectedType, boolean allowInf) {
-    List<SortExpression> sort1 = checkDependentLinkWithResult(expr.getParameters(), null, expr);
+    List<SortExpression> sort1 = checkDependentLinkWithResult(expr.getParameters(), null, expr, false, allowInf);
     SortExpression sort2 = toSort(checkInf(expr.getCodomain(), expectedType == UniverseExpression.INF_OMEGA ? expectedType : null, allowInf));
     freeDependentLink(expr.getParameters());
     return check(expectedType, new UniverseExpression(SortExpression.makePi(SortExpression.makeMax(sort1), sort2)), expr);
@@ -453,7 +463,7 @@ public class CoreExpressionChecker implements ExpressionVisitor<Expression, Expr
 
   @Override
   public Expression visitSigma(SigmaExpression expr, Expression expectedType) {
-    List<SortExpression> sorts = checkDependentLinkWithResult(expr.getParameters(), expectedType, expr, true);
+    List<SortExpression> sorts = checkDependentLinkWithResult(expr.getParameters(), expectedType, expr, true, false);
     freeDependentLink(expr.getParameters());
     return check(expectedType, new UniverseExpression(SortExpression.makeMax(sorts)), expr);
   }
@@ -491,7 +501,7 @@ public class CoreExpressionChecker implements ExpressionVisitor<Expression, Expr
   @Override
   public Expression visitTuple(TupleExpression expr, Expression expectedType) {
     visitSigma(expr.getSigmaType(), null);
-    checkList(expr.getFields(), expr.getSigmaType().getParameters(), new ExprSubstitution(), LevelSubstitution.EMPTY, true);
+    checkList(expr.getFields(), expr.getSigmaType().getParameters(), new ExprSubstitution(), LevelSubstitution.EMPTY, true, false);
     return check(expectedType, expr.getSigmaType(), expr);
   }
 
@@ -882,7 +892,7 @@ public class CoreExpressionChecker implements ExpressionVisitor<Expression, Expr
   Expression checkCase(CaseExpression expr, Expression expectedType, BigInteger level) {
     ExprSubstitution substitution = new ExprSubstitution();
     checkList(expr.getArguments(), expr.getParameters(), substitution, LevelSubstitution.EMPTY);
-    checkDependentLink(expr.getParameters(), UniverseExpression.INF_OMEGA, expr, false);
+    checkDependentLink(expr.getParameters(), UniverseExpression.INF_OMEGA, expr, false, false);
     expr.getResultType().accept(this, UniverseExpression.INF_OMEGA);
 
     BigInteger level2 = expr.getResultTypeLevel() == null ? null : checkLevelProof(expr.getResultTypeLevel(), expr.getResultType());

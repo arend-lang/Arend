@@ -22,6 +22,11 @@ public class CatPiTest extends TypeCheckingTestCase {
   }
 
   @Test
+  public void piCovariantTest2() {
+    typeCheckDef("\\func test (X :+ \\Prop) => X ->+ Nat", 1);
+  }
+
+  @Test
   public void lamCatTest() {
     typeCheckDef("\\func test (X : \\Cat) => \\lam (x : X) => 0");
   }
@@ -94,5 +99,65 @@ public class CatPiTest extends TypeCheckingTestCase {
       \\func def (X : \\Cat) (x :+ X) => 0
       \\func test (X : \\Cat) : X -> Nat => def X
       """);
+  }
+
+  @Test
+  public void piParamTest() {
+    typeCheckModule("""
+      \\func foo {C D :+ \\Cat} (f :+ C ->+ D) => f
+      \\func test (C :+ \\Cat) => foo {C} \\lam x => x
+      """);
+  }
+
+  @Test
+  public void piParamTest2() {
+    typeCheckModule("""
+      \\func foo {C D :+ \\Cat} (f :+ C ->+ D ->+ C) => f
+      \\func test (C D :+ \\Cat) => foo {C} {D} \\lam x y => x
+      """);
+  }
+
+  @Test
+  public void piParamError() {
+    typeCheckDef("\\func foo {C D :+ \\Cat} (f :+ C -> D ->+ C) => f", 1);
+  }
+
+  @Test
+  public void piParamError2() {
+    typeCheckDef("\\func foo {C D :+ \\Cat} (f :+ C ->+ D -> C) => f", 1);
+  }
+
+  @Test
+  public void piParamPartiallyAppliedError() {
+    typeCheckModule("""
+      \\func foo {C D :+ \\Cat} (f :+ C ->+ D) => f
+      \\func test (C :+ \\Cat) => foo {C} {C}
+      """, 1);
+  }
+
+  @Test
+  public void piParamContravariantError() {
+    typeCheckDef("\\func foo {C D :+ \\Cat} (f :+ (C ->+ Nat) ->+ D) => f", 1);
+  }
+
+  @Test
+  public void piParamDataTest() {
+    typeCheckModule("""
+      \\data Foo {C D :+ \\Cat} (f :+ C ->+ D)
+      \\func test (C :+ \\Cat) => Foo {C} \\lam x => x
+      """);
+  }
+
+  @Test
+  public void piParamClassTest() {
+    typeCheckDef("\\record R {C D :+ \\Cat} (f :+ C ->+ D)", 1);
+  }
+
+  @Test
+  public void piParamConstructorTest() {
+    typeCheckModule("""
+      \\data Foo (C D :+ \\Cat)
+        | con (f :+ C ->+ D)
+      """, 1);
   }
 }

@@ -443,7 +443,10 @@ public class DefinitionTypechecker extends BaseDefinitionTypechecker implements 
               sorts.add(variance == BindingVariance.INVARIANT ? paramType.sort().withoutCat() : paramType.sort());
             }
           } else {
-            TypecheckingResult paramType = typechecker.finalCheckExpr(parameter.getType(), def instanceof Concrete.DataDefinition || def instanceof Concrete.FunctionDefinition ? UniverseExpression.INF_OMEGA : UniverseExpression.OMEGA);
+            Expression expected = def instanceof Concrete.DataDefinition || def instanceof Concrete.FunctionDefinition ? UniverseExpression.INF_OMEGA : UniverseExpression.OMEGA;
+            TypecheckingResult paramType = (def instanceof Concrete.DataDefinition || def instanceof Concrete.BaseFunctionDefinition) && parameter.getType() instanceof Concrete.PiExpression piType
+              ? typechecker.finalize(typechecker.checkPi(piType, expected, true), piType)
+              : typechecker.finalCheckExpr(parameter.getType(), expected);
             if (paramType != null) {
               paramResults.add(paramType.expression);
             }
