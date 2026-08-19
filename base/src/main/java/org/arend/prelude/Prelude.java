@@ -205,18 +205,18 @@ public class Prelude implements ArendPrelude {
       }
       case "fill3" -> {
         FILL3 = (FunctionDefinition) definition;
-        DependentLink aa1 = DependentLink.Helper.get(FILL3.getParameters(), 14);
-        DependentLink topFace = aa1.getNext().getNext().getNext();
-        DependentLink rightFace = topFace.getNext();
+        DependentLink leftFace = DependentLink.Helper.get(FILL3.getParameters(), 20);
+        DependentLink rightFace = leftFace.getNext();
         DependentLink backFace = rightFace.getNext();
         DependentLink frontFace = backFace.getNext();
-        DependentLink i = frontFace.getNext();
+        DependentLink topFace = frontFace.getNext();
+        DependentLink i = topFace.getNext();
         DependentLink j = i.getNext();
         DependentLink k = j.getNext();
 
         List<IntervalElim.CasePair> cases = new ArrayList<>(3);
         cases.add(new IntervalElim.CasePair(
-          AtExpression.make(new ReferenceExpression(aa1), new ReferenceExpression(j), false, true),
+          AtExpression.make(AtExpression.make(new ReferenceExpression(leftFace), new ReferenceExpression(k), false, true), new ReferenceExpression(j), false, true),
           AtExpression.make(AtExpression.make(new ReferenceExpression(rightFace), new ReferenceExpression(k), false, true), new ReferenceExpression(j), false, true),
           true));
         cases.add(new IntervalElim.CasePair(

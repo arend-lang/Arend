@@ -59,16 +59,17 @@
   | dright, j => g j
   | i, dleft => f i
 
-\func fill3 {C :⁺ \Cat} {a b c a' b' c' :⁺ C} (_ : \Sigma)
-  {ab :⁺ a ~> b} {bc :⁺ b ~> c} {ac :⁺ a ~> c}
-  {a'b' :⁺ a' ~> b'} {b'c' :⁺ b' ~> c'} {a'c' :⁺ a' ~> c'}
-  {aa' :⁺ a ~> a'} {bb' :⁺ b ~> b'} {cc' :⁺ c ~> c'}
-  (topFace :⁺ DPath (\lam i => ab i ~> a'b' i) aa' bb')
-  (rightFace :⁺ DPath (\lam k => bc k ~> b'c' k) bb' cc')
-  (backFace :⁺ DPath (\lam i => ab i ~> ac i) idd bc)
-  (frontFace :⁺ DPath (\lam i => a'b' i ~> a'c' i) idd b'c')
-  (i j k :⁺ DI) : C \elim i, j, k
-  | dleft, j, k => aa' j
+\func fill3 {C :⁺ \Cat} {a b d a' b' c' d' :⁺ C} (_ : \Sigma)
+            {ab :⁺ a ~> b} {bd :⁺ b ~> d} {ad :⁺ a ~> d}
+            {a'b' :⁺ a' ~> b'} {b'd' :⁺ b' ~> d'} {a'c' :⁺ a' ~> c'} {c'd' :⁺ c' ~> d'}
+            {aa' :⁺ a ~> a'} {bb' :⁺ b ~> b'} {ac' :⁺ a ~> c'} {dd' :⁺ d ~> d'}
+            (leftFace :⁺ DPath (\lam k => a ~> a'c' k) aa' ac')
+            (rightFace :⁺ DPath (\lam k => bd k ~> b'd' k) bb' dd')
+            (backFace :⁺ DPath (\lam i => ab i ~> ad i) idd bd)
+            (frontFace :⁺ DPath (\lam i => a'b' i ~> c'd' i) a'c' b'd')
+            (topFace :⁺ DPath (\lam i => ab i ~> a'b' i) aa' bb')
+            (i j k :⁺ DI) : C \elim i, j, k
+  | dleft, j, k => leftFace k j
   | dright, j, k => rightFace k j
   | i, dleft, k => backFace i k
   | i, dright, k => frontFace i k
