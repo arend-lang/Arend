@@ -1,0 +1,106 @@
+\import Function.Meta
+
+\func inv {A :⁺ \Cat} {a a' :⁺ A} (p :⁺ a = a') : a' = a \elim p
+  | idp => idp
+
+\func \infixr 9 *> {A :⁺ \Cat} {a a' a'' :⁺ A} (p :⁺ a = a') (q :⁺ a' = a'') : a = a'' \elim q
+  | idp => p
+
+\func inv_*> {A :⁺ \Cat} {a a' :⁺ A} {p :⁺ a = a'} : inv p *> p = idp \elim p
+  | idp => idp
+
+\func pmap {A B :⁺ \Cat} (f :⁺ A ->⁺ B) {a a' :⁺ A} (p :⁺ a = a') : f a = f a'
+  => path (\lam i => f (p i))
+
+\func transport {A :⁺ \Cat} (B :⁺ A ->⁺ \Cat) {a a' :⁺ A} (p :⁺ a = a') (b :⁺ B a) : B a' \elim p
+  | idp => b
+
+\func sigma-ext {A :⁺ \Cat} {B :⁺ A ->⁺ \Cat} {a a' :⁺ A} (p :⁺ a = a') {b :⁺ B a} {b' :⁺ B a'} (q :⁺ transport B p b = b')
+  : (a,b) = {\Sigma (x :⁺ A) (B x)} (a',b') \elim p
+  | idp => path \lam i => (a, q i)
+
+\func sigma-unext2 {A :⁺ \Cat} {B :⁺ A ->⁺ \Cat} {s t :⁺ \Sigma (x :⁺ A) (B x)} (p :⁺ s = t)
+  : transport B (pmap __.1 p) s.2 = t.2 \elim p
+  | idp => idp
+
+\sfunc sigma-unext2_idp {A :⁺ \Cat} {B :⁺ A ->⁺ \Cat} {a :⁺ A} {b b' :⁺ B a}
+                        (p :⁺ (a,b) = {\Sigma (x :⁺ A) (B x)} (a,b')) (q :⁺ pmap __.1 p = idp) : b = b'
+  => inv (pmap (transport B __ b) q) *> sigma-unext2 p
+
+\func ~>_= {A :⁺ \Type} {a b :⁺ A} (p :⁺ a ~> b) : a = b \elim p
+  | idd => idp
+
+\func comp {C :⁺ \Cat} {a b c :⁺ C} (p :⁺ a ~> b) (q :⁺ b ~> c) : a ~> c
+  => dpath (fill2 p q __ dright)
+
+\sfunc segal2Prop {C :⁺ \Cat} {a b c :⁺ C} {ab :⁺ a ~> b} {bc :⁺ b ~> c} (s t :⁺ \Sigma (ac :⁺ a ~> c) (DPath (\lam i => ab i ~> ac i) idd bc)) : s = t
+  => aux s *> inv (aux t)
+  \where {
+    \private \sfunc aux (s :⁺ \Sigma (ac :⁺ a ~> c) (DPath (\lam i => ab i ~> ac i) idd bc))
+      : s = (comp ab bc, dpath \lam i => dpath (fill2 ab bc i))
+      => \let | f3 => fill3 () {ab} {bc} {comp ab bc}
+                        idd
+                        (dpath \lam k => idd)
+                        (dpath \lam i => dpath (fill2 ab bc i))
+                        s.2
+                        (dpath \lam i => idd)
+         \in inv $ ~>_= $ dpath \lam j => (dpath \lam i => f3 i j dright, dpath \lam i => dpath \lam k => f3 i j k)
+
+    \protected \sfunc double (u v :⁺ s = t) : u = v
+      => inv (lem u) *> lem v
+      \where {
+        \private \sfunc lem (u :⁺ s = t) : inv (segal2Prop s s) *> segal2Prop s t = u \elim u
+          | idp => inv_*>
+      }
+  }
+
+\func segal2Equiv (C : \Cat) : HQEquiv \cowith
+  | C => \Sigma (a b c :⁺ C) (ab :⁺ a ~> b) (bc :⁺ b ~> c) (ac :⁺ a ~> c) (DPath (\lam i => ab i ~> ac i) idd bc)
+  | D => \Sigma (a b c :⁺ C) (f :⁺ a ~> b) (b ~> c)
+  | f s => (s.1, s.2, s.3, s.4, s.5)
+  | finv t => (t.1, t.2, t.3, t.4, t.5, comp t.4 t.5, dpath \lam i => dpath (fill2 t.4 t.5 i))
+  | finv_f s =>
+    \have q => segal2Prop (comp s.4 s.5, dpath \lam i => dpath (fill2 s.4 s.5 i)) (s.6,s.7)
+    \in path \lam i => (s.1, s.2, s.3, s.4, s.5, (q i).1, (q i).2)
+  | f_finv t => idp
+
+\sfunc cube1-equals {C :⁺ \Cat} {a b c :⁺ C} (ab :⁺ a ~> b) (bc :⁺ b ~> c) {ac ac' :⁺ a ~> c}
+                    (p :⁺ DPath (\lam i => ab i ~> ac i) idd bc) (q :⁺ DPath (\lam i => ab i ~> ac' i) idd bc) : ac = ac'
+  => pmap __.1 $ segal2Prop (ac,p) (ac',q)
+
+\sfunc comp-char {C :⁺ \Cat} {a b c :⁺ C} {ab :⁺ a ~> b} {bc :⁺ b ~> c} {ac :⁺ a ~> c}
+                 (p :⁺ DPath (\lam i => ab i ~> ac i) idd bc) : comp ab bc = ac
+  => cube1-equals ab bc (dpath \lam i => dpath \lam j => fill2 ab bc i j) p
+
+\sfunc comp_idd-right {C :⁺ \Cat} {a b :⁺ C} (f :⁺ a ~> b) : comp f idd = f
+  => comp-char (dpath \lam i => idd)
+
+\sfunc conn-right {C :⁺ \Cat} {a b :⁺ C} (f :⁺ a ~> b) : DPath (\lam i => a ~> f i) idd f
+  => \let c => fill2 idd f
+     \in dpath \lam i => dpath \lam j => fill3 () {idd} {idd} {idd} {idd}
+          idd (dpath \lam i => dpath \lam j => c i j) idd (dpath \lam i => dpath \lam j => c j i) idd i j dright
+
+\sfunc conn-left {C :⁺ \Cat} {a b :⁺ C} (f :⁺ a ~> b) : DPath (\lam i => f i ~> b) f idd
+  => dpath \lam i => dpath \lam j => cube f i j dright
+  \where {
+    \protected \sfunc cube (f :⁺ a ~> b)
+      => dpath \lam i => dpath \lam j => dpath \lam k => fill3 () {idd} {f} {f} {idd} {f} {f} {idd}
+          (conn-right f) (dpath \lam _ => idd) (conn-right f) idd idd i j k
+  }
+
+\sfunc comp_idd-left {C :⁺ \Cat} {a b :⁺ C} (f :⁺ a ~> b) : comp idd f = f
+  => comp-char (conn-right f)
+
+\sfunc comp-assoc {C :⁺ \Cat} {a b c d e :⁺ C} (f :⁺ a ~> b) (g :⁺ b ~> c) (h :⁺ c ~> d) : comp (comp f g) h = comp f (comp g h)
+  => inv $ comp-char $ dpath \lam i => dpath \lam j => fill3 () {idd} {idd} {idd} {g} {h} {idd} {comp g h}
+      idd
+      (dpath \lam i => dpath \lam j => fill2 (comp f g) h j i)
+      idd
+      (dpath \lam i => dpath \lam j => fill2 g h i j)
+      (dpath \lam i => dpath \lam j => fill2 f g j i)
+      j i dright
+
+\record HQEquiv {C D : \Cat} (\coerce f :⁺ C ->⁺ D)
+  | finv :⁺ D ->⁺ C
+  | finv_f (x : C) :⁺ finv (f x) = x
+  | f_finv (y : D) :⁺ f (finv y) = y
