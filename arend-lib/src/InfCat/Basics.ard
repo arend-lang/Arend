@@ -27,11 +27,25 @@
                         (p :⁺ (a,b) = {\Sigma (x :⁺ A) (B x)} (a,b')) (q :⁺ pmap __.1 p = idp) : b = b'
   => inv (pmap (transport B __ b) q) *> sigma-unext2 p
 
+\func =_~> {A :⁺ \Cat} {a b :⁺ A} (p :⁺ a = b) : a ~> b \elim p
+  | idp => idd
+
+\sfunc transport_~> {A :⁺ \Cat} {a b c :⁺ A} {p :⁺ b = c} {q :⁺ a ~> b} : transport (a ~> __) p q = comp q (=_~> p) \elim p
+  | idp => inv (comp_idd-right q)
+
+\func transport_=_~> {A :⁺ \Cat} {a b :⁺ A} {p :⁺ a = b} : transport (a ~> __) p idd = =_~> p \elim p
+  | idp => idp
+
 \func ~>_= {A :⁺ \Type} {a b :⁺ A} (p :⁺ a ~> b) : a = b \elim p
   | idd => idp
 
 \func comp {C :⁺ \Cat} {a b c :⁺ C} (p :⁺ a ~> b) (q :⁺ b ~> c) : a ~> c
   => dpath (fill2 p q __ dright)
+
+\record HQEquiv {C D : \Cat} (\coerce f :⁺ C ->⁺ D)
+  | finv :⁺ D ->⁺ C
+  | finv_f (x : C) :⁺ finv (f x) = x
+  | f_finv (y : D) :⁺ f (finv y) = y
 
 \sfunc segal2Prop {C :⁺ \Cat} {a b c :⁺ C} {ab :⁺ a ~> b} {bc :⁺ b ~> c} (s t :⁺ \Sigma (ac :⁺ a ~> c) (DPath (\lam i => ab i ~> ac i) idd bc)) : s = t
   => aux s *> inv (aux t)
@@ -71,6 +85,11 @@
 \sfunc comp-char {C :⁺ \Cat} {a b c :⁺ C} {ab :⁺ a ~> b} {bc :⁺ b ~> c} {ac :⁺ a ~> c}
                  (p :⁺ DPath (\lam i => ab i ~> ac i) idd bc) : comp ab bc = ac
   => cube1-equals ab bc (dpath \lam i => dpath \lam j => fill2 ab bc i j) p
+  \where {
+    \protected \sfunc conv (p :⁺ comp ab bc = ac) : DPath (\lam i => ab i ~> ac i) idd bc
+      => \have t => transport (DPath _ ab __) p $ dpath \lam j => dpath \lam i => fill2 ab bc i j
+         \in dpath \lam i => dpath \lam j => t j i
+  }
 
 \sfunc comp_idd-right {C :⁺ \Cat} {a b :⁺ C} (f :⁺ a ~> b) : comp f idd = f
   => comp-char (dpath \lam i => idd)
@@ -99,8 +118,3 @@
       (dpath \lam i => dpath \lam j => fill2 g h i j)
       (dpath \lam i => dpath \lam j => fill2 f g j i)
       j i dright
-
-\record HQEquiv {C D : \Cat} (\coerce f :⁺ C ->⁺ D)
-  | finv :⁺ D ->⁺ C
-  | finv_f (x : C) :⁺ finv (f x) = x
-  | f_finv (y : D) :⁺ f (finv y) = y

@@ -85,6 +85,11 @@ public class ConcretePrelude implements ArendPrelude {
   }
 
   @Override
+  public CoreFunctionDefinition getRezk() {
+    return Prelude.REZK;
+  }
+
+  @Override
   public CoreDataDefinition getNat() {
     return Prelude.NAT;
   }
@@ -326,6 +331,12 @@ public class ConcretePrelude implements ArendPrelude {
   public ArendRef getFill3Ref() {
     if (Prelude.FILL3 != null) return Prelude.FILL3.getRef();
     return myPreludeScope.resolveName("fill3");
+  }
+
+  @Override
+  public ArendRef getRezkRef() {
+    if (Prelude.REZK != null) return Prelude.REZK.getRef();
+    return myPreludeScope.resolveName("rezk");
   }
 
   @Override

@@ -528,13 +528,13 @@ public class StdImplicitArgsInference implements ImplicitArgsInference {
     TResult result;
     Concrete.Expression fun = expr.getFunction();
     if (fun instanceof Concrete.ReferenceExpression refExpr) {
-      if (!expr.getArguments().get(0).isExplicit() && (refExpr.getReferent() == Prelude.ZERO.getRef() || refExpr.getReferent() == Prelude.SUC.getRef())) {
+      if (!expr.getArguments().get(0).isExplicit() && (refExpr.getReferent() == Prelude.INSTANCE.getZeroRef() || refExpr.getReferent() == Prelude.INSTANCE.getSucRef())) {
         TypecheckingResult argResult = myVisitor.checkExpr(expr.getArguments().getFirst().getExpression(), Nat());
         if (argResult == null) {
           return null;
         }
 
-        if (refExpr.getReferent() == Prelude.ZERO.getRef()) {
+        if (refExpr.getReferent() == Prelude.INSTANCE.getZeroRef()) {
           result = new TypecheckingResult(new SmallIntegerExpression(0), Fin(Suc(argResult.expression)));
           if (expr.getArguments().size() > 1) {
             myVisitor.getErrorReporter().report(new NotPiType(myVisitor.getExpressionPrettifier(), argResult.expression, result.getType(myVisitor), fun));

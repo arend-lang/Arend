@@ -1,0 +1,10 @@
+\import InfCat.Basics
+
+\func iso_= {C :⁺ \Cat} {x y :⁺ C} (f :⁺ x ~> y) (g :⁺ y ~> x) (p :⁺ comp f g = idd) (q :⁺ comp g f = idd) : x = y
+  => (pair f g p q).1
+  \where {
+    \protected \sfunc pair (f :⁺ x ~> y) (g :⁺ y ~> x) (p :⁺ comp f g = idd) (q :⁺ comp g f = idd)
+      : \Sigma (r :⁺ x = y) (=_~> r = f)
+      => \have r => rezk f g (comp-char.conv p) (comp-char.conv q)
+         \in (pmap __.1 r, inv transport_=_~> *> sigma-unext2 r)
+  }

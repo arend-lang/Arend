@@ -123,7 +123,7 @@
 \lemma <->sym {P Q : \Prop} (f : P <-> Q) : Q <-> P
   => (f.2,f.1)
 
--- | `Image f` is the set `{ f a | a : A }`.
+-- | `TSetIm f` is the set `{ f a | a : A }`.
 \type TSetIm {A B : \Type} (f : A -> B) (b : B)
   => ∃ (a : A) (f a = b)
 

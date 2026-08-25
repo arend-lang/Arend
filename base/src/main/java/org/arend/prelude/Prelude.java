@@ -63,6 +63,7 @@ public class Prelude implements ArendPrelude {
   public static FunctionDefinition DAT;
 
   public static FunctionDefinition FILL2, FILL3;
+  public static FunctionDefinition REZK;
 
   public static DataDefinition NAT;
   public static Constructor ZERO, SUC;
@@ -231,6 +232,10 @@ public class Prelude implements ArendPrelude {
         FILL3.setBody(new IntervalElim(24, cases, null));
         FILL3.setStatus(Definition.TypeCheckingStatus.NO_ERRORS);
       }
+      case "rezk" -> {
+        REZK = (FunctionDefinition) definition;
+        REZK.setStatus(Definition.TypeCheckingStatus.NO_ERRORS);
+      }
       case "Path" -> {
         PATH = (DataDefinition) definition;
         PATH.setSortExpression(new SortExpression.Prev(new SortExpression.Var(0, Collections.emptyList(), ConstLevel.INFINITY)));
@@ -349,6 +354,7 @@ public class Prelude implements ArendPrelude {
     consumer.accept(DAT);
     consumer.accept(FILL2);
     consumer.accept(FILL3);
+    consumer.accept(REZK);
     consumer.accept(PATH);
     consumer.accept(PATH_CON);
     consumer.accept(PATH_INFIX);
@@ -460,6 +466,11 @@ public class Prelude implements ArendPrelude {
   @Override
   public FunctionDefinition getFill3() {
     return FILL3;
+  }
+
+  @Override
+  public CoreFunctionDefinition getRezk() {
+    return REZK;
   }
 
   @Override
@@ -684,12 +695,17 @@ public class Prelude implements ArendPrelude {
 
   @Override
   public ArendRef getFill2Ref() {
-    return null;
+    return FILL2 == null ? null : FILL2.getRef();
   }
 
   @Override
   public ArendRef getFill3Ref() {
-    return null;
+    return FILL3 == null ? null : FILL3.getRef();
+  }
+
+  @Override
+  public ArendRef getRezkRef() {
+    return REZK == null ? null : REZK.getRef();
   }
 
   @Override

@@ -1927,23 +1927,27 @@ public class PrettyPrintVisitor implements ConcreteExpressionVisitor<Precedence,
         if (i<lhs_sz-1) ppv_default.myBuilder.append('\n');
       }
 
-      if (printSpaceBefore()) ppv_default.myBuilder.append(' ');
-      ppv_default.myBuilder.append(getOpText().trim());
-
-      if (hyph) {
-        ppv_default.myBuilder.append('\n');
-      } else {
-        if (printSpaceAfter()) ppv_default.myBuilder.append(' ');
-      }
-
       boolean ii = increaseIndent(rhs_strings);
 
-      if (ii) ppv_default.myIndent+=INDENT;
+      // When hyphenating, keep the operator attached to the right-hand side on the new line
+      // instead of leaving it dangling at the end of the left-hand side.
+      if (hyph) {
+        ppv_default.myBuilder.append('\n');
+        if (ii) ppv_default.myIndent += INDENT;
+        ppv_default.printIndent();
+        ppv_default.myBuilder.append(getOpText().trim());
+        if (printSpaceAfter()) ppv_default.myBuilder.append(' ');
+      } else {
+        if (printSpaceBefore()) ppv_default.myBuilder.append(' ');
+        ppv_default.myBuilder.append(getOpText().trim());
+        if (printSpaceAfter()) ppv_default.myBuilder.append(' ');
+        if (ii) ppv_default.myIndent += INDENT;
+      }
 
       for (int i=0; i<rhs_sz; i++) {
         String s = rhs_strings.get(i);
 
-        if (i>0 || hyph) {
+        if (i>0) {
           ppv_default.printIndent();
         }
 
