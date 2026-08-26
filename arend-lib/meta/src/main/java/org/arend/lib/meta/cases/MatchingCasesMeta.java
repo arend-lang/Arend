@@ -430,9 +430,14 @@ public class MatchingCasesMeta extends BaseMetaDefinition {
       for (Boolean addPath : addPathList) {
         if (!param.hasNext()) break;
         if (addPath) {
-          CoreParameter self = param;
           TypedExpression matchedArg = allMatchedArgs.get(i);
-          CoreParameter addPathParam = typechecker.withFreeBindings(new FreeBindingsModifier().add(self.getBinding()), tc -> tc.typecheckParameters(Collections.singletonList(factory.param(true, factory.app(factory.ref(tc.getPrelude().getEqualityRef()), true, factory.core(matchedArg), factory.core(self.getBinding().makeReference().computeTyped()))))));
+          ConcreteExpression selfExpr = factory.core(param.getBinding().makeReference().computeTyped());
+          if (matchedArg.getType().normalize(NormalizationMode.WHNF) instanceof CoreDataCallExpression dataCall && dataCall.getDefinition() == typechecker.getPrelude().getFin()
+              && !(param.getType().normalize(NormalizationMode.WHNF) instanceof CoreDataCallExpression selfDataCall && selfDataCall.getDefinition() == typechecker.getPrelude().getFin())) {
+            selfExpr = factory.app(factory.ref(typechecker.getPrelude().getModRef()), true, selfExpr, factory.core(dataCall.getDefCallArguments().getFirst().computeTyped()));
+          }
+          ConcreteExpression selfExprFinal = selfExpr;
+          CoreParameter addPathParam = typechecker.withFreeBindings(new FreeBindingsModifier().add(param.getBinding()), tc -> tc.typecheckParameters(Collections.singletonList(factory.param(true, factory.app(factory.ref(tc.getPrelude().getEqualityRef()), true, factory.core(matchedArg), selfExprFinal)))));
           if (addPathParam == null) return null;
           addPathMap.put(param, addPathParam);
         }
@@ -907,8 +912,15 @@ public class MatchingCasesMeta extends BaseMetaDefinition {
           caseArgs.add(factory.caseArg(factory.core(typed), ref, factory.meta(name + "_" + (j + 1), new MetaDefinition() {
               @Override
               public @Nullable TypedExpression invokeMeta(@NotNull ExpressionTypechecker typechecker, @NotNull ContextData contextData) {
-                AbstractedExpression argType = typechecker.substituteAbstractedExpression(abstracted, levelSubst, refExprsCopy, null);
-                return argType == null ? null : ((CoreExpression) argType).computeTyped();
+                CoreExpression argType = (CoreExpression) typechecker.substituteAbstractedExpression(abstracted, levelSubst, refExprsCopy, null);
+                if (argType == null) return null;
+                CoreExpression realType = typed.getType().normalize(NormalizationMode.WHNF);
+                if (argType.normalize(NormalizationMode.WHNF) instanceof CoreDataCallExpression dataCall && dataCall.getDefinition() == typechecker.getPrelude().getNat()
+                    && realType instanceof CoreDataCallExpression && ((CoreDataCallExpression) realType).getDefinition() == typechecker.getPrelude().getFin()) {
+                  return realType.computeTyped();
+                } else {
+                  return argType.computeTyped();
+                }
               }
             })
           ));
