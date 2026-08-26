@@ -1,0 +1,59 @@
+\import Category
+\import Equiv.Fiber
+\import Function.Meta
+\import InfCat.Basics
+\import InfCat.Objects
+\import InfCat.Rezk
+\import Logic
+\import Logic.Unique
+\import Meta
+\import Paths
+\import Paths.Meta
+\import Set
+
+\func HoPrecat (C : \Cat) : Precat (Ob C) \cowith
+  | Hom x y => Trunc0 (unob x ~> unob y)
+  | id => in0 idd
+  | o {x y z : Ob C} (g : Trunc0 (unob y ~> unob z)) (f : Trunc0 (unob x ~> unob y)) : Trunc0 (unob x ~> unob z) \elim g, f {
+    | in0 g, in0 f => in0 (comp f g)
+  }
+  | id-left {x} {y} {f} => \case \elim f \with {
+    | in0 f => pmap in0 comp_idd-right
+  }
+  | id-right {x} {y} {f} => \case \elim f \with {
+    | in0 f => pmap in0 comp_idd-left
+  }
+  | o-assoc {x} {y} {z} {w} {h} {g} {f} => \case \elim h, \elim g, \elim f \with {
+    | in0 h, in0 g, in0 f => pmap in0 comp-assoc
+  }
+
+\truncated \data Trunc1 (A : \Type) : \1-Type
+  | in1 A
+
+\func HoCat.{u} (C : \Cat u) : Cat (Trunc1 (Ob C)) \cowith
+  | Hom (x y : Trunc1 (Ob C)) : \Set u \with {
+    | in1 (ob x), in1 (ob y) => Trunc0 (x ~> y)
+  }
+  | id {x : Trunc1 (Ob C)} : Hom x x \elim x {
+    | in1 (ob x) => in0 idd
+  }
+  | o {x y z : Trunc1 (Ob C)} (g : Hom y z) (f : Hom x y) : Hom x z \elim x, y, z, g, f {
+    | in1 (ob x), in1 (ob y), in1 (ob z), in0 g, in0 f => in0 (comp f g)
+  }
+  | id-left {x} {y} {f} => \case \elim x, \elim y, \elim f \with {
+    | in1 (ob x), in1 (ob y), in0 f => pmap in0 comp_idd-right
+  }
+  | id-right {x} {y} {f} => \case \elim x, \elim y, \elim f \with {
+    | in1 (ob x), in1 (ob y), in0 f => pmap in0 comp_idd-left
+  }
+  | o-assoc {x} {y} {z} {w} {h} {g} {f} => \case \elim x, \elim y, \elim z, \elim w, \elim h, \elim g, \elim f \with {
+    | in1 (ob x), in1 (ob y), in1 (ob z), in1 (ob w), in0 h, in0 g, in0 f => pmap in0 comp-assoc
+  }
+  | univalence => Cat.makeUnivalence $ later \lam e => cases (e.dom, e.cod, e.f, e.hinv, e.f_hinv, e.hinv_f) \with {
+    | in1 (ob x), in1 (ob y), in0 f, in0 g, p, q =>
+      \have | fi : IsIso f => \case Trunc0.unequiv p, Trunc0.unequiv q \with {
+                                | inP p, inP q => inP (g,p,q)
+                              }
+            | r => iso_=.pair f (IsIso.ret fi) (IsIso.f_ret fi) (IsIso.ret_f fi)
+      \in (path \lam i => in1 $ ob (r.1 i), Trunc0.transport_Trunc0 r.1 *> pmap in0 (later $ transport_~>_idd-right.grpd *> r.2))
+  }

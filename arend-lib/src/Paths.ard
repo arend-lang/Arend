@@ -5,7 +5,7 @@
 \func pmap2 {A B C : \Type} (f : A -> B -> C) {a a' : A} (p : a = a') {b b' : B} (q : b = b') : f a b = f a' b'
   => path (\lam i => f (p @ i) (q @ i))
 
-\func transport {A : \Type} (B : A -> \Type) {a a' : A} (p : a = a') (b : B a) : B a'
+\func transport {A : \Cat} (B : A -> \Type) {a a' : A} (p : a = a') (b : B a) : B a'
   => coe (\lam i => B (p @ i)) b right
 
 \func transportInv {A : \Type} (B : A -> \Type) {a a' : A} (p : a = a') (b : B a') : B a \elim p

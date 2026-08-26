@@ -1,5 +1,6 @@
 \import Function.Meta
 \import InfCat.Basics
+\import InfCat.Paths
 
 \sfunc cube2-equals
   {C :⁺ \Cat} {a b d a' b' c' d' :⁺ C} (_ : \Sigma)

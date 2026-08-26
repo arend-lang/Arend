@@ -1,0 +1,5 @@
+\data Ob (C : \Cat)
+  | ob C
+
+\func unob {C : \Cat} (x : Ob C) : C
+  | ob x => x
