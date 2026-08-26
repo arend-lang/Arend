@@ -238,6 +238,11 @@ public interface ExpressionTypechecker extends UserDataHolder {
   <T> T withFreeBindings(@NotNull FreeBindingsModifier modifier, @NotNull Function<ExpressionTypechecker, T> action);
 
   /**
+   * Invokes the specified action with the categorical context cleared.
+   */
+  <T> T withoutCategoricalContext(@NotNull Function<ExpressionTypechecker, T> action);
+
+  /**
    * Saves the state of the typechecker and executes {@code action}.
    */
   <T> T withCurrentState(@NotNull Function<ExpressionTypechecker, T> action);

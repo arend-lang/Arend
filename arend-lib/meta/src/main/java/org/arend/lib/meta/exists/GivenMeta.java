@@ -207,7 +207,9 @@ public class GivenMeta implements MetaDefinition {
     } else {
       params = Collections.singletonList(factory.param(true, arg));
     }
-    ConcreteExpression result = new Processor(factory).processParameters(params, 0, typechecker);
+    ConcreteExpression result = kind == Kind.TRUNCATED
+      ? typechecker.withoutCategoricalContext(tc -> new Processor(factory).processParameters(params, 0, tc))
+      : new Processor(factory).processParameters(params, 0, typechecker);
     return result == null ? null : typechecker.typecheck(result, contextData.getExpectedType());
   }
 }

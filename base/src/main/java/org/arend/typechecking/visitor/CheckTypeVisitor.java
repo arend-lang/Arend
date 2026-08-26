@@ -3870,6 +3870,13 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
     }
   }
 
+  @Override
+  public <T> T withoutCategoricalContext(@NotNull Function<ExpressionTypechecker, T> action) {
+    try (var ignored = clearCategoricalContext()) {
+      return action.apply(this);
+    }
+  }
+
   public void variableSolved(InferenceVariable variable) {
     if (mySavedState != null) {
       mySavedState.solvedVariables.add(variable);
