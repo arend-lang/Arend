@@ -78,13 +78,9 @@ public class SimpCoeMeta extends BaseMetaDefinition {
     }
 
     ConcreteExpression makeConcreteValueArg(CoreExpression valueArg, ConcreteFactory factory) {
-      if (valueArg instanceof CoreReferenceExpression) {
-        return factory.core(valueArg.computeTyped());
-      } else {
-        ArendRef letRef = factory.local("f");
-        letClauses.add(factory.letClause(letRef, Collections.emptyList(), null, factory.core(valueArg.computeTyped())));
-        return factory.ref(letRef);
-      }
+      ArendRef letRef = factory.local("f");
+      letClauses.add(factory.letClause(letRef, Collections.emptyList(), null, factory.core(valueArg.computeTyped())));
+      return factory.ref(letRef);
     }
   }
 
@@ -105,7 +101,7 @@ public class SimpCoeMeta extends BaseMetaDefinition {
     final boolean isLeftConst;
 
     private EqualitySpec(CoreParameter lamParam, CorePathTypeExpression equality, ExpressionTypechecker typechecker, ConcreteSourceNode marker, ConcreteExpression concreteArg, TypedExpression arg, boolean isForward) {
-      super(Collections.emptyList(), concreteArg, arg, isForward);
+      super(new ArrayList<>(), concreteArg, arg, isForward);
       if (equality.getLeftArgument().findFreeBinding(lamParam.getBinding())) {
         leftFunc = typechecker.makeLambda(Collections.singletonList(lamParam), equality.getLeftArgument(), marker);
         isLeftConst = false;
@@ -118,7 +114,9 @@ public class SimpCoeMeta extends BaseMetaDefinition {
 
     @Override
     public ConcreteExpression make(ConcreteFactory factory, CoreExpression transportTypeArg, ConcreteExpression transportLeftArg, ConcreteExpression transportRightArg, ConcreteExpression transportPathArg, CoreExpression transportValueArg, CoreExpression eqRight) {
-      return factory.app(factory.ref(isForward ? (isLeftConst ? transport_path_pmap_right_conv : transport_path_pmap_conv) : (isLeftConst ? transport_path_pmap_right : transport_path_pmap)), true, Arrays.asList(factory.core(leftFunc.computeTyped()), factory.core(rightFunc.computeTyped()), transportPathArg, factory.core(transportValueArg.computeTyped()), factory.core(eqRight.computeTyped()), arg == null ? argument : factory.core(arg)));
+      ConcreteExpression concreteLeftFunc = isLeftConst ? makeConcreteValueArg(leftFunc, factory) : factory.core(leftFunc.computeTyped());
+      ConcreteExpression result = factory.app(factory.ref(isForward ? (isLeftConst ? transport_path_pmap_right_conv : transport_path_pmap_conv) : (isLeftConst ? transport_path_pmap_right : transport_path_pmap)), true, Arrays.asList(concreteLeftFunc, factory.core(rightFunc.computeTyped()), transportPathArg, factory.core(transportValueArg.computeTyped()), factory.core(eqRight.computeTyped()), arg == null ? argument : factory.core(arg)));
+      return letClauses.isEmpty() ? result : factory.letExpr(false, false, letClauses, result);
     }
   }
 

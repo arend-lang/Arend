@@ -1,6 +1,7 @@
 package org.arend.naming;
 
 import org.arend.Matchers;
+import org.arend.ext.concrete.ConcreteFactory;
 import org.arend.ext.concrete.definition.ConcreteMetaDefinition;
 import org.arend.ext.concrete.definition.FunctionKind;
 import org.arend.ext.typechecking.meta.TrivialMetaTypechecker;
@@ -14,6 +15,7 @@ import org.arend.ext.typechecking.meta.MetaTypechecker;
 import org.arend.library.MemoryLibrary;
 import org.arend.ext.module.ModuleLocation;
 import org.arend.naming.reference.*;
+import org.arend.prelude.Prelude;
 import org.arend.term.concrete.Concrete;
 import org.arend.term.group.AccessModifier;
 import org.arend.term.group.ConcreteGroup;
@@ -27,6 +29,7 @@ import org.junit.Test;
 
 import java.math.BigInteger;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
@@ -174,5 +177,27 @@ public class MetaResolverTest extends TypeCheckingTestCase {
     updateModule(aModule, barFunc, new Concrete.NumericLiteral(null, BigInteger.TWO), 2);
     typeCheckModule(1);
     assertThatErrorsAre(Matchers.typecheckingError(NotEqualExpressionsError.class));
+  }
+
+  @Test
+  public void coreReferableLeaksCategoricalContext() {
+    MetaDefinition meta = new MetaDefinition() {
+      @Override
+      public @Nullable TypedExpression invokeMeta(@NotNull ExpressionTypechecker typechecker, @NotNull ContextData contextData) {
+        ConcreteFactory factory = contextData.getFactory();
+        TypedExpression typedArg = typechecker.typecheckType(contextData.getArguments().getFirst().getExpression());
+        if (typedArg == null) return null;
+        ConcreteExpression sigma = factory.sigma(Arrays.asList(
+          factory.param(true, factory.core(typedArg)),
+          factory.param(true, factory.ref(Prelude.NAT.getRef()))));
+        return typechecker.typecheck(sigma, contextData.getExpectedType());
+      }
+    };
+    addMeta("testmeta", Precedence.DEFAULT, null, new TrivialMetaTypechecker(meta), Collections.emptyList(), new Concrete.HoleExpression(null));
+    typeCheckModule("""
+      \\import Meta
+      \\data D (n :+ Nat)
+      \\func f (n :+ Nat) : \\Type => testmeta (D n)
+      """, 1);
   }
 }

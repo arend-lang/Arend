@@ -1,5 +1,6 @@
 package org.arend.lib.meta.cases;
 
+import org.arend.ext.FreeBindingsModifier;
 import org.arend.ext.concrete.*;
 import org.arend.ext.concrete.expr.*;
 import org.arend.ext.concrete.pattern.ConcretePattern;
@@ -236,7 +237,16 @@ public class MatchingCasesMeta extends BaseMetaDefinition {
                   matched.add(param.getBinding());
                   CorePathTypeExpression equality = Utils.toEquality(param.getType(), null, null); // try to take the type immediately
                   if (equality == null) { // if it's not an equality, then this may be because we need to substitute patterns
-                    CoreExpression type = (CoreExpression) typechecker.substituteAbstractedExpression(parameters.abstractType(i), levelSubst, PatternUtils.toExpression(clause.getPatterns().subList(0, i), constructor, factory, null), null);
+                    List<? extends CorePattern> prefix = clause.getPatterns().subList(0, i);
+                    List<CoreBinding> prefixBindings = new ArrayList<>();
+                    for (CoreParameter p = PatternUtils.getAllBindings(prefix); p != null && p.hasNext(); p = p.getNext()) {
+                      prefixBindings.add(p.getBinding());
+                    }
+                    List<ConcreteExpression> substArgs = PatternUtils.toExpression(prefix, constructor, factory, null);
+                    int prefixSize = i;
+                    CoreParameter parametersFinal = parameters;
+                    LevelSubstitution levelSubstFinal = levelSubst;
+                    CoreExpression type = (CoreExpression) typechecker.withFreeBindings(new FreeBindingsModifier().add(prefixBindings), tc -> tc.substituteAbstractedExpression(parametersFinal.abstractType(prefixSize), levelSubstFinal, substArgs, null));
                     equality = type == null ? null : Utils.toEquality(type, null, null);
                     if (equality != null) {
                       List<CoreBinding> patternBindings = new ArrayList<>(2);
@@ -292,7 +302,7 @@ public class MatchingCasesMeta extends BaseMetaDefinition {
                 removedConcrete.add(null);
               } else {
                 argsReindexing.put(i, index);
-                removedConcrete.add(factory.ref(findParameter(bodyParameters, index).getBinding()));
+                removedConcrete.add(factory.core(argument.computeTyped()));
               }
               removedArgs.add(null);
             } else {
@@ -420,7 +430,9 @@ public class MatchingCasesMeta extends BaseMetaDefinition {
       for (Boolean addPath : addPathList) {
         if (!param.hasNext()) break;
         if (addPath) {
-          CoreParameter addPathParam = typechecker.typecheckParameters(Collections.singletonList(factory.param(true, factory.app(factory.ref(typechecker.getPrelude().getEqualityRef()), true, factory.core(allMatchedArgs.get(i)), factory.core(param.getBinding().makeReference().computeTyped())))));
+          CoreParameter self = param;
+          TypedExpression matchedArg = allMatchedArgs.get(i);
+          CoreParameter addPathParam = typechecker.withFreeBindings(new FreeBindingsModifier().add(self.getBinding()), tc -> tc.typecheckParameters(Collections.singletonList(factory.param(true, factory.app(factory.ref(tc.getPrelude().getEqualityRef()), true, factory.core(matchedArg), factory.core(self.getBinding().makeReference().computeTyped()))))));
           if (addPathParam == null) return null;
           addPathMap.put(param, addPathParam);
         }
@@ -1049,18 +1061,6 @@ public class MatchingCasesMeta extends BaseMetaDefinition {
       newRows.add(removeColumnsInRow(row, removedArgs));
     }
     return newRows;
-  }
-
-  private static CoreParameter findParameter(List<CoreParameter> parameters, int index) {
-    int i = 0;
-    for (CoreParameter param : parameters) {
-      for (; param.hasNext(); param = param.getNext(), i++) {
-        if (i == index) {
-          return param;
-        }
-      }
-    }
-    throw new IllegalStateException();
   }
 
   private static Pair<Integer, Integer> findArgument(List<SubexpressionData> dataList, int index) {

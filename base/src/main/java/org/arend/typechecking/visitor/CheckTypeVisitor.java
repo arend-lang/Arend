@@ -2168,11 +2168,52 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
     return visitReference(expr, Collections.emptySet());
   }
 
+  private boolean checkContext(TypecheckingResult result, Concrete.SourceNode sourceNode) {
+    Set<Binding> visitedEvaluatingBindings = new HashSet<>();
+    FreeVariablesCollector collector = new FreeVariablesCollector() {
+      @Override
+      public void addBinding(Binding binding) {
+        if (binding instanceof EvaluatingBinding evaluatingBinding) {
+          if (visitedEvaluatingBindings.add(binding)) {
+            evaluatingBinding.getExpression().accept(this, null);
+          }
+        } else {
+          super.addBinding(binding);
+        }
+      }
+    };
+
+    result.expression.accept(collector, null);
+    if (result.type != null) {
+      result.type.accept(collector, null);
+    }
+    Set<Binding> freeVars = collector.getResult();
+    if (freeVars.isEmpty()) {
+      return true;
+    }
+
+    for (Binding binding : context.values()) {
+      if (isVarianceAccessible(binding, true)) {
+        freeVars.remove(binding);
+      }
+    }
+
+    if (freeVars.isEmpty()) {
+      return true;
+    }
+
+    errorReporter.report(new TypecheckingError("The following variables are not available: " + freeVars, sourceNode));
+    return false;
+  }
+
   private TResult visitReference(Concrete.ReferenceExpression expr, Set<ClassField> implementedFields) {
     Referable ref = expr.getReferent();
     if (ref instanceof CoreReferable) {
       TypecheckingResult result = ((CoreReferable) ref).result;
       fixCheckedExpression(result, ref, expr);
+      if (!checkContext(result, expr)) {
+        return null;
+      }
       return new TypecheckingResult(result.expression, result.type);
     } else if (ref instanceof AbstractedReferable) {
       Expression core = (Expression) substituteAbstractedExpression(((AbstractedReferable) ref).expression, LevelSubstitution.EMPTY, ((AbstractedReferable) ref).arguments, expr);
@@ -3799,16 +3840,21 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
           case REPLACE, REPLACE_REMOVE -> {
             Map<?, ?> replacement = (Map<?, ?>) command.bindings;
             Set<Map.Entry<Referable, Binding>> removed = command.kind == FreeBindingsModifier.Command.Kind.REPLACE_REMOVE ? new HashSet<>() : null;
+            List<Binding> replacedBindings = new ArrayList<>();
             for (Map.Entry<Referable, Binding> entry : context.entrySet()) {
               Object newBinding = replacement.get(entry.getValue());
               if (newBinding != null) {
                 if (!(newBinding instanceof Binding)) {
                   throw new IllegalArgumentException();
                 }
+                replacedBindings.add(entry.getValue());
                 entry.setValue((Binding) newBinding);
               } else if (removed != null) {
                 removed.add(entry);
               }
+            }
+            for (Binding binding : replacedBindings) {
+              context.put(new VeryFakeLocalReferable(binding.getName()), binding);
             }
             if (removed != null) {
               for (var entry : removed) {

@@ -1,10 +1,12 @@
 package org.arend.lib.meta.cases;
 
+import org.arend.ext.FreeBindingsModifier;
 import org.arend.ext.concrete.ConcreteClause;
 import org.arend.ext.concrete.ConcreteFactory;
 import org.arend.ext.concrete.ConcreteParameter;
 import org.arend.ext.concrete.expr.*;
 import org.arend.ext.core.body.CoreExpressionPattern;
+import org.arend.ext.core.context.CoreBinding;
 import org.arend.ext.core.context.CoreEvaluatingBinding;
 import org.arend.ext.core.context.CoreParameter;
 import org.arend.ext.core.expr.CoreDataCallExpression;
@@ -135,14 +137,17 @@ public class CasesMeta extends BaseMetaDefinition {
           CoreExpression type1 = type;
           if (patterns1 == null) {
             List<SubstitutionPair> substitution = new ArrayList<>(patternList.size());
+            List<CoreBinding> patternBindings = new ArrayList<>();
             for (int i = 0; i < patternList.size(); i++) {
               CoreExpression expr = typedArgs.get(i).getExpression();
               if (expr instanceof CoreReferenceExpression) {
+                PatternUtils.collectLeafBindings(patternList.get(i), patternBindings);
                 substitution.add(new SubstitutionPair(((CoreReferenceExpression) expr).getBinding(), PatternUtils.toExpression(patternList.get(i), constructor, factory, null)));
               }
             }
             if (!substitution.isEmpty()) {
-              type1 = typechecker.substitute(type1, LevelSubstitution.EMPTY, substitution);
+              CoreExpression type1Arg = type1;
+              type1 = typechecker.withFreeBindings(new FreeBindingsModifier().add(patternBindings), tc -> tc.substitute(type1Arg, LevelSubstitution.EMPTY, substitution));
               if (type1 != null) {
                 patterns1 = getPatterns(type1.normalize(NormalizationMode.WHNF), parameter, typechecker);
               }
