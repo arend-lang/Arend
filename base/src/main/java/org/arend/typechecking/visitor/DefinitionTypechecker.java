@@ -917,6 +917,10 @@ public class DefinitionTypechecker extends BaseDefinitionTypechecker implements 
   }
 
   private ExpressionPattern checkDConstructor(Expression expr, Set<DependentLink> usedVars, Concrete.SourceNode sourceNode) {
+    if (expr instanceof TypeConstructorExpression typeConstructor) {
+      return checkDConstructor(typeConstructor.getArgument(), usedVars, sourceNode);
+    }
+
     if (expr instanceof ReferenceExpression && ((ReferenceExpression) expr).getBinding() instanceof DependentLink var) {
       if (!usedVars.add(var)) {
         errorReporter.report(new TypecheckingError("Variable '" + var.getName() + "' occurs multiple times in the body of \\cons", sourceNode));

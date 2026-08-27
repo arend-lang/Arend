@@ -1,4 +1,4 @@
-\func Ob (C : \Cat) => \Sigma (ob : C) (\Sigma)
+\type Ob (C : \Cat) => \Sigma (ob : C) (\Sigma)
 
 \cons ob {C : \Cat} (x : C) : Ob C
   => (x, ())
