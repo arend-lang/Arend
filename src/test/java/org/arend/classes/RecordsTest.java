@@ -193,7 +193,7 @@ public class RecordsTest extends TypeCheckingTestCase {
   public void recordUniverseTest5() {
     typeCheckModule(
         "\\class Point { | x : \\Type3 | y : \\Type1 }\n" +
-        "\\func C => Point { | x => \\Type2 }");
+        "\\func C => Point { | x => \\1-Type2 }");
     assertEquals(Sort.TypeOfLevel(4), ((ClassDefinition) getDefinition("Point")).getSort());
     assertEquals(Universe(Sort.TypeOfLevel(2)), getDefinition("C").getTypeWithParams(new ArrayList<>(), Levels.EMPTY));
   }

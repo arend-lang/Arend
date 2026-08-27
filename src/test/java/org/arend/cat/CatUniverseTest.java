@@ -28,11 +28,23 @@ public class CatUniverseTest extends TypeCheckingTestCase {
 
   @Test
   public void typeUniverseTest() {
-    typeCheckDef("\\func test.{u} : \\Type (\\suc u) => \\Type u");
+    typeCheckDef("\\func test.{u} : \\Cat (\\suc u) => \\Type u");
+  }
+
+  @Test
+  public void typeUniverseError() {
+    typeCheckDef("\\func test.{u} : \\Type (\\suc u) => \\Type u", 1);
+    assertThatErrorsAre(Matchers.typeMismatchError());
   }
 
   @Test
   public void catUniverseTest() {
-    typeCheckDef("\\func test.{u} : \\Type (\\suc u) => \\Cat u");
+    typeCheckDef("\\func test.{u} : \\Cat (\\suc u) => \\Cat u");
+  }
+
+  @Test
+  public void catUniverseError() {
+    typeCheckDef("\\func test.{u} : \\Type (\\suc u) => \\Cat u", 1);
+    assertThatErrorsAre(Matchers.typeMismatchError());
   }
 }

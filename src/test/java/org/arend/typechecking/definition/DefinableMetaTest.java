@@ -129,7 +129,7 @@ public class DefinableMetaTest extends TypeCheckingTestCase {
   public void levelsTest2() {
     typeCheckModule(
       "\\meta f.{p} (A : \\Type p) => A\n" +
-      "\\func test => f.{3} \\Type2");
+      "\\func test => f.{3} \\1-Type2");
   }
 
   @Test

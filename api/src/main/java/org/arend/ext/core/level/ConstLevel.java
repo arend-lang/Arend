@@ -51,7 +51,7 @@ public record ConstLevel(BigInteger value, boolean isCat) {
   }
 
   public ConstLevel succ() {
-    return new ConstLevel(value == null ? null : value.add(BigInteger.ONE), false);
+    return value == null ? CAT_INFINITY : new ConstLevel(value.add(BigInteger.ONE), false);
   }
 
   @Override

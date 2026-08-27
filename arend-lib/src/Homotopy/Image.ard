@@ -6,6 +6,8 @@
 \import Equiv
 \import Equiv.Univalence
 \import Function
+\import Function.Meta
+\import InfCat.Objects
 \import Logic.Unique
 \import Homotopy.Fibration
 \import Homotopy.Pushout
@@ -62,9 +64,9 @@
   \where {
     \open MJoin
 
-    \instance data : MData S \cowith
-      | R F G => \Pi (b : B) -> Equiv (F b) (G b)
-      | ret F G r => path (\lam i b => Equiv_= (r b) i)
+    \instance data : MData (\lam a b => ob (S a b)) \cowith
+      | R F G => \Pi (b : B) -> Equiv (F b).1 (G b).1
+      | ret F G r => path \lam i b => ob (Equiv_= (r b) i)
 
     \func dom-map (a : A) : YImage S
       => MData.dom-map a
@@ -77,6 +79,15 @@
 
     \lemma cod-map-emb : Embedding cod-map
       => MData.cod-map-emb (\lam {F} b => mkEquiv (inP idEquiv)) \lam {F} =>
-          \have p b : Equiv_= (mkEquiv (inP (idEquiv {F b}))) = idp => typeUnivalence.ret_f idp
-          \in path \lam i => path \lam j b => p b i j
+          \have p b : Equiv_= (mkEquiv (inP (idEquiv {(F b).1}))) = idp => typeUnivalence.ret_f idp
+          \in path \lam i => path \lam j b => ob (p b i j)
+
+    \sfunc cod-map-equiv {a a' : data.MImage} : QEquiv {a = a'} (pmap \lam a b => unob (cod-map a b))
+      => \have e => cod-map-emb.pmap-isEquiv {a} {a'}
+         \in \new QEquiv {
+           | ret p => e.ret $ path \lam i b => ob (p i b)
+           | ret_f => e.ret_f
+           | f_sec p => \have t => e.f_sec $ path \lam i b => ob (p i b)
+                        \in path \lam j => path \lam i b => unob (t j i b)
+         }
   }

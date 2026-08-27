@@ -32,7 +32,7 @@ public class InferLevelTest extends TypeCheckingTestCase {
     // ?l <= ?l'
     // error: cannot infer ?l, ?l'
     typeCheckModule("""
-      \\func A.{u} => \\Type u
+      \\func A.{u} => \\1-Type u
       \\func f.{u} (A : \\Type u) => A
       \\func g => f A
       """, 2);
@@ -49,7 +49,7 @@ public class InferLevelTest extends TypeCheckingTestCase {
     // ?l <= 10
     // error: cannot infer ?l
     typeCheckModule("""
-      \\func A.{u} => \\Type u
+      \\func A.{u} => \\1-Type u
       \\func f : \\Type10 => A
       """);
   }
@@ -59,7 +59,7 @@ public class InferLevelTest extends TypeCheckingTestCase {
     // ?l <= c
     // error: cannot infer ?l
     typeCheckModule("""
-      \\func A.{u} => \\Type u
+      \\func A.{u} => \\1-Type u
       \\func f.{u} : \\Type (\\suc u) => A
       """, 1);
     assertThatErrorsAre(Matchers.warning());
@@ -89,7 +89,7 @@ public class InferLevelTest extends TypeCheckingTestCase {
     // error: cannot solve 1 <= c
     typeCheckModule("""
       \\func f.{u} (A : \\Type u) => A
-      \\func g.{u} : \\Type u => f \\Type0
+      \\func g.{u} : \\Type u => f \\1-Type0
       """, 1);
   }
 
@@ -97,7 +97,7 @@ public class InferLevelTest extends TypeCheckingTestCase {
   public void btwOneAndParamWithH() {
     typeCheckModule("""
       \\func f.{u} (A : \\Type u) => A
-      \\func g => f \\Type0
+      \\func g => f \\1-Type0
       """);
   }
 
@@ -117,7 +117,7 @@ public class InferLevelTest extends TypeCheckingTestCase {
     // ok: ?l = 1
     typeCheckModule("""
       \\func f.{u} (A : \\Type u) => A
-      \\func g : \\Type10 => f \\Type0
+      \\func g : \\Type10 => f \\1-Type0
       """);
   }
 
@@ -137,7 +137,7 @@ public class InferLevelTest extends TypeCheckingTestCase {
     // ok: ?l = 1
     typeCheckModule("""
       \\func f.{u} (A : \\Type u) => A
-      \\func g => f \\Type0
+      \\func g => f \\1-Type0
       """);
   }
 
@@ -197,7 +197,7 @@ public class InferLevelTest extends TypeCheckingTestCase {
   public void expectedType() {
     typeCheckModule("""
       \\func X.{u} => \\Type u
-      \\func f.{u} : X => \\Type u
+      \\func f.{u} : X => \\1-Type u
       """);
   }
 
@@ -216,7 +216,7 @@ public class InferLevelTest extends TypeCheckingTestCase {
     typeCheckModule("""
       \\func f.{u} (A : \\Type u) (a a' : A) (p : a = a') => p
       \\func X : \\Type => Nat
-      \\func g.{u} : X = X => f (\\Type u) X X idp
+      \\func g.{u} : X = X => f (\\1-Type u) X X idp
       """);
   }
 
@@ -257,9 +257,9 @@ public class InferLevelTest extends TypeCheckingTestCase {
   @Test
   public void idTest() {
     typeCheckModule("""
-      \\class Functor.{u} (F : \\Type u -> \\Type u)
-        | fmap {A B : \\Type u} : (A -> B) -> F A -> F B
-      \\data Maybe.{u} (A : \\Type u) | nothing | just A
+      \\class Functor.{u} (F : \\Set u -> \\Set u)
+        | fmap {A B : \\Set u} : (A -> B) -> F A -> F B
+      \\data Maybe.{u} (A : \\Set u) | nothing | just A
       \\func id'.{u} {A : \\Type u} (a : A) => a
       \\func idTest.{u} : \\Type1 => id'.{\\suc u} (Functor Maybe)
       """, -1);
@@ -268,21 +268,21 @@ public class InferLevelTest extends TypeCheckingTestCase {
   @Test
   public void idTest2() {
     typeCheckModule("""
-      \\class Functor.{u} (F : \\Type u -> \\Type u)
-        | fmap {A B : \\Type u} : (A -> B) -> F A -> F B
-      \\data Maybe.{u} (A : \\Type u) | nothing | just A
+      \\class Functor.{u} (F : \\Set u -> \\Set u)
+        | fmap {A B : \\Set u} : (A -> B) -> F A -> F B
+      \\data Maybe.{u} (A : \\Set u) | nothing | just A
       \\func id'.{u} {A : \\Type u} (a : A) => a
       \\func idTest.{u} : \\Type1 => id'.{\\suc (\\suc u)} (Functor Maybe)
-      """, 2);
-    assertThatErrorsAre(Matchers.warning(), Matchers.warning());
+      """, 1);
+    assertThatErrorsAre(Matchers.warning());
   }
 
   @Test
   public void idTest3() {
     typeCheckModule("""
-      \\class Functor.{u} (F : \\Type u -> \\Type u)
-        | fmap {A B : \\Type u} : (A -> B) -> F A -> F B
-      \\data Maybe.{u} (A : \\Type u) | nothing | just A
+      \\class Functor.{u} (F : \\Set u -> \\Set u)
+        | fmap {A B : \\Set u} : (A -> B) -> F A -> F B
+      \\data Maybe.{u} (A : \\Set u) | nothing | just A
       \\func id'.{u} {A : \\Type u} (a : A) => a
       \\func idTest.{u} => id'.{\\suc (\\suc u)} (Functor Maybe.{0})
       """);
@@ -291,9 +291,9 @@ public class InferLevelTest extends TypeCheckingTestCase {
   @Test
   public void idTest4() {
     typeCheckModule("""
-      \\class Functor.{u} (F : \\Type u -> \\Type u)
-        | fmap {A B : \\Type u} : (A -> B) -> F A -> F B
-      \\data Maybe.{u} (A : \\Type u) | nothing | just A
+      \\class Functor.{u} (F : \\Set u -> \\Set u)
+        | fmap {A B : \\Set u} : (A -> B) -> F A -> F B
+      \\data Maybe.{u} (A : \\Set u) | nothing | just A
       \\func id'.{u} {A : \\Type u} (a : A) => a
       \\func idTest.{u} => id'.{\\suc (\\suc u)} (Functor.{0} Maybe)
       """);
@@ -302,7 +302,7 @@ public class InferLevelTest extends TypeCheckingTestCase {
   @Test
   public void idTest5() {
     typeCheckModule("""
-      \\func type.{u} => \\Type u
+      \\func type.{u} => \\1-Type u
       \\func test : \\Type10 => type
       """);
   }
@@ -310,9 +310,9 @@ public class InferLevelTest extends TypeCheckingTestCase {
   @Test
   public void idTestError() {
     typeCheckModule("""
-      \\class Functor.{u} (F : \\Type u -> \\Type u)
-        | fmap {A B : \\Type u} : (A -> B) -> F A -> F B
-      \\data Maybe.{u} (A : \\Type u) | nothing | just A
+      \\class Functor.{u} (F : \\Set u -> \\Set u)
+        | fmap {A B : \\Set u} : (A -> B) -> F A -> F B
+      \\data Maybe.{u} (A : \\Set u) | nothing | just A
       \\func id'.{u} {A : \\Type u} (a : A) => a
       \\func idTest.{u} => id'.{\\suc (\\suc u)} (Functor Maybe)
       """, 2);
@@ -332,7 +332,7 @@ public class InferLevelTest extends TypeCheckingTestCase {
     typeCheckModule("""
       \\data D.{u} | con (\\Type u)
       \\func fromD.{u} (d : D.{u}) : \\Type u | con A => A
-      \\func ddd : \\Type0 => fromD (con \\Type0)
+      \\func ddd : \\Type0 => fromD (con \\1-Type0)
       """, 1);
   }
 

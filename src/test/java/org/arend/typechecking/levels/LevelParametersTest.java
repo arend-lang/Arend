@@ -190,7 +190,7 @@ public class LevelParametersTest extends TypeCheckingTestCase {
       """
         \\record R.{p1,p2} (x : \\Type (\\max (\\suc p1) p2))
         \\func g.{p1,p2} : R.{p1,p2} \\cowith
-          | x : \\Type (\\suc p1) => \\let t => \\Type p2 \\in \\Type p1
+          | x : \\Type (\\suc p1) => \\let t => \\Type p2 \\in \\1-Type p1
         """);
   }
 

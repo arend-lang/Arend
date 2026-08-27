@@ -400,21 +400,21 @@ public class ExtensionsTest extends TypeCheckingTestCase {
   public void comparisonTest() {
     typeCheckModule(
       "\\record C (A : \\Type) (a : A)\n" +
-      "\\func f (c : C \\Type4 \\Type3) : C \\Type5 \\Type3 => c");
+      "\\func f (c : C \\1-Type4 \\Set3) : C \\1-Type5 \\Set3 => c");
   }
 
   @Test
   public void comparisonTest2() {
     typeCheckModule(
       "\\record C (A : \\Type) (a : A)\n" +
-      "\\func f (c : C \\Type5 \\Type3) : C \\Type5 \\Type4 => c");
+      "\\func f (c : C \\1-Type5 \\Set3) : C \\1-Type5 \\Set4 => c");
   }
 
   @Test
   public void comparisonTest3() {
     typeCheckModule(
       "\\record C (A : Nat -> \\Type)\n" +
-      "\\func f (c : C (\\lam _ => \\Type4)) : C (\\lam _ => \\Type5) => c");
+      "\\func f (c : C (\\lam _ => \\1-Type4)) : C (\\lam _ => \\1-Type5) => c");
   }
 
   @Test

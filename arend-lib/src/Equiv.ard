@@ -286,7 +286,8 @@
 \record Embedding \extends TypeMap {
   | isEmb : \Pi (a a' : A) -> Retraction (pmap f {a} {a'})
 
-  \func pmap-isEquiv {a a' : A} : QEquiv (pmap f {a} {a'}) => pathEquiv (f __ = f __) (\lam {a} {a'} => isEmb a a')
+  \sfunc pmap-isEquiv {a a' : A} : QEquiv (pmap f {a} {a'})
+    => pathEquiv (f __ = f __) (\lam {a} {a'} => isEmb a a')
 
   \lemma surj-split (s : IsSurj f) (y : B)
     => TruncP.remove (Embedding.embeddingFiber-isProp \this y) (s y)

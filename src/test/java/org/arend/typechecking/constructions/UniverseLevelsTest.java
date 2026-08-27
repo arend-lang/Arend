@@ -14,7 +14,7 @@ public class UniverseLevelsTest extends TypeCheckingTestCase {
     typeCheckModule("""
       \\data D (A : \\Type) (a : A) | d (B : A -> \\Type2)
       \\func f : \\Pi {A : \\Type1} {a : A} -> (A -> \\Type1) -> D A a => \\lam B => d B
-      \\func test => f {\\Set0} {\\Prop} (\\lam _ => \\Type0)
+      \\func test => f {\\Set0} {\\Prop} (\\lam _ => \\1-Type0)
       """);
   }
 

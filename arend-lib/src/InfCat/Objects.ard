@@ -1,5 +1,7 @@
-\data Ob (C : \Cat)
-  | ob C
+\func Ob (C : \Cat) => \Sigma (ob : C) (\Sigma)
+
+\cons ob {C : \Cat} (x : C) : Ob C
+  => (x, ())
 
 \func unob {C : \Cat} (x : Ob C) : C
-  | ob x => x
+  => x.1

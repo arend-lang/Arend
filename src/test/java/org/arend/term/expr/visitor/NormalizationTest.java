@@ -219,13 +219,13 @@ public class NormalizationTest extends TypeCheckingTestCase {
 
   @Test
   public void normalizeLetElimNoStuck() {
-    // normalize (\let | x (y : N) : \Type2 => \Type0 \in x zero) = \Type0
+    // normalize (\let | x (y : N) : \Type2 => \1-Type0 \in x zero) = \1-Type0
     LocalReferable y = ref("y");
     LocalReferable x = ref("x");
-    Concrete.LetClause xClause = clet(x, cargs(cTele(cvars(y), cNat())), cUniverseInf(2), cUniverse(0));
+    Concrete.LetClause xClause = clet(x, cargs(cTele(cvars(y), cNat())), cUniverseInf(2), cUniverse(0, BigInteger.ONE));
     incModification();
     TypecheckingResult result = typeCheckExpr(cLet(clets(xClause), cApps(cVar(x), cZero())), null);
-    assertEquals(Universe(new Level(BigInteger.ZERO), ConstLevel.INFINITY), result.expression.normalize(NormalizationMode.NF));
+    assertEquals(Universe(new Level(BigInteger.ZERO), new ConstLevel(BigInteger.ONE, false)), result.expression.normalize(NormalizationMode.NF));
   }
 
   @Test

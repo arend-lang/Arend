@@ -5,6 +5,7 @@ import org.arend.ext.module.LongName;
 import org.arend.naming.reference.LocalReferable;
 import org.arend.naming.reference.Referable;
 import org.arend.prelude.Prelude;
+import org.jetbrains.annotations.Nullable;
 
 import java.math.BigInteger;
 import java.util.ArrayList;
@@ -221,8 +222,12 @@ public class ConcreteExpressionFactory {
     return new Concrete.UniverseExpression(null, pLevel, hLevel, kind);
   }
 
+  public static Concrete.UniverseExpression cUniverse(int pLevel, @Nullable BigInteger hLevel) {
+    return new Concrete.UniverseExpression(null, new Concrete.NumberLevelExpression(null, BigInteger.valueOf(pLevel)), hLevel, ConcreteUniverseExpression.Kind.TYPE);
+  }
+
   public static Concrete.UniverseExpression cUniverse(int level) {
-    return new Concrete.UniverseExpression(null, new Concrete.NumberLevelExpression(null, BigInteger.valueOf(level)), null, ConcreteUniverseExpression.Kind.TYPE);
+    return cUniverse(level, null);
   }
 
   public static Concrete.ConstructorPattern cConPattern(boolean isExplicit, Referable referable, List<Concrete.Pattern> patternArgs) {

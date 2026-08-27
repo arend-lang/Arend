@@ -21,9 +21,9 @@ public class TypeClassesTypesTest extends TypeCheckingTestCase {
     typeCheckModule("""
       \\class C (X : \\Type)
         | idf : X -> X
-      \\instance inst.{u} : C (\\Type u)
+      \\instance inst.{u} : C (\\1-Type u)
         | idf A => A
-      \\func foo.{u} (P : \\Type u) => idf P
+      \\func foo.{u} (P : \\1-Type u) => idf P
       """);
   }
 
@@ -32,7 +32,7 @@ public class TypeClassesTypesTest extends TypeCheckingTestCase {
     typeCheckModule("""
       \\class C (X : \\Type)
         | idf : X -> X
-      \\instance inst.{u} : C (\\Type u)
+      \\instance inst.{u} : C (\\1-Type u)
         | idf A => A
       \\func foo (P : \\Prop) => idf P
       """, 1);
@@ -44,7 +44,7 @@ public class TypeClassesTypesTest extends TypeCheckingTestCase {
     typeCheckModule("""
       \\class C (X : \\Type)
         | idf : X -> X
-      \\instance inst.{u} : C (\\Type u)
+      \\instance inst.{u} : C (\\1-Type u)
         | idf A => A
       \\func foo (P : \\Set) => idf P
       """, 1);
@@ -56,7 +56,7 @@ public class TypeClassesTypesTest extends TypeCheckingTestCase {
     typeCheckModule("""
       \\class C (X : \\Type)
         | idf : X -> X
-      \\instance inst : C \\Type0
+      \\instance inst : C \\1-Type0
         | idf A => A
       \\func foo (P : \\Set1) => idf P
       """, 1);
