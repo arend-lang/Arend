@@ -1,6 +1,8 @@
 package org.arend.typechecking.error.local;
 
 import org.arend.core.definition.DataDefinition;
+import org.arend.core.sort.Sort;
+import org.arend.ext.core.level.ConstLevel;
 import org.arend.ext.error.TypecheckingError;
 import org.arend.ext.prettyprinting.PrettyPrinterConfig;
 import org.arend.ext.prettyprinting.doc.LineDoc;
@@ -11,14 +13,20 @@ import static org.arend.ext.prettyprinting.doc.DocFactory.*;
 
 public class SquashedDataError extends TypecheckingError {
   public final DataDefinition dataDef;
+  public final Sort dataSort;
+  public final ConstLevel actualLevel;
 
-  public SquashedDataError(DataDefinition dataDef, @NotNull Concrete.SourceNode cause) {
+  public SquashedDataError(DataDefinition dataDef, Sort dataSort, ConstLevel actualLevel, @NotNull Concrete.SourceNode cause) {
     super("", cause);
     this.dataDef = dataDef;
+    this.dataSort = dataSort;
+    this.actualLevel = actualLevel;
   }
 
   @Override
   public LineDoc getShortHeaderDoc(PrettyPrinterConfig ppConfig) {
-    return hList(text("Pattern matching on " + (dataDef.isTruncated() ? "truncated" : "squashed") + " data type '"), refDoc(dataDef.getReferable()), text("' is allowed only in \\sfunc and \\scase"));
+    return dataDef.isTruncated()
+      ? hList(text("The level " + actualLevel + " of the eliminator does not fit into the level " + dataSort.getHLevel() + " of the truncated data type '"), refDoc(dataDef.getReferable()), text("'; this can be overridden with a \\level annotation, but only inside \\sfunc or \\scase"))
+      : hList(text("Pattern matching on squashed data type '"), refDoc(dataDef.getReferable()), text("' is allowed only in \\sfunc and \\scase"));
   }
 }

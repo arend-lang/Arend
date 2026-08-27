@@ -9,6 +9,7 @@ import org.arend.core.subst.Levels;
 import org.arend.ext.core.ops.NormalizationMode;
 import org.arend.typechecking.TypeCheckingTestCase;
 import org.arend.typechecking.error.local.SquashedDataError;
+import org.arend.typechecking.error.local.TruncatedDataError;
 import org.arend.util.SingletonList;
 import org.junit.Test;
 
@@ -131,6 +132,43 @@ public class SFuncTest extends TypeCheckingTestCase {
     typeCheckModule(
       "\\truncated \\data D (A : \\Type) : \\Prop | con A\n" +
       "\\func f {A : \\Type} (p : \\Pi (x y : A) -> x = y) (d : D A) : \\level A p \\elim d | con a => a", 1);
+  }
+
+  @Test
+  public void truncatedIntoMatchingUniverse() {
+    typeCheckModule("""
+      \\truncated \\data D : \\1-Type
+        | base
+        | loop (i : I) \\elim i {
+          | left => base
+          | right => base
+        }
+      \\func f (d : D) : \\Set0 \\elim d
+        | base => Nat
+        | loop i => Nat
+      """);
+  }
+
+  @Test
+  public void truncatedFuncMismatch() {
+    typeCheckModule("""
+      \\truncated \\data D : \\Prop | con1 | con2
+      \\func f (d : D) : Nat \\elim d
+        | con1 => 0
+        | con2 => 0
+      """, 2);
+    assertThatErrorsAre(Matchers.typecheckingError(SquashedDataError.class), Matchers.typecheckingError(TruncatedDataError.class));
+  }
+
+  @Test
+  public void truncatedSFuncMismatch() {
+    typeCheckModule("""
+      \\truncated \\data D : \\Prop | con1 | con2
+      \\sfunc f (d : D) : Nat \\elim d
+        | con1 => 0
+        | con2 => 0
+      """, 1);
+    assertThatErrorsAre(Matchers.typecheckingError(TruncatedDataError.class));
   }
 
   @Test

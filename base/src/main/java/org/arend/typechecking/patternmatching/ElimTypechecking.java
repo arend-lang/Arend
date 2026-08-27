@@ -925,7 +925,7 @@ public class ElimTypechecking {
       if (dataType != null && dataType.isSquashed() && myErrorReporter != null) {
         Sort dataSort = dataType.getSortExpression().withInfLevel();
         if (myActualLevel != null && !myActualLevel.isLessOrEquals(dataSort.getHLevel().add(myActualLevelSub))) {
-          myErrorReporter.report(new SquashedDataError(dataType, getClause(conClause.index, someConPattern)));
+          myErrorReporter.report(new SquashedDataError(dataType, dataSort, myActualLevel, getClause(conClause.index, someConPattern)));
         }
 
         boolean ok = !dataType.isTruncated() || myLevel != null && myLevel.compareTo(dataType.getTruncatedLevel().add(BigInteger.ONE)) <= 0;
