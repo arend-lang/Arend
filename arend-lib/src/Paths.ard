@@ -1,123 +1,123 @@
-\func idpe {A : \Type} (a : A) : a = a => idp
+\func idpe {A : \Cat} (a : A) : a = a => idp
 
-\func pmap {A B : \Type} (f : A -> B) {a a' : A} (p : a = a') : f a = f a' => path (\lam i => f (p @ i))
+\func pmap {A B : \Cat} (f : A -> B) {a a' : A} (p : a = a') : f a = f a' => path (\lam i => f (p @ i))
 
-\func pmap2 {A B C : \Type} (f : A -> B -> C) {a a' : A} (p : a = a') {b b' : B} (q : b = b') : f a b = f a' b'
+\func pmap2 {A B C : \Cat} (f : A -> B -> C) {a a' : A} (p : a = a') {b b' : B} (q : b = b') : f a b = f a' b'
   => path (\lam i => f (p @ i) (q @ i))
 
-\func transport {A : \Cat} (B : A -> \Type) {a a' : A} (p : a = a') (b : B a) : B a'
+\func transport {A : \Cat} (B : A -> \Cat) {a a' : A} (p : a = a') (b : B a) : B a'
   => coe (\lam i => B (p @ i)) b right
 
-\func transportInv {A : \Type} (B : A -> \Type) {a a' : A} (p : a = a') (b : B a') : B a \elim p
+\func transportInv {A : \Cat} (B : A -> \Type) {a a' : A} (p : a = a') (b : B a') : B a \elim p
   | idp => b
 
-\func transport2 {A B : \Type} (C : A -> B -> \Type) {a a' : A} {b b' : B} (p : a = a') (q : b = b') (c : C a b) : C a' b' \elim p, q
+\func transport2 {A B : \Cat} (C : A -> B -> \Type) {a a' : A} {b b' : B} (p : a = a') (q : b = b') (c : C a b) : C a' b' \elim p, q
   | idp, idp => c
 
-\func inv {A : \Type} {a a' : A} (p : a = a') : a' = a \elim p
+\func inv {A : \Cat} {a a' : A} (p : a = a') : a' = a \elim p
   | idp => idp
 
-\func \infixr 9 *> {A : \Type} {a a' a'' : A} (p : a = a') (q : a' = a'') : a = a'' \elim q
+\func \infixr 9 *> {A : \Cat} {a a' a'' : A} (p : a = a') (q : a' = a'') : a = a'' \elim q
   | idp => p
   \where
-    \func concat {A : I -> \Type} {a : A left} {a' a'' : A right} (p : Path A a a') (q : a' = a'') : Path A a a'' \elim q
+    \func concat {A : I -> \Cat} {a : A left} {a' a'' : A right} (p : Path A a a') (q : a' = a'') : Path A a a'' \elim q
       | idp => p
 
-\func \infixr 9 <* {A : \Type} {a a' a'' : A} (p : a = a') (q : a' = a'') : a = a'' \elim p
+\func \infixr 9 <* {A : \Cat} {a a' a'' : A} (p : a = a') (q : a' = a'') : a = a'' \elim p
   | idp => q
   \where
     \func concat {A : I -> \Type} {a a' : A left} {a'' : A right} (p : a = a') (q : Path A a' a'') : Path A a a'' \elim p
       | idp => q
 
-\func psqueeze {A : \Type} {a a' : A} (p : a = a') (i : I) : a = p @ i => path (p @ I.squeeze i __)
+\func psqueeze {A : \Cat} {a a' : A} (p : a = a') (i : I) : a = p @ i => path (p @ I.squeeze i __)
 
-\func Jl {A : \Type} {a : A} (B : \Pi (a' : A) -> a = a' -> \Type) (b : B a idp) {a' : A} (p : a = a') : B a' p \elim p
+\func Jl {A : \Cat} {a : A} (B : \Pi (a' : A) -> a = a' -> \Type) (b : B a idp) {a' : A} (p : a = a') : B a' p \elim p
   | idp => b
   \where {
-    \func Jr {A : \Type} {a' : A} (B : \Pi (a : A) -> a = a' -> \Type) (b : B a' idp) {a : A} (p : a = a') : B a p \elim p
+    \func Jr {A : \Cat} {a' : A} (B : \Pi (a : A) -> a = a' -> \Type) (b : B a' idp) {a : A} (p : a = a') : B a p \elim p
       | idp => b
 
     -- | J can be defined in terms of coe
-    \func def {A : \Type} {a : A} (B : \Pi (a' : A) -> a = a' -> \Type) (b : B a idp) {a' : A} (p : a = a') : B a' p =>
+    \func def {A : \Cat} {a : A} (B : \Pi (a' : A) -> a = a' -> \Type) (b : B a idp) {a' : A} (p : a = a') : B a' p =>
       coe (\lam i => B (p @ i) (psqueeze p i)) b right
   }
 
-\func pmap_*>-comm {A B : \Type} (f : A -> B) {a a' a'' : A} (p : a = a') (q : a' = a'')
+\func pmap_*>-comm {A B : \Cat} (f : A -> B) {a a' a'' : A} (p : a = a') (q : a' = a'')
   : pmap f (p *> q) = pmap f p *> pmap f q \elim q
   | idp => idp
 
-\func pmap_<*-comm {A B : \Type} (f : A -> B) {a a' a'' : A} (p : a = a') (q : a' = a'')
+\func pmap_<*-comm {A B : \Cat} (f : A -> B) {a a' a'' : A} (p : a = a') (q : a' = a'')
   : pmap f (p <* q) = pmap f p <* pmap f q \elim p
   | idp => idp
 
-\func pmap2_*>-comm {A B C : \Type} (f : A -> B -> C) {a a' a'' : A} (p : a = a') (q : a' = a'') {b b' b'' : B} (s : b = b') (t : b' = b'')
+\func pmap2_*>-comm {A B C : \Cat} (f : A -> B -> C) {a a' a'' : A} (p : a = a') (q : a' = a'') {b b' b'' : B} (s : b = b') (t : b' = b'')
   : pmap2 f (p *> q) (s *> t) = pmap2 f p s *> pmap2 f q t \elim q, t
   | idp, idp => idp
 
-\func inv_inv {A : \Type} {a a' : A} (p : a = a') : inv (inv p) = p
+\func inv_inv {A : \Cat} {a a' : A} (p : a = a') : inv (inv p) = p
   | idp => idp
 
-\func inv_*> {A : \Type} {a a' : A} (p : a = a') : inv p *> p = idp
+\func inv_*> {A : \Cat} {a a' : A} (p : a = a') : inv p *> p = idp
   | idp => idp
 
-\func *>_inv {A : \Type} {a a' : A} (p : a = a') : p *> inv p = idp
+\func *>_inv {A : \Cat} {a a' : A} (p : a = a') : p *> inv p = idp
   | idp => idp
 
-\func idp_*> {A : \Type} {a a' : A} (p : a = a') : idp *> p = p
+\func idp_*> {A : \Cat} {a a' : A} (p : a = a') : idp *> p = p
   | idp => idp
   \where
-    \func idp_concat {A : \Type} {a a' : A} (p : a = a') : *>.concat idp p = p \elim p
+    \func idp_concat {A : \Cat} {a a' : A} (p : a = a') : *>.concat idp p = p \elim p
       | idp => idp
 
-\func <*_idp {A : \Type} {a a' : A} (p : a = a') : p <* idp = p
+\func <*_idp {A : \Cat} {a a' : A} (p : a = a') : p <* idp = p
   | idp => idp
 
-\func <*_*> {A : \Type} {a a' a'' : A} (p : a = a') (q : a' = a'') : p <* q = p *> q
+\func <*_*> {A : \Cat} {a a' a'' : A} (p : a = a') (q : a' = a'') : p <* q = p *> q
   | idp, idp => idp
 
-\func *>_inv-comm {A : \Type} {a a' a'' : A} (p : a = a') (q : a' = a'') : inv (p *> q) = inv q *> inv p
+\func *>_inv-comm {A : \Cat} {a a' a'' : A} (p : a = a') (q : a' = a'') : inv (p *> q) = inv q *> inv p
   | idp, idp => idp
 
-\func pmap_inv-comm {A B : \Type} {a a' : A} (f : A -> B) (p : a = a') : pmap f (inv p) = inv (pmap f p) \elim p
+\func pmap_inv-comm {A B : \Cat} {a a' : A} (f : A -> B) (p : a = a') : pmap f (inv p) = inv (pmap f p) \elim p
   | idp => idp
 
-\func *>-assoc {A : \Type} {a1 a2 a3 a4 : A} (p : a1 = a2) (q : a2 = a3) (r : a3 = a4) : (p *> q) *> r = p *> (q *> r) \elim r
+\func *>-assoc {A : \Cat} {a1 a2 a3 a4 : A} (p : a1 = a2) (q : a2 = a3) (r : a3 = a4) : (p *> q) *> r = p *> (q *> r) \elim r
   | idp => idp
 
-\func \fix 2 qed {A : \Type} (a : A) : a = a => idp
+\func \fix 2 qed {A : \Cat} (a : A) : a = a => idp
 
-\func \infixr 1 >== {A : \Type} {a a' a'' : A} (p : a = a') (q : a' = a'') => p *> q
+\func \infixr 1 >== {A : \Cat} {a a' a'' : A} (p : a = a') (q : a' = a'') => p *> q
 
-\func \infix 2 ==< {A : \Type} (a : A) {a' : A} (p : a = a') => p
+\func \infix 2 ==< {A : \Cat} (a : A) {a' : A} (p : a = a') => p
 
-\func idpOver (A : I -> \Type) (a : A left) : Path A a (coe A a right) => path (coe A a)
+\func idpOver (A : I -> \Cat) (a : A left) : Path A a (coe A a right) => path (coe A a)
 
-\func pathOver {A : I -> \Type} {a : A left} {a' : A right} (p : coe A a right = a') : Path A a a'
+\func pathOver {A : I -> \Cat} {a : A left} {a' : A right} (p : coe A a right = a') : Path A a a'
   => *>.concat (idpOver A a) p
   \where {
     \protected \func conv (p : Path A a a') : coe A a right = a'
       => coe (\lam i => coe A a i = p i) idp right
   }
 
-\func coe_path {A : \Type} {a1 a2 a3 a4 : A} (p : a2 = a1) (q : a2 = a3) (r : a3 = a4)
+\func coe_path {A : \Cat} {a1 a2 a3 a4 : A} (p : a2 = a1) (q : a2 = a3) (r : a3 = a4)
   : coe (\lam i => p @ i = r @ i) q right = inv p *> q *> r
   => coe (\lam j => coe (\lam i => p @ i = r @ i) q j = inv (psqueeze p j) *> q *> psqueeze r j) (inv (idp_*> q)) right
   \where
-    \func alt {A : \Type} {a1 a2 a3 a4 : A} (p : a1 = a2) (q : a2 = a3) (r : a4 = a3)
+    \func alt {A : \Cat} {a1 a2 a3 a4 : A} (p : a1 = a2) (q : a2 = a3) (r : a4 = a3)
       : coe (\lam i => p @ i = r @ i) (p *> q *> inv r) right = q
       | idp, idp, idp => idp
 
-\func path-sym.{u} {A : \Type u} (a a' : A) : (a = a') = (a' = a) => path (iso inv inv inv_inv inv_inv)
+\func path-sym.{u} {A : \Cat u} (a a' : A) : (a = a') = (a' = a) => path (iso {a = a'} {a' = a} inv inv inv_inv inv_inv)
 
-\func rotatePathLeft {A : \Type} {a a' a'' : A} {p : a' = a} {q : a' = a''} {r : a = a''} (t : q = p *> r)
+\func rotatePathLeft {A : \Cat} {a a' a'' : A} {p : a' = a} {q : a' = a''} {r : a = a''} (t : q = p *> r)
   : inv p *> q = r \elim p, r, t
   | idp, idp, idp => idp
 
-\func homotopy-isNatural {A B : \Type} (f g : A -> B) (h : \Pi (a : A) -> f a = g a) {a a' : A} (p : a = a')
+\func homotopy-isNatural {A B : \Cat} (f g : A -> B) (h : \Pi (a : A) -> f a = g a) {a a' : A} (p : a = a')
   : pmap f p *> h a' = h a *> pmap g p \elim p
   | idp => idp_*> (h a)
 
-\func homotopy_app-comm {A : \Type} (f : A -> A) (h : \Pi (a : A) -> f a = a) (a : A) : h (f a) = pmap f (h a) =>
+\func homotopy_app-comm {A : \Cat} (f : A -> A) (h : \Pi (a : A) -> f a = a) (a : A) : h (f a) = pmap f (h a) =>
   h (f a)                             ==< pmap (h (f a) *>) (inv (*>_inv (h a))) >==
   h (f a) *> (h a *> inv (h a))       ==< inv (*>-assoc (h (f a)) (h a) (inv (h a))) >==
   (h (f a) *> h a) *> inv (h a)       ==< pmap (*> inv (h a)) (inv (homotopy-isNatural f (\lam a => a) h (h a))) >==
@@ -125,65 +125,65 @@
   pmap f (h a) *> (h a *> inv (h a))  ==< pmap (pmap f (h a) *>) (*>_inv (h a)) >==
   pmap f (h a)                        `qed
 
-\func pmapd {A : \Type} {B : A -> \Type} (f : \Pi (x : A) -> B x) {a a' : A} (p : a = a')
+\func pmapd {A : \Cat} {B : A -> \Cat} (f : \Pi (x : A) -> B x) {a a' : A} (p : a = a')
   : transport B p (f a) = f a' \elim p
   | idp => idp
 
-\func pmapd_pathOver {A : \Type} (B : A -> \Type) (f : \Pi (x : A) -> B x) {a a' : A} (p : a = a') (s : transport B p (f a) = f a')
+\func pmapd_pathOver {A : \Cat} (B : A -> \Cat) (f : \Pi (x : A) -> B x) {a a' : A} (p : a = a') (s : transport B p (f a) = f a')
                      (t : path (\lam i => f (p @ i)) = {Path (\lam i => B (p @ i)) (f a) (f a')} pathOver s) : pmapd f p = s \elim p
   | idp => t *> idp_*>.idp_concat s
 
-\func transport_*> {A : \Type} (B : A -> \Type) {a a' a'' : A} (p : a = a') (q : a' = a'') (x : B a)
+\func transport_*> {A : \Cat} (B : A -> \Type) {a a' a'' : A} (p : a = a') (q : a' = a'') (x : B a)
   : transport B (p *> q) x = transport B q (transport B p x) \elim q
   | idp => idp
 
-\func transport_pi {A : \Type} (B C : A -> \Type) {a a' : A} (p : a = a') (f : B a -> C a) (x : B a')
+\func transport_pi {A : \Cat} (B C : A -> \Type) {a a' : A} (p : a = a') (f : B a -> C a) (x : B a')
   : transport (\lam y => B y -> C y) p f x = transport C p (f (transport B (inv p) x)) \elim p
   | idp => idp
 
-\func transport_pi2 {A : \Type} (B C : A -> \Type) {a a' : A} (p : a = a') (f : B a -> C a) (g : B a' -> C a') (t : \Pi (x : B a) -> transport C p (f x) = g (transport B p x))
+\func transport_pi2 {A : \Cat} (B C : A -> \Type) {a a' : A} (p : a = a') (f : B a -> C a) (g : B a' -> C a') (t : \Pi (x : B a) -> transport C p (f x) = g (transport B p x))
   : transport (\lam y => B y -> C y) p f = g \elim p
   | idp => path (\lam i x => t x @ i)
 
-\func transport_depPi {A B : \Type} (C : A -> B -> \Type) {a a' : A} (p : a = a') (f : \Pi (b : B) -> C a b) (x : B)
+\func transport_depPi {A B : \Cat} (C : A -> B -> \Type) {a a' : A} (p : a = a') (f : \Pi (b : B) -> C a b) (x : B)
   : transport (\lam y => \Pi (b : B) -> C y b) p f x = transport (C __ x) p (f x) \elim p
   | idp => idp
 
-\func transport_path-right {A : \Type} {a0 a b : A} (p : a = b) (q : a0 = a)
+\func transport_path-right {A : \Cat} {a0 a b : A} (p : a = b) (q : a0 = a)
   : transport (a0 =) p q = q *> p
   | idp, idp => idp
 
-\func transport_path-left {A : \Type} {a0 a b : A} (p : a = b) (q : a = a0)
+\func transport_path-left {A : \Cat} {a0 a b : A} (p : a = b) (q : a = a0)
   : transport (= a0) p q = inv p *> q
   | idp, idp => idp
 
-\func transport_path_pmap {A B : \Type} (f g : A -> B) {a a' : A} (p : a = a') (q : f a = g a) (s : f a' = g a') (h : q *> pmap g p = pmap f p *> s) : transport (\lam x => f x = g x) p q = s \elim p
+\func transport_path_pmap {A B : \Cat} (f g : A -> B) {a a' : A} (p : a = a') (q : f a = g a) (s : f a' = g a') (h : q *> pmap g p = pmap f p *> s) : transport (\lam x => f x = g x) p q = s \elim p
   | idp => h *> idp_*> s
   \where {
-    \func conv {A B : \Type} (f g : A -> B) {a a' : A} (p : a = a') (q : f a = g a) (s : f a' = g a') (h : transport (\lam x => f x = g x) p q = s) : q *> pmap g p = pmap f p *> s \elim p
+    \func conv {A B : \Cat} (f g : A -> B) {a a' : A} (p : a = a') (q : f a = g a) (s : f a' = g a') (h : transport (\lam x => f x = g x) p q = s) : q *> pmap g p = pmap f p *> s \elim p
       | idp => h *> inv (idp_*> s)
   }
 
-\func transport_path_pmap-right {A B : \Type} (b : B) (g : A -> B) {a a' : A} (p : a = a') (q : b = g a) (s : b = g a') (h : q *> pmap g p = s) : transport (\lam x => b = g x) p q = s \elim p
+\func transport_path_pmap-right {A B : \Cat} (b : B) (g : A -> B) {a a' : A} (p : a = a') (q : b = g a) (s : b = g a') (h : q *> pmap g p = s) : transport (\lam x => b = g x) p q = s \elim p
   | idp => h
   \where {
-    \func conv {A B : \Type} (b : B) (g : A -> B) {a a' : A} (p : a = a') (q : b = g a) (s : b = g a') (h : transport (\lam x => b = g x) p q = s) : q *> pmap g p = s \elim p
+    \func conv {A B : \Cat} (b : B) (g : A -> B) {a a' : A} (p : a = a') (q : b = g a) (s : b = g a') (h : transport (\lam x => b = g x) p q = s) : q *> pmap g p = s \elim p
       | idp => h
   }
 
-\func transport_inv_id {A : \Type} (B : A -> \Type) {a b : A} (p : a = b) (x : B a)
+\func transport_inv_id {A : \Cat} (B : A -> \Type) {a b : A} (p : a = b) (x : B a)
   : transport B (inv p) (transport B p x) = x \elim p
   | idp => idp
 
-\func transport_id_inv {A : \Type} (B : A -> \Type) {a b : A} (p : a = b) (x : B b)
+\func transport_id_inv {A : \Cat} (B : A -> \Type) {a b : A} (p : a = b) (x : B b)
   : transport B p (transport B (inv p) x) = x \elim p
   | idp => idp
 
-\func transport-rotate {A : \Type} (B : A -> \Type) {a a' : A} (p : a = a') {x : B a} {y : B a'} (t : transport B p x = y)
+\func transport-rotate {A : \Cat} (B : A -> \Type) {a a' : A} (p : a = a') {x : B a} {y : B a'} (t : transport B p x = y)
   : x = transport B (inv p) y \elim p
   | idp => t
 
-\func transport_inv_func {A : \Type} (B : A -> \Type) {a a' : A} (p : a = a') (g : B a' -> B a) (gf : \Pi (x : B a) -> g (transport B p x) = x) (b : B a')
+\func transport_inv_func {A : \Cat} (B : A -> \Type) {a a' : A} (p : a = a') (g : B a' -> B a) (gf : \Pi (x : B a) -> g (transport B p x) = x) (b : B a')
   : transport B (inv p) b = g b \elim p
   | idp => inv (gf b)
 
