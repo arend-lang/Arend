@@ -12,6 +12,7 @@ import org.arend.core.sort.Sort;
 import org.arend.core.sort.SortExpression;
 import org.arend.core.subst.ExprSubstitution;
 import org.arend.core.subst.Levels;
+import org.arend.ext.core.context.BindingVariance;
 import org.arend.ext.core.level.ConstLevel;
 import org.arend.ext.core.level.LevelSubstitution;
 import org.arend.ext.core.ops.NormalizationMode;
@@ -165,7 +166,7 @@ public class GetTypeVisitor implements ExpressionVisitor<Void, Expression> {
       if (sort == null) {
         return new ErrorExpression();
       }
-      sorts.add(sort);
+      sorts.add(param.getVariance() == BindingVariance.INVARIANT ? sort.withoutCat() : sort);
     }
     return new UniverseExpression(SortExpression.makeMax(sorts));
   }

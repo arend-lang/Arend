@@ -235,11 +235,17 @@ public sealed interface SortExpression extends CoreSortExpression permits SortEx
   final class InfVar implements SortExpression {
     private final InferenceVariable variable;
     private final boolean isSelfVar;
+    private final boolean noCat;
     private SortExpression sort;
 
-    public InfVar(InferenceVariable variable, boolean isSelfVar) {
+    private InfVar(InferenceVariable variable, boolean isSelfVar, boolean noCat) {
       this.variable = variable;
       this.isSelfVar = isSelfVar;
+      this.noCat = noCat;
+    }
+
+    public InfVar(InferenceVariable variable, boolean isSelfVar) {
+      this(variable, isSelfVar, false);
     }
 
     public InfVar(InferenceVariable variable) {
@@ -271,7 +277,11 @@ public sealed interface SortExpression extends CoreSortExpression permits SortEx
               }
             }
           }
-          if (sort == null) {
+          if (sort != null) {
+            if (noCat) {
+              sort = sort.withoutCat();
+            }
+          } else {
             sort = this;
           }
         }
@@ -291,13 +301,14 @@ public sealed interface SortExpression extends CoreSortExpression permits SortEx
     @Override
     public @NotNull Sort withInfLevel() {
       checkIfSolved();
-      return sort == null || sort == this ? new Sort(Level.INFINITY, variable.getHLevel()) : sort.withInfLevel();
+      return sort == null || sort == this ? new Sort(Level.INFINITY, noCat ? new ConstLevel(variable.getHLevel().value(), false) : variable.getHLevel()) : sort.withInfLevel();
     }
 
     @Override
     public @NotNull SortExpression withoutCat() {
+      if (noCat) return this;
       checkIfSolved();
-      return sort == null || sort == this ? new Const(new Sort(Level.INFINITY, new ConstLevel(variable.getHLevel().value(), false))) : sort.withoutCat();
+      return sort == null || sort == this ? new InfVar(variable, isSelfVar, true) : sort.withoutCat();
     }
 
     @Override

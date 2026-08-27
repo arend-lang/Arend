@@ -2835,9 +2835,9 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
     }
 
     TypeExpression result;
-    if (!isLast && variance == BindingVariance.INVARIANT) {
-      try (var ignored = clearCategoricalContext()) {
-        result = checkType(arg.getType(), expectedType == null ? UniverseExpression.OMEGA : expectedType);
+    if (variance == BindingVariance.INVARIANT) {
+      try (var ignored = isLast ? null : clearCategoricalContext()) {
+        result = checkType(arg.getType(), UniverseExpression.INF_OMEGA);
       }
     } else {
       result = checkType(arg.getType(), expectedType == null ? UniverseExpression.OMEGA : expectedType);
@@ -2865,7 +2865,7 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
     }
 
     if (resultSorts != null) {
-      resultSorts.add(sort);
+      resultSorts.add(variance == BindingVariance.INVARIANT ? sort.withoutCat() : sort);
     }
     return true;
   }

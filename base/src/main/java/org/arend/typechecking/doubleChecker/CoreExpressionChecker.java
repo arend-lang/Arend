@@ -345,14 +345,19 @@ public class CoreExpressionChecker implements ExpressionVisitor<Expression, Expr
       if (link instanceof TypedDependentLink) {
         Expression paramType;
         boolean isLast = isSigma && !link.getNext().hasNext();
-        if (isLast || isSigma && link.getVariance() != BindingVariance.INVARIANT || allowCatDomain) {
-          paramType = link.getType().accept(this, type);
+        boolean invariant = isSigma && link.getVariance() == BindingVariance.INVARIANT;
+        Expression checkAgainst = invariant ? UniverseExpression.INF_OMEGA : type;
+        if (isLast || isSigma && !invariant || allowCatDomain) {
+          paramType = link.getType().accept(this, checkAgainst);
         } else {
           try (var ignored = clearCategoricalContext()) {
-            paramType = link.getType().accept(this, type);
+            paramType = link.getType().accept(this, checkAgainst);
           }
         }
         SortExpression sort = toSort(paramType);
+        if (invariant) {
+          sort = sort.withoutCat();
+        }
         result.add(sort);
         if (link.isProperty()) {
           if (!sort.isProp()) {
