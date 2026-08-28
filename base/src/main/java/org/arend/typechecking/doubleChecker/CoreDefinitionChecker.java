@@ -290,7 +290,7 @@ public class CoreDefinitionChecker extends BaseDefinitionTypechecker {
     }
 
     if (parametersLevel.level == null || parametersLevel.level.compareTo(defLevel) > 0) {
-      errorReporter.report(new TypecheckingError("The h-level " + defLevel + " of '" + definition.getName() + "' does not fit into the h-level " + new ConstLevel(parametersLevel.level, false) + " of \\use \\level " + squasher.getName(), null));
+      errorReporter.report(new TypecheckingError("The h-level " + defLevel + " of '" + definition.getName() + "' does not fit into the h-level " + new ConstLevel(parametersLevel.level) + " of \\use \\level " + squasher.getName(), null));
       return false;
     }
 
@@ -413,7 +413,7 @@ public class CoreDefinitionChecker extends BaseDefinitionTypechecker {
           propertyOK = true;
         }
         if (!Objects.equals(field.getResultTypeLevel(), level)) {
-          errorReporter.report(CoreErrorWrapper.make(new TypecheckingError("The level (" + new ConstLevel(field.getResultTypeLevel(), false) + ") of the type of the field does not match the level (" + level + ") inferred from the proof", null), fieldType));
+          errorReporter.report(CoreErrorWrapper.make(new TypecheckingError("The level (" + new ConstLevel(field.getResultTypeLevel()) + ") of the type of the field does not match the level (" + level + ") inferred from the proof", null), fieldType));
         }
       }
 

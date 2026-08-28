@@ -18,7 +18,7 @@ public class Sort implements CoreSort {
   private final ConstLevel myHLevel;
 
   public static final Sort PROP = new Sort(new Level(BigInteger.ZERO), ConstLevel.PROP);
-  public static final Sort SET0 = new Sort(new Level(BigInteger.ZERO), new ConstLevel(BigInteger.ZERO, false));
+  public static final Sort SET0 = new Sort(new Level(BigInteger.ZERO), new ConstLevel(BigInteger.ZERO));
   public static final Sort INFINITY = new Sort(Level.INFINITY, ConstLevel.CAT_INFINITY);
 
   public static Sort SetOfLevel(int pLevel) {
@@ -35,7 +35,7 @@ public class Sort implements CoreSort {
   }
 
   public Sort(int pLevel, int hLevel) {
-    this(new Level(BigInteger.valueOf(pLevel)), new ConstLevel(BigInteger.valueOf(hLevel), false));
+    this(new Level(BigInteger.valueOf(pLevel)), new ConstLevel(BigInteger.valueOf(hLevel)));
     assert pLevel >= 0;
     assert hLevel >= 0;
   }

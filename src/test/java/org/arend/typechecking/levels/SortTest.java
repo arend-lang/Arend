@@ -326,7 +326,7 @@ public class SortTest extends TypeCheckingTestCase {
       \\data D (r : R) | con1 r.A | con2 r.A
       \\func test => D (\\new R \\Set0 \\3-Type7 Nat Nat)
       """);
-    assertEquals(new Sort(new Level(BigInteger.ONE), new ConstLevel(BigInteger.ONE, false)), ((FunctionDefinition) getDefinition("test")).getResultType().toSort());
+    assertEquals(new Sort(new Level(BigInteger.ONE), new ConstLevel(BigInteger.ONE)), ((FunctionDefinition) getDefinition("test")).getResultType().toSort());
   }
 
   @Test
@@ -346,7 +346,7 @@ public class SortTest extends TypeCheckingTestCase {
       \\data D (r : R) | con1 r.A | con2 r.B
       \\func test => D (\\new R \\3-Type7 \\7-Type3 Nat Nat)
       """);
-    assertEquals(new Sort(new Level(BigInteger.valueOf(8)), new ConstLevel(BigInteger.valueOf(8), false)), ((FunctionDefinition) getDefinition("test")).getResultType().toSort());
+    assertEquals(new Sort(new Level(BigInteger.valueOf(8)), new ConstLevel(BigInteger.valueOf(8))), ((FunctionDefinition) getDefinition("test")).getResultType().toSort());
   }
 
   @Test
@@ -357,7 +357,7 @@ public class SortTest extends TypeCheckingTestCase {
       \\data D (s : S) | con1 s.r.B | con2 s.C
       \\func test => D (\\new S \\3-Type7 (\\new R \\100-Type100 \\7-Type3 Nat Nat))
       """);
-    assertEquals(new Sort(new Level(BigInteger.valueOf(8)), new ConstLevel(BigInteger.valueOf(8), false)), ((FunctionDefinition) getDefinition("test")).getResultType().toSort());
+    assertEquals(new Sort(new Level(BigInteger.valueOf(8)), new ConstLevel(BigInteger.valueOf(8))), ((FunctionDefinition) getDefinition("test")).getResultType().toSort());
   }
 
   @Test

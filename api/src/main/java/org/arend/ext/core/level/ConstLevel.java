@@ -5,10 +5,10 @@ import org.jetbrains.annotations.NotNull;
 
 import java.math.BigInteger;
 
-public record ConstLevel(BigInteger value, boolean isCat) {
-  public final static ConstLevel CAT_INFINITY = new ConstLevel(null, true);
-  public final static ConstLevel INFINITY = new ConstLevel(null, false);
-  public final static ConstLevel PROP = new ConstLevel(BigInteger.valueOf(-1), false);
+public record ConstLevel(BigInteger value) {
+  public final static ConstLevel CAT_INFINITY = new ConstLevel(null);
+  public final static ConstLevel INFINITY = new ConstLevel(null);
+  public final static ConstLevel PROP = new ConstLevel(BigInteger.valueOf(-1));
 
   public boolean isProp() {
     return value != null && value.equals(PROP.value);
@@ -18,23 +18,27 @@ public record ConstLevel(BigInteger value, boolean isCat) {
     return value == null;
   }
 
+  public boolean isCat() {
+    return this == CAT_INFINITY;
+  }
+
   public boolean isLessOrEquals(ConstLevel level) {
     if (level.value == null) {
-      return value != null || level.isCat || !isCat;
+      return value != null || level.isCat() || !isCat();
     } else {
       if (value == null) return false;
       int cmp = value.compareTo(level.value);
-      return cmp < 0 || cmp == 0 && (level.isCat || !isCat);
+      return cmp < 0 || cmp == 0 && (level.isCat() || !isCat());
     }
   }
 
   public boolean isLess(ConstLevel level) {
     if (value == null) {
-      return level.value == null && !isCat && level.isCat;
+      return level.value == null && !isCat() && level.isCat();
     } else {
       if (level.value == null) return true;
       int cmp = value.compareTo(level.value);
-      return cmp < 0 || cmp == 0 && !isCat && level.isCat;
+      return cmp < 0 || cmp == 0 && !isCat() && level.isCat();
     }
   }
 
@@ -43,19 +47,19 @@ public record ConstLevel(BigInteger value, boolean isCat) {
   }
 
   public ConstLevel max(ConstLevel level) {
-    return new ConstLevel(value == null || level.value == null ? null : value.max(level.value), isCat || level.isCat);
+    return isCat() || level.isCat() ? CAT_INFINITY : new ConstLevel(value == null || level.value == null ? null : value.max(level.value));
   }
 
   public ConstLevel add(BigInteger val) {
-    return value == null ? this : new ConstLevel(value.add(val), isCat);
+    return value == null ? this : new ConstLevel(value.add(val));
   }
 
   public ConstLevel succ() {
-    return value == null ? CAT_INFINITY : new ConstLevel(value.add(BigInteger.ONE), false);
+    return value == null ? CAT_INFINITY : new ConstLevel(value.add(BigInteger.ONE));
   }
 
   @Override
   public @NotNull String toString() {
-    return value == null ? (isCat ? "Cat∞" : "∞") : value.toString();
+    return value == null ? (isCat() ? "Cat∞" : "∞") : value.toString();
   }
 }

@@ -225,7 +225,7 @@ public class NormalizationTest extends TypeCheckingTestCase {
     Concrete.LetClause xClause = clet(x, cargs(cTele(cvars(y), cNat())), cUniverseInf(2), cUniverse(0, BigInteger.ONE));
     incModification();
     TypecheckingResult result = typeCheckExpr(cLet(clets(xClause), cApps(cVar(x), cZero())), null);
-    assertEquals(Universe(new Level(BigInteger.ZERO), new ConstLevel(BigInteger.ONE, false)), result.expression.normalize(NormalizationMode.NF));
+    assertEquals(Universe(new Level(BigInteger.ZERO), new ConstLevel(BigInteger.ONE)), result.expression.normalize(NormalizationMode.NF));
   }
 
   @Test
