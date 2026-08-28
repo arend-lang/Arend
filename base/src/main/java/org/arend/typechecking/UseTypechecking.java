@@ -40,7 +40,20 @@ public class UseTypechecking {
         Definition useParent = definition.getUseParent().getTypechecked();
         ParametersLevel parametersLevel = typecheckLevel(definition, useDefinition, useParent, localErrorReporter);
         if (parametersLevel != null) {
-          registerParametersLevel(useDefinition, useParent, parametersLevel);
+          boolean ok = true;
+          if (useParent instanceof DataDefinition dataDef) {
+            if (!dataDef.isInvariantContext()) {
+              localErrorReporter.report(new CertainTypecheckingError(CertainTypecheckingError.Kind.USE_LEVEL_COVARIANT_CONTEXT, definition));
+              ok = false;
+            }
+            if (dataDef.getSortExpression() instanceof SortExpression.Const(Sort sort) && sort.getHLevel().isCat()) {
+              localErrorReporter.report(new CertainTypecheckingError(CertainTypecheckingError.Kind.USE_LEVEL_CAT_SORT, definition));
+              ok = false;
+            }
+          }
+          if (ok) {
+            registerParametersLevel(useDefinition, useParent, parametersLevel);
+          }
         }
       } else if (definition.getKind() == FunctionKind.COERCE) {
         typecheckCoerce(definition, useDefinition, localErrorReporter, fromMap, toMap);

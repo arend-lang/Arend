@@ -9,6 +9,7 @@ import org.arend.core.expr.Expression;
 import org.arend.core.sort.Level;
 import org.arend.core.subst.Levels;
 import org.arend.core.subst.ListLevels;
+import org.arend.ext.core.context.BindingVariance;
 import org.arend.ext.core.definition.CoreDefinition;
 import org.arend.ext.util.Pair;
 import org.arend.extImpl.userData.UserDataHolderImpl;
@@ -129,6 +130,16 @@ public abstract class Definition extends UserDataHolderImpl implements CoreDefin
 
   public boolean isStrict(int parameter) {
     return false;
+  }
+
+  public boolean isInvariantContext() {
+    for (DependentLink param = getParameters(); param.hasNext(); param = param.getNext()) {
+      param = param.getNextTyped(null);
+      if (param.getVariance() != BindingVariance.INVARIANT) {
+        return false;
+      }
+    }
+    return true;
   }
 
   public boolean hasEnclosingClass() {

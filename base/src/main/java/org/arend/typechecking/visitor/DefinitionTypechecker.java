@@ -1741,6 +1741,16 @@ public class DefinitionTypechecker extends BaseDefinitionTypechecker implements 
 
     errorReporter = originalErrorReporter;
 
+    boolean isCovariantContext = !dataDefinition.isInvariantContext();
+    if (isCovariantContext) {
+      for (Constructor constructor : dataDefinition.getConstructors()) {
+        if (constructor.getBody() != null) {
+          originalErrorReporter.report(new CertainTypecheckingError(CertainTypecheckingError.Kind.CONDITIONS_COVARIANT_CONTEXT, def));
+          break;
+        }
+      }
+    }
+
     // Find covariant parameters
     if (dataDefinition.getParameters().hasNext()) {
       int index = 0;
@@ -1766,9 +1776,17 @@ public class DefinitionTypechecker extends BaseDefinitionTypechecker implements 
 
     // Check truncatedness
     if (def.isTruncated()) {
+      boolean catSort = inferredSort instanceof SortExpression.Const(Sort sort) && sort.getHLevel().isCat();
+      if (catSort) {
+        originalErrorReporter.report(new CertainTypecheckingError(CertainTypecheckingError.Kind.TRUNCATED_CAT_SORT, def.getUniverse() == null ? def : def.getUniverse()));
+      }
+      if (isCovariantContext) {
+        originalErrorReporter.report(new CertainTypecheckingError(CertainTypecheckingError.Kind.TRUNCATED_COVARIANT_CONTEXT, def.getUniverse()));
+      }
+
       if (userSort == null) {
         originalErrorReporter.report(new CertainTypecheckingError(CertainTypecheckingError.Kind.TRUNCATED_WITHOUT_UNIVERSE, def));
-      } else {
+      } else if (!isCovariantContext && !catSort) {
         if (inferredSort instanceof SortExpression.Const(Sort sort) && sort.isLessOrEquals(userSort)) {
           originalErrorReporter.report(new CertainTypecheckingError(CertainTypecheckingError.Kind.DATA_WONT_BE_TRUNCATED, def.getUniverse() == null ? def : def.getUniverse()));
         } else {
