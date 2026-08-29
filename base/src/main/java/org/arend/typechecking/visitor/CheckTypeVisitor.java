@@ -4181,12 +4181,15 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
       for (int i = 0; i < caseArgs.size(); i++) {
         Concrete.CaseArgument caseArg = caseArgs.get(i);
         TypecheckingResult argType = null;
-        if (caseArg.type != null) {
-          argType = checkExpr(caseArg.type, UniverseExpression.OMEGA);
+        Expression argTypeExpr;
+        TypecheckingResult exprResult;
+        try (var ignoredCatContext = clearCategoricalContext()) {
+          if (caseArg.type != null) {
+            argType = checkExpr(caseArg.type, UniverseExpression.OMEGA);
+          }
+          argTypeExpr = argType == null ? null : argType.expression.subst(substitution);
+          exprResult = checkExpr(caseArg.expression, argTypeExpr);
         }
-
-        Expression argTypeExpr = argType == null ? null : argType.expression.subst(substitution);
-        TypecheckingResult exprResult = checkExpr(caseArg.expression, argTypeExpr);
         if (exprResult == null) return null;
         if (caseArg.isElim && !(exprResult.expression instanceof ReferenceExpression)) {
           errorReporter.report(new TypecheckingError("Expected a variable", caseArg.expression));

@@ -262,4 +262,25 @@ public class CatPreludeTest extends TypeCheckingTestCase {
   public void dPathCovariantTest3() {
     typeCheckDef("\\func test (x :+ Nat) : \\Type => x ~> x");
   }
+
+  @Test
+  public void caseOnCovariantIntervalForbidden() {
+    typeCheckModule("""
+      \\func f (i :+ I) : Nat => \\case i \\with { left => 0 | right => 1 }
+      """, 1);
+  }
+
+  @Test
+  public void caseOnInvariantDIForbidden() {
+    typeCheckModule("""
+      \\func f (i : DI) : Nat => \\case i \\with { dleft => 0 | dright => 1 }
+      """);
+  }
+
+  @Test
+  public void caseOnCovariantDIForbidden() {
+    typeCheckModule("""
+      \\func f (i :+ DI) : Nat => \\case i \\with { dleft => 0 | dright => 1 }
+      """, 1);
+  }
 }

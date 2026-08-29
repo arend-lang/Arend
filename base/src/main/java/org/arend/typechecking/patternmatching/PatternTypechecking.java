@@ -6,6 +6,7 @@ import org.arend.core.context.binding.Binding;
 import org.arend.core.context.binding.TypedEvaluatingBinding;
 import org.arend.core.context.binding.inference.FunctionInferenceVariable;
 import org.arend.core.context.param.DependentLink;
+import org.arend.core.context.param.TypedDependentLink;
 import org.arend.core.context.param.TypedSingleDependentLink;
 import org.arend.core.context.param.UntypedDependentLink;
 import org.arend.core.definition.*;
@@ -485,6 +486,19 @@ public class PatternTypechecking {
     return type;
   }
 
+  private static DependentLink forceInvariant(DependentLink params, BindingVariance matchedVariance) {
+    if (matchedVariance != BindingVariance.INVARIANT) {
+      return params;
+    }
+    DependentLink copy = DependentLink.Helper.copy(params);
+    for (DependentLink link = copy; link.hasNext(); link = link.getNext()) {
+      if (link instanceof TypedDependentLink tdl) {
+        tdl.setVariance(BindingVariance.INVARIANT);
+      }
+    }
+    return copy;
+  }
+
   private Result doTypechecking(List<Concrete.Pattern> patterns, DependentLink parameters, ExprSubstitution paramsSubst, ExprSubstitution totalSubst, ConcreteSourceNode sourceNode, boolean withElim, int addIntervalVars) {
     List<ExpressionPattern> result = new ArrayList<>();
     List<Expression> exprs = new ArrayList<>();
@@ -587,7 +601,7 @@ public class PatternTypechecking {
         SigmaExpression sigmaExpr = unfoldedExpr.cast(SigmaExpression.class);
         ClassCallExpression classCall = sigmaExpr == null ? unfoldedExpr.cast(ClassCallExpression.class) : null;
         if (sigmaExpr != null || classCall != null) {
-          DependentLink newParameters = sigmaExpr != null ? DependentLink.Helper.copy(sigmaExpr.getParameters()) : classCall.getClassFieldParameters();
+          DependentLink newParameters = forceInvariant(sigmaExpr != null ? DependentLink.Helper.copy(sigmaExpr.getParameters()) : classCall.getClassFieldParameters(), parameters.getVariance());
           Result conResult = doTypechecking(patternArgs, newParameters, paramsSubst, totalSubst, pattern, false, 0);
           if (conResult == null) {
             return null;
@@ -833,7 +847,7 @@ public class PatternTypechecking {
           }
           substitution.subst(levelSolution);
 
-          Result conResult = doTypechecking(conPattern.getPatterns(), DependentLink.Helper.subst(link, substitution, levelSolution), paramsSubst, totalSubst, conPattern, false, 0);
+          Result conResult = doTypechecking(conPattern.getPatterns(), forceInvariant(DependentLink.Helper.subst(link, substitution, levelSolution), parameters.getVariance()), paramsSubst, totalSubst, conPattern, false, 0);
           if (conResult == null) {
             return null;
           }
@@ -963,6 +977,7 @@ public class PatternTypechecking {
       } else {
         newParameters = ((DConstructor) constructor).getArrayParameters(classCall);
       }
+      newParameters = forceInvariant(newParameters, parameters.getVariance());
 
       Expression length = classCall == null ? null : classCall.getAbsImplementationHere(Prelude.ARRAY_LENGTH);
       if (length != null) length = length.normalize(NormalizationMode.WHNF);

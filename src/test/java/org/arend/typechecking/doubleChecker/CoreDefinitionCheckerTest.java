@@ -76,4 +76,14 @@ public class CoreDefinitionCheckerTest extends TypeCheckingTestCase {
     assertFalse("A case pair whose directed flag disagrees with its parameter's actual type must be rejected", ok);
     assertFalse(errors.isEmpty());
   }
+
+  @Test
+  public void caseOnCovariantParameterRejected() {
+    typeCheckModule("""
+      \\func f (x :+ Nat) : Nat => \\case x \\with {
+        | 0 => 0
+        | suc n => 1
+      }
+      """, 1);
+  }
 }

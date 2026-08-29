@@ -46,7 +46,7 @@ public class UseTypechecking {
               localErrorReporter.report(new CertainTypecheckingError(CertainTypecheckingError.Kind.USE_LEVEL_COVARIANT_CONTEXT, definition));
               ok = false;
             }
-            if (dataDef.getSortExpression() instanceof SortExpression.Const(Sort sort) && sort.getHLevel().isCat()) {
+            if (dataDef.getSortExpression().withInfLevel().getHLevel().isCat()) {
               localErrorReporter.report(new CertainTypecheckingError(CertainTypecheckingError.Kind.USE_LEVEL_CAT_SORT, definition));
               ok = false;
             }
