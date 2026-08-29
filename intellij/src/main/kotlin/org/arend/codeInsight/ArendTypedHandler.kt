@@ -147,4 +147,4 @@ class ArendTypedHandler : TypedHandlerDelegate() {
 
 private val BRACKETS = listOf("(", "{", ")", "}")
 
-private val PLUS_TOKEN_TYPES = setOf(COLON_PLUS, ARROW_PLUS, FAT_ARROW_PLUS)
+private val PLUS_TOKEN_TYPES = setOf(COLON_PLUS, ARROW_PLUS, FAT_ARROW_PLUS, LEVEL_PLUS_KW)

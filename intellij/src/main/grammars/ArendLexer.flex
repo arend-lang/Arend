@@ -169,6 +169,8 @@ OCT_DIGIT           = [0-8]
     "\\protected"           { return PROTECTED_KW; }
     "\\suc"                 { return SUC_KW; }
     "\\level"               { return LEVEL_KW; }
+    "\\level+"              { return LEVEL_PLUS_KW; }
+    "\\level⁺"              { return LEVEL_PLUS_KW; }
     "\\max"                 { return MAX_KW; }
 
     {STRING}                { return STRING; }

@@ -91,6 +91,7 @@
         PROTECTED_KW        = '\protected'
         SUC_KW              = '\suc'
         LEVEL_KW            = '\level'
+        LEVEL_PLUS_KW       = '\level+'
         MAX_KW              = '\max'
         INVALID_KW          = '\invalid'
 
@@ -258,12 +259,12 @@ functionKw ::= FUNC_KW | SFUNC_KW | LEMMA_KW | TYPE_KW | AXIOM_KW | COERCE_KW | 
 
 private functionType ::= COLON returnExprWOB { pin = 1 }
 
-returnExprWOB ::= exprWOB [LEVEL_KW exprWOB] | LEVEL_KW atomFieldsAcc atomFieldsAcc {
+returnExprWOB ::= exprWOB [(LEVEL_KW | LEVEL_PLUS_KW) exprWOB] | (LEVEL_KW | LEVEL_PLUS_KW) atomFieldsAcc atomFieldsAcc {
     pin(".*") = 1
     elementType = returnExpr
 }
 
-returnExpr ::= expr [LEVEL_KW expr] | LEVEL_KW atomFieldsAcc atomFieldsAcc { pin(".*") = 1 }
+returnExpr ::= expr [(LEVEL_KW | LEVEL_PLUS_KW) expr] | (LEVEL_KW | LEVEL_PLUS_KW) atomFieldsAcc atomFieldsAcc { pin(".*") = 1 }
 
 private defIdentifier_func ::= defIdentifier {
     recoverWhile = defIdentifier_func_recover
@@ -455,7 +456,7 @@ exprWOB ::= <<exprWOBImpl>> {
     name = expr
 }
 
-private expr_recover ::= !(LBRACE | RBRACE | RPAREN | IN_KW | ARROW | ARROW_PLUS | COMMA | PIPE | COWITH_KW | WITH_KW | ELIM_KW | FAT_ARROW | FAT_ARROW_PLUS | AS_KW | RETURN_KW | COLON | LEVEL_KW) & statement_recover
+private expr_recover ::= !(LBRACE | RBRACE | RPAREN | IN_KW | ARROW | ARROW_PLUS | COMMA | PIPE | COWITH_KW | WITH_KW | ELIM_KW | FAT_ARROW | FAT_ARROW_PLUS | AS_KW | RETURN_KW | COLON | LEVEL_KW | LEVEL_PLUS_KW) & statement_recover
 
 arrExpr ::= expr (ARROW | ARROW_PLUS) expr {
     pin = 2
@@ -820,7 +821,7 @@ private typedTeleExplicit ::= LPAREN paramAttr? typedExpr RPAREN { pin = 1 }
 
 private typedTeleImplicit ::= LBRACE paramAttr? typedExpr RBRACE { pin = 1 }
 
-private typeTele_recover ::= !(LPAREN | LBRACE | ID | ALIAS_KW | COLON | COLON_PLUS | WITH_KW | ELIM_KW | FAT_ARROW | RPAREN | RBRACE | PIPE | ARROW | ARROW_PLUS | COMMA | IN_KW | SET | UNIVERSE | TRUNCATED_UNIVERSE | CAT_UNIVERSE | PROP_KW | SET_KW | UNDERSCORE | APPLY_HOLE | TGOAL | LGOAL | LEVEL_KW | RETURN_KW) & statement_recover
+private typeTele_recover ::= !(LPAREN | LBRACE | ID | ALIAS_KW | COLON | COLON_PLUS | WITH_KW | ELIM_KW | FAT_ARROW | RPAREN | RBRACE | PIPE | ARROW | ARROW_PLUS | COMMA | IN_KW | SET | UNIVERSE | TRUNCATED_UNIVERSE | CAT_UNIVERSE | PROP_KW | SET_KW | UNDERSCORE | APPLY_HOLE | TGOAL | LGOAL | LEVEL_KW | LEVEL_PLUS_KW | RETURN_KW) & statement_recover
 
 typedExpr ::= typedExprNamed | expr
 

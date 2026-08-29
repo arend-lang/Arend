@@ -18,4 +18,6 @@ class ArendOverriddenField(node: ASTNode) : ArendSourceNodeImpl(node), Abstract.
     override fun getResultType(): ArendExpr? = returnExpr?.type
 
     override fun getResultTypeLevel(): ArendExpr? = returnExpr?.typeLevel
+
+    override fun isResultTypeLevelPlus() = returnExpr?.isLevelPlus == true
 }

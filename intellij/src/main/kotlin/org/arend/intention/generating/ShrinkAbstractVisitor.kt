@@ -72,7 +72,7 @@ class ShrinkAbstractVisitor(val textRange: TextRange) : AbstractExpressionVisito
         }
     }
 
-    override fun visitCase(data: Any?, isSFunc: Boolean, evalKind: Abstract.EvalKind?, arguments: MutableCollection<out Abstract.CaseArgument>, resultType: Abstract.Expression?, resultTypeLevel: Abstract.Expression?, clauses: MutableCollection<out Abstract.FunctionClause>, params: Unit?): String {
+    override fun visitCase(data: Any?, isSFunc: Boolean, evalKind: Abstract.EvalKind?, arguments: MutableCollection<out Abstract.CaseArgument>, resultType: Abstract.Expression?, resultTypeLevel: Abstract.Expression?, resultTypeLevelPlus: Boolean, clauses: MutableCollection<out Abstract.FunctionClause>, params: Unit?): String {
         return """\case ${arguments.joinToString(", ") { DOTS }} \with { $DOTS }"""
     }
 

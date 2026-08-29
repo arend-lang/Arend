@@ -1387,6 +1387,7 @@ public final class Concrete {
     private final List<CaseArgument> myArguments;
     private Expression myResultType;
     private Expression myResultTypeLevel;
+    private boolean myGroupoidalLevelProof;
     private final List<FunctionClause> myClauses;
     public BigInteger level = null; // the level of the result type
 
@@ -1432,6 +1433,14 @@ public final class Concrete {
 
     public void setResultTypeLevel(Expression resultTypeLevel) {
       myResultTypeLevel = resultTypeLevel;
+    }
+
+    public boolean isGroupoidalLevelProof() {
+      return myGroupoidalLevelProof;
+    }
+
+    public void setGroupoidalLevelProof(boolean groupoidalLevelProof) {
+      myGroupoidalLevelProof = groupoidalLevelProof;
     }
 
     @Override
@@ -2153,6 +2162,7 @@ public final class Concrete {
       result.setUseParent(getUseParent());
       result.setUsedDefinitions(getUsedDefinitions());
       result.setNumberOfExternalParameters(myNumberOfExternalParameters);
+      result.setGroupoidalLevelProof(isGroupoidalLevelProof());
       return result;
     }
   }
@@ -2163,6 +2173,8 @@ public final class Concrete {
     void setResultType(Expression resultType);
     @Nullable Expression getResultTypeLevel();
     void setResultTypeLevel(Expression resultTypeLevel);
+    boolean isGroupoidalLevelProof();
+    void setGroupoidalLevelProof(boolean groupoidalLevelProof);
   }
 
   public static abstract class ReferableDefinitionBase implements GeneralDefinition {
@@ -2191,6 +2203,7 @@ public final class Concrete {
     private final List<TypeParameter> myParameters;
     private Expression myResultType;
     private Expression myResultTypeLevel;
+    private boolean myGroupoidalLevelProof;
     private final boolean myCoerce;
     private final BindingVariance myVariance;
 
@@ -2256,6 +2269,16 @@ public final class Concrete {
       myResultTypeLevel = resultTypeLevel;
     }
 
+    @Override
+    public boolean isGroupoidalLevelProof() {
+      return myGroupoidalLevelProof;
+    }
+
+    @Override
+    public void setGroupoidalLevelProof(boolean groupoidalLevelProof) {
+      myGroupoidalLevelProof = groupoidalLevelProof;
+    }
+
     public boolean isCoerce() {
       return myCoerce;
     }
@@ -2285,6 +2308,7 @@ public final class Concrete {
     private final List<TypeParameter> myParameters;
     private Expression myResultType;
     private Expression myResultTypeLevel;
+    private boolean myGroupoidalLevelProof;
 
     public OverriddenField(Object data, Referable overriddenField, List<TypeParameter> parameters, Expression resultType, Expression resultTypeLevel) {
       super(data);
@@ -2329,6 +2353,16 @@ public final class Concrete {
     @Override
     public void setResultTypeLevel(Expression resultTypeLevel) {
       myResultTypeLevel = resultTypeLevel;
+    }
+
+    @Override
+    public boolean isGroupoidalLevelProof() {
+      return myGroupoidalLevelProof;
+    }
+
+    @Override
+    public void setGroupoidalLevelProof(boolean groupoidalLevelProof) {
+      myGroupoidalLevelProof = groupoidalLevelProof;
     }
 
     @Override
@@ -2436,6 +2470,7 @@ public final class Concrete {
     private final List<Parameter> myParameters;
     private Expression myResultType;
     private Expression myResultTypeLevel;
+    private boolean myGroupoidalLevelProof;
     private final FunctionBody myBody;
 
     public BaseFunctionDefinition(TCDefReferable referable, LevelParameters pParams, List<Parameter> parameters, Expression resultType, Expression resultTypeLevel, FunctionBody body) {
@@ -2477,6 +2512,14 @@ public final class Concrete {
 
     public void setResultTypeLevel(Expression resultTypeLevel) {
       myResultTypeLevel = resultTypeLevel;
+    }
+
+    public boolean isGroupoidalLevelProof() {
+      return myGroupoidalLevelProof;
+    }
+
+    public void setGroupoidalLevelProof(boolean groupoidalLevelProof) {
+      myGroupoidalLevelProof = groupoidalLevelProof;
     }
 
     @NotNull
@@ -2521,6 +2564,7 @@ public final class Concrete {
       result.enclosingClass = enclosingClass;
       result.setUseParent(getUseParent());
       result.setUsedDefinitions(getUsedDefinitions());
+      result.setGroupoidalLevelProof(isGroupoidalLevelProof());
       return result;
     }
   }

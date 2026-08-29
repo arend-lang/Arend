@@ -36,6 +36,8 @@ public class BuildVisitor extends ArendBaseVisitor<Object> {
     myErrorReporter = errorReporter;
   }
 
+  public record ReturnType(Concrete.Expression type, Concrete.Expression typeLevel, boolean isTypeLevelPlus) {}
+
   private String getVar(AtomFieldsAccContext ctx) {
     if (!(ctx.DOT().isEmpty() && ctx.atom() instanceof AtomLiteralContext)) {
       return null;
@@ -468,7 +470,7 @@ public class BuildVisitor extends ArendBaseVisitor<Object> {
     DefIdContext defId = topDefId.defId();
     Pair<String, Precedence> alias = visitAlias(defId.alias());
     LocatedReferableImpl reference = makeReferable(tokenPosition(defId.ID().getSymbol()), accessModifier, defId.ID().getText(), visitPrecedence(defId.precedence()), alias.proj1, alias.proj2, parent.referable(), isInstance ? LocatedReferableImpl.Kind.INSTANCE : GlobalReferable.Kind.DEFINED_CONSTRUCTOR);
-    Pair<Concrete.Expression,Concrete.Expression> returnPair = visitReturnExpr(ctx.returnExpr2());
+    ReturnType returnType = visitReturnExpr(ctx.returnExpr2());
 
     Concrete.FunctionBody body;
     InstanceBodyContext bodyCtx = ctx.instanceBody();
@@ -489,7 +491,8 @@ public class BuildVisitor extends ArendBaseVisitor<Object> {
       case null, default -> throw new IllegalStateException();
     }
 
-    Concrete.FunctionDefinition funcDef = new Concrete.FunctionDefinition(isInstance ? FunctionKind.INSTANCE : FunctionKind.CONS, reference, visitLevelParams(topDefId.levelParams()), parameters, returnPair.proj1, returnPair.proj2, body);
+    Concrete.FunctionDefinition funcDef = new Concrete.FunctionDefinition(isInstance ? FunctionKind.INSTANCE : FunctionKind.CONS, reference, visitLevelParams(topDefId.levelParams()), parameters, returnType.type, returnType.typeLevel, body);
+    funcDef.setGroupoidalLevelProof(returnType.isTypeLevelPlus);
     List<ConcreteStatement> statements = new ArrayList<>();
     ConcreteGroup resultGroup = new ConcreteGroup(nullDoc(), reference, funcDef, statements, Collections.emptyList(), makeParameterReferableList(parent.definition()));
     if (coClauses != null) {
@@ -546,37 +549,35 @@ public class BuildVisitor extends ArendBaseVisitor<Object> {
   }
 
   @Override
-  public Pair<Concrete.Expression,Concrete.Expression> visitReturnExprExpr(ReturnExprExprContext ctx) {
+  public ReturnType visitReturnExprExpr(ReturnExprExprContext ctx) {
     List<ExprContext> exprs = ctx.expr();
     Concrete.Expression resultType = visitExpr(exprs.get(0));
-    return new Pair<>(resultType, exprs.size() > 1 ? visitExpr(exprs.get(1)) : null);
+    return new ReturnType(resultType, exprs.size() > 1 ? visitExpr(exprs.get(1)) : null, ctx.LEVEL_PLUS() != null);
   }
 
   @Override
-  public Pair<Concrete.Expression,Concrete.Expression> visitReturnExprExpr2(ReturnExprExpr2Context ctx) {
+  public ReturnType visitReturnExprExpr2(ReturnExprExpr2Context ctx) {
     List<Expr2Context> exprs = ctx.expr2();
     Concrete.Expression resultType = visitExpr(exprs.get(0));
-    return new Pair<>(resultType, exprs.size() > 1 ? visitExpr(exprs.get(1)) : null);
+    return new ReturnType(resultType, exprs.size() > 1 ? visitExpr(exprs.get(1)) : null, ctx.LEVEL_PLUS() != null);
   }
 
   @Override
-  public Pair<Concrete.Expression,Concrete.Expression> visitReturnExprLevel(ReturnExprLevelContext ctx) {
-    return new Pair<>(visitAtomFieldsAcc(ctx.atomFieldsAcc(0)), visitAtomFieldsAcc(ctx.atomFieldsAcc(1)));
+  public ReturnType visitReturnExprLevel(ReturnExprLevelContext ctx) {
+    return new ReturnType(visitAtomFieldsAcc(ctx.atomFieldsAcc(0)), visitAtomFieldsAcc(ctx.atomFieldsAcc(1)), ctx.LEVEL_PLUS() != null);
   }
 
   @Override
-  public Pair<Concrete.Expression,Concrete.Expression> visitReturnExprLevel2(ReturnExprLevel2Context ctx) {
-    return new Pair<>(visitAtomFieldsAcc(ctx.atomFieldsAcc(0)), visitAtomFieldsAcc(ctx.atomFieldsAcc(1)));
+  public ReturnType visitReturnExprLevel2(ReturnExprLevel2Context ctx) {
+    return new ReturnType(visitAtomFieldsAcc(ctx.atomFieldsAcc(0)), visitAtomFieldsAcc(ctx.atomFieldsAcc(1)), ctx.LEVEL_PLUS() != null);
   }
 
-  private Pair<Concrete.Expression,Concrete.Expression> visitReturnExpr(ReturnExprContext returnExprCtx) {
-    //noinspection unchecked
-    return returnExprCtx == null ? new Pair<>(null, null) : (Pair<Concrete.Expression,Concrete.Expression>) visit(returnExprCtx);
+  private ReturnType visitReturnExpr(ReturnExprContext returnExprCtx) {
+    return returnExprCtx == null ? new ReturnType(null, null, false) : (ReturnType) visit(returnExprCtx);
   }
 
-  private Pair<Concrete.Expression,Concrete.Expression> visitReturnExpr(ReturnExpr2Context returnExprCtx) {
-    //noinspection unchecked
-    return returnExprCtx == null ? new Pair<>(null, null) : (Pair<Concrete.Expression,Concrete.Expression>) visit(returnExprCtx);
+  private ReturnType visitReturnExpr(ReturnExpr2Context returnExprCtx) {
+    return returnExprCtx == null ? new ReturnType(null, null, false) : (ReturnType) visit(returnExprCtx);
   }
 
   private ConcreteGroup visitDefMeta(AccessModifier accessModifier, DefMetaContext ctx, ConcreteGroup parent, TCDefReferable enclosingClass) {
@@ -610,7 +611,7 @@ public class BuildVisitor extends ArendBaseVisitor<Object> {
     Pair<String, Precedence> alias = visitAlias(defId.alias());
     LocatedReferableImpl referable = makeReferable(tokenPosition(defId.ID().getSymbol()), accessModifier, defId.ID().getText(), visitPrecedence(defId.precedence()), alias.proj1, alias.proj2, parent.referable(), GlobalReferable.Kind.FUNCTION);
     List<ConcreteStatement> statements = new ArrayList<>();
-    Pair<Concrete.Expression,Concrete.Expression> returnPair = visitReturnExpr(ctx.returnExpr2());
+    ReturnType returnType = visitReturnExpr(ctx.returnExpr2());
 
     List<CoClauseContext> coClauses = null;
     switch (functionBodyCtx) {
@@ -636,7 +637,8 @@ public class BuildVisitor extends ArendBaseVisitor<Object> {
         funcKw instanceof FuncKwSFuncContext ? FunctionKind.SFUNC :
         funcKw instanceof FuncKwAxiomContext ? FunctionKind.AXIOM :
         FunctionKind.FUNC;
-      Concrete.FunctionDefinition funDef = new Concrete.FunctionDefinition(kind, referable, visitLevelParams(topDefId.levelParams()), visitLamTeles(ctx.tele(), true), returnPair.proj1, returnPair.proj2, body);
+      Concrete.FunctionDefinition funDef = new Concrete.FunctionDefinition(kind, referable, visitLevelParams(topDefId.levelParams()), visitLamTeles(ctx.tele(), true), returnType.type, returnType.typeLevel, body);
+      funDef.setGroupoidalLevelProof(returnType.isTypeLevelPlus);
       resultGroup = new ConcreteGroup(nullDoc(), referable, funDef, statements, Collections.emptyList(), makeParameterReferableList(parent.definition()));
       if (coClauses != null) {
         List<ConcreteGroup> dynamicGroups = new ArrayList<>();
@@ -766,7 +768,7 @@ public class BuildVisitor extends ArendBaseVisitor<Object> {
 
   private Concrete.ClassField visitClassFieldDef(ClassFieldDefContext ctx, ClassFieldKind kind, Concrete.ClassDefinition parentClass) {
     List<Concrete.TypeParameter> parameters = visitTeles(ctx.tele(), false);
-    Pair<Concrete.Expression,Concrete.Expression> returnPair = visitReturnExpr(ctx.returnExpr());
+    ReturnType returnType = visitReturnExpr(ctx.returnExpr());
     DefIdContext defId = ctx.defId();
     Pair<String, Precedence> alias = visitAlias(defId.alias());
     AccessModifier accessModifier = visitAccessModifier(ctx.accessMod());
@@ -775,7 +777,8 @@ public class BuildVisitor extends ArendBaseVisitor<Object> {
       myErrorReporter.report(new ParserError(GeneralError.Level.WARNING_UNUSED, tokenPosition(ctx.accessMod().start), "Access modifier is redundant"));
     }
     FieldReferableImpl reference = new FieldReferableImpl(tokenPosition(defId.ID().getSymbol()), accessModifier.max(classAccessModifier), visitPrecedence(defId.precedence()), defId.ID().getText(), alias.proj2, alias.proj1, true, false, false, parentClass.getData());
-    Concrete.ClassField field = new Concrete.ClassField(reference, true, kind, parameters, returnPair.proj1, returnPair.proj2, ctx.COERCE() != null, ctx.COLON_PLUS() != null ? BindingVariance.COVARIANT : BindingVariance.INVARIANT);
+    Concrete.ClassField field = new Concrete.ClassField(reference, true, kind, parameters, returnType.type, returnType.typeLevel, ctx.COERCE() != null, ctx.COLON_PLUS() != null ? BindingVariance.COVARIANT : BindingVariance.INVARIANT);
+    field.setGroupoidalLevelProof(returnType.isTypeLevelPlus);
     if (ctx.CLASSIFYING() != null) {
       setClassifyingField(parentClass, reference, true);
     }
@@ -822,8 +825,10 @@ public class BuildVisitor extends ArendBaseVisitor<Object> {
               elements.add(visitClassFieldDef(fieldStatCtx.classFieldDef(), (ClassFieldKind) visit(fieldStatCtx.fieldMod()), parentClass));
           case ClassOverrideStatContext overrideCtx -> {
             LongNameContext longName = overrideCtx.longName();
-            Pair<Concrete.Expression, Concrete.Expression> pair = visitReturnExpr(overrideCtx.returnExpr());
-            elements.add(new Concrete.OverriddenField(tokenPosition(overrideCtx.start), LongUnresolvedReference.make(tokenPosition(longName.start), visitLongNamePath(longName)), visitTeles(overrideCtx.tele(), false), pair.proj1, pair.proj2));
+            ReturnType returnType = visitReturnExpr(overrideCtx.returnExpr());
+            Concrete.OverriddenField overriddenField = new Concrete.OverriddenField(tokenPosition(overrideCtx.start), LongUnresolvedReference.make(tokenPosition(longName.start), visitLongNamePath(longName)), visitTeles(overrideCtx.tele(), false), returnType.type, returnType.typeLevel);
+            overriddenField.setGroupoidalLevelProof(returnType.isTypeLevelPlus);
+            elements.add(overriddenField);
           }
           case ClassDefaultStatContext classDefaultStatContext ->
               elements.add(visitCoClause(classDefaultStatContext.coClause(), statements, parent, parentClass.getData(), parentClass.getData(), true));
@@ -1211,7 +1216,7 @@ public class BuildVisitor extends ArendBaseVisitor<Object> {
         }
       } else {
         LocatedReferableImpl reference = makeReferable(position, isDefault ? AccessModifier.PROTECTED : AccessModifier.PUBLIC, id != null ? id.getText() : path.getLast(), visitPrecedence(precCtx), null, Precedence.DEFAULT, parentGroup.referable(), LocatedReferableImpl.Kind.COCLAUSE_FUNCTION);
-        Pair<Concrete.Expression, Concrete.Expression> pair = visitReturnExpr(returnCtx);
+        ReturnType returnType = visitReturnExpr(returnCtx);
         Referable fieldRef = LongUnresolvedReference.make(position, path);
         Concrete.FunctionBody fBody;
         switch (defBody) {
@@ -1234,7 +1239,8 @@ public class BuildVisitor extends ArendBaseVisitor<Object> {
         if (!patterns.isEmpty()) {
           myErrorReporter.report(new ParserError((Position) patterns.getFirst().getData(), "Patterns are not allowed in coclause functions"));
         }
-        Concrete.CoClauseFunctionDefinition def = new Concrete.CoClauseFunctionDefinition(isDefault ? FunctionKind.CLASS_COCLAUSE : FunctionKind.FUNC_COCLAUSE, reference, enclosingDefinition, fieldRef, parameters, pair.proj1, pair.proj2, fBody);
+        Concrete.CoClauseFunctionDefinition def = new Concrete.CoClauseFunctionDefinition(isDefault ? FunctionKind.CLASS_COCLAUSE : FunctionKind.FUNC_COCLAUSE, reference, enclosingDefinition, fieldRef, parameters, returnType.type, returnType.typeLevel, fBody);
+        def.setGroupoidalLevelProof(returnType.isTypeLevelPlus);
         ConcreteGroup myGroup = new ConcreteGroup(nullDoc(), reference, def, Collections.emptyList(), Collections.emptyList(), Collections.emptyList());
         if (defBody instanceof CoClauseCowithContext) {
           visitCoClauses(getCoClauses(((CoClauseCowithContext) defBody).coClauses()), dynamicGroups, myGroup, reference, enclosingClass, fBody.getCoClauseElements());
@@ -1787,8 +1793,9 @@ public class BuildVisitor extends ArendBaseVisitor<Object> {
     }
 
     List<Concrete.FunctionClause> clauses = visitWithBody(ctx.withBody());
-    Pair<Concrete.Expression,Concrete.Expression> returnPair = visitReturnExpr(ctx.returnExpr2());
-    Concrete.Expression result = new Concrete.CaseExpression(tokenPosition(ctx.start), ctx.SCASE() != null, caseArgs, returnPair.proj1, returnPair.proj2, clauses);
+    ReturnType returnType = visitReturnExpr(ctx.returnExpr2());
+    Concrete.CaseExpression result = new Concrete.CaseExpression(tokenPosition(ctx.start), ctx.SCASE() != null, caseArgs, returnType.type, returnType.typeLevel, clauses);
+    result.setGroupoidalLevelProof(returnType.isTypeLevelPlus);
     boolean isPEval = ctx.PEVAL() != null;
     boolean isEval = !isPEval && ctx.EVAL() != null;
     return isPEval || isEval ? new Concrete.EvalExpression(result.getData(), isPEval, result) : result;

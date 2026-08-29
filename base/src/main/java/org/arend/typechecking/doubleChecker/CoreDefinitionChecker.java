@@ -7,6 +7,7 @@ import org.arend.core.elimtree.Body;
 import org.arend.core.elimtree.ElimBody;
 import org.arend.core.elimtree.IntervalElim;
 import org.arend.core.expr.*;
+import org.arend.core.expr.visitor.CompareVisitor;
 import org.arend.core.sort.Level;
 import org.arend.core.sort.Sort;
 import org.arend.core.sort.SortExpression;
@@ -72,6 +73,12 @@ public class CoreDefinitionChecker extends BaseDefinitionTypechecker {
     }
   }
 
+  private BigInteger checkGroupoidalLevelProof(Expression proof, Expression type, List<DependentLink> categoricalParams) {
+    Expression proofType = proof.accept(myChecker, null);
+    Expression expectedType = DefinitionTypechecker.buildGroupoidalLevelProofType(type, categoricalParams);
+    return CompareVisitor.compare(DummyEquations.getInstance(), CMP.EQ, proofType, expectedType, UniverseExpression.OMEGA, null) ? ConstLevel.PROP.value() : null;
+  }
+
   private boolean check(FunctionDefinition definition) {
     Body body = definition.getReallyActualBody();
     boolean checkType = true;
@@ -105,7 +112,9 @@ public class CoreDefinitionChecker extends BaseDefinitionTypechecker {
     }
 
     Expression typeType = checkType ? (definition.getResultType() instanceof UniverseExpression && body instanceof Expression ? definition.getResultType() : myChecker.checkInf(definition.getResultType(), UniverseExpression.OMEGA, true)) : null;
-    BigInteger level = definition.getResultTypeLevel() == null ? null : myChecker.checkLevelProof(definition.getResultTypeLevel(), definition.getResultType());
+    List<DependentLink> catParams = definition.getResultTypeLevel() == null ? Collections.emptyList() : DefinitionTypechecker.getCategoricalParameters(definition.getParameters());
+    BigInteger catLevel = definition.getResultTypeLevel() == null ? null : checkGroupoidalLevelProof(definition.getResultTypeLevel(), definition.getResultType(), catParams);
+    BigInteger level = catLevel != null ? catLevel : definition.getResultTypeLevel() == null ? null : myChecker.checkLevelProof(definition.getResultTypeLevel(), definition.getResultType());
 
     if (definition.getKind() == CoreFunctionDefinition.Kind.LEMMA && !Objects.equals(level, ConstLevel.PROP.value())) {
       if (!DefinitionTypechecker.isBoxed(definition)) {
@@ -133,84 +142,93 @@ public class CoreDefinitionChecker extends BaseDefinitionTypechecker {
       }
     }
 
-    if (body instanceof Expression) {
-      Expression resultType = definition.getResultType();
-      if (resultType instanceof UniverseExpression universe && !(universe.getSortExpression() instanceof SortExpression.Const)) {
-        for (DependentLink param = definition.getParameters(); param.hasNext(); param = param.getNext()) {
-          param = param.getNextTyped(null);
-          if (param.getType().isInfinityLevel()) {
-            resultType = UniverseExpression.OMEGA;
-            break;
+    if (catLevel != null) {
+      DefinitionTypechecker.setVariance(catParams, BindingVariance.INVARIANT);
+    }
+    try {
+      if (body instanceof Expression) {
+        Expression resultType = definition.getResultType();
+        if (resultType instanceof UniverseExpression universe && !(universe.getSortExpression() instanceof SortExpression.Const)) {
+          for (DependentLink param = definition.getParameters(); param.hasNext(); param = param.getNext()) {
+            param = param.getNextTyped(null);
+            if (param.getType().isInfinityLevel()) {
+              resultType = UniverseExpression.OMEGA;
+              break;
+            }
           }
         }
+        if (body instanceof CaseExpression) {
+          myChecker.checkCase((CaseExpression) body, resultType, level);
+        } else {
+          ((Expression) body).accept(myChecker, checkType ? resultType : null);
+        }
+        return true;
       }
-      if (body instanceof CaseExpression) {
-        myChecker.checkCase((CaseExpression) body, resultType, level);
+
+      ElimBody elimBody;
+      if (body instanceof IntervalElim intervalElim) {
+        if (intervalElim.getCases().isEmpty()) {
+          errorReporter.report(new TypecheckingError("Empty IntervalElim", null));
+          return false;
+        }
+
+        int offset = intervalElim.getOffset();
+        DependentLink link = definition.getParameters();
+        for (int i = 0; i < offset && link.hasNext(); i++) {
+          link = link.getNext();
+        }
+
+        boolean allDIAndTotal = true;
+        for (IntervalElim.CasePair casePair : intervalElim.getCases()) {
+          if (!link.hasNext()) {
+            errorReporter.report(new TypecheckingError("Interval elim has too many parameters", null));
+            return false;
+          }
+
+          DataDefinition expectedType = casePair.isDirected() ? Prelude.DI : Prelude.INTERVAL;
+          DataCallExpression dataCall = link.getType().normalize(NormalizationMode.WHNF).cast(DataCallExpression.class);
+          if (dataCall == null || dataCall.getDefinition() != expectedType) {
+            errorReporter.report(new TypeMismatchError(DataCallExpression.make(expectedType, Levels.EMPTY, Collections.emptyList()), link.getType(), null));
+            return false;
+          }
+          if (expectedType != Prelude.DI || link.getVariance() != BindingVariance.INVARIANT || casePair.getLeftCase() == null || casePair.getRightCase() == null) {
+            allDIAndTotal = false;
+          }
+
+          link = link.getNext();
+        }
+
+        // TODO[double_check]: Check interval conditions
+
+        if (intervalElim.getOtherwise() == null && !allDIAndTotal) {
+          errorReporter.report(new TypecheckingError("Missing non-interval clauses", null));
+          return false;
+        }
+
+        elimBody = intervalElim.getOtherwise();
+      } else if (body instanceof ElimBody) {
+        elimBody = (ElimBody) body;
+      } else if (body == null) {
+        ClassCallExpression classCall = definition.getResultType().normalize(NormalizationMode.WHNF).cast(ClassCallExpression.class);
+        if (classCall == null) {
+          errorReporter.report(new TypecheckingError("Missing a body", null));
+          return false;
+        }
+        myChecker.checkCocoverage(classCall);
+        return true;
       } else {
-        ((Expression) body).accept(myChecker, checkType ? resultType : null);
+        throw new IllegalStateException();
+      }
+
+      if (elimBody != null) {
+        myChecker.checkElimBody(definition, elimBody, definition.getParameters(), definition.getResultType(), level, null, definition.isSFunc(), PatternTypechecking.Mode.FUNCTION);
       }
       return true;
+    } finally {
+      if (catLevel != null) {
+        DefinitionTypechecker.setVariance(catParams, BindingVariance.COVARIANT);
+      }
     }
-
-    ElimBody elimBody;
-    if (body instanceof IntervalElim intervalElim) {
-      if (intervalElim.getCases().isEmpty()) {
-        errorReporter.report(new TypecheckingError("Empty IntervalElim", null));
-        return false;
-      }
-
-      int offset = intervalElim.getOffset();
-      DependentLink link = definition.getParameters();
-      for (int i = 0; i < offset && link.hasNext(); i++) {
-        link = link.getNext();
-      }
-
-      boolean allDIAndTotal = true;
-      for (IntervalElim.CasePair casePair : intervalElim.getCases()) {
-        if (!link.hasNext()) {
-          errorReporter.report(new TypecheckingError("Interval elim has too many parameters", null));
-          return false;
-        }
-
-        DataDefinition expectedType = casePair.isDirected() ? Prelude.DI : Prelude.INTERVAL;
-        DataCallExpression dataCall = link.getType().normalize(NormalizationMode.WHNF).cast(DataCallExpression.class);
-        if (dataCall == null || dataCall.getDefinition() != expectedType) {
-          errorReporter.report(new TypeMismatchError(DataCallExpression.make(expectedType, Levels.EMPTY, Collections.emptyList()), link.getType(), null));
-          return false;
-        }
-        if (expectedType != Prelude.DI || link.getVariance() != BindingVariance.INVARIANT || casePair.getLeftCase() == null || casePair.getRightCase() == null) {
-          allDIAndTotal = false;
-        }
-
-        link = link.getNext();
-      }
-
-      // TODO[double_check]: Check interval conditions
-
-      if (intervalElim.getOtherwise() == null && !allDIAndTotal) {
-        errorReporter.report(new TypecheckingError("Missing non-interval clauses", null));
-        return false;
-      }
-
-      elimBody = intervalElim.getOtherwise();
-    } else if (body instanceof ElimBody) {
-      elimBody = (ElimBody) body;
-    } else if (body == null) {
-      ClassCallExpression classCall = definition.getResultType().normalize(NormalizationMode.WHNF).cast(ClassCallExpression.class);
-      if (classCall == null) {
-        errorReporter.report(new TypecheckingError("Missing a body", null));
-        return false;
-      }
-      myChecker.checkCocoverage(classCall);
-      return true;
-    } else {
-      throw new IllegalStateException();
-    }
-
-    if (elimBody != null) {
-      myChecker.checkElimBody(definition, elimBody, definition.getParameters(), definition.getResultType(), level, null, definition.isSFunc(), PatternTypechecking.Mode.FUNCTION);
-    }
-    return true;
   }
 
   private boolean check(DataDefinition definition) {

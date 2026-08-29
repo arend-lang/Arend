@@ -260,6 +260,9 @@ public class ConcreteBuilder implements AbstractDefinitionVisitor<Concrete.Resol
     } else {
       result = new Concrete.FunctionDefinition(def.getFunctionKind(), myDefinition, visitLevelParameters(def.getLevelParameters()), parameters, type, typeLevel, body);
     }
+    if (typeLevel != null) {
+      result.setGroupoidalLevelProof(def.isResultTypeLevelPlus());
+    }
     return result;
   }
 
@@ -351,7 +354,11 @@ public class ConcreteBuilder implements AbstractDefinitionVisitor<Concrete.Resol
             Concrete.Expression type = resultType.accept(this, null);
             Abstract.Expression resultTypeLevel = field.getResultTypeLevel();
             Concrete.Expression typeLevel = resultTypeLevel == null ? null : resultTypeLevel.accept(this, null);
-            elements.add(new Concrete.ClassField((FieldReferableImpl) fieldRef, true, field.getClassFieldKind(), buildTypeParameters(parameters, false, null), type, typeLevel, field.isCoerce(), field.getVariance()));
+            Concrete.ClassField classField = new Concrete.ClassField((FieldReferableImpl) fieldRef, true, field.getClassFieldKind(), buildTypeParameters(parameters, false, null), type, typeLevel, field.isCoerce(), field.getVariance());
+            if (typeLevel != null) {
+              classField.setGroupoidalLevelProof(field.isResultTypeLevelPlus());
+            }
+            elements.add(classField);
             if (field.isClassifying()) {
               setClassifyingField(classDef, (FieldReferable) fieldRef, field, true);
             }
@@ -365,7 +372,12 @@ public class ConcreteBuilder implements AbstractDefinitionVisitor<Concrete.Resol
             continue;
           }
           Abstract.Expression typeLevel = field.getResultTypeLevel();
-          elements.add(new Concrete.OverriddenField(field.getData(), ref.getReferent(), buildTypeParameters(field.getParameters(), false, null), type.accept(this, null), typeLevel == null ? null : typeLevel.accept(this, null)));
+          Concrete.Expression concreteTypeLevel = typeLevel == null ? null : typeLevel.accept(this, null);
+          Concrete.OverriddenField overriddenField = new Concrete.OverriddenField(field.getData(), ref.getReferent(), buildTypeParameters(field.getParameters(), false, null), type.accept(this, null), concreteTypeLevel);
+          if (concreteTypeLevel != null) {
+            overriddenField.setGroupoidalLevelProof(field.isResultTypeLevelPlus());
+          }
+          elements.add(overriddenField);
         }
         case null, default ->
             myErrorReporter.report(new AbstractExpressionError(GeneralError.Level.ERROR, "Unknown class element", element));
@@ -738,7 +750,7 @@ public class ConcreteBuilder implements AbstractDefinitionVisitor<Concrete.Resol
   }
 
   @Override
-  public Concrete.Expression visitCase(@Nullable Object data, boolean isSFunc, @Nullable Abstract.EvalKind evalKind, @NotNull Collection<? extends Abstract.CaseArgument> caseArgs, @Nullable Abstract.Expression resultType, @Nullable Abstract.Expression resultTypeLevel, @NotNull Collection<? extends Abstract.FunctionClause> clauses, Void params) {
+  public Concrete.Expression visitCase(@Nullable Object data, boolean isSFunc, @Nullable Abstract.EvalKind evalKind, @NotNull Collection<? extends Abstract.CaseArgument> caseArgs, @Nullable Abstract.Expression resultType, @Nullable Abstract.Expression resultTypeLevel, boolean resultTypeLevelPlus, @NotNull Collection<? extends Abstract.FunctionClause> clauses, Void params) {
     if (caseArgs.isEmpty()) {
       myErrorLevel = GeneralError.Level.ERROR;
       return new Concrete.ErrorHoleExpression(data, null);
@@ -766,8 +778,12 @@ public class ConcreteBuilder implements AbstractDefinitionVisitor<Concrete.Resol
     }
 
     resultTypeLevel = checkResultTypeLevel(resultType, resultTypeLevel);
-    Concrete.Expression result = new Concrete.CaseExpression(data, isSFunc, concreteCaseArgs, resultType == null ? null : resultType.accept(this, null), resultTypeLevel == null ? null : resultTypeLevel.accept(this, null), buildClauses(clauses));
-    return evalKind == Abstract.EvalKind.BOX ? new Concrete.BoxExpression(data, result) : evalKind != null ? new Concrete.EvalExpression(data, evalKind == Abstract.EvalKind.PEVAL, result) : result;
+    Concrete.Expression concreteResultTypeLevel = resultTypeLevel == null ? null : resultTypeLevel.accept(this, null);
+    Concrete.CaseExpression caseExpression = new Concrete.CaseExpression(data, isSFunc, concreteCaseArgs, resultType == null ? null : resultType.accept(this, null), concreteResultTypeLevel, buildClauses(clauses));
+    if (concreteResultTypeLevel != null) {
+      caseExpression.setGroupoidalLevelProof(resultTypeLevelPlus);
+    }
+    return evalKind == Abstract.EvalKind.BOX ? new Concrete.BoxExpression(data, caseExpression) : evalKind != null ? new Concrete.EvalExpression(data, evalKind == Abstract.EvalKind.PEVAL, (Concrete.Expression) caseExpression) : caseExpression;
   }
 
   private Abstract.Expression checkResultTypeLevel(Abstract.Expression resultType, Abstract.Expression resultTypeLevel) {

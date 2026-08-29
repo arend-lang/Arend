@@ -16,7 +16,7 @@ public class TypedDependentLink implements DependentLink {
   private Expression myType;
   private DependentLink myNext;
   private final boolean myHidden;
-  private final BindingVariance myVariance;
+  private BindingVariance myVariance;
 
   public TypedDependentLink(boolean isExplicit, String name, Expression type, boolean isHidden, BindingVariance variance, DependentLink next) {
     assert next != null;
@@ -44,6 +44,10 @@ public class TypedDependentLink implements DependentLink {
   @Override
   public @NotNull BindingVariance getVariance() {
     return myVariance;
+  }
+
+  public void setVariance(BindingVariance variance) {
+    myVariance = variance;
   }
 
   @Override

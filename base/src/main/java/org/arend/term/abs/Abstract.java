@@ -271,6 +271,7 @@ public final class Abstract {
   public interface FunctionDefinition extends Definition, EliminatedExpressionsHolder, ClassReferenceHolder {
     @Nullable Expression getResultType();
     @Nullable Expression getResultTypeLevel();
+    boolean isResultTypeLevelPlus();
     @Nullable Expression getTerm();
     @Override @NotNull Collection<? extends Reference> getEliminatedExpressions();
     @NotNull Collection<? extends FunctionClause> getClauses();
@@ -308,6 +309,7 @@ public final class Abstract {
     @NotNull BindingVariance getVariance();
     /* @NotNull */ @Nullable Expression getResultType();
     @Nullable Expression getResultTypeLevel();
+    default boolean isResultTypeLevelPlus() { return false; }
     boolean isClassifying();
     boolean isCoerce();
     boolean isParameterField();
@@ -319,5 +321,6 @@ public final class Abstract {
     /* @NotNull */ @Nullable Reference getOverriddenField();
     /* @NotNull */ @Nullable Expression getResultType();
     @Nullable Expression getResultTypeLevel();
+    boolean isResultTypeLevelPlus();
   }
 }

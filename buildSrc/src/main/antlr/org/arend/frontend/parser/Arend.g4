@@ -48,12 +48,12 @@ definition  : funcKw topDefId tele* (':' returnExpr2)? functionBody where?      
 
 superClass : longName (DOT levelArgs)?;
 
-returnExpr  : expr ('\\level' expr)?                # returnExprExpr
-            | '\\level' atomFieldsAcc atomFieldsAcc # returnExprLevel
+returnExpr  : expr ((LEVEL | LEVEL_PLUS) expr)?                # returnExprExpr
+            | (LEVEL | LEVEL_PLUS) atomFieldsAcc atomFieldsAcc # returnExprLevel
             ;
 
-returnExpr2 : expr2 ('\\level' expr2)?              # returnExprExpr2
-            | '\\level' atomFieldsAcc atomFieldsAcc # returnExprLevel2
+returnExpr2 : expr2 ((LEVEL | LEVEL_PLUS) expr2)?              # returnExprExpr2
+            | (LEVEL | LEVEL_PLUS) atomFieldsAcc atomFieldsAcc # returnExprLevel2
             ;
 
 funcKw      : '\\func'            # funcKwFunc
@@ -61,7 +61,7 @@ funcKw      : '\\func'            # funcKwFunc
             | '\\lemma'           # funcKwLemma
             | '\\type'            # funcKwType
             | COERCE              # funcKwCoerce
-            | '\\level'           # funcKwLevel
+            | LEVEL               # funcKwLevel
             | '\\axiom'           # funcKwAxiom
             ;
 
@@ -329,6 +329,8 @@ COLON_PLUS : ':+' | ':⁺';
 ARROW : '->';
 ARROW_PLUS : '->+' | '->⁺';
 FAT_ARROW_PLUS : '=>+' | '=>⁺';
+LEVEL : '\\level';
+LEVEL_PLUS : '\\level+' | '\\level⁺';
 APPLY_HOLE : '__';
 UNDERSCORE : '_';
 DOT : '.';

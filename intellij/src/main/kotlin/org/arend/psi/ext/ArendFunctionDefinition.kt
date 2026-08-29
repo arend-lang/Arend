@@ -28,6 +28,8 @@ where StubT : ArendNamedStub, StubT : StubElement<*> {
 
     override fun getResultTypeLevel() = returnExpr?.typeLevel
 
+    override fun isResultTypeLevelPlus() = returnExpr?.isLevelPlus == true
+
     override fun withTerm() = body?.fatArrow != null
 
     override fun isCowith() = body?.cowithKw != null

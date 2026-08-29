@@ -4276,10 +4276,14 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
       resultExpr = resultType != null ? resultType.expression() : checkedSubst(expectedType, elimSubst, allowedBindings, expr.getResultType() != null ? expr.getResultType() : expr);
 
       if (expr.getResultTypeLevel() != null) {
-        TypecheckingResult levelResult = checkExpr(expr.getResultTypeLevel(), null);
-        if (levelResult != null) {
-          resultTypeLevel = levelResult.expression;
-          level = minInteger(level, getExpressionLevel(EmptyDependentLink.getInstance(), levelResult.type, resultExpr, myEquations, expr.getResultTypeLevel()));
+        if (expr.isGroupoidalLevelProof()) {
+          errorReporter.report(new TypecheckingError("\\level+ is not supported in \\case", expr.getResultTypeLevel()));
+        } else {
+          TypecheckingResult levelResult = checkExpr(expr.getResultTypeLevel(), null);
+          if (levelResult != null) {
+            resultTypeLevel = levelResult.expression;
+            level = minInteger(level, getExpressionLevel(EmptyDependentLink.getInstance(), levelResult.type, resultExpr, myEquations, expr.getResultTypeLevel()));
+          }
         }
       }
     }
