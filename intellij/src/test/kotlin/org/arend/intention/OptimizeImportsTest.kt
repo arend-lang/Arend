@@ -2,12 +2,27 @@ package org.arend.intention
 
 import com.intellij.application.options.CodeStyle
 import com.intellij.openapi.command.WriteCommandAction
+import com.intellij.openapi.components.service
+import com.intellij.psi.util.PsiTreeUtil
 import org.arend.*
 import org.arend.codeInsight.ArendImportOptimizer
+import org.arend.core.definition.FunctionDefinition
+import org.arend.ext.ArendExtension
+import org.arend.ext.LiteralTypechecker
+import org.arend.ext.concrete.expr.ConcreteExpression
+import org.arend.ext.module.LongName
+import org.arend.ext.reference.ExpressionResolver
+import org.arend.ext.typechecking.ContextData
+import org.arend.psi.ArendFile
+import org.arend.psi.ext.ArendDefFunction
+import org.arend.psi.ext.ArendDefInstance
 import org.arend.quickfix.QuickFixTestBase
+import org.arend.server.ArendServerService
+import org.arend.server.impl.ArendLibraryImpl
 import org.arend.settings.ArendCustomCodeStyleSettings
 import org.arend.settings.ArendCustomCodeStyleSettings.*
 import org.arend.util.ArendBundle
+import java.math.BigInteger
 
 class OptimizeImportsTest : QuickFixTestBase() {
 
@@ -30,10 +45,12 @@ class OptimizeImportsTest : QuickFixTestBase() {
         }
     }
 
-    private fun doTest(before: String, after: String) {
+    private fun doTest(before: String, after: String, beforeTypecheck: () -> Unit = {}, afterTypecheck: () -> Unit = {}) {
         val fileTree = fileTreeFromText(before)
         fileTree.prepareFileSystem()
+        beforeTypecheck()
         typecheck(fileTree.fileNames) //
+        afterTypecheck()
 
         val optimizer = ArendImportOptimizer()
         WriteCommandAction.runWriteCommandAction(myFixture.project, optimizer.processFile(myFixture.file))
@@ -42,7 +59,9 @@ class OptimizeImportsTest : QuickFixTestBase() {
 
     private fun doExplicitTest(
         before: String,
-        after: String) = doWithSettings(OptimizeImportsPolicy.ONLY_EXPLICIT) { doTest(before, after) }
+        after: String,
+        beforeTypecheck: () -> Unit = {},
+        afterTypecheck: () -> Unit = {}) = doWithSettings(OptimizeImportsPolicy.ONLY_EXPLICIT) { doTest(before, after, beforeTypecheck, afterTypecheck) }
 
     private fun doImplicitTest(
         before: String,
@@ -553,6 +572,194 @@ class OptimizeImportsTest : QuickFixTestBase() {
             \func g {b : B} => b.f
         """
         )
+    }
+
+    fun `test instance import when module name is shadowed by a definition`() {
+        doExplicitTest(
+            """
+            -- ! Foo.ard
+            \class Foo (E : \Type) {
+              \field cmp (x y : E) : Nat
+            }
+            -- ! Foo/Fin.ard
+            \import Foo
+
+            \instance FinOrd (n : Nat) : Foo (Fin n)
+              | cmp _ _ => 0
+            -- ! Main.ard
+            \import Foo
+            \import Foo.Fin
+
+            \func test {n : Nat} (i j : Fin (suc n)) : Nat => cmp i j
+        """, """
+            \import Foo (cmp)
+            \import Foo.Fin (FinOrd)
+
+            \func test {n : Nat} (i j : Fin (suc n)) : Nat => cmp i j
+        """
+        )
+    }
+
+    /**
+     * A definition loaded from a binary has a referable that carries no PSI, so an instance must be
+     * recognized by where it is defined rather than by its PSI. Dropping the data of the referable
+     * reproduces that state on a source module.
+     */
+    fun `test instance import when the referable of the instance carries no psi`() {
+        doExplicitTest(
+            """
+            -- ! Foo.ard
+            \class Foo (E : \Type) {
+              \field cmp (x y : E) : Nat
+            }
+            -- ! Bar.ard
+            \import Foo
+
+            \instance NatOrd : Foo Nat
+              | cmp _ _ => 0
+            -- ! Main.ard
+            \import Bar
+            \import Foo
+
+            \func test (i j : Nat) : Nat => cmp i j
+        """, """
+            \import Bar (NatOrd)
+            \import Foo (cmp)
+
+            \func test (i j : Nat) : Nat => cmp i j
+        """,
+            afterTypecheck = {
+                val instanceFile = myFixture.psiManager.findFile(myFixture.findFileInTempDir("Bar.ard")!!) as ArendFile
+                PsiTreeUtil.findChildOfType(instanceFile, ArendDefInstance::class.java)!!.tcReferable!!.setData(null)
+            }
+        )
+    }
+
+    fun `test instance import from a submodule of a module`() {
+        doExplicitTest(
+            """
+            -- ! Foo.ard
+            \class Foo (E : \Type) {
+              \field cmp (x y : E) : Nat
+            }
+            -- ! Bar/Baz.ard
+            \func foo => 0
+            -- ! Bar/Baz/Qux.ard
+            \import Foo
+
+            \instance FinOrd (n : Nat) : Foo (Fin n)
+              | cmp _ _ => 0
+            -- ! Main.ard
+            \import Bar.Baz.Qux
+            \import Foo
+
+            \func test {n : Nat} (i j : Fin (suc n)) : Nat => cmp i j
+        """, """
+            \import Bar.Baz.Qux (FinOrd)
+            \import Foo (cmp)
+
+            \func test {n : Nat} (i j : Fin (suc n)) : Nat => cmp i j
+        """
+        )
+    }
+
+    fun `test instance import when instance name is equal to module name`() {
+        doExplicitTest(
+            """
+            -- ! Foo.ard
+            \class Foo (E : \Type) {
+              \field cmp (x y : E) : Nat
+            }
+            -- ! Bar.ard
+            \import Foo
+
+            \instance Bar : Foo Nat
+              | cmp _ _ => 0
+            -- ! Main.ard
+            \import Bar
+            \import Foo
+
+            \func test (i j : Nat) : Nat => cmp i j
+        """, """
+            \import Bar (Bar)
+            \import Foo (cmp)
+
+            \func test (i j : Nat) : Nat => cmp i j
+        """
+        )
+    }
+
+    /**
+     * The server drops the body of every `\lemma` right after typechecking it, so an instance used only
+     * in a proof leaves no trace in the core. Dropping the body by hand reproduces that state.
+     */
+    fun `test instance import when the instance is used only in a lemma`() {
+        doExplicitTest(
+            """
+            -- ! Foo.ard
+            \class Foo (E : \Type) {
+              \field cmp (x y : E) : Nat
+            }
+            -- ! Bar.ard
+            \import Foo
+
+            \instance NatOrd : Foo Nat
+              | cmp _ _ => 0
+            -- ! Main.ard
+            \import Bar
+            \import Foo
+
+            \lemma test {P : \Prop} (f : Nat -> P) : P => f (cmp 0 0)
+        """, """
+            \import Bar (NatOrd)
+            \import Foo (cmp)
+
+            \lemma test {P : \Prop} (f : Nat -> P) : P => f (cmp 0 0)
+        """,
+            afterTypecheck = {
+                val lemma = PsiTreeUtil.findChildOfType(myFixture.file, ArendDefFunction::class.java)!!
+                (lemma.tcReferable!!.typechecked as FunctionDefinition).setBody(null)
+            }
+        )
+    }
+
+    /**
+     * A numeric literal is turned into a reference by the language extension, which looks the name up in
+     * the scope of the literal. Nothing in the file refers to that name, so the import bringing it in has
+     * to be kept all the same.
+     */
+    fun `test import needed by the name a numeric literal resolves to`() {
+        doExplicitTest(
+            """
+            -- ! Foo.ard
+            \class Foo (E : \Type) {
+              | ide : E
+            }
+
+            \func foo => 0
+            -- ! Main.ard
+            \import Foo
+
+            \func test => foo Nat.+ 1
+        """, """
+            \import Foo (Foo, foo)
+
+            \func test => foo Nat.+ 1
+        """,
+            beforeTypecheck = { setIdeNumberResolver() }
+        )
+    }
+
+    private fun setIdeNumberResolver() {
+        (project.service<ArendServerService>().server.getLibrary(library.name) as? ArendLibraryImpl)?.extension = object : ArendExtension {
+            override fun getLiteralTypechecker() = object : LiteralTypechecker {
+                override fun resolveNumber(number: BigInteger, resolver: ExpressionResolver, contextData: ContextData): ConcreteExpression? {
+                    if (number != BigInteger.ONE) return null
+                    val ref = resolver.resolveLongName(LongName("Foo", "ide")) ?: return null
+                    return contextData.factory.ref(ref)
+                }
+            }
+        }
     }
 
     fun `test implicit instance import`() {
