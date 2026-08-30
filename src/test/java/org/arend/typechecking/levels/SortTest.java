@@ -542,4 +542,12 @@ public class SortTest extends TypeCheckingTestCase {
       \\func test {A B : \\Set3} (r : R A) (s : R B) => foo r s
       """);
   }
+
+  @Test
+  public void infiniteSigmaParamTest() {
+    typeCheckModule("""
+      \\func foo (A : \\Sigma (\\Set) (\\Sigma)) (a : A.1) => a
+      \\func test => foo (Nat,()) 5
+      """);
+  }
 }

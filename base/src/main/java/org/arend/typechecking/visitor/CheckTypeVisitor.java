@@ -2837,7 +2837,7 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
     TypeExpression result;
     if (variance == BindingVariance.INVARIANT) {
       try (var ignored = isLast ? null : clearCategoricalContext()) {
-        result = checkType(arg.getType(), UniverseExpression.INF_OMEGA);
+        result = checkType(arg.getType(), expectedType == UniverseExpression.INF_OMEGA ? UniverseExpression.INF_OMEGA : UniverseExpression.OMEGA);
       }
     } else {
       result = checkType(arg.getType(), expectedType == null ? UniverseExpression.OMEGA : expectedType);

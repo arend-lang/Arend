@@ -47,4 +47,19 @@ public class CatUniverseTest extends TypeCheckingTestCase {
     typeCheckDef("\\func test.{u} : \\Type (\\suc u) => \\Cat u", 1);
     assertThatErrorsAre(Matchers.typeMismatchError());
   }
+
+  @Test
+  public void sigmaCatUniverseError() {
+    typeCheckDef("\\func test => \\Sigma \\Cat (\\Sigma)", 1);
+  }
+
+  @Test
+  public void sigmaTypeUniverseError() {
+   typeCheckDef("\\func test => \\Sigma \\Type (\\Sigma)", 1);
+  }
+
+  @Test
+  public void sigmaSetUniverseError() {
+    typeCheckDef("\\func test => \\Sigma \\Set (\\Sigma)", 1);
+  }
 }
