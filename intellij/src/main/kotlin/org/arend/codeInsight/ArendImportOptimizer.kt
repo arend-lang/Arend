@@ -9,19 +9,23 @@ import com.intellij.openapi.util.EmptyRunnable
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiFile
 import com.intellij.psi.PsiRecursiveElementWalkingVisitor
-import com.intellij.psi.SmartPsiElementPointer
 import com.intellij.psi.util.PsiTreeUtil
 import com.intellij.psi.util.elementType
 import com.intellij.psi.util.parentOfType
 import com.intellij.psi.util.parentsOfType
 import com.intellij.util.concurrency.annotations.RequiresWriteLock
 import org.arend.core.definition.ClassDefinition
+import org.arend.core.definition.Definition
 import org.arend.core.definition.Definition.TypeCheckingStatus.NO_ERRORS
+import org.arend.core.definition.FunctionDefinition
 import org.arend.core.expr.FunCallExpression
-import org.arend.ext.concrete.definition.FunctionKind
+import org.arend.ext.core.definition.CoreFunctionDefinition
 import org.arend.ext.module.ModulePath
-import org.arend.naming.reference.LocatedReferableImpl
+import org.arend.naming.reference.GlobalReferable
+import org.arend.naming.reference.LocatedReferable
 import org.arend.naming.reference.Referable
+import org.arend.naming.reference.RedirectingReferable
+import org.arend.naming.reference.TCDefReferable
 import org.arend.naming.scope.EmptyScope
 import org.arend.naming.scope.NamespaceCommandNamespace
 import org.arend.naming.scope.Scope
@@ -29,10 +33,15 @@ import org.arend.prelude.Prelude
 import org.arend.psi.*
 import org.arend.psi.ext.*
 import org.arend.refactoring.getCompleteWhere
+import org.arend.server.ArendServer
 import org.arend.server.ArendServerService
 import org.arend.settings.ArendCustomCodeStyleSettings
 import org.arend.settings.ArendCustomCodeStyleSettings.OptimizeImportsPolicy
+import org.arend.term.concrete.Concrete
+import org.arend.typechecking.provider.ConcreteProvider
+import org.arend.typechecking.visitor.CollectDefCallsVisitor
 import org.arend.typechecking.visitor.SearchVisitor
+import org.arend.typechecking.visitor.VoidConcreteVisitor
 import org.arend.util.ArendBundle
 import org.arend.util.getFileGroup
 import org.arend.util.getReferableConcreteGroup
@@ -331,7 +340,7 @@ private fun eraseNamespaceCommands(group: ArendGroup) {
 }
 
 data class ImportedName(val original: String, val renamed: String?) {
-    constructor(original: String, renamed: String?, psi: PsiElement?): this ((psi as? Referable)?.refName ?: original, renamed)
+    constructor(original: String, renamed: String?, psi: PsiElement?): this ((psi as? PsiStubbedReferableImpl<*>)?.refName ?: (psi as? Referable)?.refName ?: original, renamed)
 
     val visibleName = renamed ?: original
     override fun toString(): String = if (renamed == null) original else "$original \\as $renamed"
@@ -353,6 +362,20 @@ private val EMPTY_STRUCTURE = OptimalModuleStructure("", emptyList(), emptyMap()
 
 private fun OptimalModuleStructure.getDeeplyImportedNames(path: ModulePath) : Set<ImportedName> {
     return (usages[path] ?: emptySet()) + subgroups.flatMap { it.getDeeplyImportedNames(path) }
+}
+
+private data class InstanceRef(val module: ModulePath, val longName: List<String>) {
+    val refName get() = longName.last()
+
+    val qualifier get() = ModulePath(longName.dropLast(1))
+}
+
+private fun instanceRef(referable: Referable?): InstanceRef? {
+    val located = RedirectingReferable.getOriginalReferable(referable ?: return null) as? LocatedReferable ?: return null
+    if (located.kind != GlobalReferable.Kind.INSTANCE) return null
+    val fullName = located.refFullName
+    val longName = fullName.longName.toList()
+    return if (longName.isEmpty()) null else InstanceRef(fullName.module?.modulePath ?: return null, longName)
 }
 
 internal fun getOptimalImportStructure(group: ArendGroup, progressIndicator: ProgressIndicator? = null): OptimizationResult {
@@ -385,7 +408,7 @@ private class ImportStructureCollector(
         if (element is ArendDefinition<*>) {
             currentFrame.definitions.add(element.refName)
             registerCoClauses(element)
-            addCoreGlobalInstances(element)
+            addGlobalInstances(element)
         }
         if (element is ArendGroup && element !is ArendFile) {
             frameStack.add(MutableFrame(element.refName))
@@ -421,23 +444,57 @@ private class ImportStructureCollector(
         element.internalReferables.filterIsInstance<ArendClassField>().forEach { currentFrame.definitions.add(it.refName) }
     }
 
-    private fun addCoreGlobalInstances(element: ArendDefinition<*>) {
-        val tcReferable = element.tcReferable?.typechecked
-        allDefinitionsTypechecked = allDefinitionsTypechecked && (tcReferable != null && tcReferable.status() == NO_ERRORS)
-        if (!allDefinitionsTypechecked) return
-        tcReferable!!.accept(object : SearchVisitor<Unit>() { // not-null assertion implied by '&&' above
-            override fun visitFunCall(expr: FunCallExpression?, params: Unit?): Boolean {
-                val data = expr?.definition?.referable?.data
-                val globalInstance = (if (data is SmartPsiElementPointer<*>) {
-                    data.element as? ArendDefInstance
-                } else data as? ArendDefInstance)?.takeIf { it.isDefinitelyInstance() }
-
-                if (globalInstance != null) {
-                    currentFrame.instancesFromCore.add(globalInstance)
+    private fun addGlobalInstances(element: ArendDefinition<*>) {
+        val core = element.tcReferable?.typechecked?.takeIf { it.status() == NO_ERRORS && !coreHidesInstances(it) }
+        val concreteInspected = inspectResolvedDefinition(element, withInstances = core == null)
+        if (core != null) {
+            // An instance the typechecker picked shows up as a call in the core, which is the exact answer:
+            // an instance of the same class that was merely available cannot have been picked instead,
+            // because the search takes the first match in scope order.
+            core.accept(object : SearchVisitor<Unit>() {
+                override fun visitFunCall(expr: FunCallExpression?, params: Unit?): Boolean {
+                    instanceRef(expr?.definition?.referable)?.let { currentFrame.usedInstances.add(it) }
+                    return super.visitFunCall(expr, params)
                 }
-                return super.visitFunCall(expr, params)
+            }, Unit)
+        } else if (!concreteInspected) {
+            // neither a core nor a resolved definition to read the instances off: over-approximate with the scope
+            allDefinitionsTypechecked = false
+        }
+    }
+
+    private fun inspectResolvedDefinition(element: ArendDefinition<*>, withInstances: Boolean): Boolean {
+        val referable = element.tcReferable ?: return false
+        val server = element.project.service<ArendServerService>().server
+        val data = server.getResolvedDefinition(referable) ?: return false
+        val definition = data.definition()
+        val instances = if (withInstances) HashSet<TCDefReferable>() else null
+        val literalReferences = object : VoidConcreteVisitor<Void?>() {
+            override fun visitReference(expr: Concrete.ReferenceExpression, params: Void?): Void? {
+                addLiteralReference(expr.referent)
+                return null
             }
-        }, Unit)
+        }
+        definition.accept(object : CollectDefCallsVisitor(
+            null, instances, true,
+            data.instances().takeIf { withInstances }, ServerConcreteProvider(server), definition
+        ) {
+            override fun visitNumericLiteral(expr: Concrete.NumericLiteral, params: Void?): Void? {
+                expr.resolvedExpression?.accept(literalReferences, null)
+                return super.visitNumericLiteral(expr, params)
+            }
+        }, null)
+        instances?.forEach { instance -> instanceRef(instance)?.let { currentFrame.usedInstances.add(it) } }
+        return true
+    }
+
+    private fun addLiteralReference(referable: Referable?) {
+        val located = RedirectingReferable.getOriginalReferable(referable ?: return) as? LocatedReferable ?: return
+        val fullName = located.refFullName
+        val module = fullName.module?.modulePath ?: return
+        // the lookup goes through the long name, so it is the first name of it that has to be visible
+        val visibleName = fullName.longName.toList().firstOrNull() ?: return
+        fileImports.computeIfAbsent(module) { HashSet() }.add(ImportedName(visibleName, null))
     }
 
     private fun addSyntacticGlobalInstances(element: ArendGroup) {
@@ -447,20 +504,18 @@ private class ImportStructureCollector(
         } else {
             (element as? ArendFile)?.moduleLocation?.let { getFileScope(element.project, it) to getFileGroup(element.project, it) } ?: (EmptyScope.INSTANCE to null)
         }
-        val referables =
-            concreteGroup?.statements?.flatMap { stat -> stat.command?.let { NamespaceCommandNamespace.resolveNamespace(scope, it).elements } ?: emptyList() } ?: emptyList()
+        val referables = concreteGroup?.statements?.flatMap { stat ->
+            val command = stat.command ?: return@flatMap emptyList()
+            // the path of an \import must be resolved in the namespace of modules, not in the scope of the group;
+            // otherwise a module whose name is shadowed by an imported definition cannot be found
+            val commandScope = (if (command.isImport) scope.importedSubscope else scope) ?: return@flatMap emptyList()
+            NamespaceCommandNamespace.resolveNamespace(commandScope, command).elements
+        } ?: emptyList()
         for (instanceCandidate in referables) {
-            if (instanceCandidate !is LocatedReferableImpl) {
-                continue
-            }
-            val data = instanceCandidate.data
-            if (data is ArendDefInstance && data.isDefinitelyInstance()) {
-                currentFrame.instancesFromScope.add(data)
-            }
+            instanceRef(instanceCandidate)?.let { currentFrame.instancesFromScope.add(it) }
         }
     }
 
-    private fun ArendDefInstance.isDefinitelyInstance(): Boolean = functionKind == FunctionKind.INSTANCE
 
     override fun elementFinished(element: PsiElement?) {
         if (element is ArendGroup && element !is ArendFile) {
@@ -487,7 +542,6 @@ private class ImportStructureCollector(
         fileImports.computeIfAbsent(importedFilePath) { HashSet() }.add(ImportedName(identifierImportedFromFile, importedAs?.takeIf { identifierImportedFromFile == characteristics }, null))
         val shortenedOpeningPath = openingPath.shorten(groupStack)
         if (shortenedOpeningPath.isNotEmpty() || importedAs != null) {
-            if (openingPath.size > 1) println(openingPath)
             currentFrame.usages[ImportedName(characteristics, importedAs, null)] = ModulePath(openingPath)
         }
 
@@ -554,8 +608,8 @@ private data class MutableFrame(
     val subgroups: MutableList<MutableFrame> = mutableListOf(),
     val definitions: MutableSet<String> = mutableSetOf(),
     val usages: MutableMap<ImportedName, ModulePath> = mutableMapOf(),
-    val instancesFromScope: MutableList<ArendDefInstance> = mutableListOf(),
-    val instancesFromCore: MutableSet<ArendDefInstance> = mutableSetOf(),
+    val instancesFromScope: MutableSet<InstanceRef> = LinkedHashSet(),
+    val usedInstances: MutableSet<InstanceRef> = LinkedHashSet(),
     val activeOpens: MutableMap<Pair<FilePath, ModulePath>, ArendStatCmd> = mutableMapOf()
 ) {
     fun asOptimalTree(): OptimalModuleStructure =
@@ -608,14 +662,14 @@ private data class MutableFrame(
             }
         }
         // the order is important. Implicitly used instances are not inherited, so they should be adder after erasing unnecessary usages
-        instancesFromCore.addAll(subgroups.flatMap { it.instancesFromCore })
-        val instanceSource =
-            if (useTypecheckedInstances) instancesFromCore intersect instancesFromScope.toSet() else instancesFromScope
+        usedInstances.addAll(subgroups.flatMap { it.usedInstances })
+        val instanceSource = if (useTypecheckedInstances) usedInstances else instancesFromScope
         for (instance in instanceSource) {
-            val (importedFile, qualifier) = collectQualifier(instance) ?: continue
+            val importedFile = instance.module
+            val qualifier = instance.qualifier
             additionalFiles.computeIfAbsent(importedFile) { HashSet() }
-                .add(ImportedName(qualifier.firstName ?: instance.refName, null, instance))
-            usages[ImportedName(instance.refName, null, instance)] =
+                .add(ImportedName(qualifier.firstName ?: instance.refName, null))
+            usages[ImportedName(instance.refName, null)] =
                 qualifier.takeIf { this@MutableFrame.name == "" || it.toList().isNotEmpty() } ?: importedFile
         }
         subgroups.removeAll { it.usages.isEmpty() && it.subgroups.isEmpty() }
@@ -655,6 +709,15 @@ private fun subtract(
     }
     return moduleQualifier.take((moduleQualifier.size - (actualQualifier.size - 1)).coerceAtLeast(0)) to actualQualifier[0]
 }
+
+private class ServerConcreteProvider(private val server: ArendServer) : ConcreteProvider {
+    override fun getConcrete(referable: GlobalReferable): Concrete.GeneralDefinition? =
+        (referable as? TCDefReferable)?.let { server.getResolvedDefinition(it)?.definition() }
+}
+
+private fun coreHidesInstances(definition: Definition): Boolean =
+    definition is FunctionDefinition &&
+        (definition.kind == CoreFunctionDefinition.Kind.LEMMA || definition.reallyActualBody == null)
 
 typealias FilePath = ModulePath
 
