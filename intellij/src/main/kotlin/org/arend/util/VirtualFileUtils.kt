@@ -1,5 +1,6 @@
 package org.arend.util
 
+import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.vfs.JarFileSystem
 import com.intellij.openapi.vfs.VfsUtil
 import com.intellij.openapi.vfs.VirtualFile
@@ -75,17 +76,21 @@ val VirtualFile.libraryRootParent: VirtualFile?
         else -> parent
     }
 
+private val refreshAsynchronously: Boolean
+    get() = ApplicationManager.getApplication().let { !it.isDispatchThread && it.isReadAccessAllowed }
+
 val VirtualFile.refreshed: VirtualFile
     get() {
-        VfsUtil.markDirtyAndRefresh(false, false, false, this)
+        val async = refreshAsynchronously
+        VfsUtil.markDirtyAndRefresh(async, false, false, this)
         val file = JarFileSystem.getInstance().getJarRootForLocalFile(this) ?: return this
-        VfsUtil.markDirtyAndRefresh(false, false, false, file)
+        VfsUtil.markDirtyAndRefresh(async, false, false, file)
         return this
     }
 
 fun refreshLibrariesDirectory(libRoot: Path): VirtualFile? {
     val file = VfsUtil.findFile(libRoot, true) ?: return null
-    VfsUtil.markDirtyAndRefresh(false, false, false, file)
+    VfsUtil.markDirtyAndRefresh(refreshAsynchronously, false, false, file)
     for (child in file.children) {
         child.refreshed
     }
