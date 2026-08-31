@@ -330,6 +330,35 @@ class RedundantParensInspectionTest : QuickFixTestBase() {
           ::-++ {_} {a} {u1} {(x, p) :: u2}
     """)
 
+    fun `test parens around an infix field implemented by a coclause`() = doWeakWarningsCheck(myFixture,"""
+        \class Magma (A : \Set)
+          | \infixl 6 ** : A -> A -> A
+          | op : A -> A -> A
+
+        \data D | con
+
+        \func apply {A : \Type} (a : A) => a
+
+        \instance DMagma : Magma D
+          | ** (x y : D) : D => con
+          -- `**` is an infix operator here as well, so these parens are not redundant
+          | op => apply (**)
+    """)
+
+    fun `test parens around a non-infix field implemented by a coclause`() = doWeakWarningsCheck(myFixture,"""
+        \class Box (A : \Set)
+          | unwrap : A -> A
+          | copy : A -> A
+
+        \data D | con
+
+        \func apply {A : \Type} (a : A) => a
+
+        \instance DBox : Box D
+          | unwrap (x : D) : D => con
+          | copy => apply ${rp("(unwrap)")}
+    """)
+
     private fun doTypedQuickFixTest(before: String, after: String) =
             typedQuickFixTest(ArendBundle.message("arend.unwrap.parentheses.fix"), before, after)
 

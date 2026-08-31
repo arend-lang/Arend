@@ -5,6 +5,7 @@ import com.intellij.openapi.components.service
 import com.intellij.openapi.util.TextRange
 import com.intellij.psi.PsiElement
 import com.intellij.psi.util.parentOfType
+import org.arend.ext.reference.Precedence
 import org.arend.naming.reference.AliasReferable
 import org.arend.naming.reference.GlobalReferable
 import org.arend.psi.ancestor
@@ -222,7 +223,13 @@ fun findDefAndArgsInParsedBinop(arg: ArendExpr, parsedExpr: Concrete.Expression)
 fun isBinOp(binOpReference: ArendReferenceContainer?) =
         if (binOpReference is ArendIPName) binOpReference.infix != null
         else resolve(binOpReference)?.precedence?.isInfix
-          ?: ((binOpReference?.resolve as? Abstract.AbstractLocatedReferable)?.precedence?.isInfix == true)
+          ?: ((binOpReference?.resolve as? Abstract.AbstractLocatedReferable)?.let { precedenceOf(it).isInfix } == true)
+
+private fun precedenceOf(referable: Abstract.AbstractLocatedReferable): Precedence {
+    if (referable.kind != GlobalReferable.Kind.COCLAUSE_FUNCTION) return referable.precedence
+    val field = (referable as? ArendCoClauseDef)?.implementedField as? ArendReferenceContainer ?: return referable.precedence
+    return (field.resolve as? Abstract.AbstractLocatedReferable)?.precedence ?: referable.precedence
+}
 
 private fun resolve(reference: ArendReferenceContainer?): GlobalReferable? =
         (reference?.resolve as? GlobalReferable)
