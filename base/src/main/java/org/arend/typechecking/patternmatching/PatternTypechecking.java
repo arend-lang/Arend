@@ -717,11 +717,24 @@ public class PatternTypechecking {
               return null;
             }
 
+            boolean requireCovariant = parameters.getVariance() == BindingVariance.COVARIANT;
+            if (requireCovariant && (num == 1 ? refExpr1.getBinding() : refExpr2.getBinding()).getVariance() != BindingVariance.COVARIANT) {
+              boolean ok = false;
+              if (both && (num == 2 ? refExpr1.getBinding() : refExpr2.getBinding()).getVariance() == BindingVariance.COVARIANT) {
+                num = 3 - num;
+                ok = true;
+              }
+              if (!ok) {
+                myErrorReporter.report(new IdpPatternError(myVisitor == null ? null : myVisitor.getExpressionPrettifier(), IdpPatternError.notCovariant(), dataCall, conPattern));
+                return null;
+              }
+            }
+
             Expression normType = type.normalize(NormalizationMode.WHNF);
             if (!(normType instanceof BaseDataCallExpression)) {
               if (!CompareVisitor.compare(myVisitor.getEquations(), CMP.EQ, normType, (num == 1 ? refExpr1 : refExpr2).getType(), UniverseExpression.OMEGA, conPattern)) {
                 boolean ok = false;
-                if (both) {
+                if (both && (!requireCovariant || (num == 2 ? refExpr1.getBinding() : refExpr2.getBinding()).getVariance() == BindingVariance.COVARIANT)) {
                   num = 3 - num;
                   ok = CompareVisitor.compare(myVisitor.getEquations(), CMP.EQ, normType, (num == 1 ? refExpr1 : refExpr2).getType(), UniverseExpression.OMEGA, conPattern);
                 }

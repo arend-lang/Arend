@@ -40,6 +40,10 @@ public class IdpPatternError extends TypecheckingError {
     return "One of the sides in the expected type should be a parameter";
   }
 
+  public static String notCovariant() {
+    return "One of the sides in the expected type should be a covariant parameter";
+  }
+
   public static String notInType() {
     return "idd can be used as a pattern only when the type of the equality belongs to \\Type";
   }

@@ -6,7 +6,7 @@
   : (a,b) = {\Sigma (x :⁺ A) (B x)} (a',b') \elim p
   | idp => path \lam i => (a, q i)
   \where {
-    \protected \func grpd {A : \Cat} {B :⁺ A ->⁺ \Cat} {a a' : A} (p :⁺ a = a') {b :⁺ B a} {b' :⁺ B a'} (q :⁺ transport B p b = b')
+    \protected \func grpd {A : \Cat} {B :⁺ A ->⁺ \Cat} {a a' : A} (p : a = a') {b :⁺ B a} {b' :⁺ B a'} (q :⁺ transport B p b = b')
       : (a,b) = {\Sigma (x : A) (B x)} (a',b') \elim p
       | idp => path \lam i => (a, q i)
   }
