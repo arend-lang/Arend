@@ -4,6 +4,7 @@ import org.arend.ext.ArendPrelude;
 import org.arend.ext.concrete.definition.*;
 import org.arend.ext.concrete.expr.*;
 import org.arend.ext.concrete.pattern.ConcretePattern;
+import org.arend.ext.core.context.BindingVariance;
 import org.arend.ext.core.context.CoreBinding;
 import org.arend.ext.core.expr.AbstractedExpression;
 import org.arend.ext.error.GeneralError;
@@ -95,6 +96,7 @@ public interface ConcreteFactory {
   @NotNull ConcreteParameter param(boolean explicit, @NotNull Collection<? extends ArendRef> refs, @NotNull ConcreteExpression type);
   @NotNull ConcreteParameter param(boolean explicit, @NotNull ConcreteExpression type);
   @NotNull ConcreteParameter param(boolean explicit, boolean isProperty, @NotNull Collection<? extends ArendRef> refs, @NotNull ConcreteExpression type);
+  @NotNull ConcreteParameter param(boolean explicit, boolean isProperty, @NotNull Collection<? extends ArendRef> refs, @NotNull ConcreteExpression type, @NotNull BindingVariance variance);
   @NotNull ConcreteParameter param(boolean explicit, boolean isProperty, @NotNull ConcreteExpression type);
 
   default @NotNull ConcreteParameter param(@Nullable ArendRef ref) {

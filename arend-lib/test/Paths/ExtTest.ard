@@ -149,3 +149,6 @@
 
 \func arrayTest4 {A : \Type} {n : Nat} (l l' : Array A n) (q : l = {Fin n -> A} l') : l = {Array A} l'
   => ext q
+
+\func covariantPiTest {C D : \Cat} {f g : C ->⁺ D} (p : \Pi (x :⁺ C) -> f x = g x) : f = g
+  => ext p

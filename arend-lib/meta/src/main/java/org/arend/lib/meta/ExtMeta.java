@@ -185,7 +185,7 @@ public class ExtMeta extends BaseMetaDefinition {
         for (int i = 0; i < piParams.size(); i++) {
           CoreParameter piParam = piParams.get(i);
           ArendRef ref = factory.local(typechecker.getVariableRenameFactory().getNameFromBinding(piParam.getBinding(), null));
-          concretePiParams.add(factory.param(piParam.isExplicit(), Collections.singletonList(ref), factory.meta("ext_param", new SubstitutionMeta(piParam.getType(), substitution.subList(0, i)))));
+          concretePiParams.add(factory.param(piParam.isExplicit(), false, Collections.singletonList(ref), factory.meta("ext_param", new SubstitutionMeta(piParam.getType(), substitution.subList(0, i))), piParam.getVariance()));
           concreteLamParams.add(factory.param(piParam.isExplicit(), ref));
           ConcreteExpression refExpr = factory.ref(ref);
           args.add(factory.arg(refExpr, piParam.isExplicit()));

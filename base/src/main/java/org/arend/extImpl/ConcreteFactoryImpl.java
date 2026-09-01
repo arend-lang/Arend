@@ -731,17 +731,22 @@ public class ConcreteFactoryImpl implements ConcreteFactory {
 
   @Override
   public @NotNull Concrete.TypeParameter param(boolean explicit, boolean isProperty, @NotNull Collection<? extends ArendRef> refs, @NotNull ConcreteExpression type) {
+    return param(explicit, isProperty, refs, type, BindingVariance.INVARIANT);
+  }
+
+  @Override
+  public @NotNull Concrete.TypeParameter param(boolean explicit, boolean isProperty, @NotNull Collection<? extends ArendRef> refs, @NotNull ConcreteExpression type, @NotNull BindingVariance variance) {
     if (!(type instanceof Concrete.Expression)) {
       throw new IllegalArgumentException();
     }
     if (refs.isEmpty()) {
-      return new Concrete.TypeParameter(myData, explicit, (Concrete.Expression) type, false);
+      return new Concrete.TypeParameter(myData, explicit, (Concrete.Expression) type, false, variance);
     }
     List<Referable> cRefs = new ArrayList<>(refs.size());
     for (ArendRef ref : refs) {
       cRefs.add(makeLocalRef(ref));
     }
-    return new Concrete.TelescopeParameter(myData, explicit, cRefs, (Concrete.Expression) type, false);
+    return new Concrete.TelescopeParameter(myData, explicit, cRefs, (Concrete.Expression) type, false, variance);
   }
 
   @NotNull
