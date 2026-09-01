@@ -30,7 +30,15 @@ final class SymbolIndexStore {
   // older cache on disk. The stamp pairs file size with mtime so identical-mtime
   // overwrites (same-second edits, a `git checkout` of an already-matching file,
   // coarse-mtime filesystems) still invalidate the cached entries.
-  private static final String FORMAT_HEADER = "# arend symbol index v4";
+  //
+  // v5 escapes the file-path field, which v4 wrote raw, so every string field is now
+  // escaped on write and unescaped on read. v4 also split entries on a plain `|`,
+  // ignoring its own `\|` escaping and thereby dropping every definition whose name
+  // contains a pipe (`||`, `||-search`, `GCD.res|val1`); see #splitUnescaped.
+  private static final String FORMAT_HEADER = "# arend symbol index v5";
+
+  /** Fields per entry line: shortName, longName, kind, file, line, column, signature. */
+  private static final int FIELD_COUNT = 7;
 
   // ---- file location ------------------------------------------------------
 
@@ -108,7 +116,7 @@ final class SymbolIndexStore {
         // literal `\n`, so the entry stays on one physical line; unescape() on
         // read restores it.
         w.write("  " + escape(e.shortName()) + "|" + escape(e.longName()) + "|" + e.kind().name() + "|"
-            + (e.absoluteFile() == null ? "" : e.absoluteFile()) + "|"
+            + escape(e.absoluteFile() == null ? "" : e.absoluteFile()) + "|"
             + e.line() + "|" + e.column() + "|" + escape(e.signature()));
         w.newLine();
       }
@@ -150,16 +158,45 @@ final class SymbolIndexStore {
   }
 
   private static @Nullable SymbolIndex.Entry parseEntry(String line, ModulePath mp) {
-    String[] parts = line.split("\\|", 7);
-    if (parts.length < 7) return null;
+    List<String> parts = splitUnescaped(line);
+    if (parts.size() != FIELD_COUNT) return null;
     try {
-      SymbolIndex.Kind k = SymbolIndex.Kind.valueOf(parts[2]);
-      int ln = Integer.parseInt(parts[4]);
-      int col = Integer.parseInt(parts[5]);
-      return new SymbolIndex.Entry(unescape(parts[0]), unescape(parts[1]), k, mp, parts[3], ln, col, unescape(parts[6]));
+      SymbolIndex.Kind k = SymbolIndex.Kind.valueOf(parts.get(2));
+      int ln = Integer.parseInt(parts.get(4));
+      int col = Integer.parseInt(parts.get(5));
+      return new SymbolIndex.Entry(unescape(parts.get(0)), unescape(parts.get(1)), k, mp,
+          unescape(parts.get(3)), ln, col, unescape(parts.get(6)));
     } catch (RuntimeException e) {
       return null;
     }
+  }
+
+  /**
+   * Splits an entry line on the {@code |} delimiters {@link #escape} left unescaped.
+   *
+   * <p>A backslash always escapes the character after it, so scanning left to right and
+   * consuming pairs finds exactly the field boundaries. {@code String.split("\\|")} cannot:
+   * it has no notion of the escape, so it cuts a name like {@code ||-search} into empty
+   * pieces, the kind field lands on a fragment, {@link SymbolIndex.Kind#valueOf} throws and
+   * the entry is dropped -- silently, since the caller treats a null as "skip this line".
+   * Escape sequences are left in place here for {@link #unescape} to resolve per field.
+   */
+  private static List<String> splitUnescaped(String line) {
+    List<String> parts = new ArrayList<>(FIELD_COUNT);
+    StringBuilder current = new StringBuilder();
+    for (int i = 0; i < line.length(); i++) {
+      char c = line.charAt(i);
+      if (c == '\\' && i + 1 < line.length()) {
+        current.append(c).append(line.charAt(++i));
+      } else if (c == '|') {
+        parts.add(current.toString());
+        current.setLength(0);
+      } else {
+        current.append(c);
+      }
+    }
+    parts.add(current.toString());
+    return parts;
   }
 
   private static String escape(String s) {
