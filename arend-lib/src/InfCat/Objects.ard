@@ -3,5 +3,5 @@
 \cons ob {C : \Cat} (x : C) : Ob C
   => (x, ())
 
-\func unob {C : \Cat} (x : Ob C) : C
+\func unob {C : \Cat} (x :⁺ Ob C) : C
   => x.1

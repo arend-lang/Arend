@@ -1,0 +1,74 @@
+\import Equiv
+\import Equiv.Fiber
+\import Equiv.Sigma
+\import Function.Meta
+\import InfCat.Basics
+\import InfCat.Equiv
+\import InfCat.Paths
+\import InfCat.Rezk
+\import InfCat.Square
+\import Logic
+\import Logic.Meta
+\import Logic.Unique
+\import Paths ()
+\import Paths.Meta
+
+\type IsFFMap {C D : \Cat} (f : C ->⁺ D) : \Prop
+  => \Pi (x y : C) -> IsEquiv {x ~> y} (\lam p => dmap f p)
+  \where {
+    \lemma section-ff (ff : IsFFMap f) {g : D ->⁺ C} (fg : \Pi (y :⁺ D) -> f (g y) = y) : IsFFMap g
+      => \lam x y => IsEquiv.leftFactor (ff (g x) (g y)) $
+            Paths.transportInv {D ->⁺ D} (\lam h => IsEquiv (dmap h)) (ext fg) (inP idEquiv)
+
+    \lemma section-surj (ff : IsFFMap f) {g : D ->⁺ C} (fg : \Pi (y :⁺ D) -> f (g y) = y) : IsSurjMap g
+      => \lam x => inP (f x, iso_= (IsEquiv.ret (ff _ _) (=_~> (fg (f x)))) (IsEquiv.ret (ff _ _) (=_~> (inv (fg (f x)))))
+            (IsEquiv.isInj (ff _ _) $ dmap_comp f *> pmap2 comp (IsEquiv.f_ret (ff _ _)) (IsEquiv.f_ret (ff _ _)) *> =_~>_comp *> pmap =_~> *>_inv)
+            (IsEquiv.isInj (ff x x) $ dmap_comp f *> pmap2 comp (IsEquiv.f_ret (ff _ _)) (IsEquiv.f_ret (ff _ _)) *> =_~>_comp *> pmap =_~> inv_*>))
+  }
+
+\type IsSurjMap {C D : \Cat} (f : C ->⁺ D) : \Prop
+  => \Pi (y : D) -> ∃ (x : C) (f x = y)
+
+\lemma ff-surj-equiv {C D : \Cat} {f : C ->⁺ D} : (\Sigma (IsFFMap f) (IsSurjMap f)) <-> IsHEquiv f
+  => (\lam (ff,fs) => IsHEquiv.rightFactor
+        (\have | fs2 => \lam y =>⁺ (section ff fs y).2
+               | r => section (IsFFMap.section-ff ff fs2) (IsFFMap.section-surj ff fs2)
+         \in IsHEquiv.biEquiv {_} {_} {_} {f} fs2 \lam x => (r x).2)
+        (Paths.transportInv IsHEquiv (ext \lam x => (section ff fs x).2) idHEquiv),
+      \lam (inP e) => (\lam x y => inP \new QEquiv {
+        | ret p => comp (=_~> (inv (e.finv_f x))) (comp (dmap e.finv p) (=_~> (e.finv_f y)))
+        | ret_f p => pmap (comp _) (~>-natural (\lam x => =_~> (e.finv_f x)))
+                  *> comp-assoc *> pmap (comp __ p) (=_~>_comp *> pmap =_~> inv_*>) *> comp_idd-left
+        | f_sec p => dmap_comp f *> pmap2 comp (dmap_=_~> f) (dmap_comp f
+                      *> pmap (comp _) (dmap_=_~> f *> pmap =_~> (equiv-fibers.coh_inv_f f e.finv e.finv_f e.f_finv))
+                      *> ~>-natural (\lam y => =_~> (equiv-fibers.coh_inv f e.finv e.finv_f e.f_finv y)))
+                  *> comp-assoc *> pmap (comp __ _) (pmap (\lam x => comp _ (=_~> x)) (inv (equiv-fibers.coh_inv_f f e.finv e.finv_f e.f_finv))
+                      *> =_~>_comp *> pmap =_~> (inv (pmap_*> f) *> pmap (pmap f) inv_*>)) *> comp_idd-left
+      }, \lam y => inP (e.finv y, e.f_finv y)))
+  \where {
+    \private \lemma contr {C D : \Cat} {f : C ->⁺ D} (ff : IsFFMap f) (fs : IsSurjMap f) (h : DI ->⁺ D)
+                          {tl : \Sigma (x :⁺ C) (f x = h dleft)} {tr : \Sigma (x :⁺ C) (f x = h dright)}
+      : Contr (DPath (\lam i => \Sigma (x :⁺ C) (f x = h i)) tl tr)
+      => Contr.Contr_QEquiv (symQEquiv $ transQEquiv equiv1 $ sigma-right \lam r =>
+            path-square-equiv {_} {_} {_} {_} {_} {dmap f r} {dpath h} `transQEquiv`
+            square-equiv {_} {_} {_} {_} {_} {dmap f r} {_} {_} {dpath h}`transQEquiv` equiv2) $
+          IsEquiv=>contrFibers (ff tl.1 tr.1) $ comp (comp (=_~> tl.2) (dpath h)) (=_~> (inv tr.2))
+      \where {
+        \private \func equiv1
+          : QEquiv {DPath (\lam i => \Sigma (x :⁺ C) (f x = h i)) tl tr} {\Sigma (r : tl.1 ~> tr.1) (DPath (\lam i => f (r i) = h i) tl.2 tr.2)} \cowith
+          | f p => (dpath \lam i => (p i).1, dpath \lam i => (p i).2)
+          | ret s => dpath \lam i => (s.1 i, s.2 i)
+          | ret_f p => idp
+          | f_sec s => idp
+
+        \private \func equiv2 {C : \Cat} {a b c : C} {f : a ~> b} {p : c = b} {g : a ~> c}
+          : QEquiv {comp g (=_~> p) = f} {g = comp f (=_~> (inv p))} \elim p
+          | idp => Paths.transport2 (\lam x y => QEquiv {x = f} {g = y}) (inv comp_idd-right) (inv comp_idd-right) idEquiv
+      }
+
+    \private \lemma section {C D : \Cat} {f : C ->⁺ D} (ff : IsFFMap f) (fs : IsSurjMap f) (y :⁺ D) : \Sigma (x :⁺ C) (f x = y)
+      \level⁺ \lam h tl tr => (contr ff fs h).toSigma
+      => \case fs y \with {
+        | inP r => (r.1, r.2)
+      }
+  }

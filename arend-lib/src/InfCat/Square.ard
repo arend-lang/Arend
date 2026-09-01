@@ -1,5 +1,7 @@
+\import Equiv
 \import Function.Meta
 \import InfCat.Basics
+\import InfCat.Equiv
 \import InfCat.Paths
 
 \sfunc cube2-equals
@@ -109,3 +111,16 @@
         (dpath \lam i => dpath \lam j => dpath \lam k => forward.cube (backward p) j i k)
         (dpath \lam i => dpath \lam j => dpath \lam k => backward.cube p k i j)
   }
+
+\sfunc square-equiv {C : \Cat} {a b c d : C} {ab : a ~> b} {bd : b ~> d} {ac : a ~> c} {cd : c ~> d}
+  : QEquiv {DPath (\lam i => ab i ~> cd i) ac bd} {comp ab bd = comp ac cd}
+  => \new QEquiv {
+    | f => square-char.forward
+    | ret => square-char.backward
+    | ret_f => square-char.backward_forward
+    | f_sec => square-char.forward_backward
+  } `transQEquiv` comp-equiv.flipped {C}
+
+\sfunc ~>-natural {C D :⁺ \Cat} {f g :⁺ C ->⁺ D} (h :⁺ \Pi (a :⁺ C) -> f a ~> g a) {a a' :⁺ C} {p :⁺ a ~> a'}
+  : comp (dmap f p) (h a') = comp (h a) (dmap g p)
+  => inv $ comp-char $ dpath \lam i => dpath \lam j => square-char.forward (dpath \lam i => dpath \lam j => h (p j) i) j i

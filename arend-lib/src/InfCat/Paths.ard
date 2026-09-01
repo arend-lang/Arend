@@ -13,7 +13,7 @@
 \func inv_*> {A :⁺ \Cat} {a a' :⁺ A} {p :⁺ a = a'} : inv p *> p = idp \elim p
   | idp => idp
 
-\func *>_inv {A :⁺ \Cat} {a a' :⁺ A} (p :⁺ a = a') : p *> inv p = idp
+\func *>_inv {A :⁺ \Cat} {a a' :⁺ A} {p :⁺ a = a'} : p *> inv p = idp \elim p
   | idp => idp
 
 \func pmap {A B :⁺ \Cat} (f :⁺ A ->⁺ B) {a a' :⁺ A} (p :⁺ a = a') : f a = f a'
@@ -45,8 +45,8 @@
   | idp => idp_*>
 
 \sfunc homotopy_app-comm {A :⁺ \Cat} (f :⁺ A ->⁺ A) (h :⁺ \Pi (a :⁺ A) -> f a = a) (a :⁺ A) : h (f a) = pmap f (h a)
-  => pmap (h (f a) *> __) (inv (*>_inv (h a)))
+  => pmap (h (f a) *> __) (inv *>_inv)
   *> inv *>-assoc
   *> pmap (*> inv (h a)) (inv (homotopy-isNatural f (\lam a => a) h (h a)))
   *> *>-assoc
-  *> pmap (pmap f (h a) *> __) (*>_inv (h a))
+  *> pmap (pmap f (h a) *> __) *>_inv

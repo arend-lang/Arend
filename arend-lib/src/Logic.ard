@@ -18,11 +18,11 @@
 \lemma /=-sym {A : \Type} {a a' : A} (p : a /= a') : a' /= a
   => \lam r => p (inv r)
 
-\data TruncP (A : \Type)
+\data TruncP (A : \Cat)
   | inP A
   | truncP (a a' : TruncP A) : a = a'
   \where {
-    \use \level levelProp {A : \Type} (a a' : TruncP A) : a = a' => path (truncP a a')
+    \use \level levelProp {A : \Cat} (a a' : TruncP A) : a = a' => path (truncP a a')
 
     \lemma remove {A : \Type} (p : isProp A) (t : TruncP A) : A \level p \elim t
       | inP a => a

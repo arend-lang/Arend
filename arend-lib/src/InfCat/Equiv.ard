@@ -1,0 +1,82 @@
+\import Equiv
+\import InfCat.Basics
+\import InfCat.Paths
+\import Logic
+\import Paths.Meta
+
+\record HQEquiv {C D : \Cat} (\coerce f : C ->⁺ D)
+  | finv : D ->⁺ C
+  | finv_f (x :⁺ C) : finv (f x) = x
+  | f_finv (y :⁺ D) : f (finv y) = y
+  \where {
+    \func leftFactor {A B C : \Cat} {f : A ->⁺ B} {g : B ->⁺ C} (e2 : HQEquiv g) (e3 : HQEquiv \lam a => g (f a)) : HQEquiv f \cowith
+      | finv b => e3.finv (g b)
+      | finv_f => e3.finv_f
+      | f_finv b => inv (e2.finv_f _) *> pmap e2.finv (e3.f_finv (g b)) *> e2.finv_f b
+
+    \func rightFactor {A B C : \Cat} {f : A ->⁺ B} (e1 : HQEquiv f) {g : B ->⁺ C} (e3 : HQEquiv \lam a => g (f a)) : HQEquiv g \cowith
+      | finv c => f (e3.finv c)
+      | finv_f b => pmap (\lam x => f (e3.finv (g x))) (inv (e1.f_finv b)) *> pmap f (e3.finv_f _) *> e1.f_finv b
+      | f_finv => e3.f_finv
+  }
+
+\type IsHEquiv {C D : \Cat} (f : C ->⁺ D) : \Prop
+  => TruncP (HQEquiv f)
+  \where {
+    \lemma toTuple (e : IsHEquiv f)
+      : \Sigma (\Sigma (g : D ->⁺ C) (\Pi (x :⁺ C) -> g (f x) = x)) (\Sigma (h : D ->⁺ C) (\Pi (y :⁺ D) -> f (h y) = y))
+        \level \lam s t => ext (linv-unique f s.2.1 s.2.2, rinv-unique f s.1.1 s.1.2)
+      \elim e
+      | inP s => ((s.finv, s.finv_f), (s.finv, s.f_finv))
+
+    \sfunc ret (e : IsHEquiv f) : D ->⁺ C
+      => (toTuple e).1.1
+
+    \sfunc ret_f (e : IsHEquiv f) {x :⁺ C} : ret e (f x) = x
+      => path (\lam i => (\peval ret e) i (f x)) *> (toTuple e).1.2 x
+
+    \sfunc f_ret (e : IsHEquiv f) {y :⁺ D} : f (ret e y) = y
+      => pmap f (path (\lam i => (\peval ret e) i y) *> inv-equals f {(toTuple e).1.1} (toTuple e).1.2 (toTuple e).2.2) *> (toTuple e).2.2 y
+
+    \sfunc inv-equals {C D :⁺ \Cat} (f :⁺ C ->⁺ D) {g h :⁺ D ->⁺ C}
+                      (gf=id :⁺ \Pi (x :⁺ C) -> g (f x) = x) (fh=id :⁺ \Pi (y :⁺ D) -> f (h y) = y) {y :⁺ D} : g y = h y
+      => inv (pmap g (fh=id y)) *> gf=id (h y)
+
+    \lemma leftFactor {A B C : \Cat} {f : A ->⁺ B} {g : B ->⁺ C} (e2 : IsHEquiv g) (e3 : IsHEquiv \lam a => g (f a)) : IsHEquiv f \elim e2, e3
+      | inP e2, inP e3 => inP (HQEquiv.leftFactor e2 e3)
+
+    \lemma rightFactor {A B C : \Cat} {f : A ->⁺ B} (e1 : IsHEquiv f) {g : B ->⁺ C} (e3 : IsHEquiv \lam a => g (f a)) : IsHEquiv g \elim e1, e3
+      | inP e1, inP e3 => inP (HQEquiv.rightFactor e1 e3)
+
+    \lemma biEquiv {g : D ->⁺ C} (p : \Pi (x :⁺ C) -> g (f x) = x) {h : D ->⁺ C} (q : \Pi (y :⁺ D) -> f (h y) = y) : IsHEquiv f
+      => inP \new HQEquiv {
+        | finv => g
+        | finv_f => p
+        | f_finv y => pmap f (pmap g (inv (q y)) *> p (h y)) *> q y
+      }
+
+    \sfunc linv-unique {C D : \Cat} (f : C ->⁺ D) (g : D ->⁺ C) (fg=id : \Pi (y :⁺ D) -> f (g y) = y)
+                       {s t : \Sigma (h : D ->⁺ C) (\Pi (x :⁺ C) -> h (f x) = x)} : s = t
+      => \have r => equiv-fibers {D ->⁺ C} {C ->⁺ C} (\lam h x => h (f x)) (\lam h y => h (g y))
+                      (\lam h => path \lam i y => h (fg=id y i))
+                      (\lam h => path \lam i x => h ((inv (inv-equals f {s.1} s.2 fg=id) *> s.2 x) i))
+                      {_} {s.1, path \lam i x => s.2 x i} {t.1, path \lam i x => t.2 x i}
+         \in path \lam i => ((r i).1, \lam x => path \lam j => (r i).2 j x)
+
+    \sfunc rinv-unique {C D : \Cat} (f : C ->⁺ D) (g : D ->⁺ C) (gf=id : \Pi (x :⁺ C) -> g (f x) = x)
+                       {s t : \Sigma (h : D ->⁺ C) (\Pi (y :⁺ D) -> f (h y) = y)} : s = t
+      => \have r => equiv-fibers {D ->⁺ C} {D ->⁺ D} (\lam h y => f (h y)) (\lam h x => g (h x))
+                      (\lam h => path \lam i x => gf=id (h x) i)
+                      (\lam h => path \lam i y => (pmap f (inv-equals f {g} gf=id s.2) *> s.2 (h y)) i)
+                      {_} {s.1, path \lam i y => s.2 y i} {t.1, path \lam i x => t.2 x i}
+         \in path \lam i => ((r i).1, \lam y => path \lam j => (r i).2 j y)
+  }
+
+\func idHQEquiv {C : \Cat} : HQEquiv {C} {C} \cowith
+  | f x => x
+  | finv x => x
+  | finv_f x => idp
+  | f_finv x => idp
+
+\lemma idHEquiv {C : \Cat} : IsHEquiv {C} (\lam x => x)
+  => inP idHQEquiv

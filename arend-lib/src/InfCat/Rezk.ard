@@ -14,33 +14,6 @@
          \in (pmap __.1 r, inv transport_~>_idd-right *> sigma-unext2 r)
   }
 
-\sfunc inv-equals {C :⁺ \Cat} {x y :⁺ C} (f :⁺ x ~> y) {g h :⁺ y ~> x} (gf=id :⁺ comp g f = idd) (fh=id :⁺ comp f h = idd) : g = h
-  => inv (pmap (comp g __) fh=id *> comp_idd-right) *> comp-assoc *> pmap (comp __ h) gf=id *> comp_idd-left
-
-\sfunc linv-unique {C :⁺ \Cat} {x y :⁺ C} (f :⁺ x ~> y) (g :⁺ y ~> x) (fg=id :⁺ comp f g = idd)
-                   {s t :⁺ \Sigma (h :⁺ y ~> x) (comp h f = idd)} : s = t
-  => equiv-fibers (comp __ f) (comp __ g)
-      (\lam h => inv comp-assoc *> pmap (comp h __) fg=id *> comp_idd-right)
-      (\lam h => inv comp-assoc *> pmap (comp h __) (pmap (comp __ f) (inv $ inv-equals f s.2 fg=id) *> s.2) *> comp_idd-right)
-  \where {
-    \protected \sfunc grpd {C : \Cat} {x y : C} (f : x ~> y) (g : y ~> x) (fg=id : comp f g = idd)
-                           {s t : \Sigma (h : y ~> x) (comp h f = idd)} : s = t
-      => \have r => linv-unique f g fg=id {s.1,s.2} {t.1,t.2}
-         \in sigma-ext.grpd (pmap __.1 r) (sigma-unext2 r)
-  }
-
-\sfunc rinv-unique {C :⁺ \Cat} {x y :⁺ C} (f :⁺ x ~> y) (g :⁺ y ~> x) (gf=id :⁺ comp g f = idd)
-                   {s t :⁺ \Sigma (h :⁺ y ~> x) (comp f h = idd)} : s = t
-  => equiv-fibers (comp f __) (comp g __)
-      (\lam h => comp-assoc *> pmap (comp __ h) gf=id *> comp_idd-left)
-      (\lam h => comp-assoc *> pmap (comp __ h) (pmap (comp f __) (inv-equals f gf=id s.2) *> s.2) *> comp_idd-left)
-  \where {
-    \protected \sfunc grpd {C : \Cat} {x y : C} (f : x ~> y) (g : y ~> x) (gf=id : comp g f = idd)
-                           {s t : \Sigma (h : y ~> x) (comp f h = idd)} : s = t
-      => \have r => rinv-unique f g gf=id {s.1,s.2} {t.1,t.2}
-         \in sigma-ext.grpd (pmap __.1 r) (sigma-unext2 r)
-  }
-
 \type IsIso {C : \Cat} {x y : C} (f : x ~> y) : \Prop
   => ∃ (g : y ~> x) (comp g f = idd) (comp f g = idd)
   \where {
@@ -58,4 +31,31 @@
 
     \sfunc f_ret (e : IsIso f) : comp f (ret e) = idd
       => pmap (comp f __) ((\peval ret e) *> inv-equals f (toTuple e).1.2 (toTuple e).2.2) *> (toTuple e).2.2
+
+    \sfunc inv-equals {C :⁺ \Cat} {x y :⁺ C} (f :⁺ x ~> y) {g h :⁺ y ~> x} (gf=id :⁺ comp g f = idd) (fh=id :⁺ comp f h = idd) : g = h
+      => inv (pmap (comp g __) fh=id *> comp_idd-right) *> comp-assoc *> pmap (comp __ h) gf=id *> comp_idd-left
+
+    \sfunc linv-unique {C :⁺ \Cat} {x y :⁺ C} (f :⁺ x ~> y) (g :⁺ y ~> x) (fg=id :⁺ comp f g = idd)
+                       {s t :⁺ \Sigma (h :⁺ y ~> x) (comp h f = idd)} : s = t
+      => equiv-fibers (comp __ f) (comp __ g)
+          (\lam h => inv comp-assoc *> pmap (comp h __) fg=id *> comp_idd-right)
+          (\lam h => inv comp-assoc *> pmap (comp h __) (pmap (comp __ f) (inv $ inv-equals f s.2 fg=id) *> s.2) *> comp_idd-right)
+      \where {
+        \protected \sfunc grpd {C : \Cat} {x y : C} (f : x ~> y) (g : y ~> x) (fg=id : comp f g = idd)
+                               {s t : \Sigma (h : y ~> x) (comp h f = idd)} : s = t
+          => \have r => linv-unique f g fg=id {s.1,s.2} {t.1,t.2}
+             \in sigma-ext.grpd (pmap __.1 r) (sigma-unext2 r)
+      }
+
+    \sfunc rinv-unique {C :⁺ \Cat} {x y :⁺ C} (f :⁺ x ~> y) (g :⁺ y ~> x) (gf=id :⁺ comp g f = idd)
+                       {s t :⁺ \Sigma (h :⁺ y ~> x) (comp f h = idd)} : s = t
+      => equiv-fibers (comp f __) (comp g __)
+          (\lam h => comp-assoc *> pmap (comp __ h) gf=id *> comp_idd-left)
+          (\lam h => comp-assoc *> pmap (comp __ h) (pmap (comp f __) (inv-equals f gf=id s.2) *> s.2) *> comp_idd-left)
+      \where {
+        \protected \sfunc grpd {C : \Cat} {x y : C} (f : x ~> y) (g : y ~> x) (gf=id : comp g f = idd)
+                               {s t : \Sigma (h : y ~> x) (comp f h = idd)} : s = t
+          => \have r => rinv-unique f g gf=id {s.1,s.2} {t.1,t.2}
+             \in sigma-ext.grpd (pmap __.1 r) (sigma-unext2 r)
+      }
   }

@@ -34,8 +34,10 @@
 
 -- # Contr
 
-\class Contr (A : \Type) (center : A) (contraction : \Pi (a' : A) -> center = a')
-  \where {
+\class Contr (A : \Type) (center : A) (contraction : \Pi (a' : A) -> center = a') {
+  \sfunc toSigma : \Sigma (x : A) (\Pi (a : A) -> x = a)
+    => (center, contraction)
+} \where {
     \func make {A : \Type} (a : A) (p : \Pi (a' : A) -> a = a')  => \new Contr A a p
 
     \use \level levelProp (A : \Type) (c1 c2 : Contr A) : c1 = c2 => path (\lam i => \new Contr A {
