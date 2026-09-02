@@ -922,8 +922,10 @@ public class ExpressionResolveNameVisitor extends BaseConcreteExpressionVisitor<
     return oldField;
   }
 
-  void visitClassFieldImpl(Concrete.ClassFieldImpl impl, DynamicScopeProvider provider) {
-    visitClassFieldReference(impl, impl.getImplementedField(), provider);
+  void visitClassFieldImpl(Concrete.ClassFieldImpl impl, @Nullable DynamicScopeProvider provider) {
+    if (provider != null) {
+      visitClassFieldReference(impl, impl.getImplementedField(), provider);
+    }
 
     if (impl.implementation == null) {
       Referable ref = impl.getImplementedField();
@@ -935,14 +937,14 @@ public class ExpressionResolveNameVisitor extends BaseConcreteExpressionVisitor<
         if (subProvider.getReferable() instanceof TCDefReferable defRef) {
           impl.classRef = defRef;
         }
-        visitClassFieldImpls(impl.getSubCoclauseList(), subProvider);
       }
+      visitClassFieldImpls(impl.getSubCoclauseList(), subProvider);
     } else {
       impl.implementation = impl.implementation.accept(this, null);
     }
   }
 
-  private void visitClassFieldImpls(List<Concrete.ClassFieldImpl> classFieldImpls, DynamicScopeProvider provider) {
+  private void visitClassFieldImpls(List<Concrete.ClassFieldImpl> classFieldImpls, @Nullable DynamicScopeProvider provider) {
     for (Concrete.ClassFieldImpl impl : classFieldImpls) {
       visitClassFieldImpl(impl, provider);
     }

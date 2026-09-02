@@ -335,7 +335,11 @@ public class ConcreteCompareVisitor implements ConcreteExpressionVisitor<Concret
     if (pattern instanceof Concrete.NamePattern) {
       mySubstitution.remove(((Concrete.NamePattern) pattern).getReferable());
     }
-    freePatterns(pattern.getPatterns());
+    switch (pattern) {
+      case Concrete.ConstructorPattern constructorPattern -> freePatterns(constructorPattern.getPatterns());
+      case Concrete.TuplePattern tuplePattern -> freePatterns(tuplePattern.getPatterns());
+      default -> { }
+    }
   }
 
   private void freePatterns(List<? extends Concrete.Pattern> patterns) {
