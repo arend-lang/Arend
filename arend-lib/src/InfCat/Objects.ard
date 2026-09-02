@@ -1,3 +1,7 @@
+\import Equiv
+\import InfCat.Equiv
+\import Paths
+
 \type Ob (C : \Cat) => \Sigma (ob : C) (\Sigma)
 
 \cons ob {C : \Cat} (x : C) : Ob C
@@ -5,3 +9,9 @@
 
 \func unob {C : \Cat} (x :⁺ Ob C) : C
   => x.1
+
+\func unob_= {C : \Cat} {x y : Ob C} : QEquiv {x = y} {unob x = unob y} \cowith
+  | f => pmap unob
+  | ret => pmap ob
+  | ret_f => idpe
+  | f_sec => idpe

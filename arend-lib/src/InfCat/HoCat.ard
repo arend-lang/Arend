@@ -54,6 +54,6 @@
       \have | fi : IsIso f => \case Trunc0.unequiv p, Trunc0.unequiv q \with {
                                 | inP p, inP q => inP (g,p,q)
                               }
-            | r => iso_=.pair f (IsIso.ret fi) (IsIso.f_ret fi) (IsIso.ret_f fi)
+            | r => iso_= f (IsIso.ret fi) (IsIso.f_ret fi) (IsIso.ret_f fi)
       \in (path \lam i => in1 $ ob (r.1 i), Trunc0.transport_Trunc0 r.1 *> pmap in0 (later $ transport_~>_idd-right.grpd *> r.2))
   }

@@ -52,6 +52,12 @@
 \func =_~>_= {A :⁺ \Type} {a b :⁺ A} {p :⁺ a = b} : ~>_= (=_~> p) = p \elim p
   | idp => idp
 
+\func =_~>-equiv {A : \Type} {a b : A} : QEquiv {a = b} {a ~> b} \cowith
+  | f => =_~>
+  | ret => ~>_=
+  | ret_f p => =_~>_=
+  | f_sec p => ~>_=_~>
+
 \func flipQEquiv {C : \Cat} {a b c d : C} {ab : a ~> b} {bd : b ~> d} {ac : a ~> c} {cd : c ~> d}
   : QEquiv {DPath (\lam i => ab i ~> cd i) ac bd} {DPath (\lam i => ac i ~> bd i) ab cd} \cowith
   | f p => dpath \lam i => dpath \lam j => p j i
@@ -70,12 +76,7 @@
   \where {
     \protected \func flipped {p : a = c} {q : b = d}
       : QEquiv {Path (\lam i => p i ~> q i) f g} {DPath (\lam i => =_~> p i ~> =_~> q i) f g} \elim p, q
-      | idp, idp => \new QEquiv {
-        | f => =_~>
-        | ret => ~>_=
-        | ret_f p => =_~>_=
-        | f_sec p => ~>_=_~>
-      }
+      | idp, idp => =_~>-equiv
   }
 
 \func =_~>_comp {A :⁺ \Cat} {a b c :⁺ A} {p :⁺ a = b} {q :⁺ b = c} : comp (=_~> p) (=_~> q) = =_~> (p *> q) \elim q

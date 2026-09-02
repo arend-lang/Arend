@@ -21,9 +21,9 @@
             Paths.transportInv {D ->⁺ D} (\lam h => IsEquiv (dmap h)) (ext fg) (inP idEquiv)
 
     \lemma section-surj (ff : IsFFMap f) {g : D ->⁺ C} (fg : \Pi (y :⁺ D) -> f (g y) = y) : IsSurjMap g
-      => \lam x => inP (f x, iso_= (IsEquiv.ret (ff _ _) (=_~> (fg (f x)))) (IsEquiv.ret (ff _ _) (=_~> (inv (fg (f x)))))
+      => \lam x => inP (f x, (iso_= (IsEquiv.ret (ff _ _) (=_~> (fg (f x)))) (IsEquiv.ret (ff _ _) (=_~> (inv (fg (f x)))))
             (IsEquiv.isInj (ff _ _) $ dmap_comp f *> pmap2 comp (IsEquiv.f_ret (ff _ _)) (IsEquiv.f_ret (ff _ _)) *> =_~>_comp *> pmap =_~> *>_inv)
-            (IsEquiv.isInj (ff x x) $ dmap_comp f *> pmap2 comp (IsEquiv.f_ret (ff _ _)) (IsEquiv.f_ret (ff _ _)) *> =_~>_comp *> pmap =_~> inv_*>))
+            (IsEquiv.isInj (ff x x) $ dmap_comp f *> pmap2 comp (IsEquiv.f_ret (ff _ _)) (IsEquiv.f_ret (ff _ _)) *> =_~>_comp *> pmap =_~> inv_*>)).1)
   }
 
 \type IsSurjMap {C D : \Cat} (f : C ->⁺ D) : \Prop

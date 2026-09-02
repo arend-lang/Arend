@@ -1,18 +1,17 @@
+\import Equiv
+\import Equiv.Path
 \import Function.Meta
 \import InfCat.Basics
 \import InfCat.Paths
 \import Logic
 \import Logic.Meta
+\import Paths()
 \import Paths.Meta
 
-\func iso_= {C :⁺ \Cat} {x y :⁺ C} (f :⁺ x ~> y) (g :⁺ y ~> x) (p :⁺ comp f g = idd) (q :⁺ comp g f = idd) : x = y
-  => (pair f g p q).1
-  \where {
-    \protected \sfunc pair (f :⁺ x ~> y) (g :⁺ y ~> x) (p :⁺ comp f g = idd) (q :⁺ comp g f = idd)
-      : \Sigma (r :⁺ x = y) (=_~> r = f)
-      => \have r => rezk f g (comp-char.conv p) (comp-char.conv q)
-         \in (pmap __.1 r, inv transport_~>_idd-right *> sigma-unext2 r)
-  }
+\sfunc iso_= {C :⁺ \Cat} {x y :⁺ C} (f :⁺ x ~> y) (g :⁺ y ~> x) (p :⁺ comp f g = idd) (q :⁺ comp g f = idd)
+  : \Sigma (r :⁺ x = y) (=_~> r = f)
+  => \have r => rezk f g (comp-char.conv p) (comp-char.conv q)
+     \in (pmap __.1 r, inv transport_~>_idd-right *> sigma-unext2 r)
 
 \type IsIso {C : \Cat} {x y : C} (f : x ~> y) : \Prop
   => ∃ (g : y ~> x) (comp g f = idd) (comp f g = idd)
@@ -59,3 +58,22 @@
              \in sigma-ext.grpd (pmap __.1 r) (sigma-unext2 r)
       }
   }
+
+\sfunc IsIso_= {C : \Cat} {x y : C} {f : x ~> y} (fi : IsIso f) : \Sigma (p : x = y) (=_~> p = f)
+  => \have r => iso_= f (IsIso.ret fi) (IsIso.f_ret fi) (IsIso.ret_f fi)
+     \in (r.1,r.2)
+
+\lemma IsIso-char {C : \Cat} {x y : C} {f : x ~> y} : IsIso f <-> ∃ (p : x = y) (=_~> p = f)
+  => (\lam fi => inP (IsIso_= fi),
+      \lam (inP s) => Paths.transport IsIso s.2 $ inP (=_~> (inv s.1), =_~>_comp *> pmap =_~> inv_*>, =_~>_comp *> pmap =_~> *>_inv))
+
+\lemma =-char {C : \Cat} (x y : C)
+  : IsEquiv {x = y} {\Sigma (f : x ~> y) (IsIso f)} (\lam p => (=_~> p, IsIso-char.2 $ inP (p,idp)))
+  => inP $ pathEquiv (\lam x y => \Sigma (f : x ~> y) (IsIso f)) \lam {x} {y} => \new Retraction {
+    | f p => (=_~> p, IsIso-char.2 $ inP (p,idp))
+    | sec s => (IsIso_= s.2).1
+    | f_sec s => ext (IsIso_= s.2).2
+  }
+
+\lemma =_~>-embedding {C : \Cat} (x y : C) : Embedding {x = y} =_~>
+  => transEmbedding (Embedding.fromIsEquiv (=-char x y)) (Embedding.projection {x ~> y} IsIso)
