@@ -1,6 +1,7 @@
 package org.arend.formatting
 
 import org.arend.ext.concrete.expr.ConcreteExpression
+import org.arend.ext.module.LongName
 import org.arend.ext.prettyprinting.doc.DocFactory.nullDoc
 import org.arend.ext.reference.ExpressionResolver
 import org.arend.ext.typechecking.ContextData
@@ -188,5 +189,26 @@ class ArendReformatTest : ArendFormatterTestBase() {
         checkReformat(
             "\\import Meta\n\\func test (f : Nat -> Nat -> Nat) (g : Nat) => run (f __ 1) g",
             "\\import Meta\n\n\\func test (f : Nat -> Nat -> Nat) (g : Nat) => run (f __ 1) g")
+    }
+
+    fun testBug3() {
+        addGeneratedModules {
+            declare(nullDoc(), makeMeta("seq", object : MetaResolver {
+                override fun resolvePrefix(resolver: ExpressionResolver, contextData: ContextData): ConcreteExpression {
+                    val args = contextData.arguments
+                    var result: ConcreteExpression = args.last().expression
+                    for (i in args.size - 2 downTo 0) {
+                        val stmt = args[i].expression
+                        val factory = ConcreteFactoryImpl(stmt.data)
+                        result = factory.app(factory.ref(factory.unresolved(LongName(">>"))), true, listOf(stmt, result))
+                    }
+                    return resolver.resolve(result)
+                }
+            }, null))
+        }
+
+        checkReformat(
+            "\\import Meta\n\\func \\infixr 2 >> (a b : Nat) => b\n\\func test (f : Nat -> Nat) => seq (f 1) (f 2)",
+            "\\import Meta\n\n\\func \\infixr 2 >> (a b : Nat) => b\n\n\\func test (f : Nat -> Nat) => seq (f 1) (f 2)")
     }
 }

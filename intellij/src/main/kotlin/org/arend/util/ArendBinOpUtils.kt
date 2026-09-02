@@ -54,7 +54,15 @@ fun appExprToConcrete(appExpr: ArendExpr): Concrete.Expression? {
     fun isCollisionWrapper(node: Concrete.SourceNode) =
         node is Concrete.AppExpression && matchIdentitySet.contains(node.function) &&
         node.function !is Concrete.ReferenceExpression && node.function !is Concrete.FieldCallExpression && node.function !is Concrete.AppExpression
-    return matches.firstOrNull { !isCollisionWrapper(it) } as? Concrete.Expression
+
+    val textRange = appExpr.textRange
+    fun escapesTextRange(node: Concrete.SourceNode) =
+        node is Concrete.AppExpression && node.arguments.any {
+            val data = it.expression.data
+            data is PsiElement && !textRange.contains(data.textRange)
+        }
+
+    return matches.firstOrNull { !isCollisionWrapper(it) && !escapesTextRange(it) } as? Concrete.Expression
 }
 
 /**
