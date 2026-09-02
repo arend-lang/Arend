@@ -205,7 +205,11 @@ public class SearchConcreteVisitor<P,R> implements ConcreteExpressionVisitor<P,R
     if (pattern instanceof Concrete.NamePattern namePattern && namePattern.getReferable() != null) {
       freeReferable(namePattern.getReferable(), params);
     }
-    freePatterns(pattern.getPatterns(), params);
+    switch (pattern) {
+      case Concrete.ConstructorPattern constructorPattern -> freePatterns(constructorPattern.getPatterns(), params);
+      case Concrete.TuplePattern tuplePattern -> freePatterns(tuplePattern.getPatterns(), params);
+      default -> { }
+    }
   }
 
   public void freePatterns(List<? extends Concrete.Pattern> patterns, P params) {
