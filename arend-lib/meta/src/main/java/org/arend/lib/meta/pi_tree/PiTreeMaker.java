@@ -6,6 +6,7 @@ import org.arend.ext.concrete.ConcreteParameter;
 import org.arend.ext.concrete.expr.ConcreteArgument;
 import org.arend.ext.concrete.expr.ConcreteExpression;
 import org.arend.ext.concrete.expr.ConcreteReferenceExpression;
+import org.arend.ext.core.context.BindingVariance;
 import org.arend.ext.core.context.CoreBinding;
 import org.arend.ext.core.context.CoreParameter;
 import org.arend.ext.core.expr.CoreExpression;
@@ -53,7 +54,7 @@ public class PiTreeMaker {
       Set<? extends CoreBinding> codomainFreeVars = piExpr.getCodomain().findFreeBindings();
       for (CoreParameter param = piExpr.getParameters(); param.hasNext(); param = param.getNext(), k++) {
         ArendRef lamRef = factory.local("x" + (k + 1));
-        lamParams.add(factory.param(lamRef));
+        lamParams.add(factory.param(true, lamRef, param.getVariance()));
         substitution.add(new SubstitutionPair(param.getBinding(), factory.ref(lamRef)));
 
         if (codomainFreeVars.contains(param.getBinding())) {
@@ -138,7 +139,7 @@ public class PiTreeMaker {
     for (int i = 0; i < parameters.size(); i++) {
       CoreParameter parameter = parameters.get(i);
       ArendRef ref = factory.local("x" + (i + 1));
-      lamParams.add(factory.param(true, Collections.singletonList(ref), factory.core(parameter.getType().computeTyped())));
+      lamParams.add(factory.param(true, false, Collections.singletonList(ref), factory.core(parameter.getType().computeTyped()), parameter.getVariance()));
       substitution.add(new SubstitutionPair(parameter.getBinding(), factory.ref(ref)));
       substBindings.add(parameter.getBinding());
     }
@@ -193,8 +194,14 @@ public class PiTreeMaker {
 
     for (int i = tree.subtrees.size() - 1; i >= 0; i--) {
       ConcreteExpression domain = makeConcrete(tree.subtrees.get(i), useLet, evenArgs, oddArgs, !isEven);
-      boolean isExplicit = tree.subtrees.get(i).parameter.isExplicit();
-      result = piRefs == null ? (isExplicit ? factory.arr(domain, result) : factory.pi(Collections.singletonList(factory.param(false, Collections.singletonList(null), domain)), result)) : factory.pi(Collections.singletonList(factory.param(isExplicit, Collections.singletonList(piRefs.get(i)), domain)), result);
+      CoreParameter parameter = tree.subtrees.get(i).parameter;
+      boolean isExplicit = parameter.isExplicit();
+      BindingVariance variance = parameter.getVariance();
+      result = piRefs != null
+        ? factory.pi(Collections.singletonList(factory.param(isExplicit, false, Collections.singletonList(piRefs.get(i)), domain, variance)), result)
+        : isExplicit && variance == BindingVariance.INVARIANT
+          ? factory.arr(domain, result)
+          : factory.pi(Collections.singletonList(factory.param(isExplicit, false, Collections.singletonList(null), domain, variance)), result);
     }
     return result;
   }
@@ -292,12 +299,13 @@ public class PiTreeMaker {
     List<ConcreteArgument> piRefs = new ArrayList<>(tree.subtrees.size());
     List<ConcreteParameter> piParams = new ArrayList<>(tree.subtrees.size());
     for (int i = 0; i < tree.subtrees.size(); i++) {
-      ArendRef piRef = factory.local(typechecker.getVariableRenameFactory().getNameFromBinding(tree.subtrees.get(i).parameter.getBinding(), "s"));
+      CoreParameter parameter = tree.subtrees.get(i).parameter;
+      ArendRef piRef = factory.local(typechecker.getVariableRenameFactory().getNameFromBinding(parameter.getBinding(), "s"));
       ConcreteExpression piRefExpr = factory.ref(piRef);
       leftRefs.add(piRefExpr);
       rightRefs.add(piRefExpr);
-      piRefs.add(factory.arg(piRefExpr, tree.subtrees.get(i).parameter.isExplicit()));
-      piParams.add(factory.param(tree.subtrees.get(i).parameter.isExplicit(), Collections.singletonList(piRef), makeConcrete(tree.subtrees.get(i), useLet, leftRefs, rightRefs, true)));
+      piRefs.add(factory.arg(piRefExpr, parameter.isExplicit()));
+      piParams.add(factory.param(parameter.isExplicit(), false, Collections.singletonList(piRef), makeConcrete(tree.subtrees.get(i), useLet, leftRefs, rightRefs, true), parameter.getVariance()));
     }
 
     index = 1;

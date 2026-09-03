@@ -707,7 +707,13 @@ public class ConcreteFactoryImpl implements ConcreteFactory {
   @NotNull
   @Override
   public Concrete.Parameter param(boolean explicit, @Nullable ArendRef ref) {
-    return new Concrete.NameParameter(myData, explicit, makeLocalRef(ref));
+    return param(explicit, ref, BindingVariance.INVARIANT);
+  }
+
+  @NotNull
+  @Override
+  public Concrete.Parameter param(boolean explicit, @Nullable ArendRef ref, @NotNull BindingVariance variance) {
+    return new Concrete.NameParameter(myData, explicit, makeLocalRef(ref), variance);
   }
 
   @NotNull

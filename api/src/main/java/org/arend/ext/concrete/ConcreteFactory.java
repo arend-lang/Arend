@@ -93,6 +93,7 @@ public interface ConcreteFactory {
   @NotNull MetaRef metaRef(@NotNull ArendRef parent, @NotNull String name, @NotNull Precedence precedence, @Nullable String alias, @Nullable Precedence aliasPrec, @Nullable MetaResolver resolver, @NotNull MetaTypechecker typechecker);
 
   @NotNull ConcreteParameter param(boolean explicit, @Nullable ArendRef ref);
+  @NotNull ConcreteParameter param(boolean explicit, @Nullable ArendRef ref, @NotNull BindingVariance variance);
   @NotNull ConcreteParameter param(boolean explicit, @NotNull Collection<? extends ArendRef> refs, @NotNull ConcreteExpression type);
   @NotNull ConcreteParameter param(boolean explicit, @NotNull ConcreteExpression type);
   @NotNull ConcreteParameter param(boolean explicit, boolean isProperty, @NotNull Collection<? extends ArendRef> refs, @NotNull ConcreteExpression type);
