@@ -395,4 +395,34 @@ public class DataTest extends TypeCheckingTestCase {
     typeCheckDef("\\data D (F : Nat -> \\Set0) | con F", 1);
     assertThatErrorsAre(typeMismatchError());
   }
+
+  @Test
+  public void contravariantTest() {
+    typeCheckModule("""
+      \\data Bool | true | false
+      \\data Empty
+      \\data Fam (A : \\Type) (b : Bool) \\elim b
+        | true => cT (A -> Empty)
+        | false => cF
+      \\data Bad | bad (Fam Bad true)
+      """, 1);
+  }
+
+  @Test
+  public void contravariantTest2() {
+    typeCheckModule("""
+      \\data Bool | true | false
+      \\record RA (fa : Nat)
+      \\record RB \\extends RA
+        | pf : 0 = 1
+      \\data F (A : \\Type0) (b : Bool) \\elim b
+        | true => cT (A -> 0 = 1)
+        | false => cF
+      \\func mk : F RB true => cT (\\lam r => r.pf)
+      \\func up : F RA true => mk
+      \\func get (x : F RA true) : RA -> 0 = 1
+        | cT f => f
+      \\func zero=one : 0 = 1 => get up (\\new RA 0)
+      """, 1);
+  }
 }
