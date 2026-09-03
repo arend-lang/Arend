@@ -5,9 +5,8 @@ import com.intellij.openapi.components.service
 import com.intellij.openapi.util.TextRange
 import com.intellij.psi.PsiElement
 import com.intellij.psi.util.parentOfType
-import org.arend.ext.reference.Precedence
-import org.arend.naming.reference.AliasReferable
 import org.arend.naming.reference.GlobalReferable
+import org.arend.naming.resolving.typing.TypingInfo
 import org.arend.psi.ancestor
 import org.arend.psi.ext.*
 import org.arend.psi.ext.ArendExpr
@@ -252,20 +251,41 @@ fun findDefAndArgsInParsedBinop(arg: ArendExpr, parsedExpr: Concrete.Expression)
     return null
 }
 
-fun isBinOp(binOpReference: ArendReferenceContainer?) =
-        if (binOpReference is ArendIPName) binOpReference.infix != null
-        else resolve(binOpReference)?.precedence?.isInfix
-          ?: ((binOpReference?.resolve as? Abstract.AbstractLocatedReferable)?.let { precedenceOf(it).isInfix } == true)
+/**
+ * Whether [referent], written at the use site as [writtenName], is an infix operator there.
+ *
+ * A definition with an alias exports both names, and only one of them may carry `\infix`, so the
+ * answer depends on which one was written. The precedence of the name itself comes from
+ * [TypingInfo], which is what resolves a coclause to the field it implements.
+ */
+fun TypingInfo.isInfixReference(referent: GlobalReferable, writtenName: String): Boolean =
+        getRefPrecedence(referent).isInfix && (!referent.hasAlias() || referent.refName == writtenName) ||
+                referent.aliasPrecedence.isInfix && referent.aliasName == writtenName
 
-private fun precedenceOf(referable: Abstract.AbstractLocatedReferable): Precedence {
-    if (referable.kind != GlobalReferable.Kind.COCLAUSE_FUNCTION) return referable.precedence
-    val field = (referable as? ArendCoClauseDef)?.implementedField as? ArendReferenceContainer ?: return referable.precedence
-    return (field.resolve as? Abstract.AbstractLocatedReferable)?.precedence ?: referable.precedence
+fun isBinOp(binOpReference: ArendReferenceContainer?): Boolean {
+    if (binOpReference is ArendIPName) return binOpReference.infix != null
+    val referable = binOpReference?.resolve as? Abstract.AbstractLocatedReferable ?: return false
+    val writtenName = binOpReference.referenceName
+    (referable as? ReferableBase<*>)?.tcReferable?.let {
+        return binOpReference.project.service<ArendServerService>().server.typingInfo.isInfixReference(it, writtenName)
+    }
+    return psiIsInfix(referable, writtenName)
 }
 
-private fun resolve(reference: ArendReferenceContainer?): GlobalReferable? =
-        (reference?.resolve as? GlobalReferable)
-                ?.let { if (it.hasAlias() && it.aliasName == reference.referenceName) AliasReferable(it) else it }
+/**
+ * The answer [isBinOp] falls back on when the server has not built a concrete group for the
+ * definition yet, so no `TCDefReferable` is available to ask [TypingInfo] about. Mirrors
+ * [isInfixReference] on the PSI, including the walk from a coclause to the field it implements.
+ */
+private fun psiIsInfix(referable: Abstract.AbstractLocatedReferable, writtenName: String): Boolean {
+    if (referable.aliasName == writtenName) return referable.aliasPrecedence.isInfix
+    if (referable.kind != GlobalReferable.Kind.COCLAUSE_FUNCTION) return referable.precedence.isInfix
+    val field = (referable as? ArendCoClauseDef)?.implementedField as? ArendReferenceContainer
+        ?: return referable.precedence.isInfix
+    val fieldReferable = field.resolve as? Abstract.AbstractLocatedReferable ?: return referable.precedence.isInfix
+    return if (fieldReferable.aliasName == field.referenceName) fieldReferable.aliasPrecedence.isInfix
+           else fieldReferable.precedence.isInfix
+}
 
 /**
  * [action] returns true if the processing should be stopped.

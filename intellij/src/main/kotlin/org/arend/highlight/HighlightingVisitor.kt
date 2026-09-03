@@ -7,6 +7,7 @@ import org.arend.psi.ext.*
 import org.arend.psi.extendLeft
 import org.arend.term.concrete.Concrete
 import org.arend.typechecking.visitor.VoidConcreteVisitor
+import org.arend.util.isInfixReference
 
 class HighlightingVisitor(private val collector: HighlightingCollector, private val typingInfo: TypingInfo) : VoidConcreteVisitor<Void>() {
     private fun resolveReference(data: Any?, referent: Referable) {
@@ -35,7 +36,7 @@ class HighlightingVisitor(private val collector: HighlightingCollector, private 
         val lastReference = list.lastOrNull() ?: return
         if (data !is ArendPattern && (lastReference is ArendRefIdentifier || lastReference is ArendDefIdentifier)) {
             when {
-                referent is GlobalReferable && (typingInfo.getRefPrecedence(referent).isInfix && (!referent.hasAlias() || referent.refName == lastReference.referenceName) || referent.aliasPrecedence.isInfix && referent.aliasName == lastReference.referenceName) ->
+                referent is GlobalReferable && typingInfo.isInfixReference(referent, lastReference.referenceName) ->
                     collector.addHighlightInfo(lastReference.textRange, ArendHighlightingColors.OPERATORS)
 
                 (referent as? MetaReferable)?.resolver != null ->

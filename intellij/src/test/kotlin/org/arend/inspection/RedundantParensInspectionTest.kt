@@ -359,6 +359,52 @@ class RedundantParensInspectionTest : QuickFixTestBase() {
           | copy => apply ${rp("(unwrap)")}
     """)
 
+    fun `test parens around an infix alias of a field implemented by a coclause`() = doWeakWarningsCheck(myFixture,"""
+        \class Magma (A : \Set)
+          | mul \alias \infixl 6 ** : A -> A -> A
+          | op : A -> A -> A
+
+        \data D | con
+
+        \func apply {A : \Type} (a : A) => a
+
+        \instance DMagma : Magma D
+          | ** (x y : D) : D => con
+          -- the `\infixl 6` sits on the alias, and `**` is what is written here
+          | op => apply (**)
+    """)
+
+    fun `test parens around the plain name of a field with an infix alias`() = doWeakWarningsCheck(myFixture,"""
+        \class Magma (A : \Set)
+          | mul \alias \infixl 6 ** : A -> A -> A
+          | op : A -> A -> A
+
+        \data D | con
+
+        \func apply {A : \Type} (a : A) => a
+
+        \instance DMagma : Magma D
+          | ** (x y : D) : D => con
+          -- `mul` itself has no precedence, so these parens are redundant
+          | op => apply ${rp("(mul)")}
+    """)
+
+    fun `test parens around an infix alias of a function`() = doWeakWarningsCheck(myFixture,"""
+        \func apply {A : \Type} (a : A) => a
+
+        \func f \alias \infixl 6 ## (a b : Nat) => a
+
+        \func g => apply (##)
+    """)
+
+    fun `test parens around the plain name of a function with an infix alias`() = doWeakWarningsCheck(myFixture,"""
+        \func apply {A : \Type} (a : A) => a
+
+        \func f \alias \infixl 6 ## (a b : Nat) => a
+
+        \func g => apply ${rp("(f)")}
+    """)
+
     private fun doTypedQuickFixTest(before: String, after: String) =
             typedQuickFixTest(ArendBundle.message("arend.unwrap.parentheses.fix"), before, after)
 
