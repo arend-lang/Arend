@@ -1,0 +1,376 @@
+\import Algebra.Group
+\import Algebra.Meta
+\import Algebra.Monoid
+\import Algebra.Ring
+\import Algebra.Solver
+\import Algebra.Solver.CRing
+\import Algebra.Solver.Ring
+\import Algebra.Solver.Semiring
+\import Arith.Int
+\import Meta
+\import Paths
+\import Paths.Meta
+
+\open Monoid(Inv)
+
+-- Field syntax is independent of its interpretation. In particular, inverse
+-- nodes do not invent a total inverse on a generic commutative ring; their
+-- witnesses are recorded by 'Eval'.
+\data FieldTerm (n : Nat)
+  | var (Fin n)
+  | coef Int
+  | :zro
+  | :ide
+  | :negative (FieldTerm n)
+  | \infixl 6 :+ (left right : FieldTerm n)
+  | \infixl 7 :* (left right : FieldTerm n)
+  | :inverse (FieldTerm n)
+
+\func RingTerm (n : Nat) => RingSolverModel.Term Int n
+\func RingNF (n : Nat) => SemiringSolverModel.NF Int n
+
+-- Raw fractions retain ring syntax so that the two cross-products can each be
+-- normalized once by CRingSolverModel's ring backend.
+\func FractionTerm (n : Nat) => \Sigma (RingTerm n) (RingTerm n)
+\func FractionNF (n : Nat) => \Sigma (RingNF n) (RingNF n)
+
+\func normalize-fraction {n : Nat} (term : FieldTerm n) : FractionTerm n \elim term
+  | var index => (RingSolverModel.Term.var index, RingSolverModel.Term.:ide)
+  | coef value => (RingSolverModel.Term.coef value, RingSolverModel.Term.:ide)
+  | :zro => (RingSolverModel.Term.:zro, RingSolverModel.Term.:ide)
+  | :ide => (RingSolverModel.Term.:ide, RingSolverModel.Term.:ide)
+  | :negative term =>
+      (RingSolverModel.Term.:negative (normalize-fraction term).1,
+       (normalize-fraction term).2)
+  | t :+ s =>
+      ((normalize-fraction t).1 RingSolverModel.Term.:* (normalize-fraction s).2
+         RingSolverModel.Term.:+
+       (normalize-fraction s).1 RingSolverModel.Term.:* (normalize-fraction t).2,
+       (normalize-fraction t).2 RingSolverModel.Term.:* (normalize-fraction s).2)
+  | t :* s =>
+      ((normalize-fraction t).1 RingSolverModel.Term.:* (normalize-fraction s).1,
+       (normalize-fraction t).2 RingSolverModel.Term.:* (normalize-fraction s).2)
+  | :inverse term => ((normalize-fraction term).2, (normalize-fraction term).1)
+
+-- This is the same normalizer installed as the normalize field of
+-- CRingSolverModel. The wrapper gives Java a stable, structure-independent
+-- reference.
+\func normalize-ring {n : Nat} (term : RingTerm n) : RingNF n
+  => RingSolverModel.normalize term
+
+\func normalize {n : Nat} (term : FieldTerm n) : FractionNF n
+  => (normalize-ring (normalize-fraction term).1,
+      normalize-ring (normalize-fraction term).2)
+
+\func cross-left-term {n : Nat} (left right : FieldTerm n) : RingTerm n
+  => (normalize-fraction left).1 RingSolverModel.Term.:* (normalize-fraction right).2
+
+\func cross-right-term {n : Nat} (left right : FieldTerm n) : RingTerm n
+  => (normalize-fraction right).1 RingSolverModel.Term.:* (normalize-fraction left).2
+
+-- These are the two canonical ring-normalized goals produced when an equality
+-- of field expressions is cleared.
+\func cross-left {n : Nat} (left right : FieldTerm n) : RingNF n
+  => normalize-ring (cross-left-term left right)
+
+\func cross-right {n : Nat} (left right : FieldTerm n) : RingNF n
+  => normalize-ring (cross-right-term left right)
+
+\func ring-interpret {R : CRing} {n : Nat} (env : Fin n -> R) (term : RingTerm n) : R
+  => RingSolverModel.interpret env term
+
+\func ring-interpretNF {R : CRing} {n : Nat} (env : Fin n -> R) (nf : RingNF n) : R
+  => (CRingSolverModel R).interpretNF env nf
+
+\lemma ring-normalize-correct {R : CRing} {n : Nat} {env : Fin n -> R} {term : RingTerm n} :
+  ring-interpretNF env (normalize-ring term) = ring-interpret env term
+  => (CRingSolverModel R).interpretNF-consistent
+
+-- Eval is proof-relevant only at inverse nodes. The witness is supplied by the
+-- source Arend term, whose inverse projection is necessarily proof-carrying.
+\sfunc Eval.{u} {R : CRing.{u}} {n : Nat} (env : Fin n -> R)
+    (term : FieldTerm n) (value : R) : \Set u \elim term
+  | var index => env index = value
+  | coef coefficient => R.intCoef coefficient = value
+  | :zro => R.zro = value
+  | :ide => R.ide = value
+  | :negative term => \Sigma (x : R) (Eval env term x) (R.negative x = value)
+  | t :+ s =>
+      \Sigma (x y : R) (Eval env t x) (Eval env s y) (x + y = value)
+  | t :* s =>
+      \Sigma (x y : R) (Eval env t x) (Eval env s y) (x * y = value)
+  | :inverse term =>
+      \Sigma (x : R) (Eval env term x) (x-inv : Inv x) (x-inv.inv = value)
+
+-- Stable constructors for Eval. Clients should use these instead of unfolding
+-- Eval or constructing its sigma values directly.
+\func eval-var.{u} {R : CRing.{u}} {n : Nat} {env : Fin n -> R} {index : Fin n} :
+    Eval env (FieldTerm.var index) (env index)
+  => rewrite (\peval Eval env (FieldTerm.var index) (env index)) idp
+
+\func eval-coef.{u} {R : CRing.{u}} {n : Nat} {env : Fin n -> R}
+    {coefficient : Int} : Eval env (FieldTerm.coef coefficient) (R.intCoef coefficient)
+  => rewrite (\peval Eval env (FieldTerm.coef coefficient) (R.intCoef coefficient)) idp
+
+\func eval-zro.{u} {R : CRing.{u}} {n : Nat} {env : Fin n -> R} :
+    Eval env FieldTerm.:zro R.zro
+  => rewrite (\peval Eval env FieldTerm.:zro R.zro) idp
+
+\func eval-ide.{u} {R : CRing.{u}} {n : Nat} {env : Fin n -> R} :
+    Eval env FieldTerm.:ide R.ide
+  => rewrite (\peval Eval env FieldTerm.:ide R.ide) idp
+
+\func eval-negative.{u} {R : CRing.{u}} {n : Nat} {env : Fin n -> R}
+    {term : FieldTerm n} {value : R} (evaluation : Eval env term value) :
+    Eval env (FieldTerm.:negative term) (R.negative value)
+  => rewrite (\peval Eval env (FieldTerm.:negative term) (R.negative value))
+       (value, evaluation, idp)
+
+\func eval-add.{u} {R : CRing.{u}} {n : Nat} {env : Fin n -> R}
+    {left right : FieldTerm n} {left-value right-value : R}
+    (left-evaluation : Eval env left left-value)
+    (right-evaluation : Eval env right right-value) :
+    Eval env (left FieldTerm.:+ right) (left-value + right-value)
+  => rewrite (\peval Eval env (left FieldTerm.:+ right) (left-value + right-value))
+       (left-value, right-value, left-evaluation, right-evaluation, idp)
+
+\func eval-mul.{u} {R : CRing.{u}} {n : Nat} {env : Fin n -> R}
+    {left right : FieldTerm n} {left-value right-value : R}
+    (left-evaluation : Eval env left left-value)
+    (right-evaluation : Eval env right right-value) :
+    Eval env (left FieldTerm.:* right) (left-value * right-value)
+  => rewrite (\peval Eval env (left FieldTerm.:* right) (left-value * right-value))
+       (left-value, right-value, left-evaluation, right-evaluation, idp)
+
+\func eval-inverse.{u} {R : CRing.{u}} {n : Nat} {env : Fin n -> R}
+    {term : FieldTerm n} {value : R} (evaluation : Eval env term value)
+    (value-inv : Inv value) : Eval env (FieldTerm.:inverse term) value-inv.inv
+  => rewrite (\peval Eval env (FieldTerm.:inverse term) value-inv.inv)
+       (value, evaluation, value-inv, idp)
+
+\func FractionTermValid.{u} {R : CRing.{u}} {n : Nat} (env : Fin n -> R)
+    (fraction : FractionTerm n) (value : R) : \Set u
+  => \Sigma (denominator-inv : Inv (ring-interpret env fraction.2))
+            (value = ring-interpret env fraction.1 * denominator-inv.inv)
+
+\func FractionValid.{u} {R : CRing.{u}} {n : Nat} (env : Fin n -> R)
+    (fraction : FractionNF n) (value : R) : \Set u
+  => \Sigma (denominator-inv : Inv (ring-interpretNF env fraction.2))
+            (value = ring-interpretNF env fraction.1 * denominator-inv.inv)
+
+-- Algebraic certificates used by normalize-fraction-correct. They need only a
+-- commutative ring and explicit inverse witnesses.
+\lemma fraction-add {R : CRing} {a b d e : R} (di : Inv d) (ei : Inv e) :
+  a * di.inv + b * ei.inv = (a * e + b * d) * (ei.inv * di.inv)
+  => equation.cRing { di.inv-right, ei.inv-right }
+
+\lemma fraction-mul {R : CRing} {a b d e : R} (di : Inv d) (ei : Inv e) :
+  (a * di.inv) * (b * ei.inv) = (a * b) * (ei.inv * di.inv)
+  => equation.cRing
+
+\lemma fraction-neg {R : CRing} {a d : R} (di : Inv d) :
+  R.negative (a * di.inv) = R.negative a * di.inv
+  => inv R.negative_*-left
+
+\lemma fraction-inverse {R : CRing} {a d : R} (di : Inv d)
+    (value-inv : Inv (a * di.inv)) :
+  value-inv.inv = d * (Inv.cfactor-left value-inv).inv
+  => Inv.inv-isUnique value-inv
+       (Inv.prod (Inv.cfactor-left value-inv) (Inv.reverse {di})) idp
+
+\lemma fraction-cross-forward {R : CRing} {a b d e : R}
+    (di : Inv d) (ei : Inv e) (p : a * di.inv = b * ei.inv) : a * e = b * d
+  => inv (equation.cRing { di.inv-right }) *>
+     pmap (* (d * e)) p *>
+     equation.cRing { ei.inv-right }
+
+\lemma fraction-cross-backward {R : CRing} {a b d e : R}
+    (di : Inv d) (ei : Inv e) (p : a * e = b * d) : a * di.inv = b * ei.inv
+  => inv (equation.cRing { ei.inv-right }) *>
+     pmap (* (di.inv * ei.inv)) p *>
+     equation.cRing { di.inv-right }
+
+\func normalize-fraction-correct.{u} {R : CRing.{u}} {n : Nat}
+    {env : Fin n -> R} {term : FieldTerm n} {value : R}
+    (evaluation : Eval env term value) :
+    FractionTermValid env (normalize-fraction term) value \elim term
+  | var index =>
+      (Inv.lmake R.ide R.ide-left,
+       inv (rewrite (\peval Eval env (var index) value) in evaluation) *> inv R.ide-right)
+  | coef coefficient =>
+      (Inv.lmake R.ide R.ide-left,
+       inv (rewrite (\peval Eval env (coef coefficient) value) in evaluation) *> inv R.ide-right)
+  | :zro =>
+      (Inv.lmake R.ide R.ide-left,
+       inv (rewrite (\peval Eval env :zro value) in evaluation) *> inv R.ide-right)
+  | :ide =>
+      (Inv.lmake R.ide R.ide-left,
+       inv (rewrite (\peval Eval env :ide value) in evaluation) *> inv R.ide-right)
+  | :negative term =>
+      \case rewrite (\peval Eval env (:negative term) value) in evaluation \with {
+      | (x, term-evaluation, negative-x=value) =>
+          \case normalize-fraction-correct term-evaluation \with {
+            | (denominator-inv, correct) =>
+                (denominator-inv,
+                 inv negative-x=value *>
+                 pmap R.negative correct *>
+                 inv R.negative_*-left)
+          }
+    }
+  | t :+ s => \case rewrite (\peval Eval env (t :+ s) value) in evaluation \with {
+      | (x, y, left-evaluation, right-evaluation, x+y=value) =>
+          \case normalize-fraction-correct left-evaluation,
+                normalize-fraction-correct right-evaluation \with {
+            | (left-denominator-inv, left-correct),
+              (right-denominator-inv, right-correct) =>
+                (Inv.prod left-denominator-inv right-denominator-inv,
+                 inv x+y=value *>
+                 pmap2 (+) left-correct right-correct *>
+                 fraction-add left-denominator-inv right-denominator-inv)
+          }
+    }
+  | t :* s => \case rewrite (\peval Eval env (t :* s) value) in evaluation \with {
+      | (x, y, left-evaluation, right-evaluation, x*y=value) =>
+          \case normalize-fraction-correct left-evaluation,
+                normalize-fraction-correct right-evaluation \with {
+            | (left-denominator-inv, left-correct),
+              (right-denominator-inv, right-correct) =>
+                (Inv.prod left-denominator-inv right-denominator-inv,
+                 inv x*y=value *>
+                 pmap2 (*) left-correct right-correct *>
+                 fraction-mul left-denominator-inv right-denominator-inv)
+          }
+    }
+  | :inverse term =>
+      \case rewrite (\peval Eval env (:inverse term) value) in evaluation \with {
+      | (x, term-evaluation, x-inv, x-inv=value) =>
+          \case normalize-fraction-correct term-evaluation \with {
+            | (denominator-inv, correct) =>
+                \have product-inv :
+                    Inv (ring-interpret env (normalize-fraction term).1 * denominator-inv.inv)
+                        x-inv.inv
+                  => transport (\lam z => Inv z x-inv.inv) correct x-inv
+                \in (Inv.cfactor-left product-inv,
+                     inv x-inv=value *>
+                     fraction-inverse denominator-inv product-inv)
+          }
+    }
+
+\func normalize-correct.{u} {R : CRing.{u}} {n : Nat} {env : Fin n -> R}
+    {term : FieldTerm n} {value : R} (evaluation : Eval env term value) :
+    FractionValid env (normalize term) value =>
+  \case normalize-fraction-correct evaluation \with {
+    | (denominator-inv, correct) =>
+        \have denominator-correct :
+            ring-interpretNF env (normalize-ring (normalize-fraction term).2) =
+            ring-interpret env (normalize-fraction term).2
+          => ring-normalize-correct {R} {n} {env} {(normalize-fraction term).2}
+        \in
+        \have numerator-correct :
+            ring-interpretNF env (normalize-ring (normalize-fraction term).1) =
+            ring-interpret env (normalize-fraction term).1
+          => ring-normalize-correct {R} {n} {env} {(normalize-fraction term).1}
+        \in
+        \have normalized-denominator-inv :
+            Inv (ring-interpretNF env (normalize-ring (normalize-fraction term).2))
+                denominator-inv.inv
+          => transport (\lam z => Inv z denominator-inv.inv)
+               (inv denominator-correct) denominator-inv
+        \in (normalized-denominator-inv,
+             correct *> pmap (* denominator-inv.inv) (inv numerator-correct))
+  }
+
+\lemma fraction-terms-equality.{u} {R : CRing.{u}} {n : Nat}
+    {env : Fin n -> R} {left right : FractionTerm n} {left-value right-value : R}
+    (left-valid : FractionTermValid env left left-value)
+    (right-valid : FractionTermValid env right right-value)
+    (cross-proof :
+      ring-interpret env left.1 * ring-interpret env right.2 =
+      ring-interpret env right.1 * ring-interpret env left.2) :
+    left-value = right-value =>
+  \case left-valid, right-valid \with {
+    | (left-denominator-inv, left-correct),
+      (right-denominator-inv, right-correct) =>
+        left-correct *>
+        fraction-cross-backward left-denominator-inv right-denominator-inv cross-proof *>
+        inv right-correct
+  }
+
+\lemma fraction-terms-equality-conv.{u} {R : CRing.{u}} {n : Nat}
+    {env : Fin n -> R} {left right : FractionTerm n} {left-value right-value : R}
+    (left-valid : FractionTermValid env left left-value)
+    (right-valid : FractionTermValid env right right-value)
+    (value-proof : left-value = right-value) :
+    ring-interpret env left.1 * ring-interpret env right.2 =
+    ring-interpret env right.1 * ring-interpret env left.2 =>
+  \case left-valid, right-valid \with {
+    | (left-denominator-inv, left-correct),
+      (right-denominator-inv, right-correct) =>
+        fraction-cross-forward left-denominator-inv right-denominator-inv
+          (inv left-correct *> value-proof *> right-correct)
+  }
+
+-- Raw frontend entry points. Unlike 'field-terms-equality', these lemmas do
+-- not normalize the cross-products. Thus, their cross equality can be handed
+-- directly to another ring simplifier or solver.
+\lemma field-terms-equality-raw.{u} {R : CRing.{u}} {n : Nat}
+    {env : Fin n -> R} {left right : FieldTerm n} {left-value right-value : R}
+    (left-evaluation : Eval env left left-value)
+    (right-evaluation : Eval env right right-value)
+    (cross-proof :
+      ring-interpret env (cross-left-term left right) =
+      ring-interpret env (cross-right-term left right)) :
+    left-value = right-value =>
+  fraction-terms-equality
+    (normalize-fraction-correct left-evaluation)
+    (normalize-fraction-correct right-evaluation)
+    cross-proof
+
+\lemma field-terms-equality-raw-conv.{u} {R : CRing.{u}} {n : Nat}
+    {env : Fin n -> R} {left right : FieldTerm n} {left-value right-value : R}
+    (left-evaluation : Eval env left left-value)
+    (right-evaluation : Eval env right right-value)
+    (value-proof : left-value = right-value) :
+    ring-interpret env (cross-left-term left right) =
+    ring-interpret env (cross-right-term left right) =>
+  fraction-terms-equality-conv
+    (normalize-fraction-correct left-evaluation)
+    (normalize-fraction-correct right-evaluation)
+    value-proof
+
+-- Frontend entry point: its sole generated subgoal is equality of the two
+-- interpreted, ring-normalized cross-products.
+\lemma field-terms-equality.{u} {R : CRing.{u}} {n : Nat} {env : Fin n -> R}
+    {left right : FieldTerm n} {left-value right-value : R}
+    (left-evaluation : Eval env left left-value)
+    (right-evaluation : Eval env right right-value)
+    (cross-proof :
+      ring-interpretNF env (cross-left left right) =
+      ring-interpretNF env (cross-right left right)) :
+    left-value = right-value =>
+  \have left-valid => normalize-fraction-correct left-evaluation
+  \in \have right-valid => normalize-fraction-correct right-evaluation
+  \in \have raw-cross-proof :
+      ring-interpret env (normalize-fraction left).1 *
+        ring-interpret env (normalize-fraction right).2 =
+      ring-interpret env (normalize-fraction right).1 *
+        ring-interpret env (normalize-fraction left).2
+    => inv (ring-normalize-correct {R} {n} {env} {cross-left-term left right}) *>
+       cross-proof *>
+       ring-normalize-correct {R} {n} {env} {cross-right-term left right}
+  \in fraction-terms-equality left-valid right-valid raw-cross-proof
+
+\lemma field-terms-equality-conv.{u} {R : CRing.{u}} {n : Nat}
+    {env : Fin n -> R} {left right : FieldTerm n} {left-value right-value : R}
+    (left-evaluation : Eval env left left-value)
+    (right-evaluation : Eval env right right-value)
+    (value-proof : left-value = right-value) :
+    ring-interpretNF env (cross-left left right) =
+    ring-interpretNF env (cross-right left right) =>
+  \have left-valid => normalize-fraction-correct left-evaluation
+  \in \have right-valid => normalize-fraction-correct right-evaluation
+  \in \have raw-cross-proof =>
+    fraction-terms-equality-conv left-valid right-valid value-proof
+  \in ring-normalize-correct {R} {n} {env} {cross-left-term left right} *>
+      raw-cross-proof *>
+      inv (ring-normalize-correct {R} {n} {env} {cross-right-term left right})

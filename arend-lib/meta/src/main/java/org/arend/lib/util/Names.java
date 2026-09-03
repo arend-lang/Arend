@@ -108,6 +108,10 @@ public class Names {
     return new ModulePath("Algebra", "Group");
   }
 
+  public static ModulePath getFieldModule() {
+    return new ModulePath("Algebra", "Field");
+  }
+
   public static ModulePath getGroupSolverModule() {
     return new ModulePath("Algebra", "Group", "Solver");
   }
@@ -178,6 +182,10 @@ public class Names {
 
   public static ModulePath getNewRingSolverModule() {
     return new ModulePath("Algebra", "Solver", "Ring");
+  }
+
+  public static ModulePath getFieldSolverModule() {
+    return new ModulePath("Algebra", "Solver", "Field");
   }
 
   public static ModulePath getNewSemiringSolverModule() {

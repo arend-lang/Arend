@@ -1,0 +1,64 @@
+\import Algebra.Group
+\import Algebra.Monoid
+\import Algebra.Ring
+\import Algebra.Solver.Field
+\import Paths
+
+\open Monoid(Inv)
+
+\func inverse-eval.{u} {R : CRing.{u}} {n : Nat} {env : Fin n -> R} {i : Fin n}
+    (xi : Inv (env i)) :
+    Eval env (FieldTerm.:inverse (FieldTerm.var i)) xi.inv
+  => eval-inverse eval-var xi
+
+\func inverse-add-eval.{u} {R : CRing.{u}} {n : Nat} {env : Fin n -> R} {i j : Fin n}
+    (xi : Inv (env i)) (yj : Inv (env j)) :
+    Eval env
+      (FieldTerm.:inverse (FieldTerm.var i) FieldTerm.:+
+       FieldTerm.:inverse (FieldTerm.var j))
+      (xi.inv + yj.inv)
+  => eval-add (inverse-eval {R} {n} {env} {i} xi)
+       (inverse-eval {R} {n} {env} {j} yj)
+
+\lemma inverse-add-comm.{u} {R : CRing.{u}} {n : Nat} {env : Fin n -> R} {i j : Fin n}
+    (xi : Inv (env i)) (yj : Inv (env j)) : xi.inv + yj.inv = yj.inv + xi.inv =>
+  \have left-eval => inverse-add-eval {R} {n} {env} {i} {j} xi yj
+  \in \have right-eval => inverse-add-eval {R} {n} {env} {j} {i} yj xi
+  \in field-terms-equality left-eval right-eval
+    (field-terms-equality-conv left-eval right-eval R.+-comm)
+
+\func inverse-add-normalize-correct.{u} {R : CRing.{u}} {n : Nat}
+    {env : Fin n -> R} {i j : Fin n} (xi : Inv (env i)) (yj : Inv (env j)) :
+    FractionValid env
+      (normalize
+        (FieldTerm.:inverse (FieldTerm.var i) FieldTerm.:+
+         FieldTerm.:inverse (FieldTerm.var j)))
+      (xi.inv + yj.inv)
+  => normalize-correct (inverse-add-eval {R} {n} {env} {i} {j} xi yj)
+
+\lemma inverse-add-comm-cross.{u} {R : CRing.{u}} {n : Nat}
+    {env : Fin n -> R} {i j : Fin n} (xi : Inv (env i)) (yj : Inv (env j)) :
+    ring-interpretNF env
+      (cross-left
+        (FieldTerm.:inverse (FieldTerm.var i) FieldTerm.:+
+         FieldTerm.:inverse (FieldTerm.var j))
+        (FieldTerm.:inverse (FieldTerm.var j) FieldTerm.:+
+         FieldTerm.:inverse (FieldTerm.var i))) =
+    ring-interpretNF env
+      (cross-right
+        (FieldTerm.:inverse (FieldTerm.var i) FieldTerm.:+
+         FieldTerm.:inverse (FieldTerm.var j))
+        (FieldTerm.:inverse (FieldTerm.var j) FieldTerm.:+
+         FieldTerm.:inverse (FieldTerm.var i))) =>
+  field-terms-equality-conv
+    (inverse-add-eval {R} {n} {env} {i} {j} xi yj)
+    (inverse-add-eval {R} {n} {env} {j} {i} yj xi)
+    R.+-comm
+
+\lemma inverse-add-comm-raw.{u} {R : CRing.{u}} {n : Nat}
+    {env : Fin n -> R} {i j : Fin n} (xi : Inv (env i)) (yj : Inv (env j)) :
+    xi.inv + yj.inv = yj.inv + xi.inv =>
+  \have left-eval => inverse-add-eval {R} {n} {env} {i} {j} xi yj
+  \in \have right-eval => inverse-add-eval {R} {n} {env} {j} {i} yj xi
+  \in field-terms-equality-raw left-eval right-eval
+    (field-terms-equality-raw-conv left-eval right-eval R.+-comm)

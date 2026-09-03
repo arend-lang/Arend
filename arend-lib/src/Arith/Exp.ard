@@ -104,11 +104,7 @@
     \lemma deriv-coef-Rat (n : Nat) : deriv coef-Rat n = coef-Rat n
       => run {
         unfold (deriv, coef-Rat),
-        rewrite (RatField.natCoef_*, RatField.finv_* {natCoef (suc n)} {natCoef (fac n)}),
-        rewrite {2} *-comm,
-        rewriteI *-assoc,
-        rewrite (finv-right {RatField} {natCoef (suc n)} (natRat/=0 suc/=0)),
-        ide-left
+        field_simp {natRat/=0 fac/=0}
       }
 
     -- | Bridge: $\exp x$ is the {IsSeriesSum} value of the exp power series at $x$.

@@ -38,6 +38,7 @@ import org.arend.lib.meta.equationNew.semigroup.*;
 import org.arend.lib.meta.exists.ExistsMeta;
 import org.arend.lib.meta.exists.GivenMeta;
 import org.arend.lib.meta.exists.ExistsResolver;
+import org.arend.lib.meta.field.FieldSimpMeta;
 import org.arend.lib.meta.linear.LinearSolverMeta;
 import org.arend.lib.meta.arith.IntArithMeta;
 import org.arend.lib.meta.arith.NatArithMeta;
@@ -250,6 +251,7 @@ public class StdExtension implements ArendExtension {
 
     ModulePath algebra = new ModulePath("Algebra", "Meta");
     contributor.declare(algebra, Names.getAlgebraModule());
+    contributor.declare(algebra, Names.getFieldModule());
     contributor.declare(algebra, Names.getGroupModule());
     contributor.declare(algebra, Names.getGroupSolverModule(), "NatData", "CGroupData", "GroupTerm");
     contributor.declare(algebra, Names.getLinearSolverModule());
@@ -268,6 +270,11 @@ public class StdExtension implements ArendExtension {
     contributor.declare(algebra, Names.getNewGroupSolverModule());
     contributor.declare(algebra, Names.getNewMonoidSolverModule());
     contributor.declare(algebra, Names.getNewRingSolverModule());
+    contributor.declare(algebra, Names.getFieldSolverModule(),
+        "FieldTerm", "field-terms-equality", "field-terms-equality-raw",
+        "field-terms-equality-raw-conv",
+        "eval-var", "eval-coef", "eval-zro", "eval-ide",
+        "eval-negative", "eval-add", "eval-mul", "eval-inverse");
     contributor.declare(algebra, Names.getNewSemiringSolverModule());
     contributor.declare(algebra, Names.getSemigroupSolverModule());
     contributor.declare(algebra, Names.getCSemigroupSolverModule());
@@ -499,6 +506,22 @@ public class StdExtension implements ArendExtension {
         Several hypotheses are applied sequentially.
         For example, if `p : a = b`, `q : b * c = 0`, and the goal is `a * c = 0`, then `cRing {p,q}` proves the goal.
         """), makeDef(equation.getRef(), "cRing", new DependencyMetaTypechecker(CRingEquationMeta.class, () -> new DeferredMetaDefinition(new CRingEquationMeta(), true))));
+    contributor.declare(multiline("""
+        Clears denominators from an equality over a commutative ring. Projections
+        from `Monoid.Inv` are cleared directly. A total `DiscreteField.finv x` is
+        cleared only when `field_simp` can elaborate evidence of `x /= 0`;
+        it never invents an inverse or generates a nonzero side goal.
+
+        Nonzero evidence is supplied in the implicit argument, for example
+        `field_simp {x/=0}`. Each expression in a tuple is tried afresh for every
+        inverse occurrence; local bindings are tried afterwards as well.
+
+        Without a final explicit argument, the cleared cross-products are reduced
+        to the canonical `CRingSolverModel` normal form and must coincide. An
+        optional final explicit argument proves the raw denominator-free equality;
+        for example, `run { field_simp {x/=0}, equation.cRing }` delegates that
+        equality to the existing commutative-ring solver.
+        """), makeDef(algebra, "field_simp", new DependencyMetaTypechecker(FieldSimpMeta.class, () -> new DeferredMetaDefinition(new FieldSimpMeta(), true))));
     ConcreteMetaDefinition cRingAlgoSolver = makeDef(equation.getRef(), "cRingAuto", new DependencyMetaTypechecker(CRingAlgoSolverMeta.class, () -> new DeferredMetaDefinition(new CRingAlgoSolverMeta(), true)));
     contributor.declare(multiline("""
         TODO

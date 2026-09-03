@@ -1,0 +1,105 @@
+\import Algebra.Meta
+\import Algebra.Field
+\import Algebra.Group
+\import Algebra.Monoid
+\import Algebra.Ring
+\import Algebra.Ring.FormalSeries.Derivative
+\import Arith.Exp
+\import Arith.Rat
+\import Combinatorics.Factorial
+\import Logic
+\import Meta
+\import Paths
+
+\open Monoid(Inv)
+
+-- field_simp works over a commutative ring. Proof-bearing inverses are used
+-- directly; total field inverses require nonzero evidence and create no goals.
+\lemma variable-reflexive {R : CRing.{0}} (x : R) : x = x
+  => field_simp
+
+\lemma inverse-cancel {R : CRing.{0}} {x : R} (xi : Inv x) : xi.inv * x = R.ide
+  => field_simp
+
+\lemma clear-two-denominators {R : CRing.{0}} (x y : R)
+    (xi : Inv x) (yi : Inv y) :
+    (xi.inv + yi.inv) * (x * y) = x + y
+  => field_simp
+
+\lemma inverse-inverse {R : CRing.{0}} {x : R}
+    (xi : Inv x) (inverse-xi : Inv xi.inv) : inverse-xi.inv = x
+  => field_simp
+
+\lemma inverse-witness-irrelevance {R : CRing.{0}} {x : R}
+    (xi yi : Inv x) : xi.inv = yi.inv
+  => field_simp
+
+\lemma inverse-cancel-level.{u} {R : CRing.{u}} {x : R}
+    (xi : Inv x) : xi.inv * x = R.ide
+  => field_simp
+
+\lemma polynomial.{u} {R : CRing.{u}} (x y : R) :
+    (x + y) * (x + y) = x * x + R.natCoef 2 * x * y + y * y
+  => field_simp
+
+\lemma negative-inverses.{u} {R : CRing.{u}} {x y : R}
+    (xi : Inv x) (yi : Inv y) :
+    R.negative (xi.inv + yi.inv) = R.negative xi.inv + R.negative yi.inv
+  => field_simp
+
+-- A total inverse can be cleared only after field_simp turns the supplied
+-- nonzero evidence into a proof-bearing Inv witness.
+\lemma finv-with-evidence {F : DiscreteField.{0}} (x : F) (x/=0 : x /= F.zro) :
+    F.finv x * x = F.ide
+  => field_simp {x/=0}
+
+\lemma finv-with-evidence-level.{u} {F : DiscreteField.{u}}
+    (x : F) (x/=0 : x /= F.zro) : F.finv x * x = F.ide
+  => field_simp {x/=0}
+
+\lemma finv-with-local-evidence {F : DiscreteField.{0}} (x : F)
+    (x/=0 : x /= F.zro) : F.finv x * x = F.ide
+  => field_simp
+
+\lemma finv-clear-two {F : DiscreteField.{0}} (x y : F)
+    (x/=0 : x /= F.zro) (y/=0 : y /= F.zro) :
+    (F.finv x + F.finv y) * (x * y) = x + y
+  => field_simp {x/=0,y/=0}
+
+\lemma finv-involutive {F : DiscreteField.{0}} (x : F)
+    (x/=0 : x /= F.zro) : F.finv (F.finv x) = x
+  => field_simp {x/=0,F.finv/=0 x/=0}
+
+-- A finv belonging to a different field structure on the same carrier stays
+-- an atom; evidence for F must not be used to reify G.finv.
+\lemma foreign-finv-is-an-atom {F : DiscreteField.{0}}
+    (G : DiscreteField F) (x a b : F) (x/=0 : x /= F.zro) :
+    G.finv x F.* (a F.+ b) = G.finv x F.* a F.+ G.finv x F.* b
+  => field_simp {x/=0}
+
+-- Without such evidence, treating finv as an inverse would be unsound at 0.
+\lemma finv-is-not-cleared {F : DiscreteField.{0}} (x : F)
+  => fails {F.finv x * x = F.ide} field_simp
+
+\lemma unrelated-evidence-is-rejected {F : DiscreteField.{0}} (x y : F)
+    (y/=0 : y /= F.zro)
+  => fails {F.finv x * x = F.ide} field_simp {y/=0}
+
+-- The explicit argument proves the raw denominator-free subgoal. This checks
+-- that field_simp composes with the existing ring solver instead of requiring
+-- its own second polynomial normalizer.
+\lemma finv-then-cRing {F : DiscreteField.{0}} (x a b : F) (x/=0 : x /= F.zro) :
+    F.finv x * (x * ((a + b) * (a - b))) = a * a - b * b
+  => run {
+    field_simp {x/=0},
+    equation.cRing
+  }
+
+-- Regression for https://github.com/arend-lang/Arend/issues/121. The same
+-- template is elaborated separately for fac n and fac (suc n).
+\lemma issue-121-deriv-coef-Rat (n : Nat) :
+    deriv exp.coef-Rat n = exp.coef-Rat n
+  => run {
+    unfold (deriv, exp.coef-Rat),
+    field_simp {natRat/=0 fac/=0}
+  }
