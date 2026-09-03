@@ -283,12 +283,19 @@ class ArendRecursiveLineMarkerProvider : LineMarkerProviderDescriptor() {
     return result.removeSuffix("\n").toString()
   }
 
+  /**
+   * The identity a vertex and the edges pointing at it agree on. `fullName` and `fullNameText`
+   * differ -- the former carries the module -- so both ends must be derived from the same one,
+   * or the edges reference ids no vertex has.
+   */
+  private fun ArendDefFunction.graphId(): String = fullName.toString()
+
   private fun getVertices(component: Set<Definition>): Set<GraphNode> {
-    return component.mapNotNull { it.referable.data as? ArendDefFunction }.map { GraphNode(it.fullName.toString(), it.fullNameText) }.toSet()
+    return component.mapNotNull { it.referable.data as? ArendDefFunction }.map { GraphNode(it.graphId(), it.fullNameText) }.toSet()
   }
 
   private fun getNameDefinition(vertex: Definition): String? {
-    return (vertex.referable.data as? ArendDefFunction?)?.fullName?.toString()
+    return (vertex.referable.data as? ArendDefFunction?)?.graphId()
   }
 
   private fun getEdges(
