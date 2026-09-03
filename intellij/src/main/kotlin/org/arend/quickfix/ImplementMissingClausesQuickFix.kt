@@ -91,7 +91,7 @@ class ImplementMissingClausesQuickFix(private val missingClausesError: MissingCl
         }
         if (causeData is LocatedReferable) {
             val allReferables = concreteDefinition?.parameters?.map { parameter -> parameter.referableList }?.flatten()
-            val eliminatedReferables = ((concreteDefinition as Concrete.FunctionDefinition).body as? Concrete.ElimFunctionBody)?.eliminatedReferences?.map { it.referent }
+            val eliminatedReferables = ((concreteDefinition as? Concrete.FunctionDefinition)?.body as? Concrete.ElimFunctionBody)?.eliminatedReferences?.map { it.referent }
             if (eliminatedReferables?.isNotEmpty() == true && allReferables?.isNotEmpty() == true) {
                 definedVariables.addAll(allReferables.minus(eliminatedReferables).map { VariableImpl(it.refName) })
             }
