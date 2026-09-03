@@ -191,8 +191,8 @@ class ArendCodeInsightUtils {
                     }
 
                     elim.elimKw != null -> { //Case 2.2 pattern matching via `\elim` construction
-                        val dataParams = data.parameters.map { it.referableList }.flatten()
-                        val eliminatedParams = elim.refIdentifierList.map { it.resolve as ArendDefIdentifier }
+                        val dataParams = data.parameters.flatMap { it.referableList }
+                        val eliminatedParams = elim.refIdentifierList.map { it.resolve as? ArendDefIdentifier }
 
                         dataParams.withIndex().forEach { (index, referable) ->
                             val oldParameter = dataOldParameters.getOrNull(index + firstInternalIndex)
