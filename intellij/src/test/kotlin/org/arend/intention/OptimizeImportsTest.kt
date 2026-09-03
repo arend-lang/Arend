@@ -1506,6 +1506,47 @@ class OptimizeImportsTest : QuickFixTestBase() {
        }
     """)
 
+    // `\using (<alias>)` without an `\as` is legal and exports the alias, so the item is in use
+    fun `test open using an alias without a renaming`() = checkNoQuickFixes(
+        ArendBundle.message("arend.optimize.imports.intention.name"), """
+       \module M \where {
+         \func foo \alias fu (a : Nat) => a
+       }
+
+       \module M1 \where {
+         \open {-caret-}M (fu)
+
+         \func lol => 1 Nat.+ fu 2
+       }
+    """)
+
+    fun `test import using an alias without a renaming`() = checkNoQuickFixesWithMultifile(
+        ArendBundle.message("arend.optimize.imports.intention.name"), """
+            -- ! Foo.ard
+            \func foo \alias fu (a : Nat) => a
+            -- ! Main.ard
+            \import Foo {-caret-}(fu)
+
+            \func lol => 1 Nat.+ fu 2
+    """)
+
+    // the alias is what the file writes, so it is the name the optimizer has to write back
+    fun `test alias is preserved when rewriting an import`() {
+        doExplicitTest("""
+            -- ! Foo.ard
+            \func foo \alias fu (a : Nat) => a
+            -- ! Main.ard
+            \import Foo
+
+            \func lol => 1 Nat.+ fu 2
+            """, """
+            \import Foo (fu)
+
+            \func lol => 1 Nat.+ fu 2
+            """
+        )
+    }
+
     fun testOptimizeImports2() = checkNoQuickFixes(
         ArendBundle.message("arend.optimize.imports.intention.name"), """
        \module N \where \data Bool | true | false

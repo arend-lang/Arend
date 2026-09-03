@@ -340,7 +340,13 @@ private fun eraseNamespaceCommands(group: ArendGroup) {
 }
 
 data class ImportedName(val original: String, val renamed: String?) {
-    constructor(original: String, renamed: String?, psi: PsiElement?): this ((psi as? PsiStubbedReferableImpl<*>)?.refName ?: (psi as? Referable)?.refName ?: original, renamed)
+    // `original` has to be spelled the way `visitReferenceElement` spells `characteristics`:
+    // the declared name when the item is renamed with `\as`, and otherwise the name as written,
+    // which may be the definition's alias -- `\using (<alias>)` is legal and exports the alias.
+    constructor(original: String, renamed: String?, psi: PsiElement?): this (
+        if (renamed == null) original else (psi as? PsiStubbedReferableImpl<*>)?.refName ?: original,
+        renamed
+    )
 
     val visibleName = renamed ?: original
     override fun toString(): String = if (renamed == null) original else "$original \\as $renamed"
