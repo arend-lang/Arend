@@ -378,6 +378,33 @@ private fun instanceRef(referable: Referable?): InstanceRef? {
     return if (longName.isEmpty()) null else InstanceRef(fullName.module?.modulePath ?: return null, longName)
 }
 
+private fun syntacticGlobalInstances(element: ArendGroup): Set<InstanceRef> {
+    val referable = element as? ReferableBase<*>
+    val moduleLocation = if (referable == null) (element as? ArendFile)?.moduleLocation else null
+    val concreteGroup = when {
+        referable != null -> getReferableConcreteGroup(referable)
+        moduleLocation != null -> getFileGroup(element.project, moduleLocation)
+        else -> null
+    } ?: return emptySet()
+    val commands = concreteGroup.statements.mapNotNull { it.command }
+    if (commands.isEmpty()) return emptySet()
+    val scope = when {
+        referable != null -> getReferableScope(referable)
+        moduleLocation != null -> getFileScope(element.project, moduleLocation)
+        else -> EmptyScope.INSTANCE
+    }
+    val result = LinkedHashSet<InstanceRef>()
+    for (command in commands) {
+        // the path of an \import must be resolved in the namespace of modules, not in the scope of the group;
+        // otherwise a module whose name is shadowed by an imported definition cannot be found
+        val commandScope = (if (command.isImport) scope.importedSubscope else scope) ?: continue
+        for (candidate in NamespaceCommandNamespace.resolveNamespace(commandScope, command).elements) {
+            instanceRef(candidate)?.let { result.add(it) }
+        }
+    }
+    return result
+}
+
 internal fun getOptimalImportStructure(group: ArendGroup, progressIndicator: ProgressIndicator? = null): OptimizationResult {
     val rootFrame = MutableFrame("")
     val file = (group.containingFile as ArendFile)
@@ -413,10 +440,9 @@ private class ImportStructureCollector(
         if (element is ArendGroup && element !is ArendFile) {
             frameStack.add(MutableFrame(element.refName))
             groupStack.add(element.refName)
-            addSyntacticGlobalInstances(element)
         }
-        if (element is ArendFile) {
-            addSyntacticGlobalInstances(element)
+        if (element is ArendGroup) {
+            currentFrame.group = element
         }
 
         if (element is ArendGroup) {
@@ -497,26 +523,6 @@ private class ImportStructureCollector(
         fileImports.computeIfAbsent(module) { HashSet() }.add(ImportedName(visibleName, null))
     }
 
-    private fun addSyntacticGlobalInstances(element: ArendGroup) {
-        // only \open-ed instances can participate in instance candidate resolution
-        val (scope, concreteGroup) = if (element is ReferableBase<*>) {
-            getReferableScope(element) to getReferableConcreteGroup(element)
-        } else {
-            (element as? ArendFile)?.moduleLocation?.let { getFileScope(element.project, it) to getFileGroup(element.project, it) } ?: (EmptyScope.INSTANCE to null)
-        }
-        val referables = concreteGroup?.statements?.flatMap { stat ->
-            val command = stat.command ?: return@flatMap emptyList()
-            // the path of an \import must be resolved in the namespace of modules, not in the scope of the group;
-            // otherwise a module whose name is shadowed by an imported definition cannot be found
-            val commandScope = (if (command.isImport) scope.importedSubscope else scope) ?: return@flatMap emptyList()
-            NamespaceCommandNamespace.resolveNamespace(commandScope, command).elements
-        } ?: emptyList()
-        for (instanceCandidate in referables) {
-            instanceRef(instanceCandidate)?.let { currentFrame.instancesFromScope.add(it) }
-        }
-    }
-
-
     override fun elementFinished(element: PsiElement?) {
         if (element is ArendGroup && element !is ArendFile) {
             val last = frameStack.removeLast()
@@ -536,7 +542,7 @@ private class ImportStructureCollector(
             groupPath.toList(),
             importedFilePath.toList() ?: emptyList(),
             element.longName
-        ) ?: return // if reference is 'A.B.c' from File1.X.A.B.c, then it's splitted to ([X], A)
+        ) ?: return // if reference is 'A.B.c' from File1.X.A.B.c, then it's split to ([X], A)
         val characteristics = if (preCharacteristics == importedAs) resolved.refName else preCharacteristics
         val identifierImportedFromFile = groupPath.firstName ?: characteristics
         fileImports.computeIfAbsent(importedFilePath) { HashSet() }.add(ImportedName(identifierImportedFromFile, importedAs?.takeIf { identifierImportedFromFile == characteristics }, null))
@@ -545,9 +551,9 @@ private class ImportStructureCollector(
             currentFrame.usages[ImportedName(characteristics, importedAs, null)] = ModulePath(openingPath)
         }
 
-        for (frame in frameStack) {
+        for ((_, _, _, _, _, activeOpens) in frameStack) {
             val key : Pair<FilePath, ModulePath> = Pair(importedFilePath, ModulePath(openingPath))
-            val relevantOpen = frame.activeOpens[key]
+            val relevantOpen = activeOpens[key]
             if (relevantOpen != null) {
                 val lN = relevantOpen.openedReference ?: continue
                 for (ref in lN.refIdentifierList)
@@ -571,17 +577,13 @@ private class ImportStructureCollector(
     ): Boolean {
         val resolvedParentGroup by lazy(LazyThreadSafetyMode.NONE) { resolved.parentOfType<ArendGroup>() }
         val elementGroup by lazy(LazyThreadSafetyMode.NONE) { element.parentOfType<ArendGroup>() ?: element }
-        if (/*resolved is ArendDefModule ||*/
-            element.parent?.parent is CoClauseBase ||
-            (resolved is ArendClassField &&
-               resolved.name == element.referenceName && // check against renamed field
-               PsiTreeUtil.isAncestor(resolvedParentGroup?.parentGroup, elementGroup, false)
-               ) ||
-            isSuperAffectsElement(resolvedParentGroup, resolved, elementGroup)
-        ) {
-            return true
-        }
-        return false
+        return element.parent?.parent is CoClauseBase ||
+                (resolved is ArendClassField &&
+                        resolved.name == element.referenceName && // check against renamed field
+                        PsiTreeUtil.isAncestor(resolvedParentGroup?.parentGroup, elementGroup, false)
+                        ) ||
+                isSuperAffectsElement(resolvedParentGroup, resolved, elementGroup)/*resolved is ArendDefModule ||*/
+        // check against renamed field
     }
 }
 
@@ -608,10 +610,10 @@ private data class MutableFrame(
     val subgroups: MutableList<MutableFrame> = mutableListOf(),
     val definitions: MutableSet<String> = mutableSetOf(),
     val usages: MutableMap<ImportedName, ModulePath> = mutableMapOf(),
-    val instancesFromScope: MutableSet<InstanceRef> = LinkedHashSet(),
     val usedInstances: MutableSet<InstanceRef> = LinkedHashSet(),
-    val activeOpens: MutableMap<Pair<FilePath, ModulePath>, ArendStatCmd> = mutableMapOf()
-) {
+    val activeOpens: MutableMap<Pair<FilePath, ModulePath>, ArendStatCmd> = mutableMapOf()) {
+    var group: ArendGroup? = null
+
     fun asOptimalTree(): OptimalModuleStructure =
         OptimalModuleStructure(name, subgroups.map { it.asOptimalTree() }, run {
             val reverseMapping = mutableMapOf<ModulePath, MutableSet<ImportedName>>()
@@ -663,7 +665,8 @@ private data class MutableFrame(
         }
         // the order is important. Implicitly used instances are not inherited, so they should be adder after erasing unnecessary usages
         usedInstances.addAll(subgroups.flatMap { it.usedInstances })
-        val instanceSource = if (useTypecheckedInstances) usedInstances else instancesFromScope
+        val instanceSource: Set<InstanceRef> =
+            if (useTypecheckedInstances) usedInstances else group?.let { syntacticGlobalInstances(it) } ?: emptySet()
         for (instance in instanceSource) {
             val importedFile = instance.module
             val qualifier = instance.qualifier
