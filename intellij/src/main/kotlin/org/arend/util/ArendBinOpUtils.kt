@@ -40,15 +40,35 @@ fun exprToConcrete1(appExpr: ArendExpr): List<Concrete.SourceNode> {
     return result
 }
 
+/**
+ * The `Concrete.Expression` that the resolved definition holds for [appExpr], or `null` when none of
+ * the candidates can be trusted to correspond to it.
+ *
+ * [exprToConcrete1] matches by text range rather than by identity, so one PSI expression can have
+ * several concrete nodes answering for it, and two kinds have to be filtered out:
+ *
+ * - **A wrapper colliding with its own function.** An application normally reuses its function's data
+ *   as its own -- a chain of field calls `a.f.g` nests that way, and the outermost one is what
+ *   consumers want. But when the function is a complete-value expression carrying its own PSI (the
+ *   lambda produced for a `__` section) rather than a reference, a field call or an application, the
+ *   synthetic application wrapped around it reuses that data too and so collides with it among the
+ *   candidates. The wrapper holds nothing its function does not, so prefer the function.
+ * - **A node claiming a range it does not cover.** A meta resolver builds its result through
+ *   `ConcreteFactoryImpl(data)`, which stamps one PSI element -- usually an argument's -- on a whole
+ *   synthesized subtree, so an application can report the range of a sub-expression while
+ *   structurally spanning more. Every consumer assumes the opposite: the formatter maps the parts back
+ *   onto AST children, and the inspections, intentions and refactorings rewrite the text the parts
+ *   point at. Only data lying *outside* the range is rejected, because the function often shares the
+ *   range legitimately -- [appExpr] is sometimes a bare reference (`ArendChangeSignatureProcessor`
+ *   passes an `ArendAtomFieldsAcc`), and the `__` lambda above does the same. A function that spans
+ *   the node without fitting into any single child is handled where that actually matters, in
+ *   `ArgumentAppExprBlock.transform`.
+ *
+ * `null` is a supported outcome: callers fall back to a representation that makes no structural claim
+ * -- the formatter to `SimpleArendBlock`, the inspections and intentions to doing nothing.
+ */
 fun appExprToConcrete(appExpr: ArendExpr): Concrete.Expression? {
     val matches = exprToConcrete1(appExpr)
-    // An application normally reuses its function's data as its own (e.g. a chain of field calls
-    // `a.f.g` naturally nests applications this way, and the outermost one -- matches.first() -- is
-    // the one consumers want). But when the function is a complete-value expression with its own PSI
-    // (e.g. the lambda produced for a `__` section) rather than a reference/field-call/application,
-    // some resolving code still reuses that data for the synthetic application wrapper around it,
-    // making the wrapper collide with its function in `matches`. That wrapper carries no information
-    // beyond what its function already has, so skip it and prefer the function.
     val matchIdentitySet = java.util.Collections.newSetFromMap(java.util.IdentityHashMap<Concrete.SourceNode, Boolean>())
     matchIdentitySet.addAll(matches)
     fun isCollisionWrapper(node: Concrete.SourceNode) =
@@ -56,11 +76,15 @@ fun appExprToConcrete(appExpr: ArendExpr): Concrete.Expression? {
         node.function !is Concrete.ReferenceExpression && node.function !is Concrete.FieldCallExpression && node.function !is Concrete.AppExpression
 
     val textRange = appExpr.textRange
-    fun escapesTextRange(node: Concrete.SourceNode) =
-        node is Concrete.AppExpression && node.arguments.any {
+    fun escapesTextRange(node: Concrete.SourceNode): Boolean {
+        if (node !is Concrete.AppExpression) return false
+        val functionData = node.function.data
+        if (functionData is PsiElement && !textRange.contains(functionData.textRange)) return true
+        return node.arguments.any {
             val data = it.expression.data
             data is PsiElement && !textRange.contains(data.textRange)
         }
+    }
 
     return matches.firstOrNull { !isCollisionWrapper(it) && !escapesTextRange(it) } as? Concrete.Expression
 }

@@ -2,22 +2,15 @@ package org.arend.formatting.block
 
 import com.intellij.formatting.*
 import com.intellij.lang.ASTNode
-import com.intellij.openapi.application.runReadAction
-import com.intellij.openapi.components.service
-import com.intellij.openapi.project.DumbService
+import com.intellij.openapi.application.ApplicationManager
+import com.intellij.openapi.diagnostic.Logger
 import com.intellij.psi.PsiComment
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiWhiteSpace
 import com.intellij.psi.TokenType
 import com.intellij.psi.codeStyle.CommonCodeStyleSettings
 import org.arend.formatting.block.SimpleArendBlock.Companion.oneSpaceWrap
-import org.arend.psi.ArendFile
-import org.arend.psi.ext.ArendExpr
-import org.arend.server.ArendServerService
-import org.arend.server.ProgressReporter
 import org.arend.term.concrete.Concrete
-import org.arend.typechecking.computation.UnstoppableCancellationIndicator
-import org.arend.util.appExprToConcreteOnlyTopLevel
 import org.arend.util.getBounds
 
 class ArgumentAppExprBlock(val cExpr: Concrete.Expression, node: ASTNode, settings: CommonCodeStyleSettings?, wrap: Wrap?, alignment: Alignment?, myIndent: Indent?, parentBlock: AbstractArendBlock?) :
@@ -84,12 +77,21 @@ class ArgumentAppExprBlock(val cExpr: Concrete.Expression, node: ASTNode, settin
 
 
             if (fData is PsiElement) {
+                // The function's data has to be lifted to the granularity the block tree works at: the
+                // single child of this node that contains it. There may be none -- a meta resolver builds
+                // its result through `ConcreteFactoryImpl(data)`, stamping one PSI element on a whole
+                // synthesized subtree, so an application can carry the data of one of its own arguments
+                // and thus span the entire node. `getBounds` has tolerated that since 354850db8 ("f may be
+                // empty if neither of aaeBlocks corresponds"); this copy of the same lookup must too. The
+                // lost-blocks search below then covers whatever child is left uncovered.
                 val f = aaeBlocks.filter { it.textRange.contains(fData.node.textRange) }
-                if (f.size != 1)
-                  throw java.lang.IllegalStateException()
-                val fBlock = createArendBlock(f.first(), null, null, if (isPrefix) Indent.getNoneIndent() else Indent.getNormalIndent())
-                if (!blocks.any { it.textRange.contains(fBlock.textRange) })
-                    blocks.add(fBlock)
+                if (f.size == 1) {
+                    val fBlock = createArendBlock(f.first(), null, null, if (isPrefix) Indent.getNoneIndent() else Indent.getNormalIndent())
+                    if (!blocks.any { it.textRange.contains(fBlock.textRange) })
+                        blocks.add(fBlock)
+                } else {
+                    LOG.warn("No single child block holds the function of $cExpr in ${node.elementType} at ${node.textRange}")
+                }
             }
 
             blocks.sortBy { it.textRange.startOffset }
@@ -125,8 +127,12 @@ class ArgumentAppExprBlock(val cExpr: Concrete.Expression, node: ASTNode, settin
             for (block in blocks) {
                 if (block.textRange.endOffset == segmentEnd)
                     oddBlocks.add(block)
-                if (block.textRange.endOffset < segmentEnd)
-                    throw AssertionError("Blocks intersect")
+                if (block.textRange.endOffset < segmentEnd) {
+                    // Intersecting children are the one thing the platform must not be handed: it garbles
+                    // the text on reformat. Give up on the parsed structure for this node instead.
+                    reportMalformedConcrete("blocks intersect")
+                    return plainBlocks(aaeBlocks, align, indent)
+                }
                 segmentEnd = block.textRange.endOffset
             }
             blocks.removeAll(oddBlocks)
@@ -142,6 +148,31 @@ class ArgumentAppExprBlock(val cExpr: Concrete.Expression, node: ASTNode, settin
                 return GroupBlock(settings, blocks, null, align, indent, this)
             }
         }
-        else throw IllegalStateException()
+        reportMalformedConcrete("unexpected concrete expression ${cExpr.javaClass.simpleName}")
+        return plainBlocks(aaeBlocks, align, indent)
+    }
+
+    /**
+     * Formats [aaeBlocks] as they are, making no structural claim about them. Trivially satisfies what
+     * the platform requires of a child list -- ordered, non-overlapping, inside the parent -- and is the
+     * shape the right-section branch above already builds.
+     */
+    private fun plainBlocks(aaeBlocks: List<ASTNode>, align: Alignment?, indent: Indent): AbstractArendBlock {
+        val blocks = aaeBlocks.map { createArendBlock(it, null, null, Indent.getNoneIndent()) as Block }.toMutableList()
+        return if (blocks.size == 1) blocks.first() as AbstractArendBlock
+        else GroupBlock(settings, blocks, null, align, indent, this)
+    }
+
+    /**
+     * The concrete tree cannot be mapped onto this node's children at all. Unlike a function without a
+     * single containing child, which is a supported consequence of how metas build concrete, this should
+     * not happen -- so it is an error in tests, where it fails `ArendReformatTest` and the arend-lib
+     * stress test, and only a log line for users, who get unaligned but otherwise correct formatting.
+     */
+    private fun reportMalformedConcrete(reason: String) {
+        val message = "Cannot build blocks for ${node.elementType} at ${node.textRange}: $reason ($cExpr)"
+        if (ApplicationManager.getApplication().isUnitTestMode) LOG.error(message) else LOG.warn(message)
     }
 }
+
+private val LOG = Logger.getInstance(ArgumentAppExprBlock::class.java)

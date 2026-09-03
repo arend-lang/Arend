@@ -267,6 +267,7 @@ tasks.register<Test>("formatterStressTest") {
     systemProperties(defaultTest.systemProperties)
     dependsOn(defaultTest.dependsOn)
     dependsOn(":arend-lib:meta:classes")
+    systemProperty("java.awt.headless", true)
     maxHeapSize = "6g"
     filter { includeTestsMatching("org.arend.formatting.ArendLibReformatStressTest") }
 }

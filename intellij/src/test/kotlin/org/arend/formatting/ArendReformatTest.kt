@@ -211,4 +211,20 @@ class ArendReformatTest : ArendFormatterTestBase() {
             "\\import Meta\n\\func \\infixr 2 >> (a b : Nat) => b\n\\func test (f : Nat -> Nat) => seq (f 1) (f 2)",
             "\\import Meta\n\n\\func \\infixr 2 >> (a b : Nat) => b\n\n\\func test (f : Nat -> Nat) => seq (f 1) (f 2)")
     }
+
+    fun testMetaWrappingArgumentInApp() {
+        addGeneratedModules {
+            declare(nullDoc(), makeMeta("wrap", object : MetaResolver {
+                override fun resolvePrefix(resolver: ExpressionResolver, contextData: ContextData): ConcreteExpression {
+                    val arg = contextData.arguments.first().expression
+                    val factory = ConcreteFactoryImpl(arg.data)
+                    return resolver.resolve(factory.app(factory.ref(factory.unresolved(LongName("id"))), true, listOf(arg)))
+                }
+            }, null))
+        }
+
+        checkReformat(
+            "\\import Meta\n\\func id (a : Nat) => a\n\\func test (f : Nat -> Nat) => wrap (f 1)",
+            "\\import Meta\n\n\\func id (a : Nat) => a\n\n\\func test (f : Nat -> Nat) => wrap (f 1)")
+    }
 }
