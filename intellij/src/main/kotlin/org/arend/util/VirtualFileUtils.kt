@@ -1,6 +1,5 @@
 package org.arend.util
 
-import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.vfs.JarFileSystem
 import com.intellij.openapi.vfs.VfsUtil
 import com.intellij.openapi.vfs.VirtualFile
@@ -76,21 +75,25 @@ val VirtualFile.libraryRootParent: VirtualFile?
         else -> parent
     }
 
-private val refreshAsynchronously: Boolean
-    get() = ApplicationManager.getApplication().let { !it.isDispatchThread && it.isReadAccessAllowed }
-
+/**
+ * Refreshes this file synchronously, and the jar root behind it if it is an archive.
+ *
+ * The refresh is synchronous because every caller reads the result immediately. Do not call this
+ * from a background thread holding a read lock -- a synchronous refresh is forbidden there; pass
+ * the asynchronous flag explicitly at such a call site instead of inferring it from thread state,
+ * which would silently hand back the stale snapshot.
+ */
 val VirtualFile.refreshed: VirtualFile
     get() {
-        val async = refreshAsynchronously
-        VfsUtil.markDirtyAndRefresh(async, false, false, this)
+        VfsUtil.markDirtyAndRefresh(false, false, false, this)
         val file = JarFileSystem.getInstance().getJarRootForLocalFile(this) ?: return this
-        VfsUtil.markDirtyAndRefresh(async, false, false, file)
+        VfsUtil.markDirtyAndRefresh(false, false, false, file)
         return this
     }
 
 fun refreshLibrariesDirectory(libRoot: Path): VirtualFile? {
     val file = VfsUtil.findFile(libRoot, true) ?: return null
-    VfsUtil.markDirtyAndRefresh(refreshAsynchronously, false, false, file)
+    VfsUtil.markDirtyAndRefresh(false, false, false, file)
     for (child in file.children) {
         child.refreshed
     }
