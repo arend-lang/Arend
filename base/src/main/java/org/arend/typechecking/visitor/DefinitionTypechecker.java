@@ -1672,6 +1672,10 @@ public class DefinitionTypechecker extends BaseDefinitionTypechecker implements 
       errorReporter.report(new TypecheckingError("Data types with conditions cannot be used in data type patterns", sourceNode));
       return false;
     }
+    if (def instanceof Constructor && ((Constructor) def).getDataType().isTruncated()) {
+      errorReporter.report(new TypecheckingError("Truncated data types cannot be used in data type patterns", sourceNode));
+      return false;
+    }
 
     for (ExpressionPattern subPattern : pattern.getSubPatterns()) {
       if (!checkNoHITs(subPattern, sourceNode)) {

@@ -425,4 +425,16 @@ public class DataTest extends TypeCheckingTestCase {
       \\func zero=one : 0 = 1 => get up (\\new RA 0)
       """, 1);
   }
+
+  @Test
+  public void truncatedDataMatchTest() {
+    typeCheckModule("""
+      \\data Empty
+      \\truncated \\data T : \\Prop
+        | t1
+        | t2
+      \\data D (t : T) \\elim t
+        | t1 => d1
+      """, 1);
+  }
 }
