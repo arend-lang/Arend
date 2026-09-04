@@ -11,7 +11,9 @@ import org.arend.ext.module.ModuleLocation
 import org.arend.ext.module.ModulePath
 import org.arend.ext.reference.DataContainer
 import org.arend.library.LibraryDependency
-import org.arend.module.IntellijClassLoaderDelegate
+import org.arend.library.classLoader.ClassLoaderDelegate
+import org.arend.library.classLoader.FileClassLoaderDelegate
+import org.arend.library.classLoader.ZipClassLoaderDelegate
 import org.arend.naming.reference.DataModuleReferable
 import org.arend.psi.ArendFile
 import org.arend.server.ArendLibrary
@@ -20,6 +22,8 @@ import org.arend.ui.impl.ArendGeneralUI
 import org.arend.util.*
 import org.arend.util.FileUtils.EXTENSION
 import org.jetbrains.yaml.psi.YAMLFile
+import java.nio.file.Files
+import java.nio.file.Paths
 
 
 abstract class LibraryConfig(val project: Project) : ArendLibrary {
@@ -51,7 +55,7 @@ abstract class LibraryConfig(val project: Project) : ArendLibrary {
         get() = yamlVirtualFile?.let { PsiManager.getInstance(project).findFile(it) as? YAMLFile }
 
     open val localFSRoot: VirtualFile?
-        get() = root?.let { if (it.isInLocalFileSystem) it else JarFileSystem.getInstance().getVirtualFileForJar(it) }
+        get() = root?.localFSFile
 
     private fun findDir(dir: String) = root?.findFileByRelativePath(FileUtil.toSystemIndependentName(dir).removeSuffix("/"))
 
@@ -72,7 +76,24 @@ abstract class LibraryConfig(val project: Project) : ArendLibrary {
 
     override fun getLibraryDependencies() = dependencies.map { it.name }
 
-    override fun getClassLoaderDelegate() = extensionDirFile?.let { IntellijClassLoaderDelegate(it) }
+    // Classes are loaded lazily, that is, in the middle of resolving, which happens under a read
+    // lock. VFS operations there are either forbidden (a synchronous refresh) or needlessly slow,
+    // and a stale VFS snapshot of an archive cannot be refreshed from there at all. Both delegates
+    // read the bytes off the file system directly, so they are read-lock safe and always current.
+    override fun getClassLoaderDelegate(): ClassLoaderDelegate? {
+        // an empty `extensions` means the library root, which both delegates accept as-is
+        val extDir = extensionsDir?.let { FileUtil.toSystemIndependentName(it).removeSuffix("/") } ?: return null
+        // `root` is read exactly once: ExternalLibraryConfig.root invalidates itself when the file
+        // goes away, so reading it again below could pair a directory library with the zip branch.
+        val rootFile = root ?: return null
+        val localPath = rootFile.localFSFile?.let { Paths.get(it.path) } ?: return null
+        return if (rootFile.isInLocalFileSystem) {
+            localPath.resolve(extDir).takeIf { Files.isDirectory(it) }?.let { FileClassLoaderDelegate(it) }
+        } else {
+            // a zip library's arend.yaml sits at the archive root, so extDir is the entry prefix
+            localPath.takeIf { Files.isRegularFile(it) }?.let { ZipClassLoaderDelegate(it.toFile(), extDir) }
+        }
+    }
 
     override fun getExtensionMainClass(): String? = null
 

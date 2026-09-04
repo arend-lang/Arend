@@ -76,6 +76,13 @@ val VirtualFile.libraryRootParent: VirtualFile?
     }
 
 /**
+ * The local file system file behind this library root: the root itself when it is a directory,
+ * and the archive when it is a jar root.
+ */
+val VirtualFile.localFSFile: VirtualFile?
+    get() = if (isInLocalFileSystem) this else JarFileSystem.getInstance().getVirtualFileForJar(this)
+
+/**
  * Refreshes this file synchronously, and the jar root behind it if it is an archive.
  *
  * The refresh is synchronous because every caller reads the result immediately. Do not call this
