@@ -26,6 +26,23 @@ import java.nio.file.Files
 import java.nio.file.Paths
 
 
+/**
+ * Reads a `langVersion` declaration.
+ *
+ * An absent declaration means "no constraint". A declaration that is present but unparseable must not
+ * mean the same thing: [Range.unbound] would read a typo as "compatible with every language version",
+ * so the check would be waved through for exactly the libraries most likely to be broken. It yields
+ * [VersionRange.malformed] instead, which admits no version, so the library is refused and the error
+ * quotes the text that could not be read.
+ *
+ * Note also that `parseVersionRange` is a Java method returning a platform type, so assigning its
+ * result straight to a non-null `Range<Version>` makes Kotlin insert a null check that throws from the
+ * config constructor -- out of `findExternalLibrary`, which resolution, completion and the reload loop
+ * all call.
+ */
+internal fun parseLangVersion(text: String): Range<Version> =
+    if (text.isEmpty()) Range.unbound() else VersionRange.parseVersionRange(text) ?: VersionRange.malformed(text)
+
 abstract class LibraryConfig(val project: Project) : ArendLibrary {
     open val sourcesDir: String
         get() = ""

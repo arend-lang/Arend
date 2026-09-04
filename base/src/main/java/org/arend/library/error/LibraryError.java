@@ -59,7 +59,7 @@ public class LibraryError extends GeneralError {
   }
 
   public static LibraryError incorrectVersion(String libraryName, Range<Version> range) {
-    return new LibraryError("Library supports language version " + range.checkRange(Prelude.VERSION) + ", but current language version is " + Prelude.VERSION, Stream.of(libraryName));
+    return new LibraryError("Library language version " + range + " does not include the current language version " + Prelude.VERSION, Stream.of(libraryName));
   }
 
   public static LibraryError incorrectExtensionClass(String libraryName) {

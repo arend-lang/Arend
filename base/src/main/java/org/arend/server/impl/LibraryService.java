@@ -3,6 +3,7 @@ package org.arend.server.impl;
 import org.arend.ext.ArendExtension;
 import org.arend.ext.DefaultArendExtension;
 import org.arend.ext.error.ErrorReporter;
+import org.arend.ext.error.ListErrorReporter;
 import org.arend.ext.ui.ArendUI;
 import org.arend.extImpl.*;
 import org.arend.library.classLoader.ClassLoaderDelegate;
@@ -39,6 +40,10 @@ public class LibraryService {
     synchronized (myServer) {
       String name = library.getLibraryName();
       ArendLibraryImpl[] newLibrary = new ArendLibraryImpl[1];
+      // Errors are collected rather than reported from inside the remapping function below: that
+      // function runs under the bin lock of a ConcurrentHashMap, and the reporter is caller-supplied
+      // code that may take locks of its own or post to a UI queue.
+      ListErrorReporter deferredErrors = new ListErrorReporter();
       myLibraries.compute(name, (libName, prevLibrary) -> {
         long modificationStamp = library.getModificationStamp();
         if (prevLibrary != null && modificationStamp >= 0 && prevLibrary.getModificationStamp() >= modificationStamp) {
@@ -50,7 +55,8 @@ public class LibraryService {
 
         Range<Version> versionRange = library.getLanguageVersion();
         if (versionRange != null && !versionRange.inRange(Prelude.VERSION)) {
-          myLogger.info(() -> "Library '" + libName + "' is not updated; library language version " + versionRange + " < current language version " + Prelude.VERSION);
+          myLogger.info(() -> "Library '" + libName + "' is not updated; library language version " + versionRange + " does not include the current language version " + Prelude.VERSION);
+          deferredErrors.report(LibraryError.incorrectVersion(libName, versionRange));
           return null;
         }
 
@@ -60,12 +66,14 @@ public class LibraryService {
           (isExternal ? myExternalClassLoader : myInternalClassLoader).addDelegate(libName, delegate);
         }
 
-        ArendLibraryImpl result = new ArendLibraryImpl(libName, library.getLibraryVersion(), library.getLanguageVersion(), isExternal, modificationStamp, library.getLibraryDependencies(), loadArendExtension(delegate, name, isExternal, library, errorReporter), library.getGeneratedNames());
+        ArendLibraryImpl result = new ArendLibraryImpl(libName, library.getLibraryVersion(), library.getLanguageVersion(), isExternal, modificationStamp, library.getLibraryDependencies(), loadArendExtension(delegate, name, isExternal, library, deferredErrors), library.getGeneratedNames());
         newLibrary[0] = result;
 
         myLogger.info(() -> "Library '" + libName + "' is updated");
         return result;
       });
+
+      deferredErrors.reportTo(errorReporter);
 
       if (newLibrary[0] != null) {
         try {
@@ -90,6 +98,10 @@ public class LibraryService {
     Set<String> removed = new HashSet<>();
     for (Iterator<Map.Entry<String, ArendLibraryImpl>> iterator = myLibraries.entrySet().iterator(); iterator.hasNext(); ) {
       Map.Entry<String, ArendLibraryImpl> entry = iterator.next();
+      // Prelude is registered by the constructor of this class, not by a caller, and nothing ever
+      // re-registers it. It is flagged external, so unloading everything used to drop it -- along with
+      // its read-only module in ArendServerImpl -- for the remaining life of the server.
+      if (entry.getKey().equals(Prelude.LIBRARY_NAME)) continue;
       if (!onlyInternal || !entry.getValue().isExternalLibrary()) {
         iterator.remove();
         removed.add(entry.getKey());

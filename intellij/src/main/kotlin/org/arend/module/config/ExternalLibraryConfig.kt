@@ -1,13 +1,13 @@
 package org.arend.module.config
 
+import com.intellij.openapi.vfs.VirtualFile
 import org.arend.util.Range
 import org.arend.util.Version
-import org.arend.util.VersionRange
 import org.arend.yaml.*
 import org.jetbrains.yaml.psi.YAMLFile
 
 
-class ExternalLibraryConfig(override val name: String, val yaml: YAMLFile) : LibraryConfig(yaml.project) {
+class ExternalLibraryConfig(override val name: String, val yaml: YAMLFile, libraryRoot: VirtualFile? = yaml.virtualFile?.parent) : LibraryConfig(yaml.project) {
     override val sourcesDir = yaml.sourcesDir ?: ""
     override val binariesDir = yaml.binariesDir
     override val testsDir = yaml.testsDir
@@ -18,9 +18,7 @@ class ExternalLibraryConfig(override val name: String, val yaml: YAMLFile) : Lib
     override val version: Version? = yaml.version.let {
         if (it.isEmpty()) null else Version.fromString(it)
     }
-    override val langVersion: Range<Version> = yaml.langVersion.let {
-        if (it.isEmpty()) Range.unbound() else VersionRange.parseVersionRange(it)
-    }
+    override val langVersion: Range<Version> = parseLangVersion(yaml.langVersion)
 
     override fun getLibraryVersion(): Version? = version
 
@@ -28,7 +26,7 @@ class ExternalLibraryConfig(override val name: String, val yaml: YAMLFile) : Lib
 
     override fun isExternalLibrary() = true
 
-    override var root = yaml.virtualFile?.parent
+    override var root = libraryRoot
         get() =
             if (field?.isValid == false) {
                 field = null

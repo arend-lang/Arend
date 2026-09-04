@@ -11,12 +11,13 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import org.arend.module.config.LibraryConfig
 import org.arend.server.ArendServerService
 import org.arend.settings.ArendProjectSettings
 import org.arend.toolWindow.errors.ArendMessagesService
 import org.arend.typechecking.computation.ComputationRunner
-import org.arend.typechecking.error.NotificationErrorReporter
 import org.arend.util.findLibrary
+import org.arend.util.registerLibrary
 import org.arend.util.refreshLibrariesDirectory
 
 @Service(Service.Level.PROJECT)
@@ -42,7 +43,22 @@ class ReloadLibrariesService(private val project: Project, private val coroutine
     val libraries = server.libraries.filter { !onlyInternal || server.getLibrary(it)?.isExternalLibrary == false }
     runReadAction {
       server.unloadLibraries(onlyInternal)
-      val configs = libraries.associateWith { project.findLibrary(it) }
+      val configs = LinkedHashMap<String, LibraryConfig?>()
+      for (libraryName in libraries) configs[libraryName] = project.findLibrary(libraryName)
+
+      if (!onlyInternal) {
+        val pending = ArrayDeque(configs.keys)
+        while (pending.isNotEmpty()) {
+          val config = configs[pending.removeFirst()] ?: continue
+          for (dependency in config.libraryDependencies) {
+            if (!configs.containsKey(dependency)) {
+              configs[dependency] = project.findLibrary(dependency)
+              pending.addLast(dependency)
+            }
+          }
+        }
+      }
+
       val reloaded = HashSet<String>()
 
       fun reload(libraryName: String) {
@@ -51,10 +67,10 @@ class ReloadLibrariesService(private val project: Project, private val coroutine
         for (dependency in config.libraryDependencies) {
           if (configs.containsKey(dependency)) reload(dependency)
         }
-        server.updateLibrary(config, NotificationErrorReporter(project))
+        project.registerLibrary(server, config)
       }
 
-      for (libraryName in libraries) reload(libraryName)
+      for (libraryName in configs.keys.toList()) reload(libraryName)
     }
   }
 }

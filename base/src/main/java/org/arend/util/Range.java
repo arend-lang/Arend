@@ -30,12 +30,6 @@ public class Range<T extends Comparable<T>> extends Pair<T,T> {
     return (proj1 == null || proj1.compareTo(t) <= 0) && (proj2 == null || proj2.compareTo(t) >= 0);
   }
 
-  public String checkRange(T t) {
-    String s1 = proj1 != null && proj1.compareTo(t) > 0 ? "<= " + proj1 : null;
-    String s2 = proj2 != null && proj2.compareTo(t) < 0 ? ">= " + proj2 : null;
-    return s1 == null ? s2 : s2 == null ? s1 : s1 + ", " + s2;
-  }
-
   private enum TokenType { LEQ, GEQ, COMMA, TEXT }
 
   public static Range<String> parseRange(String text) {
@@ -113,6 +107,8 @@ public class Range<T extends Comparable<T>> extends Pair<T,T> {
 
   @Override
   public String toString() {
-    return proj1 == null && proj2 == null ? "" : proj1 == null ? "<= " + proj2 : proj2 == null ? ">= " + proj1 : proj1.equals(proj2) ? proj1.toString() : ">= " + proj1 + ", <= " + proj2;
+    // "any" rather than the empty string: this is the only rendering of a range in user-facing
+    // diagnostics, and an unbound range must not read there as a missing word.
+    return proj1 == null && proj2 == null ? "any" : proj1 == null ? "<= " + proj2 : proj2 == null ? ">= " + proj1 : proj1.equals(proj2) ? proj1.toString() : ">= " + proj1 + ", <= " + proj2;
   }
 }

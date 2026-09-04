@@ -4,6 +4,7 @@ import com.intellij.codeInsight.daemon.DaemonCodeAnalyzer
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.application.runReadAction
 import com.intellij.openapi.components.service
+import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.module.Module
 import com.intellij.openapi.module.ModuleManager
@@ -18,11 +19,15 @@ import com.intellij.psi.PsiManager
 import com.intellij.testFramework.TestModeFlags
 import org.arend.ArendLanguage
 import org.arend.educational.ArendConfigurator.Companion.getStudyLibrary
+import org.arend.ext.error.ListErrorReporter
 import org.arend.ext.prettyprinting.doc.BaseDocVisitor
 import org.arend.ext.prettyprinting.doc.ReferenceDoc
 import org.arend.ext.reference.ArendRef
 import org.arend.injection.InjectedArendEditor
+import org.arend.module.AREND_LIB
 import org.arend.module.ArendModuleType
+import org.arend.module.Reason
+import org.arend.module.showDownloadNotification
 import org.arend.ext.module.ModuleLocation
 import org.arend.module.config.ArendModuleConfigService
 import org.arend.module.config.ExternalLibraryConfig
@@ -32,6 +37,7 @@ import org.arend.naming.reference.LocatedReferableImpl
 import org.arend.naming.reference.Referable
 import org.arend.naming.reference.TCDefReferable
 import org.arend.naming.reference.UnresolvedReference
+import org.arend.prelude.Prelude
 import org.arend.psi.ArendFile
 import org.arend.psi.ext.ArendGroup
 import org.arend.psi.ext.ArendReferenceElement
@@ -44,10 +50,15 @@ import org.arend.term.group.ConcreteGroup
 import org.arend.term.prettyprint.PrettyPrintVisitor
 import org.arend.typechecking.ArendExtensionChangeService
 import org.arend.typechecking.error.NotificationErrorReporter
+import org.arend.yaml.createFromText
 import org.arend.yaml.dependencies
 import org.jetbrains.yaml.psi.YAMLFile
+import java.io.IOException
 import java.nio.file.Path
 import java.nio.file.Paths
+import java.util.concurrent.ConcurrentHashMap
+
+private val LOG = Logger.getInstance("org.arend.util.ProjectUtils")
 
 val Project.arendModules: List<Module>
     get() = runReadAction { ModuleManager.getInstance(this).modules.filter { ArendModuleType.has(it) } }
@@ -80,15 +91,35 @@ fun Project.findExternalLibrary(name: String): LibraryConfig? {
     return if (libRoot.isEmpty()) null else findExternalLibrary(Paths.get(libRoot), name)
 }
 
-private fun Project.findConfigInZip(zipFile: VirtualFile): YAMLFile? {
+/**
+ * The `arend.yaml` of a zip library, as a [YAMLFile], together with the archive root it describes.
+ *
+ * The PSI is used only while it still agrees with the bytes the VFS holds. After an archive is
+ * replaced, the VFS picks the change up immediately but the PSI built from the previous archive can
+ * survive for a few seconds, and a config built in that window reports the *previous* library's
+ * `langVersion` -- which let an extension compiled against another language version through the
+ * check in `LibraryService.updateLibrary` and end in a `NoSuchMethodError` while typechecking.
+ * Reparsing the bytes costs a small PSI file, so it happens only when they disagree.
+ */
+private fun Project.findConfigInZip(zipFile: VirtualFile): Pair<YAMLFile, VirtualFile>? {
     val zipRoot = JarFileSystem.getInstance().getJarRootForLocalFile(zipFile) ?: return null
     val configFile = zipRoot.findChild(FileUtils.LIBRARY_CONFIG_FILE) ?: return null
-    return PsiManager.getInstance(this).findFile(configFile) as? YAMLFile
+
+    val fromPsi = PsiManager.getInstance(this).findFile(configFile) as? YAMLFile
+    val text = try {
+        String(configFile.contentsToByteArray(), Charsets.UTF_8)
+    } catch (e: IOException) {
+        return fromPsi?.let { it to zipRoot }
+    }
+
+    if (fromPsi != null && fromPsi.text == text) return fromPsi to zipRoot
+    LOG.info("Reparsing ${configFile.path}: the PSI does not match the archive on disk")
+    return createFromText(text, this)?.let { it to zipRoot }
 }
 
 fun Project.findExternalLibrary(root: VirtualFile, libName: String): ExternalLibraryConfig? {
     root.findChild(libName + FileUtils.ZIP_EXTENSION)?.let { zip ->
-        findConfigInZip(zip)?.let { return ExternalLibraryConfig(libName, it) }
+        findConfigInZip(zip)?.let { (yaml, zipRoot) -> return ExternalLibraryConfig(libName, yaml, zipRoot) }
     }
 
     val configFile = root.findChild(libName)?.findChild(FileUtils.LIBRARY_CONFIG_FILE) ?: return null
@@ -106,7 +137,50 @@ private fun Project.addDependencies(server: ArendServer, library: ArendLibrary, 
         if (!loaded.add(dependency) || server.getLibrary(dependency) != null) continue
         val config = findExternalLibrary(dependency) ?: continue
         addDependencies(server, config, loaded)
-        server.updateLibrary(config, NotificationErrorReporter(this))
+        registerLibrary(server, config)
+    }
+}
+
+private val reportedFailures: Key<MutableMap<String, String>> = Key.create("AREND_REPORTED_LIBRARY_FAILURES")
+
+/**
+ * The failure last reported for each library, so that a refusal is reported once rather than on every
+ * attempt to register it. A lost race here can only duplicate a report, never drop one, so the map is
+ * published without locking.
+ */
+private val Project.reportedLibraryFailures: MutableMap<String, String>
+    get() = getUserData(reportedFailures) ?: ConcurrentHashMap<String, String>().also { putUserData(reportedFailures, it) }
+
+/**
+ * Registers [config] with [server] and reports whatever went wrong.
+ *
+ * A library the server refuses -- today, one whose declared language version excludes the running one --
+ * must not disappear silently, which is how the incompatible-`arend-lib` case went unnoticed. But
+ * registration is retried on every module registration, dependency synchronization and library reload,
+ * and a shared dependency is retried once per Arend module, so reporting unconditionally would turn one
+ * refusal into a stream of balloons. Each distinct failure is therefore reported once per library, and
+ * a successful registration re-arms reporting for that library.
+ */
+internal fun Project.registerLibrary(server: ArendServer, config: ArendLibrary) {
+    val libraryName = config.libraryName
+    val errors = ListErrorReporter()
+    server.updateLibrary(config, errors)
+
+    if (server.getLibrary(libraryName) != null) {
+        reportedLibraryFailures.remove(libraryName)
+        errors.reportTo(NotificationErrorReporter(this))
+        return
+    }
+
+    val details = errors.errorList.joinToString("\n") { it.message }
+        .ifEmpty { "'$libraryName' does not support language version ${Prelude.VERSION}" }
+    if (reportedLibraryFailures.put(libraryName, details) == details) return
+
+    // For arend-lib the actionable report is the one offering the download that fixes it.
+    if (libraryName == AREND_LIB && config.isExternalLibrary()) {
+        showDownloadNotification(this, Reason.WRONG_VERSION, details = details)
+    } else {
+        errors.reportTo(NotificationErrorReporter(this))
     }
 }
 
@@ -149,7 +223,7 @@ fun Module.register(modules: List<Module> = emptyList()) {
     runReadAction {
         loaded.addAll(project.arendModules.map { it.name })
         project.addDependencies(server, config, loaded)
-        server.updateLibrary(config, NotificationErrorReporter(project))
+        project.registerLibrary(server, config)
     }
 
     project.service<ArendExtensionChangeService>().initializeModule(config)
@@ -172,7 +246,7 @@ fun Project.registerStudyLibrary() {
     loaded.addAll(arendModules.map { it.name })
     runReadAction {
         addDependencies(server, studyLibrary, loaded)
-        server.updateLibrary(studyLibrary, NotificationErrorReporter(this))
+        registerLibrary(server, studyLibrary)
     }
 }
 
