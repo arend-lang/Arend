@@ -195,6 +195,7 @@ public final class Abstract {
     @Nullable AbstractReferable getReferable();
     @Nullable Expression getType();
     @Nullable Reference getEliminatedReference();
+    @NotNull BindingVariance getVariance();
   }
 
   public interface CaseArgumentsHolder extends SourceNode {

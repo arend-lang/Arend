@@ -1331,33 +1331,30 @@ public final class Concrete {
     public @Nullable Referable referable;
     public @Nullable Expression type;
     public final boolean isElim;
+    private final BindingVariance myVariance;
 
-    public CaseArgument(@NotNull Expression expression, @Nullable Referable referable, @Nullable Expression type, boolean isElim) {
+    public CaseArgument(@NotNull Expression expression, @Nullable Referable referable, @Nullable Expression type, boolean isElim, BindingVariance variance) {
       this.expression = expression;
       this.referable = referable;
       this.type = type;
       this.isElim = isElim;
+      myVariance = variance;
+    }
+
+    public CaseArgument(@NotNull Expression expression, @Nullable Referable referable, @Nullable Expression type, BindingVariance variance) {
+      this(expression, referable, type, false, variance);
     }
 
     public CaseArgument(@NotNull Expression expression, @Nullable Referable referable, @Nullable Expression type) {
-      this.expression = expression;
-      this.referable = referable;
-      this.type = type;
-      isElim = false;
+      this(expression, referable, type, false, BindingVariance.INVARIANT);
     }
 
-    public CaseArgument(@NotNull ReferenceExpression expression, @Nullable Expression type) {
-      this.expression = expression;
-      this.referable = null;
-      this.type = type;
-      isElim = expression.getReferent().isLocalRef() || expression.getReferent() instanceof UnresolvedReference;
+    public CaseArgument(@NotNull ReferenceExpression expression, @Nullable Expression type, BindingVariance variance) {
+      this(expression, null, type, expression.getReferent().isLocalRef() || expression.getReferent() instanceof UnresolvedReference, variance);
     }
 
-    public CaseArgument(@NotNull ApplyHoleExpression expression, @Nullable Expression type) {
-      this.expression = expression;
-      this.referable = null;
-      this.type = type;
-      isElim = true;
+    public CaseArgument(@NotNull ApplyHoleExpression expression, @Nullable Expression type, BindingVariance variance) {
+      this(expression, null, type, true, variance);
     }
 
     @Override
@@ -1378,6 +1375,10 @@ public final class Concrete {
     @Override
     public boolean isElim() {
       return isElim;
+    }
+
+    public BindingVariance getVariance() {
+      return myVariance;
     }
   }
 

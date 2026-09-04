@@ -4180,12 +4180,28 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
     try (var ignored = new Utils.RefContextSaver(context, myLocalPrettifier)) {
       for (int i = 0; i < caseArgs.size(); i++) {
         Concrete.CaseArgument caseArg = caseArgs.get(i);
+        BindingVariance markerVariance = caseArg.getVariance();
+        Concrete.Expression typeToCheck = caseArg.type;
+        if (caseArg.isElim) {
+          if (typeToCheck != null && !(typeToCheck instanceof Concrete.HoleExpression)) {
+            errorReporter.report(new TypecheckingError("Explicit type annotation is not allowed with \\elim", caseArg.expression));
+          }
+          typeToCheck = null;
+        }
         TypecheckingResult argType = null;
         Expression argTypeExpr;
         TypecheckingResult exprResult;
-        try (var ignoredCatContext = clearCategoricalContext()) {
-          if (caseArg.type != null) {
-            argType = checkExpr(caseArg.type, UniverseExpression.OMEGA);
+        if (!caseArg.isElim && markerVariance == BindingVariance.INVARIANT) {
+          try (var ignoredCatContext = clearCategoricalContext()) {
+            if (typeToCheck != null) {
+              argType = checkExpr(typeToCheck, UniverseExpression.OMEGA);
+            }
+            argTypeExpr = argType == null ? null : argType.expression.subst(substitution);
+            exprResult = checkExpr(caseArg.expression, argTypeExpr);
+          }
+        } else {
+          if (typeToCheck != null) {
+            argType = checkExpr(typeToCheck, UniverseExpression.OMEGA);
           }
           argTypeExpr = argType == null ? null : argType.expression.subst(substitution);
           exprResult = checkExpr(caseArg.expression, argTypeExpr);
@@ -4193,6 +4209,13 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
         if (exprResult == null) return null;
         if (caseArg.isElim && !(exprResult.expression instanceof ReferenceExpression)) {
           errorReporter.report(new TypecheckingError("Expected a variable", caseArg.expression));
+          return null;
+        }
+
+        Binding origBinding = caseArg.isElim ? ((ReferenceExpression) exprResult.expression).getBinding() : null;
+        BindingVariance argVariance = caseArg.isElim ? origBinding.getVariance() : markerVariance;
+        if (caseArg.isElim && caseArg.type != null && markerVariance != argVariance) {
+          errorReporter.report(new TypecheckingError("The variance of '" + origBinding.getName() + "' does not match the specified variance", caseArg.expression));
           return null;
         }
         if (argType == null && Prelude.ARRAY_CONS != null) {
@@ -4232,14 +4255,9 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
           exprResult.type = checkedSubst(exprResult.type, elimSubst, allowedBindings, caseArg.expression);
         }
         Referable asRef = caseArg.isElim ? ((Concrete.ReferenceExpression) caseArg.expression).getReferent() : caseArg.referable;
-        DependentLink link = ExpressionFactory.parameter(asRef == null ? null : asRef.textRepresentation(), argType != null ? argType.expression : exprResult.type);
+        DependentLink link = ExpressionFactory.parameter(asRef == null ? null : asRef.textRepresentation(), argType != null ? argType.expression : exprResult.type, argVariance);
         list.append(link);
         if (caseArg.isElim) {
-          if (argTypeExpr != null) {
-            errorReporter.report(new TypecheckingError("Explicit type annotation is not allowed with \\elim", caseArg.expression));
-            return null;
-          }
-          Binding origBinding = ((ReferenceExpression) exprResult.expression).getBinding();
           origElimBindings.put(asRef, origBinding);
           elimSubst.add(origBinding, new ReferenceExpression(link));
 

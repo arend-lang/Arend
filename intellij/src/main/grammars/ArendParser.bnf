@@ -456,7 +456,7 @@ exprWOB ::= <<exprWOBImpl>> {
     name = expr
 }
 
-private expr_recover ::= !(LBRACE | RBRACE | RPAREN | IN_KW | ARROW | ARROW_PLUS | COMMA | PIPE | COWITH_KW | WITH_KW | ELIM_KW | FAT_ARROW | FAT_ARROW_PLUS | AS_KW | RETURN_KW | COLON | LEVEL_KW | LEVEL_PLUS_KW) & statement_recover
+private expr_recover ::= !(LBRACE | RBRACE | RPAREN | IN_KW | ARROW | ARROW_PLUS | COMMA | PIPE | COWITH_KW | WITH_KW | ELIM_KW | FAT_ARROW | FAT_ARROW_PLUS | AS_KW | RETURN_KW | COLON | COLON_PLUS | LEVEL_KW | LEVEL_PLUS_KW) & statement_recover
 
 arrExpr ::= expr (ARROW | ARROW_PLUS) expr {
     pin = 2
@@ -521,7 +521,7 @@ private returnCaseExpr ::= RETURN_KW returnExprWOB {
 
 private returnCaseExpr_recover ::= !WITH_KW & expr_recover
 
-caseArg ::= caseArgExprAs [COLON exprWOB] {
+caseArg ::= caseArgExprAs [(COLON | COLON_PLUS) exprWOB] {
     pin = 1
     recoverWhile = caseArg_recover
 }
@@ -534,13 +534,13 @@ private caseArgExprAs ::= caseArgExpr [AS_KW defIdentifier]
     recoverWhile = caseArgExprAs_recover
 }
 
-private caseArgExprAs_recover ::= !COLON & expr_recover
+private caseArgExprAs_recover ::= !(COLON | COLON_PLUS) & expr_recover
 
 private caseArgExpr ::= exprWOB {
     recoverWhile = caseArgExpr_recover
 }
 
-private caseArgExpr_recover ::= !(AS_KW | COLON) & expr_recover
+private caseArgExpr_recover ::= !(AS_KW | COLON | COLON_PLUS) & expr_recover
 
 piExpr ::= PI_KW typeTele+ (ARROW | ARROW_PLUS) expr {
     pin = 1

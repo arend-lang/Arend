@@ -243,7 +243,7 @@ public abstract class BiConcreteVisitor extends BaseConcreteExpressionVisitor<Co
       } else {
         newType = null;
       }
-      arguments.add(new Concrete.CaseArgument(newArg, caseArg.referable, newType));
+      arguments.add(new Concrete.CaseArgument(newArg, caseArg.referable, newType, caseArg.getVariance()));
     }
 
     if (expr.getResultType() != null) {

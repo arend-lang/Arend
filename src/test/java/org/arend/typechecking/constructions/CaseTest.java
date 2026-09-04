@@ -318,7 +318,7 @@ public class CaseTest extends TypeCheckingTestCase {
         => \\case x \\as x_, \\elim p : x_ = x \\with {
           | x, idp => idp
         }
-      """, 1);
+      """, 2);
   }
 
   @Test

@@ -817,7 +817,7 @@ public class ConcreteFactoryImpl implements ConcreteFactory {
     if (!(expression instanceof Concrete.ReferenceExpression && (type == null || type instanceof Concrete.Expression))) {
       throw new IllegalArgumentException();
     }
-    return new Concrete.CaseArgument((Concrete.ReferenceExpression) expression, (Concrete.Expression) type);
+    return new Concrete.CaseArgument((Concrete.ReferenceExpression) expression, (Concrete.Expression) type, BindingVariance.INVARIANT);
   }
 
   private List<Concrete.Pattern> patterns(Collection<? extends ConcretePattern> patterns) {

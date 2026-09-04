@@ -248,7 +248,7 @@ public class SubstConcreteVisitor extends BaseConcreteExpressionVisitor<Void> im
   public Concrete.Expression visitCase(Concrete.CaseExpression expr, Void ignored) {
     var clauses = expr.getClauses().stream().map(this::visitClause).collect(Collectors.toList());
     var arguments = expr.getArguments().stream()
-      .map(arg -> new Concrete.CaseArgument(arg.expression.accept(this, null), arg.referable, nullableMap(arg.type)))
+      .map(arg -> new Concrete.CaseArgument(arg.expression.accept(this, null), arg.referable, nullableMap(arg.type), arg.getVariance()))
       .collect(Collectors.toList());
     return new Concrete.CaseExpression(myData != null ? myData : expr.getData(), expr.isSCase(), arguments, nullableMap(expr.getResultType()), nullableMap(expr.getResultTypeLevel()), clauses);
   }

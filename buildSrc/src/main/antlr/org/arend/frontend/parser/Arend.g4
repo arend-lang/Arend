@@ -169,7 +169,7 @@ withBody : '\\with' '{' clause? ('|' clause)* '}';
 
 appPrefix : NEW EVAL? | EVAL | PEVAL | BOX;
 
-caseArg : caseArgExprAs (':' expr2)?;
+caseArg : caseArgExprAs ((COLON | COLON_PLUS) expr2)?;
 
 caseArgExprAs : '\\elim' (ID | APPLY_HOLE)  # caseArgElim
               | expr2 (AS ID)?              # caseArgExpr

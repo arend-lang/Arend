@@ -45,7 +45,11 @@ public class ExpressionFactory {
   }
 
   public static TypedDependentLink parameter(String var, Expression type) {
-    return new TypedDependentLink(true, var, type, EmptyDependentLink.getInstance());
+    return parameter(var, type, BindingVariance.INVARIANT);
+  }
+
+  public static TypedDependentLink parameter(String var, Expression type, BindingVariance variance) {
+    return new TypedDependentLink(true, var, type, false, variance, EmptyDependentLink.getInstance());
   }
 
   public static DependentLink parameter(boolean explicit, boolean isProperty, String name, Expression type, boolean isHidden, BindingVariance variance) {

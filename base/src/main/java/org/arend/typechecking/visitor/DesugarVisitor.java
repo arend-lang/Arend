@@ -3,6 +3,7 @@ package org.arend.typechecking.visitor;
 import org.arend.core.definition.ClassDefinition;
 import org.arend.core.definition.ClassField;
 import org.arend.core.definition.Definition;
+import org.arend.ext.core.context.BindingVariance;
 import org.arend.ext.core.definition.CoreClassDefinition;
 import org.arend.ext.error.ErrorReporter;
 import org.arend.ext.error.LocalError;
@@ -407,7 +408,7 @@ public class DesugarVisitor extends BaseConcreteExpressionVisitor<Void> {
         if (ref == null) ref = new LocalReferable("p" + j++);
         Concrete.Expression type = pattern instanceof Concrete.NamePattern ? ((Concrete.NamePattern) pattern).type : pattern.getAsReferable() != null ? pattern.getAsReferable().type : null;
         newParams.add(type != null ? new Concrete.TelescopeParameter(pattern.getData(), pattern.isExplicit(), Collections.singletonList(ref), type.accept(this, null), false) : new Concrete.NameParameter(pattern.getData(), pattern.isExplicit(), ref));
-        caseArgs.add(new Concrete.CaseArgument(new Concrete.ReferenceExpression(pattern.getData(), ref), null));
+        caseArgs.add(new Concrete.CaseArgument(new Concrete.ReferenceExpression(pattern.getData(), ref), null, BindingVariance.INVARIANT));
         pattern.setExplicit(true);
         newPatterns.add(pattern);
       }
@@ -493,7 +494,7 @@ public class DesugarVisitor extends BaseConcreteExpressionVisitor<Void> {
             }
           }
         }
-        caseArgs.add(isElim ? new Concrete.CaseArgument((Concrete.ReferenceExpression) curClause.term, curClause.resultType) : new Concrete.CaseArgument(curClause.term, curClause.getPattern().getAsReferable() == null ? null : curClause.getPattern().getAsReferable().referable, curClause.resultType));
+        caseArgs.add(isElim ? new Concrete.CaseArgument((Concrete.ReferenceExpression) curClause.term, curClause.resultType, BindingVariance.INVARIANT) : new Concrete.CaseArgument(curClause.term, curClause.getPattern().getAsReferable() == null ? null : curClause.getPattern().getAsReferable().referable, curClause.resultType));
         patterns.add(curClause.getPattern());
       }
       newBody = new Concrete.CaseExpression(data, false, caseArgs, null, null, Collections.singletonList(new Concrete.FunctionClause(data, patterns, newBody instanceof Concrete.IncompleteExpression ? null : newBody)));

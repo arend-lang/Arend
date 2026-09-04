@@ -760,19 +760,20 @@ public class ConcreteBuilder implements AbstractDefinitionVisitor<Concrete.Resol
       Abstract.Expression type = caseArg.getType();
       Abstract.Reference elimRef = caseArg.getEliminatedReference();
       Concrete.Expression cType = type == null ? null : type.accept(this, null);
+      BindingVariance variance = caseArg.getVariance();
       if (elimRef != null) {
-        concreteCaseArgs.add(new Concrete.CaseArgument(buildReference(elimRef), cType));
+        concreteCaseArgs.add(new Concrete.CaseArgument(buildReference(elimRef), cType, variance));
       } else {
         Object applyHoleData = caseArg.getApplyHoleData();
         if (applyHoleData != null) {
-          concreteCaseArgs.add(new Concrete.CaseArgument(new Concrete.ApplyHoleExpression(applyHoleData), cType));
+          concreteCaseArgs.add(new Concrete.CaseArgument(new Concrete.ApplyHoleExpression(applyHoleData), cType, variance));
         } else {
           Abstract.Expression expr = caseArg.getExpression();
           if (expr == null) {
             myErrorLevel = GeneralError.Level.ERROR;
           }
           Concrete.Expression cExpr = expr == null ? new Concrete.ErrorHoleExpression(data, null) : expr.accept(this, null);
-          concreteCaseArgs.add(new Concrete.CaseArgument(cExpr, makeLocalRef(caseArg.getReferable()), cType));
+          concreteCaseArgs.add(new Concrete.CaseArgument(cExpr, makeLocalRef(caseArg.getReferable()), cType, variance));
         }
       }
     }

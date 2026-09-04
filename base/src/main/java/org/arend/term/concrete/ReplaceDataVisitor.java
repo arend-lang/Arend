@@ -189,7 +189,7 @@ public class ReplaceDataVisitor implements ConcreteExpressionVisitor<Void,Concre
   public Concrete.Expression visitCase(Concrete.CaseExpression expr, Void params) {
     List<Concrete.CaseArgument> args = new ArrayList<>(expr.getArguments().size());
     for (Concrete.CaseArgument caseArg : expr.getArguments()) {
-      args.add(new Concrete.CaseArgument(caseArg.expression.accept(this, null), caseArg.referable, caseArg.type == null ? null : caseArg.type.accept(this, null), caseArg.isElim));
+      args.add(new Concrete.CaseArgument(caseArg.expression.accept(this, null), caseArg.referable, caseArg.type == null ? null : caseArg.type.accept(this, null), caseArg.isElim, caseArg.getVariance()));
     }
     return new Concrete.CaseExpression(getData(expr), expr.isSCase(), args, expr.getResultType() == null ? null : expr.getResultType().accept(this, null), expr.getResultTypeLevel() == null ? null : expr.getResultTypeLevel().accept(this, null), visitFunctionClauses(expr.getClauses()));
   }

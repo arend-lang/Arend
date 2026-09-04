@@ -283,4 +283,12 @@ public class CatPreludeTest extends TypeCheckingTestCase {
       \\func f (i :+ DI) : Nat => \\case i \\with { dleft => 0 | dright => 1 }
       """, 1);
   }
+
+  @Test
+  public void caseCovariantMarkedDIStillForbidden() {
+    typeCheckModule("""
+      \\func f (i :+ DI) : Nat => \\case i :+ _ \\with { dleft => 0 | dright => 1 }
+      """, 2);
+    assertThatErrorsAre(Matchers.typecheckingError(), Matchers.typecheckingError());
+  }
 }

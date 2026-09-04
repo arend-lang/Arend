@@ -1773,10 +1773,11 @@ public class BuildVisitor extends ArendBaseVisitor<Object> {
     for (CaseArgContext caseArgCtx : ctx.caseArg()) {
       Expr2Context typeCtx = caseArgCtx.expr2();
       Concrete.Expression type = typeCtx == null ? null : visitExpr(typeCtx);
+      BindingVariance variance = caseArgCtx.COLON_PLUS() != null ? BindingVariance.COVARIANT : BindingVariance.INVARIANT;
       CaseArgExprAsContext caseArgExprAs = caseArgCtx.caseArgExprAs();
       if (caseArgExprAs instanceof CaseArgExprContext caseArgExpr) {
         TerminalNode id = caseArgExpr.ID();
-        caseArgs.add(new Concrete.CaseArgument(visitExpr(caseArgExpr.expr2()), id == null ? null : new ParsedLocalReferable(tokenPosition(id.getSymbol()), id.getText()), type));
+        caseArgs.add(new Concrete.CaseArgument(visitExpr(caseArgExpr.expr2()), id == null ? null : new ParsedLocalReferable(tokenPosition(id.getSymbol()), id.getText()), type, variance));
       } else if (caseArgExprAs instanceof CaseArgElimContext caseArgElim) {
         TerminalNode id = caseArgElim.ID();
         TerminalNode applyHole = caseArgElim.APPLY_HOLE();
@@ -1784,10 +1785,10 @@ public class BuildVisitor extends ArendBaseVisitor<Object> {
         if (id != null) {
           Position position = tokenPosition(id.getSymbol());
           argument = new Concrete.CaseArgument(new Concrete.ReferenceExpression(position,
-              new NamedUnresolvedReference(position, id.getText())), type);
+              new NamedUnresolvedReference(position, id.getText())), type, variance);
         } else
           argument = new Concrete.CaseArgument(new Concrete.ApplyHoleExpression(
-              tokenPosition(applyHole.getSymbol())), type);
+              tokenPosition(applyHole.getSymbol())), type, variance);
         caseArgs.add(argument);
       }
     }
