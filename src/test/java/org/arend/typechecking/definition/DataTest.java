@@ -437,4 +437,39 @@ public class DataTest extends TypeCheckingTestCase {
         | t1 => d1
       """, 1);
   }
+
+  @Test
+  public void changingParametersError() {
+    typeCheckModule("""
+      \\data Bool | true | false
+      \\data D (b : Bool) (A : \\Set) \\elim b
+        | true  => leaf A
+        | false => node (D true Nat)
+      \\func P : \\Prop => D false (0 = 0)
+      """, 1);
+    assertThatErrorsAre(Matchers.typeMismatchError());
+  }
+
+  @Test
+  public void changingParametersError2() {
+    typeCheckModule("""
+      \\data Bool | true | false
+      \\data D (b : Bool) (A : \\Set) \\elim b
+        | true  => leaf A
+        | false => node (D true Nat)
+      \\func P : \\Set => D false (0 = 0)
+      """, 1);
+    assertThatErrorsAre(Matchers.typeMismatchError());
+  }
+
+  @Test
+  public void changingParametersTest() {
+    typeCheckModule("""
+      \\data Bool | true | false
+      \\data D (b : Bool) (A : \\Set) : \\Set \\elim b
+        | true  => leaf A
+        | false => node (D true Nat)
+      \\func P : \\Set => D false (0 = 0)
+      """);
+  }
 }

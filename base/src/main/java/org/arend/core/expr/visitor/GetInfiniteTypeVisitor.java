@@ -55,7 +55,17 @@ public class GetInfiniteTypeVisitor extends GetTypeVisitor {
 
   @Override
   public UniverseExpression visitDataCall(DataCallExpression expr, Void params) {
-    return myThisData == expr.getDefinition() ? new UniverseExpression(new SortExpression.RecursiveData()) : super.visitDataCall(expr, params);
+    return myThisData == expr.getDefinition() && isSelfInstantiation(expr.getDefCallArguments()) ? new UniverseExpression(new SortExpression.RecursiveData()) : super.visitDataCall(expr, params);
+  }
+
+  private boolean isSelfInstantiation(List<? extends Expression> actualArguments) {
+    for (Map.Entry<DependentLink, Integer> entry : myParameters.entrySet()) {
+      int index = entry.getValue();
+      if (index >= actualArguments.size() || !(actualArguments.get(index) instanceof ReferenceExpression ref) || ref.getBinding() != entry.getKey()) {
+        return false;
+      }
+    }
+    return true;
   }
 
   @Override
