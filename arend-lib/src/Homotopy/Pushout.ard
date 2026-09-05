@@ -186,7 +186,7 @@
     | idp => idp
 
   \func encode_decode-right (b0 : B) (c : C) (d : code b0 (pinr c)) : encode b0 {pinr c} (decode b0 d) = d \elim d
-   | (a,idp,idp) => pmap (encode (f a)) (idp_*> (ppglue a))
+   | (a,idp,idp) => pmap (encode (f a)) idp_*>
 
   \func decode_enode (b0 : B) {w : PO} (p : pinl b0 = w) : decode b0 (encode b0 p) = p \elim p
     | idp => idp

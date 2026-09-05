@@ -36,7 +36,7 @@
         (pmap jinr (B.contraction b)) -- bottom edge
         (idpe (jinr B.center))        -- left edge
         (jglue a b)                   -- right edge
-        (Jl (\lam x p => inv (jglue a B.center) = pmap jinr p *> inv (jglue a x)) (inv (idp_*> _)) (B.contraction b))
+        (Jl (\lam x p => inv (jglue a B.center) = pmap jinr p *> inv (jglue a x)) (inv idp_*>) (B.contraction b))
   }
 
 \func Join_Sphere0 (A : \Type) : QEquiv {Join (Sphere 0) A} {Susp A} \cowith
@@ -99,8 +99,8 @@
       | jinl a => idp
       | jinr b => idp
       | pglue (a,b) i =>
-        \have p => pmap_inv-comm flip (jglue b a) *> inv_inv (jglue a b)
-        \in path (p @ __ @ i)
+        \have p => pmap_inv-comm flip (jglue b a) *> inv_inv
+        \in path (p __ i)
   }
 
 \func Join-assoc (A B C : \Type) : QEquiv {Join (Join A B) C} {Join A (Join B C)} \cowith

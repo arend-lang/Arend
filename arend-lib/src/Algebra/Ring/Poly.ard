@@ -62,7 +62,7 @@
       | :: a l => pmap (qadd __ a) (cfunc l)
 
     \use \func path-lem {R : AddPointed} {p : R.zro = R.zro} : inv (path peq) *> pmap2 padd idp p *> path peq = idp
-      => pmap (inv (path peq) *> pmap2 padd idp __ *> path peq) (prop-isProp _ idp) *> pmap (_ *>) (idp_*> _) *> inv_*> _
+      => pmap (inv (path peq) *> pmap2 padd idp __ *> path peq) (prop-isProp _ idp) *> pmap (_ *>) idp_*> *> inv_*>
 
     \use \func toQPoly-nil {R : AddPointed} {p : Poly R} : toQPoly p = in~ nil -> p = pzero \elim p
       | pzero => \lam _ => idp

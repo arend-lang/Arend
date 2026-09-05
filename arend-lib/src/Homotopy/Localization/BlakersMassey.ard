@@ -154,7 +154,7 @@
             | idp => t
 
           \func pathLem2 {A : \Type u} {a a' a'' : A} (p : a = a') (q : a = a'') : p *> inv p *> q = q
-            => pathLem2-gen (*>_inv p)
+            => pathLem2-gen *>_inv
 
           \func pathLem3 {A : \Type u} {a a' : A} (p : a = a') : pathLem1 p p = pathLem2 p p
             | idp => idp
@@ -183,18 +183,18 @@
                     (m : Join (\Sigma (p : y0 = y) (transport (Q x) p a.1 = q)) (\Sigma (p : x = x0) (transport (Q __ y0) p a.1 = q0)))
                     : (RL q0 q p (LR q p a m).1 (LR q p a m).2).1 = a
             \elim a, m
-            | (a1,idp), jinl (idp,idp) =>                path (\lam i => (q,  *>_inv (pathLem1 (pbMap q0) (pbMap q)) @ i))
-            | (a1,idp), jinr (idp,idp) =>                path (\lam i => (q0, *>_inv (pathLem2 (pbMap q0) (pbMap q)) @ i))
-            | (a1,idp), pglue ((idp,idp),(idp,idp)) j => path (\lam i => (q0, *>_inv (pathLem3 (pbMap q0) @ j)       @ i))
+            | (a1,idp), jinl (idp,idp) =>                path (\lam i => (q,  *>_inv i))
+            | (a1,idp), jinr (idp,idp) =>                path (\lam i => (q0, *>_inv i))
+            | (a1,idp), pglue ((idp,idp),(idp,idp)) j => path (\lam i => (q0, *>_inv i))
 
           \func RLR {x : X} {y : Y} (q : Q x y) (p : pinl x0 = {PO} pinr y)
                     (b : \Sigma (q2 : Q x0 y) (pbMap q2 = p))
                     (n : Join (\Sigma (p : y = y0) (transport (Q x0) p b.1 = q0)) (\Sigma (p : x0 = x) (transport (Q __ y) p b.1 = q)))
                     : (LR q p (RL q0 q p b n).1 (RL q0 q p b n).2).1 = b
             \elim b, n
-            | (b1,idp), jinl (idp,idp) =>                path (\lam i => (q0, inv_*> (pathLem1 (pbMap q0) (pbMap q)) @ i))
-            | (b1,idp), jinr (idp,idp) =>                path (\lam i => (q,  inv_*> (pathLem2 (pbMap q0) (pbMap q)) @ i))
-            | (b1,idp), pglue ((idp,idp),(idp,idp)) j => path (\lam i => (q0, inv_*> (pathLem3 (pbMap q0) @ j)       @ i))
+            | (b1,idp), jinl (idp,idp) =>                path (\lam i => (q0, inv_*> i))
+            | (b1,idp), jinr (idp,idp) =>                path (\lam i => (q,  inv_*> i))
+            | (b1,idp), pglue ((idp,idp),(idp,idp)) j => path (\lam i => (q0, inv_*> i))
         }
 
       \func coerce-path-gen {w : PO} (p : pinl x0 = w) (t : transport (pinl x0 = __ -> \Type u) p (code-left idp) = code)
@@ -216,7 +216,7 @@
 
       \func code-center {w : PO} (p : pinl x0 = w) : code p
         => transport (\lam T => T) (coerce-path p) (lEta point)
-        \where \func point : Left idp => (q0, *>_inv (pbMap q0))
+        \where \func point : Left idp => (q0, *>_inv)
 
       \func code-path (p : pinl x0 = {PO} pinr y0) (c : Fib pbMap p) : code-center p = lEta c \elim c
         | (q,idp) =>
@@ -229,7 +229,7 @@
             code.equiv.func (lEta ((q0, code.pathLem2 (pbMap q0) (pbMap q)) : Left (pbMap q)))
               ==< EquivData.eval {code.equivData q (pbMap q)} (q0, code.pathLem2 (pbMap q0) (pbMap q)) (pinr (idp,idp)) >==
             lEta ((q, inv (code.pathLem2 (pbMap q0) (pbMap q)) *> code.pathLem2 (pbMap q0) (pbMap q)) : Fib pbMap p)
-              ==< pmap (\lam x => lEta ((q,x) : Fib pbMap p)) (inv_*> (code.pathLem2 (pbMap q0) (pbMap q))) >==
+              ==< pmap (\lam x => lEta ((q,x) : Fib pbMap p)) inv_*> >==
             lEta ((q, idp) : Fib pbMap p)
               `qed
 

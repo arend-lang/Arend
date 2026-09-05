@@ -57,7 +57,7 @@
             \in rewriteI (SeqColimit.flattening P)
                          (constantMaps SeqColimit.flattening.total.seq (\lam n => ((pinl a, idp), \lam p =>
                              inv (ext (path (pglue ((a, p.1, sec (inv p.2)) : \Sigma (a : A) (x : (MImageAppr n).1) (R (f a) ((MImageAppr n).2 x)))),
-                                       transport_path-left (ret (f a) ((MImageAppr n).2 p.1) (sec (inv p.2))) idp *> pmap inv (sec-ret (inv p.2)) *> inv_inv p.2)))))
+                                       transport_path-left (ret (f a) ((MImageAppr n).2 p.1) (sec (inv p.2))) idp *> pmap inv (sec-ret (inv p.2)) *> inv_inv)))))
     }
 
 \func YImage.{u} {A B : \Type u} (S : A -> B -> \Type u) => data.MImage

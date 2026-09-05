@@ -51,7 +51,7 @@
                               (\lam p => ->*.ext {Sphere.pointed n}
                                                  {Pointed.make t}
                                                  (\lam s => inv p.2 *> path (spokeT p.1 north) *> inv (path (spokeT p.1 s)))
-                                                 (pmap ((inv p.2 *> __) *> p.2) (*>_inv (path (spokeT p.1 north))) *> inv_*> p.2))
+                                                 (pmap ((inv p.2 *> __) *> p.2) *>_inv *> inv_*>))
 
     \func elim.{u} {n : Nat} {A : \Type}
                    (P : Trunc_-1+ n A -> Truncated_-1+.{u} n)

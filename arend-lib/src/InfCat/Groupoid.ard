@@ -8,6 +8,7 @@
 \import InfCat.Rezk
 \import Logic
 \import Meta
+\import Paths
 
 \func IsGroupoid (C : \Cat) : \Prop
   => \Pi {x y : C} (f : x ~> y) -> IsIso f
@@ -18,8 +19,8 @@
 
 \lemma type-groupoid {X : \Type} : IsGroupoid X
   => \lam f => inP (=_~> $ inv (~>_= f),
-                    pmap (comp _) (inv ~>_=_~>) *> =_~>_comp *> pmap =_~> inv_*>,
-                    pmap (comp __ _) (inv ~>_=_~>) *> =_~>_comp *> pmap =_~> *>_inv)
+                    pmap+ (comp _) (inv ~>_=_~>) *> =_~>_comp *> pmap+ =_~> inv_*>,
+                    pmap+ (comp __ _) (inv ~>_=_~>) *> =_~>_comp *> pmap+ =_~> *>_inv)
 
 \func type_ob {X : \Type} : QEquiv {X} {Ob X} \cowith
   | f => ob

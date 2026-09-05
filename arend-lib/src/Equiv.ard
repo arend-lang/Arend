@@ -342,8 +342,8 @@
          | fx=fx' => x.2 *> inv x'.2
     \in Fib.ext b x x' (eq.sec fx=fx') (
       pmap e (eq.sec fx=fx') *> x'.2 ==< pmap (*> x'.2) (eq.f_sec fx=fx') >==
-      fx=fx' *> x'.2                   ==< *>-assoc _ _ _ >==
-      x.2 *> inv x'.2 *> x'.2          ==< pmap (x.2 *>) (inv_*> _) >==
+      fx=fx' *> x'.2                   ==< *>-assoc >==
+      x.2 *> inv x'.2 *> x'.2          ==< pmap (x.2 *>) inv_*> >==
       x.2                              `qed
     )
 }

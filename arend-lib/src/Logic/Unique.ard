@@ -9,7 +9,7 @@
 \func isProp (A : \Type) => \Pi (a a' : A) -> a = a'
   \where {
     \use \sfunc =>isSet {A : \Type} (p : isProp A) (a a' : A) : isProp (a = a')
-      => \lam s t => \have q => Jl (\lam x q => inv (p a a) *> p a x = q) (inv_*> (p a a))
+      => \lam s t => \have q => Jl (\lam x q => inv (p a a) *> p a x = q) inv_*>
                      \in inv (q s) *> q t
 
     \use \level levelProp (A : \Type) (e e' : isProp A) : e = e'

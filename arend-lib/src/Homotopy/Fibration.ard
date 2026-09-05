@@ -14,14 +14,14 @@
       => (retraction b0 x' x p q).1
       \where
         \func retraction (b0 : B) (x' x : Fib f b0) (p : x.1 = x'.1) (q : pmap f p *> x'.2 = x.2)
-          : \Sigma (t : x = x') (transport (\lam x'' => \Sigma (p : x.1 = x''.1) (pmap f p *> x''.2 = x.2)) t (idp, idp_*> x.2) = (p,q)) \elim x', x, p, q
+          : \Sigma (t : x = x') (transport (\lam x'' => \Sigma (p : x.1 = x''.1) (pmap f p *> x''.2 = x.2)) t (idp, idp_*>) = (p,q)) \elim x', x, p, q
           | (x'1,idp), (x1,x2), idp, idp => (idp,idp)
 
     \func equiv (b0 : B) (x x' : Fib f b0) : QEquiv {x = x'} {\Sigma (p : x.1 = x'.1) (pmap f p *> x'.2 = x.2)} =>
       \let S {b0 : B} (x x' : Fib f b0) => \Sigma (p : x.1 = x'.1) (pmap f p *> x'.2 = x.2)
       \in pathEquiv S (\lam {x x' : Fib f b0} =>
           \new Retraction {
-            | f q => transport (S x) q (idp, idp_*> x.2)
+            | f q => transport (S x) q (idp, idp_*>)
             | sec s => ext b0 x x' s.1 s.2
             | f_sec s => (ext.retraction b0 x' x s.1 s.2).2
           })

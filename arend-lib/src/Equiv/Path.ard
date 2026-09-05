@@ -10,15 +10,15 @@
   | ret_f => Jl (\lam _ q' => p.sec (p q') = q') (
     \let | h {a a' : A} (q : a = a') => p.sec (p q)
          | h-idemp {a a' : A} (q : a = a') : h (h q) = h q => pmap p.sec (p.f_sec (p q))
-    \in Jl (\lam _ q => h idp = h q *> inv q) idp (h idp) *> pmap (*> inv (h idp)) (h-idemp idp) *> *>_inv (h idp)
+    \in Jl (\lam _ q => h idp = h q *> inv q) idp (h idp) *> pmap (*> inv (h idp)) (h-idemp idp) *> *>_inv
   )
   | f_sec => p.f_sec
 
 \func pathConcatEquiv {A : \Type} {a b c : A} (p : a = b) : QEquiv {a = c} {b = c} \cowith
   | f => inv p *>
   | ret => p *>
-  | ret_f q => inv (*>-assoc _ _ _) *> pmap (*> q) (*>_inv p) *> idp_*> q
-  | f_sec q => inv (*>-assoc _ _ _) *> pmap (*> q) (inv_*> p) *> idp_*> q
+  | ret_f q => inv *>-assoc *> pmap (*> q) *>_inv *> idp_*>
+  | f_sec q => inv *>-assoc *> pmap (*> q) inv_*> *> idp_*>
 
 -- | If ``f : A -> B`` is an equivalence, then ``pmap f`` is also an equivalence.
 \lemma pmapIsEquiv {A B : \Type} {f : A -> B} (e : IsEquiv f) {a a' : A} : IsEquiv (pmap f {a} {a'}) \elim e
@@ -43,4 +43,4 @@
 -- | If ``f : A -> B`` is a section, then ``pmap f`` is also a section.
 \func pmapSection (s : Section) {a a' : s.A} : Section {a = a'} (pmap s) \cowith
   | ret q => (inv (s.ret_f a) *> pmap s.ret q) *> s.ret_f a'
-  | ret_f q => Jl (\lam a'' q' => (inv (s.ret_f a) *> pmap s.ret (pmap s q')) *> s.ret_f a'' = q') (inv_*> (s.ret_f a)) q
+  | ret_f q => Jl (\lam a'' q' => (inv (s.ret_f a) *> pmap s.ret (pmap s q')) *> s.ret_f a'' = q') inv_*> q

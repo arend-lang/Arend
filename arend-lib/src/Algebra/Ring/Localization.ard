@@ -50,8 +50,8 @@
     }, \lam (inP (c,Sc,xc=0)) => (localization-inv Sc).inv-cancel-right $ inv func-* *> pmap inL xc=0 *> func-zro *> inv Ring.zro_*-left)
 
   \lemma loc-trivial-char : (0 = {L} 1) <-> S 0
-    => <->trans (\lam p => func-ide *> inv p, \lam p => inv p *> func-ide) $ <->trans zro-char
-        (\lam (inP (c,Sc,p)) => transport S (inv ide-left *> p) Sc, \lam S0 => inP (0, S0, ide-left))
+    => <->trans (\lam p => func-ide *> sym p, \lam p => sym p *> func-ide) $ <->trans zro-char
+        (\lam (inP (c,Sc,p)) => transport S (sym ide-left *> p) Sc, \lam S0 => inP (0, S0, ide-left))
 
   \lemma nilpotent-trivial {x : B} (n : Ring.IsNilpotent x) (Sx : S x) : 0 = {L} 1 \elim n
     | inP (n,p) => loc-trivial-char.2 $ transport S p (S.contains_pow Sx)

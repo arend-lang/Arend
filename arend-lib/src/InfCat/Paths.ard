@@ -1,52 +1,32 @@
-\func inv {A :⁺ \Cat} {a a' :⁺ A} (p :⁺ a = a') : a' = a \elim p
-  | idp => idp
+\import Paths
 
-\func \infixr 9 *> {A :⁺ \Cat} {a a' a'' :⁺ A} (p :⁺ a = a') (q :⁺ a' = a'') : a = a'' \elim q
-  | idp => p
-
-\func *>-assoc {A :⁺ \Cat} {a1 a2 a3 a4 :⁺ A} {p :⁺ a1 = a2} {q :⁺ a2 = a3} {r :⁺ a3 = a4} : (p *> q) *> r = p *> (q *> r) \elim r
-  | idp => idp
-
-\func idp_*> {A :⁺ \Cat} {a a' :⁺ A} {p :⁺ a = a'} : idp *> p = p \elim p
-  | idp => idp
-
-\func inv_*> {A :⁺ \Cat} {a a' :⁺ A} {p :⁺ a = a'} : inv p *> p = idp \elim p
-  | idp => idp
-
-\func *>_inv {A :⁺ \Cat} {a a' :⁺ A} {p :⁺ a = a'} : p *> inv p = idp \elim p
-  | idp => idp
-
-\func pmap {A B :⁺ \Cat} (f :⁺ A ->⁺ B) {a a' :⁺ A} (p :⁺ a = a') : f a = f a'
+\func pmap+ {A B :⁺ \Cat} (f :⁺ A ->⁺ B) {a a' :⁺ A} (p :⁺ a = a') : f a = f a'
   => path \lam i => f (p i)
 
-\func pmap2 {A B C :⁺ \Cat} (f :⁺ A ->⁺ B ->⁺ C) {a a' :⁺ A} (p :⁺ a = a') {b b' :⁺ B} (q :⁺ b = b') : f a b = f a' b'
+\func pmap2+ {A B C :⁺ \Cat} (f :⁺ A ->⁺ B ->⁺ C) {a a' :⁺ A} (p :⁺ a = a') {b b' :⁺ B} (q :⁺ b = b') : f a b = f a' b'
   => path \lam i => f (p i) (q i)
 
-\func pmap_*> {A B :⁺ \Cat} (f :⁺ A ->⁺ B) {a a' a'' :⁺ A} {p :⁺ a = a'} {q :⁺ a' = a''}
-  : pmap f (p *> q) = pmap f p *> pmap f q \elim q
+\func pmap+_*> {A B :⁺ \Cat} (f :⁺ A ->⁺ B) {a a' a'' :⁺ A} {p :⁺ a = a'} {q :⁺ a' = a''}
+  : pmap+ f (p *> q) = pmap+ f p *> pmap+ f q \elim q
   | idp => idp
 
-\func pmap_inv {A B :⁺ \Cat} {a a' :⁺ A} (f :⁺ A ->⁺ B) {p :⁺ a = a'} : pmap f (inv p) = inv (pmap f p) \elim p
+\func pmap+_inv {A B :⁺ \Cat} {a a' :⁺ A} (f :⁺ A ->⁺ B) {p :⁺ a = a'} : pmap+ f (inv p) = inv (pmap+ f p) \elim p
   | idp => idp
 
-\func transport {A :⁺ \Cat} (B :⁺ A ->⁺ \Cat) {a a' :⁺ A} (p :⁺ a = a') (b :⁺ B a) : B a' \elim p
+\func transport+ {A :⁺ \Cat} (B :⁺ A ->⁺ \Cat) {a a' :⁺ A} (p :⁺ a = a') (b :⁺ B a) : B a' \elim p
   | idp => b
 
-\func transport_path_pmap {A B :⁺ \Cat} {f g :⁺ A ->⁺ B} {a a' :⁺ A} {p :⁺ a = a'} {q :⁺ f a = g a} {s :⁺ f a' = g a'}
-                          (h :⁺ q *> pmap g p = pmap f p *> s) : transport (\lam x => f x = g x) p q = s \elim p
+\func transport+_path_pmap {A B :⁺ \Cat} {f g :⁺ A ->⁺ B} {a a' :⁺ A} {p :⁺ a = a'} {q :⁺ f a = g a} {s :⁺ f a' = g a'}
+                           (h :⁺ q *> pmap+ g p = pmap+ f p *> s) : transport+ (\lam x => f x = g x) p q = s \elim p
   | idp => h *> idp_*>
 
-\func rotatePathLeft {A :⁺ \Cat} {a a' a'' :⁺ A} {p :⁺ a' = a} {q :⁺ a' = a''} {r :⁺ a = a''} (t :⁺ q = p *> r)
-  : inv p *> q = r \elim p, r, t
-  | idp, idp, idp => idp
-
-\func homotopy-isNatural {A B :⁺ \Cat} (f g :⁺ A ->⁺ B) (h :⁺ \Pi (a :⁺ A) -> f a = g a) {a a' :⁺ A} (p :⁺ a = a')
-  : pmap f p *> h a' = h a *> pmap g p \elim p
+\func homotopy-isNatural+ {A B :⁺ \Cat} (f g :⁺ A ->⁺ B) (h :⁺ \Pi (a :⁺ A) -> f a = g a) {a a' :⁺ A} (p :⁺ a = a')
+  : pmap+ f p *> h a' = h a *> pmap+ g p \elim p
   | idp => idp_*>
 
-\sfunc homotopy_app-comm {A :⁺ \Cat} (f :⁺ A ->⁺ A) (h :⁺ \Pi (a :⁺ A) -> f a = a) (a :⁺ A) : h (f a) = pmap f (h a)
-  => pmap (h (f a) *> __) (inv *>_inv)
+\sfunc homotopy_app-comm+ {A :⁺ \Cat} (f :⁺ A ->⁺ A) (h :⁺ \Pi (a :⁺ A) -> f a = a) (a :⁺ A) : h (f a) = pmap+ f (h a)
+  => pmap+ (h (f a) *> __) (inv *>_inv)
   *> inv *>-assoc
-  *> pmap (*> inv (h a)) (inv (homotopy-isNatural f (\lam a => a) h (h a)))
+  *> pmap+ (*> inv (h a)) (inv (homotopy-isNatural+ f (\lam a => a) h (h a)))
   *> *>-assoc
-  *> pmap (pmap f (h a) *> __) *>_inv
+  *> pmap+ (pmap+ f (h a) *> __) *>_inv

@@ -193,8 +193,8 @@
     | in0 y=z, in0 x=y => in0 (x=y *> y=z)
   }
   | id-left {_} {_} {p} => cases p idp
-  | id-right {_} {_} {p} => cases p (pmap in0 (idp_*> _))
-  | o-assoc {_} {_} {_} {_} {p} {q} {r} => cases (p,q,r) (pmap in0 (inv (*>-assoc _ _ _)))
+  | id-right {_} {_} {p} => cases p (pmap in0 idp_*>)
+  | o-assoc {_} {_} {_} {_} {p} {q} {r} => cases (p,q,r) (pmap in0 (inv *>-assoc))
   \where {
     \func map {X : \Type} {D : Precat} (f : X -> D) {x y : X} (h : Hom {DiscretePrecat X} x y) : Hom (f x) (f y) \elim h
       | in0 idp => id

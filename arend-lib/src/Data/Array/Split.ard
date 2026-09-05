@@ -25,4 +25,4 @@
             | (0, p) => absurd $ remove.no-element (\lam s => decideEq b s.2) {l} $ inv (pmap __.2 t.2 *> inv p)
             | (suc k, p) => (k, p *> inv (pmap __.2 t.2))
           })) $
-        EPerm.eperm-= $ pmap (Big (++) nil) $ exts \lam j => keep_remove=keep \lam p q => \case inj {0} {suc j} (q *> inv p)
+        EPerm.eperm-= $ pmap (Big (++) nil) $ exts \lam j => keep_remove=keep $ later \lam p q => \case inj {0} {suc j} (q *> inv p)

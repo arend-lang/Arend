@@ -2,35 +2,35 @@
 \import Function.Meta
 \import InfCat.Paths
 \import Meta
-\import Paths()
+\import Paths
 
 \func dmap {C D :⁺ \Cat} (f :⁺ C ->⁺ D) {a a' :⁺ C} (p :⁺ a ~> a') : f a ~> f a'
   => dpath \lam i => f (p i)
 
-\func sigma-ext {A :⁺ \Cat} {B :⁺ A ->⁺ \Cat} {a a' :⁺ A} (p :⁺ a = a') {b :⁺ B a} {b' :⁺ B a'} (q :⁺ transport B p b = b')
+\func sigma-ext {A :⁺ \Cat} {B :⁺ A ->⁺ \Cat} {a a' :⁺ A} (p :⁺ a = a') {b :⁺ B a} {b' :⁺ B a'} (q :⁺ transport+ B p b = b')
   : (a,b) = {\Sigma (x :⁺ A) (B x)} (a',b') \elim p
   | idp => path \lam i => (a, q i)
   \where {
-    \protected \func grpd {A : \Cat} {B :⁺ A ->⁺ \Cat} {a a' : A} (p : a = a') {b :⁺ B a} {b' :⁺ B a'} (q :⁺ transport B p b = b')
+    \protected \func grpd {A : \Cat} {B :⁺ A ->⁺ \Cat} {a a' : A} (p : a = a') {b :⁺ B a} {b' :⁺ B a'} (q :⁺ transport+ B p b = b')
       : (a,b) = {\Sigma (x : A) (B x)} (a',b') \elim p
       | idp => path \lam i => (a, q i)
   }
 
 \func sigma-unext2 {A :⁺ \Cat} {B :⁺ A ->⁺ \Cat} {s t :⁺ \Sigma (x :⁺ A) (B x)} (p :⁺ s = t)
-  : transport B (pmap __.1 p) s.2 = t.2 \elim p
+  : transport+ B (pmap+ __.1 p) s.2 = t.2 \elim p
   | idp => idp
 
 \sfunc sigma-unext2_idp {A :⁺ \Cat} {B :⁺ A ->⁺ \Cat} {a :⁺ A} {b b' :⁺ B a}
-                        (p :⁺ (a,b) = {\Sigma (x :⁺ A) (B x)} (a,b')) (q :⁺ pmap __.1 p = idp) : b = b'
-  => inv (pmap (transport B __ b) q) *> sigma-unext2 p
+                        (p :⁺ (a,b) = {\Sigma (x :⁺ A) (B x)} (a,b')) (q :⁺ pmap+ __.1 p = idp) : b = b'
+  => inv (pmap+ (transport+ B __ b) q) *> sigma-unext2 p
 
 \func =_~> {A :⁺ \Cat} {a b :⁺ A} (p :⁺ a = b) : a ~> b \elim p
   | idp => idd
 
-\sfunc transport_~>-right {A :⁺ \Cat} {a b c :⁺ A} {p :⁺ b = c} {q :⁺ a ~> b} : transport (a ~> __) p q = comp q (=_~> p) \elim p
+\sfunc transport_~>-right {A :⁺ \Cat} {a b c :⁺ A} {p :⁺ b = c} {q :⁺ a ~> b} : transport+ (a ~> __) p q = comp q (=_~> p) \elim p
   | idp => inv comp_idd-right
 
-\func transport_~>_idd-right {A :⁺ \Cat} {a b :⁺ A} {p :⁺ a = b} : transport (a ~> __) p idd = =_~> p \elim p
+\func transport_~>_idd-right {A :⁺ \Cat} {a b :⁺ A} {p :⁺ a = b} : transport+ (a ~> __) p idd = =_~> p \elim p
   | idp => idp
   \where {
     \protected \func grpd {A : \Cat} {a b : A} {p : a = b} : Paths.transport (a ~> __) p idd = =_~> p \elim p
@@ -82,7 +82,7 @@
 \func =_~>_comp {A :⁺ \Cat} {a b c :⁺ A} {p :⁺ a = b} {q :⁺ b = c} : comp (=_~> p) (=_~> q) = =_~> (p *> q) \elim q
   | idp => comp_idd-right
 
-\func dmap_=_~> {C D :⁺ \Cat} (f :⁺ C ->⁺ D) {a b :⁺ C} {p :⁺ a = b} : dmap f (=_~> p) = =_~> (pmap f p) \elim p
+\func dmap_=_~> {C D :⁺ \Cat} (f :⁺ C ->⁺ D) {a b :⁺ C} {p :⁺ a = b} : dmap f (=_~> p) = =_~> (pmap+ f p) \elim p
   | idp => idp
 
 \sfunc segal2Prop {C :⁺ \Cat} {a b c :⁺ C} {ab :⁺ a ~> b} {bc :⁺ b ~> c} (s t :⁺ \Sigma (ac :⁺ a ~> c) (DPath (\lam i => ab i ~> ac i) idd bc)) : s = t
@@ -108,25 +108,25 @@
 
 \sfunc cube1-equals {C :⁺ \Cat} {a b c :⁺ C} (ab :⁺ a ~> b) (bc :⁺ b ~> c) {ac ac' :⁺ a ~> c}
                     (p :⁺ DPath (\lam i => ab i ~> ac i) idd bc) (q :⁺ DPath (\lam i => ab i ~> ac' i) idd bc) : ac = ac'
-  => pmap __.1 $ segal2Prop (ac,p) (ac',q)
+  => pmap+ __.1 $ segal2Prop (ac,p) (ac',q)
 
 \sfunc comp-char {C :⁺ \Cat} {a b c :⁺ C} {ab :⁺ a ~> b} {bc :⁺ b ~> c} {ac :⁺ a ~> c}
                  (p :⁺ DPath (\lam i => ab i ~> ac i) idd bc) : comp ab bc = ac
   => cube1-equals ab bc (dpath \lam i => dpath \lam j => fill2 ab bc i j) p
   \where {
     \protected \sfunc conv {ac :⁺ a ~> c} (p :⁺ comp ab bc = ac) : DPath (\lam i => ab i ~> ac i) idd bc
-      => transport (\lam x => DPath (\lam i => ab i ~> x i) idd bc) p $ dpath \lam i => dpath (fill2 ab bc i)
+      => transport+ (\lam x => DPath (\lam i => ab i ~> x i) idd bc) p $ dpath \lam i => dpath (fill2 ab bc i)
 
     \protected \sfunc conv_idp : conv idp = dpath \lam i => dpath (fill2 ab bc i)
       => \peval conv idp
 
     \protected \sfunc forward_backward : conv (comp-char p) = p
-      => pmap (comp-char.conv __) ((\peval comp-char p) *> (\peval cube1-equals ab bc _ p)) *> (\peval comp-char.conv _)
+      => pmap+ (comp-char.conv __) ((\peval comp-char p) *> (\peval cube1-equals ab bc _ p)) *> (\peval comp-char.conv _)
       *> sigma-unext2 (segal2Prop (comp ab bc, dpath \lam i => dpath (fill2 ab bc i)) (ac,p))
 
     \protected \sfunc backward_forward {ac :⁺ a ~> c} {p :⁺ comp ab bc = ac} : comp-char (conv p) = p \elim p
-      | idp => pmap (comp-char __) comp-char.conv_idp *> (\peval comp-char _) *> (\peval cube1-equals ab bc _ _)
-            *> path \lam i => pmap __.1 (segal2Prop.double _ idp i)
+      | idp => pmap+ (comp-char __) comp-char.conv_idp *> (\peval comp-char _) *> (\peval cube1-equals ab bc _ _)
+            *> path \lam i => pmap+ __.1 (segal2Prop.double _ idp i)
   }
 
 \func comp-equiv {C : \Cat} {a b c : C} {ab : a ~> b} {bc : b ~> c} {ac : a ~> c}
@@ -170,20 +170,20 @@
 
 \sfunc equiv-fibers {C D :⁺ \Cat} (f :⁺ C ->⁺ D) (g :⁺ D ->⁺ C) (p :⁺ \Pi (x :⁺ C) -> g (f x) = x) (q :⁺ \Pi (y :⁺ D) -> f (g y) = y)
                     {y :⁺ D} {s t :⁺ \Sigma (x :⁺ C) (f x = y)} : s = t
-  => sigma-ext (inv (p s.1) *> pmap g (s.2 *> inv t.2) *> p t.1) $ transport_path_pmap $ inv $
-      pmap (*> _) (pmap_*> f *> pmap (_ *> __) (pmap_*> f))
-      *> *>-assoc *> pmap (_ *> __) *>-assoc *> pmap (*> _) (pmap_inv f)
-      *> rotatePathLeft (pmap (_ *> __ *> _) (coh_inv_f f g p q)
-        *> inv *>-assoc *> pmap (*> _) (homotopy-isNatural (\lam y => f (g y)) (\lam y => y) (coh_inv f g p q __) _)
-        *> *>-assoc *> pmap2 (__ *> __) (inv $ coh_inv_f f g p q) (*>-assoc *> pmap (_ *> __) inv_*>))
+  => sigma-ext (inv (p s.1) *> pmap+ g (s.2 *> inv t.2) *> p t.1) $ transport+_path_pmap $ inv $
+                                                                                          pmap+ (*> _) (pmap+_*> f *> pmap+ (_ *> __) (pmap+_*> f))
+      *> *>-assoc *> pmap+ (_ *> __) *>-assoc *> pmap+ (*> _) (pmap+_inv f)
+      *> rotatePathLeft (pmap+ (_ *> __ *> _) (coh_inv_f f g p q)
+        *> inv *>-assoc *> pmap+ (*> _) (homotopy-isNatural+ (\lam y => f (g y)) (\lam y => y) (coh_inv f g p q __) _)
+        *> *>-assoc *> pmap2+ (__ *> __) (inv $ coh_inv_f f g p q) (*>-assoc *> pmap+ (_ *> __) inv_*>))
   \where {
     \func coh_inv (f :⁺ C ->⁺ D) (g :⁺ D ->⁺ C) (p :⁺ \Pi (x :⁺ C) -> g (f x) = x)
                   (q :⁺ \Pi (y :⁺ D) -> f (g y) = y) (y :⁺ D) : f (g y) = y
-      => inv (q (f (g y))) *> pmap f (p (g y)) *> q y
+      => inv (q (f (g y))) *> pmap+ f (p (g y)) *> q y
 
     \sfunc coh_inv_f (f :⁺ C ->⁺ D) (g :⁺ D ->⁺ C) (p :⁺ \Pi (x :⁺ C) -> g (f x) = x)
-                     (q :⁺ \Pi (y :⁺ D) -> f (g y) = y) {x :⁺ C} : pmap f (p x) = coh_inv f g p q (f x)
+                     (q :⁺ \Pi (y :⁺ D) -> f (g y) = y) {x :⁺ C} : pmap+ f (p x) = coh_inv f g p q (f x)
       => inv $ rotatePathLeft $
-          pmap (pmap f __ *> q (f x)) (homotopy_app-comm (\lam x => g (f x)) p x)
-          *> homotopy-isNatural (\lam y => f (g y)) (\lam y => y) q (pmap f (p x))
+               pmap+ (pmap+ f __ *> q (f x)) (homotopy_app-comm+ (\lam x => g (f x)) p x)
+          *> homotopy-isNatural+ (\lam y => f (g y)) (\lam y => y) q (pmap+ f (p x))
   }

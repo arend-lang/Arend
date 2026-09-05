@@ -7,8 +7,8 @@
 \func =-to-QEquiv.{u} {A B : \Set u} (p : A = B) : QEquiv {A} {B} \cowith
   | f => transport (\lam X => X) p
   | ret => transport (\lam X => X) (inv p)
-  | ret_f a => inv (transport_*> _ p (inv p) a) *> pmap (transport _ __ a) (*>_inv p)
-  | f_sec b => inv (transport_*> _ (inv p) p b) *> pmap (transport _ __ b) (inv_*> p)
+  | ret_f a => inv (transport_*> _ p (inv p) a) *> pmap (transport _ __ a) (*>_inv {_} {_} {_} {p})
+  | f_sec b => inv (transport_*> _ (inv p) p b) *> pmap (transport _ __ b) (inv_*> {_} {_} {_} {p})
 
 \func QEquiv-to-=.{u} {A B : \Set u} (e : QEquiv {A} {B}) : A = B => path (iso e.f e.ret e.ret_f e.f_sec)
 

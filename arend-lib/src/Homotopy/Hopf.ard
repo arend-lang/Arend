@@ -46,7 +46,7 @@
 
     \func circle-loop (y : Sphere1) : y = y
       | base1 => path loop
-      | loop => Cube2.map ploop ploop ploop ploop (inv (<*_idp ploop) *> pmap (ploop <*) (inv (*>_inv ploop)))
+      | loop => Cube2.map ploop ploop ploop ploop (inv <*_idp *> pmap (ploop <*) (inv *>_inv))
 
     \func mult (x y : Sphere1) : Sphere1 \elim x
       | base1 => y

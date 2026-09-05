@@ -275,7 +275,7 @@
       | func-Join>= => SJoin-univ \lam c => locale_cover (f.func-Cover c) <=∘ SJoin-univ (later \lam {b} (inP (U,CU,Ub)) => SJoin-cond Ub <=∘ SJoin-cond CU)
 
     \lemma adjointMap_embed {X : PreorderSite} {Y : Locale} {f : PreorderSiteHom X (LocaleSite Y)} {x : X} : adjointMap f (embed x) = f x
-      => <=-antisymmetric (SJoin-univ \lam c => locale_cover (f.func-Cover c) <=∘ SJoin-univ \lam p => func-<= $ =_<= $ inv p) (SJoin-conde x (later $ cover-refl idp))
+      => <=-antisymmetric (SJoin-univ \lam c => locale_cover (f.func-Cover c) <=∘ SJoin-univ \lam p => func-<= $ =_<= $ sym p) (SJoin-conde x (later $ cover-refl idp))
 
     \func embedHom {P : PreorderSite} : PreorderSitePredenseHom P (LocaleSite (SiteLocale P)) \cowith
       | func => embed

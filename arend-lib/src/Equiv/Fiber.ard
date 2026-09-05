@@ -32,8 +32,8 @@
                      pmap f p0 *> x.2                                               ==< pmap (*> x.2) (pmap_*>-comm f _ _) >==
                      (pmap f (pmap s.ret (inv x.2)) *> pmap f (s.ret_f x.1)) *> x.2 ==< pmap ((pmap f (pmap s.ret (inv x.2)) *> __) *> x.2) (HAEquiv.coh_f_ret_f=f_sec_f s r' x.1) >==
                      (pmap f (pmap s.ret (inv x.2)) *> f_sec (f x.1)) *> x.2      ==< pmap (*> x.2) (homotopy-isNatural (\lam x => f (s.ret x)) (\lam x => x) f_sec (inv x.2)) >==
-                     (f_sec b0 *> inv x.2) *> x.2                                 ==< *>-assoc _ _ _ >==
-                     f_sec b0 *> (inv x.2 *> x.2)                                 ==< pmap (f_sec b0 *>) (inv_*> x.2) >==
+                     (f_sec b0 *> inv x.2) *> x.2                                 ==< *>-assoc >==
+                     f_sec b0 *> (inv x.2 *> x.2)                                 ==< pmap (f_sec b0 *>) inv_*> >==
                      f_sec b0                                                     `qed
               \in Fib.ext b0 x0 x p0 q0)
   }

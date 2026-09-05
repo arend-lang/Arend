@@ -6,14 +6,14 @@
 \import Paths.Meta
 
 \type IsEmbedding {C D : \Cat} (f : C ->⁺ D) : \Prop
-  => TruncP (\Pi (s :⁺ \Sigma (x y :⁺ C) (f x = f y)) -> \Sigma (p :⁺ s.1 = s.2) (pmap f p = s.3))
+  => TruncP (\Pi (s :⁺ \Sigma (x y :⁺ C) (f x = f y)) -> \Sigma (p :⁺ s.1 = s.2) (pmap+ f p = s.3))
   \where {
-    \lemma external (fe : IsEmbedding f) {E : \Cat} (g h : E ->⁺ C) : IsEquiv {g = h} (pmap {E ->⁺ C} {E ->⁺ D} \lam g x => f (g x)) \elim fe
+    \lemma external (fe : IsEmbedding f) {E : \Cat} (g h : E ->⁺ C) : IsEquiv {g = h} (pmap+ {E ->⁺ C} {E ->⁺ D} \lam g x => f (g x)) \elim fe
       | inP fe => inP $ pathEquiv {E ->⁺ C} (\lam g h => (\lam x =>⁺ f (g x)) = (\lam x =>⁺ f (h x))) \lam {g} {h} =>
-        \have lem (q : (\lam x =>⁺ f (g x)) = (\lam x =>⁺ f (h x))) : \Sigma (p : g = h) (pmap {E ->⁺ C} {E ->⁺ D} (\lam g x => f (g x)) p = q)
+        \have lem (q : (\lam x =>⁺ f (g x)) = (\lam x =>⁺ f (h x))) : \Sigma (p : g = h) (pmap+ {E ->⁺ C} {E ->⁺ D} (\lam g x => f (g x)) p = q)
               => (ext \lam x => (fe (g x, h x, path \lam i => q i x)).1, path \lam j => path \lam i x => (fe (g x, h x, path \lam i => q i x)).2 j i)
         \in \new Retraction {
-          | f p => pmap {E ->⁺ C} {E ->⁺ D} (\lam g x => f (g x)) p
+          | f p => pmap+ {E ->⁺ C} {E ->⁺ D} (\lam g x => f (g x)) p
           | sec q => (lem q).1
           | f_sec q => (lem q).2
         }

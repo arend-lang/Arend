@@ -68,7 +68,7 @@
   \where {
     \func wind_loop (n : Int) : wind n *> path loop = wind (isuc n)
       | pos _ => idp
-      | neg (suc n) => *>-assoc (wind (neg n)) (inv (path loop)) (path loop) *> pmap (wind (neg n) *>) (inv_*> (path loop))
+      | neg (suc n) => *>-assoc *> pmap (wind (neg n) *>) inv_*>
 
     \func decode_loop : transport (\lam x => code x -> base1 = x) (path loop) wind = wind
       => simp_coe (\lam c => simp_coe (wind_loop c))

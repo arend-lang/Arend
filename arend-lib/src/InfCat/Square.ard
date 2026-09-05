@@ -3,6 +3,7 @@
 \import InfCat.Basics
 \import InfCat.Equiv
 \import InfCat.Paths
+\import Paths
 
 \sfunc cube2-equals
   {C :⁺ \Cat} {a b d a' b' c' d' :⁺ C} (_ : \Sigma)
@@ -51,11 +52,11 @@
         \have | c => segal2Prop {DI ->⁺ C} {\lam j => aa' j} {\lam j => bb' j} {\lam j => dd' j} {dpath \lam i j => topFace i j}
                       (dpath \lam i j => botFace1 i j, dpath \lam i => dpath \lam k j => p i j k)
                       (dpath \lam i j => botFace2 i j, dpath \lam i => dpath \lam k j => q i j k)
-              | h1 => pmap (\lam w => path \lam i => (w i).1) $
+              | h1 => pmap+ (\lam w => path \lam i => (w i).1) $
                       segal2Prop.double (path \lam w => ((map (c w).1).1.1, dpath \lam i => dpath \lam k => (c w).2 i k dleft)) idp
-              | h2 => pmap (\lam w => path \lam i => (w i).1) $
+              | h2 => pmap+ (\lam w => path \lam i => (w i).1) $
                       segal2Prop.double (path \lam w => ((map (c w).1).1.2, dpath \lam i => dpath \lam k => (c w).2 i k dright)) idp
-              | r => sigma-unext2_idp (pmap (\lam w => map w.1) c) $ path \lam i => path \lam j => (h1 i j, h2 i j)
+              | r => sigma-unext2_idp (pmap+ (\lam w => map w.1) c) $ path \lam i => path \lam j => (h1 i j, h2 i j)
         \in path \lam w => dpath \lam i => dpath \lam j => r w j i
       \where {
         \private \func map (p :⁺ (\lam i =>⁺ aa' i) ~> (\lam i =>⁺ dd' i))
