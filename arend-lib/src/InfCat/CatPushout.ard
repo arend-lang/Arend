@@ -1,0 +1,18 @@
+\data CatPushout {A B C : \Cat} (f : A ->⁺ B) (g : A ->⁺ C)
+  | cinl (b :⁺ B)
+  | cinr (c :⁺ C)
+  | cglue (a :⁺ A) : cinl (f a) = cinr (g a)
+  \where {
+    \protected \func rec {A B C : \Cat} {f : A ->⁺ B} {g : A ->⁺ C} {Z : \Cat} (lm : B ->⁺ Z) (rm : C ->⁺ Z) (gm : \Pi (a :⁺ A) -> lm (f a) = rm (g a)) (x :⁺ CatPushout f g) : Z \elim x
+      | cinl b => lm b
+      | cinr c => rm c
+      | cglue a => gm a
+
+    \protected \func elim {A B C : \Cat} {f : A ->⁺ B} {g : A ->⁺ C} {Z : CatPushout f g ->⁺ \Cat}
+                          (lm : \Pi (b :⁺ B) -> Z (cinl b)) (rm : \Pi (c :⁺ C) -> Z (cinr c))
+                          (gm : \Pi (a :⁺ A) -> Path (\lam i => Z (cglue a i)) (lm (f a)) (rm (g a)))
+                          (x :⁺ CatPushout f g) : Z x \elim x
+      | cinl b => lm b
+      | cinr c => rm c
+      | cglue a => gm a
+  }

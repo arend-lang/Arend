@@ -43,7 +43,7 @@
         \protected \sfunc grpd {C : \Cat} {x y : C} (f : x ~> y) (g : y ~> x) (fg=id : comp f g = idd)
                                {s t : \Sigma (h : y ~> x) (comp h f = idd)} : s = t
           => \have r => linv-unique f g fg=id {s.1,s.2} {t.1,t.2}
-             \in sigma-ext.grpd (pmap+ __.1 r) (sigma-unext2 r)
+             \in sigma-ext.grpd {_} {comp __ f = idd} (pmap+ __.1 r) (sigma-unext2 r)
       }
 
     \sfunc rinv-unique {C :⁺ \Cat} {x y :⁺ C} (f :⁺ x ~> y) (g :⁺ y ~> x) (gf=id :⁺ comp g f = idd)
@@ -55,7 +55,7 @@
         \protected \sfunc grpd {C : \Cat} {x y : C} (f : x ~> y) (g : y ~> x) (gf=id : comp g f = idd)
                                {s t : \Sigma (h : y ~> x) (comp f h = idd)} : s = t
           => \have r => rinv-unique f g gf=id {s.1,s.2} {t.1,t.2}
-             \in sigma-ext.grpd (pmap+ __.1 r) (sigma-unext2 r)
+             \in sigma-ext.grpd {_} {comp f __ = idd} (pmap+ __.1 r) (sigma-unext2 r)
       }
   }
 

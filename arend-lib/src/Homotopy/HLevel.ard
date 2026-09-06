@@ -92,5 +92,5 @@
 
 -- | Contr-based hLevels are closed under sigma-types
 \lemma HLevels_-2-sigma {A : \Type} (B : A -> \Type) {n : Nat} (pA : A ofHLevel_-2+ n) (pB : \Pi (a : A) -> B a ofHLevel_-2+ n) : (\Sigma (a : A) (B a)) ofHLevel_-2+ n \elim n
-  | 0 => sigma-Contr B pA pB
+  | 0 => sigma-Contr pA pB
   | suc n => \lam p p' => HLevel_-2-retracts (sigmaEquiv B p p') (HLevels_-2-sigma (transport B __ p.2 = p'.2) (pA p.1 p'.1) (\lam s => pB _ _ _))

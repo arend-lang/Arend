@@ -164,6 +164,13 @@
         | f_sec b => inj (surj (g b))
       }
 
+    \lemma fromMonoRetraction {A B : \Type} {f : A -> B} (mono : \Pi {a a' : A} -> f a = f a' -> a = a') (s : Retraction f) : IsEquiv f
+      => inP \new QEquiv {
+        | ret => s.sec
+        | ret_f a => mono (s.f_sec (f a))
+        | f_sec => s.f_sec
+      }
+
     \lemma trans {A B C : \Type} {f : A -> B} (e : IsEquiv f) {g : B -> C} (e' : IsEquiv g) : IsEquiv \lam a => g (f a) \elim e, e'
       | inP e, inP e' => inP (transQEquiv e e')
 
@@ -280,6 +287,12 @@
   | ret b => absurd (Be b)
   | ret_f a => absurd (Ae a)
   | f_sec b => absurd (Be b)
+
+\func pathEquiv-right {A : \Type} {a b c : A} (ab : a = b) : QEquiv {a = c} {b = c} \cowith
+  | f ac => inv ab *> ac
+  | ret bc => ab *> bc
+  | ret_f ac => inv *>-assoc *> pmap (*> _) *>_inv *> idp_*>
+  | f_sec bc => inv *>-assoc *> pmap (*> _) inv_*> *> idp_*>
 
 -- # Embeddings and surjections
 

@@ -1,0 +1,109 @@
+\import Data.Bool
+\import Equiv
+\import Function.Meta
+\import Homotopy.Cube
+\import InfCat.Basics
+\import InfCat.CatPushout
+\import InfCat.Equiv
+\import InfCat.OFS.CatOFS
+\import InfCat.Objects
+\import InfCat.Paths
+\import Logic
+\import Meta
+\import Paths
+\import Paths.Meta
+\open CatFactor \using (Family)
+
+\type CatFactor {fam : Family} {C D : \Cat} (f : C ->⁺ D)
+  => LData {famHat} f
+  \where {
+    \protected \class Family {
+      | J : \Type
+      | X : J -> \Cat
+      | Y : J -> \Cat
+      | F : \Pi (j : J) -> X j ->⁺ Y j
+
+      \func IsRight {C D : \Cat} (g : C ->⁺ D) : \Prop
+        => \Pi (j : J) -> IsOrthogonal (F j) g
+    }
+
+    \data LData {fam : Family} {C D : \Cat} (f : C ->⁺ D)
+      | alpha (c :⁺ C)
+      | lext {j : J} (u : X j ->⁺ LData f) (v : Y j ->⁺ D) (c : \Pi (x :⁺ X j) -> v (F j x) = fromLData (u x)) (y :⁺ Y j)
+      | isExt {j : J} (u : X j ->⁺ LData f) (v : Y j ->⁺ D) (c : \Pi (x :⁺ X j) -> v (F j x) = fromLData (u x)) (x :⁺ X j) : lext u v c (F j x) = u x
+
+    \func fromLData {fam : Family} {C D : \Cat} {f : C ->⁺ D} (d :⁺ LData f) : D \elim d
+      | alpha c => f c
+      | lext u v c y => v y
+      | isExt u v c x => c x
+      \where {
+        \lemma isRight : fam.IsRight (fromLData {famHat} {C} {D} {f})
+          => \lam j => IsEquiv.fromMonoRetraction (\lam {ob h} {ob h'} p => later
+              \have r (e :⁺ CatPushout (F j) (F j)) => path $ isExt {famHat} {C} {D} {f} {j,false}
+                      (lift2 $ CatPushout.rec h h' \lam x => path \lam i => (p i).1.1 x)
+                      (\lam y => fromLData {famHat} (h y))
+                      (lift2 $ CatPushout.elim (\lam y => idp) (\lam y => path \lam i => (p i).1.2 y) $ later
+                                 \lam x => Cube2.map idp _ idp (path \lam i => fromLData {famHat} ((p i).1.1 x)) $
+                                 inv $ pmap+ (*> _) (path \lam j => path \lam i => (p i).2 x j) *> *>_inv)
+                      (dHat2 e)
+              \in pmap ob $ ext \lam y => inv (r (cinl y)) *> r (cinr y)) $ later \new Retraction {
+                | sec s => ob $ lext {famHat} {C} {D} {f} {j,true} (lift s.1.1) s.1.2 (lift s.2)
+                | f_sec s => ext (ext (path \lam i x => isExt (lift s.1.1) s.1.2 (lift s.2) (dHat1 x) i, idp),
+                                  simp_coe \lam x => transport+_path_pmap (\lam _ => s.1.2 (fam.F j x)) (\lam y => y) idp)
+              }
+
+        \private \func lift {j : J} {B : DHat j true ->⁺ \Cat} (u : \Pi (x :⁺ fam.X j) -> B (dHat1 x)) (d :⁺ DHat j true) : B d \elim d
+          | dHat1 x => u x
+
+        \private \func lift2 {j : fam.J} {B : DHat j false ->⁺ \Cat} (u : \Pi (x :⁺ CatPushout (F j) (F j)) -> B (dHat2 x)) (d :⁺ DHat j false) : B d \elim d
+          | dHat2 x => u x
+      }
+
+    \func dataExt {fam : Family} {C D : \Cat} {f : C ->⁺ D} {E : \Cat} {g : C ->⁺ E} {h : E ->⁺ D} (hr : fam.IsRight h) (p : \Pi (x :⁺ C) -> h (g x) = f x) (d :⁺ LData f) : \Sigma (e :⁺ E) (h e = fromLData d) \elim d
+      | alpha x => (g x, p x)
+      | lext {j} u v c y =>
+        \have r => IsEquiv.splitSurj (hr j) ((\lam x => (dataExt hr p (u x)).1, v), \lam x => c x *> inv (dataExt hr p (u x)).2)
+        \in (unob r.1 y, path \lam i => (r.2 i).1.2 y)
+      | isExt {j} u v c x => unfold_let
+        \let | r => IsEquiv.f_ret (hr j) {(\lam x => (dataExt hr p (u x)).1, v), \lam x => c x *> inv (dataExt hr p (u x)).2}
+             | q => pmap+ (*> (dataExt hr p (u x)).2) $ inv idp_*> *> coe_path_pmap.conv (path \lam i => (r i).1.2 (F j x)) (path \lam i => h ((r i).1.1 x)) ((simp_coe in pmapd __.2 r) x) *> inv *>-assoc
+        \in sigma-depPath (path \lam i => (r i).1.1 x) (pathOver $ coe_path (path \lam i => h ((IsEquiv.f_ret (hr j) i).1.1 x)) _ _ *> rotatePathLeft (inv $ q *> *>-assoc *> pmap+ (_ *> __) inv_*>))
+
+    \data DHat {fam : Family} (j : J) (b : Bool) \elim b
+      | true => dHat1 (x :⁺ X j)
+      | false => dHat2 (p :⁺ CatPushout (F j) (F j))
+
+    \func FHat {fam : Family} (j : J) (b : Bool) (d :⁺ DHat j b) : Y j \elim b, d
+      | true, dHat1 x => F j x
+      | false, dHat2 (cinl y) => y
+      | false, dHat2 (cinr y) => y
+      | false, dHat2 (cglue x i) => F j x
+
+    \func famHat {fam : Family}
+      => \new Family (\Sigma J Bool) (\lam s => DHat s.1 s.2) (\lam s => Y s.1) (\lam s => FHat s.1 s.2)
+
+    \lemma famHat_IsRight {fam : Family} {C D : \Cat} {f : C ->⁺ D} (fr : fam.IsRight f) : famHat.IsRight f
+      => \case \elim __ \with {
+        | (j,true) => unfold {?}
+        | (j,false) => unfold {?}
+      }
+  }
+
+\cons catFactorLeft {fam : Family} {C D : \Cat} {f : C ->⁺ D} (c :⁺ C) : CatFactor f
+  => alpha c
+  -- TODO: Prove that catFactorLeft is left orthogonal to any right map.
+
+\func catFactorRight {fam : Family} {C D : \Cat} {f : C ->⁺ D} (x :⁺ CatFactor f) : D
+  => fromLData {famHat} x
+  \where {
+    \lemma isRight : fam.IsRight (catFactorRight {fam} {C} {D} {f})
+      => \lam j => IsOrthogonal_o-right (IsOrthogonal_IsHEquiv-right $ inP $ later \new HQEquiv {
+        | finv d => d
+        | finv_f d => idp
+        | f_finv d => idp
+      }) (fromLData.isRight j)
+
+    \sfunc lift {fam : Family} {C D : \Cat} {f : C ->⁺ D} {E : \Cat} {g : C ->⁺ E} {h : E ->⁺ D} (hr : fam.IsRight h)
+                (p : \Pi (x :⁺ C) -> h (g x) = f x) (d :⁺ CatFactor f) : \Sigma (e :⁺ E) (h e = catFactorRight d)
+      => dataExt {famHat} (famHat_IsRight hr) p d
+  }

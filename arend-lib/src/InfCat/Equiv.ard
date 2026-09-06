@@ -5,11 +5,17 @@
 \import Paths
 \import Paths.Meta
 
-\record HQEquiv {C D : \Cat} (\coerce f : C ->⁺ D)
+\record HQEquiv {C D : \Cat} (\coerce f : C ->⁺ D) {
   | finv : D ->⁺ C
   | finv_f (x :⁺ C) : finv (f x) = x
   | f_finv (y :⁺ D) : f (finv y) = y
-  \where {
+
+  \sfunc coh_inv (y :⁺ D) : f (finv y) = y
+    => equiv-fibers.coh_inv f finv finv_f f_finv y
+
+  \sfunc coh_inv_f {x :⁺ C} : pmap+ f (finv_f x) = coh_inv (f x)
+    => equiv-fibers.coh_inv_f f finv finv_f f_finv *> inv (\peval coh_inv (f x))
+} \where {
     \func leftFactor {A B C : \Cat} {f : A ->⁺ B} {g : B ->⁺ C} (e2 : HQEquiv g) (e3 : HQEquiv \lam a => g (f a)) : HQEquiv f \cowith
       | finv b => e3.finv (g b)
       | finv_f => e3.finv_f

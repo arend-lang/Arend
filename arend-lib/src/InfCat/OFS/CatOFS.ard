@@ -1,0 +1,83 @@
+\import Equiv
+\import Equiv.Fiber
+\import Equiv.Sigma
+\import Function.Meta
+\import InfCat.Equiv
+\import InfCat.Objects
+\import InfCat.Paths
+\import Logic
+\import Logic.Unique
+\import Meta
+\import Paths
+\import Paths.Meta
+
+\type IsOrthogonal {A B C D : \Cat} (f : A ->⁺ B) (g : C ->⁺ D) : \Prop
+  => IsEquiv {Ob (B ->⁺ C)} {\Sigma (uv : \Sigma (A ->⁺ C) (B ->⁺ D)) (\Pi (x :⁺ A) -> uv.2 (f x) = g (uv.1 x))}
+      (\lam h => ((\lam x => unob h (f x), \lam y => g (unob h y)), \lam x => idp))
+
+\lemma IsOrthogonal-char {A B C D : \Cat} {f : A ->⁺ B} {g : C ->⁺ D}
+  : IsOrthogonal f g <-> (\Pi (u : A ->⁺ C) (v : B ->⁺ D) (s : \Pi (x :⁺ A) -> v (f x) = g (u x)) ->
+                          Contr (\Sigma (h : B ->⁺ C) (t1 : \Pi (x :⁺ A) -> h (f x) = u x) (t2 : \Pi (y :⁺ B) -> g (h y) = v y)
+                                        (\Pi (x :⁺ A) -> inv (t2 (f x)) *> pmap+ g (t1 x) = s x)))
+  => (\lam gr u v s => Contr.Contr_QEquiv (transQEquiv (sigma-right \lam h => later $ sigmaEquiv _ _ _) $
+        transQEquiv {_} {\Sigma (h : Ob (B ->⁺ C)) (\Sigma (t : (\lam x =>⁺ h.1 (f x), \lam y =>⁺ g (h.1 y)) = (u,v)) ((\lam x =>⁺ inv (path \lam i => (t i).2 (f x)) *> path (\lam i => g ((t i).1 x))) = s))}
+          (sigma-right \lam h => later $ sigma-right \lam t => later $ pathEquiv-right $ later $ simp_coe \lam x => coe_path_pmap (path \lam i => (t i).2 (f x)) (path \lam i => g ((t i).1 x)) _ _ $ pmap+ (*> _) (inv *>_inv) *> *>-assoc)
+          (later \new QEquiv {
+            | f a => (unob a.1, \lam x => path \lam i => (a.2.1 i).1 x, \lam y => path \lam i => (a.2.1 i).2 y, \lam x => path \lam i => a.2.2 i x)
+            | ret b => (ob b.1, (path \lam i => (\lam x => b.2 x i, \lam y => b.3 y i), path \lam i x => b.4 x i))
+            | ret_f => idpe
+            | f_sec => idpe
+          })) $ IsEquiv=>contrFibers gr ((u,v),s),
+      \lam gr => contrFibers=>IsEquiv $ later \lam s => Contr.Contr_QEquiv (transQEquiv
+              (transQEquiv {_}
+                {\Sigma (a : Ob (B ->⁺ C)) (\Sigma (s1 : (\lam x =>⁺ unob a (f x), \lam y =>⁺ g (unob a y)) = s.1)
+                        ((\lam x =>⁺ inv (path \lam i => (s1 i).2 (f x)) *> pmap+ g (path \lam i => (s1 i).1 x)) = s.2))}
+                (later \new QEquiv {
+                  | f a => (ob a.1, (path \lam i => (\lam x => a.2 x i, \lam y => a.3 y i), path \lam i x => a.4 x i))
+                  | ret b => (unob b.1, \lam x => path \lam i => (b.2.1 i).1 x, \lam y => path \lam i => (b.2.1 i).2 y, \lam x => path \lam i => b.2.2 i x)
+                  | ret_f => idpe
+                  | f_sec => idpe
+                })
+                (sigma-right \lam h => later $ sigma-right \lam t => later $ pathEquiv-right $ inv $ later $ simp_coe \lam x =>
+                  coe_path_pmap (path \lam i => (t i).2 (f x)) (path \lam i => g ((t i).1 x)) _ _ $ pmap+ (*> _) (inv *>_inv) *> *>-assoc))
+              (symQEquiv $ sigma-right \lam h => later $ sigmaEquiv _ _ _))
+            (gr s.1.1 s.1.2 s.2))
+
+\lemma IsOrthogonal_o-right {A B C D E : \Cat} {f : A ->⁺ B} {g : C ->⁺ D} (fg : IsOrthogonal f g) {h : D ->⁺ E} (fh : IsOrthogonal f h)
+  : IsOrthogonal f (\lam x => h (g x))
+  => IsOrthogonal-char.2 \lam u v s => Contr.Contr_QEquiv
+      (transQEquiv {_}
+        {\Sigma (b1 : \Sigma (h : B ->⁺ C) (\Pi (x :⁺ A) -> h (f x) = u x))
+                (\Sigma (a1 : \Sigma (h : B ->⁺ D) ((\lam y =>⁺ g (b1.1 y)) = h))
+                        (\Sigma (r : \Sigma (t1 : \Pi (x :⁺ A) -> a1.1 (f x) = g (u x)) ((\lam x =>⁺ inv (path \lam i => a1.2 i (f x)) *> pmap+ g (b1.2 x)) = t1))
+                                (\Sigma (t2 : \Pi (y :⁺ B) -> h (a1.1 y) = v y) (\Pi (x :⁺ A) -> inv (t2 (f x)) *> pmap+ h (r.1 x) = s x))))}
+        (later \new QEquiv {
+          | f a => ((a.2.1, a.2.2), ((a.1.1, path \lam i y => a.2.3 y i), ((a.1.2, path \lam i x => a.2.4 x i), (a.1.3, a.1.4))))
+          | ret b => ((b.2.1.1, b.2.2.1.1, b.2.2.2.1, b.2.2.2.2), (b.1.1, b.1.2, \lam y => path \lam i => b.2.1.2 i y, \lam x => path \lam i => b.2.2.1.2 i x))
+          | ret_f => idpe
+          | f_sec => idpe
+        })
+        (transQEquiv {_}
+          {\Sigma (b1 : \Sigma (h : B ->⁺ C) (\Pi (x :⁺ A) -> h (f x) = u x))
+                  (\Sigma (t2 : \Pi (y :⁺ B) -> h (g (b1.1 y)) = v y) (\Pi (x :⁺ A) -> inv (t2 (f x)) *> pmap+ h (idp *> pmap+ g (b1.2 x)) = s x))}
+          (sigma-right \lam b1 => later $ transQEquiv (contr-left (lsigma _)) (contr-left (lsigma _)))
+          (later \new QEquiv {
+            | f a => (a.1.1, a.1.2, a.2.1, \lam x => pmap+ (\lam z => _ *> pmap+ h z) (inv idp_*>) *> a.2.2 x)
+            | ret b => ((b.1, b.2), (b.3, \lam x => pmap+ (\lam z => _ *> pmap+ h z) idp_*> *> b.4 x))
+            | ret_f a => ext (idp, ext (idp, ext \lam x => inv *>-assoc *> pmap+ (*> _) (inv (pmap+_*> \lam z => _ *> pmap+ h z) *> pmap+ (pmap+ (\lam z => _ *> pmap+ h z) __) *>_inv) *> idp_*>))
+            | f_sec b =>
+              \have lem (x :⁺ A) : pmap+ (\lam z => inv (b.3 (f x)) *> pmap+ h z) (inv (idp_*> {_} {_} {_} {pmap+ g (b.2 x)})) *> pmap+ (\lam z => inv (b.3 (f x)) *> pmap+ h z) idp_*> *> b.4 x = b.4 x
+                        => inv *>-assoc *> pmap+ (*> _) (inv (pmap+_*> \lam z => _ *> pmap+ h z) *> pmap+ (pmap+ (\lam z => _ *> pmap+ h z) __) inv_*>) *> idp_*>
+              \in path \lam i => (b.1, b.2, b.3, \lam x => lem x i)
+          })))
+      (sigma-Contr (IsOrthogonal-char.1 fh (\lam x => g (u x)) v s) \lam a => IsOrthogonal-char.1 fg u a.1 a.2)
+
+\lemma IsOrthogonal_IsHEquiv-right {A B C D : \Cat} {f : A ->⁺ B} {g : C ->⁺ D} (ge : IsHEquiv g) : IsOrthogonal f g \elim ge
+  | inP ge => inP \new QEquiv {
+    | ret s => ob \lam y => ge.finv (s.1.2 y)
+    | ret_f (ob h) => pmap ob $ ext \lam y => ge.finv_f _
+    | f_sec s => ext (ext (ext \lam x => pmap+ ge.finv (s.2 x) *> ge.finv_f _,
+                           ext \lam y => ge.coh_inv _),
+                      simp_coe \lam x => coe_path_pmap _ (pmap+ g (pmap+ ge.finv (s.2 x) *> ge.finv_f _)) _ _ $
+                      idp_*> *> pmap+_*> g *> pmap+ (_ *> __) ge.coh_inv_f *> homotopy-isNatural+ _ _ ge.coh_inv _)
+  }

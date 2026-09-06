@@ -1,0 +1,21 @@
+{-
++ 2. Changing context from categorical to groupoidal in lemmas
++ 3. Разобраться с \data.
++ 3a. Разрешать \use \level и \truncated только если \data живет в \Type.
++ 3b. Запретить категорный контекст для HITs, \use \level и \truncated.
++ 4. Мы наверное можем положить все вселенные в \Cat, но если они используются в инвариантных позициях в конструкторах и полях, то считать, что они живут в \Type.
++ 5. Fundamental theorem of category theory, Ob C -> C is an equivalence for types.
+6. Проверить, что подкатегории можно определить при помощи локализаций.
+7. Adjoint functors.
+8. (Co)cartesian fibrations, left/right fibrations, functoriality of universals.
+9. Univalence.
+
+10. Characterization of hom-types in DI, geometric realization.
+11. Simplicial types, equivalence with \Cat.
+12. Определить функтор Cat -> \Cat, доказать, что он правый сопряженный к HoCat : \Cat -> Cat.
+13. Opposite categories (through simplicial types).
+14. Yoneda lemma.
+15. (Co)limits, joins.
+16. Stable categories.
+17. Weak equivalences, derived functors, (co)fibrations.
+ -}

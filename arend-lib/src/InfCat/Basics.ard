@@ -24,6 +24,10 @@
                         (p :⁺ (a,b) = {\Sigma (x :⁺ A) (B x)} (a,b')) (q :⁺ pmap+ __.1 p = idp) : b = b'
   => inv (pmap+ (transport+ B __ b) q) *> sigma-unext2 p
 
+\sfunc sigma-depPath {A :⁺ \Cat} {B :⁺ A ->⁺ I -> \Cat} {s :⁺ \Sigma (a :⁺ A) (B a left)} {t :⁺ \Sigma (a :⁺ A) (B a right)}
+  (p :⁺ s.1 = t.1) (q :⁺ Path (\lam i => B (p i) i) s.2 t.2) : Path (\lam i => \Sigma (a :⁺ A) (B a i)) s t
+  => path \lam i => (p i, q i)
+
 \func =_~> {A :⁺ \Cat} {a b :⁺ A} (p :⁺ a = b) : a ~> b \elim p
   | idp => idd
 
@@ -170,8 +174,8 @@
 
 \sfunc equiv-fibers {C D :⁺ \Cat} (f :⁺ C ->⁺ D) (g :⁺ D ->⁺ C) (p :⁺ \Pi (x :⁺ C) -> g (f x) = x) (q :⁺ \Pi (y :⁺ D) -> f (g y) = y)
                     {y :⁺ D} {s t :⁺ \Sigma (x :⁺ C) (f x = y)} : s = t
-  => sigma-ext (inv (p s.1) *> pmap+ g (s.2 *> inv t.2) *> p t.1) $ transport+_path_pmap $ inv $
-                                                                                          pmap+ (*> _) (pmap+_*> f *> pmap+ (_ *> __) (pmap+_*> f))
+  => sigma-ext (inv (p s.1) *> pmap+ g (s.2 *> inv t.2) *> p t.1) $ transport+_path_pmap f (\lam _ => y) $ inv $
+      pmap+ (*> _) (pmap+_*> f *> pmap+ (_ *> __) (pmap+_*> f))
       *> *>-assoc *> pmap+ (_ *> __) *>-assoc *> pmap+ (*> _) (pmap+_inv f)
       *> rotatePathLeft (pmap+ (_ *> __ *> _) (coh_inv_f f g p q)
         *> inv *>-assoc *> pmap+ (*> _) (homotopy-isNatural+ (\lam y => f (g y)) (\lam y => y) (coh_inv f g p q __) _)

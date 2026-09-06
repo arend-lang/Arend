@@ -23,7 +23,7 @@
 \func \infixr 9 *> {A :⁺ \Cat} {a a' a'' :⁺ A} (p :⁺ a = a') (q :⁺ a' = a'') : a = a'' \elim q
   | idp => p
   \where
-    \func concat {A : I -> \Cat} {a : A left} {a' a'' : A right} (p : Path A a a') (q : a' = a'') : Path A a a'' \elim q
+    \func concat {A :⁺ I -> \Cat} {a :⁺ A left} {a' a'' :⁺ A right} (p :⁺ Path A a a') (q :⁺ a' = a'') : Path A a a'' \elim q
       | idp => p
 
 \func \infixr 9 <* {A :⁺ \Cat} {a a' a'' :⁺ A} (p :⁺ a = a') (q :⁺ a' = a'') : a = a'' \elim p
@@ -32,7 +32,7 @@
     \func concat {A : I -> \Type} {a a' : A left} {a'' : A right} (p : a = a') (q : Path A a' a'') : Path A a a'' \elim p
       | idp => q
 
-\func psqueeze {A : \Cat} {a a' : A} (p : a = a') (i : I) : a = p @ i => path (p @ I.squeeze i __)
+\func psqueeze {A :⁺ \Cat} {a a' :⁺ A} (p :⁺ a = a') (i : I) : a = p i => path (p @ I.squeeze i __)
 
 \func Jl {A : \Cat} {a : A} (B : \Pi (a' : A) -> a = a' -> \Type) (b : B a idp) {a' : A} (p : a = a') : B a' p \elim p
   | idp => b
@@ -93,21 +93,21 @@
 
 \func \infix 2 ==< {A : \Cat} (a : A) {a' : A} (p : a = a') => p
 
-\func idpOver (A : I -> \Cat) (a : A left) : Path A a (coe A a right) => path (coe A a)
+\func idpOver (A :⁺ I -> \Cat) (a :⁺ A left) : Path A a (coe A a right) => path (coe A a)
 
-\func pathOver {A : I -> \Cat} {a : A left} {a' : A right} (p : coe A a right = a') : Path A a a'
+\func pathOver {A :⁺ I -> \Cat} {a :⁺ A left} {a' :⁺ A right} (p :⁺ coe A a right = a') : Path A a a'
   => *>.concat (idpOver A a) p
   \where {
-    \protected \func conv (p : Path A a a') : coe A a right = a'
+    \protected \func conv (p :⁺ Path A a a') : coe A a right = a'
       => coe (\lam i => coe A a i = p i) idp right
   }
 
-\func coe_path {A : \Cat} {a1 a2 a3 a4 : A} (p : a2 = a1) (q : a2 = a3) (r : a3 = a4)
-  : coe (\lam i => p @ i = r @ i) q right = inv p *> q *> r
-  => coe (\lam j => coe (\lam i => p @ i = r @ i) q j = inv (psqueeze p j) *> q *> psqueeze r j) (inv idp_*>) right
+\func coe_path {A :⁺ \Cat} {a1 a2 a3 a4 :⁺ A} (p :⁺ a2 = a1) (q :⁺ a2 = a3) (r :⁺ a3 = a4)
+  : coe (\lam i => p i = r i) q right = inv p *> q *> r
+  => coe (\lam j => coe (\lam i => p i = r i) q j = inv (psqueeze p j) *> q *> psqueeze r j) (inv idp_*>) right
   \where
-    \func alt {A : \Cat} {a1 a2 a3 a4 : A} (p : a1 = a2) (q : a2 = a3) (r : a4 = a3)
-      : coe (\lam i => p @ i = r @ i) (p *> q *> inv r) right = q
+    \func alt {A :⁺ \Cat} {a1 a2 a3 a4 :⁺ A} (p :⁺ a1 = a2) (q :⁺ a2 = a3) (r :⁺ a4 = a3)
+      : coe (\lam i => p i = r i) (p *> q *> inv r) right = q
       | idp, idp, idp => idp
 
 \func path-sym.{u} {A : \Cat u} (a a' : A) : (a = a') = (a' = a) => path (iso {a = a'} {a' = a} inv inv (\lam p => inv_inv) (\lam p => inv_inv))
@@ -198,3 +198,11 @@
 \func coe_pi {B C : I -> \Type} {f : B left -> C left}
   : coe (\lam i => B i -> C i) f right = \lam x => coe C (f (coe2 B right x left)) right
   => coe (\lam j => coe (\lam i => B i -> C i) f j = \lam x => coe C (f (coe2 B j x left)) j) idp right
+
+\func coe_path_pmap {A :⁺ \Cat} {a a' :⁺ A} (p :⁺ a = a') {b b' :⁺ A} (q :⁺ b = b') (s :⁺ a = b) (s' :⁺ a' = b') (h :⁺ s *> q = p *> s')
+  : coe (\lam i => p i = q i) s right = s' \elim p, q
+  | idp, idp => h *> idp_*>
+  \where {
+    \protected \func conv (p :⁺ a = a') (q :⁺ b = b') (h :⁺ coe (\lam i => p i = q i) s right = s') : s *> q = p *> s' \elim p, q
+      | idp, idp => h *> inv idp_*>
+  }

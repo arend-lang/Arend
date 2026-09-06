@@ -13,10 +13,10 @@
 \func pmap+_inv {A B :⁺ \Cat} {a a' :⁺ A} (f :⁺ A ->⁺ B) {p :⁺ a = a'} : pmap+ f (inv p) = inv (pmap+ f p) \elim p
   | idp => idp
 
-\func transport+ {A :⁺ \Cat} (B :⁺ A ->⁺ \Cat) {a a' :⁺ A} (p :⁺ a = a') (b :⁺ B a) : B a' \elim p
-  | idp => b
+\func transport+ {A :⁺ \Cat} (B :⁺ A ->⁺ \Cat) {a a' :⁺ A} (p :⁺ a = a') (b :⁺ B a) : B a'
+  => coe (\lam i => B (p i)) b right
 
-\func transport+_path_pmap {A B :⁺ \Cat} {f g :⁺ A ->⁺ B} {a a' :⁺ A} {p :⁺ a = a'} {q :⁺ f a = g a} {s :⁺ f a' = g a'}
+\func transport+_path_pmap {A B :⁺ \Cat} (f g :⁺ A ->⁺ B) {a a' :⁺ A} {p :⁺ a = a'} {q :⁺ f a = g a} {s :⁺ f a' = g a'}
                            (h :⁺ q *> pmap+ g p = pmap+ f p *> s) : transport+ (\lam x => f x = g x) p q = s \elim p
   | idp => h *> idp_*>
 

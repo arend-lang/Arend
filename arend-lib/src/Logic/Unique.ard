@@ -74,7 +74,7 @@
   => Contr.make (\lam a => Contr.center {p a}) (\lam f => path (\lam i a => Contr.contraction {p a} (f a) @ i))
 
 -- | Contr-based hLevels are closed under sigma-types
-\lemma sigma-Contr {A : \Type} (B : A -> \Type) (pA : Contr A) (pB : \Pi (a : A) -> Contr (B a)) : Contr (\Sigma (a : A) (B a))
-  => \let | a0 => Contr.center {pA}
-          | p0 => ((a0, Contr.center {pB a0}) : \Sigma (a : A) (B a))
-     \in Contr.make p0 (\lam p => ext (Contr.contraction {pA} p.1, isContr=>isProp (pB p.1) _ _))
+\lemma sigma-Contr (A : Contr) (B : \Pi (a : A) -> Contr) : Contr (\Sigma (a : A) (B a))
+  => \let | a0 => A.center
+          | p0 => ((a0, (B a0).center) : \Sigma (a : A) (B a))
+     \in Contr.make p0 (\lam p => ext (A.contraction p.1, isContr=>isProp (B p.1) _ _))
