@@ -13,6 +13,16 @@
 \func pmap+_inv {A B :⁺ \Cat} {a a' :⁺ A} (f :⁺ A ->⁺ B) {p :⁺ a = a'} : pmap+ f (inv p) = inv (pmap+ f p) \elim p
   | idp => idp
 
+\func inv_inv-coh+ {A :⁺ \Cat} {a a' :⁺ A} {p :⁺ a = a'} : pmap+ (inv __) (inv_inv {A} {a} {a'} {p}) = inv_inv \elim p
+  | idp => idp
+
+\func *>_ext+ {A :⁺ \Cat} {B :⁺ A ->⁺ \Cat} {f g h :⁺ \Pi (x :⁺ A) -> B x} {p :⁺ f = g} {q :⁺ g = h}
+  : p *> q = path (\lam i x => (path (\lam j => p j x) *> path (\lam j => q j x)) i) \elim q
+  | idp => idp
+
+\func funExt+ {A :⁺ \Cat} {B :⁺ A ->⁺ \Cat} {f g :⁺ \Pi (x :⁺ A) -> B x} (p :⁺ \Pi (x :⁺ A) -> f x = g x) : f = g
+  => path \lam i x => p x i
+
 \func transport+ {A :⁺ \Cat} (B :⁺ A ->⁺ \Cat) {a a' :⁺ A} (p :⁺ a = a') (b :⁺ B a) : B a'
   => coe (\lam i => B (p i)) b right
 

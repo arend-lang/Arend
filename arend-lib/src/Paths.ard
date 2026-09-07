@@ -199,7 +199,7 @@
   : coe (\lam i => B i -> C i) f right = \lam x => coe C (f (coe2 B right x left)) right
   => coe (\lam j => coe (\lam i => B i -> C i) f j = \lam x => coe C (f (coe2 B j x left)) j) idp right
 
-\func coe_path_pmap {A :⁺ \Cat} {a a' :⁺ A} (p :⁺ a = a') {b b' :⁺ A} (q :⁺ b = b') (s :⁺ a = b) (s' :⁺ a' = b') (h :⁺ s *> q = p *> s')
+\func coe_path_pmap {A :⁺ \Cat} {a a' :⁺ A} (p :⁺ a = a') {b b' :⁺ A} (q :⁺ b = b') {s :⁺ a = b} {s' :⁺ a' = b'} (h :⁺ s *> q = p *> s')
   : coe (\lam i => p i = q i) s right = s' \elim p, q
   | idp, idp => h *> idp_*>
   \where {

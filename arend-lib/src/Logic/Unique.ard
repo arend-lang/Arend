@@ -38,7 +38,8 @@
   \sfunc toSigma : \Sigma (x : A) (\Pi (a : A) -> x = a)
     => (center, contraction)
 } \where {
-    \func make {A : \Type} (a : A) (p : \Pi (a' : A) -> a = a')  => \new Contr A a p
+    \func make {A : \Type} (a : A) (p : \Pi (a' : A) -> a = a')
+      => \new Contr A a p
 
     \use \level levelProp (A : \Type) (c1 c2 : Contr A) : c1 = c2 => path (\lam i => \new Contr A {
       | center => c1.contraction c2.center i
@@ -58,11 +59,14 @@
     | f_sec y => isContr=>isProp Bc _ _
   }
 
-\func isContr=>isProp {A : \Type} (c : Contr A) : isProp A => \lam a a' => inv (c.contraction a) *> c.contraction a'
+\func isContr=>isProp {A : \Type} (c : Contr A) : isProp A
+  => \lam a a' => inv (c.contraction a) *> c.contraction a'
 
-\lemma isContr'=>isProp {A : \Type} (c : A -> Contr A) : isProp A => \lam a => isContr=>isProp (c a) a
+\lemma isContr'=>isProp {A : \Type} (c : A -> Contr A) : isProp A
+  => \lam a => isContr=>isProp (c a) a
 
-\lemma isProp=>isContr {A : \Type} (p : isProp A) (a : A) : Contr A => Contr.make a (p a)
+\func isProp=>isContr {A : \Type} (p : isProp A) (a : A) : Contr A
+  => Contr.make a (p a)
 
 \lemma isProp'=>isContr {A : \Type} (p : isProp A) (a : TruncP A) : Contr A \elim a
   | inP a => isProp=>isContr p a

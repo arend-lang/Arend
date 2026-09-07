@@ -1,4 +1,5 @@
 \import Equiv
+\import Function.Meta
 \import InfCat.Basics
 \import InfCat.Paths
 \import Logic
@@ -87,3 +88,12 @@
 
 \lemma idHEquiv {C : \Cat} : IsHEquiv {C} (\lam x => x)
   => inP idHQEquiv
+
+\lemma pmapIsHEquiv {A B : \Cat} {f : A ->⁺ B} (e : IsHEquiv f) {a a' : A} : IsHEquiv (pmap+ f {a} {a'}) \elim e
+  | inP e => inP \new HQEquiv {
+    | finv q => inv (e.finv_f a) *> pmap+ e.finv q *> e.finv_f a'
+    | finv_f p => pmap+ (_ *> __) (homotopy-isNatural+ _ _ e.finv_f p) *> inv *>-assoc *> pmap+ (*> p) inv_*> *> idp_*>
+    | f_finv q => pmap+_*> f *> pmap+ (_ *> __) (pmap+_*> f) *> pmap+ (_ *> _ *> __) e.coh_inv_f
+               *> pmap+ (_ *> __) (homotopy-isNatural+ _ _ e.coh_inv q) *> inv *>-assoc
+               *> pmap+ (*> q) (pmap+ (_ *> __) (inv e.coh_inv_f) *> inv (pmap+_*> f) *> pmap+ (pmap+ f __) inv_*>) *> idp_*>
+  }
