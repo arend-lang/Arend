@@ -3,6 +3,8 @@
 \import Equiv.Path
 \import Equiv.Sigma
 \import Function.Meta
+\import InfCat.Basics
+\import InfCat.CatPushout
 \import InfCat.Equiv
 \import InfCat.Objects
 \import InfCat.Paths
@@ -131,3 +133,41 @@
                         (pmap+ (*> _) (inv inv_*>) *> *>-assoc *> pmap+ (_ *> __) (inv (homotopy-isNatural+ _ _ s.2 _))
                          *> pmap+ (_ *> pmap+ s.1.2 __ *> _) fe.coh_inv_f *> inv *>-assoc))
   }
+
+\lemma IsOrthogonal-retraction {A B C D : \Cat} {f : A ->⁺ B} {g : C ->⁺ D} (fg : IsOrthogonal f g)
+                               {r : B ->⁺ A} (rf : \Pi (x :⁺ A) -> r (f x) = x) : IsOrthogonal r g
+  => IsEquiv.fromMonoRetraction (\lam {h} {h'} p => exts \lam x => pmap+ h.1 (inv (rf x)) *> path (\lam i => (p i).1.1 (f x)) *> pmap+ h'.1 (rf x)) $ later \new Retraction {
+    | sec s => ob \lam x => s.1.1 (f x)
+    | f_sec s =>
+      \have aux => aux s.1.1 s.1.2 s.2
+      \in ext (path \lam i => (\lam x => aux.1 x i, \lam x => (inv (s.2 (f x)) *> pmap+ s.1.2 (rf x)) i),
+               simp_coe \lam y => coe_path_pmap _ (pmap+ g (aux.1 y)) $ idp_*> *> aux.2 y *> inv *>-assoc)
+  }
+  \where {
+    \private \sfunc aux (u : B ->⁺ C) (v : A ->⁺ D) (s : \Pi (x :⁺ B) -> v (r x) = g (u x))
+      : \Sigma (p : \Pi (b :⁺ B) -> u (f (r b)) = u b) (\Pi (b :⁺ B) -> pmap+ g (p b) = inv (s _) *> pmap+ v (rf _) *> s b)
+      => \have t => IsEquiv.splitSurj (pmapIsEquiv fg {ob \lam y => u (f (r y))} {ob u}) $
+                      ext (path \lam i => (\lam x => u (f (rf x i)), \lam y => (inv (s _) *> pmap+ v (rf _) *> s y) i),
+                           simp_coe \lam x => coe_path_pmap _ (pmap+ (\lam x => g (u (f x))) (rf x)) $ idp_*> *>
+                            inv (rotatePathLeft $ pmap+ (pmap+ v __ *> _) (homotopy_app-comm+ (\lam x => r (f x)) rf x)
+                              *> homotopy-isNatural+ _ _ s (pmap+ f (rf x))))
+         \in (\lam y => path \lam i => unob (t.1 i) y, \lam y => path (\lam i => pmap (__.1.2 y) (t.2 i)))
+  }
+
+\lemma IsOrthogonal_CatPushout {A B C D E : \Cat} {f : A ->⁺ B} {g : A ->⁺ C} {h : D ->⁺ E} (gh : IsOrthogonal g h)
+  : IsOrthogonal {B} {CatPushout f g} cinl h
+  => IsOrthogonal-char.2 \lam u v s => Contr.Contr_QEquiv (symQEquiv $ transQEquiv {_}
+        {\Sigma (p : \Pi (y :⁺ CatPushout f g) -> \Sigma (d :⁺ D) (t2 : h d = v y)) (\Sigma (t1 : \Pi (x :⁺ B) -> (p (cinl x)).1 = u x)
+                (\Pi (x :⁺ B) -> pmap+ h (t1 x) *> inv (s x) = (p (cinl x)).2))}
+        (later \new QEquiv {
+          | f s => (\lam w => (s.1 w, s.3 w), (s.2, \lam y => rotatePathRight $ rotatePathLeft.conv (s.4 y)))
+          | ret r => (\lam w => (r.1 w).1, r.2.1, \lam w => (r.1 w).2, \lam y => rotatePathLeft $ rotatePathRight.conv (r.2.2 y))
+          | ret_f s => path \lam i => (s.1, s.2, s.3, \lam y => (pmap+ (rotatePathLeft __) rotatePathRight.conv_dir *> rotatePathLeft.dir_conv (s.4 y)) i)
+          | f_sec r => path \lam i => (r.1, (r.2.1, \lam y => (pmap+ (rotatePathRight __) rotatePathLeft.conv_dir *> rotatePathRight.dir_conv (r.2.2 y)) i))
+        })
+        {?}) $
+      IsOrthogonal-char.1 gh (\lam x => u (f x)) (\lam z => v (cinr z)) \lam x => pmap+ v (inv (path (cglue x))) *> s (f x)
+
+\lemma IsOrthogonal-codiag {A B C D : \Cat} {f : A ->⁺ B} {g : C ->⁺ D} (fg : IsOrthogonal f g)
+  : IsOrthogonal {CatPushout f f} (CatPushout.rec id+ id+ \lam x => idp) g
+  => IsOrthogonal-retraction (IsOrthogonal_CatPushout fg) idpe

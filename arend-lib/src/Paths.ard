@@ -1,4 +1,4 @@
-\func idpe {A : \Cat} (a : A) : a = a => idp
+\func idpe {A :⁺ \Cat} (a :⁺ A) : a = a => idp
 
 \func pmap {A B : \Cat} (f : A -> B) {a a' : A} (p : a = a') : f a = f a' => path (\lam i => f (p @ i))
 
@@ -115,6 +115,36 @@
 \func rotatePathLeft {A :⁺ \Cat} {a a' a'' :⁺ A} {p :⁺ a' = a} {q :⁺ a' = a''} {r :⁺ a = a''} (t :⁺ q = p *> r)
   : inv p *> q = r \elim p, r, t
   | idp, idp, idp => idp
+  \where {
+    \protected \func conv {A :⁺ \Cat} {a a' a'' :⁺ A} {p :⁺ a' = a} {q :⁺ a' = a''} {r :⁺ a = a''} (t :⁺ inv p *> q = r)
+      : q = p *> r \elim p, q, t
+      | idp, idp, idp => idp
+
+    \protected \func dir_conv {A :⁺ \Cat} {a a' a'' :⁺ A} {p :⁺ a' = a} {q :⁺ a' = a''} {r :⁺ a = a''} (t :⁺ inv p *> q = r)
+      : rotatePathLeft (conv t) = t \elim p, q, t
+      | idp, idp, idp => idp
+
+    \protected \func conv_dir {A :⁺ \Cat} {a a' a'' :⁺ A} {p :⁺ a' = a} {q :⁺ a' = a''} {r :⁺ a = a''} {t :⁺ q = p *> r}
+      : conv (rotatePathLeft t) = t \elim p, r, t
+      | idp, idp, idp => idp
+  }
+
+\func rotatePathRight {A :⁺ \Cat} {a a' a'' :⁺ A} {p :⁺ a'' = a'} {q :⁺ a = a'} {r :⁺ a = a''} (t :⁺ q = r *> p)
+  : q *> inv p = r \elim p, r, t
+  | idp, idp, idp => idp
+  \where {
+    \protected \func conv {A :⁺ \Cat} {a a' a'' :⁺ A} {p :⁺ a'' = a'} {q :⁺ a = a'} {r :⁺ a = a''} (t :⁺ q *> inv p = r)
+      : q = r *> p \elim p, q, t
+      | idp, idp, idp => idp
+
+    \protected \func dir_conv {A :⁺ \Cat} {a a' a'' :⁺ A} {p :⁺ a'' = a'} {q :⁺ a = a'} {r :⁺ a = a''} (t :⁺ q *> inv p = r)
+      : rotatePathRight (conv t) = t \elim p, q, t
+      | idp, idp, idp => idp
+
+    \protected \func conv_dir {A :⁺ \Cat} {a a' a'' :⁺ A} {p :⁺ a'' = a'} {q :⁺ a = a'} {r :⁺ a = a''} {t :⁺ q = r *> p}
+      : conv (rotatePathRight t) = t \elim p, r, t
+      | idp, idp, idp => idp
+  }
 
 \func homotopy-isNatural {A B : \Cat} (f g : A -> B) (h : \Pi (a : A) -> f a = g a) {a a' : A} (p : a = a')
   : pmap f p *> h a' = h a *> pmap g p \elim p

@@ -4,6 +4,8 @@
 \import Meta
 \import Paths
 
+\func id+ {C :⁺ \Cat} (x :⁺ C) => x
+
 \func dmap {C D :⁺ \Cat} (f :⁺ C ->⁺ D) {a a' :⁺ C} (p :⁺ a ~> a') : f a ~> f a'
   => dpath \lam i => f (p i)
 
