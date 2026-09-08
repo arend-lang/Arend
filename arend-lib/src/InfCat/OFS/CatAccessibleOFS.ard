@@ -73,19 +73,35 @@
       | true => dHat1 (x :⁺ X j)
       | false => dHat2 (p :⁺ CatPushout (F j) (F j))
 
+    \func unDHat1 {fam : Family} {j : J} (d :⁺ DHat j true) : X j \elim d
+      | dHat1 x => x
+
+    \func unDHat2 {fam : Family} {j : J} (d :⁺ DHat j false) : CatPushout (F j) (F j) \elim d
+      | dHat2 y => y
+
     \func FHat {fam : Family} (j : J) (b : Bool) (d :⁺ DHat j b) : Y j \elim b, d
       | true, dHat1 x => F j x
-      | false, dHat2 (cinl y) => y
-      | false, dHat2 (cinr y) => y
-      | false, dHat2 (cglue x i) => F j x
+      | false, dHat2 y => CatPushout.rec (\lam x => x) (\lam x => x) (\lam x => idp) y
 
     \func famHat {fam : Family}
       => \new Family (\Sigma J Bool) (\lam s => DHat s.1 s.2) (\lam s => Y s.1) (\lam s => FHat s.1 s.2)
 
     \lemma famHat_IsRight {fam : Family} {C D : \Cat} {f : C ->⁺ D} (fr : fam.IsRight f) : famHat.IsRight f
       => \case \elim __ \with {
-        | (j,true) => unfold {?}
-        | (j,false) => unfold {?}
+        | (j,true) => transport (IsOrthogonal __ f) (ext \lam (dHat1 x) => idp) $
+          IsOrthogonal_o-left (IsOrthogonal_IsHEquiv-left $ inP \new HQEquiv {
+            | f => unDHat1
+            | finv => dHat1
+            | finv_f (dHat1 x) => idp
+            | f_finv => idpe
+          }) (fr j)
+        | (j,false) => transport (IsOrthogonal __ f) (ext \lam (dHat2 y) => idp) $
+          IsOrthogonal_o-left (IsOrthogonal_IsHEquiv-left $ inP \new HQEquiv {
+            | f => unDHat2
+            | finv => dHat2
+            | finv_f (dHat2 x) => idp
+            | f_finv => idpe
+          }) $ IsOrthogonal-codiag (fr j)
       }
   }
 
