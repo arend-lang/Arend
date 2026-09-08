@@ -53,7 +53,10 @@
       => path \lam i => \Sigma (x : p i) (B' (coe2 p i x right))
   }
 
-\func sigma-right {A : \Type} {B B' : A -> \Type} (q : \Pi (a : A) -> QEquiv {B a} {B' a})
+\sfunc qsigma-left {A A' : \Type} {B' : A' -> \Type} (e : QEquiv {A} {A'}) : QEquiv {\Sigma (a : A) (B' (e a))} {\Sigma (a' : A') (B' a')}
+  => sigma-left e
+
+\func sigma-right {A : \Cat} {B B' : A -> \Type} (q : \Pi (a : A) -> QEquiv {B a} {B' a})
   : QEquiv {\Sigma (a : A) (B a)} {\Sigma (a : A) (B' a)} \cowith
   | f p => (p.1, q p.1 p.2)
   | ret p' => (p'.1, (q p'.1).ret p'.2)
