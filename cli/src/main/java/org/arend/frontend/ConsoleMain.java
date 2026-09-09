@@ -41,10 +41,22 @@ public class ConsoleMain {
           ClassHierarchyTool.INSTANCE, ScopeInfoTool.INSTANCE);
 
 
-  private CommandLine parseArgs(String[] args) {
+  /**
+   * What parsing argv came to. A null {@code cmdLine} means there is nothing left to run, and
+   * {@code failed} says which of the two reasons applies: the request was served in full
+   * ({@code --help}, {@code -v}) or the arguments were rejected. They must not share an exit
+   * code -- asking for help is not an error.
+   */
+  public record ParsedArgs(CommandLine cmdLine, boolean failed) {
+    static ParsedArgs served() { return new ParsedArgs(null, false); }
+    static ParsedArgs rejected() { return new ParsedArgs(null, true); }
+    static ParsedArgs of(CommandLine cmdLine) { return new ParsedArgs(cmdLine, false); }
+  }
+
+  public static ParsedArgs parseArgs(String[] args) {
     if (hasRawFlag(args, "h", "help")) {
       for (ConsoleQueryTool tool : QUERY_TOOLS) {
-        if (hasRawFlag(args, tool.shortName(), tool.longName())) { tool.printHelp(); return null; }
+        if (hasRawFlag(args, tool.shortName(), tool.longName())) { tool.printHelp(); return ParsedArgs.served(); }
       }
       // else fall through: the general -h handler below prints the grouped help.
     }
@@ -77,18 +89,18 @@ public class ConsoleMain {
 
       if (cmdLine.hasOption("h")) {
         ConsoleHelp.printGrouped(cmdOptions, List.of(SHOW_TIMES, SHOW_SIZES, SHOW_MODULES, SHOW_MODULES_WITH_INSTANCES));
-        return null;
+        return ParsedArgs.served();
       }
 
       if (cmdLine.hasOption("v")) {
         System.out.println("Arend " + Prelude.VERSION);
-        return null;
+        return ParsedArgs.served();
       }
 
-      return cmdLine;
+      return ParsedArgs.of(cmdLine);
     } catch (ParseException e) {
       System.err.println(e.getMessage());
-      return null;
+      return ParsedArgs.rejected();
     }
   }
 
@@ -122,8 +134,9 @@ public class ConsoleMain {
 
 
   private boolean run(String[] args) {
-    CommandLine cmdLine = parseArgs(args);
-    if (cmdLine == null) return false;
+    ParsedArgs parsed = parseArgs(args);
+    if (parsed.cmdLine() == null) return !parsed.failed();
+    CommandLine cmdLine = parsed.cmdLine();
 
     CommandContext ctx = new CommandContext();
     if (!CliSetup.bootstrap(ctx, cmdLine)) return false;
