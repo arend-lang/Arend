@@ -858,14 +858,14 @@ public class ExpressionResolveNameVisitor extends BaseConcreteExpressionVisitor<
     }
 
     DynamicScopeProvider provider = myTypingInfo.getBodyOrTypeDynamicScopeProvider(baseExpr);
-    if (provider != null) {
-      visitClassFieldImpls(coclauses.getCoclauseList(), provider);
-    } else {
-      LocalError error = new NameResolverError("Expected a class or a class instance", baseExpr);
+    LocalError error = null;
+    if (provider == null) {
+      error = new NameResolverError("Expected a class or a class instance", baseExpr);
       myErrorReporter.report(error);
-      return new Concrete.ErrorHoleExpression(data, error);
+      provider = new EmptyDynamicScopeProvider(null);
     }
-    return Concrete.ClassExtExpression.make(data, baseExpr, coclauses);
+    visitClassFieldImpls(coclauses.getCoclauseList(), provider);
+    return error != null ? new Concrete.ErrorHoleExpression(data, error) : Concrete.ClassExtExpression.make(data, baseExpr, coclauses);
   }
 
   @Override
@@ -931,12 +931,13 @@ public class ExpressionResolveNameVisitor extends BaseConcreteExpressionVisitor<
       if (subProvider == null) {
         subProvider = myTypingInfo.getTypeDynamicScopeProvider(ref);
       }
-      if (subProvider != null) {
-        if (subProvider.getReferable() instanceof TCDefReferable defRef) {
-          impl.classRef = defRef;
-        }
-        visitClassFieldImpls(impl.getSubCoclauseList(), subProvider);
+      if (subProvider == null) {
+        subProvider = new EmptyDynamicScopeProvider(null);
       }
+      if (subProvider.getReferable() instanceof TCDefReferable defRef) {
+        impl.classRef = defRef;
+      }
+      visitClassFieldImpls(impl.getSubCoclauseList(), subProvider);
     } else {
       impl.implementation = impl.implementation.accept(this, null);
     }
