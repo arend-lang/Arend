@@ -28,7 +28,7 @@
                        (v : \Pi (z :⁺ C) -> D (cinr z))
                        (\Pi (x :⁺ A) -> Path (\lam i => D (cglue x i)) (u (f x)) (v (g x)))}
       \cowith
-      | f h => (\lam y => h.1 (cinl y), \lam z => h.1 (cinr z), \lam x => path \lam i => h.1 (cglue x i))
+      | f h => (\lam y => unob h (cinl y), \lam z => unob h (cinr z), \lam x => path \lam i => unob h (cglue x i))
       | ret s => ob (elim s.1 s.2 s.3)
       | ret_f (ob h) => pmap ob $ ext \case \elim __ \with {
         | cinl y => idp

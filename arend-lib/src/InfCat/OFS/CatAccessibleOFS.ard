@@ -38,7 +38,7 @@
       | isExt u v c x => c x
       \where {
         \lemma isRight : fam.IsRight (fromLData {famHat} {C} {D} {f})
-          => \lam j => IsEquiv.fromMonoRetraction (\lam {ob h} {ob h'} p => later
+          => \lam j => IsEquiv.fromMonoRetraction (later \lam {ob h} {ob h'} p =>
               \have r (e :⁺ CatPushout (F j) (F j)) => path $ isExt {famHat} {C} {D} {f} {j,false}
                       (lift2 $ CatPushout.rec h h' \lam x => path \lam i => (p i).1.1 x)
                       (\lam y => fromLData {famHat} (h y))

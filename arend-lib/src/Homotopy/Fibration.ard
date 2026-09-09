@@ -6,7 +6,7 @@
   \where
     \func proj (F : B -> \Type) => \lam (t : Total F) => t.1
 
-\func Fib {A B : \Type} (f : A -> B) (base : B) => \Sigma (a : A) (f a = base)
+\func Fib {A : \Type} {B : \Cat} (f : A -> B) (base : B) => \Sigma (a : A) (f a = base)
   \where {
     \func make {base : B} (a : A) (p : f a = base) : Fib f base => (a,p)
 

@@ -39,6 +39,10 @@
   | sec : B -> A
   | f_sec : \Pi (y : B) -> f (sec y) = y
   \where {
+    \func fromSigma {A B : \Type} {f : A -> B} (g : \Pi (b : B) -> \Sigma (a : A) (f a = b)) : Retraction f \cowith
+      | sec b => (g b).1
+      | f_sec b => (g b).2
+
     \func Retraction~Fiber {A B : \Type} {f : A -> B} : QEquiv {Retraction f} {Fib (f `o-) id} \cowith
       | f r => Fib.make r.sec $ path \lam i x => r.f_sec x i
       | ret z => \new Retraction f z.1 \lam x => path (z.2 __ x)
@@ -342,12 +346,13 @@
 
   -- | If the fibers of a map are propositions, then the map is an embedding
   \lemma fibers {A B : \Type} (f : A -> B) (p : \Pi (b : B) -> isProp (Fib f b)) : Embedding f \cowith
-    | isEmb a a' =>
-      \have e (q : f a = f a') => Fib.equiv (f a') (a,q) (a',idp) (p (f a') (a,q) (a',idp))
-      \in \new Retraction {
-        | sec q => (e q).1
-        | f_sec q => (e q).2
-      }
+    | isEmb a a' => IsEquiv.toQEquiv (pmap-equiv p)
+    \where {
+      \protected \lemma pmap-equiv {A : \Type} {B : \Cat} {f : A -> B} (p : \Pi (b : B) -> isProp (Fib f b)) {a a' : A}
+        : IsEquiv {a = a'} {f a = f a'} (pmap f)
+        => inP $ pathEquiv (f __ = f __) \lam {a} {a'} => Retraction.fromSigma
+            \lam q => Fib.equiv (f a') (a,q) (a',idp) (p (f a') (a,q) (a',idp))
+    }
 
   -- | The fibers of an embedding are propositions.
   \lemma embeddingFiber-isProp (e : Embedding) (b : e.B) : isProp (Fib e b) => \lam x x' =>

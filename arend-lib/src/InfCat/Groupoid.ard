@@ -26,9 +26,9 @@
   | f => ob
   | ret => unob
   | ret_f x => idp
-  | f_sec y => idp
+  | f_sec (ob y) => idp
 
 \lemma cat_ob {C : \Cat} (Cg : IsGroupoid C) : IsHEquiv {Ob C} {C} unob
-  => ff-surj-equiv.1 (\lam x y => later $ propExt.dir (IsEquiv.parallelEquiv {x = y} (inP =_~>-equiv) (groupoid-char.1 Cg x.1 y.1) \case \elim y, \elim __ \with {
-    | _, idp => idp
+  => ff-surj-equiv.1 (\lam x y => later $ propExt.dir (IsEquiv.parallelEquiv {x = y} (inP =_~>-equiv) (groupoid-char.1 Cg (unob x) (unob y)) \case \elim x, \elim y, \elim __ \with {
+    | ob x, _, idp => idp
   }) (inP unob_=), \lam y => inP (ob y, idp))

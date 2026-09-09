@@ -1,17 +1,22 @@
 \import Equiv
-\import InfCat.Equiv
 \import Paths
 
-\type Ob (C : \Cat) => \Sigma (ob : C) (\Sigma)
+\data Ob (C : \Cat)
+  | ob C
 
-\cons ob {C : \Cat} (x : C) : Ob C
-  => (x, ())
+\func unob {C : \Cat} (x :⁺ Ob C) : C \elim x
+  | ob x => x
 
-\func unob {C : \Cat} (x :⁺ Ob C) : C
-  => x.1
+\func ob_unob {C : \Cat} (x : Ob C) : ob (unob x) = x \elim x
+  | ob x => idp
 
-\func unob_= {C : \Cat} {x y : Ob C} : QEquiv {x = y} {unob x = unob y} \cowith
-  | f => pmap unob
-  | ret => pmap ob
-  | ret_f => idpe
-  | f_sec => idpe
+\sfunc pmap_ob_unob {C : \Cat} {x y : Ob C} (p : x = y) : pmap ob (pmap unob p) = ob_unob x *> p *> inv (ob_unob y) \elim p
+  | idp => inv (pmap (_ *>) idp_*> *> *>_inv)
+
+\func unob_= {C : \Cat} {x y : Ob C} : QEquiv {x = y} {unob x = unob y} \elim x, y
+  | ob x, ob y => \new QEquiv {
+    | f => pmap unob
+    | ret => pmap ob
+    | ret_f p => pmap_ob_unob p *> idp_*>
+    | f_sec => idpe
+  }
