@@ -96,6 +96,9 @@ val slowTest by sourceSets.creating
 dependencies {
     testImplementation("org.jetbrains:annotations:$annotationsVersion")
     testImplementation("org.antlr:antlr4-runtime:$antlrVersion")
+    // :cli keeps this as `implementation`, so it is not on the test classpath by
+    // inheritance; the CLI tests parse argv the way ConsoleMain does, which needs it.
+    testImplementation("commons-cli:commons-cli:1.4")
 
     testImplementation(project(":base"))
     testImplementation(project(":parser"))

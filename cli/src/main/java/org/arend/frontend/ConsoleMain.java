@@ -4,6 +4,11 @@ import org.apache.commons.cli.*;
 import org.arend.core.definition.Definition;
 import org.arend.ext.module.ModulePath;
 import org.arend.frontend.cli.CliSetup;
+import org.arend.frontend.cli.daemon.DaemonMain;
+import org.arend.frontend.cli.daemon.DaemonPaths;
+import org.arend.frontend.cli.daemon.DaemonStart;
+import org.arend.frontend.cli.daemon.DaemonStop;
+import org.arend.frontend.cli.daemon.client.DaemonRpc;
 import org.arend.frontend.cli.CommandContext;
 import org.arend.frontend.cli.Dispatch;
 import org.arend.frontend.cli.JsonOutputRedirect;
@@ -20,6 +25,7 @@ import org.arend.frontend.repl.jline.JLineCliRepl;
 import org.arend.prelude.Prelude;
 
 
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.*;
@@ -76,6 +82,12 @@ public class ConsoleMain {
             .hasArgs().argName(tool.argName()).desc(tool.cliDescription()).build());
       }
       cmdOptions.addOption(Option.builder().longOpt("json").desc("with -ss/-ps/-fu/-sc/-ch: print results as a single JSON object on stdout ({results:[...],count:N}; -sc uses {target,entries:[...],count:N}; -ch uses {target,superclasses:[...],subclasses:[...],instances:[...],newSites:[...],counts}); all diagnostics ([INFO]/[WARN]/[ERROR], query echo) go to a log file, keeping stdout pure JSON and the console clean (ignored in REPL mode). For -fu, each usage is a separate entry (never grouped by row).").build());
+      cmdOptions.addOption(Option.builder("d").longOpt("daemon").desc("start a daemon for the given library. Requires either a LIBRARY positional anchored to an arend.yaml (or a name resolved via -L; defaults to ./arend.yaml when omitted), or a `-s <dir>` synthetic library (in which case the daemon is keyed to <dir> and its state lives in <dir>/.arend/). The daemon does the normal load+typecheck+persist once, then idles serving future client requests.").build());
+      cmdOptions.addOption(Option.builder().longOpt("daemon-stop").desc("stop the daemon serving the given library (single positional library reference).").build());
+      cmdOptions.addOption(Option.builder().longOpt("daemon-ping").desc("ping the daemon serving the given library; reports IDLE or BUSY.").build());
+      cmdOptions.addOption(Option.builder().longOpt("daemon-status").desc("dump the daemon's state: queue depth, uptime, current task, protocol version and locked flags.").build());
+      cmdOptions.addOption(Option.builder().longOpt("daemon-refresh").desc("re-run the bootstrap pipeline on the daemon's warm context so source edits are picked up.").build());
+      cmdOptions.addOption(Option.builder().longOpt("no-daemon").desc("force in-process execution even if a daemon serves the requested library.").build());
       cmdOptions.addOption(Option.builder().longOpt("log-file").hasArg().argName("path").desc("with --json -ss/-ps/-fu/-sc/-ch: write diagnostics here instead of the default <tmpdir>/arend-symbol-search.log").build());
       cmdOptions.addOption("r", "recompile", false, "recompile all modules from source, ignoring binary caches (.arc files)");
       cmdOptions.addOption(null, "serialize", false, "after typechecking, persist typechecked modules as .arc binary caches; without this flag, no .arc files are written");
@@ -178,24 +190,177 @@ public class ConsoleMain {
     return ctx;
   }
 
-  private boolean run(String[] args) {
+  /**
+   * Whether this command may be served by a daemon.
+   *
+   * <p>It has to be decided here, from the flags alone, because {@link
+   * DaemonRpc#tryRouteCli} returns the daemon's exit code and the client exits with it -- a
+   * refusal on the far side is not a fallback, it is the answer the user gets. Two flags mean a
+   * command cannot be served, on top of the explicit {@code --no-daemon}:
+   *
+   * <ul>
+   *   <li>{@code -i}: the REPL is interactive and the daemon rejects it outright, so routing it
+   *       would take the REPL away from anyone who has a daemon running.</li>
+   *   <li>{@code -s}: it names the sources to typecheck, and is read only by {@link
+   *       CliSetup#classifyRequestedTargets} -- the cold-context path. A served command goes
+   *       through {@code populateRequestedTargets}, which never sees it, so the daemon would
+   *       check its own library and report success for a target the user did not name. Being a
+   *       locked flag is not enough: locking is for flags that shape the server, and this one
+   *       chooses the work.</li>
+   * </ul>
+   */
+  static boolean isRoutable(CommandLine cmdLine) {
+    return !cmdLine.hasOption("no-daemon")
+        && !cmdLine.hasOption("i")
+        && !cmdLine.hasOption("s");
+  }
+
+  /** @return the process exit code. */
+  private int run(String[] args) {
     ParsedArgs parsed = parseArgs(args);
-    if (parsed.cmdLine() == null) return !parsed.failed();
+    if (parsed.cmdLine() == null) return parsed.failed() ? 1 : 0;
     CommandLine cmdLine = parsed.cmdLine();
 
     CommandContext ctx = new CommandContext();
-    if (!CliSetup.bootstrap(ctx, cmdLine)) return false;
-    CliSetup.classifyRequestedTargets(ctx, cmdLine);
+    if (!CliSetup.bootstrap(ctx, cmdLine)) return 1;
 
-    if (cmdLine.hasOption("i")) return runRepl(ctx, cmdLine);
+    // A recoverable error must not reach a daemon. -d would bake a bad -L into a server that
+    // then outlives the command, and routing would hand the work to one built from a context
+    // this process already knows is wrong -- so both daemon branches below are guarded.
+    //
+    // The REPL is exempt, because it is neither: it loads its own startup targets, and
+    // `arend -L /no/such/dir -i` dropped the user into a working REPL long before any of this
+    // existed. CliSetup.bootstrap still documents such an error as recoverable, and the point
+    // of these guards is to keep a daemon from inheriting one, not to shut the REPL.
+    boolean replRun = cmdLine.hasOption("i") && !hasDaemonControlFlag(cmdLine);
+    if (ctx.exitWithError && !replRun) return 1;
+
+    // Before the positional arguments are classified: the daemon flags take a library
+    // *reference*, which is a looser thing than a library -- "." names the daemon for the
+    // current directory, and is not a library name.
+    Integer daemonControl = runDaemonControl(ctx, cmdLine);
+    if (daemonControl != null) return daemonControl;
+
+    // Likewise before: an ordinary command goes to whichever daemon serves this library,
+    // because the point of the daemon is that the user does not have to ask, and there is no
+    // reason to classify or load anything in this process first.
+    if (isRoutable(cmdLine)) {
+      OptionalInt routed = DaemonRpc.tryRouteCli(args, cmdLine.getArgList(), ctx.libDirs);
+      // The daemon's exit code verbatim. A routed command has to be indistinguishable from a
+      // local one and that includes what the shell sees: 130 for a cancellation is the whole
+      // reason the daemon reports it, and collapsing every non-zero code to 1 leaves a caller
+      // no way to tell an abandoned run from a failed typecheck.
+      if (routed.isPresent()) return routed.getAsInt();
+    }
+
+    CliSetup.classifyRequestedTargets(ctx, cmdLine);
+    if (ctx.exitWithError && !replRun) return 1;
+
+    if (cmdLine.hasOption("i")) return runRepl(ctx, cmdLine) ? 0 : 1;
 
     // In JSON mode stdout has to carry the document and nothing else, so the redirect covers
     // library loading as well as dispatch -- loader chatter would otherwise land in it. It is
     // also what restores the streams on every exit below, including the early ones.
     try (JsonOutputRedirect json = JsonOutputRedirect.open(cmdLine)) {
-      if (!CliSetup.loadRequestedLibraries(ctx, cmdLine) || ctx.exitWithError) return false;
-      return Dispatch.execute(ctx, cmdLine, json) == 0;
+      if (!CliSetup.loadRequestedLibraries(ctx, cmdLine) || ctx.exitWithError) return 1;
+      return Dispatch.execute(ctx, cmdLine, json);
     }
+  }
+
+  /**
+   * Handles {@code -d} and the {@code --daemon-*} control flags. None of them loads a library in
+   * this process -- the child JVM does that.
+   *
+   * @return the exit code, or null when no control flag was given and the run should continue.
+   */
+  /** Whether argv asks for one of the daemon control flags {@link #runDaemonControl} handles. */
+  static boolean hasDaemonControlFlag(CommandLine cmdLine) {
+    return cmdLine.hasOption("d")
+        || cmdLine.hasOption("daemon-stop")
+        || cmdLine.hasOption("daemon-ping")
+        || cmdLine.hasOption("daemon-status")
+        || cmdLine.hasOption("daemon-refresh");
+  }
+
+  private Integer runDaemonControl(CommandContext ctx, CommandLine cmdLine) {
+    boolean daemonStart = cmdLine.hasOption("d");
+    boolean daemonStop = cmdLine.hasOption("daemon-stop");
+    boolean daemonPing = cmdLine.hasOption("daemon-ping");
+    boolean daemonStatus = cmdLine.hasOption("daemon-status");
+    boolean daemonRefresh = cmdLine.hasOption("daemon-refresh");
+    if (!hasDaemonControlFlag(cmdLine)) return null;
+
+    int chosen = (daemonStart ? 1 : 0) + (daemonStop ? 1 : 0) + (daemonPing ? 1 : 0)
+        + (daemonStatus ? 1 : 0) + (daemonRefresh ? 1 : 0);
+    if (chosen > 1) {
+      System.err.println("[ERROR] only one of -d / --daemon-stop / --daemon-ping /"
+          + " --daemon-status / --daemon-refresh may be given");
+      return 1;
+    }
+    List<String> positional = cmdLine.getArgList();
+    if (positional.size() > 1) {
+      System.err.println("[ERROR] daemon mode requires at most one positional library reference");
+      return 1;
+    }
+
+    // Synthetic-library daemon: -s <dir> with no positional. The daemon is keyed to <dir> and
+    // its inner pipeline is driven by -s/-e/-m rather than an arend.yaml. Positional wins if
+    // both are given (warn the user that -s is ignored).
+    String sourceDirStr = cmdLine.getOptionValue("s");
+    Path syntheticSrcDir = null;
+    if (sourceDirStr != null && positional.isEmpty()) {
+      syntheticSrcDir = Paths.get(sourceDirStr).toAbsolutePath();
+    } else if (sourceDirStr != null) {
+      System.err.println("[WARN] daemon mode: positional LIBRARY given, -s " + sourceDirStr
+          + " is ignored for daemon-identity resolution (still forwarded to the inner pipeline)");
+    }
+    // Control ops (stop/ping/status/refresh) with no -s and no positional: try cwd's arend.yaml
+    // first; if absent, see if a synthetic daemon was previously started here (its lock file is
+    // the marker) and target that instead.
+    if (syntheticSrcDir == null && positional.isEmpty() && !daemonStart) {
+      Path cwd = Paths.get(".").toAbsolutePath();
+      if (!Files.isRegularFile(cwd.resolve("arend.yaml"))) {
+        DaemonPaths synthetic = DaemonPaths.resolveSynthetic(cwd);
+        if (Files.exists(synthetic.lockFile)) syntheticSrcDir = cwd;
+      }
+    }
+    // No positional + no -s -> fall back to ./arend.yaml, mirroring the non-daemon default.
+    String libRef = positional.isEmpty() ? "." : positional.getFirst();
+
+    if (daemonStart) {
+      return DaemonStart.run(libRef, ctx.libDirs, bootstrapFlagsToForward(cmdLine), syntheticSrcDir);
+    }
+    if (daemonStop) {
+      return DaemonStop.run(libRef, ctx.libDirs, syntheticSrcDir);
+    }
+    String op = daemonPing ? "ping" : daemonStatus ? "status" : "refresh";
+    int rc = DaemonRpc.run(libRef, ctx.libDirs, op, syntheticSrcDir);
+    if (rc == DaemonRpc.NO_DAEMON) {
+      System.err.println("[ERROR] " + op + ": no daemon running for the given library");
+      return 1;
+    }
+    return rc;
+  }
+
+  /**
+   * The bootstrap-affecting flags {@code -d} hands to the child, so the child owns the same
+   * locked state this process was asked for. Kept in step with {@link
+   * org.arend.frontend.cli.daemon.LockedFlags#NAMES} minus {@code -L}, which {@link
+   * DaemonStart} forwards itself from {@code ctx.libDirs}.
+   */
+  private static List<String> bootstrapFlagsToForward(CommandLine cmdLine) {
+    List<String> extra = new ArrayList<>();
+    for (String flag : List.of("s", "e", "m")) {
+      if (cmdLine.hasOption(flag)) {
+        extra.add("-" + flag);
+        extra.add(cmdLine.getOptionValue(flag));
+      }
+    }
+    for (String flag : List.of("c", "r")) {
+      if (cmdLine.hasOption(flag)) extra.add("-" + flag);
+    }
+    if (cmdLine.hasOption("serialize")) extra.add("--serialize");
+    return extra;
   }
 
   /**
@@ -275,8 +440,16 @@ public class ConsoleMain {
 
 
   public static void main(String[] args) {
-    if (!new ConsoleMain().run(args)) {
-      System.exit(1);
+    // The daemon child JVM's entry point. Detected before parseArgs, because commons-cli would
+    // reject the flag, and before any other output, so nothing is written before the parent has
+    // pointed stdout and stderr at daemon.log.
+    if (args.length > 0 && ("--daemon-bootstrap".equals(args[0]) || "--daemon-bootstrap-synthetic".equals(args[0]))) {
+      DaemonMain.run(args);
+      return;
+    }
+    int exitCode = new ConsoleMain().run(args);
+    if (exitCode != 0) {
+      System.exit(exitCode);
     }
   }
 }
