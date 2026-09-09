@@ -19,7 +19,7 @@ import org.arend.term.concrete.Concrete;
 import org.arend.term.group.ConcreteGroup;
 import org.arend.term.group.ConcreteNamespaceCommand;
 import org.arend.term.group.ConcreteStatement;
-import org.arend.typechecking.computation.UnstoppableCancellationIndicator;
+import org.arend.typechecking.computation.CancellationIndicator;
 import org.jetbrains.annotations.Nullable;
 
 import java.io.IOException;
@@ -54,10 +54,13 @@ public final class UsageFinder {
    * Every usage of {@code target} in {@code searchScope}, declaration site excluded,
    * sorted by (module, line, column). The libraries must already be registered on
    * {@code server} (so raw groups and resolved definitions are available).
+   *
+   * <p>{@code cancellation} aborts the resolve pass over the candidate modules, which is the
+   * long half of the search and the reason a daemon worker can otherwise be pinned by one.
    */
   public static List<UsageHit> find(LocatedReferable target, ModuleLocation targetModule,
       List<SourceLibrary> searchScope, ArendServer server,
-      boolean withTests, boolean useAliases) {
+      boolean withTests, boolean useAliases, CancellationIndicator cancellation) {
     String aliasName = target.getAliasName();
     Set<String> primaryNames = new LinkedHashSet<>();
     primaryNames.add(target.textRepresentation());
@@ -98,7 +101,7 @@ public final class UsageFinder {
     // Resolve candidates (their transitive deps come along).
     if (!textHits.isEmpty()) {
       server.getCheckerFor(new ArrayList<>(textHits.keySet()))
-          .resolveAll(UnstoppableCancellationIndicator.INSTANCE, ProgressReporter.empty());
+          .resolveAll(cancellation, ProgressReporter.empty());
     }
 
     // Walk candidates' resolved definitions, keep refs whose getReferent() == target.

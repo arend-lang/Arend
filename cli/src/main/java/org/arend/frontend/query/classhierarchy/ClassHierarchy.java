@@ -11,7 +11,7 @@ import org.arend.server.ProgressReporter;
 import org.arend.server.impl.DefinitionData;
 import org.arend.term.concrete.BaseConcreteExpressionVisitor;
 import org.arend.term.concrete.Concrete;
-import org.arend.typechecking.computation.UnstoppableCancellationIndicator;
+import org.arend.typechecking.computation.CancellationIndicator;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
@@ -39,10 +39,13 @@ final class ClassHierarchy {
   /**
    * Resolves every module in {@code sources} and walks the resulting definitions to
    * build the parent/child graph plus the {@code \new} / {@code \instance} site lists.
+   *
+   * <p>{@code cancellation} aborts that resolve pass, which is the long half of the work.
    */
-  static ClassHierarchy build(List<ModuleLocation> sources, ArendServer server) {
+  static ClassHierarchy build(List<ModuleLocation> sources, ArendServer server,
+                              CancellationIndicator cancellation) {
     if (!sources.isEmpty()) {
-      server.getCheckerFor(sources).resolveAll(UnstoppableCancellationIndicator.INSTANCE, ProgressReporter.empty());
+      server.getCheckerFor(sources).resolveAll(cancellation, ProgressReporter.empty());
     }
     Map<LocatedReferable, ClassNode> graph = new HashMap<>();
     Map<LocatedReferable, ModuleLocation> moduleOf = new HashMap<>();

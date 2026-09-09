@@ -99,7 +99,7 @@ public final class FindUsagesTool extends ConsoleQueryTool {
         // 3) Find usages: name-scan candidate modules, resolve, keep identity matches
         //    (declaration site dropped), sorted by source position.
         List<UsageHit> sorted = UsageFinder.find(targetReferable, targetModule, searchScope, server,
-            options.withTests, options.useAliases);
+            options.withTests, options.useAliases, ctx.cancellation());
 
         // 4) This search resolves but never typechecks, so a field usage whose receiver type is
         //    only inferred stays an unresolved field reference and is invisible here — warn for fields.
