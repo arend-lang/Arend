@@ -63,7 +63,7 @@ public final class Dispatch {
     // what keeps CLI and REPL behaviour identical.
     ConsoleQueryTool.QueryContext queryCtx = new ConsoleQueryTool.QueryContext(
         ctx.requestedLibraries, ctx.libraryManager, ctx.server, ctx.systemErrErrorReporter,
-        json.stdout(), json.active(), Set.of());
+        json.stdout(), json.active(), Set.of(), ctx.cancellation);
     for (ConsoleQueryTool tool : ConsoleMain.QUERY_TOOLS) {
       if (!cmdLine.hasOption(tool.shortName())) continue;
       ConsoleQueryTool.ConsoleToolRunner parsed = tool.parseArgs(cmdLine.getOptionValues(tool.shortName()));

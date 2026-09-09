@@ -1,0 +1,47 @@
+package org.arend.frontend.cli.daemon.server;
+
+import org.apache.commons.cli.CommandLine;
+import org.arend.frontend.ConsoleMain;
+import org.arend.frontend.cli.CommandContext;
+import org.arend.frontend.cli.Dispatch;
+import org.arend.frontend.cli.daemon.LockedFlags;
+
+/**
+ * The daemon's policy on top of {@link Dispatch#run(CommandContext, String[])}: what a client is
+ * and is not allowed to ask for.
+ *
+ * <p>Running the command is not daemon-specific and is not done here — a client request is the
+ * same argv against the same already-loaded context that any other caller would use, and the two
+ * must not drift. What is specific is that some flags shaped the daemon when it started and
+ * cannot be changed per request, and some make no sense inside one at all.
+ */
+public final class CliDispatcher {
+  private CliDispatcher() {}
+
+  /** @return the exit code the client should report. */
+  public static int run(CommandContext ctx, String[] args) {
+    CommandLine cmdLine = ConsoleMain.parseArgs(args).cmdLine();
+    // A command line Dispatch will reject anyway is left to it, so that the verdict on argv is
+    // reached in exactly one place.
+    if (cmdLine != null) {
+      if (cmdLine.hasOption("i")) {
+        System.err.println("[ERROR] -i (REPL) is not supported in daemon mode");
+        return 1;
+      }
+      if (cmdLine.hasOption("d") || cmdLine.hasOption("daemon-stop") || cmdLine.hasOption("daemon-ping")
+          || cmdLine.hasOption("daemon-status") || cmdLine.hasOption("daemon-refresh")) {
+        System.err.println("[ERROR] daemon control flags are not valid inside a daemon-served command");
+        return 1;
+      }
+      for (String flag : LockedFlags.NAMES) {
+        if (cmdLine.hasOption(flag)) {
+          System.err.println("[WARN] " + LockedFlags.display(flag)
+              + " passed to a daemon-served command is ignored "
+              + "(daemon bootstrap is authoritative; use --no-daemon to override).");
+        }
+      }
+    }
+
+    return Dispatch.run(ctx, args);
+  }
+}
