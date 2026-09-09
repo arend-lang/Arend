@@ -7,6 +7,7 @@ import org.arend.frontend.repl.CommonCliRepl;
 import org.arend.repl.Repl;
 import org.arend.repl.action.AliasableCommand;
 import org.arend.server.ArendServer;
+import org.arend.typechecking.computation.CancellationIndicator;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -141,6 +142,10 @@ public abstract class ConsoleQueryTool extends AliasableCommand {
    * @param requestedLibraries the top-level libraries (drives {@code self})
    * @param excludeLibraries   library names to drop from scope (the REPL excludes its
    *                           synthetic {@code Repl} library; the CLI passes an empty set)
+   * @param cancellation       trips the long-running scans ({@code -ps} resolves every module
+   *                           before matching); the daemon passes a per-request indicator so a
+   *                           client {@code cancel} is honoured, the REPL and local CLI pass
+   *                           the unstoppable default
    */
   public record QueryContext(List<SourceLibrary> requestedLibraries,
                              LibraryManager libraryManager,
@@ -148,7 +153,8 @@ public abstract class ConsoleQueryTool extends AliasableCommand {
                              ErrorReporter errorReporter,
                              PrintStream out,
                              boolean json,
-                             Set<String> excludeLibraries) {
+                             Set<String> excludeLibraries,
+                             CancellationIndicator cancellation) {
     /**
      * Applies the environment flags this context carries onto a tool's parsed options.
      * (Scope exclusion is not among them: it is applied authoritatively in

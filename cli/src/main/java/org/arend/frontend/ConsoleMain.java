@@ -167,6 +167,17 @@ public class ConsoleMain {
     return ctx;
   }
 
+  /**
+   * The context a {@link org.arend.frontend.cli.daemon.server.DaemonServer} serves: a
+   * {@link #warmContext} that also remembers the argv it was built from, which the daemon's
+   * {@code status} and {@code refresh} ops need.
+   */
+  public CommandContext runDaemonBootstrap(String[] args) {
+    CommandContext ctx = warmContext(args);
+    if (ctx != null) ctx.bootstrapArgs = args.clone();
+    return ctx;
+  }
+
   private boolean run(String[] args) {
     ParsedArgs parsed = parseArgs(args);
     if (parsed.cmdLine() == null) return !parsed.failed();

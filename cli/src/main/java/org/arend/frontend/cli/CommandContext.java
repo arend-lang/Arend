@@ -15,6 +15,8 @@ import org.arend.naming.reference.LocatedReferable;
 import org.arend.naming.scope.EmptyScope;
 import org.arend.server.ArendServer;
 import org.arend.term.prettyprint.PrettyPrinterConfigWithRenamer;
+import org.arend.typechecking.computation.CancellationIndicator;
+import org.arend.typechecking.computation.UnstoppableCancellationIndicator;
 import org.arend.typechecking.error.local.GoalError;
 import org.arend.util.FileUtils;
 
@@ -51,6 +53,20 @@ public class CommandContext {
 
   /** If true, persist typechecked modules as {@code .arc} binary caches after typechecking. */
   public boolean serialize;
+
+  /**
+   * The argv the daemon was started with, or null for a local run. The daemon's {@code refresh}
+   * op re-dispatches exactly these against the warm context, so that source-timestamp checks
+   * see the same scope the bootstrap did.
+   */
+  public String[] bootstrapArgs;
+
+  /**
+   * Trips the long-running commands. A local run leaves the unstoppable default; the daemon
+   * worker swaps in a per-task indicator, so a client {@code cancel} reaches
+   * {@code ComputationRunner.checkCanceled()} inside the typechecker.
+   */
+  public CancellationIndicator cancellation = UnstoppableCancellationIndicator.INSTANCE;
 
   // ───────── per-run bookkeeping consulted across phases ─────────
 
@@ -144,6 +160,11 @@ public class CommandContext {
     moduleResults.clear();
     streamDiagnostics = true;
     requestedModules.clear();
+    // A command that ended without finishProgressLine() -- cancelled, or unwound by a throw --
+    // leaves a partial line open. Carried into the next command it costs a blank line before its
+    // first diagnostic, and a padding width measured against somebody else's module name.
+    myProgressActive = false;
+    myLastProgressLength = 0;
   }
 
   public void updateSourceResult(ModuleLocation module, GeneralError.Level result) {
