@@ -42,6 +42,21 @@ public class ModuleDeserialization {
   }
 
   /**
+   * The modules whose definitions this one links against, as recorded in the serialized
+   * call-target table. Exactly the set {@link #readModule} will ask
+   * {@link SimpleCallTargetProvider#getCallTarget} to resolve, so a caller loading several
+   * modules in one pass can use it to check that every callee is being loaded too.
+   * The module's own path may occur, for its constructors and class fields.
+   */
+  public List<ModulePath> getCallTargetModules() {
+    List<ModulePath> result = new ArrayList<>(myModuleProto.getModuleCallTargetsCount());
+    for (ModuleProtos.ModuleCallTargets callTargets : myModuleProto.getModuleCallTargetsList()) {
+      result.add(new ModulePath(callTargets.getNameList()));
+    }
+    return result;
+  }
+
+  /**
    * Shares one {@link DeferredBoxFixes} across a multi-module load, so that box fixing is
    * replayed only after <em>every</em> module has been filled in. Callers that load a single
    * module (and recursively its dependencies) can leave this unset: {@link #readModule} then

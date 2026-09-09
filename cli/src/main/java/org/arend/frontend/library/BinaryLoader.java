@@ -63,6 +63,8 @@ public class BinaryLoader {
    *   <li>Phase 1: For each module with a valid .arc file, parse the protobuf and fill in
    *       Definition shells on the existing (raw-loaded) group. This does not require
    *       dependency modules to be loaded.</li>
+   *   <li>Phase 1b: Drop candidates whose callees are not being loaded, since phase 2b
+   *       could not resolve their call targets.</li>
    *   <li>Phase 2: Resolve cross-module call targets and fill in definition bodies.
    *       This requires all dependency modules to have completed phase 1.</li>
    * </ol>
@@ -85,6 +87,18 @@ public class BinaryLoader {
     ArendLibrary serverLib = server.getLibrary(library.getLibraryName());
     SerializableKeyRegistryImpl keyRegistry = serverLib instanceof ArendLibraryImpl impl ? impl.getKeyRegistry() : null;
 
+    // Every source module of this library known to the server. A call target outside this set
+    // lives in a dependency (or in Prelude) and is loaded by a pass we do not control here.
+    Set<ModulePath> libraryModules = new HashSet<>();
+    for (ModuleLocation module : server.getModules()) {
+      if (module.getLibraryName().equals(library.getLibraryName()) && module.getLocationKind() == ModuleLocation.LocationKind.SOURCE) {
+        libraryModules.add(module.getModulePath());
+      }
+    }
+    // Modules of this library whose definitions will be in memory by the time phase 2b resolves
+    // call targets.
+    Set<ModulePath> willBeLoaded = new HashSet<>();
+
     // Phase 1: parse protobuf files (does NOT touch any group referables)
     for (ModuleLocation module : server.getModules()) {
       if (!module.getLibraryName().equals(library.getLibraryName())) continue;
@@ -106,7 +120,8 @@ public class BinaryLoader {
           streamSource.setKeyRegistry(keyRegistry);
           ModuleDeserialization deser = streamSource.parseProtobuf(errorReporter);
           if (deser != null) {
-            pending.add(new PendingBinaryLoad(module, deser));
+            pending.add(new PendingBinaryLoad(module, deser, calleesInLibrary(deser, module.getModulePath(), libraryModules)));
+            willBeLoaded.add(module.getModulePath());
           }
         } catch (Exception e) {
           reportBinaryCacheError(errorReporter, module, "protobuf parsing", e);
@@ -114,6 +129,35 @@ public class BinaryLoader {
         }
       }
     }
+
+    // Phase 1b: close the candidate set under "calls into". Phase 1 judges each module against
+    // its *own* source only, so an untouched module whose dependency was just edited stays a
+    // candidate while the dependency is dropped; phase 2b then asks for a call target that was
+    // never filled in and fails with "Definition M:d is not loaded". A .arc is usable only if
+    // every module of this library it links against is loaded in the same pass, which is not a
+    // property of any single module -- hence a fixed point rather than one sweep.
+    //
+    // Nothing needs clearing for a module dropped here: it never got past parsing, so
+    // re-typechecking it from source is all that is left to do.
+    int candidates = pending.size();
+    while (true) {
+      Set<ModuleLocation> unusable = new HashSet<>();
+      for (PendingBinaryLoad load : pending) {
+        for (ModulePath callee : load.callees) {
+          if (!willBeLoaded.contains(callee)) {
+            unusable.add(load.module);
+            break;
+          }
+        }
+      }
+      if (unusable.isEmpty()) break;
+      for (ModuleLocation module : unusable) {
+        willBeLoaded.remove(module.getModulePath());
+        myBinaryCacheLoaded.remove(module);
+      }
+      pending.removeIf(load -> unusable.contains(load.module));
+    }
+    int stale = candidates - pending.size();
 
     // Process dependencies before dependents, so that phase 2b's expression building sees
     // filled-in callees wherever the import graph allows it.
@@ -199,11 +243,12 @@ public class BinaryLoader {
     }
     loaded -= promotedToIncomplete;
     incomplete += promotedToIncomplete;
-    if (loaded > 0 || failed > 0 || incomplete > 0) {
+    if (loaded > 0 || failed > 0 || incomplete > 0 || stale > 0) {
       System.out.println("[INFO] Binary cache: " + loaded + " loaded"
+          + (stale > 0 ? ", " + stale + " stale" : "")
           + (incomplete > 0 ? ", " + incomplete + " incomplete" : "")
           + (failed > 0 ? ", " + failed + " failed" : "")
-          + " out of " + pending.size() + " candidates"
+          + " out of " + candidates + " candidates"
           // Routinely non-zero and not a warning: ordering only sequences whole modules, so any
           // forward reference within a module -- plus every import cycle -- still builds a
           // defcall before its callee is filled. Reported because this is the path that used to
@@ -310,5 +355,18 @@ public class BinaryLoader {
     errorReporter.report(new BinaryCacheError(module.getModulePath(), phase, e));
   }
 
-  private record PendingBinaryLoad(ModuleLocation module, ModuleDeserialization deserialization) {}
+  private record PendingBinaryLoad(ModuleLocation module, ModuleDeserialization deserialization, Set<ModulePath> callees) {}
+
+  /**
+   * The modules of {@code libraryModules} that {@code deser}'s call targets point into, excluding
+   * {@code self}: a module's own constructors and class fields are listed as call targets too, and
+   * those are filled in along with their parent, never by another pass.
+   */
+  private static Set<ModulePath> calleesInLibrary(ModuleDeserialization deser, ModulePath self, Set<ModulePath> libraryModules) {
+    Set<ModulePath> result = new HashSet<>();
+    for (ModulePath callee : deser.getCallTargetModules()) {
+      if (!callee.equals(self) && libraryModules.contains(callee)) result.add(callee);
+    }
+    return result;
+  }
 }

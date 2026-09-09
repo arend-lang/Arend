@@ -25,17 +25,20 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.attribute.FileTime;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
 /**
  * Tests for {@code BinaryLoader.loadBinaryCache}: that a warm {@code bin/} reloads whole,
- * and that phase 2 deserializes a module only after everything it imports.
+ * that the set of caches it uses is closed under "calls into", and that phase 2 deserializes a
+ * module only after everything it imports.
  *
  * <p>The ordering is load-bearing rather than cosmetic. Filling a definition in inspects its
  * callees, and a callee that is still a shell answers wrongly instead of failing, so a module
@@ -62,10 +65,10 @@ public class StaleBinaryCacheTest {
   // ───────── fixture ─────────
 
   /**
-   * {@code Leaf <- Mid <- Top} is a chain the load order has to respect; {@code Unrelated} has no
-   * imports at all and {@code Importer} imports {@code Leaf} without referring to anything in it,
-   * so between them the fixture covers a module the order constrains from both sides, one it does
-   * not constrain, and one constrained by an import that carries no reference.
+   * {@code Leaf <- Mid <- Top} is the chain the skip set has to close over, and the order phase 2
+   * has to respect; {@code Unrelated} checks the closure does not over-close, and {@code Importer}
+   * that it follows call targets rather than {@code \import}s — it imports {@code Leaf} without
+   * referring to anything in it, so its {@code .arc} names no call target there and stays loadable.
    */
   private void writeLibrary() throws IOException {
     libRoot = tempFolder.newFolder(LIB).toPath();
@@ -84,6 +87,23 @@ public class StaleBinaryCacheTest {
     Files.writeString(libRoot.resolve("src").resolve(name + ".ard"), body, StandardCharsets.UTF_8);
   }
 
+
+  /**
+   * Rewrite a module and age <em>its</em> {@code .arc} a second below the new source, so the
+   * staleness comparison does not ride on filesystem timer granularity. Aging the cache rather
+   * than stamping the source into the future matters for
+   * {@link #theRunRepairsTheCacheForTheNextOne}: a source dated ahead of the {@code .arc} the
+   * repairing pass writes would look stale forever.
+   */
+  private void editModule(String name, String body) throws IOException {
+    Path file = libRoot.resolve("src").resolve(name + ".ard");
+    Files.writeString(file, body, StandardCharsets.UTF_8);
+    Path arc = libRoot.resolve("bin").resolve(name + ".arc");
+    if (Files.exists(arc)) {
+      Files.setLastModifiedTime(arc,
+          FileTime.fromMillis(Files.getLastModifiedTime(file).toMillis() - 1000));
+    }
+  }
 
   /** Discards all in-memory state, as starting a new CLI process does, and keeps {@code bin/}. */
   private void newServer() {
@@ -160,6 +180,11 @@ public class StaleBinaryCacheTest {
   }
 
 
+  private void assertNotLoadedFromCache(String phase, String module) {
+    assertFalse(phase + ": " + module + "'s .arc is not usable and must not be loaded",
+        binaryLoader.getBinaryCacheLoaded().contains(moduleLoc(module)));
+  }
+
   // ───────── tests ─────────
 
   /** Baseline: an untouched {@code bin/} loads whole, so the tests below start from a known state. */
@@ -173,6 +198,109 @@ public class StaleBinaryCacheTest {
     for (String module : List.of("Leaf", "Mid", "Top", "Unrelated", "Importer")) {
       assertLoadedFromCache("reload with no edits", module);
     }
+  }
+
+  /**
+   * The reported bug: {@code Leaf} is dropped for being older than its source, so {@code Mid}'s
+   * {@code .arc} — newer than <em>its own</em> source, hence a phase-1 candidate — asks for a
+   * call target nobody filled in.
+   */
+  @Test
+  public void editingADependencyDoesNotBreakItsDependentsLoad() throws IOException {
+    buildCachesThenRestart();
+    editModule("Leaf", "\\func leaf : Nat => 1\n");
+    pass();
+
+    assertNoBinaryCacheErrors("after editing Leaf");
+    assertNoErrors("after editing Leaf");
+    assertNotLoadedFromCache("after editing Leaf", "Leaf");
+    assertNotLoadedFromCache("after editing Leaf", "Mid");
+  }
+
+  /** The skip set has to be a fixed point: {@code Top} reaches {@code Leaf} only through {@code Mid}. */
+  @Test
+  public void theSkipSetIsClosedTransitively() throws IOException {
+    buildCachesThenRestart();
+    editModule("Leaf", "\\func leaf : Nat => 1\n");
+    pass();
+
+    assertNoBinaryCacheErrors("after editing Leaf");
+    assertNotLoadedFromCache("after editing Leaf", "Top");
+  }
+
+  /** Closing the skip set must not swallow modules that do not depend on the edited one. */
+  @Test
+  public void anIndependentModuleStillLoadsFromCache() throws IOException {
+    buildCachesThenRestart();
+    editModule("Leaf", "\\func leaf : Nat => 1\n");
+    pass();
+
+    assertLoadedFromCache("after editing Leaf", "Unrelated");
+  }
+
+  /**
+   * Closure follows the serialized call targets, not the {@code \import} graph: {@code Importer}
+   * imports {@code Leaf} but refers to nothing in it, so its {@code .arc} is still consistent.
+   * Walking imports instead would needlessly re-typecheck it — on arend-lib that would drag in
+   * every module importing a hub like {@code Algebra.Monoid}.
+   */
+  @Test
+  public void anImportWithoutAReferenceDoesNotInvalidateTheCache() throws IOException {
+    buildCachesThenRestart();
+    editModule("Leaf", "\\func leaf : Nat => 1\n");
+    pass();
+
+    assertLoadedFromCache("after editing Leaf", "Importer");
+  }
+
+  /** A missing {@code .arc} makes dependents' caches unusable just as a stale one does. */
+  @Test
+  public void deletingADependencysCacheInvalidatesItsDependents() throws IOException {
+    buildCachesThenRestart();
+    Files.delete(libRoot.resolve("bin").resolve("Leaf.arc"));
+    pass();
+
+    assertNoBinaryCacheErrors("after deleting Leaf.arc");
+    assertNoErrors("after deleting Leaf.arc");
+    assertNotLoadedFromCache("after deleting Leaf.arc", "Mid");
+    assertNotLoadedFromCache("after deleting Leaf.arc", "Top");
+    assertLoadedFromCache("after deleting Leaf.arc", "Unrelated");
+  }
+
+  /**
+   * The pass that skipped a module has to re-persist it, or the inconsistency survives the run and
+   * the next cold start pays for it again. This is what {@code arend -r} used to be needed for.
+   */
+  @Test
+  public void theRunRepairsTheCacheForTheNextOne() throws IOException {
+    buildCachesThenRestart();
+    editModule("Leaf", "\\func leaf : Nat => 1\n");
+    pass();
+    assertNoErrors("after editing Leaf");
+
+    newServer();
+    pass();
+
+    assertNoBinaryCacheErrors("second cold start");
+    assertNoErrors("second cold start");
+    for (String module : List.of("Leaf", "Mid", "Top", "Unrelated", "Importer")) {
+      assertLoadedFromCache("second cold start", module);
+    }
+  }
+
+  /** A changed signature must reach dependents through the cache load too, not just a body change. */
+  @Test
+  public void aChangedSignatureIsPropagatedThroughTheCache() throws IOException {
+    buildCachesThenRestart();
+    // mid : Nat => leaf no longer typechecks as written, so it must be re-elaborated against the
+    // new signature rather than restored from an .arc that predates it.
+    editModule("Leaf", "\\func leaf : Fin 3 => 0\n");
+    editModule("Mid", "\\import Leaf\n\\func mid : Fin 3 => leaf\n");
+    editModule("Top", "\\import Mid\n\\func top : Fin 3 => mid\n");
+    pass();
+
+    assertNoBinaryCacheErrors("after changing leaf's signature");
+    assertNoErrors("after changing leaf's signature");
   }
 
   /**
