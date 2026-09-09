@@ -157,7 +157,7 @@
 \lemma IsOrthogonal_CatPushout {A B C D E : \Cat} {f : A ->⁺ B} {g : A ->⁺ C} {h : D ->⁺ E} (gh : IsOrthogonal g h)
   : IsOrthogonal {B} {CatPushout f g} cinl h
   => IsOrthogonal-char.2 \lam u v s => Contr.Contr_QEquiv (symQEquiv $ transQEquiv {_}
-        {\Sigma (p : Ob (\Pi (y :⁺ CatPushout f g) -> \Sigma (d :⁺ D) (t2 : h d = v y)))
+        {\Sigma (p : Ob (\Pi (y :⁺ CatPushout f g) -> \Sigma⁺ (d : D) (t2 : h d = v y)))
                 (\Sigma (t1 : \Pi (x :⁺ B) -> (unob p (cinl x)).1 = u x) (\Pi (x :⁺ B) -> pmap+ h (t1 x) *> inv (s x) = (unob p (cinl x)).2))}
         (later \new QEquiv {
           | f s => (ob \lam w => (s.1 w, s.3 w), (s.2, \lam y => rotatePathRight $ rotatePathLeft.conv (s.4 y)))
@@ -169,7 +169,7 @@
           transQEquiv {_}
             {\Sigma (q1 : \Sigma (u' : Ob (B ->⁺ D)) (u' = ob u))
                     (\Sigma (q2 : \Sigma (s' : \Pi (y :⁺ B) -> h (unob q1.1 y) = v (cinl y)) ((\lam y =>⁺ path (\lam i => h (unob (q1.2 i) y)) *> inv (s y)) = s'))
-                            (\Sigma (q : \Sigma (h1 :⁺ C ->⁺ D) (\Pi (z :⁺ C) -> h (h1 z) = v (cinr z)))
+                            (\Sigma (q : \Sigma⁺ (h1 : C ->⁺ D) (\Pi (z :⁺ C) -> h (h1 z) = v (cinr z)))
                                     (\Sigma (r : \Pi (x :⁺ A) -> unob q1.1 (f x) = q.1 (g x))
                                             (\Pi (x :⁺ A) -> Path (\lam i => h (r x i) = v (cglue x i)) (q2.1 (f x)) (q.2 (g x))))))}
             (later \new QEquiv {
@@ -182,7 +182,7 @@
               | f_sec ((_, idp), t2) => idp
             })
             (transQEquiv (contr-left (rsigma _)) $ transQEquiv (contr-left (lsigma _)) $ transQEquiv {_}
-              {\Sigma (q : \Sigma (h1 :⁺ C ->⁺ D) (\Pi (y :⁺ C) -> h (h1 y) = v (cinr y)))
+              {\Sigma (q : \Sigma⁺ (h1 : C ->⁺ D) (\Pi (y :⁺ C) -> h (h1 y) = v (cinr y)))
                       (\Sigma (t1 : \Pi (x :⁺ A) -> q.1 (g x) = u (f x))
                               (\Pi (x :⁺ A) -> inv (q.2 (g x)) *> pmap+ h (t1 x) = pmap+ v (inv (path (cglue x))) *> s (f x)))}
               (sigma-right $ later \lam q => transQEquiv

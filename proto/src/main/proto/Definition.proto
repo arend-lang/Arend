@@ -74,7 +74,6 @@ message Definition {
             bool isRealParameter = 13;
             bool isProperty = 8;
             bool isHideable = 9;
-            bool isCovariant = 15;
             map<string, bytes> user_data = 12;
         }
     }

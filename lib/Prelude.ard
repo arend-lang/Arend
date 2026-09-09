@@ -77,7 +77,7 @@
 
 \func rezk {C :⁺ \Cat} {x y :⁺ C} (f :⁺ x ~> y) (g :⁺ y ~> x)
            (p :⁺ DPath (\lam i => f i ~> x) idd g) (q :⁺ DPath (\lam i => g i ~> y) idd f)
-  : (x,idd) = {\Sigma (z :⁺ C) (x ~> z)} (y,f)
+  : (x,idd) = {\Sigma⁺ (z : C) (x ~> z)} (y,f)
 
 \data Nat
   | zero

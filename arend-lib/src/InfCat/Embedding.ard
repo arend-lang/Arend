@@ -6,7 +6,7 @@
 \import Paths.Meta
 
 \type IsEmbedding {C D : \Cat} (f : C ->⁺ D) : \Prop
-  => TruncP (\Pi (s :⁺ \Sigma (x y :⁺ C) (f x = f y)) -> \Sigma (p :⁺ s.1 = s.2) (pmap+ f p = s.3))
+  => TruncP (\Pi (s :⁺ \Sigma⁺ (x y : C) (f x = f y)) -> \Sigma⁺ (p : s.1 = s.2) (pmap+ f p = s.3))
   \where {
     \lemma external (fe : IsEmbedding f) {E : \Cat} (g h : E ->⁺ C) : IsEquiv {g = h} (pmap+ {E ->⁺ C} {E ->⁺ D} \lam g x => f (g x)) \elim fe
       | inP fe => inP $ pathEquiv {E ->⁺ C} (\lam g h => (\lam x =>⁺ f (g x)) = (\lam x =>⁺ f (h x))) \lam {g} {h} =>

@@ -50,8 +50,8 @@ class ShrinkAbstractVisitor(val textRange: TextRange) : AbstractExpressionVisito
                 fields.joinToString(", ", "(", ")") { DOTS }
             }
 
-    override fun visitSigma(data: Any?, parameters: MutableCollection<out Abstract.Parameter>, params: Unit?): String =
-            """\Sigma $DOTS $DOTS"""
+    override fun visitSigma(data: Any?, parameters: MutableCollection<out Abstract.Parameter>, variance: BindingVariance?, params: Unit?): String =
+            if (variance == BindingVariance.COVARIANT) """\Sigma⁺ $DOTS $DOTS""" else """\Sigma $DOTS $DOTS"""
 
     override fun visitBinOpSequence(data: Any?, left: Abstract.Expression, leftIsVariable: Boolean, sequence: Collection<Abstract.BinOpSequenceElem>, params: Unit?): String {
         val parsed = parseBinOp(left, leftIsVariable, sequence)

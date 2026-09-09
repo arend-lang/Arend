@@ -145,6 +145,8 @@ OCT_DIGIT           = [0-8]
     "\\new"                 { return NEW_KW; }
     "\\Pi"                  { return PI_KW; }
     "\\Sigma"               { return SIGMA_KW; }
+    "\\Sigma+"              { return SIGMA_PLUS_KW; }
+    "\\Sigma⁺"              { return SIGMA_PLUS_KW; }
     "\\lam"                 { return LAM_KW; }
     "\\have"                { return HAVE_KW; }
     "\\have!"               { return HAVES_KW; }

@@ -21,7 +21,7 @@ public interface AbstractExpressionVisitor<P, R> {
   R visitInferHole(@Nullable Object data, P params);
   R visitGoal(@Nullable Object data, @Nullable String name, @Nullable Abstract.Expression expression, P params);
   R visitTuple(@Nullable Object data, @NotNull Collection<? extends Abstract.Expression> fields, @Nullable Object trailingComma, P params);
-  R visitSigma(@Nullable Object data, @NotNull Collection<? extends Abstract.Parameter> parameters, P params);
+  R visitSigma(@Nullable Object data, @NotNull Collection<? extends Abstract.Parameter> parameters, @Nullable BindingVariance variance, P params);
   R visitBinOpSequence(@Nullable Object data, @NotNull Abstract.Expression left, boolean leftIsVariable, @NotNull Collection<? extends Abstract.BinOpSequenceElem> sequence, P params);
   R visitCase(@Nullable Object data, boolean isSFunc, @Nullable Abstract.EvalKind evalKind, @NotNull Collection<? extends Abstract.CaseArgument> arguments, @Nullable Abstract.Expression resultType, @Nullable Abstract.Expression resultTypeLevel, boolean resultTypeLevelPlus, @NotNull Collection<? extends Abstract.FunctionClause> clauses, P params);
   R visitFieldAccs(@Nullable Object data, @NotNull Abstract.Expression expression, @NotNull List<Abstract.FieldAcc> fieldAccs, @Nullable AbstractReference infixReference, @Nullable String infixName, @Nullable Fixity fixity, P params);

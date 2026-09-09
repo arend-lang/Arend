@@ -314,7 +314,7 @@ public class ConcreteBuilder implements AbstractDefinitionVisitor<Concrete.Resol
             if (forced || explicit) {
               setClassifyingField(classDef, (FieldReferableImpl) referable, parameter, forced);
             }
-            elements.add(new Concrete.ClassField((FieldReferableImpl) referable, explicit, absParameter.getClassFieldKind(), new ArrayList<>(), parameter.getType(), null, absParameter.isCoerce(), parameter.getVariance()));
+            elements.add(new Concrete.ClassField((FieldReferableImpl) referable, explicit, absParameter.getClassFieldKind(), new ArrayList<>(), parameter.getType(), null, absParameter.isCoerce()));
           } else {
             myErrorReporter.report(new AbstractExpressionError(GeneralError.Level.ERROR, "Incorrect field parameter", referable));
           }
@@ -354,7 +354,7 @@ public class ConcreteBuilder implements AbstractDefinitionVisitor<Concrete.Resol
             Concrete.Expression type = resultType.accept(this, null);
             Abstract.Expression resultTypeLevel = field.getResultTypeLevel();
             Concrete.Expression typeLevel = resultTypeLevel == null ? null : resultTypeLevel.accept(this, null);
-            Concrete.ClassField classField = new Concrete.ClassField((FieldReferableImpl) fieldRef, true, field.getClassFieldKind(), buildTypeParameters(parameters, false, null), type, typeLevel, field.isCoerce(), field.getVariance());
+            Concrete.ClassField classField = new Concrete.ClassField((FieldReferableImpl) fieldRef, true, field.getClassFieldKind(), buildTypeParameters(parameters, false, null), type, typeLevel, field.isCoerce());
             if (typeLevel != null) {
               classField.setGroupoidalLevelProof(field.isResultTypeLevelPlus());
             }
@@ -719,8 +719,8 @@ public class ConcreteBuilder implements AbstractDefinitionVisitor<Concrete.Resol
   }
 
   @Override
-  public Concrete.SigmaExpression visitSigma(@Nullable Object data, @NotNull Collection<? extends Abstract.Parameter> parameters, Void params) {
-    return new Concrete.SigmaExpression(data, buildTypeParameters(parameters, false, null));
+  public Concrete.SigmaExpression visitSigma(@Nullable Object data, @NotNull Collection<? extends Abstract.Parameter> parameters, @Nullable BindingVariance variance, Void params) {
+    return new Concrete.SigmaExpression(data, buildTypeParameters(parameters, false, null), variance == null ? BindingVariance.INVARIANT : variance);
   }
 
   private Concrete.Expression makeBinOpSequence(Object data, Concrete.Expression left, boolean leftIsVariable, Collection<? extends Abstract.BinOpSequenceElem> sequence, Abstract.FunctionClauses clauses) {

@@ -164,7 +164,7 @@ public class ReplaceDataVisitor implements ConcreteExpressionVisitor<Void,Concre
   @Override
   public Concrete.Expression visitSigma(Concrete.SigmaExpression expr, Void params) {
     //noinspection unchecked
-    return new Concrete.SigmaExpression(getData(expr), (List<Concrete.TypeParameter>) (List<? extends Concrete.Parameter>) visitParameters(expr.getParameters()));
+    return new Concrete.SigmaExpression(getData(expr), (List<Concrete.TypeParameter>) (List<? extends Concrete.Parameter>) visitParameters(expr.getParameters()), expr.getVariance());
   }
 
   @Override
@@ -369,7 +369,7 @@ public class ReplaceDataVisitor implements ConcreteExpressionVisitor<Void,Concre
             previousType = field.getResultType();
             previousTypeCopied = previousType.accept(this, null);
           }
-          elements.add(new Concrete.ClassField(field.getData(), field.isExplicit(), field.getKind(), (List<Concrete.TypeParameter>) (List<?>) visitParameters(field.getParameters()), previousTypeCopied, field.getResultTypeLevel() == null ? null : field.getResultTypeLevel().accept(this, null), field.isCoerce(), field.getVariance()));
+          elements.add(new Concrete.ClassField(field.getData(), field.isExplicit(), field.getKind(), (List<Concrete.TypeParameter>) (List<?>) visitParameters(field.getParameters()), previousTypeCopied, field.getResultTypeLevel() == null ? null : field.getResultTypeLevel().accept(this, null), field.isCoerce()));
         }
         case Concrete.OverriddenField field -> elements.add(new Concrete.OverriddenField(getData(field), field.getOverriddenField(), (List<Concrete.TypeParameter>) (List<?>) visitParameters(field.getParameters()), field.getResultType().accept(this, null), field.getResultTypeLevel() == null ? null : field.getResultTypeLevel().accept(this, null)));
         case null, default -> throw new IllegalStateException();

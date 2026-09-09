@@ -59,7 +59,7 @@
           | dHat2 x => u x
       }
 
-    \func dataExt {fam : Family} {C D : \Cat} {f : C ->⁺ D} {E : \Cat} {g : C ->⁺ E} {h : E ->⁺ D} (hr : fam.IsRight h) (p : \Pi (x :⁺ C) -> h (g x) = f x) (d :⁺ LData f) : \Sigma (e :⁺ E) (h e = fromLData d) \elim d
+    \func dataExt {fam : Family} {C D : \Cat} {f : C ->⁺ D} {E : \Cat} {g : C ->⁺ E} {h : E ->⁺ D} (hr : fam.IsRight h) (p : \Pi (x :⁺ C) -> h (g x) = f x) (d :⁺ LData f) : \Sigma⁺ (e : E) (h e = fromLData d) \elim d
       | alpha x => (g x, p x)
       | lext {j} u v c y =>
         \have r => IsEquiv.splitSurj (hr j) ((\lam x => (dataExt hr p (u x)).1, v), \lam x => c x *> inv (dataExt hr p (u x)).2)
@@ -120,6 +120,6 @@
       }) (fromLData.isRight j)
 
     \sfunc lift {fam : Family} {C D : \Cat} {f : C ->⁺ D} {E : \Cat} {g : C ->⁺ E} {h : E ->⁺ D} (hr : fam.IsRight h)
-                (p : \Pi (x :⁺ C) -> h (g x) = f x) (d :⁺ CatFactor f) : \Sigma (e :⁺ E) (h e = catFactorRight d)
+                (p : \Pi (x :⁺ C) -> h (g x) = f x) (d :⁺ CatFactor f) : \Sigma⁺ (e : E) (h e = catFactorRight d)
       => dataExt {famHat} (famHat_IsRight hr) p d
   }

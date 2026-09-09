@@ -559,7 +559,7 @@ class ArendCompletionContributor : CompletionContributor() {
          *  which must be followed by an expression, by a name or by a modifier of the statement being written */
         private val CLASS_MEMBER_START_CONTEXT = not(afterLeaves(
                 COLON, ARROW, FAT_ARROW, PIPE, COMMA, LPAREN, DOT,
-                PI_KW, SIGMA_KW, LAM_KW, HAVE_KW, HAVES_KW, LET_KW, LETS_KW, IN_KW, CASE_KW, SCASE_KW, WITH_KW,
+                PI_KW, SIGMA_KW, SIGMA_PLUS_KW, LAM_KW, HAVE_KW, HAVES_KW, LET_KW, LETS_KW, IN_KW, CASE_KW, SCASE_KW, WITH_KW,
                 NEW_KW, EVAL_KW, PEVAL_KW, BOX_KW, ELIM_KW, COWITH_KW, RETURN_KW, AS_KW, LEVEL_KW,
                 FUNC_KW, SFUNC_KW, LEMMA_KW, TYPE_KW, CONS_KW, AXIOM_KW, META_KW, DATA_KW, TRUNCATED_KW,
                 CLASS_KW, RECORD_KW, INSTANCE_KW, EXTENDS_KW, OPEN_KW, MODULE_KW, WHERE_KW, USE_KW,
@@ -591,7 +591,7 @@ class ArendCompletionContributor : CompletionContributor() {
         private val bareSigmaOrPiPattern = elementPattern { o ->
             var result: PsiElement? = o
 
-            val context = ofType(PI_KW, SIGMA_KW)
+            val context = ofType(PI_KW, SIGMA_KW, SIGMA_PLUS_KW)
 
             var tele: ArendCompositeElement? = null
             while (result != null) {

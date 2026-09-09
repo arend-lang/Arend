@@ -723,7 +723,7 @@ public class PrettyPrintVisitor implements ConcreteExpressionVisitor<Precedence,
   @Override
   public Void visitSigma(Concrete.SigmaExpression expr, Precedence prec) {
     if (prec.priority > Concrete.SigmaExpression.PREC) myBuilder.append('(');
-    myBuilder.append("\\Sigma");
+    myBuilder.append(expr.getVariance() == BindingVariance.COVARIANT ? "\\Sigma⁺" : "\\Sigma");
     if (!expr.getParameters().isEmpty()) {
       myBuilder.append(' ');
     }
@@ -1591,7 +1591,7 @@ public class PrettyPrintVisitor implements ConcreteExpressionVisitor<Precedence,
       myBuilder.append(" ");
       prettyPrintParameters(field.getParameters());
     }
-    myBuilder.append(field.getVariance() == BindingVariance.COVARIANT ? " :⁺ " : " : ");
+    myBuilder.append(" : ");
     printTypeLevel(field.getResultType(), field.getResultTypeLevel());
   }
 

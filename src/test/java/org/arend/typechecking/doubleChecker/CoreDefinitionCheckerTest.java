@@ -6,6 +6,9 @@ import org.arend.core.context.param.TypedDependentLink;
 import org.arend.core.definition.FunctionDefinition;
 import org.arend.core.elimtree.IntervalElim;
 import org.arend.core.expr.ExpressionFactory;
+import org.arend.core.expr.SigmaExpression;
+import org.arend.core.expr.UniverseExpression;
+import org.arend.typechecking.implicitargs.equations.DummyEquations;
 import org.arend.ext.core.context.BindingVariance;
 import org.arend.ext.error.GeneralError;
 import org.arend.ext.error.ListErrorReporter;
@@ -19,15 +22,44 @@ import org.junit.Test;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 public class CoreDefinitionCheckerTest extends TypeCheckingTestCase {
   @Before
   public void checkPrelude() {
     server.getCheckerFor(Collections.singletonList(Prelude.MODULE_LOCATION)).typecheck(UnstoppableCancellationIndicator.INSTANCE, ProgressReporter.empty());
+  }
+
+  @Test
+  public void mixedVarianceSigmaRejected() {
+    DependentLink second = new TypedDependentLink(true, "y", ExpressionFactory.Nat(), false, BindingVariance.INVARIANT, EmptyDependentLink.getInstance());
+    DependentLink first = new TypedDependentLink(true, "x", ExpressionFactory.Nat(), false, BindingVariance.COVARIANT, second);
+    SigmaExpression sigma = new SigmaExpression(first);
+
+    CoreExpressionChecker checker = new CoreExpressionChecker(new HashSet<>(), DummyEquations.getInstance(), null);
+    try {
+      sigma.accept(checker, UniverseExpression.OMEGA);
+      fail("A \\Sigma type with mixed parameter variance must be rejected");
+    } catch (CoreException e) {
+      // expected
+    }
+  }
+
+  @Test
+  public void uniformVarianceSigmaAccepted() {
+    DependentLink second = new TypedDependentLink(true, "y", ExpressionFactory.Nat(), false, BindingVariance.COVARIANT, EmptyDependentLink.getInstance());
+    DependentLink first = new TypedDependentLink(true, "x", ExpressionFactory.Nat(), false, BindingVariance.COVARIANT, second);
+    SigmaExpression sigma = new SigmaExpression(first);
+    assertEquals(BindingVariance.COVARIANT, sigma.getVariance());
+
+    CoreExpressionChecker checker = new CoreExpressionChecker(new HashSet<>(), DummyEquations.getInstance(), null);
+    sigma.accept(checker, UniverseExpression.OMEGA);
   }
 
   @Test

@@ -9,7 +9,7 @@
 \import Paths.Meta
 
 \sfunc iso_= {C :⁺ \Cat} {x y :⁺ C} (f :⁺ x ~> y) (g :⁺ y ~> x) (p :⁺ comp f g = idd) (q :⁺ comp g f = idd)
-  : \Sigma (r :⁺ x = y) (=_~> r = f)
+  : \Sigma⁺ (r : x = y) (=_~> r = f)
   => \have r => rezk f g (comp-char.conv p) (comp-char.conv q)
      \in (pmap+ __.1 r, inv transport_~>_idd-right *> sigma-unext2 r)
 
@@ -35,7 +35,7 @@
       => inv (pmap+ (comp g __) fh=id *> comp_idd-right) *> comp-assoc *> pmap+ (comp __ h) gf=id *> comp_idd-left
 
     \sfunc linv-unique {C :⁺ \Cat} {x y :⁺ C} (f :⁺ x ~> y) (g :⁺ y ~> x) (fg=id :⁺ comp f g = idd)
-                       {s t :⁺ \Sigma (h :⁺ y ~> x) (comp h f = idd)} : s = t
+                       {s t :⁺ \Sigma⁺ (h : y ~> x) (comp h f = idd)} : s = t
       => equiv-fibers (comp __ f) (comp __ g)
           (\lam h => inv comp-assoc *> pmap+ (comp h __) fg=id *> comp_idd-right)
           (\lam h => inv comp-assoc *> pmap+ (comp h __) (pmap+ (comp __ f) (inv $ inv-equals f s.2 fg=id) *> s.2) *> comp_idd-right)
@@ -47,7 +47,7 @@
       }
 
     \sfunc rinv-unique {C :⁺ \Cat} {x y :⁺ C} (f :⁺ x ~> y) (g :⁺ y ~> x) (gf=id :⁺ comp g f = idd)
-                       {s t :⁺ \Sigma (h :⁺ y ~> x) (comp f h = idd)} : s = t
+                       {s t :⁺ \Sigma⁺ (h : y ~> x) (comp f h = idd)} : s = t
       => equiv-fibers (comp f __) (comp g __)
           (\lam h => comp-assoc *> pmap+ (comp __ h) gf=id *> comp_idd-left)
           (\lam h => comp-assoc *> pmap+ (comp __ h) (pmap+ (comp f __) (inv-equals f gf=id s.2) *> s.2) *> comp_idd-left)

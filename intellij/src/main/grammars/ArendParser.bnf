@@ -68,6 +68,7 @@
         NEW_KW              = '\new'
         PI_KW               = '\Pi'
         SIGMA_KW            = '\Sigma'
+        SIGMA_PLUS_KW       = '\Sigma+'
         LAM_KW              = '\lam'
         HAVE_KW             = '\have'
         HAVES_KW            = '\have!'
@@ -200,7 +201,7 @@ classField ::= accessMod classFieldPrivate | classFieldPrivate {
     elementTypeFactory = "org.arend.psi.stubs.StubImplementationsKt.factory"
 }
 
-private classFieldPrivate ::= [CLASSIFYING_KW | COERCE_KW] prec? defIdentifier_typeTele alias? typeTele* (COLON | COLON_PLUS) returnExpr {
+private classFieldPrivate ::= [CLASSIFYING_KW | COERCE_KW] prec? defIdentifier_typeTele alias? typeTele* COLON returnExpr {
     pin = 6
 }
 
@@ -552,7 +553,7 @@ piExprWOB ::= PI_KW typeTele+ (ARROW | ARROW_PLUS) exprWOB {
     elementType = piExpr
 }
 
-sigmaExpr ::= SIGMA_KW typeTele* {
+sigmaExpr ::= (SIGMA_KW | SIGMA_PLUS_KW) typeTele* {
     pin = 1
 }
 
@@ -799,9 +800,9 @@ private nameTele_recover ::= !(ID | UNDERSCORE | LPAREN) & expr_recover
 
 fieldTele ::= fieldTeleExplicit | fieldTeleImplicit | fieldTeleRecovery
 
-private fieldTeleExplicit ::= LPAREN accessMod? [CLASSIFYING_KW | COERCE_KW] fieldDefIdentifier+ (COLON | COLON_PLUS) expr RPAREN { pin = 1 }
+private fieldTeleExplicit ::= LPAREN accessMod? [CLASSIFYING_KW | COERCE_KW] fieldDefIdentifier+ COLON expr RPAREN { pin = 1 }
 
-private fieldTeleImplicit ::= LBRACE accessMod? [CLASSIFYING_KW | COERCE_KW] fieldDefIdentifier+ (COLON | COLON_PLUS) expr RBRACE { pin = 5 }
+private fieldTeleImplicit ::= LBRACE accessMod? [CLASSIFYING_KW | COERCE_KW] fieldDefIdentifier+ COLON expr RBRACE { pin = 5 }
 
 private fieldTeleRecovery ::= fieldTele_recover {
     recoverWhile = fieldTele_recover
@@ -834,7 +835,7 @@ fieldDefIdentifier ::= defIdentifier {
     recoverWhile = fieldDefIdentifier_recover
 }
 
-private fieldDefIdentifier_recover ::= !(COLON | COLON_PLUS | ID | EXTENDS_KW | FAT_ARROW | LBRACE | LPAREN) & topStatement_recover
+private fieldDefIdentifier_recover ::= !(COLON | ID | EXTENDS_KW | FAT_ARROW | LBRACE | LPAREN) & topStatement_recover
 
 defIdentifier ::= ID
 

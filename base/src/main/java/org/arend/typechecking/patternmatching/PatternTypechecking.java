@@ -601,7 +601,12 @@ public class PatternTypechecking {
         SigmaExpression sigmaExpr = unfoldedExpr.cast(SigmaExpression.class);
         ClassCallExpression classCall = sigmaExpr == null ? unfoldedExpr.cast(ClassCallExpression.class) : null;
         if (sigmaExpr != null || classCall != null) {
-          DependentLink newParameters = forceInvariant(sigmaExpr != null ? DependentLink.Helper.copy(sigmaExpr.getParameters()) : classCall.getClassFieldParameters(), parameters.getVariance());
+          DependentLink newParameters = sigmaExpr != null ? DependentLink.Helper.copy(sigmaExpr.getParameters()) : classCall.getClassFieldParameters();
+          if (parameters.getVariance() == BindingVariance.COVARIANT && newParameters.hasNext() && newParameters.getVariance() == BindingVariance.INVARIANT) {
+            myErrorReporter.report(new TypecheckingError("Pattern matching on an invariant " + (sigmaExpr != null ? "\\Sigma type" : "record") + " is not allowed for covariant parameters", pattern));
+            return null;
+          }
+          newParameters = forceInvariant(newParameters, parameters.getVariance());
           Result conResult = doTypechecking(patternArgs, newParameters, paramsSubst, totalSubst, pattern, false, 0);
           if (conResult == null) {
             return null;

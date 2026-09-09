@@ -68,7 +68,7 @@ public class BaseAbstractExpressionVisitor<P, R> implements AbstractExpressionVi
   }
 
   @Override
-  public R visitSigma(@Nullable Object data, @NotNull Collection<? extends Abstract.Parameter> parameters, P params) {
+  public R visitSigma(@Nullable Object data, @NotNull Collection<? extends Abstract.Parameter> parameters, @Nullable BindingVariance variance, P params) {
     return defaultValue;
   }
 

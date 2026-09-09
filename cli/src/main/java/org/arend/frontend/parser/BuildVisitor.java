@@ -777,7 +777,7 @@ public class BuildVisitor extends ArendBaseVisitor<Object> {
       myErrorReporter.report(new ParserError(GeneralError.Level.WARNING_UNUSED, tokenPosition(ctx.accessMod().start), "Access modifier is redundant"));
     }
     FieldReferableImpl reference = new FieldReferableImpl(tokenPosition(defId.ID().getSymbol()), accessModifier.max(classAccessModifier), visitPrecedence(defId.precedence()), defId.ID().getText(), alias.proj2, alias.proj1, true, false, false, parentClass.getData());
-    Concrete.ClassField field = new Concrete.ClassField(reference, true, kind, parameters, returnType.type, returnType.typeLevel, ctx.COERCE() != null, ctx.COLON_PLUS() != null ? BindingVariance.COVARIANT : BindingVariance.INVARIANT);
+    Concrete.ClassField field = new Concrete.ClassField(reference, true, kind, parameters, returnType.type, returnType.typeLevel, ctx.COERCE() != null);
     field.setGroupoidalLevelProof(returnType.isTypeLevelPlus);
     if (ctx.CLASSIFYING() != null) {
       setClassifyingField(parentClass, reference, true);
@@ -1491,7 +1491,6 @@ public class BuildVisitor extends ArendBaseVisitor<Object> {
       AccessModContext accessMod;
       boolean forced;
       boolean coerced;
-      BindingVariance variance;
       if (tele instanceof ExplicitFieldTeleContext expCtx) {
         explicit = true;
         vars = expCtx.ID();
@@ -1499,7 +1498,6 @@ public class BuildVisitor extends ArendBaseVisitor<Object> {
         forced = expCtx.CLASSIFYING() != null;
         coerced = expCtx.COERCE() != null;
         accessMod = expCtx.accessMod();
-        variance = expCtx.COLON_PLUS() != null ? BindingVariance.COVARIANT : BindingVariance.INVARIANT;
       } else if (tele instanceof ImplicitFieldTeleContext impCtx) {
         explicit = false;
         vars = impCtx.ID();
@@ -1507,7 +1505,6 @@ public class BuildVisitor extends ArendBaseVisitor<Object> {
         forced = impCtx.CLASSIFYING() != null;
         coerced = impCtx.COERCE() != null;
         accessMod = impCtx.accessMod();
-        variance = impCtx.COLON_PLUS() != null ? BindingVariance.COVARIANT : BindingVariance.INVARIANT;
       } else {
         throw new IllegalStateException();
       }
@@ -1515,7 +1512,7 @@ public class BuildVisitor extends ArendBaseVisitor<Object> {
       Concrete.Expression type = visitExpr(exprCtx);
       for (TerminalNode var : vars) {
         FieldReferableImpl fieldRef = new FieldReferableImpl(tokenPosition(var.getSymbol()), visitAccessModifier(accessMod), Precedence.DEFAULT, var.getText(), Precedence.DEFAULT, null, explicit, true, false, classDef.getData());
-        Concrete.ClassField field = new Concrete.ClassField(fieldRef, explicit, ClassFieldKind.ANY, new ArrayList<>(), type, null, coerced, variance);
+        Concrete.ClassField field = new Concrete.ClassField(fieldRef, explicit, ClassFieldKind.ANY, new ArrayList<>(), type, null, coerced);
         fields.add(field);
         if (forced || explicit) {
           setClassifyingField(classDef, fieldRef, forced);
@@ -1565,12 +1562,12 @@ public class BuildVisitor extends ArendBaseVisitor<Object> {
 
   @Override
   public Concrete.SigmaExpression visitSigma(SigmaContext ctx) {
-    return new Concrete.SigmaExpression(tokenPosition(ctx.start), visitTeles(ctx.tele(), false));
+    return new Concrete.SigmaExpression(tokenPosition(ctx.start), visitTeles(ctx.tele(), false), ctx.SIGMA_PLUS() != null ? BindingVariance.COVARIANT : BindingVariance.INVARIANT);
   }
 
   @Override
   public Concrete.SigmaExpression visitSigma2(Sigma2Context ctx) {
-    return new Concrete.SigmaExpression(tokenPosition(ctx.start), visitTeles(ctx.tele(), false));
+    return new Concrete.SigmaExpression(tokenPosition(ctx.start), visitTeles(ctx.tele(), false), ctx.SIGMA_PLUS() != null ? BindingVariance.COVARIANT : BindingVariance.INVARIANT);
   }
 
   @Override

@@ -25,7 +25,7 @@ class ArendSyntaxHighlighter : SyntaxHighlighterBase() {
             ArendElementTypes.NUMBER, ArendElementTypes.NEGATIVE_NUMBER -> ArendHighlightingColors.NUMBER
             ArendElementTypes.STRING -> ArendHighlightingColors.STRING
             ArendElementTypes.PROP_KW, ArendElementTypes.SET_KW, ArendElementTypes.SET, ArendElementTypes.CAT_UNIVERSE, ArendElementTypes.UNIVERSE, ArendElementTypes.TRUNCATED_UNIVERSE -> ArendHighlightingColors.UNIVERSE
-            in AREND_KEYWORDS -> ArendHighlightingColors.KEYWORD
+            in AREND_KEYWORDS, ArendElementTypes.SIGMA_PLUS_KW -> ArendHighlightingColors.KEYWORD
             ArendElementTypes.UNDERSCORE, ArendElementTypes.APPLY_HOLE -> ArendHighlightingColors.IMPLICIT
 
             ArendElementTypes.INFIX, ArendElementTypes.POSTFIX -> ArendHighlightingColors.OPERATORS

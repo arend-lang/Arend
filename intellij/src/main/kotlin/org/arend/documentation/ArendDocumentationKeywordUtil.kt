@@ -91,6 +91,7 @@ enum class ArendKeyword(val type: IElementType, val section: ArendKeywordSection
     THIS(ArendElementTypes.THIS_KW, THIS_SECTION),
     PI(ArendElementTypes.PI_KW, null),
     SIGMA(ArendElementTypes.SIGMA_KW, null),
+    SIGMA_PLUS(ArendElementTypes.SIGMA_PLUS_KW, null),
     LAM(ArendElementTypes.LAM_KW, null),
     LET(ArendElementTypes.LET_KW, null),
     LETS(ArendElementTypes.LETS_KW, LETS_SECTION),
@@ -211,7 +212,7 @@ internal fun getArendKeywordHtml(arendKeyword: ArendKeyword?) =
         SUC, MAX, PROP, SET, CAT_UNIVERSE, UNIVERSE, TRUNCATED_UNIVERSE -> universesHtml
         NEW -> classExtHtml
         PI, LAM -> piHtml
-        SIGMA -> sigmaHtml
+        SIGMA, SIGMA_PLUS -> sigmaHtml
         LET, LETS, HAVE, HAVES, IN -> letHtml
         CASE, SCASE, RETURN -> caseHtml
         BOX, PRIVATE, PROTECTED, null -> null

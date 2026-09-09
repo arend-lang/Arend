@@ -12,7 +12,6 @@ import org.arend.psi.stubs.ArendClassFieldParamStub
 import org.arend.resolving.ArendDefReferenceImpl
 import org.arend.resolving.ArendReference
 import org.arend.ext.concrete.definition.ClassFieldKind
-import org.arend.ext.core.context.BindingVariance
 import org.arend.term.abs.Abstract
 import org.arend.term.group.AccessModifier
 
@@ -56,8 +55,6 @@ class ArendFieldDefIdentifier : ArendClassFieldBase<ArendClassFieldParamStub>, A
     override fun isClassifying() = parentFieldTele?.isClassifying == true
 
     override fun isCoerce() = parentFieldTele?.isCoerce == true
-
-    override fun getVariance(): BindingVariance = parentFieldTele?.getVariance() ?: BindingVariance.INVARIANT
 
     override fun getParameters(): List<Abstract.Parameter> = emptyList()
 

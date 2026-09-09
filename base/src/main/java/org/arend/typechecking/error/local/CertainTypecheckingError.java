@@ -22,7 +22,6 @@ public class CertainTypecheckingError extends TypecheckingError {
     AXIOM_WITH_BODY(Level.WARNING, "An axiom should not have a body"),
     INSTANCE_TYPE("The type of an instance must be a class"),
     NO_CLASSIFYING_IGNORED(Level.WARNING_UNUSED, "\\noclassifying is ignored"),
-    VARIANCE_IGNORED(Level.WARNING_UNUSED, "Variance is ignored for the last parameter of a \\Sigma type"),
     CONDITIONS_COVARIANT_CONTEXT("A data type with conditions cannot depend on a covariant context"),
     TRUNCATED_COVARIANT_CONTEXT("A truncated data type cannot depend on a covariant context"),
     TRUNCATED_CAT_SORT("A data type in \\Cat cannot be truncated"),

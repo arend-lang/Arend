@@ -116,7 +116,6 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
   private boolean myAllowDeferredMetas = true;
   private Set<Binding> myCovariantContext = new HashSet<>();
   private int myInvariantDepth = 0;
-  private Binding myFieldThisParameter;
 
   private record DeferredMeta(MetaDefinition meta, Map<Referable, Binding> context, LocalExpressionPrettifier localPrettifier, ContextDataImpl contextData, InferenceVariable inferenceVar, MyErrorReporter errorReporter, Set<Binding> covariantContext, int invariantDepth) {}
 
@@ -270,23 +269,6 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
     myCovariantContext = new HashSet<>();
     myInvariantDepth++;
     return new ClearedCategoricalContext(saved);
-  }
-
-  public boolean isUnderInvariantArgument() {
-    return myInvariantDepth > 0;
-  }
-
-  public void setFieldThisParameter(Binding binding) {
-    myFieldThisParameter = binding;
-  }
-
-  public boolean checkCovariantFieldAccess(ClassField field, Expression argExpr, Concrete.SourceNode sourceNode) {
-    if (field.getVariance() == BindingVariance.COVARIANT && isUnderInvariantArgument() && argExpr.getUnderlyingExpression() instanceof ReferenceExpression refExpr
-        && (refExpr.getBinding() == myFieldThisParameter || refExpr.getBinding() instanceof ClassCallExpression.ClassCallBinding binding && myClassCallBindings.contains(binding))) {
-      errorReporter.report(new TypecheckingError("Covariant field '" + field.getName() + "' is used in an invariant position", sourceNode));
-      return false;
-    }
-    return true;
   }
 
   public BindingVariance checkVariance(Concrete.Parameter parameter, boolean allowed) {
@@ -1802,11 +1784,7 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
     }
 
     TypecheckingResult result;
-    if (field.getVariance() == BindingVariance.INVARIANT) {
-      try (var ignored = clearCategoricalContext()) {
-        result = fieldSetClass.getDefinition().isGoodField(field) ? checkArgument(implBody, type, null, null) : checkExpr(implBody, type);
-      }
-    } else {
+    try (var ignored = clearCategoricalContext()) {
       result = fieldSetClass.getDefinition().isGoodField(field) ? checkArgument(implBody, type, null, null) : checkExpr(implBody, type);
     }
     if (result == null) {
@@ -2256,10 +2234,6 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
     ClassField field = classCall.getDefinition().findField(field2 -> expr.getFieldName().equals(field2.getName()));
     if (field == null) {
       errorReporter.report(new NotInDynamicScopeError(classCall.getDefinition(), expr.getFieldName(), expr));
-      return null;
-    }
-
-    if (!checkCovariantFieldAccess(field, argResult.expression, expr)) {
       return null;
     }
 
@@ -2806,19 +2780,25 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
       return expr.getParameters().getFirst().getType().accept(this, expectedType);
     }
 
+    for (Concrete.TypeParameter parameter : expr.getParameters()) {
+      if (parameter.getVariance() != BindingVariance.INVARIANT) {
+        errorReporter.report(new TypecheckingError("Variance annotations are not allowed in \\Sigma types; use \\Sigma+ instead", parameter));
+      }
+    }
+
     List<SortExpression> sorts = new ArrayList<>(expr.getParameters().size());
-    DependentLink args = visitSigmaParameters(expr.getParameters(), expectedType, sorts);
+    DependentLink args = visitSigmaParameters(expr.getParameters(), expr.getVariance(), expectedType, sorts);
     return args == null || !args.hasNext() ? null : checkResult(expectedType, new TypecheckingResult(new SigmaExpression(args), new UniverseExpression(SortExpression.makeMax(sorts))), expr);
   }
 
-  private DependentLink visitSigmaParameters(Collection<? extends Concrete.TypeParameter> parameters, Expression expectedType, List<SortExpression> resultSorts) {
+  private DependentLink visitSigmaParameters(Collection<? extends Concrete.TypeParameter> parameters, BindingVariance variance, Expression expectedType, List<SortExpression> resultSorts) {
     LinkList list = new LinkList();
 
     try (var ignored = new Utils.RefContextSaver(context, myLocalPrettifier)) {
       int i = 0;
       int size = parameters.size();
       for (Concrete.TypeParameter parameter : parameters) {
-        if (!visitSigmaParameter(parameter, expectedType, resultSorts, list, i == size - 1)) {
+        if (!visitSigmaParameter(parameter, variance, expectedType, resultSorts, list, i == size - 1)) {
           return null;
         }
         i++;
@@ -2828,12 +2808,7 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
     return list.getFirst();
   }
 
-  private boolean visitSigmaParameter(Concrete.TypeParameter arg, Expression expectedType, List<SortExpression> resultSorts, LinkList list, boolean isLast) {
-    BindingVariance variance = isLast ? arg.getVariance() : checkVariance(arg, true);
-    if (isLast && variance != BindingVariance.INVARIANT && arg.getReferableList().size() == 1) {
-      errorReporter.report(new CertainTypecheckingError(CertainTypecheckingError.Kind.VARIANCE_IGNORED, arg));
-    }
-
+  private boolean visitSigmaParameter(Concrete.TypeParameter arg, BindingVariance variance, Expression expectedType, List<SortExpression> resultSorts, LinkList list, boolean isLast) {
     TypeExpression result;
     if (variance == BindingVariance.INVARIANT) {
       try (var ignored = isLast ? null : clearCategoricalContext()) {

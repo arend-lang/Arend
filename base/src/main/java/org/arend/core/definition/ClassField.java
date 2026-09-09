@@ -6,7 +6,6 @@ import org.arend.core.expr.*;
 import org.arend.core.subst.ExprSubstitution;
 import org.arend.core.subst.Levels;
 import org.arend.core.subst.SubstVisitor;
-import org.arend.ext.core.context.BindingVariance;
 import org.arend.ext.core.definition.CoreClassField;
 import org.arend.naming.reference.FieldReferableImpl;
 import org.jetbrains.annotations.NotNull;
@@ -24,7 +23,6 @@ public class ClassField extends CallableDefinition implements CoreClassField {
   private int myNumberOfParameters;
   private boolean myHideable;
   private boolean myInfinite;
-  private BindingVariance myVariance = BindingVariance.INVARIANT;
 
   public ClassField(FieldReferableImpl referable, ClassDefinition parentClass) {
     super(referable, TypeCheckingStatus.NEEDS_TYPE_CHECKING);
@@ -122,14 +120,6 @@ public class ClassField extends CallableDefinition implements CoreClassField {
 
   public boolean isTypeClass() {
     return myParentClass.isTypeClassField(this);
-  }
-
-  public BindingVariance getVariance() {
-    return myVariance;
-  }
-
-  public void setVariance(BindingVariance variance) {
-    myVariance = variance;
   }
 
   @Override

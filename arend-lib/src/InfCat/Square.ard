@@ -60,14 +60,14 @@
         \in path \lam w => dpath \lam i => dpath \lam j => r w j i
       \where {
         \private \func map (p :⁺ (\lam i =>⁺ aa' i) ~> (\lam i =>⁺ dd' i))
-          : \Sigma (s :⁺ \Sigma (f :⁺ a ~> d) (g : a' ~> d')) (DPath (\lam i => aa' i ~> dd' i) s.1 s.2)
+          : \Sigma⁺ (s : \Sigma⁺ (f : a ~> d) (g : a' ~> d')) (DPath (\lam i => aa' i ~> dd' i) s.1 s.2)
           => ((dpath \lam i => p i dleft, dpath \lam i => p i dright), dpath \lam j => dpath \lam i => p i j)
       }
   }
 
 \func square-char (C : \Cat) : HQEquiv \cowith
   | C => DI ->⁺ DI ->⁺ C
-  | D => \Sigma (a b c d :⁺ C) (ab :⁺ a ~> b) (bd :⁺ b ~> d) (ac :⁺ a ~> c) (cd :⁺ c ~> d) (DPath (\lam i => a ~> bd i) ab (comp ac cd))
+  | D => \Sigma⁺ (a b c d : C) (ab : a ~> b) (bd : b ~> d) (ac : a ~> c) (cd : c ~> d) (DPath (\lam i => a ~> bd i) ab (comp ac cd))
   | f p => (p dleft dleft, p dright dleft, p dleft dright, p dright dright, dpath (p __ dleft), dpath (p dright), dpath (p dleft), dpath (p __ dright),
             forward $ dpath \lam i => dpath \lam j => p i j)
   | finv s i j => backward s.9 i j

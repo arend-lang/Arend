@@ -12,7 +12,6 @@ import org.arend.core.subst.ExprSubstitution;
 import org.arend.core.subst.InfiniteFieldsSubstVisitor;
 import org.arend.core.subst.Levels;
 import org.arend.core.subst.SubstVisitor;
-import org.arend.ext.core.context.BindingVariance;
 import org.arend.ext.core.definition.CoreClassDefinition;
 import org.arend.ext.core.definition.CoreClassField;
 import org.arend.ext.core.level.ConstLevel;
@@ -249,9 +248,7 @@ public class ClassDefinition extends TopLevelDefinition implements CoreClassDefi
           }
         }
         if (fieldSort != null) {
-          if (field.getVariance() == BindingVariance.INVARIANT) {
-            fieldSort = fieldSort.withoutCat();
-          }
+          fieldSort = fieldSort.withoutCat();
           sorts.add(levelSubstitution.isEmpty() ? fieldSort : fieldSort.subst(levelSubstitution));
         }
       }

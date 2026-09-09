@@ -107,7 +107,4 @@ class ArendFieldTele(node: ASTNode): ArendSourceNodeImpl(node), FieldParameter {
     override fun isClassifying() = classifyingKw != null
 
     override fun isCoerce() = findChildByType<PsiElement>(COERCE_KW) != null
-
-    override fun getVariance(): BindingVariance =
-        if (hasChildOfType(COLON_PLUS)) BindingVariance.COVARIANT else BindingVariance.INVARIANT
 }

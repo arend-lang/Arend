@@ -5,6 +5,7 @@ import org.arend.core.context.binding.LevelVariable;
 import org.arend.core.context.binding.PersistentEvaluatingBinding;
 import org.arend.core.context.binding.inference.InferenceLevelVariable;
 import org.arend.core.context.param.DependentLink;
+import org.arend.ext.core.context.BindingVariance;
 import org.arend.core.context.param.SingleDependentLink;
 import org.arend.core.definition.*;
 import org.arend.core.elimtree.Body;
@@ -700,6 +701,10 @@ public class ToAbstractVisitor extends BaseExpressionVisitor<Void, Concrete.Expr
   }
 
   private void visitDependentLink(DependentLink parameters, List<? super Concrete.TypeParameter> args, boolean isNamed, boolean genName) {
+    visitDependentLink(parameters, args, isNamed, genName, false);
+  }
+
+  private void visitDependentLink(DependentLink parameters, List<? super Concrete.TypeParameter> args, boolean isNamed, boolean genName, boolean clearVariance) {
     List<Referable> referableList = new ArrayList<>(3);
     for (DependentLink link = parameters; link.hasNext(); link = link.getNext()) {
       DependentLink link1 = link.getNextTyped(null);
@@ -711,10 +716,10 @@ public class ToAbstractVisitor extends BaseExpressionVisitor<Void, Concrete.Expr
       Referable referable = makeLocalReference(link, freeVars, genName || !link.isExplicit());
       if (referable == null && !isNamed && referableList.isEmpty()) {
         Concrete.Expression convertedType = convertExpr(link.getType());
-        args.add(new Concrete.TypeParameter(convertedType.getData(), link.isExplicit(), convertedType, link.isProperty(), link.getVariance()));
+        args.add(new Concrete.TypeParameter(convertedType.getData(), link.isExplicit(), convertedType, link.isProperty(), clearVariance ? BindingVariance.INVARIANT : link.getVariance()));
       } else {
         referableList.add(referable);
-        args.add(new Concrete.TelescopeParameter(null, link.isExplicit(), new ArrayList<>(referableList), convertExpr(link.getType()), link.isProperty(), link.getVariance()));
+        args.add(new Concrete.TelescopeParameter(null, link.isExplicit(), new ArrayList<>(referableList), convertExpr(link.getType()), link.isProperty(), clearVariance ? BindingVariance.INVARIANT : link.getVariance()));
         referableList.clear();
       }
     }
@@ -825,8 +830,8 @@ public class ToAbstractVisitor extends BaseExpressionVisitor<Void, Concrete.Expr
   @Override
   public Concrete.Expression visitSigma(SigmaExpression expr, Void params) {
     List<Concrete.TypeParameter> parameters = new ArrayList<>();
-    visitDependentLink(expr.getParameters(), parameters, false);
-    return cSigma(parameters);
+    visitDependentLink(expr.getParameters(), parameters, false, false, true);
+    return new Concrete.SigmaExpression(null, parameters, expr.getVariance());
   }
 
   private Concrete.Expression simplifyLetClause(Expression expr) {
@@ -1209,7 +1214,7 @@ public class ToAbstractVisitor extends BaseExpressionVisitor<Void, Concrete.Expr
         type = ((Concrete.PiExpression) type).getCodomain();
       }
 
-      return new Concrete.ClassField(field.getReferable(), field.getReferable().isExplicitField(), kind, parameters, type, field.getTypeLevel() == null ? null : convertExpr(field.getTypeLevel()), false, field.getVariance());
+      return new Concrete.ClassField(field.getReferable(), field.getReferable().isExplicitField(), kind, parameters, type, field.getTypeLevel() == null ? null : convertExpr(field.getTypeLevel()), false);
     } finally {
       myRenamer.setCanonicalThis(saved);
     }

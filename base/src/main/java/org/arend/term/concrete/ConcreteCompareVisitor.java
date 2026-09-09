@@ -243,8 +243,9 @@ public class ConcreteCompareVisitor implements ConcreteExpressionVisitor<Concret
 
   @Override
   public Boolean visitSigma(Concrete.SigmaExpression expr1, Concrete.Expression expr2) {
-    if (!(expr2 instanceof Concrete.SigmaExpression)) return false;
-    boolean result = compareParameters(expr1.getParameters(), ((Concrete.SigmaExpression) expr2).getParameters());
+    if (!(expr2 instanceof Concrete.SigmaExpression sigma2)) return false;
+    if (expr1.getVariance() != sigma2.getVariance()) return false;
+    boolean result = compareParameters(expr1.getParameters(), sigma2.getParameters());
     freeParameters(expr1.getParameters());
     return result;
   }

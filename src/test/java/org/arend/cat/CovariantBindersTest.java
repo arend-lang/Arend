@@ -1,6 +1,5 @@
 package org.arend.cat;
 
-import org.arend.Matchers;
 import org.arend.core.definition.FunctionDefinition;
 import org.arend.core.expr.LamExpression;
 import org.arend.core.expr.SigmaExpression;
@@ -187,19 +186,18 @@ public class CovariantBindersTest extends TypeCheckingTestCase {
 
   @Test
   public void sigmaTest() {
-    FunctionDefinition def = (FunctionDefinition) typeCheckDef("\\func test => \\Sigma (x :+ Nat) Nat");
+    FunctionDefinition def = (FunctionDefinition) typeCheckDef("\\func test => \\Sigma+ (x : Nat) Nat");
     assertEquals(BindingVariance.COVARIANT, ((SigmaExpression) Objects.requireNonNull(def.getBody())).getParameters().getVariance());
   }
 
   @Test
-  public void sigmaLastFieldWarning() {
+  public void sigmaLastFieldError() {
     typeCheckDef("\\func test => \\Sigma (x : Nat) (_ :+ Nat)", 1);
-    assertThatErrorsAre(Matchers.warning());
   }
 
   @Test
-  public void sigmaLastGroupMultiNameNoWarning() {
-    FunctionDefinition def = (FunctionDefinition) typeCheckDef("\\func test => \\Sigma (x y :+ Nat)");
+  public void sigmaGroupMultiNameTest() {
+    FunctionDefinition def = (FunctionDefinition) typeCheckDef("\\func test => \\Sigma+ (x y : Nat)");
     SigmaExpression sigma = (SigmaExpression) Objects.requireNonNull(def.getBody());
     assertEquals(BindingVariance.COVARIANT, sigma.getParameters().getVariance());
     assertEquals(BindingVariance.COVARIANT, sigma.getParameters().getNext().getVariance());
@@ -209,7 +207,7 @@ public class CovariantBindersTest extends TypeCheckingTestCase {
   public void sigmaTypeCovariantTest() {
     typeCheckModule("""
       \\func g (y :+ Nat) : \\Type => Nat
-      \\func test (a :+ Nat) => \\Sigma (f :+ g a) Nat
+      \\func test (a :+ Nat) => \\Sigma+ (f : g a) Nat
       """);
   }
 
@@ -223,7 +221,7 @@ public class CovariantBindersTest extends TypeCheckingTestCase {
 
   @Test
   public void tupleFieldCovariantTest() {
-    typeCheckDef("\\func test (a :+ Nat) : \\Sigma (x :+ Nat) Nat Nat => (a, 0, 0)");
+    typeCheckDef("\\func test (a :+ Nat) : \\Sigma+ (x : Nat) Nat Nat => (a, 0, 0)");
   }
 
   @Test

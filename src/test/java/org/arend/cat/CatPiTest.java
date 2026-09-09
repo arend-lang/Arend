@@ -149,11 +149,6 @@ public class CatPiTest extends TypeCheckingTestCase {
   }
 
   @Test
-  public void piParamClassTest() {
-    typeCheckDef("\\record R {C D :+ \\Cat} (f :+ C ->+ D)", 1);
-  }
-
-  @Test
   public void piParamConstructorTest() {
     typeCheckModule("""
       \\data Foo (C D :+ \\Cat)

@@ -1220,16 +1220,22 @@ public final class Concrete {
   public static class SigmaExpression extends Expression implements ConcreteSigmaExpression {
     public static final byte PREC = -3;
     private final List<TypeParameter> myParameters;
+    private final BindingVariance myVariance;
 
-    public SigmaExpression(Object data, List<TypeParameter> parameters) {
+    public SigmaExpression(Object data, List<TypeParameter> parameters, BindingVariance variance) {
       super(data);
       myParameters = parameters;
+      myVariance = variance;
     }
 
     @Override
     @NotNull
     public List<TypeParameter> getParameters() {
       return myParameters;
+    }
+
+    public BindingVariance getVariance() {
+      return myVariance;
     }
 
     @Override
@@ -2122,7 +2128,7 @@ public final class Concrete {
           if (!(referable instanceof FieldReferableImpl)) {
             throw new IllegalArgumentException();
           }
-          elements.add(new ClassField((FieldReferableImpl) referable, parameter.isExplicit(), ClassFieldKind.ANY, new ArrayList<>(), type, null, false, parameter.getVariance()));
+          elements.add(new ClassField((FieldReferableImpl) referable, parameter.isExplicit(), ClassFieldKind.ANY, new ArrayList<>(), type, null, false));
         }
       }
       myElements.addAll(0, elements);
@@ -2206,9 +2212,8 @@ public final class Concrete {
     private Expression myResultTypeLevel;
     private boolean myGroupoidalLevelProof;
     private final boolean myCoerce;
-    private final BindingVariance myVariance;
 
-    public ClassField(FieldReferableImpl referable, boolean isExplicit, ClassFieldKind kind, List<TypeParameter> parameters, Expression resultType, Expression resultTypeLevel, boolean isCoerce, BindingVariance variance) {
+    public ClassField(FieldReferableImpl referable, boolean isExplicit, ClassFieldKind kind, List<TypeParameter> parameters, Expression resultType, Expression resultTypeLevel, boolean isCoerce) {
       myReferable = referable;
       myExplicit = isExplicit;
       myKind = kind;
@@ -2216,7 +2221,6 @@ public final class Concrete {
       myResultType = resultType;
       myResultTypeLevel = resultTypeLevel;
       myCoerce = isCoerce;
-      myVariance = variance;
     }
 
     @NotNull
@@ -2282,10 +2286,6 @@ public final class Concrete {
 
     public boolean isCoerce() {
       return myCoerce;
-    }
-
-    public BindingVariance getVariance() {
-      return myVariance;
     }
 
     @Override

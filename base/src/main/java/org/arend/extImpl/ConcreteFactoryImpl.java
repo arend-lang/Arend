@@ -250,12 +250,23 @@ public class ConcreteFactoryImpl implements ConcreteFactory {
 
   @Override
   public @NotNull ConcreteExpression sigma(@NotNull List<? extends ConcreteParameter> parameters) {
+    return sigma(BindingVariance.INVARIANT, parameters);
+  }
+
+  @NotNull
+  @Override
+  public ConcreteExpression sigma(@NotNull BindingVariance variance, @NotNull ConcreteParameter... parameters) {
+    return sigma(variance, Arrays.asList(parameters));
+  }
+
+  @Override
+  public @NotNull ConcreteExpression sigma(@NotNull BindingVariance variance, @NotNull List<? extends ConcreteParameter> parameters) {
     if (parameters.size() == 1) {
       ConcreteExpression type = parameters.getFirst().getType();
       if (type == null) throw new IllegalArgumentException();
       return type;
     }
-    return new Concrete.SigmaExpression(myData, typeParameters(new ArrayList<>(parameters)));
+    return new Concrete.SigmaExpression(myData, typeParameters(new ArrayList<>(parameters)), variance);
   }
 
   private ConcreteExpression caseExprC(boolean isSCase, Collection<? extends ConcreteCaseArgument> arguments, @Nullable ConcreteExpression resultType, @Nullable ConcreteExpression resultTypeLevel, @NotNull List<Concrete.FunctionClause> clauses) {
@@ -615,7 +626,7 @@ public class ConcreteFactoryImpl implements ConcreteFactory {
       throw new IllegalArgumentException("The reference must be a global reference with a parent");
     }
 
-    return new Concrete.ClassField(cRef, cRef.isExplicitField(), kind, typeParameters(parameters), (Concrete.Expression) resultType, (Concrete.Expression) resultTypeLevel, isCoerce, BindingVariance.INVARIANT);
+    return new Concrete.ClassField(cRef, cRef.isExplicitField(), kind, typeParameters(parameters), (Concrete.Expression) resultType, (Concrete.Expression) resultTypeLevel, isCoerce);
   }
 
   @Override

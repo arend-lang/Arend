@@ -242,8 +242,7 @@ public class CoreExpressionChecker implements ExpressionVisitor<Expression, Expr
     addBinding(expr.getThisBinding(), expr);
     for (Map.Entry<ClassField, Expression> entry : expr.getImplementedHere().entrySet()) {
       Expression type = expr.getFieldType(entry.getKey());
-      boolean invariant = entry.getKey().getVariance() == BindingVariance.INVARIANT;
-      try (var ignored = invariant ? clearCategoricalContext() : null) {
+      try (var ignored = clearCategoricalContext()) {
         if (entry.getKey().isProperty() || Objects.equals(entry.getKey().getResultTypeLevel(), ConstLevel.PROP.value())) {
           if (entry.getValue() instanceof LamExpression) {
             checkLam((LamExpression) entry.getValue(), type, ConstLevel.PROP.value());
@@ -468,6 +467,11 @@ public class CoreExpressionChecker implements ExpressionVisitor<Expression, Expr
 
   @Override
   public Expression visitSigma(SigmaExpression expr, Expression expectedType) {
+    for (DependentLink link = expr.getParameters(); link.hasNext(); link = link.getNext()) {
+      if (link.getVariance() != expr.getVariance()) {
+        throw new CoreException(CoreErrorWrapper.make(new TypecheckingError("All parameters of a \\Sigma type must have the same variance", mySourceNode), expr));
+      }
+    }
     List<SortExpression> sorts = checkDependentLinkWithResult(expr.getParameters(), expectedType, expr, true, false);
     freeDependentLink(expr.getParameters());
     return check(expectedType, new UniverseExpression(SortExpression.makeMax(sorts)), expr);

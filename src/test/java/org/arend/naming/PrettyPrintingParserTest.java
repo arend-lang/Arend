@@ -1,6 +1,9 @@
 package org.arend.naming;
 
+import org.arend.core.context.param.DependentLink;
+import org.arend.core.context.param.EmptyDependentLink;
 import org.arend.core.context.param.SingleDependentLink;
+import org.arend.core.context.param.TypedDependentLink;
 import org.arend.core.context.param.TypedSingleDependentLink;
 import org.arend.core.definition.FunctionDefinition;
 import org.arend.core.elimtree.ElimBody;
@@ -170,6 +173,33 @@ public class PrettyPrintingParserTest extends TypeCheckingTestCase {
     StringBuilder builder = new StringBuilder();
     result.accept(new PrettyPrintVisitor(builder, 0), new Precedence(Concrete.Expression.PREC));
     assertTrue(builder.toString().contains(":⁺"));
+  }
+
+  @Test
+  public void prettyPrintingParserSigmaPlus() {
+    DependentLink y = new TypedDependentLink(true, "y", Universe(1), false, BindingVariance.COVARIANT, EmptyDependentLink.getInstance());
+    DependentLink x = new TypedDependentLink(true, "x", Universe(1), false, BindingVariance.COVARIANT, y);
+    Expression expr = new SigmaExpression(x);
+    Concrete.Expression result = ToAbstractVisitor.convert(expr, new PrettyPrinterConfig() {
+      @NotNull
+      @Override
+      public EnumSet<PrettyPrinterFlag> getExpressionFlags() {
+        return EnumSet.of(PrettyPrinterFlag.SHOW_TYPES_IN_LAM, PrettyPrinterFlag.SHOW_IMPLICIT_ARGS);
+      }
+
+      @Override
+      public NormalizationMode getNormalizationMode() {
+        return null;
+      }
+    });
+    assertTrue(result instanceof Concrete.SigmaExpression);
+    assertEquals(BindingVariance.COVARIANT, ((Concrete.SigmaExpression) result).getVariance());
+    StringBuilder builder = new StringBuilder();
+    result.accept(new PrettyPrintVisitor(builder, 0), new Precedence(Concrete.Expression.PREC));
+    String printed = builder.toString();
+    assertTrue(printed, printed.contains("\\Sigma⁺"));
+    assertFalse(printed, printed.contains(":⁺"));
+    assertEquals(BindingVariance.COVARIANT, ((Concrete.SigmaExpression) parseExpr(printed)).getVariance());
   }
 
   @Test

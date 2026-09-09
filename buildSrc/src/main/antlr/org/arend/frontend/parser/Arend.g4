@@ -21,7 +21,7 @@ scId : DOT? ID;
 
 nsId : scId (AS precedence ID)?;
 
-classFieldDef : accessMod? (CLASSIFYING | COERCE)? defId tele* (COLON | COLON_PLUS) returnExpr;
+classFieldDef : accessMod? (CLASSIFYING | COERCE)? defId tele* COLON returnExpr;
 
 classFieldOrImpl : classFieldDef    # classField
                  | localCoClause    # classImpl
@@ -140,7 +140,7 @@ letKw : HAVE | LET | HAVES | LETS;
 expr  : appPrefix? appExpr (implementStatements argument*)? withBody?     # app
       | <assoc=right> expr (ARROW | ARROW_PLUS) expr                       # arr
       | '\\Pi' tele+ (ARROW | ARROW_PLUS) expr                             # pi
-      | '\\Sigma' tele*                                                   # sigma
+      | ('\\Sigma' | SIGMA_PLUS) tele*                                    # sigma
       | lamExpr                                                           # lam
       | letExpr                                                           # let
       | caseExpr                                                          # case
@@ -149,7 +149,7 @@ expr  : appPrefix? appExpr (implementStatements argument*)? withBody?     # app
 expr2 : appPrefix? appExpr (implementStatements argument*)?               # app2
       | <assoc=right> expr2 (ARROW | ARROW_PLUS) expr2                     # arr2
       | '\\Pi' tele+ (ARROW | ARROW_PLUS) expr2                            # pi2
-      | '\\Sigma' tele*                                                   # sigma2
+      | ('\\Sigma' | SIGMA_PLUS) tele*                                    # sigma2
       | '\\lam' lamParam+ (('=>' | FAT_ARROW_PLUS) expr2?)?               # lam2
       | letKw '|'? letClause ('|' letClause)* ('\\in' expr2?)?            # let2
       | caseExpr                                                          # case2
@@ -287,8 +287,8 @@ idOrUnknown : ID            # iuId
             | UNDERSCORE    # iuUnknown
             ;
 
-fieldTele : '(' accessMod? (CLASSIFYING | COERCE)? ID+ (COLON | COLON_PLUS) expr ')'        # explicitFieldTele
-          | '{' accessMod? (CLASSIFYING | COERCE)? ID+ (COLON | COLON_PLUS) expr '}'        # implicitFieldTele
+fieldTele : '(' accessMod? (CLASSIFYING | COERCE)? ID+ COLON expr ')'        # explicitFieldTele
+          | '{' accessMod? (CLASSIFYING | COERCE)? ID+ COLON expr '}'        # implicitFieldTele
           ;
 
 LET : '\\let';
@@ -331,6 +331,7 @@ ARROW_PLUS : '->+' | '->⁺';
 FAT_ARROW_PLUS : '=>+' | '=>⁺';
 LEVEL : '\\level';
 LEVEL_PLUS : '\\level+' | '\\level⁺';
+SIGMA_PLUS : '\\Sigma+' | '\\Sigma⁺';
 APPLY_HOLE : '__';
 UNDERSCORE : '_';
 DOT : '.';

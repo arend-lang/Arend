@@ -10,7 +10,7 @@
   => dpath \lam i => f (p i)
 
 \func sigma-ext {A :⁺ \Cat} {B :⁺ A ->⁺ \Cat} {a a' :⁺ A} (p :⁺ a = a') {b :⁺ B a} {b' :⁺ B a'} (q :⁺ transport+ B p b = b')
-  : (a,b) = {\Sigma (x :⁺ A) (B x)} (a',b') \elim p
+  : (a,b) = {\Sigma⁺ (x : A) (B x)} (a',b') \elim p
   | idp => path \lam i => (a, q i)
   \where {
     \protected \func grpd {A : \Cat} {B :⁺ A ->⁺ \Cat} {a a' : A} (p : a = a') {b :⁺ B a} {b' :⁺ B a'} (q :⁺ transport+ B p b = b')
@@ -18,16 +18,16 @@
       | idp => path \lam i => (a, q i)
   }
 
-\func sigma-unext2 {A :⁺ \Cat} {B :⁺ A ->⁺ \Cat} {s t :⁺ \Sigma (x :⁺ A) (B x)} (p :⁺ s = t)
+\func sigma-unext2 {A :⁺ \Cat} {B :⁺ A ->⁺ \Cat} {s t :⁺ \Sigma⁺ (x : A) (B x)} (p :⁺ s = t)
   : transport+ B (pmap+ __.1 p) s.2 = t.2 \elim p
   | idp => idp
 
 \sfunc sigma-unext2_idp {A :⁺ \Cat} {B :⁺ A ->⁺ \Cat} {a :⁺ A} {b b' :⁺ B a}
-                        (p :⁺ (a,b) = {\Sigma (x :⁺ A) (B x)} (a,b')) (q :⁺ pmap+ __.1 p = idp) : b = b'
+                        (p :⁺ (a,b) = {\Sigma⁺ (x : A) (B x)} (a,b')) (q :⁺ pmap+ __.1 p = idp) : b = b'
   => inv (pmap+ (transport+ B __ b) q) *> sigma-unext2 p
 
-\sfunc sigma-depPath {A :⁺ \Cat} {B :⁺ A ->⁺ I -> \Cat} {s :⁺ \Sigma (a :⁺ A) (B a left)} {t :⁺ \Sigma (a :⁺ A) (B a right)}
-  (p :⁺ s.1 = t.1) (q :⁺ Path (\lam i => B (p i) i) s.2 t.2) : Path (\lam i => \Sigma (a :⁺ A) (B a i)) s t
+\sfunc sigma-depPath {A :⁺ \Cat} {B :⁺ A ->⁺ I -> \Cat} {s :⁺ \Sigma⁺ (a : A) (B a left)} {t :⁺ \Sigma⁺ (a : A) (B a right)}
+  (p :⁺ s.1 = t.1) (q :⁺ Path (\lam i => B (p i) i) s.2 t.2) : Path (\lam i => \Sigma⁺ (a : A) (B a i)) s t
   => path \lam i => (p i, q i)
 
 \func =_~> {A :⁺ \Cat} {a b :⁺ A} (p :⁺ a = b) : a ~> b \elim p
@@ -91,10 +91,10 @@
 \func dmap_=_~> {C D :⁺ \Cat} (f :⁺ C ->⁺ D) {a b :⁺ C} {p :⁺ a = b} : dmap f (=_~> p) = =_~> (pmap+ f p) \elim p
   | idp => idp
 
-\sfunc segal2Prop {C :⁺ \Cat} {a b c :⁺ C} {ab :⁺ a ~> b} {bc :⁺ b ~> c} (s t :⁺ \Sigma (ac :⁺ a ~> c) (DPath (\lam i => ab i ~> ac i) idd bc)) : s = t
+\sfunc segal2Prop {C :⁺ \Cat} {a b c :⁺ C} {ab :⁺ a ~> b} {bc :⁺ b ~> c} (s t :⁺ \Sigma⁺ (ac : a ~> c) (DPath (\lam i => ab i ~> ac i) idd bc)) : s = t
   => aux s *> inv (aux t)
   \where {
-    \private \sfunc aux (s :⁺ \Sigma (ac :⁺ a ~> c) (DPath (\lam i => ab i ~> ac i) idd bc))
+    \private \sfunc aux (s :⁺ \Sigma⁺ (ac : a ~> c) (DPath (\lam i => ab i ~> ac i) idd bc))
       : s = (comp ab bc, dpath \lam i => dpath (fill2 ab bc i))
       => \let | f3 => fill3 () {ab} {bc} {comp ab bc}
                         idd
@@ -175,7 +175,7 @@
       j i dright
 
 \sfunc equiv-fibers {C D :⁺ \Cat} (f :⁺ C ->⁺ D) (g :⁺ D ->⁺ C) (p :⁺ \Pi (x :⁺ C) -> g (f x) = x) (q :⁺ \Pi (y :⁺ D) -> f (g y) = y)
-                    {y :⁺ D} {s t :⁺ \Sigma (x :⁺ C) (f x = y)} : s = t
+                    {y :⁺ D} {s t :⁺ \Sigma⁺ (x : C) (f x = y)} : s = t
   => sigma-ext (inv (p s.1) *> pmap+ g (s.2 *> inv t.2) *> p t.1) $ transport+_path_pmap f (\lam _ => y) $ inv $
       pmap+ (*> _) (pmap+_*> f *> pmap+ (_ *> __) (pmap+_*> f))
       *> *>-assoc *> pmap+ (_ *> __) *>-assoc *> pmap+ (*> _) (pmap+_inv f)

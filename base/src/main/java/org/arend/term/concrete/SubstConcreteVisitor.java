@@ -187,7 +187,7 @@ public class SubstConcreteVisitor extends BaseConcreteExpressionVisitor<Void> im
 
   @Override
   public Concrete.Expression visitSigma(Concrete.SigmaExpression expr, Void ignored) {
-    return new Concrete.SigmaExpression(myData != null ? myData : expr.getData(), visitParameters(expr.getParameters()));
+    return new Concrete.SigmaExpression(myData != null ? myData : expr.getData(), visitParameters(expr.getParameters()), expr.getVariance());
   }
 
   @Override
@@ -291,7 +291,7 @@ public class SubstConcreteVisitor extends BaseConcreteExpressionVisitor<Void> im
     } else if (Concrete.ClassField.class.equals(element.getClass())) {
       var field = (Concrete.ClassField) element;
       // Ideally we should replace this `field.getData()` too
-      return (T) new Concrete.ClassField(field.getData(), field.isExplicit(), field.getKind(), visitParameters(field.getParameters()), nullableMap(field.getResultType()), nullableMap(field.getResultTypeLevel()), field.isCoerce(), field.getVariance());
+      return (T) new Concrete.ClassField(field.getData(), field.isExplicit(), field.getKind(), visitParameters(field.getParameters()), nullableMap(field.getResultType()), nullableMap(field.getResultTypeLevel()), field.isCoerce());
     } else if (Concrete.OverriddenField.class.equals(element.getClass())) {
       var field = (Concrete.OverriddenField) element;
       return (T) new Concrete.OverriddenField(myData != null ? myData : field.getData(), field.getOverriddenField(), visitParameters(field.getParameters()), field.getResultType().accept(this, null), nullableMap(field.getResultTypeLevel()));

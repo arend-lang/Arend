@@ -153,7 +153,7 @@ public abstract class BiConcreteVisitor extends BaseConcreteExpressionVisitor<Co
   public Concrete.Expression visitSigma(Concrete.SigmaExpression expr, Concrete.SourceNode params) {
     var wideExpr = (Concrete.SigmaExpression) params;
     var newParams = visitParameters(expr.getParameters(), wideExpr.getParameters());
-    return (Concrete.Expression) myFactory.sigma(newParams);
+    return (Concrete.Expression) myFactory.sigma(expr.getVariance(), newParams);
   }
 
   @Override

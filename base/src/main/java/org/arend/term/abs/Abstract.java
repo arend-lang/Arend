@@ -307,7 +307,6 @@ public final class Abstract {
 
   public interface ClassField extends ClassElement, ReferableDefinition, ParametersHolder {
     ClassFieldKind getClassFieldKind();
-    @NotNull BindingVariance getVariance();
     /* @NotNull */ @Nullable Expression getResultType();
     @Nullable Expression getResultTypeLevel();
     default boolean isResultTypeLevelPlus() { return false; }

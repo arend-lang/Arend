@@ -1,0 +1,5 @@
+\func ascii => \Sigma+ (x : Nat) Nat
+
+\func unicode => \Sigma⁺ (x : Nat) Nat
+
+\func plain => \Sigma (x : Nat) Nat

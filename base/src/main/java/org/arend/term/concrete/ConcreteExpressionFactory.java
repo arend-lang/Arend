@@ -186,10 +186,6 @@ public class ConcreteExpressionFactory {
     return new Concrete.TupleExpression(data, fields);
   }
 
-  public static Concrete.SigmaExpression cSigma(List<Concrete.TypeParameter> args) {
-    return new Concrete.SigmaExpression(null, args);
-  }
-
   public static Concrete.ProjExpression cProj(Concrete.Expression expr, int field) {
     return new Concrete.ProjExpression(null, expr, field);
   }

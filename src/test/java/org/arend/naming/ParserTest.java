@@ -105,7 +105,29 @@ public class ParserTest extends NameResolverTestCase {
   public void parserDottedSigmaParses() {
     Concrete.Expression expr = parseExpr("\\Sigma (x :+ \\Type0)");
     Concrete.SigmaExpression sigma = (Concrete.SigmaExpression) expr;
+    assertEquals(BindingVariance.INVARIANT, sigma.getVariance());
     assertEquals(BindingVariance.COVARIANT, sigma.getParameters().getFirst().getVariance());
+  }
+
+  @Test
+  public void parserSigmaPlusParses() {
+    Concrete.Expression expr = parseExpr("\\Sigma+ (x : \\Type0) \\Type0");
+    Concrete.SigmaExpression sigma = (Concrete.SigmaExpression) expr;
+    assertEquals(BindingVariance.COVARIANT, sigma.getVariance());
+    assertEquals(2, sigma.getParameters().size());
+    assertEquals(BindingVariance.INVARIANT, sigma.getParameters().getFirst().getVariance());
+  }
+
+  @Test
+  public void parserSigmaPlusUnicodeParses() {
+    Concrete.Expression expr = parseExpr("\\Sigma⁺ Type0");
+    assertEquals(BindingVariance.COVARIANT, ((Concrete.SigmaExpression) expr).getVariance());
+  }
+
+  @Test
+  public void parserSigmaParses() {
+    Concrete.Expression expr = parseExpr("\\Sigma (x : \\Type0) \\Type0");
+    assertEquals(BindingVariance.INVARIANT, ((Concrete.SigmaExpression) expr).getVariance());
   }
 
   @Test
