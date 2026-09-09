@@ -1068,11 +1068,13 @@ public class ConsoleMain {
     for (Path libDir : libDirs) {
       Path configFile = libDir.resolve(libName).resolve(FileUtils.LIBRARY_CONFIG_FILE);
       if (Files.isRegularFile(configFile)) {
+        warnIfShadowsCwd(libName, configFile);
         loadFileLibrary(configFile, result);
         return true;
       } else {
         Path zipFile = libDir.resolve(libName + FileUtils.ZIP_EXTENSION);
         if (Files.isRegularFile(zipFile)) {
+          warnIfShadowsCwd(libName, zipFile);
           loadZipLibrary(zipFile, result);
           return true;
         }
@@ -1080,6 +1082,32 @@ public class ConsoleMain {
     }
 
     return false;
+  }
+
+  /**
+   * Warns when the library just resolved out of a {@code -L} directory has a namesake in the
+   * current directory. By convention a library's name is its directory's name, so a cwd
+   * {@code arend.yaml} under a directory called {@code libName} is almost certainly the copy the
+   * user meant -- but the libdir match wins, because {@code findLibrary} is also reached for
+   * transitive dependencies, where the current directory means nothing.
+   *
+   * <p>Silently picking the other one is the failure this exists to make visible: it typechecks,
+   * and every diagnostic afterwards points at source the user is not looking at.
+   */
+  private static void warnIfShadowsCwd(String libName, Path chosen) {
+    Path cwdConfig = Paths.get(FileUtils.LIBRARY_CONFIG_FILE).toAbsolutePath();
+    if (!Files.isRegularFile(cwdConfig)) return;
+    Path parent = cwdConfig.getParent();
+    Path dirName = parent == null ? null : parent.getFileName();
+    if (dirName == null || !libName.equals(dirName.toString())) return;
+    try {
+      if (cwdConfig.toRealPath().equals(chosen.toRealPath())) return;
+    } catch (IOException ignored) {
+      // Cannot prove they are the same file; warning is the safe side.
+    }
+    System.err.println("[WARN] library '" + libName + "' has multiple copies: "
+        + cwdConfig + " (cwd) and " + chosen.toAbsolutePath()
+        + " — using the libdir copy. Pass `-L` explicitly or remove the unused copy to make the choice explicit.");
   }
 
   private void loadFileLibrary(Path configFile, List<SourceLibrary> result) {
