@@ -31,6 +31,10 @@ public final class CliDispatcher {
         System.err.println("[ERROR] -i (REPL) is not supported in daemon mode");
         return 1;
       }
+      if (ConsoleMain.hasDaemonControlFlag(cmdLine)) {
+        System.err.println("[ERROR] daemon control flags are not valid inside a daemon-served command");
+        return 1;
+      }
       for (LockedFlags.Flag flag : LockedFlags.ALL) {
         if (cmdLine.hasOption(flag.name())) {
           System.err.println("[WARN] " + flag.display()
