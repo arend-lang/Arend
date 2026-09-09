@@ -417,20 +417,6 @@ public class ConsoleMain {
       return true;
     }
 
-    if (requestedLibraries.isEmpty()) {
-      Path config = Paths.get(FileUtils.LIBRARY_CONFIG_FILE);
-      if (Files.isRegularFile(config)) {
-        loadFileLibrary(config, requestedLibraries);
-      } else {
-        System.out.println("Nothing to load");
-        return true;
-      }
-    }
-
-    if (myExitWithError) {
-      return false;
-    }
-
     // In `--json` query mode stdout must carry ONLY the JSON. Redirect both System.out and
     // System.err to a log file so every diagnostic (library-loading chatter, query echo,
     // [WARN]/[ERROR]) lands there; the JSON goes to the captured real stdout, and a pointer
@@ -462,10 +448,30 @@ public class ConsoleMain {
     // exits below, which the old code leaked past. The typecheck blocks after it
     // are reached only when none of those matched, hence never in JSON mode.
     try {
-      Set<String> loading = new HashSet<>();
-      for (SourceLibrary library : requestedLibraries) {
-        if (!loadLibraryWithDependencies(library, libraryManager, libDirs, server, loading)) {
+      // Inside the redirect, so the loader's own chatter lands in the JSON log with the rest.
+      boolean loadable = true;
+      if (requestedLibraries.isEmpty()) {
+        Path config = Paths.get(FileUtils.LIBRARY_CONFIG_FILE);
+        if (Files.isRegularFile(config)) {
+          loadFileLibrary(config, requestedLibraries);
+        } else {
+          // Having nothing to load is not a failure, and not a reason to stop either: a module
+          // named on the command line still deserves its "not found", and a query tool still
+          // has Prelude to answer from.
+          System.out.println("Nothing to load");
+          loadable = false;
+        }
+      }
+
+      if (loadable) {
+        if (myExitWithError) {
           return false;
+        }
+        Set<String> loading = new HashSet<>();
+        for (SourceLibrary library : requestedLibraries) {
+          if (!loadLibraryWithDependencies(library, libraryManager, libDirs, server, loading)) {
+            return false;
+          }
         }
       }
 
