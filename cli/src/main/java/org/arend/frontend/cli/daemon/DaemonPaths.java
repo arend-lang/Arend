@@ -42,6 +42,12 @@ public final class DaemonPaths {
   public final Path lockFile;
   public final Path logFile;
   public final Path socketFile;
+  /**
+   * {@code <basename>.starting} — created by the parent before it spawns a child, removed once
+   * the child is ready or has failed. Two {@code arend -d} calls racing would otherwise both
+   * see no lock and both spawn, and only one of them can bind the socket.
+   */
+  public final Path startingMarker;
   /** Hex-encoded SHA-256 of {@link #libraryConfig}'s string form, first 16 chars. */
   public final String libraryHash;
 
@@ -66,6 +72,7 @@ public final class DaemonPaths {
     this.lockFile = arendDir.resolve(basename + ".lock");
     this.logFile = arendDir.resolve(basename + ".log");
     this.socketFile = arendDir.resolve(basename + ".sock");
+    this.startingMarker = arendDir.resolve(basename + ".starting");
   }
 
   /**
