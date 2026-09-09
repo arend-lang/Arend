@@ -2,6 +2,7 @@ package org.arend.typechecking.covariance;
 
 import org.arend.ext.variable.Variable;
 import org.arend.core.definition.DataDefinition;
+import org.arend.core.expr.ConCallExpression;
 import org.arend.core.expr.Expression;
 import org.arend.ext.error.ErrorReporter;
 import org.arend.term.concrete.Concrete;
@@ -31,5 +32,14 @@ public class RecursiveDataChecker extends CovarianceChecker {
 
     myErrorReporter.report(new NonPositiveDataError((DataDefinition) def, myConstructor, myParameter == null ? myConstructor : myParameter.getType() != null ? myParameter.getType() : myParameter));
     return true;
+  }
+
+  @Override
+  protected boolean checkConstructor(Expression expr) {
+    Expression underlying = expr.getUnderlyingExpression();
+    if (underlying instanceof ConCallExpression) {
+      return checkNonCovariant(underlying);
+    }
+    return super.checkConstructor(expr);
   }
 }

@@ -15,6 +15,7 @@ import org.arend.prelude.Prelude;
 import org.arend.term.concrete.Concrete;
 import org.arend.typechecking.TypeCheckingTestCase;
 import org.arend.typechecking.error.local.DataUniverseError;
+import org.arend.typechecking.error.local.NonPositiveDataError;
 import org.arend.typechecking.error.local.TruncatedDataError;
 import org.arend.typechecking.result.TypecheckingResult;
 import org.junit.Ignore;
@@ -424,6 +425,30 @@ public class DataTest extends TypeCheckingTestCase {
         | cT f => f
       \\func zero=one : 0 = 1 => get up (\\new RA 0)
       """, 1);
+  }
+
+  @Test
+  public void eliminatedParameterNotCovariantTest() {
+    typeCheckModule("""
+      \\data Empty
+      \\data Box | box \\Set0
+      \\data Neg (b : Box) \\elim b
+        | box A => neg (A -> Empty)
+      """);
+    DataDefinition neg = (DataDefinition) getDefinition("Neg");
+    assertFalse(neg.isCovariant(0));
+  }
+
+  @Test
+  public void nonPositiveNestedInConstructorTest() {
+    typeCheckModule("""
+      \\data Empty
+      \\data Box | box \\Set0
+      \\data Pos (b : Box) \\elim b
+        | box A => pos A
+      \\data Bad : \\Set0 | bad (Pos (box Bad))
+      """, 1);
+    assertThatErrorsAre(typecheckingError(NonPositiveDataError.class));
   }
 
   @Test

@@ -26,7 +26,7 @@ public abstract class CovarianceChecker {
     return false;
   }
 
-  private boolean checkConstructor(Expression expr) {
+  protected boolean checkConstructor(Expression expr) {
     expr = expr.getUnderlyingExpression();
 
     if (expr instanceof LamExpression) {

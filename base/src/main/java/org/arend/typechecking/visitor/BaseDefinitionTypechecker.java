@@ -69,6 +69,7 @@ public class BaseDefinitionTypechecker {
           if (pattern instanceof BindingPattern) {
             localLink = ((BindingPattern) pattern).getBinding();
           } else {
+            parameters.remove(link);
             continue;
           }
         }
