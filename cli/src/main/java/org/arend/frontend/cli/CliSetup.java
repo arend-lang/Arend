@@ -211,6 +211,41 @@ public final class CliSetup {
     }
   }
 
+  /**
+   * Re-reads the positional arguments as typecheck targets against libraries that are
+   * <em>already loaded</em>. The counterpart to {@link #classifyRequestedTargets}, for a context
+   * being reused: a positional naming a loaded library is nothing to do, and everything else is
+   * a module, or a module and a definition inside it.
+   *
+   * <p>An argument that is neither is reported and fails the run, exactly as
+   * {@code classifyRequestedTargets} reports "File X not found" on a fresh context. The two have
+   * to agree: the same argv reaching the same libraries must not get two verdicts depending on
+   * which path read it.
+   */
+  public static void populateRequestedTargets(CommandContext ctx, CommandLine cmdLine) {
+    Set<String> loadedLibNames = new HashSet<>();
+    for (SourceLibrary library : ctx.requestedLibraries) loadedLibNames.add(library.getLibraryName());
+
+    for (String positional : cmdLine.getArgList()) {
+      // A positional may name the library the way classifyRequestedTargets accepts one, which
+      // includes a path: `arend .` is the library in the current directory.
+      if (loadedLibNames.contains(positional) || Files.exists(Paths.get(positional))) continue;
+      if (positional.indexOf(':') >= 0) {
+        // parseFullName reports what is wrong with it and returns null.
+        Pair<ModulePath, LongName> parsed = ctx.parseFullName(positional);
+        if (parsed != null) ctx.requestedModules.add(parsed);
+        continue;
+      }
+      ModulePath modulePath = ModulePath.fromString(positional);
+      if (FileUtils.isCorrectModulePath(modulePath)) {
+        ctx.requestedModules.add(new Pair<>(modulePath, null));
+      } else {
+        ctx.systemErrErrorReporter.report(new GeneralError(GeneralError.Level.ERROR,
+            "File " + positional + " not found"));
+      }
+    }
+  }
+
   // ───────── helpers ─────────
 
   private static void loadLibrary(CommandContext ctx, SourceLibrary library) {

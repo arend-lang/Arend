@@ -21,6 +21,28 @@ public final class Dispatch {
   private Dispatch() {}
 
   /**
+   * Runs the command named by {@code args} against a context whose libraries are already
+   * loaded. Everything belonging to a previous command is discarded first.
+   *
+   * @return the exit code the caller should report.
+   */
+  public static int run(CommandContext ctx, String[] args) {
+    ConsoleMain.ParsedArgs parsed = ConsoleMain.parseArgs(args);
+    if (parsed.cmdLine() == null) {
+      // parseArgs printed the help, the version, or the parse error. Only the first two are a
+      // success: a command that did nothing because its arguments were rejected must not
+      // report 0.
+      return parsed.failed() ? 1 : 0;
+    }
+    ctx.beginCommand();
+    CliSetup.populateRequestedTargets(ctx, parsed.cmdLine());
+    // A target that named nothing has been reported. Stop rather than dispatching with an
+    // empty scope, which means "the whole library".
+    if (ctx.exitWithError) return 1;
+    return execute(ctx, parsed.cmdLine());
+  }
+
+  /**
    * Dispatch with a {@code --json} redirect scoped to the dispatch itself. Correct when the
    * caller has nothing to run beforehand that could write to stdout.
    */

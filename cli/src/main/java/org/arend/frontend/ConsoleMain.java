@@ -133,6 +133,40 @@ public class ConsoleMain {
 
 
 
+  /**
+   * Builds a context with its libraries loaded and the requested command run once, and hands it
+   * back so that further commands can be run against it with
+   * {@link Dispatch#run(CommandContext, String[])}.
+   *
+   * <p>The first command's diagnostics are not fatal: a library that does not typecheck is
+   * still worth holding, since the next command can re-run it or query it. Only a failure that
+   * leaves nothing to hold returns null -- rejected arguments, a library that would not load,
+   * or an unhandled exception.
+   *
+   * @return the loaded context, or null if there is nothing to hold.
+   */
+  public CommandContext warmContext(String[] args) {
+    ParsedArgs parsed = parseArgs(args);
+    if (parsed.cmdLine() == null) return null;
+    CommandLine cmdLine = parsed.cmdLine();
+
+    CommandContext ctx = new CommandContext();
+    if (!CliSetup.bootstrap(ctx, cmdLine) || ctx.exitWithError) return null;
+    CliSetup.classifyRequestedTargets(ctx, cmdLine);
+    if (!CliSetup.loadRequestedLibraries(ctx, cmdLine)) return null;
+
+    try {
+      Dispatch.execute(ctx, cmdLine);
+    } catch (Throwable t) {
+      System.err.println("[ERROR] unhandled exception while loading the context:");
+      t.printStackTrace();
+      return null;
+    }
+    // This command's verdict is not the next one's.
+    ctx.beginCommand();
+    return ctx;
+  }
+
   private boolean run(String[] args) {
     ParsedArgs parsed = parseArgs(args);
     if (parsed.cmdLine() == null) return !parsed.failed();

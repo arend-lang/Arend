@@ -129,6 +129,21 @@ public class CommandContext {
     }
   };
 
+  /**
+   * Discards everything that belongs to the command just finished, so this context can serve
+   * another one. Anything left behind is a diagnostic, an exit code or a target from the
+   * previous command leaking into the next.
+   *
+   * <p>The reset lives here rather than at the call site: a field added to this class and
+   * forgotten in a reset method somewhere else is a leak nobody would find.
+   */
+  public void beginCommand() {
+    exitWithError = false;
+    moduleResults.clear();
+    suppressErrorOutput = false;
+    requestedModules.clear();
+  }
+
   public void updateSourceResult(ModuleLocation module, GeneralError.Level result) {
     if (module == null) return;
     GeneralError.Level prevResult = moduleResults.get(module);
