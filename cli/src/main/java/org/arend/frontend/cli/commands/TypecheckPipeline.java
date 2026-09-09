@@ -30,7 +30,6 @@ import org.arend.term.group.ConcreteGroup;
 import org.arend.term.group.ConcreteNamespaceCommand;
 import org.arend.term.group.ConcreteStatement;
 import org.arend.term.prettyprint.ToAbstractVisitor;
-import org.arend.typechecking.computation.UnstoppableCancellationIndicator;
 import org.arend.typechecking.doubleChecker.CoreModuleChecker;
 import org.arend.typechecking.order.MapTarjanSCC;
 import org.arend.typechecking.error.local.GoalError;
@@ -91,7 +90,7 @@ public final class TypecheckPipeline {
     if (!ctx.recompile) {
       // Typecheck Prelude first — binary cache loading needs Prelude definitions to be available
       ctx.server.getCheckerFor(Collections.singletonList(Prelude.MODULE_LOCATION))
-          .typecheck(UnstoppableCancellationIndicator.INSTANCE, ProgressReporter.empty());
+          .typecheck(ctx.cancellation, ProgressReporter.empty());
       Set<String> libraryNames = requestedLibraryNames(ctx.requestedLibraries);
       boolean resolvedRequestedScope = false;
       if (ctx.requestedModules.isEmpty()) {
@@ -101,7 +100,7 @@ public final class TypecheckPipeline {
               .map(mp -> new ModuleLocation(library.getLibraryName(), ModuleLocation.LocationKind.SOURCE, mp))
               .toList();
           if (!allModules.isEmpty()) {
-            ctx.server.getCheckerFor(allModules).resolveAll(UnstoppableCancellationIndicator.INSTANCE, ProgressReporter.empty());
+            ctx.server.getCheckerFor(allModules).resolveAll(ctx.cancellation, ProgressReporter.empty());
             resolvedRequestedScope = true;
           }
         }
@@ -117,7 +116,7 @@ public final class TypecheckPipeline {
           if (module != null) targets.add(module);
         }
         if (!targets.isEmpty()) {
-          ctx.server.getCheckerFor(targets).resolveAll(UnstoppableCancellationIndicator.INSTANCE, ProgressReporter.empty());
+          ctx.server.getCheckerFor(targets).resolveAll(ctx.cancellation, ProgressReporter.empty());
           resolvedRequestedScope = true;
         }
       }
@@ -143,7 +142,7 @@ public final class TypecheckPipeline {
         for (ModulePath modulePath : modulesToTypecheck) {
           ctx.reportModuleProgress(checkedModules, totalModules, modulePath);
           ModuleLocation module = new ModuleLocation(library.getLibraryName(), ModuleLocation.LocationKind.SOURCE, modulePath);
-          ctx.server.getCheckerFor(Collections.singletonList(module)).typecheck(UnstoppableCancellationIndicator.INSTANCE, progressReporter);
+          ctx.server.getCheckerFor(Collections.singletonList(module)).typecheck(ctx.cancellation, progressReporter);
           reportStoredDiagnostics(ctx, module, reported);
           checkedModules++;
         }
@@ -209,7 +208,11 @@ public final class TypecheckPipeline {
           }
         }
 
-        if (ctx.serialize) {
+        // Not after a cancellation: the modules that were skipped did not fail, they were never
+        // reached, and writing .arc caches for that state leaves the gap behind for every later
+        // run to load as if it were checked.
+        // See above: a cancelled run has nothing worth caching.
+      if (ctx.serialize && !ctx.cancellation.isCanceled()) {
           persistLibrary(ctx, library, ctx.binaryLoader.getBinaryCacheLoaded());
         }
       }
@@ -226,7 +229,7 @@ public final class TypecheckPipeline {
           System.out.println("--- Typechecking " + fullName + " ---");
           long time = System.currentTimeMillis();
 
-          ctx.server.getCheckerFor(Collections.singletonList(module)).typecheck(Collections.singletonList(fullName), ctx.errorReporter, UnstoppableCancellationIndicator.INSTANCE, progressReporter);
+          ctx.server.getCheckerFor(Collections.singletonList(module)).typecheck(Collections.singletonList(fullName), ctx.errorReporter, ctx.cancellation, progressReporter);
           reportStoredDiagnostics(ctx, module, reported);
 
           System.out.println("--- Done (" + TimedProgressReporter.timeToString(System.currentTimeMillis() - time) + ") ---");
@@ -235,7 +238,7 @@ public final class TypecheckPipeline {
           System.out.println("--- Typechecking " + module + " ---");
           long time = System.currentTimeMillis();
 
-          ctx.server.getCheckerFor(Collections.singletonList(module)).typecheck(UnstoppableCancellationIndicator.INSTANCE, progressReporter);
+          ctx.server.getCheckerFor(Collections.singletonList(module)).typecheck(ctx.cancellation, progressReporter);
           reportStoredDiagnostics(ctx, module, reported);
 
           System.out.println("--- Done (" + TimedProgressReporter.timeToString(System.currentTimeMillis() - time) + ") ---");
@@ -258,7 +261,8 @@ public final class TypecheckPipeline {
           }
         }
       }
-      if (ctx.serialize) {
+      // See above: a cancelled run has nothing worth caching.
+      if (ctx.serialize && !ctx.cancellation.isCanceled()) {
         // Persist all libraries that had modules typechecked
         for (SourceLibrary library : ctx.requestedLibraries) {
           persistLibrary(ctx, library, ctx.binaryLoader.getBinaryCacheLoaded());
@@ -279,7 +283,7 @@ public final class TypecheckPipeline {
         int checkedTestModules = 0;
         for (ModulePath modulePath : testModulesToTypecheck) {
           ctx.reportModuleProgress(checkedTestModules, totalTestModules, modulePath);
-          ctx.server.getCheckerFor(Collections.singletonList(new ModuleLocation(library.getLibraryName(), ModuleLocation.LocationKind.TEST, modulePath))).typecheck(UnstoppableCancellationIndicator.INSTANCE, progressReporter);
+          ctx.server.getCheckerFor(Collections.singletonList(new ModuleLocation(library.getLibraryName(), ModuleLocation.LocationKind.TEST, modulePath))).typecheck(ctx.cancellation, progressReporter);
           checkedTestModules++;
         }
         ctx.finishProgressLine();
@@ -462,7 +466,7 @@ public final class TypecheckPipeline {
     // Nothing needs silencing here any more: the pipeline prints from the store, per module,
     // and only for the libraries that were asked for. Whatever is wrong in a dependency is
     // recorded but not printed, and will be reported by the pass that actually asks for it.
-    ctx.server.getCheckerFor(modules).typecheck(UnstoppableCancellationIndicator.INSTANCE, ProgressReporter.empty());
+    ctx.server.getCheckerFor(modules).typecheck(ctx.cancellation, ProgressReporter.empty());
   }
 
   /**

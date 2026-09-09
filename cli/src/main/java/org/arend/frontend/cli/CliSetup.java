@@ -223,13 +223,23 @@ public final class CliSetup {
    * which path read it.
    */
   public static void populateRequestedTargets(CommandContext ctx, CommandLine cmdLine) {
+    populateRequestedTargets(ctx, cmdLine, null);
+  }
+
+  /**
+   * @param clientCwd the directory the command was issued from, or null for this process's own.
+   *                  It decides whether a positional is an existing path or a module name, and a
+   *                  daemon asking that question about its own directory gets a different answer
+   *                  from the one the client would have got.
+   */
+  public static void populateRequestedTargets(CommandContext ctx, CommandLine cmdLine, String clientCwd) {
     Set<String> loadedLibNames = new HashSet<>();
     for (SourceLibrary library : ctx.requestedLibraries) loadedLibNames.add(library.getLibraryName());
 
     for (String positional : cmdLine.getArgList()) {
       // A positional may name the library the way classifyRequestedTargets accepts one, which
       // includes a path: `arend .` is the library in the current directory.
-      if (loadedLibNames.contains(positional) || Files.exists(Paths.get(positional))) continue;
+      if (loadedLibNames.contains(positional) || Files.exists(against(clientCwd, positional))) continue;
       if (positional.indexOf(':') >= 0) {
         // parseFullName reports what is wrong with it and returns null.
         Pair<ModulePath, LongName> parsed = ctx.parseFullName(positional);
@@ -247,6 +257,12 @@ public final class CliSetup {
   }
 
   // ───────── helpers ─────────
+
+  /** {@code path} as the client would have seen it: resolved against {@code clientCwd} if given. */
+  private static Path against(String clientCwd, String path) {
+    Path p = Paths.get(path);
+    return clientCwd == null || p.isAbsolute() ? p : Paths.get(clientCwd).resolve(p);
+  }
 
   private static void loadLibrary(CommandContext ctx, SourceLibrary library) {
     System.out.println("[INFO] Loading " + library.getLibraryName());
