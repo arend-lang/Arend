@@ -28,6 +28,13 @@ public class BinaryLoader {
   private boolean myRecompile = false;
   private final Set<ModuleLocation> myBinaryCacheLoaded = new HashSet<>();
 
+  /**
+   * The order phase 2 of the last {@link #loadBinaryCache} deserialized in. Exposed so that the
+   * dependencies-first invariant can be asserted rather than trusted; empty until a load has run,
+   * and after one that {@link #setRecompile} skipped.
+   */
+  private List<ModuleLocation> myLoadOrder = Collections.emptyList();
+
   public BinaryLoader(LibraryManager myLibraryManager) {
     this.myLibraryManager = myLibraryManager;
   }
@@ -38,6 +45,11 @@ public class BinaryLoader {
    */
   public Set<ModuleLocation> getBinaryCacheLoaded() {
     return Collections.unmodifiableSet(myBinaryCacheLoaded);
+  }
+
+  /** @see #myLoadOrder */
+  public List<ModuleLocation> getLoadOrder() {
+    return Collections.unmodifiableList(myLoadOrder);
   }
 
   public void setRecompile(boolean recompile) {
@@ -106,6 +118,7 @@ public class BinaryLoader {
     // Process dependencies before dependents, so that phase 2b's expression building sees
     // filled-in callees wherever the import graph allows it.
     pending = sortDependenciesFirst(pending, server);
+    myLoadOrder = pending.stream().map(PendingBinaryLoad::module).toList();
 
     // Phase 2a: fill in Definition shells on all groups (no cross-module scope needed)
     List<PendingBinaryLoad> phase2b = new ArrayList<>();

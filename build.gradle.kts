@@ -214,7 +214,7 @@ tasks.register<Test>("partialRoundTripTest") {
 //       -> 25 errors in Topology.CoverSpace.Locale / Topology.Locale.Points
 //   -Darend.partial_cache.touched=Algebra.Domain            (the default)
 //       -> 9 errors in Algebra.Field.Splitting
-// Requires arend-lib/bin to be pre-seeded (run `arend -L .. arend-lib -r -ai`
+// Requires arend-lib/bin to be pre-seeded (run `arend -L .. arend-lib -r`
 // once before invoking).
 tasks.register<Test>("partialCacheTest") {
     description = "Runs the partial-binary-cache contradiction-meta repro test"
