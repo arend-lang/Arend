@@ -126,7 +126,7 @@ public final class ClassHierarchyTool extends ConsoleQueryTool {
             }
           }
         }
-        ClassHierarchy hierarchy = ClassHierarchy.build(allSources, server);
+        ClassHierarchy hierarchy = ClassHierarchy.build(allSources, server, ctx.cancellation());
 
         // 4) Print (tree, flat, or JSON) through the uniform Printer dispatch.
         ClassHierarchyPrinter classHierarchyPrinter = options.json ? new JsonClassHierarchyPrinter()

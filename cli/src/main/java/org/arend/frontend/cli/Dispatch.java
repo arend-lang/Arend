@@ -27,6 +27,15 @@ public final class Dispatch {
    * @return the exit code the caller should report.
    */
   public static int run(CommandContext ctx, String[] args) {
+    return run(ctx, args, null);
+  }
+
+  /**
+   * @param clientCwd the directory the command was issued from, when that is not this process's
+   *                  own -- a daemon serves requests from anywhere, and a relative path in the
+   *                  argv means the client's directory, never the daemon's. Null for a local run.
+   */
+  public static int run(CommandContext ctx, String[] args, String clientCwd) {
     ConsoleMain.ParsedArgs parsed = ConsoleMain.parseArgs(args);
     if (parsed.cmdLine() == null) {
       // parseArgs printed the help, the version, or the parse error. Only the first two are a
@@ -35,7 +44,7 @@ public final class Dispatch {
       return parsed.failed() ? 1 : 0;
     }
     ctx.beginCommand();
-    CliSetup.populateRequestedTargets(ctx, parsed.cmdLine());
+    CliSetup.populateRequestedTargets(ctx, parsed.cmdLine(), clientCwd);
     // A target that named nothing has been reported. Stop rather than dispatching with an
     // empty scope, which means "the whole library".
     if (ctx.exitWithError) return 1;
@@ -63,7 +72,7 @@ public final class Dispatch {
     // what keeps CLI and REPL behaviour identical.
     ConsoleQueryTool.QueryContext queryCtx = new ConsoleQueryTool.QueryContext(
         ctx.requestedLibraries, ctx.libraryManager, ctx.server, ctx.systemErrErrorReporter,
-        json.stdout(), json.active(), Set.of());
+        json.stdout(), json.active(), Set.of(), ctx.cancellation);
     for (ConsoleQueryTool tool : ConsoleMain.QUERY_TOOLS) {
       if (!cmdLine.hasOption(tool.shortName())) continue;
       ConsoleQueryTool.ConsoleToolRunner parsed = tool.parseArgs(cmdLine.getOptionValues(tool.shortName()));

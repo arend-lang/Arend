@@ -24,6 +24,7 @@ import org.arend.naming.reference.FullModuleReferable;
 import org.arend.prelude.GeneratedVersion;
 import org.arend.prelude.Prelude;
 import org.arend.repl.Repl;
+import org.arend.typechecking.computation.UnstoppableCancellationIndicator;
 import org.arend.repl.action.ReplCommand;
 import org.arend.server.ArendLibrary;
 import org.arend.server.ArendServer;
@@ -416,7 +417,8 @@ public abstract class CommonCliRepl extends Repl {
    * synthetic {@code Repl} library excluded from the search scope.
    */
   public ConsoleQueryTool.QueryContext replQueryContext(LibraryManager manager, List<SourceLibrary> libs, PrintStream capture) {
-    return new ConsoleQueryTool.QueryContext(libs, manager, myServer, errorReporter, capture, false, Set.of(REPL_NAME));
+    return new ConsoleQueryTool.QueryContext(libs, manager, myServer, errorReporter, capture, false,
+        Set.of(REPL_NAME), UnstoppableCancellationIndicator.INSTANCE);
   }
 
   private final class ChangePromptCommand implements ReplCommand {
