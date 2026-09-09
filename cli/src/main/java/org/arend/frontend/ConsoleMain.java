@@ -75,11 +75,19 @@ public class ConsoleMain {
           SymbolSearchTool.INSTANCE, ProofSearchTool.INSTANCE, FindUsagesTool.INSTANCE,
           ClassHierarchyTool.INSTANCE, ScopeInfoTool.INSTANCE);
 
+  /**
+   * Reports a diagnostic that has no module to attach it to. Only an {@code ERROR} fails the run:
+   * this reporter also carries recoverable warnings — an unreadable binary cache, say — and
+   * failing on those exits 1 for a run in which nothing was actually wrong. Callers that must
+   * fail on a lower level set {@link #myExitWithError} themselves, as {@code dispatchError} does.
+   */
   private final ErrorReporter mySystemErrErrorReporter = error -> {
     finishProgressLine();
     System.err.println(error);
     System.err.flush();
-    myExitWithError = true;
+    if (error.level == GeneralError.Level.ERROR) {
+      myExitWithError = true;
+    }
   };
 
   private CommandLine parseArgs(String[] args) {
