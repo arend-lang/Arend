@@ -4,6 +4,11 @@ import org.apache.commons.cli.*;
 import org.arend.core.definition.Definition;
 import org.arend.ext.module.ModulePath;
 import org.arend.frontend.cli.CliSetup;
+import org.arend.frontend.cli.daemon.DaemonMain;
+import org.arend.frontend.cli.daemon.DaemonPaths;
+import org.arend.frontend.cli.daemon.DaemonStart;
+import org.arend.frontend.cli.daemon.DaemonStop;
+import org.arend.frontend.cli.daemon.client.DaemonRpc;
 import org.arend.frontend.cli.CommandContext;
 import org.arend.frontend.cli.Dispatch;
 import org.arend.frontend.cli.JsonOutputRedirect;
@@ -20,6 +25,7 @@ import org.arend.frontend.repl.jline.JLineCliRepl;
 import org.arend.prelude.Prelude;
 
 
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.*;
@@ -76,6 +82,12 @@ public class ConsoleMain {
             .hasArgs().argName(tool.argName()).desc(tool.cliDescription()).build());
       }
       cmdOptions.addOption(Option.builder().longOpt("json").desc("with -ss/-ps/-fu/-sc/-ch: print results as a single JSON object on stdout ({results:[...],count:N}; -sc uses {target,entries:[...],count:N}; -ch uses {target,superclasses:[...],subclasses:[...],instances:[...],newSites:[...],counts}); all diagnostics ([INFO]/[WARN]/[ERROR], query echo) go to a log file, keeping stdout pure JSON and the console clean (ignored in REPL mode). For -fu, each usage is a separate entry (never grouped by row).").build());
+      cmdOptions.addOption(Option.builder("d").longOpt("daemon").desc("start a daemon for the given library. Requires either a LIBRARY positional anchored to an arend.yaml (or a name resolved via -L; defaults to ./arend.yaml when omitted), or a `-s <dir>` synthetic library (in which case the daemon is keyed to <dir> and its state lives in <dir>/.arend/). The daemon does the normal load+typecheck+persist once, then idles serving future client requests.").build());
+      cmdOptions.addOption(Option.builder().longOpt("daemon-stop").desc("stop the daemon serving the given library (single positional library reference).").build());
+      cmdOptions.addOption(Option.builder().longOpt("daemon-ping").desc("ping the daemon serving the given library; reports IDLE or BUSY.").build());
+      cmdOptions.addOption(Option.builder().longOpt("daemon-status").desc("dump the daemon's state: queue depth, uptime, current task, protocol version and locked flags.").build());
+      cmdOptions.addOption(Option.builder().longOpt("daemon-refresh").desc("re-run the bootstrap pipeline on the daemon's warm context so source edits are picked up.").build());
+      cmdOptions.addOption(Option.builder().longOpt("no-daemon").desc("force in-process execution even if a daemon serves the requested library.").build());
       cmdOptions.addOption(Option.builder().longOpt("log-file").hasArg().argName("path").desc("with --json -ss/-ps/-fu/-sc/-ch: write diagnostics here instead of the default <tmpdir>/arend-symbol-search.log").build());
       cmdOptions.addOption("r", "recompile", false, "recompile all modules from source, ignoring binary caches (.arc files)");
       cmdOptions.addOption(null, "serialize", false, "after typechecking, persist typechecked modules as .arc binary caches; without this flag, no .arc files are written");
@@ -185,7 +197,24 @@ public class ConsoleMain {
 
     CommandContext ctx = new CommandContext();
     if (!CliSetup.bootstrap(ctx, cmdLine)) return false;
+    if (ctx.exitWithError) return false;
+
+    // Before the positional arguments are classified: the daemon flags take a library
+    // *reference*, which is a looser thing than a library -- "." names the daemon for the
+    // current directory, and is not a library name.
+    Integer daemonControl = runDaemonControl(ctx, cmdLine);
+    if (daemonControl != null) return daemonControl == 0;
+
+    // Likewise before: an ordinary command goes to whichever daemon serves this library,
+    // because the point of the daemon is that the user does not have to ask, and there is no
+    // reason to classify or load anything in this process first. --no-daemon opts out.
+    if (!cmdLine.hasOption("no-daemon")) {
+      OptionalInt routed = DaemonRpc.tryRouteCli(args, cmdLine.getArgList(), ctx.libDirs);
+      if (routed.isPresent()) return routed.getAsInt() == 0;
+    }
+
     CliSetup.classifyRequestedTargets(ctx, cmdLine);
+    if (ctx.exitWithError) return false;
 
     if (cmdLine.hasOption("i")) return runRepl(ctx, cmdLine);
 
@@ -202,6 +231,98 @@ public class ConsoleMain {
    * Starts the REPL. Positional arguments are libraries to add and modules to auto-load; the
    * batch-only options do not apply, so warn and ignore them rather than silently dropping them.
    */
+
+  /**
+   * Handles {@code -d} and the {@code --daemon-*} control flags. None of them loads a library in
+   * this process -- the child JVM does that.
+   *
+   * @return the exit code, or null when no control flag was given and the run should continue.
+   */
+  private Integer runDaemonControl(CommandContext ctx, CommandLine cmdLine) {
+      // Daemon control: doesn't load libraries in-process; the child JVM does.
+      // Library reference is always a single positional arg.
+      boolean daemonStart = cmdLine.hasOption("d");
+      boolean daemonStop = cmdLine.hasOption("daemon-stop");
+      boolean daemonPing = cmdLine.hasOption("daemon-ping");
+      boolean daemonStatus = cmdLine.hasOption("daemon-status");
+      boolean daemonRefresh = cmdLine.hasOption("daemon-refresh");
+      if (daemonStart || daemonStop || daemonPing || daemonStatus || daemonRefresh) {
+          int chosen = (daemonStart ? 1 : 0) + (daemonStop ? 1 : 0) + (daemonPing ? 1 : 0)
+                  + (daemonStatus ? 1 : 0) + (daemonRefresh ? 1 : 0);
+          if (chosen > 1) {
+              System.err.println("[ERROR] only one of -d / --daemon-stop / --daemon-ping / --daemon-status / --daemon-refresh may be given");
+              return 1;
+          }
+          List<String> positional = cmdLine.getArgList();
+          if (positional.size() > 1) {
+              System.err.println("[ERROR] daemon mode requires at most one positional library reference");
+              return 1;
+          }
+          // Synthetic-library daemon: -s <dir> with no positional. The daemon is keyed to
+          // <dir> and its inner pipeline is driven by -s/-e/-m rather than an arend.yaml.
+          // Positional wins if both are given (warn the user that -s is ignored).
+          String sourceDirStr = cmdLine.getOptionValue("s");
+          Path syntheticSrcDir = null;
+          if (sourceDirStr != null && positional.isEmpty()) {
+              syntheticSrcDir = Paths.get(sourceDirStr).toAbsolutePath();
+          } else if (sourceDirStr != null) {
+              System.err.println("[WARN] daemon mode: positional LIBRARY given, -s " + sourceDirStr
+                      + " is ignored for daemon-identity resolution (still forwarded to the inner pipeline)");
+          }
+          // Control ops (stop/ping/status/refresh) with no -s and no positional: try cwd's
+          // arend.yaml first; if absent, see if a synthetic daemon was previously started here
+          // (a `<cwd>/.arend/daemon.lock` is the marker) and target that instead.
+          if (syntheticSrcDir == null && positional.isEmpty() && !daemonStart) {
+              Path cwd = Paths.get(".").toAbsolutePath();
+              if (!Files.isRegularFile(cwd.resolve("arend.yaml"))) {
+                  org.arend.frontend.cli.daemon.DaemonPaths synth =
+                          org.arend.frontend.cli.daemon.DaemonPaths.resolveSynthetic(cwd);
+                  if (Files.exists(synth.lockFile)) syntheticSrcDir = cwd;
+              }
+          }
+          // No positional + no -s → fall back to ./arend.yaml, mirroring non-daemon default.
+          String libRef = positional.isEmpty() ? "." : positional.getFirst();
+          int rc;
+          if (daemonStart) {
+              // Forward bootstrap-affecting flags so the child JVM owns the same locked state.
+              List<String> extra = new ArrayList<>();
+              if (cmdLine.hasOption("s")) {
+                  extra.add("-s");
+                  extra.add(cmdLine.getOptionValue("s"));
+              }
+              if (cmdLine.hasOption("e")) {
+                  extra.add("-e");
+                  extra.add(cmdLine.getOptionValue("e"));
+              }
+              if (cmdLine.hasOption("m")) {
+                  extra.add("-m");
+                  extra.add(cmdLine.getOptionValue("m"));
+              }
+              if (cmdLine.hasOption("c")) {
+                  extra.add("-c");
+              }
+              if (cmdLine.hasOption("r")) {
+                  extra.add("-r");
+              }
+              if (cmdLine.hasOption("serialize")) {
+                  extra.add("--serialize");
+              }
+              rc = org.arend.frontend.cli.daemon.DaemonStart.run(libRef, ctx.libDirs, extra, syntheticSrcDir);
+          } else if (daemonStop) {
+              rc = org.arend.frontend.cli.daemon.DaemonStop.run(libRef, ctx.libDirs, syntheticSrcDir);
+          } else {
+              String op = daemonPing ? "ping" : daemonStatus ? "status" : "refresh";
+              rc = org.arend.frontend.cli.daemon.client.DaemonRpc.run(libRef, ctx.libDirs, op, syntheticSrcDir);
+              if (rc == org.arend.frontend.cli.daemon.client.DaemonRpc.NO_DAEMON) {
+                  System.err.println("[ERROR] " + op + ": no daemon running for the given library");
+                  rc = 1;
+              }
+          }
+          return rc;
+      }
+    return null;
+  }
+
   private boolean runRepl(CommandContext ctx, CommandLine cmdLine) {
     warnUnsupportedReplOptions(cmdLine);
     List<ModulePath> autoloadModules = ctx.requestedModules.stream().map(pair -> pair.proj1).distinct().toList();
@@ -275,6 +396,13 @@ public class ConsoleMain {
 
 
   public static void main(String[] args) {
+    // The daemon child JVM's entry point. Detected before parseArgs, because commons-cli would
+    // reject the flag, and before any other output, so nothing is written before the parent has
+    // pointed stdout and stderr at daemon.log.
+    if (args.length > 0 && ("--daemon-bootstrap".equals(args[0]) || "--daemon-bootstrap-synthetic".equals(args[0]))) {
+      DaemonMain.run(args);
+      return;
+    }
     if (!new ConsoleMain().run(args)) {
       System.exit(1);
     }

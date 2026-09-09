@@ -54,7 +54,7 @@ public class DaemonServerSocketTest {
     writeModule("Bad", "\\func bad : Nat => nosuchthing\n");
 
     CommandContext ctx = new ConsoleMain()
-        .runDaemonBootstrap(new String[] { libRoot.toString(), "--no-serialize" });
+        .runDaemonBootstrap(new String[] { libRoot.toString() });
     assertNotNull("daemon bootstrap failed", ctx);
 
     Path sock = tempFolder.newFolder("state").toPath().resolve("daemon.sock");
