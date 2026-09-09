@@ -58,11 +58,14 @@ public class CommandContext {
   public final Map<ModuleLocation, GeneralError.Level> moduleResults = new LinkedHashMap<>();
 
   /**
-   * Drops everything reported while it is set. Used around passes whose diagnostics are not the
-   * user's business — typechecking a dependency library's uncached modules, where any error will
-   * be reported again by the pass that actually asked for it.
+   * Whether a diagnostic the server reports is printed as it arrives. The typecheck pipeline
+   * turns this off for its own duration: it prints each module's diagnostics from the server's
+   * error store instead, right after that module is checked, which is the only account that is
+   * also correct on a warm server. Everything else — the REPL above all — leaves it on and gets
+   * the stream. Diagnostics reported directly rather than through the server are unaffected;
+   * see {@link #reportAndPrint}.
    */
-  public boolean suppressErrorOutput;
+  public boolean streamDiagnostics = true;
 
   // ───────── progress line ─────────
 
@@ -115,17 +118,16 @@ public class CommandContext {
     if (error.level == GeneralError.Level.ERROR) exitWithError = true;
   };
 
-  /** Goal-aware reporter that also records each module's worst diagnostic level. */
+  /**
+   * The reporter registered on the server: records each module's worst diagnostic level, and
+   * prints as the diagnostic arrives unless {@link #streamDiagnostics} is off. The level is
+   * recorded either way — it is a floor under the verdict, never the whole of it.
+   */
   public final ErrorReporter errorReporter = new ErrorReporter() {
     @Override
     public void report(GeneralError error) {
-      if (suppressErrorOutput) return;
-      error.forAffectedDefinitions((referable, err) -> {
-        if (referable instanceof LocatedReferable) {
-          updateSourceResult(((LocatedReferable) referable).getLocation(), err.level);
-        }
-      });
-      dispatchError(error);
+      recordLevels(error);
+      if (streamDiagnostics) dispatchError(error);
     }
   };
 
@@ -140,7 +142,7 @@ public class CommandContext {
   public void beginCommand() {
     exitWithError = false;
     moduleResults.clear();
-    suppressErrorOutput = false;
+    streamDiagnostics = true;
     requestedModules.clear();
   }
 
@@ -150,6 +152,25 @@ public class CommandContext {
     if (prevResult == null || result.ordinal() > prevResult.ordinal()) {
       moduleResults.put(module, result);
     }
+  }
+
+  /**
+   * Records {@code error} against its module and prints it, whatever {@link #streamDiagnostics}
+   * says. This is the entry point for diagnostics that never reach the server's error store and
+   * so cannot be read back from it: the double-checker's, and the pipeline's own replay of what
+   * the store does hold.
+   */
+  public void reportAndPrint(GeneralError error) {
+    recordLevels(error);
+    dispatchError(error);
+  }
+
+  private void recordLevels(GeneralError error) {
+    error.forAffectedDefinitions((referable, err) -> {
+      if (referable instanceof LocatedReferable located) {
+        updateSourceResult(located.getLocation(), err.level);
+      }
+    });
   }
 
   /** Render one diagnostic to stdout/stderr, goal-aware. */

@@ -64,7 +64,25 @@ public final class TypecheckPipeline {
 
   /** @return false if the run should be reported as failed, independently of {@code ctx.exitWithError}. */
   public static boolean run(CommandContext ctx, CommandLine cmdLine) {
+    // The pipeline reports each module out of the server's error store, once that module has
+    // been checked. That is the only account that is also right on a warm server, where a
+    // module resolved on an earlier run reports nothing on this one; letting the same
+    // diagnostics stream past as they arrive would simply print them a second time.
+    boolean oldStream = ctx.streamDiagnostics;
+    ctx.streamDiagnostics = false;
+    try {
+      return runPipeline(ctx, cmdLine);
+    } finally {
+      ctx.streamDiagnostics = oldStream;
+    }
+  }
+
+  private static boolean runPipeline(CommandContext ctx, CommandLine cmdLine) {
     extendScopeForPrintTarget(ctx, cmdLine);
+    dropDeletedModules(ctx);
+
+    // Modules whose stored diagnostics have already been printed by this run.
+    Set<ModuleLocation> reported = new HashSet<>();
 
     TimedProgressReporter timedProgressReporter = cmdLine.hasOption(SHOW_TIMES) ? new TimedProgressReporter() : null;
     ProgressReporter<List<? extends Concrete.ResolvableDefinition>> progressReporter = timedProgressReporter != null ? timedProgressReporter : ProgressReporter.empty();
@@ -111,11 +129,6 @@ public final class TypecheckPipeline {
           }
         }
       }
-      // Report goals from definitions loaded from binary cache
-      reportCachedGoals(ctx, ctx.binaryLoader.getBinaryCacheLoaded(), libraryNames);
-      // Re-report errors that were detected on a previous typecheck pass and
-      // whose modules are still in memory but won't be re-typechecked this run.
-      reportInMemoryErrors(ctx, libraryNames);
     }
 
     if (ctx.requestedModules.isEmpty()) {
@@ -129,7 +142,9 @@ public final class TypecheckPipeline {
         int checkedModules = 0;
         for (ModulePath modulePath : modulesToTypecheck) {
           ctx.reportModuleProgress(checkedModules, totalModules, modulePath);
-          ctx.server.getCheckerFor(Collections.singletonList(new ModuleLocation(library.getLibraryName(), ModuleLocation.LocationKind.SOURCE, modulePath))).typecheck(UnstoppableCancellationIndicator.INSTANCE, progressReporter);
+          ModuleLocation module = new ModuleLocation(library.getLibraryName(), ModuleLocation.LocationKind.SOURCE, modulePath);
+          ctx.server.getCheckerFor(Collections.singletonList(module)).typecheck(UnstoppableCancellationIndicator.INSTANCE, progressReporter);
+          reportStoredDiagnostics(ctx, module, reported);
           checkedModules++;
         }
         ctx.finishProgressLine();
@@ -179,7 +194,7 @@ public final class TypecheckPipeline {
           time = System.currentTimeMillis();
 
           try {
-            CoreModuleChecker checker = new CoreModuleChecker(ctx.errorReporter);
+            CoreModuleChecker checker = new CoreModuleChecker(ctx::reportAndPrint);
             for (ModuleLocation module : ctx.server.getModules()) {
               if (module.getLocationKind() == ModuleLocation.LocationKind.SOURCE && module.getLibraryName().equals(library.getLibraryName())) {
                 ConcreteGroup group = ctx.server.getRawGroup(module);
@@ -212,6 +227,7 @@ public final class TypecheckPipeline {
           long time = System.currentTimeMillis();
 
           ctx.server.getCheckerFor(Collections.singletonList(module)).typecheck(Collections.singletonList(fullName), ctx.errorReporter, UnstoppableCancellationIndicator.INSTANCE, progressReporter);
+          reportStoredDiagnostics(ctx, module, reported);
 
           System.out.println("--- Done (" + TimedProgressReporter.timeToString(System.currentTimeMillis() - time) + ") ---");
         } else {
@@ -220,6 +236,7 @@ public final class TypecheckPipeline {
           long time = System.currentTimeMillis();
 
           ctx.server.getCheckerFor(Collections.singletonList(module)).typecheck(UnstoppableCancellationIndicator.INSTANCE, progressReporter);
+          reportStoredDiagnostics(ctx, module, reported);
 
           System.out.println("--- Done (" + TimedProgressReporter.timeToString(System.currentTimeMillis() - time) + ") ---");
 
@@ -229,7 +246,7 @@ public final class TypecheckPipeline {
             time = System.currentTimeMillis();
 
             try {
-              CoreModuleChecker checker = new CoreModuleChecker(ctx.errorReporter);
+              CoreModuleChecker checker = new CoreModuleChecker(ctx::reportAndPrint);
               ConcreteGroup group = ctx.server.getRawGroup(module);
               if (group != null) {
                 checker.checkGroup(group);
@@ -296,7 +313,7 @@ public final class TypecheckPipeline {
           time = System.currentTimeMillis();
 
           try {
-            CoreModuleChecker checker = new CoreModuleChecker(ctx.errorReporter);
+            CoreModuleChecker checker = new CoreModuleChecker(ctx::reportAndPrint);
             for (ModuleLocation module : ctx.server.getModules()) {
               if (module.getLocationKind() == ModuleLocation.LocationKind.TEST && module.getLibraryName().equals(library.getLibraryName())) {
                 ConcreteGroup group = ctx.server.getRawGroup(module);
@@ -442,13 +459,10 @@ public final class TypecheckPipeline {
     }
     if (modules.isEmpty()) return;
 
-    boolean oldSuppressErrorOutput = ctx.suppressErrorOutput;
-    ctx.suppressErrorOutput = true;
-    try {
-      ctx.server.getCheckerFor(modules).typecheck(UnstoppableCancellationIndicator.INSTANCE, ProgressReporter.empty());
-    } finally {
-      ctx.suppressErrorOutput = oldSuppressErrorOutput;
-    }
+    // Nothing needs silencing here any more: the pipeline prints from the store, per module,
+    // and only for the libraries that were asked for. Whatever is wrong in a dependency is
+    // recorded but not printed, and will be reported by the pass that actually asks for it.
+    ctx.server.getCheckerFor(modules).typecheck(UnstoppableCancellationIndicator.INSTANCE, ProgressReporter.empty());
   }
 
   /**
@@ -507,36 +521,59 @@ public final class TypecheckPipeline {
     result.add(library);
   }
 
-  private static void reportCachedGoals(CommandContext ctx, Set<ModuleLocation> cachedModules, Set<String> libraryNames) {
-    for (ModuleLocation module : cachedModules) {
-      if (!libraryNames.contains(module.getLibraryName())) continue;
-      ConcreteGroup group = ctx.server.getRawGroup(module);
-      if (group == null) continue;
-      reportGoalsInGroup(ctx, group, module);
+  /**
+   * Prints everything the server's error store holds for {@code module}, once per run.
+   *
+   * <p>Called after the module has been checked, so the store is final: whatever this run
+   * produced is in it, and so is whatever an earlier run produced and this one did not repeat.
+   * That second case is the whole point. Name-resolution errors are pushed to the reporters
+   * only by {@code ErrorService.setResolverErrors}, i.e. only when a module is actually
+   * (re-)resolved, so on a context that outlives one command they were reported once and never
+   * again -- the module then listed as fine, no error printed, no "Number of modules with
+   * errors" line, exit 0, while the source on disk was still broken (arend-lang/Arend#138).
+   *
+   * <p>Reading the verdict from the same place that prints it is what keeps the two from
+   * disagreeing: {@link CommandContext#reportAndPrint} records the level as it prints, so the
+   * module list and the exit code follow from the store rather than from whether anything
+   * happened to be emitted.
+   */
+  private static void reportStoredDiagnostics(CommandContext ctx, ModuleLocation module, Set<ModuleLocation> reported) {
+    if (!(ctx.server instanceof ArendServerImpl impl) || !reported.add(module)) return;
+    ErrorService errorService = impl.getErrorService();
+    for (GeneralError error : errorService.getResolverErrors(module)) {
+      ctx.reportAndPrint(error);
+    }
+    for (GeneralError error : errorService.getTypecheckingErrors(module)) {
+      ctx.reportAndPrint(error);
     }
   }
 
-  private static void reportGoalsInGroup(CommandContext ctx, ConcreteGroup group, ModuleLocation module) {
-    LocatedReferable ref = group.referable();
-    if (ref instanceof TCDefReferable tcRef) {
-      Definition def = tcRef.getTypechecked();
-      if (def != null && def.getGoals().contains(def)) {
-        GeneralError goalError = new GeneralError(GeneralError.Level.GOAL, "Goal") {
-          @Override
-          public Object getCause() {
-            return ref;
-          }
-        };
-        ctx.errorReporter.report(goalError);
+  /**
+   * Removes modules of the requested libraries whose source file is gone.
+   *
+   * <p>A warm server keeps a module after its {@code .ard} is deleted, because nothing rescans
+   * the library between commands. Dropping it here -- rather than filtering it out of the
+   * module list, the diagnostics and the persist pass one at a time -- is what makes it stay
+   * gone: {@code ArendServerImpl.removeModule} also clears the module's entries from the error
+   * store, so a deleted file stops being reported at all rather than being reported forever.
+   *
+   * <p>Inert on a cold run, where the server was told about exactly the modules on disk.
+   */
+  private static void dropDeletedModules(CommandContext ctx) {
+    List<ModuleLocation> gone = new ArrayList<>();
+    for (SourceLibrary library : ctx.requestedLibraries) {
+      Set<ModulePath> onDisk = new HashSet<>(library.findModules(false));
+      for (ModuleLocation module : ctx.server.getModules()) {
+        if (module.getLocationKind() == ModuleLocation.LocationKind.SOURCE
+            && module.getLibraryName().equals(library.getLibraryName())
+            && !onDisk.contains(module.getModulePath())) {
+          gone.add(module);
+        }
       }
     }
-    for (ConcreteStatement statement : group.statements()) {
-      if (statement.group() != null) {
-        reportGoalsInGroup(ctx, statement.group(), module);
-      }
-    }
-    for (ConcreteGroup dynGroup : group.dynamicGroups()) {
-      reportGoalsInGroup(ctx, dynGroup, module);
+    // Collected first: removeModule mutates what getModules() iterates.
+    for (ModuleLocation module : gone) {
+      ctx.server.removeModule(module);
     }
   }
 
@@ -558,7 +595,7 @@ public final class TypecheckPipeline {
         // daemon, accumulates orphan FunctionDefinitions pinned by cached expression
         // trees across the deserialize → clear → re-typecheck cycle.
         org.arend.term.group.ConcreteGroup group = ctx.server.getRawGroup(module);
-        if (group != null && groupHasTypecheckingErrors(group)) {
+        if (group != null && (groupHasTypecheckingErrors(group) || groupHasGoals(group))) {
           skippedWithErrors++;
           continue;
         }
@@ -580,6 +617,28 @@ public final class TypecheckPipeline {
     }
   }
 
+  /**
+   * True if any definition in {@code group} holds an unfilled goal.
+   *
+   * <p>Goals keep a module out of the cache for the same reason errors do, and for one more:
+   * the {@code .arc} records that a definition had a goal but not what the goal was, so a
+   * module restored from cache could only ever report a contentless placeholder. Not caching
+   * it means every goal comes from a real typecheck, with its context intact.
+   */
+  public static boolean groupHasGoals(ConcreteGroup group) {
+    if (group.referable() instanceof TCDefReferable tcRef) {
+      Definition def = tcRef.getTypechecked();
+      if (def != null && def.getGoals().contains(def)) return true;
+    }
+    for (ConcreteStatement statement : group.statements()) {
+      if (statement.group() != null && groupHasGoals(statement.group())) return true;
+    }
+    for (ConcreteGroup dynGroup : group.dynamicGroups()) {
+      if (groupHasGoals(dynGroup)) return true;
+    }
+    return false;
+  }
+
   public static boolean groupHasTypecheckingErrors(org.arend.term.group.ConcreteGroup group) {
     if (group.referable() instanceof TCDefReferable tcRef && tcRef.getKind().isTypecheckable()) {
       Definition def = tcRef.getTypechecked();
@@ -598,16 +657,5 @@ public final class TypecheckPipeline {
       if (groupHasTypecheckingErrors(dynGroup)) return true;
     }
     return false;
-  }
-
-  private static void reportInMemoryErrors(CommandContext ctx, Set<String> libraryNames) {
-    if (!(ctx.server instanceof ArendServerImpl impl)) return;
-    ErrorService errorService = impl.getErrorService();
-    for (ModuleLocation module : ctx.server.getModules()) {
-      if (module.getLocationKind() != ModuleLocation.LocationKind.SOURCE || !libraryNames.contains(module.getLibraryName())) continue;
-      for (GeneralError error : errorService.getTypecheckingErrors(module)) {
-        ctx.errorReporter.report(error);
-      }
-    }
   }
 }

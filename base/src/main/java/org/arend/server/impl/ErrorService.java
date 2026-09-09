@@ -73,6 +73,24 @@ public class ErrorService implements ErrorReporter {
     myTypecheckingErrors.remove(referable);
   }
 
+  /**
+   * The name-resolution errors currently recorded for {@code module}, empty if there are none.
+   *
+   * <p>{@link #setResolverErrors} also pushes them to the registered reporters, but only when
+   * the module is actually (re-)resolved. A process that outlives one pass over a library --
+   * an IDE server, a daemon -- has to read them back from here to report them again.
+   */
+  public List<GeneralError> getResolverErrors(ModuleLocation module) {
+    List<GeneralError> errors = myResolverErrors.get(module);
+    return errors == null ? Collections.emptyList() : errors;
+  }
+
+  /** Forgets everything recorded for a module that is no longer part of the server. */
+  public void removeModule(ModuleLocation module) {
+    myResolverErrors.remove(module);
+    clearTypecheckingErrors(module);
+  }
+
   public void clearTypecheckingErrors(ModuleLocation module) {
     myTypecheckingErrors.keySet().removeIf(ref -> module.equals(ref.getLocation()));
   }
