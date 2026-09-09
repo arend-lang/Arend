@@ -14,11 +14,14 @@ import org.arend.naming.reference.TCDefReferable;
 import org.arend.server.ArendLibrary;
 import org.arend.server.ArendServer;
 import org.arend.server.impl.ArendLibraryImpl;
+import org.arend.server.impl.ArendServerImpl;
 import org.arend.source.PersistableBinarySource;
 import org.arend.source.Source;
 import org.arend.source.StreamBinarySource;
 import org.arend.term.group.ConcreteGroup;
 import org.arend.term.group.ConcreteStatement;
+import org.arend.typechecking.order.dependency.DependencyCollector;
+import org.arend.typechecking.order.dependency.DependencyListener;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.*;
@@ -27,6 +30,9 @@ public class BinaryLoader {
   private final LibraryManager myLibraryManager;
   private boolean myRecompile = false;
   private final Set<ModuleLocation> myBinaryCacheLoaded = new HashSet<>();
+
+  /** Modules seen in an earlier pass; only first sight may load from {@code .arc}. */
+  private final Set<ModuleLocation> mySeenModules = new HashSet<>();
 
   /**
    * The order phase 2 of the last {@link #loadBinaryCache} deserialized in. Exposed so that the
@@ -96,13 +102,16 @@ public class BinaryLoader {
       }
     }
     // Modules of this library whose definitions will be in memory by the time phase 2b resolves
-    // call targets.
+    // call targets: the ones deserialized below, plus the ones that already carry a core.
     Set<ModulePath> willBeLoaded = new HashSet<>();
 
     // Phase 1: parse protobuf files (does NOT touch any group referables)
     for (ModuleLocation module : server.getModules()) {
       if (!module.getLibraryName().equals(library.getLibraryName())) continue;
       if (module.getLocationKind() != ModuleLocation.LocationKind.SOURCE) continue;
+
+      // Before any early exit below, so "seen" holds whichever branch the earlier pass took.
+      boolean firstSight = mySeenModules.add(module);
 
       PersistableBinarySource binarySource = library.getBinarySource(module.getModulePath());
       if (binarySource == null) continue;
@@ -112,7 +121,34 @@ public class BinaryLoader {
       Source rawSource = library.getSource(module.getModulePath(), false);
       if (rawSource != null) {
         long rawTimestamp = rawSource.getTimeStamp();
-        if (rawTimestamp > 0 && arcTimestamp < rawTimestamp) continue;
+        if (rawTimestamp > 0 && arcTimestamp < rawTimestamp) {
+          // Its cores, if it has any, are invalidated per definition by
+          // ArendCheckerImpl.resolveModules -- not wholesale here. Clearing the whole module
+          // would drop definitions the edit did not touch, and every dependent holding one of
+          // those would then be comparing against a fresh object.
+          myBinaryCacheLoaded.remove(module);
+          continue;
+        }
+      }
+
+      // What a warm server already holds beats what is on disk. Re-deserializing a module whose
+      // cores are in memory mints fresh Definition objects, and identity is load-bearing: a
+      // meta's @Dependency-captured class fields are bound once, when the meta was typechecked,
+      // so a freshly deserialized replacement makes ClassCallExpression.isSubClassOf fail and
+      // takes linarith and equation down with it.
+      ConcreteGroup memGroup = server.getRawGroup(module);
+      if (memGroup != null && hasTypechecked(memGroup)) {
+        myBinaryCacheLoaded.add(module);
+        willBeLoaded.add(module.getModulePath());
+        continue;
+      }
+      // Seen before, still has definitions to typecheck, yet holds no core: it was invalidated
+      // since the last pass. Its own .arc describes what it used to be, so restoring from it
+      // would put back exactly the state that was just thrown away -- and, because that replaces
+      // the core without re-elaborating, never re-bind the metas that captured the old one.
+      if (memGroup != null && !firstSight && hasTypecheckableDefinitions(memGroup)) {
+        myBinaryCacheLoaded.remove(module);
+        continue;
       }
 
       if (binarySource instanceof StreamBinarySource streamSource) {
@@ -125,7 +161,12 @@ public class BinaryLoader {
           }
         } catch (Exception e) {
           reportBinaryCacheError(errorReporter, module, "protobuf parsing", e);
-          // Skip this module — will be re-typechecked from source
+          // The .arc exists but is unreadable. Drop any in-memory state a previous pass loaded
+          // from it, for the same reason as the stale-mtime branch: without this, a module that
+          // suddenly fails to parse silently keeps the state of the cache it can no longer read.
+          ConcreteGroup group = server.getRawGroup(module);
+          if (group != null) clearTypechecked(group);
+          myBinaryCacheLoaded.remove(module);
         }
       }
     }
@@ -192,7 +233,7 @@ public class BinaryLoader {
         load.deserialization.setDeferredBoxFixes(boxFixes);
         load.deserialization.readModule(
             server.getModuleScopeProvider(load.module.getLibraryName(), false),
-            new org.arend.typechecking.order.dependency.DependencyCollector(null));
+            dependencyListener(server));
         loaded++;
         myBinaryCacheLoaded.add(load.module);
         loadedLoads.add(load);
@@ -296,6 +337,32 @@ public class BinaryLoader {
     sorted.add(load);
   }
 
+  /** True if any definition reachable from {@code group} already holds a typechecked core. */
+  private static boolean hasTypechecked(ConcreteGroup group) {
+    boolean[] found = { false };
+    walkDefinitions(group, def -> { found[0] = true; return true; });
+    return found[0];
+  }
+
+  /**
+   * True if anything reachable from {@code group} is typecheckable, whether or not it holds a
+   * core. Separates a module that <em>lost</em> its definitions from one that never had any --
+   * without it, a module with nothing to typecheck looks invalidated on every pass.
+   */
+  private static boolean hasTypecheckableDefinitions(ConcreteGroup group) {
+    if (group.referable() instanceof TCDefReferable ref && ref.getKind().isTypecheckable()) return true;
+    for (InternalReferable internalRef : group.getInternalReferables()) {
+      if (internalRef instanceof TCDefReferable ref && ref.getKind().isTypecheckable()) return true;
+    }
+    for (ConcreteStatement statement : group.statements()) {
+      if (statement.group() != null && hasTypecheckableDefinitions(statement.group())) return true;
+    }
+    for (ConcreteGroup dynamicGroup : group.dynamicGroups()) {
+      if (hasTypecheckableDefinitions(dynamicGroup)) return true;
+    }
+    return false;
+  }
+
   /**
    * Returns true if any typecheckable definition in the group has an expression
    * (parameter type, result type, body) that references another {@link Definition}
@@ -349,6 +416,16 @@ public class BinaryLoader {
     for (ConcreteGroup dynGroup : group.dynamicGroups()) {
       clearTypechecked(dynGroup);
     }
+  }
+
+  /**
+   * The server's own dependency graph, so edges recorded while deserializing survive the call.
+   * Falls back to a throwaway for servers that expose none (test doubles), which consume no edges.
+   */
+  private static DependencyListener dependencyListener(ArendServer server) {
+    return server instanceof ArendServerImpl impl
+        ? impl.getDependencyCollector()
+        : new DependencyCollector(null);
   }
 
   private static void reportBinaryCacheError(ErrorReporter errorReporter, ModuleLocation module, String phase, Exception e) {
