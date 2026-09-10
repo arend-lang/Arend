@@ -8,7 +8,7 @@
 \func transport {A : \Cat} (B : A -> \Cat) {a a' : A} (p : a = a') (b : B a) : B a'
   => coe (\lam i => B (p @ i)) b right
 
-\func transportInv {A : \Cat} (B : A -> \Type) {a a' : A} (p : a = a') (b : B a') : B a \elim p
+\func transportInv {A : \Cat} (B : A -> \Cat) {a a' : A} (p : a = a') (b : B a') : B a \elim p
   | idp => b
 
 \func transport2 {A B : \Cat} (C : A -> B -> \Type) {a a' : A} {b b' : B} (p : a = a') (q : b = b') (c : C a b) : C a' b' \elim p, q

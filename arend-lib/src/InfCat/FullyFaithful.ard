@@ -4,12 +4,14 @@
 \import Function.Meta
 \import InfCat.Basics
 \import InfCat.Equiv
+\import InfCat.Objects
 \import InfCat.Paths
 \import InfCat.Rezk
 \import InfCat.Square
 \import Logic
 \import Logic.Meta
 \import Logic.Unique
+\import Meta
 \import Paths
 \import Paths.Meta
 
@@ -24,7 +26,38 @@
       => \lam x => inP (f x, (iso_= (IsEquiv.ret (ff _ _) (=_~> (fg (f x)))) (IsEquiv.ret (ff _ _) (=_~> (inv (fg (f x)))))
             (IsEquiv.isInj (ff _ _) $ dmap_comp f *> pmap2+ comp (IsEquiv.f_ret (ff _ _)) (IsEquiv.f_ret (ff _ _)) *> =_~>_comp *> pmap+ =_~> *>_inv)
             (IsEquiv.isInj (ff x x) $ dmap_comp f *> pmap2+ comp (IsEquiv.f_ret (ff _ _)) (IsEquiv.f_ret (ff _ _)) *> =_~>_comp *> pmap+ =_~> inv_*>)).1)
+
+    \lemma isConservative (ff : IsFFMap f) {x y : C} {p : x ~> y} (fpi : IsIso (dmap f p)) : IsIso p \elim fpi
+      | inP r => inP (IsEquiv.ret (ff y x) r.1,
+                      IsEquiv.isInj (ff y y) $ dmap_comp f *> pmap (comp __ _) (IsEquiv.f_ret (ff y x)) *> r.2,
+                      IsEquiv.isInj (ff x x) $ dmap_comp f *> pmap (comp _ __) (IsEquiv.f_ret (ff y x)) *> r.3)
+
+    \lemma isObEmbedding (ff : IsFFMap f) : Embedding {Ob C} {Ob D} (\lam x => ob (f (unob x))) \cowith
+      | isEmb (ob x) (ob y) => transQEquiv (unob_= {C}) $ transQEquiv
+          (IsEquiv.toQEquiv {_} {_} {pmap (f __)} $ propExt.conv (IsEquiv.parallelEquiv {_} {_} {_} {_} {_}
+              {\lam s => later (dmap f s.1, dmap_IsIso f s.2)}
+              (=-char x y)
+              (=-char (f x) (f y))
+              (\lam p => ext $ inv $ dmap_=_~> f))
+            (IsEquiv.fromEmbSurj (leftEmbedding (Embedding.projection _) $ transEmbedding (Embedding.projection _ ) $ Embedding.fromIsEquiv (ff x y))
+              \lam s => \case IsEquiv.isSurj (ff x y) s.1 \with {
+                | inP (p,fp=s) => inP ((p, isConservative ff $ transportInv IsIso fp=s s.2), ext fp=s)
+              }))
+          (symQEquiv (unob_= {D}))
+
+    \lemma fibProp (ff : IsFFMap f) (y : D) : isProp (\Sigma (x : C) (f x = y))
+      => \lam s t =>
+          \have r => Embedding.embeddingFiber-isProp (isObEmbedding ff) (ob y) (ob s.1, pmap ob s.2) (ob t.1, pmap ob t.2)
+          \in path \lam i => (unob (r i).1, pmap unob (r i).2)
   }
+
+\lemma ffMap-char {C D : \Cat} {f : C ->⁺ D}
+  : IsFFMap f <-> IsEquiv {\Sigma (j : \Sigma C C) (j.1 ~> j.2)} {\Sigma (j : \Sigma C C) (f j.1 ~> f j.2)} (\lam s => (s.1, dmap f s.2))
+  => <->trans (later (\lam ff j => ff j.1 j.2, \lam e x y => e (x,y))) $ <->_=.2 $ totalEquiv {\Sigma C C} {\lam j => j.1 ~> j.2} \lam j => dmap f
+
+\lemma ffMap-pullback {B C D : \Cat} (g : B ->⁺ D) {f : C ->⁺ D} (ff : IsFFMap f)
+  : IsFFMap {\Sigma⁺ (x : B) (\Sigma⁺ (y : C) (g x = f y))} __.1
+  => {?}
 
 \type IsSurjMap {C D : \Cat} (f : C ->⁺ D) : \Prop
   => \Pi (y : D) -> ∃ (x : C) (f x = y)

@@ -7,10 +7,10 @@
 \func unob {C : \Cat} (x :⁺ Ob C) : C \elim x
   | ob x => x
 
-\func ob_unob {C : \Cat} (x : Ob C) : ob (unob x) = x \elim x
+\func ob_unob {C : \Cat} {x : Ob C} : ob (unob x) = x \elim x
   | ob x => idp
 
-\sfunc pmap_ob_unob {C : \Cat} {x y : Ob C} (p : x = y) : pmap ob (pmap unob p) = ob_unob x *> p *> inv (ob_unob y) \elim p
+\sfunc pmap_ob_unob {C : \Cat} {x y : Ob C} (p : x = y) : pmap ob (pmap unob p) = ob_unob *> p *> inv ob_unob \elim p
   | idp => inv (pmap (_ *>) idp_*> *> *>_inv)
 
 \func unob_= {C : \Cat} {x y : Ob C} : QEquiv {x = y} {unob x = unob y} \elim x, y
@@ -20,3 +20,9 @@
     | ret_f p => pmap_ob_unob p *> idp_*>
     | f_sec => idpe
   }
+
+\func Ob-equiv {X : \Type} : QEquiv {X} {Ob X} \cowith
+  | f => ob
+  | ret => unob
+  | ret_f => idpe
+  | f_sec y => ob_unob

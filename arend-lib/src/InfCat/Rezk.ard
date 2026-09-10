@@ -59,6 +59,9 @@
       }
   }
 
+\lemma dmap_IsIso {C D : \Cat} (f : C ->⁺ D) {x y : C} {p : x ~> y} (fi : IsIso p) : IsIso (dmap f p) \elim fi
+  | inP r => inP (dmap f r.1, inv (dmap_comp f) *> pmap (dmap f) r.2, inv (dmap_comp f) *> pmap (dmap f) r.3)
+
 \sfunc IsIso_= {C : \Cat} {x y : C} {f : x ~> y} (fi : IsIso f) : \Sigma (p : x = y) (=_~> p = f)
   => \have r => iso_= f (IsIso.ret fi) (IsIso.f_ret fi) (IsIso.ret_f fi)
      \in (r.1,r.2)

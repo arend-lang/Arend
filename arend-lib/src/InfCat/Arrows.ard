@@ -1,0 +1,27 @@
+\import Equiv
+\import Function.Meta
+\import InfCat.Objects
+\import Paths
+\import Paths.Meta
+
+\func ObDI-elim {B : Ob DI ->⁺ \Cat} (x :⁺ B (ob dleft)) (y :⁺ B (ob dright)) (d :⁺ Ob DI) : B d \elim d
+  | ob dleft => x
+  | ob dright => y
+
+\func DI-equiv {C : \Cat} : QEquiv {Ob (DI ->⁺ C)} {\Sigma (j : \Sigma C C) (j.1 ~> j.2)} \cowith
+  | f h => ((unob h dleft, unob h dright), dpath (unob h))
+  | ret s => ob \lam i => s.2 i
+  | ret_f h => ob_unob
+  | f_sec => idpe
+
+\func ObDI-equiv {C : \Cat} : QEquiv {Ob (Ob DI ->⁺ C)} {\Sigma C C} \cowith
+  | f h => (unob h (ob dleft), unob h (ob dright))
+  | ret j => ob (ObDI-elim j.1 j.2)
+  | ret_f (ob h) => pmap ob $ ext (ObDI-elim idp idp)
+  | f_sec => idpe
+
+\func ObDI-depEquiv {C : Ob DI ->⁺ \Type} : QEquiv {\Pi (d :⁺ Ob DI) -> C d} {\Sigma (C (ob dleft)) (C (ob dright))} \cowith
+  | f u => (u (ob dleft), u (ob dright))
+  | ret s => ObDI-elim s.1 s.2
+  | ret_f u => ext (ObDI-elim idp idp)
+  | f_sec => idpe

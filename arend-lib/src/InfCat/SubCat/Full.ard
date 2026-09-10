@@ -1,0 +1,92 @@
+\import Data.Bool
+\import Equiv
+\import Equiv.Fiber
+\import Equiv.Sigma
+\import Function.Meta
+\import InfCat.Arrows
+\import InfCat.Basics
+\import InfCat.Equiv
+\import InfCat.FullyFaithful
+\import InfCat.Groupoid
+\import InfCat.OFS.CatAccessibleOFS
+\import InfCat.OFS.CatOFS
+\import InfCat.Objects
+\import InfCat.Paths
+\import Logic
+\import Logic.Meta
+\import Logic.Unique
+\import Meta
+\import Paths
+\import Paths.Meta
+
+\type FullSubCat {C : \Cat} (P : C -> \Prop) : \Cat
+  => CatFactor {_} {\Sigma (x : C) (P x)} {C} __.1
+  \where {
+    \protected \instance family : CatFactor.Family
+      | J => \Sigma
+      | X _ => Ob DI
+      | Y _ => DI
+      | F _ => unob
+
+    \protected \lemma family-ff {C D : \Cat} {f : C ->⁺ D} : family.IsRight f <-> IsFFMap f
+      => (\lam r => propExt.dir orth=ff (r ()), \lam ff () => propExt.conv orth=ff ff)
+      \where {
+        \private \lemma orth=ff {C D : \Cat} {f : C ->⁺ D}
+          : IsEquiv {Ob (DI ->⁺ C)} {\Sigma (uv : \Sigma (Ob DI ->⁺ C) (DI ->⁺ D)) (\Pi (x :⁺ Ob DI) -> uv.2 (unob x) = f (uv.1 x))}
+                    (\lam h => ((\lam x => unob h (unob x), \lam y => f (unob h y)), \lam x => idp))
+          = IsFFMap f
+          => IsEquiv.parallelEquiv (inP DI-equiv)
+              (IsEquiv.trans
+                (IsEquiv.trans {_} {\Sigma (u : Ob (Ob DI ->⁺ C)) (\Sigma (v : Ob (DI ->⁺ D)) (\Pi (x :⁺ Ob DI) -> unob v (unob x) = f (unob u x)))} {_}
+                  (inP $ later \new QEquiv {
+                    | f s => (ob s.1.1, (ob s.1.2, s.2))
+                    | ret t => ((unob t.1, unob t.2.1), t.2.2)
+                    | ret_f => idpe
+                    | f_sec (ob t1, (ob t21, t22)) => idp
+                  })
+                  {later \lam s => (s.1, coe (\lam i => s.2.2 (ob dleft) i ~> s.2.2 (ob dright) i) (dpath (unob s.2.1)) right)}
+                  (IsSigma-right (later \lam u r => coe (\lam i => r.2 (ob dleft) i ~> r.2 (ob dright) i) (dpath (unob r.1)) right) $ later \lam (ob u) =>
+                    IsEquiv.trans (inP $ sigma-right \lam v => later ObDI-depEquiv) (IsEquiv.trans (inP $ qsigma-left {Ob (DI ->⁺ D)} DI-equiv)
+                      (inP \new QEquiv {\Sigma (w : \Sigma (j : \Sigma D D) (j.1 ~> j.2)) (\Sigma (w.1.1 = f (u (ob dleft))) (w.1.2 = f (u (ob dright))))} {
+                        | f z => coe (\lam i => z.2.1 i ~> z.2.2 i) z.1.2 right
+                        | ret a => (((f $ u $ ob dleft, f $ u $ ob dright), a), (idp, idp))
+                        | ret_f (((_,_),z12),(idp,idp)) => idp
+                        | f_sec a => idp
+                      }))
+                  ))
+                (inP $ qsigma-left {Ob (Ob DI ->⁺ C)} ObDI-equiv))
+              (\lam h => idp)
+             *> inv (<->_=.1 ffMap-char)
+      }
+
+    \sfunc inc (d :⁺ FullSubCat P) : C
+      => catFactorRight d
+
+    \lemma inc-con {d : FullSubCat P} : P (inc d)
+      => \case catFactorLeft.isSurj (\lam _ y => inP (ob y, idp)) d \with {
+        | inP (s,p) => transport P (inv (\peval inc _) *> pmap (inc __) p) s.2
+      }
+
+    \lemma inc-sat {c : C} (Pc : P c) : ∃ (d : FullSubCat P) (inc d = c)
+      => inP (catFactorLeft {_} {\Sigma (x : C) (P x)} (c,Pc), \peval inc _)
+
+    \lemma inc-ff : IsFFMap inc
+      => family-ff.1 \lam p =>
+           transportInv (IsOrthogonal _) (ext \lam d => \peval inc d) $
+           IsOrthogonal_o-right (IsOrthogonal_IsHEquiv-right $ inP \new HQEquiv {
+             | C => FullSubCat P
+             | D => CatFactor {_} {\Sigma (x : C) (P x)} {C} __.1
+             | f d => d
+             | finv d => d
+             | finv_f d => idp
+             | f_finv d => idp
+           }) (catFactorRight.isRight p)
+
+    \sfunc isMin {D : \Cat} {f : D ->⁺ C} (ff : IsFFMap f) (fs : \Pi {c : C} -> P c -> ∃ (d : D) (f d = c))
+      : \Sigma (h : FullSubCat P ->⁺ D) (\Pi (x :⁺ FullSubCat P) -> f (h x) = inc x)
+      => {?}
+
+    \sfunc isMax {D : \Cat} {f : D ->⁺ C} (fs : \Pi (d : D) -> P (f d))
+      : \Sigma (h : D ->⁺ FullSubCat P) (\Pi (y :⁺ D) -> inc (h y) = f y)
+      => {?}
+  }

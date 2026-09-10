@@ -255,7 +255,7 @@
   | ret_f _ => idp
   | f_sec _ => idp
 
-\func sigmaEquiv {A : \Type} (B : A -> \Type) (p p' : \Sigma (a : A) (B a)) : QEquiv \cowith
+\func sigmaEquiv {A : \Cat} (B : A -> \Type) (p p' : \Sigma (a : A) (B a)) : QEquiv \cowith
   | A => p = p'
   | B => \Sigma (s : p.1 = p'.1) (transport B s p.2 = p'.2)
   | f q => (pmap __.1 q, pmapd __.2 q)
@@ -371,6 +371,13 @@
   | isEmb a a' => \new Retraction {
     | sec p => sec {e1.isEmb a a'} (sec {e2.isEmb (e1 a) (e1 a')} p)
     | f_sec p => pmap (pmap e2) (f_sec {e1.isEmb a a'} (sec {e2.isEmb (e1 a) (e1 a')} p)) *> f_sec {e2.isEmb (e1 a) (e1 a')} p
+  }
+
+\lemma leftEmbedding {A B C : \Type} {f : A -> B} (g : Embedding {B} {C}) (e : Embedding \lam x => g (f x)) : Embedding f \cowith
+  | isEmb a a' => \new Retraction {
+    | sec p => (e.isEmb a a').sec (pmap g p)
+    | f_sec p => \have e' => g.pmap-isEquiv {f a} {f a'}
+                 \in inv (e'.ret_f _) *> pmap e'.ret ((e.isEmb a a').f_sec (pmap g p)) *> e'.ret_f p
   }
 
 \lemma piEmbedding {A : \Type} {B C : A -> \Type} (e : \Pi (a : A) -> Embedding {B a} {C a}) : Embedding {\Pi (a : A) -> B a} {\Pi (a : A) -> C a} (\lam f a => e a (f a)) \cowith

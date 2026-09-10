@@ -1,14 +1,17 @@
 \import Data.Bool
 \import Equiv
+\import Function
 \import Function.Meta
 \import Homotopy.Cube
 \import InfCat.Basics
 \import InfCat.CatPushout
 \import InfCat.Equiv
+\import InfCat.FullyFaithful
 \import InfCat.OFS.CatOFS
 \import InfCat.Objects
 \import InfCat.Paths
 \import Logic
+\import Logic.Meta
 \import Meta
 \import Paths
 \import Paths.Meta
@@ -31,6 +34,18 @@
       | alpha (c :⁺ C)
       | lext {j : J} (u : X j ->⁺ LData f) (v : Y j ->⁺ D) (c : \Pi (x :⁺ X j) -> v (F j x) = fromLData (u x)) (y :⁺ Y j)
       | isExt {j : J} (u : X j ->⁺ LData f) (v : Y j ->⁺ D) (c : \Pi (x :⁺ X j) -> v (F j x) = fromLData (u x)) (x :⁺ X j) : lext u v c (F j x) = u x
+
+    \lemma alpha-isSurj {fam : Family} (fs : \Pi (j : J) -> IsSurjMap (F j)) {C D : \Cat} {f : C ->⁺ D} : IsSurjMap (alpha {fam} {C} {D} {f})
+      => induction __
+      \where {
+        \private \lemma induction (d : LData {fam} f) : ∃ (c : C) (alpha c = d) \elim d
+          | alpha c => inP (c,idp)
+          | lext {j} u v c y => \case fs j y \with {
+            | inP (x,Fx=y) => \case induction (u x) \with {
+              | inP (r,ar=ux) => inP (r, ar=ux *> inv (path (isExt u v c x)) *> pmap (lext u v c) Fx=y)
+            }
+          }
+      }
 
     \func fromLData {fam : Family} {C D : \Cat} {f : C ->⁺ D} (d :⁺ LData f) : D \elim d
       | alpha c => f c
@@ -107,7 +122,18 @@
 
 \cons catFactorLeft {fam : Family} {C D : \Cat} {f : C ->⁺ D} (c :⁺ C) : CatFactor f
   => alpha c
-  -- TODO: Prove that catFactorLeft is left orthogonal to any right map.
+  \where {
+    -- TODO: Prove that catFactorLeft is left orthogonal to any right map.
+
+    \protected \lemma isSurj {fam : Family} (fs : \Pi (j : fam.J) -> IsSurjMap (fam.F j)) {C D : \Cat} {f : C ->⁺ D}
+      : IsSurjMap (catFactorLeft {fam} {C} {D} {f})
+      => IsSurj.comp {_} {_} {CatFactor f} (alpha-isSurj {famHat} \case \elim __ \with {
+        | (j, true) => \lam y => \case fs j y \with {
+          | inP (x,p) => inP (dHat1 x, p)
+        }
+        | (j, false) => \lam y => inP (dHat2 (cinl y), idp)
+      }) {\lam x => x} \lam x => inP (x,idp)
+  }
 
 \func catFactorRight {fam : Family} {C D : \Cat} {f : C ->⁺ D} (x :⁺ CatFactor f) : D
   => fromLData {famHat} x
@@ -119,7 +145,7 @@
         | f_finv d => idp
       }) (fromLData.isRight j)
 
-    \sfunc lift {fam : Family} {C D : \Cat} {f : C ->⁺ D} {E : \Cat} {g : C ->⁺ E} {h : E ->⁺ D} (hr : fam.IsRight h)
+    \sfunc lift {fam : Family} {C D : \Cat} {f : C ->⁺ D} {E : \Cat} (g : C ->⁺ E) {h : E ->⁺ D} (hr : fam.IsRight h)
                 (p : \Pi (x :⁺ C) -> h (g x) = f x) (d :⁺ CatFactor f) : \Sigma⁺ (e : E) (h e = catFactorRight d)
       => dataExt {famHat} (famHat_IsRight hr) p d
   }
