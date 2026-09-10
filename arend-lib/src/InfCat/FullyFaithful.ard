@@ -56,8 +56,9 @@
   => <->trans (later (\lam ff j => ff j.1 j.2, \lam e x y => e (x,y))) $ <->_=.2 $ totalEquiv {\Sigma C C} {\lam j => j.1 ~> j.2} \lam j => dmap f
 
 \lemma ffMap-pullback {B C D : \Cat} (g : B ->⁺ D) {f : C ->⁺ D} (ff : IsFFMap f)
-  : IsFFMap {\Sigma⁺ (x : B) (\Sigma⁺ (y : C) (g x = f y))} __.1
-  => {?}
+  : IsFFMap {\Sigma⁺ (x : B) (\Sigma⁺ (y : C) (f y = g x))} __.1
+  => \lam s t => inP $ transQEquiv (dpath-sigma-equiv \lam _ x => \Sigma⁺ (y : C) (f y = g x)) $
+        contr-right {s.1 ~> t.1} \lam r => ff-surj-equiv.contr ff (\lam i =>⁺ g (r i))
 
 \type IsSurjMap {C D : \Cat} (f : C ->⁺ D) : \Prop
   => \Pi (y : D) -> ∃ (x : C) (f x = y)
@@ -79,29 +80,32 @@
                       *> =_~>_comp *> pmap+ =_~> (inv (pmap+_*> f) *> pmap+ (pmap+ f) inv_*>)) *> comp_idd-left
       }, \lam y => inP (e.finv y, e.f_finv y)))
   \where {
-    \private \lemma contr {C D : \Cat} {f : C ->⁺ D} (ff : IsFFMap f) (fs : IsSurjMap f) (h : DI ->⁺ D)
-                          {tl : \Sigma⁺ (x : C) (f x = h dleft)} {tr : \Sigma⁺ (x : C) (f x = h dright)}
+    \protected \lemma contr {C D : \Cat} {f : C ->⁺ D} (ff : IsFFMap f) (h : DI ->⁺ D)
+                            {tl : \Sigma⁺ (x : C) (f x = h dleft)} {tr : \Sigma⁺ (x : C) (f x = h dright)}
       : Contr (DPath (\lam i => \Sigma⁺ (x : C) (f x = h i)) tl tr)
-      => Contr.Contr_QEquiv (symQEquiv $ transQEquiv equiv1 $ sigma-right \lam r =>
+      => Contr.Contr_QEquiv (symQEquiv $ transQEquiv (dpath-sigma-equiv {C} (\lam i x => f x = h i)) $ sigma-right \lam r =>
             path-square-equiv {_} {_} {_} {_} {_} {dmap f r} {dpath h} `transQEquiv`
-            square-equiv {_} {_} {_} {_} {_} {dmap f r} {_} {_} {dpath h}`transQEquiv` equiv2) $
+            square-equiv {_} {_} {_} {_} {_} {dmap f r} `transQEquiv` equiv2) $
           IsEquiv=>contrFibers (ff tl.1 tr.1) $ comp (comp (=_~> tl.2) (dpath h)) (=_~> (inv tr.2))
       \where {
-        \private \func equiv1
-          : QEquiv {DPath (\lam i => \Sigma⁺ (x : C) (f x = h i)) tl tr} {\Sigma (r : tl.1 ~> tr.1) (DPath (\lam i => f (r i) = h i) tl.2 tr.2)} \cowith
-          | f p => (dpath \lam i => (p i).1, dpath \lam i => (p i).2)
-          | ret s => dpath \lam i => (s.1 i, s.2 i)
-          | ret_f p => idp
-          | f_sec s => idp
-
         \private \func equiv2 {C : \Cat} {a b c : C} {f : a ~> b} {p : c = b} {g : a ~> c}
           : QEquiv {comp g (=_~> p) = f} {g = comp f (=_~> (inv p))} \elim p
           | idp => Paths.transport2 (\lam x y => QEquiv {x = f} {g = y}) (inv comp_idd-right) (inv comp_idd-right) idEquiv
       }
 
     \private \lemma section {C D : \Cat} {f : C ->⁺ D} (ff : IsFFMap f) (fs : IsSurjMap f) (y :⁺ D) : \Sigma⁺ (x : C) (f x = y)
-      \level⁺ \lam h tl tr => (contr ff fs h).toSigma
+      \level⁺ \lam h tl tr => (contr ff h).toSigma
       => \case fs y \with {
         | inP r => (r.1, r.2)
       }
   }
+
+-- | A fully faithful map admits a lift of any map whose values lie in its image.
+\sfunc ffMap-lift {B C : \Cat} {f : B ->⁺ C} (ff : IsFFMap f) {D : \Cat} (g : D ->⁺ C)
+                  (gs : \Pi (y : D) -> ∃ (x : B) (f x = g y))
+  : \Sigma (h : D ->⁺ B) (\Pi (y :⁺ D) -> f (h y) = g y)
+  => \have e : IsHEquiv {\Sigma⁺ (x : D) (\Sigma⁺ (y : B) (f y = g x))} __.1
+              => ff-surj-equiv.1 (ffMap-pullback g ff, \lam y => \case gs y \with {
+                   | inP (x,fx=gy) => inP ((y, (x,fx=gy)), idp)
+                 })
+     \in (\lam y =>⁺ (IsHEquiv.ret e y).2.1, \lam y => (IsHEquiv.ret e y).2.2 *> pmap+ g (IsHEquiv.f_ret e))

@@ -30,6 +30,15 @@
   (p :⁺ s.1 = t.1) (q :⁺ Path (\lam i => B (p i) i) s.2 t.2) : Path (\lam i => \Sigma⁺ (a : A) (B a i)) s t
   => path \lam i => (p i, q i)
 
+\func dpath-sigma-equiv {A : \Cat} (B : DI ->⁺ A ->⁺ \Cat)
+                        {s : \Sigma⁺ (x : A) (B dleft x)} {t : \Sigma⁺ (x : A) (B dright x)}
+  : QEquiv {DPath (\lam i => \Sigma⁺ (x : A) (B i x)) s t}
+           {\Sigma (r : s.1 ~> t.1) (DPath (\lam i => B i (r i)) s.2 t.2)} \cowith
+  | f p => (dpath \lam i => (p i).1, dpath \lam i => (p i).2)
+  | ret u => dpath \lam i => (u.1 i, u.2 i)
+  | ret_f p => idp
+  | f_sec u => idp
+
 \func =_~> {A :⁺ \Cat} {a b :⁺ A} (p :⁺ a = b) : a ~> b \elim p
   | idp => idd
 

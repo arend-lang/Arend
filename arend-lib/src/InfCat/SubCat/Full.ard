@@ -84,9 +84,11 @@
 
     \sfunc isMin {D : \Cat} {f : D ->⁺ C} (ff : IsFFMap f) (fs : \Pi {c : C} -> P c -> ∃ (d : D) (f d = c))
       : \Sigma (h : FullSubCat P ->⁺ D) (\Pi (x :⁺ FullSubCat P) -> f (h x) = inc x)
-      => {?}
+      => \have | (g,p) => ffMap-lift ff {\Sigma (x : C) (P x)} __.1 \lam s => fs s.2
+               | l => catFactorRight.lift g (family-ff.2 ff) p
+         \in (\lam d =>⁺ (l d).1, \lam d => (l d).2 *> inv (\peval inc d))
 
     \sfunc isMax {D : \Cat} {f : D ->⁺ C} (fs : \Pi (d : D) -> P (f d))
       : \Sigma (h : D ->⁺ FullSubCat P) (\Pi (y :⁺ D) -> inc (h y) = f y)
-      => {?}
+      => ffMap-lift inc-ff f \lam d => inc-sat (fs d)
   }
