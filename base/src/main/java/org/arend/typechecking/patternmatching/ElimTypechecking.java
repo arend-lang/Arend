@@ -340,7 +340,11 @@ public class ElimTypechecking {
     } else {
       myContext = new Stack<>();
       myCoreClauses = nonIntervalClauses;
-      elimTree = clausesToElimTree(nonIntervalClauses, 0, 0);
+      List<BindingVariance> variances = new ArrayList<>();
+      for (DependentLink link = parameters; link.hasNext(); link = link.getNext()) {
+        variances.add(link.getVariance());
+      }
+      elimTree = clausesToElimTree(nonIntervalClauses, 0, 0, variances);
 
       reportMissingClauses(elimTree, parameters, elimParams);
 
@@ -807,7 +811,7 @@ public class ElimTypechecking {
     return true;
   }
 
-  private ElimTree clausesToElimTree(List<ExtElimClause> clauses, int argsStackSize, int numberOfIntervals) {
+  private ElimTree clausesToElimTree(List<ExtElimClause> clauses, int argsStackSize, int numberOfIntervals, List<BindingVariance> variances) {
     try (Utils.ContextSaver ignored = new Utils.ContextSaver(myContext)) {
       int index = 0;
       loop:
@@ -922,13 +926,16 @@ public class ElimTypechecking {
         return null;
       }
 
-      if (dataType != null && dataType.isSquashed() && myErrorReporter != null) {
-        Sort dataSort = dataType.getSortExpression().withInfLevel();
-        if (myActualLevel != null && !myActualLevel.isLessOrEquals(dataSort.getHLevel().add(myActualLevelSub))) {
+      boolean propOnly = dataType != null && dataType.isHIT() && variances.get(index) != BindingVariance.COVARIANT && dataType.hasCovariantConstructorParameters();
+      if (dataType != null && (dataType.isSquashed() || propOnly) && myErrorReporter != null) {
+        Sort dataSort = propOnly ? Sort.PROP : dataType.getSortExpression().withInfLevel();
+        boolean levelOK = myActualLevel == null || myActualLevel.isLessOrEquals(dataSort.getHLevel().add(myActualLevelSub));
+        if (!levelOK && !propOnly) {
           myErrorReporter.report(new SquashedDataError(dataType, dataSort, myActualLevel, getClause(conClause.index, someConPattern)));
         }
 
-        boolean ok = !dataType.isTruncated() || myLevel != null && myLevel.compareTo(dataType.getTruncatedLevel().add(BigInteger.ONE)) <= 0;
+        BigInteger truncatedLevel = propOnly ? ConstLevel.PROP.value() : dataType.getTruncatedLevel();
+        boolean ok = !(propOnly || dataType.isTruncated()) || myLevel != null && myLevel.compareTo(truncatedLevel.add(BigInteger.ONE)) <= 0;
         if (!ok) {
           Expression type = myExpectedType.getType();
           if (type != null) {
@@ -942,8 +949,10 @@ public class ElimTypechecking {
             }
           }
         }
-        if (!ok) {
-          myErrorReporter.report(new TruncatedDataError(dataType, dataSort, myExpectedType, getClause(conClause.index, someConPattern)));
+        if (propOnly ? !ok || !levelOK : !ok) {
+          myErrorReporter.report(propOnly
+            ? new PropOnlyPatternError(dataType, myExpectedType, getClause(conClause.index, someConPattern))
+            : new TruncatedDataError(dataType, dataSort, myExpectedType, getClause(conClause.index, someConPattern)));
           myOK = false;
         }
       }
@@ -1102,7 +1111,13 @@ public class ElimTypechecking {
           conClauseList.set(i, new ExtElimClause(patterns, clause.getExpression(), clause.index, indices, numberOfFakeVars, newSubstitution));
         }
 
-        ElimTree elimTree = clausesToElimTree(conClauseList, argsStackSize + index + (hasVars ? 1 : 0), myLevel == null ? 0 : numberOfIntervals + (branchKey.getBody() instanceof IntervalElim ? ((IntervalElim) branchKey.getBody()).getNumberOfTotalElim() : 0));
+        List<BindingVariance> newVariances = new ArrayList<>();
+        boolean forceInvariant = variances.get(index) == BindingVariance.INVARIANT;
+        for (DependentLink link = branchKey instanceof SingleConstructor ? someConPattern.getParameters() : branchKey.getParameters(someConPattern); link.hasNext(); link = link.getNext()) {
+          newVariances.add(forceInvariant ? BindingVariance.INVARIANT : link.getVariance());
+        }
+        newVariances.addAll(variances.subList(index + 1, variances.size()));
+        ElimTree elimTree = clausesToElimTree(conClauseList, argsStackSize + index + (hasVars ? 1 : 0), myLevel == null ? 0 : numberOfIntervals + (branchKey.getBody() instanceof IntervalElim ? ((IntervalElim) branchKey.getBody()).getNumberOfTotalElim() : 0), newVariances);
         if (elimTree == null) {
           myOK = false;
         } else {

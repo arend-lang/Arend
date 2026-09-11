@@ -928,6 +928,10 @@ public class PatternTypechecking {
         myErrorReporter.report(new TypecheckingError("Pattern matching on DI is allowed only for invariant parameters", pattern));
         return null;
       }
+      if (myMode == Mode.DATA && dataCall != null && parameters.getVariance() != BindingVariance.INVARIANT) {
+        myErrorReporter.report(new TypecheckingError("Pattern matching in \\data is allowed only for invariant parameters", pattern));
+        return null;
+      }
 
       // Empty pattern
       if (pattern instanceof Concrete.TuplePattern) {
