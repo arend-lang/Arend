@@ -5,7 +5,7 @@
 \import Function.Meta
 \import InfCat.Basics
 \import InfCat.CatPushout
-\import InfCat.Equiv
+\import InfCat.Functor.Equiv
 \import InfCat.Objects
 \import InfCat.Paths
 \import Logic

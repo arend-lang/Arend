@@ -1,7 +1,7 @@
 \import Equiv
 \import Function.Meta
 \import InfCat.Basics
-\import InfCat.Equiv
+\import InfCat.Functor.Equiv
 \import InfCat.Paths
 \import Paths
 

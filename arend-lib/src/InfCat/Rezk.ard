@@ -68,7 +68,7 @@
 
 \lemma IsIso-char {C : \Cat} {x y : C} {f : x ~> y} : IsIso f <-> ∃ (p : x = y) (=_~> p = f)
   => (\lam fi => inP (IsIso_= fi),
-      \lam (inP s) => Paths.transport IsIso s.2 $ inP (=_~> (inv s.1), =_~>_comp *> pmap+ =_~> inv_*>, =_~>_comp *> pmap+ =_~> *>_inv))
+      \lam (inP s) => transport IsIso s.2 $ inP (=_~> (inv s.1), =_~>_comp *> pmap+ =_~> inv_*>, =_~>_comp *> pmap+ =_~> *>_inv))
 
 \lemma =-char {C : \Cat} (x y : C)
   : IsEquiv {x = y} {\Sigma (f : x ~> y) (IsIso f)} (\lam p => (=_~> p, IsIso-char.2 $ inP (p,idp)))
@@ -80,3 +80,13 @@
 
 \lemma =_~>-embedding {C : \Cat} (x y : C) : Embedding {x = y} =_~>
   => transEmbedding (Embedding.fromIsEquiv (=-char x y)) (Embedding.projection {x ~> y} IsIso)
+
+-- | A morphism is an isomorphism iff it is identified with a constant arrow in the arrow category.
+\lemma IsIso-diag-char {A : \Cat} {a b : A} {q : a ~> b}
+  : IsIso q <-> ∃ (c : A) ((\lam _ => c) = {DI ->⁺ A} (\lam i => q i))
+  => (\lam e => inP (a, aux (IsIso_= e).1 (IsIso_= e).2),
+      \lam (inP (c, e)) => transport (\lam u => IsIso (dpath u)) e (inP (idd, comp_idd-left, comp_idd-left)))
+  \where {
+    \private \func aux {C : \Cat} {a b : C} (r : a = b) {q : a ~> b} (s : =_~> r = q) : (\lam _ => a) = {DI ->⁺ C} (\lam i => q i) \elim r, s
+      | idp, idp => idp
+  }

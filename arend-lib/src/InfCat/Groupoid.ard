@@ -1,8 +1,8 @@
 \import Equiv
 \import Function.Meta
 \import InfCat.Basics
-\import InfCat.Equiv
-\import InfCat.FullyFaithful
+\import InfCat.Functor.Equiv
+\import InfCat.Functor.FullyFaithful
 \import InfCat.Objects
 \import InfCat.Paths
 \import InfCat.Rezk

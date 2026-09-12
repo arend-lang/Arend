@@ -5,8 +5,8 @@
 \import Homotopy.Cube
 \import InfCat.Basics
 \import InfCat.CatPushout
-\import InfCat.Equiv
-\import InfCat.FullyFaithful
+\import InfCat.Functor.Equiv
+\import InfCat.Functor.FullyFaithful
 \import InfCat.OFS.CatOFS
 \import InfCat.Objects
 \import InfCat.Paths

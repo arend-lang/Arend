@@ -3,7 +3,7 @@
 \import Equiv.Sigma
 \import Function.Meta
 \import InfCat.Basics
-\import InfCat.Equiv
+\import InfCat.Functor.Equiv
 \import InfCat.Objects
 \import InfCat.Paths
 \import InfCat.Rezk

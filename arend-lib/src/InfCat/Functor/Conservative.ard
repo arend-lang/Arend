@@ -1,0 +1,14 @@
+\import Function.Meta
+\import InfCat.Arrows
+\import InfCat.Basics
+\import InfCat.Functor.FullyFaithful
+\import InfCat.Rezk
+\import Logic
+
+\type IsConservative {C D : \Cat} (f : C ->⁺ D) : \Prop
+  => \Pi {x y : C} (p : x ~> y) -> IsIso (dmap f p) -> IsIso p
+
+\lemma cov-func-conservative {C D : \Cat} : IsConservative {C ->⁺ D} {C -> D} (\lam f x => f x)
+  => \lam p e =>
+       \have (h,q) => ffMap-lift diag-ff (\lam x i => p i x) \lam x => IsIso-diag-char.1 (dmap_IsIso (\lam u => u x) e)
+       \in IsIso-diag-char.2 $ inP (h, path \lam j i x => q x j i)

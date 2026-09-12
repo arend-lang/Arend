@@ -1,6 +1,11 @@
 \import Equiv
+\import Equiv.Sigma
 \import Function.Meta
+\import InfCat.Basics
+\import InfCat.Functor.FullyFaithful
 \import InfCat.Objects
+\import Logic
+\import Logic.Unique
 \import Paths
 \import Paths.Meta
 
@@ -25,3 +30,17 @@
   | ret s => ObDI-elim s.1 s.2
   | ret_f u => ext (ObDI-elim idp idp)
   | f_sec => idpe
+
+-- | A morphism in the arrow category is a commutative square.
+\func DI-hom-equiv {D : \Cat} {u v : DI ->⁺ D}
+  : QEquiv {u ~> v} {\Sigma (l : u dleft ~> v dleft) (\Sigma (r : u dright ~> v dright) (DPath (\lam i => u i ~> v i) l r))} \cowith
+  | f t => (dpath \lam j => t j dleft, (dpath \lam j => t j dright, dpath \lam i => dpath \lam j => t j i))
+  | ret s => dpath \lam i j => s.2.2 j i
+  | ret_f t => idp
+  | f_sec s => idp
+
+-- | The diagonal map into the arrow category is fully faithful.
+\lemma diag-ff {C : \Cat} : IsFFMap {C} {DI ->⁺ C} (\lam c _ => c)
+  => \lam a b => IsEquiv.leftFactor
+        (inP $ DI-hom-equiv {C} `transQEquiv` contr-right \lam p => Contr.Contr_QEquiv (sigma-right \lam q => =_~>-equiv {_} {p} {q}) (lsigma p))
+        (inP idEquiv)

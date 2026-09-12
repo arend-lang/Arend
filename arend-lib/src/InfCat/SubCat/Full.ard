@@ -5,8 +5,8 @@
 \import Function.Meta
 \import InfCat.Arrows
 \import InfCat.Basics
-\import InfCat.Equiv
-\import InfCat.FullyFaithful
+\import InfCat.Functor.Equiv
+\import InfCat.Functor.FullyFaithful
 \import InfCat.Groupoid
 \import InfCat.OFS.CatAccessibleOFS
 \import InfCat.OFS.CatOFS
