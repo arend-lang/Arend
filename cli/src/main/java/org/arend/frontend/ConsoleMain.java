@@ -1,7 +1,6 @@
 package org.arend.frontend;
 
 import org.apache.commons.cli.*;
-import org.arend.core.definition.Definition;
 import org.arend.ext.module.ModulePath;
 import org.arend.frontend.cli.CliSetup;
 import org.arend.frontend.cli.daemon.DaemonStart;
@@ -356,44 +355,6 @@ public class ConsoleMain {
       System.out.println("[WARNING] Option " + name + " is not supported in REPL (-i) mode and will be ignored.");
     }
   }
-
-
-
-
-
-
-
-  /**
-   * Returns true if any typecheckable definition reachable from {@code group} has
-   * status {@link Definition.TypeCheckingStatus#HAS_ERRORS}. Used to gate persist:
-   * caching a module that contains an erroneous def would only feed the
-   * deserialize → orphan-shell-detected → clear → re-typecheck cycle in
-   * {@code CliServerRequester.loadBinaryCache}.
-   */
-
-  /**
-   * Re-reports typechecking errors stored in the server's {@code ErrorService} for
-   * source modules in the given library. Without this step, a daemon that
-   * bootstrapped with HAS_ERRORS modules would silently drop the error reports on
-   * the second and later client requests: persist now skips those modules, load
-   * doesn't see them in the binary cache, and the typechecker skips already-
-   * typechecked defs — so the per-request {@code moduleResults} map never gets
-   * an ERROR entry. Walking the ErrorService here restores the per-invocation
-   * "Number of modules with errors" summary that the old re-typecheck cycle
-   * incidentally provided.
-   */
-
-  /**
-   * The file that {@code --json -ss} writes its diagnostics to. Honours an
-   * explicit {@code --log-file <path>}; otherwise defaults to
-   * {@code <java.io.tmpdir>/arend-symbol-search.log}, overwritten each run.
-   */
-  private static Path resolveJsonLogPath(CommandLine cmdLine) {
-    String custom = cmdLine.getOptionValue("log-file");
-    if (custom != null && !custom.isEmpty()) return Paths.get(custom);
-    return Paths.get(System.getProperty("java.io.tmpdir"), "arend-symbol-search.log");
-  }
-
 
   public static void main(String[] args) {
     // The daemon child JVM's entry point. Detected before parseArgs, because commons-cli would
