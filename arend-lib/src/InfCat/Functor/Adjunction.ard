@@ -1,0 +1,352 @@
+\import Equiv
+\import Equiv.Fiber
+\import Equiv.Sigma
+\import Function.Meta
+\import InfCat.Basics
+\import InfCat.Functor.Conservative
+\import InfCat.Functor.Equiv
+\import InfCat.Functor.FullyFaithful
+\import InfCat.Paths
+\import InfCat.Rezk
+\import InfCat.Square
+\import InfCat.SubCat.Full
+\import Logic
+\import Logic.Unique
+\import Meta
+\import Paths
+\import Paths.Meta
+\open FullSubCat
+
+\record QAdjunction (C D : \Cat) {
+  | ladj : C ->⁺ D
+  | radj : D ->⁺ C
+  | heta (x :⁺ C) : x ~> radj (ladj x)
+  | heps (y :⁺ D) : ladj (radj y) ~> y
+  | heta_heps-left {y :⁺ D} : comp (heta (radj y)) (dmap radj (heps y)) = idd
+  | heta_heps-right {x :⁺ C} : comp (dmap ladj (heta x)) (heps (ladj x)) = idd
+
+  \func heta_heps-lr {x :⁺ C} {y :⁺ D} (g :⁺ ladj x ~> y) : x ~> radj y
+    => comp (heta x) (dmap radj g)
+
+  \func heta_heps-rl {x :⁺ C} {y :⁺ D} (h :⁺ x ~> radj y) : ladj x ~> y
+    => comp (dmap ladj h) (heps y)
+
+  \sfunc heta_heps-lrl {x :⁺ C} {y :⁺ D} {g :⁺ ladj x ~> y} : heta_heps-rl (heta_heps-lr g) = g
+    => unfold (heta_heps-rl, heta_heps-lr) $ pmap+ (comp __ _) (dmap_comp ladj) *> inv comp-assoc
+    *> pmap+ (comp _ __) (~>-natural heps) *> comp-assoc *> pmap+ (comp __ g) heta_heps-right *> comp_idd-left
+
+  \sfunc heta_heps-rlr {x :⁺ C} {y :⁺ D} {h :⁺ x ~> radj y} : heta_heps-lr (heta_heps-rl h) = h
+    => unfold (heta_heps-lr, heta_heps-rl) $ pmap+ (comp _ __) (dmap_comp radj) *> comp-assoc
+    *> pmap+ (comp __ _) (inv (~>-natural heta)) *> inv comp-assoc *> pmap+ (comp h __) heta_heps-left *> comp_idd-right
+
+  \func heta_heps-equiv {x : C} {y : D} : QEquiv {ladj x ~> y} {x ~> radj y} \cowith
+    | f => heta_heps-lr
+    | ret => heta_heps-rl
+    | ret_f g => heta_heps-lrl
+    | f_sec h => heta_heps-rlr
+}
+
+-- | Naturality of `g ↦ comp (eta x) (dmap R g)` in `x`.
+\sfunc unit-comp-natural {C D :⁺ \Cat} (L :⁺ C ->⁺ D) (R :⁺ D ->⁺ C) (eta :⁺ \Pi (x :⁺ C) -> x ~> R (L x))
+                         {x x' :⁺ C} {y :⁺ D} (f :⁺ x ~> x') (g :⁺ L x' ~> y)
+  : comp (eta x) (dmap R (comp (dmap L f) g)) = comp f (comp (eta x') (dmap R g))
+  => pmap+ (comp _ __) (dmap_comp R) *> comp-assoc *> pmap+ (comp __ _) (inv (~>-natural eta)) *> inv comp-assoc
+
+-- | Naturality of `h ↦ comp (dmap L h) (eps y)` in `y`.
+\sfunc counit-comp-natural {C D :⁺ \Cat} (L :⁺ C ->⁺ D) (R :⁺ D ->⁺ C) (eps :⁺ \Pi (y :⁺ D) -> L (R y) ~> y)
+                           {x :⁺ C} {y y' :⁺ D} (h :⁺ x ~> R y) (g :⁺ y ~> y')
+  : comp (dmap L (comp h (dmap R g))) (eps y') = comp (comp (dmap L h) (eps y)) g
+  => pmap+ (comp __ _) (dmap_comp L) *> inv comp-assoc *> pmap+ (comp _ __) (~>-natural eps) *> comp-assoc
+
+\protected \record FunctorPair {C D : \Cat} (F : C ->⁺ D) (G : D ->⁺ C)
+
+-- | A pair of functors with a natural universal unit.
+\protected \record UnivUnit \extends FunctorPair
+  | eta (x :⁺ C) : x ~> G (F x)
+  | eta-univ (x : C) (y : D) : IsEquiv {F x ~> y} {x ~> G y} (\lam g => comp (eta x) (dmap G g))
+
+-- | A pair of functors with a natural universal counit.
+\protected \record UnivCounit \extends FunctorPair
+  | eps (y :⁺ D) : F (G y) ~> y
+  | eps-univ (y : D) (x : C) : IsEquiv {x ~> G y} {F x ~> y} (\lam f => comp (dmap F f) (eps y))
+
+{- | Given a universal unit for {G} and a universal counit for {G'}, the canonical transformation `G' ~> G` is a natural isomorphism.
+     Transporting the counit along its inverse gives a counit for {G} satisfying the left triangle identity.
+ -}
+\protected \record CounitTransport \extends UnivUnit {
+  | G' : D ->⁺ C
+  | counit : UnivCounit F G'
+
+  \func tau (y :⁺ D) : G' y ~> G y
+    => comp (eta (G' y)) (dmap G (counit.eps y))
+
+  \lemma tau-iso (y : D) : IsIso (tau y)
+    => postcomp-equiv=>iso \lam x => transport IsEquiv (ext \lam f => unit-comp-natural F G eta f (counit.eps y)) (IsEquiv.trans (counit.eps-univ y x) (eta-univ x y))
+
+  \func tauNat : G' ~> G
+    => dpath \lam i y => tau y i
+
+  \lemma tauNat-iso : IsIso tauNat
+    => objectwise-iso tau-iso
+
+  \func sigma (y :⁺ D) : G y ~> G' y
+    => dmap (\lam u => u y) (IsIso.ret tauNat-iso)
+
+  \sfunc sigma_tau {y :⁺ D} : comp (sigma y) (tau y) = idd
+    => inv (dmap_comp {D ->⁺ C} \lam u => u y) *> pmap+ (dmap (\lam u => u y) __) (IsIso.ret_f tauNat-iso)
+
+  \sfunc tau_sigma {y :⁺ D} : comp (tau y) (sigma y) = idd
+    => inv (dmap_comp {D ->⁺ C} \lam u => u y) *> pmap+ (dmap (\lam u => u y) __) (IsIso.f_ret tauNat-iso)
+
+  \func eps (y :⁺ D) : F (G y) ~> y
+    => comp (dmap F (sigma y)) (counit.eps y)
+
+  \sfunc triangle-left {y :⁺ D} : comp (eta (G y)) (dmap G (eps y)) = idd
+    => unit-comp-natural F G eta (sigma y) (counit.eps y) *> sigma_tau
+}
+
+{- | Given a universal counit for {F} and a universal unit for {F'}, the canonical transformation `F ~> F'` is a natural isomorphism.
+     Transporting the unit along its inverse gives a unit for {F} satisfying the right triangle identity.
+ -}
+\protected \record UnitTransport \extends UnivCounit {
+  | F' : C ->⁺ D
+  | unit : UnivUnit F' G
+
+  \func rho (x :⁺ C) : F x ~> F' x
+    => comp (dmap F (unit.eta x)) (eps (F' x))
+
+  \lemma rho-iso (x : C) : IsIso (rho x)
+    => precomp-equiv=>iso \lam y => transport IsEquiv (ext \lam g => counit-comp-natural F G eps (unit.eta x) g) (IsEquiv.trans (unit.eta-univ x y) (eps-univ y x))
+
+  \func rhoNat : F ~> F'
+    => dpath \lam i x => rho x i
+
+  \lemma rhoNat-iso : IsIso rhoNat
+    => objectwise-iso rho-iso
+
+  \func pi (x :⁺ C) : F' x ~> F x
+    => dmap (\lam u => u x) (IsIso.ret rhoNat-iso)
+
+  \sfunc rho_pi {x :⁺ C} : comp (rho x) (pi x) = idd
+    => inv (dmap_comp {C ->⁺ D} \lam u => u x) *> pmap+ (dmap (\lam u => u x) __) (IsIso.f_ret rhoNat-iso)
+
+  \sfunc pi_rho {x :⁺ C} : comp (pi x) (rho x) = idd
+    => inv (dmap_comp {C ->⁺ D} \lam u => u x) *> pmap+ (dmap (\lam u => u x) __) (IsIso.ret_f rhoNat-iso)
+
+  \func eta (x :⁺ C) : x ~> G (F x)
+    => comp (unit.eta x) (dmap G (pi x))
+
+  \sfunc triangle-right {x :⁺ C} : comp (dmap F (eta x)) (eps (F x)) = idd
+    => counit-comp-natural F G eps (unit.eta x) (pi x) *> rho_pi
+}
+
+\record LeftAdjoint {C D : \Cat} (L : C ->⁺ D) {
+  | rob : D -> C
+  | eps0 (y : D) : L (rob y) ~> y
+  | eps0-adjoint {x : C} {y : D} : IsEquiv {x ~> rob y} {L x ~> y} (\lam f => comp (dmap L f) (eps0 y))
+
+  -- | The comma category {L} ↓ {D}.
+  \protected \func Comma => \Sigma⁺ (y : D) (\Sigma⁺ (x : C) (L x ~> y))
+
+  \protected \func IsUniversal {x : C} {y : D} (h : L x ~> y) : \Prop
+    => \Pi (x' : C) -> IsEquiv {x' ~> x} {L x' ~> y} (\lam f => comp (dmap L f) h)
+
+  -- | The full subcategory of {Comma} on universal arrows.
+  \protected \func Univ : \Cat => FullSubCat {Comma} (\lam s => IsUniversal s.2.2)
+
+  \protected \func proj (u :⁺ Univ) : D => (inc u).1
+
+  \protected \lemma proj-equiv : IsHEquiv proj
+    => ff-surj-equiv.1 $ later
+        (\lam u v => IsEquiv.trans (inc-ff u v) (comma-ff (inc-con {_} {_} {v})),
+         \lam y => \case inc-sat {Comma} {\lam s => IsUniversal s.2.2} {y, (rob y, eps0 y)} (\lam _ => eps0-adjoint) \with {
+           | inP (u,p) => inP (u, pmap __.1 p)
+         })
+    \where {
+      -- | The projection from {Comma} is fully faithful relative to universal arrows.
+      \protected \lemma comma-ff {s t : Comma} (tu : IsUniversal t.2.2) : IsEquiv {s ~> t} {s.1 ~> t.1} (dmap __.1)
+        => inP $ transQEquiv (dpath-sigma-equiv \lam _ y => \Sigma⁺ (x : C) (L x ~> y)) $
+             contr-right {s.1 ~> t.1} \lam f => Contr.Contr_QEquiv
+               (symQEquiv $ transQEquiv (dpath-sigma-equiv \lam i x => L x ~> f i) $ sigma-right \lam g =>
+                  square-equiv {D} {L s.2.1} {L t.2.1} {s.1} {t.1} {dmap L g})
+               (IsEquiv=>contrFibers (tu s.2.1) (comp s.2.2 f))
+    }
+
+  \protected \func univ-ret (y :⁺ D) : Univ
+    => IsHEquiv.ret proj-equiv y
+
+  \protected \func proj_univ-ret {y :⁺ D} : proj (univ-ret y) = y
+    => IsHEquiv.f_ret proj-equiv
+
+  \protected \func radj (y :⁺ D) : C
+    => (inc (univ-ret y)).2.1
+
+  \protected \func heps (y :⁺ D) : L (radj y) ~> y
+    => comp (inc (univ-ret y)).2.2 (=_~> proj_univ-ret)
+
+  \protected \lemma heps-univ (y : D) : IsUniversal (heps y)
+    => \lam x' => transport IsEquiv (ext \lam f => inv comp-assoc) (IsEquiv.trans (inc-con {_} {_} {univ-ret y} x') (comp_=_~>-right-equiv proj_univ-ret))
+
+  \protected \func rightAdjoint : RightAdjoint radj \cowith
+    | lob x => L x
+    | eta0 => eta0
+    | eta0-adjoint {x} {y}
+      => IsEquiv.leftFactor (heps-univ y x) $ transportInv IsEquiv
+          (ext \lam g => counit-comp-natural L radj heps (eta0 x) g
+                          *> pmap (comp __ g) (IsEquiv.f_ret (heps-univ (L x) x))
+                          *> comp_idd-left)
+          (inP idEquiv)
+    \where {
+      -- | The objectwise unit of {radj}.
+      \protected \func eta0 (x : C) : x ~> radj (L x)
+        => IsEquiv.ret (heps-univ (L x) x) idd
+    }
+
+ \protected \func leftAdjoint : LeftAdjoint rightAdjoint.ladj \cowith
+    | rob y => radj y
+    | eps0 => eps0
+    | eps0-adjoint {x} {y} => IsEquiv.leftFactor (rightAdjoint.heta-univ x y) $ transportInv IsEquiv
+        (ext \lam f => unit-comp-natural rightAdjoint.ladj radj rightAdjoint.heta f (eps0 y)
+                        *> pmap (comp f __) (IsEquiv.f_ret (rightAdjoint.heta-univ (radj y) y))
+                        *> comp_idd-right)
+        (inP idEquiv)
+    \where {
+      -- | The objectwise counit of {rightAdjoint.ladj}.
+      \protected \func eps0 (y : D) : rightAdjoint.ladj (radj y) ~> y
+        => IsEquiv.ret (rightAdjoint.heta-univ (radj y) y) idd
+    }
+
+  \protected \func univCounit : UnivCounit L radj \cowith
+    | eps => heps
+    | eps-univ => heps-univ
+
+  \func toAdjunction : QAdjunction C D \cowith
+    | ladj => L
+    | radj => radj
+    | heta => unitTransport.eta
+    | heps => heps
+    | heta_heps-left {y} => pmap+ (comp _ __) (pmap+ (dmap radj __) heps-char *> dmap_comp radj) *> comp-assoc
+      *> pmap+ (comp __ _) (inv comp-assoc *> pmap+ (comp _ __) (inv (dmap_comp radj) *> pmap+ (dmap radj __) unitTransport.pi_rho) *> comp_idd-right)
+      *> counitTransport.triangle-left
+    | heta_heps-right => unitTransport.triangle-right
+    \where {
+      \private \func unitTransport : UnitTransport L radj \cowith
+        | UnivCounit => univCounit
+        | F' => rightAdjoint.ladj
+        | unit => rightAdjoint.univUnit
+
+      \private \func counitTransport : CounitTransport rightAdjoint.ladj radj \cowith
+        | UnivUnit => rightAdjoint.univUnit
+        | G' => leftAdjoint.radj
+        | counit => leftAdjoint.univCounit
+
+      \private \sfunc heps-char {y :⁺ D} : heps y = comp (unitTransport.rho (radj y)) (counitTransport.eps y)
+        => inv comp_idd-left *> inv (pmap+ (\lam h => comp (dmap L h) (heps y)) counitTransport.triangle-left)
+            *> counit-comp-natural L radj heps (rightAdjoint.heta (radj y)) (counitTransport.eps y)
+    }
+}
+
+\record RightAdjoint {C D : \Cat} (R : D ->⁺ C) {
+  | lob : C -> D
+  | eta0 (x : C) : x ~> R (lob x)
+  | eta0-adjoint {x : C} {y : D} : IsEquiv {lob x ~> y} {x ~> R y} (\lam g => comp (eta0 x) (dmap R g))
+
+  -- | The comma category {C} ↓ {R}.
+  \protected \func Comma => \Sigma⁺ (x : C) (\Sigma⁺ (y : D) (x ~> R y))
+
+  \protected \func IsUniversal {x : C} {y : D} (h : x ~> R y) : \Prop
+    => \Pi (y' : D) -> IsEquiv {y ~> y'} {x ~> R y'} (\lam g => comp h (dmap R g))
+
+  -- | The full subcategory of {Comma} on universal arrows.
+  \protected \func Univ : \Cat => FullSubCat {Comma} (\lam s => IsUniversal s.2.2)
+
+  \protected \func proj (u :⁺ Univ) : C => (inc u).1
+
+  \protected \lemma proj-equiv : IsHEquiv proj
+    => ff-surj-equiv.1 $ later
+        (\lam u v => IsEquiv.trans (inc-ff u v) (comma-ff (inc-con {_} {_} {u})),
+         \lam x => \case inc-sat {Comma} {\lam s => IsUniversal s.2.2} {x, (lob x, eta0 x)} (\lam _ => eta0-adjoint) \with {
+           | inP (u,p) => inP (u, pmap __.1 p)
+         })
+    \where {
+      -- | The projection from {Comma} is fully faithful relative to universal arrows.
+      \protected \lemma comma-ff {s t : Comma} (su : IsUniversal s.2.2) : IsEquiv {s ~> t} {s.1 ~> t.1} (dmap __.1)
+        => inP $ transQEquiv (dpath-sigma-equiv \lam _ x => \Sigma⁺ (y : D) (x ~> R y)) $
+             contr-right {s.1 ~> t.1} \lam f => Contr.Contr_QEquiv
+               (symQEquiv $ transQEquiv (dpath-sigma-equiv \lam i y => f i ~> R y) $ sigma-right \lam g =>
+                  transQEquiv (square-equiv {C} {s.1} {t.1} {R s.2.1} {R t.2.1} {f} {t.2.2} {s.2.2} {dmap R g}) inv-equiv)
+               (IsEquiv=>contrFibers (su t.2.1) (comp f t.2.2))
+    }
+
+  \protected \func univ-ret (x :⁺ C) : Univ
+    => IsHEquiv.ret proj-equiv x
+
+  \protected \func proj_univ-ret {x :⁺ C} : proj (univ-ret x) = x
+    => IsHEquiv.f_ret proj-equiv
+
+  \protected \func ladj (x :⁺ C) : D
+    => (inc (univ-ret x)).2.1
+
+  \protected \func heta (x :⁺ C) : x ~> R (ladj x)
+    => comp (=_~> (inv proj_univ-ret)) (inc (univ-ret x)).2.2
+
+  \protected \lemma heta-univ (x : C) : IsUniversal (heta x)
+    => \lam y' => transport IsEquiv (ext \lam g => comp-assoc) (IsEquiv.trans (inc-con {_} {_} {univ-ret x} y') (comp_=_~>-left-equiv (inv proj_univ-ret)))
+
+  \protected \func leftAdjoint : LeftAdjoint ladj \cowith
+    | rob y => R y
+    | eps0 => eps0
+    | eps0-adjoint {x} {y} => IsEquiv.leftFactor (heta-univ x y) $ transportInv IsEquiv
+        (ext \lam f => unit-comp-natural ladj R heta f (eps0 y)
+                        *> pmap (comp f __) (IsEquiv.f_ret (heta-univ (R y) y))
+                        *> comp_idd-right)
+        (inP idEquiv)
+    \where {
+      -- | The objectwise counit of {ladj}.
+      \protected \func eps0 (y : D) : ladj (R y) ~> y
+        => IsEquiv.ret (heta-univ (R y) y) idd
+    }
+
+  \protected \func rightAdjoint : RightAdjoint leftAdjoint.radj \cowith
+    | lob x => ladj x
+    | eta0 => eta0
+    | eta0-adjoint {x} {y} => IsEquiv.leftFactor (leftAdjoint.heps-univ y x) $ transportInv IsEquiv
+        (ext \lam g => counit-comp-natural ladj leftAdjoint.radj leftAdjoint.heps (eta0 x) g
+                        *> pmap (comp __ g) (IsEquiv.f_ret (leftAdjoint.heps-univ (ladj x) x))
+                        *> comp_idd-left)
+        (inP idEquiv)
+    \where {
+      -- | The objectwise unit of {leftAdjoint.radj}.
+      \protected \func eta0 (x : C) : x ~> leftAdjoint.radj (ladj x)
+        => IsEquiv.ret (leftAdjoint.heps-univ (ladj x) x) idd
+    }
+
+  \protected \func univUnit : UnivUnit ladj R \cowith
+    | eta => heta
+    | eta-univ => heta-univ
+
+  \func toAdjunction : QAdjunction C D \cowith
+    | ladj => ladj
+    | radj => R
+    | heta => heta
+    | heps => counitTransport.eps
+    | heta_heps-left => counitTransport.triangle-left
+    | heta_heps-right {x} => pmap+ (comp __ _) (pmap+ (dmap ladj __) heta-char *> dmap_comp ladj) *> inv comp-assoc
+       *> pmap+ (comp _ __) (comp-assoc *> pmap+ (comp __ _) (inv (dmap_comp ladj) *> pmap+ (dmap ladj __) counitTransport.tau_sigma) *> comp_idd-left)
+       *> unitTransport.triangle-right
+    \where {
+      \private \func counitTransport : CounitTransport ladj R \cowith
+        | UnivUnit => univUnit
+        | G' => leftAdjoint.radj
+        | counit => leftAdjoint.univCounit
+
+      \private \func unitTransport : UnitTransport ladj leftAdjoint.radj \cowith
+        | UnivCounit => leftAdjoint.univCounit
+        | F' => rightAdjoint.ladj
+        | unit => rightAdjoint.univUnit
+
+      \private \sfunc heta-char {x :⁺ C} : heta x = comp (unitTransport.eta x) (counitTransport.tau (ladj x))
+        => inv comp_idd-right *> inv (pmap+ (\lam g => comp (heta x) (dmap R g)) unitTransport.triangle-right)
+           *> unit-comp-natural ladj R heta (unitTransport.eta x) (leftAdjoint.heps (ladj x))
+    }
+}

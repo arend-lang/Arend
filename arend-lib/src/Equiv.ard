@@ -298,6 +298,12 @@
   | ret_f ac => inv *>-assoc *> pmap (*> _) *>_inv *> idp_*>
   | f_sec bc => inv *>-assoc *> pmap (*> _) inv_*> *> idp_*>
 
+\func inv-equiv {A : \Type} {a b : A} : QEquiv {a = b} {b = a} \cowith
+  | f => inv
+  | ret => inv
+  | ret_f _ => inv_inv
+  | f_sec _ => inv_inv
+
 -- # Embeddings and surjections
 
 \record Embedding \extends TypeMap {

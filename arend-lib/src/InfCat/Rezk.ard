@@ -90,3 +90,22 @@
     \private \func aux {C : \Cat} {a b : C} (r : a = b) {q : a ~> b} (s : =_~> r = q) : (\lam _ => a) = {DI ->⁺ C} (\lam i => q i) \elim r, s
       | idp, idp => idp
   }
+
+-- | A morphism is an isomorphism if precomposition with it is an equivalence.
+\lemma precomp-equiv=>iso {C : \Cat} {a b : C} {q : a ~> b} (e : \Pi (y : C) -> IsEquiv {b ~> y} {a ~> y} (comp q __)) : IsIso q
+  => inP (IsEquiv.ret (e a) idd,
+          IsEquiv.isInj (e b) $ comp-assoc *> pmap (comp __ q) (IsEquiv.f_ret (e a)) *> comp_idd-left *> inv comp_idd-right,
+          IsEquiv.f_ret (e a))
+
+-- | A morphism is an isomorphism if postcomposition with it is an equivalence.
+\lemma postcomp-equiv=>iso {C : \Cat} {a b : C} {q : a ~> b} (e : \Pi (x : C) -> IsEquiv {x ~> a} {x ~> b} (comp __ q)) : IsIso q
+  => inP (IsEquiv.ret (e b) idd, IsEquiv.f_ret (e b),
+          IsEquiv.isInj (e a) $ inv comp-assoc *> pmap (comp q __) (IsEquiv.f_ret (e b)) *> comp_idd-right *> inv comp_idd-left)
+
+-- | Precomposition with the arrow of a path is an equivalence.
+\lemma comp_=_~>-left-equiv {C : \Cat} {a b c : C} (p : a = b) : IsEquiv {b ~> c} {a ~> c} (comp (=_~> p) __) \elim p
+  | idp => transport IsEquiv (ext \lam g => inv comp_idd-left) (inP idEquiv)
+
+-- | Postcomposition with the arrow of a path is an equivalence.
+\lemma comp_=_~>-right-equiv {C : \Cat} {a b c : C} (p : b = c) : IsEquiv {a ~> b} {a ~> c} (comp __ (=_~> p)) \elim p
+  | idp => transport IsEquiv (ext \lam g => inv comp_idd-right) (inP idEquiv)

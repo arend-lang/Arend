@@ -8,7 +8,10 @@
 \type IsConservative {C D : \Cat} (f : C ->⁺ D) : \Prop
   => \Pi {x y : C} (p : x ~> y) -> IsIso (dmap f p) -> IsIso p
 
+-- | A natural transformation which is an isomorphism objectwise is an isomorphism.
+\lemma objectwise-iso {C D : \Cat} {f g : C ->⁺ D} {p : f ~> g} (e : \Pi (x : C) -> IsIso (dmap (\lam u => u x) p)) : IsIso p
+  => \have (h,q) => ffMap-lift diag-ff (\lam x i => p i x) \lam x => IsIso-diag-char.1 (e x)
+     \in IsIso-diag-char.2 $ inP (h, path \lam j i x => q x j i)
+
 \lemma cov-func-conservative {C D : \Cat} : IsConservative {C ->⁺ D} {C -> D} (\lam f x => f x)
-  => \lam p e =>
-       \have (h,q) => ffMap-lift diag-ff (\lam x i => p i x) \lam x => IsIso-diag-char.1 (dmap_IsIso (\lam u => u x) e)
-       \in IsIso-diag-char.2 $ inP (h, path \lam j i x => q x j i)
+  => \lam p e => objectwise-iso \lam x => dmap_IsIso (\lam u => u x) e
