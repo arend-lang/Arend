@@ -50,6 +50,10 @@ public record ConstLevel(BigInteger value) {
     return isCat() || level.isCat() ? CAT_INFINITY : new ConstLevel(value == null || level.value == null ? null : value.max(level.value));
   }
 
+  public ConstLevel min(ConstLevel level) {
+    return isCat() ? level : level.isCat() ? this : value == null ? level : level.value == null ? this : new ConstLevel(value.min(level.value));
+  }
+
   public ConstLevel add(BigInteger val) {
     return value == null ? this : new ConstLevel(value.add(val));
   }
