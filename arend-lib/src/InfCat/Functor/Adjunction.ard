@@ -11,6 +11,7 @@
 \import InfCat.Square
 \import InfCat.SubCat.Full
 \import Logic
+\import Logic.Meta
 \import Logic.Unique
 \import Meta
 \import Paths
@@ -140,6 +141,36 @@
     => counit-comp-natural F G eps (unit.eta x) (pi x) *> rho_pi
 }
 
+-- | A universal arrow from {L} to {y}.
+\record CounivArrow {C D : \Cat} (L : C ->⁺ D) (y : D)
+  | R0y : C
+  | eps0y : L R0y ~> y
+  | eps0y-univ {x' : C} : IsEquiv {x' ~> R0y} {L x' ~> y} (\lam f => comp (dmap L f) eps0y)
+  \where {
+    -- | Universal arrows are unique.
+    \use \level levelProp {C D : \Cat} {L : C ->⁺ D} {y : D} (s t : CounivArrow L y) : s = t
+      => \have | gp => IsEquiv.f_ret t.eps0y-univ {s.eps0y}
+               | r => IsIso_= $ postcomp-equiv=>iso \lam x => IsEquiv.leftFactor t.eps0y-univ $ transport IsEquiv
+                        (ext \lam f => pmap (comp _) (inv gp) *> comp-assoc *> pmap (comp __ _) (inv (dmap_comp L)))
+                        s.eps0y-univ
+         \in ext (r.1, transport_~>_dmap L (\lam _ => y) (comp_idd-right *> inv (pmap (\lam z => comp (dmap L z) _) r.2 *> gp)))
+  }
+
+-- | A universal arrow from {x} to {R}.
+\record UnivArrow {C D : \Cat} (R : D ->⁺ C) (x : C)
+  | L0x : D
+  | eta0x : x ~> R L0x
+  | eta0x-univ {y' : D} : IsEquiv {L0x ~> y'} {x ~> R y'} (\lam g => comp eta0x (dmap R g))
+  \where {
+    -- | Universal arrows are unique.
+    \use \level levelProp {C D : \Cat} {R : D ->⁺ C} {x : C} (s t : UnivArrow R x) : s = t
+      => \have | gp => IsEquiv.f_ret s.eta0x-univ
+               | r => IsIso_= $ precomp-equiv=>iso \lam y => IsEquiv.leftFactor s.eta0x-univ $ transport IsEquiv
+                        (ext \lam k => pmap (comp __ _) (inv gp) *> inv comp-assoc *> pmap (comp s.eta0x) (inv (dmap_comp R)))
+                        t.eta0x-univ
+         \in ext (r.1, transport_~>_dmap-right R *> pmap (\lam z => comp s.eta0x (dmap R z)) r.2 *> gp)
+  }
+
 \record LeftAdjoint {C D : \Cat} (L : C ->⁺ D) {
   | rob : D -> C
   | eps0 (y : D) : L (rob y) ~> y
@@ -244,6 +275,15 @@
         => inv comp_idd-left *> inv (pmap+ (\lam h => comp (dmap L h) (heps y)) counitTransport.triangle-left)
             *> counit-comp-natural L radj heps (rightAdjoint.heta (radj y)) (counitTransport.eps y)
     }
+} \where {
+  \use \func counivArrow {C D : \Cat} {L : C ->⁺ D} (A : LeftAdjoint L) (y : D) : CounivArrow L y
+    => \new CounivArrow L y (A.rob y) (A.eps0 y) A.eps0-adjoint
+
+  -- | Left adjoints are unique since universal arrows are.
+  \use \level levelProp {C D : \Cat} {L : C ->⁺ D} (A B : LeftAdjoint L) : A = B
+    => pmap {\Pi (y : D) -> CounivArrow L y}
+            (\lam t => \new LeftAdjoint L { | rob y => R0y {t y} | eps0 y => eps0y | eps0-adjoint => eps0y-univ })
+            (path \lam i y => CounivArrow.levelProp (counivArrow A y) (counivArrow B y) i)
 }
 
 \record RightAdjoint {C D : \Cat} (R : D ->⁺ C) {
@@ -349,4 +389,18 @@
         => inv comp_idd-right *> inv (pmap+ (\lam g => comp (heta x) (dmap R g)) unitTransport.triangle-right)
            *> unit-comp-natural ladj R heta (unitTransport.eta x) (leftAdjoint.heps (ladj x))
     }
+} \where {
+  \use \func univArrow {C D : \Cat} {R : D ->⁺ C} (A : RightAdjoint R) (x : C) : UnivArrow R x
+    => \new UnivArrow R x (A.lob x) (A.eta0 x) A.eta0-adjoint
+
+  -- | Right adjoints are unique since universal arrows are.
+  \use \level levelProp {C D : \Cat} {R : D ->⁺ C} (A B : RightAdjoint R) : A = B
+    => pmap {\Pi (x : C) -> UnivArrow R x}
+            (\lam t => \new RightAdjoint R { | lob x => L0x {t x} | eta0 x => eta0x | eta0-adjoint => eta0x-univ })
+            (path \lam i x => UnivArrow.levelProp (univArrow A x) (univArrow B x) i)
+
+  \func fromUnivArrow {C D : \Cat} {R : D ->⁺ C} (ua : \Pi (x : C) -> UnivArrow R x) : RightAdjoint R \cowith
+    | lob x => (ua x).L0x
+    | eta0 x => (ua x).eta0x
+    | eta0-adjoint {x} => (ua x).eta0x-univ
 }

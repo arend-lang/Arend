@@ -42,15 +42,23 @@
 \func =_~> {A :⁺ \Cat} {a b :⁺ A} (p :⁺ a = b) : a ~> b \elim p
   | idp => idd
 
+\sfunc transport_~>_dmap {A B :⁺ \Cat} (f g :⁺ A ->⁺ B) {a b :⁺ A} {p :⁺ a = b} {q :⁺ f a ~> g a} {r :⁺ f b ~> g b}
+  (s :⁺ comp q (dmap g (=_~> p)) = comp (dmap f (=_~> p)) r) : transport+ (\lam x => f x ~> g x) p q = r \elim p
+  | idp => inv comp_idd-right *> s *> comp_idd-left
+
+\sfunc transport_~>_dmap-left {A B :⁺ \Cat} (f :⁺ A ->⁺ B) {a b :⁺ A} {p :⁺ a = b} {c :⁺ B} {q :⁺ f a ~> c}
+  : transport+ (f __ ~> c) p q = comp (dmap f (=_~> (inv p))) q \elim p
+  | idp => inv comp_idd-left
+
+\sfunc transport_~>_dmap-right {A B :⁺ \Cat} (f :⁺ A ->⁺ B) {a :⁺ B} {b c :⁺ A} {p :⁺ b = c} {q :⁺ a ~> f b}
+  : transport+ (a ~> f __) p q = comp q (dmap f (=_~> p)) \elim p
+  | idp => inv comp_idd-right
+
 \sfunc transport_~>-right {A :⁺ \Cat} {a b c :⁺ A} {p :⁺ b = c} {q :⁺ a ~> b} : transport+ (a ~> __) p q = comp q (=_~> p) \elim p
   | idp => inv comp_idd-right
 
 \func transport_~>_idd-right {A :⁺ \Cat} {a b :⁺ A} {p :⁺ a = b} : transport+ (a ~> __) p idd = =_~> p \elim p
   | idp => idp
-  \where {
-    \protected \func grpd {A : \Cat} {a b : A} {p : a = b} : Paths.transport (a ~> __) p idd = =_~> p \elim p
-      | idp => idp
-  }
 
 \func comp {C :⁺ \Cat} {a b c :⁺ C} (p :⁺ a ~> b) (q :⁺ b ~> c) : a ~> c
   => dpath (fill2 p q __ dright)
