@@ -63,6 +63,7 @@ public class Prelude implements ArendPrelude {
   public static FunctionDefinition DAT;
 
   public static FunctionDefinition FILL2, FILL3;
+  public static FunctionDefinition COERCE_PLUS;
   public static FunctionDefinition REZK;
 
   public static DataDefinition NAT;
@@ -232,6 +233,12 @@ public class Prelude implements ArendPrelude {
         FILL3.setBody(new IntervalElim(24, cases, null));
         FILL3.setStatus(Definition.TypeCheckingStatus.NO_ERRORS);
       }
+      case "coe+" -> {
+        COERCE_PLUS = (FunctionDefinition) definition;
+        DependentLink a = COERCE_PLUS.getParameters().getNext();
+        COERCE_PLUS.setBody(new IntervalElim(3, Collections.singletonList(new IntervalElim.CasePair(new ReferenceExpression(a), null, true)), null));
+        COERCE_PLUS.setStatus(Definition.TypeCheckingStatus.NO_ERRORS);
+      }
       case "rezk" -> {
         REZK = (FunctionDefinition) definition;
         REZK.setStatus(Definition.TypeCheckingStatus.NO_ERRORS);
@@ -354,6 +361,7 @@ public class Prelude implements ArendPrelude {
     consumer.accept(DAT);
     consumer.accept(FILL2);
     consumer.accept(FILL3);
+    consumer.accept(COERCE_PLUS);
     consumer.accept(REZK);
     consumer.accept(PATH);
     consumer.accept(PATH_CON);
@@ -471,6 +479,11 @@ public class Prelude implements ArendPrelude {
   @Override
   public CoreFunctionDefinition getRezk() {
     return REZK;
+  }
+
+  @Override
+  public CoreFunctionDefinition getCoePlus() {
+    return COERCE_PLUS;
   }
 
   @Override
@@ -706,6 +719,11 @@ public class Prelude implements ArendPrelude {
   @Override
   public ArendRef getRezkRef() {
     return REZK == null ? null : REZK.getRef();
+  }
+
+  @Override
+  public ArendRef getCoePlusRef() {
+    return COERCE_PLUS == null ? null : COERCE_PLUS.getRef();
   }
 
   @Override

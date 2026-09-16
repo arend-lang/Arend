@@ -22,6 +22,7 @@ public interface ArendPrelude {
   CoreFunctionDefinition getFill2();
   CoreFunctionDefinition getFill3();
   CoreFunctionDefinition getRezk();
+  CoreFunctionDefinition getCoePlus();
   CoreDataDefinition getNat();
   CoreConstructor getZero();
   CoreConstructor getSuc();
@@ -70,6 +71,7 @@ public interface ArendPrelude {
   ArendRef getFill2Ref();
   ArendRef getFill3Ref();
   ArendRef getRezkRef();
+  ArendRef getCoePlusRef();
   ArendRef getNatRef();
   ArendRef getZeroRef();
   ArendRef getSucRef();

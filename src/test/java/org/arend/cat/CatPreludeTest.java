@@ -224,6 +224,14 @@ public class CatPreludeTest extends TypeCheckingTestCase {
   }
 
   @Test
+  public void coePlusTest() {
+    typeCheckModule("""
+      \\func test.{u} {A B : \\Type u} (p : A ~> B) (a : A) : coe+ (\\lam i => p i) a dleft = a
+        => idp
+      """);
+  }
+
+  @Test
   public void nestedDependentDPathTest() {
     typeCheckModule("""
       \\func foo {C :+ \\Cat} (f :+ \\Pi (i j k :+ DI) ->⁺ C) (j :+ DI)
