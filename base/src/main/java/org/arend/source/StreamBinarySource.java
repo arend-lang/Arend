@@ -184,7 +184,7 @@ public abstract class StreamBinarySource implements PersistableBinarySource {
     // commitOutput() may touch the destination, which is why an interrupted run can only lose
     // the new cache, never the old one.
     try {
-      ModuleProtos.Module module = new ModuleSerialization(errorReporter, new DependencyCollector(null)).writeModule(group, currentModule.getModulePath());
+      ModuleProtos.Module module = new ModuleSerialization(errorReporter, new DependencyCollector(server)).writeModule(group, currentModule.getModulePath());
       if (module == null) {
         return false;
       }

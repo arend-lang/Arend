@@ -5,20 +5,14 @@ import com.intellij.openapi.application.runReadAction
 import com.intellij.openapi.components.Service
 import com.intellij.openapi.components.service
 import com.intellij.openapi.project.Project
-import com.intellij.openapi.project.ProjectManager
-import com.intellij.openapi.project.ProjectManagerListener
 import com.intellij.openapi.vfs.VfsUtil
 import com.intellij.openapi.vfs.VirtualFile
-import com.intellij.openapi.vfs.VirtualFileManager
-import com.intellij.openapi.vfs.newvfs.BulkFileListener
-import com.intellij.openapi.vfs.newvfs.events.VFileContentChangeEvent
-import com.intellij.openapi.vfs.newvfs.events.VFileEvent
-import com.intellij.psi.PsiManager
 import org.arend.ext.error.ErrorReporter
 import org.arend.ext.module.ModuleLocation
-import org.arend.module.IntellijBinarySource
+import org.arend.source.GZIPStreamBinarySource
 import org.arend.psi.ArendFile
 import org.arend.server.ArendServerService
+import org.arend.source.FileBinarySource
 import org.arend.typechecking.error.NotificationErrorReporter
 import org.arend.util.FileUtils
 import org.arend.util.getRelativeFile
@@ -27,36 +21,6 @@ import org.arend.util.getRelativeFile
 @Service(Service.Level.PROJECT)
 class BinaryFileSaver(private val project: Project) {
     private val typecheckedModules = LinkedHashSet<ArendFile>()
-
-    init {
-        // TODO: Replace with AsyncFileListener?
-        project.messageBus.connect().subscribe(VirtualFileManager.VFS_CHANGES, object : BulkFileListener {
-            override fun after(events: List<VFileEvent>) {
-                if (typecheckedModules.isEmpty()) {
-                    return
-                }
-
-                val savedFiles = HashSet<VirtualFile>()
-                for (event in events) {
-                    val file = (if (event is VFileContentChangeEvent && event.isFromSave) PsiManager.getInstance(project).findFile(event.file) as? ArendFile else null) ?: continue
-                    synchronized(project) {
-                        if (typecheckedModules.remove(file)) {
-                            saveFile(file, NotificationErrorReporter(project), savedFiles)
-                        }
-                    }
-                }
-                updateFiles(savedFiles)
-            }
-        })
-
-        ProjectManager.getInstance().addProjectManagerListener(project, object : ProjectManagerListener {
-            override fun projectClosing(closedProject: Project) {
-                if (closedProject == project) {
-                    saveAll()
-                }
-            }
-        })
-    }
 
     private fun updateFiles(savedFiles: Set<VirtualFile>) {
         // We need to update them because we save files using Java API and not the VFS because the latter is very slow for some reason
@@ -74,7 +38,7 @@ class BinaryFileSaver(private val project: Project) {
         val binDir = config.binariesDir ?: return
         val binDirList = binDir.split("/").filter { it.isNotEmpty() }
         val server = project.service<ArendServerService>().server
-        val binarySource = IntellijBinarySource(root, binDirList, moduleLocation)
+        val binarySource = GZIPStreamBinarySource(FileBinarySource(config.binariesDirFile?.toNioPath(), moduleLocation))
         if (runReadAction { binarySource.persist(server, errorReporter) }) {
             val vFile = root.getRelativeFile(binDirList + moduleLocation.modulePath.toList(), FileUtils.SERIALIZED_EXTENSION) ?: return
             savedFiles.add(vFile)

@@ -15,6 +15,8 @@ import org.arend.module.config.LibraryConfig
 import org.arend.server.ArendServerService
 import org.arend.settings.ArendProjectSettings
 import org.arend.toolWindow.errors.ArendMessagesService
+import org.arend.typechecking.ArendBinaryCacheService
+import org.arend.typechecking.BinaryFileSaver
 import org.arend.typechecking.computation.ComputationRunner
 import org.arend.util.findLibrary
 import org.arend.util.registerLibrary
@@ -41,6 +43,10 @@ class ReloadLibrariesService(private val project: Project, private val coroutine
   fun doReload(onlyInternal: Boolean) {
     val server = project.service<ArendServerService>().server
     val libraries = server.libraries.filter { !onlyInternal || server.getLibrary(it)?.isExternalLibrary == false }
+
+    project.service<BinaryFileSaver>().saveAll()
+    project.service<ArendBinaryCacheService>().invalidate(libraries)
+
     runReadAction {
       server.unloadLibraries(onlyInternal)
       val configs = LinkedHashMap<String, LibraryConfig?>()

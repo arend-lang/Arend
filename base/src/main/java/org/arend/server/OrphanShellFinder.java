@@ -1,4 +1,4 @@
-package org.arend.frontend.library;
+package org.arend.server;
 
 import org.arend.core.context.param.DependentLink;
 import org.arend.core.definition.ClassDefinition;
