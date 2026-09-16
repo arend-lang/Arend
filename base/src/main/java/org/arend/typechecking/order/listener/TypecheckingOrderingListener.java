@@ -18,6 +18,7 @@ import org.arend.ext.ArendExtension;
 import org.arend.ext.core.definition.CoreFunctionDefinition;
 import org.arend.ext.core.expr.CoreExpression;
 import org.arend.ext.core.ops.CMP;
+import org.arend.ext.core.ops.NormalizationMode;
 import org.arend.ext.error.ErrorReporter;
 import org.arend.ext.error.TypecheckingError;
 import org.arend.ext.typechecking.DefinitionListener;
@@ -37,6 +38,7 @@ import org.arend.typechecking.error.TerminationCheckError;
 import org.arend.typechecking.error.local.LocalErrorReporter;
 import org.arend.typechecking.implicitargs.equations.DummyEquations;
 import org.arend.typechecking.instance.pool.GlobalInstancePool;
+import org.arend.typechecking.visitor.CheckTypeVisitor;
 import org.arend.typechecking.instance.provider.InstanceScopeProvider;
 import org.arend.typechecking.order.Ordering;
 import org.arend.typechecking.order.PartialComparator;
@@ -49,6 +51,7 @@ import org.arend.typechecking.visitor.*;
 import org.arend.ext.util.Pair;
 
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class TypecheckingOrderingListener extends BooleanComputationRunner implements OrderingListener {
   private final ArendCheckerFactory myCheckerFactory;
@@ -63,10 +66,12 @@ public class TypecheckingOrderingListener extends BooleanComputationRunner imple
   private final Map<TCDefReferable, Concrete.ResolvableDefinition> myDesugaredDefinitions = new HashMap<>();
   private final ArendServerResolveListener myResolveListener;
   private final boolean myClearLemmas;
+  private Map<TCDefReferable, Set<TCDefReferable>> myUsedInstances;
+  private Map<TCDefReferable, Set<TCDefReferable>> myInferenceFields;
   private List<TCDefReferable> myCurrentDefinitions = new ArrayList<>();
   private boolean myHeadersAreOK = true;
 
-  private record Suspension(CheckTypeVisitor typechecker) {}
+  private record Suspension(CheckTypeVisitor typechecker, List<Pair<Expression, ClassField>> inferenceFieldCandidates) {}
 
   public TypecheckingOrderingListener(ArendCheckerFactory factory, InstanceScopeProvider instanceScopeProvider, Map<TCDefReferable, List<TCDefReferable>> instanceDependencies, ConcreteProvider concreteProvider, ErrorReporter errorReporter, DependencyListener dependencyListener, PartialComparator<TCDefReferable> comparator, ArendExtensionProvider extensionProvider, ArendServerResolveListener resolveListener, boolean clearLemmas) {
     myCheckerFactory = factory;
@@ -79,6 +84,39 @@ public class TypecheckingOrderingListener extends BooleanComputationRunner imple
     myExtensionProvider = extensionProvider;
     myResolveListener = resolveListener;
     myClearLemmas = clearLemmas;
+  }
+
+  public void setUsedInstancesCollector(Map<TCDefReferable, Set<TCDefReferable>> usedInstances) {
+    myUsedInstances = usedInstances;
+  }
+
+  private Set<TCDefReferable> usedInstancesOf(TCDefReferable definition) {
+    return myUsedInstances == null ? null : myUsedInstances.computeIfAbsent(definition, k -> ConcurrentHashMap.newKeySet());
+  }
+
+  public void setInferenceFieldsCollector(Map<TCDefReferable, Set<TCDefReferable>> inferenceFields) {
+    myInferenceFields = inferenceFields;
+  }
+
+  private Set<TCDefReferable> inferenceFieldsOf(TCDefReferable definition) {
+    return myInferenceFields == null ? null : myInferenceFields.computeIfAbsent(definition, k -> ConcurrentHashMap.newKeySet());
+  }
+
+  private List<Pair<Expression, ClassField>> newInferenceFieldCandidates() {
+    return myInferenceFields == null ? null : new ArrayList<>();
+  }
+
+  private void collectInferenceFields(List<Pair<Expression, ClassField>> candidates, TCDefReferable definition) {
+    if (candidates == null || candidates.isEmpty()) return;
+    Set<TCDefReferable> fields = inferenceFieldsOf(definition);
+    if (fields == null) return;
+    for (Pair<Expression, ClassField> candidate : candidates) {
+      Expression type = candidate.proj1.normalize(NormalizationMode.WHNF).getPiParameters(new ArrayList<>(), true).normalize(NormalizationMode.WHNF);
+      boolean fromElsewhere = type instanceof ClassCallExpression classCall
+        && classCall.getDefinition() != candidate.proj2.getParentClass()
+        && classCall.getDefinition().containsField(candidate.proj2);
+      if (!fromElsewhere) fields.add(candidate.proj2.getReferable());
+    }
   }
 
   public ConcreteProvider getConcreteProvider() {
@@ -243,7 +281,9 @@ public class TypecheckingOrderingListener extends BooleanComputationRunner imple
 
     if (ok) {
       CheckTypeVisitor checkTypeVisitor = myCheckerFactory.create(errorReporter, null, extension, myResolveListener);
-      checkTypeVisitor.setInstancePool(new GlobalInstancePool(getInstances(definition.getData()), checkTypeVisitor));
+      checkTypeVisitor.setInstancePool(new GlobalInstancePool(getInstances(definition.getData()), checkTypeVisitor, null, usedInstancesOf(definition.getData())));
+      List<Pair<Expression, ClassField>> inferenceFieldCandidates = newInferenceFieldCandidates();
+      checkTypeVisitor.setInferenceFieldCandidates(inferenceFieldCandidates);
       definition = definition.accept(new ReplaceDataVisitor(), null);
       if (definition instanceof Concrete.FunctionDefinition funDef && funDef.getKind().isUse()) {
         myDesugaredDefinitions.put(funDef.getData(), funDef);
@@ -254,6 +294,7 @@ public class TypecheckingOrderingListener extends BooleanComputationRunner imple
       DesugarVisitor.desugar(definition, myConcreteProvider, checkTypeVisitor.getErrorReporter());
       DefinitionTypechecker typechecker = new DefinitionTypechecker(checkTypeVisitor, recursive ? Collections.singleton(definition.getData()) : Collections.emptySet());
       List<ExtElimClause> clauses = definition.accept(typechecker, null);
+      collectInferenceFields(inferenceFieldCandidates, definition.getData());
       Definition typechecked = definition.getData().getTypechecked();
       if (typechecked == null) {
         typechecked = newDefinition(definition);
@@ -456,11 +497,13 @@ public class TypecheckingOrderingListener extends BooleanComputationRunner imple
     visitor.setStatus(definition.getStatus().getTypecheckingStatus());
     DesugarVisitor.desugar(definition, myConcreteProvider, visitor.getErrorReporter());
     DefinitionTypechecker typechecker = new DefinitionTypechecker(visitor, definition instanceof Concrete.Definition ? ((Concrete.Definition) definition).getRecursiveDefinitions() : Collections.emptySet());
-    Definition typechecked = typechecker.typecheckHeader(new GlobalInstancePool(getInstances(definition.getData()), visitor), definition);
+    List<Pair<Expression, ClassField>> inferenceFieldCandidates = newInferenceFieldCandidates();
+    visitor.setInferenceFieldCandidates(inferenceFieldCandidates);
+    Definition typechecked = typechecker.typecheckHeader(new GlobalInstancePool(getInstances(definition.getData()), visitor, null, usedInstancesOf(definition.getData())), definition);
     if (typechecked == null) return;
 
     if (typechecked.status() == Definition.TypeCheckingStatus.TYPE_CHECKING) {
-      mySuspensions.put(definition.getData(), new Suspension(visitor));
+      mySuspensions.put(definition.getData(), new Suspension(visitor, inferenceFieldCandidates));
     }
 
     if (!typechecked.status().headerIsOK()) {
@@ -508,6 +551,7 @@ public class TypecheckingOrderingListener extends BooleanComputationRunner imple
       if (myHeadersAreOK && suspension != null) {
         typechecking.setTypechecker(suspension.typechecker);
         List<? extends ElimClause<ExpressionPattern>> clauses = typechecking.typecheckBody(def, definition, dataDefinitions);
+        collectInferenceFields(suspension.inferenceFieldCandidates, definition.getData());
         if (def instanceof FunctionDefinition && definition instanceof Concrete.Definition) {
           functionDefinitions.put((FunctionDefinition) def, (Concrete.Definition) definition);
           if (clauses != null) {

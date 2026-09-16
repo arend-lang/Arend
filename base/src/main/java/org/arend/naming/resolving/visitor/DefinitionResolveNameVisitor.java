@@ -16,6 +16,7 @@ import org.arend.naming.error.ExistingOpenedNameError;
 import org.arend.naming.error.ReferenceError;
 import org.arend.naming.reference.*;
 import org.arend.naming.resolving.ResolverListener;
+import org.arend.naming.resolving.ScopeUsageCollector;
 import org.arend.naming.resolving.typing.*;
 import org.arend.naming.scope.*;
 import org.arend.naming.scope.local.ListScope;
@@ -39,6 +40,7 @@ public class DefinitionResolveNameVisitor implements ConcreteResolvableDefinitio
   private final LiteralTypechecker myLiteralTypechecker;
   private final ResolverListener myResolverListener;
   private final Map<TCDefReferable, Concrete.ExternalParameters> myExternalParameters = new HashMap<>();
+  private ScopeUsageCollector myScopeUsageCollector;
 
   public DefinitionResolveNameVisitor(ConcreteProvider concreteProvider, TypingInfo typingInfo, ErrorReporter errorReporter, LiteralTypechecker literalTypechecker, ResolverListener resolverListener) {
     myConcreteProvider = concreteProvider;
@@ -50,6 +52,10 @@ public class DefinitionResolveNameVisitor implements ConcreteResolvableDefinitio
 
   public DefinitionResolveNameVisitor(ConcreteProvider concreteProvider, TypingInfo typingInfo, ErrorReporter errorReporter) {
     this(concreteProvider, typingInfo, errorReporter, null, null);
+  }
+
+  public void setScopeUsageCollector(ScopeUsageCollector collector) {
+    myScopeUsageCollector = collector;
   }
 
   @Override
@@ -619,12 +625,26 @@ public class DefinitionResolveNameVisitor implements ConcreteResolvableDefinitio
   }
 
   public void resolveGroup(ConcreteGroup group, Scope scope, ArendInstances instances, Map<LongName, DefinitionData> definitionData) {
+    if (myScopeUsageCollector == null) {
+      resolveGroupContent(group, scope, instances, definitionData);
+      return;
+    }
+    LongName previous = myScopeUsageCollector.startGroup(group.referable().getRefLongName());
+    try {
+      resolveGroupContent(group, scope, instances, definitionData);
+    } finally {
+      myScopeUsageCollector.finishGroup(previous);
+    }
+  }
+
+  private void resolveGroupContent(ConcreteGroup group, Scope scope, ArendInstances instances, Map<LongName, DefinitionData> definitionData) {
     LocatedReferable groupRef = group.referable();
     Collection<? extends ConcreteStatement> statements = group.statements();
     Collection<? extends ConcreteGroup> dynamicSubgroups = group.dynamicGroups();
 
     Concrete.GeneralDefinition def = myConcreteProvider.getConcrete(groupRef);
     Scope cachedScope = CachingScope.make(makeScope(group, scope, false));
+    if (myScopeUsageCollector != null) cachedScope = myScopeUsageCollector.record(cachedScope);
     LocalErrorReporter localErrorReporter = new LocalErrorReporter(groupRef, myErrorReporter);
     myLocalErrorReporter = localErrorReporter;
     if (def instanceof Concrete.ClassDefinition) {
@@ -676,76 +696,81 @@ public class DefinitionResolveNameVisitor implements ConcreteResolvableDefinitio
     }
 
     boolean hasSelf = false;
-    for (ConcreteStatement statement : statements) {
-      ConcreteNamespaceCommand namespaceCommand = statement.command();
-      if (namespaceCommand == null) {
-        continue;
-      }
-      if (namespaceCommand.isImport() && !isTopLevel) {
-        continue;
-      }
+    if (myScopeUsageCollector != null) myScopeUsageCollector.setEnabled(false);
+    try {
+      for (ConcreteStatement statement : statements) {
+        ConcreteNamespaceCommand namespaceCommand = statement.command();
+        if (namespaceCommand == null) {
+          continue;
+        }
+        if (namespaceCommand.isImport() && !isTopLevel) {
+          continue;
+        }
 
-      LongUnresolvedReference reference = namespaceCommand.module().copy();
-      Scope importedScope = namespaceCommand.isImport() ? namespaceScope.getImportedSubscope() : namespaceScope;
-      List<Referable> resolvedRefs = myResolverListener == null ? null : new ArrayList<>();
-      reference.resolve(importedScope, resolvedRefs, myResolverListener);
-      if (myResolverListener != null) {
-        myResolverListener.namespaceResolved(namespaceCommand, resolvedRefs);
-      }
-      Scope curScope = reference.resolveNamespace(importedScope);
-      if (curScope == null) {
-        localErrorReporter.report(reference.getErrorReference().getError());
-      } else {
-        List<TCDefReferable> scopeInstances = new ArrayList<>();
-        loop:
-        for (Referable element : curScope.getElements()) {
-          if (element instanceof TCDefReferable defRef && defRef.getKind() == GlobalReferable.Kind.INSTANCE) {
-            for (ConcreteNamespaceCommand.NameHiding hiding : namespaceCommand.hidings()) {
-              if (hiding.isStatic() && hiding.reference().getRefName().equals(defRef.getRefName())) continue loop;
-            }
-            boolean ok = namespaceCommand.isUsing();
-            if (!ok) {
-              for (ConcreteNamespaceCommand.NameRenaming renaming : namespaceCommand.renamings()) {
-                if (renaming.isStatic() && renaming.reference().getRefName().equals(defRef.getRefName())) {
-                  ok = true;
-                  break;
+        LongUnresolvedReference reference = namespaceCommand.module().copy();
+        Scope importedScope = namespaceCommand.isImport() ? namespaceScope.getImportedSubscope() : namespaceScope;
+        List<Referable> resolvedRefs = myResolverListener == null ? null : new ArrayList<>();
+        reference.resolve(importedScope, resolvedRefs, myResolverListener);
+        if (myResolverListener != null) {
+          myResolverListener.namespaceResolved(namespaceCommand, resolvedRefs);
+        }
+        Scope curScope = reference.resolveNamespace(importedScope);
+        if (curScope == null) {
+          localErrorReporter.report(reference.getErrorReference().getError());
+        } else {
+          List<TCDefReferable> scopeInstances = new ArrayList<>();
+          loop:
+          for (Referable element : curScope.getElements()) {
+            if (element instanceof TCDefReferable defRef && defRef.getKind() == GlobalReferable.Kind.INSTANCE) {
+              for (ConcreteNamespaceCommand.NameHiding hiding : namespaceCommand.hidings()) {
+                if (hiding.isStatic() && hiding.reference().getRefName().equals(defRef.getRefName())) continue loop;
+              }
+              boolean ok = namespaceCommand.isUsing();
+              if (!ok) {
+                for (ConcreteNamespaceCommand.NameRenaming renaming : namespaceCommand.renamings()) {
+                  if (renaming.isStatic() && renaming.reference().getRefName().equals(defRef.getRefName())) {
+                    ok = true;
+                    break;
+                  }
                 }
               }
-            }
-            if (ok) {
-              boolean add = true;
-              if (defRef.equals(groupRef)) {
-                if (hasSelf) add = false;
-                else hasSelf = true;
+              if (ok) {
+                boolean add = true;
+                if (defRef.equals(groupRef)) {
+                  if (hasSelf) add = false;
+                  else hasSelf = true;
+                }
+                if (add) scopeInstances.add(defRef);
               }
-              if (add) scopeInstances.add(defRef);
             }
           }
-        }
-        instances = addInstances(instances, scopeInstances);
+          instances = addInstances(instances, scopeInstances);
 
-        for (ConcreteNamespaceCommand.NameRenaming renaming : namespaceCommand.renamings()) {
-          Referable oldRef = renaming.reference();
-          Referable ref = ExpressionResolveNameVisitor.resolve(oldRef, new PrivateFilteredScope(curScope, true), null, myResolverListener);
-          if (myResolverListener != null) {
-            myResolverListener.renamingResolved(renaming, oldRef, ref);
+          for (ConcreteNamespaceCommand.NameRenaming renaming : namespaceCommand.renamings()) {
+            Referable oldRef = renaming.reference();
+            Referable ref = ExpressionResolveNameVisitor.resolve(oldRef, new PrivateFilteredScope(curScope, true), null, myResolverListener);
+            if (myResolverListener != null) {
+              myResolverListener.renamingResolved(renaming, oldRef, ref);
+            }
+            if (ref instanceof ErrorReference) {
+              localErrorReporter.report(((ErrorReference) ref).getError());
+            }
           }
-          if (ref instanceof ErrorReference) {
-            localErrorReporter.report(((ErrorReference) ref).getError());
-          }
-        }
 
-        for (ConcreteNamespaceCommand.NameHiding nameHiding : namespaceCommand.hidings()) {
-          Referable oldRef = nameHiding.reference();
-          Referable ref = ExpressionResolveNameVisitor.resolve(nameHiding.reference(), new PrivateFilteredScope(curScope, true), nameHiding.scopeContext(), myResolverListener);
-          if (myResolverListener != null) {
-            myResolverListener.hidingResolved(nameHiding, oldRef, ref);
-          }
-          if (ref instanceof ErrorReference) {
-            localErrorReporter.report(((ErrorReference) ref).getError());
+          for (ConcreteNamespaceCommand.NameHiding nameHiding : namespaceCommand.hidings()) {
+            Referable oldRef = nameHiding.reference();
+            Referable ref = ExpressionResolveNameVisitor.resolve(nameHiding.reference(), new PrivateFilteredScope(curScope, true), nameHiding.scopeContext(), myResolverListener);
+            if (myResolverListener != null) {
+              myResolverListener.hidingResolved(nameHiding, oldRef, ref);
+            }
+            if (ref instanceof ErrorReference) {
+              localErrorReporter.report(((ErrorReference) ref).getError());
+            }
           }
         }
       }
+    } finally {
+      if (myScopeUsageCollector != null) myScopeUsageCollector.setEnabled(true);
     }
 
     List<TCDefReferable> newInstances = new ArrayList<>();

@@ -419,9 +419,7 @@ class ArendMoveRefactoringProcessor(project: Project,
 
         //Optimize imports
         if (myOptimizeImportsAfterMove) {
-            val optimalStructure = getOptimalImportStructure(mySourceContainer)
-            val (fileImports, optimalTree, _) = optimalStructure
-            processRedundantImportedDefinitions(mySourceContainer, fileImports, optimalTree, importRemover)
+            removeUnusedImports(mySourceContainer)
         }
 
         //Invoke move callback

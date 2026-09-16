@@ -4,11 +4,14 @@ import org.arend.ext.reference.ArendRef;
 import org.arend.naming.reference.Referable;
 import org.arend.naming.scope.DelegateScope;
 import org.arend.naming.scope.EmptyScope;
+import org.arend.naming.scope.NamespaceCommandSink;
 import org.arend.naming.scope.Scope;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.Objects;
 import java.util.function.Predicate;
 
 public class ListScope extends DelegateScope {
@@ -41,5 +44,20 @@ public class ListScope extends DelegateScope {
   public Referable find(Predicate<Referable> pred, @Nullable ScopeContext context) {
     Referable ref = context == null || context == ScopeContext.STATIC ? findHere(pred) : null;
     return ref != null ? ref : parent.find(pred, context);
+  }
+
+  @Override
+  public Referable resolveName(@NotNull String name, @Nullable ScopeContext context, @Nullable NamespaceCommandSink sink) {
+    return find(ref -> Objects.equals(name, ref.textRepresentation()), context, sink);
+  }
+
+  @Override
+  public Referable find(Predicate<Referable> pred, @Nullable ScopeContext context, @Nullable NamespaceCommandSink sink) {
+    if (context == null || context == ScopeContext.STATIC) {
+      if (sink != null) sink.setNoCommand();
+      Referable ref = findHere(pred);
+      if (ref != null) return ref;
+    }
+    return parent.find(pred, context, sink);
   }
 }

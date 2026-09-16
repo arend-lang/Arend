@@ -234,6 +234,7 @@ public class BinaryCacheLoader {
         loaded++;
         myBinaryCacheLoaded.add(load.module);
         loadedLoads.add(load);
+        myServer.restoreUsedInstances(load.module);
       } catch (Exception e) {
         reportBinaryCacheError(myErrorReporter, load.module, "definition body loading", e);
         failed++;

@@ -74,6 +74,10 @@ public class DefinitionDeserialization implements ArendDeserializer {
       myDependencyListener.dependsOn(def.getRef(), myCallTargetProvider.getMetaCallTarget(index));
     }
 
+    if (defProto.getInstancesKnown()) {
+      def.setUsedInstances(readRefs(defProto.getUsedInstanceList()), readRefs(defProto.getInferenceFieldList()));
+    }
+
     loadKeys(defProto.getUserDataMap(), def);
 
     if (myDefinitionListener != null) {
@@ -218,6 +222,15 @@ public class DefinitionDeserialization implements ArendDeserializer {
       }
       classDef.setTypeClassFields(typeClassFields);
     }
+  }
+
+  private Set<TCDefReferable> readRefs(List<Integer> protos) throws DeserializationException {
+    if (protos.isEmpty()) return Collections.emptySet();
+    Set<TCDefReferable> result = new HashSet<>(protos.size());
+    for (Integer proto : protos) {
+      result.add(myCallTargetProvider.getTCRef(proto));
+    }
+    return result;
   }
 
   private <T extends Definition> Set<T> readDefinitions(List<Integer> protos, Class<T> clazz) throws DeserializationException {

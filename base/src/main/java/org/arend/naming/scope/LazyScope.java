@@ -34,6 +34,18 @@ public class LazyScope implements Scope {
     return myScope.resolveName(name, context);
   }
 
+  @Override
+  public Referable resolveName(@NotNull String name, @Nullable ScopeContext context, @Nullable NamespaceCommandSink sink) {
+    updateScope();
+    return myScope.resolveName(name, context, sink);
+  }
+
+  @Override
+  public Referable find(Predicate<Referable> pred, @Nullable ScopeContext context, @Nullable NamespaceCommandSink sink) {
+    updateScope();
+    return myScope.find(pred, context, sink);
+  }
+
   @Nullable
   @Override
   public Scope resolveNamespace(@NotNull String name) {

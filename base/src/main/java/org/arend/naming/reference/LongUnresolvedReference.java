@@ -261,7 +261,7 @@ public class LongUnresolvedReference implements UnresolvedReference {
     for (i++; i < myPath.size(); i++) {
       Referable newResolved;
       if (provider == null) {
-        newResolved = initialScope.resolveName(myPath.get(i), Scope.ScopeContext.DYNAMIC);
+        newResolved = initialScope.resolveName(myPath.get(i), Scope.ScopeContext.DYNAMIC, NamespaceCommandSink.forGuess());
         if (listener != null && i < myReferences.size() && myReferences.get(i) != null) {
           listener.resolving(myReferences.get(i), initialScope, Scope.ScopeContext.DYNAMIC, !onlyTry);
         }

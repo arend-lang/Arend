@@ -3,9 +3,12 @@ package org.arend.intention
 import com.intellij.application.options.CodeStyle
 import com.intellij.openapi.command.WriteCommandAction
 import com.intellij.openapi.components.service
+import com.intellij.openapi.editor.Document
+import com.intellij.psi.PsiDocumentManager
 import com.intellij.psi.util.PsiTreeUtil
 import org.arend.*
 import org.arend.codeInsight.ArendImportOptimizer
+import org.arend.codeInsight.removeUnusedImports
 import org.arend.core.definition.FunctionDefinition
 import org.arend.ext.ArendExtension
 import org.arend.ext.LiteralTypechecker
@@ -17,6 +20,7 @@ import org.arend.psi.ArendFile
 import org.arend.psi.ext.ArendDefFunction
 import org.arend.psi.ext.ArendDefInstance
 import org.arend.quickfix.QuickFixTestBase
+import org.arend.server.ArendServerRequesterImpl
 import org.arend.server.ArendServerService
 import org.arend.server.impl.ArendLibraryImpl
 import org.arend.settings.ArendCustomCodeStyleSettings
@@ -67,9 +71,33 @@ class OptimizeImportsTest : QuickFixTestBase() {
         before: String,
         after: String) = doWithSettings(OptimizeImportsPolicy.ONLY_IMPLICIT) { doTest(before, after) }
 
+    private fun doAutomaticRemovalTest(before: String, after: String, afterTypecheck: () -> Unit = {}) {
+        val fileTree = fileTreeFromText(before)
+        fileTree.prepareFileSystem()
+        typecheck(fileTree.fileNames)
+        afterTypecheck()
+        WriteCommandAction.runWriteCommandAction(myFixture.project) {
+            removeUnusedImports(myFixture.file as ArendFile)
+        }
+        myFixture.checkResult(replaceCaretMarker(after.trimIndent()))
+    }
+
     private fun doSoftTest(
         before: String,
-        after: String) = doWithSettings(OptimizeImportsPolicy.SOFT) { doTest(before, after) }
+        after: String,
+        beforeTypecheck: () -> Unit = {},
+        afterTypecheck: () -> Unit = {}) = doWithSettings(OptimizeImportsPolicy.SOFT) { doTest(before, after, beforeTypecheck, afterTypecheck) }
+
+    private fun editAndUpdateServer(edit: (Document) -> Unit) {
+        val document = myFixture.getDocument(myFixture.file)
+        WriteCommandAction.runWriteCommandAction(myFixture.project) {
+            edit(document)
+            PsiDocumentManager.getInstance(myFixture.project).commitDocument(document)
+        }
+        val file = myFixture.file as ArendFile
+        ArendServerRequesterImpl(myFixture.project).doUpdateModule(
+            myFixture.project.service<ArendServerService>().server, file.moduleLocation!!, file)
+    }
 
     fun `test prelude`() {
         doExplicitTest("""
@@ -1408,6 +1436,126 @@ class OptimizeImportsTest : QuickFixTestBase() {
               \func h : Nat => e
             }
         """)
+    }
+
+    fun `test partial reset sees a usage added after typechecking`() {
+        doSoftTest("""
+            -- ! Bar.ard
+            \func bar => 0
+            -- ! Foo.ard
+            \func foo => 0
+            -- ! Main.ard
+            \import Bar
+            \import Foo (foo)
+            
+            \func p => 0
+        """, """
+            \import Foo (foo)
+            
+            \func p => foo
+        """, afterTypecheck = {
+            editAndUpdateServer { it.setText("\\import Bar\n\\import Foo (foo)\n\n\\func p => foo") }
+        })
+    }
+
+    fun `test partial reset sees a usage removed after typechecking`() {
+        doSoftTest("""
+            -- ! Foo.ard
+            \func foo => 0
+            -- ! Main.ard
+            \import Foo (foo)
+            
+            \func p => foo
+        """, """
+            \func p => 0
+        """, afterTypecheck = {
+            editAndUpdateServer { it.setText("\\import Foo (foo)\n\n\\func p => 0") }
+        })
+    }
+
+    fun `test the reader's removal runs while the edited file has errors`() {
+        doSoftTest("""
+            -- ! Foo.ard
+            \func foo => 0
+            -- ! Main.ard
+            \import Foo (foo)
+            
+            \func p => foo
+        """, """
+            \func p => unknown
+        """, afterTypecheck = {
+            editAndUpdateServer { it.setText("\\import Foo (foo)\n\n\\func p => unknown") }
+        })
+    }
+
+    fun `test the reader's removal runs while a definition is half-written`() {
+        doSoftTest("""
+            -- ! Foo.ard
+            \func foo => 0
+            -- ! Main.ard
+            \import Foo
+            
+            \func f (s :
+        """, """
+            \func f (s :
+        """)
+    }
+
+    fun `test automatic removal writes nothing while the edited file has errors`() {
+        doAutomaticRemovalTest("""
+            -- ! Foo.ard
+            \func foo => 0
+            -- ! Main.ard
+            \import Foo (foo)
+            
+            \func p => foo
+        """, """
+            \import Foo (foo)
+            
+            \func p => unknown
+        """, afterTypecheck = {
+            editAndUpdateServer { it.setText("\\import Foo (foo)\n\n\\func p => unknown") }
+        })
+    }
+
+    fun `test automatic removal deletes an unused import`() {
+        doAutomaticRemovalTest("""
+            -- ! Foo.ard
+            \func foo => 0
+            -- ! Main.ard
+            \import Foo (foo)
+            
+            \func p => 0
+        """, """
+            \func p => 0
+        """)
+    }
+
+    fun `test optimizing a copy leaves the original alone`() = checkCopyIsOptimizedAlone(OptimizeImportsPolicy.SOFT)
+
+    fun `test optimizing a copy leaves the original alone with explicit imports`() = checkCopyIsOptimizedAlone(OptimizeImportsPolicy.ONLY_EXPLICIT)
+
+    private fun checkCopyIsOptimizedAlone(policy: OptimizeImportsPolicy) {
+        doWithSettings(policy) {
+            val fileTree = fileTreeFromText("""
+                -- ! Foo.ard
+                \func foo => 0
+                -- ! Main.ard
+                \import Foo (foo)
+                
+                \func p => 0
+            """)
+            fileTree.prepareFileSystem()
+            typecheck(fileTree.fileNames)
+
+            val original = myFixture.file as ArendFile
+            val before = original.text
+            val copy = original.copy() as ArendFile
+            WriteCommandAction.runWriteCommandAction(myFixture.project, ArendImportOptimizer().processFile(copy))
+
+            assertEquals("\\func p => 0", copy.text.trim())
+            assertEquals(before, original.text)
+        }
     }
 
     fun `test class in module`() {

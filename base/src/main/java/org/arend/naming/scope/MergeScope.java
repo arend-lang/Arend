@@ -55,6 +55,30 @@ public class MergeScope implements Scope {
     return null;
   }
 
+  @Override
+  public Referable resolveName(@NotNull String name, @Nullable ScopeContext context, @Nullable NamespaceCommandSink sink) {
+    for (Scope scope : myScopes) {
+      Referable ref = scope.resolveName(name, context, sink);
+      if (ref != null) {
+        return ref;
+      }
+    }
+    if (sink != null) sink.reset();
+    return null;
+  }
+
+  @Override
+  public Referable find(Predicate<Referable> pred, @Nullable ScopeContext context, @Nullable NamespaceCommandSink sink) {
+    for (Scope scope : myScopes) {
+      Referable ref = scope.find(pred, context, sink);
+      if (ref != null) {
+        return ref;
+      }
+    }
+    if (sink != null) sink.reset();
+    return null;
+  }
+
   @Nullable
   @Override
   public Scope resolveNamespace(@NotNull String name) {
@@ -106,6 +130,18 @@ public class MergeScope implements Scope {
       ImportedScope importedScope = scope.getImportedSubscope();
       if (importedScope != null) {
         return importedScope;
+      }
+    }
+    return null;
+  }
+
+  @Nullable
+  @Override
+  public RecordingScope getRecordingScope() {
+    for (Scope scope : myScopes) {
+      RecordingScope recordingScope = scope.getRecordingScope();
+      if (recordingScope != null) {
+        return recordingScope;
       }
     }
     return null;

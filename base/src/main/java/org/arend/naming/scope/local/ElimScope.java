@@ -4,6 +4,7 @@ import org.arend.ext.reference.ArendRef;
 import org.arend.naming.reference.Referable;
 import org.arend.naming.scope.Scope;
 import org.arend.naming.scope.DelegateScope;
+import org.arend.naming.scope.NamespaceCommandSink;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -27,5 +28,20 @@ public class ElimScope extends DelegateScope {
   public Referable resolveName(@NotNull String name, @Nullable ScopeContext context) {
     Referable ref = parent.resolveName(name, context);
     return ref != null && myExcluded.contains(ref) ? null : ref;
+  }
+
+  @Override
+  public Referable resolveName(@NotNull String name, @Nullable ScopeContext context, @Nullable NamespaceCommandSink sink) {
+    Referable ref = parent.resolveName(name, context, sink);
+    if (ref != null && myExcluded.contains(ref)) {
+      if (sink != null) sink.reset();
+      return null;
+    }
+    return ref;
+  }
+
+  @Override
+  public Referable find(Predicate<Referable> pred, @Nullable ScopeContext context, @Nullable NamespaceCommandSink sink) {
+    return parent.find(ref -> !myExcluded.contains(ref) && pred.test(ref), context, sink);
   }
 }

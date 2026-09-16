@@ -55,7 +55,19 @@ public class ContextScope extends DelegateScope {
   }
 
   @Override
+  public Referable find(Predicate<Referable> pred, @Nullable ScopeContext context, @Nullable NamespaceCommandSink sink) {
+    if (sink != null) sink.setNoCommand();
+    Referable ref = findHere(pred, context);
+    return ref != null ? ref : parent.find(pred, context, sink);
+  }
+
+  @Override
   public Referable find(Predicate<Referable> pred, @Nullable ScopeContext context) {
+    Referable ref = findHere(pred, context);
+    return ref != null ? ref : parent.find(pred, context);
+  }
+
+  private Referable findHere(Predicate<Referable> pred, @Nullable ScopeContext context) {
     if (context == null || context == ScopeContext.STATIC) {
       for (int i = myContext.size() - 1; i >= 0; i--) {
         if (pred.test(myContext.get(i).getReferable())) {
@@ -70,7 +82,7 @@ public class ContextScope extends DelegateScope {
         }
       }
     }
-    return parent.find(pred, context);
+    return null;
   }
 
   private Referable resolveNameLocal(@NotNull String name, @Nullable ScopeContext context) {
@@ -99,6 +111,16 @@ public class ContextScope extends DelegateScope {
   public @Nullable Referable resolveName(@NotNull String name, @Nullable ScopeContext context) {
     Referable ref = resolveNameLocal(name, context);
     return ref != null ? ref : parent.resolveName(name, context);
+  }
+
+  @Override
+  public @Nullable Referable resolveName(@NotNull String name, @Nullable ScopeContext context, @Nullable NamespaceCommandSink sink) {
+    Referable ref = resolveNameLocal(name, context);
+    if (ref != null) {
+      if (sink != null) sink.setNoCommand();
+      return ref;
+    }
+    return parent.resolveName(name, context, sink);
   }
 
   @Override

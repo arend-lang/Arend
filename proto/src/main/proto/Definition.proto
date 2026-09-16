@@ -24,6 +24,9 @@ message Definition {
     bool no_errors = 17;
     bool has_errors = 18;
     bool has_goals = 19;
+    bool instances_known = 20;
+    repeated int32 used_instance = 21;
+    repeated int32 inference_field = 22;
 
     message RefList {
         repeated int32 ref = 1;

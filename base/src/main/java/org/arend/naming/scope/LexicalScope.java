@@ -65,6 +65,14 @@ public class LexicalScope implements Scope {
   @Nullable
   @Override
   public Referable find(Predicate<Referable> pred, @Nullable ScopeContext context) {
+    return find(pred, context, null);
+  }
+
+  @Nullable
+  @Override
+  public Referable find(Predicate<Referable> pred, @Nullable ScopeContext context, @Nullable NamespaceCommandSink sink) {
+    if (sink != null) sink.setNoCommand();
+
     for (ConcreteStatement statement : myGroup.statements()) {
       ConcreteGroup subgroup = statement.group();
       if (subgroup != null) {
@@ -124,17 +132,19 @@ public class LexicalScope implements Scope {
         scope = cachingScope;
       }
       scope = NamespaceCommandNamespace.resolveNamespace(scope, cmd);
-      Referable ref = scope.find(pred, context);
+      if (sink != null) sink.setCommand(cmd);
+      Referable ref = scope.find(pred, context, sink);
       if (ref != null) return ref;
     }
 
+    if (sink != null) sink.setNoCommand();
     if (myWithAdditionalContent && (context == null || context == ScopeContext.STATIC)) {
       for (ParameterReferable ref : myGroup.externalParameters()) {
         if (pred.test(ref)) return ref;
       }
     }
 
-    return myParent.find(pred, context);
+    return myParent.find(pred, context, sink);
   }
 
   private static GlobalReferable resolveInternal(ConcreteGroup group, String name, boolean onlyInternal) {
@@ -178,10 +188,12 @@ public class LexicalScope implements Scope {
 
   private enum ResolveType { REF, SCOPE }
 
-  private Object resolve(String name, ResolveType resolveType, ScopeContext context) {
+  private Object resolve(String name, ResolveType resolveType, ScopeContext context, NamespaceCommandSink sink) {
     if (name.isEmpty() || "_".equals(name)) {
       return null;
     }
+
+    if (sink != null) sink.setNoCommand();
 
     for (ConcreteStatement statement : myGroup.statements()) {
       ConcreteGroup subgroup = statement.group();
@@ -246,12 +258,14 @@ public class LexicalScope implements Scope {
       }
 
       scope = NamespaceCommandNamespace.resolveNamespace(scope, cmd);
-      Object result = resolveType == ResolveType.REF ? scope.resolveName(name, context) : scope.resolveNamespace(name);
+      Object result = resolveType == ResolveType.REF ? scope.resolveName(name, context, sink) : scope.resolveNamespace(name);
       if (result != null) {
+        if (sink != null) sink.setCommand(cmd);
         return result;
       }
     }
 
+    if (sink != null) sink.setNoCommand();
     if (myWithAdditionalContent && resolveType == ResolveType.REF) {
       List<? extends Referable> refs = myGroup.externalParameters();
       for (int i = refs.size() - 1; i >= 0; i--) {
@@ -262,20 +276,26 @@ public class LexicalScope implements Scope {
       }
     }
 
-    return resolveType == ResolveType.REF ? myParent.resolveName(name, context) : myParent.resolveNamespace(name);
+    return resolveType == ResolveType.REF ? myParent.resolveName(name, context, sink) : myParent.resolveNamespace(name);
   }
 
   @Nullable
   @Override
   public Referable resolveName(@NotNull String name, @Nullable ScopeContext context) {
-    Object result = resolve(name, ResolveType.REF, context);
+    return resolveName(name, context, null);
+  }
+
+  @Nullable
+  @Override
+  public Referable resolveName(@NotNull String name, @Nullable ScopeContext context, @Nullable NamespaceCommandSink sink) {
+    Object result = resolve(name, ResolveType.REF, context, sink);
     return result instanceof Referable ? (Referable) result : null;
   }
 
   @Nullable
   @Override
   public Scope resolveNamespace(@NotNull String name) {
-    Object result = resolve(name, ResolveType.SCOPE, null);
+    Object result = resolve(name, ResolveType.SCOPE, null, null);
     return result instanceof Scope ? (Scope) result : null;
   }
 
@@ -288,6 +308,11 @@ public class LexicalScope implements Scope {
   @Override
   public @Nullable ImportedScope getImportedSubscope() {
     return myParent.getImportedSubscope();
+  }
+
+  @Override
+  public @Nullable RecordingScope getRecordingScope() {
+    return myParent.getRecordingScope();
   }
 
   public ConcreteGroup getGroup() {

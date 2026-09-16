@@ -221,6 +221,18 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
     myLevelContext = levelContext;
   }
 
+  private List<Pair<Expression, ClassField>> myInferenceFieldCandidates;
+
+  public void setInferenceFieldCandidates(@Nullable List<Pair<Expression, ClassField>> candidates) {
+    myInferenceFieldCandidates = candidates;
+  }
+
+  public void recordPendingInferenceField(@NotNull ClassField field, @NotNull Expression receiverType) {
+    if (myInferenceFieldCandidates != null) {
+      myInferenceFieldCandidates.add(new Pair<>(receiverType, field));
+    }
+  }
+
   @NotNull
   public Map<Referable, Binding> getContext() {
     return context;
@@ -1056,6 +1068,7 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
         }
         checkTypeVisitor = copy(deferredMeta.context, deferredMeta.localPrettifier, deferredMeta.errorReporter, null, myArendExtension, myResolveListener, this);
         checkTypeVisitor.setInstancePool(myInstancePool.copy(checkTypeVisitor));
+        checkTypeVisitor.setInferenceFieldCandidates(myInferenceFieldCandidates);
         checkTypeVisitor.setLevelContext(myLevelContext);
       } else {
         checkTypeVisitor = this;

@@ -7,6 +7,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
+import java.util.function.Predicate;
 
 public class NamespaceCommandNamespace implements Scope {
   private final Scope myModuleNamespace;
@@ -25,12 +26,27 @@ public class NamespaceCommandNamespace implements Scope {
     if (path.isEmpty()) {
       return EmptyScope.INSTANCE;
     }
-    parentScope = parentScope == null ? null : parentScope.resolveNamespace(path);
+    if (parentScope != null) {
+      RecordingScope recordingScope = parentScope.getRecordingScope();
+      if (recordingScope != null) recordingScope.suppress();
+      try {
+        parentScope = parentScope.resolveNamespace(path);
+      } finally {
+        if (recordingScope != null) recordingScope.release();
+      }
+    }
     return parentScope == null ? EmptyScope.INSTANCE : new NamespaceCommandNamespace(parentScope, cmd);
   }
 
   private Referable resolve(NamedUnresolvedReference ref, ScopeContext context) {
     return ref.resolve(new PrivateFilteredScope(myModuleNamespace, true), null, context, null);
+  }
+
+  @Nullable
+  @Override
+  public Referable find(Predicate<Referable> pred, @Nullable ScopeContext context, @Nullable NamespaceCommandSink sink) {
+    if (sink != null) sink.setCommand(myNamespaceCommand);
+    return find(pred, context);
   }
 
   @NotNull
@@ -101,6 +117,16 @@ public class NamespaceCommandNamespace implements Scope {
     }
 
     return false;
+  }
+
+  @Nullable
+  @Override
+  public Referable resolveName(@NotNull String name, @Nullable ScopeContext context, @Nullable NamespaceCommandSink sink) {
+    Referable result = resolveName(name, context);
+    if (sink != null) {
+      if (result == null) sink.reset(); else sink.setCommand(myNamespaceCommand);
+    }
+    return result;
   }
 
   @Nullable

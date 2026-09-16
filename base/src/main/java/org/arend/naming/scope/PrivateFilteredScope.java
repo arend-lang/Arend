@@ -39,6 +39,21 @@ public class PrivateFilteredScope extends DelegateScope {
   }
 
   @Override
+  public @Nullable Referable resolveName(@NotNull String name, @Nullable ScopeContext context, @Nullable NamespaceCommandSink sink) {
+    Referable ref = parent.resolveName(name, context, sink);
+    if (myDiscardPrivate && ref instanceof GlobalReferable && ((GlobalReferable) ref).getAccessModifier() == AccessModifier.PRIVATE) {
+      if (sink != null) sink.reset();
+      return null;
+    }
+    return ref;
+  }
+
+  @Override
+  public @Nullable Referable find(Predicate<Referable> pred, @Nullable ScopeContext context, @Nullable NamespaceCommandSink sink) {
+    return myDiscardPrivate ? parent.find(ref -> (!(ref instanceof GlobalReferable) || ((GlobalReferable) ref).getAccessModifier() != AccessModifier.PRIVATE) && pred.test(ref), context, sink) : parent.find(pred, context, sink);
+  }
+
+  @Override
   public @Nullable Scope resolveNamespace(@NotNull String name) {
     Scope result = parent.resolveNamespace(name);
     return result == null ? null : new PrivateFilteredScope(result, true);

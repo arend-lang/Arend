@@ -174,4 +174,19 @@ public interface ArendServer {
    * @return the instance cache, which can be used to find available instances for a given class.
    */
   @NotNull InstanceCache getInstanceCache();
+
+  /**
+   * @return which {@code \import} and {@code \open} commands the registered modules actually use.
+   */
+  @NotNull ScopeUsages getScopeUsages();
+
+  /**
+   * Feeds the scope usages of {@param module} with the instances its definitions recorded, for a
+   * module whose definitions were restored from a binary cache rather than typechecked. Typechecking
+   * reports them by itself; a load has to hand them over, or the analysis of the module would have to
+   * assume that any command providing an instance is needed.
+   *
+   * <p>The module must already be resolved, since this only fills in what the resolution recorded.
+   */
+  void restoreUsedInstances(@NotNull ModuleLocation module);
 }

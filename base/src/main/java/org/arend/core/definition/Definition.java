@@ -24,6 +24,8 @@ import java.util.*;
 public abstract class Definition extends UserDataHolderImpl implements CoreDefinition {
   private final TCDefReferable myReferable;
   private TypeCheckingStatus myStatus;
+  private Set<TCDefReferable> myUsedInstances;
+  private Set<TCDefReferable> myInferenceFields;
 
   public Definition(TCDefReferable referable, TypeCheckingStatus status) {
     myReferable = referable;
@@ -59,6 +61,19 @@ public abstract class Definition extends UserDataHolderImpl implements CoreDefin
 
   public Set<? extends FunctionDefinition> getAxioms() {
     return getTopLevelDefinition().getAxioms();
+  }
+
+  public @Nullable Set<TCDefReferable> getUsedInstances() {
+    return myUsedInstances;
+  }
+
+  public @Nullable Set<TCDefReferable> getInferenceFields() {
+    return myInferenceFields;
+  }
+
+  public void setUsedInstances(@NotNull Set<TCDefReferable> usedInstances, @NotNull Set<TCDefReferable> inferenceFields) {
+    myUsedInstances = usedInstances;
+    myInferenceFields = inferenceFields;
   }
 
   public Set<? extends Definition> getGoals() {

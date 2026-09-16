@@ -12,8 +12,10 @@ import org.arend.module.error.DefinitionNotFoundError;
 import org.arend.module.error.ModuleNotFoundError;
 import org.arend.naming.reference.GlobalReferable;
 import org.arend.naming.reference.Referable;
+import org.arend.core.definition.Definition;
 import org.arend.naming.reference.TCDefReferable;
 import org.arend.naming.resolving.CollectingResolverListener;
+import org.arend.naming.resolving.ScopeUsageCollector;
 import org.arend.naming.resolving.typing.GlobalTypingInfo;
 import org.arend.naming.resolving.typing.TypingInfoVisitor;
 import org.arend.naming.resolving.visitor.DefinitionResolveNameVisitor;
@@ -41,6 +43,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Consumer;
 import java.util.logging.Logger;
@@ -178,6 +181,7 @@ public class ArendCheckerImpl implements ArendChecker {
       CollectingResolverListener resolverListener = new CollectingResolverListener(myServer.getRequester(), myServer.doCacheReferences());
       Map<ModuleLocation, ListErrorReporter> errorReporterMap = new HashMap<>();
       Map<ModuleLocation, Map<LongName, DefinitionData>> resolverResult = new HashMap<>();
+      Map<ModuleLocation, ScopeUsageCollector> scopeUsageCollectors = new HashMap<>();
       progressReporter.beginProcessing(toResolve.size());
       for (Pair<ModuleLocation, ConcreteGroup> pair : toResolve) {
         ModuleLocation module = pair.proj1;
@@ -188,7 +192,11 @@ public class ArendCheckerImpl implements ArendChecker {
         errorReporterMap.put(module, listErrorReporter);
         Map<LongName, DefinitionData> definitionData = new LinkedHashMap<>();
         ArendExtension extension = myServer.getExtensionProvider().getArendExtension(module.getLibraryName());
-        new DefinitionResolveNameVisitor(concreteProvider, myServer.getTypingInfo(), listErrorReporter, extension == null ? null : extension.getLiteralTypechecker(), resolverListener).resolveGroup(pair.proj2, myServer.getParentGroupScope(module, pair.proj2), new ArendInstances(), definitionData);
+        ScopeUsageCollector scopeUsageCollector = new ScopeUsageCollector();
+        scopeUsageCollectors.put(module, scopeUsageCollector);
+        DefinitionResolveNameVisitor visitor = new DefinitionResolveNameVisitor(concreteProvider, myServer.getTypingInfo(), listErrorReporter, extension == null ? null : extension.getLiteralTypechecker(), resolverListener);
+        visitor.setScopeUsageCollector(scopeUsageCollector);
+        visitor.resolveGroup(pair.proj2, myServer.getParentGroupScope(module, pair.proj2), new ArendInstances(), definitionData);
         resolverResult.put(module, definitionData);
 
         myLogger.info(() -> "Module '" + module + "' is resolved");
@@ -238,24 +246,9 @@ public class ArendCheckerImpl implements ArendChecker {
                     }
                     update = !entry.getValue().compare(newData, updater);
                     if (!update && entry.getValue().definition().getData() != newData.definition().getData()) {
-                      // The definition itself has not changed, but its referable was recreated
-                      // (this happens when the previously resolved definitions are discarded, e.g.
-                      // because the previous version of the module had resolver errors). The
-                      // typechecking errors are stored under the old (now orphaned) referable, while
-                      // the recreated referable will be typechecked from scratch. Drop the stale
-                      // errors of the old referable to avoid duplicated/lingering errors.
                       myServer.getErrorService().resetDefinition(entry.getValue().definition().getData());
                     }
                     if (!update && !myServer.getErrorService().getTypecheckingErrors(entry.getValue().definition().getData()).isEmpty()) {
-                      // The definition itself has not changed, but it still has typechecking errors.
-                      // Such an error may have been caused by another definition that has since been
-                      // fixed: e.g. a cascading "unsolved metavariable" error whose real cause was a
-                      // different definition. The reverse-dependency edge that would normally trigger
-                      // re-typechecking of this definition may be missing (typechecking was aborted by
-                      // the error, so the dependency was never recorded). Force re-typechecking here so
-                      // that stale errors disappear once their cause is fixed, even when the edit
-                      // happens in another definition or module. If the error is genuine, it will be
-                      // reported again during the following typechecking pass.
                       update = true;
                     }
                   } else {
@@ -274,6 +267,8 @@ public class ArendCheckerImpl implements ArendChecker {
                 }
               }
               groupData.updateResolvedDefinitions(definitionData);
+              ScopeUsageCollector collector = scopeUsageCollectors.get(module);
+              if (collector != null) myServer.getScopeUsages().updateNames(module, collector.getUsages());
               myServer.getInstanceCache().addInstances(groupData, myServer.getTypingInfo());
               // Notify listeners that this module has been resolved
               myServer.notifyModuleResolved(module);
@@ -399,8 +394,14 @@ public class ArendCheckerImpl implements ArendChecker {
           myLogger.info(() -> "Collected definitions (" + collector.getElements().size() + ") for " + (definitions == null ? myModules : definitions));
 
           ListErrorReporter listErrorReporter = new ListErrorReporter();
+          Map<TCDefReferable, Set<TCDefReferable>> usedInstances = checkerFactory == null ? new ConcurrentHashMap<>() : null;
+          Map<TCDefReferable, Set<TCDefReferable>> inferenceFields = checkerFactory == null ? new ConcurrentHashMap<>() : null;
           TypecheckingOrderingListener dependencyTypechecker = new TypecheckingOrderingListener(ArendCheckerFactory.DEFAULT, myServer.getInstanceScopeProvider(), ordering.getInstanceDependencies(), concreteProvider, listErrorReporter, dependencyCollector, new GroupComparator(myDependencies), myServer.getExtensionProvider(), myServer.getRequester(), myServer.doClearLemmas());
           TypecheckingOrderingListener typechecker = checkerFactory == null ? dependencyTypechecker : new TypecheckingOrderingListener(checkerFactory, myServer.getInstanceScopeProvider(), ordering.getInstanceDependencies(), concreteProvider, listErrorReporter, dependencyCollector, new GroupComparator(myDependencies), myServer.getExtensionProvider(), myServer.getRequester(), myServer.doClearLemmas());
+          dependencyTypechecker.setUsedInstancesCollector(usedInstances);
+          typechecker.setUsedInstancesCollector(usedInstances);
+          dependencyTypechecker.setInferenceFieldsCollector(inferenceFields);
+          typechecker.setInferenceFieldsCollector(inferenceFields);
 
           try {
             progressReporter.beginProcessing(collector.getElements().size());
@@ -476,6 +477,20 @@ public class ArendCheckerImpl implements ArendChecker {
               }
               listErrorReporter.reportTo(myServer.getErrorService());
               dependencyCollector.copyTo(myServer.getDependencyCollector());
+              if (usedInstances != null) {
+                for (CollectingOrderingListener.Element element : collector.getElements()) {
+                  for (Concrete.ResolvableDefinition definition : element.getAllDefinitions()) {
+                    usedInstances.putIfAbsent(definition.getData(), Collections.emptySet());
+                  }
+                }
+                myServer.getScopeUsages().updateInstances(usedInstances, inferenceFields);
+                for (Map.Entry<TCDefReferable, Set<TCDefReferable>> entry : usedInstances.entrySet()) {
+                  Definition typechecked = entry.getKey().getTypechecked();
+                  if (typechecked == null) continue;
+                  Set<TCDefReferable> fields = inferenceFields == null ? null : inferenceFields.get(entry.getKey());
+                  typechecked.setUsedInstances(Set.copyOf(entry.getValue()), fields == null ? Collections.emptySet() : Set.copyOf(fields));
+                }
+              }
             });
 
             myLogger.info(() -> "<Unlock> Typechecking of definitions (" + collector.getElements().size() + ") " + (definitions == null ? "in " + myModules : definitions) + " is commited");

@@ -24,6 +24,11 @@ public interface Scope {
     return null;
   }
 
+  default @Nullable Referable find(Predicate<Referable> pred, @Nullable ScopeContext context, @Nullable NamespaceCommandSink sink) {
+    if (sink != null) sink.reset();
+    return find(pred, context);
+  }
+
   default @Nullable Referable find(Predicate<Referable> pred) {
     return find(pred, ScopeContext.STATIC);
   }
@@ -61,6 +66,12 @@ public interface Scope {
     return resolveName(name, ScopeContext.STATIC);
   }
 
+  @Nullable
+  default Referable resolveName(@NotNull String name, @Nullable ScopeContext context, @Nullable NamespaceCommandSink sink) {
+    if (sink != null) sink.reset();
+    return resolveName(name, context);
+  }
+
   default @Nullable Scope resolveNamespace(@NotNull String name) {
     return null;
   }
@@ -74,6 +85,10 @@ public interface Scope {
   }
 
   default @Nullable ImportedScope getImportedSubscope() {
+    return null;
+  }
+
+  default @Nullable RecordingScope getRecordingScope() {
     return null;
   }
 

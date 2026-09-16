@@ -1,5 +1,6 @@
 package org.arend.typechecking.implicitargs;
 
+import org.arend.core.context.binding.Binding;
 import org.arend.core.context.binding.inference.ExpressionInferenceVariable;
 import org.arend.core.context.binding.inference.FunctionInferenceVariable;
 import org.arend.core.context.binding.inference.InferenceVariable;
@@ -161,6 +162,14 @@ public class StdImplicitArgsInference implements ImplicitArgsInference {
     return result;
   }
 
+  private boolean isReceiverTypeKnown(Concrete.Expression arg) {
+    if (!(arg instanceof Concrete.ReferenceExpression refExpr)) return false;
+    Binding binding = myVisitor.getContext().get(refExpr.getReferent());
+    if (binding == null) return false;
+    Expression type = binding.getType();
+    return type != null && type.normalize(NormalizationMode.WHNF).getPiParameters(new ArrayList<>(), true).normalize(NormalizationMode.WHNF) instanceof ClassCallExpression;
+  }
+
   private TResult inferArg(TResult result, Concrete.Expression arg, boolean isExplicit, Concrete.Expression fun) {
     if (result == null) {
       myVisitor.checkExpr(arg, null);
@@ -230,9 +239,15 @@ public class StdImplicitArgsInference implements ImplicitArgsInference {
       return fixImplicitArgs(result, Collections.singletonList(param), fun, false, arg instanceof RecursiveInstanceHoleExpression ? (RecursiveInstanceHoleExpression) arg : null);
     }
 
+    boolean receiverTypeKnown = result instanceof DefCallResult fieldCall && fieldCall.getDefinition() instanceof ClassField && fieldCall.getArguments().isEmpty() && isReceiverTypeKnown(arg);
+
     TypecheckingResult argResult = myVisitor.checkArgument(arg, param.hasNext() ? param.getType() : null, result, null);
     if (argResult == null) {
       return null;
+    }
+
+    if (!receiverTypeKnown && result instanceof DefCallResult fieldCall && fieldCall.getDefinition() instanceof ClassField field && fieldCall.getArguments().isEmpty()) {
+      myVisitor.recordPendingInferenceField(field, argResult.type);
     }
 
     if (!param.hasNext()) {

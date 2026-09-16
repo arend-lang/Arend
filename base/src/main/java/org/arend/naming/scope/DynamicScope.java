@@ -25,6 +25,19 @@ public class DynamicScope implements Scope {
 
   @Nullable
   @Override
+  public Referable find(Predicate<Referable> pred, @Nullable ScopeContext context, @Nullable NamespaceCommandSink sink) {
+    if (sink != null) sink.setNoCommand();
+    return find(pred, context);
+  }
+
+  @Nullable
+  @Override
+  public Referable resolveName(@NotNull String name, @Nullable ScopeContext context, @Nullable NamespaceCommandSink sink) {
+    return find(ref -> Objects.equals(name, ref.textRepresentation()), context, sink);
+  }
+
+  @Nullable
+  @Override
   public Referable find(Predicate<Referable> pred, @Nullable ScopeContext context) {
     if (!(context == null || context == ScopeContext.STATIC)) {
       return null;

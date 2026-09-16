@@ -29,4 +29,9 @@ public abstract class DelegateScope implements Scope {
   public @Nullable ImportedScope getImportedSubscope() {
     return parent.getImportedSubscope();
   }
+
+  @Override
+  public @Nullable RecordingScope getRecordingScope() {
+    return parent.getRecordingScope();
+  }
 }

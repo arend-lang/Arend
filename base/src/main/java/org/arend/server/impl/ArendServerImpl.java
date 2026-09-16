@@ -23,6 +23,7 @@ import org.arend.server.modifier.RawModifier;
 import org.arend.term.abs.AbstractReferable;
 import org.arend.term.abs.AbstractReference;
 import org.arend.term.concrete.Concrete;
+import org.arend.core.definition.Definition;
 import org.arend.term.group.ConcreteGroup;
 import org.arend.term.group.ConcreteStatement;
 import org.arend.typechecking.ArendExtensionProvider;
@@ -50,6 +51,10 @@ public class ArendServerImpl implements ArendServer {
   private final DependencyCollector myDependencyCollector = new DependencyCollector(null);
   private final boolean myCacheReferences;
   private final InstanceCacheImpl myInstanceCache = new InstanceCacheImpl();
+  private final ScopeUsagesService myScopeUsageService = new ScopeUsagesService(module -> {
+    GroupData groupData = myGroups.get(module);
+    return groupData != null && groupData.isResolved();
+  });
   private final boolean myClearLemmas;
 
   private final TypingInfo myTypingInfo = new TypingInfo() {
@@ -149,6 +154,7 @@ public class ArendServerImpl implements ArendServer {
   }
 
   void clearReverseDependencies(String libraryName) {
+    myScopeUsageService.removeModules(module -> module.getLibraryName().equals(libraryName));
     for (Iterator<Map.Entry<ModuleLocation, GroupData>> iterator = myGroups.entrySet().iterator(); iterator.hasNext(); ) {
       Map.Entry<ModuleLocation, GroupData> entry = iterator.next();
       if (entry.getKey().getLibraryName().equals(libraryName)) {
@@ -223,6 +229,7 @@ public class ArendServerImpl implements ArendServer {
     synchronized (this) {
       Set<String> libraries = myLibraryService.unloadLibraries(onlyInternal);
       myGroups.keySet().removeIf(module -> libraries.contains(module.getLibraryName()));
+      myScopeUsageService.removeModules(module -> libraries.contains(module.getLibraryName()));
       myReverseDependencies.clear();
       myLogger.info(onlyInternal ? "Internal libraries unloaded" : "Libraries unloaded");
     }
@@ -413,6 +420,7 @@ public class ArendServerImpl implements ArendServer {
     synchronized (this) {
       GroupData groupData = myGroups.remove(module);
       if (groupData != null) {
+        myScopeUsageService.removeModule(module);
         clearReverseDependencies(module, groupData.getRawGroup());
         myLogger.info(() -> "Module '" + module + "' is deleted");
         removed = true;
@@ -694,5 +702,39 @@ public class ArendServerImpl implements ArendServer {
   @Override
   public @NotNull InstanceCacheImpl getInstanceCache() {
     return myInstanceCache;
+  }
+
+  @Override
+  public @NotNull ScopeUsagesService getScopeUsages() {
+    return myScopeUsageService;
+  }
+
+  @Override
+  public void restoreUsedInstances(@NotNull ModuleLocation module) {
+    ConcreteGroup group = getRawGroup(module);
+    if (group == null) return;
+    Map<TCDefReferable, Set<TCDefReferable>> instances = new HashMap<>();
+    Map<TCDefReferable, Set<TCDefReferable>> fields = new HashMap<>();
+    collectUsedInstances(group, instances, fields);
+    if (!instances.isEmpty()) myScopeUsageService.updateInstances(instances, fields);
+  }
+
+  private static void collectUsedInstances(ConcreteGroup group, Map<TCDefReferable, Set<TCDefReferable>> instances, Map<TCDefReferable, Set<TCDefReferable>> fields) {
+    if (group.referable() instanceof TCDefReferable referable) {
+      Definition definition = referable.getTypechecked();
+      Set<TCDefReferable> used = definition == null ? null : definition.getUsedInstances();
+      if (used != null) {
+        instances.put(referable, used);
+        Set<TCDefReferable> inferenceFields = definition.getInferenceFields();
+        fields.put(referable, inferenceFields == null ? Collections.emptySet() : inferenceFields);
+      }
+    }
+    for (ConcreteStatement statement : group.statements()) {
+      ConcreteGroup subgroup = statement.group();
+      if (subgroup != null) collectUsedInstances(subgroup, instances, fields);
+    }
+    for (ConcreteGroup subgroup : group.dynamicGroups()) {
+      collectUsedInstances(subgroup, instances, fields);
+    }
   }
 }
