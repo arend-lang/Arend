@@ -4,6 +4,7 @@ import org.arend.ext.module.ModuleLocation;
 import org.arend.frontend.TimedProgressReporter;
 import org.arend.frontend.library.SourceLibrary;
 import org.arend.naming.reference.TCDefReferable;
+import org.arend.naming.scope.EmptyScope;
 import org.arend.naming.scope.Scope;
 import org.arend.proof.ArendExpressionMatcher;
 import org.arend.proof.ProofSearchQuery;
@@ -57,8 +58,13 @@ final class ProofSearchEngine {
       // additionally drops anything outside the requested (top-level) libraries.
       if (self && !scopeNames.contains(moduleLocation.getLibraryName())) continue;
       for (DefinitionData data : server.getResolvedDefinitions(moduleLocation)) {
+        // One scope per definition, not per signature: each call builds a CachingScope over the
+        // whole enclosing file. A definition whose scope the server cannot produce is matched
+        // against an empty one (as the IDE's proof search does), so it can still match a pattern
+        // that names nothing, rather than taking the search down with it.
+        Scope scope = server.getReferableScope(data.definition().getData());
+        if (scope == null) scope = EmptyScope.INSTANCE;
         for (Triple<Concrete.GeneralDefinition, List<Concrete.Expression>, Concrete.Expression> signature : getSignatures(data.definition())) {
-          Scope scope = server.getReferableScope(data.definition().getData());
           ArendExpressionMatcher.ProofSearchMatchingResult result = matcher.match(signature.second(), signature.third(), scope);
           if (result == null) continue;
           // Count every match for the total; collect only up to `limit` (0 = all).
