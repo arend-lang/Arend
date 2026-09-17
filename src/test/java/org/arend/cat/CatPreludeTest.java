@@ -2,6 +2,7 @@ package org.arend.cat;
 
 import org.arend.Matchers;
 import org.arend.typechecking.TypeCheckingTestCase;
+import org.arend.typechecking.error.local.SolveLevelEquationsError;
 import org.junit.Test;
 
 import static org.arend.Matchers.typecheckingError;
@@ -228,6 +229,34 @@ public class CatPreludeTest extends TypeCheckingTestCase {
     typeCheckModule("""
       \\func test.{u} {A B : \\Type u} (p : A ~> B) (a : A) : coe+ (\\lam i => p i) a dleft = a
         => idp
+      """);
+  }
+
+  @Test
+  public void isoPlusTest() {
+    typeCheckModule("""
+      \\func endpoints.{u} {A B :+ \\Type u} (f :+ A ->+ B) : \\Sigma+ (iso+ f dleft = A) (iso+ f dright = B) => (idp, idp)
+      \\func dpath-iso.{u} {A B :+ \\Type u} (f :+ A ->+ B) : A ~> B => dpath (\\lam i => iso+ f i)
+      \\func coe-iso.{u} {A B :+ \\Type u} (f :+ A ->+ B) (a :+ A) : coe+ (\\lam i => iso+ f i) a dright = f a => idp
+      \\func coe-dpath-iso.{u} {A B :+ \\Type u} (f :+ A ->+ B) (a :+ A) : coe+ (\\lam i => (dpath (\\lam i => iso+ f i)) i) a dright = f a => idp
+      """);
+  }
+
+  @Test
+  public void isoPlusLevelError() {
+    typeCheckModule("\\func test.{u} (A B : \\Type (\\suc u)) (f : A ->+ B) (i :+ DI) : \\Type u => iso+ f i", 1);
+    assertThatErrorsAre(Matchers.typecheckingError(SolveLevelEquationsError.class));
+  }
+
+  @Test
+  public void isoCoePlusTest() {
+    typeCheckModule("""
+      \\func faces.{u} {A B :+ \\Type u} (p :+ A ~> B) (i :+ DI) (j : I)
+        : \\Sigma+ (iso+_coe+ p dleft j = A) (iso+_coe+ p dright j = B)
+                   (iso+_coe+ p i left = iso+ (\\lam a => coe+ (\\lam i => p i) a dright) i) (iso+_coe+ p i right = p i)
+        => (idp, idp, idp, idp)
+      \\func roundTrip.{u} {A B :+ \\Type u} (p :+ A ~> B) : dpath (\\lam i => iso+ (\\lam a => coe+ (\\lam i => p i) a dright) i) = p
+        => path (\\lam j => dpath (\\lam i => iso+_coe+ p i j))
       """);
   }
 

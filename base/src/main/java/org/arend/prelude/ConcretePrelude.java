@@ -95,6 +95,16 @@ public class ConcretePrelude implements ArendPrelude {
   }
 
   @Override
+  public CoreFunctionDefinition getIsoPlus() {
+    return Prelude.ISO_PLUS;
+  }
+
+  @Override
+  public CoreFunctionDefinition getIsoCoePlus() {
+    return Prelude.ISO_COE_PLUS;
+  }
+
+  @Override
   public CoreDataDefinition getNat() {
     return Prelude.NAT;
   }
@@ -348,6 +358,18 @@ public class ConcretePrelude implements ArendPrelude {
   public ArendRef getCoePlusRef() {
     if (Prelude.COERCE_PLUS != null) return Prelude.COERCE_PLUS.getRef();
     return myPreludeScope.resolveName("coe+");
+  }
+
+  @Override
+  public ArendRef getIsoPlusRef() {
+    if (Prelude.ISO_PLUS != null) return Prelude.ISO_PLUS.getRef();
+    return myPreludeScope.resolveName("iso+");
+  }
+
+  @Override
+  public ArendRef getIsoCoePlusRef() {
+    if (Prelude.ISO_COE_PLUS != null) return Prelude.ISO_COE_PLUS.getRef();
+    return myPreludeScope.resolveName("iso+_coe+");
   }
 
   @Override

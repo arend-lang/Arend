@@ -78,6 +78,16 @@
 \func coe+.{u} (C :⁺ DI ->⁺ \Type u) (a :⁺ C dleft) (i :⁺ DI) : C i \elim i
   | dleft => a
 
+\func iso+.{u} {A B :⁺ \Type u} (f :⁺ A ->⁺ B) (i :⁺ DI) : \Type u \elim i
+  | dleft => A
+  | dright => B
+
+\func iso+_coe+.{u} {A B :⁺ \Type u} (p :⁺ A ~> B) (i :⁺ DI) (j : I) : \Type u \elim i, j
+  | dleft, j => A
+  | dright, j => B
+  | i, left => iso+ (\lam a => coe+ (\lam i => p i) a dright) i
+  | i, right => p i
+
 \func rezk {C :⁺ \Cat} {x y :⁺ C} (f :⁺ x ~> y) (g :⁺ y ~> x)
            (p :⁺ DPath (\lam i => f i ~> x) idd g) (q :⁺ DPath (\lam i => g i ~> y) idd f)
   : (x,idd) = {\Sigma⁺ (z : C) (x ~> z)} (y,f)

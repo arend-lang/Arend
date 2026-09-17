@@ -13,6 +13,7 @@ import org.arend.core.sort.SortExpression;
 import org.arend.core.subst.Levels;
 import org.arend.error.DummyErrorReporter;
 import org.arend.ext.ArendPrelude;
+import org.arend.ext.core.context.BindingVariance;
 import org.arend.ext.core.definition.*;
 import org.arend.ext.core.level.ConstLevel;
 import org.arend.ext.module.ModulePath;
@@ -64,6 +65,7 @@ public class Prelude implements ArendPrelude {
 
   public static FunctionDefinition FILL2, FILL3;
   public static FunctionDefinition COERCE_PLUS;
+  public static FunctionDefinition ISO_PLUS, ISO_COE_PLUS;
   public static FunctionDefinition REZK;
 
   public static DataDefinition NAT;
@@ -239,6 +241,34 @@ public class Prelude implements ArendPrelude {
         COERCE_PLUS.setBody(new IntervalElim(3, Collections.singletonList(new IntervalElim.CasePair(new ReferenceExpression(a), null, true)), null));
         COERCE_PLUS.setStatus(Definition.TypeCheckingStatus.NO_ERRORS);
       }
+      case "iso+" -> {
+        ISO_PLUS = (FunctionDefinition) definition;
+        DependentLink A = ISO_PLUS.getParameters();
+        DependentLink B = A.getNext();
+        ISO_PLUS.setBody(new IntervalElim(4, Collections.singletonList(new IntervalElim.CasePair(new ReferenceExpression(A), new ReferenceExpression(B), true)), null));
+        ISO_PLUS.setStatus(Definition.TypeCheckingStatus.NO_ERRORS);
+      }
+      case "iso+_coe+" -> {
+        ISO_COE_PLUS = (FunctionDefinition) definition;
+        DependentLink A = ISO_COE_PLUS.getParameters();
+        DependentLink B = A.getNext();
+        DependentLink p = B.getNext();
+        DependentLink i = p.getNext();
+
+        // \lam a => coe+ (\lam k => p k) a dright
+        TypedSingleDependentLink k = new TypedSingleDependentLink(true, "k", DI(), false, BindingVariance.COVARIANT);
+        TypedSingleDependentLink a = new TypedSingleDependentLink(true, "a", new ReferenceExpression(A), false, BindingVariance.COVARIANT);
+        Expression coeFamily = new LamExpression(k, AtExpression.make(new ReferenceExpression(p), new ReferenceExpression(k), false, true));
+        Expression coeFun = new LamExpression(a, FunCallExpression.make(COERCE_PLUS, ISO_COE_PLUS.makeIdLevels(), Arrays.asList(coeFamily, new ReferenceExpression(a), Right(true))));
+        Expression isoFace = FunCallExpression.make(ISO_PLUS, ISO_COE_PLUS.makeIdLevels(), Arrays.asList(new ReferenceExpression(A), new ReferenceExpression(B), coeFun, new ReferenceExpression(i)));
+
+        List<IntervalElim.CasePair> cases = new ArrayList<>(2);
+        cases.add(new IntervalElim.CasePair(new ReferenceExpression(A), new ReferenceExpression(B), true));
+        cases.add(new IntervalElim.CasePair(isoFace, AtExpression.make(new ReferenceExpression(p), new ReferenceExpression(i), false, true), false));
+
+        ISO_COE_PLUS.setBody(new IntervalElim(5, cases, null));
+        ISO_COE_PLUS.setStatus(Definition.TypeCheckingStatus.NO_ERRORS);
+      }
       case "rezk" -> {
         REZK = (FunctionDefinition) definition;
         REZK.setStatus(Definition.TypeCheckingStatus.NO_ERRORS);
@@ -362,6 +392,8 @@ public class Prelude implements ArendPrelude {
     consumer.accept(FILL2);
     consumer.accept(FILL3);
     consumer.accept(COERCE_PLUS);
+    consumer.accept(ISO_PLUS);
+    consumer.accept(ISO_COE_PLUS);
     consumer.accept(REZK);
     consumer.accept(PATH);
     consumer.accept(PATH_CON);
@@ -484,6 +516,16 @@ public class Prelude implements ArendPrelude {
   @Override
   public CoreFunctionDefinition getCoePlus() {
     return COERCE_PLUS;
+  }
+
+  @Override
+  public CoreFunctionDefinition getIsoPlus() {
+    return ISO_PLUS;
+  }
+
+  @Override
+  public CoreFunctionDefinition getIsoCoePlus() {
+    return ISO_COE_PLUS;
   }
 
   @Override
@@ -724,6 +766,16 @@ public class Prelude implements ArendPrelude {
   @Override
   public ArendRef getCoePlusRef() {
     return COERCE_PLUS == null ? null : COERCE_PLUS.getRef();
+  }
+
+  @Override
+  public ArendRef getIsoPlusRef() {
+    return ISO_PLUS == null ? null : ISO_PLUS.getRef();
+  }
+
+  @Override
+  public ArendRef getIsoCoePlusRef() {
+    return ISO_COE_PLUS == null ? null : ISO_COE_PLUS.getRef();
   }
 
   @Override
