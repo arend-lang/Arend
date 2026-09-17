@@ -5,6 +5,7 @@
 \import Category.Slice
 \import Data.Bool
 \import Equiv
+\import Function (IsSurj)
 \import Function.Meta
 \import Logic.Unique
 \import Logic
@@ -74,6 +75,10 @@
   \use \level levelProp {J : Precat} {D : Precat} (G : Functor J D) (apex : D)
                         (cm : \Pi (j : J) -> Hom apex (G j)) (L L' : Limit G apex cm) : L = L' =>
     exts (\lam c => L.limUnique (\lam j => L.limBeta c j *> inv (L'.limBeta c j)))
+
+  \func fromIsLimit {J : Precat} {D : Precat} {G : Functor J D} (c : Cone G) (cl : IsLimitCone c) : Limit G c.apex \cowith
+    | Cone => c
+    | isLimit => cl
 
   \lemma iso_lim {J : Precat} {D : Precat} {G : Functor J D} (c : Cone G) (L : Limit G) (e : Iso (L.limMap c)) : Limit { | Cone => c } \cowith
     | limMap c' => e.hinv ∘ limMap c'
@@ -174,6 +179,21 @@
       | f_sec c => idp
     }
 } \where {
+  -- | Any two products of the same family are isomorphic, by the canonical comparison map.
+  \func unique-iso {J : \Type} {D : Precat} {G : J -> D} (p p' : Product G) : Iso {D} {p'.apex} {p.apex} (p.tupleMap p'.proj) \cowith
+    | hinv => p'.tupleMap p.proj
+    | hinv_f => p'.tupleEq \lam j => inv o-assoc *> pmap (∘ _) p'.tupleBeta *> p.tupleBeta *> inv id-right
+    | f_hinv => p.tupleEq \lam j => inv o-assoc *> pmap (∘ _) p.tupleBeta *> p'.tupleBeta *> inv id-right
+
+  -- | A product transports along isomorphisms of its factors.
+  \func fromFactorIso {J : \Type} {D : Precat} {G G' : J -> D} (p : Product G) (e : \Pi (j : J) -> Iso {D} {G j} {G' j})
+    : Product G' p.apex \cowith
+    | proj j => (e j).f ∘ p.proj j
+    | tupleMap f => p.tupleMap \lam j => (e j).hinv ∘ f j
+    | tupleBeta {Z} {f} {j} => o-assoc *> pmap ((e j).f ∘) p.tupleBeta *> inv o-assoc *>
+                               pmap (∘ f j) (e j).f_hinv *> id-left
+    | tupleEq q => p.tupleEq \lam j => (e j).isMono (inv o-assoc *> q j *> o-assoc)
+
   \func functor {J : \Type} {D : Precat} (G : J -> D) : Functor (DiscretePrecat J) D \cowith
     | F => G
     | Func => DiscretePrecat.map G
@@ -336,6 +356,13 @@
     | hinv => unique id-equalizer eq
     | hinv_f => unfold $ eq.eqMono $ rewriteI o-assoc $ rewrite (eq.eqBeta, id-left, id-right) idp
     | f_hinv => unique-map id-equalizer eq
+
+  -- | An object isomorphic to an equalizer is an equalizer; mirrors {Pullback.fromIso}.  The
+  -- | converse direction -- any two equalizers of the same pair are isomorphic -- is {unique}.
+  \func fromIso {D : Precat} {x y : D} {f g : Hom x y} (Q : Equalizer f g) (e : Iso {D} { | cod => Q })
+    : Equalizer f g e.dom (Q.eql ∘ e.f) (inv o-assoc *> pmap (∘ e.f) Q.equal *> o-assoc) \cowith
+    | isEqualizer Z => transport (IsEquiv __) (ext \lam u => ext (inv o-assoc))
+        (IsEquiv.trans (e.o-_Equiv {Z}) (Q.isEqualizer Z))
 }
 
 \class Pullback {D : Precat} {x y z : D} (f : Hom x z) (g : Hom y z) (\classifying apex : D) {
@@ -479,6 +506,21 @@
     }
 
 
+-- | A pullback out of a binary product and an equalizer: `x ×_z y` is the equalizer of
+-- | `f ∘ proj1` and `g ∘ proj2`.  {limits<=pr+eq} does not cover this, since it asks for products
+-- | indexed by an arbitrary small type rather than binary ones.
+\func pullback-pr+eq {D : PrecatWithBprod} {x y z : D} {f : Hom x z} {g : Hom y z}
+                     (Q : Equalizer (f ∘ D.proj1) (g ∘ D.proj2))
+  : Pullback f g Q.apex \cowith
+  | pbProj1 => D.proj1 ∘ Q.eql
+  | pbProj2 => D.proj2 ∘ Q.eql
+  | pbCoh => inv o-assoc *> Q.equal *> o-assoc
+  | pbMap p1 p2 c => Q.eqMap (D.pair p1 p2)
+      (o-assoc *> pmap (f ∘) D.beta1 *> c *> inv (pmap (g ∘) D.beta2) *> inv o-assoc)
+  | pbBeta1 => o-assoc *> pmap (D.proj1 ∘) Q.eqBeta *> D.beta1
+  | pbBeta2 => o-assoc *> pmap (D.proj2 ∘) Q.eqBeta *> D.beta2
+  | pbEta q1 q2 => Q.eqMono $ D.pair-unique (inv o-assoc *> q1 *> o-assoc) (inv o-assoc *> q2 *> o-assoc)
+
 \class PrecatWithPullbacks \extends Precat
   | pullback {x y z : Ob} (f : Hom x z) (g : Hom y z) : Pullback f g
 
@@ -527,6 +569,9 @@
     | hinv => terminalMap
     | hinv_f => terminal-unique
 }
+
+\lemma terminal-isTerminal {C : PrecatWithTerminal} : IsTerminal {C} C.terminal.apex
+  => \lam {c} => \new Contr (Hom c C.terminal.apex) C.terminalMap (\lam _ => C.terminal-unique)
 
 \class PrecatWithBprod \extends Precat {
   | Bprod (x y : Ob) : Product (x :: y :: nil)
@@ -580,6 +625,10 @@
 
   \lemma pair-eta {x y : Ob} : pair proj1 proj2 = id {_} {Bprod x y}
     => pair-unique (beta1 *> inv id-right) (beta2 *> inv id-right)
+
+  \lemma prodMap-pair {x y x' y' z : Ob} {f : Hom x y} {g : Hom x' y'} {a : Hom z x} {b : Hom z x'}
+    : prodMap f g ∘ pair a b = pair (f ∘ a) (g ∘ b)
+    => pair-comp *> pmap2 pair (o-assoc *> pmap (f ∘) beta1) (o-assoc *> pmap (g ∘) beta2)
 
   \func diagonal (x : Ob) : Hom x (Bprod x x)
     => pair id id
@@ -758,6 +807,109 @@
 \func CreatesLimit {J C D : Precat} (G : Functor C D) (F : Functor J C)
   => Limit (Comp G F) -> \Sigma (Limit F) (PreservesLimit G F) (ReflectsLimit G F)
 
+\func PreservesColimit {J C D : Precat} (G : Functor C D) (F : Functor J C)
+  => PreservesLimit {J.op} {C.op} {D.op} G.op F.op
+
+-- | A functor that carries one limit cone of {F} to a limit cone carries every limit cone of {F} to
+-- | a limit cone: any two limit cones of {F} are isomorphic, and {Functor.Func-iso} turns that
+-- | isomorphism into one in {D}.
+\lemma preservesLimit-fromLimit {J C D : Precat} (G : Functor C D) {F : Functor J C} (L : Limit F)
+                                (p : IsLimitCone (Cone.map G L))
+  : PreservesLimit G F
+  => \lam c cl => (Limit.iso_lim (Cone.map G c) (Limit.fromIsLimit (Cone.map G L) p) $
+       transport (Iso __) (inv (comparison c))
+                 (G.Func-iso (Limit.lim_iso L (Limit.fromIsLimit c cl)))).isLimit
+  \where {
+    \private \lemma comparison (c : Cone F)
+      : (Limit.fromIsLimit (Cone.map G L) p).limMap (Cone.map G c) = G.Func (L.limMap c)
+      => (Limit.fromIsLimit (Cone.map G L) p).limUniqueBeta \lam j =>
+          pmap G.Func (inv (L.limBeta c j)) *> G.Func-o
+  }
+
+-- | A fully faithful functor reflects limits: {Cone.mapEquiv} identifies the cones over {F} with
+-- | apex `z` with the cones over `Comp G F` with apex `G z`, compatibly with pullback along a
+-- | morphism, and {isFullyFaithful} identifies the morphisms.
+\lemma fullyFaithful-reflectsLimit {J C D : Precat} (G : FullyFaithfulFunctor C D) (F : Functor J C)
+  : ReflectsLimit G F
+  => \lam c cl z => IsEquiv.leftFactor (inP (Cone.mapEquiv G z))
+      (transport IsEquiv (ext \lam h => exts \lam j => inv G.Func-o)
+                 (IsEquiv.trans G.isFullyFaithful (cl (G z))))
+
+\func IsFiniteCat (J : Precat) : \Prop
+  => \Sigma (∃ (n : Nat) (f : Fin n -> J) (IsSurj f))
+            (\Pi (x y : J) -> ∃ (n : Nat) (f : Fin n -> Hom x y) (IsSurj f))
+
+\lemma isFiniteCat-op {J : Precat} (fin : IsFiniteCat J) : IsFiniteCat J.op
+  => (fin.1, \lam x y => fin.2 y x)
+
+\func PreservesFiniteLimits.{u} {C D : Precat} (G : Functor C D) : \Prop
+  => \Pi {J : Precat.{u,u}} -> IsFiniteCat J -> \Pi (F : Functor J C) -> PreservesLimit G F
+
+\lemma preservesFiniteLimits-comp.{u} {C D E : Precat} {G : Functor D E} {F : Functor C D}
+       (pg : PreservesFiniteLimits.{u} G) (pf : PreservesFiniteLimits.{u} F) : PreservesFiniteLimits.{u} (Comp G F)
+  => \lam fin H c cl => pg fin (Comp F H) (Cone.map F c) (pf fin H c cl)
+
+\func PreservesFiniteColimits.{u} {C D : Precat} (G : Functor C D) : \Prop
+  => PreservesFiniteLimits.{u} {C.op} {D.op} G.op
+
+\func PreservesTerminal {C D : PrecatWithTerminal} (G : Functor C D) : \Prop
+  => IsTerminal {D} (G C.terminal.apex)
+
+\func PreservesBprod {C D : PrecatWithBprod} (G : Functor C D) : \Prop
+  => \Pi {x y : C} -> Iso {D} {G (C.Bprod x y)} {D.Bprod (G x) (G y)} (D.pair (G.Func C.proj1) (G.Func C.proj2))
+
+\func PreservesEqualizer {C D : Precat} (H : Functor C D) : \Prop
+  => \Pi {x y : C} {f g : Hom x y} (Q : Equalizer f g)
+     -> Equalizer (H.Func f) (H.Func g) (H Q.apex) (H.Func Q.eql)
+
+\lemma preservesTerminal-comp {C D E : PrecatWithTerminal} {G : Functor D E} {F : Functor C D}
+                              (ptg : PreservesTerminal G) (ptf : PreservesTerminal F) : PreservesTerminal (Comp G F)
+  => iso-isTerminal (G.Func-iso (isTerminal-iso ptf)).reverse ptg
+  \where {
+    \lemma isTerminal-iso {D : PrecatWithTerminal} {t : D} (p : IsTerminal t) : Iso {D} {t} {D.terminal.apex} D.terminalMap \cowith
+      | hinv => Contr.center {p}
+      | hinv_f => isContr=>isProp p _ _
+      | f_hinv => D.terminal-unique
+
+    \lemma iso-isTerminal {D : Precat} {t t' : D} (e : Iso {D} {t} {t'}) (p : IsTerminal t) : IsTerminal t'
+      => \lam {c} => Contr.make (e.f ∘ Contr.center {p}) \lam h =>
+          pmap (e.f ∘) (isContr=>isProp p _ (e.hinv ∘ h)) *> inv o-assoc *> pmap (∘ h) e.f_hinv *> id-left
+  }
+
+\func preservesBprod-comp {C D E : PrecatWithBprod} {G : Functor D E} {F : Functor C D}
+                           (pbg : PreservesBprod G) (pbf : PreservesBprod F) : PreservesBprod (Comp G F)
+  => \lam {x} {y} => \new Iso {
+    | hinv => G.Func (Iso.hinv {pbf {x} {y}}) ∘ Iso.hinv {pbg {F x} {F y}}
+    | hinv_f => pmap (_ ∘) (inv (fcomp pbg pbf x y)) *> o-assoc *>
+        pmap (G.Func (Iso.hinv {pbf {x} {y}}) ∘) (inv o-assoc *> pmap (∘ _) (Iso.hinv_f {pbg {F x} {F y}}) *> id-left) *>
+        inv G.Func-o *> pmap G.Func (Iso.hinv_f {pbf {x} {y}}) *> G.Func-id
+    | f_hinv => pmap (∘ _) (inv (fcomp pbg pbf x y)) *> o-assoc *>
+        pmap (Iso.f {pbg {F x} {F y}} ∘) (inv o-assoc *> pmap (∘ _)
+          (inv G.Func-o *> pmap G.Func (Iso.f_hinv {pbf {x} {y}}) *> G.Func-id) *> id-left) *>
+        Iso.f_hinv {pbg {F x} {F y}}
+  }
+  \where {
+    \private \lemma fcomp {C D E : PrecatWithBprod} {G : Functor D E} {F : Functor C D}
+                          (pbg : PreservesBprod G) (pbf : PreservesBprod F) (x y : C)
+      : Iso.f {pbg {F x} {F y}} ∘ G.Func (Iso.f {pbf {x} {y}}) = E.pair (G.Func (F.Func C.proj1)) (G.Func (F.Func C.proj2))
+      => E.pair-comp *> pmap2 E.pair (inv G.Func-o *> pmap G.Func D.beta1) (inv G.Func-o *> pmap G.Func D.beta2)
+  }
+
+-- | Evaluation at an object preserves the terminal object of a functor category: it is pointwise.
+\lemma evalFunctor-preservesTerminal {J : Precat} {C : CartesianPrecat} (j : J)
+  : PreservesTerminal {FunctorCartesianPrecat J C} {C} (evalFunctor j)
+  => terminal-isTerminal {C}
+
+-- | ... and its binary products, for the same reason.  The comparison map is `pair proj1 proj2`,
+-- | which is the identity.
+\lemma evalFunctor-preservesBprod {J : Precat} {C : CartesianPrecat} (j : J)
+  : PreservesBprod {FunctorCartesianPrecat J C} {C} (evalFunctor j)
+  => \lam {X} {Y} => \new Iso {
+    | hinv => C.id
+    | hinv_f => C.id-left *> C.pair-eta
+    | f_hinv => C.id-right *> C.pair-eta
+  }
+
 \lemma Mono_pullback (P : Pullback {}) (m : Mono P.g) : Mono P.pbProj1 \cowith
   | isMono {d} {dP} {dP'} q => P.pbEta q $ m.isMono $ inv o-assoc *> pmap (∘ _) (inv P.pbCoh) *> o-assoc *> pmap (_ ∘) q *> inv o-assoc *> pmap (∘ _) P.pbCoh *> o-assoc
 
@@ -820,3 +972,51 @@
 }
 
 \func isRegularEpi {C : Precat} {x y : C} (f : Hom x y) => IsRegularMono {C.op} f
+
+-- | The terminal object and binary products of a functor category are computed pointwise.
+-- | Declared as a \func rather than an \instance on purpose: instance search is first-match on the
+-- | classifying field, and a third instance classified by `Functor J C` (besides {FunctorPrecat}
+-- | and {FunctorCat}) makes every `Precat` search over a functor category ambiguous.
+\func FunctorCartesianPrecat (J : Precat) (C : CartesianPrecat) : CartesianPrecat (Functor J C) \cowith
+  | Precat => FunctorPrecat J C
+  | terminal => \new Product {
+    | apex => Const C.terminal.apex
+    | proj => absurd
+    | tupleMap _ => \new NatTrans {
+      | trans _ => C.terminalMap
+      | natural _ => C.terminal-unique
+    }
+    | tupleBeta {_} {_} {j} => absurd j
+    | tupleEq _ => exts \lam _ => C.terminal-unique
+  }
+  | Bprod X Y => \new Product {
+    | apex => \new Functor {
+      | F j => C.Bprod (X j) (Y j)
+      | Func f => C.prodMap (X.Func f) (Y.Func f)
+      | Func-id => pmap2 C.prodMap X.Func-id Y.Func-id *> C.prod-id
+      | Func-o => pmap2 C.prodMap X.Func-o Y.Func-o *> inv C.prodMap-comp
+    }
+    | proj => \case \elim __ \with {
+      | 0 => \new NatTrans {
+        | trans _ => C.proj1
+        | natural _ => C.beta1
+      }
+      | 1 => \new NatTrans {
+        | trans _ => C.proj2
+        | natural _ => C.beta2
+      }
+    }
+    | tupleMap h => \new NatTrans {
+      | trans j => C.pair (h 0 j) (h 1 j)
+      | natural f => C.pair-unique
+        (inv o-assoc *> pmap (∘ _) C.beta1 *> (h 0).natural f *> pmap (_ ∘) (inv C.beta1) *> inv o-assoc *>
+         pmap (∘ _) (inv C.beta1) *> o-assoc)
+        (inv o-assoc *> pmap (∘ _) C.beta2 *> (h 1).natural f *> pmap (_ ∘) (inv C.beta2) *> inv o-assoc *>
+         pmap (∘ _) (inv C.beta2) *> o-assoc)
+    }
+    | tupleBeta {_} {_} {j} => \case \elim j \with {
+      | 0 => exts \lam _ => C.beta1
+      | 1 => exts \lam _ => C.beta2
+    }
+    | tupleEq c => exts \lam j => C.pair-unique (path \lam i => c 0 i j) (path \lam i => c 1 i j)
+  }

@@ -178,6 +178,25 @@
   g * ide ==< ide-right >==
   g `qed
 
+\func commutator {E : Group} (g h : E)
+  => g * h * inverse g * inverse h
+
+\lemma commutator=ide<->comm {E : Group} {g h : E} : commutator g h = ide <-> g * h = h * g
+  => (\lam p => equation.group {pmap (* (h * g)) p},
+      \lam q => equation.group {pmap (\lam x => x * inverse g * inverse h) q})
+
+\lemma comm_sym {E : Group} {g h : E} (p : commutator g h = ide) : commutator h g = ide
+  => equation.group {pmap inverse p}
+
+\lemma comm_conjugate {E : Group} {g h : E} (p : commutator g h = ide) : conjugate g h = h
+  => equation.group {pmap (* h) p}
+
+\lemma comm_inverse-right {E : Group} {g h : E} (p : commutator g h = ide) : commutator g (inverse h) = ide
+  => equation.group {pmap (\lam x => conjugate (inverse h) (inverse x)) p}
+
+\lemma comm_inverse-left {E : Group} {g h : E} (p : commutator g h = ide) : commutator (inverse g) h = ide
+  => comm_sym $ comm_inverse-right $ comm_sym p
+
 \class AddGroup \extends AddMonoid {
   | negative : E -> E
   | negative-left {x : E} : negative x + x = zro

@@ -14,7 +14,6 @@
 \import Algebra.Ring.Poly.Euclidean
 \import Algebra.Semiring
 \import Arith.Nat
-\import Category
 \import Data.Array
 \import Function.Meta ($)
 \import Logic

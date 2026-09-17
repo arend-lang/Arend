@@ -6,11 +6,14 @@
 \import Algebra.Monoid.SubMonoid
 \import Algebra.Pointed
 \import Algebra.Pointed.SubPointed
+\import Arith.Nat
 \import Function
+\import Function.Iterate
 \import Function.Meta
 \import Logic
 \import Logic.Meta
 \import Meta
+\import Order.Lattice
 \import Order.PartialOrder
 \import Paths
 \import Paths.Meta
@@ -43,6 +46,49 @@
 
   \lemma ~-pequiv-left {x y : S} (p : 1 equivalence.~ y) : inc~ x = inc~ (x * y)
     => ~-pequiv $ transport contains (inv (pmap (* y) inverse-left *> ide-left) *> *-assoc) (contains_~.2 p)
+} \where {
+  \func closure {G : Group} (S : SubSet G) : SubGroup G \cowith
+    | contains x => ∃ (n : Nat) (iterr apl n S x)
+    | contains_ide => inP (1, byRight (byLeft idp))
+    | contains_* {x} {y} (inP (n,xr)) (inP (m,yr)) => inP (suc (n ∨ m), byRight (byRight (byLeft (x, y, apl-inc join-left x xr, apl-inc join-right y yr, idp))))
+    | contains_inverse {x} (inP (n,xr)) => inP (suc n, byRight (byRight (byRight (x, xr, idp))))
+    \where {
+      \lemma ext {G : Group} (S : SubSet G) : S <= closure S
+        => \lam x x<-S => inP (0, x<-S)
+
+      \lemma univ (H : SubGroup G) (p : S <= H) (x : G) (q : closure S x) : H x \elim q
+        | inP (0, x<-S) => p x x<-S
+        | inP (suc n, byLeft x<-C) => univ H p x (inP (n, x<-C))
+        | inP (suc n, byRight (byLeft x=1)) => transport H (inv x=1) H.contains_ide
+        | inP (suc n, byRight (byRight (byLeft (y, z, y<-C, z<-C, x=y*z)))) => transport H (inv x=y*z) (H.contains_* (univ H p y (inP (n, y<-C))) (univ H p z (inP (n, z<-C))))
+        | inP (suc n, byRight (byRight (byRight (y, y<-C, x=inv-y)))) => transport H (inv x=inv-y) (H.contains_inverse (univ H p y (inP (n, y<-C))))
+
+      \lemma monotone {G : Group} {S S' : SubSet G} (p : S <= S') (x : G) (q : closure S x) : closure S' x
+        => univ {G} {S} (closure S') (\lam y y<-S => ext S' y (p y y<-S)) x q
+
+      \lemma idempotent {G : Group} (H : SubGroup G) : closure {G} H = H
+        => <=-antisymmetric {SubGroupPoset} {closure {G} H} {H}
+             (\lam {x} q => univ {G} {H} H (\lam _ c => c) x q)
+             (\lam {x} => ext H x)
+
+      \lemma contains_conjugate (n : \Pi (g x : G) -> S x -> S (conjugate g x)) (g x : G) (q : closure S x)
+        : closure S (conjugate g x)
+        => univ {G} {S} (PreimageGroup (conjugateHom g) (closure S))
+             (\lam y y<-S => ext S (conjugate g y) (n g y y<-S)) x q
+
+      \func apl {G : Group} (S : SubSet G) : SubSet G \cowith
+        | contains x => S x || (x = 1) || (\Sigma (y z : G) (S y) (S z) (x = y * z)) || (\Sigma (y : G) (S y) (x = inverse y))
+
+      \lemma apl-inc {n m : Nat} (q : n <= m) (x : G) (p : iterr apl n S x) : iterr apl m S x
+        => rewriteI (<=_exists q) (alt n (m -' n) x p)
+        \where
+          \lemma alt (n m : Nat) (x : G) (p : iterr apl n S x) : iterr apl (n + m) S x \elim m
+            | 0 => p
+            | suc m => byLeft (alt n m x p)
+    }
+
+  \func generatedBy {G : Group} {J : \Type} (g : J -> G) : SubGroup G
+    => closure (\new SubSet G (\lam x => ∃ (j : J) (g j = x)))
 }
 
 \instance IGroup (S : SubGroup {}) : Group
@@ -99,6 +145,57 @@
     | func => inc~
     | func-ide => idp
     | func-* => idp
+
+  \lemma quotHom-surj : IsSurj quotHom
+    => \lam (in~ x) => inP (x, idp)
+
+  \lemma quotHom_=1 {x : S} (c : contains x) : quotHom x = ide {Quot}
+    => inv $ ~-pequiv $ contains_~.1 c
+
+  \lemma quotHom-eq {x y : S} (c : contains (x * inverse y)) : quotHom x = quotHom y
+    => ~-pequiv $ transport contains equation.group $ isNormal (inverse y) (contains_inverse c)
+
+  \func quot-univ {K : Group} (f : GroupHom S K) (p : \Pi (x : S) -> contains x -> f x = 1) : GroupHom Quot K \cowith
+    | func (x : Quot) : K \with {
+      | in~ g => f g
+      | ~-equiv g g' r => (K.makeInv (inverse (f g))).inv-cancel-left $
+          inverse-left *> inv (p _ r) *> f.func-* *> pmap (* _) f.func-inverse
+    }
+    | func-* {in~ x} {in~ y} => f.func-*
+
+  \lemma quot-univ-beta {K : Group} {f : GroupHom S K} {p : \Pi (x : S) -> contains x -> f x = 1}
+    : quot-univ f p GroupHom.∘ quotHom = f
+    => exts \lam _ => idp
+
+  \lemma quot-hom-ext {K : Group} {f g : GroupHom Quot K} (p : \Pi (x : S) -> f (quotHom x) = g (quotHom x))
+    : f = g
+    => exts \lam (in~ x) => p x
+} \where {
+  \func conjugates {G : Group} (S : SubSet G) : SubSet G \cowith
+    | contains x => ∃ (g y : G) (S y) (conjugate g y = x)
+    \where {
+      \lemma ext {G : Group} (S : SubSet G) : S <= conjugates S
+        => \lam x x<-S => inP (1, x, x<-S, conjugate-via-id)
+
+      \lemma contains_conjugate {G : Group} {S : SubSet G} (g x : G) (q : conjugates S x) : conjugates S (conjugate g x)
+        => \let (inP (a, y, y<-S, c)) => q
+           \in inP (g * a, y, y<-S, equation.group *> pmap (conjugate g) c)
+    }
+
+  \func normalClosure {G : Group} (S : SubSet G) : NormalSubGroup G \cowith
+    | SubGroup => SubGroup.closure (conjugates S)
+    | isNormal g {h} q => SubGroup.closure.contains_conjugate conjugates.contains_conjugate g h q
+    \where {
+      \lemma ext {G : Group} (S : SubSet G) : S <= normalClosure S
+        => \lam x x<-S => SubGroup.closure.ext (conjugates S) x (conjugates.ext S x x<-S)
+
+      \lemma univ (H : NormalSubGroup G) (p : S <= H) (x : G) (q : normalClosure S x) : H x
+        => SubGroup.closure.univ {G} {conjugates S} H
+             (\lam y (inP (a, z, z<-S, c)) => transport H c (H.isNormal a (p z z<-S))) x q
+
+      \lemma monotone {G : Group} {S S' : SubSet G} (p : S <= S') (x : G) (q : normalClosure S x) : normalClosure S' x
+        => univ {G} {S} (normalClosure S') (\lam y y<-S => ext S' y (p y y<-S)) x q
+    }
 }
 
 \class FinSubGroup \extends DecSubGroup {
@@ -121,6 +218,10 @@
 
   \lemma contains_- {x y : S} : contains x -> contains y -> contains (x - y)
     => \lam cx cy => contains_+ cx (contains_negative cy)
+
+  \lemma contains_*i {x : S} (c : contains x) {n : Int} : contains (n AddGroup.*i x) \elim n
+    | pos n => contains_*n c
+    | neg n => contains_*n (contains_negative c)
 } \where {
   \func max {A : AddGroup} : SubAddGroup \cowith
     | SubAddMonoid => SubAddMonoid.max {A}
@@ -161,6 +262,13 @@
 
 \lemma AddKernel-trivial-char {f : AddGroupHom} : IsAddKernelTrivial f <-> IsInj f
   => Kernel-trivial-char {AddGroupHom.toGroupHom f}
+
+
+\func PreimageGroup (f : GroupHom) (H : SubGroup f.Cod) : SubGroup f.Dom \cowith
+  | contains x => H (f x)
+  | contains_ide => transportInv H f.func-ide H.contains_ide
+  | contains_* p q => transportInv H f.func-* (H.contains_* p q)
+  | contains_inverse p => transportInv H f.func-inverse (H.contains_inverse p)
 
 
 \func ImageGroup (f : GroupHom) : SubGroup f.Cod \cowith

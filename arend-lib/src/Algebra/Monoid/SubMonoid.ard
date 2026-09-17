@@ -111,6 +111,10 @@
   \override S : AddMonoid
   | contains_+ {x y : S} : contains x -> contains y -> contains (x + y)
 
+  \lemma contains_*n {x : S} (c : contains x) {n : Nat} : contains (n AddMonoid.*n x) \elim n
+    | 0 => contains_zro
+    | suc n => contains_+ (contains_*n c) c
+
   \lemma contains_BigSum {l : Array S} (p : \Pi (j : Fin l.len) -> contains (l j)) : contains (AddMonoid.BigSum l) \elim l
     | nil => contains_zro
     | a :: l => contains_+ (p 0) $ contains_BigSum \lam j => p (suc j)

@@ -3,6 +3,7 @@
 \import Algebra.Meta
 \import Algebra.Monoid
 \import Algebra.Monoid.GCD
+\import Algebra.Monoid.SubMonoid
 \import Algebra.Ring.Ideal
 \import Algebra.Semiring
 \import Arith.Nat
@@ -174,6 +175,19 @@
 \class PseudoCRing \extends PseudoRing, PseudoCSemiring
 
 \class CRing \extends Ring, PseudoCRing, CSemiring {
+  \func regulars : SubMonoid \this \cowith
+    | contains r => IsRegularElem r
+    | contains_ide p => inv ide-left *> p *> ide-left
+    | contains_* p q s => q (p (inv *-assoc *> s *> *-assoc))
+
+  \lemma regulars-cancel {r x y : E} (p : regulars r) (q : r * x = r * y) : x = y
+    => p q
+
+  -- | Over a ring, being regular is the same as being a non-zero-divisor.
+  \lemma regulars-zro-char {r : E} : regulars r <-> (\Pi {x : E} -> r * x = 0 -> x = 0)
+    => (\lam p q => p (q *> inv zro_*-right),
+        \lam h q => fromZero (h (ldistr_- *> toZero q)))
+
   \func IsBezout => \Pi (a b : E) -> ∃ (s t : E) (LDiv (s * a + t * b) a) (LDiv (s * a + t * b) b)
 
   \func IsStrictBezout => \Pi (a b : E) -> ∃ (s t u v : E) (a * u = b * v) (s * u + t * v = 1)

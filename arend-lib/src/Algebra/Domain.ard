@@ -147,6 +147,10 @@
 
   \lemma IsRegular_/=0 {a : E} : IsRegularElem a <-> a /= 0
     => (\lam ar a=0 => zro/=ide $ ar (rewrite a=0 simplify), \lam a/=0 p => nonZero-cancel-left a/=0 p)
+
+  -- | {CRing.regulars} is {IsRegularElem} packaged as a submonoid, so this is {IsRegular_/=0}.
+  \lemma regulars-char {r : E} : regulars r <-> r /= zro
+    => IsRegular_/=0
 } \where {
   \open DivQuotient
 

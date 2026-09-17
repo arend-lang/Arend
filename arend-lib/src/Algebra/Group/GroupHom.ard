@@ -16,6 +16,12 @@
   \lemma func-inverse {a : Dom} : func (inverse a) = inverse (func a)
     => func-InvElem (Group.makeInv a) (Group.makeInv (func a)) idp
 
+  \lemma func-conjugate {g h : Dom} : func (conjugate g h) = conjugate (func g) (func h)
+    => func-* *> pmap2 (*) func-* func-inverse
+
+  \lemma func-commutator {g h : Dom} : func (commutator g h) = commutator (func g) (func h)
+    => func-* *> pmap2 (*) func-conjugate func-inverse
+
   \func IsIsomorphism : \Prop
     => \Sigma (IsInj func) (IsSurj func)
 } \where {

@@ -1,15 +1,44 @@
+\import Algebra.Group
+\import Algebra.Group.GroupHom
+\import Algebra.Monoid
+\import Algebra.Monoid.MonoidHom
+\import Algebra.Pointed
 \import Category
+\import Function.Meta
+\import Category.Functor
 \import Category.Limit
+\import Logic
+\import Logic.Unique
+\import Paths
+\import Paths.Meta
 \open PrecatWithBprod
 \open PrecatWithTerminal
+
 \class BaseObject {C : CartesianPrecat} (E : C)
 
-\class CMonoidObject \extends BaseObject
+{- | A monoid object: a monoid in the cartesian category {C}.  Written multiplicatively, so that
+     {AbGroupObject} and {CRingObject} below can keep their additive names and a ring object can
+     carry both structures at once. -}
+\class MonoidObject \extends BaseObject
   | iide : Hom terminal.apex E
   | imul : Hom (Bprod E E) E
   | iide-left : imul ∘ pair (iide ∘ terminalMap) id = id
+  | iide-right : imul ∘ pair id (iide ∘ terminalMap) = id
   | imul-assoc : imul ∘ prodMap imul id = imul ∘ prodMap id imul ∘ associator
+
+\class GroupObject \extends MonoidObject
+  | iinverse : Hom E E
+  | iinverse-left : imul ∘ pair iinverse id = iide ∘ terminalMap
+  | iinverse-right : imul ∘ pair id iinverse = iide ∘ terminalMap
+
+\class CMonoidObject \extends MonoidObject {
   | imul-comm : imul ∘ pair proj2 proj1 = imul
+  \default iide-right => comm_pair-swap imul-comm id (iide ∘ terminalMap) *> iide-left
+}
+
+\lemma comm_pair-swap {C : CartesianPrecat} {E : C} {m : Hom (C.Bprod E E) E} (c : m ∘ pair proj2 proj1 = m)
+                      {z : C} (f g : Hom z E) : m ∘ pair f g = m ∘ pair g f
+  => pmap (∘ _) (inv c) *> o-assoc *> pmap (m ∘) (pair-comp *> pmap2 pair beta2 beta1)
 
 \class AbGroupObject \extends BaseObject
   | izro : Hom terminal.apex E
@@ -19,6 +48,313 @@
   | iadd-assoc : iadd ∘ prodMap iadd id = iadd ∘ prodMap id iadd ∘ associator
   | iadd-comm : iadd ∘ pair proj2 proj1 = iadd
   | inegative-left : iadd ∘ pair inegative id = izro ∘ terminalMap
+  \where {
+    -- | The additive group object read multiplicatively.
+    \func toGroupObject {C : CartesianPrecat} (G : AbGroupObject {C}) : GroupObject {C} G.E \cowith
+      | iide => G.izro
+      | imul => G.iadd
+      | iide-left => G.izro-left
+      | iide-right => comm_pair-swap G.iadd-comm id (G.izro ∘ terminalMap) *> G.izro-left
+      | imul-assoc => G.iadd-assoc
+      | iinverse => G.inegative
+      | iinverse-left => G.inegative-left
+      | iinverse-right => comm_pair-swap G.iadd-comm id G.inegative *> G.inegative-left
+  }
 
 \class CRingObject \extends AbGroupObject, CMonoidObject
   | ildistr : imul ∘ prodMap id iadd = iadd ∘ prodMap imul imul ∘ pair (prodMap id proj1) (prodMap id proj2)
+
+-- | Generalized elements of a monoid object form a monoid.
+\func homMonoid {C : CartesianPrecat} (X : C) (G : MonoidObject {C}) : Monoid (Hom X G.E) \cowith
+  | ide => G.iide ∘ terminalMap
+  | * f g => G.imul ∘ pair f g
+  | ide-left {f} => pmap (G.imul ∘) (inv (pair-comp *> pmap2 pair (o-assoc *> pmap (G.iide ∘) terminal-unique) id-left)) *>
+      inv o-assoc *> pmap (∘ f) G.iide-left *> id-left
+  | ide-right {f} => pmap (G.imul ∘) (inv (pair-comp *> pmap2 pair id-left (o-assoc *> pmap (G.iide ∘) terminal-unique))) *>
+      inv o-assoc *> pmap (∘ f) G.iide-right *> id-left
+  | *-assoc {f} {g} {h} => pmap (G.imul ∘) (inv (prodMap-pair *> pmap (pair _) id-left)) *>
+      inv o-assoc *> pmap (∘ pair (pair f g) h) G.imul-assoc *> o-assoc *>
+      pmap (_ ∘) associator-pair *> o-assoc *> pmap (G.imul ∘) (prodMap-pair *> pmap (pair __ _) id-left)
+
+-- | Generalized elements of a group object form a group.
+\func homGroup {C : CartesianPrecat} (X : C) (G : GroupObject {C}) : Group (Hom X G.E) \cowith
+  | Monoid => homMonoid X G
+  | inverse f => G.iinverse ∘ f
+  | inverse-left {f} => pmap (G.imul ∘) (inv (pair-comp *> pmap (pair _) id-left)) *>
+      inv o-assoc *> pmap (∘ f) G.iinverse-left *> o-assoc *> pmap (G.iide ∘) terminal-unique
+  | inverse-right {f} => pmap (G.imul ∘) (inv (pair-comp *> pmap (pair __ _) id-left)) *>
+      inv o-assoc *> pmap (∘ f) G.iinverse-right *> o-assoc *> pmap (G.iide ∘) terminal-unique
+
+\lemma imul_o {C : CartesianPrecat} (G : MonoidObject {C}) {X Y : C} (h : Hom X Y) {f g : Hom Y G.E}
+  : G.imul ∘ pair f g ∘ h = G.imul ∘ pair (f ∘ h) (g ∘ h)
+  => o-assoc *> pmap (G.imul ∘) pair-comp
+
+\func precompMonoidHom {C : CartesianPrecat} (G : MonoidObject {C}) {X Y : C} (h : Hom X Y)
+  : MonoidHom (homMonoid Y G) (homMonoid X G) \cowith
+  | func f => f ∘ h
+  | func-ide => o-assoc *> pmap (G.iide ∘) terminal-unique
+  | func-* => imul_o G h
+
+\func precompHom {C : CartesianPrecat} (G : GroupObject {C}) {X Y : C} (h : Hom X Y)
+  : GroupHom (homGroup Y G) (homGroup X G) \cowith
+  | func f => f ∘ h
+  | func-* => imul_o G h
+
+{- | A morphism of monoid objects.  A morphism of group objects is the same thing: {iinverse} is
+     determined by {imul} and {iide}, so it is automatically preserved. -}
+\record MonoidObjectHom {C : CartesianPrecat} (Dom Cod : MonoidObject {C}) (\coerce f : Hom Dom.E Cod.E)
+  | func-iide : f ∘ Dom.iide = Cod.iide
+  | func-imul : f ∘ Dom.imul = Cod.imul ∘ prodMap f f
+  \where {
+    \func id {C : CartesianPrecat} {G : MonoidObject {C}} : MonoidObjectHom G G C.id \cowith
+      | func-iide => id-left
+      | func-imul => id-left *> inv (pmap (G.imul ∘) prod-id *> id-right)
+
+    \func comp {C : CartesianPrecat} {G H K : MonoidObject {C}} (g : MonoidObjectHom H K) (f : MonoidObjectHom G H)
+      : MonoidObjectHom G K (g.f ∘ f.f) \cowith
+      | func-iide => o-assoc *> pmap (g.f ∘) f.func-iide *> g.func-iide
+      | func-imul => o-assoc *> pmap (g.f ∘) f.func-imul *> inv o-assoc *> pmap (∘ _) g.func-imul *>
+          o-assoc *> pmap (K.imul ∘) prodMap-comp
+  }
+
+{- | A morphism of monoid objects is exactly a monoid homomorphism on generalized elements,
+     uniformly in the probing object. -}
+\lemma MonoidObjectHom-char {C : CartesianPrecat} {G H : MonoidObject {C}} {f : Hom G.E H.E}
+  : MonoidObjectHom G H f <-> (\Pi {X : C} -> MonoidHom (homMonoid X G) (homMonoid X H) (f ∘))
+  => (\lam h {X} => \new MonoidHom (homMonoid X G) (homMonoid X H) (f ∘) {
+        | func-ide => inv o-assoc *> pmap (∘ terminalMap) h.func-iide
+        | func-* => inv o-assoc *> pmap (∘ _) h.func-imul *> o-assoc *> pmap (H.imul ∘) prodMap-pair
+      },
+      \lam h => \new MonoidObjectHom G H f {
+        | func-iide => pmap (f ∘) (inv (pmap (G.iide ∘) terminal-unique *> id-right)) *>
+            MonoidHom.func-ide {h {C.terminal.apex}} *> pmap (H.iide ∘) terminal-unique *> id-right
+        | func-imul => pmap (f ∘) (inv (pmap (G.imul ∘) pair-eta *> id-right)) *>
+            MonoidHom.func-* {h {C.Bprod G.E G.E}} {proj1} {proj2}
+      })
+
+\instance MonoidObjectPrecat {C : CartesianPrecat} : Precat (MonoidObject {C})
+  | Hom G H => MonoidObjectHom G H
+  | id => MonoidObjectHom.id
+  | o g f => MonoidObjectHom.comp g f
+  | id-left => exts id-left
+  | id-right => exts id-right
+  | o-assoc => exts o-assoc
+
+\instance GroupObjectPrecat {C : CartesianPrecat} : Precat (GroupObject {C})
+  | Hom G H => MonoidObjectHom G H
+  | id => MonoidObjectHom.id
+  | o g f => MonoidObjectHom.comp g f
+  | id-left => exts id-left
+  | id-right => exts id-right
+  | o-assoc => exts o-assoc
+
+{- | The image of a binary product under a {PreservesBprod} functor is again a binary product, with
+     the images of the projections as its projections.  {F-pair}, {F-beta1}, {F-beta2} and
+     {F-pair-unique} are its tuple map and its beta and eta rules. -}
+\func F-pair {C D : CartesianPrecat} {F : Functor C D} (pb : PreservesBprod F) (x y : C) {z : D}
+            (a : Hom z (F x)) (b : Hom z (F y)) : Hom z (F (C.Bprod x y))
+  => Iso.hinv {pb {x} {y}} ∘ pair a b
+
+\lemma F-proj1 {C D : CartesianPrecat} {F : Functor C D} (pb : PreservesBprod F) (x y : C)
+  : F.Func C.proj1 ∘ Iso.hinv {pb {x} {y}} = proj1
+  => inv (Iso.adjointMap' {pb {x} {y}} beta1)
+
+\lemma F-proj2 {C D : CartesianPrecat} {F : Functor C D} (pb : PreservesBprod F) (x y : C)
+  : F.Func C.proj2 ∘ Iso.hinv {pb {x} {y}} = proj2
+  => inv (Iso.adjointMap' {pb {x} {y}} beta2)
+
+\lemma F-beta1 {C D : CartesianPrecat} {F : Functor C D} (pb : PreservesBprod F) (x y : C) {z : D}
+               {a : Hom z (F x)} {b : Hom z (F y)} : F.Func C.proj1 ∘ F-pair pb x y a b = a
+  => inv o-assoc *> pmap (∘ pair a b) (F-proj1 pb x y) *> beta1
+
+\lemma F-beta2 {C D : CartesianPrecat} {F : Functor C D} (pb : PreservesBprod F) (x y : C) {z : D}
+               {a : Hom z (F x)} {b : Hom z (F y)} : F.Func C.proj2 ∘ F-pair pb x y a b = b
+  => inv o-assoc *> pmap (∘ pair a b) (F-proj2 pb x y) *> beta2
+
+\lemma F-pair-unique {C D : CartesianPrecat} {F : Functor C D} (pb : PreservesBprod F) (x y : C) {z : D}
+                     {u u' : Hom z (F (C.Bprod x y))}
+                     (p1 : F.Func C.proj1 ∘ u = F.Func C.proj1 ∘ u') (p2 : F.Func C.proj2 ∘ u = F.Func C.proj2 ∘ u')
+  : u = u'
+  => Mono.isMono {pb {x} {y}} $ pair-unique
+      (inv o-assoc *> pmap (∘ u) beta1 *> p1 *> inv (pmap (∘ u') beta1) *> o-assoc)
+      (inv o-assoc *> pmap (∘ u) beta2 *> p2 *> inv (pmap (∘ u') beta2) *> o-assoc)
+
+\lemma F-Func_o {C D : Precat} (F : Functor C D) {x y p : C} {z : D} {g : Hom y p} {f : Hom x y} {v : Hom z (F x)}
+  : F.Func (g ∘ f) ∘ v = F.Func g ∘ (F.Func f ∘ v)
+  => pmap (∘ v) F.Func-o *> o-assoc
+
+{- | Every {pair} in {C} becomes an {F-pair} in {D}.  This single lemma computes the image of
+     {prodMap} and {associator}, which are pairs. -}
+\lemma F-Func-pair {C D : CartesianPrecat} {F : Functor C D} (pb : PreservesBprod F) (x y : C) {p : C} {z : D}
+                   (a : Hom p x) (b : Hom p y) (v : Hom z (F p))
+  : F.Func (C.pair a b) ∘ v = F-pair pb x y (F.Func a ∘ v) (F.Func b ∘ v)
+  => F-pair-unique pb x y
+      (inv (F-Func_o F) *> pmap (F.Func __ ∘ v) beta1 *> inv (F-beta1 pb x y))
+      (inv (F-Func_o F) *> pmap (F.Func __ ∘ v) beta2 *> inv (F-beta2 pb x y))
+
+\lemma F-terminal-unique {C D : CartesianPrecat} {F : Functor C D} (pt : PreservesTerminal F) {z : D}
+                         {u v : Hom z (F C.terminal.apex)} : u = v
+  => isContr=>isProp pt u v
+
+-- | Associativity in the {pair} form implies it in the {prodMap} form.
+\lemma imul-assoc-char {C : CartesianPrecat} {E : C} {m : Hom (C.Bprod E E) E}
+                       (p : \Pi {z : C} (f g h : Hom z E) -> m ∘ pair (m ∘ pair f g) h = m ∘ pair f (m ∘ pair g h))
+  : m ∘ prodMap m id = m ∘ prodMap id m ∘ associator
+  => pmap (m ∘) (pmap2 pair (pmap (m ∘) (inv pair_proj1)) id-left) *> p _ _ _ *>
+     inv (o-assoc *> pmap (m ∘) (pair-comp *> pmap2 pair (pmap (∘ associator) id-left *> beta1)
+                                                         (o-assoc *> pmap (m ∘) beta2)))
+  \where {
+    \lemma pair_proj1 {C : CartesianPrecat} {x y z : C} : pair (proj1 ∘ proj1) (proj2 ∘ proj1) = proj1 {C} {C.Bprod x y} {z}
+      => inv pair-comp *> pmap (∘ proj1) pair-eta *> id-left
+  }
+
+\lemma F-Func-pair' {C D : CartesianPrecat} {F : Functor C D} (pb : PreservesBprod F) (x y : C) {p : C}
+                    (a : Hom p x) (b : Hom p y)
+  : F.Func (C.pair a b) = F-pair pb x y (F.Func a) (F.Func b)
+  => F-pair-unique pb x y (inv F.Func-o *> pmap F.Func beta1 *> inv (F-beta1 pb x y))
+                          (inv F.Func-o *> pmap F.Func beta2 *> inv (F-beta2 pb x y))
+
+\lemma F-imul_pair {C D : CartesianPrecat} {F : Functor C D} (pb : PreservesBprod F) {E : C} (m : Hom (C.Bprod E E) E)
+                  {z : D} (a b : Hom z (F E))
+  : F.Func m ∘ Iso.hinv {pb {E} {E}} ∘ pair a b = F.Func m ∘ F-pair pb E E a b
+  => o-assoc
+
+\private \lemma F-prodMap-left {C D : CartesianPrecat} {F : Functor C D} (pb : PreservesBprod F) {E : C}
+                               (m : Hom (C.Bprod E E) E) {z : D} (u : Hom z (F (C.Bprod E E))) (h : Hom z (F E))
+  : F.Func (prodMap m id) ∘ F-pair pb (C.Bprod E E) E u h = F-pair pb E E (F.Func m ∘ u) h
+  => F-Func-pair pb E E (m ∘ proj1) (id ∘ proj2) _ *>
+     pmap2 (F-pair pb E E) (F-Func_o F *> pmap (F.Func m ∘) (F-beta1 pb (C.Bprod E E) E))
+                          (pmap (F.Func __ ∘ _) id-left *> F-beta2 pb (C.Bprod E E) E)
+
+\private \lemma F-prodMap-right {C D : CartesianPrecat} {F : Functor C D} (pb : PreservesBprod F) {E : C}
+                                (m : Hom (C.Bprod E E) E) {z : D} (f : Hom z (F E)) (t : Hom z (F (C.Bprod E E)))
+  : F.Func (prodMap id m) ∘ F-pair pb E (C.Bprod E E) f t = F-pair pb E E f (F.Func m ∘ t)
+  => F-Func-pair pb E E (id ∘ proj1) (m ∘ proj2) _ *>
+     pmap2 (F-pair pb E E) (pmap (F.Func __ ∘ _) id-left *> F-beta1 pb E (C.Bprod E E))
+                          (F-Func_o F *> pmap (F.Func m ∘) (F-beta2 pb E (C.Bprod E E)))
+
+\private \lemma F-associator {C D : CartesianPrecat} {F : Functor C D} (pb : PreservesBprod F) {E : C}
+                             {z : D} (f g h : Hom z (F E))
+  : F.Func associator ∘ F-pair pb (C.Bprod E E) E (F-pair pb E E f g) h
+  = F-pair pb E (C.Bprod E E) f (F-pair pb E E g h)
+  => F-Func-pair pb E (C.Bprod E E) (proj1 ∘ proj1) (pair (proj2 ∘ proj1) proj2) _ *>
+     pmap2 (F-pair pb E (C.Bprod E E))
+       (F-Func_o F *> pmap (F.Func C.proj1 ∘) (F-beta1 pb (C.Bprod E E) E) *> F-beta1 pb E E)
+       (F-Func-pair pb E E (proj2 ∘ proj1) proj2 _ *>
+        pmap2 (F-pair pb E E) (F-Func_o F *> pmap (F.Func C.proj2 ∘) (F-beta1 pb (C.Bprod E E) E) *> F-beta2 pb E E)
+                             (F-beta2 pb (C.Bprod E E) E))
+
+\private \lemma F-imul-assoc {C D : CartesianPrecat} {F : Functor C D} (pb : PreservesBprod F) {E : C}
+                            {m : Hom (C.Bprod E E) E} (ma : m ∘ prodMap m id = m ∘ prodMap id m ∘ associator)
+                            {z : D} (f g h : Hom z (F E))
+  : F.Func m ∘ F-pair pb E E (F.Func m ∘ F-pair pb E E f g) h = F.Func m ∘ F-pair pb E E f (F.Func m ∘ F-pair pb E E g h)
+  => pmap (F.Func m ∘) (inv (F-prodMap-left pb m (F-pair pb E E f g) h)) *>
+     inv (F-Func_o F) *> pmap (F.Func __ ∘ _) ma *> F-Func_o F *> F-Func_o F *>
+     pmap (F.Func m ∘) (pmap (F.Func (prodMap id m) ∘) (F-associator pb f g h) *>
+                        F-prodMap-right pb m f (F-pair pb E E g h))
+
+\private \lemma F-iide-tm {C D : CartesianPrecat} {F : Functor C D} (pt : PreservesTerminal F) {E : C}
+                          (u : Hom C.terminal.apex E)
+  : F.Func u ∘ Contr.center {pt} ∘ terminalMap = F.Func (u ∘ C.terminalMap {E})
+  => o-assoc *> pmap (F.Func u ∘) (F-terminal-unique pt) *> inv F.Func-o
+
+\func mapMonoidObject {C D : CartesianPrecat} (F : Functor C D) (pt : PreservesTerminal F) (pb : PreservesBprod F)
+                      (G : MonoidObject {C}) : MonoidObject {D} (F G.E) \cowith
+  | iide => F.Func G.iide ∘ Contr.center {pt}
+  | imul => F.Func G.imul ∘ Iso.hinv {pb {G.E} {G.E}}
+  | iide-left => F-imul_pair pb G.imul _ id *>
+      pmap (F.Func G.imul ∘) (pmap2 (F-pair pb G.E G.E) (F-iide-tm pt G.iide) (inv F.Func-id) *>
+                              inv (F-Func-pair' pb G.E G.E _ _)) *>
+      inv F.Func-o *> pmap F.Func G.iide-left *> F.Func-id
+  | iide-right => F-imul_pair pb G.imul id _ *>
+      pmap (F.Func G.imul ∘) (pmap2 (F-pair pb G.E G.E) (inv F.Func-id) (F-iide-tm pt G.iide) *>
+                              inv (F-Func-pair' pb G.E G.E _ _)) *>
+      inv F.Func-o *> pmap F.Func G.iide-right *> F.Func-id
+  | imul-assoc => imul-assoc-char \lam f g h =>
+      F-imul_pair pb G.imul _ h *> pmap (F.Func G.imul ∘) (pmap2 (F-pair pb G.E G.E) (F-imul_pair pb G.imul f g) idp) *>
+      F-imul-assoc pb G.imul-assoc f g h *>
+      inv (F-imul_pair pb G.imul f _ *> pmap (F.Func G.imul ∘) (pmap2 (F-pair pb G.E G.E) idp (F-imul_pair pb G.imul g h)))
+
+\func mapGroupObject {C D : CartesianPrecat} (F : Functor C D) (pt : PreservesTerminal F) (pb : PreservesBprod F)
+                     (G : GroupObject {C}) : GroupObject {D} (F G.E) \cowith
+  | MonoidObject => mapMonoidObject F pt pb G
+  | iinverse => F.Func G.iinverse
+  | iinverse-left => F-imul_pair pb G.imul _ id *>
+      pmap (F.Func G.imul ∘) (pmap2 (F-pair pb G.E G.E) idp (inv F.Func-id) *> inv (F-Func-pair' pb G.E G.E _ _)) *>
+      inv F.Func-o *> pmap F.Func G.iinverse-left *> inv (F-iide-tm pt G.iide)
+  | iinverse-right => F-imul_pair pb G.imul id _ *>
+      pmap (F.Func G.imul ∘) (pmap2 (F-pair pb G.E G.E) (inv F.Func-id) idp *> inv (F-Func-pair' pb G.E G.E _ _)) *>
+      inv F.Func-o *> pmap F.Func G.iinverse-right *> inv (F-iide-tm pt G.iide)
+
+-- | A product-preserving functor induces a homomorphism on the groups of generalized elements.
+\func mapHomGroup {C D : CartesianPrecat} (F : Functor C D) (pt : PreservesTerminal F) (pb : PreservesBprod F)
+                  (X : C) (G : GroupObject {C})
+  : GroupHom (homGroup X G) (homGroup (F X) (mapGroupObject F pt pb G)) \cowith
+  | func f => F.Func f
+  | func-* {f} {g} => F.Func-o *> pmap (F.Func G.imul ∘) (F-Func-pair' pb G.E G.E f g) *>
+                      inv (F-imul_pair pb G.imul (F.Func f) (F.Func g))
+
+\private \lemma F-prodMap-hinv {C D : CartesianPrecat} {F : Functor C D} (pb : PreservesBprod F) {x y : C} (f : Hom x y)
+  : F.Func (prodMap f f) ∘ Iso.hinv {pb {x} {x}} = Iso.hinv {pb {y} {y}} ∘ prodMap (F.Func f) (F.Func f)
+  => F-pair-unique pb y y
+      (inv (F-Func_o F) *> pmap (F.Func __ ∘ _) beta1 *> F-Func_o F *> pmap (F.Func f ∘) (F-proj1 pb x x) *>
+       inv (inv o-assoc *> pmap (∘ _) (F-proj1 pb y y) *> beta1))
+      (inv (F-Func_o F) *> pmap (F.Func __ ∘ _) beta2 *> F-Func_o F *> pmap (F.Func f ∘) (F-proj2 pb x x) *>
+       inv (inv o-assoc *> pmap (∘ _) (F-proj2 pb y y) *> beta2))
+
+\lemma mapMonoidObjectHom {C D : CartesianPrecat} (F : Functor C D) (pt : PreservesTerminal F) (pb : PreservesBprod F)
+                          {G H : MonoidObject {C}} (a : MonoidObjectHom G H)
+  : MonoidObjectHom (mapMonoidObject F pt pb G) (mapMonoidObject F pt pb H) (F.Func a) \cowith
+  | func-iide => inv o-assoc *> pmap (∘ _) (inv F.Func-o *> pmap F.Func a.func-iide)
+  | func-imul => inv o-assoc *> pmap (∘ _) (inv F.Func-o *> pmap F.Func a.func-imul *> F.Func-o) *>
+      o-assoc *> pmap (F.Func H.imul ∘) (F-prodMap-hinv pb a.f) *> inv o-assoc
+
+{- | A natural transformation of product-preserving functors is a morphism of the transported
+     monoid objects.  This is what makes a level projection of a pro-object a group homomorphism. -}
+\lemma mapMonoidObject-natural {C D : CartesianPrecat} {F F' : Functor C D} (a : NatTrans F F')
+                               (pt : PreservesTerminal F) (pb : PreservesBprod F)
+                               (pt' : PreservesTerminal F') (pb' : PreservesBprod F') (G : MonoidObject {C})
+  : MonoidObjectHom (mapMonoidObject F pt pb G) (mapMonoidObject F' pt' pb' G) (a G.E) \cowith
+  | func-iide => inv o-assoc *> pmap (∘ _) (a.natural G.iide) *> o-assoc *>
+      pmap (F'.Func G.iide ∘) (F-terminal-unique pt')
+  | func-imul => inv o-assoc *> pmap (∘ _) (a.natural G.imul) *> o-assoc *>
+      pmap (F'.Func G.imul ∘) (F-pair-unique pb' G.E G.E
+        (inv o-assoc *> pmap (∘ _) (inv (a.natural C.proj1)) *> o-assoc *> pmap (a G.E ∘) (F-proj1 pb G.E G.E) *>
+         inv (inv o-assoc *> pmap (∘ _) (F-proj1 pb' G.E G.E) *> beta1))
+        (inv o-assoc *> pmap (∘ _) (inv (a.natural C.proj2)) *> o-assoc *> pmap (a G.E ∘) (F-proj2 pb G.E G.E) *>
+         inv (inv o-assoc *> pmap (∘ _) (F-proj2 pb' G.E G.E) *> beta2))) *> inv o-assoc
+
+{- | A morphism of group objects acts on generalized elements as a group homomorphism.  This is the
+     postcomposition counterpart of {precompHom}, and the forward half of {MonoidObjectHom-char}
+     with the codomain read as a group. -}
+\func postcompHom {C : CartesianPrecat} {G H : GroupObject {C}} (a : MonoidObjectHom G H) (X : C)
+  : GroupHom (homGroup X G) (homGroup X H) \cowith
+  | func f => a.f ∘ f
+  | func-* => inv o-assoc *> pmap (∘ _) a.func-imul *> o-assoc *> pmap (H.imul ∘) prodMap-pair
+
+{- | Transporting a monoid object along a composite is transporting it twice.  The two results have
+     the same carrier, so the statement is that the identity is a morphism between them; the
+     witnesses of preservation do not appear, since {PreservesTerminal} and {PreservesBprod} are
+     propositions. -}
+\lemma mapMonoidObject-comp {C D B : CartesianPrecat} {F : Functor C D} {G : Functor D B}
+                            (ptF : PreservesTerminal F) (pbF : PreservesBprod F)
+                            (ptG : PreservesTerminal G) (pbG : PreservesBprod G)
+                            (pt : PreservesTerminal (Comp G F)) (pb : PreservesBprod (Comp G F))
+                            (X : MonoidObject {C})
+  : MonoidObjectHom (mapMonoidObject (Comp G F) pt pb X)
+                    (mapMonoidObject G ptG pbG (mapMonoidObject F ptF pbF X)) B.id \cowith
+  | func-iide => id-left *> pmap (G.Func (F.Func X.iide) ∘) (isContr=>isProp pt _ _) *>
+      inv o-assoc *> pmap (∘ _) (inv G.Func-o)
+  | func-imul => id-left *>
+      pmap (G.Func (F.Func X.imul) ∘)
+           (Iso.hinv-unique (pb {X.E} {X.E}) (preservesBprod-comp pbG pbF {X.E} {X.E}) idp) *>
+      inv o-assoc *> pmap (∘ _) (inv G.Func-o) *>
+      inv (pmap (_ ∘) prod-id *> id-right)
+
+{- | A morphism of monoid objects between group objects preserves the inverse.  This is what makes
+    {MonoidObjectHom} the right notion for group objects too: read on generalized elements it is a
+    monoid homomorphism between groups, and those preserve inverses. -}
+\lemma monHom-iinverse {C : CartesianPrecat} {G H : GroupObject {C}} (a : MonoidObjectHom G H)
+  : a.f ∘ G.iinverse = H.iinverse ∘ a.f
+  => pmap (a.f ∘) (inv id-right) *> GroupHom.func-inverse {postcompHom a G.E} {id} *>
+     pmap (H.iinverse ∘) id-right

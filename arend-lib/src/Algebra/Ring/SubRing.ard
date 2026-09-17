@@ -1,15 +1,9 @@
-\import Algebra.Group
 \import Algebra.Group.SubGroup
 \import Algebra.Monoid
 \import Algebra.Monoid.SubMonoid
-\import Algebra.Pointed
 \import Algebra.Ring
 \import Algebra.Ring.RingHom
 \import Algebra.Semiring.SubSemiring
-\import Logic.Unique
-\import Logic
-\import Logic.Meta
-\import Paths
 \import Paths.Meta
 
 \class SubPseudoRing \extends SubPseudoSemiring, SubAddGroup {
@@ -19,6 +13,11 @@
 \instance IPseudoRing (S : SubPseudoRing {}) : PseudoRing
   | PseudoSemiring => IPseudoSemiring S
   | AbGroup => IAbGroup S
+  \where
+    \func embed : PseudoRingHom (IPseudoRing S) S.S \cowith
+      | func => __.1
+      | func-+ => idp
+      | func-* => idp
 
 \instance IPseudoCRing {R : PseudoCRing} (S : SubPseudoRing R) : PseudoCRing
   | PseudoRing => IPseudoRing S

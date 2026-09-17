@@ -20,6 +20,30 @@
   | Func-id => exts (\lam _ => id-right)
   | Func-o => exts (\lam _ => inv o-assoc)
 
+-- | The covariant hom functor `C(c,-)`.
+\func HomRight.{o,h} {C : Precat.{o,h}} (c : C) : Functor C SetCat.{h} \cowith
+  | F x => C.Hom c x
+  | Func f g => f ∘ g
+  | Func-id => exts (\lam _ => id-left)
+  | Func-o => exts (\lam _ => o-assoc)
+
+\lemma homRight-preservesLimit.{o,h} {J : Precat} {C : Precat.{o,h}} (c : C) (F : Functor J C)
+  : PreservesLimit (HomRight c) F
+  => \lam L cl Z =>
+     \have lim => \new Limit { | Cone => L | isLimit => cl }
+     \in inP \new QEquiv {
+       | ret K z => lim.limMap (pointCone K z)
+       | ret_f u => ext \lam z => lim.limUniqueBeta \lam j => idp
+       | f_sec K => exts \lam j => ext \lam z => lim.limBeta (pointCone K z) j
+     }
+  \where {
+    \private \func pointCone.{o,h} {J : Precat} {C : Precat.{o,h}} {F : Functor J C} {c : C} {Z : \Set h}
+                                   (K : Cone (Comp (HomRight c) F) Z) (z : Z)
+      : Cone F c \cowith
+      | coneMap j => K.coneMap j z
+      | coneCoh h => path (\lam i => K.coneCoh h i z)
+  }
+
 \func HomPresheaf.{o,h} {C : Precat.{o,h}} (c : C) : Presheaf C \cowith
   | F => HomLeft c
 
@@ -35,6 +59,12 @@
 
 \lemma Yoneda-apply.{o,h} {C : Precat.{o,h}} {a : C} (S T : Functor C.op SetCat.{h}) (f : NatTrans S T) {x : S a} : f ∘ Yoneda-trans x = Yoneda-trans (f a x)
   => (Yoneda-lemma {C} {a} {T}).adjoint $ pmap (f a) $ path \lam i => S.Func-id i x
+
+-- | Naturality of the Yoneda isomorphism in the object variable: precomposing with a representable
+-- | morphism acts on the corresponding element of {F}.
+\lemma Yoneda-trans_o.{o,h} {C : Precat.{o,h}} {a b : C} {F : Functor C.op SetCat.{h}} (g : Hom a b) (x : F b)
+  : Yoneda-trans x ∘ Yoneda.Func g = Yoneda-trans (F.Func g x)
+  => exts \lam c => ext \lam h => path \lam i => F.Func-o i x
 
 \func Yoneda.{o,h} {C : Precat.{o,h}} : FullyFaithfulFunctor C (PresheafCat C) \cowith
   | F => HomPresheaf
