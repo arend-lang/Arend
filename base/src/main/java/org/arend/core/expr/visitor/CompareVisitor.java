@@ -19,6 +19,7 @@ import org.arend.core.sort.SortExpression;
 import org.arend.core.subst.*;
 import org.arend.ext.core.level.LevelSubstitution;
 import org.arend.ext.core.definition.CoreFunctionDefinition;
+import org.arend.ext.core.expr.CoreExpression;
 import org.arend.ext.core.ops.CMP;
 import org.arend.ext.core.ops.NormalizationMode;
 import org.arend.prelude.Prelude;
@@ -26,6 +27,7 @@ import org.arend.term.concrete.Concrete;
 import org.arend.typechecking.TypecheckerState;
 import org.arend.typechecking.implicitargs.equations.DummyEquations;
 import org.arend.typechecking.implicitargs.equations.Equations;
+import org.arend.typechecking.visitor.SearchVisitor;
 import org.arend.ext.util.Pair;
 import org.jetbrains.annotations.TestOnly;
 
@@ -44,6 +46,7 @@ public class CompareVisitor implements ExpressionVisitor2<Expression, Expression
   private boolean myOnlySolveVars = false;
   private boolean myAllowEquations = true;
   private boolean myNormalize = true;
+  private boolean myComparingFunCalls = false;
   private Result myResult;
 
   public CompareVisitor(Equations equations, CMP cmp, Concrete.SourceNode sourceNode) {
@@ -207,6 +210,79 @@ public class CompareVisitor implements ExpressionVisitor2<Expression, Expression
     }
 
     return false;
+  }
+
+  private boolean compareFunCalls(FunCallExpression expr1, FunCallExpression expr2) {
+    if (myComparingFunCalls || expr1.getDefinition() != expr2.getDefinition() || expr1.getDefinition().isSFunc() ||
+        expr1.accept(FindInferenceVariablesVisitor.INSTANCE, null) || expr2.accept(FindInferenceVariablesVisitor.INSTANCE, null)) {
+      return false;
+    }
+
+    Result result = myResult;
+    CMP cmp = myCMP;
+    boolean ok;
+    myComparingFunCalls = true;
+    try {
+      myCMP = CMP.EQ;
+      ok = visitDefCall(expr1, expr2);
+    } finally {
+      myCMP = cmp;
+      myComparingFunCalls = false;
+    }
+    if (!ok) {
+      // The calls may still be equal after unfolding their common head.
+      myResult = result;
+    }
+    return ok;
+  }
+
+  private static class FindInferenceVariablesVisitor extends SearchVisitor<Void> {
+    private static final FindInferenceVariablesVisitor INSTANCE = new FindInferenceVariablesVisitor();
+
+    private static boolean hasInferenceVariable(Levels levels) {
+      for (Level level : levels.toList()) {
+        if (level.hasInferenceVariables()) {
+          return true;
+        }
+      }
+      return false;
+    }
+
+    private static boolean hasInferenceVariable(SortExpression sort) {
+      return switch (sort) {
+        case SortExpression.Const constant -> constant.sort().getPLevel().hasInferenceVariables();
+        case SortExpression.InfVar ignored -> true;
+        case SortExpression.Max max -> max.getSorts().stream().anyMatch(FindInferenceVariablesVisitor::hasInferenceVariable);
+        case SortExpression.Pi pi -> hasInferenceVariable(pi.getDomain()) || hasInferenceVariable(pi.getCodomain());
+        case SortExpression.Prev prev -> hasInferenceVariable(prev.getSort());
+        case SortExpression.Succ succ -> hasInferenceVariable(succ.getSort());
+        case SortExpression.Var ignored -> false;
+        case SortExpression.RecursiveData ignored -> false;
+      };
+    }
+
+    @Override
+    protected CoreExpression.FindAction processDefCall(DefCallExpression expression, Void param) {
+      return expression instanceof LeveledDefCallExpression leveled && hasInferenceVariable(leveled.getLevels())
+        ? CoreExpression.FindAction.STOP
+        : CoreExpression.FindAction.CONTINUE;
+    }
+
+    @Override
+    public Boolean visitInferenceReference(InferenceReferenceExpression expression, Void param) {
+      // A solved reference is unsafe as well: an outer rollback can make it unsolved again.
+      return true;
+    }
+
+    @Override
+    public Boolean visitUniverse(UniverseExpression expression, Void param) {
+      return hasInferenceVariable(expression.getSortExpression());
+    }
+
+    @Override
+    public Boolean visitTypeConstructor(TypeConstructorExpression expression, Void param) {
+      return hasInferenceVariable(expression.getLevels()) || super.visitTypeConstructor(expression, param);
+    }
   }
 
   private boolean initResult(Expression expr1, Expression expr2) {
@@ -463,6 +539,10 @@ public class CompareVisitor implements ExpressionVisitor2<Expression, Expression
         initResult(expr1, expr2);
         return false;
       }
+      return true;
+    }
+
+    if (expr1 instanceof FunCallExpression funCall1 && expr2 instanceof FunCallExpression funCall2 && compareFunCalls(funCall1, funCall2)) {
       return true;
     }
 
