@@ -239,11 +239,6 @@ public abstract class Expression implements Body, CoreExpression {
         return result != expr ? result : expr instanceof SmallIntegerExpression ? new SmallIntegerExpression(expr.getSmallInteger()) : new BigIntegerExpression(expr.getBigInteger());
       }
 
-      @Override
-      public Expression visitString(StringExpression expr, Void params) {
-        Expression result = super.visitString(expr, params);
-        return result == expr ? new StringExpression(expr.getString()) : result;
-      }
     }, null);
   }
 

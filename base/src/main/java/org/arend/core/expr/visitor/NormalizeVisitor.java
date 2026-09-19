@@ -1047,11 +1047,6 @@ public class NormalizeVisitor extends ExpressionTransformer<NormalizationMode>  
   }
 
   @Override
-  public Expression visitString(StringExpression expr, NormalizationMode params) {
-    return expr;
-  }
-
-  @Override
   public Expression visitTypeConstructor(TypeConstructorExpression expr, NormalizationMode mode) {
     if (mode == NormalizationMode.WHNF) return expr;
     Expression arg = expr.getArgument().accept(this, mode);

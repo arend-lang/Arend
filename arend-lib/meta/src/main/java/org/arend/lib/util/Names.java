@@ -15,6 +15,7 @@ public class Names {
   public static final FullName APPEND = fullName(getListModule(), new LongName("++"));
   public static final FullName CONS = fullName(getListModule(), new LongName("List", "::"));
   public static final FullName NIL = fullName(getListModule(), new LongName("List", "nil"));
+  public static final FullName STRING = fullName(getStringModule(), new LongName("String"));
   public static final FullName BASE_SET = fullName(getSetModule(), new LongName("BaseSet"));
   public static final FullName CARRIER = fullName(getSetModule(), new LongName("BaseSet", "E"));
   public static final FullName ZRO = fullName(getPointedModule(), new LongName("AddPointed", "zro"));
@@ -226,6 +227,10 @@ public class Names {
 
   public static ModulePath getListModule() {
     return new ModulePath("Data", "List");
+  }
+
+  public static ModulePath getStringModule() {
+    return new ModulePath("Data", "String");
   }
 
   public static ModulePath getEquivModule() {

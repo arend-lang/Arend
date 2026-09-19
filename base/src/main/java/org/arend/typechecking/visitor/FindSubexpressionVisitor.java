@@ -208,15 +208,6 @@ public class FindSubexpressionVisitor extends SearchVisitor<Void> {
   }
 
   @Override
-  public Boolean visitString(StringExpression expr, Void param) {
-    return switch (myFunction.apply(expr)) {
-      case STOP -> true;
-      case SKIP -> false;
-      default -> super.visitString(expr, param);
-    };
-  }
-
-  @Override
   public Boolean visitTypeConstructor(TypeConstructorExpression expr, Void param) {
     return switch (myFunction.apply(expr)) {
       case STOP -> true;

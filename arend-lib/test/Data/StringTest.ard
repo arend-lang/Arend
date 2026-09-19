@@ -1,0 +1,37 @@
+\import Data.Bool
+\import Set
+\import Data.String
+\import Paths
+\import Logic
+
+\lemma testStringEq : "abc" = "abc" => idp
+\lemma testStringNeq (p : "abc" = "abd") : Empty => \case stringInj p \with {}
+
+\lemma testStringEqTrue : ("abc" == "abc") = true => idp
+\lemma testStringEqFalse : ("abc" == "abd") = false => idp
+
+-- Multibyte (UTF-8) content: exercises the byte-array representation beyond ASCII.
+\lemma testStringEqMultibyte : "€λ" = "€λ" => idp
+\lemma testStringEqMultibyteTrue : ("€λ" == "€λ") = true => idp
+\lemma testStringNeqMultibyte (p : "€" = "λ") : Empty => \case stringInj p \with {}
+\lemma testStringEqMultibyteFalse : ("€" == "λ") = false => idp
+
+\lemma testStringEmpty : "" = "" => idp
+\lemma testStringEmptyConcatL : "abc" = "" ++ "abc" => idp
+\lemma testStringEmptyConcatR : "abc" = "abc" ++ "" => idp
+
+\lemma testStringConcat : "abcd" = "ab" ++ "cd" => idp
+\lemma testStringConcatNot (p : "abc" = "ab" ++ "d") : Empty => \case stringInj p \with {}
+
+\lemma testStringConcatTrue : ("abcd" == "ab" ++ "cd") = true => idp
+\lemma testStringConcatFalse : ("abc" == "ab" ++ "d") = false => idp
+
+-- A record field of type String must not be proof-irrelevant: two records differing only in their
+-- String content must be distinguishable, not provably equal.
+\record R (s : String)
+\lemma testRecordFieldDistinguishesContent (p : \new R { | s => "abc" } = \new R { | s => "abd" }) : Empty
+  => \case stringInj (pmap (\lam (r : R) => r.s) p) \with {}
+
+-- Manual test for String printing (not run automatically):
+-- \import Debug.Meta
+-- \func testPrintStringConcat => putStrLn ("Hello" ++ " " ++ "World" ++ "!")

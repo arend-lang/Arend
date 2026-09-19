@@ -161,12 +161,6 @@ public class SizeExpressionVisitor extends VoidExpressionVisitor<Void> {
   }
 
   @Override
-  public Void visitString(StringExpression expr, Void params) {
-    mySize++;
-    return null;
-  }
-
-  @Override
   public Void visitTypeConstructor(TypeConstructorExpression expr, Void params) {
     mySize++;
     return super.visitTypeConstructor(expr, params);

@@ -239,11 +239,6 @@ public class GetTypeVisitor implements ExpressionVisitor<Void, Expression> {
   }
 
   @Override
-  public Expression visitString(StringExpression expr, Void params) {
-    return String();
-  }
-
-  @Override
   public Expression visitTypeConstructor(TypeConstructorExpression expr, Void params) {
     return expr.getType();
   }

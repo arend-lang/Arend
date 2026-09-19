@@ -26,7 +26,6 @@ public interface ExpressionVisitor2<P1,P2,R> {
   R visitCase(CaseExpression expr, P1 param1, P2 param2);
   R visitOfType(OfTypeExpression expr, P1 param1, P2 param2);
   R visitInteger(IntegerExpression expr, P1 param1, P2 param2);
-  R visitString(StringExpression expr, P1 param1, P2 param2);
   R visitTypeConstructor(TypeConstructorExpression expr, P1 param1, P2 param2);
   R visitTypeDestructor(TypeDestructorExpression expr, P1 param1, P2 param2);
   R visitArray(ArrayExpression expr, P1 param1, P2 param2);
