@@ -383,7 +383,7 @@ public class ConstructorExpressionPattern extends ConstructorPattern<Object> imp
     if (dataExpr instanceof ConCallExpression || dataExpr instanceof SmallIntegerExpression) {
       ConCallExpression conCall = expression.cast(ConCallExpression.class);
       Definition myConstructor = getDefinition();
-      if (conCall != null && conCall.getDefinition() != myConstructor) {
+      if (conCall != null && conCall.getDefinition() != myConstructor && !(myConstructor instanceof Constructor constructor && conCall.mayReduceTo(constructor))) {
         return Decision.NO;
       }
       if (conCall == null && (myConstructor == Prelude.ZERO || myConstructor == Prelude.SUC)) {

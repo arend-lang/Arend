@@ -10,6 +10,7 @@ import org.arend.prelude.Prelude;
 import org.arend.util.Decision;
 import org.jetbrains.annotations.NotNull;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
@@ -97,5 +98,29 @@ public class ConCallExpression extends LeveledDefCallExpression implements CoreC
   @Override
   public Expression getStuckExpression() {
     return getDefinition().getBody() != null ? getDefinition().getBody().getStuckExpression(myArguments, this) : null;
+  }
+
+  /**
+   * @return false only if this expression definitely cannot evaluate to a call of {@code constructor}.
+   */
+  public boolean mayReduceTo(Constructor constructor) {
+    if (getDefinition() == constructor) {
+      return true;
+    }
+    if (getDefinition().getBody() == null) {
+      return false;
+    }
+
+    List<ConCallExpression> closure = new ArrayList<>();
+    closure.add(this);
+    if (!computeClosure(closure)) {
+      return true;
+    }
+    for (ConCallExpression conCall : closure) {
+      if (conCall.getDefinition() == constructor) {
+        return true;
+      }
+    }
+    return false;
   }
 }

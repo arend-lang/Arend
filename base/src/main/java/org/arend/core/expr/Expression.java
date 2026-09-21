@@ -412,15 +412,26 @@ public abstract class Expression implements Body, CoreExpression {
       return checkInteger(((IntegerExpression) expr2).getBigInteger(), expr1);
     }
     if (expr1 instanceof ArrayExpression array1 && expr2 instanceof ArrayExpression array2) {
-      if (array1.getTail() == null && array1.getElements().size() < array2.getElements().size() || array2.getTail() == null && array2.getElements().size() < array1.getElements().size()) {
+      int size1 = array1.getElements().size();
+      int size2 = array2.getElements().size();
+      // A tail of type Array _ 0 is eta-equal to nil, so it is treated as if there were no tail
+      boolean closed1 = array1.getTail() == null || Boolean.TRUE.equals(ConstructorExpressionPattern.isArrayEmpty(array1.getTail().getType()));
+      boolean closed2 = array2.getTail() == null || Boolean.TRUE.equals(ConstructorExpressionPattern.isArrayEmpty(array2.getTail().getType()));
+      if (closed1 && size1 < size2 || closed2 && size2 < size1) {
         return true;
       }
-      for (int i = 0; i < array1.getElements().size() && i < array2.getElements().size(); i++) {
+      for (int i = 0; i < size1 && i < size2; i++) {
         if (array1.getElements().get(i).areDisjointConstructors(array2.getElements().get(i))) {
           return true;
         }
       }
-      return array1.getTail() != null && Boolean.TRUE.equals(ConstructorExpressionPattern.isArrayEmpty(array1.getTail().getType())) || array2.getTail() != null && Boolean.TRUE.equals(ConstructorExpressionPattern.isArrayEmpty(array2.getTail().getType()));
+      if (size1 < size2) {
+        return array1.getTail().areDisjointConstructors(array2.drop(size1));
+      }
+      if (size2 < size1) {
+        return array2.getTail().areDisjointConstructors(array1.drop(size2));
+      }
+      return array1.getTail() != null && array2.getTail() != null && array1.getTail().areDisjointConstructors(array2.getTail());
     }
     if (!(expr1 instanceof ConCallExpression conCall1) || !(expr2 instanceof ConCallExpression conCall2)) {
       return false;
@@ -484,7 +495,11 @@ public abstract class Expression implements Body, CoreExpression {
     }
   }
 
-  private boolean computeClosure(List<ConCallExpression> conCalls) {
+  /**
+   * Extends {@code conCalls} with all constructor calls that its elements may evaluate to via conditions.
+   * Returns false if the closure cannot be computed, i.e., some element may evaluate to something that is not a constructor call.
+   */
+  static boolean computeClosure(List<ConCallExpression> conCalls) {
     for (int i = 0; i < conCalls.size(); i++) {
       ConCallExpression conCall = conCalls.get(i);
       Body body = conCall.getDefinition().getBody();
@@ -500,7 +515,7 @@ public abstract class Expression implements Body, CoreExpression {
           if (ExpressionMatcher.matchExpressions(conCall.getDefCallArguments(), clause.getPatterns(), false, matchResults) != null) {
             ExprSubstitution substitution = new ExprSubstitution();
             for (ExpressionMatcher.MatchResult matchResult : matchResults) {
-              if (matchResult.expression instanceof ConCallExpression && matchResult.pattern.getDefinition() != null && ((ConCallExpression) matchResult.expression).getDefinition() != matchResult.pattern.getDefinition()) {
+              if (matchResult.expression instanceof ConCallExpression conCallArg && matchResult.pattern.getDefinition() instanceof Constructor patternCon && !conCallArg.mayReduceTo(patternCon)) {
                 continue loop;
               }
               if (matchResult.expression instanceof IntegerExpression && (matchResult.pattern.getDefinition() == Prelude.ZERO) != ((IntegerExpression) matchResult.expression).isZero()) {
@@ -511,8 +526,10 @@ public abstract class Expression implements Body, CoreExpression {
             rhsList.add(clause.getExpression().subst(substitution).normalize(NormalizationMode.WHNF));
           }
         }
-      } else {
+      } else if (body == null) {
         continue;
+      } else {
+        return false;
       }
 
       for (Expression rhs : rhsList) {

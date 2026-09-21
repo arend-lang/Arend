@@ -607,4 +607,32 @@ public class DataTest extends TypeCheckingTestCase {
       """, 1);
     assertThatErrorsAre(Matchers.typecheckingError(TruncatedDataPatternError.class));
   }
+
+  @Test
+  public void disjointEvalConstructorsTest() {
+    typeCheckModule("""
+      \\data Empty
+      \\data D | con1 | con2 (n : Nat) \\with { | 0 => con1 }
+      \\data E | con3 | con4 D \\with { | con1 => con3 }
+      \\func test (n : Nat) (p : con4 (con2 n) = con3) : Empty => \\case p \\with {}
+      """, 1);
+  }
+
+  @Test
+  public void evalConstructorInDataTest() {
+    typeCheckModule("""
+      \\data Empty
+      \\data D (i : Int) \\with | pos n => con
+      \\func test (m : Nat) (d : D (neg m)) : Empty \\elim d
+      """, 1);
+  }
+
+  @Test
+  public void arrayDisjointConstructorsTest() {
+    typeCheckModule("""
+      \\data Empty
+      \\func test {A : \\Type} (a : A) (l : Array A 0) (p : (a :: l) = {Array A} (a :: nil)) : Empty
+        => \\case \\elim p \\with {}
+      """, 1);
+  }
 }
