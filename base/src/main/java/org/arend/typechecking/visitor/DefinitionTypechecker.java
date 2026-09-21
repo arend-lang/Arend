@@ -1667,14 +1667,16 @@ public class DefinitionTypechecker extends BaseDefinitionTypechecker implements 
   }
 
   private boolean checkNoHITs(ExpressionPattern pattern, Concrete.SourceNode sourceNode) {
-    Definition def = pattern.getDefinition();
-    if (def instanceof Constructor && ((Constructor) def).getDataType().isHIT()) {
-      errorReporter.report(new TypecheckingError("Data types with conditions cannot be used in data type patterns", sourceNode));
-      return false;
-    }
-    if (def instanceof Constructor && ((Constructor) def).getDataType().isTruncated()) {
-      errorReporter.report(new TypecheckingError("Truncated data types cannot be used in data type patterns", sourceNode));
-      return false;
+    if (pattern.getDefinition() instanceof Constructor constructor) {
+      DataDefinition dataType = constructor.getDataType();
+      if (dataType.isHIT()) {
+        errorReporter.report(new TypecheckingError("Data types with conditions cannot be used in data type patterns", sourceNode));
+        return false;
+      }
+      if (dataType.getTruncatedLevel() != null && dataType.getTruncatedLevel().signum() < 0) {
+        errorReporter.report(new TypecheckingError("Data types truncated to \\Prop cannot be used in data type patterns", sourceNode));
+        return false;
+      }
     }
 
     for (ExpressionPattern subPattern : pattern.getSubPatterns()) {
@@ -1684,6 +1686,22 @@ public class DefinitionTypechecker extends BaseDefinitionTypechecker implements 
     }
 
     return true;
+  }
+
+  /**
+   * @return the truncated data type with the smallest truncation level among those matched in {@code pattern} or {@code current} if there are none.
+   */
+  private static DataDefinition getMinTruncatedDataType(ExpressionPattern pattern, DataDefinition current) {
+    if (pattern.getDefinition() instanceof Constructor constructor) {
+      DataDefinition dataType = constructor.getDataType();
+      if (dataType.getTruncatedLevel() != null && (current == null || dataType.getTruncatedLevel().compareTo(current.getTruncatedLevel()) < 0)) {
+        current = dataType;
+      }
+    }
+    for (ExpressionPattern subPattern : pattern.getSubPatterns()) {
+      current = getMinTruncatedDataType(subPattern, current);
+    }
+    return current;
   }
 
   private boolean typecheckDataBody(DataDefinition dataDefinition, Concrete.DataDefinition def, Set<DataDefinition> dataDefinitions) {
@@ -1705,6 +1723,9 @@ public class DefinitionTypechecker extends BaseDefinitionTypechecker implements 
     ErrorReporter originalErrorReporter = errorReporter;
     ErrorReporterCounter countingErrorReporter = new ErrorReporterCounter(GeneralError.Level.ERROR, originalErrorReporter);
     errorReporter = countingErrorReporter;
+
+    // Clauses that match on truncated data types; they are checked after the sort of the data type is known
+    List<Pair<Concrete.ConstructorClause, DataDefinition>> truncatedPatternClauses = new ArrayList<>();
 
     if (!def.getConstructorClauses().isEmpty()) {
       Map<Referable, Binding> context = typechecker.getContext();
@@ -1737,12 +1758,17 @@ public class DefinitionTypechecker extends BaseDefinitionTypechecker implements 
               typechecker.getInstancePool().setInstancePool(instancePool.subst(substitution));
             }
             if (result != null && noHITs) {
+              DataDefinition truncatedDataType = null;
               for (ExpressionPattern pattern : result.getPatterns()) {
                 if (!checkNoHITs(pattern, clause)) {
                   result = null;
                   noHITs = false;
                   break;
                 }
+                truncatedDataType = getMinTruncatedDataType(pattern, truncatedDataType);
+              }
+              if (result != null && truncatedDataType != null) {
+                truncatedPatternClauses.add(new Pair<>(clause, truncatedDataType));
               }
             }
             if (result != null && result.hasEmptyPattern()) {
@@ -1910,6 +1936,18 @@ public class DefinitionTypechecker extends BaseDefinitionTypechecker implements 
       }
     } else if (countingErrorReporter.getErrorsNumber() == 0 && userSort != null && !inferredSort.withInfLevel().isLessOrEquals(userSort)) {
       countingErrorReporter.report(new DataUniverseError(inferredSort.withInfLevel(), userSort, def.getUniverse() == null ? def : def.getUniverse()));
+    }
+
+    // A data type truncated to level n+1 can be matched only in a data type of level <= n
+    if (!truncatedPatternClauses.isEmpty()) {
+      ConstLevel dataHLevel = userSort != null ? userSort.getHLevel() : inferredSort.withInfLevel().getHLevel();
+      ConstLevel requiredLevel = dataHLevel.succ();
+      for (Pair<Concrete.ConstructorClause, DataDefinition> pair : truncatedPatternClauses) {
+        ConstLevel truncatedLevel = new ConstLevel(pair.proj2.getTruncatedLevel());
+        if (!requiredLevel.isLessOrEquals(truncatedLevel)) {
+          countingErrorReporter.report(new TruncatedDataPatternError(pair.proj2, truncatedLevel, dataHLevel, pair.proj1));
+        }
+      }
     }
 
     dataDefinition.setSortExpression(def.isTruncated() && userSort != null ? SortExpression.makeTrunc(inferredSort, userSort.getHLevel().value()) : countingErrorReporter.getErrorsNumber() == 0 && userSort != null ? new SortExpression.Const(userSort) : inferredSort);

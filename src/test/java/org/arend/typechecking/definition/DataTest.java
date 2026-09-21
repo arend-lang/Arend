@@ -17,6 +17,7 @@ import org.arend.typechecking.TypeCheckingTestCase;
 import org.arend.typechecking.error.local.DataUniverseError;
 import org.arend.typechecking.error.local.NonPositiveDataError;
 import org.arend.typechecking.error.local.TruncatedDataError;
+import org.arend.typechecking.error.local.TruncatedDataPatternError;
 import org.arend.typechecking.result.TypecheckingResult;
 import org.junit.Ignore;
 import org.junit.Test;
@@ -496,5 +497,114 @@ public class DataTest extends TypeCheckingTestCase {
         | false => node (D true Nat)
       \\func P : \\Set => D false (0 = 0)
       """);
+  }
+
+  @Test
+  public void truncatedSetMatchInPropTest() {
+    typeCheckModule("""
+      \\truncated \\data TS (A : \\Type) : \\Set | inS A
+      \\data D (A : \\Type) (t : TS A) : \\Prop \\elim t
+        | inS a => con
+      """);
+  }
+
+  @Test
+  public void truncatedSetMatchInTruncatedPropTest() {
+    typeCheckModule("""
+      \\truncated \\data TS (A : \\Type) : \\Set | inS A
+      \\truncated \\data D (A : \\Type) (t : TS A) : \\Prop \\elim t
+        | inS a => con1
+        | inS a => con2
+      """);
+  }
+
+  @Test
+  public void truncatedSetMatchInSetTest() {
+    typeCheckModule("""
+      \\truncated \\data TS (A : \\Type) : \\Set | inS A
+      \\data D (A : \\Type) (t : TS A) : \\Set \\elim t
+        | inS a => con Nat
+      """, 1);
+    assertThatErrorsAre(Matchers.typecheckingError(TruncatedDataPatternError.class));
+  }
+
+  @Test
+  public void truncated1TypeMatchInSetTest() {
+    typeCheckModule("""
+      \\truncated \\data T1 (A : \\Type) : \\1-Type | in1 A
+      \\data D (A : \\Type) (t : T1 A) : \\Set \\elim t
+        | in1 a => con Nat
+      """);
+  }
+
+  @Test
+  public void truncated1TypeMatchIn1TypeTest() {
+    typeCheckModule("""
+      \\truncated \\data T1 (A : \\Type) : \\1-Type | in1 A
+      \\data D (A : \\Type) (t : T1 A) : \\1-Type \\elim t
+        | in1 a => con
+      """, 1);
+    assertThatErrorsAre(Matchers.typecheckingError(TruncatedDataPatternError.class));
+  }
+
+  @Test
+  public void truncated1TypeMatchInferredSetTest() {
+    typeCheckModule("""
+      \\truncated \\data T1 (A : \\Type) : \\1-Type | in1 A
+      \\data D (A : \\Type) (t : T1 A) \\elim t
+        | in1 a => con Nat
+      """);
+  }
+
+  @Test
+  public void truncated1TypeMatchInferredInfTest() {
+    typeCheckModule("""
+      \\truncated \\data T1 (A : \\Type) : \\1-Type | in1 A
+      \\data D (A : \\Type) (t : T1 A) \\elim t
+        | in1 a => con (a = a)
+      """, 1);
+    assertThatErrorsAre(Matchers.typecheckingError(TruncatedDataPatternError.class));
+  }
+
+  @Test
+  public void truncatedNestedPatternTest() {
+    typeCheckModule("""
+      \\truncated \\data TS (A : \\Type) : \\Set | inS A
+      \\data Wrap (A : \\Type) | wrap (TS A)
+      \\data D (A : \\Type) (w : Wrap A) : \\Prop \\elim w
+        | wrap (inS a) => con
+      """);
+  }
+
+  @Test
+  public void truncatedNestedPatternErrorTest() {
+    typeCheckModule("""
+      \\truncated \\data TS (A : \\Type) : \\Set | inS A
+      \\data Wrap (A : \\Type) | wrap (TS A)
+      \\data D (A : \\Type) (w : Wrap A) : \\Set \\elim w
+        | wrap (inS a) => con Nat
+      """, 1);
+    assertThatErrorsAre(Matchers.typecheckingError(TruncatedDataPatternError.class));
+  }
+
+  @Test
+  public void truncatedNestedPatternTest2() {
+    typeCheckModule("""
+      \\data Wrap (A : \\Type) | wrap A
+      \\truncated \\data T1 (A : \\Type) : \\1-Type | in1 (Wrap A)
+      \\data D (A : \\Type) (t : T1 A) : \\Set \\elim t
+        | in1 (wrap a) => con Nat
+      """);
+  }
+
+  @Test
+  public void truncatedNestedMinLevelTest() {
+    typeCheckModule("""
+      \\truncated \\data TS (A : \\Type) : \\Set | inS A
+      \\truncated \\data T1 (A : \\Type) : \\1-Type | in1 (TS A) A
+      \\data D (A : \\Type) (t : T1 A) : \\Set \\elim t
+        | in1 (inS a) _ => con Nat
+      """, 1);
+    assertThatErrorsAre(Matchers.typecheckingError(TruncatedDataPatternError.class));
   }
 }
