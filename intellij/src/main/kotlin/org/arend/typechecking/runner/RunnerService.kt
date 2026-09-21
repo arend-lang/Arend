@@ -5,6 +5,8 @@ import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.application.EDT
 import com.intellij.openapi.components.Service
 import com.intellij.openapi.components.service
+import com.intellij.openapi.diagnostic.logger
+import com.intellij.openapi.progress.ProcessCanceledException
 import com.intellij.openapi.project.Project
 import com.intellij.platform.ide.progress.withBackgroundProgress
 import com.intellij.platform.util.progress.reportRawProgress
@@ -31,12 +33,6 @@ class RunnerService(private val project: Project, private val coroutineScope: Co
             val message = module?.toString() ?: (library ?: "project")
             val server = project.service<ArendServerService>().server
 
-            // Snapshot the errors before the run. The resolve phase may clear stale errors (e.g.
-            // errors left under a recreated referable, or cascading errors whose real cause was
-            // fixed elsewhere) without any definition being re-typechecked afterwards (updated == 0).
-            // In that case we still have to refresh the editor highlighting, otherwise the red
-            // underlining of the (now removed) errors would linger until the next edit, even though
-            // the gutter status is already correct.
             fun errorSnapshot(): Map<ModuleLocation, List<Any>> =
                 if (module == null) server.errorMap.mapValues { ArrayList(it.value) }
                 else server.errorMap[module]?.let { mapOf(module to ArrayList(it)) } ?: emptyMap()
@@ -46,7 +42,15 @@ class RunnerService(private val project: Project, private val coroutineScope: Co
                 var cacheLoaded = false
                 reporter.nextStep(1, "Loading binary cache") { reportRawProgress {
                     val cacheLibrary = module?.libraryName ?: library
-                    cacheLoaded = cacheLibrary != null && project.service<ArendBinaryCacheService>().loadCache(cacheLibrary)
+                    try {
+                        cacheLoaded = cacheLibrary != null && project.service<ArendBinaryCacheService>().loadCache(cacheLibrary)
+                    } catch (e: ProcessCanceledException) {
+                        throw e
+                    } catch (e: CancellationException) {
+                        throw e
+                    } catch (e: Exception) {
+                        LOG.warn("Failed to load binary cache for $cacheLibrary", e)
+                    }
                 } }
 
                 val checker = reporter.nextStep(if (onlyResolve) 100 else 5, "Resolving $message") { reportRawProgress { reporter ->
@@ -106,4 +110,8 @@ class RunnerService(private val project: Project, private val coroutineScope: Co
 
     fun runChecker(module: ModuleLocation, onlyResolve: Boolean = false) =
         runChecker(module.libraryName, module.locationKind == ModuleLocation.LocationKind.TEST, module, null, onlyResolve)
+
+    companion object {
+        private val LOG = logger<RunnerService>()
+    }
 }
