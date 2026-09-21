@@ -30,30 +30,42 @@
 \truncated \data Trunc1 (A : \Type) : \1-Type
   | in1 A
 
-\func HoCat.{u} (C : \Cat u) : Cat (Trunc1 (Ob C)) \cowith
-  | Hom (x y : Trunc1 (Ob C)) : \Set u \with {
-    | in1 (ob x), in1 (ob y) => Trunc0 (x ~> y)
-  }
+\func HoCat (C : \Cat) : Cat (Trunc1 (Ob C)) \cowith
+  | Hom => Hom
   | id {x : Trunc1 (Ob C)} : Hom x x \elim x {
-    | in1 (ob x) => in0 idd
+    | in1 (ob x) => mkHom idd
   }
   | o {x y z : Trunc1 (Ob C)} (g : Hom y z) (f : Hom x y) : Hom x z \elim x, y, z, g, f {
-    | in1 (ob x), in1 (ob y), in1 (ob z), in0 g, in0 f => in0 (comp f g)
+    | in1 (ob x), in1 (ob y), in1 (ob z), mkHom g, mkHom f => mkHom (comp f g)
   }
   | id-left {x} {y} {f} => \case \elim x, \elim y, \elim f \with {
-    | in1 (ob x), in1 (ob y), in0 f => pmap in0 comp_idd-right
+    | in1 (ob x), in1 (ob y), mkHom f => pmap mkHom comp_idd-right
   }
   | id-right {x} {y} {f} => \case \elim x, \elim y, \elim f \with {
-    | in1 (ob x), in1 (ob y), in0 f => pmap in0 comp_idd-left
+    | in1 (ob x), in1 (ob y), mkHom f => pmap mkHom comp_idd-left
   }
   | o-assoc {x} {y} {z} {w} {h} {g} {f} => \case \elim x, \elim y, \elim z, \elim w, \elim h, \elim g, \elim f \with {
-    | in1 (ob x), in1 (ob y), in1 (ob z), in1 (ob w), in0 h, in0 g, in0 f => pmap in0 comp-assoc
+    | in1 (ob x), in1 (ob y), in1 (ob z), in1 (ob w), mkHom h, mkHom g, mkHom f => pmap mkHom comp-assoc
   }
   | univalence => Cat.makeUnivalence $ later \lam e => cases (e.dom, e.cod, e.f, e.hinv, e.f_hinv, e.hinv_f) \with {
-    | in1 (ob x), in1 (ob y), in0 f, in0 g, p, q =>
-      \have | fi : IsIso f => \case Trunc0.unequiv p, Trunc0.unequiv q \with {
+    | in1 (ob x), in1 (ob y), mkHom f, mkHom g, p, q =>
+      \have | fi : IsIso f => \case unequiv p, unequiv q \with {
                                 | inP p, inP q => inP (g,p,q)
                               }
             | r => iso_= f (IsIso.ret fi) (IsIso.f_ret fi) (IsIso.ret_f fi)
-      \in (path \lam i => in1 $ ob (r.1 i), Trunc0.transport_Trunc0 r.1 *> pmap in0 (later $ transport_~>_idd-right *> r.2))
+      \in (path \lam i => in1 $ ob (r.1 i), transport_Hom r.1 *> pmap mkHom (later $ transport_~>_idd-right *> r.2))
+  }
+  \where {
+    \protected \truncated \data Hom (x y : Trunc1 (Ob C)) : \Set \elim x, y
+      | in1 a, in1 b => mkHom (unob a ~> unob b)
+
+    \private \lemma unequiv {x y : C} {f g : x ~> y} (p : mkHom f = {Hom (in1 (ob x)) (in1 (ob y))} mkHom g) : TruncP (f = g)
+      => \let code (h : Hom (in1 (ob x)) (in1 (ob y))) : \Prop => \case \elim h \with {
+                | mkHom g => TruncP (f = g)
+              }
+         \in transport code p (inP idp)
+
+    \lemma transport_Hom {x y : C} (p : x = y) {f : x ~> x}
+      : transport (\lam z => Hom (in1 (ob x)) (in1 (ob z))) p (mkHom f) = mkHom (transport (x ~>) p f) \elim p
+      | idp => idp
   }
