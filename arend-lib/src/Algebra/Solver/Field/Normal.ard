@@ -1,0 +1,52 @@
+\import Algebra.Ring
+\import Algebra.Solver.CRing
+\import Algebra.Solver.Field
+\import Algebra.Solver.Guarded
+\import Algebra.Solver.Ring
+\import Algebra.Solver.Semiring
+\import Arith.Int
+\import Paths
+\import Paths.Meta
+
+\open RingSolverModel.Term
+
+{- | `FieldSolverModel` in which the cross-products of the fractions are compared in the normal form of
+   `CRingSolverModel`, so that `idp` proves the cleared equality whenever the two cross-products agree as polynomials.
+
+   It is a separate module from `Algebra.Solver.Field`, since `simplify` depends on that module and `CRingSolverModel`
+   depends on definitions that use `simplify`.
+-}
+\func FieldNormalSolverModel (R : CRing) : GuardedSolverModel R \cowith
+  | Term => FieldSolverModel.RingTerm
+  | NF => FieldSolverModel.FractionTerm
+  | Hyp n => Array (FieldSolverModel.InverseOf n)
+  | Guard env inverses => FieldSolverModel.Witnesses env inverses
+  | normalize => FieldSolverModel.normalize
+  | interpret env => FieldSolverModel.ring-interpret env
+  | NFEquiv env f g => ring-interpretNF env (RingSolverModel.normalize (f.numerator :* g.denominator)) = ring-interpretNF env (RingSolverModel.normalize (g.numerator :* f.denominator))
+  | terms-equality {_} {env} {inverses} witnesses {left} {right} => terms-equality-normalized env inverses witnesses left right
+  | terms-equality-conv {_} {env} {inverses} witnesses {left} {right} => terms-equality-normalized-conv env inverses witnesses left right
+  \where {
+    \func RingNF (n : Nat) => SemiringSolverModel.NF Int n
+
+    \func ring-interpretNF {n : Nat} (env : Fin n -> R) (nf : RingNF n) : R
+      => (CRingSolverModel R).interpretNF env nf
+
+    \lemma ring-normalize-correct {n : Nat} {env : Fin n -> R} {term : FieldSolverModel.RingTerm n} :
+      ring-interpretNF env (RingSolverModel.normalize term) = FieldSolverModel.ring-interpret env term
+      => (CRingSolverModel R).interpretNF-consistent
+
+    -- | Both cross-products are compared in their normal form.
+    \func terms-equality-normalized {n : Nat} (env : Fin n -> R) (inverses : Array (FieldSolverModel.InverseOf n)) (witnesses : FieldSolverModel.Witnesses env inverses) (left right : FieldSolverModel.RingTerm n)
+        (cross-proof : ring-interpretNF env (RingSolverModel.normalize (FieldSolverModel.cross-left inverses left right)) = ring-interpretNF env (RingSolverModel.normalize (FieldSolverModel.cross-right inverses left right)))
+      : FieldSolverModel.ring-interpret env left = FieldSolverModel.ring-interpret env right
+      => FieldSolverModel.terms-equality-raw env inverses witnesses left right
+           (inv (ring-normalize-correct {R} {n} {env} {FieldSolverModel.cross-left inverses left right}) *> cross-proof *> ring-normalize-correct {R} {n} {env} {FieldSolverModel.cross-right inverses left right})
+
+    \func terms-equality-normalized-conv {n : Nat} (env : Fin n -> R) (inverses : Array (FieldSolverModel.InverseOf n)) (witnesses : FieldSolverModel.Witnesses env inverses) (left right : FieldSolverModel.RingTerm n)
+        (value-proof : FieldSolverModel.ring-interpret env left = FieldSolverModel.ring-interpret env right)
+      : ring-interpretNF env (RingSolverModel.normalize (FieldSolverModel.cross-left inverses left right)) = ring-interpretNF env (RingSolverModel.normalize (FieldSolverModel.cross-right inverses left right))
+      => ring-normalize-correct {R} {n} {env} {FieldSolverModel.cross-left inverses left right} *>
+         FieldSolverModel.terms-equality-raw-conv env inverses witnesses left right value-proof *>
+         inv (ring-normalize-correct {R} {n} {env} {FieldSolverModel.cross-right inverses left right})
+  }

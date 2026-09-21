@@ -33,13 +33,15 @@ public class Simplifier {
   private final ConcreteReferenceExpression refExpr;
   private final ConcreteFactory factory;
   private final ErrorReporter errorReporter;
+  private final List<TypeSimplificationRule> typeRules;
 
-  public Simplifier(SimplifyMeta meta, ExpressionTypechecker typechecker, ConcreteReferenceExpression refExpr, ConcreteFactory factory, ErrorReporter errorReporter) {
+  public Simplifier(SimplifyMeta meta, ExpressionTypechecker typechecker, ConcreteReferenceExpression refExpr, ConcreteFactory factory, ErrorReporter errorReporter, List<TypeSimplificationRule> typeRules) {
     this.meta = meta;
     this.typechecker = typechecker;
     this.refExpr = refExpr;
     this.factory = factory;
     this.errorReporter = errorReporter;
+    this.typeRules = typeRules;
   }
 
   private class SimplifyExpressionProcessor implements Function<CoreExpression, CoreExpression.FindAction> {
@@ -75,7 +77,6 @@ public class Simplifier {
         return CoreExpression.FindAction.CONTINUE;
       }
 
-      var simplificationRules = new TreeSet<SimplificationRule>((o1, o2) -> o1.equals(o2) ? 0 : o1.hashCode() - o2.hashCode()); //getSimplificationRulesForType(expression.computeType());
       var normExpr = expression.normalize(NormalizationMode.ENF);
       var simplifiedExpr = normExpr.computeTyped();
 
@@ -83,7 +84,7 @@ public class Simplifier {
         lamParams.add(lam.getParameters());
       }
 
-      simplificationRules.addAll(getSimplificationRulesForType(expression.computeType()));
+      var simplificationRules = getSimplificationRulesForType(expression.computeType());
 
     /*  if (simplificationRules.stream().anyMatch(rule -> rule instanceof LocalSimplificationRuleBase)) {
         simplifiedExpr.getExpression().processSubexpression(subexpr -> {
@@ -224,8 +225,74 @@ public class Simplifier {
     return uncheckedRes;
   }
 
-  public ConcreteExpression simplifyTypeOfExpression(ConcreteExpression expression, CoreExpression type, boolean isForward) {
+  /**
+   * The simplification of the subterms of a type: the abstraction of the type over the simplified subterms
+   * together with the proofs of their simplification.
+   */
+  private record TermStage(@NotNull CoreExpression abstraction, @NotNull List<RewriteEquationMeta.EqProofConcrete> proofs) {
+    static final TermStage FAILED = new TermStage(null, null);
+  }
+
+  private TypeSimplificationRule.Result applyTypeRules(CoreExpression type, boolean closesGoal, boolean requested) {
+    for (var rule : typeRules) {
+      if (rule.isRequested() != requested) continue;
+      var result = rule.apply(type, closesGoal ? TypeSimplificationRule.Purpose.CLOSE_GOAL : TypeSimplificationRule.Purpose.TRANSFORM);
+      if (result != null) return result;
+    }
+    return null;
+  }
+
+  /**
+   * Simplifies the type in two stages. The rules for the type itself are applied to the whole type. Then, the rules
+   * for terms are applied to the subterms of the result. A rule for types takes part only if it is requested or if
+   * the rules for terms have nothing to simplify in the original type.
+   *
+   * @param closesGoal  true if there is no argument and the simplified type is going to be proved by {@code idp}.
+   * @return the term of the original type in the backward mode, the term of the simplified type in the forward mode,
+   *         or null if simplification failed.
+   */
+  public ConcreteExpression simplifyTypeOfExpression(ConcreteExpression expression, CoreExpression type, boolean isForward, boolean closesGoal) {
     CoreExpression normType = type.normalize(NormalizationMode.WHNF);
+
+    TypeSimplificationRule.Result typeStage = applyTypeRules(normType, closesGoal, true);
+    TermStage termStage = null;
+    if (typeStage == null) {
+      termStage = simplifyTerms(normType);
+      if (termStage == TermStage.FAILED) return null;
+      if (termStage == null) typeStage = applyTypeRules(normType, closesGoal, false);
+    }
+    if (typeStage != null && !typeStage.isFinal()) {
+      termStage = simplifyTerms(typeStage.simplifiedType().normalize(NormalizationMode.WHNF));
+      if (termStage == TermStage.FAILED) return null;
+    }
+
+    if (typeStage == null && termStage == null) {
+      errorReporter.report(new TypecheckingError("Nothing to simplify", refExpr));
+      return expression;
+    }
+
+    // In the forward mode, the argument is converted in the order of simplification.
+    // In the backward mode, the proof of the simplified type is converted back in the opposite order.
+    ConcreteExpression result = expression;
+    if (isForward) {
+      if (typeStage != null) result = factory.app(typeStage.forward(), true, result);
+      if (termStage != null) result = transport(termStage, result, true);
+    } else {
+      if (termStage != null) result = transport(termStage, result, false);
+      if (typeStage != null && result != null) result = factory.app(typeStage.backward(), true, result);
+    }
+    return result;
+  }
+
+  private ConcreteExpression transport(TermStage stage, ConcreteExpression expression, boolean isForward) {
+    var proofs = stage.proofs().stream().map(x -> isForward ? x : x.inverse(factory, meta.inv)).collect(Collectors.toList());
+    return RewriteEquationMeta.chainOfTransports(factory.ref(meta.transport, refExpr.getLevels()), stage.abstraction(), proofs, expression, factory, false);
+  }
+
+  /**
+   * @return null if there is nothing to simplify and {@link TermStage#FAILED} if the simplification is impossible.
+   */
+  private TermStage simplifyTerms(CoreExpression normType) {
     var processor = new SimplifyExpressionProcessor();
     typechecker.withCurrentState(tc -> normType.processSubexpression(processor));
 
@@ -233,10 +300,8 @@ public class Simplifier {
     var lamParams = new ArrayList<ConcreteParameter>();
 
     if (occurrences.isEmpty()) {
-      errorReporter.report(new TypecheckingError("Nothing to simplify", refExpr));
-      return expression;
+      return null;
     }
-
     for (int i = 0; i < occurrences.size(); ++i) {
       var var = factory.local("y" + i);
       var typeParam = factory.core(occurrences.get(i).computeType().computeTyped());
@@ -299,10 +364,8 @@ public class Simplifier {
     var checkedLam = typechecker.typecheck(lam, null);
 
     if (checkedLam == null || checkedLam instanceof CoreErrorExpression) {
-      return null;
+      return TermStage.FAILED;
     }
-    var proofs = processor.simplificationOccurrences.stream().map(x -> isForward ? x.proj2 : x.proj2.inverse(factory, meta.inv)).collect(Collectors.toList());
-    return RewriteEquationMeta.chainOfTransports(factory.ref(meta.transport, refExpr.getLevels()),
-            checkedLam.getExpression(), proofs, expression, factory, false);
+    return new TermStage(checkedLam.getExpression(), processor.simplificationOccurrences.stream().map(x -> x.proj2).collect(Collectors.toList()));
   }
 }

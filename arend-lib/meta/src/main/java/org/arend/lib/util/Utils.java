@@ -67,6 +67,27 @@ public class Utils {
     return equality;
   }
 
+  /**
+   * If {@code expression} refers to an unsolved inference variable, forces equation solving for that variable and
+   * returns its solution in WHNF. Other expressions are returned unchanged.
+   */
+  public static CoreExpression solveInferenceVariable(CoreExpression expression, ExpressionTypechecker typechecker) {
+    if (expression instanceof CoreInferenceReferenceExpression infRef && infRef.getSubstExpression() == null && infRef.getVariable() != null) {
+      typechecker.solveEquationsFor(infRef.getVariable());
+      if (infRef.getSubstExpression() != null) {
+        return infRef.getSubstExpression().normalize(NormalizationMode.WHNF);
+      }
+    }
+    return expression;
+  }
+
+  /**
+   * @return the expression as a concrete expression that refers to the already typechecked core expression.
+   */
+  public static ConcreteExpression concrete(ConcreteFactory factory, CoreExpression expression) {
+    return factory.core(expression.computeTyped());
+  }
+
   public static CoreExpression getAppArguments(CoreExpression expression, int numberOfArgs, List<CoreExpression> args) {
     CoreExpression result = getAppArgumentsRev(expression, numberOfArgs, args);
     Collections.reverse(args);

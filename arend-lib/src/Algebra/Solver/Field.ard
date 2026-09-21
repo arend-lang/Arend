@@ -1,0 +1,211 @@
+\import Algebra.Group
+\import Algebra.Monoid
+\import Algebra.Ring
+\import Algebra.Solver.Guarded
+\import Algebra.Solver.Ring
+\import Arith.Fin.Order
+\import Arith.Int
+\import Logic
+\import Meta
+\import Paths
+\import Paths.Meta
+\import Set
+
+\open Monoid(Inv)
+\open RingSolverModel.Term
+
+{- | Denominator clearing for commutative rings.
+
+   A commutative ring has no total inverse, so an inverse is meaningful only together with a witness `Inv x`.
+   Therefore, an inverse `w.inv` is treated as an ordinary atom of the environment, and the fact that it is an inverse
+   is recorded in an `InverseOf`: the atom `k` is the inverse of the ring term `d`. The witness `w` is kept separately,
+   in `Witnesses`. The terms are those of `RingSolverModel`.
+
+   Normalization turns a term into a fraction. An ordinary atom is the fraction `x / 1`, and an inverse atom is the
+   inverse of the fraction of its denominator. An equality of two terms is equivalent to the equality of the
+   cross-products of their fractions, provided that the inverses are supported by witnesses. This is expressed by
+   `GuardedSolverModel`, which is `SolverModel` for the case when normalization needs a hypothesis (the list of
+   `InverseOf`) and is correct only if the environment satisfies a guard (the `Witnesses`).
+
+   The polynomial part is not duplicated: the cross-products are ordinary ring terms. They are stated here without
+   normalizing them. Comparing them in the normal form of `CRingSolverModel` is done in `Algebra.Solver.Field.Normal`;
+   it is a separate module because `simplify` depends on this one and `CRingSolverModel` depends on definitions
+   that use `simplify`.
+-}
+\func FieldSolverModel (R : CRing) : GuardedSolverModel R \cowith
+  | Term => RingTerm
+  | NF => FractionTerm
+  | Hyp n => Array (InverseOf n)
+  | Guard env inverses => Witnesses env inverses
+  | normalize => normalize
+  | interpret env => ring-interpret env
+  | NFEquiv env f g => ring-interpret env (f.numerator :* g.denominator) = ring-interpret env (g.numerator :* f.denominator)
+  | terms-equality {_} {env} {inverses} witnesses {left} {right} => terms-equality-raw env inverses witnesses left right
+  | terms-equality-conv {_} {env} {inverses} witnesses {left} {right} => terms-equality-raw-conv env inverses witnesses left right
+  \where {
+    \func RingTerm (n : Nat) => RingSolverModel.Term Int n
+
+    {- | The atom `atom` of the environment is the inverse of the ring term `denominator`.
+
+       For example, let `xi : Inv x`, and let the environment be `[x, xi.inv]`. The expression `x * xi.inv` is the term
+       `var 0 :* var 1`, and `inverse-of (var 0) 1` says that the atom 1 is the inverse of the term `var 0`. Thus, the
+       atom 1 is normalized as the fraction `1 / x` instead of as an unrelated variable. That it is true is
+       proved by the witness `xi` in `Witnesses`.
+    -}
+    \data InverseOf (n : Nat)
+      | inverse-of (denominator : RingTerm n) (atom : Fin n)
+
+    -- | A fraction of ring terms; it is never normalized here, only by the ring backend.
+    \record FractionTerm (n : Nat) (numerator denominator : RingTerm n)
+
+    \func fraction {n : Nat} (numerator denominator : RingTerm n) : FractionTerm n
+      => \new FractionTerm n numerator denominator
+
+    \func inverse-fraction {n : Nat} (f : FractionTerm n) : FractionTerm n
+      => fraction f.denominator f.numerator
+
+    \func ring-interpret {n : Nat} (env : Fin n -> R) (term : RingTerm n) : R
+      => RingSolverModel.interpret env term
+
+    {- | The witnesses of a list of `InverseOf`: one `Inv` for each of them, whose `inv` is the atom. The first element of the
+       list is the last inverse that was introduced: its denominator may mention the atoms of the inverses after it.
+    -}
+    \data Witnesses {n : Nat} (env : Fin n -> R) (inverses : Array (InverseOf n)) \elim inverses
+      | nil => witnesses-nil
+      | inverse-of d k :: rest => witnesses-cons (w : Inv (ring-interpret env d)) (w.inv = env k) (Witnesses env rest)
+
+    -- | Normalization with respect to the fractions of the atoms.
+    \func norm-with {n : Nat} (fractions : Fin n -> FractionTerm n) (term : RingTerm n) : FractionTerm n \elim term
+      | var j => fractions j
+      | coef c => fraction (coef c) :ide
+      | :zro => fraction :zro :ide
+      | :ide => fraction :ide :ide
+      | :negative t => fraction (:negative (norm-with fractions t).numerator) (norm-with fractions t).denominator
+      | t :+ s => fraction
+          ((norm-with fractions t).numerator :* (norm-with fractions s).denominator :+ (norm-with fractions s).numerator :* (norm-with fractions t).denominator)
+          ((norm-with fractions t).denominator :* (norm-with fractions s).denominator)
+      | t :* s => fraction
+          ((norm-with fractions t).numerator :* (norm-with fractions s).numerator)
+          ((norm-with fractions t).denominator :* (norm-with fractions s).denominator)
+
+    {- | The fraction that each atom of the environment stands for. An ordinary atom `x` is the fraction `x / 1`. An atom
+       that is the inverse of a term `d` is the inverse of the fraction of `d`, that is, the fraction with the numerator and the
+       denominator swapped.
+
+       The list of inverses is processed from the newest one. Its denominator is normalized with the fractions of the older
+       inverses only (`atom-fractions rest`), so it may mention only the atoms that were introduced before.
+
+       For example, let `xi : Inv x` and let the environment be `[x, xi.inv]` with the only inverse `inverse-of (var 0) 1`.
+       Then the atom 0 is `x / 1`, and the atom 1 is `1 / x`.
+    -}
+    \func atom-fractions {n : Nat} (inverses : Array (InverseOf n)) : Fin n -> FractionTerm n \elim inverses
+      | nil => \lam j => fraction (var j) :ide
+      | inverse-of d k :: rest => \lam j => \case decideEq j k \with {
+        | yes _ => inverse-fraction (norm-with (atom-fractions rest) d)
+        | no _ => atom-fractions rest j
+      }
+
+    \func normalize {n : Nat} (inverses : Array (InverseOf n)) (term : RingTerm n) : FractionTerm n
+      => norm-with (atom-fractions inverses) term
+
+    -- | The cross-products of the fractions of two terms. The terms are equal if they are equal.
+    \func cross-left {n : Nat} (inverses : Array (InverseOf n)) (left right : RingTerm n) : RingTerm n
+      => (normalize inverses left).numerator :* (normalize inverses right).denominator
+
+    \func cross-right {n : Nat} (inverses : Array (InverseOf n)) (left right : RingTerm n) : RingTerm n
+      => (normalize inverses right).numerator :* (normalize inverses left).denominator
+
+    -- | `value` is the fraction `numerator * denominator⁻¹`, and the denominator is invertible.
+    \data FractionValid {n : Nat} (env : Fin n -> R) (fraction : FractionTerm n) (value : R)
+      | valid (denominator-inv : Inv (ring-interpret env fraction.denominator)) (value = ring-interpret env fraction.numerator * denominator-inv.inv)
+
+    -- Algebraic certificates for the correctness of normalization; commutativity and inverse witnesses are all they need.
+    \lemma cancel-inverse-factor {a x y : R} (xi : Inv x) : (a * xi.inv) * (x * y) = a * y
+      => (a * xi.inv) * (x * y) ==< *-assoc >==
+         a * (xi.inv * (x * y)) ==< pmap (a *) (inv *-assoc) >==
+         a * ((xi.inv * x) * y) ==< pmap (a * (__ * y)) xi.inv-left >==
+         a * (R.ide * y) ==< pmap (a *) R.ide-left >==
+         a * y `qed
+
+    \lemma cancel-factor {a x y : R} (xi : Inv x) : (a * x) * (xi.inv * y) = a * y
+      => (a * x) * (xi.inv * y) ==< *-assoc >==
+         a * (x * (xi.inv * y)) ==< pmap (a *) (inv *-assoc) >==
+         a * ((x * xi.inv) * y) ==< pmap (a * (__ * y)) xi.inv-right >==
+         a * (R.ide * y) ==< pmap (a *) R.ide-left >==
+         a * y `qed
+
+    \lemma fraction-add {a b d e : R} (di : Inv d) (ei : Inv e) : a * di.inv + b * ei.inv = (a * e + b * d) * (ei.inv * di.inv)
+      => inv (R.rdistr *> pmap2 (+) (cancel-factor ei) (pmap ((b * d) *) *-comm *> cancel-factor di))
+
+    \lemma fraction-mul {a b d e : R} (di : Inv d) (ei : Inv e) : (a * di.inv) * (b * ei.inv) = (a * b) * (ei.inv * di.inv)
+      => (a * di.inv) * (b * ei.inv) ==< *-assoc >==
+         a * (di.inv * (b * ei.inv)) ==< pmap (a *) (inv *-assoc) >==
+         a * ((di.inv * b) * ei.inv) ==< pmap (a * (__ * ei.inv)) *-comm >==
+         a * ((b * di.inv) * ei.inv) ==< pmap (a *) *-assoc >==
+         a * (b * (di.inv * ei.inv)) ==< inv *-assoc >==
+         (a * b) * (di.inv * ei.inv) ==< pmap ((a * b) *) *-comm >==
+         (a * b) * (ei.inv * di.inv) `qed
+
+    \lemma fraction-inverse {a d : R} (di : Inv d) (value-inv : Inv (a * di.inv)) : value-inv.inv = d * (Inv.cfactor-left value-inv).inv
+      => Inv.inv-isUnique value-inv (Inv.prod (Inv.cfactor-left value-inv) (Inv.reverse {di})) idp
+
+    \lemma fraction-cross-forward {a b d e : R} (di : Inv d) (ei : Inv e) (p : a * di.inv = b * ei.inv) : a * e = b * d
+      => inv (cancel-inverse-factor di) *> pmap (* (d * e)) p *> pmap ((b * ei.inv) *) *-comm *> cancel-inverse-factor ei
+
+    \lemma fraction-cross-backward {a b d e : R} (di : Inv d) (ei : Inv e) (p : a * e = b * d) : a * di.inv = b * ei.inv
+      => inv (pmap ((a * e) *) *-comm *> cancel-factor ei) *> pmap (* (di.inv * ei.inv)) p *> cancel-factor di
+
+    -- | If the fractions of the atoms are valid, then so is the fraction of any term.
+    \func norm-with-valid {n : Nat} {env : Fin n -> R} {fractions : Fin n -> FractionTerm n} (atoms-valid : \Pi (j : Fin n) -> FractionValid env (fractions j) (env j)) (term : RingTerm n)
+      : FractionValid env (norm-with fractions term) (ring-interpret env term) \elim term
+      | var j => atoms-valid j
+      | coef c => valid (Inv.lmake R.ide R.ide-left) (inv R.ide-right)
+      | :zro => valid (Inv.lmake R.ide R.ide-left) (inv R.ide-right)
+      | :ide => valid (Inv.lmake R.ide R.ide-left) (inv R.ide-right)
+      | :negative t =>
+          \case norm-with-valid atoms-valid t \with {
+            | valid denominator-inv correct => valid denominator-inv (pmap R.negative correct *> inv R.negative_*-left)
+          }
+      | t :+ s =>
+          \case norm-with-valid atoms-valid t, norm-with-valid atoms-valid s \with {
+            | valid left-denominator-inv left-correct, valid right-denominator-inv right-correct =>
+              valid (Inv.prod left-denominator-inv right-denominator-inv)
+                    (pmap2 (+) left-correct right-correct *> fraction-add left-denominator-inv right-denominator-inv)
+          }
+      | t :* s =>
+          \case norm-with-valid atoms-valid t, norm-with-valid atoms-valid s \with {
+            | valid left-denominator-inv left-correct, valid right-denominator-inv right-correct =>
+              valid (Inv.prod left-denominator-inv right-denominator-inv)
+                    (pmap2 (*) left-correct right-correct *> fraction-mul left-denominator-inv right-denominator-inv)
+          }
+
+    -- | The witnesses of the inverses make the fractions of all atoms valid.
+    \func atom-fractions-valid {n : Nat} {env : Fin n -> R} {inverses : Array (InverseOf n)} (witnesses : Witnesses env inverses) (j : Fin n)
+      : FractionValid env (atom-fractions inverses j) (env j) \elim inverses, witnesses
+      | nil, witnesses-nil => valid (Inv.lmake R.ide R.ide-left) (inv R.ide-right)
+      | inverse-of d k :: rest, witnesses-cons w w=env-k rest-witnesses => mcases \with {
+        | yes j=k => \case norm-with-valid (atom-fractions-valid rest-witnesses) d \with {
+          | valid denominator-inv correct =>
+            \have product-inv : Inv (ring-interpret env (norm-with (atom-fractions rest) d).numerator * denominator-inv.inv) w.inv
+              => transport (\lam z => Inv z w.inv) correct w
+            \in valid (Inv.cfactor-left product-inv) (pmap env j=k *> inv w=env-k *> fraction-inverse denominator-inv product-inv)
+        }
+        | no _ => atom-fractions-valid rest-witnesses j
+      }
+
+    \func terms-equality-raw {n : Nat} (env : Fin n -> R) (inverses : Array (InverseOf n)) (witnesses : Witnesses env inverses) (left right : RingTerm n)
+        (cross-proof : ring-interpret env (cross-left inverses left right) = ring-interpret env (cross-right inverses left right))
+      : ring-interpret env left = ring-interpret env right
+      => \case norm-with-valid (atom-fractions-valid witnesses) left, norm-with-valid (atom-fractions-valid witnesses) right \with {
+        | valid left-denominator-inv left-correct, valid right-denominator-inv right-correct =>
+          left-correct *> fraction-cross-backward left-denominator-inv right-denominator-inv cross-proof *> inv right-correct
+      }
+
+    \func terms-equality-raw-conv {n : Nat} (env : Fin n -> R) (inverses : Array (InverseOf n)) (witnesses : Witnesses env inverses) (left right : RingTerm n)
+        (value-proof : ring-interpret env left = ring-interpret env right)
+      : ring-interpret env (cross-left inverses left right) = ring-interpret env (cross-right inverses left right)
+      => \case norm-with-valid (atom-fractions-valid witnesses) left, norm-with-valid (atom-fractions-valid witnesses) right \with {
+        | valid left-denominator-inv left-correct, valid right-denominator-inv right-correct =>
+          fraction-cross-forward left-denominator-inv right-denominator-inv (inv left-correct *> value-proof *> right-correct)
+      }
+  }

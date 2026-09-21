@@ -2,6 +2,7 @@ package org.arend.lib.meta.simplify;
 
 import org.arend.ext.concrete.ConcreteFactory;
 import org.arend.ext.concrete.expr.ConcreteArgument;
+import org.arend.ext.concrete.expr.ConcreteExpression;
 import org.arend.ext.core.definition.CoreClassDefinition;
 import org.arend.ext.core.definition.CoreClassField;
 import org.arend.ext.core.expr.*;
@@ -13,6 +14,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
+import org.arend.lib.meta.simplify.field.ProofBearingInverses;
 
 public class SimplifyMeta extends BaseMetaDefinition {
   @Dependency                                       ArendRef transport;
@@ -27,13 +29,14 @@ public class SimplifyMeta extends BaseMetaDefinition {
   @Dependency                                       CoreClassDefinition CGroup;
   @Dependency                                       CoreClassDefinition AddGroup;
   @Dependency                                       CoreClassDefinition AbGroup;
-  @Dependency(name = "BaseSet.E")                   CoreClassField carrier;
-  @Dependency(name = "AddGroup.negative")           CoreClassField negative;
+  @Dependency                                       public CoreClassDefinition CRing;
+  @Dependency(name = "BaseSet.E")                   public CoreClassField carrier;
+  @Dependency(name = "AddGroup.negative")           public CoreClassField negative;
   @Dependency(name = "Group.inverse")               CoreClassField inverse;
-  @Dependency(name = "Semigroup.*")                 CoreClassField mul;
-  @Dependency(name = "AddMonoid.+")                 CoreClassField plus;
-  @Dependency(name = "Pointed.ide")                 CoreClassField ide;
-  @Dependency(name = "AddPointed.zro")              CoreClassField zro;
+  @Dependency(name = "Semigroup.*")                 public CoreClassField mul;
+  @Dependency(name = "AddMonoid.+")                 public CoreClassField plus;
+  @Dependency(name = "Pointed.ide")                 public CoreClassField ide;
+  @Dependency(name = "AddPointed.zro")              public CoreClassField zro;
   @Dependency(name = "AddGroup.negative-isInv")     ArendRef negIsInv;
   @Dependency(name = "Group.inverse-isInv")         ArendRef invIsInv;
   @Dependency(name = "Group.inverse_*")             ArendRef inverseMul;
@@ -50,6 +53,26 @@ public class SimplifyMeta extends BaseMetaDefinition {
   @Dependency(name = "AbGroup.toCGroup")            ArendRef fromAbGroupToCGroup;
   @Dependency(name = "AddGroup.negative_zro")       ArendRef negativeZro;
   @Dependency(name = "Group.inverse_ide")           ArendRef invIde;
+
+  @Dependency(name = "Semiring.natCoef")            public CoreClassField natCoef;
+  @Dependency(name = "Monoid.Inv")                  public CoreClassDefinition invClass;
+  @Dependency(name = "Monoid.DivBase.val")          public CoreClassField invValue;
+  @Dependency(name = "Monoid.DivBase.inv")          public CoreClassField invProjection;
+
+  @Dependency(name = "RingSolverModel.Term.var")     public ArendRef ringVar;
+  @Dependency(name = "RingSolverModel.Term.coef")    public ArendRef ringCoef;
+  @Dependency(name = "RingSolverModel.Term.:zro")    public ArendRef ringZro;
+  @Dependency(name = "RingSolverModel.Term.:ide")    public ArendRef ringIde;
+  @Dependency(name = "RingSolverModel.Term.:negative") public ArendRef ringNegative;
+  @Dependency(name = "RingSolverModel.Term.:+")      public ArendRef ringAdd;
+  @Dependency(name = "RingSolverModel.Term.:*")      public ArendRef ringMul;
+
+  @Dependency(name = "FieldSolverModel.InverseOf.inverse-of") public ArendRef inverseOf;
+  @Dependency(name = "FieldSolverModel.Witnesses.witnesses-nil") public ArendRef witnessesNil;
+  @Dependency(name = "FieldSolverModel.Witnesses.witnesses-cons") public ArendRef witnessesCons;
+
+  @Dependency(name = "FieldSolverModel.terms-equality-raw") ArendRef fieldTermsEqualityRaw;
+  @Dependency(name = "FieldSolverModel.terms-equality-raw-conv") ArendRef fieldTermsEqualityRawConv;
 
   @Dependency(name = "NatData")                     public ArendRef GroupData;
   @Dependency(name = "CGroupData")                  public ArendRef CGroupData;
@@ -71,7 +94,12 @@ public class SimplifyMeta extends BaseMetaDefinition {
     return 1;
   }
 
-
+  /**
+   * @return rules that simplify the type itself; the rules for its subterms are applied afterwards.
+   */
+  protected @NotNull List<TypeSimplificationRule> createTypeRules(@NotNull ExpressionTypechecker typechecker, @NotNull ContextData contextData) {
+    return List.of(new FieldEqualityRule(this, new ProofBearingInverses(this, typechecker, contextData), typechecker, contextData));
+  }
 
   @Override
   public TypedExpression invokeMeta(@NotNull ExpressionTypechecker typechecker, @NotNull ContextData contextData) {
@@ -79,13 +107,14 @@ public class SimplifyMeta extends BaseMetaDefinition {
     boolean isForward = contextData.getExpectedType() == null;
     CoreExpression expectedType = contextData.getExpectedType();
     List<? extends ConcreteArgument> args = contextData.getArguments();
+    ConcreteExpression argument = args.isEmpty() || !args.getLast().isExplicit() ? null : args.getLast().getExpression();
 
-    if (isForward && args.isEmpty()) {
+    if (isForward && argument == null) {
       return null;
     }
 
     ConcreteFactory factory = contextData.getFactory();
-    var expression = args.isEmpty() ? factory.ref(typechecker.getPrelude().getIdpRef()) : args.getFirst().getExpression();
+    var expression = argument == null ? factory.ref(typechecker.getPrelude().getIdpRef()) : argument;
     CoreExpression type;
 
     if (isForward) {
@@ -99,7 +128,8 @@ public class SimplifyMeta extends BaseMetaDefinition {
       return Utils.typecheckWithAdditionalArguments(expression, typechecker, 0, false);
     }
 
-    var transportedExpr = new Simplifier(this, typechecker, refExpr, factory, typechecker.getErrorReporter()).simplifyTypeOfExpression(expression, type, isForward);
+    var simplifier = new Simplifier(this, typechecker, refExpr, factory, typechecker.getErrorReporter(), createTypeRules(typechecker, contextData));
+    var transportedExpr = simplifier.simplifyTypeOfExpression(expression, type, isForward, !isForward && argument == null);
     return transportedExpr == null ? null : typechecker.typecheck(transportedExpr, expectedType);
   }
 }
