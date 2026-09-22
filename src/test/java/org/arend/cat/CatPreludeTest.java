@@ -328,4 +328,15 @@ public class CatPreludeTest extends TypeCheckingTestCase {
       """, 2);
     assertThatErrorsAre(Matchers.typecheckingError(), Matchers.typecheckingError());
   }
+
+  @Test
+  public void diSortTest() {
+    typeCheckDef("\\func test : \\Cat0 => DI");
+  }
+
+  @Test
+  public void diSortError() {
+    typeCheckDef("\\func test : \\Type => DI", 1);
+    assertThatErrorsAre(Matchers.typeMismatchError());
+  }
 }
