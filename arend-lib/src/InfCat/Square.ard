@@ -1,9 +1,14 @@
 \import Equiv
+\import Equiv.Sigma
 \import Function.Meta
 \import InfCat.Basics
 \import InfCat.Functor.Equiv
 \import InfCat.Paths
+\import Logic
+\import Logic.Unique
+\import Meta
 \import Paths
+\import Paths.Meta
 
 \sfunc cube2-equals
   {C :⁺ \Cat} {a b d a' b' c' d' :⁺ C} (_ : \Sigma)
@@ -74,43 +79,95 @@
   | finv_f p => path \lam l i j => backward_forward (dpath \lam i => dpath \lam j => p i j) l i j
   | f_finv s => path \lam l => (s.1, s.2, s.3, s.4, s.5, s.6, s.7, s.8, forward_backward s.9 l)
   \where {
-    \func forward {C :⁺ \Cat} {a b c d :⁺ C} {ab :⁺ a ~> b} {bd :⁺ b ~> d} {ac :⁺ a ~> c} {cd :⁺ c ~> d}
-                  (p :⁺ DPath (\lam i => ab i ~> cd i) ac bd) : DPath (\lam i => a ~> bd i) ab (comp ac cd)
+    \func forward-gen {C :⁺ \Cat} {a b c d :⁺ C} {ab :⁺ a ~> b} {bd :⁺ b ~> d} {ac :⁺ a ~> c} {cd :⁺ c ~> d}
+                      {ab' :⁺ a ~> b} (bf :⁺ DPath (\lam i => a ~> ab' i) idd ab)
+                      {ac' :⁺ a ~> c} (tf :⁺ DPath (\lam i => a ~> ac' i) idd ac)
+                      {ad :⁺ a ~> d} (ff :⁺ DPath (\lam i => ac' i ~> ad i) idd cd)
+                      (p :⁺ DPath (\lam i => ab i ~> cd i) ac bd) : DPath (\lam i => a ~> bd i) ab' ad
       => dpath \lam i => dpath \lam j => cube p j i dright
       \where {
         \protected \sfunc cube (p :⁺ DPath (\lam i => ab i ~> cd i) ac bd)
-          => dpath \lam i => dpath \lam j => dpath \lam k => fill3 () {idd} {ab} {ab} {ac} {cd} {idd} {comp ac cd}
-              idd p (conn-right ab) (dpath \lam i => dpath \lam j => fill2 ac cd i j) (conn-right ac) i j k
+          => dpath \lam i => dpath \lam j => dpath \lam k => fill3 () {idd} idd p bf ff tf i j k
+
+        \sfunc natural {C D :⁺ \Cat} (F :⁺ C ->⁺ D) {a b c d :⁺ C} {ab :⁺ a ~> b} {bd :⁺ b ~> d} {ac :⁺ a ~> c} {cd :⁺ c ~> d}
+                       {ab' :⁺ a ~> b} (bf :⁺ DPath (\lam i => a ~> ab' i) idd ab)
+                       {ac :⁺ a ~> c} (tf :⁺ DPath (\lam i => a ~> ac i) idd ac)
+                       {ad :⁺ a ~> d} (ff :⁺ DPath (\lam i => ac i ~> ad i) idd cd)
+                       (p :⁺ DPath (\lam i => ab i ~> cd i) ac bd)
+          : dpath (\lam i => dpath \lam j => F (forward-gen bf tf ff p i j))
+            = forward-gen (dpath \lam i => dpath \lam j => F (bf i j)) {dmap F ac} (dpath \lam i => dpath \lam j => F (tf i j)) (dpath \lam i => dpath \lam j => F (ff i j)) (dpath \lam i => dpath \lam j => F (p i j))
+          => pmap+ (\lam bot => dpath \lam i => dpath \lam j => bot j i) $
+               cube2-equals () {idd} {dmap F ab} {dmap F ab'} {dmap F ac} {dmap F cd} {idd} {dmap F ad}
+                 idd (dpath \lam j => dpath \lam k => F (p k j)) (dpath \lam i => dpath \lam j => F (bf i j)) (dpath \lam i => dpath \lam j => F (ff i j)) (dpath \lam i => dpath \lam j => F (tf i j))
+                 {dpath \lam i => dpath \lam j => F (fill3 () idd p bf ff tf i j dright)}
+                 {dpath \lam i => dpath \lam j => fill3 () idd (dpath \lam i => dpath \lam j => F (p i j)) (dpath \lam i => dpath \lam j => F (bf i j)) (dpath \lam i => dpath \lam j => F (ff i j)) (dpath \lam i => dpath \lam j => F (tf i j)) i j dright}
+                 (dpath \lam i => dpath \lam j => dpath \lam k => F (fill3 () idd p bf ff tf i j k))
+                 (dpath \lam i => dpath \lam j => dpath \lam k => fill3 () idd (dpath \lam i => dpath \lam j => F (p i j)) (dpath \lam i => dpath \lam j => F (bf i j)) (dpath \lam i => dpath \lam j => F (ff i j)) (dpath \lam i => dpath \lam j => F (tf i j)) i j k)
       }
 
-    \func backward {C :⁺ \Cat} {a b c d :⁺ C} {ab :⁺ a ~> b} {bd :⁺ b ~> d} {ac :⁺ a ~> c} {cd :⁺ c ~> d}
-                   (p :⁺ DPath (\lam i => a ~> bd i) ab (comp ac cd)) : DPath (\lam i => ab i ~> cd i) ac bd
+    \func backward-gen {C :⁺ \Cat} {a b c d :⁺ C} {ab :⁺ a ~> b} {bd :⁺ b ~> d} {ac :⁺ a ~> c} {cd :⁺ c ~> d}
+                       {ab' :⁺ a ~> b} (bf :⁺ DPath (\lam i => a ~> ab' i) idd ab)
+                       {ac' :⁺ a ~> c} (tf :⁺ DPath (\lam i => a ~> ac' i) idd ac)
+                       {ad :⁺ a ~> d} (ff :⁺ DPath (\lam i => ac' i ~> ad i) idd cd)
+                       (p :⁺ DPath (\lam i => a ~> bd i) ab' ad) : DPath (\lam i => ab i ~> cd i) ac bd
       => dpath \lam i => dpath \lam j => cube p i j dright
       \where {
-        \protected \sfunc cube (p :⁺ DPath (\lam i => a ~> bd i) ab (comp ac cd))
-          => dpath \lam i => dpath \lam j => dpath \lam k => fill3 () {idd} {ab} {ab} {idd}
-            (conn-right ac)
+        \protected \sfunc cube (p :⁺ DPath (\lam i => a ~> bd i) ab' ad)
+          => dpath \lam i => dpath \lam j => dpath \lam k => fill3 () {idd} {_} {_} {idd}
+            tf
             (dpath \lam i => dpath \lam j => p j i)
-            (dpath \lam i => dpath \lam j => conn-right ab j i)
-            (dpath \lam i => dpath \lam j => fill2 ac cd j i)
+            (dpath \lam i => dpath \lam j => bf j i)
+            (dpath \lam i => dpath \lam j => ff j i)
             idd
             i j k
       }
 
+    \sfunc backward_forward-gen
+      {C :⁺ \Cat} {a b c d :⁺ C} {ab :⁺ a ~> b} {bd :⁺ b ~> d} {ac :⁺ a ~> c} {cd :⁺ c ~> d}
+      {ab' :⁺ a ~> b} (bf :⁺ DPath (\lam i => a ~> ab' i) idd ab)
+      {ac' :⁺ a ~> c} (tf :⁺ DPath (\lam i => a ~> ac' i) idd ac)
+      {ad :⁺ a ~> d} (ff :⁺ DPath (\lam i => ac' i ~> ad i) idd cd)
+      (p :⁺ DPath (\lam i => ab i ~> cd i) ac bd) : backward-gen bf tf ff (forward-gen bf tf ff p) = p
+      => cube2-equals () {idd} {_} {_} {idd} {_} {_} {_} {idd}
+          (dpath \lam i => dpath \lam j => tf j i) (forward-gen bf tf ff p)
+          (dpath \lam i => dpath \lam j => bf j i) (dpath \lam i => dpath \lam j => ff j i) idd
+          (backward-gen.cube (forward-gen bf tf ff p)) (dpath \lam i => dpath \lam j => dpath \lam k => forward-gen.cube p k j i)
+
+    \sfunc forward_backward-gen
+      {C :⁺ \Cat} {a b c d :⁺ C} {ab :⁺ a ~> b} {bd :⁺ b ~> d} {ac :⁺ a ~> c} {cd :⁺ c ~> d}
+      {ab' :⁺ a ~> b} (bf :⁺ DPath (\lam i => a ~> ab' i) idd ab)
+      {ac' :⁺ a ~> c} (tf :⁺ DPath (\lam i => a ~> ac' i) idd ac)
+      {ad :⁺ a ~> d} (ff :⁺ DPath (\lam i => ac' i ~> ad i) idd cd)
+      (p :⁺ DPath (\lam i => a ~> bd i) ab' ad) : forward-gen bf tf ff (backward-gen bf tf ff p) = p
+      => cube2-equals () {idd} {idd} {idd} bf ff idd
+          (dpath \lam i => dpath \lam j => backward-gen bf tf ff p j i) (dpath \lam i => dpath \lam j => tf j i)
+          (dpath \lam i => dpath \lam j => dpath \lam k => forward-gen.cube (backward-gen bf tf ff p) j i k)
+          (dpath \lam i => dpath \lam j => dpath \lam k => backward-gen.cube p k i j)
+
+    \func gen-equiv {C : \Cat} {a b c d : C} {ab : a ~> b} {bd : b ~> d} {ac : a ~> c} {cd : c ~> d}
+                     {ab' : a ~> b} (bf : DPath (\lam i => a ~> ab' i) idd ab)
+                     {acc : a ~> c} (tf : DPath (\lam i => a ~> acc i) idd ac)
+                     {ad : a ~> d} (ff : DPath (\lam i => acc i ~> ad i) idd cd)
+      : QEquiv {DPath (\lam i => ab i ~> cd i) ac bd} (forward-gen bf tf ff) \cowith
+      | ret => backward-gen bf tf ff
+      | ret_f => backward_forward-gen bf tf ff
+      | f_sec => forward_backward-gen bf tf ff
+
+    \func forward {C :⁺ \Cat} {a b c d :⁺ C} {ab :⁺ a ~> b} {bd :⁺ b ~> d} {ac :⁺ a ~> c} {cd :⁺ c ~> d}
+                  (p :⁺ DPath (\lam i => ab i ~> cd i) ac bd) : DPath (\lam i => a ~> bd i) ab (comp ac cd)
+      => forward-gen (conn-right ab) (conn-right ac) (dpath \lam i => dpath \lam j => fill2 ac cd i j) p
+
+    \func backward {C :⁺ \Cat} {a b c d :⁺ C} {ab :⁺ a ~> b} {bd :⁺ b ~> d} {ac :⁺ a ~> c} {cd :⁺ c ~> d}
+                   (p :⁺ DPath (\lam i => a ~> bd i) ab (comp ac cd)) : DPath (\lam i => ab i ~> cd i) ac bd
+      => backward-gen (conn-right ab) (conn-right ac) (dpath \lam i => dpath \lam j => fill2 ac cd i j) p
+
     \sfunc backward_forward {C :⁺ \Cat} {a b c d :⁺ C} {ab :⁺ a ~> b} {bd :⁺ b ~> d} {ac :⁺ a ~> c} {cd :⁺ c ~> d}
                             (p :⁺ DPath (\lam i => ab i ~> cd i) ac bd) : backward (forward p) = p
-      => cube2-equals () {idd} {ab} {ab} {idd} {comp ac cd} {ac} {cd} {idd}
-        (dpath \lam i => dpath \lam j => conn-right ac j i) (forward p)
-        (dpath \lam i => dpath \lam j => conn-right ab j i) (dpath \lam i => dpath \lam j => fill2 ac cd j i) idd
-        (backward.cube (forward p)) (dpath \lam i => dpath \lam j => dpath \lam k => forward.cube p k j i)
+      => backward_forward-gen (conn-right ab) (conn-right ac) (dpath \lam i => dpath \lam j => fill2 ac cd i j) p
 
     \sfunc forward_backward {C :⁺ \Cat} {a b c d :⁺ C} {ab :⁺ a ~> b} {bd :⁺ b ~> d} {ac :⁺ a ~> c} {cd :⁺ c ~> d}
                             (p :⁺ DPath (\lam i => a ~> bd i) ab (comp ac cd)) : forward (backward p) = p
-      => cube2-equals () {idd} {idd} {idd}
-        (conn-right ab) (dpath \lam i => dpath \lam j => fill2 ac cd i j) idd
-        (dpath \lam i => dpath \lam j => backward p j i) (dpath \lam i => dpath \lam j => conn-right ac j i)
-        (dpath \lam i => dpath \lam j => dpath \lam k => forward.cube (backward p) j i k)
-        (dpath \lam i => dpath \lam j => dpath \lam k => backward.cube p k i j)
+      => forward_backward-gen (conn-right ab) (conn-right ac) (dpath \lam i => dpath \lam j => fill2 ac cd i j) p
   }
 
 \sfunc square-equiv {C : \Cat} {a b c d : C} {ab : a ~> b} {bd : b ~> d} {ac : a ~> c} {cd : c ~> d}
@@ -125,3 +182,24 @@
 \sfunc ~>-natural {C D :⁺ \Cat} {f g :⁺ C ->⁺ D} (h :⁺ \Pi (a :⁺ C) -> f a ~> g a) {a a' :⁺ C} {p :⁺ a ~> a'}
   : comp (dmap f p) (h a') = comp (h a) (dmap g p)
   => inv $ comp-char $ dpath \lam i => dpath \lam j => square-char.forward (dpath \lam i => dpath \lam j => h (p j) i) j i
+
+{- | A square in the total category lying over a given square {sqA} of the base is the same as a square in the family {B} over {sqA}.
+ - The same applies to triangles, since they are squares with a degenerate edge.
+ -}
+\func rel-square-equiv {A : \Cat} (B : A ->⁺ \Cat) {x y x' y' : \Sigma⁺ (a : A) (B a)} {u : x ~> y} {v : x' ~> y'} {l : x ~> x'} {r : y ~> y'}
+                       (sqA : DPath (\lam i => (u i).1 ~> (v i).1) (dpath \lam j => (l j).1) (dpath \lam j => (r j).1))
+  : QEquiv {DPath (\lam i => DPath (\lam j => B (sqA i j)) (u i).2 (v i).2) (dpath \lam j => (l j).2) (dpath \lam j => (r j).2)}
+           {\Sigma (sqT : DPath (\lam i => u i ~> v i) l r) (dpath (\lam i => dpath \lam j => (sqT i j).1) = sqA)}
+  => \let R (sqA : DPath (\lam i => (u i).1 ~> (v i).1) (dpath \lam j => (l j).1) (dpath \lam j => (r j).1))
+            => DPath (\lam i => DPath (\lam j => B (sqA i j)) (u i).2 (v i).2) (dpath \lam j => (l j).2) (dpath \lam j => (r j).2)
+     \in symQEquiv (contr-left (rsigma sqA) {\lam w => R w.1}) `transQEquiv` later (\new QEquiv {
+           | f u => ((u.1.1, u.2), u.1.2)
+           | ret u => ((u.1.1, u.2), u.1.2)
+           | ret_f => idpe
+           | f_sec => idpe
+         }) `transQEquiv` qsigma-left {\Sigma (sqA : DPath (\lam i => (u i).1 ~> (v i).1) (dpath \lam j => (l j).1) (dpath \lam j => (r j).1)) (R sqA)} (later \new QEquiv {
+           | f w => dpath \lam i => dpath \lam j => (w.1 i j, w.2 i j)
+           | ret sqT => (dpath \lam i => dpath \lam j => (sqT i j).1, dpath \lam i => dpath \lam j => (sqT i j).2)
+           | ret_f w => idp
+           | f_sec sqT => idp
+         })

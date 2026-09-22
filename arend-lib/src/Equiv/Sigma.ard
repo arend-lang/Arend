@@ -27,6 +27,15 @@
   | ret_f p => inv (ext (inv (c.contraction p.1), idp))
   | f_sec b => rewriteI (isProp.=>isSet (isContr=>isProp c) c.center c.center idp (c.contraction c.center)) idp
 
+-- | If the total space of a family is contractible, then a fiber is equivalent to the type of paths from the center.
+\func contr-sigma-fiber {A : \Cat} {B : A -> \Type} (c : Contr (\Sigma (x : A) (B x))) (a : A) : QEquiv {B a} {c.center.1 = a}
+  => symQEquiv (contr-left (rsigma a) {\lam w => B w.1}) `transQEquiv` later (\new QEquiv {
+    | f u => ((u.1.1, u.2), u.1.2)
+    | ret u => ((u.1.1, u.2), u.1.2)
+    | ret_f => idpe
+    | f_sec => idpe
+  }) `transQEquiv` contr-left c {\lam w => w.1 = a}
+
 \func contr-right {A : \Type} (C : A -> Contr) : QEquiv {\Sigma (x : A) (C x)} {A} \cowith
   | f p => p.1
   | ret a => (a, Contr.center {C a})

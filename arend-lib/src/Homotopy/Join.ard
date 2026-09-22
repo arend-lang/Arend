@@ -26,17 +26,17 @@
 
 \func jglue {A B : \Type} (a : A) (b : B) : jinl a = jinr b => path (pglue (a,b))
 
-\lemma Join_Contr (A : \Type) (B : Contr) : Contr (Join A B) \cowith
-  | center => jinr B.center
+\lemma Join_Contr (A : \Type) {B : \Type} (Bc : Contr B) : Contr (Join A B) \cowith
+  | center => jinr Bc.center
   | contraction x => \case \elim x \with {
-    | jinl a => inv (jglue a B.center)
-    | jinr b => pmap jinr (B.contraction b)
+    | jinl a => inv (jglue a Bc.center)
+    | jinr b => pmap jinr (Bc.contraction b)
     | pglue (a,b) => Cube2.map
-        (inv (jglue a B.center))      -- top edge
-        (pmap jinr (B.contraction b)) -- bottom edge
-        (idpe (jinr B.center))        -- left edge
+        (inv (jglue a Bc.center))      -- top edge
+        (pmap jinr (Bc.contraction b)) -- bottom edge
+        (idpe (jinr Bc.center))        -- left edge
         (jglue a b)                   -- right edge
-        (Jl (\lam x p => inv (jglue a B.center) = pmap jinr p *> inv (jglue a x)) (inv idp_*>) (B.contraction b))
+        (Jl (\lam x p => inv (jglue a Bc.center) = pmap jinr p *> inv (jglue a x)) (inv idp_*>) (Bc.contraction b))
   }
 
 \func Join_Sphere0 (A : \Type) : QEquiv {Join (Sphere 0) A} {Susp A} \cowith

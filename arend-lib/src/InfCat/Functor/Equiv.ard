@@ -31,20 +31,35 @@
 \type IsHEquiv {C D : \Cat} (f : C ->⁺ D) : \Prop
   => TruncP (HQEquiv f)
   \where {
-    \lemma toTuple (e : IsHEquiv f)
+    \lemma toTuple {C D : \Cat} {f : C ->⁺ D} (e : IsHEquiv f)
       : \Sigma (\Sigma (g : D ->⁺ C) (\Pi (x :⁺ C) -> g (f x) = x)) (\Sigma (h : D ->⁺ C) (\Pi (y :⁺ D) -> f (h y) = y))
         \level \lam s t => ext (linv-unique f s.2.1 s.2.2, rinv-unique f s.1.1 s.1.2)
       \elim e
       | inP s => ((s.finv, s.finv_f), (s.finv, s.f_finv))
 
-    \sfunc ret (e : IsHEquiv f) : D ->⁺ C
+    \sfunc ret {C D : \Cat} {f : C ->⁺ D} (e : IsHEquiv f) : D ->⁺ C
       => (toTuple e).1.1
 
-    \sfunc ret_f (e : IsHEquiv f) {x :⁺ C} : ret e (f x) = x
+    \sfunc ret_f {C D : \Cat} {f : C ->⁺ D} (e : IsHEquiv f) {x :⁺ C} : ret e (f x) = x
       => path (\lam i => (\peval ret e) i (f x)) *> (toTuple e).1.2 x
 
-    \sfunc f_ret (e : IsHEquiv f) {y :⁺ D} : f (ret e y) = y
+    \sfunc f_ret {C D : \Cat} {f : C ->⁺ D} (e : IsHEquiv f) {y :⁺ D} : f (ret e y) = y
       => pmap+ f (path (\lam i => (\peval ret e) i y) *> inv-equals f {(toTuple e).1.1} (toTuple e).1.2 (toTuple e).2.2) *> (toTuple e).2.2 y
+
+    \sfunc fib-sec {A : \Cat} {B : A ->⁺ \Cat} (e : IsHEquiv {\Sigma⁺ (a : A) (B a)} __.1) (a :⁺ A) : B a
+      => transport+ B (f_ret e) (ret e a).2
+
+    \sfunc fib-sec-unique {A : \Cat} {B : A ->⁺ \Cat} (e : IsHEquiv {\Sigma⁺ (a : A) (B a)} __.1) {a :⁺ A} {b b' :⁺ B a} : b = b'
+      => pmap+ (\lam s => transport+ B s.2 s.1.2) $
+           equiv-fibers __.1 (ret e) (\lam x => ret_f e) (\lam y => f_ret e) {a} {(a,b), idp} {(a,b'), idp}
+
+    \lemma fromFib {A : \Cat} {B : A ->⁺ \Cat} (s : \Pi (a :⁺ A) -> B a) (u : \Pi {a :⁺ A} {b b' :⁺ B a} -> b = b')
+      : IsHEquiv {\Sigma⁺ (a : A) (B a)} __.1
+      => inP \new HQEquiv {
+        | finv a => (a, s a)
+        | finv_f t => path \lam i => (t.1, u i)
+        | f_finv => idpe
+      }
 
     \sfunc inv-equals {C D :⁺ \Cat} (f :⁺ C ->⁺ D) {g h :⁺ D ->⁺ C}
                       (gf=id :⁺ \Pi (x :⁺ C) -> g (f x) = x) (fh=id :⁺ \Pi (y :⁺ D) -> f (h y) = y) {y :⁺ D} : g y = h y

@@ -1,6 +1,8 @@
 \import Equiv
+\import Equiv.Sigma
 \import Function.Meta
 \import InfCat.Paths
+\import Logic.Unique
 \import Meta
 \import Paths
 
@@ -161,6 +163,51 @@
   \where {
     \protected \sfunc flipped : QEquiv {DPath (\lam i => a ~> bc i) ab ac} {comp ab bc = ac}
       => flipQEquiv `transQEquiv` comp-equiv {C}
+  }
+
+-- | The Segal condition as a contractibility statement: the type of composites of {ab} and {bc} equipped with a filler is contractible.
+\lemma segal-contr {C : \Cat} {a b c : C} (ab : a ~> b) (bc : b ~> c) : Contr (\Sigma (ac : a ~> c) (DPath (\lam i => ab i ~> ac i) idd bc))
+  => Contr.Contr_QEquiv (sigma-right \lam ac => later flipQEquiv) (flipped ab bc)
+  \where {
+    \lemma flipped {C : \Cat} {a b c : C} (ab : a ~> b) (bc : b ~> c) : Contr (\Sigma (ac : a ~> c) (DPath (\lam i => a ~> bc i) ab ac))
+      => Contr.Contr_QEquiv (symQEquiv (sigma-right \lam ac => later comp-equiv.flipped)) (lsigma (comp ab bc))
+
+    -- | The type of connections from {ab} to the identity (as in {conn-right}) is contractible.
+    \lemma conn {C : \Cat} {a b : C} (ab : a ~> b) : Contr (\Sigma (x : a ~> b) (DPath (\lam i => a ~> x i) idd ab))
+      => Contr.Contr_QEquiv (symQEquiv (sigma-right \lam x => later $ comp-equiv.flipped `transQEquiv` pathEquiv-right comp_idd-left)) (rsigma ab)
+  }
+
+{- | The relative Segal condition: given lifts {x} of {f} and {k} of {g},
+ -   the type of lifts of {h} equipped with a filler over the 2-simplex {tri} is contractible.
+ -}
+\lemma horn-Contr {A : \Cat} (B : A ->⁺ \Cat) {a a' a'' : A} {f : a ~> a'} {g : a' ~> a''} {h : a ~> a''}
+                  (tri : DPath (\lam i => f i ~> h i) idd g) {b : B a} {b' : B a'} {b'' : B a''}
+                  (x : DPath (\lam i => B (f i)) b b') (k : DPath (\lam j => B (g j)) b' b'')
+  : Contr (\Sigma (q : DPath (\lam i => B (h i)) b b'') (DPath (\lam i => DPath (\lam j => B (tri i j)) (x i) (q i)) idd k))
+  => \let | Tot => \Sigma⁺ (a : A) (B a)
+          | ab => dpath \lam i => ((f i, x i) : Tot)
+          | bc => dpath \lam j => ((g j, k j) : Tot)
+          | G (v : \Sigma (r : a ~> a'') (DPath (\lam i => f i ~> r i) idd g))
+              => \Sigma (q : DPath (\lam i => B (v.1 i)) b b'') (DPath (\lam i => DPath (\lam j => B (v.2 i j)) (x i) (q i)) idd k)
+          | T => \Sigma (v : \Sigma (r : a ~> a'') (DPath (\lam i => f i ~> r i) idd g)) (G v)
+          | split (w : \Sigma⁺ (ac : (a,b) ~> {Tot} (a'',b'')) (DPath (\lam i => ab i ~> ac i) idd bc)) : T
+              => ((dpath \lam i => (w.1 i).1, dpath \lam i => dpath \lam j => (w.2 i j).1), (dpath \lam i => (w.1 i).2, dpath \lam i => dpath \lam j => (w.2 i j).2))
+          | unsplit (u : T) : \Sigma⁺ (ac : (a,b) ~> {Tot} (a'',b'')) (DPath (\lam i => ab i ~> ac i) idd bc)
+              => (dpath \lam i => (u.1.1 i, u.2.1 i), dpath \lam i => dpath \lam j => (u.1.2 i j, u.2.2 i j))
+     \in fiber-Contr G (segal-contr f g)
+           (isProp=>isContr (\lam u v => pmap split (segal2Prop {Tot} {_} {_} {_} {ab} {bc} (unsplit u) (unsplit v))) (split (comp ab bc, dpath \lam i => dpath (fill2 ab bc i))))
+           (h, tri)
+  \where {
+    -- | The relative Segal condition for the flipped shape of 2-simplices.
+    \lemma flipped (tri : DPath (\lam i => a ~> g i) f h) {b : B a} {b' : B a'} {b'' : B a''}
+                   (x : DPath (\lam i => B (f i)) b b') (k : DPath (\lam j => B (g j)) b' b'')
+      : Contr (\Sigma (q : DPath (\lam i => B (h i)) b b'') (DPath (\lam i => DPath (\lam j => B (tri i j)) b (k i)) x q))
+      => Contr.Contr_QEquiv (sigma-right \lam p => later \new QEquiv {
+        | f q => dpath \lam i => dpath \lam j => q j i
+        | ret q => dpath \lam i => dpath \lam j => q j i
+        | ret_f => idpe
+        | f_sec => idpe
+      }) $ horn-Contr B (dpath \lam i => dpath \lam j => tri j i) x k
   }
 
 \sfunc comp_idd-right {C :⁺ \Cat} {a b :⁺ C} {f :⁺ a ~> b} : comp f idd = f
