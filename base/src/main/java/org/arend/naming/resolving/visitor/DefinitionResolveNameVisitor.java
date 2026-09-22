@@ -27,6 +27,7 @@ import org.arend.typechecking.error.local.LocalErrorReporter;
 import org.arend.typechecking.instance.ArendInstances;
 import org.arend.typechecking.provider.ConcreteProvider;
 import org.arend.typechecking.visitor.SyntacticDesugarVisitor;
+import org.jetbrains.annotations.NotNull;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -39,6 +40,7 @@ public class DefinitionResolveNameVisitor implements ConcreteResolvableDefinitio
   private final LiteralTypechecker myLiteralTypechecker;
   private final ResolverListener myResolverListener;
   private final Map<TCDefReferable, Concrete.ExternalParameters> myExternalParameters = new HashMap<>();
+  private GroupScopeFactory myScopeFactory = GroupScopeFactory.DEFAULT;
 
   public DefinitionResolveNameVisitor(ConcreteProvider concreteProvider, TypingInfo typingInfo, ErrorReporter errorReporter, LiteralTypechecker literalTypechecker, ResolverListener resolverListener) {
     myConcreteProvider = concreteProvider;
@@ -50,6 +52,31 @@ public class DefinitionResolveNameVisitor implements ConcreteResolvableDefinitio
 
   public DefinitionResolveNameVisitor(ConcreteProvider concreteProvider, TypingInfo typingInfo, ErrorReporter errorReporter) {
     this(concreteProvider, typingInfo, errorReporter, null, null);
+  }
+
+  /**
+   * Builds the scope a group is resolved in, from the scope of its parent. The result is used as
+   * it is returned, so an implementation is responsible for making it cheap to query repeatedly.
+   */
+  public interface GroupScopeFactory {
+    GroupScopeFactory DEFAULT = (group, parentScope, isDynamicContext, withAdditionalContent) ->
+      CachingScope.make(withAdditionalContent ? LexicalScope.insideOf(group, parentScope, isDynamicContext) : new LexicalScope(parentScope, group, null, isDynamicContext, false));
+
+    /**
+     * @param withAdditionalContent   if {@code false}, the scope leaves out the external parameters
+     *                                of the group and the content of its own opens, which is what
+     *                                the path of one of those opens has to be resolved in.
+     */
+    @NotNull Scope insideOf(@NotNull ConcreteGroup group, @NotNull Scope parentScope, boolean isDynamicContext, boolean withAdditionalContent);
+  }
+
+  /**
+   * Replaces the scopes this visitor builds for the groups it descends into.
+   * Used to observe how namespace commands are consulted during resolution.
+   */
+  public DefinitionResolveNameVisitor withScopeFactory(@NotNull GroupScopeFactory factory) {
+    myScopeFactory = factory;
+    return this;
   }
 
   @Override
@@ -585,8 +612,8 @@ public class DefinitionResolveNameVisitor implements ConcreteResolvableDefinitio
     return null;
   }
 
-  private static Scope makeScope(ConcreteGroup group, Scope parentScope, boolean isDynamicScope) {
-    return parentScope == null ? null : LexicalScope.insideOf(group, parentScope, isDynamicScope);
+  private Scope makeScope(ConcreteGroup group, Scope parentScope, boolean isDynamicScope) {
+    return parentScope == null ? null : myScopeFactory.insideOf(group, parentScope, isDynamicScope, true);
   }
 
   private boolean addExternalParameters(Concrete.GeneralDefinition def) {
@@ -624,7 +651,7 @@ public class DefinitionResolveNameVisitor implements ConcreteResolvableDefinitio
     Collection<? extends ConcreteGroup> dynamicSubgroups = group.dynamicGroups();
 
     Concrete.GeneralDefinition def = myConcreteProvider.getConcrete(groupRef);
-    Scope cachedScope = CachingScope.make(makeScope(group, scope, false));
+    Scope cachedScope = makeScope(group, scope, false);
     LocalErrorReporter localErrorReporter = new LocalErrorReporter(groupRef, myErrorReporter);
     myLocalErrorReporter = localErrorReporter;
     if (def instanceof Concrete.ClassDefinition) {
@@ -670,7 +697,7 @@ public class DefinitionResolveNameVisitor implements ConcreteResolvableDefinitio
     }
 
     boolean isTopLevel = group.isTopLevel();
-    Scope namespaceScope = CachingScope.make(new LexicalScope(scope, group, null, true, false));
+    Scope namespaceScope = myScopeFactory.insideOf(group, scope, true, false);
     if (myResolverListener != null && myResolverListener != ResolverListener.EMPTY) {
       group.description().accept(this, docScope);
     }
@@ -686,7 +713,7 @@ public class DefinitionResolveNameVisitor implements ConcreteResolvableDefinitio
       }
 
       LongUnresolvedReference reference = namespaceCommand.module().copy();
-      Scope importedScope = namespaceCommand.isImport() ? namespaceScope.getImportedSubscope() : namespaceScope;
+      Scope importedScope = namespaceScope.forNamespaceCommand(namespaceCommand);
       List<Referable> resolvedRefs = myResolverListener == null ? null : new ArrayList<>();
       reference.resolve(importedScope, resolvedRefs, myResolverListener);
       if (myResolverListener != null) {
@@ -776,7 +803,7 @@ public class DefinitionResolveNameVisitor implements ConcreteResolvableDefinitio
     }
 
     if (!dynamicSubgroups.isEmpty()) {
-      Scope dynamicScope = CachingScope.make(makeScope(group, scope, true));
+      Scope dynamicScope = makeScope(group, scope, true);
       if (dynamicScopeProvider != null) {
         dynamicScope = new MergeScope(dynamicScope, new DynamicScope(dynamicScopeProvider, myTypingInfo, DynamicScope.Extent.WITH_SUPER_DYNAMIC));
       }
@@ -837,7 +864,7 @@ public class DefinitionResolveNameVisitor implements ConcreteResolvableDefinitio
 
     record NamespaceStruct(boolean isStatic, ConcreteNamespaceCommand command, Map<String, Referable> refMap) {
       static void addNamespaceStruct(Scope.ScopeContext context, ConcreteNamespaceCommand cmd, Scope namespaceScope, List<NamespaceStruct> result) {
-        Collection<? extends Referable> elements = NamespaceCommandNamespace.resolveNamespace(cmd.isImport() ? namespaceScope.getImportedSubscope() : namespaceScope, cmd).getElements(context);
+        Collection<? extends Referable> elements = NamespaceCommandNamespace.resolveNamespace(namespaceScope.forNamespaceCommand(cmd), cmd).getElements(context);
         if (elements.isEmpty()) return;
         Map<String, Referable> map = new LinkedHashMap<>();
         for (Referable element : elements) {

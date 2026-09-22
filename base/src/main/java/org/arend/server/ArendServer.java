@@ -12,6 +12,7 @@ import org.arend.naming.reference.Referable;
 import org.arend.naming.reference.TCDefReferable;
 import org.arend.naming.resolving.typing.TypingInfo;
 import org.arend.naming.scope.Scope;
+import org.arend.server.imports.NamespaceCommandUsage;
 import org.arend.server.impl.DefinitionData;
 import org.arend.server.modifier.RawModifier;
 import org.arend.term.abs.AbstractReference;
@@ -169,6 +170,18 @@ public interface ArendServer {
    * @return the modifier and the list of long names that should be used to refer to the given referables.
    */
   @NotNull Pair<RawModifier, List<LongName>> makeReferencesAvailable(@NotNull List<LocatedReferable> referables, @Nullable ConcreteGroup group, @NotNull RawAnchor anchor, @NotNull ErrorReporter errorReporter);
+
+  /**
+   * Resolves {@param module} again in scopes that record which namespace command answered each
+   * lookup, and returns the result.
+   *
+   * <p>This says only what name resolution needs. An instance the typechecker picks is not a
+   * reference and leaves no trace here, so a caller deciding whether a command may be removed has
+   * to account for instances separately.
+   *
+   * @return the usage, or {@code null} if the module is unknown or has not been resolved yet.
+   */
+  @Nullable NamespaceCommandUsage getNamespaceCommandUsage(@NotNull ModuleLocation module);
 
   /**
    * @return the instance cache, which can be used to find available instances for a given class.

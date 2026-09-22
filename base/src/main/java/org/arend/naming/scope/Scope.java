@@ -1,6 +1,7 @@
 package org.arend.naming.scope;
 
 import org.arend.naming.reference.Referable;
+import org.arend.term.group.ConcreteNamespaceCommand;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -75,6 +76,13 @@ public interface Scope {
 
   default @Nullable ImportedScope getImportedSubscope() {
     return null;
+  }
+
+  /**
+   * @return the scope in which the module path of {@param command} is resolved.
+   */
+  default @Nullable Scope forNamespaceCommand(@NotNull ConcreteNamespaceCommand command) {
+    return command.isImport() ? getImportedSubscope() : this;
   }
 
   default @Nullable Scope resolveNamespace(List<? extends String> path) {
