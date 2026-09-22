@@ -1,0 +1,26 @@
+\import InfCat.Basics
+\import Logic
+\import Logic.Unique
+\import Paths
+
+\lemma DI-hom-ll-contr : Contr (dleft ~> dleft)
+  => Contr.make idd \lam p => inv (comp-equiv.flipped.f (dpath \lam k => conn-right (dpath \lam i => i) (p k))) *> comp_idd-left
+
+\lemma DI-hom-lr-contr : Contr (dleft ~> dright)
+  => Contr.make (dpath \lam i => i) \lam p => inv (comp-equiv.flipped.f (dpath \lam k => conn-right (dpath \lam i => i) (p k))) *> comp_idd-left
+
+\lemma DI-hom-rr-contr : Contr (dright ~> dright)
+  => Contr.make idd \lam p => inv (comp-char (dpath \lam k => conn-left (dpath \lam i => i) (p k))) *> comp_idd-right
+
+\func DI-hom-rl-empty (p : dright ~> dleft) : Empty
+  => coe+ (\lam i => iso+ (\lam _ => ()) (p i)) () dright
+
+\lemma DI-hom-prop {x y : DI} : isProp (x ~> y) \elim x
+  | dleft => \case \elim y \with {
+    | dleft => isContr=>isProp DI-hom-ll-contr
+    | dright => isContr=>isProp DI-hom-lr-contr
+  }
+  | dright => \case \elim y \with {
+    | dleft => \lam p => absurd (DI-hom-rl-empty p)
+    | dright => isContr=>isProp DI-hom-rr-contr
+  }
