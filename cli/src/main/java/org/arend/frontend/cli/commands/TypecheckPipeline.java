@@ -17,9 +17,10 @@ import org.arend.frontend.library.SourceLibrary;
 import org.arend.module.error.DefinitionNotFoundError;
 import org.arend.module.error.ModuleNotFoundError;
 import org.arend.naming.reference.GlobalReferable;
-import org.arend.naming.reference.LocatedReferable;
 import org.arend.naming.reference.TCDefReferable;
 import org.arend.prelude.Prelude;
+import org.arend.error.SourcePosition;
+import org.arend.server.ImportFinding;
 import org.arend.server.ProgressReporter;
 import org.arend.server.impl.ArendServerImpl;
 import org.arend.server.impl.DefinitionData;
@@ -38,6 +39,7 @@ import static org.arend.ext.prettyprinting.PrettyPrinterConfig.DEFAULT;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -58,6 +60,7 @@ public final class TypecheckPipeline {
   public static final String SHOW_SIZES = "show-sizes";
   public static final String SHOW_MODULES = "show-modules";
   public static final String SHOW_MODULES_WITH_INSTANCES = "show-modules-with-instances";
+  public static final String LINT = "lint";
 
   private TypecheckPipeline() {}
 
@@ -187,6 +190,11 @@ public final class TypecheckPipeline {
           showModules(ctx, library, false);
         }
 
+        if (cmdLine.hasOption(LINT)) {
+          System.out.println();
+          lint(ctx, library);
+        }
+
         if (ctx.doubleCheck && numWithErrors == 0) {
           System.out.println();
           System.out.println("--- Checking " + library.getLibraryName() + " ---");
@@ -216,10 +224,12 @@ public final class TypecheckPipeline {
         }
       }
     } else {
+      List<ModuleLocation> requestedLocations = new ArrayList<>();
       for (Pair<ModulePath, LongName> requested : ctx.requestedModules) {
         ModulePath modulePath = requested.proj1;
         LongName definitionName = requested.proj2;
         ModuleLocation module = ctx.server.findModule(modulePath, null, true, false);
+        if (module != null) requestedLocations.add(module);
         if (module == null) {
           ctx.systemErrErrorReporter.report(new ModuleNotFoundError(modulePath));
         } else if (definitionName != null) {
@@ -260,6 +270,11 @@ public final class TypecheckPipeline {
           }
         }
       }
+      if (cmdLine.hasOption(LINT)) {
+        System.out.println();
+        lint(ctx, requestedLocations);
+      }
+
       // See above: a cancelled run has nothing worth caching.
       if (ctx.serialize && !ctx.cancellation.isCanceled()) {
         // Persist all libraries that had modules typechecked
@@ -395,6 +410,46 @@ public final class TypecheckPipeline {
         }
       }
     }
+  }
+
+  private static void lint(CommandContext ctx, SourceLibrary library) {
+    List<ModuleLocation> modules = new ArrayList<>();
+    for (ModuleLocation module : ctx.server.getModules()) {
+      if (module.getLocationKind() == ModuleLocation.LocationKind.SOURCE && module.getLibraryName().equals(library.getLibraryName())) {
+        modules.add(module);
+      }
+    }
+    lint(ctx, modules);
+  }
+
+  private static void lint(CommandContext ctx, List<ModuleLocation> modules) {
+    if (ctx.exitWithError) {
+      System.out.println("Unused imports are not reported because the run has errors");
+      return;
+    }
+
+    List<ModuleLocation> sorted = new ArrayList<>(modules);
+    sorted.sort(Comparator.comparing(module -> module.getModulePath().toString()));
+
+    int total = 0;
+    for (ModuleLocation module : sorted) {
+      for (ImportFinding finding : ctx.server.getUnusedImports(module)) {
+        Object data = finding.data();
+        System.out.println((data instanceof SourcePosition ? data : module) + ": " + lintMessage(finding));
+        total++;
+      }
+    }
+    System.out.println(total == 0 ? "No unused imports" : "Unused imports: " + total);
+  }
+
+  private static String lintMessage(ImportFinding finding) {
+    String name = "'" + finding.name() + "'";
+    return switch (finding.kind()) {
+      case UNUSED_IMPORT -> "unused import of " + name;
+      case UNUSED_OPEN -> "unused open of " + name;
+      case UNUSED_NAME -> "unused imported name " + name;
+      case UNUSED_ALIAS -> "unused alias " + name;
+    };
   }
 
   private static void showModules(CommandContext ctx, SourceLibrary library, boolean allModules) {

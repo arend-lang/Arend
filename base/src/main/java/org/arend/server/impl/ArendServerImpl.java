@@ -638,6 +638,19 @@ public class ArendServerImpl implements ArendServer {
   }
 
   @Override
+  public @NotNull List<ImportFinding> getUnusedImports(@NotNull ModuleLocation module) {
+    NamespaceCommandUsage usage = getNamespaceCommandUsage(module);
+    ConcreteGroup group = getRawGroup(module);
+    if (usage == null || group == null) return Collections.emptyList();
+
+    List<ImportFinding> result = new ArrayList<>();
+    for (NamespaceCommandUsage.Part part : usage.getUnused(ImportUsageTracer.collectCommands(group))) {
+      result.add(part.renaming() == null ? ImportFinding.ofCommand(part.command()) : ImportFinding.ofName(part.command(), part.renaming()));
+    }
+    return result;
+  }
+
+  @Override
   public @Nullable Scope getReferableScope(@NotNull LocatedReferable referable) {
     if (referable.getKind() == GlobalReferable.Kind.CONSTRUCTOR || referable.getKind() == GlobalReferable.Kind.FIELD) {
       LocatedReferable parent = referable.getLocatedReferableParent();

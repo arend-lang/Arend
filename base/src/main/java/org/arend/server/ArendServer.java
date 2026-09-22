@@ -185,6 +185,16 @@ public interface ArendServer {
   @Nullable NamespaceCommandUsage getNamespaceCommandUsage(@NotNull ModuleLocation module);
 
   /**
+   * Reports the namespace commands of {@param module}, and the individual names inside them, that
+   * nothing in the module needs. Built on {@link #getNamespaceCommandUsage}.
+   *
+   * @return the findings in source order, or an empty list if the module cannot be analysed --
+   *         which is not the same as having nothing to report, so a caller that acts on the
+   *         result should first satisfy itself that the module was typechecked without errors.
+   */
+  @NotNull List<ImportFinding> getUnusedImports(@NotNull ModuleLocation module);
+
+  /**
    * @return the instance cache, which can be used to find available instances for a given class.
    */
   @NotNull InstanceCache getInstanceCache();
