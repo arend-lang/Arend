@@ -178,11 +178,16 @@ public class CoreDefinitionChecker extends BaseDefinitionTypechecker {
           link = link.getNext();
         }
 
-        boolean allDIAndTotal = true;
+        boolean someDIAndTotal = false;
         for (IntervalElim.CasePair casePair : intervalElim.getCases()) {
           if (!link.hasNext()) {
             errorReporter.report(new TypecheckingError("Interval elim has too many parameters", null));
             return false;
+          }
+
+          if (casePair.getLeftCase() == null && casePair.getRightCase() == null) {
+            link = link.getNext();
+            continue;
           }
 
           DataDefinition expectedType = casePair.isDirected() ? Prelude.DI : Prelude.INTERVAL;
@@ -191,8 +196,8 @@ public class CoreDefinitionChecker extends BaseDefinitionTypechecker {
             errorReporter.report(new TypeMismatchError(DataCallExpression.make(expectedType, Levels.EMPTY, Collections.emptyList()), link.getType(), null));
             return false;
           }
-          if (expectedType != Prelude.DI || link.getVariance() != BindingVariance.INVARIANT || casePair.getLeftCase() == null || casePair.getRightCase() == null) {
-            allDIAndTotal = false;
+          if (expectedType == Prelude.DI && link.getVariance() == BindingVariance.INVARIANT && casePair.getLeftCase() != null && casePair.getRightCase() != null) {
+            someDIAndTotal = true;
           }
 
           link = link.getNext();
@@ -200,7 +205,7 @@ public class CoreDefinitionChecker extends BaseDefinitionTypechecker {
 
         // TODO[double_check]: Check interval conditions
 
-        if (intervalElim.getOtherwise() == null && !allDIAndTotal) {
+        if (intervalElim.getOtherwise() == null && !someDIAndTotal) {
           errorReporter.report(new TypecheckingError("Missing non-interval clauses", null));
           return false;
         }

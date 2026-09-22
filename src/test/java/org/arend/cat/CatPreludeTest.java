@@ -339,4 +339,23 @@ public class CatPreludeTest extends TypeCheckingTestCase {
     typeCheckDef("\\func test : \\Type => DI", 1);
     assertThatErrorsAre(Matchers.typeMismatchError());
   }
+
+  @Test
+  public void doubleIntervalMatchTest() {
+    typeCheckModule("""
+      \\func test (i j : DI) : Nat \\elim i
+        | dleft => 0
+        | dright => 1
+      """);
+  }
+
+  @Test
+  public void doubleIntervalMatchError() {
+    typeCheckModule("""
+      \\func test (i :+ DI) (j : DI) : Nat \\elim i
+        | dleft => 0
+        | dright => 1
+      """, -1);
+  }
+
 }

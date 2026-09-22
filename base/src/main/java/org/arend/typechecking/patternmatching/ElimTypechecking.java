@@ -287,11 +287,10 @@ public class ElimTypechecking {
 
     boolean intervalClausesCoverEverything = false;
     if (cases != null && !cases.isEmpty()) {
-      intervalClausesCoverEverything = true;
       DependentLink link = DependentLink.Helper.get(parameters, DependentLink.Helper.size(parameters) - cases.size());
       for (IntervalElim.CasePair casePair : cases) {
-        if (casePair.proj1 == null || casePair.proj2 == null || !casePair.isDirected() || link.getVariance() != BindingVariance.INVARIANT) {
-          intervalClausesCoverEverything = false;
+        if (casePair.proj1 != null && casePair.proj2 != null && casePair.isDirected() && link.getVariance() == BindingVariance.INVARIANT) {
+          intervalClausesCoverEverything = true;
           break;
         }
         link = link.getNext();
