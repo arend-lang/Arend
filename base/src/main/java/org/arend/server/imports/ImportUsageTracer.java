@@ -5,6 +5,7 @@ import org.arend.error.DummyErrorReporter;
 import org.arend.ext.module.ModuleLocation;
 import org.arend.module.scopeprovider.ModuleScopeProvider;
 import org.arend.naming.reference.GlobalReferable;
+import org.arend.naming.reference.TCDefReferable;
 import org.arend.naming.resolving.visitor.DefinitionResolveNameVisitor;
 import org.arend.naming.scope.Scope;
 import org.arend.server.impl.ArendServerImpl;
@@ -44,16 +45,48 @@ public final class ImportUsageTracer {
   private ImportUsageTracer() {}
 
   /**
-   * @return how often each part of each namespace command of {@param module} was used, or
-   *         {@code null} if the module is unknown or has not been resolved yet.
+   * Traces {@param module} and charges the namespace commands that supplied the instances its
+   * definitions turned out to use, as well as the ones name resolution needed.
+   *
+   * @return {@code null} if the module is unknown, has not been resolved, or has a definition
+   *         without a usable core -- the state between name resolution and typechecking. Nothing
+   *         can be said about instances then, and an answer that ignored them would call an import
+   *         superfluous because the only thing needing it is invisible.
    */
   public static @Nullable NamespaceCommandUsage trace(@NotNull ArendServerImpl server, @NotNull ModuleLocation module) {
     GroupData groupData = server.getGroupData(module);
     if (groupData == null || !groupData.isResolved()) return null;
-    return trace(server, module, groupData.getRawGroup());
+    ConcreteGroup group = groupData.getRawGroup();
+
+    UsedInstances instances = UsedInstances.collect(group);
+    if (instances == null) return null;
+
+    Map<TCDefReferable, TracingLexicalScope> frames = new HashMap<>();
+    NamespaceCommandUsage usage = traceResolution(server, module, group, frames);
+
+    for (TCDefReferable definition : instances.getDefinitions()) {
+      TracingLexicalScope frame = frames.get(definition);
+      if (frame == null) continue;
+      for (TCDefReferable instance : instances.forDefinition(definition)) {
+        frame.chargeInstance(instance);
+      }
+    }
+    usage.setDefinitionsHidingInstances(instances.getDefinitionsHidingInstances());
+    return usage;
   }
 
-  public static @NotNull NamespaceCommandUsage trace(@NotNull ArendServerImpl server, @NotNull ModuleLocation module, @NotNull ConcreteGroup group) {
+  /**
+   * Traces only what name resolution needs, leaving instances out. Useful on its own to tell the
+   * two halves of the answer apart; a caller deciding whether a command may be removed wants
+   * {@link #trace}.
+   */
+  public static @Nullable NamespaceCommandUsage traceResolution(@NotNull ArendServerImpl server, @NotNull ModuleLocation module) {
+    GroupData groupData = server.getGroupData(module);
+    if (groupData == null || !groupData.isResolved()) return null;
+    return traceResolution(server, module, groupData.getRawGroup(), null);
+  }
+
+  private static @NotNull NamespaceCommandUsage traceResolution(@NotNull ArendServerImpl server, @NotNull ModuleLocation module, @NotNull ConcreteGroup group, @Nullable Map<TCDefReferable, TracingLexicalScope> frames) {
     Map<GlobalReferable, Concrete.GeneralDefinition> definitions = new HashMap<>();
     group.traverseGroup(subgroup -> {
       Concrete.ResolvableDefinition definition = subgroup.definition();
@@ -68,9 +101,15 @@ public final class ImportUsageTracer {
     ArendExtension extension = server.getExtensionProvider().getArendExtension(module.getLibraryName());
 
     new DefinitionResolveNameVisitor(new SimpleConcreteProvider(definitions), server.getTypingInfo(), DummyErrorReporter.INSTANCE, extension == null ? null : extension.getLiteralTypechecker(), null)
-      .withScopeFactory((subgroup, parent, isDynamicContext, withAdditionalContent) -> withAdditionalContent
-        ? TracingLexicalScope.insideOf(subgroup, parent, isDynamicContext, usage)
-        : new TracingLexicalScope(parent, subgroup, null, isDynamicContext, false, usage))
+      .withScopeFactory((subgroup, parent, isDynamicContext, withAdditionalContent) -> {
+        if (!withAdditionalContent) return new TracingLexicalScope(parent, subgroup, null, isDynamicContext, false, usage);
+        TracingLexicalScope scope = TracingLexicalScope.insideOf(subgroup, parent, isDynamicContext, usage);
+        // the scope a definition is resolved in is also the one its instance pool is built from
+        if (frames != null && !isDynamicContext && subgroup.definition() != null) {
+          frames.put(subgroup.definition().getData(), scope);
+        }
+        return scope;
+      })
       .resolveGroup(group, parentScope, new ArendInstances(), null);
 
     return usage;

@@ -21,8 +21,8 @@ import org.junit.Before;
 import org.junit.Test;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
-import java.util.TreeSet;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
@@ -75,15 +75,18 @@ public class ImportUsageTracerTest {
       .filter(error -> error.level.ordinal() >= GeneralError.Level.ERROR.ordinal()).toList());
 
     ModuleLocation module = moduleLoc(name);
-    NamespaceCommandUsage usage = ImportUsageTracer.trace((ArendServerImpl) server, module);
+    NamespaceCommandUsage usage = ImportUsageTracer.traceResolution((ArendServerImpl) server, module);
     assertNotNull("module " + name + " is not resolved", usage);
     ConcreteGroup group = server.getRawGroup(module);
     assertNotNull(group);
 
-    TreeSet<String> result = new TreeSet<>();
+    // a list rather than a set: two identical commands are two results, and a test that collapsed
+    // them could not tell "the second one is superfluous" from "both are"
+    List<String> result = new ArrayList<>();
     for (NamespaceCommandUsage.Part part : usage.getUnused(ImportUsageTracer.collectCommands(group))) {
       result.add(part.toString());
     }
+    Collections.sort(result);
     return String.join(", ", result);
   }
 

@@ -1,5 +1,6 @@
 package org.arend.server.imports;
 
+import org.arend.naming.reference.TCDefReferable;
 import org.arend.term.group.ConcreteNamespaceCommand;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -40,6 +41,7 @@ public final class NamespaceCommandUsage {
   private final Map<Part, Integer> myHits = new LinkedHashMap<>();
   private final Map<ConcreteNamespaceCommand, Set<Part>> myPathDependencies = new LinkedHashMap<>();
   private final List<ConcreteNamespaceCommand> mySinks = new ArrayList<>();
+  private Set<TCDefReferable> myDefinitionsHidingInstances = Collections.emptySet();
 
   /**
    * Runs {@param supplier} with every charge redirected to the dependencies of {@param command}
@@ -84,6 +86,21 @@ public final class NamespaceCommandUsage {
       }
     }
     return null;
+  }
+
+  void setDefinitionsHidingInstances(@NotNull Set<TCDefReferable> definitions) {
+    myDefinitionsHidingInstances = definitions;
+  }
+
+  /**
+   * The core of a {@code \lemma} or an {@code \axiom} keeps no body, so an instance used only
+   * there is charged to nothing and the command that supplied it can look superfluous. While this
+   * is not empty, {@link #getUnused} is an over-estimate.
+   *
+   * @return the definitions of the module whose instances could not be read.
+   */
+  public @NotNull Set<TCDefReferable> getDefinitionsHidingInstances() {
+    return Collections.unmodifiableSet(myDefinitionsHidingInstances);
   }
 
   public int getHits(@NotNull Part part) {

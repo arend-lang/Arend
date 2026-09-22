@@ -8,6 +8,7 @@ import org.arend.ext.module.LongName;
 import org.arend.ext.module.ModulePath;
 import org.arend.ext.module.ModuleLocation;
 import org.arend.ext.util.Pair;
+import org.arend.core.definition.Definition;
 import org.arend.module.error.DefinitionNotFoundError;
 import org.arend.module.error.ModuleNotFoundError;
 import org.arend.naming.reference.GlobalReferable;
@@ -41,6 +42,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Consumer;
 import java.util.logging.Logger;
@@ -402,6 +404,12 @@ public class ArendCheckerImpl implements ArendChecker {
           TypecheckingOrderingListener dependencyTypechecker = new TypecheckingOrderingListener(ArendCheckerFactory.DEFAULT, myServer.getInstanceScopeProvider(), ordering.getInstanceDependencies(), concreteProvider, listErrorReporter, dependencyCollector, new GroupComparator(myDependencies), myServer.getExtensionProvider(), myServer.getRequester(), myServer.doClearLemmas());
           TypecheckingOrderingListener typechecker = checkerFactory == null ? dependencyTypechecker : new TypecheckingOrderingListener(checkerFactory, myServer.getInstanceScopeProvider(), ordering.getInstanceDependencies(), concreteProvider, listErrorReporter, dependencyCollector, new GroupComparator(myDependencies), myServer.getExtensionProvider(), myServer.getRequester(), myServer.doClearLemmas());
 
+          // the double-checker re-elaborates what is already checked, so its instance choices are
+          // not the ones the definitions were built with; only the ordinary path records
+          Map<TCDefReferable, Set<TCDefReferable>> usedInstances = checkerFactory == null ? new ConcurrentHashMap<>() : null;
+          dependencyTypechecker.setUsedInstancesCollector(usedInstances);
+          typechecker.setUsedInstancesCollector(usedInstances);
+
           try {
             progressReporter.beginProcessing(collector.getElements().size());
             for (CollectingOrderingListener.Element element : collector.getElements()) {
@@ -472,6 +480,19 @@ public class ArendCheckerImpl implements ArendChecker {
                       myServer.getErrorService().resetDefinition(definition.getData());
                     }
                   }
+                }
+              }
+              if (usedInstances != null) {
+                // a definition that picked nothing still has a recorded set, so that "used none"
+                // can be told apart from "never recorded"
+                for (CollectingOrderingListener.Element element : collector.getElements()) {
+                  for (Concrete.ResolvableDefinition definition : element.getAllDefinitions()) {
+                    usedInstances.putIfAbsent(definition.getData(), Collections.emptySet());
+                  }
+                }
+                for (Map.Entry<TCDefReferable, Set<TCDefReferable>> entry : usedInstances.entrySet()) {
+                  Definition typechecked = entry.getKey().getTypechecked();
+                  if (typechecked != null) typechecked.setUsedInstances(Set.copyOf(entry.getValue()));
                 }
               }
               listErrorReporter.reportTo(myServer.getErrorService());

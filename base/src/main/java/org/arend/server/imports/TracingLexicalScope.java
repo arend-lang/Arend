@@ -2,9 +2,12 @@ package org.arend.server.imports;
 
 import org.arend.ext.module.ModuleLocation;
 import org.arend.ext.module.ModulePath;
+import org.arend.naming.reference.GlobalReferable;
 import org.arend.naming.reference.ModuleReferable;
 import org.arend.naming.reference.ParameterReferable;
+import org.arend.naming.reference.RedirectingReferable;
 import org.arend.naming.reference.Referable;
+import org.arend.naming.reference.TCDefReferable;
 import org.arend.naming.scope.*;
 import org.arend.term.group.ConcreteGroup;
 import org.arend.term.group.ConcreteNamespaceCommand;
@@ -53,6 +56,8 @@ public class TracingLexicalScope implements TracedScope {
   private final List<CommandScope> myCommands;
   private final EnumMap<ScopeContext, Map<String, Entry>> myElements = new EnumMap<>(ScopeContext.class);
   private final Map<String, Entry> myNamespaces = new HashMap<>();
+  private Map<TCDefReferable, NamespaceCommandUsage.Part> myPooledInstances;
+  private Set<TCDefReferable> myOwnInstances;
 
   private record CommandScope(@NotNull ConcreteNamespaceCommand command, @NotNull Scope namespace) {}
 
@@ -298,5 +303,81 @@ public class TracingLexicalScope implements TracedScope {
   @Override
   public @NotNull Map<String, Entry> getEntries(@NotNull ScopeContext context) {
     return myElements.get(context);
+  }
+
+  /**
+   * Charges whatever put {@param instance} into the instance pool this group is typechecked with.
+   *
+   * <p>The pool is not the scope: {@code DefinitionResolveNameVisitor.resolveGroup} fills it from
+   * the elements of each command regardless of whether their names are shadowed, so an instance
+   * stays available under a name that resolves to something else. The order is mirrored here --
+   * the instances a group declares itself come first, then its commands in reverse source order,
+   * then the pool it inherited -- because the typechecker takes the first match, and that is the
+   * entry whose command has to be kept.
+   *
+   * <p>An instance that needs no command charges nothing: one the group declares itself, or one
+   * reached from outside the module's own scopes, such as Prelude.
+   */
+  void chargeInstance(@NotNull TCDefReferable instance) {
+    chargeInstanceIn(this, instance);
+  }
+
+  private static boolean chargeInstanceIn(Scope scope, TCDefReferable instance) {
+    switch (scope) {
+      case TracingLexicalScope frame -> {
+        if (frame.getOwnInstances().contains(instance)) return true;
+        NamespaceCommandUsage.Part part = frame.getPooledInstances().get(instance);
+        if (part != null) {
+          frame.myUsage.charge(part);
+          return true;
+        }
+        return chargeInstanceIn(frame.myParent, instance);
+      }
+      case MergeScope merge -> {
+        for (Scope subScope : merge.getScopes()) {
+          if (chargeInstanceIn(subScope, instance)) return true;
+        }
+        return false;
+      }
+      default -> {
+        return false;
+      }
+    }
+  }
+
+  private Set<TCDefReferable> getOwnInstances() {
+    if (myOwnInstances == null) {
+      myOwnInstances = new HashSet<>();
+      for (ConcreteStatement statement : myGroup.statements()) {
+        if (statement.group() != null) addInstance(statement.group().referable(), myOwnInstances);
+      }
+      for (ConcreteGroup dynamicGroup : myGroup.dynamicGroups()) {
+        addInstance(dynamicGroup.referable(), myOwnInstances);
+      }
+    }
+    return myOwnInstances;
+  }
+
+  private static void addInstance(Referable referable, Set<TCDefReferable> result) {
+    if (referable instanceof TCDefReferable defRef && defRef.getKind() == GlobalReferable.Kind.INSTANCE) {
+      result.add(defRef);
+    }
+  }
+
+  private Map<TCDefReferable, NamespaceCommandUsage.Part> getPooledInstances() {
+    if (myPooledInstances == null) {
+      myPooledInstances = new HashMap<>();
+      // later commands are prepended to the pool, so they are the ones the search reaches first
+      for (int i = myCommands.size() - 1; i >= 0; i--) {
+        CommandScope command = myCommands.get(i);
+        for (Referable element : command.namespace().getElements(ScopeContext.STATIC)) {
+          Referable original = RedirectingReferable.getOriginalReferable(element);
+          if (original instanceof TCDefReferable defRef && defRef.getKind() == GlobalReferable.Kind.INSTANCE) {
+            myPooledInstances.putIfAbsent(defRef, NamespaceCommandUsage.partOf(command.command(), element.getRefName()));
+          }
+        }
+      }
+    }
+    return myPooledInstances;
   }
 }

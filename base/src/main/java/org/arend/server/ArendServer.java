@@ -172,14 +172,15 @@ public interface ArendServer {
   @NotNull Pair<RawModifier, List<LongName>> makeReferencesAvailable(@NotNull List<LocatedReferable> referables, @Nullable ConcreteGroup group, @NotNull RawAnchor anchor, @NotNull ErrorReporter errorReporter);
 
   /**
-   * Resolves {@param module} again in scopes that record which namespace command answered each
-   * lookup, and returns the result.
+   * Reports which namespace commands of {@param module} its content needs: those that answered a
+   * lookup when the module is resolved again in scopes that record what each command supplied, and
+   * those that put into the instance pool an instance the typechecker turned out to pick.
    *
-   * <p>This says only what name resolution needs. An instance the typechecker picks is not a
-   * reference and leaves no trace here, so a caller deciding whether a command may be removed has
-   * to account for instances separately.
-   *
-   * @return the usage, or {@code null} if the module is unknown or has not been resolved yet.
+   * @return the usage, or {@code null} if the module is unknown, has not been resolved, or has a
+   *         definition without a usable core. The last is the state of a module between name
+   *         resolution and typechecking: the instances are not known yet, so neither is the
+   *         answer, and reporting one would call an import superfluous on the strength of not
+   *         having looked.
    */
   @Nullable NamespaceCommandUsage getNamespaceCommandUsage(@NotNull ModuleLocation module);
 
