@@ -13,14 +13,15 @@ import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.progress.ProgressIndicator
 import com.intellij.profile.codeInspection.InspectionProjectProfileManager
 import com.intellij.psi.PsiElement
-import org.arend.codeInsight.OptimizationResult
-import org.arend.codeInsight.getOptimalImportStructure
-import org.arend.codeInsight.processRedundantImportedDefinitions
+import com.intellij.psi.util.parentOfType
+import org.arend.codeInsight.getUnusedImports
+import org.arend.server.ImportFinding
 import org.arend.inspection.ArendUnusedImportInspection
 import org.arend.intention.ArendOptimizeImportsQuickFix
 import org.arend.psi.ArendFile
 import org.arend.psi.ext.ArendNsId
 import org.arend.psi.ext.ArendStat
+import org.arend.psi.ext.ArendStatCmd
 import org.arend.util.ArendBundle
 import org.jetbrains.annotations.Nls
 
@@ -28,7 +29,7 @@ class ArendUnusedImportHighlightingPass(private val file: ArendFile, private val
     TextEditorHighlightingPass(file.project, editor.document) {
 
     @Volatile
-    private var optimizationResult: OptimizationResult? = null
+    private var findings: List<ImportFinding> = emptyList()
 
     @Volatile
     private var redundantElements: List<PsiElement> = emptyList()
@@ -36,14 +37,17 @@ class ArendUnusedImportHighlightingPass(private val file: ArendFile, private val
     override fun doCollectInformation(progress: ProgressIndicator) {
         if (file.isRepl) return
 
-        val currentOptimizationResult = getOptimalImportStructure(file, progress)
-        val (fileImports, openStructure, _) = currentOptimizationResult
-        val toErase = mutableListOf<PsiElement>()
-        processRedundantImportedDefinitions(file, fileImports, openStructure) {
-            toErase.add(it)
+        val currentFindings = getUnusedImports(file) ?: return
+        // a command is greyed out as a whole statement, which is also what carries the keyword the
+        // message below reads; a name is greyed out on its own
+        redundantElements = currentFindings.mapNotNull {
+            when (val element = it.data()) {
+                is ArendNsId -> element
+                is ArendStatCmd -> element.parentOfType<ArendStat>()
+                else -> null
+            }
         }
-        optimizationResult = currentOptimizationResult
-        redundantElements = toErase
+        findings = currentFindings
     }
 
     private fun registerUnusedThing(
@@ -55,9 +59,8 @@ class ArendUnusedImportHighlightingPass(private val file: ArendFile, private val
         val key = HighlightDisplayKey.find(ArendUnusedImportInspection.ID)
         val highlightInfoType = if (key == null) HighlightInfoType.UNUSED_SYMBOL else HighlightInfoType.HighlightInfoTypeImpl(profile.getErrorLevel(key, element).severity, HighlightInfoType.UNUSED_SYMBOL.attributesKey)
         val builder = UnusedSymbolUtil.createUnusedSymbolInfoBuilder(element, description, highlightInfoType, ArendUnusedImportInspection.ID)
-        val actualOptimizationResult = optimizationResult
-        if (actualOptimizationResult != null) {
-            val intentionAction = QuickFixWrapper.wrap(InspectionManager.getInstance(element.project).createProblemDescriptor(element, description, ArendOptimizeImportsQuickFix(actualOptimizationResult), ProblemHighlightType.GENERIC_ERROR_OR_WARNING, true), 0)
+        if (findings.isNotEmpty()) {
+            val intentionAction = QuickFixWrapper.wrap(InspectionManager.getInstance(element.project).createProblemDescriptor(element, description, ArendOptimizeImportsQuickFix(findings), ProblemHighlightType.GENERIC_ERROR_OR_WARNING, true), 0)
             builder.registerFix(intentionAction, null, null, null, null)
         }
         builder.create()?.let {

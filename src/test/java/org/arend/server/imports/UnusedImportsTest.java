@@ -37,12 +37,20 @@ import java.util.Set;
 import static org.junit.Assert.*;
 
 /**
- * An instance is never written down, so nothing about it shows up when a module is resolved. These
- * check the other half of the answer: the namespace command that put into the instance pool an
- * instance the typechecker turned out to pick is charged too, and until the module is typechecked
- * there is no answer to give at all.
+ * What {@link org.arend.server.ArendServer#getUnusedImports} reports, over the shapes that make it
+ * hard.
+ *
+ * <p>The answer has two halves and they fail differently. Name resolution decides which command
+ * supplied each written name, which is where shadowing, qualifiers, aliases and renamings bite.
+ * Instances are decided by the typechecker and never written down at all, so nothing about them
+ * survives a resolve; they are recorded where they are picked and read back here. Most tests below
+ * ask for the whole answer, as the IDE and {@code --lint} do; a few contrast the halves on purpose
+ * by asking {@link ImportUsageTracer#traceResolution} for the resolution half alone.
+ *
+ * <p>These cover what the IDE's OptimizeImportsTest used to, now that deciding what is unused
+ * happens on the server rather than over the PSI tree.
  */
-public class UsedInstancesTest {
+public class UnusedImportsTest {
   private static final String LIB_NAME = "test_library";
 
   /** The class and the instance live apart, so the import of the instance is needed for it alone. */
@@ -119,6 +127,267 @@ public class UsedInstancesTest {
     NamespaceCommandUsage usage = server.getNamespaceCommandUsage(moduleLoc(name));
     assertNotNull("no usage for " + name, usage);
     return render(usage, server.getRawGroup(moduleLoc(name)));
+  }
+
+  // ------------------------------------------------------------------ plain imports
+
+  @Test
+  public void anImportNothingRefersToIsUnused() {
+    addModule("Foo", "\\func f => 1");
+    addModule("Main", "\\import Foo\n\n\\func g => 2");
+    assertEquals("\\import Foo", unused("Main"));
+  }
+
+  @Test
+  public void anImportThatBringsInAUsedNameIsKept() {
+    addModule("Foo", "\\func f => 1");
+    addModule("Main", "\\import Foo\n\n\\func g => f");
+    assertEquals("", unused("Main"));
+  }
+
+  @Test
+  public void onlyTheNamesOfAnExplicitImportThatAreUnusedAreReported() {
+    addModule("Foo", "\\func f => 1\n\\func g => 2\n\\func h => 3");
+    addModule("Main", "\\import Foo (f, g, h)\n\n\\func r => f Nat.+ h");
+    assertEquals("\\import Foo (g)", unused("Main"));
+  }
+
+  /** When a command is needed for nothing at all, it is reported once, not once per renaming. */
+  @Test
+  public void anExplicitImportWhoseNamesAreAllUnusedIsReportedAsAWhole() {
+    addModule("Foo", "\\func f => 1\n\\func g => 2");
+    addModule("Main", "\\import Foo (f, g)\n\n\\func r => 3");
+    assertEquals("\\import Foo (f, g)", unused("Main"));
+  }
+
+  /** A using-command keeps bringing in the rest of the module, so only the renaming is reported. */
+  @Test
+  public void aUsingCommandSurvivesTheLossOfAllItsRenamings() {
+    addModule("Foo", "\\func f => 1\n\\func g => 2");
+    addModule("Main", "\\import Foo \\using (f \\as ff)\n\n\\func r => g");
+    assertEquals("\\import Foo (f \\as ff)", unused("Main"));
+  }
+
+  @Test
+  public void anOpenInAWhereBlockIsChargedByTheDefinitionItServes() {
+    addModule("Main", """
+        \\module M \\where { \\func f : Nat => 1 }
+
+        \\func g : Nat => f
+          \\where \\open M
+        """);
+    assertEquals("", unused("Main"));
+  }
+
+  @Test
+  public void anUnusedOpenInAWhereBlockIsReported() {
+    addModule("Main", """
+        \\module M \\where { \\func f : Nat => 1 }
+
+        \\func g : Nat => 1
+          \\where \\open M
+        """);
+    assertEquals("\\open M", unused("Main"));
+  }
+
+  @Test
+  public void aRenamedImportIsKeptWhenTheNewNameIsUsed() {
+    addModule("Foo", "\\func f => 1");
+    addModule("Main", "\\import Foo (f \\as g)\n\n\\func h => g");
+    assertEquals("", unused("Main"));
+  }
+
+  @Test
+  public void aRenamedImportIsReportedWhenOnlyTheOldNameWouldMatch() {
+    addModule("Foo", "\\func f => 1\n\\func g => 2");
+    addModule("Main", "\\import Foo (f \\as ff, g)\n\n\\func h => g");
+    assertEquals("\\import Foo (f \\as ff)", unused("Main"));
+  }
+
+  @Test
+  public void hidingLeavesTheRestOfTheImportInPlace() {
+    addModule("Foo", "\\func f => 1\n\\func g => 2");
+    addModule("Main", "\\import Foo \\hiding (f)\n\n\\func h => g");
+    assertEquals("", unused("Main"));
+  }
+
+  // ------------------------------------------------------------------ qualified references
+
+  /** {@code Foo.f} needs the import, because only an import puts {@code Foo} in the file's scope. */
+  @Test
+  public void aQualifiedReferenceKeepsTheImportItGoesThrough() {
+    addModule("Foo", "\\func f => 1");
+    addModule("Main", "\\import Foo\n\n\\func g => Foo.f");
+    assertEquals("", unused("Main"));
+  }
+
+  @Test
+  public void aQualifiedReferenceIsChargedToTheLongestImportItGoesThrough() {
+    addModule("Bar.Baz", "\\func foo => 0");
+    addModule("Bar.Baz.Qux", "\\func bar => 1");
+    addModule("Main", "\\import Bar.Baz\n\\import Bar.Baz.Qux\n\n\\func g => Bar.Baz.Qux.bar");
+    assertEquals("\\import Bar.Baz", unused("Main"));
+  }
+
+  // ------------------------------------------------------------------ shadowing
+
+  /** Two commands bringing in the same name: the first one binds it, the second never answers. */
+  @Test
+  public void theSecondOfTwoIdenticalOpensIsUnused() {
+    addModule("Main", "\\module M \\where { \\func f => 1 }\n\n\\open M\n\\open M\n\n\\func g => f");
+    assertEquals("\\open M", unused("Main"));
+  }
+
+  @Test
+  public void anOpenShadowedByALocalDefinitionIsUnused() {
+    addModule("Main", "\\module M \\where { \\func f => 1 }\n\n\\open M\n\n\\func f => 2\n\n\\func g => f");
+    assertEquals("\\open M", unused("Main"));
+  }
+
+  @Test
+  public void anOpenIsKeptWhenItIsTheOneThatWinsTheName() {
+    addModule("A", "\\func f => 1");
+    addModule("B", "\\func f => 2");
+    addModule("Main", "\\import A\n\\import B\n\n\\func g => f");
+    assertEquals("\\import B", unused("Main"));
+  }
+
+  // ------------------------------------------------------------------ nesting and paths
+
+  /** An {@code \open} whose own path needs another command keeps that command alive. */
+  @Test
+  public void anOpenKeepsTheCommandItsPathGoesThrough() {
+    addModule("Main", """
+        \\open Outer (Inner)
+
+        \\module Bar \\where {
+          \\open Inner
+
+          \\func bar => foobar
+        }
+
+        \\module Outer \\where {
+          \\module Inner \\where {
+            \\func foobar => 100
+          }
+        }
+        """);
+    assertEquals("", unused("Main"));
+  }
+
+  /** The mirror image: an unused {@code \open} must not keep its own path alive. */
+  @Test
+  public void anUnusedOpenDoesNotKeepTheCommandItsPathGoesThrough() {
+    addModule("Main", """
+        \\open Outer (Inner)
+
+        \\module Bar \\where {
+          \\open Inner
+        }
+
+        \\module Outer \\where {
+          \\module Inner \\where {
+            \\func foobar => 100
+          }
+        }
+        """);
+    assertEquals("\\open Inner, \\open Outer (Inner)", unused("Main"));
+  }
+
+  @Test
+  public void anOpenUsedOnlyInsideASubgroupIsKept() {
+    addModule("Foo", "\\func f => 1");
+    addModule("Main", "\\import Foo\n\n\\func g => 1 \\where \\func h => f");
+    assertEquals("", unused("Main"));
+  }
+
+  @Test
+  public void anImportUsedOnlyByADefinitionInAWhereBlockIsKept() {
+    addModule("Foo", "\\data Bar");
+    addModule("Main", "\\import Foo\n\n\\func f => 1 \\where \\func g : Bar => {?}");
+    assertEquals("", unused("Main"));
+  }
+
+  // ------------------------------------------------------------------ aliases, constructors, fields
+
+  /** An alias is a name of its own; opening under it is a use. */
+  @Test
+  public void openingADefinitionUnderItsAliasIsAUse() {
+    addModule("Main", """
+        \\module M \\where {
+          \\func foo \\alias fu (a : Nat) => a
+        }
+
+        \\module M1 \\where {
+          \\open M (fu)
+
+          \\func lol => 1 Nat.+ fu 2
+        }
+        """);
+    assertEquals("", unused("Main"));
+  }
+
+  @Test
+  public void aConstructorUsedInAPatternKeepsItsImport() {
+    addModule("Foo", "\\data D | d Nat");
+    addModule("Main", "\\import Foo (D, d)\n\n\\func foo (x : D) : Nat \\elim x\n  | d n => 1");
+    assertEquals("", unused("Main"));
+  }
+
+  @Test
+  public void aFieldReferredToOutsideItsClassKeepsItsOpen() {
+    // R is classified by T, so the implicit {r : R Nat} is a local instance the field can be
+    // resolved against; without the \open, the bare `rr` would not resolve at all
+    addModule("Foo", "\\class R (T : \\Type) | rr : T");
+    addModule("Main", "\\import Foo (R)\n\\open R\n\n\\func f {r : R Nat} : Nat => rr");
+    assertEquals("", unused("Main"));
+  }
+
+  /** A field reached through the dynamic scope of the enclosing class needs no command. */
+  @Test
+  public void aFieldReachedThroughTheEnclosingClassNeedsNoOpen() {
+    addModule("Main", """
+        \\record R {
+          | rr : Nat
+
+          \\func f : Nat => rr
+        }
+
+        \\open R
+
+        \\func g : Nat => 1
+        """);
+    assertEquals("\\open R", unused("Main"));
+  }
+
+  /** A definition inside a class body resolves through the merged dynamic scope of that class. */
+  @Test
+  public void anImportUsedFromADynamicSubgroupIsKept() {
+    addModule("Foo", "\\class A { | a : Nat }");
+    addModule("Main", """
+        \\import Foo
+
+        \\class C {
+          \\data D \\where {
+            \\func g {x : A} : Nat => 1
+          }
+        }
+        """);
+    assertEquals("", unused("Main"));
+  }
+
+  // ------------------------------------------------------------------ prelude
+
+  @Test
+  public void preludeNeedsNoImport() {
+    addModule("Main", "\\func f : Nat => 1");
+    assertEquals("", unused("Main"));
+  }
+
+  @Test
+  public void anExplicitPreludeImportIsChargedLikeAnyOther() {
+    addModule("Main", "\\import Prelude (Nat)\n\n\\func f : Nat => 0");
+    assertEquals("", unused("Main"));
   }
 
   // ------------------------------------------------------------------ the core is required
@@ -380,5 +649,209 @@ public class UsedInstancesTest {
     NamespaceCommandUsage usage = server.getNamespaceCommandUsage(moduleLoc("Main"));
     assertNotNull(usage);
     assertEquals("[]", usage.getDefinitionsHidingInstances().toString());
+  }
+
+  // ------------------------------------------- shapes migrated from the IDE OptimizeImportsTest
+
+  /** Everything is in one file and reached by qualifier, so no command is involved at all. */
+  @Test
+  public void aQualifierInsideTheSameFileNeedsNothing() {
+    addModule("Main", """
+        \\data Bar \\where {
+          \\data R \\where {
+            \\func f : Nat => 1
+          }
+        }
+
+        \\func g => Bar.R.f
+        """);
+    assertEquals("", unused("Main"));
+  }
+
+  /** Prelude's Array is in scope unimported, so a \\new over it charges nothing. */
+  @Test
+  public void aPreludeRecordUsedInANewExpressionNeedsNothing() {
+    addModule("Main", "\\func f => \\new Array { | A => Nat | len => 1 | at (0) => 1 }");
+    assertEquals("", unused("Main"));
+  }
+
+  /** A field used by a definition inside its own record resolves through the dynamic scope. */
+  @Test
+  public void aFieldUsedByADynamicDefinitionOfItsOwnRecordNeedsNothing() {
+    addModule("Main", """
+        \\record R {
+          | r : Nat
+
+          \\func rrr : Fin r => {?}
+        }
+        """);
+    assertEquals("", unused("Main"));
+  }
+
+  /** Two classes exporting the same name: each use goes through its own receiver, not a command. */
+  @Test
+  public void aFieldReachedThroughItsReceiverNeedsNoCommand() {
+    addModule("Main", """
+        \\class A { | n : Nat  \\func f : Nat => n }
+
+        \\class B { | n : Nat  \\func f : Nat => n }
+
+        \\func h {a : A} => a.f
+        \\func g {b : B} => b.f
+        """);
+    assertEquals("", unused("Main"));
+  }
+
+  /** A field inherited from a superclass is reached without opening anything. */
+  @Test
+  public void anInheritedFieldNeedsNoCommand() {
+    addModule("Main", "\\class R (rr : Nat)\n\n\\class E \\extends R\n  | ee : Fin rr");
+    assertEquals("", unused("Main"));
+  }
+
+  /** The \\open is what makes B writable bare in the body of a class that extends A. */
+  @Test
+  public void anOpenIsKeptWhenItsNameIsUsedInsideAnExtension() {
+    addModule("Main", """
+        \\open A (B)
+
+        \\class A \\where \\record B
+
+        \\class E \\extends A {
+          | f : B
+        }
+        """);
+    assertEquals("", unused("Main"));
+  }
+
+  /** The \\open is inside the instance's own \\where and serves its coclause. */
+  @Test
+  public void anOpenInAnInstanceWhereBlockIsKept() {
+    addModule("Main", """
+        \\class A (E : \\Type) {
+          | + : E -> E -> E
+        }
+
+        \\instance a : A Nat
+          | + => +
+        \\where {
+          \\open Nat (+)
+        }
+        """);
+    assertEquals("", unused("Main"));
+  }
+
+  /** A qualified \\open of a record nested in a module, from a definition's \\where block. */
+  @Test
+  public void aQualifiedOpenOfANestedRecordIsKept() {
+    addModule("Main", """
+        \\module M \\where {
+          \\record R
+            | field : Nat
+        }
+
+        \\func asdzxc {r : M.R} => field
+          \\where
+            \\open M.R(field)
+        """);
+    assertEquals("", unused("Main"));
+  }
+
+  /** An \\open whose path names a definition rather than a module. */
+  @Test
+  public void anOpenOfTheWhereBlockOfADefinitionIsKept() {
+    addModule("Main", """
+        \\module A \\where {
+          \\module B \\where {
+            \\func f => 1
+            \\where {
+              \\func g => {?}
+            }
+            \\open B.f
+
+            \\func h => g
+          }
+        }
+        """);
+    assertEquals("", unused("Main"));
+  }
+
+  @Test
+  public void anUnusedOpenInTheWhereBlockOfADefinitionIsReported() {
+    addModule("Main", "\\module M \\where \\func f => 1\n\n\\func g => 1\n\\where { \\open M }");
+    assertEquals("\\open M", unused("Main"));
+  }
+
+  /** The name the command renames to is then used as a qualifier. */
+  @Test
+  public void aRenamedNameUsedAsAQualifierIsAUse() {
+    addModule("Main", """
+        \\module M \\where {
+          \\func foo \\alias fu (a : Nat) => a \\where
+            \\func lol => 101
+        }
+
+        \\module M1 \\where {
+          \\open M (fu \\as foobar)
+
+          \\func lol => 1 Nat.+ foobar.lol
+        }
+        """);
+    assertEquals("", unused("Main"));
+  }
+
+  /** Opening the module being edited, to bring one of its own instances into the pool. */
+  @Test
+  public void anOpenOfTheOwnModuleForAnInstanceIsKept() {
+    addModule("Main", """
+        \\class R | n : Nat
+
+        \\func ff {_ : R} => 10
+
+        \\instance G' : R | n => 2
+
+        \\module M \\where {
+          \\open Main (G')
+
+          \\func f : Nat => ff
+        }
+        """);
+    assertEquals("", unused("Main"));
+  }
+
+  /** The same name reached through a file in one group and a local module in another. */
+  @Test
+  public void theSameNameFromAFileAndFromALocalModuleKeepsBoth() {
+    addModule("Foo", "\\func f => 1");
+    addModule("Main", """
+        \\import Foo
+
+        \\func g => f
+        \\module M \\where { \\func f => 2 }
+
+        \\module N \\where {
+          \\open M
+          \\func h => f
+        }
+        """);
+    assertEquals("", unused("Main"));
+  }
+
+  /** A renamed field opened inside the \\where block of a lemma. */
+  @Test
+  public void aRenamedFieldOpenedForALemmaIsKept() {
+    addModule("Main", """
+        \\data Unit | unit
+
+        \\class Op {
+          | f : Unit
+        }
+
+        \\lemma foo {o : Op} : Unit => f'
+        \\where {
+          \\open Op(f \\as f')
+        }
+        """);
+    assertEquals("", unused("Main"));
   }
 }

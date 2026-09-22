@@ -17,6 +17,7 @@ import com.intellij.usageView.UsageViewDescriptor
 import com.intellij.usageView.UsageViewUtil
 import com.intellij.util.containers.MultiMap
 import com.intellij.util.containers.SortedList
+import org.arend.codeInsight.removeUnusedImports
 import org.arend.codeInsight.*
 import org.arend.codeInsight.ArendCodeInsightUtils.Companion.getExternalParameters
 import org.arend.ext.module.LongName
@@ -419,9 +420,7 @@ class ArendMoveRefactoringProcessor(project: Project,
 
         //Optimize imports
         if (myOptimizeImportsAfterMove) {
-            val optimalStructure = getOptimalImportStructure(mySourceContainer)
-            val (fileImports, optimalTree, _) = optimalStructure
-            processRedundantImportedDefinitions(mySourceContainer, fileImports, optimalTree, importRemover)
+            removeUnusedImports(mySourceContainer)
         }
 
         //Invoke move callback
