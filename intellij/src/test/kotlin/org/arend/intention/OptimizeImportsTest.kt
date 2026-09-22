@@ -1,28 +1,11 @@
 package org.arend.intention
 
-import com.intellij.application.options.CodeStyle
 import com.intellij.openapi.command.WriteCommandAction
-import com.intellij.openapi.components.service
-import com.intellij.psi.util.PsiTreeUtil
 import org.arend.*
 import org.arend.codeInsight.ArendImportOptimizer
-import org.arend.core.definition.FunctionDefinition
-import org.arend.ext.ArendExtension
-import org.arend.ext.LiteralTypechecker
-import org.arend.ext.concrete.expr.ConcreteExpression
-import org.arend.ext.module.LongName
-import org.arend.ext.reference.ExpressionResolver
-import org.arend.ext.typechecking.ContextData
 import org.arend.psi.ArendFile
-import org.arend.psi.ext.ArendDefFunction
-import org.arend.psi.ext.ArendDefInstance
 import org.arend.quickfix.QuickFixTestBase
-import org.arend.server.ArendServerService
-import org.arend.server.impl.ArendLibraryImpl
-import org.arend.settings.ArendCustomCodeStyleSettings
-import org.arend.settings.ArendCustomCodeStyleSettings.*
 import org.arend.util.ArendBundle
-import java.math.BigInteger
 
 class OptimizeImportsTest : QuickFixTestBase() {
 
@@ -32,20 +15,7 @@ class OptimizeImportsTest : QuickFixTestBase() {
         return testProject
     }
 
-    private inline fun doWithSettings(policy : OptimizeImportsPolicy, action : () -> Unit) {
-        val settings = CodeStyle.createTestSettings()
-        val arendSettings = settings.getCustomSettings(ArendCustomCodeStyleSettings::class.java)
-        arendSettings.OPTIMIZE_IMPORTS_POLICY = policy
-        arendSettings.EXPLICIT_IMPORTS_LIMIT = 5000
-        CodeStyle.setTemporarySettings(myFixture.project, settings)
-        try {
-            action()
-        } finally {
-            CodeStyle.dropTemporarySettings(myFixture.project)
-        }
-    }
-
-    private fun doTest(before: String, after: String, beforeTypecheck: () -> Unit = {}, afterTypecheck: () -> Unit = {}) {
+    private fun doSoftTest(before: String, after: String, beforeTypecheck: () -> Unit = {}, afterTypecheck: () -> Unit = {}) {
         val fileTree = fileTreeFromText(before)
         fileTree.prepareFileSystem()
         beforeTypecheck()
@@ -57,22 +27,8 @@ class OptimizeImportsTest : QuickFixTestBase() {
         myFixture.checkResult(replaceCaretMarker(after.trimIndent()))
     }
 
-    private fun doExplicitTest(
-        before: String,
-        after: String,
-        beforeTypecheck: () -> Unit = {},
-        afterTypecheck: () -> Unit = {}) = doWithSettings(OptimizeImportsPolicy.ONLY_EXPLICIT) { doTest(before, after, beforeTypecheck, afterTypecheck) }
-
-    private fun doImplicitTest(
-        before: String,
-        after: String) = doWithSettings(OptimizeImportsPolicy.ONLY_IMPLICIT) { doTest(before, after) }
-
-    private fun doSoftTest(
-        before: String,
-        after: String) = doWithSettings(OptimizeImportsPolicy.SOFT) { doTest(before, after) }
-
     fun `test prelude`() {
-        doExplicitTest("""
+        doSoftTest("""
             -- ! Main.ard
             \func foo : Nat => 1
             """, """
@@ -80,82 +36,8 @@ class OptimizeImportsTest : QuickFixTestBase() {
             """)
     }
 
-    fun `test constructor`() {
-        doExplicitTest("""
-            -- ! Main.ard
-            \import Foo
-            
-            \func foo : Bar => bar
-            -- ! Foo.ard
-            \data Bar | bar
-            """, """
-            \import Foo (Bar, bar)
-            
-            \func foo : Bar => bar
-            """
-        )
-    }
-
-    fun `test partially qualified name`() {
-        doExplicitTest("""
-            -- ! Bar.ard
-            \module A \where {
-              \func bar : Nat => {?}            
-            }
-            
-            -- ! Main.ard
-            \import Bar
-            
-            \func foo : Nat => A.bar
-            """, """
-            \import Bar (A)
-            
-            \func foo : Nat => A.bar
-            """
-        )
-    }
-
-    fun `test import func`() {
-        doExplicitTest("""
-            -- ! Bar.ard
-            \func f : Nat => 1
-            
-            -- ! Main.ard
-            \import Bar
-            
-            \func foo : Nat => f
-            """, """
-            \import Bar (f)
-            
-            \func foo : Nat => f
-            """
-        )
-    }
-
-    fun `test alphabetic order`() {
-        doExplicitTest("""
-            -- ! ZZZ.ard
-            \func z : Nat => 1
-            
-            -- ! AAA.ard
-            \func a : Nat => 1
-            
-            -- ! Main.ard
-            \import ZZZ
-            \import AAA
-            
-            \func foo : z = a => idp
-            """, """
-            \import AAA (a)
-            \import ZZZ (z)
-            
-            \func foo : z = a => idp
-            """,
-        )
-    }
-
     fun `test same-package modularized usage`() {
-        doExplicitTest("""
+        doSoftTest("""
             -- ! Main.ard
             \data Bar \where {
               \data R \where {
@@ -177,7 +59,7 @@ class OptimizeImportsTest : QuickFixTestBase() {
     }
 
     fun `test same-package in-module usage`() {
-        doExplicitTest("""
+        doSoftTest("""
             -- ! Main.ard
             \data Bar \where {
               \func foo : Nat => 1
@@ -194,20 +76,7 @@ class OptimizeImportsTest : QuickFixTestBase() {
         )
     }
 
-    fun `test in-prelude import`() {
-        doExplicitTest("""
-            \open Nat
-
-            \func xx : 1 + 1 = 1 + 1 => idp
-            """, """
-            \open Nat (+)
-
-            \func xx : 1 + 1 = 1 + 1 => idp
-            """,
-        )
-    }
-
-    private val collidedDefinitions = """
+private val collidedDefinitions = """
         -- ! Foo.ard
         \func foo => () \where \func apply => ()
 
@@ -215,108 +84,8 @@ class OptimizeImportsTest : QuickFixTestBase() {
         
     """
 
-    fun `test collision 1`() {
-        doExplicitTest("""
-            $collidedDefinitions
-            -- ! Main.ard
-            \import Foo
-            
-            \func f : foo.apply = bar.apply => {?}
-            """, """
-            \import Foo (bar, foo)
-            
-            \func f : foo.apply = bar.apply => {?}
-            """,
-        )
-    }
-
-    fun `test collision 2`() {
-        doExplicitTest("""
-            $collidedDefinitions
-            -- ! Main.ard
-            \import Foo
-            \open foo
-            
-            \func f : apply = bar.apply => {?}
-            """, """
-            \import Foo (bar, foo)
-            \open foo (apply)
-            
-            \func f : apply = bar.apply => {?}
-            """,
-        )
-    }
-
-    fun `test collision 3`() {
-        doExplicitTest("""
-            $collidedDefinitions
-            -- ! Main.ard
-            \import Foo
-
-            \module A \where {
-              \open foo
-            
-              \func f => apply
-            }
-            
-            \module B \where {
-              \open bar
-            
-              \func f => apply
-            }
-            """, """
-            \import Foo (bar, foo)
-            
-            \module A \where {
-              \open foo (apply)
-            
-              \func f => apply
-            }
-            
-            \module B \where {
-              \open bar (apply)
-            
-              \func f => apply
-            }
-            """,
-        )
-    }
-
-    fun `test single import`() {
-        doExplicitTest("""
-            -- ! Foo.ard
-            \data Bar
-            
-            -- ! Main.ard
-            \import Foo
-            \func f => 1 \where \func g : Bar => {?}
-            """, """
-            \import Foo (Bar)
-
-            \func f => 1 \where \func g : Bar => {?}
-            """,
-        )
-    }
-
-    fun `test local module`() {
-        doExplicitTest("""
-            -- ! Main.ard
-            \module M \where { \func x => 1 }
-            \open M
-            
-            \func f => x
-            """, """
-            \open M (x)
-
-            \module M \where { \func x => 1 }
-            
-            \func f => x
-            """,
-        )
-    }
-
     fun `test self-contained datatype`() {
-        doExplicitTest(
+        doSoftTest(
             """
             -- ! Main.ard
             \data D (a : Nat)
@@ -329,7 +98,7 @@ class OptimizeImportsTest : QuickFixTestBase() {
     }
 
     fun `test self-contained function`() {
-        doExplicitTest(
+        doSoftTest(
             """
             -- ! Main.ard
             \func foo => bar
@@ -337,54 +106,12 @@ class OptimizeImportsTest : QuickFixTestBase() {
         """, """
             \func foo => bar
               \where \func bar => 1
-        """
-        )
-    }
-
-    fun `test constructor in pattern`() {
-        doExplicitTest(
-            """
-            -- ! Foo.ard
-            \data D | d Nat
-            -- ! Main.ard
-            \import Foo
-            
-            \func foo (dd : D) : Nat \elim dd
-              | d n => 1
-        """, """
-            \import Foo (D, d)
-            
-            \func foo (dd : D) : Nat \elim dd
-              | d n => 1
-        """
-        )
-    }
-
-    fun `test record`() {
-        doExplicitTest(
-            """
-            -- ! Foo.ard
-            \record R {
-              | rr : Nat
-            }
-            -- ! Main.ard
-            \import Foo
-            
-            \func f : R \cowith {
-              | rr => 1
-            }
-        """, """
-            \import Foo (R)
-
-            \func f : R \cowith {
-              | rr => 1
-            }
         """
         )
     }
 
     fun `test definition in where`() {
-        doExplicitTest(
+        doSoftTest(
             """
             -- ! Main.ard
             \func f => gg \where
@@ -392,39 +119,12 @@ class OptimizeImportsTest : QuickFixTestBase() {
         """, """
             \func f => gg \where
               \data g | gg
-        """
-        )
-    }
-
-    fun `test no big space`() {
-        doExplicitTest(
-            """
-            -- ! Main.ard
-            \open M
-
-            -- a comment
-            
-            \module M \where {
-              \func f => 1
-            }
-            
-            \func g => f
-        """, """
-            \open M (f)
-
-            -- a comment
-            
-            \module M \where {
-              \func f => 1
-            }
-            
-            \func g => f
         """
         )
     }
 
     fun `test array`() {
-        doExplicitTest(
+        doSoftTest(
             """
             -- ! Main.ard
             \func f => \new Array { | A => \lam _ => Nat
@@ -439,7 +139,7 @@ class OptimizeImportsTest : QuickFixTestBase() {
     }
 
     fun `test dynamic definition`() {
-        doExplicitTest(
+        doSoftTest(
             """
             -- ! Main.ard
             \record R {
@@ -452,59 +152,13 @@ class OptimizeImportsTest : QuickFixTestBase() {
               | r : Nat
             
               \func rrr : Fin r => {?}
-            }
-        """
-        )
-    }
-
-    fun `test instance`() {
-        doExplicitTest(
-            """
-            -- ! Foo.ard
-            \class R (rr : Nat)
-            -- ! Main.ard
-            \import Foo (R)
-            \open R
-            
-            \func f {r : R} : Fin rr => {?}
-        """, """
-            \import Foo (R)
-            \open R (rr)
-            
-            \func f {r : R} : Fin rr => {?}
-        """
-        )
-    }
-
-    fun `test dynamic subgroup`() {
-        doExplicitTest(
-            """
-            -- ! Foo.ard
-            \class A {
-              | a : Nat
-            }
-            -- ! Main.ard
-            \import Foo
-
-            \class C {
-              \data D \where {
-                \func g {x : A} : Fin a => {?}
-              }
-            }
-        """, """
-            \import Foo (A, a)
-
-            \class C {
-              \data D \where {
-                \func g {x : A} : Fin a => {?}
-              }
             }
         """
         )
     }
 
     fun `test record field`() {
-        doExplicitTest(
+        doSoftTest(
             """
             -- ! Main.ard
             \record R {
@@ -523,7 +177,7 @@ class OptimizeImportsTest : QuickFixTestBase() {
     }
 
     fun `test record parameter`() {
-        doExplicitTest(
+        doSoftTest(
             """
             -- ! Main.ard
             \open R (rr)
@@ -542,7 +196,7 @@ class OptimizeImportsTest : QuickFixTestBase() {
     }
 
     fun `test two exporting classes`() {
-        doExplicitTest(
+        doSoftTest(
             """
             -- ! Main.ard
             \class A {
@@ -570,262 +224,12 @@ class OptimizeImportsTest : QuickFixTestBase() {
             
             \func h {a : A} => a.f
             \func g {b : B} => b.f
-        """
-        )
-    }
-
-    fun `test instance import when module name is shadowed by a definition`() {
-        doExplicitTest(
-            """
-            -- ! Foo.ard
-            \class Foo (E : \Type) {
-              \field cmp (x y : E) : Nat
-            }
-            -- ! Foo/Fin.ard
-            \import Foo
-
-            \instance FinOrd (n : Nat) : Foo (Fin n)
-              | cmp _ _ => 0
-            -- ! Main.ard
-            \import Foo
-            \import Foo.Fin
-
-            \func test {n : Nat} (i j : Fin (suc n)) : Nat => cmp i j
-        """, """
-            \import Foo (cmp)
-            \import Foo.Fin (FinOrd)
-
-            \func test {n : Nat} (i j : Fin (suc n)) : Nat => cmp i j
-        """
-        )
-    }
-
-    /**
-     * A definition loaded from a binary has a referable that carries no PSI, so an instance must be
-     * recognized by where it is defined rather than by its PSI. Dropping the data of the referable
-     * reproduces that state on a source module.
-     */
-    fun `test instance import when the referable of the instance carries no psi`() {
-        doExplicitTest(
-            """
-            -- ! Foo.ard
-            \class Foo (E : \Type) {
-              \field cmp (x y : E) : Nat
-            }
-            -- ! Bar.ard
-            \import Foo
-
-            \instance NatOrd : Foo Nat
-              | cmp _ _ => 0
-            -- ! Main.ard
-            \import Bar
-            \import Foo
-
-            \func test (i j : Nat) : Nat => cmp i j
-        """, """
-            \import Bar (NatOrd)
-            \import Foo (cmp)
-
-            \func test (i j : Nat) : Nat => cmp i j
-        """,
-            afterTypecheck = {
-                val instanceFile = myFixture.psiManager.findFile(myFixture.findFileInTempDir("Bar.ard")!!) as ArendFile
-                PsiTreeUtil.findChildOfType(instanceFile, ArendDefInstance::class.java)!!.tcReferable!!.setData(null)
-            }
-        )
-    }
-
-    fun `test instance import from a submodule of a module`() {
-        doExplicitTest(
-            """
-            -- ! Foo.ard
-            \class Foo (E : \Type) {
-              \field cmp (x y : E) : Nat
-            }
-            -- ! Bar/Baz.ard
-            \func foo => 0
-            -- ! Bar/Baz/Qux.ard
-            \import Foo
-
-            \instance FinOrd (n : Nat) : Foo (Fin n)
-              | cmp _ _ => 0
-            -- ! Main.ard
-            \import Bar.Baz.Qux
-            \import Foo
-
-            \func test {n : Nat} (i j : Fin (suc n)) : Nat => cmp i j
-        """, """
-            \import Bar.Baz.Qux (FinOrd)
-            \import Foo (cmp)
-
-            \func test {n : Nat} (i j : Fin (suc n)) : Nat => cmp i j
-        """
-        )
-    }
-
-    fun `test instance import when instance name is equal to module name`() {
-        doExplicitTest(
-            """
-            -- ! Foo.ard
-            \class Foo (E : \Type) {
-              \field cmp (x y : E) : Nat
-            }
-            -- ! Bar.ard
-            \import Foo
-
-            \instance Bar : Foo Nat
-              | cmp _ _ => 0
-            -- ! Main.ard
-            \import Bar
-            \import Foo
-
-            \func test (i j : Nat) : Nat => cmp i j
-        """, """
-            \import Bar (Bar)
-            \import Foo (cmp)
-
-            \func test (i j : Nat) : Nat => cmp i j
-        """
-        )
-    }
-
-    /**
-     * The server drops the body of every `\lemma` right after typechecking it, so an instance used only
-     * in a proof leaves no trace in the core. Dropping the body by hand reproduces that state.
-     */
-    fun `test instance import when the instance is used only in a lemma`() {
-        doExplicitTest(
-            """
-            -- ! Foo.ard
-            \class Foo (E : \Type) {
-              \field cmp (x y : E) : Nat
-            }
-            -- ! Bar.ard
-            \import Foo
-
-            \instance NatOrd : Foo Nat
-              | cmp _ _ => 0
-            -- ! Main.ard
-            \import Bar
-            \import Foo
-
-            \lemma test {P : \Prop} (f : Nat -> P) : P => f (cmp 0 0)
-        """, """
-            \import Bar (NatOrd)
-            \import Foo (cmp)
-
-            \lemma test {P : \Prop} (f : Nat -> P) : P => f (cmp 0 0)
-        """,
-            afterTypecheck = {
-                val lemma = PsiTreeUtil.findChildOfType(myFixture.file, ArendDefFunction::class.java)!!
-                (lemma.tcReferable!!.typechecked as FunctionDefinition).setBody(null)
-            }
-        )
-    }
-
-    /**
-     * A numeric literal is turned into a reference by the language extension, which looks the name up in
-     * the scope of the literal. Nothing in the file refers to that name, so the import bringing it in has
-     * to be kept all the same.
-     */
-    fun `test import needed by the name a numeric literal resolves to`() {
-        doExplicitTest(
-            """
-            -- ! Foo.ard
-            \class Foo (E : \Type) {
-              | ide : E
-            }
-
-            \func foo => 0
-            -- ! Main.ard
-            \import Foo
-
-            \func test => foo Nat.+ 1
-        """, """
-            \import Foo (Foo, foo)
-
-            \func test => foo Nat.+ 1
-        """,
-            beforeTypecheck = { setIdeNumberResolver() }
-        )
-    }
-
-    private fun setIdeNumberResolver() {
-        (project.service<ArendServerService>().server.getLibrary(library.name) as? ArendLibraryImpl)?.extension = object : ArendExtension {
-            override fun getLiteralTypechecker() = object : LiteralTypechecker {
-                override fun resolveNumber(number: BigInteger, resolver: ExpressionResolver, contextData: ContextData): ConcreteExpression? {
-                    if (number != BigInteger.ONE) return null
-                    val ref = resolver.resolveLongName(LongName("Foo", "ide")) ?: return null
-                    return contextData.factory.ref(ref)
-                }
-            }
-        }
-    }
-
-    fun `test implicit instance import`() {
-        doExplicitTest(
-            """
-            -- ! Foo.ard
-            \class A (T : \Type) {
-              | t : T
-            }
-            
-            \instance nat : A Nat 1
-            -- ! Main.ard
-            \import Foo
-
-            \func p : Nat => t
-        """, """
-            \import Foo (nat, t)
-
-            \func p : Nat => t
-        """
-        )
-    }
-
-    fun `test implicit instance import 2`() {
-        doExplicitTest(
-            """
-            -- ! Foo.ard
-            \class A (T : \Type) {
-              | t : T
-            }
-            
-            \instance nat : A Nat 1
-            
-            \data D | d
-            \instance dd : A D d
-            -- ! Main.ard
-            \import Foo
-
-            \func p : Nat => t
-        """, """
-            \import Foo (nat, t)
-
-            \func p : Nat => t
-        """
-        )
-    }
-
-    fun `test file does not appear in import`() {
-        doExplicitTest(
-            """
-            -- ! Foo.ard
-            \func foo => 1
-            -- ! Main.ard
-            \import Foo
-
-            \func p => Foo.foo
-        """, """
-            \import Foo (foo)
-
-            \func p => Foo.foo
         """
         )
     }
 
     fun `test extension`() {
-        doExplicitTest(
+        doSoftTest(
             """
             -- ! Main.ard
             \class R (rr : Nat)
@@ -842,7 +246,7 @@ class OptimizeImportsTest : QuickFixTestBase() {
     }
 
     fun `test extension3`() {
-        doExplicitTest(
+        doSoftTest(
             """
             -- ! Main.ard
             \open A (B)
@@ -863,10 +267,9 @@ class OptimizeImportsTest : QuickFixTestBase() {
         """
         )
     }
-
 
     fun `test shadowed import`() {
-        doExplicitTest(
+        doSoftTest(
             """
             -- ! Main.ard
             \class A (E : \Type) {
@@ -888,98 +291,12 @@ class OptimizeImportsTest : QuickFixTestBase() {
             \where {
               \open Nat (+)
             } 
-        """
-        )
-    }
-
-    fun `test remove where`() {
-        doExplicitTest(
-            """
-            -- ! Main.ard
-            \module M \where {}
-
-            \module N
-              \open M
-        """, """
-            \module M
-            
-            \module N
-              
-        """
-        )
-    }
-
-    fun `test remove where 2`() {
-        doExplicitTest(
-            """
-            -- ! Main.ard
-            \module M \where {}
-
-            \module N \where {
-              \open M            
-            }
-        """, """
-            \module M
-            
-            \module N 
-        """
-        )
-    }
-
-    fun `test import from file and group`() {
-        doExplicitTest(
-            """
-            -- ! Foo.ard
-            \func f => 1
-            -- ! Main.ard
-            \import Foo
-            
-            \func g => f
-            \module M \where { \func f => 2 }
-
-            \module N \where {
-              \open M 
-              \func h => f
-            }
-        """, """
-            \import Foo (f)
-            
-            \func g => f
-            \module M \where { \func f => 2 }
-            
-            \module N \where {
-              \open M (f)
-            
-              \func h => f
-            }
-        """
-        )
-    }
-
-    fun `test deep open`() {
-        doExplicitTest(
-            """
-            -- ! Main.ard
-            \func f => a \where {
-              \class E {
-                \func a => 1
-              }
-              \open E (a)
-            }
-        """, """
-            \open f.E (a)
-            
-            \func f => a \where {
-              \class E {
-                \func a => 1
-              }
-            }
         """
         )
     }
 
     fun `test can import identifier without opening a class`() {
-        doExplicitTest(
+        doSoftTest(
             """
             -- ! Foo.ard
             \class A {
@@ -998,7 +315,7 @@ class OptimizeImportsTest : QuickFixTestBase() {
     }
 
     fun `test renamed import`() {
-        doExplicitTest(
+        doSoftTest(
             """
                 -- ! Foo.ard
                 \func f => 1
@@ -1015,7 +332,7 @@ class OptimizeImportsTest : QuickFixTestBase() {
     }
 
     fun `test implicit import`() {
-        doImplicitTest("""
+        doSoftTest("""
             -- ! Foo.ard
             \func f => 1
             -- ! Main.ard
@@ -1029,47 +346,8 @@ class OptimizeImportsTest : QuickFixTestBase() {
         """)
     }
 
-    fun `test implicit import with module`() {
-        doImplicitTest("""
-            -- ! Main.ard
-            \module M \where {
-              \func f : Nat => 4
-              \func g => 5
-            }
-            
-            \module K \where {
-              \func f : Nat => 3
-            }
-            
-            \module N \where {
-              \open M \hiding (f)
-              \open K
-            
-              \func h => f
-              \func h' => g
-            }
-        """, """
-            \open K
-            \open M \hiding (f)
-            
-            \module M \where {
-              \func f : Nat => 4
-              \func g => 5
-            }
-            
-            \module K \where {
-              \func f : Nat => 3
-            }
-            
-            \module N \where {
-              \func h => f
-              \func h' => g
-            }
-        """)
-    }
-
     fun `test implicit import combined with open`() {
-        doImplicitTest("""
+        doSoftTest("""
             -- ! Foo.ard
             \func f => 2
             \func g2 => 3
@@ -1096,64 +374,8 @@ class OptimizeImportsTest : QuickFixTestBase() {
         """)
     }
 
-    fun `test nested implicit import`() {
-        doImplicitTest("""
-            -- ! Foo.ard
-            \func f => 2
-            -- ! Main.ard
-            \import Foo
-            \open K
-            
-            \module K \where {
-              \func f => 4
-              \func g => 5
-            }
-            
-            \module G \where {
-              \open K (g)
-              \func h => f
-              \func j => g
-            }
-        """, """
-            \import Foo
-            \open K \hiding (f)
-            
-            \module K \where {
-              \func f => 4
-              \func g => 5
-            }
-            
-            \module G \where {
-              \func h => f
-              \func j => g
-            }
-        """)
-    }
-
-    fun `test implicit imports with implicit collision`() {
-        doImplicitTest("""
-            -- ! Foo.ard
-            \func f => 2
-            \func g => 3
-            -- ! Bar.ard
-            \func f => 4
-            \func h => 5
-            -- ! Main.ard
-            \import Foo
-            \import Bar \hiding (f)
-            \func g' => g
-            \func h' => h
-        """, """
-            \import Bar
-            \import Foo \hiding (f)
-            
-            \func g' => g
-            \func h' => h
-        """)
-    }
-
     fun `test implicit imports with class`() {
-        doImplicitTest("""
+        doSoftTest("""
             -- ! Foo.ard
             \class F {
               | ff : Nat
@@ -1529,23 +751,6 @@ class OptimizeImportsTest : QuickFixTestBase() {
 
             \func lol => 1 Nat.+ fu 2
     """)
-
-    // the alias is what the file writes, so it is the name the optimizer has to write back
-    fun `test alias is preserved when rewriting an import`() {
-        doExplicitTest("""
-            -- ! Foo.ard
-            \func foo \alias fu (a : Nat) => a
-            -- ! Main.ard
-            \import Foo
-
-            \func lol => 1 Nat.+ fu 2
-            """, """
-            \import Foo (fu)
-
-            \func lol => 1 Nat.+ fu 2
-            """
-        )
-    }
 
     fun testOptimizeImports2() = checkNoQuickFixes(
         ArendBundle.message("arend.optimize.imports.intention.name"), """

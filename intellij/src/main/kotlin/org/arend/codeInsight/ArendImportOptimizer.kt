@@ -35,8 +35,6 @@ import org.arend.psi.ext.*
 import org.arend.refactoring.getCompleteWhere
 import org.arend.server.ArendServer
 import org.arend.server.ArendServerService
-import org.arend.settings.ArendCustomCodeStyleSettings
-import org.arend.settings.ArendCustomCodeStyleSettings.OptimizeImportsPolicy
 import org.arend.term.concrete.Concrete
 import org.arend.typechecking.provider.ConcreteProvider
 import org.arend.typechecking.visitor.CollectDefCallsVisitor
@@ -53,17 +51,16 @@ import java.util.Collections.singletonList
 import kotlin.reflect.jvm.internal.impl.utils.SmartSet
 
 /**
- * Import optimization is performed in 3 phases:
- * 1) Collecting all references in the file. Responsible code is in [ImportStructureCollector].
- * This stage determines _what_ should be referenced and with _what qualifier_.
- * Global instances are gathered from core expressions if they exist or from the scope in the other case.
+ * Removes the \import and \open commands a file does without, and the unused names inside them.
  *
- * 2) Optimizing ns-commands structure. Responsible code is in [MutableFrame.contract].
- * This stage determines _where_ should go _what_ import.
- * It removes an \open in a child group if parent group should have this \open.
+ * It works in two phases: [ImportStructureCollector] collects every reference in the file, with the
+ * qualifier it was written under, and [MutableFrame.contract] works out which command each one
+ * needs -- an \open in a child group counts as used only when the parent does not already supply
+ * the name. What is left over is what [importRemover] deletes.
  *
- * 3) Writing changes to the file. Responsible code is in [psiModificationRunnable].
- * @see ArendCustomCodeStyleSettings.OptimizeImportsPolicy
+ * Nothing is moved and nothing is rewritten: `\import Foo (a, b, c)` never becomes `\import Foo`,
+ * and a command stays in the group it was written in. The imports of the file are sorted
+ * alphabetically, which is the one change to layout.
  */
 class ArendImportOptimizer : ImportOptimizer {
 
@@ -71,51 +68,16 @@ class ArendImportOptimizer : ImportOptimizer {
 
     override fun processFile(file: PsiFile): Runnable {
         if (file !is ArendFile) return EmptyRunnable.getInstance()
-        val optimizationResult = getOptimalImportStructure(file)
-        return psiModificationRunnable(file, optimizationResult)
+        return psiModificationRunnable(file, getOptimalImportStructure(file))
     }
 
     internal fun psiModificationRunnable(
         file: ArendFile,
         optimizationResult: OptimizationResult,
     ) = object : ImportOptimizer.CollectingInfoRunnable {
-        val settings = CodeStyle.getCustomSettings(file, ArendCustomCodeStyleSettings::class.java)
 
         override fun run() {
             val (fileImports, optimalTree, _) = optimizationResult
-            if (settings.OPTIMIZE_IMPORTS_POLICY == OptimizeImportsPolicy.SOFT) {
-                optimizeImportsSoftly(fileImports, optimalTree)
-            } else {
-                optimizeImportsHard(fileImports, optimalTree)
-            }
-        }
-
-        private fun optimizeImportsHard(
-            fileImports: Map<FilePath, Set<ImportedName>>,
-            optimalTree: OptimalModuleStructure
-        ) {
-            val definitelyToHide = HashMap<String, Referable>()
-            val fileScopeProvider = getScopeProvider(true, file)
-            fileImports.forEach { (path, names) ->
-                val scope = fileScopeProvider(path) ?: return@forEach
-                names.forEach { refName ->
-                    scope.resolveName(refName.visibleName)?.let { definitelyToHide[refName.visibleName] = it }
-                }
-            }
-            optimalTree.usages.forEach { (path, names) ->
-                val scope = fileScopeProvider(path) ?: return@forEach
-                names.forEach { refName ->
-                    scope.resolveName(refName.visibleName)?.let { definitelyToHide[refName.visibleName] = it }
-                }
-            }
-            addFileImports(file, fileImports, definitelyToHide)
-            addModuleOpens(file, optimalTree, definitelyToHide)
-        }
-
-        private fun optimizeImportsSoftly(
-            fileImports: Map<FilePath, Set<ImportedName>>,
-            optimalTree: OptimalModuleStructure
-        ) {
             processRedundantImportedDefinitions(file, fileImports, optimalTree, importRemover)
             val factory = ArendPsiFactory(file.project)
             val allImports = file.statements.filter { it.statCmd?.isImport == true }.map {
@@ -219,126 +181,6 @@ private fun visitModuleInconsistencies(action : (ArendCompositeElement) -> Unit,
     }
 }
 
-private val LOG = Logger.getInstance(ArendImportOptimizer::class.java)
-
-@RequiresWriteLock
-private fun addFileImports(
-    file: ArendFile,
-    imports: Map<ModulePath, Set<ImportedName>>,
-    allIdentifiers: HashMap<String, Referable>,
-) {
-    eraseNamespaceCommands(file)
-    doAddNamespaceCommands(file, imports, allIdentifiers,"\\import")
-}
-
-@RequiresWriteLock
-private fun addModuleOpens(
-        group: ArendGroup,
-        rootStructure: OptimalModuleStructure?,
-        alreadyImported: HashMap<String, Referable>
-) {
-    if (group !is PsiFile) {
-        eraseNamespaceCommands(group)
-    }
-    if (rootStructure != null && rootStructure.usages.isNotEmpty()) {
-        doAddNamespaceCommands(group, rootStructure.usages, alreadyImported)
-    }
-    for (subgroup in group.statements.flatMap { stat -> stat.group?.let { listOf(it) + it.dynamicSubgroups } ?: emptyList() }) {
-        val substructure = rootStructure?.subgroups?.find { it.name == subgroup.name }
-        val subset = if (substructure == null) alreadyImported else HashMap(alreadyImported)
-        addModuleOpens(subgroup, substructure, subset) // remove nested opens
-    }
-}
-
-private fun doAddNamespaceCommands(
-        group: ArendGroup,
-        importMap: Map<ModulePath, Set<ImportedName>>,
-        alreadyImported: MutableMap<String, Referable>,
-        prefix: String = "\\open"
-) {
-    val importStatements = mutableListOf<String>()
-    val settings = CodeStyle.getCustomSettings(group.containingFile, ArendCustomCodeStyleSettings::class.java)
-    val scopeProvider = getScopeProvider(prefix == "\\open", group)
-    for ((path, identifiers) in importMap.toSortedMap { a, b -> a.toList().joinToString().compareTo(b.toList().joinToString()) }) {
-        if (path.toList().isEmpty()) continue
-        if (settings.OPTIMIZE_IMPORTS_POLICY == OptimizeImportsPolicy.ONLY_IMPLICIT || identifiers.size > settings.EXPLICIT_IMPORTS_LIMIT) {
-            importStatements.add(createImplicitImport(prefix, path, scopeProvider, alreadyImported, identifiers.mapToSet(ImportedName::visibleName)))
-            scopeProvider(path)?.globalSubscope?.getElements(null)?.forEach { alreadyImported[it.refName] = it }
-        } else {
-            importStatements.add(createExplicitImport("$prefix ${path.toList().joinToString(".")}", identifiers))
-        }
-    }
-    if (importStatements.isEmpty()) {
-        return
-    }
-    val factory = ArendPsiFactory(group.project)
-    val (groupContainer, anchorElement) = if (group is ArendFile) {
-        group to group.statements.lastOrNull { it.statCmd != null }
-    } else {
-        val where = getCompleteWhere(group, factory)
-        where to where.lbrace
-    }
-    val commands = factory.createFromText(importStatements.joinToString(" "))?.statements ?: return
-    for (command in commands.reversed()) {
-        if (anchorElement == null)
-            groupContainer.addBefore(command, group.firstChild)
-        else
-            groupContainer.addAfter(command, anchorElement)
-    }
-}
-
-fun getScopeProvider(isForModule: Boolean, group: ArendGroup): ScopeProvider {
-    val server = group.project.service<ArendServerService>().server
-    return if (isForModule) {
-        { (if (group is ArendFile) {
-            group.moduleLocation?.let { moduleLocation -> getFileScope(group.project, moduleLocation) }
-        } else {
-            getReferableScope(group as? ReferableBase<*>)
-        })?.resolveNamespace(it.toList()) }
-    } else {
-        { path -> server.getModuleScopeProvider(null, true).forModule(path) }
-    }
-}
-
-private fun createExplicitImport(
-    longPrefix: String,
-    identifiers: Set<ImportedName>
-) = longPrefix + identifiers.map { it.toString() }.sorted().joinToString(", ", " (", ")")
-
-private typealias ScopeProvider = (ModulePath) -> Scope?
-
-private fun createImplicitImport(
-    prefix: String,
-    modulePath: ModulePath,
-    scopeProvider: ScopeProvider,
-    alreadyImportedNames: Map<String, Referable>,
-    toImportHere: Set<String>
-) : String {
-    // todo: modules with equal names from different libraries
-    val currentScope = scopeProvider(modulePath)
-    if (currentScope == null) {
-        LOG.error("No library containing required module found while optimizing imports. Please report it to maintainers")
-    }
-    currentScope!!
-    val namesToHide = currentScope.globalSubscope.getElements(null).mapNotNull { ref -> ref.refName.takeIf { it !in toImportHere && it in alreadyImportedNames && alreadyImportedNames[it] != ref } }
-    val baseName = "$prefix ${modulePath.toList().joinToString(".")}"
-    return if (namesToHide.isEmpty()) {
-        baseName
-    } else {
-        "$baseName ${namesToHide.joinToString(", ", "\\hiding (", ")")}"
-    }
-}
-
-@RequiresWriteLock
-private fun eraseNamespaceCommands(group: ArendGroup) {
-    val statCommands = group.statements.filter { it.namespaceCommand != null }
-    val deleteWhere = statCommands.size == group.statements.size
-    statCommands.forEach { it.delete() }
-    if (deleteWhere) {
-        group.where?.delete()
-    }
-}
-
 data class ImportedName(val original: String, val renamed: String?) {
     // `original` has to be spelled the way `visitReferenceElement` spells `characteristics`:
     // the declared name when the item is renamed with `\as`, and otherwise the name as written,
@@ -416,10 +258,9 @@ internal fun getOptimalImportStructure(group: ArendGroup, progressIndicator: Pro
     val file = (group.containingFile as ArendFile)
     val forbiddenFilesToImport = setOfNotNull(file.moduleLocation?.modulePath, Prelude.MODULE_PATH)
     val collector = ImportStructureCollector(rootFrame, progressIndicator)
-    val settings = CodeStyle.getCustomSettings(file, ArendCustomCodeStyleSettings::class.java)
 
     group.accept(collector)
-    rootFrame.contract(collector.allDefinitionsTypechecked, collector.fileImports.values.flatMapTo(HashSet()) { it }, settings)
+    rootFrame.contract(collector.allDefinitionsTypechecked, collector.fileImports.values.flatMapTo(HashSet()) { it })
         .forEach { (file, ids) -> collector.fileImports.computeIfAbsent(file) { HashSet() }.addAll(ids) }
     return OptimizationResult(collector.fileImports.filter { it.key !in forbiddenFilesToImport }, rootFrame.asOptimalTree(), collector.allDefinitionsTypechecked)
 }
@@ -629,8 +470,14 @@ private data class MutableFrame(
             reverseMapping
         })
 
-    fun contract(useTypecheckedInstances: Boolean, fileImports: Set<ImportedName>, settings: ArendCustomCodeStyleSettings): Map<ModulePath, Set<ImportedName>> {
-        val submaps = subgroups.map { it.contract(useTypecheckedInstances, fileImports, settings) }
+    /**
+     * Works out which group each identifier is needed in, so that a command a parent already
+     * covers is not counted as used in a child. Nothing is lifted or erased: the caller only
+     * deletes commands that come out unused, so an identifier reachable from a parent still
+     * leaves the child's own usage in place.
+     */
+    fun contract(useTypecheckedInstances: Boolean, fileImports: Set<ImportedName>): Map<ModulePath, Set<ImportedName>> {
+        val submaps = subgroups.map { it.contract(useTypecheckedInstances, fileImports) }
         val additionalFiles = mutableMapOf<FilePath, MutableSet<ImportedName>>()
         submaps.forEach {
             it.forEach { (filePath, ids) ->
@@ -640,21 +487,7 @@ private data class MutableFrame(
         val allInnerIdentifiers = subgroups.flatMapTo(HashSet()) { it.usages.keys }
 
         for (identifier in allInnerIdentifiers) {
-            if (usages.containsKey(identifier)) {
-                // the subgroups that open something to bring this identifier will shadow it
-                subgroups.forEach {
-                    // the 'open' of parent group will be inherited
-                    if (it.usages.containsKey(identifier)) {
-                        if (settings.OPTIMIZE_IMPORTS_POLICY != OptimizeImportsPolicy.SOFT) it.usages.remove(identifier)
-                    }
-                }
-            }
             if (definitions.contains(identifier.visibleName) || (name == "" && fileImports.contains(identifier))) {
-                subgroups.forEach {
-                    if (it.usages[identifier] == usages[identifier]) {
-                        if (settings.OPTIMIZE_IMPORTS_POLICY != OptimizeImportsPolicy.SOFT) it.usages.remove(identifier)
-                    }
-                }
                 continue
             }
             val paths = subgroups.mapNotNullTo(SmartSet.create()) { it.usages[identifier] }
@@ -666,7 +499,6 @@ private data class MutableFrame(
             } else {
                 // identifier is unique for each of the submodules, import for it can be lifted
                 usages[identifier] = paths.first()
-                if (settings.OPTIMIZE_IMPORTS_POLICY != OptimizeImportsPolicy.SOFT) subgroups.forEach { it.usages.remove(identifier) }
             }
         }
         // the order is important. Implicitly used instances are not inherited, so they should be adder after erasing unnecessary usages

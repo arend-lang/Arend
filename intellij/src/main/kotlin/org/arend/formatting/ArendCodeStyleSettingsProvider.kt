@@ -4,7 +4,6 @@ import com.intellij.application.options.*
 import com.intellij.lang.Language
 import com.intellij.psi.codeStyle.*
 import org.arend.ArendLanguage
-import org.arend.settings.ArendCustomCodeStyleSettings
 
 class ArendCodeStyleSettingsProvider : LanguageCodeStyleSettingsProvider() {
     override fun getLanguage(): Language = ArendLanguage.INSTANCE
@@ -41,15 +40,10 @@ class ArendCodeStyleSettingsProvider : LanguageCodeStyleSettingsProvider() {
         }
     }
 
-    override fun createCustomSettings(settings: CodeStyleSettings): CustomCodeStyleSettings {
-        return ArendCustomCodeStyleSettings(settings)
-    }
-
     override fun createConfigurable(baseSettings: CodeStyleSettings, modelSettings: CodeStyleSettings) = object : CodeStyleAbstractConfigurable(baseSettings, modelSettings, "Arend") {
         override fun createPanel(settings: CodeStyleSettings) = object : TabbedLanguageCodeStylePanel(ArendLanguage.INSTANCE, currentSettings, settings) {
             override fun initTabs(settings: CodeStyleSettings) {
                 addIndentOptionsTab(settings)
-                addTab(ArendCodeStyleImportsPanelWrapper(settings))
             }
         }
     }
