@@ -18,6 +18,12 @@
 \type IsLeftFib {A : \Cat} (B : A ->⁺ \Cat) : \Prop
   => \Pi {x y : A} (f : x ~> y) (b : B x) -> Contr (CovLift B f b)
 
+\lemma leftFib-pullback {A' A : \Cat} (f : A' ->⁺ A) {B : A ->⁺ \Cat} (Bf : IsLeftFib B) : IsLeftFib (\lam a => B (f a))
+  => \lam g b =>
+      \let c => Bf (dmap f g) b
+      \in Contr.make {CovLift (\lam a =>⁺ B (f a)) g b} (c.center.1, c.center.2)
+            \lam u => pmap {CovLift B (dmap f g) b} {CovLift (\lam a =>⁺ B (f a)) g b} (\lam v => (v.1, v.2)) (c.contraction (u.1, u.2))
+
 \lemma leftFib-grpd {A : \Cat} {B : A ->⁺ \Cat} (Bf : IsLeftFib B) (a : A) : IsGroupoid (B a)
   => \lam {t} {t'} f => IsIso-diag-char.2 $ inP (t, path \lam k i => (isContr=>isProp (Bf idd t) (t, idd) (t', f) k).2 i)
 

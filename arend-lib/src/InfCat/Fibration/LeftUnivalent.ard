@@ -1,0 +1,84 @@
+\import Equiv
+\import Equiv.Fiber
+\import Equiv.Path
+\import Equiv.Sigma
+\import Function.Meta
+\import InfCat.Basics
+\import InfCat.Fibration.CovariantLift
+\import InfCat.Fibration.LeftFib
+\import InfCat.Functor.Equiv
+\import InfCat.Functor.FullyFaithful
+\import InfCat.Groupoid
+\import InfCat.Objects
+\import InfCat.Paths
+\import InfCat.Square
+\import Logic
+\import Logic.Unique
+\import Paths
+\import Paths.Meta
+
+\type IsLeftUnivalent {A : \Cat} (B : A ->⁺ \Cat) : \Prop
+  => \Pi {x y : A} (u : B x ->⁺ B y) -> Contr (\Sigma (f : x ~> y) (\Pi (b :⁺ B x) -> DPath (\lam i => B (f i)) b (u b)))
+
+\func ~>_->.{u} {A B :⁺ \Type u} (p :⁺ A ~> B) (a :⁺ A) : B
+  => coe+ (\lam i => p i) a dright
+
+\func ->_~>.{u} {A B :⁺ \Type u} (f :⁺ A ->⁺ B) : A ~> B
+  => dpath (iso+ f)
+
+\func dirUnivalence.{u} {A B : \Type u} : QEquiv {A ~> B} {A ->⁺ B} \cowith
+  | f => ~>_->
+  | ret => ->_~>
+  | ret_f p => path (\lam j => dpath (\lam i => iso+_coe+ p i j))
+  | f_sec f => idp
+
+-- | Given a natural lift {l} of {f}, natural lifts of {f} to {u} are paths from the transport functor determined by {l} to {u}.
+\sfunc natLifts-equiv {A : \Cat} {B : A ->⁺ \Cat} (Bf : IsLeftFib B) {x y : A} (f : x ~> y) (l : \Pi (b :⁺ B x) -> CovLift B f b) (u : Ob (B x ->⁺ B y))
+  : QEquiv {\Pi (b :⁺ B x) -> DPath (\lam i => B (f i)) b (unob u b)} {ob (\lam b =>⁺ (l b).1) = u}
+  => contr-sigma-fiber (isProp=>isContr (natLifts-isProp Bf f) (ob (\lam b => (l b).1), \lam b => (l b).2)) u
+  \where {
+    -- | Functors equipped with natural lifts of {f} to them form a proposition.
+    \lemma natLifts-isProp {A : \Cat} {B : A ->⁺ \Cat} (Bf : IsLeftFib B) {x y : A} (f : x ~> y)
+      : isProp (\Sigma (u : Ob (B x ->⁺ B y)) (\Pi (b :⁺ B x) -> DPath (\lam i => B (f i)) b (unob u b)))
+      => \case \elim __, \elim __ \with {
+        | (ob g1, d1), (ob g2, d2) =>
+          \let q (b :⁺ B x) => IsHEquiv.fib-sec-unique (leftFib-equiv Bf) {x,y,f,b} {g1 b, d1 b} {g2 b, d2 b}
+          \in path \lam i => (ob \lam b => (q b i).1, \lam b => (q b i).2)
+      }
+  }
+
+\lemma leftUnivalent-char {A : \Cat} {B : A ->⁺ \Cat} (Bf : IsLeftFib B)
+  : IsLeftUnivalent B <-> (\Pi (a a' : A) -> IsEquiv {a ~> a'} {Ob (B a ->⁺ B a')} (\lam f => ob \lam b => (leftFib-lift {A} {B} Bf f b).1))
+  => (\lam Bu a a' => contrFibers=>IsEquiv \lam w =>
+        Contr.Contr_QEquiv (sigma-right \lam f => natLifts-equiv Bf f (\lam b => leftFib-lift Bf f b) w) (Bu (unob w)),
+      \lam e {a} {a'} u => Contr.Contr_QEquiv (symQEquiv (sigma-right \lam f => natLifts-equiv Bf f (\lam b => leftFib-lift Bf f b) (ob u)))
+                                              (IsEquiv=>contrFibers (e a a') (ob u)))
+
+-- | The universal left fibration over `\Type u` is univalent: this is directed univalence.
+\lemma universe-leftUnivalent.{u} : IsLeftUnivalent {\Type u} (\lam X => X)
+  => \lam u => Contr.Contr_QEquiv
+      (symQEquiv (sigma-right \lam f => natLifts-equiv universe-leftFib f (\lam b => (coe+ (\lam i => f i) b dright, dpath \lam i => coe+ (\lam j => f j) b i)) (ob u)))
+      (IsEquiv=>contrFibers (inP (dirUnivalence `transQEquiv` Ob-equiv)) (ob u))
+
+-- | The pullback of a univalent family along a fully faithful functor is univalent.
+\lemma univalent-pullback-ff {A' A : \Cat} {f : A' ->⁺ A} (ff : IsFFMap f) {B : A ->⁺ \Cat} (Bu : IsLeftUnivalent B)
+  : IsLeftUnivalent (\lam a => B (f a))
+  => \lam {x} {y} u => \case ff x y \with {
+    | inP e => Contr.Contr_QEquiv (symQEquiv (qsigma-left e)) (Bu u)
+  }
+
+-- | The pullback of a univalent left fibration along {f} is univalent if and only if {f} is fully faithful.
+\lemma univalent-pullback {A' A : \Cat} (f : A' ->⁺ A) {B : A ->⁺ \Cat} (Bf : IsLeftFib B) (Bu : IsLeftUnivalent B)
+  : IsLeftUnivalent (\lam a => B (f a)) <-> IsFFMap f
+  => (\lam u x y => IsEquiv.leftFactor ((leftUnivalent-char Bf).1 Bu (f x) (f y)) $
+        transport IsEquiv (ext (transport-pullback x y)) ((leftUnivalent-char (leftFib-pullback f Bf)).1 u x y),
+      \lam ff => univalent-pullback-ff ff Bu)
+  \where {
+    \sfunc transport-pullback (x y : A') (g : x ~> y)
+      : ob (\lam b =>⁺ (leftFib-lift (leftFib-pullback f Bf) g b).1) = ob (\lam b => (leftFib-lift Bf (dmap f g) b).1)
+      => pmap __.1 $ natLifts-equiv.natLifts-isProp Bf (dmap f g)
+          (ob (\lam b => (leftFib-lift {A'} {\lam a =>⁺ B (f a)} (leftFib-pullback f Bf) g b).1),
+           \lam b => (leftFib-lift {A'} {\lam a =>⁺ B (f a)} (leftFib-pullback f Bf) g b).2)
+          (ob (\lam b => (leftFib-lift Bf (dmap f g) b).1),
+           \lam b => (leftFib-lift Bf (dmap f g) b).2)
+  }
