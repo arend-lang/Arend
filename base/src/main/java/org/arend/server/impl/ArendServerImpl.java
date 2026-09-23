@@ -19,6 +19,8 @@ import org.arend.naming.resolving.visitor.DefinitionResolveNameVisitor;
 import org.arend.naming.scope.*;
 import org.arend.prelude.Prelude;
 import org.arend.server.*;
+import org.arend.server.imports.ImportUsageTracer;
+import org.arend.server.imports.ImportUsageData;
 import org.arend.server.modifier.RawModifier;
 import org.arend.term.abs.AbstractReferable;
 import org.arend.term.abs.AbstractReference;
@@ -628,6 +630,11 @@ public class ArendServerImpl implements ArendServer {
 
     myLogger.fine(() -> found[0] ? "Finish completion for '" + reference.getReferenceText() + "' with " + result.size() + " results" : "Cannot find completion variants for '" + reference.getReferenceText() + "'");
     return result;
+  }
+
+  @Override
+  public @Nullable ImportUsageData getNamespaceCommandUsage(@NotNull ModuleLocation module) {
+    return ImportUsageTracer.trace(this, module);
   }
 
   @Override

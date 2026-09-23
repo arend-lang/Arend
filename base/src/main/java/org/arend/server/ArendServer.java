@@ -12,6 +12,7 @@ import org.arend.naming.reference.Referable;
 import org.arend.naming.reference.TCDefReferable;
 import org.arend.naming.resolving.typing.TypingInfo;
 import org.arend.naming.scope.Scope;
+import org.arend.server.imports.ImportUsageData;
 import org.arend.server.impl.DefinitionData;
 import org.arend.server.modifier.RawModifier;
 import org.arend.term.abs.AbstractReference;
@@ -169,6 +170,16 @@ public interface ArendServer {
    * @return the modifier and the list of long names that should be used to refer to the given referables.
    */
   @NotNull Pair<RawModifier, List<LongName>> makeReferencesAvailable(@NotNull List<LocatedReferable> referables, @Nullable ConcreteGroup group, @NotNull RawAnchor anchor, @NotNull ErrorReporter errorReporter);
+
+  /**
+   * Reports which namespace commands of {@param module} its content needs: those that answered a
+   * lookup when the module is resolved again in scopes that record what each command supplied, and
+   * those that put into the instance pool an instance the typechecker turned out to pick.
+   *
+   * @return the usage, or {@code null} if the module is unknown, has not been resolved, or has a
+   *         definition with null core or without a record of the instances it used.
+   */
+  @Nullable ImportUsageData getNamespaceCommandUsage(@NotNull ModuleLocation module);
 
   /**
    * @return the instance cache, which can be used to find available instances for a given class.
