@@ -34,6 +34,10 @@ public class MergeScope implements Scope {
     myMergeNamespaces = mergeNamespaces;
   }
 
+  public @NotNull Collection<Scope> getScopes() {
+    return myScopes;
+  }
+
   @NotNull
   @Override
   public List<Referable> getElements(@Nullable ScopeContext context) {

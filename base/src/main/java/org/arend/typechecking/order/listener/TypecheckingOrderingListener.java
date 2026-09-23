@@ -49,6 +49,7 @@ import org.arend.typechecking.visitor.*;
 import org.arend.ext.util.Pair;
 
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class TypecheckingOrderingListener extends BooleanComputationRunner implements OrderingListener {
   private final ArendCheckerFactory myCheckerFactory;
@@ -63,6 +64,7 @@ public class TypecheckingOrderingListener extends BooleanComputationRunner imple
   private final Map<TCDefReferable, Concrete.ResolvableDefinition> myDesugaredDefinitions = new HashMap<>();
   private final ArendServerResolveListener myResolveListener;
   private final boolean myClearLemmas;
+  private Map<TCDefReferable, Set<TCDefReferable>> myUsedInstances;
   private List<TCDefReferable> myCurrentDefinitions = new ArrayList<>();
   private boolean myHeadersAreOK = true;
 
@@ -79,6 +81,18 @@ public class TypecheckingOrderingListener extends BooleanComputationRunner imple
     myExtensionProvider = extensionProvider;
     myResolveListener = resolveListener;
     myClearLemmas = clearLemmas;
+  }
+
+  /**
+   * Asks for the instances the typechecker picks to be recorded, per definition. Only the pool
+   * knows them: an instance need leave no call behind in the term it helped elaborate.
+   */
+  public void setUsedInstancesCollector(Map<TCDefReferable, Set<TCDefReferable>> usedInstances) {
+    myUsedInstances = usedInstances;
+  }
+
+  private Set<TCDefReferable> usedInstancesOf(TCDefReferable definition) {
+    return myUsedInstances == null ? null : myUsedInstances.computeIfAbsent(definition, k -> ConcurrentHashMap.newKeySet());
   }
 
   public ConcreteProvider getConcreteProvider() {
@@ -243,7 +257,7 @@ public class TypecheckingOrderingListener extends BooleanComputationRunner imple
 
     if (ok) {
       CheckTypeVisitor checkTypeVisitor = myCheckerFactory.create(errorReporter, null, extension, myResolveListener);
-      checkTypeVisitor.setInstancePool(new GlobalInstancePool(getInstances(definition.getData()), checkTypeVisitor));
+      checkTypeVisitor.setInstancePool(new GlobalInstancePool(getInstances(definition.getData()), checkTypeVisitor, null, usedInstancesOf(definition.getData())));
       definition = definition.accept(new ReplaceDataVisitor(), null);
       if (definition instanceof Concrete.FunctionDefinition funDef && funDef.getKind().isUse()) {
         myDesugaredDefinitions.put(funDef.getData(), funDef);
@@ -456,7 +470,7 @@ public class TypecheckingOrderingListener extends BooleanComputationRunner imple
     visitor.setStatus(definition.getStatus().getTypecheckingStatus());
     DesugarVisitor.desugar(definition, myConcreteProvider, visitor.getErrorReporter());
     DefinitionTypechecker typechecker = new DefinitionTypechecker(visitor, definition instanceof Concrete.Definition ? ((Concrete.Definition) definition).getRecursiveDefinitions() : Collections.emptySet());
-    Definition typechecked = typechecker.typecheckHeader(new GlobalInstancePool(getInstances(definition.getData()), visitor), definition);
+    Definition typechecked = typechecker.typecheckHeader(new GlobalInstancePool(getInstances(definition.getData()), visitor, null, usedInstancesOf(definition.getData())), definition);
     if (typechecked == null) return;
 
     if (typechecked.status() == Definition.TypeCheckingStatus.TYPE_CHECKING) {

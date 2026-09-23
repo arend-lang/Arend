@@ -50,6 +50,14 @@ public class DefinitionSerialization implements ArendSerializer {
     for (Pair<TCDefReferable, Integer> pair : definition.getParametersOriginalDefinitions()) {
       out.addParameterOriginalDef(writeParameterOriginalDef(pair));
     }
+    Set<TCDefReferable> usedInstances = definition.getUsedInstances();
+    if (usedInstances != null) {
+      out.setInstancesKnown(true);
+      for (TCDefReferable instance : usedInstances) {
+        out.addUsedInstance(myCallTargetIndexProvider.getDefIndex(instance));
+      }
+    }
+
     for (FunctionDefinition axiom : definition.getAxioms()) {
       out.addAxiom(myCallTargetIndexProvider.getDefIndex(axiom));
     }

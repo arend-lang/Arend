@@ -24,6 +24,7 @@ import java.util.*;
 public abstract class Definition extends UserDataHolderImpl implements CoreDefinition {
   private final TCDefReferable myReferable;
   private TypeCheckingStatus myStatus;
+  private Set<TCDefReferable> myUsedInstances;
 
   public Definition(TCDefReferable referable, TypeCheckingStatus status) {
     myReferable = referable;
@@ -59,6 +60,20 @@ public abstract class Definition extends UserDataHolderImpl implements CoreDefin
 
   public Set<? extends FunctionDefinition> getAxioms() {
     return getTopLevelDefinition().getAxioms();
+  }
+
+  /**
+   * The instances the typechecker picked while checking this definition, recorded as it picked them.
+   *
+   * @return {@code null} for a definition that was never typechecked in this session and never
+   *         read from a binary that carried the set -- which is not the same as having used none.
+   */
+  public @Nullable Set<TCDefReferable> getUsedInstances() {
+    return myUsedInstances;
+  }
+
+  public void setUsedInstances(@NotNull Set<TCDefReferable> usedInstances) {
+    myUsedInstances = usedInstances;
   }
 
   public Set<? extends Definition> getGoals() {

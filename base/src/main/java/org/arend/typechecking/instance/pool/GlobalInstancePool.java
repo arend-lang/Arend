@@ -18,6 +18,7 @@ import org.arend.term.concrete.Concrete;
 import org.arend.typechecking.result.TypecheckingResult;
 import org.arend.typechecking.visitor.CheckTypeVisitor;
 import org.arend.ext.util.Pair;
+import org.arend.naming.reference.TCDefReferable;
 
 import java.util.*;
 import java.util.function.Predicate;
@@ -26,16 +27,27 @@ public class GlobalInstancePool implements InstancePool {
   private final List<FunctionDefinition> myInstances;
   private final CheckTypeVisitor myCheckTypeVisitor;
   private LocalInstancePool myInstancePool;
+  private final Set<TCDefReferable> myUsedInstances;
 
   public GlobalInstancePool(List<FunctionDefinition> instances, CheckTypeVisitor checkTypeVisitor) {
-    myInstances = instances;
-    myCheckTypeVisitor = checkTypeVisitor;
+    this(instances, checkTypeVisitor, null, null);
   }
 
   public GlobalInstancePool(List<FunctionDefinition> instances, CheckTypeVisitor checkTypeVisitor, LocalInstancePool instancePool) {
+    this(instances, checkTypeVisitor, instancePool, null);
+  }
+
+  /**
+   * @param usedInstances   if given, every instance this pool hands out is added to it. This is
+   *                        the only place an instance is knowingly chosen, and so the only place
+   *                        the choice can be recorded; the elaborated term need not keep a call
+   *                        to it.
+   */
+  public GlobalInstancePool(List<FunctionDefinition> instances, CheckTypeVisitor checkTypeVisitor, LocalInstancePool instancePool, Set<TCDefReferable> usedInstances) {
     myInstances = instances;
     myCheckTypeVisitor = checkTypeVisitor;
     myInstancePool = instancePool;
+    myUsedInstances = usedInstances;
   }
 
   public void setInstancePool(LocalInstancePool instancePool) {
@@ -59,7 +71,7 @@ public class GlobalInstancePool implements InstancePool {
 
   @Override
   public GlobalInstancePool copy(CheckTypeVisitor typechecker) {
-    return new GlobalInstancePool(myInstances, typechecker, myInstancePool == null ? null : myInstancePool.copy(typechecker));
+    return new GlobalInstancePool(myInstances, typechecker, myInstancePool == null ? null : myInstancePool.copy(typechecker), myUsedInstances);
   }
 
   @Override
@@ -224,11 +236,17 @@ public class GlobalInstancePool implements InstancePool {
       instanceExpr = Concrete.AppExpression.make(data, instanceExpr, new RecursiveInstanceHoleExpression(recursiveHoleExpression == null ? data : recursiveHoleExpression.getData(), newRecursiveData), link.isExplicit());
     }
 
-    return parameters.testGlobalInstance(instanceExpr) ? new Pair<>(instanceExpr, actualClass) : null;
+    if (!parameters.testGlobalInstance(instanceExpr)) {
+      return null;
+    }
+    if (myUsedInstances != null) {
+      myUsedInstances.add(instance.getRef());
+    }
+    return new Pair<>(instanceExpr, actualClass);
   }
 
   @Override
   public GlobalInstancePool subst(ExprSubstitution substitution) {
-    return myInstancePool != null ? new GlobalInstancePool(myInstances, myCheckTypeVisitor, myInstancePool.subst(substitution)) : this;
+    return myInstancePool != null ? new GlobalInstancePool(myInstances, myCheckTypeVisitor, myInstancePool.subst(substitution), myUsedInstances) : this;
   }
 }

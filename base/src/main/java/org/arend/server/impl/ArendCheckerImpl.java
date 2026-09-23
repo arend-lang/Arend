@@ -8,6 +8,7 @@ import org.arend.ext.module.LongName;
 import org.arend.ext.module.ModulePath;
 import org.arend.ext.module.ModuleLocation;
 import org.arend.ext.util.Pair;
+import org.arend.core.definition.Definition;
 import org.arend.module.error.DefinitionNotFoundError;
 import org.arend.module.error.ModuleNotFoundError;
 import org.arend.naming.reference.GlobalReferable;
@@ -41,6 +42,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Consumer;
 import java.util.logging.Logger;
@@ -402,6 +404,14 @@ public class ArendCheckerImpl implements ArendChecker {
           TypecheckingOrderingListener dependencyTypechecker = new TypecheckingOrderingListener(ArendCheckerFactory.DEFAULT, myServer.getInstanceScopeProvider(), ordering.getInstanceDependencies(), concreteProvider, listErrorReporter, dependencyCollector, new GroupComparator(myDependencies), myServer.getExtensionProvider(), myServer.getRequester(), myServer.doClearLemmas());
           TypecheckingOrderingListener typechecker = checkerFactory == null ? dependencyTypechecker : new TypecheckingOrderingListener(checkerFactory, myServer.getInstanceScopeProvider(), ordering.getInstanceDependencies(), concreteProvider, listErrorReporter, dependencyCollector, new GroupComparator(myDependencies), myServer.getExtensionProvider(), myServer.getRequester(), myServer.doClearLemmas());
 
+          // A custom checker (the IDE's expression actions) typechecks renamed copies, whose instance
+          // choices belong to no real definition, so it does not record. The dependencies it needs
+          // are real definitions typechecked for good, and they do: left unrecorded, they would
+          // stay so, since nothing typechecks them again.
+          Map<TCDefReferable, Set<TCDefReferable>> usedInstances = new ConcurrentHashMap<>();
+          dependencyTypechecker.setUsedInstancesCollector(usedInstances);
+          List<CollectingOrderingListener.Element> recordedElements = new ArrayList<>();
+
           try {
             progressReporter.beginProcessing(collector.getElements().size());
             for (CollectingOrderingListener.Element element : collector.getElements()) {
@@ -410,6 +420,7 @@ public class ArendCheckerImpl implements ArendChecker {
 
               if (checkerFactory == null) {
                 element.feedTo(typechecker);
+                recordedElements.add(element);
               } else {
                 boolean found = false;
                 List<? extends Concrete.ResolvableDefinition> allDefinitions = element.getAllDefinitions();
@@ -429,6 +440,7 @@ public class ArendCheckerImpl implements ArendChecker {
                   break;
                 } else {
                   element.feedTo(dependencyTypechecker);
+                  recordedElements.add(element);
                 }
               }
 
@@ -473,6 +485,18 @@ public class ArendCheckerImpl implements ArendChecker {
                     }
                   }
                 }
+              }
+              // a definition that picked nothing still has a recorded set, so that "used none" can
+              // be told apart from "never recorded" -- but only one the recording listener checked:
+              // what a custom checker saw, or never reached, was not recorded and must not look it
+              for (CollectingOrderingListener.Element element : recordedElements) {
+                for (Concrete.ResolvableDefinition definition : element.getAllDefinitions()) {
+                  usedInstances.putIfAbsent(definition.getData(), Collections.emptySet());
+                }
+              }
+              for (Map.Entry<TCDefReferable, Set<TCDefReferable>> entry : usedInstances.entrySet()) {
+                Definition typechecked = entry.getKey().getTypechecked();
+                if (typechecked != null) typechecked.setUsedInstances(Set.copyOf(entry.getValue()));
               }
               listErrorReporter.reportTo(myServer.getErrorService());
               dependencyCollector.copyTo(myServer.getDependencyCollector());

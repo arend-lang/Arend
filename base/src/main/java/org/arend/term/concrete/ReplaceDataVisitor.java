@@ -81,13 +81,13 @@ public class ReplaceDataVisitor implements ConcreteExpressionVisitor<Void,Concre
   private Concrete.Pattern visitPattern(Concrete.Pattern pattern) {
     Concrete.Pattern result;
     switch (pattern) {
-      case Concrete.NamePattern namePattern -> result = new Concrete.NamePattern(getData(pattern), pattern.isExplicit(), namePattern.getReferable(), namePattern.type == null ? null : namePattern.type.accept(this, null), namePattern.fixity);
+      case Concrete.NamePattern namePattern -> result = new Concrete.NamePattern(getData(pattern), pattern.isExplicit(), copyRef(namePattern.getReferable()), namePattern.type == null ? null : namePattern.type.accept(this, null), namePattern.fixity);
       case Concrete.ConstructorPattern conPattern -> {
         List<Concrete.Pattern> args = new ArrayList<>(pattern.getPatterns().size());
         for (Concrete.Pattern subPattern : pattern.getPatterns()) {
           args.add(visitPattern(subPattern));
         }
-        result = new Concrete.ConstructorPattern(getData(pattern), pattern.isExplicit(), myReplace ? myData : conPattern.getConstructorData(), conPattern.getConstructor(), args, null);
+        result = new Concrete.ConstructorPattern(getData(pattern), pattern.isExplicit(), myReplace ? myData : conPattern.getConstructorData(), copyRef(conPattern.getConstructor()), args, null);
       }
       case Concrete.TuplePattern ignored -> {
         List<Concrete.Pattern> args = new ArrayList<>(pattern.getPatterns().size());
