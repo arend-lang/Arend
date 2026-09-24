@@ -358,4 +358,51 @@ public class CatPreludeTest extends TypeCheckingTestCase {
       """, -1);
   }
 
+
+  private static final String RESIZE_DEFS = """
+    \\func Small.{u} {C : \\Cat} (F : C ->+ \\Type)
+      => \\Pi (y : C) -> \\Sigma (S : \\Type u) (to : S -> F y) (from : F y -> S) (\\Pi (s : S) -> from (to s) = s) (\\Pi (b : F y) -> to (from b) = b)
+    """;
+
+  @Test
+  public void resizeFunctorTest() {
+    typeCheckModule(RESIZE_DEFS + """
+      \\func test {C : \\Cat} (F : C ->+ \\Type) (s : Small.{0} F) (l : \\Pi {a a' :+ C} (f :+ a ~> a') (b :+ F a) -> \\Sigma+ (b' : F a') (DPath (\\lam i => F (f i)) b b')) : C ->+ \\Type0
+        => \\lam y => Resize+ F s l y
+      """);
+  }
+
+  @Test
+  public void resizeCoeTest() {
+    typeCheckModule(RESIZE_DEFS + """
+      \\func test {C : \\Cat} (F : C ->+ \\Type) (s : Small.{0} F) (l : \\Pi {a a' :+ C} (f :+ a ~> a') (b :+ F a) -> \\Sigma+ (b' : F a') (DPath (\\lam i => F (f i)) b b')) {y y' : C} (f : y ~> y') (r : Resize+ F s l y) : Resize+ F s l y'
+        => coe+ (\\lam i => Resize+ F s l (f i)) r dright
+      """);
+  }
+
+  @Test
+  public void resizeElimTest() {
+    typeCheckModule(RESIZE_DEFS + """
+      \\func unresize {C : \\Cat} {F : C ->+ \\Type} {s : Small.{0} F} {l : \\Pi {a a' :+ C} (f :+ a ~> a') (b :+ F a) -> \\Sigma+ (b' : F a') (DPath (\\lam i => F (f i)) b b')} (y :+ C) (r :+ Resize+ F s l y) : F y \\elim r
+        | resize+ b => b
+      \\func beta {C : \\Cat} {F : C ->+ \\Type} {s : Small.{0} F} {l : \\Pi {a a' :+ C} (f :+ a ~> a') (b :+ F a) -> \\Sigma+ (b' : F a') (DPath (\\lam i => F (f i)) b b')} (y : C) (b : F y) : unresize y (resize+ {C} {F} {s} {l} b) = b
+        => idp
+      """);
+  }
+
+  @Test
+  public void resizeLevelError() {
+    typeCheckModule(RESIZE_DEFS + """
+      \\func test {C : \\Cat} (F : C ->+ \\Type) (s : Small.{1} F) (l : \\Pi {a a' :+ C} (f :+ a ~> a') (b :+ F a) -> \\Sigma+ (b' : F a') (DPath (\\lam i => F (f i)) b b')) (y :+ C) : \\Type0
+        => Resize+ F s l y
+      """, 1);
+  }
+
+  @Test
+  public void resizeCovariantFamilyError() {
+    typeCheckModule(RESIZE_DEFS + """
+      \\func test {C : \\Cat} (F :+ C ->+ \\Type) (s : Small.{0} F) (l : \\Pi {a a' :+ C} (f :+ a ~> a') (b :+ F a) -> \\Sigma+ (b' : F a') (DPath (\\lam i => F (f i)) b b')) (y :+ C) : \\Type0
+        => Resize+ F s l y
+      """, -1);
+  }
 }

@@ -66,6 +66,8 @@ public class Prelude implements ArendPrelude {
   public static FunctionDefinition FILL2, FILL3;
   public static FunctionDefinition COERCE_PLUS;
   public static FunctionDefinition ISO_PLUS, ISO_COE_PLUS;
+  public static DataDefinition RESIZE_PLUS;
+  public static Constructor RESIZE_PLUS_CON;
   public static FunctionDefinition REZK;
 
   public static DataDefinition NAT;
@@ -270,6 +272,11 @@ public class Prelude implements ArendPrelude {
         ISO_COE_PLUS.setBody(new IntervalElim(5, cases, null));
         ISO_COE_PLUS.setStatus(Definition.TypeCheckingStatus.NO_ERRORS);
       }
+      case "Resize+" -> {
+        RESIZE_PLUS = (DataDefinition) definition;
+        RESIZE_PLUS.setSort(new Sort(new Level(RESIZE_PLUS.getLevelParameters().getFirst()), ConstLevel.INFINITY));
+        RESIZE_PLUS_CON = RESIZE_PLUS.getConstructor("resize+");
+      }
       case "rezk" -> {
         REZK = (FunctionDefinition) definition;
         REZK.setStatus(Definition.TypeCheckingStatus.NO_ERRORS);
@@ -396,6 +403,8 @@ public class Prelude implements ArendPrelude {
     consumer.accept(ISO_PLUS);
     consumer.accept(ISO_COE_PLUS);
     consumer.accept(REZK);
+    consumer.accept(RESIZE_PLUS);
+    consumer.accept(RESIZE_PLUS_CON);
     consumer.accept(PATH);
     consumer.accept(PATH_CON);
     consumer.accept(PATH_INFIX);
@@ -510,6 +519,16 @@ public class Prelude implements ArendPrelude {
   }
 
   @Override
+  public DataDefinition getResize() {
+    return RESIZE_PLUS;
+  }
+
+  @Override
+  public Constructor getResizeCon() {
+    return RESIZE_PLUS_CON;
+  }
+
+  @Override
   public CoreFunctionDefinition getRezk() {
     return REZK;
   }
@@ -580,7 +599,7 @@ public class Prelude implements ArendPrelude {
   }
 
   @Override
-  public CoreDataDefinition getString() {
+  public DataDefinition getString() {
     return STRING;
   }
 
@@ -757,6 +776,16 @@ public class Prelude implements ArendPrelude {
   @Override
   public ArendRef getFill3Ref() {
     return FILL3 == null ? null : FILL3.getRef();
+  }
+
+  @Override
+  public ArendRef getResizeRef() {
+    return RESIZE_PLUS == null ? null : RESIZE_PLUS.getRef();
+  }
+
+  @Override
+  public ArendRef getResizeConRef() {
+    return RESIZE_PLUS_CON == null ? null : RESIZE_PLUS_CON.getRef();
   }
 
   @Override

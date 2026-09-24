@@ -166,7 +166,7 @@ public class CoreExpressionChecker implements ExpressionVisitor<Expression, Expr
       ConCallExpression conCall = (ConCallExpression) it;
       LevelSubstitution levelSubst = conCall.getLevelSubstitution();
       ExprSubstitution substitution = new ExprSubstitution();
-      checkList(conCall.getDataTypeArguments(), conCall.getDefinition().getDataTypeParameters(), substitution, levelSubst);
+      checkList(conCall.getDataTypeArguments(), conCall.getDefinition().getDataTypeParameters(), substitution, levelSubst, false, true);
       Expression actualType = conCall.getDefinition().getDataTypeExpression(conCall.getLevels(), conCall.getDataTypeArguments());
       check(expectedType, actualType, conCall);
       if (result == null) {
@@ -175,7 +175,7 @@ public class CoreExpressionChecker implements ExpressionVisitor<Expression, Expr
 
       int recursiveParam = conCall.getDefinition().getRecursiveParameter();
       if (recursiveParam < 0) {
-        checkList(conCall.getDefCallArguments(), conCall.getDefinition().getParameters(), substitution, levelSubst);
+        checkList(conCall.getDefCallArguments(), conCall.getDefinition().getParameters(), substitution, levelSubst, false, true);
         return result;
       }
 
@@ -625,7 +625,8 @@ public class CoreExpressionChecker implements ExpressionVisitor<Expression, Expr
     if (pattern instanceof BindingPattern) {
       Expression actualType = pattern.getFirstBinding().getType();
       if (pattern.getFirstBinding() instanceof TypedDependentLink) {
-        actualType.accept(this, type.isInfinityLevel() ? UniverseExpression.INF_OMEGA : UniverseExpression.OMEGA);
+        // Pattern bindings come from parameters, so their types are checked as parameter types
+        checkInf(actualType, type.isInfinityLevel() ? UniverseExpression.INF_OMEGA : UniverseExpression.OMEGA, true);
       }
       Binding newBinding = new TypedBinding(pattern.getFirstBinding().getName(), type);
       newBindings.add(newBinding);

@@ -92,6 +92,13 @@
            (p :⁺ DPath (\lam i => f i ~> x) idd g) (q :⁺ DPath (\lam i => g i ~> y) idd f)
   : (x,idd) = {\Sigma⁺ (z : C) (x ~> z)} (y,f)
 
+\data Resize+.{u} {C : \Cat} (F : C ->⁺ \Type)
+                  (small : \Pi (y : C) -> \Sigma (S : \Type u) (to : S -> F y) (from : F y -> S)
+                                                 (\Pi (s : S) -> from (to s) = s) (\Pi (b : F y) -> to (from b) = b))
+                  (lift : \Pi {a a' :⁺ C} (f :⁺ a ~> a') (b :⁺ F a) -> \Sigma⁺ (b' : F a') (DPath (\lam i => F (f i)) b b'))
+                  (y :⁺ C)
+  | resize+ (b :⁺ F y)
+
 \data Nat
   | zero
   | suc Nat

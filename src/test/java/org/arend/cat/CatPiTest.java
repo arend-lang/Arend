@@ -155,4 +155,21 @@ public class CatPiTest extends TypeCheckingTestCase {
         | con (f :+ C ->+ D)
       """, 1);
   }
+
+  @Test
+  public void dependentCovariantDomainElimTest() {
+    typeCheckModule("""
+      \\func f {l : \\Pi (a :+ Nat) (b :+ a ~> a) -> Nat} (n : Nat) : Nat \\elim n
+        | zero => 0
+        | suc n => n
+      """);
+  }
+
+  @Test
+  public void dependentCovariantDomainConCallTest() {
+    typeCheckModule("""
+      \\data D (l : \\Pi (a :+ Nat) (b :+ a ~> a) -> Nat) | con
+      \\func f : D (\\lam a b => 0) => con
+      """);
+  }
 }

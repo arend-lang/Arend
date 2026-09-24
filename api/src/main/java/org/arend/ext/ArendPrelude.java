@@ -21,6 +21,8 @@ public interface ArendPrelude {
   CoreFunctionDefinition getHomType();
   CoreFunctionDefinition getFill2();
   CoreFunctionDefinition getFill3();
+  CoreDataDefinition getResize();
+  CoreConstructor getResizeCon();
   CoreFunctionDefinition getRezk();
   CoreFunctionDefinition getCoePlus();
   CoreFunctionDefinition getIsoPlus();
@@ -72,6 +74,8 @@ public interface ArendPrelude {
   ArendRef getHomTypeRef();
   ArendRef getFill2Ref();
   ArendRef getFill3Ref();
+  ArendRef getResizeRef();
+  ArendRef getResizeConRef();
   ArendRef getRezkRef();
   ArendRef getCoePlusRef();
   ArendRef getIsoPlusRef();

@@ -85,6 +85,16 @@ public class ConcretePrelude implements ArendPrelude {
   }
 
   @Override
+  public CoreDataDefinition getResize() {
+    return Prelude.RESIZE_PLUS;
+  }
+
+  @Override
+  public CoreConstructor getResizeCon() {
+    return Prelude.RESIZE_PLUS_CON;
+  }
+
+  @Override
   public CoreFunctionDefinition getRezk() {
     return Prelude.REZK;
   }
@@ -346,6 +356,18 @@ public class ConcretePrelude implements ArendPrelude {
   public ArendRef getFill3Ref() {
     if (Prelude.FILL3 != null) return Prelude.FILL3.getRef();
     return myPreludeScope.resolveName("fill3");
+  }
+
+  @Override
+  public ArendRef getResizeRef() {
+    if (Prelude.RESIZE_PLUS != null) return Prelude.RESIZE_PLUS.getRef();
+    return myPreludeScope.resolveName("Resize+");
+  }
+
+  @Override
+  public ArendRef getResizeConRef() {
+    if (Prelude.RESIZE_PLUS_CON != null) return Prelude.RESIZE_PLUS_CON.getRef();
+    return myPreludeScope.resolveName("resize+");
   }
 
   @Override
