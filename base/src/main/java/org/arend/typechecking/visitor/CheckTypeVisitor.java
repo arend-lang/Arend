@@ -2795,23 +2795,20 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
     LinkList list = new LinkList();
 
     try (var ignored = new Utils.RefContextSaver(context, myLocalPrettifier)) {
-      int i = 0;
-      int size = parameters.size();
       for (Concrete.TypeParameter parameter : parameters) {
-        if (!visitSigmaParameter(parameter, variance, expectedType, resultSorts, list, i == size - 1)) {
+        if (!visitSigmaParameter(parameter, variance, expectedType, resultSorts, list)) {
           return null;
         }
-        i++;
       }
     }
 
     return list.getFirst();
   }
 
-  private boolean visitSigmaParameter(Concrete.TypeParameter arg, BindingVariance variance, Expression expectedType, List<SortExpression> resultSorts, LinkList list, boolean isLast) {
+  private boolean visitSigmaParameter(Concrete.TypeParameter arg, BindingVariance variance, Expression expectedType, List<SortExpression> resultSorts, LinkList list) {
     TypeExpression result;
     if (variance == BindingVariance.INVARIANT) {
-      try (var ignored = isLast ? null : clearCategoricalContext()) {
+      try (var ignored = clearCategoricalContext()) {
         result = checkType(arg.getType(), expectedType == UniverseExpression.INF_OMEGA ? UniverseExpression.INF_OMEGA : UniverseExpression.OMEGA);
       }
     } else {
@@ -2898,9 +2895,8 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
       ExprSubstitution substitution = new ExprSubstitution();
       for (Concrete.Expression field : expr.getFields()) {
         Expression expType = sigmaParams.getType().subst(substitution);
-        boolean isLast = !sigmaParams.getNext().hasNext();
         TypecheckingResult result;
-        if (!isLast && sigmaParams.getVariance() == BindingVariance.INVARIANT) {
+        if (sigmaParams.getVariance() == BindingVariance.INVARIANT) {
           try (var ignored = clearCategoricalContext()) {
             result = checkExpr(field, expType);
           }

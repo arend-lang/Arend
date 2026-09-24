@@ -72,14 +72,13 @@ public class CoreExpressionChecker implements ExpressionVisitor<Expression, Expr
   }
 
   private void checkList(List<? extends Expression> args, DependentLink parameters, ExprSubstitution substitution, LevelSubstitution levelSubst) {
-    checkList(args, parameters, substitution, levelSubst, false, false);
+    checkList(args, parameters, substitution, levelSubst, false);
   }
 
-  private void checkList(List<? extends Expression> args, DependentLink parameters, ExprSubstitution substitution, LevelSubstitution levelSubst, boolean isSigmaTuple, boolean allowCatDomain) {
+  private void checkList(List<? extends Expression> args, DependentLink parameters, ExprSubstitution substitution, LevelSubstitution levelSubst, boolean allowCatDomain) {
     for (Expression arg : args) {
-      boolean isLast = isSigmaTuple && !parameters.getNext().hasNext();
       Expression expectedType = parameters.getType().subst(substitution, levelSubst);
-      if (!isLast && parameters.getVariance() == BindingVariance.INVARIANT) {
+      if (parameters.getVariance() == BindingVariance.INVARIANT) {
         try (var ignored = clearCategoricalContext()) {
           checkArgExpr(arg, expectedType, allowCatDomain);
         }
@@ -121,7 +120,7 @@ public class CoreExpressionChecker implements ExpressionVisitor<Expression, Expr
     checkBoxes(expr);
     ExprSubstitution substitution = new ExprSubstitution();
     List<? extends Expression> args = expr.getDefCallArguments();
-    checkList(args, expr.getDefinition().getParameters(), substitution, expr.getLevelSubstitution(), false, true);
+    checkList(args, expr.getDefinition().getParameters(), substitution, expr.getLevelSubstitution(), true);
     Expression resultType = null;
     if (expr.getDefinition() == Prelude.MOD || expr.getDefinition() == Prelude.DIV_MOD) {
       Expression arg2 = args.get(1);
@@ -166,7 +165,7 @@ public class CoreExpressionChecker implements ExpressionVisitor<Expression, Expr
       ConCallExpression conCall = (ConCallExpression) it;
       LevelSubstitution levelSubst = conCall.getLevelSubstitution();
       ExprSubstitution substitution = new ExprSubstitution();
-      checkList(conCall.getDataTypeArguments(), conCall.getDefinition().getDataTypeParameters(), substitution, levelSubst, false, true);
+      checkList(conCall.getDataTypeArguments(), conCall.getDefinition().getDataTypeParameters(), substitution, levelSubst, true);
       Expression actualType = conCall.getDefinition().getDataTypeExpression(conCall.getLevels(), conCall.getDataTypeArguments());
       check(expectedType, actualType, conCall);
       if (result == null) {
@@ -175,7 +174,7 @@ public class CoreExpressionChecker implements ExpressionVisitor<Expression, Expr
 
       int recursiveParam = conCall.getDefinition().getRecursiveParameter();
       if (recursiveParam < 0) {
-        checkList(conCall.getDefCallArguments(), conCall.getDefinition().getParameters(), substitution, levelSubst, false, true);
+        checkList(conCall.getDefCallArguments(), conCall.getDefinition().getParameters(), substitution, levelSubst, true);
         return result;
       }
 
@@ -202,7 +201,7 @@ public class CoreExpressionChecker implements ExpressionVisitor<Expression, Expr
   public Expression visitDataCall(DataCallExpression expr, Expression expectedType) {
     checkLevels(expr.getLevels(), expr);
     checkBoxes(expr);
-    checkList(expr.getDefCallArguments(), expr.getDefinition().getParameters(), new ExprSubstitution(), expr.getLevelSubstitution(), false, true);
+    checkList(expr.getDefCallArguments(), expr.getDefinition().getParameters(), new ExprSubstitution(), expr.getLevelSubstitution(), true);
     return check(expectedType, GetTypeVisitor.INSTANCE.visitDataCall(expr, null), expr);
   }
 
@@ -343,10 +342,9 @@ public class CoreExpressionChecker implements ExpressionVisitor<Expression, Expr
       addBinding(link, expr);
       if (link instanceof TypedDependentLink) {
         Expression paramType;
-        boolean isLast = isSigma && !link.getNext().hasNext();
         boolean invariant = isSigma && link.getVariance() == BindingVariance.INVARIANT;
         Expression checkAgainst = invariant ? UniverseExpression.INF_OMEGA : type;
-        if (isLast || isSigma && !invariant || allowCatDomain) {
+        if (isSigma && !invariant || allowCatDomain) {
           paramType = link.getType().accept(this, checkAgainst);
         } else {
           try (var ignored = clearCategoricalContext()) {
@@ -510,7 +508,7 @@ public class CoreExpressionChecker implements ExpressionVisitor<Expression, Expr
   @Override
   public Expression visitTuple(TupleExpression expr, Expression expectedType) {
     visitSigma(expr.getSigmaType(), null);
-    checkList(expr.getFields(), expr.getSigmaType().getParameters(), new ExprSubstitution(), LevelSubstitution.EMPTY, true, false);
+    checkList(expr.getFields(), expr.getSigmaType().getParameters(), new ExprSubstitution(), LevelSubstitution.EMPTY, false);
     return check(expectedType, expr.getSigmaType(), expr);
   }
 

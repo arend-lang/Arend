@@ -60,6 +60,46 @@ public class CatSigmaTest extends TypeCheckingTestCase {
   }
 
   @Test
+  public void sigmaInResultTypeLastVarianceError() {
+    typeCheckDef("\\func test (X : \\Cat) (x :+ X) : \\Sigma (n : Nat) X => (0, x)", 1);
+  }
+
+  @Test
+  public void sigmaInResultTypeLastTest() {
+    typeCheckDef("\\func test (X : \\Cat) (x : X) : \\Sigma (n : Nat) X => (0, x)");
+  }
+
+  @Test
+  public void sigmaPlusInResultTypeLastVarianceTest() {
+    typeCheckDef("\\func test (X : \\Cat) (x :+ X) : \\Sigma+ (n : Nat) X => (0, x)");
+  }
+
+  @Test
+  public void sigmaLastComponentFunctorError() {
+    typeCheckDef("\\func test (X : \\Cat) : X ->+ \\Sigma (n : Nat) X => \\lam x => (0, x)", 1);
+  }
+
+  @Test
+  public void sigmaLastComponentVarianceError() {
+    typeCheckDef("\\func test (C : \\Cat) (x :+ C) => \\Sigma (y : C) (y = x)", 1);
+  }
+
+  @Test
+  public void sigmaLastComponentCatVarianceError() {
+    typeCheckDef("\\func test (C : \\Cat) (F : C ->+ \\Cat) (x :+ C) => \\Sigma (n : Nat) (F x)", 1);
+  }
+
+  @Test
+  public void sigmaLastComponentInvariantTest() {
+    typeCheckDef("\\func test (C : \\Cat) (F : C ->+ \\Cat) (x : C) => \\Sigma (y : C) (y = x) (F x)");
+  }
+
+  @Test
+  public void sigmaPlusLastComponentVarianceTest() {
+    typeCheckDef("\\func test (C : \\Cat) (F : C ->+ \\Cat) (x :+ C) => \\Sigma+ (y : C) (y = x) (F x)");
+  }
+
+  @Test
   public void sigmaFiniteExpectedTypeTest() {
     typeCheckDef("\\func test (C : \\Cat0) : \\Type1 => \\Sigma (x : C) Nat");
   }

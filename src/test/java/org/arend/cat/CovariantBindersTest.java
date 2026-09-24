@@ -230,8 +230,8 @@ public class CovariantBindersTest extends TypeCheckingTestCase {
   }
 
   @Test
-  public void tupleLastFieldFullContextTest() {
-    typeCheckDef("\\func test (a :+ Nat) : \\Sigma Nat Nat Nat => (0, 0, a)");
+  public void tupleLastFieldClearError() {
+    typeCheckDef("\\func test (a :+ Nat) : \\Sigma Nat Nat Nat => (0, 0, a)", 1);
   }
 
   @Test
