@@ -65,4 +65,12 @@
       | finv s => (s.1, fromCatType s.2)
       | finv_f => idpe
       | f_finv t => path \lam i => (t.1, toCatType_fromCatType t.2 i)
+
+    -- | Objects of a fibre of {F} are elements of the corresponding fibre of `CatTypeFamily F Fg`.
+    \func ob-equiv {C : \Cat} {F : C ->⁺ \Cat} {Fg : \Pi (x : C) -> IsGroupoid (F x)} {x : C}
+      : QEquiv {Ob (F x)} {CatTypeFamily F Fg x} \cowith
+      | f o => toCatType (unob o)
+      | ret t => ob (fromCatType t)
+      | ret_f (ob a) => idp
+      | f_sec => toCatType_fromCatType
   }

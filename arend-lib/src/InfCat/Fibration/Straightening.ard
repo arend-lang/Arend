@@ -1,0 +1,74 @@
+\import Equiv
+\import Equiv.Sigma
+\import Equiv.Univalence
+\import InfCat.Basics
+\import InfCat.Fibration.CovariantLift
+\import InfCat.Fibration.LeftFib
+\import InfCat.Functor.Equiv
+\import InfCat.Groupoid
+\import InfCat.Objects
+\import Logic
+\import Logic.Meta
+\import Logic.Unique
+\import Paths
+\import Paths.Meta
+
+-- | {X} is equivalent to a type in `\Type u`.
+\func IsSmall.{u} (X : \Cat) : \Prop
+  => ∃ (S : \Type u) (HQEquiv {S} {X})
+  \where {
+    -- | A type has at most one small model up to identity.
+    \private \lemma levelProp.{u} {X : \Type} : isProp (\Sigma (S : \Type u) (Equiv S X))
+      => isContr'=>isProp \lam p => Contr.Contr_QEquiv
+          (transQEquiv (sigma-right \lam (S : \Type u) => typeUnivalence {S} {p.1})
+                       (sigma-right \lam (S : \Type u) => postcomp {S} (Equiv.toQEquiv p.2)))
+          (rsigma p.1)
+      \where
+        \func postcomp {S S0 X : \Type} (e0 : QEquiv {S0} {X}) : QEquiv {Equiv S S0} {Equiv S X} \cowith
+          | f e => mkEquiv (inP (transQEquiv (Equiv.toQEquiv e) e0))
+          | ret e => mkEquiv (inP (transQEquiv (Equiv.toQEquiv e) (symQEquiv e0)))
+          | ret_f e => Equiv.equals (ext \lam s => e0.ret_f (e s))
+          | f_sec e => Equiv.equals (ext \lam s => e0.f_sec (e s))
+
+    \private \lemma extract.{u} {X : \Cat} (s : IsSmall.{u} X) : \Sigma (S : \Type u) (Equiv S (Ob X)) \level levelProp \elim s
+      | inP (S, e) => (S, mkEquiv (inP (obEquiv e)))
+
+    -- | An equivalence with a type induces an equivalence with the type of objects.
+    \private \func obEquiv {S : \Type} {X : \Cat} (e : HQEquiv {S} {X}) : QEquiv {S} {Ob X} \cowith
+      | f s => ob (e s)
+      | ret o => e.finv (unob o)
+      | ret_f s => e.finv_f s
+      | f_sec (ob x) => pmap ob (e.f_finv x)
+
+    -- | The data that `Resize+` expects for a type {Y} equivalent to the objects of {X}.
+    \sfunc toResize.{u} {X : \Cat} {Y : \Type} (s : IsSmall.{u} X) (e' : QEquiv {Ob X} {Y})
+      : \Sigma (S : \Type u) (to : S -> Y) (from : Y -> S) (\Pi (s : S) -> from (to s) = s) (\Pi (b : Y) -> to (from b) = b)
+      => \let e => transQEquiv (Equiv.toQEquiv (extract s).2) e'
+         \in ((extract s).1, e.f, e.ret, e.ret_f, e.f_sec)
+  }
+
+-- | A left fibration with small fibers is classified by `\Type u`.
+\type Straight.{u} {C : \Cat} {F : C ->⁺ \Cat} (Ff : IsLeftFib F) (s : \Pi (y : C) -> IsSmall.{u} (F y)) (y :⁺ C) : \Type u
+  => Resize+ (CatTypeFamily F (leftFib-grpd Ff)) (\lam y => IsSmall.toResize (s y) CatTypeFamily.ob-equiv)
+             (\lam {a} {a'} f b => leftFib-lift (catType-leftFib Ff) f b) y
+  \where {
+    \func fromStraight.{u} {Ff : IsLeftFib F} {s : \Pi (y : C) -> IsSmall.{u} (F y)} {y :⁺ C}
+                           (r :⁺ Straight Ff s y) : F y \elim r
+      | resize+ b => CatTypeFamily.fromCatType b
+
+    \func toStraight.{u} {Ff : IsLeftFib F} {s : \Pi (y : C) -> IsSmall.{u} (F y)} {y :⁺ C}
+                     (b :⁺ F y) : Straight Ff s y
+      => resize+ (CatTypeFamily.toCatType b)
+
+    \func toStraight_fromStraight.{u} {Ff : IsLeftFib F} {s : \Pi (y : C) -> IsSmall.{u} (F y)} {y :⁺ C}
+                                      (r :⁺ Straight Ff s y) : toStraight (fromStraight r) = r \elim r
+      | resize+ b => path \lam i => resize+ (CatTypeFamily.toCatType_fromCatType b i)
+  }
+
+\lemma straighten-leftFib.{u} {C : \Cat} {F : C ->⁺ \Cat} {Ff : IsLeftFib F} {s : \Pi (y : C) -> IsSmall.{u} (F y)}
+  : IsLeftFib (Straight Ff s)
+  => leftFib-pullback (Straight Ff s) universe-leftFib
+
+-- | The representable functor `x ~> -` with values in `\Type u`.
+\func ReprFunctor.{u} {C : \Cat u} (x : C) (y :⁺ C) : \Type u
+  => Straight (hom-leftFib x) (\lam y => inP (x ~> y, idHQEquiv)) y

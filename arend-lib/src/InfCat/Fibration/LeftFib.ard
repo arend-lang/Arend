@@ -8,6 +8,7 @@
 \import InfCat.Functor.FullyFaithful
 \import InfCat.Groupoid
 \import InfCat.Objects
+\import InfCat.Paths
 \import InfCat.Rezk
 \import InfCat.Square
 \import Logic
@@ -128,5 +129,16 @@
 \lemma lift_type-IsLeftFib {A : \Cat} {B : A ->⁺ \Type} (lift : \Pi {a a' :⁺ A} (f :⁺ a ~> a') (b :⁺ B a) -> CovLift B f b) : IsLeftFib B
   => lift-IsLeftFib (\lam a => type-groupoid) lift
 
+-- | The family of types associated to a left fibration is a left fibration.
+\lemma catType-leftFib {A : \Cat} {B : A ->⁺ \Cat} (Bf : IsLeftFib B) {Bg : \Pi (a : A) -> IsGroupoid (B a)}
+  : IsLeftFib (CatTypeFamily B Bg)
+  => lift_type-IsLeftFib \lam f t => transport+ (CovLift _ f __) (CatTypeFamily.toCatType_fromCatType t)
+      \let l => leftFib-lift Bf f (CatTypeFamily.fromCatType t)
+      \in (CatTypeFamily.toCatType l.1, dpath \lam i => CatTypeFamily.toCatType (l.2 i))
+
 \lemma universe-leftFib.{u} : IsLeftFib {\Type u} (\lam A => A)
   => lift_type-IsLeftFib \lam f b => (coe+ (\lam i => f i) b dright, dpath \lam i => coe+ (\lam j => f j) b i)
+
+-- | The coslice under {x} is a left fibration.
+\lemma hom-leftFib {C : \Cat} (x : C) : IsLeftFib (\lam y => x ~> y)
+  => lift_type-IsLeftFib \lam {a} {a'} f b => (comp b f, dpath \lam j => dpath \lam i => fill2 b f i j)
