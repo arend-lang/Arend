@@ -1,5 +1,6 @@
 \import Equiv
 \import Function.Meta
+\import InfCat.Arrows
 \import InfCat.Basics
 \import InfCat.Functor.Equiv
 \import InfCat.Functor.FullyFaithful
@@ -29,3 +30,39 @@
 
 \lemma type_ob {X : \Type} : IsHEquiv {Ob X} {X} unob
   => cat_ob type-groupoid
+
+-- | A family of groupoids as a family of types.
+\type CatTypeFamily {C : \Cat} (F : C ->⁺ \Cat) (Fg : \Pi (x : C) -> IsGroupoid (F x)) (x :⁺ C) : \Type
+  => GroupoidType {F x} \lam h => catGroupoid-witness F Fg h
+  \where {
+    -- | A natural choice of a lift of an arrow in a fibre of {F} to a constant arrow.
+    \private \sfunc groupoid-lift {C : \Cat} (F : C ->⁺ \Cat) (Fg : \Pi (x : C) -> IsGroupoid (F x))
+      : \Sigma (h : (\Sigma⁺ (x : C) (a b : F x) (a ~> b)) ->⁺ \Sigma⁺ (x : C) (F x))
+               (\Pi (u :⁺ \Sigma⁺ (x : C) (a b : F x) (a ~> b)) -> ((h u).1, \lam _ => (h u).2) = {\Sigma⁺ (x : C) (DI ->⁺ F x)} (u.1, \lam i => u.4 i))
+      => ffMap-lift diag-rel-ff {\Sigma⁺ (x : C) (a b : F x) (a ~> b)} (\lam u => (u.1, \lam i => u.4 i))
+          \lam u => TruncP.map (IsIso-diag-char.1 (Fg u.1 u.4)) \lam s => ((u.1, s.1), path \lam i => (u.1, s.2 i))
+
+    -- | Every arrow in a fibre of {F} comes from a path, naturally in the arrow.
+    \private \sfunc catGroupoid-witness {C : \Cat} (F : C ->⁺ \Cat) (Fg : \Pi (x : C) -> IsGroupoid (F x)) {x :⁺ C} {a b :⁺ F x} (h :⁺ a ~> b)
+      : \Sigma⁺ (p : a = b) (coe (\lam i => a ~> p i) idd right = h)
+      => transport+ (\lam v => \Sigma⁺ (p : v.2 dleft = v.2 dright) (coe (\lam i => v.2 dleft ~> p i) idd right = dpath (\lam i => v.2 i)))
+                    ((groupoid-lift F Fg).2 (x,a,b,h)) (idp, idp)
+
+    \func toCatType {C : \Cat} {F : C ->⁺ \Cat} {Fg : \Pi (x : C) -> IsGroupoid (F x)} {x :⁺ C} (a :⁺ F x) : CatTypeFamily F Fg x
+      => groupoidType a
+
+    \func fromCatType {C : \Cat} {F : C ->⁺ \Cat} {Fg : \Pi (x : C) -> IsGroupoid (F x)} {x :⁺ C} (t :⁺ CatTypeFamily F Fg x) : F x \elim t
+      | groupoidType a => a
+
+    \func toCatType_fromCatType {C : \Cat} {F : C ->⁺ \Cat} {Fg : \Pi (x : C) -> IsGroupoid (F x)} {x :⁺ C} (t :⁺ CatTypeFamily F Fg x)
+      : toCatType (fromCatType t) = t \elim t
+      | groupoidType a => idp
+
+    -- | `CatTypeFamily F Fg` is equivalent to {F}.
+    \func catTypeFamily-equiv {C : \Cat} {F : C ->⁺ \Cat} {Fg : \Pi (x : C) -> IsGroupoid (F x)}
+      : HQEquiv {\Sigma⁺ (x : C) (F x)} {\Sigma⁺ (x : C) (CatTypeFamily F Fg x)} \cowith
+      | f s => (s.1, toCatType s.2)
+      | finv s => (s.1, fromCatType s.2)
+      | finv_f => idpe
+      | f_finv t => path \lam i => (t.1, toCatType_fromCatType t.2 i)
+  }

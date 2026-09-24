@@ -99,6 +99,9 @@
                   (y :⁺ C)
   | resize+ (b :⁺ F y)
 
+\data GroupoidType {C :⁺ \Cat} (Cg :⁺ \Pi {x y :⁺ C} (f :⁺ x ~> y) -> \Sigma⁺ (p : x = y) (coe (\lam i => x ~> p i) idd right = f))
+  | groupoidType (_ :⁺ C)
+
 \data Nat
   | zero
   | suc Nat

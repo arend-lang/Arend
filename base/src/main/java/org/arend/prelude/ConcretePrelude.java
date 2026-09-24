@@ -95,6 +95,16 @@ public class ConcretePrelude implements ArendPrelude {
   }
 
   @Override
+  public CoreDataDefinition getGroupoidType() {
+    return Prelude.GROUPOID_TYPE;
+  }
+
+  @Override
+  public CoreConstructor getGroupoidTypeCon() {
+    return Prelude.GROUPOID_TYPE_CON;
+  }
+
+  @Override
   public CoreFunctionDefinition getRezk() {
     return Prelude.REZK;
   }
@@ -368,6 +378,18 @@ public class ConcretePrelude implements ArendPrelude {
   public ArendRef getResizeConRef() {
     if (Prelude.RESIZE_PLUS_CON != null) return Prelude.RESIZE_PLUS_CON.getRef();
     return myPreludeScope.resolveName("resize+");
+  }
+
+  @Override
+  public ArendRef getGroupoidTypeRef() {
+    if (Prelude.GROUPOID_TYPE != null) return Prelude.GROUPOID_TYPE.getRef();
+    return myPreludeScope.resolveName("GroupoidType");
+  }
+
+  @Override
+  public ArendRef getGroupoidTypeConRef() {
+    if (Prelude.GROUPOID_TYPE_CON != null) return Prelude.GROUPOID_TYPE_CON.getRef();
+    return myPreludeScope.resolveName("groupoidType");
   }
 
   @Override

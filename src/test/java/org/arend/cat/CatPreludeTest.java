@@ -405,4 +405,39 @@ public class CatPreludeTest extends TypeCheckingTestCase {
         => Resize+ F s l y
       """, -1);
   }
+
+  private static final String IS_GRPD = "(\\Pi {x y :+ C} (f :+ x ~> y) -> \\Sigma+ (p : x = y) (coe (\\lam i => x ~> p i) idd right = f))";
+
+  @Test
+  public void groupoidTypeIsTypeTest() {
+    typeCheckModule(
+      "\\func test {C :+ \\Cat} (Cg :+ " + IS_GRPD + ") : \\Type => GroupoidType {C} Cg\n" +
+      "\\func test2 {C : \\Cat} (Cg : " + IS_GRPD + ") : \\Set0 -> \\Type => \\lam _ => GroupoidType {C} Cg");
+  }
+
+  @Test
+  public void groupoidTypeLevelTest() {
+    typeCheckModule("\\func test {C : \\Cat0} (Cg : " + IS_GRPD + ") : \\Type => GroupoidType {C} Cg");
+  }
+
+  @Test
+  public void groupoidTypeLevelError() {
+    typeCheckModule("\\func test {C : \\Cat0} (Cg : " + IS_GRPD + ") : \\Type0 => GroupoidType {C} Cg", 1);
+  }
+
+  @Test
+  public void groupoidTypeElimTest() {
+    typeCheckModule(
+      "\\func from {C :+ \\Cat} {Cg :+ " + IS_GRPD + "} (t :+ GroupoidType {C} Cg) : C \\elim t\n" +
+      "  | groupoidType c => c\n" +
+      "\\func to {C :+ \\Cat} {Cg :+ " + IS_GRPD + "} (c :+ C) : GroupoidType {C} Cg => groupoidType c\n" +
+      "\\func beta {C : \\Cat} {Cg : " + IS_GRPD + "} (c : C) : from {C} {Cg} (to c) = c => idp\n" +
+      "\\func eta {C : \\Cat} {Cg : " + IS_GRPD + "} (t : GroupoidType {C} Cg) : to (from t) = t \\elim t\n" +
+      "  | groupoidType c => idp");
+  }
+
+  @Test
+  public void groupoidTypeInvariantSigmaError() {
+    typeCheckModule("\\func test {C : \\Cat} (Cg : \\Pi {x y :+ C} (f :+ x ~> y) -> \\Sigma (p : x = y) (coe (\\lam i => x ~> p i) idd right = f)) : \\Type => GroupoidType {C} Cg", -1);
+  }
 }

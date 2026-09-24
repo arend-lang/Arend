@@ -68,6 +68,8 @@ public class Prelude implements ArendPrelude {
   public static FunctionDefinition ISO_PLUS, ISO_COE_PLUS;
   public static DataDefinition RESIZE_PLUS;
   public static Constructor RESIZE_PLUS_CON;
+  public static DataDefinition GROUPOID_TYPE;
+  public static Constructor GROUPOID_TYPE_CON;
   public static FunctionDefinition REZK;
 
   public static DataDefinition NAT;
@@ -277,6 +279,12 @@ public class Prelude implements ArendPrelude {
         RESIZE_PLUS.setSort(new Sort(new Level(RESIZE_PLUS.getLevelParameters().getFirst()), ConstLevel.INFINITY));
         RESIZE_PLUS_CON = RESIZE_PLUS.getConstructor("resize+");
       }
+      case "GroupoidType" -> {
+        GROUPOID_TYPE = (DataDefinition) definition;
+        // A groupoid is a type, but not a small one, even if its carrier is small
+        GROUPOID_TYPE.setSort(new Sort(Level.INFINITY, ConstLevel.INFINITY));
+        GROUPOID_TYPE_CON = GROUPOID_TYPE.getConstructor("groupoidType");
+      }
       case "rezk" -> {
         REZK = (FunctionDefinition) definition;
         REZK.setStatus(Definition.TypeCheckingStatus.NO_ERRORS);
@@ -405,6 +413,8 @@ public class Prelude implements ArendPrelude {
     consumer.accept(REZK);
     consumer.accept(RESIZE_PLUS);
     consumer.accept(RESIZE_PLUS_CON);
+    consumer.accept(GROUPOID_TYPE);
+    consumer.accept(GROUPOID_TYPE_CON);
     consumer.accept(PATH);
     consumer.accept(PATH_CON);
     consumer.accept(PATH_INFIX);
@@ -526,6 +536,16 @@ public class Prelude implements ArendPrelude {
   @Override
   public Constructor getResizeCon() {
     return RESIZE_PLUS_CON;
+  }
+
+  @Override
+  public DataDefinition getGroupoidType() {
+    return GROUPOID_TYPE;
+  }
+
+  @Override
+  public Constructor getGroupoidTypeCon() {
+    return GROUPOID_TYPE_CON;
   }
 
   @Override
@@ -786,6 +806,16 @@ public class Prelude implements ArendPrelude {
   @Override
   public ArendRef getResizeConRef() {
     return RESIZE_PLUS_CON == null ? null : RESIZE_PLUS_CON.getRef();
+  }
+
+  @Override
+  public ArendRef getGroupoidTypeRef() {
+    return GROUPOID_TYPE == null ? null : GROUPOID_TYPE.getRef();
+  }
+
+  @Override
+  public ArendRef getGroupoidTypeConRef() {
+    return GROUPOID_TYPE_CON == null ? null : GROUPOID_TYPE_CON.getRef();
   }
 
   @Override
