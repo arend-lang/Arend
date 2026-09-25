@@ -24,6 +24,14 @@
     | rdistr => ldistr
     | zro_*-left => zro_*-right
     | zro_*-right => zro_*-left
+
+  \lemma BigSum-ldistr {x : E} {l : Array E} : x * BigSum l = BigSum (map (x *) l) \elim l
+    | nil => zro_*-right
+    | :: a l => ldistr *> pmap (x * a +) BigSum-ldistr
+
+  \lemma BigSum-rdistr {l : Array E} {z : E} : BigSum l * z = BigSum (\lam i => l i * z) \elim l
+    | nil => zro_*-left
+    | :: a arr => rdistr *> pmap (_ +) BigSum-rdistr
 }
 
 \class Semiring \extends PseudoSemiring, Monoid {
@@ -92,18 +100,10 @@
   \lemma Inv_zro : Monoid.Inv zro <-> (zro = ide)
     => (\lam zi => inv zro_*-left *> zi.inv-right, \lam t => \new Monoid.Inv zro zro (trivial t) (trivial t))
 
-  \lemma BigSum-ldistr {x : E} {l : Array E} : x * BigSum l = BigSum (map (x *) l) \elim l
-    | nil => zro_*-right
-    | :: a l => ldistr *> pmap (x * a +) BigSum-ldistr
-
   \lemma FinSum-ldistr {A : FinSet} {x : E} {y : A -> E} : x * FinSum y = FinSum (x * y __)
     => \case FinSum_char y \with {
       | inP p => pmap (x *) p.2 *> BigSum-ldistr *> inv (FinSum_char2 p.1)
     }
-
-  \lemma BigSum-rdistr {l : Array E} {z : E} : BigSum l * z = BigSum (\lam i => l i * z) \elim l
-    | nil => zro_*-left
-    | :: a arr => rdistr *> pmap (_ +) BigSum-rdistr
 
   \lemma FinSum-rdistr {A : FinSet} {x : E} {y : A -> E} : FinSum y * x = FinSum (y __ * x)
     => \case FinSum_char y \with {

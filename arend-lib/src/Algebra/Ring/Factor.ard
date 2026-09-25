@@ -18,12 +18,13 @@
 \import Paths.Meta
 \import Relation.Equivalence
 \open Monoid
+\open FactorPseudoRing (inF, fequiv, fequiv0, unfequiv, unfequiv0)
 
-\instance FactorRing (I : Ideal) : CRing
+\instance FactorPseudoRing (I : PseudoTIdeal) : PseudoRing
   | E => Type I
   | zro => inF 0
   | + (x y : Type I) : Type I \with {
-    | in~ a, in~ b => in~ (a Ring.+ b)
+    | in~ a, in~ b => in~ (a PseudoRing.+ b)
     | in~ a, ~-equiv b c r => fequiv (simplify r)
     | ~-equiv b c r, in~ a => fequiv (simplify r)
   }
@@ -36,14 +37,10 @@
   | +-comm {x} {y} => \case \elim x, \elim y \with {
     | in~ a, in~ b => fequiv (simplify contains_zro)
   }
-  | ide => inF 1
   | * (x y : Type I) : Type I \with {
-    | in~ a, in~ b => inF (a Ring.* b)
-    | in~ a, ~-equiv b c r => fequiv $ transport I Ring.ldistr_- (I.ideal-left r)
-    | ~-equiv b c r, in~ a => fequiv $ transport I Ring.rdistr_- (I.ideal-right r)
-  }
-  | ide-left {x} => \case \elim x \with {
-    | in~ a => fequiv (simplify contains_zro)
+    | in~ a, in~ b => inF (a PseudoRing.* b)
+    | in~ a, ~-equiv b c r => fequiv $ transport I PseudoRing.ldistr_- (I.ideal-left r)
+    | ~-equiv b c r, in~ a => fequiv $ transport I PseudoRing.rdistr_- (I.ideal-right r)
   }
   | *-assoc {x} {y} {z} => \case \elim x, \elim y, \elim z \with {
     | in~ a, in~ b, in~ c => fequiv (transportInv I (AddGroup.toZero *-assoc) contains_zro)
@@ -51,46 +48,76 @@
   | ldistr {x} {y} {z} => \case \elim x, \elim y, \elim z \with {
     | in~ a, in~ b, in~ c => fequiv (transportInv I (AddGroup.toZero ldistr) contains_zro)
   }
-  | natCoef n => inF (natCoef n)
-  | natCoefZero => fequiv $ simplify (transportInv I natCoefZero contains_zro)
-  | natCoefSuc n => fequiv $ later $ rewrite natCoefSuc (simplify contains_zro)
+  | rdistr {x} {y} {z} => \case \elim x, \elim y, \elim z \with {
+    | in~ a, in~ b, in~ c => fequiv (transportInv I (AddGroup.toZero rdistr) contains_zro)
+  }
   | negative (x : Type I) : Type I \with {
-    | in~ a => inF (Ring.negative a)
-    | ~-equiv a b r => fequiv $ transport I equation.ring (I.ideal-left { -1} r)
+    | in~ a => inF (PseudoRing.negative a)
+    | ~-equiv a b r => fequiv $ transport I AbGroup.negative_+-comm (I.contains_negative r)
   }
   | negative-left {x} => \case \elim x \with {
     | in~ a => fequiv (simplify contains_zro)
   }
+  \where {
+    \type Type (I : PseudoTIdeal) => Quotient {I.S} (\lam a b => I (a - b))
+
+    \func inF {I : PseudoTIdeal} (a : I.S) : Type I => in~ a
+
+    \lemma fequiv {I : PseudoTIdeal} {a b : I.S} (p : I (a - b)) : inF a = inF b
+      => path (\lam i => ~-equiv a b p i)
+
+    \lemma fequiv0 {I : PseudoTIdeal} {a : I.S} (p : I a) : inF a = inF 0
+      => fequiv $ transportInv I (pmap (a PseudoRing.+) AddGroup.negative_zro *> zro-right) p
+
+    \lemma unfequiv {I : PseudoTIdeal} {a b : I.S} (p : inF a = inF b) : I (a - b)
+      => Quotient.equalityEquiv (\new Equivalence I.S (\lam a b => I (a - b)) {
+        | ~-transitive c d => transport I equation.addGroup (contains_+ c d)
+        | ~-reflexive => simplify contains_zro
+        | ~-symmetric c => transport I AddGroup.negative_- (I.contains_negative c)
+      }) $ path (\lam i => p i)
+
+    \lemma unfequiv0 {I : PseudoTIdeal} {a : I.S} (p : inF a = inF 0) : I a
+      => transport I (pmap (a PseudoRing.+) AddGroup.negative_zro *> zro-right) (unfequiv p)
+  }
+
+\func factorPseudoHom {I : PseudoTIdeal} : PseudoRingHom I.S (FactorPseudoRing I) \cowith
+  | func => inF
+  | func-+ => idp
+  | func-* => idp
+
+\instance FactorRing (I : Ideal) : CRing
+  | PseudoRing => FactorPseudoRing I
+  | ide => inF 1
+  | ide-left {x} => \case \elim x \with {
+    | in~ a => fequiv (simplify contains_zro)
+  }
+  | natCoef n => inF (natCoef n)
+  | natCoefZero => fequiv $ simplify (transportInv I natCoefZero contains_zro)
+  | natCoefSuc n => fequiv $ later $ rewrite natCoefSuc (simplify contains_zro)
   | *-comm {x} {y} => \case \elim x, \elim y \with {
     | in~ a, in~ b => fequiv (transportInv I (AddGroup.toZero *-comm) contains_zro)
   }
   \where {
-    \type Type (I : Ideal) => Quotient {I.S} (\lam a b => I (a - b))
-
-    \func inF {I : Ideal} (a : I.S) : Type I => in~ a
+    {- | The constructor and the equality lemmas of {FactorPseudoRing}, re-exported: a user of a
+         quotient by a unital ideal never has to mention the rng-level instance. -}
+    \func inF {I : Ideal} (a : I.S) : FactorPseudoRing.Type I => FactorPseudoRing.inF a
 
     \lemma fequiv {I : Ideal} {a b : I.S} (p : I (a - b)) : inF a = inF b
-      => path (\lam i => ~-equiv a b p i)
+      => FactorPseudoRing.fequiv p
 
     \lemma fequiv0 {I : Ideal} {a : I.S} (p : I a) : inF a = inF 0
-      => fequiv $ transportInv I (pmap (a Ring.+) AddGroup.negative_zro *> zro-right) p
+      => FactorPseudoRing.fequiv0 p
 
     \lemma unfequiv {I : Ideal} {a b : I.S} (p : inF a = inF b) : I (a - b)
-      => Quotient.equalityEquiv (\new Equivalence I.S (\lam a b => I (a - b)) {
-        | ~-transitive c d => transport I equation.addGroup (contains_+ c d)
-        | ~-reflexive => simplify contains_zro
-        | ~-symmetric c => transport I equation.ring (I.ideal-left { -1} c)
-      }) $ path (\lam i => p i)
+      => FactorPseudoRing.unfequiv p
 
     \lemma unfequiv0 {I : Ideal} {a : I.S} (p : inF a = inF 0) : I a
-      => transport I (pmap (a Ring.+) AddGroup.negative_zro *> zro-right) (unfequiv p)
+      => FactorPseudoRing.unfequiv0 p
   }
 
 \func factorHom {I : Ideal} : RingHom I.S (FactorRing I) \cowith
-  | func => FactorRing.inF
-  | func-+ => idp
+  | PseudoRingHom => factorPseudoHom
   | func-ide => idp
-  | func-* => idp
 
 \func factor-lift {I : Ideal} {R : Ring} (f : RingHom I.S R) (p : \Pi {a : I.S} -> I a -> f a = 0) : RingHom (FactorRing I) R \cowith
   | func (x : FactorRing I) : R \with {
@@ -115,8 +142,6 @@
     }
   }
   \where {
-    \open FactorRing
-
     \lemma conv {I : Ideal} (p : 0 /= {FactorRing I} 1) (q : \Pi (x : FactorRing I) -> (x = 0) || Inv x) : I.IsMaximal
       => (\lam c => p $ inv $ fequiv0 c, \lam x => \case q (inF x) \with {
         | byLeft r => byLeft $ unfequiv0 r
@@ -137,8 +162,6 @@
     }
   }
   \where {
-    \open FactorRing \hiding (+,*,negative)
-
     \lemma trivial_Inv {R : CRing} {p : R} : (0 = {FactorRing (Ideal.closure1 p)} 1) <-> Inv p
       => (\lam q => \case Ideal.closure1-lem.1 $ unfequiv (inv q) \with {
         | inP t => Inv.lmake t.1 (*-comm *> inv t.2 *> simplify)
