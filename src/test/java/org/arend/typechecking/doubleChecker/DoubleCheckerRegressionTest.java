@@ -168,4 +168,36 @@ public class DoubleCheckerRegressionTest extends TypeCheckingTestCase {
       \\func test (n : Nat) : defer n = n => idp
       """);
   }
+
+  @Test
+  public void classFieldParametersPartialNewTest() {
+    typeCheckModule("""
+      \\data Empty
+      \\record SP (E : \\Set) (lt : E -> E -> \\Prop)
+      \\func le {A : SP} (a b : A.E) => A.lt b a -> Empty
+      \\record P \\extends SP | le' : E -> E -> \\Type
+      \\record C2 \\extends P {
+        | le' => le
+        | m : E -> E -> E
+        | ml {x y : E} : le' (m x y) x
+      }
+      \\func test {A : \\Set} (c : C2 A) : Nat \\elim c
+        | (lt, m, ml) => \\let t => ml \\in 0
+      """);
+  }
+
+  @Test
+  public void uncomputableTypeSolutionTest() {
+    typeCheckModule("""
+      \\record M (E : \\Set) (zro : E)
+      \\data Q (A : \\Type) | inq A
+      \\data D {V : M} (l : Array (\\Sigma V.E Nat)) | dcon
+      \\func inF {V : M} (l : Array (\\Sigma V.E Nat)) : Q (Array (\\Sigma V.E Nat)) => inq l
+      \\func zl {V : M} {l : Array (\\Sigma V.E Nat)} (p : \\Pi (i : Fin l.len) -> (l i).1 = V.zro) : D l => dcon
+      \\func sfQ {V : M} {l : Array (\\Sigma V.E Nat)} (d : D l) : inF l = inF l => idp
+      \\func test {V : M} {l : Array (\\Sigma V.E Nat)}
+        : inF (\\new Array (\\Sigma V.E Nat) l.len (\\lam i => (V.zro, (l i).2))) = inF (\\new Array (\\Sigma V.E Nat) l.len (\\lam i => (V.zro, (l i).2)))
+        => sfQ (zl \\lam _ => idp)
+      """);
+  }
 }

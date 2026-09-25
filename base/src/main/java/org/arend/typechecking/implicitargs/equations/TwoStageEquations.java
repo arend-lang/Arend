@@ -1039,6 +1039,9 @@ public class TwoStageEquations implements Equations {
         actualType = dataCall != null && dataCall.getDefinition() == Prelude.FIN ? result.getType() : Nat();
       } else {
         actualType = result.getType().normalize(NormalizationMode.WHNF);
+        if (trySolve2 && actualType instanceof ErrorExpression && actualType.isError() && result.getStuckInferenceVariable() != null) {
+          return SolveResult.NOT_SOLVED;
+        }
         if (actualType instanceof ClassCallExpression actualClassCall && expectedType instanceof ClassCallExpression expectedClassCall) {
           /* I don't know if this is necessary or not
           if (var.compareClassCallsExactly()) {

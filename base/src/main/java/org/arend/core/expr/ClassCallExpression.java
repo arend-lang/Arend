@@ -421,9 +421,9 @@ public class ClassCallExpression extends LeveledDefCallExpression implements Cor
 
           Expression arg = expr.getArgument().getUnderlyingExpression();
           if (arg instanceof ReferenceExpression && ((ReferenceExpression) arg).getBinding() == thisBinding) {
-            Expression fieldImpl = newExpr.getClassCall().myImplementations.get(field);
-            if (fieldImpl != null) {
-              return expr.subst(myThisBinding, newExpr).accept(this, null);
+            Expression impl = ClassCallExpression.this.getImplementation(expr.getDefinition(), arg);
+            if (impl != null) {
+              return impl.accept(this, null);
             }
           }
           return super.visitFieldCall(expr, null);
