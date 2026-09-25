@@ -777,10 +777,14 @@ public class ToAbstractVisitor extends BaseExpressionVisitor<Void, Concrete.Expr
   }
 
   private Concrete.UniverseExpression visitSort(Sort sort) {
-    return cUniverse(visitLevelNull(sort.getPLevel(), false), !sort.getHLevel().isInfinity() ? sort.getHLevel().value() : null, sort.getHLevel().isCat() ? ConcreteUniverseExpression.Kind.CAT : ConcreteUniverseExpression.Kind.TYPE);
+    return cUniverse(visitLevel(sort.getPLevel(), true), !sort.getHLevel().isInfinity() ? sort.getHLevel().value() : null, sort.getHLevel().isCat() ? ConcreteUniverseExpression.Kind.CAT : ConcreteUniverseExpression.Kind.TYPE);
   }
 
   private Concrete.LevelExpression visitLevel(Level level) {
+    return visitLevel(level, false);
+  }
+
+  private Concrete.LevelExpression visitLevel(Level level, boolean force) {
     if (level.isInfinity()) {
       return null;
     }
@@ -790,7 +794,7 @@ public class ToAbstractVisitor extends BaseExpressionVisitor<Void, Concrete.Expr
 
     Concrete.LevelExpression result = null;
     for (Map.Entry<LevelVariable, BigInteger> entry : level.getVarPairs()) {
-      if (!hasFlag(PrettyPrinterFlag.SHOW_LEVELS)) {
+      if (!force && !hasFlag(PrettyPrinterFlag.SHOW_LEVELS)) {
         return null;
       }
       Concrete.LevelExpression levelExpr = new Concrete.VarLevelExpression(null, new LocalReferable(entry.getKey().getName()), entry.getKey() instanceof InferenceLevelVariable);
