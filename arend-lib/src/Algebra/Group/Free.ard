@@ -119,16 +119,49 @@
     \func univ_map' {G : Group} (i : S -> G) (w : FreeGroup S) : G \elim w
       | in~ a => univ_map i a
       | ~-equiv x y p => univ_equiv {S} {G} i x y p
+
+    \func lift {G : Group} (i : S -> G) : GroupHom (FreeGroup S) G \cowith
+      | func => univ_map' i
+      | func-* {x} {y} => \case \elim x, \elim y \with {
+        | in~ x, in~ y => univ_map_++ i x y
+      }
+
+    \lemma lift-beta {G : Group} (i : S -> G) (s : S) : lift i (can s) = i s
+      => ide-right
+
+    \lemma lift-unique {G : Group} {i : S -> G} {f : GroupHom (FreeGroup S) G}
+                       (p : \Pi (s : S) -> f (can s) = i s)
+      : f = lift i
+      => exts \lam x => \case \elim x \with {
+        | in~ a => char a *> pmap (univ_map __ a) (ext p)
+      }
+      \where {
+        \private \lemma char (a : W) : f (in~ a) = univ_map (\lam t => f (can t)) a \elim a
+          | nil => f.func-ide
+          | (s, b) :: l => f.func-* {in~ ((s, b) :: nil)} {in~ l} *> pmap2 (*) (\case \elim b \with {
+            | true => idp
+            | false => f.func-inverse {can s}
+          }) (char l)
+      }
+
+    \lemma hom-ext {G : Group} {f g : GroupHom (FreeGroup S) G}
+                   (p : \Pi (s : S) -> f (can s) = g (can s))
+      : f = g
+      => lift-unique p *> Paths.inv (lift-unique \lam _ => idp)
+
+    \func map {T : \Set} (u : S -> T) : GroupHom (FreeGroup S) (FreeGroup T)
+      => lift (can o u)
+
+    \lemma func-lift {G H : Group} (f : GroupHom G H) (i : S -> G)
+      : f GroupHom.∘ lift i = lift (f o i)
+      => lift-unique \lam s => pmap f (lift-beta i s)
+
+    \lemma lift_can : lift can = GroupHom.id {FreeGroup S}
+      => Paths.inv (lift-unique \lam _ => idp)
   }
 
-\func FreeGroupUniversalProperty (S : \Set) (G : Group) (i : S -> G) : \Sigma (f : GroupHom (FreeGroup S) G) (f o FreeGroup.can = i) =>
-  (\new GroupHom {
-     | func => FreeGroup.univ_map' i
-     | func-ide => idp
-     | func-* {x} {y} => \case \elim x, \elim y \with {
-       | in~ x, in~ y => FreeGroup.univ_map_++ i x y
-     }
-   }, ext (\lam _ => unfold (o) (rewrite ide-right idp)))
+\func FreeGroupUniversalProperty (S : \Set) (G : Group) (i : S -> G) : \Sigma (f : GroupHom (FreeGroup S) G) (f o FreeGroup.can = i)
+  => (FreeGroup.lift i, ext \lam s => FreeGroup.lift-beta i s)
 
 \func reduce {S : DecSet} (x : List (\Sigma S Bool)) : List (\Sigma S Bool) \elim x
   | nil =>  nil
