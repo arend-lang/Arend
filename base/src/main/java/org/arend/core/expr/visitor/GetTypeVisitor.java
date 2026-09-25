@@ -1,6 +1,8 @@
 package org.arend.core.expr.visitor;
 
+import org.arend.core.context.binding.Binding;
 import org.arend.core.context.param.DependentLink;
+import org.arend.core.context.param.SingleDependentLink;
 import org.arend.core.definition.ClassField;
 import org.arend.core.definition.DataDefinition;
 import org.arend.core.definition.FunctionDefinition;
@@ -28,13 +30,51 @@ public class GetTypeVisitor implements ExpressionVisitor<Void, Expression> {
   public final static GetTypeVisitor NN_INSTANCE = new GetTypeVisitor(false);
 
   private final boolean myNormalizing;
+  private final Set<Binding> myReleased;
+
+  private GetTypeVisitor(boolean normalizing, Set<Binding> released) {
+    myNormalizing = normalizing;
+    myReleased = released;
+  }
 
   private GetTypeVisitor(boolean normalizing) {
-    myNormalizing = normalizing;
+    this(normalizing, Collections.emptySet());
+  }
+
+  GetTypeVisitor(Set<Binding> released) {
+    this(true, released);
   }
 
   GetTypeVisitor() {
     this(true);
+  }
+
+  /**
+   * @return a visitor that treats forced path types depending only on {@code released} (among covariant variables) as not forced.
+   */
+  protected GetTypeVisitor withReleased(Set<Binding> released) {
+    return new GetTypeVisitor(myNormalizing, released);
+  }
+
+  /**
+   * Path types that depend on the categorical context are forced to the infinite level.
+   * This is relative to the context: once all covariant variables such a path type depends on are bound by \Pi-types,
+   * these \Pi-types do not depend on them anymore, so the path type does not contribute the infinite level to their sort.
+   *
+   * @return the type of {@code codomain} computed so that forced path types depending only on covariant variables among {@code parameters} (each is a chain of parameters of the same type) and on variables released by this visitor are treated as not forced,
+   *         or null if there are no covariant variables among {@code parameters}.
+   */
+  public Expression getReleasedType(Expression codomain, Collection<? extends SingleDependentLink> parameters) {
+    Set<Binding> released = null;
+    for (SingleDependentLink params : parameters) {
+      for (SingleDependentLink param = params; param.hasNext(); param = param.getNext()) {
+        if (param.getVariance() != BindingVariance.INVARIANT) {
+          if (released == null) released = new HashSet<>(myReleased);
+          released.add(param);
+        }
+      }
+    }
+    return released == null ? null : codomain.accept(withReleased(released), null);
   }
 
   @Override
@@ -152,7 +192,8 @@ public class GetTypeVisitor implements ExpressionVisitor<Void, Expression> {
   @Override
   public Expression visitPi(PiExpression expr, Void params) {
     SortExpression sort1 = expr.getParameters().getType().accept(this, null).toSortExpression();
-    SortExpression sort2 = expr.getCodomain().accept(this, null).toSortExpression();
+    Expression codomainType = getReleasedType(expr.getCodomain(), Collections.singletonList(expr.getParameters()));
+    SortExpression sort2 = (codomainType != null ? codomainType : expr.getCodomain().accept(this, null)).toSortExpression();
     return sort1 == null || sort2 == null ? new ErrorExpression() : new UniverseExpression(SortExpression.makePi(sort1, sort2));
   }
 
@@ -306,11 +347,21 @@ public class GetTypeVisitor implements ExpressionVisitor<Void, Expression> {
 
   @Override
   public UniverseExpression visitPathType(PathTypeExpression expr, Void params) {
-    if (expr.isForcedInfinite()) {
+    if (expr.isForcedInfinite() && !isReleased(expr)) {
       return new UniverseExpression(new Sort(Level.INFINITY, ConstLevel.INFINITY));
     }
     DataDefinition definition = expr.getDefinition();
     return new UniverseExpression(definition.getSortExpression().subst(Arrays.asList(expr.getArgumentType(), expr.getLeftArgument(), expr.getRightArgument()), Levels.EMPTY.makeSubstitution(definition), this));
+  }
+
+  private boolean isReleased(PathTypeExpression expr) {
+    if (myReleased.isEmpty()) return false;
+    for (Binding binding : FreeVariablesCollector.getFreeVariables(expr, true)) {
+      if (binding instanceof DependentLink link && link.getVariance() != BindingVariance.INVARIANT && !myReleased.contains(binding)) {
+        return false;
+      }
+    }
+    return true;
   }
 
   @Override

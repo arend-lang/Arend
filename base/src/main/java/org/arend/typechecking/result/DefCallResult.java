@@ -175,6 +175,19 @@ public class DefCallResult implements TResult {
       }
     }
 
+    // A path type that depends on a covariant parameter of the eta-expansion depends on the categorical context
+    if (isPathDefinition(myDefinition) && !Boolean.TRUE.equals(myForcedInfinite)) {
+      for (SingleDependentLink parameter : parameters) {
+        if (parameter.getVariance() != BindingVariance.INVARIANT) {
+          myForcedInfinite = true;
+          if (myResultType instanceof PathTypeExpression pathType && !pathType.isForcedInfinite()) {
+            myResultType = new PathTypeExpression(pathType.getArgumentType(), pathType.getLeftArgument(), pathType.getRightArgument(), pathType.isDirected(), true);
+          }
+          break;
+        }
+      }
+    }
+
     Expression expression = getCoreDefCall(typechecker);
     Expression resultType = myResultType instanceof UniverseExpression ? getType(typechecker) : myResultType.subst(substitution, LevelSubstitution.EMPTY);
     if (parameters.isEmpty()) {

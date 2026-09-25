@@ -454,6 +454,13 @@ public class CoreExpressionChecker implements ExpressionVisitor<Expression, Expr
   private Expression checkPi(PiExpression expr, Expression expectedType, boolean allowInf) {
     List<SortExpression> sort1 = checkDependentLinkWithResult(expr.getParameters(), null, expr, false, allowInf);
     SortExpression sort2 = toSort(checkInf(expr.getCodomain(), expectedType == UniverseExpression.INF_OMEGA ? expectedType : null, allowInf));
+    if (sort2.isInfinite()) {
+      Expression releasedType = GetTypeVisitor.INSTANCE.getReleasedType(expr.getCodomain(), Collections.singletonList(expr.getParameters()));
+      SortExpression releasedSort = releasedType == null ? null : releasedType.toSortExpression();
+      if (releasedSort != null) {
+        sort2 = releasedSort;
+      }
+    }
     freeDependentLink(expr.getParameters());
     return check(expectedType, new UniverseExpression(SortExpression.makePi(SortExpression.makeMax(sort1), sort2)), expr);
   }
@@ -984,8 +991,21 @@ public class CoreExpressionChecker implements ExpressionVisitor<Expression, Expr
     return check(expectedType, expr.getType(), expr);
   }
 
+  /**
+   * Checks that a path (type) that depends on the categorical context is forced to the infinite level.
+   */
+  private void checkForcedInfinite(Expression expr, boolean isForcedInfinite) {
+    if (isForcedInfinite || myContext == null) return;
+    for (Binding binding : FreeVariablesCollector.getFreeVariables(expr)) {
+      if (binding instanceof DependentLink link && link.getVariance() != BindingVariance.INVARIANT && myContext.contains(binding)) {
+        throw new CoreException(CoreErrorWrapper.make(new TypecheckingError("A path type that depends on the categorical context must be forced to the infinite level", mySourceNode), expr));
+      }
+    }
+  }
+
   @Override
   public Expression visitPath(PathExpression expr, Expression expectedType) {
+    checkForcedInfinite(expr, expr.isForcedInfinite());
     boolean isDirected = expr.isDirected();
     expr.getArgumentType().accept(this, new PiExpression(isDirected ? UnusedDirectedIntervalDependentLink.INSTANCE : UnusedIntervalDependentLink.INSTANCE, UniverseExpression.OMEGA));
     TypedSingleDependentLink param = new TypedSingleDependentLink(true, "i", isDirected ? ExpressionFactory.DI() : ExpressionFactory.Interval(), false, isDirected ? BindingVariance.COVARIANT : BindingVariance.INVARIANT);
@@ -995,6 +1015,7 @@ public class CoreExpressionChecker implements ExpressionVisitor<Expression, Expr
 
   @Override
   public Expression visitPathType(PathTypeExpression expr, Expression expectedType) {
+    checkForcedInfinite(expr, expr.isForcedInfinite());
     DataDefinition definition = expr.getDefinition();
     checkList(Arrays.asList(expr.getArgumentType(), expr.getLeftArgument(), expr.getRightArgument()), definition.getParameters(), new ExprSubstitution(), Levels.EMPTY.makeSubstitution(definition));
     return check(expectedType, GetTypeVisitor.INSTANCE.visitPathType(expr, null), expr);

@@ -184,7 +184,7 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
     if (myCovariantContext.isEmpty()) {
       return false;
     }
-    FreeVariablesCollector collector = new FreeVariablesCollector() {
+    FreeVariablesCollector collector = new FreeVariablesCollector(true) {
       @Override
       public void addBinding(Binding binding) {
         if (myCovariantContext.contains(binding)) {
@@ -2759,12 +2759,21 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
         : checkType(codomain, codomainExpectedType);
       if (result == null) return null;
 
+      SortExpression codomainSort = result.sort();
+      if (codomainSort.isInfinite()) {
+        Expression releasedType = GetTypeVisitor.INSTANCE.getReleasedType(result.expression(), list);
+        SortExpression releasedSort = releasedType == null ? null : releasedType.toSortExpression();
+        if (releasedSort != null) {
+          codomainSort = releasedSort;
+        }
+      }
+
       Expression piExpr = result.expression();
       for (int i = list.size() - 1; i >= 0; i--) {
         piExpr = new PiExpression(list.get(i), piExpr);
       }
 
-      return checkResult(expectedType, new TypecheckingResult(piExpr, new UniverseExpression(SortExpression.makePi(SortExpression.makeMax(paramSorts), result.sort()))), expr);
+      return checkResult(expectedType, new TypecheckingResult(piExpr, new UniverseExpression(SortExpression.makePi(SortExpression.makeMax(paramSorts), codomainSort))), expr);
     }
   }
 

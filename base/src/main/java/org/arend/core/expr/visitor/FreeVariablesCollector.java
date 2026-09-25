@@ -15,19 +15,46 @@ import java.util.Set;
 
 public class FreeVariablesCollector extends VoidExpressionVisitor<Void> {
   private final Set<Binding> myResult = new HashSet<>();
+  private final boolean myWithInferenceBounds;
+
+  /**
+   * @param withInferenceBounds if true, the bounds of unsolved inference variables are also collected
+   *                            since such a variable may be solved later with an expression that depends on them.
+   */
+  public FreeVariablesCollector(boolean withInferenceBounds) {
+    myWithInferenceBounds = withInferenceBounds;
+  }
+
+  public FreeVariablesCollector() {
+    this(false);
+  }
 
   public Set<Binding> getResult() {
     return myResult;
   }
 
-  public static Set<Binding> getFreeVariables(Expression expression) {
-    FreeVariablesCollector collector = new FreeVariablesCollector();
+  public static Set<Binding> getFreeVariables(Expression expression, boolean withInferenceBounds) {
+    FreeVariablesCollector collector = new FreeVariablesCollector(withInferenceBounds);
     expression.accept(collector, null);
     return collector.myResult;
   }
 
+  public static Set<Binding> getFreeVariables(Expression expression) {
+    return getFreeVariables(expression, false);
+  }
+
   public void addBinding(Binding binding) {
     myResult.add(binding);
+  }
+
+  @Override
+  public Void visitInferenceReference(InferenceReferenceExpression expr, Void params) {
+    if (myWithInferenceBounds && expr.getSubstExpression() == null && expr.getVariable() != null) {
+      for (Binding bound : expr.getVariable().getBounds()) {
+        addBinding(bound);
+      }
+    }
+    return super.visitInferenceReference(expr, params);
   }
 
   @Override
