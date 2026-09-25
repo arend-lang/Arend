@@ -151,7 +151,7 @@
                            simp_coe \lam x => coe_path_pmap _ (pmap+ (\lam x => g (u (f x))) (rf x)) $ idp_*> *>
                             inv (rotatePathLeft $ pmap+ (pmap+ v __ *> _) (homotopy_app-comm+ (\lam x => r (f x)) rf x)
                               *> homotopy-isNatural+ _ _ s (pmap+ f (rf x))))
-         \in (\lam y => path \lam i => unob (t.1 i) y, \lam y => path (\lam i => pmap (__.1.2 y) (t.2 i)))
+         \in (\lam y => path \lam i => unob (t.1 i) y, \lam y => path (\lam i => pmap+ (__.1.2 y) (t.2 i)))
   }
 
 \lemma IsOrthogonal_CatPushout {A B C D E : \Cat} {f : A ->⁺ B} {g : A ->⁺ C} {h : D ->⁺ E} (gh : IsOrthogonal g h)

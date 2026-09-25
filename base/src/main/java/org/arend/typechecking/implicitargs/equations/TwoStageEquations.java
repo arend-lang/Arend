@@ -6,6 +6,7 @@ import org.arend.core.context.binding.LevelVariable;
 import org.arend.core.context.binding.inference.DerivedInferenceVariable;
 import org.arend.core.context.binding.inference.InferenceLevelVariable;
 import org.arend.core.context.binding.inference.InferenceVariable;
+import org.arend.core.context.binding.inference.MetaInferenceVariable;
 import org.arend.core.context.binding.inference.TypeClassInferenceVariable;
 import org.arend.core.context.param.SingleDependentLink;
 import org.arend.core.context.param.TypedSingleDependentLink;
@@ -13,6 +14,7 @@ import org.arend.core.definition.ClassDefinition;
 import org.arend.core.definition.ClassField;
 import org.arend.core.expr.*;
 import org.arend.core.expr.visitor.CompareVisitor;
+import org.arend.core.expr.visitor.FreeVariablesCollector;
 import org.arend.core.expr.visitor.ElimBindingVisitor;
 import org.arend.core.sort.Level;
 import org.arend.core.sort.Sort;
@@ -38,6 +40,7 @@ import static org.arend.core.expr.ExpressionFactory.Nat;
 
 public class TwoStageEquations implements Equations {
   private List<Equation> myEquations = new ArrayList<>();
+  private final List<Equation> myDeferredMetaEquations = new ArrayList<>();
   private final List<LevelEquation<LevelVariable>> myLevelEquations = new ArrayList<>();
   private final List<AbstractEquation<Level>> myDeferredMaxLevelEquations = new ArrayList<>();
   private final List<AbstractEquation<SortExpression>> mySortExpressionEquations = new ArrayList<>();
@@ -62,11 +65,22 @@ public class TwoStageEquations implements Equations {
     return null;
   }
 
-  private static Pair<Expression, ExprSubstitution> reverseSubstitution(Expression expr) {
+  /**
+   * Reverses the substitutions of {@code expr} so that an equation {@code expr == other} can be transformed into an equation on the underlying expression.
+   * This is possible only if {@code other} does not refer to bindings that are substituted since such bindings cannot occur in {@code expr}.
+   */
+  private static Pair<Expression, ExprSubstitution> reverseSubstitution(Expression expr, Expression other) {
     ExprSubstitution totalSubst = new ExprSubstitution();
+    Set<Binding> otherFreeVars = null;
     while (expr instanceof SubstExpression) {
       ExprSubstitution reversedSubst = new ExprSubstitution();
       for (Map.Entry<Binding, Expression> entry : ((SubstExpression) expr).getSubstitution().getEntries()) {
+        if (otherFreeVars == null) {
+          otherFreeVars = FreeVariablesCollector.getFreeVariables(other);
+        }
+        if (otherFreeVars.contains(entry.getKey())) {
+          return null;
+        }
         if (entry.getValue() instanceof ReferenceExpression) {
           reversedSubst.add(((ReferenceExpression) entry.getValue()).getBinding(), new ReferenceExpression(entry.getKey()));
         } else {
@@ -86,7 +100,7 @@ public class TwoStageEquations implements Equations {
     Expression expr1 = normalize ? origExpr1.normalize(NormalizationMode.WHNF) : origExpr1;
     Expression expr2 = normalize ? origExpr2.normalize(NormalizationMode.WHNF) : origExpr2;
     if (expr1 instanceof SubstExpression && !(expr2 instanceof SubstExpression)) {
-      Pair<Expression, ExprSubstitution> pair = reverseSubstitution(expr1);
+      Pair<Expression, ExprSubstitution> pair = reverseSubstitution(expr1, expr2);
       if (pair != null) {
         origExpr1 = expr1 = pair.proj1;
         SubstVisitor substVisitor = new SubstVisitor(pair.proj2, LevelSubstitution.EMPTY, false);
@@ -94,7 +108,7 @@ public class TwoStageEquations implements Equations {
         origExpr2 = normalize ? origExpr2.accept(substVisitor, null) : expr2;
       }
     } else if (expr2 instanceof SubstExpression && !(expr1 instanceof SubstExpression)) {
-      Pair<Expression, ExprSubstitution> pair = reverseSubstitution(expr2);
+      Pair<Expression, ExprSubstitution> pair = reverseSubstitution(expr2, expr1);
       if (pair != null) {
         origExpr2 = expr2 = pair.proj1;
         SubstVisitor substVisitor = new SubstVisitor(pair.proj2, LevelSubstitution.EMPTY, false);
@@ -373,6 +387,12 @@ public class TwoStageEquations implements Equations {
 
     for (Iterator<Equation> iterator = myEquations.iterator(); iterator.hasNext(); ) {
       Equation equation = iterator.next();
+      if (isStuckOnDeferredMeta(equation.expr1) || isStuckOnDeferredMeta(equation.expr2)) {
+        // Deferred metas may be invoked after this point; the equation is checked when the corresponding variable is solved
+        iterator.remove();
+        myDeferredMetaEquations.add(equation);
+        continue;
+      }
       Expression stuckExpr = equation.expr2.getStuckExpression();
       if (stuckExpr != null && (stuckExpr.isInstance(InferenceReferenceExpression.class) || stuckExpr.isError())) {
         iterator.remove();
@@ -397,9 +417,14 @@ public class TwoStageEquations implements Equations {
     return true;
   }
 
+  private static boolean isStuckOnDeferredMeta(Expression expr) {
+    InferenceVariable var = expr.getStuckInferenceVariable();
+    return var instanceof MetaInferenceVariable && !var.isSolved();
+  }
+
   @Override
   public boolean remove(Equation equation) {
-    return myEquations.remove(equation);
+    return myEquations.remove(equation) || myDeferredMetaEquations.remove(equation);
   }
 
   @Override
@@ -966,6 +991,23 @@ public class TwoStageEquations implements Equations {
     return solve(var, expr, isLowerBound, false, false, true);
   }
 
+  /**
+   * The domains of \Pi-types may depend on covariant variables only in parameter types.
+   * Since solutions of inference variables are not typechecked, we check that they do not violate this restriction.
+   * Such a \Pi-type can occur only on the top level of a solution.
+   */
+  private void checkCatDomains(Expression solution, InferenceVariable var) {
+    Expression expr = solution.getUnderlyingExpression();
+    while (expr instanceof PiExpression piExpr) {
+      for (SingleDependentLink param = piExpr.getParameters(); param.hasNext(); param = param.getNext()) {
+        if (param instanceof TypedSingleDependentLink) {
+          myVisitor.checkCatDomain(param.getType(), var.getSourceNode());
+        }
+      }
+      expr = piExpr.getCodomain().getUnderlyingExpression();
+    }
+  }
+
   private SolveResult solve(InferenceVariable var, Expression expr, boolean isLowerBound, boolean trySolve, boolean trySolve2, boolean fromEquations) {
     assert !fromEquations || var.isSolvableFromEquations();
     if (var.isSolved()) {
@@ -1026,6 +1068,7 @@ public class TwoStageEquations implements Equations {
           myVisitor.getErrorReporter().report(new SolveEquationError(myVisitor.getExpressionPrettifier(), var.getSolution(), result, var.getSourceNode()));
         }
       } else {
+        checkCatDomains(result, var);
         var.solve(myVisitor, OfTypeExpression.make(result, actualType, expectedType));
       }
       return SolveResult.SOLVED;

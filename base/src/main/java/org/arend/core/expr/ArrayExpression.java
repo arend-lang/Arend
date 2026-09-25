@@ -89,7 +89,7 @@ public class ArrayExpression extends Expression implements CoreArrayExpression {
     return result;
   }
 
-  private Expression getLengthMinus1() {
+  public Expression getLengthMinus1() {
     if (myTail == null) {
       return new SmallIntegerExpression(myElements.size() - 1);
     }

@@ -305,7 +305,14 @@ public class StdImplicitArgsInference implements ImplicitArgsInference {
   }
 
   private void typecheckDeferredArgument(DeferredArgument defArg, TResult result) {
-    TypecheckingResult argResult = myVisitor.checkArgument(defArg.expr, defArg.expectedType, result, defArg.variable);
+    TypecheckingResult argResult;
+    if (defArg.variance == BindingVariance.INVARIANT) {
+      try (var ignored = myVisitor.clearCategoricalContext()) {
+        argResult = myVisitor.checkArgument(defArg.expr, defArg.expectedType, result, defArg.variable);
+      }
+    } else {
+      argResult = myVisitor.checkArgument(defArg.expr, defArg.expectedType, result, defArg.variable);
+    }
     Expression argResultExpr = argResult == null ? new ErrorExpression() : argResult.expression;
     defArg.variable.solve(myVisitor, argResultExpr);
   }
@@ -518,7 +525,7 @@ public class StdImplicitArgsInference implements ImplicitArgsInference {
     return result;
   }
 
-  private record DeferredArgument(InferenceVariable variable, Concrete.Expression expr, Expression expectedType) {}
+  private record DeferredArgument(InferenceVariable variable, Concrete.Expression expr, Expression expectedType, BindingVariance variance) {}
 
   @Override
   public TResult infer(Concrete.AppExpression expr, Expression expectedType) {
@@ -694,7 +701,7 @@ public class StdImplicitArgsInference implements ImplicitArgsInference {
             var.setType(newType);
           }
           if (!isHole) {
-            deferredArguments.put(current + numberOfImplicitArguments, new DeferredArgument(var, argument.getExpression(), type));
+            deferredArguments.put(current + numberOfImplicitArguments, new DeferredArgument(var, argument.getExpression(), type, parameter.getVariance()));
           }
           result = result.applyExpression(new InferenceReferenceExpression(var), parameter.isExplicit(), myVisitor, fun);
           current++;

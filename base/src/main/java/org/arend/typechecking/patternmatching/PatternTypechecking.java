@@ -1122,7 +1122,11 @@ public class PatternTypechecking {
           newConCall = FunCallExpression.make((FunctionDefinition) constructor, classCall.getLevels(), funCallArgs);
         }
         for (int i = typeConstructorFunCalls.size() - 1; i >= 0; i--) {
-          newConCall = TypeConstructorExpression.match(typeConstructorFunCalls.get(i), newConCall);
+          FunCallExpression typeConstructorFunCall = typeConstructorFunCalls.get(i);
+          if (!conResult.varSubst.isEmpty()) {
+            typeConstructorFunCall = (FunCallExpression) new SubstVisitor(conResult.varSubst, LevelSubstitution.EMPTY).visitFunCall(typeConstructorFunCall, null);
+          }
+          newConCall = TypeConstructorExpression.match(typeConstructorFunCall, newConCall);
         }
         typecheckAsPattern(pattern.getAsReferable(), newConCall, expr.subst(varSubst));
         exprs.add(newConCall);
