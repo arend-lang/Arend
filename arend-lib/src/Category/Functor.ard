@@ -135,6 +135,17 @@
     (exts (\lam X => D.isotoid (FunctorPrecat.mapIso e X), \lam {X} {Y} h => Cat.transport_Hom_iso (FunctorPrecat.mapIso e X) (FunctorPrecat.mapIso e Y) (natural h)),
      simp_coe $ simp_coe \lam X => Cat.transport_iso (FunctorPrecat.mapIso e X))
 
+\func evalFunctor {J C : Precat} (j : J) : Functor (FunctorPrecat J C) C \cowith
+  | F G => G j
+  | Func a => a j
+  | Func-id => idp
+  | Func-o => idp
+
+-- | A morphism of the index category, read as a natural transformation of the two evaluations.
+\func evalNat {J C : Precat} {j j' : J} (u : Hom j j') : NatTrans (evalFunctor {J} {C} j) (evalFunctor j') \cowith
+  | trans X => X.Func u
+  | natural a => inv (a.natural u)
+
 \instance FamPrecat {J : \Type} (D : Precat) : Precat (J -> D)
   | Hom F G => \Pi {j : J} -> Hom (F j) (G j)
   | id => id
