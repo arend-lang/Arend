@@ -1,10 +1,14 @@
 package org.arend.core.sort;
 
 import org.arend.core.context.binding.inference.InferenceVariable;
+import org.arend.core.context.param.SingleDependentLink;
 import org.arend.core.definition.ClassField;
+import org.arend.core.expr.AppExpression;
 import org.arend.core.expr.ClassCallExpression;
+import org.arend.core.expr.FieldCallExpression;
 import org.arend.core.expr.Expression;
 import org.arend.core.expr.PiExpression;
+import org.arend.core.expr.ReferenceExpression;
 import org.arend.core.expr.UniverseExpression;
 import org.arend.core.expr.visitor.GetTypeVisitor;
 import org.arend.ext.core.level.ConstLevel;
@@ -132,39 +136,22 @@ public sealed interface SortExpression extends CoreSortExpression permits SortEx
       Expression arg = arguments.get(index);
       if (arg == null) return this;
 
-      // Once a field in the chain turns out to be not implemented, there is no concrete value to
-      // keep substituting into -- but remaining fields still need to be resolved against its
-      // (uninstantiated) type, since only the type of the very last field determines the sort.
-      Expression type = null;
-      for (int i = 0; i < fields.size(); i++) {
-        ClassField field = fields.get(i);
-        Expression argType;
-        if (arg != null) {
-          arg = arg.normalize(NormalizationMode.WHNF);
-          argType = arg.accept(visitor, null).normalize(NormalizationMode.WHNF);
-        } else {
-          argType = type;
-        }
+      for (ClassField field : fields) {
+        arg = arg.normalize(NormalizationMode.WHNF);
+        Expression argType = arg.accept(visitor, null).normalize(NormalizationMode.WHNF);
         while (argType instanceof PiExpression piExpr) {
+          for (SingleDependentLink param = piExpr.getParameters(); param.hasNext(); param = param.getNext()) {
+            arg = AppExpression.make(arg, new ReferenceExpression(param), param.isExplicit());
+          }
           argType = piExpr.getCodomain().normalize(NormalizationMode.WHNF);
         }
         if (!(argType instanceof ClassCallExpression classCall)) {
           return getTypeUniverse(field.getType());
         }
 
-        if (arg != null) {
-          arg = classCall.getImplementation(field, arg);
-        }
-        if (arg == null) {
-          Expression fieldType = classCall.getFieldType(field);
-          if (i == fields.size() - 1) {
-            return getTypeUniverse(fieldType);
-          }
-          type = fieldType.normalize(NormalizationMode.WHNF);
-        }
+        Expression impl = classCall.getImplementation(field, arg);
+        arg = impl != null ? impl : FieldCallExpression.make(field, arg);
       }
-
-      if (arg == null) return new Const(new Sort(Level.INFINITY, hLevel));
 
       arg = arg.normalize(NormalizationMode.WHNF).accept(visitor, null).normalize(NormalizationMode.WHNF);
       while (arg instanceof PiExpression piExpr) {

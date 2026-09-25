@@ -361,6 +361,39 @@ public class SortTest extends TypeCheckingTestCase {
   }
 
   @Test
+  public void fieldProjectionResultTypeTest() {
+    typeCheckModule("""
+      \\record R (A : \\Type) (a : A)
+      \\data D (r : R) | con r.A
+      \\func fun (r : R) => D r
+      \\func test => fun (\\new R Nat 7)
+      """);
+    assertEquals(Sort.SET0, ((FunctionDefinition) getDefinition("test")).getResultType().toSort());
+  }
+
+  @Test
+  public void fieldProjectionFunctionResultTypeTest() {
+    typeCheckModule("""
+      \\record R (A : \\Type) (a : A)
+      \\data D (G : Nat -> R) (n : Nat) | con (G n).A
+      \\func fun (G : Nat -> R) (n : Nat) => D G n
+      \\func test => fun (\\lam _ => \\new R Nat 7) 0
+      """);
+    assertEquals(Sort.SET0, ((FunctionDefinition) getDefinition("test")).getResultType().toSort());
+  }
+
+  @Test
+  public void fieldProjectionFunctionResultTypeTest2() {
+    typeCheckModule("""
+      \\record R (A : \\Type) (a : A)
+      \\data D (G : Nat -> Nat -> R) (n m : Nat) | con (G n m).A
+      \\func fun (G : Nat -> Nat -> R) (n m : Nat) => D G n m
+      \\func test => fun (\\lam _ _ => \\new R Nat 7) 0 1
+      """);
+    assertEquals(Sort.SET0, ((FunctionDefinition) getDefinition("test")).getResultType().toSort());
+  }
+
+  @Test
   public void overrideTest() {
     typeCheckModule("""
       \\record R (A : \\Type)
