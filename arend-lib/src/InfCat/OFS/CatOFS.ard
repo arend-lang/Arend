@@ -226,3 +226,41 @@
 \lemma IsOrthogonal-codiag {A B C D : \Cat} {f : A ->⁺ B} {g : C ->⁺ D} (fg : IsOrthogonal f g)
   : IsOrthogonal {CatPushout f f} (CatPushout.rec id+ id+ \lam x => idp) g
   => IsOrthogonal-retraction (IsOrthogonal_CatPushout fg) idpe
+
+-- | Restriction along {k} of sections of the pullback of {g} along {v}.
+\func restrict-sections {X Y E F : \Cat} (k : X ->⁺ Y) (g : E ->⁺ F) (v : Ob (Y ->⁺ F))
+                        (s : Ob (\Pi (y :⁺ Y) -> \Sigma⁺ (e : E) (g e = unob v y)))
+  : Ob (\Pi (x :⁺ X) -> \Sigma⁺ (e : E) (g e = unob v (k x)))
+  => ob \lam x => unob s (k x)
+  \where {
+    -- | A path in a fiber of {restrict-sections} evaluated at a point.
+    \func fiber-coh {X Y E F : \Cat} (k : X ->⁺ Y) (g : E ->⁺ F) (v : Ob (Y ->⁺ F))
+                    {b : Ob (\Pi (x :⁺ X) -> \Sigma⁺ (e : E) (g e = unob v (k x)))}
+                    {s t : \Sigma (a : Ob (\Pi (y :⁺ Y) -> \Sigma⁺ (e : E) (g e = unob v y))) (restrict-sections k g v a = b)}
+                    (q : s = t) (x :⁺ X)
+      : path (\lam i => unob (q i).1 (k x)) *> path (\lam i => unob (t.2 i) x) = path (\lam i => unob (s.2 i) x) \elim q
+      | idp => idp_*>
+  }
+
+-- | {k} is left orthogonal to {g} if and only if sections of every pullback of {g} extend uniquely along {k}.
+\lemma IsOrthogonal-sections {X Y E F : \Cat} {k : X ->⁺ Y} {g : E ->⁺ F}
+  : IsOrthogonal k g <-> (\Pi (v : Ob (Y ->⁺ F)) -> IsEquiv (restrict-sections k g v))
+  => \have p => IsEquiv.parallelEquiv (inP sections-equiv) (inP squares-equiv) (\lam h => idp)
+     \in (\lam o => propExt.conv (totalEquiv (restrict-sections k g)) (propExt.dir p o),
+          \lam e => propExt.conv p (propExt.dir (totalEquiv (restrict-sections k g)) e))
+  \where {
+    -- | A functor to {E} is a functor to {F} together with a section of the pullback of {g} along it.
+    \func sections-equiv : QEquiv {Ob (Y ->⁺ E)} {\Sigma (v : Ob (Y ->⁺ F)) (Ob (\Pi (y :⁺ Y) -> \Sigma⁺ (e : E) (g e = unob v y)))} \cowith
+      | f h => (ob \lam y => g (unob h y), ob \lam y => (unob h y, idp))
+      | ret s => ob \lam y => (unob s.2 y).1
+      | ret_f (ob h) => idp
+      | f_sec (ob v, ob s) => path \lam i => (ob \lam y => (s y).2 i, ob \lam y => ((s y).1, path \lam j => (s y).2 @ I.squeeze i j))
+
+    -- | A commutative square is a functor to {F} together with a section over {X} of the pullback of {g} along it.
+    \func squares-equiv : QEquiv {\Sigma (uv : \Sigma (X ->⁺ E) (Y ->⁺ F)) (\Pi (x :⁺ X) -> uv.2 (k x) = g (uv.1 x))}
+                                 {\Sigma (v : Ob (Y ->⁺ F)) (Ob (\Pi (x :⁺ X) -> \Sigma⁺ (e : E) (g e = unob v (k x))))} \cowith
+      | f s => (ob s.1.2, ob \lam x => (s.1.1 x, inv (s.2 x)))
+      | ret t => ((\lam x => (unob t.2 x).1, unob t.1), \lam x => inv (unob t.2 x).2)
+      | ret_f s => path \lam i => (s.1, \lam x => inv_inv {_} {_} {_} {s.2 x} i)
+      | f_sec (ob v, ob t) => path \lam i => (ob v, ob \lam x => ((t x).1, inv_inv {_} {_} {_} {(t x).2} i))
+  }
