@@ -1,0 +1,44 @@
+\import Equiv
+\import InfCat.Basics
+\import InfCat.Fibration.CovariantLift
+\import InfCat.Fibration.LeftFib
+\import InfCat.Functor.Equiv
+\import InfCat.Groupoid
+\import InfCat.Objects
+\import InfCat.Paths
+\import Logic
+\import Logic.Unique
+\import Paths
+\import Paths.Meta
+
+\func ~>_->.{u} {A B :⁺ \Type u} (p :⁺ A ~> B) (a :⁺ A) : B
+  => coe+ (\lam i => p i) a dright
+
+\sfunc ->_~>.{u} {A B : \Type u} (f : A -> B) : A ~> B
+  => dpath (iso+ (cov-fun-type-equiv.toCov f))
+
+\sfunc ~>_->_~>.{u} {A B : \Type u} {p : A ~> B} : ->_~> (~>_-> p) = p
+  => (\peval ->_~> _)
+  *> path (\lam i => dpath (iso+ (IsEquiv.ret_f cov-fun-type-equiv {\lam x => coe+ (p __) x dright} i)))
+  *> path (\lam j => dpath \lam i => iso+_coe+ p i j)
+
+\sfunc ->_~>_->.{u} {A B : \Type u} {f : A -> B} {a : A} : ~>_-> (->_~> f) a = f a
+  => pmap (~>_-> __ a) (\peval ->_~> f) *> cov-fun-type-equiv.ofInv
+
+\func dirUnivalence.{u} {A B : \Type u} : QEquiv {A ~> B} {A -> B} \cowith
+  | f => ~>_->
+  | ret => ->_~>
+  | ret_f p => ~>_->_~>
+  | f_sec f => ext \lam a => ->_~>_->
+
+-- | Covariant transport along an arrow is determined by any path over the arrow.
+\sfunc ~>_->-pathOver.{u} {A B : \Type u} (p : A ~> B) {a : A} {b : B} (d : DPath (\lam i => p i) a b) : ~>_-> p a = b
+  => pmap __.1 (isContr=>isProp (universe-leftFib p a) (~>_-> p a, dpath \lam i => coe+ (\lam j => p j) a i) (b, d))
+
+-- | {~>_->} commutes with identity.
+\sfunc ~>_->_idd.{u} {A : \Type u} {a : A} : ~>_-> idd a = a
+  => ~>_->-pathOver idd idd
+
+-- | {~>_->} commutes with composition.
+\sfunc ~>_->_comp.{u} {A B D : \Type u} (p : A ~> B) (q : B ~> D) {a : A} : ~>_-> (comp p q) a = ~>_-> q (~>_-> p a)
+  => pmap (~>_-> (comp p q)) (inv ~>_->_idd) *> ~>_->-pathOver (comp p q) (dpath \lam i => coe+ (\lam j => fill2 p q i j) (coe+ (\lam k => p k) a i) dright)
