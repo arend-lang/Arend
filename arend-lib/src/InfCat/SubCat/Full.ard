@@ -59,34 +59,35 @@
              *> inv (<->_=.1 ffMap-char)
       }
 
-    \sfunc inc (d :⁺ FullSubCat P) : C
+    \func inc (d :⁺ FullSubCat P) : C
       => catFactorRight d
 
     \lemma inc-con {d : FullSubCat P} : P (inc d)
       => \case catFactorLeft.isSurj (\lam _ y => inP (ob y, idp)) d \with {
-        | inP (s,p) => transport P (inv (\peval inc _) *> pmap (inc __) p) s.2
+        | inP (s,p) => transport P (pmap (inc __) p) s.2
       }
 
+    \func make (x : C) (Px : P x) : FullSubCat P
+      => catFactorLeft {_} {\Sigma (x : C) (P x)} (x,Px)
+
     \lemma inc-sat {c : C} (Pc : P c) : ∃ (d : FullSubCat P) (inc d = c)
-      => inP (catFactorLeft {_} {\Sigma (x : C) (P x)} (c,Pc), \peval inc _)
+      => inP (make c Pc, idp)
 
     \lemma inc-ff : IsFFMap inc
-      => family-ff.1 \lam p =>
-           transportInv (IsOrthogonal _) (ext \lam d => \peval inc d) $
-           IsOrthogonal_o-right (IsOrthogonal_IsHEquiv-right $ inP \new HQEquiv {
-             | C => FullSubCat P
-             | D => CatFactor {_} {\Sigma (x : C) (P x)} {C} __.1
-             | f d => d
-             | finv d => d
-             | finv_f d => idp
-             | f_finv d => idp
-           }) (catFactorRight.isRight p)
+      => family-ff.1 \lam p => IsOrthogonal_o-right (IsOrthogonal_IsHEquiv-right $ inP \new HQEquiv {
+           | C => FullSubCat P
+           | D => CatFactor {_} {\Sigma (x : C) (P x)} {C} __.1
+           | f d => d
+           | finv d => d
+           | finv_f d => idp
+           | f_finv d => idp
+         }) (catFactorRight.isRight p)
 
     \sfunc isMin {D : \Cat} {f : D ->⁺ C} (ff : IsFFMap f) (fs : \Pi {c : C} -> P c -> ∃ (d : D) (f d = c))
       : \Sigma (h : FullSubCat P ->⁺ D) (\Pi (x :⁺ FullSubCat P) -> f (h x) = inc x)
       => \have | (g,p) => ffMap-lift ff {\Sigma (x : C) (P x)} __.1 \lam s => fs s.2
                | l => catFactorRight.lift g (family-ff.2 ff) p
-         \in (\lam d =>⁺ (l d).1, \lam d => (l d).2 *> inv (\peval inc d))
+         \in (\lam d =>⁺ (l d).1, \lam d => (l d).2)
 
     \sfunc isMax {D : \Cat} {f : D ->⁺ C} (fs : \Pi (d : D) -> P (f d))
       : \Sigma (h : D ->⁺ FullSubCat P) (\Pi (y :⁺ D) -> inc (h y) = f y)
