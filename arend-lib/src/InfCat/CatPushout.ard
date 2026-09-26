@@ -37,3 +37,6 @@
       }
       | f_sec s => idp
   }
+
+\func codiag {A B : \Cat} (f : A ->⁺ B) (x :⁺ CatPushout f f) : B
+  => CatPushout.rec (\lam y => y) (\lam y => y) (\lam _ => idp) x

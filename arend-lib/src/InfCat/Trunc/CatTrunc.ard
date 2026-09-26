@@ -1,0 +1,119 @@
+\import Equiv
+\import Equiv.Fiber
+\import Function.Meta
+\import Homotopy.Diagonal
+\import Homotopy.HLevel
+\import InfCat.Arrows
+\import InfCat.CatPushout
+\import InfCat.Functor.Equiv
+\import InfCat.OFS.CatAccessibleOFS
+\import InfCat.OFS.CatOFS
+\import InfCat.Objects
+\import InfCat.Trunc.TruncUniverse
+\import Logic
+\import Meta
+\import Paths
+\import Paths.Meta
+
+\type IsTruncCat (n : Nat) (C : \Cat) : \Prop
+  => \Pi (x y : C) -> (x ~> y) ofHLevel_-1+ n
+
+\lemma TypeCat_IsTruncCat.{u} {n : Nat} : IsTruncCat n (TypeCat.{u} n)
+  => \lam A B => TypeCat-hom-level
+
+-- | The universal category with hom-types of level {n} under {C}.
+\type CatTrunc (n : Nat) (C : \Cat) : \Cat
+  => CatFactor {family n} {C} (\lam _ => ())
+  \where {
+    -- | Iterated codiagonals of {unob}.
+    \protected \func codiagMap (n : Nat) : \Sigma (S : \Cat0) (S ->⁺ DI) \elim n
+      | 0 => (Ob DI, unob)
+      | suc n => (CatPushout (codiagMap n).2 (codiagMap n).2, codiag (codiagMap n).2)
+
+    -- | Right maps of this family are exactly the maps whose hom-types are `(n-1)`-types.
+    \protected \func family (n : Nat) : CatFactor.Family \cowith
+      | J => \Sigma
+      | X _ => (codiagMap (suc n)).1
+      | Y _ => DI
+      | F _ => (codiagMap (suc n)).2
+
+    \lemma right1-char {C : \Cat} : IsOrthogonal ((family n).F ()) (\lam (c :⁺ C) => ()) <-> IsTruncCat n C
+      => <->trans IsOrthogonal-terminal $ later
+           (\lam o x y => HLevel_-2+1=>HLevel_-1 (x ~> y) n $ (truncMap-unob {C} {suc n}).1 $
+                            (truncMap-codiagMap (suc n) {0}).1 $ IsEquiv=>contrFibers o,
+            \lam Ct => contrFibers=>IsEquiv $ (truncMap-codiagMap (suc n) {0}).2 $
+                            truncMap-unob.2 \lam {a} {b} => HLevel_-1=>HLevel_-2+1 (a ~> b) n (Ct _ _))
+      \where {
+        -- | Restriction of maps along {f}.
+        \private \func res {A B E : \Cat} (f : A ->⁺ B) (h : Ob (B ->⁺ E)) : Ob (A ->⁺ E)
+          => ob (\lam x => unob h (f x))
+
+        -- | Fibers of restriction along {unob} are hom-types.
+        \private \lemma truncMap-unob {E : \Cat} {k : Nat}
+          : IsTruncMap k (res {Ob DI} unob) <-> (\Pi {a b : E} -> (a ~> b) ofHLevel_-2+ k)
+          => <->sym (IsTruncMap.truncMap-post {Ob (DI ->⁺ E)} {_} {_} {res unob} ObDI-equiv)
+            `<->trans` IsTruncMap.truncMap-pre DI-equiv
+            `<->trans` IsTruncMap.truncMap-proj {\Sigma E E} {\lam j => j.1 ~> j.2} {k}
+            `<->trans` (\lam r {a} {b} => r (a,b), \lam r s => r)
+
+      \private \lemma truncMap-codiagMap {E : \Cat} (m : Nat) {j : Nat}
+        : IsTruncMap j (res {_} {_} {E} (codiagMap m).2) <-> IsTruncMap (j Nat.+ m) (res {Ob DI} {DI} {E} unob) \elim m
+        | 0 => <->refl
+        | suc m => <->trans truncMap-codiag (truncMap-codiagMap m)
+        \where {
+          -- | Maps out of the pushout of {f} along itself are pairs of maps with equal restrictions along {f}.
+          \func codiag-maps {A B E : \Cat} (f : A ->⁺ B)
+            : QEquiv {Ob (CatPushout f f ->⁺ E)} {\Sigma (u v : Ob (B ->⁺ E)) (res f u = res f v)}
+            => transQEquiv (CatPushout.elim-equiv {A} {B} {B} {f} {f} {\lam _ => E}) $ later \new QEquiv {
+              | f s => (ob s.1, ob s.2, path \lam i => ob (\lam x => s.3 x i))
+              | ret t => (unob t.1, unob t.2, \lam x => path \lam i => unob (t.3 i) x)
+              | ret_f s => idp
+              | f_sec t => aux t.1 t.2 t.3
+            }
+            \where {
+              \private \func aux (u v : Ob (B ->⁺ E)) (p : res f u = res f v)
+                : (ob (unob u), ob (unob v), path \lam i => ob (\lam x => unob (p i) x)) = {\Sigma (u v : Ob (B ->⁺ E)) (res f u = res f v)} (u,v,p) \elim u, v
+                | ob u, ob v => pmap {res f (ob u) = res f (ob v)} {\Sigma (u v : Ob (B ->⁺ E)) (res f u = res f v)} (\lam q => (ob u, ob v, q)) (unob_=.ret_f p)
+
+              \func res-codiag (h : Ob (B ->⁺ E)) : codiag-maps f (res (codiag f) h) = diagonal (res f) h \elim h
+                | ob h => idp
+            }
+
+          \lemma truncMap-codiag {A B E : \Cat} {f : A ->⁺ B} {k : Nat}
+            : IsTruncMap k (res {_} {_} {E} (codiag f)) <-> IsTruncMap (suc k) (res {A} {B} {E} f)
+            => \have p : (\lam h => codiag-maps f (res (codiag f) h)) = diagonal (res {A} {B} {E} f) => ext \lam h => codiag-maps.res-codiag h
+               \in <->sym (transport (IsTruncMap k __ <-> _) p $ IsTruncMap.truncMap-post {_} {_} {_} {res {_} {_} {E} (codiag f)} (codiag-maps {A} {B} {E} f))
+                    `<->trans` truncMap-diagonal `<->trans` <->sym IsTruncMap.truncMap-suc
+        }
+      }
+
+    \lemma isTruncCat : IsTruncCat n (CatTrunc n C)
+      => right1-char.1 $ IsOrthogonal_o-right {_} {_} {CatTrunc n C} {CatFactor {family n} (\lam _ => ())}
+          (IsOrthogonal_IsHEquiv-right (inP \new HQEquiv {
+            | finv x => x
+            | finv_f => idpe
+            | f_finv => idpe
+          })) (catFactorRight.isRight {family n} ())
+  }
+
+-- | The unit of the n-truncation.
+\func catTrunc {n : Nat} {C : \Cat} (x :⁺ C) : CatTrunc n C
+  => catFactorLeft {CatTrunc.family n} x
+
+\lemma catTrunc-univ {n : Nat} {C Z : \Cat} (Zt : IsTruncCat n Z)
+  : IsEquiv {Ob (CatTrunc n C ->⁺ Z)} {Ob (C ->⁺ Z)} (\lam f => ob \lam x => unob f (catTrunc x))
+  => IsOrthogonal-terminal.1 $ IsOrthogonal_o-left {_} {_} {CatTrunc n C}
+      (catFactorLeft.isLeft {CatTrunc.family n} \lam _ => (CatTrunc.right1-char {n}).2 Zt)
+      (IsOrthogonal_IsHEquiv-left $ inP \new HQEquiv {
+        | f x => x
+        | finv x => x
+        | finv_f => idpe
+        | f_finv => idpe
+      })
+  \where {
+    \sfunc lift (Zt : IsTruncCat n Z) (f : C ->⁺ Z) (x :⁺ CatTrunc n C) : Z
+      => unob (IsEquiv.ret (catTrunc-univ {n} {C} Zt) (ob f)) x
+
+    \sfunc lift_catTrunc {Zt : IsTruncCat n Z} {f : C ->⁺ Z} {x :⁺ C} : lift Zt f (catTrunc x) = f x
+      => (\peval lift Zt f _) *> path \lam i => unob (IsEquiv.f_ret (catTrunc-univ {n} {C} Zt) i) x
+  }

@@ -227,6 +227,21 @@
   : IsOrthogonal {CatPushout f f} (CatPushout.rec id+ id+ \lam x => idp) g
   => IsOrthogonal-retraction (IsOrthogonal_CatPushout fg) idpe
 
+-- | Orthogonality to a map to the terminal category means that restriction is an equivalence.
+\lemma IsOrthogonal-terminal {A B E : \Cat} {f : A ->⁺ B}
+  : IsOrthogonal f (\lam (e :⁺ E) => ()) <-> IsEquiv {Ob (B ->⁺ E)} {Ob (A ->⁺ E)} (\lam g => ob \lam a => unob g (f a))
+  => (\lam o => IsEquiv.trans o $ later $ inP \new QEquiv {
+        | f s => ob s.1.1
+        | ret k => ((unob k, \lam _ => ()), \lam x => idp)
+        | ret_f s => path \lam i => ((s.1.1, \lam _ => ()), \lam x => idp)
+        | f_sec k => ob_unob
+      }, \lam e => IsEquiv.leftFactor (later $ inP \new QEquiv {
+        | f s => ob s.1.1
+        | ret k => ((unob k, \lam _ => ()), \lam x => idp)
+        | ret_f s => path \lam i => ((s.1.1, \lam _ => ()), \lam x => idp)
+        | f_sec k => ob_unob
+      }) e)
+
 -- | Restriction along {k} of sections of the pullback of {g} along {v}.
 \func restrict-sections {X Y E F : \Cat} (k : X ->⁺ Y) (g : E ->⁺ F) (v : Ob (Y ->⁺ F))
                         (s : Ob (\Pi (y :⁺ Y) -> \Sigma⁺ (e : E) (g e = unob v y)))
