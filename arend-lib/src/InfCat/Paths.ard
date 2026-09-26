@@ -26,6 +26,9 @@
 \func transport+ {A :⁺ \Cat} (B :⁺ A ->⁺ \Cat) {a a' :⁺ A} (p :⁺ a = a') (b :⁺ B a) : B a'
   => coe (\lam i => B (p i)) b right
 
+\func transport+_app {A :⁺ \Cat} {B :⁺ A ->⁺ \Cat} (s :⁺ \Pi (x :⁺ A) -> B x) {a a' :⁺ A} (p :⁺ a = a') : transport+ B p (s a) = s a' \elim p
+  | idp => idp
+
 \func transport+_path_pmap {A B :⁺ \Cat} (f g :⁺ A ->⁺ B) {a a' :⁺ A} {p :⁺ a = a'} {q :⁺ f a = g a} {s :⁺ f a' = g a'}
                            (h :⁺ q *> pmap+ g p = pmap+ f p *> s) : transport+ (\lam x => f x = g x) p q = s \elim p
   | idp => h *> idp_*>

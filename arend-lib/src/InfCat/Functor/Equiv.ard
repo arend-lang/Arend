@@ -3,6 +3,7 @@
 \import InfCat.Basics
 \import InfCat.Paths
 \import Logic
+\import Logic.Unique
 \import Paths
 \import Paths.Meta
 
@@ -17,16 +18,22 @@
   \sfunc coh_inv_f {x :⁺ C} : pmap+ f (finv_f x) = coh_inv (f x)
     => equiv-fibers.coh_inv_f f finv finv_f f_finv *> inv (\peval coh_inv (f x))
 } \where {
-    \func leftFactor {A B C : \Cat} {f : A ->⁺ B} {g : B ->⁺ C} (e2 : HQEquiv g) (e3 : HQEquiv \lam a => g (f a)) : HQEquiv f \cowith
-      | finv b => e3.finv (g b)
-      | finv_f => e3.finv_f
-      | f_finv b => inv (e2.finv_f _) *> pmap+ e2.finv (e3.f_finv (g b)) *> e2.finv_f b
+  \func leftFactor {A B C : \Cat} {f : A ->⁺ B} {g : B ->⁺ C} (e2 : HQEquiv g) (e3 : HQEquiv \lam a => g (f a)) : HQEquiv f \cowith
+    | finv b => e3.finv (g b)
+    | finv_f => e3.finv_f
+    | f_finv b => inv (e2.finv_f _) *> pmap+ e2.finv (e3.f_finv (g b)) *> e2.finv_f b
 
-    \func rightFactor {A B C : \Cat} {f : A ->⁺ B} (e1 : HQEquiv f) {g : B ->⁺ C} (e3 : HQEquiv \lam a => g (f a)) : HQEquiv g \cowith
-      | finv c => f (e3.finv c)
-      | finv_f b => pmap+ (\lam x => f (e3.finv (g x))) (inv (e1.f_finv b)) *> pmap+ f (e3.finv_f _) *> e1.f_finv b
-      | f_finv => e3.f_finv
-  }
+  \func rightFactor {A B C : \Cat} {f : A ->⁺ B} (e1 : HQEquiv f) {g : B ->⁺ C} (e3 : HQEquiv \lam a => g (f a)) : HQEquiv g \cowith
+    | finv c => f (e3.finv c)
+    | finv_f b => pmap+ (\lam x => f (e3.finv (g x))) (inv (e1.f_finv b)) *> pmap+ f (e3.finv_f _) *> e1.f_finv b
+    | f_finv => e3.f_finv
+
+  \func toQEquiv {C D : \Type} (e : HQEquiv {C} {D}) : QEquiv {C} {D} \cowith
+    | f x => e.f x
+    | ret y => e.finv y
+    | ret_f x => e.finv_f x
+    | f_sec y => e.f_finv y
+}
 
 \type IsHEquiv {C D : \Cat} (f : C ->⁺ D) : \Prop
   => TruncP (HQEquiv f)
@@ -46,12 +53,19 @@
     \sfunc f_ret {C D : \Cat} {f : C ->⁺ D} (e : IsHEquiv f) {y :⁺ D} : f (ret e y) = y
       => pmap+ f (path (\lam i => (\peval ret e) i y) *> inv-equals f {(toTuple e).1.1} (toTuple e).1.2 (toTuple e).2.2) *> (toTuple e).2.2 y
 
+    \lemma toIsEquiv {C D : \Type} {f : C ->⁺ D} (e : IsHEquiv f) : IsEquiv (\lam x => f x) \elim e
+      | inP e => inP (HQEquiv.toQEquiv e)
+
     \sfunc fib-sec {A : \Cat} {B : A ->⁺ \Cat} (e : IsHEquiv {\Sigma⁺ (a : A) (B a)} __.1) (a :⁺ A) : B a
       => transport+ B (f_ret e) (ret e a).2
 
     \sfunc fib-sec-unique {A : \Cat} {B : A ->⁺ \Cat} (e : IsHEquiv {\Sigma⁺ (a : A) (B a)} __.1) {a :⁺ A} {b b' :⁺ B a} : b = b'
       => pmap+ (\lam s => transport+ B s.2 s.1.2) $
            equiv-fibers __.1 (ret e) (\lam x => ret_f e) (\lam y => f_ret e) {a} {(a,b), idp} {(a,b'), idp}
+
+    -- | The category of sections of a family whose projection is an equivalence is contractible.
+    \lemma sections-contr {A : \Cat} {B : A ->⁺ \Cat} (e : IsHEquiv {\Sigma⁺ (a : A) (B a)} __.1) : Contr (\Pi (a :⁺ A) -> B a)
+      => Contr.make (fib-sec e) \lam s => funExt+ \lam a => fib-sec-unique e
 
     \lemma fromFib {A : \Cat} {B : A ->⁺ \Cat} (s : \Pi (a :⁺ A) -> B a) (u : \Pi {a :⁺ A} {b b' :⁺ B a} -> b = b')
       : IsHEquiv {\Sigma⁺ (a : A) (B a)} __.1

@@ -31,6 +31,29 @@
 \lemma type_ob {X : \Type} : IsHEquiv {Ob X} {X} unob
   => cat_ob type-groupoid
 
+\lemma cov-pi-cat-equiv {C : \Cat} (Cg : IsGroupoid C) (T : C ->⁺ \Cat) : IsHEquiv {\Pi (x :⁺ C) -> T x} {\Pi (x : C) -> T x} (\lam f x => f x)
+  => inP \new HQEquiv {
+    | finv k x => transport+ T (IsHEquiv.f_ret (cat_ob Cg)) (Ob-elim T k (IsHEquiv.ret (cat_ob Cg) x))
+    | finv_f s => funExt+ \lam x => pmap+ (transport+ T (IsHEquiv.f_ret (cat_ob Cg)) __) (Ob-elim.cov T s _) *> transport+_app s (IsHEquiv.f_ret (cat_ob Cg))
+    | f_finv k => path \lam i x => Ob-elim.transport T k _ (IsHEquiv.f_ret (cat_ob Cg)) i
+  }
+
+\lemma cov-pi-type-equiv {X : \Type} (T : X ->⁺ \Type) : IsEquiv {\Pi (x :⁺ X) -> T x} {\Pi (x : X) -> T x} (\lam f x => f x)
+  => IsHEquiv.toIsEquiv (cov-pi-cat-equiv type-groupoid T)
+
+\lemma cov-fun-type-equiv {X Y : \Type} : IsEquiv {X ->⁺ Y} {X -> Y} (\lam f x => f x)
+  => cov-pi-type-equiv \lam _ => Y
+  \where {
+    \func toCov (f : X -> Y) (x :⁺ X) : Y
+      => IsEquiv.ret cov-fun-type-equiv f x
+
+    \func ofCov {f : X ->⁺ Y} {x :⁺ X} : toCov (\lam x => f x) x = f x
+      => path \lam i => IsEquiv.ret_f cov-fun-type-equiv {f} i x
+
+    \func ofInv {f : X -> Y} {x : X} : toCov f x = f x
+      => path \lam i => IsEquiv.f_ret cov-fun-type-equiv {f} i x
+  }
+
 -- | A family of groupoids as a family of types.
 \type CatTypeFamily {C : \Cat} (F : C ->⁺ \Cat) (Fg : \Pi (x : C) -> IsGroupoid (F x)) (x :⁺ C) : \Type
   => GroupoidType {F x} \lam h => catGroupoid-witness F Fg h

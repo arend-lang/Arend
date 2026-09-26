@@ -1,4 +1,5 @@
 \import Equiv
+\import InfCat.Paths
 \import Paths
 
 \data Ob (C : \Cat)
@@ -9,6 +10,17 @@
 
 \func ob_unob {C : \Cat} {x : Ob C} : ob (unob x) = x \elim x
   | ob x => idp
+
+-- | A function on the objects of {C} extends to a functor out of `Ob C`.
+\func Ob-elim {C : \Cat} (T :⁺ C ->⁺ \Cat) (k :⁺ \Pi (x : C) -> T x) (o :⁺ Ob C) : T (unob o) \elim o
+  | ob x => k x
+  \where {
+    \protected \func cov {C : \Cat} (T :⁺ C ->⁺ \Cat) (s :⁺ \Pi (x :⁺ C) -> T x) (o :⁺ Ob C) : Ob-elim T (\lam x => s x) o = s (unob o) \elim o
+      | ob x => idp
+
+    \protected \func transport {C : \Cat} (T :⁺ C ->⁺ \Cat) (k :⁺ \Pi (x : C) -> T x) (o : Ob C) {x : C} (p : unob o = x) : transport+ T p (Ob-elim T k o) = k x \elim o, p
+      | ob y, idp => idp
+  }
 
 \sfunc pmap_ob_unob {C : \Cat} {x y : Ob C} (p : x = y) : pmap ob (pmap unob p) = ob_unob *> p *> inv ob_unob \elim p
   | idp => inv (pmap (_ *>) idp_*> *> *>_inv)
