@@ -1,0 +1,38 @@
+\import Equiv
+\import Function.Meta
+\import Homotopy.HLevel
+\import Homotopy.Truncation
+\import InfCat.Basics
+\import InfCat.Fibration.DirectedUnivalence
+\import InfCat.Functor.Adjunction
+\import InfCat.Groupoid
+\import InfCat.SubCat.Full
+\import Logic
+\import Meta
+\import Paths
+\import Paths.Meta
+\open FullSubCat
+
+-- | The category of types of level {n} in `\Type u`.
+\func TypeCat.{u} (n : Nat) => FullSubCat {\Type u} (ofHLevel_-1+ n)
+
+-- | Truncation is left adjoint to the inclusion of types of level {n}.
+\func truncAdjunction.{u} (n : Nat) : QAdjunction (\Type u) (TypeCat n)
+  => (truncRightAdjoint n).toAdjunction
+  \where {
+    \func truncRightAdjoint.{u} (n : Nat) : RightAdjoint {\Type u} {TypeCat n} inc \cowith
+      | lob A => make (Trunc_-1+ n A) (Trunc_-1+.level n A).isTruncated
+      | eta0 A => ->_~> (cov-fun-type-equiv.toCov inT)
+      | eta0-adjoint {A} {B} => IsEquiv.trans (inc-ff _ B) {comp _} (aux (inc-con {\Type u} {ofHLevel_-1+ n}))
+      \where {
+        \private \lemma aux.{u} {n : Nat} {A B : \Type u} (Bl : B ofHLevel_-1+ n)
+          : IsEquiv {Trunc_-1+ n A ~> B} {A ~> B} (comp (->_~> (cov-fun-type-equiv.toCov inT)) __)
+          => IsEquiv.leftFactor (inP dirUnivalence) $ transport IsEquiv (ext \lam f a =>
+                pmap (~>_-> f) (inv $ path (\lam i => (dirUnivalence.f_ret _ *> IsEquiv.f_ret cov-fun-type-equiv) i a)) *> inv (~>_->_comp _ _))
+              (IsEquiv.trans (inP dirUnivalence) (Trunc_-1+.univ Bl))
+      }
+  }
+
+\lemma TypeCat-hom-level.{u} {n : Nat} {A B : TypeCat.{u} n} : (A ~> B) ofHLevel_-1+ n
+  => HLevel-retracts (transQEquiv (IsEquiv.toQEquiv (FullSubCat.inc-ff A B)) dirUnivalence) $
+      HLevels-pi _ \lam _ => inc-con {\Type u} {ofHLevel_-1+ n}

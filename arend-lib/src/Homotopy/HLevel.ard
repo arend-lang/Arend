@@ -1,6 +1,8 @@
 \import Arith.Nat
 \import Equiv
 \import Equiv.Path
+\import Equiv.Sigma
+\import Homotopy.Fibration
 \import Logic
 \import Logic.Unique
 \import Order.PartialOrder
@@ -11,11 +13,8 @@
   | 0 => ToProp (isProp A) (isProp.levelProp A)
   | suc n => \Pi (a a' : A) -> (a = a') ofHLevel_-1+ n
   \where
-    \use \level levelProp (A : \Type) (n : Nat) (e e' : A ofHLevel_-1+ n) : e = e' \elim n
-      | 0 => \case \elim e, \elim e' \with {
-        | toProp e, toProp e' => pmap toProp (isProp.levelProp A e e')
-      }
-      | suc n => path \lam i a a' => levelProp (a = a') n (e a a') (e' a a') i
+    \lemma levelProp (A : \Type) (n : Nat) (e e' : A ofHLevel_-1+ n) : e = e'
+      => prop-pi
 
 \func hLevel-inh {A : \Type} (n : Nat) (f : A -> A ofHLevel_-1+ n) : A ofHLevel_-1+ n \elim n
   | 0 => toProp \lam a => ToProp.fromProp (f a) a
@@ -28,6 +27,39 @@
 \func \infix 2 ofHLevel_-2+ (A : \Type) (n : Nat) : \Prop \elim n
   | 0 => Contr A
   | suc n => \Pi (a a' : A) -> (a = a') ofHLevel_-2+ n
+
+-- | A map is `(k-2)`-truncated if its fibers are `(k-2)`-types.
+\type IsTruncMap {X Y : \Type} (n : Nat) (f : X -> Y) : \Prop
+  => \Pi (y : Y) -> Fib f y ofHLevel_-2+ n
+  \where {
+    -- | Truncatedness is invariant under postcomposition with an equivalence.
+    \lemma truncMap-post {X Y Z : \Type} {g : X -> Y} (e : QEquiv {Y} {Z}) {k : Nat}
+      : IsTruncMap k (\lam x => e (g x)) <-> IsTruncMap k g
+      => \have fib-post y => sigma-right \lam x => IsEquiv.toQEquiv (pmapIsEquiv (inP e) {g x} {y})
+         \in (\lam t y => HLevel_-2-retracts (fib-post y) (t (e y)),
+              \lam t z => transport (\lam z => Fib (\lam x => e (g x)) z ofHLevel_-2+ k) (e.f_sec z) (HLevel_-2-retracts (symQEquiv (fib-post (e.ret z))) (t (e.ret z))))
+
+    -- | Truncatedness is invariant under precomposition with an equivalence.
+    \lemma truncMap-pre {X' X Y : \Type} (e : QEquiv {X'} {X}) {g : X -> Y} {k : Nat}
+      : IsTruncMap k (\lam x' => g (e x')) <-> IsTruncMap k g
+      => (\lam t y => HLevel_-2-retracts (symQEquiv (qsigma-left {X'} {X} {\lam x => g x = y} e)) (t y),
+          \lam t y => HLevel_-2-retracts (qsigma-left {X'} {X} {\lam x => g x = y} e) (t y))
+
+    \lemma truncMap-proj {A : \Type} {B : A -> \Type} {k : Nat}
+      : IsTruncMap {\Sigma (x : A) (B x)} {A} k __.1 <-> (\Pi (a : A) -> B a ofHLevel_-2+ k)
+      => (\lam t a => HLevel_-2-retracts (symQEquiv (proj-fib B a)) (t a), \lam h a => HLevel_-2-retracts (proj-fib B a) (h a))
+
+    -- | Paths in fibers of {r} are fibers of `pmap r`.
+    \lemma fib-path-level {X Y : \Type} {r : X -> Y} {k : Nat} (h : \Pi {u v : X} -> IsTruncMap k (pmap r {u} {v}))
+                          (u v : X) {y : Y} (q : r u = y) (q' : r v = y) : ((u,q) = {Fib r y} (v,q')) ofHLevel_-2+ k \elim q'
+      | idp => HLevel_-2-retracts (Fib.equiv (r v) (u,q) (v,idp)) (h q)
+
+    -- | {r} is `(k-1)`-truncated iff the action of {r} on paths is `(k-2)`-truncated.
+    \lemma truncMap-suc {X Y : \Type} {r : X -> Y} {k : Nat}
+      : IsTruncMap (suc k) r <-> (\Pi {u v : X} -> IsTruncMap k (pmap r {u} {v}))
+      => (\lam t {u} {v} q => HLevel_-2-retracts (symQEquiv (Fib.equiv (r v) (u,q) (v,idp))) (t (r v) (u,q) (v,idp)),
+          \lam h y w w' => fib-path-level h w.1 w'.1 w.2 w'.2)
+  }
 
 -- # Prop-based and Contr-base hLevels are equivalent
 

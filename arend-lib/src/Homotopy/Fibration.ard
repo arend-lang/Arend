@@ -26,3 +26,14 @@
             | f_sec s => (ext.retraction b0 x' x s.1 s.2).2
           })
   }
+
+-- | Fibers of a projection are the fibers of the family.
+\func proj-fib {A : \Type} (B : A -> \Type) (a : A) : QEquiv {Fib {\Sigma (x : A) (B x)} __.1 a} {B a} \cowith
+  | f w => transport B w.2 w.1.2
+  | ret b => ((a,b), idp)
+  | ret_f w => aux w.1.1 w.1.2 w.2
+  | f_sec b => idp
+  \where
+    \private \func aux (x : A) (b : B x) {a : A} (p : x = a)
+      : ((a, transport B p b), idp) = {Fib {\Sigma (x : A) (B x)} {A} __.1 a} ((x,b),p) \elim p
+      | idp => idp

@@ -2,6 +2,7 @@
 \import Equiv.Path
 \import Equiv.Univalence
 \import Homotopy.HLevel
+\import Logic
 \import Logic.Unique
 \import Homotopy.Loop
 \import Homotopy.Pointed
@@ -13,13 +14,10 @@
 \class Truncated_-1+.{u} (n : Nat) (\classifying A : \Type u)
   | isTruncated : A ofHLevel_-1+ n
   \where {
-    \func ext.{u} {n : Nat} (t t' : Truncated_-1+.{u} n) (p : t.A = t'.A) : t = t' =>
-      path (\lam i => \new Truncated_-1+ n (p @ i) (pathOver (ofHLevel_-1+.levelProp t'.A n (rewriteI p t.isTruncated) t'.isTruncated) @ i))
-
-    \func equiv.{u} {n : Nat} (t t' : Truncated_-1+.{u} n) : QEquiv {t = t'} {t.A = t'.A} =>
-      pathEquiv (\lam (t t' : Truncated_-1+ n) => t.A = t'.A) (\lam {t} {t'} => \new Retraction {
+    \func equiv.{u} {n : Nat} (t t' : Truncated_-1+.{u} n) : QEquiv {t = t'} {t.A = t'.A}
+      => pathEquiv (\lam (t t' : Truncated_-1+ n) => t.A = t'.A) (\lam {t} {t'} => \new Retraction {
         | f => pmap (Truncated_-1+.A {__})
-        | sec => ext t t'
+        | sec p => ext p
         | f_sec _ => idp
       })
 
@@ -53,7 +51,7 @@
                                                  (\lam s => inv p.2 *> path (spokeT p.1 north) *> inv (path (spokeT p.1 s)))
                                                  (pmap ((inv p.2 *> __) *> p.2) *>_inv *> inv_*>))
 
-    \func elim.{u} {n : Nat} {A : \Type}
+    \protected \func elim.{u} {n : Nat} {A : \Type}
                    (P : Trunc_-1+ n A -> Truncated_-1+.{u} n)
                    (g : \Pi (a : A) -> P (inT a))
                    (x : Trunc_-1+ n A) : P x \elim x
@@ -68,11 +66,26 @@
              | p : f x = p0 => path (\lam j => (isContr=>isProp c (f,idp) (\lam _ => p0, idp) @ j).1 x)
         \in pathOver p
 
-    \func elim2.{u} {n : Nat} {A : \Type}
+    \protected \func elim2.{u} {n : Nat} {A : \Type}
                     (P : Trunc_-1+ n A -> Trunc_-1+ n A -> Truncated_-1+.{u} n)
                     (g : \Pi (a a' : A) -> P (inT a) (inT a'))
                     (x y : Trunc_-1+ n A) : P x y
       => elim (P x) (\lam a' => elim (P __ (inT a')) (g __ a') x) y
+
+    \protected \func rec.{u} {n : Nat} {A : \Type} {B : \Type u} (Bl : B ofHLevel_-1+ n) (g : A -> B) (t : Trunc_-1+ n A) : B
+      => elim (\lam _ => \new Truncated_-1+ n B Bl) g t
+
+    \sfunc elim-eq.{u} {n : Nat} {A : \Type} {B : \Type u} (Bl : B ofHLevel_-1+ n) {h h' : Trunc_-1+ n A -> B} (p : \Pi (a : A) -> h (inT a) = h' (inT a))
+                       (t : Trunc_-1+ n A) : h t = h' t
+      => Trunc_-1+.elim (\lam t => \new Truncated_-1+ n (h t = h' t) (HLevel_-1_suc Bl (h t) (h' t))) p t
+
+    \lemma univ.{u} {n : Nat} {A B : \Type u} (Bl : B ofHLevel_-1+ n)
+      : IsEquiv {Trunc_-1+ n A -> B} {A -> B} (\lam h a => h (inT a))
+      => inP \new QEquiv {
+        | ret g => Trunc_-1+.rec Bl g
+        | ret_f h => ext (Trunc_-1+.elim-eq Bl \lam a => idp)
+        | f_sec g => idp
+      }
 
     \func equality.{u} {n : Nat} {A : \Type u} (a a' : A) : QEquiv {inT a = {Trunc_-1+ (suc n) A} inT a'} {Trunc_-1+ n (a = a')} =>
       \let | code => elim2 (\lam _ _ => truncatedTypesLevel n) (\lam a a' => level n (a = a'))
