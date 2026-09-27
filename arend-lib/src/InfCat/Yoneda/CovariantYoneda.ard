@@ -1,0 +1,65 @@
+\import Equiv
+\import Function.Meta
+\import InfCat.Basics
+\import InfCat.Fibration.DirectedUnivalence
+\import InfCat.Fibration.LeftFib
+\import InfCat.Fibration.Straightening
+\import InfCat.Functor.Equiv
+\import InfCat.Paths
+\import Logic.Unique
+\import Paths
+\import Paths.Meta
+
+-- | The canonical arrow from the initial object `(x, idd)` of the coslice under {x}.
+\func coslice-arrow {C : \Cat} {x : C} (k :⁺ \Sigma⁺ (y : C) (x ~> y)) : (x, idd) ~> {\Sigma⁺ (y : C) (x ~> y)} k
+  => dpath \lam i => (k.2 i, conn-right k.2 i)
+  \where {
+    \sfunc idd-path {C : \Cat} {x : C} : coslice-arrow {C} {x} (x, idd) = idd
+      => pmap {\Sigma (a : x ~> x) (DPath (\lam i => x ~> a i) idd idd)} {(x, idd) ~> {\Sigma⁺ (y : C) (x ~> y)} (x, idd)}
+              (\lam p => dpath \lam i => (p.1 i, p.2 i))
+              (isContr=>isProp (segal-contr.conn idd) (idd, conn-right idd) (idd, dpath \lam _ => idd))
+  }
+
+-- | Sections of a family of types over the coslice under {x} are determined by their value at `(x, idd)`.
+\func coslice-yoneda.{u} {C : \Cat} (x : C) (G : \Sigma⁺ (y : C) (x ~> y) ->⁺ \Type u)
+  : QEquiv {\Pi (k :⁺ \Sigma⁺ (y : C) (x ~> y)) -> G k} {G (x, idd)} \cowith
+  | f M => M (x, idd)
+  | ret b k => coe+ (\lam i => G (coslice-arrow k i)) b dright
+  | ret_f M => ext \lam k => pmap+ (\lam l => l.1) $
+      IsHEquiv.fib-sec-unique (leftFib-equiv (leftFib-pullback G universe-leftFib))
+        {(x, idd), k, coslice-arrow k, M (x, idd)}
+        {coe+ (\lam i => G (coslice-arrow k i)) (M (x, idd)) dright, dpath \lam i => coe+ (\lam j => G (coslice-arrow k j)) (M (x, idd)) i}
+        {M k, dpath \lam i => M (coslice-arrow k i)}
+  | f_sec b => pmap (\lam p => ~>_-> (dmap G p) b) coslice-arrow.idd-path *> ~>_->_idd
+
+-- | The Yoneda lemma: natural transformations from the representable functor of {x} to {F} are elements of `F x`.
+\func yonedaCov.{u} {C : \Cat u} (x : C) (F : C ->⁺ \Type u) : QEquiv {(\lam y =>⁺ ReprFunctor x y) ~> F} {F x} \cowith
+  | f e => ~>_-> (dpath \lam i => e i x) (Straight.toStraight idd)
+  | ret b => toArr (ext-sec x F b)
+  | ret_f e => pmap toArr (ext-sec-unique x F \lam k => coe+ (\lam i => e i k.1) k.2 dright)
+            *> path (\lam j => dpath (\lam i y => iso+_coe+ (dpath \lam i' => e i' y) i j))
+  | f_sec b => ~>_->_idd
+  \where {
+    -- | Sections over the total category of the representable functor.
+    \func Sec.{u} {C : \Cat u} (x : C) (F : C ->⁺ \Type u)
+      => \Pi (k :⁺ \Sigma⁺ (y : C) (ReprFunctor x y)) -> F k.1
+
+    -- | The natural transformation corresponding to a section.
+    \func toArr.{u} {C : \Cat u} {x : C} {F : C ->⁺ \Type u} (H : \Pi (k :⁺ \Sigma⁺ (y : C) (ReprFunctor x y)) -> F k.1)
+      : (\lam y =>⁺ ReprFunctor x y) ~> F
+      => dpath \lam i y => iso+ (\lam r => H (y,r)) i
+
+    -- | The section obtained by transporting {b} along arrows out of {x}.
+    \func ext-sec.{u} {C : \Cat u} (x : C) (F : C ->⁺ \Type u) (b : F x) : Sec x F
+      => \lam k => ~>_-> (dmap F (Straight.fromStraight k.2)) b
+
+    -- | A section is determined by its value at the identity.
+    \func ext-sec-unique.{u} {C : \Cat u} (x : C) (F : C ->⁺ \Type u) (H : Sec x F)
+      : ext-sec x F (H (x, Straight.toStraight idd)) = H
+      => \let | Q => coslice-yoneda x (\lam k => F k.1)
+              | hh (S : Sec x F) : \Pi (k :⁺ \Sigma⁺ (y : C) (x ~> y)) -> F k.1 => \lam k => S (k.1, Straight.toStraight k.2)
+              | back (T : \Pi (k :⁺ \Sigma⁺ (y : C) (x ~> y)) -> F k.1) : Sec x F => \lam k => T (k.1, Straight.fromStraight k.2)
+              | back-hh (S : Sec x F) : back (hh S) = S => path \lam j k => S (k.1, Straight.toStraight_fromStraight k.2 j)
+              | q : hh (ext-sec x F (H (x, Straight.toStraight idd))) = hh H => inv (Q.ret_f _) *> pmap Q.ret ~>_->_idd *> Q.ret_f _
+         \in inv (back-hh _) *> pmap back q *> back-hh H
+  }

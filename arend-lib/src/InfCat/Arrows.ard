@@ -19,6 +19,12 @@
   | ret_f h => ob_unob
   | f_sec => idpe
 
+\func DI-fun-equiv {X C : \Cat} : QEquiv {Ob (X ->⁺ DI ->⁺ C)} {\Sigma (j : \Sigma (Ob (X ->⁺ C)) (Ob (X ->⁺ C))) (unob j.1 ~> unob j.2)} \cowith
+  | f o => ((ob \lam a => unob o a dleft, ob \lam a => unob o a dright), dpath \lam i a => unob o a i)
+  | ret s => ob \lam a i => s.2 i a
+  | ret_f (ob k) => idp
+  | f_sec ((ob H1, ob H2), t) => idp
+
 \func ObDI-equiv {C : \Cat} : QEquiv {Ob (Ob DI ->⁺ C)} {\Sigma C C} \cowith
   | f h => (unob h (ob dleft), unob h (ob dright))
   | ret j => ob (ObDI-elim j.1 j.2)

@@ -6,6 +6,8 @@
 \import InfCat.Fibration.DirectedUnivalence
 \import InfCat.Functor.Adjunction
 \import InfCat.Groupoid
+\import InfCat.Paths
+\import InfCat.Rezk
 \import InfCat.SubCat.Full
 \import Logic
 \import Meta
@@ -30,6 +32,29 @@
           => IsEquiv.leftFactor (inP dirUnivalence) $ transport IsEquiv (ext \lam f a =>
                 pmap (~>_-> f) (inv $ path (\lam i => (dirUnivalence.f_ret _ *> IsEquiv.f_ret cov-fun-type-equiv) i a)) *> inv (~>_->_comp _ _))
               (IsEquiv.trans (inP dirUnivalence) (Trunc_-1+.univ Bl))
+      }
+
+    -- | The left adjoint computes the truncation.
+    \func ladj-equiv.{u} {n : Nat} {A : \Type u} : QEquiv {inc ((truncAdjunction n).ladj A)} {Trunc_-1+ n A} \cowith
+      | f => ~>_-> (dmap inc k)
+      | ret => Trunc_-1+.rec (inc-con {_} {_} {(truncAdjunction n).ladj A}) (~>_-> ((truncAdjunction n).heta A))
+      | ret_f c => \let | g => dmap inc (IsIso.ret k-iso)
+                        | h (c : inc ((truncAdjunction n).ladj A)) => ~>_-> g (~>_-> (dmap inc k) c)
+                        | hc {c : inc ((truncAdjunction n).ladj A)} : h c = c => inv (~>_->_comp (dmap inc k) g)
+                            *> pmap (~>_-> __ c) (inv (dmap_comp inc) *> pmap+ (dmap inc __) (IsIso.f_ret k-iso)) *> ~>_->_idd
+                   \in inv hc *> pmap (~>_-> g) (f_sec' (~>_-> (dmap inc k) c)) *> hc
+      | f_sec => f_sec'
+      \where \private {
+        \func k => (truncAdjunction n).heta_heps-rl {A} {(truncRightAdjoint n).lob A} ((truncRightAdjoint n).eta0 A)
+
+        \lemma k-iso : IsIso k
+          => precomp-equiv=>iso \lam Y => IsEquiv.leftFactor (inP (truncAdjunction n).heta_heps-equiv) $ transport IsEquiv
+              (ext \lam g => inv $ pmap (comp _ __) (dmap_comp inc) *> comp-assoc *> pmap (comp __ _) (truncAdjunction n).heta_heps-rlr)
+              (truncRightAdjoint n).eta0-adjoint
+
+        \sfunc f_sec' (t : Trunc_-1+ n A) : ~>_-> (dmap inc k) (Trunc_-1+.rec (inc-con {_} {_} {(truncAdjunction n).ladj A}) (~>_-> ((truncAdjunction n).heta A)) t) = t
+          => Trunc_-1+.elim-eq (Trunc_-1+.level n A).isTruncated (\lam a => inv (~>_->_comp _ _)
+              *> pmap (~>_-> __ a) (truncAdjunction n).heta_heps-rlr *> ->_~>_-> *> cov-fun-type-equiv.ofInv) t
       }
   }
 

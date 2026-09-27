@@ -52,17 +52,23 @@
   => Resize+ (CatTypeFamily F (leftFib-grpd Ff)) (\lam y => IsSmall.toResize (s y) CatTypeFamily.ob-equiv)
              (\lam {a} {a'} f b => leftFib-lift (catType-leftFib Ff) f b) y
   \where {
-    \func fromStraight.{u} {Ff : IsLeftFib F} {s : \Pi (y : C) -> IsSmall.{u} (F y)} {y :⁺ C}
+    \func fromStraight.{u} {C : \Cat} {F : C ->⁺ \Cat} {Ff : IsLeftFib F} {s : \Pi (y : C) -> IsSmall.{u} (F y)} {y :⁺ C}
                            (r :⁺ Straight Ff s y) : F y \elim r
       | resize+ b => CatTypeFamily.fromCatType b
 
-    \func toStraight.{u} {Ff : IsLeftFib F} {s : \Pi (y : C) -> IsSmall.{u} (F y)} {y :⁺ C}
+    \func toStraight.{u} {C : \Cat} {F : C ->⁺ \Cat} {Ff : IsLeftFib F} {s : \Pi (y : C) -> IsSmall.{u} (F y)} {y :⁺ C}
                      (b :⁺ F y) : Straight Ff s y
       => resize+ (CatTypeFamily.toCatType b)
 
-    \func toStraight_fromStraight.{u} {Ff : IsLeftFib F} {s : \Pi (y : C) -> IsSmall.{u} (F y)} {y :⁺ C}
+    \func toStraight_fromStraight.{u} {C : \Cat} {F : C ->⁺ \Cat} {Ff : IsLeftFib F} {s : \Pi (y : C) -> IsSmall.{u} (F y)} {y :⁺ C}
                                       (r :⁺ Straight Ff s y) : toStraight (fromStraight r) = r \elim r
       | resize+ b => path \lam i => resize+ (CatTypeFamily.toCatType_fromCatType b i)
+
+    \func equiv.{u} {C : \Cat} {F : C ->⁺ \Type} {Ff : IsLeftFib F} {s : \Pi (y : C) -> IsSmall.{u} (F y)} {y : C} : QEquiv {Straight Ff s y} {F y} \cowith
+      | f => fromStraight
+      | ret => toStraight
+      | ret_f => toStraight_fromStraight
+      | f_sec => idpe
   }
 
 \lemma straighten-leftFib.{u} {C : \Cat} {F : C ->⁺ \Cat} {Ff : IsLeftFib F} {s : \Pi (y : C) -> IsSmall.{u} (F y)}
@@ -72,3 +78,7 @@
 -- | The representable functor `x ~> -` with values in `\Type u`.
 \func ReprFunctor.{u} {C : \Cat u} (x : C) (y :⁺ C) : \Type u
   => Straight (hom-leftFib x) (\lam y => inP (x ~> y, idHQEquiv)) y
+  \where {
+    \func equiv.{u} {C : \Cat u} {x y : C} : QEquiv {ReprFunctor x y} {x ~> y}
+      => Straight.equiv
+  }

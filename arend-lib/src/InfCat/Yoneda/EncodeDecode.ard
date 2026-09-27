@@ -1,0 +1,21 @@
+\import Equiv
+\import InfCat.Basics
+\import InfCat.Square
+\import Paths
+
+\class EncodeDecode.{u} \noclassifying
+  {C : \Cat} (e : C) (code : C ->⁺ \Type u) (ce : code e)
+  (decode : \Pi (s :⁺ \Sigma⁺ (c : C) (code c)) -> e ~> s.1)
+  (decode_base : decode (e,ce) = idd)
+{
+  \func encode {r :⁺ C} (p :⁺ e ~> r) : code r
+    => coe+ (\lam i => code (p i)) ce dright
+
+  \func decode-equiv {r : C} (ed : \Pi (c : code r) -> encode (decode (r,c)) = c) : QEquiv {code r} {e ~> r} \cowith
+    | f c => decode (r,c)
+    | ret => encode
+    | ret_f => ed
+    | f_sec p => inv comp_idd-left
+        *> ~>-natural decode {e, ce} {r, encode p} {dpath \lam i => (p i, coe+ (\lam j => code (p j)) ce i)}
+        *> pmap (comp __ p) decode_base *> comp_idd-left
+}

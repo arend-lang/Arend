@@ -112,3 +112,8 @@
             })
             (contr-left (rsigma j)))
   }
+
+-- | A map of total spaces over an equivalence of bases is an equivalence if and only if it is a fiberwise equivalence.
+\lemma fiberwiseEquiv {X Y : \Type} {g : X -> Y} (ge : IsEquiv g) {P : X -> \Type} {Q : Y -> \Type} (h : \Pi (x : X) -> P x -> Q (g x))
+                      (te : IsEquiv {\Sigma (x : X) (P x)} {\Sigma (y : Y) (Q y)} (\lam s => (g s.1, h s.1 s.2))) (x : X) : IsEquiv (h x)
+  => propExt.conv (totalEquiv h) (IsEquiv.leftFactor (inP (qsigma-left (IsEquiv.toQEquiv ge))) te) x
