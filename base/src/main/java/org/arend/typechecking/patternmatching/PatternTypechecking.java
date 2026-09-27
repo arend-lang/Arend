@@ -211,7 +211,7 @@ public class PatternTypechecking {
           List<TypedSingleDependentLink> lamBindings = new ArrayList<>(intervalBindings.size());
           ExprSubstitution intervalSubst = new ExprSubstitution();
           for (Binding binding : intervalBindings) {
-            TypedSingleDependentLink link = new TypedSingleDependentLink(true, binding.getName(), binding.getType());
+            TypedSingleDependentLink link = new TypedSingleDependentLink(true, binding.getName(), binding.getType(), false, isDirectedBinding(binding) ? BindingVariance.COVARIANT : BindingVariance.INVARIANT);
             lamBindings.add(link);
             intervalSubst.add(binding, new ReferenceExpression(link));
           }
@@ -223,13 +223,14 @@ public class PatternTypechecking {
             exprTypes.add(exprType);
             Binding intervalBinding = intervalBindings.get(i);
 
-            intervalSubst.add(intervalBinding, Left());
+            boolean directed = isDirectedBinding(intervalBinding);
+            intervalSubst.add(intervalBinding, Left(directed));
             Expression leftArg = evalBody(intervalSubst, (ElimBody) body, args);
             if (leftArg == null && definition != null) {
               leftArg = makeFunCall(definition, args, intervalSubst, clause);
             }
 
-            intervalSubst.add(intervalBinding, Right());
+            intervalSubst.add(intervalBinding, Right(directed));
             Expression rightArg = evalBody(intervalSubst, (ElimBody) body, args);
             if (rightArg == null && definition != null) {
               rightArg = makeFunCall(definition, args, intervalSubst, clause);
@@ -246,15 +247,16 @@ public class PatternTypechecking {
             }
 
             for (int j = intervalBindings.size() - 1, k = 0; j > i; j--, k++) {
-              Expression leftArgType = new LamExpression(lamBindings.get(j), exprTypes.get(k).subst(lamBindings.get(i), Left()));
-              Expression rightArgType = new LamExpression(lamBindings.get(j), exprTypes.get(k).subst(lamBindings.get(i), Right()));
-              leftArg = new PathExpression(leftArgType, new LamExpression(lamBindings.get(j), leftArg), false, myVisitor.dependsOnCategoricalContext(leftArgType));
-              rightArg = new PathExpression(rightArgType, new LamExpression(lamBindings.get(j), rightArg), false, myVisitor.dependsOnCategoricalContext(rightArgType));
+              boolean directedJ = isDirectedBinding(intervalBindings.get(j));
+              Expression leftArgType = new LamExpression(lamBindings.get(j), exprTypes.get(k).subst(lamBindings.get(i), Left(directed)));
+              Expression rightArgType = new LamExpression(lamBindings.get(j), exprTypes.get(k).subst(lamBindings.get(i), Right(directed)));
+              leftArg = new PathExpression(leftArgType, new LamExpression(lamBindings.get(j), leftArg), directedJ, myVisitor.dependsOnCategoricalContext(leftArgType));
+              rightArg = new PathExpression(rightArgType, new LamExpression(lamBindings.get(j), rightArg), directedJ, myVisitor.dependsOnCategoricalContext(rightArgType));
             }
 
             intervalSubst.add(intervalBinding, new ReferenceExpression(lamBindings.get(i)));
             Expression newArgumentType = new LamExpression(lamBindings.get(i), exprType);
-            exprType = new PathTypeExpression(newArgumentType, leftArg, rightArg, false, myVisitor.dependsOnCategoricalContext(newArgumentType));
+            exprType = new PathTypeExpression(newArgumentType, leftArg, rightArg, directed, myVisitor.dependsOnCategoricalContext(newArgumentType));
           }
         } else {
           intervalBindings = null;
@@ -267,7 +269,7 @@ public class PatternTypechecking {
           if (!(errorExpr != null && errorExpr.isGoal())) {
             Expression resultExpr = tcResult.expression;
             for (Binding binding : intervalBindings) {
-              resultExpr = AtExpression.make(resultExpr, new ReferenceExpression(binding), false, false);
+              resultExpr = AtExpression.make(resultExpr, new ReferenceExpression(binding), false, isDirectedBinding(binding));
             }
             tcResult = new TypecheckingResult(resultExpr, expectedType);
           }
@@ -341,6 +343,10 @@ public class PatternTypechecking {
       substArgs.add(arg.subst(substitution));
     }
     return NormalizeVisitor.INSTANCE.eval(body, substArgs, new ExprSubstitution(), LevelSubstitution.EMPTY, null, null, false);
+  }
+
+  private static boolean isDirectedBinding(Binding binding) {
+    return binding.getType().normalize(NormalizationMode.WHNF) instanceof DataCallExpression dataCall && dataCall.getDefinition() == Prelude.DI;
   }
 
   private int getIntervalBindings(List<? extends ExpressionPattern> patterns, int index, List<Binding> result) {
@@ -924,7 +930,7 @@ public class PatternTypechecking {
         myErrorReporter.report(new TypecheckingError("Pattern matching on the interval is not allowed here", pattern));
         return null;
       }
-      if (dataCall != null && dataCall.getDefinition() == Prelude.DI && parameters.getVariance() != BindingVariance.INVARIANT) {
+      if (myMode != Mode.CONSTRUCTOR && dataCall != null && dataCall.getDefinition() == Prelude.DI && parameters.getVariance() != BindingVariance.INVARIANT) {
         myErrorReporter.report(new TypecheckingError("Pattern matching on DI is allowed only for invariant parameters", pattern));
         return null;
       }

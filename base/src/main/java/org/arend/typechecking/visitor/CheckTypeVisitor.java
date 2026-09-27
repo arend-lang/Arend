@@ -585,7 +585,7 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
           return checkResultExpr(expectedType, new TypecheckingResult(new NewExpression(null, resultClassCall), resultClassCall), expr);
         }
       }
-    } else if (expectedType instanceof PathTypeExpression pt && !pt.isDirected() && result.type instanceof PiExpression) {
+    } else if (expectedType instanceof PathTypeExpression && result.type instanceof PiExpression) {
       int n1 = 0;
       Expression actualType = result.type;
       while (actualType instanceof PiExpression && ((PiExpression) actualType).getParameters().isExplicit()) {
@@ -593,14 +593,14 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
         actualType = ((PiExpression) actualType).getCodomain().normalize(NormalizationMode.WHNF);
       }
 
-      int n2 = 0;
+      List<Boolean> directedList = new ArrayList<>();
       Expression eType = expectedType;
-      while (eType instanceof PathTypeExpression eTypePath && !eTypePath.isDirected()) {
-        n2++;
-        eType = AppExpression.make(eTypePath.getArgumentType(), new ReferenceExpression(new TypedBinding("i", ExpressionFactory.Interval())), true).normalize(NormalizationMode.WHNF);
+      while (eType instanceof PathTypeExpression eTypePath) {
+        directedList.add(eTypePath.isDirected());
+        eType = AppExpression.make(eTypePath.getArgumentType(), new ReferenceExpression(new TypedBinding("i", eTypePath.isDirected() ? ExpressionFactory.DI() : ExpressionFactory.Interval())), true).normalize(NormalizationMode.WHNF);
       }
 
-      int n = Math.min(n1, n2);
+      int n = Math.min(n1, directedList.size());
       if (n > 0) {
         List<Referable> refs = new ArrayList<>(n - 1);
         for (int i = 1; i < n; i++) {
@@ -614,15 +614,14 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
           }
           newExpr = Concrete.AppExpression.make(expr.getData(), newExpr, args);
         }
-        Concrete.Expression pathRef = new Concrete.ReferenceExpression(expr.getData(), Prelude.PATH_CON.getRef());
-        newExpr = Concrete.AppExpression.make(expr.getData(), pathRef, newExpr, true);
+        newExpr = Concrete.AppExpression.make(expr.getData(), new Concrete.ReferenceExpression(expr.getData(), (directedList.get(n - 1) ? Prelude.DPATH_CON : Prelude.PATH_CON).getRef()), newExpr, true);
         for (int i = refs.size() - 1; i >= 0; i--) {
-          newExpr = Concrete.AppExpression.make(expr.getData(), pathRef, new Concrete.LamExpression(expr.getData(), Collections.singletonList(new Concrete.NameParameter(expr.getData(), true, refs.get(i))), newExpr), true);
+          newExpr = Concrete.AppExpression.make(expr.getData(), new Concrete.ReferenceExpression(expr.getData(), (directedList.get(i) ? Prelude.DPATH_CON : Prelude.PATH_CON).getRef()), new Concrete.LamExpression(expr.getData(), Collections.singletonList(new Concrete.NameParameter(expr.getData(), true, refs.get(i))), newExpr), true);
         }
         return checkExpr(newExpr, expectedType);
       }
-    } else if (expectedType instanceof PiExpression && result.type instanceof PathTypeExpression pt3 && !pt3.isDirected()) {
-      return checkExpr(Concrete.AppExpression.make(expr.getData(), new Concrete.ReferenceExpression(expr.getData(), Prelude.AT.getRef()), new Concrete.ReferenceExpression(expr.getData(), new CoreReferable(null, result)), true), expectedType);
+    } else if (expectedType instanceof PiExpression && result.type instanceof PathTypeExpression pt3) {
+      return checkExpr(Concrete.AppExpression.make(expr.getData(), new Concrete.ReferenceExpression(expr.getData(), (pt3.isDirected() ? Prelude.DAT : Prelude.AT).getRef()), new Concrete.ReferenceExpression(expr.getData(), new CoreReferable(null, result)), true), expectedType);
     }
 
     if (result.type instanceof DataCallExpression && ((DataCallExpression) result.type).getDefinition() == Prelude.FIN && expectedType instanceof DataCallExpression && ((DataCallExpression) expectedType).getDefinition() == Prelude.INT) {

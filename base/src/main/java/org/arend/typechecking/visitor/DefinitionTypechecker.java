@@ -1831,15 +1831,26 @@ public class DefinitionTypechecker extends BaseDefinitionTypechecker implements 
       typechecker.getInstancePool().setInstancePool(instancePool);
 
       boolean infLevel = false;
+      boolean catLevel = false;
       for (Constructor constructor : dataDefinition.getConstructors()) {
-        if (constructor.getBody() instanceof IntervalElim) {
+        if (constructor.getBody() instanceof IntervalElim intervalElim) {
           infLevel = true;
-          break;
+          DependentLink link = DependentLink.Helper.get(constructor.getParameters(), intervalElim.getOffset());
+          for (IntervalElim.CasePair casePair : intervalElim.getCases()) {
+            if (casePair.isDirected() && link.getVariance() == BindingVariance.COVARIANT) {
+              catLevel = true;
+              break;
+            }
+            link = link.getNext();
+          }
+          if (catLevel) {
+            break;
+          }
         }
       }
 
       if (infLevel) {
-        inferredSortList.add(new SortExpression.Const(Sort.TypeOfLevel(0)));
+        inferredSortList.add(new SortExpression.Const(catLevel ? new Sort(new Level(BigInteger.ZERO), ConstLevel.CAT_INFINITY) : Sort.TypeOfLevel(0)));
       } else if (dataDefinition.hasMultipleConstructors()) {
         inferredSortList.add(new SortExpression.Const(Sort.SET0));
       }
@@ -1966,14 +1977,14 @@ public class DefinitionTypechecker extends BaseDefinitionTypechecker implements 
 
   private Expression normalizePathExpression(Expression type, Constructor constructor, Concrete.SourceNode sourceNode) {
     type = type.normalize(NormalizationMode.WHNF);
-    if (type instanceof PathTypeExpression pathType && !pathType.isDirected()) {
+    if (type instanceof PathTypeExpression pathType) {
       Expression lamExpr = pathType.getArgumentType().normalize(NormalizationMode.WHNF);
       if (lamExpr instanceof LamExpression lam) {
         Expression newType = normalizePathExpression(lam.getBody(), constructor, sourceNode);
         if (newType == null) {
           return null;
         } else {
-          return new PathTypeExpression(new LamExpression(lam.getParameters(), newType), pathType.getLeftArgument(), pathType.getRightArgument(), false, pathType.isForcedInfinite());
+          return new PathTypeExpression(new LamExpression(lam.getParameters(), newType), pathType.getLeftArgument(), pathType.getRightArgument(), pathType.isDirected(), pathType.isForcedInfinite());
         }
       } else {
         type = null;
@@ -1990,8 +2001,8 @@ public class DefinitionTypechecker extends BaseDefinitionTypechecker implements 
   }
 
   private Expression addAts(Expression expression, DependentLink param, Expression type) {
-    while (type instanceof PathTypeExpression pathType && !pathType.isDirected()) {
-      expression = AtExpression.make(expression, new ReferenceExpression(param), false, false);
+    while (type instanceof PathTypeExpression pathType) {
+      expression = AtExpression.make(expression, new ReferenceExpression(param), false, pathType.isDirected());
       type = ((LamExpression) pathType.getArgumentType()).getBody();
       param = param.getNext();
     }
@@ -2083,21 +2094,22 @@ public class DefinitionTypechecker extends BaseDefinitionTypechecker implements 
 
     List<DependentLink> newParams = new ArrayList<>();
     if (constructorType != null) {
-      int numberOfNewParameters = 0;
-      for (Expression type = constructorType; type instanceof PathTypeExpression pt && !pt.isDirected(); type = ((LamExpression) pt.getArgumentType()).getBody()) {
-        numberOfNewParameters++;
+      List<Boolean> directedList = new ArrayList<>();
+      for (Expression type = constructorType; type instanceof PathTypeExpression pt; type = ((LamExpression) pt.getArgumentType()).getBody()) {
+        directedList.add(pt.isDirected());
       }
 
+      int numberOfNewParameters = directedList.size();
       if (numberOfNewParameters != 0) {
         if (elimParams != null && elimParams.isEmpty()) {
           elimParams = DependentLink.Helper.toList(list.getFirst());
         }
 
-        DependentLink newParam = new TypedDependentLink(true, "i" + (numberOfNewParameters == 1 ? "" : numberOfNewParameters), Interval(), EmptyDependentLink.getInstance());
-        newParams.add(newParam);
-        for (int i = numberOfNewParameters - 1; i >= 1; i--) {
-          newParam = new UntypedDependentLink("i" + i, newParam);
-          newParams.add(newParam);
+        DependentLink newParam = EmptyDependentLink.getInstance();
+        for (int i = numberOfNewParameters - 1; i >= 0; i--) {
+          boolean directed = directedList.get(i);
+          newParam = new TypedDependentLink(true, "i" + (numberOfNewParameters == 1 ? "" : i + 1), directed ? DI() : Interval(), false, directed ? BindingVariance.COVARIANT : BindingVariance.INVARIANT, newParam);
+          newParams.addFirst(newParam);
         }
         list.append(newParam);
         constructor.setParameters(list.getFirst());
@@ -2115,13 +2127,13 @@ public class DefinitionTypechecker extends BaseDefinitionTypechecker implements 
           elimBody = constructor.getBody() instanceof ElimBody ? (ElimBody) constructor.getBody() : null;
         }
 
-        int i = 0;
         Expression type = constructorType;
-        while (type instanceof PathTypeExpression pathType && !pathType.isDirected()) {
+        while (type instanceof PathTypeExpression pathType) {
+          boolean directed = pathType.isDirected();
           LamExpression lamExpr = (LamExpression) pathType.getArgumentType();
           type = lamExpr.getBody();
-          DependentLink param = newParams.get(i++);
-          pairs.add(new IntervalElim.CasePair(addAts(pathType.getLeftArgument(), param, type.subst(lamExpr.getParameters(), Left())), addAts(pathType.getRightArgument(), param, type.subst(lamExpr.getParameters(), Right())), false));
+          DependentLink param = newParam.getNext();
+          pairs.add(new IntervalElim.CasePair(addAts(pathType.getLeftArgument(), param, type.subst(lamExpr.getParameters(), Left(directed))), addAts(pathType.getRightArgument(), param, type.subst(lamExpr.getParameters(), Right(directed))), directed));
           type = type.subst(lamExpr.getParameters(), new ReferenceExpression(newParam));
           newParam = newParam.getNext();
         }
@@ -2142,7 +2154,7 @@ public class DefinitionTypechecker extends BaseDefinitionTypechecker implements 
               Expression expr = clause.getExpression();
               if (expr == null) continue;
               for (DependentLink param : newParams) {
-                expr = AtExpression.make(expr.normalize(NormalizationMode.WHNF), new ReferenceExpression(param), true, false);
+                expr = AtExpression.make(expr.normalize(NormalizationMode.WHNF), new ReferenceExpression(param), true, param.getVariance() == BindingVariance.COVARIANT);
               }
               clause.setExpression(expr);
             }
