@@ -45,6 +45,36 @@
     | ret => heta_heps-rl
     | ret_f g => heta_heps-lrl
     | f_sec h => heta_heps-rlr
+
+  -- | The right adjoint is fully faithful if and only if the counit is an isomorphism.
+  \lemma radj-ff-char : IsFFMap radj <-> (\Pi (y : D) -> IsIso (heps y))
+    => (\lam ff y => precomp-equiv=>iso \lam z => IsEquiv.leftFactor (inP heta_heps-equiv) $ transport IsEquiv
+          (ext \lam g => inv $ pmap (comp _ __) (dmap_comp radj) *> comp-assoc *> pmap (comp __ _) heta_heps-left *> comp_idd-left)
+          (ff y z),
+        \lam ei y z => transport IsEquiv
+          (ext \lam g => pmap (comp _ __) (dmap_comp radj) *> comp-assoc *> pmap (comp __ _) heta_heps-left *> comp_idd-left)
+          (IsEquiv.trans (transport (\lam q => IsEquiv (comp q)) (IsIso_= (ei y)).2 (comp_=_~>-left-equiv (IsIso_= (ei y)).1))
+                         (inP heta_heps-equiv)))
+
+  -- | If the right adjoint is fully faithful, then the unit is an isomorphism on its image.
+  \lemma radj-ff-unit-iso (ff : IsFFMap radj) (y : D) : IsIso (heta (radj y))
+    => \have e => dmap_IsIso radj (radj-ff-char.1 ff y)
+       \in inP (dmap radj (heps y), pmap (comp _ __) (IsIso.inv-equals _ heta_heps-left (IsIso.f_ret e)) *> IsIso.f_ret e, heta_heps-left)
+
+  -- | If the left adjoint is fully faithful, then the unit is an isomorphism.
+  \lemma ladj-ff-char : IsFFMap ladj <-> (\Pi (x : C) -> IsIso (heta x))
+    => (\lam ff x => postcomp-equiv=>iso \lam w => IsEquiv.leftFactor (inP (symQEquiv heta_heps-equiv)) $ transport IsEquiv
+          (ext \lam f => inv $ pmap (comp __ _) (dmap_comp ladj) *> inv comp-assoc *> pmap (comp _ __) heta_heps-right *> comp_idd-right)
+          (ff w x),
+        \lam ei w x => transport IsEquiv
+          (ext \lam f => pmap (comp __ _) (dmap_comp ladj) *> inv comp-assoc *> pmap (comp _) heta_heps-right *> comp_idd-right)
+          (IsEquiv.trans (transport (\lam q => IsEquiv (comp __ q)) (IsIso_= (ei x)).2 (comp_=_~>-right-equiv (IsIso_= (ei x)).1))
+                         (inP (symQEquiv heta_heps-equiv))))
+
+  -- | If the left adjoint is fully faithful, then the counit is an isomorphism on its image.
+  \lemma ladj-ff-counit-iso (ff : IsFFMap ladj) (x : C) : IsIso (heps (ladj x))
+    => \have e => dmap_IsIso ladj (ladj-ff-char.1 ff x)
+       \in inP (dmap ladj (heta x), heta_heps-right, pmap (comp __ _) (inv (IsIso.inv-equals _ (IsIso.ret_f e) heta_heps-right)) *> IsIso.ret_f e)
 }
 
 -- | Naturality of `g ↦ comp (eta x) (dmap R g)` in `x`.
