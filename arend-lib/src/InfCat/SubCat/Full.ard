@@ -32,21 +32,21 @@
       => (\lam r => propExt.dir orth=ff (r ()), \lam ff () => propExt.conv orth=ff ff)
       \where {
         \private \lemma orth=ff {C D : \Cat} {f : C ->⁺ D}
-          : IsEquiv {Ob (DI ->⁺ C)} {\Sigma (uv : \Sigma (Ob DI ->⁺ C) (DI ->⁺ D)) (\Pi (x :⁺ Ob DI) -> uv.2 (unob x) = f (uv.1 x))}
-                    (\lam h => ((\lam x => unob h (unob x), \lam y => f (unob h y)), \lam x => idp))
+          : IsEquiv {DI ->⁺ C} {\Sigma (uv : \Sigma (Ob DI ->⁺ C) (DI ->⁺ D)) (\Pi (x :⁺ Ob DI) -> uv.2 (unob x) = f (uv.1 x))}
+                    (\lam h => ((\lam x => h (unob x), \lam y => f (h y)), \lam x => idp))
           = IsFFMap f
           => IsEquiv.parallelEquiv (inP DI-equiv)
               (IsEquiv.trans
-                (IsEquiv.trans {_} {\Sigma (u : Ob (Ob DI ->⁺ C)) (\Sigma (v : Ob (DI ->⁺ D)) (\Pi (x :⁺ Ob DI) -> unob v (unob x) = f (unob u x)))} {_}
+                (IsEquiv.trans {_} {\Sigma (u : Ob DI ->⁺ C) (\Sigma (v : DI ->⁺ D) (\Pi (x :⁺ Ob DI) -> v (unob x) = f (u x)))} {_}
                   (inP $ later \new QEquiv {
-                    | f s => (ob s.1.1, (ob s.1.2, s.2))
-                    | ret t => ((unob t.1, unob t.2.1), t.2.2)
+                    | f s => (s.1.1, (s.1.2, s.2))
+                    | ret t => ((t.1, t.2.1), t.2.2)
                     | ret_f => idpe
-                    | f_sec (ob t1, (ob t21, t22)) => idp
+                    | f_sec => idpe
                   })
-                  {later \lam s => (s.1, coe (\lam i => s.2.2 (ob dleft) i ~> s.2.2 (ob dright) i) (dpath (unob s.2.1)) right)}
-                  (IsSigma-right (later \lam u r => coe (\lam i => r.2 (ob dleft) i ~> r.2 (ob dright) i) (dpath (unob r.1)) right) $ later \lam (ob u) =>
-                    IsEquiv.trans (inP $ sigma-right \lam v => later ObDI-depEquiv) (IsEquiv.trans (inP $ qsigma-left {Ob (DI ->⁺ D)} DI-equiv)
+                  {later \lam s => (s.1, coe (\lam i => s.2.2 (ob dleft) i ~> s.2.2 (ob dright) i) (dpath s.2.1) right)}
+                  (IsSigma-right (later \lam u r => coe (\lam i => r.2 (ob dleft) i ~> r.2 (ob dright) i) (dpath r.1) right) $ later \lam u =>
+                    IsEquiv.trans (inP $ sigma-right \lam v => later ObDI-depEquiv) (IsEquiv.trans (inP $ qsigma-left {DI ->⁺ D} DI-equiv)
                       (inP \new QEquiv {\Sigma (w : \Sigma (j : \Sigma D D) (j.1 ~> j.2)) (\Sigma (w.1.1 = f (u (ob dleft))) (w.1.2 = f (u (ob dright))))} {
                         | f z => coe (\lam i => z.2.1 i ~> z.2.2 i) z.1.2 right
                         | ret a => (((f $ u $ ob dleft, f $ u $ ob dright), a), (idp, idp))
@@ -54,7 +54,7 @@
                         | f_sec a => idp
                       }))
                   ))
-                (inP $ qsigma-left {Ob (Ob DI ->⁺ C)} ObDI-equiv))
+                (inP $ qsigma-left {Ob DI ->⁺ C} ObDI-equiv))
               (\lam h => idp)
              *> inv (<->_=.1 ffMap-char)
       }

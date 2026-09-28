@@ -1,6 +1,5 @@
 \import Equiv
 \import Function.Meta
-\import InfCat.Objects
 \import Paths
 \import Paths.Meta
 
@@ -23,14 +22,14 @@
       | cglue a => gm a
 
     \protected \func elim-equiv {D : CatPushout f g ->⁺ \Cat}
-      : QEquiv {Ob (\Pi (w :⁺ CatPushout f g) -> D w)}
+      : QEquiv {\Pi (w :⁺ CatPushout f g) -> D w}
                {\Sigma (u : \Pi (y :⁺ B) -> D (cinl y))
                        (v : \Pi (z :⁺ C) -> D (cinr z))
                        (\Pi (x :⁺ A) -> Path (\lam i => D (cglue x i)) (u (f x)) (v (g x)))}
       \cowith
-      | f h => (\lam y => unob h (cinl y), \lam z => unob h (cinr z), \lam x => path \lam i => unob h (cglue x i))
-      | ret s => ob (elim s.1 s.2 s.3)
-      | ret_f (ob h) => pmap ob $ ext \case \elim __ \with {
+      | f h => (\lam y => h (cinl y), \lam z => h (cinr z), \lam x => path \lam i => h (cglue x i))
+      | ret s => elim s.1 s.2 s.3
+      | ret_f h => ext \case \elim __ \with {
         | cinl y => idp
         | cinr z => idp
         | cglue x i => idp

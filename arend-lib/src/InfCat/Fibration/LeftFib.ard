@@ -69,7 +69,7 @@
 
     -- | The type of objects of {Coslice}.
     \func ObCoslice {B : \Cat} (T : B ->⁺ \Cat) {a b : B} (ta : T a) : \Type
-      => \Sigma (tb : Ob (T b)) ((a,ta) ~> {Total T} (b, unob tb))
+      => \Sigma (tb : T b) ((a,ta) ~> {Total T} (b, tb))
 
     -- | The projection of the coslice to the hom-type of the base.
     \func coslice-proj {B : \Cat} (T : B ->⁺ \Cat) {a b : B} (ta : T a) (s : ObCoslice T {a} {b} ta) : a ~> b
@@ -82,9 +82,9 @@
               *> comp-equiv.flipped {_} {_} {_} {_} {_} {dmap F (dmap __.1 m)} (dpath \lam k => (m k).2)
 
     -- | A contractible type of objects gives a contractible category.
-    \lemma ob-sigma-Contr {C : \Cat} (P : C ->⁺ \Type) (c : Contr (\Sigma (x : Ob C) (P (unob x)))) : Contr (\Sigma⁺ (x : C) (P x)) \cowith
-      | center => (unob c.center.1, c.center.2)
-      | contraction u => path \lam i => (unob (c.contraction (ob u.1, u.2) i).1, (c.contraction (ob u.1, u.2) i).2)
+    \lemma ob-sigma-Contr {C : \Cat} (P : C ->⁺ \Type) (c : Contr (\Sigma (x : C) (P x))) : Contr (\Sigma⁺ (x : C) (P x)) \cowith
+      | center => (c.center.1, c.center.2)
+      | contraction u => path \lam i => ((c.contraction (u.1, u.2) i).1, (c.contraction (u.1, u.2) i).2)
 
     {- | Every lift of {f} is equal to the canonical one in the coslice.
      - {L} is the family of lifts along the square {conn-left}; it is obtained by applying a natural lift to `conn-left f k` and `p k`.
@@ -105,22 +105,22 @@
                         (lift : \Pi {a b :⁺ B} (f :⁺ a ~> b) (ta :⁺ T a) -> CovLift T f ta)
                         {a b : B} (ta : T a) : QEquiv {ObCoslice T ta} {a ~> b} \cowith
       | f => coslice-proj T ta
-      | ret r => (ob (lift r ta).1, dpath \lam i => ((r i, (lift r ta).2 i) : Total T))
-      | ret_f (ob x, p) =>
+      | ret r => ((lift r ta).1, dpath \lam i => ((r i, (lift r ta).2 i) : Total T))
+      | ret_f (x, p) =>
         \let q => coslice-path T Tg (dpath \lam i => (p i).1) (dpath \lam i => (p i).2) (\lam k => lift (conn-left (dpath \lam i => (p i).1) k) ((p k).2))
-        \in path \lam k => (ob (q k).1, (q k).2)
+        \in path \lam k => ((q k).1, (q k).2)
       | f_sec r => idp
 
     -- | The type of lifts of {f} is the fiber of {coslice-proj} over {f}.
     \func lift-fiber-equiv {B : \Cat} (T : B ->⁺ \Cat) {a b : B} (f : a ~> b) (ta : T a)
-      : QEquiv {\Sigma (x : Ob (T b)) (DPath (\lam i => T (f i)) ta (unob x))} {Fib (coslice-proj T ta) f} \cowith
+      : QEquiv {\Sigma (x : T b) (DPath (\lam i => T (f i)) ta x)} {Fib (coslice-proj T ta) f} \cowith
       | f s => ((s.1, dpath \lam i => ((f i, s.2 i) : Total T)), idp)
-      | ret t => (t.1.1, transport (\lam r => DPath (\lam i => T (r i)) ta (unob t.1.1)) t.2 (dpath \lam i => (t.1.2 i).2))
+      | ret t => (t.1.1, transport (\lam r => DPath (\lam i => T (r i)) ta t.1.1) t.2 (dpath \lam i => (t.1.2 i).2))
       | ret_f s => idp
       | f_sec t => aux T f t.2 t.1.1 (dpath \lam i => (t.1.2 i).2)
       \where {
-        \private \func aux {B : \Cat} (T : B ->⁺ \Cat) {a b : B} (f : a ~> b) {ta : T a} {r : a ~> b} (e : r = f) (x : Ob (T b)) (P : DPath (\lam i => T (r i)) ta (unob x))
-          : ((x, dpath \lam i => ((f i, transport (\lam r => DPath (\lam i => T (r i)) ta (unob x)) e P i) : Total T)), idp)
+        \private \func aux {B : \Cat} (T : B ->⁺ \Cat) {a b : B} (f : a ~> b) {ta : T a} {r : a ~> b} (e : r = f) (x : T b) (P : DPath (\lam i => T (r i)) ta x)
+          : ((x, dpath \lam i => ((f i, transport (\lam r => DPath (\lam i => T (r i)) ta x) e P i) : Total T)), idp)
             = {Fib (coslice-proj T ta) f} ((x, dpath \lam i => ((r i, P i) : Total T)), e) \elim e
           | idp => idp
       }

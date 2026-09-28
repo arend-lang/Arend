@@ -4,7 +4,6 @@
 \import Equiv.Sigma
 \import Function.Meta
 \import InfCat.Basics
-\import InfCat.Objects
 \import InfCat.Paths
 \import InfCat.Trunc.IsCatTrunc
 \import Logic
@@ -101,10 +100,10 @@
 
 -- | Maps from the nerve to a 1-category are equivalent to the images of generators satisfying the relations.
 \func nerve-maps {C : Precat} {Z : \Cat} (Zt : IsTruncCat 1 Z)
-  : QEquiv {Ob (Nerve C ->⁺ Z)} {\Sigma (b : NGraph C Z) (NRels b)} (\lam h => nerve-restrict (unob h)) \cowith
-  | ret s => ob (nerve-rec Zt s.1 s.2)
-  | ret_f (ob h) => path \lam m => ob \lam n => inv (nerve-restrict-rec Zt h n) m
-  | f_sec s => idp
+  : QEquiv {Nerve C ->⁺ Z} {\Sigma (b : NGraph C Z) (NRels b)} (\lam h => nerve-restrict h) \cowith
+  | ret s => nerve-rec Zt s.1 s.2
+  | ret_f h => path \lam m n => inv (nerve-restrict-rec Zt h n) m
+  | f_sec => idpe
 
 -- | The relations are propositions in a 1-category.
 \lemma NRels-isProp {C : Precat} {Z : \Cat} (Zt : IsTruncCat 1 Z) (b : NGraph C Z) : isProp (NRels b)
@@ -116,9 +115,9 @@
 -- | Maps from the nerve to a 1-category are determined by the images of vertices and edges.
 \func nerve-maps-ext {C : Precat} {N : \Cat} (Nt : IsTruncCat 1 N) {h1 h2 : Nerve C ->⁺ N}
                      (t : (nerve-restrict h1).1 = (nerve-restrict h2).1) : h1 = h2
-  => pmap unob $ inv ((nerve-maps Nt).ret_f (ob h1))
+  => inv ((nerve-maps Nt).ret_f h1)
                    *> pmap (nerve-maps Nt).ret (sigma-prop-ext (NRels-isProp Nt) {nerve-restrict h1} {nerve-restrict h2} t)
-                   *> (nerve-maps Nt).ret_f (ob h2)
+                   *> (nerve-maps Nt).ret_f h2
 
 -- # Functoriality
 
@@ -158,10 +157,9 @@
     \func base-eval (x : C) : nerve-section T Tt tau0 tau1 rc ri (nerveOb x) = tau0 x
       => \let | R => nerve-maps {C} {Nerve C} nerve-isTruncCat
               | ev (o : Nerve C ->⁺ Nerve C) => o (nerveOb x)
-              | ev' f => ev (unob f)
               | h1 : Nerve C ->⁺ Nerve C => \lam n => (lift n).1
               | S => sigma-prop-ext {NGraph C (Nerve C)} {NRels} (NRels-isProp nerve-isTruncCat) {nerve-restrict h1} {nerve-restrict (\lam n => n)} idp
-              | e1 : pmap ev' (inv (R.ret_f (ob h1))) = idp => pmap_inv-comm ev' (R.ret_f (ob h1))
-              | e : pmap ev lift-proj1 = idp => pmap_*>-comm ev' _ _ *> pmap2 (*>) e1 (pmap_*>-comm ev' (pmap R.ret S) _ *> idp_*>) *> idp_*>
+              | e1 : pmap ev (inv (R.ret_f h1)) = idp => pmap_inv-comm ev (R.ret_f h1)
+              | e : pmap ev lift-proj1 = idp => pmap_*>-comm ev _ _ *> pmap2 (*>) e1 (pmap_*>-comm ev (pmap R.ret S) _ *> idp_*>) *> idp_*>
          \in (\peval nerve-section T Tt tau0 tau1 rc ri (nerveOb x)) *> pmap (\lam q => transport+ T q (tau0 x)) e
   }

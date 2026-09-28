@@ -13,22 +13,22 @@
   | ob dleft => x
   | ob dright => y
 
-\func DI-equiv {C : \Cat} : QEquiv {Ob (DI ->⁺ C)} {\Sigma (j : \Sigma C C) (j.1 ~> j.2)} \cowith
-  | f h => ((unob h dleft, unob h dright), dpath (unob h))
-  | ret s => ob \lam i => s.2 i
-  | ret_f h => ob_unob
+\func DI-equiv {C : \Cat} : QEquiv {DI ->⁺ C} {\Sigma (j : \Sigma C C) (j.1 ~> j.2)} \cowith
+  | f h => ((h dleft, h dright), dpath h)
+  | ret s => \lam i => s.2 i
+  | ret_f => idpe
   | f_sec => idpe
 
-\func DI-fun-equiv {X C : \Cat} : QEquiv {Ob (X ->⁺ DI ->⁺ C)} {\Sigma (j : \Sigma (Ob (X ->⁺ C)) (Ob (X ->⁺ C))) (unob j.1 ~> unob j.2)} \cowith
-  | f o => ((ob \lam a => unob o a dleft, ob \lam a => unob o a dright), dpath \lam i a => unob o a i)
-  | ret s => ob \lam a i => s.2 i a
-  | ret_f (ob k) => idp
-  | f_sec ((ob H1, ob H2), t) => idp
+\func DI-fun-equiv {X C : \Cat} : QEquiv {X ->⁺ DI ->⁺ C} {\Sigma (j : \Sigma (X ->⁺ C) (X ->⁺ C)) (j.1 ~> j.2)} \cowith
+  | f o => ((\lam a => o a dleft, \lam a => o a dright), dpath \lam i a => o a i)
+  | ret s => \lam a i => s.2 i a
+  | ret_f => idpe
+  | f_sec => idpe
 
-\func ObDI-equiv {C : \Cat} : QEquiv {Ob (Ob DI ->⁺ C)} {\Sigma C C} \cowith
-  | f h => (unob h (ob dleft), unob h (ob dright))
-  | ret j => ob (ObDI-elim j.1 j.2)
-  | ret_f (ob h) => pmap ob $ ext (ObDI-elim idp idp)
+\func ObDI-equiv {C : \Cat} : QEquiv {Ob DI ->⁺ C} {\Sigma C C} \cowith
+  | f h => (h (ob dleft), h (ob dright))
+  | ret j => ObDI-elim j.1 j.2
+  | ret_f h => ext (ObDI-elim idp idp)
   | f_sec => idpe
 
 \func ObDI-depEquiv {C : Ob DI ->⁺ \Type} : QEquiv {\Pi (d :⁺ Ob DI) -> C d} {\Sigma (C (ob dleft)) (C (ob dright))} \cowith

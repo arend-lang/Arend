@@ -4,14 +4,14 @@
 \import Logic
 \import Paths
 
-\func Diagonal {X Y : \Type} (r : X -> Y)
+\func Diagonal {X Y : \Cat} (r : X -> Y)
   => \Sigma (u v : X) (r u = r v)
 
-\func diagonal {X Y : \Type} (r : X -> Y) (x : X) : Diagonal r
+\func diagonal {X Y : \Cat} (r : X -> Y) (x : X) : Diagonal r
   => (x, x, idp)
 
 -- | Fibers of the diagonal of {r} are fibers of `pmap r`.
-\func diag-fib {X Y : \Type} (r : X -> Y) {u v : X} (p : r u = r v)
+\func diag-fib {X Y : \Cat} (r : X -> Y) {u v : X} (p : r u = r v)
   : QEquiv {Fib {X} {Diagonal r} (diagonal r) (u,v,p)} {Fib (pmap r {u} {v}) p} \cowith
   | f w => forward w.1 w.2
   | ret w => backward w.1 w.2
@@ -32,7 +32,7 @@
   }
 
 -- | The diagonal of {r} is `(k-2)`-truncated iff the action of {r} on paths is.
-\lemma truncMap-diagonal {X Y : \Type} {r : X -> Y} {k : Nat}
+\lemma truncMap-diagonal {X Y : \Cat} {r : X -> Y} {k : Nat}
   : IsTruncMap k (diagonal r) <-> (\Pi {u v : X} -> IsTruncMap k (pmap r {u} {v}))
   => (\lam t {u} {v} p => HLevel_-2-retracts (symQEquiv (diag-fib r p)) (t (u,v,p)),
       \lam h t => HLevel_-2-retracts (diag-fib r t.3) (h t.3))

@@ -3,7 +3,6 @@
 \import Category.Functor
 \import Equiv
 \import InfCat.OFS.CatAccessibleOFS
-\import InfCat.Objects
 \import Function.Meta
 \import InfCat.Basics
 \import InfCat.Fibration.CocartesianFib

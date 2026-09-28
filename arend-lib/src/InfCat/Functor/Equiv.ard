@@ -28,7 +28,7 @@
     | finv_f b => pmap+ (\lam x => f (e3.finv (g x))) (inv (e1.f_finv b)) *> pmap+ f (e3.finv_f _) *> e1.f_finv b
     | f_finv => e3.f_finv
 
-  \func toQEquiv {C D : \Type} (e : HQEquiv {C} {D}) : QEquiv {C} {D} \cowith
+  \func toQEquiv {C D : \Cat} (e : HQEquiv {C} {D}) : QEquiv {C} {D} \cowith
     | f x => e.f x
     | ret y => e.finv y
     | ret_f x => e.finv_f x
@@ -53,7 +53,7 @@
     \sfunc f_ret {C D : \Cat} {f : C ->⁺ D} (e : IsHEquiv f) {y :⁺ D} : f (ret e y) = y
       => pmap+ f (path (\lam i => (\peval ret e) i y) *> inv-equals f {(toTuple e).1.1} (toTuple e).1.2 (toTuple e).2.2) *> (toTuple e).2.2 y
 
-    \lemma toIsEquiv {C D : \Type} {f : C ->⁺ D} (e : IsHEquiv f) : IsEquiv (\lam x => f x) \elim e
+    \lemma toIsEquiv {C D : \Cat} {f : C ->⁺ D} (e : IsHEquiv f) : IsEquiv (\lam x => f x) \elim e
       | inP e => inP (HQEquiv.toQEquiv e)
 
     \sfunc fib-sec {A : \Cat} {B : A ->⁺ \Cat} (e : IsHEquiv {\Sigma⁺ (a : A) (B a)} __.1) (a :⁺ A) : B a

@@ -9,7 +9,6 @@
 \import InfCat.Functor.Equiv
 \import InfCat.Functor.FullyFaithful
 \import InfCat.OFS.CatOFS
-\import InfCat.Objects
 \import InfCat.Paths
 \import Logic
 \import Logic.Meta
@@ -55,7 +54,7 @@
       | isExt u v c x => c x
       \where {
         \lemma isRight : fam.IsRight (fromLData {famHat} {C} {D} {f})
-          => \lam j => IsEquiv.fromMonoRetraction (later \lam {ob h} {ob h'} p =>
+          => \lam j => IsEquiv.fromMonoRetraction (later \lam {h} {h'} p =>
               \have r (e :⁺ CatPushout (F j) (F j)) => path $ isExt {famHat} {C} {D} {f} {j,false}
                       (lift2 $ CatPushout.rec h h' \lam x => path \lam i => (p i).1.1 x)
                       (\lam y => fromLData {famHat} (h y))
@@ -63,8 +62,8 @@
                                  \lam x => Cube2.map idp _ idp (path \lam i => fromLData {famHat} ((p i).1.1 x)) $
                                  inv $ pmap+ (*> _) (path \lam j => path \lam i => (p i).2 x j) *> *>_inv)
                       (dHat2 e)
-              \in pmap ob $ ext \lam y => inv (r (cinl y)) *> r (cinr y)) $ later \new Retraction {
-                | sec s => ob $ lext {famHat} {C} {D} {f} {j,true} (lift s.1.1) s.1.2 (lift s.2)
+              \in ext \lam y => inv (r (cinl y)) *> r (cinr y)) $ later \new Retraction {
+                | sec s => \lam y => lext {famHat} {C} {D} {f} {j,true} (lift s.1.1) s.1.2 (lift s.2) y
                 | f_sec s => ext (ext (path \lam i x => isExt (lift s.1.1) s.1.2 (lift s.2) (dHat1 x) i, idp),
                                   simp_coe \lam x => transport+_path_pmap (\lam _ => s.1.2 (fam.F j x)) (\lam y => y) idp)
               }
@@ -80,7 +79,7 @@
       | alpha x => (g x, p x)
       | lext {j} u v c y =>
         \have r => IsEquiv.splitSurj (hr j) ((\lam x => (dataExt hr p (u x)).1, v), \lam x => c x *> inv (dataExt hr p (u x)).2)
-        \in (unob r.1 y, path \lam i => (r.2 i).1.2 y)
+        \in (r.1 y, path \lam i => (r.2 i).1.2 y)
       | isExt {j} u v c x => unfold_let
         \let | r => IsEquiv.f_ret (hr j) {(\lam x => (dataExt hr p (u x)).1, v), \lam x => c x *> inv (dataExt hr p (u x)).2}
              | q => pmap+ (*> (dataExt hr p (u x)).2) $ inv idp_*> *> coe_path_pmap.conv (path \lam i => (r i).1.2 (F j x)) (path \lam i => h ((r i).1.1 x)) ((simp_coe in pmapd __.2 r) x) *> inv *>-assoc
@@ -88,10 +87,10 @@
 
     -- | Sections of pullbacks over `LData f` are determined by their restrictions along {alpha}.
     \func LData-sections {fam : Family} {C D : \Cat} {f : C ->⁺ D} {E E' : \Cat} {g : E ->⁺ E'} (gr : fam.IsRight g) (v : LData f ->⁺ E')
-      : QEquiv (restrict-sections {C} {LData f} (\lam c => alpha c) g (ob v)) \cowith
-      | ret t => ob (liftData (unob t))
-      | ret_f (ob s) => path \lam i => ob \lam d => inv (liftData-unique s d) i
-      | f_sec (ob t) => idp
+      : QEquiv (restrict-sections {C} {LData f} (\lam c => alpha c) g v) \cowith
+      | ret t => liftData t
+      | ret_f s => path \lam i d => inv (liftData-unique s d) i
+      | f_sec => idpe
       \where \private {
         -- | Moving a point of the fiber over `v a` to the fiber over `v a'` along a path `P : a' = a`.
         \func pb-shift {A E F : \Cat} {g : E ->⁺ F} (v : A ->⁺ F) {a' a :⁺ A} (P :⁺ a' = a) (b :⁺ \Sigma⁺ (e : E) (g e = v a))
@@ -129,33 +128,33 @@
         -- | For a cell `lext u w c`, restriction along `F j` of sections of the pullback of {g} is an equivalence.
         \func cellEquiv
             {j : J} (u : X j ->⁺ LData f) (w : Y j ->⁺ D) (c : \Pi (x :⁺ X j) -> w (F j x) = fromLData (u x))
-          => IsOrthogonal-sections.1 (gr j) (ob \lam y => v (lext u w c y))
+          => IsOrthogonal-sections.1 (gr j) (\lam y => v (lext u w c y))
 
         -- | A section over `X j` of the pullback of {g} along {u} moved to the boundary of the cell along {isExt}.
         \func cellData
             {j : fam.J} (u : X j ->⁺ LData f) (w : Y j ->⁺ D) (c : \Pi (x :⁺ X j) -> w (F j x) = fromLData (u x))
             (r : \Pi (x :⁺ X j) -> \Sigma⁺ (e : E) (g e = v (u x)))
-          : Ob (\Pi (x :⁺ X j) -> \Sigma⁺ (e : E) (g e = v (lext u w c (F j x))))
-          => ob \lam x => pb-shift v (path (isExt u w c x)) (r x)
+          : \Pi (x :⁺ X j) -> \Sigma⁺ (e : E) (g e = v (lext u w c (F j x)))
+          => \lam x => pb-shift v (path (isExt u w c x)) (r x)
 
         -- | The unique extension of {cellData} to the cell.
         \func cellSec
             {j : J} (u : X j ->⁺ LData f) (w : Y j ->⁺ D) (c : \Pi (x :⁺ X j) -> w (F j x) = fromLData (u x))
             (r : \Pi (x :⁺ X j) -> \Sigma⁺ (e : E) (g e = v (u x)))
-          : Ob (\Pi (y :⁺ Y j) -> \Sigma⁺ (e : E) (g e = v (lext u w c y)))
+          : \Pi (y :⁺ Y j) -> \Sigma⁺ (e : E) (g e = v (lext u w c y))
           => IsEquiv.ret (cellEquiv u w c) (cellData u w c r)
 
         \func cellSec-F
             {j : J} (u : X j ->⁺ LData f) (w : Y j ->⁺ D) (c : \Pi (x :⁺ X j) -> w (F j x) = fromLData (u x))
             (r : \Pi (x :⁺ X j) -> \Sigma⁺ (e : E) (g e = v (u x))) (x :⁺ X j)
-          : unob {\Pi (y :⁺ Y j) -> \Sigma⁺ (e : E) (g e = v (lext u w c y))} (cellSec u w c r) (F j x) = pb-shift v (path (isExt u w c x)) (r x)
-          => path \lam i => unob {\Pi (x :⁺ X j) -> \Sigma⁺ (e : E) (g e = v (lext u w c (F j x)))} (IsEquiv.f_ret (cellEquiv u w c) {cellData u w c r} i) x
+          : cellSec u w c r (F j x) = pb-shift v (path (isExt u w c x)) (r x)
+          => path \lam i => IsEquiv.f_ret (cellEquiv u w c) {cellData u w c r} i x
 
         -- | The extension of a section over {C} of the pullback of {g} along {v} to `LData f`.
         \func liftData
             (t : \Pi (c :⁺ C) -> \Sigma⁺ (e : E) (g e = v (alpha c))) (d :⁺ LData f) : \Sigma⁺ (e : E) (g e = v d) \elim d
           | alpha c => t c
-          | lext u w c y => unob {\Pi (y :⁺ _) -> \Sigma⁺ (e : E) (g e = v (lext u w c y))} (cellSec u w c (\lam x => liftData t (u x))) y
+          | lext u w c y => cellSec u w c (\lam x => liftData t (u x)) y
           | isExt u w c x => pb-concat-over v (path (isExt u w c x)) (cellSec-F u w c (\lam x => liftData t (u x)) x)
                                               (pb-shift-over v (path (isExt u w c x)) (liftData t (u x)))
 
@@ -164,9 +163,9 @@
             {j : J} (u : X j ->⁺ LData f) (w : Y j ->⁺ D) (c : \Pi (x :⁺ X j) -> w (F j x) = fromLData (u x))
             (s : \Pi (d :⁺ LData f) -> \Sigma⁺ (e : E) (g e = v d))
             (r : \Pi (x :⁺ X j) -> \Sigma⁺ (e : E) (g e = v (u x))) (ih : \Pi (x :⁺ X j) -> s (u x) = r x)
-          : (ob \lam y => s (lext u w c y), path \lam i => ob \lam x => cellPt u w c s r ih x i)
-            = {\Sigma (a : Ob (\Pi (y :⁺ Y j) -> \Sigma⁺ (e : E) (g e = v (lext u w c y))))
-                      (restrict-sections (F j) g (ob \lam y => v (lext u w c y)) a = cellData u w c r)}
+          : (\lam y => s (lext u w c y), path \lam i x => cellPt u w c s r ih x i)
+            = {\Sigma (a : \Pi (y :⁺ Y j) -> \Sigma⁺ (e : E) (g e = v (lext u w c y)))
+                      (restrict-sections (F j) g (\lam y => v (lext u w c y)) a = cellData u w c r)}
               (cellSec u w c r, IsEquiv.f_ret (cellEquiv u w c))
           => isContr=>isProp (IsEquiv=>contrFibers (cellEquiv u w c) (cellData u w c r)) _ _
           \where {
@@ -185,15 +184,15 @@
           | alpha c => idp
           | lext u w c y =>
             \let q => cellFiber u w c s (\lam x => liftData (\lam c => s (alpha c)) (u x)) (\lam x => liftData-unique s (u x))
-            \in path \lam i => unob {\Pi (y :⁺ _) -> \Sigma⁺ (e : E) (g e = v (lext u w c y))} (q i).1 y
+            \in path \lam i => (q i).1 y
           | isExt {j} u w c x =>
             \let | r => \lam x =>⁺ liftData (\lam c => s (alpha c)) (u x)
                  | ih => \lam x =>⁺ liftData-unique s (u x)
                  | q => cellFiber u w c s r ih
             \in pb-over-square v (path (isExt u w c x)) (path \lam i => s (isExt u w c x i))
                   (cellSec-F u w c r x) (ih x)
-                  (path \lam i => unob {\Pi (y :⁺ Y j) -> \Sigma⁺ (e : E) (g e = v (lext u w c y))} (q i).1 (F j x))
-                  (restrict-sections.fiber-coh (F j) g (ob \lam y => v (lext u w c y)) q x)
+                  (path \lam i => (q i).1 (F j x))
+                  (restrict-sections.fiber-coh (F j) g (\lam y => v (lext u w c y)) q x)
       }
 
     \data DHat {fam : Family} (j : J) (b : Bool) \elim b
@@ -239,7 +238,7 @@
     \lemma isLeft {fam : Family} {C D : \Cat} {f : C ->⁺ D} {E E' : \Cat} {g : E ->⁺ E'} (gr : fam.IsRight g)
       : IsOrthogonal (catFactorLeft {fam} {C} {D} {f}) g
       => IsOrthogonal_o-left
-          (IsOrthogonal-sections.2 \lam v => inP (LData-sections {famHat} (famHat_IsRight gr) (unob v)))
+          (IsOrthogonal-sections.2 \lam v => inP (LData-sections {famHat} (famHat_IsRight gr) v))
           (IsOrthogonal_IsHEquiv-left $ inP \new HQEquiv {
             | f d => d
             | finv d => d

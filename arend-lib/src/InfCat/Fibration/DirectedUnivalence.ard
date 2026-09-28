@@ -4,7 +4,6 @@
 \import InfCat.Fibration.LeftFib
 \import InfCat.Functor.Equiv
 \import InfCat.Groupoid
-\import InfCat.Objects
 \import InfCat.Paths
 \import Logic
 \import Logic.Unique
