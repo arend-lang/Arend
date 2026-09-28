@@ -5,7 +5,7 @@
 \import Paths
 
 -- | If ``a = a'`` is a retract of ``R a a'``, then ``a = a'`` is equivalent to ``R a a'``.
-\func pathEquiv {A : \Cat} (R : A -> A -> \Type) (p : \Pi {a a' : A} -> Retraction {a = a'} {R a a'}) {a a' : A} : QEquiv {a = a'} p \cowith
+\func pathEquiv {A : \Cat} (R : A -> A -> \Cat) (p : \Pi {a a' : A} -> Retraction {a = a'} {R a a'}) {a a' : A} : QEquiv {a = a'} p \cowith
   | ret => p.sec
   | ret_f => Jl (\lam _ q' => p.sec (p q') = q') (
     \let | h {a a' : A} (q : a = a') => p.sec (p q)
@@ -14,14 +14,14 @@
   )
   | f_sec => p.f_sec
 
-\func pathConcatEquiv {A : \Type} {a b c : A} (p : a = b) : QEquiv {a = c} {b = c} \cowith
+\func pathConcatEquiv {A : \Cat} {a b c : A} (p : a = b) : QEquiv {a = c} {b = c} \cowith
   | f => inv p *>
   | ret => p *>
   | ret_f q => inv *>-assoc *> pmap (*> q) *>_inv *> idp_*>
   | f_sec q => inv *>-assoc *> pmap (*> q) inv_*> *> idp_*>
 
 -- | If ``f : A -> B`` is an equivalence, then ``pmap f`` is also an equivalence.
-\lemma pmapIsEquiv {A B : \Type} {f : A -> B} (e : IsEquiv f) {a a' : A} : IsEquiv (pmap f {a} {a'}) \elim e
+\lemma pmapIsEquiv {A B : \Cat} {f : A -> B} (e : IsEquiv f) {a a' : A} : IsEquiv (pmap f {a} {a'}) \elim e
   | inP e => inP $ pathEquiv (f __ = f __) \lam {a} {a'} => \new Retraction {
     | f => pmap f
     | sec p => inv (e.ret_f a) *> pmap e.ret p *> e.ret_f a'

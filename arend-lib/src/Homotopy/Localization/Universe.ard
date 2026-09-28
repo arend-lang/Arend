@@ -116,10 +116,10 @@
       }
 
 -- | If ``inL : X -> X'`` factors through an embedding ``g : Y -> X'`` with {Y} local, then {g} is an equivalence.
-\lemma localizationFactorEmbedding.{u} {U : ReflUniverse.{u}} {X : \Type u} (Y : Local.{u}) (f : X -> Y) (g : Y >-> LType X) (p : \Pi (x : X) -> g (f x) = (localization X).inL x) : IsEquiv g
+\lemma localizationFactorEmbedding.{u} {U : ReflUniverse.{u}} {X : \Type u} (Y : Local.{u}) (f : X -> Y) (g : Embedding {Y} {LType X}) (p : \Pi (x : X) -> g (f x) = (localization X).inL x) : IsEquiv g
   => lem (localization X) Y f g p
   \where
-    \lemma lem.{u} {U : ReflUniverse.{u}} (L : Localization.{u}) (Y : Local.{u}) (f : L.S -> Y) (g : Y >-> L.S') (p : \Pi (x : L.S) -> g (f x) = inL x) : IsEquiv g
+    \lemma lem.{u} {U : ReflUniverse.{u}} (L : Localization.{u}) (Y : Local.{u}) (f : L.S -> Y) (g : Embedding {Y} {L.S'}) (p : \Pi (x : L.S) -> g (f x) = inL x) : IsEquiv g
       => IsEquiv.fromEmbSurj g \lam x =>
         \have r : Retraction g => localizationFactor.lem L Y f g p
         \in inP (r.sec x, r.f_sec x)

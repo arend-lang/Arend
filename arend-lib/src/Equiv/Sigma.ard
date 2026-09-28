@@ -21,14 +21,14 @@
   | center => (a0,idp)
   | contraction p => Jl (\lam x q => (a0,idp) = {\Sigma (y : A) (y = a0)} (x, inv q)) idp (inv p.2) *> path (\lam i => (p.1, inv_inv i))
 
-\func contr-left {A : \Type} (c : Contr A) {B : A -> \Type} : QEquiv {\Sigma (x : A) (B x)} {B c.center} \cowith
+\func contr-left {A : \Cat} (c : Contr A) {B : A -> \Cat} : QEquiv {\Sigma (x : A) (B x)} {B c.center} \cowith
   | f p => transport B (inv (c.contraction p.1)) p.2
   | ret b => (c.center, b)
   | ret_f p => inv (ext (inv (c.contraction p.1), idp))
   | f_sec b => rewriteI (isProp.=>isSet (isContr=>isProp c) c.center c.center idp (c.contraction c.center)) idp
 
 -- | If the total space of a family is contractible, then a fiber is equivalent to the type of paths from the center.
-\func contr-sigma-fiber {A : \Cat} {B : A -> \Type} (c : Contr (\Sigma (x : A) (B x))) (a : A) : QEquiv {B a} {c.center.1 = a}
+\func contr-sigma-fiber {A : \Cat} {B : A -> \Cat} (c : Contr (\Sigma (x : A) (B x))) (a : A) : QEquiv {B a} {c.center.1 = a}
   => symQEquiv (contr-left (rsigma a) {\lam w => B w.1}) `transQEquiv` later (\new QEquiv {
     | f u => ((u.1.1, u.2), u.1.2)
     | ret u => ((u.1.1, u.2), u.1.2)
@@ -36,70 +36,70 @@
     | f_sec => idpe
   }) `transQEquiv` contr-left c {\lam w => w.1 = a}
 
-\func contr-right {A : \Type} (C : A -> Contr) : QEquiv {\Sigma (x : A) (C x)} {A} \cowith
+\func contr-right {A : \Cat} (C : A -> Contr) : QEquiv {\Sigma (x : A) (C x)} {A} \cowith
   | f p => p.1
   | ret a => (a, Contr.center {C a})
   | ret_f p => path (\lam i => (p.1, Contr.contraction {C p.1} p.2 @ i))
   | f_sec a => idp
 
-\func pi-contr-left {A : \Type} (a : A) (B : \Pi (a' : A) -> a = a' -> \Type) : QEquiv {\Pi (a' : A) (p : a = a') -> B a' p} {B a idp} \cowith
+\func pi-contr-left {A : \Cat} (a : A) (B : \Pi (a' : A) -> a = a' -> \Cat) : QEquiv {\Pi (a' : A) (p : a = a') -> B a' p} {B a idp} \cowith
   | f h => h a idp
   | ret b a' => Jl B b
   | ret_f h => path (\lam i a' p => Jl (\lam x q => Jl B (h a idp) q = h x q) idp p @ i)
   | f_sec => idpe
 
-\func pi-contr-right {A : \Type} (a' : A) (B : \Pi (a : A) -> a = a' -> \Type) : QEquiv {\Pi (a : A) (p : a = a') -> B a p} {B a' idp} \cowith
+\func pi-contr-right {A : \Cat} (a' : A) (B : \Pi (a : A) -> a = a' -> \Cat) : QEquiv {\Pi (a : A) (p : a = a') -> B a p} {B a' idp} \cowith
   | f h => h a' idp
   | ret b a => Jl.Jr B b
   | ret_f h => path (\lam i a p => Jl.Jr (\lam x q => Jl.Jr B (h a' idp) q = h x q) idp p @ i)
   | f_sec => idpe
 
-\func sigma-left {A A' : \Type} {B' : A' -> \Type} (e : HAEquiv {A} {A'}) : QEquiv {\Sigma (a : A) (B' (e a))} {\Sigma (a' : A') (B' a')} \cowith
+\func sigma-left {A A' : \Cat} {B' : A' -> \Cat} (e : HAEquiv {A} {A'}) : QEquiv {\Sigma (a : A) (B' (e a))} {\Sigma (a' : A') (B' a')} \cowith
   | f p => (e p.1, p.2)
   | ret p => (e.ret p.1, transport B' (inv (e.f_sec p.1)) p.2)
   | ret_f p => ext (e.ret_f p.1, path (\lam i => coe (\lam j => B' (e.f_ret_f=f_sec_f p.1 i j) ) _ right) *> transport_id_inv B' _ _)
   | f_sec p => ext (e.f_sec p.1, transport_id_inv B' _ _)
   \where {
-    \func path-func.{u} {A A' : \Type u} {B' : A' -> \Type u} (p : A = A') : (\Sigma (x : A) (B' (coe (p @) x right))) = (\Sigma (x' : A') (B' x'))
+    \func path-func.{u} {A A' : \Cat u} {B' : A' -> \Cat u} (p : A = A') : (\Sigma (x : A) (B' (coe (p @) x right))) = (\Sigma (x' : A') (B' x'))
       => path \lam i => \Sigma (x : p i) (B' (coe2 p i x right))
   }
 
-\sfunc qsigma-left {A A' : \Type} {B' : A' -> \Type} (e : QEquiv {A} {A'})
+\sfunc qsigma-left {A A' : \Cat} {B' : A' -> \Cat} (e : QEquiv {A} {A'})
   : QEquiv {\Sigma (a : A) (B' (e a))} {\Sigma (a' : A') (B' a')} (\lam p => (e p.1, p.2))
   => sigma-left e
 
-\func sigma-right {A : \Cat} {B B' : A -> \Type} (q : \Pi (a : A) -> QEquiv {B a} {B' a})
+\func sigma-right {A : \Cat} {B B' : A -> \Cat} (q : \Pi (a : A) -> QEquiv {B a} {B' a})
   : QEquiv {\Sigma (a : A) (B a)} {\Sigma (a : A) (B' a)} \cowith
   | f p => (p.1, q p.1 p.2)
   | ret p' => (p'.1, (q p'.1).ret p'.2)
   | ret_f p => path (\lam i => (p.1, (q p.1).ret_f p.2 i))
   | f_sec p' => path (\lam i => (p'.1, (q p'.1).f_sec p'.2 i))
 
-\func IsSigma-right {A : \Cat} {B B' : A -> \Type} (f : \Pi (a : A) -> B a -> B' a) (q : \Pi (a : A) -> IsEquiv (f a))
+\func IsSigma-right {A : \Cat} {B B' : A -> \Cat} (f : \Pi (a : A) -> B a -> B' a) (q : \Pi (a : A) -> IsEquiv (f a))
   : IsEquiv {\Sigma (a : A) (B a)} {\Sigma (a : A) (B' a)} (\lam s => (s.1, f s.1 s.2))
   => inP $ sigma-right \lam a => IsEquiv.toQEquiv (q a)
 
-\func sigma-equiv {A A' : \Type} {B : A -> \Type} {B' : A' -> \Type} (e1 : QEquiv {A} {A'}) (e2 : \Pi (a : A) -> QEquiv {B a} {B' (e1 a)})
+\func sigma-equiv {A A' : \Cat} {B : A -> \Cat} {B' : A' -> \Cat} (e1 : QEquiv {A} {A'}) (e2 : \Pi (a : A) -> QEquiv {B a} {B' (e1 a)})
   : QEquiv {\Sigma (a : A) (B a)} {\Sigma (a : A') (B' a)}
   => sigma-right e2 `transQEquiv` sigma-left e1
 
-\func unit-func (A : \Type) : QEquiv {\Sigma -> A} {A} \cowith
+\func unit-func (A : \Cat) : QEquiv {\Sigma -> A} {A} \cowith
   | f g => g ()
   | ret a _ => a
   | ret_f g => idp
   | f_sec a => idp
 
 -- | The HoTT book, Theorem 4.7.7
-\lemma totalEquiv {J : \Cat} {A B : J -> \Type} (f : \Pi (j : J) -> A j -> B j)
+\lemma totalEquiv {J : \Cat} {A B : J -> \Cat} (f : \Pi (j : J) -> A j -> B j)
   : (\Pi (j : J) -> IsEquiv (f j)) = IsEquiv (total f)
   => propExt (\lam e => contrFibers=>IsEquiv \lam p => Contr.Contr_QEquiv (symQEquiv (totalFiber f p.1 p.2)) (IsEquiv=>contrFibers (e p.1) p.2))
              (\lam e j => contrFibers=>IsEquiv \lam b => Contr.Contr_QEquiv (totalFiber f j b) (IsEquiv=>contrFibers e (j,b)))
   \where {
-    \func total {J : \Cat} {A B : J -> \Type} (f : \Pi (j : J) -> A j -> B j) (p : \Sigma (j : J) (A j)) : \Sigma (j : J) (B j)
+    \func total {J : \Cat} {A B : J -> \Cat} (f : \Pi (j : J) -> A j -> B j) (p : \Sigma (j : J) (A j)) : \Sigma (j : J) (B j)
       => (p.1, f p.1 p.2)
 
     -- | Theorem 4.7.6
-    \func totalFiber {J : \Cat} {A B : J -> \Type} (f : \Pi (j : J) -> A j -> B j) (j : J) (b : B j)
+    \func totalFiber {J : \Cat} {A B : J -> \Cat} (f : \Pi (j : J) -> A j -> B j) (j : J) (b : B j)
       : QEquiv {Fib (total f) ((j,b) : \Sigma (j : J) (B j))} {Fib (f j) b}
       => transQEquiv
           (sigma-right \lam p => sigmaEquiv B (total f p) (j,b))
@@ -114,10 +114,10 @@
   }
 
 -- | A map of total spaces over an equivalence of bases is an equivalence if and only if it is a fiberwise equivalence.
-\lemma fiberwiseEquiv {X Y : \Type} {g : X -> Y} (ge : IsEquiv g) {P : X -> \Type} {Q : Y -> \Type} (h : \Pi (x : X) -> P x -> Q (g x))
+\lemma fiberwiseEquiv {X Y : \Cat} {g : X -> Y} (ge : IsEquiv g) {P : X -> \Cat} {Q : Y -> \Cat} (h : \Pi (x : X) -> P x -> Q (g x))
                       (te : IsEquiv {\Sigma (x : X) (P x)} {\Sigma (y : Y) (Q y)} (\lam s => (g s.1, h s.1 s.2))) (x : X) : IsEquiv (h x)
   => propExt.conv (totalEquiv h) (IsEquiv.leftFactor (inP (qsigma-left (IsEquiv.toQEquiv ge))) te) x
 
 -- | Pairs with propositional second components are equal if their first components are.
-\func sigma-prop-ext {A : \Cat} {B : A -> \Type} (Bp : \Pi (a : A) -> isProp (B a)) {s s' : \Sigma (a : A) (B a)} (p : s.1 = s'.1) : s = s'
+\func sigma-prop-ext {A : \Cat} {B : A -> \Cat} (Bp : \Pi (a : A) -> isProp (B a)) {s s' : \Sigma (a : A) (B a)} (p : s.1 = s'.1) : s = s'
   => path \lam i => (p i, pathOver (Bp s'.1 _ _) i)

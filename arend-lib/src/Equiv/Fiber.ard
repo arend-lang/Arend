@@ -5,18 +5,18 @@
 \import Equiv
 \import Equiv.HalfAdjoint
 
-\func HasContrFibers {A B : \Type} (f : A -> B) : \Prop
+\func HasContrFibers {A B : \Cat} (f : A -> B) : \Prop
   => \Pi (b : B) -> Contr (\Sigma (a : A) (f a = b))
 
-\func contrFibers=>QEquiv {A B : \Type} {f : A -> B} (p : HasContrFibers f) : QEquiv f \cowith
+\func contrFibers=>QEquiv {A B : \Cat} {f : A -> B} (p : HasContrFibers f) : QEquiv f \cowith
   | ret y => (p y).center.1
   | ret_f x => pmap (\lam (r : Fib f (f x)) => r.1) ((p (f x)).contraction (x,idp))
   | f_sec y => (p y).center.2
 
-\lemma contrFibers=>IsEquiv {A B : \Type} {f : A -> B} (p : HasContrFibers f) : IsEquiv f
+\lemma contrFibers=>IsEquiv {A B : \Cat} {f : A -> B} (p : HasContrFibers f) : IsEquiv f
   => inP (contrFibers=>QEquiv p)
 
-\lemma IsEquiv=>contrFibers {A B : \Type} {f : A -> B} (e : IsEquiv f) : HasContrFibers f \elim e
+\lemma IsEquiv=>contrFibers {A B : \Cat} {f : A -> B} (e : IsEquiv f) : HasContrFibers f \elim e
   | inP e => fromSection e e
   \where {
     \protected \lemma fromSection (s : Section f) (r : Retraction f) : HasContrFibers f

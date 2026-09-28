@@ -2,11 +2,11 @@
 \import Equiv.Path
 \import Paths
 
-\func Total {B : \Type} (F : B -> \Type) => \Sigma (b : B) (F b)
+\func Total {B : \Cat} (F : B -> \Cat) => \Sigma (b : B) (F b)
   \where
-    \func proj (F : B -> \Type) => \lam (t : Total F) => t.1
+    \func proj (F : B -> \Cat) => \lam (t : Total F) => t.1
 
-\func Fib {A : \Type} {B : \Cat} (f : A -> B) (base : B) => \Sigma (a : A) (f a = base)
+\func Fib {A B : \Cat} (f : A -> B) (base : B) => \Sigma (a : A) (f a = base)
   \where {
     \func make {base : B} (a : A) (p : f a = base) : Fib f base => (a,p)
 
@@ -28,7 +28,7 @@
   }
 
 -- | Fibers of a projection are the fibers of the family.
-\func proj-fib {A : \Type} (B : A -> \Type) (a : A) : QEquiv {Fib {\Sigma (x : A) (B x)} __.1 a} {B a} \cowith
+\func proj-fib {A : \Cat} (B : A -> \Cat) (a : A) : QEquiv {Fib {\Sigma (x : A) (B x)} __.1 a} {B a} \cowith
   | f w => transport B w.2 w.1.2
   | ret b => ((a,b), idp)
   | ret_f w => aux w.1.1 w.1.2 w.2
