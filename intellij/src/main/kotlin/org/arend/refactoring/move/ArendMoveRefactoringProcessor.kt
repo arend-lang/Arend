@@ -463,19 +463,24 @@ class ArendMoveRefactoringProcessor(project: Project,
                 memberData[element] = LocationDescriptor(groupNumber, prefix)
                 return
             }
-            is ArendLongName, is ArendAtomFieldsAcc -> {
-                val refList: List<Pair<ArendRefIdentifier, List<Int>>> = when (element) {
-                    is ArendLongName -> element.refIdentifierList.withIndex().map { Pair(it.value, singletonList(it.index)) }
-                    is ArendAtomFieldsAcc -> element.atom.literal?.refIdentifier?.let { atomRefId ->
-                        val firstNull = element.fieldAccList.indexOfFirst { it.refIdentifier == null }
-                        val subListBeforeNull = if (firstNull == -1) element.fieldAccList else element.fieldAccList.subList(0, firstNull)
-                        singletonList(Pair(atomRefId, listOf(0, 0, 0))) +
-                                subListBeforeNull.map { Pair(it.refIdentifier!!, listOf(element.children.indexOf(it), 0)) }
-                    } ?: emptyList()
-                    else -> emptyList()
+            is ArendLongName -> {
+                // Outside expressions a long name has no field accesses: it denotes what its last identifier resolves to
+                val refIdentifier = element.referenceNameElement
+                if (refIdentifier != null) {
+                    collectUsagesAndMembers(prefix + singletonList(element.children.indexOf(refIdentifier)), refIdentifier,
+                        groupNumber, usagesData, memberData, memberReferences)
+                    return
                 }
+            }
+            is ArendAtomFieldsAcc -> {
+                val refList: List<Pair<ArendRefIdentifier, List<Int>>> = element.atom.literal?.refIdentifier?.let { atomRefId ->
+                    val firstNull = element.fieldAccList.indexOfFirst { it.refIdentifier == null }
+                    val subListBeforeNull = if (firstNull == -1) element.fieldAccList else element.fieldAccList.subList(0, firstNull)
+                    singletonList(Pair(atomRefId, listOf(0, 0, 0))) +
+                            subListBeforeNull.map { Pair(it.refIdentifier!!, listOf(element.children.indexOf(it), 0)) }
+                } ?: emptyList()
 
-                val concrete = exprToConcrete1(element as ArendExpr).firstOrNull()
+                val concrete = exprToConcrete1(element).firstOrNull()
                 if (concrete is Concrete.ReferenceExpression) {
                     val reference = refList.firstOrNull {
                         it.first.resolve() == concrete.referent

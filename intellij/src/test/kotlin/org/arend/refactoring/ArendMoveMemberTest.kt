@@ -1988,4 +1988,34 @@ $testMOR8Header
        }
     """, "A", "", fileToCheck = "A.ard")
 
+    fun testMoveClassWithSuperClass() = doTestMoveRefactoring("""
+       \module M \where {
+         \class A
+         \class B{-caret-} \extends A
+       }
+
+       \module N
+    """, """
+       \module M \where {
+         \class A
+       }
+
+       \module N \where {
+         \class B \extends M.A
+       }
+    """, "Main", "N")
+
+    fun testMoveQualifiedPatterns() = doTestMoveRefactoring("""
+       \func foo{-caret-} (n : Nat) : Nat \with
+         | Nat.zero => 0
+         | Nat.suc m => m
+
+       \module M
+    """, """
+       \module M \where {
+         \func foo (n : Nat) : Nat \with
+           | zero => 0
+           | suc m => m
+       }
+    """, "Main", "M")
 }
