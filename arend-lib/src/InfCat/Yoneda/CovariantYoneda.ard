@@ -63,3 +63,10 @@
               | q : hh (ext-sec x F (H (x, Straight.toStraight idd))) = hh H => inv (Q.ret_f _) *> pmap Q.ret ~>_->_idd *> Q.ret_f _
          \in inv (back-hh _) *> pmap back q *> back-hh H
   }
+
+-- | Transport in the representable functor is postcomposition.
+\sfunc ReprFunctor-transport.{u} {C : \Cat u} {x y z : C} (q : x ~> y) (p : y ~> z)
+  : ~>_-> (dmap (ReprFunctor x) p) (Straight.toStraight q) = Straight.toStraight (comp q p)
+  => \have tr {w : C} (r : x ~> w) : ~>_-> (dmap (ReprFunctor x) r) (Straight.toStraight idd) = Straight.toStraight r
+           => pmap (\lam S => S (w, Straight.toStraight r)) (yonedaCov.ext-sec-unique x (\lam y => ReprFunctor x y) (\lam k => k.2))
+     \in pmap (~>_-> (dmap (ReprFunctor x) p)) (inv (tr q)) *> inv (~>_->_comp _ _) *> pmap (~>_-> __ _) (inv (dmap_comp (ReprFunctor x))) *> tr (comp q p)

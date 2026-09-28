@@ -11,11 +11,15 @@
   \func encode {r :⁺ C} (p :⁺ e ~> r) : code r
     => coe+ (\lam i => code (p i)) ce dright
 
+  -- | {decode} is a retraction of {encode}.
+  \func decode_encode {r : C} (p : e ~> r) : decode (r, encode p) = p
+    => inv comp_idd-left
+        *> ~>-natural decode {e, ce} {r, encode p} {dpath \lam i => (p i, coe+ (\lam j => code (p j)) ce i)}
+        *> pmap (comp __ p) decode_base *> comp_idd-left
+
   \func decode-equiv {r : C} (ed : \Pi (c : code r) -> encode (decode (r,c)) = c) : QEquiv {code r} {e ~> r} \cowith
     | f c => decode (r,c)
     | ret => encode
     | ret_f => ed
-    | f_sec p => inv comp_idd-left
-        *> ~>-natural decode {e, ce} {r, encode p} {dpath \lam i => (p i, coe+ (\lam j => code (p j)) ce i)}
-        *> pmap (comp __ p) decode_base *> comp_idd-left
+    | f_sec => decode_encode
 }

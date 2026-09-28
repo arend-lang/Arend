@@ -1,0 +1,127 @@
+\import Category
+\import Equiv
+\import Function.Meta
+\import Homotopy.HLevel
+\import InfCat.Basics
+\import InfCat.Fibration.DirectedUnivalence
+\import InfCat.Fibration.Straightening
+\import InfCat.Nerve.Nerve
+\import InfCat.Paths
+\import InfCat.Square
+\import InfCat.SubCat.Full
+\import InfCat.Trunc.IsCatTrunc
+\import InfCat.Trunc.TruncUniverse
+\import InfCat.Yoneda.CovariantYoneda
+\import InfCat.Yoneda.EncodeDecode
+\import Logic
+\import Meta
+\import Paths
+\open FullSubCat (inc, isMax)
+\open NerveCode
+
+-- # The code family
+
+\module NerveCode \where {
+  -- | Morphisms from {x} to {y} as an object of {TypeCat}.
+  \func homOb.{u} {C : Precat.{u,u}} (x y : C) : TypeCat.{u} 1
+    => FullSubCat.make {\Type u} (Hom {C} x y) (\lam a a' => toProp (\lam p q => prop-pi))
+
+  -- | Postcomposition with {f}.
+  \func postArr.{u} {C : Precat.{u,u}} (x : C) {a b : C} (f : Hom {C} a b) : homOb x a ~> homOb x b
+    => typeArr.{u} {1} {homOb x a} {homOb x b} (\lam (g : Hom {C} x a) => f ∘ g)
+
+  \sfunc postArr-comp.{u} {C : Precat.{u,u}} {x a b c : C} {f : Hom {C} a b} {g : Hom {C} b c} : comp (postArr x f) (postArr x g) = postArr x (g ∘ f)
+    => typeArr-ext {1} \lam h => pmap (~>_-> __ h) (dmap_comp inc) *> ~>_->_comp (dmap inc (postArr x f)) (dmap inc (postArr x g))
+        *> pmap (~>_-> (dmap inc (postArr x g))) (typeArr-app {1}) *> typeArr-app {1} *> inv o-assoc *> inv (typeArr-app {1})
+
+  \sfunc postArr-id.{u} {C : Precat.{u,u}} {x a : C} : postArr x (id {C} {a}) = idd
+    => typeArr-ext {1} \lam h => typeArr-app {1} *> id-left *> inv ~>_->_idd
+
+  \func codeL.{u} {C : Precat.{u,u}} (x : C) (n :⁺ Nerve C) : TypeCat.{u} 1
+    => nerve-rec' TypeCat_IsTruncCat (homOb x, \lam f => postArr x f) (\lam f g => postArr-comp) (\lam y => postArr-id) n
+
+  \func code.{u} {C : Precat.{u,u}} (x : C) (n :⁺ Nerve C) : \Type u
+    => inc (codeL x n)
+
+  -- | Transport in {code} along `nerveHom f` is postcomposition with {f}.
+  \sfunc code-nerveHom.{u} {C : Precat.{u,u}} {x a b : C} (f : Hom {C} a b) (g : Hom {C} x a) : ~>_-> (dmap (code x) (nerveHom {C} f)) g = f ∘ g
+    => typeArr-app {1}
+
+  \sfunc encode-nerveHom.{u} {C : Precat.{u,u}} {x y : C} (g : Hom {C} x y) : ~>_-> (dmap (code x) (nerveHom {C} g)) id = g
+    => code-nerveHom {C} g id *> id-right
+
+  -- # The decoding
+
+  -- | The representable functor of `nerveOb x` as a functor to {TypeCat}.
+  \sfunc Repr.{u} {C : Precat.{u,u}} (x : C) : \Sigma (h : Nerve C ->⁺ TypeCat.{u} 1) (\Pi (t :⁺ Nerve C) -> inc (h t) = ReprFunctor (nerveOb x) t)
+    => isMax {_} {_} {_} {ReprFunctor.{u} (nerveOb x)} \lam t => HLevel-retracts (ReprFunctor.equiv.{u} {Nerve C} {nerveOb x} {t}) {1} (nerve-isTruncCat (nerveOb x) t)
+
+  \private \func T.{u} {C : Precat.{u,u}} (x : C) (n :⁺ Nerve C)
+    => codeL x n ~> (Repr x).1 n
+
+  \private \func W.{u} {C : Precat.{u,u}} (x y : C) : T x (nerveOb y)
+    => typeArr {1} \lam c => transport+ (\lam X => X) (inv ((Repr x).2 (nerveOb y))) (Straight.toStraight (nerveHom c))
+
+  \private \sfunc W-app.{u} {C : Precat.{u,u}} {x y : C} {g : Hom {C} x y}
+    : ~>_-> (dmap inc (W x y)) g = transport+ (\lam X => X) (inv ((Repr x).2 (nerveOb y))) (Straight.toStraight (nerveHom g))
+    => typeArr-app {1}
+
+  \private \sfunc Sq0-pt.{u} {C : Precat.{u,u}} {x a b : C} (f : Hom {C} a b) (g : Hom {C} x a)
+    : ~>_-> (dmap inc (comp (dmap (codeL x) (nerveHom f)) (W x b))) g = ~>_-> (dmap inc (comp (W x a) (dmap (Repr x).1 (nerveHom f)))) g
+    => \let | hp => (Repr x).2
+            | nf => nerveHom f
+       \in pmap (~>_-> __ g) (dmap_comp inc) *> ~>_->_comp (dmap inc (dmap (codeL x) nf)) (dmap inc (W x b))
+            *> pmap (~>_-> (dmap inc (W x b))) (code-nerveHom f g) *> W-app
+            *> pmap (transport+ (\lam X => X) (inv (hp (nerveOb b)))) (pmap Straight.toStraight (inv nerveHom-comp) *> inv (ReprFunctor-transport {Nerve C} (nerveHom g) nf))
+            *> inv (~>_->-natural {Nerve C} {\lam t => ReprFunctor.{u} (nerveOb x) t} {\lam t => inc ((Repr x).1 t)} (\lam t m => transport+ (\lam X => X) (inv (hp t)) m) nf)
+            *> inv (pmap (~>_-> __ g) (dmap_comp inc) *> ~>_->_comp (dmap inc (W x a)) (dmap inc (dmap (Repr x).1 nf))
+                    *> pmap (~>_-> (dmap inc (dmap (Repr x).1 nf))) W-app)
+
+  -- | The square over `nerveHom f` with sides {W}.
+  \private \sfunc Sq0.{u} {C : Precat.{u,u}} {x a b : C} (f : Hom {C} a b) : DPath (\lam i => T x (nerveHom f i)) (W x a) (W x b)
+    => (square-equiv (dmap (codeL x) (nerveHom f)) (dmap (Repr x).1 (nerveHom f))).ret $ typeArr-ext {1} (Sq0-pt f)
+
+  \private \sfunc sect.{u} {C : Precat.{u,u}} (x : C) (n :⁺ Nerve C) : T x n
+    => nerve-section (T x) (sect.Tt x) (W x) (\lam f => Sq0 f) sect.rc sect.ri n
+    \where {
+      \lemma Tt.{u} {C : Precat.{u,u}} (x : C) : IsTruncCat 1 (\Sigma⁺ (n : Nerve C) (T x n)) => transf-IsTruncCat nerve-isTruncCat TypeCat_IsTruncCat (codeL x) (Repr x).1
+
+      \func rc.{u} {C : Precat.{u,u}} {x : C} {a b c : C} (f : Hom {C} a b) (g : Hom {C} b c)
+        : comp (nerve-total-edge (T x) (\lam f => Sq0 f) f) (nerve-total-edge (T x) (\lam f => Sq0 f) g) = nerve-total-edge (T x) (\lam f => Sq0 f) (g ∘ f)
+        => transf-hom-ext TypeCat_IsTruncCat (dmap_comp (\lam (s : \Sigma⁺ (n : Nerve C) (T x n)) => s.1) *> nerveHom-comp)
+
+      \func ri.{u} {C : Precat.{u,u}} {x : C} (y : C) : nerve-total-edge (T x) (\lam f => Sq0 f) (id {C} {y}) = idd
+        => transf-hom-ext TypeCat_IsTruncCat nerveHom-id
+    }
+
+  \sfunc decode.{u} {C : Precat.{u,u}} (x : C) (s :⁺ \Sigma⁺ (n : Nerve C) (code x n)) : nerveOb x ~> s.1
+    => Straight.fromStraight (transport+ (\lam X => X) ((Repr x).2 s.1) (~>_-> (dmap inc (sect x s.1)) s.2))
+
+  \sfunc decode_base.{u} {C : Precat.{u,u}} {x : C} : decode x (nerveOb x, id) = idd
+    => (\peval decode x (nerveOb x, id)) *> pmap (\lam w => Straight.fromStraight (transport+ (\lam X => X) ((Repr x).2 (nerveOb x)) (~>_-> (dmap inc w) (id))))
+            ((\peval sect x (nerveOb x)) *> nerve-section.base-eval {C} {T x} {sect.Tt x} {W x} {\lam f => Sq0 f} {sect.rc} {sect.ri} x)
+       *> pmap (\lam z => Straight.fromStraight (transport+ (\lam X => X) ((Repr x).2 (nerveOb x)) z)) W-app
+       *> pmap Straight.fromStraight (transport_id_inv (\lam X => X) ((Repr x).2 (nerveOb x)) _)
+       *> nerveHom-id
+
+  \func encodeDecode.{u} {C : Precat.{u,u}} (x : C) : EncodeDecode.{u} (nerveOb x) \cowith
+    | code => code x
+    | ce => id
+    | decode => decode x
+    | decode_base => decode_base
+
+  \sfunc decode-hom.{u} {C : Precat.{u,u}} {x y : C} (g : Hom {C} x y) : decode x (nerveOb y, g) = nerveHom g
+    => pmap (\lam c => decode x (nerveOb y, c)) (inv (encode-nerveHom g)) *> (encodeDecode x).decode_encode (nerveHom g)
+}
+
+{- | Arrows between objects of the nerve are morphisms of the category.
+
+     The proof is by the encode-decode method at `nerveOb x`: the family `y ↦ Hom x y` extends to the functor {code} on the nerve,
+     and {decode} is a section of the category of arrows from {code} to the representable functor of `nerveOb x`.
+ -}
+\lemma nerveHom-equiv.{u} {C : Precat.{u,u}} {x y : C} : IsEquiv (nerveHom {C} {x} {y})
+  => inP \new QEquiv {
+    | ret p => (encodeDecode x).encode p
+    | ret_f g => encode-nerveHom g
+    | f_sec p => inv (decode-hom _) *> (encodeDecode x).decode_encode p
+  }

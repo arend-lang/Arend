@@ -15,7 +15,7 @@
 \import Paths.Meta
 \open FullSubCat
 
--- | The category of types of level {n} in `\Type u`.
+-- | The category of types of level `n-1` in `\Type u`.
 \func TypeCat.{u} (n : Nat) => FullSubCat {\Type u} (ofHLevel_-1+ n)
 
 -- | Truncation is left adjoint to the inclusion of types of level {n}.
@@ -61,3 +61,14 @@
 \lemma TypeCat-hom-level.{u} {n : Nat} {A B : TypeCat.{u} n} : (A ~> B) ofHLevel_-1+ n
   => HLevel-retracts (transQEquiv (IsEquiv.toQEquiv (FullSubCat.inc-ff A B)) dirUnivalence) $
       HLevels-pi _ \lam _ => inc-con {\Type u} {ofHLevel_-1+ n}
+
+-- | The arrow of {TypeCat} given by a function.
+\func typeArr.{u} {n : Nat} {A B : TypeCat.{u} n} (f : inc A -> inc B) : A ~> B
+  => IsEquiv.ret (inc-ff A B) (->_~> f)
+
+\sfunc typeArr-app.{u} {n : Nat} {A B : TypeCat.{u} n} {f : inc A -> inc B} {a : inc A} : ~>_-> (dmap inc (typeArr f)) a = f a
+  => pmap (~>_-> __ a) (IsEquiv.f_ret (inc-ff A B)) *> ->_~>_->
+
+-- | Arrows of {TypeCat} are equal if they act equally on elements.
+\sfunc typeArr-ext.{u} {n : Nat} {A B : TypeCat.{u} n} {p q : A ~> B} (h : \Pi (a : inc A) -> ~>_-> (dmap inc p) a = ~>_-> (dmap inc q) a) : p = q
+  => IsEquiv.isInj (inc-ff A B) $ IsEquiv.isInj (inP dirUnivalence) (ext h)
