@@ -1,0 +1,28 @@
+\import Equiv.Sigma
+\import Function.Meta
+\import Homotopy.HLevel
+\import InfCat.Basics
+\import InfCat.Square
+\import InfCat.Trunc.TruncUniverse
+\import Logic
+\import Logic.Unique
+\import Paths
+
+\type IsTruncCat (n : Nat) (C : \Cat) : \Prop
+  => \Pi (x y : C) -> (x ~> y) ofHLevel_-1+ n
+
+\lemma TypeCat_IsTruncCat.{u} {n : Nat} : IsTruncCat n (TypeCat.{u} n)
+  => \lam A B => TypeCat-hom-level
+
+-- | The category of arrows between two functors to a category with hom-types of level {n} has hom-types of level {n}.
+\lemma transf-IsTruncCat {n : Nat} {D Z : \Cat} (Dt : IsTruncCat n D) (Zt : IsTruncCat n Z) (F G : D ->⁺ Z)
+  : IsTruncCat n (\Sigma⁺ (d : D) (F d ~> G d))
+  => \lam p q => HLevel-retracts (dpath-sigma-equiv (\lam _ d => F d ~> G d)) $ HLevels-sigma _ (Dt _ _) \lam r =>
+      HLevel-retracts (square-equiv (dmap F r) (dmap G r)) (HLevel_-1_suc (Zt _ _) _ _)
+
+-- | Arrows of the category of arrows between functors to a category with hom-sets are determined by their first components.
+\func transf-hom-ext {D Z : \Cat} (Zt : IsTruncCat 1 Z) {F G : D ->⁺ Z} {p q : \Sigma⁺ (d : D) (F d ~> G d)} {u v : p ~> q}
+                     (e : dpath (\lam i => (u i).1) = dpath (\lam i => (v i).1)) : u = v
+  => \have E => dpath-sigma-equiv (\lam _ d => F d ~> G d)
+     \in inv (E.ret_f u) *> pmap E.ret (sigma-prop-ext (\lam r => isProp.equiv (inP (square-equiv (dmap F r) (dmap G r) {q.2} {p.2}))
+                                                     (ToProp.fromProp (Zt _ _ _ _))) {E u} {E v} e) *> E.ret_f v

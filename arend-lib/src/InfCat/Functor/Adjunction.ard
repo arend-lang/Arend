@@ -229,7 +229,7 @@
         => inP $ transQEquiv (dpath-sigma-equiv \lam _ y => \Sigma⁺ (x : C) (L x ~> y)) $
              contr-right {s.1 ~> t.1} \lam f => Contr.Contr_QEquiv
                (symQEquiv $ transQEquiv (dpath-sigma-equiv \lam i x => L x ~> f i) $ sigma-right \lam g =>
-                  square-equiv {D} {L s.2.1} {L t.2.1} {s.1} {t.1} {dmap L g})
+                  square-equiv (dmap L g) _)
                (IsEquiv=>contrFibers (tu s.2.1) (comp s.2.2 f))
     }
 
@@ -344,7 +344,7 @@
         => inP $ transQEquiv (dpath-sigma-equiv \lam _ x => \Sigma⁺ (y : D) (x ~> R y)) $
              contr-right {s.1 ~> t.1} \lam f => Contr.Contr_QEquiv
                (symQEquiv $ transQEquiv (dpath-sigma-equiv \lam i y => f i ~> R y) $ sigma-right \lam g =>
-                  transQEquiv (square-equiv {C} {s.1} {t.1} {R s.2.1} {R t.2.1} {f} {t.2.2} {s.2.2} {dmap R g}) inv-equiv)
+                  transQEquiv (square-equiv f (dmap R g)) inv-equiv)
                (IsEquiv=>contrFibers (su t.2.1) (comp f t.2.2))
     }
 

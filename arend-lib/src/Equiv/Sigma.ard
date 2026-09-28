@@ -117,3 +117,7 @@
 \lemma fiberwiseEquiv {X Y : \Type} {g : X -> Y} (ge : IsEquiv g) {P : X -> \Type} {Q : Y -> \Type} (h : \Pi (x : X) -> P x -> Q (g x))
                       (te : IsEquiv {\Sigma (x : X) (P x)} {\Sigma (y : Y) (Q y)} (\lam s => (g s.1, h s.1 s.2))) (x : X) : IsEquiv (h x)
   => propExt.conv (totalEquiv h) (IsEquiv.leftFactor (inP (qsigma-left (IsEquiv.toQEquiv ge))) te) x
+
+-- | Pairs with propositional second components are equal if their first components are.
+\func sigma-prop-ext {A : \Cat} {B : A -> \Type} (Bp : \Pi (a : A) -> isProp (B a)) {s s' : \Sigma (a : A) (B a)} (p : s.1 = s'.1) : s = s'
+  => path \lam i => (p i, pathOver (Bp s'.1 _ _) i)

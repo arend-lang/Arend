@@ -90,7 +90,7 @@
   | ret_f p => idp
   | f_sec p => idp
 
-\sfunc path-square-equiv {C : \Cat} {a b c d : C} {f : a ~> b} {g : c ~> d} {p : a = c} {q : b = d}
+\sfunc path-square-equiv {C : \Cat} {a b c d : C} (f : a ~> b) (g : c ~> d) {p : a = c} {q : b = d}
   : QEquiv {DPath (\lam i => f i = g i) p q} {DPath (\lam i => f i ~> g i) (=_~> p) (=_~> q)}
   => later (\new QEquiv {
     | f p => path \lam i => dpath \lam j => p j i

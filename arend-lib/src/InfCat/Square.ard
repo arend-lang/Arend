@@ -170,7 +170,7 @@
       => forward_backward-gen (conn-right ab) (conn-right ac) (dpath \lam i => dpath \lam j => fill2 ac cd i j) p
   }
 
-\sfunc square-equiv {C : \Cat} {a b c d : C} {ab : a ~> b} {bd : b ~> d} {ac : a ~> c} {cd : c ~> d}
+\sfunc square-equiv {C : \Cat} {a b c d : C} (ab : a ~> b) (cd : c ~> d) {bd : b ~> d} {ac : a ~> c}
   : QEquiv {DPath (\lam i => ab i ~> cd i) ac bd} {comp ab bd = comp ac cd}
   => \new QEquiv {
     | f => square-char.forward

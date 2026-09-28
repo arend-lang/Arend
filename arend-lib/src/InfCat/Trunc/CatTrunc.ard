@@ -3,33 +3,19 @@
 \import Function.Meta
 \import Homotopy.Diagonal
 \import Homotopy.HLevel
-\import Homotopy.Truncation
 \import InfCat.Arrows
-\import InfCat.Basics
 \import InfCat.CatPushout
-\import InfCat.Fibration.DirectedUnivalence
-\import InfCat.Fibration.Straightening
 \import InfCat.Functor.Equiv
 \import InfCat.Functor.FullyFaithful
 \import InfCat.OFS.CatAccessibleOFS
 \import InfCat.OFS.CatOFS
 \import InfCat.Objects
-\import InfCat.Paths
 \import InfCat.Square
-\import InfCat.SubCat.Full
-\import InfCat.Trunc.TruncUniverse
-\import InfCat.Yoneda.EncodeDecode
-\import InfCat.Yoneda.CovariantYoneda
+\import InfCat.Trunc.IsCatTrunc
 \import Logic
 \import Meta
 \import Paths
 \import Paths.Meta
-
-\type IsTruncCat (n : Nat) (C : \Cat) : \Prop
-  => \Pi (x y : C) -> (x ~> y) ofHLevel_-1+ n
-
-\lemma TypeCat_IsTruncCat.{u} {n : Nat} : IsTruncCat n (TypeCat.{u} n)
-  => \lam A B => TypeCat-hom-level
 
 -- | The universal category with hom-types of level {n} under {C}.
 \type CatTrunc (n : Nat) (C : \Cat) : \Cat
@@ -114,11 +100,11 @@
   : IsEquiv {Ob (CatTrunc n C ->⁺ Z)} {Ob (C ->⁺ Z)} (\lam f => ob \lam x => unob f (catTrunc x))
   => IsOrthogonal-terminal.1 (catTrunc-isLeft Zt)
   \where {
-    \sfunc lift (Zt : IsTruncCat n Z) (f : C ->⁺ Z) (x :⁺ CatTrunc n C) : Z
-      => unob (IsEquiv.ret (catTrunc-univ {n} {C} Zt) (ob f)) x
-
-    \sfunc lift_catTrunc {Zt : IsTruncCat n Z} {f : C ->⁺ Z} {x :⁺ C} : lift Zt f (catTrunc x) = f x
-      => (\peval lift Zt f _) *> path \lam i => unob (IsEquiv.f_ret (catTrunc-univ {n} {C} Zt) i) x
+    -- | The extension of {f} to {CatTrunc}; it computes on {catTrunc}.
+    \func lift (Zt : IsTruncCat n Z) (f : C ->⁺ Z) (x :⁺ CatTrunc n C) : Z
+      => (CatFactor.dataExt {CatFactor.famHat {CatTrunc.family n}} {C} {\Sigma} {\lam _ => ()} {Z} {f} {\lam _ => ()}
+            (CatFactor.famHat_IsRight {CatTrunc.family n} {Z} {\Sigma} {\lam _ => ()} \lam _ => (CatTrunc.right1-char {n}).2 Zt)
+            (\lam _ => idp) x).1
 
     -- | {catTrunc} is left orthogonal to the map to the terminal category from any category with hom-types of level {n}.
     \lemma catTrunc-isLeft {n : Nat} {C E : \Cat} (Et : IsTruncCat n E) : IsOrthogonal (catTrunc {n} {C}) (\lam (e :⁺ E) => ())
@@ -142,105 +128,5 @@
       => \lam u v => HLevel-retracts DI-hom-equiv $
           HLevels-sigma (\lam l => \Sigma (r : u dright ~> v dright) (DPath (\lam i => u i ~> v i) l r)) (Zt _ _) \lam l =>
           HLevels-sigma (\lam r => DPath (\lam i => u i ~> v i) l r) (Zt _ _) \lam r =>
-          HLevel-retracts (square-equiv {Z} {u dleft} {u dright} {v dleft} {v dright} {dpath (\lam i => u i)} {r} {l} {dpath (\lam i => v i)}) (HLevel_-1_suc (Zt _ _) _ _)
-  }
-
--- | The action of {catTrunc} on arrows, factored through the truncation.
-\func catTrunc-hom-map.{u} {n : Nat} {C : \Cat u} {x y : C} (t : Trunc_-1+ n (x ~> y)) : catTrunc x ~> catTrunc y
-  => Trunc_-1+.rec (CatTrunc.isTruncCat (catTrunc x) (catTrunc y)) (dmap catTrunc) t
-  \where {
-    \open FullSubCat
-
-    -- | The functor `y ↦ Trunc_-1+ n (x ~> y)`.
-    \func codeB.{u} {C : \Cat u} (x : C) (y :⁺ C) : TypeCat.{u} n
-      => (truncAdjunction n).ladj (ReprFunctor x y)
-
-    -- | Its extension to `CatTrunc n C`.
-    \func codeL.{u} {C : \Cat u} (x : C) (y :⁺ CatTrunc n C) : TypeCat.{u} n
-      => catTrunc-univ.lift TypeCat_IsTruncCat (codeB x) y
-
-    \func code.{u} {C : \Cat u} (x : C) (y :⁺ CatTrunc n C) : \Type u
-      => inc (codeL x y)
-
-    \lemma code-level.{u} {C : \Cat u} {x : C} {y : CatTrunc n C} : code x y ofHLevel_-1+ n
-      => inc-con {_} {_} {codeL x y}
-
-    \func code=codeB.{u} {C : \Cat u} {x : C} {y :⁺ C} : code x (catTrunc y) = inc (codeB x y)
-      => pmap+ inc catTrunc-univ.lift_catTrunc
-
-    \sfunc code-equiv.{u} {C : \Cat u} {x y : C} : QEquiv {code x (catTrunc y)} {Trunc_-1+ n (x ~> y)}
-      => transportInv (QEquiv {__} {_}) code=codeB codeB-equiv
-      \where {
-        \sfunc codeB-equiv.{u} {C : \Cat u} {x y : C} : QEquiv {inc (codeB x y)} {Trunc_-1+ n (x ~> y)}
-          => transQEquiv truncAdjunction.ladj-equiv \new QEquiv {
-               | f => Trunc_-1+.rec (Trunc_-1+.level n (x ~> y)).isTruncated \lam r => inT (Straight.fromStraight r)
-               | ret => Trunc_-1+.rec (Trunc_-1+.level n (ReprFunctor x y)).isTruncated \lam r => inT (Straight.toStraight r)
-               | ret_f => Trunc_-1+.elim-eq (Trunc_-1+.level n (ReprFunctor x y)).isTruncated \lam r => pmap inT (Straight.toStraight_fromStraight r)
-               | f_sec => Trunc_-1+.elim-eq (Trunc_-1+.level n (x ~> y)).isTruncated \lam r => idp
-             }
-
-        -- | {codeB-equiv} maps the class of an arrow to its image under the unit of the truncation adjunction.
-        \sfunc codeB-equiv_inT.{u} {C : \Cat u} {x y : C} {r : x ~> y}
-          : codeB-equiv.ret (inT r) = ~>_-> ((truncAdjunction n).heta (ReprFunctor x y)) (Straight.toStraight r)
-          => pmap (\lam (e : QEquiv {inc (codeB x y)} {Trunc_-1+ n (x ~> y)}) => e.ret (inT r)) (\peval codeB-equiv {n} {C} {x} {y})
-
-        -- | {code-equiv} is {codeB-equiv} transported along {code=codeB}.
-        \sfunc code-equiv_ret.{u} {C : \Cat u} {x y : C} {t : Trunc_-1+ n (x ~> y)}
-          : code-equiv.ret t = transport (\lam X => X) (inv (pmap inc catTrunc-univ.lift_catTrunc)) (codeB-equiv.ret t)
-          => pmap (\lam (e : QEquiv {code x (catTrunc y)} {Trunc_-1+ n (x ~> y)}) => e.ret t) (\peval code-equiv {n} {C} {x} {y})
-             *> aux {_} {inc (codeB x y)}
-          \where
-            \private \func aux.{v} {X Y : \Type v} {B : \Type} {q : X = Y} {e : QEquiv {Y} {B}} {b : B}
-              : (transportInv (QEquiv {__} {B}) q e).ret b = transport (\lam X => X) (inv q) (e.ret b) \elim q
-              | idp => idp
-      }
-
-    -- | The representable functor of `catTrunc x` as a functor to {TypeCat}.
-    \sfunc ReprFunctorL.{u} {C : \Cat u} (x : C)
-      : \Sigma (h : CatTrunc n C ->⁺ TypeCat n) (\Pi (t :⁺ CatTrunc n C) -> inc (h t) = ReprFunctor (catTrunc x) t)
-      => isMax {_} {_} {_} {ReprFunctor (catTrunc x)} \lam t => HLevel-retracts ReprFunctor.equiv (CatTrunc.isTruncCat (catTrunc x) t)
-
-    \sfunc decode.{u} {C : \Cat u} {x : C}
-      : \Sigma (d : \Pi (s :⁺ \Sigma⁺ (y : CatTrunc n C) (code x y)) -> catTrunc x ~> s.1)
-               (\Pi {y : C} (p : x ~> y) -> d (catTrunc y, code-equiv.ret (inT p)) = dmap catTrunc p)
-      => \let | (h,hp) => ReprFunctorL x
-              | ff => catTrunc-ext-ff {n} {C} {TypeCat n} TypeCat_IsTruncCat (\lam t => codeL x t) h
-              | lc {y :⁺ C} => catTrunc-univ.lift_catTrunc {n} {C} {TypeCat n} {TypeCat_IsTruncCat} {codeB x} {y}
-              -- The arrow from `y ↦ (x ~> y)` to `y ↦ (catTrunc x ~> catTrunc y)` given by {catTrunc}.
-              | a : (\lam y => ReprFunctor x y) ~> {C ->⁺ \Type u} (\lam y => inc (h (catTrunc y)))
-                  => depUnivalence.ret \lam s => transport+ (\lam X => X) (inv (hp (catTrunc s.1))) (Straight.toStraight (dmap catTrunc (Straight.fromStraight s.2)))
-              | b0 : (\lam t => codeL x (catTrunc t)) ~> {C ->⁺ TypeCat n} (\lam t => h (catTrunc t))
-                  => dpath \lam i y => comp (=_~> lc) ((truncAdjunction n).heta_heps-rl (dmap (__ y) a)) i
-              | b => IsEquiv.ret ff b0
-              | d (s :⁺ \Sigma⁺ (y : CatTrunc n C) (code x y)) : catTrunc x ~> s.1
-                  => Straight.fromStraight (transport+ (\lam X => X) (hp s.1) (depUnivalence (dmap (\lam H t =>⁺ inc (H t)) b) s))
-         \in (d, \lam {y} p => pmap (\lam z => Straight.fromStraight (transport+ (\lam X => X) (hp (catTrunc y)) z)) (
-                pmap (\lam (r : (\lam t => codeL x (catTrunc t)) ~> {C ->⁺ TypeCat n} (\lam t => h (catTrunc t))) => ~>_-> (dmap (\lam H => inc (H y)) r) (code-equiv.ret (inT p))) (IsEquiv.f_ret ff {b0})
-                *> pmap (~>_-> __ _) (dmap_comp inc) *> ~>_->_comp _ _
-                *> pmap (~>_-> (dmap inc ((truncAdjunction n).heta_heps-rl (dmap (__ y) a)))) (pmap (~>_-> __ _) (dmap_=_~> inc) *> ~>_->_=_~> _ *> pmap (transport (\lam X => X) (pmap+ inc lc)) code-equiv.code-equiv_ret *> transport_id_inv (\lam X => X) _ _ *> code-equiv.codeB-equiv_inT)
-                *> inv (~>_->_comp _ _) *> pmap (~>_-> __ _) ((truncAdjunction n).heta_heps-rlr {_} {_} {dmap (__ y) a}))
-              *> pmap Straight.fromStraight (transport_id_inv (\lam X => X) _ _))
-
-    \func encodeDecode.{u} {C : \Cat u} {x : C} : EncodeDecode.{u} (catTrunc {n} x) \cowith
-      | code => code x
-      | ce => code-equiv.ret (inT idd)
-      | decode => decode.1
-      | decode_base => decode.2 idd
-
-    \lemma isEquiv.{u} {C : \Cat u} {x y : C} : IsEquiv (catTrunc-hom-map {n} {C} {x} {y})
-      => \have ed => encodeDecode.decode-equiv {catTrunc y} $ unfold \lam c => rewriteI (code-equiv.ret_f c) $
-                      Trunc_-1+.elim-eq code-level {\lam t => encodeDecode.encode (decode.1 (catTrunc y, code-equiv.ret t))} {code-equiv.ret}
-                        (\lam p => pmap encodeDecode.encode (decode.2 p) *>
-                          \let eta (y :⁺ C) => (truncAdjunction n).heta (ReprFunctor x y)
-                          \in pmap (~>_-> (dmap (\lam y => code x (catTrunc y)) p)) code-equiv.code-equiv_ret
-                              *> ~>_->-natural {_} {\lam y => inc (codeB x y)} (\lam y m => transport+ (\lam X => X) (inv code=codeB) m) p
-                              *> pmap (transport (\lam X => X) (inv code=codeB)) (pmap (~>_-> (dmap (\lam y => inc (codeB x y)) p)) code-equiv.codeB-equiv_inT
-                                  *> ~>_->-natural (\lam y a => ~>_-> (eta y) a) p
-                                  *> pmap (~>_-> (eta _)) (pmap (\lam S => S (_, Straight.toStraight p)) (yonedaCov.ext-sec-unique x (\lam y => ReprFunctor x y) (\lam k => k.2)))
-                                  *> inv code-equiv.codeB-equiv_inT)
-                              *> inv code-equiv.code-equiv_ret)
-                        (code-equiv c)
-         \in transport IsEquiv
-              (ext \lam t => Trunc_-1+.elim-eq {n} {_} {catTrunc x ~> catTrunc y} (CatTrunc.isTruncCat _ _) (\lam p => decode.2 p) t)
-              (inP (transQEquiv (symQEquiv code-equiv) ed))
+          HLevel-retracts (square-equiv (dpath (\lam i => u i)) (dpath (\lam i => v i))) (HLevel_-1_suc (Zt _ _) _ _)
   }
