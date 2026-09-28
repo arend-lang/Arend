@@ -272,4 +272,26 @@ public class CatHITsTest extends TypeCheckingTestCase {
       """, 1);
     assertThatErrorsAre(Matchers.typecheckingError(PropOnlyPatternError.class));
   }
+
+  @Test
+  public void directedPathRecursionTest() {
+    typeCheckModule("""
+      \\data S | base | tr {a : S} (p : a ~> a) : a ~> a
+      \\func rec {B : \\Cat} (b : B) (s :+ S) : B \\elim s
+        | base => b
+        | tr p => dpath (\\lam k => rec b (p k))
+      """);
+  }
+
+  @Test
+  public void directedTruncRecursionTest() {
+    typeCheckModule("""
+      \\data S | base | loop : base ~> base | tr {a b : S} {p q : a ~> b} (e e' : p = q) : Path (\\lam _ => p = q) e e'
+      \\func rec {B : \\Cat} (Bs : \\Pi (x y : B) (p q : x ~> y) (e e' : p = q) -> e = e') (b : B) (l : b ~> b) (s :+ S) : B \\elim s
+        | base => b
+        | loop => l
+        | tr {a} {b'} {p} {q} e e' => Bs (rec Bs b l a) (rec Bs b l b') (dpath (\\lam k => rec Bs b l (p k))) (dpath (\\lam k => rec Bs b l (q k)))
+                                         (path (\\lam j => dpath (\\lam k => rec Bs b l (e j k)))) (path (\\lam j => dpath (\\lam k => rec Bs b l (e' j k))))
+      """);
+  }
 }

@@ -103,9 +103,9 @@ public class CollectCallVisitor extends SearchVisitor<Void> {
           type = param.getType();
         }
         case PathEliminator ignored -> {
-          if (type instanceof FunCallExpression funCall && funCall.getDefinition() == Prelude.PATH_INFIX) {
+          if (type instanceof FunCallExpression funCall && (funCall.getDefinition() == Prelude.PATH_INFIX || funCall.getDefinition() == Prelude.DPATH_INFIX)) {
             type = funCall.getDefCallArguments().getFirst();
-          } else if (type instanceof PathTypeExpression pathType && !pathType.isDirected()) {
+          } else if (type instanceof PathTypeExpression pathType) {
             type = pathType.getArgumentType();
             if (!(type instanceof LamExpression lamExpr)) return null;
             type = lamExpr.getBody();
