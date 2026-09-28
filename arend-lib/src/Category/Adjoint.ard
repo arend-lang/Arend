@@ -4,6 +4,8 @@
 \import Equiv
 \import Function.Meta
 \import Logic
+\import Logic.Meta
+\import Logic.Unique (isProp)
 \import Meta
 \import Paths
 \import Paths.Meta
@@ -135,4 +137,36 @@
     | eta_epsilon-right => Iso.hinv-unique (oIso eta-iso (RAdj.Func-iso epsilon-iso)) idIso eta_epsilon-left
     | eta-iso => epsilon-iso.reverse
     | epsilon-iso => eta-iso.reverse
+} \where {
+  -- | A fully faithful functor which is split essentially surjective on objects is an equivalence.
+  \sfunc fromFF-splitEssSurj {C D : Precat} (F : FullyFaithfulFunctor C D) (s : \Pi (y : D) -> \Sigma (x : C) (Iso {D} {F x} {y})) : CatEquiv C D F
+    => \have A : Adjunction C D F => \new Adjunction.FromCoreflector {
+               | ROb y => (s y).1
+               | epsilonMap => (s _).2.f
+               | epsilon-adjoint {_} {Y} => IsEquiv.trans F.isFullyFaithful (Iso.o-_Equiv {(s Y).2})
+             }
+       \in \new CatEquiv {
+         | Adjunction => A
+         | eta-iso {X} => F.reflects-iso $ \new Iso {
+           | hinv => (s (F X)).2.f
+           | hinv_f => A.eta_epsilon-right
+           | f_hinv => pmap (∘ _) (SplitMono.adjointMap {(s (F X)).2} A.eta_epsilon-right *> id-right) *> (s (F X)).2.hinv_f
+         }
+         | epsilon-iso => (s _).2
+       }
+
+  -- | If {C} is univalent and {F} is fully faithful, then the type of objects `x` with `F x ≅ y` is a proposition.
+  \lemma ff-fiber-isProp {C : Cat} {D : Precat} (F : FullyFaithfulFunctor C D) (y : D) : isProp (\Sigma (x : C) (Iso {D} {F x} {y}))
+    => \lam t t' => \let i => F.inverse-iso (oIso t.2 (Iso.reverse {t'.2}))
+                   \in ext (C.isotoid i, Iso.equals _ _ $ Iso.adjointMap' {F.Func-iso i}
+                         (pmap (_ ∘ F.Func __) (inv (C.transport_iso i)) *> transport-iso F (C.isotoid i) t.2)
+                         *> pmap (t.2.f ∘) F.inverse-right *> inv o-assoc *> pmap (∘ _) t.2.f_hinv *> id-left)
+    \where
+      \lemma transport-iso {C D : Precat} (F : Functor C D) {x x' : C} (p : x = x') {y : D} (e : Iso {D} {F x} {y})
+        : Iso.f {transport (\lam z => Iso {D} {F z} {y}) p e} ∘ F.Func (transport (Hom x) p id) = e.f \elim p
+        | idp => pmap (_ ∘) Func-id *> id-right
+
+  -- | A fully faithful functor from a univalent category which is essentially surjective on objects is an equivalence.
+  \sfunc fromFF-essSurj {C : Cat} {D : Precat} (F : FullyFaithfulFunctor C D) (s : \Pi (y : D) -> ∃ (x : C) (Iso {D} {F x} {y})) : CatEquiv C D F
+    => fromFF-splitEssSurj F \lam y => TruncP.remove (ff-fiber-isProp F y) (s y)
 }
