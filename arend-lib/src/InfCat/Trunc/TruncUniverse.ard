@@ -45,16 +45,20 @@
                    \in inv hc *> pmap (~>_-> g) (f_sec' (~>_-> (dmap inc k) c)) *> hc
       | f_sec => f_sec'
       \where \private {
-        \func k => (truncAdjunction n).heta_heps-rl {A} {(truncRightAdjoint n).lob A} ((truncRightAdjoint n).eta0 A)
+        \sfunc k : (truncAdjunction n).ladj A ~> (truncRightAdjoint n).lob A
+          => (truncAdjunction n).heta_heps-rl {A} {(truncRightAdjoint n).lob A} ((truncRightAdjoint n).eta0 A)
+
+        \sfunc k-rlr : (truncAdjunction n).heta_heps-lr k = (truncRightAdjoint n).eta0 A
+          => rewrite (\peval k) (truncAdjunction n).heta_heps-rlr
 
         \lemma k-iso : IsIso k
           => precomp-equiv=>iso \lam Y => IsEquiv.leftFactor (inP (truncAdjunction n).heta_heps-equiv) $ transport IsEquiv
-              (ext \lam g => inv $ pmap (comp _ __) (dmap_comp inc) *> comp-assoc *> pmap (comp __ _) (truncAdjunction n).heta_heps-rlr)
+              (ext \lam g => inv $ pmap (comp _ __) (dmap_comp inc) *> comp-assoc *> pmap (comp __ _) k-rlr)
               (truncRightAdjoint n).eta0-adjoint
 
         \sfunc f_sec' (t : Trunc_-1+ n A) : ~>_-> (dmap inc k) (Trunc_-1+.rec (inc-con {_} {_} {(truncAdjunction n).ladj A}) (~>_-> ((truncAdjunction n).heta A)) t) = t
           => Trunc_-1+.elim-eq (Trunc_-1+.level n A).isTruncated (\lam a => inv (~>_->_comp _ _)
-              *> pmap (~>_-> __ a) (truncAdjunction n).heta_heps-rlr *> ->_~>_-> *> cov-fun-type-equiv.ofInv) t
+              *> pmap (~>_-> __ a) k-rlr *> ->_~>_-> *> cov-fun-type-equiv.ofInv) t
       }
   }
 

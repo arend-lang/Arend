@@ -112,7 +112,7 @@
 \lemma poly-dec-div {R : DiscreteField} (a b : Poly R) : Dec (TruncP (LDiv a b))
   => GCDDomain.Dec.div_unit.2 poly-dec-unit a b
 
-\func poly-maximal-ideal {K : DiscreteField} (c : Countable K) (p : Poly K) (pc : Not (Monoid.Inv p))
+\sfunc poly-maximal-ideal {K : DiscreteField} (c : Countable K) (p : Poly K) (pc : Not (Monoid.Inv p))
   : \Sigma (M : Ideal (PolyAlgebra K)) M.IsMaximal (M p)
   => \let (M,Mm,g) => BezoutRing.maximal-ideal (Poly.poly-countable c) poly-dec-div (p :: nil) (\lam c => pc $ c p \lam (0) => LDiv.id-div)
      \in (M, Mm, g 0)
