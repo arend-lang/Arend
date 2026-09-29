@@ -119,6 +119,20 @@
                    *> pmap (nerve-maps Nt).ret (sigma-prop-ext (NRels-isProp Nt) {nerve-restrict h1} {nerve-restrict h2} t)
                    *> (nerve-maps Nt).ret_f h2
 
+-- | Graphs in a category are equal if their vertex maps are connected by paths making the edge squares commute.
+\func NGraph-ext {C : Precat} {Z : \Cat} {b0 b0' : C -> Z} (P : b0 = b0')
+                 {e0 : \Pi {x y : C} (f : Hom x y) -> b0 x ~> b0 y} {e0' : \Pi {x y : C} (f : Hom x y) -> b0' x ~> b0' y}
+                 (sq : \Pi {x y : C} (f : Hom x y) -> comp (e0 f) (=_~> (pmap (__ y) P)) = comp (=_~> (pmap (__ x) P)) (e0' f))
+  : (b0, e0) = {NGraph C Z} (b0', e0') \elim P
+  | idp => pmap {\Pi {x y : C} (f : Hom x y) -> b0 x ~> b0 y} {NGraph C Z} (\lam e => (b0, e)) (ext \lam f => inv comp_idd-right *> sq f *> comp_idd-left)
+
+-- | Maps from the nerve to a 1-category are equal if they are connected by paths on vertices making the edge squares commute.
+\sfunc nerve-maps-ext' {C : Precat} {N : \Cat} (Nt : IsTruncCat 1 N) {h1 h2 : Nerve C ->⁺ N}
+                       (a : \Pi (x : C) -> h1 (nerveOb x) = h2 (nerveOb x))
+                       (sq : \Pi {x y : C} (f : Hom x y) -> comp (dmap h1 (nerveHom f)) (=_~> (a y)) = comp (=_~> (a x)) (dmap h2 (nerveHom f)))
+  : h1 = h2
+  => nerve-maps-ext Nt (NGraph-ext (ext a) sq)
+
 -- # Functoriality
 
 -- | The map of nerves induced by a functor.

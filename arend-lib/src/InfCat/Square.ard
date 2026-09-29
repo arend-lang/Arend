@@ -183,6 +183,11 @@
   : comp (dmap f p) (h a') = comp (h a) (dmap g p)
   => inv $ comp-char $ dpath \lam i => dpath \lam j => square-char.forward (dpath \lam i => dpath \lam j => h (p j) i) j i
 
+-- | Horizontal pasting of commutative squares.
+\sfunc square-paste {C : \Cat} {a b c a' b' c' : C} {h : a ~> a'} {g : b ~> b'} {k : c ~> c'} {u : a ~> b} {u' : b ~> c} {v : a' ~> b'} {v' : b' ~> c'}
+                    (s1 : comp h v = comp u g) (s2 : comp g v' = comp u' k) : comp h (comp v v') = comp (comp u u') k
+  => comp-assoc *> pmap (comp __ v') s1 *> inv comp-assoc *> pmap (comp u) s2 *> comp-assoc
+
 {- | A square in the total category lying over a given square {sqA} of the base is the same as a square in the family {B} over {sqA}.
  - The same applies to triangles, since they are squares with a degenerate edge.
  -}

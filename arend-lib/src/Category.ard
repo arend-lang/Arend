@@ -2,6 +2,7 @@
 \import Equiv.Path
 \import Function.Meta ($)
 \import Logic
+\import Logic.Unique (isSet)
 \import Meta
 \import Paths
 \import Paths.Meta
@@ -169,6 +170,10 @@
 
   \lemma transport_Hom_iso-right (e : Iso {\this}) {z : Ob} (g : Hom z e.dom) {f : Hom z e.cod} (h : g >> e.f = f) : transport (Hom z) (isotoid e) g = f
     => transport_Hom-right (isotoid e) (pmap (g >>) (transport_iso e) *> h)
+
+  -- | Objects of a univalent category form a 1-type.
+  \lemma ob-isGpd (a b : Ob) : isSet (a = b)
+    => isSet.equiv univalence \lam e e' => prop-isProp
 } \where {
   \lemma univalenceFromQEquiv {C : Precat} (e : \Pi {a b : C} -> QEquiv {a = b} {Iso {C} {a} {b}}) (i : \Pi {a : C} -> (e (idpe a)).f = id) {a b : C} : IsEquiv (C.idtoiso {a} {b})
     => \have t : e.f = C.idtoiso {a} {b} => ext (\case \elim b, \elim __ \with {

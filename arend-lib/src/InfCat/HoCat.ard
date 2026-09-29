@@ -1,10 +1,15 @@
 \import Category
+\import Category.Functor
+\import Equiv
 \import Equiv.Fiber
 \import Function.Meta
+\import Homotopy.HLevel
+\import Homotopy.Truncation
 \import InfCat.Basics
 \import InfCat.Objects
 \import InfCat.Rezk
 \import Logic
+\import Logic.Meta
 \import Logic.Unique
 \import Meta
 \import Paths
@@ -27,45 +32,97 @@
     | in0 h, in0 g, in0 f => pmap in0 comp-assoc
   }
 
-\truncated \data Trunc1 (A : \Type) : \1-Type
-  | in1 A
-
-\func HoCat (C : \Cat) : Cat (Trunc1 (Ob C)) \cowith
+-- | The homotopy category of {C}.
+\func HoCat.{u} (C : \Cat u) : Cat (Trunc1 C) \cowith
   | Hom => Hom
-  | id {x : Trunc1 (Ob C)} : Hom x x \elim x {
-    | in1 (ob x) => mkHom idd
+  | id {x : Trunc1 C} : Hom x x \elim x {
+    | in1 a => mkHom idd
   }
-  | o {x y z : Trunc1 (Ob C)} (g : Hom y z) (f : Hom x y) : Hom x z \elim x, y, z, g, f {
-    | in1 (ob x), in1 (ob y), in1 (ob z), mkHom g, mkHom f => mkHom (comp f g)
+  | o {x y z : Trunc1 C} (g : Hom y z) (f : Hom x y) : Hom x z \elim x, y, z, g, f {
+    | in1 x, in1 y, in1 z, mkHom g, mkHom f => mkHom (comp f g)
   }
   | id-left {x} {y} {f} => \case \elim x, \elim y, \elim f \with {
-    | in1 (ob x), in1 (ob y), mkHom f => pmap mkHom comp_idd-right
+    | in1 x, in1 y, mkHom f => pmap mkHom comp_idd-right
   }
   | id-right {x} {y} {f} => \case \elim x, \elim y, \elim f \with {
-    | in1 (ob x), in1 (ob y), mkHom f => pmap mkHom comp_idd-left
+    | in1 x, in1 y, mkHom f => pmap mkHom comp_idd-left
   }
   | o-assoc {x} {y} {z} {w} {h} {g} {f} => \case \elim x, \elim y, \elim z, \elim w, \elim h, \elim g, \elim f \with {
-    | in1 (ob x), in1 (ob y), in1 (ob z), in1 (ob w), mkHom h, mkHom g, mkHom f => pmap mkHom comp-assoc
+    | in1 x, in1 y, in1 z, in1 w, mkHom h, mkHom g, mkHom f => pmap mkHom comp-assoc
   }
-  | univalence => Cat.makeUnivalence $ later \lam e => cases (e.dom, e.cod, e.f, e.hinv, e.f_hinv, e.hinv_f) \with {
-    | in1 (ob x), in1 (ob y), mkHom f, mkHom g, p, q =>
-      \have | fi : IsIso f => \case unequiv p, unequiv q \with {
-                                | inP p, inP q => inP (g,p,q)
-                              }
-            | r => iso_= f (IsIso.ret fi) (IsIso.f_ret fi) (IsIso.ret_f fi)
-      \in (path \lam i => in1 $ ob (r.1 i), transport_Hom r.1 *> pmap mkHom (later $ transport_~>_idd-right *> r.2))
-  }
+  | univalence => Cat.makeUnivalence $ later \lam e => iso-path e.dom e.cod e.f e.hinv e.hinv_f e.f_hinv
   \where {
-    \protected \truncated \data Hom (x y : Trunc1 (Ob C)) : \Set \elim x, y
-      | in1 a, in1 b => mkHom (unob a ~> unob b)
+    \truncated \data Mor {C : \Cat} (a b : C) : \Set
+      | mkHom (a ~> b)
 
-    \private \lemma unequiv {x y : C} {f g : x ~> y} (p : mkHom f = {Hom (in1 (ob x)) (in1 (ob y))} mkHom g) : TruncP (f = g)
-      => \let code (h : Hom (in1 (ob x)) (in1 (ob y))) : \Prop => \case \elim h \with {
+    \func Hom.{u} {C : \Cat u} (x y : Trunc1 C) : \Set u \elim x, y
+      | in1 a, in1 b => Mor a b
+
+    \func IsoPath.{u} {C : \Cat u} (x y : Trunc1 C) (f : Hom x y)
+      => \Sigma (p : x = y) (transport (Hom x) p id = f)
+
+    \lemma IsoPath-level.{u} {C : \Cat u} (x y : Trunc1 C) (f : Hom x y) : IsoPath x y f ofHLevel_-1+ 1
+      => HLevels-sigma (\lam p => transport (Hom x) p id = f) {1} (Trunc1.level C x y) \lam (p : x = y) (a a' : transport (Hom x) p id = f) => toProp prop-isProp
+
+    -- | Isomorphisms in {HoCat} come from paths.
+    \sfunc iso-path.{u} {C : \Cat u} (x y : Trunc1 C) (f : Hom x y) (g : Hom y x) (gf : g `o` f = id) (fg : f `o` g = id) : IsoPath x y f
+      \level \lam a b => ToProp.fromProp (IsoPath-level x y f a b)
+      \elim x, y, f, g
+      | in1 x, in1 y, mkHom f, mkHom g =>
+        \have | fi : IsIso f => \case unequiv gf, unequiv fg \with {
+                                  | inP p, inP q => inP (g,q,p)
+                                }
+              | r => iso_= f (IsIso.ret fi) (IsIso.f_ret fi) (IsIso.ret_f fi)
+        \in (path \lam i => in1 (r.1 i), transport_Hom r.1 *> pmap mkHom (later $ transport_~>_idd-right *> r.2))
+
+    \lemma unequiv.{u} {C : \Cat u} {x y : C} {f g : x ~> y} (p : mkHom f = {Mor x y} mkHom g) : TruncP (f = g)
+      => \let code (h : Mor x y) : \Prop => \case \elim h \with {
                 | mkHom g => TruncP (f = g)
               }
          \in transport code p (inP idp)
 
-    \lemma transport_Hom {x y : C} (p : x = y) {f : x ~> x}
-      : transport (\lam z => Hom (in1 (ob x)) (in1 (ob z))) p (mkHom f) = mkHom (transport (x ~>) p f) \elim p
+    \lemma transport_Hom.{u} {C : \Cat u} {x y : C} (p : x = y) {f : x ~> x}
+      : transport (\lam z => Hom (in1 x) (in1 z)) p (mkHom f) = mkHom (transport (x ~>) p f) \elim p
       | idp => idp
   }
+
+-- | A functor out of {HoCat} is determined by its action on objects and arrows of {C}.
+\func HoCat-lift.{u} {C : \Cat u} {D : Cat.{u,u}} (F0 : C -> D) (G : \Pi {x y : C} -> x ~> y -> Hom {D} (F0 x) (F0 y))
+                     (G-id : \Pi {x : C} -> G (idd {C} {x}) = id)
+                     (G-comp : \Pi {x y z : C} {f : x ~> y} {g : y ~> z} -> G (comp f g) = G g ∘ G f)
+  : Functor (HoCat C) D \cowith
+  | F => ob-map
+  | Func {X Y : Trunc1 C} (h : HoCat.Hom X Y) : Hom {D} (ob-map X) (ob-map Y) \elim X, Y, h {
+    | in1 x, in1 y, HoCat.mkHom f => G f
+  }
+  | Func-id {X} => \case \elim X \with {
+    | in1 x => G-id
+  }
+  | Func-o {X} {Y} {Z} {g} {f} => \case \elim X, \elim Y, \elim Z, \elim g, \elim f \with {
+    | in1 x, in1 y, in1 z, HoCat.mkHom g, HoCat.mkHom f => G-comp
+  }
+  \where
+    \func ob-map (X : Trunc1 C) : D
+      \level D.ob-isGpd
+      \elim X
+      | in1 x => F0 x
+
+-- | The functor of homotopy categories induced by a map of categories.
+\func HoCat-map.{u} {C C' : \Cat u} (f : C ->⁺ C') : Functor (HoCat C) (HoCat C')
+  => HoCat-lift {C} {HoCat C'} (\lam x => in1 (f x)) (\lam g => HoCat.mkHom (dmap f g)) (\lam {_} => idp) (\lam {_} {_} {_} {_} {_} => pmap HoCat.mkHom (dmap_comp f))
+
+-- | Morphisms of {HoCat} are elements of the set truncation.
+\sfunc hoTrunc.{u} {C : \Cat u} {x y : C} (h : HoCat.Hom (in1 x) (in1 y)) : Trunc_-1+ 1 (x ~> y)
+  \level \lam a b => ToProp.fromProp ((Trunc_-1+.level 1 (x ~> y)).isTruncated a b)
+  \elim h
+  | HoCat.mkHom f => inT f
+
+\func hoTrunc-equiv.{u} {C : \Cat u} {x y : C} : QEquiv (hoTrunc {C} {x} {y}) \cowith
+  | ret => Trunc_-1+.rec hom-level HoCat.mkHom
+  | ret_f h => \case \elim h \with {
+    | HoCat.mkHom f => pmap (Trunc_-1+.rec hom-level HoCat.mkHom) (\peval hoTrunc (HoCat.mkHom f))
+  }
+  | f_sec => Trunc_-1+.elim-eq (Trunc_-1+.level 1 (x ~> y)).isTruncated \lam f => \peval hoTrunc (HoCat.mkHom f)
+  \where
+    \lemma hom-level : HoCat.Hom (in1 x) (in1 y) ofHLevel_-1+ 1
+      => \lam a b => toProp (prop-isProp {a = b})

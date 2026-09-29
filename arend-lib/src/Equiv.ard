@@ -75,6 +75,9 @@
   \lemma isSurj : IsSurj f
     => \lam y => inP (ret y, f_ret y)
 
+  \protected \func splitSurj (b : B) : \Sigma (a : A) (f a = b)
+    => (ret b, f_ret b)
+
   \func adjoint {a : A} {b : B} (p : f a = b) : a = ret b
     => inv (ret_f a) *> pmap ret p
 

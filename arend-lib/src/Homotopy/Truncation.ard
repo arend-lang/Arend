@@ -1,3 +1,4 @@
+\import Arith.Nat
 \import Equiv
 \import Equiv.Path
 \import Equiv.Univalence
@@ -36,12 +37,16 @@
 \instance truncatedTypesLevel.{u} (n : Nat) : Truncated_-1+ (suc n) (Truncated_-1+.{u} n)
   | isTruncated t t' => rewrite (QEquiv_= (Truncated_-1+.equiv t t') *> QEquiv_= typeUnivalence) (truncatedEquiv t t').isTruncated
 
-\data Trunc_-1+ (n : Nat) (A : \Type)
+-- | The universe of sets is a groupoid.
+\lemma Set-isGpd.{u} : (\Set u) ofHLevel_-1+ 2
+  => \lam A B p q => toProp \lam e e' => prop-pi
+
+\data Trunc_-1+ (n : Nat) (A : \Cat)
   | inT A
   | hubT (Sphere n -> Trunc_-1+ n A)
   | spokeT (r : Sphere n -> Trunc_-1+ n A) (x : Sphere n) : r x = hubT r
   \where {
-    \instance level.{u} (n : Nat) (A : \Type u) : Truncated_-1+ n (Trunc_-1+ n A)
+    \instance level.{u} (n : Nat) (A : \Cat u) : Truncated_-1+ n (Trunc_-1+ n A)
       | isTruncated => loop-level-iter n \lam t =>
           rewriteI (SphereLoopEquiv n (\new Pointed (Trunc_-1+ n A) t))
                    \new Contr (Sphere.pointed n ->* Pointed.make t)
@@ -51,7 +56,7 @@
                                                  (\lam s => inv p.2 *> path (spokeT p.1 north) *> inv (path (spokeT p.1 s)))
                                                  (pmap ((inv p.2 *> __) *> p.2) *>_inv *> inv_*>))
 
-    \protected \func elim.{u} {n : Nat} {A : \Type}
+    \protected \func elim.{u} {n : Nat} {A : \Cat}
                    (P : Trunc_-1+ n A -> Truncated_-1+.{u} n)
                    (g : \Pi (a : A) -> P (inT a))
                    (x : Trunc_-1+ n A) : P x \elim x
@@ -66,16 +71,21 @@
              | p : f x = p0 => path (\lam j => (isContr=>isProp c (f,idp) (\lam _ => p0, idp) @ j).1 x)
         \in pathOver p
 
-    \protected \func elim2.{u} {n : Nat} {A : \Type}
+    \protected \func elim2.{u} {n : Nat} {A : \Cat}
                     (P : Trunc_-1+ n A -> Trunc_-1+ n A -> Truncated_-1+.{u} n)
                     (g : \Pi (a a' : A) -> P (inT a) (inT a'))
                     (x y : Trunc_-1+ n A) : P x y
       => elim (P x) (\lam a' => elim (P __ (inT a')) (g __ a') x) y
 
-    \protected \func rec.{u} {n : Nat} {A : \Type} {B : \Type u} (Bl : B ofHLevel_-1+ n) (g : A -> B) (t : Trunc_-1+ n A) : B
+    \protected \func rec.{u} {n : Nat} {A : \Cat} {B : \Type u} (Bl : B ofHLevel_-1+ n) (g : A -> B) (t : Trunc_-1+ n A) : B
       => elim (\lam _ => \new Truncated_-1+ n B Bl) g t
 
-    \sfunc elim-eq.{u} {n : Nat} {A : \Type} {B : \Type u} (Bl : B ofHLevel_-1+ n) {h h' : Trunc_-1+ n A -> B} (p : \Pi (a : A) -> h (inT a) = h' (inT a))
+    -- | Elimination into a family of sets.
+    \protected \func elimSet.{u} {n : Nat} {A : \Cat} (P : Trunc_-1+ (suc n) A -> \Type u) (Pl : \Pi (x : Trunc_-1+ (suc n) A) -> P x ofHLevel_-1+ 1)
+                                 (g : \Pi (a : A) -> P (inT a)) (x : Trunc_-1+ (suc n) A) : P x
+      => elim (\lam x => \new Truncated_-1+ (suc n) (P x) (HLevel_-1_<= 1 (suc n) (suc<=suc zero<=_) (Pl x))) g x
+
+    \sfunc elim-eq.{u} {n : Nat} {A : \Cat} {B : \Type u} (Bl : B ofHLevel_-1+ n) {h h' : Trunc_-1+ n A -> B} (p : \Pi (a : A) -> h (inT a) = h' (inT a))
                        (t : Trunc_-1+ n A) : h t = h' t
       => Trunc_-1+.elim (\lam t => \new Truncated_-1+ n (h t = h' t) (HLevel_-1_suc Bl (h t) (h' t))) p t
 
@@ -86,6 +96,12 @@
         | ret_f h => ext (Trunc_-1+.elim-eq Bl \lam a => idp)
         | f_sec g => idp
       }
+
+    -- | {inT} is an equivalence for types of the right level.
+    \func inT-equiv.{u} {n : Nat} {A : \Type u} (As : A ofHLevel_-1+ n) : QEquiv {A} {Trunc_-1+ n A} inT \cowith
+      | ret => rec As (\lam a => a)
+      | ret_f a => idp
+      | f_sec => elim-eq (level n A).isTruncated \lam a => idp
 
     \func equality.{u} {n : Nat} {A : \Type u} (a a' : A) : QEquiv {inT a = {Trunc_-1+ (suc n) A} inT a'} {Trunc_-1+ n (a = a')} =>
       \let | code => elim2 (\lam _ _ => truncatedTypesLevel n) (\lam a a' => level n (a = a'))
@@ -107,4 +123,13 @@
                                                                        (pmap inT p)
                                                                        (inT idp) = inT p) idp)) x y
       }) {inT a} {inT a'}
+  }
+
+-- | The 1-truncation of a type.
+\data Trunc1 (A : \Cat)
+  | in1 A
+  | trunc1 (x y : Trunc1 A) (p q : x = y) (r s : p = q) : r = s
+  \where {
+    \lemma level (A : \Cat) : Trunc1 A ofHLevel_-1+ 2
+      => \lam x y p q => toProp \lam r s => path \lam i => path \lam j => path \lam k => trunc1 x y p q r s i j k
   }

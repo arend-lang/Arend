@@ -1,7 +1,9 @@
+\import Equiv
 \import Equiv.Sigma
 \import Function.Meta
 \import Homotopy.HLevel
 \import InfCat.Basics
+\import InfCat.Rezk
 \import InfCat.Square
 \import InfCat.Trunc.TruncUniverse
 \import Logic
@@ -26,3 +28,11 @@
   => \have E => dpath-sigma-equiv (\lam _ d => F d ~> G d)
      \in inv (E.ret_f u) *> pmap E.ret (sigma-prop-ext (\lam r => isProp.equiv (inP (square-equiv (dmap F r) (dmap G r) {q.2} {p.2}))
                                                      (ToProp.fromProp (Zt _ _ _ _))) {E u} {E v} e) *> E.ret_f v
+
+-- | Hom-types of a category with hom-sets are sets.
+\lemma hom-isSet {Z : \Cat} (Zt : IsTruncCat 1 Z) (x y : Z) : isSet (x ~> y)
+  => \lam u v => ToProp.fromProp (Zt x y u v)
+
+-- | Objects of a category with hom-sets form a 1-type.
+\lemma truncCat-ob-isGpd {Z : \Cat} (Zt : IsTruncCat 1 Z) (a b : Z) : isSet (a = b)
+  => \lam p q => isProp.equiv (inP (=_~>-embedding a b).pmap-isEquiv) (hom-isSet Zt a b (=_~> p) (=_~> q))

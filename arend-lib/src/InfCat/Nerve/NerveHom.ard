@@ -1,12 +1,15 @@
 \import Category
 \import Equiv
 \import Function.Meta
+\import Homotopy.Fibration
 \import Homotopy.HLevel
 \import InfCat.Basics
 \import InfCat.Fibration.DirectedUnivalence
 \import InfCat.Fibration.Straightening
 \import InfCat.Nerve.Nerve
+\import InfCat.Objects
 \import InfCat.Paths
+\import InfCat.Rezk
 \import InfCat.Square
 \import InfCat.SubCat.Full
 \import InfCat.Trunc.IsCatTrunc
@@ -14,8 +17,10 @@
 \import InfCat.Yoneda.CovariantYoneda
 \import InfCat.Yoneda.EncodeDecode
 \import Logic
+\import Logic.Unique
 \import Meta
 \import Paths
+\import Paths.Meta
 \open FullSubCat (inc, isMax)
 \open NerveCode
 
@@ -125,3 +130,41 @@
     | ret_f g => encode-nerveHom g
     | f_sec p => inv (decode-hom _) *> (encodeDecode x).decode_encode p
   }
+
+-- # Objects of the nerve of a univalent category
+
+-- | The action of {nerveHom} on the transport of the identity along a path.
+\func nerveHom-transport {D : Precat} {x y : D} (p : x = y) : nerveHom (transport (Hom x) p id) = =_~> (pmap nerveOb p) \elim p
+  | idp => nerveHom-id
+
+-- | Isomorphisms of {D} are isomorphisms of the nerve.
+\func nerveIso.{u} {D : Precat.{u,u}} {x y : D} : QEquiv {Iso {D} {x} {y}} {\Sigma (p : nerveOb x ~> nerveOb y) (IsIso p)} \cowith
+  | f e => (nerveHom e.f, inP (nerveHom e.hinv, nerveHom-comp *> pmap nerveHom e.f_hinv *> nerveHom-id,
+                                                nerveHom-comp *> pmap nerveHom e.hinv_f *> nerveHom-id))
+  | ret s => \new Iso {
+    | f => IsEquiv.ret nerveHom-equiv s.1
+    | hinv => IsEquiv.ret nerveHom-equiv (IsIso.ret s.2)
+    | hinv_f => IsEquiv.isInj nerveHom-equiv $ inv nerveHom-comp *> pmap2 comp (IsEquiv.f_ret nerveHom-equiv) (IsEquiv.f_ret nerveHom-equiv)
+                  *> IsIso.f_ret s.2 *> inv nerveHom-id
+    | f_hinv => IsEquiv.isInj nerveHom-equiv $ inv nerveHom-comp *> pmap2 comp (IsEquiv.f_ret nerveHom-equiv) (IsEquiv.f_ret nerveHom-equiv)
+                  *> IsIso.ret_f s.2 *> inv nerveHom-id
+  }
+  | ret_f e => Iso.equals _ _ (IsEquiv.ret_f nerveHom-equiv)
+  | f_sec s => ext (IsEquiv.f_ret nerveHom-equiv)
+
+-- | {nerveOb} is an embedding for univalent categories.
+\lemma nerveOb-emb.{u} {D : Cat.{u,u}} : Embedding {D} {Nerve D} nerveOb \cowith
+  | isEmb a a' => IsEquiv.toQEquiv $ IsEquiv.leftFactor (=-char (nerveOb a) (nerveOb a')) $
+      transport IsEquiv (ext \lam p => ext (aux p)) (IsEquiv.trans univalence (inP nerveIso))
+  \where
+    \private \func aux {a a' : D} (p : a = a') : nerveHom (D.idtoiso p).f = =_~> (pmap nerveOb p) \elim p
+      | idp => nerveHom-id
+
+-- | The object of {D} corresponding to an object of the nerve.
+\sfunc nerve-point.{u} {D : Cat.{u,u}} (n : Nerve D) : Fib nerveOb n
+  \level Embedding.embeddingFiber-isProp nerveOb-emb n
+  \elim n
+  | nerveOb x => (x, idp)
+
+\sfunc nerve-point-ob.{u} {D : Cat.{u,u}} (x : D) : nerve-point (nerveOb x) = (x, idp)
+  => \peval nerve-point (nerveOb x)

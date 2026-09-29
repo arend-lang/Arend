@@ -37,3 +37,8 @@
     \private \func aux (x : A) (b : B x) {a : A} (p : x = a)
       : ((a, transport B p b), idp) = {Fib {\Sigma (x : A) (B x)} {A} __.1 a} ((x,b),p) \elim p
       | idp => idp
+
+-- | A path between elements of a fiber relates their second components.
+\func fib-path {A B : \Cat} {f : A -> B} {b : B} {s t : Fib f b} (e : s = t)
+  : pmap (\lam z => f z.1) e *> t.2 = s.2 \elim e
+  | idp => idp_*>
