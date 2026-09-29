@@ -11,7 +11,7 @@
 \import Arith.Rat
 \import Arith.Real
 \import Arith.Real.Field
-\import Arith.Trig.Real (cos \as rcos, sin \as rsin, conj_exp)
+\import Arith.Trig.Real \using (cos \as rcos, sin \as rsin)
 \import Function.Meta
 \import Meta
 \import Paths
@@ -57,15 +57,23 @@
 
 -- | Cosine addition formula: $\cos(x+y) = \cos x \cos y - \sin x \sin y$.
 \lemma cos_+ {x y : Complex} : cos (x + y) = cos x * cos y - sin x * sin y
-  => (\peval cos _) *> later (rewrite (exp_i_+, exp_i_neg_+) $
-       ext (equation.cRing {half-sq-re}, equation.cRing {half-sq-re}))
+  => (\peval cos _) *> pmap2 (\lam (a b : Complex) => (a + b) * ratio 1 2) exp_i_+ exp_i_neg_+
+     *> cos_add-ring Complex.iunit-square half-sq
      *> inv (path \lam j => (\peval cos x) j * (\peval cos y) j - (\peval sin x) j * (\peval sin y) j)
+  \where
+    \private \lemma cos_add-ring {R : CRing} {A A' B B' i h : R} (ii : i * i = negative R.ide) (hh : h * h + h * h = h)
+      : (A * B + A' * B') * h = (A + A') * h * ((B + B') * h) - i * (A' - A) * h * (i * (B' - B) * h)
+      => equation.cRing {ii, hh}
 
 -- | Sine addition formula: $\sin(x+y) = \cos x \sin y + \sin x \cos y$.
 \lemma sin_+ {x y : Complex} : sin (x + y) = cos x * sin y + sin x * cos y
-  => (\peval sin _)
-     *> later (rewrite (exp_i_+, exp_i_neg_+) $ ext (equation.cRing {half-sq-re}, equation.cRing {half-sq-re}))
+  => (\peval sin _) *> pmap2 (\lam (a b : Complex) => i * (a - b) * ratio 1 2) exp_i_neg_+ exp_i_+
+     *> sin_add-ring half-sq
      *> inv (path \lam j => (\peval cos x) j * (\peval sin y) j + (\peval sin x) j * (\peval cos y) j)
+  \where
+    \private \lemma sin_add-ring {R : CRing} {A A' B B' i h : R} (hh : h * h + h * h = h)
+      : i * (A' * B' - A * B) * h = (A + A') * h * (i * (B' - B) * h) + i * (A' - A) * h * ((B + B') * h)
+      => equation.cRing {hh}
 
 -- | $\cos(-z) = \cos z$ — cosine is even.
 \lemma cos_negative {z : Complex} : cos (negative z) = cos z
@@ -95,35 +103,21 @@
 \lemma sin_minus {x y : Complex} : sin (x - y) = sin x * cos y - cos x * sin y
   => sin_+ {x} {negative y} *> rewrite (cos_negative, sin_negative) (ext (equation.cRing, equation.cRing))
 
--- | $(x+y)/2 + (x-y)/2 = x$. Helper for the sum-to-product identities.
-\private \lemma half-decomp-plus {x y : Complex} : (x + y) * ratio 1 2 + (x - y) * ratio 1 2 = x
-  => ext (equation.cRing {half2-re}, equation.cRing {half2-re})
-
--- | $(x+y)/2 - (x-y)/2 = y$. Helper for the sum-to-product identities.
-\private \lemma half-decomp-minus {x y : Complex} : (x + y) * ratio 1 2 - (x - y) * ratio 1 2 = y
-  => ext (equation.cRing {half2-re}, equation.cRing {half2-re})
-
 {- | Sum-to-product for cosines:
      $\cos x - \cos y = -2 \sin\tfrac{x+y}2 \sin\tfrac{x-y}2$. -}
 \lemma cos-sum-to-product {x y : Complex}
   : cos x - cos y = negative (2 * sin ((x + y) * ratio 1 2) * sin ((x - y) * ratio 1 2))
-  => \have
-       | cosX => pmap cos (inv half-decomp-plus) *> cos_+ {(x + y) * ratio 1 2} {(x - y) * ratio 1 2}
-       | cosY => pmap cos (inv (half-decomp-minus {x} {y})) *> cos_minus
-     \in rewrite (cosX, cosY) (ext (equation.cRing, equation.cRing))
+  => pmap2 (-) (pmap cos (inv (half-plus-ring half2)) *> cos_+)
+               (pmap cos (inv (half-minus-ring half2)) *> cos_minus)
+     *> cos-diff-ring
 
 {- | Sum-to-product for sines:
      $\sin x - \sin y = 2 \cos\tfrac{x+y}2 \sin\tfrac{x-y}2$. -}
 \lemma sin-sum-to-product {x y : Complex}
   : sin x - sin y = 2 * cos ((x + y) * ratio 1 2) * sin ((x - y) * ratio 1 2)
-  => \let
-       | sinX => pmap sin (inv half-decomp-plus) *> sin_+ {(x + y) * ratio 1 2} {(x - y) * ratio 1 2}
-       | sinY => pmap sin (inv (half-decomp-minus {x} {y})) *> sin_minus
-     \in rewrite (sinX, sinY) (ext (equation.cRing, equation.cRing))
-
--- | $E(\mathrm{fromReal}\,x) = \mathrm{fromReal}(\cos x) + i\,\mathrm{fromReal}(\sin x)$ — real Euler.
-\private \lemma exp_i_fromReal {x : Real} : exp (i * x) = rcos x ComplexField.+ i * rsin x
-  => reuler
+  => pmap2 (-) (pmap sin (inv (half-plus-ring half2)) *> sin_+)
+               (pmap sin (inv (half-minus-ring half2)) *> sin_minus)
+     *> sin-diff-ring
 
 -- | $E(-\mathrm{fromReal}\,x) = \mathrm{fromReal}(\cos x) - i\,\mathrm{fromReal}(\sin x)$.
 \private \lemma exp_i_negative_fromReal {x : Real} : exp (i * ComplexField.negative x) = Complex.fromReal (rcos x) - i * rsin x
@@ -136,9 +130,9 @@
 {- | The complex cosine agrees with the real cosine on $\mathbb{R}$:
      $\cos(\mathrm{fromReal}\,x) = \mathrm{fromReal}(\cos x)$. -}
 \lemma cos-fromReal {x : Real} : cos x = {Complex} rcos x
-  => (\peval cos _) *> rewrite (exp_i_fromReal, exp_i_negative_fromReal) (ext (equation.cRing {half2-re}, equation.cRing))
+  => (\peval cos _) *> rewrite (reuler, exp_i_negative_fromReal) (ext (equation.cRing {half2-re}, equation.cRing))
 
 {- | The complex sine agrees with the real sine on $\mathbb{R}$:
      $\sin(\mathrm{fromReal}\,x) = \mathrm{fromReal}(\sin x)$. -}
 \lemma sin-fromReal {x : Real} : sin x = {Complex} rsin x
-  => (\peval sin _) *> rewrite (exp_i_fromReal, exp_i_negative_fromReal) (ext (equation.cRing {half2-re}, equation.cRing))
+  => (\peval sin _) *> rewrite (reuler, exp_i_negative_fromReal) (ext (equation.cRing {half2-re}, equation.cRing))
