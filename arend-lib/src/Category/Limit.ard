@@ -833,7 +833,7 @@
       (transport IsEquiv (ext \lam h => exts \lam j => inv G.Func-o)
                  (IsEquiv.trans G.isFullyFaithful (cl (G z))))
 
-\func IsFiniteCat (J : Precat) : \Prop
+\type IsFiniteCat (J : Precat) : \Prop
   => \Sigma (∃ (n : Nat) (f : Fin n -> J) (IsSurj f))
             (\Pi (x y : J) -> ∃ (n : Nat) (f : Fin n -> Hom x y) (IsSurj f))
 
@@ -852,9 +852,67 @@
 
 \func PreservesTerminal {C D : PrecatWithTerminal} (G : Functor C D) : \Prop
   => IsTerminal {D} (G C.terminal.apex)
+  \where {
+    \lemma F-terminal-unique {C D : CartesianPrecat} {F : Functor C D} (pt : PreservesTerminal F) {z : D}
+                             {u v : Hom z (F C.terminal.apex)} : u = v
+      => isContr=>isProp pt u v
+  }
 
 \func PreservesBprod {C D : PrecatWithBprod} (G : Functor C D) : \Prop
   => \Pi {x y : C} -> Iso {D} {G (C.Bprod x y)} {D.Bprod (G x) (G y)} (D.pair (G.Func C.proj1) (G.Func C.proj2))
+  \where {
+    \open PrecatWithBprod
+
+    {- | The image of a binary product under a {PreservesBprod} functor is again a binary product, with
+         the images of the projections as its projections.  {F-pair}, {F-beta1}, {F-beta2} and
+         {F-pair-unique} are its tuple map and its beta and eta rules. -}
+    \func F-pair {C D : CartesianPrecat} {F : Functor C D} (pb : PreservesBprod F) (x y : C) {z : D}
+                (a : Hom z (F x)) (b : Hom z (F y)) : Hom z (F (C.Bprod x y))
+      => Iso.hinv {pb {x} {y}} ∘ pair a b
+
+    \lemma F-proj1 {C D : CartesianPrecat} {F : Functor C D} (pb : PreservesBprod F) (x y : C)
+      : F.Func C.proj1 ∘ Iso.hinv {pb {x} {y}} = proj1
+      => inv (Iso.adjointMap' {pb {x} {y}} beta1)
+
+    \lemma F-proj2 {C D : CartesianPrecat} {F : Functor C D} (pb : PreservesBprod F) (x y : C)
+      : F.Func C.proj2 ∘ Iso.hinv {pb {x} {y}} = proj2
+      => inv (Iso.adjointMap' {pb {x} {y}} beta2)
+
+    \lemma F-beta1 {C D : CartesianPrecat} {F : Functor C D} (pb : PreservesBprod F) (x y : C) {z : D}
+                   {a : Hom z (F x)} {b : Hom z (F y)} : F.Func C.proj1 ∘ F-pair pb x y a b = a
+      => inv o-assoc *> pmap (∘ pair a b) (F-proj1 pb x y) *> beta1
+
+    \lemma F-beta2 {C D : CartesianPrecat} {F : Functor C D} (pb : PreservesBprod F) (x y : C) {z : D}
+                   {a : Hom z (F x)} {b : Hom z (F y)} : F.Func C.proj2 ∘ F-pair pb x y a b = b
+      => inv o-assoc *> pmap (∘ pair a b) (F-proj2 pb x y) *> beta2
+
+    \lemma F-pair-unique {C D : CartesianPrecat} {F : Functor C D} (pb : PreservesBprod F) (x y : C) {z : D}
+                         {u u' : Hom z (F (C.Bprod x y))}
+                         (p1 : F.Func C.proj1 ∘ u = F.Func C.proj1 ∘ u') (p2 : F.Func C.proj2 ∘ u = F.Func C.proj2 ∘ u')
+      : u = u'
+      => Mono.isMono {pb {x} {y}} $ pair-unique
+          (inv o-assoc *> pmap (∘ u) beta1 *> p1 *> inv (pmap (∘ u') beta1) *> o-assoc)
+          (inv o-assoc *> pmap (∘ u) beta2 *> p2 *> inv (pmap (∘ u') beta2) *> o-assoc)
+
+    \lemma F-Func_o {C D : Precat} (F : Functor C D) {x y p : C} {z : D} {g : Hom y p} {f : Hom x y} {v : Hom z (F x)}
+      : F.Func (g ∘ f) ∘ v = F.Func g ∘ (F.Func f ∘ v)
+      => pmap (∘ v) F.Func-o *> o-assoc
+
+    {- | Every {pair} in {C} becomes an {F-pair} in {D}.  This single lemma computes the image of
+         {prodMap} and {associator}, which are pairs. -}
+    \lemma F-Func-pair {C D : CartesianPrecat} {F : Functor C D} (pb : PreservesBprod F) (x y : C) {p : C} {z : D}
+                       (a : Hom p x) (b : Hom p y) (v : Hom z (F p))
+      : F.Func (C.pair a b) ∘ v = F-pair pb x y (F.Func a ∘ v) (F.Func b ∘ v)
+      => F-pair-unique pb x y
+          (inv (F-Func_o F) *> pmap (F.Func __ ∘ v) beta1 *> inv (F-beta1 pb x y))
+          (inv (F-Func_o F) *> pmap (F.Func __ ∘ v) beta2 *> inv (F-beta2 pb x y))
+
+    \lemma F-Func-pair' {C D : CartesianPrecat} {F : Functor C D} (pb : PreservesBprod F) (x y : C) {p : C}
+                        (a : Hom p x) (b : Hom p y)
+      : F.Func (C.pair a b) = F-pair pb x y (F.Func a) (F.Func b)
+      => F-pair-unique pb x y (inv F.Func-o *> pmap F.Func beta1 *> inv (F-beta1 pb x y))
+                              (inv F.Func-o *> pmap F.Func beta2 *> inv (F-beta2 pb x y))
+  }
 
 \func PreservesEqualizer {C D : Precat} (H : Functor C D) : \Prop
   => \Pi {x y : C} {f g : Hom x y} (Q : Equalizer f g)
