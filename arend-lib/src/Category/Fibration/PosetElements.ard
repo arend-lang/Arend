@@ -1,0 +1,36 @@
+\import Category
+\import Category.Displayed
+\import Category.Fibration
+\import Category.Functor
+\import Logic
+\import Logic.Unique
+\import Order.Category
+\import Order.PartialOrder
+\import Paths
+\import Paths.Meta
+
+-- | The displayed precategory of elements of a poset-valued functor: the fiber over `d` is the poset `F d`.
+\func PosetElements.{u} {D : Precat} (F : Functor D PosetCat.{u}) : DPrecat {D} (\lam d => F d) \cowith
+  | DHom f x y => F.Func f x <= y
+  | id^ {a} x => transportInv (\lam (h : PosetHom (F a) (F a)) => h x <= x) F.Func-id <=-refl
+  | o^ {_} {_} {_} {g} {f} {x} q p => transportInv (\lam (h : PosetHom _ _) => h x <= _) F.Func-o (func-<= p <=∘ q)
+  | id^-left => prop-pi
+  | id^-right => prop-pi
+  | o^-assoc => prop-pi
+  \where {
+    -- | The projection of the category of elements to the base.
+    \func proj.{v} {D : Precat} (F : Functor D PosetCat.{v}) : Functor (totalPrecat (PosetElements F)) D
+      => totalPrecat.proj {PosetElements F}
+
+    -- | The lift `(f, refl) : (d,x) -> (d', F f x)` of an arrow {f} of the base is cocartesian.
+    \lemma lift-cocartesian.{v} {D : Precat} (F : Functor D PosetCat.{v}) {d d' : D} (f : Hom d d') (x : F d)
+      : IsCocartesianMor (proj F) {d,x} {d', F.Func f x} (f, <=-refl)
+      => \lam {z} h k e =>
+          \let g : Hom {totalPrecat (PosetElements F)} (d', F.Func f x) z
+                 => (k, transport (\lam (m : PosetHom _ _) => m x <= z.2) F.Func-o (transportInv (\lam m => F.Func m x <= z.2) e h.2))
+          \in isProp=>isContr (\lam s t => ext (ext (s.3 *> inv t.3))) (g, ext e, idp)
+
+    -- | The projection of the category of elements is a cocartesian fibration.
+    \lemma proj-cocartesian.{v} {D : Precat} (F : Functor D PosetCat.{v}) : IsCocartesianFunctor (proj F)
+      => \lam {x} phi => inP ((_, F.Func phi x.2), (phi, <=-refl), idp, idp, lift-cocartesian F phi x.2)
+  }

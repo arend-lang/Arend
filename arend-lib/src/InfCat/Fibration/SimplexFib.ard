@@ -1,0 +1,41 @@
+\import Arith.Fin.Order
+\import Category.Displayed
+\import Category.Fibration.PosetElements
+\import Category.Functor
+\import Category.Simplex
+\import InfCat.Fibration.CocartesianFib
+\import InfCat.Fibration.CocartesianMap
+\import InfCat.Nerve.Nerve
+\import InfCat.Nerve.NerveFib
+\import Order.Category
+
+-- | The inclusion of the simplex category into posets, `[n] ↦ Fin (suc n)`.
+\func simplexPoset : Functor SimplexCat PosetCat \cowith
+  | F n => FinOrder (suc n)
+  | Func f => f
+  | Func-id => idp
+  | Func-o => idp
+
+-- | The simplex category as a directed type.
+\func DeltaCat : \Cat
+  => Nerve SimplexCat
+
+-- | The category of elements of {simplexPoset}: pairs of `[n]` and a vertex of `[n]`.
+\func SimplexTotal
+  => totalPrecat (PosetElements simplexPoset)
+
+-- | The projection of {SimplexTotal} to the simplex category.
+\func simplexProj : Functor SimplexTotal SimplexCat
+  => PosetElements.proj simplexPoset
+
+-- | The universal cocartesian fibration over the simplex category; its fiber over `[n]` is `[n]`.
+\func UnivSimplexFib (n :⁺ DeltaCat) : \Cat
+  => Fibers (nerveMap simplexProj) n
+
+-- | The map of nerves underlying {UnivSimplexFib} is a cocartesian fibration.
+\lemma univSimplex-cocartesianMap : IsCocartesianMap (nerveMap simplexProj)
+  => nerveMap-cocartesian simplexProj (PosetElements.proj-cocartesian simplexPoset)
+
+-- | {UnivSimplexFib} is a cocartesian fibration.
+\lemma univSimplexFib-cocartesian : IsCocartesianFib UnivSimplexFib
+  => nerveMap-cocartesianFib simplexProj (PosetElements.proj-cocartesian simplexPoset)
