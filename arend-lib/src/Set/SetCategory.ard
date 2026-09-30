@@ -146,7 +146,74 @@
 
     \lemma inMap-coh {j j' : J} (f : Hom j j') (a : F j) : inMap j a = inMap j' (F.Func f a)
       => ~-cequiv f idp
+
+    \lemma surj (x : SetColimit F) : ∃ (j : J) (a : F j) (inMap j a = x) \elim x
+      | in~ (j,a) => inP (j,a,idp)
+
+    -- | Two elements of a colimit agree as soon as they have a common image; valid over any
+    -- | index category.
+    \lemma inC-eq.{u} {J : Precat} {H : Functor J SetCat.{u}} {j j' k : J} {a : H j} {a' : H j'}
+                      (f : Hom j k) (g : Hom j' k) (e : H.Func f a = H.Func g a')
+      : inC (j,a) = {SetColimit H} inC (j',a')
+      => path (\lam i => ~-equiv (j,a) (k, H.Func f a) (f,idp) i) *> pmap (\lam t => inC (k,t)) e *>
+         inv (path \lam i => ~-equiv (j',a') (k, H.Func g a') (g,idp) i)
+
+    \func map.{u} {J : Precat} {F G : Functor J SetCat.{u}} (a : NatTrans F G) (x : SetColimit F) : SetColimit G \elim x
+      | in~ (j,c) => in~ (j, a j c)
+      | ~-equiv s s' r => path \lam i => ~-equiv (s.1, a s.1 s.2) (s'.1, a s'.1 s'.2)
+          (r.1, inv (path \lam i => (a.natural r.1 @ i) s.2) *> pmap (a s'.1) r.2) i
+
+    -- | `SetColimit F` is the colimit of `F`, for an arbitrary index category.
+    \func colimit.{u} {J : Precat.{u,u}} (F : Functor J SetCat.{u}) : Colimit F \cowith
+      | apex => SetColimit F
+      | coneMap j a => in~ (j,a)
+      | coneCoh {j} {j'} h => ext \lam a => inv (path \lam i => ~-equiv (j',a) (j, F.Func h a) (h,idp) i)
+      | limMap c => \case __ \with {
+        | in~ (j,a) => c.coneMap j a
+        | ~-equiv s s' r => pmap (__ s.2) (inv (c.coneCoh r.1)) *> pmap (c.coneMap s'.1) r.2
+      }
+      | limBeta c j => idp
+      | limUnique p => ext \case \elim __ \with {
+        | in~ (j,a) => path \lam i => (p j @ i) a
+      }
   }
+
+\func colimitFunctor.{u} (J : Precat.{u,u}) : Functor (FunctorPrecat J SetCat.{u}) SetCat.{u} \cowith
+  | F F => SetColimit F
+  | Func a => SetColimit.map a
+  | Func-id => ext \case \elim __ \with {
+    | in~ (j,c) => idp
+  }
+  | Func-o => ext \case \elim __ \with {
+    | in~ (j,c) => idp
+  }
+
+\func prodFunctor.{u} {J : Precat} (F G : Functor J SetCat.{u}) : Functor J SetCat.{u} \cowith
+  | F j => \Sigma (F j) (G j)
+  | Func h s => (F.Func h s.1, G.Func h s.2)
+  | Func-id => ext \lam s => ext (pmap (__ s.1) F.Func-id, pmap (__ s.2) G.Func-id)
+  | Func-o => ext \lam s => ext (pmap (__ s.1) F.Func-o, pmap (__ s.2) G.Func-o)
+
+\func prodColimitMap.{u} {J : Precat.{u,u}} (F G : Functor J SetCat.{u}) (x : SetColimit (prodFunctor F G))
+  : \Sigma (SetColimit F) (SetColimit G) \elim x
+  | in~ (j,s) => (in~ (j,s.1), in~ (j,s.2))
+  | ~-equiv t t' r => path \lam i => (~-equiv (t.1,t.2.1) (t'.1,t'.2.1) (r.1, pmap (__.1) r.2) i,
+                                      ~-equiv (t.1,t.2.2) (t'.1,t'.2.2) (r.1, pmap (__.2) r.2) i)
+
+-- | The pointwise equalizer of two natural transformations of set-valued functors.
+\func eqFunctor.{u} {J : Precat} {F G : Functor J SetCat.{u}} (f g : NatTrans F G) : Functor J SetCat.{u} \cowith
+  | F j => \Sigma (a : F j) (f j a = g j a)
+  | Func h s => (F.Func h s.1,
+                 path (\lam i => (f.natural h @ i) s.1) *> pmap (G.Func h) s.2 *>
+                 inv (path \lam i => (g.natural h @ i) s.1))
+  | Func-id => ext \lam s => ext (pmap (__ s.1) F.Func-id)
+  | Func-o => ext \lam s => ext (pmap (__ s.1) F.Func-o)
+
+\func eqColimitMap.{u} {J : Precat.{u,u}} {F G : Functor J SetCat.{u}} (f g : NatTrans F G)
+                       (x : SetColimit (eqFunctor f g))
+  : \Sigma (y : SetColimit F) (SetColimit.map f y = SetColimit.map g y) \elim x
+  | in~ (j,s) => (in~ (j,s.1), pmap (\lam t => SetColimit.inC (j,t)) s.2)
+  | ~-equiv t t' r => ext (path \lam i => ~-equiv (t.1,t.2.1) (t'.1,t'.2.1) (r.1, pmap (__.1) r.2) i)
 
 \func NatFunctor {C : Precat} (F : Nat -> C) (f : \Pi {n : Nat} -> Hom (F n) (F (suc n))) : Functor NatSemiring C \cowith
   | F => F
@@ -172,4 +239,27 @@
       | suc k, (0, idp) => pmap natHom (sigma-isProp _ _) *> inv id-left
       | 0, (suc m, ())
       | suc k, (suc m, q) => pmap (f ∘) (pmap natHom (sigma-isProp _ _) *> natHom-comp) *> inv o-assoc
+  }
+
+-- | The canonical equalizer of two maps of sets.
+\func sigmaEqualizer.{u} {A B : \Set u} (f g : A -> B)
+  : Equalizer {SetCat.{u}} f g (\Sigma (a : A) (f a = g a)) __.1 (ext \lam s => s.2) \cowith
+  | isEqualizer Z => inP \new QEquiv {
+    | ret p => \lam z => (p.1 z, path \lam i => p.2 i z)
+    | ret_f h => ext \lam z => ext idp
+    | f_sec p => ext idp
+  }
+
+-- | Equalizers in a functor category are pointwise: {eqFunctor} is the equalizer of `f` and `g`.
+\func functorEqualizer.{u} {J : Precat} {X Y : Functor J SetCat.{u}} (f g : NatTrans X Y)
+  : Equalizer {FunctorPrecat J SetCat.{u}} f g (eqFunctor f g)
+              (\new NatTrans { | trans j => __.1 | natural h => idp })
+              (exts \lam j => ext \lam s => s.2) \cowith
+  | isEqualizer Z => inP \new QEquiv {
+    | ret p => \new NatTrans {
+      | trans j z => (p.1 j z, path \lam i => trans {p.2 i} j z)
+      | natural h => ext \lam z => ext (path \lam i => p.1.natural h i z)
+    }
+    | ret_f h => exts \lam j => ext \lam z => ext idp
+    | f_sec p => ext (exts \lam j => ext \lam z => idp)
   }

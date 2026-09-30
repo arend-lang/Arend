@@ -4,8 +4,8 @@
 \import Category.Subcat
 \import Equiv
 \import Function.Meta
+\import Logic
 \import Meta
-\import Order.PartialOrder
 \import Paths
 \import Paths.Meta
 \import Set.SetCategory
@@ -136,6 +136,48 @@
         | Func-o => pmap2 D.prodMap S.F.Func-o T.F.Func-o *> inv D.prodMap-comp
       }
   }
+
+-- | Evaluation at an object of {C}.
+\func evalVPresheaf {D : Cat} {C : Precat} (c : C) : Functor (VPresheafCat D C) D \cowith
+  | F P => P c
+  | Func a => a c
+  | Func-id => idp
+  | Func-o => idp
+
+{- | If you have a cone over a diagram of presheaves, and that cone evaluates to a limit cone at every single object $c$,
+     then the original cone is a limit cone in the presheaf category-}
+\lemma vpresheafCone-fromPointwise {D : Cat} {C : Precat} {J : Precat} {G : Functor J (VPresheafCat D C)}
+                                  (L : Cone G) (p : \Pi (c : C) -> IsLimitCone (Cone.map (evalVPresheaf c) L))
+  : IsLimitCone L
+  => \lam P => inP \new QEquiv {
+       | ret K => \new NatTrans {
+         | trans c => (pointLimit c).limMap (Cone.map (evalVPresheaf c) K)
+         | natural {X} {Y} u => (pointLimit Y).limUnique \lam j =>
+             inv o-assoc *> pmap (∘ _) ((pointLimit Y).limBeta (Cone.map (evalVPresheaf Y) K) j) *>
+             (K.coneMap j).natural u *>
+             pmap (_ ∘) (inv ((pointLimit X).limBeta (Cone.map (evalVPresheaf X) K) j)) *>
+             inv o-assoc *> pmap (∘ _) (inv ((L.coneMap j).natural u)) *> o-assoc
+       }
+       | ret_f u => exts \lam c => (pointLimit c).limUniqueBeta \lam j => idp
+       | f_sec K => exts \lam j => exts \lam c => (pointLimit c).limBeta (Cone.map (evalVPresheaf c) K) j
+     }
+  \where {
+    \private \func pointLimit (c : C) : Limit (Comp (evalVPresheaf c) G) (L.apex c)
+      => Limit.fromIsLimit (Cone.map (evalVPresheaf c) L) (p c)
+  }
+
+{- | The evaluation functor $ev_c : [C^{op}, D] \to D$, which takes a presheaf $F$ and evaluates it at an object $c$ (giving $F(c)$), preserves limits. -}
+\lemma evalVPresheaf-preservesLimit.{u} {D : CompleteCat.{u}} {C : Precat} {J : Precat.{u,u}}
+                                        (G : Functor J (VPresheafCat D C)) (c : C)
+  : PreservesLimit (evalVPresheaf c) G
+  => preservesLimit-fromLimit (evalVPresheaf c) (VPresheafComplete.limit G)
+       (D.limit (Comp (evalVPresheaf c) G)).isLimit
+
+{- | If $L$ is a limit of a diagram of presheaves $G$, then for any object $c$, $L(c)$ is a limit of the evaluated diagram $G(c)$ -}
+\func vpresheafLimit-pointwise.{u} {D : CompleteCat.{u}} {C : Precat} {J : Precat.{u,u}}
+                                  {G : Functor J (VPresheafCat D C)} (L : Limit G) (c : C)
+  : Limit (Comp (evalVPresheaf c) G) (L.apex c)
+  => Limit.fromIsLimit (Cone.map (evalVPresheaf c) L) (evalVPresheaf-preservesLimit G c L L.isLimit)
 
 {-
 -- the proof of this should be completely analogues to the CompleteCat (VPresheafCat) instance.

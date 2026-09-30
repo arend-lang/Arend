@@ -1,4 +1,5 @@
 \import Algebra.Meta
+\import Algebra.Monoid.SubMonoid
 \import Algebra.Pointed
 \import Arith.Nat
 \import Data.Array
@@ -24,7 +25,6 @@
 \import Set.Fin
 \import Set.Fin.BoundedPigeonhole
 \import Set.Fin.Instances
-\import Set.Fin.Pigeonhole
 
 \class Semigroup \extends BaseSet {
   | \infixl 7 * : E -> E -> E
@@ -510,6 +510,11 @@
     => TruncP.map (FinSet.finiteAC p) LDiv_BigProd-coord
 
   \func IsRegularElem (a : E) => \Pi {x y : E} -> a * x = a * y -> x = y
+
+  \func regulars : SubMonoid \this \cowith
+    | contains r => IsRegularElem r
+    | contains_ide p => inv ide-left *> p *> ide-left
+    | contains_* p q s => q (p (inv *-assoc *> s *> *-assoc))
 
   \lemma LDiv_IsRegular {a b : E} (d : LDiv a b) (c : IsRegularElem b) : IsRegularElem a
     => \lam p => c $ pmap (* _) (inv d.inv-right *> *-comm) *> *-assoc *> pmap (d.inv *) p *> inv *-assoc *> pmap (* _) (*-comm *> d.inv-right)

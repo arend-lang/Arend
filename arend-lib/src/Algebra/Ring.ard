@@ -174,6 +174,11 @@
 \class PseudoCRing \extends PseudoRing, PseudoCSemiring
 
 \class CRing \extends Ring, PseudoCRing, CSemiring {
+  -- | Over a ring, being regular is the same as being a non-zero-divisor.
+  \lemma regulars-zro-char {r : E} : IsRegularElem r <-> (\Pi {x : E} -> r * x = 0 -> x = 0)
+    => (\lam p q => p (q *> inv zro_*-right),
+        \lam h q => fromZero (h (ldistr_- *> toZero q)))
+
   \func IsBezout => \Pi (a b : E) -> ∃ (s t : E) (LDiv (s * a + t * b) a) (LDiv (s * a + t * b) b)
 
   \func IsStrictBezout => \Pi (a b : E) -> ∃ (s t u v : E) (a * u = b * v) (s * u + t * v = 1)
@@ -218,7 +223,7 @@
   \lemma finite-zeroDimensional (c : FinSet E) : IsZeroDimensional
     => \lam a => TruncP.map (c.pigeonhole< (pow a)) \lam s => (pow a (s.2 -' suc s.1), s.1, s.4 *> pmap (pow a) (inv $ <=_exists $ suc_<_<= s.3) *> pow_+ {_} {_} {suc s.1})
 } \where {
-    \open Monoid(LDiv,Inv)
+    \open Monoid(LDiv)
 
     -- | A commutative ring with a tight apartness relation.
     \class With# \extends CRing, Ring.With#
