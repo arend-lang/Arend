@@ -7,6 +7,7 @@
 \import Algebra.Pointed
 \import Algebra.Ring
 \import Algebra.Ring.Local
+\import Algebra.Ring.RingHom
 \import Algebra.Semiring
 \import Arith.Real
 \import Function.Meta
@@ -102,6 +103,13 @@
                     })
                     \in Inv.lmake (\new Complex (x.re * d.inv) (negative (x.im * d.inv))) $ ext (equation.cRing {d.inv-left}, equation.cRing))
   }
+
+-- | The embedding $\mathbb{R} \to \mathbb{C}$ as a ring homomorphism.
+\func fromRealRingHom : RingHom RealField ComplexField \cowith
+  | func => Complex.fromReal
+  | func-+ => Complex.fromReal_+
+  | func-ide => idp
+  | func-* => Complex.fromReal_*
 
 {- | Prove an identity between two-component records componentwise, closing each
      component with the commutative-ring solver. The workhorse for `Complex`

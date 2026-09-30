@@ -342,6 +342,17 @@
       | byLeft q => rewrite (LinearOrder.join/=left $ <_/= q) y<z
       | byRight q => q
     }
+
+  \lemma Big_meet_< {l : Array E} {x c : E} (h : Big (∧) x l < c)
+    : (x < c) || ∃ (i : Fin l.len) (l i < c) \elim l
+    | nil => byLeft h
+    | :: a l => \case <-comparison a h \with {
+      | byLeft r => \case Big_meet_< (transport (< c) (LinearOrder.meet/=left (<_/= r)) h) \with {
+        | byLeft x<c => byLeft x<c
+        | byRight (inP (i, p)) => byRight (inP (suc i, p))
+      }
+      | byRight a<c => byRight (inP (0,a<c))
+    }
 }
 
 \class DenseLinearOrder \extends LinearOrder

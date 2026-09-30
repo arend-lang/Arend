@@ -137,6 +137,10 @@
     | 0 => absurd (n/=0 idp)
     | suc n => zro_*-right
 
+  -- | $\sum_{j<n} x^j$, the `n`-th partial sum of the geometric series.
+  \func powSum (x : E) (n : Nat) : E
+    => BigSum \new Array E n \lam j => pow x j
+
   \protected \func op : Semiring \cowith
     | PseudoSemiring => PseudoSemiring.op
     | Monoid => Monoid.op

@@ -272,6 +272,11 @@
 \lemma midSum>=0 {A : PosetAddMonoid} {b : Series A} {n m : Nat} (s : \Pi (j : Nat) -> 0 <= b j) : 0 <= midSum b n m
   => transport (<= _) midSum_0 (midSum_<= \lam _ _ => s _)
 
+-- | A series vanishing on `[n,m)` has zero `midSum` there.
+\lemma midSum_zro {A : PosetAddMonoid} {b : Series A} {n m : Nat} (s : \Pi {j : Nat} -> n <= j -> j < m -> b j = 0) : midSum b n m = 0
+  => <=-antisymmetric (transport (_ <=) midSum_0 $ midSum_<= \lam p q => =_<= (s p q))
+                      (transport (`<= _) midSum_0 $ midSum_<= \lam p q => =_<= (inv (s p q)))
+
 \lemma series-conv {A : ExPseudoNormedAbGroup} {S : Series A}
   : IsConvSeries S <-> ∀ {eps : Rat} (0 < eps) ∃ (N : Nat) ∀ {n} (N <= n -> (norm (midSum S N n)).U eps)
   => (\lam p eps>0 => \case convergent-metric-char.1 p eps>0 \with {

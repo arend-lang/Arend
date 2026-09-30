@@ -112,3 +112,9 @@
      then $x = y$. -}
 \lemma sqrt-cancel {x y : Real} (x>=0 : 0 <= x) (y>=0 : 0 <= y) (p : x * x = y * y) : x = y
   => inv (sqrt_pow x>=0) *> pmap sqrt p *> sqrt_pow y>=0
+
+-- | `pow · n` reflects the strict order on nonnegatives.
+\lemma pow_<-cancel {n : Nat} (n/=0 : n /= 0) {x y : Real}
+                    (x>=0 : 0 <= x) (y>=0 : 0 <= y) (p : pow x n < pow y n) : x < y
+  => transport2 (<) (root_pow n/=0 x>=0) (root_pow n/=0 y>=0)
+       (root-monotone n/=0 (RealField.pow>=0 x>=0) p)

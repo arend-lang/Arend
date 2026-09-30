@@ -316,6 +316,11 @@
   \lemma <=_Inv-cancel-left {x y z : E} (xi : Inv x) (x>=0 : 0 <= x) (p : x * y <= x * z) : y <= z
     => transport2 (<=) (inv *-assoc *> pmap (* y) xi.inv-left *> ide-left) (inv *-assoc *> pmap (* z) xi.inv-left *> ide-left) $ <=_*_positive-right (>=0_Inv xi x>=0) p
 
+  -- | Cancel a positive right factor from a `<=`. Unlike `<=_Inv-cancel-right` this needs only
+  -- positivity of the factor, not an inverse for it.
+  \lemma <=_*-cancel-right {x y z : E} (x>0 : 0 < x) (p : y * x <= z * x) : y <= z
+    => \lam z<y => <-irreflexive (<_*_positive-left z<y x>0 <∘l p)
+
   \lemma <=_Inv-cancel-right {x y z : E} (xi : Inv x) (p : y * x <= z * x) (x>=0 : 0 <= x) : y <= z
     => transport2 (<=) (*-assoc *> pmap (y *) xi.inv-right *> ide-right) (*-assoc *> pmap (z *) xi.inv-right *> ide-right) $ <=_*_positive-left p (>=0_Inv xi x>=0)
 

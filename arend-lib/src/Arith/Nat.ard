@@ -521,6 +521,9 @@
 \lemma mod_+-cong-right {n c a b : Nat} (p : a mod suc n = b mod suc n) : (a + c) mod suc n = (b + c) mod suc n
   => inv mod_+-left *> pmap ((__ + c) mod suc n) p *> mod_+-left
 
+\lemma mod_suc {n : Nat} (i : Nat) (p : i < suc n) : suc (i mod suc n) = suc i mod suc (suc n)
+  => fin_nat-inj $ pmap suc (mod_< p) *> inv (mod_< (suc<suc p))
+
 -- Properties of div
 
 \lemma div_suc-lem {n m : Nat} (m/=0 : m /= 0) : (n + m) div m = suc (n div m)

@@ -1,0 +1,46 @@
+\import Data.Or
+\import Logic
+\import Logic.Classical
+
+{- | Dependent choice over `Nat`, strictly weaker than full choice -}
+\axiom adchoice {A : Nat -> \Set} (R : \Pi {i : Nat} -> A i -> A (suc i) -> \Prop) (a0 : A 0)
+                (total : \Pi (i : Nat) (a : A i) -> TruncP (\Sigma (b : A (suc i)) (R a b))) :
+  TruncP (\Sigma (s : \Pi (i : Nat) -> A i) (\Pi (i : Nat) -> R (s i) (s (suc i))))
+  \where {
+    \lemma fromChoice {A : Nat -> \Set} (R : \Pi {i : Nat} -> A i -> A (suc i) -> \Prop) (a0 : A 0)
+                      (total : \Pi (i : Nat) (a : A i) -> TruncP (\Sigma (b : A (suc i)) (R a b))) :
+      TruncP (\Sigma (s : \Pi (i : Nat) -> A i) (\Pi (i : Nat) -> R (s i) (s (suc i))))
+      => \case achoice {\Sigma (i : Nat) (A i)} (\lam p => \Sigma (b : A (suc p.1)) (R p.2 b))
+                 (\lam p => total p.1 p.2) \with {
+        | inP g => inP (iter A R g a0, \lam i => (g (i, iter A R g a0 i)).2)
+      }
+      \where
+        \private \func iter (A : Nat -> \Set) (R : \Pi {i : Nat} -> A i -> A (suc i) -> \Prop)
+                            (g : \Pi (p : \Sigma (i : Nat) (A i)) -> \Sigma (b : A (suc p.1)) (R p.2 b))
+                            (a0 : A 0) (i : Nat) : A i \elim i
+          | 0 => a0
+          | suc i => (g (i, iter A R g a0 i)).1
+  }
+
+{- | Countable choice $AC_\mathbb{N}$, strictly weaker than adchoice. -}
+\axiom acchoice {A : Nat -> \Set} (h : \Pi (i : Nat) -> TruncP (A i)) : TruncP (\Pi (i : Nat) -> A i)
+  \where {
+    \lemma fromDepChoice {A : Nat -> \Set} (h : \Pi (i : Nat) -> TruncP (A i)) : TruncP (\Pi (i : Nat) -> A i)
+      => \case adchoice {\lam n => Or (A n) (sequence n)} (\lam {_} _ _ => \Sigma) (inr ()) (\lam i _ => \case h (suc i) \with {
+        | inP c => inP (inl c, ())
+      }) \with {
+        | inP (r,_) => \case h 0 \with {
+          | inP a0 => inP \case \elim __ \with {
+            | 0 => a0
+            | suc i => \case r (suc i) \with {
+              | inl a => a
+              | inr ()
+            }
+          }
+        }
+      }
+
+    \private \func sequence (n : Nat) : \Prop
+      | 0 => \Sigma
+      | suc n => Empty
+  }
