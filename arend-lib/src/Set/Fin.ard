@@ -439,9 +439,6 @@
   | 0 => f0
   | suc x => plus1 x *> pmap suc (sucPreserving-isId f plus1 f0 x)
 
-\lemma suc_fromNat {n : Nat} (i : Nat) (p : i < suc n) : suc (i Nat.mod suc n) = {Fin (n + 2)} (suc i) Nat.mod suc (suc n)
-  => nat_fin_= $ rewrite (mod_< {i} {suc n} linarith, mod_< {suc i} {suc (suc n)} linarith) idp
-
 \lemma finiteDependentChoice {A : \Type} (R : A -> A -> \Type) (a0 : A) (step : \Pi (a : A) -> ∃ (b : A) (R a b)) (n : Nat)
   : ∃ (f : Fin (suc n) -> A) (f 0 = a0) (\Pi (i : Fin n) -> R (f i) (f (suc i)))
   \elim n

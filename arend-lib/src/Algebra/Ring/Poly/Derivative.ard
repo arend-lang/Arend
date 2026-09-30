@@ -1,3 +1,4 @@
+\import Algebra.Domain
 \import Algebra.Group
 \import Algebra.Meta
 \import Algebra.Monoid
@@ -8,7 +9,9 @@
 \import Algebra.Semiring
 \import Arith.Nat
 \import Function.Meta
+\import Logic
 \import Order.PartialOrder
+\import Order.StrictOrder
 \import Paths
 \import Paths.Meta
 \open PolyRing (*c, zro_*c, *c-ldistr)
@@ -26,23 +29,16 @@
 \private \lemma padd0_+ {R : Ring} {p q : Poly R} : padd (p + q) 0 = padd p 0 + padd q 0
   => pmap (padd (p + q)) (inv R.zro-left)
 
-{- | The additive rearrangement behind `polyDeriv_+`. Stated over an abstract group with all four
-     operands variables: at `Poly R` the summands `padd _ 0` collapse into a single `padd`, so the
-     solver sees one atom where it needs two. -}
-\private \lemma rearrange {A : AbGroup} (p q x y : A) : p + q + (x + y) = p + x + (q + y)
-  => equation
-
 -- | The derivative is additive.
 \lemma polyDeriv_+ {R : Ring} {p q : Poly R} : polyDeriv (p + q) = polyDeriv p + polyDeriv q
   \elim p, q
   | pzero, q => idp
   | padd p e, pzero => inv zro-right
-  | padd p e, padd q e' =>
-    rewrite (polyDeriv_+ {R} {p} {q}) $
-    pmap ((p + q) +) (padd0_+ {R} {polyDeriv p} {polyDeriv q})
-    *> rearrange p q (padd (polyDeriv p) 0) (padd (polyDeriv q) 0)
+  | padd p e, padd q e' => rewrite polyDeriv_+ $ pmap (_ +) padd0_+ *>
+    \have rearrange {p q x y : Poly R} : p + q + (x + y) = p + x + (q + y) => equation.abGroup
+    \in rearrange
 
--- | `polyDeriv` in coordinates: $(p')_n = (n+1)\,p_{n+1}$.
+-- | {polyDeriv} in coordinates: $(p')_n = (n+1)\,p_{n+1}$.
 \lemma polyCoef_polyDeriv {R : Ring} {p : Poly R} {n : Nat}
   : polyCoef (polyDeriv p) n = natCoef (suc n) * polyCoef p (suc n)
   \elim p, n
@@ -53,10 +49,6 @@
     rewrite (polyCoef_+ {R} {p} {padd (polyDeriv p) 0} {suc m},
              polyCoef_polyDeriv {R} {p} {m}, R.natCoefSuc (suc m)) equation
 
--- | $(Xa)q = X(aq)$.
-\private \lemma padd0_* {R : Ring} {a q : Poly R} : padd a 0 * q = padd (a * q) 0
-  => pmap (padd (a * q) 0 +) zro_*c *> zro-right
-
 -- | The derivative is `R`-linear.
 \lemma polyDeriv_*c {R : Ring} {r : R} {q : Poly R} : polyDeriv (r *c q) = r *c polyDeriv q
   \elim q
@@ -65,10 +57,6 @@
     rewrite (polyDeriv_*c {R} {r} {q}) $
     pmap ((r *c q) +) (pmap (padd (r *c polyDeriv q)) (inv R.zro_*-right))
     *> inv *c-ldistr
-
--- | The four-term rearrangement behind Leibniz, with the `padd _ 0` summands kept opaque.
-\private \lemma rearrange4 {A : AbGroup} (a x y c : A) : a + (x + y) + c = a + x + (y + c)
-  => equation
 
 -- | **The Leibniz rule.** The last step expands the right-hand side; the rest reassociates.
 \lemma polyDeriv_* {R : Ring} {p q : Poly R}
@@ -80,15 +68,18 @@
     *> pmap2 (+) (pmap (\lam t => p * q + padd t 0) (polyDeriv_* {R} {p} {q})
                   *> pmap (p * q +) (padd0_+ {R} {polyDeriv p * q} {p * polyDeriv q}))
                  (polyDeriv_*c {R} {e} {q})
-    *> rearrange4 (p * q) (padd (polyDeriv p * q) 0) (padd (p * polyDeriv q) 0) (e *c polyDeriv q)
+    *> (\have rearrange {a x y c : Poly R} : a + (x + y) + c = a + x + (y + c) => equation.abGroup \in rearrange)
     *> inv (pmap (+ padd p e * polyDeriv q)
               (rdistr {_} {p} {padd (polyDeriv p) 0} {q} *> pmap (p * q +) padd0_*))
+  \where {
+    -- | $(Xa)q = X(aq)$.
+    \private \lemma padd0_* {R : Ring} {a q : Poly R} : padd a 0 * q = padd (a * q) 0
+      => pmap (padd (a * q) 0 +) zro_*c *> zro-right
+  }
 
 -- | Differentiating drops the degree bound by one.
-\lemma degree<_polyDeriv {R : Ring} {p : Poly R} {n : Nat} (d : degree< p (suc n))
-  : degree< (polyDeriv p) n
-  => \lam {k} n<=k =>
-       polyCoef_polyDeriv *> pmap (natCoef (suc k) *) (d (suc<=suc n<=k)) *> R.zro_*-right
+\lemma degree<_polyDeriv {R : Ring} {p : Poly R} {n : Nat} (d : degree< p (suc n)) : degree< (polyDeriv p) n
+  => \lam {k} n<=k => polyCoef_polyDeriv *> pmap (natCoef (suc k) *) (d (suc<=suc n<=k)) *> R.zro_*-right
 
 -- | The formal derivative commutes with coefficientwise application of a ring homomorphism.
 \lemma polyDeriv_polyMap {f : RingHom} {p : Poly f.Dom}
@@ -118,3 +109,20 @@
   => rewrite (polyEval_deflate p z y, polyEval_deflate (deflate p z) z y,
               polyEval_deflate-diag p z) equation.cRing
 
+-- | A nonconstant polynomial in characteristic zero has a non-zero derivative.
+\lemma polyDeriv/=0 {K : Domain}
+    (char0 : \Pi (n : Nat) -> 0 < n -> natCoef {K} n /= 0)
+    {p : Poly K} {n : Nat} (lead : polyCoef p (suc n) /= 0)
+  : polyDeriv p /= 0
+  => \lam h => polyCoef_polyDeriv/=0 char0 lead (pmap (\lam t => polyCoef t n) h)
+  \where {
+    {- | **Characteristic zero is what makes the separable reduction terminate.** If $p_{n+1} \neq 0$
+         then $(p')_n \neq 0$, since it is $(n+1)\,p_{n+1}$ and $n+1$ is invertible. In positive
+         characteristic this fails — $p'$ can vanish on a nonconstant $p$ — which is why the argument is
+         stated for subfields of $\mathbb{C}$. -}
+    \private \lemma polyCoef_polyDeriv/=0 {K : Domain}
+        (char0 : \Pi (n : Nat) -> 0 < n -> K.natCoef n /= 0)
+        {p : Poly K} {n : Nat} (lead : polyCoef p (suc n) /= 0)
+      : polyCoef (polyDeriv p) n /= 0
+      => rewrite polyCoef_polyDeriv (Domain.nonZero_* (char0 (suc n) NatOrder.zero<suc) lead)
+  }

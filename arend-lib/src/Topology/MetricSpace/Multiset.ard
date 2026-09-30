@@ -7,8 +7,10 @@
 \import Arith.Real
 \import Arith.Real.Field
 \import Arith.Real.UpperReal
+\import Combinatorics.Factorial
 \import Data.Array
 \import Data.Fin (fsuc)
+\import Equiv
 \import Function (IsInj)
 \import Logic
 \import Logic.Meta
@@ -20,12 +22,12 @@
 \import Paths
 \import Paths.Meta
 \import Set.Fin
+\import Set.Fin.Pigeonhole
 \import Topology.MetricSpace
 \import Topology.MetricSpace.Complete
 \open JoinSemilattice (Big_<=_join0, Big_<=_join1, Big_join-univ, join-comm, join-idemp)
 \open MeetSemilattice (Big_<=_meet1, Big_meet-univ)
 \open BiorderedLattice (Big_<_join-univ)
-\open LinearLattice (Big_meet-lt)
 
 {- | For a pseudometric space `X`, `Array X n` carries
      $d(r,s) = \min_{\sigma \in S_n} \max_i d(r_i, s_{\sigma i})$.
@@ -62,8 +64,8 @@
        (\lam i => ldist-triang <=∘ <=_+ (maxDist-cond i) (maxDist-cond (f i)))
 
 -- | The costs of all the permutations.
-\func permCosts {X : PseudoMetricSpace} {n : Nat} (r s : Array X n) : Array Real (perms n).len
-  => \new Array Real (perms n).len (\lam i => maxDist r s (perms n i))
+\func permCosts {X : PseudoMetricSpace} {n : Nat} (r s : Array X n) : Array Real (fac n)
+  => \new Array Real (fac n) \lam i => maxDist r s (SymFin.fin_equiv i)
 
 -- | The one-sided matching cost: the least cost of a permutation, or of the identity pairing.
 \func rawDist {X : PseudoMetricSpace} {n : Nat} (r s : Array X n) : Real
@@ -75,23 +77,22 @@
 -- | `rawDist` is below the cost of any injective pairing.
 \lemma rawDist-cond {X : PseudoMetricSpace} {n : Nat} {r s : Array X n} {f : Fin n -> Fin n}
                     (fi : IsInj f) : rawDist r s <= maxDist r s f
-  => \let (inP (j, p)) => perms-complete fi
-     \in Big_<=_meet1 {_} {permCosts r s} j <=∘ =_<= (pmap (maxDist r s) p)
+  => \have e => IsEquiv.toQEquiv (PigeonholeSet.isEquiv f fi)
+     \in Big_<=_meet1 (SymFin.fin_equiv.ret e) <=∘ =_<= (pmap (maxDist r s __) (SymFin.fin_equiv.f_ret e))
 
 -- | ...and it is the greatest such bound.
 \lemma rawDist-univ {X : PseudoMetricSpace} {n : Nat} {r s : Array X n} {c : Real}
                     (h : \Pi (f : Fin n -> Fin n) -> IsInj f -> c <= maxDist r s f)
   : c <= rawDist r s
-  => Big_meet-univ {_} {permCosts r s} (h _ (\lam p => p)) (\lam i => h _ (perms-inj i))
+  => Big_meet-univ {_} {permCosts r s} (h _ (\lam p => p)) \lam i => h _ (SymFin.fin_equiv i).isInj
 
 {- | **A cheap matching from a small `rawDist`**, the converse of `rawDist-cond`. The slack `c' < c`
      is unavoidable: the optimal permutation does not exist constructively. -}
-\lemma rawDist-lt {X : PseudoMetricSpace} {n : Nat} {r s : Array X n} {c' c : Real}
-                  (h : rawDist r s <= c') (lt : c' < c)
+\lemma rawDist-lt {X : PseudoMetricSpace} {n : Nat} {r s : Array X n} {c : Real} (h : rawDist r s < c)
   : ∃ (f : Fin n -> Fin n) (IsInj f) (maxDist r s f < c)
-  => \case Big_meet-lt {_} {permCosts r s} h lt \with {
+  => \case RealField.Big_meet_< {permCosts r s} h \with {
        | byLeft p => inP (\lam i => i, \lam p => p, p)
-       | byRight (inP (i, p)) => inP (perms n i, perms-inj i, p)
+       | byRight (inP (i, p)) => inP (SymFin.fin_equiv i, (SymFin.fin_equiv i).isInj, p)
      }
 
 -- | One minimum stripped off the triangle inequality for `rawDist`.
@@ -123,8 +124,7 @@
     | suc i, suc i' => \lam p => pmap fsuc (fi (sface-inj p))
   }
 
--- | The extended pairing costs no more than the matched pair's distance and the shortened pairing's
--- cost.
+-- | The extended pairing costs no more than the matched pair's distance and the shortened pairing's cost.
 \lemma maxDist-extend {X : PseudoMetricSpace} {m : Nat} (r s : Array X (suc m)) (j : Fin (suc m))
                       (f : Fin m -> Fin m) {c : Real}
                       (h0 : ldist (r 0) (s j) < c)
@@ -175,10 +175,9 @@
   => Big_<=_meet1 {_} {pointCosts s z} j
 
 -- | **Which entry is nearest**, recoverable from a bound on `minDist` given slack.
-\lemma minDist-index {X : PseudoMetricSpace} {n : Nat} (s : Array X (suc n)) (z : X)
-                     {c' c : Real} (h : minDist s z <= c') (lt : c' < c)
+\lemma minDist-index {X : PseudoMetricSpace} {n : Nat} (s : Array X (suc n)) (z : X) {c : Real} (h : minDist s z < c)
   : ∃ (j : Fin (suc n)) (ldist z (s j) < c)
-  => \case Big_meet-lt {_} {pointCosts s z} h lt \with {
+  => \case RealField.Big_meet_< {pointCosts s z} h \with {
        | byLeft p => inP (0, p)
        | byRight (inP (j, p)) => inP (j, p)
      }

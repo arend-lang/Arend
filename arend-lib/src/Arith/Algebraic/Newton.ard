@@ -278,8 +278,8 @@
     (hdinv : cabs dinv <= Dd)
     (hv0 : cabs (polyEval p z0) <= e0) (e0>=0 : 0 <= e0)
     (hB : e0 * Dd + e0 * Dd <= B)
-    (hL : coefMax {ComplexValuedRing} (polyDeriv p) M * powSum R M * powSum R M * B * Dd <= quarter)
-    (hC : coefMax {ComplexValuedRing} p M * powSum R M * powSum R M * powSum R M * (Dd * Dd) * e0
+    (hL : coefMax {ComplexValuedRing} (polyDeriv p) M * RealField.powSum R M * RealField.powSum R M * B * Dd <= quarter)
+    (hC : coefMax {ComplexValuedRing} p M * RealField.powSum R M * RealField.powSum R M * RealField.powSum R M * (Dd * Dd) * e0
           <= quarter)
   : ∃ (z : Complex) (polyEval p z = 0)
   => \have
@@ -287,10 +287,10 @@
        | R0>=0 : (0 : Real) <= R0 => cabs>=0 {z0} <=∘ hz0
        | hz0R : cabs z0 <= R => hz0 <=∘ (linarith : R0 <= R)
        | R>=0 : (0 : Real) <= R => linarith
-       | P>=0 => powSum>=0 R>=0 M
+       | P>=0 => RealField.powSum>=0 R>=0 M
        | dp' => degree<_polyDeriv (degree<-suc dp)
        | ball : \Pi (z : Complex) -> cabs (z - z0) <= B -> cabs z <= R
-          => \lam z hz => =_<= (pmap cabs (inv AddGroup.diff+))
+          => \lam z hz => =_<= (pmap cabs (inv AddGroup.minus_+))
                           <=∘ cabs_+ {z - z0} {z0}
                           <=∘ <=_+ hz hz0
                           <=∘ (linarith : B + R0 <= R)

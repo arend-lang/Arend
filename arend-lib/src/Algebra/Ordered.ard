@@ -288,6 +288,19 @@
   \lemma pow_<=-degree_>=1 {a : E} (p : a >= 1) {n m : Nat} (m<=n : m NatSemiring.<= n) : pow a m <= pow a n
     => rewriteI (<=_exists m<=n, inv Monoid.pow_+) $ rewriteI {1} ide-right $
         <=_*_positive-right (PosetSemiring.pow>=0 (zro<=ide <=∘ p)) (PosetSemiring.pow>=1 p)
+
+  \lemma powSum>=0 {a : E} (a>=0 : 0 <= a) (n : Nat) : 0 <= powSum a n
+    => BigSum_>=0 (\lam k => pow>=0 a>=0)
+
+  -- | {powSum} is monotone in the base.
+  \lemma powSum-mono {a b : E} (a>=0 : 0 <= a) (a<=b : a <= b) (n : Nat) : powSum a n <= powSum b n
+    => BigSum_<= (\lam k => pow_<=-monotone a>=0 a<=b)
+
+  -- | For `a >= 1`, `powSum a (suc m) <= (suc m) * a^m`.
+  \lemma powSum-bound {a : E} (a>=1 : 1 <= a) (m : Nat) : powSum a (suc m) <= natCoef (suc m) * pow a m
+    => BigSum_<= {_} {suc m} {\new Array E (suc m) (\lam k => pow a k)} {replicate (suc m) (pow a m)}
+        (\lam k => pow_<=-degree_>=1 a>=1 (<_suc_<= (fin_< k)))
+       <=∘ =_<= (BigSum_replicate {_} {pow a m} {suc m})
 }
 
 \class PosetRing \extends PosetSemiring, Ring, PosetAbGroup

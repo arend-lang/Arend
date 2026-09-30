@@ -370,12 +370,12 @@
                         ide-left
                       }
                     \in inP (finMod i, root (suc i) ((a 0 - eps) * OrderedField.pinv (a (finMod (suc i))) ai>0), root>0 i/=0 a0-eps/ai>0,
-                             rewrite (suc_fromNat i i<n+1, mod_< {i} {suc n} linarith, i-term=a0-eps) idp,
+                             rewrite (mod_suc i i<n+1, mod_< {i} {suc n} linarith, i-term=a0-eps) idp,
                              \lam l l+m+1>=n+1 =>
                                \case LinearOrder.Dec.trichotomy (l + {NatSemiring} m) n \with {
                                  | less l+m<n => absurd (suc<=suc.conv l+m+1>=n+1 l+m<n)
                                  | equals l+m=n => run {
-                                   rewrite (suc_fromNat i i<n+1, mod_< {i} {suc n} i<n+1),
+                                   rewrite (mod_suc i i<n+1, mod_< {i} {suc n} i<n+1),
                                    rewrite (nat_fin_= {suc (suc n)} {l} {(suc i) Nat.mod suc (suc n)} (rewrite (mod_< {suc i} {suc (suc n)} linarith) (l=i+1 l+m=n))),
                                    rewrite {9} (mod_< {suc i} {suc (suc n)} linarith),
                                    x-eps<x eps>0
@@ -384,7 +384,7 @@
                                    \have l/=0 : l /= {Nat} 0 => \lam l=0 => suc<=suc.conv l+m+1>=n+1 (rewrite l=0 (fin_< m)),
                                    \have r0new^l<=r0^l => <=-less (LinearlyOrderedSemiring.pow_<-monotone l/=0 (<=-less (root>0 i/=0 a0-eps/ai>0)) r0new<r0),
                                    rewrite {2} (mod_< {i} {suc n} i<n+1),
-                                   rewrite (suc_fromNat {n} i i<n+1),
+                                   rewrite (mod_suc {n} i i<n+1),
                                    rewrite i-term=a0-eps,
                                    (<=_+ (<=_*_positive-right (ai>=0 l) r0new^l<=r0^l) (<=-refl {RealField} {negative eps})) <∘r,
                                    (IA l (<_suc_<= linarith)) <∘l,

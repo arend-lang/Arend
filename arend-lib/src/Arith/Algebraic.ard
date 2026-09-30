@@ -57,37 +57,40 @@
   => \lam p => complex-char0 k k>0 (inv f.func-natCoef *> pmap f p *> f.func-zro)
 
 -- | A complex number is *algebraic* if it is integral over the rationals.
-\func IsAlgebraic (z : Complex) : \Prop => isIntegral ratToComplex z
+\type IsAlgNumber (z : Complex) : \Prop
+  => isIntegral ratToComplex z
 
 -- | The algebraic numbers, as a subring of `C`.
-\func AlgebraicSubring : SubRing ComplexField
+\func AlgNumbersSubring : SubRing ComplexField
   => integralClosure-subring {RatField} {ComplexField} ratToComplex
 
 -- | The algebraic numbers as a commutative ring in their own right.
-\func AlgebraicRing : CRing => ICRing AlgebraicSubring
+\func AlgNumbersRing : CRing
+  => ICRing AlgNumbersSubring
 
 -- | The inclusion `A -> C`.
-\func algebraicToComplex : RingHom AlgebraicRing ComplexField => IRing.embed {AlgebraicSubring}
-
--- | The inclusion is injective, so `A` inherits `C`'s lack of nilpotents and idempotents.
-\func algebraicToComplex-inj : IsInj algebraicToComplex
-  => \lam p => ext p
+\func algNumbersToComplex : RingHom AlgNumbersRing ComplexField
+  => IRing.embed {AlgNumbersSubring}
+  \where {
+    \protected \lemma isInj : IsInj algNumbersToComplex
+      => \lam p => ext p
+  }
 
 -- | `A` has no nilpotents other than `0` and no idempotents other than `0` and `1`.
-\func AlgebraicImpotent : ImpotentCRing { | CRing => AlgebraicRing }
-  => ImpotentCRing.subring {AlgebraicRing} algebraicToComplex algebraicToComplex-inj
+\func AlgNumbersImpotent : ImpotentCRing { | CRing => AlgNumbersRing }
+  => ImpotentCRing.subring {AlgNumbersRing} algNumbersToComplex algNumbersToComplex.isInj
 
 {- | **The algebraic numbers form a discrete field.** The integral closure of `Q` in `C` is an
      integral extension of `Q`, hence zero-dimensional, and a zero-dimensional impotent ring is a
      discrete field. -}
-\func AlgebraicNumbers : DiscreteField { | CRing => AlgebraicRing }
-  => zeroDim->field {AlgebraicImpotent} (integralExt-zeroDim (integralClosure-integral ratToComplex))
+\func AlgNumbersField : DiscreteField { | CRing => AlgNumbersRing }
+  => zeroDim->field {AlgNumbersImpotent} (integralExt-zeroDim (integralClosure-integral ratToComplex))
 
 {- | **Equality of algebraic numbers is decidable**, as a statement about `C` rather than about the
      abstract ring `A`. This is the form Richman uses: given two algebraic numbers we may decide
      whether they are equal, so a finite set of them is a genuinely discrete metric space. -}
-\lemma algebraic-dec {a b : Complex} (ai : IsAlgebraic a) (bi : IsAlgebraic b) : Dec (a = b)
-  => \case AlgebraicNumbers.decideEq (a, ai) (b, bi) \with {
-    | yes p => yes (pmap algebraicToComplex p)
+\lemma algebraic-dec {a b : Complex} (ai : IsAlgNumber a) (bi : IsAlgNumber b) : Dec (a = b)
+  => \case AlgNumbersField.decideEq (a, ai) (b, bi) \with {
+    | yes p => yes (pmap algNumbersToComplex p)
     | no q => no \lam p => q (ext p)
   }

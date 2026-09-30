@@ -1,3 +1,4 @@
+\import Data.Or
 \import Logic
 \import Logic.Classical
 
@@ -23,13 +24,23 @@
 
 {- | Countable choice $AC_\mathbb{N}$, strictly weaker than adchoice. -}
 \axiom acchoice {A : Nat -> \Set} (h : \Pi (i : Nat) -> TruncP (A i)) : TruncP (\Pi (i : Nat) -> A i)
-  \where
-    \lemma fromDepChoice.{l} {A : Nat -> \Set l} (h : \Pi (i : Nat) -> TruncP (A i)) : TruncP (\Pi (i : Nat) -> A i)
-      => \case adchoice {A_shifted} (\lam {_} _ _ => \Sigma) () (\lam i _ => \case h i \with {
-        | inP c => inP (c, ())
+  \where {
+    \lemma fromDepChoice {A : Nat -> \Set} (h : \Pi (i : Nat) -> TruncP (A i)) : TruncP (\Pi (i : Nat) -> A i)
+      => \case adchoice {\lam n => Or (A n) (sequence n)} (\lam {_} _ _ => \Sigma) (inr ()) (\lam i _ => \case h (suc i) \with {
+        | inP c => inP (inl c, ())
       }) \with {
-        | inP b => inP (\lam i => b.1 (suc i))
-      } \where
-      \private \func A_shifted.{l} {A : Nat -> \Set l} (n : Nat) : \Set l \elim n
-        | zero => \Sigma
-        | suc n => A n
+        | inP (r,_) => \case h 0 \with {
+          | inP a0 => inP \case \elim __ \with {
+            | 0 => a0
+            | suc i => \case r (suc i) \with {
+              | inl a => a
+              | inr ()
+            }
+          }
+        }
+      }
+
+    \private \func sequence (n : Nat) : \Prop
+      | 0 => \Sigma
+      | suc n => Empty
+  }

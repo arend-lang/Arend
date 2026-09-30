@@ -104,7 +104,7 @@
                      (degree<-monic-diff deg (degree<=_degree< degree<=_monomial) monic
                         polyCoef_monomial) hC z
            | low => cabs_polyEval-monic-lower monic z
-           | ps' => RealField.<=_*_positive-right C>=0 (powSum-bound w>=1 m)
+           | ps' => RealField.<=_*_positive-right C>=0 (RealField.powSum-bound w>=1 m)
      \in RealField.<=_*-cancel-right (RealField.pow>0 (linarith : 0 < cabs z))
            (=_<= (equation.cRing : cabs z * pow (cabs z) m = pow (cabs z) (suc m))
             <=∘ linarith
@@ -179,7 +179,7 @@
                            (degree<-monic-diff (prodLin-degree r) deg (prodLin-monic r) monic)
                            (\lam k => <=-less (rewrite polyCoef_- (hr k))) (r i)
                          <=∘ =_<= ide-left
-                         <=∘ powSum-bound w>=1 m
+                         <=∘ RealField.powSum-bound w>=1 m
                          <=∘ =_<= (inv ide-left))
           \in cabs-large-bound p deg monic C>=0 hC (r i) w>=1 up
               <=∘ =_<= (equation.cRing
@@ -206,7 +206,7 @@
     {B : Real} (hrB : \Pi (i : Fin n) -> cabs (r i) <= B)
     {delta : Real} (hd : \Pi (k : Nat) -> cabs (polyCoef (prodLin r - prodLin s) k) <= delta)
     (i : Fin n)
-  : absProd s (r i) <= delta * powSum B n
+  : absProd s (r i) <= delta * RealField.powSum B n
   => \have B>=0 : 0 <= B => cabs>=0 <=∘ hrB i
      \in =_<= (inv (cabs_linProd s (r i))
                *> pmap cabs (inv (polyEval_prodLin s (r i)))
@@ -227,9 +227,9 @@
       -> (\Pi (k : Nat) -> cabs (polyCoef (prodLin r) k - polyCoef (prodLin s) k) < delta)
       -> \Pi (i : Fin (suc n)) -> minDist {ComplexNormed} s (r i) < eta)
   => \let | B>=0 : (0 : Real) <= B => linarith
-          | S>=0 : (0 : Real) <= powSum B (suc n) => powSum>=0 B>=0 (suc n)
+          | S>=0 : (0 : Real) <= RealField.powSum B (suc n) => RealField.powSum>=0 B>=0 (suc n)
           | (inP (d, d>0, dS)) => split-eps (RealField.pow>0 eta>0 {suc n})
-                                    (linarith : (0 : Real) < powSum B (suc n) + 1)
+                                    (linarith : (0 : Real) < RealField.powSum B (suc n) + 1)
      \in inP (d, d>0, \lam r s hrB hd i =>
            minDist-small s (r i) eta>0
              (absProd-bound r s hrB (\lam k => <=-less (rewrite polyCoef_- (hd k))) i
@@ -245,7 +245,7 @@
     (hd : \Pi (i : Nat) -> cabs (polyCoef (prodLin r) i - polyCoef (prodLin s) i) <= delta)
     (hj : cabs (r 0 - s j) <= eta) (k : Nat)
   : cabs (polyCoef (prodLin (skip r 0)) k - polyCoef (prodLin (skip s j)) k)
-      <= (delta + eta * pow (1 + B) m) * powSum B (suc m)
+      <= (delta + eta * pow (1 + B) m) * RealField.powSum B (suc m)
   => \have
      | B>=0 : (0 : Real) <= B => cabs>=0 <=∘ hrB 0
      | M>=0 : (0 : Real) <= pow (1 + B) m => RealField.pow>=0 linarith
@@ -269,10 +269,10 @@
                         (prodLin-coefBound (skip s j) B>=0 (skip-bounded hsB) i) (cabs>=0 {s j - r 0})
                   <=∘ RealField.<=_*_positive-right M>=0 hj'
                   <=∘ =_<= *-comm)
-     \in transport (\lam t => cabs t <= (delta + eta * pow (1 + B) m) * powSum (cabs (r 0)) (suc m))
-           (pmap (polyCoef __ k) (deflate_*padd1 _ (r 0)) *> polyCoef_-)
+     \in transport (\lam t => cabs t <= (delta + eta * pow (1 + B) m) * RealField.powSum (cabs (r 0)) (suc m))
+           (pmap (polyCoef __ k) deflate_*padd1 *> polyCoef_-)
            (deflate-coefBound {ComplexValuedRing} (degree<_*padd1 (negative (r 0)) degE) c>=0 hD k)
-         <=∘ RealField.<=_*_positive-right c>=0 (powSum-mono cabs>=0 (hrB 0) (suc m))
+         <=∘ RealField.<=_*_positive-right c>=0 (RealField.powSum-mono cabs>=0 (hrB 0) (suc m))
 
 
 {- | **The shrinking lemma without the polynomial.** For every `eps > 0` there is a `delta > 0` such
@@ -291,35 +291,34 @@
     \let | (inP (e1, e1>0, e1<eps)) => shrink eps>0
          | (inP (delta', delta'>0, IH)) => match-bounded {m} B>=1 e1>0
     \in \have | B>=0 : (0 : Real) <= B => linarith
-              | P>=0 : (0 : Real) <= powSum B (suc m) => powSum>=0 B>=0 (suc m)
+              | P>=0 : (0 : Real) <= RealField.powSum B (suc m) => RealField.powSum>=0 B>=0 (suc m)
               | M>=0 : (0 : Real) <= pow (1 + B) m => RealField.pow>=0 linarith
     \in \let | (inP (q, q>0, qP)) => split-eps delta'>0
-                                       (linarith : (0 : Real) < powSum B (suc m) + 1)
+                                       (linarith : (0 : Real) < RealField.powSum B (suc m) + 1)
              | (inP (e0, e0>0, e0M)) => split-eps q>0
                                           (linarith : (0 : Real) < 1 + pow (1 + B) m)
     \in \have | eta>0 : (0 : Real) < e0 ∧ e1 => <_meet-univ e0>0 e1>0
               | e0M' : e0 + e0 * pow (1 + B) m < q
                  => transport (`< q) (equation.cRing
                       : e0 * (1 + pow (1 + B) m) = e0 + e0 * pow (1 + B) m) e0M
-              | loss : (e0 + e0 ∧ e1 * pow (1 + B) m) * powSum B (suc m) < delta'
+              | loss : (e0 + e0 ∧ e1 * pow (1 + B) m) * RealField.powSum B (suc m) < delta'
                  => (RealField.<=_*_positive-left
                        (linarith (RealField.<=_*_positive-left (meet-left {_} {e0} {e1}) M>=0)) P>=0
                      <=∘ RealField.<=_*_positive-right (<=-less q>0)
-                           (linarith : powSum B (suc m) <= powSum B (suc m) + 1))
+                           (linarith : RealField.powSum B (suc m) <= RealField.powSum B (suc m) + 1))
                     <∘r qP
     \in \let | (inP (eta', eta'>0, eta'<eta)) => shrink eta>0
              | (inP (delta0, delta0>0, PROX)) => proximity-bounded {m} B>=1 eta'>0
     \in inP (delta0 ∧ e0, <_meet-univ delta0>0 e0>0, \lam r s hrB hsB hd =>
           \let | (inP (j, hj)) => minDist-index {ComplexNormed} s (r 0)
-                 (<=-less (PROX r s hrB (\lam k => hd k <∘l meet-left) 0)) eta'<eta
+                 (<=-less (PROX r s hrB (\lam k => hd k <∘l meet-left) 0) <∘r eta'<eta)
                | close : \Pi (k : Nat) -> cabs (polyCoef (prodLin (skip r 0)) k
                                                 - polyCoef (prodLin (skip s j)) k) < delta'
                   => \lam k => prodLin-deflate-close r s j hrB hsB (<=-less eta>0)
                                  (\lam i => <=-less (hd i <∘l meet-right)) (<=-less hj) k
                                <∘r loss
                | (inP (f, finj, hf)) => rawDist-lt {ComplexNormed} {m} {skip r 0} {skip s j}
-                    (<=-less (IH (skip r 0) (skip s j) (skip-bounded hrB) (skip-bounded hsB) close))
-                    e1<eps
+                    (<=-less (IH (skip r 0) (skip s j) (skip-bounded hrB) (skip-bounded hsB) close) <∘r e1<eps)
           \in rawDist-cond {ComplexNormed} {suc m} {r} {s} {extendMatch j f} (extendMatch-inj finj)
               <∘r maxDist-extend {ComplexNormed} r s j f ((hj <∘l meet-right) <∘ e1<eps) hf)
   \where
@@ -351,7 +350,7 @@
 \private \lemma cabs_polyEval-monic-lower {p : Poly ComplexField} {n : Nat} (_ : polyCoef p n = 1) (z : Complex)
   : pow (cabs z) n - cabs (polyEval (p - monomial 1 n) z) <= cabs (polyEval p z)
   => \have e : polyEval p z = pow z n + polyEval (p - monomial 1 n) z
-             => pmap (\lam t => polyEval t z) (inv (+-comm *> AddGroup.diff+))
+             => pmap (\lam t => polyEval t z) (inv (+-comm *> AddGroup.minus_+))
                 *> (polyEvalRingHom z).func-+
                 *> pmap (\lam t => t + polyEval (p - monomial 1 n) z)
                      (polyEval_monomial *> ide-left)
@@ -428,7 +427,7 @@
     -- | Shifting a bound along a small difference.
     \private \lemma cabs-shift {a b : Complex} {B d : Real} (hb : cabs b <= B)
                                (hd : cabs (a - b) <= d) : cabs a <= B + d
-      => transport (\lam t => cabs t <= B + d) AddGroup.diff+ (cabs_+ {a - b} {b} <=∘ linarith)
+      => transport (\lam t => cabs t <= B + d) AddGroup.minus_+ (cabs_+ {a - b} {b} <=∘ linarith)
   }
 
 -- # Roots and near factorisations
@@ -440,8 +439,8 @@
   : ∃ (delta : Real) (0 < delta)
       (\Pi (r : Array Complex (suc m)) -> nearFactorSet p delta r -> minDist {ComplexNormed} r z < eta)
   => \let (inP (d, d>0, dP)) => split-eps (RealField.pow>0 eta>0 {suc m})
-            (linarith (powSum>=0 (cabs>=0 {z}) (suc m))
-               : (0 : Real) < powSum (cabs z) (suc m) + 1)
+            (linarith (RealField.powSum>=0 (cabs>=0 {z}) (suc m))
+               : (0 : Real) < RealField.powSum (cabs z) (suc m) + 1)
      \in inP (d, d>0, \lam r hr => minDist-small r z eta>0 $
            (=_<= (inv (cabs_linProd r z) *> pmap cabs (inv (polyEval_prodLin r z))
                   *> cabs_polyEval-diff-at-root root)
@@ -449,7 +448,7 @@
                   (degree<-monic-diff deg (prodLin-degree r) monic (prodLin-monic r))
                   (\lam k => coefs-minus p r hr k) z)
            <∘r (RealField.<=_*_positive-right (<=-less d>0)
-                  (linarith : powSum (cabs z) (suc m) <= powSum (cabs z) (suc m) + 1)
+                  (linarith : RealField.powSum (cabs z) (suc m) <= RealField.powSum (cabs z) (suc m) + 1)
                 <∘r dP))
 
 -- | A near factorisation bounds the coefficients of `p - prodLin r`.
@@ -465,55 +464,54 @@
          -> ∃ (r : Array Complex (suc m)) (nearFactorSet p delta r) (nearFactorSet p 1 r)
               (minDist {ComplexNormed} r z < eta))
   : polyEval p z = 0
-  => cabs_zro-ext $ below-all-positive cabs>=0 \lam {c} _ =>
+  => cabs_zro-ext $ real-below-all-positive cabs>=0 \lam {c} _ =>
        \let (inP (B, B>=1, hB)) => nearFactor-bound p deg monic
        \in \have | B>=0 : (0 : Real) <= B => linarith
-                 | P>=0 : 0 <= powSum (cabs z) (suc m) => powSum>=0 cabs>=0 (suc m)
-                 | Q>=0 : 0 <= pow (1 + B) m * powSum (cabs z) (suc m)
+                 | P>=0 : 0 <= RealField.powSum (cabs z) (suc m) => RealField.powSum>=0 cabs>=0 (suc m)
+                 | Q>=0 : 0 <= pow (1 + B) m * RealField.powSum (cabs z) (suc m)
                     => RealField.<=_*_positive_positive
                          (RealField.pow>=0 (linarith : (0 : Real) <= 1 + B)) P>=0
        \in \let | (inP (delta, delta>0, dP)) => split-eps (linarith : (0 : Real) < c * ratio 1 2)
-                     (linarith : (0 : Real) < powSum (cabs z) (suc m) + 1)
+                     (linarith : (0 : Real) < RealField.powSum (cabs z) (suc m) + 1)
                 | (inP (eta, eta>0, dQ)) => split-eps (linarith : (0 : Real) < c * ratio 1 2)
-                     (linarith : (0 : Real) < pow (1 + B) m * powSum (cabs z) (suc m) + 1)
+                     (linarith : (0 : Real) < pow (1 + B) m * RealField.powSum (cabs z) (suc m) + 1)
                 | (inP (r, hr, hr1, hd)) => h delta>0 (linarith : (0 : Real) < eta * ratio 1 2)
-                | (inP (j, hj)) => minDist-index {ComplexNormed} r z (<=-less hd)
-                                     (linarith : eta * ratio 1 2 < eta)
+                | (inP (j, hj)) => minDist-index {ComplexNormed} r z linarith
           \in \have
               | bound1 : cabs (polyEval (p - prodLin r) z) < c * ratio 1 2
                  => lnorm_polyEval-boundD {ComplexValuedRing}
                       (degree<-monic-diff deg (prodLin-degree r) monic (prodLin-monic r))
                       (\lam k => coefs-minus p r hr k) z
                     <∘r (RealField.<=_*_positive-right (<=-less delta>0)
-                           (linarith : powSum (cabs z) (suc m) <= powSum (cabs z) (suc m) + 1)
+                           (linarith : RealField.powSum (cabs z) (suc m) <= RealField.powSum (cabs z) (suc m) + 1)
                          <∘r dP)
               | bound2 : cabs (polyEval (prodLin r) z) < c * ratio 1 2
                  => =_<= (pmap cabs (polyEval_prodLin r z) *> cabs_linProd r z)
                     <∘r (absProd-factor r z j B>=0 (hB r hr1)
                          <∘r ((RealField.<=_*_positive-left (<=-less hj) Q>=0
                                <=∘ RealField.<=_*_positive-right (<=-less eta>0)
-                                     (linarith : pow (1 + B) m * powSum (cabs z) (suc m)
-                                              <= pow (1 + B) m * powSum (cabs z) (suc m) + 1))
+                                     (linarith : pow (1 + B) m * RealField.powSum (cabs z) (suc m)
+                                              <= pow (1 + B) m * RealField.powSum (cabs z) (suc m) + 1))
                               <∘r dQ))
               | total : cabs (polyEval p z)
                      <= cabs (polyEval (p - prodLin r) z) + cabs (polyEval (prodLin r) z)
-                 => rewrite (pmap (polyEval __ z) (inv AddGroup.diff+)
+                 => rewrite (pmap (polyEval __ z) (inv AddGroup.minus_+)
                              *> (polyEvalRingHom z).func-+) cabs_+
               \in linarith
   \where
     \private \lemma absProd-factor {m : Nat} (s : Array Complex (suc m)) (z : Complex) (j : Fin (suc m))
                           {B : Real} (B>=0 : 0 <= B) (hB : \Pi (i : Fin (suc m)) -> cabs (s i) <= B)
-      : absProd s z <= cabs (z - s j) * (pow (1 + B) m * powSum (cabs z) (suc m))
+      : absProd s z <= cabs (z - s j) * (pow (1 + B) m * RealField.powSum (cabs z) (suc m))
       => \have | hB' : \Pi (i : Fin m) -> cabs (skip s j i) <= B
                   => \lam i => transportInv (\lam t => cabs t <= B) (skip-sface s j i) (hB (sface j i))
                | tail : cabs (polyEval (prodLin (skip s j)) z)
-                     <= pow (1 + B) m * powSum (cabs z) (suc m)
+                     <= pow (1 + B) m * RealField.powSum (cabs z) (suc m)
                   => lnorm_polyEval-boundD {ComplexValuedRing} (prodLin-degree (skip s j))
                        (\lam k => prodLin-coefBound (skip s j) B>=0 hB' k) z
                | val : polyEval (prodLin s) z = (z - s j) * polyEval (prodLin (skip s j)) z
                   => pmap (polyEval __ z) (prodLin-skip s j)
                      *> (polyEvalRingHom z).func-* {padd 1 (negative (s j))} {prodLin (skip s j)}
-                     *> pmap (`* polyEval (prodLin (skip s j)) z) (polyEval_padd1 (s j) z)
+                     *> pmap (`* polyEval (prodLin (skip s j)) z) polyEval_padd1
                | eq : absProd s z = cabs (z - s j) * cabs (polyEval (prodLin (skip s j)) z)
                   => inv (cabs_linProd s z) *> pmap cabs (inv (polyEval_prodLin s z) *> val)
                      *> cabs_* {z - s j} {polyEval (prodLin (skip s j)) z}

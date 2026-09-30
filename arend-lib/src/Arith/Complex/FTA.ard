@@ -115,7 +115,7 @@
   : multiset-mem (spectrum p deg monic) z
   => \lam {eps} _ =>
        \let (inP (e, e>0, eR<eps/3)) => rat-below (linarith : (0 : Real) < eps * ratio 1 3)
-       \in sregCF-mem {MultisetPseudoMetric {ComplexNormed} (suc m)} {specFilter p deg monic} e>0
+       \in sregCF-metric {MultisetPseudoMetric {ComplexNormed} (suc m)} {specFilter p deg monic} e>0
              \lam r0 (inP (d, d>0, hd)) =>
              \let | (inP (d2, d2>0, hd2)) => root-nearRoot p deg monic root
                                                (rat_real_<.1 e>0 : (0 : Real) < e)
@@ -173,7 +173,7 @@
     (r : Array Complex n) (hb : specSetFilter p (OBall c r))
   : spectrum p deg monic (OBall e r)
   => \let (inP (d1, d1>0, hd1)) => hb
-     \in sregCF-mem {MultisetPseudoMetric {ComplexNormed} n} {specFilter p deg monic} c>0
+     \in sregCF-metric {MultisetPseudoMetric {ComplexNormed} n} {specFilter p deg monic} c>0
            \lam x (inP (d2, d2>0, hd2)) {y} hxy =>
        \let (inP (s, hs)) => approx-factor p deg monic (<_meet-univ d1>0 d2>0 : 0 < d1 ∧ d2)
        \in real_<_U.1 $ usingOnly
@@ -269,7 +269,7 @@
                             (linarith : natCoef n * pow (1 + B + 1) n
                                      <= natCoef n * pow (1 + B + 1) n + 1))
                      <∘r ddK
-     \in sregCF-mem {MultisetPseudoMetric {ComplexNormed} n} {specFilter p deg monic}
+     \in sregCF-metric {MultisetPseudoMetric {ComplexNormed} n} {specFilter p deg monic}
            (linarith : (0 : Rat) < aa * ratio 1 2) \lam x (inP (d0, d0>0, hd0)) {y} hxy =>
        \let (inP (s, hs)) => approx-factor p deg monic
               (<_meet-univ d0>0 (<_meet-univ (linarith : (0 : Real) < 1)
@@ -284,7 +284,7 @@
                                   matchDist-triang {ComplexNormed} {n} {s} {x} {y},
                                   rat-2c (linarith : aa * ratio 1 2 + aa * ratio 1 2 <= aa))
                          linarith
-       \in \let (inP (f, finj, hf)) => rawDist-lt {ComplexNormed} {n} {s} {y} join-left sy
+       \in \let (inP (f, finj, hf)) => rawDist-lt {ComplexNormed} {n} {s} {y} (join-left <∘r sy)
        \in \have | hd : \Pi (i : Fin n) -> cabs (y (f i) - s i) <= (aa : Real)
                     => \lam i => <=-less (transport (`< (aa : Real))
                          (lnorm-ldist {ComplexNormed} {s i} {y (f i)}
@@ -327,7 +327,7 @@
     -- | Two monic polynomials with the same spectrum agree coefficientwise.
     \private \lemma coefEq (j : Nat) : polyCoef p j = polyCoef q j
       => AddGroup.fromZero $ cabs_zro-ext $
-         below-all-positive (cabs>=0 {polyCoef p j - polyCoef q j}) \lam {c} c>0 =>
+                             real-below-all-positive (cabs>=0 {polyCoef p j - polyCoef q j}) \lam {c} c>0 =>
            \let | (inP (delta, delta>0, hdel)) =>
                     sregCF_<= (transport (\lam (mu : ComplexMultiset n) =>
                                     mu (nearFactorSet p (c * ratio 1 2)))

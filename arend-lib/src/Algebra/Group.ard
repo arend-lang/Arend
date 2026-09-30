@@ -239,7 +239,7 @@
     z + (zro - x)              ==< pmap (z +) zro-left >==
     z - x                      `qed
 
-  \lemma diff+ {x y : E} : (x - y) + y = x
+  \lemma minus_+ {x y : E} : (x - y) + y = x
     => +-assoc *> pmap (x +) negative-left *> zro-right
 } \where {
     \use \coerce fromGroup (G : Group) => \new AddGroup G.E G.ide (G.*) G.ide-left G.ide-right G.*-assoc G.inverse G.inverse-left G.inverse-right

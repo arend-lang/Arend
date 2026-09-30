@@ -37,8 +37,7 @@
 \lemma polyEval_prodLin {R : CRing} {n : Nat} (r : Array R n) (z : R)
   : polyEval (prodLin r) z = linProd r z \elim n, r
   | 0, nil => simplify
-  | suc n, a :: l => polyEvalRingHom.func-*
-                     *> pmap2 (*) (polyEval_prodLin l z) (polyEval_padd1 a z)
+  | suc n, a :: l => polyEvalRingHom.func-* *> pmap2 (*) (polyEval_prodLin l z) polyEval_padd1
 
 -- | Each `r i` is a root of `linProd r`.
 \lemma linProd-root {R : CRing} {n : Nat} (r : Array R n) (i : Fin n) : linProd r (r i) = 0 \elim n, r, i
@@ -50,8 +49,7 @@
 
 -- # Pulling out a factor
 
--- | **Pulling out an arbitrary linear factor**: $\prod_i (X - r_i) = (X - r_k) \prod_{i \neq k}
--- (X - r_i)$.
+-- | **Pulling out an arbitrary linear factor**: $\prod_i (X - r_i) = (X - r_k) \prod_{i \neq k} (X - r_i)$.
 \lemma prodLin-skip {R : CRing} {n : Nat} (r : Array R (suc n)) (k : Fin (suc n))
   : prodLin r = padd {R} 1 (negative (r k)) * prodLin (skip r k) \elim n, r, k
   | 0, a :: nil, 0 => *-comm {_} {1} {padd {R} 1 (negative a)}

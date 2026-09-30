@@ -32,27 +32,27 @@
 \private \lemma deflate-coefBound-disc {p : Poly ComplexField} {m : Nat} (d : degree< p m)
     {c : Real} (c>=0 : 0 <= c) (hc : \Pi (j : Nat) -> cabs (polyCoef p j) <= c)
     {R : Real} {z : Complex} (hz : cabs z <= R) (k : Nat)
-  : cabs (polyCoef (deflate p z) k) <= c * powSum R m
+  : cabs (polyCoef (deflate p z) k) <= c * RealField.powSum R m
   => deflate-coefBound {ComplexValuedRing} d c>=0 hc k
-     <=∘ <=_*_positive-right c>=0 (powSum-mono (cabs>=0 {z}) hz m)
+     <=∘ <=_*_positive-right c>=0 (RealField.powSum-mono (cabs>=0 {z}) hz m)
 
 -- | Hence $|(\mathrm{deflate}\ p\ z)(y)| \leq c \cdot \mathrm{powSum}(R,m)^2$ for $|z|,|y| \leq R$.
 \private \lemma deflate-eval-bound {p : Poly ComplexField} {m : Nat} (d : degree< p m)
     {c : Real} (c>=0 : 0 <= c) (hc : \Pi (j : Nat) -> cabs (polyCoef p j) <= c)
     {R : Real} {z y : Complex} (hz : cabs z <= R) (hy : cabs y <= R)
-  : cabs (polyEval (deflate p z) y) <= c * powSum R m * powSum R m
+  : cabs (polyEval (deflate p z) y) <= c * RealField.powSum R m * RealField.powSum R m
   => lnorm_polyEval-boundD {ComplexValuedRing} (deflate-degree (degree<-suc d) z)
        (\lam k => deflate-coefBound-disc d c>=0 hc hz k) y
      <=∘ <=_*_positive-right
-           (<=_*_positive_positive c>=0 (powSum>=0 (cabs>=0 {z} <=∘ hz) m))
-           (powSum-mono (cabs>=0 {y}) hy m)
+           (<=_*_positive_positive c>=0 (RealField.powSum>=0 (cabs>=0 {z} <=∘ hz) m))
+           (RealField.powSum-mono (cabs>=0 {y}) hy m)
 
 {- | **A complex polynomial is Lipschitz on the disc $|\cdot| \leq R$**, with a constant read off
      a coefficient bound $c$ for `p`. -}
 \lemma polyEval-diff-bound {p : Poly ComplexField} {m : Nat} (d : degree< p m)
     {c : Real} (c>=0 : 0 <= c) (hc : \Pi (j : Nat) -> cabs (polyCoef p j) <= c)
     {R : Real} {z y : Complex} (hz : cabs z <= R) (hy : cabs y <= R)
-  : cabs (polyEval p y - polyEval p z) <= c * powSum R m * powSum R m * cabs (y - z)
+  : cabs (polyEval p y - polyEval p z) <= c * RealField.powSum R m * RealField.powSum R m * cabs (y - z)
   => =_<= (pmap cabs (polyEval_deflate-diff p z y)
            *> cabs_* {polyEval (deflate p z) y} {y - z})
      <=∘ <=_*_positive-left (deflate-eval-bound d c>=0 hc hz hy) (cabs>=0 {y - z})
@@ -64,11 +64,11 @@
     {c : Real} (c>=0 : 0 <= c) (hc : \Pi (j : Nat) -> cabs (polyCoef p j) <= c)
     {R : Real} {z y : Complex} (hz : cabs z <= R) (hy : cabs y <= R)
   : cabs (polyEval p y - polyEval p z - polyEval (polyDeriv p) z * (y - z))
-  <= c * powSum R m * powSum R m * powSum R m * (cabs (y - z) * cabs (y - z))
+  <= c * RealField.powSum R m * RealField.powSum R m * RealField.powSum R m * (cabs (y - z) * cabs (y - z))
   => =_<= (pmap cabs (polyTaylor2 p z y)
            *> cabs_*sq (polyEval (deflate (deflate p z) z) y) (y - z))
      <=∘ <=_*_positive-left
            (deflate-eval-bound (deflate-degree (degree<-suc d) z)
-              (<=_*_positive_positive c>=0 (powSum>=0 (cabs>=0 {z} <=∘ hz) m))
+              (<=_*_positive_positive c>=0 (RealField.powSum>=0 (cabs>=0 {z} <=∘ hz) m))
               (\lam k => deflate-coefBound-disc d c>=0 hc hz k) hz hy)
            (<=_*_positive_positive (cabs>=0 {y - z}) (cabs>=0 {y - z}))

@@ -110,8 +110,7 @@
                    = polyCoef ((prodLin r' - deflate p z) * padd 1 (negative z)) j
                      - polyCoef (padd pzero (polyEval p z)) j
                   => inv polyCoef_-
-                     *> pmap (\lam t => polyCoef (prodLin r' * padd 1 (negative z) - t) j)
-                          (deflate-eq p z)
+                     *> pmap (\lam t => polyCoef (prodLin r' * padd 1 (negative z) - t) j) deflate-eq
                      *> pmap (polyCoef __ j)
                           (poly-diff (prodLin r') (deflate p z) (padd 1 (negative z))
                              (padd pzero (polyEval p z)))
@@ -119,8 +118,8 @@
           \in rewrite eq $
               (cabs_- <=∘ <=_+ (coefErr_*padd1 (\lam k => rewrite polyCoef_- (<=-less (hr' k))) j)
                                (constCoef-bound (polyEval p z) j))
-              <∘r linarith) \where {
-  \private \lemma poly-diff {R : CRing} (A Q L C : Poly R) : A * L - (Q * L + C) = (A - Q) * L - C
-    => equation.cRing
-
-}
+              <∘r linarith)
+  \where {
+    \private \lemma poly-diff {R : CRing} (A Q L C : Poly R) : A * L - (Q * L + C) = (A - Q) * L - C
+      => equation.cRing
+  }

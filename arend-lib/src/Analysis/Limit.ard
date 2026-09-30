@@ -159,8 +159,9 @@
     | inP (N,h) => inP (N, \lam p => real_<_U.1 $ h p)
   })
 
--- | **Geometrically dominated increments make a sequence convergent.**
---   If consecutive terms of `z` are within `r^i K` with `0 <= r < 1`, then `z` converges.
+{- | **Geometrically dominated increments make a sequence convergent.**
+ -   If consecutive terms of {z} are within `r^i K` with `0 <= r < 1`, then {z} converges.
+ -}
 \lemma nat-convergent-metric {X : PseudoMetricSpace} {r K : Real}
                              (r>=0 : 0 <= r) (r<1 : r < 1)
                              (z : Nat -> X)
@@ -181,8 +182,9 @@
                | byRight (p, _) => absurd linarith
              })
   \where
-    -- | Summed triangle inequality against a geometric bound, in division-free form:
-    --   $(1-r)\,d(z_N, z_{N+k}) \leq (r^N - r^{N+k})\,K$.
+    {- | Summed triangle inequality against a geometric bound, in division-free form:
+     -   $(1-r)\,d(z_N, z_{N+k}) \leq (r^N - r^{N+k})\,K$.
+     -}
     \private \lemma tail-bound (N k : Nat)
       : (1 - r) * ldist (z N) (z (N + k)) <= (RealField.pow r N - RealField.pow r (N + k)) * K \elim k
       | 0 => =_<= (pmap (\lam t => (1 - r) * t) ldist-refl *> equation.cRing)

@@ -66,7 +66,7 @@
 -- | A uniform bound `c` on the first `m` coefficients bounds `‖q(z)‖` by `c * powSum ‖z‖ m`.
 \lemma lnorm_polyEval-boundD {X : PseudoNormedRing} {q : Poly X} {m : Nat} (d : degree< q m)
     {c : Real} (h : \Pi (k : Fin m) -> lnorm (polyCoef q k) <= c) (z : X)
-  : lnorm (polyEval q z) <= c * powSum (lnorm z) m
+  : lnorm (polyEval q z) <= c * RealField.powSum (lnorm z) m
   => lnorm_polyEval-bound d z
      <=∘ RealAbGroup.BigSum_<= (\lam k => RealField.<=_*_positive-left (h k)
                                             (RealField.pow>=0 lnorm>=0))
@@ -76,8 +76,8 @@
      on `p` gives the bound `c * powSum ‖z‖ m` on `deflate p z`. -}
 \lemma deflate-coefBound {X : PseudoNormedRing} {p : Poly X} {m : Nat} (deg : degree< p m) {z : X}
     {c : Real} (c>=0 : 0 <= c) (h : \Pi (j : Nat) -> lnorm (polyCoef p j) <= c) (k : Nat)
-  : lnorm (polyCoef (deflate p z) k) <= c * powSum (lnorm z) m \elim p, k
-  | pzero, k => rewrite lnorm_zro (RealField.<=_*_positive_positive c>=0 (powSum>=0 lnorm>=0 m))
+  : lnorm (polyCoef (deflate p z) k) <= c * RealField.powSum (lnorm z) m \elim p, k
+  | pzero, k => rewrite lnorm_zro (RealField.<=_*_positive_positive c>=0 (RealField.powSum>=0 lnorm>=0 m))
   | padd p e, 0 => lnorm_polyEval-boundD (degree<_padd-tail deg) (\lam j => h (suc j)) z
   | padd p e, suc k => deflate-coefBound (degree<_padd-tail deg) c>=0 (\lam j => h (suc j)) k
 

@@ -104,8 +104,8 @@
             (maxDist {ComplexNormed} (seqR S k) (seqR S (suc k)) f < geo k)
 
 \private \lemma StepB-inh (S : NearSeq) (k : Nat) : TruncP (StepB S k)
-  => rawDist-lt {ComplexNormed} {suc S.m} {seqR S k} {seqR S (suc k)} join-left
-    ((S.seq k).4 (idx (seqK S) k) (idx (seqK S) (suc k))
+  => rawDist-lt {ComplexNormed} {suc S.m} {seqR S k} {seqR S (suc k)}
+    (join-left <∘r (S.seq k).4 (idx (seqK S) k) (idx (seqK S) (suc k))
       (idx>=K (seqK S) k) (idx>=K' (seqK S) k) (seqR S k) (seqR S (suc k))
       (seqR-near S k) (seqR-near S (suc k)))
 
@@ -137,7 +137,7 @@
                <=∘ <=-less hN1),
              \lam j => seqR-near A (N1 ∨ N2) j <∘l geo<=1 _,
              minDist-cond {ComplexNormed} (seqR A (N1 ∨ N2)) z (tau (tSig A) (N1 ∨ N2) 0)
-               <∘r ((dist_U z (thread A (N1 ∨ N2))).2 (hN2 join-right) <∘ real_<_L.2 e<eta))
+               <∘r ((cabs_dist_U z (thread A (N1 ∨ N2))).2 (hN2 join-right) <∘ real_<_L.2 e<eta))
 
 -- | Consecutive thread points are within `2^{ -k}`.
 \private \lemma thread-incr (A : Threading) (k : Nat)
