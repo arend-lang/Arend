@@ -12,6 +12,7 @@ import com.intellij.psi.codeStyle.CommonCodeStyleSettings
 import com.intellij.psi.formatter.common.AbstractBlock
 import com.intellij.psi.tree.IElementType
 import com.intellij.psi.tree.TokenSet
+import com.intellij.psi.util.PsiTreeUtil
 import com.intellij.psi.util.siblings
 import org.arend.documentation.AREND_DOC_COMMENT_TABS_SIZE
 import org.arend.documentation.LIST_ORDERED_REGEX
@@ -33,6 +34,17 @@ class SimpleArendBlock(node: ASTNode, settings: CommonCodeStyleSettings?, wrap: 
         val oneSpaceWrap: Spacing = Spacing.createSpacing(1, 1, 0, true, 0)
         val oneCrlf: Spacing = Spacing.createSpacing(0, 0, 1, false, 0)
         val oneBlankLine: Spacing = Spacing.createSpacing(0, 0, 2, false, 1)
+        val trailingComment: Spacing = Spacing.createSpacing(1, Int.MAX_VALUE, 0, false, 0)
+
+        /**
+         * A comment is trailing if code precedes it on the same line, separated by whitespace.
+         * Such a comment must stay on its line and must not be glued to that code.
+         * A comment with no whitespace before it is generated code that is yet to be formatted.
+         */
+        fun isTrailingComment(node: ASTNode): Boolean {
+            val prevLeaf = PsiTreeUtil.prevLeaf(node.psi) as? PsiWhiteSpace ?: return false
+            return !prevLeaf.textContains('\n') && PsiTreeUtil.prevLeaf(prevLeaf) != null
+        }
     }
 
     override fun getSpacing(child1: Block?, child2: Block): Spacing? {
@@ -83,9 +95,15 @@ class SimpleArendBlock(node: ASTNode, settings: CommonCodeStyleSettings?, wrap: 
             val c2et = child2.node.elementType
             val c1comment = child1 is DocCommentBlock
 
-            if ((AREND_COMMENTS.contains(c1et) || c1comment) && (psi2 is ArendStat || psi2 is ArendClassStat))
-                return (if ((c1et == DOC_COMMENT || c1comment) && (psi2 is ArendStat && psi2.statCmd == null)) oneCrlf else oneBlankLine)
-            else if ((psi1 is ArendStat || psi1 is ArendClassStat) && (TokenSet.create(BLOCK_COMMENT, DOC_COMMENT, DOC_TEXT).contains(c2et) || child2 is DocCommentBlock)) return oneBlankLine
+            if ((AREND_COMMENTS.contains(c1et) || c1comment) && (psi2 is ArendStat || psi2 is ArendClassStat)) {
+                // A trailing doc comment is not glued to the next statement: the whitespace after it separates two statements
+                val isOwnLineDocComment = if (child1 is DocCommentBlock) !child1.isTrailing else c1et == DOC_COMMENT && !isTrailingComment(child1.node)
+                return (if (isOwnLineDocComment && (psi2 is ArendStat && psi2.statCmd == null)) oneCrlf else oneBlankLine)
+            }
+            else if ((psi1 is ArendStat || psi1 is ArendClassStat) && (TokenSet.create(BLOCK_COMMENT, DOC_COMMENT, DOC_TEXT).contains(c2et) || child2 is DocCommentBlock)) {
+                val isTrailing = if (child2 is DocCommentBlock) child2.isTrailing else isTrailingComment(child2.node)
+                return if (isTrailing) trailingComment else oneBlankLine
+            }
 
             if (nodePsi is ArendWithBody && (c1et == LBRACE || c2et == RBRACE)) return oneCrlf
 
@@ -378,7 +396,10 @@ class SimpleArendBlock(node: ASTNode, settings: CommonCodeStyleSettings?, wrap: 
                 }
 
                 if (childET == DOC_COMMENT) {
-                    blocks.add(processDocComment(settings, this, alignment, indent, child))
+                    // A trailing doc comment must not share the alignment of its siblings: when a sibling is reformatted,
+                    // the formatter would try to align the comment with it and, unable to move it to another line, glue it to the code before it
+                    val isTrailing = isTrailingComment(child)
+                    blocks.add(processDocComment(settings, this, if (isTrailing) null else alignment, indent, child, isTrailing))
                     child = child.treeNext
                     continue@mainLoop
                 }
@@ -415,7 +436,7 @@ class SimpleArendBlock(node: ASTNode, settings: CommonCodeStyleSettings?, wrap: 
     }
 
     private fun processDocComment(settings: CommonCodeStyleSettings?, parent: AbstractArendBlock,
-                                  globalAlignment: Alignment?, globalIndent: Indent, commentNode: ASTNode): AbstractArendBlock {
+                                  globalAlignment: Alignment?, globalIndent: Indent, commentNode: ASTNode, isTrailing: Boolean): AbstractArendBlock {
         val blocks = ArrayList<Block>()
         val oneSpaceIndent = Indent.getSpaceIndent(1)
         var startOffset = commentNode.startOffset
@@ -457,7 +478,7 @@ class SimpleArendBlock(node: ASTNode, settings: CommonCodeStyleSettings?, wrap: 
             skipWhitespace { c -> c.isWhitespace() }
         }
 
-        return DocCommentBlock(commentNode.text, commentNode.startOffset, settings, blocks, globalAlignment, globalIndent, parent)
+        return DocCommentBlock(commentNode.text, commentNode.startOffset, isTrailing, settings, blocks, globalAlignment, globalIndent, parent)
     }
 
     private fun needsCrlfInCoClausesBlock(child1: Block?, child2: Block?): Boolean =
@@ -466,7 +487,7 @@ class SimpleArendBlock(node: ASTNode, settings: CommonCodeStyleSettings?, wrap: 
                             || child1.node.psi is ArendLocalCoClause && child2.node.elementType == RBRACE)
 
 
-    class DocCommentBlock(private val fullCommentText: String, private val startCommentOffset: Int, settings: CommonCodeStyleSettings?, blocks: ArrayList<Block>, globalAlignment: Alignment?, globalIndent: Indent, parent: AbstractArendBlock) : GroupBlock(settings, blocks, null, globalAlignment, globalIndent, parent) {
+    class DocCommentBlock(private val fullCommentText: String, private val startCommentOffset: Int, val isTrailing: Boolean, settings: CommonCodeStyleSettings?, blocks: ArrayList<Block>, globalAlignment: Alignment?, globalIndent: Indent, parent: AbstractArendBlock) : GroupBlock(settings, blocks, null, globalAlignment, globalIndent, parent) {
         override fun getSpacing(child1: Block?, child2: Block): Spacing? {
             if (child1 is CommentPieceBlock && child1.isDash &&
                     !(child2 is CommentPieceBlock && child2.isDash)) {

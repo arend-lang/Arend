@@ -227,4 +227,20 @@ class ArendReformatTest : ArendFormatterTestBase() {
             "\\import Meta\n\\func id (a : Nat) => a\n\\func test (f : Nat -> Nat) => wrap (f 1)",
             "\\import Meta\n\n\\func id (a : Nat) => a\n\n\\func test (f : Nat -> Nat) => wrap (f 1)")
     }
+
+    fun testTrailingDocComments() = checkReformat("""
+        \record R {
+          | a : Nat           -- | doc a
+
+          | b : Nat {- | doc b -}
+
+          | c : Nat -- | doc c
+        }
+    """)
+
+    fun testTrailingDocCommentBetweenFunctions() = checkReformat("""
+        \func g => 0 -- | doc g
+
+        \func h => 0
+    """)
 }
