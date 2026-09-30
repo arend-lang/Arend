@@ -64,7 +64,7 @@ public class SimplifyMeta extends BaseMetaDefinition {
   @Dependency(name = "RingSolverModel.Term.:zro")    public ArendRef ringZro;
   @Dependency(name = "RingSolverModel.Term.:ide")    public ArendRef ringIde;
   @Dependency(name = "RingSolverModel.Term.:negative") public ArendRef ringNegative;
-  @Dependency(name = "RingSolverModel.Term.:+")      public ArendRef ringAdd;
+  @Dependency(name = "RingSolverModel.Term.:_+")      public ArendRef ringAdd;
   @Dependency(name = "RingSolverModel.Term.:*")      public ArendRef ringMul;
 
   @Dependency(name = "FieldSolverModel.InverseOf.inverse-of") public ArendRef inverseOf;

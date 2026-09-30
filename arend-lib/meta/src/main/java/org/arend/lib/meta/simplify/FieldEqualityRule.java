@@ -3,9 +3,9 @@ package org.arend.lib.meta.simplify;
 import org.arend.ext.concrete.ConcreteFactory;
 import org.arend.ext.concrete.expr.ConcreteExpression;
 import org.arend.ext.concrete.expr.ConcreteReferenceExpression;
+import org.arend.ext.core.expr.CorePathTypeExpression;
 import org.arend.ext.typechecking.ContextData;
 import org.arend.ext.core.expr.CoreExpression;
-import org.arend.ext.core.expr.CoreFunCallExpression;
 import org.arend.ext.core.expr.CorePiExpression;
 import org.arend.ext.core.ops.NormalizationMode;
 import org.arend.ext.reference.ArendRef;
@@ -68,17 +68,17 @@ public final class FieldEqualityRule implements TypeSimplificationRule {
 
   @Override
   public @Nullable Result apply(@NotNull CoreExpression type, @NotNull Purpose purpose) {
-    CoreFunCallExpression equality = type.normalize(NormalizationMode.WHNF).toEquality();
+    Pair<CorePathTypeExpression, CoreExpression> equality = Utils.toEqualityWithType(type, null, null);
     if (equality == null) return null;
 
-    CoreExpression carrier = equality.getDefCallArguments().getFirst();
+    CoreExpression carrier = equality.proj2;
     CRingInstance instance = CRingInstance.find(meta, inverseSource, typechecker, Utils.solveInferenceVariable(carrier.normalize(NormalizationMode.WHNF), typechecker), marker);
     if (instance == null) return null;
 
     Values<CoreExpression> values = new Values<>(typechecker, marker);
     var reifier = new FieldReifier(meta, typechecker, factory, marker, instance, inverseSource.matcherFor(instance), values);
-    var left = reifier.reify(equality.getDefCallArguments().get(1));
-    var right = reifier.reify(equality.getDefCallArguments().get(2));
+    var left = reifier.reify(equality.proj1.getLeftArgument());
+    var right = reifier.reify(equality.proj1.getRightArgument());
     if (!reifier.hasInverses()) return null;
 
     TypedExpression env = reifier.environment(carrier);
@@ -103,13 +103,12 @@ public final class FieldEqualityRule implements TypeSimplificationRule {
 
   /** The lemmas state the equality in terms of {@code interpret}; show the sides evaluated. */
   private CoreExpression tidy(CoreExpression type) {
-    CoreFunCallExpression equality = type.normalize(NormalizationMode.WHNF).toEquality();
+    Pair<CorePathTypeExpression, CoreExpression> equality = Utils.toEqualityWithType(type, null, null);
     if (equality == null) return type;
-    var arguments = equality.getDefCallArguments();
     ConcreteExpression tidied = factory.appBuilder(factory.ref(factory.getPrelude().getEqualityRef()))
-      .app(Utils.concrete(factory, arguments.get(0)), false)
-      .app(Utils.concrete(factory, arguments.get(1).normalize(NormalizationMode.ENF)))
-      .app(Utils.concrete(factory, arguments.get(2).normalize(NormalizationMode.ENF)))
+      .app(Utils.concrete(factory, equality.proj2), false)
+      .app(Utils.concrete(factory, equality.proj1.getLeftArgument().normalize(NormalizationMode.ENF)))
+      .app(Utils.concrete(factory, equality.proj1.getRightArgument().normalize(NormalizationMode.ENF)))
       .build();
     TypedExpression result = Utils.tryTypecheck(typechecker, tc -> tc.typecheck(tidied, null));
     return result == null ? type : result.getExpression();

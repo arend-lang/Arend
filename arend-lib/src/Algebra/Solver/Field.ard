@@ -81,8 +81,8 @@
       | :zro => fraction :zro :ide
       | :ide => fraction :ide :ide
       | :negative t => fraction (:negative (norm-with fractions t).numerator) (norm-with fractions t).denominator
-      | t :+ s => fraction
-          ((norm-with fractions t).numerator :* (norm-with fractions s).denominator :+ (norm-with fractions s).numerator :* (norm-with fractions t).denominator)
+      | t :_+ s => fraction
+          ((norm-with fractions t).numerator :* (norm-with fractions s).denominator :_+ (norm-with fractions s).numerator :* (norm-with fractions t).denominator)
           ((norm-with fractions t).denominator :* (norm-with fractions s).denominator)
       | t :* s => fraction
           ((norm-with fractions t).numerator :* (norm-with fractions s).numerator)
@@ -166,7 +166,7 @@
           \case norm-with-valid atoms-valid t \with {
             | valid denominator-inv correct => valid denominator-inv (pmap R.negative correct *> inv R.negative_*-left)
           }
-      | t :+ s =>
+      | t :_+ s =>
           \case norm-with-valid atoms-valid t, norm-with-valid atoms-valid s \with {
             | valid left-denominator-inv left-correct, valid right-denominator-inv right-correct =>
               valid (Inv.prod left-denominator-inv right-denominator-inv)
