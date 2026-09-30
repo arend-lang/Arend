@@ -1,0 +1,71 @@
+\import Algebra.Domain
+\import Algebra.Field
+\import Algebra.Group
+\import Algebra.Meta
+\import Algebra.Monoid
+\import Algebra.Ring
+\import Algebra.Ring.FormalSeries.Derivative
+\import Arith.Exp
+\import Arith.Rat
+\import Combinatorics.Factorial
+\import Logic
+\import Meta
+\import Paths
+
+\open Monoid(Inv)
+
+-- The total inverse is cleared with the evidence that the argument is nonzero.
+\lemma finv-with-evidence {F : DiscreteField} (x : F) (x/=0 : x /= F.zro) : F.finv x * x = F.ide
+  => dfield_simp {x/=0}
+
+-- Evidence in the local context is found automatically.
+\lemma finv-with-local-evidence {F : DiscreteField} (x : F) (x/=0 : x /= F.zro) : F.finv x * x = F.ide
+  => dfield_simp
+
+\lemma finv-clear-two {F : DiscreteField} (x y : F) (x/=0 : x /= F.zro) (y/=0 : y /= F.zro) : (F.finv x + F.finv y) * (x * y) = x + y
+  => dfield_simp {x/=0,y/=0}
+
+\lemma finv-involutive {F : DiscreteField} (x : F) (x/=0 : x /= F.zro) : F.finv (F.finv x) = x
+  => dfield_simp {x/=0,F.finv/=0 x/=0}
+
+-- Evidence is an inequality, a proof of invertibility, or apartness.
+\lemma evidence-inv {F : DiscreteField} (x : F) (xi : Inv x) : F.finv x * x = F.ide
+  => dfield_simp {xi}
+
+-- The inverse of another structure on the same carrier is an atom; evidence for F must not clear it.
+\lemma foreign-finv-is-an-atom {F : DiscreteField} (G : DiscreteField F) (x : F) (x/=0 : x /= F.zro)
+  => fails {G.finv x F.* x = F.ide} dfield_simp {x/=0}
+
+-- Without evidence, treating finv as an inverse would be unsound at 0.
+\lemma finv-is-not-cleared {F : DiscreteField} (x : F)
+  => fails {F.finv x * x = F.ide} dfield_simp
+
+\lemma unrelated-evidence-is-rejected {F : DiscreteField} (x y : F) (y/=0 : y /= F.zro)
+  => fails {F.finv x * x = F.ide} dfield_simp {y/=0}
+
+-- The explicit argument proves the equality with cleared denominators.
+\lemma finv-then-cRing {F : DiscreteField} (x a b : F) (x/=0 : x /= F.zro) : F.finv x * (x * ((a + b) * (a - b))) = a * a - b * b
+  => run {
+    dfield_simp {x/=0},
+    equation.cRing
+  }
+
+-- Forward mode.
+\lemma forward {F : DiscreteField} (x a b : F) (x/=0 : x /= F.zro) (p : a * F.finv x = b) : a = b * x
+  => \have q => dfield_simp {x/=0} p \in equation.cRing {q}
+
+-- Proof-bearing inverses are cleared together with finv.
+\lemma mixed {F : DiscreteField} (x y : F) (x/=0 : x /= F.zro) (yi : Inv y) : F.finv x * yi.inv * (x * y) = F.ide
+  => dfield_simp {x/=0}
+
+-- Evidence is needed for every denominator, including the inverse of a product.
+\lemma finv-of-product {F : DiscreteField} (a b x y : F) (x/=0 : x /= F.zro) (y/=0 : y /= F.zro) : a * F.finv x + b * F.finv y = (a * y + b * x) * F.finv (x * y)
+  => dfield_simp {x/=0, y/=0, F.nonZero_* x/=0 y/=0}
+
+-- Regression for https://github.com/arend-lang/Arend/issues/121: the denominator fac (suc n) reduces to suc n * fac n,
+-- but the evidence is still stated for fac.
+\lemma issue-121 (n : Nat) : deriv exp.coef-Rat n = exp.coef-Rat n
+  => run {
+    unfold (deriv, exp.coef-Rat),
+    dfield_simp {natRat/=0 fac/=0}
+  }

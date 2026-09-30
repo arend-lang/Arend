@@ -1,0 +1,53 @@
+\import Algebra.Field
+\import Algebra.Group
+\import Algebra.Meta
+\import Algebra.Monoid
+\import Algebra.Ring
+\import Meta
+\import Paths
+
+\open Monoid(Inv)
+
+-- The denominators are cleared and the remaining identity of a ring is proved by the argument.
+\lemma inverse-cancel {R : CRing} {x : R} (xi : Inv x) : x * xi.inv = R.ide
+  => simplify
+
+\lemma clear-two-denominators {R : CRing} (x y : R) (xi : Inv x) (yi : Inv y) : (xi.inv + yi.inv) * (x * y) = x + y
+  => simplify equation.cRing
+
+\lemma inverse-of-inverse {R : CRing} {x : R} (xi : Inv x) (ixi : Inv xi.inv) : ixi.inv = x
+  => simplify equation.cRing
+
+\lemma inverse-of-product {R : CRing} {x y : R} (xi : Inv x) (yi : Inv y) (xyi : Inv (x * y)) : xyi.inv = xi.inv * yi.inv
+  => simplify equation.cRing
+
+\lemma negative-inverses {R : CRing} {x y : R} (xi : Inv x) (yi : Inv y) : R.negative (xi.inv + yi.inv) = R.negative xi.inv + R.negative yi.inv
+  => simplify equation.cRing
+
+\lemma inverse-in-field {F : Field} {x : F} (xi : Inv x) : x * xi.inv = F.ide
+  => simplify
+
+\lemma numerals {R : CRing} {x : R} (xi : Inv x) : R.natCoef 2 * x * xi.inv = R.natCoef 2
+  => simplify equation.cRing
+
+\lemma three-fractions {R : CRing} (x y z : R) (xi : Inv x) (yi : Inv y) (zi : Inv z) : xi.inv + yi.inv + zi.inv = (y * z + x * z + x * y) * (xi.inv * yi.inv * zi.inv)
+  => simplify equation.cRing
+
+-- The denominator of a denominator is cleared as well.
+\lemma nested {R : CRing} (x y : R) (xi : Inv x) (yi : Inv (x + xi.inv * y)) : yi.inv * (x + xi.inv * y) = R.ide
+  => simplify equation.cRing
+
+-- The argument proves the equality with cleared denominators.
+\lemma with-argument {R : CRing} (a b x y : R) (xi : Inv x) (yi : Inv y) (p : a * y = b * x) : a * xi.inv = b * yi.inv
+  => simplify p
+
+\lemma with-solver {R : CRing} (a b x y : R) (xi : Inv x) (yi : Inv y) (p : a * y = x * b) : a * xi.inv = b * yi.inv
+  => simplify (equation.cRing {p})
+
+-- In the forward mode, the argument is converted to the equality with cleared denominators.
+\lemma forward {R : CRing} (a b x y : R) (xi : Inv x) (yi : Inv y) (p : a * xi.inv = b * yi.inv) : a * y = b * x
+  => \have q => simplify p \in equation.cRing {q}
+
+-- An equality without inverses is left to the other rules.
+\lemma no-inverses {R : CRing} (x : R) : x = x * R.ide
+  => simplify

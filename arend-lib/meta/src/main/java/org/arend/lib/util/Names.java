@@ -180,6 +180,18 @@ public class Names {
     return new ModulePath("Algebra", "Solver", "Ring");
   }
 
+  public static ModulePath getFieldModule() {
+    return new ModulePath("Algebra", "Field");
+  }
+
+  public static ModulePath getFieldSolverModule() {
+    return new ModulePath("Algebra", "Solver", "Field");
+  }
+
+  public static ModulePath getFieldNormalSolverModule() {
+    return new ModulePath("Algebra", "Solver", "Field", "Normal");
+  }
+
   public static ModulePath getNewSemiringSolverModule() {
     return new ModulePath("Algebra", "Solver", "Semiring");
   }

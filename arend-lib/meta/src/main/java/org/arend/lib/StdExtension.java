@@ -43,6 +43,7 @@ import org.arend.lib.meta.arith.IntArithMeta;
 import org.arend.lib.meta.arith.NatArithMeta;
 import org.arend.lib.meta.rewrite.RewriteEquationMeta;
 import org.arend.lib.meta.rewrite.RewriteMeta;
+import org.arend.lib.meta.simplify.field.DFieldSimpMeta;
 import org.arend.lib.meta.simplify.SimplifyMeta;
 import org.arend.lib.util.Names;
 import org.jetbrains.annotations.NotNull;
@@ -268,6 +269,9 @@ public class StdExtension implements ArendExtension {
     contributor.declare(algebra, Names.getNewGroupSolverModule());
     contributor.declare(algebra, Names.getNewMonoidSolverModule());
     contributor.declare(algebra, Names.getNewRingSolverModule());
+    contributor.declare(algebra, Names.getFieldModule());
+    contributor.declare(algebra, Names.getFieldSolverModule(), "FieldSolverModel");
+    contributor.declare(algebra, Names.getFieldNormalSolverModule(), "FieldNormalSolverModel");
     contributor.declare(algebra, Names.getNewSemiringSolverModule());
     contributor.declare(algebra, Names.getSemigroupSolverModule());
     contributor.declare(algebra, Names.getCSemigroupSolverModule());
@@ -499,6 +503,18 @@ public class StdExtension implements ArendExtension {
         Several hypotheses are applied sequentially.
         For example, if `p : a = b`, `q : b * c = 0`, and the goal is `a * c = 0`, then `cRing {p,q}` proves the goal.
         """), makeDef(equation.getRef(), "cRing", new DependencyMetaTypechecker(CRingEquationMeta.class, () -> new DeferredMetaDefinition(new CRingEquationMeta(), true))));
+    contributor.declare(multiline("""
+        `simplify` for discrete fields: it also clears the total inverse `DiscreteField.finv` from an equality.
+        The inverse of `x` is cleared only if `x /= 0` is known, so the evidence is given in the implicit argument,
+        for example `dfield_simp {x/=0, y/=0}`. Evidence can be a proof of `x /= 0`, of `Inv x`, or of `x # 0`.
+        Each expression in the tuple is tried for every occurrence of `finv`; the local context is tried afterwards.
+        Proof-bearing inverses `Monoid.Inv.inv` are cleared as by `simplify`.
+
+        Without an explicit argument, the goal is closed if it follows from clearing the denominators and a ring identity.
+        An explicit argument is a proof of the equality with cleared denominators; for example,
+        `run { dfield_simp {x/=0}, equation.cRing }` delegates that equality to the solver for commutative rings.
+        In the forward mode, `dfield_simp {x/=0} p` converts `p` into the equality with cleared denominators.
+        """), makeDef(algebra, "dfield_simp", new DependencyMetaTypechecker(DFieldSimpMeta.class, () -> new DeferredMetaDefinition(new DFieldSimpMeta(), true))));
     ConcreteMetaDefinition cRingAlgoSolver = makeDef(equation.getRef(), "cRingAuto", new DependencyMetaTypechecker(CRingAlgoSolverMeta.class, () -> new DeferredMetaDefinition(new CRingAlgoSolverMeta(), true)));
     contributor.declare(multiline("""
         TODO
@@ -533,7 +549,7 @@ public class StdExtension implements ArendExtension {
         makeDef(algebra, "intarith", new DependencyMetaTypechecker(IntArithMeta.class, () -> new DeferredMetaDefinition(new IntArithMeta(), true))));
     contributor.declare(text("Proves an equality by congruence closure of equalities in the context. E.g. derives f a = g b from f = g and a = b"),
         makeDef(algebra, "cong", new DependencyMetaTypechecker(CongruenceMeta.class, () ->  new DeferredMetaDefinition(new CongruenceMeta()))));
-    contributor.declare(text("Simplifies the expected type or the type of the argument if the expected type is unknown."),
+    contributor.declare(text("Simplifies the expected type or the type of the argument if the expected type is unknown. An equality in a commutative ring is also cleared of denominators, that is, of the projections `inv` of `Monoid.Inv`."),
         makeDef(algebra, "simplify", new DependencyMetaTypechecker(SimplifyMeta.class, () -> new DeferredMetaDefinition(new SimplifyMeta(), true))));
     contributor.declare(vList(
             hList(text("`rewriteEq (p : a = b) t : T` is similar to "), refDoc(rewrite.getRef()), text(", but it finds and replaces occurrences of `a` up to algebraic equivalences.")),

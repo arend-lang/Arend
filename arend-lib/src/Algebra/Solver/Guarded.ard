@@ -1,0 +1,25 @@
+\import Data.Fin
+\import Paths
+
+{- | A variant of `SolverModel` for the case when normalization needs a hypothesis and is correct only if the
+   environment satisfies a guard. For example, a field has no total inverse, so an inverse can be treated as an atom only
+   together with a witness that it is one. The hypothesis is that some atoms are inverses of some terms, and the guard
+   consists of the witnesses.
+
+   Normal forms are not required to be canonical: two normal forms can represent equal values without being equal
+   (`a / b` and `c / d`). Therefore, `NFEquiv` says when they are equivalent, and the equivalence replaces the equality of
+   normal forms in `terms-equality` and `terms-equality-conv`.
+
+   It is a separate module from `Algebra.Solver`, since the fields of both classes have the same names.
+-}
+\class GuardedSolverModel (M : \Set) {
+  | \protected Term : Nat -> \Set
+  | \protected NF : Nat -> \Set
+  | \protected Hyp : Nat -> \Set
+  | \protected Guard {n : Nat} : (Fin n -> M) -> Hyp n -> \Type
+  | \protected normalize {n : Nat} : Hyp n -> Term n -> NF n
+  | \protected interpret {n : Nat} (env : Fin n -> M) : Term n -> M
+  | \protected NFEquiv {n : Nat} (env : Fin n -> M) : NF n -> NF n -> \Type
+  | \protected terms-equality {n : Nat} {env : Fin n -> M} {h : Hyp n} : Guard env h -> \Pi {t s : Term n} -> NFEquiv env (normalize h t) (normalize h s) -> interpret env t = interpret env s
+  | \protected terms-equality-conv {n : Nat} {env : Fin n -> M} {h : Hyp n} : Guard env h -> \Pi {t s : Term n} -> interpret env t = interpret env s -> NFEquiv env (normalize h t) (normalize h s)
+}
