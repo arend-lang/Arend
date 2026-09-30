@@ -15,3 +15,12 @@
 
 \lemma cov-func-conservative {C D : \Cat} : IsConservative {C ->⁺ D} {C -> D} (\lam f x => f x)
   => \lam p e => objectwise-iso \lam x => dmap_IsIso (\lam u => u x) e
+
+-- | A morphism in the arrow category is an isomorphism if and only if both of its components are.
+\lemma DI-iso-char {D : \Cat} {u v : DI ->⁺ D} {p : u ~> v}
+  : IsIso p <-> (\Sigma (IsIso (dmap (\lam h => h dleft) p)) (IsIso (dmap (\lam h => h dright) p)))
+  => (\lam e => (dmap_IsIso (\lam h => h dleft) e, dmap_IsIso (\lam h => h dright) e),
+      \lam s => objectwise-iso \lam x => \case \elim x \with {
+        | dleft => s.1
+        | dright => s.2
+      })

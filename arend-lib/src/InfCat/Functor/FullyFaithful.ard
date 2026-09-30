@@ -55,6 +55,14 @@
   => \lam s t => inP $ transQEquiv (dpath-sigma-equiv \lam _ x => \Sigma⁺ (y : C) (f y = g x)) $
         contr-right {s.1 ~> t.1} \lam r => ff-surj-equiv.contr ff (\lam i =>⁺ g (r i))
 
+-- | A composite of fully faithful maps is fully faithful.
+\lemma ffMap-comp {A B C : \Cat} {f : A ->⁺ B} {g : B ->⁺ C} (ff : IsFFMap f) (gf : IsFFMap g) : IsFFMap (\lam a => g (f a))
+  => \lam x y => IsEquiv.trans (ff x y) (gf (f x) (f y))
+
+-- | If {g} and `g ∘ f` are fully faithful, then so is {f}.
+\lemma ffMap-leftFactor {A B C : \Cat} {f : A ->⁺ B} {g : B ->⁺ C} (gf : IsFFMap g) (gff : IsFFMap (\lam a => g (f a))) : IsFFMap f
+  => \lam x y => IsEquiv.leftFactor (gf (f x) (f y)) (gff x y)
+
 \type IsSurjMap {C D : \Cat} (f : C ->⁺ D) : \Prop
   => \Pi (y : D) -> ∃ (x : C) (f x = y)
 

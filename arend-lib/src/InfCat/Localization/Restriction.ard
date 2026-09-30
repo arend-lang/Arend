@@ -1,0 +1,72 @@
+\import Equiv
+\import Equiv.Sigma
+\import Function.Meta
+\import InfCat.Arrows
+\import InfCat.Basics
+\import InfCat.Functor.Equiv
+\import InfCat.Functor.FullyFaithful
+\import InfCat.OFS.CatOFS
+\import InfCat.Paths
+\import InfCat.SubCat.Full
+\import Logic
+\import Paths
+\import Paths.Meta
+
+{- | Restriction along {l} as a functor into the full subcategory of `C ->⁺ D` spanned by {P},
+ -   where {lP} says that restrictions satisfy {P}.
+ -   On objects this is `FullSubCat.make (\lam x => G (l x)) (lP G)`, but {FullSubCat.make} is invariant in its arguments,
+ -   while this functor must be covariant in {G}, so it is obtained from {FullSubCat.isMax} instead.
+ -}
+\func res-sub {C L D : \Cat} (l : C ->⁺ L) (P : (C ->⁺ D) -> \Prop) (lP : \Pi (G : L ->⁺ D) -> P (\lam x => G (l x)))
+  (G :⁺ L ->⁺ D) : FullSubCat P
+  => (FullSubCat.isMax {_} {P} {L ->⁺ D} {\lam G x => G (l x)} lP).1 G
+  \where {
+    \sfunc inc_res {G :⁺ L ->⁺ D} : FullSubCat.inc (res-sub l P lP G) = (\lam x => G (l x))
+      => (FullSubCat.isMax {_} {P} {L ->⁺ D} {\lam G x => G (l x)} lP).2 G
+  }
+
+{- | Restriction along {l} is an equivalence onto the full subcategory spanned by {P} if it is an equivalence
+ -   on objects onto {P} for {D} and onto {P'} for the arrow category `DI ->⁺ D`,
+ -   where {P'} holds if and only if both endpoints satisfy {P}.
+ -}
+\lemma res-sub-equiv {C L D : \Cat} (l : C ->⁺ L) (P : (C ->⁺ D) -> \Prop) (lP : \Pi (G : L ->⁺ D) -> P (\lam x => G (l x)))
+  (P' : (C ->⁺ DI ->⁺ D) -> \Prop) (lP' : \Pi (G : L ->⁺ DI ->⁺ D) -> P' (\lam x => G (l x)))
+  (Pe : \Pi (H : C ->⁺ DI ->⁺ D) -> P' H <-> (\Sigma (P (\lam x => H x dleft)) (P (\lam x => H x dright))))
+  (e : IsEquiv {L ->⁺ D} {\Sigma (F : C ->⁺ D) (P F)} (\lam G => (\lam x => G (l x), lP G)))
+  (e' : IsEquiv {L ->⁺ DI ->⁺ D} {\Sigma (H : C ->⁺ DI ->⁺ D) (P' H)} (\lam G => (\lam x => G (l x), lP' G)))
+  : IsHEquiv (res-sub l P lP)
+  => ff-surj-equiv.1 (ffMap-leftFactor {_} {_} {_} {res-sub l P lP} (FullSubCat.inc-ff {C ->⁺ D} {P}) $
+                        transportInv IsFFMap (funExt+ \lam G => res-sub.inc_res {C} {L} {D} {l} {P} {lP} {G}) res-ff,
+                      \lam d => \case IsEquiv.isSurj e (FullSubCat.inc d, FullSubCat.inc-con {C ->⁺ D} {P} {d}) \with {
+                        | inP (G,q) => inP (G, ((IsFFMap.isObEmbedding FullSubCat.inc-ff).isEmb _ _).sec $
+                                                res-sub.inc_res *> pmap __.1 q)
+                      })
+  \where {
+    \lemma res-ff : IsFFMap {L ->⁺ D} {C ->⁺ D} (\lam G x => G (l x))
+      => \let | X => \Sigma (L ->⁺ D) (L ->⁺ D)
+              | Y => \Sigma (\Sigma (F : C ->⁺ D) (P F)) (\Sigma (F : C ->⁺ D) (P F))
+              | TY => \Sigma (j : Y) (j.1.1 ~> j.2.1)
+              | tmap (s : \Sigma (j : X) (j.1 ~> j.2)) : TY
+                  => (((\lam x => s.1.1 (l x), lP s.1.1), (\lam x => s.1.2 (l x), lP s.1.2)), dmap (\lam G x =>⁺ G (l x)) {s.1.1} {s.1.2} s.2)
+              | rmap (G : L ->⁺ DI ->⁺ D) : \Sigma (H : C ->⁺ DI ->⁺ D) (P' H) => (\lam x => G (l x), lP' G)
+         \in \lam G1 G2 => fiberwiseEquiv {X} {Y} {\lam j => ((\lam x => j.1 (l x), lP j.1), (\lam x => j.2 (l x), lP j.2))}
+          (IsOrthogonal-res-ff.pair-equiv e) {\lam j => j.1 ~> j.2} {\lam j => j.1.1 ~> j.2.1}
+          (\lam j p => dmap (\lam G x =>⁺ G (l x)) {j.1} {j.2} p)
+          (transport (\lam X => X) (IsEquiv.parallelEquiv {L ->⁺ DI ->⁺ D} {\Sigma (H : C ->⁺ DI ->⁺ D) (P' H)} {\Sigma (j : X) (j.1 ~> j.2)} {TY}
+              {rmap} {tmap} {\lam G => DI-fun-equiv {L} {D} G} {\lam s => pairs-equiv s}
+              (inP (DI-fun-equiv {L} {D})) (inP pairs-equiv)
+              \lam G => path {\lam _ => TY} \lam j =>
+                (((\lam x => G (l x) dleft, prop-pi {_} {((Pe (\lam x => G (l x))).1 (lP' G)).1} {lP (\lam y => G y dleft)} j),
+                  (\lam x => G (l x) dright, prop-pi {_} {((Pe (\lam x => G (l x))).1 (lP' G)).2} {lP (\lam y => G y dright)} j)),
+                 dpath \lam i x => G (l x) i)) e')
+          (G1, G2)
+
+    -- | A functor to the arrow category whose endpoints satisfy {P} is a morphism of the full subcategory.
+    \func pairs-equiv
+      : QEquiv {\Sigma (H : C ->⁺ DI ->⁺ D) (P' H)}
+               {\Sigma (j : \Sigma (\Sigma (F : C ->⁺ D) (P F)) (\Sigma (F : C ->⁺ D) (P F))) (j.1.1 ~> j.2.1)} \cowith
+      | f s => (((\lam x => s.1 x dleft, ((Pe s.1).1 s.2).1), (\lam x => s.1 x dright, ((Pe s.1).1 s.2).2)), dpath \lam i x => s.1 x i)
+      | ret t => (\lam x i => t.2 i x, (Pe (\lam x i => t.2 i x)).2 (t.1.1.2, t.1.2.2))
+      | ret_f s => ext idp
+      | f_sec t => path \lam k => (((t.1.1.1, prop-pi {P t.1.1.1} {_} {t.1.1.2} k), (t.1.2.1, prop-pi {P t.1.2.1} {_} {t.1.2.2} k)), t.2)
+  }

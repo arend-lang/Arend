@@ -47,7 +47,7 @@
           (isProp.=>isSet (\lam x y => inv (c1.contraction x) *> c1.contraction y) c2.center a' _ _) i
     })
 
-    \lemma Contr_QEquiv {A B : \Type} (e : QEquiv {A} {B}) (c : Contr A) : Contr B \cowith
+    \lemma Contr_QEquiv {A B : \Cat} (e : QEquiv {A} {B}) (c : Contr A) : Contr B \cowith
       | center => e c.center
       | contraction b => e.adjointInv (c.contraction _)
   }
@@ -89,3 +89,6 @@
      \in Contr.make c \lam b =>
           \have t => sigmaEquiv B (a,c) (a,b) (isContr=>isProp cT _ _)
           \in pmap (transport B __ c) (isProp.=>isSet (isContr=>isProp cA) a a idp t.1) *> t.2
+
+\func isProp-retract {A B : \Cat} (f : B -> A) (g : A -> B) (gf : \Pi (b : B) -> g (f b) = b) (p : isProp A) : isProp B
+  => \lam b b' => inv (gf b) *> pmap g (p (f b) (f b')) *> gf b'

@@ -85,6 +85,21 @@
     \lemma rightFactor {A B C : \Cat} {f : A ->⁺ B} (e1 : IsHEquiv f) {g : B ->⁺ C} (e3 : IsHEquiv \lam a => g (f a)) : IsHEquiv g \elim e1, e3
       | inP e1, inP e3 => inP (HQEquiv.rightFactor e1 e3)
 
+    \lemma trans {A B C : \Cat} {f : A ->⁺ B} (e1 : IsHEquiv f) {g : B ->⁺ C} (e2 : IsHEquiv g) : IsHEquiv \lam a => g (f a) \elim e1, e2
+      | inP e1, inP e2 => inP \new HQEquiv {
+        | finv c => e1.finv (e2.finv c)
+        | finv_f a => pmap+ e1.finv (e2.finv_f (f a)) *> e1.finv_f a
+        | f_finv c => pmap+ g (e1.f_finv (e2.finv c)) *> e2.f_finv c
+      }
+
+    -- | Precomposition with an equivalence is an equivalence.
+    \lemma precomp {A B D : \Cat} {f : A ->⁺ B} (e : IsHEquiv f) : IsHEquiv {B ->⁺ D} {A ->⁺ D} (\lam G a => G (f a)) \elim e
+      | inP e => inP \new HQEquiv {
+        | finv K b => K (e.finv b)
+        | finv_f G => funExt+ \lam b => pmap+ G (e.f_finv b)
+        | f_finv K => funExt+ \lam a => pmap+ K (e.finv_f a)
+      }
+
     \lemma biEquiv {g : D ->⁺ C} (p : \Pi (x :⁺ C) -> g (f x) = x) {h : D ->⁺ C} (q : \Pi (y :⁺ D) -> f (h y) = y) : IsHEquiv f
       => inP \new HQEquiv {
         | finv => g

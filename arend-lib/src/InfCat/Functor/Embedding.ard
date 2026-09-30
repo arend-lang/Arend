@@ -1,8 +1,13 @@
 \import Equiv
+\import Equiv.Fiber
 \import Equiv.Path
 \import Function.Meta
+\import InfCat.Basics
+\import InfCat.Functor.Equiv
+\import InfCat.Functor.FullyFaithful
 \import InfCat.Paths
 \import Logic
+\import Paths
 \import Paths.Meta
 
 \type IsEmbedding {C D : \Cat} (f : C ->⁺ D) : \Prop
@@ -20,6 +25,60 @@
 
     \sfunc isMono (fe : IsEmbedding f) {E : \Cat} (g h : E ->⁺ C) (p : \Pi (x :⁺ E) -> f (g x) = f (h x)) {x :⁺ E} : g x = h x
       => path \lam i => IsEquiv.ret (external fe g h) (path \lam j x => p x j) i x
+
+    -- | A functor is an embedding if and only if it is an embedding on objects and on homs.
+    \lemma char {C D : \Cat} {f : C ->⁺ D}
+      : IsEmbedding f <-> (\Sigma (Embedding {C} {D} (\lam x => f x)) (\Pi (x y : C) -> Embedding {x ~> y} (\lam p => dmap f p)))
+      => (\lam fe => \have e => diag-equiv.1 fe
+                     \in (diag-ob.1 (IsHEquiv.toIsEquiv e), diag-ff.1 (ff-surj-equiv.2 e).1),
+          \lam s => diag-equiv.2 $ ff-surj-equiv.1 ((diag-ff {C} {D} {f}).2 s.2, \lam t => inP (IsEquiv=>contrFibers ((diag-ob {C} {D} {f}).2 s.1) t).center))
+
+    -- | The diagonal of a functor.
+    \func diag {C D : \Cat} (f : C ->⁺ D) (x :⁺ C) : \Sigma⁺ (x y : C) (f x = f y)
+      => (x, x, idp)
+
+    -- | A functor is an embedding if and only if its diagonal is an equivalence.
+    \lemma diag-equiv {C D : \Cat} {f : C ->⁺ D} : IsEmbedding f <-> IsHEquiv (diag f)
+      => (\lam (inP e) => IsHEquiv.biEquiv {_} {_} {diag f} {__.1} (\lam x => idp) (\lam s => fib-diag (e s).1 (e s).2),
+          \lam e => inP \lam s => diag-fib (IsHEquiv.f_ret e))
+      \where {
+        \func diag-fib {C D : \Cat} {f : C ->⁺ D} {c :⁺ C} {s :⁺ \Sigma⁺ (x y : C) (f x = f y)} (r :⁺ diag f c = s)
+          : \Sigma⁺ (p : s.1 = s.2) (pmap+ f p = s.3) \elim r
+          | idp => (idp, idp)
+
+        \func fib-diag {C D : \Cat} {f : C ->⁺ D} {x y :⁺ C} {q :⁺ f x = f y} (p :⁺ x = y) (h :⁺ pmap+ f p = q)
+          : diag f x = {\Sigma⁺ (x y : C) (f x = f y)} (x, y, q) \elim p, h
+          | idp, idp => idp
+      }
+
+    -- | The diagonal of a functor is an equivalence on objects if and only if the functor is an embedding on objects.
+    \lemma diag-ob {C D : \Cat} {f : C ->⁺ D} : IsEquiv (\lam x => diag f x) <-> Embedding {C} {D} (\lam x => f x)
+      => <->trans (<->_=.2 $ IsEquiv.parallelEquiv {C} {\Sigma⁺ (x y : C) (f x = f y)} {C} {\Sigma (x y : C) (f x = f y)}
+                    (inP idEquiv)
+                    (inP \new QEquiv {
+                      | f s => (s.1, s.2, s.3)
+                      | ret s => (s.1, s.2, s.3)
+                      | ret_f => idpe
+                      | f_sec => idpe
+                    }) (\lam x => idp))
+                  (<->sym Embedding.diag-char)
+
+    -- | The diagonal of a functor is fully faithful if and only if the functor is an embedding on homs.
+    \lemma diag-ff {C D : \Cat} {f : C ->⁺ D} : IsFFMap (diag f) <-> (\Pi (x y : C) -> Embedding {x ~> y} (dmap f))
+      => (\lam ff x y => Embedding.diag-char.2 $ (hom-equiv x y).1 (ff x y),
+          \lam he x y => (hom-equiv {C} {D} {f} x y).2 $ Embedding.diag-char.1 (he x y))
+      \where {
+        \lemma hom-equiv {C D : \Cat} {f : C ->⁺ D} (x y : C)
+          : IsEquiv (\lam p => dmap (diag f) {x} {y} p) <-> IsEquiv {x ~> y} {\Sigma (u v : x ~> y) (dmap f u = dmap f v)} (\lam u => (u, u, idp))
+          => <->_=.2 $ IsEquiv.parallelEquiv (inP idEquiv) (inP \new QEquiv {diag f x ~> diag f y} {\Sigma (u v : x ~> y) (dmap f u = dmap f v)} {
+            | f h => (dpath \lam i => (h i).1, dpath \lam i => (h i).2, path \lam j => dpath \lam i => (h i).3 j)
+            | ret s => dpath \lam i => (s.1 i, s.2 i, path \lam j => s.3 j i)
+            | ret_f => idpe
+            | f_sec => idpe
+          }) (\lam u => idp)
+      }
   }
 
--- TODO: Prove that a functor is an embedding iff it is an embedding on objects and on homs
+-- | A fully faithful functor is an embedding.
+\lemma ffMap-embedding {C D : \Cat} {f : C ->⁺ D} (ff : IsFFMap f) : IsEmbedding f
+  => (IsEmbedding.char {C} {D} {f}).2 (IsFFMap.isObEmbedding ff, \lam x y => Embedding.fromIsEquiv (ff x y))

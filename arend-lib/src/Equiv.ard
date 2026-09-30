@@ -6,7 +6,6 @@
 \import Logic.Unique
 \import Homotopy.Fibration
 \import Logic
-\import Logic.Meta
 \import Paths
 \import Paths.Meta
 
@@ -346,6 +345,37 @@
                   | f_sec t => pmap (\lam r => ((t.1, t.2, r) : T)) (pe.f_sec t.3)
                 }
     \in inP (transQEquiv q s)
+
+  -- | The fiber of the diagonal over {t} is equivalent to the fiber of `pmap f` over `t.3`
+  \func diag-fib-equiv {A B : \Cat} {f : A -> B} (t : \Sigma (a1 a2 : A) (f a1 = f a2))
+    : QEquiv {\Sigma (a : A) ((a, a, idp) = {\Sigma (a1 a2 : A) (f a1 = f a2)} t)} {\Sigma (p : t.1 = t.2) (pmap f p = t.3)} \cowith
+    | f s => diag-fib s.2
+    | ret s => (t.1, fib-diag s.1 s.2)
+    | ret_f s => ret_f' s.2
+    | f_sec s => f_sec' s.1 s.2
+    \where {
+      \func diag-fib {A B : \Cat} {f : A -> B} {a : A} {t : \Sigma (a1 a2 : A) (f a1 = f a2)} (r : (a, a, idp) = {\Sigma (a1 a2 : A) (f a1 = f a2)} t)
+        : \Sigma (p : t.1 = t.2) (pmap f p = t.3) \elim r
+        | idp => (idp, idp)
+
+      \func fib-diag {A B : \Cat} {f : A -> B} {a a' : A} {q : f a = f a'} (p : a = a') (h : pmap f p = q)
+        : (a, a, idp) = {\Sigma (a1 a2 : A) (f a1 = f a2)} (a, a', q) \elim p, h
+        | idp, idp => idp
+
+      \func ret_f' {A B : \Cat} {f : A -> B} {a : A} {t : \Sigma (a1 a2 : A) (f a1 = f a2)} (r : (a, a, idp) = {\Sigma (a1 a2 : A) (f a1 = f a2)} t)
+        : (t.1, fib-diag (diag-fib r).1 (diag-fib r).2) = {\Sigma (a : A) ((a, a, idp) = {\Sigma (a1 a2 : A) (f a1 = f a2)} t)} (a, r) \elim r
+        | idp => idp
+
+      \func f_sec' {A B : \Cat} {f : A -> B} {a a' : A} {q : f a = f a'} (p : a = a') (h : pmap f p = q)
+        : diag-fib {A} {B} {f} (fib-diag p h) = {\Sigma (p : a = a') (pmap f p = q)} (p, h) \elim p, h
+        | idp, idp => idp
+    }
+
+  -- | A map is an embedding if and only if its diagonal is an equivalence
+  \lemma diag-char {A B : \Cat} {f : A -> B} : Embedding f <-> IsEquiv {A} {\Sigma (a1 a2 : A) (f a1 = f a2)} (\lam a => (a, a, idp))
+    => (\lam e => diag-equiv e, \lam e => \new Embedding {
+      | isEmb a a' => contrFibers=>QEquiv \lam q => Contr.Contr_QEquiv (diag-fib-equiv (a, a', q)) (IsEquiv=>contrFibers e (a, a', q))
+    })
 
   \lemma projection {A : \Cat} (B : A -> \Prop) : Embedding {\Sigma (a : A) (B a)} __.1 \cowith
     | isEmb p p' => \new Retraction {

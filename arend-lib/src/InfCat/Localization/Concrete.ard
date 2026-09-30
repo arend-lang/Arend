@@ -1,0 +1,148 @@
+{- | The localization of a category at the class of morphisms satisfying a predicate `S : (DI ->⁺ C) -> \Prop`,
+ -   constructed as the pushout of `DI × W -> C` along the projection `DI × W -> W`,
+ -   where {W} is the type of morphisms satisfying {S} [1, Remark 3.3.8].
+ -   A functor is a localization if the canonical functor from this pushout is an equivalence;
+ -   this is equivalent to the universal property of [1, Definition 3.3.6].
+ -
+ -   [1] Denis-Charles Cisinski, Bastiaan Cnossen, Kim Nguyen, Tashi Walde, Synthetic Category Theory, 2026
+ -}
+
+\import Equiv
+\import Equiv.Sigma
+\import Function.Meta
+\import InfCat.Arrows
+\import InfCat.CatPushout
+\import InfCat.Functor.Embedding
+\import InfCat.Functor.Equiv
+\import InfCat.Functor.FullyFaithful
+\import InfCat.Groupoid
+\import InfCat.Localization.Abstract
+\import InfCat.Rezk
+\import InfCat.SubCat.Full
+\import Logic
+\import Logic.Unique
+\import Paths
+\import Paths.Meta
+
+-- | The type of morphisms of {C} satisfying {W}.
+\func MorW {C : \Cat} (W : (DI ->⁺ C) -> \Prop) : \Type
+  => \Sigma (a : DI ->⁺ C) (W a)
+
+-- | The localization of {C} at {W}.
+\func Localize {C : \Cat} (W : (DI ->⁺ C) -> \Prop) : \Cat
+  => CatPushout {\Sigma⁺ (MorW W) DI} {C} {MorW W} (\lam a => a.1.1 a.2) (\lam a => a.1)
+
+-- | The localization functor.
+\func localize {C : \Cat} (W : (DI ->⁺ C) -> \Prop) (x :⁺ C) : Localize W
+  => cinl x
+
+\lemma localize-inverts {C : \Cat} {W : (DI ->⁺ C) -> \Prop} : InvertsW W (localize W)
+  => \lam {a} s => (IsIso-diag-char {Localize W}).2 $ inP (cinr (a, s), inv $ path \lam j i => cglue ((a, s), i) j)
+
+-- | The data of a functor out of {Localize} besides its restriction {F} to {C}.
+\func GlueData {C D : \Cat} (W : (DI ->⁺ C) -> \Prop) (F : C ->⁺ D)
+  => \Sigma (v : MorW W ->⁺ D) (\Pi (a :⁺ \Sigma⁺ (MorW W) DI) -> F (a.1.1 a.2) = v a.1)
+
+-- | Functors out of {Localize} are functors out of {C} with gluing data.
+\func localize-rec-equiv {C D : \Cat} {W : (DI ->⁺ C) -> \Prop}
+  : QEquiv {Localize W ->⁺ D} {\Sigma (F : C ->⁺ D) (GlueData W F)}
+  => CatPushout.elim-equiv `transQEquiv` \new QEquiv {_} {\Sigma (F : C ->⁺ D) (GlueData W F)} {
+    | f s => (s.1, (s.2, s.3))
+    | ret s => (s.1, s.2.1, s.2.2)
+    | ret_f => idpe
+    | f_sec => idpe
+  }
+
+\lemma GlueData=>inverts {C D : \Cat} {W : (DI ->⁺ C) -> \Prop} {F : C ->⁺ D} (g : GlueData W F) : InvertsW W F
+  => \lam {a} s => IsIso-diag-char.2 $ inP (g.1 (a, s), inv $ path \lam j i => g.2 ((a, s), i) j)
+
+-- | Gluing data for a functor inverting {W} is unique.
+\lemma GlueData-contr {C D : \Cat} {W : (DI ->⁺ C) -> \Prop} {F : C ->⁺ D} (Fw : InvertsW W F) : Contr (GlueData W F)
+  => \let | T (u :⁺ MorW W) => \Sigma⁺ (k : D) ((\lam i =>⁺ F (u.1 i)) = (\lam _ =>⁺ k))
+          | Fib (u : MorW W) => \Sigma (k : D) ((\lam _ =>⁺ k) = (\lam i =>⁺ F (u.1 i)))
+          | T-prop (u : MorW W) : isProp (T u) => isProp-retract {Fib u} {T u} (\lam r => (r.1, inv r.2)) (\lam r => (r.1, inv r.2))
+                                               (\lam r => path \lam k => (r.1, inv_inv k))
+                                               (IsFFMap.fibProp diag-ff (\lam i => F (u.1 i)))
+          | T-inh (u : MorW W) : T u =>
+            \have r => TruncP.remove (IsFFMap.fibProp diag-ff (\lam i => F (u.1 i))) (IsIso-diag-char.1 (Fw u.2))
+            \in (r.1, inv r.2)
+          | e1 : QEquiv {GlueData W F} {\Pi (u :⁺ MorW W) -> T u} => \new QEquiv {
+              | f g u => (g.1 u, path \lam j i => g.2 (u,i) j)
+              | ret s => (\lam u => (s u).1, \lam a => path \lam j => ((s a.1).2 @ j) a.2)
+              | ret_f => idpe
+              | f_sec => idpe
+            }
+     \in \case cov-pi-cat-equiv type-groupoid T \with {
+       | inP e2 => Contr.Contr_QEquiv (symQEquiv (HQEquiv.toQEquiv e2) `transQEquiv` symQEquiv e1) $
+                    pi-Contr (\lam u => T u) \lam u => isProp=>isContr (T-prop u) (T-inh u)
+     }
+
+-- | For a functor inverting {W}, the gluing data is equivalent to the property of inverting {W}.
+\func GlueData-equiv {C D : \Cat} {W : (DI ->⁺ C) -> \Prop} (F : C ->⁺ D) : QEquiv {GlueData W F} {InvertsW W F} \cowith
+  | f => GlueData=>inverts
+  | ret Fw => (GlueData-contr Fw).center
+  | ret_f g => (GlueData-contr (GlueData=>inverts g)).contraction g
+  | f_sec Fw => prop-pi
+
+-- | On objects, functors out of {Localize} are exactly the functors out of {C} inverting {W}.
+\lemma localize-ob-equiv {C D : \Cat} {W : (DI ->⁺ C) -> \Prop}
+  : IsEquiv (restrictW {C} {Localize W} {D} (localize-inverts {C} {W}))
+  => transport IsEquiv (ext \lam G => ext idp) $
+       IsEquiv.trans (inP localize-rec-equiv) (inP (sigma-right GlueData-equiv))
+
+-- | {Localize} is a localization with respect to functors into any category.
+\lemma localize-isLocalizationFor {C D : \Cat} {W : (DI ->⁺ C) -> \Prop} : IsLocalizationFor W (localize W) D
+  => localization-criterion localize-inverts (localize-ob-equiv {C} {D} {W}) (localize-ob-equiv {C} {DI ->⁺ D} {W})
+
+-- | The canonical functor out of {Localize} induced by a functor inverting {W}; it computes on {localize}.
+\func localize-ext {C L : \Cat} {W : (DI ->⁺ C) -> \Prop} {l : C ->⁺ L} (lw : InvertsW W l) (y :⁺ Localize W) : L
+  => CatPushout.rec l (GlueData-contr lw).center.1 (GlueData-contr lw).center.2 y
+
+-- | {l} is a localization of {C} at {W} if the canonical functor from {Localize} is an equivalence.
+\type IsLocalization {C L : \Cat} (W : (DI ->⁺ C) -> \Prop) (l : C ->⁺ L) : \Prop
+  => \Sigma (lw : InvertsW W l) (IsHEquiv (localize-ext lw))
+  \where {
+    -- | A localization satisfies the universal property of [1, Definition 3.3.6] with respect to every category.
+    \lemma univ {C L : \Cat} {W : (DI ->⁺ C) -> \Prop} {l : C ->⁺ L} (Lz : IsLocalization W l) {D : \Cat} : IsLocalizationFor W l D
+      => (Lz.1, transportInv IsHEquiv (ext \lam G => IsEmbedding.isMono
+                    (ffMap-embedding FullSubCat.inc-ff)
+                    (loc-precomp Lz.1)
+                    (\lam G => loc-precomp localize-inverts \lam y => G (localize-ext Lz.1 y))
+                    (\lam G => ext \lam x => loc-precomp.inc_precomp Lz.1 *> inv (loc-precomp.inc_precomp localize-inverts)))
+                  (IsHEquiv.trans (IsHEquiv.precomp Lz.2) (localize-isLocalizationFor {C} {D} {W}).2))
+
+    -- | The universal property with respect to {L} and {Localize} implies that {l} is a localization.
+    \lemma fromUniv {C L : \Cat} {W : (DI ->⁺ C) -> \Prop} {l : C ->⁺ L}
+                    (loc1 : IsLocalizationFor W l L) (loc2 : IsLocalizationFor W l (Localize W)) : IsLocalization W l
+      => \have lu => localization-unique localize-isLocalizationFor localize-isLocalizationFor loc2 loc1
+         \in (loc1.1, transportInv IsHEquiv (ext \lam y => loc-ext-eq localize-isLocalizationFor (\lam x => inv (lu.2 x)) {y}) lu.3)
+
+    -- | Localizations of {C} at {W} are equivalent under {C}.
+    \sfunc unique {C L L' : \Cat} {W : (DI ->⁺ C) -> \Prop} {l : C ->⁺ L} {l' : C ->⁺ L'}
+                  (Lz : IsLocalization W l) (Lz' : IsLocalization W l')
+      : \Sigma (u : L ->⁺ L') (\Pi (x :⁺ C) -> u (l x) = l' x) (IsHEquiv u)
+      => localization-unique (univ Lz) (univ Lz) (univ Lz') (univ Lz')
+
+    -- | Functors into a groupoid factor uniquely through a localization.
+    \lemma groupoid {C L D : \Cat} {W : (DI ->⁺ C) -> \Prop} {l : C ->⁺ L} (Lz : IsLocalization W l) (Dg : IsGroupoid D)
+      : IsHEquiv {L ->⁺ D} {C ->⁺ D} (\lam G x => G (l x))
+      => loc-groupoid (univ Lz) Dg
+
+    -- | Functoriality of localizations [1, Construction 3.3.9].
+    \sfunc map {C C' L L' : \Cat} {W : (DI ->⁺ C) -> \Prop} {S' : (DI ->⁺ C') -> \Prop} {l : C ->⁺ L} {l' : C' ->⁺ L'}
+              (Lz : IsLocalization W l) (l'S : InvertsW S' l') (f : C ->⁺ C') (fw : SendsW W S' f)
+      : \Sigma (m : L ->⁺ L') (\Pi (x :⁺ C) -> m (l x) = l' (f x))
+      => loc-map (univ Lz) l'S f fw
+  }
+
+-- | {Localize} is a localization.
+\lemma localize-isLocalization {C : \Cat} {W : (DI ->⁺ C) -> \Prop} : IsLocalization W (localize W)
+  => (localize-inverts, transportInv IsHEquiv (ext \lam y => loc-ext-eq localize-isLocalizationFor (\lam _ => idp) {y}) idHEquiv)
+
+-- | The functor between localizations induced by a functor sending {W} to {W'}; it computes on {localize}.
+\func localize-map {C C' : \Cat} {W : (DI ->⁺ C) -> \Prop} {W' : (DI ->⁺ C') -> \Prop} (f : C ->⁺ C') (fw : SendsW W W' f) (y :⁺ Localize W) : Localize W'
+  => localize-ext {_} {_} {_} {\lam x => localize W' (f x)} (\lam s => localize-inverts (fw s)) y
+
+-- | The identity functor is the localization at the isomorphisms.
+\lemma id-isLocalization-iso {C : \Cat} : IsLocalization (IsIso {C} __) (\lam x => x)
+  => IsLocalization.fromUniv id-isLocalizationFor-iso id-isLocalizationFor-iso
