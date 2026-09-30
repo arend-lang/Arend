@@ -600,7 +600,10 @@ class ExpressionDeserialization {
   private Expression readTypeConstructor(ExpressionProtos.Expression.TypeConstructor proto) throws DeserializationException {
     FunctionDefinition function = myCallTargetProvider.getCallTarget(proto.getFunRef(), FunctionDefinition.class);
     myDependencyListener.dependsOn(myDefinition.getRef(), function.getReferable());
-    return TypeConstructorExpression.make(function, readLevels(proto.getLevels()), proto.getClauseIndex(), readExprList(proto.getClauseArgumentList()), readExpr(proto.getArgument()));
+    // Not TypeConstructorExpression.make: whether to cancel a destructor was decided when the term was
+    // built, and deciding it again needs the argument's type, which may refer to a definition that has
+    // not been filled in yet.
+    return new TypeConstructorExpression(function, readLevels(proto.getLevels()), proto.getClauseIndex(), readExprList(proto.getClauseArgumentList()), readExpr(proto.getArgument()));
   }
 
   private Expression readTypeDestructor(ExpressionProtos.Expression.TypeDestructor proto) throws DeserializationException {

@@ -31,7 +31,7 @@ public class TypeConstructorExpression extends Expression implements CoreTypeCon
   private final List<Expression> myClauseArguments;
   private Expression myArgument;
 
-  private TypeConstructorExpression(FunctionDefinition definition, Levels levels, int clauseIndex, List<Expression> clauseArguments, Expression argument) {
+  public TypeConstructorExpression(FunctionDefinition definition, Levels levels, int clauseIndex, List<Expression> clauseArguments, Expression argument) {
     myDefinition = definition;
     myLevels = levels;
     myClauseIndex = clauseIndex;

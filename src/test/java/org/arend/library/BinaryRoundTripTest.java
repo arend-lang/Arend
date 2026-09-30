@@ -4,6 +4,9 @@ import org.arend.core.definition.Definition;
 import org.arend.core.definition.FunctionDefinition;
 import org.arend.core.elimtree.Body;
 import org.arend.core.elimtree.IntervalElim;
+import org.arend.core.expr.FunCallExpression;
+import org.arend.core.expr.TypeConstructorExpression;
+import org.arend.core.expr.TypeDestructorExpression;
 import org.arend.error.DummyErrorReporter;
 import org.arend.ext.error.ListErrorReporter;
 import org.arend.frontend.source.PreludeResourceSource;
@@ -127,5 +130,33 @@ public class BinaryRoundTripTest extends TypeCheckingTestCase {
     assertEquals(2, cases.size());
     assertFalse("The I column must not be marked directed", cases.get(0).isDirected());
     assertTrue("The DI column must be marked directed", cases.get(1).isDirected());
+  }
+
+  /*
+   * The ascription elaborates to ctor_T (dtor_T (h n)), and TypeConstructorExpression.make keeps
+   * the pair because h n : T n. Deserialization used to rebuild it through make, which asks for the
+   * type of h n; h comes later in the module, so at that point it is a shell with no parameters and
+   * no status, and GetTypeVisitor failed on it.
+   */
+  @Test
+  public void typeConstructorOverForwardCallRoundTrip() {
+    ConcreteGroup group = persistAndReload("""
+        \\type T (n : Nat) => Nat
+        \\func g (n : Nat) : T n => (h n : Nat)
+        \\func h (n : Nat) : T n => 0
+        """);
+    TCDefReferable g = getDef(group, "g");
+    assertNotNull(g);
+    Definition def = g.getTypechecked();
+    assertNotNull(def);
+    assertTrue(def.status().isOK());
+    assertTrue(def instanceof FunctionDefinition);
+    Body body = ((FunctionDefinition) def).getReallyActualBody();
+    assertTrue("Expected the reloaded body to still be a type constructor", body instanceof TypeConstructorExpression);
+    TypeDestructorExpression destructor = ((TypeConstructorExpression) body).getArgument().cast(TypeDestructorExpression.class);
+    assertNotNull("The type destructor must survive the round trip", destructor);
+    FunCallExpression call = destructor.getArgument().cast(FunCallExpression.class);
+    assertNotNull(call);
+    assertEquals("h", call.getDefinition().getName());
   }
 }
