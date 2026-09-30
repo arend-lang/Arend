@@ -66,7 +66,7 @@ class SplitAtomPatternIntention : SelfTargetingIntention<PsiElement>(PsiElement:
             if (it.first == null) null else TypeConstructorExpression.unfoldType(it.first)
         }
         this.splitPatternEntries = when (type) {
-            is DataCallExpression -> {
+            is BaseDataCallExpression -> { // includes PathTypeExpression, i.e. = and Path
                 val canDoPatternMatchingOnIdp = admitsPatternMatchingOnIdp(type, caseClauseParameters)
                 if (project != null && canDoPatternMatchingOnIdp == PatternMatchingOnIdpResult.IDP) {
                     singletonList(IdpPatternEntry(project, element.isExplicit))
