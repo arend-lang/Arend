@@ -112,12 +112,6 @@ public interface CoreExpression extends CoreBody, UncheckedExpression, Abstracte
   @Override @Nullable CoreExpression removeConstLam();
 
   /**
-   * Checks that this expression is equivalent to expression of the form {@code a = a'}.
-   * @return  an expression of the form {@code a = a'} equivalent to this one or {@code null} if there is no such expression.
-   */
-  @Nullable CoreFunCallExpression toEquality();
-
-  /**
    * @return a subexpression on which this expression is stuck or {@code null} if there is no such subexpression.
    */
   @Nullable CoreExpression getStuckExpression();

@@ -15,7 +15,9 @@ import org.arend.prelude.Prelude;
 import org.arend.term.concrete.Concrete;
 import org.arend.typechecking.TypeCheckingTestCase;
 import org.arend.typechecking.error.local.DataUniverseError;
+import org.arend.typechecking.error.local.NonPositiveDataError;
 import org.arend.typechecking.error.local.TruncatedDataError;
+import org.arend.typechecking.error.local.TruncatedDataPatternError;
 import org.arend.typechecking.result.TypecheckingResult;
 import org.junit.Ignore;
 import org.junit.Test;
@@ -394,5 +396,243 @@ public class DataTest extends TypeCheckingTestCase {
   public void constructorTypeTest() {
     typeCheckDef("\\data D (F : Nat -> \\Set0) | con F", 1);
     assertThatErrorsAre(typeMismatchError());
+  }
+
+  @Test
+  public void contravariantTest() {
+    typeCheckModule("""
+      \\data Bool | true | false
+      \\data Empty
+      \\data Fam (A : \\Type) (b : Bool) \\elim b
+        | true => cT (A -> Empty)
+        | false => cF
+      \\data Bad | bad (Fam Bad true)
+      """, 1);
+  }
+
+  @Test
+  public void contravariantTest2() {
+    typeCheckModule("""
+      \\data Bool | true | false
+      \\record RA (fa : Nat)
+      \\record RB \\extends RA
+        | pf : 0 = 1
+      \\data F (A : \\Type0) (b : Bool) \\elim b
+        | true => cT (A -> 0 = 1)
+        | false => cF
+      \\func mk : F RB true => cT (\\lam r => r.pf)
+      \\func up : F RA true => mk
+      \\func get (x : F RA true) : RA -> 0 = 1
+        | cT f => f
+      \\func zero=one : 0 = 1 => get up (\\new RA 0)
+      """, 1);
+  }
+
+  @Test
+  public void eliminatedParameterNotCovariantTest() {
+    typeCheckModule("""
+      \\data Empty
+      \\data Box | box \\Set0
+      \\data Neg (b : Box) \\elim b
+        | box A => neg (A -> Empty)
+      """);
+    DataDefinition neg = (DataDefinition) getDefinition("Neg");
+    assertFalse(neg.isCovariant(0));
+  }
+
+  @Test
+  public void nonPositiveNestedInConstructorTest() {
+    typeCheckModule("""
+      \\data Empty
+      \\data Box | box \\Set0
+      \\data Pos (b : Box) \\elim b
+        | box A => pos A
+      \\data Bad : \\Set0 | bad (Pos (box Bad))
+      """, 1);
+    assertThatErrorsAre(typecheckingError(NonPositiveDataError.class));
+  }
+
+  @Test
+  public void truncatedDataMatchTest() {
+    typeCheckModule("""
+      \\data Empty
+      \\truncated \\data T : \\Prop
+        | t1
+        | t2
+      \\data D (t : T) \\elim t
+        | t1 => d1
+      """, 1);
+  }
+
+  @Test
+  public void changingParametersError() {
+    typeCheckModule("""
+      \\data Bool | true | false
+      \\data D (b : Bool) (A : \\Set) \\elim b
+        | true  => leaf A
+        | false => node (D true Nat)
+      \\func P : \\Prop => D false (0 = 0)
+      """, 1);
+    assertThatErrorsAre(Matchers.typeMismatchError());
+  }
+
+  @Test
+  public void changingParametersError2() {
+    typeCheckModule("""
+      \\data Bool | true | false
+      \\data D (b : Bool) (A : \\Set) \\elim b
+        | true  => leaf A
+        | false => node (D true Nat)
+      \\func P : \\Set => D false (0 = 0)
+      """, 1);
+    assertThatErrorsAre(Matchers.typeMismatchError());
+  }
+
+  @Test
+  public void changingParametersTest() {
+    typeCheckModule("""
+      \\data Bool | true | false
+      \\data D (b : Bool) (A : \\Set) : \\Set \\elim b
+        | true  => leaf A
+        | false => node (D true Nat)
+      \\func P : \\Set => D false (0 = 0)
+      """);
+  }
+
+  @Test
+  public void truncatedSetMatchInPropTest() {
+    typeCheckModule("""
+      \\truncated \\data TS (A : \\Type) : \\Set | inS A
+      \\data D (A : \\Type) (t : TS A) : \\Prop \\elim t
+        | inS a => con
+      """);
+  }
+
+  @Test
+  public void truncatedSetMatchInTruncatedPropTest() {
+    typeCheckModule("""
+      \\truncated \\data TS (A : \\Type) : \\Set | inS A
+      \\truncated \\data D (A : \\Type) (t : TS A) : \\Prop \\elim t
+        | inS a => con1
+        | inS a => con2
+      """);
+  }
+
+  @Test
+  public void truncatedSetMatchInSetTest() {
+    typeCheckModule("""
+      \\truncated \\data TS (A : \\Type) : \\Set | inS A
+      \\data D (A : \\Type) (t : TS A) : \\Set \\elim t
+        | inS a => con Nat
+      """, 1);
+    assertThatErrorsAre(Matchers.typecheckingError(TruncatedDataPatternError.class));
+  }
+
+  @Test
+  public void truncated1TypeMatchInSetTest() {
+    typeCheckModule("""
+      \\truncated \\data T1 (A : \\Type) : \\1-Type | in1 A
+      \\data D (A : \\Type) (t : T1 A) : \\Set \\elim t
+        | in1 a => con Nat
+      """);
+  }
+
+  @Test
+  public void truncated1TypeMatchIn1TypeTest() {
+    typeCheckModule("""
+      \\truncated \\data T1 (A : \\Type) : \\1-Type | in1 A
+      \\data D (A : \\Type) (t : T1 A) : \\1-Type \\elim t
+        | in1 a => con
+      """, 1);
+    assertThatErrorsAre(Matchers.typecheckingError(TruncatedDataPatternError.class));
+  }
+
+  @Test
+  public void truncated1TypeMatchInferredSetTest() {
+    typeCheckModule("""
+      \\truncated \\data T1 (A : \\Type) : \\1-Type | in1 A
+      \\data D (A : \\Type) (t : T1 A) \\elim t
+        | in1 a => con Nat
+      """);
+  }
+
+  @Test
+  public void truncated1TypeMatchInferredInfTest() {
+    typeCheckModule("""
+      \\truncated \\data T1 (A : \\Type) : \\1-Type | in1 A
+      \\data D (A : \\Type) (t : T1 A) \\elim t
+        | in1 a => con (a = a)
+      """, 1);
+    assertThatErrorsAre(Matchers.typecheckingError(TruncatedDataPatternError.class));
+  }
+
+  @Test
+  public void truncatedNestedPatternTest() {
+    typeCheckModule("""
+      \\truncated \\data TS (A : \\Type) : \\Set | inS A
+      \\data Wrap (A : \\Type) | wrap (TS A)
+      \\data D (A : \\Type) (w : Wrap A) : \\Prop \\elim w
+        | wrap (inS a) => con
+      """);
+  }
+
+  @Test
+  public void truncatedNestedPatternErrorTest() {
+    typeCheckModule("""
+      \\truncated \\data TS (A : \\Type) : \\Set | inS A
+      \\data Wrap (A : \\Type) | wrap (TS A)
+      \\data D (A : \\Type) (w : Wrap A) : \\Set \\elim w
+        | wrap (inS a) => con Nat
+      """, 1);
+    assertThatErrorsAre(Matchers.typecheckingError(TruncatedDataPatternError.class));
+  }
+
+  @Test
+  public void truncatedNestedPatternTest2() {
+    typeCheckModule("""
+      \\data Wrap (A : \\Type) | wrap A
+      \\truncated \\data T1 (A : \\Type) : \\1-Type | in1 (Wrap A)
+      \\data D (A : \\Type) (t : T1 A) : \\Set \\elim t
+        | in1 (wrap a) => con Nat
+      """);
+  }
+
+  @Test
+  public void truncatedNestedMinLevelTest() {
+    typeCheckModule("""
+      \\truncated \\data TS (A : \\Type) : \\Set | inS A
+      \\truncated \\data T1 (A : \\Type) : \\1-Type | in1 (TS A) A
+      \\data D (A : \\Type) (t : T1 A) : \\Set \\elim t
+        | in1 (inS a) _ => con Nat
+      """, 1);
+    assertThatErrorsAre(Matchers.typecheckingError(TruncatedDataPatternError.class));
+  }
+
+  @Test
+  public void disjointEvalConstructorsTest() {
+    typeCheckModule("""
+      \\data Empty
+      \\data D | con1 | con2 (n : Nat) \\with { | 0 => con1 }
+      \\data E | con3 | con4 D \\with { | con1 => con3 }
+      \\func test (n : Nat) (p : con4 (con2 n) = con3) : Empty => \\case p \\with {}
+      """, 1);
+  }
+
+  @Test
+  public void evalConstructorInDataTest() {
+    typeCheckModule("""
+      \\data Empty
+      \\data D (i : Int) \\with | pos n => con
+      \\func test (m : Nat) (d : D (neg m)) : Empty \\elim d
+      """, 1);
+  }
+
+  @Test
+  public void arrayDisjointConstructorsTest() {
+    typeCheckModule("""
+      \\data Empty
+      \\func test {A : \\Type} (a : A) (l : Array A 0) (p : (a :: l) = {Array A} (a :: nil)) : Empty
+        => \\case \\elim p \\with {}
+      """, 1);
   }
 }

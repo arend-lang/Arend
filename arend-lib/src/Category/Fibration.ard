@@ -1,0 +1,16 @@
+\import Category
+\import Category.Functor
+\import Logic
+\import Logic.Meta
+\import Logic.Unique
+\import Paths
+
+-- | A morphism {f} is {F}-cocartesian if every morphism `h` out of its domain factors uniquely through {f} over any given factorization of `F h`.
+\func IsCocartesianMor {C D : Precat} (F : Functor C D) {x y : C} (f : Hom x y) : \Prop
+  => \Pi {z : C} (h : Hom x z) (k : Hom (F y) (F z)) -> k ∘ F.Func f = F.Func h
+      -> Contr (\Sigma (g : Hom y z) (g ∘ f = h) (F.Func g = k))
+
+-- | A functor is a cocartesian fibration if every morphism out of the image of an object has a cocartesian lift.
+\func IsCocartesianFunctor {C D : Precat} (F : Functor C D) : \Prop
+  => \Pi {x : C} {d : D} (phi : Hom (F x) d)
+      -> ∃ (y : C) (f : Hom x y) (s : F y = d) (transport (Hom (F x)) s (F.Func f) = phi) (IsCocartesianMor F f)

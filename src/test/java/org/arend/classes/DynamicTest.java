@@ -10,6 +10,7 @@ import org.arend.typechecking.TypeCheckingTestCase;
 import org.junit.Test;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 import static org.arend.ExpressionFactory.*;
@@ -727,8 +728,9 @@ public class DynamicTest extends TypeCheckingTestCase {
       """);
     FunctionDefinition testFun = (FunctionDefinition) getDefinition("test");
     Expression function = testFun.getResultType().normalize(NormalizationMode.WHNF);
-    assertEquals(Prelude.PATH, function.cast(DataCallExpression.class).getDefinition());
-    List<? extends Expression> arguments = function.cast(DataCallExpression.class).getDefCallArguments();
+    PathTypeExpression functionPathType = function.cast(PathTypeExpression.class);
+    assertFalse(functionPathType.isDirected());
+    List<? extends Expression> arguments = Arrays.asList(functionPathType.getArgumentType(), functionPathType.getLeftArgument(), functionPathType.getRightArgument());
     assertEquals(3, arguments.size());
 
     Constructor foo = ((DataDefinition) getDefinition("A.Foo")).getConstructor("foo");
@@ -744,8 +746,9 @@ public class DynamicTest extends TypeCheckingTestCase {
     assertEquals(foo, arg1.getDefinition());
 
     Expression domFunction = arguments.getFirst().cast(LamExpression.class).getBody().cast(PiExpression.class).getParameters().getType().normalize(NormalizationMode.WHNF);
-    assertEquals(Prelude.PATH, domFunction.cast(DataCallExpression.class).getDefinition());
-    List<? extends Expression> domArguments = domFunction.cast(DataCallExpression.class).getDefCallArguments();
+    PathTypeExpression domPathType = domFunction.cast(PathTypeExpression.class);
+    assertFalse(domPathType.isDirected());
+    List<? extends Expression> domArguments = Arrays.asList(domPathType.getArgumentType(), domPathType.getLeftArgument(), domPathType.getRightArgument());
     assertEquals(3, domArguments.size());
     assertEquals(Prelude.NAT, domArguments.get(0).cast(LamExpression.class).getBody().cast(DefCallExpression.class).getDefinition());
     assertEquals(FieldCall((ClassField) getDefinition("A.x"), Ref(testFun.getParameters())), domArguments.get(1));
@@ -765,8 +768,9 @@ public class DynamicTest extends TypeCheckingTestCase {
     FunctionDefinition testFun = (FunctionDefinition) getDefinition("test");
     Expression xCall = FieldCall((ClassField) getDefinition("A.x"), Ref(testFun.getParameters()));
     Expression function = testFun.getResultType().cast(PiExpression.class).getParameters().getType().normalize(NormalizationMode.NF);
-    assertEquals(Prelude.PATH, function.cast(DataCallExpression.class).getDefinition());
-    List<? extends Expression> arguments = function.cast(DataCallExpression.class).getDefCallArguments();
+    PathTypeExpression functionPathType = function.cast(PathTypeExpression.class);
+    assertFalse(functionPathType.isDirected());
+    List<? extends Expression> arguments = Arrays.asList(functionPathType.getArgumentType(), functionPathType.getLeftArgument(), functionPathType.getRightArgument());
     assertEquals(3, arguments.size());
 
     DataDefinition Foo = (DataDefinition) getDefinition("A.Foo");

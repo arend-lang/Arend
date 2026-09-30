@@ -29,5 +29,6 @@ public interface CoreExpressionVisitor<P, R> {
   R visitTypeDestructor(@NotNull CoreTypeDestructorExpression expr, P params);
   R visitArray(@NotNull CoreArrayExpression expr, P params);
   R visitPath(@NotNull CorePathExpression expr, P params);
+  R visitPathType(@NotNull CorePathTypeExpression expr, P params);
   R visitAt(@NotNull CoreAtExpression expr, P params);
 }

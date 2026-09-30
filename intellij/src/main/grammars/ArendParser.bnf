@@ -19,8 +19,11 @@
         LPAREN              = '('
         RPAREN              = ')'
         COLON               = ':'
+        COLON_PLUS          = ':+'
         ARROW               = '->'
+        ARROW_PLUS          = '->+'
         FAT_ARROW           = '=>'
+        FAT_ARROW_PLUS      = '=>+'
         DOT                 = '.'
         COMMA               = ','
         APPLY_HOLE          = '__'
@@ -65,6 +68,7 @@
         NEW_KW              = '\new'
         PI_KW               = '\Pi'
         SIGMA_KW            = '\Sigma'
+        SIGMA_PLUS_KW       = '\Sigma+'
         LAM_KW              = '\lam'
         HAVE_KW             = '\have'
         HAVES_KW            = '\have!'
@@ -88,6 +92,7 @@
         PROTECTED_KW        = '\protected'
         SUC_KW              = '\suc'
         LEVEL_KW            = '\level'
+        LEVEL_PLUS_KW       = '\level+'
         MAX_KW              = '\max'
         INVALID_KW          = '\invalid'
 
@@ -255,12 +260,12 @@ functionKw ::= FUNC_KW | SFUNC_KW | LEMMA_KW | TYPE_KW | AXIOM_KW | COERCE_KW | 
 
 private functionType ::= COLON returnExprWOB { pin = 1 }
 
-returnExprWOB ::= exprWOB [LEVEL_KW exprWOB] | LEVEL_KW atomFieldsAcc atomFieldsAcc {
+returnExprWOB ::= exprWOB [(LEVEL_KW | LEVEL_PLUS_KW) exprWOB] | (LEVEL_KW | LEVEL_PLUS_KW) atomFieldsAcc atomFieldsAcc {
     pin(".*") = 1
     elementType = returnExpr
 }
 
-returnExpr ::= expr [LEVEL_KW expr] | LEVEL_KW atomFieldsAcc atomFieldsAcc { pin(".*") = 1 }
+returnExpr ::= expr [(LEVEL_KW | LEVEL_PLUS_KW) expr] | (LEVEL_KW | LEVEL_PLUS_KW) atomFieldsAcc atomFieldsAcc { pin(".*") = 1 }
 
 private defIdentifier_func ::= defIdentifier {
     recoverWhile = defIdentifier_func_recover
@@ -380,7 +385,7 @@ private pattern_sequence ::= atomPattern+ (typeAnnotation | asPattern?) {
     recoverWhile=pattern_recover
 }
 
-private pattern_recover ::= !(RPAREN | RBRACE | FAT_ARROW | PIPE | COMMA) & statement_recover
+private pattern_recover ::= !(RPAREN | RBRACE | FAT_ARROW | FAT_ARROW_PLUS | PIPE | COMMA) & statement_recover
 
 asPattern ::= AS_KW defIdentifier typeAnnotation? {
     pin = 1
@@ -429,7 +434,7 @@ private defIdentifier_constructor ::= defIdentifier {
     recoverWhile = defIdentifier_constructor_recover
 }
 
-private defIdentifier_constructor_recover ::= !(LPAREN | LBRACE | ID | ALIAS_KW | PROP_KW | SET_KW | UNDERSCORE | APPLY_HOLE | TGOAL | LGOAL | SET | UNIVERSE | TRUNCATED_UNIVERSE | COLON | WITH_KW | ELIM_KW | PIPE | RBRACE) & statement_recover
+private defIdentifier_constructor_recover ::= !(LPAREN | LBRACE | ID | ALIAS_KW | PROP_KW | SET_KW | UNDERSCORE | APPLY_HOLE | TGOAL | LGOAL | SET | UNIVERSE | TRUNCATED_UNIVERSE | CAT_UNIVERSE | COLON | WITH_KW | ELIM_KW | PIPE | RBRACE) & statement_recover
 
 private assoc ::= NON_ASSOC_KW | LEFT_ASSOC_KW | RIGHT_ASSOC_KW | INFIX_NON_KW | INFIX_LEFT_KW | INFIX_RIGHT_KW
 
@@ -452,9 +457,9 @@ exprWOB ::= <<exprWOBImpl>> {
     name = expr
 }
 
-private expr_recover ::= !(LBRACE | RBRACE | RPAREN | IN_KW | ARROW | COMMA | PIPE | COWITH_KW | WITH_KW | ELIM_KW | FAT_ARROW | AS_KW | RETURN_KW | COLON | LEVEL_KW) & statement_recover
+private expr_recover ::= !(LBRACE | RBRACE | RPAREN | IN_KW | ARROW | ARROW_PLUS | COMMA | PIPE | COWITH_KW | WITH_KW | ELIM_KW | FAT_ARROW | FAT_ARROW_PLUS | AS_KW | RETURN_KW | COLON | COLON_PLUS | LEVEL_KW | LEVEL_PLUS_KW) & statement_recover
 
-arrExpr ::= expr ARROW expr {
+arrExpr ::= expr (ARROW | ARROW_PLUS) expr {
     pin = 2
     rightAssociative = true
 }
@@ -517,7 +522,7 @@ private returnCaseExpr ::= RETURN_KW returnExprWOB {
 
 private returnCaseExpr_recover ::= !WITH_KW & expr_recover
 
-caseArg ::= caseArgExprAs [COLON exprWOB] {
+caseArg ::= caseArgExprAs [(COLON | COLON_PLUS) exprWOB] {
     pin = 1
     recoverWhile = caseArg_recover
 }
@@ -530,34 +535,34 @@ private caseArgExprAs ::= caseArgExpr [AS_KW defIdentifier]
     recoverWhile = caseArgExprAs_recover
 }
 
-private caseArgExprAs_recover ::= !COLON & expr_recover
+private caseArgExprAs_recover ::= !(COLON | COLON_PLUS) & expr_recover
 
 private caseArgExpr ::= exprWOB {
     recoverWhile = caseArgExpr_recover
 }
 
-private caseArgExpr_recover ::= !(AS_KW | COLON) & expr_recover
+private caseArgExpr_recover ::= !(AS_KW | COLON | COLON_PLUS) & expr_recover
 
-piExpr ::= PI_KW typeTele+ ARROW expr {
+piExpr ::= PI_KW typeTele+ (ARROW | ARROW_PLUS) expr {
     pin = 1
 }
 
 //noinspection BnfUnusedRule
-piExprWOB ::= PI_KW typeTele+ ARROW exprWOB {
+piExprWOB ::= PI_KW typeTele+ (ARROW | ARROW_PLUS) exprWOB {
     pin = 1
     elementType = piExpr
 }
 
-sigmaExpr ::= SIGMA_KW typeTele* {
+sigmaExpr ::= (SIGMA_KW | SIGMA_PLUS_KW) typeTele* {
     pin = 1
 }
 
-lamExpr ::= LAM_KW lamParam+ [FAT_ARROW expr?] {
+lamExpr ::= LAM_KW lamParam+ [(FAT_ARROW | FAT_ARROW_PLUS) expr?] {
     pin = 1
 }
 
 //noinspection BnfUnusedRule
-lamExprWOB ::= LAM_KW lamParam+ [FAT_ARROW exprWOB?] {
+lamExprWOB ::= LAM_KW lamParam+ [(FAT_ARROW | FAT_ARROW_PLUS) exprWOB?] {
     pin = 1
     elementType = lamExpr
 }
@@ -671,6 +676,10 @@ truncatedUniverseAppExpr ::= TRUNCATED_UNIVERSE atomLevelExpr? {
     pin = 1
 }
 
+catUniverseAppExpr ::= CAT_UNIVERSE atomLevelExpr? {
+    pin = 1
+}
+
 argumentAppExpr ::= atomFieldsAcc (argument | argumentRecovery)* {
     name = "defCall"
 }
@@ -761,6 +770,7 @@ private defIdentifier_goal_recover ::= !(LPAREN | RBRACE) & statement_recover
 universeAtom ::= SET
     | UNIVERSE
     | TRUNCATED_UNIVERSE
+    | CAT_UNIVERSE
 
 nameTele ::= identifierOrUnknown
     | nameTeleExplicit
@@ -769,8 +779,8 @@ nameTele ::= identifierOrUnknown
 }
 
 lamTele ::= identifierOrUnknown
-    | LPAREN identifierOrUnknown+ COLON expr RPAREN
-    | LBRACE (identifierOrUnknown [identifierOrUnknown* COLON expr]) RBRACE
+    | LPAREN identifierOrUnknown+ (COLON | COLON_PLUS) expr RPAREN
+    | LBRACE (identifierOrUnknown [identifierOrUnknown* (COLON | COLON_PLUS) expr]) RBRACE
 
 nameTeleUntyped ::= defIdentifier {
     recoverWhile = nameTeleUntyped_recover
@@ -778,11 +788,11 @@ nameTeleUntyped ::= defIdentifier {
 
 private paramAttr ::= STRICT_KW | PROPERTY_KW
 
-private nameTeleUntyped_recover ::= !(ID | FAT_ARROW) & statement_recover
+private nameTeleUntyped_recover ::= !(ID | FAT_ARROW | FAT_ARROW_PLUS) & statement_recover
 
-private nameTeleExplicit ::= LPAREN paramAttr? identifierOrUnknown+ COLON expr RPAREN { pin = 1 }
+private nameTeleExplicit ::= LPAREN paramAttr? identifierOrUnknown+ (COLON | COLON_PLUS) expr RPAREN { pin = 1 }
 
-private nameTeleImplicit ::= LBRACE (paramAttr identifierOrUnknown+ COLON expr | identifierOrUnknown [identifierOrUnknown* COLON expr]) RBRACE { pin = 1 }
+private nameTeleImplicit ::= LBRACE (paramAttr identifierOrUnknown+ (COLON | COLON_PLUS) expr | identifierOrUnknown [identifierOrUnknown* (COLON | COLON_PLUS) expr]) RBRACE { pin = 1 }
 
 private nameTele_first ::= !(ID | UNDERSCORE | LPAREN | LBRACE)
 
@@ -812,11 +822,11 @@ private typedTeleExplicit ::= LPAREN paramAttr? typedExpr RPAREN { pin = 1 }
 
 private typedTeleImplicit ::= LBRACE paramAttr? typedExpr RBRACE { pin = 1 }
 
-private typeTele_recover ::= !(LPAREN | LBRACE | ID | ALIAS_KW | COLON | WITH_KW | ELIM_KW | FAT_ARROW | RPAREN | RBRACE | PIPE | ARROW | COMMA | IN_KW | SET | UNIVERSE | TRUNCATED_UNIVERSE | PROP_KW | SET_KW | UNDERSCORE | APPLY_HOLE | TGOAL | LGOAL | LEVEL_KW | RETURN_KW) & statement_recover
+private typeTele_recover ::= !(LPAREN | LBRACE | ID | ALIAS_KW | COLON | COLON_PLUS | WITH_KW | ELIM_KW | FAT_ARROW | RPAREN | RBRACE | PIPE | ARROW | ARROW_PLUS | COMMA | IN_KW | SET | UNIVERSE | TRUNCATED_UNIVERSE | CAT_UNIVERSE | PROP_KW | SET_KW | UNDERSCORE | APPLY_HOLE | TGOAL | LGOAL | LEVEL_KW | LEVEL_PLUS_KW | RETURN_KW) & statement_recover
 
 typedExpr ::= typedExprNamed | expr
 
-private typedExprNamed ::= identifierOrUnknown+ COLON expr { pin = 2 }
+private typedExprNamed ::= identifierOrUnknown+ (COLON | COLON_PLUS) expr { pin = 2 }
 
 identifierOrUnknown ::= defIdentifier | UNDERSCORE
 

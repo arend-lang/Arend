@@ -2,7 +2,7 @@
 \import Paths
 \import Logic
 
-\data \fixr 2 Or (A B : \Type)
+\data \fixr 2 Or (A B : \Cat)
   | inl A
   | inr B
   \where {
@@ -12,11 +12,11 @@
       | inr b, inl a => absurd (e a b)
       | inr b, inr b' => pmap inr prop-pi
 
-    \func map {A B C D : \Type} (e : Or A B) (f : A -> C) (g : B -> D) : Or C D \elim e
+    \func map {A B C D : \Cat} (e : Or A B) (f : A -> C) (g : B -> D) : Or C D \elim e
       | inl a => inl (f a)
       | inr b => inr (g b)
 
-    \func rec {A B C : \Type} (f : A -> C) (g : B -> C) (e : Or A B) : C \elim e
+    \func rec {A B C : \Cat} (f : A -> C) (g : B -> C) (e : Or A B) : C \elim e
       | inl a => f a
       | inr b => g b
 
@@ -33,8 +33,8 @@
       }
   }
 
-\sfunc uninl {A B : \Type} {a a' : A} (p : inl a = {Or A B} inl a') : a = a'
+\sfunc uninl {A B : \Cat} {a a' : A} (p : inl a = {Or A B} inl a') : a = a'
   => pmap (Or.rec (\lam x => x) (\lam _ => a)) p
 
-\sfunc uninr {A B : \Type} {b b' : B} (p : inr b = {Or A B} inr b') : b = b'
+\sfunc uninr {A B : \Cat} {b b' : B} (p : inr b = {Or A B} inr b') : b = b'
   => pmap (Or.rec (\lam x => b) (\lam x => x)) p

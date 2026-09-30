@@ -9,6 +9,7 @@ import org.arend.ext.core.definition.CoreClassField;
 import org.arend.ext.core.expr.CoreClassCallExpression;
 import org.arend.ext.core.expr.CoreExpression;
 import org.arend.ext.core.expr.CoreFunCallExpression;
+import org.arend.ext.core.expr.CorePathTypeExpression;
 import org.arend.ext.core.ops.CMP;
 import org.arend.ext.core.ops.NormalizationMode;
 import org.arend.ext.error.*;
@@ -201,15 +202,15 @@ public abstract class BaseEquationMeta<NF> extends BaseMetaDefinition {
       return null;
     }
 
-    CoreFunCallExpression equality = Utils.toEquality(typed.getType().normalize(NormalizationMode.WHNF), typechecker.getErrorReporter(), hint);
+    Pair<CorePathTypeExpression, CoreExpression> equality = Utils.toEqualityWithType(typed.getType().normalize(NormalizationMode.WHNF), typechecker.getErrorReporter(), hint);
     if (equality == null) return null;
-    if (!typechecker.compare(equality.getDefCallArguments().getFirst(), hintType, CMP.LE, hint, true, true, false)) {
-      typechecker.getErrorReporter().report(new TypeMismatchError("Mismatch between equation types", equality.getDefCallArguments().getFirst(), hintType, hint));
+    if (!typechecker.compare(equality.proj2, hintType, CMP.LE, hint, true, true, false)) {
+      typechecker.getErrorReporter().report(new TypeMismatchError("Mismatch between equation types", equality.proj2, hintType, hint));
       return null;
     }
 
-    EquationTerm left = EquationTerm.match(equality.getDefCallArguments().get(1), operations, values);
-    EquationTerm right = EquationTerm.match(equality.getDefCallArguments().get(2), operations, values);
+    EquationTerm left = EquationTerm.match(equality.proj1.getLeftArgument(), operations, values);
+    EquationTerm right = EquationTerm.match(equality.proj1.getRightArgument(), operations, values);
     return new Hint<>(typed, left, right, meta.normalize(left), meta.normalize(right), hint);
   }
 
@@ -244,7 +245,7 @@ public abstract class BaseEquationMeta<NF> extends BaseMetaDefinition {
   @Override
   public @Nullable TypedExpression invokeMeta(@NotNull ExpressionTypechecker typechecker, @NotNull ContextData contextData) {
     ConcreteExpression marker = contextData.getMarker();
-    CoreFunCallExpression equality;
+    Pair<CorePathTypeExpression, CoreExpression> equality;
     boolean isForward = contextData.getExpectedType() == null;
     TypedExpression argTyped;
 
@@ -263,17 +264,17 @@ public abstract class BaseEquationMeta<NF> extends BaseMetaDefinition {
         return null;
       }
 
-      equality = Utils.toEquality(argTyped.getType().normalize(NormalizationMode.WHNF), typechecker.getErrorReporter(), marker);
+      equality = Utils.toEqualityWithType(argTyped.getType().normalize(NormalizationMode.WHNF), typechecker.getErrorReporter(), marker);
     } else {
       argTyped = null;
-      equality = Utils.toEquality(contextData.getExpectedType().normalize(NormalizationMode.WHNF), typechecker.getErrorReporter(), marker);
+      equality = Utils.toEqualityWithType(contextData.getExpectedType().normalize(NormalizationMode.WHNF), typechecker.getErrorReporter(), marker);
     }
 
     if (equality == null) {
       return null;
     }
 
-    CoreExpression classifyingExpr = Utils.solveInferenceVariable(equality.getDefCallArguments().getFirst().normalize(NormalizationMode.WHNF), typechecker);
+    CoreExpression classifyingExpr = Utils.solveInferenceVariable(equality.proj2.normalize(NormalizationMode.WHNF), typechecker);
     Pair<TypedExpression, CoreClassCallExpression> instance = Utils.findInstanceWithClassCall(new SubclassSearchParameters(getClassDef()), carrier, classifyingExpr, typechecker, marker, getClassDef());
     if (instance == null) {
       return null;
@@ -283,8 +284,8 @@ public abstract class BaseEquationMeta<NF> extends BaseMetaDefinition {
     ConcreteFactory factory = contextData.getFactory();
 
     List<TermOperation> operations = getOperations(instance.proj1, instance.proj2, typechecker, factory, marker);
-    EquationTerm left = EquationTerm.match(equality.getDefCallArguments().get(1), operations, values);
-    EquationTerm right = EquationTerm.match(equality.getDefCallArguments().get(2), operations, values);
+    EquationTerm left = EquationTerm.match(equality.proj1.getLeftArgument(), operations, values);
+    EquationTerm right = EquationTerm.match(equality.proj1.getRightArgument(), operations, values);
     NF leftNF = normalize(left);
     NF rightNF = normalize(right);
 
@@ -293,7 +294,7 @@ public abstract class BaseEquationMeta<NF> extends BaseMetaDefinition {
 
     ConcreteExpression proof;
     if (argTyped != null) {
-      List<Hint<NF>> hints = parseHints(hint, equality.getDefCallArguments().getFirst(), operations, values, typechecker);
+      List<Hint<NF>> hints = parseHints(hint, equality.proj2, operations, values, typechecker);
       if (hints == null) return null;
       ConcreteExpression argConcrete = factory.app(getTermsEqualityConv(solverRef, factory), true, factory.ref(envRef.get()), left.generateReflectedTerm(factory, getVarTerm()), right.generateReflectedTerm(factory, getVarTerm()), factory.core(argTyped));
       proof = applyForward(hints, leftNF, rightNF, argConcrete, values, instance.proj1, solverRef, envRef, typechecker, factory);
@@ -309,7 +310,7 @@ public abstract class BaseEquationMeta<NF> extends BaseMetaDefinition {
         typechecker.getErrorReporter().report(new TypecheckingError(GeneralError.Level.WARNING_UNUSED, "Argument is ignored", argument));
       }
     } else {
-      List<Hint<NF>> hints = parseHints(hint, equality.getDefCallArguments().getFirst(), operations, values, typechecker);
+      List<Hint<NF>> hints = parseHints(hint, equality.proj2, operations, values, typechecker);
       if (hints == null) return null;
       proof = solve(hints, argument, leftNF, rightNF, values, instance.proj1, solverRef, envRef, typechecker, marker);
       if (proof == null) {
@@ -330,7 +331,7 @@ public abstract class BaseEquationMeta<NF> extends BaseMetaDefinition {
         clauses.add(factory.letClause(solverRef.get(), Collections.emptyList(), null, solver));
       }
       if (envRef.isUsed()) {
-        clauses.add(factory.letClause(envRef.get(), Collections.emptyList(), factory.app(factory.ref(typechecker.getPrelude().getArrayRef()), true, factory.core(equality.getDefCallArguments().getFirst().computeTyped()), factory.number(values.getValues().size())), env));
+        clauses.add(factory.letClause(envRef.get(), Collections.emptyList(), factory.app(factory.ref(typechecker.getPrelude().getArrayRef()), true, factory.core(equality.proj2.computeTyped()), factory.number(values.getValues().size())), env));
       }
       result = factory.letExpr(false, false, clauses, result);
     }

@@ -1,6 +1,6 @@
 \import Data.Or
 
-\class HasProduct (E : \Type)
+\class HasProduct (E : \Cat)
   | Product \alias \infixl 7 ⨯ : E -> E -> E
 
 \instance TypeHasProduct.{u} : HasProduct (\Type u)
@@ -9,7 +9,7 @@
 \instance SetHasProduct.{u} : HasProduct (\Set u)
   | Product A B => \Sigma A B
 
-\class HasCoproduct (E : \Type)
+\class HasCoproduct (E : \Cat)
   | Coproduct \alias \infixl 6 ⨿ : E -> E -> E
 
 \instance TypeHasCoproduct.{u} : HasCoproduct (\Type u)

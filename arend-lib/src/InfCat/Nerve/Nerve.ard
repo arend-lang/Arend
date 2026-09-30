@@ -1,0 +1,179 @@
+\import Category
+\import Category.Functor
+\import Equiv
+\import Equiv.Sigma
+\import Function.Meta
+\import InfCat.Basics
+\import InfCat.Paths
+\import InfCat.Trunc.IsCatTrunc
+\import Logic
+\import Logic.Meta
+\import Logic.Unique
+\import Paths
+\import Paths.Meta
+
+{- | The nerve of {C}: vertices are objects, edges are morphisms, 2-simplices witness composites, identities are degenerate,
+ -   and the hom-types are truncated to sets.
+ -}
+\data Nerve (C : Precat)
+  | nerveOb (x : C)
+  | nerve-edge {x y : C} (f : Hom x y) : nerveOb x ~> nerveOb y
+  | nerve-comp {x y z : C} (f : Hom x y) (g : Hom y z) : DPath (\lam i => nerve-edge f i ~> nerve-edge (g ∘ f) i) idd (nerve-edge {C} g)
+  | nerve-id (x : C) : dpath (nerve-edge (C.id {x})) = idd
+  | nerve-trunc {a b : Nerve C} {p q : a ~> b} (e e' : p = q) : e = e'
+
+\func nerveHom {C : Precat} {x y : C} (f : Hom x y) : nerveOb x ~> nerveOb y
+  => nerve-edge {C} f
+
+\func nerveHom-id {C : Precat} {x : C} : nerveHom (C.id {x}) = idd
+  => nerve-id {C} x
+
+\sfunc nerveHom-comp {C : Precat} {x y z : C} {f : Hom x y} {g : Hom y z}
+  : comp (nerveHom f) (nerveHom g) = nerveHom (g ∘ f)
+  => comp-char (nerve-comp {C} f g)
+
+-- | The hom-types of the nerve are sets.
+\func nerve-hom-isSet {C : Precat} {a b : Nerve C} : isSet (a ~> b)
+  => \lam p q e e' => nerve-trunc {C} e e'
+
+\lemma nerve-isTruncCat {C : Precat} : IsTruncCat 1 (Nerve C)
+  => \lam a b p q => toProp (nerve-hom-isSet p q)
+
+-- | Every object of the nerve is the image of an object of the category.
+\lemma nerveOb-surj {C : Precat} (e : Nerve C) : ∃ (x : C) (nerveOb x = e) \elim e
+  | nerveOb x => inP (x, idp)
+
+-- # Maps out of the nerve
+
+-- | The images of vertices and edges.
+\func NGraph (C : Precat) (Z : \Cat) : \Type
+  => \Sigma (b0 : C -> Z) (\Pi {x y : C} (f : Hom x y) -> b0 x ~> b0 y)
+
+-- | The images of 2-simplices and degeneracies.
+\func NRels {C : Precat} {Z : \Cat} (b : NGraph C Z) : \Type
+  => \Sigma (\Pi {x y z : C} (f : Hom x y) (g : Hom y z) -> DPath (\lam i => b.2 f i ~> b.2 (g ∘ f) i) idd (b.2 g))
+            (\Pi (x : C) -> b.2 (C.id {x}) = idd)
+
+-- | In a 1-category, 2-cells between parallel arrows are unique, uniformly along a path.
+\func hom-2cell-path {N : \Cat} (Nt : IsTruncCat 1 N) {A B : I -> N} {P Q : \Pi (m : I) -> A m ~> B m}
+                     {E E' : \Pi (m : I) -> P m = Q m} (FL : E left = E' left) (FR : E right = E' right)
+  : Path (\lam m => E m = E' m) FL FR
+  => pathOver (isContr=>isProp (isProp=>PathContr (P right = Q right) (ToProp.fromProp (Nt _ _ (P right) (Q right))) (E right) (E' right)) _ FR)
+
+-- | The map out of the nerve to a 1-category determined by the images of the generators.
+\func nerve-rec {C : Precat} {Z : \Cat} (Zt : IsTruncCat 1 Z) (b : NGraph C Z) (r : NRels b) (n :⁺ Nerve C) : Z \elim n
+  | nerveOb x => b.1 x
+  | nerve-edge f => b.2 f
+  | nerve-comp f g => r.1 f g
+  | nerve-id x => r.2 x
+  | nerve-trunc {a} {a'} {p} {q} e e' => ToProp.fromProp
+    (Zt (nerve-rec Zt b r a) (nerve-rec Zt b r a') (dpath (\lam k => nerve-rec Zt b r (p k))) (dpath (\lam k => nerve-rec Zt b r (q k))))
+    (path (\lam j => dpath (\lam k => nerve-rec Zt b r (e j k))))
+    (path (\lam j => dpath (\lam k => nerve-rec Zt b r (e' j k))))
+
+-- | {nerve-rec} with the relations given as equations between composites.
+\func nerve-rec' {C : Precat} {Z : \Cat} (Zt : IsTruncCat 1 Z) (b : NGraph C Z)
+                 (rc : \Pi {x y z : C} (f : Hom x y) (g : Hom y z) -> comp (b.2 f) (b.2 g) = b.2 (g ∘ f))
+                 (ri : \Pi (x : C) -> b.2 (id {C} {x}) = idd) (n :⁺ Nerve C) : Z
+  => nerve-rec Zt b (\lam f g => comp-char.conv (rc f g), ri) n
+
+-- | The images of the generators under a map out of the nerve.
+\func nerve-restrict {C : Precat} {Z : \Cat} (h : Nerve C ->⁺ Z) : \Sigma (b : NGraph C Z) (NRels b)
+  => ((\lam x => h (nerveOb x), \lam f => dmap h (nerveHom f)),
+      (\lam f g => dpath (\lam i => dpath (\lam j => h (nerve-comp f g i j))),
+       \lam x => path (\lam i => dmap h (nerveHom-id i))))
+
+-- | Every map out of the nerve is {nerve-rec} of its restriction.
+\func nerve-restrict-rec {C : Precat} {Z : \Cat} (Zt : IsTruncCat 1 Z) (h : Nerve C ->⁺ Z) (n :⁺ Nerve C)
+  : h n = nerve-rec Zt (nerve-restrict h).1 (nerve-restrict h).2 n \elim n
+  | nerveOb x => idp
+  | nerve-edge f k => idp
+  | nerve-comp f g i j => idp
+  | nerve-id x i k => idp
+  | nerve-trunc {a} {a'} {p} {q} e e' i j k => path \lam m => hom-2cell-path Zt
+    {\lam m => nerve-restrict-rec Zt h a m} {\lam m => nerve-restrict-rec Zt h a' m}
+    {\lam m => dpath (\lam k => nerve-restrict-rec Zt h (p k) m)} {\lam m => dpath (\lam k => nerve-restrict-rec Zt h (q k) m)}
+    {\lam m => path (\lam j => dpath (\lam k => nerve-restrict-rec Zt h (e j k) m))} {\lam m => path (\lam j => dpath (\lam k => nerve-restrict-rec Zt h (e' j k) m))}
+    (path \lam i => path \lam j => dpath \lam k => h (nerve-trunc e e' i j k))
+    (path \lam i => path \lam j => dpath \lam k => nerve-rec Zt (nerve-restrict h).1 (nerve-restrict h).2 (nerve-trunc e e' i j k))
+    m i j k
+
+-- | Maps from the nerve to a 1-category are equivalent to the images of generators satisfying the relations.
+\func nerve-maps {C : Precat} {Z : \Cat} (Zt : IsTruncCat 1 Z)
+  : QEquiv {Nerve C ->⁺ Z} {\Sigma (b : NGraph C Z) (NRels b)} (\lam h => nerve-restrict h) \cowith
+  | ret s => nerve-rec Zt s.1 s.2
+  | ret_f h => path \lam m n => inv (nerve-restrict-rec Zt h n) m
+  | f_sec => idpe
+
+-- | The relations are propositions in a 1-category.
+\lemma NRels-isProp {C : Precat} {Z : \Cat} (Zt : IsTruncCat 1 Z) (b : NGraph C Z) : isProp (NRels b)
+  => \have | hp {a a' : Z} {p q : a ~> a'} : isProp (p = q) => ToProp.fromProp (Zt a a' p q)
+           | tp {a b c : Z} {ab : a ~> b} {bc : b ~> c} {ac : a ~> c} : isProp (DPath (\lam i => ab i ~> ac i) idd bc)
+               => isProp.equiv (inP comp-equiv) hp
+     \in \lam r r' => ext (ext \lam f g => tp _ _, ext \lam x => hp _ _)
+
+-- | Maps from the nerve to a 1-category are determined by the images of vertices and edges.
+\func nerve-maps-ext {C : Precat} {N : \Cat} (Nt : IsTruncCat 1 N) {h1 h2 : Nerve C ->⁺ N}
+                     (t : (nerve-restrict h1).1 = (nerve-restrict h2).1) : h1 = h2
+  => inv ((nerve-maps Nt).ret_f h1)
+                   *> pmap (nerve-maps Nt).ret (sigma-prop-ext (NRels-isProp Nt) {nerve-restrict h1} {nerve-restrict h2} t)
+                   *> (nerve-maps Nt).ret_f h2
+
+-- | Graphs in a category are equal if their vertex maps are connected by paths making the edge squares commute.
+\func NGraph-ext {C : Precat} {Z : \Cat} {b0 b0' : C -> Z} (P : b0 = b0')
+                 {e0 : \Pi {x y : C} (f : Hom x y) -> b0 x ~> b0 y} {e0' : \Pi {x y : C} (f : Hom x y) -> b0' x ~> b0' y}
+                 (sq : \Pi {x y : C} (f : Hom x y) -> comp (e0 f) (=_~> (pmap (__ y) P)) = comp (=_~> (pmap (__ x) P)) (e0' f))
+  : (b0, e0) = {NGraph C Z} (b0', e0') \elim P
+  | idp => pmap {\Pi {x y : C} (f : Hom x y) -> b0 x ~> b0 y} {NGraph C Z} (\lam e => (b0, e)) (ext \lam f => inv comp_idd-right *> sq f *> comp_idd-left)
+
+-- | Maps from the nerve to a 1-category are equal if they are connected by paths on vertices making the edge squares commute.
+\sfunc nerve-maps-ext' {C : Precat} {N : \Cat} (Nt : IsTruncCat 1 N) {h1 h2 : Nerve C ->⁺ N}
+                       (a : \Pi (x : C) -> h1 (nerveOb x) = h2 (nerveOb x))
+                       (sq : \Pi {x y : C} (f : Hom x y) -> comp (dmap h1 (nerveHom f)) (=_~> (a y)) = comp (=_~> (a x)) (dmap h2 (nerveHom f)))
+  : h1 = h2
+  => nerve-maps-ext Nt (NGraph-ext (ext a) sq)
+
+-- # Functoriality
+
+-- | The map of nerves induced by a functor.
+\func nerveMap {C D : Precat} (F : Functor C D) (n :⁺ Nerve C) : Nerve D
+  => nerve-rec' nerve-isTruncCat (\lam x => nerveOb (F x), \lam f => nerveHom (F.Func f))
+                (\lam f g => nerveHom-comp *> pmap nerveHom (inv F.Func-o)) (\lam x => pmap nerveHom F.Func-id *> nerveHom-id) n
+
+-- # Sections of families over the nerve
+
+-- | An edge of the nerve together with a path over it.
+\func nerve-total-edge {C : Precat} (T : Nerve C ->⁺ \Cat) {tau0 : \Pi (x : C) -> T (nerveOb x)}
+                       (tau1 : \Pi {x y : C} (f : Hom x y) -> DPath (\lam i => T (nerve-edge f i)) (tau0 x) (tau0 y)) {x y : C} (f : Hom x y)
+  : (nerveOb x, tau0 x) ~> {\Sigma⁺ (n : Nerve C) (T n)} (nerveOb y, tau0 y)
+  => dpath \lam i => (nerve-edge f i, tau1 f i)
+
+{- | A family over the nerve whose total category has hom-sets has a section with given values over vertices and edges,
+ -   provided these respect composites and identities.
+ -}
+\sfunc nerve-section
+  {C : Precat} (T : Nerve C ->⁺ \Cat) (Tt : IsTruncCat 1 (\Sigma⁺ (n : Nerve C) (T n)))
+  (tau0 : \Pi (x : C) -> T (nerveOb x))
+  (tau1 : \Pi {x y : C} (f : Hom x y) -> DPath (\lam i => T (nerve-edge {C} f i)) (tau0 x) (tau0 y))
+  (rc : \Pi {x y z : C} (f : Hom x y) (g : Hom y z) -> comp (nerve-total-edge T tau1 f) (nerve-total-edge T tau1 g) = nerve-total-edge T tau1 (g ∘ f))
+  (ri : \Pi (x : C) -> nerve-total-edge T tau1 (C.id {x}) = idd)
+  (n :⁺ Nerve C) : T n
+  => transport+ T (path \lam i => lift-proj1 i n) (lift n).2
+  \where {
+    \protected \func lift (n :⁺ Nerve C) : \Sigma⁺ (n : Nerve C) (T n)
+      => nerve-rec' Tt (\lam x => (nerveOb x, tau0 x), nerve-total-edge T tau1) rc ri n
+
+    -- | The first component of {lift} is the identity.
+    \protected \func lift-proj1 : (\lam n =>⁺ (lift n).1) = (\lam n =>⁺ n)
+      => nerve-maps-ext nerve-isTruncCat idp
+
+    -- | The value of {nerve-section} at a vertex is given by {tau0}.
+    \func base-eval (x : C) : nerve-section T Tt tau0 tau1 rc ri (nerveOb x) = tau0 x
+      => \let | R => nerve-maps {C} {Nerve C} nerve-isTruncCat
+              | ev (o : Nerve C ->⁺ Nerve C) => o (nerveOb x)
+              | h1 : Nerve C ->⁺ Nerve C => \lam n => (lift n).1
+              | S => sigma-prop-ext {NGraph C (Nerve C)} {NRels} (NRels-isProp nerve-isTruncCat) {nerve-restrict h1} {nerve-restrict (\lam n => n)} idp
+              | e1 : pmap ev (inv (R.ret_f h1)) = idp => pmap_inv-comm ev (R.ret_f h1)
+              | e : pmap ev lift-proj1 = idp => pmap_*>-comm ev _ _ *> pmap2 (*>) e1 (pmap_*>-comm ev (pmap R.ret S) _ *> idp_*>) *> idp_*>
+         \in (\peval nerve-section T Tt tau0 tau1 rc ri (nerveOb x)) *> pmap (\lam q => transport+ T q (tau0 x)) e
+  }

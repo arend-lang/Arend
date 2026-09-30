@@ -145,6 +145,11 @@ public abstract class SearchVisitor<P> extends BaseExpressionVisitor<P, Boolean>
   }
 
   @Override
+  public Boolean visitPathType(PathTypeExpression expr, P params) {
+    return expr.getArgumentType().accept(this, params) || expr.getLeftArgument().accept(this, params) || expr.getRightArgument().accept(this, params);
+  }
+
+  @Override
   public Boolean visitAt(AtExpression expr, P params) {
     return expr.getPathArgument().accept(this, params) || expr.getIntervalArgument().accept(this, params);
   }

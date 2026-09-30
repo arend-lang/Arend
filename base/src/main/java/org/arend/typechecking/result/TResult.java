@@ -3,16 +3,20 @@ package org.arend.typechecking.result;
 import org.arend.core.context.param.DependentLink;
 import org.arend.core.expr.Expression;
 import org.arend.term.concrete.Concrete;
-import org.arend.typechecking.implicitargs.equations.Equations;
 import org.arend.typechecking.visitor.CheckTypeVisitor;
-import org.jetbrains.annotations.Nullable;
+import org.jetbrains.annotations.NotNull;
 
 import java.util.List;
 
 public interface TResult {
   TypecheckingResult toResult(CheckTypeVisitor typechecker);
+
+  default TypecheckingResult toResult(CheckTypeVisitor typechecker, Expression expectedType) {
+    return toResult(typechecker);
+  }
+
   DependentLink getParameter();
   TResult applyExpression(Expression expression, boolean isExplicit, CheckTypeVisitor typechecker, Concrete.SourceNode sourceNode);
   List<? extends DependentLink> getImplicitParameters();
-  Expression getType(@Nullable Equations equations);
+  Expression getType(@NotNull CheckTypeVisitor typechecker);
 }

@@ -202,49 +202,57 @@ public class NormalizeVisitor extends ExpressionTransformer<NormalizationMode>  
     return FunCallExpression.make(Prelude.MINUS, expr.getLevels(), newDefCallArgs);
   }
 
-  private Expression visitFunctionDefCall(LeveledDefCallExpression expr, NormalizationMode mode) {
+  private Expression normalizeCoe(LeveledDefCallExpression expr, NormalizationMode mode) {
     Definition definition = expr.getDefinition();
-    if (definition == Prelude.COERCE || definition == Prelude.COERCE2) {
-      LamExpression lamExpr = expr.getDefCallArguments().get(0).accept(this, NormalizationMode.WHNF).cast(LamExpression.class);
-      if (lamExpr != null) {
-        SingleDependentLink param = lamExpr.getParameters();
-        Expression body = param.getNext().hasNext() ? new LamExpression(param.getNext(), lamExpr.getBody()) : lamExpr.getBody();
-        body = body.accept(this, NormalizationMode.WHNF);
-        FunCallExpression funCall = body.cast(FunCallExpression.class);
-        boolean checkSigma = true;
+    if (definition != Prelude.COERCE && definition != Prelude.COERCE2 && definition != Prelude.COERCE_PLUS) {
+      return null;
+    }
 
-        if (funCall != null && funCall.getDefinition() == Prelude.ISO && definition == Prelude.COERCE) {
-          List<? extends Expression> isoArgs = funCall.getDefCallArguments();
-          ReferenceExpression refExpr = isoArgs.getLast().accept(this, NormalizationMode.WHNF).cast(ReferenceExpression.class);
-          if (refExpr != null && refExpr.getBinding() == param) {
-            checkSigma = false;
-            ConCallExpression normedPtCon = expr.getDefCallArguments().get(2).accept(this, NormalizationMode.WHNF).cast(ConCallExpression.class);
-            if (normedPtCon != null && normedPtCon.getDefinition() == Prelude.RIGHT) {
-              boolean noFreeVar = true;
-              for (int i = 0; i < isoArgs.size() - 1; i++) {
-                if (NormalizingFindBindingVisitor.findBinding(isoArgs.get(i), param)) {
-                  noFreeVar = false;
-                  break;
-                }
-              }
-              if (noFreeVar) {
-                return AppExpression.make(isoArgs.get(2), expr.getDefCallArguments().get(1), true).accept(this, mode);
-              }
-              /* Stricter version of iso
-              if (!NormalizingFindBindingVisitor.findBinding(isoArgs.get(0), param) && !NormalizingFindBindingVisitor.findBinding(isoArgs.get(1), param) && !NormalizingFindBindingVisitor.findBinding(isoArgs.get(2), param)) {
-                return AppExpression.make(isoArgs.get(2), expr.getDefCallArguments().get(1), true).accept(this, mode);
-              }
-              */
+    LamExpression lamExpr = expr.getDefCallArguments().getFirst().accept(this, NormalizationMode.WHNF).cast(LamExpression.class);
+    if (lamExpr == null) {
+      return null;
+    }
+
+    SingleDependentLink param = lamExpr.getParameters();
+    Expression body = param.getNext().hasNext() ? new LamExpression(param.getNext(), lamExpr.getBody()) : lamExpr.getBody().accept(this, NormalizationMode.WHNF);
+    FunCallExpression funCall = body.cast(FunCallExpression.class);
+    boolean checkSigma = definition != Prelude.COERCE_PLUS;
+
+    if (funCall != null && (funCall.getDefinition() == Prelude.ISO && definition == Prelude.COERCE || funCall.getDefinition() == Prelude.ISO_PLUS && definition == Prelude.COERCE_PLUS)) {
+      List<? extends Expression> isoArgs = funCall.getDefCallArguments();
+      ReferenceExpression refExpr = isoArgs.getLast().accept(this, NormalizationMode.WHNF).cast(ReferenceExpression.class);
+      if (refExpr != null && refExpr.getBinding() == param) {
+        checkSigma = false;
+        ConCallExpression normedPtCon = expr.getDefCallArguments().get(2).accept(this, NormalizationMode.WHNF).cast(ConCallExpression.class);
+        if (normedPtCon != null && (normedPtCon.getDefinition() == Prelude.RIGHT && definition == Prelude.COERCE || normedPtCon.getDefinition() == Prelude.DRIGHT && definition == Prelude.COERCE_PLUS)) {
+          boolean noFreeVar = true;
+          for (int i = 0; i < isoArgs.size() - 1; i++) {
+            if (NormalizingFindBindingVisitor.findBinding(isoArgs.get(i), param)) {
+              noFreeVar = false;
+              break;
             }
           }
-        }
-
-        if (checkSigma && !NormalizingFindBindingVisitor.findBinding(body, param)) {
-          return expr.getDefCallArguments().get(definition == Prelude.COERCE ? 1 : 2).accept(this, mode);
+          if (noFreeVar) {
+            return AppExpression.make(isoArgs.get(2), expr.getDefCallArguments().get(1), true).accept(this, mode);
+          }
         }
       }
     }
 
+    if (checkSigma && !NormalizingFindBindingVisitor.findBinding(body, param)) {
+      return expr.getDefCallArguments().get(definition == Prelude.COERCE2 ? 2 : 1).accept(this, mode);
+    }
+
+    return null;
+  }
+
+  private Expression visitFunctionDefCall(LeveledDefCallExpression expr, NormalizationMode mode) {
+    Expression coeResult = normalizeCoe(expr, mode);
+    if (coeResult != null) {
+      return coeResult;
+    }
+
+    Definition definition = expr.getDefinition();
     if (definition == Prelude.MINUS) {
       return normalizeMinus((FunCallExpression) expr, mode);
     }
@@ -404,9 +412,9 @@ public class NormalizeVisitor extends ExpressionTransformer<NormalizationMode>  
           }
 
           Expression result;
-          if (conCall.getDefinition() == Prelude.LEFT) {
+          if (conCall.getDefinition() == Prelude.LEFT || conCall.getDefinition() == Prelude.DLEFT) {
             result = thisCase.proj1;
-          } else if (conCall.getDefinition() == Prelude.RIGHT) {
+          } else if (conCall.getDefinition() == Prelude.RIGHT || conCall.getDefinition() == Prelude.DRIGHT) {
             result = thisCase.proj2;
             if (definition == Prelude.COERCE2 && i == 1) { // Just a shortcut
               ConCallExpression arg3 = defCallArgs.get(3).accept(this, NormalizationMode.WHNF).cast(ConCallExpression.class);
@@ -697,10 +705,10 @@ public class NormalizeVisitor extends ExpressionTransformer<NormalizationMode>  
   private ElimTree updateStack(Deque<Expression> stack, List<Expression> argList, BranchElimTree branchElimTree) {
     Expression argument = TypeConstructorExpression.unfoldExpression(stack.pop());
     ArrayExpression array = argument instanceof ArrayExpression ? (ArrayExpression) argument : null;
-    BranchKey key = argument instanceof ConCallExpression ? ((ConCallExpression) argument).getDefinition() : argument instanceof IntegerExpression ? (((IntegerExpression) argument).isZero() ? Prelude.ZERO : Prelude.SUC) : array != null ? new ArrayConstructor(array.getElements().isEmpty(), true, true) : argument instanceof PathExpression ? Prelude.PATH_CON : null;
+    BranchKey key = argument instanceof ConCallExpression ? ((ConCallExpression) argument).getDefinition() : argument instanceof IntegerExpression ? (((IntegerExpression) argument).isZero() ? Prelude.ZERO : Prelude.SUC) : array != null ? new ArrayConstructor(array.getElements().isEmpty(), true, true) : argument instanceof PathExpression pathArg ? (pathArg.isDirected() ? Prelude.DPATH_CON : Prelude.PATH_CON) : null;
 
     ElimTree elimTree = key == null ? branchElimTree.getSingleConstructorChild() : branchElimTree.getChild(key);
-    if (elimTree == null && key == Prelude.PATH_CON && branchElimTree.getSingleConstructorKey() instanceof IdpConstructor) {
+    if (elimTree == null && (key == Prelude.PATH_CON || key == Prelude.DPATH_CON) && branchElimTree.getSingleConstructorKey() instanceof IdpConstructor idpKey && idpKey.isDirected() == (key == Prelude.DPATH_CON)) {
       elimTree = branchElimTree.getSingleConstructorChild();
       key = null;
     }
@@ -1102,7 +1110,13 @@ public class NormalizeVisitor extends ExpressionTransformer<NormalizationMode>  
   @Override
   public Expression visitPath(PathExpression expr, NormalizationMode mode) {
     if (mode == NormalizationMode.WHNF) return expr;
-    return new PathExpression(expr.getArgumentType().accept(this, mode), expr.getArgument().accept(this, mode));
+    return new PathExpression(expr.getArgumentType().accept(this, mode), expr.getArgument().accept(this, mode), expr.isDirected(), expr.isForcedInfinite());
+  }
+
+  @Override
+  public Expression visitPathType(PathTypeExpression expr, NormalizationMode mode) {
+    if (mode == NormalizationMode.WHNF) return expr;
+    return new PathTypeExpression(expr.getArgumentType().accept(this, mode), expr.getLeftArgument().accept(this, mode), expr.getRightArgument().accept(this, mode), expr.isDirected(), expr.isForcedInfinite());
   }
 
   @Override
@@ -1112,13 +1126,15 @@ public class NormalizeVisitor extends ExpressionTransformer<NormalizationMode>  
       return AppExpression.make(((PathExpression) pathArg).getArgument(), expr.getIntervalArgument(), true).accept(this, mode);
     }
     Expression intervalArg = expr.getIntervalArgument().normalize(NormalizationMode.WHNF);
-    if (intervalArg instanceof ConCallExpression && (((ConCallExpression) intervalArg).getDefinition() == Prelude.LEFT || ((ConCallExpression) intervalArg).getDefinition() == Prelude.RIGHT)) {
+    boolean directed = expr.isDirected();
+    if (intervalArg instanceof ConCallExpression conCall && (directed ? conCall.getDefinition() == Prelude.DLEFT || conCall.getDefinition() == Prelude.DRIGHT : conCall.getDefinition() == Prelude.LEFT || conCall.getDefinition() == Prelude.RIGHT)) {
       Expression pathType = pathArg.getType().normalize(NormalizationMode.WHNF);
-      if (pathType instanceof DataCallExpression && ((DataCallExpression) pathType).getDefinition() == Prelude.PATH) {
-        return (((ConCallExpression) intervalArg).getDefinition() == Prelude.LEFT ? ((DataCallExpression) pathType).getDefCallArguments().get(1) : ((DataCallExpression) pathType).getDefCallArguments().get(2)).accept(this, mode);
+      if (pathType instanceof PathTypeExpression pathTypeExpr && pathTypeExpr.isDirected() == directed) {
+        boolean isLeft = conCall.getDefinition() == (directed ? Prelude.DLEFT : Prelude.LEFT);
+        return (isLeft ? pathTypeExpr.getLeftArgument() : pathTypeExpr.getRightArgument()).accept(this, mode);
       }
     }
-    return mode == NormalizationMode.WHNF ? AtExpression.make(pathArg, intervalArg, false) : AtExpression.make(pathArg.accept(this, mode), intervalArg.accept(this, mode), false);
+    return mode == NormalizationMode.WHNF ? AtExpression.make(pathArg, intervalArg, false, directed) : AtExpression.make(pathArg.accept(this, mode), intervalArg.accept(this, mode), false, directed);
   }
 
   @Override

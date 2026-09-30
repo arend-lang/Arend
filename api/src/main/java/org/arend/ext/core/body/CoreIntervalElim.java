@@ -8,6 +8,7 @@ import java.util.Collection;
 
 public interface CoreIntervalElim extends CoreBody {
   interface CasePair {
+    boolean isDirected();
     @Nullable CoreExpression getLeftCase();
     @Nullable CoreExpression getRightCase();
   }

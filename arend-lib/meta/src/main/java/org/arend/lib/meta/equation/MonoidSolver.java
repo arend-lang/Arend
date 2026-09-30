@@ -55,9 +55,10 @@ public class MonoidSolver extends BaseEqualitySolver {
   private final Map<Integer, Integer> domMap; // indices of morphisms in `values` to indices of domains.
   private final Map<Integer, Integer> codomMap; // indices of morphisms in `values` to indices of codomains.
 
-  public MonoidSolver(BaseEquationMeta meta, ExpressionTypechecker typechecker, ConcreteFactory factory, ConcreteReferenceExpression refExpr, CoreFunCallExpression equality, TypedExpression instance, CoreClassCallExpression classCall, CoreClassDefinition forcedClass, boolean useHypotheses, CoreClassField catComp, CoreClassField catId) {
+  public MonoidSolver(BaseEquationMeta meta, ExpressionTypechecker typechecker, ConcreteFactory factory, ConcreteReferenceExpression refExpr, CorePathTypeExpression equality, CoreExpression equalityType, TypedExpression instance, CoreClassCallExpression classCall, CoreClassDefinition forcedClass, boolean useHypotheses, CoreClassField catComp, CoreClassField catId) {
     super(meta, typechecker, factory, refExpr, instance, useHypotheses);
     this.equality = equality;
+    this.equalityType = equalityType;
 
     letClauses = new ArrayList<>();
     isCat = classCall == null;
@@ -544,7 +545,7 @@ public class MonoidSolver extends BaseEqualitySolver {
       return false;
     }
     CoreExpression type = binding != null ? binding.getType() : typed.getType();
-    CoreFunCallExpression eq = Utils.toEquality(type, null, null);
+    Pair<CorePathTypeExpression, CoreExpression> eq = Utils.toEqualityWithType(type, null, null);
     if (eq == null) {
       CoreExpression typeNorm = type.normalize(NormalizationMode.WHNF);
       if (!(typeNorm instanceof CoreClassCallExpression classCall)) {
@@ -560,14 +561,14 @@ public class MonoidSolver extends BaseEqualitySolver {
         (!isRDiv || typeToRule(typechecker.typecheck(factory.app(factory.ref(meta.rdiv.getPersonalFields().getFirst().getRef()), false, args), null), null, true, rules));
     }
 
-    if (!typechecker.compare(eq.getDefCallArguments().getFirst(), getValuesType(), CMP.EQ, refExpr, false, true, false)) {
+    if (!typechecker.compare(eq.proj2, getValuesType(), CMP.EQ, refExpr, false, true, false)) {
       return false;
     }
 
     List<Integer> lhs = new ArrayList<>();
     List<Integer> rhs = new ArrayList<>();
-    ConcreteExpression lhsTerm = computeTerm(eq.getDefCallArguments().get(1), lhs);
-    ConcreteExpression rhsTerm = computeTerm(eq.getDefCallArguments().get(2), rhs);
+    ConcreteExpression lhsTerm = computeTerm(eq.proj1.getLeftArgument(), lhs);
+    ConcreteExpression rhsTerm = computeTerm(eq.proj1.getRightArgument(), rhs);
     if (binding == null) {
       rules.add(new RuleExt(typed, null, Direction.FORWARD, lhs, rhs, lhsTerm, rhsTerm));
     } else {

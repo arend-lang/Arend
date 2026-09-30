@@ -21,6 +21,7 @@ import org.arend.core.sort.Sort;
 import org.arend.core.sort.SortExpression;
 import org.arend.core.subst.*;
 import org.arend.ext.concrete.expr.ConcreteUniverseExpression;
+import org.arend.ext.core.context.BindingVariance;
 import org.arend.ext.core.level.ConstLevel;
 import org.arend.ext.core.level.LevelSubstitution;
 import org.arend.error.CountingErrorReporter;
@@ -355,6 +356,96 @@ public class DefinitionTypechecker extends BaseDefinitionTypechecker implements 
     return checkResultTypeLevel(typechecker.finalCheckExpr(resultTypeLevel, null), kind, resultType, funDef, classField, isOverridden, resultTypeLevel);
   }
 
+  public static List<DependentLink> getCategoricalParameters(DependentLink params) {
+    List<DependentLink> result = new ArrayList<>();
+    for (DependentLink link = params; link.hasNext(); link = link.getNext()) {
+      if (link.getVariance() == BindingVariance.COVARIANT) {
+        result.add(link);
+      }
+    }
+    return result;
+  }
+
+  // Builds the expected type of the "functoriality of universals" \level proof:
+  //   \Pi (h : DI ->+ A) (tl : B (h dleft)) (tr : B (h dright)) ->
+  //     \Sigma (t : DPath (\lam i => B (h i)) tl tr) (\Pi (t' : DPath (\lam i => B (h i)) tl tr) -> t = t')
+  public static Expression buildGroupoidalLevelProofType(Expression resultType, List<DependentLink> categoricalParams) {
+    int n = categoricalParams.size();
+
+    Expression domainType;
+    if (n == 1) {
+      domainType = categoricalParams.getFirst().getType();
+    } else {
+      ExprSubstitution sigmaSubst = new ExprSubstitution();
+      LinkList sigmaLinks = new LinkList();
+      for (DependentLink link : categoricalParams) {
+        DependentLink newLink = parameter(link.isExplicit(), link.isProperty(), link.getName(), link.getType().subst(sigmaSubst), link.isHidden(), link.getVariance());
+        sigmaLinks.append(newLink);
+        sigmaSubst.add(link, new ReferenceExpression(newLink));
+      }
+      domainType = new SigmaExpression(sigmaLinks.getFirst());
+    }
+
+    TypedSingleDependentLink hLink = new TypedSingleDependentLink(true, "h", new PiExpression(UnusedDirectedIntervalDependentLink.INSTANCE, domainType));
+    Expression hRef = new ReferenceExpression(hLink);
+    Expression hLeft = AppExpression.make(hRef, ConCallExpression.make(Prelude.DLEFT, Levels.EMPTY, Collections.emptyList(), Collections.emptyList()), true);
+    Expression hRight = AppExpression.make(hRef, ConCallExpression.make(Prelude.DRIGHT, Levels.EMPTY, Collections.emptyList(), Collections.emptyList()), true);
+
+    ExprSubstitution substLeft = new ExprSubstitution();
+    ExprSubstitution substRight = new ExprSubstitution();
+    for (int i = 0; i < n; i++) {
+      DependentLink link = categoricalParams.get(i);
+      substLeft.add(link, n == 1 ? hLeft : ProjExpression.make(hLeft, i, false));
+      substRight.add(link, n == 1 ? hRight : ProjExpression.make(hRight, i, false));
+    }
+    TypedSingleDependentLink tlLink = new TypedSingleDependentLink(true, "tl", resultType.subst(substLeft));
+    TypedSingleDependentLink trLink = new TypedSingleDependentLink(true, "tr", resultType.subst(substRight));
+
+    TypedSingleDependentLink iLink = new TypedSingleDependentLink(true, "i", DataCallExpression.make(Prelude.DI, Levels.EMPTY, Collections.emptyList()), false, BindingVariance.COVARIANT);
+    Expression hi = AppExpression.make(hRef, new ReferenceExpression(iLink), true);
+    ExprSubstitution substI = new ExprSubstitution();
+    for (int i = 0; i < n; i++) {
+      DependentLink link = categoricalParams.get(i);
+      substI.add(link, n == 1 ? hi : ProjExpression.make(hi, i, false));
+    }
+    PathTypeExpression pathType = new PathTypeExpression(new LamExpression(iLink, resultType.subst(substI)), new ReferenceExpression(tlLink), new ReferenceExpression(trLink), true, true);
+
+    LinkList sigmaFields = new LinkList();
+    DependentLink tLink = parameter(true, false, "t", pathType, false, BindingVariance.INVARIANT);
+    sigmaFields.append(tLink);
+    TypedSingleDependentLink tPrimeLink = new TypedSingleDependentLink(true, "t'", pathType);
+    Expression uniqType = new PiExpression(tPrimeLink, FunCallExpression.make(Prelude.PATH_INFIX, Levels.EMPTY, Arrays.asList(pathType, new ReferenceExpression(tLink), new ReferenceExpression(tPrimeLink))));
+    sigmaFields.append(parameter(true, false, null, uniqType, false, BindingVariance.INVARIANT));
+
+    return new PiExpression(hLink, new PiExpression(tlLink, new PiExpression(trLink, new SigmaExpression(sigmaFields.getFirst()))));
+  }
+
+  public static void setVariance(List<DependentLink> links, BindingVariance variance) {
+    for (DependentLink link : links) {
+      if (link instanceof TypedDependentLink tdl) {
+        tdl.setVariance(variance);
+      }
+    }
+  }
+
+  private List<DependentLink> checkGroupoidalLevelProof(Concrete.BaseFunctionDefinition def, FunctionDefinition typedDef, FunctionKind kind) {
+    if (typedDef.getResultType().isError()) {
+      return null;
+    }
+    if (!kind.isSFunc()) {
+      errorReporter.report(new TypecheckingError("\\level+ is not allowed here", def.getResultTypeLevel()));
+      return null;
+    }
+    List<DependentLink> params = getCategoricalParameters(typedDef.getParameters());
+
+    Expression expectedType = buildGroupoidalLevelProofType(typedDef.getResultType(), params);
+    TypecheckingResult result = typechecker.finalCheckExpr(def.getResultTypeLevel(), expectedType);
+    if (result == null) return null;
+
+    typedDef.setResultTypeLevel(result.expression);
+    return params;
+  }
+
   private void calculateGoodThisParameters(Constructor definition) {
     GoodThisParametersVisitor visitor;
     if (definition.getPatterns() == null) {
@@ -423,6 +514,7 @@ public class DefinitionTypechecker extends BaseDefinitionTypechecker implements 
     Expression resultType = fieldType == null ? null : isClassCoclause ? fieldType : fieldType.getCodomain();
     ExprSubstitution substitution = fieldType == null ? null : new ExprSubstitution();
     int skip = def instanceof Concrete.CoClauseFunctionDefinition ? ((Concrete.CoClauseFunctionDefinition) def).getNumberOfExternalParameters() : 0;
+    boolean allowCovariant = def instanceof Concrete.DataDefinition || def instanceof Concrete.Constructor || def instanceof Concrete.BaseFunctionDefinition;
 
     boolean first = true;
     for (Concrete.Parameter parameter : def.getParameters()) {
@@ -430,18 +522,24 @@ public class DefinitionTypechecker extends BaseDefinitionTypechecker implements 
         resultType = resultType.normalize(NormalizationMode.WHNF).getUnderlyingExpression();
       }
 
+      BindingVariance variance = typechecker.checkVariance(parameter, allowCovariant);
       List<Expression> paramResults = new ArrayList<>();
       if (parameter.getType() != null) {
-        if (def instanceof Concrete.Constructor) {
-          TypeExpression paramType = typechecker.checkType(parameter.getType(), UniverseExpression.OMEGA);
-          if (paramType != null) {
-            paramResults.add(paramType.expression());
-            sorts.add(paramType.sort());
-          }
-        } else {
-          TypecheckingResult paramType = typechecker.finalCheckExpr(parameter.getType(), def instanceof Concrete.DataDefinition || def instanceof Concrete.FunctionDefinition ? UniverseExpression.INF_OMEGA : UniverseExpression.OMEGA);
-          if (paramType != null) {
-            paramResults.add(paramType.expression);
+        try (var ignored = variance == BindingVariance.INVARIANT ? typechecker.clearCategoricalContext() : null) {
+          if (def instanceof Concrete.Constructor) {
+            TypeExpression paramType = typechecker.checkType(parameter.getType(), UniverseExpression.OMEGA);
+            if (paramType != null) {
+              paramResults.add(paramType.expression());
+              sorts.add(variance == BindingVariance.INVARIANT ? paramType.sort().withoutCat() : paramType.sort());
+            }
+          } else {
+            Expression expected = def instanceof Concrete.DataDefinition || def instanceof Concrete.FunctionDefinition ? UniverseExpression.INF_OMEGA : UniverseExpression.OMEGA;
+            TypecheckingResult paramType = (def instanceof Concrete.DataDefinition || def instanceof Concrete.BaseFunctionDefinition) && parameter.getType() instanceof Concrete.PiExpression piType
+              ? typechecker.finalize(typechecker.checkPi(piType, expected, true), piType)
+              : typechecker.finalCheckExpr(parameter.getType(), expected);
+            if (paramType != null) {
+              paramResults.add(paramType.expression);
+            }
           }
         }
         if (typedParameters != null) {
@@ -500,17 +598,17 @@ public class DefinitionTypechecker extends BaseDefinitionTypechecker implements 
         if (paramResults.isEmpty()) {
           param = null;
         } else if (referableList.size() == 1 && referableList.getFirst() instanceof HiddenLocalReferable) {
-          param = parameter(parameter.isExplicit(), isProperty, names.getFirst(), paramResults.getFirst(), true);
+          param = parameter(parameter.isExplicit(), isProperty, names.getFirst(), paramResults.getFirst(), true, variance);
         } else if (paramResults.size() == names.size()) {
-          param = parameter(parameter.isExplicit(), isProperty, names.getFirst(), paramResults.getFirst(), false);
+          param = parameter(parameter.isExplicit(), isProperty, names.getFirst(), paramResults.getFirst(), false, variance);
           DependentLink current = param;
           for (int i = 1; i < names.size(); i++) {
-            DependentLink newParam = parameter(parameter.isExplicit(), isProperty, names.get(i), paramResults.get(i), false);
+            DependentLink newParam = parameter(parameter.isExplicit(), isProperty, names.get(i), paramResults.get(i), false, variance);
             current.setNext(newParam);
             current = newParam;
           }
         } else {
-          param = parameter(parameter.isExplicit(), isProperty, names, paramResults.getFirst());
+          param = parameter(parameter.isExplicit(), isProperty, names, paramResults.getFirst(), variance);
         }
         numberOfParameters = names.size();
 
@@ -523,7 +621,7 @@ public class DefinitionTypechecker extends BaseDefinitionTypechecker implements 
       } else {
         numberOfParameters = 1;
         Referable ref = parameter.getReferableList().getFirst();
-        param = paramResults.isEmpty() ? null : parameter(parameter.isExplicit(), isProperty, Collections.singletonList(ref == null ? null : ref.getRefName()), paramResults.getFirst());
+        param = paramResults.isEmpty() ? null : parameter(parameter.isExplicit(), isProperty, Collections.singletonList(ref == null ? null : ref.getRefName()), paramResults.getFirst(), variance);
         if (param != null) {
           typechecker.addBinding(ref, param);
         }
@@ -794,12 +892,9 @@ public class DefinitionTypechecker extends BaseDefinitionTypechecker implements 
         ? new TypeExpression(new ErrorExpression(), new SortExpression.Const(Sort.PROP))
         : def.getBody() instanceof Concrete.CoelimFunctionBody && !def.isRecursive()
           ? null // The result type will be typechecked together with all field implementations during body typechecking.
-          : def.getBody() instanceof Concrete.TermFunctionBody && cResultType instanceof Concrete.UniverseExpression universe && universe.isInfSort()
-            ? new TypeExpression(universe.getHLevel() == null ? UniverseExpression.OMEGA : new UniverseExpression(new Sort(Level.INFINITY, new ConstLevel(universe.getHLevel()))),
-                new SortExpression.Const(universe.getHLevel() == null ? Sort.INFINITY : new Sort(Level.INFINITY, new ConstLevel(universe.getHLevel().add(BigInteger.ONE)))))
-            : checkResultTypeLater(def)
-              ? typechecker.checkType(cResultType, def.getBody() instanceof Concrete.ElimFunctionBody ? UniverseExpression.OMEGA : UniverseExpression.INF_OMEGA)
-              : typechecker.finalCheckType(cResultType, def.getBody() instanceof Concrete.ElimFunctionBody ? UniverseExpression.OMEGA : UniverseExpression.INF_OMEGA);
+          : checkResultTypeLater(def)
+            ? typechecker.checkType(cResultType, def.getBody() instanceof Concrete.ElimFunctionBody ? UniverseExpression.OMEGA : UniverseExpression.INF_OMEGA)
+            : typechecker.finalCheckType(cResultType, def.getBody() instanceof Concrete.ElimFunctionBody ? UniverseExpression.OMEGA : UniverseExpression.INF_OMEGA);
       if (expectedTypeResult != null) {
         expectedType = expectedTypeResult.expression();
       }
@@ -909,6 +1004,10 @@ public class DefinitionTypechecker extends BaseDefinitionTypechecker implements 
   }
 
   private ExpressionPattern checkDConstructor(Expression expr, Set<DependentLink> usedVars, Concrete.SourceNode sourceNode) {
+    if (expr instanceof TypeConstructorExpression typeConstructor) {
+      return checkDConstructor(typeConstructor.getArgument(), usedVars, sourceNode);
+    }
+
     if (expr instanceof ReferenceExpression && ((ReferenceExpression) expr).getBinding() instanceof DependentLink var) {
       if (!usedVars.add(var)) {
         errorReporter.report(new TypecheckingError("Variable '" + var.getName() + "' occurs multiple times in the body of \\cons", sourceNode));
@@ -1047,7 +1146,7 @@ public class DefinitionTypechecker extends BaseDefinitionTypechecker implements 
     }
 
     Expression type = typedDef.getResultType();
-    BigInteger resultTypeLevel = type.isError() ? null : typecheckResultTypeLevel(def.getResultTypeLevel(), def.getKind() == FunctionKind.LEMMA ? LevelMismatchError.TargetKind.LEMMA : def.getKind() == FunctionKind.AXIOM ? LevelMismatchError.TargetKind.AXIOM : null, type, typedDef, null, false);
+    BigInteger resultTypeLevel = type.isError() || def.isGroupoidalLevelProof() ? null : typecheckResultTypeLevel(def.getResultTypeLevel(), def.getKind() == FunctionKind.LEMMA ? LevelMismatchError.TargetKind.LEMMA : def.getKind() == FunctionKind.AXIOM ? LevelMismatchError.TargetKind.AXIOM : null, type, typedDef, null, false);
     if (resultTypeLevel == null && !type.isError()) {
       DefCallExpression defCall = type.cast(DefCallExpression.class);
       resultTypeLevel = defCall == null ? null : defCall.getUseLevel();
@@ -1143,8 +1242,9 @@ public class DefinitionTypechecker extends BaseDefinitionTypechecker implements 
 
     List<ExtElimClause> clauses = null;
     Concrete.FunctionBody body = def.getBody();
-    boolean checkLevelNow = (body instanceof Concrete.ElimFunctionBody || body.getTerm() instanceof Concrete.CaseExpression && def.getKind() != FunctionKind.LEVEL) && def.getKind() != FunctionKind.AXIOM && !checkResultTypeLater(def);
-    BigInteger typeLevel = checkLevelNow ? checkTypeLevel(def, typedDef, false) : null;
+    List<DependentLink> catParams = def.getResultTypeLevel() != null && def.isGroupoidalLevelProof() ? checkGroupoidalLevelProof(def, typedDef, kind) : null;
+    boolean checkLevelNow = catParams != null || (body instanceof Concrete.ElimFunctionBody || body.getTerm() instanceof Concrete.CaseExpression && def.getKind() != FunctionKind.LEVEL) && def.getKind() != FunctionKind.AXIOM && !checkResultTypeLater(def);
+    BigInteger typeLevel = catParams != null ? ConstLevel.PROP.value() : checkLevelNow ? checkTypeLevel(def, typedDef, false) : null;
     if (typeLevel != null && typedDef.isSFunc()) {
       if (body instanceof Concrete.ElimFunctionBody) {
         for (Concrete.FunctionClause clause : body.getClauses()) {
@@ -1158,113 +1258,122 @@ public class DefinitionTypechecker extends BaseDefinitionTypechecker implements 
     boolean bodyIsOK = false;
     ClassCallExpression consType = null;
     boolean checkCanBeLemma = true;
-    if (body instanceof Concrete.ElimFunctionBody elimBody) {
-      List<DependentLink> elimParams = ElimTypechecking.getEliminatedParameters(elimBody.getEliminatedReferences(), elimBody.getClauses(), typedDef.getParameters(), typechecker);
-      CountingErrorReporter countingErrorReporter = new CountingErrorReporter(PathEndpointMismatchError.class, errorReporter);
-      if (elimParams != null) {
-        clauses = typechecker.withErrorReporter(countingErrorReporter, tc -> new PatternTypechecking(PatternTypechecking.Mode.FUNCTION, typechecker, true, null, elimParams).typecheckClauses(elimBody.getClauses(), def.getParameters(), typedDef.getParameters(), expectedType, typedDef));
-      }
-      SortExpression sort = expectedType.getSortExpressionOfType();
-      Body typedBody = clauses == null || def.getKind() == FunctionKind.AXIOM ? null : new ElimTypechecking(errorReporter, typechecker.getEquations(), expectedType, PatternTypechecking.Mode.FUNCTION, typeLevel, sort != null ? sort.withInfLevel().getHLevel() : ConstLevel.INFINITY, kind.isSFunc() && kind != FunctionKind.TYPE, elimBody.getClauses(), typedDef.getParametersOriginalDefinitions().size(), def).typecheckElim(clauses, typedDef.getParameters(), elimParams);
-      if (typedBody != null) {
-        typedDef.setBody(typedBody);
-        typedDef.addStatus(Definition.TypeCheckingStatus.NO_ERRORS);
-        boolean conditionsResult = countingErrorReporter.getErrorsNumber() > 0 || typedDef.getKind() == CoreFunctionDefinition.Kind.LEMMA || new ConditionsChecking(DummyEquations.getInstance(), errorReporter, def).check(typedBody, clauses, elimBody.getClauses(), typedDef);
-        if (!conditionsResult) {
-          typedDef.addStatus(Definition.TypeCheckingStatus.HAS_ERRORS);
+    if (catParams != null) {
+      setVariance(catParams, BindingVariance.INVARIANT);
+    }
+    try {
+      if (body instanceof Concrete.ElimFunctionBody elimBody) {
+        List<DependentLink> elimParams = ElimTypechecking.getEliminatedParameters(elimBody.getEliminatedReferences(), elimBody.getClauses(), typedDef.getParameters(), typechecker);
+        CountingErrorReporter countingErrorReporter = new CountingErrorReporter(PathEndpointMismatchError.class, errorReporter);
+        if (elimParams != null) {
+          clauses = typechecker.withErrorReporter(countingErrorReporter, tc -> new PatternTypechecking(PatternTypechecking.Mode.FUNCTION, typechecker, true, null, elimParams).typecheckClauses(elimBody.getClauses(), def.getParameters(), typedDef.getParameters(), expectedType, typedDef));
         }
-      } else {
-        clauses = null;
-      }
-    } else if (body instanceof Concrete.CoelimFunctionBody) {
-      if (def.getResultType() != null) {
-        fixClassElements(typedDef, def, body.getCoClauseElements());
-        checkCanBeLemma = false;
-        Pair<Expression, ClassCallExpression> result = typecheckCoClauses(typedDef, def, kind, body.getCoClauseElements());
-        if (result != null) {
-          if (!def.isRecursive()) {
-            if (kind == FunctionKind.CONS) {
-              typedDef.setResultType(result.proj1.getType());
-            } else {
-              ClassCallExpression resultType = result.proj2;
-              boolean hasProperties = false;
-              for (ClassField field : resultType.getImplementedHere().keySet()) {
-                if (field.isProperty()) {
-                  hasProperties = true;
-                  break;
-                }
-              }
-              if (hasProperties) {
-                Map<ClassField, Expression> resultTypeImpls = new LinkedHashMap<>();
-                resultType = new ClassCallExpression(result.proj2.getDefinition(), result.proj2.getLevels(), resultTypeImpls);
-                ExprSubstitution substitution = new ExprSubstitution(result.proj2.getThisBinding(), new ReferenceExpression(resultType.getThisBinding()));
-                for (Map.Entry<ClassField, Expression> entry : result.proj2.getImplementedHere().entrySet()) {
-                  if (!entry.getKey().isProperty()) {
-                    resultTypeImpls.put(entry.getKey(), entry.getValue().subst(substitution));
-                  }
-                }
-              }
-              typedDef.setResultType(resultType);
-              if (hasProperties || result.proj2.getNumberOfNotImplementedFields() > 0) {
-                typedDef.setBody(result.proj1);
-                if (hasProperties) typedDef.reallyHideBody();
-              }
-            }
-          }
-          consType = result.proj2;
-        }
-        bodyIsOK = true;
-      }
-    } else if (body instanceof Concrete.TermFunctionBody) {
-      Concrete.Expression bodyTerm = ((Concrete.TermFunctionBody) body).getTerm();
-      boolean useExpectedType = !expectedType.isError();
-      TypecheckingResult nonFinalResult = typechecker.checkExpr(bodyTerm, useExpectedType ? expectedType : null);
-      if (useExpectedType && !expectedType.isOmega()) {
-        if (kind == FunctionKind.LEMMA || kind == FunctionKind.SFUNC || def.getData().getKind() == GlobalReferable.Kind.DEFINED_CONSTRUCTOR || nonFinalResult == null || !nonFinalResult.type.isInstance(ClassCallExpression.class)) {
-          if (nonFinalResult == null) {
-            nonFinalResult = new TypecheckingResult(null, expectedType);
-          } else {
-            nonFinalResult.type = expectedType;
+        SortExpression sort = expectedType.getSortExpressionOfType();
+        Body typedBody = clauses == null || def.getKind() == FunctionKind.AXIOM ? null : new ElimTypechecking(errorReporter, typechecker.getEquations(), expectedType, PatternTypechecking.Mode.FUNCTION, typeLevel, sort != null ? sort.withInfLevel().getHLevel() : ConstLevel.INFINITY, kind.isSFunc() && kind != FunctionKind.TYPE, elimBody.getClauses(), typedDef.getParametersOriginalDefinitions().size(), def).typecheckElim(clauses, typedDef.getParameters(), elimParams);
+        if (typedBody != null) {
+          typedDef.setBody(typedBody);
+          typedDef.addStatus(Definition.TypeCheckingStatus.NO_ERRORS);
+          boolean conditionsResult = countingErrorReporter.getErrorsNumber() > 0 || typedDef.getKind() == CoreFunctionDefinition.Kind.LEMMA || new ConditionsChecking(DummyEquations.getInstance(), errorReporter, def).check(typedBody, clauses, elimBody.getClauses(), typedDef);
+          if (!conditionsResult) {
+            typedDef.addStatus(Definition.TypeCheckingStatus.HAS_ERRORS);
           }
         } else {
+          clauses = null;
+        }
+      } else if (body instanceof Concrete.CoelimFunctionBody) {
+        if (def.getResultType() != null) {
+          fixClassElements(typedDef, def, body.getCoClauseElements());
           checkCanBeLemma = false;
-        }
-      }
-      TypecheckingResult termResult = typechecker.finalize(nonFinalResult, bodyTerm);
-
-      if (termResult != null) {
-        Expression expr = termResult.expression;
-        while (expr instanceof LetExpression) {
-          expr = ((LetExpression) expr).getExpression();
-        }
-        if (expr instanceof NewExpression) {
-          ExprSubstitution substitution = new ExprSubstitution();
-          expr = termResult.expression;
-          while (expr instanceof LetExpression) {
-            for (HaveClause clause : ((LetExpression) expr).getClauses()) {
-              substitution.add(clause, new ReferenceExpression(new PersistentEvaluatingBinding(clause.getName(), clause.getExpression().subst(substitution))));
+          Pair<Expression, ClassCallExpression> result = typecheckCoClauses(typedDef, def, kind, body.getCoClauseElements());
+          if (result != null) {
+            if (!def.isRecursive()) {
+              if (kind == FunctionKind.CONS) {
+                typedDef.setResultType(result.proj1.getType());
+              } else {
+                ClassCallExpression resultType = result.proj2;
+                boolean hasProperties = false;
+                for (ClassField field : resultType.getImplementedHere().keySet()) {
+                  if (field.isProperty()) {
+                    hasProperties = true;
+                    break;
+                  }
+                }
+                if (hasProperties) {
+                  Map<ClassField, Expression> resultTypeImpls = new LinkedHashMap<>();
+                  resultType = new ClassCallExpression(result.proj2.getDefinition(), result.proj2.getLevels(), resultTypeImpls);
+                  ExprSubstitution substitution = new ExprSubstitution(result.proj2.getThisBinding(), new ReferenceExpression(resultType.getThisBinding()));
+                  for (Map.Entry<ClassField, Expression> entry : result.proj2.getImplementedHere().entrySet()) {
+                    if (!entry.getKey().isProperty()) {
+                      resultTypeImpls.put(entry.getKey(), entry.getValue().subst(substitution));
+                    }
+                  }
+                }
+                typedDef.setResultType(resultType);
+                if (hasProperties || result.proj2.getNumberOfNotImplementedFields() > 0) {
+                  typedDef.setBody(result.proj1);
+                  if (hasProperties) typedDef.reallyHideBody();
+                }
+              }
             }
+            consType = result.proj2;
+          }
+          bodyIsOK = true;
+        }
+      } else if (body instanceof Concrete.TermFunctionBody) {
+        Concrete.Expression bodyTerm = ((Concrete.TermFunctionBody) body).getTerm();
+        boolean useExpectedType = !expectedType.isError();
+        TypecheckingResult nonFinalResult = typechecker.checkExpr(bodyTerm, useExpectedType ? expectedType : null);
+        if (useExpectedType) {
+          if (kind == FunctionKind.LEMMA || kind == FunctionKind.SFUNC || def.getData().getKind() == GlobalReferable.Kind.DEFINED_CONSTRUCTOR || nonFinalResult == null || !nonFinalResult.type.isInstance(ClassCallExpression.class)) {
+            if (nonFinalResult == null) {
+              nonFinalResult = new TypecheckingResult(null, expectedType);
+            } else {
+              nonFinalResult.type = expectedType;
+            }
+          } else {
+            checkCanBeLemma = false;
+          }
+        }
+        TypecheckingResult termResult = typechecker.finalize(nonFinalResult, bodyTerm);
+
+        if (termResult != null) {
+          Expression expr = termResult.expression;
+          while (expr instanceof LetExpression) {
             expr = ((LetExpression) expr).getExpression();
           }
-          termResult.expression = expr.subst(substitution);
-          if (termResult.type instanceof LetExpression) {
-            expr = termResult.type;
+          if (expr instanceof NewExpression) {
+            ExprSubstitution substitution = new ExprSubstitution();
+            expr = termResult.expression;
             while (expr instanceof LetExpression) {
+              for (HaveClause clause : ((LetExpression) expr).getClauses()) {
+                substitution.add(clause, new ReferenceExpression(new PersistentEvaluatingBinding(clause.getName(), clause.getExpression().subst(substitution))));
+              }
               expr = ((LetExpression) expr).getExpression();
             }
-            termResult.type = expr.subst(substitution);
+            termResult.expression = expr.subst(substitution);
+            if (termResult.type instanceof LetExpression) {
+              expr = termResult.type;
+              while (expr instanceof LetExpression) {
+                expr = ((LetExpression) expr).getExpression();
+              }
+              termResult.type = expr.subst(substitution);
+            }
+          }
+
+          if (!def.isRecursive()) {
+            typedDef.setResultType(termResult.type);
+          }
+          if (termResult.expression != null) {
+            typedDef.setBody(termResult.expression);
           }
         }
-
-        if (!def.isRecursive()) {
-          typedDef.setResultType(termResult.type);
-        }
-        if (termResult.expression != null) {
-          typedDef.setBody(termResult.expression);
-        }
+      } else {
+        throw new IllegalStateException();
       }
-    } else {
-      throw new IllegalStateException();
+    } finally {
+      if (catParams != null) {
+        setVariance(catParams, BindingVariance.COVARIANT);
+      }
     }
 
     if (typedDef.getKind() == CoreFunctionDefinition.Kind.SFUNC && typedDef.getActualBody() instanceof IntervalElim) {
@@ -1431,7 +1540,7 @@ public class DefinitionTypechecker extends BaseDefinitionTypechecker implements 
             classifyingExpr = classifyingExpr.normalize(NormalizationMode.WHNF);
           }
 
-          if (!(classifyingExpr == null || classifyingExpr instanceof ErrorExpression || classifyingExpr instanceof DataCallExpression || classifyingExpr instanceof ConCallExpression || classifyingExpr instanceof FunCallExpression && ((FunCallExpression) classifyingExpr).getDefinition().getKind() == CoreFunctionDefinition.Kind.TYPE || classifyingExpr instanceof ClassCallExpression || params.isEmpty() && (classifyingExpr instanceof UniverseExpression || classifyingExpr instanceof SigmaExpression || classifyingExpr instanceof PiExpression || classifyingExpr instanceof IntegerExpression))) {
+          if (!(classifyingExpr == null || classifyingExpr instanceof ErrorExpression || classifyingExpr instanceof BaseDataCallExpression || classifyingExpr instanceof ConCallExpression || classifyingExpr instanceof FunCallExpression && ((FunCallExpression) classifyingExpr).getDefinition().getKind() == CoreFunctionDefinition.Kind.TYPE || classifyingExpr instanceof ClassCallExpression || params.isEmpty() && (classifyingExpr instanceof UniverseExpression || classifyingExpr instanceof SigmaExpression || classifyingExpr instanceof PiExpression || classifyingExpr instanceof IntegerExpression))) {
             errorReporter.report(new TypecheckingError("Classifying field must be either a universe, a sigma type, a record, or a partially applied data or constructor", def.getResultType() == null ? def : def.getResultType()));
           }
         } else {
@@ -1490,7 +1599,7 @@ public class DefinitionTypechecker extends BaseDefinitionTypechecker implements 
           }
         }
         TypedSingleDependentLink thisBinding = new TypedSingleDependentLink(false, "this", thisType, true);
-        Expression result = DefCallResult.makeTResult(new Concrete.ReferenceExpression(def.getData().getData(), def.getData()), typedDef, classDef.makeIdLevels()).applyExpression(new ReferenceExpression(thisBinding), false, typechecker, def).toResult(typechecker).expression;
+        Expression result = DefCallResult.makeTResult(new Concrete.ReferenceExpression(def.getData().getData(), def.getData()), typedDef, classDef.makeIdLevels(), typechecker).applyExpression(new ReferenceExpression(thisBinding), false, typechecker, def).toResult(typechecker).expression;
         Expression actualType = result.getType();
         Expression fieldType = ((ClassField) fieldDef).getType().applyExpression(new ReferenceExpression(thisBinding));
         CompareVisitor visitor = new CompareVisitor(DummyEquations.getInstance(), CMP.LE, def);
@@ -1558,10 +1667,16 @@ public class DefinitionTypechecker extends BaseDefinitionTypechecker implements 
   }
 
   private boolean checkNoHITs(ExpressionPattern pattern, Concrete.SourceNode sourceNode) {
-    Definition def = pattern.getDefinition();
-    if (def instanceof Constructor && ((Constructor) def).getDataType().isHIT()) {
-      errorReporter.report(new TypecheckingError("Data types with conditions cannot be used in data type patterns", sourceNode));
-      return false;
+    if (pattern.getDefinition() instanceof Constructor constructor) {
+      DataDefinition dataType = constructor.getDataType();
+      if (dataType.isHIT()) {
+        errorReporter.report(new TypecheckingError("Data types with conditions cannot be used in data type patterns", sourceNode));
+        return false;
+      }
+      if (dataType.getTruncatedLevel() != null && dataType.getTruncatedLevel().signum() < 0) {
+        errorReporter.report(new TypecheckingError("Data types truncated to \\Prop cannot be used in data type patterns", sourceNode));
+        return false;
+      }
     }
 
     for (ExpressionPattern subPattern : pattern.getSubPatterns()) {
@@ -1573,11 +1688,27 @@ public class DefinitionTypechecker extends BaseDefinitionTypechecker implements 
     return true;
   }
 
+  /**
+   * @return the truncated data type with the smallest truncation level among those matched in {@code pattern} or {@code current} if there are none.
+   */
+  private static DataDefinition getMinTruncatedDataType(ExpressionPattern pattern, DataDefinition current) {
+    if (pattern.getDefinition() instanceof Constructor constructor) {
+      DataDefinition dataType = constructor.getDataType();
+      if (dataType.getTruncatedLevel() != null && (current == null || dataType.getTruncatedLevel().compareTo(current.getTruncatedLevel()) < 0)) {
+        current = dataType;
+      }
+    }
+    for (ExpressionPattern subPattern : pattern.getSubPatterns()) {
+      current = getMinTruncatedDataType(subPattern, current);
+    }
+    return current;
+  }
+
   private boolean typecheckDataBody(DataDefinition dataDefinition, Concrete.DataDefinition def, Set<DataDefinition> dataDefinitions) {
     dataDefinition.getConstructors().clear();
 
     Sort userSort = dataDefinition.getSort();
-    if (userSort != null && userSort.isOmega()) userSort = null;
+    if (userSort != null && userSort.getPLevel().isInfinity() && userSort.getHLevel().isInfinity()) userSort = null;
     List<SortExpression> inferredSortList = new ArrayList<>();
 
     boolean dataOk = true;
@@ -1592,6 +1723,9 @@ public class DefinitionTypechecker extends BaseDefinitionTypechecker implements 
     ErrorReporter originalErrorReporter = errorReporter;
     ErrorReporterCounter countingErrorReporter = new ErrorReporterCounter(GeneralError.Level.ERROR, originalErrorReporter);
     errorReporter = countingErrorReporter;
+
+    // Clauses that match on truncated data types; they are checked after the sort of the data type is known
+    List<Pair<Concrete.ConstructorClause, DataDefinition>> truncatedPatternClauses = new ArrayList<>();
 
     if (!def.getConstructorClauses().isEmpty()) {
       Map<Referable, Binding> context = typechecker.getContext();
@@ -1624,12 +1758,17 @@ public class DefinitionTypechecker extends BaseDefinitionTypechecker implements 
               typechecker.getInstancePool().setInstancePool(instancePool.subst(substitution));
             }
             if (result != null && noHITs) {
+              DataDefinition truncatedDataType = null;
               for (ExpressionPattern pattern : result.getPatterns()) {
                 if (!checkNoHITs(pattern, clause)) {
                   result = null;
                   noHITs = false;
                   break;
                 }
+                truncatedDataType = getMinTruncatedDataType(pattern, truncatedDataType);
+              }
+              if (result != null && truncatedDataType != null) {
+                truncatedPatternClauses.add(new Pair<>(clause, truncatedDataType));
               }
             }
             if (result != null && result.hasEmptyPattern()) {
@@ -1692,15 +1831,26 @@ public class DefinitionTypechecker extends BaseDefinitionTypechecker implements 
       typechecker.getInstancePool().setInstancePool(instancePool);
 
       boolean infLevel = false;
+      boolean catLevel = false;
       for (Constructor constructor : dataDefinition.getConstructors()) {
-        if (constructor.getBody() instanceof IntervalElim) {
+        if (constructor.getBody() instanceof IntervalElim intervalElim) {
           infLevel = true;
-          break;
+          DependentLink link = DependentLink.Helper.get(constructor.getParameters(), intervalElim.getOffset());
+          for (IntervalElim.CasePair casePair : intervalElim.getCases()) {
+            if (casePair.isDirected() && link.getVariance() == BindingVariance.COVARIANT) {
+              catLevel = true;
+              break;
+            }
+            link = link.getNext();
+          }
+          if (catLevel) {
+            break;
+          }
         }
       }
 
       if (infLevel) {
-        inferredSortList.add(new SortExpression.Const(Sort.TypeOfLevel(0)));
+        inferredSortList.add(new SortExpression.Const(catLevel ? new Sort(new Level(BigInteger.ZERO), ConstLevel.CAT_INFINITY) : Sort.TypeOfLevel(0)));
       } else if (dataDefinition.hasMultipleConstructors()) {
         inferredSortList.add(new SortExpression.Const(Sort.SET0));
       }
@@ -1732,6 +1882,16 @@ public class DefinitionTypechecker extends BaseDefinitionTypechecker implements 
 
     errorReporter = originalErrorReporter;
 
+    boolean isCovariantContext = !dataDefinition.isInvariantContext();
+    if (isCovariantContext) {
+      for (Constructor constructor : dataDefinition.getConstructors()) {
+        if (constructor.getBody() != null) {
+          originalErrorReporter.report(new CertainTypecheckingError(CertainTypecheckingError.Kind.CONDITIONS_COVARIANT_CONTEXT, def));
+          break;
+        }
+      }
+    }
+
     // Find covariant parameters
     if (dataDefinition.getParameters().hasNext()) {
       int index = 0;
@@ -1757,9 +1917,17 @@ public class DefinitionTypechecker extends BaseDefinitionTypechecker implements 
 
     // Check truncatedness
     if (def.isTruncated()) {
+      boolean catSort = inferredSort instanceof SortExpression.Const(Sort sort) && sort.getHLevel().isCat();
+      if (catSort) {
+        originalErrorReporter.report(new CertainTypecheckingError(CertainTypecheckingError.Kind.TRUNCATED_CAT_SORT, def.getUniverse() == null ? def : def.getUniverse()));
+      }
+      if (isCovariantContext) {
+        originalErrorReporter.report(new CertainTypecheckingError(CertainTypecheckingError.Kind.TRUNCATED_COVARIANT_CONTEXT, def.getUniverse()));
+      }
+
       if (userSort == null) {
         originalErrorReporter.report(new CertainTypecheckingError(CertainTypecheckingError.Kind.TRUNCATED_WITHOUT_UNIVERSE, def));
-      } else {
+      } else if (!isCovariantContext && !catSort) {
         if (inferredSort instanceof SortExpression.Const(Sort sort) && sort.isLessOrEquals(userSort)) {
           originalErrorReporter.report(new CertainTypecheckingError(CertainTypecheckingError.Kind.DATA_WONT_BE_TRUNCATED, def.getUniverse() == null ? def : def.getUniverse()));
         } else {
@@ -1781,6 +1949,18 @@ public class DefinitionTypechecker extends BaseDefinitionTypechecker implements 
       countingErrorReporter.report(new DataUniverseError(inferredSort.withInfLevel(), userSort, def.getUniverse() == null ? def : def.getUniverse()));
     }
 
+    // A data type truncated to level n+1 can be matched only in a data type of level <= n
+    if (!truncatedPatternClauses.isEmpty()) {
+      ConstLevel dataHLevel = userSort != null ? userSort.getHLevel() : inferredSort.withInfLevel().getHLevel();
+      ConstLevel requiredLevel = dataHLevel.succ();
+      for (Pair<Concrete.ConstructorClause, DataDefinition> pair : truncatedPatternClauses) {
+        ConstLevel truncatedLevel = new ConstLevel(pair.proj2.getTruncatedLevel());
+        if (!requiredLevel.isLessOrEquals(truncatedLevel)) {
+          countingErrorReporter.report(new TruncatedDataPatternError(pair.proj2, truncatedLevel, dataHLevel, pair.proj1));
+        }
+      }
+    }
+
     dataDefinition.setSortExpression(def.isTruncated() && userSort != null ? SortExpression.makeTrunc(inferredSort, userSort.getHLevel().value()) : countingErrorReporter.getErrorsNumber() == 0 && userSort != null ? new SortExpression.Const(userSort) : inferredSort);
     typechecker.setStatus(def.getStatus().getTypecheckingStatus());
     dataDefinition.addStatus(typechecker.getStatus());
@@ -1797,19 +1977,14 @@ public class DefinitionTypechecker extends BaseDefinitionTypechecker implements 
 
   private Expression normalizePathExpression(Expression type, Constructor constructor, Concrete.SourceNode sourceNode) {
     type = type.normalize(NormalizationMode.WHNF);
-    if (type instanceof DataCallExpression && ((DataCallExpression) type).getDefinition() == Prelude.PATH) {
-      List<Expression> pathArgs = ((DataCallExpression) type).getDefCallArguments();
-      Expression lamExpr = pathArgs.get(0).normalize(NormalizationMode.WHNF);
+    if (type instanceof PathTypeExpression pathType) {
+      Expression lamExpr = pathType.getArgumentType().normalize(NormalizationMode.WHNF);
       if (lamExpr instanceof LamExpression lam) {
         Expression newType = normalizePathExpression(lam.getBody(), constructor, sourceNode);
         if (newType == null) {
           return null;
         } else {
-          List<Expression> args = new ArrayList<>(3);
-          args.add(new LamExpression(lam.getParameters(), newType));
-          args.add(pathArgs.get(1));
-          args.add(pathArgs.get(2));
-          return DataCallExpression.make(Prelude.PATH, Levels.EMPTY, args);
+          return new PathTypeExpression(new LamExpression(lam.getParameters(), newType), pathType.getLeftArgument(), pathType.getRightArgument(), pathType.isDirected(), pathType.isForcedInfinite());
         }
       } else {
         type = null;
@@ -1826,9 +2001,9 @@ public class DefinitionTypechecker extends BaseDefinitionTypechecker implements 
   }
 
   private Expression addAts(Expression expression, DependentLink param, Expression type) {
-    while (type instanceof DataCallExpression && ((DataCallExpression) type).getDefinition() == Prelude.PATH) {
-      expression = AtExpression.make(expression, new ReferenceExpression(param), false);
-      type = ((LamExpression) ((DataCallExpression) type).getDefCallArguments().getFirst()).getBody();
+    while (type instanceof PathTypeExpression pathType) {
+      expression = AtExpression.make(expression, new ReferenceExpression(param), false, pathType.isDirected());
+      type = ((LamExpression) pathType.getArgumentType()).getBody();
       param = param.getNext();
     }
     return expression;
@@ -1919,21 +2094,22 @@ public class DefinitionTypechecker extends BaseDefinitionTypechecker implements 
 
     List<DependentLink> newParams = new ArrayList<>();
     if (constructorType != null) {
-      int numberOfNewParameters = 0;
-      for (Expression type = constructorType; type instanceof DataCallExpression && ((DataCallExpression) type).getDefinition() == Prelude.PATH; type = ((LamExpression) ((DataCallExpression) type).getDefCallArguments().getFirst()).getBody()) {
-        numberOfNewParameters++;
+      List<Boolean> directedList = new ArrayList<>();
+      for (Expression type = constructorType; type instanceof PathTypeExpression pt; type = ((LamExpression) pt.getArgumentType()).getBody()) {
+        directedList.add(pt.isDirected());
       }
 
+      int numberOfNewParameters = directedList.size();
       if (numberOfNewParameters != 0) {
         if (elimParams != null && elimParams.isEmpty()) {
           elimParams = DependentLink.Helper.toList(list.getFirst());
         }
 
-        DependentLink newParam = new TypedDependentLink(true, "i" + (numberOfNewParameters == 1 ? "" : numberOfNewParameters), Interval(), EmptyDependentLink.getInstance());
-        newParams.add(newParam);
-        for (int i = numberOfNewParameters - 1; i >= 1; i--) {
-          newParam = new UntypedDependentLink("i" + i, newParam);
-          newParams.add(newParam);
+        DependentLink newParam = EmptyDependentLink.getInstance();
+        for (int i = numberOfNewParameters - 1; i >= 0; i--) {
+          boolean directed = directedList.get(i);
+          newParam = new TypedDependentLink(true, "i" + (numberOfNewParameters == 1 ? "" : i + 1), directed ? DI() : Interval(), false, directed ? BindingVariance.COVARIANT : BindingVariance.INVARIANT, newParam);
+          newParams.addFirst(newParam);
         }
         list.append(newParam);
         constructor.setParameters(list.getFirst());
@@ -1943,7 +2119,7 @@ public class DefinitionTypechecker extends BaseDefinitionTypechecker implements 
         if (constructor.getBody() instanceof IntervalElim) {
           pairs = ((IntervalElim) constructor.getBody()).getCases();
           for (int i = 0; i < pairs.size(); i++) {
-            pairs.set(i, new IntervalElim.CasePair(addAts(pairs.get(i).proj1, newParam, constructorType), addAts(pairs.get(i).proj2, newParam, constructorType)));
+            pairs.set(i, new IntervalElim.CasePair(addAts(pairs.get(i).proj1, newParam, constructorType), addAts(pairs.get(i).proj2, newParam, constructorType), pairs.get(i).isDirected()));
           }
           elimBody = ((IntervalElim) constructor.getBody()).getOtherwise();
         } else {
@@ -1951,14 +2127,13 @@ public class DefinitionTypechecker extends BaseDefinitionTypechecker implements 
           elimBody = constructor.getBody() instanceof ElimBody ? (ElimBody) constructor.getBody() : null;
         }
 
-        int i = 0;
         Expression type = constructorType;
-        while (type instanceof DataCallExpression && ((DataCallExpression) type).getDefinition() == Prelude.PATH) {
-          List<Expression> pathArgs = ((DataCallExpression) type).getDefCallArguments();
-          LamExpression lamExpr = (LamExpression) pathArgs.getFirst();
+        while (type instanceof PathTypeExpression pathType) {
+          boolean directed = pathType.isDirected();
+          LamExpression lamExpr = (LamExpression) pathType.getArgumentType();
           type = lamExpr.getBody();
-          DependentLink param = newParams.get(i++);
-          pairs.add(new IntervalElim.CasePair(addAts(pathArgs.get(1), param, type.subst(lamExpr.getParameters(), Left())), addAts(pathArgs.get(2), param, type.subst(lamExpr.getParameters(), Right()))));
+          DependentLink param = newParam.getNext();
+          pairs.add(new IntervalElim.CasePair(addAts(pathType.getLeftArgument(), param, type.subst(lamExpr.getParameters(), Left(directed))), addAts(pathType.getRightArgument(), param, type.subst(lamExpr.getParameters(), Right(directed))), directed));
           type = type.subst(lamExpr.getParameters(), new ReferenceExpression(newParam));
           newParam = newParam.getNext();
         }
@@ -1979,7 +2154,7 @@ public class DefinitionTypechecker extends BaseDefinitionTypechecker implements 
               Expression expr = clause.getExpression();
               if (expr == null) continue;
               for (DependentLink param : newParams) {
-                expr = AtExpression.make(expr.normalize(NormalizationMode.WHNF), new ReferenceExpression(param), true);
+                expr = AtExpression.make(expr.normalize(NormalizationMode.WHNF), new ReferenceExpression(param), true, param.getVariance() == BindingVariance.COVARIANT);
               }
               clause.setExpression(expr);
             }
@@ -2697,7 +2872,9 @@ public class DefinitionTypechecker extends BaseDefinitionTypechecker implements 
         typedDef = addField(((Concrete.ClassField) def).getData(), parentClass, piType, null);
       }
 
-      if (ok && def.getResultTypeLevel() != null) {
+      if (ok && def.getResultTypeLevel() != null && def.isGroupoidalLevelProof()) {
+        errorReporter.report(new TypecheckingError("\\level+ is not supported for class fields", def.getResultTypeLevel()));
+      } else if (ok && def.getResultTypeLevel() != null) {
         var pair = addPiParametersToContext(def.getParameters(), piType);
         if (!pair.proj1.hasNext() && pair.proj2 != null) {
           BigInteger level = typecheckResultTypeLevel(def.getResultTypeLevel(), LevelMismatchError.TargetKind.PROPERTY, pair.proj2, null, typedDef, def instanceof Concrete.OverriddenField);
@@ -2915,13 +3092,13 @@ public class DefinitionTypechecker extends BaseDefinitionTypechecker implements 
       return expr1 instanceof IntegerExpression ? ((IntegerExpression) expr1).compare((IntegerExpression) expr2) : 1;
     }
 
-    if (expr2 instanceof DataCallExpression || expr2 instanceof FunCallExpression && ((FunCallExpression) expr2).getDefinition().getKind() == CoreFunctionDefinition.Kind.TYPE) {
+    if (expr2 instanceof BaseDefCallExpression defCall2 && (expr2 instanceof BaseDataCallExpression || expr2 instanceof FunCallExpression && ((FunCallExpression) expr2).getDefinition().getKind() == CoreFunctionDefinition.Kind.TYPE)) {
       int cmp = 0;
-      if (expr1 instanceof DefCallExpression && ((DefCallExpression) expr1).getDefinition() == ((DefCallExpression) expr2).getDefinition()) {
+      if (expr1 instanceof BaseDefCallExpression defCall1 && defCall1.getDefinition() == defCall2.getDefinition()) {
         ExprSubstitution substitution = new ExprSubstitution();
-        DependentLink link = ((DefCallExpression) expr1).getDefinition().getParameters();
-        List<? extends Expression> args1 = ((DefCallExpression) expr1).getDefCallArguments();
-        List<? extends Expression> args2 = ((DefCallExpression) expr2).getDefCallArguments();
+        DependentLink link = defCall1.getDefinition().getParameters();
+        List<? extends Expression> args1 = defCall1.getDefCallArguments();
+        List<? extends Expression> args2 = defCall2.getDefCallArguments();
         for (int i = 0; i < args1.size(); i++) {
           int argCmp = compareExpressions(args1.get(i), args2.get(i), link.getType().subst(substitution));
           if (argCmp == 1) {
@@ -2940,7 +3117,7 @@ public class DefinitionTypechecker extends BaseDefinitionTypechecker implements 
         }
       }
 
-      for (Expression arg : ((DefCallExpression) expr2).getDefCallArguments()) {
+      for (Expression arg : defCall2.getDefCallArguments()) {
         if (compareExpressions(expr1, arg, null) != 1) {
           return -1;
         }

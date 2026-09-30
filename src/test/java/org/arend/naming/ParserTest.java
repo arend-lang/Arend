@@ -1,5 +1,6 @@
 package org.arend.naming;
 
+import org.arend.ext.core.context.BindingVariance;
 import org.arend.naming.reference.GlobalReferable;
 import org.arend.naming.reference.LocalReferable;
 import org.arend.naming.reference.Referable;
@@ -89,6 +90,51 @@ public class ParserTest extends NameResolverTestCase {
     LocalReferable b = ref("b");
     LocalReferable c = ref("c");
     assertTrue(compareAbstract(cPi(ctypeArgs(cTele(cvars(x, y, z), cUniverse(0)), cTele(cvars(w, t), cPi(cUniverse(0), cUniverse(0)))), cPi(ctypeArgs(cTele(cvars(a, b), cPi(c, cUniverse(0), cApps(cVar(x), cVar(c))))), cApps(cVar(x), cVar(b), cVar(y), cVar(w)))), expr));
+  }
+
+  @Test
+  public void parserDottedPi() {
+    Concrete.Expression expr = resolveNamesExpr("\\Pi (x :+ \\Type0) (y : \\Type0) -> \\Type0");
+    Concrete.PiExpression pi = (Concrete.PiExpression) expr;
+    assertEquals(2, pi.getParameters().size());
+    assertEquals(BindingVariance.COVARIANT, pi.getParameters().get(0).getVariance());
+    assertEquals(BindingVariance.INVARIANT, pi.getParameters().get(1).getVariance());
+  }
+
+  @Test
+  public void parserDottedSigmaParses() {
+    Concrete.Expression expr = parseExpr("\\Sigma (x :+ \\Type0)");
+    Concrete.SigmaExpression sigma = (Concrete.SigmaExpression) expr;
+    assertEquals(BindingVariance.INVARIANT, sigma.getVariance());
+    assertEquals(BindingVariance.COVARIANT, sigma.getParameters().getFirst().getVariance());
+  }
+
+  @Test
+  public void parserSigmaPlusParses() {
+    Concrete.Expression expr = parseExpr("\\Sigma+ (x : \\Type0) \\Type0");
+    Concrete.SigmaExpression sigma = (Concrete.SigmaExpression) expr;
+    assertEquals(BindingVariance.COVARIANT, sigma.getVariance());
+    assertEquals(2, sigma.getParameters().size());
+    assertEquals(BindingVariance.INVARIANT, sigma.getParameters().getFirst().getVariance());
+  }
+
+  @Test
+  public void parserSigmaPlusUnicodeParses() {
+    Concrete.Expression expr = parseExpr("\\Sigma⁺ Type0");
+    assertEquals(BindingVariance.COVARIANT, ((Concrete.SigmaExpression) expr).getVariance());
+  }
+
+  @Test
+  public void parserSigmaParses() {
+    Concrete.Expression expr = parseExpr("\\Sigma (x : \\Type0) \\Type0");
+    assertEquals(BindingVariance.INVARIANT, ((Concrete.SigmaExpression) expr).getVariance());
+  }
+
+  @Test
+  public void parserDottedLetParses() {
+    Concrete.Expression expr = parseExpr("\\let f (x :+ \\Type0) => x \\in f");
+    Concrete.LetExpression let = (Concrete.LetExpression) expr;
+    assertEquals(BindingVariance.COVARIANT, let.getClauses().getFirst().getParameters().getFirst().getVariance());
   }
 
   @Test

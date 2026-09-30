@@ -56,6 +56,7 @@ INFIX               = `{ID}`
 SET                 = \\Set[0-9]*
 UNIVERSE            = \\Type[0-9]*
 TRUNCATED_UNIVERSE  = \\[0-9]+-Type[0-9]*
+CAT_UNIVERSE        = \\Cat[0-9]*
 
 STRING              = \"{STRING_CONTENT}*\"
 STRING_CONTENT      = [^\"\\\r\n] | \\[btnfr\"\'\\] | {OCT_ESCAPE} | {UNICODE_ESCAPE}
@@ -93,8 +94,14 @@ OCT_DIGIT           = [0-8]
     "("                     { return LPAREN; }
     ")"                     { return RPAREN; }
     ":"                     { return COLON; }
+    ":+"                    { return COLON_PLUS; }
+    ":⁺"                    { return COLON_PLUS; }
     "->"                    { return ARROW; }
+    "->+"                   { return ARROW_PLUS; }
+    "->⁺"                   { return ARROW_PLUS; }
     "=>"                    { return FAT_ARROW; }
+    "=>+"                   { return FAT_ARROW_PLUS; }
+    "=>⁺"                   { return FAT_ARROW_PLUS; }
     "."                     { return DOT; }
     ","                     { return COMMA; }
     "__"                    { return APPLY_HOLE; }
@@ -138,6 +145,8 @@ OCT_DIGIT           = [0-8]
     "\\new"                 { return NEW_KW; }
     "\\Pi"                  { return PI_KW; }
     "\\Sigma"               { return SIGMA_KW; }
+    "\\Sigma+"              { return SIGMA_PLUS_KW; }
+    "\\Sigma⁺"              { return SIGMA_PLUS_KW; }
     "\\lam"                 { return LAM_KW; }
     "\\have"                { return HAVE_KW; }
     "\\have!"               { return HAVES_KW; }
@@ -162,6 +171,8 @@ OCT_DIGIT           = [0-8]
     "\\protected"           { return PROTECTED_KW; }
     "\\suc"                 { return SUC_KW; }
     "\\level"               { return LEVEL_KW; }
+    "\\level+"              { return LEVEL_PLUS_KW; }
+    "\\level⁺"              { return LEVEL_PLUS_KW; }
     "\\max"                 { return MAX_KW; }
 
     {STRING}                { return STRING; }
@@ -169,6 +180,7 @@ OCT_DIGIT           = [0-8]
     {SET}                   { return SET; }
     {UNIVERSE}              { return UNIVERSE; }
     {TRUNCATED_UNIVERSE}    { return TRUNCATED_UNIVERSE; }
+    {CAT_UNIVERSE}          { return CAT_UNIVERSE; }
 
     {KEYWORD}               { return INVALID_KW; }
 

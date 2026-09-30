@@ -6,11 +6,13 @@ import org.arend.ext.concrete.expr.ConcreteReferenceExpression;
 import org.arend.ext.core.context.CoreBinding;
 import org.arend.ext.core.definition.CoreClassDefinition;
 import org.arend.ext.core.expr.CoreClassCallExpression;
-import org.arend.ext.core.expr.CoreFunCallExpression;
+import org.arend.ext.core.expr.CoreExpression;
+import org.arend.ext.core.expr.CorePathTypeExpression;
 import org.arend.ext.core.ops.CMP;
 import org.arend.ext.error.ErrorReporter;
 import org.arend.ext.typechecking.ExpressionTypechecker;
 import org.arend.ext.typechecking.TypedExpression;
+import org.arend.ext.util.Pair;
 import org.arend.lib.context.ContextHelper;
 import org.arend.lib.error.EquationSolverError;
 import org.arend.lib.meta.closure.CongruenceClosure;
@@ -39,9 +41,10 @@ public class RingSolver extends BaseEqualitySolver {
   private TermCompiler.CompiledTerm lastCompiled;
   private TypedExpression lastTerm;
 
-  protected RingSolver(BaseEquationMeta meta, ExpressionTypechecker typechecker, ConcreteFactory factory, ConcreteReferenceExpression refExpr, CoreFunCallExpression equality, TypedExpression instance, CoreClassCallExpression classCall, CoreClassDefinition forcedClass, boolean useHypotheses) {
+  protected RingSolver(BaseEquationMeta meta, ExpressionTypechecker typechecker, ConcreteFactory factory, ConcreteReferenceExpression refExpr, CorePathTypeExpression equality, CoreExpression equalityType, TypedExpression instance, CoreClassCallExpression classCall, CoreClassDefinition forcedClass, boolean useHypotheses) {
     super(meta, typechecker, factory, refExpr, instance, useHypotheses);
     this.equality = equality;
+    this.equalityType = equalityType;
     termCompiler = new TermCompiler(classCall, instance, meta, typechecker, refExpr, values, forcedClass);
     isCommutative = termCompiler.isLattice || classCall.getDefinition().isSubClassOf(meta.CMonoid) && (forcedClass == null || forcedClass.isSubClassOf(meta.CMonoid));
   }
@@ -54,10 +57,10 @@ public class RingSolver extends BaseEqualitySolver {
 
   private void typeToRule(CoreBinding binding, List<Equality> rules) {
     if (binding == null) return;
-    CoreFunCallExpression eq = Utils.toEquality(binding.getType(), null, null);
-    if (eq == null || !typechecker.compare(eq.getDefCallArguments().get(0), getValuesType(), CMP.EQ, refExpr, false, true, false)) return;
-    TermCompiler.CompiledTerm lhsTerm = termCompiler.compileTerm(eq.getDefCallArguments().get(1));
-    TermCompiler.CompiledTerm rhsTerm = termCompiler.compileTerm(eq.getDefCallArguments().get(2));
+    Pair<CorePathTypeExpression, CoreExpression> eq = Utils.toEqualityWithType(binding.getType(), null, null);
+    if (eq == null || !typechecker.compare(eq.proj2, getValuesType(), CMP.EQ, refExpr, false, true, false)) return;
+    TermCompiler.CompiledTerm lhsTerm = termCompiler.compileTerm(eq.proj1.getLeftArgument());
+    TermCompiler.CompiledTerm rhsTerm = termCompiler.compileTerm(eq.proj1.getRightArgument());
     if (isCommutative) {
       toCommutativeNF(lhsTerm.nf);
       toCommutativeNF(rhsTerm.nf);

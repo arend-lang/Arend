@@ -1,3 +1,5 @@
+-- | [1] Peter T. Johnstone, Fibrewise separation axioms for locales, 1990
+
 \import Function.Meta
 \import Logic
 \import Logic.Meta
@@ -45,6 +47,73 @@
 \type IsWeaklyHausdorff (L : Locale)
   => (localeDiagonal {L}).IsWeaklyClosed
 
--- | A weakly regular locale is weakly Hausdorff
+{- | A weakly regular locale is weakly Hausdorff.
+     This is [1, Corollary 3.4].
+ -}
 \lemma wregular_wHausdorff {L : Locale} (reg : L.IsWeaklyRegularLocale) : IsWeaklyHausdorff L
-  => {?} -- [4, Corollary 3.4]
+  => (localeDiagonal.diag-surj, \lam j H {U} => (ProductLocale L L).Join-univ
+        (later \lam {V} dV<=dU {s} Vs => core reg H (SJoin-cond Vs <=∘ dV<=dU) (cover-refl idp)))
+  \where {
+    {- | The heart of {wregular_wHausdorff}: a pair whose meet is under the diagonal image of {U}
+         already lies in every nucleus {j} that dominates the diagonal on propositions.
+     -}
+    \private \lemma core {L : Locale} (reg : L.IsWeaklyRegularLocale) {a b : L}
+      {j : Nucleus (ProductLocale L L)} {U : ProductLocale L L}
+      (H : \Pi {P : \Prop} {x : ProductLocale L L} -> localeDiagonal x <= L.pHat P -> x <= j ((ProductLocale L L).pHat P))
+      (h : a ∧ b <= localeDiagonal U) : prod a b <= j U
+      => wlem1 reg H $ prod-cover2 h <=∘ (ProductLocale L L).SJoin-univ
+          (\lam {c} m => SetIm-elim {_} {_} {\lam c => prod a c <= j U} (later \lam {t} Ut => wlem2 reg H $
+          prod-mono-left (meet-right <=∘ meet-left) <=∘ prod-mono-right meet-right <=∘
+             SiteLocale.embed-univ Ut <=∘ j.nucleus-unit) m)
+
+    -- | The transported nucleus dominates `open a'` on propositions, so `a' <=<w a` applies to it.
+    \private \lemma wbelow-kn1 {L : Locale} {a' a : L} {j : Nucleus (ProductLocale L L)}
+      (H : \Pi {P : \Prop} {x : ProductLocale L L} -> localeDiagonal x L.<= L.pHat P -> x <= j ((ProductLocale L L).pHat P))
+      (w : a' L.<=<w a) {y : L} : a L.--> y L.<= nucleus-left a' j y
+      => w {y} <=∘ SMeet-conde (nucleus-left a' j) \lam {P} {z} h =>
+           \have | h' : z L.<= a' L.--> L.pHat P
+                     => L.<=-curry meet-left <=∘ h <=∘ =_<= (L.open a').locale_pHat
+                 | az : a' ∧ z L.<= L.pHat P => L.meet-comm =<= L.<=-uncurry h'
+                 | d1 : prod a' z <= j ((ProductLocale L L).pHat P) => H $ localeDiagonal.diag_prod <=∘ az
+                 | d2 : Locale.pHat P ∧ prod a' z <= prod a' (L.pHat P)
+                     => Locale.pHat_meet-left \lam p => prod-mono-right (L.Join-cond p)
+           \in prod-sec1-univ.1 $ meet-univ d1 <=-refl
+                <=∘ j.nucleus_meet-left {ProductLocale L L} {_} {_} {prod a' z}
+                <=∘ j.nucleus-<= d2
+
+    -- | Weak regularity in the first coordinate: shrinking `b` to `a ∧ b` is enough.
+    \private \lemma wlem1 {L : Locale} (reg : L.IsWeaklyRegularLocale) {a b : L}
+      {j : Nucleus (ProductLocale L L)} {U : ProductLocale L L}
+      (H : \Pi {P : \Prop} {x : ProductLocale L L} -> localeDiagonal x <= L.pHat P -> x <= j (Locale.pHat P))
+      (h : prod a (a ∧ b) <= j U) : prod a b <= j U
+      => prod-cover1 (reg a) <=∘ SJoin-univ \lam {a'} w =>
+           \have | ab : a ∧ b <= prod-sec1 a' (j U) => prod-sec1-univ.1 (prod-mono-left (L.<=<w_<= w) <=∘ h)
+                 | fix : a L.--> prod-sec1 a' (j U) <= prod-sec1 a' (j U)
+                     => wbelow-kn1 H w <=∘ prod-sec1-mono (j.nucleus-univ prod-sec1-counit)
+           \in prod-sec1-univ.2 $ L.<=-curry (L.meet-comm =<= ab) <=∘ fix
+
+    \private \lemma wbelow-kn2 {L : Locale} {b' b : L} {j : Nucleus (ProductLocale L L)}
+      (H : \Pi {P : \Prop} {x : ProductLocale L L} -> localeDiagonal x <= L.pHat P -> x <= j ((ProductLocale L L).pHat P))
+      (w : b' L.<=<w b) {y : L} : b L.--> y <= nucleus-right b' j y
+      => w {y} <=∘ SMeet-conde (nucleus-right b' j) \lam {P} {z} h =>
+           \have | h' : z <= b' L.--> L.pHat P
+                     => L.<=-curry meet-left <=∘ h <=∘ =_<= (L.open b').locale_pHat
+                 | az : z ∧ b' <= L.pHat P => L.<=-uncurry h'
+                 | d1 : prod z b' <= j ((ProductLocale L L).pHat P) => H $ localeDiagonal.diag_prod <=∘ az
+                 | d2 : Locale.pHat P ∧ prod z b' <= prod (L.pHat P) b'
+                     => Locale.pHat_meet-left \lam p => prod-mono-left (Join-cond p)
+           \in prod-sec2-univ.1 $ meet-univ d1 <=-refl
+                <=∘ j.nucleus_meet-left {ProductLocale L L} {_} {_} {prod z b'}
+                <=∘ j.nucleus-<= d2
+
+    -- | Weak regularity in the second coordinate: shrinking `a` to `a ∧ b` is enough.
+    \private \lemma wlem2 {L : Locale} (reg : L.IsWeaklyRegularLocale) {a b : L}
+      {j : Nucleus (ProductLocale L L)} {U : ProductLocale L L}
+      (H : \Pi {P : \Prop} {x : ProductLocale L L} -> localeDiagonal x <= L.pHat P -> x <= j (Locale.pHat P))
+      (h : prod (a ∧ b) b <= j U) : prod a b <= j U
+      => prod-cover2 (reg b) <=∘ SJoin-univ \lam {b'} w =>
+           \have | ab : a ∧ b <= prod-sec2 b' (j U) => prod-sec2-univ.1 (prod-mono-right (L.<=<w_<= w) <=∘ h)
+                 | fix : b L.--> prod-sec2 b' (j U) <= prod-sec2 b' (j U)
+                     => wbelow-kn2 H w <=∘ prod-sec2-mono (j.nucleus-univ prod-sec2-counit)
+           \in prod-sec2-univ.2 $ L.<=-curry ab <=∘ fix
+  }

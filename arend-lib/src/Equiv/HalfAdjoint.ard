@@ -38,7 +38,7 @@
            | T1-isContr (r : Retraction f) (x : A) : Contr (T1 r x) =>
               rewriteI (T1'=T1 r x) (T1'-isContr r x)
            | T2 => \Sigma (r : Retraction f) (\Pi (x : A) -> T1 r x)
-           | T2-isContr : Contr T2 => sigma-Contr (\Pi (x : A) -> T1 __ x)
+           | T2-isContr : Contr T2 => sigma-Contr
                                         (Retraction.isContr e)
                                         (\lam r => pi-Contr (T1 r) (T1-isContr r))
            | E : T2 = HAEquiv f => path (iso (\lam (t : T2) => \new HAEquiv f {

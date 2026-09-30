@@ -12,19 +12,19 @@ import static org.junit.Assert.assertNotNull;
 public class UniverseTest extends TypeCheckingTestCase {
   @Test
   public void universe() {
-    TypecheckingResult result = typeCheckExpr("\\Type5", null);
+    TypecheckingResult result = typeCheckExpr("\\1-Type5", null);
     assertNotNull(result);
-    assertEquals(Universe(5), result.expression);
-    assertEquals(Universe(6), result.type);
-    assertEquals(Universe(6), result.expression.getType());
+    assertEquals(Universe(5, 1), result.expression);
+    assertEquals(Universe(6, 2), result.type);
+    assertEquals(Universe(6, 2), result.expression.getType());
   }
 
   @Test
   public void universeExpected() {
-    TypecheckingResult result = typeCheckExpr("\\Type5", Universe(8));
+    TypecheckingResult result = typeCheckExpr("\\1-Type5", Universe(8, 9));
     assertNotNull(result);
-    assertEquals(Universe(5), result.expression);
-    assertEquals(Universe(6), result.expression.getType());
+    assertEquals(Universe(5, 1), result.expression);
+    assertEquals(Universe(6, 2), result.expression.getType());
   }
 
   @Test

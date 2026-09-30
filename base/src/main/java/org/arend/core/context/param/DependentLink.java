@@ -5,6 +5,7 @@ import org.arend.core.context.binding.Binding;
 import org.arend.core.expr.Expression;
 import org.arend.core.expr.ReferenceExpression;
 import org.arend.core.subst.ExprSubstitution;
+import org.arend.ext.core.context.BindingVariance;
 import org.arend.ext.core.level.LevelSubstitution;
 import org.arend.core.subst.SubstVisitor;
 import org.arend.ext.core.context.CoreBinding;
@@ -26,6 +27,11 @@ public interface DependentLink extends Binding, CoreParameter {
   DependentLink subst(SubstVisitor substVisitor, int size, boolean updateSubst);
   TypedDependentLink getNextTyped(List<String> names);
   boolean isProperty();
+
+  @Override
+  default @NotNull BindingVariance getVariance() {
+    return BindingVariance.INVARIANT;
+  }
 
   @Override
   default Binding subst(SubstVisitor visitor) {

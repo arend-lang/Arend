@@ -102,7 +102,7 @@ public class ConcreteCompareVisitor implements ConcreteExpressionVisitor<Concret
   }
 
   private boolean compareParameter(Concrete.Parameter arg1, Concrete.Parameter arg2) {
-    if (arg1.isExplicit() != arg2.isExplicit() || arg1.isProperty() != arg2.isProperty() || arg1.isStrict() != arg2.isStrict()) {
+    if (arg1.isExplicit() != arg2.isExplicit() || arg1.isProperty() != arg2.isProperty() || arg1.isStrict() != arg2.isStrict() || arg1.getVariance() != arg2.getVariance()) {
       return false;
     }
 
@@ -243,8 +243,9 @@ public class ConcreteCompareVisitor implements ConcreteExpressionVisitor<Concret
 
   @Override
   public Boolean visitSigma(Concrete.SigmaExpression expr1, Concrete.Expression expr2) {
-    if (!(expr2 instanceof Concrete.SigmaExpression)) return false;
-    boolean result = compareParameters(expr1.getParameters(), ((Concrete.SigmaExpression) expr2).getParameters());
+    if (!(expr2 instanceof Concrete.SigmaExpression sigma2)) return false;
+    if (expr1.getVariance() != sigma2.getVariance()) return false;
+    boolean result = compareParameters(expr1.getParameters(), sigma2.getParameters());
     freeParameters(expr1.getParameters());
     return result;
   }

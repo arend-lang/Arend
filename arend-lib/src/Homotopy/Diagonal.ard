@@ -1,0 +1,38 @@
+\import Equiv
+\import Homotopy.Fibration
+\import Homotopy.HLevel
+\import Logic
+\import Paths
+
+\func Diagonal {X Y : \Cat} (r : X -> Y)
+  => \Sigma (u v : X) (r u = r v)
+
+\func diagonal {X Y : \Cat} (r : X -> Y) (x : X) : Diagonal r
+  => (x, x, idp)
+
+-- | Fibers of the diagonal of {r} are fibers of `pmap r`.
+\func diag-fib {X Y : \Cat} (r : X -> Y) {u v : X} (p : r u = r v)
+  : QEquiv {Fib {X} {Diagonal r} (diagonal r) (u,v,p)} {Fib (pmap r {u} {v}) p} \cowith
+  | f w => forward w.1 w.2
+  | ret w => backward w.1 w.2
+  | ret_f w => backward_forward w.1 w.2
+  | f_sec w => forward_backward w.1 w.2
+  \where {
+    \protected \func forward {t : Diagonal r} (w : X) (e : diagonal r w = t) : Fib (pmap r {t.1} {t.2}) t.3 \elim e
+      | idp => (idp, idp)
+
+    \protected \func backward {u v : X} (q : u = v) {p : r u = r v} (c : pmap r q = p) : Fib {X} {Diagonal r} (diagonal r) (u,v,p) \elim q, c
+      | idp, idp => (u, idp)
+
+    \protected \func backward_forward {t : Diagonal r} (w : X) (e : diagonal r w = t) : backward (forward w e).1 (forward w e).2 = {Fib {X} {Diagonal r} (diagonal r) t} (w,e) \elim e
+      | idp => idp
+
+    \protected \func forward_backward {u v : X} (q : u = v) {p : r u = r v} (c : pmap r q = p) : forward (backward q c).1 (backward q c).2 = (q,c) \elim q, c
+      | idp, idp => idp
+  }
+
+-- | The diagonal of {r} is `(k-2)`-truncated iff the action of {r} on paths is.
+\lemma truncMap-diagonal {X Y : \Cat} {r : X -> Y} {k : Nat}
+  : IsTruncMap k (diagonal r) <-> (\Pi {u v : X} -> IsTruncMap k (pmap r {u} {v}))
+  => (\lam t {u} {v} p => HLevel_-2-retracts (symQEquiv (diag-fib r p)) (t (u,v,p)),
+      \lam h t => HLevel_-2-retracts (diag-fib r t.3) (h t.3))

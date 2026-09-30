@@ -1,0 +1,111 @@
+\import Equiv
+\import Equiv.Path
+\import Function.Meta
+\import InfCat.Basics
+\import InfCat.Paths
+\import Logic
+\import Logic.Meta
+\import Paths
+\import Paths.Meta
+
+\sfunc iso_= {C :⁺ \Cat} {x y :⁺ C} (f :⁺ x ~> y) (g :⁺ y ~> x) (p :⁺ comp f g = idd) (q :⁺ comp g f = idd)
+  : \Sigma⁺ (r : x = y) (=_~> r = f)
+  => \have r => rezk f g (comp-char.conv p) (comp-char.conv q)
+     \in (pmap+ __.1 r, inv transport_~>_idd-right *> sigma-unext2 r)
+
+\type IsIso {C : \Cat} {x y : C} (f : x ~> y) : \Prop
+  => ∃ (g : y ~> x) (comp g f = idd) (comp f g = idd)
+  \where {
+    \lemma toTuple (e : IsIso f)
+      : \Sigma (\Sigma (g : y ~> x) (comp g f = idd)) (\Sigma (h : y ~> x) (comp f h = idd))
+        \level \lam s t => ext (linv-unique.grpd f s.2.1 s.2.2, rinv-unique.grpd f s.1.1 s.1.2)
+      \elim e
+      | inP s => ((s.1, s.2), (s.1, s.3))
+
+    \sfunc ret (e : IsIso f) : y ~> x
+      => (toTuple e).1.1
+
+    \sfunc ret_f (e : IsIso f) : comp (ret e) f = idd
+      => pmap+ (comp __ f) (\peval ret e) *> (toTuple e).1.2
+
+    \sfunc f_ret (e : IsIso f) : comp f (ret e) = idd
+      => pmap+ (comp f __) ((\peval ret e) *> inv-equals f (toTuple e).1.2 (toTuple e).2.2) *> (toTuple e).2.2
+
+    \sfunc inv-equals {C :⁺ \Cat} {x y :⁺ C} (f :⁺ x ~> y) {g h :⁺ y ~> x} (gf=id :⁺ comp g f = idd) (fh=id :⁺ comp f h = idd) : g = h
+      => inv (pmap+ (comp g __) fh=id *> comp_idd-right) *> comp-assoc *> pmap+ (comp __ h) gf=id *> comp_idd-left
+
+    \sfunc linv-unique {C :⁺ \Cat} {x y :⁺ C} (f :⁺ x ~> y) (g :⁺ y ~> x) (fg=id :⁺ comp f g = idd)
+                       {s t :⁺ \Sigma⁺ (h : y ~> x) (comp h f = idd)} : s = t
+      => equiv-fibers (comp __ f) (comp __ g)
+          (\lam h => inv comp-assoc *> pmap+ (comp h __) fg=id *> comp_idd-right)
+          (\lam h => inv comp-assoc *> pmap+ (comp h __) (pmap+ (comp __ f) (inv $ inv-equals f s.2 fg=id) *> s.2) *> comp_idd-right)
+      \where {
+        \protected \sfunc grpd {C : \Cat} {x y : C} (f : x ~> y) (g : y ~> x) (fg=id : comp f g = idd)
+                               {s t : \Sigma (h : y ~> x) (comp h f = idd)} : s = t
+          => \have r => linv-unique f g fg=id {s.1,s.2} {t.1,t.2}
+             \in sigma-ext.grpd {_} {comp __ f = idd} (pmap+ __.1 r) (sigma-unext2 r)
+      }
+
+    \sfunc rinv-unique {C :⁺ \Cat} {x y :⁺ C} (f :⁺ x ~> y) (g :⁺ y ~> x) (gf=id :⁺ comp g f = idd)
+                       {s t :⁺ \Sigma⁺ (h : y ~> x) (comp f h = idd)} : s = t
+      => equiv-fibers (comp f __) (comp g __)
+          (\lam h => comp-assoc *> pmap+ (comp __ h) gf=id *> comp_idd-left)
+          (\lam h => comp-assoc *> pmap+ (comp __ h) (pmap+ (comp f __) (inv-equals f gf=id s.2) *> s.2) *> comp_idd-left)
+      \where {
+        \protected \sfunc grpd {C : \Cat} {x y : C} (f : x ~> y) (g : y ~> x) (gf=id : comp g f = idd)
+                               {s t : \Sigma (h : y ~> x) (comp f h = idd)} : s = t
+          => \have r => rinv-unique f g gf=id {s.1,s.2} {t.1,t.2}
+             \in sigma-ext.grpd {_} {comp f __ = idd} (pmap+ __.1 r) (sigma-unext2 r)
+      }
+  }
+
+\lemma dmap_IsIso {C D : \Cat} (f : C ->⁺ D) {x y : C} {p : x ~> y} (fi : IsIso p) : IsIso (dmap f p) \elim fi
+  | inP r => inP (dmap f r.1, inv (dmap_comp f) *> pmap (dmap f) r.2, inv (dmap_comp f) *> pmap (dmap f) r.3)
+
+\sfunc IsIso_= {C : \Cat} {x y : C} {f : x ~> y} (fi : IsIso f) : \Sigma (p : x = y) (=_~> p = f)
+  => \have r => iso_= f (IsIso.ret fi) (IsIso.f_ret fi) (IsIso.ret_f fi)
+     \in (r.1,r.2)
+
+\lemma IsIso-char {C : \Cat} {x y : C} {f : x ~> y} : IsIso f <-> ∃ (p : x = y) (=_~> p = f)
+  => (\lam fi => inP (IsIso_= fi),
+      \lam (inP s) => transport IsIso s.2 $ inP (=_~> (inv s.1), =_~>_comp *> pmap+ =_~> inv_*>, =_~>_comp *> pmap+ =_~> *>_inv))
+
+\lemma =-char {C : \Cat} (x y : C)
+  : IsEquiv {x = y} {\Sigma (f : x ~> y) (IsIso f)} (\lam p => (=_~> p, IsIso-char.2 $ inP (p,idp)))
+  => inP $ pathEquiv (\lam x y => \Sigma (f : x ~> y) (IsIso f)) \lam {x} {y} => \new Retraction {
+    | f p => (=_~> p, IsIso-char.2 $ inP (p,idp))
+    | sec s => (IsIso_= s.2).1
+    | f_sec s => ext (IsIso_= s.2).2
+  }
+
+\lemma =_~>-embedding {C : \Cat} (x y : C) : Embedding {x = y} =_~>
+  => transEmbedding (Embedding.fromIsEquiv (=-char x y)) (Embedding.projection {x ~> y} IsIso)
+
+-- | A morphism is an isomorphism iff it is identified with a constant arrow in the arrow category.
+\lemma IsIso-diag-char {A : \Cat} {a b : A} {q : a ~> b}
+  : IsIso q <-> ∃ (c : A) ((\lam _ => c) = {DI ->⁺ A} (\lam i => q i))
+  => (\lam e => inP (a, aux (IsIso_= e).1 (IsIso_= e).2),
+      \lam (inP (c, e)) => transport (\lam u => IsIso (dpath u)) e (inP (idd, comp_idd-left, comp_idd-left)))
+  \where {
+    \private \func aux {C : \Cat} {a b : C} (r : a = b) {q : a ~> b} (s : =_~> r = q) : (\lam _ => a) = {DI ->⁺ C} (\lam i => q i) \elim r, s
+      | idp, idp => idp
+  }
+
+-- | A morphism is an isomorphism if precomposition with it is an equivalence.
+\lemma precomp-equiv=>iso {C : \Cat} {a b : C} {q : a ~> b} (e : \Pi (y : C) -> IsEquiv {b ~> y} {a ~> y} (comp q __)) : IsIso q
+  => inP (IsEquiv.ret (e a) idd,
+          IsEquiv.isInj (e b) $ comp-assoc *> pmap (comp __ q) (IsEquiv.f_ret (e a)) *> comp_idd-left *> inv comp_idd-right,
+          IsEquiv.f_ret (e a))
+
+-- | A morphism is an isomorphism if postcomposition with it is an equivalence.
+\lemma postcomp-equiv=>iso {C : \Cat} {a b : C} {q : a ~> b} (e : \Pi (x : C) -> IsEquiv {x ~> a} {x ~> b} (comp __ q)) : IsIso q
+  => inP (IsEquiv.ret (e b) idd, IsEquiv.f_ret (e b),
+          IsEquiv.isInj (e a) $ inv comp-assoc *> pmap (comp q __) (IsEquiv.f_ret (e b)) *> comp_idd-right *> inv comp_idd-left)
+
+-- | Precomposition with the arrow of a path is an equivalence.
+\lemma comp_=_~>-left-equiv {C : \Cat} {a b c : C} (p : a = b) : IsEquiv {b ~> c} {a ~> c} (comp (=_~> p) __) \elim p
+  | idp => transport IsEquiv (ext \lam g => inv comp_idd-left) (inP idEquiv)
+
+-- | Postcomposition with the arrow of a path is an equivalence.
+\lemma comp_=_~>-right-equiv {C : \Cat} {a b c : C} (p : b = c) : IsEquiv {a ~> b} {a ~> c} (comp __ (=_~> p)) \elim p
+  | idp => transport IsEquiv (ext \lam g => inv comp_idd-right) (inP idEquiv)

@@ -22,7 +22,7 @@ import java.util.Set;
 public abstract class InferenceVariable implements Variable, CoreInferenceVariable {
   private final String myName;
   private Expression myType;
-  private ConstLevel myHLevel;
+  private ConstLevel myHLevel = ConstLevel.CAT_INFINITY;
   private final Set<Binding> myBounds;
   private final Concrete.SourceNode mySourceNode;
   private InferenceReferenceExpression myReference;

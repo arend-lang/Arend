@@ -133,20 +133,36 @@
      *> pmap (+ sin x * cos y) Ring.negative_*-right
      *> +-comm
 
+{- | The ring identities behind the sum-to-product formulas, stated for an arbitrary commutative ring.
+     Proving them abstractly and instantiating is much faster than solving the concrete equations,
+     whose operations unfold during normalization. -}
+\lemma cos-diff-ring {R : CRing} {C1 S1 C2 S2 : R} : (C1 * C2 - S1 * S2) - (C1 * C2 + S1 * S2) = negative (2 * S1 * S2)
+  => equation.cRing
+
+\lemma sin-diff-ring {R : CRing} {C1 S1 C2 S2 : R} : (C1 * S2 + S1 * C2) - (S1 * C2 - C1 * S2) = 2 * C1 * S2
+  => equation.cRing
+
+\lemma half-plus-ring {R : CRing} {x y h : R} (hh : h + h = 1) : (x + y) * h + (x - y) * h = x
+  => equation.cRing {hh}
+
+\lemma half-minus-ring {R : CRing} {x y h : R} (hh : h + h = 1) : (x + y) * h - (x - y) * h = y
+  => equation.cRing {hh}
+
+\private \lemma half2 : (ratio 1 2 : Real) + ratio 1 2 = 1
+  => linarith
+
 {- | Sum-to-product for cosines:
      $\cos x - \cos y = -2 \sin\frac{x+y}{2} \sin\frac{x-y}{2}$. -}
 \lemma cos-sum-to-product {x y : Real}
   : cos x - cos y = negative (2 * sin ((x + y) * ratio 1 2) * sin ((x - y) * ratio 1 2))
-  => \let
-       | cosX => pmap cos (inv linarith) *> cos_+ {(x + y) * ratio 1 2} {(x - y) * ratio 1 2}
-       | cosY => pmap cos (inv (linarith : (x + y) * ratio 1 2 - (x - y) * ratio 1 2 = y)) *> cos_minus
-     \in rewrite (cosX, cosY) equation.cRing
+  => pmap2 (-) (pmap cos (inv (half-plus-ring half2)) *> cos_+)
+               (pmap cos (inv (half-minus-ring half2)) *> cos_minus)
+     *> cos-diff-ring
 
 {- | Sum-to-product for sines:
      $\sin x - \sin y = 2 \cos\frac{x+y}{2} \sin\frac{x-y}{2}$. -}
 \lemma sin-sum-to-product {x y : Real}
   : sin x - sin y = 2 * cos ((x + y) * ratio 1 2) * sin ((x - y) * ratio 1 2)
-  => \let
-       | sinX => pmap sin (inv linarith) *> sin_+ {(x + y) * ratio 1 2} {(x - y) * ratio 1 2} *> +-comm
-       | sinY => pmap sin (inv (linarith : (x + y) * ratio 1 2 - (x - y) * ratio 1 2 = y)) *> sin_minus
-     \in rewrite (sinX, sinY) equation.cRing
+  => pmap2 (-) (pmap sin (inv (half-plus-ring half2)) *> sin_+)
+               (pmap sin (inv (half-minus-ring half2)) *> sin_minus)
+     *> sin-diff-ring

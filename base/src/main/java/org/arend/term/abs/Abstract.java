@@ -1,5 +1,6 @@
 package org.arend.term.abs;
 
+import org.arend.ext.core.context.BindingVariance;
 import org.arend.ext.prettyprinting.doc.Doc;
 import org.arend.ext.reference.Precedence;
 import org.arend.naming.reference.GlobalReferable;
@@ -31,6 +32,9 @@ public final class Abstract {
     boolean isExplicit();
     boolean isStrict();
     boolean isProperty();
+    default @NotNull BindingVariance getVariance() {
+      return BindingVariance.INVARIANT;
+    }
     @NotNull List<? extends AbstractReferable> getReferableList();
     @Nullable Expression getType();
   }
@@ -191,6 +195,7 @@ public final class Abstract {
     @Nullable AbstractReferable getReferable();
     @Nullable Expression getType();
     @Nullable Reference getEliminatedReference();
+    @NotNull BindingVariance getVariance();
   }
 
   public interface CaseArgumentsHolder extends SourceNode {
@@ -267,6 +272,7 @@ public final class Abstract {
   public interface FunctionDefinition extends Definition, EliminatedExpressionsHolder, ClassReferenceHolder {
     @Nullable Expression getResultType();
     @Nullable Expression getResultTypeLevel();
+    boolean isResultTypeLevelPlus();
     @Nullable Expression getTerm();
     @Override @NotNull Collection<? extends Reference> getEliminatedExpressions();
     @NotNull Collection<? extends FunctionClause> getClauses();
@@ -303,6 +309,7 @@ public final class Abstract {
     ClassFieldKind getClassFieldKind();
     /* @NotNull */ @Nullable Expression getResultType();
     @Nullable Expression getResultTypeLevel();
+    default boolean isResultTypeLevelPlus() { return false; }
     boolean isClassifying();
     boolean isCoerce();
     boolean isParameterField();
@@ -314,5 +321,6 @@ public final class Abstract {
     /* @NotNull */ @Nullable Reference getOverriddenField();
     /* @NotNull */ @Nullable Expression getResultType();
     @Nullable Expression getResultTypeLevel();
+    boolean isResultTypeLevelPlus();
   }
 }

@@ -37,6 +37,7 @@ message Expression {
         Array array = 23;
         Path path = 24;
         At at = 25;
+        PathType path_type = 31;
     }
 
     message Abs {
@@ -158,10 +159,20 @@ message Expression {
     message Path {
         Expression argumentType = 3;
         Expression argument = 4;
+        bool directed = 5;
+        bool forceInfinity = 6;
     }
     message At {
         Expression pathArgument = 3;
         Expression intervalArgument = 4;
+        bool directed = 5;
+    }
+    message PathType {
+        Expression argumentType = 1;
+        Expression leftArgument = 2;
+        Expression rightArgument = 3;
+        bool directed = 4;
+        bool forceInfinity = 5;
     }
     message New {
         ClassCall class_call = 1;
@@ -218,6 +229,7 @@ message SingleParameter {
     // instead of creating a new one. Used when pattern bindings share identity
     // with function/case parameters.
     int32 existing_ref = 5;
+    bool is_covariant = 6;
 }
 
 message Telescope {
@@ -229,6 +241,7 @@ message Telescope {
     // When > 0, this telescope reuses an already-registered binding (at index existing_ref - 1)
     // instead of defining a new one. Used to preserve object identity across Pi/Lambda param sharing.
     int32 existing_ref = 6;
+    bool is_covariant = 7;
 }
 
 message TypedBinding {
@@ -315,6 +328,7 @@ message ElimTree {
             }
 
             message Idp {
+                bool directed = 1;
             }
         }
         message ArrayClause {

@@ -3,7 +3,6 @@ package org.arend.core.expr;
 import org.arend.core.expr.visitor.ExpressionVisitor;
 import org.arend.core.expr.visitor.ExpressionVisitor2;
 import org.arend.ext.core.expr.CoreExpressionVisitor;
-import org.arend.prelude.Prelude;
 import org.arend.util.Decision;
 import org.jetbrains.annotations.NotNull;
 
@@ -18,7 +17,7 @@ public class OfTypeExpression extends Expression {
 
   public static Expression make(Expression expression, Expression actualType, Expression expectedType) {
     Expression expectedType1 = expectedType.getUnderlyingExpression();
-    if (expression instanceof PathExpression && expectedType1 instanceof DataCallExpression && ((DataCallExpression) expectedType1).getDefinition() == Prelude.PATH) {
+    if (expression instanceof PathExpression && expectedType1 instanceof PathTypeExpression pathType && !pathType.isDirected()) {
       return new OfTypeExpression(expression, expectedType);
     }
 

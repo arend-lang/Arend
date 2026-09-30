@@ -5,6 +5,7 @@ import org.arend.core.context.binding.EvaluatingBinding;
 import org.arend.core.expr.Expression;
 import org.arend.core.subst.ExprSubstitution;
 import org.arend.ext.concrete.ConcreteSourceNode;
+import org.arend.ext.core.context.BindingVariance;
 import org.arend.ext.error.TypecheckingError;
 import org.arend.ext.prettifier.ExpressionPrettifier;
 import org.arend.ext.prettyprinting.PrettyPrinterConfig;
@@ -80,7 +81,9 @@ public class GoalDataHolder extends TypecheckingError {
           Expression type = bindingTypes.get(entry.getValue());
           if (type == null) type = entry.getValue().getType();
           if (type != null) type = type.subst(substitution);
-          contextDocs.add(hang(hList(entry.getKey() == null ? text("_") : refDoc(entry.getKey()), text(" :")), type == null ? text("{?}") : termDoc(type, myPrettifier, ppConfig)));
+          contextDocs.add(hang(hList(entry.getKey() == null ? text("_") : refDoc(entry.getKey()),
+              text(entry.getValue().getVariance() == BindingVariance.COVARIANT ? " :⁺" : " :")),
+              type == null ? text("{?}") : termDoc(type, myPrettifier, ppConfig)));
         }
       }
       return contextDocs.isEmpty() ? nullDoc() : hang(text("Context:"), vList(contextDocs));

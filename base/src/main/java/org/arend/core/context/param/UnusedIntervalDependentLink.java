@@ -12,4 +12,9 @@ public class UnusedIntervalDependentLink extends TypedSingleDependentLink {
   private UnusedIntervalDependentLink() {
     super(true, null, DataCallExpression.make(Prelude.INTERVAL, Levels.EMPTY, Collections.emptyList()));
   }
+
+  @Override
+  public boolean isUnused() {
+    return true;
+  }
 }

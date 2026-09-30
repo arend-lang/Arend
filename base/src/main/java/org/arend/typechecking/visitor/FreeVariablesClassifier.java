@@ -8,6 +8,7 @@ import org.arend.core.expr.visitor.ExpressionVisitor;
 import org.arend.ext.core.definition.CoreFunctionDefinition;
 import org.arend.prelude.Prelude;
 
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
@@ -59,7 +60,7 @@ public class FreeVariablesClassifier implements ExpressionVisitor<Boolean, FreeV
 
   @Override
   public Result visitFunCall(FunCallExpression expr, Boolean good) {
-    return visitList(expr.getDefCallArguments(), good && (expr.getDefinition() == Prelude.PATH_INFIX || expr.getDefinition() == Prelude.ARRAY || expr.getDefinition().getKind() == CoreFunctionDefinition.Kind.TYPE));
+    return visitList(expr.getDefCallArguments(), good && (expr.getDefinition() == Prelude.PATH_INFIX || expr.getDefinition() == Prelude.DPATH_INFIX || expr.getDefinition() == Prelude.ARRAY || expr.getDefinition().getKind() == CoreFunctionDefinition.Kind.TYPE));
   }
 
   @Override
@@ -286,6 +287,11 @@ public class FreeVariablesClassifier implements ExpressionVisitor<Boolean, FreeV
   @Override
   public Result visitPath(PathExpression expr, Boolean good) {
     return expr.getArgument().accept(this, good);
+  }
+
+  @Override
+  public Result visitPathType(PathTypeExpression expr, Boolean good) {
+    return visitList(Arrays.asList(expr.getArgumentType(), expr.getLeftArgument(), expr.getRightArgument()), good);
   }
 
   @Override

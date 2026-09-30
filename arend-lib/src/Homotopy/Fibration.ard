@@ -2,11 +2,11 @@
 \import Equiv.Path
 \import Paths
 
-\func Total {B : \Type} (F : B -> \Type) => \Sigma (b : B) (F b)
+\func Total {B : \Cat} (F : B -> \Cat) => \Sigma (b : B) (F b)
   \where
-    \func proj (F : B -> \Type) => \lam (t : Total F) => t.1
+    \func proj (F : B -> \Cat) => \lam (t : Total F) => t.1
 
-\func Fib {A B : \Type} (f : A -> B) (base : B) => \Sigma (a : A) (f a = base)
+\func Fib {A B : \Cat} (f : A -> B) (base : B) => \Sigma (a : A) (f a = base)
   \where {
     \func make {base : B} (a : A) (p : f a = base) : Fib f base => (a,p)
 
@@ -14,15 +14,31 @@
       => (retraction b0 x' x p q).1
       \where
         \func retraction (b0 : B) (x' x : Fib f b0) (p : x.1 = x'.1) (q : pmap f p *> x'.2 = x.2)
-          : \Sigma (t : x = x') (transport (\lam x'' => \Sigma (p : x.1 = x''.1) (pmap f p *> x''.2 = x.2)) t (idp, idp_*> x.2) = (p,q)) \elim x', x, p, q
+          : \Sigma (t : x = x') (transport (\lam x'' => \Sigma (p : x.1 = x''.1) (pmap f p *> x''.2 = x.2)) t (idp, idp_*>) = (p,q)) \elim x', x, p, q
           | (x'1,idp), (x1,x2), idp, idp => (idp,idp)
 
     \func equiv (b0 : B) (x x' : Fib f b0) : QEquiv {x = x'} {\Sigma (p : x.1 = x'.1) (pmap f p *> x'.2 = x.2)} =>
       \let S {b0 : B} (x x' : Fib f b0) => \Sigma (p : x.1 = x'.1) (pmap f p *> x'.2 = x.2)
       \in pathEquiv S (\lam {x x' : Fib f b0} =>
           \new Retraction {
-            | f q => transport (S x) q (idp, idp_*> x.2)
+            | f q => transport (S x) q (idp, idp_*>)
             | sec s => ext b0 x x' s.1 s.2
             | f_sec s => (ext.retraction b0 x' x s.1 s.2).2
           })
   }
+
+-- | Fibers of a projection are the fibers of the family.
+\func proj-fib {A : \Cat} (B : A -> \Cat) (a : A) : QEquiv {Fib {\Sigma (x : A) (B x)} __.1 a} {B a} \cowith
+  | f w => transport B w.2 w.1.2
+  | ret b => ((a,b), idp)
+  | ret_f w => aux w.1.1 w.1.2 w.2
+  | f_sec b => idp
+  \where
+    \private \func aux (x : A) (b : B x) {a : A} (p : x = a)
+      : ((a, transport B p b), idp) = {Fib {\Sigma (x : A) (B x)} {A} __.1 a} ((x,b),p) \elim p
+      | idp => idp
+
+-- | A path between elements of a fiber relates their second components.
+\func fib-path {A B : \Cat} {f : A -> B} {b : B} {s t : Fib f b} (e : s = t)
+  : pmap (\lam z => f z.1) e *> t.2 = s.2 \elim e
+  | idp => idp_*>

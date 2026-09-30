@@ -4,6 +4,7 @@ import org.arend.ext.ArendPrelude;
 import org.arend.ext.concrete.definition.*;
 import org.arend.ext.concrete.expr.*;
 import org.arend.ext.concrete.pattern.ConcretePattern;
+import org.arend.ext.core.context.BindingVariance;
 import org.arend.ext.core.context.CoreBinding;
 import org.arend.ext.core.expr.AbstractedExpression;
 import org.arend.ext.error.GeneralError;
@@ -47,6 +48,8 @@ public interface ConcreteFactory {
   @NotNull ConcreteExpression tuple(@NotNull Collection<? extends ConcreteExpression> expressions);
   @NotNull ConcreteExpression sigma(@NotNull ConcreteParameter... parameters);
   @NotNull ConcreteExpression sigma(@NotNull List<? extends ConcreteParameter> parameters);
+  @NotNull ConcreteExpression sigma(@NotNull BindingVariance variance, @NotNull ConcreteParameter... parameters);
+  @NotNull ConcreteExpression sigma(@NotNull BindingVariance variance, @NotNull List<? extends ConcreteParameter> parameters);
   @NotNull ConcreteExpression caseExpr(boolean isSCase, Collection<? extends ConcreteCaseArgument> arguments, @Nullable ConcreteExpression resultType, @Nullable ConcreteExpression resultTypeLevel, @NotNull ConcreteClause... clauses);
   @NotNull ConcreteExpression caseExpr(boolean isSCase, Collection<? extends ConcreteCaseArgument> arguments, @Nullable ConcreteExpression resultType, @Nullable ConcreteExpression resultTypeLevel, @NotNull Collection<? extends ConcreteClause> clauses);
   @NotNull ConcreteExpression eval(@NotNull ConcreteExpression expression);
@@ -92,9 +95,11 @@ public interface ConcreteFactory {
   @NotNull MetaRef metaRef(@NotNull ArendRef parent, @NotNull String name, @NotNull Precedence precedence, @Nullable String alias, @Nullable Precedence aliasPrec, @Nullable MetaResolver resolver, @NotNull MetaTypechecker typechecker);
 
   @NotNull ConcreteParameter param(boolean explicit, @Nullable ArendRef ref);
+  @NotNull ConcreteParameter param(boolean explicit, @Nullable ArendRef ref, @NotNull BindingVariance variance);
   @NotNull ConcreteParameter param(boolean explicit, @NotNull Collection<? extends ArendRef> refs, @NotNull ConcreteExpression type);
   @NotNull ConcreteParameter param(boolean explicit, @NotNull ConcreteExpression type);
   @NotNull ConcreteParameter param(boolean explicit, boolean isProperty, @NotNull Collection<? extends ArendRef> refs, @NotNull ConcreteExpression type);
+  @NotNull ConcreteParameter param(boolean explicit, boolean isProperty, @NotNull Collection<? extends ArendRef> refs, @NotNull ConcreteExpression type, @NotNull BindingVariance variance);
   @NotNull ConcreteParameter param(boolean explicit, boolean isProperty, @NotNull ConcreteExpression type);
 
   default @NotNull ConcreteParameter param(@Nullable ArendRef ref) {

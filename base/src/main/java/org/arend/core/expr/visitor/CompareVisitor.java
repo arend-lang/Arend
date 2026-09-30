@@ -17,6 +17,7 @@ import org.arend.core.sort.Level;
 import org.arend.core.sort.Sort;
 import org.arend.core.sort.SortExpression;
 import org.arend.core.subst.*;
+import org.arend.ext.core.context.BindingVariance;
 import org.arend.ext.core.level.LevelSubstitution;
 import org.arend.ext.core.definition.CoreFunctionDefinition;
 import org.arend.ext.core.ops.CMP;
@@ -343,7 +344,7 @@ public class CompareVisitor implements ExpressionVisitor2<Expression, Expression
     if (expr1 instanceof ErrorExpression) {
       return true;
     }
-    if (!(expr1 instanceof UniverseExpression || expr1 instanceof PiExpression || expr1 instanceof ClassCallExpression || expr1 instanceof DataCallExpression || expr1 instanceof AppExpression || expr1 instanceof SigmaExpression || expr1 instanceof LamExpression)) {
+    if (!(expr1 instanceof UniverseExpression || expr1 instanceof PiExpression || expr1 instanceof ClassCallExpression || expr1 instanceof DataCallExpression || expr1 instanceof PathTypeExpression || expr1 instanceof AppExpression || expr1 instanceof SigmaExpression || expr1 instanceof LamExpression)) {
       myCMP = CMP.EQ;
     }
 
@@ -560,10 +561,13 @@ public class CompareVisitor implements ExpressionVisitor2<Expression, Expression
   }
 
   private Boolean comparePathEta(PathExpression pathExpr1, Expression expr2, Expression type, boolean correctOrder) {
-    SingleDependentLink param = new TypedSingleDependentLink(true, "i", ExpressionFactory.Interval());
+    boolean directed = pathExpr1.isDirected();
+    SingleDependentLink param = directed
+      ? new TypedSingleDependentLink(true, "i", ExpressionFactory.DI(), false, BindingVariance.COVARIANT)
+      : new TypedSingleDependentLink(true, "i", ExpressionFactory.Interval());
     ReferenceExpression paramRef = new ReferenceExpression(param);
     Expression argumentType = pathExpr1.getArgumentType();
-    LamExpression lamExpr = new LamExpression(param, AtExpression.make(expr2, paramRef, false));
+    LamExpression lamExpr = new LamExpression(param, AtExpression.make(expr2, paramRef, false, directed));
     Expression argType = new PiExpression(param, AppExpression.make(argumentType, paramRef, true));
     if (!(correctOrder ? compare(pathExpr1.getArgument(), lamExpr, argType, true) : compare(lamExpr, pathExpr1.getArgument(), argType, true))) {
       initResult(pathExpr1, expr2, correctOrder);
@@ -619,8 +623,8 @@ public class CompareVisitor implements ExpressionVisitor2<Expression, Expression
       if (myResult == null) {
         initResult(expr1, expr2);
       } else {
-        myResult.wholeExpr1 = AtExpression.make(myResult.wholeExpr1, expr1.getIntervalArgument(), false);
-        myResult.wholeExpr2 = AtExpression.make(myResult.wholeExpr2, atExpr2.getIntervalArgument(), false);
+        myResult.wholeExpr1 = AtExpression.make(myResult.wholeExpr1, expr1.getIntervalArgument(), false, expr1.isDirected());
+        myResult.wholeExpr2 = AtExpression.make(myResult.wholeExpr2, atExpr2.getIntervalArgument(), false, atExpr2.isDirected());
       }
       return false;
     }
@@ -628,8 +632,8 @@ public class CompareVisitor implements ExpressionVisitor2<Expression, Expression
       if (myResult == null) {
         initResult(expr1, expr2);
       } else {
-        myResult.wholeExpr1 = AtExpression.make(expr1.getPathArgument(), myResult.wholeExpr1, false);
-        myResult.wholeExpr2 = AtExpression.make(atExpr2.getPathArgument(), myResult.wholeExpr2, false);
+        myResult.wholeExpr1 = AtExpression.make(expr1.getPathArgument(), myResult.wholeExpr1, false, expr1.isDirected());
+        myResult.wholeExpr2 = AtExpression.make(atExpr2.getPathArgument(), myResult.wholeExpr2, false, atExpr2.isDirected());
       }
       return false;
     }
@@ -1075,7 +1079,8 @@ public class CompareVisitor implements ExpressionVisitor2<Expression, Expression
         type = checkedSubst(type, paramSubst, allowedBindings, null);
         if (type == null) return null;
       }
-      TypedSingleDependentLink param = new TypedSingleDependentLink(pair.proj2, pair.proj1.getName(), type);
+      TypedSingleDependentLink param = new TypedSingleDependentLink(pair.proj2, pair.proj1.getName(), type, false,
+          pair.proj1 instanceof DependentLink ? ((DependentLink) pair.proj1).getVariance() : BindingVariance.INVARIANT);
       params.add(param);
       paramSubst.add(pair.proj1, new ReferenceExpression(param));
       allowedBindings.add(pair.proj1);
@@ -1572,7 +1577,7 @@ public class CompareVisitor implements ExpressionVisitor2<Expression, Expression
   @Override
   public Boolean visitPi(PiExpression expr1, Expression expr2, Expression type) {
     PiExpression piExpr2 = expr2.cast(PiExpression.class);
-    if (piExpr2 == null) {
+    if (piExpr2 == null || expr1.getParameters().getVariance() != piExpr2.getParameters().getVariance()) {
       initResult(expr1, expr2);
       return false;
     }
@@ -1640,7 +1645,7 @@ public class CompareVisitor implements ExpressionVisitor2<Expression, Expression
     for (int i = 0; i < list1.size() && i < list2.size(); ++i) {
       DependentLink param1 = list1.get(i);
       DependentLink param2 = list2.get(i);
-      if (param1.isProperty() != param2.isProperty() || !compare(param1.getType(), param2.getType(), UniverseExpression.OMEGA, false)) {
+      if (param1.isProperty() != param2.isProperty() || param1.getVariance() != param2.getVariance() || !compare(param1.getType(), param2.getType(), UniverseExpression.OMEGA, false)) {
         for (int j = 0; j < i; j++) {
           mySubstitution.remove(list2.get(j));
         }
@@ -2277,8 +2282,44 @@ public class CompareVisitor implements ExpressionVisitor2<Expression, Expression
       if (myResult == null) {
         initResult(expr, expr2);
       } else {
-        myResult.wholeExpr1 = new PathExpression(expr.getArgumentType(), myResult.wholeExpr1);
-        myResult.wholeExpr2 = new PathExpression(pathExpr2.getArgumentType(), myResult.wholeExpr2);
+        myResult.wholeExpr1 = new PathExpression(expr.getArgumentType(), myResult.wholeExpr1, expr.isDirected(), expr.isForcedInfinite());
+        myResult.wholeExpr2 = new PathExpression(pathExpr2.getArgumentType(), myResult.wholeExpr2, pathExpr2.isDirected(), pathExpr2.isForcedInfinite());
+      }
+      return false;
+    }
+    return true;
+  }
+
+  @Override
+  public Boolean visitPathType(PathTypeExpression expr1, Expression expr2, Expression type) {
+    PathTypeExpression pathType2 = expr2.cast(PathTypeExpression.class);
+    if (pathType2 == null || pathType2.isDirected() != expr1.isDirected()) {
+      initResult(expr1, expr2);
+      return false;
+    }
+
+    DataDefinition definition = expr1.getDefinition();
+    List<Expression> args1 = Arrays.asList(expr1.getArgumentType(), expr1.getLeftArgument(), expr1.getRightArgument());
+    List<Expression> args2 = Arrays.asList(pathType2.getArgumentType(), pathType2.getLeftArgument(), pathType2.getRightArgument());
+    if (!compareLists(args1, args2, definition.getParameters(), definition, new ExprSubstitution())) {
+      if (myResult == null) {
+        initResult(expr1, expr2);
+      } else {
+        if (myResult.index >= 0 && myResult.index < args1.size()) {
+          List<Expression> args = new ArrayList<>(args1);
+          args.set(myResult.index, myResult.wholeExpr1);
+          myResult.wholeExpr1 = new PathTypeExpression(args.get(0), args.get(1), args.get(2), expr1.isDirected(), expr1.isForcedInfinite());
+        } else {
+          myResult.wholeExpr1 = expr1;
+        }
+        if (myResult.index >= 0 && myResult.index < args2.size()) {
+          List<Expression> args = new ArrayList<>(args2);
+          args.set(myResult.index, myResult.wholeExpr2);
+          myResult.wholeExpr2 = new PathTypeExpression(args.get(0), args.get(1), args.get(2), pathType2.isDirected(), pathType2.isForcedInfinite());
+        } else {
+          myResult.wholeExpr2 = expr2;
+        }
+        myResult.index = -1;
       }
       return false;
     }

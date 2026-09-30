@@ -36,7 +36,7 @@ public class BooleanRingEquationMeta extends BaseEquationMeta<List<BooleanMonomi
   @Dependency(name = "AddGroup.negative")                           CoreClassField negative;
 
   @Dependency(name = "BooleanRingSolverModel.Term.:zro")            ArendRef zroTerm;
-  @Dependency(name = "BooleanRingSolverModel.Term.:+")              ArendRef addTerm;
+  @Dependency(name = "BooleanRingSolverModel.Term.:_+")             ArendRef addTerm;
   @Dependency(name = "BooleanRingSolverModel.Term.:*")              ArendRef mulTerm;
   @Dependency(name = "BooleanRingSolverModel.Term.:negative")       ArendRef negativeTerm;
   @Dependency(name = "BooleanRingSolverModel.Term.var")             ArendRef varTerm;

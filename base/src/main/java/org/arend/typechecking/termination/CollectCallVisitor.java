@@ -13,7 +13,6 @@ import org.arend.ext.core.expr.CoreExpression;
 import org.arend.ext.core.ops.NormalizationMode;
 import org.arend.prelude.Prelude;
 import org.arend.typechecking.visitor.SearchVisitor;
-import org.arend.ext.util.Pair;
 
 import java.util.*;
 
@@ -39,17 +38,18 @@ public class CollectCallVisitor extends SearchVisitor<Void> {
       myPatterns = patternList;
       int i = patternList.size() - elim.getCases().size();
 
-      for (Pair<Expression, Expression> pair : elim.getCases()) {
+      for (IntervalElim.CasePair pair : elim.getCases()) {
         ExpressionPattern old = patternList.get(i);
-        patternList.set(i, new ConstructorExpressionPattern(ExpressionFactory.Left(), Collections.emptyList()));
+        patternList.set(i, new ConstructorExpressionPattern(ExpressionFactory.Left(pair.isDirected()), Collections.emptyList()));
         if (pair.proj1 != null) {
           pair.proj1.accept(this, null);
         }
-        patternList.set(i, new ConstructorExpressionPattern(ExpressionFactory.Right(), Collections.emptyList()));
+        patternList.set(i, new ConstructorExpressionPattern(ExpressionFactory.Right(pair.isDirected()), Collections.emptyList()));
         if (pair.proj2 != null) {
           pair.proj2.accept(this, null);
         }
         patternList.set(i, old);
+        i++;
       }
 
       body = elim.getOtherwise();
@@ -103,10 +103,10 @@ public class CollectCallVisitor extends SearchVisitor<Void> {
           type = param.getType();
         }
         case PathEliminator ignored -> {
-          if (type instanceof FunCallExpression funCall && funCall.getDefinition() == Prelude.PATH_INFIX) {
+          if (type instanceof FunCallExpression funCall && (funCall.getDefinition() == Prelude.PATH_INFIX || funCall.getDefinition() == Prelude.DPATH_INFIX)) {
             type = funCall.getDefCallArguments().getFirst();
-          } else if (type instanceof DataCallExpression dataCall && dataCall.getDefinition() == Prelude.PATH) {
-            type = dataCall.getDefCallArguments().getFirst();
+          } else if (type instanceof PathTypeExpression pathType) {
+            type = pathType.getArgumentType();
             if (!(type instanceof LamExpression lamExpr)) return null;
             type = lamExpr.getBody();
           } else {
@@ -124,7 +124,7 @@ public class CollectCallVisitor extends SearchVisitor<Void> {
     }
 
     type = normalizeFieldCall(type);
-    return type instanceof DataCallExpression ? expr : null;
+    return type instanceof BaseDataCallExpression ? expr : null;
   }
 
   private sealed interface Eliminator {}

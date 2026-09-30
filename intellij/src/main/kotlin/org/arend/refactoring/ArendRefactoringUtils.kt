@@ -12,10 +12,13 @@ import com.intellij.psi.util.elementType
 import com.intellij.psi.util.endOffset
 import com.intellij.psi.util.siblings
 import org.arend.core.definition.Definition
+import org.arend.ext.core.context.BindingVariance
 import org.arend.ext.core.context.CoreBinding
 import org.arend.ext.core.context.CoreParameter
 import org.arend.ext.core.expr.CoreExpression
+import org.arend.ext.core.expr.CorePathTypeExpression
 import org.arend.ext.core.expr.CoreReferenceExpression
+import org.arend.ext.core.ops.NormalizationMode
 import org.arend.ext.module.LongName
 import org.arend.ext.reference.DataContainer
 import org.arend.ext.variable.Variable
@@ -564,9 +567,10 @@ enum class PatternMatchingOnIdpResult {INAPPLICABLE, DO_NOT_ELIMINATE, IDP}
 fun admitsPatternMatchingOnIdp(expr: CoreExpression,
                                caseParameters: CoreParameter?,
                                eliminatedBindings: Set<CoreBinding>? = null): PatternMatchingOnIdpResult {
-    val equality = expr.toEquality() ?: return PatternMatchingOnIdpResult.INAPPLICABLE
-    val leftBinding = (equality.defCallArguments[1] as? CoreReferenceExpression)?.binding
-    val rightBinding = (equality.defCallArguments[2] as? CoreReferenceExpression)?.binding
+    val equality = (expr.normalize(NormalizationMode.WHNF) as? CorePathTypeExpression)?.takeIf { !it.isDirected && it.argumentType.removeConstLam() != null }
+        ?: return PatternMatchingOnIdpResult.INAPPLICABLE
+    val leftBinding = (equality.leftArgument as? CoreReferenceExpression)?.binding
+    val rightBinding = (equality.rightArgument as? CoreReferenceExpression)?.binding
     val leftNotEliminated = eliminatedBindings == null || !eliminatedBindings.contains(leftBinding)
     val rightNotEliminated = eliminatedBindings == null || !eliminatedBindings.contains(rightBinding)
     var leftSideOk = caseParameters == null && leftBinding != null && leftNotEliminated
@@ -844,15 +848,15 @@ private object PrecVisitor : AbstractExpressionVisitor<Void?, Int> {
         if (pLevel != null) APP_PREC else MAX_PREC
 
     override fun visitThis(data: Any?, params: Void?) = MAX_PREC
-    override fun visitLam(data: Any?, parameters: Collection<Abstract.LamParameter>, body: Abstract.Expression?, params: Void?) = MIN_PREC
-    override fun visitPi(data: Any?, parameters: Collection<Abstract.Parameter>, codomain: Abstract.Expression?, params: Void?) = MIN_PREC
+    override fun visitLam(data: Any?, parameters: Collection<Abstract.LamParameter>, variance: BindingVariance?, body: Abstract.Expression?, params: Void?) = MIN_PREC
+    override fun visitPi(data: Any?, parameters: Collection<Abstract.Parameter>, variance: BindingVariance?, codomain: Abstract.Expression?, params: Void?) = MIN_PREC
     override fun visitApplyHole(data: Any?, params: Void?) = MAX_PREC
     override fun visitInferHole(data: Any?, params: Void?) = MAX_PREC
     override fun visitGoal(data: Any?, name: String?, expression: Abstract.Expression?, params: Void?) = MAX_PREC
     override fun visitTuple(data: Any?, fields: Collection<Abstract.Expression>, trailingComma: Any?, params: Void?) = MAX_PREC
-    override fun visitSigma(data: Any?, parameters: Collection<Abstract.Parameter>, params: Void?) = MIN_PREC
+    override fun visitSigma(data: Any?, parameters: Collection<Abstract.Parameter>, variance: BindingVariance?, params: Void?) = MIN_PREC
     override fun visitBinOpSequence(data: Any?, left: Abstract.Expression, leftIsVariable: Boolean, sequence: Collection<Abstract.BinOpSequenceElem>, params: Void?) = APP_PREC
-    override fun visitCase(data: Any?, isSFunc: Boolean, evalKind: Abstract.EvalKind?, arguments: Collection<Abstract.CaseArgument>, resultType: Abstract.Expression?, resultTypeLevel: Abstract.Expression?, clauses: Collection<Abstract.FunctionClause>, params: Void?) = MIN_PREC
+    override fun visitCase(data: Any?, isSFunc: Boolean, evalKind: Abstract.EvalKind?, arguments: Collection<Abstract.CaseArgument>, resultType: Abstract.Expression?, resultTypeLevel: Abstract.Expression?, resultTypeLevelPlus: Boolean, clauses: Collection<Abstract.FunctionClause>, params: Void?) = MIN_PREC
     override fun visitFieldAccs(data: Any?, expression: Abstract.Expression, fieldAccs: List<Abstract.FieldAcc>, infixReference: AbstractReference?, infixName: String?, fixity: Fixity?, params: Void?) = MAX_PREC
     override fun visitClassExt(data: Any?, isNew: Boolean, evalKind: Abstract.EvalKind?, baseClass: Abstract.Expression?, coclausesData: Any?, implementations: MutableCollection<out Abstract.ClassFieldImpl>?, sequence: MutableCollection<out Abstract.BinOpSequenceElem>, clauses: Abstract.FunctionClauses?, params: Void?) = MIN_PREC
     override fun visitLet(data: Any?, isHave: Boolean, isStrict: Boolean, clauses: Collection<Abstract.LetClause>, expression: Abstract.Expression?, params: Void?) = MIN_PREC

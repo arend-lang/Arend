@@ -15,28 +15,92 @@
       | i, right => right
   }
 
-\data Path (A : I -> \Type) (a : A left) (a' : A right)
-  | path (\Pi (i : I) -> A i)
+\data Path (A :⁺ I -> \Cat) (a :⁺ A left) (a' :⁺ A right) : \Type
+  | path (f :⁺ \Pi (i : I) -> A i)
 
-\func \infix 1 = {A : \Type} (a a' : A) => Path (\lam _ => A) a a'
+\func \infix 1 = {A :⁺ \Cat} (a a' :⁺ A) => Path (\lam _ => A) a a'
 
-\cons idp {A : \Type} {a : A} => path (\lam _ => a)
+\cons idp {A :⁺ \Cat} {a :⁺ A} => path (\lam _ => a)
 
-\func \infixl 9 @ {A : I -> \Type} {a : A left} {a' : A right} (p : Path A a a') (i : I) : A i \elim p, i
+\func \infixl 9 @ {A :⁺ I -> \Cat} {a :⁺ A left} {a' :⁺ A right} (p :⁺ Path A a a') (i : I) : A i \elim p, i
   | path f, i => f i
   | _, left => a
   | _, right => a'
 
-\func coe (A : I -> \Type) (a : A left) (i : I) : A i \elim i
+\func coe (A :⁺ I -> \Cat) (a :⁺ A left) (i : I) : A i \elim i
   | left => a
 
-\func coe2 (A : I -> \Type) (i : I) (a : A i) (j : I) : A j \elim i, j
+\func coe2 (A :⁺ I -> \Cat) (i : I) (a :⁺ A i) (j : I) : A j \elim i, j
   | left, j => coe A a j
   | i, right => coe (\lam k => A (I.squeezeR i k)) a right
 
 \func iso {A B : \Type} (f : A -> B) (g : B -> A) (p : \Pi (x : A) -> g (f x) = x) (q : \Pi (y : B) -> f (g y) = y) (i : I) : \Type \elim i
   | left => A
   | right => B
+
+\data DI
+  | dleft
+  | dright
+
+\data DPath (C :⁺ DI ->⁺ \Cat) (a :⁺ C dleft) (b :⁺ C dright) : \Type
+  | dpath (f :⁺ \Pi (i : DI) ->⁺ C i)
+
+\func \infix 1 ~> {C :⁺ \Cat} (a b :⁺ C) => DPath (\lam _ => C) a b
+
+\cons idd {C :⁺ \Cat} {a :⁺ C} => dpath \lam _ => a
+
+\func \infixl 9 d@ {C :⁺ DI ->⁺ \Cat} {a :⁺ C dleft} {b :⁺ C dright} (p :⁺ DPath C a b) (i :⁺ DI) : C i \elim p, i
+  | dpath f, i => f i
+  | _, dleft => a
+  | _, dright => b
+
+\func fill2 {C :⁺ \Cat} {a b c :⁺ C} (f :⁺ a ~> b) (g :⁺ b ~> c) (i j :⁺ DI) : C \elim i, j
+  | dleft, j => a
+  | dright, j => g j
+  | i, dleft => f i
+
+\func fill3 {C :⁺ \Cat} {a b d a' b' c' d' :⁺ C} (_ : \Sigma)
+            {ab :⁺ a ~> b} {bd :⁺ b ~> d} {ad :⁺ a ~> d}
+            {a'b' :⁺ a' ~> b'} {b'd' :⁺ b' ~> d'} {a'c' :⁺ a' ~> c'} {c'd' :⁺ c' ~> d'}
+            {aa' :⁺ a ~> a'} {bb' :⁺ b ~> b'} {ac' :⁺ a ~> c'} {dd' :⁺ d ~> d'}
+            (leftFace :⁺ DPath (\lam k => a ~> a'c' k) aa' ac')
+            (rightFace :⁺ DPath (\lam k => bd k ~> b'd' k) bb' dd')
+            (backFace :⁺ DPath (\lam i => ab i ~> ad i) idd bd)
+            (frontFace :⁺ DPath (\lam i => a'b' i ~> c'd' i) a'c' b'd')
+            (topFace :⁺ DPath (\lam i => ab i ~> a'b' i) aa' bb')
+            (i j k :⁺ DI) : C \elim i, j, k
+  | dleft, j, k => leftFace k j
+  | dright, j, k => rightFace k j
+  | i, dleft, k => backFace i k
+  | i, dright, k => frontFace i k
+  | i, j, dleft => topFace i j
+
+\func coe+.{u} (C :⁺ DI ->⁺ \Type u) (a :⁺ C dleft) (i :⁺ DI) : C i \elim i
+  | dleft => a
+
+\func iso+.{u} {A B :⁺ \Type u} (f :⁺ A ->⁺ B) (i :⁺ DI) : \Type u \elim i
+  | dleft => A
+  | dright => B
+
+\func iso+_coe+.{u} {A B :⁺ \Type u} (p :⁺ A ~> B) (i :⁺ DI) (j : I) : \Type u \elim i, j
+  | dleft, j => A
+  | dright, j => B
+  | i, left => iso+ (\lam a => coe+ (\lam i => p i) a dright) i
+  | i, right => p i
+
+\func rezk {C :⁺ \Cat} {x y :⁺ C} (f :⁺ x ~> y) (g :⁺ y ~> x)
+           (p :⁺ DPath (\lam i => f i ~> x) idd g) (q :⁺ DPath (\lam i => g i ~> y) idd f)
+  : (x,idd) = {\Sigma⁺ (z : C) (x ~> z)} (y,f)
+
+\data Resize+.{u} {C : \Cat} (F : C ->⁺ \Type)
+                  (small : \Pi (y : C) -> \Sigma (S : \Type u) (to : S -> F y) (from : F y -> S)
+                                                 (\Pi (s : S) -> from (to s) = s) (\Pi (b : F y) -> to (from b) = b))
+                  (lift : \Pi {a a' :⁺ C} (f :⁺ a ~> a') (b :⁺ F a) -> \Sigma⁺ (b' : F a') (DPath (\lam i => F (f i)) b b'))
+                  (y :⁺ C)
+  | resize+ (b :⁺ F y)
+
+\data GroupoidType {C :⁺ \Cat} (Cg :⁺ \Pi {x y :⁺ C} (f :⁺ x ~> y) -> \Sigma⁺ (p : x = y) (coe (\lam i => x ~> p i) idd right = f))
+  | groupoidType (_ :⁺ C)
 
 \data Nat
   | zero

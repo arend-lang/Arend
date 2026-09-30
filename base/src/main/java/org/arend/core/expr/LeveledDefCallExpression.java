@@ -5,7 +5,7 @@ import org.arend.core.subst.Levels;
 import org.arend.ext.core.level.LevelSubstitution;
 import org.jetbrains.annotations.NotNull;
 
-public abstract class LeveledDefCallExpression extends DefCallExpression {
+public abstract class LeveledDefCallExpression extends DefCallExpression implements BaseDefCallExpression {
   private Levels myLevels;
 
   public LeveledDefCallExpression(CallableDefinition definition, Levels levels) {
@@ -13,6 +13,7 @@ public abstract class LeveledDefCallExpression extends DefCallExpression {
     myLevels = levels;
   }
 
+  @Override
   @NotNull
   public Levels getLevels() {
     return myLevels;
@@ -23,7 +24,7 @@ public abstract class LeveledDefCallExpression extends DefCallExpression {
   }
 
   @Override
-  public LevelSubstitution getLevelSubstitution() {
+  public @NotNull LevelSubstitution getLevelSubstitution() {
     return myLevels.makeSubstitution(getDefinition());
   }
 

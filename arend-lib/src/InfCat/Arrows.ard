@@ -1,0 +1,72 @@
+\import Equiv
+\import Equiv.Sigma
+\import Function.Meta
+\import InfCat.Basics
+\import InfCat.Functor.FullyFaithful
+\import InfCat.Objects
+\import Logic
+\import Logic.Unique
+\import Paths
+\import Paths.Meta
+
+\func ObDI-elim {B : Ob DI ->⁺ \Cat} (x :⁺ B (ob dleft)) (y :⁺ B (ob dright)) (d :⁺ Ob DI) : B d \elim d
+  | ob dleft => x
+  | ob dright => y
+
+\func DI-equiv {C : \Cat} : QEquiv {DI ->⁺ C} {\Sigma (j : \Sigma C C) (j.1 ~> j.2)} \cowith
+  | f h => ((h dleft, h dright), dpath h)
+  | ret s => \lam i => s.2 i
+  | ret_f => idpe
+  | f_sec => idpe
+
+\func DI-fun-equiv {X C : \Cat} : QEquiv {X ->⁺ DI ->⁺ C} {\Sigma (j : \Sigma (X ->⁺ C) (X ->⁺ C)) (j.1 ~> j.2)} \cowith
+  | f o => ((\lam a => o a dleft, \lam a => o a dright), dpath \lam i a => o a i)
+  | ret s => \lam a i => s.2 i a
+  | ret_f => idpe
+  | f_sec => idpe
+
+\func ObDI-equiv {C : \Cat} : QEquiv {Ob DI ->⁺ C} {\Sigma C C} \cowith
+  | f h => (h (ob dleft), h (ob dright))
+  | ret j => ObDI-elim j.1 j.2
+  | ret_f h => ext (ObDI-elim idp idp)
+  | f_sec => idpe
+
+\func ObDI-depEquiv {C : Ob DI ->⁺ \Type} : QEquiv {\Pi (d :⁺ Ob DI) -> C d} {\Sigma (C (ob dleft)) (C (ob dright))} \cowith
+  | f u => (u (ob dleft), u (ob dright))
+  | ret s => ObDI-elim s.1 s.2
+  | ret_f u => ext (ObDI-elim idp idp)
+  | f_sec => idpe
+
+-- | A morphism in the arrow category is a commutative square.
+\func DI-hom-equiv {D : \Cat} {u v : DI ->⁺ D}
+  : QEquiv {u ~> v} {\Sigma (l : u dleft ~> v dleft) (\Sigma (r : u dright ~> v dright) (DPath (\lam i => u i ~> v i) l r))} \cowith
+  | f t => (dpath \lam j => t j dleft, (dpath \lam j => t j dright, dpath \lam i => dpath \lam j => t j i))
+  | ret s => dpath \lam i j => s.2.2 j i
+  | ret_f t => idp
+  | f_sec s => idp
+
+-- | The diagonal map into the arrow category is fully faithful.
+\lemma diag-ff {C : \Cat} : IsFFMap {C} {DI ->⁺ C} (\lam c _ => c)
+  => \lam a b => IsEquiv.leftFactor
+        (inP $ DI-hom-equiv {C} `transQEquiv` contr-right \lam p => Contr.Contr_QEquiv (sigma-right \lam q => =_~>-equiv {_} {p} {q}) (lsigma p))
+        (inP idEquiv)
+
+-- | The diagonal map into the fiberwise arrow category of a family is fully faithful.
+\lemma diag-rel-ff {C : \Cat} {G : C ->⁺ \Cat} : IsFFMap {\Sigma⁺ (x : C) (G x)} {\Sigma⁺ (x : C) (DI ->⁺ G x)} (\lam s => (s.1, \lam _ => s.2))
+  => \lam s t => IsEquiv.leftFactor
+        (inP $ dpath-sigma-equiv (\lam _ x => DI ->⁺ G x) `transQEquiv`
+               sigma-right (\lam r => DI-dhom-equiv r `transQEquiv`
+                 contr-right \lam l => Contr.Contr_QEquiv (sigma-right \lam l' => =_~>-equiv {_} {l} {l'}) (lsigma l)) `transQEquiv`
+               symQEquiv (dpath-sigma-equiv (\lam _ x => G x)))
+        (inP idEquiv)
+  \where {
+    -- | A morphism in the arrow category of a family over {r} is a commutative square over {r}.
+    \private \func DI-dhom-equiv {D : \Cat} {G : D ->⁺ \Cat} {x y : D} (r : x ~> y) {u : DI ->⁺ G x} {v : DI ->⁺ G y}
+      : QEquiv {DPath (\lam i => DI ->⁺ G (r i)) u v}
+               {\Sigma (l : DPath (\lam j => G (r j)) (u dleft) (v dleft))
+                       (\Sigma (l' : DPath (\lam j => G (r j)) (u dright) (v dright)) (DPath (\lam i => DPath (\lam j => G (r j)) (u i) (v i)) l l'))} \cowith
+      | f t => (dpath \lam j => t j dleft, (dpath \lam j => t j dright, dpath \lam i => dpath \lam j => t j i))
+      | ret s => dpath \lam j i => s.2.2 i j
+      | ret_f t => idp
+      | f_sec s => idp
+  }

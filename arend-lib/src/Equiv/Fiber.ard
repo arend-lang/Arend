@@ -5,18 +5,18 @@
 \import Equiv
 \import Equiv.HalfAdjoint
 
-\func HasContrFibers {A B : \Type} (f : A -> B) : \Prop
+\func HasContrFibers {A B : \Cat} (f : A -> B) : \Prop
   => \Pi (b : B) -> Contr (\Sigma (a : A) (f a = b))
 
-\func contrFibers=>QEquiv {A B : \Type} {f : A -> B} (p : HasContrFibers f) : QEquiv f \cowith
+\func contrFibers=>QEquiv {A B : \Cat} {f : A -> B} (p : HasContrFibers f) : QEquiv f \cowith
   | ret y => (p y).center.1
   | ret_f x => pmap (\lam (r : Fib f (f x)) => r.1) ((p (f x)).contraction (x,idp))
   | f_sec y => (p y).center.2
 
-\lemma contrFibers=>IsEquiv {A B : \Type} {f : A -> B} (p : HasContrFibers f) : IsEquiv f
+\lemma contrFibers=>IsEquiv {A B : \Cat} {f : A -> B} (p : HasContrFibers f) : IsEquiv f
   => inP (contrFibers=>QEquiv p)
 
-\lemma IsEquiv=>contrFibers {A B : \Type} {f : A -> B} (e : IsEquiv f) : HasContrFibers f \elim e
+\lemma IsEquiv=>contrFibers {A B : \Cat} {f : A -> B} (e : IsEquiv f) : HasContrFibers f \elim e
   | inP e => fromSection e e
   \where {
     \protected \lemma fromSection (s : Section f) (r : Retraction f) : HasContrFibers f
@@ -32,8 +32,8 @@
                      pmap f p0 *> x.2                                               ==< pmap (*> x.2) (pmap_*>-comm f _ _) >==
                      (pmap f (pmap s.ret (inv x.2)) *> pmap f (s.ret_f x.1)) *> x.2 ==< pmap ((pmap f (pmap s.ret (inv x.2)) *> __) *> x.2) (HAEquiv.coh_f_ret_f=f_sec_f s r' x.1) >==
                      (pmap f (pmap s.ret (inv x.2)) *> f_sec (f x.1)) *> x.2      ==< pmap (*> x.2) (homotopy-isNatural (\lam x => f (s.ret x)) (\lam x => x) f_sec (inv x.2)) >==
-                     (f_sec b0 *> inv x.2) *> x.2                                 ==< *>-assoc _ _ _ >==
-                     f_sec b0 *> (inv x.2 *> x.2)                                 ==< pmap (f_sec b0 *>) (inv_*> x.2) >==
+                     (f_sec b0 *> inv x.2) *> x.2                                 ==< *>-assoc >==
+                     f_sec b0 *> (inv x.2 *> x.2)                                 ==< pmap (f_sec b0 *>) inv_*> >==
                      f_sec b0                                                     `qed
               \in Fib.ext b0 x0 x p0 q0)
   }

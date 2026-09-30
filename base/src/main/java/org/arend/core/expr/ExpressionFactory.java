@@ -3,9 +3,11 @@ package org.arend.core.expr;
 import org.arend.core.context.param.*;
 import org.arend.core.definition.ClassField;
 import org.arend.core.subst.Levels;
+import org.arend.ext.core.context.BindingVariance;
 import org.arend.prelude.Prelude;
 import org.arend.util.SingletonList;
 
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
@@ -26,16 +28,52 @@ public class ExpressionFactory {
     return (ConCallExpression) ConCallExpression.make(Prelude.RIGHT, Levels.EMPTY, Collections.emptyList(), Collections.emptyList());
   }
 
+  public static DataCallExpression DI() {
+    return DataCallExpression.make(Prelude.DI, Levels.EMPTY, Collections.emptyList());
+  }
+
+  public static ConCallExpression Left(boolean isDirected) {
+    return (ConCallExpression) ConCallExpression.make(isDirected ? Prelude.DLEFT : Prelude.LEFT, Levels.EMPTY, Collections.emptyList(), Collections.emptyList());
+  }
+
+  public static ConCallExpression Right(boolean isDirected) {
+    return (ConCallExpression) ConCallExpression.make(isDirected ? Prelude.DRIGHT : Prelude.RIGHT, Levels.EMPTY, Collections.emptyList(), Collections.emptyList());
+  }
+
+  public static DataCallExpression Path(boolean isDirected, Expression type, Expression left, Expression right) {
+    return DataCallExpression.make(isDirected ? Prelude.DPATH : Prelude.PATH, Levels.EMPTY, Arrays.asList(type, left, right));
+  }
+
   public static TypedDependentLink parameter(String var, Expression type) {
-    return new TypedDependentLink(true, var, type, EmptyDependentLink.getInstance());
+    return parameter(var, type, BindingVariance.INVARIANT);
+  }
+
+  public static TypedDependentLink parameter(String var, Expression type, BindingVariance variance) {
+    return new TypedDependentLink(true, var, type, false, variance, EmptyDependentLink.getInstance());
+  }
+
+  public static DependentLink parameter(boolean explicit, boolean isProperty, String name, Expression type, boolean isHidden, BindingVariance variance) {
+    return isProperty ? new PropertyTypedDependentLink(explicit, name, type, isHidden, EmptyDependentLink.getInstance()) : new TypedDependentLink(explicit, name, type, isHidden, variance, EmptyDependentLink.getInstance());
   }
 
   public static DependentLink parameter(boolean explicit, boolean isProperty, String name, Expression type, boolean isHidden) {
-    return isProperty ? new PropertyTypedDependentLink(explicit, name, type, isHidden, EmptyDependentLink.getInstance()) : new TypedDependentLink(explicit, name, type, isHidden, EmptyDependentLink.getInstance());
+    return parameter(explicit, isProperty, name, type, isHidden, BindingVariance.INVARIANT);
+  }
+
+  public static DependentLink parameter(boolean explicit, boolean isProperty, List<String> names, Expression type, BindingVariance variance) {
+    DependentLink link = isProperty ? new PropertyTypedDependentLink(explicit, names.getLast(), type, EmptyDependentLink.getInstance()) : new TypedDependentLink(explicit, names.getLast(), type, false, variance, EmptyDependentLink.getInstance());
+    for (int i = names.size() - 2; i >= 0; i--) {
+      link = new UntypedDependentLink(names.get(i), link);
+    }
+    return link;
   }
 
   public static DependentLink parameter(boolean explicit, boolean isProperty, List<String> names, Expression type) {
-    DependentLink link = isProperty ? new PropertyTypedDependentLink(explicit, names.getLast(), type, EmptyDependentLink.getInstance()) : new TypedDependentLink(explicit, names.getLast(), type, EmptyDependentLink.getInstance());
+    return parameter(explicit, isProperty, names, type, BindingVariance.INVARIANT);
+  }
+
+  public static DependentLink parameter(boolean explicit, List<String> names, Expression type, BindingVariance variance) {
+    DependentLink link = new TypedDependentLink(explicit, names.getLast(), type, false, variance, EmptyDependentLink.getInstance());
     for (int i = names.size() - 2; i >= 0; i--) {
       link = new UntypedDependentLink(names.get(i), link);
     }
@@ -43,19 +81,19 @@ public class ExpressionFactory {
   }
 
   public static DependentLink parameter(boolean explicit, List<String> names, Expression type) {
-    DependentLink link = new TypedDependentLink(explicit, names.getLast(), type, EmptyDependentLink.getInstance());
+    return parameter(explicit, names, type, BindingVariance.INVARIANT);
+  }
+
+  public static SingleDependentLink singleParams(boolean explicit, List<String> names, Expression type, BindingVariance variance) {
+    SingleDependentLink link = new TypedSingleDependentLink(explicit, names.getLast(), type, false, variance);
     for (int i = names.size() - 2; i >= 0; i--) {
-      link = new UntypedDependentLink(names.get(i), link);
+      link = new UntypedSingleDependentLink(names.get(i), link);
     }
     return link;
   }
 
   public static SingleDependentLink singleParams(boolean explicit, List<String> names, Expression type) {
-    SingleDependentLink link = new TypedSingleDependentLink(explicit, names.getLast(), type);
-    for (int i = names.size() - 2; i >= 0; i--) {
-      link = new UntypedSingleDependentLink(names.get(i), link);
-    }
-    return link;
+    return singleParams(explicit, names, type, BindingVariance.INVARIANT);
   }
 
   public static DataCallExpression Nat() {

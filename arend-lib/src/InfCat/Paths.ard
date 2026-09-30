@@ -1,0 +1,45 @@
+\import Paths
+
+\func pmap+ {A B :⁺ \Cat} (f :⁺ A ->⁺ B) {a a' :⁺ A} (p :⁺ a = a') : f a = f a'
+  => path \lam i => f (p i)
+
+\func pmap2+ {A B C :⁺ \Cat} (f :⁺ A ->⁺ B ->⁺ C) {a a' :⁺ A} (p :⁺ a = a') {b b' :⁺ B} (q :⁺ b = b') : f a b = f a' b'
+  => path \lam i => f (p i) (q i)
+
+\func pmap+_*> {A B :⁺ \Cat} (f :⁺ A ->⁺ B) {a a' a'' :⁺ A} {p :⁺ a = a'} {q :⁺ a' = a''}
+  : pmap+ f (p *> q) = pmap+ f p *> pmap+ f q \elim q
+  | idp => idp
+
+\func pmap+_inv {A B :⁺ \Cat} {a a' :⁺ A} (f :⁺ A ->⁺ B) {p :⁺ a = a'} : pmap+ f (inv p) = inv (pmap+ f p) \elim p
+  | idp => idp
+
+\func inv_inv-coh+ {A :⁺ \Cat} {a a' :⁺ A} {p :⁺ a = a'} : pmap+ (inv __) (inv_inv {A} {a} {a'} {p}) = inv_inv \elim p
+  | idp => idp
+
+\func *>_ext+ {A : \Cat} {B :⁺ A ->⁺ \Cat} {f g h :⁺ \Pi (x :⁺ A) -> B x} {p :⁺ f = g} {q :⁺ g = h}
+  : p *> q = path (\lam i x => (path (\lam j => p j x) *> path (\lam j => q j x)) i) \elim q
+  | idp => idp
+
+\func funExt+ {A : \Cat} {B :⁺ A ->⁺ \Cat} {f g :⁺ \Pi (x :⁺ A) -> B x} (p :⁺ \Pi (x :⁺ A) -> f x = g x) : f = g
+  => path \lam i x => p x i
+
+\func transport+ {A :⁺ \Cat} (B :⁺ A ->⁺ \Cat) {a a' :⁺ A} (p :⁺ a = a') (b :⁺ B a) : B a'
+  => coe (\lam i => B (p i)) b right
+
+\func transport+_app {A :⁺ \Cat} {B :⁺ A ->⁺ \Cat} (s :⁺ \Pi (x :⁺ A) -> B x) {a a' :⁺ A} (p :⁺ a = a') : transport+ B p (s a) = s a' \elim p
+  | idp => idp
+
+\func transport+_path_pmap {A B :⁺ \Cat} (f g :⁺ A ->⁺ B) {a a' :⁺ A} {p :⁺ a = a'} {q :⁺ f a = g a} {s :⁺ f a' = g a'}
+                           (h :⁺ q *> pmap+ g p = pmap+ f p *> s) : transport+ (\lam x => f x = g x) p q = s \elim p
+  | idp => h *> idp_*>
+
+\func homotopy-isNatural+ {A B :⁺ \Cat} (f g :⁺ A ->⁺ B) (h :⁺ \Pi (a :⁺ A) -> f a = g a) {a a' :⁺ A} (p :⁺ a = a')
+  : pmap+ f p *> h a' = h a *> pmap+ g p \elim p
+  | idp => idp_*>
+
+\sfunc homotopy_app-comm+ {A :⁺ \Cat} (f :⁺ A ->⁺ A) (h :⁺ \Pi (a :⁺ A) -> f a = a) (a :⁺ A) : h (f a) = pmap+ f (h a)
+  => pmap+ (h (f a) *> __) (inv *>_inv)
+  *> inv *>-assoc
+  *> pmap+ (*> inv (h a)) (inv (homotopy-isNatural+ f (\lam a => a) h (h a)))
+  *> *>-assoc
+  *> pmap+ (pmap+ f (h a) *> __) *>_inv

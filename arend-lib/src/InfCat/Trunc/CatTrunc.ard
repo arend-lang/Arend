@@ -1,0 +1,123 @@
+\import Equiv
+\import Equiv.Fiber
+\import Function.Meta
+\import Homotopy.Diagonal
+\import Homotopy.HLevel
+\import InfCat.Arrows
+\import InfCat.CatPushout
+\import InfCat.Functor.Equiv
+\import InfCat.Functor.FullyFaithful
+\import InfCat.OFS.CatAccessibleOFS
+\import InfCat.OFS.CatOFS
+\import InfCat.Objects
+\import InfCat.Square
+\import InfCat.Trunc.IsCatTrunc
+\import Logic
+\import Meta
+\import Paths
+\import Paths.Meta
+
+-- | The universal category with hom-types of level {n} under {C}.
+\type CatTrunc (n : Nat) (C : \Cat) : \Cat
+  => CatFactor {family n} {C} (\lam _ => ())
+  \where {
+    -- | Iterated codiagonals of {unob}.
+    \protected \func codiagMap (n : Nat) : \Sigma (S : \Cat0) (S ->⁺ DI) \elim n
+      | 0 => (Ob DI, unob)
+      | suc n => (CatPushout (codiagMap n).2 (codiagMap n).2, codiag (codiagMap n).2)
+
+    -- | Right maps of this family are exactly the maps whose hom-types are `(n-1)`-types.
+    \protected \func family (n : Nat) : CatFactor.Family \cowith
+      | J => \Sigma
+      | X _ => (codiagMap (suc n)).1
+      | Y _ => DI
+      | F _ => (codiagMap (suc n)).2
+
+    \lemma right1-char {C : \Cat} : IsOrthogonal ((family n).F ()) (\lam (c :⁺ C) => ()) <-> IsTruncCat n C
+      => <->trans IsOrthogonal-terminal $ later
+           (\lam o x y => HLevel_-2+1=>HLevel_-1 (x ~> y) n $ (truncMap-unob {C} {suc n}).1 $
+                            (truncMap-codiagMap (suc n) {0}).1 $ IsEquiv=>contrFibers o,
+            \lam Ct => contrFibers=>IsEquiv $ (truncMap-codiagMap (suc n) {0}).2 $
+                            truncMap-unob.2 \lam {a} {b} => HLevel_-1=>HLevel_-2+1 (a ~> b) n (Ct _ _))
+      \where {
+        -- | Restriction of maps along {f}.
+        \private \func res {A B E : \Cat} (f : A ->⁺ B) (h : B ->⁺ E) : A ->⁺ E
+          => \lam x => h (f x)
+
+        -- | Fibers of restriction along {unob} are hom-types.
+        \private \lemma truncMap-unob {E : \Cat} {k : Nat}
+          : IsTruncMap k (res {Ob DI} unob) <-> (\Pi {a b : E} -> (a ~> b) ofHLevel_-2+ k)
+          => <->sym (IsTruncMap.truncMap-post {DI ->⁺ E} {_} {_} {res unob} ObDI-equiv)
+            `<->trans` IsTruncMap.truncMap-pre DI-equiv
+            `<->trans` IsTruncMap.truncMap-proj {\Sigma E E} {\lam j => j.1 ~> j.2} {k}
+            `<->trans` (\lam r {a} {b} => r (a,b), \lam r s => r)
+
+      \private \lemma truncMap-codiagMap {E : \Cat} (m : Nat) {j : Nat}
+        : IsTruncMap j (res {_} {_} {E} (codiagMap m).2) <-> IsTruncMap (j Nat.+ m) (res {Ob DI} {DI} {E} unob) \elim m
+        | 0 => <->refl
+        | suc m => <->trans truncMap-codiag (truncMap-codiagMap m)
+        \where {
+          -- | Maps out of the pushout of {f} along itself are pairs of maps with equal restrictions along {f}.
+          \func codiag-maps {A B E : \Cat} (f : A ->⁺ B)
+            : QEquiv {CatPushout f f ->⁺ E} {\Sigma (u v : B ->⁺ E) (res f u = res f v)}
+            => transQEquiv (CatPushout.elim-equiv {A} {B} {B} {f} {f} {\lam _ => E}) $ later \new QEquiv {
+              | f s => (s.1, s.2, path \lam i x => s.3 x i)
+              | ret t => (t.1, t.2, \lam x => path \lam i => t.3 i x)
+              | ret_f => idpe
+              | f_sec => idpe
+            }
+
+          \lemma truncMap-codiag {A B E : \Cat} {f : A ->⁺ B} {k : Nat}
+            : IsTruncMap k (res {_} {_} {E} (codiag f)) <-> IsTruncMap (suc k) (res {A} {B} {E} f)
+            => <->sym (IsTruncMap.truncMap-post {_} {_} {_} {res {_} {_} {E} (codiag f)} (codiag-maps {A} {B} {E} f))
+                `<->trans` truncMap-diagonal `<->trans` <->sym IsTruncMap.truncMap-suc
+        }
+      }
+
+    \lemma isTruncCat : IsTruncCat n (CatTrunc n C)
+      => right1-char.1 $ IsOrthogonal_o-right {_} {_} {CatTrunc n C} {CatFactor {family n} (\lam _ => ())}
+          (IsOrthogonal_IsHEquiv-right (inP \new HQEquiv {
+            | finv x => x
+            | finv_f => idpe
+            | f_finv => idpe
+          })) (catFactorRight.isRight {family n} ())
+  }
+
+-- | The unit of the n-truncation.
+\func catTrunc {n : Nat} {C : \Cat} (x :⁺ C) : CatTrunc n C
+  => catFactorLeft {CatTrunc.family n} x
+
+\lemma catTrunc-univ {n : Nat} {C Z : \Cat} (Zt : IsTruncCat n Z)
+  : IsEquiv {CatTrunc n C ->⁺ Z} {C ->⁺ Z} (\lam f x => f (catTrunc x))
+  => IsOrthogonal-terminal.1 (catTrunc-isLeft Zt)
+  \where {
+    -- | The extension of {f} to {CatTrunc}; it computes on {catTrunc}.
+    \func lift (Zt : IsTruncCat n Z) (f : C ->⁺ Z) (x :⁺ CatTrunc n C) : Z
+      => (CatFactor.dataExt {CatFactor.famHat {CatTrunc.family n}} {C} {\Sigma} {\lam _ => ()} {Z} {f} {\lam _ => ()}
+            (CatFactor.famHat_IsRight {CatTrunc.family n} {Z} {\Sigma} {\lam _ => ()} \lam _ => (CatTrunc.right1-char {n}).2 Zt)
+            (\lam _ => idp) x).1
+
+    -- | {catTrunc} is left orthogonal to the map to the terminal category from any category with hom-types of level {n}.
+    \lemma catTrunc-isLeft {n : Nat} {C E : \Cat} (Et : IsTruncCat n E) : IsOrthogonal (catTrunc {n} {C}) (\lam (e :⁺ E) => ())
+      => IsOrthogonal_o-left {_} {_} {CatTrunc n C}
+          (catFactorLeft.isLeft {CatTrunc.family n} \lam _ => (CatTrunc.right1-char {n}).2 Et)
+          (IsOrthogonal_IsHEquiv-left $ inP \new HQEquiv {
+            | f x => x
+            | finv x => x
+            | finv_f => idpe
+            | f_finv => idpe
+          })
+  }
+
+-- | Restriction along {catTrunc} to functors to a category with hom-types of level {n} is fully faithful.
+\lemma catTrunc-ext-ff {n : Nat} {C Z : \Cat} (Zt : IsTruncCat n Z)
+  : IsFFMap {CatTrunc n C ->⁺ Z} {C ->⁺ Z} (\lam H y => H (catTrunc y))
+  => IsOrthogonal-res-ff (catTrunc-univ.catTrunc-isLeft Zt) (catTrunc-univ.catTrunc-isLeft (arr-IsTruncCat Zt))
+  \where {
+    -- | The arrow category of a category with hom-types of level {n} has hom-types of level {n}.
+    \lemma arr-IsTruncCat {n : Nat} {Z : \Cat} (Zt : IsTruncCat n Z) : IsTruncCat n (DI ->⁺ Z)
+      => \lam u v => HLevel-retracts DI-hom-equiv $
+          HLevels-sigma (\lam l => \Sigma (r : u dright ~> v dright) (DPath (\lam i => u i ~> v i) l r)) (Zt _ _) \lam l =>
+          HLevels-sigma (\lam r => DPath (\lam i => u i ~> v i) l r) (Zt _ _) \lam r =>
+          HLevel-retracts (square-equiv (dpath (\lam i => u i)) (dpath (\lam i => v i))) (HLevel_-1_suc (Zt _ _) _ _)
+  }

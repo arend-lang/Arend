@@ -12,7 +12,7 @@
 \func Equiv_=.{u} {A B : \Type u} (e : Equiv A B) : A = B => QEquiv_= (Equiv.toQEquiv e)
 
 \sfunc typeUnivalence.{u} {A B : \Type u} : QEquiv {A = B} {Equiv A B} =_Equiv Equiv_=
-  => pathEquiv (Equiv __ __) \lam {A} {B} => \new Retraction {
+  => pathEquiv {\Type u} (Equiv __ __) \lam {A} {B} => \new Retraction {
     | f => =_Equiv
     | sec => Equiv_=
     | f_sec e => Equiv.equals $ Jl (\lam _ p => Equiv.toFunc (=_Equiv p) = \lam a => coe p a right) idp (Equiv_= e)

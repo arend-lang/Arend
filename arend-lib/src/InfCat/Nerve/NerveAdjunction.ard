@@ -1,0 +1,212 @@
+\import Category
+\import Category.Adjoint
+\import Category.Functor
+\import Equiv
+\import Function.Meta
+\import Homotopy.Fibration
+\import Homotopy.HLevel
+\import Homotopy.Truncation
+\import InfCat.Basics
+\import InfCat.Functor.Equiv
+\import InfCat.Functor.FullyFaithful
+\import InfCat.HoCat
+\import InfCat.Nerve.Nerve
+\import InfCat.Nerve.NerveHom
+\import InfCat.Objects
+\import InfCat.Rezk
+\import InfCat.Square
+\import InfCat.Trunc.CatTrunc
+\import InfCat.Trunc.CatTruncHom
+\import InfCat.Trunc.IsCatTrunc
+\import Logic
+\import Logic.Unique
+\import Meta
+\import Paths
+\import Paths.Meta
+\open NerveCounit
+\open NerveUnit
+
+{- | The nerve of a univalent category is right adjoint to the homotopy category.
+
+     Since we have no notion of adjunction between `\Cat` and {Cat}, we construct the unit {unit} and the counit {counit}
+     and prove the triangle identities {nerve-triangle-left} and {nerve-triangle-right}.
+     The counit is an equivalence of categories ({counit-equiv}), and the unit is an equivalence
+     if and only if the category has hom-sets ({unit-equiv}).
+ -}
+
+\module NerveCounit \where {
+  \func hom-at.{u} {D : Cat.{u,u}} {n m : Nerve D} (s : Fib nerveOb n) (t : Fib nerveOb m) (p : n ~> m) : Hom {D} s.1 t.1 \elim n, m, s, t
+    | _, _, (x, idp), (y, idp) => IsEquiv.ret nerveHom-equiv p
+
+  \lemma hom-at-id.{u} {D : Cat.{u,u}} {n : Nerve D} (s : Fib nerveOb n) : hom-at s s idd = id \elim n, s
+    | _, (x, idp) => IsEquiv.isInj nerveHom-equiv $ IsEquiv.f_ret nerveHom-equiv *> inv nerveHom-id
+
+  \lemma hom-at-comp.{u} {D : Cat.{u,u}} {n m k : Nerve D} (s : Fib nerveOb n) (t : Fib nerveOb m) (r : Fib nerveOb k)
+                         {p : n ~> m} {q : m ~> k} : hom-at s r (comp p q) = hom-at t r q ∘ hom-at s t p \elim n, m, k, s, t, r
+    | _, _, _, (x, idp), (y, idp), (z, idp) => IsEquiv.isInj nerveHom-equiv $ IsEquiv.f_ret nerveHom-equiv
+        *> inv (pmap2 comp (IsEquiv.f_ret nerveHom-equiv) (IsEquiv.f_ret nerveHom-equiv)) *> nerveHom-comp
+
+  \lemma hom-at-equiv.{u} {D : Cat.{u,u}} {n m : Nerve D} (s : Fib nerveOb n) (t : Fib nerveOb m) : IsEquiv (hom-at s t) \elim n, m, s, t
+    | _, _, (x, idp), (y, idp) => IsEquiv.ret-equiv nerveHom-equiv
+
+  \func hom-at-square.{u} {D : Cat.{u,u}} {n m : Nerve D} (s : Fib nerveOb n) (t : Fib nerveOb m) (p : n ~> m)
+    : comp (nerveHom (hom-at s t p)) (=_~> t.2) = comp (=_~> s.2) p \elim n, m, s, t
+    | _, _, (x, idp), (y, idp) => comp_idd-right *> IsEquiv.f_ret nerveHom-equiv *> inv comp_idd-left
+
+  -- | The counit on arrows.
+  \func counit-hom.{u} {D : Cat.{u,u}} {n m : Nerve D} (p : n ~> m) : Hom (nerve-point n).1 (nerve-point m).1
+    => hom-at (nerve-point n) (nerve-point m) p
+
+  -- | The counit on arrows is a naturality square with respect to {nerve-point}.
+  \sfunc counit-square.{u} {D : Cat.{u,u}} {n m : Nerve D} (p : n ~> m)
+    : comp (nerveHom (counit-hom p)) (=_~> (nerve-point m).2) = comp (=_~> (nerve-point n).2) p
+    => hom-at-square (nerve-point n) (nerve-point m) p
+
+  -- | The counit of the adjunction.
+  \func counit.{u} (D : Cat.{u,u}) : Functor (HoCat (Nerve D)) D
+    => HoCat-lift (\lam n => (nerve-point n).1) counit-hom (\lam {n} => hom-at-id (nerve-point n))
+        \lam {n} {m} {k} => hom-at-comp (nerve-point n) (nerve-point m) (nerve-point k)
+
+  -- | The counit is fully faithful.
+  \lemma counit-ff.{u} {D : Cat.{u,u}} {X Y : HoCat (Nerve D)} : IsEquiv ((counit D).Func {X} {Y})
+    => \case \elim X, \elim Y \with {
+      | in1 n, in1 m =>
+        \have hs : (n ~> m) ofHLevel_-1+ 1 => \lam a b => toProp (nerve-hom-isSet a b)
+        \in transport IsEquiv (ext \lam h => hom-eq hs h) $ IsEquiv.trans (inP hoTrunc-equiv) $
+              IsEquiv.trans (inP (symQEquiv (Trunc_-1+.inT-equiv hs))) (hom-at-equiv (nerve-point n) (nerve-point m))
+    }
+    \where
+      \lemma hom-eq.{u} {D : Cat.{u,u}} {n m : Nerve D} (hs : (n ~> m) ofHLevel_-1+ 1) (h : HoCat.Hom (in1 n) (in1 m))
+        : counit-hom (Trunc_-1+.rec hs (\lam p => p) (hoTrunc h)) = (counit D).Func {in1 n} {in1 m} h \elim h
+        | HoCat.mkHom p => pmap (\lam t => counit-hom (Trunc_-1+.rec hs (\lam p => p) t)) (\peval hoTrunc (HoCat.mkHom p))
+
+  -- | The counit as a fully faithful functor.
+  \func counit-FF.{u} (D : Cat.{u,u}) : FullyFaithfulFunctor (HoCat (Nerve D)) D \cowith
+    | Functor => counit D
+    | isFullyFaithful => counit-ff
+
+  -- | The counit is an equivalence of categories.
+  \sfunc counit-equiv.{u} (D : Cat.{u,u}) : CatEquiv (HoCat (Nerve D)) D (counit D)
+    => CatEquiv.fromFF-splitEssSurj (counit-FF D) \lam y => (in1 (nerveOb y), D.idtoiso (pmap __.1 (nerve-point-ob y)))
+}
+
+\module NerveUnit \where {
+  \func theta-ob.{u} {C : \Cat u} (X : Trunc1 C) : CatTrunc 1 C
+    \level truncCat-ob-isGpd (CatTrunc.isTruncCat {1} {C})
+    \elim X
+    | in1 x => catTrunc x
+
+  \func theta-hom.{u} {C : \Cat u} {X Y : Trunc1 C} (h : HoCat.Hom X Y) : theta-ob X ~> theta-ob Y
+    \level hom-isSet CatTrunc.isTruncCat (theta-ob X) (theta-ob Y)
+    \elim X, Y
+    | in1 x, in1 y => catTrunc-hom-map (hoTrunc h)
+
+  \func theta-hom-mk.{u} {C : \Cat u} {x y : C} (f : x ~> y)
+    : theta-hom {C} {in1 x} {in1 y} (HoCat.mkHom f) = dmap catTrunc f
+    => pmap catTrunc-hom-map (\peval hoTrunc (HoCat.mkHom f))
+
+  \lemma theta-rc.{u} {C : \Cat u} {X Y Z : Trunc1 C} (f : HoCat.Hom X Y) (g : HoCat.Hom Y Z)
+    : comp (theta-hom f) (theta-hom g) = theta-hom (Cat.o {HoCat C} g f)
+    \level hom-isSet CatTrunc.isTruncCat _ _ (comp (theta-hom f) (theta-hom g)) (theta-hom (Cat.o {HoCat C} g f))
+    => \case \elim X, \elim Y, \elim Z, \elim f, \elim g \with {
+      | in1 x, in1 y, in1 z, HoCat.mkHom f, HoCat.mkHom g =>
+        pmap2 comp (theta-hom-mk f) (theta-hom-mk g) *> inv (dmap_comp catTrunc) *> inv (theta-hom-mk (comp f g))
+    }
+
+  \lemma theta-ri.{u} {C : \Cat u} (X : Trunc1 C) : theta-hom (Cat.id {HoCat C} {X}) = idd
+    \level hom-isSet CatTrunc.isTruncCat _ _ (theta-hom (Cat.id {HoCat C} {X})) idd
+    => \case \elim X \with {
+      | in1 x => theta-hom-mk idd
+    }
+
+  -- | The comparison map from the nerve of the homotopy category to the 1-truncation.
+  \func theta.{u} {C : \Cat u} (n :⁺ Nerve (HoCat C)) : CatTrunc 1 C
+    => nerve-rec' CatTrunc.isTruncCat (theta-ob, \lam h => theta-hom h) theta-rc theta-ri n
+
+  -- | The comparison map is fully faithful.
+  \lemma theta-ff.{u} {C : \Cat u} : IsFFMap (theta {C})
+    => \lam a b => \case \elim a, \elim b, nerveOb-surj a, nerveOb-surj b \with {
+      | a, b, inP (X, idp), inP (Y, idp) => \case \elim X, \elim Y \with {
+        | in1 x, in1 y => IsEquiv.rightFactor nerveHom-equiv $ IsEquiv.trans (inP hoTrunc-equiv) catTrunc-hom-map.isEquiv
+      }
+    }
+
+  -- | The lift of {catTrunc} along {theta}.
+  \sfunc unit-lift.{u} {C : \Cat u} : \Sigma (h : C ->⁺ Nerve (HoCat C)) (\Pi (y :⁺ C) -> theta (h y) = catTrunc y)
+    => ffMap-lift theta-ff (\lam y =>⁺ catTrunc y) (\lam y => inP (nerveOb (in1 y), idp))
+
+  -- | The unit of the adjunction.
+  \func unit.{u} {C : \Cat u} (x :⁺ C) : Nerve (HoCat C)
+    => unit-lift.1 x
+
+  \func unit-theta.{u} {C : \Cat u} (x :⁺ C) : theta (unit x) = catTrunc x
+    => unit-lift.2 x
+
+  \func unit-fib.{u} {C : \Cat u} (x : C)
+    : (unit x, unit-theta x) = {\Sigma (n : Nerve (HoCat C)) (theta n = catTrunc x)} (nerveOb (in1 x), idp)
+    => IsFFMap.fibProp theta-ff (catTrunc x) _ _
+
+  -- | The unit on objects.
+  \func unit-ob.{u} {C : \Cat u} (x : C) : unit x = nerveOb (in1 x)
+    => pmap __.1 (unit-fib x)
+
+  \func unit-ob-theta.{u} {C : \Cat u} (x : C) : pmap theta (unit-ob x) = unit-theta x
+    => fib-path (unit-fib x)
+
+  -- | The unit on arrows.
+  \func unit-hom.{u} {C : \Cat u} {x y : C} (f : x ~> y)
+    : comp (dmap unit f) (=_~> (unit-ob y)) = comp (=_~> (unit-ob x)) (nerveHom (HoCat.mkHom f))
+    => IsEquiv.isInj (theta-ff _ _) $ dmap_comp theta *> pmap (comp _) (dmap_=_~> theta)
+        *> pmap (\lam p => comp _ (=_~> p)) (unit-ob-theta y)
+        *> ~>-natural {C} {CatTrunc 1 C} {\lam a =>⁺ theta (unit a)} {\lam a =>⁺ catTrunc a} (\lam a => =_~> (unit-theta a)) {x} {y} {f}
+        *> inv (pmap (\lam p => comp (=_~> p) _) (unit-ob-theta x))
+        *> inv (dmap_comp theta *> pmap2 comp (dmap_=_~> theta) (theta-hom-mk f))
+
+  -- | Every object of the nerve of the homotopy category is in the image of the unit.
+  \lemma unit-surj.{u} {C : \Cat u} : IsSurjMap (unit {C})
+    => \lam n => \case \elim n, nerveOb-surj n \with {
+      | n, inP (X, idp) => \case \elim X \with {
+        | in1 x => inP (x, unit-ob x)
+      }
+    }
+
+  -- | The unit is an equivalence if and only if the category has hom-sets.
+  \lemma unit-equiv.{u} {C : \Cat u} : IsHEquiv (unit {C}) <-> IsTruncCat 1 C
+    => (\lam e x y => HLevel-retracts (IsEquiv.toQEquiv ((ff-surj-equiv.2 e).1 x y)) {1} (nerve-isTruncCat (unit x) (unit y)),
+        \lam Ct => (ff-surj-equiv {C} {_} {unit}).1 (\lam x y => IsEquiv.leftFactor (theta-ff (unit x) (unit y)) $
+            transportInv {C ->⁺ CatTrunc 1 C} (\lam h => IsEquiv {x ~> y} (dmap h)) (ext unit-theta) $
+              IsEquiv.trans (inP (Trunc_-1+.inT-equiv (Ct x y))) catTrunc-hom-map.isEquiv, unit-surj))
+}
+
+-- # Triangle identities
+
+-- | The composite `HoCat C -> HoCat (Nerve (HoCat C)) -> HoCat C` is the identity.
+\func nerve-triangle-left.{u} {C : \Cat u} : Comp (counit (HoCat C)) (HoCat-map (\lam x =>⁺ unit x)) = Id
+  => exts (tri-ob, \lam {X} {Y} h => \case \elim X, \elim Y, \elim h \with {
+    | in1 x, in1 y, HoCat.mkHom f => Cat.transport_Hom {HoCat C} (tl-path x).1 (tl-path y).1
+        \have tl-nerve x => nerveHom-transport (tl-path x).1 *> pmap =_~> (tl-path x).2 *> inv =_~>_comp
+        \in IsEquiv.isInj nerveHom-equiv $ inv nerveHom-comp *> pmap (comp _) (tl-nerve y)
+          *> square-paste (counit-square (dmap unit f)) (unit-hom f)
+          *> inv (pmap (comp __ _) (tl-nerve x)) *> nerveHom-comp
+  })
+  \where \private {
+    \func tl-path (x : C)
+      => nerveOb-emb.pmap-isEquiv.splitSurj $ (nerve-point (unit x)).2 *> unit-ob x
+
+    \func tri-ob (X : Trunc1 C) : (counit (HoCat C)).F (HoCat-map (\lam x =>⁺ unit x) X) = X
+      \level \lam p q => ToProp.fromProp (Trunc1.level C ((counit (HoCat C)).F (HoCat-map (\lam x =>⁺ unit x) X)) X p q)
+      \elim X
+      | in1 x => (tl-path x).1
+  }
+
+-- | The composite `Nerve D -> Nerve (HoCat (Nerve D)) -> Nerve D` is the identity.
+\sfunc nerve-triangle-right.{u} {D : Cat.{u,u}} {n :⁺ Nerve D} : nerveMap (counit D) (unit n) = n
+  => path \lam i => nerve-maps-ext' nerve-isTruncCat
+      (\lam x => pmap (nerveMap (counit D)) (unit-ob {Nerve D} (nerveOb x)) *> (nerve-point (nerveOb x)).2)
+      (\lam {x} {y} f => pmap (comp _) (inv =_~>_comp)
+        *> square-paste (pmap (comp _) (inv (dmap_=_~> (nerveMap (counit D)))) *> inv (dmap_comp (nerveMap (counit D)))
+                           *> pmap (dmap (nerveMap (counit D))) (unit-hom {Nerve D} (nerveHom f))
+                           *> dmap_comp (nerveMap (counit D)) *> pmap (comp __ _) (dmap_=_~> (nerveMap (counit D))))
+                        (counit-square (nerveHom f))
+        *> pmap (comp __ _) =_~>_comp)
+      i n

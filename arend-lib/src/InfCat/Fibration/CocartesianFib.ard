@@ -1,0 +1,44 @@
+\import Equiv
+\import Function.Meta
+\import InfCat.Basics
+\import InfCat.Fibration.CovariantLift
+\import InfCat.Functor.Equiv
+\import InfCat.Functor.FullyFaithful
+\import InfCat.Paths
+\import InfCat.SubCat.Full
+\import Logic
+\import Logic.Meta
+\import Logic.Unique
+\import Meta
+\import Paths
+
+-- | {B} is a cocartesian fibration if every arrow in the base has a cocartesian lift from every point of the fiber.
+\type IsCocartesianFib {A : \Cat} (B : A ->⁺ \Cat) : \Prop
+  => \Pi {a a' : A} (f : a ~> a') (b : B a) -> ∃ (l : CovLift B f b) (IsCocartesianLift l)
+
+\lemma cocartesianFib-char {A : \Cat} {B : A ->⁺ \Cat}
+  : IsCocartesianFib B <-> IsHEquiv {FullSubCat {\Sigma⁺ (s : \Sigma⁺ (a a' : A) (f : a ~> a') (b : B a)) (CovLift B s.3 s.4)} \lam t => IsCocartesianLift t.2}
+                                    {\Sigma⁺ (a a' : A) (f : a ~> a') (b : B a)}
+                                    (\lam x => (FullSubCat.inc x).1)
+  => \let | S => \Sigma⁺ (a a' : A) (f : a ~> a') (b : B a)
+          | T => \Sigma⁺ (s : S) (CovLift B s.3 s.4)
+     \in (\lam cf => (ff-surj-equiv {FullSubCat {T} \lam t => IsCocartesianLift t.2} {S} {\lam x => (FullSubCat.inc x).1}).1
+            (\lam x y => IsEquiv.trans (FullSubCat.inc-ff x y) (cocartesian-ff B (FullSubCat.inc-con {T} {_} {x})),
+             \lam s => \case cf s.3 s.4 \with {
+               | inP (l,lc) => TruncP.map (FullSubCat.inc-sat {T} {_} {s,l} lc) \lam (d,p) => (d, pmap __.1 p)
+             }),
+          \lam e {a} {a'} f b => \let d => IsHEquiv.ret e (a,a',f,b)
+            \in transport (\lam s => ∃ (l : CovLift B s.3 s.4) (IsCocartesianLift l)) (IsHEquiv.f_ret e) (inP ((FullSubCat.inc d).2, FullSubCat.inc-con {_} {_} {d})))
+
+\sfunc cocartesianFib-lift {A : \Cat} {B : A ->⁺ \Cat} (Bf : IsCocartesianFib B) {a a' :⁺ A} (f :⁺ a ~> a') (b :⁺ B a) : CovLift B f b
+  => \have e => cocartesianFib-char.1 Bf
+     \in transport+ (\lam s => CovLift B s.3 s.4) (IsHEquiv.f_ret e) (FullSubCat.inc $ IsHEquiv.ret e (a,a',f,b)).2
+  \where {
+    \lemma isCocartesian {a a' : A} (f : a ~> a') (b : B a) : IsCocartesianLift (cocartesianFib-lift {A} {B} Bf f b)
+      => transportInv IsCocartesianLift (\peval cocartesianFib-lift {A} {B} Bf f b) $
+          transport-cocartesian $ FullSubCat.inc-con {_} {_} {IsHEquiv.ret (cocartesianFib-char.1 Bf) (a,a',f,b)}
+
+    \private \lemma transport-cocartesian {s t : \Sigma⁺ (a a' : A) (f : a ~> a') (b : B a)} {p : s = t} {l : CovLift B s.3 s.4} (lc : IsCocartesianLift l)
+      : IsCocartesianLift (transport+ (\lam s => CovLift B s.3 s.4) p l) \elim p
+      | idp => lc
+  }

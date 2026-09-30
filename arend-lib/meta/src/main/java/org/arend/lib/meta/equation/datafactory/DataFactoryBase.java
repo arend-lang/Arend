@@ -6,7 +6,6 @@ import org.arend.ext.concrete.ConcreteFactory;
 import org.arend.ext.concrete.ConcreteLetClause;
 import org.arend.ext.concrete.expr.ConcreteExpression;
 import org.arend.ext.core.expr.CoreExpression;
-import org.arend.ext.core.expr.CoreFunCallExpression;
 import org.arend.ext.reference.ArendRef;
 import org.arend.ext.typechecking.TypedExpression;
 import org.arend.lib.util.Values;
@@ -20,7 +19,6 @@ import static java.util.Collections.singletonList;
 public abstract class DataFactoryBase implements DataFactory {
   private final ArendPrelude prelude;
   protected final ConcreteFactory factory;
-  protected CoreFunCallExpression equality;
   protected final TypedExpression instance;
   protected final Values<CoreExpression> values;
   protected final ArendRef dataRef;

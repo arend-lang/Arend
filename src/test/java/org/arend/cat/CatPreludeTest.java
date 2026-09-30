@@ -1,0 +1,443 @@
+package org.arend.cat;
+
+import org.arend.Matchers;
+import org.arend.typechecking.TypeCheckingTestCase;
+import org.arend.typechecking.error.local.SolveLevelEquationsError;
+import org.junit.Test;
+
+import static org.arend.Matchers.typecheckingError;
+
+public class CatPreludeTest extends TypeCheckingTestCase {
+  @Test
+  public void invariantOk() {
+    typeCheckModule("""
+      \\func f (i : DI) : Nat \\elim i
+        | dleft => 0
+        | dright => 1
+      """);
+  }
+
+  @Test
+  public void covariantError() {
+    typeCheckModule("""
+      \\func g (i :+ DI) : Nat \\elim i
+        | dleft => 0
+        | dright => 1
+      """, 2);
+    assertThatErrorsAre(typecheckingError(), typecheckingError());
+  }
+
+  @Test
+  public void invariantInDataOk() {
+    typeCheckModule("""
+      \\data D (i : DI) \\elim i
+        | dleft => con1
+        | dright => con2
+      """);
+  }
+
+  @Test
+  public void invariantInDataOk2() {
+    typeCheckModule("""
+      \\data D (i : DI) \\elim i
+        | dleft => con
+      """);
+  }
+
+  @Test
+  public void covariantInDataError() {
+    typeCheckModule("""
+      \\data D (i :+ DI) \\elim i
+        | dleft => Nat
+        | dright => Int
+      """, 2);
+    assertThatErrorsAre(typecheckingError(), typecheckingError());
+  }
+
+  @Test
+  public void pathAppTest() {
+    typeCheckModule("""
+      \\func test {C : \\Cat} {a b : C} (p : a ~> b) (i :+ DI)
+        => p i
+      """);
+  }
+
+  @Test
+  public void pathBetaTest() {
+    typeCheckModule("""
+      \\func test {C : \\Cat} (f : DI ->+ C) : (\\lam i =>+ dpath f i) = (\\lam i =>+ f i)
+        => idp
+      """);
+  }
+
+  @Test
+  public void pathBetaLeftTest() {
+    typeCheckModule("""
+      \\func test {C : \\Cat} {a b : C} (p : a ~> b) : p dleft = a
+        => idp
+      """);
+  }
+
+  @Test
+  public void pathBetaRightTest() {
+    typeCheckModule("""
+      \\func test {C : \\Cat} {a b : C} (p : a ~> b) : p dright = b
+        => idp
+      """);
+  }
+
+  @Test
+  public void pathEtaTest() {
+    typeCheckModule("""
+      \\func test {C : \\Cat} {a b : C} (p : a ~> b) : dpath (\\lam i => p i) = p
+        => idp
+      """);
+  }
+
+  @Test
+  public void pathTypeTest() {
+    typeCheckModule("""
+      \\func test {C : \\Cat} {a b : C} : \\Type
+        => a = b
+      """);
+  }
+
+  @Test
+  public void dPathTypeTest() {
+    typeCheckModule("""
+      \\func test {C : DI ->+ \\Cat} {a : C dleft} {b : C dright} : \\Type
+        => DPath C a b
+      """);
+  }
+
+  @Test
+  public void dPathInfixTypeTest() {
+    typeCheckModule("""
+      \\func test {C : \\Cat} {a b : C} : \\Type
+        => a ~> b
+      """);
+  }
+
+  @Test
+  public void dPathInfTypeError() {
+    typeCheckModule("""
+      \\func test {C :+ DI ->+ \\Cat0} {a :+ C dleft} {b :+ C dright} : \\Type0
+        => DPath C a b
+      """, 1);
+    assertThatErrorsAre(Matchers.typeMismatchError());
+  }
+
+  @Test
+  public void dPathInfixInfTypeError() {
+    typeCheckModule("""
+      \\func test {C :+ \\Cat0} {a b :+ C} : \\Type0
+        => a ~> b
+      """, 1);
+    assertThatErrorsAre(Matchers.typeMismatchError());
+  }
+
+  @Test
+  public void intervalElimDI() {
+    typeCheckModule("""
+      \\func f (n : Nat) (i : DI) : Nat
+        | zero, _ => 0
+        | suc _, _ => 0
+        | _, dleft => 0
+        | _, dright => 0
+      \\func g (n : Nat) : f n dleft = 0 => idp
+      """);
+  }
+
+  @Test
+  public void intervalElimDIError() {
+    typeCheckModule("""
+      \\func f (n : Nat) (i :+ DI) : Nat
+        | zero, _ => 0
+        | suc _, _ => 0
+        | _, dleft => 0
+        | _, dright => 0
+      """, 2);
+  }
+
+  @Test
+  public void intervalElimDICoverageError() {
+    typeCheckModule("""
+      \\func f (n : Nat) (i : DI) : Nat
+        | zero, _ => 0
+        | _, dleft => 0
+        | _, dright => 0
+      """, 1);
+  }
+
+  @Test
+  public void intervalElimDAt() {
+    typeCheckModule("""
+      \\func myDAt {C : DI ->+ \\Cat} {a : C dleft} {b : C dright} (p : DPath C a b) (i : DI) : C i \\elim p, i
+        | dpath f, i => f i
+        | _, dleft => a
+        | _, dright => b
+      \\func g (p : 0 ~> 1) : myDAt p dright = 1 => idp
+      """);
+  }
+
+  @Test
+  public void intervalElimDAtConditionsError() {
+    typeCheckModule("""
+      \\func myDAt {A : \\Type} (a a' : A) (p : a ~> a') (i : DI) : A \\elim p, i
+        | dpath f, i => f i
+        | _, dleft => a'
+        | _, dright => a
+      """, 2);
+  }
+
+  @Test
+  public void intervalElimMixedIAndDI() {
+    typeCheckModule("""
+      \\func mixed (i : I) (j : DI) : Nat
+        | _, _ => 0
+        | left, _ => 0
+        | right, _ => 0
+        | _, dleft => 0
+        | _, dright => 0
+      \\func testMixed : mixed left dleft = 0 => idp
+      """);
+  }
+
+  @Test
+  public void intervalElimDIConstructor() {
+    typeCheckModule("""
+      \\data D | con1 | con2 | dseg (d : D) (i : DI) \\elim i { | dleft => d | dright => con2 }
+      \\func testLeft (d : D) : dseg d dleft = d => idp
+      \\func testRight (d : D) : dseg d dright = con2 => idp
+      """);
+  }
+
+  @Test
+  public void fill2Test() {
+    typeCheckModule("""
+      \\func test1 {C : \\Cat} {a b c : C} (f : a ~> b) (g : b ~> c) : dpath (fill2 f g dleft) = dpath \\lam _ => a
+        => idp
+      \\func test2 {C : \\Cat} {a b c : C} (f : a ~> b) (g : b ~> c) : dpath (fill2 f g dright) = g
+        => idp
+      \\func test3 {C : \\Cat} {a b c : C} (f : a ~> b) (g : b ~> c) : dpath (fill2 f g __ dleft) = f
+        => idp
+      """);
+  }
+
+  @Test
+  public void coePlusTest() {
+    typeCheckModule("""
+      \\func test.{u} {A B : \\Type u} (p : A ~> B) (a : A) : coe+ (\\lam i => p i) a dleft = a
+        => idp
+      """);
+  }
+
+  @Test
+  public void isoPlusTest() {
+    typeCheckModule("""
+      \\func endpoints.{u} {A B :+ \\Type u} (f :+ A ->+ B) : \\Sigma+ (iso+ f dleft = A) (iso+ f dright = B) => (idp, idp)
+      \\func dpath-iso.{u} {A B :+ \\Type u} (f :+ A ->+ B) : A ~> B => dpath (\\lam i => iso+ f i)
+      \\func coe-iso.{u} {A B :+ \\Type u} (f :+ A ->+ B) (a :+ A) : coe+ (\\lam i => iso+ f i) a dright = f a => idp
+      \\func coe-dpath-iso.{u} {A B :+ \\Type u} (f :+ A ->+ B) (a :+ A) : coe+ (\\lam i => (dpath (\\lam i => iso+ f i)) i) a dright = f a => idp
+      """);
+  }
+
+  @Test
+  public void isoPlusLevelError() {
+    typeCheckModule("\\func test.{u} (A B : \\Type (\\suc u)) (f : A ->+ B) (i :+ DI) : \\Type u => iso+ f i", 1);
+    assertThatErrorsAre(Matchers.typecheckingError(SolveLevelEquationsError.class));
+  }
+
+  @Test
+  public void isoCoePlusTest() {
+    typeCheckModule("""
+      \\func faces.{u} {A B :+ \\Type u} (p :+ A ~> B) (i :+ DI) (j : I)
+        : \\Sigma+ (iso+_coe+ p dleft j = A) (iso+_coe+ p dright j = B)
+                   (iso+_coe+ p i left = iso+ (\\lam a => coe+ (\\lam i => p i) a dright) i) (iso+_coe+ p i right = p i)
+        => (idp, idp, idp, idp)
+      \\func roundTrip.{u} {A B :+ \\Type u} (p :+ A ~> B) : dpath (\\lam i => iso+ (\\lam a => coe+ (\\lam i => p i) a dright) i) = p
+        => path (\\lam j => dpath (\\lam i => iso+_coe+ p i j))
+      """);
+  }
+
+  @Test
+  public void nestedDependentDPathTest() {
+    typeCheckModule("""
+      \\func foo {C :+ \\Cat} (f :+ \\Pi (i j k :+ DI) ->⁺ C) (j :+ DI)
+        => dpath \\lam k => dpath \\lam i => f i j k
+      """);
+  }
+
+  @Test
+  public void pathCovariantTest() {
+    typeCheckDef("\\func test (x : Nat) : \\Set0 => x = x");
+  }
+
+
+  @Test
+  public void pathCovariantTest2() {
+    typeCheckDef("\\func test (x :+ Nat) : \\Set0 => x = x", 1);
+  }
+
+  @Test
+  public void pathCovariantTest3() {
+    typeCheckDef("\\func test (x :+ Nat) : \\Type => x = x");
+  }
+
+  @Test
+  public void dPathCovariantTest() {
+    typeCheckDef("\\func test (x : Nat) : \\Type0 => x ~> x");
+  }
+
+
+  @Test
+  public void dPathCovariantTest2() {
+    typeCheckDef("\\func test (x :+ Nat) : \\Type0 => x ~> x", 1);
+  }
+
+  @Test
+  public void dPathCovariantTest3() {
+    typeCheckDef("\\func test (x :+ Nat) : \\Type => x ~> x");
+  }
+
+  @Test
+  public void caseOnCovariantIntervalForbidden() {
+    typeCheckModule("""
+      \\func f (i :+ I) : Nat => \\case i \\with { left => 0 | right => 1 }
+      """, 1);
+  }
+
+  @Test
+  public void caseOnInvariantDIForbidden() {
+    typeCheckModule("""
+      \\func f (i : DI) : Nat => \\case i \\with { dleft => 0 | dright => 1 }
+      """);
+  }
+
+  @Test
+  public void caseOnCovariantDIForbidden() {
+    typeCheckModule("""
+      \\func f (i :+ DI) : Nat => \\case i \\with { dleft => 0 | dright => 1 }
+      """, 1);
+  }
+
+  @Test
+  public void caseCovariantMarkedDIStillForbidden() {
+    typeCheckModule("""
+      \\func f (i :+ DI) : Nat => \\case i :+ _ \\with { dleft => 0 | dright => 1 }
+      """, 2);
+    assertThatErrorsAre(Matchers.typecheckingError(), Matchers.typecheckingError());
+  }
+
+  @Test
+  public void diSortTest() {
+    typeCheckDef("\\func test : \\Cat0 => DI");
+  }
+
+  @Test
+  public void diSortError() {
+    typeCheckDef("\\func test : \\Type => DI", 1);
+    assertThatErrorsAre(Matchers.typeMismatchError());
+  }
+
+  @Test
+  public void doubleIntervalMatchTest() {
+    typeCheckModule("""
+      \\func test (i j : DI) : Nat \\elim i
+        | dleft => 0
+        | dright => 1
+      """);
+  }
+
+  @Test
+  public void doubleIntervalMatchError() {
+    typeCheckModule("""
+      \\func test (i :+ DI) (j : DI) : Nat \\elim i
+        | dleft => 0
+        | dright => 1
+      """, -1);
+  }
+
+
+  private static final String RESIZE_DEFS = """
+    \\func Small.{u} {C : \\Cat} (F : C ->+ \\Type)
+      => \\Pi (y : C) -> \\Sigma (S : \\Type u) (to : S -> F y) (from : F y -> S) (\\Pi (s : S) -> from (to s) = s) (\\Pi (b : F y) -> to (from b) = b)
+    """;
+
+  @Test
+  public void resizeFunctorTest() {
+    typeCheckModule(RESIZE_DEFS + """
+      \\func test {C : \\Cat} (F : C ->+ \\Type) (s : Small.{0} F) (l : \\Pi {a a' :+ C} (f :+ a ~> a') (b :+ F a) -> \\Sigma+ (b' : F a') (DPath (\\lam i => F (f i)) b b')) : C ->+ \\Type0
+        => \\lam y => Resize+ F s l y
+      """);
+  }
+
+  @Test
+  public void resizeCoeTest() {
+    typeCheckModule(RESIZE_DEFS + """
+      \\func test {C : \\Cat} (F : C ->+ \\Type) (s : Small.{0} F) (l : \\Pi {a a' :+ C} (f :+ a ~> a') (b :+ F a) -> \\Sigma+ (b' : F a') (DPath (\\lam i => F (f i)) b b')) {y y' : C} (f : y ~> y') (r : Resize+ F s l y) : Resize+ F s l y'
+        => coe+ (\\lam i => Resize+ F s l (f i)) r dright
+      """);
+  }
+
+  @Test
+  public void resizeElimTest() {
+    typeCheckModule(RESIZE_DEFS + """
+      \\func unresize {C : \\Cat} {F : C ->+ \\Type} {s : Small.{0} F} {l : \\Pi {a a' :+ C} (f :+ a ~> a') (b :+ F a) -> \\Sigma+ (b' : F a') (DPath (\\lam i => F (f i)) b b')} (y :+ C) (r :+ Resize+ F s l y) : F y \\elim r
+        | resize+ b => b
+      \\func beta {C : \\Cat} {F : C ->+ \\Type} {s : Small.{0} F} {l : \\Pi {a a' :+ C} (f :+ a ~> a') (b :+ F a) -> \\Sigma+ (b' : F a') (DPath (\\lam i => F (f i)) b b')} (y : C) (b : F y) : unresize y (resize+ {C} {F} {s} {l} b) = b
+        => idp
+      """);
+  }
+
+  @Test
+  public void resizeLevelError() {
+    typeCheckModule(RESIZE_DEFS + """
+      \\func test {C : \\Cat} (F : C ->+ \\Type) (s : Small.{1} F) (l : \\Pi {a a' :+ C} (f :+ a ~> a') (b :+ F a) -> \\Sigma+ (b' : F a') (DPath (\\lam i => F (f i)) b b')) (y :+ C) : \\Type0
+        => Resize+ F s l y
+      """, 1);
+  }
+
+  @Test
+  public void resizeCovariantFamilyError() {
+    typeCheckModule(RESIZE_DEFS + """
+      \\func test {C : \\Cat} (F :+ C ->+ \\Type) (s : Small.{0} F) (l : \\Pi {a a' :+ C} (f :+ a ~> a') (b :+ F a) -> \\Sigma+ (b' : F a') (DPath (\\lam i => F (f i)) b b')) (y :+ C) : \\Type0
+        => Resize+ F s l y
+      """, -1);
+  }
+
+  private static final String IS_GRPD = "(\\Pi {x y :+ C} (f :+ x ~> y) -> \\Sigma+ (p : x = y) (coe (\\lam i => x ~> p i) idd right = f))";
+
+  @Test
+  public void groupoidTypeIsTypeTest() {
+    typeCheckModule(
+      "\\func test {C :+ \\Cat} (Cg :+ " + IS_GRPD + ") : \\Type => GroupoidType {C} Cg\n" +
+      "\\func test2 {C : \\Cat} (Cg : " + IS_GRPD + ") : \\Set0 -> \\Type => \\lam _ => GroupoidType {C} Cg");
+  }
+
+  @Test
+  public void groupoidTypeLevelTest() {
+    typeCheckModule("\\func test {C : \\Cat0} (Cg : " + IS_GRPD + ") : \\Type => GroupoidType {C} Cg");
+  }
+
+  @Test
+  public void groupoidTypeLevelError() {
+    typeCheckModule("\\func test {C : \\Cat0} (Cg : " + IS_GRPD + ") : \\Type0 => GroupoidType {C} Cg", 1);
+  }
+
+  @Test
+  public void groupoidTypeElimTest() {
+    typeCheckModule(
+      "\\func from {C :+ \\Cat} {Cg :+ " + IS_GRPD + "} (t :+ GroupoidType {C} Cg) : C \\elim t\n" +
+      "  | groupoidType c => c\n" +
+      "\\func to {C :+ \\Cat} {Cg :+ " + IS_GRPD + "} (c :+ C) : GroupoidType {C} Cg => groupoidType c\n" +
+      "\\func beta {C : \\Cat} {Cg : " + IS_GRPD + "} (c : C) : from {C} {Cg} (to c) = c => idp\n" +
+      "\\func eta {C : \\Cat} {Cg : " + IS_GRPD + "} (t : GroupoidType {C} Cg) : to (from t) = t \\elim t\n" +
+      "  | groupoidType c => idp");
+  }
+
+  @Test
+  public void groupoidTypeInvariantSigmaError() {
+    typeCheckModule("\\func test {C : \\Cat} (Cg : \\Pi {x y :+ C} (f :+ x ~> y) -> \\Sigma (p : x = y) (coe (\\lam i => x ~> p i) idd right = f)) : \\Type => GroupoidType {C} Cg", -1);
+  }
+}

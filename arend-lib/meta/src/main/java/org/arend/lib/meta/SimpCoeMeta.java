@@ -78,13 +78,9 @@ public class SimpCoeMeta extends BaseMetaDefinition {
     }
 
     ConcreteExpression makeConcreteValueArg(CoreExpression valueArg, ConcreteFactory factory) {
-      if (valueArg instanceof CoreReferenceExpression) {
-        return factory.core(valueArg.computeTyped());
-      } else {
-        ArendRef letRef = factory.local("f");
-        letClauses.add(factory.letClause(letRef, Collections.emptyList(), null, factory.core(valueArg.computeTyped())));
-        return factory.ref(letRef);
-      }
+      ArendRef letRef = factory.local("f");
+      letClauses.add(factory.letClause(letRef, Collections.emptyList(), null, factory.core(valueArg.computeTyped())));
+      return factory.ref(letRef);
     }
   }
 
@@ -104,21 +100,23 @@ public class SimpCoeMeta extends BaseMetaDefinition {
     final CoreExpression rightFunc;
     final boolean isLeftConst;
 
-    private EqualitySpec(CoreParameter lamParam, CoreFunCallExpression equality, ExpressionTypechecker typechecker, ConcreteSourceNode marker, ConcreteExpression concreteArg, TypedExpression arg, boolean isForward) {
-      super(Collections.emptyList(), concreteArg, arg, isForward);
-      if (equality.getDefCallArguments().get(1).findFreeBinding(lamParam.getBinding())) {
-        leftFunc = typechecker.makeLambda(Collections.singletonList(lamParam), equality.getDefCallArguments().get(1), marker);
+    private EqualitySpec(CoreParameter lamParam, CorePathTypeExpression equality, ExpressionTypechecker typechecker, ConcreteSourceNode marker, ConcreteExpression concreteArg, TypedExpression arg, boolean isForward) {
+      super(new ArrayList<>(), concreteArg, arg, isForward);
+      if (equality.getLeftArgument().findFreeBinding(lamParam.getBinding())) {
+        leftFunc = typechecker.makeLambda(Collections.singletonList(lamParam), equality.getLeftArgument(), marker);
         isLeftConst = false;
       } else {
-        leftFunc = equality.getDefCallArguments().get(1);
+        leftFunc = equality.getLeftArgument();
         isLeftConst = true;
       }
-      rightFunc = typechecker.makeLambda(Collections.singletonList(lamParam), equality.getDefCallArguments().get(2), marker);
+      rightFunc = typechecker.makeLambda(Collections.singletonList(lamParam), equality.getRightArgument(), marker);
     }
 
     @Override
     public ConcreteExpression make(ConcreteFactory factory, CoreExpression transportTypeArg, ConcreteExpression transportLeftArg, ConcreteExpression transportRightArg, ConcreteExpression transportPathArg, CoreExpression transportValueArg, CoreExpression eqRight) {
-      return factory.app(factory.ref(isForward ? (isLeftConst ? transport_path_pmap_right_conv : transport_path_pmap_conv) : (isLeftConst ? transport_path_pmap_right : transport_path_pmap)), true, Arrays.asList(factory.core(leftFunc.computeTyped()), factory.core(rightFunc.computeTyped()), transportPathArg, factory.core(transportValueArg.computeTyped()), factory.core(eqRight.computeTyped()), arg == null ? argument : factory.core(arg)));
+      ConcreteExpression concreteLeftFunc = isLeftConst ? makeConcreteValueArg(leftFunc, factory) : factory.core(leftFunc.computeTyped());
+      ConcreteExpression result = factory.app(factory.ref(isForward ? (isLeftConst ? transport_path_pmap_right_conv : transport_path_pmap_conv) : (isLeftConst ? transport_path_pmap_right : transport_path_pmap)), true, Arrays.asList(concreteLeftFunc, factory.core(rightFunc.computeTyped()), transportPathArg, factory.core(transportValueArg.computeTyped()), factory.core(eqRight.computeTyped()), arg == null ? argument : factory.core(arg)));
+      return letClauses.isEmpty() ? result : factory.letExpr(false, false, letClauses, result);
     }
   }
 
@@ -339,8 +337,8 @@ public class SimpCoeMeta extends BaseMetaDefinition {
     }
 
     CoreExpression body = lam.getBody().getUnderlyingExpression();
-    if (body instanceof CoreFunCallExpression && ((CoreFunCallExpression) body).getDefinition() == typechecker.getPrelude().getEquality()) {
-      return new EqualitySpec(lam.getParameters(), (CoreFunCallExpression) body, typechecker, marker, concreteArg, simpCoeArg, isForward);
+    if (body instanceof CorePathTypeExpression pt && !pt.isDirected() && pt.getArgumentType().removeConstLam() != null) {
+      return new EqualitySpec(lam.getParameters(), pt, typechecker, marker, concreteArg, simpCoeArg, isForward);
     }
 
     body = body.normalize(NormalizationMode.WHNF);
@@ -465,7 +463,7 @@ public class SimpCoeMeta extends BaseMetaDefinition {
       }
     }
 
-    CoreFunCallExpression equality = body.toEquality();
+    CorePathTypeExpression equality = Utils.toEquality(body, null, null);
     if (equality != null ) {
       return new EqualitySpec(lam.getParameters(), equality, typechecker, marker, concreteArg, simpCoeArg, isForward);
     }
@@ -485,11 +483,11 @@ public class SimpCoeMeta extends BaseMetaDefinition {
     } else {
       type = contextData.getExpectedType();
     }
-    CoreFunCallExpression equality = Utils.toEquality(type, typechecker.getErrorReporter(), contextData.getMarker());
+    CorePathTypeExpression equality = Utils.toEquality(type, typechecker.getErrorReporter(), contextData.getMarker());
     if (equality == null) return null;
     ConcreteFactory factory = contextData.getFactory();
 
-    CoreExpression leftExpr = equality.getDefCallArguments().get(1).getUnderlyingExpression();
+    CoreExpression leftExpr = equality.getLeftArgument().getUnderlyingExpression();
     List<CoreExpression> arguments = new ArrayList<>();
     while (true) {
       if (!(leftExpr instanceof CoreAppExpression || leftExpr instanceof CoreFieldCallExpression || leftExpr instanceof CoreProjExpression || leftExpr instanceof CoreFunCallExpression && (((CoreFunCallExpression) leftExpr).getDefinition() == typechecker.getPrelude().getCoerce() || ((CoreFunCallExpression) leftExpr).getDefinition().getRef().equals(transport)))) {
@@ -525,7 +523,7 @@ public class SimpCoeMeta extends BaseMetaDefinition {
       if (spec instanceof ErrorSpec) return null;
       if (spec != null) {
         spec.excessiveArgsError(excessiveArgs, typechecker);
-        return typechecker.typecheck(spec.make(factory, transportArgs.get(0), factory.core(transportArgs.get(2).computeTyped()), factory.core(transportArgs.get(3).computeTyped()), factory.core(transportArgs.get(4).computeTyped()), transportArgs.get(5), equality.getDefCallArguments().get(2)), contextData.getExpectedType());
+        return typechecker.typecheck(spec.make(factory, transportArgs.get(0), factory.core(transportArgs.get(2).computeTyped()), factory.core(transportArgs.get(3).computeTyped()), factory.core(transportArgs.get(4).computeTyped()), transportArgs.get(5), equality.getRightArgument()), contextData.getExpectedType());
       }
     } else {
       if (leftExpr instanceof CoreFunCallExpression && ((CoreFunCallExpression) leftExpr).getDefinition() == typechecker.getPrelude().getCoerce()) {
@@ -537,7 +535,7 @@ public class SimpCoeMeta extends BaseMetaDefinition {
           if (spec != null) {
             spec.excessiveArgsError(excessiveArgs, typechecker);
             ArendRef iRef = factory.local("i");
-            return typechecker.typecheck(spec.make(factory, null, factory.ref(typechecker.getPrelude().getLeftRef()), factory.ref(typechecker.getPrelude().getRightRef()), factory.app(factory.ref(typechecker.getPrelude().getPathConRef()), true, Collections.singletonList(factory.lam(Collections.singletonList(factory.param(iRef)), factory.ref(iRef)))), coeArgs.get(1), equality.getDefCallArguments().get(2)), contextData.getExpectedType());
+            return typechecker.typecheck(spec.make(factory, null, factory.ref(typechecker.getPrelude().getLeftRef()), factory.ref(typechecker.getPrelude().getRightRef()), factory.app(factory.ref(typechecker.getPrelude().getPathConRef()), true, Collections.singletonList(factory.lam(Collections.singletonList(factory.param(iRef)), factory.ref(iRef)))), coeArgs.get(1), equality.getRightArgument()), contextData.getExpectedType());
           }
         }
       }

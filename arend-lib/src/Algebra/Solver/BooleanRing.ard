@@ -30,7 +30,7 @@
       | var (Fin n)
       | :zro
       | :negative (Term n)
-      | \infixl 6 :+ (t s : Term n)
+      | \infixl 6 :_+ (t s : Term n)
       | \infixl 7 :* (t s : Term n)
 
     \func NF (n : Nat) => List (Array Bool n)
@@ -49,14 +49,14 @@
       | var j => l:: (singleAt j true false) lnil
       | :zro => lnil
       | :negative t => normalize t
-      | t :+ s => normalize t ++ normalize s
+      | t :_+ s => normalize t ++ normalize s
       | t :* s => multiply (normalize t) (normalize s)
 
     \func interpret (env : Array B) (t : Term env.len) : B \elim t
       | var j => env j
       | :zro => B.zro
       | :negative t => B.negative (interpret env t)
-      | t :+ s => interpret env t + interpret env s
+      | t :_+ s => interpret env t + interpret env s
       | t :* s => interpret env t * interpret env s
 
     \func toArray (cs : Array Bool) (env : Array B cs.len) : Array B \elim cs, env
@@ -178,14 +178,14 @@
       }
       | :zro => \case __
       | :negative t => normalize-nonEmpty
-      | t :+ s => all-++ normalize-nonEmpty normalize-nonEmpty
+      | t :_+ s => all-++ normalize-nonEmpty normalize-nonEmpty
       | t :* s => multiply-nonEmpty normalize-nonEmpty
 
     \lemma interpretNF'-consistent {n : Nat} {env : Array B n} {t : Term n} : interpretNF' env (normalize t) = interpret env t \elim t
       | var j => pmap sBigProd (pmap {Array Bool n} (toArray __ env) singleAt.char *> toArray_singleAt)
       | :zro => idp
       | :negative t => interpretNF'-consistent *> inv B.negative=id
-      | t :+ s => interpretNF_++ *> pmap2 (+) interpretNF'-consistent interpretNF'-consistent
+      | t :_+ s => interpretNF_++ *> pmap2 (+) interpretNF'-consistent interpretNF'-consistent
       | t :* s => interpretNF_multiply normalize-nonEmpty normalize-nonEmpty *> pmap2 (*) interpretNF'-consistent interpretNF'-consistent
 
     \lemma collapse-consistent {n : Nat} {env : Array B n} {l : NF n} : interpretNF' env (collapse l) = interpretNF' env l \elim l
@@ -208,10 +208,10 @@
     \lemma interpretNF=interpretNF' {n : Nat} {env : Array B n} {l : NF n} : interpretNF env l = interpretNF' env l
       => collapse-consistent *> sort-consistent
 
-    \lemma terms-equality (env : Array B) (t s : Term env.len) (p : interpretNF env (normalize (t :+ s)) = B.zro) : interpret env t = interpret env s
+    \lemma terms-equality (env : Array B) (t s : Term env.len) (p : interpretNF env (normalize (t :_+ s)) = B.zro) : interpret env t = interpret env s
       => B.fromZero $ pmap (_ +) B.negative=id *> inv (interpretNF=interpretNF' *> interpretNF_++ *> pmap2 (+) interpretNF'-consistent interpretNF'-consistent) *> p
 
-    \lemma terms-equality-conv (env : Array B) (t s : Term env.len) (p : interpret env t = interpret env s) : interpretNF env (normalize (t :+ s)) = B.zro
+    \lemma terms-equality-conv (env : Array B) (t s : Term env.len) (p : interpret env t = interpret env s) : interpretNF env (normalize (t :_+ s)) = B.zro
       => interpretNF=interpretNF' *> interpretNF_++ *> pmap2 (+) interpretNF'-consistent interpretNF'-consistent *> pmap (_ +) (inv B.negative=id) *> B.toZero p
 
     \lemma interpretNF_Big_++ {n : Nat} {env : Array B n} {l : Array (NF n)} {a : NF n} : interpretNF' env (Big (++) a l) = B.BigSum (Data.Array.map (interpretNF' env) l) + interpretNF' env a \elim l
@@ -248,6 +248,6 @@
       | a l:: l' => interpretNF_multiply'_zro l'p p idp
 
     \lemma apply-axioms {n : Nat} (env : Array B n) (l : Array (\Sigma (NF n) (t s : Term n) (p : interpret env t = interpret env s))) (add : NF n)
-      : interpretNF env (Big (++) add (Data.Array.map (\lam s => multiply s.1 (normalize (s.2 :+ s.3))) l)) = interpretNF' env add
+      : interpretNF env (Big (++) add (Data.Array.map (\lam s => multiply s.1 (normalize (s.2 :_+ s.3))) l)) = interpretNF' env add
       => interpretNF=interpretNF' *> interpretNF_Big_++ *> pmap (+ _) (B.BigSum_zro \lam j => interpretNF_multiply_zro (all-++ normalize-nonEmpty normalize-nonEmpty) $ interpretNF_++ *> pmap (_ +) (inv B.negative=id) *> B.toZero (later $ interpretNF'-consistent *> (l j).4 *> inv interpretNF'-consistent)) *> zro-left
   }

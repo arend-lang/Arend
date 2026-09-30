@@ -25,6 +25,7 @@ import org.arend.core.pattern.ExpressionPattern
 import org.arend.core.subst.ExprSubstitution
 import org.arend.core.subst.SubstVisitor
 import org.arend.error.DummyErrorReporter
+import org.arend.ext.core.context.BindingVariance
 import org.arend.ext.core.level.LevelSubstitution
 import org.arend.ext.error.ListErrorReporter
 import org.arend.ext.prettyprinting.DefinitionRenamer
@@ -573,7 +574,7 @@ class ExpectedConstructorQuickFix(val error: ExpectedConstructorError, val cause
                 return Concrete.CaseExpression(null, concreteCaseExpression.isSCase, newCaseArgs.map {
                     Concrete.CaseArgument(it.first.expression.accept(renamingVisitor, null),
                         it.first.referable,
-                        it.first.type?.accept(renamingVisitor, null), it.first.isElim) }, concreteCaseExpression.resultType,
+                        it.first.type?.accept(renamingVisitor, null), it.first.isElim, BindingVariance.INVARIANT) }, concreteCaseExpression.resultType,
                     concreteCaseExpression.resultTypeLevel, newClauses)
             }
 

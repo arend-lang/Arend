@@ -196,13 +196,13 @@ public class TypeCheckingTest extends TypeCheckingTestCase {
   @Test
   public void isoSet() {
     typeCheckModule("\\func setExt (A B : \\Set0) (f : A -> B) (g : B -> A) (p : \\Pi (x : A) -> g (f x) = x) (q : \\Pi (y : B) -> f (g y) = y) => path {\\lam _ => \\Set0} (iso f g p q)");
-    assertEquals(new UniverseExpression(Sort.SET0), ((FunctionDefinition) getDefinition("setExt")).getResultType().normalize(NormalizationMode.WHNF).cast(DataCallExpression.class).getDefCallArguments().getFirst().cast(LamExpression.class).getBody());
+    assertEquals(new UniverseExpression(Sort.SET0), ((FunctionDefinition) getDefinition("setExt")).getResultType().normalize(NormalizationMode.WHNF).cast(PathTypeExpression.class).getArgumentType().cast(LamExpression.class).getBody());
   }
 
   @Test
   public void isoSet2() {
     typeCheckModule("\\func setExt (A B : \\Set0) (f : A -> B) (g : B -> A) (p : \\Pi (x : A) -> g (f x) = x) (q : \\Pi (y : B) -> f (g y) = y) : A = {\\Set0} B => path (iso f g p q)");
-    assertEquals(new UniverseExpression(Sort.SET0), ((FunctionDefinition) getDefinition("setExt")).getResultType().cast(FunCallExpression.class).getDefCallArguments().getFirst());
+    assertEquals(new UniverseExpression(Sort.SET0), ((FunctionDefinition) getDefinition("setExt")).getResultType().cast(PathTypeExpression.class).getArgumentType().cast(LamExpression.class).getBody());
   }
 
   @Test

@@ -383,4 +383,79 @@ public class IdpTest extends TypeCheckingTestCase {
       """, 1);
     assertThatErrorsAre(Matchers.typecheckingError(IdpPatternError.class));
   }
+
+  @Test
+  public void covariantTest() {
+    typeCheckDef("""
+      \\func test {A : \\Set} {a a' :+ A} (p :+ a = a') : Nat \\elim p
+        | idp => 0
+      """);
+  }
+
+  @Test
+  public void covariantTest2() {
+    typeCheckDef("""
+      \\func foo {A : \\Set} (a : A) => A
+      \\func test {A : \\Set} {a :+ A} {a' : A} (p :+ a = a') : A \\elim p
+        | idp => foo a'
+      """);
+  }
+
+  @Test
+  public void covariantTest3() {
+    typeCheckDef("""
+      \\func foo {A : \\Set} (a : A) => A
+      \\func test {A : \\Set} {a : A} {a' :+ A} (p :+ a = a') : A \\elim p
+        | idp => foo a
+      """);
+  }
+
+  @Test
+  public void covariantTest4() {
+    typeCheckDef("""
+      \\func test {A : \\Set} {a :+ A} {f :+ Nat ->+ A} (p :+ a = f 0) : Nat \\elim p
+        | idp => 0
+      """);
+  }
+
+  @Test
+  public void covariantTest5() {
+    typeCheckDef("""
+      \\func test {A : \\Set} {a :+ A} {f :+ Nat ->+ A} (p :+ f 0 = a) : Nat \\elim p
+        | idp => 0
+      """);
+  }
+
+  @Test
+  public void covariantError() {
+    typeCheckDef("""
+      \\func test {A : \\Set} {a a' : A} (p :+ a = a') : Nat \\elim p
+        | idp => 0
+      """, 1);
+  }
+
+
+  @Test
+  public void covariantError2() {
+    typeCheckDef("""
+      \\func test {A : \\Set} {a : A} {f :+ Nat ->+ A} (p :+ a = f 0) : Nat \\elim p
+        | idp => 0
+      """, 1);
+  }
+
+  @Test
+  public void covariantError3() {
+    typeCheckDef("""
+      \\func test {A : \\Set} {a : A} {f :+ Nat ->+ A} (p :+ f 0 = a) : Nat \\elim p
+        | idp => 0
+      """, 1);
+  }
+
+  @Test
+  public void covariantHomError() {
+    typeCheckDef("""
+      \\func test {A : \\Set} {a a' : A} (p :+ a ~> a') : Nat \\elim p
+        | idd => 0
+      """, 1);
+  }
 }

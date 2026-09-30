@@ -318,6 +318,28 @@ public class CaseTest extends TypeCheckingTestCase {
         => \\case x \\as x_, \\elim p : x_ = x \\with {
           | x, idp => idp
         }
+      """, 2);
+  }
+
+  @Test
+  public void largeElimTest() {
+    typeCheckModule("""
+      \\func test (x : Nat) : \\Set
+        => \\case \\elim x \\with {
+          | 0 => Nat
+          | suc _ => Nat
+        }
+      """, 1);
+  }
+
+  @Test
+  public void largeElimTest2() {
+    typeCheckModule("""
+      \\func test (x : Nat)
+        => \\case \\elim x \\return \\Set \\with {
+          | 0 => Nat
+          | suc _ => Nat
+        }
       """, 1);
   }
 }

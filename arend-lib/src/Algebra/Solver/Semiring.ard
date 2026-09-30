@@ -36,7 +36,7 @@
       | coef C
       | :zro
       | :ide
-      | \infixl 6 :+ (t s : Term C n)
+      | \infixl 6 :_+ (t s : Term C n)
       | \infixl 7 :* (t s : Term C n)
 
     \func NF (C : \Set) (n : Nat) => List (\Sigma (List (Fin n)) C)
@@ -46,7 +46,7 @@
       | coef c => (nil, c) :: nil
       | :zro => nil
       | :ide => (nil, 1) :: nil
-      | t :+ s => normalize t ++ normalize s
+      | t :_+ s => normalize t ++ normalize s
       | t :* s => remove0 (collapse (multiply (normalize t) (normalize s)))
 
     \func multiply {n : Nat} {C : Monoid} (l1 l2 : NF C n) : NF C n \elim l2
@@ -85,8 +85,8 @@
         | var c => env c
         | :zro => 0
         | :ide => 1
-        | :+ t s => interpret t + interpret s
-        | :* t s => interpret t * interpret s
+        | t :_+ s => interpret t + interpret s
+        | t :* s => interpret t * interpret s
 
       \func mulCoef (c : C) (l : List (Fin env.len)) : R \elim l
         | nil => alg c
@@ -185,8 +185,8 @@
         | var v => rewrite (decideEq=_reduce idp) idp
         | :zro => idp
         | :ide => func-ide
-        | :+ t s => interpretNF_++ *> pmap2 (+) normalize-consistent normalize-consistent
-        | :* t s => remove0-consistent *> collapse-consistent *> interpretNF_multiply *> pmap2 (*) normalize-consistent normalize-consistent
+        | t :_+ s => interpretNF_++ *> pmap2 (+) normalize-consistent normalize-consistent
+        | t :* s => remove0-consistent *> collapse-consistent *> interpretNF_multiply *> pmap2 (*) normalize-consistent normalize-consistent
 
       \lemma interpretNF-correct {l : NF} : interpretNF l = interpretNF' l
         => remove0-consistent *> collapse-consistent *> sort-consistent

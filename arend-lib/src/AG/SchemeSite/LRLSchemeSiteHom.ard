@@ -218,17 +218,17 @@
     \func LRL-equiv.{u} {L : LocallyRingedLocale.{u}} {S : SatSchemeSite.{u}} : QEquiv {LRLSchemeSiteHom L S} {LocallyRingedLocaleHom L S.toScheme} \cowith
       | f f => f.toLRLHom
       | ret => fromLRLHom
-      | ret_f f => inv $ equals
+      | ret_f f => sym $ equals
         (\lam a => SJoin-cond $ cover-refl idp)
-        (\lam a => SJoin-univ \lam {b} b<=a => LocaleSite.locale_cover (f.toPreorderSiteHom.func-Cover b<=a) <=∘ SJoin-univ \lam p => func-<= (=_<= (inv p)))
+        (\lam a => SJoin-univ \lam {b} b<=a => LocaleSite.locale_cover (f.toPreorderSiteHom.func-Cover b<=a) <=∘ SJoin-univ \lam p => func-<= (=_<= (sym p)))
         \lam a x => path (\lam i => IsEquiv.f_ret (VSheaf.sheaf-locale_SJoin L.R) {LRLSchemeSiteHom.toLRLHom.matchingFamily {f} (embed a)} i (a, cover-refl idp) _) *>
           pmap (f.f# a) ((CRingCat.Iso_QEquiv (SiteLocaleSheaf.embed-iso {S.toSite} S.toLRLSite.R-sheaf {a})).f_ret x)
       | f_sec f => LocallyRingedLocaleHom.equals {L} {S.toScheme}
         (\lam U => SJoin-univ \lam Ua => unfold $ func-<= $ embed-univ Ua)
         (\lam U => func-<= (=_<= element_SJoin) <=∘ f.func-SJoin>= <=∘ SJoin-univ \lam Ua => SJoin-cond Ua)
-        \lam U => SeparatedVPresheaf.separated-locale_SJoin L.R (LimitCRing $ SiteLocaleSheaf.extend.limFunctor U) \lam {a} Ua => inv $
+        \lam U => SeparatedVPresheaf.separated-locale_SJoin L.R (LimitCRing $ SiteLocaleSheaf.extend.limFunctor U) \lam {a} Ua => sym $
           path (\lam i => IsEquiv.f_ret (VSheaf.sheaf-locale_SJoin L.R) {LRLSchemeSiteHom.toLRLHom.matchingFamily {fromLRLHom f} U} i (a,Ua)) *>
-          exts (\lam x => pmap (f.f# _) (inv $ (CRingCat.Iso_QEquiv (SiteLocaleSheaf.embed-iso {S.toSite} S.toLRLSite.R-sheaf)).adjoint $ unfold idp)) *>
+          exts (\lam x => pmap (f.f# _) (sym $ (CRingCat.Iso_QEquiv (SiteLocaleSheaf.embed-iso {S.toSite} S.toLRLSite.R-sheaf)).adjoint $ unfold idp)) *>
           f.f#.natural (embed-univ Ua) *> pmap (RingHom.∘ _) L.R.F.Func-o
 
   \protected \func compose-left \alias \infixl 8 ∘l.{u} {L M : LocallyRingedLocale.{u}} {U : SatSchemeSite.{u}} (g : LRLSchemeSiteHom M U) (f : LocallyRingedLocaleHom L M) : LRLSchemeSiteHom L U \cowith

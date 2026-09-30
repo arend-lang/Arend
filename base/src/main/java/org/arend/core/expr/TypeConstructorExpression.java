@@ -41,7 +41,14 @@ public class TypeConstructorExpression extends Expression implements CoreTypeCon
 
   public static Expression make(FunctionDefinition definition, Levels levels, int clauseIndex, List<Expression> clauseArguments, Expression argument) {
     TypeDestructorExpression typeDestructor = argument == null ? null : argument.cast(TypeDestructorExpression.class);
-    return typeDestructor != null && definition == typeDestructor.getDefinition() ? typeDestructor.getArgument() : new TypeConstructorExpression(definition, levels, clauseIndex, clauseArguments, argument);
+    return typeDestructor != null && definition == typeDestructor.getDefinition() && canCancel(clauseIndex, clauseArguments, typeDestructor.getArgument()) ? typeDestructor.getArgument() : new TypeConstructorExpression(definition, levels, clauseIndex, clauseArguments, argument);
+  }
+
+  private static boolean canCancel(int clauseIndex, List<Expression> clauseArguments, Expression argument) {
+    if (clauseIndex != -1) return true;
+    Expression type = argument.getType();
+    FunCallExpression funCall = type == null ? null : type.cast(FunCallExpression.class);
+    return funCall == null || funCall.getDefCallArguments().size() != clauseArguments.size();
   }
 
   public static Expression match(FunCallExpression funCall, Expression argument) {
@@ -119,8 +126,7 @@ public class TypeConstructorExpression extends Expression implements CoreTypeCon
     Expression expr = result.expression;
     Expression type = result.type;
     Expression typeNorm = type.normalize(NormalizationMode.WHNF);
-    while (typeNorm instanceof FunCallExpression && ((FunCallExpression) typeNorm).getDefinition().getKind() == CoreFunctionDefinition.Kind.TYPE) {
-      FunCallExpression funCall = (FunCallExpression) typeNorm;
+    while (typeNorm instanceof FunCallExpression funCall && funCall.getDefinition().getKind() == CoreFunctionDefinition.Kind.TYPE) {
       Expression next = match(funCall, null);
       if (next == null) break;
       type = ((TypeConstructorExpression) next).getArgumentType();

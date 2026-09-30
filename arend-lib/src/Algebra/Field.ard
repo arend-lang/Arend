@@ -148,7 +148,7 @@
     | inP (y,yy=x) => inP (finv y, inv finv_* *> pmap finv yy=x)
 } \where {
   \private \lemma aux {R : CRing} (p : R.zro /= R.ide) (x : R) (q : (x = 0) || Inv x) : (x = 0) `Or` Inv x
-    \level Or.levelProp (\lam x=0 (j : Inv x) => p $ inv R.zro_*-left *> pmap (* _) (inv x=0) *> j.inv-right)
+    \level Or.levelProp (\lam x=0 (j : Inv x) => p $ sym R.zro_*-left *> pmap (* _) (sym x=0) *> j.inv-right)
     => \case q \with {
          | byLeft r => inl r
          | byRight r => inr r

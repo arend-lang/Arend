@@ -37,7 +37,8 @@ public class DynamicScope implements Scope {
 
     while (!toVisit.isEmpty()) {
       DynamicScopeProvider provider = toVisit.removeLast();
-      if (!visited.add(provider.getReferable())) {
+      GlobalReferable providerRef = provider.getReferable();
+      if (providerRef == null || !visited.add(providerRef)) {
         continue;
       }
 
@@ -66,11 +67,13 @@ public class DynamicScope implements Scope {
         for (GlobalReferable superRef : superRefs) {
           DynamicScopeProvider superProvider = myTypingInfo.getDynamicScopeProvider(superRef);
           if (superProvider == null) continue;
-          if (pred.test(superProvider.getReferable())) {
-            return superProvider.getReferable();
+          GlobalReferable superProviderRef = superProvider.getReferable();
+          if (superProviderRef == null) superProviderRef = superRef;
+          if (pred.test(superProviderRef)) {
+            return superProviderRef;
           }
-          if (superProvider.getReferable().hasAlias()) {
-            AliasReferable aliasRef = new AliasReferable(superProvider.getReferable());
+          if (superProviderRef.hasAlias()) {
+            AliasReferable aliasRef = new AliasReferable(superProviderRef);
             if (pred.test(aliasRef)) {
               return aliasRef;
             }

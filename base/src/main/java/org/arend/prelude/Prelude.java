@@ -1,10 +1,8 @@
 package org.arend.prelude;
 
-import org.arend.core.context.param.DependentLink;
-import org.arend.core.context.param.EmptyDependentLink;
-import org.arend.core.context.param.TypedDependentLink;
-import org.arend.core.context.param.UnusedIntervalDependentLink;
+import org.arend.core.context.param.*;
 import org.arend.core.definition.*;
+import org.arend.core.elimtree.IntervalElim;
 import org.arend.core.expr.*;
 import org.arend.core.pattern.BindingPattern;
 import org.arend.core.pattern.ConstructorExpressionPattern;
@@ -15,10 +13,8 @@ import org.arend.core.sort.SortExpression;
 import org.arend.core.subst.Levels;
 import org.arend.error.DummyErrorReporter;
 import org.arend.ext.ArendPrelude;
-import org.arend.ext.core.definition.CoreClassDefinition;
-import org.arend.ext.core.definition.CoreClassField;
-import org.arend.ext.core.definition.CoreDataDefinition;
-import org.arend.ext.core.definition.CoreFunctionDefinition;
+import org.arend.ext.core.context.BindingVariance;
+import org.arend.ext.core.definition.*;
 import org.arend.ext.core.level.ConstLevel;
 import org.arend.ext.module.ModulePath;
 import org.arend.ext.reference.ArendRef;
@@ -59,6 +55,23 @@ public class Prelude implements ArendPrelude {
   public static Constructor LEFT, RIGHT;
   public static FunctionDefinition SQUEEZE, SQUEEZE_R;
 
+  public static DataDefinition DI;
+  public static Constructor DLEFT, DRIGHT;
+
+  public static DataDefinition DPATH;
+  public static FunctionDefinition DPATH_INFIX;
+  public static Constructor DPATH_CON;
+  public static FunctionDefinition DAT;
+
+  public static FunctionDefinition FILL2, FILL3;
+  public static FunctionDefinition COERCE_PLUS;
+  public static FunctionDefinition ISO_PLUS, ISO_COE_PLUS;
+  public static DataDefinition RESIZE_PLUS;
+  public static Constructor RESIZE_PLUS_CON;
+  public static DataDefinition GROUPOID_TYPE;
+  public static Constructor GROUPOID_TYPE_CON;
+  public static FunctionDefinition REZK;
+
   public static DataDefinition NAT;
   public static Constructor ZERO, SUC;
   public static FunctionDefinition PLUS, MUL, MINUS;
@@ -79,6 +92,7 @@ public class Prelude implements ArendPrelude {
   public static Constructor PATH_CON;
 
   public static DConstructor IDP;
+  public static DConstructor IDD;
   public static FunctionDefinition AT;
   public static FunctionDefinition ISO;
 
@@ -99,6 +113,10 @@ public class Prelude implements ArendPrelude {
 
   public static boolean isInitialized() {
     return IS_INITIALIZED;
+  }
+
+  public static boolean isIdpFunction(Definition def) {
+    return def == IDP || def == IDD;
   }
 
   private Prelude() {}
@@ -158,30 +176,139 @@ public class Prelude implements ArendPrelude {
         SQUEEZE_R = (FunctionDefinition) definition;
         SQUEEZE_R.setStatus(Definition.TypeCheckingStatus.NO_ERRORS);
       }
+      case "DI" -> {
+        DI = (DataDefinition) definition;
+        DI.setSort(new Sort(new Level(BigInteger.ZERO), ConstLevel.CAT_INFINITY));
+        DLEFT = DI.getConstructor("dleft");
+        DRIGHT = DI.getConstructor("dright");
+      }
+      case "DPath" -> {
+        DPATH = (DataDefinition) definition;
+        DPATH.setSortExpression(new SortExpression.Var(0, Collections.emptyList(), ConstLevel.INFINITY));
+        DPATH.setCovariant(1, false);
+        DPATH.setCovariant(2, false);
+        DPATH_CON = DPATH.getConstructor("dpath");
+      }
+      case "~>" -> {
+        DPATH_INFIX = (FunctionDefinition) definition;
+        DPATH_INFIX.setResultType(new UniverseExpression(new SortExpression.Var(0, Collections.emptyList(), ConstLevel.INFINITY)));
+      }
+      case "d@" -> {
+        DAT = (FunctionDefinition) definition;
+        DAT.setStatus(Definition.TypeCheckingStatus.NO_ERRORS);
+      }
+      case "fill2" -> {
+        FILL2 = (FunctionDefinition) definition;
+        DependentLink a = FILL2.getParameters().getNext();
+        DependentLink f = a.getNext().getNext().getNext();
+        DependentLink g = f.getNext();
+        DependentLink i = g.getNext();
+        DependentLink j = i.getNext();
+
+        List<IntervalElim.CasePair> cases = new ArrayList<>(2);
+        cases.add(new IntervalElim.CasePair(new ReferenceExpression(a), AtExpression.make(new ReferenceExpression(g), new ReferenceExpression(j), false, true), true));
+        cases.add(new IntervalElim.CasePair(AtExpression.make(new ReferenceExpression(f), new ReferenceExpression(i), false, true), null, true));
+
+        FILL2.setBody(new IntervalElim(8, cases, null));
+        FILL2.setStatus(Definition.TypeCheckingStatus.NO_ERRORS);
+      }
+      case "fill3" -> {
+        FILL3 = (FunctionDefinition) definition;
+        DependentLink leftFace = DependentLink.Helper.get(FILL3.getParameters(), 20);
+        DependentLink rightFace = leftFace.getNext();
+        DependentLink backFace = rightFace.getNext();
+        DependentLink frontFace = backFace.getNext();
+        DependentLink topFace = frontFace.getNext();
+        DependentLink i = topFace.getNext();
+        DependentLink j = i.getNext();
+        DependentLink k = j.getNext();
+
+        List<IntervalElim.CasePair> cases = new ArrayList<>(3);
+        cases.add(new IntervalElim.CasePair(
+          AtExpression.make(AtExpression.make(new ReferenceExpression(leftFace), new ReferenceExpression(k), false, true), new ReferenceExpression(j), false, true),
+          AtExpression.make(AtExpression.make(new ReferenceExpression(rightFace), new ReferenceExpression(k), false, true), new ReferenceExpression(j), false, true),
+          true));
+        cases.add(new IntervalElim.CasePair(
+          AtExpression.make(AtExpression.make(new ReferenceExpression(backFace), new ReferenceExpression(i), false, true), new ReferenceExpression(k), false, true),
+          AtExpression.make(AtExpression.make(new ReferenceExpression(frontFace), new ReferenceExpression(i), false, true), new ReferenceExpression(k), false, true),
+          true));
+        cases.add(new IntervalElim.CasePair(
+          AtExpression.make(AtExpression.make(new ReferenceExpression(topFace), new ReferenceExpression(i), false, true), new ReferenceExpression(j), false, true),
+          null,
+          true));
+
+        FILL3.setBody(new IntervalElim(24, cases, null));
+        FILL3.setStatus(Definition.TypeCheckingStatus.NO_ERRORS);
+      }
+      case "coe+" -> {
+        COERCE_PLUS = (FunctionDefinition) definition;
+        DependentLink a = COERCE_PLUS.getParameters().getNext();
+        COERCE_PLUS.setBody(new IntervalElim(3, Collections.singletonList(new IntervalElim.CasePair(new ReferenceExpression(a), null, true)), null));
+        COERCE_PLUS.setStatus(Definition.TypeCheckingStatus.NO_ERRORS);
+      }
+      case "iso+" -> {
+        ISO_PLUS = (FunctionDefinition) definition;
+        DependentLink A = ISO_PLUS.getParameters();
+        DependentLink B = A.getNext();
+        ISO_PLUS.setBody(new IntervalElim(4, Collections.singletonList(new IntervalElim.CasePair(new ReferenceExpression(A), new ReferenceExpression(B), true)), null));
+        ISO_PLUS.setStatus(Definition.TypeCheckingStatus.NO_ERRORS);
+      }
+      case "iso+_coe+" -> {
+        ISO_COE_PLUS = (FunctionDefinition) definition;
+        DependentLink A = ISO_COE_PLUS.getParameters();
+        DependentLink B = A.getNext();
+        DependentLink p = B.getNext();
+        DependentLink i = p.getNext();
+
+        // \lam a => coe+ (\lam k => p k) a dright
+        TypedSingleDependentLink k = new TypedSingleDependentLink(true, "k", DI(), false, BindingVariance.COVARIANT);
+        TypedSingleDependentLink a = new TypedSingleDependentLink(true, "a", new ReferenceExpression(A), false, BindingVariance.COVARIANT);
+        Expression coeFamily = new LamExpression(k, AtExpression.make(new ReferenceExpression(p), new ReferenceExpression(k), false, true));
+        Expression coeFun = new LamExpression(a, FunCallExpression.make(COERCE_PLUS, ISO_COE_PLUS.makeIdLevels(), Arrays.asList(coeFamily, new ReferenceExpression(a), Right(true))));
+        Expression isoFace = FunCallExpression.make(ISO_PLUS, ISO_COE_PLUS.makeIdLevels(), Arrays.asList(new ReferenceExpression(A), new ReferenceExpression(B), coeFun, new ReferenceExpression(i)));
+
+        List<IntervalElim.CasePair> cases = new ArrayList<>(2);
+        cases.add(new IntervalElim.CasePair(new ReferenceExpression(A), new ReferenceExpression(B), true));
+        cases.add(new IntervalElim.CasePair(isoFace, AtExpression.make(new ReferenceExpression(p), new ReferenceExpression(i), false, true), false));
+
+        ISO_COE_PLUS.setBody(new IntervalElim(5, cases, null));
+        ISO_COE_PLUS.setStatus(Definition.TypeCheckingStatus.NO_ERRORS);
+      }
+      case "Resize+" -> {
+        RESIZE_PLUS = (DataDefinition) definition;
+        RESIZE_PLUS.setSort(new Sort(new Level(RESIZE_PLUS.getLevelParameters().getFirst()), ConstLevel.INFINITY));
+        RESIZE_PLUS_CON = RESIZE_PLUS.getConstructor("resize+");
+      }
+      case "GroupoidType" -> {
+        GROUPOID_TYPE = (DataDefinition) definition;
+        // A groupoid is a type, but not a small one, even if its carrier is small
+        GROUPOID_TYPE.setSort(new Sort(Level.INFINITY, ConstLevel.INFINITY));
+        GROUPOID_TYPE_CON = GROUPOID_TYPE.getConstructor("groupoidType");
+      }
+      case "rezk" -> {
+        REZK = (FunctionDefinition) definition;
+        REZK.setStatus(Definition.TypeCheckingStatus.NO_ERRORS);
+      }
       case "Path" -> {
         PATH = (DataDefinition) definition;
-        PATH.setSortExpression(new SortExpression.Prev(new SortExpression.Var(0, Collections.emptyList())));
+        PATH.setSortExpression(new SortExpression.Prev(new SortExpression.Var(0, Collections.emptyList(), ConstLevel.INFINITY)));
         PATH.setCovariant(1, false);
         PATH.setCovariant(2, false);
         PATH_CON = PATH.getConstructor("path");
       }
       case "=" -> {
         PATH_INFIX = (FunctionDefinition) definition;
-        DataCallExpression dataCall = (DataCallExpression) PATH_INFIX.getBody();
-        assert dataCall != null;
-        PATH_INFIX.setBody(DataCallExpression.make(dataCall.getDefinition(), dataCall.getLevels(), Arrays.asList(new LamExpression(UnusedIntervalDependentLink.INSTANCE, ((LamExpression) dataCall.getDefCallArguments().get(0)).getBody()), dataCall.getDefCallArguments().get(1), dataCall.getDefCallArguments().get(2))));
+        PathTypeExpression pathType = (PathTypeExpression) PATH_INFIX.getBody();
+        assert pathType != null;
+        PATH_INFIX.setResultType(new UniverseExpression(new SortExpression.Prev(new SortExpression.Var(0, Collections.emptyList(), ConstLevel.INFINITY))));
       }
       case "idp" -> {
         IDP = (DConstructor) definition;
-        List<Expression> args = new ArrayList<>(2);
-        args.add(new ReferenceExpression(IDP.getParameters()));
-        args.add(new ReferenceExpression(IDP.getParameters().getNext()));
-        IDP.setPattern(new ConstructorExpressionPattern(FunCallExpression.makeFunCall(IDP, Levels.EMPTY, args), Collections.emptyList()));
-        IDP.setNumberOfParameters(2);
-        IDP.setStatus(Definition.TypeCheckingStatus.NO_ERRORS);
-        PathExpression pathExpr = (PathExpression) IDP.getBody();
-        assert pathExpr != null;
-        IDP.setBody(new PathExpression(new LamExpression(UnusedIntervalDependentLink.INSTANCE, args.getFirst()), new LamExpression(UnusedIntervalDependentLink.INSTANCE, ((LamExpression) pathExpr.getArgument()).getBody())));
+        setIdpBody(IDP);
+      }
+      case "idd" -> {
+        IDD = (DConstructor) definition;
+        setIdpBody(IDD);
       }
       case "@" -> {
         AT = (FunctionDefinition) definition;
@@ -197,7 +324,7 @@ public class Prelude implements ArendPrelude {
       }
       case "iso" -> {
         ISO = (FunctionDefinition) definition;
-        ISO.setResultType(new UniverseExpression(SortExpression.makeMax(Arrays.asList(new SortExpression.Var(0, Collections.emptyList()), new SortExpression.Var(1, Collections.emptyList())))));
+        ISO.setResultType(new UniverseExpression(SortExpression.makeMax(Arrays.asList(new SortExpression.Var(0, Collections.emptyList(), ConstLevel.INFINITY), new SortExpression.Var(1, Collections.emptyList(), ConstLevel.INFINITY)))));
         ISO.setStatus(Definition.TypeCheckingStatus.NO_ERRORS);
       }
       case "divMod" -> {
@@ -241,6 +368,19 @@ public class Prelude implements ArendPrelude {
     }
   }
 
+  private static void setIdpBody(DConstructor definition) {
+    List<Expression> args = new ArrayList<>(2);
+    args.add(new ReferenceExpression(definition.getParameters()));
+    args.add(new ReferenceExpression(definition.getParameters().getNext()));
+    definition.setPattern(new ConstructorExpressionPattern(FunCallExpression.makeFunCall(definition, Levels.EMPTY, args), Collections.emptyList()));
+    definition.setNumberOfParameters(2);
+    definition.setStatus(Definition.TypeCheckingStatus.NO_ERRORS);
+    PathExpression pathExpr = (PathExpression) definition.getBody();
+    assert pathExpr != null;
+    TypedSingleDependentLink param = definition == IDD ? UnusedDirectedIntervalDependentLink.INSTANCE : UnusedIntervalDependentLink.INSTANCE;
+    definition.setBody(new PathExpression(new LamExpression(param, args.getFirst()), new LamExpression(param, ((LamExpression) pathExpr.getArgument()).getBody()), definition == IDD, true));
+  }
+
   public static void forEach(Consumer<Definition> consumer) {
     consumer.accept(NAT);
     consumer.accept(PLUS);
@@ -258,10 +398,28 @@ public class Prelude implements ArendPrelude {
     consumer.accept(RIGHT);
     consumer.accept(SQUEEZE);
     consumer.accept(SQUEEZE_R);
+    consumer.accept(DI);
+    consumer.accept(DLEFT);
+    consumer.accept(DRIGHT);
+    consumer.accept(DPATH);
+    consumer.accept(DPATH_CON);
+    consumer.accept(DPATH_INFIX);
+    consumer.accept(DAT);
+    consumer.accept(FILL2);
+    consumer.accept(FILL3);
+    consumer.accept(COERCE_PLUS);
+    consumer.accept(ISO_PLUS);
+    consumer.accept(ISO_COE_PLUS);
+    consumer.accept(REZK);
+    consumer.accept(RESIZE_PLUS);
+    consumer.accept(RESIZE_PLUS_CON);
+    consumer.accept(GROUPOID_TYPE);
+    consumer.accept(GROUPOID_TYPE_CON);
     consumer.accept(PATH);
     consumer.accept(PATH_CON);
     consumer.accept(PATH_INFIX);
     consumer.accept(IDP);
+    consumer.accept(IDD);
     consumer.accept(AT);
     consumer.accept(COERCE);
     consumer.accept(COERCE2);
@@ -331,6 +489,91 @@ public class Prelude implements ArendPrelude {
   }
 
   @Override
+  public DataDefinition getDI() {
+    return DI;
+  }
+
+  @Override
+  public Constructor getDLeft() {
+    return DLEFT;
+  }
+
+  @Override
+  public Constructor getDRight() {
+    return DRIGHT;
+  }
+
+  @Override
+  public DataDefinition getDPath() {
+    return DPATH;
+  }
+
+  @Override
+  public Constructor getDPathCon() {
+    return DPATH_CON;
+  }
+
+  @Override
+  public FunctionDefinition getDAt() {
+    return DAT;
+  }
+
+  @Override
+  public FunctionDefinition getHomType() {
+    return DPATH_INFIX;
+  }
+
+  @Override
+  public FunctionDefinition getFill2() {
+    return FILL2;
+  }
+
+  @Override
+  public FunctionDefinition getFill3() {
+    return FILL3;
+  }
+
+  @Override
+  public DataDefinition getResize() {
+    return RESIZE_PLUS;
+  }
+
+  @Override
+  public Constructor getResizeCon() {
+    return RESIZE_PLUS_CON;
+  }
+
+  @Override
+  public DataDefinition getGroupoidType() {
+    return GROUPOID_TYPE;
+  }
+
+  @Override
+  public Constructor getGroupoidTypeCon() {
+    return GROUPOID_TYPE_CON;
+  }
+
+  @Override
+  public CoreFunctionDefinition getRezk() {
+    return REZK;
+  }
+
+  @Override
+  public CoreFunctionDefinition getCoePlus() {
+    return COERCE_PLUS;
+  }
+
+  @Override
+  public CoreFunctionDefinition getIsoPlus() {
+    return ISO_PLUS;
+  }
+
+  @Override
+  public CoreFunctionDefinition getIsoCoePlus() {
+    return ISO_COE_PLUS;
+  }
+
+  @Override
   public DataDefinition getNat() {
     return NAT;
   }
@@ -381,7 +624,7 @@ public class Prelude implements ArendPrelude {
   }
 
   @Override
-  public CoreDataDefinition getString() {
+  public DataDefinition getString() {
     return STRING;
   }
 
@@ -413,6 +656,11 @@ public class Prelude implements ArendPrelude {
   @Override
   public DConstructor getIdp() {
     return IDP;
+  }
+
+  @Override
+  public DConstructor getIdd() {
+    return IDD;
   }
 
   @Override
@@ -511,6 +759,91 @@ public class Prelude implements ArendPrelude {
   }
 
   @Override
+  public ArendRef getDIRef() {
+    return DI == null ? null : DI.getRef();
+  }
+
+  @Override
+  public ArendRef getDLeftRef() {
+    return DLEFT == null ? null : DLEFT.getRef();
+  }
+
+  @Override
+  public ArendRef getDRightRef() {
+    return DRIGHT == null ? null : DRIGHT.getRef();
+  }
+
+  @Override
+  public ArendRef getDPathRef() {
+    return DPATH == null ? null : DPATH.getRef();
+  }
+
+  @Override
+  public ArendRef getDPathConRef() {
+    return DPATH_CON == null ? null : DPATH_CON.getRef();
+  }
+
+  @Override
+  public ArendRef getDAtRef() {
+    return DAT == null ? null : DAT.getRef();
+  }
+
+  @Override
+  public ArendRef getHomTypeRef() {
+    return DPATH_INFIX == null ? null : DPATH_INFIX.getRef();
+  }
+
+  @Override
+  public ArendRef getFill2Ref() {
+    return FILL2 == null ? null : FILL2.getRef();
+  }
+
+  @Override
+  public ArendRef getFill3Ref() {
+    return FILL3 == null ? null : FILL3.getRef();
+  }
+
+  @Override
+  public ArendRef getResizeRef() {
+    return RESIZE_PLUS == null ? null : RESIZE_PLUS.getRef();
+  }
+
+  @Override
+  public ArendRef getResizeConRef() {
+    return RESIZE_PLUS_CON == null ? null : RESIZE_PLUS_CON.getRef();
+  }
+
+  @Override
+  public ArendRef getGroupoidTypeRef() {
+    return GROUPOID_TYPE == null ? null : GROUPOID_TYPE.getRef();
+  }
+
+  @Override
+  public ArendRef getGroupoidTypeConRef() {
+    return GROUPOID_TYPE_CON == null ? null : GROUPOID_TYPE_CON.getRef();
+  }
+
+  @Override
+  public ArendRef getRezkRef() {
+    return REZK == null ? null : REZK.getRef();
+  }
+
+  @Override
+  public ArendRef getCoePlusRef() {
+    return COERCE_PLUS == null ? null : COERCE_PLUS.getRef();
+  }
+
+  @Override
+  public ArendRef getIsoPlusRef() {
+    return ISO_PLUS == null ? null : ISO_PLUS.getRef();
+  }
+
+  @Override
+  public ArendRef getIsoCoePlusRef() {
+    return ISO_COE_PLUS == null ? null : ISO_COE_PLUS.getRef();
+  }
+
+  @Override
   public ArendRef getNatRef() {
     return NAT == null ? null : NAT.getRef();
   }
@@ -593,6 +926,11 @@ public class Prelude implements ArendPrelude {
   @Override
   public ArendRef getIdpRef() {
     return IDP == null ? null : IDP.getRef();
+  }
+
+  @Override
+  public ArendRef getIddRef() {
+    return IDD == null ? null : IDD.getRef();
   }
 
   @Override

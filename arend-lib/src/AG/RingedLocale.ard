@@ -312,7 +312,7 @@
         | inP (b,ba,bx,_) =>
           \have b<=V => xp.2 (embed-univ $ cover-inj ba idp) ((proj b).equiv-Inv (proj-eq b) $ transport Inv (x.2 ba) bx.1)
           \in ideal-iso (embed-iso R-sheaf) (later \lam (inP (d, inP (W,UW,Wd), c, cd, cb, cl)) =>
-                inP (W, UW, embed c, embed-univ $ W.2 $ cover-inj cd Wd, embed-univ (cover-inj cb idp) <=∘ b<=V,
+                inP (W, UW, embed c, embed-univ $ W.2 $ cover-inj cd Wd, embed-univ {_} {_} {embed b} (cover-inj cb idp) <=∘ b<=V,
                      Localization.equiv-transport1.reverse (proj a) (proj-eq a) cl (proj c) (proj-eq c) \lam z => z.2 _)) $
               ap ba (proj a x) bx $ (b<=V <=∘ V<=U) (cover-refl idp)
       }, \lam {U} U<=a => element_SJoin_<= U<=a <=∘ SJoin-univ (later \lam {b} (Ub,ba) => embed-univ $ cover-sub (aq ba)

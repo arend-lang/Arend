@@ -56,7 +56,7 @@ public class ElimBody implements Body, CoreElimBody {
   }
 
   private static DependentLink copyDependentLink(DependentLink link, ExprSubstitution substitution, LinkList linkList) {
-    TypedDependentLink result = new TypedDependentLink(link.isExplicit(), link.getName(), link.getType().subst(substitution), link.isHidden(), EmptyDependentLink.getInstance());
+    TypedDependentLink result = new TypedDependentLink(link.isExplicit(), link.getName(), link.getType().subst(substitution), link.isHidden(), link.getVariance(), EmptyDependentLink.getInstance());
     linkList.append(result);
     substitution.add(link, new ReferenceExpression(result));
     return result;
@@ -89,7 +89,7 @@ public class ElimBody implements Body, CoreElimBody {
 
         ConstructorExpressionPattern conPattern;
         if (key instanceof Constructor) {
-          if (!(type instanceof DataCallExpression dataCall)) {
+          if (!(type instanceof BaseDataCallExpression dataCall)) {
             throw new IllegalArgumentException();
           }
           boolean isFin = dataCall.getDefinition() == Prelude.FIN;
@@ -102,11 +102,12 @@ public class ElimBody implements Body, CoreElimBody {
             }
             continue;
           }
-          conPattern = new ConstructorExpressionPattern(new ConCallExpression(constructor, dataCall.getLevels(), dataCall.getDefCallArguments(), Collections.emptyList()), Collections.emptyList());
-          clauseElems.add(new Util.ConstructorClauseElem(constructor, dataCall.getLevels(), dataCall.getDefCallArguments()));
+          List<Expression> dataTypeArgs = dataCall.getDefCallArguments();
+          conPattern = new ConstructorExpressionPattern(new ConCallExpression(constructor, dataCall.getLevels(), dataTypeArgs, Collections.emptyList()), Collections.emptyList());
+          clauseElems.add(new Util.ConstructorClauseElem(constructor, dataCall.getLevels(), dataTypeArgs));
           newParams.addAll(DependentLink.Helper.toList(DependentLink.Helper.subst(constructor.getParameters(), new ExprSubstitution().add(constructor.getDataTypeParameters(), conCalls.getFirst().getDataTypeArguments()), conCalls.getFirst().getLevelSubstitution())));
-        } else if (key instanceof IdpConstructor) {
-          conPattern = ConstructorPattern.make(Prelude.IDP, Collections.emptyList()).toExpressionPattern(type);
+        } else if (key instanceof IdpConstructor idpKey) {
+          conPattern = ConstructorPattern.make(idpKey.isDirected() ? Prelude.IDD : Prelude.IDP, Collections.emptyList()).toExpressionPattern(type);
           clauseElems.add(new Util.PatternClauseElem(conPattern));
         } else if (key instanceof ArrayConstructor) {
           if (!(type instanceof ClassCallExpression classCall)) {

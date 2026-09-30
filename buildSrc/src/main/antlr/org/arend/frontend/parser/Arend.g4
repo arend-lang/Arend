@@ -21,7 +21,7 @@ scId : DOT? ID;
 
 nsId : scId (AS precedence ID)?;
 
-classFieldDef : accessMod? (CLASSIFYING | COERCE)? defId tele* ':' returnExpr;
+classFieldDef : accessMod? (CLASSIFYING | COERCE)? defId tele* COLON returnExpr;
 
 classFieldOrImpl : classFieldDef    # classField
                  | localCoClause    # classImpl
@@ -48,12 +48,12 @@ definition  : funcKw topDefId tele* (':' returnExpr2)? functionBody where?      
 
 superClass : longName (DOT levelArgs)?;
 
-returnExpr  : expr ('\\level' expr)?                # returnExprExpr
-            | '\\level' atomFieldsAcc atomFieldsAcc # returnExprLevel
+returnExpr  : expr ((LEVEL | LEVEL_PLUS) expr)?                # returnExprExpr
+            | (LEVEL | LEVEL_PLUS) atomFieldsAcc atomFieldsAcc # returnExprLevel
             ;
 
-returnExpr2 : expr2 ('\\level' expr2)?              # returnExprExpr2
-            | '\\level' atomFieldsAcc atomFieldsAcc # returnExprLevel2
+returnExpr2 : expr2 ((LEVEL | LEVEL_PLUS) expr2)?              # returnExprExpr2
+            | (LEVEL | LEVEL_PLUS) atomFieldsAcc atomFieldsAcc # returnExprLevel2
             ;
 
 funcKw      : '\\func'            # funcKwFunc
@@ -61,7 +61,7 @@ funcKw      : '\\func'            # funcKwFunc
             | '\\lemma'           # funcKwLemma
             | '\\type'            # funcKwType
             | COERCE              # funcKwCoerce
-            | '\\level'           # funcKwLevel
+            | LEVEL               # funcKwLevel
             | '\\axiom'           # funcKwAxiom
             ;
 
@@ -138,19 +138,19 @@ associativity : '\\infix'               # nonAssocInfix
 letKw : HAVE | LET | HAVES | LETS;
 
 expr  : appPrefix? appExpr (implementStatements argument*)? withBody?     # app
-      | <assoc=right> expr '->' expr                                      # arr
-      | '\\Pi' tele+ '->' expr                                            # pi
-      | '\\Sigma' tele*                                                   # sigma
+      | <assoc=right> expr (ARROW | ARROW_PLUS) expr                       # arr
+      | '\\Pi' tele+ (ARROW | ARROW_PLUS) expr                             # pi
+      | ('\\Sigma' | SIGMA_PLUS) tele*                                    # sigma
       | lamExpr                                                           # lam
       | letExpr                                                           # let
       | caseExpr                                                          # case
       ;
 
 expr2 : appPrefix? appExpr (implementStatements argument*)?               # app2
-      | <assoc=right> expr2 '->' expr2                                    # arr2
-      | '\\Pi' tele+ '->' expr2                                           # pi2
-      | '\\Sigma' tele*                                                   # sigma2
-      | '\\lam' lamParam+ ('=>' expr2?)?                                  # lam2
+      | <assoc=right> expr2 (ARROW | ARROW_PLUS) expr2                     # arr2
+      | '\\Pi' tele+ (ARROW | ARROW_PLUS) expr2                            # pi2
+      | ('\\Sigma' | SIGMA_PLUS) tele*                                    # sigma2
+      | '\\lam' lamParam+ (('=>' | FAT_ARROW_PLUS) expr2?)?               # lam2
       | letKw '|'? letClause ('|' letClause)* ('\\in' expr2?)?            # let2
       | caseExpr                                                          # case2
       ;
@@ -159,7 +159,7 @@ lamParam : nameTele     # lamTele
          | atomPattern  # lamPattern
          ;
 
-lamExpr : '\\lam' lamParam+ ('=>' expr?)?;
+lamExpr : '\\lam' lamParam+ (('=>' | FAT_ARROW_PLUS) expr?)?;
 
 caseExpr : (EVAL | PEVAL)? (CASE | SCASE) caseArg (',' caseArg)* ('\\return' returnExpr2)? withBody?;
 
@@ -169,7 +169,7 @@ withBody : '\\with' '{' clause? ('|' clause)* '}';
 
 appPrefix : NEW EVAL? | EVAL | PEVAL | BOX;
 
-caseArg : caseArgExprAs (':' expr2)?;
+caseArg : caseArgExprAs ((COLON | COLON_PLUS) expr2)?;
 
 caseArgExprAs : '\\elim' (ID | APPLY_HOLE)  # caseArgElim
               | expr2 (AS ID)?              # caseArgExpr
@@ -265,6 +265,7 @@ literal : ID                                # name
 universeAtom : TRUNCATED_UNIVERSE       # uniTruncatedUniverse
              | UNIVERSE                 # uniUniverse
              | SET                      # uniSetUniverse
+             | CAT_UNIVERSE             # uniCatUniverse
              ;
 
 tele : '(' typedExpr ')'                # explicit
@@ -275,19 +276,19 @@ tele : '(' typedExpr ')'                # explicit
 
 paramAttr : (STRICT | PROPERTY)?;
 
-typedExpr : paramAttr expr (':' expr)? ;
+typedExpr : paramAttr expr ((COLON | COLON_PLUS) expr)? ;
 
-nameTele : idOrUnknown                                            # nameId
-         | '(' paramAttr idOrUnknown+ ':' expr ')'                # nameExplicit
-         | '{' paramAttr idOrUnknown (idOrUnknown* ':' expr)? '}' # nameImplicit
+nameTele : idOrUnknown                                                    # nameId
+         | '(' paramAttr idOrUnknown+ (COLON | COLON_PLUS) expr ')'        # nameExplicit
+         | '{' paramAttr idOrUnknown (idOrUnknown* (COLON | COLON_PLUS) expr)? '}' # nameImplicit
          ;
 
 idOrUnknown : ID            # iuId
             | UNDERSCORE    # iuUnknown
             ;
 
-fieldTele : '(' accessMod? (CLASSIFYING | COERCE)? ID+ ':' expr ')'        # explicitFieldTele
-          | '{' accessMod? (CLASSIFYING | COERCE)? ID+ ':' expr '}'        # implicitFieldTele
+fieldTele : '(' accessMod? (CLASSIFYING | COERCE)? ID+ COLON expr ')'        # explicitFieldTele
+          | '{' accessMod? (CLASSIFYING | COERCE)? ID+ COLON expr '}'        # implicitFieldTele
           ;
 
 LET : '\\let';
@@ -314,6 +315,7 @@ NUMBER : [0-9]+;
 NEGATIVE_NUMBER : '-' [0-9]+;
 UNIVERSE : '\\Type' [0-9]*;
 TRUNCATED_UNIVERSE : '\\' NUMBER '-Type' [0-9]*;
+CAT_UNIVERSE : '\\Cat' [0-9]*;
 SET : '\\Set' [0-9]*;
 STRING : INCOMPLETE_STRING '"';
 INCOMPLETE_STRING : '"' (~["\\\r\n] | ESCAPE_SEQ)* EOF?;
@@ -323,7 +325,13 @@ fragment UNICODE_ESCAPE : '\\' 'u'+ HEX_DIGIT HEX_DIGIT HEX_DIGIT HEX_DIGIT;
 fragment HEX_DIGIT : [0-9a-fA-F];
 fragment OCT_DIGIT : [0-8];
 COLON : ':';
+COLON_PLUS : ':+' | ':⁺';
 ARROW : '->';
+ARROW_PLUS : '->+' | '->⁺';
+FAT_ARROW_PLUS : '=>+' | '=>⁺';
+LEVEL : '\\level';
+LEVEL_PLUS : '\\level+' | '\\level⁺';
+SIGMA_PLUS : '\\Sigma+' | '\\Sigma⁺';
 APPLY_HOLE : '__';
 UNDERSCORE : '_';
 DOT : '.';

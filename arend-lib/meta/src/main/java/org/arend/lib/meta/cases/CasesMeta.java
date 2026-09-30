@@ -1,14 +1,17 @@
 package org.arend.lib.meta.cases;
 
+import org.arend.ext.FreeBindingsModifier;
 import org.arend.ext.concrete.ConcreteClause;
 import org.arend.ext.concrete.ConcreteFactory;
 import org.arend.ext.concrete.ConcreteParameter;
 import org.arend.ext.concrete.expr.*;
 import org.arend.ext.core.body.CoreExpressionPattern;
+import org.arend.ext.core.context.CoreBinding;
 import org.arend.ext.core.context.CoreEvaluatingBinding;
 import org.arend.ext.core.context.CoreParameter;
 import org.arend.ext.core.expr.CoreDataCallExpression;
 import org.arend.ext.core.expr.CoreExpression;
+import org.arend.ext.core.expr.CorePathTypeExpression;
 import org.arend.ext.core.expr.CoreReferenceExpression;
 import org.arend.ext.core.level.LevelSubstitution;
 import org.arend.ext.core.ops.NormalizationMode;
@@ -134,14 +137,17 @@ public class CasesMeta extends BaseMetaDefinition {
           CoreExpression type1 = type;
           if (patterns1 == null) {
             List<SubstitutionPair> substitution = new ArrayList<>(patternList.size());
+            List<CoreBinding> patternBindings = new ArrayList<>();
             for (int i = 0; i < patternList.size(); i++) {
               CoreExpression expr = typedArgs.get(i).getExpression();
               if (expr instanceof CoreReferenceExpression) {
+                PatternUtils.collectLeafBindings(patternList.get(i), patternBindings);
                 substitution.add(new SubstitutionPair(((CoreReferenceExpression) expr).getBinding(), PatternUtils.toExpression(patternList.get(i), constructor, factory, null)));
               }
             }
             if (!substitution.isEmpty()) {
-              type1 = typechecker.substitute(type1, LevelSubstitution.EMPTY, substitution);
+              CoreExpression type1Arg = type1;
+              type1 = typechecker.withFreeBindings(new FreeBindingsModifier().add(patternBindings), tc -> tc.substitute(type1Arg, LevelSubstitution.EMPTY, substitution));
               if (type1 != null) {
                 patterns1 = getPatterns(type1.normalize(NormalizationMode.WHNF), parameter, typechecker);
               }
@@ -200,10 +206,10 @@ public class CasesMeta extends BaseMetaDefinition {
   }
 
   private List<ArendPattern> getPatterns(CoreExpression type, CoreParameter parameter, ExpressionTypechecker typechecker) {
-    if (type instanceof CoreDataCallExpression && ((CoreDataCallExpression) type).getDefinition() == typechecker.getPrelude().getPath()) {
+    if (type instanceof CorePathTypeExpression pt && !pt.isDirected()) {
       return Collections.singletonList(new ArendPattern(parameter.getBinding(), null, Collections.emptyList(), parameter, typechecker.getVariableRenameFactory()));
     }
-    List<CoreExpression.ConstructorWithDataArguments> constructors = type instanceof CoreDataCallExpression ? type.computeMatchedConstructorsWithDataArguments() : null;
+    List<CoreExpression.ConstructorWithDataArguments> constructors = type instanceof CoreDataCallExpression || type instanceof CorePathTypeExpression ? type.computeMatchedConstructorsWithDataArguments() : null;
     if (constructors == null) return null;
 
     List<ArendPattern> patterns = new ArrayList<>(constructors.size());

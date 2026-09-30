@@ -12,19 +12,19 @@
 
 -- # Definition of equivalences
 
-\record TypeMap {A B : \Type} (\coerce f : A -> B)
+\record TypeMap {A B : \Cat} (\coerce f : A -> B)
 
 \record Section \extends TypeMap
   | ret : B -> A
   | ret_f : \Pi (x : A) -> ret (f x) = x
   \where {
-    \func Section~Fiber {A B : \Type} {f : A -> B} : QEquiv {Section f} {Fib (-o f) id} \cowith
+    \func Section~Fiber {A B : \Cat} {f : A -> B} : QEquiv {Section f} {Fib (-o f) id} \cowith
       | f s => Fib.make s.ret $ path \lam i x => s.ret_f x i
       | ret z => \new Section f z.1 \lam x => path (z.2 __ x)
       | ret_f => idpe
       | f_sec => idpe
 
-    \lemma levelProp {A B : \Type} (r : Retraction {A} {B}) : isProp (Section r)
+    \lemma levelProp {A B : \Cat} (r : Retraction {A} {B}) : isProp (Section r)
       => \lam s => isContr=>isProp (Contr.Contr_QEquiv (symQEquiv Section~Fiber) $
         IsEquiv=>contrFibers.fromSection (\new Section (-o r) {
           | ret => -o r.sec
@@ -39,13 +39,17 @@
   | sec : B -> A
   | f_sec : \Pi (y : B) -> f (sec y) = y
   \where {
-    \func Retraction~Fiber {A B : \Type} {f : A -> B} : QEquiv {Retraction f} {Fib (f `o-) id} \cowith
+    \func fromSigma {A B : \Cat} {f : A -> B} (g : \Pi (b : B) -> \Sigma (a : A) (f a = b)) : Retraction f \cowith
+      | sec b => (g b).1
+      | f_sec b => (g b).2
+
+    \func Retraction~Fiber {A B : \Cat} {f : A -> B} : QEquiv {Retraction f} {Fib (f `o-) id} \cowith
       | f r => Fib.make r.sec $ path \lam i x => r.f_sec x i
       | ret z => \new Retraction f z.1 \lam x => path (z.2 __ x)
       | ret_f => idpe
       | f_sec => idpe
 
-    \lemma levelProp {A B : \Type} (s : Section {A} {B}) : isProp (Retraction s)
+    \lemma levelProp {A B : \Cat} (s : Section {A} {B}) : isProp (Retraction s)
       => \lam r => isContr=>isProp (Contr.Contr_QEquiv (symQEquiv Retraction~Fiber) $
         IsEquiv=>contrFibers.fromSection (\new Section (s `o-) {
           | ret => s.ret `o-
@@ -71,6 +75,9 @@
   \lemma isSurj : IsSurj f
     => \lam y => inP (ret y, f_ret y)
 
+  \protected \func splitSurj (b : B) : \Sigma (a : A) (f a = b)
+    => (ret b, f_ret b)
+
   \func adjoint {a : A} {b : B} (p : f a = b) : a = ret b
     => inv (ret_f a) *> pmap ret p
 
@@ -88,7 +95,7 @@
     \lemma equals {A B : \Set} {e e' : QEquiv {A} {B}} (p : \Pi (a : A) -> e a = e' a) : e = e'
       => exts (p, \lam b => e.isInj $ e.f_ret b *> inv (p _ *> e'.f_ret b))
 
-    \func leftFactor {A B C : \Type} {f : A -> B} {g : B -> C} (e2 : Section g) (e3 : QEquiv (g `o` f)) : QEquiv f \cowith
+    \func leftFactor {A B C : \Cat} {f : A -> B} {g : B -> C} (e2 : Section g) (e3 : QEquiv (g `o` f)) : QEquiv f \cowith
       | ret b => e3.ret (g b)
       | ret_f => e3.ret_f
       | f_sec b =>
@@ -97,7 +104,7 @@
         e2.ret (g b)                  ==< e2.ret_f b >==
         b                             `qed
 
-    \func rightFactor {A B C : \Type} {f : A -> B} (e1 : Retraction f) {g : B -> C} (e3 : QEquiv (g `o` f)) : QEquiv g \cowith
+    \func rightFactor {A B C : \Cat} {f : A -> B} (e1 : Retraction f) {g : B -> C} (e3 : QEquiv (g `o` f)) : QEquiv g \cowith
       | ret c => f (e3.ret c)
       | ret_f b =>
         f (e3.ret (g b))              ==< pmap (f `o` e3.ret `o` g) (inv (e1.f_sec b)) >==
@@ -110,7 +117,7 @@
 \func QEquiv_= {A B : \Type} (e : QEquiv {A} {B}) (i : I) : \Type
   => iso e.f e.ret e.ret_f e.f_sec i
 
-\type IsEquiv {A B : \Type} (f : A -> B) : \Prop
+\type IsEquiv {A B : \Cat} (f : A -> B) : \Prop
   => TruncP (QEquiv f)
   \where {
     \lemma toBiEquiv (e : IsEquiv f) : BiEquiv f \level BiEquiv.levelProp {A} {B} {f}
@@ -147,7 +154,7 @@
     \lemma isSurj (e : IsEquiv f) : IsSurj f \elim e
       | inP e => e.isSurj
 
-    \lemma fromEmbSurj {A B : \Type} {f : A -> B} (emb : Embedding f) (surj : IsSurj f) : IsEquiv f
+    \lemma fromEmbSurj {A B : \Cat} {f : A -> B} (emb : Embedding f) (surj : IsSurj f) : IsEquiv f
       => inP \new QEquiv {
         | ret b => (emb.surj-split surj b).1
         | ret_f a => (emb.isEmb _ _).sec (emb.surj-split surj (f a)).2
@@ -164,22 +171,29 @@
         | f_sec b => inj (surj (g b))
       }
 
-    \lemma trans {A B C : \Type} {f : A -> B} (e : IsEquiv f) {g : B -> C} (e' : IsEquiv g) : IsEquiv \lam a => g (f a) \elim e, e'
+    \lemma fromMonoRetraction {A B : \Cat} {f : A -> B} (mono : \Pi {a a' : A} -> f a = f a' -> a = a') (s : Retraction f) : IsEquiv f
+      => inP \new QEquiv {
+        | ret => s.sec
+        | ret_f a => mono (s.f_sec (f a))
+        | f_sec => s.f_sec
+      }
+
+    \lemma trans {A B C : \Cat} {f : A -> B} (e : IsEquiv f) {g : B -> C} (e' : IsEquiv g) : IsEquiv \lam a => g (f a) \elim e, e'
       | inP e, inP e' => inP (transQEquiv e e')
 
-    \lemma leftFactor {A B C : \Type} {f : A -> B} {g : B -> C} (e2 : IsEquiv g) (e3 : IsEquiv \lam a => g (f a)) : IsEquiv f \elim e2, e3
+    \lemma leftFactor {A B C : \Cat} {f : A -> B} {g : B -> C} (e2 : IsEquiv g) (e3 : IsEquiv \lam a => g (f a)) : IsEquiv f \elim e2, e3
       | inP e2, inP e3 => inP (QEquiv.leftFactor e2 e3)
 
-    \lemma rightFactor {A B C : \Type} {f : A -> B} (e1 : IsEquiv f) {g : B -> C} (e3 : IsEquiv \lam a => g (f a)) : IsEquiv g \elim e1, e3
+    \lemma rightFactor {A B C : \Cat} {f : A -> B} (e1 : IsEquiv f) {g : B -> C} (e3 : IsEquiv \lam a => g (f a)) : IsEquiv g \elim e1, e3
       | inP e1, inP e3 => inP (QEquiv.rightFactor e1 e3)
 
-    \lemma parallelEquiv {A B C D : \Type} {ab : A -> B} {cd : C -> D} {ac : A -> C} {bd : B -> D}
+    \lemma parallelEquiv {A B C D : \Cat} {ab : A -> B} {cd : C -> D} {ac : A -> C} {bd : B -> D}
                          (ace : IsEquiv ac) (bde : IsEquiv bd) (h : \Pi (a : A) -> bd (ab a) = cd (ac a)) : IsEquiv ab = IsEquiv cd
       => propExt (\lam abe => rightFactor ace $ transport IsEquiv (ext h) $ trans abe bde)
                  (\lam cde => leftFactor bde $ transportInv IsEquiv (ext h) $ trans ace cde)
   }
 
-\data Equiv (A B : \Type)
+\data Equiv (A B : \Cat)
   | mkEquiv {f : A -> B} (IsEquiv f)
   \where {
     \use \coerce toFunc (e : Equiv A B) : A -> B \elim e
@@ -202,7 +216,7 @@
 
 -- # Examples of equialences
 
-\func idEquiv {A : \Type} : QEquiv \cowith
+\func idEquiv {A : \Cat} : QEquiv \cowith
   | A => A
   | B => A
   | f x => x
@@ -210,33 +224,33 @@
   | ret_f _ => idp
   | f_sec _ => idp
 
-\func symQEquiv {A B : \Type} (e : QEquiv {A} {B}) : QEquiv {B} {A} \cowith
+\func symQEquiv {A B : \Cat} (e : QEquiv {A} {B}) : QEquiv {B} {A} \cowith
   | f => e.ret
   | ret => e.f
   | ret_f => e.f_sec
   | f_sec => e.ret_f
 
-\func \fixr 3 transQEquiv {A B C : \Type} (e1 : QEquiv {A} {B}) (e2 : QEquiv {B} {C}) : QEquiv {A} {C} \cowith
+\func \fixr 3 transQEquiv {A B C : \Cat} (e1 : QEquiv {A} {B}) (e2 : QEquiv {B} {C}) : QEquiv {A} {C} \cowith
   | f x => e2 (e1 x)
   | ret y => e1.ret (e2.ret y)
   | ret_f x => pmap e1.ret (e2.ret_f (e1 x)) *> e1.ret_f x
   | f_sec y => pmap e2 (e1.f_sec (e2.sec y)) *> e2.f_sec y
 
-\lemma -o_IsEquiv {A B C : \Type} {f : A -> B} (e : IsEquiv f) : IsEquiv {B -> C} {A -> C} (-o f)
+\lemma -o_IsEquiv {A B C : \Cat} {f : A -> B} (e : IsEquiv f) : IsEquiv {B -> C} {A -> C} (-o f)
   => inP \new QEquiv {
     | ret => -o (IsEquiv.ret e)
     | ret_f g => path \lam i x => g (IsEquiv.f_ret e {x} i)
     | f_sec g => path \lam i x => g (IsEquiv.ret_f e {x} i)
   }
 
-\lemma o-_IsEquiv {A B C : \Type} {f : A -> B} (e : IsEquiv f) : IsEquiv {C -> A} {C -> B} (f `o-)
+\lemma o-_IsEquiv {A B C : \Cat} {f : A -> B} (e : IsEquiv f) : IsEquiv {C -> A} {C -> B} (f `o-)
   => inP \new QEquiv {
     | ret => IsEquiv.ret e `o-
     | ret_f g => path (\lam i x => IsEquiv.ret_f e {g x} i)
     | f_sec g => path (\lam i x => IsEquiv.f_ret e {g x} i)
   }
 
-\func piEquiv {A : \Type} (B : A -> \Type) (f f' : \Pi (a : A) -> B a) : QEquiv \cowith
+\func piEquiv {A : \Cat} (B : A -> \Cat) (f f' : \Pi (a : A) -> B a) : QEquiv \cowith
   | A => f = f'
   | B => \Pi (a : A) -> f a = f' a
   | f p a => path ((p @ __) a)
@@ -244,7 +258,7 @@
   | ret_f _ => idp
   | f_sec _ => idp
 
-\func sigmaEquiv {A : \Type} (B : A -> \Type) (p p' : \Sigma (a : A) (B a)) : QEquiv \cowith
+\func sigmaEquiv {A : \Cat} (B : A -> \Cat) (p p' : \Sigma (a : A) (B a)) : QEquiv \cowith
   | A => p = p'
   | B => \Sigma (s : p.1 = p'.1) (transport B s p.2 = p'.2)
   | f q => (pmap __.1 q, pmapd __.2 q)
@@ -257,7 +271,7 @@
                 | p'1, idp, p'2, idp => idp
               })
 
-\func piSigmaEquiv {A A' : \Type} (h : A -> A') (B : A' -> \Type)
+\func piSigmaEquiv {A A' : \Cat} (h : A -> A') (B : A' -> \Cat)
   : QEquiv {\Pi (a : A) -> B (h a)}
            {\Sigma (g : A -> \Sigma (a' : A') (B a')) ((\lam a => (g a).1) = h)}
   \cowith
@@ -270,37 +284,50 @@
                   idp
                   p.2
 
-\func piSigmaIdEquiv {A : \Type} (B : A -> \Type)
+\func piSigmaIdEquiv {A : \Cat} (B : A -> \Cat)
   : QEquiv {\Pi (a : A) -> B a}
            {\Sigma (g : A -> \Sigma (a : A) (B a)) ((\lam a => (g a).1) = id)}
   => piSigmaEquiv id B
 
-\func emptyEquiv {A B : \Type} (Ae : A -> Empty) (Be : B -> Empty) : QEquiv {A} {B} \cowith
+\func emptyEquiv {A B : \Cat} (Ae : A -> Empty) (Be : B -> Empty) : QEquiv {A} {B} \cowith
   | f a => absurd (Ae a)
   | ret b => absurd (Be b)
   | ret_f a => absurd (Ae a)
   | f_sec b => absurd (Be b)
+
+\func pathEquiv-right {A : \Cat} {a b c : A} (ab : a = b) : QEquiv {a = c} {b = c} \cowith
+  | f ac => inv ab *> ac
+  | ret bc => ab *> bc
+  | ret_f ac => inv *>-assoc *> pmap (*> _) *>_inv *> idp_*>
+  | f_sec bc => inv *>-assoc *> pmap (*> _) inv_*> *> idp_*>
+
+\func inv-equiv {A : \Cat} {a b : A} : QEquiv {a = b} {b = a} \cowith
+  | f => inv
+  | ret => inv
+  | ret_f _ => inv_inv
+  | f_sec _ => inv_inv
 
 -- # Embeddings and surjections
 
 \record Embedding \extends TypeMap {
   | isEmb : \Pi (a a' : A) -> Retraction (pmap f {a} {a'})
 
-  \func pmap-isEquiv {a a' : A} : QEquiv (pmap f {a} {a'}) => pathEquiv (f __ = f __) (\lam {a} {a'} => isEmb a a')
+  \sfunc pmap-isEquiv {a a' : A} : QEquiv (pmap f {a} {a'})
+    => pathEquiv (f __ = f __) (\lam {a} {a'} => isEmb a a')
 
   \lemma surj-split (s : IsSurj f) (y : B)
     => TruncP.remove (Embedding.embeddingFiber-isProp \this y) (s y)
 } \where {
-  \use \level levelProp {A B : \Type} {f : A -> B} (e e' : Embedding f) : e = e'
+  \use \level levelProp {A B : \Cat} {f : A -> B} (e e' : Embedding f) : e = e'
     => path (\lam i => \new Embedding f (\lam a a' => Retraction.levelProp (pathEquiv (e __ = e __) (\lam {a} {a'} => e.isEmb a a')) (e.isEmb a a') (e'.isEmb a a') @ i))
 
-  \func fromInjection {A : \Type} {B : \Set} {f : A -> B} (inj : \Pi {a a' : A} -> f a = f a' -> a = a') : Embedding f \cowith
+  \func fromInjection {A : \Cat} {B : \Set} {f : A -> B} (inj : \Pi {a a' : A} -> f a = f a' -> a = a') : Embedding f \cowith
     | isEmb a a' => \new Retraction {
       | sec => inj
       | f_sec p => prop-pi {f a = f a'}
     }
 
-  \sfunc fromIsEquiv {A B : \Type} {f : A -> B} (e : IsEquiv f) : Embedding f \cowith
+  \sfunc fromIsEquiv {A B : \Cat} {f : A -> B} (e : IsEquiv f) : Embedding f \cowith
     | isEmb a a' => IsEquiv.toQEquiv (pmapIsEquiv e)
 
   -- | The diagonal of an embedding is an equivalence
@@ -320,20 +347,21 @@
                 }
     \in inP (transQEquiv q s)
 
-  \lemma projection {A : \Type} (B : A -> \Prop) : Embedding {\Sigma (a : A) (B a)} __.1 \cowith
+  \lemma projection {A : \Cat} (B : A -> \Prop) : Embedding {\Sigma (a : A) (B a)} __.1 \cowith
     | isEmb p p' => \new Retraction {
       | sec q => ext q
       | f_sec => idpe
     }
 
   -- | If the fibers of a map are propositions, then the map is an embedding
-  \lemma fibers {A B : \Type} (f : A -> B) (p : \Pi (b : B) -> isProp (Fib f b)) : Embedding f \cowith
-    | isEmb a a' =>
-      \have e (q : f a = f a') => Fib.equiv (f a') (a,q) (a',idp) (p (f a') (a,q) (a',idp))
-      \in \new Retraction {
-        | sec q => (e q).1
-        | f_sec q => (e q).2
-      }
+  \lemma fibers {A B : \Cat} (f : A -> B) (p : \Pi (b : B) -> isProp (Fib f b)) : Embedding f \cowith
+    | isEmb a a' => IsEquiv.toQEquiv (pmap-equiv p)
+    \where {
+      \protected \lemma pmap-equiv {A B : \Cat} {f : A -> B} (p : \Pi (b : B) -> isProp (Fib f b)) {a a' : A}
+        : IsEquiv {a = a'} {f a = f a'} (pmap f)
+        => inP $ pathEquiv (f __ = f __) \lam {a} {a'} => Retraction.fromSigma
+            \lam q => Fib.equiv (f a') (a,q) (a',idp) (p (f a') (a,q) (a',idp))
+    }
 
   -- | The fibers of an embedding are propositions.
   \lemma embeddingFiber-isProp (e : Embedding) (b : e.B) : isProp (Fib e b) => \lam x x' =>
@@ -341,23 +369,28 @@
          | fx=fx' => x.2 *> inv x'.2
     \in Fib.ext b x x' (eq.sec fx=fx') (
       pmap e (eq.sec fx=fx') *> x'.2 ==< pmap (*> x'.2) (eq.f_sec fx=fx') >==
-      fx=fx' *> x'.2                   ==< *>-assoc _ _ _ >==
-      x.2 *> inv x'.2 *> x'.2          ==< pmap (x.2 *>) (inv_*> _) >==
+      fx=fx' *> x'.2                   ==< *>-assoc >==
+      x.2 *> inv x'.2 *> x'.2          ==< pmap (x.2 *>) inv_*> >==
       x.2                              `qed
     )
 }
 
-\func transEmbedding {A B C : \Type} (e1 : Embedding {A} {B}) (e2 : Embedding {B} {C}) : Embedding {A} {C} \cowith
+\func transEmbedding {A B C : \Cat} (e1 : Embedding {A} {B}) (e2 : Embedding {B} {C}) : Embedding {A} {C} \cowith
   | f a => e2 (e1 a)
   | isEmb a a' => \new Retraction {
     | sec p => sec {e1.isEmb a a'} (sec {e2.isEmb (e1 a) (e1 a')} p)
     | f_sec p => pmap (pmap e2) (f_sec {e1.isEmb a a'} (sec {e2.isEmb (e1 a) (e1 a')} p)) *> f_sec {e2.isEmb (e1 a) (e1 a')} p
   }
 
-\lemma piEmbedding {A : \Type} {B C : A -> \Type} (e : \Pi (a : A) -> Embedding {B a} {C a}) : Embedding {\Pi (a : A) -> B a} {\Pi (a : A) -> C a} (\lam f a => e a (f a)) \cowith
+\lemma leftEmbedding {A B C : \Cat} {f : A -> B} (g : Embedding {B} {C}) (e : Embedding \lam x => g (f x)) : Embedding f \cowith
+  | isEmb a a' => \new Retraction {
+    | sec p => (e.isEmb a a').sec (pmap g p)
+    | f_sec p => \have e' => g.pmap-isEquiv {f a} {f a'}
+                 \in inv (e'.ret_f _) *> pmap e'.ret ((e.isEmb a a').f_sec (pmap g p)) *> e'.ret_f p
+  }
+
+\lemma piEmbedding {A : \Cat} {B C : A -> \Cat} (e : \Pi (a : A) -> Embedding {B a} {C a}) : Embedding {\Pi (a : A) -> B a} {\Pi (a : A) -> C a} (\lam f a => e a (f a)) \cowith
   | isEmb f g => \new Retraction {
     | sec p => path \lam i a => ((e a).isEmb (f a) (g a)).sec (path \lam j => p j a) i
     | f_sec p => path \lam i j a => ((e a).isEmb (f a) (g a)).f_sec (path \lam j => p j a) i j
   }
-
-\func \infixr 1 >-> (A B : \Type) => Embedding {A} {B}

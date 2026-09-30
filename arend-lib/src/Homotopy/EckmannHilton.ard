@@ -62,10 +62,10 @@
   \func Omega^2_X => Loop (Loop X)
 
   \func LeftHorizontalWhiskering-relation {b c : X} {r s : b = c} (bet : r = s)
-    : LeftHorizontalWhiskering (idp {X} {b}) bet = idp_*> r *> bet *> inv (idp_*> s) \elim bet
-    | idp => unfold LeftHorizontalWhiskering (rewrite (inv $ *>-assoc (idp_*> r) idp (inv (idp_*> r)), aux) idp)
+    : LeftHorizontalWhiskering (idp {X} {b}) bet = idp_*> *> bet *> inv idp_*> \elim bet
+    | idp => unfold LeftHorizontalWhiskering (rewrite (inv *>-assoc, aux) idp)
     \where {
-      \protected \func aux {f : b = c} : idp_*> f *> inv (idp_*> f) = idp \elim f
+      \protected \func aux {f : b = c} : idp_*> {_} {_} {_} {f} *> inv idp_*> = idp \elim f
         | idp => idp
     }
 

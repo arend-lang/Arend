@@ -1,5 +1,6 @@
 package org.arend.term.abs;
 
+import org.arend.ext.core.context.BindingVariance;
 import org.arend.naming.reference.Referable;
 import org.arend.term.Fixity;
 import org.jetbrains.annotations.NotNull;
@@ -27,12 +28,12 @@ public class BaseAbstractExpressionVisitor<P, R> implements AbstractExpressionVi
   }
 
   @Override
-  public R visitLam(@Nullable Object data, @NotNull Collection<? extends Abstract.LamParameter> parameters, @Nullable Abstract.Expression body, P params) {
+  public R visitLam(@Nullable Object data, @NotNull Collection<? extends Abstract.LamParameter> parameters, @Nullable BindingVariance variance, @Nullable Abstract.Expression body, P params) {
     return defaultValue;
   }
 
   @Override
-  public R visitPi(@Nullable Object data, @NotNull Collection<? extends Abstract.Parameter> parameters, @Nullable Abstract.Expression codomain, P params) {
+  public R visitPi(@Nullable Object data, @NotNull Collection<? extends Abstract.Parameter> parameters, @Nullable BindingVariance variance, @Nullable Abstract.Expression codomain, P params) {
     return defaultValue;
   }
 
@@ -67,7 +68,7 @@ public class BaseAbstractExpressionVisitor<P, R> implements AbstractExpressionVi
   }
 
   @Override
-  public R visitSigma(@Nullable Object data, @NotNull Collection<? extends Abstract.Parameter> parameters, P params) {
+  public R visitSigma(@Nullable Object data, @NotNull Collection<? extends Abstract.Parameter> parameters, @Nullable BindingVariance variance, P params) {
     return defaultValue;
   }
 
@@ -77,7 +78,7 @@ public class BaseAbstractExpressionVisitor<P, R> implements AbstractExpressionVi
   }
 
   @Override
-  public R visitCase(@Nullable Object data, boolean isSFunc, @Nullable Abstract.EvalKind evalKind, @NotNull Collection<? extends Abstract.CaseArgument> caseArgs, @Nullable Abstract.Expression resultType, @Nullable Abstract.Expression resultTypeLevel, @NotNull Collection<? extends Abstract.FunctionClause> clauses, P params) {
+  public R visitCase(@Nullable Object data, boolean isSFunc, @Nullable Abstract.EvalKind evalKind, @NotNull Collection<? extends Abstract.CaseArgument> caseArgs, @Nullable Abstract.Expression resultType, @Nullable Abstract.Expression resultTypeLevel, boolean resultTypeLevelPlus, @NotNull Collection<? extends Abstract.FunctionClause> clauses, P params) {
     return defaultValue;
   }
 

@@ -20,6 +20,7 @@ import org.arend.core.sort.Sort;
 import org.arend.core.sort.SortExpression;
 import org.arend.core.subst.Levels;
 import org.arend.core.subst.ListLevels;
+import org.arend.ext.core.context.BindingVariance;
 import org.arend.ext.core.level.ConstLevel;
 import org.arend.ext.serialization.DeserializationException;
 import org.arend.prelude.Prelude;
@@ -96,7 +97,7 @@ class ExpressionDeserialization {
   }
 
   private ConstLevel readConstLevel(LevelProtos.ConstLevel proto) {
-    return proto.getIsInfinity() ? ConstLevel.INFINITY : new ConstLevel(readBigInteger(proto.getValue()));
+    return proto.getIsCat() ? ConstLevel.CAT_INFINITY : new ConstLevel(proto.getIsInfinity() ? null : readBigInteger(proto.getValue()));
   }
 
   Sort readSort(LevelProtos.Sort proto) {
@@ -109,11 +110,12 @@ class ExpressionDeserialization {
         return new SortExpression.Const(readSort(proto.getConstSort()));
       }
       case VAR_SORT -> {
+        LevelProtos.SortExpression.VarSort varSort = proto.getVarSort();
         List<ClassField> fields = new ArrayList<>();
-        for (int fieldRef : proto.getVarSort().getFieldList()) {
+        for (int fieldRef : varSort.getFieldList()) {
           fields.add(myCallTargetProvider.getCallTarget(fieldRef, ClassField.class));
         }
-        return new SortExpression.Var(proto.getVarSort().getIndex(), fields);
+        return new SortExpression.Var(varSort.getIndex(), fields, readConstLevel(varSort.getHLevel()));
       }
       case RECURSIVE_DATA -> {
         return new SortExpression.RecursiveData();
@@ -179,9 +181,10 @@ class ExpressionDeserialization {
         unfixedNames.add(name.isEmpty() ? null : name);
       }
       Expression type = readExpr(proto.getType());
+      BindingVariance variance = proto.getIsCovariant() ? BindingVariance.COVARIANT : BindingVariance.INVARIANT;
       DependentLink tele = proto.getIsHidden() && unfixedNames.size() == 1
-        ? new TypedDependentLink(!proto.getIsNotExplicit(), unfixedNames.getFirst(), type, true, EmptyDependentLink.getInstance())
-        : ExpressionFactory.parameter(!proto.getIsNotExplicit(), proto.getIsProperty(), unfixedNames, type);
+        ? new TypedDependentLink(!proto.getIsNotExplicit(), unfixedNames.getFirst(), type, true, variance, EmptyDependentLink.getInstance())
+        : ExpressionFactory.parameter(!proto.getIsNotExplicit(), proto.getIsProperty(), unfixedNames, type, variance);
       for (DependentLink link = tele; link.hasNext(); link = link.getNext()) {
         registerBinding(link);
       }
@@ -210,9 +213,10 @@ class ExpressionDeserialization {
       unfixedNames.add(name.isEmpty() ? null : name);
     }
     Expression type = readExpr(proto.getType());
+    BindingVariance variance = proto.getIsCovariant() ? BindingVariance.COVARIANT : BindingVariance.INVARIANT;
     SingleDependentLink tele = proto.getIsHidden() && unfixedNames.size() == 1
-      ? new TypedSingleDependentLink(!proto.getIsNotExplicit(), unfixedNames.getFirst(), type, true)
-      : ExpressionFactory.singleParams(!proto.getIsNotExplicit(), unfixedNames, type);
+      ? new TypedSingleDependentLink(!proto.getIsNotExplicit(), unfixedNames.getFirst(), type, true, variance)
+      : ExpressionFactory.singleParams(!proto.getIsNotExplicit(), unfixedNames, type, variance);
     for (DependentLink link = tele; link.hasNext(); link = link.getNext()) {
       registerBinding(link);
     }
@@ -229,7 +233,8 @@ class ExpressionDeserialization {
     }
     DependentLink link;
     if (proto.hasType()) {
-      link = new TypedDependentLink(!proto.getIsNotExplicit(), proto.getName(), readExpr(proto.getType()), proto.getIsHidden(), EmptyDependentLink.getInstance());
+      BindingVariance variance = proto.getIsCovariant() ? BindingVariance.COVARIANT : BindingVariance.INVARIANT;
+      link = new TypedDependentLink(!proto.getIsNotExplicit(), proto.getName(), readExpr(proto.getType()), proto.getIsHidden(), variance, EmptyDependentLink.getInstance());
     } else {
       link = new UntypedDependentLink(proto.getName());
     }
@@ -373,7 +378,7 @@ class ExpressionDeserialization {
             result.addChild(new TupleConstructor(tupleProto.getLength(), new HashSet<>(tupleProto.getPropertyIndexList())), elimTree);
           }
           if (singleClause.hasIdp()) {
-            result.addChild(new IdpConstructor(), elimTree);
+            result.addChild(new IdpConstructor(singleClause.getIdp().getDirected()), elimTree);
           }
           if (singleClause.hasClass_()) {
             ExpressionProtos.ElimTree.Branch.SingleConstructorClause.Class classProto = singleClause.getClass_();
@@ -434,6 +439,7 @@ class ExpressionDeserialization {
       case STRING -> readString(proto.getString());
       case PATH -> readPath(proto.getPath());
       case AT -> readAt(proto.getAt());
+      case PATH_TYPE -> readPathType(proto.getPathType());
       default -> throw new DeserializationException("Unknown Expression kind: " + proto.getKindCase());
     };
   }
@@ -608,11 +614,15 @@ class ExpressionDeserialization {
   }
 
   private Expression readPath(ExpressionProtos.Expression.Path proto) throws DeserializationException {
-    return new PathExpression(proto.hasArgumentType() ? readExpr(proto.getArgumentType()) : null, readExpr(proto.getArgument()));
+    return new PathExpression(proto.hasArgumentType() ? readExpr(proto.getArgumentType()) : null, readExpr(proto.getArgument()), proto.getDirected(), proto.getForceInfinity());
   }
 
   private Expression readAt(ExpressionProtos.Expression.At proto) throws DeserializationException {
-    return AtExpression.make(readExpr(proto.getPathArgument()), readExpr(proto.getIntervalArgument()), false);
+    return AtExpression.make(readExpr(proto.getPathArgument()), readExpr(proto.getIntervalArgument()), false, proto.getDirected());
+  }
+
+  private Expression readPathType(ExpressionProtos.Expression.PathType proto) throws DeserializationException {
+    return new PathTypeExpression(readExpr(proto.getArgumentType()), readExpr(proto.getLeftArgument()), readExpr(proto.getRightArgument()), proto.getDirected(), proto.getForceInfinity());
   }
 
   private String validName(String name) {

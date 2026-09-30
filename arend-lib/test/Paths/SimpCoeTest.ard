@@ -208,3 +208,8 @@
 
 \func argPathCoeTest2 {B : \Type} (b : B) (g : I -> B) (q : b = g left) (s : b = g right) (h : coe (\lam i => b = g i) q right = s) : q *> path g = s
   => simp_coe in h
+
+
+\func covariantTest {A : \Cat} {B : A ->⁺ I -> \Cat} (f : \Pi (a :⁺ A) -> B a left) (g : \Pi (a :⁺ A) -> B a right) (h : \Pi (a :⁺ A) -> coe (B a) (f a) right = g a)
+  : coe (\lam i => \Pi (a :⁺ A) -> B a i) f right = g
+  => simp_coe h

@@ -1,6 +1,7 @@
 package org.arend.core.expr;
 
 import org.arend.core.context.param.DependentLink;
+import org.arend.ext.core.context.BindingVariance;
 import org.arend.core.expr.visitor.ExpressionVisitor;
 import org.arend.core.expr.visitor.ExpressionVisitor2;
 import org.arend.ext.core.expr.CoreExpressionVisitor;
@@ -20,6 +21,12 @@ public class SigmaExpression extends Expression implements CoreSigmaExpression {
   @Override
   public DependentLink getParameters() {
     return myLink;
+  }
+
+  @NotNull
+  @Override
+  public BindingVariance getVariance() {
+    return myLink.getVariance();
   }
 
   @Override

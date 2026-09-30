@@ -247,6 +247,7 @@ message Body {
     message ExpressionPair {
         Expression left = 1;
         Expression right = 2;
+        bool directed = 3;
     }
     message IntervalElim {
         repeated ExpressionPair case = 1;

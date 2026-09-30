@@ -2,10 +2,8 @@ package org.arend.cat;
 
 import org.arend.Matchers;
 import org.arend.typechecking.TypeCheckingTestCase;
-import org.junit.Ignore;
 import org.junit.Test;
 
-@Ignore
 public class CatUniverseTest extends TypeCheckingTestCase {
   @Test
   public void subType() {
@@ -20,15 +18,48 @@ public class CatUniverseTest extends TypeCheckingTestCase {
 
   @Test
   public void idTest() {
-    typeCheckDef("""
-      \\func test {C : \\Cat} (c : C) => c
-      """);
+    typeCheckDef("\\func test {C : \\Cat} (c : C) => c");
   }
 
   @Test
-  public void idpTest() {
-    typeCheckDef("""
-      \\func test {C : \\Cat} {c : C} : c = c => idp
-      """);
+  public void setUniverseTest() {
+    typeCheckDef("\\func test.{u} : \\1-Type (\\suc u) => \\Set u");
+  }
+
+  @Test
+  public void typeUniverseTest() {
+    typeCheckDef("\\func test.{u} : \\Cat (\\suc u) => \\Type u");
+  }
+
+  @Test
+  public void typeUniverseError() {
+    typeCheckDef("\\func test.{u} : \\Type (\\suc u) => \\Type u", 1);
+    assertThatErrorsAre(Matchers.typeMismatchError());
+  }
+
+  @Test
+  public void catUniverseTest() {
+    typeCheckDef("\\func test.{u} : \\Cat (\\suc u) => \\Cat u");
+  }
+
+  @Test
+  public void catUniverseError() {
+    typeCheckDef("\\func test.{u} : \\Type (\\suc u) => \\Cat u", 1);
+    assertThatErrorsAre(Matchers.typeMismatchError());
+  }
+
+  @Test
+  public void sigmaCatUniverseError() {
+    typeCheckDef("\\func test => \\Sigma \\Cat (\\Sigma)", 1);
+  }
+
+  @Test
+  public void sigmaTypeUniverseError() {
+   typeCheckDef("\\func test => \\Sigma \\Type (\\Sigma)", 1);
+  }
+
+  @Test
+  public void sigmaSetUniverseError() {
+    typeCheckDef("\\func test => \\Sigma \\Set (\\Sigma)", 1);
   }
 }

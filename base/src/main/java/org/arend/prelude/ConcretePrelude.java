@@ -40,6 +40,91 @@ public class ConcretePrelude implements ArendPrelude {
   }
 
   @Override
+  public CoreDataDefinition getDI() {
+    return Prelude.DI;
+  }
+
+  @Override
+  public CoreConstructor getDLeft() {
+    return Prelude.DLEFT;
+  }
+
+  @Override
+  public CoreConstructor getDRight() {
+    return Prelude.DRIGHT;
+  }
+
+  @Override
+  public CoreDataDefinition getDPath() {
+    return Prelude.DPATH;
+  }
+
+  @Override
+  public CoreConstructor getDPathCon() {
+    return Prelude.DPATH_CON;
+  }
+
+  @Override
+  public CoreFunctionDefinition getDAt() {
+    return Prelude.DAT;
+  }
+
+  @Override
+  public CoreFunctionDefinition getHomType() {
+    return Prelude.DPATH_INFIX;
+  }
+
+  @Override
+  public CoreFunctionDefinition getFill2() {
+    return Prelude.FILL2;
+  }
+
+  @Override
+  public CoreFunctionDefinition getFill3() {
+    return Prelude.FILL3;
+  }
+
+  @Override
+  public CoreDataDefinition getResize() {
+    return Prelude.RESIZE_PLUS;
+  }
+
+  @Override
+  public CoreConstructor getResizeCon() {
+    return Prelude.RESIZE_PLUS_CON;
+  }
+
+  @Override
+  public CoreDataDefinition getGroupoidType() {
+    return Prelude.GROUPOID_TYPE;
+  }
+
+  @Override
+  public CoreConstructor getGroupoidTypeCon() {
+    return Prelude.GROUPOID_TYPE_CON;
+  }
+
+  @Override
+  public CoreFunctionDefinition getRezk() {
+    return Prelude.REZK;
+  }
+
+  @Override
+  public CoreFunctionDefinition getCoePlus() {
+    return Prelude.COERCE_PLUS;
+  }
+
+  @Override
+  public CoreFunctionDefinition getIsoPlus() {
+    return Prelude.ISO_PLUS;
+  }
+
+  @Override
+  public CoreFunctionDefinition getIsoCoePlus() {
+    return Prelude.ISO_COE_PLUS;
+  }
+
+  @Override
   public CoreDataDefinition getNat() {
     return Prelude.NAT;
   }
@@ -122,6 +207,11 @@ public class ConcretePrelude implements ArendPrelude {
   @Override
   public CoreFunctionDefinition getIdp() {
     return Prelude.IDP;
+  }
+
+  @Override
+  public CoreFunctionDefinition getIdd() {
+    return Prelude.IDD;
   }
 
   @Override
@@ -225,6 +315,108 @@ public class ConcretePrelude implements ArendPrelude {
   }
 
   @Override
+  public ArendRef getDIRef() {
+    if (Prelude.DI != null) return Prelude.DI.getRef();
+    return myPreludeScope.resolveName("DI");
+  }
+
+  @Override
+  public ArendRef getDLeftRef() {
+    if (Prelude.DLEFT != null) return Prelude.DLEFT.getRef();
+    return myPreludeScope.resolveName("dleft");
+  }
+
+  @Override
+  public ArendRef getDRightRef() {
+    if (Prelude.DRIGHT != null) return Prelude.DRIGHT.getRef();
+    return myPreludeScope.resolveName("dright");
+  }
+
+  @Override
+  public ArendRef getDPathRef() {
+    if (Prelude.DPATH != null) return Prelude.DPATH.getRef();
+    return myPreludeScope.resolveName("DPath");
+  }
+
+  @Override
+  public ArendRef getDPathConRef() {
+    if (Prelude.DPATH_CON != null) return Prelude.DPATH_CON.getRef();
+    return myPreludeScope.resolveName("dpath");
+  }
+
+  @Override
+  public ArendRef getDAtRef() {
+    if (Prelude.DAT != null) return Prelude.DAT.getRef();
+    return myPreludeScope.resolveName("d@");
+  }
+
+  @Override
+  public ArendRef getHomTypeRef() {
+    if (Prelude.DPATH_INFIX != null) return Prelude.DPATH_INFIX.getRef();
+    return myPreludeScope.resolveName("~>");
+  }
+
+  @Override
+  public ArendRef getFill2Ref() {
+    if (Prelude.FILL2 != null) return Prelude.FILL2.getRef();
+    return myPreludeScope.resolveName("fill2");
+  }
+
+  @Override
+  public ArendRef getFill3Ref() {
+    if (Prelude.FILL3 != null) return Prelude.FILL3.getRef();
+    return myPreludeScope.resolveName("fill3");
+  }
+
+  @Override
+  public ArendRef getResizeRef() {
+    if (Prelude.RESIZE_PLUS != null) return Prelude.RESIZE_PLUS.getRef();
+    return myPreludeScope.resolveName("Resize+");
+  }
+
+  @Override
+  public ArendRef getResizeConRef() {
+    if (Prelude.RESIZE_PLUS_CON != null) return Prelude.RESIZE_PLUS_CON.getRef();
+    return myPreludeScope.resolveName("resize+");
+  }
+
+  @Override
+  public ArendRef getGroupoidTypeRef() {
+    if (Prelude.GROUPOID_TYPE != null) return Prelude.GROUPOID_TYPE.getRef();
+    return myPreludeScope.resolveName("GroupoidType");
+  }
+
+  @Override
+  public ArendRef getGroupoidTypeConRef() {
+    if (Prelude.GROUPOID_TYPE_CON != null) return Prelude.GROUPOID_TYPE_CON.getRef();
+    return myPreludeScope.resolveName("groupoidType");
+  }
+
+  @Override
+  public ArendRef getRezkRef() {
+    if (Prelude.REZK != null) return Prelude.REZK.getRef();
+    return myPreludeScope.resolveName("rezk");
+  }
+
+  @Override
+  public ArendRef getCoePlusRef() {
+    if (Prelude.COERCE_PLUS != null) return Prelude.COERCE_PLUS.getRef();
+    return myPreludeScope.resolveName("coe+");
+  }
+
+  @Override
+  public ArendRef getIsoPlusRef() {
+    if (Prelude.ISO_PLUS != null) return Prelude.ISO_PLUS.getRef();
+    return myPreludeScope.resolveName("iso+");
+  }
+
+  @Override
+  public ArendRef getIsoCoePlusRef() {
+    if (Prelude.ISO_COE_PLUS != null) return Prelude.ISO_COE_PLUS.getRef();
+    return myPreludeScope.resolveName("iso+_coe+");
+  }
+
+  @Override
   public ArendRef getNatRef() {
     if (Prelude.NAT != null) return Prelude.NAT.getRef();
     return myPreludeScope.resolveName("Nat");
@@ -324,6 +516,12 @@ public class ConcretePrelude implements ArendPrelude {
   public ArendRef getIdpRef() {
     if (Prelude.IDP != null) return Prelude.IDP.getRef();
     return myPreludeScope.resolveName("idp");
+  }
+
+  @Override
+  public ArendRef getIddRef() {
+    if (Prelude.IDD != null) return Prelude.IDD.getRef();
+    return myPreludeScope.resolveName("idd");
   }
 
   @Override

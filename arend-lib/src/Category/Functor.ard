@@ -206,6 +206,17 @@
 
   \lemma inverse-o {x y z : C} {g : Hom (F y) (F z)} {f : Hom (F x) (F y)} : inverse (g ∘ f) = inverse g ∘ inverse f
     => inv (pmap inverse Func-o *> cong inverse-right inverse-right) *> inverse-left
+
+  -- | Isomorphisms between images lift to isomorphisms.
+  \func inverse-iso {x y : C} (e : Iso {D} {F x} {F y}) : Iso {C} {x} {y} \cowith
+    | f => inverse e.f
+    | hinv => inverse e.hinv
+    | hinv_f => inv inverse-o *> pmap inverse e.hinv_f *> inverse-id
+    | f_hinv => inv inverse-o *> pmap inverse e.f_hinv *> inverse-id
+
+  -- | Fully faithful functors reflect isomorphisms.
+  \lemma reflects-iso {x y : C} {f : Hom x y} (e : Iso (Func f)) : Iso f
+    => transport (\lam g => Iso {C} {x} {y} g) inverse-left (inverse-iso e)
 } \where {
   \func Comp {C D E : Precat} (G : FullyFaithfulFunctor D E) (F : FullyFaithfulFunctor C D) : FullyFaithfulFunctor C E \cowith
     | Functor => Category.Functor.Comp G F

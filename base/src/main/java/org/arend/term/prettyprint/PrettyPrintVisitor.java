@@ -13,6 +13,7 @@ import org.arend.ext.variable.Variable;
 import org.arend.extImpl.AbstractedExpressionImpl;
 import org.arend.naming.reference.*;
 import org.arend.naming.renamer.MapReferableRenamer;
+import org.arend.ext.core.context.BindingVariance;
 import org.arend.term.Fixity;
 import org.arend.ext.concrete.definition.FunctionKind;
 import org.arend.term.concrete.*;
@@ -469,7 +470,7 @@ public class PrettyPrintVisitor implements ConcreteExpressionVisitor<Precedence,
         myBuilder.append(referable == null ? "_" : referable.textRepresentation()).append(' ');
       }
 
-      myBuilder.append(": ");
+      myBuilder.append(parameter.getVariance() == BindingVariance.COVARIANT ? ":⁺ " : ": ");
       printExpr(((Concrete.TypeParameter) parameter).getType(), new Precedence(Concrete.Expression.PREC));
       if (parameter.isExplicit()) {
         myBuilder.append(')');
@@ -548,7 +549,15 @@ public class PrettyPrintVisitor implements ConcreteExpressionVisitor<Precedence,
 
       @Override
       String getOpText() {
-        return "=>";
+        List<Concrete.Parameter> parameters = expr.getParameters();
+        boolean allCovariant = !parameters.isEmpty();
+        for (Concrete.Parameter parameter : parameters) {
+          if (parameter.getVariance() != BindingVariance.COVARIANT) {
+            allCovariant = false;
+            break;
+          }
+        }
+        return allCovariant ? "=>⁺" : "=>";
       }
     }.doPrettyPrint(this, noIndent);
 
@@ -582,7 +591,7 @@ public class PrettyPrintVisitor implements ConcreteExpressionVisitor<Precedence,
 
       @Override
       String getOpText() {
-        return "->";
+        return expr.getParameters().size() == 1 && !(expr.getParameters().getFirst() instanceof Concrete.TelescopeParameter) && expr.getParameters().getFirst().getVariance() == BindingVariance.COVARIANT ? "->⁺" : "->";
       }
 
       @Override
@@ -714,7 +723,7 @@ public class PrettyPrintVisitor implements ConcreteExpressionVisitor<Precedence,
   @Override
   public Void visitSigma(Concrete.SigmaExpression expr, Precedence prec) {
     if (prec.priority > Concrete.SigmaExpression.PREC) myBuilder.append('(');
-    myBuilder.append("\\Sigma");
+    myBuilder.append(expr.getVariance() == BindingVariance.COVARIANT ? "\\Sigma⁺" : "\\Sigma");
     if (!expr.getParameters().isEmpty()) {
       myBuilder.append(' ');
     }
@@ -878,7 +887,7 @@ public class PrettyPrintVisitor implements ConcreteExpressionVisitor<Precedence,
 
         @Override
         void printRight(PrettyPrintVisitor pp) {
-          pp.printExpr(clause.getExpression(), new Precedence(Concrete.Expression.PREC));
+          if (clause.expression != null) pp.printExpr(clause.expression, new Precedence(Concrete.Expression.PREC));
         }
 
         @Override
@@ -1918,23 +1927,27 @@ public class PrettyPrintVisitor implements ConcreteExpressionVisitor<Precedence,
         if (i<lhs_sz-1) ppv_default.myBuilder.append('\n');
       }
 
-      if (printSpaceBefore()) ppv_default.myBuilder.append(' ');
-      ppv_default.myBuilder.append(getOpText().trim());
-
-      if (hyph) {
-        ppv_default.myBuilder.append('\n');
-      } else {
-        if (printSpaceAfter()) ppv_default.myBuilder.append(' ');
-      }
-
       boolean ii = increaseIndent(rhs_strings);
 
-      if (ii) ppv_default.myIndent+=INDENT;
+      // When hyphenating, keep the operator attached to the right-hand side on the new line
+      // instead of leaving it dangling at the end of the left-hand side.
+      if (hyph) {
+        ppv_default.myBuilder.append('\n');
+        if (ii) ppv_default.myIndent += INDENT;
+        ppv_default.printIndent();
+        ppv_default.myBuilder.append(getOpText().trim());
+        if (printSpaceAfter()) ppv_default.myBuilder.append(' ');
+      } else {
+        if (printSpaceBefore()) ppv_default.myBuilder.append(' ');
+        ppv_default.myBuilder.append(getOpText().trim());
+        if (printSpaceAfter()) ppv_default.myBuilder.append(' ');
+        if (ii) ppv_default.myIndent += INDENT;
+      }
 
       for (int i=0; i<rhs_sz; i++) {
         String s = rhs_strings.get(i);
 
-        if (i>0 || hyph) {
+        if (i>0) {
           ppv_default.printIndent();
         }
 

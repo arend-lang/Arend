@@ -5,6 +5,7 @@ import org.arend.core.context.binding.LevelVariable;
 import org.arend.core.context.binding.PersistentEvaluatingBinding;
 import org.arend.core.context.binding.inference.InferenceLevelVariable;
 import org.arend.core.context.param.DependentLink;
+import org.arend.ext.core.context.BindingVariance;
 import org.arend.core.context.param.SingleDependentLink;
 import org.arend.core.definition.*;
 import org.arend.core.elimtree.Body;
@@ -220,15 +221,16 @@ public class ToAbstractVisitor extends BaseExpressionVisitor<Void, Concrete.Expr
     return false;
   }
 
-  private Concrete.Expression checkPath(DataCallExpression expr) {
-    if (expr.getDefinition() != Prelude.PATH || hasFlag(PrettyPrinterFlag.SHOW_PREFIX_PATH)) {
+  private Concrete.Expression checkPathType(PathTypeExpression expr) {
+    if (hasFlag(PrettyPrinterFlag.SHOW_PREFIX_PATH)) {
       return null;
     }
 
-    LamExpression expr1 = expr.getDefCallArguments().get(0).cast(LamExpression.class);
+    LamExpression expr1 = expr.getArgumentType().cast(LamExpression.class);
     if (expr1 != null) {
-      if (!expr1.getBody().findBinding(expr1.getParameters())) {
-        return cBinOp(convertExpr(expr.getDefCallArguments().get(1)), Prelude.PATH_INFIX.getReferable(), hasFlag(PrettyPrinterFlag.SHOW_BIN_OP_IMPLICIT_ARGS) || convertSubexpr(expr1.getBody()) ? convertExpr(expr1.getBody()) : null, convertExpr(expr.getDefCallArguments().get(2)));
+      if (expr1.getParameters().isUnused() || !expr1.getBody().findBinding(expr1.getParameters())) {
+        Referable infix = (expr.isDirected() ? Prelude.DPATH_INFIX : Prelude.PATH_INFIX).getReferable();
+        return cBinOp(convertExpr(expr.getLeftArgument()), infix, hasFlag(PrettyPrinterFlag.SHOW_BIN_OP_IMPLICIT_ARGS) || convertSubexpr(expr1.getBody()) || getVerboseLevel(expr) > 0 ? convertExpr(expr1.getBody()) : null, convertExpr(expr.getRightArgument()));
       }
     }
     return null;
@@ -499,8 +501,20 @@ public class ToAbstractVisitor extends BaseExpressionVisitor<Void, Concrete.Expr
 
   @Override
   public Concrete.Expression visitDataCall(DataCallExpression expr, Void params) {
-    Concrete.Expression result = checkPath(expr);
-    return result != null ? result : visitDefCall(expr, params);
+    return visitDefCall(expr, params);
+  }
+
+  @Override
+  public Concrete.Expression visitPathType(PathTypeExpression expr, Void params) {
+    Concrete.Expression result = checkPathType(expr);
+    if (result != null) {
+      return result;
+    }
+
+    DataDefinition definition = expr.getDefinition();
+    Referable ref = definition.getRef();
+    Concrete.ReferenceExpression refExpr = cVar(expr, myDefinitionRenamer.renameDefinition(ref), ref);
+    return visitParameters(refExpr, definition.getParameters(), Arrays.asList(expr.getArgumentType(), expr.getLeftArgument(), expr.getRightArgument()), getVerboseLevel(expr));
   }
 
   private Concrete.Expression generateHiddenGoal(Object data) {
@@ -672,7 +686,7 @@ public class ToAbstractVisitor extends BaseExpressionVisitor<Void, Concrete.Expr
         SingleDependentLink params = lamExpr.getParameters();
         Set<Variable> freeVars = myFreeVariablesCollector.getFreeVariables(params.getNextTyped(null));
         for (SingleDependentLink link = params; link.hasNext(); link = link.getNext()) {
-          parameters.add(cName(link, link.isExplicit(), makeLocalReference(link, freeVars, false)));
+          parameters.add(new Concrete.NameParameter(link, link.isExplicit(), makeLocalReference(link, freeVars, false), link.getVariance()));
         }
       }
       expr = lamExpr.getBody();
@@ -687,6 +701,10 @@ public class ToAbstractVisitor extends BaseExpressionVisitor<Void, Concrete.Expr
   }
 
   private void visitDependentLink(DependentLink parameters, List<? super Concrete.TypeParameter> args, boolean isNamed, boolean genName) {
+    visitDependentLink(parameters, args, isNamed, genName, false);
+  }
+
+  private void visitDependentLink(DependentLink parameters, List<? super Concrete.TypeParameter> args, boolean isNamed, boolean genName, boolean clearVariance) {
     List<Referable> referableList = new ArrayList<>(3);
     for (DependentLink link = parameters; link.hasNext(); link = link.getNext()) {
       DependentLink link1 = link.getNextTyped(null);
@@ -697,10 +715,11 @@ public class ToAbstractVisitor extends BaseExpressionVisitor<Void, Concrete.Expr
 
       Referable referable = makeLocalReference(link, freeVars, genName || !link.isExplicit());
       if (referable == null && !isNamed && referableList.isEmpty()) {
-        args.add(new Concrete.TypeParameter(link.isExplicit(), convertExpr(link.getType()), link.isProperty()));
+        Concrete.Expression convertedType = convertExpr(link.getType());
+        args.add(new Concrete.TypeParameter(convertedType.getData(), link.isExplicit(), convertedType, link.isProperty(), clearVariance ? BindingVariance.INVARIANT : link.getVariance()));
       } else {
         referableList.add(referable);
-        args.add(new Concrete.TelescopeParameter(null, link.isExplicit(), new ArrayList<>(referableList), convertExpr(link.getType()), link.isProperty()));
+        args.add(new Concrete.TelescopeParameter(null, link.isExplicit(), new ArrayList<>(referableList), convertExpr(link.getType()), link.isProperty(), clearVariance ? BindingVariance.INVARIANT : link.getVariance()));
         referableList.clear();
       }
     }
@@ -758,10 +777,14 @@ public class ToAbstractVisitor extends BaseExpressionVisitor<Void, Concrete.Expr
   }
 
   private Concrete.UniverseExpression visitSort(Sort sort) {
-    return cUniverse(sort.isOmega() ? null : visitLevelNull(sort.getPLevel(), false), !sort.getHLevel().isInfinity() ? sort.getHLevel().value() : null, sort.isCat() ? ConcreteUniverseExpression.Kind.CAT : ConcreteUniverseExpression.Kind.TYPE);
+    return cUniverse(visitLevel(sort.getPLevel(), true), !sort.getHLevel().isInfinity() ? sort.getHLevel().value() : null, sort.getHLevel().isCat() ? ConcreteUniverseExpression.Kind.CAT : ConcreteUniverseExpression.Kind.TYPE);
   }
 
   private Concrete.LevelExpression visitLevel(Level level) {
+    return visitLevel(level, false);
+  }
+
+  private Concrete.LevelExpression visitLevel(Level level, boolean force) {
     if (level.isInfinity()) {
       return null;
     }
@@ -771,7 +794,7 @@ public class ToAbstractVisitor extends BaseExpressionVisitor<Void, Concrete.Expr
 
     Concrete.LevelExpression result = null;
     for (Map.Entry<LevelVariable, BigInteger> entry : level.getVarPairs()) {
-      if (!hasFlag(PrettyPrinterFlag.SHOW_LEVELS)) {
+      if (!force && !hasFlag(PrettyPrinterFlag.SHOW_LEVELS)) {
         return null;
       }
       Concrete.LevelExpression levelExpr = new Concrete.VarLevelExpression(null, new LocalReferable(entry.getKey().getName()), entry.getKey() instanceof InferenceLevelVariable);
@@ -811,8 +834,8 @@ public class ToAbstractVisitor extends BaseExpressionVisitor<Void, Concrete.Expr
   @Override
   public Concrete.Expression visitSigma(SigmaExpression expr, Void params) {
     List<Concrete.TypeParameter> parameters = new ArrayList<>();
-    visitDependentLink(expr.getParameters(), parameters, false);
-    return cSigma(parameters);
+    visitDependentLink(expr.getParameters(), parameters, false, false, true);
+    return new Concrete.SigmaExpression(null, parameters, expr.getVariance());
   }
 
   private Concrete.Expression simplifyLetClause(Expression expr) {
@@ -1063,12 +1086,12 @@ public class ToAbstractVisitor extends BaseExpressionVisitor<Void, Concrete.Expr
 
   @Override
   public Concrete.Expression visitPath(PathExpression expr, Void params) {
-    return Concrete.AppExpression.make(null, new Concrete.ReferenceExpression(null, Prelude.PATH_CON.getRef()), convertExpr(expr.getArgument()), true);
+    return Concrete.AppExpression.make(null, new Concrete.ReferenceExpression(null, (expr.isDirected() ? Prelude.DPATH_CON : Prelude.PATH_CON).getRef()), convertExpr(expr.getArgument()), true);
   }
 
   @Override
   public Concrete.Expression visitAt(AtExpression expr, Void params) {
-    return Concrete.AppExpression.make(null, Concrete.AppExpression.make(null, new Concrete.ReferenceExpression(null, Prelude.AT.getRef()), convertExpr(expr.getPathArgument()), true), convertExpr(expr.getIntervalArgument()), true);
+    return Concrete.AppExpression.make(null, convertExpr(expr.getPathArgument()), convertExpr(expr.getIntervalArgument()), true);
   }
 
   private FunctionKind visitFunctionKind(CoreFunctionDefinition.Kind kind) {

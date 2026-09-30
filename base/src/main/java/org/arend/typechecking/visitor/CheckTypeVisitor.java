@@ -56,6 +56,7 @@ import org.arend.naming.reference.*;
 import org.arend.naming.renamer.Renamer;
 import org.arend.prelude.Prelude;
 import org.arend.server.ArendServerResolveListener;
+import org.arend.ext.core.context.BindingVariance;
 import org.arend.term.abs.AbstractReference;
 import org.arend.term.concrete.Concrete;
 import org.arend.term.concrete.ConcreteExpressionVisitor;
@@ -113,8 +114,10 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
   private Definition myDefinition;
   private Set<TCDefReferable> myRecursiveDefinitions = Collections.emptySet();
   private boolean myAllowDeferredMetas = true;
+  private Set<Binding> myCovariantContext = new HashSet<>();
+  private int myInvariantDepth = 0;
 
-  private record DeferredMeta(MetaDefinition meta, Map<Referable, Binding> context, LocalExpressionPrettifier localPrettifier, ContextDataImpl contextData, InferenceVariable inferenceVar, MyErrorReporter errorReporter) {}
+  private record DeferredMeta(MetaDefinition meta, Map<Referable, Binding> context, LocalExpressionPrettifier localPrettifier, ContextDataImpl contextData, InferenceVariable inferenceVar, MyErrorReporter errorReporter, Set<Binding> covariantContext, int invariantDepth) {}
 
   public static class MyErrorReporter implements ErrorReporter {
     private final CountingErrorReporter myErrorReporter;
@@ -169,8 +172,38 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
     return myArendExtension;
   }
 
+  private boolean isVarianceAccessible(Binding binding, boolean withCovariant) {
+    return !(binding instanceof DependentLink dl) || dl.getVariance() == BindingVariance.INVARIANT || withCovariant && myCovariantContext.contains(binding);
+  }
+
+  public boolean hasCategoricalContext() {
+    return !myCovariantContext.isEmpty();
+  }
+
+  public boolean dependsOnCategoricalContext(Expression expr) {
+    if (myCovariantContext.isEmpty()) {
+      return false;
+    }
+    FreeVariablesCollector collector = new FreeVariablesCollector(true) {
+      @Override
+      public void addBinding(Binding binding) {
+        if (myCovariantContext.contains(binding)) {
+          super.addBinding(binding);
+        }
+      }
+    };
+    expr.accept(collector, null);
+    return !collector.getResult().isEmpty();
+  }
+
   public TypecheckingContext saveTypecheckingContext() {
-    return new TypecheckingContext(new LinkedHashMap<>(context), new LocalExpressionPrettifier(myLocalPrettifier), myInstancePool, myArendExtension, myResolveListener, copyUserData(), myLevelContext);
+    Map<Referable, Binding> filtered = new LinkedHashMap<>();
+    for (Map.Entry<Referable, Binding> entry : context.entrySet()) {
+      if (isVarianceAccessible(entry.getValue(), true)) {
+        filtered.put(entry.getKey(), entry.getValue());
+      }
+    }
+    return new TypecheckingContext(filtered, new LocalExpressionPrettifier(myLocalPrettifier), myInstancePool, myArendExtension, myResolveListener, copyUserData(), myLevelContext);
   }
 
   public Definition getDefinition() {
@@ -189,23 +222,81 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
     CheckTypeVisitor visitor = new CheckTypeVisitor(typecheckingContext.localContext(), typecheckingContext.localPrettifier(), errorReporter, null, typecheckingContext.arendExtension(), typecheckingContext.resolveListener(), typecheckingContext.userDataHolder());
     visitor.setInstancePool(typecheckingContext.instancePool().copy(visitor));
     visitor.setLevelContext(typecheckingContext.levelContext());
+    for (Binding binding : typecheckingContext.localContext().values()) {
+      if (binding instanceof DependentLink dl && dl.getVariance() != BindingVariance.INVARIANT) {
+        visitor.myCovariantContext.add(binding);
+      }
+    }
     return visitor;
   }
 
   public Referable addBinding(@Nullable Referable referable, Binding binding) {
     Referable ref = referable != null ? referable : new FakeLocalReferable(binding.getName() != null ? binding.getName() : "_");
     context.put(ref, binding);
+    registerVarianceBinding(binding);
     return ref;
   }
 
   public void addBindings(Map<Referable, Binding> bindings) {
     context.putAll(bindings);
+    for (Binding binding : bindings.values()) {
+      registerVarianceBinding(binding);
+    }
+  }
+
+  private void registerVarianceBinding(Binding binding) {
+    if (binding instanceof DependentLink dl && dl.getVariance() == BindingVariance.COVARIANT) {
+      myCovariantContext.add(binding);
+    }
+  }
+
+  public class ClearedCategoricalContext implements AutoCloseable {
+    private final Set<Binding> mySaved;
+
+    private ClearedCategoricalContext(Set<Binding> saved) {
+      mySaved = saved;
+    }
+
+    @Override
+    public void close() {
+      myCovariantContext = mySaved;
+      myInvariantDepth--;
+    }
+  }
+
+  public ClearedCategoricalContext clearCategoricalContext() {
+    Set<Binding> saved = myCovariantContext;
+    myCovariantContext = new HashSet<>();
+    myInvariantDepth++;
+    return new ClearedCategoricalContext(saved);
+  }
+
+  public BindingVariance checkVariance(Concrete.Parameter parameter, boolean allowed) {
+    if (parameter.getVariance() != BindingVariance.INVARIANT && !allowed) {
+      errorReporter.report(new TypecheckingError("Covariant parameters are not allowed here", parameter));
+      return BindingVariance.INVARIANT;
+    }
+    return parameter.getVariance();
+  }
+
+  private BindingVariance checkLambdaVariance(Concrete.Parameter parameter, SingleDependentLink piParam) {
+    if (parameter.getVariance() == BindingVariance.INVARIANT) {
+      return piParam != null && piParam.isExplicit() == parameter.isExplicit() && piParam.getVariance() == BindingVariance.COVARIANT ? BindingVariance.COVARIANT : BindingVariance.INVARIANT;
+    }
+
+    if (piParam != null && piParam.isExplicit() == parameter.isExplicit() && piParam.getVariance() == BindingVariance.INVARIANT) {
+      errorReporter.report(new TypecheckingError("Expected an invariant parameter", parameter));
+      return BindingVariance.INVARIANT;
+    }
+
+    return BindingVariance.COVARIANT;
   }
 
   private void removeBinding(Referable ref) {
     Binding binding = context.remove(ref);
     if (binding != null) {
       myLocalPrettifier.removeBinding(binding);
+      myCovariantContext.remove(binding);
     }
   }
 
@@ -231,9 +322,10 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
     myLocalPrettifier.clear();
   }
 
-  public Set<Binding> getAllBindings() {
+  public Set<Binding> getAllBindings(boolean withCovariant) {
     Set<Binding> result = new HashSet<>();
     for (Binding binding : context.values()) {
+      if (!isVarianceAccessible(binding, withCovariant)) continue;
       result.add(binding);
       if (binding instanceof EvaluatingBinding) {
         Expression expr = ((EvaluatingBinding) binding).getExpression();
@@ -243,6 +335,10 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
       }
     }
     return result;
+  }
+
+  public Set<Binding> getAllBindings() {
+    return getAllBindings(true);
   }
 
   private static class VeryFakeLocalReferable extends FakeLocalReferable {
@@ -255,7 +351,7 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
   public @NotNull List<CoreBinding> getFreeBindingsList() {
     List<CoreBinding> result = new ArrayList<>();
     for (Map.Entry<Referable, Binding> entry : context.entrySet()) {
-      if (!(entry.getKey() instanceof VeryFakeLocalReferable)) {
+      if (!(entry.getKey() instanceof VeryFakeLocalReferable) && isVarianceAccessible(entry.getValue(), true)) {
         result.add(entry.getValue());
       }
     }
@@ -267,7 +363,8 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
     if (!(ref instanceof Referable)) {
       throw new IllegalArgumentException();
     }
-    return context.get(ref);
+    Binding binding = context.get(ref);
+    return binding != null && isVarianceAccessible(binding, true) ? binding : null;
   }
 
   @Override
@@ -376,27 +473,23 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
     expectedType = expectedType.normalize(NormalizationMode.WHNF);
 
     if (result.expression instanceof FunCallExpression idp && idp.getDefinition() == Prelude.IDP) {
-      FunCallExpression equality = expectedType.toEquality();
-      if (equality != null) {
+      PathTypeExpression pathType = expectedType.cast(PathTypeExpression.class);
+      Expression constType = pathType == null ? null : pathType.getArgumentType().removeConstLam();
+      if (pathType != null && constType != null) {
         CompareVisitor visitor = new CompareVisitor(myEquations, CMP.LE, expr);
-        if (!idp.getLevels().compare(equality.getLevels(), CMP.LE, myEquations, expr)) {
+        if (!visitor.compare(idp.getDefCallArguments().get(0), constType, UniverseExpression.OMEGA, false)) {
           Expression resultType = FunCallExpression.make(Prelude.PATH_INFIX, Levels.EMPTY, Arrays.asList(idp.getDefCallArguments().get(0), idp.getDefCallArguments().get(1), idp.getDefCallArguments().get(1)));
-          errorReporter.report(new TypeMismatchWithSubexprError(new CompareVisitor.Result(resultType, equality, resultType, equality, idp.getLevels(), equality.getLevels()), expr));
-          return null;
-        }
-        if (!visitor.compare(idp.getDefCallArguments().get(0), equality.getDefCallArguments().getFirst(), UniverseExpression.OMEGA, false)) {
-          Expression resultType = FunCallExpression.make(Prelude.PATH_INFIX, Levels.EMPTY, Arrays.asList(idp.getDefCallArguments().get(0), idp.getDefCallArguments().get(1), idp.getDefCallArguments().get(1)));
-          errorReporter.report(new TypeMismatchWithSubexprError(new CompareVisitor.Result(resultType, equality, idp.getDefCallArguments().get(0), equality.getDefCallArguments().getFirst(), null, null), expr));
+          errorReporter.report(new TypeMismatchWithSubexprError(new CompareVisitor.Result(resultType, pathType, idp.getDefCallArguments().get(0), constType, null, null), expr));
           return null;
         }
         visitor.setCMP(CMP.EQ);
-        Expression type = equality.getDefCallArguments().get(0);
-        Expression left = equality.getDefCallArguments().get(1).getUnderlyingExpression();
-        Expression right = equality.getDefCallArguments().get(2).getUnderlyingExpression();
+        Expression type = constType;
+        Expression left = pathType.getLeftArgument().getUnderlyingExpression();
+        Expression right = pathType.getRightArgument().getUnderlyingExpression();
         Expression idpArg = idp.getDefCallArguments().get(1).getUnderlyingExpression();
         boolean isNotEqualError = idpArg instanceof InferenceReferenceExpression && ((InferenceReferenceExpression) idpArg).getVariable() != null;
         if (!(visitor.compare(idpArg, left, type, true) && visitor.compare(idpArg, right, type, true))) {
-          errorReporter.report(isNotEqualError ? new NotEqualExpressionsError(getExpressionPrettifier(), left, right, expr) : new TypeMismatchError(equality, result.type, expr));
+          errorReporter.report(isNotEqualError ? new NotEqualExpressionsError(getExpressionPrettifier(), left, right, expr) : new TypeMismatchError(pathType, result.type, expr));
           return null;
         }
         if (left instanceof ArrayExpression) {
@@ -492,7 +585,7 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
           return checkResultExpr(expectedType, new TypecheckingResult(new NewExpression(null, resultClassCall), resultClassCall), expr);
         }
       }
-    } else if (expectedType instanceof DataCallExpression && ((DataCallExpression) expectedType).getDefinition() == Prelude.PATH && result.type instanceof PiExpression) {
+    } else if (expectedType instanceof PathTypeExpression && result.type instanceof PiExpression) {
       int n1 = 0;
       Expression actualType = result.type;
       while (actualType instanceof PiExpression && ((PiExpression) actualType).getParameters().isExplicit()) {
@@ -500,14 +593,14 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
         actualType = ((PiExpression) actualType).getCodomain().normalize(NormalizationMode.WHNF);
       }
 
-      int n2 = 0;
+      List<Boolean> directedList = new ArrayList<>();
       Expression eType = expectedType;
-      while (eType instanceof DataCallExpression && ((DataCallExpression) eType).getDefinition() == Prelude.PATH) {
-        n2++;
-        eType = AppExpression.make(((DataCallExpression) eType).getDefCallArguments().getFirst(), new ReferenceExpression(new TypedBinding("i", ExpressionFactory.Interval())), true).normalize(NormalizationMode.WHNF);
+      while (eType instanceof PathTypeExpression eTypePath) {
+        directedList.add(eTypePath.isDirected());
+        eType = AppExpression.make(eTypePath.getArgumentType(), new ReferenceExpression(new TypedBinding("i", eTypePath.isDirected() ? ExpressionFactory.DI() : ExpressionFactory.Interval())), true).normalize(NormalizationMode.WHNF);
       }
 
-      int n = Math.min(n1, n2);
+      int n = Math.min(n1, directedList.size());
       if (n > 0) {
         List<Referable> refs = new ArrayList<>(n - 1);
         for (int i = 1; i < n; i++) {
@@ -521,15 +614,14 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
           }
           newExpr = Concrete.AppExpression.make(expr.getData(), newExpr, args);
         }
-        Concrete.Expression pathRef = new Concrete.ReferenceExpression(expr.getData(), Prelude.PATH_CON.getRef());
-        newExpr = Concrete.AppExpression.make(expr.getData(), pathRef, newExpr, true);
+        newExpr = Concrete.AppExpression.make(expr.getData(), new Concrete.ReferenceExpression(expr.getData(), (directedList.get(n - 1) ? Prelude.DPATH_CON : Prelude.PATH_CON).getRef()), newExpr, true);
         for (int i = refs.size() - 1; i >= 0; i--) {
-          newExpr = Concrete.AppExpression.make(expr.getData(), pathRef, new Concrete.LamExpression(expr.getData(), Collections.singletonList(new Concrete.NameParameter(expr.getData(), true, refs.get(i))), newExpr), true);
+          newExpr = Concrete.AppExpression.make(expr.getData(), new Concrete.ReferenceExpression(expr.getData(), (directedList.get(i) ? Prelude.DPATH_CON : Prelude.PATH_CON).getRef()), new Concrete.LamExpression(expr.getData(), Collections.singletonList(new Concrete.NameParameter(expr.getData(), true, refs.get(i))), newExpr), true);
         }
         return checkExpr(newExpr, expectedType);
       }
-    } else if (expectedType instanceof PiExpression && result.type instanceof DataCallExpression && ((DataCallExpression) result.type).getDefinition() == Prelude.PATH) {
-      return checkExpr(Concrete.AppExpression.make(expr.getData(), new Concrete.ReferenceExpression(expr.getData(), Prelude.AT.getRef()), new Concrete.ReferenceExpression(expr.getData(), new CoreReferable(null, result)), true), expectedType);
+    } else if (expectedType instanceof PiExpression && result.type instanceof PathTypeExpression pt3) {
+      return checkExpr(Concrete.AppExpression.make(expr.getData(), new Concrete.ReferenceExpression(expr.getData(), (pt3.isDirected() ? Prelude.DAT : Prelude.AT).getRef()), new Concrete.ReferenceExpression(expr.getData(), new CoreReferable(null, result)), true), expectedType);
     }
 
     if (result.type instanceof DataCallExpression && ((DataCallExpression) result.type).getDefinition() == Prelude.FIN && expectedType instanceof DataCallExpression && ((DataCallExpression) expectedType).getDefinition() == Prelude.INT) {
@@ -599,7 +691,7 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
     if (result != null) {
       result = myArgsInference.inferTail(result, expectedType, expr);
     }
-    return result == null ? null : checkResult(expectedType, result.toResult(this), expr);
+    return result == null ? null : checkResult(expectedType, result.toResult(this, expectedType), expr);
   }
 
   @Nullable
@@ -1049,6 +1141,8 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
       MyErrorReporter originalErrorReporter = errorReporter;
       Map<Referable, Binding> originalContext = context;
       LocalExpressionPrettifier originalLocalPrettifier = myLocalPrettifier;
+      Set<Binding> originalCovariantContext = myCovariantContext;
+      int originalInvariantDepth = myInvariantDepth;
       if (afterLevels) {
         for (Binding binding : deferredMeta.context.values()) {
           Expression bindingType = binding.getType();
@@ -1057,11 +1151,15 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
         checkTypeVisitor = copy(deferredMeta.context, deferredMeta.localPrettifier, deferredMeta.errorReporter, null, myArendExtension, myResolveListener, this);
         checkTypeVisitor.setInstancePool(myInstancePool.copy(checkTypeVisitor));
         checkTypeVisitor.setLevelContext(myLevelContext);
+        checkTypeVisitor.myCovariantContext = deferredMeta.covariantContext;
+        checkTypeVisitor.myInvariantDepth = deferredMeta.invariantDepth;
       } else {
         checkTypeVisitor = this;
         errorReporter = deferredMeta.errorReporter;
         context = deferredMeta.context;
         myLocalPrettifier = deferredMeta.localPrettifier;
+        myCovariantContext = deferredMeta.covariantContext;
+        myInvariantDepth = deferredMeta.invariantDepth;
       }
 
       int numberOfErrors = checkTypeVisitor.getNumberOfErrors();
@@ -1078,6 +1176,8 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
       errorReporter = originalErrorReporter;
       context = originalContext;
       myLocalPrettifier = originalLocalPrettifier;
+      myCovariantContext = originalCovariantContext;
+      myInvariantDepth = originalInvariantDepth;
       if (result == null && checkTypeVisitor.getNumberOfErrors() == numberOfErrors) {
         deferredMeta.errorReporter.report(new TypecheckingError(refExpr == null ? "Cannot check deferred expression" : "Meta '" + refExpr.getReferent().getRefName() + "' failed", marker));
       }
@@ -1157,6 +1257,25 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
         infVar = infRefExpr.getInferenceVariable();
       } else {
         infVar = myArgsInference.newInferenceVariable(UniverseExpression.OMEGA, expr);
+        infVar.setType(new UniverseExpression(new SortExpression.InfVar(infVar)));
+      }
+      sortExpr = new SortExpression.InfVar(infVar, true);
+    }
+
+    return new TypeExpression(result.expression, sortExpr);
+  }
+
+  private TypeExpression asPiType(TypecheckingResult result, Concrete.SourceNode sourceNode) {
+    if (result == null) return null;
+
+    Expression type = result.type.normalize(NormalizationMode.WHNF);
+    SortExpression sortExpr = type instanceof UniverseExpression universe ? universe.getSortExpression() : null;
+    if (sortExpr == null) {
+      InferenceVariable infVar;
+      if (type instanceof InferenceReferenceExpression infRefExpr) {
+        infVar = infRefExpr.getInferenceVariable();
+      } else {
+        infVar = myArgsInference.newInferenceVariable(UniverseExpression.OMEGA, sourceNode);
         infVar.setType(new UniverseExpression(new SortExpression.InfVar(infVar)));
       }
       sortExpr = new SortExpression.InfVar(infVar, true);
@@ -1648,7 +1767,7 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
           }
         }
       } else {
-        result = new TypecheckingResult(InferenceReferenceExpression.make(new TypeClassInferenceVariable(field.getName(), type, classDef, false, false, implBody, holeExpr, myDefinition, getAllBindings()), myEquations), type);
+        result = new TypecheckingResult(InferenceReferenceExpression.make(new TypeClassInferenceVariable(field.getName(), type, classDef, false, false, implBody, holeExpr, myDefinition, getAllBindings(false)), myEquations), type);
       }
       return result;
     }
@@ -1663,7 +1782,10 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
       implBody = addImplicitLamParams(implBody, type);
     }
 
-    TypecheckingResult result = fieldSetClass.getDefinition().isGoodField(field) ? checkArgument(implBody, type, null, null) : checkExpr(implBody, type);
+    TypecheckingResult result;
+    try (var ignored = clearCategoricalContext()) {
+      result = fieldSetClass.getDefinition().isGoodField(field) ? checkArgument(implBody, type, null, null) : checkExpr(implBody, type);
+    }
     if (result == null) {
       return null;
     }
@@ -1985,7 +2107,7 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
       levels = typecheckLevels(definition, expr, implementedFields);
     }
 
-    return DefCallResult.makeTResult(expr, definition, levels);
+    return DefCallResult.makeTResult(expr, definition, levels, this);
   }
 
   private boolean checkUnresolved(Referable ref, Concrete.SourceNode sourceNode) {
@@ -2006,6 +2128,10 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
       errorReporter.report(new IncorrectReferenceError(ref, sourceNode));
       return null;
     }
+    if (def instanceof DependentLink dl && dl.getVariance() != BindingVariance.INVARIANT && !myCovariantContext.contains(def)) {
+      errorReporter.report(new TypecheckingError("Covariant variable '" + ref.textRepresentation() + "' is used in an invariant position", sourceNode));
+      return null;
+    }
     Expression type = def.getType();
     if (type == null) {
       errorReporter.report(new ReferenceTypeError(ref, sourceNode));
@@ -2019,11 +2145,52 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
     return visitReference(expr, Collections.emptySet());
   }
 
+  private boolean checkContext(TypecheckingResult result, Concrete.SourceNode sourceNode) {
+    Set<Binding> visitedEvaluatingBindings = new HashSet<>();
+    FreeVariablesCollector collector = new FreeVariablesCollector() {
+      @Override
+      public void addBinding(Binding binding) {
+        if (binding instanceof EvaluatingBinding evaluatingBinding) {
+          if (visitedEvaluatingBindings.add(binding)) {
+            evaluatingBinding.getExpression().accept(this, null);
+          }
+        } else {
+          super.addBinding(binding);
+        }
+      }
+    };
+
+    result.expression.accept(collector, null);
+    if (result.type != null) {
+      result.type.accept(collector, null);
+    }
+    Set<Binding> freeVars = collector.getResult();
+    if (freeVars.isEmpty()) {
+      return true;
+    }
+
+    for (Binding binding : context.values()) {
+      if (isVarianceAccessible(binding, true)) {
+        freeVars.remove(binding);
+      }
+    }
+
+    if (freeVars.isEmpty()) {
+      return true;
+    }
+
+    errorReporter.report(new TypecheckingError("The following variables are not available: " + freeVars, sourceNode));
+    return false;
+  }
+
   private TResult visitReference(Concrete.ReferenceExpression expr, Set<ClassField> implementedFields) {
     Referable ref = expr.getReferent();
     if (ref instanceof CoreReferable) {
       TypecheckingResult result = ((CoreReferable) ref).result;
       fixCheckedExpression(result, ref, expr);
+      if (!checkContext(result, expr)) {
+        return null;
+      }
       return new TypecheckingResult(result.expression, result.type);
     } else if (ref instanceof AbstractedReferable) {
       Expression core = (Expression) substituteAbstractedExpression(((AbstractedReferable) ref).expression, LevelSubstitution.EMPTY, ((AbstractedReferable) ref).arguments, expr);
@@ -2056,7 +2223,7 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
     if (!params.isEmpty()) {
       ExprSubstitution substitution = new ExprSubstitution();
       for (SingleDependentLink param : params) {
-        Expression arg = new InferenceReferenceExpression(new ExpressionInferenceVariable(param.getType().subst(substitution), expr, getAllBindings(), true));
+        Expression arg = new InferenceReferenceExpression(new ExpressionInferenceVariable(param.getType().subst(substitution), expr, getAllBindings(param.getVariance() == BindingVariance.COVARIANT), true));
         argResult.expression = AppExpression.make(argResult.expression, arg, param.isExplicit());
         substitution.add(param, arg);
       }
@@ -2074,7 +2241,7 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
     }
 
     TResult result = myArgsInference.inferTail(new TypecheckingResult(FieldCallExpression.make(field, argResult.expression), GetTypeVisitor.INSTANCE.getFieldCallType(field, classCall, argResult.expression)), expectedType, expr);
-    return result == null ? null : checkResult(expectedType, result.toResult(this), expr);
+    return result == null ? null : checkResult(expectedType, result.toResult(this, expectedType), expr);
   }
 
   private TypecheckingResult visitReference(Concrete.ReferenceExpression expr, Expression expectedType, boolean inferTailImplicits, boolean checkInfiniteLevel) {
@@ -2198,13 +2365,53 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
     InferenceVariable inferenceVariable = new LambdaInferenceVariable(name == null ? "_" : "type-of-" + name, UniverseExpression.OMEGA, param.getReferable(), false, sourceNode, getAllBindings());
     inferenceVariable.setType(new UniverseExpression(new SortExpression.InfVar(inferenceVariable)));
     Expression argType = InferenceReferenceExpression.make(inferenceVariable, myEquations);
-    TypedSingleDependentLink link = new TypedSingleDependentLink(param.isExplicit(), name, argType);
+    TypedSingleDependentLink link = new TypedSingleDependentLink(param.isExplicit(), name, argType, false, param.getVariance());
     addBinding(referable, link);
     return link;
   }
 
-  private SingleDependentLink visitTypeParameter(Concrete.TypeParameter param, List<SortExpression> sorts, Expression expectedType) {
-    TypeExpression argResult = checkType(param.getType(), UniverseExpression.OMEGA);
+  public void checkCatDomain(Expression domain, Concrete.SourceNode sourceNode) {
+    FreeVariablesCollector collector = new FreeVariablesCollector() {
+      @Override
+      public void addBinding(Binding binding) {
+        if (binding instanceof DependentLink link && link.getVariance() != BindingVariance.INVARIANT) {
+          super.addBinding(binding);
+        }
+      }
+
+      @Override
+      public Void visitInferenceReference(InferenceReferenceExpression expr, Void params) {
+        InferenceVariable variable = expr.getVariable();
+        if (variable == null) {
+          return super.visitInferenceReference(expr, params);
+        } else {
+          for (Binding binding : variable.getBounds()) {
+            addBinding(binding);
+          }
+          return null;
+        }
+      }
+    };
+
+    domain.accept(collector, null);
+    if (!collector.getResult().isEmpty()) {
+      errorReporter.report(new TypecheckingError("The domain of a \\Pi-type depends on covariant parameters " + collector.getResult(), sourceNode));
+    }
+  }
+
+  private SingleDependentLink visitTypeParameter(Concrete.TypeParameter param, List<SortExpression> sorts, Expression expectedType, BindingVariance variance) {
+    return visitTypeParameter(param, sorts, expectedType, variance, false);
+  }
+
+  private SingleDependentLink visitTypeParameter(Concrete.TypeParameter param, List<SortExpression> sorts, Expression expectedType, BindingVariance variance, boolean allowCatDomain) {
+    TypeExpression argResult;
+    if (allowCatDomain && variance != BindingVariance.INVARIANT) {
+      argResult = checkType(param.getType(), UniverseExpression.OMEGA);
+    } else {
+      try (var ignored = clearCategoricalContext()) {
+        argResult = checkType(param.getType(), UniverseExpression.OMEGA);
+      }
+    }
     if (argResult == null) return null;
     if (expectedType != null) {
       Expression expected = expectedType.normalize(NormalizationMode.WHNF).getUnderlyingExpression();
@@ -2219,35 +2426,43 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
 
     if (param instanceof Concrete.TelescopeParameter) {
       List<? extends Referable> referableList = param.getReferableList();
-      SingleDependentLink link = ExpressionFactory.singleParams(param.isExplicit(), param.getNames(), argResult.expression());
+      SingleDependentLink link = ExpressionFactory.singleParams(param.isExplicit(), param.getNames(), argResult.expression(), variance);
       int i = 0;
       for (SingleDependentLink link1 = link; link1.hasNext(); link1 = link1.getNext(), i++) {
         addBinding(referableList.get(i) , link1);
       }
       return link;
     } else {
-      return new TypedSingleDependentLink(param.isExplicit(), null, argResult.expression());
+      return new TypedSingleDependentLink(param.isExplicit(), null, argResult.expression(), false, variance);
     }
   }
 
-  private boolean visitParameter(Concrete.Parameter arg, LinkList list) {
+  private boolean visitParameter(Concrete.Parameter arg, LinkList list, boolean allowCovariant) {
     if (arg.getType() == null) {
       errorReporter.report(new TypecheckingError("Incomplete expression", arg));
       return false;
     }
-    TypecheckingResult result = checkExpr(arg.getType(), UniverseExpression.OMEGA);
+    BindingVariance variance = checkVariance(arg, allowCovariant);
+    TypecheckingResult result;
+    if (variance == BindingVariance.INVARIANT) {
+      try (var ignored = clearCategoricalContext()) {
+        result = checkExpr(arg.getType(), UniverseExpression.OMEGA);
+      }
+    } else {
+      result = checkExpr(arg.getType(), UniverseExpression.OMEGA);
+    }
     if (result == null) return false;
 
     if (arg instanceof Concrete.TelescopeParameter) {
       List<? extends Referable> referableList = arg.getReferableList();
-      DependentLink link = ExpressionFactory.parameter(arg.isExplicit(), arg.getNames(), result.expression);
+      DependentLink link = ExpressionFactory.parameter(arg.isExplicit(), arg.getNames(), result.expression, variance);
       list.append(link);
       int i = 0;
       for (DependentLink link1 = link; link1.hasNext(); link1 = link1.getNext(), i++) {
         addBinding(referableList.get(i), link1);
       }
     } else {
-      DependentLink link = ExpressionFactory.parameter(arg.isExplicit(), Collections.singletonList(null), result.expression);
+      DependentLink link = ExpressionFactory.parameter(arg.isExplicit(), Collections.singletonList(null), result.expression, variance);
       list.append(link);
       addBinding(null, link);
     }
@@ -2263,7 +2478,7 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
         if (!(parameter instanceof Concrete.TypeParameter)) {
           throw new IllegalArgumentException();
         }
-        if (!visitParameter((Concrete.TypeParameter) parameter, list)) {
+        if (!visitParameter((Concrete.TypeParameter) parameter, list, false)) {
           return null;
         }
       }
@@ -2386,13 +2601,13 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
             errorReporter.report(new ImplicitLambdaError(referable, -1, param));
           }
 
-          SingleDependentLink link = new TypedSingleDependentLink(piParam.isExplicit(), referable == null ? null : referable.textRepresentation(), piParam.getType());
+          SingleDependentLink link = new TypedSingleDependentLink(piParam.isExplicit(), referable == null ? null : referable.textRepresentation(), piParam.getType(), false, checkLambdaVariance(param, piParam));
           addBinding(referable, link);
           newProvider.subst(piParam, new ReferenceExpression(link));
           return new Pair<>(bodyToLam(link, visitLam(parameters.subList(1, parameters.size()), expr, newProvider)), true);
         }
       } else if (param instanceof Concrete.TypeParameter) {
-        SingleDependentLink link = visitTypeParameter((Concrete.TypeParameter) param, null, piParam == null || piParam.isExplicit() != param.isExplicit() ? null : piParam.getType());
+        SingleDependentLink link = visitTypeParameter((Concrete.TypeParameter) param, null, piParam == null || piParam.isExplicit() != param.isExplicit() ? null : piParam.getType(), checkLambdaVariance(param, piParam));
         if (link == null) {
           return new Pair<>(null, true);
         }
@@ -2517,6 +2732,10 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
 
   @Override
   public TypecheckingResult visitPi(Concrete.PiExpression expr, Expression expectedType) {
+    return checkPi(expr, expectedType, false);
+  }
+
+  public TypecheckingResult checkPi(Concrete.PiExpression expr, Expression expectedType, boolean allowCatDomain) {
     List<SingleDependentLink> list = new ArrayList<>();
     List<SortExpression> paramSorts = new ArrayList<>(expr.getParameters().size());
 
@@ -2525,22 +2744,35 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
         if (arg.isProperty()) {
           errorReporter.report(new CertainTypecheckingError(CertainTypecheckingError.Kind.PROPERTY_IGNORED, arg));
         }
-        SingleDependentLink link = visitTypeParameter(arg, paramSorts, null);
+        SingleDependentLink link = visitTypeParameter(arg, paramSorts, null, arg.getVariance(), allowCatDomain);
         if (link == null) {
           return null;
         }
         list.add(link);
       }
 
-      TypeExpression result = checkType(expr.getCodomain(), expectedType == UniverseExpression.INF_OMEGA ? expectedType : UniverseExpression.OMEGA);
+      Expression codomainExpectedType = expectedType == UniverseExpression.INF_OMEGA ? expectedType : UniverseExpression.OMEGA;
+      Concrete.Expression codomain = expr.getCodomain();
+      TypeExpression result = allowCatDomain && codomain instanceof Concrete.PiExpression codomainPi
+        ? asPiType(checkPi(codomainPi, codomainExpectedType, true), codomain)
+        : checkType(codomain, codomainExpectedType);
       if (result == null) return null;
+
+      SortExpression codomainSort = result.sort();
+      if (codomainSort.isInfinite()) {
+        Expression releasedType = GetTypeVisitor.INSTANCE.getReleasedType(result.expression(), list);
+        SortExpression releasedSort = releasedType == null ? null : releasedType.toSortExpression();
+        if (releasedSort != null) {
+          codomainSort = releasedSort;
+        }
+      }
 
       Expression piExpr = result.expression();
       for (int i = list.size() - 1; i >= 0; i--) {
         piExpr = new PiExpression(list.get(i), piExpr);
       }
 
-      return checkResult(expectedType, new TypecheckingResult(piExpr, new UniverseExpression(SortExpression.makePi(SortExpression.makeMax(paramSorts), result.sort()))), expr);
+      return checkResult(expectedType, new TypecheckingResult(piExpr, new UniverseExpression(SortExpression.makePi(SortExpression.makeMax(paramSorts), codomainSort))), expr);
     }
   }
 
@@ -2556,17 +2788,23 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
       return expr.getParameters().getFirst().getType().accept(this, expectedType);
     }
 
+    for (Concrete.TypeParameter parameter : expr.getParameters()) {
+      if (parameter.getVariance() != BindingVariance.INVARIANT) {
+        errorReporter.report(new TypecheckingError("Variance annotations are not allowed in \\Sigma types; use \\Sigma+ instead", parameter));
+      }
+    }
+
     List<SortExpression> sorts = new ArrayList<>(expr.getParameters().size());
-    DependentLink args = visitSigmaParameters(expr.getParameters(), expectedType, sorts);
+    DependentLink args = visitSigmaParameters(expr.getParameters(), expr.getVariance(), expectedType, sorts);
     return args == null || !args.hasNext() ? null : checkResult(expectedType, new TypecheckingResult(new SigmaExpression(args), new UniverseExpression(SortExpression.makeMax(sorts))), expr);
   }
 
-  private DependentLink visitSigmaParameters(Collection<? extends Concrete.TypeParameter> parameters, Expression expectedType, List<SortExpression> resultSorts) {
+  private DependentLink visitSigmaParameters(Collection<? extends Concrete.TypeParameter> parameters, BindingVariance variance, Expression expectedType, List<SortExpression> resultSorts) {
     LinkList list = new LinkList();
 
     try (var ignored = new Utils.RefContextSaver(context, myLocalPrettifier)) {
       for (Concrete.TypeParameter parameter : parameters) {
-        if (!visitSigmaParameter(parameter, expectedType, resultSorts, list)) {
+        if (!visitSigmaParameter(parameter, variance, expectedType, resultSorts, list)) {
           return null;
         }
       }
@@ -2575,8 +2813,15 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
     return list.getFirst();
   }
 
-  private boolean visitSigmaParameter(Concrete.TypeParameter arg, Expression expectedType, List<SortExpression> resultSorts, LinkList list) {
-    TypeExpression result = checkType(arg.getType(), expectedType == null ? UniverseExpression.OMEGA : expectedType);
+  private boolean visitSigmaParameter(Concrete.TypeParameter arg, BindingVariance variance, Expression expectedType, List<SortExpression> resultSorts, LinkList list) {
+    TypeExpression result;
+    if (variance == BindingVariance.INVARIANT) {
+      try (var ignored = clearCategoricalContext()) {
+        result = checkType(arg.getType(), expectedType == UniverseExpression.INF_OMEGA ? UniverseExpression.INF_OMEGA : UniverseExpression.OMEGA);
+      }
+    } else {
+      result = checkType(arg.getType(), expectedType == null ? UniverseExpression.OMEGA : expectedType);
+    }
     if (result == null) return false;
 
     SortExpression sort = result.sort();
@@ -2587,20 +2832,20 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
     }
     if (arg instanceof Concrete.TelescopeParameter) {
       List<? extends Referable> referableList = arg.getReferableList();
-      DependentLink link = ExpressionFactory.parameter(true, isProp, arg.getNames(), result.expression());
+      DependentLink link = ExpressionFactory.parameter(true, isProp, arg.getNames(), result.expression(), variance);
       list.append(link);
       int i = 0;
       for (DependentLink link1 = link; link1.hasNext(); link1 = link1.getNext(), i++) {
         addBinding(referableList.get(i), link1);
       }
     } else {
-      DependentLink link = ExpressionFactory.parameter(true, isProp, Collections.singletonList(null), result.expression());
+      DependentLink link = ExpressionFactory.parameter(true, isProp, Collections.singletonList(null), result.expression(), variance);
       list.append(link);
       addBinding(null, link);
     }
 
     if (resultSorts != null) {
-      resultSorts.add(sort);
+      resultSorts.add(variance == BindingVariance.INVARIANT ? sort.withoutCat() : sort);
     }
     return true;
   }
@@ -2658,7 +2903,14 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
       ExprSubstitution substitution = new ExprSubstitution();
       for (Concrete.Expression field : expr.getFields()) {
         Expression expType = sigmaParams.getType().subst(substitution);
-        TypecheckingResult result = checkExpr(field, expType);
+        TypecheckingResult result;
+        if (sigmaParams.getVariance() == BindingVariance.INVARIANT) {
+          try (var ignored = clearCategoricalContext()) {
+            result = checkExpr(field, expType);
+          }
+        } else {
+          result = checkExpr(field, expType);
+        }
         if (result == null) return new Pair<>(null, false);
         fields.add(result.expression);
         substitution.add(sigmaParams, result.expression);
@@ -2727,7 +2979,7 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
       ExprSubstitution subst = new ExprSubstitution();
       while (exprResult.type instanceof PiExpression && !((PiExpression) exprResult.type).getParameters().isExplicit()) {
         for (DependentLink param = ((PiExpression) exprResult.type).getParameters(); param.hasNext(); param = param.getNext()) {
-          Expression arg = new InferenceReferenceExpression(new ExpressionInferenceVariable(param.getType(), expr, getAllBindings(), true));
+          Expression arg = new InferenceReferenceExpression(new ExpressionInferenceVariable(param.getType(), expr, getAllBindings(param.getVariance() == BindingVariance.COVARIANT), true));
           exprResult.expression = AppExpression.make(exprResult.expression, arg, false);
           subst.add(param, arg);
         }
@@ -2802,7 +3054,7 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
     if (param instanceof Concrete.NameParameter) {
       return bodyToLam(visitNameParameter((Concrete.NameParameter) param, letClause), typecheckLetClause(parameters.subList(1, parameters.size()), letClause, false));
     } else if (param instanceof Concrete.TypeParameter) {
-      SingleDependentLink link = visitTypeParameter((Concrete.TypeParameter) param, null, null);
+      SingleDependentLink link = visitTypeParameter((Concrete.TypeParameter) param, null, null, param.getVariance());
       return link == null ? null : bodyToLam(link, typecheckLetClause(parameters.subList(1, parameters.size()), letClause, false));
     } else {
       throw new IllegalStateException();
@@ -3040,7 +3292,7 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
 
     ContextDataImpl contextDataImpl = new ContextDataImpl((Concrete.Expression) marker, contextData.getArguments(), contextData.getCoclauses(), contextData.getClauses(), expectedType, contextData.getUserData());
     InferenceVariable inferenceVar = new MetaInferenceVariable(marker instanceof Concrete.ReferenceExpression ? ((Concrete.ReferenceExpression) marker).getReferent().getRefName() : "deferred", expectedType, (Concrete.Expression) marker, getAllBindings());
-    (afterLevels ? myDeferredMetasAfterLevels : myDeferredMetasBeforeSolver).add(new DeferredMeta(meta, new LinkedHashMap<>(context), new LocalExpressionPrettifier(myLocalPrettifier), contextDataImpl, inferenceVar, errorReporter));
+    (afterLevels ? myDeferredMetasAfterLevels : myDeferredMetasBeforeSolver).add(new DeferredMeta(meta, new LinkedHashMap<>(context), new LocalExpressionPrettifier(myLocalPrettifier), contextDataImpl, inferenceVar, errorReporter, new HashSet<>(myCovariantContext), myInvariantDepth));
     return new TypecheckingResult(new InferenceReferenceExpression(inferenceVar), expectedType);
   }
 
@@ -3363,18 +3615,6 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
 
   @Override
   public TypecheckingResult visitUniverse(Concrete.UniverseExpression expr, Expression expectedType) {
-    if (expr.isInfSort()) {
-      if (expectedType != UniverseExpression.INF_OMEGA) {
-        errorReporter.report(new TypecheckingError("Infinite level is not allowed here", expr));
-        return null;
-      }
-
-      return checkResult(expectedType, expr.getHLevel() == null
-          ? new TypecheckingResult(UniverseExpression.OMEGA, UniverseExpression.OMEGA)
-          : new TypecheckingResult(new UniverseExpression(new Sort(Level.INFINITY, new ConstLevel(expr.getHLevel()))), new UniverseExpression(new Sort(Level.INFINITY, new ConstLevel(expr.getHLevel().add(BigInteger.ONE))))), expr);
-    }
-
-    Level pLevel = expr.getPLevel() != null ? expr.getPLevel().accept(this, null) : null;
     BigInteger hLevel;
     if (expr.getHLevel() != null) {
       BigInteger number = expr.getHLevel();
@@ -3387,22 +3627,31 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
       hLevel = null;
     }
 
+    boolean isCat = expr.getKind() == ConcreteUniverseExpression.Kind.CAT;
+    if (isCat && hLevel != null) {
+      errorReporter.report(new TypecheckingError("\\Cat cannot have an h-level", expr));
+    }
+    ConstLevel constHLevel = isCat ? ConstLevel.CAT_INFINITY : new ConstLevel(hLevel);
+
+    if (expr.isInfSort()) {
+      if (expectedType != UniverseExpression.INF_OMEGA) {
+        errorReporter.report(new TypecheckingError("Infinite level is not allowed here", expr));
+        return null;
+      }
+
+      Sort sort = new Sort(Level.INFINITY, constHLevel);
+      return checkResult(expectedType, new TypecheckingResult(new UniverseExpression(sort), new UniverseExpression(sort.succ())), expr);
+    }
+
+    Level pLevel = expr.getPLevel() != null ? expr.getPLevel().accept(this, null) : null;
+
     if (pLevel == null) {
       InferenceLevelVariable pl = new InferenceLevelVariable(expr, false);
       myEquations.addVariable(pl);
       pLevel = new Level(pl);
     }
 
-    Sort sort;
-    if (expr.getKind() == ConcreteUniverseExpression.Kind.CAT) {
-      if (hLevel != null) {
-        errorReporter.report(new TypecheckingError("\\Cat cannot have an h-level", expr));
-      }
-      sort = new Sort(pLevel, true);
-    } else {
-      sort = new Sort(pLevel, new ConstLevel(hLevel));
-    }
-
+    Sort sort = new Sort(pLevel, constHLevel);
     return checkResult(expectedType, new TypecheckingResult(new UniverseExpression(sort), new UniverseExpression(sort.succ())), expr);
   }
 
@@ -3550,7 +3799,7 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
               if (!(param instanceof Concrete.Parameter)) {
                 throw new IllegalArgumentException();
               }
-              if (!visitParameter((Concrete.Parameter) param, list)) {
+              if (!visitParameter((Concrete.Parameter) param, list, false)) {
                 return null;
               }
             }
@@ -3571,16 +3820,21 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
           case REPLACE, REPLACE_REMOVE -> {
             Map<?, ?> replacement = (Map<?, ?>) command.bindings;
             Set<Map.Entry<Referable, Binding>> removed = command.kind == FreeBindingsModifier.Command.Kind.REPLACE_REMOVE ? new HashSet<>() : null;
+            List<Binding> replacedBindings = new ArrayList<>();
             for (Map.Entry<Referable, Binding> entry : context.entrySet()) {
               Object newBinding = replacement.get(entry.getValue());
               if (newBinding != null) {
                 if (!(newBinding instanceof Binding)) {
                   throw new IllegalArgumentException();
                 }
+                replacedBindings.add(entry.getValue());
                 entry.setValue((Binding) newBinding);
               } else if (removed != null) {
                 removed.add(entry);
               }
+            }
+            for (Binding binding : replacedBindings) {
+              context.put(new VeryFakeLocalReferable(binding.getName()), binding);
             }
             if (removed != null) {
               for (var entry : removed) {
@@ -3592,6 +3846,13 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
         }
       }
 
+      return action.apply(this);
+    }
+  }
+
+  @Override
+  public <T> T withoutCategoricalContext(@NotNull Function<ExpressionTypechecker, T> action) {
+    try (var ignored = clearCategoricalContext()) {
       return action.apply(this);
     }
   }
@@ -3898,16 +4159,42 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
     try (var ignored = new Utils.RefContextSaver(context, myLocalPrettifier)) {
       for (int i = 0; i < caseArgs.size(); i++) {
         Concrete.CaseArgument caseArg = caseArgs.get(i);
-        TypecheckingResult argType = null;
-        if (caseArg.type != null) {
-          argType = checkExpr(caseArg.type, UniverseExpression.OMEGA);
+        BindingVariance markerVariance = caseArg.getVariance();
+        Concrete.Expression typeToCheck = caseArg.type;
+        if (caseArg.isElim) {
+          if (typeToCheck != null && !(typeToCheck instanceof Concrete.HoleExpression)) {
+            errorReporter.report(new TypecheckingError("Explicit type annotation is not allowed with \\elim", caseArg.expression));
+          }
+          typeToCheck = null;
         }
-
-        Expression argTypeExpr = argType == null ? null : argType.expression.subst(substitution);
-        TypecheckingResult exprResult = checkExpr(caseArg.expression, argTypeExpr);
+        TypecheckingResult argType = null;
+        Expression argTypeExpr;
+        TypecheckingResult exprResult;
+        if (!caseArg.isElim && markerVariance == BindingVariance.INVARIANT) {
+          try (var ignoredCatContext = clearCategoricalContext()) {
+            if (typeToCheck != null) {
+              argType = checkExpr(typeToCheck, UniverseExpression.OMEGA);
+            }
+            argTypeExpr = argType == null ? null : argType.expression.subst(substitution);
+            exprResult = checkExpr(caseArg.expression, argTypeExpr);
+          }
+        } else {
+          if (typeToCheck != null) {
+            argType = checkExpr(typeToCheck, UniverseExpression.OMEGA);
+          }
+          argTypeExpr = argType == null ? null : argType.expression.subst(substitution);
+          exprResult = checkExpr(caseArg.expression, argTypeExpr);
+        }
         if (exprResult == null) return null;
         if (caseArg.isElim && !(exprResult.expression instanceof ReferenceExpression)) {
           errorReporter.report(new TypecheckingError("Expected a variable", caseArg.expression));
+          return null;
+        }
+
+        Binding origBinding = caseArg.isElim ? ((ReferenceExpression) exprResult.expression).getBinding() : null;
+        BindingVariance argVariance = caseArg.isElim ? origBinding.getVariance() : markerVariance;
+        if (caseArg.isElim && caseArg.type != null && markerVariance != argVariance) {
+          errorReporter.report(new TypecheckingError("The variance of '" + origBinding.getName() + "' does not match the specified variance", caseArg.expression));
           return null;
         }
         if (argType == null && Prelude.ARRAY_CONS != null) {
@@ -3947,14 +4234,9 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
           exprResult.type = checkedSubst(exprResult.type, elimSubst, allowedBindings, caseArg.expression);
         }
         Referable asRef = caseArg.isElim ? ((Concrete.ReferenceExpression) caseArg.expression).getReferent() : caseArg.referable;
-        DependentLink link = ExpressionFactory.parameter(asRef == null ? null : asRef.textRepresentation(), argType != null ? argType.expression : exprResult.type);
+        DependentLink link = ExpressionFactory.parameter(asRef == null ? null : asRef.textRepresentation(), argType != null ? argType.expression : exprResult.type, argVariance);
         list.append(link);
         if (caseArg.isElim) {
-          if (argTypeExpr != null) {
-            errorReporter.report(new TypecheckingError("Explicit type annotation is not allowed with \\elim", caseArg.expression));
-            return null;
-          }
-          Binding origBinding = ((ReferenceExpression) exprResult.expression).getBinding();
           origElimBindings.put(asRef, origBinding);
           elimSubst.add(origBinding, new ReferenceExpression(link));
 
@@ -3984,17 +4266,24 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
       if (resultType == null && expectedType == null) {
         return null;
       }
-      if (resultType == null && expectedType.isOmega()) {
-        errorReporter.report(new TypecheckingError("Large elimination is not allowed", expr.getResultType() != null ? expr.getResultType() : expr));
-        return null;
+      if (resultType == null) {
+        Sort sort = expectedType.toSort();
+        if (sort != null && sort.getPLevel().isInfinity()) {
+          errorReporter.report(new TypecheckingError("Large elimination is not allowed", expr.getResultType() != null ? expr.getResultType() : expr));
+          return null;
+        }
       }
       resultExpr = resultType != null ? resultType.expression() : checkedSubst(expectedType, elimSubst, allowedBindings, expr.getResultType() != null ? expr.getResultType() : expr);
 
       if (expr.getResultTypeLevel() != null) {
-        TypecheckingResult levelResult = checkExpr(expr.getResultTypeLevel(), null);
-        if (levelResult != null) {
-          resultTypeLevel = levelResult.expression;
-          level = minInteger(level, getExpressionLevel(EmptyDependentLink.getInstance(), levelResult.type, resultExpr, myEquations, expr.getResultTypeLevel()));
+        if (expr.isGroupoidalLevelProof()) {
+          errorReporter.report(new TypecheckingError("\\level+ is not supported in \\case", expr.getResultTypeLevel()));
+        } else {
+          TypecheckingResult levelResult = checkExpr(expr.getResultTypeLevel(), null);
+          if (levelResult != null) {
+            resultTypeLevel = levelResult.expression;
+            level = minInteger(level, getExpressionLevel(EmptyDependentLink.getInstance(), levelResult.type, resultExpr, myEquations, expr.getResultTypeLevel()));
+          }
         }
       }
     }

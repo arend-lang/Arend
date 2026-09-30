@@ -1,10 +1,14 @@
 package org.arend.core.sort;
 
 import org.arend.core.context.binding.inference.InferenceVariable;
+import org.arend.core.context.param.SingleDependentLink;
 import org.arend.core.definition.ClassField;
+import org.arend.core.expr.AppExpression;
 import org.arend.core.expr.ClassCallExpression;
+import org.arend.core.expr.FieldCallExpression;
 import org.arend.core.expr.Expression;
 import org.arend.core.expr.PiExpression;
+import org.arend.core.expr.ReferenceExpression;
 import org.arend.core.expr.UniverseExpression;
 import org.arend.core.expr.visitor.GetTypeVisitor;
 import org.arend.ext.core.level.ConstLevel;
@@ -33,6 +37,8 @@ public sealed interface SortExpression extends CoreSortExpression permits SortEx
   default @NotNull SortExpression simplify() {
     return subst(LevelSubstitution.EMPTY);
   }
+
+  @NotNull SortExpression withoutCat();
 
   @Override
   @Nullable BigInteger getSortHLevel();
@@ -67,6 +73,7 @@ public sealed interface SortExpression extends CoreSortExpression permits SortEx
     return equations.addEquation(sortExpr1, sortExpr2, cmp, sourceNode);
   }
 
+
   record Const(@NotNull Sort sort) implements SortExpression, ConstSortExpression {
     @Override
     public @NotNull Sort getSort() {
@@ -99,6 +106,11 @@ public sealed interface SortExpression extends CoreSortExpression permits SortEx
     }
 
     @Override
+    public @NotNull SortExpression withoutCat() {
+      return new Const(new Sort(sort.getPLevel(), new ConstLevel(sort.getHLevel().value())));
+    }
+
+    @Override
     public @Nullable BigInteger getSortHLevel() {
       ConstLevel level = sort.getHLevel();
       return level.value() == null ? null : level.value();
@@ -110,12 +122,12 @@ public sealed interface SortExpression extends CoreSortExpression permits SortEx
    *
    * @param index   refers to one of the parameters of the (data or function) definition.
    */
-  record Var(int index, List<ClassField> fields) implements SortExpression {
-    private static SortExpression getTypeUniverse(Expression expr) {
+  record Var(int index, List<ClassField> fields, ConstLevel hLevel) implements SortExpression {
+    private SortExpression getTypeUniverse(Expression expr) {
       while (expr instanceof PiExpression piExpr) {
         expr = piExpr.getCodomain();
       }
-      return expr instanceof UniverseExpression universe ? universe.getSortExpression() : new Const(Sort.INFINITY);
+      return expr instanceof UniverseExpression universe ? universe.getSortExpression() : new Const(new Sort(Level.INFINITY, hLevel));
     }
 
     @Override
@@ -124,46 +136,46 @@ public sealed interface SortExpression extends CoreSortExpression permits SortEx
       Expression arg = arguments.get(index);
       if (arg == null) return this;
 
-      // Once a field in the chain turns out to be not implemented, there is no concrete value to
-      // keep substituting into -- but remaining fields still need to be resolved against its
-      // (uninstantiated) type, since only the type of the very last field determines the sort.
-      Expression type = null;
-      for (int i = 0; i < fields.size(); i++) {
-        ClassField field = fields.get(i);
-        Expression argType;
-        if (arg != null) {
-          arg = arg.normalize(NormalizationMode.WHNF);
-          argType = arg.accept(visitor, null).normalize(NormalizationMode.WHNF);
-        } else {
-          argType = type;
-        }
+      for (ClassField field : fields) {
+        arg = arg.normalize(NormalizationMode.WHNF);
+        Expression argType = arg.accept(visitor, null).normalize(NormalizationMode.WHNF);
         while (argType instanceof PiExpression piExpr) {
+          for (SingleDependentLink param = piExpr.getParameters(); param.hasNext(); param = param.getNext()) {
+            arg = AppExpression.make(arg, new ReferenceExpression(param), param.isExplicit());
+          }
           argType = piExpr.getCodomain().normalize(NormalizationMode.WHNF);
         }
         if (!(argType instanceof ClassCallExpression classCall)) {
           return getTypeUniverse(field.getType());
         }
 
-        if (arg != null) {
-          arg = classCall.getImplementation(field, arg);
-        }
-        if (arg == null) {
-          Expression fieldType = classCall.getFieldType(field);
-          if (i == fields.size() - 1) {
-            return getTypeUniverse(fieldType);
-          }
-          type = fieldType.normalize(NormalizationMode.WHNF);
-        }
+        Expression impl = classCall.getImplementation(field, arg);
+        arg = impl != null ? impl : FieldCallExpression.make(field, arg);
       }
-
-      if (arg == null) return new Const(Sort.INFINITY);
 
       arg = arg.normalize(NormalizationMode.WHNF).accept(visitor, null).normalize(NormalizationMode.WHNF);
       while (arg instanceof PiExpression piExpr) {
         arg = piExpr.getCodomain().normalize(NormalizationMode.WHNF);
       }
       SortExpression result = arg.toSortExpression();
-      return result == null ? new Const(Sort.INFINITY) : result;
+      if (result == null) {
+        return new Const(new Sort(Level.INFINITY, hLevel));
+      }
+      if (!hLevel.isCat()) {
+        switch (result) {
+          case Const(Sort sort) -> {
+            return new Const(new Sort(sort.getPLevel(), hLevel.min(sort.getHLevel())));
+          }
+          case Var var -> {
+            return new Var(var.index, var.fields, hLevel.min(var.hLevel));
+          }
+          case InfVar infVar when !infVar.noCat -> {
+            return new InfVar(infVar.variable, infVar.isSelfVar, true);
+          }
+          default -> {}
+        }
+      }
+      return result;
     }
 
     @Override
@@ -173,7 +185,12 @@ public sealed interface SortExpression extends CoreSortExpression permits SortEx
 
     @Override
     public @NotNull Sort withInfLevel() {
-      return Sort.INFINITY;
+      return new Sort(Level.INFINITY, hLevel);
+    }
+
+    @Override
+    public @NotNull SortExpression withoutCat() {
+      return new Var(index, fields, new ConstLevel(hLevel.value()));
     }
 
     @Override
@@ -199,6 +216,11 @@ public sealed interface SortExpression extends CoreSortExpression permits SortEx
     }
 
     @Override
+    public @NotNull SortExpression withoutCat() {
+      return this;
+    }
+
+    @Override
     public @NotNull Sort withInfLevel() {
       return Sort.INFINITY;
     }
@@ -217,11 +239,17 @@ public sealed interface SortExpression extends CoreSortExpression permits SortEx
   final class InfVar implements SortExpression {
     private final InferenceVariable variable;
     private final boolean isSelfVar;
+    private final boolean noCat;
     private SortExpression sort;
 
-    public InfVar(InferenceVariable variable, boolean isSelfVar) {
+    private InfVar(InferenceVariable variable, boolean isSelfVar, boolean noCat) {
       this.variable = variable;
       this.isSelfVar = isSelfVar;
+      this.noCat = noCat;
+    }
+
+    public InfVar(InferenceVariable variable, boolean isSelfVar) {
+      this(variable, isSelfVar, false);
     }
 
     public InfVar(InferenceVariable variable) {
@@ -253,7 +281,11 @@ public sealed interface SortExpression extends CoreSortExpression permits SortEx
               }
             }
           }
-          if (sort == null) {
+          if (sort != null) {
+            if (noCat) {
+              sort = sort.withoutCat();
+            }
+          } else {
             sort = this;
           }
         }
@@ -273,7 +305,14 @@ public sealed interface SortExpression extends CoreSortExpression permits SortEx
     @Override
     public @NotNull Sort withInfLevel() {
       checkIfSolved();
-      return sort == null || sort == this ? Sort.INFINITY : sort.withInfLevel();
+      return sort == null || sort == this ? new Sort(Level.INFINITY, noCat ? new ConstLevel(variable.getHLevel().value()) : variable.getHLevel()) : sort.withInfLevel();
+    }
+
+    @Override
+    public @NotNull SortExpression withoutCat() {
+      if (noCat) return this;
+      checkIfSolved();
+      return sort == null || sort == this ? new InfVar(variable, isSelfVar, true) : sort.withoutCat();
     }
 
     @Override
@@ -363,6 +402,15 @@ public sealed interface SortExpression extends CoreSortExpression permits SortEx
     }
 
     @Override
+    public @NotNull SortExpression withoutCat() {
+      List<SortExpression> sorts = new ArrayList<>(mySorts.size());
+      for (SortExpression sort : mySorts) {
+        sorts.add(sort.withoutCat());
+      }
+      return makeMax(sorts);
+    }
+
+    @Override
     public @NotNull Sort withInfLevel() {
       Sort result = Sort.PROP;
       for (SortExpression sort : mySorts) {
@@ -439,6 +487,11 @@ public sealed interface SortExpression extends CoreSortExpression permits SortEx
     }
 
     @Override
+    public @NotNull SortExpression withoutCat() {
+      return new Pi(myDomain, myCodomain.withoutCat());
+    }
+
+    @Override
     public @NotNull Sort withInfLevel() {
       Sort domain = myDomain.withInfLevel();
       Sort codomain = myCodomain.withInfLevel();
@@ -479,6 +532,11 @@ public sealed interface SortExpression extends CoreSortExpression permits SortEx
     }
 
     @Override
+    public @NotNull SortExpression withoutCat() {
+      return new Prev(mySort.withoutCat());
+    }
+
+    @Override
     public @NotNull Sort withInfLevel() {
       Sort result = mySort.withInfLevel();
       return result.isSet() || result.isProp() ? Sort.PROP : result.getHLevel().isInfinity() ? result : new Sort(result.getPLevel(), new ConstLevel(result.getHLevel().value().subtract(BigInteger.ONE)));
@@ -516,6 +574,11 @@ public sealed interface SortExpression extends CoreSortExpression permits SortEx
     @Override
     public @NotNull SortExpression replaceRecursiveData(@NotNull Expression argument) {
       return makeSucc(mySort.replaceRecursiveData(argument));
+    }
+
+    @Override
+    public @NotNull SortExpression withoutCat() {
+      return new Succ(mySort.withoutCat());
     }
 
     @Override

@@ -18,7 +18,7 @@
   | base => idp
 
 \func Loop-Func {X Y : Pointed} (f : X ->* Y) : Loop X ->* Loop Y
-  => (\lam z => inv f.2 *> pmap f.1 z *> f.2, pmap (_ *>) (idp_*> _) *> inv_*> _)
+  => (\lam z => inv f.2 *> pmap f.1 z *> f.2, pmap (_ *>) idp_*> *> inv_*>)
 
 \lemma loop-level {X : \Type}
                   (n : Nat)
@@ -66,7 +66,7 @@
                              | pinl _ => inv p.2
                              | pinr _ => idp
                              | pglue () _
-                           }) (inv_*> p.2))
+                           }) inv_*>)
                        (\lam b => idp))
   | suc n => SuspLoopEquiv (Sphere.pointed n) B *> SphereLoopEquiv n (Loop B)
 

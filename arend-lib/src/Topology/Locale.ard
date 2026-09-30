@@ -184,6 +184,9 @@
   -- | The "weakly rather below" relation: `x <=<w y` if and only if the weak closure of {x} is contained in {y}.
   \type \infix 4 <=<w (x y : E) => (open x).map.wclosed-image <= {NucleusFrame _} open y
 
+  \lemma <=<w_<= {x y : E} (w : x <=<w y) : x <= y
+    => meet-univ top-univ <=-refl <=∘ <=-uncurry (<=-curry meet-right <=∘ w <=∘ NucleusFrame.wclosure_<= {open x} {y})
+
   \type IsRegularLocale => \Pi (x : E) -> x <= Join (<=< x)
 
   \type IsWeaklyRegularLocale => \Pi (x : E) -> x <= Join (<=<w x)
@@ -213,6 +216,9 @@
 
   \lemma pHat_meet {P Q : \Prop} : pHat P ∧ pHat Q = pHat (\Sigma P Q)
     => <=-antisymmetric pHat_meet>= $ meet-univ (pHat-impl __.1) (pHat-impl __.2)
+
+  \lemma pHat_meet-left {P : \Prop} {W V : E} (f : P -> W <= V) : pHat P ∧ W <= V
+    => Join-rdistr>= <=∘ SJoin-univ \lam p => meet-right <=∘ f p
 
   \lemma pHat-char {P : \Prop} {a : E} : pHat P <= a <-> (P -> top <= a)
     => (\lam P<=a p => Join-cond p <=∘ P<=a, \lam h => Join-univ \lam p => top-univ <=∘ h p)
@@ -500,6 +506,9 @@
 
   \lemma exponent-func {x y : L} : x --> y <= nucleus x --> nucleus y
     => Join-univ \lam p => <=-curry $ meet-monotone nucleus-unit <=-refl <=∘ nucleus-meet>= <=∘ nucleus-<= p
+
+  \lemma nucleus_meet-left {L : Locale} {j : Nucleus L} {a b : L} : j a ∧ b <= j (a ∧ b)
+    => L.meet-monotone <=-refl j.nucleus-unit <=∘ j.nucleus-meet>=
 
   \type Subtype => \Sigma (x : L) (nucleus x <= x)
 

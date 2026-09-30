@@ -6,6 +6,7 @@ import org.arend.core.context.binding.Binding;
 import org.arend.core.context.binding.TypedEvaluatingBinding;
 import org.arend.core.context.binding.inference.FunctionInferenceVariable;
 import org.arend.core.context.param.DependentLink;
+import org.arend.core.context.param.TypedDependentLink;
 import org.arend.core.context.param.TypedSingleDependentLink;
 import org.arend.core.context.param.UntypedDependentLink;
 import org.arend.core.definition.*;
@@ -15,8 +16,10 @@ import org.arend.core.elimtree.IntervalElim;
 import org.arend.core.expr.*;
 import org.arend.core.expr.visitor.*;
 import org.arend.core.pattern.*;
+import org.arend.core.sort.Sort;
 import org.arend.core.subst.ExprSubstitution;
 import org.arend.core.subst.Levels;
+import org.arend.ext.core.context.BindingVariance;
 import org.arend.ext.core.definition.CoreFunctionDefinition;
 import org.arend.ext.core.level.ConstLevel;
 import org.arend.ext.core.level.LevelSubstitution;
@@ -208,7 +211,7 @@ public class PatternTypechecking {
           List<TypedSingleDependentLink> lamBindings = new ArrayList<>(intervalBindings.size());
           ExprSubstitution intervalSubst = new ExprSubstitution();
           for (Binding binding : intervalBindings) {
-            TypedSingleDependentLink link = new TypedSingleDependentLink(true, binding.getName(), binding.getType());
+            TypedSingleDependentLink link = new TypedSingleDependentLink(true, binding.getName(), binding.getType(), false, isDirectedBinding(binding) ? BindingVariance.COVARIANT : BindingVariance.INVARIANT);
             lamBindings.add(link);
             intervalSubst.add(binding, new ReferenceExpression(link));
           }
@@ -220,13 +223,14 @@ public class PatternTypechecking {
             exprTypes.add(exprType);
             Binding intervalBinding = intervalBindings.get(i);
 
-            intervalSubst.add(intervalBinding, Left());
+            boolean directed = isDirectedBinding(intervalBinding);
+            intervalSubst.add(intervalBinding, Left(directed));
             Expression leftArg = evalBody(intervalSubst, (ElimBody) body, args);
             if (leftArg == null && definition != null) {
               leftArg = makeFunCall(definition, args, intervalSubst, clause);
             }
 
-            intervalSubst.add(intervalBinding, Right());
+            intervalSubst.add(intervalBinding, Right(directed));
             Expression rightArg = evalBody(intervalSubst, (ElimBody) body, args);
             if (rightArg == null && definition != null) {
               rightArg = makeFunCall(definition, args, intervalSubst, clause);
@@ -243,12 +247,16 @@ public class PatternTypechecking {
             }
 
             for (int j = intervalBindings.size() - 1, k = 0; j > i; j--, k++) {
-              leftArg = new PathExpression(new LamExpression(lamBindings.get(j), exprTypes.get(k).subst(lamBindings.get(i), Left())), new LamExpression(lamBindings.get(j), leftArg));
-              rightArg = new PathExpression(new LamExpression(lamBindings.get(j), exprTypes.get(k).subst(lamBindings.get(i), Right())), new LamExpression(lamBindings.get(j), rightArg));
+              boolean directedJ = isDirectedBinding(intervalBindings.get(j));
+              Expression leftArgType = new LamExpression(lamBindings.get(j), exprTypes.get(k).subst(lamBindings.get(i), Left(directed)));
+              Expression rightArgType = new LamExpression(lamBindings.get(j), exprTypes.get(k).subst(lamBindings.get(i), Right(directed)));
+              leftArg = new PathExpression(leftArgType, new LamExpression(lamBindings.get(j), leftArg), directedJ, myVisitor.dependsOnCategoricalContext(leftArgType));
+              rightArg = new PathExpression(rightArgType, new LamExpression(lamBindings.get(j), rightArg), directedJ, myVisitor.dependsOnCategoricalContext(rightArgType));
             }
 
             intervalSubst.add(intervalBinding, new ReferenceExpression(lamBindings.get(i)));
-            exprType = DataCallExpression.make(Prelude.PATH, Levels.EMPTY, Arrays.asList(new LamExpression(lamBindings.get(i), exprType), leftArg, rightArg));
+            Expression newArgumentType = new LamExpression(lamBindings.get(i), exprType);
+            exprType = new PathTypeExpression(newArgumentType, leftArg, rightArg, directed, myVisitor.dependsOnCategoricalContext(newArgumentType));
           }
         } else {
           intervalBindings = null;
@@ -261,7 +269,7 @@ public class PatternTypechecking {
           if (!(errorExpr != null && errorExpr.isGoal())) {
             Expression resultExpr = tcResult.expression;
             for (Binding binding : intervalBindings) {
-              resultExpr = AtExpression.make(resultExpr, new ReferenceExpression(binding), false);
+              resultExpr = AtExpression.make(resultExpr, new ReferenceExpression(binding), false, isDirectedBinding(binding));
             }
             tcResult = new TypecheckingResult(resultExpr, expectedType);
           }
@@ -335,6 +343,10 @@ public class PatternTypechecking {
       substArgs.add(arg.subst(substitution));
     }
     return NormalizeVisitor.INSTANCE.eval(body, substArgs, new ExprSubstitution(), LevelSubstitution.EMPTY, null, null, false);
+  }
+
+  private static boolean isDirectedBinding(Binding binding) {
+    return binding.getType().normalize(NormalizationMode.WHNF) instanceof DataCallExpression dataCall && dataCall.getDefinition() == Prelude.DI;
   }
 
   private int getIntervalBindings(List<? extends ExpressionPattern> patterns, int index, List<Binding> result) {
@@ -480,6 +492,19 @@ public class PatternTypechecking {
     return type;
   }
 
+  private static DependentLink forceInvariant(DependentLink params, BindingVariance matchedVariance) {
+    if (matchedVariance != BindingVariance.INVARIANT) {
+      return params;
+    }
+    DependentLink copy = DependentLink.Helper.copy(params);
+    for (DependentLink link = copy; link.hasNext(); link = link.getNext()) {
+      if (link instanceof TypedDependentLink tdl) {
+        tdl.setVariance(BindingVariance.INVARIANT);
+      }
+    }
+    return copy;
+  }
+
   private Result doTypechecking(List<Concrete.Pattern> patterns, DependentLink parameters, ExprSubstitution paramsSubst, ExprSubstitution totalSubst, ConcreteSourceNode sourceNode, boolean withElim, int addIntervalVars) {
     List<ExpressionPattern> result = new ArrayList<>();
     List<Expression> exprs = new ArrayList<>();
@@ -583,6 +608,11 @@ public class PatternTypechecking {
         ClassCallExpression classCall = sigmaExpr == null ? unfoldedExpr.cast(ClassCallExpression.class) : null;
         if (sigmaExpr != null || classCall != null) {
           DependentLink newParameters = sigmaExpr != null ? DependentLink.Helper.copy(sigmaExpr.getParameters()) : classCall.getClassFieldParameters();
+          if (parameters.getVariance() == BindingVariance.COVARIANT && newParameters.hasNext() && newParameters.getVariance() == BindingVariance.INVARIANT) {
+            myErrorReporter.report(new TypecheckingError("Pattern matching on an invariant " + (sigmaExpr != null ? "\\Sigma type" : "record") + " is not allowed for covariant parameters", pattern));
+            return null;
+          }
+          newParameters = forceInvariant(newParameters, parameters.getVariance());
           Result conResult = doTypechecking(patternArgs, newParameters, paramsSubst, totalSubst, pattern, false, 0);
           if (conResult == null) {
             return null;
@@ -616,7 +646,7 @@ public class PatternTypechecking {
             }
             return null;
           }
-          if (!unfoldedExpr.isInstance(DataCallExpression.class)) {
+          if (!(unfoldedExpr instanceof BaseDataCallExpression)) {
             if (!expr.reportIfError(myErrorReporter, pattern)) {
               myErrorReporter.report(new TypeMismatchError(DocFactory.text("a data type, a sigma type, or a class"), expr, pattern));
             }
@@ -638,23 +668,32 @@ public class PatternTypechecking {
           ExprSubstitution substitution = new ExprSubstitution();
           List<Expression> args = new ArrayList<>();
 
-          if (constructor == Prelude.IDP) {
+          if (constructor == Prelude.IDP || constructor == Prelude.IDD) {
+            boolean directed = constructor == Prelude.IDD;
             if (!myMode.allowIdp()) {
-              myErrorReporter.report(new TypecheckingError("Pattern matching on idp is not allowed here", pattern));
+              myErrorReporter.report(new TypecheckingError("Pattern matching on " + (directed ? "idd" : "idp") + " is not allowed here", pattern));
               return null;
             }
 
             levels = Levels.EMPTY;
-            DataCallExpression dataCall = unfoldedExpr.cast(DataCallExpression.class);
-            LamExpression typeLam = dataCall == null || dataCall.getDefinition() != Prelude.PATH ? null : dataCall.getDefCallArguments().getFirst().normalize(NormalizationMode.WHNF).cast(LamExpression.class);
+            PathTypeExpression dataCall = unfoldedExpr.cast(PathTypeExpression.class);
+            LamExpression typeLam = dataCall == null || dataCall.isDirected() != directed ? null : dataCall.getArgumentType().normalize(NormalizationMode.WHNF).cast(LamExpression.class);
             Expression type = ElimBindingVisitor.elimLamBinding(typeLam);
             if (type == null) {
               myErrorReporter.report(new TypeMismatchError(expr, constructor.getResultType().subst(substitution), conPattern));
               return null;
             }
 
-            Expression expr1 = dataCall.getDefCallArguments().get(2).normalize(NormalizationMode.WHNF);
-            Expression expr2 = dataCall.getDefCallArguments().get(1).normalize(NormalizationMode.WHNF);
+            if (directed) {
+              Sort typeSort = type.getSortOfType();
+              if (typeSort == null || typeSort.getHLevel().isCat()) {
+                myErrorReporter.report(new IdpPatternError(myVisitor == null ? null : myVisitor.getExpressionPrettifier(), IdpPatternError.notInType(), dataCall, conPattern));
+                return null;
+              }
+            }
+
+            Expression expr1 = dataCall.getRightArgument().normalize(NormalizationMode.WHNF);
+            Expression expr2 = dataCall.getLeftArgument().normalize(NormalizationMode.WHNF);
             ReferenceExpression refExpr1 = expr1.cast(ReferenceExpression.class);
             ReferenceExpression refExpr2 = expr2.cast(ReferenceExpression.class);
             if (refExpr1 == null && refExpr2 == null) {
@@ -689,11 +728,24 @@ public class PatternTypechecking {
               return null;
             }
 
+            boolean requireCovariant = parameters.getVariance() == BindingVariance.COVARIANT;
+            if (requireCovariant && (num == 1 ? refExpr1.getBinding() : refExpr2.getBinding()).getVariance() != BindingVariance.COVARIANT) {
+              boolean ok = false;
+              if (both && (num == 2 ? refExpr1.getBinding() : refExpr2.getBinding()).getVariance() == BindingVariance.COVARIANT) {
+                num = 3 - num;
+                ok = true;
+              }
+              if (!ok) {
+                myErrorReporter.report(new IdpPatternError(myVisitor == null ? null : myVisitor.getExpressionPrettifier(), IdpPatternError.notCovariant(), dataCall, conPattern));
+                return null;
+              }
+            }
+
             Expression normType = type.normalize(NormalizationMode.WHNF);
-            if (!(normType instanceof DataCallExpression)) {
+            if (!(normType instanceof BaseDataCallExpression)) {
               if (!CompareVisitor.compare(myVisitor.getEquations(), CMP.EQ, normType, (num == 1 ? refExpr1 : refExpr2).getType(), UniverseExpression.OMEGA, conPattern)) {
                 boolean ok = false;
-                if (both) {
+                if (both && (!requireCovariant || (num == 2 ? refExpr1.getBinding() : refExpr2.getBinding()).getVariance() == BindingVariance.COVARIANT)) {
                   num = 3 - num;
                   ok = CompareVisitor.compare(myVisitor.getEquations(), CMP.EQ, normType, (num == 1 ? refExpr1 : refExpr2).getType(), UniverseExpression.OMEGA, conPattern);
                 }
@@ -710,7 +762,7 @@ public class PatternTypechecking {
               myErrorReporter.report(new IdpPatternError(myVisitor == null ? null : myVisitor.getExpressionPrettifier(), IdpPatternError.variable(substVar.getName()), dataCall, conPattern));
               return null;
             }
-            Expression otherExpr2 = ElimBindingVisitor.elimBinding(num == 1 ? dataCall.getDefCallArguments().get(1) : dataCall.getDefCallArguments().get(2), substVar);
+            Expression otherExpr2 = ElimBindingVisitor.elimBinding(num == 1 ? dataCall.getLeftArgument() : dataCall.getRightArgument(), substVar);
             if (otherExpr2 == null) {
               otherExpr2 = otherExpr;
             }
@@ -756,10 +808,9 @@ public class PatternTypechecking {
             FreeVariablesCollector collector = new FreeVariablesCollector();
             constructor.getResultType().accept(collector, null);
             if (constructor.getNumberOfParameters() > 0 || !collector.getResult().isEmpty()) {
-              Set<Binding> bindings = myVisitor.getAllBindings();
               int i = 0;
               for (; i < constructor.getNumberOfParameters(); i++) {
-                Expression arg = InferenceReferenceExpression.make(new FunctionInferenceVariable(constructor, link, i + 1, link.getType().subst(substitution, levelSubst), conPattern, bindings), myVisitor.getEquations());
+                Expression arg = InferenceReferenceExpression.make(new FunctionInferenceVariable(constructor, link, i + 1, link.getType().subst(substitution, levelSubst), conPattern, myVisitor.getAllBindings(link.getVariance() == BindingVariance.COVARIANT)), myVisitor.getEquations());
                 args.add(arg);
                 substitution.add(link, arg);
                 collector.getResult().remove(link);
@@ -767,7 +818,7 @@ public class PatternTypechecking {
               }
               if (!collector.getResult().isEmpty()) {
                 for (DependentLink link1 = link; link1.hasNext(); link1 = link1.getNext(), i++) {
-                  substitution.add(link1, InferenceReferenceExpression.make(new FunctionInferenceVariable(constructor, link1, i + 1, link1.getType().subst(substitution, levelSubst), conPattern, bindings), myVisitor.getEquations()));
+                  substitution.add(link1, InferenceReferenceExpression.make(new FunctionInferenceVariable(constructor, link1, i + 1, link1.getType().subst(substitution, levelSubst), conPattern, myVisitor.getAllBindings(link1.getVariance() == BindingVariance.COVARIANT)), myVisitor.getEquations()));
                 }
               }
             }
@@ -820,7 +871,7 @@ public class PatternTypechecking {
           }
           substitution.subst(levelSolution);
 
-          Result conResult = doTypechecking(conPattern.getPatterns(), DependentLink.Helper.subst(link, substitution, levelSolution), paramsSubst, totalSubst, conPattern, false, 0);
+          Result conResult = doTypechecking(conPattern.getPatterns(), forceInvariant(DependentLink.Helper.subst(link, substitution, levelSolution), parameters.getVariance()), paramsSubst, totalSubst, conPattern, false, 0);
           if (conResult == null) {
             return null;
           }
@@ -867,7 +918,7 @@ public class PatternTypechecking {
 
       // Constructor patterns
       Expression underlyingExpr = unfoldedExpr.getUnderlyingExpression();
-      DataCallExpression dataCall = underlyingExpr instanceof DataCallExpression ? (DataCallExpression) underlyingExpr : null;
+      BaseDataCallExpression dataCall = underlyingExpr instanceof BaseDataCallExpression ? (BaseDataCallExpression) underlyingExpr : null;
       ClassCallExpression classCall = underlyingExpr instanceof ClassCallExpression ? (ClassCallExpression) underlyingExpr : null;
       if (!(dataCall != null || classCall != null && classCall.getDefinition() == Prelude.DEP_ARRAY)) {
         if (!expr.reportIfError(myErrorReporter, pattern)) {
@@ -877,6 +928,14 @@ public class PatternTypechecking {
       }
       if (!myMode.allowInterval() && dataCall != null && dataCall.getDefinition() == Prelude.INTERVAL) {
         myErrorReporter.report(new TypecheckingError("Pattern matching on the interval is not allowed here", pattern));
+        return null;
+      }
+      if (myMode != Mode.CONSTRUCTOR && dataCall != null && dataCall.getDefinition() == Prelude.DI && parameters.getVariance() != BindingVariance.INVARIANT) {
+        myErrorReporter.report(new TypecheckingError("Pattern matching on DI is allowed only for invariant parameters", pattern));
+        return null;
+      }
+      if (myMode == Mode.DATA && dataCall != null && parameters.getVariance() != BindingVariance.INVARIANT) {
+        myErrorReporter.report(new TypecheckingError("Pattern matching in \\data is allowed only for invariant parameters", pattern));
         return null;
       }
 
@@ -946,6 +1005,7 @@ public class PatternTypechecking {
       } else {
         newParameters = ((DConstructor) constructor).getArrayParameters(classCall);
       }
+      newParameters = forceInvariant(newParameters, parameters.getVariance());
 
       Expression length = classCall == null ? null : classCall.getAbsImplementationHere(Prelude.ARRAY_LENGTH);
       if (length != null) length = length.normalize(NormalizationMode.WHNF);
@@ -1014,7 +1074,7 @@ public class PatternTypechecking {
       if (dataCall != null) {
         if (!conResult.varSubst.isEmpty()) {
           conCall = (ConCallExpression) new SubstVisitor(conResult.varSubst, LevelSubstitution.EMPTY).visitConCall(conCall, null);
-    }
+        }
         resultPattern = new ConstructorExpressionPattern(conCall, conResult.patterns);
       } else {
         Expression elementsType = classCall.getAbsImplementationHere(Prelude.ARRAY_ELEMENTS_TYPE);
@@ -1068,7 +1128,11 @@ public class PatternTypechecking {
           newConCall = FunCallExpression.make((FunctionDefinition) constructor, classCall.getLevels(), funCallArgs);
         }
         for (int i = typeConstructorFunCalls.size() - 1; i >= 0; i--) {
-          newConCall = TypeConstructorExpression.match(typeConstructorFunCalls.get(i), newConCall);
+          FunCallExpression typeConstructorFunCall = typeConstructorFunCalls.get(i);
+          if (!conResult.varSubst.isEmpty()) {
+            typeConstructorFunCall = (FunCallExpression) new SubstVisitor(conResult.varSubst, LevelSubstitution.EMPTY).visitFunCall(typeConstructorFunCall, null);
+          }
+          newConCall = TypeConstructorExpression.match(typeConstructorFunCall, newConCall);
         }
         typecheckAsPattern(pattern.getAsReferable(), newConCall, expr.subst(varSubst));
         exprs.add(newConCall);
@@ -1097,7 +1161,7 @@ public class PatternTypechecking {
       if (ok) {
         for (; parameters.hasNext() && addedIntervalVars < addIntervalVars; parameters = parameters.getNext()) {
           Expression paramType = parameters.getType().normalize(NormalizationMode.WHNF);
-          if (paramType instanceof DataCallExpression && ((DataCallExpression) paramType).getDefinition() == Prelude.INTERVAL) {
+          if (paramType instanceof DataCallExpression && (((DataCallExpression) paramType).getDefinition() == Prelude.INTERVAL || ((DataCallExpression) paramType).getDefinition() == Prelude.DI)) {
             DependentLink newParam = parameters.subst(new SubstVisitor(paramsSubst, LevelSubstitution.EMPTY), 1, false);
             myLinkList.append(newParam);
             result.add(new BindingPattern(newParam));

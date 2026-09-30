@@ -95,7 +95,7 @@ public abstract class BiConcreteVisitor extends BaseConcreteExpressionVisitor<Co
     for (var existingParameter : parameters) {
       if (existingParameter instanceof Concrete.TelescopeParameter) {
         for (Referable innerParameter : existingParameter.getReferableList()) {
-          flattenedParameters.add(new Concrete.TelescopeParameter(null, existingParameter.isExplicit(), List.of(innerParameter), existingParameter.getType(), existingParameter.isProperty()));
+          flattenedParameters.add(new Concrete.TelescopeParameter(null, existingParameter.isExplicit(), List.of(innerParameter), existingParameter.getType(), existingParameter.isProperty(), existingParameter.getVariance()));
         }
       } else {
         flattenedParameters.add(existingParameter);
@@ -153,7 +153,7 @@ public abstract class BiConcreteVisitor extends BaseConcreteExpressionVisitor<Co
   public Concrete.Expression visitSigma(Concrete.SigmaExpression expr, Concrete.SourceNode params) {
     var wideExpr = (Concrete.SigmaExpression) params;
     var newParams = visitParameters(expr.getParameters(), wideExpr.getParameters());
-    return (Concrete.Expression) myFactory.sigma(newParams);
+    return (Concrete.Expression) myFactory.sigma(expr.getVariance(), newParams);
   }
 
   @Override
@@ -243,7 +243,7 @@ public abstract class BiConcreteVisitor extends BaseConcreteExpressionVisitor<Co
       } else {
         newType = null;
       }
-      arguments.add(new Concrete.CaseArgument(newArg, caseArg.referable, newType));
+      arguments.add(new Concrete.CaseArgument(newArg, caseArg.referable, newType, caseArg.getVariance()));
     }
 
     if (expr.getResultType() != null) {

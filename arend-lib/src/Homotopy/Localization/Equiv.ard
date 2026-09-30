@@ -20,10 +20,10 @@
   \func ext-equiv {A B C : \Type} (f : A -> B) (g : A -> C) : QEquiv {ext f g} {\Pi (b : B) -> \Sigma (c : C) (\Pi (a : A) -> f a = b -> g a = c)} \cowith
     | f p b => (p.1 b, \lam a fa=b => inv (path ((p.2 @ __) a)) *> pmap p.1 fa=b)
     | ret K => ((K __).1, path (\lam i a => inv ((K (f a)).2 a idp) @ i))
-    | ret_f b => path (\lam j => (b.1, path (\lam i a => inv_inv (path ((b.2 @ __) a)) @ j @ i)))
+    | ret_f b => path (\lam j => (b.1, path (\lam i a => inv_inv {_} {_} {_} {path (b.2 __ a)} j i)))
     | f_sec K =>
       \have p (b : B) (a : A) (q : f a = b) =>
-             Jl (\lam b' q' => inv (inv ((K (f a)).2 a idp)) *> pmap (K __).1 q' = (K b').2 a q') (inv_inv ((K (f a)).2 a idp)) q
+             Jl (\lam b' q' => inv (inv ((K (f a)).2 a idp)) *> pmap (K __).1 q' = (K b').2 a q') inv_inv q
       \in path (\lam i b => ((K b).1, p b __ __ @ i))
 
   \lemma contr-equiv.{u} {A B C : \Type u} (f : A -> B) (p : \Pi (g : A -> C) (b : B) -> Contr (\Sigma (c : C) (\Pi (a : A) -> f a = b -> g a = c)))
@@ -37,8 +37,8 @@
             | p c => \new QEquiv {(\lam _ => c) = G} {\Pi (a : A) -> f a = b -> g a = c} {
               | f q a r => path ((inv q @ __) (a,r))
               | ret h => inv (path (\lam i (x : Fib f b) => h x.1 x.2 @ i))
-              | ret_f q => inv_inv q
-              | f_sec h => path (\lam k a r => path (\lam i => (inv_inv (path (\lam j (x : Fib f b) => h x.1 x.2 @ j)) @ k @ i) (a,r)))
+              | ret_f q => inv_inv
+              | f_sec h => path (\lam k a r => path (\lam i => (inv_inv {_} {_} {_} {path (\lam j (x : Fib f b) => h x.1 x.2 j)} k i) (a,r)))
             }
        \in rewriteI (path (\lam i => \Sigma (c : C) (QEquiv_= (p c) i)))
                     (IsEquiv=>contrFibers (propExt.dir (nullTypeUniverse.localDesc (Fib f b) C) (conn b C)) G))

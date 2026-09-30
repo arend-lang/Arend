@@ -255,15 +255,15 @@ public class DefinitionResolveNameVisitor implements ConcreteResolvableDefinitio
     boolean instanceTypeOK = true;
     if (body instanceof Concrete.CoelimFunctionBody) {
       DynamicScopeProvider provider = def.getResultType() == null ? null : myTypingInfo.getBodyDynamicScopeProvider(def.getResultType());
-      if (provider != null) {
-        for (Concrete.CoClauseElement element : body.getCoClauseElements()) {
-          if (element instanceof Concrete.ClassFieldImpl) {
-            exprVisitor.visitClassFieldImpl((Concrete.ClassFieldImpl) element, provider);
-          }
-        }
-      } else {
+      if (provider == null) {
         instanceTypeOK = false;
         myLocalErrorReporter.report(def.getResultType() != null ? new NameResolverError("Expected a class", def.getResultType()) : new NameResolverError("The type of a function defined by copattern matching must be specified explicitly", def));
+        provider = new EmptyDynamicScopeProvider(null);
+      }
+      for (Concrete.CoClauseElement element : body.getCoClauseElements()) {
+        if (element instanceof Concrete.ClassFieldImpl) {
+          exprVisitor.visitClassFieldImpl((Concrete.ClassFieldImpl) element, provider);
+        }
       }
     }
     if (body instanceof Concrete.ElimFunctionBody) {

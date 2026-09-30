@@ -21,6 +21,7 @@ import org.arend.ext.typechecking.GoalSolver;
 import org.arend.ext.util.Pair;
 import org.arend.naming.reference.*;
 import org.arend.ext.concrete.definition.ClassFieldKind;
+import org.arend.ext.core.context.BindingVariance;
 import org.arend.term.Fixity;
 import org.arend.term.prettyprint.PrettyPrintVisitor;
 import org.jetbrains.annotations.NotNull;
@@ -63,10 +64,12 @@ public final class Concrete {
 
   public static abstract class Parameter extends SourceNodeImpl implements ConcreteParameter {
     private boolean myExplicit;
+    private final BindingVariance myVariance;
 
-    public Parameter(Object data, boolean explicit) {
+    public Parameter(Object data, boolean explicit, BindingVariance variance) {
       super(data);
       myExplicit = explicit;
+      myVariance = variance;
     }
 
     @Override
@@ -91,6 +94,10 @@ public final class Concrete {
 
     public boolean isProperty() {
       return false;
+    }
+
+    public BindingVariance getVariance() {
+      return myVariance;
     }
 
     public abstract @NotNull List<? extends Referable> getReferableList();
@@ -125,9 +132,13 @@ public final class Concrete {
   public static class NameParameter extends Parameter {
     private Referable myReferable;
 
-    public NameParameter(Object data, boolean explicit, Referable referable) {
-      super(data, explicit);
+    public NameParameter(Object data, boolean explicit, Referable referable, BindingVariance variance) {
+      super(data, explicit, variance);
       myReferable = referable;
+    }
+
+    public NameParameter(Object data, boolean explicit, Referable referable) {
+      this(data, explicit, referable, BindingVariance.INVARIANT);
     }
 
     @Nullable
@@ -147,7 +158,7 @@ public final class Concrete {
 
     @Override
     public NameParameter copy(Object data) {
-      return new NameParameter(data, isExplicit(), myReferable);
+      return new NameParameter(data, isExplicit(), myReferable, getVariance());
     }
 
     @Override
@@ -160,14 +171,22 @@ public final class Concrete {
     private final boolean myProperty;
     public Expression type;
 
-    public TypeParameter(Object data, boolean explicit, Expression type, boolean isProperty) {
-      super(data, explicit);
+    public TypeParameter(Object data, boolean explicit, Expression type, boolean isProperty, BindingVariance variance) {
+      super(data, explicit, variance);
       this.type = type;
       myProperty = isProperty;
     }
 
+    public TypeParameter(boolean explicit, Expression type, boolean isProperty, BindingVariance variance) {
+      this(type.getData(), explicit, type, isProperty, variance);
+    }
+
+    public TypeParameter(Object data, boolean explicit, Expression type, boolean isProperty) {
+      this(data, explicit, type, isProperty, BindingVariance.INVARIANT);
+    }
+
     public TypeParameter(boolean explicit, Expression type, boolean isProperty) {
-      this(type.getData(), explicit, type, isProperty);
+      this(type.getData(), explicit, type, isProperty, BindingVariance.INVARIANT);
     }
 
     @Override
@@ -194,16 +213,20 @@ public final class Concrete {
 
     @Override
     public TypeParameter copy(Object data) {
-      return new TypeParameter(data, isExplicit(), type, isProperty());
+      return new TypeParameter(data, isExplicit(), type, isProperty(), getVariance());
     }
   }
 
   public static class TelescopeParameter extends TypeParameter {
     private List<? extends Referable> myReferableList;
 
-    public TelescopeParameter(Object data, boolean explicit, List<? extends Referable> referableList, Expression type, boolean isProperty) {
-      super(data, explicit, type, isProperty);
+    public TelescopeParameter(Object data, boolean explicit, List<? extends Referable> referableList, Expression type, boolean isProperty, BindingVariance variance) {
+      super(data, explicit, type, isProperty, variance);
       myReferableList = referableList;
+    }
+
+    public TelescopeParameter(Object data, boolean explicit, List<? extends Referable> referableList, Expression type, boolean isProperty) {
+      this(data, explicit, referableList, type, isProperty, BindingVariance.INVARIANT);
     }
 
     @Override
@@ -223,7 +246,7 @@ public final class Concrete {
 
     @Override
     public TelescopeParameter copy(Object data) {
-      return new TelescopeParameter(data, isExplicit(), myReferableList, type, isProperty());
+      return new TelescopeParameter(data, isExplicit(), myReferableList, type, isProperty(), getVariance());
     }
   }
 
@@ -243,8 +266,8 @@ public final class Concrete {
   public static class DefinitionTelescopeParameter extends TelescopeParameter {
     private final boolean myStrict;
 
-    public DefinitionTelescopeParameter(Object data, boolean explicit, boolean strict, List<? extends Referable> referableList, Expression type, boolean isProperty) {
-      super(data, explicit, referableList, type, isProperty);
+    public DefinitionTelescopeParameter(Object data, boolean explicit, boolean strict, List<? extends Referable> referableList, Expression type, boolean isProperty, BindingVariance variance) {
+      super(data, explicit, referableList, type, isProperty, variance);
       myStrict = strict;
     }
 
@@ -255,7 +278,7 @@ public final class Concrete {
 
     @Override
     public TelescopeParameter copy(Object data) {
-      return new DefinitionTelescopeParameter(data, isExplicit(), isStrict(), getReferableList(), type, isProperty());
+      return new DefinitionTelescopeParameter(data, isExplicit(), isStrict(), getReferableList(), type, isProperty(), getVariance());
     }
   }
 
@@ -1197,16 +1220,22 @@ public final class Concrete {
   public static class SigmaExpression extends Expression implements ConcreteSigmaExpression {
     public static final byte PREC = -3;
     private final List<TypeParameter> myParameters;
+    private final BindingVariance myVariance;
 
-    public SigmaExpression(Object data, List<TypeParameter> parameters) {
+    public SigmaExpression(Object data, List<TypeParameter> parameters, BindingVariance variance) {
       super(data);
       myParameters = parameters;
+      myVariance = variance;
     }
 
     @Override
     @NotNull
     public List<TypeParameter> getParameters() {
       return myParameters;
+    }
+
+    public BindingVariance getVariance() {
+      return myVariance;
     }
 
     @Override
@@ -1308,33 +1337,30 @@ public final class Concrete {
     public @Nullable Referable referable;
     public @Nullable Expression type;
     public final boolean isElim;
+    private final BindingVariance myVariance;
 
-    public CaseArgument(@NotNull Expression expression, @Nullable Referable referable, @Nullable Expression type, boolean isElim) {
+    public CaseArgument(@NotNull Expression expression, @Nullable Referable referable, @Nullable Expression type, boolean isElim, BindingVariance variance) {
       this.expression = expression;
       this.referable = referable;
       this.type = type;
       this.isElim = isElim;
+      myVariance = variance;
+    }
+
+    public CaseArgument(@NotNull Expression expression, @Nullable Referable referable, @Nullable Expression type, BindingVariance variance) {
+      this(expression, referable, type, false, variance);
     }
 
     public CaseArgument(@NotNull Expression expression, @Nullable Referable referable, @Nullable Expression type) {
-      this.expression = expression;
-      this.referable = referable;
-      this.type = type;
-      isElim = false;
+      this(expression, referable, type, false, BindingVariance.INVARIANT);
     }
 
-    public CaseArgument(@NotNull ReferenceExpression expression, @Nullable Expression type) {
-      this.expression = expression;
-      this.referable = null;
-      this.type = type;
-      isElim = expression.getReferent().isLocalRef() || expression.getReferent() instanceof UnresolvedReference;
+    public CaseArgument(@NotNull ReferenceExpression expression, @Nullable Expression type, BindingVariance variance) {
+      this(expression, null, type, expression.getReferent().isLocalRef() || expression.getReferent() instanceof UnresolvedReference, variance);
     }
 
-    public CaseArgument(@NotNull ApplyHoleExpression expression, @Nullable Expression type) {
-      this.expression = expression;
-      this.referable = null;
-      this.type = type;
-      isElim = true;
+    public CaseArgument(@NotNull ApplyHoleExpression expression, @Nullable Expression type, BindingVariance variance) {
+      this(expression, null, type, true, variance);
     }
 
     @Override
@@ -1356,6 +1382,10 @@ public final class Concrete {
     public boolean isElim() {
       return isElim;
     }
+
+    public BindingVariance getVariance() {
+      return myVariance;
+    }
   }
 
   public static class CaseExpression extends Expression implements ConcreteCaseExpression {
@@ -1364,6 +1394,7 @@ public final class Concrete {
     private final List<CaseArgument> myArguments;
     private Expression myResultType;
     private Expression myResultTypeLevel;
+    private boolean myGroupoidalLevelProof;
     private final List<FunctionClause> myClauses;
     public BigInteger level = null; // the level of the result type
 
@@ -1409,6 +1440,14 @@ public final class Concrete {
 
     public void setResultTypeLevel(Expression resultTypeLevel) {
       myResultTypeLevel = resultTypeLevel;
+    }
+
+    public boolean isGroupoidalLevelProof() {
+      return myGroupoidalLevelProof;
+    }
+
+    public void setGroupoidalLevelProof(boolean groupoidalLevelProof) {
+      myGroupoidalLevelProof = groupoidalLevelProof;
     }
 
     @Override
@@ -2130,6 +2169,7 @@ public final class Concrete {
       result.setUseParent(getUseParent());
       result.setUsedDefinitions(getUsedDefinitions());
       result.setNumberOfExternalParameters(myNumberOfExternalParameters);
+      result.setGroupoidalLevelProof(isGroupoidalLevelProof());
       return result;
     }
   }
@@ -2140,6 +2180,8 @@ public final class Concrete {
     void setResultType(Expression resultType);
     @Nullable Expression getResultTypeLevel();
     void setResultTypeLevel(Expression resultTypeLevel);
+    boolean isGroupoidalLevelProof();
+    void setGroupoidalLevelProof(boolean groupoidalLevelProof);
   }
 
   public static abstract class ReferableDefinitionBase implements GeneralDefinition {
@@ -2168,6 +2210,7 @@ public final class Concrete {
     private final List<TypeParameter> myParameters;
     private Expression myResultType;
     private Expression myResultTypeLevel;
+    private boolean myGroupoidalLevelProof;
     private final boolean myCoerce;
 
     public ClassField(FieldReferableImpl referable, boolean isExplicit, ClassFieldKind kind, List<TypeParameter> parameters, Expression resultType, Expression resultTypeLevel, boolean isCoerce) {
@@ -2231,6 +2274,16 @@ public final class Concrete {
       myResultTypeLevel = resultTypeLevel;
     }
 
+    @Override
+    public boolean isGroupoidalLevelProof() {
+      return myGroupoidalLevelProof;
+    }
+
+    @Override
+    public void setGroupoidalLevelProof(boolean groupoidalLevelProof) {
+      myGroupoidalLevelProof = groupoidalLevelProof;
+    }
+
     public boolean isCoerce() {
       return myCoerce;
     }
@@ -2256,6 +2309,7 @@ public final class Concrete {
     private final List<TypeParameter> myParameters;
     private Expression myResultType;
     private Expression myResultTypeLevel;
+    private boolean myGroupoidalLevelProof;
 
     public OverriddenField(Object data, Referable overriddenField, List<TypeParameter> parameters, Expression resultType, Expression resultTypeLevel) {
       super(data);
@@ -2300,6 +2354,16 @@ public final class Concrete {
     @Override
     public void setResultTypeLevel(Expression resultTypeLevel) {
       myResultTypeLevel = resultTypeLevel;
+    }
+
+    @Override
+    public boolean isGroupoidalLevelProof() {
+      return myGroupoidalLevelProof;
+    }
+
+    @Override
+    public void setGroupoidalLevelProof(boolean groupoidalLevelProof) {
+      myGroupoidalLevelProof = groupoidalLevelProof;
     }
 
     @Override
@@ -2407,6 +2471,7 @@ public final class Concrete {
     private final List<Parameter> myParameters;
     private Expression myResultType;
     private Expression myResultTypeLevel;
+    private boolean myGroupoidalLevelProof;
     private final FunctionBody myBody;
 
     public BaseFunctionDefinition(TCDefReferable referable, LevelParameters pParams, List<Parameter> parameters, Expression resultType, Expression resultTypeLevel, FunctionBody body) {
@@ -2448,6 +2513,14 @@ public final class Concrete {
 
     public void setResultTypeLevel(Expression resultTypeLevel) {
       myResultTypeLevel = resultTypeLevel;
+    }
+
+    public boolean isGroupoidalLevelProof() {
+      return myGroupoidalLevelProof;
+    }
+
+    public void setGroupoidalLevelProof(boolean groupoidalLevelProof) {
+      myGroupoidalLevelProof = groupoidalLevelProof;
     }
 
     @NotNull
@@ -2492,6 +2565,7 @@ public final class Concrete {
       result.enclosingClass = enclosingClass;
       result.setUseParent(getUseParent());
       result.setUsedDefinitions(getUsedDefinitions());
+      result.setGroupoidalLevelProof(isGroupoidalLevelProof());
       return result;
     }
   }

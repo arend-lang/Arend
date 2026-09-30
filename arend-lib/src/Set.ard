@@ -175,4 +175,14 @@
   \where {
     \func map {A B : \Type} (t : Trunc0 A) (f : A -> B) : Trunc0 B \elim t
       | in0 a => in0 (f a)
+
+    \lemma unequiv {A : \Type} {a b : A} (p : in0 a = in0 b) : TruncP (a = b)
+      => \let code (y : Trunc0 A) : \Prop => \case \elim y \with {
+                | in0 b => TruncP (a = b)
+              }
+         \in transport code p (inP idp)
+
+    \lemma transport_Trunc0 {A : \Cat} {B : A -> \Type} {a a' : A} (p : a = a') {b : B a}
+      : transport (\lam x => Trunc0 (B x)) p (in0 b) = in0 (transport B p b) \elim p
+      | idp => idp
   }

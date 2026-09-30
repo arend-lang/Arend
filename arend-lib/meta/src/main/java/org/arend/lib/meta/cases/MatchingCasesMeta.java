@@ -1,5 +1,6 @@
 package org.arend.lib.meta.cases;
 
+import org.arend.ext.FreeBindingsModifier;
 import org.arend.ext.concrete.*;
 import org.arend.ext.concrete.expr.*;
 import org.arend.ext.concrete.pattern.ConcretePattern;
@@ -234,17 +235,26 @@ public class MatchingCasesMeta extends BaseMetaDefinition {
               for (CoreElimClause clause : body.getClauses()) {
                 if (clause.getPatterns().get(i).getBinding() == null) {
                   matched.add(param.getBinding());
-                  CoreFunCallExpression funCall = param.getType().toEquality(); // try to take the type immediately
-                  if (funCall == null) { // if it's not an equality, then this may be because we need to substitute patterns
-                    CoreExpression type = (CoreExpression) typechecker.substituteAbstractedExpression(parameters.abstractType(i), levelSubst, PatternUtils.toExpression(clause.getPatterns().subList(0, i), constructor, factory, null), null);
-                    funCall = type == null ? null : type.toEquality();
-                    if (funCall != null) {
+                  CorePathTypeExpression equality = Utils.toEquality(param.getType(), null, null); // try to take the type immediately
+                  if (equality == null) { // if it's not an equality, then this may be because we need to substitute patterns
+                    List<? extends CorePattern> prefix = clause.getPatterns().subList(0, i);
+                    List<CoreBinding> prefixBindings = new ArrayList<>();
+                    for (CoreParameter p = PatternUtils.getAllBindings(prefix); p != null && p.hasNext(); p = p.getNext()) {
+                      prefixBindings.add(p.getBinding());
+                    }
+                    List<ConcreteExpression> substArgs = PatternUtils.toExpression(prefix, constructor, factory, null);
+                    int prefixSize = i;
+                    CoreParameter parametersFinal = parameters;
+                    LevelSubstitution levelSubstFinal = levelSubst;
+                    CoreExpression type = (CoreExpression) typechecker.withFreeBindings(new FreeBindingsModifier().add(prefixBindings), tc -> tc.substituteAbstractedExpression(parametersFinal.abstractType(prefixSize), levelSubstFinal, substArgs, null));
+                    equality = type == null ? null : Utils.toEquality(type, null, null);
+                    if (equality != null) {
                       List<CoreBinding> patternBindings = new ArrayList<>(2);
-                      if (funCall.getDefCallArguments().get(1) instanceof CoreReferenceExpression) {
-                        patternBindings.add(((CoreReferenceExpression) funCall.getDefCallArguments().get(1)).getBinding());
+                      if (equality.getLeftArgument() instanceof CoreReferenceExpression) {
+                        patternBindings.add(((CoreReferenceExpression) equality.getLeftArgument()).getBinding());
                       }
-                      if (funCall.getDefCallArguments().get(2) instanceof CoreReferenceExpression) {
-                        patternBindings.add(((CoreReferenceExpression) funCall.getDefCallArguments().get(2)).getBinding());
+                      if (equality.getRightArgument() instanceof CoreReferenceExpression) {
+                        patternBindings.add(((CoreReferenceExpression) equality.getRightArgument()).getBinding());
                       }
                       if (!patternBindings.isEmpty()) {
                         CoreParameter param1 = parameters;
@@ -257,11 +267,11 @@ public class MatchingCasesMeta extends BaseMetaDefinition {
                       }
                     }
                   } else {
-                    if (funCall.getDefCallArguments().get(1) instanceof CoreReferenceExpression) {
-                      matched.add(((CoreReferenceExpression) funCall.getDefCallArguments().get(1)).getBinding());
+                    if (equality.getLeftArgument() instanceof CoreReferenceExpression) {
+                      matched.add(((CoreReferenceExpression) equality.getLeftArgument()).getBinding());
                     }
-                    if (funCall.getDefCallArguments().get(2) instanceof CoreReferenceExpression) {
-                      matched.add(((CoreReferenceExpression) funCall.getDefCallArguments().get(2)).getBinding());
+                    if (equality.getRightArgument() instanceof CoreReferenceExpression) {
+                      matched.add(((CoreReferenceExpression) equality.getRightArgument()).getBinding());
                     }
                   }
                   break;
@@ -292,7 +302,7 @@ public class MatchingCasesMeta extends BaseMetaDefinition {
                 removedConcrete.add(null);
               } else {
                 argsReindexing.put(i, index);
-                removedConcrete.add(factory.ref(findParameter(bodyParameters, index).getBinding()));
+                removedConcrete.add(factory.core(argument.computeTyped()));
               }
               removedArgs.add(null);
             } else {
@@ -420,7 +430,14 @@ public class MatchingCasesMeta extends BaseMetaDefinition {
       for (Boolean addPath : addPathList) {
         if (!param.hasNext()) break;
         if (addPath) {
-          CoreParameter addPathParam = typechecker.typecheckParameters(Collections.singletonList(factory.param(true, factory.app(factory.ref(typechecker.getPrelude().getEqualityRef()), true, factory.core(allMatchedArgs.get(i)), factory.core(param.getBinding().makeReference().computeTyped())))));
+          TypedExpression matchedArg = allMatchedArgs.get(i);
+          ConcreteExpression selfExpr = factory.core(param.getBinding().makeReference().computeTyped());
+          if (matchedArg.getType().normalize(NormalizationMode.WHNF) instanceof CoreDataCallExpression dataCall && dataCall.getDefinition() == typechecker.getPrelude().getFin()
+              && !(param.getType().normalize(NormalizationMode.WHNF) instanceof CoreDataCallExpression selfDataCall && selfDataCall.getDefinition() == typechecker.getPrelude().getFin())) {
+            selfExpr = factory.app(factory.ref(typechecker.getPrelude().getModRef()), true, selfExpr, factory.core(dataCall.getDefCallArguments().getFirst().computeTyped()));
+          }
+          ConcreteExpression selfExprFinal = selfExpr;
+          CoreParameter addPathParam = typechecker.withFreeBindings(new FreeBindingsModifier().add(param.getBinding()), tc -> tc.typecheckParameters(Collections.singletonList(factory.param(true, factory.app(factory.ref(tc.getPrelude().getEqualityRef()), true, factory.core(matchedArg), selfExprFinal)))));
           if (addPathParam == null) return null;
           addPathMap.put(param, addPathParam);
         }
@@ -895,8 +912,15 @@ public class MatchingCasesMeta extends BaseMetaDefinition {
           caseArgs.add(factory.caseArg(factory.core(typed), ref, factory.meta(name + "_" + (j + 1), new MetaDefinition() {
               @Override
               public @Nullable TypedExpression invokeMeta(@NotNull ExpressionTypechecker typechecker, @NotNull ContextData contextData) {
-                AbstractedExpression argType = typechecker.substituteAbstractedExpression(abstracted, levelSubst, refExprsCopy, null);
-                return argType == null ? null : ((CoreExpression) argType).computeTyped();
+                CoreExpression argType = (CoreExpression) typechecker.substituteAbstractedExpression(abstracted, levelSubst, refExprsCopy, null);
+                if (argType == null) return null;
+                CoreExpression realType = typed.getType().normalize(NormalizationMode.WHNF);
+                if (argType.normalize(NormalizationMode.WHNF) instanceof CoreDataCallExpression dataCall && dataCall.getDefinition() == typechecker.getPrelude().getNat()
+                    && realType instanceof CoreDataCallExpression && ((CoreDataCallExpression) realType).getDefinition() == typechecker.getPrelude().getFin()) {
+                  return realType.computeTyped();
+                } else {
+                  return argType.computeTyped();
+                }
               }
             })
           ));
@@ -1049,18 +1073,6 @@ public class MatchingCasesMeta extends BaseMetaDefinition {
       newRows.add(removeColumnsInRow(row, removedArgs));
     }
     return newRows;
-  }
-
-  private static CoreParameter findParameter(List<CoreParameter> parameters, int index) {
-    int i = 0;
-    for (CoreParameter param : parameters) {
-      for (; param.hasNext(); param = param.getNext(), i++) {
-        if (i == index) {
-          return param;
-        }
-      }
-    }
-    throw new IllegalStateException();
   }
 
   private static Pair<Integer, Integer> findArgument(List<SubexpressionData> dataList, int index) {

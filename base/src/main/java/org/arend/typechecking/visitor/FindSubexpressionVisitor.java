@@ -37,6 +37,15 @@ public class FindSubexpressionVisitor extends SearchVisitor<Void> {
   }
 
   @Override
+  public Boolean visitPathType(PathTypeExpression expr, Void param) {
+    return switch (myFunction.apply(expr)) {
+      case STOP -> true;
+      case SKIP -> false;
+      default -> super.visitPathType(expr, param);
+    };
+  }
+
+  @Override
   public Boolean visitAt(AtExpression expr, Void params) {
     return switch (myFunction.apply(expr)) {
       case STOP -> true;

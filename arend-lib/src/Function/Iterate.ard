@@ -1,19 +1,19 @@
 \import Arith.Nat
 \import Function
 
-\func iterl {A : \Type} (f : A -> A) (n : Nat) (a : A) : A \elim n
+\func iterl {A : \Cat} (f : A -> A) (n : Nat) (a : A) : A \elim n
   | 0 => a
   | suc n => iterl f n (f a)
 
-\func iterr {A : \Type} (f : A -> A) (n : Nat) (a : A) : A \elim n
+\func iterr {A : \Cat} (f : A -> A) (n : Nat) (a : A) : A \elim n
   | 0 => a
   | suc n => f (iterr f n a)
 
-\func iterr-ind {A : \Type} {P : A -> \Type} {f : A -> A} {a0 : A} (p0 : P a0) (s : \Pi {a : A} -> P a -> P (f a)) (n : Nat) : P (iterr f n a0) \elim n
+\func iterr-ind {A : \Cat} {P : A -> \Type} {f : A -> A} {a0 : A} (p0 : P a0) (s : \Pi {a : A} -> P a -> P (f a)) (n : Nat) : P (iterr f n a0) \elim n
   | 0 => p0
   | suc n => s (iterr-ind p0 s n)
 
-\func iterr-index-ind {A : \Type} {P : Nat -> A -> \Type} {f : A -> A} {a0 : A} (p0 : P 0 a0) (s : \Pi {n : Nat} {a : A} -> P n a -> P (suc n) (f a)) (n : Nat) : P n (iterr f n a0) \elim n
+\func iterr-index-ind {A : \Cat} {P : Nat -> A -> \Type} {f : A -> A} {a0 : A} (p0 : P 0 a0) (s : \Pi {n : Nat} {a : A} -> P n a -> P (suc n) (f a)) (n : Nat) : P n (iterr f n a0) \elim n
   | 0 => p0
   | suc n => s (iterr-index-ind p0 s n)
 

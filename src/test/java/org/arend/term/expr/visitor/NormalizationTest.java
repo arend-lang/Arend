@@ -219,13 +219,13 @@ public class NormalizationTest extends TypeCheckingTestCase {
 
   @Test
   public void normalizeLetElimNoStuck() {
-    // normalize (\let | x (y : N) : \Type2 => \Type0 \in x zero) = \Type0
+    // normalize (\let | x (y : N) : \Type2 => \1-Type0 \in x zero) = \1-Type0
     LocalReferable y = ref("y");
     LocalReferable x = ref("x");
-    Concrete.LetClause xClause = clet(x, cargs(cTele(cvars(y), cNat())), cUniverseInf(2), cUniverse(0));
+    Concrete.LetClause xClause = clet(x, cargs(cTele(cvars(y), cNat())), cUniverseInf(2), cUniverse(0, BigInteger.ONE));
     incModification();
     TypecheckingResult result = typeCheckExpr(cLet(clets(xClause), cApps(cVar(x), cZero())), null);
-    assertEquals(Universe(new Level(BigInteger.ZERO), ConstLevel.INFINITY), result.expression.normalize(NormalizationMode.NF));
+    assertEquals(Universe(new Level(BigInteger.ZERO), new ConstLevel(BigInteger.ONE)), result.expression.normalize(NormalizationMode.NF));
   }
 
   @Test
@@ -342,7 +342,7 @@ public class NormalizationTest extends TypeCheckingTestCase {
   public void testCoeIsoFreeVar() {
     SingleDependentLink k = singleParam("k", Interval());
     SingleDependentLink i = singleParam("i", Interval());
-    DataCallExpression A = DataCall(Prelude.PATH, Levels.EMPTY, Lam(i, Interval()), Ref(k), Ref(k));
+    PathTypeExpression A = PathType(false, Lam(i, Interval()), Ref(k), Ref(k));
     DependentLink B = param("B", Universe(Sort.SET0));
     DependentLink f = param("f", Pi(A, Ref(B)));
     DependentLink g = param("g", Pi(Ref(B), A));
@@ -361,7 +361,7 @@ public class NormalizationTest extends TypeCheckingTestCase {
     DependentLink aleft = paramExpr("aleft", A.subst(k, Right()));
     Expression expr = FunCall(Prelude.COERCE, Levels.EMPTY,
         Lam(k, FunCall(Prelude.ISO, Levels.EMPTY,
-            DataCall(Prelude.PATH, Levels.EMPTY,
+            PathType(false,
                 Lam(i, Interval()),
                 Ref(k),
                 Ref(k)),

@@ -5,6 +5,7 @@ import org.arend.core.expr.ReferenceExpression;
 import org.arend.core.expr.visitor.StripVisitor;
 import org.arend.core.subst.InPlaceLevelSubstVisitor;
 import org.arend.core.subst.SubstVisitor;
+import org.arend.ext.core.context.BindingVariance;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.List;
@@ -15,23 +16,38 @@ public class TypedDependentLink implements DependentLink {
   private Expression myType;
   private DependentLink myNext;
   private final boolean myHidden;
+  private BindingVariance myVariance;
 
-  public TypedDependentLink(boolean isExplicit, String name, Expression type, boolean isHidden, DependentLink next) {
+  public TypedDependentLink(boolean isExplicit, String name, Expression type, boolean isHidden, BindingVariance variance, DependentLink next) {
     assert next != null;
     myExplicit = isExplicit;
     myName = name;
     myType = type;
     myNext = next;
     myHidden = isHidden;
+    myVariance = variance;
+  }
+
+  public TypedDependentLink(boolean isExplicit, String name, Expression type, boolean isHidden, DependentLink next) {
+    this(isExplicit, name, type, isHidden, BindingVariance.INVARIANT, next);
   }
 
   public TypedDependentLink(boolean isExplicit, String name, Expression type, DependentLink next) {
-    this(isExplicit, name, type, false, next);
+    this(isExplicit, name, type, false, BindingVariance.INVARIANT, next);
   }
 
   @Override
   public boolean isProperty() {
     return false;
+  }
+
+  @Override
+  public @NotNull BindingVariance getVariance() {
+    return myVariance;
+  }
+
+  public void setVariance(BindingVariance variance) {
+    myVariance = variance;
   }
 
   @Override
@@ -78,7 +94,7 @@ public class TypedDependentLink implements DependentLink {
   @Override
   public DependentLink subst(SubstVisitor substVisitor, int size, boolean updateSubst) {
     if (size > 0) {
-      TypedDependentLink result = new TypedDependentLink(myExplicit, myName, myType.accept(substVisitor, null), myHidden, EmptyDependentLink.getInstance());
+      TypedDependentLink result = new TypedDependentLink(myExplicit, myName, myType.accept(substVisitor, null), myHidden, myVariance, EmptyDependentLink.getInstance());
       if (updateSubst) {
         substVisitor.getExprSubstitution().addSubst(this, new ReferenceExpression(result));
       } else {

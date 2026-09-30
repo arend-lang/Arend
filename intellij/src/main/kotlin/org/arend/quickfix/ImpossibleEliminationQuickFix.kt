@@ -14,6 +14,7 @@ import org.arend.core.context.param.DependentLink
 import org.arend.core.context.param.DependentLink.Helper.toList
 import org.arend.core.context.param.UntypedDependentLink
 import org.arend.core.definition.DataDefinition
+import org.arend.core.expr.BaseDataCallExpression
 import org.arend.core.expr.DataCallExpression
 import org.arend.core.expr.Expression
 import org.arend.core.expr.ReferenceExpression
@@ -57,7 +58,8 @@ class ImpossibleEliminationQuickFix(val error: ImpossibleEliminationError, val c
     override fun invoke(project: Project, editor: Editor?, file: PsiFile?) {
         val server = project.service<ArendServerService>().server
         val psiFactory = ArendPsiFactory(project)
-        val dataDefinition = error.defCall.definition as? DataDefinition ?: return
+        val dataCall = error.defCall as? BaseDataCallExpression ?: return
+        val dataDefinition = dataCall.definition
         val definition = error.definition as? TCDefReferable ?: return
         val definitionPsi = definition.data
         val concreteDefinition = server.getResolvedDefinition(definition)?.definition as Concrete.GeneralDefinition
@@ -98,7 +100,7 @@ class ImpossibleEliminationQuickFix(val error: ImpossibleEliminationError, val c
             if (caseExprPsi != null && stuckParameterType is DataCallExpression && clausesListPsi != null) {
                 val concreteCaseExpr = (concreteDefinition as? Concrete.Definition)?.let{ findConcreteByPsi(it, Concrete.CaseExpression::class.java, caseExprPsi) }
                 val exprsToEliminate = stuckParameterType.defCallArguments.zip(toList(dataDefinition.parameters)).filter { ddEliminatedParameters.contains(it.second) }.toList()
-                val sampleDataCall = DataCallExpression.make(dataDefinition, error.defCall.levels, toList(dataDefinition.parameters).map { it.makeReference() })
+                val sampleDataCall = DataCallExpression.make(dataDefinition, dataCall.levels, toList(dataDefinition.parameters).map { it.makeReference() })
                 val toActualParametersSubstitution = ExprSubstitution(); for (entry in stuckParameterType.defCallArguments.zip(toList(dataDefinition.parameters))) toActualParametersSubstitution.add(entry.second, entry.first)
                 val oldCaseArgs = caseExprPsi.caseArguments
                 val parameterToCaseArgMap = HashMap<DependentLink, ArendCaseArg>()
@@ -145,7 +147,7 @@ class ImpossibleEliminationQuickFix(val error: ImpossibleEliminationError, val c
                 }
 
                 val definitionParametersToEliminate = HashSet<Variable>()
-                val exprsToEliminate = toList(dataDefinition.parameters).zip(error.defCall.defCallArguments)
+                val exprsToEliminate = toList(dataDefinition.parameters).zip(dataCall.defCallArguments)
                     .filter { ddEliminatedParameters.contains(it.first) }.map { it.second }.toList()
                 for (expr in exprsToEliminate) if (expr is ReferenceExpression) (clauseToDefinitionMap[expr.binding]
                     ?: expr.binding).let { definitionParametersToEliminate.add(it) }

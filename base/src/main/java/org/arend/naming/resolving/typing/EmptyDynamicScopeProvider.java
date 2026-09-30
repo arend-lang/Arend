@@ -2,6 +2,7 @@ package org.arend.naming.resolving.typing;
 
 import org.arend.naming.reference.GlobalReferable;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.Collections;
 import java.util.List;
@@ -14,7 +15,7 @@ public class EmptyDynamicScopeProvider implements DynamicScopeProvider {
   }
 
   @Override
-  public @NotNull GlobalReferable getReferable() {
+  public @Nullable GlobalReferable getReferable() {
     return myReferable;
   }
 

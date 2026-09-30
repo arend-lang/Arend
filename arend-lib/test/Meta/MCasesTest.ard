@@ -231,7 +231,7 @@
   | false => idp
 }
 
-\lemma andIdempotent (x : Bool) : and x x = x => mcases {and} \with {
+\lemma andIdempotent (x : Bool) : x and x = x => mcases {and} \with {
   | true => idp
   | false => idp
 }

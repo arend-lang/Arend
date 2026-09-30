@@ -114,7 +114,7 @@ public class SortTest extends TypeCheckingTestCase {
       """);
     checkLevelParameters("R", "test");
     FunctionDefinition function = (FunctionDefinition) getDefinition("test");
-    assertEquals(new UniverseExpression(new SortExpression.Var(0, Collections.emptyList())), function.getResultType());
+    assertEquals(new UniverseExpression(new SortExpression.Var(0, Collections.emptyList(), ConstLevel.INFINITY)), function.getResultType());
   }
 
   @Test
@@ -361,6 +361,39 @@ public class SortTest extends TypeCheckingTestCase {
   }
 
   @Test
+  public void fieldProjectionResultTypeTest() {
+    typeCheckModule("""
+      \\record R (A : \\Type) (a : A)
+      \\data D (r : R) | con r.A
+      \\func fun (r : R) => D r
+      \\func test => fun (\\new R Nat 7)
+      """);
+    assertEquals(Sort.SET0, ((FunctionDefinition) getDefinition("test")).getResultType().toSort());
+  }
+
+  @Test
+  public void fieldProjectionFunctionResultTypeTest() {
+    typeCheckModule("""
+      \\record R (A : \\Type) (a : A)
+      \\data D (G : Nat -> R) (n : Nat) | con (G n).A
+      \\func fun (G : Nat -> R) (n : Nat) => D G n
+      \\func test => fun (\\lam _ => \\new R Nat 7) 0
+      """);
+    assertEquals(Sort.SET0, ((FunctionDefinition) getDefinition("test")).getResultType().toSort());
+  }
+
+  @Test
+  public void fieldProjectionFunctionResultTypeTest2() {
+    typeCheckModule("""
+      \\record R (A : \\Type) (a : A)
+      \\data D (G : Nat -> Nat -> R) (n m : Nat) | con (G n m).A
+      \\func fun (G : Nat -> Nat -> R) (n m : Nat) => D G n m
+      \\func test => fun (\\lam _ _ => \\new R Nat 7) 0 1
+      """);
+    assertEquals(Sort.SET0, ((FunctionDefinition) getDefinition("test")).getResultType().toSort());
+  }
+
+  @Test
   public void overrideTest() {
     typeCheckModule("""
       \\record R (A : \\Type)
@@ -421,7 +454,7 @@ public class SortTest extends TypeCheckingTestCase {
   @Test
   public void classImplTest() {
     typeCheckModule("""
-      \\record R (f : Nat -> \\Set)
+      \\record R (f : Nat -> \\Set0)
       \\func test : R => \\new R \\case __ \\with {
         | 0 => \\Sigma
         | suc _ => Nat
@@ -540,6 +573,14 @@ public class SortTest extends TypeCheckingTestCase {
       \\record R (A : \\Type) (a : A)
       \\func foo {X : \\Type} (x y : X) => 0
       \\func test {A B : \\Set3} (r : R A) (s : R B) => foo r s
+      """);
+  }
+
+  @Test
+  public void infiniteSigmaParamTest() {
+    typeCheckModule("""
+      \\func foo (A : \\Sigma (\\Set) (\\Sigma)) (a : A.1) => a
+      \\func test => foo (Nat,()) 5
       """);
   }
 }

@@ -1,0 +1,79 @@
+\import Category
+\import Category.Fibration
+\import Category.Functor
+\import Equiv
+\import InfCat.OFS.CatAccessibleOFS
+\import Function.Meta
+\import InfCat.Basics
+\import InfCat.Fibration.CocartesianFib
+\import InfCat.Fibration.CocartesianMap
+\import InfCat.Nerve.Nerve
+\import InfCat.Nerve.NerveHom
+\import Logic
+\import Logic.Meta
+\import Logic.Unique
+\import Meta
+\import Paths
+\import Paths.Meta
+
+-- # Cocartesian arrows
+
+-- | The image of an {F}-cocartesian morphism is `nerveMap F`-cocartesian.
+\lemma nerveHom-cocartesian.{u} {C D : Precat.{u,u}} (F : Functor C D) {x y : C} {c : Hom x y} (cc : IsCocartesianMor F c)
+  : IsCocartesianArrow (nerveMap F) (nerveHom c)
+  => cocartesianArrow-set (\lam {e''} => nerve-hom-isSet) \lam {e''} => \case \elim e'', nerveOb-surj e'' \with {
+    | _, inP (z, idp) => \lam w k => step (IsEquiv.f_ret nerveHom-equiv) (IsEquiv.f_ret nerveHom-equiv)
+  }
+  \where \private {
+    \lemma step
+        {z : C} {h : Hom x z} {w : nerveOb x ~> nerveOb z} (rw : nerveHom h = w)
+        {k' : Hom (F y) (F z)} {k : nerveOb (F y) ~> nerveOb (F z)} (rk : nerveHom k' = k)
+        (eq : comp (dmap (nerveMap F) (nerveHom c)) k = dmap (nerveMap F) w)
+      : Contr (\Sigma (v : nerveOb y ~> nerveOb z) (comp (nerveHom c) v = w) (dmap (nerveMap F) v = k)) \elim rw, rk
+      | idp, idp => core h k' eq
+
+    \func sigma3-ext {V : \Type} {P Q : V -> \Type} (Pp : \Pi (v : V) -> isProp (P v)) (Qp : \Pi (v : V) -> isProp (Q v))
+                              {v v' : V} (r : v = v') {a : P v} {b : Q v} {a' : P v'} {b' : Q v'}
+      : (v, a, b) = {\Sigma (v : V) (P v) (Q v)} (v', a', b') \elim r
+      | idp => path \lam i => (v, Pp v a a' i, Qp v b b' i)
+
+    \lemma core {z : C} (h : Hom x z) (k' : Hom (F y) (F z)) (eq : comp (nerveHom (F.Func c)) (nerveHom k') = nerveHom (F.Func h))
+      : Contr (\Sigma (v : nerveOb y ~> nerveOb z) (comp (nerveHom c) v = nerveHom h) (dmap (nerveMap F) v = nerveHom k'))
+      => \have | NE {a b : C} : IsEquiv (nerveHom {C} {a} {b}) => nerveHom-equiv
+               | ND {a b : D} : IsEquiv (nerveHom {D} {a} {b}) => nerveHom-equiv
+               | eq1 : k' ∘ F.Func c = F.Func h => IsEquiv.isInj ND (inv nerveHom-comp *> eq)
+         \in Contr.Contr_QEquiv (\new QEquiv {\Sigma (g : Hom y z) (g ∘ c = h) (F.Func g = k')}
+                                             {\Sigma (v : nerveOb y ~> nerveOb z) (comp (nerveHom c) v = nerveHom h) (dmap (nerveMap F) v = nerveHom k')} {
+           | f s => (nerveHom s.1, nerveHom-comp *> pmap nerveHom s.2, pmap nerveHom s.3)
+           | ret t => (IsEquiv.ret NE t.1,
+                       IsEquiv.isInj NE $ inv nerveHom-comp *> pmap (comp (nerveHom c)) (IsEquiv.f_ret NE) *> t.2,
+                       IsEquiv.isInj ND $ pmap (dmap (nerveMap F)) (IsEquiv.f_ret NE) *> t.3)
+           | ret_f s => ext (IsEquiv.ret_f NE)
+           | f_sec t => sigma3-ext {_} {\lam v => comp (nerveHom c) v = nerveHom h} {\lam v => dmap (nerveMap F) v = nerveHom k'}
+                          (\lam v => nerve-hom-isSet _ _) (\lam v => nerve-hom-isSet _ _) (IsEquiv.f_ret NE)
+         }) (cc h k' eq1)
+  }
+
+-- # The main theorem
+
+-- | The map of nerves induced by a cocartesian fibration is cocartesian.
+\lemma nerveMap-cocartesian.{u} {C D : Precat.{u,u}} (F : Functor C D) (Fc : IsCocartesianFunctor F) : IsCocartesianMap (nerveMap F)
+  => \lam {e} {a'} f => step (nerveOb-surj e) (nerveOb-surj a') f
+  \where {
+    \lemma step {e : Nerve C} {a' : Nerve D} (re : ∃ (x : C) (nerveOb x = e)) (ra : ∃ (d : D) (nerveOb d = a')) (f : nerveMap F e ~> a')
+      : ∃ (e' : Nerve C) (u : e ~> e') (s : nerveMap F e' = a') (comp (dmap (nerveMap F) u) (=_~> s) = f) (IsCocartesianArrow (nerveMap F) u) \elim re, ra
+      | inP (x, idp), inP (d, idp) => step2 (IsEquiv.f_ret nerveHom-equiv {f})
+
+    \lemma step2 {x : C} {d : D} {phi : Hom (F x) d} {f : nerveOb (F x) ~> nerveOb d} (rf : nerveHom phi = f)
+      : ∃ (e' : Nerve C) (u : nerveOb x ~> e') (s : nerveMap F e' = nerveOb d) (comp (dmap (nerveMap F) u) (=_~> s) = f) (IsCocartesianArrow (nerveMap F) u) \elim rf
+      | idp => TruncP.map (Fc phi) \lam (y, c, sy, eq, cc) => lift c sy eq cc
+
+    \func lift {x y : C} {d : D} (c : Hom x y) (sy : F y = d) {phi : Hom (F x) d} (eq : transport (Hom (F x)) sy (F.Func c) = phi) (cc : IsCocartesianMor F c)
+      : \Sigma (e' : Nerve C) (u : nerveOb x ~> e') (s : nerveMap F e' = nerveOb d)
+               (comp (dmap (nerveMap F) u) (=_~> s) = nerveHom phi) (IsCocartesianArrow (nerveMap F) u) \elim sy, eq
+      | idp, idp => (nerveOb y, nerveHom c, idp, comp_idd-right, nerveHom-cocartesian F cc)
+  }
+
+-- | The family of fibers of the map of nerves induced by a cocartesian fibration is a cocartesian fibration.
+\lemma nerveMap-cocartesianFib.{u} {C D : Precat.{u,u}} (F : Functor C D) (Fc : IsCocartesianFunctor F) : IsCocartesianFib (Fibers (nerveMap F))
+  => cocartesianMap-char.1 (nerveMap-cocartesian F Fc)

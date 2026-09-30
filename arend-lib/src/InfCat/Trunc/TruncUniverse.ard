@@ -1,0 +1,78 @@
+\import Equiv
+\import Function.Meta
+\import Homotopy.HLevel
+\import Homotopy.Truncation
+\import InfCat.Basics
+\import InfCat.Fibration.DirectedUnivalence
+\import InfCat.Functor.Adjunction
+\import InfCat.Groupoid
+\import InfCat.Paths
+\import InfCat.Rezk
+\import InfCat.SubCat.Full
+\import Logic
+\import Meta
+\import Paths
+\import Paths.Meta
+\open FullSubCat
+
+-- | The category of types of level `n-1` in `\Type u`.
+\func TypeCat.{u} (n : Nat) => FullSubCat {\Type u} (ofHLevel_-1+ n)
+
+-- | Truncation is left adjoint to the inclusion of types of level {n}.
+\func truncAdjunction.{u} (n : Nat) : QAdjunction (\Type u) (TypeCat n)
+  => (truncRightAdjoint n).toAdjunction
+  \where {
+    \func truncRightAdjoint.{u} (n : Nat) : RightAdjoint {\Type u} {TypeCat n} inc \cowith
+      | lob A => make (Trunc_-1+ n A) (Trunc_-1+.level n A).isTruncated
+      | eta0 A => ->_~> (cov-fun-type-equiv.toCov inT)
+      | eta0-adjoint {A} {B} => IsEquiv.trans (inc-ff _ B) {comp _} (aux (inc-con {\Type u} {ofHLevel_-1+ n}))
+      \where {
+        \private \lemma aux.{u} {n : Nat} {A B : \Type u} (Bl : B ofHLevel_-1+ n)
+          : IsEquiv {Trunc_-1+ n A ~> B} {A ~> B} (comp (->_~> (cov-fun-type-equiv.toCov inT)) __)
+          => IsEquiv.leftFactor (inP dirUnivalence) $ transport IsEquiv (ext \lam f a =>
+                pmap (~>_-> f) (inv $ path (\lam i => (dirUnivalence.f_ret _ *> IsEquiv.f_ret cov-fun-type-equiv) i a)) *> inv (~>_->_comp _ _))
+              (IsEquiv.trans (inP dirUnivalence) (Trunc_-1+.univ Bl))
+      }
+
+    -- | The left adjoint computes the truncation.
+    \func ladj-equiv.{u} {n : Nat} {A : \Type u} : QEquiv {inc ((truncAdjunction n).ladj A)} {Trunc_-1+ n A} \cowith
+      | f => ~>_-> (dmap inc k)
+      | ret => Trunc_-1+.rec (inc-con {_} {_} {(truncAdjunction n).ladj A}) (~>_-> ((truncAdjunction n).heta A))
+      | ret_f c => \let | g => dmap inc (IsIso.ret k-iso)
+                        | h (c : inc ((truncAdjunction n).ladj A)) => ~>_-> g (~>_-> (dmap inc k) c)
+                        | hc {c : inc ((truncAdjunction n).ladj A)} : h c = c => inv (~>_->_comp (dmap inc k) g)
+                            *> pmap (~>_-> __ c) (inv (dmap_comp inc) *> pmap+ (dmap inc __) (IsIso.f_ret k-iso)) *> ~>_->_idd
+                   \in inv hc *> pmap (~>_-> g) (f_sec' (~>_-> (dmap inc k) c)) *> hc
+      | f_sec => f_sec'
+      \where \private {
+        \sfunc k : (truncAdjunction n).ladj A ~> (truncRightAdjoint n).lob A
+          => (truncAdjunction n).heta_heps-rl {A} {(truncRightAdjoint n).lob A} ((truncRightAdjoint n).eta0 A)
+
+        \sfunc k-rlr : (truncAdjunction n).heta_heps-lr k = (truncRightAdjoint n).eta0 A
+          => rewrite (\peval k) (truncAdjunction n).heta_heps-rlr
+
+        \lemma k-iso : IsIso k
+          => precomp-equiv=>iso \lam Y => IsEquiv.leftFactor (inP (truncAdjunction n).heta_heps-equiv) $ transport IsEquiv
+              (ext \lam g => inv $ pmap (comp _ __) (dmap_comp inc) *> comp-assoc *> pmap (comp __ _) k-rlr)
+              (truncRightAdjoint n).eta0-adjoint
+
+        \sfunc f_sec' (t : Trunc_-1+ n A) : ~>_-> (dmap inc k) (Trunc_-1+.rec (inc-con {_} {_} {(truncAdjunction n).ladj A}) (~>_-> ((truncAdjunction n).heta A)) t) = t
+          => Trunc_-1+.elim-eq (Trunc_-1+.level n A).isTruncated (\lam a => inv (~>_->_comp _ _)
+              *> pmap (~>_-> __ a) k-rlr *> ->_~>_-> *> cov-fun-type-equiv.ofInv) t
+      }
+  }
+
+\lemma TypeCat-hom-level.{u} {n : Nat} {A B : TypeCat.{u} n} : (A ~> B) ofHLevel_-1+ n
+  => HLevel-retracts (transQEquiv (IsEquiv.toQEquiv (FullSubCat.inc-ff A B)) dirUnivalence) $
+      HLevels-pi _ \lam _ => inc-con {\Type u} {ofHLevel_-1+ n}
+
+-- | The arrow of {TypeCat} given by a function.
+\func typeArr.{u} {n : Nat} {A B : TypeCat.{u} n} (f : inc A -> inc B) : A ~> B
+  => IsEquiv.ret (inc-ff A B) (->_~> f)
+
+\sfunc typeArr-app.{u} {n : Nat} {A B : TypeCat.{u} n} {f : inc A -> inc B} {a : inc A} : ~>_-> (dmap inc (typeArr f)) a = f a
+  => pmap (~>_-> __ a) (IsEquiv.f_ret (inc-ff A B)) *> ->_~>_->
+
+-- | Arrows of {TypeCat} are equal if they act equally on elements.
+\sfunc typeArr-ext.{u} {n : Nat} {A B : TypeCat.{u} n} {p q : A ~> B} (h : \Pi (a : inc A) -> ~>_-> (dmap inc p) a = ~>_-> (dmap inc q) a) : p = q
+  => IsEquiv.isInj (inc-ff A B) $ IsEquiv.isInj (inP dirUnivalence) (ext h)

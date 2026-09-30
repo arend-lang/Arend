@@ -35,11 +35,11 @@
         | :nil idp => inv id-right
         | :cons a l => idp
 
-  \func \infixr 5 :++ {a b c : V} (h : CatNF b c H) (h' : CatNF a b H) : CatNF a c H \elim h
+  \func \infixr 5 :_++ {a b c : V} (h : CatNF b c H) (h' : CatNF a b H) : CatNF a c H \elim h
     | :nil idp => h'
-    | :cons h t => h :cons (t :++ h')
+    | :cons h t => h :cons (t :_++ h')
 
-  \protected \lemma interpretNF_++ {a b c : V} (h : CatNF b c H) (h' : CatNF a b H) : interpretNF (h :++ h') = interpretNF h ∘ interpretNF h' \elim h
+  \protected \lemma interpretNF_++ {a b c : V} (h : CatNF b c H) (h' : CatNF a b H) : interpretNF (h :_++ h') = interpretNF h ∘ interpretNF h' \elim h
     | :nil idp => inv id-left
     | :cons h t => repeat {2} (rewrite interpretNF.cons) $ rewrite interpretNF_++ (inv o-assoc)
 

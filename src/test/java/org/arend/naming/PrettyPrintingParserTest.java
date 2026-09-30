@@ -1,11 +1,15 @@
 package org.arend.naming;
 
+import org.arend.core.context.param.DependentLink;
+import org.arend.core.context.param.EmptyDependentLink;
 import org.arend.core.context.param.SingleDependentLink;
+import org.arend.core.context.param.TypedDependentLink;
 import org.arend.core.context.param.TypedSingleDependentLink;
 import org.arend.core.definition.FunctionDefinition;
 import org.arend.core.elimtree.ElimBody;
 import org.arend.core.elimtree.ElimClause;
 import org.arend.core.expr.*;
+import org.arend.ext.core.context.BindingVariance;
 import org.arend.naming.reference.LocatedReferableImpl;
 import org.arend.term.group.AccessModifier;
 import org.arend.term.prettyprint.ToAbstractVisitor;
@@ -146,6 +150,79 @@ public class PrettyPrintingParserTest extends TypeCheckingTestCase {
     SingleDependentLink x_ = singleParam(false, vars("x'"), Pi(singleParam(null, Universe(1)), Universe(1)));
     Expression expr = Pi(w, Pi(x, Pi(yz, Pi(Universe(1), Pi(tz_, Pi(x_, Apps(Ref(w), Ref(x_), Ref(yz), Ref(tz_.getNext()), Ref(tz_))))))));
     testExpr(expected, expr);
+  }
+
+  @Test
+  public void prettyPrintingParserDottedPi() {
+    SingleDependentLink x = new TypedSingleDependentLink(true, "x", Universe(1), false, BindingVariance.COVARIANT);
+    Expression expr = Pi(x, Ref(x));
+    Concrete.Expression result = ToAbstractVisitor.convert(expr, new PrettyPrinterConfig() {
+      @NotNull
+      @Override
+      public EnumSet<PrettyPrinterFlag> getExpressionFlags() {
+        return EnumSet.of(PrettyPrinterFlag.SHOW_TYPES_IN_LAM, PrettyPrinterFlag.SHOW_IMPLICIT_ARGS);
+      }
+
+      @Override
+      public NormalizationMode getNormalizationMode() {
+        return null;
+      }
+    });
+    assertTrue(result instanceof Concrete.PiExpression);
+    assertEquals(BindingVariance.COVARIANT, ((Concrete.PiExpression) result).getParameters().getFirst().getVariance());
+    StringBuilder builder = new StringBuilder();
+    result.accept(new PrettyPrintVisitor(builder, 0), new Precedence(Concrete.Expression.PREC));
+    assertTrue(builder.toString().contains(":⁺"));
+  }
+
+  @Test
+  public void prettyPrintingParserSigmaPlus() {
+    DependentLink y = new TypedDependentLink(true, "y", Universe(1), false, BindingVariance.COVARIANT, EmptyDependentLink.getInstance());
+    DependentLink x = new TypedDependentLink(true, "x", Universe(1), false, BindingVariance.COVARIANT, y);
+    Expression expr = new SigmaExpression(x);
+    Concrete.Expression result = ToAbstractVisitor.convert(expr, new PrettyPrinterConfig() {
+      @NotNull
+      @Override
+      public EnumSet<PrettyPrinterFlag> getExpressionFlags() {
+        return EnumSet.of(PrettyPrinterFlag.SHOW_TYPES_IN_LAM, PrettyPrinterFlag.SHOW_IMPLICIT_ARGS);
+      }
+
+      @Override
+      public NormalizationMode getNormalizationMode() {
+        return null;
+      }
+    });
+    assertTrue(result instanceof Concrete.SigmaExpression);
+    assertEquals(BindingVariance.COVARIANT, ((Concrete.SigmaExpression) result).getVariance());
+    StringBuilder builder = new StringBuilder();
+    result.accept(new PrettyPrintVisitor(builder, 0), new Precedence(Concrete.Expression.PREC));
+    String printed = builder.toString();
+    assertTrue(printed, printed.contains("\\Sigma⁺"));
+    assertFalse(printed, printed.contains(":⁺"));
+    assertEquals(BindingVariance.COVARIANT, ((Concrete.SigmaExpression) parseExpr(printed)).getVariance());
+  }
+
+  @Test
+  public void prettyPrintingParserDottedLam() {
+    SingleDependentLink x = new TypedSingleDependentLink(true, "x", Universe(1), false, BindingVariance.COVARIANT);
+    Expression expr = Lam(x, Ref(x));
+    Concrete.Expression result = ToAbstractVisitor.convert(expr, new PrettyPrinterConfig() {
+      @NotNull
+      @Override
+      public EnumSet<PrettyPrinterFlag> getExpressionFlags() {
+        return EnumSet.noneOf(PrettyPrinterFlag.class);
+      }
+
+      @Override
+      public NormalizationMode getNormalizationMode() {
+        return null;
+      }
+    });
+    assertTrue(result instanceof Concrete.LamExpression);
+    assertEquals(BindingVariance.COVARIANT, ((Concrete.LamExpression) result).getParameters().getFirst().getVariance());
+    StringBuilder builder = new StringBuilder();
+    result.accept(new PrettyPrintVisitor(builder, 0), new Precedence(Concrete.Expression.PREC));
+    assertTrue(builder.toString().contains("=>⁺"));
   }
 
   @Test

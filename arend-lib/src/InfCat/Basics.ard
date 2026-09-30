@@ -1,0 +1,259 @@
+\import Equiv
+\import Equiv.Sigma
+\import Function.Meta
+\import InfCat.Paths
+\import Logic.Unique
+\import Meta
+\import Paths
+
+\func id+ {C :⁺ \Cat} (x :⁺ C) => x
+
+\func dmap {C D :⁺ \Cat} (f :⁺ C ->⁺ D) {a a' :⁺ C} (p :⁺ a ~> a') : f a ~> f a'
+  => dpath \lam i => f (p i)
+
+\func sigma-ext {A :⁺ \Cat} {B :⁺ A ->⁺ \Cat} {a a' :⁺ A} (p :⁺ a = a') {b :⁺ B a} {b' :⁺ B a'} (q :⁺ transport+ B p b = b')
+  : (a,b) = {\Sigma⁺ (x : A) (B x)} (a',b') \elim p
+  | idp => path \lam i => (a, q i)
+  \where {
+    \protected \func grpd {A : \Cat} {B : A ->⁺ \Cat} {a a' : A} (p : a = a') {b : B a} {b' : B a'} (q : transport+ B p b = b')
+      : (a,b) = {\Sigma (x : A) (B x)} (a',b') \elim p
+      | idp => path \lam i => (a, q i)
+  }
+
+\func sigma-unext2 {A :⁺ \Cat} {B :⁺ A ->⁺ \Cat} {s t :⁺ \Sigma⁺ (x : A) (B x)} (p :⁺ s = t)
+  : transport+ B (pmap+ __.1 p) s.2 = t.2 \elim p
+  | idp => idp
+
+\sfunc sigma-unext2_idp {A :⁺ \Cat} {B :⁺ A ->⁺ \Cat} {a :⁺ A} {b b' :⁺ B a}
+                        (p :⁺ (a,b) = {\Sigma⁺ (x : A) (B x)} (a,b')) (q :⁺ pmap+ __.1 p = idp) : b = b'
+  => inv (pmap+ (transport+ B __ b) q) *> sigma-unext2 p
+
+\sfunc sigma-depPath {A :⁺ \Cat} {B :⁺ A ->⁺ I -> \Cat} {s :⁺ \Sigma⁺ (a : A) (B a left)} {t :⁺ \Sigma⁺ (a : A) (B a right)}
+  (p :⁺ s.1 = t.1) (q :⁺ Path (\lam i => B (p i) i) s.2 t.2) : Path (\lam i => \Sigma⁺ (a : A) (B a i)) s t
+  => path \lam i => (p i, q i)
+
+\func dpath-sigma-equiv {A : \Cat} (B : DI ->⁺ A ->⁺ \Cat)
+                        {s : \Sigma⁺ (x : A) (B dleft x)} {t : \Sigma⁺ (x : A) (B dright x)}
+  : QEquiv {DPath (\lam i => \Sigma⁺ (x : A) (B i x)) s t}
+           {\Sigma (r : s.1 ~> t.1) (DPath (\lam i => B i (r i)) s.2 t.2)} \cowith
+  | f p => (dpath \lam i => (p i).1, dpath \lam i => (p i).2)
+  | ret u => dpath \lam i => (u.1 i, u.2 i)
+  | ret_f p => idp
+  | f_sec u => idp
+
+\func =_~> {A :⁺ \Cat} {a b :⁺ A} (p :⁺ a = b) : a ~> b \elim p
+  | idp => idd
+
+\sfunc transport_~>_dmap {A B :⁺ \Cat} (f g :⁺ A ->⁺ B) {a b :⁺ A} {p :⁺ a = b} {q :⁺ f a ~> g a} {r :⁺ f b ~> g b}
+  (s :⁺ comp q (dmap g (=_~> p)) = comp (dmap f (=_~> p)) r) : transport+ (\lam x => f x ~> g x) p q = r \elim p
+  | idp => inv comp_idd-right *> s *> comp_idd-left
+
+\sfunc transport_~>_dmap-left {A B :⁺ \Cat} (f :⁺ A ->⁺ B) {a b :⁺ A} {p :⁺ a = b} {c :⁺ B} {q :⁺ f a ~> c}
+  : transport+ (f __ ~> c) p q = comp (dmap f (=_~> (inv p))) q \elim p
+  | idp => inv comp_idd-left
+
+\sfunc transport_~>_dmap-right {A B :⁺ \Cat} (f :⁺ A ->⁺ B) {a :⁺ B} {b c :⁺ A} {p :⁺ b = c} {q :⁺ a ~> f b}
+  : transport+ (a ~> f __) p q = comp q (dmap f (=_~> p)) \elim p
+  | idp => inv comp_idd-right
+
+\sfunc transport_~>-right {A :⁺ \Cat} {a b c :⁺ A} {p :⁺ b = c} {q :⁺ a ~> b} : transport+ (a ~> __) p q = comp q (=_~> p) \elim p
+  | idp => inv comp_idd-right
+
+\func transport_~>_idd-right {A :⁺ \Cat} {a b :⁺ A} {p :⁺ a = b} : transport+ (a ~> __) p idd = =_~> p \elim p
+  | idp => idp
+
+\func comp {C :⁺ \Cat} {a b c :⁺ C} (p :⁺ a ~> b) (q :⁺ b ~> c) : a ~> c
+  => dpath (fill2 p q __ dright)
+
+\sfunc dmap_comp {C D :⁺ \Cat} (f :⁺ C ->⁺ D) {a b c :⁺ C} {p :⁺ a ~> b} {q :⁺ b ~> c} : dmap f (comp p q) = comp (dmap f p) (dmap f q)
+  => inv $ comp-char $ dpath \lam i => dpath \lam j => f (fill2 p q i j)
+
+\func ~>_= {A :⁺ \Type} {a b :⁺ A} (p :⁺ a ~> b) : a = b \elim p
+  | idd => idp
+
+\func ~>_=_~> {A :⁺ \Type} {a b :⁺ A} {p :⁺ a ~> b} : =_~> (~>_= p) = p \elim p
+  | idd => idp
+
+\func =_~>_= {A :⁺ \Type} {a b :⁺ A} {p :⁺ a = b} : ~>_= (=_~> p) = p \elim p
+  | idp => idp
+
+\func =_~>-equiv {A : \Type} {a b : A} : QEquiv {a = b} {a ~> b} \cowith
+  | f => =_~>
+  | ret => ~>_=
+  | ret_f p => =_~>_=
+  | f_sec p => ~>_=_~>
+
+\func flipQEquiv {C : \Cat} {a b c d : C} {ab : a ~> b} {bd : b ~> d} {ac : a ~> c} {cd : c ~> d}
+  : QEquiv {DPath (\lam i => ab i ~> cd i) ac bd} {DPath (\lam i => ac i ~> bd i) ab cd} \cowith
+  | f p => dpath \lam i => dpath \lam j => p j i
+  | ret p => dpath \lam i => dpath \lam j => p j i
+  | ret_f p => idp
+  | f_sec p => idp
+
+\sfunc path-square-equiv {C : \Cat} {a b c d : C} (f : a ~> b) (g : c ~> d) {p : a = c} {q : b = d}
+  : QEquiv {DPath (\lam i => f i = g i) p q} {DPath (\lam i => f i ~> g i) (=_~> p) (=_~> q)}
+  => later (\new QEquiv {
+    | f p => path \lam i => dpath \lam j => p j i
+    | ret p => dpath \lam i => path \lam j => p j i
+    | ret_f p => idp
+    | f_sec p => idp
+  }) `transQEquiv` flipped `transQEquiv` flipQEquiv
+  \where {
+    \protected \func flipped {p : a = c} {q : b = d}
+      : QEquiv {Path (\lam i => p i ~> q i) f g} {DPath (\lam i => =_~> p i ~> =_~> q i) f g} \elim p, q
+      | idp, idp => =_~>-equiv
+  }
+
+\func =_~>_comp {A :⁺ \Cat} {a b c :⁺ A} {p :⁺ a = b} {q :⁺ b = c} : comp (=_~> p) (=_~> q) = =_~> (p *> q) \elim q
+  | idp => comp_idd-right
+
+\func dmap_=_~> {C D :⁺ \Cat} (f :⁺ C ->⁺ D) {a b :⁺ C} {p :⁺ a = b} : dmap f (=_~> p) = =_~> (pmap+ f p) \elim p
+  | idp => idp
+
+\sfunc segal2Prop {C :⁺ \Cat} {a b c :⁺ C} {ab :⁺ a ~> b} {bc :⁺ b ~> c} (s t :⁺ \Sigma⁺ (ac : a ~> c) (DPath (\lam i => ab i ~> ac i) idd bc)) : s = t
+  => aux s *> inv (aux t)
+  \where {
+    \private \sfunc aux (s :⁺ \Sigma⁺ (ac : a ~> c) (DPath (\lam i => ab i ~> ac i) idd bc))
+      : s = (comp ab bc, dpath \lam i => dpath (fill2 ab bc i))
+      => \let | f3 => fill3 () {ab} {bc} {comp ab bc}
+                        idd
+                        (dpath \lam k => idd)
+                        (dpath \lam i => dpath (fill2 ab bc i))
+                        s.2
+                        (dpath \lam i => idd)
+         \in inv $ ~>_= $ dpath \lam j => (dpath \lam i => f3 i j dright, dpath \lam i => dpath \lam k => f3 i j k)
+
+    \protected \sfunc double (u v :⁺ s = t) : u = v
+      => inv (lem u) *> lem v
+      \where {
+        \private \sfunc lem (u :⁺ s = t) : inv (segal2Prop s s) *> segal2Prop s t = u \elim u
+          | idp => inv_*>
+      }
+  }
+
+\sfunc cube1-equals {C :⁺ \Cat} {a b c :⁺ C} (ab :⁺ a ~> b) (bc :⁺ b ~> c) {ac ac' :⁺ a ~> c}
+                    (p :⁺ DPath (\lam i => ab i ~> ac i) idd bc) (q :⁺ DPath (\lam i => ab i ~> ac' i) idd bc) : ac = ac'
+  => pmap+ __.1 $ segal2Prop (ac,p) (ac',q)
+
+\sfunc comp-char {C :⁺ \Cat} {a b c :⁺ C} {ab :⁺ a ~> b} {bc :⁺ b ~> c} {ac :⁺ a ~> c}
+                 (p :⁺ DPath (\lam i => ab i ~> ac i) idd bc) : comp ab bc = ac
+  => cube1-equals ab bc (dpath \lam i => dpath \lam j => fill2 ab bc i j) p
+  \where {
+    \protected \sfunc conv {ac :⁺ a ~> c} (p :⁺ comp ab bc = ac) : DPath (\lam i => ab i ~> ac i) idd bc
+      => transport+ (\lam x => DPath (\lam i => ab i ~> x i) idd bc) p $ dpath \lam i => dpath (fill2 ab bc i)
+
+    \protected \sfunc conv_idp : conv idp = dpath \lam i => dpath (fill2 ab bc i)
+      => \peval conv idp
+
+    \protected \sfunc forward_backward : conv (comp-char p) = p
+      => pmap+ (comp-char.conv __) ((\peval comp-char p) *> (\peval cube1-equals ab bc _ p)) *> (\peval comp-char.conv _)
+      *> sigma-unext2 (segal2Prop (comp ab bc, dpath \lam i => dpath (fill2 ab bc i)) (ac,p))
+
+    \protected \sfunc backward_forward {ac :⁺ a ~> c} {p :⁺ comp ab bc = ac} : comp-char (conv p) = p \elim p
+      | idp => pmap+ (comp-char __) comp-char.conv_idp *> (\peval comp-char _) *> (\peval cube1-equals ab bc _ _)
+            *> path \lam i => pmap+ __.1 (segal2Prop.double _ idp i)
+  }
+
+\func comp-equiv {C : \Cat} {a b c : C} {ab : a ~> b} {bc : b ~> c} {ac : a ~> c}
+  : QEquiv {DPath (\lam i => ab i ~> ac i) idd bc} {comp ab bc = ac} \cowith
+  | f => comp-char
+  | ret => comp-char.conv
+  | ret_f p => comp-char.forward_backward
+  | f_sec p => comp-char.backward_forward
+  \where {
+    \protected \sfunc flipped : QEquiv {DPath (\lam i => a ~> bc i) ab ac} {comp ab bc = ac}
+      => flipQEquiv `transQEquiv` comp-equiv {C}
+  }
+
+-- | The Segal condition as a contractibility statement: the type of composites of {ab} and {bc} equipped with a filler is contractible.
+\lemma segal-contr {C : \Cat} {a b c : C} (ab : a ~> b) (bc : b ~> c) : Contr (\Sigma (ac : a ~> c) (DPath (\lam i => ab i ~> ac i) idd bc))
+  => Contr.Contr_QEquiv (sigma-right \lam ac => later flipQEquiv) (flipped ab bc)
+  \where {
+    \lemma flipped {C : \Cat} {a b c : C} (ab : a ~> b) (bc : b ~> c) : Contr (\Sigma (ac : a ~> c) (DPath (\lam i => a ~> bc i) ab ac))
+      => Contr.Contr_QEquiv (symQEquiv (sigma-right \lam ac => later comp-equiv.flipped)) (lsigma (comp ab bc))
+
+    -- | The type of connections from {ab} to the identity (as in {conn-right}) is contractible.
+    \lemma conn {C : \Cat} {a b : C} (ab : a ~> b) : Contr (\Sigma (x : a ~> b) (DPath (\lam i => a ~> x i) idd ab))
+      => Contr.Contr_QEquiv (symQEquiv (sigma-right \lam x => later $ comp-equiv.flipped `transQEquiv` pathEquiv-right comp_idd-left)) (rsigma ab)
+  }
+
+{- | The relative Segal condition: given lifts {x} of {f} and {k} of {g},
+ -   the type of lifts of {h} equipped with a filler over the 2-simplex {tri} is contractible.
+ -}
+\lemma horn-Contr {A : \Cat} (B : A ->⁺ \Cat) {a a' a'' : A} {f : a ~> a'} {g : a' ~> a''} {h : a ~> a''}
+                  (tri : DPath (\lam i => f i ~> h i) idd g) {b : B a} {b' : B a'} {b'' : B a''}
+                  (x : DPath (\lam i => B (f i)) b b') (k : DPath (\lam j => B (g j)) b' b'')
+  : Contr (\Sigma (q : DPath (\lam i => B (h i)) b b'') (DPath (\lam i => DPath (\lam j => B (tri i j)) (x i) (q i)) idd k))
+  => \let | Tot => \Sigma⁺ (a : A) (B a)
+          | ab => dpath \lam i => ((f i, x i) : Tot)
+          | bc => dpath \lam j => ((g j, k j) : Tot)
+          | G (v : \Sigma (r : a ~> a'') (DPath (\lam i => f i ~> r i) idd g))
+              => \Sigma (q : DPath (\lam i => B (v.1 i)) b b'') (DPath (\lam i => DPath (\lam j => B (v.2 i j)) (x i) (q i)) idd k)
+          | T => \Sigma (v : \Sigma (r : a ~> a'') (DPath (\lam i => f i ~> r i) idd g)) (G v)
+          | split (w : \Sigma⁺ (ac : (a,b) ~> {Tot} (a'',b'')) (DPath (\lam i => ab i ~> ac i) idd bc)) : T
+              => ((dpath \lam i => (w.1 i).1, dpath \lam i => dpath \lam j => (w.2 i j).1), (dpath \lam i => (w.1 i).2, dpath \lam i => dpath \lam j => (w.2 i j).2))
+          | unsplit (u : T) : \Sigma⁺ (ac : (a,b) ~> {Tot} (a'',b'')) (DPath (\lam i => ab i ~> ac i) idd bc)
+              => (dpath \lam i => (u.1.1 i, u.2.1 i), dpath \lam i => dpath \lam j => (u.1.2 i j, u.2.2 i j))
+     \in fiber-Contr G (segal-contr f g)
+           (isProp=>isContr (\lam u v => pmap split (segal2Prop {Tot} {_} {_} {_} {ab} {bc} (unsplit u) (unsplit v))) (split (comp ab bc, dpath \lam i => dpath (fill2 ab bc i))))
+           (h, tri)
+  \where {
+    -- | The relative Segal condition for the flipped shape of 2-simplices.
+    \lemma flipped (tri : DPath (\lam i => a ~> g i) f h) {b : B a} {b' : B a'} {b'' : B a''}
+                   (x : DPath (\lam i => B (f i)) b b') (k : DPath (\lam j => B (g j)) b' b'')
+      : Contr (\Sigma (q : DPath (\lam i => B (h i)) b b'') (DPath (\lam i => DPath (\lam j => B (tri i j)) b (k i)) x q))
+      => Contr.Contr_QEquiv (sigma-right \lam p => later \new QEquiv {
+        | f q => dpath \lam i => dpath \lam j => q j i
+        | ret q => dpath \lam i => dpath \lam j => q j i
+        | ret_f => idpe
+        | f_sec => idpe
+      }) $ horn-Contr B (dpath \lam i => dpath \lam j => tri j i) x k
+  }
+
+\sfunc comp_idd-right {C :⁺ \Cat} {a b :⁺ C} {f :⁺ a ~> b} : comp f idd = f
+  => comp-char (dpath \lam i => idd)
+
+\sfunc conn-right {C :⁺ \Cat} {a b :⁺ C} (f :⁺ a ~> b) : DPath (\lam i => a ~> f i) idd f
+  => \let c => fill2 idd f
+     \in dpath \lam i => dpath \lam j => fill3 () {idd} {idd} {idd} {idd}
+          idd (dpath \lam i => dpath \lam j => c i j) idd (dpath \lam i => dpath \lam j => c j i) idd i j dright
+
+\sfunc conn-left {C :⁺ \Cat} {a b :⁺ C} (f :⁺ a ~> b) : DPath (\lam i => f i ~> b) f idd
+  => dpath \lam i => dpath \lam j => cube f i j dright
+  \where {
+    \protected \sfunc cube (f :⁺ a ~> b)
+      => dpath \lam i => dpath \lam j => dpath \lam k => fill3 () {idd} {f} {f} {idd} {f} {f} {idd}
+          (conn-right f) (dpath \lam _ => idd) (conn-right f) idd idd i j k
+  }
+
+\sfunc comp_idd-left {C :⁺ \Cat} {a b :⁺ C} {f :⁺ a ~> b} : comp idd f = f
+  => comp-char (conn-right f)
+
+\sfunc comp-assoc {C :⁺ \Cat} {a b c d :⁺ C} {f :⁺ a ~> b} {g :⁺ b ~> c} {h :⁺ c ~> d} : comp f (comp g h) = comp (comp f g) h
+  => comp-char $ dpath \lam i => dpath \lam j => fill3 () {idd} {idd} {idd} {g} {h} {idd} {comp g h}
+      idd
+      (dpath \lam i => dpath \lam j => fill2 (comp f g) h j i)
+      idd
+      (dpath \lam i => dpath \lam j => fill2 g h i j)
+      (dpath \lam i => dpath \lam j => fill2 f g j i)
+      j i dright
+
+\sfunc equiv-fibers {C D :⁺ \Cat} (f :⁺ C ->⁺ D) (g :⁺ D ->⁺ C) (p :⁺ \Pi (x :⁺ C) -> g (f x) = x) (q :⁺ \Pi (y :⁺ D) -> f (g y) = y)
+                    {y :⁺ D} {s t :⁺ \Sigma⁺ (x : C) (f x = y)} : s = t
+  => sigma-ext (inv (p s.1) *> pmap+ g (s.2 *> inv t.2) *> p t.1) $ transport+_path_pmap f (\lam _ => y) $ inv $
+      pmap+ (*> _) (pmap+_*> f *> pmap+ (_ *> __) (pmap+_*> f))
+      *> *>-assoc *> pmap+ (_ *> __) *>-assoc *> pmap+ (*> _) (pmap+_inv f)
+      *> rotatePathLeft (pmap+ (_ *> __ *> _) (coh_inv_f f g p q)
+        *> inv *>-assoc *> pmap+ (*> _) (homotopy-isNatural+ (\lam y => f (g y)) (\lam y => y) (coh_inv f g p q __) _)
+        *> *>-assoc *> pmap2+ (__ *> __) (inv $ coh_inv_f f g p q) (*>-assoc *> pmap+ (_ *> __) inv_*>))
+  \where {
+    \func coh_inv (f :⁺ C ->⁺ D) (g :⁺ D ->⁺ C) (p :⁺ \Pi (x :⁺ C) -> g (f x) = x)
+                  (q :⁺ \Pi (y :⁺ D) -> f (g y) = y) (y :⁺ D) : f (g y) = y
+      => inv (q (f (g y))) *> pmap+ f (p (g y)) *> q y
+
+    \sfunc coh_inv_f (f :⁺ C ->⁺ D) (g :⁺ D ->⁺ C) (p :⁺ \Pi (x :⁺ C) -> g (f x) = x)
+                     (q :⁺ \Pi (y :⁺ D) -> f (g y) = y) {x :⁺ C} : pmap+ f (p x) = coh_inv f g p q (f x)
+      => inv $ rotatePathLeft $
+               pmap+ (pmap+ f __ *> q (f x)) (homotopy_app-comm+ (\lam x => g (f x)) p x)
+          *> homotopy-isNatural+ (\lam y => f (g y)) (\lam y => y) q (pmap+ f (p x))
+  }

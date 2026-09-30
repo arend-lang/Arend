@@ -5,6 +5,7 @@ import org.arend.core.context.param.DependentLink;
 import org.arend.core.expr.*;
 import org.arend.core.subst.ExprSubstitution;
 import org.arend.core.subst.Levels;
+import org.arend.ext.core.context.BindingVariance;
 import org.arend.ext.core.definition.CoreCoerceData;
 import org.arend.ext.core.definition.CoreDefinition;
 import org.arend.ext.core.ops.NormalizationMode;
@@ -210,7 +211,7 @@ public class CoerceData implements CoreCoerceData {
         if (def instanceof Constructor) {
           dataArgs = new ArrayList<>();
           for (DependentLink dataParams = ((Constructor) def).getDataTypeParameters(); dataParams.hasNext(); dataParams = dataParams.getNext(), index++) {
-            Expression arg = InferenceReferenceExpression.make(new FunctionInferenceVariable(def, link, index + 1, link.getType(), sourceNode, visitor.getAllBindings()), visitor.getEquations());
+            Expression arg = InferenceReferenceExpression.make(new FunctionInferenceVariable(def, link, index + 1, link.getType(), sourceNode, visitor.getAllBindings(link.getVariance() == BindingVariance.COVARIANT)), visitor.getEquations());
             substitution.add(dataParams, arg);
             dataArgs.add(arg);
             index++;
@@ -220,7 +221,7 @@ public class CoerceData implements CoreCoerceData {
         while (true) {
           DependentLink next = link.getNext();
           if (next.hasNext()) {
-            Expression arg = InferenceReferenceExpression.make(new FunctionInferenceVariable(def, link, index + 1, link.getType(), sourceNode, visitor.getAllBindings()), visitor.getEquations());
+            Expression arg = InferenceReferenceExpression.make(new FunctionInferenceVariable(def, link, index + 1, link.getType(), sourceNode, visitor.getAllBindings(link.getVariance() == BindingVariance.COVARIANT)), visitor.getEquations());
             substitution.add(link, arg);
             arguments.add(arg);
             link = next;

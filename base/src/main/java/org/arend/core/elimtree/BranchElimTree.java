@@ -290,35 +290,25 @@ public class BranchElimTree extends ElimTree {
     } else if (argument instanceof ArrayExpression array) {
       ElimTree elimTree = myChildren.get(new ArrayConstructor(array.getElements().isEmpty(), true, true));
       if (elimTree != null) {
-        List<Expression> args = new ArrayList<>();
         boolean withElementsType = withArrayElementsType();
         boolean withLength = withArrayLength();
-        if (!withLength) {
-          args.add(array.getLength());
-        }
-        if (!withElementsType) {
-          args.add(array.getElementsType());
-        }
-        if (!array.getElements().isEmpty()) {
-          args.add(array.getElements().getFirst());
-          args.add(array.drop(1));
-        }
+        // The same arguments as in NormalizeVisitor
+        List<Expression> args = new ArrayList<>(array.getConstructorArguments(!withElementsType, !withLength, true));
+        int numberOfConArgs = args.size();
         args.addAll(arguments.subList(index + 1, arguments.size()));
         List<Expression> newArgs = elimTree.normalizeArguments(args);
         if (array.getElements().isEmpty()) {
           result.add(array);
         } else {
+          int i = 0;
           List<Expression> consArgs = new ArrayList<>(4);
-          if (withLength) {
-            consArgs.add(array.getLength());
-          }
-          if (withElementsType) {
-            consArgs.add(array.getElementsType());
-          }
-          consArgs.addAll(newArgs.subList(0, 2 + (withLength ? 0 : 1) + (withElementsType ? 0 : 1)));
+          consArgs.add(withLength ? array.getLengthMinus1() : newArgs.get(i++));
+          consArgs.add(withElementsType ? array.getElementsType() : newArgs.get(i++));
+          consArgs.add(newArgs.get(i++));
+          consArgs.add(newArgs.get(i));
           result.add(FunCallExpression.make(Prelude.ARRAY_CONS, Levels.EMPTY, consArgs));
         }
-        result.addAll(newArgs.subList((array.getElements().isEmpty() ? 0 : 2) + (withElementsType ? 0 : 1) + (withLength ? 0 : 1), newArgs.size()));
+        result.addAll(newArgs.subList(numberOfConArgs, newArgs.size()));
         return result;
       }
     }

@@ -435,7 +435,7 @@ public class DefinitionSerialization implements ArendSerializer {
     DefinitionProtos.Body.Builder bodyBuilder = DefinitionProtos.Body.newBuilder();
     if (body instanceof IntervalElim intervalElim) {
       DefinitionProtos.Body.IntervalElim.Builder intervalBuilder = DefinitionProtos.Body.IntervalElim.newBuilder();
-      for (Pair<Expression, Expression> pair : intervalElim.getCases()) {
+      for (IntervalElim.CasePair pair : intervalElim.getCases()) {
         DefinitionProtos.Body.ExpressionPair.Builder pairBuilder = DefinitionProtos.Body.ExpressionPair.newBuilder();
         if (pair.proj1 != null) {
           pairBuilder.setLeft(defSerializer.writeExpr(pair.proj1));
@@ -443,6 +443,7 @@ public class DefinitionSerialization implements ArendSerializer {
         if (pair.proj2 != null) {
           pairBuilder.setRight(defSerializer.writeExpr(pair.proj2));
         }
+        pairBuilder.setDirected(pair.isDirected());
         intervalBuilder.addCase(pairBuilder);
       }
       if (intervalElim.getOtherwise() != null) {

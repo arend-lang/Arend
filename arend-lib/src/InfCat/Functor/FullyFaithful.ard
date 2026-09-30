@@ -1,0 +1,106 @@
+\import Equiv
+\import Equiv.Fiber
+\import Equiv.Sigma
+\import Function.Meta
+\import InfCat.Basics
+\import InfCat.Functor.Equiv
+\import InfCat.Paths
+\import InfCat.Rezk
+\import InfCat.Square
+\import Logic
+\import Logic.Meta
+\import Logic.Unique
+\import Meta
+\import Paths
+\import Paths.Meta
+
+\type IsFFMap {C D : \Cat} (f : C ->⁺ D) : \Prop
+  => \Pi (x y : C) -> IsEquiv {x ~> y} (\lam p => dmap f p)
+  \where {
+    \lemma section-ff (ff : IsFFMap f) {g : D ->⁺ C} (fg : \Pi (y :⁺ D) -> f (g y) = y) : IsFFMap g
+      => \lam x y => IsEquiv.leftFactor (ff (g x) (g y)) $
+            Paths.transportInv {D ->⁺ D} (\lam h => IsEquiv (dmap h)) (ext fg) (inP idEquiv)
+
+    \lemma section-surj (ff : IsFFMap f) {g : D ->⁺ C} (fg : \Pi (y :⁺ D) -> f (g y) = y) : IsSurjMap g
+      => \lam x => inP (f x, (iso_= (IsEquiv.ret (ff _ _) (=_~> (fg (f x)))) (IsEquiv.ret (ff _ _) (=_~> (inv (fg (f x)))))
+            (IsEquiv.isInj (ff _ _) $ dmap_comp f *> pmap2+ comp (IsEquiv.f_ret (ff _ _)) (IsEquiv.f_ret (ff _ _)) *> =_~>_comp *> pmap+ =_~> *>_inv)
+            (IsEquiv.isInj (ff x x) $ dmap_comp f *> pmap2+ comp (IsEquiv.f_ret (ff _ _)) (IsEquiv.f_ret (ff _ _)) *> =_~>_comp *> pmap+ =_~> inv_*>)).1)
+
+    \lemma isConservative (ff : IsFFMap f) {x y : C} {p : x ~> y} (fpi : IsIso (dmap f p)) : IsIso p \elim fpi
+      | inP r => inP (IsEquiv.ret (ff y x) r.1,
+                      IsEquiv.isInj (ff y y) $ dmap_comp f *> pmap (comp __ _) (IsEquiv.f_ret (ff y x)) *> r.2,
+                      IsEquiv.isInj (ff x x) $ dmap_comp f *> pmap (comp _ __) (IsEquiv.f_ret (ff y x)) *> r.3)
+
+    \lemma isObEmbedding (ff : IsFFMap f) : Embedding {C} {D} (\lam x => f x) \cowith
+      | isEmb x y => IsEquiv.toQEquiv {_} {_} {pmap (f __)} $ propExt.conv (IsEquiv.parallelEquiv {_} {_} {_} {_} {_}
+          {\lam s => later (dmap f s.1, dmap_IsIso f s.2)}
+          (=-char x y)
+          (=-char (f x) (f y))
+          (\lam p => ext $ inv $ dmap_=_~> f))
+        (IsEquiv.fromEmbSurj (leftEmbedding (Embedding.projection _) $ transEmbedding (Embedding.projection _ ) $ Embedding.fromIsEquiv (ff x y))
+          \lam s => \case IsEquiv.isSurj (ff x y) s.1 \with {
+            | inP (p,fp=s) => inP ((p, isConservative ff $ transportInv IsIso fp=s s.2), ext fp=s)
+          })
+
+    \lemma fibProp (ff : IsFFMap f) (y : D) : isProp (\Sigma (x : C) (f x = y))
+      => Embedding.embeddingFiber-isProp (isObEmbedding ff) y
+  }
+
+\lemma ffMap-char {C D : \Cat} {f : C ->⁺ D}
+  : IsFFMap f <-> IsEquiv {\Sigma (j : \Sigma C C) (j.1 ~> j.2)} {\Sigma (j : \Sigma C C) (f j.1 ~> f j.2)} (\lam s => (s.1, dmap f s.2))
+  => <->trans (later (\lam ff j => ff j.1 j.2, \lam e x y => e (x,y))) $ <->_=.2 $ totalEquiv {\Sigma C C} {\lam j => j.1 ~> j.2} \lam j => dmap f
+
+\lemma ffMap-pullback {B C D : \Cat} (g : B ->⁺ D) {f : C ->⁺ D} (ff : IsFFMap f)
+  : IsFFMap {\Sigma⁺ (x : B) (\Sigma⁺ (y : C) (f y = g x))} __.1
+  => \lam s t => inP $ transQEquiv (dpath-sigma-equiv \lam _ x => \Sigma⁺ (y : C) (f y = g x)) $
+        contr-right {s.1 ~> t.1} \lam r => ff-surj-equiv.contr ff (\lam i =>⁺ g (r i))
+
+\type IsSurjMap {C D : \Cat} (f : C ->⁺ D) : \Prop
+  => \Pi (y : D) -> ∃ (x : C) (f x = y)
+
+\lemma ff-surj-equiv {C D : \Cat} {f : C ->⁺ D} : (\Sigma (IsFFMap f) (IsSurjMap f)) <-> IsHEquiv f
+  => (\lam (ff,fs) => IsHEquiv.rightFactor
+        (\have | fs2 => \lam y =>⁺ (section ff fs y).2
+               | r => section (IsFFMap.section-ff ff fs2) (IsFFMap.section-surj ff fs2)
+         \in IsHEquiv.biEquiv {_} {_} {_} {f} fs2 \lam x => (r x).2)
+        (Paths.transportInv IsHEquiv (ext \lam x => (section ff fs x).2) idHEquiv),
+      \lam (inP e) => (\lam x y => inP \new QEquiv {
+        | ret p => comp (=_~> (inv (e.finv_f x))) (comp (dmap e.finv p) (=_~> (e.finv_f y)))
+        | ret_f p => pmap+ (comp _) (~>-natural (\lam x => =_~> (e.finv_f x)))
+                  *> comp-assoc *> pmap+ (comp __ p) (=_~>_comp *> pmap+ =_~> inv_*>) *> comp_idd-left
+        | f_sec p => dmap_comp f *> pmap2+ comp (dmap_=_~> f) (dmap_comp f
+                      *> pmap+ (comp _) (dmap_=_~> f *> pmap+ =_~> e.coh_inv_f)
+                      *> ~>-natural (\lam y => =_~> (e.coh_inv y)))
+                  *> comp-assoc *> pmap+ (comp __ _) (pmap+ (\lam x => comp _ (=_~> x)) (inv e.coh_inv_f)
+                      *> =_~>_comp *> pmap+ =_~> (inv (pmap+_*> f) *> pmap+ (pmap+ f) inv_*>)) *> comp_idd-left
+      }, \lam y => inP (e.finv y, e.f_finv y)))
+  \where {
+    \protected \lemma contr {C D : \Cat} {f : C ->⁺ D} (ff : IsFFMap f) (h : DI ->⁺ D)
+                            {tl : \Sigma⁺ (x : C) (f x = h dleft)} {tr : \Sigma⁺ (x : C) (f x = h dright)}
+      : Contr (DPath (\lam i => \Sigma⁺ (x : C) (f x = h i)) tl tr)
+      => Contr.Contr_QEquiv (symQEquiv $ transQEquiv (dpath-sigma-equiv {C} (\lam i x => f x = h i)) $ sigma-right \lam r =>
+            path-square-equiv (dmap f r) (dpath h) `transQEquiv`
+            square-equiv (dmap f r) _ `transQEquiv` equiv2) $
+          IsEquiv=>contrFibers (ff tl.1 tr.1) $ comp (comp (=_~> tl.2) (dpath h)) (=_~> (inv tr.2))
+      \where {
+        \private \func equiv2 {C : \Cat} {a b c : C} {f : a ~> b} {p : c = b} {g : a ~> c}
+          : QEquiv {comp g (=_~> p) = f} {g = comp f (=_~> (inv p))} \elim p
+          | idp => Paths.transport2 (\lam x y => QEquiv {x = f} {g = y}) (inv comp_idd-right) (inv comp_idd-right) idEquiv
+      }
+
+    \private \lemma section {C D : \Cat} {f : C ->⁺ D} (ff : IsFFMap f) (fs : IsSurjMap f) (y :⁺ D) : \Sigma⁺ (x : C) (f x = y)
+      \level⁺ \lam h tl tr => (contr ff h).toSigma
+      => \case fs y \with {
+        | inP r => (r.1, r.2)
+      }
+  }
+
+-- | A fully faithful map admits a lift of any map whose values lie in its image.
+\sfunc ffMap-lift {B C : \Cat} {f : B ->⁺ C} (ff : IsFFMap f) {D : \Cat} (g : D ->⁺ C)
+                  (gs : \Pi (y : D) -> ∃ (x : B) (f x = g y))
+  : \Sigma (h : D ->⁺ B) (\Pi (y :⁺ D) -> f (h y) = g y)
+  => \have e : IsHEquiv {\Sigma⁺ (x : D) (\Sigma⁺ (y : B) (f y = g x))} __.1
+              => ff-surj-equiv.1 (ffMap-pullback g ff, \lam y => \case gs y \with {
+                   | inP (x,fx=gy) => inP ((y, (x,fx=gy)), idp)
+                 })
+     \in (\lam y =>⁺ (IsHEquiv.ret e y).2.1, \lam y => (IsHEquiv.ret e y).2.2 *> pmap+ g (IsHEquiv.f_ret e))

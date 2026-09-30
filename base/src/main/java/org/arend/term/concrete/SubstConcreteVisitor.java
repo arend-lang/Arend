@@ -112,13 +112,13 @@ public class SubstConcreteVisitor extends BaseConcreteExpressionVisitor<Void> im
   protected <T extends Concrete.Parameter> T visitParameter(T parameter) {
     var data = myData != null ? myData : parameter.getData();
     if (Concrete.NameParameter.class.equals(parameter.getClass())) {
-      return (T) new Concrete.NameParameter(data, parameter.isExplicit(), ((Concrete.NameParameter) parameter).getReferable());
+      return (T) new Concrete.NameParameter(data, parameter.isExplicit(), ((Concrete.NameParameter) parameter).getReferable(), parameter.getVariance());
     } else if (Concrete.TypeParameter.class.equals(parameter.getClass())) {
-      return (T) new Concrete.TypeParameter(data, parameter.isExplicit(), nullableMap(parameter.getType()), parameter.isProperty());
+      return (T) new Concrete.TypeParameter(data, parameter.isExplicit(), nullableMap(parameter.getType()), parameter.isProperty(), parameter.getVariance());
     } else if (Concrete.TelescopeParameter.class.equals(parameter.getClass())) {
-      return (T) new Concrete.TelescopeParameter(data, parameter.isExplicit(), new ArrayList<>(parameter.getReferableList()), nullableMap(parameter.getType()), parameter.isProperty());
+      return (T) new Concrete.TelescopeParameter(data, parameter.isExplicit(), new ArrayList<>(parameter.getReferableList()), nullableMap(parameter.getType()), parameter.isProperty(), parameter.getVariance());
     } else if (Concrete.DefinitionTelescopeParameter.class.equals(parameter.getClass())) {
-      return (T) new Concrete.DefinitionTelescopeParameter(data, parameter.isExplicit(), parameter.isStrict(), new ArrayList<>(parameter.getReferableList()), nullableMap(parameter.getType()), parameter.isProperty());
+      return (T) new Concrete.DefinitionTelescopeParameter(data, parameter.isExplicit(), parameter.isStrict(), new ArrayList<>(parameter.getReferableList()), nullableMap(parameter.getType()), parameter.isProperty(), parameter.getVariance());
     } else {
       throw new IllegalArgumentException("Unhandled parameter: " + parameter.getClass());
     }
@@ -187,7 +187,7 @@ public class SubstConcreteVisitor extends BaseConcreteExpressionVisitor<Void> im
 
   @Override
   public Concrete.Expression visitSigma(Concrete.SigmaExpression expr, Void ignored) {
-    return new Concrete.SigmaExpression(myData != null ? myData : expr.getData(), visitParameters(expr.getParameters()));
+    return new Concrete.SigmaExpression(myData != null ? myData : expr.getData(), visitParameters(expr.getParameters()), expr.getVariance());
   }
 
   @Override
@@ -248,7 +248,7 @@ public class SubstConcreteVisitor extends BaseConcreteExpressionVisitor<Void> im
   public Concrete.Expression visitCase(Concrete.CaseExpression expr, Void ignored) {
     var clauses = expr.getClauses().stream().map(this::visitClause).collect(Collectors.toList());
     var arguments = expr.getArguments().stream()
-      .map(arg -> new Concrete.CaseArgument(arg.expression.accept(this, null), arg.referable, nullableMap(arg.type)))
+      .map(arg -> new Concrete.CaseArgument(arg.expression.accept(this, null), arg.referable, nullableMap(arg.type), arg.getVariance()))
       .collect(Collectors.toList());
     return new Concrete.CaseExpression(myData != null ? myData : expr.getData(), expr.isSCase(), arguments, nullableMap(expr.getResultType()), nullableMap(expr.getResultTypeLevel()), clauses);
   }

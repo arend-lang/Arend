@@ -1,0 +1,296 @@
+\import Equiv
+\import Equiv.Fiber
+\import Equiv.Path
+\import Equiv.Sigma
+\import Function.Meta
+\import InfCat.Arrows
+\import InfCat.Basics
+\import InfCat.CatPushout
+\import InfCat.Functor.Equiv
+\import InfCat.Functor.FullyFaithful
+\import InfCat.Paths
+\import Logic
+\import Logic.Unique
+\import Meta
+\import Paths
+\import Paths.Meta
+
+\type IsOrthogonal {A B C D : \Cat} (f : A ->⁺ B) (g : C ->⁺ D) : \Prop
+  => IsEquiv {B ->⁺ C} {\Sigma (uv : \Sigma (A ->⁺ C) (B ->⁺ D)) (\Pi (x :⁺ A) -> uv.2 (f x) = g (uv.1 x))}
+      (\lam h => ((\lam x => h (f x), \lam y => g (h y)), \lam x => idp))
+
+\lemma IsOrthogonal-char {A B C D : \Cat} {f : A ->⁺ B} {g : C ->⁺ D}
+  : IsOrthogonal f g <-> (\Pi (u : A ->⁺ C) (v : B ->⁺ D) (s : \Pi (x :⁺ A) -> v (f x) = g (u x)) ->
+                          Contr (\Sigma (h : B ->⁺ C) (t1 : \Pi (x :⁺ A) -> h (f x) = u x) (t2 : \Pi (y :⁺ B) -> g (h y) = v y)
+                                        (\Pi (x :⁺ A) -> inv (t2 (f x)) *> pmap+ g (t1 x) = s x)))
+  => (\lam gr u v s => Contr.Contr_QEquiv (transQEquiv (sigma-right \lam h => later $ sigmaEquiv _ _ _) $
+        transQEquiv {_} {\Sigma (h : B ->⁺ C) (\Sigma (t : (\lam x =>⁺ h (f x), \lam y =>⁺ g (h y)) = (u,v)) ((\lam x =>⁺ inv (path \lam i => (t i).2 (f x)) *> path (\lam i => g ((t i).1 x))) = s))}
+          (sigma-right \lam h => later $ sigma-right \lam t => later $ pathEquiv-right $ later $ simp_coe \lam x => coe_path_pmap (path \lam i => (t i).2 (f x)) (path \lam i => g ((t i).1 x)) $ pmap+ (*> _) (inv *>_inv) *> *>-assoc)
+          (later \new QEquiv {
+            | f a => (a.1, \lam x => path \lam i => (a.2.1 i).1 x, \lam y => path \lam i => (a.2.1 i).2 y, \lam x => path \lam i => a.2.2 i x)
+            | ret b => (b.1, (path \lam i => (\lam x => b.2 x i, \lam y => b.3 y i), path \lam i x => b.4 x i))
+            | ret_f => idpe
+            | f_sec => idpe
+          })) $ IsEquiv=>contrFibers gr ((u,v),s),
+      \lam gr => contrFibers=>IsEquiv $ later \lam s => Contr.Contr_QEquiv (transQEquiv
+              (transQEquiv {_}
+                {\Sigma (a : B ->⁺ C) (\Sigma (s1 : (\lam x =>⁺ a (f x), \lam y =>⁺ g (a y)) = s.1)
+                        ((\lam x =>⁺ inv (path \lam i => (s1 i).2 (f x)) *> pmap+ g (path \lam i => (s1 i).1 x)) = s.2))}
+                (later \new QEquiv {
+                  | f a => (a.1, (path \lam i => (\lam x => a.2 x i, \lam y => a.3 y i), path \lam i x => a.4 x i))
+                  | ret b => (b.1, \lam x => path \lam i => (b.2.1 i).1 x, \lam y => path \lam i => (b.2.1 i).2 y, \lam x => path \lam i => b.2.2 i x)
+                  | ret_f => idpe
+                  | f_sec => idpe
+                })
+                (sigma-right \lam h => later $ sigma-right \lam t => later $ pathEquiv-right $ inv $ later $ simp_coe \lam x =>
+                  coe_path_pmap (path \lam i => (t i).2 (f x)) (path \lam i => g ((t i).1 x)) $ pmap+ (*> _) (inv *>_inv) *> *>-assoc))
+              (symQEquiv $ sigma-right \lam h => later $ sigmaEquiv _ _ _))
+            (gr s.1.1 s.1.2 s.2))
+
+\lemma IsOrthogonal_o-right {A B C D E : \Cat} {f : A ->⁺ B} {g : C ->⁺ D} (fg : IsOrthogonal f g) {h : D ->⁺ E} (fh : IsOrthogonal f h)
+  : IsOrthogonal f (\lam x => h (g x))
+  => IsOrthogonal-char.2 \lam u v s => Contr.Contr_QEquiv
+      (transQEquiv {_}
+        {\Sigma (b1 : \Sigma (h : B ->⁺ C) (\Pi (x :⁺ A) -> h (f x) = u x))
+                (\Sigma (a1 : \Sigma (h : B ->⁺ D) ((\lam y =>⁺ g (b1.1 y)) = h))
+                        (\Sigma (r : \Sigma (t1 : \Pi (x :⁺ A) -> a1.1 (f x) = g (u x)) ((\lam x =>⁺ inv (path \lam i => a1.2 i (f x)) *> pmap+ g (b1.2 x)) = t1))
+                                (\Sigma (t2 : \Pi (y :⁺ B) -> h (a1.1 y) = v y) (\Pi (x :⁺ A) -> inv (t2 (f x)) *> pmap+ h (r.1 x) = s x))))}
+        (later \new QEquiv {
+          | f a => ((a.2.1, a.2.2), ((a.1.1, path \lam i y => a.2.3 y i), ((a.1.2, path \lam i x => a.2.4 x i), (a.1.3, a.1.4))))
+          | ret b => ((b.2.1.1, b.2.2.1.1, b.2.2.2.1, b.2.2.2.2), (b.1.1, b.1.2, \lam y => path \lam i => b.2.1.2 i y, \lam x => path \lam i => b.2.2.1.2 i x))
+          | ret_f => idpe
+          | f_sec => idpe
+        })
+        (transQEquiv {_}
+          {\Sigma (b1 : \Sigma (h : B ->⁺ C) (\Pi (x :⁺ A) -> h (f x) = u x))
+                  (\Sigma (t2 : \Pi (y :⁺ B) -> h (g (b1.1 y)) = v y) (\Pi (x :⁺ A) -> inv (t2 (f x)) *> pmap+ h (idp *> pmap+ g (b1.2 x)) = s x))}
+          (sigma-right \lam b1 => later $ transQEquiv (contr-left (lsigma _)) (contr-left (lsigma _)))
+          (later \new QEquiv {
+            | f a => (a.1.1, a.1.2, a.2.1, \lam x => pmap+ (\lam z => _ *> pmap+ h z) (inv idp_*>) *> a.2.2 x)
+            | ret b => ((b.1, b.2), (b.3, \lam x => pmap+ (\lam z => _ *> pmap+ h z) idp_*> *> b.4 x))
+            | ret_f a => ext (idp, ext (idp, ext \lam x => inv *>-assoc *> pmap+ (*> _) (inv (pmap+_*> \lam z => _ *> pmap+ h z) *> pmap+ (pmap+ (\lam z => _ *> pmap+ h z) __) *>_inv) *> idp_*>))
+            | f_sec b =>
+              \have lem (x :⁺ A) : pmap+ (\lam z => inv (b.3 (f x)) *> pmap+ h z) (inv (idp_*> {_} {_} {_} {pmap+ g (b.2 x)})) *> pmap+ (\lam z => inv (b.3 (f x)) *> pmap+ h z) idp_*> *> b.4 x = b.4 x
+                        => inv *>-assoc *> pmap+ (*> _) (inv (pmap+_*> \lam z => _ *> pmap+ h z) *> pmap+ (pmap+ (\lam z => _ *> pmap+ h z) __) inv_*>) *> idp_*>
+              \in path \lam i => (b.1, b.2, b.3, \lam x => lem x i)
+          })))
+      (sigma-Contr (IsOrthogonal-char.1 fh (\lam x => g (u x)) v s) \lam a => IsOrthogonal-char.1 fg u a.1 a.2)
+
+\lemma IsOrthogonal_o-left {A B C D E : \Cat} {h : D ->⁺ E} {f : A ->⁺ B} (fh : IsOrthogonal f h) {g : B ->⁺ C} (gh : IsOrthogonal g h)
+  : IsOrthogonal (\lam x => g (f x)) h
+  => IsOrthogonal-char.2 \lam u v s => Contr.Contr_QEquiv (transQEquiv {_}
+        {\Sigma (b1 : \Sigma (h2 : C ->⁺ D) (\Pi (y :⁺ C) -> h (h2 y) = v y))
+                (\Sigma (a1 : \Sigma (h1 : B ->⁺ D) ((\lam x =>+ b1.1 (g x)) = h1))
+                        (\Sigma (r : \Sigma (t2 : \Pi (y :⁺ B) -> h (a1.1 y) = v (g y)) (\Pi (y :⁺ B) -> inv (b1.2 (g y)) *> path (\lam i => h (a1.2 i y)) = inv (t2 y)))
+                                (\Sigma (t1 : \Pi (x :⁺ A) -> a1.1 (f x) = u x)
+                                        (\Pi (x :⁺ A) -> inv (r.1 (f x)) *> pmap+ h (t1 x) = s x))))}
+        (later \new QEquiv {
+          | f a => ((a.2.1, a.2.3), ((a.1.1, path \lam i x => a.2.2 x i), ((a.1.3, a.2.4), (a.1.2, a.1.4))))
+          | ret b => ((b.2.1.1, b.2.2.2.1, b.2.2.1.1, b.2.2.2.2), (b.1.1, \lam x => path \lam i => b.2.1.2 i x, b.1.2, b.2.2.1.2))
+          | ret_f => idpe
+          | f_sec => idpe
+        })
+        (transQEquiv {_}
+          {\Sigma (b1 : \Sigma (h2 : C ->⁺ D) (\Pi (y :⁺ C) -> h (h2 y) = v y))
+                  (\Sigma (t1 : \Pi (x :⁺ A) -> b1.1 (g (f x)) = u x)
+                          (\Pi (x :⁺ A) -> inv (b1.2 (g (f x))) *> pmap+ h (t1 x) = s x))}
+          (sigma-right \lam b1 => later $ transQEquiv (contr-left (lsigma \lam x =>⁺ b1.1 (g x))) $
+            contr-left $ later $ isProp=>isContr (isContr=>isProp $ Contr.Contr_QEquiv (later \new QEquiv {
+              | f s => (\lam y => inv (s.1 y), \lam y => path (\lam i => s.2 i y) *> inv inv_inv)
+              | ret t => (\lam y => inv (t.1 y), path \lam i y => t.2 y i)
+              | ret_f s => ext (ext \lam y => inv_inv,
+                                simp_coe $ *>_ext+ *> pmap funExt+ {_} {later \lam x => path \lam i => s.2 i x}
+                                   (ext \lam y => *>-assoc *> pmap+ (_ *> __) inv_*>))
+              | f_sec t => ext (ext \lam y => inv_inv, simp_coe \lam y => coe_path_pmap idp (pmap+ (inv __) inv_inv) $
+                            pmap+ (_ *> __) inv_inv-coh+ *> *>-assoc *> pmap+ (_ *> __) inv_*> *> inv idp_*>)
+            }) $ lsigma \lam y =>⁺ inv (b1.2 (g y))) (\lam y => b1.2 (g y), \lam y => idp))
+          (later \new QEquiv {
+            | f a => (a.1.1, a.2.1, a.1.2, a.2.2)
+            | ret b => ((b.1, b.3), (b.2, b.4))
+            | ret_f => idpe
+            | f_sec => idpe
+          })))
+      (sigma-Contr (IsOrthogonal-char.1 fh u (\lam y => v (g y)) s) (\lam a => IsOrthogonal-char.1 gh a.1 v (\lam y => inv (a.3 y))))
+
+\lemma IsOrthogonal_IsHEquiv-right {A B C D : \Cat} {f : A ->⁺ B} {g : C ->⁺ D} (ge : IsHEquiv g) : IsOrthogonal f g \elim ge
+  | inP ge => inP \new QEquiv {
+    | ret s => \lam y => ge.finv (s.1.2 y)
+    | ret_f h => ext \lam y => ge.finv_f _
+    | f_sec s => ext (ext (ext \lam x => pmap+ ge.finv (s.2 x) *> ge.finv_f _,
+                           ext \lam y => ge.coh_inv _),
+                      simp_coe \lam x => coe_path_pmap _ (pmap+ g (pmap+ ge.finv (s.2 x) *> ge.finv_f _)) $
+                      idp_*> *> pmap+_*> g *> pmap+ (_ *> __) ge.coh_inv_f *> homotopy-isNatural+ _ _ ge.coh_inv _)
+  }
+
+\lemma IsOrthogonal_IsHEquiv-left {A B C D : \Cat} {f : A ->⁺ B} {g : C ->⁺ D} (fe : IsHEquiv f) : IsOrthogonal f g \elim fe
+  | inP fe => inP \new QEquiv {
+    | ret s => \lam x => s.1.1 (fe.finv x)
+    | ret_f h => ext \lam x => pmap+ h (fe.coh_inv x)
+    | f_sec s => ext (ext (ext \lam x => pmap+ s.1.1 (fe.finv_f x),
+                           ext \lam y => inv (s.2 _) *> pmap+ s.1.2 (fe.coh_inv y)),
+                      simp_coe \lam x => coe_path_pmap
+                        (inv (s.2 (fe.finv (f x))) *> pmap+ s.1.2 (fe.coh_inv (f x)))
+                        (path \lam i => g (s.1.1 (fe.finv_f x i)))
+                        (pmap+ (*> _) (inv inv_*>) *> *>-assoc *> pmap+ (_ *> __) (inv (homotopy-isNatural+ _ _ s.2 _))
+                         *> pmap+ (_ *> pmap+ s.1.2 __ *> _) fe.coh_inv_f *> inv *>-assoc))
+  }
+
+\lemma IsOrthogonal-retraction {A B C D : \Cat} {f : A ->⁺ B} {g : C ->⁺ D} (fg : IsOrthogonal f g)
+                               {r : B ->⁺ A} (rf : \Pi (x :⁺ A) -> r (f x) = x) : IsOrthogonal r g
+  => IsEquiv.fromMonoRetraction (later \lam {h} {h'} p => ext \lam x => pmap+ h (inv (rf x)) *> path (\lam i => (p i).1.1 (f x)) *> pmap+ h' (rf x)) $ later \new Retraction {
+    | sec s => \lam x => s.1.1 (f x)
+    | f_sec s =>
+      \have aux => aux s.1.1 s.1.2 s.2
+      \in ext (path \lam i => (\lam x => aux.1 x i, \lam x => (inv (s.2 (f x)) *> pmap+ s.1.2 (rf x)) i),
+               simp_coe \lam y => coe_path_pmap _ (pmap+ g (aux.1 y)) $ idp_*> *> aux.2 y *> inv *>-assoc)
+  }
+  \where {
+    \private \sfunc aux (u : B ->⁺ C) (v : A ->⁺ D) (s : \Pi (x :⁺ B) -> v (r x) = g (u x))
+      : \Sigma (p : \Pi (b :⁺ B) -> u (f (r b)) = u b) (\Pi (b :⁺ B) -> pmap+ g (p b) = inv (s _) *> pmap+ v (rf _) *> s b)
+      => \have t => IsEquiv.splitSurj (pmapIsEquiv fg {\lam y => u (f (r y))} {u}) $
+                      ext (path \lam i => (\lam x => u (f (rf x i)), \lam y => (inv (s _) *> pmap+ v (rf _) *> s y) i),
+                           simp_coe \lam x => coe_path_pmap _ (pmap+ (\lam x => g (u (f x))) (rf x)) $ idp_*> *>
+                            inv (rotatePathLeft $ pmap+ (pmap+ v __ *> _) (homotopy_app-comm+ (\lam x => r (f x)) rf x)
+                              *> homotopy-isNatural+ _ _ s (pmap+ f (rf x))))
+         \in (\lam y => path \lam i => t.1 i y, \lam y => path (\lam i => pmap+ (__.1.2 y) (t.2 i)))
+  }
+
+\lemma IsOrthogonal_CatPushout {A B C D E : \Cat} {f : A ->⁺ B} {g : A ->⁺ C} {h : D ->⁺ E} (gh : IsOrthogonal g h)
+  : IsOrthogonal {B} {CatPushout f g} cinl h
+  => IsOrthogonal-char.2 \lam u v s => Contr.Contr_QEquiv (symQEquiv $ transQEquiv {_}
+        {\Sigma (p : \Pi (y :⁺ CatPushout f g) -> \Sigma⁺ (d : D) (t2 : h d = v y))
+                (\Sigma (t1 : \Pi (x :⁺ B) -> (p (cinl x)).1 = u x) (\Pi (x :⁺ B) -> pmap+ h (t1 x) *> inv (s x) = (p (cinl x)).2))}
+        (later \new QEquiv {
+          | f s => (\lam w => (s.1 w, s.3 w), (s.2, \lam y => rotatePathRight $ rotatePathLeft.conv (s.4 y)))
+          | ret r => (\lam w => (r.1 w).1, r.2.1, \lam w => (r.1 w).2, \lam y => rotatePathLeft $ rotatePathRight.conv (r.2.2 y))
+          | ret_f s => path \lam i => (s.1, s.2, s.3, \lam y => (pmap+ (rotatePathLeft __) rotatePathRight.conv_dir *> rotatePathLeft.dir_conv (s.4 y)) i)
+          | f_sec (p, r2) => path \lam i => (p, (r2.1, \lam y => (pmap+ (rotatePathRight __) rotatePathLeft.conv_dir *> rotatePathRight.dir_conv (r2.2 y)) i))
+        })
+        (transQEquiv (symQEquiv $ qsigma-left $ symQEquiv $ later CatPushout.elim-equiv) $
+          transQEquiv {_}
+            {\Sigma (q1 : \Sigma (u' : B ->⁺ D) (u' = u))
+                    (\Sigma (q2 : \Sigma (s' : \Pi (y :⁺ B) -> h (q1.1 y) = v (cinl y)) ((\lam y =>⁺ path (\lam i => h (q1.2 i y)) *> inv (s y)) = s'))
+                            (\Sigma (q : \Sigma⁺ (h1 : C ->⁺ D) (\Pi (z :⁺ C) -> h (h1 z) = v (cinr z)))
+                                    (\Sigma (r : \Pi (x :⁺ A) -> q1.1 (f x) = q.1 (g x))
+                                            (\Pi (x :⁺ A) -> Path (\lam i => h (r x i) = v (cglue x i)) (q2.1 (f x)) (q.2 (g x))))))}
+            (later \new QEquiv {
+              | f r => ((\lam y => (r.1.1 y).1, path \lam i y => r.2.1 y i),
+                        ((\lam y => (r.1.1 y).2, path \lam i y => r.2.2 y i),
+                         ((\lam z => (r.1.2 z).1, \lam z => (r.1.2 z).2), (\lam x => path \lam i => (r.1.3 x i).1, \lam x => path \lam i => (r.1.3 x i).2))))
+              | ret t => ((\lam y => (t.1.1 y, t.2.1.1 y), \lam z => (t.2.2.1.1 z, t.2.2.1.2 z), \lam x => path \lam i => (t.2.2.2.1 x i, t.2.2.2.2 x i)),
+                          (\lam y => path \lam i => t.1.2 i y, \lam y => path \lam i => t.2.1.2 i y))
+              | ret_f => idpe
+              | f_sec ((_, idp), t2) => idp
+            })
+            (transQEquiv (contr-left (rsigma _)) $ transQEquiv (contr-left (lsigma _)) $ transQEquiv {_}
+              {\Sigma (q : \Sigma⁺ (h1 : C ->⁺ D) (\Pi (y :⁺ C) -> h (h1 y) = v (cinr y)))
+                      (\Sigma (t1 : \Pi (x :⁺ A) -> q.1 (g x) = u (f x))
+                              (\Pi (x :⁺ A) -> inv (q.2 (g x)) *> pmap+ h (t1 x) = pmap+ v (inv (path (cglue x))) *> s (f x)))}
+              (sigma-right $ later \lam q => transQEquiv
+                (sigma-right \lam e => later \new QEquiv {
+                  | f g x => fromPath h v (g x)
+                  | ret g x => toPath h v (g x)
+                  | ret_f g => ext \lam x => toPath_fromPath
+                  | f_sec g => ext \lam x => fromPath_toPath
+                })
+                (qsigma-left $ later \new QEquiv {
+                  | f g x => inv (g x)
+                  | ret g x => inv (g x)
+                  | ret_f g => ext \lam x => inv_inv
+                  | f_sec g => ext \lam x => inv_inv
+                }))
+              (later \new QEquiv {
+                | f s => (s.1.1, s.2.1, s.1.2, s.2.2)
+                | ret t => ((t.1, t.3), (t.2, t.4))
+                | ret_f => idpe
+                | f_sec => idpe
+              })))) $
+      IsOrthogonal-char.1 gh (\lam x => u (f x)) (\lam z => v (cinr z)) \lam x => pmap+ v (inv (path (cglue x))) *> s (f x)
+  \where {
+    \private \func fromPath {C D E : \Cat} (h : D ->⁺ E) (v : C ->⁺ E) {d d' :⁺ D} {p :⁺ d = d'} {c c' :⁺ C} {r :⁺ c = c'} {s :⁺ v c = h d} {q :⁺ h d' = v c'}
+                            (t :⁺ Path (\lam i => h (p i) = v (r i)) (idp *> inv s) q) : inv q *> pmap+ h (inv p) = pmap+ v (inv r) *> s \elim p, r
+      | idp, idp => rotatePathLeft (rotatePathRight.conv t) *> inv idp_*>
+
+    \private \func toPath {C D E : \Cat} (h : D ->⁺ E) (v : C ->⁺ E) {d d' :⁺ D} {p :⁺ d = d'} {c c' :⁺ C} {r :⁺ c = c'} {s :⁺ v c = h d} {q :⁺ h d' = v c'}
+                          (t :⁺ inv q *> pmap+ h (inv p) = pmap+ v (inv r) *> s) : Path (\lam i => h (p i) = v (r i)) (idp *> inv s) q \elim p, r
+      | idp, idp => rotatePathRight (rotatePathLeft.conv (t *> idp_*>))
+
+    \private \func toPath_fromPath {C D E : \Cat} {h : D ->⁺ E} {v : C ->⁺ E} {d d' :⁺ D} {p :⁺ d = d'} {c c' :⁺ C} {r :⁺ c = c'} {s :⁺ v c = h d} {q :⁺ h d' = v c'}
+                                   {t :⁺ Path (\lam i => h (p i) = v (r i)) (idp *> inv s) q} : toPath h v (fromPath h v t) = t \elim p, r
+      | idp, idp => pmap+ (rotatePathRight __) (pmap+ (rotatePathLeft.conv __) (inv $ rotatePathRight.conv idp) *> rotatePathLeft.conv_dir) *> rotatePathRight.dir_conv t
+
+    \private \sfunc fromPath_toPath {C D E : \Cat} {h : D ->⁺ E} {v : C ->⁺ E} {d d' :⁺ D} {p :⁺ d = d'} {c c' :⁺ C} {r :⁺ c = c'} {s :⁺ v c = h d} {q :⁺ h d' = v c'}
+                                    {t :⁺ inv q *> pmap+ h (inv p) = pmap+ v (inv r) *> s} : fromPath h v (toPath h v t) = t \elim p, r
+      | idp, idp => pmap+ (rotatePathLeft __ *> _) rotatePathRight.conv_dir *> pmap+ (*> _) (rotatePathLeft.dir_conv _) *> *>-assoc *> pmap+ (t *> __) *>_inv
+  }
+
+\lemma IsOrthogonal-codiag {A B C D : \Cat} {f : A ->⁺ B} {g : C ->⁺ D} (fg : IsOrthogonal f g)
+  : IsOrthogonal {CatPushout f f} (CatPushout.rec id+ id+ \lam x => idp) g
+  => IsOrthogonal-retraction (IsOrthogonal_CatPushout fg) idpe
+
+-- | Orthogonality to a map to the terminal category means that restriction is an equivalence.
+\lemma IsOrthogonal-terminal {A B E : \Cat} {f : A ->⁺ B}
+  : IsOrthogonal f (\lam (e :⁺ E) => ()) <-> IsEquiv {B ->⁺ E} {A ->⁺ E} (\lam g a => g (f a))
+  => (\lam o => IsEquiv.trans o $ later $ inP \new QEquiv {
+        | f s => s.1.1
+        | ret k => ((k, \lam _ => ()), \lam x => idp)
+        | ret_f s => path \lam i => ((s.1.1, \lam _ => ()), \lam x => idp)
+        | f_sec => idpe
+      }, \lam e => IsEquiv.leftFactor (later $ inP \new QEquiv {
+        | f s => s.1.1
+        | ret k => ((k, \lam _ => ()), \lam x => idp)
+        | ret_f s => path \lam i => ((s.1.1, \lam _ => ()), \lam x => idp)
+        | f_sec => idpe
+      }) e)
+
+-- | Restriction along {k} of sections of the pullback of {g} along {v}.
+\func restrict-sections {X Y E F : \Cat} (k : X ->⁺ Y) (g : E ->⁺ F) (v : Y ->⁺ F)
+                        (s : \Pi (y :⁺ Y) -> \Sigma⁺ (e : E) (g e = v y))
+  : \Pi (x :⁺ X) -> \Sigma⁺ (e : E) (g e = v (k x))
+  => \lam x => s (k x)
+  \where {
+    -- | A path in a fiber of {restrict-sections} evaluated at a point.
+    \func fiber-coh {X Y E F : \Cat} (k : X ->⁺ Y) (g : E ->⁺ F) (v : Y ->⁺ F)
+                    {b : \Pi (x :⁺ X) -> \Sigma⁺ (e : E) (g e = v (k x))}
+                    {s t : \Sigma (a : \Pi (y :⁺ Y) -> \Sigma⁺ (e : E) (g e = v y)) (restrict-sections k g v a = b)}
+                    (q : s = t) (x :⁺ X)
+      : path (\lam i => (q i).1 (k x)) *> path (\lam i => t.2 i x) = path (\lam i => s.2 i x) \elim q
+      | idp => idp_*>
+  }
+
+-- | {k} is left orthogonal to {g} if and only if sections of every pullback of {g} extend uniquely along {k}.
+\lemma IsOrthogonal-sections {X Y E F : \Cat} {k : X ->⁺ Y} {g : E ->⁺ F}
+  : IsOrthogonal k g <-> (\Pi (v : Y ->⁺ F) -> IsEquiv (restrict-sections k g v))
+  => \have p => IsEquiv.parallelEquiv {Y ->⁺ E} {\Sigma (uv : \Sigma (X ->⁺ E) (Y ->⁺ F)) (\Pi (x :⁺ X) -> uv.2 (k x) = g (uv.1 x))}
+                   {_} {_} {\lam h => ((\lam x => h (k x), \lam y => g (h y)), \lam x => idp)} {totalEquiv.total (restrict-sections k g)}
+                   (inP sections-equiv) (inP squares-equiv) (\lam h => idp)
+     \in (\lam o => propExt.conv (totalEquiv (restrict-sections k g)) (propExt.dir p o),
+          \lam e => propExt.conv p (propExt.dir (totalEquiv (restrict-sections k g)) e))
+  \where {
+    -- | A functor to {E} is a functor to {F} together with a section of the pullback of {g} along it.
+    \func sections-equiv : QEquiv {Y ->⁺ E} {\Sigma (v : Y ->⁺ F) (\Pi (y :⁺ Y) -> \Sigma⁺ (e : E) (g e = v y))} \cowith
+      | f h => (\lam y => g (h y), \lam y => (h y, idp))
+      | ret s => \lam y => (s.2 y).1
+      | ret_f => idpe
+      | f_sec (v, s) => path \lam i => (\lam y => (s y).2 i, \lam y => ((s y).1, path \lam j => (s y).2 @ I.squeeze i j))
+
+    -- | A commutative square is a functor to {F} together with a section over {X} of the pullback of {g} along it.
+    \func squares-equiv : QEquiv {\Sigma (uv : \Sigma (X ->⁺ E) (Y ->⁺ F)) (\Pi (x :⁺ X) -> uv.2 (k x) = g (uv.1 x))}
+                                 {\Sigma (v : Y ->⁺ F) (\Pi (x :⁺ X) -> \Sigma⁺ (e : E) (g e = v (k x)))} \cowith
+      | f s => (s.1.2, \lam x => (s.1.1 x, inv (s.2 x)))
+      | ret t => ((\lam x => (t.2 x).1, t.1), \lam x => inv (t.2 x).2)
+      | ret_f s => path \lam i => (s.1, \lam x => inv_inv {_} {_} {_} {s.2 x} i)
+      | f_sec (v, t) => path \lam i => (v, \lam x => ((t x).1, inv_inv {_} {_} {_} {(t x).2} i))
+  }
+
+-- | If {f} is left orthogonal to the maps from {Z} and from `DI ->⁺ Z` to the terminal category, then restriction along {f} is fully faithful.
+\lemma IsOrthogonal-res-ff {A B Z : \Cat} {f : A ->⁺ B} (o : IsOrthogonal f (\lam (z :⁺ Z) => ())) (oD : IsOrthogonal f (\lam (u :⁺ DI ->⁺ Z) => ()))
+  : IsFFMap {B ->⁺ Z} {A ->⁺ Z} (\lam H a => H (f a))
+  => \lam H1 H2 => fiberwiseEquiv (pair-equiv (IsOrthogonal-terminal.1 o))
+      (\lam j p => dmap (\lam H a =>⁺ H (f a)) {j.1} {j.2} p)
+      (IsEquiv.rightFactor (inP (DI-fun-equiv {B} {Z})) (IsEquiv.trans (IsOrthogonal-terminal.1 oD) (inP DI-fun-equiv)))
+      (H1, H2)
+  \where {
+    \lemma pair-equiv {X Y : \Cat} {g : X -> Y} (e : IsEquiv g) : IsEquiv {\Sigma X X} {\Sigma Y Y} (\lam j => (g j.1, g j.2))
+      => IsEquiv.trans (IsSigma-right {X} {\lam _ => X} {\lam _ => Y} (\lam _ => g) (\lam _ => e)) (inP (qsigma-left {X} {Y} {\lam _ => Y} (IsEquiv.toQEquiv e)))
+  }

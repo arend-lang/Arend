@@ -13,6 +13,7 @@ import org.arend.ext.error.TypecheckingError;
 import org.arend.ext.reference.ArendRef;
 import org.arend.ext.typechecking.*;
 import org.arend.ext.typechecking.meta.Dependency;
+import org.arend.ext.util.Pair;
 import org.arend.lib.error.SubexprError;
 import org.arend.lib.util.Utils;
 import org.jetbrains.annotations.NotNull;
@@ -100,13 +101,13 @@ public class RewriteMeta extends BaseMetaDefinition {
     }
 
     // Check that the first argument is a path
-    CoreFunCallExpression eq = Utils.toEquality(path.getType(), errorReporter, arg0);
+    Pair<CorePathTypeExpression, CoreExpression> eq = Utils.toEqualityWithType(path.getType(), errorReporter, arg0);
     if (eq == null) {
       return null;
     }
 
     ConcreteExpression transportExpr = factory.ref(isInverse ? transportInv : transport, refExpr.getLevels());
-    CoreExpression value = eq.getDefCallArguments().get(isInverse == isForward ? 2 : 1);
+    CoreExpression value = isInverse == isForward ? eq.proj1.getRightArgument() : eq.proj1.getLeftArgument();
 
     // This case won't happen often, but sill possible
     if (!isForward && expectedType instanceof CoreInferenceReferenceExpression) {
@@ -142,7 +143,7 @@ public class RewriteMeta extends BaseMetaDefinition {
 
     ArendRef ref = factory.local("x");
     return typechecker.typecheck(factory.appBuilder(transportExpr)
-      .app(factory.lam(Collections.singletonList(factory.param(Collections.singletonList(ref), factory.core(eq.getDefCallArguments().getFirst().computeTyped()))), factory.meta("transport (\\lam x => {!}) _ _", new MetaDefinition() {
+      .app(factory.lam(Collections.singletonList(factory.param(Collections.singletonList(ref), factory.core(eq.proj2.computeTyped()))), factory.meta("transport (\\lam x => {!}) _ _", new MetaDefinition() {
         @Override
         public TypedExpression invokeMeta(@NotNull ExpressionTypechecker typechecker, @NotNull ContextData contextData) {
           TypedExpression var = typechecker.typecheck(factory.ref(ref), null);

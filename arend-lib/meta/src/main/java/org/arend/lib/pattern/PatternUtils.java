@@ -109,6 +109,21 @@ public class PatternUtils {
     return null;
   }
 
+  public static void collectLeafBindings(CorePattern pattern, List<? super CoreBinding> result) {
+    CoreBinding binding = pattern.getBinding();
+    if (binding != null) {
+      result.add(binding);
+    } else {
+      collectLeafBindings(pattern.getSubPatterns(), result);
+    }
+  }
+
+  public static void collectLeafBindings(Collection<? extends CorePattern> patterns, List<? super CoreBinding> result) {
+    for (CorePattern pattern : patterns) {
+      collectLeafBindings(pattern, result);
+    }
+  }
+
   public static int getNumberOfBindings(CorePattern pattern) {
     if (pattern.getBinding() != null) {
       return 1;

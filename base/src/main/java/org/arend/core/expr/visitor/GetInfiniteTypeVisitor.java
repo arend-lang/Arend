@@ -1,5 +1,6 @@
 package org.arend.core.expr.visitor;
 
+import org.arend.core.context.binding.Binding;
 import org.arend.core.context.param.DependentLink;
 import org.arend.core.definition.ClassField;
 import org.arend.core.definition.DataDefinition;
@@ -10,10 +11,17 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 public class GetInfiniteTypeVisitor extends GetTypeVisitor {
   private final Map<DependentLink, Integer> myParameters;
   private final DataDefinition myThisData;
+
+  private GetInfiniteTypeVisitor(Map<DependentLink, Integer> parameters, DataDefinition thisData, Set<Binding> released) {
+    super(released);
+    myParameters = parameters;
+    myThisData = thisData;
+  }
 
   public GetInfiniteTypeVisitor(Map<DependentLink, Integer> parameters, DataDefinition thisData) {
     myParameters = parameters;
@@ -22,6 +30,11 @@ public class GetInfiniteTypeVisitor extends GetTypeVisitor {
 
   public GetInfiniteTypeVisitor(Map<DependentLink, Integer> parameters) {
     this(parameters, null);
+  }
+
+  @Override
+  protected GetTypeVisitor withReleased(Set<Binding> released) {
+    return new GetInfiniteTypeVisitor(myParameters, myThisData, released);
   }
 
   @Override
@@ -55,7 +68,17 @@ public class GetInfiniteTypeVisitor extends GetTypeVisitor {
 
   @Override
   public UniverseExpression visitDataCall(DataCallExpression expr, Void params) {
-    return myThisData == expr.getDefinition() ? new UniverseExpression(new SortExpression.RecursiveData()) : super.visitDataCall(expr, params);
+    return myThisData == expr.getDefinition() && isSelfInstantiation(expr.getDefCallArguments()) ? new UniverseExpression(new SortExpression.RecursiveData()) : super.visitDataCall(expr, params);
+  }
+
+  private boolean isSelfInstantiation(List<? extends Expression> actualArguments) {
+    for (Map.Entry<DependentLink, Integer> entry : myParameters.entrySet()) {
+      int index = entry.getValue();
+      if (index >= actualArguments.size() || !(actualArguments.get(index) instanceof ReferenceExpression ref) || ref.getBinding() != entry.getKey()) {
+        return false;
+      }
+    }
+    return true;
   }
 
   @Override

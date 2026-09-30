@@ -367,7 +367,7 @@
         | suc m => inc (include Ia)
     }
 
-  \func countable-maximal {R : CRing} (c : Countable R)
+  \sfunc countable-maximal {R : CRing} (c : Countable R)
                           (Id : \Pi (I : Ideal R) -> I.IsFinitelyGenerated -> \Pi (x : R) -> Dec (I x))
                           {I : Ideal R} (Ig : I.IsFinitelyGenerated) (Ip : Not (I 1))
     : \Sigma (M : Ideal R) M.IsMaximal (\Pi {a : R} -> I a -> M a)

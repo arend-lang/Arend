@@ -10,10 +10,14 @@ import org.jetbrains.annotations.NotNull;
 public class PathExpression extends Expression implements CorePathExpression {
   private final Expression myArgumentType;
   private final Expression myArgument;
+  private final boolean myDirected;
+  private final boolean myForcedInfinite;
 
-  public PathExpression(Expression argumentType, Expression argument) {
+  public PathExpression(Expression argumentType, Expression argument, boolean directed, boolean forceInfinity) {
     myArgumentType = argumentType;
     myArgument = argument;
+    myDirected = directed;
+    myForcedInfinite = forceInfinity;
   }
 
   @Override
@@ -24,6 +28,15 @@ public class PathExpression extends Expression implements CorePathExpression {
   @Override
   public @NotNull Expression getArgument() {
     return myArgument;
+  }
+
+  public boolean isDirected() {
+    return myDirected;
+  }
+
+  @Override
+  public boolean isForcedInfinite() {
+    return myForcedInfinite;
   }
 
   @Override

@@ -2,6 +2,7 @@ package org.arend.psi.ext
 
 import com.intellij.lang.ASTNode
 import com.intellij.psi.PsiElement
+import org.arend.ext.core.context.BindingVariance
 import org.arend.psi.*
 import org.arend.term.abs.Abstract
 import org.arend.term.abs.AbstractExpressionVisitor
@@ -16,8 +17,11 @@ class ArendLamExpr(node: ASTNode) : ArendExpr(node), Abstract.LamParametersHolde
     val fatArrow: PsiElement?
         get() = findChildByType(ArendElementTypes.FAT_ARROW)
 
-    override fun <P : Any?, R : Any?> accept(visitor: AbstractExpressionVisitor<in P, out R>, params: P?): R =
-        visitor.visitLam(this, lamParamList, body, params)
+    val fatArrowPlus: PsiElement?
+        get() = findChildByType(ArendElementTypes.FAT_ARROW_PLUS)
+
+    override fun <P, R> accept(visitor: AbstractExpressionVisitor<in P, out R>, params: P?): R =
+        visitor.visitLam(this, lamParamList, if (fatArrowPlus != null) BindingVariance.COVARIANT else null, body, params)
 
     override fun getParameters() = lamParamList.filterIsInstance<ArendNameTele>()
 

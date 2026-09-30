@@ -7,6 +7,7 @@ import org.arend.ext.concrete.*;
 import org.arend.ext.concrete.definition.*;
 import org.arend.ext.concrete.expr.*;
 import org.arend.ext.concrete.pattern.ConcretePattern;
+import org.arend.ext.core.context.BindingVariance;
 import org.arend.ext.core.context.CoreBinding;
 import org.arend.ext.core.expr.AbstractedExpression;
 import org.arend.ext.error.GeneralError;
@@ -249,12 +250,23 @@ public class ConcreteFactoryImpl implements ConcreteFactory {
 
   @Override
   public @NotNull ConcreteExpression sigma(@NotNull List<? extends ConcreteParameter> parameters) {
+    return sigma(BindingVariance.INVARIANT, parameters);
+  }
+
+  @NotNull
+  @Override
+  public ConcreteExpression sigma(@NotNull BindingVariance variance, @NotNull ConcreteParameter... parameters) {
+    return sigma(variance, Arrays.asList(parameters));
+  }
+
+  @Override
+  public @NotNull ConcreteExpression sigma(@NotNull BindingVariance variance, @NotNull List<? extends ConcreteParameter> parameters) {
     if (parameters.size() == 1) {
       ConcreteExpression type = parameters.getFirst().getType();
       if (type == null) throw new IllegalArgumentException();
       return type;
     }
-    return new Concrete.SigmaExpression(myData, typeParameters(new ArrayList<>(parameters)));
+    return new Concrete.SigmaExpression(myData, typeParameters(new ArrayList<>(parameters)), variance);
   }
 
   private ConcreteExpression caseExprC(boolean isSCase, Collection<? extends ConcreteCaseArgument> arguments, @Nullable ConcreteExpression resultType, @Nullable ConcreteExpression resultTypeLevel, @NotNull List<Concrete.FunctionClause> clauses) {
@@ -706,7 +718,13 @@ public class ConcreteFactoryImpl implements ConcreteFactory {
   @NotNull
   @Override
   public Concrete.Parameter param(boolean explicit, @Nullable ArendRef ref) {
-    return new Concrete.NameParameter(myData, explicit, makeLocalRef(ref));
+    return param(explicit, ref, BindingVariance.INVARIANT);
+  }
+
+  @NotNull
+  @Override
+  public Concrete.Parameter param(boolean explicit, @Nullable ArendRef ref, @NotNull BindingVariance variance) {
+    return new Concrete.NameParameter(myData, explicit, makeLocalRef(ref), variance);
   }
 
   @NotNull
@@ -730,17 +748,22 @@ public class ConcreteFactoryImpl implements ConcreteFactory {
 
   @Override
   public @NotNull Concrete.TypeParameter param(boolean explicit, boolean isProperty, @NotNull Collection<? extends ArendRef> refs, @NotNull ConcreteExpression type) {
+    return param(explicit, isProperty, refs, type, BindingVariance.INVARIANT);
+  }
+
+  @Override
+  public @NotNull Concrete.TypeParameter param(boolean explicit, boolean isProperty, @NotNull Collection<? extends ArendRef> refs, @NotNull ConcreteExpression type, @NotNull BindingVariance variance) {
     if (!(type instanceof Concrete.Expression)) {
       throw new IllegalArgumentException();
     }
     if (refs.isEmpty()) {
-      return new Concrete.TypeParameter(myData, explicit, (Concrete.Expression) type, false);
+      return new Concrete.TypeParameter(myData, explicit, (Concrete.Expression) type, false, variance);
     }
     List<Referable> cRefs = new ArrayList<>(refs.size());
     for (ArendRef ref : refs) {
       cRefs.add(makeLocalRef(ref));
     }
-    return new Concrete.TelescopeParameter(myData, explicit, cRefs, (Concrete.Expression) type, false);
+    return new Concrete.TelescopeParameter(myData, explicit, cRefs, (Concrete.Expression) type, false, variance);
   }
 
   @NotNull
@@ -805,7 +828,7 @@ public class ConcreteFactoryImpl implements ConcreteFactory {
     if (!(expression instanceof Concrete.ReferenceExpression && (type == null || type instanceof Concrete.Expression))) {
       throw new IllegalArgumentException();
     }
-    return new Concrete.CaseArgument((Concrete.ReferenceExpression) expression, (Concrete.Expression) type);
+    return new Concrete.CaseArgument((Concrete.ReferenceExpression) expression, (Concrete.Expression) type, BindingVariance.INVARIANT);
   }
 
   private List<Concrete.Pattern> patterns(Collection<? extends ConcretePattern> patterns) {

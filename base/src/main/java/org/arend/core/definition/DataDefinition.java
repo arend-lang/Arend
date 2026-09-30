@@ -1,10 +1,12 @@
 package org.arend.core.definition;
 
 import org.arend.core.context.param.DependentLink;
+import org.arend.ext.core.context.BindingVariance;
 import org.arend.core.context.param.EmptyDependentLink;
 import org.arend.core.elimtree.IntervalElim;
 import org.arend.core.expr.*;
 import org.arend.core.pattern.ExpressionPattern;
+import org.arend.core.sort.Level;
 import org.arend.core.sort.Sort;
 import org.arend.core.sort.SortExpression;
 import org.arend.core.subst.ExprSubstitution;
@@ -12,6 +14,7 @@ import org.arend.core.subst.Levels;
 import org.arend.error.DummyErrorReporter;
 import org.arend.ext.core.definition.CoreConstructor;
 import org.arend.ext.core.definition.CoreDataDefinition;
+import org.arend.ext.core.level.ConstLevel;
 import org.arend.ext.core.level.LevelSubstitution;
 import org.arend.naming.reference.GlobalReferable;
 import org.arend.naming.reference.TCDefReferable;
@@ -24,7 +27,7 @@ import java.util.*;
 public class DataDefinition extends TopLevelDefinition implements CoreDataDefinition {
   private final List<Constructor> myConstructors;
   private DependentLink myParameters;
-  private SortExpression mySort = new SortExpression.Const(Sort.INFINITY);
+  private SortExpression mySort = new SortExpression.Const(new Sort(Level.INFINITY, ConstLevel.INFINITY));
   private BigInteger myTruncatedLevel;
   private boolean mySquashed;
   private FunctionDefinition mySquasher;
@@ -74,6 +77,18 @@ public class DataDefinition extends TopLevelDefinition implements CoreDataDefini
     for (Constructor constructor : myConstructors) {
       if (constructor.getBody() instanceof IntervalElim) {
         return true;
+      }
+    }
+    return false;
+  }
+
+  public boolean hasCovariantConstructorParameters() {
+    for (Constructor constructor : myConstructors) {
+      for (DependentLink param = constructor.getParameters(); param.hasNext(); param = param.getNext()) {
+        param = param.getNextTyped(null);
+        if (param.getVariance() != BindingVariance.INVARIANT) {
+          return true;
+        }
       }
     }
     return false;

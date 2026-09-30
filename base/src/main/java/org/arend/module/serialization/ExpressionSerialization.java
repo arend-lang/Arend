@@ -22,6 +22,7 @@ import org.arend.core.sort.Level;
 import org.arend.core.sort.Sort;
 import org.arend.core.sort.SortExpression;
 import org.arend.core.subst.Levels;
+import org.arend.ext.core.context.BindingVariance;
 import org.arend.ext.core.level.ConstLevel;
 import org.arend.prelude.Prelude;
 
@@ -93,6 +94,7 @@ class ExpressionSerialization implements ExpressionVisitor<Void, ExpressionProto
     } else {
       builder.setValue(writeBigInteger(level.value()));
     }
+    builder.setIsCat(level.isCat());
     return builder.build();
   }
 
@@ -113,6 +115,7 @@ class ExpressionSerialization implements ExpressionVisitor<Void, ExpressionProto
         for (ClassField field : v.fields()) {
           varBuilder.addField(myCallTargetIndexProvider.getDefIndex(field));
         }
+        varBuilder.setHLevel(writeConstLevel(v.hLevel()));
         builder.setVarSort(varBuilder.build());
       }
       case SortExpression.RecursiveData ignored -> builder.setRecursiveData(true);
@@ -199,6 +202,7 @@ class ExpressionSerialization implements ExpressionVisitor<Void, ExpressionProto
     tBuilder.setIsHidden(typed.isHidden());
     tBuilder.setType(writeExpr(typed.getType()));
     tBuilder.setIsProperty(typed.isProperty());
+    tBuilder.setIsCovariant(typed.getVariance() == BindingVariance.COVARIANT);
     for (; link != typed; link = link.getNext()) {
       registerBinding(link);
     }
@@ -224,6 +228,7 @@ class ExpressionSerialization implements ExpressionVisitor<Void, ExpressionProto
       builder.setType(writeExpr(link.getType()));
     }
     builder.setIsHidden(link.isHidden());
+    builder.setIsCovariant(link.getVariance() == BindingVariance.COVARIANT);
     registerBinding(link);
     return builder.build();
   }
@@ -373,8 +378,8 @@ class ExpressionSerialization implements ExpressionVisitor<Void, ExpressionProto
                 .setLength(tuple.getNumberOfParameters())
                 .addAllPropertyIndex(tuple.getPropertyIndices())
                 .build());
-            } else if (entry.getKey() instanceof IdpConstructor) {
-              singleClauseBuilder.setIdp(ExpressionProtos.ElimTree.Branch.SingleConstructorClause.Idp.newBuilder());
+            } else if (entry.getKey() instanceof IdpConstructor idpConstructor) {
+              singleClauseBuilder.setIdp(ExpressionProtos.ElimTree.Branch.SingleConstructorClause.Idp.newBuilder().setDirected(idpConstructor.isDirected()));
             } else if (entry.getKey() instanceof ClassConstructor classCon) {
               ExpressionProtos.ElimTree.Branch.SingleConstructorClause.Class.Builder conBuilder = ExpressionProtos.ElimTree.Branch.SingleConstructorClause.Class.newBuilder();
               conBuilder.setClassRef(myCallTargetIndexProvider.getDefIndex(classCon.getClassDefinition()));
@@ -762,6 +767,8 @@ class ExpressionSerialization implements ExpressionVisitor<Void, ExpressionProto
     ExpressionProtos.Expression.Path.Builder builder = ExpressionProtos.Expression.Path.newBuilder();
     builder.setArgumentType(writeExpr(expr.getArgumentType()));
     builder.setArgument(writeExpr(expr.getArgument()));
+    builder.setDirected(expr.isDirected());
+    builder.setForceInfinity(expr.isForcedInfinite());
     return ExpressionProtos.Expression.newBuilder().setPath(builder.build()).build();
   }
 
@@ -770,7 +777,19 @@ class ExpressionSerialization implements ExpressionVisitor<Void, ExpressionProto
     ExpressionProtos.Expression.At.Builder builder = ExpressionProtos.Expression.At.newBuilder();
     builder.setPathArgument(writeExpr(expr.getPathArgument()));
     builder.setIntervalArgument(writeExpr(expr.getIntervalArgument()));
+    builder.setDirected(expr.isDirected());
     return ExpressionProtos.Expression.newBuilder().setAt(builder.build()).build();
+  }
+
+  @Override
+  public ExpressionProtos.Expression visitPathType(PathTypeExpression expr, Void params) {
+    ExpressionProtos.Expression.PathType.Builder builder = ExpressionProtos.Expression.PathType.newBuilder();
+    builder.setArgumentType(writeExpr(expr.getArgumentType()));
+    builder.setLeftArgument(writeExpr(expr.getLeftArgument()));
+    builder.setRightArgument(writeExpr(expr.getRightArgument()));
+    builder.setDirected(expr.isDirected());
+    builder.setForceInfinity(expr.isForcedInfinite());
+    return ExpressionProtos.Expression.newBuilder().setPathType(builder.build()).build();
   }
 
   @Override

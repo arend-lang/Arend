@@ -10,7 +10,7 @@
   \where {
     \instance Shape (J : \Set) : Graph \cowith
       | V => Or (\Sigma) J
-      | E => \case __, __ \with {
+      | E => \case __, __ \return \Prop \with {
         | inr i, inl _ => \Sigma
         | _, _ => Empty
       }
