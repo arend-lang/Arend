@@ -200,4 +200,21 @@ public class DoubleCheckerRegressionTest extends TypeCheckingTestCase {
         => sfQ (zl \\lam _ => idp)
       """);
   }
+
+  // The inferred result type has the sort of a \Pi-type whose codomain sort refers to a parameter.
+  @Test
+  public void parametricPiSortTest() {
+    typeCheckModule("""
+      \\func test.{u} {P : \\Cat} (Q : \\Type u) (X : \\Cat) : P ->+ \\Cat
+        => \\lam (e :+ P) => \\Pi (q :+ Q) -> X
+      """);
+  }
+
+  @Test
+  public void parametricPiSortTest2() {
+    typeCheckModule("""
+      \\func test.{u} (Q : \\Type u) (X : \\Type) : Nat -> \\Type
+        => \\lam n => Q -> X
+      """);
+  }
 }
