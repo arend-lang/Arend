@@ -1,0 +1,57 @@
+\import Category
+\import Category.Functor
+\import Category.Subcat
+\import Equiv
+\import Paths
+\import Paths.Meta
+
+-- | A (not necessarily full) subcategory of {C} given by predicates on objects and arrows.
+\record SubcatPred (C : Precat) {
+  | ob : C -> \Prop
+  | hom {x y : C} : Hom x y -> \Prop
+  | hom-dom {x y : C} {f : Hom x y} : hom f -> ob x
+  | hom-cod {x y : C} {f : Hom x y} : hom f -> ob y
+  | ob-id {x : C} : ob x -> hom (id {C} {x})
+  | hom-o {x y z : C} {g : Hom y z} {f : Hom x y} : hom g -> hom f -> hom (g ∘ f)
+
+  -- | {hom} is invariant under transport along paths between objects.
+  \lemma hom-transport {x x' y y' : C} (p : x = x') (q : y = y') {f : Hom x y} (h : hom f)
+    : hom (transport (Hom x' __) q (transport (Hom __ y) p f)) \elim p, q
+    | idp, idp => h
+
+  \func toPrecat : Precat (\Sigma (x : C) (ob x)) \cowith
+    | Hom x y => \Sigma (f : Hom x.1 y.1) (hom f)
+    | id {x} => (id, ob-id x.2)
+    | o g f => (g.1 ∘ f.1, hom-o g.2 f.2)
+    | id-left => ext id-left
+    | id-right => ext id-right
+    | o-assoc => ext o-assoc
+
+  -- | The inclusion of the subcategory.
+  \func incl : FaithfulFunctor toPrecat C __.1 \cowith
+    | Func f => f.1
+    | Func-id => idp
+    | Func-o => idp
+    | isFaithful p => ext p
+} \where {
+  -- | The subcategory of a univalent category is univalent.
+  \func toCat {C : Cat} (S : SubcatPred C) : Cat \cowith
+    | Precat => S.toPrecat
+    | univalence => subCat.faithful-univalence S.incl (Embedding.projection S.ob)
+
+  -- | The preimage of a subcategory under a functor.
+  \func pullback {C D : Precat} (F : Functor C D) (S : SubcatPred D) : SubcatPred C \cowith
+    | ob x => S.ob (F x)
+    | hom f => S.hom (F.Func f)
+    | hom-dom h => S.hom-dom h
+    | hom-cod h => S.hom-cod h
+    | ob-id o => transportInv S.hom F.Func-id (S.ob-id o)
+    | hom-o g f => transportInv S.hom F.Func-o (S.hom-o g f)
+}
+
+{- | Left maps of the orthogonal factorization system on univalent categories whose right maps are
+ -   faithful functors which are embeddings on objects.
+ -   A functor is left if the only subcategory of its codomain containing its image is the whole category.
+ -}
+\func IsGeneratingFunctor {A B : Cat} (L : Functor A B) : \Prop
+  => \Pi (S : SubcatPred B) -> (\Pi {a a' : A} (f : Hom a a') -> S.hom (L.Func f)) -> \Pi {x y : B} (g : Hom x y) -> S.hom g

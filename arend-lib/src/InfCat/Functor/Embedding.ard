@@ -50,6 +50,25 @@
                      \in (diag-ob.1 (IsHEquiv.toIsEquiv e), diag-ff.1 (ff-surj-equiv.2 e).1),
           \lam s => diag-equiv.2 $ ff-surj-equiv.1 ((diag-ff {C} {D} {f}).2 s.2, \lam t => inP (IsEquiv=>contrFibers ((diag-ob {C} {D} {f}).2 s.1) t).center))
 
+    -- | A functor which is an embedding on homs and whose paths lift is an embedding.
+    \lemma fromHoms {C D : \Cat} {f : C ->⁺ D} (he : \Pi (x y : C) -> Embedding {x ~> y} (dmap f))
+                    (pl : \Pi {x y : C} (p : f x = f y) -> ∃ (q : x = y) (pmap+ f q = p)) : IsEmbedding f
+      => (char {C} {D} {f}).2 (\new Embedding {
+           | isEmb x y => \new Retraction {
+             | sec p => (lift p).1
+             | f_sec p => (lift p).2
+           }
+         }, he)
+      \where {
+        -- | `pmap f` is an embedding since {=_~>} is and {f} is an embedding on homs.
+        \lemma pmap-emb {x y : C} : Embedding (pmap+ f {x} {y})
+          => leftEmbedding (=_~>-embedding (f x) (f y))
+               (transport (Embedding {x = y} {f x ~> f y}) (path \lam i p => dmap_=_~> f {x} {y} {p} @ i) (transEmbedding (=_~>-embedding x y) (he x y)))
+
+        \lemma lift {x y : C} (p : f x = f y) : \Sigma (q : x = y) (pmap+ f q = p)
+          => TruncP.remove (Embedding.embeddingFiber-isProp pmap-emb p) (pl p)
+      }
+
     -- | An embedding which is surjective on objects and on homs is an equivalence.
     \lemma surj-equiv {C D : \Cat} {f : C ->⁺ D} (fe : IsEmbedding f) (os : IsSurjMap f)
                       (hs : \Pi (x y : C) -> IsSurj (dmap f {x} {y})) : IsHEquiv f

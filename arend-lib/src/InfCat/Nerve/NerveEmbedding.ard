@@ -1,0 +1,57 @@
+\import Category
+\import Category.Functor
+\import Equiv
+\import Function.Meta
+\import InfCat.Basics
+\import InfCat.Functor.Embedding
+\import InfCat.Nerve.Nerve
+\import InfCat.Nerve.NerveHom
+\import InfCat.Paths
+\import Logic
+\import Logic.Meta
+\import Paths
+
+-- | The nerve of a faithful functor which is an embedding on objects is an embedding.
+\lemma nerveMap-emb.{u} {C : Precat.{u,u}} {D : Cat.{u,u}} (J : FaithfulFunctor C D) (Je : Embedding {C} {D} J) : IsEmbedding (nerveMap J)
+  => IsEmbedding.fromHoms (\lam n m => \new Embedding {
+       | isEmb p q => \new Retraction {
+         | sec e => TruncP.remove (nerve-hom-isSet p q) (hom-inj e)
+         | f_sec e => nerve-hom-isSet _ _ _ _
+       }
+     }) (\lam {n} {m} => path-lift)
+  \where {
+    \lemma hom-inj {n m : Nerve C} {p q : n ~> m} (e : dmap (nerveMap J) p = dmap (nerveMap J) q) : TruncP (p = q) \elim n, m
+      | nerveOb x, nerveOb y => inP $ inv (IsEquiv.f_ret nerveHom-equiv)
+        *> pmap nerveHom (J.isFaithful $ IsEquiv.isInj nerveHom-equiv $ pmap (dmap (nerveMap J)) (IsEquiv.f_ret nerveHom-equiv)
+              *> e *> inv (pmap (\lam (r : nerveOb x ~> nerveOb y) => dmap (nerveMap J) r) (IsEquiv.f_ret nerveHom-equiv {q})))
+        *> IsEquiv.f_ret nerveHom-equiv {q}
+
+    \lemma path-lift {n m : Nerve C} (p : nerveMap J n = nerveMap J m) : ∃ (q : n = m) (pmap+ (nerveMap J) q = p) \elim n, m
+      | nerveOb x, nerveOb y =>
+        \have | r => nerveOb-emb.isEmb (J x) (J y)
+              | s => Je.isEmb x y
+        \in inP (pmap nerveOb (s.sec (r.sec p)), pmap-nerve (s.sec (r.sec p)) *> pmap (pmap nerveOb) (s.f_sec _) *> r.f_sec p)
+
+    \func pmap-nerve {x y : C} (s : x = y) : pmap+ (nerveMap J) (pmap nerveOb s) = pmap nerveOb (pmap J s) \elim s
+      | idp => idp
+  }
+
+{- | An arrow of the nerve of {S} whose image under the nerve of {J} is the arrow of a morphism {phi} of {D}
+ -   gives a morphism of {S} which is mapped to {phi} up to paths between objects.
+ -}
+\lemma nerve-image.{u} {S : Precat.{u,u}} {D : Cat.{u,u}} (J : Functor S D) {n m : Nerve S}
+  (a : n ~> m) {x y : D} (p : nerveMap J n = nerveOb x) (q : nerveMap J m = nerveOb y) (phi : Hom x y)
+  (sq : comp (dmap (nerveMap J) a) (=_~> q) = comp (=_~> p) (nerveHom phi))
+  : ∃ (s t : S) (psi : Hom s t) (e1 : J s = x) (e2 : J t = y) (transport (Hom x) e2 (transport (Hom __ (J t)) e1 (J.Func psi)) = phi)
+  \elim n, m
+  | nerveOb s, nerveOb t =>
+    \have | r1 => nerveOb-emb.isEmb (J s) x
+          | r2 => nerveOb-emb.isEmb (J t) y
+    \in inP (s, t, IsEquiv.ret nerveHom-equiv a, r1.sec p, r2.sec q, aux (r1.sec p) (r2.sec q) (IsEquiv.ret nerveHom-equiv a) phi $
+          pmap2 (\lam u v => comp u (=_~> v)) (pmap (dmap (nerveMap J)) (IsEquiv.f_ret nerveHom-equiv)) (r2.f_sec q)
+          *> sq *> inv (pmap (\lam v => comp (=_~> v) _) (r1.f_sec p)))
+  \where
+    \private \lemma aux {s t : S} {x y : D} (e1 : J s = x) (e2 : J t = y) (psi : Hom s t) (phi : Hom x y)
+                        (sq : comp (nerveHom (J.Func psi)) (=_~> (pmap nerveOb e2)) = comp (=_~> (pmap nerveOb e1)) (nerveHom phi))
+      : transport (Hom x) e2 (transport (Hom __ (J t)) e1 (J.Func psi)) = phi \elim e1, e2
+      | idp, idp => IsEquiv.isInj nerveHom-equiv (inv comp_idd-right *> sq *> comp_idd-left)
