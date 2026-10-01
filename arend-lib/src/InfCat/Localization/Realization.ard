@@ -1,0 +1,32 @@
+{- | The geometric realization of a category, that is, its localization at all morphisms.
+ -}
+
+\import InfCat.Basics
+\import InfCat.Functor.Equiv
+\import InfCat.Groupoid
+\import InfCat.Localization.Abstract
+\import InfCat.Localization.Concrete
+\import InfCat.Objects
+\import InfCat.Rezk
+
+-- | The geometric realization of {C}.
+\func Realization (C : \Cat) : \Cat
+  => Localize {C} \lam _ => \Sigma
+
+-- | The localization functor into the geometric realization.
+\func realize {C : \Cat} (x :⁺ C) : Realization C
+  => localize (\lam _ => \Sigma) x
+
+-- | {realize} inverts all morphisms.
+\lemma realize-inverts {C : \Cat} {x y : C} (f : x ~> y) : IsIso (dmap realize f)
+  => localize-inverts ()
+
+-- | The geometric realization is a groupoid.
+\lemma realization-groupoid {C : \Cat} : IsGroupoid (Realization C)
+  => \let | G => core-lift {C} {Realization C} {realize} realize-inverts
+          | r (y :⁺ Realization C) : Ob (Realization C) => localize-ext (\lam _ => type-groupoid _) y
+     \in retract-groupoid type-groupoid r unob \lam y => loc-ext-eq localize-isLocalizationFor {\lam y => unob (r y)} G.2
+
+-- | Functors from the geometric realization to a groupoid are functors from {C}.
+\lemma realization-univ {C D : \Cat} (Dg : IsGroupoid D) : IsHEquiv {Realization C ->⁺ D} {C ->⁺ D} (\lam G x => G (realize x))
+  => IsLocalization.groupoid {C} {Realization C} {D} localize-isLocalization Dg

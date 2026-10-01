@@ -383,6 +383,12 @@
       | f_sec => idpe
     }
 
+  \lemma sigma-prop-embedding {A : \Cat} {B : A -> \Cat} (Bp : \Pi (a : A) -> isProp (B a)) : Embedding {\Sigma (a : A) (B a)} __.1 \cowith
+    | isEmb s s' => \new Retraction {
+      | sec p => ext (p, Bp _ _ _)
+      | f_sec => idpe
+    }
+
   -- | If the fibers of a map are propositions, then the map is an embedding
   \lemma fibers {A B : \Cat} (f : A -> B) (p : \Pi (b : B) -> isProp (Fib f b)) : Embedding f \cowith
     | isEmb a a' => IsEquiv.toQEquiv (pmap-equiv p)

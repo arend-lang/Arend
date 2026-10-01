@@ -2,6 +2,7 @@
 \import Equiv.Fiber
 \import Equiv.Sigma
 \import Function.Meta
+\import Homotopy.Fibration
 \import InfCat.Basics
 \import InfCat.Functor.Equiv
 \import InfCat.Paths
@@ -86,11 +87,18 @@
     \protected \lemma contr {C D : \Cat} {f : C ->⁺ D} (ff : IsFFMap f) (h : DI ->⁺ D)
                             {tl : \Sigma⁺ (x : C) (f x = h dleft)} {tr : \Sigma⁺ (x : C) (f x = h dright)}
       : Contr (DPath (\lam i => \Sigma⁺ (x : C) (f x = h i)) tl tr)
-      => Contr.Contr_QEquiv (symQEquiv $ transQEquiv (dpath-sigma-equiv {C} (\lam i x => f x = h i)) $ sigma-right \lam r =>
-            path-square-equiv (dmap f r) (dpath h) `transQEquiv`
-            square-equiv (dmap f r) _ `transQEquiv` equiv2) $
+      => Contr.Contr_QEquiv (symQEquiv (fib-equiv f h)) $
           IsEquiv=>contrFibers (ff tl.1 tr.1) $ comp (comp (=_~> tl.2) (dpath h)) (=_~> (inv tr.2))
       \where {
+        -- | Lifts of {h} to the pullback of {f} along {h} are the fibers of {f} on homs.
+        \func fib-equiv {C D : \Cat} (f : C ->⁺ D) (h : DI ->⁺ D)
+                        {tl : \Sigma⁺ (x : C) (f x = h dleft)} {tr : \Sigma⁺ (x : C) (f x = h dright)}
+          : QEquiv {DPath (\lam i => \Sigma⁺ (x : C) (f x = h i)) tl tr}
+                   {Fib (dmap f) (comp (comp (=_~> tl.2) (dpath h)) (=_~> (inv tr.2)))}
+          => transQEquiv (dpath-sigma-equiv \lam i x => f x = h i) $ sigma-right \lam r =>
+               path-square-equiv (dmap f r) (dpath h) `transQEquiv`
+               square-equiv (dmap f r) _ `transQEquiv` equiv2
+
         \private \func equiv2 {C : \Cat} {a b c : C} {f : a ~> b} {p : c = b} {g : a ~> c}
           : QEquiv {comp g (=_~> p) = f} {g = comp f (=_~> (inv p))} \elim p
           | idp => Paths.transport2 (\lam x y => QEquiv {x = f} {g = y}) (inv comp_idd-right) (inv comp_idd-right) idEquiv

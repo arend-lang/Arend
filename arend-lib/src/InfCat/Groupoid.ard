@@ -2,12 +2,14 @@
 \import Function.Meta
 \import InfCat.Arrows
 \import InfCat.Basics
+\import InfCat.Functor.Embedding
 \import InfCat.Functor.Equiv
 \import InfCat.Functor.FullyFaithful
 \import InfCat.Objects
 \import InfCat.Paths
 \import InfCat.Rezk
 \import Logic
+\import Logic.Meta
 \import Meta
 \import Paths
 
@@ -30,6 +32,37 @@
 
 \lemma type_ob {X : \Type} : IsHEquiv {Ob X} {X} unob
   => cat_ob type-groupoid
+
+-- | A retract of a groupoid is a groupoid.
+\lemma retract-groupoid {C G : \Cat} (Gg : IsGroupoid G) (r : C ->⁺ G) (s : G ->⁺ C) (sr : \Pi (x :⁺ C) -> s (r x) = x) : IsGroupoid C
+  => \lam {x} {y} f => transport (\lam (H : C ->⁺ C) => IsIso (dmap H f)) (funExt+ sr) (dmap_IsIso s (Gg (dmap r f)))
+
+-- | A functor inverting all morphisms factors through the groupoid of objects.
+\sfunc core-lift {C D : \Cat} {F : C ->⁺ D} (Fi : \Pi {x y : C} (r : x ~> y) -> IsIso (dmap F r))
+  : \Sigma (G : C ->⁺ Ob D) (\Pi (x :⁺ C) -> unob (G x) = F x)
+  => \have e => core-lift-equiv {C} {D} {F} Fi
+     \in (\lam x =>⁺ (IsHEquiv.ret e x).2.1, \lam x => (IsHEquiv.ret e x).2.2 *> pmap+ F (IsHEquiv.f_ret e))
+  \where {
+    -- | The pullback of {unob} along a functor inverting all morphisms is an equivalence.
+    \lemma core-lift-equiv {C D : \Cat} {F : C ->⁺ D} (Fi : \Pi {x y : C} (r : x ~> y) -> IsIso (dmap F r))
+      : IsHEquiv {\Sigma⁺ (x : C) (\Sigma⁺ (o : Ob D) (unob o = F x))} __.1
+      => IsEmbedding.surj-equiv (IsEmbedding.pullback F unob-embedding) (\lam x => inP ((x, (ob (F x), idp)), idp))
+          \lam s t r => \case \elim s, \elim t, \elim r \with {
+            | (b, (ob d, p)), (b', (ob d', p')), r => hom-surj p p' r
+          }
+      \where {
+        \lemma hom-surj {b b' : C} {d d' : D} (p : d = F b) (p' : d' = F b') (r : b ~> b')
+          : ∃ (h : (b, (ob d, p)) ~> {\Sigma⁺ (x : C) (\Sigma⁺ (o : Ob D) (unob o = F x))} (b', (ob d', p'))) (dmap __.1 h = r) \elim p, p'
+          | idp, idp => \case IsIso-diag-char.1 (Fi r) \with {
+            | inP (c, e) => inP (dpath \lam i => (r i, lift-arrow {D} {\lam i => F (r i)} e i), idp)
+          }
+
+        -- | A lift of a constant arrow to the pullback of {unob}.
+        \func lift-arrow {D : \Cat} {a : DI ->⁺ D} {c : D} (e : (\lam _ => c) = {DI ->⁺ D} a)
+          : DPath (\lam i => \Sigma⁺ (o : Ob D) (unob o = a i)) (ob (a dleft), idp) (ob (a dright), idp) \elim e
+          | idp => idd
+      }
+  }
 
 \lemma cov-pi-cat-equiv {C : \Cat} (Cg : IsGroupoid C) (T : C ->⁺ \Cat) : IsHEquiv {\Pi (x :⁺ C) -> T x} {\Pi (x : C) -> T x} (\lam f x => f x)
   => inP \new HQEquiv {

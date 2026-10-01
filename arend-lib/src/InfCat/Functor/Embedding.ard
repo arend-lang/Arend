@@ -1,12 +1,17 @@
 \import Equiv
 \import Equiv.Fiber
 \import Equiv.Path
+\import Function
 \import Function.Meta
+\import Homotopy.Fibration
 \import InfCat.Basics
 \import InfCat.Functor.Equiv
 \import InfCat.Functor.FullyFaithful
+\import InfCat.Objects
 \import InfCat.Paths
+\import InfCat.Rezk
 \import Logic
+\import Logic.Unique
 \import Paths
 \import Paths.Meta
 
@@ -32,6 +37,38 @@
       => (\lam fe => \have e => diag-equiv.1 fe
                      \in (diag-ob.1 (IsHEquiv.toIsEquiv e), diag-ff.1 (ff-surj-equiv.2 e).1),
           \lam s => diag-equiv.2 $ ff-surj-equiv.1 ((diag-ff {C} {D} {f}).2 s.2, \lam t => inP (IsEquiv=>contrFibers ((diag-ob {C} {D} {f}).2 s.1) t).center))
+
+    -- | An embedding which is surjective on objects and on homs is an equivalence.
+    \lemma surj-equiv {C D : \Cat} {f : C ->⁺ D} (fe : IsEmbedding f) (os : IsSurjMap f)
+                      (hs : \Pi (x y : C) -> IsSurj (dmap f {x} {y})) : IsHEquiv f
+      => (ff-surj-equiv {C} {D} {f}).1 (\lam x y => IsEquiv.fromEmbSurj ((char.1 fe).2 x y) (hs x y), os)
+
+    -- | The pullback of an embedding is an embedding.
+    \lemma pullback {B C D : \Cat} (g : B ->⁺ D) {f : C ->⁺ D} (fe : IsEmbedding f)
+      : IsEmbedding {\Sigma⁺ (x : B) (\Sigma⁺ (y : C) (f y = g x))} __.1
+      => (char {\Sigma⁺ (x : B) (\Sigma⁺ (y : C) (f y = g x))} {B} {\lam s => s.1}).2 (pullback-ob g fe, pullback-hom g fe)
+      \where {
+        \lemma pullback-ob {B C D : \Cat} (g : B ->⁺ D) {f : C ->⁺ D} (fe : IsEmbedding f)
+          : Embedding {\Sigma⁺ (x : B) (\Sigma⁺ (y : C) (f y = g x))} {B} (\lam s => s.1)
+          => Embedding.fibers _ \lam b => isProp-retract {Fib (\lam y => f y) (g b)} {Fib {\Sigma⁺ (x : B) (\Sigma⁺ (y : C) (f y = g x))} __.1 b}
+               (\lam u => (u.1.2.1, u.1.2.2 *> pmap+ g u.2)) (\lam v => ((b, (v.1, v.2)), idp))
+               (\lam u => fib-aux {B} {C} {D} {g} {f} u.2) (Embedding.embeddingFiber-isProp (char.1 fe).1 (g b))
+
+        \lemma pullback-hom {B C D : \Cat} (g : B ->⁺ D) {f : C ->⁺ D} (fe : IsEmbedding f) (s t : \Sigma⁺ (x : B) (\Sigma⁺ (y : C) (f y = g x)))
+          : Embedding {s ~> t} {s.1 ~> t.1} (\lam h => dpath \lam i => (h i).1)
+          => transEmbedding (Embedding.fromIsEquiv (inP (dpath-sigma-equiv {B} (\lam i x => \Sigma⁺ (y : C) (f y = g x)) {s} {t})))
+               (Embedding.sigma-prop-embedding \lam (r : s.1 ~> t.1) => pullback-hom-prop g fe r)
+
+        \lemma pullback-hom-prop {B C D : \Cat} (g : B ->⁺ D) {f : C ->⁺ D} (fe : IsEmbedding f) {s t : \Sigma⁺ (x : B) (\Sigma⁺ (y : C) (f y = g x))} (r : s.1 ~> t.1)
+          : isProp (DPath (\lam i => \Sigma⁺ (y : C) (f y = g (r i))) s.2 t.2)
+          => \have e => ff-surj-equiv.contr.fib-equiv f (\lam i => g (r i)) {s.2} {t.2}
+             \in isProp-retract e e.ret e.ret_f (Embedding.embeddingFiber-isProp ((char.1 fe).2 _ _) _)
+
+        \private \func fib-aux {B C D : \Cat} {g : B ->⁺ D} {f : C ->⁺ D} {x b : B} {y : C} {q : f y = g x} (e : x = b)
+          : ((((b, (y, q *> pmap+ g e)) : \Sigma⁺ (x : B) (\Sigma⁺ (y : C) (f y = g x))), idp) : Fib {\Sigma⁺ (x : B) (\Sigma⁺ (y : C) (f y = g x))} __.1 b)
+            = ((x, (y, q)), e) \elim e
+          | idp => idp
+      }
 
     -- | The diagonal of a functor.
     \func diag {C D : \Cat} (f : C ->⁺ D) (x :⁺ C) : \Sigma⁺ (x y : C) (f x = f y)
@@ -82,3 +119,20 @@
 -- | A fully faithful functor is an embedding.
 \lemma ffMap-embedding {C D : \Cat} {f : C ->⁺ D} (ff : IsFFMap f) : IsEmbedding f
   => (IsEmbedding.char {C} {D} {f}).2 (IsFFMap.isObEmbedding ff, \lam x y => Embedding.fromIsEquiv (ff x y))
+
+-- | {unob} is an embedding on objects.
+\func unob-ob-embedding {C : \Cat} : Embedding {Ob C} {C} unob \cowith
+  | isEmb x y => \case \elim x, \elim y \with {
+    | ob x, ob y => \new Retraction {
+      | sec => pmap ob
+      | f_sec => idpe
+    }
+  }
+
+-- | {unob} is an embedding.
+\lemma unob-embedding {C : \Cat} : IsEmbedding (unob {C})
+  => (IsEmbedding.char {Ob C} {C} {unob}).2 (unob-ob-embedding, \lam x y => transport (Embedding __)
+        (ext \lam p => inv (dmap_=_~> unob) *> pmap (dmap unob) ~>_=_~>)
+        (transEmbedding (transEmbedding (Embedding.fromIsEquiv (inP (symQEquiv =_~>-equiv)))
+                                        (Embedding.fromIsEquiv (inP unob-ob-embedding.pmap-isEquiv)))
+                        (=_~>-embedding (unob x) (unob y))))
