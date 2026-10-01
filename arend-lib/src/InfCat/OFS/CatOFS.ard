@@ -290,7 +290,3 @@
       (\lam j p => dmap (\lam H a =>⁺ H (f a)) {j.1} {j.2} p)
       (IsEquiv.rightFactor (inP (DI-fun-equiv {B} {Z})) (IsEquiv.trans (IsOrthogonal-terminal.1 oD) (inP DI-fun-equiv)))
       (H1, H2)
-  \where {
-    \lemma pair-equiv {X Y : \Cat} {g : X -> Y} (e : IsEquiv g) : IsEquiv {\Sigma X X} {\Sigma Y Y} (\lam j => (g j.1, g j.2))
-      => IsEquiv.trans (IsSigma-right {X} {\lam _ => X} {\lam _ => Y} (\lam _ => g) (\lam _ => e)) (inP (qsigma-left {X} {Y} {\lam _ => Y} (IsEquiv.toQEquiv e)))
-  }

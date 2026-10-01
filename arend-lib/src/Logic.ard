@@ -11,6 +11,8 @@
 
 \func absurd {A : \Cat} (x : Empty) : A
 
+\func absurd+ {A :⁺ \Cat} (x :⁺ Empty) : A
+
 \func Not (A : \Cat) => A -> Empty
 
 \func \infix 1 /= {A : \Cat} (a a' : A) => Not (a = a')

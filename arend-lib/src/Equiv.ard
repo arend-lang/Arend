@@ -177,6 +177,17 @@
         | f_sec => s.f_sec
       }
 
+    -- | A retract of an equivalence in the arrow category is an equivalence.
+    \lemma retract {A B C D : \Cat} {f : A -> B} (e : IsEquiv f) {g : C -> D}
+                   (sC : C -> A) (rC : A -> C) (rsC : \Pi (c : C) -> rC (sC c) = c)
+                   (sD : D -> B) (rD : B -> D) (rsD : \Pi (d : D) -> rD (sD d) = d)
+                   (fs : \Pi (c : C) -> f (sC c) = sD (g c)) (rf : \Pi (a : A) -> rD (f a) = g (rC a)) : IsEquiv g \elim e
+      | inP e => inP \new QEquiv {
+        | ret d => rC (e.ret (sD d))
+        | ret_f c => pmap (\lam b => rC (e.ret b)) (inv (fs c)) *> pmap rC (e.ret_f (sC c)) *> rsC c
+        | f_sec d => inv (rf _) *> pmap rD (e.f_sec (sD d)) *> rsD d
+      }
+
     \lemma trans {A B C : \Cat} {f : A -> B} (e : IsEquiv f) {g : B -> C} (e' : IsEquiv g) : IsEquiv \lam a => g (f a) \elim e, e'
       | inP e, inP e' => inP (transQEquiv e e')
 

@@ -50,7 +50,7 @@
                   => (((\lam x => s.1.1 (l x), lP s.1.1), (\lam x => s.1.2 (l x), lP s.1.2)), dmap (\lam G x =>⁺ G (l x)) {s.1.1} {s.1.2} s.2)
               | rmap (G : L ->⁺ DI ->⁺ D) : \Sigma (H : C ->⁺ DI ->⁺ D) (P' H) => (\lam x => G (l x), lP' G)
          \in \lam G1 G2 => fiberwiseEquiv {X} {Y} {\lam j => ((\lam x => j.1 (l x), lP j.1), (\lam x => j.2 (l x), lP j.2))}
-          (IsOrthogonal-res-ff.pair-equiv e) {\lam j => j.1 ~> j.2} {\lam j => j.1.1 ~> j.2.1}
+          (pair-equiv e) {\lam j => j.1 ~> j.2} {\lam j => j.1.1 ~> j.2.1}
           (\lam j p => dmap (\lam G x =>⁺ G (l x)) {j.1} {j.2} p)
           (transport (\lam X => X) (IsEquiv.parallelEquiv {L ->⁺ DI ->⁺ D} {\Sigma (H : C ->⁺ DI ->⁺ D) (P' H)} {\Sigma (j : X) (j.1 ~> j.2)} {TY}
               {rmap} {tmap} {\lam G => DI-fun-equiv {L} {D} G} {\lam s => pairs-equiv s}

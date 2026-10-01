@@ -118,6 +118,10 @@
                       (te : IsEquiv {\Sigma (x : X) (P x)} {\Sigma (y : Y) (Q y)} (\lam s => (g s.1, h s.1 s.2))) (x : X) : IsEquiv (h x)
   => propExt.conv (totalEquiv h) (IsEquiv.leftFactor (inP (qsigma-left (IsEquiv.toQEquiv ge))) te) x
 
+-- | A map applied to both components of a pair is an equivalence if the map is.
+\lemma pair-equiv {X Y : \Cat} {g : X -> Y} (e : IsEquiv g) : IsEquiv {\Sigma X X} {\Sigma Y Y} (\lam j => (g j.1, g j.2))
+  => IsEquiv.trans (IsSigma-right {X} {\lam _ => X} {\lam _ => Y} (\lam _ => g) (\lam _ => e)) (inP (qsigma-left {X} {Y} {\lam _ => Y} (IsEquiv.toQEquiv e)))
+
 -- | Pairs with propositional second components are equal if their first components are.
 \func sigma-prop-ext {A : \Cat} {B : A -> \Cat} (Bp : \Pi (a : A) -> isProp (B a)) {s s' : \Sigma (a : A) (B a)} (p : s.1 = s'.1) : s = s'
   => path \lam i => (p i, pathOver (Bp s'.1 _ _) i)

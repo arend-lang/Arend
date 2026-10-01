@@ -1,5 +1,6 @@
 \import Equiv
 \import Function.Meta
+\import Logic
 \import Paths
 \import Paths.Meta
 
@@ -39,3 +40,17 @@
 
 \func codiag {A B : \Cat} (f : A ->⁺ B) (x :⁺ CatPushout f f) : B
   => CatPushout.rec (\lam y => y) (\lam y => y) (\lam _ => idp) x
+
+-- | Functors out of a pushout over the empty category are pairs of functors.
+\func empty-pushout-equiv {B C : \Cat} {D : CatPushout {Empty} {B} {C} absurd+ absurd+ ->⁺ \Cat}
+  : QEquiv {\Pi (w :⁺ CatPushout {Empty} {B} {C} absurd+ absurd+) -> D w}
+           {\Sigma (\Pi (y :⁺ B) -> D (cinl y)) (\Pi (z :⁺ C) -> D (cinr z))}
+  \cowith
+  | f h => (\lam y => h (cinl y), \lam z => h (cinr z))
+  | ret s => CatPushout.elim {_} {_} {_} {_} {_} {D} s.1 s.2 \lam x => absurd+ {Path (\lam i => D (cglue x i)) (s.1 (absurd+ x)) (s.2 (absurd+ x))} x
+  | ret_f h => ext \case \elim __ \with {
+    | cinl y => idp
+    | cinr z => idp
+    | cglue () i
+  }
+  | f_sec s => idp

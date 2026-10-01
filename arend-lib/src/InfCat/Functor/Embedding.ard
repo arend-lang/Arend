@@ -4,6 +4,7 @@
 \import Function
 \import Function.Meta
 \import Homotopy.Fibration
+\import InfCat.Arrows
 \import InfCat.Basics
 \import InfCat.Functor.Equiv
 \import InfCat.Functor.FullyFaithful
@@ -11,6 +12,7 @@
 \import InfCat.Paths
 \import InfCat.Rezk
 \import Logic
+\import Logic.Meta
 \import Logic.Unique
 \import Paths
 \import Paths.Meta
@@ -27,6 +29,16 @@
           | sec q => (lem q).1
           | f_sec q => (lem q).2
         }
+
+    -- | Postcomposition with an embedding is an embedding.
+    \func post (fe : IsEmbedding f) (E : \Cat) : Embedding {E ->⁺ C} {E ->⁺ D} (\lam g x => f (g x)) \cowith
+      | isEmb g h => IsEquiv.toQEquiv (external fe g h)
+
+    -- | Lifts along an embedding are unique.
+    \lemma lift-isProp (fe : IsEmbedding f) {E : \Cat} (h : E ->⁺ D) : isProp (\Sigma (k : E ->⁺ C) (\Pi (x :⁺ E) -> f (k x) = h x))
+      => isProp-retract {Fib (post fe E) h} {\Sigma (k : E ->⁺ C) (\Pi (x :⁺ E) -> f (k x) = h x)}
+           (\lam s => (s.1, path \lam i x => s.2 x i)) (\lam t => (t.1, \lam x => path \lam i => t.2 i x)) (\lam s => idp)
+           (Embedding.embeddingFiber-isProp (post fe E) h)
 
     \sfunc isMono (fe : IsEmbedding f) {E : \Cat} (g h : E ->⁺ C) (p : \Pi (x :⁺ E) -> f (g x) = f (h x)) {x :⁺ E} : g x = h x
       => path \lam i => IsEquiv.ret (external fe g h) (path \lam j x => p x j) i x
@@ -119,6 +131,17 @@
 -- | A fully faithful functor is an embedding.
 \lemma ffMap-embedding {C D : \Cat} {f : C ->⁺ D} (ff : IsFFMap f) : IsEmbedding f
   => (IsEmbedding.char {C} {D} {f}).2 (IsFFMap.isObEmbedding ff, \lam x y => Embedding.fromIsEquiv (ff x y))
+
+-- | An embedding admits a lift of any functor whose arrows lift.
+\sfunc embedding-lift {B C : \Cat} {f : B ->⁺ C} (fe : IsEmbedding f) {D : \Cat} (g : D ->⁺ C)
+                      (gs : \Pi (k : DI ->⁺ D) -> ∃ (k' : DI ->⁺ B) (\Pi (i :⁺ DI) -> f (k' i) = g (k i)))
+  : \Sigma (h : D ->⁺ B) (\Pi (y :⁺ D) -> f (h y) = g y)
+  => \have | pe => IsEmbedding.pullback g fe
+           | e : IsHEquiv {\Sigma⁺ (x : D) (\Sigma⁺ (y : B) (f y = g x))} __.1
+               => post-DI-equiv.2 $ IsEquiv.fromEmbSurj (IsEmbedding.post pe DI) \lam k => \case gs k \with {
+                    | inP (k',p) => inP (\lam i => (k i, (k' i, p i)), idp)
+                  }
+     \in (\lam y =>⁺ (IsHEquiv.ret e y).2.1, \lam y => (IsHEquiv.ret e y).2.2 *> pmap+ g (IsHEquiv.f_ret e))
 
 -- | {unob} is an embedding on objects.
 \func unob-ob-embedding {C : \Cat} : Embedding {Ob C} {C} unob \cowith

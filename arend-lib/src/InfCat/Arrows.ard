@@ -2,6 +2,7 @@
 \import Equiv.Sigma
 \import Function.Meta
 \import InfCat.Basics
+\import InfCat.Functor.Equiv
 \import InfCat.Functor.FullyFaithful
 \import InfCat.Objects
 \import Logic
@@ -69,4 +70,26 @@
       | ret s => dpath \lam j i => s.2.2 i j
       | ret_f t => idp
       | f_sec s => idp
+  }
+
+-- | A functor is an equivalence if and only if postcomposition with it is an equivalence on arrows.
+\lemma post-DI-equiv {A B : \Cat} {g : A ->⁺ B} : IsHEquiv g <-> IsEquiv {DI ->⁺ A} {DI ->⁺ B} (\lam h i => g (h i))
+  => (\lam (inP e) => inP \new QEquiv {
+        | ret k => \lam i => e.finv (k i)
+        | ret_f h => ext \lam i => e.finv_f (h i)
+        | f_sec k => ext \lam i => e.f_finv (k i)
+      },
+      \lam pe => \have oe => ob-equiv {A} {B} {g} pe
+                 \in (ff-surj-equiv {A} {B} {g}).1
+                      (\lam x y => fiberwiseEquiv (pair-equiv oe) {\lam j => j.1 ~> j.2} {\lam j => j.1 ~> j.2} (\lam j p => dmap g p) (total-equiv {A} {B} {g} pe) (x,y),
+                       \lam y => inP (IsEquiv.ret oe y, IsEquiv.f_ret oe)))
+  \where {
+    -- | Objects of {A} are a retract of arrows of {A}.
+    \lemma ob-equiv {A B : \Cat} {g : A ->⁺ B} (pe : IsEquiv {DI ->⁺ A} {DI ->⁺ B} (\lam h i => g (h i))) : IsEquiv (\lam x => g x)
+      => IsEquiv.retract pe (\lam x _ => x) (\lam h => h dleft) (\lam _ => idp) (\lam y _ => y) (\lam k => k dleft) (\lam _ => idp) (\lam _ => idp) (\lam _ => idp)
+
+    -- | Postcomposition on arrows is the total map of {g} on homs.
+    \lemma total-equiv {A B : \Cat} {g : A ->⁺ B} (pe : IsEquiv {DI ->⁺ A} {DI ->⁺ B} (\lam h i => g (h i)))
+      : IsEquiv {\Sigma (j : \Sigma A A) (j.1 ~> j.2)} {\Sigma (j : \Sigma B B) (j.1 ~> j.2)} (\lam s => ((g s.1.1, g s.1.2), dmap g s.2))
+      => propExt.dir (IsEquiv.parallelEquiv (inP DI-equiv) (inP DI-equiv) (\lam h => idp)) pe
   }
