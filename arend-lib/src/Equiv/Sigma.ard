@@ -36,6 +36,12 @@
     | f_sec => idpe
   }) `transQEquiv` contr-left c {\lam w => w.1 = a}
 
+-- | A relation that is functional in both directions is the graph of an equivalence.
+\lemma contr-relation-equiv {X Y : \Cat} (R : X -> Y -> \Cat)
+  (cx : \Pi (x : X) -> Contr (\Sigma (y : Y) (R x y))) (cy : \Pi (y : Y) -> Contr (\Sigma (x : X) (R x y)))
+  : IsEquiv (\lam x => (cx x).center.1)
+  => contrFibers=>IsEquiv \lam y => Contr.Contr_QEquiv (sigma-right \lam x => contr-sigma-fiber (cx x) y) (cy y)
+
 \func contr-right {A : \Cat} (C : A -> Contr) : QEquiv {\Sigma (x : A) (C x)} {A} \cowith
   | f p => p.1
   | ret a => (a, Contr.center {C a})

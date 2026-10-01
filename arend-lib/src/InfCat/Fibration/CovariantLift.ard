@@ -23,7 +23,7 @@
  - This is the property of being a cocartesian lift, but for arbitrary squares in the base instead of just 2-simplices.
  -}
 \lemma cocartesian-square {A : \Cat} (B : A ->⁺ \Cat)
-  {a1 a1' a2 a2' : A} {f1 : a1 ~> a1'} {f2 : a2 ~> a2'} {p : a1 ~> a2} {p' : a1' ~> a2'} (sqA : DPath (\lam i => p i ~> p' i) f1 f2)
+  {a1 a1' a2 a2' : A} {f1 : a1 ~> a1'} {f2 : a2 ~> a2'} (p : a1 ~> a2) (p' : a1' ~> a2') (sqA : DPath (\lam i => p i ~> p' i) f1 f2)
   {b1 : B a1} {b2 : B a2} (q : DPath (\lam i => B (p i)) b1 b2) (c : CovLift B f1 b1) (cc : IsCocartesianLift c) (l' : CovLift B f2 b2)
   : Contr (\Sigma (k : DPath (\lam i => B (p' i)) c.1 l'.1) (DPath (\lam i => DPath (\lam j => B (sqA i j)) (q i) (k i)) c.2 l'.2))
   => \let | qq => dpath \lam i => ((p i, q i) : \Sigma⁺ (y : A) (B y))
@@ -50,6 +50,23 @@
            Contr.Contr_QEquiv (sigma-right \lam k => contr-sigma-fiber (hc k) hf.center.1 `transQEquiv` inv-equiv)
                               (cc p' (l'.1, hf.center.1))
 
+-- | Lifts of {f} starting at {b} are arrows in the fiber from the endpoint of a cocartesian lift {c}.
+\lemma cocartesian-lift-equiv {A : \Cat} {B : A ->⁺ \Cat} {a a' : A} {f : a ~> a'} {b : B a}
+                              (c : CovLift B f b) (cc : IsCocartesianLift c) (b' : B a')
+  : IsEquiv {DPath (\lam i => B (f i)) b b'} {c.1 ~> b'}
+            (\lam t => (cocartesian-square B idd idd (dpath \lam _ => f) idd c cc (b', t)).center.1)
+  => contr-relation-equiv (\lam t (k : c.1 ~> b') => DPath (\lam i => DPath (\lam j => B (f j)) b (k i)) c.2 t)
+      (\lam t => cocartesian-square B idd idd (dpath \lam _ => f) idd c cc (b', t))
+      (\lam k => Contr.Contr_QEquiv
+          (sigma-right $ later \lam t => \new QEquiv {DPath (\lam i => DPath (\lam j => B (f i)) (c.2 i) (t i)) idd k}
+                                                     {DPath (\lam i => DPath (\lam j => B (f j)) b (k i)) c.2 t} {
+            | f r => dpath \lam i => dpath \lam j => r j i
+            | ret s => dpath \lam i => dpath \lam j => s j i
+            | ret_f r => idp
+            | f_sec s => idp
+          })
+          (horn-Contr B (dpath \lam i => idd {_} {f i}) c.2 k))
+
 -- | The projection from the category of lifts to the base data is fully faithful at cocartesian lifts.
 \lemma cocartesian-ff {A : \Cat} (B : A ->⁺ \Cat)
   {x y : \Sigma⁺ (s : \Sigma⁺ (a a' : A) (f : a ~> a') (b : B a)) (CovLift B s.3 s.4)} (xc : IsCocartesianLift x.2)
@@ -57,7 +74,7 @@
   => inP $ transQEquiv (dpath-sigma-equiv {\Sigma⁺ (a a' : A) (f : a ~> a') (b : B a)} (\lam _ s => CovLift B s.3 s.4)) $
        contr-right {x.1 ~> y.1} \lam r => Contr.Contr_QEquiv
          (symQEquiv (covLift-dpath-equiv r))
-         (cocartesian-square B {_} {_} {_} {_} {_} {_} {dpath \lam i => (r i).1} {dpath \lam i => (r i).2} (dpath \lam i => (r i).3) (dpath \lam i => (r i).4) x.2 xc y.2)
+         (cocartesian-square B (dpath \lam i => (r i).1) (dpath \lam i => (r i).2) (dpath \lam i => (r i).3) (dpath \lam i => (r i).4) x.2 xc y.2)
   \where {
     -- | A path in the family of categories of lifts over a morphism {r} of the base is a lift of {r} together with a square over it.
     \func covLift-dpath-equiv {A : \Cat} {B : A ->⁺ \Cat} {s t : \Sigma⁺ (a a' : A) (f : a ~> a') (b : B a)} (r : s ~> t) {c : CovLift B s.3 s.4} {l : CovLift B t.3 t.4}

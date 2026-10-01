@@ -83,7 +83,7 @@
                           \let eta (y :⁺ C) => (truncAdjunction n).heta (ReprFunctor x y)
                           \in pmap (~>_-> (dmap (\lam y => code x (catTrunc y)) p)) code-equiv.code-equiv_inT
                               *> ~>_->-natural (\lam y a => ~>_-> (eta y) a) p
-                              *> pmap (~>_-> (eta _)) (pmap (\lam S => S (_, Straight.toStraight p)) (yonedaCov.ext-sec-unique x (\lam y => ReprFunctor x y) (\lam k => k.2)))
+                              *> pmap (~>_-> (eta _)) (pmap (\lam S => S (_, Straight.toStraight p)) ((yonedaCov.Sec-equiv x (ReprFunctor x)).ret_f (\lam k => k.2)))
                               *> inv code-equiv.code-equiv_inT)
                         (code-equiv c)
          \in transport IsEquiv

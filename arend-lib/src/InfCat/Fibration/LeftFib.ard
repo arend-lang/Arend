@@ -1,5 +1,6 @@
 \import Equiv
 \import Equiv.Fiber
+\import Equiv.Sigma
 \import Function.Meta
 \import Homotopy.Fibration
 \import InfCat.Basics
@@ -7,7 +8,6 @@
 \import InfCat.Functor.Equiv
 \import InfCat.Functor.FullyFaithful
 \import InfCat.Groupoid
-\import InfCat.Objects
 \import InfCat.Paths
 \import InfCat.Rezk
 \import InfCat.Square
@@ -45,6 +45,10 @@
 
 \sfunc leftFib-lift {A : \Cat} {B : A ->⁺ \Cat} (Bf : IsLeftFib B) {a a' :⁺ A} (f :⁺ a ~> a') (b :⁺ B a) : CovLift B f b
   => IsHEquiv.fib-sec (leftFib-equiv Bf) (later (a,a',f,b))
+
+-- | Lifts along a left fibration are unique, naturally in all the data.
+\sfunc leftFib-lift-unique {A : \Cat} {B : A ->⁺ \Cat} (Bf : IsLeftFib B) {a a' :⁺ A} {f :⁺ a ~> a'} {b :⁺ B a} {c c' :⁺ CovLift B f b} : c = c'
+  => IsHEquiv.fib-sec-unique (leftFib-equiv Bf) {a,a',f,b}
 
 {- | A functor to `\Cat` with groupoid fibers equipped with a natural choice of lifts is a left fibration.
  -
@@ -107,7 +111,7 @@
       | f => coslice-proj T ta
       | ret r => ((lift r ta).1, dpath \lam i => ((r i, (lift r ta).2 i) : Total T))
       | ret_f (x, p) =>
-        \let q => coslice-path T Tg (dpath \lam i => (p i).1) (dpath \lam i => (p i).2) (\lam k => lift (conn-left (dpath \lam i => (p i).1) k) ((p k).2))
+        \let q => coslice-path T Tg (dpath \lam i => (p i).1) (dpath \lam i => (p i).2) (\lam k => lift (conn-left (dpath \lam i => (p i).1) k) (p k).2)
         \in path \lam k => ((q k).1, (q k).2)
       | f_sec r => idp
 
@@ -138,6 +142,29 @@
 
 \lemma universe-leftFib.{u} : IsLeftFib {\Type u} (\lam A => A)
   => lift_type-IsLeftFib \lam f b => (coe+ (\lam i => f i) b dright, dpath \lam i => coe+ (\lam j => f j) b i)
+
+\sfunc leftFib-dpath {A : \Cat} {B : A ->⁺ \Cat} (Bf : IsLeftFib B) {a a' :⁺ A} {f :⁺ a ~> a'} {b :⁺ B a} (c :⁺ CovLift B f b) {b' :⁺ B a'}
+  (t :⁺ DPath (\lam i => B (f i)) b b') : c.1 = b'
+  => pmap+ (\lam l => l.1) $ leftFib-lift-unique {A} {B} Bf {_} {_} {f} {_} {c} {b',t}
+
+-- | Lifts of {f} starting at {b} are paths from the endpoint of a fixed lift {c}.
+\lemma leftFib-dpath-equiv {A : \Cat} {B : A ->⁺ \Cat} (Bf : IsLeftFib B) {a a' : A} {f : a ~> a'} {b : B a} (c : CovLift B f b) {b' : B a'}
+  : IsEquiv {DPath (\lam i => B (f i)) b b'} {c.1 = b'} (leftFib-dpath Bf c)
+  => \let L => Bf f b
+     \in propExt.conv (totalEquiv (\lam b' => leftFib-dpath Bf c {b'})) (inP \new QEquiv {
+       | ret _ => (L.center.1, L.center.2)
+       | ret_f t => path \lam i => \let c => L.contraction (t.1,t.2) i
+                                   \in (c.1,c.2)
+       | f_sec s => isContr=>isProp (lsigma c.1) _ s
+     }) b'
+
+\func coe+-dpath.{u} {A :⁺ DI ->⁺ \Type u} {a :⁺ A dleft} {a' :⁺ A dright} (t :⁺ DPath A a a') : coe+ A a dright = a'
+  => leftFib-dpath universe-leftFib {_} {_} {dpath A} (coe+ A a dright, dpath (coe+ A a)) t
+
+-- | Paths over a family of types {A} starting at {a} are paths from the transport of {a} along {A}.
+\lemma coe+-dpath-equiv.{u} (A : DI ->⁺ \Type u) (a : A dleft) (a' : A dright)
+  : IsEquiv {DPath A a a'} {coe+ A a dright = a'} coe+-dpath
+  => leftFib-dpath-equiv universe-leftFib _
 
 -- | The coslice under {x} is a left fibration.
 \lemma hom-leftFib {C : \Cat} (x : C) : IsLeftFib (\lam y => x ~> y)

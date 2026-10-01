@@ -1,11 +1,8 @@
 \import Equiv
-\import Function.Meta
 \import InfCat.Basics
 \import InfCat.Fibration.DirectedUnivalence
 \import InfCat.Fibration.LeftFib
 \import InfCat.Fibration.Straightening
-\import InfCat.Functor.Equiv
-\import InfCat.Paths
 \import Logic.Unique
 \import Paths
 \import Paths.Meta
@@ -25,48 +22,32 @@
   : QEquiv {\Pi (k :⁺ \Sigma⁺ (y : C) (x ~> y)) -> G k} {G (x, idd)} \cowith
   | f M => M (x, idd)
   | ret b k => coe+ (\lam i => G (coslice-arrow k i)) b dright
-  | ret_f M => ext \lam k => pmap+ (\lam l => l.1) $
-      IsHEquiv.fib-sec-unique (leftFib-equiv (leftFib-pullback G universe-leftFib))
-        {(x, idd), k, coslice-arrow k, M (x, idd)}
-        {coe+ (\lam i => G (coslice-arrow k i)) (M (x, idd)) dright, dpath \lam i => coe+ (\lam j => G (coslice-arrow k j)) (M (x, idd)) i}
-        {M k, dpath \lam i => M (coslice-arrow k i)}
+  | ret_f M => ext \lam k => coe+-dpath (dpath \lam i => M (coslice-arrow k i))
   | f_sec b => pmap (\lam p => ~>_-> (dmap G p) b) coslice-arrow.idd-path *> ~>_->_idd
 
 -- | The Yoneda lemma: natural transformations from the representable functor of {x} to {F} are elements of `F x`.
-\func yonedaCov.{u} {C : \Cat u} (x : C) (F : C ->⁺ \Type u) : QEquiv {(\lam y =>⁺ ReprFunctor x y) ~> F} {F x} \cowith
-  | f e => ~>_-> (dpath \lam i => e i x) (Straight.toStraight idd)
-  | ret b => toArr (ext-sec x F b)
-  | ret_f e => pmap toArr (ext-sec-unique x F \lam k => coe+ (\lam i => e i k.1) k.2 dright)
-            *> path (\lam j => dpath (\lam i y => iso+_coe+ (dpath \lam i' => e i' y) i j))
-  | f_sec b => ~>_->_idd
+\func yonedaCov.{u} {C : \Cat u} (x : C) (F : C ->⁺ \Type u) : QEquiv {(\lam y =>⁺ ReprFunctor x y) ~> F} {F x}
+  => depUnivalence `transQEquiv` Sec-equiv x F
   \where {
     -- | Sections over the total category of the representable functor.
-    \func Sec.{u} {C : \Cat u} (x : C) (F : C ->⁺ \Type u)
+    \protected \func Sec.{u} {C : \Cat u} (x : C) (F : C ->⁺ \Type u)
       => \Pi (k :⁺ \Sigma⁺ (y : C) (ReprFunctor x y)) -> F k.1
 
-    -- | The natural transformation corresponding to a section.
-    \func toArr.{u} {C : \Cat u} {x : C} {F : C ->⁺ \Type u} (H : \Pi (k :⁺ \Sigma⁺ (y : C) (ReprFunctor x y)) -> F k.1)
-      : (\lam y =>⁺ ReprFunctor x y) ~> F
-      => dpath \lam i y => iso+ (\lam r => H (y,r)) i
+    -- | Sections over the total category of the representable functor are sections over the coslice.
+    \func Sec-reindex.{u} {C : \Cat u} (x : C) (F : C ->⁺ \Type u)
+      : QEquiv {Sec x F} {\Pi (k :⁺ \Sigma⁺ (y : C) (x ~> y)) -> F k.1} \cowith
+      | f S k => S (k.1, Straight.toStraight k.2)
+      | ret T k => T (k.1, Straight.fromStraight k.2)
+      | ret_f S => path \lam j k => S (k.1, Straight.toStraight_fromStraight k.2 j)
+      | f_sec T => idp
 
-    -- | The section obtained by transporting {b} along arrows out of {x}.
-    \func ext-sec.{u} {C : \Cat u} (x : C) (F : C ->⁺ \Type u) (b : F x) : Sec x F
-      => \lam k => ~>_-> (dmap F (Straight.fromStraight k.2)) b
-
-    -- | A section is determined by its value at the identity.
-    \func ext-sec-unique.{u} {C : \Cat u} (x : C) (F : C ->⁺ \Type u) (H : Sec x F)
-      : ext-sec x F (H (x, Straight.toStraight idd)) = H
-      => \let | Q => coslice-yoneda x (\lam k => F k.1)
-              | hh (S : Sec x F) : \Pi (k :⁺ \Sigma⁺ (y : C) (x ~> y)) -> F k.1 => \lam k => S (k.1, Straight.toStraight k.2)
-              | back (T : \Pi (k :⁺ \Sigma⁺ (y : C) (x ~> y)) -> F k.1) : Sec x F => \lam k => T (k.1, Straight.fromStraight k.2)
-              | back-hh (S : Sec x F) : back (hh S) = S => path \lam j k => S (k.1, Straight.toStraight_fromStraight k.2 j)
-              | q : hh (ext-sec x F (H (x, Straight.toStraight idd))) = hh H => inv (Q.ret_f _) *> pmap Q.ret ~>_->_idd *> Q.ret_f _
-         \in inv (back-hh _) *> pmap back q *> back-hh H
+    \func Sec-equiv.{u} {C : \Cat u} (x : C) (F : C ->⁺ \Type u) : QEquiv {Sec x F} {F x}
+      => Sec-reindex x F `transQEquiv` coslice-yoneda x (\lam k => F k.1)
   }
 
 -- | Transport in the representable functor is postcomposition.
 \sfunc ReprFunctor-transport.{u} {C : \Cat u} {x y z : C} (q : x ~> y) (p : y ~> z)
   : ~>_-> (dmap (ReprFunctor x) p) (Straight.toStraight q) = Straight.toStraight (comp q p)
   => \have tr {w : C} (r : x ~> w) : ~>_-> (dmap (ReprFunctor x) r) (Straight.toStraight idd) = Straight.toStraight r
-           => pmap (\lam S => S (w, Straight.toStraight r)) (yonedaCov.ext-sec-unique x (\lam y => ReprFunctor x y) (\lam k => k.2))
+           => pmap (\lam S => S (w, Straight.toStraight r)) ((yonedaCov.Sec-equiv x (ReprFunctor x)).ret_f (\lam k => k.2))
      \in pmap (~>_-> (dmap (ReprFunctor x) p)) (inv (tr q)) *> inv (~>_->_comp _ _) *> pmap (~>_-> __ _) (inv (dmap_comp (ReprFunctor x))) *> tr (comp q p)
