@@ -1,5 +1,14 @@
 package org.arend.typechecking.visitor;
 
+import org.arend.core.context.param.DependentLink;
+import org.arend.core.definition.ClassDefinition;
+import org.arend.core.definition.ClassField;
+import org.arend.core.definition.Constructor;
+import org.arend.core.definition.DataDefinition;
+import org.arend.core.definition.Definition;
+import org.arend.core.definition.FunctionDefinition;
+import org.arend.core.expr.ClassCallExpression;
+import org.arend.core.expr.Expression;
 import org.arend.extImpl.DefaultMetaDefinition;
 import org.arend.naming.reference.*;
 import org.arend.term.concrete.Concrete;
@@ -135,6 +144,12 @@ public class CollectDefCallsVisitor extends VoidConcreteVisitor<Void> {
               toVisit.add(superClass);
             }
           }
+        } else if (last.getTypechecked() instanceof org.arend.core.definition.ClassDefinition deserClass) {
+          // Fallback for deserialized classes: myConcreteProvider has no Concrete for them,
+          // so walk super-classes via the typechecked ClassDefinition instead.
+          for (org.arend.core.definition.ClassDefinition superClass : deserClass.getSuperClasses()) {
+            toVisit.add(superClass.getReferable());
+          }
         }
       }
     }
@@ -144,11 +159,18 @@ public class CollectDefCallsVisitor extends VoidConcreteVisitor<Void> {
     myVisitedClasses = new HashSet<>();
     myInstanceMap = new HashMap<>();
     for (TCDefReferable instance : myInstances.getInstances()) {
-      if (myConcreteProvider.getConcrete(instance) instanceof Concrete.FunctionDefinition function) {
-        TCDefReferable classRef = ArendInstances.getClassRef(function.getResultType(), myConcreteProvider);
-        if (classRef != null) {
-          fillInstanceMap(classRef, instance);
-        }
+      TCDefReferable classRef = null;
+      if (myConcreteProvider != null && myConcreteProvider.getConcrete(instance) instanceof Concrete.FunctionDefinition function) {
+        classRef = ArendInstances.getClassRef(function.getResultType(), myConcreteProvider);
+      } else if (instance.getTypechecked() instanceof org.arend.core.definition.FunctionDefinition fnDef
+                 && fnDef.getResultType() instanceof org.arend.core.expr.ClassCallExpression classCall) {
+        // Fallback for deserialized instances: myConcreteProvider doesn't know them
+        // (their Concrete was never rebuilt), so read the class from the typechecked
+        // FunctionDefinition's core result type.
+        classRef = classCall.getDefinition().getReferable();
+      }
+      if (classRef != null) {
+        fillInstanceMap(classRef, instance);
       }
     }
 
@@ -182,8 +204,19 @@ public class CollectDefCallsVisitor extends VoidConcreteVisitor<Void> {
       if (myInstanceDependencies != null) {
         myInstanceDependencies.addAll(instances);
         for (TCDefReferable instance : instances) {
-          if (myConcreteProvider.getConcrete(instance) instanceof Concrete.FunctionDefinition function) {
+          if (myConcreteProvider != null && myConcreteProvider.getConcrete(instance) instanceof Concrete.FunctionDefinition function) {
             addParametersClassReferences(function.getParameters(), Collections.emptyList(), false);
+          } else if (instance.getTypechecked() instanceof FunctionDefinition fnDef) {
+            // Fallback for deserialized instances: scan core parameters for class-typed params.
+            for (DependentLink link = fnDef.getParameters(); link.hasNext(); link = link.getNext()) {
+              Expression type = link.getType();
+              if (type instanceof ClassCallExpression classCall) {
+                TCDefReferable cr = classCall.getDefinition().getReferable();
+                if (!mySuperClasses.contains(cr)) {
+                  addInstances(cr, false);
+                }
+              }
+            }
           }
         }
       }
@@ -317,7 +350,7 @@ public class CollectDefCallsVisitor extends VoidConcreteVisitor<Void> {
     }
 
     TCDefReferable ownerRef = ref.getTypecheckable();
-    Concrete.GeneralDefinition definition = myConcreteProvider.getConcrete(ownerRef);
+    Concrete.GeneralDefinition definition = myConcreteProvider == null ? null : myConcreteProvider.getConcrete(ownerRef);
     if (definition != null) {
       List<? extends Concrete.Parameter> parameters;
       if (definition instanceof Concrete.ClassDefinition classDef) {
@@ -349,7 +382,81 @@ public class CollectDefCallsVisitor extends VoidConcreteVisitor<Void> {
           }
         }
       }
+    } else {
+      // Fallback for deserialized definitions: myConcreteProvider has no Concrete for them,
+      // so read their parameters off the core Definition instead.
+      // Without this, references to deserialized definitions never trigger instance collection,
+      // so the instances they need never reach the GlobalInstancePool.
+      addCoreParameterClassReferences(ownerRef, ref, arguments);
     }
+  }
+
+  private record CoreParameter(boolean isExplicit, Expression type) {}
+
+  private static List<CoreParameter> getCoreParameters(DependentLink link, boolean implicit) {
+    List<CoreParameter> result = new ArrayList<>();
+    for (; link.hasNext(); link = link.getNext()) {
+      result.add(new CoreParameter(!implicit && link.isExplicit(), link.getType()));
+    }
+    return result;
+  }
+
+  /**
+   * The deserialized-definition counterpart of the Concrete branch of {@link #visitReference}: builds
+   * the same parameter lists from the core definition and passes them to
+   * {@link #addCoreParametersClassReferences}.
+   */
+  private void addCoreParameterClassReferences(TCDefReferable ownerRef, TCDefReferable ref, List<? extends Concrete.Argument> arguments) {
+    Definition typechecked = ownerRef.getTypechecked();
+    if (typechecked instanceof ClassDefinition classDef) {
+      // The parameter fields of the class and its superclasses, as in getClassParameters
+      List<CoreParameter> parameters = new ArrayList<>();
+      for (ClassField field : classDef.getNotImplementedFields()) {
+        if (field.getReferable().isParameterField()) {
+          parameters.add(new CoreParameter(field.getReferable().isExplicitField(), field.getResultType()));
+        }
+      }
+      addCoreParametersClassReferences(parameters, arguments);
+    } else if (typechecked instanceof DataDefinition dataDef && !ownerRef.equals(ref)) {
+      // A constructor takes the parameters of its data type implicitly
+      int n = addCoreParametersClassReferences(getCoreParameters(dataDef.getParameters(), true), arguments);
+      if (ref.getTypechecked() instanceof Constructor constructor) {
+        addCoreParametersClassReferences(getCoreParameters(constructor.getParameters(), false), arguments.subList(n, arguments.size()));
+      }
+    } else if (typechecked instanceof FunctionDefinition || typechecked instanceof DataDefinition) {
+      // For a dynamic definition, the parameters start with the implicit `this`
+      addCoreParametersClassReferences(getCoreParameters(typechecked.getParameters(), false), arguments);
+    }
+  }
+
+  /**
+   * {@link #addParametersClassReferences} for core parameters: adds the instances of every class-typed
+   * parameter that {@code arguments} do not cover, and returns the number of arguments consumed.
+   */
+  private int addCoreParametersClassReferences(List<CoreParameter> parameters, List<? extends Concrete.Argument> arguments) {
+    boolean[] safeParams = new boolean[parameters.size()];
+    int n = 0;
+    for (int i = 0; i < parameters.size() && n < arguments.size(); i++) {
+      Concrete.Argument argument = arguments.get(n);
+      if (parameters.get(i).isExplicit() == argument.isExplicit()) {
+        n++;
+        safeParams[i] = !(argument.getExpression() instanceof Concrete.HoleExpression);
+      } else if (parameters.get(i).isExplicit()) {
+        n = arguments.size();
+        break;
+      }
+    }
+
+    for (int i = 0; i < parameters.size(); i++) {
+      if (!safeParams[i] && parameters.get(i).type() instanceof ClassCallExpression classCall) {
+        TCDefReferable classRef = classCall.getDefinition().getReferable();
+        if (!mySuperClasses.contains(classRef)) {
+          addInstances(classRef, true);
+        }
+      }
+    }
+
+    return n;
   }
 
   @Override

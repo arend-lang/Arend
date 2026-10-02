@@ -21,10 +21,11 @@ import java.util.*;
 
 public class InstanceCacheImpl implements InstanceCache {
   private final Map<TCDefReferable, Set<TCDefReferable>> myCache = new HashMap<>();
-  private final Map<TCDefReferable, TCDefReferable> myInstances = new HashMap<>();
+  // An instance is registered under its class and every superclass.
+  private final Map<TCDefReferable, Set<TCDefReferable>> myInstances = new HashMap<>();
 
   private void addInstance(TCDefReferable classRef, TCDefReferable instanceRef) {
-    myInstances.put(instanceRef, classRef);
+    myInstances.computeIfAbsent(instanceRef, k -> new HashSet<>()).add(classRef);
     myCache.computeIfAbsent(classRef, k -> new HashSet<>()).add(instanceRef);
   }
 
@@ -45,13 +46,41 @@ public class InstanceCacheImpl implements InstanceCache {
             }
           }
         }
+        return;
+      }
+
+      // Fallback for deserialized groups where `subgroup.definition()` is null but the
+      // referable carries a typechecked FunctionDefinition with kind INSTANCE. Without
+      // this, `\instance` declarations in deserialized modules are silently skipped here
+      // and downstream fresh typechecking fails with "Cannot infer an instance of class X".
+      if (subgroup.definition() == null
+          && subgroup.referable() instanceof TCDefReferable tcRef
+          && tcRef.getTypechecked() instanceof FunctionDefinition fnDef
+          && fnDef.getKind() == org.arend.ext.core.definition.CoreFunctionDefinition.Kind.INSTANCE) {
+        Expression resultType = fnDef.getResultType();
+        if (resultType instanceof org.arend.core.expr.ClassCallExpression classCall) {
+          ClassDefinition directClass = classCall.getDefinition();
+          addInstance(directClass.getReferable(), fnDef.getReferable());
+          // Also register for every transitive super-class, so that queries for a
+          // base class (e.g. Preorder) find instances that were declared for subclasses
+          // (e.g. Poset). Mirrors the DynamicScope.Extent.WITH_SUPER walk above.
+          Set<ClassDefinition> visited = new HashSet<>();
+          Deque<ClassDefinition> todo = new ArrayDeque<>(directClass.getSuperClasses());
+          while (!todo.isEmpty()) {
+            ClassDefinition sc = todo.pop();
+            if (!visited.add(sc)) continue;
+            addInstance(sc.getReferable(), fnDef.getReferable());
+            todo.addAll(sc.getSuperClasses());
+          }
+        }
       }
     });
   }
 
   private void removeInstance(TCDefReferable instanceRef) {
-    TCDefReferable classRef = myInstances.remove(instanceRef);
-    if (classRef != null) {
+    Set<TCDefReferable> classRefs = myInstances.remove(instanceRef);
+    if (classRefs == null) return;
+    for (TCDefReferable classRef : classRefs) {
       Set<TCDefReferable> instances = myCache.get(classRef);
       if (instances != null) {
         instances.remove(instanceRef);
@@ -66,6 +95,9 @@ public class InstanceCacheImpl implements InstanceCache {
     group.traverseGroup(subgroup -> {
       if (subgroup.definition() instanceof Concrete.FunctionDefinition function && function.getKind() == FunctionKind.INSTANCE) {
         removeInstance(function.getRef());
+      } else if (subgroup.definition() == null && subgroup.referable() instanceof TCDefReferable tcRef) {
+        // Deserialized group: registered by the core fallback in addInstances, whose core may already be cleared
+        removeInstance(tcRef);
       }
     });
   }

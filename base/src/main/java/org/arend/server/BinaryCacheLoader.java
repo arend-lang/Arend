@@ -398,11 +398,13 @@ public class BinaryCacheLoader {
   }
 
   private static void clearTypechecked(ConcreteGroup group) {
+    // Taken before clearing the parent: a deserialized group derives its constructors and fields from the parent's core.
+    var internalRefs = group.getInternalReferables();
     LocatedReferable ref = group.referable();
     if (ref instanceof TCDefReferable tcRef) {
       tcRef.setTypechecked(null);
     }
-    for (var internalRef : group.getInternalReferables()) {
+    for (var internalRef : internalRefs) {
       internalRef.setTypechecked(null);
     }
     for (ConcreteStatement statement : group.statements()) {

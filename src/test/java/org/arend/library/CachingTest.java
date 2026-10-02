@@ -347,6 +347,62 @@ public class CachingTest {
     assertThat(getDef(aGroup, "C").getTypechecked().status(), is(equalTo(Definition.TypeCheckingStatus.NO_ERRORS)));
   }
 
+  // ───────── instance demand through definitions loaded from .arc ─────────
+  //
+  // A definition's instance pool only gets the instances that the parameters of what it references
+  // ask for. A definition loaded from .arc has no Concrete, so those parameters have to be read off
+  // its core instead; each case below references a cached definition with a class-typed parameter
+  // that only instance search can fill.
+
+  private static final String INSTANCE_MODULE =
+      "\\class M (E : \\Set) | z : E\n" +
+      "\\instance natM : M Nat | z => 0\n";
+
+  /**
+   * Typechecks {@code source} against module A twice: once with A from source, which must succeed
+   * so the fixture is known to be valid Arend, and once with A loaded from its .arc.
+   *
+   * @return B's errors in the second run
+   */
+  private List<GeneralError> typecheckAgainstCache(String cached, String source) {
+    addModule("A", INSTANCE_MODULE + cached);
+    addModule("B", "\\import A\n" + source);
+    typecheck("A", "B");
+    assertThat("the fixture must typecheck from source", server.getErrorMap().entrySet(), is(empty()));
+    errorList.clear();
+    assertTrue(persistModule("A"));
+    assertThat(errorList, is(empty()));
+
+    ArendServer srv2 = loadFromBinary("A");
+    ModuleLocation module = moduleLoc("B");
+    ConcreteGroup group = parseModule("\\import A\n" + source, module);
+    assertNotNull(group);
+    srv2.updateModule(modStamp++, module, () -> group);
+    srv2.getCheckerFor(List.of(module)).typecheck(UnstoppableCancellationIndicator.INSTANCE, ProgressReporter.empty());
+    return srv2.getErrorMap().getOrDefault(module, List.of());
+  }
+
+  @Test
+  public void cachedFunctionDemandsInstancesOfItsParameters() {
+    assertThat(typecheckAgainstCache(
+        "\\func pick {m : M} (x : m) => x",
+        "\\func g (n : Nat) => pick n"), is(empty()));
+  }
+
+  @Test
+  public void cachedRecordDemandsInstancesOfItsParameterFields() {
+    assertThat(typecheckAgainstCache(
+        "\\record R {m : M} (x : m)",
+        "\\func h (n : Nat) => R n"), is(empty()));
+  }
+
+  @Test
+  public void cachedConstructorDemandsInstancesOfItsDataParameters() {
+    assertThat(typecheckAgainstCache(
+        "\\data D (m : M) | con (x : m)",
+        "\\func k (n : Nat) => con n"), is(empty()));
+  }
+
   // ───────── unreadable and half-written .arc files ─────────
   //
   // A cache that cannot be read back is recoverable — the module is simply recompiled — and the
