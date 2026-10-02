@@ -140,8 +140,8 @@ abstract class IntellijRepl private constructor(
 
     override fun getAllModules(): Set<ModulePath> {
         val result = mutableSetOf<ModulePath>()
-        libraries.map { libraryName -> createLibrary(libraryName)?.let {
-            result.addAll(it.findModules(false))
+        libraries.forEach { libraryName -> createLibrary(libraryName)?.let {
+            result.addAll(it.findModules(ModuleLocation.LocationKind.SOURCE))
         } }
         result.addAll(myServer.modules.filter { it.locationKind == ModuleLocation.LocationKind.GENERATED }.map { it.modulePath })
         return result

@@ -55,7 +55,7 @@ class ArendBinaryCacheService(private val project: Project) {
                 }
                 val config = project.findLibrary(libraryName) ?: continue
                 readAction {
-                    server.getCheckerFor(config.findModules(false).map { ModuleLocation(libraryName, ModuleLocation.LocationKind.SOURCE, it) })
+                    server.getCheckerFor(config.findModules(ModuleLocation.LocationKind.SOURCE).map { ModuleLocation(libraryName, ModuleLocation.LocationKind.SOURCE, it) })
                         .resolveAll(UnstoppableCancellationIndicator.INSTANCE, ProgressReporter.empty())
                 }
 
