@@ -1,12 +1,8 @@
 \import Equiv
 \import InfCat.Basics
-\import InfCat.Fibration.CovariantLift
 \import InfCat.Fibration.LeftFib
-\import InfCat.Functor.Equiv
 \import InfCat.Groupoid
 \import InfCat.Paths
-\import Logic
-\import Logic.Unique
 \import Paths
 \import Paths.Meta
 
@@ -30,26 +26,19 @@
   | ret_f p => ~>_->_~>
   | f_sec f => ext \lam a => ->_~>_->
 
--- | Covariant transport along an arrow is determined by any path over the arrow.
-\sfunc ~>_->-pathOver.{u} {A B : \Type u} (p : A ~> B) {a : A} {b : B} (d : DPath (\lam i => p i) a b) : ~>_-> p a = b
-  => pmap __.1 (isContr=>isProp (universe-leftFib p a) (~>_-> p a, dpath \lam i => coe+ (\lam j => p j) a i) (b, d))
-
 -- | {~>_->} commutes with identity.
-\sfunc ~>_->_idd.{u} {A : \Type u} {a : A} : ~>_-> idd a = a
-  => ~>_->-pathOver idd idd
-
--- | {~>_->} of the arrow of a path is transport along it.
-\func ~>_->_=_~>.{u} {A B : \Type u} (p : A = B) {a : A} : ~>_-> (=_~> p) a = transport (\lam X => X) p a \elim p
-  | idp => ~>_->_idd
+\sfunc ~>_->_idd.{u} {A :⁺ \Type u} {a :⁺ A} : ~>_-> idd a = a
+  => coe+-dpath idd
 
 -- | {~>_->} commutes with composition.
-\sfunc ~>_->_comp.{u} {A B D : \Type u} (p : A ~> B) (q : B ~> D) {a : A} : ~>_-> (comp p q) a = ~>_-> q (~>_-> p a)
-  => pmap (~>_-> (comp p q)) (inv ~>_->_idd) *> ~>_->-pathOver (comp p q) (dpath \lam i => coe+ (\lam j => fill2 p q i j) (coe+ (\lam k => p k) a i) dright)
+\sfunc ~>_->_comp.{u} {A B D :⁺ \Type u} (p :⁺ A ~> B) (q :⁺ B ~> D) {a :⁺ A} : ~>_-> (comp p q) a = ~>_-> q (~>_-> p a)
+  => pmap+ (\lam x => ~>_-> (comp p q) x) (inv ~>_->_idd)
+     *> coe+-dpath (dpath \lam i => coe+ (\lam j => fill2 p q i j) (coe+ (\lam k => p k) a i) dright)
 
 -- | Covariant maps commute with {~>_->}.
 \sfunc ~>_->-natural.{u} {C : \Cat} {F G : C ->⁺ \Type u} (h : \Pi (x :⁺ C) -> F x ->⁺ G x) {x y : C} (p : x ~> y) {a : F x}
   : ~>_-> (dmap G p) (h x a) = h y (~>_-> (dmap F p) a)
-  => ~>_->-pathOver (dmap G p) (dpath \lam i => h (p i) (coe+ (\lam j => F (p j)) a i))
+  => coe+-dpath (dpath \lam i => h (p i) (coe+ (\lam j => F (p j)) a i))
 
 \func depUnivalence.{u} {C : \Cat} {F G : C ->⁺ \Type u} : QEquiv {F ~> G} {\Pi (s :⁺ \Sigma⁺ (x : C) (F x)) -> G s.1} \cowith
   | f p s => ~>_-> (dpath \lam i => p i s.1) s.2

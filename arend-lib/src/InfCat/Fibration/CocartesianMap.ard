@@ -4,6 +4,7 @@
 \import Function.Meta
 \import Homotopy.Fibration
 \import InfCat.Basics
+\import InfCat.Fibration.Categorical
 \import InfCat.Fibration.CocartesianFib
 \import InfCat.Fibration.CovariantLift
 \import Logic
@@ -11,10 +12,6 @@
 \import Logic.Unique
 \import Meta
 \import Paths
-
--- | The family of fibers of {p}.
-\func Fibers {E A : \Cat} (p : E ->⁺ A) (a :⁺ A) : \Cat
-  => \Sigma⁺ (e : E) (p e = a)
 
 -- | Commutative triangles `u ; v = w` in {E} and their images under {p}.
 \func triangle-map {E A : \Cat} (p : E ->⁺ A) {e e' e'' : E} (u : e ~> e') (w : e ~> e'')

@@ -6,6 +6,7 @@
 \import InfCat.Arrows
 \import InfCat.Basics
 \import InfCat.CatPushout
+\import InfCat.Fibration.Categorical
 \import InfCat.Functor.Equiv
 \import InfCat.Functor.FullyFaithful
 \import InfCat.Paths
@@ -282,6 +283,12 @@
       | ret_f s => path \lam i => (s.1, \lam x => inv_inv {_} {_} {_} {s.2 x} i)
       | f_sec (v, t) => path \lam i => (v, \lam x => ((t x).1, inv_inv {_} {_} {_} {(t x).2} i))
   }
+
+-- | Restriction of sections of {Q} along a functor left orthogonal to {totalProj} is an equivalence.
+\lemma IsOrthogonal-family-sections {X Y B : \Cat} {k : X ->⁺ Y} {Q : B ->⁺ \Cat} (o : IsOrthogonal k (totalProj Q)) (v : Y ->⁺ B)
+  : IsEquiv {\Pi (y :⁺ Y) -> Q (v y)} {\Pi (x :⁺ X) -> Q (v (k x))} (\lam s x => s (k x))
+  => IsEquiv.leftFactor (inP (fibers-total-equiv.sections (\lam x => v (k x))))
+      (IsEquiv.trans (inP (fibers-total-equiv.sections v)) (IsOrthogonal-sections.1 o v))
 
 -- | If {f} is left orthogonal to the maps from {Z} and from `DI ->⁺ Z` to the terminal category, then restriction along {f} is fully faithful.
 \lemma IsOrthogonal-res-ff {A B Z : \Cat} {f : A ->⁺ B} (o : IsOrthogonal f (\lam (z :⁺ Z) => ())) (oD : IsOrthogonal f (\lam (u :⁺ DI ->⁺ Z) => ()))

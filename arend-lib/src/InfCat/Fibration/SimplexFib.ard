@@ -3,6 +3,7 @@
 \import Category.Fibration.PosetElements
 \import Category.Functor
 \import Category.Simplex
+\import InfCat.Fibration.Categorical
 \import InfCat.Fibration.CocartesianFib
 \import InfCat.Fibration.CocartesianMap
 \import InfCat.Nerve.Nerve

@@ -2,7 +2,7 @@
 \import Category.Fibration
 \import Category.Functor
 \import Equiv
-\import InfCat.OFS.CatAccessibleOFS
+\import InfCat.Fibration.Categorical
 \import Function.Meta
 \import InfCat.Basics
 \import InfCat.Fibration.CocartesianFib
@@ -12,7 +12,6 @@
 \import Logic
 \import Logic.Meta
 \import Logic.Unique
-\import Meta
 \import Paths
 \import Paths.Meta
 

@@ -87,6 +87,14 @@
       => path \lam i => IsEquiv.f_ret cov-fun-type-equiv {f} i x
   }
 
+-- | An equivalence of types is an equivalence of the corresponding categories.
+\func type-HQEquiv {S T : \Type} (e : QEquiv {S} {T}) : HQEquiv {S} {T} \cowith
+  | f => toCov e
+  | finv => toCov e.ret
+  | finv_f => IsEquiv.ret (cov-pi-type-equiv \lam x => toCov e.ret (toCov e x) = x) \lam x => pmap (toCov e.ret) ofInv *> ofInv *> e.ret_f x
+  | f_finv => IsEquiv.ret (cov-pi-type-equiv \lam y => toCov e (toCov e.ret y) = y) \lam y => pmap (toCov e) ofInv *> ofInv *> e.f_sec y
+  \where \open cov-fun-type-equiv
+
 -- | A family of groupoids as a family of types.
 \type CatTypeFamily {C : \Cat} (F : C ->⁺ \Cat) (Fg : \Pi (x : C) -> IsGroupoid (F x)) (x :⁺ C) : \Type
   => GroupoidType {F x} \lam h => catGroupoid-witness F Fg h

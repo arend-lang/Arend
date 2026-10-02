@@ -1,0 +1,38 @@
+\import Equiv
+\import InfCat.Paths
+\import Paths.Meta
+
+-- | The family of fibers of {p}.
+\func Fibers {E A : \Cat} (p : E ->⁺ A) (a :⁺ A) : \Cat
+  => \Sigma⁺ (e : E) (p e = a)
+
+-- | The projection from the total category of a family.
+\func totalProj {B : \Cat} (Q : B ->⁺ \Cat) (s :⁺ \Sigma⁺ (b : B) (Q b)) : B
+  => s.1
+
+-- | The fibers of {totalProj} are the values of {Q}.
+\func fibers-total-equiv {B : \Cat} {Q : B ->⁺ \Cat} (b : B) : QEquiv {Q b} {Fibers (totalProj Q) b} \cowith
+  | f q => ((b, q), idp)
+  | ret => fibers-total-ret
+  | ret_f _ => idp
+  | f_sec => fibers-total-ret-sec
+  \where {
+    \func fibers-total-ret {B : \Cat} {Q : B ->⁺ \Cat} {b :⁺ B} (t :⁺ Fibers (totalProj Q) b) : Q b
+      => transport+ Q t.2 t.1.2
+
+    \func fibers-total-ret-sec {B : \Cat} {Q : B ->⁺ \Cat} {b :⁺ B} (t :⁺ Fibers (totalProj Q) b)
+      : ((b, fibers-total-ret t), idp) = {Fibers (totalProj Q) b} t
+      => aux t.1.2 t.2
+      \where
+        \func aux {B : \Cat} {Q : B ->⁺ \Cat} {b' b :⁺ B} (q :⁺ Q b') (p :⁺ b' = b)
+          : ((b, transport+ Q p q), idp) = {Fibers (totalProj Q) b} ((b', q), p) \elim p
+          | idp => idp
+
+    -- | Sections of {Q} are sections of the fibers of {totalProj}.
+    \func sections {B Y : \Cat} {Q : B ->⁺ \Cat} (v : Y ->⁺ B)
+      : QEquiv {\Pi (y :⁺ Y) -> Q (v y)} {\Pi (y :⁺ Y) -> Fibers (totalProj Q) (v y)} \cowith
+      | f s y => ((v y, s y), idp)
+      | ret s y => fibers-total-ret (s y)
+      | ret_f _ => idp
+      | f_sec s => ext \lam y => fibers-total-ret-sec (s y)
+  }
