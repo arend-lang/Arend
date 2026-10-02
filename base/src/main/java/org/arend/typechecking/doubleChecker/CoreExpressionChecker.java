@@ -348,12 +348,15 @@ public class CoreExpressionChecker implements ExpressionVisitor<Expression, Expr
 
   private List<SortExpression> checkDependentLinkWithResult(DependentLink link, Expression type, Expression expr, boolean isSigma, boolean allowCatDomain) {
     List<SortExpression> result = new ArrayList<>();
+    DependentLink first = link;
     for (; link.hasNext(); link = link.getNext()) {
       addBinding(link, expr);
       if (link instanceof TypedDependentLink) {
         Expression paramType;
         boolean invariant = isSigma && link.getVariance() == BindingVariance.INVARIANT;
-        Expression checkAgainst = invariant ? UniverseExpression.INF_OMEGA : type;
+        // The type of a parameter of a covariant \Sigma-type may be released by previous parameters, so its sort is checked against the expected type later
+        boolean released = isSigma && !invariant && link != first;
+        Expression checkAgainst = invariant ? UniverseExpression.INF_OMEGA : released && type != UniverseExpression.INF_OMEGA ? null : type;
         if (isSigma && !invariant || allowCatDomain) {
           paramType = link.getType().accept(this, checkAgainst);
         } else {
@@ -364,6 +367,12 @@ public class CoreExpressionChecker implements ExpressionVisitor<Expression, Expr
         SortExpression sort = toSort(paramType);
         if (invariant) {
           sort = sort.withoutCat();
+        } else if (released && sort.isInfinite()) {
+          Expression releasedType = GetTypeVisitor.INSTANCE.getReleasedType(link.getType(), first, link);
+          SortExpression releasedSort = releasedType == null ? null : releasedType.toSortExpression();
+          if (releasedSort != null) {
+            sort = releasedSort;
+          }
         }
         result.add(sort);
         if (link.isProperty()) {

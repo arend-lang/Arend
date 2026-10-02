@@ -2819,12 +2819,22 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
       try (var ignored = clearCategoricalContext()) {
         result = checkType(arg.getType(), expectedType == UniverseExpression.INF_OMEGA ? UniverseExpression.INF_OMEGA : UniverseExpression.OMEGA);
       }
+    } else if (list.getFirst().hasNext()) {
+      // The type may be released by previous parameters, so its sort is checked against the expected type later
+      result = checkType(arg.getType(), expectedType == UniverseExpression.INF_OMEGA ? UniverseExpression.INF_OMEGA : UniverseExpression.OMEGA);
     } else {
       result = checkType(arg.getType(), expectedType == null ? UniverseExpression.OMEGA : expectedType);
     }
     if (result == null) return false;
 
     SortExpression sort = result.sort();
+    if (variance != BindingVariance.INVARIANT && sort.isInfinite()) {
+      Expression releasedType = GetTypeVisitor.INSTANCE.getReleasedType(result.expression(), list.getFirst(), null);
+      SortExpression releasedSort = releasedType == null ? null : releasedType.toSortExpression();
+      if (releasedSort != null) {
+        sort = releasedSort;
+      }
+    }
     boolean isProperty = arg.isProperty();
     boolean isProp = isProperty && sort.isProp();
     if (!isProp && isProperty) {

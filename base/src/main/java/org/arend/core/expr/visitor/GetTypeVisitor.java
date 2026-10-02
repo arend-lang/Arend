@@ -58,8 +58,8 @@ public class GetTypeVisitor implements ExpressionVisitor<Void, Expression> {
 
   /**
    * Path types that depend on the categorical context are forced to the infinite level.
-   * This is relative to the context: once all covariant variables such a path type depends on are bound by \Pi-types,
-   * these \Pi-types do not depend on them anymore, so the path type does not contribute the infinite level to their sort.
+   * This is relative to the context: once all covariant variables such a path type depends on are bound by \Pi- or \Sigma-types,
+   * these types do not depend on them anymore, so the path type does not contribute the infinite level to their sort.
    *
    * @return the type of {@code codomain} computed so that forced path types depending only on covariant variables among {@code parameters} (each is a chain of parameters of the same type) and on variables released by this visitor are treated as not forced,
    *         or null if there are no covariant variables among {@code parameters}.
@@ -67,14 +67,28 @@ public class GetTypeVisitor implements ExpressionVisitor<Void, Expression> {
   public Expression getReleasedType(Expression codomain, Collection<? extends SingleDependentLink> parameters) {
     Set<Binding> released = null;
     for (SingleDependentLink params : parameters) {
-      for (SingleDependentLink param = params; param.hasNext(); param = param.getNext()) {
-        if (param.getVariance() != BindingVariance.INVARIANT) {
-          if (released == null) released = new HashSet<>(myReleased);
-          released.add(param);
-        }
-      }
+      released = addReleased(released, params, null);
     }
     return released == null ? null : codomain.accept(withReleased(released), null);
+  }
+
+  /**
+   * @return the type of {@code type} computed so that forced path types depending only on covariant variables among {@code parameters} before {@code end} and on variables released by this visitor are treated as not forced,
+   *         or null if there are no such covariant variables.
+   */
+  public Expression getReleasedType(Expression type, DependentLink parameters, DependentLink end) {
+    Set<Binding> released = addReleased(null, parameters, end);
+    return released == null ? null : type.accept(withReleased(released), null);
+  }
+
+  private Set<Binding> addReleased(Set<Binding> released, DependentLink parameters, DependentLink end) {
+    for (DependentLink param = parameters; param.hasNext() && param != end; param = param.getNext()) {
+      if (param.getVariance() != BindingVariance.INVARIANT) {
+        if (released == null) released = new HashSet<>(myReleased);
+        released.add(param);
+      }
+    }
+    return released;
   }
 
   @Override
@@ -202,7 +216,8 @@ public class GetTypeVisitor implements ExpressionVisitor<Void, Expression> {
     List<SortExpression> sorts = new ArrayList<>();
     for (DependentLink param = expr.getParameters(); param.hasNext(); param = param.getNext()) {
       param = param.getNextTyped(null);
-      Expression type = param.getType().accept(this, null);
+      Expression type = param.getVariance() == BindingVariance.INVARIANT ? null : getReleasedType(param.getType(), expr.getParameters(), param);
+      if (type == null) type = param.getType().accept(this, null);
       SortExpression sort = type.toSortExpression();
       if (sort == null) {
         return new ErrorExpression();

@@ -1,12 +1,16 @@
 package org.arend.cat;
 
 import org.arend.Matchers;
+import org.arend.core.definition.FunctionDefinition;
+import org.arend.core.expr.UniverseExpression;
 import org.arend.typechecking.TypeCheckingTestCase;
 import org.junit.Test;
 
+import static org.junit.Assert.assertFalse;
+
 /**
  * Path types that depend on the categorical context are forced to the infinite level,
- * but once the covariant variables they depend on are bound by \Pi-types, these \Pi-types can be small.
+ * but once the covariant variables they depend on are bound by \Pi- or \Sigma-types, these types can be small.
  */
 public class CatForcedPathTest extends TypeCheckingTestCase {
   @Test
@@ -115,5 +119,55 @@ public class CatForcedPathTest extends TypeCheckingTestCase {
         => \\lam (y :+ C) => k.{u} (\\Pi (x :+ C) -> a x = _) (c y)
       """, 1);
     assertThatErrorsAre(Matchers.typeMismatchError());
+  }
+
+  @Test
+  public void sigmaTest() {
+    typeCheckDef("\\func test.{u} {C : \\Cat u} (x : C) : \\Cat u => \\Sigma+ (y : C) (x = y)");
+  }
+
+  @Test
+  public void sigmaFunctorsTest() {
+    typeCheckDef("\\func test.{u} {C D : \\Cat u} (a b : C ->+ D) : \\Cat u => \\Sigma+ (x : C) (a x = b x)");
+  }
+
+  @Test
+  public void sigmaSeveralParamsTest() {
+    typeCheckDef("\\func test.{u} {C D : \\Cat u} (a b : C ->+ D) : \\Cat u => \\Sigma+ (x y : C) (a x = b y)");
+  }
+
+  @Test
+  public void sigmaDependentPathTest() {
+    typeCheckDef("\\func test.{u} {C : \\Cat u} (x : C) : \\Cat u => \\Sigma+ (y : C) (p : x = y) (p = p)");
+  }
+
+  @Test
+  public void sigmaInferredSortTest() {
+    FunctionDefinition def = (FunctionDefinition) typeCheckDef("\\func test.{u} {C : \\Cat u} (x : C) => \\Sigma+ (y : C) (x = y)");
+    assertFalse(((UniverseExpression) def.getResultType()).getSortExpression().isInfinite());
+  }
+
+  @Test
+  public void sigmaInPiTest() {
+    typeCheckDef("\\func test.{u} {C D : \\Cat u} (a b : C ->+ D) : \\Type u => \\Pi (x y :+ C) -> \\Sigma+ (p : x = y) (a x = b y)");
+  }
+
+  @Test
+  public void sigmaDataTest() {
+    typeCheckModule("""
+      \\data W {C D : \\Cat} (a b : C ->+ D)
+        | w (\\Sigma+ (x : C) (a x = b x))
+      \\func test.{u} {C D : \\Cat u} (a b : C ->+ D) : \\Cat u => W a b
+      """);
+  }
+
+  @Test
+  public void sigmaOuterCategoricalTest() {
+    typeCheckDef("\\func test.{u} {C D : \\Cat u} (a b : C ->+ D) : C ->+ \\Cat u => \\lam (y :+ C) => \\Sigma+ (x : C) (a y = b x)", 1);
+  }
+
+  @Test
+  public void sigmaFirstComponentTest() {
+    typeCheckDef("\\func test.{u} {C D : \\Cat u} (a b : C ->+ D) : C ->+ \\Cat u => \\lam (y :+ C) => \\Sigma+ (a y = b y) (x : C)", 1);
   }
 }
