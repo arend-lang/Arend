@@ -1,4 +1,5 @@
 \import Algebra.Group
+\import Algebra.Meta
 \import Algebra.Monoid
 \import Algebra.StrictlyOrdered
 \import Algebra.Pointed
@@ -501,3 +502,41 @@
 
 \lemma int_<-dec {x y : Int} {so : So (int_<=-dec.int_<=_Bool (isuc x) y)} : x < y
   => id<isuc <∘l int_<=-dec {isuc x} {y} {so}
+
+-- | The canonical map `ℤ → K` into an ordered ring is an order embedding.
+\lemma intCoef>=0 {K : OrderedRing} {d : Int} (p : 0 <= d) : 0 <= K.intCoef d
+  => rewriteI (iabs.ofPos p) (transport (__ <= _) natCoefZero (K.natCoef_<= {0} {iabs d} zero<=_))
+
+\lemma intCoef>0 {K : OrderedRing} {d : Int} (p : 0 < d) : 0 < K.intCoef d
+  => \have n>0 : 0 < iabs d => pos<pos.conv (transportInv (0 <) (iabs.ofPos (LinearOrder.<_<= p)) p)
+     \in rewriteI (iabs.ofPos (LinearOrder.<_<= p)) (transport (__ < _) natCoefZero (K.natCoef_< n>0))
+
+\lemma intCoef_< {K : OrderedRing} {x y : Int} (p : x < y) : K.intCoef x < K.intCoef y \elim x, y
+  | pos n, pos m => K.natCoef_< (pos<pos.conv p)
+  | pos n, neg (suc m) => \case pos/<=neg (LinearOrder.<_<= p)
+  | neg (suc n), pos m => \have | a : 0 < K.natCoef (suc n) => K.natCoef>0 NatOrder.zero<suc
+                                | b : 0 <= K.natCoef m => K.natCoef>=0
+                          \in linarith
+  | neg (suc n), neg (suc m) => \have c : K.natCoef (suc m) < K.natCoef (suc n) => K.natCoef_< (neg<neg.conv p)
+                                \in linarith
+
+\lemma intCoef_<= {K : OrderedRing} {x y : Int} (p : x <= y) : K.intCoef x <= K.intCoef y
+  => \case trichotomy x y \with {
+    | less r => LinearOrder.<_<= (intCoef_< r)
+    | equals r => rewrite r <=-refl
+    | greater r => absurd (p r)
+  }
+
+\lemma intCoef-reflect_< {K : OrderedRing} {x y : Int} (p : K.intCoef x < K.intCoef y) : x < y
+  => \case trichotomy x y \with {
+    | less r => r
+    | equals r => absurd (<-irreflexive (transport (\lam z => K.intCoef z < K.intCoef y) r p))
+    | greater r => absurd (<-irreflexive (intCoef_< {K} r <∘ p))
+  }
+
+\lemma intCoef-inj {K : OrderedRing} {x y : Int} (p : K.intCoef x = K.intCoef y) : x = y
+  => \case trichotomy x y \with {
+    | less r => absurd (<-irreflexive (transport (\lam z => z < K.intCoef y) p (intCoef_< {K} r)))
+    | equals r => r
+    | greater r => absurd (<-irreflexive (transport (\lam z => K.intCoef y < z) p (intCoef_< {K} r)))
+  }
