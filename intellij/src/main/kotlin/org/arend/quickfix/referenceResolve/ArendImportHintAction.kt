@@ -29,6 +29,7 @@ import org.arend.refactoring.RenameReferenceAction
 import org.arend.server.ArendServerService
 import org.arend.settings.ArendSettings
 import org.arend.util.ArendBundle
+import org.arend.util.checkArcFile
 
 enum class Result { POPUP_SHOWN, CLASS_AUTO_IMPORTED, POPUP_NOT_SHOWN }
 
@@ -40,12 +41,15 @@ class ArendImportHintAction(private val referenceElement: ArendReferenceElement)
         val initializer = {
             val psiFile = referenceElement.containingFile
             val project = referenceElement.project
-            availability = doComputeAvailability(project, referenceElement)
-            itemsToImport = if (importQuickFixAllowed(referenceElement))
-                getStubElementSet(project, referenceElement, psiFile).asSequence().mapNotNull {
-                    ResolveReferenceAction.getProposedFix(it, referenceElement)
-                }
-            else emptySequence()
+            // Nothing can be imported into a read-only .arc view
+            if (!checkArcFile(psiFile)) {
+                availability = doComputeAvailability(project, referenceElement)
+                itemsToImport = if (importQuickFixAllowed(referenceElement))
+                    getStubElementSet(project, referenceElement, psiFile).asSequence().mapNotNull {
+                        ResolveReferenceAction.getProposedFix(it, referenceElement)
+                    }
+                else emptySequence()
+            }
         }
 
         val application = ApplicationManager.getApplication()

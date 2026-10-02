@@ -91,7 +91,9 @@ class RunnerService(private val project: Project, private val coroutineScope: Co
                 val errorsChanged = checkerFactory == null && errorsBefore != errorSnapshot()
                 if ((updated || errorsChanged || cacheLoaded) && checkerFactory == null) {
                     if (!ApplicationManager.getApplication().isUnitTestMode) {
-                        DaemonCodeAnalyzer.getInstance(project).restart()
+                        if (module?.locationKind != ModuleLocation.LocationKind.GENERATED) {
+                          DaemonCodeAnalyzer.getInstance(project).restart()
+                        }
                     }
                     withContext(Dispatchers.EDT) {
                         project.service<ArendMessagesService>().update()
