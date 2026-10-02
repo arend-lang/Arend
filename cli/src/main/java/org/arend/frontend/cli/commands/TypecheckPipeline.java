@@ -17,9 +17,9 @@ import org.arend.frontend.library.SourceLibrary;
 import org.arend.module.error.DefinitionNotFoundError;
 import org.arend.module.error.ModuleNotFoundError;
 import org.arend.naming.reference.GlobalReferable;
-import org.arend.naming.reference.LocatedReferable;
 import org.arend.naming.reference.TCDefReferable;
 import org.arend.prelude.Prelude;
+import org.arend.server.BinaryCacheFilter;
 import org.arend.server.ProgressReporter;
 import org.arend.server.impl.ArendServerImpl;
 import org.arend.server.impl.DefinitionData;
@@ -32,7 +32,6 @@ import org.arend.term.group.ConcreteStatement;
 import org.arend.term.prettyprint.ToAbstractVisitor;
 import org.arend.typechecking.doubleChecker.CoreModuleChecker;
 import org.arend.typechecking.order.MapTarjanSCC;
-import org.arend.typechecking.error.local.GoalError;
 
 import static org.arend.ext.prettyprinting.PrettyPrinterConfig.DEFAULT;
 
@@ -592,13 +591,18 @@ public final class TypecheckPipeline {
           skipped++;
           continue;
         }
-        // Skip modules whose typechecked state contains any HAS_ERRORS def.  Persisting
-        // them would write a cache that the next load can't use (the deserialized
-        // module would still need re-typechecking from source) and, in a long-lived
-        // daemon, accumulates orphan FunctionDefinitions pinned by cached expression
+        // A module is skipped only if something that was checked has an error or an unfilled
+        // goal -- not if the run left some (or all) of its definitions untouched, which is the
+        // normal case for a targeted run: it typechecks the requested import cone, and most of
+        // the transitively-loaded modules only get the definitions that cone actually reached, or
+        // none at all. ModuleSerialization writes whatever cores it has -- none, some, or all --
+        // and leaves the rest out rather than refusing the whole module, so refusing it here
+        // would throw away a cache the next load can use just fine for what it does contain. A
+        // HAS_ERRORS def is refused for a different reason: in a long-lived daemon, a cache the
+        // next load cannot use accumulates orphan FunctionDefinitions pinned by cached expression
         // trees across the deserialize → clear → re-typecheck cycle.
-        org.arend.term.group.ConcreteGroup group = ctx.server.getRawGroup(module);
-        if (group != null && (groupHasTypecheckingErrors(group) || groupHasGoals(group))) {
+        ConcreteGroup group = ctx.server.getRawGroup(module);
+        if (group != null && !BinaryCacheFilter.isCacheable(group)) {
           skippedWithErrors++;
           continue;
         }
@@ -615,50 +619,9 @@ public final class TypecheckPipeline {
     if (persisted > 0 || failed > 0 || skippedWithErrors > 0) {
       System.out.println("[INFO] Persisted " + persisted + " module(s)"
           + (failed > 0 ? ", " + failed + " failed" : "")
-          + (skippedWithErrors > 0 ? ", " + skippedWithErrors + " skipped (had errors)" : "")
+          + (skippedWithErrors > 0 ? ", " + skippedWithErrors + " skipped (had errors or goals)" : "")
           + (skipped > 0 ? " (" + skipped + " up-to-date)" : ""));
     }
   }
 
-  /**
-   * True if any definition in {@code group} holds an unfilled goal.
-   *
-   * <p>Goals keep a module out of the cache for the same reason errors do, and for one more:
-   * the {@code .arc} records that a definition had a goal but not what the goal was, so a
-   * module restored from cache could only ever report a contentless placeholder. Not caching
-   * it means every goal comes from a real typecheck, with its context intact.
-   */
-  public static boolean groupHasGoals(ConcreteGroup group) {
-    if (group.referable() instanceof TCDefReferable tcRef) {
-      Definition def = tcRef.getTypechecked();
-      if (def != null && def.getGoals().contains(def)) return true;
-    }
-    for (ConcreteStatement statement : group.statements()) {
-      if (statement.group() != null && groupHasGoals(statement.group())) return true;
-    }
-    for (ConcreteGroup dynGroup : group.dynamicGroups()) {
-      if (groupHasGoals(dynGroup)) return true;
-    }
-    return false;
-  }
-
-  public static boolean groupHasTypecheckingErrors(org.arend.term.group.ConcreteGroup group) {
-    if (group.referable() instanceof TCDefReferable tcRef && tcRef.getKind().isTypecheckable()) {
-      Definition def = tcRef.getTypechecked();
-      if (def != null && def.status() == Definition.TypeCheckingStatus.HAS_ERRORS) return true;
-    }
-    for (org.arend.naming.reference.InternalReferable internalRef : group.getInternalReferables()) {
-      if (internalRef instanceof TCDefReferable tcRef && tcRef.getKind().isTypecheckable()) {
-        Definition def = tcRef.getTypechecked();
-        if (def != null && def.status() == Definition.TypeCheckingStatus.HAS_ERRORS) return true;
-      }
-    }
-    for (org.arend.term.group.ConcreteStatement statement : group.statements()) {
-      if (statement.group() != null && groupHasTypecheckingErrors(statement.group())) return true;
-    }
-    for (org.arend.term.group.ConcreteGroup dynGroup : group.dynamicGroups()) {
-      if (groupHasTypecheckingErrors(dynGroup)) return true;
-    }
-    return false;
-  }
 }
