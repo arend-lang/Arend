@@ -173,10 +173,6 @@ tasks.register<Test>("partialRoundTripTest") {
     // A larger per-thread stack helps substitution of deep cross-module types
     // surface as test errors instead of raw StackOverflowError kill-switches.
     jvmArgs("-Xss16m")
-    // The subst-depth guard makes the SubstVisitor throw a diagnostic
-    // SubstDepthExceeded exception instead of blowing the stack, so the test can
-    // log which PiExpression was cycling.
-    systemProperty("arend.subst.maxDepth", "2000")
     // The instance-depth guard makes GlobalInstancePool throw a diagnostic
     // InstanceDepthExceeded when instance resolution runs away (cycle caused by
     // deserialized instances matching each other transitively).
@@ -224,7 +220,6 @@ tasks.register<Test>("partialCacheTest") {
     group = "verification"
     maxHeapSize = "6g"
     jvmArgs("-Xss16m")
-    systemProperty("arend.subst.maxDepth", "2000")
     systemProperty("arend.instance.maxDepth", "200")
     // Required gate — without this the test self-skips via Assume.assumeTrue.
     systemProperty("arend.partial_cache.enabled",

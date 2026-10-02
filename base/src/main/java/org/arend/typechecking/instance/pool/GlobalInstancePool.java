@@ -13,6 +13,7 @@ import org.arend.core.sort.SortExpression;
 import org.arend.core.subst.ExprSubstitution;
 import org.arend.ext.core.ops.NormalizationMode;
 import org.arend.ext.instance.InstanceSearchParameters;
+import org.arend.ext.instance.SubclassSearchParameters;
 import org.arend.naming.reference.CoreReferable;
 import org.arend.term.concrete.Concrete;
 import org.arend.typechecking.result.TypecheckingResult;
@@ -26,6 +27,52 @@ public class GlobalInstancePool implements InstancePool {
   private final List<FunctionDefinition> myInstances;
   private final CheckTypeVisitor myCheckTypeVisitor;
   private LocalInstancePool myInstancePool;
+
+  // Diagnostic: optional runaway-depth guard for instance resolution. Activated by
+  // system property `-Darend.instance.maxDepth=N`. When > 0, findInstance increments
+  // a thread-local counter; exceeding the limit throws InstanceDepthExceeded naming the
+  // searched class and the classifying fields along its super-chain, so the log shows
+  // where the chain breaks.
+  private static final int MAX_INSTANCE_DEPTH;
+  static {
+    int d = 0;
+    try { d = Integer.parseInt(System.getProperty("arend.instance.maxDepth", "0")); }
+    catch (NumberFormatException ignored) {}
+    MAX_INSTANCE_DEPTH = d;
+  }
+  private static final ThreadLocal<int[]> INSTANCE_DEPTH = ThreadLocal.withInitial(() -> new int[1]);
+
+  public static class InstanceDepthExceeded extends RuntimeException {
+    public InstanceDepthExceeded(ClassDefinition cls, Expression classifying, int depth) {
+      super("Instance search depth exceeded (" + depth + ") for class "
+          + (cls == null ? "<null>" : cls.getName())
+          + " classifying=" + (classifying == null ? "<null>" : classifying.getClass().getSimpleName())
+          + (cls == null ? "" : superChain(cls)));
+    }
+
+    private static String superChain(ClassDefinition cls) {
+      StringBuilder sb = new StringBuilder();
+      sb.append(" classifyingField=").append(cls.getClassifyingField() == null ? "<null>" : cls.getClassifyingField().getName());
+      sb.append(" superChain=[");
+      dumpSuperChain(cls, sb, new HashSet<>(), 0);
+      sb.append("]");
+      return sb.toString();
+    }
+
+    private static void dumpSuperChain(ClassDefinition cls, StringBuilder sb, Set<ClassDefinition> seen, int depth) {
+      if (depth > 10 || !seen.add(cls)) return;
+      for (ClassDefinition sc : cls.getSuperClasses()) {
+        for (int i = 0; i < depth; i++) sb.append(' ');
+        sb.append(sc.getName()).append(".cf=").append(sc.getClassifyingField() == null ? "<null>" : sc.getClassifyingField().getName())
+            .append(" status=").append(sc.status());
+        ClassField own = sc.getClassifyingField();
+        // show if this class's classifying field is one of its own personal fields or inherited
+        if (own != null && !sc.getPersonalFields().contains(own)) sb.append(" [inherited]");
+        sb.append('\n');
+        dumpSuperChain(sc, sb, seen, depth + 1);
+      }
+    }
+  }
 
   public GlobalInstancePool(List<FunctionDefinition> instances, CheckTypeVisitor checkTypeVisitor) {
     myInstances = instances;
@@ -64,6 +111,24 @@ public class GlobalInstancePool implements InstancePool {
 
   @Override
   public TypecheckingResult findInstance(Expression classifyingExpression, Expression expectedType, InstanceSearchParameters parameters, Concrete.SourceNode sourceNode, RecursiveInstanceHoleExpression recursiveHoleExpression, Definition currentDef) {
+    if (MAX_INSTANCE_DEPTH > 0) {
+      int[] d = INSTANCE_DEPTH.get();
+      if (++d[0] > MAX_INSTANCE_DEPTH) {
+        int depth = d[0];
+        d[0]--;
+        ClassDefinition cls = parameters instanceof SubclassSearchParameters sp ? (ClassDefinition) sp.classDefinition : null;
+        throw new InstanceDepthExceeded(cls, classifyingExpression, depth);
+      }
+      try {
+        return findInstanceImpl(classifyingExpression, expectedType, parameters, sourceNode, recursiveHoleExpression, currentDef);
+      } finally {
+        d[0]--;
+      }
+    }
+    return findInstanceImpl(classifyingExpression, expectedType, parameters, sourceNode, recursiveHoleExpression, currentDef);
+  }
+
+  private TypecheckingResult findInstanceImpl(Expression classifyingExpression, Expression expectedType, InstanceSearchParameters parameters, Concrete.SourceNode sourceNode, RecursiveInstanceHoleExpression recursiveHoleExpression, Definition currentDef) {
     if (myInstancePool != null) {
       TypecheckingResult result = myInstancePool.findInstance(classifyingExpression, expectedType, parameters, sourceNode, currentDef, currentDef instanceof ClassDefinition ? LocalInstancePool.FieldSearchParameters.ALL : LocalInstancePool.FieldSearchParameters.NOT_FIELDS);
       if (result != null) {

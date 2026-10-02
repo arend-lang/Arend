@@ -234,15 +234,6 @@ public class ArendLibPartialRoundTripTest {
     testStartMs = System.currentTimeMillis();
     openLog();
     log("=== ArendLib partial round-trip test START ===");
-    log("arend.subst.maxDepth property = " + System.getProperty("arend.subst.maxDepth", "<unset>"));
-    // Verify the static SubstVisitor guard picked up the property
-    try {
-      java.lang.reflect.Field f = org.arend.core.subst.SubstVisitor.class.getDeclaredField("MAX_SUBST_DEPTH");
-      f.setAccessible(true);
-      log("SubstVisitor.MAX_SUBST_DEPTH = " + f.get(null));
-    } catch (Throwable t) {
-      log("Could not read SubstVisitor.MAX_SUBST_DEPTH: " + t);
-    }
 
     tempBinRoot = Files.createTempDirectory("arend_partial_bin_");
     log("Temp binary root: " + tempBinRoot.toAbsolutePath());
