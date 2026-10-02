@@ -51,6 +51,16 @@
   \override Dom : PseudoRing
   \override Cod : PseudoRing
 } \where {
+  \func id {R : PseudoRing} : PseudoRingHom R R \cowith
+    | func x => x
+    | func-+ => idp
+    | func-* => idp
+
+  \func \fixl 8 compose \alias \infixl 8 ∘ {R S T : PseudoRing} (g : PseudoRingHom S T) (f : PseudoRingHom R S) : PseudoRingHom R T \cowith
+    | func x => g (f x)
+    | func-+ => pmap g f.func-+ *> g.func-+
+    | func-* => pmap g f.func-* *> g.func-*
+
   \lemma func-Ideal_closure {R S : CRing} (f : PseudoRingHom R S) {J : \Set} {g : J -> R} {x : R} (gx : Ideal.closure g x) : Ideal.closure (\lam j => f (g j)) (f x) \elim gx
     | inP (l,p) => inP (map (\lam s => (f s.1, s.2)) l, pmap f p *> f.func-BigSum *> pmap S.BigSum (exts \lam j => f.func-*))
 
