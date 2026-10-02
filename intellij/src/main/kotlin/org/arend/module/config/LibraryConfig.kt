@@ -23,6 +23,7 @@ import org.arend.util.*
 import org.arend.util.FileUtils.EXTENSION
 import org.jetbrains.yaml.psi.YAMLFile
 import java.nio.file.Files
+import java.nio.file.Path
 import java.nio.file.Paths
 
 
@@ -84,6 +85,17 @@ abstract class LibraryConfig(val project: Project) : ArendLibrary {
 
     val binariesDirFile: VirtualFile?
         get() = binariesDir?.let { findDir(it) }
+
+    val binariesDirPath: Path?
+        get() {
+            val dir = binariesDir ?: return null
+            val root = root?.takeIf { it.isInLocalFileSystem } ?: return null
+            var path = root.toNioPath()
+            for (segment in FileUtil.toSystemIndependentName(dir).split('/')) {
+                if (segment.isNotEmpty()) path = path.resolve(segment)
+            }
+            return path
+        }
 
     override fun getLibraryName() = name
 

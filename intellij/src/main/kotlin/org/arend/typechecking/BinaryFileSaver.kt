@@ -4,67 +4,92 @@ import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.application.runReadAction
 import com.intellij.openapi.components.Service
 import com.intellij.openapi.components.service
+import com.intellij.openapi.diagnostic.logger
+import com.intellij.openapi.progress.ProgressIndicator
+import com.intellij.openapi.progress.ProgressManager
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VfsUtil
-import com.intellij.openapi.vfs.VirtualFile
-import org.arend.ext.error.ErrorReporter
+import com.intellij.openapi.vfs.VirtualFileManager
 import org.arend.ext.module.ModuleLocation
-import org.arend.source.GZIPStreamBinarySource
-import org.arend.psi.ArendFile
+import org.arend.module.config.LibraryConfig
 import org.arend.server.ArendServerService
+import org.arend.server.BinaryCacheFilter
 import org.arend.source.FileBinarySource
+import org.arend.source.GZIPStreamBinarySource
+import org.arend.typechecking.error.DeduplicatingErrorReporter
 import org.arend.typechecking.error.NotificationErrorReporter
-import org.arend.util.FileUtils
-import org.arend.util.getRelativeFile
-
+import org.arend.util.ArendBundle
+import org.arend.util.findLibrary
+import java.nio.file.Path
 
 @Service(Service.Level.PROJECT)
 class BinaryFileSaver(private val project: Project) {
-    private val typecheckedModules = LinkedHashSet<ArendFile>()
-
-    private fun updateFiles(savedFiles: Set<VirtualFile>) {
-        // We need to update them because we save files using Java API and not the VFS because the latter is very slow for some reason
-        // TODO: Probably a better way is to save files using VFS immediately after typechecking
-        VfsUtil.markDirtyAndRefresh(true, false, false, *savedFiles.toTypedArray())
-    }
-
-    private fun saveFile(file: ArendFile, errorReporter: ErrorReporter, savedFiles: HashSet<VirtualFile>) {
-        val moduleLocation = file.moduleLocation ?: return
-        if (moduleLocation.locationKind != ModuleLocation.LocationKind.SOURCE) {
-            return
-        }
-        val config = file.arendLibrary ?: return
-        val root = config.root ?: return
-        val binDir = config.binariesDir ?: return
-        val binDirList = binDir.split("/").filter { it.isNotEmpty() }
-        val server = project.service<ArendServerService>().server
-        val binarySource = GZIPStreamBinarySource(FileBinarySource(config.binariesDirFile?.toNioPath(), moduleLocation))
-        if (runReadAction { binarySource.persist(server, errorReporter) }) {
-            val vFile = root.getRelativeFile(binDirList + moduleLocation.modulePath.toList(), FileUtils.SERIALIZED_EXTENSION) ?: return
-            savedFiles.add(vFile)
-        }
-    }
-
-    fun addToQueue(file: ArendFile) {
-        synchronized(project) {
-            typecheckedModules.add(file)
-        }
-    }
-
     fun saveAll() {
-        if (typecheckedModules.isEmpty()) {
-            return
+        val application = ApplicationManager.getApplication()
+        if (application.isDispatchThread && !application.isUnitTestMode) {
+            ProgressManager.getInstance().runProcessWithProgressSynchronously(
+                { saveAll(ProgressManager.getInstance().progressIndicator) },
+                ArendBundle.message("arend.binaries.saving"), true, project)
+        } else {
+            saveAll(ProgressManager.getGlobalProgressIndicator())
+        }
+    }
+
+    private fun saveAll(indicator: ProgressIndicator?) {
+        val server = project.service<ArendServerService>().server
+        val errorReporter = DeduplicatingErrorReporter(NotificationErrorReporter(project))
+        val configs = HashMap<String, LibraryConfig?>()
+        val binariesDirs = HashSet<Path>()
+        var persisted = 0
+        var failed = 0
+
+        val modules = server.modules.filter { it.locationKind == ModuleLocation.LocationKind.SOURCE }
+        indicator?.isIndeterminate = false
+        for ((index, module) in modules.withIndex()) {
+            indicator?.checkCanceled()
+            indicator?.fraction = index.toDouble() / modules.size
+            val target = runReadAction { targetFor(module, configs) } ?: continue
+
+            indicator?.text2 = module.toString()
+            val binarySource = GZIPStreamBinarySource(FileBinarySource(target.binariesDir, module))
+            if (runReadAction { binarySource.persist(server, errorReporter) }) {
+                persisted++
+                binariesDirs.add(target.binariesDir)
+            } else {
+                failed++
+            }
         }
 
-        synchronized(project) {
-            val savedFiles = HashSet<VirtualFile>()
-            for (file in typecheckedModules) {
-                ApplicationManager.getApplication().executeOnPooledThread {
-                    saveFile(file, NotificationErrorReporter(project), savedFiles)
-                }
-            }
-            typecheckedModules.clear()
-            updateFiles(savedFiles)
+        errorReporter.flush()
+        if (persisted > 0 || failed > 0) {
+            LOG.info("Binary cache: persisted $persisted module(s)" + if (failed > 0) ", $failed failed" else "")
         }
+        refresh(binariesDirs)
+    }
+
+    private class Target(val binariesDir: Path)
+
+    private fun targetFor(module: ModuleLocation, configs: MutableMap<String, LibraryConfig?>): Target? {
+        val server = project.service<ArendServerService>().server
+        val config = configs.getOrPut(module.libraryName) { project.findLibrary(module.libraryName) } ?: return null
+        val binariesDir = config.binariesDirPath ?: return null
+        val group = server.getRawGroup(module) ?: return null
+        if (!BinaryCacheFilter.isCacheable(group)) return null
+        return Target(binariesDir)
+    }
+
+    private fun refresh(binariesDirs: Collection<Path>) {
+        if (binariesDirs.isEmpty()) return
+        val fileManager = VirtualFileManager.getInstance()
+        val files = binariesDirs.mapNotNull { dir ->
+            fileManager.findFileByNioPath(dir) ?: dir.parent?.let { fileManager.findFileByNioPath(it) }
+        }
+        if (files.isNotEmpty()) {
+            VfsUtil.markDirtyAndRefresh(true, true, false, *files.toTypedArray())
+        }
+    }
+
+    companion object {
+        private val LOG = logger<BinaryFileSaver>()
     }
 }
