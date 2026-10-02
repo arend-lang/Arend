@@ -7,11 +7,13 @@ import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.TextRange
 import org.arend.IArendFile
+import org.arend.arc.ArcFile
 
 class ArendSubclassesPassFactory : BasePassFactory<IArendFile>(IArendFile::class.java), TextEditorHighlightingPassFactoryRegistrar {
     private var myPassId = -1
 
-    override fun createPass(file: IArendFile, editor: Editor, textRange: TextRange) = ArendSubclassesPass(file, editor, textRange)
+    override fun createPass(file: IArendFile, editor: Editor, textRange: TextRange) =
+        if (file is ArcFile) null else ArendSubclassesPass(file, editor, textRange)
 
     override fun getPassId(): Int = myPassId
 
