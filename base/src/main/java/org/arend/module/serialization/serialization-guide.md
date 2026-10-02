@@ -58,9 +58,17 @@ recursion depth, but cycles still resolve correctly because the
 ARD-loaded group is registered before its `readModule` is invoked.
 
 This is *test-side* behaviour. Production code does not parse sources
-during deserialization, and there is no `loadSourceGroup` requester
-method. The overlay approach exists only because the test exercises a
-scenario where source is still available.
+during deserialization. The overlay approach exists only because the
+test exercises a scenario where source is still available.
+
+The one place production code does read a source after the fact is
+inline-meta recovery: inline `\meta` bodies are not serialized, so
+`ArendCheckerImpl` asks `ArendServerRequester.loadSourceGroup` for a
+freshly parsed group and transplants the bodies onto the deserialized
+`MetaReferable`s. Only the CLI requester implements `loadSourceGroup`;
+the IDE requester keeps the default (`null`), so there an inline meta of
+a module built by `readGroup` still reports `Meta 'X' is empty`.
+
 
 ## The one invariant
 

@@ -1,5 +1,6 @@
 package org.arend.server;
 
+import org.arend.ext.error.ErrorReporter;
 import org.arend.ext.module.ModuleLocation;
 import org.arend.naming.reference.Referable;
 import org.arend.naming.reference.TCDefReferable;
@@ -21,6 +22,20 @@ public interface ArendServerRequester extends ArendServerResolveListener {
   default void requestModuleUpdate(@NotNull ArendServer server, @NotNull ModuleLocation module) {}
 
   default void setupGeneratedModule(@NotNull ModuleLocation module, @NotNull ConcreteGroup group) {}
+
+  /**
+   * Parses the source file for {@code module} into a fresh {@link ConcreteGroup} without updating
+   * the server. Used to recover concrete bodies (e.g. inline-meta bodies) that are not serialized
+   * into .arc files, when the deserialized version of a module is already present in the server.
+   *
+   * @param module         the module whose source to parse.
+   * @param errorReporter  receives any parse errors.
+   * @return a freshly parsed concrete group, or {@code null} if the source cannot be located or the
+   *         requester does not support source parsing. The returned group is not added to the server.
+   */
+  default @Nullable ConcreteGroup loadSourceGroup(@NotNull ModuleLocation module, @NotNull ErrorReporter errorReporter) {
+    return null;
+  }
 
   /**
    * Returns the list of files and directories in the given library and directory.

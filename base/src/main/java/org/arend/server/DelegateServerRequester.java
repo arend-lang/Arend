@@ -1,5 +1,6 @@
 package org.arend.server;
 
+import org.arend.ext.error.ErrorReporter;
 import org.arend.ext.module.ModuleLocation;
 import org.arend.naming.reference.Referable;
 import org.arend.naming.reference.TCDefReferable;
@@ -27,6 +28,11 @@ public class DelegateServerRequester implements ArendServerRequester {
   @Override
   public void setupGeneratedModule(@NotNull ModuleLocation module, @NotNull ConcreteGroup group) {
     requester.setupGeneratedModule(module, group);
+  }
+
+  @Override
+  public @Nullable ConcreteGroup loadSourceGroup(@NotNull ModuleLocation module, @NotNull ErrorReporter errorReporter) {
+    return requester.loadSourceGroup(module, errorReporter);
   }
 
   @Override

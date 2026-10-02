@@ -1,9 +1,11 @@
 package org.arend.frontend.library;
 
+import org.arend.ext.error.ErrorReporter;
 import org.arend.ext.module.ModuleLocation;
 import org.arend.server.ArendServer;
 import org.arend.server.ArendServerRequester;
 import org.arend.source.Source;
+import org.arend.term.group.ConcreteGroup;
 import org.arend.util.FileUtils;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -35,6 +37,17 @@ public class CliServerRequester implements ArendServerRequester {
     Source rawSource = library.getSource(module.getModulePath(), inTests);
     if (rawSource == null) return;
     rawSource.load(server, myLibraryManager.getErrorReporter());
+  }
+
+  @Override
+  public @Nullable ConcreteGroup loadSourceGroup(@NotNull ModuleLocation module, @NotNull ErrorReporter errorReporter) {
+    if (module.getLocationKind() == ModuleLocation.LocationKind.GENERATED) return null;
+    SourceLibrary library = myLibraryManager.getLibrary(module.getLibraryName());
+    if (library == null) return null;
+    boolean inTests = module.getLocationKind() == ModuleLocation.LocationKind.TEST;
+    Source rawSource = library.getSource(module.getModulePath(), inTests);
+    if (rawSource == null) return null;
+    return rawSource.loadGroup(errorReporter);
   }
 
   @Override
