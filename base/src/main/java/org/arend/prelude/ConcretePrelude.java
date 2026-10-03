@@ -95,6 +95,16 @@ public class ConcretePrelude implements ArendPrelude {
   }
 
   @Override
+  public CoreDataDefinition getResizeCat() {
+    return Prelude.RESIZE_CAT;
+  }
+
+  @Override
+  public CoreConstructor getResizeCatCon() {
+    return Prelude.RESIZE_CAT_CON;
+  }
+
+  @Override
   public CoreDataDefinition getGroupoidType() {
     return Prelude.GROUPOID_TYPE;
   }
@@ -378,6 +388,18 @@ public class ConcretePrelude implements ArendPrelude {
   public ArendRef getResizeConRef() {
     if (Prelude.RESIZE_PLUS_CON != null) return Prelude.RESIZE_PLUS_CON.getRef();
     return myPreludeScope.resolveName("resize+");
+  }
+
+  @Override
+  public ArendRef getResizeCatRef() {
+    if (Prelude.RESIZE_CAT != null) return Prelude.RESIZE_CAT.getRef();
+    return myPreludeScope.resolveName("ResizeCat");
+  }
+
+  @Override
+  public ArendRef getResizeCatConRef() {
+    if (Prelude.RESIZE_CAT_CON != null) return Prelude.RESIZE_CAT_CON.getRef();
+    return myPreludeScope.resolveName("resizeCat");
   }
 
   @Override

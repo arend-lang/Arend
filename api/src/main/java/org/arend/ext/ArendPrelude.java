@@ -23,6 +23,8 @@ public interface ArendPrelude {
   CoreFunctionDefinition getFill3();
   CoreDataDefinition getResize();
   CoreConstructor getResizeCon();
+  CoreDataDefinition getResizeCat();
+  CoreConstructor getResizeCatCon();
   CoreDataDefinition getGroupoidType();
   CoreConstructor getGroupoidTypeCon();
   CoreFunctionDefinition getRezk();
@@ -78,6 +80,8 @@ public interface ArendPrelude {
   ArendRef getFill3Ref();
   ArendRef getResizeRef();
   ArendRef getResizeConRef();
+  ArendRef getResizeCatRef();
+  ArendRef getResizeCatConRef();
   ArendRef getGroupoidTypeRef();
   ArendRef getGroupoidTypeConRef();
   ArendRef getRezkRef();

@@ -398,6 +398,50 @@ public class CatPreludeTest extends TypeCheckingTestCase {
       """, 1);
   }
 
+  private static final String RESIZE_CAT_DEFS = """
+    \\func SmallCat.{u} (C : \\Cat)
+      => \\Sigma (S : \\Type u) (to : S -> (DI ->+ C)) (from : (DI ->+ C) -> S) (\\Pi (s : S) -> from (to s) = s) (\\Pi (f : DI ->+ C) -> to (from f) = f)
+    """;
+
+  @Test
+  public void resizeCatSortTest() {
+    typeCheckModule(RESIZE_CAT_DEFS + """
+      \\func test (C : \\Cat) (s : SmallCat.{0} C) : \\Cat0 => ResizeCat s.2 s.3 s.4 s.5
+      """);
+  }
+
+  @Test
+  public void resizeCatArrowTest() {
+    typeCheckModule(RESIZE_CAT_DEFS + """
+      \\func test {C : \\Cat} {s : SmallCat.{0} C} {x y :+ C} (f :+ x ~> y) : resizeCat {C} {s.1} {s.2} {s.3} {s.4} {s.5} x ~> resizeCat y
+        => dpath (\\lam i => resizeCat (f i))
+      """);
+  }
+
+  @Test
+  public void resizeCatElimTest() {
+    typeCheckModule(RESIZE_CAT_DEFS + """
+      \\func unresize {C : \\Cat} {s : SmallCat.{0} C} (r :+ ResizeCat s.2 s.3 s.4 s.5) : C \\elim r
+        | resizeCat c => c
+      \\func beta {C : \\Cat} {s : SmallCat.{0} C} (c : C) : unresize (resizeCat {C} {s.1} {s.2} {s.3} {s.4} {s.5} c) = c
+        => idp
+      """);
+  }
+
+  @Test
+  public void resizeCatNotTypeError() {
+    typeCheckModule(RESIZE_CAT_DEFS + """
+      \\func test (C : \\Cat) (s : SmallCat.{0} C) : \\Type0 => ResizeCat s.2 s.3 s.4 s.5
+      """, 1);
+  }
+
+  @Test
+  public void resizeCatLevelError() {
+    typeCheckModule(RESIZE_CAT_DEFS + """
+      \\func test (C : \\Cat) (s : SmallCat.{1} C) : \\Cat0 => ResizeCat s.2 s.3 s.4 s.5
+      """, 1);
+  }
+
   @Test
   public void resizeCovariantFamilyError() {
     typeCheckModule(RESIZE_DEFS + """

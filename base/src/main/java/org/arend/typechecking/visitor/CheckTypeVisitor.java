@@ -3538,7 +3538,7 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
 
     Referable referable = expr.getFunction() instanceof Concrete.ReferenceExpression ? ((Concrete.ReferenceExpression) expr.getFunction()).getReferent() : null;
     Definition definition = referable instanceof TCDefReferable ? ((TCDefReferable) referable).getTypechecked() : null;
-    if ((definition == Prelude.MOD || definition == Prelude.DIV_MOD) && expr.getArguments().size() == 2 && expr.getArguments().get(0).isExplicit() && expr.getArguments().get(1).isExplicit()) {
+    if (definition != null && (definition == Prelude.MOD || definition == Prelude.DIV_MOD) && expr.getArguments().size() == 2 && expr.getArguments().get(0).isExplicit() && expr.getArguments().get(1).isExplicit()) {
       TypecheckingResult arg1 = checkExpr(expr.getArguments().get(0).getExpression(), ExpressionFactory.Nat());
       TypecheckingResult arg2 = checkExpr(expr.getArguments().get(1).getExpression(), ExpressionFactory.Nat());
       if (arg1 == null || arg2 == null) {

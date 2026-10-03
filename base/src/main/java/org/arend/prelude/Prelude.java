@@ -68,6 +68,8 @@ public class Prelude implements ArendPrelude {
   public static FunctionDefinition ISO_PLUS, ISO_COE_PLUS;
   public static DataDefinition RESIZE_PLUS;
   public static Constructor RESIZE_PLUS_CON;
+  public static DataDefinition RESIZE_CAT;
+  public static Constructor RESIZE_CAT_CON;
   public static DataDefinition GROUPOID_TYPE;
   public static Constructor GROUPOID_TYPE_CON;
   public static FunctionDefinition REZK;
@@ -279,6 +281,11 @@ public class Prelude implements ArendPrelude {
         RESIZE_PLUS.setSort(new Sort(new Level(RESIZE_PLUS.getLevelParameters().getFirst()), ConstLevel.INFINITY));
         RESIZE_PLUS_CON = RESIZE_PLUS.getConstructor("resize+");
       }
+      case "ResizeCat" -> {
+        RESIZE_CAT = (DataDefinition) definition;
+        RESIZE_CAT.setSort(new Sort(new Level(RESIZE_CAT.getLevelParameters().getFirst()), ConstLevel.CAT_INFINITY));
+        RESIZE_CAT_CON = RESIZE_CAT.getConstructor("resizeCat");
+      }
       case "GroupoidType" -> {
         GROUPOID_TYPE = (DataDefinition) definition;
         // A groupoid is a type, but not a small one, even if its carrier is small
@@ -413,6 +420,8 @@ public class Prelude implements ArendPrelude {
     consumer.accept(REZK);
     consumer.accept(RESIZE_PLUS);
     consumer.accept(RESIZE_PLUS_CON);
+    consumer.accept(RESIZE_CAT);
+    consumer.accept(RESIZE_CAT_CON);
     consumer.accept(GROUPOID_TYPE);
     consumer.accept(GROUPOID_TYPE_CON);
     consumer.accept(PATH);
@@ -541,6 +550,16 @@ public class Prelude implements ArendPrelude {
   @Override
   public Constructor getResizeCon() {
     return RESIZE_PLUS_CON;
+  }
+
+  @Override
+  public DataDefinition getResizeCat() {
+    return RESIZE_CAT;
+  }
+
+  @Override
+  public Constructor getResizeCatCon() {
+    return RESIZE_CAT_CON;
   }
 
   @Override
@@ -811,6 +830,16 @@ public class Prelude implements ArendPrelude {
   @Override
   public ArendRef getResizeConRef() {
     return RESIZE_PLUS_CON == null ? null : RESIZE_PLUS_CON.getRef();
+  }
+
+  @Override
+  public ArendRef getResizeCatRef() {
+    return RESIZE_CAT == null ? null : RESIZE_CAT.getRef();
+  }
+
+  @Override
+  public ArendRef getResizeCatConRef() {
+    return RESIZE_CAT_CON == null ? null : RESIZE_CAT_CON.getRef();
   }
 
   @Override

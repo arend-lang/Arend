@@ -99,6 +99,10 @@
                   (y :⁺ C)
   | resize+ (b :⁺ F y)
 
+\data ResizeCat.{u} {C : \Cat} {S : \Type u} (to : S -> (DI ->⁺ C)) (from : (DI ->⁺ C) -> S)
+                    (from_to : \Pi (s : S) -> from (to s) = s) (to_from : \Pi (f : DI ->⁺ C) -> to (from f) = f)
+  | resizeCat (c :⁺ C)
+
 \data GroupoidType {C :⁺ \Cat} (Cg :⁺ \Pi {x y :⁺ C} (f :⁺ x ~> y) -> \Sigma⁺ (p : x = y) (coe (\lam i => x ~> p i) idd right = f))
   | groupoidType (_ :⁺ C)
 
