@@ -11,7 +11,8 @@
  -   (`Resize+`, see {InfCat.Fibration.Straightening}) gives a functor {LeftKanExtStraight} with values in `\Type u`.
  -   Since `Resize+` and the factorization are not functorial in {P}, {LeftKanExtType} is defined instead as the
  -   left adjoint to restriction along {f} ({leftKanRightAdjoint}), which is covariant in {P} and agrees with
- -   {LeftKanExtStraight} on objects ({leftKanExtType-char}).
+ -   {LeftKanExtStraight} on objects ({leftKanExtType-char}). It sends representable functors to representable functors
+ -   ({leftKanExtType-repr}).
  -}
 
 \import Equiv
@@ -26,6 +27,7 @@
 \import InfCat.Functor.Equiv
 \import InfCat.OFS.CatOFS
 \import InfCat.Paths
+\import InfCat.Yoneda.CovariantYoneda
 \import Logic
 \import Paths
 \import Paths.Meta
@@ -139,3 +141,17 @@
 
 \lemma leftKanExtType-leftFib.{u} {A B : \Cat u} (f : A ->⁺ B) (P : A ->⁺ \Type u) : IsLeftFib (LeftKanExtType f P)
   => leftFib-pullback (LeftKanExtType f P) universe-leftFib
+
+-- | The representable functor of `f x` is a universal arrow from the representable functor of {x} to restriction along {f}.
+\func leftKanExtType-repr-univArrow.{u} {A B : \Cat u} (f : A ->⁺ B) (x : A)
+  : UnivArrow {A ->⁺ \Type u} {B ->⁺ \Type u} (\lam G a =>⁺ G (f a)) (ReprFunctor x) \cowith
+  | L0x => ReprFunctor (f x)
+  | eta0x => (yonedaCov x (\lam a => ReprFunctor (f x) (f a))).ret (Straight.toStraight idd)
+  | eta0x-univ {Q} => IsEquiv.leftFactor (inP (yonedaCov x (\lam a => Q (f a)))) $ transport IsEquiv
+      (ext \lam g => inv $ yonedaCov-natural x _ (dmap (\lam G a =>⁺ G (f a)) g)
+                         *> pmap (~>_-> (dmap (\lam (H : B ->⁺ \Type u) => H (f x)) g)) ((yonedaCov x (\lam a => ReprFunctor (f x) (f a))).f_sec _))
+      (inP (yonedaCov (f x) Q))
+
+-- | Left Kan extension preserves representable functors.
+\func LeftKanExtType_ReprFunctor.{u} {A B : \Cat u} {f : A ->⁺ B} {x : A} {b :⁺ B} : LeftKanExtType f (ReprFunctor x) b = ReprFunctor (f x) b
+  => path \lam i => L0x {UnivArrow.levelProp (leftKanExtType-univArrow f (ReprFunctor x)) (leftKanExtType-repr-univArrow f x) i} b

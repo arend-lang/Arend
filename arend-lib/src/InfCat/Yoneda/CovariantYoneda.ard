@@ -5,6 +5,7 @@
 \import InfCat.Fibration.DirectedUnivalence
 \import InfCat.Fibration.LeftFib
 \import InfCat.Fibration.Straightening
+\import InfCat.Paths
 \import InfCat.Rezk
 \import Logic
 \import Logic.Unique
@@ -81,3 +82,8 @@
   => \have tr {w : C} (r : x ~> w) : ~>_-> (dmap (ReprFunctor x) r) (Straight.toStraight idd) = Straight.toStraight r
            => pmap (\lam S => S (w, Straight.toStraight r)) ((yonedaCov.Sec-equiv x (ReprFunctor x)).ret_f (\lam k => k.2))
      \in pmap (~>_-> (dmap (ReprFunctor x) p)) (inv (tr q)) *> inv (~>_->_comp _ _) *> pmap (~>_-> __ _) (inv (dmap_comp (ReprFunctor x))) *> tr (comp q p)
+
+-- | The Yoneda equivalence is natural in the functor.
+\sfunc yonedaCov-natural.{u} {C : \Cat u} (x : C) {F G : C ->⁺ \Type u} (a : ReprFunctor x ~> F) (g : F ~> G)
+  : yonedaCov x G (comp a g) = ~>_-> (dmap (\lam H => H x) g) (yonedaCov x F a)
+  => pmap+ (~>_-> __ _) (dmap_comp (\lam (H : C ->⁺ \Type u) => H x) {_} {_} {_} {a} {g}) *> ~>_->_comp _ _

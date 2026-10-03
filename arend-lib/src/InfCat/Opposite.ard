@@ -1,5 +1,6 @@
 \import Equiv
 \import Function.Meta
+\import InfCat.Fibration.LeftKanType
 \import InfCat.Fibration.Straightening
 \import InfCat.Functor.Equiv
 \import InfCat.Functor.FullyFaithful
@@ -56,4 +57,17 @@
       => ext \lam y => (\peval Hom _ y)
           *> pmap+ (FullSubCat.inc {C ->⁺ \Type u} __ y)
                    (pmap (IsHEquiv.ret OpLarge-equiv __) (\peval OpOb x) *> IsHEquiv.ret_f OpLarge-equiv)
+  }
+
+\sfunc OpFunc.{u} {C : \Cat u} {D : \Cat u} (f : C ->⁺ D) (x :⁺ Op C) : Op D
+  => pair.1 x
+  \where {
+    \private \sfunc pair
+      => ffMap-lift Op.Hom-ff (\lam x => LeftKanExtType f (Op.Hom x))
+          \lam x' => \case IsEquiv.isSurj Op.OpOb-equiv x' \with {
+            | inP (x,p) => inP (Op.OpOb (f x), Op.Hom-char *> ext (\lam b => inv LeftKanExtType_ReprFunctor) *> pmap (LeftKanExtType f) (inv Op.Hom-char *> pmap Op.Hom p))
+          }
+
+    \protected \sfunc char : Op.Hom (OpFunc f x) = LeftKanExtType f (Op.Hom x)
+      => pmap+ Op.Hom (\peval OpFunc f x) *> pair.2 x
   }
