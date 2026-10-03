@@ -21,7 +21,7 @@ public class DerivedInferenceVariable extends InferenceVariable {
 
   @Override
   public boolean canBeInfinite() {
-    return true;
+    return myVar.canBeInfinite();
   }
 
   @Override
