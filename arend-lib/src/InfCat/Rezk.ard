@@ -70,7 +70,7 @@
   => (\lam fi => inP (IsIso_= fi),
       \lam (inP s) => transport IsIso s.2 $ inP (=_~> (inv s.1), =_~>_comp *> pmap+ =_~> inv_*>, =_~>_comp *> pmap+ =_~> *>_inv))
 
-\lemma =-char {C : \Cat} (x y : C)
+\lemma =-char {C : \Cat} {x y : C}
   : IsEquiv {x = y} {\Sigma (f : x ~> y) (IsIso f)} (\lam p => (=_~> p, IsIso-char.2 $ inP (p,idp)))
   => inP $ pathEquiv (\lam x y => \Sigma (f : x ~> y) (IsIso f)) \lam {x} {y} => \new Retraction {
     | f p => (=_~> p, IsIso-char.2 $ inP (p,idp))
@@ -79,7 +79,7 @@
   }
 
 \lemma =_~>-embedding {C : \Cat} (x y : C) : Embedding {x = y} =_~>
-  => transEmbedding (Embedding.fromIsEquiv (=-char x y)) (Embedding.projection {x ~> y} IsIso)
+  => transEmbedding (Embedding.fromIsEquiv =-char) (Embedding.projection {x ~> y} IsIso)
 
 -- | A morphism is an isomorphism iff it is identified with a constant arrow in the arrow category.
 \lemma IsIso-diag-char {A : \Cat} {a b : A} {q : a ~> b}

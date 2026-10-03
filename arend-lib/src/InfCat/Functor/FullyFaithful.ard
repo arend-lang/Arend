@@ -33,15 +33,9 @@
                       IsEquiv.isInj (ff x x) $ dmap_comp f *> pmap (comp _ __) (IsEquiv.f_ret (ff y x)) *> r.3)
 
     \lemma isObEmbedding (ff : IsFFMap f) : Embedding {C} {D} (\lam x => f x) \cowith
-      | isEmb x y => IsEquiv.toQEquiv {_} {_} {pmap (f __)} $ propExt.conv (IsEquiv.parallelEquiv {_} {_} {_} {_} {_}
-          {\lam s => later (dmap f s.1, dmap_IsIso f s.2)}
-          (=-char x y)
-          (=-char (f x) (f y))
-          (\lam p => ext $ inv $ dmap_=_~> f))
-        (IsEquiv.fromEmbSurj (leftEmbedding (Embedding.projection _) $ transEmbedding (Embedding.projection _ ) $ Embedding.fromIsEquiv (ff x y))
-          \lam s => \case IsEquiv.isSurj (ff x y) s.1 \with {
-            | inP (p,fp=s) => inP ((p, isConservative ff $ transportInv IsIso fp=s s.2), ext fp=s)
-          })
+      | isEmb x y => IsEquiv.toQEquiv $ propExt.conv
+          (IsEquiv.parallelEquiv =-char =-char (\lam p => ext $ inv $ dmap_=_~> f))
+          (subtype-equiv (ff x y) (dmap_IsIso f) (isConservative ff))
 
     \lemma fibProp (ff : IsFFMap f) (y : D) : isProp (\Sigma (x : C) (f x = y))
       => Embedding.embeddingFiber-isProp (isObEmbedding ff) y

@@ -124,9 +124,20 @@
                       (te : IsEquiv {\Sigma (x : X) (P x)} {\Sigma (y : Y) (Q y)} (\lam s => (g s.1, h s.1 s.2))) (x : X) : IsEquiv (h x)
   => propExt.conv (totalEquiv h) (IsEquiv.leftFactor (inP (qsigma-left (IsEquiv.toQEquiv ge))) te) x
 
+-- | An equivalence that preserves and reflects a family of propositions restricts to an equivalence of the subtypes.
+\lemma subtype-equiv {X Y : \Cat} {g : X -> Y} (ge : IsEquiv g) {P : X -> \Prop} {Q : Y -> \Prop}
+                     (h : \Pi {x : X} -> P x -> Q (g x)) (r : \Pi {x : X} -> Q (g x) -> P x)
+  : IsEquiv {\Sigma (x : X) (P x)} {\Sigma (y : Y) (Q y)} (\lam s => (g s.1, h s.2))
+  => inP $ sigma-equiv (IsEquiv.toQEquiv ge) \lam x => \new QEquiv {
+    | f => h
+    | ret => r
+    | ret_f _ => prop-pi
+    | f_sec _ => prop-pi
+  }
+
 -- | A map applied to both components of a pair is an equivalence if the map is.
 \lemma pair-equiv {X Y : \Cat} {g : X -> Y} (e : IsEquiv g) : IsEquiv {\Sigma X X} {\Sigma Y Y} (\lam j => (g j.1, g j.2))
-  => IsEquiv.trans (IsSigma-right {X} {\lam _ => X} {\lam _ => Y} (\lam _ => g) (\lam _ => e)) (inP (qsigma-left {X} {Y} {\lam _ => Y} (IsEquiv.toQEquiv e)))
+  => inP $ sigma-equiv (IsEquiv.toQEquiv e) \lam _ => IsEquiv.toQEquiv e
 
 -- | Pairs with propositional second components are equal if their first components are.
 \func sigma-prop-ext {A : \Cat} {B : A -> \Cat} (Bp : \Pi (a : A) -> isProp (B a)) {s s' : \Sigma (a : A) (B a)} (p : s.1 = s'.1) : s = s'

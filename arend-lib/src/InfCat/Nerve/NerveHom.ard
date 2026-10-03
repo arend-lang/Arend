@@ -154,7 +154,7 @@
 
 -- | {nerveOb} is an embedding for univalent categories.
 \lemma nerveOb-emb.{u} {D : Cat.{u,u}} : Embedding {D} {Nerve D} nerveOb \cowith
-  | isEmb a a' => IsEquiv.toQEquiv $ IsEquiv.leftFactor (=-char (nerveOb a) (nerveOb a')) $
+  | isEmb a a' => IsEquiv.toQEquiv $ IsEquiv.leftFactor =-char $
       transport IsEquiv (ext \lam p => ext (aux p)) (IsEquiv.trans univalence (inP nerveIso))
   \where
     \private \func aux {a a' : D} (p : a = a') : nerveHom (D.idtoiso p).f = =_~> (pmap nerveOb p) \elim p

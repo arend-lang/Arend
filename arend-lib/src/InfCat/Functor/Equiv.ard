@@ -53,6 +53,13 @@
     \sfunc f_ret {C D : \Cat} {f : C ->⁺ D} (e : IsHEquiv f) {y :⁺ D} : f (ret e y) = y
       => pmap+ f (path (\lam i => (\peval ret e) i y) *> inv-equals f {(toTuple e).1.1} (toTuple e).1.2 (toTuple e).2.2) *> (toTuple e).2.2 y
 
+    \lemma ret-equiv {C D : \Cat} {f : C ->⁺ D} (e : IsHEquiv f) : IsHEquiv (ret e)
+      => inP \new HQEquiv {
+        | finv => f
+        | finv_f x => f_ret e
+        | f_finv y => ret_f e
+      }
+
     \lemma toIsEquiv {C D : \Cat} {f : C ->⁺ D} (e : IsHEquiv f) : IsEquiv (\lam x => f x) \elim e
       | inP e => inP (HQEquiv.toQEquiv e)
 

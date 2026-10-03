@@ -1,0 +1,31 @@
+\import Equiv
+\import Equiv.Sigma
+\import InfCat.Arrows
+\import InfCat.Functor.Equiv
+\import Logic
+
+\type ResizeFromArrows.{u} {C : \Cat} {S : \Type u} (e : QEquiv {DI ->⁺ C} {S}) : \Cat u
+  => ResizeCat e.ret e e.f_ret e.ret_f
+
+\lemma ResizeFromArrows-equiv.{u} {C : \Cat} {S : \Type u} {e : QEquiv {DI ->⁺ C} {S}}
+  : IsHEquiv {C} {ResizeFromArrows e} (\lam x => resizeCat x)
+  => inP \new HQEquiv {
+    | finv (resizeCat x) => x
+    | finv_f x => idp
+    | f_finv (resizeCat x) => idp
+  }
+
+\type ResizeFromObjects.{u} {C : \Cat} {S : \Cat u} (Se : QEquiv {S} {C}) {T : S -> S -> \Cat u} (Te : \Pi (x y : S) -> QEquiv {T x y} {Se x ~> Se y}) : \Cat u
+  => ResizeFromArrows homEquiv
+  \where {
+    \func homEquiv : QEquiv {DI ->⁺ C} {\Sigma (s : \Sigma S S) (T s.1 s.2)}
+      => DI-equiv `transQEquiv` symQEquiv (sigma-equiv (sigma-equiv Se \lam _ => Se) \lam s => Te s.1 s.2)
+  }
+
+\lemma ResizeFromObjects-equiv.{u} {C : \Cat} {S : \Cat u} (Se : QEquiv {S} {C}) {T : S -> S -> \Cat u} (Te : \Pi (x y : S) -> QEquiv {T x y} {Se x ~> Se y})
+  : IsHEquiv {C} {ResizeFromObjects Se Te} (\lam x => resizeCat x)
+  => inP \new HQEquiv {
+    | finv (resizeCat x) => x
+    | finv_f x => idp
+    | f_finv (resizeCat x) => idp
+  }

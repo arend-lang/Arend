@@ -1,9 +1,14 @@
 \import Equiv
+\import Equiv.Sigma
+\import Function.Meta
 \import InfCat.Basics
 \import InfCat.Fibration.DirectedUnivalence
 \import InfCat.Fibration.LeftFib
 \import InfCat.Fibration.Straightening
+\import InfCat.Rezk
+\import Logic
 \import Logic.Unique
+\import Meta
 \import Paths
 \import Paths.Meta
 
@@ -26,7 +31,7 @@
   | f_sec b => pmap (\lam p => ~>_-> (dmap G p) b) coslice-arrow.idd-path *> ~>_->_idd
 
 -- | The Yoneda lemma: natural transformations from the representable functor of {x} to {F} are elements of `F x`.
-\func yonedaCov.{u} {C : \Cat u} (x : C) (F : C ->⁺ \Type u) : QEquiv {(\lam y =>⁺ ReprFunctor x y) ~> F} {F x}
+\func yonedaCov.{u} {C : \Cat u} (x : C) (F : C ->⁺ \Type u) : QEquiv {ReprFunctor x ~> F} {F x}
   => depUnivalence `transQEquiv` Sec-equiv x F
   \where {
     -- | Sections over the total category of the representable functor.
@@ -44,6 +49,31 @@
     \func Sec-equiv.{u} {C : \Cat u} (x : C) (F : C ->⁺ \Type u) : QEquiv {Sec x F} {F x}
       => Sec-reindex x F `transQEquiv` coslice-yoneda x (\lam k => F k.1)
   }
+
+\func yonedaEmbCov.{u} {C : \Cat u} {x y : C} : QEquiv {x ~> y} {ReprFunctor y ~> ReprFunctor x}
+  => symQEquiv $ yonedaCov y (ReprFunctor x) `transQEquiv` ReprFunctor.equiv
+  \where {
+    \sfunc idd-path {x : C} : yonedaEmbCov {C} {x} idd = idd
+      => pmap (\lam a => yonedaEmbCov (Straight.fromStraight a)) (inv ~>_->_idd) *> yonedaEmbCov.f_sec idd
+
+    \lemma isIso {p : x ~> y} (e : IsIso p) : IsIso (yonedaEmbCov p)
+      => \case IsIso-char.1 e \with {
+        | inP (r, q) => transport (\lam p' => IsIso (yonedaEmbCov p')) q \case \elim y, \elim r \with {
+          | _, idp => transportInv IsIso idd-path $ IsIso-char.2 $ inP (idp, idp)
+        }
+      }
+
+    \lemma isConservative {p : x ~> y} (e : IsIso (yonedaEmbCov p)) : IsIso p
+      => precomp-equiv=>iso \lam z => transport IsEquiv (ext \lam g => pmap Straight.fromStraight (ReprFunctor-transport p g)) $
+          IsEquiv.trans (IsEquiv.trans (inP (symQEquiv ReprFunctor.equiv)) (~>_->-iso-equiv (dmap_IsIso (\lam u => u z) e))) (inP ReprFunctor.equiv)
+  }
+
+\lemma ReprFunctor-embedding.{u} {C : \Cat u} : Embedding (ReprFunctor {C}) \cowith
+  | isEmb x y => IsEquiv.toQEquiv $ propExt.conv (IsEquiv.parallelEquiv (IsEquiv.trans (inP inv-equiv) =-char) =-char
+      \lam p => later \case \elim y, \elim p \with {
+        | _, idp => ext (inv (yonedaEmbCov.idd-path {C} {x}))
+      })
+    (subtype-equiv (inP yonedaEmbCov) yonedaEmbCov.isIso yonedaEmbCov.isConservative)
 
 -- | Transport in the representable functor is postcomposition.
 \sfunc ReprFunctor-transport.{u} {C : \Cat u} {x y z : C} (q : x ~> y) (p : y ~> z)

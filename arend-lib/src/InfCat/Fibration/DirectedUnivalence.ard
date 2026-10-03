@@ -3,6 +3,8 @@
 \import InfCat.Fibration.LeftFib
 \import InfCat.Groupoid
 \import InfCat.Paths
+\import InfCat.Rezk
+\import Logic
 \import Paths
 \import Paths.Meta
 
@@ -39,6 +41,15 @@
 \sfunc ~>_->-natural.{u} {C : \Cat} {F G : C ->⁺ \Type u} (h : \Pi (x :⁺ C) -> F x ->⁺ G x) {x y : C} (p : x ~> y) {a : F x}
   : ~>_-> (dmap G p) (h x a) = h y (~>_-> (dmap F p) a)
   => coe+-dpath (dpath \lam i => h (p i) (coe+ (\lam j => F (p j)) a i))
+
+-- | Transport along an isomorphism of types is an equivalence.
+\lemma ~>_->-iso-equiv.{u} {A B : \Type u} {p : A ~> B} (e : IsIso p) : IsEquiv (~>_-> p)
+  => inP \new QEquiv {A} {B} {
+    | f => ~>_-> p
+    | ret => ~>_-> (IsIso.ret e)
+    | ret_f a => inv (~>_->_comp p (IsIso.ret e)) *> pmap (~>_-> __ a) (IsIso.f_ret e) *> ~>_->_idd
+    | f_sec b => inv (~>_->_comp (IsIso.ret e) p) *> pmap (~>_-> __ b) (IsIso.ret_f e) *> ~>_->_idd
+  }
 
 \func depUnivalence.{u} {C : \Cat} {F G : C ->⁺ \Type u} : QEquiv {F ~> G} {\Pi (s :⁺ \Sigma⁺ (x : C) (F x)) -> G s.1} \cowith
   | f p s => ~>_-> (dpath \lam i => p i s.1) s.2
