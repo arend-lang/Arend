@@ -213,7 +213,7 @@ public class StdImplicitArgsInference implements ImplicitArgsInference {
         result = tcResult;
         if (tcResult.type instanceof PathTypeExpression pathType) {
           FunctionDefinition at = pathType.isDirected() ? Prelude.DAT : Prelude.AT;
-          result = DefCallResult.makeTResult(new Concrete.ReferenceExpression(fun.getData(), at.getRef()), at, Levels.EMPTY, myVisitor)
+          result = DefCallResult.makeTResult(new Concrete.ReferenceExpression(fun.getData(), at.getRef()), at, Levels.EMPTY)
             .applyExpression(pathType.getArgumentType(), false, myVisitor, fun)
             .applyExpression(pathType.getLeftArgument(), false, myVisitor, fun)
             .applyExpression(pathType.getRightArgument(), false, myVisitor, fun)

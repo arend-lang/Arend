@@ -768,7 +768,6 @@ class ExpressionSerialization implements ExpressionVisitor<Void, ExpressionProto
     builder.setArgumentType(writeExpr(expr.getArgumentType()));
     builder.setArgument(writeExpr(expr.getArgument()));
     builder.setDirected(expr.isDirected());
-    builder.setForceInfinity(expr.isForcedInfinite());
     return ExpressionProtos.Expression.newBuilder().setPath(builder.build()).build();
   }
 
@@ -788,7 +787,6 @@ class ExpressionSerialization implements ExpressionVisitor<Void, ExpressionProto
     builder.setLeftArgument(writeExpr(expr.getLeftArgument()));
     builder.setRightArgument(writeExpr(expr.getRightArgument()));
     builder.setDirected(expr.isDirected());
-    builder.setForceInfinity(expr.isForcedInfinite());
     return ExpressionProtos.Expression.newBuilder().setPathType(builder.build()).build();
   }
 

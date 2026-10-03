@@ -378,7 +378,7 @@ public class Prelude implements ArendPrelude {
     PathExpression pathExpr = (PathExpression) definition.getBody();
     assert pathExpr != null;
     TypedSingleDependentLink param = definition == IDD ? UnusedDirectedIntervalDependentLink.INSTANCE : UnusedIntervalDependentLink.INSTANCE;
-    definition.setBody(new PathExpression(new LamExpression(param, args.getFirst()), new LamExpression(param, ((LamExpression) pathExpr.getArgument()).getBody()), definition == IDD, true));
+    definition.setBody(new PathExpression(new LamExpression(param, args.getFirst()), new LamExpression(param, ((LamExpression) pathExpr.getArgument()).getBody()), definition == IDD));
   }
 
   public static void forEach(Consumer<Definition> consumer) {

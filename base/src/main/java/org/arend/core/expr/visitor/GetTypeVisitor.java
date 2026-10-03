@@ -1,6 +1,7 @@
 package org.arend.core.expr.visitor;
 
 import org.arend.core.context.binding.Binding;
+import org.arend.core.context.binding.TypedBinding;
 import org.arend.core.context.param.DependentLink;
 import org.arend.core.context.param.SingleDependentLink;
 import org.arend.core.definition.ClassField;
@@ -30,19 +31,9 @@ public class GetTypeVisitor implements ExpressionVisitor<Void, Expression> {
   public final static GetTypeVisitor NN_INSTANCE = new GetTypeVisitor(false);
 
   private final boolean myNormalizing;
-  private final Set<Binding> myReleased;
-
-  private GetTypeVisitor(boolean normalizing, Set<Binding> released) {
-    myNormalizing = normalizing;
-    myReleased = released;
-  }
 
   private GetTypeVisitor(boolean normalizing) {
-    this(normalizing, Collections.emptySet());
-  }
-
-  GetTypeVisitor(Set<Binding> released) {
-    this(true, released);
+    myNormalizing = normalizing;
   }
 
   GetTypeVisitor() {
@@ -50,45 +41,57 @@ public class GetTypeVisitor implements ExpressionVisitor<Void, Expression> {
   }
 
   /**
-   * @return a visitor that treats forced path types depending only on {@code released} (among covariant variables) as not forced.
+   * @return true if {@code expr} depends on the categorical context, that is, has a free covariant variable.
+   *         Since an unsolved inference variable may be solved with an expression that depends on its bounds, they are also taken into account.
    */
-  protected GetTypeVisitor withReleased(Set<Binding> released) {
-    return new GetTypeVisitor(myNormalizing, released);
+  public static boolean hasFreeCovariantVariable(Expression expr) {
+    for (Binding binding : FreeVariablesCollector.getFreeVariables(expr, true)) {
+      if (binding instanceof DependentLink link && link.getVariance() != BindingVariance.INVARIANT) {
+        return true;
+      }
+    }
+    return false;
   }
 
   /**
-   * Path types that depend on the categorical context are forced to the infinite level.
-   * This is relative to the context: once all covariant variables such a path type depends on are bound by \Pi- or \Sigma-types,
-   * these types do not depend on them anymore, so the path type does not contribute the infinite level to their sort.
+   * Path types that depend on the categorical context live in the infinite universe.
+   * This is relative to the context: once covariant variables are bound by \Pi- or \Sigma-types, these types do not depend on them anymore.
+   * Thus, the sort of such a type can be computed after replacing these variables with invariant ones.
    *
-   * @return the type of {@code codomain} computed so that forced path types depending only on covariant variables among {@code parameters} (each is a chain of parameters of the same type) and on variables released by this visitor are treated as not forced,
+   * @return the type of {@code codomain} with covariant variables among {@code parameters} (each is a chain of parameters of the same type) replaced with invariant ones,
    *         or null if there are no covariant variables among {@code parameters}.
    */
   public Expression getReleasedType(Expression codomain, Collection<? extends SingleDependentLink> parameters) {
-    Set<Binding> released = null;
+    ExprSubstitution substitution = new ExprSubstitution();
     for (SingleDependentLink params : parameters) {
-      released = addReleased(released, params, null);
+      release(substitution, params, null);
     }
-    return released == null ? null : codomain.accept(withReleased(released), null);
+    return substitution.isEmpty() ? null : codomain.subst(substitution).accept(this, null);
   }
 
   /**
-   * @return the type of {@code type} computed so that forced path types depending only on covariant variables among {@code parameters} before {@code end} and on variables released by this visitor are treated as not forced,
+   * @return the type of {@code type} with covariant variables among {@code parameters} before {@code end} replaced with invariant ones,
    *         or null if there are no such covariant variables.
    */
   public Expression getReleasedType(Expression type, DependentLink parameters, DependentLink end) {
-    Set<Binding> released = addReleased(null, parameters, end);
-    return released == null ? null : type.accept(withReleased(released), null);
+    ExprSubstitution substitution = new ExprSubstitution();
+    release(substitution, parameters, end);
+    return substitution.isEmpty() ? null : type.subst(substitution).accept(this, null);
   }
 
-  private Set<Binding> addReleased(Set<Binding> released, DependentLink parameters, DependentLink end) {
+  /**
+   * A variable is replaced only if its type does not depend on the categorical context.
+   * This is always true for parameters of \Pi-types, but not for components of \Sigma-types.
+   */
+  private static void release(ExprSubstitution substitution, DependentLink parameters, DependentLink end) {
     for (DependentLink param = parameters; param.hasNext() && param != end; param = param.getNext()) {
       if (param.getVariance() != BindingVariance.INVARIANT) {
-        if (released == null) released = new HashSet<>(myReleased);
-        released.add(param);
+        Expression type = param.getType().subst(substitution);
+        if (!hasFreeCovariantVariable(type)) {
+          substitution.add(param, new ReferenceExpression(new TypedBinding(param.getName(), type)));
+        }
       }
     }
-    return released;
   }
 
   @Override
@@ -206,8 +209,11 @@ public class GetTypeVisitor implements ExpressionVisitor<Void, Expression> {
   @Override
   public Expression visitPi(PiExpression expr, Void params) {
     SortExpression sort1 = expr.getParameters().getType().accept(this, null).toSortExpression();
-    Expression codomainType = getReleasedType(expr.getCodomain(), Collections.singletonList(expr.getParameters()));
-    SortExpression sort2 = (codomainType != null ? codomainType : expr.getCodomain().accept(this, null)).toSortExpression();
+    SortExpression sort2 = expr.getCodomain().accept(this, null).toSortExpression();
+    if (sort2 != null && sort2.isInfinite()) {
+      Expression codomainType = getReleasedType(expr.getCodomain(), Collections.singletonList(expr.getParameters()));
+      if (codomainType != null) sort2 = codomainType.toSortExpression();
+    }
     return sort1 == null || sort2 == null ? new ErrorExpression() : new UniverseExpression(SortExpression.makePi(sort1, sort2));
   }
 
@@ -216,9 +222,11 @@ public class GetTypeVisitor implements ExpressionVisitor<Void, Expression> {
     List<SortExpression> sorts = new ArrayList<>();
     for (DependentLink param = expr.getParameters(); param.hasNext(); param = param.getNext()) {
       param = param.getNextTyped(null);
-      Expression type = param.getVariance() == BindingVariance.INVARIANT ? null : getReleasedType(param.getType(), expr.getParameters(), param);
-      if (type == null) type = param.getType().accept(this, null);
-      SortExpression sort = type.toSortExpression();
+      SortExpression sort = param.getType().accept(this, null).toSortExpression();
+      if (sort != null && sort.isInfinite() && param.getVariance() != BindingVariance.INVARIANT) {
+        Expression type = getReleasedType(param.getType(), expr.getParameters(), param);
+        if (type != null) sort = type.toSortExpression();
+      }
       if (sort == null) {
         return new ErrorExpression();
       }
@@ -357,26 +365,16 @@ public class GetTypeVisitor implements ExpressionVisitor<Void, Expression> {
     boolean isDirected = expr.isDirected();
     Expression left = AppExpression.make(expr.getArgument(), ExpressionFactory.Left(isDirected), true);
     Expression right = AppExpression.make(expr.getArgument(), ExpressionFactory.Right(isDirected), true);
-    return new PathTypeExpression(expr.getArgumentType(), left, right, isDirected, expr.isForcedInfinite());
+    return new PathTypeExpression(expr.getArgumentType(), left, right, isDirected);
   }
 
   @Override
   public UniverseExpression visitPathType(PathTypeExpression expr, Void params) {
-    if (expr.isForcedInfinite() && !isReleased(expr)) {
+    if (hasFreeCovariantVariable(expr)) {
       return new UniverseExpression(new Sort(Level.INFINITY, ConstLevel.INFINITY));
     }
     DataDefinition definition = expr.getDefinition();
     return new UniverseExpression(definition.getSortExpression().subst(Arrays.asList(expr.getArgumentType(), expr.getLeftArgument(), expr.getRightArgument()), Levels.EMPTY.makeSubstitution(definition), this));
-  }
-
-  private boolean isReleased(PathTypeExpression expr) {
-    if (myReleased.isEmpty()) return false;
-    for (Binding binding : FreeVariablesCollector.getFreeVariables(expr, true)) {
-      if (binding instanceof DependentLink link && link.getVariance() != BindingVariance.INVARIANT && !myReleased.contains(binding)) {
-        return false;
-      }
-    }
-    return true;
   }
 
   @Override

@@ -170,4 +170,15 @@ public class CatForcedPathTest extends TypeCheckingTestCase {
   public void sigmaFirstComponentTest() {
     typeCheckDef("\\func test.{u} {C D : \\Cat u} (a b : C ->+ D) : C ->+ \\Cat u => \\lam (y :+ C) => \\Sigma+ (a y = b y) (x : C)", 1);
   }
+
+  @Test
+  public void sigmaReleasedComponentTest() {
+    typeCheckDef("\\func test.{u} {C : \\Cat u} : C ->+ \\Cat u => \\lam (y :+ C) => \\Sigma+ (x : \\Sigma+ Nat Nat) (x.2 = x.2)");
+  }
+
+  // The type of the first component depends on the categorical context, so it cannot be released
+  @Test
+  public void sigmaCategoricalComponentTest() {
+    typeCheckDef("\\func test.{u} {C : \\Cat u} (B : C ->+ \\Type u) : C ->+ \\Cat u => \\lam (y :+ C) => \\Sigma+ (x : \\Sigma+ (B y) Nat) (x.2 = x.2)", 1);
+  }
 }

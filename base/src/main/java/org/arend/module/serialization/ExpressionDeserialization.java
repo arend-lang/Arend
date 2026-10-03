@@ -617,7 +617,7 @@ class ExpressionDeserialization {
   }
 
   private Expression readPath(ExpressionProtos.Expression.Path proto) throws DeserializationException {
-    return new PathExpression(proto.hasArgumentType() ? readExpr(proto.getArgumentType()) : null, readExpr(proto.getArgument()), proto.getDirected(), proto.getForceInfinity());
+    return new PathExpression(proto.hasArgumentType() ? readExpr(proto.getArgumentType()) : null, readExpr(proto.getArgument()), proto.getDirected());
   }
 
   private Expression readAt(ExpressionProtos.Expression.At proto) throws DeserializationException {
@@ -625,7 +625,7 @@ class ExpressionDeserialization {
   }
 
   private Expression readPathType(ExpressionProtos.Expression.PathType proto) throws DeserializationException {
-    return new PathTypeExpression(readExpr(proto.getArgumentType()), readExpr(proto.getLeftArgument()), readExpr(proto.getRightArgument()), proto.getDirected(), proto.getForceInfinity());
+    return new PathTypeExpression(readExpr(proto.getArgumentType()), readExpr(proto.getLeftArgument()), readExpr(proto.getRightArgument()), proto.getDirected());
   }
 
   private String validName(String name) {

@@ -50,7 +50,7 @@ public class ExpressionFactory {
   }
 
   public static PathTypeExpression PathType(boolean directed, Expression argumentType, Expression left, Expression right) {
-    return new PathTypeExpression(argumentType, left, right, directed, false);
+    return new PathTypeExpression(argumentType, left, right, directed);
   }
 
   public static ClassCallExpression ClassCall(ClassDefinition definition) {
