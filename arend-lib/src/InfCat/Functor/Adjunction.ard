@@ -53,8 +53,7 @@
           (ff y z),
         \lam ei y z => transport IsEquiv
           (ext \lam g => pmap (comp _ __) (dmap_comp radj) *> comp-assoc *> pmap (comp __ _) heta_heps-left *> comp_idd-left)
-          (IsEquiv.trans (transport (\lam q => IsEquiv (comp q)) (IsIso_= (ei y)).2 (comp_=_~>-left-equiv (IsIso_= (ei y)).1))
-                         (inP heta_heps-equiv)))
+          (IsEquiv.trans (comp-iso-left-equiv (ei y)) (inP heta_heps-equiv)))
 
   -- | If the right adjoint is fully faithful, then the unit is an isomorphism on its image.
   \lemma radj-ff-unit-iso (ff : IsFFMap radj) (y : D) : IsIso (heta (radj y))
@@ -68,8 +67,7 @@
           (ff w x),
         \lam ei w x => transport IsEquiv
           (ext \lam f => pmap (comp __ _) (dmap_comp ladj) *> inv comp-assoc *> pmap (comp _) heta_heps-right *> comp_idd-right)
-          (IsEquiv.trans (transport (\lam q => IsEquiv (comp __ q)) (IsIso_= (ei x)).2 (comp_=_~>-right-equiv (IsIso_= (ei x)).1))
-                         (inP (symQEquiv heta_heps-equiv))))
+          (IsEquiv.trans (comp-iso-right-equiv (ei x)) (inP (symQEquiv heta_heps-equiv))))
 
   -- | If the left adjoint is fully faithful, then the counit is an isomorphism on its image.
   \lemma ladj-ff-counit-iso (ff : IsFFMap ladj) (x : C) : IsIso (heps (ladj x))
@@ -246,7 +244,7 @@
     => comp (inc (univ-ret y)).2.2 (=_~> proj_univ-ret)
 
   \protected \lemma heps-univ (y : D) : IsUniversal (heps y)
-    => \lam x' => transport IsEquiv (ext \lam f => inv comp-assoc) (IsEquiv.trans (inc-con {_} {_} {univ-ret y} x') (comp_=_~>-right-equiv proj_univ-ret))
+    => \lam x' => transport IsEquiv (ext \lam f => inv comp-assoc) (IsEquiv.trans (inc-con {_} {_} {univ-ret y} x') (comp-iso-right-equiv (=_~>-iso proj_univ-ret)))
 
   \protected \func rightAdjoint : RightAdjoint radj \cowith
     | lob x => L x
@@ -361,7 +359,9 @@
     => comp (=_~> (inv proj_univ-ret)) (inc (univ-ret x)).2.2
 
   \protected \lemma heta-univ (x : C) : IsUniversal (heta x)
-    => \lam y' => transport IsEquiv (ext \lam g => comp-assoc) (IsEquiv.trans (inc-con {_} {_} {univ-ret x} y') (comp_=_~>-left-equiv (inv proj_univ-ret)))
+    => \lam y' => transport IsEquiv (ext \lam g => comp-assoc)
+          (IsEquiv.trans (inc-con {_} {_} {univ-ret x} y')
+                         (comp-iso-left-equiv (=_~>-iso (inv proj_univ-ret))))
 
   \protected \func leftAdjoint : LeftAdjoint ladj \cowith
     | rob y => R y

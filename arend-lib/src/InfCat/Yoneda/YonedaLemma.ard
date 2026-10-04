@@ -1,0 +1,70 @@
+\import Equiv
+\import Function
+\import Function.Meta
+\import InfCat.Basics
+\import InfCat.Fibration.DirectedUnivalence
+\import InfCat.Fibration.Straightening
+\import InfCat.Functor.Conservative
+\import InfCat.Functor.Equiv
+\import InfCat.Functor.FullyFaithful
+\import InfCat.Opposite
+\import InfCat.Paths
+\import InfCat.Rezk
+\import InfCat.Yoneda.CovariantYoneda
+\import Logic
+\import Paths
+\import Paths.Meta
+
+{- | The Yoneda lemma: natural transformations from the representable functor of {y} to {F} are elements of `F y`.
+ -
+ -   Proof strategy:
+ -   1. By {yonedaCov}, construct {unit} corresponding to {Op.Hom-idd}.
+ -   2. {unit-iso} proves that {unit} is an isomorphism using {objectwise-iso}.
+ -   3. Precomposition with an isomorphism is an equivalence.
+ -      So, `(\lam x =>⁺ Op.Hom x y) ~> F` is equivalent to `ReprFunctor (Op.toOp y) ~> F`,
+ -      which is equivalent to `F (Op.toOp y)` by {yonedaCov}.
+ -   4. The underlying function of this equivalence is equal to {fun} by {yonedaCov-natural}.
+ -}
+\lemma yoneda.{u} {C : \Cat u} (y : C) (F : Op C ->⁺ \Type u)
+  : IsEquiv {(\lam x =>⁺ Op.Hom x y) ~> F} {F (Op.toOp y)} fun
+  => transport IsEquiv
+      (ext \lam a => yonedaCov-natural *> pmap (~>_-> (dmap (\lam H => H (Op.toOp y)) a))
+                                               (IsEquiv.f_ret (yonedaCov (Op.toOp y) (\lam x =>⁺ Op.Hom x y))))
+      (IsEquiv.trans (comp-iso-left-equiv (unit-iso y)) (yonedaCov (Op.toOp y) F))
+  \where {
+    \protected \func fun (p : (\lam x =>⁺ Op.Hom x y) ~> F) : F (Op.toOp y)
+      => ~>_-> (dmap (\lam H => H (Op.toOp y)) p) (Op.Hom-idd y)
+
+    -- | The natural transformation from the representable functor of `toOp y` corresponding to `Hom-idd y`.
+    \func unit.{u} {C : \Cat u} (y : C) : ReprFunctor (Op.toOp y) ~> (\lam x =>⁺ Op.Hom x y)
+      => IsEquiv.ret (yonedaCov (Op.toOp y) (\lam x =>⁺ Op.Hom x y)) (Op.Hom-idd y)
+
+    \lemma unit-iso.{u} {C : \Cat u} (y : C) : IsIso (unit y)
+      => objectwise-iso \lam x => ~>_->-equiv-iso $ transport IsEquiv
+          (ext \lam a => pmap (~>_-> (dmap (\lam x' => Op.Hom x' y) (Straight.fromStraight a)))
+                              (inv (IsEquiv.f_ret (yonedaCov (Op.toOp y) (\lam x' =>⁺ Op.Hom x' y))))
+                          *> yonedaCov-component
+                          *> pmap (~>_-> (dmap (\lam H => H x) (unit y))) (ReprFunctor.equiv.ret_f a))
+          (IsEquiv.trans (inP ReprFunctor.equiv) (IsEquiv.trans (Op.Hom-ff (Op.toOp y) x) (yonedaCov y (Op.Hom x))))
+  }
+
+\lemma yonedaEmbedding.{u} {C : \Cat u} : IsFFMap {C} {Op C ->⁺ \Type u} (\lam y x => Op.Hom x y)
+  => \lam y z => IsEquiv.leftFactor (yoneda y (Op.Hom __ z)) $
+      transport IsEquiv (ext \lam p => inv (ReprFunctor-transport-idd p)) (inP (symQEquiv ReprFunctor.equiv))
+
+\sfunc toOpOp.{u} {C : \Cat u} (x :⁺ C) : Op (Op C)
+  => pair.1 x
+  \where {
+    \private \sfunc pair
+      => ffMap-lift Op.Hom-ff {C} (\lam y x => Op.Hom x y) \lam y => inP (Op.toOp (Op.toOp y), (IsIso_= (yoneda.unit-iso y)).1)
+
+    \protected \sfunc char {x :⁺ Op C} {y :⁺ C} : Op.Hom (toOpOp y) x = Op.Hom x y
+      => path \lam i => (pmap+ Op.Hom (\peval toOpOp y) *> pair.2 y) i x
+
+    \protected \sfunc charOb {x : C} : toOpOp x = Op.toOp (Op.toOp x)
+      => ((IsFFMap.isObEmbedding Op.Hom-ff).isEmb _ _).sec $ ext \lam y => char *> path \lam i => inv (IsIso_= (yoneda.unit-iso x)).1 i y
+
+    \protected \lemma isEquiv : IsHEquiv (toOpOp {C})
+      => ff-surj-equiv.1 (ffMap-leftFactor Op.Hom-ff $ transport IsFFMap (ext \lam y x => inv char) yonedaEmbedding,
+                          transport IsSurj (ext \lam x => inv charOb) (IsSurj.comp (IsEquiv.isSurj Op.toOp-equiv) (IsEquiv.isSurj Op.toOp-equiv)))
+  }

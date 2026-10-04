@@ -7,7 +7,6 @@
 \import InfCat.Fibration.DirectedUnivalence
 \import InfCat.Fibration.Straightening
 \import InfCat.Nerve.Nerve
-\import InfCat.Objects
 \import InfCat.Paths
 \import InfCat.Rezk
 \import InfCat.Square
@@ -17,8 +16,6 @@
 \import InfCat.Yoneda.CovariantYoneda
 \import InfCat.Yoneda.EncodeDecode
 \import Logic
-\import Logic.Unique
-\import Meta
 \import Paths
 \import Paths.Meta
 \open FullSubCat (inc, isMax)
@@ -77,7 +74,7 @@
             | nf => nerveHom f
        \in pmap (~>_-> __ g) (dmap_comp inc) *> ~>_->_comp (dmap inc (dmap (codeL x) nf)) (dmap inc (W x b))
             *> pmap (~>_-> (dmap inc (W x b))) (code-nerveHom f g) *> W-app
-            *> pmap (transport+ (\lam X => X) (inv (hp (nerveOb b)))) (pmap Straight.toStraight (inv nerveHom-comp) *> inv (ReprFunctor-transport {Nerve C} (nerveHom g) nf))
+            *> pmap (transport+ (\lam X => X) (inv (hp (nerveOb b)))) (pmap Straight.toStraight (inv nerveHom-comp) *> inv (ReprFunctor-transport {Nerve C}))
             *> inv (~>_->-natural {Nerve C} {\lam t => ReprFunctor.{u} (nerveOb x) t} {\lam t => inc ((Repr x).1 t)} (\lam t m => transport+ (\lam X => X) (inv (hp t)) m) nf)
             *> inv (pmap (~>_-> __ g) (dmap_comp inc) *> ~>_->_comp (dmap inc (W x a)) (dmap inc (dmap (Repr x).1 nf))
                     *> pmap (~>_-> (dmap inc (dmap (Repr x).1 nf))) W-app)
@@ -103,7 +100,7 @@
     => Straight.fromStraight (transport+ (\lam X => X) ((Repr x).2 s.1) (~>_-> (dmap inc (sect x s.1)) s.2))
 
   \sfunc decode_base.{u} {C : Precat.{u,u}} {x : C} : decode x (nerveOb x, id) = idd
-    => (\peval decode x (nerveOb x, id)) *> pmap (\lam w => Straight.fromStraight (transport+ (\lam X => X) ((Repr x).2 (nerveOb x)) (~>_-> (dmap inc w) (id))))
+    => (\peval decode x (nerveOb x, id)) *> pmap (\lam w => Straight.fromStraight (transport+ (\lam X => X) ((Repr x).2 (nerveOb x)) (~>_-> (dmap inc w) id)))
             ((\peval sect x (nerveOb x)) *> nerve-section.base-eval {C} {T x} {sect.Tt x} {W x} {\lam f => Sq0 f} {sect.rc} {sect.ri} x)
        *> pmap (\lam z => Straight.fromStraight (transport+ (\lam X => X) ((Repr x).2 (nerveOb x)) z)) W-app
        *> pmap Straight.fromStraight (transport_id_inv (\lam X => X) ((Repr x).2 (nerveOb x)) _)

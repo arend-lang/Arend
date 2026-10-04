@@ -51,6 +51,12 @@
     | f_sec b => inv (~>_->_comp (IsIso.ret e) p) *> pmap (~>_-> __ b) (IsIso.ret_f e) *> ~>_->_idd
   }
 
+-- | A morphism of types is an isomorphism if transport along it is an equivalence.
+\lemma ~>_->-equiv-iso.{u} {A B : \Type u} {p : A ~> B} (e : IsEquiv (~>_-> p)) : IsIso p
+  => inP (->_~> (IsEquiv.ret e),
+          inv ~>_->_~> *> pmap ->_~> (ext \lam b => ~>_->_comp _ _ *> pmap (~>_-> p) ->_~>_-> *> IsEquiv.f_ret e *> inv ~>_->_idd) *> ~>_->_~>,
+          inv ~>_->_~> *> pmap ->_~> (ext \lam a => ~>_->_comp _ _ *> ->_~>_-> *> IsEquiv.ret_f e *> inv ~>_->_idd) *> ~>_->_~>)
+
 \func depUnivalence.{u} {C : \Cat} {F G : C ->⁺ \Type u} : QEquiv {F ~> G} {\Pi (s :⁺ \Sigma⁺ (x : C) (F x)) -> G s.1} \cowith
   | f p s => ~>_-> (dpath \lam i => p i s.1) s.2
   | ret h => dpath \lam i x => dpath (iso+ \lam y => h (x,y)) i

@@ -146,11 +146,10 @@
 \func leftKanExtType-repr-univArrow.{u} {A B : \Cat u} (f : A ->⁺ B) (x : A)
   : UnivArrow {A ->⁺ \Type u} {B ->⁺ \Type u} (\lam G a =>⁺ G (f a)) (ReprFunctor x) \cowith
   | L0x => ReprFunctor (f x)
-  | eta0x => (yonedaCov x (\lam a => ReprFunctor (f x) (f a))).ret (Straight.toStraight idd)
-  | eta0x-univ {Q} => IsEquiv.leftFactor (inP (yonedaCov x (\lam a => Q (f a)))) $ transport IsEquiv
-      (ext \lam g => inv $ yonedaCov-natural x _ (dmap (\lam G a =>⁺ G (f a)) g)
-                         *> pmap (~>_-> (dmap (\lam (H : B ->⁺ \Type u) => H (f x)) g)) ((yonedaCov x (\lam a => ReprFunctor (f x) (f a))).f_sec _))
-      (inP (yonedaCov (f x) Q))
+  | eta0x => IsEquiv.ret (yonedaCov x \lam a => ReprFunctor (f x) (f a)) (Straight.toStraight idd)
+  | eta0x-univ {Q} => IsEquiv.leftFactor (yonedaCov x \lam a => Q (f a)) $ transport IsEquiv
+      (ext \lam g => inv $ yonedaCov-natural *> pmap (~>_-> (dmap (\lam H => H (f x)) g)) (IsEquiv.f_ret (yonedaCov x (\lam a => ReprFunctor (f x) (f a)))))
+      (yonedaCov (f x) Q)
 
 -- | Left Kan extension preserves representable functors.
 \func LeftKanExtType_ReprFunctor.{u} {A B : \Cat u} {f : A ->⁺ B} {x : A} {b :⁺ B} : LeftKanExtType f (ReprFunctor x) b = ReprFunctor (f x) b

@@ -62,6 +62,12 @@
 \lemma dmap_IsIso {C D : \Cat} (f : C ->⁺ D) {x y : C} {p : x ~> y} (fi : IsIso p) : IsIso (dmap f p) \elim fi
   | inP r => inP (dmap f r.1, inv (dmap_comp f) *> pmap (dmap f) r.2, inv (dmap_comp f) *> pmap (dmap f) r.3)
 
+\lemma idd-iso {C : \Cat} {x : C} : IsIso (idd {C} {x})
+  => IsIso-char.2 $ inP (idp,idp)
+
+\lemma =_~>-iso {C : \Cat} {x y : C} (p : x = y) : IsIso (=_~> p)
+  | idp => idd-iso
+
 \sfunc IsIso_= {C : \Cat} {x y : C} {f : x ~> y} (fi : IsIso f) : \Sigma (p : x = y) (=_~> p = f)
   => \have r => iso_= f (IsIso.ret fi) (IsIso.f_ret fi) (IsIso.ret_f fi)
      \in (r.1,r.2)
@@ -102,10 +108,20 @@
   => inP (IsEquiv.ret (e b) idd, IsEquiv.f_ret (e b),
           IsEquiv.isInj (e a) $ inv comp-assoc *> pmap (comp q __) (IsEquiv.f_ret (e b)) *> comp_idd-right *> inv comp_idd-left)
 
--- | Precomposition with the arrow of a path is an equivalence.
-\lemma comp_=_~>-left-equiv {C : \Cat} {a b c : C} (p : a = b) : IsEquiv {b ~> c} {a ~> c} (comp (=_~> p) __) \elim p
-  | idp => transport IsEquiv (ext \lam g => inv comp_idd-left) (inP idEquiv)
+-- | Precomposition with an isomorphism is an equivalence.
+\lemma comp-iso-left-equiv {C : \Cat} {a b c : C} {q : a ~> b} (qi : IsIso q) : IsEquiv {b ~> c} {a ~> c} (comp q)
+  \elim qi
+  | inP (r,rq=id,qr=id) => inP \new QEquiv {
+    | ret p => comp r p
+    | ret_f p => comp-assoc *> pmap (comp __ p) rq=id *> comp_idd-left
+    | f_sec p => comp-assoc *> pmap (comp __ p) qr=id *> comp_idd-left
+  }
 
--- | Postcomposition with the arrow of a path is an equivalence.
-\lemma comp_=_~>-right-equiv {C : \Cat} {a b c : C} (p : b = c) : IsEquiv {a ~> b} {a ~> c} (comp __ (=_~> p)) \elim p
-  | idp => transport IsEquiv (ext \lam g => inv comp_idd-right) (inP idEquiv)
+-- | Postcomposition with an isomorphism is an equivalence.
+\lemma comp-iso-right-equiv {C : \Cat} {a b c : C} {q : b ~> c} (qi : IsIso q) : IsEquiv {a ~> b} {a ~> c} (comp __ q)
+  \elim qi
+  | inP (r,rq=id,qr=id) => inP \new QEquiv {
+    | ret p => comp p r
+    | ret_f p => inv comp-assoc *> pmap (comp p) qr=id *> comp_idd-right
+    | f_sec p => inv comp-assoc *> pmap (comp p) rq=id *> comp_idd-right
+  }

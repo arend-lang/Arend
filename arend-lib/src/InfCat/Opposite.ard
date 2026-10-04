@@ -10,6 +10,7 @@
 \import InfCat.Yoneda.CovariantYoneda
 \import Logic
 \import Logic.Meta
+\import Meta
 \import Paths
 \import Paths.Meta
 
@@ -30,7 +31,7 @@
           }
 
     \private \sfunc OpLarge-hom.{u} {C : \Cat u} (x y : C) : QEquiv {y ~> x} {OpLargeOb x ~> OpLargeOb y}
-      => yonedaEmbCov `transQEquiv` symQEquiv (IsEquiv.toQEquiv (FullSubCat.inc-ff _ _))
+      => symQEquiv $ IsEquiv.toQEquiv $ IsEquiv.trans (FullSubCat.inc-ff _ _) yonedaEmbCov
 
     \private \lemma OpLarge-equiv.{u} {C : \Cat u} : IsHEquiv {OpLarge C} {Op C} (\lam x => resizeCat x)
       => inP \new HQEquiv {
@@ -39,24 +40,28 @@
         | f_finv (resizeCat x) => idp
       }
 
-    \sfunc Hom.{u} {C : \Cat u} (x :⁺ Op C) (y :⁺ C) : \Type u
-      => FullSubCat.inc (IsHEquiv.ret OpLarge-equiv x) y
+    \func toLarge.{u} {C : \Cat u} (x :⁺ Op C) : OpLarge C \elim x
+      | resizeCat x => x
+
+    \func Hom.{u} {C : \Cat u} (x :⁺ Op C) (y :⁺ C) : \Type u
+      => FullSubCat.inc (toLarge x) y
 
     \lemma Hom-ff.{u} {C : \Cat u} : IsFFMap (Hom {C})
-      => transportInv IsFFMap (ext \lam x y => \peval Hom x y) $
-          ffMap-comp (ff-surj-equiv.2 (IsHEquiv.ret-equiv OpLarge-equiv)).1 FullSubCat.inc-ff
+      => ffMap-comp (ff-surj-equiv.2 $ inP $ later \new HQEquiv {
+        | finv x => resizeCat x
+        | finv_f (resizeCat x) => idp
+        | f_finv => idpe
+      }).1 FullSubCat.inc-ff
 
-    \sfunc OpOb.{u} {C : \Cat u} (x : C) : Op C
+    \func toOp.{u} {C : \Cat u} (x : C) : Op C
       => resizeCat (OpLargeOb x)
 
-    \lemma OpOb-equiv.{u} {C : \Cat u} : IsEquiv (OpOb {C})
-      => transportInv IsEquiv (ext \lam x => \peval OpOb x) $
-          IsEquiv.trans (inP OpLargeOb-equiv) (IsHEquiv.toIsEquiv OpLarge-equiv)
+    \lemma toOp-equiv.{u} {C : \Cat u} : IsEquiv (toOp {C})
+      => IsEquiv.trans (inP OpLargeOb-equiv) (IsHEquiv.toIsEquiv OpLarge-equiv)
 
-    \sfunc Hom-char.{u} {C : \Cat u} {x : C} : Hom (OpOb x) = ReprFunctor x
-      => ext \lam y => (\peval Hom _ y)
-          *> pmap+ (FullSubCat.inc {C ->⁺ \Type u} __ y)
-                   (pmap (IsHEquiv.ret OpLarge-equiv __) (\peval OpOb x) *> IsHEquiv.ret_f OpLarge-equiv)
+    -- | The identity of {x} as an element of `Hom (toOp x) x`.
+    \func Hom-idd.{u} {C : \Cat u} (x : C) : Hom (toOp x) x
+      => Straight.toStraight idd
   }
 
 \sfunc OpFunc.{u} {C : \Cat u} {D : \Cat u} (f : C ->⁺ D) (x :⁺ Op C) : Op D
@@ -64,8 +69,8 @@
   \where {
     \private \sfunc pair
       => ffMap-lift Op.Hom-ff (\lam x => LeftKanExtType f (Op.Hom x))
-          \lam x' => \case IsEquiv.isSurj Op.OpOb-equiv x' \with {
-            | inP (x,p) => inP (Op.OpOb (f x), Op.Hom-char *> ext (\lam b => inv LeftKanExtType_ReprFunctor) *> pmap (LeftKanExtType f) (inv Op.Hom-char *> pmap Op.Hom p))
+          \lam x' => \case IsEquiv.isSurj Op.toOp-equiv x' \with {
+            | inP (x,p) => inP (Op.toOp (f x), ext (\lam b => inv LeftKanExtType_ReprFunctor) *> pmap (LeftKanExtType f) (pmap Op.Hom p))
           }
 
     \protected \sfunc char : Op.Hom (OpFunc f x) = LeftKanExtType f (Op.Hom x)
