@@ -6,17 +6,20 @@
  -}
 
 \import Equiv
+\import Equiv.Sigma
 \import Function.Meta
+\import InfCat.Arrows
+\import InfCat.Basics
 \import InfCat.Functor.Conservative
 \import InfCat.Functor.Equiv
 \import InfCat.Functor.FullyFaithful
 \import InfCat.Groupoid
-\import InfCat.Localization.Restriction
 \import InfCat.Paths
 \import InfCat.Rezk
 \import InfCat.SubCat.Full
 \import Logic
 \import Paths
+\import Paths.Meta
 
 -- | {F} sends the morphisms satisfying {W} to isomorphisms.
 \type InvertsW {C D : \Cat} (W : (DI ->⁺ C) -> \Prop) (F : C ->⁺ D) : \Prop
@@ -62,6 +65,19 @@
 \func restrictW {C L D : \Cat} {W : (DI ->⁺ C) -> \Prop} {l : C ->⁺ L} (lw : InvertsW W l) (G : L ->⁺ D) : MapW W D
   => (\lam x => G (l x), \lam s => dmap_IsIso G (lw s))
 
+{- | Restriction along {l} as a functor into the full subcategory of `C ->⁺ D` spanned by {P},
+ -   where {lP} says that restrictions satisfy {P}.
+ -   On objects this is `FullSubCat.make (\lam x => G (l x)) (lP G)`, but {FullSubCat.make} is invariant in its arguments,
+ -   while this functor must be covariant in {G}, so it is obtained from {FullSubCat.isMax} instead.
+ -}
+\func res-sub {C L D : \Cat} (l : C ->⁺ L) (P : (C ->⁺ D) -> \Prop) (lP : \Pi (G : L ->⁺ D) -> P (\lam x => G (l x)))
+  (G :⁺ L ->⁺ D) : FullSubCat P
+  => (FullSubCat.isMax {_} {P} {L ->⁺ D} {\lam G x => G (l x)} lP).1 G
+  \where {
+    \sfunc inc_res {G :⁺ L ->⁺ D} : FullSubCat.inc (res-sub l P lP G) = (\lam x => G (l x))
+      => (FullSubCat.isMax {_} {P} {L ->⁺ D} {\lam G x => G (l x)} lP).2 G
+  }
+
 -- | Restriction along a functor inverting {W} lands in `Fun_W(C,D)` [1, Construction 3.3.5].
 \func loc-precomp {C L D : \Cat} {W : (DI ->⁺ C) -> \Prop} {l : C ->⁺ L} (lw : InvertsW W l) (G :⁺ L ->⁺ D) : FunW W D
   => res-sub l (InvertsW W) (\lam G s => dmap_IsIso G (lw s)) G
@@ -81,12 +97,48 @@
   => (lw, res-sub-equiv l (InvertsW S) (\lam G s => dmap_IsIso G (lw s)) (InvertsW S) (\lam G s => dmap_IsIso G (lw s))
                           (\lam H => (\lam Hw => (\lam s => (DI-iso-char.1 (Hw s)).1, \lam s => (DI-iso-char.1 (Hw s)).2),
                                       \lam t s => DI-iso-char.2 (t.1 s, t.2 s))) e e')
+  \where {
+    {- | Restriction along {l} is an equivalence onto the full subcategory spanned by {P} if it is an equivalence
+     -   on objects onto {P} for {D} and onto {P'} for the arrow category `DI ->⁺ D`,
+     -   where {P'} holds if and only if both endpoints satisfy {P}.
+     -}
+    \lemma res-sub-equiv {C L D : \Cat} (l : C ->⁺ L) (P : (C ->⁺ D) -> \Prop) (lP : \Pi (G : L ->⁺ D) -> P (\lam x => G (l x)))
+      (P' : (C ->⁺ DI ->⁺ D) -> \Prop) (lP' : \Pi (G : L ->⁺ DI ->⁺ D) -> P' (\lam x => G (l x)))
+      (Pe : \Pi (H : C ->⁺ DI ->⁺ D) -> P' H <-> (\Sigma (P (\lam x => H x dleft)) (P (\lam x => H x dright))))
+      (e : IsEquiv {L ->⁺ D} {\Sigma (F : C ->⁺ D) (P F)} (\lam G => (\lam x => G (l x), lP G)))
+      (e' : IsEquiv {L ->⁺ DI ->⁺ D} {\Sigma (H : C ->⁺ DI ->⁺ D) (P' H)} (\lam G => (\lam x => G (l x), lP' G)))
+      : IsHEquiv (res-sub l P lP)
+      => ff-surj-equiv.1 (ffMap-leftFactor FullSubCat.inc-ff $ transportInv IsFFMap (funExt+ \lam G => res-sub.inc_res) res-ff,
+                          \lam d => \case IsEquiv.isSurj e (FullSubCat.inc d, FullSubCat.inc-con {_} {P} {d}) \with {
+                            | inP (G,q) => inP (G, ((IsFFMap.isObEmbedding FullSubCat.inc-ff).isEmb _ _).sec $ res-sub.inc_res *> pmap __.1 q)
+                          })
+      \where {
+        \lemma res-ff : IsFFMap {L ->⁺ D} {C ->⁺ D} (\lam G x => G (l x))
+          => \let | X => \Sigma (L ->⁺ D) (L ->⁺ D)
+                  | Y => \Sigma (\Sigma (F : C ->⁺ D) (P F)) (\Sigma (F : C ->⁺ D) (P F))
+                  | TY => \Sigma (j : Y) (j.1.1 ~> j.2.1)
+                  | rmap (G : L ->⁺ DI ->⁺ D) : \Sigma (H : C ->⁺ DI ->⁺ D) (P' H) => (\lam x => G (l x), lP' G)
+             \in \lam G1 G2 => fiberwiseEquiv (pair-equiv e) (\lam j p => dmap (\lam G x =>⁺ G (l x)) {j.1} {j.2} p)
+              (transport (\lam X => X) (IsEquiv.parallelEquiv {_} {_} {_} {_} {rmap} (inP DI-fun-equiv) (inP pairs-equiv)
+                \lam G => path \lam j => (((\lam x => G (l x) dleft, prop-pi j), (\lam x => G (l x) dright, prop-pi j)), dpath \lam i x => G (l x) i)) e')
+              (G1, G2)
+
+        -- | A functor to the arrow category whose endpoints satisfy {P} is a morphism of the full subcategory.
+        \func pairs-equiv
+          : QEquiv {\Sigma (H : C ->⁺ DI ->⁺ D) (P' H)}
+                   {\Sigma (j : \Sigma (\Sigma (F : C ->⁺ D) (P F)) (\Sigma (F : C ->⁺ D) (P F))) (j.1.1 ~> j.2.1)} \cowith
+          | f s => (((\lam x => s.1 x dleft, ((Pe s.1).1 s.2).1), (\lam x => s.1 x dright, ((Pe s.1).1 s.2).2)), dpath \lam i x => s.1 x i)
+          | ret t => (\lam x i => t.2 i x, (Pe (\lam x i => t.2 i x)).2 (t.1.1.2, t.1.2.2))
+          | ret_f s => ext idp
+          | f_sec t => path \lam k => (((t.1.1.1, prop-pi {P t.1.1.1} {_} {t.1.1.2} k), (t.1.2.1, prop-pi {P t.1.2.1} {_} {t.1.2.2} k)), t.2)
+      }
+  }
 
 -- | Functors that coincide after restriction along a localization are equal.
 \sfunc loc-ext-eq {C L D : \Cat} {W : (DI ->⁺ C) -> \Prop} {l : C ->⁺ L} (loc : IsLocalizationFor W l D)
                   {G1 G2 : L ->⁺ D} (p : \Pi (x :⁺ C) -> G1 (l x) = G2 (l x)) {y :⁺ L} : G1 y = G2 y
   => path \lam i => (IsEquiv.isInj (IsHEquiv.toIsEquiv loc.2) $ ((IsFFMap.isObEmbedding FullSubCat.inc-ff).isEmb _ _).sec $
-      funExt+ \lam x => loc-precomp.inc_precomp loc.1 *> p x *> inv (loc-precomp.inc_precomp loc.1)) i y
+      ext \lam x => loc-precomp.inc_precomp loc.1 *> p x *> inv (loc-precomp.inc_precomp loc.1)) i y
 
 -- | The extension along a localization of a functor inverting {W}.
 \func loc-lift {C L D : \Cat} {W : (DI ->⁺ C) -> \Prop} {l : C ->⁺ L} (loc : IsLocalizationFor W l D)
