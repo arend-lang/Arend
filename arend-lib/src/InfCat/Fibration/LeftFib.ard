@@ -161,6 +161,10 @@
 \func coe+-dpath.{u} {A :⁺ DI ->⁺ \Type u} {a :⁺ A dleft} {a' :⁺ A dright} (t :⁺ DPath A a a') : coe+ A a dright = a'
   => leftFib-dpath universe-leftFib {_} {_} {dpath A} (coe+ A a dright, dpath (coe+ A a)) t
 
+-- | Transport in a family of types does not depend on the universe level.
+\sfunc coe+-level.{u} {A :⁺ DI ->⁺ \Type u} {a :⁺ A dleft} : coe+.{\suc u} A a dright = coe+.{u} A a dright
+  => coe+-dpath (dpath (coe+ A a))
+
 -- | Paths over a family of types {A} starting at {a} are paths from the transport of {a} along {A}.
 \lemma coe+-dpath-equiv.{u} (A : DI ->⁺ \Type u) (a : A dleft) (a' : A dright)
   : IsEquiv {DPath A a a'} {coe+ A a dright = a'} coe+-dpath

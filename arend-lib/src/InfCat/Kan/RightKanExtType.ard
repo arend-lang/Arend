@@ -1,0 +1,189 @@
+{- | Right Kan extensions of functors valued in types.
+ -
+ -   For `f : A ->⁺ B` and `T : A ->⁺ \Type u`, the value of {RightKanExtType} at `b` is the type of natural transformations
+ -   `Hom(b, f -) ⇒ T` ({rightKanExtType-eval}), and {RightKanExtType} is right adjoint to restriction along `f`
+ -   ({rightKanAdjunction}, {rightKanExtType-counit}, {rightKanExtType-univ}).
+ -
+ -   Construction ({rightKanLeftAdjoint}). The functor `Hom(b, f -)` is contravariant in `b`, so `Hom(Hom(b, f -), T)`
+ -   cannot be written directly. Instead, it is the left Kan extension of evaluation at `b` along restriction
+ -   `(B ->⁺ \Type u) ->⁺ (A ->⁺ \Type u)`, taken one universe level up ({rightKanLeftAdjoint.Large}); this is covariant in `b`.
+ -   Evaluation at `b` is corepresented by `Hom(b, -)` ({ev-univElem}), so its left Kan extension is corepresented by
+ -   `Hom(b, f -)` ({leftKanExtType-univElem}). This computes the values, which are therefore small ({rightKanLeftAdjoint.Small}).
+ -   The unit and the counit come from the adjunction one level up. One round trip of the adjunction is a triangle identity
+ -   ({rightKanLeftAdjoint.phi-psi}); by naturality, the other one reduces to representable functors ({rightKanLeftAdjoint.kappa-component}).
+ -
+ -   As for {LeftKanExtType}, {RightKanExtType} is the right adjoint as a functor, so it is covariant in `T`.
+ -}
+
+\import Equiv
+\import Function.Meta
+\import InfCat.Basics
+\import InfCat.Fibration.DirectedUnivalence
+\import InfCat.Fibration.LeftFib
+\import InfCat.Kan.LeftKanExtType
+\import InfCat.Fibration.Straightening
+\import InfCat.Functor.Adjunction
+\import InfCat.Functor.Conservative
+\import InfCat.Groupoid
+\import InfCat.Rezk
+\import InfCat.Square
+\import InfCat.Yoneda.CovariantYoneda
+\import Logic
+\import Paths
+\import Paths.Meta
+
+-- | The right Kan extension along {f} of functors to `\Type u`.
+\func RightKanExtType.{u} {A B : \Cat u} (f : A ->⁺ B) (T :⁺ A ->⁺ \Type u) (b :⁺ B) : \Type u
+  => (rightKanLeftAdjoint f).radj T b
+
+-- | Right Kan extension along {f} is right adjoint to restriction along {f}.
+\func rightKanAdjunction.{u} {A B : \Cat u} (f : A ->⁺ B) : QAdjunction (B ->⁺ \Type u) (A ->⁺ \Type u)
+  => (rightKanLeftAdjoint f).toAdjunction
+
+-- | The counit of {RightKanExtType}.
+\func rightKanExtType-counit.{u} {A B : \Cat u} (f : A ->⁺ B) (T :⁺ A ->⁺ \Type u) : (\lam a =>⁺ RightKanExtType f T (f a)) ~> T
+  => (rightKanLeftAdjoint f).heps T
+
+-- | The universal property of {RightKanExtType}: natural transformations into it are natural transformations into {T}.
+\lemma rightKanExtType-univ.{u} {A B : \Cat u} (f : A ->⁺ B) (R : B ->⁺ \Type u) (T : A ->⁺ \Type u)
+  : IsEquiv {R ~> RightKanExtType f T} {(\lam a =>⁺ R (f a)) ~> T}
+            (\lam g => comp (dmap (\lam G a =>⁺ G (f a)) g) (rightKanExtType-counit f T))
+  => (rightKanLeftAdjoint f).heps-univ T R
+
+-- | The couniversal arrow given by {RightKanExtType}.
+\func rightKanExtType-counivArrow.{u} {A B : \Cat u} (f : A ->⁺ B) (T : A ->⁺ \Type u)
+  : CounivArrow {B ->⁺ \Type u} {A ->⁺ \Type u} (\lam G a =>⁺ G (f a)) T \cowith
+  | R0y => RightKanExtType f T
+  | eps0y => rightKanExtType-counit f T
+  | eps0y-univ {R} => rightKanExtType-univ f R T
+
+-- | The values of {RightKanExtType} are natural transformations `Hom(b, f -) ⇒ T`.
+\sfunc rightKanExtType-eval.{u} {A B : \Cat u} {f : A ->⁺ B} {T : A ->⁺ \Type u} {b : B}
+  : QEquiv {RightKanExtType f T b} {(\lam a =>⁺ ReprFunctor b (f a)) ~> T}
+  => transportInv (\lam X => QEquiv {X} {_}) (rightKanLeftAdjoint.radj-char f T b)
+      (Straight.equiv `transQEquiv` symQEquiv (IsEquiv.toQEquiv (rightKanLeftAdjoint.theta-equiv f b T)))
+
+\lemma rightKanExtType-leftFib.{u} {A B : \Cat u} (f : A ->⁺ B) (T : A ->⁺ \Type u) : IsLeftFib (RightKanExtType f T)
+  => leftFib-pullback (RightKanExtType f T) universe-leftFib
+
+-- | {Small} is pointwise right adjoint to restriction along {f}.
+\func rightKanLeftAdjoint.{u} {A B : \Cat u} (f : A ->⁺ B) : LeftAdjoint {B ->⁺ \Type u} {A ->⁺ \Type u} (\lam G a => G (f a)) \cowith
+  | rob T => Small f T
+  | eps0 T => counit f T
+  | eps0-adjoint {R} {T} => IsEquiv.fromMonoRetraction
+      (\lam {g} {g'} p => IsEquiv.isInj (comp-iso-right-equiv (kappa-iso f T)) (inv (psi-phi f g) *> pmap (psi f) p *> psi-phi f g'))
+      (\new Retraction {
+        | sec => psi f
+        | f_sec => phi-psi f
+      })
+  \where {
+    -- | The adjunction between left Kan extension along restriction and restriction, one universe level up.
+    \func adj.{u} {A B : \Cat u} (f : A ->⁺ B) : QAdjunction ((B ->⁺ \Type u) ->⁺ \Type (\suc u)) ((A ->⁺ \Type u) ->⁺ \Type (\suc u))
+      => leftKanAdjunction {B ->⁺ \Type u} (\lam G a =>⁺ G (f a))
+
+    -- | The right Kan extension, valued in the next universe: `Large f T b` is `Hom(Hom(b, f -), T)` ({theta-equiv}).
+    \func Large.{u} {A B : \Cat u} (f : A ->⁺ B) (T :⁺ A ->⁺ \Type u) (b :⁺ B) : \Type (\suc u)
+      => LeftKanExtType {B ->⁺ \Type u} {A ->⁺ \Type u} (\lam G a => G (f a)) (\lam G => G b) T
+
+    -- | The universal element of {Large} at {b}: the image of the identity of {b} under the unit.
+    \func elem.{u} {A B : \Cat u} (f : A ->⁺ B) (b : B) : Large f (\lam (a :⁺ A) => ReprFunctor b (f a)) b
+      => ~>_-> (dmap (\lam H => H (ReprFunctor b)) ((adj f).heta (\lam G => G b))) (Straight.toStraight idd)
+
+    -- | Transport of {elem} identifies natural transformations `Hom(b, f -) ⇒ T` with {Large}.
+    \lemma theta-equiv.{u} {A B : \Cat u} (f : A ->⁺ B) (b : B) (T : A ->⁺ \Type u)
+      : IsEquiv {(\lam a =>⁺ ReprFunctor b (f a)) ~> T} {Large f T b} (\lam h => ~>_-> (dmap (\lam (T' :⁺ A ->⁺ \Type u) => Large f T' b) h) (elem f b))
+      => univElem-equiv (leftKanExtType-univElem {B ->⁺ \Type u} {A ->⁺ \Type u} (\lam G a =>⁺ G (f a)) (ev-univElem b)) T
+
+    \lemma large-leftFib.{u} {A B : \Cat u} (f : A ->⁺ B) (T : A ->⁺ \Type u) : IsLeftFib (Large f T)
+      => leftFib-pullback (Large f T) universe-leftFib
+
+    \lemma large-small.{u} {A B : \Cat u} (f : A ->⁺ B) (T : A ->⁺ \Type u) (b : B) : IsSmall.{u} (Large f T b)
+      => IsSmall.fromGroupoid type-groupoid $ symQEquiv depUnivalence `transQEquiv` IsEquiv.toQEquiv (theta-equiv f b T)
+
+    -- | {Large} straightened to a functor with values in `\Type u`.
+    \func Small.{u} {A B : \Cat u} (f : A ->⁺ B) (T : A ->⁺ \Type u) (b :⁺ B) : \Type u
+      => Straight (large-leftFib f T) (large-small f T) b
+
+    -- | On objects, {RightKanExtType} agrees with {Small}.
+    \sfunc radj-char.{u} {A B : \Cat u} (f : A ->⁺ B) (T : A ->⁺ \Type u) (b :⁺ B) : RightKanExtType f T b = Small f T b
+      => path \lam i => R0y {CounivArrow.levelProp (rightKanExtType-counivArrow f T) (LeftAdjoint.counivArrow (rightKanLeftAdjoint f) T) i} b
+
+    -- | The unit of {Large}.
+    \func unit.{u} {A B : \Cat u} (f : A ->⁺ B) (R :⁺ B ->⁺ \Type u) : R ~> Large f (\lam a => R (f a))
+      => dpath \lam i b => (adj f).heta (\lam G => G b) i R
+
+    -- | The counit of {Large}.
+    \func counitL.{u} {A B : \Cat u} (f : A ->⁺ B) (T :⁺ A ->⁺ \Type u) : (\lam a =>⁺ Large f T (f a)) ~> T
+      => dpath \lam i a => (adj f).heps (\lam T' => T' a) i T
+
+    -- | The counit of {Small}.
+    \func counit.{u} {A B : \Cat u} (f : A ->⁺ B) (T : A ->⁺ \Type u) : (\lam (a :⁺ A) => Small f T (f a)) ~> T
+      => depUnivalence.ret (\lam s => ~>_-> (dmap (\lam (H : A ->⁺ \Type (\suc u)) => H s.1) (counitL f T)) (Straight.fromStraight s.2))
+
+    -- | The natural transformation into {Small} corresponding to {be}; this is the inverse of the adjunction.
+    \func psi.{u} {A B : \Cat u} (f : A ->⁺ B) {R : B ->⁺ \Type u} {T : A ->⁺ \Type u} (be : (\lam a =>⁺ R (f a)) ~> T) : R ~> Small f T
+      => depUnivalence.ret \lam s => Straight.toStraight (~>_-> (dmap (Large f __ s.1) be) (~>_-> (dmap (\lam H => H s.1) (unit f R)) s.2))
+
+    -- | The triangle identity of {Large}, applied to elements.
+    \sfunc triangle.{u} {A B : \Cat u} (f : A ->⁺ B) (R : B ->⁺ \Type u) {a :⁺ A} {r :⁺ R (f a)}
+      : ~>_-> (dmap (\lam H => H a) (counitL f (\lam a' => R (f a')))) (~>_-> (dmap (\lam H => H (f a)) (unit f R)) r) = r
+      => inv (~>_->_comp _ _)
+         *> path (\lam i => ~>_-> ((inv (dmap_comp (\lam (H : (B ->⁺ \Type u) ->⁺ \Type (\suc u)) => H R)
+                                                   {(adj f).radj (\lam T' => T' a)} {_} {(adj f).radj (\lam T' => T' a)})
+                                      *> path \lam j => dmap (\lam H => H R) ((adj f).heta_heps-left j)) i) r)
+         *> ~>_->_idd
+
+    -- | Applying {Large} to {be} between the unit and the counit gives {be}.
+    \sfunc counit-unit.{u} {A B : \Cat u} (f : A ->⁺ B) {R : B ->⁺ \Type u} {T : A ->⁺ \Type u} (be : (\lam a =>⁺ R (f a)) ~> T) {a :⁺ A} {r :⁺ R (f a)}
+      : ~>_-> (dmap (__ a) (counitL f T)) (~>_-> (dmap (Large f __ (f a)) be) (~>_-> (dmap (__ (f a)) (unit f R)) r)) = ~>_-> (dmap (__ a) be) r
+      => inv (~>_->_comp _ _)
+         *> path (\lam i => ~>_-> (~>-natural (\lam T' => dmap (__ T') ((adj f).heps (__ a))) i) (~>_-> (dmap (__ (f a)) (unit f R)) r))
+         *> ~>_->_comp _ _
+         *> path (\lam i => ~>_-> (dmap (__ a) be) (triangle f R i))
+         *> coe+-level
+
+    -- | {psi} is a section of composition with the counit.
+    \sfunc phi-psi.{u} {A B : \Cat u} (f : A ->⁺ B) {R : B ->⁺ \Type u} {T : A ->⁺ \Type u} (be : (\lam a =>⁺ R (f a)) ~> T)
+      : comp (dmap (\lam G a =>⁺ G (f a)) (psi f be)) (counit f T) = be
+      => IsEquiv.isInj (inP depUnivalence) $ ext \lam t =>
+           path (\lam i => ~>_-> (dmap_comp (\lam (H : A ->⁺ \Type u) => H t.1) {_} {_} {_} {dmap (\lam G a =>⁺ G (f a)) (psi f {R} be)} i) t.2)
+           *> ~>_->_comp _ _
+           *> counit-unit f be
+
+    -- | Naturality of the unit, applied to elements.
+    \sfunc unit-natural.{u} {A B : \Cat u} (f : A ->⁺ B) {R G : B ->⁺ \Type u} (ga : R ~> G) {b :⁺ B} {r :⁺ R b}
+      : ~>_-> (dmap (Large f __ b) (dmap (\lam G' a =>⁺ G' (f a)) ga)) (~>_-> (dmap (__ b) (unit f R)) r) = ~>_-> (dmap (__ b) (unit f G)) (~>_-> (dmap (__ b) ga) r)
+      => inv (~>_->_comp _ _)
+         *> path (\lam i => ~>_-> (inv (~>-natural \lam G' => dmap (__ G') ((adj f).heta (__ b))) i) r)
+         *> ~>_->_comp _ _
+         *> path (\lam i => ~>_-> (dmap (__ b) (unit f G)) (coe+-level {ga __ b} i))
+
+    -- | The endomorphism of {Small} given by {psi} applied to the counit; its components are identities ({kappa-component}).
+    \func kappa.{u} {A B : \Cat u} (f : A ->⁺ B) (T : A ->⁺ \Type u) : Small f T ~> Small f T
+      => psi f (counit f T)
+
+    -- | {psi} after composition with the counit is postcomposition with {kappa}.
+    \sfunc psi-phi.{u} {A B : \Cat u} (f : A ->⁺ B) {R : B ->⁺ \Type u} {T : A ->⁺ \Type u} (ga : R ~> Small f T)
+      : psi f (comp (dmap (\lam G a =>⁺ G (f a)) ga) (counit f T)) = comp ga (kappa f T)
+      => IsEquiv.isInj (inP depUnivalence) $ ext \lam s =>
+           path (\lam i => Straight.toStraight
+             ((path (\lam j => ~>_-> (dmap_comp (Large f __ s.1) {_} {_} {_} {dmap (\lam G a =>⁺ G (f a)) ga} j) (~>_-> (dmap (__ s.1) (unit f R)) s.2))
+               *> ~>_->_comp _ _
+               *> path \lam j => ~>_-> (dmap (Large f __ s.1) (counit f T)) (unit-natural f ga j)) i))
+           *> inv (~>_->_comp (dmap (__ s.1) ga) (dmap (__ s.1) (kappa f T)))
+           *> path (\lam i => ~>_-> (inv (dmap_comp (\lam (H : B ->⁺ \Type u) => H s.1)) i) s.2)
+
+    -- | The components of {kappa} are identities: by {theta-equiv}, every element of {Small} comes from {psi} at a representable functor.
+    \sfunc kappa-component.{u} {A B : \Cat u} (f : A ->⁺ B) (T : A ->⁺ \Type u) {b : B} (z : Small f T b)
+      : ~>_-> (dmap (__ b) (kappa f T)) z = z
+      => \let | P be : Small f T b => yonedaCov.fun (psi f be)
+              | Pe : IsEquiv P => IsEquiv.trans (theta-equiv f b T) (inP (symQEquiv Straight.equiv))
+              | be => IsEquiv.ret Pe z
+         \in pmap (~>_-> (dmap (__ b) (kappa f T))) (inv (IsEquiv.f_ret Pe))
+             *> inv (yonedaCov-natural {B} {b} {_} {_} {psi f be} {kappa f T})
+             *> pmap yonedaCov.fun (inv (psi-phi f (psi f be)) *> pmap (psi f) (phi-psi f be))
+             *> IsEquiv.f_ret Pe
+
+    \lemma kappa-iso.{u} {A B : \Cat u} (f : A ->⁺ B) (T : A ->⁺ \Type u) : IsIso (kappa f T)
+      => objectwise-iso \lam b => ~>_->-equiv-iso $ transport IsEquiv (ext \lam z => inv (kappa-component f T z)) (inP idEquiv)
+  }

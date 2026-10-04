@@ -5,6 +5,7 @@
 \import InfCat.Fibration.DirectedUnivalence
 \import InfCat.Fibration.LeftFib
 \import InfCat.Fibration.Straightening
+\import InfCat.Functor.Conservative
 \import InfCat.Paths
 \import InfCat.Rezk
 \import Logic
@@ -122,3 +123,44 @@
       | sec => g
       | f_sec q => IsEquiv.isInj ge gp
     }
+
+-- | {p} is a universal element of {F} at {x}: natural transformations out of {F} are determined by their value at {p}.
+\type IsUnivElem.{u} {C : \Cat u} (F : C ->⁺ \Type u) (x : C) (p : F x) : \Prop
+  => \Pi (G : C ->⁺ \Type u) -> IsEquiv {F ~> G} {G x} (\lam g => ~>_-> (dmap (\lam H => H x) g) p)
+
+-- | A universal element {p} of {F} at {x} corepresents {F}: transport of {p} identifies arrows out of {x} with {F}.
+\lemma univElem-equiv.{u} {C : \Cat u} {F : C ->⁺ \Type u} {x : C} {p : F x} (U : IsUnivElem F x p) (y : C)
+  : IsEquiv {x ~> y} {F y} (\lam h => ~>_-> (dmap F h) p)
+  => transport IsEquiv (ext \lam h => inv yonedaCov-component *> pmap (~>_-> (dmap F h)) (IsEquiv.f_ret (yonedaCov x F)))
+      (IsEquiv.trans (inP (symQEquiv ReprFunctor.equiv)) (~>_->-iso-equiv (dmap_IsIso (__ y) (univElem-iso U))))
+  \where {
+    -- | The Yoneda transformation of a universal element is an isomorphism.
+    \lemma univElem-iso.{u} {C : \Cat u} {F : C ->⁺ \Type u} {x : C} {p : F x} (U : IsUnivElem F x p) : IsIso (IsEquiv.ret (yonedaCov x F) p)
+      => precomp-equiv=>iso \lam G => IsEquiv.leftFactor (yonedaCov x G) $ transport IsEquiv
+           (ext \lam g => inv $ pmap (~>_-> __ _) (dmap_comp (\lam (H : C ->⁺ \Type u) => H x) {_} {_} {G})
+                                *> ~>_->_comp _ _ *> pmap (~>_-> (dmap (__ x) g)) (IsEquiv.f_ret (yonedaCov x F)))
+           (U G)
+  }
+
+-- | The identity of {b} is a universal element of evaluation at {b}.
+\lemma ev-univElem.{u} {B : \Cat u} (b : B) : IsUnivElem {B ->⁺ \Type u} (\lam G => G b) (ReprFunctor b) (Straight.toStraight idd)
+  => \lam Q => transport IsEquiv
+       (ext \lam g => pmap (~>_-> __ _) (dmap_comp (\lam (H : (B ->⁺ \Type u) ->⁺ \Type (\suc u)) => H (ReprFunctor b)))
+                      *> ~>_->_comp _ _
+                      *> pmap (~>_-> (dmap (__ (ReprFunctor b)) g)) (IsEquiv.f_ret (yonedaCov (ReprFunctor b) (\lam G => G b))))
+       (IsEquiv.trans (comp-iso-left-equiv (objectwise-iso ev-al-component : IsIso (ev-al b))) (yonedaCov (ReprFunctor b) Q))
+  \where {
+    -- | The Yoneda transformation from the representable functor of `ReprFunctor b` to evaluation at {b}.
+    \func ev-al.{u} {B : \Cat u} (b : B) : ReprFunctor (ReprFunctor b) ~> (\lam G => G b)
+      => IsEquiv.ret (yonedaCov (ReprFunctor b) (\lam G => G b)) (Straight.toStraight idd)
+
+    -- | The components of {ev-al} are the Yoneda equivalences.
+    \lemma ev-al-component.{u} {B : \Cat u} {b : B} (G : B ->⁺ \Type u) : IsIso (dmap (__ G) (ev-al b))
+      => ~>_->-equiv-iso $ transport IsEquiv
+           (ext \lam r => inv coe+-level
+                          *> pmap (~>_-> (dmap (__ b) (Straight.fromStraight r)))
+                                  (inv (IsEquiv.f_ret (yonedaCov (ReprFunctor b) (__ b))))
+                          *> yonedaCov-component {_} {_} {G} {__ b}
+                          *> pmap (~>_-> (dmap (__ G) (ev-al b))) (Straight.toStraight_fromStraight r))
+           (IsEquiv.trans (inP ReprFunctor.equiv) (yonedaCov b G))
+  }
