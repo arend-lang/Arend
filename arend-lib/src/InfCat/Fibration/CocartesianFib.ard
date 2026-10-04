@@ -42,3 +42,16 @@
       : IsCocartesianLift (transport+ (\lam s => CovLift B s.3 s.4) p l) \elim p
       | idp => lc
   }
+
+{- | Given a family {F} and a map {p}, if a lift {l} in the pullback of {F} along {p} is cocartesian over {S},
+ -   then it is cocartesian over {X}.
+ -}
+\lemma cocartesianLift-pullback {X S : \Cat} {F : S ->⁺ \Cat} (p : X ->⁺ S) {a a' : X} {m : a ~> a'} {b : F (p a)}
+                                {l : CovLift (\lam x => F (p x)) m b} (lc : IsCocartesianLift {S} {F} {p a} {p a'} {dmap p m} (l.1, l.2))
+  : IsCocartesianLift l
+  => \lam g l' => Contr.Contr_QEquiv (later \new QEquiv {
+    | f v => (v.1, dpath \lam i => dpath \lam j => v.2 j i)
+    | ret w => (w.1, dpath \lam i => dpath \lam j => w.2 j i)
+    | ret_f v => idp
+    | f_sec w => idp
+  }) $ cocartesian-square F idd (dmap p g) (dpath \lam i => dpath \lam j => p (fill2 m g j i)) idd (l.1, l.2) lc (l'.1, l'.2)

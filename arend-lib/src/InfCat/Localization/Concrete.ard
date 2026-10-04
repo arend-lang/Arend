@@ -95,19 +95,21 @@
   => localization-criterion localize-inverts (localize-ob-equiv {C} {D} {W}) (localize-ob-equiv {C} {DI ->⁺ D} {W})
 
 -- | The canonical functor out of {Localize} induced by a functor inverting {W}; it computes on {localize}.
-\func localize-ext {C L : \Cat} {W : (DI ->⁺ C) -> \Prop} {l : C ->⁺ L} (lw : InvertsW W l) (y :⁺ Localize W) : L
-  => CatPushout.rec l (GlueData-contr lw).center.1 (GlueData-contr lw).center.2 y
+\func localize-lift {C L : \Cat} {W : (DI ->⁺ C) -> \Prop} {l : C ->⁺ L} (lw : InvertsW W l) (y :⁺ Localize W) : L \elim y
+  | cinl x => l x
+  | cinr w => (GlueData-contr lw).center.1 w
+  | cglue s => (GlueData-contr lw).center.2 s
 
 -- | {l} is a localization of {C} at {W} if the canonical functor from {Localize} is an equivalence.
 \type IsLocalization {C L : \Cat} (W : (DI ->⁺ C) -> \Prop) (l : C ->⁺ L) : \Prop
-  => \Sigma (lw : InvertsW W l) (IsHEquiv (localize-ext lw))
+  => \Sigma (lw : InvertsW W l) (IsHEquiv (localize-lift lw))
   \where {
     -- | A localization satisfies the universal property of [1, Definition 3.3.6] with respect to every category.
     \lemma univ {C L : \Cat} {W : (DI ->⁺ C) -> \Prop} {l : C ->⁺ L} (Lz : IsLocalization W l) {D : \Cat} : IsLocalizationFor W l D
       => (Lz.1, transportInv IsHEquiv (ext \lam G => IsEmbedding.isMono
                     (ffMap-embedding FullSubCat.inc-ff)
                     (loc-precomp Lz.1)
-                    (\lam G => loc-precomp localize-inverts \lam y => G (localize-ext Lz.1 y))
+                    (\lam G => loc-precomp localize-inverts \lam y => G (localize-lift Lz.1 y))
                     (\lam G => ext \lam x => loc-precomp.inc_precomp Lz.1 *> inv (loc-precomp.inc_precomp localize-inverts)))
                   (IsHEquiv.trans (IsHEquiv.precomp Lz.2) (localize-isLocalizationFor {C} {D} {W}).2))
 
@@ -141,7 +143,7 @@
 
 -- | The functor between localizations induced by a functor sending {W} to {W'}; it computes on {localize}.
 \func localize-map {C C' : \Cat} {W : (DI ->⁺ C) -> \Prop} {W' : (DI ->⁺ C') -> \Prop} (f : C ->⁺ C') (fw : SendsW W W' f) (y :⁺ Localize W) : Localize W'
-  => localize-ext {_} {_} {_} {\lam x => localize W' (f x)} (\lam s => localize-inverts (fw s)) y
+  => localize-lift {_} {_} {_} {\lam x => localize W' (f x)} (\lam s => localize-inverts (fw s)) y
 
 -- | The identity functor is the localization at the isomorphisms.
 \lemma id-isLocalization-iso {C : \Cat} : IsLocalization (IsIso {C} __) (\lam x => x)

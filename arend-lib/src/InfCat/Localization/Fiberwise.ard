@@ -1,0 +1,65 @@
+{- | Fiberwise localizations of cocartesian fibrations [1, Section 7.6.3].
+ -
+ -   Let `F` be a cocartesian fibration over `S` and let `W` be a family of classes of morphisms in its fibers
+ -   that is stable under cocartesian transport ({IsTransportStable}).
+ -   We define a class {TotW} of weak equivalences in the total category `\Sigma⁺ (s : S) (F s)`.
+ -   We take the localization at {TotW} in {FibLoc} and take the fibers of the induced projection to {S} in {FibLocFam}.
+ -   The expected properties are that {FibLocFam} is again a cocartesian fibration and that its fibers are
+ -   the localizations of the fibers of `F` ([1, Proposition 7.6.16 (3) and Theorem 7.6.20];
+ -   see also V. Hinich, Dwyer-Kan localization revisited, Proposition 2.1.4).
+ -
+ -   [1] Denis-Charles Cisinski, Bastiaan Cnossen, Kim Nguyen, Tashi Walde, Synthetic Category Theory, 2026
+ -}
+
+\import InfCat.Basics
+\import InfCat.Fibration.Categorical
+\import InfCat.Fibration.CocartesianFib
+\import InfCat.Fibration.CovariantLift
+\import InfCat.Localization.Abstract
+\import InfCat.Localization.Concrete
+\import InfCat.Rezk
+\import Logic
+\import Logic.Meta
+\import Meta
+\import Paths
+
+{- | A family of classes {W} of morphisms in the fibers of {F} is stable under cocartesian transport
+ -   if the transport of a morphism in `W s` along any `g : s ~> s'` is in `W s'`.
+ -   The transport is given as an arbitrary square over `g` whose horizontal sides are cocartesian lifts.
+ -}
+\type IsTransportStable {S : \Cat} (F : S ->⁺ \Cat) (W : \Pi (s : S) -> (DI ->⁺ F s) -> \Prop) : \Prop
+  => \Pi {s s' : S} (g : s ~> s') {b : DI ->⁺ F s} -> W s b ->
+       ∃ (k : DI ->⁺ F s') (W s' k) (H : DPath (\lam i => DI ->⁺ F (g i)) b k)
+         (IsCocartesianLift {S} {F} (k dleft, dpath \lam i => H i dleft))
+         (IsCocartesianLift {S} {F} (k dright, dpath \lam i => H i dright))
+
+-- | Transport stability is preserved by base change along a functor.
+\lemma transportStable-pullback {X S : \Cat} {F : S ->⁺ \Cat} {W : \Pi (s : S) -> (DI ->⁺ F s) -> \Prop}
+                                (Ws : IsTransportStable F W) (p : X ->⁺ S)
+  : IsTransportStable (\lam x => F (p x)) (\lam x => W (p x))
+  => \lam m wb => TruncP.map (Ws (dmap p m) wb) \lam t => (t.1, t.2, t.3, cocartesianLift-pullback p t.4, cocartesianLift-pullback p t.5)
+
+-- | The morphisms of the total category of {F} that lie in a single fiber and satisfy {W} there.
+\type TotW {S : \Cat} (F : S ->⁺ \Cat) (W : \Pi (s : S) -> (DI ->⁺ F s) -> \Prop) (a : DI ->⁺ \Sigma⁺ (s : S) (F s)) : \Prop
+  => ∃ (s : S) (b : DI ->⁺ F s) (W s b) ((\lam i => (s, b i)) = {DI ->⁺ \Sigma⁺ (t : S) (F t)} a)
+
+-- | The projection to the base inverts {TotW}.
+\lemma proj-inverts {S : \Cat} (F : S ->⁺ \Cat) (W : \Pi (s : S) -> (DI ->⁺ F s) -> \Prop)
+  : InvertsW (TotW F W) (\lam (t : \Sigma⁺ (s : S) (F s)) => t.1)
+  => \lam (inP (s, b, _, p)) => transport (\lam a' => IsIso (dpath \lam i => (a' i).1)) p (inP (idd, comp_idd-left, comp_idd-left))
+
+-- | The localization of the total category of {F} at the morphisms of `TotW F W`.
+\func FibLoc {S : \Cat} (F : S ->⁺ \Cat) (W : \Pi (s : S) -> (DI ->⁺ F s) -> \Prop) : \Cat
+  => Localize (TotW F W)
+
+-- | The projection of {FibLoc} to the base.
+\func fibLocProj {S : \Cat} (F : S ->⁺ \Cat) (W : \Pi (s : S) -> (DI ->⁺ F s) -> \Prop) (y :⁺ FibLoc F W) : S
+  => localize-lift (proj-inverts F W) y
+
+-- | The fiberwise localization of {F} at {W}: the family of fibers of {fibLocProj}.
+\func FibLocFam {S : \Cat} (F : S ->⁺ \Cat) (W : \Pi (s : S) -> (DI ->⁺ F s) -> \Prop) (s :⁺ S) : \Cat
+  => Fibers (fibLocProj F W) s
+
+-- | The map from the fibers of {F} to the fibers of {FibLocFam}.
+\func fibLoc-incl {S : \Cat} (F : S ->⁺ \Cat) (W : \Pi (s : S) -> (DI ->⁺ F s) -> \Prop) (s :⁺ S) (x :⁺ F s) : FibLocFam F W s
+  => (localize (TotW F W) (later (s, x)), idp)
