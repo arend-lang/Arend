@@ -1,7 +1,6 @@
 \import Equiv
 \import Equiv.Fiber
 \import Equiv.Sigma
-\import Function.Meta
 \import Homotopy.Fibration
 \import InfCat.Basics
 \import InfCat.Fibration.Categorical
@@ -10,7 +9,6 @@
 \import Logic
 \import Logic.Meta
 \import Logic.Unique
-\import Meta
 \import Paths
 
 -- | Commutative triangles `u ; v = w` in {E} and their images under {p}.
@@ -41,7 +39,7 @@
   | f_sec d => idp
 
 -- | The canonical lift of `dmap p u` to `Fibers p`.
-\func arrowLift {E A : \Cat} (p : E ->⁺ A) {e e' : E} (u : e ~> e') : CovLift (Fibers p) (dmap p u) (e, idp)
+\func arrowLift {E A : \Cat} (p : E ->⁺ A) {e e' : E} (u : e ~> e') : CovLift (Fibers p) (p e, p e', dmap p u, (e, idp))
   => ((e', idp), dpath \lam i => (u i, idp))
 
 -- | The canonical lift of `dmap p u` is cocartesian if and only if {u} is {p}-cocartesian.
@@ -94,24 +92,24 @@
 -- | A lift of {f} to `Fibers p` is cocartesian if and only if the underlying arrow of {E} is {p}-cocartesian.
 \lemma cocartesianLift<->arrow {E A : \Cat} (p : E ->⁺ A) {e e' : E} (u : e ~> e') {a' : A} (s : p e' = a') {f : p e ~> a'}
                                (sigma : DPath (\lam i => p (u i) = f i) idp s)
-  : IsCocartesianLift {A} {Fibers p} ((e', s), dpath \lam i => (u i, sigma i)) <-> IsCocartesianArrow p u \elim s
-  | idp => aux p u (path \lam m => dpath \lam i => sigma i m)
+  : IsCocartesianLift {A} {Fibers p} {p e, a', f, (e, idp)} ((e', s), dpath \lam i => (u i, sigma i)) <-> IsCocartesianArrow p u \elim s
+  | idp => aux (path \lam m => dpath \lam i => sigma i m)
   \where {
-    \private \lemma aux {E A : \Cat} (p : E ->⁺ A) {e e' : E} (u : e ~> e') {f : p e ~> p e'} (pi : dmap p u = f)
-      : IsCocartesianLift {A} {Fibers p} ((e', idp), dpath \lam i => (u i, path \lam m => pi m i)) <-> IsCocartesianArrow p u \elim pi
+    \private \lemma aux {f : p e ~> p e'} (pi : dmap p u = f)
+      : IsCocartesianLift {A} {Fibers p} {p e, p e', f, (e, idp)} ((e', idp), dpath \lam i => (u i, path \lam m => pi m i)) <-> IsCocartesianArrow p u \elim pi
       | idp => arrowLift-cocartesian u
   }
 
 -- | {p} is a cocartesian fibration if and only if the family of its fibers is.
 \lemma cocartesianMap-char {E A : \Cat} {p : E ->⁺ A} : IsCocartesianMap p <-> IsCocartesianFib (Fibers p)
-  => (\lam c f b => map=>fib c b.2 f,
-      \lam c {e} f => TruncP.map (c f (e, idp)) \lam (l, lc) =>
+  => (\lam c d => map=>fib c d.4.2 d.3,
+      \lam c {e} f => TruncP.map (c (p e, _, f, (e, idp))) \lam (l, lc) =>
         (l.1.1, dpath \lam i => (l.2 i).1, l.1.2,
          comp-equiv (path-square-equiv (dmap p (dpath \lam i => (l.2 i).1)) f (dpath \lam i => (l.2 i).2)),
          (cocartesianLift<->arrow p (dpath \lam i => (l.2 i).1) l.1.2 (dpath \lam i => (l.2 i).2)).1 lc))
   \where {
     \lemma map=>fib {E A : \Cat} {p : E ->⁺ A} (c : IsCocartesianMap p) {e : E} {a : A} (q : p e = a) {a' : A} (f : a ~> a')
-      : ∃ (l : CovLift (Fibers p) f (e, q)) (IsCocartesianLift l) \elim q
+      : ∃ (l : CovLift (Fibers p) (a, a', f, (e, q))) (IsCocartesianLift l) \elim q
       | idp => TruncP.map (c f) \lam (e', u, s, r, uc) =>
         \let sigma => (path-square-equiv (dmap p u) f).ret (comp-equiv.ret r)
         \in (((e', s), dpath \lam i => (u i, sigma i)), (cocartesianLift<->arrow p u s sigma).2 uc)

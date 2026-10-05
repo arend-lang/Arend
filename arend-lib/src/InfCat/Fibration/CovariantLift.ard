@@ -9,30 +9,34 @@
 \import Meta
 \import Paths
 
--- | The category of covariant lifts of {f} starting at {b}.
-\type CovLift {A :⁺ \Cat} (B :⁺ A ->⁺ \Cat) {a a' :⁺ A} (f :⁺ a ~> a') (b :⁺ B a) : \Cat
-  => \Sigma⁺ (b' : B a') (DPath (\lam i => B (f i)) b b')
+-- | The base data of a lift: a source, a target, an arrow between them, and a point over the source.
+\func CovLiftData {A :⁺ \Cat} (B :⁺ A ->⁺ \Cat) : \Cat
+  => \Sigma⁺ (a a' : A) (f : a ~> a') (b : B a)
 
--- | A lift {l} of {f} is cocartesian if every lift of a composite `comp f g` factors uniquely through it.
-\type IsCocartesianLift {A : \Cat} {B : A ->⁺ \Cat} {a a' : A} {f : a ~> a'} {b : B a} (l : CovLift B f b) : \Prop
-  => \Pi {a'' : A} (g : a' ~> a'') (l' : CovLift B (comp f g) b)
+-- | The category of covariant lifts of `d.3` starting at `d.4`.
+\type CovLift {A :⁺ \Cat} (B :⁺ A ->⁺ \Cat) (d :⁺ CovLiftData B) : \Cat
+  => \Sigma⁺ (b' : B d.2) (DPath (\lam i => B (d.3 i)) d.4 b')
+
+-- | A lift {l} of {d} is cocartesian if every lift of a composite `comp f g` factors uniquely through it.
+\type IsCocartesianLift {A : \Cat} {B : A ->⁺ \Cat} {d : CovLiftData B} (l : CovLift B d) : \Prop
+  => \Pi {a'' : A} (g : d.2 ~> a'') (l' : CovLift B (d.1, a'', comp d.3 g, d.4))
        -> Contr (\Sigma (k : DPath (\lam j => B (g j)) l.1 l'.1)
-                        (DPath (\lam i => DPath (\lam j => B (fill2 f g i j)) (l.2 i) (l'.2 i)) idd k))
+                        (DPath (\lam i => DPath (\lam j => B (fill2 d.3 g i j)) (l.2 i) (l'.2 i)) idd k))
 
 {- | The type of maps from a cocartesian lift to a lift over a square is contractible.
  - This is the property of being a cocartesian lift, but for arbitrary squares in the base instead of just 2-simplices.
  -}
 \lemma cocartesian-square {A : \Cat} (B : A ->⁺ \Cat)
-  {a1 a1' a2 a2' : A} {f1 : a1 ~> a1'} {f2 : a2 ~> a2'} (p : a1 ~> a2) (p' : a1' ~> a2') (sqA : DPath (\lam i => p i ~> p' i) f1 f2)
-  {b1 : B a1} {b2 : B a2} (q : DPath (\lam i => B (p i)) b1 b2) (c : CovLift B f1 b1) (cc : IsCocartesianLift c) (l' : CovLift B f2 b2)
+  {d1 d2 : CovLiftData B} (p : d1.1 ~> d2.1) (p' : d1.2 ~> d2.2) (sqA : DPath (\lam i => p i ~> p' i) d1.3 d2.3)
+  (q : DPath (\lam i => B (p i)) d1.4 d2.4) (c : CovLift B d1) (cc : IsCocartesianLift c) (l' : CovLift B d2)
   : Contr (\Sigma (k : DPath (\lam i => B (p' i)) c.1 l'.1) (DPath (\lam i => DPath (\lam j => B (sqA i j)) (q i) (k i)) c.2 l'.2))
   => \let | qq => dpath \lam i => ((p i, q i) : \Sigma⁺ (y : A) (B y))
-          | m1 => dpath \lam i => ((f1 i, c.2 i) : \Sigma⁺ (y : A) (B y))
-          | m2 => dpath \lam i => ((f2 i, l'.2 i) : \Sigma⁺ (y : A) (B y))
-          | triA => dpath \lam i => dpath (fill2 f1 p' i)
+          | m1 => dpath \lam i => ((d1.3 i, c.2 i) : \Sigma⁺ (y : A) (B y))
+          | m2 => dpath \lam i => ((d2.3 i, l'.2 i) : \Sigma⁺ (y : A) (B y))
+          | triA => dpath \lam i => dpath (fill2 d1.3 p' i)
           -- the composite of `c.2` and `k` together with its filler over the canonical 2-simplex
-          | hc (k : DPath (\lam i => B (p' i)) c.1 l'.1) => horn-Contr B {_} {_} {_} {_} {_} {comp f1 p'} triA c.2 k
-          | ff (k : DPath (\lam i => B (p' i)) c.1 l'.1) => dpath \lam i => dpath \lam j => ((fill2 f1 p' i j, (hc k).center.2 i j) : \Sigma⁺ (y : A) (B y))
+          | hc (k : DPath (\lam i => B (p' i)) c.1 l'.1) => horn-Contr B {_} {_} {_} {_} {_} {comp d1.3 p'} triA c.2 k
+          | ff (k : DPath (\lam i => B (p' i)) c.1 l'.1) => dpath \lam i => dpath \lam j => ((fill2 d1.3 p' i j, (hc k).center.2 i j) : \Sigma⁺ (y : A) (B y))
           | bfA => dpath \lam i => dpath \lam j => (conn-right qq i j).1
           | tfA => dpath \lam i => dpath \lam j => (conn-right m1 i j).1
           -- the triangle corresponding to the square {sqA}
@@ -44,41 +48,38 @@
                  `transQEquiv` sigma-right (\lam sqT => IsEquiv.toQEquiv (pmapIsEquiv (inP (square-char.gen-equiv bfA tfA triA)))
                                                     `transQEquiv` pathEquiv-right (inv (square-char.forward-gen.natural __.1 {_} {_} {_} {_} {qq} {m2} {m1} (conn-right qq) (conn-right m1) (ff k) sqT)))
                  `transQEquiv` qsigma-left (square-char.gen-equiv (conn-right qq) (conn-right m1) (ff k))
-                 `transQEquiv` symQEquiv (rel-square-equiv B {_} {_} {_} {_} {idd} {m2} {qq} {dpath \lam i => ((comp f1 p' i, (hc k).center.1 i) : \Sigma⁺ (y : A) (B y))} base)
+                 `transQEquiv` symQEquiv (rel-square-equiv B {_} {_} {_} {_} {idd} {m2} {qq} {dpath \lam i => ((comp d1.3 p' i, (hc k).center.1 i) : \Sigma⁺ (y : A) (B y))} base)
                  `transQEquiv` contr-sigma-fiber hf (hc k).center.1
      \in Contr.Contr_QEquiv (symQEquiv (sigma-right E)) $
            Contr.Contr_QEquiv (sigma-right \lam k => contr-sigma-fiber (hc k) hf.center.1 `transQEquiv` inv-equiv)
                               (cc p' (l'.1, hf.center.1))
 
--- | Lifts of {f} starting at {b} are arrows in the fiber from the endpoint of a cocartesian lift {c}.
-\lemma cocartesian-lift-equiv {A : \Cat} {B : A ->⁺ \Cat} {a a' : A} {f : a ~> a'} {b : B a}
-                              (c : CovLift B f b) (cc : IsCocartesianLift c) (b' : B a')
-  : IsEquiv {DPath (\lam i => B (f i)) b b'} {c.1 ~> b'}
-            (\lam t => (cocartesian-square B idd idd (dpath \lam _ => f) idd c cc (b', t)).center.1)
-  => contr-relation-equiv (\lam t (k : c.1 ~> b') => DPath (\lam i => DPath (\lam j => B (f j)) b (k i)) c.2 t)
-      (\lam t => cocartesian-square B idd idd (dpath \lam _ => f) idd c cc (b', t))
+-- | Lifts of {d} are arrows in the fiber from the endpoint of a cocartesian lift {c}.
+\lemma cocartesian-lift-equiv {A : \Cat} {B : A ->⁺ \Cat} {d : CovLiftData B}
+                              (c : CovLift B d) (cc : IsCocartesianLift c) (b' : B d.2)
+  : IsEquiv {DPath (\lam i => B (d.3 i)) d.4 b'} {c.1 ~> b'}
+            (\lam t => (cocartesian-square B idd idd (dpath \lam _ => d.3) idd c cc (b', t)).center.1)
+  => contr-relation-equiv (\lam t (k : c.1 ~> b') => DPath (\lam i => DPath (\lam j => B (d.3 j)) d.4 (k i)) c.2 t)
+      (\lam t => cocartesian-square B idd idd (dpath \lam _ => d.3) idd c cc (b', t))
       (\lam k => Contr.Contr_QEquiv
-          (sigma-right $ later \lam t => \new QEquiv {DPath (\lam i => DPath (\lam j => B (f i)) (c.2 i) (t i)) idd k}
-                                                     {DPath (\lam i => DPath (\lam j => B (f j)) b (k i)) c.2 t} {
+          (sigma-right $ later \lam t => \new QEquiv {DPath (\lam i => DPath (\lam j => B (d.3 i)) (c.2 i) (t i)) idd k}
+                                                     {DPath (\lam i => DPath (\lam j => B (d.3 j)) d.4 (k i)) c.2 t} {
             | f r => dpath \lam i => dpath \lam j => r j i
             | ret s => dpath \lam i => dpath \lam j => s j i
             | ret_f r => idp
             | f_sec s => idp
           })
-          (horn-Contr B (dpath \lam i => idd {_} {f i}) c.2 k))
+          (horn-Contr B (dpath \lam i => idd {_} {d.3 i}) c.2 k))
 
 -- | The projection from the category of lifts to the base data is fully faithful at cocartesian lifts.
-\lemma cocartesian-ff {A : \Cat} (B : A ->⁺ \Cat)
-  {x y : \Sigma⁺ (s : \Sigma⁺ (a a' : A) (f : a ~> a') (b : B a)) (CovLift B s.3 s.4)} (xc : IsCocartesianLift x.2)
-  : IsEquiv {x ~> y} (\lam p => dmap __.1 p)
-  => inP $ transQEquiv (dpath-sigma-equiv {\Sigma⁺ (a a' : A) (f : a ~> a') (b : B a)} (\lam _ s => CovLift B s.3 s.4)) $
-       contr-right {x.1 ~> y.1} \lam r => Contr.Contr_QEquiv
-         (symQEquiv (covLift-dpath-equiv r))
-         (cocartesian-square B (dpath \lam i => (r i).1) (dpath \lam i => (r i).2) (dpath \lam i => (r i).3) (dpath \lam i => (r i).4) x.2 xc y.2)
+\lemma cocartesian-ff {A : \Cat} (B : A ->⁺ \Cat) {x y : \Sigma⁺ (d : CovLiftData B) (CovLift B d)} (xc : IsCocartesianLift x.2)
+  : IsEquiv {x ~> y} (dmap __.1)
+  => inP $ transQEquiv (dpath-sigma-equiv \lam _ => CovLift B) $ contr-right \lam r => Contr.Contr_QEquiv (symQEquiv (covLift-dpath-equiv r)) $
+      cocartesian-square B (dpath \lam i => (r i).1) (dpath \lam i => (r i).2) (dpath \lam i => (r i).3) (dpath \lam i => (r i).4) x.2 xc y.2
   \where {
     -- | A path in the family of categories of lifts over a morphism {r} of the base is a lift of {r} together with a square over it.
-    \func covLift-dpath-equiv {A : \Cat} {B : A ->⁺ \Cat} {s t : \Sigma⁺ (a a' : A) (f : a ~> a') (b : B a)} (r : s ~> t) {c : CovLift B s.3 s.4} {l : CovLift B t.3 t.4}
-      : QEquiv {DPath (\lam i => CovLift B (r i).3 (r i).4) c l}
+    \func covLift-dpath-equiv {A : \Cat} {B : A ->⁺ \Cat} {d e : CovLiftData B} (r : d ~> e) {c : CovLift B d} {l : CovLift B e}
+      : QEquiv {DPath (\lam i => CovLift B (r i)) c l}
                {\Sigma (k : DPath (\lam i => B (r i).2) c.1 l.1) (DPath (\lam i => DPath (\lam j => B ((r i).3 j)) (r i).4 (k i)) c.2 l.2)}
       \cowith
       | f u => (dpath \lam i => (u i).1, dpath \lam i => (u i).2)

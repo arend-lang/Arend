@@ -51,7 +51,7 @@
 -- | A left fibration with small fibers is classified by `\Type u`.
 \type Straight.{u} {C : \Cat} {F : C ->⁺ \Cat} (Ff : IsLeftFib F) (s : \Pi (y : C) -> IsSmall.{u} (F y)) (y :⁺ C) : \Type u
   => Resize+ (CatTypeFamily F (leftFib-grpd Ff)) (\lam y => IsSmall.toResize (s y) CatTypeFamily.ob-equiv)
-             (\lam {a} {a'} f b => leftFib-lift (catType-leftFib Ff) f b) y
+             (\lam f b => leftFib-lift (catType-leftFib Ff) (_, _, f, b)) y
   \where {
     \func fromStraight.{u} {C : \Cat} {F : C ->⁺ \Cat} {Ff : IsLeftFib F} {s : \Pi (y : C) -> IsSmall.{u} (F y)} {y :⁺ C}
                            (r :⁺ Straight Ff s y) : F y \elim r

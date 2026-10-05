@@ -33,7 +33,7 @@
   \where {
     -- | Sections over {DI} are the starting point together with a lift.
     \func DI-sections-equiv {A : \Cat} (F : A ->⁺ \Cat) (v : DI ->⁺ A)
-      : QEquiv {\Pi (i :⁺ DI) -> F (v i)} {\Sigma (b : F (v dleft)) (CovLift F (dpath v) b)} \cowith
+      : QEquiv {\Pi (i :⁺ DI) -> F (v i)} {\Sigma (b : F (v dleft)) (CovLift F (_, _, dpath v, b))} \cowith
       | f s => (s dleft, (s dright, dpath s))
       | ret t => \lam i => t.2.2 i
       | ret_f => idpe
@@ -43,9 +43,9 @@
     \lemma leftFib-sections {A : \Cat} {F : A ->⁺ \Cat}
       : IsLeftFib F <-> (\Pi (v : DI ->⁺ A) -> IsEquiv (\lam (s : \Pi (i :⁺ DI) -> F (v i)) => s dleft))
       => (\lam Ff v => IsEquiv.trans (inP (DI-sections-equiv F v)) $ contrFibers=>IsEquiv \lam b =>
-            Contr.Contr_QEquiv (symQEquiv (proj-fib _ b)) (Ff (dpath v) b),
-          \lam e {x} {y} f b => Contr.Contr_QEquiv (proj-fib _ b) $
-            IsEquiv=>contrFibers (IsEquiv.rightFactor (inP (DI-sections-equiv F (\lam i => f i))) (e (\lam i => f i))) b)
+            Contr.Contr_QEquiv (symQEquiv (proj-fib _ b)) (Ff (_, _, dpath v, b)),
+          \lam e d => Contr.Contr_QEquiv (proj-fib _ d.4) $
+            IsEquiv=>contrFibers (IsEquiv.rightFactor (inP (DI-sections-equiv F (\lam i => d.3 i))) (e (\lam i => d.3 i))) d.4)
 
     -- | Functors out of the terminal category are objects.
     \func terminal-sections-equiv {T : \Cat} : QEquiv {\Sigma ->⁺ T} {T} \cowith

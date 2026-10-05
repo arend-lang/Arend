@@ -17,38 +17,41 @@
 \import Paths
 
 \type IsLeftFib {A : \Cat} (B : A ->⁺ \Cat) : \Prop
-  => \Pi {x y : A} (f : x ~> y) (b : B x) -> Contr (CovLift B f b)
+  => \Pi (d : CovLiftData B) -> Contr (CovLift B d)
 
 \lemma leftFib-pullback {A' A : \Cat} (f : A' ->⁺ A) {B : A ->⁺ \Cat} (Bf : IsLeftFib B) : IsLeftFib (\lam a => B (f a))
-  => \lam g b =>
-      \let c => Bf (dmap f g) b
-      \in Contr.make {CovLift (\lam a =>⁺ B (f a)) g b} (c.center.1, c.center.2)
-            \lam u => pmap {CovLift B (dmap f g) b} {CovLift (\lam a =>⁺ B (f a)) g b} (\lam v => (v.1, v.2)) (c.contraction (u.1, u.2))
+  => \lam d =>
+      \let | fd : CovLiftData B => (f d.1, f d.2, dmap f d.3, d.4)
+           | c => Bf fd
+      \in Contr.make {CovLift (\lam a =>⁺ B (f a)) d} (c.center.1, c.center.2)
+            \lam u => pmap {CovLift B fd} {CovLift (\lam a =>⁺ B (f a)) d} (\lam v => (v.1, v.2)) (c.contraction (u.1, u.2))
 
 \lemma leftFib-grpd {A : \Cat} {B : A ->⁺ \Cat} (Bf : IsLeftFib B) (a : A) : IsGroupoid (B a)
-  => \lam {t} {t'} f => IsIso-diag-char.2 $ inP (t, path \lam k i => (isContr=>isProp (Bf idd t) (t, idd) (t', f) k).2 i)
+  => \lam {t} {t'} f => IsIso-diag-char.2 $ inP (t, path \lam k i => (isContr=>isProp (Bf (a,a,idd,t)) (t, idd) (t', f) k).2 i)
 
-\lemma leftFib-lift-cocartesian {A : \Cat} {B : A ->⁺ \Cat} (Bf : IsLeftFib B) {a a' : A} {f : a ~> a'} {b : B a} (c : CovLift B f b) : IsCocartesianLift c
+\lemma leftFib-lift-cocartesian {A : \Cat} {B : A ->⁺ \Cat} (Bf : IsLeftFib B) {d : CovLiftData B} (c : CovLift B d) : IsCocartesianLift c
   => \lam {a''} g l' =>
-      \let | S (t : CovLift B g c.1) => \Sigma (q : DPath (\lam i => B (comp f g i)) b t.1) (DPath (\lam i => DPath (\lam j => B (fill2 f g i j)) (c.2 i) (q i)) idd t.2)
-           | G (l : CovLift B (comp f g) b) => \Sigma (k : DPath (\lam j => B (g j)) c.1 l.1) (DPath (\lam i => DPath (\lam j => B (fill2 f g i j)) (c.2 i) (l.2 i)) idd k)
-           | swap (u : \Sigma (t : CovLift B g c.1) (S t)) : \Sigma (l : CovLift B (comp f g) b) (G l) => ((u.1.1, u.2.1), (u.1.2, u.2.2))
-           | swap' (u : \Sigma (l : CovLift B (comp f g) b) (G l)) : \Sigma (t : CovLift B g c.1) (S t) => ((u.1.1, u.2.1), (u.1.2, u.2.2))
-           | cS : Contr (\Sigma (t : CovLift B g c.1) (S t)) => sigma-Contr (Bf g c.1) \lam t => horn-Contr B {_} {_} {_} {_} {_} {comp f g} (dpath \lam i => dpath (fill2 f g i)) c.2 t.2
-      \in fiber-Contr G (Bf (comp f g) b) (isProp=>isContr (\lam u v => pmap swap (isContr=>isProp cS (swap' u) (swap' v))) (swap cS.center)) l'
+      \let | cg : CovLiftData B => (_, _, g, c.1)
+           | dg : CovLiftData B => (_, _, comp d.3 g, d.4)
+           | S (t : CovLift B cg) => \Sigma (q : DPath (\lam i => B (comp d.3 g i)) d.4 t.1) (DPath (\lam i => DPath (\lam j => B (fill2 d.3 g i j)) (c.2 i) (q i)) idd t.2)
+           | G (l : CovLift B dg) => \Sigma (k : DPath (\lam j => B (g j)) c.1 l.1) (DPath (\lam i => DPath (\lam j => B (fill2 d.3 g i j)) (c.2 i) (l.2 i)) idd k)
+           | swap (u : \Sigma (t : CovLift B cg) (S t)) : \Sigma (l : CovLift B dg) (G l) => ((u.1.1, u.2.1), (u.1.2, u.2.2))
+           | swap' (u : \Sigma (l : CovLift B dg) (G l)) : \Sigma (t : CovLift B cg) (S t) => ((u.1.1, u.2.1), (u.1.2, u.2.2))
+           | cS : Contr (\Sigma (t : CovLift B cg) (S t)) => sigma-Contr (Bf cg) \lam t => horn-Contr B {_} {_} {_} {_} {_} {comp d.3 g} (dpath \lam i => dpath (fill2 d.3 g i)) c.2 t.2
+      \in fiber-Contr G (Bf dg) (isProp=>isContr (\lam u v => pmap swap (isContr=>isProp cS (swap' u) (swap' v))) (swap cS.center)) l'
 
 \lemma leftFib-equiv {A : \Cat} {B : A ->⁺ \Cat} (Bf : IsLeftFib B)
-  : IsHEquiv {\Sigma⁺ (s : \Sigma⁺ (a a' : A) (f : a ~> a') (b : B a)) (CovLift B s.3 s.4)} {\Sigma⁺ (a a' : A) (f : a ~> a') (b : B a)} __.1
-  => (ff-surj-equiv {\Sigma⁺ (s : \Sigma⁺ (a a' : A) (f : a ~> a') (b : B a)) (CovLift B s.3 s.4)} {\Sigma⁺ (a a' : A) (f : a ~> a') (b : B a)} {__.1}).1
+  : IsHEquiv {\Sigma⁺ (d : CovLiftData B) (CovLift B d)} {CovLiftData B} __.1
+  => (ff-surj-equiv {\Sigma⁺ (d : CovLiftData B) (CovLift B d)} {CovLiftData B} {__.1}).1
       (\lam x y => cocartesian-ff B (leftFib-lift-cocartesian Bf x.2),
-       \lam y => inP ((y, Contr.center {Bf y.3 y.4}), idp))
+       \lam y => inP ((y, Contr.center {Bf y}), idp))
 
-\sfunc leftFib-lift {A : \Cat} {B : A ->⁺ \Cat} (Bf : IsLeftFib B) {a a' :⁺ A} (f :⁺ a ~> a') (b :⁺ B a) : CovLift B f b
-  => IsHEquiv.fib-sec (leftFib-equiv Bf) (later (a,a',f,b))
+\sfunc leftFib-lift {A : \Cat} {B : A ->⁺ \Cat} (Bf : IsLeftFib B) (d :⁺ CovLiftData B) : CovLift B d
+  => IsHEquiv.fib-sec (leftFib-equiv Bf) (later d)
 
 -- | Lifts along a left fibration are unique, naturally in all the data.
-\sfunc leftFib-lift-unique {A : \Cat} {B : A ->⁺ \Cat} (Bf : IsLeftFib B) {a a' :⁺ A} {f :⁺ a ~> a'} {b :⁺ B a} {c c' :⁺ CovLift B f b} : c = c'
-  => IsHEquiv.fib-sec-unique (leftFib-equiv Bf) {a,a',f,b}
+\sfunc leftFib-lift-unique {A : \Cat} {B : A ->⁺ \Cat} (Bf : IsLeftFib B) {d :⁺ CovLiftData B} {c c' :⁺ CovLift B d} : c = c'
+  => IsHEquiv.fib-sec-unique (leftFib-equiv Bf) {d}
 
 {- | A functor to `\Cat` with groupoid fibers equipped with a natural choice of lifts is a left fibration.
  -
@@ -56,12 +59,12 @@
  - `\lam f ta => (ta, idd)` is a natural lift, so without it every `\Cat` would be a groupoid.
  -}
 \lemma lift-IsLeftFib {A : \Cat} {B : A ->⁺ \Cat} (Bg : \Pi (a : A) -> IsGroupoid (B a))
-  (lift : \Pi {a a' :⁺ A} (f :⁺ a ~> a') (b :⁺ B a) -> CovLift B f b)
+  (lift : \Pi (d :⁺ CovLiftData B) -> CovLift B d)
   : IsLeftFib B
-  => \lam {x} {y} f ta =>
-       \let c => ob-sigma-Contr (DPath (\lam i => B (f i)) ta) $
-              Contr.Contr_QEquiv (symQEquiv (lift-fiber-equiv B f ta)) (IsEquiv=>contrFibers (inP (coslice-equiv B Bg lift {x} {y} ta)) f)
-       \in Contr.make {CovLift B f ta} c.center (\lam u => path (\lam i => c.contraction u @ i))
+  => \lam d =>
+       \let c => ob-sigma-Contr (DPath (\lam i => B (d.3 i)) d.4) $
+              Contr.Contr_QEquiv (symQEquiv (lift-fiber-equiv B d.3 d.4)) (IsEquiv=>contrFibers (inP (coslice-equiv B Bg lift {d.1} {d.2} d.4)) d.3)
+       \in Contr.make {CovLift B d} c.center (\lam u => path (\lam i => c.contraction u @ i))
   \where {
     -- | The total category of {T}.
     \func Total {B : \Cat} (T : B ->⁺ \Cat) : \Cat
@@ -106,12 +109,12 @@
 
     -- | The projection of the coslice to the hom-type of the base is an equivalence; its inverse is given by {lift}.
     \func coslice-equiv {B : \Cat} (T : B ->⁺ \Cat) (Tg : \Pi (x : B) -> IsGroupoid (T x))
-                        (lift : \Pi {a b :⁺ B} (f :⁺ a ~> b) (ta :⁺ T a) -> CovLift T f ta)
+                        (lift : \Pi (d :⁺ CovLiftData T) -> CovLift T d)
                         {a b : B} (ta : T a) : QEquiv {ObCoslice T ta} {a ~> b} \cowith
       | f => coslice-proj T ta
-      | ret r => ((lift r ta).1, dpath \lam i => ((r i, (lift r ta).2 i) : Total T))
+      | ret r => ((lift (a,b,r,ta)).1, dpath \lam i => ((r i, (lift (a,b,r,ta)).2 i) : Total T))
       | ret_f (x, p) =>
-        \let q => coslice-path T Tg (dpath \lam i => (p i).1) (dpath \lam i => (p i).2) (\lam k => lift (conn-left (dpath \lam i => (p i).1) k) (p k).2)
+        \let q => coslice-path T Tg (dpath \lam i => (p i).1) (dpath \lam i => (p i).2) (\lam k => lift (_, _, conn-left (dpath \lam i => (p i).1) k, (p k).2))
         \in path \lam k => ((q k).1, (q k).2)
       | f_sec r => idp
 
@@ -130,27 +133,27 @@
       }
   }
 
-\lemma lift_type-IsLeftFib {A : \Cat} {B : A ->⁺ \Type} (lift : \Pi {a a' :⁺ A} (f :⁺ a ~> a') (b :⁺ B a) -> CovLift B f b) : IsLeftFib B
+\lemma lift_type-IsLeftFib {A : \Cat} {B : A ->⁺ \Type} (lift : \Pi (d :⁺ CovLiftData B) -> CovLift B d) : IsLeftFib B
   => lift-IsLeftFib (\lam a => type-groupoid) lift
 
 -- | The family of types associated to a left fibration is a left fibration.
 \lemma catType-leftFib {A : \Cat} {B : A ->⁺ \Cat} (Bf : IsLeftFib B) {Bg : \Pi (a : A) -> IsGroupoid (B a)}
   : IsLeftFib (CatTypeFamily B Bg)
-  => lift_type-IsLeftFib \lam f t => transport+ (CovLift _ f __) (CatTypeFamily.toCatType_fromCatType t)
-      \let l => leftFib-lift Bf f (CatTypeFamily.fromCatType t)
-      \in (CatTypeFamily.toCatType l.1, dpath \lam i => CatTypeFamily.toCatType (l.2 i))
+  => lift_type-IsLeftFib \lam d => transport+ (\lam t => CovLift _ (_, _, d.3, t)) (CatTypeFamily.toCatType_fromCatType d.4)
+      \let l => leftFib-lift Bf (_, _, d.3, CatTypeFamily.fromCatType d.4)
+      \in (CatTypeFamily.toCatType l.1, dpath \lam i => CatTypeFamily.toCatType {_} {_} {_} {d.3 i} (l.2 i))
 
 \lemma universe-leftFib.{u} : IsLeftFib {\Type u} (\lam A => A)
-  => lift_type-IsLeftFib \lam f b => (coe+ (\lam i => f i) b dright, dpath \lam i => coe+ (\lam j => f j) b i)
+  => lift_type-IsLeftFib \lam d => (coe+ (\lam i => d.3 i) d.4 dright, dpath \lam i => coe+ (\lam j => d.3 j) d.4 i)
 
-\sfunc leftFib-dpath {A : \Cat} {B : A ->⁺ \Cat} (Bf : IsLeftFib B) {a a' :⁺ A} {f :⁺ a ~> a'} {b :⁺ B a} (c :⁺ CovLift B f b) {b' :⁺ B a'}
-  (t :⁺ DPath (\lam i => B (f i)) b b') : c.1 = b'
-  => pmap+ (\lam l => l.1) $ leftFib-lift-unique {A} {B} Bf {_} {_} {f} {_} {c} {b',t}
+\sfunc leftFib-dpath {A : \Cat} {B : A ->⁺ \Cat} (Bf : IsLeftFib B) {d :⁺ CovLiftData B} (c :⁺ CovLift B d) {b' :⁺ B d.2}
+  (t :⁺ DPath (\lam i => B (d.3 i)) d.4 b') : c.1 = b'
+  => pmap+ (\lam l => l.1) $ leftFib-lift-unique {A} {B} Bf {d} {c} {b',t}
 
--- | Lifts of {f} starting at {b} are paths from the endpoint of a fixed lift {c}.
-\lemma leftFib-dpath-equiv {A : \Cat} {B : A ->⁺ \Cat} (Bf : IsLeftFib B) {a a' : A} {f : a ~> a'} {b : B a} (c : CovLift B f b) {b' : B a'}
-  : IsEquiv {DPath (\lam i => B (f i)) b b'} {c.1 = b'} (leftFib-dpath Bf c)
-  => \let L => Bf f b
+-- | Lifts of {d} are paths from the endpoint of a fixed lift {c}.
+\lemma leftFib-dpath-equiv {A : \Cat} {B : A ->⁺ \Cat} (Bf : IsLeftFib B) {d : CovLiftData B} (c : CovLift B d) {b' : B d.2}
+  : IsEquiv {DPath (\lam i => B (d.3 i)) d.4 b'} {c.1 = b'} (leftFib-dpath Bf c)
+  => \let L => Bf d
      \in propExt.conv (totalEquiv (\lam b' => leftFib-dpath Bf c {b'})) (inP \new QEquiv {
        | ret _ => (L.center.1, L.center.2)
        | ret_f t => path \lam i => \let c => L.contraction (t.1,t.2) i
@@ -159,7 +162,7 @@
      }) b'
 
 \func coe+-dpath.{u} {A :⁺ DI ->⁺ \Type u} {a :⁺ A dleft} {a' :⁺ A dright} (t :⁺ DPath A a a') : coe+ A a dright = a'
-  => leftFib-dpath universe-leftFib {_} {_} {dpath A} (coe+ A a dright, dpath (coe+ A a)) t
+  => leftFib-dpath universe-leftFib {_, _, dpath A, a} (coe+ A a dright, dpath (coe+ A a)) t
 
 -- | Transport in a family of types does not depend on the universe level.
 \sfunc coe+-level.{u} {A :⁺ DI ->⁺ \Type u} {a :⁺ A dleft} : coe+.{\suc u} A a dright = coe+.{u} A a dright
@@ -172,4 +175,4 @@
 
 -- | The coslice under {x} is a left fibration.
 \lemma hom-leftFib {C : \Cat} (x : C) : IsLeftFib (\lam y => x ~> y)
-  => lift_type-IsLeftFib \lam {a} {a'} f b => (comp b f, dpath \lam j => dpath \lam i => fill2 b f i j)
+  => lift_type-IsLeftFib \lam d => (comp d.4 d.3, dpath \lam j => dpath \lam i => fill2 d.4 d.3 i j)

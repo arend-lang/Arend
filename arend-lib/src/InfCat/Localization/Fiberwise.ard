@@ -30,8 +30,8 @@
 \type IsTransportStable {S : \Cat} (F : S ->⁺ \Cat) (W : \Pi (s : S) -> (DI ->⁺ F s) -> \Prop) : \Prop
   => \Pi {s s' : S} (g : s ~> s') {b : DI ->⁺ F s} -> W s b ->
        ∃ (k : DI ->⁺ F s') (W s' k) (H : DPath (\lam i => DI ->⁺ F (g i)) b k)
-         (IsCocartesianLift {S} {F} (k dleft, dpath \lam i => H i dleft))
-         (IsCocartesianLift {S} {F} (k dright, dpath \lam i => H i dright))
+         (IsCocartesianLift {S} {F} {s, s', g, b dleft} (k dleft, dpath \lam i => H i dleft))
+         (IsCocartesianLift {S} {F} {s, s', g, b dright} (k dright, dpath \lam i => H i dright))
 
 -- | Transport stability is preserved by base change along a functor.
 \lemma transportStable-pullback {X S : \Cat} {F : S ->⁺ \Cat} {W : \Pi (s : S) -> (DI ->⁺ F s) -> \Prop}

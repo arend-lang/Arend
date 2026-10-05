@@ -14,44 +14,45 @@
 
 -- | {B} is a cocartesian fibration if every arrow in the base has a cocartesian lift from every point of the fiber.
 \type IsCocartesianFib {A : \Cat} (B : A ->⁺ \Cat) : \Prop
-  => \Pi {a a' : A} (f : a ~> a') (b : B a) -> ∃ (l : CovLift B f b) (IsCocartesianLift l)
+  => \Pi (d : CovLiftData B) -> ∃ (l : CovLift B d) (IsCocartesianLift l)
 
 \lemma cocartesianFib-char {A : \Cat} {B : A ->⁺ \Cat}
-  : IsCocartesianFib B <-> IsHEquiv {FullSubCat {\Sigma⁺ (s : \Sigma⁺ (a a' : A) (f : a ~> a') (b : B a)) (CovLift B s.3 s.4)} \lam t => IsCocartesianLift t.2}
-                                    {\Sigma⁺ (a a' : A) (f : a ~> a') (b : B a)}
+  : IsCocartesianFib B <-> IsHEquiv {FullSubCat {\Sigma⁺ (d : CovLiftData B) (CovLift B d)} \lam t => IsCocartesianLift t.2}
+                                    {CovLiftData B}
                                     (\lam x => (FullSubCat.inc x).1)
-  => \let | S => \Sigma⁺ (a a' : A) (f : a ~> a') (b : B a)
-          | T => \Sigma⁺ (s : S) (CovLift B s.3 s.4)
-     \in (\lam cf => (ff-surj-equiv {FullSubCat {T} \lam t => IsCocartesianLift t.2} {S} {\lam x => (FullSubCat.inc x).1}).1
+  => \let T => \Sigma⁺ (d : CovLiftData B) (CovLift B d)
+     \in (\lam cf => (ff-surj-equiv {FullSubCat {T} \lam t => IsCocartesianLift t.2} {CovLiftData B} {\lam x => (FullSubCat.inc x).1}).1
             (\lam x y => IsEquiv.trans (FullSubCat.inc-ff x y) (cocartesian-ff B (FullSubCat.inc-con {T} {_} {x})),
-             \lam s => \case cf s.3 s.4 \with {
+             \lam s => \case cf s \with {
                | inP (l,lc) => TruncP.map (FullSubCat.inc-sat {T} {_} {s,l} lc) \lam (d,p) => (d, pmap __.1 p)
              }),
-          \lam e {a} {a'} f b => \let d => IsHEquiv.ret e (a,a',f,b)
-            \in transport (\lam s => ∃ (l : CovLift B s.3 s.4) (IsCocartesianLift l)) (IsHEquiv.f_ret e) (inP ((FullSubCat.inc d).2, FullSubCat.inc-con {_} {_} {d})))
+          \lam e s => \let d => IsHEquiv.ret e s
+            \in transport (\lam s => ∃ (l : CovLift B s) (IsCocartesianLift l)) (IsHEquiv.f_ret e) (inP ((FullSubCat.inc d).2, FullSubCat.inc-con {_} {_} {d})))
 
-\sfunc cocartesianFib-lift {A : \Cat} {B : A ->⁺ \Cat} (Bf : IsCocartesianFib B) {a a' :⁺ A} (f :⁺ a ~> a') (b :⁺ B a) : CovLift B f b
+\sfunc cocartesianFib-lift {A : \Cat} {B : A ->⁺ \Cat} (Bf : IsCocartesianFib B) (d :⁺ CovLiftData B) : CovLift B d
   => \have e => cocartesianFib-char.1 Bf
-     \in transport+ (\lam s => CovLift B s.3 s.4) (IsHEquiv.f_ret e) (FullSubCat.inc $ IsHEquiv.ret e (a,a',f,b)).2
+     \in transport+ (CovLift B) (IsHEquiv.f_ret e) (FullSubCat.inc $ IsHEquiv.ret e d).2
   \where {
-    \lemma isCocartesian {a a' : A} (f : a ~> a') (b : B a) : IsCocartesianLift (cocartesianFib-lift {A} {B} Bf f b)
-      => transportInv IsCocartesianLift (\peval cocartesianFib-lift {A} {B} Bf f b) $
-          transport-cocartesian $ FullSubCat.inc-con {_} {_} {IsHEquiv.ret (cocartesianFib-char.1 Bf) (a,a',f,b)}
+    \lemma isCocartesian (d : CovLiftData B) : IsCocartesianLift (cocartesianFib-lift {A} {B} Bf d)
+      => transportInv IsCocartesianLift (\peval cocartesianFib-lift {A} {B} Bf d) $
+          transport-cocartesian $ FullSubCat.inc-con {_} {_} {IsHEquiv.ret (cocartesianFib-char.1 Bf) d}
 
-    \private \lemma transport-cocartesian {s t : \Sigma⁺ (a a' : A) (f : a ~> a') (b : B a)} {p : s = t} {l : CovLift B s.3 s.4} (lc : IsCocartesianLift l)
-      : IsCocartesianLift (transport+ (\lam s => CovLift B s.3 s.4) p l) \elim p
+    \private \lemma transport-cocartesian {s t : CovLiftData B} {p : s = t} {l : CovLift B s} (lc : IsCocartesianLift l)
+      : IsCocartesianLift (transport+ (CovLift B) p l) \elim p
       | idp => lc
   }
 
 {- | Given a family {F} and a map {p}, if a lift {l} in the pullback of {F} along {p} is cocartesian over {S},
  -   then it is cocartesian over {X}.
  -}
-\lemma cocartesianLift-pullback {X S : \Cat} {F : S ->⁺ \Cat} (p : X ->⁺ S) {a a' : X} {m : a ~> a'} {b : F (p a)}
-                                {l : CovLift (\lam x => F (p x)) m b} (lc : IsCocartesianLift {S} {F} {p a} {p a'} {dmap p m} (l.1, l.2))
+\lemma cocartesianLift-pullback {X S : \Cat} {F : S ->⁺ \Cat} (p : X ->⁺ S) {d : CovLiftData (\lam x => F (p x))}
+                                {l : CovLift (\lam x => F (p x)) d}
+                                (lc : IsCocartesianLift {S} {F} {p d.1, p d.2, dmap p d.3, d.4} (l.1, l.2))
   : IsCocartesianLift l
-  => \lam g l' => Contr.Contr_QEquiv (later \new QEquiv {
+  => \lam {a''} g l' => Contr.Contr_QEquiv (later \new QEquiv {
     | f v => (v.1, dpath \lam i => dpath \lam j => v.2 j i)
     | ret w => (w.1, dpath \lam i => dpath \lam j => w.2 j i)
     | ret_f v => idp
     | f_sec w => idp
-  }) $ cocartesian-square F idd (dmap p g) (dpath \lam i => dpath \lam j => p (fill2 m g j i)) idd (l.1, l.2) lc (l'.1, l'.2)
+  }) $ cocartesian-square F {p d.1, p d.2, dmap p d.3, d.4} {p d.1, p a'', dmap p (comp d.3 g), d.4}
+        idd (dmap p g) (dpath \lam i => dpath \lam j => p (fill2 d.3 g j i)) idd (l.1, l.2) lc (l'.1, l'.2)
