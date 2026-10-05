@@ -1,8 +1,8 @@
 {- | Right Kan extensions of functors valued in types.
  -
- -   For `f : A ->⁺ B` and `T : A ->⁺ \Type u`, the value of {RightKanExtType} at `b` is the type of natural transformations
- -   `Hom(b, f -) ⇒ T` ({rightKanExtType-eval}), and {RightKanExtType} is right adjoint to restriction along `f`
- -   ({rightKanAdjunction}, {rightKanExtType-counit}, {rightKanExtType-univ}).
+ -   For `f : A ->⁺ B` and `T : A ->⁺ \Type u`, {RightKanExtType} is right adjoint to restriction along `f`
+ -   ({rightKanAdjunction}, {rightKanExtType-counit}, {rightKanExtType-univ}). Its value at `b` is the limit of `T`
+ -   over the comma category {Comma} `b ↓ f` ({rightKanExtType-comma-equiv}).
  -
  -   Construction ({rightKanLeftAdjoint}). The functor `Hom(b, f -)` is contravariant in `b`, so `Hom(Hom(b, f -), T)`
  -   cannot be written directly. Instead, it is the left Kan extension of evaluation at `b` along restriction
@@ -29,6 +29,7 @@
 \import InfCat.Square
 \import InfCat.Yoneda.CovariantYoneda
 \import Logic
+\import Meta
 \import Paths
 \import Paths.Meta
 
@@ -57,11 +58,32 @@
   | eps0y => rightKanExtType-counit f T
   | eps0y-univ {R} => rightKanExtType-univ f R T
 
--- | The values of {RightKanExtType} are natural transformations `Hom(b, f -) ⇒ T`.
-\sfunc rightKanExtType-eval.{u} {A B : \Cat u} {f : A ->⁺ B} {T : A ->⁺ \Type u} {b : B}
-  : QEquiv {RightKanExtType f T b} {(\lam a =>⁺ ReprFunctor b (f a)) ~> T}
-  => transportInv (\lam X => QEquiv {X} {_}) (rightKanLeftAdjoint.radj-char f T b)
-      (Straight.equiv `transQEquiv` symQEquiv (IsEquiv.toQEquiv (rightKanLeftAdjoint.theta-equiv f b T)))
+-- | The comma category `b ↓ f`.
+\func RightComma.{u} {A B : \Cat u} (f : A ->⁺ B) (b : B) : \Cat u
+  => \Sigma⁺ (a : A) (b ~> f a)
+
+-- | The comparison map from {RightKanExtType} to the limit of {T} over `b ↓ f`: transport along the arrow followed by the counit.
+\func rightKanExtType-comma.{u} {A B : \Cat u} (f : A ->⁺ B) (T : A ->⁺ \Type u) {b : B}
+                                (t :⁺ RightKanExtType f T b) (q :⁺ RightComma f b) : T q.1
+  => ~>_-> (dpath \lam i => rightKanExtType-counit f T i q.1) (~>_-> (dpath \lam i => RightKanExtType f T (q.2 i)) t)
+
+{- | The value of {RightKanExtType} at {b} is the limit of {T} over `b ↓ f`.
+ -   The map {rightKanExtType-comma} is the composite of the Yoneda lemma, the universal property of the right Kan extension,
+ -   and directed univalence.
+ -}
+\lemma rightKanExtType-comma-equiv.{u} {A B : \Cat u} (f : A ->⁺ B) (T : A ->⁺ \Type u) {b : B}
+  : IsEquiv (rightKanExtType-comma f T {b})
+  => \let | RK => RightKanExtType f T
+          | Y => depUnivalence `transQEquiv` yonedaCov.Sec-equiv b RK
+     \in transport IsEquiv (ext \lam r q => ~>_->_comp-fam (dmap (\lam H a =>⁺ H (f a)) (Y.ret r)) (rightKanExtType-counit f T) q.1 _) $
+        IsEquiv.trans (inP (symQEquiv Y)) $
+        IsEquiv.trans (rightKanExtType-univ f (\lam c => ReprFunctor b c) T) $
+        IsEquiv.trans (inP depUnivalence) $ inP $ later \new QEquiv {
+          | f S q => S (q.1, Straight.toStraight q.2)
+          | ret S' k => S' (k.1, Straight.fromStraight k.2)
+          | ret_f S => path \lam j k => S (k.1, Straight.toStraight_fromStraight k.2 j)
+          | f_sec S' => idp
+        }
 
 \lemma rightKanExtType-leftFib.{u} {A B : \Cat u} (f : A ->⁺ B) (T : A ->⁺ \Type u) : IsLeftFib (RightKanExtType f T)
   => leftFib-pullback (RightKanExtType f T) universe-leftFib
@@ -103,10 +125,6 @@
     -- | {Large} straightened to a functor with values in `\Type u`.
     \func Small.{u} {A B : \Cat u} (f : A ->⁺ B) (T : A ->⁺ \Type u) (b :⁺ B) : \Type u
       => Straight (large-leftFib f T) (large-small f T) b
-
-    -- | On objects, {RightKanExtType} agrees with {Small}.
-    \sfunc radj-char.{u} {A B : \Cat u} (f : A ->⁺ B) (T : A ->⁺ \Type u) (b :⁺ B) : RightKanExtType f T b = Small f T b
-      => path \lam i => R0y {CounivArrow.levelProp (rightKanExtType-counivArrow f T) (LeftAdjoint.counivArrow (rightKanLeftAdjoint f) T) i} b
 
     -- | The unit of {Large}.
     \func unit.{u} {A B : \Cat u} (f : A ->⁺ B) (R :⁺ B ->⁺ \Type u) : R ~> Large f (\lam a => R (f a))

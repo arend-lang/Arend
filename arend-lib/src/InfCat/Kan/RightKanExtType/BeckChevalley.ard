@@ -1,0 +1,133 @@
+{- | The Beck–Chevalley formula for right Kan extensions along base changes of cocartesian fibrations.
+ -
+ -   Let `p : E ->⁺ X` be a cocartesian fibration, that is, `Fibers p` is a cocartesian family, and let `A` be its base change
+ -   {BaseChange} `psi p` along `psi : X' ->⁺ X` with the projection {bc} `: A ->⁺ E`. For `T : A ->⁺ \Type u` and
+ -   an object `y` of the fiber of {p} over `x`, {beck-chevalley} shows that the right Kan extension of {T} along {bc} at `y`
+ -   is the limit {Phi} of `T (x', m_! y)` ({liftObj}) over `(x', m)` in the comma category {Comma} `x ↓ psi`.
+ -   If `T` is the restriction of `F : X' ->⁺ \Type u` along the projection `A → X'`, then {Phi} is the limit of {F}
+ -   over `x ↓ psi`, that is, the right Kan extension of {F} along {psi} at `x`. This is the Beck–Chevalley condition
+ -   for the pullback square of {psi} and {p}: restricting `Ran_psi F` to {E} gives the right Kan extension along {bc}
+ -   of the restriction of {F} to `A`. If `x ↓ psi` has an initial object, the limit is the value at it ({ranPhi-initial-equiv}).
+ -
+ -   The proof: by {rightKanExtType-comma-equiv}, the value of the right Kan extension at `y` is the limit of {T} over
+ -   the comma category `y ↓ bc`, which is {beck-chevalley.CommaLift} ({beck-chevalley.commaLift-reindex}).
+ -   The chosen cocartesian lifts give a left adjoint {beck-chevalley.commaLift} from `x ↓ psi` to it
+ -   ({beck-chevalley.commaLift-univ}), and sections restrict along a left adjoint by an equivalence
+ -   ({beck-chevalley.commaLift-sections}).
+ -}
+
+\import Equiv
+\import Equiv.Sigma
+\import Function.Meta
+\import InfCat.Basics
+\import InfCat.Fibration.Categorical
+\import InfCat.Fibration.CocartesianFib
+\import InfCat.Fibration.CovariantLift
+\import InfCat.Fibration.DirectedUnivalence
+\import InfCat.Functor.Initial
+\import InfCat.Kan.RightKanExtType
+\import InfCat.Functor.Adjunction
+\import InfCat.Limit.Initial
+\import InfCat.Paths
+\import Logic
+\import Logic.Unique
+\import Paths
+\import Paths.Meta
+\open beck-chevalley
+
+-- | {ranPhi} is an equivalence: it is {rightKanExtType-comma} followed by the restriction of sections along the chosen cocartesian lifts.
+\lemma beck-chevalley.{u} {X X' E : \Cat u} {p : E ->⁺ X} (pc : IsCocartesianFib (Fibers p)) (psi : X' ->⁺ X) {x : X}
+                          (T : BaseChange psi p ->⁺ \Type u) (y : Fibers p x)
+  : IsEquiv {RightKanExtType (bc psi p) T y.1} {Phi pc psi T y} (ranPhi pc psi T y)
+  => IsEquiv.trans (rightKanExtType-comma-equiv (bc psi p) T) $
+     IsEquiv.trans (inP (commaLift-reindex psi y T)) (commaLift-sections pc psi y (\lam e => T (e.1.1, e.2.1)))
+  \where {
+    -- | The projection from the base change of {p} along {psi} to {E}.
+    \func bc.{u} {X X' E : \Cat u} (psi : X' ->⁺ X) (p : E ->⁺ X) (a :⁺ BaseChange psi p) : E
+      => a.2.1
+
+    -- | The object `(x', m_! y)` of the base change for an object `(x', m)` of `x ↓ psi`, where `m_!` is the transport along the chosen cocartesian lift.
+    \func liftObj.{u} {X X' E : \Cat u} {p : E ->⁺ X} (pc : IsCocartesianFib (Fibers p))
+                      (psi : X' ->⁺ X) {x : X} (y :⁺ Fibers p x) (q :⁺ RightComma psi x) : BaseChange psi p
+      => (q.1, (cocartesianFib-lift {_} {Fibers p} pc (_, _, q.2, y)).1)
+
+    -- | The limit of `T (x', m_! y)` over `(x', m) ∈ x ↓ psi`.
+    \func Phi.{u} {X X' E : \Cat u} {p : E ->⁺ X} (pc : IsCocartesianFib (Fibers p))
+                  (psi : X' ->⁺ X) {x : X} (T : BaseChange psi p ->⁺ \Type u) (y :⁺ Fibers p x) : \Type u
+      => \Pi (q :⁺ RightComma psi x) -> T (liftObj pc psi y q)
+
+    -- | The comparison map from the right Kan extension to {Phi}: transport along the chosen cocartesian lift followed by the counit.
+    \func ranPhi.{u} {X X' E : \Cat u} {p : E ->⁺ X} (pc : IsCocartesianFib (Fibers p))
+                     (psi : X' ->⁺ X) {x : X} (T : BaseChange psi p ->⁺ \Type u)
+                     (y :⁺ Fibers p x) (t :⁺ RightKanExtType (bc psi p) T y.1)
+      : Phi pc psi T y
+      => \lam (q :⁺ RightComma psi x) => \let L => cocartesianFib-lift pc ((_, _, q.2, y) : CovLiftData (Fibers p)) \in
+           ~>_-> (dpath \lam i => rightKanExtType-counit (bc psi p) T i (liftObj pc psi y q))
+                 (~>_-> (dpath \lam i => RightKanExtType (bc psi p) T (L.2 i).1) t)
+
+    -- | Arrows of `x ↓ psi` together with a lift starting at {y}.
+    \func CommaLift.{u} {X X' : \Cat u} {G : X ->⁺ \Cat} (psi : X' ->⁺ X) {x : X} (y : G x) : \Cat
+      => \Sigma⁺ (q : RightComma psi x) (CovLift G (_, _, q.2, y))
+
+    -- | The chosen cocartesian lift of an arrow of `x ↓ psi`.
+    \func commaLift.{u} {X X' : \Cat u} {G : X ->⁺ \Cat} (Gf : IsCocartesianFib G) (psi : X' ->⁺ X) {x : X} (y : G x)
+                        (q :⁺ RightComma psi x) : CommaLift {X} {X'} {G} psi y
+      => (q, cocartesianFib-lift Gf ((_, _, q.2, y) : CovLiftData G))
+
+    -- | Arrows out of a chosen cocartesian lift are determined by their images in `x ↓ psi`.
+    \lemma commaLift-univ.{u} {X X' : \Cat u} {G : X ->⁺ \Cat} (Gf : IsCocartesianFib G) (psi : X' ->⁺ X) {x : X} (y : G x)
+                              (q : RightComma psi x) (e : CommaLift {X} {X'} {G} psi y)
+      : IsEquiv {commaLift Gf psi y q ~> e} {q ~> e.1} (dmap __.1)
+      => inP $ transQEquiv (dpath-sigma-equiv (\lam _ (q' : RightComma psi x) => CovLift G (_, _, q'.2, y))) $
+           contr-right {q ~> e.1} \lam r => Contr.Contr_QEquiv (symQEquiv (lift-dpath-equiv r))
+             (cocartesian-square G idd (dpath \lam i => psi (r i).1) (dpath \lam i => (r i).2)
+               idd (cocartesianFib-lift {_} {G} Gf (_, _, q.2, y)) (cocartesianFib-lift.isCocartesian {_} {G} (_, _, q.2, y)) e.2)
+      \where
+        -- | A path of lifts over an arrow of `x ↓ psi` is a path between their endpoints together with a square.
+        \func lift-dpath-equiv {q q' : RightComma psi x} (r : q ~> q') {c : CovLift G (_, _, q.2, y)}
+                               {l : CovLift G (_, _, q'.2, y)}
+          : QEquiv {DPath (\lam i => CovLift G (_, _, (r i).2, y)) c l}
+                   {\Sigma (k : DPath (\lam i => G (psi (r i).1)) c.1 l.1)
+                           (DPath (\lam i => DPath (\lam j => G ((r i).2 j)) y (k i)) c.2 l.2)}
+          \cowith
+          | f u => (dpath \lam i => (u i).1, dpath \lam i => (u i).2)
+          | ret v => dpath \lam i => (v.1 i, v.2 i)
+          | ret_f u => idp
+          | f_sec v => idp
+
+    -- | Sections of families of types over {CommaLift} restrict to `x ↓ psi` along the chosen cocartesian lifts.
+    \lemma commaLift-sections.{u} {X X' : \Cat u} {G : X ->⁺ \Cat} (Gf : IsCocartesianFib G) (psi : X' ->⁺ X) {x : X} (y : G x)
+                                  (Q : CommaLift {X} {X'} {G} psi y ->⁺ \Type u)
+      : IsEquiv {\Pi (e :⁺ CommaLift {X} {X'} {G} psi y) -> Q e} {\Pi (q :⁺ RightComma psi x) -> Q (commaLift Gf psi y q)}
+                (\lam s q => s (commaLift Gf psi y q))
+      => ladj-sections-type (\new UnivUnit (commaLift Gf psi y) (\lam e => e.1) (\lam q => idd) (\lam q e => transport IsEquiv (ext \lam g => inv comp_idd-left) (commaLift-univ Gf psi y q e))).toAdjunction Q
+
+    -- | Sections over `y ↓ bc` are sections over {CommaLift}.
+    \func commaLift-reindex.{u} {X X' E : \Cat u} {p : E ->⁺ X} (psi : X' ->⁺ X) {x : X} (y : Fibers p x)
+                                (T : BaseChange psi p ->⁺ \Type u)
+      : QEquiv {\Pi (s :⁺ RightComma (bc psi p) y.1) -> T s.1}
+               {\Pi (e :⁺ CommaLift {X} {X'} {Fibers p} psi y) -> T (e.1.1, e.2.1)} \cowith
+      | f sg e => sg ((e.1.1, e.2.1), dpath \lam i => (e.2.2 i).1)
+      | ret t s => \let c => fiber-fill (dmap p s.2) y.2 s.1.2.2
+                   \in t ((s.1.1, c.1), (s.1.2, dpath \lam i => (s.2 i, c.2 i)))
+      | ret_f sg => idp
+      | f_sec t => funExt+ \lam e => \let P => fiber-fill-unique (dmap p (dpath \lam i => (e.2.2 i).1)) y.2 e.2.1.2 (dpath \lam i => (e.2.2 i).2)
+                                     \in path \lam j => t ((e.1.1, (P @ j).1), (e.2.1, dpath \lam i => ((e.2.2 i).1, (P @ j).2 i)))
+
+    -- | An arrow {r} with paths {h0} and {h1} from its endpoints gives an arrow between their targets together with a square.
+    \func fiber-fill {X : \Cat} {a b x z :⁺ X} (r :⁺ a ~> b) (h0 :⁺ a = x) (h1 :⁺ b = z)
+      : \Sigma⁺ (m : x ~> z) (DPath (\lam i => r i = m i) h0 h1) \elim h0, h1
+      | idp, idp => (r, dpath \lam i => idp)
+
+    -- | {fiber-fill} is the unique such arrow with a square.
+    \func fiber-fill-unique {X : \Cat} {a b x z :⁺ X} (r :⁺ a ~> b) (h0 :⁺ a = x) (h1 :⁺ b = z) {m :⁺ x ~> z}
+                            (sq :⁺ DPath (\lam i => r i = m i) h0 h1)
+      : fiber-fill r h0 h1 = (m, sq) \elim h0, h1
+      | idp, idp => path \lam j => (dpath \lam i => sq i @ j, dpath \lam i => path \lam k => sq i @ I.squeeze k j)
+  }
+
+-- | If `x ↓ psi` has an initial object {q0}, then evaluating {ranPhi} at {q0} is an equivalence.
+\lemma ranPhi-initial-equiv.{u} {X X' E : \Cat u} {p : E ->⁺ X} (pc : IsCocartesianFib (Fibers p)) (psi : X' ->⁺ X) {x : X}
+                                (T : BaseChange psi p ->⁺ \Type u) (y : Fibers p x) (q0 : RightComma psi x) (init : IsInitial q0)
+  : IsEquiv {RightKanExtType (bc psi p) T y.1} {T (liftObj pc psi y q0)} (\lam r => ranPhi pc psi T y r q0)
+  => IsEquiv.trans (beck-chevalley pc psi T y) (initial-sections q0 init (\lam (q :⁺ RightComma psi x) => T (liftObj pc psi y q)))

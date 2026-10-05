@@ -37,6 +37,11 @@
   => pmap+ (\lam x => ~>_-> (comp p q) x) (inv ~>_->_idd)
      *> coe+-dpath (dpath \lam i => coe+ (\lam j => fill2 p q i j) (coe+ (\lam k => p k) a i) dright)
 
+-- | A version of {~>_->_comp} for families.
+\sfunc ~>_->_comp-fam.{u} {C : \Cat} {F G H :⁺ C ->⁺ \Type u} (g :⁺ F ~> G) (h :⁺ G ~> H) (c :⁺ C) (a :⁺ F c)
+  : ~>_-> (dpath \lam i => comp g h i c) a = ~>_-> (dpath \lam i => h i c) (~>_-> (dpath \lam i => g i c) a)
+  => pmap+ (~>_-> __ a) (dmap_comp \lam (K : C ->⁺ \Type u) => K c) *> ~>_->_comp _ _
+
 -- | Covariant maps commute with {~>_->}.
 \sfunc ~>_->-natural.{u} {C : \Cat} {F G : C ->⁺ \Type u} (h : \Pi (x :⁺ C) -> F x ->⁺ G x) {x y : C} (p : x ~> y) {a : F x}
   : ~>_-> (dmap G p) (h x a) = h y (~>_-> (dmap F p) a)

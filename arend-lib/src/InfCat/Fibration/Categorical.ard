@@ -6,6 +6,10 @@
 \func Fibers {E A : \Cat} (p : E ->⁺ A) (a :⁺ A) : \Cat
   => \Sigma⁺ (e : E) (p e = a)
 
+-- | The base change of {p} along {pi}.
+\func BaseChange.{u} {X S E : \Cat u} (pi : X ->⁺ S) (p : E ->⁺ S) : \Cat u
+  => \Sigma⁺ (x : X) (\Sigma⁺ (e : E) (p e = pi x))
+
 -- | The projection from the total category of a family.
 \func totalProj {B : \Cat} (Q : B ->⁺ \Cat) (s :⁺ \Sigma⁺ (b : B) (Q b)) : B
   => s.1
