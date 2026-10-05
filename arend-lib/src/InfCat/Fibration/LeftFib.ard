@@ -161,6 +161,25 @@
        | f_sec s => isContr=>isProp (lsigma c.1) _ s
      }) b'
 
+-- | Transport along an arrow in a left fibration.
+\func leftFib-tr {A : \Cat} {B : A ->⁺ \Cat} (Bf : IsLeftFib B) {a a' :⁺ A} (p :⁺ a ~> a') (b :⁺ B a) : B a'
+  => (leftFib-lift Bf (a, a', p, b)).1
+
+-- | A path over {p} starting at {b} ends at the transport of {b}.
+\sfunc leftFib-tr-dpath {A : \Cat} {B : A ->⁺ \Cat} (Bf : IsLeftFib B) {a a' :⁺ A} {p :⁺ a ~> a'} {b :⁺ B a} {b' :⁺ B a'}
+  (t :⁺ DPath (\lam i => B (p i)) b b') : leftFib-tr Bf p b = b'
+  => leftFib-dpath Bf (leftFib-lift Bf (a, a', p, b)) t
+
+-- | {leftFib-tr} commutes with identity.
+\sfunc leftFib-tr_idd {A : \Cat} {B : A ->⁺ \Cat} (Bf : IsLeftFib B) {a :⁺ A} {b :⁺ B a} : leftFib-tr Bf idd b = b
+  => leftFib-tr-dpath Bf idd
+
+-- | {leftFib-tr} commutes with composition.
+\sfunc leftFib-tr_comp {A : \Cat} {B : A ->⁺ \Cat} (Bf : IsLeftFib B) {a a' a'' :⁺ A} (p :⁺ a ~> a') (q :⁺ a' ~> a'') {b :⁺ B a}
+  : leftFib-tr Bf (comp p q) b = leftFib-tr Bf q (leftFib-tr Bf p b)
+  => pmap+ (\lam x => leftFib-tr Bf (comp p q) x) (inv (leftFib-tr_idd Bf))
+     *> leftFib-tr-dpath Bf (dpath \lam i => leftFib-tr Bf (dpath (fill2 p q i)) ((leftFib-lift Bf (a, a', p, b)).2 i))
+
 \func coe+-dpath.{u} {A :⁺ DI ->⁺ \Type u} {a :⁺ A dleft} {a' :⁺ A dright} (t :⁺ DPath A a a') : coe+ A a dright = a'
   => leftFib-dpath universe-leftFib {_, _, dpath A, a} (coe+ A a dright, dpath (coe+ A a)) t
 
