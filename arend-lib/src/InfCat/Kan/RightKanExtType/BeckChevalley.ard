@@ -24,11 +24,15 @@
 \import InfCat.Fibration.CocartesianFib
 \import InfCat.Fibration.CovariantLift
 \import InfCat.Fibration.DirectedUnivalence
+\import InfCat.Functor.Conservative
 \import InfCat.Functor.Initial
 \import InfCat.Kan.RightKanExtType
 \import InfCat.Functor.Adjunction
 \import InfCat.Limit.Initial
+\import InfCat.Localization.Abstract
+\import InfCat.Localization.Fiberwise
 \import InfCat.Paths
+\import InfCat.Rezk
 \import Logic
 \import Logic.Unique
 \import Paths
@@ -131,3 +135,17 @@
                                 (T : BaseChange psi p ->⁺ \Type u) (y : Fibers p x) (q0 : RightComma psi x) (init : IsInitial q0)
   : IsEquiv {RightKanExtType (bc psi p) T y.1} {T (liftObj pc psi y q0)} (\lam r => ranPhi pc psi T y r q0)
   => IsEquiv.trans (beck-chevalley pc psi T y) (initial-sections q0 init (\lam (q :⁺ RightComma psi x) => T (liftObj pc psi y q)))
+
+-- | The right Kan extension along a base change of a cocartesian fibration with stable weak equivalences inverts them.
+\lemma ran-inverts.{u} {X X' E : \Cat u} {p : E ->⁺ X} (pc : IsCocartesianFib (Fibers p))
+                       {W : \Pi (x : X) -> (DI ->⁺ Fibers p x) -> \Prop} (Ws : IsTransportStable (Fibers p) W) (psi : X' ->⁺ X)
+                       {T : BaseChange psi p ->⁺ \Type u}
+                       (Tw : \Pi (x' : X') -> InvertsW (W (psi x')) (\lam (y :⁺ Fibers p (psi x')) => T (x', y))) (x : X)
+  : InvertsW (W x) (\lam y => RightKanExtType (bc psi p) T y.1)
+  => \lam {b} wb => transportInv (\lam H => IsIso (dpath \lam i => H (b i)))
+      (natIso-path {Fibers p x} {\Type u} {\lam y => RightKanExtType (bc psi p) T y.1} {Phi pc psi T}
+                   (\lam y => dpath \lam i => depUnivalence.ret (\lam q => ranPhi pc psi T q.1 q.2) i y)
+                   (\lam y => ~>_->-equiv-iso (beck-chevalley pc psi T y)))
+      (dmap_IsIso (\lam H => \Pi (q :⁺ RightComma psi x) -> H q)
+                  (objectwise-iso {_} {_} {_} {_} {dpath \lam i q => T (liftObj pc psi (b i) q)}
+                    \lam q => Tw q.1 (transportStable-lift pc Ws q.2 wb)))

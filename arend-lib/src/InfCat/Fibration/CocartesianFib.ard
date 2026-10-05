@@ -1,4 +1,6 @@
 \import Equiv
+\import Equiv.Fiber
+\import Equiv.Sigma
 \import Function.Meta
 \import InfCat.Basics
 \import InfCat.Fibration.CovariantLift
@@ -56,3 +58,63 @@
     | f_sec w => idp
   }) $ cocartesian-square F {p d.1, p d.2, dmap p d.3, d.4} {p d.1, p a'', dmap p (comp d.3 g), d.4}
         idd (dmap p g) (dpath \lam i => dpath \lam j => p (fill2 d.3 g j i)) idd (l.1, l.2) lc (l'.1, l'.2)
+
+-- | The base change of a cocartesian family along a functor is cocartesian.
+\lemma cocartesianFib-pullback {X S : \Cat} {F : S ->⁺ \Cat} (Ff : IsCocartesianFib F) (p : X ->⁺ S)
+  : IsCocartesianFib (\lam x => F (p x))
+  => \lam d => TruncP.map (Ff (_, _, dmap p d.3, d.4)) \lam s => ((s.1.1, s.1.2), cocartesianLift-pullback p s.2)
+
+-- | The transport of an arrow along an arrow of the base is unique.
+\lemma transports-contr {A : \Cat} {B : A ->⁺ \Cat} (Bf : IsCocartesianFib B) {a a' : A} (m : a ~> a') (b : DI ->⁺ B a)
+  : Contr (Transports {A} {B} m b)
+  => \let | c0 => cocLift-contr Bf (a, a', m, b dleft)
+          | c1 => cocLift-contr Bf (a, a', m, b dright)
+     \in Contr.Contr_QEquiv (symQEquiv (contr-left c0 `transQEquiv` contr-left c1) `transQEquiv` symQEquiv transports-equiv)
+          (cocartesian-square B {a, a', m, b dleft} {a, a', m, b dright} idd idd (dpath \lam i => m) (dpath \lam i => b i)
+                              c0.center.1 c0.center.2 c1.center.1)
+  \where {
+    -- | Cocartesian lifts of an arrow at a point are unique.
+    \lemma cocLift-contr {A : \Cat} {B : A ->⁺ \Cat} (Bf : IsCocartesianFib B) (d : CovLiftData B)
+      : Contr (\Sigma (l : CovLift B d) (IsCocartesianLift l))
+      => Contr.Contr_QEquiv
+           (qsigma-left (IsEquiv.toQEquiv fullSub-ob-equiv) `transQEquiv` fib-equiv)
+           (IsEquiv=>contrFibers (IsHEquiv.toIsEquiv (cocartesianFib-char.1 Bf)) d)
+      \where {
+        -- | A cocartesian lift transported along a path of base data.
+        \func cocLift-transport {A : \Cat} {B : A ->⁺ \Cat} {d d' : CovLiftData B} (l : CovLift B d') (c : IsCocartesianLift l) (p : d' = d)
+          : \Sigma (l : CovLift B d) (IsCocartesianLift l) \elim p
+          | idp => (l, c)
+
+        \func fib-equiv {d : CovLiftData B}
+          : QEquiv {\Sigma (u : \Sigma (t : \Sigma⁺ (d' : CovLiftData B) (CovLift B d')) (IsCocartesianLift t.2)) (u.1.1 = d)}
+                   {\Sigma (l : CovLift B d) (IsCocartesianLift l)} \cowith
+          | f v => cocLift-transport v.1.1.2 v.1.2 v.2
+          | ret w => (((d, w.1), w.2), idp)
+          | ret_f v => aux v.1.1.2 v.1.2 v.2
+          | f_sec w => idp
+
+        \private \func aux {d d' : CovLiftData B} (l : CovLift B d') (c : IsCocartesianLift l) (p : d' = d)
+          : ((((d, (cocLift-transport l c p).1), (cocLift-transport l c p).2), idp)
+              : \Sigma (u : \Sigma (t : \Sigma⁺ (d'' : CovLiftData B) (CovLift B d'')) (IsCocartesianLift t.2)) (u.1.1 = d))
+            = (((d', l), c), p) \elim p
+          | idp => idp
+      }
+
+    -- | Transports of an arrow {b} along {m}: arrows over the target with a square whose horizontal sides are cocartesian lifts.
+    \func Transports {A : \Cat} {B : A ->⁺ \Cat} {a a' : A} (m : a ~> a') (b : DI ->⁺ B a) : \Type
+      => \Sigma (k : DI ->⁺ B a') (H : DPath (\lam i => DI ->⁺ B (m i)) b k)
+                (IsCocartesianLift {A} {B} {a, a', m, b dleft} (k dleft, dpath \lam i => H i dleft))
+                (IsCocartesianLift {A} {B} {a, a', m, b dright} (k dright, dpath \lam i => H i dright))
+
+    \func transports-equiv
+      : QEquiv {Transports {A} {B} m b}
+               {\Sigma (c : \Sigma (l : CovLift B (a, a', m, b dleft)) (IsCocartesianLift l))
+                       (\Sigma (c' : \Sigma (l' : CovLift B (a, a', m, b dright)) (IsCocartesianLift l'))
+                               (\Sigma (k : DPath (\lam i => B a') c.1.1 c'.1.1) (DPath (\lam i => DPath (\lam j => B (m j)) (b i) (k i)) c.1.2 c'.1.2)))}
+      \cowith
+      | f t => (((t.1 dleft, dpath \lam j => t.2 j dleft), t.3), (((t.1 dright, dpath \lam j => t.2 j dright), t.4),
+                 (dpath \lam i => t.1 i, dpath \lam i => dpath \lam j => t.2 j i)))
+      | ret v => (\lam i => v.2.2.1 i, dpath \lam j i => v.2.2.2 i j, v.1.2, v.2.1.2)
+      | ret_f t => idp
+      | f_sec v => idp
+  }

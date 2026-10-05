@@ -13,6 +13,10 @@
   => \have (h,q) => ffMap-lift diag-ff (\lam x i => p i x) \lam x => IsIso-diag-char.1 (e x)
      \in IsIso-diag-char.2 $ inP (h, path \lam j i x => q x j i)
 
+-- | A natural transformation whose components are isomorphisms gives a path of functors.
+\sfunc natIso-path {C D : \Cat} {F G : C ->⁺ D} (t : \Pi (x :⁺ C) -> F x ~> G x) (ti : \Pi (x : C) -> IsIso (t x)) : F = G
+  => (IsIso_= (objectwise-iso {C} {D} {F} {G} {dpath \lam i x => t x i} ti)).1
+
 \lemma cov-func-conservative {C D : \Cat} : IsConservative {C ->⁺ D} {C -> D} (\lam f x => f x)
   => \lam p e => objectwise-iso \lam x => dmap_IsIso (\lam u => u x) e
 

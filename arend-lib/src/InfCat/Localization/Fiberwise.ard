@@ -20,6 +20,7 @@
 \import InfCat.Rezk
 \import Logic
 \import Logic.Meta
+\import Logic.Unique
 \import Meta
 \import Paths
 
@@ -38,6 +39,16 @@
                                 (Ws : IsTransportStable F W) (p : X ->⁺ S)
   : IsTransportStable (\lam x => F (p x)) (\lam x => W (p x))
   => \lam m wb => TruncP.map (Ws (dmap p m) wb) \lam t => (t.1, t.2, t.3, cocartesianLift-pullback p t.4, cocartesianLift-pullback p t.5)
+
+-- | The transport of a morphism of {W} along cocartesian lifts is in {W}.
+\lemma transportStable-lift {S : \Cat} {F : S ->⁺ \Cat} (Ff : IsCocartesianFib F) {W : \Pi (s : S) -> (DI ->⁺ F s) -> \Prop}
+                            (Ws : IsTransportStable F W) {s s' : S} (g : s ~> s') {b : DI ->⁺ F s} (wb : W s b)
+  : W s' (\lam i => (cocartesianFib-lift {_} {F} Ff (s, s', g, b i)).1)
+  => \case Ws g wb \with {
+    | inP (k, wk, H, cl, cr) => transport (W s') (pmap __.1 (isContr=>isProp (transports-contr Ff g b) (k, H, cl, cr)
+        (\lam i => (cocartesianFib-lift {_} {F} Ff (s, s', g, b i)).1, dpath \lam j i => (cocartesianFib-lift {_} {F} Ff (s, s', g, b i)).2 j,
+         cocartesianFib-lift.isCocartesian {_} {F} (s, s', g, b dleft), cocartesianFib-lift.isCocartesian {_} {F} (s, s', g, b dright)))) wk
+  }
 
 -- | The morphisms of the total category of {F} that lie in a single fiber and satisfy {W} there.
 \type TotW {S : \Cat} (F : S ->⁺ \Cat) (W : \Pi (s : S) -> (DI ->⁺ F s) -> \Prop) (a : DI ->⁺ \Sigma⁺ (s : S) (F s)) : \Prop

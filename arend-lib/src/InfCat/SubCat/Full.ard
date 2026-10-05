@@ -1,20 +1,14 @@
-\import Data.Bool
 \import Equiv
-\import Equiv.Fiber
 \import Equiv.Sigma
 \import Function.Meta
 \import InfCat.Arrows
-\import InfCat.Basics
 \import InfCat.Functor.Equiv
 \import InfCat.Functor.FullyFaithful
-\import InfCat.Groupoid
 \import InfCat.OFS.CatAccessibleOFS
 \import InfCat.OFS.CatOFS
 \import InfCat.Objects
-\import InfCat.Paths
 \import Logic
 \import Logic.Meta
-\import Logic.Unique
 \import Meta
 \import Paths
 \import Paths.Meta
@@ -93,3 +87,9 @@
       : \Sigma (h : D ->⁺ FullSubCat P) (\Pi (y :⁺ D) -> inc (h y) = f y)
       => ffMap-lift inc-ff f \lam d => inc-sat (fs d)
   }
+
+-- | Objects of a full subcategory are objects satisfying the predicate.
+\lemma fullSub-ob-equiv {C : \Cat} {P : C -> \Prop}
+  : IsEquiv {FullSubCat P} {\Sigma (x : C) (P x)} (\lam d => (FullSubCat.inc d, FullSubCat.inc-con {C} {P} {d}))
+  => IsEquiv.fromEmbSurj (leftEmbedding (Embedding.projection P) (IsFFMap.isObEmbedding FullSubCat.inc-ff))
+      \lam s => TruncP.map (FullSubCat.inc-sat s.2) \lam d => (d.1, ext d.2)
