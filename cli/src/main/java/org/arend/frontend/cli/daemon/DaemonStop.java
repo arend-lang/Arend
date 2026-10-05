@@ -60,6 +60,15 @@ public final class DaemonStop {
       return 1;
     }
 
+    if (!paths.canOwn()) {
+      // Any number of daemons may have loaded it, and stopping whichever was found first would
+      // stop some other project's daemon. The one to stop is named by a library it owns.
+      System.err.println("[ERROR] --daemon-stop: " + paths.libraryConfig + (paths.isShared()
+          ? " is under " + DaemonPaths.sharedLibrariesRoot() + " and may be loaded by several daemons."
+          : " is a zip library, which no daemon owns.") + " Stop the one you mean from a library it owns.");
+      return 1;
+    }
+
     LockFile.Read existing = LockFile.read(paths.lockFile);
     Verdict verdict = inspectLock(existing, paths.libraryConfig,
         candidate -> ProcessHandle.of(candidate.pid()).isPresent());

@@ -44,7 +44,7 @@ public class DaemonMcpServerTest {
 
   private static final ObjectMapper MAPPER = new ObjectMapper();
 
-  private Path libA, libB, libDir;
+  private Path libA, libB, shared, libDir;
   private final List<DaemonServer> daemons = new ArrayList<>();
   /** "A argv..." / "B argv...", in the order the daemons ran them. */
   private final List<String> received = new CopyOnWriteArrayList<>();
@@ -63,8 +63,9 @@ public class DaemonMcpServerTest {
     libA = library(tempFolder.getRoot().toPath().resolve("liba"));
     libB = library(tempFolder.getRoot().toPath().resolve("libb"));
     libDir = config.resolve("libs");
+    shared = library(libDir.resolve("sharedlib"));
     startDaemon("A", libA, 1);
-    startDaemon("B", libB, 2);
+    startDaemon("B", libB, 2, shared);
   }
 
   @After
@@ -86,8 +87,8 @@ public class DaemonMcpServerTest {
     return DaemonPaths.resolve(root).libraryConfig.toString();
   }
 
-  /** A daemon serving {@code root}, findable the way a real one is. */
-  private void startDaemon(String name, Path root, long startedAt) throws IOException {
+  /** A daemon owning {@code root} and having loaded {@code sharedLoaded}, findable the way a real one is. */
+  private void startDaemon(String name, Path root, long startedAt, Path... sharedLoaded) throws IOException {
     DaemonPaths paths = DaemonPaths.resolve(root);
     paths.ensureArendDir();
     SocketBinder.Bound bound = SocketBinder.bind(paths.socketFile, paths.libraryHash);
@@ -108,8 +109,10 @@ public class DaemonMcpServerTest {
     daemon.start();
     daemons.add(daemon);
 
+    List<String> sharedConfigs = new ArrayList<>();
+    for (Path library : sharedLoaded) sharedConfigs.add(config(library));
     LockFile lock = new LockFile(ProcessHandle.current().pid(), paths.libraryConfig.toString(), paths.libraryHash,
-        LockFile.PROTOCOL_VERSION, startedAt, bound.address());
+        List.of(paths.libraryConfig.toString()), sharedConfigs, LockFile.PROTOCOL_VERSION, startedAt, bound.address());
     lock.writeAtomic(paths.lockFile);
     Files.createDirectories(DaemonPaths.registryDir());
     lock.writeAtomic(lock.registryFile());
@@ -191,6 +194,74 @@ public class DaemonMcpServerTest {
     assertEquals("A " + config(libA) + " -fu M:f", received.get(1));
   }
 
+  /** A shared library is held by whichever daemon loaded it, and is no daemon's to stop. */
+  @Test
+  public void aSharedLibraryGoesToTheDaemonThatLoadedIt() throws IOException {
+    serve(tempFolder.getRoot().toPath());
+    call(1, "proof_search", "{\"library\":\"sharedlib\",\"args\":[\"Nat\"]}");
+    assertEquals(List.of("B " + config(shared) + " -ps Nat"), received);
+
+    JsonNode stop = call(2, "daemon_stop", "{\"library\":\"sharedlib\"}");
+    assertTrue(text(stop), stop.get("isError").asBoolean());
+  }
+
+  /** A name means the library of that name a running daemon serves, not a like-named one found from here. */
+  @Test
+  public void aNameMeansTheLibraryARunningDaemonServes() throws IOException {
+    library(libDir.resolve("proj"));
+    Path proj = library(tempFolder.getRoot().toPath().resolve("elsewhere").resolve("proj"));
+    startDaemon("C", proj, 3);
+    serve(tempFolder.getRoot().toPath());
+    call(1, "symbol_search", "{\"library\":\"proj\",\"args\":[\"Nat\"]}");
+    assertEquals(List.of("C " + config(proj) + " -ss Nat"), received);
+  }
+
+  /** Two daemons owning like-named directories: the name decides nothing, so nothing runs, and that is said. */
+  @Test
+  public void aNameTwoDaemonsOwnRunsNothing() throws IOException {
+    Path first = library(tempFolder.getRoot().toPath().resolve("one").resolve("proj"));
+    Path second = library(tempFolder.getRoot().toPath().resolve("two").resolve("proj"));
+    startDaemon("D", second, 4);
+    startDaemon("C", first, 3);
+    serve(tempFolder.getRoot().toPath());
+    JsonNode result = call(1, "symbol_search", "{\"library\":\"proj\",\"args\":[\"Nat\"]}");
+    assertTrue(received.isEmpty());
+    assertTrue(result.get("isError").asBoolean());
+    assertEquals("[WARN] several running daemons serve a library named 'proj': " + config(first) + ", "
+        + config(second) + "; nothing was run. Give the path of the one you mean.", text(result));
+
+    call(2, "symbol_search", "{\"library\":" + json(second) + ",\"args\":[\"Nat\"]}");
+    assertEquals(List.of("D " + config(second) + " -ss Nat"), received);
+  }
+
+  /** A name means a project a daemon owns, before a zip of that name an older daemon loaded, and says so. */
+  @Test
+  public void aNameMeansTheProjectBeforeAZip() throws IOException {
+    Path zip = Files.writeString(libDir.resolve("proj.zip"), "");
+    startDaemon("C", library(tempFolder.getRoot().toPath().resolve("libc")), 3, zip);
+    Path proj = library(tempFolder.getRoot().toPath().resolve("elsewhere").resolve("proj"));
+    startDaemon("D", proj, 4);
+    serve(tempFolder.getRoot().toPath());
+    JsonNode result = call(1, "symbol_search", "{\"library\":\"proj\",\"args\":[\"Nat\"]}");
+    assertEquals(List.of("D " + config(proj) + " -ss Nat"), received);
+    assertFalse(text(result), result.get("isError").asBoolean());
+    assertEquals("[WARN] a library named 'proj' is both a project a daemon owns and a zip or a ~/.arend/libs"
+        + " library a daemon loaded: " + config(zip) + "; using the project, " + config(proj)
+        + ". Give a path to choose another.\nran on D", text(result).trim());
+  }
+
+  /** With no daemon owning a project of the name, the longest-running one that loaded a zip of it gets it. */
+  @Test
+  public void aZipGoesToTheLongestRunningDaemonThatLoadedIt() throws IOException {
+    Path zip = Files.writeString(libDir.resolve("proj.zip"), "");
+    startDaemon("D", library(tempFolder.getRoot().toPath().resolve("libd")), 4, zip);
+    startDaemon("C", library(tempFolder.getRoot().toPath().resolve("libc")), 3, zip);
+    serve(tempFolder.getRoot().toPath());
+    JsonNode result = call(1, "symbol_search", "{\"library\":\"proj\",\"args\":[\"Nat\"]}");
+    assertEquals(List.of("C " + config(zip) + " -ss Nat"), received);
+    assertFalse("one zip loaded twice is no ambiguity: " + text(result), text(result).contains("[WARN]"));
+  }
+
   /** With no library, the agent's own directory decides; failing that, an ambiguity is reported. */
   @Test
   public void withoutALibraryTheWorkingDirectoryDecides() throws IOException {
@@ -224,6 +295,7 @@ public class DaemonMcpServerTest {
     serve(tempFolder.getRoot().toPath());
     String list = text(call(1, "daemon_list", "{}"));
     assertTrue(list, list.indexOf(config(libA)) < list.indexOf(config(libB)));
+    assertTrue(list, list.contains("also loaded from ~/.arend/libs:\n    " + config(shared)));
 
     String status = text(call(2, "daemon_status", "{\"library\":" + json(libB) + "}"));
     assertTrue(status, status.contains("\"state\" : \"IDLE\""));

@@ -18,7 +18,7 @@ public class DaemonStopLockTest {
 
   private static LockFile.Read found(Path... libraries) {
     List<String> configs = java.util.Arrays.stream(libraries).map(Path::toString).toList();
-    return new LockFile.Read.Found(new LockFile(4242, configs.getFirst(), "h", configs,
+    return new LockFile.Read.Found(new LockFile(4242, configs.getFirst(), "h", configs, List.of(),
         LockFile.PROTOCOL_VERSION, 0L, "uds:/s"));
   }
 

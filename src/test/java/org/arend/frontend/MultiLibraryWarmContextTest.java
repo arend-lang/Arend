@@ -122,4 +122,16 @@ public class MultiLibraryWarmContextTest {
     assertTrue(all.output(), all.output().contains("--- Typechecking base ---"));
     assertTrue(all.output(), all.output().contains("--- Typechecking app ---"));
   }
+
+  /** A library loaded only as a dependency can be the subject of a command, as one about a shared library is. */
+  @Test
+  public void aCommandMayBeAboutALibraryLoadedAsADependency() throws IOException {
+    Path dependency = library(libDir.resolve("base"), "", "Base", "\\func one : Nat => 1\n");
+    CommandContext ctx = warm(app);
+    for (Run run : new Run[] { run(ctx, null, "base"), run(ctx, dependency.toString()) }) {
+      assertEquals(run.output(), 0, run.exitCode());
+      assertTrue(run.output(), run.output().contains("--- Typechecking base ---"));
+      assertFalse(run.output(), run.output().contains("--- Typechecking app ---"));
+    }
+  }
 }

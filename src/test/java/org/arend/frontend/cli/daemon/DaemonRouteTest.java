@@ -86,6 +86,7 @@ public class DaemonRouteTest {
 
   @After
   public void tearDown() throws IOException {
+    System.clearProperty(DaemonPaths.CONFIG_DIR_PROPERTY);
     if (listener != null) listener.close();
     if (acceptor != null) acceptor.interrupt();
   }
@@ -148,7 +149,7 @@ public class DaemonRouteTest {
     List<DaemonPaths> all = new ArrayList<>(List.of(home));
     for (Path other : others) all.add(DaemonPaths.resolve(other));
     LockFile lock = new LockFile(ProcessHandle.current().pid(), home.libraryConfig.toString(), home.libraryHash,
-        all.stream().map(d -> d.libraryConfig.toString()).toList(), LockFile.PROTOCOL_VERSION,
+        all.stream().map(d -> d.libraryConfig.toString()).toList(), List.of(), LockFile.PROTOCOL_VERSION,
         System.currentTimeMillis(), address);
     for (DaemonPaths d : all) {
       d.ensureArendDir();
@@ -172,5 +173,59 @@ public class DaemonRouteTest {
     List<String> positional = List.of(libRoot.toString(), other.toString());
     OptionalInt rc = DaemonRpc.tryRouteCli(positional.toArray(new String[0]), positional, List.of());
     assertTrue("a library outside the daemon's set must keep the command local", rc.isEmpty());
+  }
+
+  private Path sharedLibrary(String name) throws IOException {
+    Path config = tempFolder.newFolder("config").toPath();
+    System.setProperty(DaemonPaths.CONFIG_DIR_PROPERTY, config.toString());
+    Path root = config.resolve("libs").resolve(name);
+    Files.createDirectories(root.resolve("src"));
+    Files.writeString(root.resolve("arend.yaml"), "sourcesDir: src\n", StandardCharsets.UTF_8);
+    return root;
+  }
+
+  private Path register(long pid, String hash, long startedAt, String socket, Path... shared) throws IOException {
+    List<String> sharedConfigs = new ArrayList<>();
+    for (Path root : shared) sharedConfigs.add(DaemonPaths.resolve(root).libraryConfig.toString());
+    LockFile lock = new LockFile(pid, "/owner-" + hash + "/arend.yaml", hash, List.of("/owner-" + hash + "/arend.yaml"),
+        sharedConfigs, LockFile.PROTOCOL_VERSION, startedAt, socket);
+    Files.createDirectories(DaemonPaths.registryDir());
+    lock.writeAtomic(lock.registryFile());
+    return lock.registryFile();
+  }
+
+  @Test
+  public void aCommandAboutASharedLibraryGoesToTheFirstDaemonThatLoadedIt() throws Exception {
+    Path shared = sharedLibrary("sharedlib");
+    long self = ProcessHandle.current().pid();
+    Path dead = register(Long.MAX_VALUE, "dead000000000000", 0, address, shared);
+    register(self, "first00000000000", 1, address, shared);
+    register(self, "second0000000000", 2, "uds:/nonexistent/daemon.sock", shared);
+    register(self, "unrelated0000000", 0, "uds:/nonexistent/daemon.sock");
+
+    List<String> positional = List.of(shared.toString(), "Data.Maybe");
+    OptionalInt rc = DaemonRpc.tryRouteCli(positional.toArray(new String[0]), positional, List.of());
+    assertTrue("the first live daemon that loaded the library must take the command", rc.isPresent());
+    assertTrue("the stand-in daemon must have been reached", served.await(10, TimeUnit.SECONDS));
+    assertTrue("a dead daemon's registration must be cleared", !Files.exists(dead));
+  }
+
+  /**
+   * Named together with an owned library, a shared one has to be loaded by that library's daemon:
+   * it is the only daemon the owned one can go to.
+   */
+  @Test
+  public void aSharedLibraryWithAnOwnedOneNeedsTheOwnersDaemonToHaveIt() throws Exception {
+    Path shared = sharedLibrary("sharedlib");
+    List<String> positional = List.of(libRoot.toString(), shared.toString());
+    OptionalInt rc = DaemonRpc.tryRouteCli(positional.toArray(new String[0]), positional, List.of());
+    assertTrue("the owner's daemon has not loaded the shared library, so the command stays local", rc.isEmpty());
+
+    DaemonPaths home = DaemonPaths.resolve(libRoot);
+    new LockFile(ProcessHandle.current().pid(), home.libraryConfig.toString(), home.libraryHash,
+        List.of(home.libraryConfig.toString()), List.of(DaemonPaths.resolve(shared).libraryConfig.toString()),
+        LockFile.PROTOCOL_VERSION, 1L, address).writeAtomic(home.lockFile);
+    rc = DaemonRpc.tryRouteCli(positional.toArray(new String[0]), positional, List.of());
+    assertTrue("once the owner's daemon has it, the command must route", rc.isPresent());
   }
 }

@@ -56,7 +56,7 @@ public final class DaemonRpc {
    * a second resolution re-walks the libDirs, warns again, and can land somewhere else.
    */
   public static int run(DaemonPaths paths, String op) {
-    LockFile lf = reachableDaemon(paths, true);
+    LockFile lf = paths.canOwn() ? reachableDaemon(paths, true) : firstLoading(List.of(paths), true);
     if (lf == null) return NO_DAEMON;
 
     SocketAddress addr;
@@ -235,14 +235,16 @@ public final class DaemonRpc {
   }
 
   /**
-   * The daemon serving every one of {@code libraries}, or null: locally the run would load them
-   * all, and a daemon lacking one would answer about the others only.
+   * The daemon that has every one of {@code libraries} loaded, or null: locally the run would load
+   * them all, and a daemon lacking one would answer about the others only. An owned library's
+   * daemon is found through its lock; shared libraries alone go to {@link #firstLoading}.
    */
   public static LockFile daemonFor(List<DaemonPaths> libraries) {
-    LockFile lf = reachableDaemon(libraries.getFirst(), false);
+    DaemonPaths owner = libraries.stream().filter(DaemonPaths::canOwn).findFirst().orElse(null);
+    LockFile lf = owner != null ? reachableDaemon(owner, false) : firstLoading(libraries, false);
     if (lf == null) return null;
     for (DaemonPaths paths : libraries) {
-      if (!lf.serves(paths.libraryConfig)) return null;
+      if (paths.canOwn() ? !lf.serves(paths.libraryConfig) : !lf.hasLoaded(paths.libraryConfig)) return null;
     }
     return lf;
   }
@@ -258,6 +260,27 @@ public final class DaemonRpc {
       }
     }
     return live;
+  }
+
+  /**
+   * The longest-running live daemon that has every one of {@code libraries} loaded, from
+   * {@link DaemonPaths#registryDir}: the deterministic answer for a shared library, which any
+   * number of daemons may hold. A dead daemon's entry is removed on the way.
+   */
+  private static LockFile firstLoading(List<DaemonPaths> libraries, boolean explain) {
+    for (LockFile lf : liveDaemons()) {
+      if (!libraries.stream().allMatch(paths -> lf.hasLoaded(paths.libraryConfig))) continue;
+      if (lf.socketPath() == null || lf.socketPath().isEmpty()) continue;
+      if (lf.protocolVersion() != LockFile.PROTOCOL_VERSION) {
+        if (explain) {
+          System.err.println("[WARN] the daemon PID " + lf.pid() + " speaks protocol version "
+              + lf.protocolVersion() + ", this build speaks " + LockFile.PROTOCOL_VERSION + "; skipping it");
+        }
+        continue;
+      }
+      return lf;
+    }
+    return null;
   }
 
   /**

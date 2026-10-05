@@ -5,6 +5,7 @@ import org.arend.frontend.cli.CommandContext;
 import org.arend.frontend.cli.daemon.DaemonPaths;
 import org.arend.frontend.cli.daemon.DaemonStart;
 import org.arend.frontend.cli.daemon.LockFile;
+import org.arend.frontend.library.SourceLibrary;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -27,6 +28,21 @@ import java.util.List;
  */
 public final class DaemonMain {
   private DaemonMain() {}
+
+  private static List<String> sharedLibraries(CommandContext ctx) {
+    List<String> shared = new ArrayList<>();
+    for (String name : ctx.libraryManager.getLibraries()) {
+      SourceLibrary library = ctx.libraryManager.getLibrary(name);
+      Path file = library == null ? null : library.getLibraryFile();
+      if (file == null || !DaemonPaths.isShared(file)) continue;
+      try {
+        shared.add(file.toRealPath().toString());
+      } catch (IOException ignored) {
+        // Gone since it was loaded; nothing to route to it either way.
+      }
+    }
+    return shared;
+  }
 
   public static void run(String[] args) {
     if (args.length < 2) {
@@ -55,13 +71,14 @@ public final class DaemonMain {
       }
       libraries.add(member);
     }
-    if (libraries.isEmpty() || !libraries.getFirst().libraryConfig.equals(paths.libraryConfig)) {
-      System.err.println("[DAEMON] the bootstrap argv must list " + paths.libraryConfig + " as its first library");
+    List<DaemonPaths> owned = libraries.stream().filter(DaemonPaths::canOwn).toList();
+    if (owned.isEmpty() || !owned.getFirst().libraryConfig.equals(paths.libraryConfig)) {
+      System.err.println("[DAEMON] the bootstrap argv must list " + paths.libraryConfig + " as its first owned library");
       System.exit(1);
       return;
     }
 
-    for (DaemonPaths member : libraries) {
+    for (DaemonPaths member : owned) {
       try {
         member.ensureArendDir();
       } catch (IOException e) {
@@ -101,6 +118,7 @@ public final class DaemonMain {
         paths.libraryConfig.toString(),
         paths.libraryHash,
         libraryConfigs,
+        sharedLibraries(warmCtx),
         LockFile.PROTOCOL_VERSION,
         System.currentTimeMillis(),
         bound.address()
@@ -119,7 +137,7 @@ public final class DaemonMain {
     // The first library's own lock last: a client that finds it can count on every other copy.
     List<Path> copies = new ArrayList<>();
     copies.add(lock.registryFile());
-    for (DaemonPaths member : libraries.reversed()) copies.add(member.lockFile);
+    for (DaemonPaths member : owned.reversed()) copies.add(member.lockFile);
     for (Path copy : copies) {
       try {
         Files.createDirectories(copy.getParent());

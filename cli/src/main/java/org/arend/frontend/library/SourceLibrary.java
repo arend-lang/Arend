@@ -11,6 +11,8 @@ import org.arend.util.Version;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.nio.file.Path;
+
 import java.util.List;
 
 public abstract class SourceLibrary implements ArendLibrary {
@@ -70,6 +72,14 @@ public abstract class SourceLibrary implements ArendLibrary {
   @Override
   public @Nullable Range<Version> getLanguageVersion() {
     return myLangVersion;
+  }
+
+  /**
+   * The file this library was read from: its {@code arend.yaml}, or its zip. Null for one that has
+   * neither, such as the synthetic {@code \\default} library {@code -s} builds.
+   */
+  public @Nullable Path getLibraryFile() {
+    return null;
   }
 
   public abstract @Nullable Source getSource(@NotNull ModulePath modulePath, boolean inTests);

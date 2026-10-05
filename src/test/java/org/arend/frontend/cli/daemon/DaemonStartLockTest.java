@@ -38,7 +38,7 @@ public class DaemonStartLockTest {
   /** A lock for a daemon serving {@code libraries}, the first of them being its home. */
   private static LockFile.Read found(Path... libraries) {
     List<String> configs = Arrays.stream(libraries).map(Path::toString).toList();
-    return new LockFile.Read.Found(new LockFile(4242, configs.getFirst(), "h", configs,
+    return new LockFile.Read.Found(new LockFile(4242, configs.getFirst(), "h", configs, List.of(),
         LockFile.PROTOCOL_VERSION, 0L, "uds:/s"));
   }
 
@@ -156,6 +156,35 @@ public class DaemonStartLockTest {
   }
 
   /**
+   * A shared library may come first in load order, but its directory is no daemon's: the socket
+   * and the log go to the first library the daemon owns, and the bootstrap flag names that one.
+   */
+  @Test
+  public void theHomeIsTheFirstOwnedLibrary() throws IOException {
+    Path config = tempFolder.newFolder("config").toPath();
+    Path shared = config.resolve("libs").resolve("sharedlib");
+    Files.createDirectories(shared);
+    Files.writeString(shared.resolve("arend.yaml"), "sourcesDir: src\n", StandardCharsets.UTF_8);
+    System.setProperty(DaemonPaths.CONFIG_DIR_PROPERTY, config.toString());
+    try {
+      DaemonPaths sharedPaths = DaemonPaths.resolve(shared), owned = DaemonPaths.resolve(library());
+      assertTrue(sharedPaths.isShared());
+      assertFalse(owned.isShared());
+      List<DaemonPaths> libraries = List.of(sharedPaths, owned);
+      assertEquals(owned.libraryConfig, DaemonStart.home(libraries).libraryConfig);
+
+      List<String> cmd = DaemonStart.buildChildCommand(libraries, List.of(), List.of(), "cp");
+      List<String> appArgs = cmd.subList(cmd.indexOf("org.arend.frontend.ConsoleMain") + 1, cmd.size());
+      assertEquals(List.of("--daemon-bootstrap", owned.libraryConfig.toString()), appArgs.subList(0, 2));
+      assertEquals("load order is kept as given",
+          List.of(sharedPaths.libraryConfig.toString(), owned.libraryConfig.toString()),
+          appArgs.subList(appArgs.size() - 2, appArgs.size()));
+    } finally {
+      System.clearProperty(DaemonPaths.CONFIG_DIR_PROPERTY);
+    }
+  }
+
+  /**
    * Two libraries of one name cannot share a daemon, and the start is refused before anything is
    * written into either.
    */
@@ -169,6 +198,11 @@ public class DaemonStartLockTest {
     assertEquals(1, DaemonStart.run(List.of(first.toString(), second.toString()), List.of(), List.of()));
     assertFalse(Files.exists(first.resolve(".arend")));
     assertFalse(Files.exists(second.resolve(".arend")));
+
+    // A zip is named after its file, so it clashes with a project of that name too.
+    Path zip = Files.writeString(tempFolder.getRoot().toPath().resolve("foo.zip"), "");
+    assertEquals(1, DaemonStart.run(List.of(first.toString(), zip.toString()), List.of(), List.of()));
+    assertFalse(Files.exists(first.resolve(".arend")));
   }
 
   /**

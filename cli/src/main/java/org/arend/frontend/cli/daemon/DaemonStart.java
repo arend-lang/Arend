@@ -16,7 +16,8 @@ import java.util.Optional;
 /**
  * Parent-side: start a detached daemon JVM for one or more libraries, as
  * {@code arend -d <libRef>...}, loaded into one server in the order given -- the way IntelliJ
- * holds every library of a project. Two daemons never share a library.
+ * holds every library of a project. Two daemons never share a library they own; libraries under
+ * {@link DaemonPaths#sharedLibrariesRoot}, and zips, are owned by none and any daemon may load them.
  *
  * <p>Resolve {@link DaemonPaths} for each; decide what each existing lock means
  * ({@link #inspectLock}); claim the right to start ({@link #reserveStart}); spawn
@@ -32,7 +33,8 @@ public final class DaemonStart {
 
   /**
    * @param libRefs        user-supplied library references (directory, arend.yaml, or name), in
-   *                       load order; the first one's {@code .arend/} holds the socket and the log
+   *                       load order; the first owned one's {@code .arend/} holds the socket and
+   *                       the log
    * @param libDirsForward extra {@code -L} dirs to forward to the child
    * @param extraChildArgs bootstrap-affecting flags appended after the {@code -L} forwards
    */
@@ -60,8 +62,15 @@ public final class DaemonStart {
       libraries.add(paths);
     }
     List<String> requested = libraries.stream().map(paths -> paths.libraryConfig.toString()).toList();
+    // Neither a shared library nor a zip takes part in the checks below, nor gets anything of this daemon's.
+    List<DaemonPaths> owned = libraries.stream().filter(DaemonPaths::canOwn).toList();
+    if (owned.isEmpty()) {
+      System.err.println("[ERROR] -d: list at least one library directory outside " + DaemonPaths.sharedLibrariesRoot()
+          + ": its .arend/ holds the daemon's socket and log, and no daemon owns a shared library or a zip.");
+      return 1;
+    }
 
-    for (DaemonPaths paths : libraries) {
+    for (DaemonPaths paths : owned) {
       try {
         paths.ensureArendDir();
       } catch (IOException e) {
@@ -72,7 +81,7 @@ public final class DaemonStart {
 
     // Every lock is consulted before anything starts: two daemons must not answer for one library.
     LockFile running = null;
-    for (DaemonPaths paths : libraries) {
+    for (DaemonPaths paths : owned) {
       LockFile.Read existing = LockFile.read(paths.lockFile);
       switch (inspectLock(existing, paths.libraryConfig, requested, DaemonStart::isAlive)) {
         case UNREADABLE_LOCK -> {
@@ -118,9 +127,9 @@ public final class DaemonStart {
     }
 
     // A marker in every library: two starts whose sets merely overlap race like two identical ones.
-    List<Path> reserved = new ArrayList<>(libraries.size());
+    List<Path> reserved = new ArrayList<>(owned.size());
     try {
-      for (DaemonPaths paths : libraries) {
+      for (DaemonPaths paths : owned) {
         if (!reserveStart(paths.startingMarker, READY_TIMEOUT_SECONDS * 1000L)) {
           System.err.println("[ERROR] -d: another daemon start for " + paths.libraryConfig
               + " is already in progress (" + paths.startingMarker + "). Wait for it to finish, or"
@@ -137,7 +146,7 @@ public final class DaemonStart {
 
   private static int startChild(List<DaemonPaths> libraries, List<String> requested, List<Path> libDirsForward,
                                 List<String> extraChildArgs) {
-    DaemonPaths paths = libraries.getFirst();
+    DaemonPaths paths = home(libraries);
     List<String> cmd = buildChildCommand(libraries, libDirsForward, extraChildArgs, privateClasspath(paths));
     rotateDaemonLog(paths.logFile);
 
@@ -330,6 +339,11 @@ public final class DaemonStart {
         && !option.startsWith("-XX:LogFile=");
   }
 
+  /** The library whose {@code .arend/} holds the daemon's socket and log: the first one it owns. */
+  static DaemonPaths home(List<DaemonPaths> libraries) {
+    return libraries.stream().filter(DaemonPaths::canOwn).findFirst().orElse(libraries.getFirst());
+  }
+
   /**
    * The classpath the child runs from: this process's own, except that a single jar is copied to
    * {@code .arend/daemon.jar} first. The JVM loads classes lazily for as long as it runs, and a
@@ -361,7 +375,7 @@ public final class DaemonStart {
 
   static List<String> buildChildCommand(List<DaemonPaths> libraries, List<Path> libDirsForward,
                                         List<String> extraChildArgs, String classpath) {
-    DaemonPaths paths = libraries.getFirst();
+    DaemonPaths paths = home(libraries);
     String javaBin = System.getProperty("java.home") + File.separator + "bin" + File.separator + "java";
     List<String> cmd = new ArrayList<>();
 

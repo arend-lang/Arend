@@ -50,7 +50,7 @@ public class LockFileTest {
   public void theServedLibrariesSurviveTheRoundTrip() throws IOException {
     Path path = lockPath();
     LockFile written = new LockFile(4242, "/a/arend.yaml", "0123456789abcdef",
-        List.of("/a/arend.yaml", "/b/arend.yaml"), LockFile.PROTOCOL_VERSION, 1L, "uds:/s");
+        List.of("/a/arend.yaml", "/b/arend.yaml"), List.of(), LockFile.PROTOCOL_VERSION, 1L, "uds:/s");
     written.writeAtomic(path);
     LockFile read = LockFile.readIfValid(path).orElseThrow();
     assertEquals(written, read);
@@ -69,7 +69,7 @@ public class LockFileTest {
     Files.createDirectories(a.resolve(".arend"));
     Files.createDirectories(b.resolve(".arend"));
     LockFile ours = new LockFile(4242, a.resolve("arend.yaml").toString(), "0123456789abcdef",
-        List.of(a.resolve("arend.yaml").toString(), b.resolve("arend.yaml").toString()),
+        List.of(a.resolve("arend.yaml").toString(), b.resolve("arend.yaml").toString()), List.of(),
         LockFile.PROTOCOL_VERSION, 1L, "uds:/s");
     LockFile theirs = new LockFile(777, b.resolve("arend.yaml").toString(), "fedcba9876543210",
         LockFile.PROTOCOL_VERSION, 1L, "uds:/t");
@@ -79,6 +79,33 @@ public class LockFileTest {
     ours.deleteAllCopies();
     assertFalse(Files.exists(DaemonPaths.lockFileIn(a)));
     assertEquals(theirs, LockFile.readIfValid(DaemonPaths.lockFileIn(b)).orElseThrow());
+  }
+
+  /**
+   * A shared library gets no copy of the lock -- it is no daemon's -- but the registry gets one,
+   * and the daemon going away removes that too.
+   */
+  @Test
+  public void aSharedLibraryIsInTheRegistryAndNotInItsOwnDirectory() throws IOException {
+    Path config = tempFolder.newFolder("config").toPath();
+    System.setProperty(DaemonPaths.CONFIG_DIR_PROPERTY, config.toString());
+    try {
+      Path owned = tempFolder.newFolder("owned").toPath();
+      String sharedConfig = config.resolve("libs/sharedlib/arend.yaml").toString();
+      LockFile lock = new LockFile(4242, owned.resolve("arend.yaml").toString(), "0123456789abcdef",
+          List.of(sharedConfig, owned.resolve("arend.yaml").toString()), List.of(sharedConfig),
+          LockFile.PROTOCOL_VERSION, 1L, "uds:/s");
+      assertEquals(List.of(DaemonPaths.lockFileIn(owned)), lock.lockFiles());
+      assertTrue(lock.hasLoaded(Path.of(sharedConfig)));
+
+      Files.createDirectories(DaemonPaths.registryDir());
+      lock.writeAtomic(lock.registryFile());
+      assertEquals(List.of(lock), LockFile.registered());
+      lock.deleteAllCopies();
+      assertEquals(List.of(), LockFile.registered());
+    } finally {
+      System.clearProperty(DaemonPaths.CONFIG_DIR_PROPERTY);
+    }
   }
 
   /** A daemon is in the registry until it goes away, and going away removes its library's lock too. */

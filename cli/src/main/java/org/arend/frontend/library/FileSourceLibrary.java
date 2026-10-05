@@ -31,6 +31,8 @@ public class FileSourceLibrary extends SourceLibrary {
   protected final Path testBasePath;
   private final Set<ModulePath> myModules;
   private final ClassLoaderDelegate myClassLoaderDelegate;
+  /** Set by {@link #fromConfigFile}; null for a library built from a bare source directory. */
+  private Path myConfigFile;
 
   public FileSourceLibrary(String name, boolean isExternalLibrary, long modificationStamp, List<String> dependencies, Version version, Range<Version> langVersion, String extensionMainClass, @Nullable Set<ModulePath> modules, Path sourceBasePath, Path binaryBasePath, Path testBasePath, ClassLoaderDelegate classLoaderDelegate) {
     super(name, isExternalLibrary, modificationStamp, dependencies, version, langVersion, extensionMainClass);
@@ -59,12 +61,15 @@ public class FileSourceLibrary extends SourceLibrary {
 
       LibraryHeader header = LibraryHeader.fromConfig(new YAMLMapper().readValue(configFile.toFile(), LibraryConfig.class), configFile.toString(), errorReporter);
 
-      return header == null ? null : new FileSourceLibrary(libName, isExternalLibrary, Files.getLastModifiedTime(configFile).toMillis(),
+      if (header == null) return null;
+      FileSourceLibrary library = new FileSourceLibrary(libName, isExternalLibrary, Files.getLastModifiedTime(configFile).toMillis(),
           header.dependencies(), header.version(), header.langVersion(), header.extMainClass(), header.modules(),
           header.sourcesDir() == null ? basePath : basePath.resolve(header.sourcesDir()),
           header.binariesDir() == null ? null : basePath.resolve(header.binariesDir()),
           header.testDir() == null ? null : basePath.resolve(header.testDir()),
           header.extDir() == null ? null : new FileClassLoaderDelegate(basePath.resolve(header.extDir())));
+      library.myConfigFile = configAbsolutePath;
+      return library;
     } catch (IOException e) {
       errorReporter.report(new LibraryIOError(configFile.toString(), "Failed to read configuration file", e.getLocalizedMessage()));
       return null;
@@ -94,6 +99,11 @@ public class FileSourceLibrary extends SourceLibrary {
 
   public @Nullable Path getBinaryBasePath() {
     return binaryBasePath;
+  }
+
+  @Override
+  public @Nullable Path getLibraryFile() {
+    return myConfigFile;
   }
 
   public @Nullable Path getSourceBasePath() {

@@ -282,11 +282,15 @@ public final class CliSetup {
       name = fileName(path.toAbsolutePath().normalize());
     } else if (Files.isRegularFile(path) && path.endsWith(FileUtils.LIBRARY_CONFIG_FILE)) {
       name = fileName(path.toAbsolutePath().normalize().getParent());
+    } else if (Files.isRegularFile(path) && reference.endsWith(FileUtils.ZIP_EXTENSION)) {
+      String zip = fileName(path);
+      name = zip == null ? null : zip.substring(0, zip.length() - FileUtils.ZIP_EXTENSION.length());
     }
     for (SourceLibrary library : ctx.servedLibraries) {
       if (library.getLibraryName().equals(name)) return library;
     }
-    return null;
+    // Loaded only as a dependency: a command about a shared library is routed to any daemon that loaded it.
+    return name == null || ctx.libraryManager == null ? null : ctx.libraryManager.getLibrary(name);
   }
 
   private static String fileName(Path path) {

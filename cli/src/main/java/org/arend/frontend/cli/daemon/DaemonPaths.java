@@ -41,6 +41,8 @@ public final class DaemonPaths {
   public final Path startingMarker;
   /** Hex-encoded SHA-256 of {@link #libraryConfig}'s string form, first 16 chars. */
   public final String libraryHash;
+  /** Decided on the first ask, which canonicalises paths: routing asks it of every library of every daemon. */
+  private Boolean canOwn;
 
   private DaemonPaths(Path libraryConfig, String libraryHash) {
     this.libraryConfig = libraryConfig;
@@ -67,18 +69,50 @@ public final class DaemonPaths {
     return override != null ? Paths.get(override) : FileUtils.configDir();
   }
 
+  public static Path sharedLibrariesRoot() {
+    return configDir().resolve("libs");
+  }
+
   public static Path registryDir() {
     return configDir().resolve("daemons");
   }
 
+  public static boolean isShared(Path libraryFile) {
+    try {
+      Path root = sharedLibrariesRoot();
+      if (!Files.isDirectory(root)) return false;
+      return libraryFile.toRealPath().startsWith(root.toRealPath());
+    } catch (IOException e) {
+      return false;
+    }
+  }
+
+  public boolean isShared() {
+    return isShared(libraryConfig);
+  }
+
   public String libraryName() {
-    return libraryConfig.getParent().getFileName().toString();
+    return nameOf(libraryConfig);
+  }
+
+  /** The name of the library {@code libraryFile} -- its arend.yaml or its zip -- is: the directory's, or the zip's. */
+  public static String nameOf(Path libraryFile) {
+    String file = libraryFile.getFileName().toString();
+    if (file.endsWith(FileUtils.ZIP_EXTENSION)) return file.substring(0, file.length() - FileUtils.ZIP_EXTENSION.length());
+    Path directory = libraryFile.getParent();
+    return directory == null || directory.getFileName() == null ? "" : directory.getFileName().toString();
+  }
+
+  /** Whether a daemon may own the library: not a zip, and not shared from ~/.arend/libs. */
+  public boolean canOwn() {
+    if (canOwn == null) canOwn = !libraryConfig.getFileName().toString().endsWith(FileUtils.ZIP_EXTENSION) && !isShared(libraryConfig);
+    return canOwn;
   }
 
   /**
    * Build a {@code DaemonPaths} from a user-supplied library reference: a directory containing
-   * {@code arend.yaml}, the {@code arend.yaml} itself, or any path that resolves to one of those
-   * after canonicalisation. Returns null if it resolves to neither (caller reports it).
+   * {@code arend.yaml}, the {@code arend.yaml} itself, a zip library, or any path that resolves to
+   * one of those after canonicalisation. Returns null if it resolves to none (caller reports it).
    */
   public static DaemonPaths resolve(Path libraryRef) {
     try {
@@ -87,7 +121,8 @@ public final class DaemonPaths {
       if (Files.isDirectory(probe)) {
         config = probe.resolve(FileUtils.LIBRARY_CONFIG_FILE);
       } else if (probe.getFileName() != null
-          && probe.getFileName().toString().equals(FileUtils.LIBRARY_CONFIG_FILE)) {
+          && (probe.getFileName().toString().equals(FileUtils.LIBRARY_CONFIG_FILE)
+              || probe.getFileName().toString().endsWith(FileUtils.ZIP_EXTENSION))) {
         config = probe;
       } else {
         return null;
@@ -131,6 +166,7 @@ public final class DaemonPaths {
     if (direct != null) return direct;
     for (Path libDir : libDirs) {
       DaemonPaths d = resolve(libDir.resolve(libName));
+      if (d == null) d = resolve(libDir.resolve(libName + FileUtils.ZIP_EXTENSION));
       if (d != null) return d;
     }
     return null;

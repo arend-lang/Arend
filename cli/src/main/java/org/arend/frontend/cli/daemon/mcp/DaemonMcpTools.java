@@ -17,12 +17,20 @@ final class DaemonMcpTools {
   /** The daemon op a tool call sends, with the argv of a {@code cli} op; a null op is daemon_list. */
   record Call(String library, String op, List<String> argv) {}
 
-  static final String TYPECHECK = "typecheck";
-  static final String PING = "daemon_ping";
-  static final String STATUS = "daemon_status";
-  static final String REFRESH = "daemon_refresh";
-  static final String STOP = "daemon_stop";
-  static final String LIST = "daemon_list";
+  private static final String TYPECHECK = "typecheck";
+  private static final String LIST = "daemon_list";
+
+  /** A tool that sends the daemon serving `library` one op of its own and nothing else. */
+  private record Control(String name, String op, String description) {}
+
+  private static final List<Control> CONTROLS = List.of(
+      new Control("daemon_ping", "ping", "Report whether the worker of the daemon serving `library` is IDLE or BUSY."),
+      new Control("daemon_status", "status", "The state of the daemon serving `library`, as JSON: process id, worker"
+          + " state, queue depth, uptime, current task, protocol version, the libraries it serves and locked flags."),
+      new Control("daemon_refresh", "refresh", "Re-run the bootstrap command of the daemon serving `library` on its"
+          + " warm context, so source edits made since it started are picked up."),
+      new Control("daemon_stop", "shutdown", "Stop the daemon owning `library` once the commands already queued have"
+          + " run; not for one under ~/.arend/libs."));
 
   private static final Map<String, String> TYPECHECK_FLAGS = new LinkedHashMap<>();
   static {
@@ -40,8 +48,12 @@ final class DaemonMcpTools {
   static List<Map<String, Object>> definitions() {
     List<Map<String, Object>> tools = new ArrayList<>();
     Map<String, Object> library = Map.of("type", "string", "description",
-        "The library to work on, by name (e.g. `arend-lib`) or path; the call goes to the daemon serving it and"
-            + " is limited to it. Omitted: the working directory's library, else the only running daemon.");
+        "The library to work on, by name (e.g. `arend-lib`) or path; the call goes to the daemon serving it"
+            + " and is limited to it. A name means a running daemon's own library of that name first, a project and"
+            + " not a zip, with a warning when a daemon also loaded a zip of that name, and nothing runs when"
+            + " daemons own several; else the longest-running daemon that loaded a zip or a ~/.arend/libs library of"
+            + " that name. A path to one under ~/.arend/libs, or to a zip, goes to the longest-running daemon that"
+            + " loaded it. Omitted: the working directory's library, else the only running daemon.");
 
     Map<String, Object> tcProps = new LinkedHashMap<>();
     tcProps.put("library", library);
@@ -73,16 +85,10 @@ final class DaemonMcpTools {
     }
 
     Map<String, Object> libraryOnly = Map.of("library", library);
-    tools.add(tool(LIST, "The running daemons, oldest first: process id, when it started, and the libraries it"
-        + " serves. Start one with `arend -d LIBRARY...`.",
+    tools.add(tool(LIST, "The running daemons, oldest first: process id, when it started, the libraries it serves,"
+        + " and those under ~/.arend/libs it loaded. Start one with `arend -d LIBRARY...`.",
         schema(Map.of(), List.of())));
-    tools.add(tool(PING, "Report whether the worker of the daemon serving `library` is IDLE or BUSY.", schema(libraryOnly, List.of())));
-    tools.add(tool(STATUS, "The state of the daemon serving `library`, as JSON: process id, worker state, queue depth,"
-        + " uptime, current task, protocol version, the libraries it serves and locked flags.", schema(libraryOnly, List.of())));
-    tools.add(tool(REFRESH, "Re-run the bootstrap command of the daemon serving `library` on its warm context, so"
-        + " source edits made since it started are picked up.", schema(libraryOnly, List.of())));
-    tools.add(tool(STOP, "Stop the daemon serving `library` once the commands already queued have run.",
-        schema(libraryOnly, List.of())));
+    for (Control control : CONTROLS) tools.add(tool(control.name(), control.description(), schema(libraryOnly, List.of())));
     return tools;
   }
 
@@ -101,12 +107,11 @@ final class DaemonMcpTools {
         }
         return new Call(string(args, "library"), "cli", argv);
       }
-      case PING -> { return new Call(string(args, "library"), "ping", null); }
-      case STATUS -> { return new Call(string(args, "library"), "status", null); }
-      case REFRESH -> { return new Call(string(args, "library"), "refresh", null); }
-      case STOP -> { return new Call(string(args, "library"), "shutdown", null); }
       case LIST -> { return new Call(null, null, null); }
       default -> { }
+    }
+    for (Control control : CONTROLS) {
+      if (control.name().equals(name)) return new Call(string(args, "library"), control.op(), null);
     }
     for (ConsoleQueryTool query : ConsoleMain.QUERY_TOOLS) {
       if (!toolName(query).equals(name)) continue;
