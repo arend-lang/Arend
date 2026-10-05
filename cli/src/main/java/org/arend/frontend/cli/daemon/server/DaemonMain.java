@@ -10,6 +10,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
@@ -43,15 +44,35 @@ public final class DaemonMain {
       return;
     }
 
-    try {
-      paths.ensureArendDir();
-    } catch (IOException e) {
-      System.err.println("[DAEMON] could not create " + paths.arendDir + ": " + e.getMessage());
+    List<DaemonPaths> libraries = new ArrayList<>();
+    ConsoleMain.ParsedArgs parsed = ConsoleMain.parseArgs(forwarded);
+    for (String library : parsed.cmdLine() == null ? List.<String>of() : parsed.cmdLine().getArgList()) {
+      DaemonPaths member = DaemonPaths.resolve(Paths.get(library));
+      if (member == null) {
+        System.err.println("[DAEMON] could not resolve library: " + library);
+        System.exit(1);
+        return;
+      }
+      libraries.add(member);
+    }
+    if (libraries.isEmpty() || !libraries.getFirst().libraryConfig.equals(paths.libraryConfig)) {
+      System.err.println("[DAEMON] the bootstrap argv must list " + paths.libraryConfig + " as its first library");
       System.exit(1);
       return;
     }
 
-    System.out.println("[DAEMON] Initialising daemon for " + paths.libraryConfig);
+    for (DaemonPaths member : libraries) {
+      try {
+        member.ensureArendDir();
+      } catch (IOException e) {
+        System.err.println("[DAEMON] could not create " + member.arendDir + ": " + e.getMessage());
+        System.exit(1);
+        return;
+      }
+    }
+    List<String> libraryConfigs = libraries.stream().map(member -> member.libraryConfig.toString()).toList();
+
+    System.out.println("[DAEMON] Initialising daemon for " + String.join(", ", libraryConfigs));
     System.out.println("[DAEMON] PID = " + ProcessHandle.current().pid());
     System.out.println("[DAEMON] forwarded args: " + String.join(" ", forwarded));
 
@@ -72,13 +93,14 @@ public final class DaemonMain {
     }
     System.out.println("[DAEMON] bound socket: " + bound.address());
 
-    DaemonServer server = new DaemonServer(bound, warmCtx, paths.libraryConfig.toString());
+    DaemonServer server = new DaemonServer(bound, warmCtx, libraryConfigs);
     server.start();
 
     LockFile lock = new LockFile(
         ProcessHandle.current().pid(),
         paths.libraryConfig.toString(),
         paths.libraryHash,
+        libraryConfigs,
         LockFile.PROTOCOL_VERSION,
         System.currentTimeMillis(),
         bound.address()
@@ -94,8 +116,11 @@ public final class DaemonMain {
       LockFile.deleteQuietly(socketPath);
     }, "arend-daemon-shutdown"));
 
-    // The library's own lock last: a client that finds it can count on the registry entry too.
-    for (Path copy : List.of(lock.registryFile(), paths.lockFile)) {
+    // The first library's own lock last: a client that finds it can count on every other copy.
+    List<Path> copies = new ArrayList<>();
+    copies.add(lock.registryFile());
+    for (DaemonPaths member : libraries.reversed()) copies.add(member.lockFile);
+    for (Path copy : copies) {
       try {
         Files.createDirectories(copy.getParent());
         lock.writeAtomic(copy);

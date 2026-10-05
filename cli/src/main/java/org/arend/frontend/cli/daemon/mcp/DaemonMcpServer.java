@@ -199,7 +199,8 @@ public final class DaemonMcpServer {
     result.put("capabilities", Map.of("tools", Map.of("listChanged", false)));
     result.put("serverInfo", Map.of("name", "arend-daemons", "version", String.valueOf(Prelude.VERSION)));
     result.put("instructions", "Tools of the running Arend daemons: each mirrors an `arend` option and goes"
-        + " to the daemon serving its `library`; daemon_list shows which daemon serves what.");
+        + " to the daemon serving its `library`, limited to that library; daemon_list shows which daemon"
+        + " serves what.");
     return result;
   }
 
@@ -214,19 +215,27 @@ public final class DaemonMcpServer {
     if (call == null) return error(id, -32602, "Unknown tool: " + name);
     if (call.op() == null) return result(id, toolResult(listDaemons(), false));
 
-    LockFile target;
+    Target target;
     try {
       target = target(call.library());
     } catch (IllegalArgumentException e) {
       return result(id, toolResult(e.getMessage(), true));
     }
-    return result(id, invoke(id, target, call.op(), call.argv() == null ? Map.of() : Map.of("args", call.argv())));
+    if (call.argv() == null) return result(id, invoke(id, target.daemon(), call.op(), Map.of()));
+    // The library first, as a positional: that is what limits the command to it.
+    List<String> argv = new ArrayList<>();
+    if (target.library() != null) argv.add(target.library().libraryConfig.toString());
+    argv.addAll(call.argv());
+    return result(id, invoke(id, target.daemon(), call.op(), Map.of("args", argv)));
   }
 
   // ───────── daemons ─────────
 
+  /** A daemon, and the library a call to it is about; null for every library the daemon serves. */
+  private record Target(LockFile daemon, DaemonPaths library) {}
+
   /** The daemon a call about {@code library} goes to: with none named, the working directory's, else the only one. */
-  private LockFile target(String library) {
+  private Target target(String library) {
     if (library != null) {
       String reference = library.startsWith("~/") ? System.getProperty("user.home") + library.substring(1) : library;
       DaemonPaths paths = DaemonPaths.resolveByName(reference, libDirs, false);
@@ -234,33 +243,34 @@ public final class DaemonMcpServer {
         throw new IllegalArgumentException("cannot find the library '" + library + "': give a library name found"
             + " under ~/.arend/libs or -L, or a path to a library directory or its arend.yaml.");
       }
-      LockFile daemon = DaemonRpc.daemonFor(paths);
+      LockFile daemon = DaemonRpc.daemonFor(List.of(paths));
       if (daemon == null) {
         throw new IllegalArgumentException("no running daemon serves " + paths.libraryConfig
             + "; start one with `arend -d " + library + "`.\n\n" + listDaemons());
       }
-      return daemon;
+      return new Target(daemon, paths);
     }
 
     DaemonPaths here = DaemonPaths.resolve(workingDir);
     if (here != null) {
-      LockFile daemon = DaemonRpc.daemonFor(here);
-      if (daemon != null) return daemon;
+      LockFile daemon = DaemonRpc.daemonFor(List.of(here));
+      if (daemon != null) return new Target(daemon, here);
     }
     List<LockFile> live = DaemonRpc.liveDaemons();
-    if (live.size() == 1) return live.getFirst();
+    if (live.size() == 1) return new Target(live.getFirst(), null);
     throw new IllegalArgumentException(live.isEmpty()
-        ? "no daemon is running; start one with `arend -d LIBRARY`."
+        ? "no daemon is running; start one with `arend -d LIBRARY...`."
         : "several daemons are running; say which library with `library`.\n\n" + listDaemons());
   }
 
   private static String listDaemons() {
     List<LockFile> live = DaemonRpc.liveDaemons();
-    if (live.isEmpty()) return "No daemon is running. Start one with `arend -d LIBRARY`.";
+    if (live.isEmpty()) return "No daemon is running. Start one with `arend -d LIBRARY...`.";
     StringBuilder out = new StringBuilder("Running daemons, oldest first:");
     for (LockFile daemon : live) {
       out.append("\n\nPID ").append(daemon.pid()).append(", started ").append(Instant.ofEpochMilli(daemon.startedAt()));
-      out.append("\n  library: ").append(daemon.libraryPath());
+      out.append("\n  libraries:");
+      for (String library : daemon.libraries()) out.append("\n    ").append(library);
     }
     return out.toString();
   }

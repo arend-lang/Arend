@@ -45,6 +45,42 @@ public class LockFileTest {
     assertEquals(written, found.lock());
   }
 
+  /** Every library survives, in order. */
+  @Test
+  public void theServedLibrariesSurviveTheRoundTrip() throws IOException {
+    Path path = lockPath();
+    LockFile written = new LockFile(4242, "/a/arend.yaml", "0123456789abcdef",
+        List.of("/a/arend.yaml", "/b/arend.yaml"), LockFile.PROTOCOL_VERSION, 1L, "uds:/s");
+    written.writeAtomic(path);
+    LockFile read = LockFile.readIfValid(path).orElseThrow();
+    assertEquals(written, read);
+    assertTrue(read.serves(Path.of("/b/arend.yaml")));
+    assertFalse(read.serves(Path.of("/c/arend.yaml")));
+  }
+
+  /**
+   * A daemon going away removes its lock from every library it served -- and only where the lock
+   * is still its own: a library already taken over by another daemon keeps that daemon's lock,
+   * the only way left to reach it.
+   */
+  @Test
+  public void deletingAllCopiesSparesALibraryAnotherDaemonOwns() throws IOException {
+    Path a = tempFolder.newFolder("a").toPath(), b = tempFolder.newFolder("b").toPath();
+    Files.createDirectories(a.resolve(".arend"));
+    Files.createDirectories(b.resolve(".arend"));
+    LockFile ours = new LockFile(4242, a.resolve("arend.yaml").toString(), "0123456789abcdef",
+        List.of(a.resolve("arend.yaml").toString(), b.resolve("arend.yaml").toString()),
+        LockFile.PROTOCOL_VERSION, 1L, "uds:/s");
+    LockFile theirs = new LockFile(777, b.resolve("arend.yaml").toString(), "fedcba9876543210",
+        LockFile.PROTOCOL_VERSION, 1L, "uds:/t");
+    ours.writeAtomic(DaemonPaths.lockFileIn(a));
+    theirs.writeAtomic(DaemonPaths.lockFileIn(b));
+
+    ours.deleteAllCopies();
+    assertFalse(Files.exists(DaemonPaths.lockFileIn(a)));
+    assertEquals(theirs, LockFile.readIfValid(DaemonPaths.lockFileIn(b)).orElseThrow());
+  }
+
   /** A daemon is in the registry until it goes away, and going away removes its library's lock too. */
   @Test
   public void aDaemonIsRegisteredUntilItGoesAway() throws IOException {

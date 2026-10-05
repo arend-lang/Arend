@@ -10,6 +10,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.attribute.FileTime;
+import java.util.Arrays;
 import java.util.List;
 import java.util.function.Predicate;
 
@@ -31,29 +32,53 @@ public class DaemonStartLockTest {
   private static final Predicate<LockFile> ALIVE = lf -> true;
   private static final Predicate<LockFile> DEAD = lf -> false;
 
-  private static LockFile.Read found(String hash) {
-    return new LockFile.Read.Found(
-        new LockFile(4242, "/lib/arend.yaml", hash, LockFile.PROTOCOL_VERSION, 0L, "uds:/s"));
+  private static final Path A = Path.of("/a/arend.yaml");
+  private static final Path B = Path.of("/b/arend.yaml");
+
+  /** A lock for a daemon serving {@code libraries}, the first of them being its home. */
+  private static LockFile.Read found(Path... libraries) {
+    List<String> configs = Arrays.stream(libraries).map(Path::toString).toList();
+    return new LockFile.Read.Found(new LockFile(4242, configs.getFirst(), "h", configs,
+        LockFile.PROTOCOL_VERSION, 0L, "uds:/s"));
   }
 
   /**
    * The whole verdict table. LIVE_MISMATCH is the case that matters: a moved or re-pointed
-   * {@code arend.yaml} changes the hash, so a lock whose hash does not match can perfectly well
+   * {@code arend.yaml} leaves a lock behind that does not list this library and can perfectly well
    * belong to a process running right now, and removing it orphans that process.
    */
   @Test
-  public void anExistingLockIsClassifiedByHashAndLiveness() {
+  public void anExistingLockIsClassifiedByLibraryAndLiveness() {
+    List<String> justA = List.of(A.toString());
     assertEquals(DaemonStart.Verdict.NO_DAEMON,
-        DaemonStart.inspectLock(new LockFile.Read.Absent(), "h", DEAD));
+        DaemonStart.inspectLock(new LockFile.Read.Absent(), A, justA, DEAD));
     assertEquals("an unparseable lock must be refused, not guessed at",
         DaemonStart.Verdict.UNREADABLE_LOCK,
-        DaemonStart.inspectLock(new LockFile.Read.Unreadable("boom"), "h", DEAD));
-    assertEquals(DaemonStart.Verdict.ALREADY_RUNNING, DaemonStart.inspectLock(found("h"), "h", ALIVE));
-    assertEquals(DaemonStart.Verdict.STALE_LOCK, DaemonStart.inspectLock(found("h"), "h", DEAD));
-    assertEquals(DaemonStart.Verdict.STALE_MISMATCH,
-        DaemonStart.inspectLock(found("other"), "h", DEAD));
-    assertEquals("a live daemon for another identity must keep its lock",
-        DaemonStart.Verdict.LIVE_MISMATCH, DaemonStart.inspectLock(found("other"), "h", ALIVE));
+        DaemonStart.inspectLock(new LockFile.Read.Unreadable("boom"), A, justA, DEAD));
+    assertEquals(DaemonStart.Verdict.ALREADY_RUNNING, DaemonStart.inspectLock(found(A), A, justA, ALIVE));
+    assertEquals(DaemonStart.Verdict.STALE_LOCK, DaemonStart.inspectLock(found(A), A, justA, DEAD));
+    assertEquals(DaemonStart.Verdict.STALE_MISMATCH, DaemonStart.inspectLock(found(B), A, justA, DEAD));
+    assertEquals("a live daemon for another library must keep its lock",
+        DaemonStart.Verdict.LIVE_MISMATCH, DaemonStart.inspectLock(found(B), A, justA, ALIVE));
+  }
+
+  /**
+   * Two daemons must not share a library: a live daemon whose set includes this library but is
+   * not the set asked for refuses the start, whichever of the two is larger. The same set in
+   * another order is the same daemon.
+   */
+  @Test
+  public void aLiveDaemonWithAnOverlappingSetRefusesTheStart() {
+    List<String> ab = List.of(A.toString(), B.toString());
+    assertEquals(DaemonStart.Verdict.OVERLAP, DaemonStart.inspectLock(found(A), A, ab, ALIVE));
+    assertEquals(DaemonStart.Verdict.OVERLAP,
+        DaemonStart.inspectLock(found(A, B), A, List.of(A.toString()), ALIVE));
+    assertEquals(DaemonStart.Verdict.OVERLAP,
+        DaemonStart.inspectLock(found(A, B), B, List.of(B.toString()), ALIVE));
+    assertEquals(DaemonStart.Verdict.ALREADY_RUNNING,
+        DaemonStart.inspectLock(found(B, A), A, ab, ALIVE));
+    assertEquals("a dead daemon's set is no obstacle",
+        DaemonStart.Verdict.STALE_LOCK, DaemonStart.inspectLock(found(A), A, ab, DEAD));
   }
 
   private Path library() throws IOException {
@@ -71,7 +96,7 @@ public class DaemonStartLockTest {
    */
   @Test
   public void theChildJvmInheritsThisOnesJvmOptions() throws IOException {
-    List<String> cmd = DaemonStart.buildChildCommand(DaemonPaths.resolve(library()), List.of(), List.of(), "cp");
+    List<String> cmd = DaemonStart.buildChildCommand(List.of(DaemonPaths.resolve(library())), List.of(), List.of(), "cp");
 
     List<String> forwardable = ManagementFactory.getRuntimeMXBean().getInputArguments().stream()
         .filter(DaemonStart::isForwardableJvmOption)
@@ -97,7 +122,7 @@ public class DaemonStartLockTest {
   public void theChildIsToldTheLibraryByItsConfigPath() throws IOException {
     Path root = library();
     DaemonPaths paths = DaemonPaths.resolve(root);
-    List<String> cmd = DaemonStart.buildChildCommand(paths, List.of(), List.of(), "cp");
+    List<String> cmd = DaemonStart.buildChildCommand(List.of(paths), List.of(), List.of(), "cp");
 
     String config = paths.libraryConfig.toString();
     int main = cmd.indexOf("org.arend.frontend.ConsoleMain");
@@ -110,6 +135,40 @@ public class DaemonStartLockTest {
         config, appArgs.get(appArgs.size() - 1));
     assertFalse("the reference the user typed must not reach the child",
         appArgs.contains(root.getFileName().toString()));
+  }
+
+  /**
+   * Several libraries reach the child in the order given, all by config path, after everything
+   * else: the first is named after the bootstrap flag, since its directory holds the socket.
+   */
+  @Test
+  public void theChildIsToldEveryLibraryInOrder() throws IOException {
+    Path first = library();
+    Path second = tempFolder.newFolder("other").toPath();
+    Files.writeString(second.resolve("arend.yaml"), "dependencies: [mylib]\n", StandardCharsets.UTF_8);
+    DaemonPaths a = DaemonPaths.resolve(first), b = DaemonPaths.resolve(second);
+    List<String> cmd = DaemonStart.buildChildCommand(List.of(a, b), List.of(), List.of("-c"), "cp");
+
+    List<String> appArgs = cmd.subList(cmd.indexOf("org.arend.frontend.ConsoleMain") + 1, cmd.size());
+    assertEquals(List.of("--daemon-bootstrap", a.libraryConfig.toString()), appArgs.subList(0, 2));
+    assertEquals(List.of("-c", a.libraryConfig.toString(), b.libraryConfig.toString()),
+        appArgs.subList(appArgs.size() - 3, appArgs.size()));
+  }
+
+  /**
+   * Two libraries of one name cannot share a daemon, and the start is refused before anything is
+   * written into either.
+   */
+  @Test
+  public void twoLibrariesOfOneNameAreRefused() throws IOException {
+    Path first = tempFolder.newFolder("a", "foo").toPath();
+    Path second = tempFolder.newFolder("b", "foo").toPath();
+    for (Path root : List.of(first, second)) {
+      Files.writeString(root.resolve("arend.yaml"), "sourcesDir: src\n", StandardCharsets.UTF_8);
+    }
+    assertEquals(1, DaemonStart.run(List.of(first.toString(), second.toString()), List.of(), List.of()));
+    assertFalse(Files.exists(first.resolve(".arend")));
+    assertFalse(Files.exists(second.resolve(".arend")));
   }
 
   /**

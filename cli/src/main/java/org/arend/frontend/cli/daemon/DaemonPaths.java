@@ -71,6 +71,10 @@ public final class DaemonPaths {
     return configDir().resolve("daemons");
   }
 
+  public String libraryName() {
+    return libraryConfig.getParent().getFileName().toString();
+  }
+
   /**
    * Build a {@code DaemonPaths} from a user-supplied library reference: a directory containing
    * {@code arend.yaml}, the {@code arend.yaml} itself, or any path that resolves to one of those

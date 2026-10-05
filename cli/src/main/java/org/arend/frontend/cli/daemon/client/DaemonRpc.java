@@ -145,14 +145,15 @@ public final class DaemonRpc {
   /**
    * Client-side auto-routing: if a daemon serves the library this command is about, send it a
    * {@code cli} op carrying the original argv and return its exit code; empty means run in this
-   * process instead. Which library that is, and when routing declines, is {@link #routeTarget};
-   * connection failures, malformed locks, a hash mismatch or a dead PID all return empty.
+   * process instead. Which libraries the command is about is {@link #routeTarget}, and which
+   * daemon has them {@link #daemonFor}; connection failures, malformed locks, a library the daemon
+   * lacks or a dead PID all return empty.
    */
   public static OptionalInt tryRouteCli(String[] origArgs, List<String> positional, List<Path> libDirs) {
-    DaemonPaths paths = routeTarget(positional, libDirs);
-    if (paths == null) return OptionalInt.empty();
+    List<DaemonPaths> libraries = routeTarget(positional, libDirs);
+    if (libraries == null) return OptionalInt.empty();
 
-    LockFile lf = reachableDaemon(paths, false);
+    LockFile lf = daemonFor(libraries);
     if (lf == null) return OptionalInt.empty();
 
     SocketAddress addr;
@@ -204,7 +205,7 @@ public final class DaemonRpc {
       }
       case LockFile.Read.Found found -> {
         LockFile lf = found.lock();
-        if (!lf.libraryHash().equals(paths.libraryHash)) {
+        if (!lf.serves(paths.libraryConfig)) {
           if (explain) {
             System.err.println("[WARN]  lock at " + paths.lockFile + " is for a different library; ignoring");
           }
@@ -233,9 +234,17 @@ public final class DaemonRpc {
     }
   }
 
-  /** The daemon serving {@code library}, or null. */
-  public static LockFile daemonFor(DaemonPaths library) {
-    return reachableDaemon(library, false);
+  /**
+   * The daemon serving every one of {@code libraries}, or null: locally the run would load them
+   * all, and a daemon lacking one would answer about the others only.
+   */
+  public static LockFile daemonFor(List<DaemonPaths> libraries) {
+    LockFile lf = reachableDaemon(libraries.getFirst(), false);
+    if (lf == null) return null;
+    for (DaemonPaths paths : libraries) {
+      if (!lf.serves(paths.libraryConfig)) return null;
+    }
+    return lf;
   }
 
   /** Every live daemon in {@link DaemonPaths#registryDir}, oldest first; a dead one's entry is removed. */
@@ -252,16 +261,16 @@ public final class DaemonRpc {
   }
 
   /**
-   * The daemon a routed command should be sent to, or null to run it locally: the one for the
-   * first positional that names a library, or, with no such positional, the daemon for the
-   * current directory.
+   * The libraries a routed command is about: every positional that names one, or, with no such
+   * positional, the library of the current directory. Null to run it locally.
    *
-   * <p>Every positional then has to be something that daemon can actually be given, and it is not
+   * <p>Every positional then has to be something a daemon can actually be given, and it is not
    * enough that one of them found it. Two cases decline:
    *
    * <ul>
-   *   <li>A positional naming a <em>different</em> library. Locally the run would load both; a
-   *       daemon holds one.</li>
+   *   <li>A positional naming a library no one daemon has together with the rest. Locally the run
+   *       would load it; a daemon holds only its own set. Checked by {@link #daemonFor}, against
+   *       the locks.</li>
    *   <li>A positional that exists on disk and is not this library --
    *       {@code arend ../pkgs/foo.zip} from inside a library with a daemon.
    *       {@code CliSetup.populateRequestedTargets} skips a positional that exists as a path,
@@ -273,26 +282,19 @@ public final class DaemonRpc {
    * <p>A module name routes fine: it does not exist as a path, and the daemon resolves it against
    * the library it holds exactly as a local run would.
    */
-  private static DaemonPaths routeTarget(List<String> positional, List<Path> libDirs) {
+  private static List<DaemonPaths> routeTarget(List<String> positional, List<Path> libDirs) {
     List<DaemonPaths> named = new ArrayList<>(positional.size());
-    DaemonPaths chosen = null;
     for (String pos : positional) {
       DaemonPaths d = DaemonPaths.resolveByName(pos, libDirs, false);
-      named.add(d);
-      if (d != null && chosen == null) chosen = d;
-    }
-    if (chosen == null) chosen = DaemonPaths.resolve(Paths.get("."));
-    if (chosen == null) return null;
-
-    for (int i = 0; i < positional.size(); i++) {
-      DaemonPaths d = named.get(i);
       if (d != null) {
-        if (!d.libraryHash.equals(chosen.libraryHash)) return null;
-      } else if (Files.exists(Paths.get(positional.get(i)))) {
+        named.add(d);
+      } else if (Files.exists(Paths.get(pos))) {
         return null;
       }
     }
-    return chosen;
+    if (!named.isEmpty()) return named;
+    DaemonPaths here = DaemonPaths.resolve(Paths.get("."));
+    return here == null ? null : List.of(here);
   }
 
   /** Wait for the lock file to vanish (signals daemon JVM exited and hook ran). */
@@ -328,8 +330,10 @@ public final class DaemonRpc {
       System.out.println("uptimeMs:        " + frame.get("uptimeMs"));
       System.out.println("currentTaskId:   " + frame.get("currentTaskId"));
       System.out.println("protocolVersion: " + frame.get("protocolVersion"));
-      Object libCfg = frame.get("libraryConfig");
-      if (libCfg != null) System.out.println("libraryConfig:   " + libCfg);
+      if (frame.get("libraries") instanceof List<?> libraries) {
+        System.out.println("libraries:");
+        for (Object library : libraries) System.out.println("  " + library);
+      }
       Object locked = frame.get("lockedFlags");
       if (locked instanceof Map<?, ?> m) {
         if (m.isEmpty()) {

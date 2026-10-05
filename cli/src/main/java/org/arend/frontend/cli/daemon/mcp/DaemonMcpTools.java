@@ -40,13 +40,13 @@ final class DaemonMcpTools {
   static List<Map<String, Object>> definitions() {
     List<Map<String, Object>> tools = new ArrayList<>();
     Map<String, Object> library = Map.of("type", "string", "description",
-        "The library to work on, by name (e.g. `arend-lib`) or path; the call goes to the daemon serving it."
-            + " Omitted: the working directory's library, else the only running daemon.");
+        "The library to work on, by name (e.g. `arend-lib`) or path; the call goes to the daemon serving it and"
+            + " is limited to it. Omitted: the working directory's library, else the only running daemon.");
 
     Map<String, Object> tcProps = new LinkedHashMap<>();
     tcProps.put("library", library);
     tcProps.put("targets", stringArray("Modules (e.g. `Algebra.Ring`) or libraries to typecheck: the positional"
-        + " arguments of `arend`. Omitted or empty: the daemon's whole library."));
+        + " arguments of `arend`. Omitted or empty: the whole of `library`, or with no `library` every library the daemon serves."));
     tcProps.put("print", Map.of("type", "string", "description",
         "MODULE[:DEF]: after the typecheck, print the elaborated form of MODULE, or of a single DEF inside it (-p)."));
     tcProps.put("test", bool("Run tests (-t)."));
@@ -73,12 +73,12 @@ final class DaemonMcpTools {
     }
 
     Map<String, Object> libraryOnly = Map.of("library", library);
-    tools.add(tool(LIST, "The running daemons, oldest first: process id, when it started, and the library it"
-        + " serves. Start one with `arend -d LIBRARY`.",
+    tools.add(tool(LIST, "The running daemons, oldest first: process id, when it started, and the libraries it"
+        + " serves. Start one with `arend -d LIBRARY...`.",
         schema(Map.of(), List.of())));
     tools.add(tool(PING, "Report whether the worker of the daemon serving `library` is IDLE or BUSY.", schema(libraryOnly, List.of())));
     tools.add(tool(STATUS, "The state of the daemon serving `library`, as JSON: process id, worker state, queue depth,"
-        + " uptime, current task, protocol version, the library it serves and locked flags.", schema(libraryOnly, List.of())));
+        + " uptime, current task, protocol version, the libraries it serves and locked flags.", schema(libraryOnly, List.of())));
     tools.add(tool(REFRESH, "Re-run the bootstrap command of the daemon serving `library` on its warm context, so"
         + " source edits made since it started are picked up.", schema(libraryOnly, List.of())));
     tools.add(tool(STOP, "Stop the daemon serving `library` once the commands already queued have run.",

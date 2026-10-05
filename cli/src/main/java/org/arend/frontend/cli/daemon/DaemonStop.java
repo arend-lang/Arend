@@ -37,13 +37,13 @@ public final class DaemonStop {
     SIGNAL
   }
 
-  static Verdict inspectLock(LockFile.Read existing, String expectedHash,
+  static Verdict inspectLock(LockFile.Read existing, Path libraryConfig,
                              java.util.function.Predicate<LockFile> alive) {
     if (existing instanceof LockFile.Read.Absent) return Verdict.NOTHING_TO_DO;
     if (existing instanceof LockFile.Read.Unreadable) return Verdict.UNREADABLE_LOCK;
     LockFile lf = ((LockFile.Read.Found) existing).lock();
     boolean live = alive.test(lf);
-    if (!lf.libraryHash().equals(expectedHash)) {
+    if (!lf.serves(libraryConfig)) {
       return live ? Verdict.REFUSE_LIVE_MISMATCH : Verdict.REMOVE_STALE_MISMATCH;
     }
     return live ? Verdict.SIGNAL : Verdict.REMOVE_STALE;
@@ -61,7 +61,7 @@ public final class DaemonStop {
     }
 
     LockFile.Read existing = LockFile.read(paths.lockFile);
-    Verdict verdict = inspectLock(existing, paths.libraryHash,
+    Verdict verdict = inspectLock(existing, paths.libraryConfig,
         candidate -> ProcessHandle.of(candidate.pid()).isPresent());
     switch (verdict) {
       case NOTHING_TO_DO -> {
@@ -105,7 +105,8 @@ public final class DaemonStop {
       return 0;
     }
 
-    System.out.println("Stopping Arend daemon for " + paths.libraryConfig + " (PID " + lf.pid() + ")");
+    // The daemon as a whole, whichever of its libraries named it: they share one process.
+    System.out.println("Stopping Arend daemon for " + String.join(", ", lf.libraries()) + " (PID " + lf.pid() + ")");
 
     // The clean path: socket-side `shutdown`. The daemon replies done, the worker pulls the
     // sentinel, the JVM exits, the shutdown hook removes the lock. Sent to the library this

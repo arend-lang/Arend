@@ -78,12 +78,12 @@ public class ConsoleMain {
             .hasArgs().argName(tool.argName()).desc(tool.cliDescription()).build());
       }
       cmdOptions.addOption(Option.builder().longOpt("json").desc("with -ss/-ps/-fu/-sc/-ch: print results as a single JSON object on stdout ({results:[...],count:N}; -sc uses {target,entries:[...],count:N}; -ch uses {target,superclasses:[...],subclasses:[...],instances:[...],newSites:[...],counts}); all diagnostics ([INFO]/[WARN]/[ERROR], query echo) go to a log file, keeping stdout pure JSON and the console clean (ignored in REPL mode). For -fu, each usage is a separate entry (never grouped by row).").build());
-      cmdOptions.addOption(Option.builder("d").longOpt("daemon").desc("start a daemon for the given library: a LIBRARY positional anchored to an arend.yaml, or a name resolved via -L, defaulting to ./arend.yaml when omitted. The daemon does the normal load+typecheck+persist once, then idles serving future client requests -- from arend commands routed to it, and from agents through --mcp.").build());
-      cmdOptions.addOption(Option.builder().longOpt("daemon-stop").desc("stop the daemon serving the given library (single positional library reference).").build());
+      cmdOptions.addOption(Option.builder("d").longOpt("daemon").desc("start one daemon holding the given libraries (LIBRARY positionals: an arend.yaml, its directory, or a name resolved via -L; ./arend.yaml when omitted), loaded in the order given, the way IntelliJ holds a project's libraries. Refused if one of them is already served by another daemon. The daemon does the normal load+typecheck+persist once, then serves arend commands routed to it, and agents through --mcp.").build());
+      cmdOptions.addOption(Option.builder().longOpt("daemon-stop").desc("stop the daemon serving the given library (single positional library reference), with every other library it serves.").build());
       cmdOptions.addOption(Option.builder().longOpt("daemon-ping").desc("ping the daemon serving the given library; reports IDLE or BUSY.").build());
       cmdOptions.addOption(Option.builder().longOpt("daemon-status").desc("dump the daemon's state: queue depth, uptime, current task, protocol version and locked flags.").build());
       cmdOptions.addOption(Option.builder().longOpt("daemon-refresh").desc("re-run the bootstrap pipeline on the daemon's warm context so source edits are picked up.").build());
-      cmdOptions.addOption(Option.builder().longOpt("mcp").desc("run an MCP server on stdin/stdout for an agent, exposing the running daemons' commands as tools; each call goes to the daemon serving the library it names, found the way a routed command finds it. Register it once, e.g. `claude mcp add --scope user arend-daemons -- arend --mcp`.").build());
+      cmdOptions.addOption(Option.builder().longOpt("mcp").desc("run an MCP server on stdin/stdout for an agent, exposing the running daemons' commands as tools; each call goes to the daemon holding the library it names, found the way a routed command finds it. Register it once, e.g. `claude mcp add --scope user arend-daemons -- arend --mcp`.").build());
       cmdOptions.addOption(Option.builder().longOpt("no-daemon").desc("force in-process execution even if a daemon serves the requested library.").build());
       cmdOptions.addOption(Option.builder().longOpt("log-file").hasArg().argName("path").desc("with --json -ss/-ps/-fu/-sc/-ch: write diagnostics here instead of the default <tmpdir>/arend-symbol-search.log").build());
       cmdOptions.addOption("r", "recompile", false, "recompile all modules from source, ignoring binary caches (.arc files)");
@@ -173,6 +173,7 @@ public class ConsoleMain {
     }
     // This command's verdict is not the next one's.
     ctx.beginCommand();
+    ctx.servedLibraries.addAll(ctx.requestedLibraries);
     return ctx;
   }
 
@@ -281,8 +282,8 @@ public class ConsoleMain {
       return 1;
     }
     List<String> positional = cmdLine.getArgList();
-    if (positional.size() > 1) {
-      System.err.println("[ERROR] daemon mode requires at most one positional library reference");
+    if (!daemonStart && positional.size() > 1) {
+      System.err.println("[ERROR] daemon control requires at most one positional library reference");
       return 1;
     }
 
@@ -290,7 +291,8 @@ public class ConsoleMain {
     String libRef = positional.isEmpty() ? "." : positional.getFirst();
 
     if (daemonStart) {
-      return DaemonStart.run(libRef, ctx.libDirs, bootstrapFlagsToForward(cmdLine));
+      List<String> childArgs = bootstrapFlagsToForward(cmdLine);
+      return DaemonStart.run(positional.isEmpty() ? List.of(libRef) : positional, ctx.libDirs, childArgs);
     }
     if (daemonStop) {
       return DaemonStop.run(libRef, ctx.libDirs);

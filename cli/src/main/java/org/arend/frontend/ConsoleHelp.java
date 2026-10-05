@@ -442,7 +442,8 @@ public final class ConsoleHelp {
     System.out.println("Workflows (mutually exclusive; first matching flag wins):");
     System.out.println("  arend [LIBRARY] [MODULE[:DEF]]                     Typecheck workflows");
     System.out.println("  arend [LIBRARY] -i [plain|jline]                   REPL");
-    System.out.println("  arend [LIBRARY] -d|--daemon-{stop,status,refresh}  Daemon control");
+    System.out.println("  arend [LIBRARY...] -d                              Start a daemon");
+    System.out.println("  arend [LIBRARY] --daemon-{stop,status,refresh}     Daemon control");
     System.out.println("  arend [LIBRARY] {-ss|-ps|-fu|-ch|-sc} ...          Information retrieval (no typecheck)");
     System.out.println();
     ConsoleHelpRenderer.printWrapped("LIBRARY is a path to a directory containing arend.yaml, the arend.yaml file "

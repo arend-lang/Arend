@@ -91,7 +91,7 @@ public class DaemonMcpServerTest {
     DaemonPaths paths = DaemonPaths.resolve(root);
     paths.ensureArendDir();
     SocketBinder.Bound bound = SocketBinder.bind(paths.socketFile, paths.libraryHash);
-    DaemonServer daemon = new DaemonServer(bound, new CommandContext(), paths.libraryConfig.toString(),
+    DaemonServer daemon = new DaemonServer(bound, new CommandContext(), List.of(paths.libraryConfig.toString()),
         (context, args, cwd) -> {
           received.add(name + " " + String.join(" ", args));
           if (List.of(args).contains("Hold")) {
@@ -185,10 +185,10 @@ public class DaemonMcpServerTest {
     JsonNode result = call(1, "typecheck", "{\"library\":" + json(libB) + ",\"targets\":[\"Foo\"],\"show_times\":true}");
     assertFalse(text(result), result.get("isError").asBoolean());
     assertEquals("ran on B", text(result).trim());
-    assertEquals(List.of("B Foo --show-times"), received);
+    assertEquals(List.of("B " + config(libB) + " Foo --show-times"), received);
 
     call(2, "find_usages", "{\"library\":" + json(libA) + ",\"args\":[\"M:f\"]}");
-    assertEquals("A -fu M:f", received.get(1));
+    assertEquals("A " + config(libA) + " -fu M:f", received.get(1));
   }
 
   /** With no library, the agent's own directory decides; failing that, an ambiguity is reported. */
@@ -196,7 +196,7 @@ public class DaemonMcpServerTest {
   public void withoutALibraryTheWorkingDirectoryDecides() throws IOException {
     serve(libA);
     call(1, "typecheck", "{}");
-    assertEquals(List.of("A "), received);
+    assertEquals(List.of("A " + config(libA)), received);
     toServer.close();
     serving.interrupt();
 
@@ -224,7 +224,6 @@ public class DaemonMcpServerTest {
     serve(tempFolder.getRoot().toPath());
     String list = text(call(1, "daemon_list", "{}"));
     assertTrue(list, list.indexOf(config(libA)) < list.indexOf(config(libB)));
-    assertTrue(list, list.contains("library: " + config(libA)));
 
     String status = text(call(2, "daemon_status", "{\"library\":" + json(libB) + "}"));
     assertTrue(status, status.contains("\"state\" : \"IDLE\""));

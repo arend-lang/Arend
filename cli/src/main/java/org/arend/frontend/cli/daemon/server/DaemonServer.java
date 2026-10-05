@@ -60,7 +60,8 @@ public final class DaemonServer {
 
   private final SocketBinder.Bound bound;
   private final CommandContext ctx;
-  private final String libraryConfig;
+  /** The canonical arend.yaml of every library served, in load order. */
+  private final List<String> libraries;
   private final CommandRunner runner;
   private final Map<String, Object> lockedFlags;
   private final ExecutorService clientPool;
@@ -81,15 +82,15 @@ public final class DaemonServer {
   private Thread acceptThread;
   private Thread workerThread;
 
-  public DaemonServer(SocketBinder.Bound bound, CommandContext ctx, String libraryConfig) {
-    this(bound, ctx, libraryConfig, CliDispatcher::run);
+  public DaemonServer(SocketBinder.Bound bound, CommandContext ctx, List<String> libraries) {
+    this(bound, ctx, libraries, CliDispatcher::run);
   }
 
-  public DaemonServer(SocketBinder.Bound bound, CommandContext ctx, String libraryConfig,
+  public DaemonServer(SocketBinder.Bound bound, CommandContext ctx, List<String> libraries,
                       CommandRunner runner) {
     this.bound = bound;
     this.ctx = ctx;
-    this.libraryConfig = libraryConfig;
+    this.libraries = List.copyOf(libraries);
     this.runner = runner;
     this.lockedFlags = LockedFlags.extract(ctx.bootstrapArgs);
     ThreadFactory tf = r -> {
@@ -183,7 +184,7 @@ public final class DaemonServer {
         body.put("uptimeMs", System.currentTimeMillis() - startedAt);
         body.put("currentTaskId", currentTaskId.get());
         body.put("protocolVersion", LockFile.PROTOCOL_VERSION);
-        if (libraryConfig != null) body.put("libraryConfig", libraryConfig);
+        body.put("libraries", libraries);
         body.put("lockedFlags", lockedFlags);
         ch.write(body);
         ch.write(FrameChannel.doneFrame(id, 0));

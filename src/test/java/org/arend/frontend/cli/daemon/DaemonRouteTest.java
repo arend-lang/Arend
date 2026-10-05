@@ -15,6 +15,7 @@ import java.nio.channels.SocketChannel;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.OptionalInt;
@@ -36,6 +37,7 @@ public class DaemonRouteTest {
   @Rule public final TemporaryFolder tempFolder = new TemporaryFolder();
 
   private Path libRoot;
+  private String address;
   private ServerSocketChannel listener;
   private Thread acceptor;
   private final CountDownLatch served = new CountDownLatch(1);
@@ -61,9 +63,10 @@ public class DaemonRouteTest {
 
     SocketBinder.Bound bound = SocketBinder.bind(paths.socketFile, paths.libraryHash);
     listener = bound.channel();
+    address = bound.address();
     new LockFile(ProcessHandle.current().pid(), paths.libraryConfig.toString(), paths.libraryHash,
         LockFile.PROTOCOL_VERSION, System.currentTimeMillis(),
-        bound.address()).writeAtomic(paths.lockFile);
+        address).writeAtomic(paths.lockFile);
 
     // Answers exactly one request and records it.
     acceptor = new Thread(() -> {
@@ -131,5 +134,43 @@ public class DaemonRouteTest {
     OptionalInt rc = DaemonRpc.tryRouteCli(positional.toArray(new String[0]), positional, List.of());
     assertTrue("a module name is not a path and must still route", rc.isPresent());
     assertTrue("the stand-in daemon must have been reached", served.await(10, TimeUnit.SECONDS));
+  }
+
+  private Path library(String name) throws IOException {
+    Path root = tempFolder.newFolder(name).toPath();
+    Files.createDirectories(root.resolve("src"));
+    Files.writeString(root.resolve("arend.yaml"), "sourcesDir: src\n", StandardCharsets.UTF_8);
+    return root;
+  }
+
+  private void serveAlso(Path... others) throws IOException {
+    DaemonPaths home = DaemonPaths.resolve(libRoot);
+    List<DaemonPaths> all = new ArrayList<>(List.of(home));
+    for (Path other : others) all.add(DaemonPaths.resolve(other));
+    LockFile lock = new LockFile(ProcessHandle.current().pid(), home.libraryConfig.toString(), home.libraryHash,
+        all.stream().map(d -> d.libraryConfig.toString()).toList(), LockFile.PROTOCOL_VERSION,
+        System.currentTimeMillis(), address);
+    for (DaemonPaths d : all) {
+      d.ensureArendDir();
+      lock.writeAtomic(d.lockFile);
+    }
+  }
+
+  @Test
+  public void aCommandNamingLibrariesOfOneDaemonIsRouted() throws Exception {
+    Path other = library("otherlib");
+    serveAlso(other);
+    List<String> positional = List.of(other.toString(), libRoot.toString());
+    OptionalInt rc = DaemonRpc.tryRouteCli(positional.toArray(new String[0]), positional, List.of());
+    assertTrue("both libraries are the daemon's, so the command must route", rc.isPresent());
+    assertTrue("the stand-in daemon must have been reached", served.await(10, TimeUnit.SECONDS));
+  }
+
+  @Test
+  public void aLibraryTheDaemonDoesNotServeIsNotRouted() throws Exception {
+    Path other = library("otherlib");
+    List<String> positional = List.of(libRoot.toString(), other.toString());
+    OptionalInt rc = DaemonRpc.tryRouteCli(positional.toArray(new String[0]), positional, List.of());
+    assertTrue("a library outside the daemon's set must keep the command local", rc.isEmpty());
   }
 }

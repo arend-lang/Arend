@@ -143,7 +143,9 @@ public final class CliSetup {
     for (String dependency : library.getLibraryDependencies()) {
       if (ctx.libraryManager.containsLibrary(dependency) || loading.contains(dependency)) continue;
       List<SourceLibrary> libDependency = new ArrayList<>(1);
-      findLibrary(ctx, dependency, libDependency);
+      ctx.requestedLibraries.stream().filter(requested -> requested.getLibraryName().equals(dependency))
+          .findFirst().ifPresent(libDependency::add);
+      if (libDependency.isEmpty()) findLibrary(ctx, dependency, libDependency);
       if (libDependency.isEmpty()) return false;
       if (!loadLibraryWithDependencies(ctx, libDependency.getFirst(), loading)) return false;
     }
@@ -214,8 +216,12 @@ public final class CliSetup {
   /**
    * Re-reads the positional arguments as typecheck targets against libraries that are
    * <em>already loaded</em>. The counterpart to {@link #classifyRequestedTargets}, for a context
-   * being reused: a positional naming a loaded library is nothing to do, and everything else is
+   * being reused: a positional naming a loaded library puts it in scope, and everything else is
    * a module, or a module and a definition inside it.
+   *
+   * <p>The command is scoped as a local run would be: to the served libraries its positionals
+   * name; failing that, the library of the directory it was issued from; failing that -- a client
+   * with no directory, such as the MCP server -- all of them.
    *
    * <p>An argument that is neither is reported and fails the run, exactly as
    * {@code classifyRequestedTargets} reports "File X not found" on a fresh context. The two have
@@ -233,13 +239,17 @@ public final class CliSetup {
    *                  from the one the client would have got.
    */
   public static void populateRequestedTargets(CommandContext ctx, CommandLine cmdLine, String clientCwd) {
-    Set<String> loadedLibNames = new HashSet<>();
-    for (SourceLibrary library : ctx.requestedLibraries) loadedLibNames.add(library.getLibraryName());
+    List<SourceLibrary> scope = new ArrayList<>();
 
     for (String positional : cmdLine.getArgList()) {
       // A positional may name the library the way classifyRequestedTargets accepts one, which
       // includes a path: `arend .` is the library in the current directory.
-      if (loadedLibNames.contains(positional) || Files.exists(against(clientCwd, positional))) continue;
+      SourceLibrary named = servedLibraryNamed(ctx, positional, clientCwd);
+      if (named != null) {
+        if (!scope.contains(named)) scope.add(named);
+        continue;
+      }
+      if (Files.exists(against(clientCwd, positional))) continue;
       if (positional.indexOf(':') >= 0) {
         // parseFullName reports what is wrong with it and returns null.
         Pair<ModulePath, LongName> parsed = ctx.parseFullName(positional);
@@ -254,9 +264,35 @@ public final class CliSetup {
             "File " + positional + " not found"));
       }
     }
+
+    if (scope.isEmpty() && clientCwd != null) {
+      SourceLibrary here = servedLibraryNamed(ctx, ".", clientCwd);
+      if (here != null) scope.add(here);
+    }
+    ctx.requestedLibraries.clear();
+    ctx.requestedLibraries.addAll(scope.isEmpty() ? ctx.servedLibraries : scope);
   }
 
   // ───────── helpers ─────────
+
+  private static SourceLibrary servedLibraryNamed(CommandContext ctx, String reference, String clientCwd) {
+    String name = reference;
+    Path path = against(clientCwd, reference);
+    if (Files.isDirectory(path) && Files.isRegularFile(path.resolve(FileUtils.LIBRARY_CONFIG_FILE))) {
+      name = fileName(path.toAbsolutePath().normalize());
+    } else if (Files.isRegularFile(path) && path.endsWith(FileUtils.LIBRARY_CONFIG_FILE)) {
+      name = fileName(path.toAbsolutePath().normalize().getParent());
+    }
+    for (SourceLibrary library : ctx.servedLibraries) {
+      if (library.getLibraryName().equals(name)) return library;
+    }
+    return null;
+  }
+
+  private static String fileName(Path path) {
+    Path name = path == null ? null : path.getFileName();
+    return name == null ? null : name.toString();
+  }
 
   /** {@code path} as the client would have seen it: resolved against {@code clientCwd} if given. */
   private static Path against(String clientCwd, String path) {

@@ -89,7 +89,7 @@ public class DaemonCancellationTest {
       return 0;
     };
 
-    server = new DaemonServer(bound, ctx, "test-library", runner);
+    server = new DaemonServer(bound, ctx, List.of("test-library"), runner);
     server.start();
   }
 

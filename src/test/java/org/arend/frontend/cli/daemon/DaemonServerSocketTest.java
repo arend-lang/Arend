@@ -70,7 +70,7 @@ public class DaemonServerSocketTest {
     Path sock = tempFolder.newFolder(stateDir).toPath().resolve("daemon.sock");
     SocketBinder.Bound bound = SocketBinder.bind(sock, "0123456789abcde" + stateDir.charAt(0));
     boundAddress = bound.address();
-    DaemonServer s = new DaemonServer(bound, ctx, libRoot.resolve("arend.yaml").toString());
+    DaemonServer s = new DaemonServer(bound, ctx, List.of(libRoot.resolve("arend.yaml").toString()));
     s.start();
     return s;
   }

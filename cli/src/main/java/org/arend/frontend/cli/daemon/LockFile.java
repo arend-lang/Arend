@@ -15,13 +15,16 @@ import java.util.Properties;
 
 /**
  * The record a running daemon leaves on disk so a client can find it: a properties file at
- * {@code <library>/.arend/daemon.lock}, and another copy in {@link DaemonPaths#registryDir},
- * which is how the MCP server finds every running daemon.
+ * {@code <library>/.arend/daemon.lock} in every library the daemon serves, so that a command
+ * issued from any of them finds it and a second daemon asked to serve one sees it is taken; and
+ * another copy in {@link DaemonPaths#registryDir}, which is how the MCP server finds every daemon.
  *
  * <pre>
  *   pid              process id of the daemon JVM
- *   libraryPath      canonical path to the library's arend.yaml
- *   libraryHash      digest of that path; cross-check against {@link DaemonPaths#libraryHash}
+ *   libraryPath      canonical path to the arend.yaml of the daemon's first library, whose
+ *                    {@code .arend/} holds its socket and log
+ *   libraryHash      digest of that path; the daemon's identity
+ *   library.N        canonical arend.yaml of every library served, N = 1, 2, ... in load order
  *   protocolVersion  wire-protocol version the daemon speaks
  *   startedAt        System.currentTimeMillis() at READY
  *   socketPath       the address clients connect to, as {@code uds:<path>} or {@code tcp:host:port}
@@ -30,19 +33,42 @@ import java.util.Properties;
  * @param pid             see above
  * @param libraryPath     see above
  * @param libraryHash     see above
+ * @param libraries       see {@code library.N} above
  * @param protocolVersion see above
  * @param startedAt       see above
  * @param socketPath      see above
  */
-public record LockFile(long pid, String libraryPath, String libraryHash,
+public record LockFile(long pid, String libraryPath, String libraryHash, List<String> libraries,
                        int protocolVersion, long startedAt, String socketPath) {
+  public LockFile {
+    libraries = List.copyOf(libraries);
+  }
+
+  /** A lock for a daemon that serves the one library {@code libraryPath}. */
+  public LockFile(long pid, String libraryPath, String libraryHash,
+                  int protocolVersion, long startedAt, String socketPath) {
+    this(pid, libraryPath, libraryHash, List.of(libraryPath), protocolVersion, startedAt, socketPath);
+  }
+
+  /** Whether the daemon serves the library whose canonical arend.yaml is {@code libraryConfig}. */
+  public boolean serves(Path libraryConfig) {
+    return libraries.contains(libraryConfig.toString());
+  }
+
+  /** Where each library's copy of this lock lives, in load order. */
+  public List<Path> lockFiles() {
+    return libraries.stream().map(library -> DaemonPaths.lockFileIn(Paths.get(library).getParent())).toList();
+  }
+
   /**
    * Removes every copy of this lock that still names this daemon. A copy naming another one is
    * left alone: the library has moved on to a daemon of its own, and its lock is the only way to
    * reach that one.
    */
   public void deleteAllCopies() {
-    for (Path lockFile : List.of(DaemonPaths.lockFileIn(Paths.get(libraryPath).getParent()), registryFile())) {
+    List<Path> copies = new ArrayList<>(lockFiles());
+    copies.add(registryFile());
+    for (Path lockFile : copies) {
       if (readIfValid(lockFile).filter(other -> other.pid() == pid && other.libraryHash().equals(libraryHash)).isPresent()) {
         deleteQuietly(lockFile);
       }
@@ -80,6 +106,7 @@ public record LockFile(long pid, String libraryPath, String libraryHash,
     props.setProperty("pid", Long.toString(pid));
     props.setProperty("libraryPath", libraryPath);
     props.setProperty("libraryHash", libraryHash);
+    for (int i = 0; i < libraries.size(); i++) props.setProperty("library." + (i + 1), libraries.get(i));
     props.setProperty("protocolVersion", Integer.toString(protocolVersion));
     props.setProperty("startedAt", Long.toString(startedAt));
     props.setProperty("socketPath", socketPath == null ? "" : socketPath);
@@ -121,10 +148,12 @@ public record LockFile(long pid, String libraryPath, String libraryHash,
       int protocolVersion = Integer.parseInt(props.getProperty("protocolVersion", "0").trim());
       long startedAt = Long.parseLong(props.getProperty("startedAt", "0").trim());
       String socketPath = props.getProperty("socketPath", "");
+      List<String> libraries = new ArrayList<>();
+      for (int i = 1; props.getProperty("library." + i) != null; i++) libraries.add(props.getProperty("library." + i));
       if (libraryPath.isEmpty() || libraryHash.isEmpty()) {
         return new Read.Unreadable("lock file is missing libraryPath or libraryHash");
       }
-      return new Read.Found(new LockFile(pid, libraryPath, libraryHash, protocolVersion, startedAt, socketPath));
+      return new Read.Found(new LockFile(pid, libraryPath, libraryHash, libraries, protocolVersion, startedAt, socketPath));
     } catch (NumberFormatException e) {
       return new Read.Unreadable("lock file has a malformed numeric field: " + e.getMessage());
     }
