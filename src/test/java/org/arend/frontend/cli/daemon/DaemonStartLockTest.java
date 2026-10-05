@@ -71,7 +71,7 @@ public class DaemonStartLockTest {
    */
   @Test
   public void theChildJvmInheritsThisOnesJvmOptions() throws IOException {
-    List<String> cmd = DaemonStart.buildChildCommand(DaemonPaths.resolve(library()), List.of(), List.of());
+    List<String> cmd = DaemonStart.buildChildCommand(DaemonPaths.resolve(library()), List.of(), List.of(), "cp");
 
     List<String> forwardable = ManagementFactory.getRuntimeMXBean().getInputArguments().stream()
         .filter(DaemonStart::isForwardableJvmOption)
@@ -97,7 +97,7 @@ public class DaemonStartLockTest {
   public void theChildIsToldTheLibraryByItsConfigPath() throws IOException {
     Path root = library();
     DaemonPaths paths = DaemonPaths.resolve(root);
-    List<String> cmd = DaemonStart.buildChildCommand(paths, List.of(), List.of());
+    List<String> cmd = DaemonStart.buildChildCommand(paths, List.of(), List.of(), "cp");
 
     String config = paths.libraryConfig.toString();
     int main = cmd.indexOf("org.arend.frontend.ConsoleMain");
