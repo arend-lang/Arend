@@ -1,0 +1,31 @@
+\import Equiv
+\import Equiv.Sigma
+\import Function.Meta
+\import InfCat.Basics
+\import InfCat.Fibration.LeftFib
+\import InfCat.Functor.Adjunction
+\import Logic.Unique
+
+\type IsInitial {C : \Cat} (x : C) : \Prop
+  => \Pi (y : C) -> Contr (x ~> y)
+  \where {
+    \func adjunction (xi : IsInitial x) : QAdjunction (\Sigma) C (\lam _ => x) (\lam _ => ()) (\lam _ => idd)
+      => (\new UnivUnit (\lam _ => x) (\lam _ => ()) (\lam _ => idd) \lam q c => contr-equiv (xi c) (Contr.make idd \lam _ => idp)).toAdjunction
+  }
+
+-- | If {d0} is initial and the fibers of {B} are contractible, then any object over {d0} is initial in the total category.
+\lemma sigma-initial {C : \Cat} {B : C ->⁺ \Cat} (Bf : IsLeftFib B) {d0 : C} (init : IsInitial d0)
+                     (Kc : \Pi (d : C) -> Contr (B d)) (b0 : B d0) (q : \Sigma⁺ (d : C) (B d))
+  : Contr ((d0, b0) ~> {\Sigma⁺ (d : C) (B d)} q)
+  => Contr.Contr_QEquiv (symQEquiv (dpath-sigma-equiv (\lam _ d => B d))) $
+       Contr.Contr_QEquiv (symQEquiv (contr-left (init q.1))) $
+         Contr.Contr_QEquiv (symQEquiv (IsEquiv.toQEquiv (leftFib-dpath-equiv Bf (leftFib-lift {_} {B} Bf (_, _, (init q.1).center, b0)))))
+           (isProp=>PathContr _ (isContr=>isProp (Kc q.1)) _ _)
+
+-- | If {d0} is initial and every `b0 ~> F d` is contractible, then any arrow `b0 ~> F d0` is initial in the comma category `b0 ↓ F`.
+\lemma sigma-initial-hom {D B : \Cat} (F : D ->⁺ B) {d0 : D} (init : IsInitial d0) {b0 : B}
+                         (Kc : \Pi (d : D) -> Contr (b0 ~> F d)) (k0 : b0 ~> F d0) (q : \Sigma⁺ (d : D) (b0 ~> F d))
+  : Contr ((d0, k0) ~> {\Sigma⁺ (d : D) (b0 ~> F d)} q)
+  => Contr.Contr_QEquiv (symQEquiv (dpath-sigma-equiv (\lam _ d => b0 ~> F d))) $
+       Contr.Contr_QEquiv (symQEquiv (contr-left (init q.1))) $
+         Contr.Contr_QEquiv (symQEquiv (comp-equiv.flipped {B} {_} {_} {_} {k0} {dmap F (init q.1).center})) (isProp=>PathContr _ (isContr=>isProp (Kc q.1)) _ _)
