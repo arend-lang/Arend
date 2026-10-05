@@ -99,6 +99,7 @@ dependencies {
     // :cli keeps this as `implementation`, so it is not on the test classpath by
     // inheritance; the CLI tests parse argv the way ConsoleMain does, which needs it.
     testImplementation("commons-cli:commons-cli:1.4")
+    testImplementation("com.fasterxml.jackson.core:jackson-databind:2.11.2")
 
     testImplementation(project(":base"))
     testImplementation(project(":parser"))

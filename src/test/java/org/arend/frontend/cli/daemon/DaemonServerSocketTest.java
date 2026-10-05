@@ -144,6 +144,7 @@ public class DaemonServerSocketTest {
     Map<String, Object> status = frames.stream()
         .filter(f -> "status".equals(f.get("kind"))).findFirst().orElseThrow();
     assertEquals(LockFile.PROTOCOL_VERSION, status.get("protocolVersion"));
+    assertEquals(ProcessHandle.current().pid(), ((Number) status.get("pid")).longValue());
     assertTrue(status.get("lockedFlags") instanceof Map);
   }
 

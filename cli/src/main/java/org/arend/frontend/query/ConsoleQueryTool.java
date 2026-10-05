@@ -91,6 +91,9 @@ public abstract class ConsoleQueryTool extends AliasableCommand {
   /** Prints this tool's full grammar (the {@code <flag> --help} text). */
   public abstract void printHelp();
 
+  /** The text {@link #printHelp} prints, unwrapped; the daemon's MCP tool descriptions carry it. */
+  public abstract String cliHelp();
+
   /**
    * Parses the tool's sub-arguments into a runnable {@link ConsoleToolRunner}; returns
    * {@code null} (after a diagnostic) on failure. Each tool narrows the return type

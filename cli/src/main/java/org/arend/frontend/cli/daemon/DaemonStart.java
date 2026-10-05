@@ -145,7 +145,9 @@ public final class DaemonStart {
         () -> System.err.println("[WARN]  -d: PID " + child.pid() + " did not exit within "
             + ProcessKill.GRACEFUL_TIMEOUT_SECONDS + "s; escalating to SIGKILL"));
     if (gone) {
-      LockFile.deleteQuietly(paths.lockFile);
+      // The child writes its registry entry before its library's lock, so a child that left
+      // either is found here.
+      LockFile.registered().stream().filter(lf -> lf.pid() == child.pid()).forEach(LockFile::deleteAllCopies);
     } else {
       // The lock stays: it is the only thing that can find this process again.
       System.err.println("[ERROR] -d: PID " + child.pid() + " is still alive; leaving "

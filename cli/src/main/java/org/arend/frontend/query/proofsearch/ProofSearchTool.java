@@ -41,6 +41,7 @@ public final class ProofSearchTool extends ConsoleQueryTool {
   }
 
   @Override public void printHelp() { ConsoleHelp.printProofSearch(); }
+  @Override public String cliHelp() { return ConsoleHelp.proofSearchHelp(); }
 
   // ---- REPL command (:ps / :proof-search) ---------------------------------
 

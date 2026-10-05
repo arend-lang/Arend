@@ -40,6 +40,7 @@ public final class ScopeInfoTool extends ConsoleQueryTool {
   @Override public String cliDescription() {
     return "dump the ambient scope at a referable's position. Pass `-sc --help` for full grammar.";
   }  @Override public void printHelp() { ConsoleHelp.printScope(); }
+  @Override public String cliHelp() { return ConsoleHelp.scopeHelp(); }
 
   // ---- REPL command (:sc / :scope) ----------------------------------------
 

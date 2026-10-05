@@ -6,13 +6,17 @@ import java.io.OutputStream;
 import java.nio.file.AtomicMoveNotSupportedException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 import java.util.Properties;
 
 /**
  * The record a running daemon leaves on disk so a client can find it: a properties file at
- * {@code <library>/.arend/daemon.lock}.
+ * {@code <library>/.arend/daemon.lock}, and another copy in {@link DaemonPaths#registryDir},
+ * which is how the MCP server finds every running daemon.
  *
  * <pre>
  *   pid              process id of the daemon JVM
@@ -32,6 +36,19 @@ import java.util.Properties;
  */
 public record LockFile(long pid, String libraryPath, String libraryHash,
                        int protocolVersion, long startedAt, String socketPath) {
+  /**
+   * Removes every copy of this lock that still names this daemon. A copy naming another one is
+   * left alone: the library has moved on to a daemon of its own, and its lock is the only way to
+   * reach that one.
+   */
+  public void deleteAllCopies() {
+    for (Path lockFile : List.of(DaemonPaths.lockFileIn(Paths.get(libraryPath).getParent()), registryFile())) {
+      if (readIfValid(lockFile).filter(other -> other.pid() == pid && other.libraryHash().equals(libraryHash)).isPresent()) {
+        deleteQuietly(lockFile);
+      }
+    }
+  }
+
   /**
    * The wire protocol this build speaks. Bump it for every change to the frames that an older
    * peer could not interpret; a client that finds a different value refuses to talk to that
@@ -116,6 +133,23 @@ public record LockFile(long pid, String libraryPath, String libraryHash,
   /** The lock at {@code lockPath} if it is well-formed, else empty. For callers with no use for the reason. */
   public static Optional<LockFile> readIfValid(Path lockPath) {
     return read(lockPath) instanceof Read.Found found ? Optional.of(found.lock()) : Optional.empty();
+  }
+
+  /** This daemon's entry in {@link DaemonPaths#registryDir}. */
+  public Path registryFile() {
+    return DaemonPaths.registryDir().resolve(libraryHash + ".lock");
+  }
+
+  /** Every well-formed entry in {@link DaemonPaths#registryDir}, live or not, oldest daemon first. */
+  public static List<LockFile> registered() {
+    List<LockFile> out = new ArrayList<>();
+    try (var entries = Files.newDirectoryStream(DaemonPaths.registryDir(), "*.lock")) {
+      for (Path entry : entries) readIfValid(entry).ifPresent(out::add);
+    } catch (IOException e) {
+      // No registry yet: no daemon has ever registered.
+    }
+    out.sort(java.util.Comparator.comparingLong(LockFile::startedAt).thenComparingLong(LockFile::pid));
+    return out;
   }
 
   /** Best-effort delete; does not throw if the file is already gone. */

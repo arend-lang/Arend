@@ -101,7 +101,7 @@ public final class DaemonStop {
     LockFile lf = lockOf(existing);
     Optional<ProcessHandle> ph = ProcessHandle.of(lf.pid());
     if (ph.isEmpty()) {
-      LockFile.deleteQuietly(paths.lockFile);
+      lf.deleteAllCopies();
       return 0;
     }
 
@@ -135,7 +135,7 @@ public final class DaemonStop {
       System.err.println("[ERROR] -d stop: PID " + lf.pid() + " still alive after SIGKILL");
       return 1;
     }
-    LockFile.deleteQuietly(paths.lockFile);
+    lf.deleteAllCopies();
     System.out.println("Daemon stopped (PID " + lf.pid() + ")");
     return 0;
   }

@@ -50,10 +50,25 @@ public final class DaemonPaths {
       throw new IllegalArgumentException("library config has no parent directory: " + libraryConfig);
     }
     this.arendDir = libRoot.resolve(".arend");
-    this.lockFile = arendDir.resolve("daemon.lock");
+    this.lockFile = lockFileIn(libRoot);
     this.logFile = arendDir.resolve("daemon.log");
     this.socketFile = arendDir.resolve("daemon.sock");
     this.startingMarker = arendDir.resolve("daemon.starting");
+  }
+
+  public static Path lockFileIn(Path libRoot) {
+    return libRoot.resolve(".arend").resolve("daemon.lock");
+  }
+
+  public static final String CONFIG_DIR_PROPERTY = "arend.daemon.configDir";
+
+  private static Path configDir() {
+    String override = System.getProperty(CONFIG_DIR_PROPERTY);
+    return override != null ? Paths.get(override) : FileUtils.configDir();
+  }
+
+  public static Path registryDir() {
+    return configDir().resolve("daemons");
   }
 
   /**

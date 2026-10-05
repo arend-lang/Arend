@@ -11,6 +11,7 @@ import java.nio.file.Path;
 import java.util.List;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
@@ -42,6 +43,29 @@ public class LockFileTest {
       return;
     }
     assertEquals(written, found.lock());
+  }
+
+  /** A daemon is in the registry until it goes away, and going away removes its library's lock too. */
+  @Test
+  public void aDaemonIsRegisteredUntilItGoesAway() throws IOException {
+    Path config = tempFolder.newFolder("config").toPath();
+    System.setProperty(DaemonPaths.CONFIG_DIR_PROPERTY, config.toString());
+    try {
+      Path library = tempFolder.newFolder("lib").toPath();
+      Files.createDirectories(library.resolve(".arend"));
+      LockFile lock = new LockFile(4242, library.resolve("arend.yaml").toString(), "0123456789abcdef",
+          LockFile.PROTOCOL_VERSION, 1L, "uds:/s");
+      Files.createDirectories(DaemonPaths.registryDir());
+      lock.writeAtomic(lock.registryFile());
+      lock.writeAtomic(DaemonPaths.lockFileIn(library));
+      assertEquals(List.of(lock), LockFile.registered());
+
+      lock.deleteAllCopies();
+      assertEquals(List.of(), LockFile.registered());
+      assertFalse(Files.exists(DaemonPaths.lockFileIn(library)));
+    } finally {
+      System.clearProperty(DaemonPaths.CONFIG_DIR_PROPERTY);
+    }
   }
 
   @Test

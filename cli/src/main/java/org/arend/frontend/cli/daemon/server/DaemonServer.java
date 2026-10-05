@@ -177,6 +177,7 @@ public final class DaemonServer {
         Map<String, Object> body = new HashMap<>();
         body.put("id", id);
         body.put("kind", "status");
+        body.put("pid", ProcessHandle.current().pid());
         body.put("state", workerState.get());
         body.put("queueDepth", workQueue.size());
         body.put("uptimeMs", System.currentTimeMillis() - startedAt);

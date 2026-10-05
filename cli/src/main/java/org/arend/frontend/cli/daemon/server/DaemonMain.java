@@ -7,9 +7,11 @@ import org.arend.frontend.cli.daemon.DaemonStart;
 import org.arend.frontend.cli.daemon.LockFile;
 
 import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Arrays;
+import java.util.List;
 
 /**
  * Child-side daemon entry point, reached through the internal {@code --daemon-bootstrap} flag
@@ -73,17 +75,6 @@ public final class DaemonMain {
     DaemonServer server = new DaemonServer(bound, warmCtx, paths.libraryConfig.toString());
     server.start();
 
-    // Registered before the lock is written, not after: a SIGTERM in between would otherwise
-    // leave the lock behind, pointing every later client at a daemon that no longer exists.
-    // Deleting a file that was never created is a no-op, so the early window costs nothing.
-    Path lockPath = paths.lockFile;
-    Path socketPath = paths.socketFile;
-    Runtime.getRuntime().addShutdownHook(new Thread(() -> {
-      server.close();
-      LockFile.deleteQuietly(lockPath);
-      LockFile.deleteQuietly(socketPath);
-    }, "arend-daemon-shutdown"));
-
     LockFile lock = new LockFile(
         ProcessHandle.current().pid(),
         paths.libraryConfig.toString(),
@@ -92,13 +83,27 @@ public final class DaemonMain {
         System.currentTimeMillis(),
         bound.address()
     );
-    try {
-      lock.writeAtomic(paths.lockFile);
-    } catch (IOException e) {
-      System.err.println("[DAEMON] could not write lock file " + paths.lockFile + ": " + e.getMessage());
+
+    // Registered before the lock is written, not after: a SIGTERM in between would otherwise
+    // leave the lock behind, pointing every later client at a daemon that no longer exists.
+    // Deleting a file that was never created is a no-op, so the early window costs nothing.
+    Path socketPath = paths.socketFile;
+    Runtime.getRuntime().addShutdownHook(new Thread(() -> {
       server.close();
-      System.exit(1);
-      return;
+      lock.deleteAllCopies();
+      LockFile.deleteQuietly(socketPath);
+    }, "arend-daemon-shutdown"));
+
+    // The library's own lock last: a client that finds it can count on the registry entry too.
+    for (Path copy : List.of(lock.registryFile(), paths.lockFile)) {
+      try {
+        Files.createDirectories(copy.getParent());
+        lock.writeAtomic(copy);
+      } catch (IOException e) {
+        System.err.println("[DAEMON] could not write lock file " + copy + ": " + e.getMessage());
+        System.exit(1);
+        return;
+      }
     }
 
     System.out.println("[DAEMON] READY (PID " + ProcessHandle.current().pid() + ")");

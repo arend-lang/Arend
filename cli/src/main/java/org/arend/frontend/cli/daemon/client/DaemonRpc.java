@@ -233,6 +233,24 @@ public final class DaemonRpc {
     }
   }
 
+  /** The daemon serving {@code library}, or null. */
+  public static LockFile daemonFor(DaemonPaths library) {
+    return reachableDaemon(library, false);
+  }
+
+  /** Every live daemon in {@link DaemonPaths#registryDir}, oldest first; a dead one's entry is removed. */
+  public static List<LockFile> liveDaemons() {
+    List<LockFile> live = new ArrayList<>();
+    for (LockFile lf : LockFile.registered()) {
+      if (ProcessHandle.of(lf.pid()).isPresent()) {
+        live.add(lf);
+      } else {
+        LockFile.deleteQuietly(lf.registryFile());
+      }
+    }
+    return live;
+  }
+
   /**
    * The daemon a routed command should be sent to, or null to run it locally: the one for the
    * first positional that names a library, or, with no such positional, the daemon for the
@@ -304,6 +322,7 @@ public final class DaemonRpc {
     } else if ("state".equals(kind)) {
       System.out.println("state: " + frame.get("state"));
     } else if ("status".equals(kind)) {
+      System.out.println("pid:             " + frame.get("pid"));
       System.out.println("state:           " + frame.get("state"));
       System.out.println("queueDepth:      " + frame.get("queueDepth"));
       System.out.println("uptimeMs:        " + frame.get("uptimeMs"));
