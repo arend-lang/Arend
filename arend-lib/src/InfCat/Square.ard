@@ -4,11 +4,8 @@
 \import InfCat.Basics
 \import InfCat.Functor.Equiv
 \import InfCat.Paths
-\import Logic
-\import Logic.Unique
 \import Meta
 \import Paths
-\import Paths.Meta
 
 \sfunc cube2-equals
   {C :⁺ \Cat} {a b d a' b' c' d' :⁺ C} (_ : \Sigma)
@@ -168,16 +165,18 @@
     \sfunc forward_backward {C :⁺ \Cat} {a b c d :⁺ C} {ab :⁺ a ~> b} {bd :⁺ b ~> d} {ac :⁺ a ~> c} {cd :⁺ c ~> d}
                             (p :⁺ DPath (\lam i => a ~> bd i) ab (comp ac cd)) : forward (backward p) = p
       => forward_backward-gen (conn-right ab) (conn-right ac) (dpath \lam i => dpath \lam j => fill2 ac cd i j) p
+
+    \protected \func equiv {C : \Cat} {a b c d : C} (ab : a ~> b) (cd : c ~> d) {bd : b ~> d} {ac : a ~> c}
+      : QEquiv {DPath (\lam i => ab i ~> cd i) ac bd} {DPath (\lam i => a ~> bd i) ab (comp ac cd)} \cowith
+      | f => square-char.forward
+      | ret => square-char.backward
+      | ret_f => square-char.backward_forward
+      | f_sec => square-char.forward_backward
   }
 
 \sfunc square-equiv {C : \Cat} {a b c d : C} (ab : a ~> b) (cd : c ~> d) {bd : b ~> d} {ac : a ~> c}
   : QEquiv {DPath (\lam i => ab i ~> cd i) ac bd} {comp ab bd = comp ac cd}
-  => \new QEquiv {
-    | f => square-char.forward
-    | ret => square-char.backward
-    | ret_f => square-char.backward_forward
-    | f_sec => square-char.forward_backward
-  } `transQEquiv` comp-equiv.flipped {C}
+  => square-char.equiv ab cd `transQEquiv` comp-equiv.flipped {C}
 
 \sfunc ~>-natural {C D :⁺ \Cat} {f g :⁺ C ->⁺ D} (h :⁺ \Pi (a :⁺ C) -> f a ~> g a) {a a' :⁺ C} {p :⁺ a ~> a'}
   : comp (dmap f p) (h a') = comp (h a) (dmap g p)

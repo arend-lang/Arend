@@ -1,0 +1,86 @@
+{- | A criterion for cocartesian arrows via slices.
+ -
+ -   For `p : L ->⁺ S` and `u : e ~> e'` in `L`, the functor {slicePB} sends `y` to the arrows out of `e` over `dmap p u ; g`
+ -   for some `g : p e' ~> p y`; it is the pullback of `Hom(e, -)` and `Hom(p e', p -)` over `Hom(p e, p -)`,
+ -   written as a corepresentable functor on the slice {SliceL} `p (p e)`.
+ -   Precomposition with {u} gives a natural map {slicePB-map} `: Hom(e', -) ⇒ slicePB`, and {u} is {p}-cocartesian as soon as
+ -   it is an equivalence ({slicePB-cocartesian}): its composite with the Segal filler is {triangle-map} up to the equivalence
+ -   {tri-repr} between triangles in {S} and paths in the slice.
+ -}
+
+\import Equiv
+\import Equiv.Sigma
+\import Function.Meta
+\import InfCat.Basics
+\import InfCat.Fibration.CocartesianMap
+\import InfCat.Fibration.Straightening
+\import InfCat.Square
+\import Logic
+\import Meta
+
+-- | The slice of {L} under {s} along {p}.
+\func SliceL.{u} {L S : \Cat u} (p : L ->⁺ S) (s : S) : \Cat u
+  => \Sigma⁺ (e : L) (s ~> p e)
+
+-- | Arrows out of {e} over `dmap p u ; g` for some `g : p e' ~> p y`: the pullback of `Hom(e, -)` and `Hom(p e', p -)` over `Hom(p e, p -)`.
+\func slicePB.{u} {L S : \Cat u} (p : L ->⁺ S) {e e' : L} (u : e ~> e') (y :⁺ L) : \Type u
+  => \Sigma⁺ (g : ReprFunctor (p e') (p y))
+             (ReprFunctor {SliceL p (p e)} (e, idd) (y, comp (dmap p u) (Straight.fromStraight g)))
+
+-- | Precomposition with {u} as a natural map into {slicePB}: an arrow `v` goes to `p v` and `u ; v` with the image of the canonical filler.
+\func slicePB-map.{u} {L S : \Cat u} (p : L ->⁺ S) {e e' : L} (u : e ~> e') (sg :⁺ \Sigma⁺ (y : L) (ReprFunctor e' y)) : slicePB p u sg.1
+  => (Straight.toStraight (dmap p (Straight.fromStraight sg.2)),
+      Straight.toStraight $ dpath \lam i =>
+        (comp u (Straight.fromStraight sg.2) i,
+         tri-repr (dmap p u) (dmap p (comp u (Straight.fromStraight sg.2)))
+                  (dpath \lam i' => dmap p (dpath (fill2 u (Straight.fromStraight sg.2) i'))) i))
+  \where
+    -- | A triangle `g0 ; g = h` in {S} as a path over {h} from the identity to `g0 ; g`.
+    \func tri-repr {S : \Cat} {s s' : S} (g0 : s ~> s') {t :⁺ S} {g :⁺ s' ~> t} (h :⁺ s ~> t) (tr :⁺ DPath (\lam i => g0 i ~> h i) idd g)
+      : DPath (\lam i => s ~> h i) idd (comp g0 g)
+      => square-char.forward {_} {_} {_} {_} {_} {idd} (dpath \lam i => dpath \lam j => tr j i)
+
+-- | If precomposition with {u} into {slicePB} is an equivalence, then {u} is {p}-cocartesian.
+\lemma slicePB-cocartesian.{u} {L S : \Cat u} (p : L ->⁺ S) {e e' : L} (u : e ~> e')
+                               (eq : \Pi (y : L) -> IsEquiv (\lam r => slicePB-map p u (y, r)))
+  : IsCocartesianArrow p u
+  => \lam {e''} => propExt.conv (totalEquiv (triangle-map p u)) $
+       IsEquiv.rightFactor (seg-equiv e'') $ IsEquiv.leftFactor (kk-equiv e'') $
+         IsEquiv.trans (inP (symQEquiv ReprFunctor.equiv)) (eq e'')
+  \where \private {
+    -- | Arrows out of `e'` are triangles with the side {u}.
+    \func seg (e'' : L) (v : e' ~> e'')
+      : \Sigma (w : e ~> e'') (\Sigma (v' : e' ~> e'') (DPath (\lam i => u i ~> w i) idd v'))
+      => (comp u v, (v, dpath \lam i => dpath (fill2 u v i)))
+
+    \lemma seg-equiv (e'' : L) : IsEquiv (seg e'')
+      => IsEquiv.leftFactor
+           (inP $ later \new QEquiv {
+              | f t => (t.2.1, (t.1, t.2.2))
+              | ret t => (t.2.1, (t.1, t.2.2))
+              | ret_f t => idp
+              | f_sec t => idp
+            } `transQEquiv` contr-right (\lam v' => segal-contr u v'))
+           (inP idEquiv)
+
+    -- | The total map of {triangle-map} followed by {slicePB-map.tri-repr}, landing in {slicePB}.
+    \func kk (e'' : L) (t : \Sigma (w : e ~> e'') (\Sigma (g : p e' ~> p e'') (DPath (\lam i => p (u i) ~> p (w i)) idd g)))
+      : slicePB p u e''
+      => (Straight.toStraight t.2.1,
+          Straight.toStraight (dpath \lam i => ((t.1 i, slicePB-map.tri-repr (dmap p u) (dmap p t.1) t.2.2 i) : SliceL p (p e))))
+
+    \lemma kk-equiv (e'' : L) : IsEquiv (kk e'')
+      => inP $ later \new QEquiv {_} {\Sigma (g : p e' ~> p e'') (\Sigma (w : e ~> e'') (DPath (\lam i => p (u i) ~> p (w i)) idd g))} {
+           | f t => (t.2.1, (t.1, t.2.2))
+           | ret t => (t.2.1, (t.1, t.2.2))
+           | ret_f t => idp
+           | f_sec t => idp
+         } `transQEquiv` sigma-right (\lam g => sigma-right \lam w => flipQEquiv `transQEquiv` square-char.equiv idd g {dmap p w})
+           `transQEquiv` sigma-right (\lam g => symQEquiv (dpath-sigma-equiv (\lam _ y => p e ~> p y) {e, idd} {e'', comp (dmap p u) g}))
+           `transQEquiv` later \new QEquiv {
+             | f t => (Straight.toStraight t.1, Straight.toStraight t.2)
+             | ret t => (Straight.fromStraight t.1, Straight.fromStraight t.2)
+             | ret_f t => idp
+             | f_sec (resize+ (groupoidType a1), resize+ (groupoidType a2)) => idp
+           }
+  }
