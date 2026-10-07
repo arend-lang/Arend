@@ -71,6 +71,21 @@ class ArcTest : ArendTestBase() {
     }
 
     /**
+     * Whatever was computed for the placeholder in the meantime (the folding of an editor being opened) checks
+     * the modification stamp before it is applied, so the decompiled text must come with a new one. The document
+     * must not become unsaved either, or saving it would write the decompiled text into the .arc.
+     */
+    fun `test decompiled text comes with a new modification stamp`() = withArcCopy("Test.arc") { file ->
+        val document = FileDocumentManager.getInstance().getDocument(file)!!
+        val placeholderStamp = document.modificationStamp
+
+        waitForDecompilation()
+        assertEquals("\\func f : Prelude.Nat => 0", document.text)
+        assertFalse(document.modificationStamp == placeholderStamp)
+        assertFalse(FileDocumentManager.getInstance().isDocumentUnsaved(document))
+    }
+
+    /**
      * Typechecking the module from the notification panel calls `reloadBinaryFiles`, which re-decompiles
      * the .arc into its existing document. A binary document is never committed into PSI, so an
      * [ArcFile] that was already parsed keeps its old tree; its text must follow the document instead of

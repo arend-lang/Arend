@@ -1,13 +1,16 @@
 package org.arend.arc
 
 import com.intellij.openapi.application.EDT
+import com.intellij.openapi.application.runWriteAction
 import com.intellij.openapi.components.Service
+import com.intellij.openapi.editor.ex.DocumentEx
 import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.platform.ide.progress.withBackgroundProgress
 import com.intellij.ui.EditorNotifications
 import com.intellij.util.FileContentUtilCore
+import com.intellij.util.LocalTimeCounter
 import kotlinx.coroutines.*
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -71,6 +74,7 @@ class ArcDecompilationService(private val project: Project, private val coroutin
                         results[file] = text
                         withContext(Dispatchers.EDT) {
                             FileContentUtilCore.reparseFiles(listOf(file))
+                            renewModificationStamp(file)
                         }
                     }
                 } while (outdated || continueOrFinish(file))
@@ -85,6 +89,18 @@ class ArcDecompilationService(private val project: Project, private val coroutin
                 }
             }
         }
+    }
+
+    /**
+     * The platform reloads a decompiled document with the modification stamp of the file, and the .arc has not
+     * changed, so whatever was computed for the previous text would pass a check of the stamp and be applied to
+     * the new one: the folding of the placeholder, in an editor that is being opened, fails with "Document has
+     * changed since fold regions were calculated". The document is not unsaved, so the stamp it gets here does
+     * not make the platform try to save it into the .arc.
+     */
+    private fun renewModificationStamp(file: VirtualFile) {
+        val document = FileDocumentManager.getInstance().getCachedDocument(file) as? DocumentEx ?: return
+        runWriteAction { document.modificationStamp = LocalTimeCounter.currentTime() }
     }
 
     // Takes a request that came during the reparse, or else unregisters the decompilation of the file
