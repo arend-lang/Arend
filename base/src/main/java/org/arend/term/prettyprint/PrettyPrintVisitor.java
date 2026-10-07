@@ -1561,8 +1561,35 @@ public class PrettyPrintVisitor implements ConcreteExpressionVisitor<Precedence,
     }
   }
 
-  private void prettyPrintClassDefinitionHeader(Concrete.ClassDefinition def, List<Concrete.ReferenceExpression> superClasses) {
+  // The order follows the grammar: name, level parameters, \noclassifying, parameter fields, \extends
+  private void prettyPrintClassDefinitionHeader(Concrete.ClassDefinition def) {
     myBuilder.append(def.isRecord() ? "\\record " : "\\class ").append(def.getData().textRepresentation());
+
+    if (def.getLevelParameters() != null) {
+      myBuilder.append(" ");
+      prettyPrintLevelParameters(def.getLevelParameters(), true);
+    }
+
+    if (def.withoutClassifying()) {
+      myBuilder.append(" \\noclassifying");
+    }
+
+    for (Concrete.ClassElement element : def.getElements()) {
+      if (element instanceof Concrete.ClassField classField && classField.getData().isParameterField()) {
+        myBuilder.append(' ');
+        boolean explicit = classField.getData().isExplicitField();
+        myBuilder.append(explicit ? '(' : '{');
+        if (classField.isCoerce()) {
+          myBuilder.append("\\coerce ");
+        }
+        myBuilder.append(classField.getData().textRepresentation());
+        myBuilder.append(" : ");
+        printExpr(classField.getResultType(), new Precedence(Concrete.Expression.PREC));
+        myBuilder.append(explicit ? ')' : '}');
+      }
+    }
+
+    List<Concrete.ReferenceExpression> superClasses = def.getSuperClasses();
     if (!superClasses.isEmpty()) {
       myBuilder.append(" \\extends ");
       boolean first = true;
@@ -1611,28 +1638,7 @@ public class PrettyPrintVisitor implements ConcreteExpressionVisitor<Precedence,
   }
 
   public Void visitClass(Concrete.ClassDefinition def, List<? extends ConcreteGroup> dynamicGroups, Void ignored) {
-    prettyPrintClassDefinitionHeader(def, def.getSuperClasses());
-
-    // Print parameter fields as inline parameters in the header
-    for (Concrete.ClassElement element : def.getElements()) {
-      if (element instanceof Concrete.ClassField classField && classField.getData().isParameterField()) {
-        myBuilder.append(' ');
-        boolean explicit = classField.getData().isExplicitField();
-        myBuilder.append(explicit ? '(' : '{');
-        if (classField.isCoerce()) {
-          myBuilder.append("\\coerce ");
-        }
-        myBuilder.append(classField.getData().textRepresentation());
-        myBuilder.append(" : ");
-        printExpr(classField.getResultType(), new Precedence(Concrete.Expression.PREC));
-        myBuilder.append(explicit ? ')' : '}');
-      }
-    }
-
-    if (def.getLevelParameters() != null) {
-      myBuilder.append(" ");
-      prettyPrintLevelParameters(def.getLevelParameters(), true);
-    }
+    prettyPrintClassDefinitionHeader(def);
 
     // Collect non-parameter elements for the body
     List<Concrete.ClassElement> bodyElements = new ArrayList<>();

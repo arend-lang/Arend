@@ -124,7 +124,7 @@ public class PrettyPrintingTest extends TypeCheckingTestCase {
     def.accept(new PrettyPrintVisitor(new StringBuilder(), Concrete.Expression.PREC), null);
   }
 
-  private void testDefinition(String s) {
+  private String testDefinition(String s) {
     Concrete.Definition def = (Concrete.Definition) resolveNamesDef(s);
     assertNotNull(def);
     StringBuilder sb = new StringBuilder();
@@ -134,6 +134,7 @@ public class PrettyPrintingTest extends TypeCheckingTestCase {
     Concrete.Definition def2 = (Concrete.Definition) resolveNamesDef(s2);
     assertNotNull(def2);
     assertTrue(ConcreteCompareVisitor.compare(def, def2));
+    return s2;
   }
 
   @Test
@@ -158,6 +159,43 @@ public class PrettyPrintingTest extends TypeCheckingTestCase {
           | f1 : \\Pi {X Y : \\Type0} (x : X) (y : Y) -> x = y
         }
       """);
+  }
+
+  @Test
+  public void prettyPrintClassLevelParameters() {
+    String printed = testDefinition(
+      """
+        \\class EncodeDecode.{u} \\noclassifying
+          {C : \\Type} (e : C) (code : C -> \\Type u) (ce : code e)
+          (decode : \\Pi (s : \\Sigma (c : C) (code c)) -> e = s.1)
+          (decode_base : decode (e,ce) = idp)
+        """);
+    assertTrue(printed, printed.startsWith("\\class EncodeDecode .{u} \\noclassifying {C : \\Type} (e : C) (code : C -> \\Type u)"));
+  }
+
+  @Test
+  public void prettyPrintRecordLevelParameters() {
+    String printed = testDefinition(
+      """
+        \\record Pair.{u, v} (A : \\Type u) (B : \\Type v) {
+          | fst : A
+          | snd : B
+        }
+        """);
+    assertTrue(printed, printed.startsWith("\\record Pair .{u, v} (A : \\Type u) (B : \\Type v) {"));
+  }
+
+  @Test
+  public void prettyPrintClassExtendsWithParameters() {
+    String base = "\\class Base (A : \\Type)\n";
+    resolveNamesModule(base + "\\class Derived (B : \\Type) \\extends Base");
+    Concrete.Definition def = (Concrete.Definition) getConcrete("Derived");
+    StringBuilder sb = new StringBuilder();
+    def.accept(new PrettyPrintVisitor(sb, 0), null);
+    String printed = sb.toString();
+    assertTrue(printed, printed.startsWith("\\class Derived (B : \\Type) \\extends Base"));
+    resolveNamesModule(base + printed);
+    assertTrue(ConcreteCompareVisitor.compare(def, (Concrete.Definition) getConcrete("Derived")));
   }
 
   @Test
