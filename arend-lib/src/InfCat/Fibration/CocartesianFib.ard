@@ -4,6 +4,7 @@
 \import Function.Meta
 \import InfCat.Basics
 \import InfCat.Fibration.CovariantLift
+\import InfCat.Fibration.LeftFib
 \import InfCat.Functor.Equiv
 \import InfCat.Functor.FullyFaithful
 \import InfCat.Paths
@@ -118,3 +119,6 @@
       | ret_f t => idp
       | f_sec v => idp
   }
+
+\lemma leftFib=>cocartesian {C : \Cat} {F : C ->⁺ \Cat} (Ff : IsLeftFib F) : IsCocartesianFib F
+  => \lam d => inP (leftFib-lift Ff d, leftFib-lift-cocartesian Ff _)

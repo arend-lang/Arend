@@ -71,19 +71,18 @@
           })
           (horn-Contr B (dpath \lam i => idd {_} {d.3 i}) c.2 k))
 
+-- | A path in the family of categories of lifts over a morphism {r} of the base is a lift of {r} together with a square over it.
+\func covLift-dpath-equiv {A : \Cat} {B : A ->⁺ \Cat} {d e : CovLiftData B} (r : d ~> e) {c : CovLift B d} {l : CovLift B e}
+  : QEquiv {DPath (\lam i => CovLift B (r i)) c l}
+           {\Sigma (k : DPath (\lam i => B (r i).2) c.1 l.1) (DPath (\lam i => DPath (\lam j => B ((r i).3 j)) (r i).4 (k i)) c.2 l.2)}
+  \cowith
+  | f u => (dpath \lam i => (u i).1, dpath \lam i => (u i).2)
+  | ret v => dpath \lam i => (v.1 i, v.2 i)
+  | ret_f u => idp
+  | f_sec v => idp
+
 -- | The projection from the category of lifts to the base data is fully faithful at cocartesian lifts.
 \lemma cocartesian-ff {A : \Cat} (B : A ->⁺ \Cat) {x y : \Sigma⁺ (d : CovLiftData B) (CovLift B d)} (xc : IsCocartesianLift x.2)
   : IsEquiv {x ~> y} (dmap __.1)
   => inP $ transQEquiv (dpath-sigma-equiv \lam _ => CovLift B) $ contr-right \lam r => Contr.Contr_QEquiv (symQEquiv (covLift-dpath-equiv r)) $
       cocartesian-square B (dpath \lam i => (r i).1) (dpath \lam i => (r i).2) (dpath \lam i => (r i).3) (dpath \lam i => (r i).4) x.2 xc y.2
-  \where {
-    -- | A path in the family of categories of lifts over a morphism {r} of the base is a lift of {r} together with a square over it.
-    \func covLift-dpath-equiv {A : \Cat} {B : A ->⁺ \Cat} {d e : CovLiftData B} (r : d ~> e) {c : CovLift B d} {l : CovLift B e}
-      : QEquiv {DPath (\lam i => CovLift B (r i)) c l}
-               {\Sigma (k : DPath (\lam i => B (r i).2) c.1 l.1) (DPath (\lam i => DPath (\lam j => B ((r i).3 j)) (r i).4 (k i)) c.2 l.2)}
-      \cowith
-      | f u => (dpath \lam i => (u i).1, dpath \lam i => (u i).2)
-      | ret v => dpath \lam i => (v.1 i, v.2 i)
-      | ret_f u => idp
-      | f_sec v => idp
-  }

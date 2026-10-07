@@ -195,3 +195,11 @@
 -- | The coslice under {x} is a left fibration.
 \lemma hom-leftFib {C : \Cat} (x : C) : IsLeftFib (\lam y => x ~> y)
   => lift_type-IsLeftFib \lam d => (comp d.4 d.3, dpath \lam j => dpath \lam i => fill2 d.4 d.3 i j)
+
+-- | Paths over a fixed arrow {f} starting at {b} form a left fibration over the fiber of the target.
+\lemma dpath-leftFib {A : \Cat} (B : A ->⁺ \Cat) {a a' : A} (f : a ~> a') (b : B a)
+  : IsLeftFib (DPath (\lam i => B (f i)) b)
+  => \lam e => \let c => horn-Contr B (dpath \lam i => idd) e.4 e.3
+               \in Contr.make {CovLift _ e} (c.center.1, dpath \lam j => dpath \lam i => c.center.2 i j)
+                    \lam u => path \lam k => \let v => c.contraction (u.1, dpath \lam i => dpath \lam j => u.2 j i) k
+                                             \in (v.1, dpath \lam j => dpath \lam i => v.2 i j)
