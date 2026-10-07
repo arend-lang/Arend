@@ -11,6 +11,11 @@ import com.intellij.testFramework.PlatformTestUtil
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
 import org.arend.ArendTestBase
+import org.arend.core.definition.FunctionDefinition
+import org.arend.ext.module.ModuleLocation
+import org.arend.ext.module.ModulePath
+import org.arend.naming.reference.TCDefReferable
+import org.arend.server.ArendServerService
 import org.arend.util.ArendBundle
 import java.io.File
 import java.nio.file.Files
@@ -40,6 +45,38 @@ class ArcTest : ArendTestBase() {
     fun `test decompile arc file`() {
         val file = LocalFileSystem.getInstance().findFileByIoFile(File("$testDataPath/Test.arc"))!!
         // decompile takes read actions, so it runs off the EDT
+        assertEquals("\\func f : Prelude.Nat => 0", runBlocking(Dispatchers.Default) { ArcFileDecompiler.decompile(project, file) })
+    }
+
+    /**
+     * A module with a source is shown as it is in the server, even with nothing typechecked in it. Loading its .arc
+     * instead would put the group of the .arc in the place of the module, with a timestamp that outranks every
+     * later update from the source.
+     */
+    fun `test arc file of a module with a source does not replace the module`() {
+        InlineFile("-- nothing to typecheck")
+        typecheck()
+        val server = project.service<ArendServerService>().server
+        val location = ModuleLocation(module.name, ModuleLocation.LocationKind.SOURCE, ModulePath("Main"))
+        val group = server.getRawGroup(location)!!
+
+        withArcCopy("Main.arc") { file ->
+            assertEquals("", runBlocking(Dispatchers.Default) { ArcFileDecompiler.decompile(project, file) })
+            assertSame(group, server.getRawGroup(location))
+        }
+    }
+
+    /**
+     * A definition without a header (a shell left by a cache that failed to load, or one being typechecked) is not
+     * printed, and does not make the module count as loaded.
+     */
+    fun `test arc file whose module holds a definition shell is loaded again`() = withArcCopy("Shell.arc") { file ->
+        assertEquals("\\func f : Prelude.Nat => 0", runBlocking(Dispatchers.Default) { ArcFileDecompiler.decompile(project, file) })
+        val group = project.service<ArendServerService>().server
+            .getRawGroup(ModuleLocation(module.name, ModuleLocation.LocationKind.SOURCE, ModulePath("Shell")))!!
+        val f = group.statements.firstNotNullOf { it.group?.referable as? TCDefReferable }
+        f.typechecked = FunctionDefinition(f)
+
         assertEquals("\\func f : Prelude.Nat => 0", runBlocking(Dispatchers.Default) { ArcFileDecompiler.decompile(project, file) })
     }
 

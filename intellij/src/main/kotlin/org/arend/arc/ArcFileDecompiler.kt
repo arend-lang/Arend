@@ -234,17 +234,26 @@ class ArcFileDecompiler : BinaryFileDecompiler {
                 }
                 // Interrupted typechecking returns normally
                 currentCoroutineContext().ensureActive()
+
+                // A module with a source is shown as it is in the server, never from its .arc: loading the .arc would
+                // put its group in the place of the module, with the timestamp of the .arc, which outranks every later
+                // update from the source. The server does not have the module before its library is registered, and
+                // the registration decompiles open .arc files again.
+                val liveGroup = server.getRawGroup(source.module)
+                val unloadedModules = project.service<ArcUnloadedModuleService>()
+                if (liveGroup == null) unloadedModules.addUnloadedModule(virtualFile) else unloadedModules.removeLoadedModule(virtualFile)
+                EditorNotifications.getInstance(project).updateNotifications(virtualFile)
+                return liveGroup?.let { LoadedModule(it, source.arendFile, emptyList()) }
             }
 
             val config = source.config
-            val moduleLocation = source.module
-                ?: ModuleLocation(config.name, ModuleLocation.LocationKind.SOURCE, ModulePath(source.path))
+            val moduleLocation = ModuleLocation(config.name, ModuleLocation.LocationKind.SOURCE, ModulePath(source.path))
 
-            server.getRawGroup(moduleLocation)?.let { liveGroup ->
-                if (BinaryCacheLoader.hasTypechecked(liveGroup)) {
+            server.getRawGroup(moduleLocation)?.let { loadedGroup ->
+                if (BinaryCacheLoader.hasTypechecked(loadedGroup) && !BinaryCacheLoader.hasIncompleteDefinition(loadedGroup)) {
                     project.service<ArcUnloadedModuleService>().removeLoadedModule(virtualFile)
                     EditorNotifications.getInstance(project).updateNotifications(virtualFile)
-                    return LoadedModule(liveGroup, source.arendFile, emptyList())
+                    return LoadedModule(loadedGroup, source.arendFile, emptyList())
                 }
             }
 
@@ -260,6 +269,9 @@ class ArcFileDecompiler : BinaryFileDecompiler {
                 try {
                     GZIPStreamBinarySource(FileBinarySource(binaryBasePath, moduleLocation)).loadWithImports(server, DummyErrorReporter.INSTANCE)
                 } catch (_: MissingDependencyException) {
+                    // The group was registered before its definitions were read; drop the shells, so that they are
+                    // not taken for a loaded module later
+                    server.getRawGroup(moduleLocation)?.let { BinaryCacheLoader.clearTypechecked(it) }
                     project.service<ArcUnloadedModuleService>().addUnloadedModule(virtualFile)
                     EditorNotifications.getInstance(project).updateNotifications(virtualFile)
                     null
@@ -282,14 +294,16 @@ class ArcFileDecompiler : BinaryFileDecompiler {
             return LoadedModule(group, source.arendFile, modules)
         }
 
+        // Skips definitions without a header yet: being typechecked, or shells of a cache that failed to load
+        private fun getTypechecked(group: ConcreteGroup?): Definition? =
+            (group?.referable as? TCDefReferable?)?.typechecked?.takeIf { !it.status().needsTypeChecking() }
+
         private fun getDefinitions(group: ConcreteGroup): List<Definition> {
-            return group.statements.mapNotNull {
-                (it.group?.referable as? TCDefReferable?)?.typechecked
-            }
+            return group.statements.mapNotNull { getTypechecked(it.group) }
         }
 
         private fun addStatement(group: ConcreteGroup?, builder: StringBuilder, config: PrettyPrinterConfig): Boolean {
-            (group?.referable as? TCDefReferable?)?.typechecked?.let {
+            getTypechecked(group)?.let {
                 ToAbstractVisitor.convert(it, config)
                     .prettyPrint(builder, config)
             } ?: return false
