@@ -177,3 +177,15 @@
 \lemma id-isLocalizationFor-iso {C D : \Cat} : IsLocalizationFor (IsIso {C} __) (\lam x => x) D
   => \have lw => isos-inverted (\lam x => x)
      \in (lw, IsHEquiv.leftFactor FunW-iso $ transportInv IsHEquiv (funExt+ \lam G => funExt+ \lam x => loc-precomp.inc_precomp lw) idHEquiv)
+
+-- | Restriction along a localization is fully faithful.
+\lemma localization-ff {C L D : \Cat} {W : (DI ->⁺ C) -> \Prop} {l : C ->⁺ L} (loc : IsLocalizationFor W l D)
+  : IsFFMap {L ->⁺ D} {C ->⁺ D} (\lam G x => G (l x))
+  => transport IsFFMap (funExt+ \lam G => funExt+ \lam x => loc-precomp.inc_precomp loc.1)
+       \lam G G' => IsEquiv.trans ((ff-surj-equiv.2 loc.2).1 G G') (FullSubCat.inc-ff _ _)
+
+-- | For a localization, restriction is an equivalence on objects.
+\lemma restrictW-equiv {C L D : \Cat} {W : (DI ->⁺ C) -> \Prop} {l : C ->⁺ L} (loc : IsLocalizationFor W l D)
+  : IsEquiv (restrictW loc.1)
+  => transport IsEquiv (ext \lam G => ext (ext \lam x => loc-precomp.inc_precomp loc.1))
+                       (IsEquiv.trans (IsHEquiv.toIsEquiv loc.2) fullSub-ob-equiv)

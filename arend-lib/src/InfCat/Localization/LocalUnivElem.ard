@@ -1,0 +1,84 @@
+{- | Universal elements relative to a class of morphisms.
+ -
+ -   An element `p : F x` is a {W}-local universal element of `F : C ->⁺ \Type u` ({IsUnivElemW}) if natural transformations
+ -   out of {F} into functors inverting {W} are determined by their value at {p}. This is {IsUnivElem} with the test
+ -   functors restricted to those inverting {W}.
+ -
+ -   For a localization `l : C ->⁺ L` at {W}, restriction along `l` identifies functors on `L` with functors on `C` inverting {W},
+ -   so `p` is a universal element of `G : L ->⁺ \Type u` at `l x` if and only if it is a {W}-local universal element of
+ -   `G ∘ l` at `x` ({univElem-restrict}, {univElem-extend}).
+ -   A universal element also determines sections of families over the total category ({univElemW-dsections}).
+ -}
+
+\import Equiv
+\import Equiv.Sigma
+\import Function.Meta
+\import InfCat.Basics
+\import InfCat.Fibration.DirectedUnivalence
+\import InfCat.Localization.Abstract
+\import InfCat.Rezk
+\import InfCat.Yoneda.CovariantYoneda
+\import Logic
+\import Paths
+\import Paths.Meta
+
+-- | {p} is a {W}-local universal element of {F} at {x}: transformations out of {F} into functors inverting {W} are determined by their value at {p}.
+\type IsUnivElemW.{u} {C : \Cat u} (W : (DI ->⁺ C) -> \Prop) (F : C ->⁺ \Type u) (x : C) (p : F x) : \Prop
+  => \Pi {T : C ->⁺ \Type u} -> InvertsW W T -> IsEquiv {F ~> T} {T x} (\lam g => ~>_-> (dmap (\lam H => H x) g) p)
+
+-- | The same property stated for sections over the total category of {F}.
+\lemma univElemW-sections.{u} {C : \Cat u} {W : (DI ->⁺ C) -> \Prop} {F : C ->⁺ \Type u} {x : C} {p : F x} (U : IsUnivElemW W F x p)
+                              {T : C ->⁺ \Type u} (Tw : InvertsW W T)
+  : IsEquiv {\Pi (sg :⁺ \Sigma⁺ (c : C) (F c)) -> T sg.1} {T x} (\lam S => S (x, p))
+  => IsEquiv.rightFactor (inP depUnivalence) (U Tw)
+
+-- | The converse of {univElemW-sections}.
+\lemma univElemW-fromSections.{u} {C : \Cat u} {W : (DI ->⁺ C) -> \Prop} {F : C ->⁺ \Type u} {x : C} {p : F x}
+                                  (U : \Pi {T : C ->⁺ \Type u} -> InvertsW W T -> IsEquiv {\Pi (sg :⁺ \Sigma⁺ (c : C) (F c)) -> T sg.1} {T x} (\lam S => S (x, p)))
+  : IsUnivElemW W F x p
+  => \lam {T} Tw => IsEquiv.trans (inP depUnivalence) (U {T} Tw)
+
+-- | A universal element of a functor on a localization is a local universal element of its restriction.
+\lemma univElem-restrict.{u} {C L : \Cat u} {W : (DI ->⁺ C) -> \Prop} {l : C ->⁺ L} (loc : IsLocalizationFor W l (\Type u))
+                             {G : L ->⁺ \Type u} {x : C} {p : G (l x)} (U : IsUnivElem G (l x) p)
+  : IsUnivElemW W (\lam c => G (l c)) x p
+  => \lam {T} Tw => \let G' => IsEquiv.ret (restrictW-equiv loc) (T, Tw)
+                   \in rewriteI (pmap __.1 (IsEquiv.f_ret (restrictW-equiv loc) {T, Tw})) $
+                         IsEquiv.rightFactor (localization-ff loc G G') (U G')
+
+-- | A local universal element of the restriction of a functor on a localization is a universal element.
+\lemma univElem-extend.{u} {C L : \Cat u} {W : (DI ->⁺ C) -> \Prop} {l : C ->⁺ L} (loc : IsLocalizationFor W l (\Type u))
+                           {G : L ->⁺ \Type u} {x : C} {p : G (l x)} (U : IsUnivElemW W (\lam c => G (l c)) x p)
+  : IsUnivElem G (l x) p
+  => \lam G' => IsEquiv.trans (localization-ff loc G G') (U \lam ws => dmap_IsIso G' (loc.1 ws))
+
+{- | Sections of a family pulled back along a map out of a local universal element are determined by their value at it.
+ -
+ -   Let `p` be a {W}-local universal element of {F} at {x}, `phi` a map from the total category of {F} to a functor {H}
+ -   inverting {W}, and {Q} a family over the total category of {H} whose sum over {H} inverts {W}.
+ -   Then sections of `Q ∘ phi` are determined by their value at `(x, p)`: the sections of the sum of {Q} over `phi` are
+ -   the fiber over `phi` of the map from the sections of the sum of {Q} to the sections of {H}, and both are evaluation at `(x, p)`.
+ -}
+\lemma univElemW-dsections.{u} {C : \Cat u} {W : (DI ->⁺ C) -> \Prop} {F : C ->⁺ \Type u} {x : C} {p : F x} (U : IsUnivElemW W F x p)
+                               {H : C ->⁺ \Type u} (Hw : InvertsW W H) (phi : \Pi (sg :⁺ \Sigma⁺ (c : C) (F c)) -> H sg.1)
+                               {Q : \Sigma⁺ (c : C) (H c) ->⁺ \Type u} (Qw : InvertsW W (\lam (c :⁺ C) => \Sigma⁺ (h : H c) (Q (c, h))))
+  : IsEquiv {\Pi (sg :⁺ \Sigma⁺ (c : C) (F c)) -> Q (sg.1, phi sg)} {Q (x, phi (x, p))} (\lam S => S (x, p))
+  => fiberwiseEquiv (univElemW-sections U Hw)
+       {\lam f => \Pi (sg :⁺ \Sigma⁺ (c : C) (F c)) -> Q (sg.1, f sg)} (\lam f S => S (x, p))
+       (IsEquiv.trans (inP piSigma) $ IsEquiv.trans (univElemW-sections U Qw) (inP sigma-unplus))
+       phi
+  \where \private {
+    \func piSigma
+      : QEquiv {\Sigma (f : \Pi (sg :⁺ \Sigma⁺ (c : C) (F c)) -> H sg.1) (\Pi (sg :⁺ \Sigma⁺ (c : C) (F c)) -> Q (sg.1, f sg))}
+               {\Pi (sg :⁺ \Sigma⁺ (c : C) (F c)) -> \Sigma⁺ (h : H sg.1) (Q (sg.1, h))} \cowith
+      | f t sg => (t.1 sg, t.2 sg)
+      | ret r => (\lam sg => (r sg).1, \lam sg => (r sg).2)
+      | ret_f t => idp
+      | f_sec r => idp
+
+    \func sigma-unplus : QEquiv {\Sigma⁺ (h : H x) (Q (x, h))} {\Sigma (h : H x) (Q (x, h))} \cowith
+      | f y => (y.1, y.2)
+      | ret y => (y.1, y.2)
+      | ret_f y => idp
+      | f_sec y => idp
+  }
