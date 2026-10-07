@@ -30,10 +30,22 @@ import javax.swing.JComponent
 class ArcFileNotificationProvider : EditorNotificationProvider {
 
     override fun collectNotificationData(project: Project, virtualFile: VirtualFile): Function<in FileEditor, out JComponent?>? {
+        if (project.service<ArcDecompilationService>().isCancelled(virtualFile)) {
+            return Function { createCancelledPanel(project, virtualFile, it) }
+        }
         if (!project.service<ArcUnloadedModuleService>().containsUnloadedModule(virtualFile)) {
             return null
         }
         return Function { createPanel(project, virtualFile, it) }
+    }
+
+    private fun createCancelledPanel(project: Project, virtualFile: VirtualFile, editor: FileEditor): EditorNotificationPanel {
+        val panel = EditorNotificationPanel(editor, EditorNotificationPanel.Status.Warning)
+        panel.text = ArendBundle.message("arend.arc.decompilation.cancelled", virtualFile.name)
+        panel.createActionLabel(ArendBundle.message("arend.arc.decompile", virtualFile.name)) {
+            project.service<ArcDecompilationService>().decompile(virtualFile)
+        }
+        return panel
     }
 
     private fun createPanel(project: Project, virtualFile: VirtualFile, editor: FileEditor): EditorNotificationPanel? {

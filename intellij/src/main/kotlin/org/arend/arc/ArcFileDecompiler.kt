@@ -1,19 +1,27 @@
 package org.arend.arc
 
 import com.intellij.openapi.application.ApplicationManager
+import com.intellij.openapi.application.readAction
 import com.intellij.openapi.components.service
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.fileTypes.BinaryFileDecompiler
+import com.intellij.openapi.progress.ProgressManager
 import com.intellij.openapi.project.DefaultProjectFactory
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.project.ProjectLocator
 import com.intellij.openapi.vfs.VfsUtilCore
 import com.intellij.openapi.vfs.VirtualFile
+import com.intellij.platform.util.progress.RawProgressReporter
+import com.intellij.platform.util.progress.SequentialProgressReporter
+import com.intellij.platform.util.progress.reportRawProgress
+import com.intellij.platform.util.progress.reportSequentialProgress
 import com.intellij.psi.PsiFile
 import com.intellij.psi.PsiManager
 import com.intellij.psi.compiled.ClassFileDecompilers
 import com.intellij.psi.impl.compiled.ClsFileImpl
 import com.intellij.ui.EditorNotifications
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import org.arend.arc.ArcUnloadedModuleService.Companion.DEFINITION_IS_NOT_LOADED
 import org.arend.arc.ArcUnloadedModuleService.Companion.NOT_FOUND_MODULE
 import org.arend.core.definition.ClassDefinition
@@ -34,16 +42,19 @@ import org.arend.naming.scope.EmptyScope
 import org.arend.naming.scope.LexicalScope
 import org.arend.psi.ArendFile
 import org.arend.psi.ext.*
-import org.arend.server.ArendServer
 import org.arend.server.ArendServerService
 import org.arend.server.BinaryCacheLoader
 import org.arend.server.ProgressReporter
 import org.arend.source.FileBinarySource
 import org.arend.source.GZIPStreamBinarySource
+import org.arend.term.concrete.Concrete
 import org.arend.term.group.ConcreteGroup
 import org.arend.term.prettyprint.PrettyPrinterConfigWithRenamer
 import org.arend.term.prettyprint.ToAbstractVisitor
+import org.arend.typechecking.CoroutineCancellationIndicator
 import org.arend.typechecking.computation.UnstoppableCancellationIndicator
+import org.arend.typechecking.runner.IntellijProgressReporter
+import org.arend.util.ArendBundle
 import org.arend.util.FileUtils.EXTENSION
 import org.arend.util.FileUtils.SERIALIZED_EXTENSION
 import org.arend.util.arendModules
@@ -55,7 +66,8 @@ class ArcFileDecompiler : BinaryFileDecompiler {
     override fun decompile(file: VirtualFile): CharSequence {
         val decompiler = ClassFileDecompilers.getInstance().find(file, ClassFileDecompilers.Decompiler::class.java)
         if (decompiler is ArcDecompiler) {
-            return Companion.decompile(file)
+            val project = ProjectLocator.getInstance().guessProjectForFile(file) ?: return ""
+            return project.service<ArcDecompilationService>().getText(file)
         }
 
         if (decompiler is ClassFileDecompilers.Full) {
@@ -82,13 +94,27 @@ class ArcFileDecompiler : BinaryFileDecompiler {
     companion object {
         private val LOG = Logger.getInstance(ArcFileDecompiler::class.java)
 
-        fun decompile(virtualFile: VirtualFile): String {
-            val project = ProjectLocator.getInstance().guessProjectForFile(virtualFile) ?: return ""
+        private class Source(val config: ArendModuleConfigService, val path: List<String>, val arendFile: ArendFile?, val module: ModuleLocation?)
 
+        private class LoadedModule(val group: ConcreteGroup, val arendFile: ArendFile?, val modules: List<PsiFile?>)
+
+        /**
+         * Typechecks the module of [virtualFile] if it has a source, or else loads the .arc with its imports,
+         * and prints the definitions. Reports to the current progress step, and holds a read action only
+         * while it reads PSI, so it must not be called under one.
+         */
+        suspend fun decompile(project: Project, virtualFile: VirtualFile): String = reportSequentialProgress { reporter ->
+            val module = getModule(project, virtualFile, reporter)
+            if (module == null) "" else reporter.nextStep(100, ArendBundle.message("arend.arc.printing")) {
+                reportRawProgress { progress -> readAction { print(project, module, progress) } }
+            }
+        }
+
+        private fun print(project: Project, module: LoadedModule, progress: RawProgressReporter): String {
             val builder = StringBuilder()
 
             val server = project.service<ArendServerService>().server
-            val (group, arendFile, modules) = getGroup(server, virtualFile, project) ?: return builder.toString()
+            val group = module.group
 
             val definitions = getDefinitions(group)
             val statementVisitor = object : VoidExpressionVisitor<Void>() {
@@ -118,11 +144,14 @@ class ArcFileDecompiler : BinaryFileDecompiler {
                     return super.visitClass(def, params)
                 }
             }
-            definitions.forEach { it.accept(statementVisitor, null) }
+            for (definition in definitions) {
+                ProgressManager.checkCanceled()
+                definition.accept(statementVisitor, null)
+            }
 
             val filesToDefinitions = mutableMapOf<ArendFile, MutableList<String>>()
-            for (module in modules) {
-                (module as? ArendFile?)?.let { filesToDefinitions.put(it, mutableListOf()) }
+            for (file in module.modules) {
+                (file as? ArendFile?)?.let { filesToDefinitions.put(it, mutableListOf()) }
             }
 
             val definitionsToFiles = mutableSetOf<String>()
@@ -162,79 +191,104 @@ class ArcFileDecompiler : BinaryFileDecompiler {
             }
 
             val config = PrettyPrinterConfigWithRenamer(
-                CachingScope.make(arendFile?.scope ?: LexicalScope.opened(group) ?: EmptyScope.INSTANCE)
+                CachingScope.make(module.arendFile?.scope ?: LexicalScope.opened(group) ?: EmptyScope.INSTANCE)
             )
 
-            val lastStatement = group.statements.lastOrNull()
-            for (statement in group.statements.dropLast(1)) {
-                if (addStatement(statement.group, builder, config)) {
+            val statements = group.statements
+            for ((i, statement) in statements.withIndex()) {
+                // A write action interrupts the read action here, which is then restarted
+                ProgressManager.checkCanceled()
+                if (addStatement(statement.group, builder, config) && i < statements.lastIndex) {
                     builder.append("\n\n")
                 }
+                progress.fraction((i + 1).toDouble() / statements.size)
             }
-            addStatement(lastStatement?.group, builder, config)
             return builder.toString()
         }
 
-        private fun getGroup(server: ArendServer, virtualFile: VirtualFile, project: Project): Triple<ConcreteGroup, ArendFile?, List<PsiFile?>>? {
+        private fun findSource(project: Project, virtualFile: VirtualFile): Source? {
             val psiManager = PsiManager.getInstance(project)
             if (psiManager.findFile(virtualFile) !is ArcFile) return null
 
-            val config = project.arendModules.map { ArendModuleConfigService.getInstance(it) }.find {
+            val config = (project.arendModules.map { ArendModuleConfigService.getInstance(it) }.find {
                 it?.binariesDirFile?.let { binFile -> VfsUtilCore.isAncestor(binFile, virtualFile, true) } ?: false
             } ?: if (ApplicationManager.getApplication().isUnitTestMode) {
                 ArendModuleConfigService.getInstance(project.arendModules.getOrNull(0))
             } else {
                 null
-            }
-            val path = config?.binariesDirFile?.getRelativePath(virtualFile, SERIALIZED_EXTENSION) ?: mutableListOf(virtualFile.name.removeSuffix(SERIALIZED_EXTENSION))
-            val arendFile = config?.sourcesDirFile?.getRelativeFile(path, EXTENSION)?.let { psiManager.findFile(it) } as? ArendFile?
-            arendFile?.moduleLocation?.let { server.getCheckerFor(listOf(it)).typecheck(null, DummyErrorReporter.INSTANCE, UnstoppableCancellationIndicator.INSTANCE, ProgressReporter.empty()) }
+            }) ?: return null
+            val path = config.binariesDirFile?.getRelativePath(virtualFile, SERIALIZED_EXTENSION) ?: mutableListOf(virtualFile.name.removeSuffix(SERIALIZED_EXTENSION))
+            val arendFile = config.sourcesDirFile?.getRelativeFile(path, EXTENSION)?.let { psiManager.findFile(it) } as? ArendFile?
+            return Source(config, path, arendFile, arendFile?.moduleLocation)
+        }
 
-            val cfg = config ?: return null
-            val moduleLocation = arendFile?.moduleLocation
-                ?: ModuleLocation(cfg.name, ModuleLocation.LocationKind.SOURCE, ModulePath(path))
+        private suspend fun getModule(project: Project, virtualFile: VirtualFile, reporter: SequentialProgressReporter): LoadedModule? {
+            val server = project.service<ArendServerService>().server
+            val source = readAction { findSource(project, virtualFile) } ?: return null
+
+            if (source.module != null) {
+                reporter.nextStep(70, ArendBundle.message("arend.arc.typechecking", source.module.modulePath)) {
+                    reportRawProgress { progress ->
+                        val progressReporter = IntellijProgressReporter<List<Concrete.ResolvableDefinition>>(progress) {
+                            it.firstOrNull()?.data?.refLongName?.toString()
+                        }
+                        server.getCheckerFor(listOf(source.module)).typecheck(null, DummyErrorReporter.INSTANCE, CoroutineCancellationIndicator(this), progressReporter)
+                    }
+                }
+                // Interrupted typechecking returns normally
+                currentCoroutineContext().ensureActive()
+            }
+
+            val config = source.config
+            val moduleLocation = source.module
+                ?: ModuleLocation(config.name, ModuleLocation.LocationKind.SOURCE, ModulePath(source.path))
 
             server.getRawGroup(moduleLocation)?.let { liveGroup ->
                 if (BinaryCacheLoader.hasTypechecked(liveGroup)) {
                     project.service<ArcUnloadedModuleService>().removeLoadedModule(virtualFile)
                     EditorNotifications.getInstance(project).updateNotifications(virtualFile)
-                    return Triple(liveGroup, arendFile, emptyList())
+                    return LoadedModule(liveGroup, source.arendFile, emptyList())
                 }
             }
 
             if (!Prelude.isInitialized()) {
-                server.getCheckerFor(listOf(Prelude.MODULE_LOCATION)).typecheck(UnstoppableCancellationIndicator.INSTANCE, ProgressReporter.empty())
-            }
-
-            val binaryBasePath = (cfg.binariesDirFile ?: virtualFile.parent)?.toNioPath() ?: return null
-
-            try {
-                val source = GZIPStreamBinarySource(FileBinarySource(binaryBasePath, moduleLocation))
-                val result = source.loadWithImports(server, DummyErrorReporter.INSTANCE) ?: return null
-
-                val group = result.proj1
-                val modules = result.proj2
-
-                if (BinaryCacheLoader.hasIncompleteDefinition(group) || BinaryCacheLoader.hasOrphanShellReference(group)) {
-                    BinaryCacheLoader.clearTypechecked(group)
-                    return null
-                }
-
-                project.service<ArcUnloadedModuleService>().removeLoadedModule(virtualFile)
-                EditorNotifications.getInstance(project).updateNotifications(virtualFile)
-                return Triple(group, arendFile, modules.map { cfg.sourcesDirFile?.getRelativeFile(it.toList(), EXTENSION)
-                    ?.let { virtualFile -> psiManager.findFile(virtualFile) } })
-            } catch (e : DeserializationException) {
-                val message = e.message ?: return null
-                if (DEFINITION_IS_NOT_LOADED.matches(message) || NOT_FOUND_MODULE.matches(message)) {
-                    project.service<ArcUnloadedModuleService>().addUnloadedModule(virtualFile)
-                    EditorNotifications.getInstance(project).updateNotifications(virtualFile)
-                } else {
-                    LOG.error(message)
+                readAction {
+                    server.getCheckerFor(listOf(Prelude.MODULE_LOCATION)).typecheck(UnstoppableCancellationIndicator.INSTANCE, ProgressReporter.empty())
                 }
             }
-            return null
-          }
+
+            val binaryBasePath = (config.binariesDirFile ?: virtualFile.parent)?.toNioPath() ?: return null
+
+            val result = reporter.nextStep(85, ArendBundle.message("arend.arc.loading", virtualFile.name)) {
+                try {
+                    GZIPStreamBinarySource(FileBinarySource(binaryBasePath, moduleLocation)).loadWithImports(server, DummyErrorReporter.INSTANCE)
+                } catch (e : DeserializationException) {
+                    val message = e.message
+                    if (message != null && (DEFINITION_IS_NOT_LOADED.matches(message) || NOT_FOUND_MODULE.matches(message))) {
+                        project.service<ArcUnloadedModuleService>().addUnloadedModule(virtualFile)
+                        EditorNotifications.getInstance(project).updateNotifications(virtualFile)
+                    } else if (message != null) {
+                        LOG.error(message)
+                    }
+                    null
+                }
+            } ?: return null
+
+            val group = result.proj1
+            if (BinaryCacheLoader.hasIncompleteDefinition(group) || BinaryCacheLoader.hasOrphanShellReference(group)) {
+                BinaryCacheLoader.clearTypechecked(group)
+                return null
+            }
+
+            project.service<ArcUnloadedModuleService>().removeLoadedModule(virtualFile)
+            EditorNotifications.getInstance(project).updateNotifications(virtualFile)
+            val modules = readAction {
+                val psiManager = PsiManager.getInstance(project)
+                result.proj2.map { config.sourcesDirFile?.getRelativeFile(it.toList(), EXTENSION)
+                    ?.let { file -> psiManager.findFile(file) } }
+            }
+            return LoadedModule(group, source.arendFile, modules)
+        }
 
         private fun getDefinitions(group: ConcreteGroup): List<Definition> {
             return group.statements.mapNotNull {
