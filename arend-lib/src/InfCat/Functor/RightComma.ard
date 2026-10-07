@@ -1,0 +1,75 @@
+{- | Comma categories under an object along a functor.
+ -
+ -   For `p : L ->⁺ S` and `s : S`, {RightComma} `p s` is the comma category `s ↓ p` of objects `e` of `L` with an arrow `s ~> p e`.
+ -   The fiber of {p} over {s} embeds fully faithfully into it ({fibComma-ff}), and more generally lifts of an arrow `f : p e ~> t`
+ -   to the fibers of {p} are arrows of `p e ↓ p` from `(e, idd)` to objects over `f` ({liftComma-equiv}).
+ -   Both statements come from {liftComma-equiv.under-arr-equiv}: paths from the image of an arrow to `f` are arrows from the identity to `f` in `s ↓ S`.
+ -}
+
+\import Equiv
+\import Equiv.Sigma
+\import Function.Meta
+\import InfCat.Basics
+\import InfCat.Fibration.Categorical
+\import InfCat.Functor.FullyFaithful
+\import Logic
+\import Logic.Unique
+
+-- | The comma category `b ↓ f`.
+\func RightComma.{u} {A B : \Cat u} (f : A ->⁺ B) (b : B) : \Cat u
+  => \Sigma⁺ (a : A) (b ~> f a)
+
+-- | The arrow {k} transported along a path {q} into its target.
+\func under-arr {S : \Cat} {s t t' :⁺ S} (k :⁺ s ~> t) (q :⁺ t' = t) : s ~> t' \elim q
+  | idp => k
+
+-- | The inclusion of the fiber of {p} over {s} into `s ↓ p`.
+\func fibComma.{u} {L S : \Cat u} (p : L ->⁺ S) (s : S) (t :⁺ Fibers p s) : RightComma p s
+  => (t.1, under-arr idd t.2)
+
+-- | {fibComma} is fully faithful.
+\lemma fibComma-ff.{u} {L S : \Cat u} (p : L ->⁺ S) (s : S) : IsFFMap (fibComma p s)
+  => \lam t t' =>
+    \let | D1 => dpath-sigma-equiv (\lam _ (e : L) => p e = s) {t.1, t.2} {t'.1, t'.2}
+         | D2 => dpath-sigma-equiv (\lam _ (e : L) => s ~> p e) {fibComma p s t} {fibComma p s t'}
+         | f (r : t.1 ~> t'.1) (d : DPath (\lam i => p (r i) = s) t.2 t'.2)
+             : DPath (\lam i => s ~> p (r i)) (fibComma p s t).2 (fibComma p s t').2
+             => dpath \lam i => under-arr idd (d i)
+         | e2 : IsEquiv (totalEquiv.total f) => propExt.dir (totalEquiv f) (\lam r => dpath-equiv t.2 t'.2 (dmap p r))
+    \in IsEquiv.trans {_} {_} {_} {\lam m => totalEquiv.total f (D1 m)} (IsEquiv.trans {_} {_} {_} {D1} (inP D1) {totalEquiv.total f} e2) {D2.ret} (inP (symQEquiv D2))
+  \where
+    \lemma dpath-equiv {S : \Cat} {s a b : S} (q : a = s) (q' : b = s) (g : a ~> b)
+      : IsEquiv {DPath (\lam i => g i = s) q q'} {DPath (\lam i => s ~> g i) (under-arr idd q) (under-arr idd q')}
+                (\lam d => dpath \lam i => under-arr idd (d i)) \elim q
+      | idp => liftComma-equiv.under-arr-equiv {S} {s} {s} {b} {idd} (dpath \lam _ => idd) g q'
+
+-- | A lift of {f} to the fibers of {q} as an arrow of `q e ↓ q`.
+\func liftComma.{u} {L S : \Cat u} (q : L ->⁺ S) {e : L} {t : S} {f : q e ~> t}
+                    {y :⁺ Fibers q t} (l :⁺ DPath (\lam i => Fibers q (f i)) (e, idp) y)
+  : (e, idd) ~> {RightComma q (q e)} (y.1, under-arr f y.2)
+  => dpath \lam i => ((l i).1, under-arr (conn-right f i) (l i).2)
+
+-- | {liftComma} is an equivalence.
+\lemma liftComma-equiv.{u} {L S : \Cat u} (q : L ->⁺ S) {e : L} {t : S} {f : q e ~> t} (y : Fibers q t)
+  : IsEquiv (liftComma q {e} {t} {f} {y})
+  => \have r => IsEquiv.trans (inP (dpath-sigma-equiv (\lam i (x : L) => q x = f i) {e, idp} {y.1, y.2})) $
+                IsEquiv.trans (propExt.dir (totalEquiv (\lam (w : e ~> y.1) (om : DPath (\lam i => q (w i) = f i) idp y.2) => dpath \lam i => under-arr (conn-right f i) (om i)))
+                                           (\lam w => under-arr-equiv (conn-right f) (dmap q w) y.2)) $
+                inP (symQEquiv (dpath-sigma-equiv (\lam _ x => q e ~> q x) {e, idd} {y.1, under-arr f y.2}))
+     \in r
+  \where {
+    {- | Paths from an arrow {h} to {f} ending in {r} are the same as arrows from the identity to `under-arr f r` over {h}.
+     -   The map uses an arbitrary path {adj} from the identity to {f} over {f}; both sides summed over {h} are contractible.
+     -}
+    \lemma under-arr-equiv {S : \Cat} {s t t' : S} {f : s ~> t} (adj : DPath (\lam i => s ~> f i) idd f) (h : s ~> t') (r : t' = t)
+      : IsEquiv {DPath (\lam i => h i = f i) idp r} {DPath (\lam i => s ~> h i) idd (under-arr f r)}
+                (\lam om => dpath \lam i => under-arr (adj i) (om i)) \elim r
+      | idp => propExt.conv (totalEquiv (\lam (h' : s ~> t) (om : DPath (\lam i => h' i = f i) idp idp) => dpath \lam i => under-arr (adj i) (om i)))
+                            (contr-equiv (Contr.Contr_QEquiv paths-equiv (rsigma f)) (segal-contr.conn f)) h
+      \where
+        \func paths-equiv : QEquiv {\Sigma (h' : s ~> t) (h' = f)} {\Sigma (h' : s ~> t) (DPath (\lam i => h' i = f i) idp idp)} \cowith
+          | f e => (e.1, dpath \lam i => path \lam m => (e.2 m) i)
+          | ret e => (e.1, path \lam m => dpath \lam i => e.2 i m)
+          | ret_f e => idp
+          | f_sec e => idp
+  }
