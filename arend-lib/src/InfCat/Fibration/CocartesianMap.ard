@@ -1,11 +1,13 @@
 \import Equiv
 \import Equiv.Fiber
 \import Equiv.Sigma
+\import Function.Meta
 \import Homotopy.Fibration
 \import InfCat.Basics
 \import InfCat.Fibration.Categorical
 \import InfCat.Fibration.CocartesianFib
 \import InfCat.Fibration.CovariantLift
+\import InfCat.Square
 \import Logic
 \import Logic.Meta
 \import Logic.Unique
@@ -47,7 +49,7 @@
   : IsCocartesianLift (arrowLift p u) <-> IsCocartesianArrow p u
   => (\lam c => body=>arrow {E} {A} {p} \lam w {g} t => lift=>body c {_} {g} {dmap p w} t idp w (dpath \lam i => idp),
       \lam c => body=>lift {E} {A} {p} \lam g q w om => arrow=>body c w q {g} {comp (dmap p u) g} (dpath \lam i => dpath (fill2 (dmap p u) g i)) om)
-  \where \private {
+  \where {
     -- | Factorizations through the canonical lift of {u} of a lift of an arbitrary triangle in the base.
     \func CovBody {E A : \Cat} (p : E ->⁺ A) {e e' : E} (u : e ~> e') {a'' : A} (g : p e' ~> a'') {h : p e ~> a''} (t : DPath (\lam i => p (u i) ~> h i) idd g)
                   {x : E} (q : p x = a'') (w : e ~> x) (om : DPath (\lam i => p (w i) = h i) idp q)
@@ -140,3 +142,60 @@
                | f_sec y => path \lam i => (y.1, comp-equiv.f_sec y.2 i, y.3)
              }
   }
+
+-- | Pasting of two triangles along a 2-simplex {t0} with edges {u}, {v}, {g}.
+\func paste-face {E : \Cat} {e e' e'' x : E} {u : e ~> e'} {v : e' ~> e''} {g : e ~> e''} (t0 : DPath (\lam i => u i ~> g i) idd v) {w : e ~> x}
+                 (m : PasteMid u v w) : \Sigma (z : e'' ~> x) (DPath (\lam i => g i ~> w i) idd z)
+  => (m.2.1, simplex3-face t0 m.2.2 m.1.2)
+  \where {
+    -- | Pairs of triangles over {u} and {v}: factorizations of {w} through {u} followed by factorizations of the result through {v}.
+    \func PasteMid {E : \Cat} {e e' e'' x : E} (u : e ~> e') (v : e' ~> e'') (w : e ~> x) : \Type
+      => \Sigma (s : \Sigma (r : e' ~> x) (DPath (\lam i => u i ~> w i) idd r)) (\Sigma (z : e'' ~> x) (DPath (\lam i => v i ~> s.1 i) idd z))
+
+    -- | {paste-face} is an equivalence, since both sides are equivalent to the arrows out of `e''`.
+    \protected \lemma isEquiv {E : \Cat} {e e' e'' x : E} {u : e ~> e'} {v : e' ~> e''} (g : e ~> e'') (t0 : DPath (\lam i => u i ~> g i) idd v) (w : e ~> x)
+      : IsEquiv (paste-face t0 {w})
+      => propExt.conv (totalEquiv (\lam w => paste-face t0 {w})) (IsEquiv.leftFactor right-proj left-proj) w
+      \where {
+        \lemma right-proj : IsEquiv {\Sigma (w : e ~> x) (\Sigma (z : e'' ~> x) (DPath (\lam i => g i ~> w i) idd z))} (\lam s => s.2.1)
+          => IsEquiv.trans (inP (\new QEquiv {\Sigma (w : e ~> x) (\Sigma (z : e'' ~> x) (DPath (\lam i => g i ~> w i) idd z))}
+                                             {\Sigma (z : e'' ~> x) (\Sigma (w : e ~> x) (DPath (\lam i => g i ~> w i) idd z))} {
+                              | f s => (s.2.1, (s.1, s.2.2))
+                              | ret t => (t.2.1, (t.1, t.2.2))
+                              | ret_f s => idp
+                              | f_sec t => idp
+                            }))
+                           (inP (contr-right \lam z => segal-contr g z))
+
+        \lemma left-proj : IsEquiv {\Sigma (w : e ~> x) (PasteMid u v w)} (\lam s => s.2.2.1)
+          => IsEquiv.trans (inP (\new QEquiv {\Sigma (w : e ~> x) (PasteMid u v w)}
+                                             {\Sigma (z : e'' ~> x) (\Sigma (s : \Sigma (r : e' ~> x) (DPath (\lam i => v i ~> r i) idd z))
+                                                                            (\Sigma (w : e ~> x) (DPath (\lam i => u i ~> w i) idd s.1)))} {
+                              | f s => (s.2.2.1, ((s.2.1.1, s.2.2.2), (s.1, s.2.1.2)))
+                              | ret t => (t.2.2.1, ((t.2.1.1, t.2.2.2), (t.1, t.2.1.2)))
+                              | ret_f s => idp
+                              | f_sec t => idp
+                            }))
+                           (inP (contr-right \lam z => sigma-Contr (segal-contr v z) \lam s => segal-contr u s.1))
+      }
+  }
+
+-- | Composition of cocartesian arrows: if {u} is {p}-cocartesian, then {v} is {p}-cocartesian if and only if `comp u v` is.
+\lemma cocartesianArrow-comp {E A : \Cat} {p : E ->⁺ A} {e e' e'' : E} {u : e ~> e'} (uc : IsCocartesianArrow p u) {v : e' ~> e''}
+  : IsCocartesianArrow p v <-> IsCocartesianArrow p (comp u v)
+  => \let | t0 => dpath \lam i => dpath (fill2 u v i)
+          | mid-map {x : E} (w : e ~> x) (m : paste-face.PasteMid u v w) : paste-face.PasteMid (dmap p u) (dmap p v) (dmap p w)
+            => (triangle-map p u w m.1, triangle-map p v m.1.1 m.2)
+          | mid-equiv {x : E} (w : e ~> x) : IsEquiv (mid-map w) = IsEquiv (triangle-map p (comp u v) w)
+            => IsEquiv.parallelEquiv (paste-face.isEquiv (comp u v) t0 w) (paste-face.isEquiv (dmap p (comp u v)) (dpath \lam i => dmap p (t0 i)) (dmap p w))
+                \lam m => path \lam l => (dmap p m.2.1, inv (simplex3-face.natural p t0 m.2.2 m.1.2) l)
+     \in (\lam vc {x} w => propExt.dir (mid-equiv w) $
+            IsEquiv.trans (IsSigma-right {\Sigma (r : e' ~> x) (DPath (\lam i => u i ~> w i) idd r)} (\lam s => triangle-map p v s.1) (\lam s => vc s.1))
+                          (inP (qsigma-left (IsEquiv.toQEquiv (uc w)))),
+          \lam gc {x} r => fiberwiseEquiv (uc (comp u r)) (\lam s => triangle-map p v s.1)
+                            (propExt.conv (mid-equiv (comp u r)) (gc (comp u r)))
+                            (r, dpath \lam i => dpath (fill2 u r i)))
+
+-- | Identity arrows are cocartesian: both sides of {triangle-map} are contractible.
+\lemma idd-cocartesian {E A : \Cat} {p : E ->⁺ A} {e : E} : IsCocartesianArrow p (idd {E} {e})
+  => \lam w => contr-equiv (segal-contr.flipped idd w) (segal-contr.flipped idd (dmap p w))

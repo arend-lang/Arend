@@ -187,6 +187,30 @@
                     (s1 : comp h v = comp u g) (s2 : comp g v' = comp u' k) : comp h (comp v v') = comp (comp u u') k
   => comp-assoc *> pmap (comp __ v') s1 *> inv comp-assoc *> pmap (comp u) s2 *> comp-assoc
 
+{- | The face `d1` of a 3-simplex `e -> e' -> e'' -> x` given by its inner horn:
+ -   the faces {t0} (`d3`), {t1} (`d0`) and {t2} (`d2`).
+ -}
+\func simplex3-face {C :⁺ \Cat} {e e' e'' x :⁺ C} {u :⁺ e ~> e'} {v :⁺ e' ~> e''} {g :⁺ e ~> e''} {z :⁺ e'' ~> x} {r :⁺ e' ~> x} {w :⁺ e ~> x}
+                    (t0 :⁺ DPath (\lam i => u i ~> g i) idd v) (t1 :⁺ DPath (\lam i => v i ~> r i) idd z) (t2 :⁺ DPath (\lam i => u i ~> w i) idd r)
+  : DPath (\lam i => g i ~> w i) idd z
+  => dpath \lam i => dpath \lam j => cube t0 t1 t2 i j dright
+  \where {
+    \func cube {C :⁺ \Cat} {e e' e'' x :⁺ C} {u :⁺ e ~> e'} {v :⁺ e' ~> e''} {g :⁺ e ~> e''} {z :⁺ e'' ~> x} {r :⁺ e' ~> x} {w :⁺ e ~> x}
+               (t0 :⁺ DPath (\lam i => u i ~> g i) idd v) (t1 :⁺ DPath (\lam i => v i ~> r i) idd z) (t2 :⁺ DPath (\lam i => u i ~> w i) idd r)
+               (i j k :⁺ DI) : C
+      => fill3 () (dpath \lam _ => idd) t1 t0 t2 (dpath \lam _ => idd) i j k
+
+    -- | {simplex3-face} commutes with functors.
+    \sfunc natural {C D :⁺ \Cat} (F :⁺ C ->⁺ D) {e e' e'' x :⁺ C} {u :⁺ e ~> e'} {v :⁺ e' ~> e''} {g :⁺ e ~> e''} {z :⁺ e'' ~> x} {r :⁺ e' ~> x} {w :⁺ e ~> x}
+                   (t0 :⁺ DPath (\lam i => u i ~> g i) idd v) (t1 :⁺ DPath (\lam i => v i ~> r i) idd z) (t2 :⁺ DPath (\lam i => u i ~> w i) idd r)
+      : dpath (\lam i => dpath \lam j => F (simplex3-face t0 t1 t2 i j))
+        = simplex3-face (dpath \lam i => dpath \lam j => F (t0 i j)) (dpath \lam i => dpath \lam j => F (t1 i j)) (dpath \lam i => dpath \lam j => F (t2 i j))
+      => cube2-equals () {dmap F u} {dmap F v} {dmap F g} {dmap F u} {dmap F r} {idd} {dmap F w}
+           idd (dpath \lam j => dpath \lam k => F (t1 k j)) (dpath \lam i => dpath \lam j => F (t0 i j)) (dpath \lam i => dpath \lam j => F (t2 i j)) (dpath \lam i => idd {D} {F (u i)})
+           (dpath \lam i => dpath \lam j => dpath \lam k => F (cube t0 t1 t2 i j k))
+           (dpath \lam i => dpath \lam j => dpath \lam k => cube {D} {F e} {F e'} {F e''} {F x} {dmap F u} {dmap F v} {dmap F g} {dmap F z} {dmap F r} {dmap F w} (dpath \lam i => dpath \lam j => F (t0 i j)) (dpath \lam i => dpath \lam j => F (t1 i j)) (dpath \lam i => dpath \lam j => F (t2 i j)) i j k)
+  }
+
 {- | A square in the total category lying over a given square {sqA} of the base is the same as a square in the family {B} over {sqA}.
  - The same applies to triangles, since they are squares with a degenerate edge.
  -}

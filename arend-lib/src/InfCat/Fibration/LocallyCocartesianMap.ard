@@ -1,0 +1,97 @@
+\import Equiv
+\import Equiv.Fiber
+\import Equiv.Sigma
+\import Function.Meta
+\import Homotopy.Fibration
+\import InfCat.Basics
+\import InfCat.Fibration.CocartesianMap
+\import InfCat.Fibration.LocallyCocartesianFib
+\import InfCat.Rezk
+\import InfCat.Square
+\import Logic
+\import Logic.Meta
+\import Logic.Unique
+\import Meta
+\import Paths
+
+{- | An arrow {u} is locally {p}-cocartesian if factorizations of arrows out of its domain through {u} are the same as
+ -   factorizations of their images through `dmap p u` via invertible arrows.
+ -}
+\type IsLocallyCocartesianArrow {E A : \Cat} (p : E ->⁺ A) {e e' : E} (u : e ~> e') : \Prop
+  => \Pi {e'' : E} (w : e ~> e'') (s : \Sigma (g : p e' ~> p e'') (DPath (\lam i => p (u i) ~> p (w i)) idd g)) -> IsIso s.1 -> Contr (Fib (triangle-map p u w) s)
+
+-- | {p} is a locally cocartesian fibration if every arrow in the base out of the image of an object has a locally cocartesian lift.
+\type IsLocallyCocartesianMap {E A : \Cat} (p : E ->⁺ A) : \Prop
+  => \Pi {e : E} {a' : A} (f : p e ~> a') -> ∃ (e' : E) (u : e ~> e') (s : p e' = a') (comp (dmap p u) (=_~> s) = f) (IsLocallyCocartesianArrow p u)
+
+\lemma cocartesianArrow=>locally {E A : \Cat} {p : E ->⁺ A} {e e' : E} {u : e ~> e'} (uc : IsCocartesianArrow p u)
+  : IsLocallyCocartesianArrow p u
+  => \lam w s _ => IsEquiv=>contrFibers (uc w) s
+
+-- | The canonical lift of `dmap p u` is locally cocartesian if and only if {u} is locally {p}-cocartesian.
+\lemma arrowLift-locCocartesian {E A : \Cat} {p : E ->⁺ A} {e e' : E} {u : e ~> e'}
+  : IsLocallyCocartesianLift (arrowLift p u) <-> IsLocallyCocartesianArrow p u
+  => (\lam c w s si => Contr.Contr_QEquiv (lifts-fiber-equiv p u w s.2) (lift=>body c si {dmap p w} s.2 idp w (dpath \lam i => idp)),
+      \lam c g gi l' => arrow=>body c (dpath \lam i => (l'.2 i).1) l'.1.2 gi {comp (dmap p u) g} (dpath \lam i => dpath (fill2 (dmap p u) g i)) (dpath \lam i => (l'.2 i).2))
+  \where \private {
+    \open arrowLift-cocartesian (CovBody)
+
+    \lemma arrow=>body {E A : \Cat} {p : E ->⁺ A} {e e' : E} {u : e ~> e'} (c : IsLocallyCocartesianArrow p u)
+                       {x : E} (w : e ~> x) {a'' : A} (q : p x = a'') {g : p e' ~> a''} (gi : IsIso g) {h : p e ~> a''}
+                       (t : DPath (\lam i => p (u i) ~> h i) idd g) (om : DPath (\lam i => p (w i) = h i) idp q)
+      : Contr (CovBody p u g t q w om) \elim q
+      | idp => aux c w gi t (path \lam m => dpath \lam i => om i m)
+      \where
+        \lemma aux {E A : \Cat} {p : E ->⁺ A} {e e' : E} {u : e ~> e'} (c : IsLocallyCocartesianArrow p u)
+                   {x : E} (w : e ~> x) {g : p e' ~> p x} (gi : IsIso g) {h : p e ~> p x} (t : DPath (\lam i => p (u i) ~> h i) idd g) (pi : dmap p w = h)
+          : Contr (CovBody p u g t idp w (dpath \lam i => path \lam m => pi m i)) \elim pi
+          | idp => Contr.Contr_QEquiv (symQEquiv (lifts-fiber-equiv p u w t)) (c w (g,t) gi)
+
+    \lemma lift=>body {E A : \Cat} {p : E ->⁺ A} {e e' : E} {u : e ~> e'} (c : IsLocallyCocartesianLift (arrowLift p u))
+                      {a'' : A} {g : p e' ~> a''} (gi : IsIso g) {h : p e ~> a''} (t : DPath (\lam i => p (u i) ~> h i) idd g)
+                      {x : E} (q : p x = a'') (w : e ~> x) (om : DPath (\lam i => p (w i) = h i) idp q)
+      : Contr (CovBody p u g t q w om)
+      => transport (\lam s => \Pi {x : E} (q : p x = a'') (w : e ~> x) (om : DPath (\lam i => p (w i) = s.1 i) idp q) -> Contr (CovBody p u g s.2 q w om))
+                   (isContr=>isProp (segal-contr (dmap p u) g) (comp (dmap p u) g, dpath \lam i => dpath (fill2 (dmap p u) g i)) (h,t))
+                   (\lam q w om => c g gi ((_, q), dpath \lam i => (w i, om i))) q w om
+  }
+
+{- | An arrow {u} is cocartesian if every arrow `g` out of `p e'` has a locally cocartesian lift `v`
+ -   such that the composite of {u} and `v` is locally cocartesian.
+ -
+ -   A factorization of `w` through {u} over a triangle with the second edge `g` factors uniquely through `v` via an arrow
+ -   over an isomorphism. Pairs of such factorizations are triangles with the sides `comp u v` and `w` ({paste-face.isEquiv}),
+ -   which are unique since `comp u v` is locally cocartesian.
+ -}
+\lemma locCocartesian-comp=>cocartesian {E A : \Cat} {p : E ->⁺ A} {e e' : E} {u : e ~> e'}
+  (H : \Pi {a'' : A} (g : p e' ~> a'') -> ∃ (e'' : E) (v : e' ~> e'') (s : p e'' = a'') (comp (dmap p v) (=_~> s) = g)
+                                            (IsLocallyCocartesianArrow p v) (IsLocallyCocartesianArrow p (comp u v)))
+  : IsCocartesianArrow p u
+  => \lam {x} w => contrFibers=>IsEquiv \lam sg => \case H sg.1 \with {
+    | inP (e'', v, s, q, vc, uvc) =>
+      \let | t0 : DPath (\lam i => u i ~> comp u v i) idd v => dpath \lam i => dpath (fill2 u v i)
+           | tA : DPath (\lam i => dmap p u i ~> dmap p (comp u v) i) idd (dmap p v) => dpath \lam i => dpath \lam j => p (t0 i j)
+           | P : paste-face.PasteMid (dmap p u) (dmap p v) (dmap p w) => (sg, (=_~> s, comp-equiv.ret q))
+      \in Contr.Contr_QEquiv
+            (transQEquiv (symQEquiv (fib-parallel-equiv (paste-face.isEquiv (comp u v) t0 w) (paste-face.isEquiv (dmap p (comp u v)) tA (dmap p w))
+                            (\lam m => path \lam l => (dmap p m.2.1, inv (simplex3-face.natural p {e} {e'} {e''} {x} {u} {v} {comp u v} t0 m.2.2 m.1.2) l)) P))
+                         (sigma-fib-equiv (triangle-map p u w) (\lam t => triangle-map p v t.1)
+                            (later \lam _ y' => IsIso y'.1) (\lam t y' yi => vc t.1 y' yi) (=_~>-iso s)))
+            (uvc w (paste-face tA P) (=_~>-iso s))
+  }
+
+-- | For a cocartesian fibration, locally cocartesian arrows are cocartesian.
+\lemma locCocartesianArrow=>cocartesian {E A : \Cat} {p : E ->⁺ A} (pc : IsCocartesianMap p) {e e' : E} {u : e ~> e'}
+                                        (uc : IsLocallyCocartesianArrow p u)
+  : IsCocartesianArrow p u
+  => (arrowLift-cocartesian u).1 $ locCocartesianLift=>cocartesian (cocartesianMap-char.1 pc) (arrowLift-locCocartesian.2 uc)
+
+-- | A functor is a cocartesian fibration if and only if it is a locally cocartesian fibration whose locally cocartesian arrows are closed under composition.
+\lemma cocartesianMap<->locally {E A : \Cat} {p : E ->⁺ A}
+  : IsCocartesianMap p <-> (\Sigma (IsLocallyCocartesianMap p)
+                                   (\Pi {e e' e'' : E} {u : e ~> e'} {v : e' ~> e''} -> IsLocallyCocartesianArrow p u -> IsLocallyCocartesianArrow p v
+                                      -> IsLocallyCocartesianArrow p (comp u v)))
+  => (\lam pc => (\lam f => TruncP.map (pc f) \lam t => (t.1, t.2, t.3, t.4, cocartesianArrow=>locally t.5),
+                  \lam uc vc => cocartesianArrow=>locally $ (cocartesianArrow-comp (locCocartesianArrow=>cocartesian pc uc)).1
+                                                              (locCocartesianArrow=>cocartesian pc vc)),
+      \lam lp f => TruncP.map (lp.1 f) \lam t => (t.1, t.2, t.3, t.4, locCocartesian-comp=>cocartesian \lam g => TruncP.map (lp.1 g) \lam t' => (t'.1, t'.2, t'.3, t'.4, t'.5, lp.2 t.5 t'.5)))

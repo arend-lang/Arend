@@ -1,5 +1,6 @@
 \import Equiv
 \import Equiv.Fiber
+\import Equiv.Path
 \import Equiv.HalfAdjoint
 \import Function.Meta
 \import Logic.Unique
@@ -123,6 +124,34 @@
 \lemma fiberwiseEquiv {X Y : \Cat} {g : X -> Y} (ge : IsEquiv g) {P : X -> \Cat} {Q : Y -> \Cat} (h : \Pi (x : X) -> P x -> Q (g x))
                       (te : IsEquiv {\Sigma (x : X) (P x)} {\Sigma (y : Y) (Q y)} (\lam s => (g s.1, h s.1 s.2))) (x : X) : IsEquiv (h x)
   => propExt.conv (totalEquiv h) (IsEquiv.leftFactor (inP (qsigma-left (IsEquiv.toQEquiv ge))) te) x
+
+-- | Fibers of maps related by equivalences of their domains and codomains are equivalent.
+\func fib-parallel-equiv {A B C D : \Cat} {ab : A -> B} {cd : C -> D} {ac : A -> C} {bd : B -> D}
+                         (ace : IsEquiv ac) (bde : IsEquiv bd) (h : \Pi (a : A) -> bd (ab a) = cd (ac a)) (b : B)
+  : QEquiv {Fib ab b} {Fib cd (bd b)}
+  => sigma-equiv {A} {C} {\lam a => ab a = b} {\lam c => cd c = bd b} (IsEquiv.toQEquiv ace)
+       \lam a => IsEquiv.toQEquiv (pmapIsEquiv bde) `transQEquiv` pathEquiv-right (h a)
+
+{- | The fiber of a map of total spaces `(x, y) => (T1 x, T2 x y)` over `(x', y')` is the fiber of {T1} over `x'`
+ -   if the fibers of {T2} over the points satisfying {P} are contractible and `y'` satisfies {P}.
+ -}
+\sfunc sigma-fib-equiv {X X' : \Cat} {Y : X -> \Cat} {Y' : X' -> \Cat} (T1 : X -> X') (T2 : \Pi (x : X) -> Y x -> Y' (T1 x))
+                       (P : \Pi (x' : X') -> Y' x' -> \Type) (c : \Pi (x : X) (y : Y' (T1 x)) -> P (T1 x) y -> Contr (Fib (T2 x) y))
+                       {x' : X'} {y' : Y' x'} (Py : P x' y')
+  : QEquiv {Fib {\Sigma (x : X) (Y x)} {\Sigma (x' : X') (Y' x')} (\lam s => (T1 s.1, T2 s.1 s.2)) (x', y')} {Fib T1 x'}
+  => sigma-right (\lam (s : \Sigma (x : X) (Y x)) => sigmaEquiv Y' (T1 s.1, T2 s.1 s.2) (x', y'))
+     `transQEquiv` (\new QEquiv {\Sigma (s : \Sigma (x : X) (Y x)) (\Sigma (q : T1 s.1 = x') (transport Y' q (T2 s.1 s.2) = y'))}
+                                {\Sigma (t : Fib T1 x') (\Sigma (y : Y t.1) (transport Y' t.2 (T2 t.1 y) = y'))} {
+       | f s => ((s.1.1, s.2.1), (s.1.2, s.2.2))
+       | ret t => ((t.1.1, t.2.1), (t.1.2, t.2.2))
+       | ret_f s => idp
+       | f_sec t => idp
+     })
+     `transQEquiv` contr-right (\lam (t : Fib T1 x') => aux t.1 t.2 Py)
+  \where
+    \private \lemma aux (x : X) {x' : X'} (q : T1 x = x') {y' : Y' x'} (Py : P x' y')
+      : Contr (\Sigma (y : Y x) (transport Y' q (T2 x y) = y')) \elim q
+      | idp => c x y' Py
 
 -- | An equivalence that preserves and reflects a family of propositions restricts to an equivalence of the subtypes.
 \lemma subtype-equiv {X Y : \Cat} {g : X -> Y} (ge : IsEquiv g) {P : X -> \Prop} {Q : Y -> \Prop}
