@@ -2,23 +2,29 @@ package org.arend.arc
 
 import com.intellij.openapi.application.runWriteAction
 import com.intellij.openapi.components.service
+import com.intellij.openapi.editor.event.DocumentEvent
+import com.intellij.openapi.editor.event.DocumentListener
 import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.openapi.vfs.LocalFileSystem
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.psi.PsiDocumentManager
 import com.intellij.psi.PsiManager
 import com.intellij.testFramework.PlatformTestUtil
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
 import org.arend.ArendTestBase
 import org.arend.core.definition.FunctionDefinition
 import org.arend.ext.module.ModuleLocation
 import org.arend.ext.module.ModulePath
+import org.arend.module.config.ArendModuleConfigService
 import org.arend.naming.reference.TCDefReferable
 import org.arend.server.ArendServerService
+import org.arend.typechecking.ArendBinaryCacheService
 import org.arend.util.ArendBundle
 import java.io.File
 import java.nio.file.Files
+import java.util.concurrent.atomic.AtomicInteger
 
 class ArcTest : ArendTestBase() {
     override var dataPath = "org/arend/arc"
@@ -78,6 +84,70 @@ class ArcTest : ArendTestBase() {
         f.typechecked = FunctionDefinition(f)
 
         assertEquals("\\func f : Prelude.Nat => 0", runBlocking(Dispatchers.Default) { ArcFileDecompiler.decompile(project, file) })
+    }
+
+    // Modules whose .arc is up to date come from the binary cache instead of being typechecked, so it is loaded first
+    fun `test arc file of a module with a source loads the binary cache`() {
+        InlineFile("\\func g => 1")
+        val cache = project.service<ArendBinaryCacheService>()
+        cache.invalidate(listOf(module.name))
+
+        withArcCopy("Main.arc") { file ->
+            runBlocking(Dispatchers.Default) { ArcFileDecompiler.decompile(project, file) }
+            assertTrue(cache.isLoaded(module.name))
+        }
+    }
+
+    /**
+     * Before its library is registered, an .arc has nothing to show: it keeps its placeholder, and the registration
+     * (reloadBinaryFiles) decompiles it again.
+     */
+    fun `test arc file of a library that is not registered keeps the placeholder`() = withArcCopy("Test.arc") { file ->
+        val config = ArendModuleConfigService.getInstance(module)!!
+        val document = try {
+            config.isInitialized = false
+            FileDocumentManager.getInstance().getDocument(file)!!.also { waitForDecompilation() }
+        } finally {
+            config.isInitialized = true
+        }
+        assertEquals(ArendBundle.message("arend.arc.decompiling.placeholder", file.name), document.text)
+
+        FileDocumentManager.getInstance().reloadBinaryFiles()
+        waitForDecompilation()
+        assertEquals("\\func f : Prelude.Nat => 0", document.text)
+    }
+
+    /**
+     * Decompilations wait for each other, so a result held back because the file was requested again meanwhile
+     * would leave the file empty for as long as the others take: it is shown, then replaced by the next one.
+     */
+    fun `test result is shown even if the file is requested again meanwhile`() = withArcCopy("Again.arc") { file ->
+        val service = project.service<ArcDecompilationService>()
+        val runs = AtomicInteger()
+        val firstMayFinish = CompletableDeferred<Unit>()
+        service.setDecompiler({ _, _ ->
+            if (runs.incrementAndGet() == 1) {
+                firstMayFinish.await()
+                "\\func first => 1"
+            } else {
+                "\\func second => 2"
+            }
+        }, testRootDisposable)
+
+        val document = FileDocumentManager.getInstance().getDocument(file)!!
+        // Only changes of the text: the reloadBinaryFiles of the fixture's registration can come in between, and
+        // reload the same text
+        val shown = mutableListOf<String>()
+        document.addDocumentListener(object : DocumentListener {
+            override fun documentChanged(event: DocumentEvent) {
+                if (shown.lastOrNull() != document.text) shown += document.text
+            }
+        }, testRootDisposable)
+        service.decompile(file)
+        firstMayFinish.complete(Unit)
+
+        waitForDecompilation()
+        assertEquals(listOf("\\func first => 1", "\\func second => 2"), shown)
     }
 
     // A decompilation waits for the previous one, and the .arc can be deleted in the meantime

@@ -23,6 +23,7 @@ import org.arend.typechecking.computation.UnstoppableCancellationIndicator
 import org.arend.typechecking.error.DeduplicatingErrorReporter
 import org.arend.typechecking.error.NotificationErrorReporter
 import org.arend.util.findLibrary
+import org.jetbrains.annotations.TestOnly
 import java.nio.file.Files
 import java.nio.file.Path
 import java.util.concurrent.ConcurrentHashMap
@@ -103,6 +104,9 @@ class ArendBinaryCacheService(private val project: Project) {
         }
         return loadedModules.isNotEmpty()
     }
+
+    @TestOnly
+    fun isLoaded(library: String): Boolean = loadedLibraries.containsKey(library)
 
     fun invalidate(libraries: Collection<String>) {
         for (library in libraries) {

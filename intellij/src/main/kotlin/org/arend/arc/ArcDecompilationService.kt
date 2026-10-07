@@ -1,11 +1,13 @@
 package org.arend.arc
 
+import com.intellij.openapi.Disposable
 import com.intellij.openapi.application.EDT
 import com.intellij.openapi.application.runWriteAction
 import com.intellij.openapi.components.Service
 import com.intellij.openapi.editor.ex.DocumentEx
 import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.openapi.project.Project
+import com.intellij.openapi.util.Disposer
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.platform.ide.progress.withBackgroundProgress
 import com.intellij.ui.EditorNotifications
@@ -24,7 +26,8 @@ import java.util.concurrent.ConcurrentHashMap
  * The platform asks [ArcFileDecompiler] for the text of an .arc file synchronously, when it creates the
  * document or reloads it, but decompiling may typecheck the module first. So that call only starts a
  * decompilation and answers with the current text of the document, or a placeholder for a new one. When the
- * decompilation finishes, the file is reparsed, and the platform asks again and gets the result.
+ * decompilation finishes, the file is reparsed, and the platform asks again and gets the result. A decompilation
+ * that has nothing to show yet, because the library of the .arc is not registered, leaves the text as it is.
  */
 @Service(Service.Level.PROJECT)
 class ArcDecompilationService(private val project: Project, private val coroutineScope: CoroutineScope) {
@@ -35,6 +38,7 @@ class ArcDecompilationService(private val project: Project, private val coroutin
     private val cancelled = ConcurrentHashMap.newKeySet<VirtualFile>()
     // Decompilations typecheck and load modules on the shared server, so they run one at a time
     private val mutex = Mutex()
+    private var decompiler: suspend (Project, VirtualFile) -> String? = { project, file -> ArcFileDecompiler.decompile(project, file) }
 
     fun getText(file: VirtualFile): String {
         results.remove(file)?.let { return it }
@@ -48,6 +52,13 @@ class ArcDecompilationService(private val project: Project, private val coroutin
     @get:TestOnly
     val isDecompiling: Boolean
         get() = synchronized(lock) { running.isNotEmpty() }
+
+    @TestOnly
+    fun setDecompiler(decompiler: suspend (Project, VirtualFile) -> String?, disposable: Disposable) {
+        val previous = this.decompiler
+        this.decompiler = decompiler
+        Disposer.register(disposable) { this.decompiler = previous }
+    }
 
     fun decompile(file: VirtualFile) {
         synchronized(lock) {
@@ -65,19 +76,21 @@ class ArcDecompilationService(private val project: Project, private val coroutin
             try {
                 do {
                     val text = withBackgroundProgress(project, ArendBundle.message("arend.arc.decompiling", file.name)) {
-                        mutex.withLock { ArcFileDecompiler.decompile(project, file) }
+                        mutex.withLock { decompiler(project, file) }
                     }
-                    // A request that came while decompiling may have made the text outdated
-                    val outdated = synchronized(lock) { running.put(file, false) == true }
-                    // Nothing asks for the text of a deleted file
-                    if (!outdated && file.isValid) {
+                    // A request that came while decompiling may have made the text outdated. It is shown anyway, and
+                    // replaced by the next decompilation: decompilations wait for each other, so holding it back until
+                    // then can keep a file empty for as long as the others take.
+                    val again = synchronized(lock) { running.put(file, false) == true }
+                    // Nothing to show yet, or nothing asks for the text of a deleted file
+                    if (text != null && file.isValid) {
                         results[file] = text
                         withContext(Dispatchers.EDT) {
                             FileContentUtilCore.reparseFiles(listOf(file))
                             renewModificationStamp(file)
                         }
                     }
-                } while (outdated || continueOrFinish(file))
+                } while (again || continueOrFinish(file))
             } catch (e: Throwable) {
                 synchronized(lock) { running.remove(file) }
                 // Cancelled in the progress UI rather than together with the project

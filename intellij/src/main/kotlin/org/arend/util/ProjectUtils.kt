@@ -228,13 +228,14 @@ fun Module.register(modules: List<Module> = emptyList()) {
         loaded.addAll(project.arendModules.map { it.name })
         project.addDependencies(server, config, loaded)
         project.registerLibrary(server, config)
-        invokeLater {
-            FileDocumentManager.getInstance().reloadBinaryFiles()
-        }
     }
 
     project.service<ArendExtensionChangeService>().initializeModule(config)
     config.isInitialized = true
+    // After isInitialized: until then, decompiling an .arc of this library gives nothing
+    invokeLater {
+        FileDocumentManager.getInstance().reloadBinaryFiles()
+    }
     if (!ApplicationManager.getApplication().isUnitTestMode) {
         DaemonCodeAnalyzer.getInstance(project).restart()
     }

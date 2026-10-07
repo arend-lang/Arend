@@ -1,9 +1,12 @@
 package org.arend.arc
 
+import com.intellij.codeInsight.daemon.DaemonCodeAnalyzer
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.application.readAction
 import com.intellij.openapi.components.service
+import com.intellij.openapi.diagnostic.logger
 import com.intellij.openapi.fileTypes.BinaryFileDecompiler
+import com.intellij.openapi.progress.ProcessCanceledException
 import com.intellij.openapi.progress.ProgressManager
 import com.intellij.openapi.project.DefaultProjectFactory
 import com.intellij.openapi.project.Project
@@ -19,6 +22,7 @@ import com.intellij.psi.PsiManager
 import com.intellij.psi.compiled.ClassFileDecompilers
 import com.intellij.psi.impl.compiled.ClsFileImpl
 import com.intellij.ui.EditorNotifications
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
 import org.arend.core.definition.ClassDefinition
@@ -48,6 +52,7 @@ import org.arend.term.concrete.Concrete
 import org.arend.term.group.ConcreteGroup
 import org.arend.term.prettyprint.PrettyPrinterConfigWithRenamer
 import org.arend.term.prettyprint.ToAbstractVisitor
+import org.arend.typechecking.ArendBinaryCacheService
 import org.arend.typechecking.CoroutineCancellationIndicator
 import org.arend.typechecking.computation.UnstoppableCancellationIndicator
 import org.arend.typechecking.runner.IntellijProgressReporter
@@ -89,19 +94,34 @@ class ArcFileDecompiler : BinaryFileDecompiler {
     }
 
     companion object {
-        private class Source(val config: ArendModuleConfigService, val path: List<String>, val arendFile: ArendFile?, val module: ModuleLocation?)
+        private val LOG = logger<ArcFileDecompiler>()
+
+        private sealed interface Lookup
+
+        // The library of the .arc is not registered yet; its registration decompiles open .arc files again
+        private object NotRegistered : Lookup
+
+        private class Source(val config: ArendModuleConfigService, val path: List<String>, val arendFile: ArendFile?, val module: ModuleLocation?) : Lookup
 
         private class LoadedModule(val group: ConcreteGroup, val arendFile: ArendFile?, val modules: List<PsiFile?>)
 
         /**
-         * Typechecks the module of [virtualFile] if it has a source, or else loads the .arc with its imports,
-         * and prints the definitions. Reports to the current progress step, and holds a read action only
-         * while it reads PSI, so it must not be called under one.
+         * Typechecks the module of [virtualFile] if it has a source, after loading the binary cache of its library,
+         * or else loads the .arc with its imports, and prints the definitions. Returns null while the library of the
+         * .arc is not registered: there is nothing to show yet, and the registration decompiles open .arc files again.
+         * Reports to the current progress step, and holds a read action only while it reads PSI, so it must not be
+         * called under one.
          */
-        suspend fun decompile(project: Project, virtualFile: VirtualFile): String = reportSequentialProgress { reporter ->
-            val module = getModule(project, virtualFile, reporter)
-            if (module == null) "" else reporter.nextStep(100, ArendBundle.message("arend.arc.printing")) {
-                reportRawProgress { progress -> readAction { print(project, module, progress) } }
+        suspend fun decompile(project: Project, virtualFile: VirtualFile): String? = reportSequentialProgress { reporter ->
+            when (val lookup = readAction { findSource(project, virtualFile) }) {
+                null -> ""
+                NotRegistered -> null
+                is Source -> {
+                    val module = getModule(project, virtualFile, lookup, reporter)
+                    if (module == null) "" else reporter.nextStep(100, ArendBundle.message("arend.arc.printing")) {
+                        reportRawProgress { progress -> readAction { print(project, module, progress) } }
+                    }
+                }
             }
         }
 
@@ -201,29 +221,32 @@ class ArcFileDecompiler : BinaryFileDecompiler {
             return builder.toString()
         }
 
-        private fun findSource(project: Project, virtualFile: VirtualFile): Source? {
+        private fun findSource(project: Project, virtualFile: VirtualFile): Lookup? {
             // The .arc may have been deleted while its decompilation was waiting for the previous one
             if (!virtualFile.isValid) return null
             val psiManager = PsiManager.getInstance(project)
             if (psiManager.findFile(virtualFile) !is ArcFile) return null
 
-            val config = (project.arendModules.map { ArendModuleConfigService.getInstance(it) }.find {
-                it?.binariesDirFile?.let { binFile -> VfsUtilCore.isAncestor(binFile, virtualFile, true) } ?: false
-            } ?: if (ApplicationManager.getApplication().isUnitTestMode) {
-                ArendModuleConfigService.getInstance(project.arendModules.getOrNull(0))
-            } else {
-                null
-            }) ?: return null
+            val configs = project.arendModules.mapNotNull { ArendModuleConfigService.getInstance(it) }
+            val config = configs.find {
+                it.binariesDirFile?.let { binFile -> VfsUtilCore.isAncestor(binFile, virtualFile, true) } ?: false
+            } ?: (if (ApplicationManager.getApplication().isUnitTestMode) configs.firstOrNull() else null)
+                // A library reads its binaries directory from arend.yaml when it is registered
+                ?: return if (configs.any { !it.isInitialized }) NotRegistered else null
+            if (!config.isInitialized) return NotRegistered
             val path = config.binariesDirFile?.getRelativePath(virtualFile, SERIALIZED_EXTENSION) ?: mutableListOf(virtualFile.name.removeSuffix(SERIALIZED_EXTENSION))
             val arendFile = config.sourcesDirFile?.getRelativeFile(path, EXTENSION)?.let { psiManager.findFile(it) } as? ArendFile?
             return Source(config, path, arendFile, arendFile?.moduleLocation)
         }
 
-        private suspend fun getModule(project: Project, virtualFile: VirtualFile, reporter: SequentialProgressReporter): LoadedModule? {
+        private suspend fun getModule(project: Project, virtualFile: VirtualFile, source: Source, reporter: SequentialProgressReporter): LoadedModule? {
             val server = project.service<ArendServerService>().server
-            val source = readAction { findSource(project, virtualFile) } ?: return null
 
             if (source.module != null) {
+                // Modules whose .arc is up to date are loaded from it, which leaves nothing to typecheck in them
+                reporter.nextStep(30, ArendBundle.message("arend.arc.loading.cache", source.module.libraryName)) {
+                    loadBinaryCache(project, source.module.libraryName)
+                }
                 reporter.nextStep(70, ArendBundle.message("arend.arc.typechecking", source.module.modulePath)) {
                     reportRawProgress { progress ->
                         val progressReporter = IntellijProgressReporter<List<Concrete.ResolvableDefinition>>(progress) {
@@ -292,6 +315,21 @@ class ArcFileDecompiler : BinaryFileDecompiler {
                     ?.let { file -> psiManager.findFile(file) } }
             }
             return LoadedModule(group, source.arendFile, modules)
+        }
+
+        private suspend fun loadBinaryCache(project: Project, library: String) {
+            try {
+                // As in RunnerService: definitions loaded from the binaries outdate the highlighting of the sources
+                if (project.service<ArendBinaryCacheService>().loadCache(library) && !ApplicationManager.getApplication().isUnitTestMode) {
+                    DaemonCodeAnalyzer.getInstance(project).restart()
+                }
+            } catch (e: ProcessCanceledException) {
+                throw e
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                LOG.warn("Failed to load binary cache for $library", e)
+            }
         }
 
         // Skips definitions without a header yet: being typechecked, or shells of a cache that failed to load
