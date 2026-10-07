@@ -3,7 +3,6 @@ package org.arend.arc
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.application.readAction
 import com.intellij.openapi.components.service
-import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.fileTypes.BinaryFileDecompiler
 import com.intellij.openapi.progress.ProgressManager
 import com.intellij.openapi.project.DefaultProjectFactory
@@ -22,8 +21,6 @@ import com.intellij.psi.impl.compiled.ClsFileImpl
 import com.intellij.ui.EditorNotifications
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
-import org.arend.arc.ArcUnloadedModuleService.Companion.DEFINITION_IS_NOT_LOADED
-import org.arend.arc.ArcUnloadedModuleService.Companion.NOT_FOUND_MODULE
 import org.arend.core.definition.ClassDefinition
 import org.arend.core.definition.Definition
 import org.arend.core.expr.DefCallExpression
@@ -32,8 +29,8 @@ import org.arend.error.DummyErrorReporter
 import org.arend.ext.module.ModuleLocation
 import org.arend.ext.module.ModulePath
 import org.arend.ext.prettyprinting.PrettyPrinterConfig
-import org.arend.ext.serialization.DeserializationException
 import org.arend.module.config.ArendModuleConfigService
+import org.arend.module.serialization.MissingDependencyException
 import org.arend.naming.reference.LocatedReferable
 import org.arend.naming.reference.TCDefReferable
 import org.arend.prelude.Prelude
@@ -92,8 +89,6 @@ class ArcFileDecompiler : BinaryFileDecompiler {
     }
 
     companion object {
-        private val LOG = Logger.getInstance(ArcFileDecompiler::class.java)
-
         private class Source(val config: ArendModuleConfigService, val path: List<String>, val arendFile: ArendFile?, val module: ModuleLocation?)
 
         private class LoadedModule(val group: ConcreteGroup, val arendFile: ArendFile?, val modules: List<PsiFile?>)
@@ -207,6 +202,8 @@ class ArcFileDecompiler : BinaryFileDecompiler {
         }
 
         private fun findSource(project: Project, virtualFile: VirtualFile): Source? {
+            // The .arc may have been deleted while its decompilation was waiting for the previous one
+            if (!virtualFile.isValid) return null
             val psiManager = PsiManager.getInstance(project)
             if (psiManager.findFile(virtualFile) !is ArcFile) return null
 
@@ -262,14 +259,9 @@ class ArcFileDecompiler : BinaryFileDecompiler {
             val result = reporter.nextStep(85, ArendBundle.message("arend.arc.loading", virtualFile.name)) {
                 try {
                     GZIPStreamBinarySource(FileBinarySource(binaryBasePath, moduleLocation)).loadWithImports(server, DummyErrorReporter.INSTANCE)
-                } catch (e : DeserializationException) {
-                    val message = e.message
-                    if (message != null && (DEFINITION_IS_NOT_LOADED.matches(message) || NOT_FOUND_MODULE.matches(message))) {
-                        project.service<ArcUnloadedModuleService>().addUnloadedModule(virtualFile)
-                        EditorNotifications.getInstance(project).updateNotifications(virtualFile)
-                    } else if (message != null) {
-                        LOG.error(message)
-                    }
+                } catch (_: MissingDependencyException) {
+                    project.service<ArcUnloadedModuleService>().addUnloadedModule(virtualFile)
+                    EditorNotifications.getInstance(project).updateNotifications(virtualFile)
                     null
                 }
             } ?: return null

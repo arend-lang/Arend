@@ -18,9 +18,4 @@ class ArcUnloadedModuleService {
     fun containsUnloadedModule(file: VirtualFile): Boolean {
         return unloadedModules.contains(file)
     }
-
-    companion object {
-        val DEFINITION_IS_NOT_LOADED = "Definition (.+):(.+) is not loaded".toRegex()
-        val NOT_FOUND_MODULE = "Cannot find module: (.+)".toRegex()
-    }
 }

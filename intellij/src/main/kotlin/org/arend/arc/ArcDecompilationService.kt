@@ -66,7 +66,8 @@ class ArcDecompilationService(private val project: Project, private val coroutin
                     }
                     // A request that came while decompiling may have made the text outdated
                     val outdated = synchronized(lock) { running.put(file, false) == true }
-                    if (!outdated) {
+                    // Nothing asks for the text of a deleted file
+                    if (!outdated && file.isValid) {
                         results[file] = text
                         withContext(Dispatchers.EDT) {
                             FileContentUtilCore.reparseFiles(listOf(file))

@@ -13,6 +13,7 @@ import org.arend.frontend.parser.BuildVisitor;
 import org.arend.frontend.repl.CommonCliRepl;
 import org.arend.frontend.source.PreludeResourceSource;
 import org.arend.module.error.CorruptBinaryCacheError;
+import org.arend.module.serialization.MissingDependencyException;
 import org.arend.naming.reference.FullModuleReferable;
 import org.arend.naming.reference.TCDefReferable;
 import org.arend.prelude.Prelude;
@@ -401,6 +402,59 @@ public class CachingTest {
 
     assertNull("a truncated .arc cannot yield a group", binarySource("A").load(createServer(), errorReporter));
     assertReportedAsRecoverable("A");
+  }
+
+  // A cache whose dependency is not loaded is not broken: reading it before its dependency (the .arc
+  // viewer does, before the library is registered) must leave it on disk.
+
+  private void persistDependentModules() {
+    addModule("A", "\\func f : Nat => 0");
+    addModule("B", "\\import A() \\func g : Nat => A.f");
+    typecheck("A");
+    typecheck("B");
+    assertTrue("the fixture must start from valid caches", persistModule("A") && persistModule("B"));
+    errorList.clear();
+  }
+
+  private void assertKeptWithMissingDependency(String name, String message) {
+    assertThat(errorList, hasSize(1));
+    GeneralError error = errorList.get(0);
+    assertThat(error, is(instanceOf(CorruptBinaryCacheError.class)));
+    assertThat(error.level, is(GeneralError.Level.WARNING));
+    Exception exception = ((CorruptBinaryCacheError) error).exception;
+    assertThat(exception, is(instanceOf(MissingDependencyException.class)));
+    assertThat(exception.getMessage(), is(message));
+    assertTrue("a cache whose dependency is not loaded must not be deleted", Files.exists(arcFile(name)));
+  }
+
+  @Test
+  public void aCacheWhoseDependencyIsAbsentIsKept() {
+    persistDependentModules();
+
+    assertNull(binarySource("B").load(createServer(), errorReporter));
+    assertKeptWithMissingDependency("B", "Cannot find module: A");
+  }
+
+  @Test
+  public void aCacheWhoseDependencyIsNotTypecheckedIsKept() {
+    persistDependentModules();
+    ArendServer srv = createServer();
+    ConcreteGroup a = parseModule("\\func f : Nat => 0", moduleLoc("A"));
+    srv.updateModule(1, moduleLoc("A"), () -> a);
+
+    assertNull(binarySource("B").load(srv, errorReporter));
+    assertKeptWithMissingDependency("B", "Definition A:f is not loaded");
+  }
+
+  @Test
+  public void loadWithImportsHandsAMissingDependencyToItsCaller() {
+    persistDependentModules();
+
+    MissingDependencyException exception = assertThrows(MissingDependencyException.class,
+        () -> binarySource("B").loadWithImports(createServer(), errorReporter));
+    assertThat(exception.getMessage(), is("Cannot find module: A"));
+    assertThat("the caller reports it", errorList, is(empty()));
+    assertTrue(Files.exists(arcFile("B")));
   }
 
   @Test

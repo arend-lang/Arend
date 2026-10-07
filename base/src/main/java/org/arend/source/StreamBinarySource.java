@@ -12,6 +12,7 @@ import org.arend.module.error.CorruptBinaryCacheError;
 import org.arend.module.error.ExceptionError;
 import org.arend.module.scopeprovider.ModuleScopeProvider;
 import org.arend.ext.serialization.DeserializationException;
+import org.arend.module.serialization.MissingDependencyException;
 import org.arend.module.serialization.ModuleDeserialization;
 import org.arend.module.serialization.ModuleProtos;
 import org.arend.module.serialization.ModuleSerialization;
@@ -83,11 +84,20 @@ public abstract class StreamBinarySource implements PersistableBinarySource {
 
   @Override
   public @Nullable ConcreteGroup load(@NotNull ArendServer server, @NotNull ErrorReporter errorReporter) {
-    Pair<ConcreteGroup, List<ModulePath>> result = loadWithImports(server, errorReporter);
-    return result == null ? null : result.proj1;
+    try {
+      Pair<ConcreteGroup, List<ModulePath>> result = loadWithImports(server, errorReporter);
+      return result == null ? null : result.proj1;
+    } catch (MissingDependencyException e) {
+      reportUnreadableCache(errorReporter, e);
+      return null;
+    }
   }
 
-  public @Nullable Pair<ConcreteGroup, List<ModulePath>> loadWithImports(@NotNull ArendServer server, @NotNull ErrorReporter errorReporter) {
+  /**
+   * Like {@link #load}, but also returns the modules the cache refers to, and lets the caller decide what
+   * to do when one of them is not loaded.
+   */
+  public @Nullable Pair<ConcreteGroup, List<ModulePath>> loadWithImports(@NotNull ArendServer server, @NotNull ErrorReporter errorReporter) throws MissingDependencyException {
     ModuleLocation module = getModule();
     try (InputStream inputStream = getInputStream()) {
       if (inputStream == null) return null;
@@ -107,6 +117,8 @@ public abstract class StreamBinarySource implements PersistableBinarySource {
       return new Pair<>(group, moduleProto.getModuleCallTargetsList().stream()
               .map(target -> new ModulePath(target.getNameList()))
               .filter(modulePath -> !modulePath.equals(module.getModulePath())).toList());
+    } catch (MissingDependencyException e) {
+      throw e;
     } catch (IOException | DeserializationException e) {
       reportUnreadableCache(errorReporter, e);
       return null;
@@ -156,10 +168,12 @@ public abstract class StreamBinarySource implements PersistableBinarySource {
    * wrong. A bare {@link IOException} says nothing of the sort: {@code EIO} on a failing disk, an
    * NFS hiccup, an {@code AccessDeniedException}, or the destination being replaced by a
    * concurrent persist all arrive the same way, and deleting on those is how a valid cache gets
-   * destroyed — on a library the size of arend-lib, minutes of work — by a transient fault.
+   * destroyed — on a library the size of arend-lib, minutes of work — by a transient fault. Nor
+   * does a {@link MissingDependencyException}: it says that a module the cache refers to is not
+   * loaded yet, which is how the .arc viewer meets a cache before the library is registered.
    */
   private static boolean provesCorruption(Exception e) {
-    return e instanceof DeserializationException
+    return e instanceof DeserializationException && !(e instanceof MissingDependencyException)
         || e instanceof InvalidProtocolBufferException
         || e instanceof ZipException
         || e instanceof EOFException;

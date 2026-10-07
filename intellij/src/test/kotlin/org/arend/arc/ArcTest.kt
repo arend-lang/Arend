@@ -43,6 +43,12 @@ class ArcTest : ArendTestBase() {
         assertEquals("\\func f : Prelude.Nat => 0", runBlocking(Dispatchers.Default) { ArcFileDecompiler.decompile(project, file) })
     }
 
+    // A decompilation waits for the previous one, and the .arc can be deleted in the meantime
+    fun `test decompile deleted arc file`() = withArcCopy("Deleted.arc") { file ->
+        runWriteAction { file.delete(this) }
+        assertEquals("", runBlocking(Dispatchers.Default) { ArcFileDecompiler.decompile(project, file) })
+    }
+
     /**
      * The document of an .arc file starts as a placeholder; the decompilation runs in the background and then
      * reparses the file, which puts the decompiled text into the document and rebuilds the PSI from it.

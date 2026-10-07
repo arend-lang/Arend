@@ -75,7 +75,7 @@ public class ModuleDeserialization {
       ModulePath module = new ModulePath(moduleCallTargets.getNameList());
       Scope scope = moduleScopeProvider.forModule(module);
       if (scope == null) {
-        throw new DeserializationException("Cannot find module: " + module);
+        throw new MissingDependencyException("Cannot find module: " + module);
       }
 
       for (ModuleProtos.CallTargetTree callTargetTree : moduleCallTargets.getCallTargetTreeList()) {
