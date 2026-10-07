@@ -4,6 +4,7 @@
 \import InfCat.Basics
 \import InfCat.Fibration.LeftFib
 \import InfCat.Functor.Adjunction
+\import InfCat.Rezk
 \import Logic.Unique
 
 \type IsInitial {C : \Cat} (x : C) : \Prop
@@ -12,6 +13,14 @@
     \func adjunction (xi : IsInitial x) : QAdjunction (\Sigma) C (\lam _ => x) (\lam _ => ()) (\lam _ => idd)
       => (\new UnivUnit (\lam _ => x) (\lam _ => ()) (\lam _ => idd) \lam q c => contr-equiv (xi c) (Contr.make idd \lam _ => idp)).toAdjunction
   }
+
+-- | Initial objects of a category are equal.
+\sfunc initial-unique {C : \Cat} {x y : C} (xi : IsInitial x) (yi : IsInitial y) : x = y
+  => (iso_= (xi y).center (yi x).center (isContr=>isProp (xi x) _ _) (isContr=>isProp (yi y) _ _)).1
+
+-- | `(x, idd)` is initial in the coslice under {x}.
+\lemma coslice-initial {C : \Cat} (x : C) : IsInitial {\Sigma⁺ (y : C) (x ~> y)} (x, idd)
+  => \lam k => Contr.Contr_QEquiv (symQEquiv (dpath-sigma-equiv \lam _ y => x ~> y)) (segal-contr.conn k.2)
 
 -- | If {d0} is initial and the fibers of {B} are contractible, then any object over {d0} is initial in the total category.
 \lemma sigma-initial {C : \Cat} {B : C ->⁺ \Cat} (Bf : IsLeftFib B) {d0 : C} (init : IsInitial d0)

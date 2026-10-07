@@ -1,9 +1,18 @@
 \import Equiv
+\import InfCat.Basics
 \import InfCat.Paths
+\import InfCat.Rezk
+\import Logic
 \import Paths.Meta
 
 -- | The family of fibers of {p}.
 \func Fibers {E A : \Cat} (p : E ->⁺ A) (a :⁺ A) : \Cat
+  => \Sigma⁺ (e : E) (p e = a)
+
+{- | The fiber of {p} over a fixed {a}.
+ -   It is the same category as `Fibers p a`, but it lives in `\Cat u` since the path type is released by the binder of `e`.
+ -}
+\func Fiber.{u} {E A : \Cat u} (p : E ->⁺ A) (a : A) : \Cat u
   => \Sigma⁺ (e : E) (p e = a)
 
 -- | The base change of {p} along {pi}.
@@ -40,3 +49,14 @@
       | ret_f _ => idp
       | f_sec s => ext \lam y => fibers-total-ret-sec (s y)
   }
+
+-- | An arrow of a fiber whose image in the total category is an isomorphism is an isomorphism.
+\lemma fibers-conservative {E A : \Cat} {p : E ->⁺ A} {a : A} {m : DI ->⁺ Fibers p a} (mi : IsIso (dpath \lam i => (m i).1))
+  : IsIso (dpath \lam i => m i)
+  => \case IsIso-diag-char.1 mi \with {
+    | inP (c, e) => aux e (\lam i => (m i).2)
+  }
+  \where
+    \private \lemma aux {c : E} {m1 : DI ->⁺ E} (e : (\lam _ => c) = {DI ->⁺ E} m1) (m2 : \Pi (i :⁺ DI) -> p (m1 i) = a)
+      : IsIso (dpath \lam i => ((m1 i, m2 i) : Fibers p a)) \elim e
+      | idp => dmap_IsIso (\lam (q : p c = a) => ((c, q) : Fibers p a)) {_} {_} {dpath m2} (IsIso-char.2 (inP (~>_= (dpath m2), ~>_=_~>)))

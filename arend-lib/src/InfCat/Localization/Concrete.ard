@@ -20,6 +20,7 @@
 \import InfCat.Rezk
 \import InfCat.SubCat.Full
 \import Logic
+\import Logic.Meta
 \import Logic.Unique
 \import Paths
 \import Paths.Meta
@@ -93,6 +94,11 @@
 -- | {Localize} is a localization with respect to functors into any category.
 \lemma localize-isLocalizationFor {C D : \Cat} {W : (DI ->⁺ C) -> \Prop} : IsLocalizationFor W (localize W) D
   => localization-criterion localize-inverts (localize-ob-equiv {C} {D} {W}) (localize-ob-equiv {C} {DI ->⁺ D} {W})
+
+-- | Every object of {Localize} is merely the image of an object of {C}.
+\lemma localize-surj {C : \Cat} {W : (DI ->⁺ C) -> \Prop} (e : Localize W) : ∃ (c : C) (localize W c = e) \elim e
+  | cinl b => inP (b, idp)
+  | cinr m => inP (m.1 dleft, path (cglue ((m, dleft) : \Sigma⁺ (MorW W) DI)))
 
 -- | The canonical functor out of {Localize} induced by a functor inverting {W}; it computes on {localize}.
 \func localize-lift {C L : \Cat} {W : (DI ->⁺ C) -> \Prop} {l : C ->⁺ L} (lw : InvertsW W l) (y :⁺ Localize W) : L \elim y

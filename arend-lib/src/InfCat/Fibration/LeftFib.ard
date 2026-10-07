@@ -180,6 +180,20 @@
   => pmap+ (\lam x => leftFib-tr Bf (comp p q) x) (inv (leftFib-tr_idd Bf))
      *> leftFib-tr-dpath Bf (dpath \lam i => leftFib-tr Bf (dpath (fill2 p q i)) ((leftFib-lift Bf (a, a', p, b)).2 i))
 
+-- | Maps of left fibrations commute with {leftFib-tr}.
+\sfunc leftFib-tr-natural {C : \Cat} {F G : C ->⁺ \Cat} (Ff : IsLeftFib F) (Gf : IsLeftFib G)
+                          (alpha : \Pi (s :⁺ \Sigma⁺ (x : C) (F x)) -> G s.1) {x y :⁺ C} (h :⁺ x ~> y) (a :⁺ F x)
+  : alpha (y, leftFib-tr Ff h a) = leftFib-tr Gf h (alpha (x, a))
+  => inv (leftFib-tr-dpath Gf (dpath \lam i => alpha (h i, (leftFib-lift Ff (x, y, h, a)).2 i)))
+
+-- | Along a fiberwise equivalence {alpha} of left fibrations, transport of {a} is an equivalence if and only if transport of `alpha a` is.
+\lemma leftFib-tr-equiv<-> {C : \Cat} {F G : C ->⁺ \Cat} (Ff : IsLeftFib F) (Gf : IsLeftFib G)
+                          (alpha : \Pi (s :⁺ \Sigma⁺ (x : C) (F x)) -> G s.1) (eq : \Pi (x : C) -> IsEquiv {F x} {G x} (\lam a => alpha (x,a)))
+                          {x : C} (a : F x) (y : C)
+  : IsEquiv {x ~> y} {F y} (leftFib-tr Ff __ a) <-> IsEquiv {x ~> y} {G y} (leftFib-tr Gf __ (alpha (x, a)))
+  => \let q => IsEquiv.parallelEquiv (inP idEquiv) (eq y) (\lam h => leftFib-tr-natural Ff Gf alpha h a)
+     \in (transport (\lam P => P) q, transportInv (\lam P => P) q)
+
 \func coe+-dpath.{u} {A :⁺ DI ->⁺ \Type u} {a :⁺ A dleft} {a' :⁺ A dright} (t :⁺ DPath A a a') : coe+ A a dright = a'
   => leftFib-dpath universe-leftFib {_, _, dpath A, a} (coe+ A a dright, dpath (coe+ A a)) t
 

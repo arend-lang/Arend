@@ -2,7 +2,7 @@
  -
  -   For `f : A ->⁺ B` and `T : A ->⁺ \Type u`, {RightKanExtType} is right adjoint to restriction along `f`
  -   ({rightKanAdjunction}, {rightKanExtType-counit}, {rightKanExtType-univ}). Its value at `b` is the limit of `T`
- -   over the comma category {Comma} `b ↓ f` ({rightKanExtType-comma-equiv}).
+ -   over the comma category {RightComma} `b ↓ f` ({rightKanExtType-comma-equiv}).
  -
  -   Construction ({rightKanLeftAdjoint}). The functor `Hom(b, f -)` is contravariant in `b`, so `Hom(Hom(b, f -), T)`
  -   cannot be written directly. Instead, it is the left Kan extension of evaluation at `b` along restriction
@@ -20,6 +20,7 @@
 \import InfCat.Basics
 \import InfCat.Fibration.DirectedUnivalence
 \import InfCat.Fibration.LeftFib
+\import InfCat.Functor.RightComma
 \import InfCat.Kan.LeftKanExtType
 \import InfCat.Fibration.Straightening
 \import InfCat.Functor.Adjunction
@@ -57,10 +58,6 @@
   | R0y => RightKanExtType f T
   | eps0y => rightKanExtType-counit f T
   | eps0y-univ {R} => rightKanExtType-univ f R T
-
--- | The comma category `b ↓ f`.
-\func RightComma.{u} {A B : \Cat u} (f : A ->⁺ B) (b : B) : \Cat u
-  => \Sigma⁺ (a : A) (b ~> f a)
 
 -- | The comparison map from {RightKanExtType} to the limit of {T} over `b ↓ f`: transport along the arrow followed by the counit.
 \func rightKanExtType-comma.{u} {A B : \Cat u} (f : A ->⁺ B) (T : A ->⁺ \Type u) {b : B}

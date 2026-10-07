@@ -1,0 +1,100 @@
+{- | The fibers of a fiberwise localization are localizations of the fibers [1, Proposition 7.6.16 (3), Theorem 7.6.20]
+ -   (see also V. Hinich, Dwyer-Kan localization revisited, Proposition 2.1.4).
+ -
+ -   Let `p : E ->⁺ S` be a functor between small categories whose fibers form a cocartesian family and {W} a transport stable
+ -   family of classes of morphisms in its fibers. The comparison functor `K : Localize (W s) ->⁺ Fiber (fibLocProj p W) s` is
+ -   surjective, so it is enough to show that it is fully faithful. The fiber embeds fully faithfully into the comma category `s ↓ fibLocProj`
+ -   ({fibComma-ff}), and on the image of `x` the hom-functor of the comma category restricted to the fiber of {p} is {fibLift} of the identity
+ -   of `x`, which has the universal element `idd` for functors inverting `W s` ({fibLift-univElemW}). Hence it is corepresented
+ -   by `x` on the localization of the fiber ({univElem-extend}).
+ -
+ -   [1] Denis-Charles Cisinski, Bastiaan Cnossen, Kim Nguyen, Tashi Walde, Synthetic Category Theory, 2026
+ -}
+
+\import Equiv
+\import Function.Meta
+\import InfCat.Basics
+\import InfCat.Fibration.Categorical
+\import InfCat.Fibration.CocartesianFib
+\import InfCat.Fibration.CocartesianMap
+\import InfCat.Fibration.Straightening
+\import InfCat.Functor.FullyFaithful
+\import InfCat.Functor.RightComma
+\import InfCat.Localization.Abstract
+\import InfCat.Localization.Concrete
+\import InfCat.Localization.Fiberwise
+\import InfCat.Localization.Fiberwise.FiberwiseLift
+\import InfCat.Localization.LocalUnivElem
+\import InfCat.Yoneda.CovariantYoneda
+\import Logic
+\import Logic.Meta
+
+-- | The inclusion of the fiber of {p} over {s} into the fiber of {fibLocProj}.
+\func fibLoc-fibIncl.{u} {S E : \Cat u} (p : E ->⁺ S) (W : \Pi (s : S) -> (DI ->⁺ Fibers p s) -> \Prop) (s : S) (c :⁺ Fiber p s)
+  : Fiber (fibLocProj p W) s
+  => (localize (TotW p W) c.1, c.2)
+
+-- | The fibers of {fibLocProj} are the localizations of the fibers of {p} [1, Proposition 7.6.16 (3), Theorem 7.6.20].
+\lemma fibLoc-fibre.{u} {S E : \Cat u} {p : E ->⁺ S} (Ff : IsCocartesianFib (Fibers p)) {W : \Pi (s : S) -> (DI ->⁺ Fibers p s) -> \Prop}
+                       (Ws : IsTransportStable (Fibers p) W) (s : S)
+  : IsLocalization {Fiber p s} (W s) (fibLoc-fibIncl p W s)
+  => (incl-inverts p W s, (ff-surj-equiv {_} {_} {K p W s}).1 (ffMap-leftFactor (fibComma-ff (fibLocProj p W) s) (Psi-ff Ff Ws s), K-surj p W s))
+  \where \private {
+    \lemma incl-inverts.{u'} {S E : \Cat u'} (p : E ->⁺ S) (W : \Pi (s : S) -> (DI ->⁺ Fibers p s) -> \Prop) (s : S)
+      : InvertsW {Fiber p s} (W s) (fibLoc-fibIncl p W s)
+      => \lam {b} w => fibers-conservative {_} {_} {fibLocProj p W} {s} {\lam i => fibLoc-fibIncl p W s (b i)}
+                         (localize-inverts {_} {TotW p W} {\lam i => (b i).1} (inP (s, \lam i => (b i).2, w)))
+
+    -- | The comparison functor.
+    \func K.{u'} {S E : \Cat u'} (p : E ->⁺ S) (W : \Pi (s : S) -> (DI ->⁺ Fibers p s) -> \Prop) (s : S) (a :⁺ Localize {Fiber p s} (W s))
+      : Fiber (fibLocProj p W) s
+      => localize-lift (incl-inverts p W s) a
+
+    -- | {K} followed by the inclusion of the fiber into the comma category.
+    \func Psi.{u'} {S E : \Cat u'} (p : E ->⁺ S) (W : \Pi (s : S) -> (DI ->⁺ Fibers p s) -> \Prop) (s : S) (a :⁺ Localize {Fiber p s} (W s))
+      : RightComma (fibLocProj p W) s
+      => fibComma (fibLocProj p W) s (K p W s a)
+
+    \lemma K-surj.{u'} {S E : \Cat u'} (p : E ->⁺ S) (W : \Pi (s : S) -> (DI ->⁺ Fibers p s) -> \Prop) (s : S) : IsSurjMap (K p W s)
+      => \lam y => \case localize-surj y.1 \with {
+        | inP (c, r) => aux c r y.2
+      }
+      \where
+        \lemma aux (c : E) {y1 : FibLoc p W} (r : localize (TotW p W) c = y1) (q : fibLocProj p W y1 = s)
+          : ∃ (a : Localize {Fiber p s} (W s)) (K p W s a = (y1, q)) \elim r
+          | idp => inP (localize {Fiber p s} (W s) (c, q), idp)
+
+    -- | On the image of `(z, idp)`, {Psi} is fully faithful, since the hom-functor of the comma category is corepresented by it.
+    \lemma Psi-ff-idp.{u'} {S E : \Cat u'} {p : E ->⁺ S} (Ff : IsCocartesianFib (Fibers p)) {W : \Pi (s : S) -> (DI ->⁺ Fibers p s) -> \Prop}
+                         (Ws : IsTransportStable (Fibers p) W) (z : E) (y : Localize {Fiber p (p z)} (W (p z)))
+      : IsEquiv {localize {Fiber p (p z)} (W (p z)) (z, idp) ~> y} (\lam h => dmap (Psi p W (p z)) h)
+      => \let | U0 : IsUnivElemW {Fiber p (p z)} (W (p z)) (fibLift W (idd {E} {z})) (z, idp) (Straight.toStraight idd)
+                  => fibLift-univElemW Ff Ws (idd {E} {z}) idd-cocartesian (dpath \lam _ => idd)
+              | U1 => univElem-extend {Fiber p (p z)} {Localize {Fiber p (p z)} (W (p z))} {W (p z)} {localize {Fiber p (p z)} (W (p z))}
+                        (IsLocalization.univ (localize-isLocalization {Fiber p (p z)} {W (p z)}))
+                        {\lam a => ReprFunctor {RightComma (fibLocProj p W) (p z)} (Psi p W (p z) (localize {Fiber p (p z)} (W (p z)) (z, idp))) (Psi p W (p z) a)} U0
+              | Lc => Localize {Fiber p (p z)} (W (p z))
+              | x : Lc => localize {Fiber p (p z)} (W (p z)) (z, idp)
+              | R1 (h : x ~> y) : ReprFunctor {Lc} x y => Straight.toStraight h
+              | M (r : ReprFunctor {Lc} x y) : ReprFunctor {RightComma (fibLocProj p W) (p z)} (Psi p W (p z) x) (Psi p W (p z) y)
+                  => Straight.toStraight (dmap (Psi p W (p z)) (Straight.fromStraight r))
+              | R2 (g : ReprFunctor {RightComma (fibLocProj p W) (p z)} (Psi p W (p z) x) (Psi p W (p z) y)) : Psi p W (p z) x ~> Psi p W (p z) y
+                  => Straight.fromStraight g
+         \in IsEquiv.trans {_} {_} {_} {R1} (inP (symQEquiv ReprFunctor.equiv)) {\lam r => R2 (M r)} $
+              IsEquiv.trans {_} {_} {_} {M} (univElem-sec-equiv (\lam sg => Straight.toStraight (dmap (Psi p W (p z)) (Straight.fromStraight sg.2))) U1 y)
+                            {R2} (inP ReprFunctor.equiv)
+
+    \lemma Psi-ff-loc.{u'} {S E : \Cat u'} {p : E ->⁺ S} (Ff : IsCocartesianFib (Fibers p)) {W : \Pi (s : S) -> (DI ->⁺ Fibers p s) -> \Prop}
+                         (Ws : IsTransportStable (Fibers p) W) {s : S} {z : E} (q : p z = s) (y : Localize {Fiber p s} (W s))
+      : IsEquiv {localize {Fiber p s} (W s) (z, q) ~> y} (\lam h => dmap (Psi p W s) h) \elim q
+      | idp => Psi-ff-idp Ff Ws z y
+
+    \lemma Psi-ff.{u'} {S E : \Cat u'} {p : E ->⁺ S} (Ff : IsCocartesianFib (Fibers p)) {W : \Pi (s : S) -> (DI ->⁺ Fibers p s) -> \Prop}
+                     (Ws : IsTransportStable (Fibers p) W) (s : S)
+      : IsFFMap (Psi p W s)
+      => \lam a a' => \case localize-surj a \with {
+        | inP (x, r) => \case \elim a, \elim r \with {
+          | _, idp => Psi-ff-loc Ff Ws x.2 a'
+        }
+      }
+  }

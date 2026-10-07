@@ -142,6 +142,21 @@
            (U G)
   }
 
+-- | A universal element {a} of `Hom(d, F -)` at {x}: transport of {a} in the left fibration `Hom(d, F -)` along arrows out of {x} is an equivalence.
+\lemma univElem-hom-equiv.{u} {C D : \Cat u} (F : C ->⁺ D) {x : C} {d : D} {a : d ~> F x}
+                              (U : IsUnivElem (\lam y => ReprFunctor d (F y)) x (Straight.toStraight a)) (y : C)
+  : IsEquiv {x ~> y} {d ~> F y} (leftFib-tr (leftFib-pullback F (hom-leftFib d)) __ a)
+  => transport IsEquiv (ext \lam h => pmap Straight.fromStraight ReprFunctor-transport
+                                     *> inv (leftFib-tr-dpath (leftFib-pullback F (hom-leftFib d)) (dpath \lam j => dpath \lam i => fill2 a (dmap F h) i j)))
+      (IsEquiv.trans (univElem-equiv U y) (inP ReprFunctor.equiv))
+
+-- | A section over the total category of `Hom(x, -)` whose value at the identity is a universal element is an equivalence on every component.
+\lemma univElem-sec-equiv.{u} {C : \Cat u} {x : C} {F : C ->⁺ \Type u} (s : \Pi (sg :⁺ \Sigma⁺ (y : C) (ReprFunctor x y)) -> F sg.1)
+                              (U : IsUnivElem F x (s (x, Straight.toStraight idd))) (y : C)
+  : IsEquiv {ReprFunctor x y} {F y} (\lam r => s (y, r))
+  => transport IsEquiv (ext \lam r => pmap (\lam S => S (y, r)) ((yonedaCov.Sec-equiv x F).ret_f s))
+       (IsEquiv.trans (inP ReprFunctor.equiv) (univElem-equiv U y))
+
 -- | The identity of {b} is a universal element of evaluation at {b}.
 \lemma ev-univElem.{u} {B : \Cat u} (b : B) : IsUnivElem {B ->⁺ \Type u} (\lam G => G b) (ReprFunctor b) (Straight.toStraight idd)
   => \lam Q => transport IsEquiv

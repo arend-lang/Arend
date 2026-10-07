@@ -117,6 +117,46 @@
         \in (((e', s), dpath \lam i => (u i, sigma i)), (cocartesianLift<->arrow p u s sigma).2 uc)
   }
 
+{- | A cocartesian lift in a family {Q} is also cocartesian as a lift in the fibers of {totalProj}, which are
+ -   identified with the values of {Q} by {fibers-total-equiv}.
+ -}
+\lemma cocartesianLift-total {X : \Cat} {Q : X ->⁺ \Cat} {d : CovLiftData Q} {l : CovLift Q d} (lc : IsCocartesianLift l)
+  : IsCocartesianLift {X} {Fibers (totalProj Q)} {d.1, d.2, d.3, ((d.1, d.4), idp)} (((d.2, l.1), idp), dpath \lam i => ((d.3 i, l.2 i), idp))
+  => \lam {a''} g l' => transport (\lam l'' => Contr (Fact g l'')) (lift-path g l') (Contr.Contr_QEquiv (fact-equiv g l') (lc g (ret-lift g l')))
+  \where \private {
+    \open fibers-total-equiv
+
+    -- | Factorizations of {l''} through the image of {l}.
+    \func Fact {a'' : X} (g : d.2 ~> a'') (l'' : CovLift (Fibers (totalProj Q)) (d.1, a'', comp d.3 g, ((d.1, d.4), idp)))
+      => \Sigma (k : DPath (\lam j => Fibers (totalProj Q) (g j)) ((d.2, l.1), idp) l''.1)
+                (DPath (\lam i => DPath (\lam j => Fibers (totalProj Q) (fill2 d.3 g i j)) ((d.3 i, l.2 i), idp) (l''.2 i)) idd k)
+
+    \func ret-lift {a'' : X} (g : d.2 ~> a'') (l' : CovLift (Fibers (totalProj Q)) (d.1, a'', comp d.3 g, ((d.1, d.4), idp)))
+      : CovLift Q (d.1, a'', comp d.3 g, d.4)
+      => (fibers-total-ret l'.1, dpath \lam i => fibers-total-ret (l'.2 i))
+
+    \func lift-path {a'' : X} (g : d.2 ~> a'') (l' : CovLift (Fibers (totalProj Q)) (d.1, a'', comp d.3 g, ((d.1, d.4), idp)))
+      : (((a'', (ret-lift g l').1), idp), dpath \lam i => ((comp d.3 g i, (ret-lift g l').2 i), idp))
+        = {CovLift (Fibers (totalProj Q)) (d.1, a'', comp d.3 g, ((d.1, d.4), idp))} l'
+      => path \lam m => (fibers-total-ret-sec l'.1 m, dpath \lam i => fibers-total-ret-sec (l'.2 i) m)
+
+    -- | Factorizations in {Q} are factorizations in the fibers of {totalProj}.
+    \func fact-equiv {a'' : X} (g : d.2 ~> a'') (l' : CovLift (Fibers (totalProj Q)) (d.1, a'', comp d.3 g, ((d.1, d.4), idp)))
+      : QEquiv {\Sigma (k : DPath (\lam j => Q (g j)) l.1 (ret-lift g l').1)
+                       (DPath (\lam i => DPath (\lam j => Q (fill2 d.3 g i j)) (l.2 i) ((ret-lift g l').2 i)) idd k)}
+               {Fact g (((a'', (ret-lift g l').1), idp), dpath \lam i => ((comp d.3 g i, (ret-lift g l').2 i), idp))} \cowith
+      | f c => (dpath \lam j => ((g j, c.1 j), idp), dpath \lam i => dpath \lam j => ((fill2 d.3 g i j, c.2 i j), idp))
+      | ret c => (dpath \lam j => fibers-total-ret (c.1 j), dpath \lam i => dpath \lam j => fibers-total-ret (c.2 i j))
+      | ret_f c => idp
+      | f_sec c => path \lam m => (dpath \lam j => fibers-total-ret-sec (c.1 j) m, dpath \lam i => dpath \lam j => fibers-total-ret-sec (c.2 i j) m)
+  }
+
+-- | If {Q} is a cocartesian family, then so is the family of fibers of {totalProj}.
+\lemma cocartesianFib-total {X : \Cat} {Q : X ->⁺ \Cat} (Qf : IsCocartesianFib Q) : IsCocartesianFib (Fibers (totalProj Q))
+  => \lam d => transport (\lam (y : Fibers (totalProj Q) d.1) => ∃ (l : CovLift (Fibers (totalProj Q)) (d.1, d.2, d.3, y)) (IsCocartesianLift l))
+                         (fibers-total-equiv.fibers-total-ret-sec d.4)
+                         (TruncP.map (Qf (d.1, d.2, d.3, fibers-total-equiv.fibers-total-ret d.4)) \lam (l, lc) => (_, cocartesianLift-total lc))
+
 {- | If the hom-types of the base are sets, then {u} is {p}-cocartesian if every factorization of `dmap p w` through `dmap p u`
  -   lifts uniquely to a factorization of `w` through {u}.
  -}

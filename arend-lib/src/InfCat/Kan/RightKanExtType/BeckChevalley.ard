@@ -7,7 +7,8 @@
  -   If `T` is the restriction of `F : X' ->⁺ \Type u` along the projection `A → X'`, then {Phi} is the limit of {F}
  -   over `x ↓ psi`, that is, the right Kan extension of {F} along {psi} at `x`. This is the Beck–Chevalley condition
  -   for the pullback square of {psi} and {p}: restricting `Ran_psi F` to {E} gives the right Kan extension along {bc}
- -   of the restriction of {F} to `A`. If `x ↓ psi` has an initial object, the limit is the value at it ({ranPhi-initial-equiv}).
+ -   of the restriction of {F} to `A`. If `x ↓ psi` has an initial object, the limit is the value at it, transported along
+ -   any cocartesian lift ({ranPhi-initial-equiv}).
  -
  -   The proof: by {rightKanExtType-comma-equiv}, the value of the right Kan extension at `y` is the limit of {T} over
  -   the comma category `y ↓ bc`, which is {beck-chevalley.CommaLift} ({beck-chevalley.commaLift-reindex}).
@@ -26,11 +27,13 @@
 \import InfCat.Fibration.DirectedUnivalence
 \import InfCat.Functor.Conservative
 \import InfCat.Functor.Initial
+\import InfCat.Functor.RightComma
 \import InfCat.Kan.RightKanExtType
 \import InfCat.Functor.Adjunction
 \import InfCat.Limit.Initial
 \import InfCat.Localization.Abstract
 \import InfCat.Localization.Fiberwise
+\import InfCat.Localization.LocalUnivElem
 \import InfCat.Paths
 \import InfCat.Rezk
 \import Logic
@@ -49,6 +52,11 @@
     -- | The projection from the base change of {p} along {psi} to {E}.
     \func bc.{u} {X X' E : \Cat u} (psi : X' ->⁺ X) (p : E ->⁺ X) (a :⁺ BaseChange psi p) : E
       => a.2.1
+
+    -- | The classes {V} on the fibers of {p} pulled back along {psi}, as a class of morphisms of the base change.
+    \func bcW.{u} {X X' E : \Cat u} (psi : X' ->⁺ X) (p : E ->⁺ X) (V : \Pi (x : X) -> (DI ->⁺ Fibers p x) -> \Prop)
+      : (DI ->⁺ BaseChange psi p) -> \Prop
+      => TotW (totalProj (\lam x' => Fibers p (psi x'))) (TotalFibW {X'} {\lam x' => Fibers p (psi x')} (\lam x' => V (psi x')))
 
     -- | The object `(x', m_! y)` of the base change for an object `(x', m)` of `x ↓ psi`, where `m_!` is the transport along the chosen cocartesian lift.
     \func liftObj.{u} {X X' E : \Cat u} {p : E ->⁺ X} (pc : IsCocartesianFib (Fibers p))
@@ -130,11 +138,22 @@
       | idp, idp => path \lam j => (dpath \lam i => sq i @ j, dpath \lam i => path \lam k => sq i @ I.squeeze k j)
   }
 
--- | If `x ↓ psi` has an initial object {q0}, then evaluating {ranPhi} at {q0} is an equivalence.
+{- | If `x ↓ psi` has an initial object {q0}, then the right Kan extension at {y} is the value of {T} at the target of
+ -   any cocartesian lift {L} of `q0.2` at {y}: the map is the transport along {L} followed by the counit.
+ -}
 \lemma ranPhi-initial-equiv.{u} {X X' E : \Cat u} {p : E ->⁺ X} (pc : IsCocartesianFib (Fibers p)) (psi : X' ->⁺ X) {x : X}
                                 (T : BaseChange psi p ->⁺ \Type u) (y : Fibers p x) (q0 : RightComma psi x) (init : IsInitial q0)
-  : IsEquiv {RightKanExtType (bc psi p) T y.1} {T (liftObj pc psi y q0)} (\lam r => ranPhi pc psi T y r q0)
-  => IsEquiv.trans (beck-chevalley pc psi T y) (initial-sections q0 init (\lam (q :⁺ RightComma psi x) => T (liftObj pc psi y q)))
+                                (L : CovLift (Fibers p) (_, _, q0.2, y)) (Lc : IsCocartesianLift L)
+  : IsEquiv {RightKanExtType (bc psi p) T y.1} {T (q0.1, L.1)}
+            (\lam r => ~>_-> (dpath \lam i => rightKanExtType-counit (bc psi p) T i (q0.1, L.1))
+                             (~>_-> (dpath \lam i => RightKanExtType (bc psi p) T (L.2 i).1) r))
+  => transport (\lam P => IsEquiv \lam r => ~>_-> (dpath \lam i => rightKanExtType-counit (bc psi p) T i (q0.1, P.1.1))
+                                                  (~>_-> (dpath \lam i => RightKanExtType (bc psi p) T (P.1.2 i).1) r))
+               (isContr=>isProp (transports-contr.cocLift-contr pc (_, _, q0.2, y))
+                                (cocartesianFib-lift {_} {Fibers p} pc (_, _, q0.2, y),
+                                 cocartesianFib-lift.isCocartesian {_} {Fibers p} (_, _, q0.2, y))
+                                (L, Lc))
+               (IsEquiv.trans (beck-chevalley pc psi T y) (initial-sections q0 init (\lam q => T (liftObj pc psi y q))))
 
 -- | The right Kan extension along a base change of a cocartesian fibration with stable weak equivalences inverts them.
 \lemma ran-inverts.{u} {X X' E : \Cat u} {p : E ->⁺ X} (pc : IsCocartesianFib (Fibers p))
@@ -149,3 +168,26 @@
       (dmap_IsIso (\lam H => \Pi (q :⁺ RightComma psi x) -> H q)
                   (objectwise-iso {_} {_} {_} {_} {dpath \lam i q => T (liftObj pc psi (b i) q)}
                     \lam q => Tw q.1 (transportStable-lift pc Ws q.2 wb)))
+
+{- | Restriction along the base change {bc} of a cocartesian fibration preserves local universal elements.
+ -
+ -   Let `r0` be a local universal element of `R : E ->⁺ \Type u` at {y} with respect to the transport stable classes {V},
+ -   let {q0} be an initial object of `x ↓ psi` and {L} a cocartesian lift of `q0.2` at {y}. Then the transport of `r0` along {L}
+ -   is a {bcW}-local universal element of `R ∘ bc` at `(q0.1, L.1)`, that is, for functors inverting {V} on the fibers of the base change.
+ -   Transformations `R ∘ bc ⇒ T` are transformations `R ⇒ Ran T` ({rightKanExtType-univ}); `Ran T` inverts {V} ({ran-inverts}),
+ -   so these are the elements of `Ran T y` ({U}), which are the elements of `T (q0.1, L.1)` ({ranPhi-initial-equiv}).
+ -   The composite is evaluation at the transport of `r0` by naturality along {L}.
+ -}
+\lemma univElemW-baseChange.{u} {X X' E : \Cat u} {p : E ->⁺ X} (pc : IsCocartesianFib (Fibers p))
+                                {V : \Pi (x : X) -> (DI ->⁺ Fibers p x) -> \Prop} (Vs : IsTransportStable (Fibers p) V) (psi : X' ->⁺ X)
+                                {x : X} {y : Fibers p x} {R : E ->⁺ \Type u} {r0 : R y.1} (U : IsUnivElemW (TotW p V) R y.1 r0)
+                                (q0 : RightComma psi x) (init : IsInitial q0) (L : CovLift (Fibers p) (_, _, q0.2, y)) (Lc : IsCocartesianLift L)
+  : IsUnivElemW {BaseChange psi p} (bcW psi p V) (\lam a => R (bc psi p a)) (q0.1, L.1) (~>_-> (dpath \lam i => R (L.2 i).1) r0)
+  => \lam {T} Tw' =>
+     \let Tw : \Pi (x' : X') -> InvertsW (V (psi x')) (\lam y' => T (x', y')) => \lam x' {b} wb => Tw' (inP (x', \lam i => idp, wb))
+     \in IsEquiv.rightFactor (rightKanExtType-univ (bc psi p) R T) $
+         transport IsEquiv (ext \lam ga => inv $
+             ~>_->_comp-fam (dmap (\lam G a =>⁺ G (bc psi p a)) ga) (rightKanExtType-counit (bc psi p) T) ((q0.1, L.1) : BaseChange psi p) _
+             *> pmap (~>_-> (dpath \lam i => rightKanExtType-counit (bc psi p) T i (q0.1, L.1)))
+                     (inv (~>_->-natural (\lam c b => depUnivalence ga (c, b)) (dpath \lam i => (L.2 i).1)))) $
+           IsEquiv.trans (U (totW-inverts (ran-inverts pc Vs psi Tw))) (ranPhi-initial-equiv pc psi T y q0 init L Lc)

@@ -1,0 +1,265 @@
+{- | Lifts of arrows of the base to a fiberwise localization.
+
+ -   Let `p : E ->⁺ S` be a functor between small categories whose fibers form a cocartesian family, {W} a transport stable
+ -   family of classes of morphisms in its fibers, and `l : E ->⁺ FibLoc p W` the localization at {TotW}.
+ -   For a {p}-cocartesian arrow `u : z ~> z'` over `f`, lifts of `f` from `l z` to the fiber of {fibLocProj} over `p z'` are arrows
+ -   of `p z ↓ fibLocProj` from `(l z, idd)` to objects over `f` ({liftComma-equiv}). On the fiber of {p} over `p z'`, this is
+ -   the functor {fibLift}, and the image of `u` is a `W (p z')`-local universal element of it ({fibLift-univElemW}).
+ -
+ -   The proof (in the `\where` block of {fibLift-univElemW}):
+ -   1. `E_{p z/}` ({UnderTot}) is the category of objects `c` of {E} with an arrow `p z ~> p c`, written as the base change of {p}
+ -      along the projection from the coslice under `p z`. It lies over the coslice by the cocartesian fibration {underProj},
+ -      whose fibers are those of {p} ({UnderW} is {W} on them).
+ -   2. {fibRepr} is the functor on {UnderTot} corepresented by `(l z, idd)` in `p z ↓ fibLocProj`.
+ -      The identity is a universal element of it for functors inverting {UnderW} ({fibRepr-univElemW}): summed over the arrows
+ -      of the base, it is the functor {CommaHom} on {FibLoc}, which has the universal element `(idd, idd)` by the Yoneda lemma
+ -      on the comma category ({commaHom-univElem}), and its restriction to {E} is a local universal element.
+ -   3. {fibLift} is the restriction of {fibRepr} along the inclusion of the fiber over the point `(p z', f)` of the coslice,
+ -      which is the base change of {underProj} along the point {psi0}. Hence the transport of the universal element `idd` of
+ -      {fibRepr} along the cocartesian lift {L} of the initial object {q0} of `(p z, idd) ↓ psi0` is a local
+ -      universal element ({univElemW-baseChange}). The arrow of {q0} is given by any path {adj} from the identity to `f` over `f`,
+ -      and it is chosen so that this transport is the image of `u`.
+ -}
+
+\import Equiv
+\import Function.Meta
+\import InfCat.Basics
+\import InfCat.Fibration.Categorical
+\import InfCat.Fibration.CocartesianFib
+\import InfCat.Fibration.CocartesianMap
+\import InfCat.Fibration.CovariantLift
+\import InfCat.Fibration.DirectedUnivalence
+\import InfCat.Fibration.Straightening
+\import InfCat.Functor.Conservative
+\import InfCat.Functor.RightComma
+\import InfCat.Kan.RightKanExtType.BeckChevalley
+\import InfCat.Limit.Initial
+\import InfCat.Localization.Abstract
+\import InfCat.Localization.Concrete
+\import InfCat.Localization.Fiberwise
+\import InfCat.Localization.LocalUnivElem
+\import InfCat.Paths
+\import InfCat.Rezk
+\import InfCat.Yoneda.CovariantYoneda
+\import Logic
+\import Logic.Unique
+\import Paths
+\import Paths.Meta
+
+{- | Arrows of `p z ↓ fibLocProj` from `(l z, idd)` to the image of an object of the fiber of {p} over `p z'`, transported along `dmap p u`.
+ -
+ -   Up to some bookkeeping, it is the type of arrows from `localize (TotW p W) z` to `localize (TotW p W) c.1` over `dmap p u`.
+ -   {fibLift-univElemW} implies that this functor is corepresentable for cocartesian {u}.
+ -   Informally, this means (once W z' is inverted) that the type of arrows over `dmap p u`
+ -   is equivalent to the type of arrows in the fiber over `p z'`.
+ -   This implies two properties of fiberwise localizations that we need:
+ -   `InfCat.Localization.Fiberwise.FiberwiseFiber` and `InfCat.Localization.Fiberwise.FiberwiseCocartesian`.
+ -}
+\func fibLift.{u} {S E : \Cat u} {p : E ->⁺ S} (W : \Pi (s : S) -> (DI ->⁺ Fibers p s) -> \Prop) {z z' : E} (u : z ~> z')
+                  (c :⁺ Fiber p (p z')) : \Type u
+  => ReprFunctor {RightComma (fibLocProj p W) (p z)} (localize (TotW p W) z, idd) (localize (TotW p W) c.1, under-arr (dmap p u) c.2)
+
+-- | The image of {u} in `p z ↓ fibLocProj` is a `W (p z')`-local universal element of {fibLift}.
+\lemma fibLift-univElemW.{u} {S E : \Cat u} {p : E ->⁺ S} (Ff : IsCocartesianFib (Fibers p)) {W : \Pi (s : S) -> (DI ->⁺ Fibers p s) -> \Prop}
+                             (Ws : IsTransportStable (Fibers p) W) {z z' : E} (u : z ~> z') (uc : IsCocartesianArrow p u)
+                             (adj : DPath (\lam i => p z ~> p (u i)) idd (dmap p u))
+  : IsUnivElemW {Fiber p (p z')} (W (p z')) (fibLift W u) (z', idp)
+                (Straight.toStraight (dpath \lam i => ((localize (TotW p W) (u i), adj i) : RightComma (fibLocProj p W) (p z))))
+  => univElemW-fromSections \lam {T} Tw =>
+       \let | a0 : BaseChange (psi0 {S} {E} {p} u) (underProj p (p z)) => ((q0 {S} {E} {p} u adj).1, (L {S} {E} {p} u adj).1)
+            | H : (localize (TotW p W) z, idd) ~> {RightComma (fibLocProj p W) (p z)} (localize (TotW p W) z', dmap p u)
+                => dpath \lam i => ((localize (TotW p W) (u i), adj i) : RightComma (fibLocProj p W) (p z))
+            | r1 => ~>_-> (dpath \lam i => fibRepr W z ((L {S} {E} {p} u adj).2 i).1) (Straight.toStraight idd)
+            | Sec => \Pi (tau :⁺ \Sigma⁺ (a : BaseChange (psi0 {S} {E} {p} u) (underProj p (p z))) (fibRepr W z (beck-chevalley.bc (psi0 {S} {E} {p} u) (underProj p (p z)) a)))
+                       -> T (fibObj {S} {E} {p} u tau.1)
+            | DU => depUnivalence {_} {\lam (a :⁺ BaseChange (psi0 {S} {E} {p} u) (underProj p (p z))) => fibRepr W z (beck-chevalley.bc (psi0 {S} {E} {p} u) (underProj p (p z)) a)}
+                                  {\lam a => T (fibObj {S} {E} {p} u a)}
+       \in IsEquiv.rightFactor (inP (reindex W u T)) $
+             transport IsEquiv {\lam (S' : Sec) => S' (a0, r1)} (ext \lam (S' : Sec) => pmap (\lam t => S' (a0, t)) (ReprFunctor-transport-idd H)) $
+               IsEquiv.rightFactor {_} {_} {_} {DU.f} (inP DU) {\lam (S' : Sec) => S' (a0, r1)} $
+                 univElemW-baseChange (underProj-cocartesian Ff (p z)) (underW-stable Ws (p z)) (psi0 {S} {E} {p} u) (fibRepr-univElemW {S} {E} {p} {W} z)
+                                      (q0 {S} {E} {p} u adj) (q0-initial {S} {E} {p} u adj) (L {S} {E} {p} u adj) (L-cocartesian {S} {E} {p} u adj uc) {\lam a => T (fibObj {S} {E} {p} u a)}
+                                      (totalFibW-inverts \lam x' {b} wb => Tw wb)
+  \where \private {
+    -- | The objects of {E} together with an arrow from {s} to their image, as the base change of {p} along the coslice under {s}.
+    \func UnderTot.{u'} {S E : \Cat u'} (p : E ->⁺ S) (s : S) : \Cat u'
+      => BaseChange {RightComma (\lam t => t) s} (\lam y => y.1) p
+
+    -- | The projection from {UnderTot} to the coslice.
+    \func underProj.{u'} {S E : \Cat u'} (p : E ->⁺ S) (s : S) (a :⁺ UnderTot p s) : RightComma (\lam t => t) s
+      => a.1
+
+    -- | The classes {W} on the fibers of {underProj}.
+    \func UnderW.{u'} {S E : \Cat u'} {p : E ->⁺ S} (W : \Pi (s : S) -> (DI ->⁺ Fibers p s) -> \Prop) {s : S}
+      : \Pi (y : RightComma (\lam t => t) s) -> (DI ->⁺ Fibers (underProj p s) y) -> \Prop
+      => TotalFibW {RightComma (\lam t => t) s} {\lam y => Fibers p y.1} (\lam y => W y.1)
+
+    -- | The projection {underProj} is a cocartesian fibration.
+    \lemma underProj-cocartesian.{u'} {S E : \Cat u'} {p : E ->⁺ S} (Ff : IsCocartesianFib (Fibers p)) (s : S)
+      : IsCocartesianFib (Fibers (underProj p s))
+      => cocartesianFib-total {RightComma (\lam t => t) s} {\lam y => Fibers p y.1} (cocartesianFib-pullback Ff (\lam y => y.1))
+
+    -- | The classes {UnderW} are stable under cocartesian transport.
+    \lemma underW-stable.{u'} {S E : \Cat u'} {p : E ->⁺ S} {W : \Pi (s : S) -> (DI ->⁺ Fibers p s) -> \Prop}
+                              (Ws : IsTransportStable (Fibers p) W) (s : S)
+      : IsTransportStable (Fibers (underProj p s)) (UnderW W)
+      => transportStable-total {RightComma (\lam t => t) s} {\lam y => Fibers p y.1} (transportStable-pullback Ws (\lam y => y.1))
+
+    -- | The object `z` of {UnderTot} `p (p z)`, with the identity arrow.
+    \func underIdd.{u'} {S E : \Cat u'} {p : E ->⁺ S} (z : E) : UnderTot p (p z)
+      => ((p z, idd), (z, idp))
+
+    -- | The representable functor of `p z ↓ fibLocProj` at `(l z, idd)` on {UnderTot}, where `l` is the localization functor.
+    \func fibRepr.{u'} {S E : \Cat u'} {p : E ->⁺ S} (W : \Pi (s : S) -> (DI ->⁺ Fibers p s) -> \Prop) (z : E) (b :⁺ UnderTot p (p z)) : \Type u'
+      => ReprFunctor {RightComma (fibLocProj p W) (p z)} (localize (TotW p W) z, idd) (localize (TotW p W) b.2.1, under-arr b.1.2 b.2.2)
+
+    {- | The identity is a local universal element of {fibRepr} with respect to {UnderW}.
+     -
+     -   {CommaHom} has the universal element `(idd, idd)` ({commaHom-univElem}), so its restriction to {E} is a local universal
+     -   element ({univElem-restrict}). Its total category is that of {fibRepr} ({reindex}) and the projection to the arrows
+     -   of the base is a map to `Hom(p z, p -)`, so the claim is {univElemW-dsections}.
+     -}
+    \lemma fibRepr-univElemW.{u'} {S E : \Cat u'} {p : E ->⁺ S} {W : \Pi (s : S) -> (DI ->⁺ Fibers p s) -> \Prop} (z : E)
+      : IsUnivElemW (TotW (underProj p (p z)) (UnderW W)) (fibRepr W z) (underIdd {S} {E} {p} z) (Straight.toStraight idd)
+      => univElemW-fromSections \lam {Q} Qw => IsEquiv.trans (inP (reindex {S} {E} {p} {W} z Q)) $
+           univElemW-dsections (univElem-restrict (IsLocalization.univ (localize-isLocalization {E} {TotW p W}))
+                                                  (commaHom-univElem (fibLocProj p W) {p z} {localize (TotW p W) z} idd))
+             (\lam ws => dmap_IsIso (ReprFunctor (p z)) (proj-inverts p W ws)) (\lam sg => sg.2.1)
+             {\lam (ck :⁺ \Sigma⁺ (c : E) (ReprFunctor (p z) (p c))) => Q (((p ck.1, Straight.fromStraight ck.2), (ck.1, idp)) : UnderTot p (p z))}
+             (sum-inverts Qw)
+      \where {
+        -- | The arrows of `s ↓ q` from `(e, k0)` to `(y, k)` for some `k : s ~> q y`.
+        \func CommaHom.{v} {L S : \Cat v} (q : L ->⁺ S) {s : S} {e : L} (k0 : s ~> q e) (y :⁺ L) : \Type v
+          => \Sigma⁺ (k : ReprFunctor s (q y)) (ReprFunctor {RightComma q s} (e, k0) (y, Straight.fromStraight k))
+
+        -- | `(k0, idd)` is a universal element of {CommaHom}: this is the Yoneda lemma on `s ↓ q`.
+        \lemma commaHom-univElem.{v} {L S : \Cat v} (q : L ->⁺ S) {s : S} {e : L} (k0 : s ~> q e)
+          : IsUnivElem (CommaHom q k0) e (Straight.toStraight k0, Straight.toStraight idd)
+          => \lam G => IsEquiv.trans (inP depUnivalence) $ IsEquiv.trans (inP (reindex q k0 G)) $
+                         inP (yonedaCov.Sec-equiv {RightComma q s} (e, k0) (\lam (yk :⁺ RightComma q s) => G yk.1))
+          \where {
+            -- | The total category of {CommaHom} is the total category of the corepresentable functor on `s ↓ q`.
+            \func reindex.{v'} {L S : \Cat v'} (q : L ->⁺ S) {s : S} {e : L} (k0 : s ~> q e) (G : L ->⁺ \Type v')
+              : QEquiv {\Pi (sg :⁺ \Sigma⁺ (y : L) (CommaHom q k0 y)) -> G sg.1}
+                       {yonedaCov.Sec {RightComma q s} (e, k0) (\lam (yk :⁺ RightComma q s) => G yk.1)} \cowith
+              | f M t => M (t.1.1, (Straight.toStraight t.1.2, t.2))
+              | ret N sg => N ((sg.1, Straight.fromStraight sg.2.1), sg.2.2)
+              | ret_f M => funExt+ \lam sg => reindex-sec q k0 G M sg.2.1 sg.2.2
+              | f_sec N => idp
+
+            \func reindex-sec.{v'} {L S : \Cat v'} (q : L ->⁺ S) {s : S} {e : L} (k0 : s ~> q e) (G : L ->⁺ \Type v')
+                                   (M :⁺ \Pi (sg :⁺ \Sigma⁺ (y : L) (CommaHom q k0 y)) -> G sg.1) {y :⁺ L} (k :⁺ ReprFunctor s (q y))
+                                   (b :⁺ ReprFunctor {RightComma q s} (e, k0) (y, Straight.fromStraight k))
+              : M (y, (Straight.toStraight (Straight.fromStraight k), b)) = M (y, (k, b)) \elim k
+              | resize+ (groupoidType a) => idp
+          }
+
+        -- | The total category of {fibRepr} is that of {CommaHom} restricted to {E}: the objects of {UnderTot} only add a redundant
+        -- | object `t` of the base with a path `p c = t`.
+        \func reindex.{v} {S E : \Cat v} {p : E ->⁺ S} {W : \Pi (s : S) -> (DI ->⁺ Fibers p s) -> \Prop} (z : E) (Q : UnderTot p (p z) ->⁺ \Type v)
+          : QEquiv {\Pi (om :⁺ \Sigma⁺ (b : UnderTot p (p z)) (fibRepr W z b)) -> Q om.1}
+                   {\Pi (sg :⁺ \Sigma⁺ (c : E) (CommaHom (fibLocProj p W) {p z} {localize (TotW p W) z} idd (localize (TotW p W) c)))
+                      -> Q (((p sg.1, Straight.fromStraight sg.2.1), (sg.1, idp)) : UnderTot p (p z))}
+          \cowith
+          | f M sg => M ((((p sg.1, Straight.fromStraight sg.2.1), (sg.1, idp)) : UnderTot p (p z)), sg.2.2)
+          | ret N om => ret-aux N om.1.1.2 om.1.2.2 om.2
+          | ret_f M => funExt+ \lam om => ret-aux-f M om.1.1.2 om.1.2.2 om.2
+          | f_sec N => funExt+ \lam sg => reindex-sec N sg.2.1 sg.2.2
+          \where {
+            \func ret-aux (N :⁺ \Pi (sg :⁺ \Sigma⁺ (c : E) (CommaHom (fibLocProj p W) {p z} {localize (TotW p W) z} idd (localize (TotW p W) c)))
+                               -> Q (((p sg.1, Straight.fromStraight sg.2.1), (sg.1, idp)) : UnderTot p (p z)))
+                          {c :⁺ E} {t :⁺ S} (k :⁺ p z ~> t) (q :⁺ p c = t)
+                          (r :⁺ fibRepr W z (((t, k), (c, q)) : UnderTot p (p z)))
+              : Q (((t, k), (c, q)) : UnderTot p (p z)) \elim q
+              | idp => N (c, (Straight.toStraight k, r))
+
+            \func ret-aux-f (M :⁺ \Pi (om :⁺ \Sigma⁺ (b : UnderTot p (p z)) (fibRepr W z b)) -> Q om.1)
+                            {c :⁺ E} {t :⁺ S} (k :⁺ p z ~> t) (q :⁺ p c = t)
+                            (r :⁺ fibRepr W z (((t, k), (c, q)) : UnderTot p (p z)))
+              : ret-aux (\lam sg => M ((((p sg.1, Straight.fromStraight sg.2.1), (sg.1, idp)) : UnderTot p (p z)), sg.2.2)) k q r
+                = M ((((t, k), (c, q)) : UnderTot p (p z)), r) \elim q
+              | idp => idp
+
+            \func reindex-sec (N :⁺ \Pi (sg :⁺ \Sigma⁺ (c : E) (CommaHom (fibLocProj p W) {p z} {localize (TotW p W) z} idd (localize (TotW p W) c)))
+                                   -> Q (((p sg.1, Straight.fromStraight sg.2.1), (sg.1, idp)) : UnderTot p (p z)))
+                              {c :⁺ E} (k :⁺ ReprFunctor (p z) (p c))
+                              (b :⁺ ReprFunctor {RightComma (fibLocProj p W) (p z)} (localize (TotW p W) z, idd) (localize (TotW p W) c, Straight.fromStraight k))
+              : ret-aux N (Straight.fromStraight k) idp b = N (c, (k, b)) \elim k
+              | resize+ (groupoidType a) => idp
+          }
+
+        -- | Summing a functor on {UnderTot} inverting {UnderW} over the arrows of the coslice gives a functor inverting {TotW}.
+        \lemma sum-inverts.{v} {S E : \Cat v} {p : E ->⁺ S} {W : \Pi (s : S) -> (DI ->⁺ Fibers p s) -> \Prop} {z : E}
+                            {Q : UnderTot p (p z) ->⁺ \Type v} (Qw : InvertsW (TotW (underProj p (p z)) (UnderW W)) Q)
+          : InvertsW (TotW p W) (\lam (c :⁺ E) => \Sigma⁺ (k : ReprFunctor (p z) (p c)) (Q (((p c, Straight.fromStraight k), (c, idp)) : UnderTot p (p z))))
+          => \lam {a} (inP (s0, b, wb)) =>
+               transportInv {DI ->⁺ \Sigma⁺ (t : S) (Fibers p t)}
+                 (\lam v => IsIso (dpath \lam i => \Sigma⁺ (k : ReprFunctor (p z) (v i).1) (Q ((((v i).1, Straight.fromStraight k), (v i).2) : UnderTot p (p z)))))
+                 (path \lam j i => sing (b i) @ j)
+                 (dmap_IsIso (\lam (H : ReprFunctor (p z) s0 ->⁺ \Type v) => \Sigma⁺ (k : ReprFunctor (p z) s0) (H k))
+                   (objectwise-iso {_} {_} {_} {_} {dpath \lam i (k :⁺ ReprFunctor (p z) s0) => Q (((s0, Straight.fromStraight k), (a i, b i)) : UnderTot p (p z))}
+                     \lam k => Qw (inP ((s0, Straight.fromStraight k), \lam i => idp, wb))))
+          \where {
+            \func sing {e :⁺ E} {t :⁺ S} (q :⁺ p e = t) : ((p e, (e, idp)) : \Sigma⁺ (t : S) (Fibers p t)) = (t, (e, q)) \elim q
+              | idp => idp
+          }
+      }
+
+    -- | The point `(p z', dmap p u)` of the coslice under `p z`.
+    \func psi0.{u'} {S E : \Cat u'} {p : E ->⁺ S} {z z' : E} (u : z ~> z') (d :⁺ \Sigma) : RightComma (\lam t => t) (p z)
+      => (p z', dmap p u)
+
+    -- | The object of `(p z, idd) ↓ psi0` given by the connection of `dmap p u`.
+    \func q0.{u'} {S E : \Cat u'} {p : E ->⁺ S} {z z' : E} (u : z ~> z') (adj : DPath (\lam i => p z ~> p (u i)) idd (dmap p u))
+      : RightComma (psi0 {S} {E} {p} u) ((p z, idd) : RightComma (\lam t => t) (p z))
+      => ((), dpath \lam i => ((p (u i), adj i) : RightComma (\lam t => t) (p z)))
+
+    \lemma q0-initial.{u'} {S E : \Cat u'} {p : E ->⁺ S} {z z' : E} (u : z ~> z') (adj : DPath (\lam i => p z ~> p (u i)) idd (dmap p u))
+      : IsInitial (q0 {S} {E} {p} u adj)
+      => \lam q => sigma-initial-hom (psi0 {S} {E} {p} u) (\lam (d : \Sigma) => \new Contr (() ~> d) { | center => idd | contraction _ => idp })
+                                     (\lam d => coslice-initial (p z) (psi0 {S} {E} {p} u d)) (q0 {S} {E} {p} u adj).2 q
+
+    -- | The lift of `(q0 u).2` given by {u}.
+    \func L.{u'} {S E : \Cat u'} {p : E ->⁺ S} {z z' : E} (u : z ~> z') (adj : DPath (\lam i => p z ~> p (u i)) idd (dmap p u))
+      : CovLift (Fibers (underProj p (p z))) (((p z, idd) : RightComma (\lam t => t) (p z)), ((p z', dmap p u) : RightComma (\lam t => t) (p z)),
+                                              (q0 {S} {E} {p} u adj).2, ((underIdd {S} {E} {p} z, idp) : Fibers (underProj p (p z)) ((p z, idd) : RightComma (\lam t => t) (p z))))
+      => (((((p z', dmap p u), (z', idp)) : UnderTot p (p z)), idp),
+          dpath \lam i => ((((p (u i), adj i), (u i, idp)) : UnderTot p (p z)), idp))
+
+    \lemma L-cocartesian.{u'} {S E : \Cat u'} {p : E ->⁺ S} {z z' : E} (u : z ~> z') (adj : DPath (\lam i => p z ~> p (u i)) idd (dmap p u))
+                              (uc : IsCocartesianArrow p u)
+      : IsCocartesianLift (L {S} {E} {p} u adj)
+      => cocartesianLift-total {RightComma (\lam t => t) (p z)} {\lam y => Fibers p y.1}
+           {(p z, idd), (p z', dmap p u), (q0 {S} {E} {p} u adj).2, (z, idp)} {(z', idp), dpath \lam i => (u i, idp)}
+           (cocartesianLift-pullback (\lam (y :⁺ RightComma (\lam t => t) (p z)) => y.1) ((arrowLift-cocartesian u).2 uc))
+
+    -- | The object of the fiber of {p} underlying an object of the base change of {underProj} along {psi0}.
+    \func fibObj.{u'} {S E : \Cat u'} {p : E ->⁺ S} {z z' : E} (u : z ~> z') (a :⁺ BaseChange (psi0 {S} {E} {p} u) (underProj p (p z)))
+      : Fiber p (p z')
+      => fibers-total-equiv.fibers-total-ret {RightComma (\lam t => t) (p z)} {\lam y => Fibers p y.1} {psi0 {S} {E} {p} u a.1} a.2
+
+    -- | Sections over the total category of {fibRepr} pulled back along {psi0} are sections over the total category of {fibLift}.
+    \func reindex.{u'} {S E : \Cat u'} {p : E ->⁺ S} (W : \Pi (s : S) -> (DI ->⁺ Fibers p s) -> \Prop) {z z' : E} (u : z ~> z')
+                       (T : Fiber p (p z') ->⁺ \Type u')
+      : QEquiv {\Pi (tau :⁺ \Sigma⁺ (a : BaseChange (psi0 {S} {E} {p} u) (underProj p (p z))) (fibRepr W z (beck-chevalley.bc (psi0 {S} {E} {p} u) (underProj p (p z)) a)))
+                  -> T (fibObj {S} {E} {p} u tau.1)}
+               {\Pi (sg :⁺ \Sigma⁺ (c : Fiber p (p z')) (fibLift W u c)) -> T sg.1}
+      \cowith
+      | f S' sg => S' ((((), ((((p z', dmap p u), sg.1) : UnderTot p (p z)), idp)) : BaseChange (psi0 {S} {E} {p} u) (underProj p (p z))), sg.2)
+      | ret S' tau => unpack S' tau.1.2.1.2 tau.1.2.2 tau.2
+      | ret_f S' => funExt+ \lam tau => unpack-f S' tau.1.2.1.2 tau.1.2.2 tau.2
+      | f_sec S' => idp
+      \where {
+        \func unpack (S' :⁺ \Pi (sg :⁺ \Sigma⁺ (c : Fiber p (p z')) (fibLift W u c)) -> T sg.1)
+                     {y :⁺ RightComma (\lam t => t) (p z)} (b :⁺ Fibers p y.1) (q :⁺ y = psi0 {S} {E} {p} u ()) (r :⁺ fibRepr W z ((y, b) : UnderTot p (p z)))
+          : T (fibObj {S} {E} {p} u (((), ((y, b), q)) : BaseChange (psi0 {S} {E} {p} u) (underProj p (p z)))) \elim q
+          | idp => S' (b, r)
+
+        \func unpack-f (S' :⁺ \Pi (tau :⁺ \Sigma⁺ (a : BaseChange (psi0 {S} {E} {p} u) (underProj p (p z))) (fibRepr W z (beck-chevalley.bc (psi0 {S} {E} {p} u) (underProj p (p z)) a)))
+                                -> T (fibObj {S} {E} {p} u tau.1))
+                       {y :⁺ RightComma (\lam t => t) (p z)} (b :⁺ Fibers p y.1) (q :⁺ y = psi0 {S} {E} {p} u ()) (r :⁺ fibRepr W z ((y, b) : UnderTot p (p z)))
+          : unpack (\lam sg => S' ((((), ((((p z', dmap p u), sg.1) : UnderTot p (p z)), idp)) : BaseChange (psi0 {S} {E} {p} u) (underProj p (p z))), sg.2)) b q r
+            = S' ((((), ((y, b), q)) : BaseChange (psi0 {S} {E} {p} u) (underProj p (p z))), r) \elim q
+          | idp => idp
+      }
+  }
