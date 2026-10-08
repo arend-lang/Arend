@@ -1025,7 +1025,7 @@ public class TwoStageEquations implements Equations {
     Expression expectedType = var.getType().normalize(NormalizationMode.WHNF).replaceInferenceVariable();
     Expression result = ElimBindingVisitor.keepBindings(expr, var.getBounds(), isLowerBound);
 
-    if (result != null && !var.canBeInfinite() && result.isInfinityLevel()) {
+    if (result != null && !var.canBeInfinite() && result.getLamParameters(null).isInfinityLevel()) {
       return inferenceError(var, expr);
     }
 

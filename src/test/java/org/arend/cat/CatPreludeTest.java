@@ -288,6 +288,14 @@ public class CatPreludeTest extends TypeCheckingTestCase {
   }
 
   @Test
+  public void isoCatInfiniteLevelError() {
+    typeCheckModule("""
+      \\func test (A B : \\Cat) (f : A ->+ B) (g : B ->+ A) (p : \\Pi (x :+ A) -> g (f x) = x) (q : \\Pi (y :+ B) -> f (g y) = y)
+        => path (isoCat f g p q)
+      """, 1);
+  }
+
+  @Test
   public void isoCoePlusTest() {
     typeCheckModule("""
       \\func faces.{u} {A B :+ \\Type u} (p :+ A ~> B) (i :+ DI) (j : I)
