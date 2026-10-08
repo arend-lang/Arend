@@ -249,6 +249,45 @@ public class CatPreludeTest extends TypeCheckingTestCase {
   }
 
   @Test
+  public void isoCatTest() {
+    typeCheckModule("""
+      \\func endpoints.{u} {A B : \\Cat u} (f : A ->+ B) (g : B ->+ A) (p : \\Pi (x :+ A) -> g (f x) = x) (q : \\Pi (y :+ B) -> f (g y) = y)
+        : \\Sigma (isoCat f g p q left = A) (isoCat f g p q right = B) => (idp, idp)
+      \\func cat-ua.{u} {A B : \\Cat u} (f : A ->+ B) (g : B ->+ A) (p : \\Pi (x :+ A) -> g (f x) = x) (q : \\Pi (y :+ B) -> f (g y) = y)
+        : A = B => path (isoCat f g p q)
+      \\func coe-iso.{u} {A B : \\Cat u} (f : A ->+ B) (g : B ->+ A) (p : \\Pi (x :+ A) -> g (f x) = x) (q : \\Pi (y :+ B) -> f (g y) = y) (a : A)
+        : coe (isoCat f g p q) a right = f a => idp
+      \\func coe-path-iso.{u} {A B : \\Cat u} (f : A ->+ B) (g : B ->+ A) (p : \\Pi (x :+ A) -> g (f x) = x) (q : \\Pi (y :+ B) -> f (g y) = y) (a : A)
+        : coe (\\lam i => cat-ua f g p q @ i) a right = f a => idp
+      """);
+  }
+
+  @Test
+  public void isoCatLevelError() {
+    typeCheckModule("""
+      \\func test.{u} (A B : \\Cat (\\suc u)) (f : A ->+ B) (g : B ->+ A) (p : \\Pi (x :+ A) -> g (f x) = x) (q : \\Pi (y :+ B) -> f (g y) = y) (i : I)
+        : \\Cat u => isoCat f g p q i
+      """, 1);
+    assertThatErrorsAre(Matchers.typeMismatchError());
+  }
+
+  @Test
+  public void isoCatInvariantHomotopyError() {
+    typeCheckModule("""
+      \\func test.{u} {A B : \\Cat u} (f : A ->+ B) (g : B ->+ A) (p : \\Pi (x : A) -> g (f x) = x) (q : \\Pi (y :+ B) -> f (g y) = y)
+        : A = B => path (isoCat f g p q)
+      """, 1);
+  }
+
+  @Test
+  public void isoCatInfiniteLevelTest() {
+    typeCheckModule("""
+      \\func test (A B : \\Cat) (f : A ->+ B) (g : B ->+ A) (p : \\Pi (x :+ A) -> g (f x) = x) (q : \\Pi (y :+ B) -> f (g y) = y) (i : I)
+        => isoCat f g p q i
+      """);
+  }
+
+  @Test
   public void isoCoePlusTest() {
     typeCheckModule("""
       \\func faces.{u} {A B :+ \\Type u} (p :+ A ~> B) (i :+ DI) (j : I)

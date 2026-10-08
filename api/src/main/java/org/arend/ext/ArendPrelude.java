@@ -51,6 +51,7 @@ public interface ArendPrelude {
   CoreFunctionDefinition getIdd();
   CoreFunctionDefinition getAt();
   CoreFunctionDefinition getIso();
+  CoreFunctionDefinition getIsoCat();
   CoreFunctionDefinition getDivMod();
   CoreFunctionDefinition getDiv();
   CoreFunctionDefinition getMod();
@@ -108,6 +109,7 @@ public interface ArendPrelude {
   ArendRef getIddRef();
   ArendRef getAtRef();
   ArendRef getIsoRef();
+  ArendRef getIsoCatRef();
   ArendRef getDivModRef();
   ArendRef getDivRef();
   ArendRef getModRef();

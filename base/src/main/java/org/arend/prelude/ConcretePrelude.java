@@ -235,6 +235,11 @@ public class ConcretePrelude implements ArendPrelude {
   }
 
   @Override
+  public CoreFunctionDefinition getIsoCat() {
+    return Prelude.ISO_CAT;
+  }
+
+  @Override
   public CoreFunctionDefinition getDivMod() {
     return Prelude.DIV_MOD;
   }
@@ -556,6 +561,12 @@ public class ConcretePrelude implements ArendPrelude {
   public ArendRef getIsoRef() {
     if (Prelude.ISO != null) return Prelude.ISO.getRef();
     return myPreludeScope.resolveName("iso");
+  }
+
+  @Override
+  public ArendRef getIsoCatRef() {
+    if (Prelude.ISO_CAT != null) return Prelude.ISO_CAT.getRef();
+    return myPreludeScope.resolveName("isoCat");
   }
 
   @Override

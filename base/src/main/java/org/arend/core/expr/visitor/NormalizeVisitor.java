@@ -218,7 +218,7 @@ public class NormalizeVisitor extends ExpressionTransformer<NormalizationMode>  
     FunCallExpression funCall = body.cast(FunCallExpression.class);
     boolean checkSigma = definition != Prelude.COERCE_PLUS;
 
-    if (funCall != null && (funCall.getDefinition() == Prelude.ISO && definition == Prelude.COERCE || funCall.getDefinition() == Prelude.ISO_PLUS && definition == Prelude.COERCE_PLUS)) {
+    if (funCall != null && ((funCall.getDefinition() == Prelude.ISO || funCall.getDefinition() == Prelude.ISO_CAT) && definition == Prelude.COERCE || funCall.getDefinition() == Prelude.ISO_PLUS && definition == Prelude.COERCE_PLUS)) {
       List<? extends Expression> isoArgs = funCall.getDefCallArguments();
       ReferenceExpression refExpr = isoArgs.getLast().accept(this, NormalizationMode.WHNF).cast(ReferenceExpression.class);
       if (refExpr != null && refExpr.getBinding() == param) {

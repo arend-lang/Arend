@@ -97,6 +97,7 @@ public class Prelude implements ArendPrelude {
   public static DConstructor IDD;
   public static FunctionDefinition AT;
   public static FunctionDefinition ISO;
+  public static FunctionDefinition ISO_CAT;
 
   public static FunctionDefinition DIV_MOD;
   public static FunctionDefinition DIV;
@@ -334,6 +335,11 @@ public class Prelude implements ArendPrelude {
         ISO.setResultType(new UniverseExpression(SortExpression.makeMax(Arrays.asList(new SortExpression.Var(0, Collections.emptyList(), ConstLevel.INFINITY), new SortExpression.Var(1, Collections.emptyList(), ConstLevel.INFINITY)))));
         ISO.setStatus(Definition.TypeCheckingStatus.NO_ERRORS);
       }
+      case "isoCat" -> {
+        ISO_CAT = (FunctionDefinition) definition;
+        ISO_CAT.setResultType(new UniverseExpression(SortExpression.makeMax(Arrays.asList(new SortExpression.Var(0, Collections.emptyList(), ConstLevel.CAT_INFINITY), new SortExpression.Var(1, Collections.emptyList(), ConstLevel.CAT_INFINITY)))));
+        ISO_CAT.setStatus(Definition.TypeCheckingStatus.NO_ERRORS);
+      }
       case "divMod" -> {
         DIV_MOD = (FunctionDefinition) definition;
         DIV_MOD.setStatus(Definition.TypeCheckingStatus.NO_ERRORS);
@@ -433,6 +439,7 @@ public class Prelude implements ArendPrelude {
     consumer.accept(COERCE);
     consumer.accept(COERCE2);
     consumer.accept(ISO);
+    consumer.accept(ISO_CAT);
     consumer.accept(DIV_MOD);
     consumer.accept(DIV);
     consumer.accept(MOD);
@@ -690,6 +697,11 @@ public class Prelude implements ArendPrelude {
   @Override
   public FunctionDefinition getIso() {
     return ISO;
+  }
+
+  @Override
+  public FunctionDefinition getIsoCat() {
+    return ISO_CAT;
   }
 
   @Override
@@ -970,6 +982,11 @@ public class Prelude implements ArendPrelude {
   @Override
   public ArendRef getIsoRef() {
     return ISO == null ? null : ISO.getRef();
+  }
+
+  @Override
+  public ArendRef getIsoCatRef() {
+    return ISO_CAT == null ? null : ISO_CAT.getRef();
   }
 
   @Override

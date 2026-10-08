@@ -38,6 +38,10 @@
   | left => A
   | right => B
 
+\func isoCat {A B : \Cat} (f : A ->⁺ B) (g : B ->⁺ A) (p : \Pi (x :⁺ A) -> g (f x) = x) (q : \Pi (y :⁺ B) -> f (g y) = y) (i : I) : \Cat \elim i
+  | left => A
+  | right => B
+
 \data DI
   | dleft
   | dright
