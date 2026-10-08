@@ -1,5 +1,6 @@
 \import Equiv
 \import InfCat.Basics
+\import InfCat.Functor.Equiv
 \import InfCat.Paths
 \import InfCat.Rezk
 \import Logic
@@ -49,6 +50,11 @@
       | ret_f _ => idp
       | f_sec s => ext \lam y => fibers-total-ret-sec (s y)
   }
+
+-- | The comparison of {fibers-total-equiv} is an equivalence of categories.
+\lemma fibers-total-hequiv {B : \Cat} {Q : B ->⁺ \Cat} (b : B) : IsHEquiv {Q b} {Fibers (totalProj Q) b} (\lam q => ((b, q), idp))
+  => IsHEquiv.biEquiv {Q b} {Fibers (totalProj Q) b} {\lam q => ((b, q), idp)} {fibers-total-equiv.fibers-total-ret} (\lam _ => idp)
+                      {fibers-total-equiv.fibers-total-ret} fibers-total-equiv.fibers-total-ret-sec
 
 -- | An arrow of a fiber whose image in the total category is an isomorphism is an isomorphism.
 \lemma fibers-conservative {E A : \Cat} {p : E ->⁺ A} {a : A} {m : DI ->⁺ Fibers p a} (mi : IsIso (dpath \lam i => (m i).1))

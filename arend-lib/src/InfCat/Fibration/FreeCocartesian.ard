@@ -1,0 +1,110 @@
+{- | The free cocartesian fibration on a functor `q : X ->⁺ B`: its fiber over `b` is the comma category `q ↓ b`.
+ -   Cocartesian lifts are given by postcomposition.
+ -}
+
+\import Equiv
+\import Function.Meta
+\import InfCat.Arrows
+\import InfCat.Basics
+\import InfCat.Fibration.Categorical
+\import InfCat.Fibration.CocartesianFib
+\import InfCat.Fibration.CocartesianMap
+\import InfCat.Fibration.CovariantLift
+\import Logic
+\import Logic.Unique
+\import Meta
+\import Paths
+
+-- | The free cocartesian fibration on {q}.
+\func FreeCocart {X B : \Cat} (q : X ->⁺ B) (b :⁺ B) : \Cat
+  => \Sigma⁺ (x : X) (q x ~> b)
+
+-- | The canonical lift of {d}: it keeps the object of {X} and postcomposes with `d.3`.
+\func freeLift {X B : \Cat} (q : X ->⁺ B) (d : CovLiftData (FreeCocart q)) : CovLift (FreeCocart q) d
+  => ((d.4.1, comp d.4.2 d.3), dpath \lam j => (d.4.1, dpath \lam i => fill2 d.4.2 d.3 i j))
+
+{- | The canonical lifts are cocartesian.
+ -   The arrow {vert} from `(q x, (x, idd))` to `(b, (x, psi))` is cocartesian for every `psi` ({freeVert-cocartesian}),
+ -   and {freeLift} is the second edge of a 2-simplex whose other edges are such arrows ({tri}).
+ -}
+\lemma freeLift-cocartesian {X B : \Cat} (q : X ->⁺ B) (d : CovLiftData (FreeCocart q))
+  : IsCocartesianLift (freeLift q d)
+  => (cocartesianLift<->totalArrow (freeLift q d)).2 $
+     (cocartesianArrow-comp (vert-cocartesian q d.4.2)).2 $
+     transportInv (IsCocartesianArrow (totalProj (FreeCocart q)))
+       (comp-char {_} {_} {_} {_} {vert q d.4.2} {_} {vert q (comp d.4.2 d.3)} (tri q d))
+       (vert-cocartesian q (comp d.4.2 d.3))
+  \where \private {
+    -- | The arrow of the total category from `(q x, (x, idd))` given by {psi}.
+    \func vert {X B : \Cat} (q : X ->⁺ B) {x : X} {b : B} (psi : q x ~> b)
+      : (q x, (x, idd)) ~> {\Sigma⁺ (y : B) (FreeCocart q y)} (b, (x, psi))
+      => dpath \lam i => (psi i, (x, conn-right psi i))
+
+    \lemma vert-cocartesian {X B : \Cat} (q : X ->⁺ B) {x : X} {b : B} (psi : q x ~> b)
+      : IsCocartesianArrow (totalProj (FreeCocart q)) (vert q psi)
+      => (cocartesianLift<->totalArrow {B} {FreeCocart q} ((x, psi), dpath \lam i => (x, conn-right psi i))).1 (freeVert-cocartesian q psi)
+
+    -- | {freeLift} is the second edge of a 2-simplex whose other edges are given by {vert}.
+    \func tri {X B : \Cat} (q : X ->⁺ B) (d : CovLiftData (FreeCocart q))
+      : DPath (\lam i => vert q d.4.2 i ~> vert q (comp d.4.2 d.3) i) idd (dpath \lam j => (d.3 j, (freeLift q d).2 j))
+      => dpath \lam i => dpath \lam j => (fill2 d.4.2 d.3 i j, (d.4.1, conn-right (dpath \lam l => fill2 d.4.2 d.3 l j) i))
+
+    -- | The lift of {psi} from `(x, idd)` with the trivial component in {X} is cocartesian.
+    \lemma freeVert-cocartesian {X B : \Cat} (q : X ->⁺ B) {x : X} {b : B} (psi : q x ~> b)
+      : IsCocartesianLift {B} {FreeCocart q} {q x, b, psi, (x, idd)} ((x, psi), dpath \lam i => (x, conn-right psi i))
+      => \lam {b''} g l' => Contr.Contr_QEquiv (symQEquiv (later \new QEquiv {
+           | f u => ((dpath \lam j => (u.1 j).1, dpath \lam i => dpath \lam j => (u.2 i j).1),
+                     (dpath \lam j => (u.1 j).2, dpath \lam i => dpath \lam j => (u.2 i j).2))
+           | ret v => (dpath \lam j => (v.1.1 j, v.2.1 j), dpath \lam i => dpath \lam j => (v.1.2 i j, v.2.2 i j))
+           | ret_f u => idp
+           | f_sec v => idp
+         })) $ sigma-Contr (segal-contr.flipped idd (xi l')) \lam a =>
+                transport (\lam a => Contr (Rest g l' a)) (isContr=>isProp (segal-contr.flipped idd (xi l')) (xi l', conn-right (xi l')) a) (rest-contr g l')
+      \where {
+        \func xi {b'' : B} {g : b ~> b''} (l' : CovLift (FreeCocart q) (q x, b'', comp psi g, (x, idd))) : x ~> l'.1.1
+          => dpath \lam i => (l'.2 i).1
+
+        \func sigma {b'' : B} {g : b ~> b''} (l' : CovLift (FreeCocart q) (q x, b'', comp psi g, (x, idd)))
+          : DPath (\lam i => q (xi l' i) ~> comp psi g i) idd l'.1.2
+          => dpath \lam i => (l'.2 i).2
+
+        -- | The component in {B} of factorizations, for a given component in {X}.
+        \func Rest {b'' : B} (g : b ~> b'') (l' : CovLift (FreeCocart q) (q x, b'', comp psi g, (x, idd)))
+                   (a : \Sigma (xi' : x ~> l'.1.1) (DPath (\lam i => x ~> xi l' i) idd xi')) : \Type
+          => \Sigma (kH : DPath (\lam j => q (a.1 j) ~> g j) psi l'.1.2)
+                    (DPath (\lam i => DPath (\lam j => q (a.2 i j) ~> fill2 psi g i j) (conn-right psi i) (sigma l' i)) idd kH)
+
+        -- | For the canonical component in {X}, factorizations are fillers of a box.
+        \lemma rest-contr {b'' : B} (g : b ~> b'') (l' : CovLift (FreeCocart q) (q x, b'', comp psi g, (x, idd)))
+          : Contr (Rest g l' (xi l', conn-right (xi l')))
+          => Contr.Contr_QEquiv (later \new QEquiv {
+               | f t => (dpath \lam j => dpath \lam m => t.1 m j, dpath \lam i => dpath \lam j => dpath \lam m => t.2 m j i)
+               | ret t => (dpath \lam m => dpath \lam j => t.1 j m, dpath \lam m => dpath \lam j => dpath \lam i => t.2 i j m)
+               | ret_f t => idp
+               | f_sec t => idp
+             }) (box-contr () {idd} {psi} {psi} {idd}
+                           (dpath \lam j => dpath \lam k => q (conn-right (xi l') k j))
+                           (dpath \lam j => dpath \lam k => fill2 psi g k j)
+                           (dpath \lam m => dpath \lam i => conn-right psi i m)
+                           (dpath \lam m => dpath \lam i => sigma l' i m)
+                           (dpath \lam _ => idd))
+      }
+  }
+
+-- | {FreeCocart} is a cocartesian fibration.
+\lemma freeCocart-cocartesian {X B : \Cat} (q : X ->⁺ B) : IsCocartesianFib (FreeCocart q)
+  => \lam d => inP (freeLift q d, freeLift-cocartesian q d)
+
+{- | The total category of {FreeCocart}.
+ -   It is the same category as `\Sigma⁺ (b : B) (FreeCocart q b)`, but it lives in `\Cat u`.
+ -}
+\func FreeTot.{u} {X B : \Cat u} (q : X ->⁺ B) : \Cat u
+  => \Sigma⁺ (b : B) (\Sigma⁺ (x : X) (q x ~> b))
+
+-- | The projection from {FreeTot}.
+\func freeProj.{u} {X B : \Cat u} (q : X ->⁺ B) (s :⁺ FreeTot q) : B
+  => s.1
+
+-- | {freeProj} is a cocartesian fibration.
+\lemma freeProj-cocartesian.{u} {X B : \Cat u} (q : X ->⁺ B) : IsCocartesianFib (Fibers (freeProj q))
+  => cocartesianFib-total (freeCocart-cocartesian q)

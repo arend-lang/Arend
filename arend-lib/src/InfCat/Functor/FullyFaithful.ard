@@ -39,6 +39,29 @@
 
     \lemma fibProp (ff : IsFFMap f) (y : D) : isProp (\Sigma (x : C) (f x = y))
       => Embedding.embeddingFiber-isProp (isObEmbedding ff) y
+
+    -- | A fully faithful functor induces equivalences on squares with a fixed boundary.
+    \lemma squares (ff : IsFFMap f) {a b c d : C} (ab : a ~> b) (bd : b ~> d) (ac : a ~> c) (cd : c ~> d)
+      : IsEquiv {DPath (\lam i => ab i ~> cd i) ac bd} {DPath (\lam i => f (ab i) ~> f (cd i)) (dmap f ac) (dmap f bd)} (\lam s => dpath \lam i => dmap f (s i))
+      => squares-at f (ff a d) ab bd ac cd
+  }
+
+-- | A functor that is fully faithful on arrows from {a} to {d} induces equivalences on squares from {a} to {d} with a fixed boundary.
+\lemma squares-at {C D : \Cat} (f : C ->⁺ D) {a b c d : C} (e : IsEquiv {a ~> d} (dmap f)) (ab : a ~> b) (bd : b ~> d) (ac : a ~> c) (cd : c ~> d)
+  : IsEquiv {DPath (\lam i => ab i ~> cd i) ac bd} {DPath (\lam i => f (ab i) ~> f (cd i)) (dmap f ac) (dmap f bd)} (\lam s => dpath \lam i => dmap f (s i))
+  => \let | bf => conn-right ab
+          | tf => conn-right ac
+          | cf => dpath \lam i => dpath \lam j => fill2 ac cd i j
+     \in propExt.conv (IsEquiv.parallelEquiv (inP (square-char.gen-equiv bf tf cf))
+            (inP (square-char.gen-equiv (dpath \lam i => dmap f (bf i)) (dpath \lam i => dmap f (tf i)) (dpath \lam i => dmap f (cf i))))
+            (\lam s => inv (square-char.forward-gen.natural f {a} {b} {c} {d} {ab} {bd} {ac} bf tf {comp ac cd} cf s)))
+          (triangles-at f e)
+  \where {
+    -- | A functor that is fully faithful on arrows from {a} to {d} induces equivalences on triangles from {a} to {d} with a fixed boundary.
+    \private \lemma triangles-at {C D : \Cat} (f : C ->⁺ D) {a b d : C} (e : IsEquiv {a ~> d} (dmap f)) {ab : a ~> b} {bd : b ~> d} {ad : a ~> d}
+      : IsEquiv {DPath (\lam i => a ~> bd i) ab ad} {DPath (\lam i => f a ~> dmap f bd i) (dmap f ab) (dmap f ad)} (\lam t => dpath \lam i => dmap f (t i))
+      => fiberwiseEquiv e {DPath (\lam i => a ~> bd i) ab} (\lam ad t => dpath \lam i => dmap f (t i))
+          (contr-equiv (segal-contr.flipped ab bd) (segal-contr.flipped (dmap f ab) (dmap f bd))) ad
   }
 
 \lemma ffMap-char {C D : \Cat} {f : C ->⁺ D}
@@ -114,3 +137,20 @@
                    | inP (x,fx=gy) => inP ((y, (x,fx=gy)), idp)
                  })
      \in (\lam y =>⁺ (IsHEquiv.ret e y).2.1, \lam y => (IsHEquiv.ret e y).2.2 *> pmap+ g (IsHEquiv.f_ret e))
+
+-- | A functor over {A} that is fully faithful on total categories induces equivalences on paths over arrows of {A}.
+\lemma relative-ff {A : \Cat} {F G : A ->⁺ \Cat} (H : \Pi (k :⁺ \Sigma⁺ (x : A) (F x)) -> G k.1)
+                   (ff : IsFFMap {\Sigma⁺ (x : A) (F x)} {\Sigma⁺ (x : A) (G x)} (\lam k => (k.1, H k)))
+                   {x y : A} (r : x ~> y) (u : F x) (v : F y)
+  : IsEquiv {DPath (\lam i => F (r i)) u v} {DPath (\lam i => G (r i)) (H (x,u)) (H (y,v))} (\lam w => dpath \lam i => H (r i, w i))
+  => fiberwiseEquiv {x ~> y} (inP idEquiv) {\lam r => DPath (\lam i => F (r i)) u v} (\lam r w => dpath \lam i => H (r i, w i))
+      (propExt.dir (IsEquiv.parallelEquiv (inP (dpath-sigma-equiv \lam _ => F)) (inP (dpath-sigma-equiv \lam _ => G)) (\lam _ => idp)) (ff (x,u) (y,v))) r
+  \where
+    -- | Conversely, equivalences on paths over arrows of {A} give a fully faithful functor on total categories.
+    \lemma conv {A : \Cat} {F G : A ->⁺ \Cat} (H : \Pi (k :⁺ \Sigma⁺ (x : A) (F x)) -> G k.1)
+                (rel : \Pi {x y : A} (r : x ~> y) (u : F x) (v : F y) ->
+                  IsEquiv {DPath (\lam i => F (r i)) u v} {DPath (\lam i => G (r i)) (H (x,u)) (H (y,v))} (\lam w => dpath \lam i => H (r i, w i)))
+      : IsFFMap {\Sigma⁺ (x : A) (F x)} {\Sigma⁺ (x : A) (G x)} (\lam k => (k.1, H k))
+      => \lam s t => propExt.conv (IsEquiv.parallelEquiv {_} {_} {_} {_} {dmap \lam k => later (k.1, H k)}
+                                     (inP (dpath-sigma-equiv \lam _ => F)) (inP (dpath-sigma-equiv \lam _ => G)) (\lam _ => idp))
+           (propExt.dir (totalEquiv {s.1 ~> t.1} {\lam r => DPath (\lam i => F (r i)) s.2 t.2} (\lam r w => dpath \lam i => H (r i, w i))) (rel __ s.2 t.2))

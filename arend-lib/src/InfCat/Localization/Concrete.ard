@@ -11,12 +11,15 @@
 \import Equiv.Sigma
 \import Function.Meta
 \import InfCat.Arrows
+\import InfCat.Basics
 \import InfCat.CatPushout
+\import InfCat.Functor.Conservative
 \import InfCat.Functor.Embedding
 \import InfCat.Functor.Equiv
 \import InfCat.Functor.FullyFaithful
 \import InfCat.Groupoid
 \import InfCat.Localization.Abstract
+\import InfCat.Paths
 \import InfCat.Rezk
 \import InfCat.SubCat.Full
 \import Logic
@@ -154,3 +157,58 @@
 -- | The identity functor is the localization at the isomorphisms.
 \lemma id-isLocalization-iso {C : \Cat} : IsLocalization (IsIso {C} __) (\lam x => x)
   => IsLocalization.fromUniv id-isLocalizationFor-iso id-isLocalizationFor-iso
+
+-- | A reflection whose unit lies in {W} is a localization at {W}.
+\lemma reflection-isLocalization {C L : \Cat} {W : (DI ->⁺ C) -> \Prop} {l : C ->⁺ L} (lw : InvertsW W l) (r : L ->⁺ C)
+                                 (eta : \Pi (x :⁺ C) -> x ~> r (l x)) (eps : \Pi (y :⁺ L) -> y ~> l (r y)) (eps-iso : \Pi (y : L) -> IsIso (eps y))
+                                 (eta-W : \Pi (x : C) -> W (\lam i => eta x i))
+  : IsLocalization W l
+  => IsLocalization.fromUniv
+      (reflection-isLocalizationFor lw r eta eps eps-iso (\lam F Fw x => Fw (eta-W x)) (\lam F Fw x => Fw (eta-W x)))
+      (reflection-isLocalizationFor lw r eta eps eps-iso (\lam F Fw x => Fw (eta-W x)) (\lam F Fw x => Fw (eta-W x)))
+  \where {
+    -- | Restriction along {l} is an equivalence on objects for functors into {D}.
+    \lemma reflection-restrict-equiv {C L D : \Cat} {W : (DI ->⁺ C) -> \Prop} {l : C ->⁺ L} (lw : InvertsW W l) (r : L ->⁺ C)
+                                     (eta : \Pi (x :⁺ C) -> x ~> r (l x)) (eps : \Pi (y :⁺ L) -> y ~> l (r y)) (eps-iso : \Pi (y : L) -> IsIso (eps y))
+                                     (eta-inv : \Pi (F : C ->⁺ D) -> InvertsW W F -> \Pi (x : C) -> IsIso (dmap F (eta x)))
+      : IsEquiv (restrictW {C} {L} {D} lw)
+      => inP \new QEquiv {
+        | ret s y => s.1 (r y)
+        | ret_f G => path \lam j y => G ((inv (natIso-path eps eps-iso) j) y)
+        | f_sec s => ext (inv (natIso-path (\lam x => dmap s.1 (eta x)) (eta-inv s.1 s.2)))
+      }
+
+    -- | A reflection is a localization with respect to functors into {D}.
+    \lemma reflection-isLocalizationFor {C L D : \Cat} {W : (DI ->⁺ C) -> \Prop} {l : C ->⁺ L} (lw : InvertsW W l) (r : L ->⁺ C)
+                                        (eta : \Pi (x :⁺ C) -> x ~> r (l x)) (eps : \Pi (y :⁺ L) -> y ~> l (r y)) (eps-iso : \Pi (y : L) -> IsIso (eps y))
+                                        (eta-inv : \Pi (F : C ->⁺ D) -> InvertsW W F -> \Pi (x : C) -> IsIso (dmap F (eta x)))
+                                        (eta-inv' : \Pi (F : C ->⁺ DI ->⁺ D) -> InvertsW W F -> \Pi (x : C) -> IsIso (dmap F (eta x)))
+      : IsLocalizationFor W l D
+      => localization-criterion lw (reflection-restrict-equiv lw r eta eps eps-iso eta-inv)
+                                   (reflection-restrict-equiv lw r eta eps eps-iso eta-inv')
+  }
+
+-- | Localizations can be precomposed with equivalences.
+\lemma isLocalization-precomp {C' C L : \Cat} {W : (DI ->⁺ C) -> \Prop} {l : C ->⁺ L} (Lz : IsLocalization W l) {e : C' ->⁺ C} (ee : IsHEquiv e)
+  : IsLocalization (\lam a => W (\lam i => e (a i))) (\lam x => l (e x))
+  => IsLocalization.fromUniv aux aux
+  \where \private {
+    \lemma aux {D : \Cat}
+      : IsLocalizationFor (\lam a => W (\lam i => e (a i))) (\lam x => l (e x)) D
+      => localization-criterion (\lam w => Lz.1 w) equiv equiv
+
+    \lemma equiv {D : \Cat}
+      : IsEquiv (restrictW {C'} {L} {D} {\lam a => W (\lam i => e (a i))} {\lam x => l (e x)} (\lam w => Lz.1 w))
+      => transport IsEquiv (ext \lam G => ext idp)
+           (IsEquiv.trans (restrictW-equiv (IsLocalization.univ Lz {D})) mapW-precomp-equiv)
+
+    -- | Precomposition with an equivalence identifies functors inverting {W} with functors inverting its pullback.
+    \lemma mapW-precomp-equiv {D : \Cat}
+      : IsEquiv {MapW W D} {MapW (\lam a => W (\lam i => e (a i))) D} (\lam s => (\lam x => s.1 (e x), \lam w => s.2 w))
+      => inP \new QEquiv {
+        | ret t => (\lam y => t.1 (IsHEquiv.ret ee y),
+                    \lam {a} w => t.2 (transport {DI ->⁺ C} W (path \lam j i => inv (IsHEquiv.f_ret ee {a i}) j) w))
+        | ret_f s => ext (ext \lam y => pmap+ s.1 (IsHEquiv.f_ret ee))
+        | f_sec t => ext (ext \lam x => pmap+ t.1 (IsHEquiv.ret_f ee))
+      }
+  }

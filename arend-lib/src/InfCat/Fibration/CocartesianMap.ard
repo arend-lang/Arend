@@ -11,6 +11,7 @@
 \import Logic
 \import Logic.Meta
 \import Logic.Unique
+\import Meta
 \import Paths
 
 -- | Commutative triangles `u ; v = w` in {E} and their images under {p}.
@@ -239,3 +240,38 @@
 -- | Identity arrows are cocartesian: both sides of {triangle-map} are contractible.
 \lemma idd-cocartesian {E A : \Cat} {p : E ->⁺ A} {e : E} : IsCocartesianArrow p (idd {E} {e})
   => \lam w => contr-equiv (segal-contr.flipped idd w) (segal-contr.flipped idd (dmap p w))
+
+-- | A lift is cocartesian if and only if the corresponding arrow of the total category is cocartesian over the base.
+\lemma cocartesianLift<->totalArrow {A : \Cat} {B : A ->⁺ \Cat} {d : CovLiftData B} (l : CovLift B d)
+  : IsCocartesianLift l <-> IsCocartesianArrow (totalProj B) (dpath \lam i => ((d.3 i, l.2 i) : \Sigma⁺ (x : A) (B x)))
+  => (\lam lc {y} w => IsEquiv.trans (inP (split l w)) (inP $ contr-right $ later \lam gt =>
+        lift=>body l lc {_} {_} {dpath \lam i => (w i).1} gt.2 (y.2, dpath \lam i => (w i).2)),
+      \lam ac g l' => arrow=>body l ac (dpath \lam i => (comp d.3 g i, l'.2 i)) (g, dpath \lam i => dpath (fill2 d.3 g i)))
+  \where \private {
+    -- | Factorizations through a lift {l} of a lift of {h} over a 2-simplex {t} with edges `f`, {g}, {h}.
+    \func TotBody {A : \Cat} {B : A ->⁺ \Cat} {a a' : A} {f : a ~> a'} {b : B a} (l : CovLift B (a, a', f, b)) {a'' : A} {g : a' ~> a''} {h : a ~> a''}
+                  (t : DPath (\lam i => f i ~> h i) idd g) (l' : CovLift B (a, a'', h, b)) : \Type
+      => \Sigma (k : DPath (\lam j => B (g j)) l.1 l'.1) (DPath (\lam i => DPath (\lam j => B (t i j)) (l.2 i) (l'.2 i)) idd k)
+
+    \func split {A : \Cat} {B : A ->⁺ \Cat} {a a' : A} {f : a ~> a'} {b : B a} (l : CovLift B (a, a', f, b)) {y : \Sigma⁺ (x : A) (B x)} (w : (a,b) ~> {\Sigma⁺ (x : A) (B x)} y)
+      : QEquiv {\Sigma (v : (a', l.1) ~> {\Sigma⁺ (x : A) (B x)} y) (DPath (\lam i => (f i, l.2 i) ~> {\Sigma⁺ (x : A) (B x)} w i) idd v)}
+               {\Sigma (gt : \Sigma (g : a' ~> y.1) (DPath (\lam i => f i ~> (w i).1) idd g)) (TotBody l {_} {_} {dpath \lam i => (w i).1} gt.2 (y.2, dpath \lam i => (w i).2))} \cowith
+      | f s => ((dpath \lam j => (s.1 j).1, dpath \lam i => dpath \lam j => (s.2 i j).1), (dpath \lam j => (s.1 j).2, dpath \lam i => dpath \lam j => (s.2 i j).2))
+      | ret s => (dpath \lam j => (s.1.1 j, s.2.1 j), dpath \lam i => dpath \lam j => (s.1.2 i j, s.2.2 i j))
+      | ret_f s => idp
+      | f_sec s => idp
+
+    -- | Cocartesian lifts give contractible factorizations over every 2-simplex, since 2-simplices with given `f` and {g} form a contractible type.
+    \lemma lift=>body {A : \Cat} {B : A ->⁺ \Cat} {a a' : A} {f : a ~> a'} {b : B a} (l : CovLift B (a, a', f, b)) (lc : IsCocartesianLift l)
+                      {a'' : A} {g : a' ~> a''} {h : a ~> a''} (t : DPath (\lam i => f i ~> h i) idd g) (l' : CovLift B (a, a'', h, b))
+      : Contr (TotBody l t l')
+      => transport (\lam s => \Pi (l' : CovLift B (a, a'', s.1, b)) -> Contr (TotBody l s.2 l'))
+                   (isContr=>isProp (segal-contr f g) (comp f g, dpath \lam i => dpath (fill2 f g i)) (h,t)) (lc g) l'
+
+    \lemma arrow=>body {A : \Cat} {B : A ->⁺ \Cat} {a a' : A} {f : a ~> a'} {b : B a} (l : CovLift B (a, a', f, b))
+                       (ac : IsCocartesianArrow (totalProj B) (dpath \lam i => ((f i, l.2 i) : \Sigma⁺ (x : A) (B x))))
+                       {y : \Sigma⁺ (x : A) (B x)} (w : (a,b) ~> {\Sigma⁺ (x : A) (B x)} y) (gt : \Sigma (g : a' ~> y.1) (DPath (\lam i => f i ~> (w i).1) idd g))
+      : Contr (TotBody l {_} {_} {dpath \lam i => (w i).1} gt.2 (y.2, dpath \lam i => (w i).2))
+      => Contr.Contr_QEquiv (proj-fib (\lam gt => TotBody l {_} {_} {dpath \lam i => (w i).1} gt.2 (y.2, dpath \lam i => (w i).2)) gt)
+          (IsEquiv=>contrFibers (IsEquiv.rightFactor (inP (split l w)) (ac w)) gt)
+  }

@@ -3,6 +3,7 @@
 \import Equiv.Sigma
 \import Function.Meta
 \import InfCat.Basics
+\import InfCat.Rezk
 \import InfCat.Square
 \import Logic
 \import Logic.Unique
@@ -86,3 +87,11 @@
   : IsEquiv {x ~> y} (dmap __.1)
   => inP $ transQEquiv (dpath-sigma-equiv \lam _ => CovLift B) $ contr-right \lam r => Contr.Contr_QEquiv (symQEquiv (covLift-dpath-equiv r)) $
       cocartesian-square B (dpath \lam i => (r i).1) (dpath \lam i => (r i).2) (dpath \lam i => (r i).3) (dpath \lam i => (r i).4) x.2 xc y.2
+
+-- | A cocartesian lift of an identity morphism is an isomorphism.
+\lemma cocartesianLift-idd-iso {A : \Cat} {B : A ->⁺ \Cat} {a : A} {b : B a} (c : CovLift B (a, a, idd, b)) (cc : IsCocartesianLift c) : IsIso c.2
+  => \have | cs (l' : CovLift B (a, a, idd, b)) => cocartesian-square B idd idd (dpath \lam i => idd) idd c cc l'
+           | r => (cs (b, idd)).center
+           | dr => inv (square-equiv idd r.1 r.2) *> comp_idd-left
+           | sq2 => (square-equiv idd (comp r.1 c.2)).ret (inv (comp-assoc *> pmap (comp __ c.2) dr))
+     \in inP (r.1, pmap __.1 (isContr=>isProp (cs c) (comp r.1 c.2, sq2) (idd, dpath \lam i => c.2)), dr)

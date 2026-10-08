@@ -1,12 +1,16 @@
 \import Equiv
+\import Equiv.Fiber
 \import Equiv.Sigma
+\import Function
 \import Function.Meta
+\import Homotopy.Fibration
 \import InfCat.Basics
 \import InfCat.Functor.Equiv
 \import InfCat.Functor.FullyFaithful
 \import InfCat.Objects
 \import Logic
 \import Logic.Unique
+\import Meta
 \import Paths
 \import Paths.Meta
 
@@ -93,3 +97,36 @@
       : IsEquiv {\Sigma (j : \Sigma A A) (j.1 ~> j.2)} {\Sigma (j : \Sigma B B) (j.1 ~> j.2)} (\lam s => ((g s.1.1, g s.1.2), dmap g s.2))
       => propExt.dir (IsEquiv.parallelEquiv (inP DI-equiv) (inP DI-equiv) (\lam h => idp)) pe
   }
+
+-- | Arrows from a constant functor to {Y} are determined by their source component.
+\lemma const-ev0-equiv {C : \Cat} (a : C) (Y : DI ->⁺ C)
+  : IsEquiv {(\lam _ =>⁺ a) ~> Y} {a ~> Y dleft} (dmap \lam (F : DI ->⁺ C) => F dleft)
+  => IsEquiv.trans (inP $ later \new QEquiv {
+        | f N => (dpath \lam l => N l dleft, (dpath \lam l => N l dright, dpath \lam k => dpath \lam l => N l k))
+        | ret t => dpath \lam l k => t.2.2 k l
+        | ret_f N => idp
+        | f_sec t => idp
+      })
+      (inP $ contr-right \lam n0 => segal-contr.flipped n0 (dpath Y))
+
+{- | The bottom face and the interior of a box with the shape of {fill3} are unique.
+ -   The box is a square in the arrow category whose top-left corner is constant, and the source functor is fully faithful on such squares.
+ -}
+\lemma box-contr {C : \Cat} {a b d a' b' c' d' : C} (_ : \Sigma)
+                 {ab : a ~> b} {bd : b ~> d} {ad : a ~> d}
+                 {a'b' : a' ~> b'} {b'd' : b' ~> d'} {a'c' : a' ~> c'} {c'd' : c' ~> d'}
+                 {aa' : a ~> a'} {bb' : b ~> b'} {ac' : a ~> c'} {dd' : d ~> d'}
+                 (leftFace : DPath (\lam j => aa' j ~> ac' j) idd a'c')
+                 (rightFace : DPath (\lam j => bb' j ~> dd' j) bd b'd')
+                 (backFace : DPath (\lam i => ab i ~> ad i) idd bd)
+                 (frontFace : DPath (\lam i => a'b' i ~> c'd' i) a'c' b'd')
+                 (topFace : DPath (\lam i => ab i ~> a'b' i) aa' bb')
+  : Contr (\Sigma (bot : DPath (\lam i => ad i ~> c'd' i) ac' dd')
+                  (DPath (\lam i => DPath (\lam j => topFace i j ~> bot i j) (dpath \lam k => backFace i k) (dpath \lam k => frontFace i k)) leftFace rightFace))
+  => Contr.Contr_QEquiv (proj-fib _ topFace) $ flip IsEquiv=>contrFibers topFace $ IsEquiv.rightFactor (inP $ later \new QEquiv {
+         | f S => (dpath \lam i => dpath \lam j => S i j dleft, (dpath \lam i => dpath \lam j => S i j dright, dpath \lam i => dpath \lam j => dpath \lam k => S i j k))
+         | ret t => dpath \lam i => dpath \lam j => t.2.2 i j
+         | ret_f S => idp
+         | f_sec t => idp
+       }) (squares-at (\lam F => F dleft) (const-ev0-equiv a b'd') (dpath \lam i k =>⁺ backFace i k)
+                      (dpath \lam j => rightFace j) (dpath \lam j => leftFace j) (dpath \lam i => frontFace i))
