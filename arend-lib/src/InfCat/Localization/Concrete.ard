@@ -33,7 +33,7 @@
   => \Sigma (a : DI ->⁺ C) (W a)
 
 -- | The localization of {C} at {W}.
-\func Localize {C : \Cat} (W : (DI ->⁺ C) -> \Prop) : \Cat
+\type Localize {C : \Cat} (W : (DI ->⁺ C) -> \Prop) : \Cat
   => CatPushout {\Sigma⁺ (MorW W) DI} {C} {MorW W} (\lam a => a.1.1 a.2) (\lam a => a.1)
 
 -- | The localization functor.
@@ -50,12 +50,15 @@
 -- | Functors out of {Localize} are functors out of {C} with gluing data.
 \func localize-rec-equiv {C D : \Cat} {W : (DI ->⁺ C) -> \Prop}
   : QEquiv {Localize W ->⁺ D} {\Sigma (F : C ->⁺ D) (GlueData W F)}
-  => CatPushout.elim-equiv `transQEquiv` \new QEquiv {_} {\Sigma (F : C ->⁺ D) (GlueData W F)} {
-    | f s => (s.1, (s.2, s.3))
-    | ret s => (s.1, s.2.1, s.2.2)
-    | ret_f => idpe
-    | f_sec => idpe
+  \cowith
+  | f h => (\lam y => h (localize W y), (\lam z => h (cinr z), \lam a => path \lam i => h (cglue a i)))
+  | ret s x => CatPushout.rec s.1 s.2.1 s.2.2 x
+  | ret_f h => ext \case \elim __ \with {
+    | cinl y => idp
+    | cinr z => idp
+    | cglue x i => idp
   }
+  | f_sec s => idp
 
 \lemma GlueData=>inverts {C D : \Cat} {W : (DI ->⁺ C) -> \Prop} {F : C ->⁺ D} (g : GlueData W F) : InvertsW W F
   => \lam {a} s => IsIso-diag-char.2 $ inP (g.1 (a, s), inv $ path \lam j i => g.2 ((a, s), i) j)
@@ -101,7 +104,7 @@
 -- | Every object of {Localize} is merely the image of an object of {C}.
 \lemma localize-surj {C : \Cat} {W : (DI ->⁺ C) -> \Prop} (e : Localize W) : ∃ (c : C) (localize W c = e) \elim e
   | cinl b => inP (b, idp)
-  | cinr m => inP (m.1 dleft, path (cglue ((m, dleft) : \Sigma⁺ (MorW W) DI)))
+  | cinr m => inP (m.1 dleft, path \lam i => cglue (m, dleft) i)
 
 -- | The canonical functor out of {Localize} induced by a functor inverting {W}; it computes on {localize}.
 \func localize-lift {C L : \Cat} {W : (DI ->⁺ C) -> \Prop} {l : C ->⁺ L} (lw : InvertsW W l) (y :⁺ Localize W) : L \elim y
