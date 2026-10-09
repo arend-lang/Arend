@@ -95,6 +95,11 @@ public class ErrorService implements ErrorReporter {
     myTypecheckingErrors.keySet().removeIf(ref -> module.equals(ref.getLocation()));
   }
 
+  /** Like {@link #clearTypecheckingErrors(ModuleLocation)}, but keeps the errors of the referables in {@code keep}. */
+  public void clearTypecheckingErrors(ModuleLocation module, Set<? extends LocatedReferable> keep) {
+    myTypecheckingErrors.keySet().removeIf(ref -> module.equals(ref.getLocation()) && !keep.contains(ref));
+  }
+
   @Override
   public void report(GeneralError error) {
     error.forAffectedDefinitions((ref, newError) -> {
