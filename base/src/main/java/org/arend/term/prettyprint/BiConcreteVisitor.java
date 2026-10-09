@@ -1,5 +1,6 @@
 package org.arend.term.prettyprint;
 
+import org.arend.ext.core.context.BindingVariance;
 import org.arend.ext.concrete.expr.ConcreteArgument;
 import org.arend.extImpl.ConcreteFactoryImpl;
 import org.arend.naming.reference.Referable;
@@ -87,7 +88,7 @@ public abstract class BiConcreteVisitor extends BaseConcreteExpressionVisitor<Co
         }
       }
     }
-    return Concrete.PatternLamExpression.make(expr.getData(), newParams, newPatterns, expr.getBody().accept(this, wideExpr.getBody()));
+    return Concrete.PatternLamExpression.make(expr.getData(), newParams, newPatterns, expr instanceof Concrete.PatternLamExpression patLam ? patLam.getVariance() : BindingVariance.INVARIANT, expr.getBody().accept(this, wideExpr.getBody()));
   }
 
   private static List<Concrete.Parameter> flattenTelescopes(List<? extends Concrete.Parameter> parameters) {

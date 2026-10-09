@@ -356,6 +356,7 @@ public class DesugarVisitor extends BaseConcreteExpressionVisitor<Void> {
 
     int i = 0;
     int j = 0;
+    BindingVariance variance = ((Concrete.PatternLamExpression) expr).getVariance();
     List<Concrete.Parameter> newParams = new ArrayList<>();
     Concrete.Expression body = expr.body.accept(this, null);
     if (onlyTuples(((Concrete.PatternLamExpression) expr).getPatterns())) {
@@ -372,9 +373,9 @@ public class DesugarVisitor extends BaseConcreteExpressionVisitor<Void> {
         if (ref == null && pattern.getAsReferable() != null) ref = pattern.getAsReferable().referable;
         if (ref == null) ref = new LocalReferable("p" + j++);
         Concrete.Expression type = pattern instanceof Concrete.NamePattern ? ((Concrete.NamePattern) pattern).type : pattern.getAsReferable() != null ? pattern.getAsReferable().type : null;
-        newParams.add(type != null ? new Concrete.TelescopeParameter(pattern.getData(), pattern.isExplicit(), Collections.singletonList(ref), type.accept(this, null), false) : new Concrete.NameParameter(pattern.getData(), pattern.isExplicit(), ref));
+        newParams.add(type != null ? new Concrete.TelescopeParameter(pattern.getData(), pattern.isExplicit(), Collections.singletonList(ref), type.accept(this, null), false, variance) : new Concrete.NameParameter(pattern.getData(), pattern.isExplicit(), ref, variance));
         pattern.setExplicit(true);
-        clauses.add(new Concrete.LetClause(pattern, null, new Concrete.ReferenceExpression(pattern.getData(), ref), false));
+        clauses.add(new Concrete.LetClause(pattern, null, new Concrete.ReferenceExpression(pattern.getData(), ref), variance == BindingVariance.COVARIANT));
       }
       Concrete.LetExpression let = new Concrete.LetExpression(expr.getData(), false, false, clauses, body);
       let.isGeneratedFromLambda = true;
@@ -407,7 +408,7 @@ public class DesugarVisitor extends BaseConcreteExpressionVisitor<Void> {
         if (ref == null && pattern.getAsReferable() != null) ref = pattern.getAsReferable().referable;
         if (ref == null) ref = new LocalReferable("p" + j++);
         Concrete.Expression type = pattern instanceof Concrete.NamePattern ? ((Concrete.NamePattern) pattern).type : pattern.getAsReferable() != null ? pattern.getAsReferable().type : null;
-        newParams.add(type != null ? new Concrete.TelescopeParameter(pattern.getData(), pattern.isExplicit(), Collections.singletonList(ref), type.accept(this, null), false) : new Concrete.NameParameter(pattern.getData(), pattern.isExplicit(), ref));
+        newParams.add(type != null ? new Concrete.TelescopeParameter(pattern.getData(), pattern.isExplicit(), Collections.singletonList(ref), type.accept(this, null), false, variance) : new Concrete.NameParameter(pattern.getData(), pattern.isExplicit(), ref, variance));
         caseArgs.add(new Concrete.CaseArgument(new Concrete.ReferenceExpression(pattern.getData(), ref), null, BindingVariance.INVARIANT));
         pattern.setExplicit(true);
         newPatterns.add(pattern);

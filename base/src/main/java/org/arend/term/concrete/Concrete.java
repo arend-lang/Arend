@@ -1073,18 +1073,24 @@ public final class Concrete {
   public static class PatternLamExpression extends LamExpression {
     // null elements of the list correspond to parameters of the lambda
     private final List<Pattern> myPatterns;
+    private final BindingVariance myVariance;
 
-    private PatternLamExpression(Object data, List<Parameter> parameters, List<Pattern> patterns, Expression body) {
+    private PatternLamExpression(Object data, List<Parameter> parameters, List<Pattern> patterns, BindingVariance variance, Expression body) {
       super(data, parameters, body);
       myPatterns = patterns;
+      myVariance = variance;
     }
 
-    public static LamExpression make(Object data, List<Parameter> parameters, List<Pattern> patterns, Expression body) {
-      return patterns.isEmpty() ? new LamExpression(data, parameters, body) : new PatternLamExpression(data, parameters, patterns, body);
+    public static LamExpression make(Object data, List<Parameter> parameters, List<Pattern> patterns, BindingVariance variance, Expression body) {
+      return patterns.isEmpty() ? new LamExpression(data, parameters, body) : new PatternLamExpression(data, parameters, patterns, variance, body);
     }
 
     public List<Pattern> getPatterns() {
       return myPatterns;
+    }
+
+    public BindingVariance getVariance() {
+      return myVariance;
     }
   }
 

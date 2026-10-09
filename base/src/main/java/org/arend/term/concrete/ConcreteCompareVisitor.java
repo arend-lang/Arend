@@ -153,7 +153,7 @@ public class ConcreteCompareVisitor implements ConcreteExpressionVisitor<Concret
     if ((expr1 instanceof Concrete.PatternLamExpression) != (expr2 instanceof Concrete.PatternLamExpression)) return false;
     if (expr1 instanceof Concrete.PatternLamExpression lamExpr1) {
       Concrete.PatternLamExpression lamExpr2 = (Concrete.PatternLamExpression) expr2;
-      if (!(lamExpr1.getPatterns().size() == lamExpr2.getPatterns().size() && lamExpr1.getParameters().size() == lamExpr2.getParameters().size())) return false;
+      if (!(lamExpr1.getPatterns().size() == lamExpr2.getPatterns().size() && lamExpr1.getParameters().size() == lamExpr2.getParameters().size() && lamExpr1.getVariance() == lamExpr2.getVariance())) return false;
       int j = 0;
       for (int i = 0; i < lamExpr1.getPatterns().size(); i++) {
         Concrete.Pattern pattern1 = lamExpr1.getPatterns().get(i);

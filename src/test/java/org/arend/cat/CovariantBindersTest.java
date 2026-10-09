@@ -398,6 +398,43 @@ public class CovariantBindersTest extends TypeCheckingTestCase {
   }
 
   @Test
+  public void lamTuplePatternCovariantTest() {
+    FunctionDefinition def = (FunctionDefinition) typeCheckDef("\\func test : \\Pi (p :+ \\Sigma Nat Nat) -> Nat => \\lam (a, b) =>+ a");
+    assertEquals(BindingVariance.COVARIANT, ((LamExpression) Objects.requireNonNull(def.getBody())).getParameters().getVariance());
+  }
+
+  @Test
+  public void lamTuplePatternCovariantArgTest() {
+    typeCheckModule("""
+      \\func f (g : \\Pi (p :+ \\Sigma Nat Nat) -> Nat) => 0
+      \\func test => f (\\lam (a, b) =>+ a)
+      """);
+  }
+
+  @Test
+  public void lamNestedTuplePatternCovariantTest() {
+    typeCheckDef("\\func test : \\Pi (p :+ \\Sigma Nat (\\Sigma Nat Nat)) -> Nat => \\lam (a, (b, c)) =>+ b");
+  }
+
+  @Test
+  public void lamTuplePatternCovariantInvariantUseError() {
+    typeCheckDef("\\func test (f : \\Pi (z : Nat) -> Nat) : \\Pi (p :+ \\Sigma Nat Nat) -> Nat => \\lam (a, b) =>+ f a", 1);
+  }
+
+  @Test
+  public void lamTuplePatternCovariantError() {
+    typeCheckDef("\\func test : \\Pi (p : \\Sigma Nat Nat) -> Nat => \\lam (a, b) =>+ a", 1);
+  }
+
+  @Test
+  public void lamConPatternCovariantTest() {
+    typeCheckModule(COVARIANT_DATA + "\\func test : \\Pi (d :+ D) -> Nat => \\lam (con n) =>+ n");
+    LamExpression lamExpr = (LamExpression) Objects.requireNonNull(((FunctionDefinition) getDefinition("test")).getBody());
+    assertEquals(BindingVariance.COVARIANT, lamExpr.getParameters().getVariance());
+    assertEquals(BindingVariance.COVARIANT, ((CaseExpression) lamExpr.getBody()).getParameters().getVariance());
+  }
+
+  @Test
   public void metaError() {
     typeCheckModule("\\meta warm (x :+ Nat) => x", 1);
   }

@@ -438,7 +438,7 @@ public class ConcreteBuilder implements AbstractDefinitionVisitor<Concrete.Resol
       List<Concrete.Parameter> cParams = new ArrayList<>();
       List<Concrete.Pattern> patterns = buildLamParameters(parameters, null, cParams);
       if (!parameters.isEmpty() || !patterns.isEmpty()) {
-        term = Concrete.PatternLamExpression.make(parameters.getFirst().getData(), cParams, patterns, term);
+        term = Concrete.PatternLamExpression.make(parameters.getFirst().getData(), cParams, patterns, BindingVariance.INVARIANT, term);
       }
 
       implementations.add(new Concrete.ClassFieldImpl(implementation.getData(), implementedField.getReferent(), term, null, implementation.isDefault()));
@@ -645,7 +645,7 @@ public class ConcreteBuilder implements AbstractDefinitionVisitor<Concrete.Resol
     Concrete.Expression cBody = body == null ? new Concrete.IncompleteExpression(data) : body.accept(this, null);
     if (parameters.isEmpty()) return cBody;
     List<Concrete.Parameter> cParams = new ArrayList<>();
-    return Concrete.PatternLamExpression.make(data, cParams, buildLamParameters(parameters, variance, cParams), cBody);
+    return Concrete.PatternLamExpression.make(data, cParams, buildLamParameters(parameters, variance, cParams), variance == null ? BindingVariance.INVARIANT : variance, cBody);
   }
 
   private List<Concrete.Pattern> buildLamParameters(Collection<? extends Abstract.LamParameter> parameters, @Nullable BindingVariance variance, List<Concrete.Parameter> cParams) {
