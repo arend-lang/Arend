@@ -251,7 +251,7 @@ public class SubstVisitor extends ExpressionTransformer<Void> {
   public Expression visitLet(LetExpression letExpression, Void params) {
     List<HaveClause> clauses = new ArrayList<>(letExpression.getClauses().size());
     for (HaveClause clause : letExpression.getClauses()) {
-      HaveClause newClause = LetClause.make(clause instanceof LetClause, clause.getName(), clause.getPattern(), clause.getExpression().accept(this, null));
+      HaveClause newClause = LetClause.make(clause instanceof LetClause, clause.getName(), clause.getPattern(), clause.getExpression().accept(this, null), clause.getVariance());
       clauses.add(newClause);
       myExprSubstitution.add(clause, new ReferenceExpression(newClause));
     }

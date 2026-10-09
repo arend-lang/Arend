@@ -239,6 +239,9 @@ public final class Abstract {
     @Nullable AbstractReferable getReferable();
     @Nullable Expression getResultType();
     /* @NotNull */ @Nullable Expression getTerm();
+    default boolean isCovariant() {
+      return false;
+    }
   }
 
   public interface LevelExpression extends SourceNode {

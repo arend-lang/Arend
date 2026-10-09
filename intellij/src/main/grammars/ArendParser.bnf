@@ -633,7 +633,7 @@ private coClauseImpl ::= lamParam* FAT_ARROW expr { pin = 2 }
 
 private coClauseRec ::= LBRACE coClauseImp* RBRACE
 
-letClause ::= letClauseName typeAnnotation? FAT_ARROW expr {
+letClause ::= letClauseName typeAnnotation? (FAT_ARROW | FAT_ARROW_PLUS) expr {
     pin = 1
     methods = [ pattern = "" ]
 }
@@ -644,7 +644,7 @@ private defIdentifier_letClause ::= defIdentifier {
     recoverWhile = defIdentifier_letClause_recover
 }
 
-private defIdentifier_letClause_recover ::= !(COLON | FAT_ARROW | IN_KW) & nameTele_first & statement_recover
+private defIdentifier_letClause_recover ::= !(COLON | FAT_ARROW | FAT_ARROW_PLUS | IN_KW) & nameTele_first & statement_recover
 
 private typeAnnotation ::= COLON expr { pin = 1 }
 

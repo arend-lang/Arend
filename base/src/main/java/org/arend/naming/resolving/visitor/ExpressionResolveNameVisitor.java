@@ -972,7 +972,7 @@ public class ExpressionResolveNameVisitor extends BaseConcreteExpressionVisitor<
           visitPatterns(newPattern, null, new HashMap<>(), true);
           pattern = newPattern.getFirst();
         }
-        letClauses.add(new Concrete.LetClause(clause.getParameters(), clauseResultType, newClauseTerm, pattern));
+        letClauses.add(new Concrete.LetClause(clause.getParameters(), clauseResultType, newClauseTerm, pattern, clause.isCovariant()));
       }
 
       Concrete.Expression newBody = expr.expression.accept(this, null);

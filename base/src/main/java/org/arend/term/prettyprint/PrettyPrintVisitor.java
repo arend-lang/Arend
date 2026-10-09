@@ -1066,11 +1066,11 @@ public class PrettyPrintVisitor implements ConcreteExpressionVisitor<Precedence,
 
         @Override
         String getOpText() {
-          return "=>";
+          return letClause.isCovariant() ? "=>⁺" : "=>";
         }
       }.doPrettyPrint(this, noIndent);
     } else {
-      myBuilder.append(" => ");
+      myBuilder.append(letClause.isCovariant() ? " =>⁺ " : " => ");
       printExpr(letClause.getTerm(), new Precedence(Concrete.LetExpression.PREC));
     }
   }

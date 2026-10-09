@@ -334,7 +334,7 @@ public class CoreExpressionChecker implements ExpressionVisitor<Expression, Expr
   private Utils.CompleteSetContextSaver<Binding> clearCategoricalContext() {
     Set<Binding> context = myContext != null ? myContext : new HashSet<>();
     Utils.CompleteSetContextSaver<Binding> saver = new Utils.CompleteSetContextSaver<>(context);
-    context.removeIf(binding -> binding instanceof DependentLink dl && dl.getVariance() != BindingVariance.INVARIANT);
+    context.removeIf(binding -> binding.getVariance() != BindingVariance.INVARIANT);
     return saver;
   }
 
@@ -613,7 +613,13 @@ public class CoreExpressionChecker implements ExpressionVisitor<Expression, Expr
   @Override
   public Expression visitLet(LetExpression expr, Expression expectedType) {
     for (HaveClause clause : expr.getClauses()) {
-      clause.getExpression().accept(this, null);
+      if (clause.getVariance() == BindingVariance.INVARIANT) {
+        try (var ignored = clearCategoricalContext()) {
+          clause.getExpression().accept(this, null);
+        }
+      } else {
+        clause.getExpression().accept(this, null);
+      }
       addBinding(clause, expr);
     }
     Expression type = expr.getExpression().accept(this, expectedType);

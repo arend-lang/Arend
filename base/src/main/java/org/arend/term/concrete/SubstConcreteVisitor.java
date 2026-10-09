@@ -306,7 +306,7 @@ public class SubstConcreteVisitor extends BaseConcreteExpressionVisitor<Void> im
   }
 
   private Concrete.LetClause visitLetClause(Concrete.LetClause clause) {
-    return new Concrete.LetClause(clause.getParameters().stream().map(this::visitParameter).collect(Collectors.toList()), nullableMap(clause.getResultType()), nullableMap(clause.getTerm()), visitPattern(clause.getPattern()));
+    return new Concrete.LetClause(clause.getParameters().stream().map(this::visitParameter).collect(Collectors.toList()), nullableMap(clause.getResultType()), nullableMap(clause.getTerm()), visitPattern(clause.getPattern()), clause.isCovariant());
   }
 
   @Override

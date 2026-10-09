@@ -890,11 +890,11 @@ public class ConcreteBuilder implements AbstractDefinitionVisitor<Concrete.Resol
         List<? extends Abstract.Parameter> parameters = clause.getParameters();
         Abstract.Expression resultType = clause.getResultType();
         if (referable != null) {
-          clauses.add(new Concrete.LetClause(makeLocalRef(referable), buildParameters(parameters, false, true), resultType == null ? null : resultType.accept(this, null), term.accept(this, null)));
+          clauses.add(new Concrete.LetClause(makeLocalRef(referable), buildParameters(parameters, false, true), resultType == null ? null : resultType.accept(this, null), term.accept(this, null), clause.isCovariant()));
         } else {
           Abstract.Pattern pattern = clause.getPattern();
           if (pattern != null) {
-            clauses.add(new Concrete.LetClause(buildPattern(pattern).toConstructor(), resultType == null ? null : resultType.accept(this, null), term.accept(this, null)));
+            clauses.add(new Concrete.LetClause(buildPattern(pattern).toConstructor(), resultType == null ? null : resultType.accept(this, null), term.accept(this, null), clause.isCovariant()));
           }
         }
       } else {

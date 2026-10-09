@@ -1093,20 +1093,22 @@ public final class Concrete {
     public Expression resultType;
     public Expression term;
     private final Pattern myPattern;
+    private final boolean myCovariant;
 
-    public LetClause(List<Parameter> parameters, Expression resultType, Expression term, Pattern pattern) {
+    public LetClause(List<Parameter> parameters, Expression resultType, Expression term, Pattern pattern, boolean isCovariant) {
       myParameters = parameters;
       this.resultType = resultType;
       this.term = term;
       myPattern = pattern;
+      myCovariant = isCovariant;
     }
 
-    public LetClause(Referable referable, List<Parameter> parameters, Expression resultType, Expression term) {
-      this(parameters, resultType, term, new NamePattern(referable, true, referable, null));
+    public LetClause(Referable referable, List<Parameter> parameters, Expression resultType, Expression term, boolean isCovariant) {
+      this(parameters, resultType, term, new NamePattern(referable, true, referable, null), isCovariant);
     }
 
-    public LetClause(Pattern pattern, Expression resultType, Expression term) {
-      this(Collections.emptyList(), resultType, term, pattern);
+    public LetClause(Pattern pattern, Expression resultType, Expression term, boolean isCovariant) {
+      this(Collections.emptyList(), resultType, term, pattern, isCovariant);
     }
 
     @Nullable
@@ -1131,6 +1133,10 @@ public final class Concrete {
 
     public Expression getResultType() {
       return resultType;
+    }
+
+    public boolean isCovariant() {
+      return myCovariant;
     }
 
     @Override

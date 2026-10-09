@@ -1815,12 +1815,13 @@ public class BuildVisitor extends ArendBaseVisitor<Object> {
     TypeAnnotationContext typeAnnotationCtx = ctx.typeAnnotation();
     Concrete.Expression resultType = typeAnnotationCtx == null ? null : visitExpr(typeAnnotationCtx.expr());
 
+    boolean isCovariant = ctx.FAT_ARROW_PLUS() != null;
     TerminalNode id = ctx.ID();
     if (id != null) {
-      return new Concrete.LetClause(new ParsedLocalReferable(tokenPosition(ctx.start), id.getText()), arguments, resultType, visitExpr(ctx.expr()));
+      return new Concrete.LetClause(new ParsedLocalReferable(tokenPosition(ctx.start), id.getText()), arguments, resultType, visitExpr(ctx.expr()), isCovariant);
     }
 
-    return new Concrete.LetClause(((Concrete.Pattern) visit(ctx.atomPattern())).toConstructor(), resultType, visitExpr(ctx.expr()));
+    return new Concrete.LetClause(((Concrete.Pattern) visit(ctx.atomPattern())).toConstructor(), resultType, visitExpr(ctx.expr()), isCovariant);
   }
 
   private Concrete.Expression visitIncompleteExpression(ParserRuleContext exprCtx, ParserRuleContext parentCtx) {

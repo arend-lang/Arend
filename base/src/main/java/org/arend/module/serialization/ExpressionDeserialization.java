@@ -643,7 +643,7 @@ class ExpressionDeserialization {
         clauses.add((HaveClause) existing);
         continue;
       }
-      HaveClause clause = LetClause.make(cProto.getIsLet(), validName(cProto.getName()), readLetClausePattern(cProto.getPattern()), readExpr(cProto.getExpression()));
+      HaveClause clause = LetClause.make(cProto.getIsLet(), validName(cProto.getName()), readLetClausePattern(cProto.getPattern()), readExpr(cProto.getExpression()), cProto.getIsCovariant() ? BindingVariance.COVARIANT : BindingVariance.INVARIANT);
       registerBinding(clause);
       clauses.add(clause);
     }

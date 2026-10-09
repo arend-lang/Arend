@@ -317,7 +317,7 @@ public abstract class BiConcreteVisitor extends BaseConcreteExpressionVisitor<Co
     var newParameters = visitParameters(clause.getParameters(), wideClause.getParameters());
     var newResultType = clause.getResultType() == null ? null : clause.getResultType().accept(this, wideClause.getResultType());
     var newTerm = clause.term.accept(this, wideClause.term);
-    return new Concrete.LetClause(newParameters, newResultType, newTerm, newPattern);
+    return new Concrete.LetClause(newParameters, newResultType, newTerm, newPattern, clause.isCovariant());
   }
 
   @Override

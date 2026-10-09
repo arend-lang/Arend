@@ -542,7 +542,7 @@ public class NormalizeVisitor extends ExpressionTransformer<NormalizationMode>  
             } else {
               for (HaveClause letClause : let.getClauses()) {
                 substitution.add(letClause, letClause instanceof LetClause
-                  ? new ReferenceExpression(LetClause.make(true, letClause.getName(), letClause.getPattern(), letClause.getExpression().subst(substitution, levelSubstitution)))
+                  ? new ReferenceExpression(LetClause.make(true, letClause.getName(), letClause.getPattern(), letClause.getExpression().subst(substitution, levelSubstitution), letClause.getVariance()))
                   : LetExpression.normalizeClauseExpression(letClause.getPattern(), letClause.getExpression().subst(substitution, levelSubstitution)));
               }
             }
@@ -1006,7 +1006,7 @@ public class NormalizeVisitor extends ExpressionTransformer<NormalizationMode>  
       ExprSubstitution substitution = new ExprSubstitution();
       List<HaveClause> newClauses = new ArrayList<>(let.getClauses().size());
       for (HaveClause clause : let.getClauses()) {
-        HaveClause newClause = LetClause.make(clause instanceof LetClause, clause.getName(), clause.getPattern(), clause.getExpression().accept(this, mode).subst(substitution));
+        HaveClause newClause = LetClause.make(clause instanceof LetClause, clause.getName(), clause.getPattern(), clause.getExpression().accept(this, mode).subst(substitution), clause.getVariance());
         substitution.add(clause, new ReferenceExpression(newClause));
         newClauses.add(newClause);
       }

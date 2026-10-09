@@ -653,6 +653,7 @@ class ExpressionSerialization implements ExpressionVisitor<Void, ExpressionProto
       }
       ExpressionProtos.Expression.Let.Clause.Builder letBuilder = ExpressionProtos.Expression.Let.Clause.newBuilder()
         .setIsLet(letClause instanceof LetClause)
+        .setIsCovariant(letClause.getVariance() != BindingVariance.INVARIANT)
         .setPattern(writeLetClausePattern(letClause.getPattern()))
         .setExpression(writeExpr(letClause.getExpression()));
       if (letClause.getName() != null) {

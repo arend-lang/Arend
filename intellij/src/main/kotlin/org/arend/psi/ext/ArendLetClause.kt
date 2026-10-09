@@ -15,7 +15,9 @@ class ArendLetClause(node: ASTNode) : ArendSourceNodeImpl(node), Abstract.LetCla
 
     override fun getResultType(): ArendExpr? = childOfType(ArendElementTypes.COLON)?.findNextSibling() as? ArendExpr
 
-    override fun getTerm(): ArendExpr? = childOfType(ArendElementTypes.FAT_ARROW)?.findNextSibling() as? ArendExpr
+    override fun getTerm(): ArendExpr? = (childOfType(ArendElementTypes.FAT_ARROW) ?: childOfType(ArendElementTypes.FAT_ARROW_PLUS))?.findNextSibling() as? ArendExpr
+
+    override fun isCovariant() = childOfType(ArendElementTypes.FAT_ARROW_PLUS) != null
 
     override fun getUseScope() = LocalSearchScope(parent)
 }

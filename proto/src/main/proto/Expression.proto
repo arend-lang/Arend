@@ -111,6 +111,7 @@ message Expression {
             // instead of creating a new clause.  Used when the same LetExpression
             // object appears in multiple places in a shared expression tree (DAG).
             int32 existing_ref = 5;
+            bool is_covariant = 6;
         }
 
         message Pattern {

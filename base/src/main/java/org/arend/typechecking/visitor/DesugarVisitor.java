@@ -374,7 +374,7 @@ public class DesugarVisitor extends BaseConcreteExpressionVisitor<Void> {
         Concrete.Expression type = pattern instanceof Concrete.NamePattern ? ((Concrete.NamePattern) pattern).type : pattern.getAsReferable() != null ? pattern.getAsReferable().type : null;
         newParams.add(type != null ? new Concrete.TelescopeParameter(pattern.getData(), pattern.isExplicit(), Collections.singletonList(ref), type.accept(this, null), false) : new Concrete.NameParameter(pattern.getData(), pattern.isExplicit(), ref));
         pattern.setExplicit(true);
-        clauses.add(new Concrete.LetClause(pattern, null, new Concrete.ReferenceExpression(pattern.getData(), ref)));
+        clauses.add(new Concrete.LetClause(pattern, null, new Concrete.ReferenceExpression(pattern.getData(), ref), false));
       }
       Concrete.LetExpression let = new Concrete.LetExpression(expr.getData(), false, false, clauses, body);
       let.isGeneratedFromLambda = true;
@@ -494,7 +494,18 @@ public class DesugarVisitor extends BaseConcreteExpressionVisitor<Void> {
             }
           }
         }
-        caseArgs.add(isElim ? new Concrete.CaseArgument((Concrete.ReferenceExpression) curClause.term, curClause.resultType, BindingVariance.INVARIANT) : new Concrete.CaseArgument(curClause.term, curClause.getPattern().getAsReferable() == null ? null : curClause.getPattern().getAsReferable().referable, curClause.resultType));
+        BindingVariance variance = curClause.isCovariant() ? BindingVariance.COVARIANT : BindingVariance.INVARIANT;
+        if (isElim) {
+          // The variance of an eliminated variable is taken from the variable itself unless there is a type annotation.
+          // A hole forces an invariant clause to eliminate only invariant variables.
+          Concrete.CaseArgument caseArg = new Concrete.CaseArgument((Concrete.ReferenceExpression) curClause.term, curClause.resultType, variance);
+          if (caseArg.isElim && caseArg.type == null && !curClause.isCovariant()) {
+            caseArg.type = new Concrete.HoleExpression(curClause.term.getData());
+          }
+          caseArgs.add(caseArg);
+        } else {
+          caseArgs.add(new Concrete.CaseArgument(curClause.term, curClause.getPattern().getAsReferable() == null ? null : curClause.getPattern().getAsReferable().referable, curClause.resultType, variance));
+        }
         patterns.add(curClause.getPattern());
       }
       newBody = new Concrete.CaseExpression(data, false, caseArgs, null, null, Collections.singletonList(new Concrete.FunctionClause(data, patterns, newBody instanceof Concrete.IncompleteExpression ? null : newBody)));

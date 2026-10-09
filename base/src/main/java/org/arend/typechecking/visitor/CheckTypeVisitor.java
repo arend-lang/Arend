@@ -2354,7 +2354,7 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
     FreeVariablesCollector collector = new FreeVariablesCollector() {
       @Override
       public void addBinding(Binding binding) {
-        if (binding instanceof DependentLink link && link.getVariance() != BindingVariance.INVARIANT) {
+        if (binding.getVariance() != BindingVariance.INVARIANT) {
           super.addBinding(binding);
         }
       }
@@ -3092,11 +3092,11 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
       if (result.expression.isInstance(ErrorExpression.class)) {
         result.expression = new OfTypeExpression(result.expression, result.type);
       }
-      return new Pair<>(TypedLetClause.make(!isHave, name, null, result.expression, result.type), result.type);
+      return new Pair<>(TypedLetClause.make(!isHave, name, null, result.expression, result.type, clause.isCovariant() ? BindingVariance.COVARIANT : BindingVariance.INVARIANT), result.type);
     }
   }
 
-  private Pair<LetClausePattern, LocalExpressionPrettifier.Accessor> typecheckLetClausePattern(Concrete.Pattern pattern, TypecheckingResult tcResult, Set<Binding> bindings) {
+  private Pair<LetClausePattern, LocalExpressionPrettifier.Accessor> typecheckLetClausePattern(Concrete.Pattern pattern, TypecheckingResult tcResult, BindingVariance variance, Set<Binding> bindings) {
     if (pattern instanceof Concrete.NamePattern) {
       Referable referable = ((Concrete.NamePattern) pattern).getRef();
       Concrete.Expression patternType = ((Concrete.NamePattern) pattern).type;
@@ -3109,7 +3109,7 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
 
       String name = referable == null ? null : referable.textRepresentation();
       if (referable != null) {
-        Binding binding = new TypedEvaluatingBinding(name, tcResult.expression, tcResult.type);
+        Binding binding = new TypedEvaluatingBinding(name, tcResult.expression, tcResult.type, variance);
         bindings.add(binding);
         addBinding(referable, binding);
       }
@@ -3143,7 +3143,7 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
         field = notImplementedFields.get(i);
         newType = classCall.getFieldType(field, tcResult.expression);
       }
-      Pair<LetClausePattern, LocalExpressionPrettifier.Accessor> pair = typecheckLetClausePattern(subPattern, new TypecheckingResult(link != null ? ProjExpression.make(tcResult.expression, i, link.isProperty()) : FieldCallExpression.make(notImplementedFields.get(i), tcResult.expression), newType), bindings);
+      Pair<LetClausePattern, LocalExpressionPrettifier.Accessor> pair = typecheckLetClausePattern(subPattern, new TypecheckingResult(link != null ? ProjExpression.make(tcResult.expression, i, link.isProperty()) : FieldCallExpression.make(notImplementedFields.get(i), tcResult.expression), newType), variance, bindings);
       if (pair == null) {
         return null;
       }
@@ -3171,8 +3171,12 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
         Set<Binding> definedBindings = new HashSet<>();
         for (Concrete.LetClause clause : abstractClauses) {
           Pair<HaveClause, Expression> pair;
-          try (var ignored2 = clearCategoricalContext()) {
+          if (clause.isCovariant()) {
             pair = typecheckLetClause(clause, expr.isHave());
+          } else {
+            try (var ignored2 = clearCategoricalContext()) {
+              pair = typecheckLetClause(clause, expr.isHave());
+            }
           }
           if (pair == null) {
             return null;
@@ -3185,7 +3189,7 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
             }
           } else {
             addBinding(null, pair.proj1);
-            Pair<LetClausePattern, LocalExpressionPrettifier.Accessor> patternPair = typecheckLetClausePattern(clause.getPattern(), new TypecheckingResult(new ReferenceExpression(pair.proj1), pair.proj2), definedBindings);
+            Pair<LetClausePattern, LocalExpressionPrettifier.Accessor> patternPair = typecheckLetClausePattern(clause.getPattern(), new TypecheckingResult(new ReferenceExpression(pair.proj1), pair.proj2), pair.proj1.getVariance(), definedBindings);
             if (patternPair == null) {
               return null;
             }

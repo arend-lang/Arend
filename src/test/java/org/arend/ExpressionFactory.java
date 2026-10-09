@@ -14,6 +14,7 @@ import org.arend.core.sort.Level;
 import org.arend.core.sort.Sort;
 import org.arend.core.subst.ExprSubstitution;
 import org.arend.core.subst.Levels;
+import org.arend.ext.core.context.BindingVariance;
 import org.arend.ext.core.level.ConstLevel;
 import org.arend.ext.core.level.LevelSubstitution;
 
@@ -74,7 +75,7 @@ public class ExpressionFactory {
   }
 
   public static LetClause let(String name, Expression expression) {
-    return (LetClause) LetClause.make(true, name, new NameLetClausePattern(name), expression);
+    return (LetClause) LetClause.make(true, name, new NameLetClausePattern(name), expression, BindingVariance.INVARIANT);
   }
 
   public static LetExpression let(List<HaveClause> clauses, Expression expression) {

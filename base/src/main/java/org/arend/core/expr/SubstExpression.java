@@ -95,7 +95,7 @@ public class SubstExpression extends Expression {
       } else {
         for (HaveClause letClause : let.getClauses()) {
           substitution.add(letClause, letClause instanceof LetClause
-            ? new ReferenceExpression(LetClause.make(true, letClause.getName(), letClause.getPattern(), make(letClause.getExpression(), substitution, levelSubstitution)))
+            ? new ReferenceExpression(LetClause.make(true, letClause.getName(), letClause.getPattern(), make(letClause.getExpression(), substitution, levelSubstitution), letClause.getVariance()))
             : LetExpression.normalizeClauseExpression(letClause.getPattern(), letClause.getExpression().subst(substitution, levelSubstitution)));
         }
       }
@@ -114,8 +114,8 @@ public class SubstExpression extends Expression {
         expr = ((SubstExpression) expr).getExpression();
       }
       ExprSubstitution totalSubst = new ExprSubstitution();
-      totalSubst.addAll(substitutions.get(substitutions.size() - 1).proj1);
-      LevelSubstitution totalLevelSubst = substitutions.get(substitutions.size() - 1).proj2;
+      totalSubst.addAll(substitutions.getLast().proj1);
+      LevelSubstitution totalLevelSubst = substitutions.getLast().proj2;
       for (int i = substitutions.size() - 2; i >= 0; i--) {
         totalSubst.addSubst(substitutions.get(i).proj1);
         totalLevelSubst = totalLevelSubst.subst(substitutions.get(i).proj2);

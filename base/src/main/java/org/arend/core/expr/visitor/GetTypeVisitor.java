@@ -46,7 +46,7 @@ public class GetTypeVisitor implements ExpressionVisitor<Void, Expression> {
    */
   public static boolean hasFreeCovariantVariable(Expression expr) {
     for (Binding binding : FreeVariablesCollector.getFreeVariables(expr, true)) {
-      if (binding instanceof DependentLink link && link.getVariance() != BindingVariance.INVARIANT) {
+      if (binding.getVariance() != BindingVariance.INVARIANT) {
         return true;
       }
     }

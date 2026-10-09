@@ -484,7 +484,7 @@ public class ConcreteCompareVisitor implements ConcreteExpressionVisitor<Concret
 
   private boolean compareLetClause(Concrete.LetClause clause1, Concrete.LetClause clause2) {
     updateData(clause1, clause2);
-    boolean result = compareParameters(clause1.getParameters(), clause2.getParameters()) && compare(clause1.getTerm(), clause2.getTerm()) && (clause1.getResultType() == null && clause2.getResultType() == null || clause1.getResultType() != null && clause2.getResultType() != null && compare(clause1.getResultType(), clause2.getResultType()));
+    boolean result = clause1.isCovariant() == clause2.isCovariant() && compareParameters(clause1.getParameters(), clause2.getParameters()) && compare(clause1.getTerm(), clause2.getTerm()) && (clause1.getResultType() == null && clause2.getResultType() == null || clause1.getResultType() != null && clause2.getResultType() != null && compare(clause1.getResultType(), clause2.getResultType()));
     freeParameters(clause1.getParameters());
     return result;
   }
