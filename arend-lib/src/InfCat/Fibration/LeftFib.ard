@@ -140,7 +140,7 @@
 \lemma catType-leftFib {A : \Cat} {B : A ->⁺ \Cat} (Bf : IsLeftFib B) {Bg : \Pi (a : A) -> IsGroupoid (B a)}
   : IsLeftFib (CatTypeFamily B Bg)
   => lift_type-IsLeftFib \lam d => transport+ (\lam t => CovLift _ (_, _, d.3, t)) (CatTypeFamily.toCatType_fromCatType d.4)
-      \let l => leftFib-lift Bf (_, _, d.3, CatTypeFamily.fromCatType d.4)
+      \let l =>⁺ leftFib-lift Bf (_, _, d.3, CatTypeFamily.fromCatType d.4)
       \in (CatTypeFamily.toCatType l.1, dpath \lam i => CatTypeFamily.toCatType {_} {_} {_} {d.3 i} (l.2 i))
 
 \lemma universe-leftFib.{u} : IsLeftFib {\Type u} (\lam A => A)

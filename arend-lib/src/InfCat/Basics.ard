@@ -115,7 +115,7 @@
   \where {
     \private \sfunc aux (s :⁺ \Sigma⁺ (ac : a ~> c) (DPath (\lam i => ab i ~> ac i) idd bc))
       : s = (comp ab bc, dpath \lam i => dpath (fill2 ab bc i))
-      => \let | f3 => fill3 () {ab} {bc} {comp ab bc}
+      => \let | f3 =>⁺ fill3 () {ab} {bc} {comp ab bc}
                         idd
                         (dpath \lam k => idd)
                         (dpath \lam i => dpath (fill2 ab bc i))
@@ -214,7 +214,7 @@
   => comp-char (dpath \lam i => idd)
 
 \sfunc conn-right {C :⁺ \Cat} {a b :⁺ C} (f :⁺ a ~> b) : DPath (\lam i => a ~> f i) idd f
-  => \let c => fill2 idd f
+  => \let c =>⁺ fill2 idd f
      \in dpath \lam i => dpath \lam j => fill3 () {idd} {idd} {idd} {idd}
           idd (dpath \lam i => dpath \lam j => c i j) idd (dpath \lam i => dpath \lam j => c j i) idd i j dright
 

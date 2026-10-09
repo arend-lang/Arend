@@ -136,7 +136,7 @@
       | f d => (freeLeftProj d, Straight.toStraight (d, idp))
       | finv s => (Straight.fromStraight s.2).1
       | finv_f => idpe
-      | f_finv s => \let x => Straight.fromStraight s.2
+      | f_finv s => \let x =>⁺ Straight.fromStraight s.2
                     \in path (\lam i => (x.2 i, Straight.toStraight (x.1, path \lam j => x.2 @ I.squeeze i j)))
                         *> path (\lam i => (s.1, Straight.toStraight_fromStraight s.2 i))
 

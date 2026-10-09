@@ -86,7 +86,7 @@
         \in (r.1 y, path \lam i => (r.2 i).1.2 y)
       | isExt {j} u v c x => unfold_let
         \let | r => IsEquiv.f_ret (hr j) {(\lam x => (dataExt hr p (u x)).1, v), \lam x => c x *> inv (dataExt hr p (u x)).2}
-             | q => pmap+ (*> (dataExt hr p (u x)).2) $ inv idp_*> *> coe_path_pmap.conv (path \lam i => (r i).1.2 (F j x)) (path \lam i => h ((r i).1.1 x)) ((simp_coe in pmapd __.2 r) x) *> inv *>-assoc
+             | q =>⁺ pmap+ (*> (dataExt hr p (u x)).2) $ inv idp_*> *> coe_path_pmap.conv (path \lam i => (r i).1.2 (F j x)) (path \lam i => h ((r i).1.1 x)) ((simp_coe in pmapd __.2 r) x) *> inv *>-assoc
         \in sigma-depPath (path \lam i => (r i).1.1 x) (pathOver $ coe_path (path \lam i => h ((IsEquiv.f_ret (hr j) i).1.1 x)) _ _ *> rotatePathLeft (inv $ q *> *>-assoc *> pmap+ (_ *> __) inv_*>))
 
     -- | Sections of pullbacks over `LData f` are determined by their restrictions along {alpha}.

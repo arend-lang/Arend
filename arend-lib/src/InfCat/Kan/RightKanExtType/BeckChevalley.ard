@@ -73,9 +73,9 @@
                      (psi : X' ->⁺ X) {x : X} (T : BaseChange psi p ->⁺ \Type u)
                      (y :⁺ Fibers p x) (t :⁺ RightKanExtType (bc psi p) T y.1)
       : Phi pc psi T y
-      => \lam (q :⁺ RightComma psi x) => \let L => cocartesianFib-lift pc ((_, _, q.2, y) : CovLiftData (Fibers p)) \in
-           ~>_-> (dpath \lam i => rightKanExtType-counit (bc psi p) T i (liftObj pc psi y q))
-                 (~>_-> (dpath \lam i => RightKanExtType (bc psi p) T (L.2 i).1) t)
+      => \lam q => \let L =>⁺ cocartesianFib-lift pc ((_, _, q.2, y) : CovLiftData (Fibers p))
+                   \in ~>_-> (dpath \lam i => rightKanExtType-counit (bc psi p) T i (liftObj pc psi y q))
+                             (~>_-> (dpath \lam i => RightKanExtType (bc psi p) T (L.2 i).1) t)
 
     -- | Arrows of `x ↓ psi` together with a lift starting at {y}.
     \func CommaLift.{u} {X X' : \Cat u} {G : X ->⁺ \Cat} (psi : X' ->⁺ X) {x : X} (y : G x) : \Cat
@@ -120,10 +120,10 @@
       : QEquiv {\Pi (s :⁺ RightComma (bc psi p) y.1) -> T s.1}
                {\Pi (e :⁺ CommaLift {X} {X'} {Fibers p} psi y) -> T (e.1.1, e.2.1)} \cowith
       | f sg e => sg ((e.1.1, e.2.1), dpath \lam i => (e.2.2 i).1)
-      | ret t s => \let c => fiber-fill (dmap p s.2) y.2 s.1.2.2
+      | ret t s => \let c =>⁺ fiber-fill (dmap p s.2) y.2 s.1.2.2
                    \in t ((s.1.1, c.1), (s.1.2, dpath \lam i => (s.2 i, c.2 i)))
       | ret_f sg => idp
-      | f_sec t => funExt+ \lam e => \let P => fiber-fill-unique (dmap p (dpath \lam i => (e.2.2 i).1)) y.2 e.2.1.2 (dpath \lam i => (e.2.2 i).2)
+      | f_sec t => funExt+ \lam e => \let P =>⁺ fiber-fill-unique (dmap p (dpath \lam i => (e.2.2 i).1)) y.2 e.2.1.2 (dpath \lam i => (e.2.2 i).2)
                                      \in path \lam j => t ((e.1.1, (P @ j).1), (e.2.1, dpath \lam i => ((e.2.2 i).1, (P @ j).2 i)))
 
     -- | An arrow {r} with paths {h0} and {h1} from its endpoints gives an arrow between their targets together with a square.
