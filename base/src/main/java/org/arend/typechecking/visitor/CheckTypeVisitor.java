@@ -173,7 +173,7 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
   }
 
   private boolean isVarianceAccessible(Binding binding, boolean withCovariant) {
-    return !(binding instanceof DependentLink dl) || dl.getVariance() == BindingVariance.INVARIANT || withCovariant && myCovariantContext.contains(binding);
+    return binding.getVariance() == BindingVariance.INVARIANT || withCovariant && myCovariantContext.contains(binding);
   }
 
   public TypecheckingContext saveTypecheckingContext() {
@@ -203,7 +203,7 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
     visitor.setInstancePool(typecheckingContext.instancePool().copy(visitor));
     visitor.setLevelContext(typecheckingContext.levelContext());
     for (Binding binding : typecheckingContext.localContext().values()) {
-      if (binding instanceof DependentLink dl && dl.getVariance() != BindingVariance.INVARIANT) {
+      if (binding.getVariance() != BindingVariance.INVARIANT) {
         visitor.myCovariantContext.add(binding);
       }
     }
@@ -225,7 +225,7 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
   }
 
   private void registerVarianceBinding(Binding binding) {
-    if (binding instanceof DependentLink dl && dl.getVariance() == BindingVariance.COVARIANT) {
+    if (binding.getVariance() != BindingVariance.INVARIANT) {
       myCovariantContext.add(binding);
     }
   }
@@ -2108,7 +2108,7 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
       errorReporter.report(new IncorrectReferenceError(ref, sourceNode));
       return null;
     }
-    if (def instanceof DependentLink dl && dl.getVariance() != BindingVariance.INVARIANT && !myCovariantContext.contains(def)) {
+    if (def.getVariance() != BindingVariance.INVARIANT && !myCovariantContext.contains(def)) {
       errorReporter.report(new TypecheckingError("Covariant variable '" + ref.textRepresentation() + "' is used in an invariant position", sourceNode));
       return null;
     }
@@ -3170,7 +3170,10 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
         List<HaveClause> clauses = new ArrayList<>(abstractClauses.size());
         Set<Binding> definedBindings = new HashSet<>();
         for (Concrete.LetClause clause : abstractClauses) {
-          Pair<HaveClause, Expression> pair = typecheckLetClause(clause, expr.isHave());
+          Pair<HaveClause, Expression> pair;
+          try (var ignored2 = clearCategoricalContext()) {
+            pair = typecheckLetClause(clause, expr.isHave());
+          }
           if (pair == null) {
             return null;
           }
@@ -3819,6 +3822,7 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
                 }
                 replacedBindings.add(entry.getValue());
                 entry.setValue((Binding) newBinding);
+                registerVarianceBinding((Binding) newBinding);
               } else if (removed != null) {
                 removed.add(entry);
               }

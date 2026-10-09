@@ -250,6 +250,26 @@ public class CovariantBindersTest extends TypeCheckingTestCase {
   }
 
   @Test
+  public void letCovariantError() {
+    typeCheckDef("\\func test (y :+ Nat) => \\let x => y \\in x", 1);
+  }
+
+  @Test
+  public void haveCovariantError() {
+    typeCheckDef("\\func test (y :+ Nat) => \\have x => y \\in x", 1);
+  }
+
+  @Test
+  public void letCovariantInvariantUseError() {
+    typeCheckDef("\\func test (y :+ Nat) => \\let x => y \\in suc x", 1);
+  }
+
+  @Test
+  public void letCovariantBodyTest() {
+    typeCheckDef("\\func test (y :+ Nat) => \\let x => 0 \\in y");
+  }
+
+  @Test
   public void metaError() {
     typeCheckModule("\\meta warm (x :+ Nat) => x", 1);
   }
