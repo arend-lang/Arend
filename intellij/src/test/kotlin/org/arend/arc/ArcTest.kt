@@ -98,6 +98,22 @@ class ArcTest : ArendTestBase() {
         waitForText(document, "=> 1")
     }
 
+    // The imports of a view are in the order of the modules in the sources, not in the order of their uses
+    fun `test view imports are sorted by module path`() {
+        myFixture.addFileToProject("Zeta.ard", "\\func z => 0")
+        myFixture.addFileToProject("Alpha/Inner.ard", "\\func i => 1")
+        myFixture.addFileToProject("Alpha.ard", "\\func a => 2")
+        InlineFile("""
+            \import Zeta
+            \import Alpha.Inner
+            \import Alpha
+            \func g => (z, i, a)
+        """.trimIndent())
+
+        val imports = prepare(view())!!.lines().filter { it.startsWith("\\import") }
+        assertEquals(listOf("\\import Alpha", "\\import Alpha.Inner", "\\import Zeta"), imports)
+    }
+
     fun `test view shows the module typechecked`() {
         InlineFile("\\func g => 1")
         assertTrue(prepare(view())!!.contains("=> 1"))

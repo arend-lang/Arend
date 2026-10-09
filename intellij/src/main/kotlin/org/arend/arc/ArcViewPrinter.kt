@@ -220,7 +220,11 @@ object ArcViewPrinter {
             }
         }
 
-        for ((file, importedDefinitions) in filesToDefinitions) {
+        // In the order of the modules in the sources: by the segments of their paths, as directories and files
+        val importedFiles = filesToDefinitions.entries.sortedWith { (file1, _), (file2, _) ->
+            compareModulePaths(modulePathOf(file1), modulePathOf(file2))
+        }
+        for ((file, importedDefinitions) in importedFiles) {
             if (fullFiles[file] == true) {
                 builder.append("\\import ${file.fullName}\n")
             } else {
@@ -244,6 +248,17 @@ object ArcViewPrinter {
             progress.fraction((i + 1).toDouble() / statements.size)
         }
         return builder.toString()
+    }
+
+    private fun modulePathOf(file: ArendFile): List<String> = file.moduleLocation?.modulePath?.toList() ?: listOf(file.fullName)
+
+    // Segment by segment, a prefix first; a segment ignoring case first, as the project view sorts files
+    private fun compareModulePaths(path1: List<String>, path2: List<String>): Int {
+        for (i in 0 until minOf(path1.size, path2.size)) {
+            val result = path1[i].compareTo(path2[i], ignoreCase = true).takeIf { it != 0 } ?: path1[i].compareTo(path2[i])
+            if (result != 0) return result
+        }
+        return path1.size.compareTo(path2.size)
     }
 
     // Skips definitions without a header yet: being typechecked, or shells of a cache that failed to load
