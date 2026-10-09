@@ -17,6 +17,7 @@ import org.arend.ext.module.ModuleLocation
 import org.arend.module.config.LibraryConfig
 import org.arend.server.ArendServerService
 import org.arend.server.BinaryCacheFilter
+import org.arend.term.group.ConcreteGroup
 import org.arend.source.FileBinarySource
 import org.arend.source.GZIPStreamBinarySource
 import org.arend.typechecking.error.DeduplicatingErrorReporter
@@ -63,6 +64,7 @@ class BinaryFileSaver(private val project: Project) {
             if (runReadAction { binarySource.persist(server, errorReporter) }) {
                 persisted++
                 binariesDirs.add(target.binariesDir)
+                runReadAction { project.service<ArendBinaryCacheService>().saved(module, target.group) }
                 val counts = target.counts
                 outcomes[module] = (if (counts.typechecked == counts.total) "written" else
                     if (counts.typechecked == 0) "written with nothing typechecked" else "written incomplete") +
@@ -82,7 +84,7 @@ class BinaryFileSaver(private val project: Project) {
         project.serviceIfCreated<ArcViewService>()?.serverChanged()
     }
 
-    private class Target(val binariesDir: Path, val counts: ArcTrace.Counts)
+    private class Target(val binariesDir: Path, val group: ConcreteGroup, val counts: ArcTrace.Counts)
 
     private fun targetFor(module: ModuleLocation, configs: MutableMap<String, LibraryConfig?>, outcomes: MutableMap<ModuleLocation, String>): Target? {
         val server = project.service<ArendServerService>().server
@@ -90,6 +92,12 @@ class BinaryFileSaver(private val project: Project) {
             ?: return null.also { outcomes[module] = "skipped: no library" }
         val binariesDir = config.binariesDirPath ?: return null.also { outcomes[module] = "skipped: no binaries directory" }
         val group = server.getRawGroup(module) ?: return null.also { outcomes[module] = "skipped: not in the server" }
+        // Its .arc has what it holds: nothing was typechecked or loaded in it since it was loaded from the .arc or saved to it
+        if (project.service<ArendBinaryCacheService>().isUnchangedSinceCached(module, group) &&
+            Files.exists(FileUtils.binaryFile(binariesDir, module.modulePath))) {
+            outcomes[module] = "skipped: unchanged since loaded from or saved to its .arc"
+            return null
+        }
         val counts = ArcTrace.counts(group)
         if (!BinaryCacheFilter.hasSomethingToSave(group)) {
             outcomes[module] = "skipped: nothing typechecked or loaded, ${counts.total} definitions"
@@ -100,7 +108,7 @@ class BinaryFileSaver(private val project: Project) {
                 ", ${counts.typechecked} of ${counts.total} typechecked"
             return null
         }
-        return Target(binariesDir, counts)
+        return Target(binariesDir, group, counts)
     }
 
     // How many modules each outcome of the save had, and every module that was not written whole, except those with nothing to save
@@ -108,7 +116,7 @@ class BinaryFileSaver(private val project: Project) {
         val byKind = outcomes.values.groupingBy { it.substringBefore(':').substringBefore(',') }.eachCount()
         ArcTrace.log("save: ${outcomes.size} modules in $time ms: " + byKind.entries.sortedByDescending { it.value }.joinToString { "${it.value} ${it.key}" })
         for ((module, outcome) in outcomes) {
-            if (!outcome.startsWith("written:") && !outcome.startsWith("skipped: nothing typechecked")) {
+            if (!outcome.startsWith("written:") && !outcome.startsWith("skipped: nothing typechecked") && !outcome.startsWith("skipped: unchanged")) {
                 ArcTrace.log("save:   $module: $outcome")
             }
         }

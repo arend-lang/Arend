@@ -16,6 +16,7 @@ import org.arend.prelude.Prelude
 import org.arend.server.ArendServerService
 import org.arend.server.BinaryCacheLoader
 import org.arend.server.ProgressReporter
+import org.arend.term.group.ConcreteGroup
 import org.arend.source.FileBinarySource
 import org.arend.source.GZIPStreamBinarySource
 import org.arend.source.StreamBinarySource
@@ -36,6 +37,10 @@ class ArendBinaryCacheService(private val project: Project) {
     private val loadedLibraries = ConcurrentHashMap<String, Set<ModuleLocation>>()
 
     private val loadMutex = Mutex()
+
+    // What each module loaded whole from its .arc, or saved to it, held then (see coreIdentities): a module that still
+    // holds just that has nothing to save that its .arc does not have
+    private val cachedStates = ConcurrentHashMap<ModuleLocation, List<Int>>()
 
     private class CachedLibrary(val config: LibraryConfig, val binariesDir: Path, val modules: List<ModulePath>)
 
@@ -103,6 +108,13 @@ class ArendBinaryCacheService(private val project: Project) {
                 val (_, loadTime) = ArcTrace.timed { loader.loadBinaryCache(libraryName, binarySourceProvider, rawTimestampProvider) }
                 traceLoad(libraryName, cached.modules.size, resolveTime, loadTime, loader.outcomes)
 
+                // Only the modules deserialized now: one that was in memory before may hold what it was typechecked to since
+                readAction {
+                    for ((module, outcome) in loader.outcomes) {
+                        if (outcome == "loaded") server.getRawGroup(module)?.let { cachedStates[module] = coreIdentities(it) }
+                    }
+                }
+
                 val loaded = loader.binaryCacheLoaded
                 loadedLibraries[libraryName] = loaded
                 loadedModules.addAll(loaded)
@@ -131,6 +143,16 @@ class ArendBinaryCacheService(private val project: Project) {
         for (library in libraries) {
             loadedLibraries.remove(library)
         }
+        cachedStates.keys.removeIf { it.libraryName in libraries }
+    }
+
+    // Whether the module holds just what it held when it was loaded whole from its .arc or saved to it
+    fun isUnchangedSinceCached(module: ModuleLocation, group: ConcreteGroup): Boolean =
+        cachedStates[module] == coreIdentities(group)
+
+    // The .arc of the module now has what it holds
+    fun saved(module: ModuleLocation, group: ConcreteGroup) {
+        cachedStates[module] = coreIdentities(group)
     }
 
     private fun collectDependencies(libraryName: String, result: LinkedHashSet<String>) {

@@ -5,6 +5,7 @@ import org.arend.ext.module.ModuleLocation
 import org.arend.naming.reference.TCDefReferable
 import org.arend.server.ArendServer
 import org.arend.term.group.ConcreteGroup
+import org.arend.typechecking.coreIdentities
 
 /**
  * Diagnostics of the binary cache and the .arc views, in idea.log: what is saved when the project is closed, what is
@@ -32,18 +33,7 @@ object ArcTrace {
     // The typechecked definitions of the source modules, by identity, as a typechecked definition is a new one
     fun snapshot(server: ArendServer): Map<ModuleLocation, List<Int>> =
         server.modules.filter { it.locationKind == ModuleLocation.LocationKind.SOURCE }
-            .associateWith { module -> definitions(server.getRawGroup(module)) }
-
-    private fun definitions(group: ConcreteGroup?): List<Int> {
-        val result = ArrayList<Int>()
-        fun visit(group: ConcreteGroup) {
-            (group.referable as? TCDefReferable)?.let { result.add(System.identityHashCode(it.typechecked)) }
-            for (statement in group.statements) statement.group?.let(::visit)
-            for (dynamic in group.dynamicGroups) visit(dynamic)
-        }
-        group?.let(::visit)
-        return result
-    }
+            .associateWith { module -> server.getRawGroup(module)?.let(::coreIdentities) ?: emptyList() }
 
     class Counts(val total: Int, val typechecked: Int, val errors: Int, val goals: Int)
 
