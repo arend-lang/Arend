@@ -84,13 +84,6 @@ public class ModuleDeserialization {
     return readModule(moduleScopeProvider, dependencyListener, true);
   }
 
-  // The number of definitions the last read filled or tried to fill
-  private int myDefinitionCount;
-
-  public int getDefinitionCount() {
-    return myDefinitionCount;
-  }
-
   private List<Pair<Definition, String>> readModule(ModuleScopeProvider moduleScopeProvider, DependencyListener dependencyListener, boolean dropMissing) throws DeserializationException {
     if (myModuleProto.getVersion() != ModuleSerialization.VERSION) {
       throw new DeserializationException("Version mismatch:\nLanguage version: " + ModuleSerialization.VERSION + "\nLibrary binaries version: " + myModuleProto.getVersion());
@@ -114,7 +107,6 @@ public class ModuleDeserialization {
     if (ownBoxFixes) myDeferredBoxFixes = new DeferredBoxFixes();
 
     List<Pair<Definition, String>> dropped = new ArrayList<>();
-    myDefinitionCount = myDefinitions.size();
     DefinitionDeserialization defDeserialization = new DefinitionDeserialization(myCallTargetProvider, dependencyListener, myKeyRegistry, myDefinitionListener, myDeferredBoxFixes);
     for (Pair<DefinitionProtos.Definition, Definition> pair : myDefinitions) {
       if (!dropMissing) {

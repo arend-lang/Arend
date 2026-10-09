@@ -208,7 +208,6 @@ public class BinaryCacheLoader {
     // that is not loaded is dropped, not its module.
     int failed = 0;
     List<PendingBinaryLoad> loadedLoads = new ArrayList<>();
-    Map<ModuleLocation, Integer> definitionCounts = new HashMap<>();
     Map<ModuleLocation, List<String>> droppedDefinitions = new HashMap<>();
     DeferredBoxFixes boxFixes = new DeferredBoxFixes();
     for (PendingBinaryLoad load : phase2b) {
@@ -218,7 +217,6 @@ public class BinaryCacheLoader {
         List<Pair<Definition, String>> dropped = load.deserialization.readModuleDroppingMissing(
             myServer.getModuleScopeProvider(load.module.getLibraryName(), false),
             dependencyListener(myServer));
-        definitionCounts.put(load.module, load.deserialization.getDefinitionCount());
         for (Pair<Definition, String> pair : dropped) {
           droppedDefinitions.computeIfAbsent(load.module, k -> new ArrayList<>()).add(pair.proj1.getName() + " (" + pair.proj2 + ")");
         }
@@ -263,24 +261,32 @@ public class BinaryCacheLoader {
       }
     }
 
-    // A module is loaded if all of its definitions in the .arc are; a module loaded in part keeps
-    // those, and is not reported as loaded, so that the rest of it is typechecked and saved again.
+    // A module is loaded if all of its definitions are: none was dropped, and its .arc has them
+    // all, as one saved with only part of them typechecked has not. A module loaded in part keeps
+    // what it has, and is not reported as loaded, so that the rest of it is typechecked and saved.
     int loaded = 0;
     int partial = 0;
     int droppedCount = 0;
     for (PendingBinaryLoad load : loadedLoads) {
+      ConcreteGroup group = myServer.getRawGroup(load.module);
+      int[] counts = { 0, 0 };
+      if (group != null) {
+        forEachTypecheckable(group, ref -> {
+          counts[0]++;
+          if (ref.getTypechecked() != null && !ref.getTypechecked().status().needsTypeChecking()) counts[1]++;
+        });
+      }
       List<String> dropped = droppedDefinitions.get(load.module);
-      if (dropped == null) {
+      if (counts[1] == counts[0]) {
         loaded++;
         myBinaryCacheLoaded.add(load.module);
         myOutcomes.put(load.module, "loaded");
       } else {
         partial++;
-        droppedCount += dropped.size();
         myBinaryCacheLoaded.remove(load.module);
-        int total = definitionCounts.getOrDefault(load.module, dropped.size());
-        myOutcomes.put(load.module, "loaded partially: " + Math.max(0, total - dropped.size()) + " of " + total
-            + " definitions, dropped " + String.join(", ", dropped));
+        if (dropped != null) droppedCount += dropped.size();
+        myOutcomes.put(load.module, "loaded partially: " + counts[1] + " of " + counts[0] + " definitions"
+            + (dropped != null ? ", dropped " + String.join(", ", dropped) : ", the .arc has no others"));
       }
     }
 
@@ -382,6 +388,20 @@ public class BinaryCacheLoader {
       return finder.found;
     });
     return finder.found;
+  }
+
+  /** Feeds every typecheckable referable of {@code group}, with a core or not, to {@code visit}. */
+  private static void forEachTypecheckable(ConcreteGroup group, Consumer<TCDefReferable> visit) {
+    if (group.referable() instanceof TCDefReferable ref && ref.getKind().isTypecheckable()) visit.accept(ref);
+    for (InternalReferable internalRef : group.getInternalReferables()) {
+      if (internalRef instanceof TCDefReferable ref && ref.getKind().isTypecheckable()) visit.accept(ref);
+    }
+    for (ConcreteStatement statement : group.statements()) {
+      if (statement.group() != null) forEachTypecheckable(statement.group(), visit);
+    }
+    for (ConcreteGroup dynamicGroup : group.dynamicGroups()) {
+      forEachTypecheckable(dynamicGroup, visit);
+    }
   }
 
   /** Walks {@code group} and feeds each typecheckable {@link Definition} to {@code visit}; stops on true. */

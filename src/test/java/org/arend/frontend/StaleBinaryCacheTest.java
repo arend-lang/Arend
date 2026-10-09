@@ -4,6 +4,8 @@ import org.arend.core.definition.Definition;
 import org.arend.error.DummyErrorReporter;
 import org.arend.ext.error.GeneralError;
 import org.arend.ext.error.ListErrorReporter;
+import org.arend.ext.module.FullName;
+import org.arend.ext.module.LongName;
 import org.arend.ext.module.ModuleLocation;
 import org.arend.ext.module.ModulePath;
 import org.arend.frontend.library.BinaryLoader;
@@ -412,6 +414,38 @@ public class StaleBinaryCacheTest {
     assertNoErrors("typechecking the rest");
     assertSame("the loaded definition is kept, not typechecked again", independent, typechecked("User", "independent"));
     assertNotNull(typechecked("User", "calls"));
+  }
+
+  /**
+   * An .arc saved with only part of its module typechecked is loaded in part: what it has is kept, the module is not
+   * reported as loaded, so the pass typechecks and saves the rest, and the next load is whole.
+   */
+  @Test
+  public void anArcSavedInPartIsLoadedInPartAndCompleted() throws IOException {
+    writeLibrary();
+    writeModule("Half", "\\func one : Nat => 1\n\\func two : Nat => 2\n");
+    newServer();
+    loadOnly();
+    ModuleLocation half = moduleLoc("Half");
+    server.getCheckerFor(List.of(half)).typecheck(List.of(new FullName(half, new LongName("one"))),
+        DummyErrorReporter.INSTANCE, UnstoppableCancellationIndicator.INSTANCE, ProgressReporter.empty());
+    assertNull(typechecked("Half", "two"));
+    assertTrue(library.getBinarySource(half.getModulePath()).persist(server, DummyErrorReporter.INSTANCE));
+    newServer();
+
+    loadOnly();
+    assertNoBinaryCacheErrors("load of an .arc saved in part");
+    assertNotNull("Half.one is in the .arc", typechecked("Half", "one"));
+    assertNull("Half.two is not in the .arc", typechecked("Half", "two"));
+    assertNotLoadedFromCache("load of an .arc saved in part", "Half");
+
+    newServer();
+    pass();
+    assertNoErrors("the pass that completes Half");
+    newServer();
+    loadOnly();
+    assertLoadedFromCache("load after the pass that completed Half", "Half");
+    assertNotNull(typechecked("Half", "two"));
   }
 
   /** With no cache at all there are no candidates, so nothing may be skipped or reported. */
