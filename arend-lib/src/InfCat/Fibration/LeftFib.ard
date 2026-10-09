@@ -64,7 +64,7 @@
   => \lam d =>
        \let c => ob-sigma-Contr (DPath (\lam i => B (d.3 i)) d.4) $
               Contr.Contr_QEquiv (symQEquiv (lift-fiber-equiv B d.3 d.4)) (IsEquiv=>contrFibers (inP (coslice-equiv B Bg lift {d.1} {d.2} d.4)) d.3)
-       \in Contr.make {CovLift B d} c.center (\lam u => path (\lam i => c.contraction u @ i))
+       \in Contr.make {CovLift B d} c.center (\lam u => path (\lam i => c.contraction u i))
   \where {
     -- | The total category of {T}.
     \func Total {B : \Cat} (T : B ->⁺ \Cat) : \Cat
@@ -217,3 +217,22 @@
                \in Contr.make {CovLift _ e} (c.center.1, dpath \lam j => dpath \lam i => c.center.2 i j)
                     \lam u => path \lam k => \let v => c.contraction (u.1, dpath \lam i => dpath \lam j => u.2 j i) k
                                              \in (v.1, dpath \lam j => dpath \lam i => v.2 i j)
+
+-- | A dependent sum of left fibrations is a left fibration.
+\lemma leftFib-sigma {A : \Cat} {Q : A ->⁺ \Cat} (Qf : IsLeftFib Q) {R : \Sigma⁺ (a : A) (Q a) ->⁺ \Cat} (Rf : IsLeftFib R)
+  : IsLeftFib (\lam a => \Sigma⁺ (q : Q a) (R (a, q)))
+  => \lam d => Contr.Contr_QEquiv (later \new QEquiv {
+       | f s => ((s.1.1, s.2.1), dpath \lam i => (s.1.2 i, s.2.2 i))
+       | ret t => ((t.1.1, dpath \lam i => (t.2 i).1), (t.1.2, dpath \lam i => (t.2 i).2))
+       | ret_f s => idp
+       | f_sec t => idp
+     }) (sigma-Contr (Qf (d.1, d.2, d.3, d.4.1)) \lam l => Rf ((d.1, d.4.1), (d.2, l.1), dpath \lam i => (d.3 i, l.2 i), d.4.2))
+
+-- | Paths between two sections of a left fibration form a left fibration.
+\lemma leftFib-path {Z : \Cat} {R : Z ->⁺ \Cat} (Rf : IsLeftFib R) (a b : \Pi (z :⁺ Z) -> R z) : IsLeftFib (\lam z => a z = b z)
+  => \lam d => Contr.Contr_QEquiv (later \new QEquiv {
+       | f P => (path \lam j => (P j).1, dpath \lam i => path \lam j => (P j).2 i)
+       | ret t => path \lam j => (t.1 j, dpath \lam i => t.2 i j)
+       | ret_f P => idp
+       | f_sec t => idp
+     }) (contr-pathOver (\lam t => CovLift R (d.1, d.2, d.3, t)) (\lam t => Rf (d.1, d.2, d.3, t)) d.4 _ _)

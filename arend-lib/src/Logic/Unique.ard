@@ -92,3 +92,8 @@
 
 \func isProp-retract {A B : \Cat} (f : B -> A) (g : A -> B) (gf : \Pi (b : B) -> g (f b) = b) (p : isProp A) : isProp B
   => \lam b b' => inv (gf b) *> pmap g (p (f b) (f b')) *> gf b'
+
+-- | Paths over a path in a family of contractible types form a contractible type.
+\lemma contr-pathOver {A : \Cat} (C : A -> \Cat) (Cc : \Pi (a : A) -> Contr (C a)) {a a' : A} (q : a = a') (u : C a) (v : C a')
+  : Contr (Path (\lam j => C (q j)) u v) \elim q
+  | idp => isProp=>PathContr _ (isContr=>isProp (Cc a)) u v
