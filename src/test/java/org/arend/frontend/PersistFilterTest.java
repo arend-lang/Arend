@@ -54,7 +54,9 @@ import static org.junit.Assert.assertTrue;
  * of most of a targeted run's transitive import cone) and not one that is merely partially
  * typechecked, since {@code ModuleSerialization} already writes such a module as far as its cores
  * allow (none, some, or all) rather than refusing it outright. The IDE's save pass takes the same
- * whole-module {@code isCacheable} path as the CLI.
+ * whole-module {@code isCacheable} path as the CLI, and skips in addition a module with nothing typechecked at all
+ * ({@link BinaryCacheFilter#hasSomethingToSave}): it saves every module of the server when the project is closed,
+ * and such a module would replace a cache that has something with one that has nothing.
  */
 public class PersistFilterTest {
   private static final String LIB_NAME = "test_library";
@@ -109,6 +111,27 @@ public class PersistFilterTest {
       }
     }
     return null;
+  }
+
+  /**
+   * The IDE's save skips a module with nothing typechecked: its .arc would have nothing in it, and replace one that
+   * has. A module typechecked in part, or with nothing to typecheck, is saved.
+   */
+  @Test
+  public void hasSomethingToSave() {
+    addModule("Resolved", "\\func f : Nat => 0\n\\func g : Nat => f");
+    server.getCheckerFor(List.of(moduleLoc("Resolved"))).resolveAll(UnstoppableCancellationIndicator.INSTANCE, ProgressReporter.empty());
+    ConcreteGroup group = server.getRawGroup(moduleLoc("Resolved"));
+    assertNotNull(group);
+    assertFalse("a module with nothing typechecked has nothing to save", BinaryCacheFilter.hasSomethingToSave(group));
+
+    typecheckDefinition("Resolved", "f");
+    assertNull("g is not typechecked yet", getDef(group, "g").getTypechecked());
+    assertTrue("a module typechecked in part is worth saving", BinaryCacheFilter.hasSomethingToSave(group));
+
+    addModule("Empty", "-- nothing to typecheck");
+    server.getCheckerFor(List.of(moduleLoc("Empty"))).resolveAll(UnstoppableCancellationIndicator.INSTANCE, ProgressReporter.empty());
+    assertTrue("a module with nothing to typecheck loses nothing", BinaryCacheFilter.hasSomethingToSave(server.getRawGroup(moduleLoc("Empty"))));
   }
 
   /** Sanity baseline: a clean module reports no HAS_ERRORS defs. */

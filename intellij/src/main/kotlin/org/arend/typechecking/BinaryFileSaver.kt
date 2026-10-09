@@ -91,6 +91,10 @@ class BinaryFileSaver(private val project: Project) {
         val binariesDir = config.binariesDirPath ?: return null.also { outcomes[module] = "skipped: no binaries directory" }
         val group = server.getRawGroup(module) ?: return null.also { outcomes[module] = "skipped: not in the server" }
         val counts = ArcTrace.counts(group)
+        if (!BinaryCacheFilter.hasSomethingToSave(group)) {
+            outcomes[module] = "skipped: nothing typechecked or loaded, ${counts.total} definitions"
+            return null
+        }
         if (!BinaryCacheFilter.isCacheable(group)) {
             outcomes[module] = "skipped: " + (if (counts.errors > 0) "${counts.errors} definitions with errors" else "${counts.goals} definitions with goals") +
                 ", ${counts.typechecked} of ${counts.total} typechecked"
@@ -99,12 +103,12 @@ class BinaryFileSaver(private val project: Project) {
         return Target(binariesDir, counts)
     }
 
-    // How many modules each outcome of the save had, and every module that was not written whole
+    // How many modules each outcome of the save had, and every module that was not written whole, except those with nothing to save
     private fun traceSave(outcomes: Map<ModuleLocation, String>, time: Long) {
-        val byKind = outcomes.values.groupingBy { it.substringBefore(':') }.eachCount()
+        val byKind = outcomes.values.groupingBy { it.substringBefore(':').substringBefore(',') }.eachCount()
         ArcTrace.log("save: ${outcomes.size} modules in $time ms: " + byKind.entries.sortedByDescending { it.value }.joinToString { "${it.value} ${it.key}" })
         for ((module, outcome) in outcomes) {
-            if (!outcome.startsWith("written:")) {
+            if (!outcome.startsWith("written:") && !outcome.startsWith("skipped: nothing typechecked")) {
                 ArcTrace.log("save:   $module: $outcome")
             }
         }

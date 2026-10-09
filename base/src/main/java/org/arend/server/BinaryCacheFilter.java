@@ -36,6 +36,21 @@ public final class BinaryCacheFilter {
     return !hasTypecheckingErrors(group) && !hasGoals(group);
   }
 
+  /**
+   * True unless the module has definitions to typecheck and none of them is typechecked or loaded. Saving such a
+   * module writes an {@code .arc} with nothing in it, which carries no information but would replace a cache that
+   * has some; a module typechecked in part is worth saving, as the next load uses what it contains.
+   */
+  public static boolean hasSomethingToSave(@NotNull ConcreteGroup group) {
+    boolean[] typecheckable = { false };
+    boolean typechecked = anyDefinition(group, ref -> {
+      typecheckable[0] = true;
+      Definition def = ref.getTypechecked();
+      return def != null && !def.status().needsTypeChecking();
+    });
+    return typechecked || !typecheckable[0];
+  }
+
   private static boolean anyDefinition(ConcreteGroup group, Predicate<TCDefReferable> visit) {
     if (group.referable() instanceof TCDefReferable ref && ref.getKind().isTypecheckable() && visit.test(ref)) return true;
     for (InternalReferable internalRef : group.getInternalReferables()) {
