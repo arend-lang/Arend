@@ -1,8 +1,8 @@
 package org.arend.frontend.cli.daemon.client;
 
-import org.arend.frontend.cli.daemon.DaemonPaths;
-import org.arend.frontend.cli.daemon.LockFile;
-import org.arend.frontend.cli.daemon.wire.SocketAddress;
+import org.arend.daemon.DaemonPaths;
+import org.arend.daemon.LockFile;
+import org.arend.daemon.wire.SocketAddress;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -211,8 +211,8 @@ public final class DaemonRpc {
           }
           return null;
         }
-        if (ProcessHandle.of(lf.pid()).isEmpty()) {
-          LockFile.deleteQuietly(paths.lockFile);
+        if (!lf.processAlive()) {
+          lf.deleteAllCopies();
           return null;
         }
         if (lf.socketPath() == null || lf.socketPath().isEmpty()) {
@@ -253,10 +253,10 @@ public final class DaemonRpc {
   public static List<LockFile> liveDaemons() {
     List<LockFile> live = new ArrayList<>();
     for (LockFile lf : LockFile.registered()) {
-      if (ProcessHandle.of(lf.pid()).isPresent()) {
+      if (lf.processAlive()) {
         live.add(lf);
       } else {
-        LockFile.deleteQuietly(lf.registryFile());
+        lf.deleteAllCopies();
       }
     }
     return live;
@@ -348,6 +348,7 @@ public final class DaemonRpc {
       System.out.println("state: " + frame.get("state"));
     } else if ("status".equals(kind)) {
       System.out.println("pid:             " + frame.get("pid"));
+      if (frame.get("host") != null) System.out.println("host:            " + frame.get("host"));
       System.out.println("state:           " + frame.get("state"));
       System.out.println("queueDepth:      " + frame.get("queueDepth"));
       System.out.println("uptimeMs:        " + frame.get("uptimeMs"));

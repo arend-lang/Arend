@@ -1,7 +1,7 @@
 package org.arend.frontend.cli.daemon.client;
 
-import org.arend.frontend.cli.daemon.wire.FrameChannel;
-import org.arend.frontend.cli.daemon.wire.SocketAddress;
+import org.arend.daemon.wire.FrameChannel;
+import org.arend.daemon.wire.SocketAddress;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;

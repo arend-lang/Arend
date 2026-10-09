@@ -1,6 +1,6 @@
 package org.arend.frontend.cli.daemon.server;
 
-import org.arend.frontend.cli.daemon.wire.FrameChannel;
+import org.arend.daemon.wire.FrameChannel;
 
 import java.io.IOException;
 import java.io.OutputStream;

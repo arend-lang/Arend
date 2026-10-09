@@ -1,5 +1,7 @@
 package org.arend.frontend.cli.daemon;
 
+import org.arend.daemon.DaemonPaths;
+import org.arend.daemon.LockFile;
 import org.arend.frontend.cli.daemon.client.DaemonRpc;
 
 import java.nio.file.Path;
@@ -70,8 +72,7 @@ public final class DaemonStop {
     }
 
     LockFile.Read existing = LockFile.read(paths.lockFile);
-    Verdict verdict = inspectLock(existing, paths.libraryConfig,
-        candidate -> ProcessHandle.of(candidate.pid()).isPresent());
+    Verdict verdict = inspectLock(existing, paths.libraryConfig, LockFile::processAlive);
     switch (verdict) {
       case NOTHING_TO_DO -> {
         System.out.println("No Arend daemon running for " + paths.libraryConfig);
@@ -102,7 +103,8 @@ public final class DaemonStop {
       case REMOVE_STALE -> {
         System.err.println("[WARN]  -d stop: lock for PID " + lockOf(existing).pid()
             + " is stale (process dead); removing");
-        LockFile.deleteQuietly(paths.lockFile);
+        // Every copy: a daemon of several libraries left one in each, and one in the registry.
+        lockOf(existing).deleteAllCopies();
         return 0;
       }
       case SIGNAL -> { }
@@ -131,6 +133,12 @@ public final class DaemonStop {
     if (rpcRc == 0 && DaemonRpc.waitForLockGone(paths.lockFile, ProcessKill.GRACEFUL_TIMEOUT_SECONDS)) {
       System.out.println("Daemon stopped (PID " + lf.pid() + ")");
       return 0;
+    }
+    if (lf.isHostedByIde()) {
+      // The PID is the IDE's: a signal would stop the daemon by closing the user's IDE.
+      System.err.println("[ERROR] -d stop: the daemon runs inside " + lf.host() + " (PID " + lf.pid() + ") and did"
+          + " not stop through its socket (rc=" + rpcRc + "); stop it from the IDE instead.");
+      return 1;
     }
     System.err.println(rpcRc == 0
         ? "[WARN]  -d stop: daemon ack'd shutdown but PID " + lf.pid() + " did not exit within "

@@ -1,6 +1,6 @@
-package org.arend.frontend.cli.daemon.server;
+package org.arend.daemon.server;
 
-import org.arend.frontend.cli.daemon.Platform;
+import org.arend.daemon.Platform;
 
 import java.io.IOException;
 import java.net.InetAddress;
@@ -20,7 +20,7 @@ import java.nio.file.attribute.PosixFilePermissions;
  * <p>A Unix domain socket at {@code <lib>/.arend/daemon.sock}, created {@code rw-------}: whoever
  * can connect can run arbitrary CLI commands against a warm library and can shut the daemon down,
  * so the filesystem permissions are the access control and have to actually be set.
- * {@link org.arend.frontend.cli.daemon.DaemonPaths#ensureArendDir} restricts the directory to match.
+ * {@link org.arend.daemon.DaemonPaths#ensureArendDir} restricts the directory to match.
  *
  * <p>A socket path has a hard length limit the rest of the filesystem does not -- about 104 bytes
  * for the whole {@code sockaddr_un} -- and {@code <lib>/.arend/daemon.sock} passes it for an

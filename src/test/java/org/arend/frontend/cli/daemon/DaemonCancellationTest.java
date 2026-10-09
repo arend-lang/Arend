@@ -1,10 +1,10 @@
 package org.arend.frontend.cli.daemon;
 
+import org.arend.daemon.server.SocketBinder;
+import org.arend.daemon.wire.SocketAddress;
 import org.arend.frontend.cli.CommandContext;
 import org.arend.frontend.cli.daemon.client.DaemonClient;
 import org.arend.frontend.cli.daemon.server.DaemonServer;
-import org.arend.frontend.cli.daemon.server.SocketBinder;
-import org.arend.frontend.cli.daemon.wire.SocketAddress;
 import org.arend.frontend.cli.daemon.server.StreamRedirector;
 import org.junit.After;
 import org.junit.Before;

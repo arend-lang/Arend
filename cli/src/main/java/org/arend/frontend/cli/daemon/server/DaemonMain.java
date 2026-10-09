@@ -1,10 +1,11 @@
 package org.arend.frontend.cli.daemon.server;
 
+import org.arend.daemon.DaemonPaths;
+import org.arend.daemon.LockFile;
+import org.arend.daemon.server.SocketBinder;
 import org.arend.frontend.ConsoleMain;
 import org.arend.frontend.cli.CommandContext;
-import org.arend.frontend.cli.daemon.DaemonPaths;
 import org.arend.frontend.cli.daemon.DaemonStart;
-import org.arend.frontend.cli.daemon.LockFile;
 import org.arend.frontend.library.SourceLibrary;
 
 import java.io.IOException;

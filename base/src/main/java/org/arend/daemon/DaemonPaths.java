@@ -1,4 +1,4 @@
-package org.arend.frontend.cli.daemon;
+package org.arend.daemon;
 
 import org.arend.util.FileUtils;
 
@@ -173,7 +173,7 @@ public final class DaemonPaths {
   }
 
   /**
-   * Library name as derived by {@link org.arend.frontend.library.FileSourceLibrary#fromConfigFile}:
+   * Library name as derived by {@code FileSourceLibrary.fromConfigFile} in the CLI:
    * the name of the directory containing {@code arend.yaml}.
    */
   private static String cwdLibName(Path libraryConfig) {

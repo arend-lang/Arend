@@ -2,12 +2,12 @@ package org.arend.frontend.cli.daemon.mcp;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.arend.frontend.cli.daemon.DaemonPaths;
-import org.arend.frontend.cli.daemon.LockFile;
+import org.arend.daemon.DaemonPaths;
+import org.arend.daemon.LockFile;
+import org.arend.daemon.wire.FrameChannel;
+import org.arend.daemon.wire.SocketAddress;
 import org.arend.frontend.cli.daemon.client.DaemonClient;
 import org.arend.frontend.cli.daemon.client.DaemonRpc;
-import org.arend.frontend.cli.daemon.server.DaemonServer;
-import org.arend.frontend.cli.daemon.wire.SocketAddress;
 import org.arend.prelude.Prelude;
 
 import java.io.BufferedReader;
@@ -325,6 +325,7 @@ public final class DaemonMcpServer {
     StringBuilder out = new StringBuilder("Running daemons, oldest first:");
     for (LockFile daemon : live) {
       out.append("\n\nPID ").append(daemon.pid()).append(", started ").append(Instant.ofEpochMilli(daemon.startedAt()));
+      if (daemon.isHostedByIde()) out.append(", inside ").append(daemon.host());
       out.append("\n  libraries:");
       for (String library : daemon.libraries()) out.append("\n    ").append(library);
       List<String> loaded = daemon.shared().stream().filter(shared -> !daemon.libraries().contains(shared)).toList();
@@ -341,7 +342,7 @@ public final class DaemonMcpServer {
     Running call = running.get(mcpId.toString());
     Collector collector = new Collector();
     try (DaemonClient client = DaemonClient.connect(SocketAddress.parse(daemon.socketPath()))) {
-      if (!call.attach(client)) return collector.toolResult(DaemonServer.CANCELLED_EXIT_CODE);
+      if (!call.attach(client)) return collector.toolResult(FrameChannel.CANCELLED_EXIT_CODE);
       int exitCode = client.invoke(call.requestId, op, extra, collector::accept,
           accepted -> { if (!accepted) call.refused(); });
       return collector.toolResult(exitCode);
@@ -424,7 +425,7 @@ public final class DaemonMcpServer {
       String err = collapseCarriageReturns(stderr);
       if (!out.isBlank()) texts.add(out);
       if (!err.isBlank()) texts.add("stderr:\n" + err);
-      if (exitCode == DaemonServer.CANCELLED_EXIT_CODE) texts.add("cancelled");
+      if (exitCode == FrameChannel.CANCELLED_EXIT_CODE) texts.add("cancelled");
       else if (exitCode != 0) texts.add("exit code " + exitCode);
       if (texts.isEmpty()) texts.add("(no output)");
       return DaemonMcpServer.toolResult(texts, exitCode != 0);

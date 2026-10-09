@@ -2,6 +2,8 @@ dependencies {
     val protobufVersion: String by rootProject.ext
     implementation("com.google.protobuf:protobuf-java:$protobufVersion")
     implementation(project(":proto"))
+    // The daemon's frames are JSON; the CLI bundles Jackson, and IntelliJ ships its own.
+    compileOnly("com.fasterxml.jackson.core:jackson-databind:2.11.2")
 
     api(project(":api"))
 }

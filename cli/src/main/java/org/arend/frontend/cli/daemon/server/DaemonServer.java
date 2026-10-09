@@ -1,10 +1,11 @@
 package org.arend.frontend.cli.daemon.server;
 
+import org.arend.daemon.LockFile;
+import org.arend.daemon.server.SocketBinder;
+import org.arend.daemon.wire.FrameChannel;
 import org.arend.frontend.cli.CommandContext;
 import org.arend.frontend.cli.Dispatch;
-import org.arend.frontend.cli.daemon.LockFile;
 import org.arend.frontend.cli.daemon.LockedFlags;
-import org.arend.frontend.cli.daemon.wire.FrameChannel;
 import org.arend.typechecking.computation.CancellationIndicator;
 import org.arend.typechecking.computation.UnstoppableCancellationIndicator;
 
@@ -12,19 +13,18 @@ import java.io.IOException;
 import java.nio.channels.ClosedChannelException;
 import java.nio.channels.SocketChannel;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.concurrent.ExecutorService;
 
 /**
  * Daemon-side socket server. Owns three logical threads:
@@ -49,8 +49,6 @@ import java.util.concurrent.ExecutorService;
 public final class DaemonServer {
   private static final String CLI_OP = "cli";
   private static final String REFRESH_OP = "refresh";
-  /** The Unix Ctrl-C convention, reported for anything the client asked us to abandon. */
-  public static final int CANCELLED_EXIT_CODE = 130;
 
   /** How the worker runs one client command. Visible so a test can substitute one it can hold open. */
   @FunctionalInterface
@@ -175,32 +173,14 @@ public final class DaemonServer {
         ch.write(FrameChannel.doneFrame(id, 0));
       }
       case "status" -> {
-        Map<String, Object> body = new HashMap<>();
-        body.put("id", id);
-        body.put("kind", "status");
-        body.put("pid", ProcessHandle.current().pid());
-        body.put("state", workerState.get());
-        body.put("queueDepth", workQueue.size());
-        body.put("uptimeMs", System.currentTimeMillis() - startedAt);
-        body.put("currentTaskId", currentTaskId.get());
-        body.put("protocolVersion", LockFile.PROTOCOL_VERSION);
-        body.put("libraries", libraries);
-        body.put("lockedFlags", lockedFlags);
-        ch.write(body);
+        ch.write(FrameChannel.statusFrame(id, workerState.get(), workQueue.size(),
+            System.currentTimeMillis() - startedAt, currentTaskId.get(), libraries, lockedFlags, LockFile.HOST_CLI));
         ch.write(FrameChannel.doneFrame(id, 0));
       }
       case "cancel" -> {
         String target = String.valueOf(req.getOrDefault("targetId", ""));
         boolean accepted = !target.isEmpty() && cancelTask(target);
-        Map<String, Object> body = new HashMap<>();
-        body.put("id", id);
-        body.put("kind", "cancel-ack");
-        // Echo the target: a cancel is its own request with its own id, and the client's read
-        // loop is waiting on the *command's* id, so this is what lets the waiter recognise its
-        // own answer instead of dropping it.
-        body.put("targetId", target);
-        body.put("accepted", accepted);
-        ch.write(body);
+        ch.write(FrameChannel.cancelAckFrame(id, target, accepted));
         ch.write(FrameChannel.doneFrame(id, accepted ? 0 : 1));
       }
       case "shutdown" -> {
@@ -256,7 +236,7 @@ public final class DaemonServer {
       if (item.replyTo() == null) continue;
       try {
         item.replyTo().write(FrameChannel.stderrFrame(item.requestId(), "[CANCELLED]\n"));
-        item.replyTo().write(FrameChannel.doneFrame(item.requestId(), CANCELLED_EXIT_CODE));
+        item.replyTo().write(FrameChannel.doneFrame(item.requestId(), FrameChannel.CANCELLED_EXIT_CODE));
       } catch (IOException ignored) {
         // That client is gone; the request is dropped either way.
       }
@@ -324,7 +304,7 @@ public final class DaemonServer {
             // the counter.
             ctx.finishProgressLine();
             System.err.println("[CANCELLED]");
-            exitCode = CANCELLED_EXIT_CODE;
+            exitCode = FrameChannel.CANCELLED_EXIT_CODE;
           }
           StreamRedirector.detach();
         }

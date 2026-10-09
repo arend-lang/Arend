@@ -1,8 +1,10 @@
 package org.arend.frontend.cli.daemon;
 
+import org.arend.daemon.DaemonPaths;
+import org.arend.daemon.LockFile;
+import org.arend.daemon.server.SocketBinder;
+import org.arend.daemon.wire.FrameChannel;
 import org.arend.frontend.cli.daemon.client.DaemonRpc;
-import org.arend.frontend.cli.daemon.server.SocketBinder;
-import org.arend.frontend.cli.daemon.wire.FrameChannel;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;

@@ -355,7 +355,10 @@ class ArendServerStateView(private val project: Project, toolWindow: ToolWindow)
         toolbar.targetComponent = panel
         panel.toolbar = toolbar.component
 
-        contentManager.addContent(contentManager.factory.createContent(panel, "", false))
+        contentManager.addContent(contentManager.factory.createContent(panel, "Server", false))
+        val daemonContent = contentManager.factory.createContent(null, "Daemon", false)
+        daemonContent.component = ArendDaemonView(project, daemonContent).component
+        contentManager.addContent(daemonContent)
 
         // Type to search by node name/path
         TreeSpeedSearch.installOn(tree, true) { path: TreePath ->

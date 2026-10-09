@@ -2,11 +2,11 @@ package org.arend.frontend.cli.daemon.mcp;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.arend.daemon.DaemonPaths;
+import org.arend.daemon.LockFile;
+import org.arend.daemon.server.SocketBinder;
 import org.arend.frontend.cli.CommandContext;
-import org.arend.frontend.cli.daemon.DaemonPaths;
-import org.arend.frontend.cli.daemon.LockFile;
 import org.arend.frontend.cli.daemon.server.DaemonServer;
-import org.arend.frontend.cli.daemon.server.SocketBinder;
 import org.arend.frontend.cli.daemon.server.StreamRedirector;
 import org.junit.After;
 import org.junit.Before;

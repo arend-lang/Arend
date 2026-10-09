@@ -1,9 +1,9 @@
 package org.arend.frontend.cli.daemon;
 
+import org.arend.daemon.server.SocketBinder;
+import org.arend.daemon.wire.FrameChannel;
+import org.arend.daemon.wire.SocketAddress;
 import org.arend.frontend.cli.daemon.client.DaemonClient;
-import org.arend.frontend.cli.daemon.server.SocketBinder;
-import org.arend.frontend.cli.daemon.wire.FrameChannel;
-import org.arend.frontend.cli.daemon.wire.SocketAddress;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;

@@ -1,7 +1,7 @@
 package org.arend.frontend.cli.daemon;
 
+import org.arend.daemon.wire.FrameChannel;
 import org.arend.frontend.cli.daemon.server.StreamRedirector;
-import org.arend.frontend.cli.daemon.wire.FrameChannel;
 import org.junit.Test;
 
 import java.io.ByteArrayInputStream;

@@ -1,6 +1,7 @@
-package org.arend.frontend.cli.daemon.wire;
+package org.arend.daemon.wire;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.arend.daemon.LockFile;
 
 import java.io.EOFException;
 import java.io.IOException;
@@ -8,6 +9,8 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.channels.ReadableByteChannel;
 import java.nio.channels.WritableByteChannel;
+import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -17,8 +20,8 @@ import java.util.Map;
  * flight, and the client may send a {@code cancel} on the same connection meanwhile -- so a frame
  * carries the {@code id} of the request it belongs to and a reader must ignore the rest:
  * <pre>
- *   Request:  {"id":"uuid","op":"cli|ping|status|shutdown|cancel", "targetId":"uuid"?}
- *   Response: {"id":"uuid","kind":"stdout|stderr|state|done|error", ...}
+ *   Request:  {"id":"uuid","op":"cli|refresh|ping|status|shutdown|cancel", "targetId":"uuid"?}
+ *   Response: {"id":"uuid","kind":"stdout|stderr|state|status|cancel-ack|done|error", ...}
  * </pre>
  *
  * <p>An instance owns one channel and the lock that serialises writes to it, and {@link #write}
@@ -36,6 +39,9 @@ public final class FrameChannel {
    * peer controls, so it is bounded before anything is allocated for it.
    */
   public static final int MAX_FRAME_BYTES = 4 * 1024 * 1024;
+
+  /** The exit code of a request the client asked to abandon: the Unix Ctrl-C convention, 128 + SIGINT. */
+  public static final int CANCELLED_EXIT_CODE = 130;
 
   private static final ObjectMapper MAPPER = new ObjectMapper();
 
@@ -124,5 +130,35 @@ public final class FrameChannel {
 
   public static Map<String, Object> errorFrame(String requestId, String message) {
     return Map.of("id", requestId, "kind", "error", "message", message);
+  }
+
+  /**
+   * The answer to {@code status}. {@code host} is what runs the daemon, as its lock says
+   * ({@code LockFile.HOST_CLI} or {@code LockFile.HOST_INTELLIJ}).
+   */
+  public static Map<String, Object> statusFrame(String requestId, String state, int queueDepth, long uptimeMs,
+                                                String currentTaskId, List<String> libraries,
+                                                Map<String, Object> lockedFlags, String host) {
+    Map<String, Object> frame = new HashMap<>();
+    frame.put("id", requestId);
+    frame.put("kind", "status");
+    frame.put("pid", ProcessHandle.current().pid());
+    frame.put("state", state);
+    frame.put("queueDepth", queueDepth);
+    frame.put("uptimeMs", uptimeMs);
+    frame.put("currentTaskId", currentTaskId);
+    frame.put("protocolVersion", LockFile.PROTOCOL_VERSION);
+    frame.put("libraries", libraries);
+    frame.put("lockedFlags", lockedFlags);
+    frame.put("host", host);
+    return frame;
+  }
+
+  /**
+   * The answer to {@code cancel}. It echoes the target: a cancel is a request of its own, and the
+   * client's read loop waits on the cancelled command's id, so this is how the waiter recognises it.
+   */
+  public static Map<String, Object> cancelAckFrame(String requestId, String targetId, boolean accepted) {
+    return Map.of("id", requestId, "kind", "cancel-ack", "targetId", targetId, "accepted", accepted);
   }
 }

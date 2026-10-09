@@ -1,8 +1,12 @@
 package org.arend.frontend.cli.daemon;
 
+import org.arend.daemon.DaemonPaths;
+import org.arend.daemon.LockFile;
+import org.arend.daemon.Platform;
+
 import java.io.File;
-import java.lang.management.ManagementFactory;
 import java.io.IOException;
+import java.lang.management.ManagementFactory;
 import java.nio.file.FileAlreadyExistsException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -83,7 +87,7 @@ public final class DaemonStart {
     LockFile running = null;
     for (DaemonPaths paths : owned) {
       LockFile.Read existing = LockFile.read(paths.lockFile);
-      switch (inspectLock(existing, paths.libraryConfig, requested, DaemonStart::isAlive)) {
+      switch (inspectLock(existing, paths.libraryConfig, requested, LockFile::processAlive)) {
         case UNREADABLE_LOCK -> {
           // Something is there and we cannot tell whether it is live. Starting a second daemon on
           // top of a running one is the one outcome worth refusing outright.
@@ -102,7 +106,8 @@ public final class DaemonStart {
         case STALE_LOCK -> {
           System.err.println("[WARN]  -d: removing stale lock for dead PID " + lockOf(existing).pid()
               + " at " + paths.lockFile);
-          LockFile.deleteQuietly(paths.lockFile);
+          // Every copy: a daemon of several libraries left one in each, and one in the registry.
+          lockOf(existing).deleteAllCopies();
         }
         case STALE_MISMATCH -> {
           System.err.println("[WARN]  -d: lock file at " + paths.lockFile
@@ -216,7 +221,7 @@ public final class DaemonStart {
   private static boolean reportIfReady(DaemonPaths paths) {
     Optional<LockFile> ready = LockFile.readIfValid(paths.lockFile);
     if (ready.isEmpty() || !ready.get().serves(paths.libraryConfig)
-        || ProcessHandle.of(ready.get().pid()).isEmpty()) {
+        || !ready.get().processAlive()) {
       return false;
     }
     LockFile lock = ready.get();
@@ -275,16 +280,6 @@ public final class DaemonStart {
 
   private static LockFile lockOf(LockFile.Read read) {
     return ((LockFile.Read.Found) read).lock();
-  }
-
-  /**
-   * Liveness is the PID and nothing else. A socket probe would also catch a recycled PID, but it
-   * can fail for reasons that have nothing to do with the daemon being gone -- and every caller
-   * that concludes "dead" goes on to remove the lock. A false "still running" costs the user one
-   * {@code --daemon-stop}; a false "dead" costs them a process they can no longer reach.
-   */
-  private static boolean isAlive(LockFile lf) {
-    return ProcessHandle.of(lf.pid()).isPresent();
   }
 
   /**

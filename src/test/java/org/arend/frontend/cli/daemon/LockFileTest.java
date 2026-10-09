@@ -1,5 +1,7 @@
 package org.arend.frontend.cli.daemon;
 
+import org.arend.daemon.DaemonPaths;
+import org.arend.daemon.LockFile;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
@@ -43,6 +45,23 @@ public class LockFileTest {
       return;
     }
     assertEquals(written, found.lock());
+  }
+
+  /** An IDE's lock says so, since its PID must never be signalled; a lock that says nothing is a CLI daemon's. */
+  @Test
+  public void theHostSurvivesTheRoundTrip() throws IOException {
+    Path path = lockPath();
+    LockFile ide = new LockFile(4242, "/a/arend.yaml", "0123456789abcdef", List.of("/a/arend.yaml"), List.of(),
+        LockFile.PROTOCOL_VERSION, 1L, "uds:/s", LockFile.HOST_INTELLIJ);
+    ide.writeAtomic(path);
+    LockFile read = LockFile.readIfValid(path).orElseThrow();
+    assertEquals(ide, read);
+    assertTrue(read.isHostedByIde());
+
+    Files.writeString(path, Files.readString(path).replaceAll("(?m)^host=.*\\R", ""));
+    LockFile old = LockFile.readIfValid(path).orElseThrow();
+    assertEquals(LockFile.HOST_CLI, old.host());
+    assertFalse(old.isHostedByIde());
   }
 
   /** Every library survives, in order. */

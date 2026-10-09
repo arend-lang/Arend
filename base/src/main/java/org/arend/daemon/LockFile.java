@@ -1,4 +1,4 @@
-package org.arend.frontend.cli.daemon;
+package org.arend.daemon;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -31,6 +31,8 @@ import java.util.Properties;
  *   protocolVersion  wire-protocol version the daemon speaks
  *   startedAt        System.currentTimeMillis() at READY
  *   socketPath       the address clients connect to, as {@code uds:<path>} or {@code tcp:host:port}
+ *   host             what runs the daemon: {@code cli}, a JVM of its own, or {@code intellij}, an IDE
+ *                    that answers as a daemon from its own server; absent means {@code cli}
  * </pre>
  *
  * @param pid             see above
@@ -41,18 +43,39 @@ import java.util.Properties;
  * @param protocolVersion see above
  * @param startedAt       see above
  * @param socketPath      see above
+ * @param host            see above
  */
 public record LockFile(long pid, String libraryPath, String libraryHash, List<String> libraries,
-                       List<String> shared, int protocolVersion, long startedAt, String socketPath) {
+                       List<String> shared, int protocolVersion, long startedAt, String socketPath, String host) {
+  /** A daemon that is a JVM of its own, started by {@code arend -d}. */
+  public static final String HOST_CLI = "cli";
+  /** A daemon answered by the IntelliJ plugin from the IDE's own server, in the IDE's process. */
+  public static final String HOST_INTELLIJ = "intellij";
+
   public LockFile {
     libraries = List.copyOf(libraries);
     shared = List.copyOf(shared);
+    if (host == null || host.isEmpty()) host = HOST_CLI;
+  }
+
+  /** A lock for a daemon of its own JVM. */
+  public LockFile(long pid, String libraryPath, String libraryHash, List<String> libraries,
+                  List<String> shared, int protocolVersion, long startedAt, String socketPath) {
+    this(pid, libraryPath, libraryHash, libraries, shared, protocolVersion, startedAt, socketPath, HOST_CLI);
   }
 
   /** A lock for a daemon that serves the one library {@code libraryPath}. */
   public LockFile(long pid, String libraryPath, String libraryHash,
                   int protocolVersion, long startedAt, String socketPath) {
     this(pid, libraryPath, libraryHash, List.of(libraryPath), List.of(), protocolVersion, startedAt, socketPath);
+  }
+
+  /**
+   * Whether the daemon's process is something else besides: an IDE. Its PID is the IDE's, so the
+   * daemon is stopped through its socket or not at all -- never by signalling that PID.
+   */
+  public boolean isHostedByIde() {
+    return !HOST_CLI.equals(host);
   }
 
   /** Whether the daemon serves the library whose canonical arend.yaml is {@code libraryConfig}. */
@@ -79,11 +102,28 @@ public record LockFile(long pid, String libraryPath, String libraryHash, List<St
   public void deleteAllCopies() {
     List<Path> copies = new ArrayList<>(lockFiles());
     copies.add(registryFile());
-    for (Path lockFile : copies) {
-      if (readIfValid(lockFile).filter(other -> other.pid() == pid && other.libraryHash().equals(libraryHash)).isPresent()) {
-        deleteQuietly(lockFile);
-      }
-    }
+    copies.forEach(this::deleteIfOurs);
+  }
+
+  /** Removes the lock at {@code lockPath} if it still names this daemon, as {@link #deleteAllCopies} does. */
+  public void deleteIfOurs(Path lockPath) {
+    if (readIfValid(lockPath).filter(this::sameDaemon).isPresent()) deleteQuietly(lockPath);
+  }
+
+  /** Whether {@code other} is a copy of this daemon's lock: the same process, the same identity. */
+  public boolean sameDaemon(LockFile other) {
+    return other.pid == pid && other.libraryHash.equals(libraryHash);
+  }
+
+  /**
+   * Whether the daemon's process is alive, judged by its PID alone. A socket probe would also catch
+   * a recycled PID, but it can fail for reasons that have nothing to do with the daemon being gone,
+   * and every caller that concludes "dead" goes on to remove the lock. A false "still running"
+   * costs the user one {@code --daemon-stop}; a false "dead" costs them a process they can no
+   * longer reach.
+   */
+  public boolean processAlive() {
+    return ProcessHandle.of(pid).isPresent();
   }
 
   /**
@@ -122,6 +162,7 @@ public record LockFile(long pid, String libraryPath, String libraryHash, List<St
     props.setProperty("protocolVersion", Integer.toString(protocolVersion));
     props.setProperty("startedAt", Long.toString(startedAt));
     props.setProperty("socketPath", socketPath == null ? "" : socketPath);
+    props.setProperty("host", host);
 
     Path directory = lockPath.getParent();
     Path tmp = Files.createTempFile(directory, lockPath.getFileName() + ".", ".tmp");
@@ -160,6 +201,7 @@ public record LockFile(long pid, String libraryPath, String libraryHash, List<St
       int protocolVersion = Integer.parseInt(props.getProperty("protocolVersion", "0").trim());
       long startedAt = Long.parseLong(props.getProperty("startedAt", "0").trim());
       String socketPath = props.getProperty("socketPath", "");
+      String host = props.getProperty("host", HOST_CLI);
       List<String> libraries = new ArrayList<>();
       for (int i = 1; props.getProperty("library." + i) != null; i++) libraries.add(props.getProperty("library." + i));
       List<String> shared = new ArrayList<>();
@@ -167,7 +209,7 @@ public record LockFile(long pid, String libraryPath, String libraryHash, List<St
       if (libraryPath.isEmpty() || libraryHash.isEmpty()) {
         return new Read.Unreadable("lock file is missing libraryPath or libraryHash");
       }
-      return new Read.Found(new LockFile(pid, libraryPath, libraryHash, libraries, shared, protocolVersion, startedAt, socketPath));
+      return new Read.Found(new LockFile(pid, libraryPath, libraryHash, libraries, shared, protocolVersion, startedAt, socketPath, host));
     } catch (NumberFormatException e) {
       return new Read.Unreadable("lock file has a malformed numeric field: " + e.getMessage());
     }
