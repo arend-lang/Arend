@@ -180,7 +180,7 @@ public final class TargetResolver {
    * through subgroups and finally into constructors / fields (which must be the last
    * segment). Returns {@code null} if any segment doesn't resolve.
    */
-  static @Nullable LocatedReferable walkLongName(ConcreteGroup group, LongName ln) {
+  public static @Nullable LocatedReferable walkLongName(ConcreteGroup group, LongName ln) {
     LocatedReferable result = group.referable();
     List<String> names = ln.toList();
     for (int i = 0; i < names.size(); i++) {

@@ -96,6 +96,17 @@ public class WarmContextTest {
     assertTrue(good.output(), good.output().contains("--- Typechecking Good ---"));
   }
 
+  /** A definition the module does not declare is an error, not a typecheck of nothing that succeeds. */
+  @Test
+  public void aMissingDefinitionFails() {
+    Run missing = run("Good:nope");
+    assertEquals(missing.output(), 1, missing.exitCode());
+    assertTrue(missing.output(), missing.output().contains("Definition nope is not found in"));
+
+    Run present = run("Good:good");
+    assertEquals(present.output(), 0, present.exitCode());
+  }
+
   /** The scope of one command must not widen the next: `Good` then `Other` targets only Other. */
   @Test
   public void targetsDoNotAccumulateAcrossCommands() {

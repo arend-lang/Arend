@@ -197,6 +197,7 @@ public final class TypecheckPipeline {
         if (module == null) {
           ctx.systemErrErrorReporter.report(new ModuleNotFoundError(modulePath));
         } else if (definitionName != null) {
+          if (!TypecheckReports.checkDefinitionExists(ctx.server, module, definitionName, ctx.systemErrErrorReporter)) continue;
           System.out.println();
           FullName fullName = new FullName(module, definitionName);
           System.out.println("--- Typechecking " + fullName + " ---");

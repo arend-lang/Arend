@@ -17,6 +17,7 @@ import org.arend.module.error.ModuleNotFoundError;
 import org.arend.naming.reference.GlobalReferable;
 import org.arend.naming.reference.TCDefReferable;
 import org.arend.naming.scope.EmptyScope;
+import org.arend.query.TargetResolver;
 import org.arend.server.impl.DefinitionData;
 import org.arend.term.group.ConcreteGroup;
 import org.arend.term.group.ConcreteNamespaceCommand;
@@ -74,6 +75,19 @@ public final class TypecheckReports {
       return null;
     }
     return new Pair<>(modulePath, longName);
+  }
+
+  /**
+   * Whether {@code module} declares {@code name}, a definition or a field or constructor of one;
+   * when it does not, says so to {@code errorReporter}. Typechecking a name the module does not
+   * declare checks nothing, and so would succeed.
+   */
+  public static boolean checkDefinitionExists(@NotNull ArendServer server, @NotNull ModuleLocation module,
+                                              @NotNull LongName name, @NotNull ErrorReporter errorReporter) {
+    ConcreteGroup group = server.getRawGroup(module);
+    if (group != null && TargetResolver.walkLongName(group, name) != null) return true;
+    errorReporter.report(new DefinitionNotFoundError(new FullName(module, name)));
+    return false;
   }
 
   /** {@code -p}: the elaborated form of every definition of a module, or of the one it names. */

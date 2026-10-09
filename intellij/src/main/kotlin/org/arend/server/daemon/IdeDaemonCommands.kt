@@ -187,6 +187,7 @@ class IdeDaemonCommands(private val project: Project, private val served: () -> 
                 reporter.report(ModuleNotFoundError(modulePath))
                 return 1
             }
+            if (definition != null && !TypecheckReports.checkDefinitionExists(server, module, definition, reporter)) return 1
             // A whole module asked for once covers a definition of it asked for again.
             if (module !in modules || definition == null) modules[module] = definition
         }
