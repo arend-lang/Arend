@@ -2,9 +2,8 @@ package org.arend.frontend.cli.daemon.mcp;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.MissingNode;
-import org.arend.frontend.ConsoleMain;
-import org.arend.frontend.cli.commands.TypecheckPipeline;
-import org.arend.frontend.query.ConsoleQueryTool;
+import org.arend.cli.ArendOptions;
+import org.arend.query.ConsoleQueryTool;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -35,10 +34,10 @@ final class DaemonMcpTools {
   private static final Map<String, String> TYPECHECK_FLAGS = new LinkedHashMap<>();
   static {
     TYPECHECK_FLAGS.put("test", "-t");
-    TYPECHECK_FLAGS.put("show_times", "--" + TypecheckPipeline.SHOW_TIMES);
-    TYPECHECK_FLAGS.put("show_sizes", "--" + TypecheckPipeline.SHOW_SIZES);
-    TYPECHECK_FLAGS.put("show_modules", "--" + TypecheckPipeline.SHOW_MODULES);
-    TYPECHECK_FLAGS.put("show_modules_with_instances", "--" + TypecheckPipeline.SHOW_MODULES_WITH_INSTANCES);
+    TYPECHECK_FLAGS.put("show_times", "--" + ArendOptions.SHOW_TIMES);
+    TYPECHECK_FLAGS.put("show_sizes", "--" + ArendOptions.SHOW_SIZES);
+    TYPECHECK_FLAGS.put("show_modules", "--" + ArendOptions.SHOW_MODULES);
+    TYPECHECK_FLAGS.put("show_modules_with_instances", "--" + ArendOptions.SHOW_MODULES_WITH_INSTANCES);
   }
 
   static String toolName(ConsoleQueryTool tool) {
@@ -72,7 +71,7 @@ final class DaemonMcpTools {
             + " goals. The flags the daemon was started with apply and cannot be changed here.",
         schema(tcProps, List.of())));
 
-    for (ConsoleQueryTool query : ConsoleMain.QUERY_TOOLS) {
+    for (ConsoleQueryTool query : ArendOptions.QUERY_TOOLS) {
       Map<String, Object> props = new LinkedHashMap<>();
       props.put("library", library);
       props.put("args", stringArray("The tokens that follow -" + query.shortName() + " on the command line ("
@@ -113,7 +112,7 @@ final class DaemonMcpTools {
     for (Control control : CONTROLS) {
       if (control.name().equals(name)) return new Call(string(args, "library"), control.op(), null);
     }
-    for (ConsoleQueryTool query : ConsoleMain.QUERY_TOOLS) {
+    for (ConsoleQueryTool query : ArendOptions.QUERY_TOOLS) {
       if (!toolName(query).equals(name)) continue;
       List<String> tokens = strings(args, "args");
       if (tokens.isEmpty()) throw new IllegalArgumentException("'args' must name at least one " + query.argName());

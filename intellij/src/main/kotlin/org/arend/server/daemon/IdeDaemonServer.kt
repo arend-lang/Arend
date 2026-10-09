@@ -34,8 +34,11 @@ class IdeDaemonOutput(private val channel: FrameChannel, private val requestId: 
 
 /** What answers the requests that need the IDE's server: a `cli` command and a `refresh`. */
 interface IdeDaemonRunner {
-    /** Runs `arend` [args] against the IDE's server; a set [cancel] abandons it. Returns the exit code. */
-    fun run(args: List<String>, output: IdeDaemonOutput, cancel: AtomicBoolean): Int
+    /**
+     * Runs `arend` [args] against the IDE's server, as issued from the client's [cwd] (null when it
+     * did not say); a set [cancel] abandons it. Returns the exit code.
+     */
+    fun run(args: List<String>, cwd: String?, output: IdeDaemonOutput, cancel: AtomicBoolean): Int
 
     /** Brings the IDE's server up to date with the files on disk. Returns the exit code. */
     fun refresh(output: IdeDaemonOutput, cancel: AtomicBoolean): Int
@@ -59,7 +62,7 @@ class IdeDaemonServer(
     private val onActivity: () -> Unit = {}
 ) {
     /** A request queued for the worker; [command] is what [describe] says of it. */
-    private class WorkItem(val requestId: String, val args: List<String>?, replyTo: FrameChannel, val command: String) {
+    private class WorkItem(val requestId: String, val args: List<String>?, val cwd: String?, replyTo: FrameChannel, val command: String) {
         val cancel = AtomicBoolean()
         val output = IdeDaemonOutput(replyTo, requestId)
     }
@@ -186,8 +189,9 @@ class IdeDaemonServer(
                 // Off this thread: stopping closes the client pool this very thread belongs to.
                 daemonThread(onShutdown, "arend-ide-daemon-shutdown").start()
             }
-            "cli" -> queue(id, (request["args"] as? List<*>)?.map { it.toString() } ?: emptyList(), channel)
-            "refresh" -> queue(id, null, channel)
+            "cli" -> queue(id, (request["args"] as? List<*>)?.map { it.toString() } ?: emptyList(),
+                (request["cwd"] as? String)?.takeIf { it.isNotEmpty() }, channel)
+            "refresh" -> queue(id, null, null, channel)
             else -> {
                 channel.write(FrameChannel.errorFrame(id, "unknown op: $op"))
                 channel.write(FrameChannel.doneFrame(id, 1))
@@ -195,8 +199,8 @@ class IdeDaemonServer(
         }
     }
 
-    private fun queue(id: String, args: List<String>?, channel: FrameChannel) {
-        val item = WorkItem(id, args, channel, describe(args))
+    private fun queue(id: String, args: List<String>?, cwd: String?, channel: FrameChannel) {
+        val item = WorkItem(id, args, cwd, channel, describe(args))
         inFlight[item.requestId] = item.cancel
         workQueue.add(item)
         onActivity()
@@ -230,7 +234,7 @@ class IdeDaemonServer(
             var exitCode = 1
             try {
                 if (!item.cancel.get()) {
-                    exitCode = if (item.args == null) runner.refresh(output, item.cancel) else runner.run(item.args, output, item.cancel)
+                    exitCode = if (item.args == null) runner.refresh(output, item.cancel) else runner.run(item.args, item.cwd, output, item.cancel)
                 }
             } catch (e: Throwable) {
                 if (e is InterruptedException) Thread.currentThread().interrupt()

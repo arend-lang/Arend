@@ -37,7 +37,7 @@ class IdeDaemonServerTest {
         dir = Files.createTempDirectory("ide-daemon")
         val bound = SocketBinder.bind(dir.resolve("daemon.sock"), "0123456789abcdef")
         server = IdeDaemonServer(bound, { listOf("/lib/arend.yaml") }, object : IdeDaemonRunner {
-            override fun run(args: List<String>, output: IdeDaemonOutput, cancel: AtomicBoolean): Int {
+            override fun run(args: List<String>, cwd: String?, output: IdeDaemonOutput, cancel: AtomicBoolean): Int {
                 synchronized(ran) { ran.add(args) }
                 if ("Hold" in args) {
                     holding.countDown()

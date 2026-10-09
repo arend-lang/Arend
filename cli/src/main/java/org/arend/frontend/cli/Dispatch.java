@@ -1,10 +1,12 @@
 package org.arend.frontend.cli;
 
 import org.apache.commons.cli.CommandLine;
+import org.arend.cli.ArendOptions;
 import org.arend.frontend.ConsoleMain;
 import org.arend.frontend.cli.commands.TypecheckPipeline;
-import org.arend.frontend.query.ConsoleQueryTool;
+import org.arend.query.ConsoleQueryTool;
 
+import java.util.ArrayList;
 import java.util.Set;
 
 /**
@@ -48,7 +50,10 @@ public final class Dispatch {
     // A target that named nothing has been reported. Stop rather than dispatching with an
     // empty scope, which means "the whole library".
     if (ctx.exitWithError) return 1;
-    return execute(ctx, parsed.cmdLine());
+    // A relative --log-file means the client's directory too.
+    try (JsonOutputRedirect json = JsonOutputRedirect.open(parsed.cmdLine(), clientCwd)) {
+      return execute(ctx, parsed.cmdLine(), json);
+    }
   }
 
   /**
@@ -56,7 +61,7 @@ public final class Dispatch {
    * caller has nothing to run beforehand that could write to stdout.
    */
   public static int execute(CommandContext ctx, CommandLine cmdLine) {
-    try (JsonOutputRedirect json = JsonOutputRedirect.open(cmdLine)) {
+    try (JsonOutputRedirect json = JsonOutputRedirect.open(cmdLine, null)) {
       return execute(ctx, cmdLine, json);
     }
   }
@@ -71,10 +76,10 @@ public final class Dispatch {
     // rather than a block per flag. The same tools back the REPL's `:` commands, which is
     // what keeps CLI and REPL behaviour identical.
     ConsoleQueryTool.QueryContext queryCtx = new ConsoleQueryTool.QueryContext(
-        ctx.requestedLibraries, ctx.libraryManager, ctx.server, ctx.systemErrErrorReporter,
+        new ArrayList<>(ctx.requestedLibraries), ctx.libraryManager, ctx.server,
         json.stdout(), json.active(), Set.of(), ctx.cancellation);
-    for (ConsoleQueryTool tool : ConsoleMain.QUERY_TOOLS) {
-      if (!cmdLine.hasOption(tool.shortName())) continue;
+    ConsoleQueryTool tool = ArendOptions.queryTool(cmdLine);
+    if (tool != null) {
       ConsoleQueryTool.ConsoleToolRunner parsed = tool.parseArgs(cmdLine.getOptionValues(tool.shortName()));
       // The tool has already printed its own diagnostic on a parse failure.
       if (parsed == null) return 1;

@@ -109,6 +109,16 @@ public final class DaemonPaths {
     return canOwn;
   }
 
+  /** {@code path} as a client in {@code cwd} meant it: against {@code cwd} when one is given and the path is relative. */
+  public static Path against(String cwd, String path) {
+    return cwd == null ? Paths.get(path) : Paths.get(cwd).resolve(path);
+  }
+
+  /** As {@link #resolve(Path)}, for a reference a client in {@code cwd} gave; null for this process's own directory. */
+  public static DaemonPaths resolve(String cwd, String reference) {
+    return resolve(against(cwd, reference));
+  }
+
   /**
    * Build a {@code DaemonPaths} from a user-supplied library reference: a directory containing
    * {@code arend.yaml}, the {@code arend.yaml} itself, a zip library, or any path that resolves to

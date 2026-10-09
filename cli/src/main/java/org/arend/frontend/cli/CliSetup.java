@@ -1,12 +1,13 @@
 package org.arend.frontend.cli;
 
 import org.apache.commons.cli.CommandLine;
+import org.arend.daemon.DaemonPaths;
 import org.arend.error.DummyErrorReporter;
 import org.arend.ext.error.GeneralError;
 import org.arend.ext.module.LongName;
 import org.arend.ext.module.ModulePath;
 import org.arend.ext.util.Pair;
-import org.arend.frontend.TimedProgressReporter;
+import org.arend.server.TimedProgressReporter;
 import org.arend.frontend.library.BinaryLoader;
 import org.arend.frontend.library.CliServerRequester;
 import org.arend.frontend.library.FileSourceLibrary;
@@ -249,7 +250,7 @@ public final class CliSetup {
         if (!scope.contains(named)) scope.add(named);
         continue;
       }
-      if (Files.exists(against(clientCwd, positional))) continue;
+      if (Files.exists(DaemonPaths.against(clientCwd, positional))) continue;
       if (positional.indexOf(':') >= 0) {
         // parseFullName reports what is wrong with it and returns null.
         Pair<ModulePath, LongName> parsed = ctx.parseFullName(positional);
@@ -276,32 +277,13 @@ public final class CliSetup {
   // ───────── helpers ─────────
 
   private static SourceLibrary servedLibraryNamed(CommandContext ctx, String reference, String clientCwd) {
-    String name = reference;
-    Path path = against(clientCwd, reference);
-    if (Files.isDirectory(path) && Files.isRegularFile(path.resolve(FileUtils.LIBRARY_CONFIG_FILE))) {
-      name = fileName(path.toAbsolutePath().normalize());
-    } else if (Files.isRegularFile(path) && path.endsWith(FileUtils.LIBRARY_CONFIG_FILE)) {
-      name = fileName(path.toAbsolutePath().normalize().getParent());
-    } else if (Files.isRegularFile(path) && reference.endsWith(FileUtils.ZIP_EXTENSION)) {
-      String zip = fileName(path);
-      name = zip == null ? null : zip.substring(0, zip.length() - FileUtils.ZIP_EXTENSION.length());
-    }
+    DaemonPaths paths = DaemonPaths.resolve(clientCwd, reference);
+    String name = paths == null ? reference : paths.libraryName();
     for (SourceLibrary library : ctx.servedLibraries) {
       if (library.getLibraryName().equals(name)) return library;
     }
     // Loaded only as a dependency: a command about a shared library is routed to any daemon that loaded it.
-    return name == null || ctx.libraryManager == null ? null : ctx.libraryManager.getLibrary(name);
-  }
-
-  private static String fileName(Path path) {
-    Path name = path == null ? null : path.getFileName();
-    return name == null ? null : name.toString();
-  }
-
-  /** {@code path} as the client would have seen it: resolved against {@code clientCwd} if given. */
-  private static Path against(String clientCwd, String path) {
-    Path p = Paths.get(path);
-    return clientCwd == null || p.isAbsolute() ? p : Paths.get(clientCwd).resolve(p);
+    return ctx.libraryManager == null ? null : ctx.libraryManager.getLibrary(name);
   }
 
   private static void loadLibrary(CommandContext ctx, SourceLibrary library) {

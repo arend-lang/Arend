@@ -1,12 +1,14 @@
 package org.arend.frontend.cli.daemon.server;
 
+import org.arend.cli.LockedFlags;
 import org.arend.daemon.LockFile;
 import org.arend.daemon.server.SocketBinder;
 import org.arend.daemon.wire.FrameChannel;
+import org.arend.frontend.ConsoleMain;
 import org.arend.frontend.cli.CommandContext;
 import org.arend.frontend.cli.Dispatch;
-import org.arend.frontend.cli.daemon.LockedFlags;
 import org.arend.typechecking.computation.CancellationIndicator;
+import org.arend.typechecking.computation.FlagCancellationIndicator;
 import org.arend.typechecking.computation.UnstoppableCancellationIndicator;
 
 import java.io.IOException;
@@ -90,7 +92,8 @@ public final class DaemonServer {
     this.ctx = ctx;
     this.libraries = List.copyOf(libraries);
     this.runner = runner;
-    this.lockedFlags = LockedFlags.extract(ctx.bootstrapArgs);
+    this.lockedFlags = ctx.bootstrapArgs == null ? Map.of()
+        : LockedFlags.extract(ConsoleMain.parseArgs(ctx.bootstrapArgs).cmdLine());
     ThreadFactory tf = r -> {
       Thread t = new Thread(r, "arend-daemon-client");
       t.setDaemon(false);
@@ -337,14 +340,4 @@ public final class DaemonServer {
 
   /** Makes the worker count down {@link #shutdownLatch}; recognised by identity. */
   private static final WorkItem SHUTDOWN = new WorkItem("", null, null, null, false);
-
-  /** Bridges the daemon's cancel flag into {@code ComputationRunner.checkCanceled()}. */
-  private static final class FlagCancellationIndicator implements CancellationIndicator {
-    private final AtomicBoolean flag;
-
-    FlagCancellationIndicator(AtomicBoolean flag) { this.flag = flag; }
-
-    @Override public boolean isCanceled() { return flag.get(); }
-    @Override public void cancel() { flag.set(true); }
-  }
 }

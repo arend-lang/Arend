@@ -1,13 +1,10 @@
 package org.arend.frontend.cli.daemon.server;
 
 import org.apache.commons.cli.CommandLine;
+import org.arend.cli.LockedFlags;
 import org.arend.frontend.ConsoleMain;
 import org.arend.frontend.cli.CommandContext;
 import org.arend.frontend.cli.Dispatch;
-import org.arend.frontend.cli.daemon.LockedFlags;
-
-import java.nio.file.Path;
-import java.nio.file.Paths;
 
 /**
  * The daemon's policy on top of {@link Dispatch#run(CommandContext, String[])}: what a client is
@@ -44,31 +41,6 @@ public final class CliDispatcher {
       }
     }
 
-    return Dispatch.run(ctx, rebasePathOptions(args, clientCwd), clientCwd);
-  }
-
-  /**
-   * Rewrites relative values of path-valued options to the client's directory. Only
-   * {@code --log-file} needs it: the other path-valued options are all in {@link LockedFlags},
-   * fixed at bootstrap, and the positionals are rebased in
-   * {@code CliSetup.populateRequestedTargets}.
-   */
-  private static String[] rebasePathOptions(String[] args, String clientCwd) {
-    if (clientCwd == null) return args;
-    String[] out = args.clone();
-    for (int i = 0; i < out.length; i++) {
-      if ("--log-file".equals(out[i]) && i + 1 < out.length) {
-        out[i + 1] = rebase(out[i + 1], clientCwd);
-      } else if (out[i].startsWith("--log-file=")) {
-        out[i] = "--log-file=" + rebase(out[i].substring("--log-file=".length()), clientCwd);
-      }
-    }
-    return out;
-  }
-
-  private static String rebase(String value, String clientCwd) {
-    if (value.isEmpty()) return value;
-    Path path = Paths.get(value);
-    return path.isAbsolute() ? value : Paths.get(clientCwd).resolve(path).toString();
+    return Dispatch.run(ctx, args, clientCwd);
   }
 }
