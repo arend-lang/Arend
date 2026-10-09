@@ -1,6 +1,7 @@
 package org.arend.arc
 
 import com.intellij.psi.FileViewProvider
+import org.arend.ArendIcons
 import org.arend.ext.module.ModuleLocation
 import org.arend.psi.ArendFile
 
@@ -11,4 +12,7 @@ class ArcFile(viewProvider: FileViewProvider) : ArendFile(viewProvider) {
             generatedModuleLocation = ModuleLocation(it.libraryName, ModuleLocation.LocationKind.GENERATED, it.modulePath)
         }
     }
+
+    // Editor tabs and other places that show the PSI file, like ArcViewFileType for those that show the virtual file
+    override fun getIcon(flags: Int) = ArendIcons.ARC_FILE
 }

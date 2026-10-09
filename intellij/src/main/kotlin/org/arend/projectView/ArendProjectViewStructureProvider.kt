@@ -118,7 +118,7 @@ private class ArcDirectoryNode(project: Project,
 private class ArcViewNode(project: Project, file: ArcVirtualFile, settings: ViewSettings?) : ProjectViewNode<ArcVirtualFile>(project, file, settings) {
     override fun update(presentation: PresentationData) {
         presentation.presentableText = value.name
-        presentation.setIcon(ArendIcons.AREND_FILE)
+        presentation.setIcon(ArendIcons.ARC_FILE)
     }
 
     override fun getChildren(): MutableCollection<out AbstractTreeNode<*>> = mutableListOf()

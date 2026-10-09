@@ -12,6 +12,7 @@ import com.intellij.testFramework.PlatformTestUtil
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
+import org.arend.ArendIcons
 import org.arend.ArendTestBase
 import org.arend.ext.module.ModuleLocation
 import org.arend.ext.module.ModulePath
@@ -63,7 +64,11 @@ class ArcTest : ArendTestBase() {
         assertEquals("Main.arc", file.name)
         assertFalse(file.isWritable)
         assertTrue(file.isValid)
-        assertInstanceOf(PsiManager.getInstance(project).findFile(file), ArcFile::class.java)
+        val psiFile = PsiManager.getInstance(project).findFile(file)
+        assertInstanceOf(psiFile, ArcFile::class.java)
+        // Editor tabs show the .arc icon, as the project view does
+        assertSame(ArendIcons.ARC_FILE, file.fileType.icon)
+        assertSame(ArendIcons.ARC_FILE, psiFile!!.getIcon(0))
     }
 
     // There is a view for every .ard file and only for them: one whose source is deleted is not valid

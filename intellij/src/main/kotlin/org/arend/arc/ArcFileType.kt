@@ -31,7 +31,8 @@ class ArcViewFileType private constructor() : LanguageFileType(ArendLanguage.INS
 
     override fun getDefaultExtension(): String = ""
 
-    override fun getIcon() = ArendIcons.AREND_FILE
+    // Editor tabs of .arc views, like the views in the project view
+    override fun getIcon() = ArendIcons.ARC_FILE
 
     override fun isReadOnly(): Boolean = true
 

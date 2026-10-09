@@ -16,6 +16,8 @@ object ArendIcons {
     val AREND = getIcon("/icons/arend.svg")
     val AREND_MODULE = AllIcons.Nodes.AnonymousClass
     val AREND_FILE = getIcon("/icons/arend_file.svg")
+    // An .arc view; arc_dark.svg is used with a dark theme
+    val ARC_FILE = getIcon("/icons/arc.svg")
     val DIRECTORY = AllIcons.Nodes.Package
     val LIBRARY_ICON = AllIcons.Nodes.PpLib
     val YAML_KEY = AllIcons.Nodes.FieldPK
