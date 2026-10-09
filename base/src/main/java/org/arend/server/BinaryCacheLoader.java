@@ -31,6 +31,8 @@ public class BinaryCacheLoader {
   private final ErrorReporter myErrorReporter;
   private final Consumer<String> myLogger;
   private final Set<ModuleLocation> myBinaryCacheLoaded = new HashSet<>();
+  // What the last load did with each module of the library, for diagnostics: "loaded", or why it was not
+  private final Map<ModuleLocation, String> myOutcomes = new LinkedHashMap<>();
 
   /** Modules seen in an earlier pass; only first sight may load from {@code .arc}. */
   private final Set<ModuleLocation> mySeenModules = new HashSet<>();
@@ -57,6 +59,11 @@ public class BinaryCacheLoader {
    */
   public Set<ModuleLocation> getBinaryCacheLoaded() {
     return Collections.unmodifiableSet(myBinaryCacheLoaded);
+  }
+
+  /** @see #myOutcomes */
+  public Map<ModuleLocation, String> getOutcomes() {
+    return Collections.unmodifiableMap(myOutcomes);
   }
 
   /** @see #myLoadOrder */
@@ -116,12 +123,19 @@ public class BinaryCacheLoader {
       boolean firstSight = mySeenModules.add(module);
 
       StreamBinarySource binarySource = binarySourceProvider.apply(module);
-      if (binarySource == null) continue;
+      if (binarySource == null) {
+        myOutcomes.put(module, "no .arc");
+        continue;
+      }
       long arcTimestamp = binarySource.getTimeStamp();
-      if (arcTimestamp <= 0) continue;
+      if (arcTimestamp <= 0) {
+        myOutcomes.put(module, "no timestamp of the .arc");
+        continue;
+      }
 
       long rawTimestamp = rawTimestampProvider.applyAsLong(module);
       if (rawTimestamp > 0 && arcTimestamp < rawTimestamp) {
+        myOutcomes.put(module, "stale: the .arc (" + arcTimestamp + ") is older than the source (" + rawTimestamp + ")");
         // Its cores, if it has any, are invalidated per definition by
         // ArendCheckerImpl.resolveModules -- not wholesale here. Clearing the whole module
         // would drop definitions the edit did not touch, and every dependent holding one of
@@ -137,6 +151,7 @@ public class BinaryCacheLoader {
       // takes linarith and equation down with it.
       ConcreteGroup memGroup = myServer.getRawGroup(module);
       if (memGroup != null && hasTypechecked(memGroup)) {
+        myOutcomes.put(module, "kept: already in memory");
         myBinaryCacheLoaded.add(module);
         willBeLoaded.add(module.getModulePath());
         continue;
@@ -146,6 +161,7 @@ public class BinaryCacheLoader {
       // would put back exactly the state that was just thrown away -- and, because that replaces
       // the core without re-elaborating, never re-bind the metas that captured the old one.
       if (memGroup != null && !firstSight && hasTypecheckableDefinitions(memGroup)) {
+        myOutcomes.put(module, "invalidated since the last load");
         myBinaryCacheLoaded.remove(module);
         continue;
       }
@@ -156,8 +172,12 @@ public class BinaryCacheLoader {
         if (deser != null) {
           pending.add(new PendingBinaryLoad(module, deser, calleesInLibrary(deser, module.getModulePath(), libraryModules)));
           willBeLoaded.add(module.getModulePath());
+          myOutcomes.put(module, "candidate");
+        } else {
+          myOutcomes.put(module, "unreadable .arc");
         }
       } catch (Exception e) {
+        myOutcomes.put(module, "unreadable .arc: " + e);
         reportBinaryCacheError(myErrorReporter, module, "protobuf parsing", e);
         // The .arc exists but is unreadable. Drop any in-memory state a previous pass loaded
         // from it, for the same reason as the stale-mtime branch: without this, a module that
@@ -184,6 +204,7 @@ public class BinaryCacheLoader {
         for (ModulePath callee : load.callees) {
           if (!willBeLoaded.contains(callee)) {
             unusable.add(load.module);
+            myOutcomes.put(load.module, "dropped: calls into " + callee + ", which is not loaded");
             break;
           }
         }
@@ -211,6 +232,7 @@ public class BinaryCacheLoader {
         load.deserialization.readDefinitions(group);
         phase2b.add(load);
       } catch (Exception e) {
+        myOutcomes.put(load.module, "failed: definition shells: " + e);
         reportBinaryCacheError(myErrorReporter, load.module, "definition shell loading", e);
         clearTypechecked(group);
       }
@@ -234,7 +256,9 @@ public class BinaryCacheLoader {
         loaded++;
         myBinaryCacheLoaded.add(load.module);
         loadedLoads.add(load);
+        myOutcomes.put(load.module, "loaded");
       } catch (Exception e) {
+        myOutcomes.put(load.module, "failed: definition bodies: " + e);
         reportBinaryCacheError(myErrorReporter, load.module, "definition body loading", e);
         failed++;
         if (group != null) {
@@ -275,6 +299,7 @@ public class BinaryCacheLoader {
         ConcreteGroup group = myServer.getRawGroup(load.module);
         if (group != null) clearTypechecked(group);
         myBinaryCacheLoaded.remove(load.module);
+        myOutcomes.put(load.module, "incomplete: refers to a definition that is not loaded");
       }
       loadedLoads.removeAll(toClear);
       promotedToIncomplete += toClear.size();

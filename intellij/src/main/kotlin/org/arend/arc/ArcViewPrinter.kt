@@ -80,18 +80,24 @@ object ArcViewPrinter {
             null -> ""
             NotRegistered -> null
             is Source -> {
+                val start = System.nanoTime()
                 val group = getGroup(project, file, lookup, reporter)
                 val service = project.service<ArcViewService>()
                 if (group == null) {
                     readAction { service.setShown(file, shownState(null)) }
+                    ArcTrace.log("view ${lookup.module}: nothing to show, the server has not loaded the module")
                     ""
                 } else reporter.nextStep(100, ArendBundle.message("arend.arc.printing")) {
                     reportRawProgress { progress ->
-                        readAction {
-                            val text = print(project, group, lookup.arendFile, progress)
-                            service.setShown(file, shownState(group))
-                            text
+                        val (text, printTime) = ArcTrace.timedSuspend {
+                            readAction {
+                                val text = print(project, group, lookup.arendFile, progress)
+                                service.setShown(file, shownState(group))
+                                text
+                            }
                         }
+                        ArcTrace.log("view ${lookup.module}: printed in $printTime ms, total ${(System.nanoTime() - start) / 1_000_000} ms")
+                        text
                     }
                 }
             }
@@ -119,17 +125,31 @@ object ArcViewPrinter {
 
     private suspend fun getGroup(project: Project, file: ArcVirtualFile, source: Source, reporter: SequentialProgressReporter): ConcreteGroup? {
         val server = project.service<ArendServerService>().server
-        reporter.nextStep(30, ArendBundle.message("arend.arc.loading.cache", source.module.libraryName)) {
-            loadBinaryCache(project, source.module.libraryName)
-        }
-        reporter.nextStep(70, ArendBundle.message("arend.arc.typechecking", source.module.modulePath)) {
-            reportRawProgress { progress ->
-                val progressReporter = IntellijProgressReporter<List<Concrete.ResolvableDefinition>>(progress) {
-                    it.firstOrNull()?.data?.refLongName?.toString()
-                }
-                server.getCheckerFor(listOf(source.module)).typecheck(null, DummyErrorReporter.INSTANCE, CoroutineCancellationIndicator(this), progressReporter)
+        val library = source.module.libraryName
+        val (_, cacheTime) = ArcTrace.timedSuspend {
+            reporter.nextStep(30, ArendBundle.message("arend.arc.loading.cache", library)) {
+                loadBinaryCache(project, library)
             }
         }
+        val before = readAction { ArcTrace.snapshot(server) }
+        val (typechecked, typecheckTime) = ArcTrace.timedSuspend {
+            reporter.nextStep(70, ArendBundle.message("arend.arc.typechecking", source.module.modulePath)) {
+                reportRawProgress { progress ->
+                    val progressReporter = IntellijProgressReporter<List<Concrete.ResolvableDefinition>>(progress) {
+                        it.firstOrNull()?.data?.refLongName?.toString()
+                    }
+                    server.getCheckerFor(listOf(source.module)).typecheck(null, DummyErrorReporter.INSTANCE, CoroutineCancellationIndicator(this), progressReporter)
+                }
+            }
+        }
+        val changed = ArcTrace.changed(before, readAction { ArcTrace.snapshot(server) })
+        ArcTrace.log("view ${source.module}: binary cache step $cacheTime ms; typechecking $typecheckTime ms, " +
+            "$typechecked definitions typechecked in ${changed.size} modules" +
+            if (changed.isEmpty()) " (everything came from the binary cache or was already in memory)" else "")
+        for ((module, count) in changed.entries.sortedByDescending { it.value }.take(50)) {
+            ArcTrace.log("view   typechecked $module: $count definitions")
+        }
+        if (changed.size > 50) ArcTrace.log("view   ... and ${changed.size - 50} more modules")
         // Interrupted typechecking returns normally
         currentCoroutineContext().ensureActive()
 

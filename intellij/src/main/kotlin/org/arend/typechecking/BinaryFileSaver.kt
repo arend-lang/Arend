@@ -11,6 +11,7 @@ import com.intellij.openapi.progress.ProgressManager
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VfsUtil
 import com.intellij.openapi.vfs.VirtualFileManager
+import org.arend.arc.ArcTrace
 import org.arend.arc.ArcViewService
 import org.arend.ext.module.ModuleLocation
 import org.arend.module.config.LibraryConfig
@@ -21,7 +22,9 @@ import org.arend.source.GZIPStreamBinarySource
 import org.arend.typechecking.error.DeduplicatingErrorReporter
 import org.arend.typechecking.error.NotificationErrorReporter
 import org.arend.util.ArendBundle
+import org.arend.util.FileUtils
 import org.arend.util.findLibrary
+import java.nio.file.Files
 import java.nio.file.Path
 
 @Service(Service.Level.PROJECT)
@@ -38,6 +41,8 @@ class BinaryFileSaver(private val project: Project) {
     }
 
     private fun saveAll(indicator: ProgressIndicator?) {
+        val start = System.nanoTime()
+        val outcomes = LinkedHashMap<ModuleLocation, String>()
         val server = project.service<ArendServerService>().server
         val errorReporter = DeduplicatingErrorReporter(NotificationErrorReporter(project))
         val configs = HashMap<String, LibraryConfig?>()
@@ -50,15 +55,21 @@ class BinaryFileSaver(private val project: Project) {
         for ((index, module) in modules.withIndex()) {
             indicator?.checkCanceled()
             indicator?.fraction = index.toDouble() / modules.size
-            val target = runReadAction { targetFor(module, configs) } ?: continue
+            val target = runReadAction { targetFor(module, configs, outcomes) } ?: continue
 
             indicator?.text2 = module.toString()
             val binarySource = GZIPStreamBinarySource(FileBinarySource(target.binariesDir, module))
+            val existed = Files.exists(FileUtils.binaryFile(target.binariesDir, module.modulePath))
             if (runReadAction { binarySource.persist(server, errorReporter) }) {
                 persisted++
                 binariesDirs.add(target.binariesDir)
+                val counts = target.counts
+                outcomes[module] = (if (counts.typechecked == counts.total) "written" else
+                    if (counts.typechecked == 0) "written with nothing typechecked" else "written incomplete") +
+                    ": ${counts.typechecked} of ${counts.total} definitions typechecked" + if (existed) ", replacing the .arc" else ", new .arc"
             } else {
                 failed++
+                outcomes[module] = "failed to write"
             }
         }
 
@@ -67,18 +78,36 @@ class BinaryFileSaver(private val project: Project) {
             LOG.info("Binary cache: persisted $persisted module(s)" + if (failed > 0) ", $failed failed" else "")
         }
         refresh(binariesDirs)
+        traceSave(outcomes, (System.nanoTime() - start) / 1_000_000)
         project.serviceIfCreated<ArcViewService>()?.serverChanged()
     }
 
-    private class Target(val binariesDir: Path)
+    private class Target(val binariesDir: Path, val counts: ArcTrace.Counts)
 
-    private fun targetFor(module: ModuleLocation, configs: MutableMap<String, LibraryConfig?>): Target? {
+    private fun targetFor(module: ModuleLocation, configs: MutableMap<String, LibraryConfig?>, outcomes: MutableMap<ModuleLocation, String>): Target? {
         val server = project.service<ArendServerService>().server
-        val config = configs.getOrPut(module.libraryName) { project.findLibrary(module.libraryName) } ?: return null
-        val binariesDir = config.binariesDirPath ?: return null
-        val group = server.getRawGroup(module) ?: return null
-        if (!BinaryCacheFilter.isCacheable(group)) return null
-        return Target(binariesDir)
+        val config = configs.getOrPut(module.libraryName) { project.findLibrary(module.libraryName) }
+            ?: return null.also { outcomes[module] = "skipped: no library" }
+        val binariesDir = config.binariesDirPath ?: return null.also { outcomes[module] = "skipped: no binaries directory" }
+        val group = server.getRawGroup(module) ?: return null.also { outcomes[module] = "skipped: not in the server" }
+        val counts = ArcTrace.counts(group)
+        if (!BinaryCacheFilter.isCacheable(group)) {
+            outcomes[module] = "skipped: " + (if (counts.errors > 0) "${counts.errors} definitions with errors" else "${counts.goals} definitions with goals") +
+                ", ${counts.typechecked} of ${counts.total} typechecked"
+            return null
+        }
+        return Target(binariesDir, counts)
+    }
+
+    // How many modules each outcome of the save had, and every module that was not written whole
+    private fun traceSave(outcomes: Map<ModuleLocation, String>, time: Long) {
+        val byKind = outcomes.values.groupingBy { it.substringBefore(':') }.eachCount()
+        ArcTrace.log("save: ${outcomes.size} modules in $time ms: " + byKind.entries.sortedByDescending { it.value }.joinToString { "${it.value} ${it.key}" })
+        for ((module, outcome) in outcomes) {
+            if (!outcome.startsWith("written:")) {
+                ArcTrace.log("save:   $module: $outcome")
+            }
+        }
     }
 
     private fun refresh(binariesDirs: Collection<Path>) {
