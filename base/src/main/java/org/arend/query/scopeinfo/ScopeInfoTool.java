@@ -8,6 +8,7 @@ import org.arend.repl.Repl;
 import org.arend.naming.reference.LocatedReferable;
 import org.arend.naming.scope.Scope;
 import org.arend.server.ArendServer;
+import org.arend.server.ProgressReporter;
 import org.jetbrains.annotations.Nls;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -110,6 +111,10 @@ public final class ScopeInfoTool extends ConsoleQueryTool {
           if (options.json) JsonScopePrinter.writeEmpty(out, null);
           return 1;
         }
+        // What a class inherits comes from the typing info of its module and its superclasses',
+        // which resolving the module builds; until then the scope is only the names the module
+        // sees, as on a server that has checked nothing yet.
+        server.getCheckerFor(List.of(resolved.module())).resolveModules(ctx.cancellation(), ProgressReporter.empty());
         Scope scope = server.getReferableScope(resolved.referable());
         if (scope == null) {
           QueryConsole.err().println("[ERROR] No scope available at " + targetLabel(resolved, showLibrary));
