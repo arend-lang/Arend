@@ -395,7 +395,7 @@ class ExpectedConstructorQuickFixTest : QuickFixTestBase() {
         | cons{-caret-} => c.a 
     """, data11 + """
       \func foo {c : C} (f : Foo c) : Nat \elim c, f
-        | (0, 0), cons => a {\new C {  | a => 0  | b => 0}}
+        | (0, 0), cons => a {\new C { | a => 0 | b => 0 }}
     """)
 
     fun test69_21() = doTest(data3 + """

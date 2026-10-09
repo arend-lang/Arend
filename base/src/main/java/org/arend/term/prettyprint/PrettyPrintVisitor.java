@@ -34,13 +34,16 @@ import static org.arend.ext.prettyprinting.PrettyPrinterConfig.MAX_LEN;
 
 public class PrettyPrintVisitor implements ConcreteExpressionVisitor<Precedence, Void>, ConcreteLevelExpressionVisitor<Precedence, Void>, ConcreteResolvableDefinitionVisitor<Void, Void> {
   public static final int INDENT = 2;
-  public static final float SMALL_RATIO = (float) 0.25;
+  // A sub-visitor never gets less room than this, however deep it is nested
+  private static final int MIN_LINE_LENGTH = 40;
 
   protected final StringBuilder myBuilder;
   private final VariableTracker<Referable> myLevelVariables = new VariableTracker<>();
   protected int myIndent;
   private final boolean noIndent;
-  private final int myLineLength;
+  private int myLineLength;
+  // The column the first line of the text continues; the text of a sub-visitor starts in the middle of a line
+  private int myStartColumn;
   private final Deque<Map<String, ConcreteGroup>> myCoclauseGroupsStack = new ArrayDeque<>();
 
   public PrettyPrintVisitor(StringBuilder builder, int indent, boolean doIndent, int lineLength) {
@@ -71,22 +74,85 @@ public class PrettyPrintVisitor implements ConcreteExpressionVisitor<Precedence,
     return i >= 0 && sb.charAt(i) == '\n';
   }
 
-  static int charsSinceLastNewline(StringBuilder sb) {
-    for (int i = sb.length() - 1; i >= 0; i--) {
-      if (sb.charAt(i) == '\n') {
-        return sb.length() - i - 1;
+  // The number of spaces the last line of sb starts with
+  static int lineIndent(StringBuilder sb) {
+    int start = sb.lastIndexOf("\n") + 1;
+    int i = start;
+    while (i < sb.length() && sb.charAt(i) == ' ') {
+      i++;
+    }
+    return i - start;
+  }
+
+  static int firstLineLength(String s) {
+    int i = s.indexOf('\n');
+    return i < 0 ? s.length() : i;
+  }
+
+  // Whether the first line of the text ends with an opening brace
+  static boolean opensBlock(String text) {
+    return text.substring(0, firstLineLength(text)).stripTrailing().endsWith("{");
+  }
+
+  private void trimTrailingSpaces() {
+    int length = myBuilder.length();
+    while (length > 0 && myBuilder.charAt(length - 1) == ' ') {
+      length--;
+    }
+    myBuilder.setLength(length);
+  }
+
+  private void newLine(int indent) {
+    trimTrailingSpaces();
+    myBuilder.append('\n').repeat(" ", indent);
+  }
+
+  private int column() {
+    int i = myBuilder.lastIndexOf("\n");
+    return i < 0 ? myStartColumn + myBuilder.length() : myBuilder.length() - i - 1;
+  }
+
+  // The first line of the block continues the current line, the others are shifted by shift
+  private void appendBlock(String block, int shift) {
+    int start = 0;
+    while (true) {
+      int end = block.indexOf('\n', start);
+      if (end < 0) {
+        myBuilder.append(block, start, block.length());
+        return;
+      }
+      myBuilder.append(block, start, end);
+      trimTrailingSpaces();
+      myBuilder.append('\n');
+      start = end + 1;
+      if (start < block.length() && block.charAt(start) != '\n') {
+        myBuilder.repeat(" ", shift);
       }
     }
-    return sb.length();
+  }
+
+  /**
+   * A visitor that prints a part of the text into {@code builder}, so that it can be measured before it is placed.
+   * The part will be appended with {@link #appendBlock} at {@code startColumn}, with the given shift, and it is
+   * printed in these coordinates: its continuation lines start at indent 0.
+   */
+  private PrettyPrintVisitor subVisitor(StringBuilder builder, int shift, int startColumn) {
+    PrettyPrintVisitor visitor = copy(builder, 0, !noIndent);
+    visitor.myLineLength = Math.max(MIN_LINE_LENGTH, myLineLength - shift);
+    visitor.myStartColumn = Math.max(0, startColumn - shift);
+    return visitor;
   }
 
   public void updateVisitor(PrettyPrintVisitor newVisitor, PrettyPrintVisitor oldVisitor) {
-    if ((charsSinceLastNewline(oldVisitor.myBuilder) + newVisitor.myBuilder.length() > oldVisitor.myLineLength || newVisitor.myBuilder.length() > oldVisitor.myLineLength) &&
+    String text = newVisitor.myBuilder.toString();
+    int shift = lineIndent(oldVisitor.myBuilder);
+    if (oldVisitor.column() + firstLineLength(text) > oldVisitor.myLineLength &&
             !oldVisitor.myBuilder.isEmpty() &&
             !endsWithNewlineAndIndent(oldVisitor.myBuilder)) {
-      oldVisitor.myBuilder.append('\n');
+      shift += INDENT;
+      oldVisitor.newLine(shift);
     }
-    oldVisitor.myBuilder.append(newVisitor.myBuilder);
+    oldVisitor.appendBlock(text, shift);
   }
 
   public void printExpr(Concrete.Expression expr, Precedence prec) {
@@ -831,6 +897,43 @@ public class PrettyPrintVisitor implements ConcreteExpressionVisitor<Precedence,
     if (needParens) myBuilder.append('(');
     PrettyPrintVisitor ppVisitor;
     Precedence leftPrec = infixPrec.associativity != Precedence.Associativity.LEFT_ASSOC ? new Precedence(Precedence.Associativity.NON_ASSOC, infixPrec.priority, infixPrec.isInfix) : infixPrec;
+    Precedence rightPrec = infixPrec.associativity != Precedence.Associativity.RIGHT_ASSOC ? new Precedence(Precedence.Associativity.NON_ASSOC, infixPrec.priority, infixPrec.isInfix) : infixPrec;
+    if (left != null && right != null) {
+      StringBuilder opBuilder = new StringBuilder();
+      PrettyPrintVisitor opVisitor = copy(opBuilder, 0, !noIndent);
+      opVisitor.printReferenceName(infix, null);
+      for (Concrete.Argument arg : implicitArgs) {
+        opVisitor.myBuilder.append(" {");
+        opVisitor.printExpr(arg.expression, new Precedence(Expression.PREC));
+        opVisitor.printClosingBrace();
+      }
+      String opText = opBuilder.toString();
+
+      new BinOpLayout() {
+        @Override
+        void printLeft(PrettyPrintVisitor pp) {
+          pp.printExpr(left, leftPrec);
+        }
+
+        @Override
+        void printRight(PrettyPrintVisitor pp) {
+          pp.printExpr(right, rightPrec);
+        }
+
+        @Override
+        String getOpText() {
+          return opText;
+        }
+
+        @Override
+        boolean hangMultiLineRight() {
+          return false;
+        }
+      }.doPrettyPrint(this, noIndent);
+      if (needParens) myBuilder.append(')');
+      return leftPrec;
+    }
+
     if (left != null) {
       printExpr(left, leftPrec);
       ppVisitor = this;
@@ -845,7 +948,6 @@ public class PrettyPrintVisitor implements ConcreteExpressionVisitor<Precedence,
       ppVisitor.printClosingBrace();
     }
     ppVisitor.myBuilder.append(' ');
-    Precedence rightPrec = infixPrec.associativity != Precedence.Associativity.RIGHT_ASSOC ? new Precedence(Precedence.Associativity.NON_ASSOC, infixPrec.priority, infixPrec.isInfix) : infixPrec;
     if (right != null) {
       PrettyPrintVisitor rightVisitor = copy(new StringBuilder(), myIndent, !noIndent);
       rightVisitor.printExpr(right, rightPrec);
@@ -876,6 +978,10 @@ public class PrettyPrintVisitor implements ConcreteExpressionVisitor<Precedence,
     if (clause == null) return;
 
     printIndent();
+    prettyPrintClauseLine(clause);
+  }
+
+  private void prettyPrintClauseLine(Concrete.FunctionClause clause) {
     myBuilder.append("| ");
 
     if (clause.getExpression() != null) {
@@ -911,7 +1017,15 @@ public class PrettyPrintVisitor implements ConcreteExpressionVisitor<Precedence,
       }
     }
 
-    if (!clauses.isEmpty()) {
+    if (!clauses.isEmpty() && noIndent && needBraces) {
+      myBuilder.append(" {");
+      for (Concrete.FunctionClause clause : clauses) {
+        if (clause == null) continue;
+        myBuilder.append(' ');
+        prettyPrintClauseLine(clause);
+      }
+      myBuilder.append(" }");
+    } else if (!clauses.isEmpty()) {
       if (needBraces) myBuilder.append(" {\n"); else myBuilder.append("\n");
       myIndent += INDENT;
       for (int i=0; i<clauses.size(); i++) {
@@ -961,7 +1075,6 @@ public class PrettyPrintVisitor implements ConcreteExpressionVisitor<Precedence,
     }
     myBuilder.append(" \\with");
     prettyPrintClauses(Collections.emptyList(), expr.getClauses(), true);
-    myIndent -= INDENT;
     if (prec.priority > Concrete.CaseExpression.PREC) myBuilder.append(')');
     return null;
   }
@@ -1004,6 +1117,51 @@ public class PrettyPrintVisitor implements ConcreteExpressionVisitor<Precedence,
   }
 
   public void prettyprintCoclauses(Concrete.Coclauses coclauses) {
+    if (!noIndent && coclauses != null && !coclauses.getCoclauseList().isEmpty()) {
+      // On one line if it fits there, or else one implementation per line
+      int base = lineIndent(myBuilder);
+      int indent = base + INDENT;
+      List<String> implementations = new ArrayList<>();
+      boolean fitsOnLine = true;
+      int length = "{ }".length();
+      for (Concrete.ClassFieldImpl classFieldImpl : coclauses.getCoclauseList()) {
+        StringBuilder sb = new StringBuilder();
+        subVisitor(sb, indent, indent + "| ".length()).prettyPrintClassFieldImpl(classFieldImpl);
+        String implementation = sb.toString();
+        if (implementation.indexOf('\n') >= 0) fitsOnLine = false;
+        length += " | ".length() + implementation.length();
+        implementations.add(implementation);
+      }
+
+      if (fitsOnLine && column() + length <= myLineLength) {
+        myBuilder.append("{");
+        for (String implementation : implementations) {
+          myBuilder.append(" | ").append(implementation);
+        }
+        myBuilder.append(" }");
+      } else {
+        myBuilder.append("{");
+        for (String implementation : implementations) {
+          newLine(indent);
+          myBuilder.append("| ");
+          appendBlock(implementation, indent);
+        }
+        newLine(base);
+        myBuilder.append("}");
+      }
+      return;
+    }
+
+    if (noIndent && coclauses != null && !coclauses.getCoclauseList().isEmpty()) {
+      myBuilder.append("{");
+      for (Concrete.ClassFieldImpl classFieldImpl : coclauses.getCoclauseList()) {
+        myBuilder.append(" | ");
+        prettyPrintClassFieldImpl(classFieldImpl);
+      }
+      myBuilder.append(" }");
+      return;
+    }
+
     myBuilder.append("{");
     if (coclauses != null && !coclauses.getCoclauseList().isEmpty()) {
       myIndent += INDENT;
@@ -1055,7 +1213,7 @@ public class PrettyPrintVisitor implements ConcreteExpressionVisitor<Precedence,
       new BinOpLayout() {
         @Override
         void printLeft(PrettyPrintVisitor pp) {
-          myBuilder.append(" : ");
+          pp.myBuilder.append(" : ");
           pp.printExpr(letClause.getResultType(), new Precedence(Concrete.Expression.PREC));
         }
 
@@ -1077,33 +1235,38 @@ public class PrettyPrintVisitor implements ConcreteExpressionVisitor<Precedence,
 
   @Override
   public Void visitLet(Concrete.LetExpression expr, Precedence prec) {
-    if (prec.priority > Concrete.LetExpression.PREC) myBuilder.append('(');
-    myBuilder.append("\n");
-    myIndent += INDENT;
-    printIndent();
+    boolean parens = prec.priority > Concrete.LetExpression.PREC;
     String let = expr.isHave() ? (expr.isStrict() ? "\\have! " : "\\have ") : (expr.isStrict() ? "\\let! " : "\\let ");
-    myBuilder.append(let);
+    List<? extends Concrete.LetClause> clauses = expr.getClauses();
 
-    final int INDENT0 = let.length();
-    myIndent += INDENT0;
-    for (int i = 0; i < expr.getClauses().size(); ++i) {
-      prettyPrintLetClause(expr.getClauses().get(i), expr.getClauses().size() > 1);
-      myBuilder.append("\n");
-      if (i == expr.getClauses().size() - 1) {
-        myIndent -= INDENT0;
+    if (noIndent) {
+      if (parens) myBuilder.append('(');
+      myBuilder.append(let);
+      for (int i = 0; i < clauses.size(); i++) {
+        if (i > 0) myBuilder.append(' ');
+        prettyPrintLetClause(clauses.get(i), clauses.size() > 1);
       }
-      printIndent();
+      myBuilder.append(" \\in ");
+      printExpr(expr.getExpression(), new Precedence(Concrete.LetExpression.PREC));
+      if (parens) myBuilder.append(')');
+      return null;
     }
 
-    String in = "\\in ";
-    myBuilder.append(in);
-    final int INDENT1 = in.length();
-    myIndent += INDENT1;
+    // A \let starts a line, and its clauses and \in are aligned with it
+    if (!endsWithNewlineAndIndent(myBuilder)) {
+      newLine(lineIndent(myBuilder) + INDENT);
+    }
+    if (parens) myBuilder.append('(');
+    int column = column();
+    myBuilder.append(let);
+    for (int i = 0; i < clauses.size(); i++) {
+      if (i > 0) newLine(column + let.length());
+      prettyPrintLetClause(clauses.get(i), clauses.size() > 1);
+    }
+    newLine(column);
+    myBuilder.append("\\in ");
     printExpr(expr.getExpression(), new Precedence(Concrete.LetExpression.PREC));
-    myIndent -= INDENT1;
-    myIndent -= INDENT;
-
-    if (prec.priority > Concrete.LetExpression.PREC) myBuilder.append(')');
+    if (parens) myBuilder.append(')');
     return null;
   }
 
@@ -1269,6 +1432,11 @@ public class PrettyPrintVisitor implements ConcreteExpressionVisitor<Precedence,
       String getOpText() {
         return ":";
       }
+
+      @Override
+      boolean hangMultiLineRight() {
+        return false;
+      }
     };
 
     return new BinOpLayout() {
@@ -1322,8 +1490,10 @@ public class PrettyPrintVisitor implements ConcreteExpressionVisitor<Precedence,
     }
     myIndent += INDENT;
 
-    myBuilder.append(' ');
-    prettyPrintEliminatedReferences(def.getEliminatedReferences(), true);
+    if (def.getEliminatedReferences() != null) {
+      myBuilder.append(' ');
+      prettyPrintEliminatedReferences(def.getEliminatedReferences(), true);
+    }
 
     for (int i=0; i<def.getConstructorClauses().size(); i++) {
       Concrete.ConstructorClause clause = def.getConstructorClauses().get(i);
@@ -1614,12 +1784,33 @@ public class PrettyPrintVisitor implements ConcreteExpressionVisitor<Precedence,
       default -> myBuilder.append("| ");
     }
     prettyPrintNameWithPrecedence(field.getData());
-    if (!field.getParameters().isEmpty()) {
-      myBuilder.append(" ");
-      prettyPrintParameters(field.getParameters());
-    }
-    myBuilder.append(" : ");
-    printTypeLevel(field.getResultType(), field.getResultTypeLevel());
+    myBuilder.append(" ");
+    new BinOpLayout() {
+      @Override
+      void printLeft(PrettyPrintVisitor pp) {
+        pp.prettyPrintParameters(field.getParameters());
+      }
+
+      @Override
+      void printRight(PrettyPrintVisitor pp) {
+        pp.printTypeLevel(field.getResultType(), field.getResultTypeLevel());
+      }
+
+      @Override
+      boolean printSpaceBefore() {
+        return !field.getParameters().isEmpty();
+      }
+
+      @Override
+      String getOpText() {
+        return ":";
+      }
+
+      @Override
+      boolean hangMultiLineRight() {
+        return false;
+      }
+    }.doPrettyPrint(this, noIndent);
   }
 
   public void prettyPrintOverridden(Concrete.OverriddenField field) {
@@ -1685,8 +1876,10 @@ public class PrettyPrintVisitor implements ConcreteExpressionVisitor<Precedence,
   public Void visitMeta(Concrete.MetaDefinition def, Void params) {
     myBuilder.append("\\meta ");
     prettyPrintNameWithPrecedence(def.getData());
-    myBuilder.append(" ");
-    prettyPrintParameters(def.getParameters());
+    if (!def.getParameters().isEmpty()) {
+      myBuilder.append(" ");
+      prettyPrintParameters(def.getParameters());
+    }
     if (def.body == null) {
       return null;
     }
@@ -1801,69 +1994,64 @@ public class PrettyPrintVisitor implements ConcreteExpressionVisitor<Precedence,
         return;
       }
 
-      int rem = -1;
-      int indent = 0;
-      int totalLength = 0;
-      boolean isMultLine = false;
-      boolean splitMultiLineArgs;
-      for (E e : l) {
+      // The list goes on the current line if it fits there; or else only the continuation lines of its last element
+      // do not, or the last element itself; or else each element goes on its own line
+      if (l.isEmpty()) return;
+      String separator = getSeparator();
+      boolean canJoin = separator.indexOf('\n') < 0;
+      int base = lineIndent(pp.myBuilder);
+      int indent = base + INDENT;
+      List<String> elements = new ArrayList<>(l.size());
+      boolean initialSingleLine = true; // all the elements but the last one
+      int initialLength = (l.size() - 1) * separator.length();
+      for (int i = 0; i < l.size(); i++) {
         StringBuilder sb = new StringBuilder();
-        PrettyPrintVisitor ppv = pp.copy(sb, 0, !pp.noIndent);
-        printListElement(ppv, e);
-
-        String[] strs = sb.toString().split("[\\r\\n]+");
-        int sz = strs.length;
-
-        int strsLength = 0;
-        for (String str : strs) {
-          strsLength += str.trim().length();
+        printListElement(pp.subVisitor(sb, indent, indent), l.get(i));
+        String element = sb.toString();
+        if (i < l.size() - 1) {
+          if (element.indexOf('\n') >= 0) initialSingleLine = false;
+          initialLength += element.length();
         }
-        totalLength += strsLength;
-        splitMultiLineArgs = false;
-        if (sz > 1) {
-          //This heuristic enforces line break if both the present and the previous arguments were multi-line
-          if (isMultLine) {
-            splitMultiLineArgs = true;
-          }
-          isMultLine = true;
-        } else {
-          isMultLine = false;
-        }
-
-        if (rem != -1) {
-          String separator = getSeparator();
-
-          pp.myBuilder.append(separator.trim());
-          if (strsLength > pp.myLineLength || splitMultiLineArgs) {
-            if (indent == 0) pp.myIndent += INDENT;
-            indent = INDENT;
-            pp.myBuilder.append('\n');
-            rem = 0;
-          } else {
-            pp.myBuilder.append(' ');
-            rem++;
-          }
-        }
-
-        for (int i = 0; i < sz; i++) {
-          String str = strs[i];
-          if (rem == 0) pp.printIndent();
-          if ((charsSinceLastNewline(pp.myBuilder) + str.length() > pp.myLineLength || str.length() > pp.myLineLength) &&
-                  !pp.myBuilder.isEmpty() &&
-                  !endsWithNewlineAndIndent(pp.myBuilder)) {
-            pp.myBuilder.append('\n');
-            rem = 0;
-          }
-          pp.myBuilder.append(str);
-          rem += str.trim().length();
-          if (rem > pp.myLineLength && i < sz - 1) {
-            pp.myBuilder.append('\n');
-            rem = 0;
-          }
-        }
+        elements.add(element);
       }
-      if (totalLength > pp.myLineLength && !endsWithNewlineAndIndent(pp.myBuilder)) {
-        pp.myBuilder.append('\n');
+      String last = elements.getLast();
+
+      // On the current line, except for the continuation lines of the last element
+      int column = pp.column();
+      if (canJoin && initialSingleLine && column + initialLength + firstLineLength(last) <= pp.myLineLength) {
+        for (int i = 0; i < elements.size() - 1; i++) {
+          pp.myBuilder.append(elements.get(i)).append(separator);
+        }
+        // A block ends at the indentation of the line it starts on; other continuation lines are indented
+        pp.appendBlock(last, opensBlock(last) ? base : indent);
+        return;
+      }
+
+      // On the current line, except for the last element, which goes on a continuation line
+      if (canJoin && initialSingleLine && elements.size() > 1 && column + initialLength - separator.length() <= pp.myLineLength) {
+        for (int i = 0; i < elements.size() - 1; i++) {
+          if (i > 0) pp.myBuilder.append(separator);
+          pp.myBuilder.append(elements.get(i));
+        }
+        pp.myBuilder.append(separator.trim());
+        pp.newLine(indent);
+        pp.appendBlock(last, indent);
+        return;
+      }
+
+      String trimmedSeparator = separator.trim();
+      for (int i = 0; i < elements.size(); i++) {
+        String element = elements.get(i);
+        int shift = indent;
+        if (i > 0) {
+          pp.myBuilder.append(trimmedSeparator);
+          pp.newLine(indent);
+        } else if (column > indent && column + firstLineLength(element) > pp.myLineLength) {
+          pp.newLine(indent);
+        } else {
+          shift = base;
+        }
+        pp.appendBlock(element, shift);
       }
     }
   }
@@ -1875,93 +2063,81 @@ public class PrettyPrintVisitor implements ConcreteExpressionVisitor<Precedence,
     boolean printSpaceBefore() {return true;}
     boolean printSpaceAfter() {return true;}
 
-    boolean doHyphenation(int leftLen, int rightLen, int lineLength) {
-      if (leftLen == 0) leftLen = 1; if (leftLen > lineLength) return true;
-      if (rightLen == 0) rightLen = 1; if (rightLen > lineLength) return true;
-      double ratio = ((double) rightLen) / leftLen;
-      if (ratio > 1.0) ratio = 1/ratio;
-
-      int myMaxLen = (ratio > SMALL_RATIO) ? lineLength : Math.round(lineLength * (1 + SMALL_RATIO));
-
-      return (leftLen + rightLen + getOpText().trim().length() + 1 > myMaxLen);
-    }
-
-    boolean increaseIndent(List<String> rhs_strings) {
-      return !(!rhs_strings.isEmpty() && spacesCount(rhs_strings.get(0)) > 0 || rhs_strings.size() > 1 && spacesCount(rhs_strings.get(1)) > 0);
-    }
-
-    public static int spacesCount(String s) {
-      int i = 0;
-      for (; i<s.length(); i++) if (s.charAt(i) != ' ') break;
-      return i;
-    }
-
     public void doPrettyPrint(PrettyPrintVisitor ppv_default, boolean disabled) {
       if (disabled) {
+        StringBuilder builder = ppv_default.myBuilder;
+        int start = builder.length();
         printLeft(ppv_default);
-        if (printSpaceBefore()) ppv_default.myBuilder.append(" ");
-        ppv_default.myBuilder.append(getOpText().trim());
-        if (printSpaceAfter()) ppv_default.myBuilder.append(" ");
+        boolean leftIsEmpty = builder.length() == start;
+        String op = getOpText().trim();
+        if (printSpaceBefore() && !(leftIsEmpty && op.isEmpty())) builder.append(" ");
+        builder.append(op);
+        if (printSpaceAfter() && !(op.isEmpty() && (leftIsEmpty || printSpaceBefore()))) builder.append(" ");
+        int rightStart = builder.length();
         printRight(ppv_default);
+        if (builder.length() == rightStart) {
+          ppv_default.trimTrailingSpaces();
+        } else if (builder.charAt(rightStart) == '\n') {
+          // Clauses of a definition start on a new line even in this mode
+          int i = rightStart;
+          while (i > 0 && builder.charAt(i - 1) == ' ') i--;
+          builder.delete(i, rightStart);
+        }
         return;
       }
 
+      int base = lineIndent(ppv_default.myBuilder);
+      int rightIndent = base + INDENT;
+      String op = getOpText().trim();
+      String spaceAfter = printSpaceAfter() ? " " : "";
       StringBuilder lhs = new StringBuilder();
       StringBuilder rhs = new StringBuilder();
-      PrettyPrintVisitor ppv_left = ppv_default.copy(lhs, 0, !ppv_default.noIndent);
-      PrettyPrintVisitor ppv_right = ppv_default.copy(rhs, 0, !ppv_default.noIndent);
+      printLeft(ppv_default.subVisitor(lhs, base, ppv_default.column()));
+      // The right side is printed for a continuation line, so that it fits there; it gets more room if it hangs
+      printRight(ppv_default.subVisitor(rhs, rightIndent, rightIndent + (op.isEmpty() ? 0 : op.length() + spaceAfter.length())));
+      String left = lhs.toString();
+      String right = rhs.toString();
 
-      //TODO: I don't like this implementation for it works quadratically wrt to the total number of binary operations
-      printLeft(ppv_left);
-      printRight(ppv_right);
+      String separator = op.isEmpty()
+        ? (left.isEmpty() || right.isEmpty() || !printSpaceBefore() && !printSpaceAfter() ? "" : " ")
+        : (printSpaceBefore() && !left.isEmpty() ? " " : "") + op + spaceAfter;
+      boolean leftSingleLine = left.indexOf('\n') < 0;
+      boolean rightSingleLine = right.indexOf('\n') < 0;
 
-
-      List<String> lhs_strings = new ArrayList<>(); Collections.addAll(lhs_strings, lhs.toString().split("[\\r\\n]+"));
-      List<String> rhs_strings = new ArrayList<>(); Collections.addAll(rhs_strings, rhs.toString().split("[\\r\\n]+"));
-
-      int lhs_sz = lhs_strings.size();
-      int rhs_sz = rhs_strings.size();
-
-      int leftLen = lhs_sz == 0 ? 0 : lhs_strings.get(lhs_sz-1).trim().length();
-      int rightLen = rhs_sz == 0 ? 0 : rhs_strings.getFirst().trim().length();
-
-      boolean hyph = doHyphenation(leftLen, rightLen, ppv_default.myLineLength) && !(rhs_sz > 0 && rhs_strings.getFirst().isEmpty());
-
-      for (int i=0; i<lhs_sz; i++) {
-        String s = lhs_strings.get(i);
-        if (i>0) ppv_default.printIndent(); ppv_default.myBuilder.append(s);
-        if (i<lhs_sz-1) ppv_default.myBuilder.append('\n');
+      // Everything on the current line
+      if (leftSingleLine && rightSingleLine &&
+          ppv_default.column() + left.length() + separator.length() + right.length() <= ppv_default.myLineLength) {
+        ppv_default.myBuilder.append(left).append(separator).append(right);
+        return;
       }
 
-      boolean ii = increaseIndent(rhs_strings);
+      ppv_default.appendBlock(left, base);
+      if (right.isEmpty()) {
+        ppv_default.myBuilder.append(separator);
+        ppv_default.trimTrailingSpaces();
+        return;
+      }
 
-      // When hyphenating, keep the operator attached to the right-hand side on the new line
-      // instead of leaving it dangling at the end of the left-hand side.
-      if (hyph) {
-        ppv_default.myBuilder.append('\n');
-        if (ii) ppv_default.myIndent += INDENT;
-        ppv_default.printIndent();
-        ppv_default.myBuilder.append(getOpText().trim());
-        if (printSpaceAfter()) ppv_default.myBuilder.append(' ');
+      // The right side starts on the line where the left one ends, or else on a continuation line, after the operator
+      boolean canHang = rightSingleLine || hangMultiLineRight() || leftSingleLine && opensBlock(right);
+      if (canHang && ppv_default.column() + separator.length() + firstLineLength(right) <= ppv_default.myLineLength) {
+        ppv_default.myBuilder.append(separator);
+        ppv_default.appendBlock(right, base);
       } else {
-        if (printSpaceBefore()) ppv_default.myBuilder.append(' ');
-        ppv_default.myBuilder.append(getOpText().trim());
-        if (printSpaceAfter()) ppv_default.myBuilder.append(' ');
-        if (ii) ppv_default.myIndent += INDENT;
-      }
-
-      for (int i=0; i<rhs_sz; i++) {
-        String s = rhs_strings.get(i);
-
-        if (i>0) {
-          ppv_default.printIndent();
+        ppv_default.newLine(rightIndent);
+        if (!op.isEmpty()) {
+          ppv_default.myBuilder.append(op).append(spaceAfter);
         }
-
-        ppv_default.myBuilder.append(s);
-
-        if (i<rhs_strings.size()-1) ppv_default.myBuilder.append('\n');
+        ppv_default.appendBlock(right, rightIndent);
       }
-      if (ii) ppv_default.myIndent-=INDENT;
+    }
+
+    /**
+     * Whether a right side that takes several lines can start on the line of the left side. If it cannot, it can
+     * only when it is a block, that is, its first line ends with an opening brace.
+     */
+    boolean hangMultiLineRight() {
+      return true;
     }
   }
 

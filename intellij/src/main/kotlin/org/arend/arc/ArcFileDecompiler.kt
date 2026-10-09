@@ -33,6 +33,7 @@ import org.arend.error.DummyErrorReporter
 import org.arend.ext.module.ModuleLocation
 import org.arend.ext.module.ModulePath
 import org.arend.ext.prettyprinting.PrettyPrinterConfig
+import org.arend.ext.prettyprinting.PrettyPrinterFlag
 import org.arend.module.config.ArendModuleConfigService
 import org.arend.module.serialization.MissingDependencyException
 import org.arend.naming.reference.LocatedReferable
@@ -62,6 +63,7 @@ import org.arend.util.FileUtils.SERIALIZED_EXTENSION
 import org.arend.util.arendModules
 import org.arend.util.getRelativeFile
 import org.arend.util.getRelativePath
+import java.util.EnumSet
 import kotlin.collections.iterator
 
 class ArcFileDecompiler : BinaryFileDecompiler {
@@ -95,6 +97,10 @@ class ArcFileDecompiler : BinaryFileDecompiler {
 
     companion object {
         private val LOG = logger<ArcFileDecompiler>()
+
+        // The text is for reading: it leaves out what the typechecker inferred (implicit arguments, parameters of
+        // constructors, types of lambda parameters, levels, coercions) and proofs
+        private val READER_FLAGS = EnumSet.of(PrettyPrinterFlag.SHOW_LOCAL_FIELD_INSTANCE)
 
         private sealed interface Lookup
 
@@ -208,6 +214,7 @@ class ArcFileDecompiler : BinaryFileDecompiler {
             val config = PrettyPrinterConfigWithRenamer(
                 CachingScope.make(module.arendFile?.scope ?: LexicalScope.opened(group) ?: EmptyScope.INSTANCE)
             )
+            config.expressionFlags = EnumSet.copyOf(READER_FLAGS)
 
             val statements = group.statements
             for ((i, statement) in statements.withIndex()) {

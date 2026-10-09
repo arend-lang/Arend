@@ -94,10 +94,7 @@ class ArendRevealingTest : ArendTestBase() {
             \record R { | r : 1 = 1 }
             \func foo : R { | r => idp } => {?}""",
                 """
-                Expected type:
-                  R {
-                    | r => {?hi{-caret-}dden}
-                  }
+                Expected type: R { | r => {?hi{-caret-}dden} }
             """.trimIndent(), "{?hidden}"
         )
     }
@@ -108,10 +105,7 @@ class ArendRevealingTest : ArendTestBase() {
             \record R { \field r : 1 = 1 }
             \func foo : R { | r => idp } => {?}""",
                 """
-                Expected type:
-                  R {
-                    | r => i{-caret-}dp
-                  }
+                Expected type: R { | r => i{-caret-}dp }
             """.trimIndent(), "idp"
         )
     }
@@ -122,10 +116,7 @@ class ArendRevealingTest : ArendTestBase() {
             \record R { \field r : 1 = 1 }
             \func foo : R { | r => idp } => {?}""",
                 """
-                Expected type:
-                  R {
-                    | r => {-caret-}idp
-                  }
+                Expected type: R { | r => {-caret-}idp }
             """.trimIndent(), "idp"
         )
     }
