@@ -2,11 +2,10 @@ package org.arend.arc
 
 import com.intellij.openapi.application.runWriteAction
 import com.intellij.openapi.components.service
+import com.intellij.openapi.editor.Document
 import com.intellij.openapi.editor.event.DocumentEvent
 import com.intellij.openapi.editor.event.DocumentListener
 import com.intellij.openapi.fileEditor.FileDocumentManager
-import com.intellij.openapi.vfs.LocalFileSystem
-import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.psi.PsiDocumentManager
 import com.intellij.psi.PsiManager
 import com.intellij.testFramework.PlatformTestUtil
@@ -14,118 +13,182 @@ import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
 import org.arend.ArendTestBase
-import org.arend.core.definition.FunctionDefinition
 import org.arend.ext.module.ModuleLocation
 import org.arend.ext.module.ModulePath
 import org.arend.module.config.ArendModuleConfigService
-import org.arend.naming.reference.TCDefReferable
 import org.arend.server.ArendServerService
+import org.arend.server.ProgressReporter
 import org.arend.typechecking.ArendBinaryCacheService
+import org.arend.typechecking.computation.UnstoppableCancellationIndicator
 import org.arend.util.ArendBundle
-import java.io.File
-import java.nio.file.Files
 import java.util.concurrent.atomic.AtomicInteger
 
 class ArcTest : ArendTestBase() {
-    override var dataPath = "org/arend/arc"
+    // The project is shared by the tests, and the file system keeps the views of a project with their texts
+    override fun setUp() {
+        super.setUp()
+        ArcFileSystem.getInstance().forget(project)
+    }
 
-    private fun waitForDecompilation() {
-        PlatformTestUtil.waitWithEventsDispatching("Decompilation did not finish", { !project.service<ArcDecompilationService>().isDecompiling }, 60)
+    private val location: ModuleLocation
+        get() = ModuleLocation(module.name, ModuleLocation.LocationKind.SOURCE, ModulePath("Main"))
+
+    private fun view(name: String = "Main") = ArcFileSystem.getInstance().findFile(project, module.name, ModulePath(name))
+
+    private fun prepare(file: ArcVirtualFile): String? =
+        // prepare takes read actions, so it runs off the EDT
+        runBlocking(Dispatchers.Default) { ArcViewPrinter.prepare(project, file) }
+
+    private fun waitForPreparation() {
+        PlatformTestUtil.waitWithEventsDispatching("The view was not prepared", { !project.service<ArcViewService>().isPreparing }, 60)
+    }
+
+    // Opening a view in an editor activates it, which prepares it
+    private fun show(file: ArcVirtualFile): Document {
+        myFixture.openFileInEditor(file)
+        return FileDocumentManager.getInstance().getDocument(file)!!
+    }
+
+    private fun waitForText(document: Document, text: String) {
+        PlatformTestUtil.waitWithEventsDispatching({ "The view does not show `$text`: ${document.text}" }, { document.text.contains(text) }, 60)
+        waitForPreparation()
+    }
+
+    // A view is a file of ArcFileSystem, the same one for the same module, whether its .arc on disk exists or not
+    fun `test view is a file of the arc file system`() {
+        InlineFile("\\func g => 1")
+        val file = view()
+        assertSame(file, ArcFileSystem.getInstance().findFileByPath(file.path))
+        assertSame(file, view())
+        assertEquals("Main.arc", file.name)
+        assertFalse(file.isWritable)
+        assertTrue(file.isValid)
+        assertInstanceOf(PsiManager.getInstance(project).findFile(file), ArcFile::class.java)
+    }
+
+    // There is a view for every .ard file and only for them: one whose source is deleted is not valid
+    fun `test view of a module without a source is not valid`() {
+        val source = InlineFile("\\func g => 1").psiFile.virtualFile
+        val file = view()
+        assertTrue(file.isValid)
+        runWriteAction { source.delete(this) }
+        assertFalse(file.isValid)
+        assertFalse(view("Missing").isValid)
     }
 
     /**
-     * Runs [action] on a copy of Test.arc on disk, so that the copy has no document yet, and editing its
-     * document cannot leak into the other tests or onto the fixture.
+     * Only a view that is shown is prepared: the project view lists a view for every module, and the platform reads
+     * files it does not show (editors restored but not selected), which must not typecheck their modules.
      */
-    private fun withArcCopy(name: String, action: (VirtualFile) -> Unit) {
-        val dir = Files.createTempDirectory("arc-test")
-        try {
-            val copy = Files.copy(File("$testDataPath/Test.arc").toPath(), dir.resolve(name))
-            action(LocalFileSystem.getInstance().refreshAndFindFileByNioFile(copy)!!)
-        } finally {
-            waitForDecompilation()
-            dir.toFile().deleteRecursively()
-        }
+    fun `test reading a view does not prepare it`() {
+        InlineFile("\\func g => 1")
+        val file = view()
+        val document = FileDocumentManager.getInstance().getDocument(file)!!
+        PsiManager.getInstance(project).findFile(file)!!.text
+        assertFalse(project.service<ArcViewService>().isPreparing)
+        assertFalse(file.hasText)
+        assertEquals(ArendBundle.message("arend.arc.preparing.placeholder", file.name), document.text)
+
+        show(file)
+        waitForText(document, "=> 1")
     }
 
-    fun `test decompile arc file`() {
-        val file = LocalFileSystem.getInstance().findFileByIoFile(File("$testDataPath/Test.arc"))!!
-        // decompile takes read actions, so it runs off the EDT
-        assertEquals("\\func f : Prelude.Nat => 0", runBlocking(Dispatchers.Default) { ArcFileDecompiler.decompile(project, file) })
+    fun `test view shows the module typechecked`() {
+        InlineFile("\\func g => 1")
+        assertTrue(prepare(view())!!.contains("=> 1"))
     }
 
     /**
-     * A module with a source is shown as it is in the server, even with nothing typechecked in it. Loading its .arc
-     * instead would put the group of the .arc in the place of the module, with a timestamp that outranks every
-     * later update from the source.
+     * A module is shown as it is in the server, even with nothing typechecked in it. Loading its .arc instead would
+     * put the group of the .arc in the place of the module, with a timestamp that outranks every later update from
+     * the source.
      */
-    fun `test arc file of a module with a source does not replace the module`() {
+    fun `test view does not replace the module`() {
         InlineFile("-- nothing to typecheck")
         typecheck()
         val server = project.service<ArendServerService>().server
-        val location = ModuleLocation(module.name, ModuleLocation.LocationKind.SOURCE, ModulePath("Main"))
         val group = server.getRawGroup(location)!!
 
-        withArcCopy("Main.arc") { file ->
-            assertEquals("", runBlocking(Dispatchers.Default) { ArcFileDecompiler.decompile(project, file) })
-            assertSame(group, server.getRawGroup(location))
-        }
-    }
-
-    /**
-     * A definition without a header (a shell left by a cache that failed to load, or one being typechecked) is not
-     * printed, and does not make the module count as loaded.
-     */
-    fun `test arc file whose module holds a definition shell is loaded again`() = withArcCopy("Shell.arc") { file ->
-        assertEquals("\\func f : Prelude.Nat => 0", runBlocking(Dispatchers.Default) { ArcFileDecompiler.decompile(project, file) })
-        val group = project.service<ArendServerService>().server
-            .getRawGroup(ModuleLocation(module.name, ModuleLocation.LocationKind.SOURCE, ModulePath("Shell")))!!
-        val f = group.statements.firstNotNullOf { it.group?.referable as? TCDefReferable }
-        f.typechecked = FunctionDefinition(f)
-
-        assertEquals("\\func f : Prelude.Nat => 0", runBlocking(Dispatchers.Default) { ArcFileDecompiler.decompile(project, file) })
+        assertEquals("", prepare(view()))
+        assertSame(group, server.getRawGroup(location))
     }
 
     // Modules whose .arc is up to date come from the binary cache instead of being typechecked, so it is loaded first
-    fun `test arc file of a module with a source loads the binary cache`() {
+    fun `test view loads the binary cache`() {
         InlineFile("\\func g => 1")
         val cache = project.service<ArendBinaryCacheService>()
         cache.invalidate(listOf(module.name))
 
-        withArcCopy("Main.arc") { file ->
-            runBlocking(Dispatchers.Default) { ArcFileDecompiler.decompile(project, file) }
-            assertTrue(cache.isLoaded(module.name))
-        }
+        prepare(view())
+        assertTrue(cache.isLoaded(module.name))
     }
 
     /**
-     * Before its library is registered, an .arc has nothing to show: it keeps its placeholder, and the registration
-     * (reloadBinaryFiles) decompiles it again.
+     * Before its library is registered, a view has nothing to show: it keeps its placeholder, and the registration
+     * prepares it again.
      */
-    fun `test arc file of a library that is not registered keeps the placeholder`() = withArcCopy("Test.arc") { file ->
+    fun `test view of a library that is not registered keeps the placeholder`() {
+        InlineFile("\\func g => 1")
+        val file = view()
         val config = ArendModuleConfigService.getInstance(module)!!
         val document = try {
             config.isInitialized = false
-            FileDocumentManager.getInstance().getDocument(file)!!.also { waitForDecompilation() }
+            show(file).also { waitForPreparation() }
         } finally {
             config.isInitialized = true
         }
-        assertEquals(ArendBundle.message("arend.arc.decompiling.placeholder", file.name), document.text)
+        assertEquals(ArendBundle.message("arend.arc.preparing.placeholder", file.name), document.text)
 
-        FileDocumentManager.getInstance().reloadBinaryFiles()
-        waitForDecompilation()
-        assertEquals("\\func f : Prelude.Nat => 0", document.text)
+        project.service<ArcViewService>().libraryRegistered()
+        waitForText(document, "=> 1")
     }
 
     /**
-     * Decompilations wait for each other, so a result held back because the file was requested again meanwhile
-     * would leave the file empty for as long as the others take: it is shown, then replaced by the next one.
+     * The document of a view starts as a placeholder; the view is prepared in the background, and the result becomes
+     * the text of the view, which reloads the document and rebuilds the PSI from it.
      */
-    fun `test result is shown even if the file is requested again meanwhile`() = withArcCopy("Again.arc") { file ->
-        val service = project.service<ArcDecompilationService>()
+    fun `test view is prepared in the background`() {
+        InlineFile("\\func g => 1")
+        val file = view()
+        val document = show(file)
+        assertEquals(ArendBundle.message("arend.arc.preparing.placeholder", file.name), document.text)
+
+        waitForText(document, "=> 1")
+        PsiDocumentManager.getInstance(project).commitAllDocuments()
+        val psiFile = PsiManager.getInstance(project).findFile(file)
+        assertInstanceOf(psiFile, ArcFile::class.java)
+        assertSame(psiFile, PsiDocumentManager.getInstance(project).getPsiFile(document))
+        assertEquals(document.text, psiFile!!.text)
+        myFixture.doHighlighting()
+    }
+
+    /**
+     * Whatever was computed for the placeholder in the meantime (the folding of an editor being opened) checks the
+     * modification stamp before it is applied, so the text comes with a new one. The document is not unsaved either.
+     */
+    fun `test view text comes with a new modification stamp`() {
+        InlineFile("\\func g => 1")
+        val file = view()
+        val document = FileDocumentManager.getInstance().getDocument(file)!!
+        val placeholderStamp = document.modificationStamp
+        show(file)
+
+        waitForText(document, "=> 1")
+        assertFalse(document.modificationStamp == placeholderStamp)
+        assertFalse(FileDocumentManager.getInstance().isDocumentUnsaved(document))
+    }
+
+    /**
+     * Preparations wait for each other, so a result held back because the view was requested again meanwhile would
+     * leave the view empty for as long as the others take: it is shown, then replaced by the next one.
+     */
+    fun `test result is shown even if the view is requested again meanwhile`() {
+        InlineFile("\\func g => 1")
+        val file = view()
+        val service = project.service<ArcViewService>()
         val runs = AtomicInteger()
         val firstMayFinish = CompletableDeferred<Unit>()
-        service.setDecompiler({ _, _ ->
+        service.setPrinter({ _, _ ->
             if (runs.incrementAndGet() == 1) {
                 firstMayFinish.await()
                 "\\func first => 1"
@@ -135,83 +198,62 @@ class ArcTest : ArendTestBase() {
         }, testRootDisposable)
 
         val document = FileDocumentManager.getInstance().getDocument(file)!!
-        // Only changes of the text: the reloadBinaryFiles of the fixture's registration can come in between, and
-        // reload the same text
         val shown = mutableListOf<String>()
         document.addDocumentListener(object : DocumentListener {
             override fun documentChanged(event: DocumentEvent) {
                 if (shown.lastOrNull() != document.text) shown += document.text
             }
         }, testRootDisposable)
-        service.decompile(file)
+        service.prepare(file)
+        // Requested again while the first preparation runs
+        service.prepare(file)
         firstMayFinish.complete(Unit)
 
-        waitForDecompilation()
+        waitForPreparation()
         assertEquals(listOf("\\func first => 1", "\\func second => 2"), shown)
     }
 
-    // A decompilation waits for the previous one, and the .arc can be deleted in the meantime
-    fun `test decompile deleted arc file`() = withArcCopy("Deleted.arc") { file ->
-        runWriteAction { file.delete(this) }
-        assertEquals("", runBlocking(Dispatchers.Default) { ArcFileDecompiler.decompile(project, file) })
+    /**
+     * A view shows the module as it is in the server: when the module is typechecked again, the view is out of date,
+     * and is brought up to date.
+     */
+    fun `test view follows the server`() {
+        InlineFile("\\func g => 1")
+        typecheck()
+        val file = view()
+        val service = project.service<ArcViewService>()
+        val document = show(file)
+        waitForText(document, "=> 1")
+        assertFalse(service.isOutdated(file, true))
+
+        InlineFile("\\func g => 2")
+        typecheck()
+        assertTrue(service.isOutdated(file, false))
+        service.refreshIfOutdated(file, false)
+        waitForText(document, "=> 2")
+        assertFalse(service.isOutdated(file, true))
     }
 
     /**
-     * The document of an .arc file starts as a placeholder; the decompilation runs in the background and then
-     * reparses the file, which puts the decompiled text into the document and rebuilds the PSI from it.
+     * A view is brought up to date automatically only once the server has typechecked its module again, so that a
+     * change of the module does not make it typecheck the module. Activating the view does.
      */
-    fun `test arc file is decompiled in the background`() = withArcCopy("Test.arc") { file ->
-        val document = FileDocumentManager.getInstance().getDocument(file)!!
-        assertEquals(ArendBundle.message("arend.arc.decompiling.placeholder", file.name), document.text)
+    fun `test activated view typechecks a module that the server has not`() {
+        InlineFile("\\func g => 1")
+        typecheck()
+        val file = view()
+        val service = project.service<ArcViewService>()
+        val document = show(file)
+        waitForText(document, "=> 1")
 
-        waitForDecompilation()
-        assertEquals("\\func f : Prelude.Nat => 0", document.text)
-        val psiFile = PsiManager.getInstance(project).findFile(file)
-        assertInstanceOf(psiFile, ArcFile::class.java)
-        assertSame(psiFile, PsiDocumentManager.getInstance(project).getPsiFile(document))
-        assertEquals(document.text, psiFile!!.text)
-        assertEquals(document.textLength, psiFile.textLength)
-        assertEquals(document.text, psiFile.node.text)
+        InlineFile("\\func g => 2")
+        project.service<ArendServerService>().server.getCheckerFor(listOf(location))
+            .resolveAll(UnstoppableCancellationIndicator.INSTANCE, ProgressReporter.empty())
+        assertFalse(service.isOutdated(file, false))
+        assertTrue(service.isOutdated(file, true))
 
-        myFixture.openFileInEditor(file)
-        myFixture.doHighlighting()
-    }
-
-    /**
-     * Whatever was computed for the placeholder in the meantime (the folding of an editor being opened) checks
-     * the modification stamp before it is applied, so the decompiled text must come with a new one. The document
-     * must not become unsaved either, or saving it would write the decompiled text into the .arc.
-     */
-    fun `test decompiled text comes with a new modification stamp`() = withArcCopy("Test.arc") { file ->
-        val document = FileDocumentManager.getInstance().getDocument(file)!!
-        val placeholderStamp = document.modificationStamp
-
-        waitForDecompilation()
-        assertEquals("\\func f : Prelude.Nat => 0", document.text)
-        assertFalse(document.modificationStamp == placeholderStamp)
-        assertFalse(FileDocumentManager.getInstance().isDocumentUnsaved(document))
-    }
-
-    /**
-     * Typechecking the module from the notification panel calls `reloadBinaryFiles`, which re-decompiles
-     * the .arc into its existing document. A binary document is never committed into PSI, so an
-     * [ArcFile] that was already parsed keeps its old tree; its text must follow the document instead of
-     * failing the platform's PSI/document text-mismatch assertion.
-     */
-    fun `test arc file text follows a document replaced under it`() = withArcCopy("Reloaded.arc") { file ->
-        FileDocumentManager.getInstance().getDocument(file)!!
-        waitForDecompilation()
-
-        val psiFile = PsiManager.getInstance(project).findFile(file)!!
-        val document = FileDocumentManager.getInstance().getDocument(file)!!
-        val newText = psiFile.node.text + "\n\\func g : Prelude.Nat => 1"
-
-        runWriteAction {
-            document.setReadOnly(false)
-            document.setText(newText)
-            document.setReadOnly(true)
-        }
-        assertEquals(newText, psiFile.text)
-        assertEquals(newText.length, psiFile.textLength)
+        service.refreshIfOutdated(file, true)
+        waitForText(document, "=> 2")
+        assertFalse(service.isOutdated(file, true))
     }
 }

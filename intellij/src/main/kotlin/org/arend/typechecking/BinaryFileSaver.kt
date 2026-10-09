@@ -4,12 +4,14 @@ import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.application.runReadAction
 import com.intellij.openapi.components.Service
 import com.intellij.openapi.components.service
+import com.intellij.openapi.components.serviceIfCreated
 import com.intellij.openapi.diagnostic.logger
 import com.intellij.openapi.progress.ProgressIndicator
 import com.intellij.openapi.progress.ProgressManager
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VfsUtil
 import com.intellij.openapi.vfs.VirtualFileManager
+import org.arend.arc.ArcViewService
 import org.arend.ext.module.ModuleLocation
 import org.arend.module.config.LibraryConfig
 import org.arend.server.ArendServerService
@@ -65,6 +67,7 @@ class BinaryFileSaver(private val project: Project) {
             LOG.info("Binary cache: persisted $persisted module(s)" + if (failed > 0) ", $failed failed" else "")
         }
         refresh(binariesDirs)
+        project.serviceIfCreated<ArcViewService>()?.serverChanged()
     }
 
     private class Target(val binariesDir: Path)

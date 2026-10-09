@@ -246,12 +246,9 @@ abstract class LibraryConfig(val project: Project) : ArendLibrary {
         val locationKind = if (sourcesPath != null) {
             path = sourcesPath
             ModuleLocation.LocationKind.SOURCE
-        } else if (testPath != null) {
-            path = testPath
-            ModuleLocation.LocationKind.TEST
         } else {
-            path = binariesDirFile?.getRelativePath(vFile, FileUtils.SERIALIZED_EXTENSION) ?: return null
-            ModuleLocation.LocationKind.GENERATED
+            path = testPath ?: return null
+            ModuleLocation.LocationKind.TEST
         }
         return ModuleLocation(name, locationKind, ModulePath(path))
     }

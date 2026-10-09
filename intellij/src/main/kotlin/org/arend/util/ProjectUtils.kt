@@ -2,12 +2,11 @@ package org.arend.util
 
 import com.intellij.codeInsight.daemon.DaemonCodeAnalyzer
 import com.intellij.openapi.application.ApplicationManager
-import com.intellij.openapi.application.invokeLater
 import com.intellij.openapi.application.runReadAction
 import com.intellij.openapi.components.service
+import com.intellij.openapi.components.serviceIfCreated
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.editor.Editor
-import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.openapi.module.Module
 import com.intellij.openapi.module.ModuleManager
 import com.intellij.openapi.project.Project
@@ -43,6 +42,7 @@ import org.arend.naming.reference.UnresolvedReference
 import org.arend.prelude.Prelude
 import org.arend.psi.ArendFile
 import org.arend.arc.ArcFile
+import org.arend.arc.ArcViewService
 import org.arend.psi.ext.ArendGroup
 import org.arend.psi.ext.ArendReferenceElement
 import org.arend.psi.ext.ReferableBase
@@ -232,10 +232,8 @@ fun Module.register(modules: List<Module> = emptyList()) {
 
     project.service<ArendExtensionChangeService>().initializeModule(config)
     config.isInitialized = true
-    // After isInitialized: until then, decompiling an .arc of this library gives nothing
-    invokeLater {
-        FileDocumentManager.getInstance().reloadBinaryFiles()
-    }
+    // After isInitialized: until then, an .arc view of this library has nothing to show
+    project.serviceIfCreated<ArcViewService>()?.libraryRegistered()
     if (!ApplicationManager.getApplication().isUnitTestMode) {
         DaemonCodeAnalyzer.getInstance(project).restart()
     }

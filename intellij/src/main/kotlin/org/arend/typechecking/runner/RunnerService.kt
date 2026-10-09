@@ -5,6 +5,7 @@ import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.application.EDT
 import com.intellij.openapi.components.Service
 import com.intellij.openapi.components.service
+import com.intellij.openapi.components.serviceIfCreated
 import com.intellij.openapi.diagnostic.logger
 import com.intellij.openapi.progress.ProcessCanceledException
 import com.intellij.openapi.project.Project
@@ -12,6 +13,7 @@ import com.intellij.platform.ide.progress.withBackgroundProgress
 import com.intellij.platform.util.progress.reportRawProgress
 import com.intellij.platform.util.progress.reportSequentialProgress
 import kotlinx.coroutines.*
+import org.arend.arc.ArcViewService
 import org.arend.error.DummyErrorReporter
 import org.arend.ext.module.LongName
 import org.arend.ext.module.ModuleLocation
@@ -105,6 +107,7 @@ class RunnerService(private val project: Project, private val coroutineScope: Co
                     }
                 }
             } }
+            project.serviceIfCreated<ArcViewService>()?.serverChanged()
         }
 
     fun runChecker(library: String?, isTest: Boolean, module: ModuleLocation?, definition: LongName?, onlyResolve: Boolean = false) =

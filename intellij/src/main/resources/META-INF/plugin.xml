@@ -49,6 +49,7 @@
 
         <fileType language="Arend" implementationClass="org.arend.ArendFileType" name="Arend" extensions="ard;ars" />
         <fileType fieldName="INSTANCE" implementationClass="org.arend.arc.ArcFileType" name="Arc" extensions="arc" />
+        <fileType fieldName="INSTANCE" implementationClass="org.arend.arc.ArcViewFileType" name="Arc view" />
         <internalFileTemplate name="Arend File"/>
         <internalFileTemplate name="Solution.ard"/>
         <internalFileTemplate name="Test.ard"/>
@@ -72,9 +73,6 @@
 
         <lang.syntaxHighlighterFactory language="Arend"
                                        implementationClass="org.arend.highlight.ArendSyntaxHighlighterFactory"/>
-
-        <syntaxHighlighter id="arend.arc" key="Arc"
-                           factoryClass="org.arend.highlight.ArendSyntaxHighlighterFactory"/>
 
         <highlightVisitor implementation="org.arend.highlight.ArendRainbowVisitor"/>
 
@@ -482,12 +480,10 @@
         <!-- Starters -->
         <appStarter id="generateArendLib" implementation="org.arend.documentation.GenerateArendLibStarter"/>
 
-        <!--  Decompiler tools  -->
+        <!--  .arc views  -->
 
-        <filetype.stubBuilder filetype="Arc" implementationClass="org.arend.arc.ArcFileStubBuilder"/>
-        <filetype.decompiler filetype="Arc" implementationClass="org.arend.arc.ArcFileDecompiler"/>
-        <fileType.fileViewProviderFactory filetype="Arc" implementationClass="org.arend.arc.ArcFileViewProviderFactory"/>
-        <psi.classFileDecompiler implementation="org.arend.arc.ArcDecompiler" order="first"/>
+        <virtualFileSystem key="arend-arc" implementationClass="org.arend.arc.ArcFileSystem" physical="false"/>
+        <lang.fileViewProviderFactory language="Arend" implementationClass="org.arend.arc.ArcFileViewProviderFactory"/>
 
     </extensions>
 
@@ -499,6 +495,8 @@
 
     <projectListeners>
     <listener class="org.arend.module.ModuleSynchronizer" topic=" com.intellij.openapi.roots.ModuleRootListener" />
+    <listener class="org.arend.arc.ArcFileEditorListener" topic="com.intellij.openapi.fileEditor.FileEditorManagerListener" />
+    <listener class="org.arend.arc.ArcSourcesListener" topic="com.intellij.openapi.vfs.newvfs.BulkFileListener" />
     </projectListeners>
 
     <!-- TODO[2025.2.1]

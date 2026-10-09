@@ -4,7 +4,6 @@ import com.intellij.extapi.psi.PsiFileBase
 import com.intellij.openapi.application.runReadAction
 import com.intellij.openapi.roots.LibraryOrderEntry
 import com.intellij.openapi.roots.ProjectFileIndex
-import com.intellij.openapi.vfs.VfsUtilCore
 import com.intellij.psi.FileViewProvider
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiReference
@@ -17,6 +16,7 @@ import org.arend.ArendFileTypeInstance
 import org.arend.ArendIcons
 import org.arend.ArendLanguage
 import org.arend.IArendFile
+import org.arend.arc.ArcVirtualFile
 import org.arend.educational.ArendConfigurator.Companion.getStudyLibrary
 import org.arend.ext.prettyprinting.doc.Doc
 import org.arend.ext.prettyprinting.doc.DocFactory
@@ -32,7 +32,6 @@ import org.arend.psi.stubs.ArendFileStub
 import org.arend.resolving.ArendReference
 import org.arend.util.*
 import org.arend.util.FileUtils
-import org.arend.util.arendModules
 import org.arend.util.libraryName
 
 open class ArendFile(viewProvider: FileViewProvider) : PsiFileBase(viewProvider, ArendLanguage.INSTANCE), ArendGroup, IArendFile {
@@ -78,6 +77,9 @@ open class ArendFile(viewProvider: FileViewProvider) : PsiFileBase(viewProvider,
     val arendLibrary: LibraryConfig?
         get() = CachedValuesManager.getCachedValue(this) {
             val virtualFile = originalFile.virtualFile ?: return@getCachedValue cachedValue(null)
+            if (virtualFile is ArcVirtualFile) {
+                return@getCachedValue cachedValue(virtualFile.config)
+            }
             val project = project
             if (!project.isOpen) {
                 return@getCachedValue cachedValue(null)
@@ -97,16 +99,7 @@ open class ArendFile(viewProvider: FileViewProvider) : PsiFileBase(viewProvider,
                 return@getCachedValue cachedValue(ArendModuleConfigService.getInstance(module))
             }
 
-            if (runReadAction { fileIndex.isExcluded(virtualFile) }) {
-                val config = project.arendModules.map { ArendModuleConfigService.getInstance(it) }.find {
-                    it?.binariesDirFile?.let { binFile -> VfsUtilCore.isAncestor(binFile, virtualFile, true) } ?: false
-                }
-                if (config != null) {
-                    return@getCachedValue cachedValue(config)
-                } else {
-                    return@getCachedValue cachedValue(null)
-                }
-            } else if (!runReadAction{ fileIndex.isInLibrarySource(virtualFile)}) {
+            if (!runReadAction { fileIndex.isInLibrarySource(virtualFile) }) {
                 return@getCachedValue cachedValue(null)
             }
 
