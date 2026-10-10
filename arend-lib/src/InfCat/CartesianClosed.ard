@@ -1,0 +1,42 @@
+\import Equiv
+\import InfCat.Basics
+\import InfCat.Functor.Equiv
+\import InfCat.Limit.Product
+\import InfCat.Slice
+\import Paths
+\open IsProduct
+
+-- | {ev} exhibits {e} as an exponential of {y} by {x},.
+\type IsExponential {C : CartesianHCat} {x y e : C} (ev : Prod e x ~> y) : \Prop
+  => \Pi {r : C} -> IsEquiv {r ~> e} {Prod r x ~> y} (\lam g => comp (pair Prod-isProduct (comp proj1 g) proj2) ev)
+
+-- | A Cartesian ∞-category with exponentials.
+\class CartesianClosedHCat \extends CartesianHCat {
+  | CHom (x y : C) : C
+  | CHom-eval {x y : C} : Prod (CHom x y) x ~> y
+  | CHom-univ {x y z : C} : IsEquiv {z ~> CHom x y} {Prod z x ~> y} (\lam g => comp (prodMap g) CHom-eval)
+
+  \func curry {x y z : C} (f : Prod z x ~> y) : z ~> CHom x y
+    => IsEquiv.ret CHom-univ f
+
+  \func uncurry {x y z : C} (g : z ~> CHom x y) : Prod z x ~> y
+    => comp (prodMap g) CHom-eval
+
+  \sfunc curry_uncurry {x y z : C} {g : z ~> CHom x y} : curry (uncurry g) = g
+    => IsEquiv.ret_f CHom-univ
+
+  \sfunc uncurry_curry {x y z : C} {f : Prod z x ~> y} : uncurry (curry f) = f
+    => IsEquiv.f_ret CHom-univ
+}
+
+-- | An ∞-category whose slices are Cartesian closed.
+\class LocallyCartesianClosedHCat \extends CartesianClosedHCat
+  | sliceCCC (X : C) : CartesianClosedHCat (SliceCat X)
+
+-- | Cartesian closed structures transfer along equivalences.
+\sfunc cartesianClosed-transfer.{u} {C D : \Cat u} {f : C ->⁺ D} (e : IsHEquiv f) (CC : CartesianClosedHCat C) : CartesianClosedHCat D
+  => transport (\lam (E : \Cat u) => CartesianClosedHCat E) (HEquiv_= e) CC
+
+-- | Locally Cartesian closed structures transfer along equivalences.
+\sfunc locallyCartesianClosed-transfer.{u} {C D : \Cat u} {f : C ->⁺ D} (e : IsHEquiv f) (CC : LocallyCartesianClosedHCat C) : LocallyCartesianClosedHCat D
+  => transport (\lam (E : \Cat u) => LocallyCartesianClosedHCat E) (HEquiv_= e) CC

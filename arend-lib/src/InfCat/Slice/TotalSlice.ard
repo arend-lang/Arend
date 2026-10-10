@@ -1,0 +1,232 @@
+{- | The slice category of A ->⁺ \Type u over F is equivalent to
+ -   the category of functors \Sigma⁺ (x : X) (F x) ->⁺ \Type u ({sumSlice-equiv}).
+ -}
+
+\import Equiv
+\import Equiv.Fiber
+\import Equiv.Sigma
+\import Function.Meta
+\import InfCat.Basics
+\import InfCat.Fibration.DirectedUnivalence
+\import InfCat.Fibration.LeftFib
+\import InfCat.Fibration.Straightening
+\import InfCat.Functor.Equiv
+\import InfCat.Functor.FullyFaithful
+\import InfCat.Slice
+\import InfCat.Square
+\import InfCat.Functor.Conservative
+\import InfCat.Paths
+\import InfCat.Rezk
+\import InfCat.Yoneda.CovariantYoneda
+\import Logic
+\import Logic.Unique
+\import Meta
+\import Paths
+\import Paths.Meta
+
+-- | The slice category over {F}.
+\func Slice.{u} {X : \Cat u} (F : X ->⁺ \Type u) : \Cat (\suc u)
+  => SliceCat {X ->⁺ \Type u} F
+
+-- | Functors on the total category of {F} as objects over {F}.
+\func sumSlice.{u} {X : \Cat u} (F : X ->⁺ \Type u) (G' :⁺ \Sigma⁺ (x : X) (F x) ->⁺ \Type u) : Slice F
+  => (sumFam F G', sumProj F G')
+  \where {
+    -- | The sum of a functor on the total category of {F} over the fibers of {F}.
+    \func sumFam.{u} {X : \Cat u} (F : X ->⁺ \Type u) (G' :⁺ \Sigma⁺ (x : X) (F x) ->⁺ \Type u) (x :⁺ X) : \Type u
+      => \Sigma⁺ (t : F x) (G' (x,t))
+
+    -- | The projection of {sumFam} to {F}.
+    \func sumProj.{u} {X : \Cat u} (F : X ->⁺ \Type u) (G' :⁺ \Sigma⁺ (x : X) (F x) ->⁺ \Type u) : sumFam F G' ~> F
+      => dpath \lam i x => dpath (iso+ {sumFam F G' x} {F x} \lam s => s.1) i
+  }
+
+-- | The categories of functors on the total category of {F} and functors over {F} are equivalent.
+\lemma sumSlice-equiv.{u} {X : \Cat u} (F : X ->⁺ \Type u) : IsHEquiv (sumSlice F)
+  => ff-surj-equiv.1 (sumSlice-ff F, \lam s => inP (fibFam s.2, (totalFun-slice F).f_sec s))
+  \where {
+    \open sumSlice
+
+    -- | The fibers of a functor {G} over {F}.
+    \func fibFam.{u} {X : \Cat u} {F G : X ->⁺ \Type u} (a : G ~> F) (s :⁺ \Sigma⁺ (x : X) (F x)) : \Type u
+      => Straight (leftFib a) (small a) s
+      \where {
+        -- | The action of an arrow of functors to types on the total category.
+        \func covMap.{u} {X : \Cat u} {G F : X ->⁺ \Type u} (a : G ~> F) (s :⁺ \Sigma⁺ (x : X) (G x)) : F s.1
+          => ~>_-> (dpath \lam i => a i s.1) s.2
+
+        -- | The fibers of a functor {G} over {F}, as a family of categories.
+        \func fibFamCat.{u} {X : \Cat u} {F G : X ->⁺ \Type u} (a : G ~> F) (s :⁺ \Sigma⁺ (x : X) (F x)) : \Cat
+          => \Sigma⁺ (g : G s.1) (covMap a (s.1, g) = s.2)
+
+        \lemma leftFib.{v} {X : \Cat v} {F G : X ->⁺ \Type v} (a : G ~> F) : IsLeftFib (fibFamCat a)
+          => leftFib-sigma {\Sigma⁺ (x : X) (F x)} {\lam s => G s.1} (leftFib-pullback (\lam s => G s.1) universe-leftFib)
+               {\lam z => covMap a (z.1.1, z.2) = z.1.2}
+               (leftFib-path (leftFib-pullback (\lam (z : \Sigma⁺ (s : \Sigma⁺ (x : X) (F x)) (G s.1)) => F z.1.1) universe-leftFib)
+                             (\lam z => covMap a (z.1.1, z.2)) (\lam z => z.1.2))
+
+        \lemma small.{v} {X : \Cat v} {F G : X ->⁺ \Type v} (a : G ~> F) (s : \Sigma⁺ (x : X) (F x)) : IsSmall.{v} (fibFamCat a s)
+          => IsSmall.fromGroupoid (leftFib-grpd (leftFib a) s) {\Sigma (g : G s.1) (covMap a (s.1, g) = s.2)}
+               \new QEquiv {\Sigma (g : G s.1) (covMap a (s.1, g) = s.2)} {fibFamCat a s} {
+            | f u => (u.1, u.2)
+            | ret u => (u.1, u.2)
+            | ret_f u => idp
+            | f_sec u => idp
+          }
+      }
+
+    -- | The equivalence on the level of objects.
+    \sfunc totalFun-slice.{u} {X : \Cat u} (F : X ->⁺ \Type u) : QEquiv (sumSlice F) (\lam s => fibFam s.2) \cowith
+      | ret_f G' => (fun-path {_} {fibFam (sumProj F G')} {G'}
+                      (\lam s => transport+ (\lam t => G' (s.1.1, t)) (Straight.fromStraight s.2).2 (Straight.fromStraight s.2).1.2)
+                      (sum-fib-equiv G')).1
+      | f_sec s => \let | h (u :⁺ \Sigma⁺ (x : X) (sumFam F (fibFam s.2) x)) : s.1 u.1 => (Straight.fromStraight u.2.2).1
+                        | r => fun-path {_} {sumFam F (fibFam s.2)} {s.1} h (\lam x => fib-sum-equiv s.2 x)
+                        | Q => depUnivalence {X} {sumFam F (fibFam s.2)} {F}
+                        | Q' => depUnivalence {X} {sumFam F (fibFam s.2)} {s.1}
+                   \in sigma-ext r.1 $ transport-slice r.1 $ later $
+                         pmap {\Pi (u :⁺ \Sigma⁺ (x : X) (sumFam F (fibFam s.2) x)) -> F u.1} Q.ret
+                              (ext \lam u => inv (Straight.fromStraight u.2.2).2 *> inv (~>_->_comp-fam (Q'.ret h) s.2 u.1 u.2))
+                         *> Q.ret_f _ *> pmap (comp __ s.2) (inv r.2)
+      \where \private {
+        -- | A covariant fiberwise equivalence gives a path of functors; its arrow is the given transformation.
+        \sfunc fun-path.{v} {X : \Cat v} {G G' : X ->⁺ \Type v} (h : \Pi (s :⁺ \Sigma⁺ (x : X) (G x)) -> G' s.1)
+                            (e : \Pi (x : X) -> IsEquiv {G x} {G' x} (\lam a => h (x,a)))
+          : \Sigma (p : G = G') (=_~> p = (depUnivalence {X} {G} {G'}).ret h)
+          => IsIso_= (objectwise-iso {X} {\Type v} {G} {G'} {(depUnivalence {X} {G} {G'}).ret h} \lam x => ~>_->-equiv-iso (e x))
+
+        -- | Transport of an arrow over {F} along a path of functors.
+        \func transport-slice.{v} {X : \Cat v} {F G G' : X ->⁺ \Type v} (p : G = G') {a : G ~> F} {a' : G' ~> F}
+                                  (q : a = comp (=_~> p) a') : transport+ (\lam H =>⁺ H ~> F) p a = a' \elim p
+          | idp => q *> comp_idd-left
+
+        \lemma sum-fib-equiv.{v} {X : \Cat v} {F : X ->⁺ \Type v} (G' : \Sigma⁺ (x : X) (F x) ->⁺ \Type v) (x : \Sigma⁺ (x : X) (F x))
+          : IsEquiv {fibFam (sumProj F G') x} {G' x}
+                    (\lam r => transport+ (\lam t => G' (x.1, t)) (Straight.fromStraight r).2 (Straight.fromStraight r).1.2)
+          => IsEquiv.trans (inP Straight.equiv) $ inP \new QEquiv {
+            | ret g => ((x.2, g), idp)
+            | ret_f u => aux u.2
+            | f_sec g => idp
+          }
+          \where
+            \func aux.{w} {X : \Cat w} {F : X ->⁺ \Type w} {G' : \Sigma⁺ (x : X) (F x) ->⁺ \Type w} {x : X} {t : F x} {u : sumFam F G' x} (e : u.1 = t)
+              : ((t, transport+ (\lam t' => G' (x, t')) e u.2), idp) = {fibFam.fibFamCat (sumProj F G') (x,t)} (u, e) \elim e
+              | idp => idp
+
+        \lemma fib-sum-equiv.{v} {X : \Cat v} {F G : X ->⁺ \Type v} (a : G ~> F) (x : X)
+          : IsEquiv {sumFam F (fibFam a) x} {G x} (\lam u => (Straight.fromStraight u.2).1)
+          => inP \new QEquiv {
+            | ret g => (fibFam.covMap a (x, g), Straight.toStraight (g, idp))
+            | ret_f u => aux *> path \lam i => (u.1, Straight.toStraight_fromStraight u.2 i)
+            | f_sec g => idp
+          }
+          \where {
+            \func aux.{w} {X : \Cat w} {F G : X ->⁺ \Type w} {a : G ~> F} {x : X} {t : F x} {g : G x} {e : fibFam.covMap a (x, g) = t}
+              : (fibFam.covMap a (x, g), Straight.toStraight (g, idp)) = {sumFam F (fibFam a) x} (t, Straight.toStraight (g, e)) \elim e
+              | idp => idp
+          }
+      }
+
+    -- | {sumSlice} is fully faithful.
+    \lemma sumSlice-ff.{u} {X : \Cat u} (F : X ->⁺ \Type u) : IsFFMap (sumSlice F)
+      => \lam P P' => IsEquiv.leftFactor SliceCat.hom-equiv $
+           transport IsEquiv (ext \lam h =>
+               \have q => (\peval ~>-natural (sumProj F) {P} {P'} {h}) *> inv (\peval ~>-natural (\lam s => s.2) {sumSlice F P} {sumSlice F P'} {dmap (sumSlice F) h})
+               \in path (\lam i => (dmap (sumFam F) h, q i)))
+             (sumSlice-hom-equiv F P P')
+      \where \private {
+        {- | Triangles in the category of functors to types are pointwise paths.
+         -   A 2-cell `t` with sides {k}, {b} and {a} gives, for every point `s` of {G}, a path from the transport of `s` along {a}
+         -   to its transport along {k} followed by {b}; it is obtained by transporting `s` along {k} and then along `t`.
+         -}
+        \lemma triangle-pointwise-equiv.{u} {X : \Cat u} {G G' F : X ->⁺ \Type u} (k : G ~> G') (b : G' ~> F) (a : G ~> F)
+          : IsEquiv {DPath (\lam i => k i ~> F) a b}
+                    {\Pi (s :⁺ \Sigma⁺ (x : X) (G x)) -> ~>_-> (dpath \lam j => a j s.1) s.2 = ~>_-> (dpath \lam j => b j s.1) (~>_-> (dpath \lam i => k i s.1) s.2)}
+                    (\lam t s => ~>_= (dpath \lam i => coe+ (\lam j => t i j s.1) (coe+ (\lam i => k i s.1) s.2 i) dright))
+          => \let | f (a' : G ~> F) (t : DPath (\lam i => k i ~> F) a' b) (s :⁺ \Sigma⁺ (x : X) (G x))
+                     => ~>_= (dpath \lam i => coe+ (\lam j => t i j s.1) (coe+ (\lam i => k i s.1) s.2 i) dright)
+                  -- composites of {k} and {b} are unique
+                  | cZ : Contr (\Sigma (a' : G ~> F) (DPath (\lam i => k i ~> F) a' b))
+                     => Contr.Contr_QEquiv (symQEquiv (sigma-right \lam a' =>
+                          IsEquiv.toQEquiv (SliceCat.triangle-equiv a' b k) `transQEquiv` inv-equiv `transQEquiv` pathEquiv-right comp_idd-right))
+                          (rsigma (comp k b))
+                  -- pointwise composites are unique since {depUnivalence} is an equivalence
+                  | cZ' : Contr (\Sigma (a' : G ~> F) (\Pi (s :⁺ \Sigma⁺ (x : X) (G x)) ->
+                            ~>_-> (dpath \lam j => a' j s.1) s.2 = ~>_-> (dpath \lam j => b j s.1) (~>_-> (dpath \lam i => k i s.1) s.2)))
+                     => Contr.Contr_QEquiv (symQEquiv (sigma-right \lam (a' : G ~> F) => later funExt+-equiv)) $
+                          IsEquiv=>contrFibers (inP depUnivalence) \lam s => ~>_-> (dpath \lam j => b j s.1) (~>_-> (dpath \lam i => k i s.1) s.2)
+             \in propExt.conv (totalEquiv f) (contr-equiv cZ cZ') a
+
+        -- | Triangles over {F} between the sums of {P} and {P'} are sections of {P'} over the total category of {P}.
+        \func section-equiv.{v} {X : \Cat v} (F : X ->⁺ \Type v) (P P' : \Sigma⁺ (x : X) (F x) ->⁺ \Type v)
+          : QEquiv {\Sigma (k : sumFam F P ~> sumFam F P') (DPath (\lam i => k i ~> F) (sumProj F P) (sumProj F P'))}
+                   {\Pi (s :⁺ \Sigma⁺ (z : \Sigma⁺ (x : X) (F x)) (P z)) -> P' s.1}
+          => sigma-right (\lam k => IsEquiv.toQEquiv (triangle-pointwise-equiv k (sumProj F P') (sumProj F P)))
+             `transQEquiv` qsigma-left (depUnivalence {X} {sumFam F P} {sumFam F P'})
+             `transQEquiv` later \new QEquiv {\Sigma (c : \Pi (u :⁺ \Sigma⁺ (x : X) (sumFam F P x)) -> sumFam F P' u.1)
+                                                     (\Pi (u :⁺ \Sigma⁺ (x : X) (sumFam F P x)) -> u.2.1 = (c u).1)} {
+               | f p s => transport+ (\lam t => P' (s.1.1, t)) (inv (p.2 (s.1.1, (s.1.2, s.2)))) (p.1 (s.1.1, (s.1.2, s.2))).2
+               | ret q => (\lam u => (u.2.1, q ((u.1, u.2.1), u.2.2)), \lam u => idp)
+               | ret_f p => path \lam i => (\lam u => (aux F (p.2 u) i).1, \lam u => (aux F {P'} (p.2 u) i).2)
+               | f_sec q => idp
+             }
+          \where
+            -- | The round trip of the last step of {section-equiv}.
+            \private \func aux.{v} {X : \Cat v} (F : X ->⁺ \Type v) {P' : \Sigma⁺ (x : X) (F x) ->⁺ \Type v}
+                                   {x :⁺ X} {c :⁺ \Sigma⁺ (t' : F x) (P' (x, t'))} {t :⁺ F x} (e :⁺ t = c.1)
+              : ((t, transport+ (\lam t' => P' (x, t')) (inv e) c.2), idp) = {\Sigma⁺ (c' : \Sigma⁺ (t' : F x) (P' (x, t'))) (t = c'.1)} (c, e) \elim e
+              | idp => idp
+
+        -- | The forward map of {section-equiv} on the triangle of an arrow `k.2`, written covariantly in `k`.
+        \func value.{v} {X : \Cat v} (F : X ->⁺ \Type v) (P : \Sigma⁺ (x : X) (F x) ->⁺ \Type v)
+                        (k :⁺ \Sigma⁺ (P' : \Sigma⁺ (x : X) (F x) ->⁺ \Type v) (P ~> P')) (s :⁺ \Sigma⁺ (z : \Sigma⁺ (x : X) (F x)) (P z)) : k.1 s.1
+          => transport+ (\lam t => k.1 (s.1.1, t))
+               (inv (~>_= (dpath \lam i => coe+ (\lam j => sumProj F (k.2 i) j s.1.1) (coe+ (\lam i => sumFam F (k.2 i) s.1.1) (s.1.2, s.2) i) dright)))
+               (~>_-> (dpath \lam i => sumFam F (k.2 i) s.1.1) (s.1.2, s.2)).2
+
+        -- | {value} is {depUnivalence}.
+        \func value-yoneda.{v} {X : \Cat v} (F : X ->⁺ \Type v) (P : \Sigma⁺ (x : X) (F x) ->⁺ \Type v) {P' : \Sigma⁺ (x : X) (F x) ->⁺ \Type v} (h : P ~> P')
+          : depUnivalence h = value F P (P', h)
+          => inv $ pmap (\lam M => M (P', h)) $ QEquiv.isInj
+              {coslice-yoneda P (\lam k => \Pi (s :⁺ \Sigma⁺ (z : \Sigma⁺ (x : X) (F x)) (P z)) -> k.1 s.1)}
+              {value F P} {\lam k s => ~>_-> (dpath \lam i => k.2 i s.1) s.2}
+              (ext \lam s => value-idd (\lam t => P (s.1.1, t)) s.1.2 s.2)
+
+        -- | {value} at the identity: transport along the identity in a sum of types.
+        \sfunc value-idd.{v} {A :⁺ \Type v} (B :⁺ A ->⁺ \Type v) (a :⁺ A) (b :⁺ B a)
+          : transport+ B (inv (~>_= (dpath \lam i => (coe+ (\lam _ => \Sigma⁺ (a' : A) (B a')) (a, b) i).1))) (coe+ (\lam _ => \Sigma⁺ (a' : A) (B a')) (a, b) dright).2
+            = coe+ (\lam _ => B a) b dright
+          => pmap+ (\lam l => transport+ B (inv (~>_= (dpath \lam i => (l.2 i).1))) l.1.2) $
+                   leftFib-lift-unique universe-leftFib
+                      {\Sigma⁺ (a' : A) (B a'), \Sigma⁺ (a' : A) (B a'), idd, later (a, b)}
+                      {coe+ (\lam _ => \Sigma⁺ (a' : A) (B a')) (a, b) dright, dpath \lam i => coe+ (\lam _ => \Sigma⁺ (a' : A) (B a')) (a, b) i}
+                      {later (a, coe+ (\lam _ => B a) b dright), dpath \lam i => ((a, coe+ (\lam _ => B a) b i) : \Sigma⁺ (a' : A) (B a'))}
+
+        {- | Transformations of functors on the total category of {F} are transformations of their sums over {F}
+         -   together with the naturality square of {sumProj}.
+         -
+         -   This is the hom-level part of {totalFun-slice}; it is {sumSlice-triangle-equiv} with triangles read off as in {~>-natural}.
+         -}
+        \lemma sumSlice-hom-equiv.{u} {X : \Cat u} (F : X ->⁺ \Type u) (P P' : \Sigma⁺ (x : X) (F x) ->⁺ \Type u)
+          : IsEquiv {P ~> P'} {\Sigma (k : sumFam F P ~> sumFam F P') (comp k (sumProj F P') = comp (sumProj F P) idd)}
+                    (\lam h => (dmap (sumFam F) h, ~>-natural (sumProj F)))
+          => transport IsEquiv (ext \lam h =>
+                  \have q => (\peval ~>-natural (\lam s => s.2) {sumSlice F P} {sumSlice F P'} {dpath \lam i => (sumFam F (h i), sumProj F (h i))})
+                      *> inv (\peval ~>-natural (sumProj F) {P} {P'} {h})
+                  \in path (\lam i => (dmap (sumFam F) h, q i)))
+               (IsEquiv.trans (sumSlice-triangle-equiv F P P')
+                              (inP $ sigma-right \lam k => IsEquiv.toQEquiv $ SliceCat.triangle-equiv (sumProj F P) (sumProj F P') k))
+
+        {- | Transformations of functors on the total category of {F} are transformations of their sums over {F}
+         -   together with the triangle of {sumProj}; this is the action of {sumSlice} on arrows, up to {dpath-sigma-equiv}.
+         -
+         -   The triangles are sections of `P'` over the total category of `P` ({section-equiv}, via {triangle-pointwise-equiv}).
+         -   The composite of the action on arrows with this equivalence is {depUnivalence}: both are natural in the arrow,
+         -   so by the Yoneda lemma {coslice-yoneda} it is enough to compare them at the identity ({value-idd}).
+         -}
+        \lemma sumSlice-triangle-equiv.{u} {X : \Cat u} (F : X ->⁺ \Type u) (P P' : \Sigma⁺ (x : X) (F x) ->⁺ \Type u)
+          : IsEquiv {P ~> P'} {\Sigma (k : sumFam F P ~> sumFam F P') (DPath (\lam i => k i ~> F) (sumProj F P) (sumProj F P'))}
+                    (\lam h => (dmap (sumFam F) h, dpath \lam i => sumProj F (h i)))
+          => IsEquiv.leftFactor (inP (section-equiv F P P')) $ transport IsEquiv (path \lam j h => value-yoneda F P h j) (inP depUnivalence)
+      }
+  }

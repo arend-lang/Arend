@@ -1,0 +1,189 @@
+\import Function.Meta
+\import InfCat.Fibration.LeftFib
+\import InfCat.Fibration.DirectedUnivalence
+\import InfCat.Basics
+\import InfCat.CartesianClosed
+\import InfCat.Functor.Equiv
+\import InfCat.Limit.Product
+\import InfCat.Paths
+\import InfCat.Kan.RightKanExtType
+\import Equiv
+\import InfCat.Slice.TotalSlice
+\import Meta
+\import Paths
+\import Paths.Meta
+\import Logic
+\import Logic.Unique
+
+{- | The exponent of functors `B ->⁺ \Type u`: the right Kan extension of `G ∘ p` along the projection `p` of the total category of {F}.
+ -   Its value at `b` is the type of natural transformations `Hom(b, -) × F ~> G` ({FunExp-curry}).
+ -}
+\type FunExp.{u} {B : \Cat u} (F G : B ->⁺ \Type u) (b :⁺ B) : \Type u
+  => RightKanExtType {\Sigma⁺ (b : B) (F b)} {B} (\lam s => s.1) (\lam s => G s.1) b
+
+-- | The fiberwise product of two functors.
+\func FunProd.{u} {B : \Cat u} (R F :⁺ B ->⁺ \Type u) (b :⁺ B) : \Type u
+  => \Sigma⁺ (R b) (F b)
+
+-- | Evaluation map of {FunExp}.
+\func FunExp-ev.{u} {B : \Cat u} {F G : B ->⁺ \Type u} {x :⁺ B} (e :⁺ FunExp F G x) (y :⁺ F x) : G x
+  => ~>_-> (dpath \lam i => rightKanExtType-counit {\Sigma⁺ (b : B) (F b)} __.1 (\lam s => G s.1) i (x, y)) e
+
+-- | The universal property of {FunExp}: maps from {R} to {FunExp} are maps from the product of {R} and {F} to {G}.
+\lemma FunExp-curry.{u} {B : \Cat u} (F G R : B ->⁺ \Type u)
+  : IsEquiv {\Pi (s :⁺ \Sigma⁺ (x : B) (R x)) -> FunExp F G s.1} {\Pi (s :⁺ \Sigma⁺ (x : B) (FunProd R F x)) -> G s.1}
+            (\lam h s => FunExp-ev (h (s.1, s.2.1)) s.2.2)
+  => IsEquiv.trans (inP $ later \new QEquiv {
+       | f h s => h s
+       | ret h s => h s
+       | ret_f _ => idp
+       | f_sec _ => idp
+     }) (aux F G R)
+  \where
+    \private \lemma aux.{u} {B : \Cat u} (F G R : B ->⁺ \Type u)
+      : IsEquiv {\Pi (s :⁺ \Sigma⁺ (x : B) (R x)) -> RightKanExtType {\Sigma⁺ (b : B) (F b)} __.1 (\lam s => G s.1) s.1}
+                {\Pi (s :⁺ \Sigma⁺ (x : B) (FunProd R F x)) -> G s.1}
+                (\lam h s => FunExp-ev {B} {F} {G} (h (s.1, s.2.1)) s.2.2)
+      => transport IsEquiv (ext \lam h s => ~>_->_comp-fam
+              (dmap (\lam H (t : \Sigma⁺ (b : B) (F b)) =>⁺ H t.1)
+                    ((depUnivalence {_} {R} {RightKanExtType __.1 \lam s => G s.1}).ret h))
+              (rightKanExtType-counit __.1 \lam s => G s.1) (later (s.1, s.2.2)) s.2.1) $
+           IsEquiv.trans (inP (symQEquiv depUnivalence)) $
+           IsEquiv.trans (rightKanExtType-univ __.1 R \lam s => G s.1) $
+           IsEquiv.trans (inP depUnivalence) $ inP $ later \new QEquiv {
+             | f S s => S ((s.1, s.2.2), s.2.1)
+             | ret S' t => S' (t.1.1, (t.2, t.1.2))
+             | ret_f S => idp
+             | f_sec S' => idp
+           }
+
+-- | Evaluation as a natural transformation.
+\func FunExp-evNat.{u} {B : \Cat u} (F G : B ->⁺ \Type u) : FunProd (FunExp F G) F ~> G
+  => depUnivalence.ret \lam (s : \Sigma⁺ (x : B) (FunProd (FunExp F G) F x)) => FunExp-ev {B} {F} {G} s.2.1 s.2.2
+
+-- | The universal property of {FunExp} stated in terms of natural transformations.
+\lemma FunExp-univ.{u} {B : \Cat u} (F G R : B ->⁺ \Type u)
+  : IsEquiv {R ~> FunExp F G} {FunProd R F ~> G}
+            (\lam g => comp (dmap (FunProd __ F) g) (FunExp-evNat F G))
+  => transport IsEquiv (ext \lam g => path (\lam j => depUnivalence.ret \lam s => ev-comp F G R g s j) *> depUnivalence.ret_f _) $
+       IsEquiv.trans (inP depUnivalence) $
+       IsEquiv.trans (FunExp-curry F G R) (inP (symQEquiv depUnivalence))
+  \where {
+    \sfunc ev-comp.{u} {B : \Cat u} (F G R : B ->⁺ \Type u) (g : R ~> FunExp F G) (s :⁺ \Sigma⁺ (x : B) (FunProd R F x))
+      : FunExp-ev {B} {F} {G} (~>_-> (dpath \lam i => g i s.1) s.2.1) s.2.2
+        = ~>_-> (dpath \lam i => comp (dmap (FunProd __ F) g) (FunExp-evNat F G) i s.1) s.2
+      => inv (~>_->_comp-fam (dmap (FunProd __ F) g) (FunExp-evNat F G) s.1 s.2
+              *> path \lam j => FunExp-ev {B} {F} {G} (prod-tr {B} {F} g s.2.1 s.2.2 j).1 (prod-tr {B} {F} g s.2.1 s.2.2 j).2)
+
+    -- | Transport in {FunProd} is transport in the first component.
+    \sfunc prod-tr.{u} {B : \Cat u} {F : B ->⁺ \Type u} {R R' :⁺ B ->⁺ \Type u} (g :⁺ R ~> R') {x :⁺ B} (r :⁺ R x) (y :⁺ F x)
+      : ~>_-> (dpath \lam i => FunProd (g i) F x) (r, y) = {FunProd R' F x} (~>_-> (dpath \lam i => g i x) r, y)
+      => coe+-dpath $ dpath \lam i => ((coe+ (\lam j => g j x) r i, y) : FunProd (g i) F x)
+  }
+
+-- | The functor category `B ->⁺ \Type u` is locally Cartesian closed.
+\instance FunctorLocallyCartesianClosed.{u} {B : \Cat u} : LocallyCartesianClosedHCat (B ->⁺ \Type u)
+  | CartesianClosedHCat => FunctorCartesianClosed
+  | sliceCCC F => cartesianClosed-transfer (sumSlice-equiv F) (FunctorCartesianClosed {\Sigma⁺ (b : B) (F b)})
+  \where {
+    -- | The first projection of {FunProd}.
+    \func FunProd-proj1.{u} {B : \Cat u} (F G : B ->⁺ \Type u) : FunProd F G ~> F
+      => depUnivalence.ret \lam (s : \Sigma⁺ (x : B) (FunProd F G x)) => s.2.1
+
+    -- | The second projection of {FunProd}.
+    \func FunProd-proj2.{u} {B : \Cat u} (F G : B ->⁺ \Type u) : FunProd F G ~> G
+      => depUnivalence.ret \lam (s : \Sigma⁺ (x : B) (FunProd F G x)) => s.2.2
+
+    -- | The functor category `B ->⁺ \Type u` is Cartesian.
+    \instance FunctorCartesian.{u} {B : \Cat u} : CartesianHCat (B ->⁺ \Type u)
+      | terminal _ => \Sigma
+      | terminal-isTerminal R => Contr.Contr_QEquiv (symQEquiv depUnivalence) (Contr.make (\lam _ =>⁺ ()) \lam _ => idp)
+      | Prod F G b => \Sigma⁺ (F b) (G b)
+      | proj1 {F} {G} => FunProd-proj1 F G
+      | proj2 {F} {G} => FunProd-proj2 F G
+      | Prod-isProduct {F} {G} R => IsEquiv.leftFactor (inP \new QEquiv {
+          | f p => (depUnivalence p.1, depUnivalence p.2)
+          | ret q => (depUnivalence.ret q.1, depUnivalence.ret q.2)
+          | ret_f p => ext (depUnivalence.ret_f p.1, depUnivalence.ret_f p.2)
+          | f_sec q => idp
+        }) $ transport IsEquiv
+              (ext \lam h => ext (ext \lam s => inv (~>_->_comp-fam h (FunProd-proj1 F G) s.1 s.2),
+                                  ext \lam s => inv (~>_->_comp-fam h (FunProd-proj2 F G) s.1 s.2)))
+              (IsEquiv.trans (inP (depUnivalence {B} {R} {FunProd F G})) $ inP $ later \new QEquiv {
+                | f h => (\lam s => (h s).1, \lam s => (h s).2)
+                | ret q s => (q.1 s, q.2 s)
+                | ret_f h => idp
+                | f_sec q => idp
+              })
+
+    -- | The functor category `B ->⁺ \Type u` is Cartesian closed.
+    \instance FunctorCartesianClosed.{u} {B : \Cat u} : CartesianClosedHCat (B ->⁺ \Type u)
+      | CartesianHCat => FunctorCartesian
+      | CHom F G => FunExp F G
+      | CHom-eval {F} {G} => FunExp-evNat F G
+      | CHom-univ {F} {G} {R} => transport IsEquiv (ext \lam g => pmap (comp __ (FunExp-evNat F G)) (prodMap-dmap g)) (FunExp-univ F G R)
+      \where {
+        -- | The action of `- × F` on arrows is the product of arrows.
+        \sfunc prodMap-dmap.{u} {B : \Cat u} {F R R' : B ->⁺ \Type u} (g : R ~> R')
+          : dmap (FunProd __ F) g = IsProduct.pair Prod-isProduct (comp (FunProd-proj1 R F) g) (FunProd-proj2 R F)
+          => IsProduct.pair-unique Prod-isProduct
+              (QEquiv.isInj {depUnivalence} (ext \lam s =>
+                  ~>_->_comp-fam (dmap (FunProd __ F) g) (FunProd-proj1 R' F) s.1 s.2
+                  *> pmap+ __.1 (FunExp-univ.prod-tr {B} {F} g s.2.1 s.2.2)
+                  *> inv (~>_->_comp-fam (FunProd-proj1 R F) g s.1 s.2))
+                *> inv (IsProduct.pair-beta1 Prod-isProduct))
+              (QEquiv.isInj {depUnivalence} {_} {FunProd-proj2 R F} (ext \lam s =>
+                  ~>_->_comp-fam (dmap (FunProd __ F) g) (FunProd-proj2 R' F) s.1 s.2
+                  *> pmap+ __.2 (FunExp-univ.prod-tr {B} {F} g s.2.1 s.2.2))
+                *> inv (IsProduct.pair-beta2 Prod-isProduct))
+      }
+  }
+
+-- | `\Type u` is locally Cartesian closed.
+\instance TypeLocallyCartesianClosed.{u} : LocallyCartesianClosedHCat (\Type u)
+  | terminal => \Sigma
+  | terminal-isTerminal x => transportInv Contr (QEquiv_= dirUnivalence) $ Contr.make (\lam _ => ()) (\lam _ => idp)
+  | Prod A B => \Sigma A B
+  | proj1 => ->_~> __.1
+  | proj2 => ->_~> __.2
+  | Prod-isProduct X => transport IsEquiv (ext \lam h => ext (type-arrow-ext \lam x => ->_~>_-> *> inv (~>_->_comp h _ *> ->_~>_->),
+                                                           type-arrow-ext \lam x => ->_~>_-> *> inv (~>_->_comp h _ *> ->_~>_->))) $
+      IsEquiv.trans (inP dirUnivalence) $ inP $ later \new QEquiv {
+        | f h => (->_~> \lam x => (h x).1, ->_~> \lam x => (h x).2)
+        | ret q x => (~>_-> q.1 x, ~>_-> q.2 x)
+        | ret_f h => ext \lam x => ext (->_~>_->, ->_~>_->)
+        | f_sec q => ext (~>_->_~>, ~>_->_~>)
+      }
+  | CHom A B => A -> B
+  | CHom-eval => ->_~> \lam s => s.1 s.2
+  | CHom-univ {A} {B} {Z} => transport IsEquiv (ext \lam g => type-arrow-ext \lam s =>
+      ->_~>_-> *> inv (~>_->_comp _ _ *> ->_~>_-> *> pmap {\Sigma (A -> B) A} {B} (\lam t => t.1 t.2)
+        {_} {~>_-> g s.1, s.2} (pair-app _ _ _ {s} *> ext (~>_->_comp _ _ *> pmap (~>_-> g) ->_~>_->, ->_~>_->)))) $
+      IsEquiv.trans (inP dirUnivalence) $
+      IsEquiv.trans (inP $ later \new QEquiv {Z -> A -> B} {\Sigma Z A -> B} {
+        | f h s => h s.1 s.2
+        | ret k z a => k (z, a)
+        | ret_f h => idp
+        | f_sec k => idp
+      }) (inP (symQEquiv dirUnivalence))
+  | sliceCCC X => LocallyCartesianClosedHCat.sliceCCC {locallyCartesianClosed-transfer point-equiv FunctorLocallyCartesianClosed} X
+  \where \private {
+    -- | Arrows between types are determined by their action on elements.
+    \sfunc type-arrow-ext.{v} {X Y : \Type v} {p q : X ~> Y} (h : \Pi (x : X) -> ~>_-> p x = ~>_-> q x) : p = q
+      => IsEquiv.isInj (inP dirUnivalence) (ext h)
+
+    -- | The arrow into a product of types induced by a pair of arrows acts componentwise.
+    \sfunc pair-app.{v} {X A B : \Type v} (pp : IsProduct {\Type v} {A} {B} {\Sigma A B} (->_~> __.1) (->_~> __.2))
+                        (f : X ~> A) (g : X ~> B) {x : X}
+      : ~>_-> (IsProduct.pair pp f g) x = (~>_-> f x, ~>_-> g x)
+      => ext (inv ->_~>_-> *> inv (~>_->_comp _ _) *> pmap (~>_-> __ x) (IsProduct.pair-beta1 pp),
+              inv ->_~>_-> *> inv (~>_->_comp _ _) *> pmap (~>_-> __ x) (IsProduct.pair-beta2 pp))
+
+    -- | Functors out of the point are their values.
+    \lemma point-equiv.{v} : IsHEquiv {\Sigma ->⁺ \Type v} {\Type v} (\lam G => G ())
+      => inP \new HQEquiv {\Sigma ->⁺ \Type v} {\Type v} (\lam G => G ()) {
+        | finv A _ => A
+        | finv_f G => idp
+        | f_finv A => idp
+      }
+  }

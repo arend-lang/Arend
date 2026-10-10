@@ -1,0 +1,56 @@
+\import Equiv
+\import InfCat.Basics
+\import InfCat.Limit.Terminal
+\import InfCat.Rezk
+\import Logic
+\import Paths
+\import Paths.Meta
+
+-- | {p1} and {p2} exhibit {p} as a product of {x} and {y}.
+\type IsProduct {C : \Cat} {x y p : C} (p1 : p ~> x) (p2 : p ~> y) : \Prop
+  => \Pi (r : C) -> IsEquiv {r ~> p} {\Sigma (r ~> x) (r ~> y)} (\lam h => (comp h p1, comp h p2))
+  \where {
+    -- | The arrow into the product induced by a pair of arrows.
+    \func pair {C : \Cat} {x y p : C} {p1 : p ~> x} {p2 : p ~> y} (pp : IsProduct p1 p2) {r : C} (f : r ~> x) (g : r ~> y) : r ~> p
+      => IsEquiv.ret (pp r) (f, g)
+
+    \sfunc pair-beta1 {C : \Cat} {x y p : C} {p1 : p ~> x} {p2 : p ~> y} (pp : IsProduct p1 p2) {r : C} {f : r ~> x} {g : r ~> y}
+      : comp (pair pp f g) p1 = f
+      => pmap __.1 (IsEquiv.f_ret (pp r) {f, g})
+
+    \sfunc pair-beta2 {C : \Cat} {x y p : C} {p1 : p ~> x} {p2 : p ~> y} (pp : IsProduct p1 p2) {r : C} {f : r ~> x} {g : r ~> y}
+      : comp (pair pp f g) p2 = g
+      => pmap __.2 (IsEquiv.f_ret (pp r) {f, g})
+
+    -- | Arrows into a product are determined by their components.
+    \sfunc pair-unique {C : \Cat} {x y p : C} {p1 : p ~> x} {p2 : p ~> y} (pp : IsProduct p1 p2) {r : C} {h h' : r ~> p}
+                       (e1 : comp h p1 = comp h' p1) (e2 : comp h p2 = comp h' p2) : h = h'
+      => IsEquiv.isInj (pp r) (ext (e1, e2))
+
+    -- | The comparison arrow between two products of the same objects is an isomorphism.
+    \lemma comparison-iso {C : \Cat} {x y p p' : C} {p1 : p ~> x} {p2 : p ~> y} {p1' : p' ~> x} {p2' : p' ~> y}
+                          (pp : IsProduct p1 p2) (pp' : IsProduct p1' p2') : IsIso (pair pp' p1 p2)
+      => inP (pair pp p1' p2',
+              pair-unique pp' (inv comp-assoc *> pmap (comp _ __) (pair-beta1 pp') *> pair-beta1 pp *> inv comp_idd-left)
+                              (inv comp-assoc *> pmap (comp _ __) (pair-beta2 pp') *> pair-beta2 pp *> inv comp_idd-left),
+              pair-unique pp (inv comp-assoc *> pmap (comp _ __) (pair-beta1 pp) *> pair-beta1 pp' *> inv comp_idd-left)
+                             (inv comp-assoc *> pmap (comp _ __) (pair-beta2 pp) *> pair-beta2 pp' *> inv comp_idd-left))
+  }
+
+-- | An ∞-category with a terminal object and binary products.
+\class CartesianHCat \extends HCatWithTerminal {
+  | Prod (x y : C) : C
+  | proj1 {x y : C} : Prod x y ~> x
+  | proj2 {x y : C} : Prod x y ~> y
+  | Prod-isProduct {x y : C} : IsProduct {C} {x} {y} {Prod x y} proj1 proj2
+
+  \func terminalMap {x : C} : x ~> terminal
+    => (terminal-isTerminal x).center
+
+  \func pair {x y z : C} (f : z ~> x) (g : z ~> y) : z ~> Prod x y
+    => IsProduct.pair Prod-isProduct f g
+
+  -- | The action of `- × x` on arrows.
+  \func prodMap {x z z' : C} (g : z ~> z') : Prod z x ~> Prod z' x
+    => pair (comp proj1 g) proj2
+}

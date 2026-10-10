@@ -1,0 +1,29 @@
+\import Equiv
+\import Equiv.Sigma
+\import Function.Meta
+\import InfCat.Basics
+\import InfCat.Square
+\import Logic
+\import Paths
+\import Paths.Meta
+
+-- | The slice of {C} over {X}.
+\func SliceCat {C : \Cat} (X : C) : \Cat
+  => \Sigma⁺ (c : C) (c ~> X)
+  \where {
+    {- | Arrows of the slice are arrows with a commutative triangle.
+     -   The triangle is the naturality square of the family of structure maps.
+     -}
+    \lemma hom-equiv {C : \Cat} {X c d : C} {a : c ~> X} {b : d ~> X}
+      : IsEquiv {(c,a) ~> {SliceCat X} (d,b)} {\Sigma (k : c ~> d) (comp k b = comp a idd)}
+        (\lam p => (dpath \lam i => (p i).1, ~>-natural {SliceCat X} __.2))
+      => inP $ transQEquiv (dpath-sigma-equiv (\lam _ => ~> X)) (sigma-right \lam k => IsEquiv.toQEquiv (triangle-equiv a b k))
+
+    -- | Triangles over {k} are commutative triangles: a triangle is sent to the naturality square of the family of structure maps.
+    \lemma triangle-equiv {C : \Cat} {X c d : C} (a : c ~> X) (b : d ~> X) (k : c ~> d)
+      : IsEquiv {DPath (\lam i => k i ~> X) a b} {comp k b = comp a idd}
+        (\lam t => ~>-natural {SliceCat X} __.2 {c,a} {d,b} {dpath \lam i => (k i, t i)})
+      => transport IsEquiv (ext \lam t => inv \peval ~>-natural {SliceCat X} __.2 {c,a} {d,b} {dpath \lam i => (k i, t i)})
+                   (inP $ flipQEquiv {C} {c} {d} {X} {X} {k} {b} {a} {idd} `transQEquiv` square-char.equiv a b
+                          `transQEquiv` flipQEquiv `transQEquiv` comp-equiv `transQEquiv` inv-equiv)
+  }

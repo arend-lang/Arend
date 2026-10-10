@@ -1,0 +1,9 @@
+\import Logic.Unique
+
+\type IsTerminal {C : \Cat} (t : C) : \Prop
+  => \Pi (y : C) -> Contr (y ~> t)
+
+-- | An ∞-category with a terminal object and binary products.
+\class HCatWithTerminal (C : \Cat)
+  | terminal : C
+  | terminal-isTerminal : IsTerminal terminal

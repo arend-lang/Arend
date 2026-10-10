@@ -1,3 +1,4 @@
+\import Equiv
 \import Paths
 
 \func pmap+ {A B :⁺ \Cat} (f :⁺ A ->⁺ B) {a a' :⁺ A} (p :⁺ a = a') : f a = f a'
@@ -22,6 +23,13 @@
 
 \func funExt+ {A : \Cat} {B :⁺ A ->⁺ \Cat} {f g :⁺ \Pi (x :⁺ A) -> B x} (p :⁺ \Pi (x :⁺ A) -> f x = g x) : f = g
   => path \lam i x => p x i
+
+-- | Function extensionality for covariant functions.
+\func funExt+-equiv {A : \Cat} {B : A ->⁺ \Cat} {g g' : \Pi (x :⁺ A) -> B x} : QEquiv {\Pi (x :⁺ A) -> g x = g' x} {g = g'} \cowith
+  | f => funExt+
+  | ret p x => path \lam i => p i x
+  | ret_f h => idp
+  | f_sec p => idp
 
 \func transport+ {A :⁺ \Cat} (B :⁺ A ->⁺ \Cat) {a a' :⁺ A} (p :⁺ a = a') (b :⁺ B a) : B a'
   => coe (\lam i => B (p i)) b right

@@ -148,3 +148,7 @@
                *> pmap+ (_ *> __) (homotopy-isNatural+ _ _ e.coh_inv q) *> inv *>-assoc
                *> pmap+ (*> q) (pmap+ (_ *> __) (inv e.coh_inv_f) *> inv (pmap+_*> f) *> pmap+ (pmap+ f __) inv_*>) *> idp_*>
   }
+
+-- | An equivalence of ∞-categories is a path in `\Cat`.
+\func HEquiv_=.{u} {C D : \Cat u} {f : C ->⁺ D} (e : IsHEquiv f) : C = D
+  => path (isoCat f (IsHEquiv.ret e) (\lam x => IsHEquiv.ret_f e) (\lam y => IsHEquiv.f_ret e))
