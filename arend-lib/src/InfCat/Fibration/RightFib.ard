@@ -1,0 +1,134 @@
+{- | Right fibrations.
+ -
+ - A family `B : A ->⁺ \Cat` is a right fibration if lifts of arrows of {A} *into* a given point are unique.
+ - For a functor `q : E ->⁺ A`, the corresponding notion is `IsRightFib (Fibers q)`.
+ -}
+
+\import Equiv
+\import Equiv.Sigma
+\import Function.Meta
+\import InfCat.Basics
+\import InfCat.Fibration.Categorical
+\import InfCat.Functor.FullyFaithful
+\import InfCat.Paths
+\import InfCat.SubCat.Full
+\import Logic
+\import Logic.Unique
+\import Meta
+\import Paths.Meta
+\import Paths
+
+-- | The base data of a contravariant lift: a source, a target, an arrow between them, and a point over the target.
+\func ContLiftData {A :⁺ \Cat} (B :⁺ A ->⁺ \Cat) : \Cat
+  => \Sigma⁺ (a' a : A) (f : a' ~> a) (b : B a)
+
+-- | The category of contravariant lifts of `d.3` ending at `d.4`.
+\type ContLift {A :⁺ \Cat} (B :⁺ A ->⁺ \Cat) (d :⁺ ContLiftData B) : \Cat
+  => \Sigma⁺ (b' : B d.1) (DPath (\lam i => B (d.3 i)) b' d.4)
+
+\type IsRightFib {A : \Cat} (B : A ->⁺ \Cat) : \Prop
+  => \Pi (d : ContLiftData B) -> Contr (ContLift B d)
+
+\lemma rightFib-pullback {A' A : \Cat} (f : A' ->⁺ A) {B : A ->⁺ \Cat} (Bf : IsRightFib B) : IsRightFib (\lam a => B (f a))
+  => \lam d =>
+      \let | fd : ContLiftData B => (f d.1, f d.2, dmap f d.3, d.4)
+           | c => Bf fd
+      \in Contr.make {ContLift (\lam a =>⁺ B (f a)) d} (c.center.1, c.center.2)
+            \lam u => pmap {ContLift B fd} {ContLift (\lam a =>⁺ B (f a)) d} (\lam v => (v.1, v.2)) (c.contraction (u.1, u.2))
+
+-- | Transport along an arrow in a right fibration.
+\func rightFib-tr {A : \Cat} {B : A ->⁺ \Cat} (Bf : IsRightFib B) {a' a : A} (p : a' ~> a) (b : B a) : B a'
+  => (Contr.center {Bf (a', a, p, b)}).1
+
+-- | A path over {p} ending at {b} starts at the transport of {b}.
+\func rightFib-tr-dpath {A : \Cat} {B : A ->⁺ \Cat} (Bf : IsRightFib B) {a' a : A} {p : a' ~> a} {b : B a} {b' : B a'}
+  (t : DPath (\lam i => B (p i)) b' b) : rightFib-tr Bf p b = b'
+  => path \lam k => (isContr=>isProp (Bf (a', a, p, b)) (Contr.center {Bf (a', a, p, b)}) (b', t) k).1
+
+{- | The full subcategory of the total category of a right fibration {Q} on a predicate {P} stable under transport
+ -   is a right fibration over {A}.
+ -}
+\lemma rightFib-full {A : \Cat} {Q : A ->⁺ \Cat} (Qf : IsRightFib Q) (P : \Sigma⁺ (a : A) (Q a) -> \Prop)
+                     (Ps : \Pi {a' a : A} (p : a' ~> a) (b : Q a) -> P (a, b) -> P (a', rightFib-tr Qf p b))
+  : IsRightFib (Fibers (proj P))
+  => \lam d => aux d.4.1 d.3 d.4.2
+  \where {
+    -- | The projection of the full subcategory to the base.
+    \func proj {A : \Cat} {Q : A ->⁺ \Cat} (P : \Sigma⁺ (a : A) (Q a) -> \Prop) (x :⁺ FullSubCat P) : A
+      => (FullSubCat.inc x).1
+
+    \private \lemma aux {a' a : A} (x : FullSubCat P) (p : a' ~> a) (q : proj P x = a)
+      : Contr (ContLift (Fibers (proj P)) (a', a, p, (x, q))) \elim q
+      | idp => Contr.Contr_QEquiv (symQEquiv (lift-equiv P x p)) $
+                 sigma-Contr (rsigma $ later (a', p)) \lam u => base-contr Qf P Ps x u.1
+
+    -- | Arrows into the base point together with a path to `(a', p)`.
+    \func Base {A : \Cat} {Q : A ->⁺ \Cat} (P : \Sigma⁺ (a : A) (Q a) -> \Prop) (x : FullSubCat P) {a' : A} (p : a' ~> proj P x)
+      => \Sigma (u : \Sigma (k : \Sigma (y : A) (y ~> proj P x)) (k = (a', p)))
+                (\Sigma (l : ContLift Q (u.1.1, proj P x, u.1.2, (FullSubCat.inc x).2)) (P (u.1.1, l.1)))
+
+    -- | Lifts of the arrows into the base point that satisfy {P} form a contractible type.
+    \lemma base-contr {A : \Cat} {Q : A ->⁺ \Cat} (Qf : IsRightFib Q) (P : \Sigma⁺ (a : A) (Q a) -> \Prop)
+                      (Ps : \Pi {a' a : A} (p : a' ~> a) (b : Q a) -> P (a, b) -> P (a', rightFib-tr Qf p b))
+                      (x : FullSubCat P) (k : \Sigma (y : A) (y ~> proj P x))
+      : Contr (\Sigma (l : ContLift Q (k.1, proj P x, k.2, (FullSubCat.inc x).2)) (P (k.1, l.1)))
+      => \let c => Qf (k.1, proj P x, k.2, (FullSubCat.inc x).2)
+         \in sigma-Contr c \lam l => isProp=>isContr (\lam _ _ => prop-pi) $
+               coe (\lam i => P (k.1, (c.contraction l i).1)) (Ps k.2 (FullSubCat.inc x).2 (FullSubCat.inc-con {_} {P})) right
+
+    -- | Lifts in the full subcategory are lifts in {Q} satisfying {P}.
+    \sfunc lift-equiv {A : \Cat} {Q : A ->⁺ \Cat} (P : \Sigma⁺ (a : A) (Q a) -> \Prop) (x : FullSubCat P) {a' : A} (p : a' ~> proj P x)
+      : QEquiv {ContLift (Fibers (proj P)) (a', proj P x, p, (x, idp))} {Base P x p}
+      => \let | T => \Sigma⁺ (a : A) (Q a)
+              | Pt (v : \Sigma (s : \Sigma (t : T) (P t)) (s.1 ~> FullSubCat.inc x))
+                => (v.1.1.1, dpath \lam i => (v.2 i).1) = {\Sigma (y : A) (y ~> proj P x)} (a', p)
+              | ob-ff : QEquiv {\Sigma (y : FullSubCat P) (y ~> x)} {\Sigma (s : \Sigma (t : T) (P t)) (s.1 ~> FullSubCat.inc x)}
+                => sigma-equiv (IsEquiv.toQEquiv fullSub-ob-equiv) \lam y => IsEquiv.toQEquiv (FullSubCat.inc-ff y x)
+         \in fibers-equiv P x p `transQEquiv` qsigma-left ob-ff `transQEquiv` total-equiv P x p
+      \where \private {
+        -- | A path over {p} in `Fibers (proj P)` is an arrow in the full subcategory whose projection is equal to {p}.
+        \func fibers-equiv {A : \Cat} {Q : A ->⁺ \Cat} (P : \Sigma⁺ (a : A) (Q a) -> \Prop) (x : FullSubCat P) {a' : A} (p : a' ~> proj P x)
+          : QEquiv {ContLift (Fibers (proj P)) (a', proj P x, p, (x, idp))}
+                   {\Sigma (w : \Sigma (y : FullSubCat P) (y ~> x)) (((proj P w.1, dpath \lam i => proj P (w.2 i)) : \Sigma (y : A) (y ~> proj P x)) = (a', p))} \cowith
+          | f u => ((u.1.1, dpath \lam i => (u.2 i).1), path \lam m => (u.1.2 m, dpath \lam i => (u.2 i).2 m))
+          | ret v => ((v.1.1, path \lam m => (v.2 m).1), dpath \lam i => (v.1.2 i, path \lam m => (v.2 m).2 i))
+          | ret_f u => idp
+          | f_sec v => idp
+
+        -- | An arrow into `inc x` in the total category is an arrow in the base together with a path over it.
+        \func total-equiv {A : \Cat} {Q : A ->⁺ \Cat} (P : \Sigma⁺ (a : A) (Q a) -> \Prop) (x : FullSubCat P) {a' : A} (p : a' ~> proj P x)
+          : QEquiv {\Sigma (v : \Sigma (s : \Sigma (t : \Sigma⁺ (a : A) (Q a)) (P t)) (s.1 ~> FullSubCat.inc x))
+                           (((v.1.1.1, dpath \lam i => (v.2 i).1) : \Sigma (y : A) (y ~> proj P x)) = (a', p))}
+                   {Base P x p} \cowith
+          | f v => (((v.1.1.1.1, dpath \lam i => (v.1.2 i).1), v.2), ((v.1.1.1.2, dpath \lam i => (v.1.2 i).2), v.1.1.2))
+          | ret u => ((((u.1.1.1, u.2.1.1), u.2.2), dpath \lam i => (u.1.1.2 i, u.2.1.2 i)), u.1.2)
+          | ret_f v => idp
+          | f_sec u => idp
+      }
+  }
+
+-- | Objects of the fibers of {rightFib-full} are objects of the fibers of {Q} satisfying {P}.
+\func rightFib-full-fibers {A : \Cat} {Q : A ->⁺ \Cat} (P : \Sigma⁺ (a : A) (Q a) -> \Prop) (a : A)
+  : QEquiv {Fibers (rightFib-full.proj P) a} {\Sigma (b : Q a) (P (a, b))} \cowith
+  | f u => (transport+ Q u.2 (FullSubCat.inc u.1).2, coe (\lam k => P (sigma-ext u.2 idp k)) (FullSubCat.inc-con {_} {P} {u.1}) right)
+  | ret s => (FullSubCat.make (a, s.1) s.2, idp)
+  | ret_f => \case \elim a, \elim __ \with {
+    | _, (x, idp) =>
+      \let | y => FullSubCat.make (FullSubCat.inc x) (FullSubCat.inc-con {_} {P} {x})
+           | emb => (IsFFMap.isObEmbedding FullSubCat.inc-ff).isEmb y x
+           | r : pmap (rightFib-full.proj P) (emb.sec idp) = idp => pmap (pmap (\lam (t : \Sigma⁺ (a : A) (Q a)) => t.1)) (emb.f_sec idp)
+      \in pmap (\lam z => ((y, z) : Fibers (rightFib-full.proj P) (rightFib-full.proj P x))) (inv r) *> aux (emb.sec idp)
+  }
+  | f_sec s => ext idp
+  \where
+    \private \func aux {y x : FullSubCat P} (e : y = x)
+      : (y, pmap (rightFib-full.proj P) e) = {Fibers (rightFib-full.proj P) (rightFib-full.proj P x)} (x, idp) \elim e
+      | idp => idp
+
+-- | Under {rightFib-full-fibers}, transport in {rightFib-full} is transport in {Q}.
+\sfunc rightFib-full-tr {A : \Cat} {Q : A ->⁺ \Cat} (Qf : IsRightFib Q) (P : \Sigma⁺ (a : A) (Q a) -> \Prop)
+                        (Ps : \Pi {a' a : A} (p : a' ~> a) (b : Q a) -> P (a, b) -> P (a', rightFib-tr Qf p b))
+                        {a' a : A} (p : a' ~> a) (z : Fibers (rightFib-full.proj P) a)
+  : (rightFib-full-fibers P a' (rightFib-tr (rightFib-full Qf P Ps) p z)).1 = rightFib-tr Qf p (rightFib-full-fibers P a z).1
+  => \let c => (rightFib-full Qf P Ps (a', a, p, z)).center
+     \in inv (rightFib-tr-dpath Qf (dpath \lam i => transport+ Q (c.2 i).2 (FullSubCat.inc (c.2 i).1).2))
