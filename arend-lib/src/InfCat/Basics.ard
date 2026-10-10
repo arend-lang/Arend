@@ -257,3 +257,8 @@
                pmap+ (pmap+ f __ *> q (f x)) (homotopy_app-comm+ (\lam x => g (f x)) p x)
           *> homotopy-isNatural+ (\lam y => f (g y)) (\lam y => y) q (pmap+ f (p x))
   }
+
+-- | Transport of an arrow over {F} along a path of functors.
+\func transport+-slice.{v} {X : \Cat v} {F G G' : X ->⁺ \Type v} (p : G = G') {a : G ~> F} {a' : G' ~> F}
+                           (q : a = comp (=_~> p) a') : transport+ (~> F) p a = a' \elim p
+  | idp => q *> comp_idd-left

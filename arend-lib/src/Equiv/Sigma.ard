@@ -37,6 +37,11 @@
     | f_sec => idpe
   }) `transQEquiv` contr-left c {\lam w => w.1 = a}
 
+-- | The fundamental theorem of identity types: if the total space of {B} is contractible, then transporting {b0} is an equivalence.
+\lemma contr-transport-equiv {A : \Cat} {B : A -> \Cat} (c : Contr (\Sigma (a : A) (B a))) {a0 : A} (b0 : B a0) (a : A)
+  : IsEquiv {a0 = a} {B a} (transport B __ b0)
+  => propExt.conv (totalEquiv {A} {a0 =} \lam a p => transport B p b0) (contr-equiv (lsigma a0) c) a
+
 -- | A relation that is functional in both directions is the graph of an equivalence.
 \lemma contr-relation-equiv {X Y : \Cat} (R : X -> Y -> \Cat)
   (cx : \Pi (x : X) -> Contr (\Sigma (y : Y) (R x y))) (cy : \Pi (y : Y) -> Contr (\Sigma (x : X) (R x y)))
@@ -46,19 +51,19 @@
 \func contr-right {A : \Cat} (C : A -> Contr) : QEquiv {\Sigma (x : A) (C x)} {A} \cowith
   | f p => p.1
   | ret a => (a, Contr.center {C a})
-  | ret_f p => path (\lam i => (p.1, Contr.contraction {C p.1} p.2 @ i))
+  | ret_f p => path (\lam i => (p.1, Contr.contraction {C p.1} p.2 i))
   | f_sec a => idp
 
 \func pi-contr-left {A : \Cat} (a : A) (B : \Pi (a' : A) -> a = a' -> \Cat) : QEquiv {\Pi (a' : A) (p : a = a') -> B a' p} {B a idp} \cowith
   | f h => h a idp
   | ret b a' => Jl B b
-  | ret_f h => path (\lam i a' p => Jl (\lam x q => Jl B (h a idp) q = h x q) idp p @ i)
+  | ret_f h => path (\lam i a' p => Jl (\lam x q => Jl B (h a idp) q = h x q) idp p i)
   | f_sec => idpe
 
 \func pi-contr-right {A : \Cat} (a' : A) (B : \Pi (a : A) -> a = a' -> \Cat) : QEquiv {\Pi (a : A) (p : a = a') -> B a p} {B a' idp} \cowith
   | f h => h a' idp
   | ret b a => Jl.Jr B b
-  | ret_f h => path (\lam i a p => Jl.Jr (\lam x q => Jl.Jr B (h a' idp) q = h x q) idp p @ i)
+  | ret_f h => path (\lam i a p => Jl.Jr (\lam x q => Jl.Jr B (h a' idp) q = h x q) idp p i)
   | f_sec => idpe
 
 \func sigma-left {A A' : \Cat} {B' : A' -> \Cat} (e : HAEquiv {A} {A'}) : QEquiv {\Sigma (a : A) (B' (e a))} {\Sigma (a' : A') (B' a')} \cowith
@@ -67,7 +72,7 @@
   | ret_f p => ext (e.ret_f p.1, path (\lam i => coe (\lam j => B' (e.f_ret_f=f_sec_f p.1 i j) ) _ right) *> transport_id_inv B' _ _)
   | f_sec p => ext (e.f_sec p.1, transport_id_inv B' _ _)
   \where {
-    \func path-func.{u} {A A' : \Cat u} {B' : A' -> \Cat u} (p : A = A') : (\Sigma (x : A) (B' (coe (p @) x right))) = (\Sigma (x' : A') (B' x'))
+    \func path-func.{u} {A A' : \Cat u} {B' : A' -> \Cat u} (p : A = A') : (\Sigma (x : A) (B' (coe p x right))) = (\Sigma (x' : A') (B' x'))
       => path \lam i => \Sigma (x : p i) (B' (coe2 p i x right))
   }
 

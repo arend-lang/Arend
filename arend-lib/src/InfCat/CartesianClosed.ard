@@ -2,6 +2,7 @@
 \import InfCat.Basics
 \import InfCat.Functor.Equiv
 \import InfCat.Limit.Product
+\import InfCat.Limit.Pullback
 \import InfCat.Slice
 \import Paths
 \open IsProduct
@@ -30,8 +31,16 @@
 }
 
 -- | An ∞-category whose slices are Cartesian closed.
-\class LocallyCartesianClosedHCat \extends CartesianClosedHCat
+\class LocallyCartesianClosedHCat \extends CartesianClosedHCat, HCatWithPullbacks
   | sliceCCC (X : C) : CartesianClosedHCat (SliceCat X)
+  | Pullback f g => (cone sliceCCC f g).1
+  | pbProj1 f g => (cone sliceCCC f g).2
+  | pbProj2 f g => (cone sliceCCC f g).3
+  | pbSquare => (cone sliceCCC _ _).4
+  | Pullback-isPullback => IsPullback.fromProduct (sliceCCC _).Prod-isProduct
+  \where
+    \private \func cone {C : \Cat} (P : \Pi (z : C) -> CartesianHCat (SliceCat z)) {x y z : C} (f : x ~> z) (g : y ~> z)
+      => (IsPullback.cone-equiv f g).ret (_, CartesianHCat.proj1 {P z}, CartesianHCat.proj2)
 
 -- | Cartesian closed structures transfer along equivalences.
 \sfunc cartesianClosed-transfer.{u} {C D : \Cat u} {f : C ->⁺ D} (e : IsHEquiv f) (CC : CartesianClosedHCat C) : CartesianClosedHCat D

@@ -1,6 +1,7 @@
 \import Equiv
 \import InfCat.Basics
 \import InfCat.Fibration.LeftFib
+\import InfCat.Functor.Conservative
 \import InfCat.Groupoid
 \import InfCat.Paths
 \import InfCat.Rezk
@@ -67,3 +68,9 @@
   | ret h => dpath \lam i x => dpath (iso+ \lam y => h (x,y)) i
   | ret_f p => path \lam j => dpath \lam i x => iso+_coe+ (dpath \lam i => p i x) i j
   | f_sec => idpe
+
+-- | A covariant fiberwise equivalence gives a path of functors; its arrow is the given transformation.
+\sfunc fun-path.{u} {X : \Cat u} {G G' : X ->⁺ \Type u} (h : \Pi (s :⁺ \Sigma⁺ (x : X) (G x)) -> G' s.1)
+                    (e : \Pi (x : X) -> IsEquiv (\lam a => h (x,a)))
+  : \Sigma (p : G = G') (=_~> p = depUnivalence.ret h)
+  => IsIso_= (objectwise-iso {X} {_} {G} {G'} {depUnivalence.ret h} \lam x => ~>_->-equiv-iso (e x))

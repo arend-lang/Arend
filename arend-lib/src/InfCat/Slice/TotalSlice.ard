@@ -1,5 +1,7 @@
 {- | The slice category of A ->⁺ \Type u over F is equivalent to
  -   the category of functors \Sigma⁺ (x : X) (F x) ->⁺ \Type u ({sumSlice-equiv}).
+ -
+ -   Pullbacks of slices of `X ->⁺ \Type u` are computed by precomposing with `totalMap` ({slice-pullback-equiv}).
  -}
 
 \import Equiv
@@ -12,17 +14,20 @@
 \import InfCat.Fibration.Straightening
 \import InfCat.Functor.Equiv
 \import InfCat.Functor.FullyFaithful
+\import InfCat.Limit.Product
+\import InfCat.Limit.Pullback
 \import InfCat.Slice
 \import InfCat.Square
-\import InfCat.Functor.Conservative
 \import InfCat.Paths
-\import InfCat.Rezk
 \import InfCat.Yoneda.CovariantYoneda
 \import Logic
 \import Logic.Unique
 \import Meta
 \import Paths
 \import Paths.Meta
+\open FunctorCartesian
+\open sumSlice
+\open sumSlice-equiv
 
 -- | The slice category over {F}.
 \func Slice.{u} {X : \Cat u} (F : X ->⁺ \Type u) : \Cat (\suc u)
@@ -39,6 +44,17 @@
     -- | The projection of {sumFam} to {F}.
     \func sumProj.{u} {X : \Cat u} (F : X ->⁺ \Type u) (G' :⁺ \Sigma⁺ (x : X) (F x) ->⁺ \Type u) : sumFam F G' ~> F
       => dpath \lam i x => dpath (iso+ {sumFam F G' x} {F x} \lam s => s.1) i
+
+    -- | The action of {sumFam} on an arrow {h} fixes the first component and acts by {h} on the second one.
+    \sfunc sumFam-dmap.{u} {X : \Cat u} (F : X ->⁺ \Type u) {P P' : \Sigma⁺ (x : X) (F x) ->⁺ \Type u} (h : P ~> P')
+                           {x :⁺ X} {t :⁺ F x} {p :⁺ P (x,t)}
+      : ~>_-> (dpath \lam i => sumFam F (h i) x) (t, p) = (t, ~>_-> (dpath \lam i => h i (x,t)) p)
+      => aux (~>_= (dpath \lam i => coe+ (sumProj F (h i) __ x) (coe+ (\lam i => sumFam F (h i) x) (t, p) i) dright))
+             (pmap+ (\lam k => k ((x,t),p)) (sumSlice-equiv.value-yoneda F P h))
+      \where
+        \private \func aux {A :⁺ \Type} {B :⁺ A ->⁺ \Type} {a a' :⁺ A} {b :⁺ B a} {b' :⁺ B a'} (e :⁺ a = a') (v :⁺ b = transport+ B (inv e) b')
+          : (a', b') = {\Sigma⁺ (x : A) (B x)} (a, b) \elim e
+          | idp => path \lam i => (a, inv v i)
   }
 
 -- | The categories of functors on the total category of {F} and functors over {F} are equivalent.
@@ -84,22 +100,11 @@
                         | r => fun-path {_} {sumFam F (fibFam s.2)} {s.1} h (\lam x => fib-sum-equiv s.2 x)
                         | Q => depUnivalence {X} {sumFam F (fibFam s.2)} {F}
                         | Q' => depUnivalence {X} {sumFam F (fibFam s.2)} {s.1}
-                   \in sigma-ext r.1 $ transport-slice r.1 $ later $
+                   \in sigma-ext r.1 $ transport+-slice r.1 $ later $
                          pmap {\Pi (u :⁺ \Sigma⁺ (x : X) (sumFam F (fibFam s.2) x)) -> F u.1} Q.ret
                               (ext \lam u => inv (Straight.fromStraight u.2.2).2 *> inv (~>_->_comp-fam (Q'.ret h) s.2 u.1 u.2))
                          *> Q.ret_f _ *> pmap (comp __ s.2) (inv r.2)
       \where \private {
-        -- | A covariant fiberwise equivalence gives a path of functors; its arrow is the given transformation.
-        \sfunc fun-path.{v} {X : \Cat v} {G G' : X ->⁺ \Type v} (h : \Pi (s :⁺ \Sigma⁺ (x : X) (G x)) -> G' s.1)
-                            (e : \Pi (x : X) -> IsEquiv {G x} {G' x} (\lam a => h (x,a)))
-          : \Sigma (p : G = G') (=_~> p = (depUnivalence {X} {G} {G'}).ret h)
-          => IsIso_= (objectwise-iso {X} {\Type v} {G} {G'} {(depUnivalence {X} {G} {G'}).ret h} \lam x => ~>_->-equiv-iso (e x))
-
-        -- | Transport of an arrow over {F} along a path of functors.
-        \func transport-slice.{v} {X : \Cat v} {F G G' : X ->⁺ \Type v} (p : G = G') {a : G ~> F} {a' : G' ~> F}
-                                  (q : a = comp (=_~> p) a') : transport+ (\lam H =>⁺ H ~> F) p a = a' \elim p
-          | idp => q *> comp_idd-left
-
         \lemma sum-fib-equiv.{v} {X : \Cat v} {F : X ->⁺ \Type v} (G' : \Sigma⁺ (x : X) (F x) ->⁺ \Type v) (x : \Sigma⁺ (x : X) (F x))
           : IsEquiv {fibFam (sumProj F G') x} {G' x}
                     (\lam r => transport+ (\lam t => G' (x.1, t)) (Straight.fromStraight r).2 (Straight.fromStraight r).1.2)
@@ -126,6 +131,30 @@
               | idp => idp
           }
       }
+
+    \func value.{v} {X : \Cat v} (F : X ->⁺ \Type v) (P : \Sigma⁺ (x : X) (F x) ->⁺ \Type v)
+                    (k :⁺ \Sigma⁺ (P' : \Sigma⁺ (x : X) (F x) ->⁺ \Type v) (P ~> P')) (s :⁺ \Sigma⁺ (z : \Sigma⁺ (x : X) (F x)) (P z)) : k.1 s.1
+      => transport+ (\lam t => k.1 (s.1.1, t))
+           (inv (~>_= (dpath \lam i => coe+ (\lam j => sumProj F (k.2 i) j s.1.1) (coe+ (\lam i => sumFam F (k.2 i) s.1.1) (s.1.2, s.2) i) dright)))
+           (~>_-> (dpath \lam i => sumFam F (k.2 i) s.1.1) (s.1.2, s.2)).2
+
+    -- | {value} is {depUnivalence}.
+    \func value-yoneda.{v} {X : \Cat v} (F : X ->⁺ \Type v) (P : \Sigma⁺ (x : X) (F x) ->⁺ \Type v) {P' : \Sigma⁺ (x : X) (F x) ->⁺ \Type v} (h : P ~> P')
+      : depUnivalence h = value F P (P', h)
+      => inv $ pmap (\lam M => M (P', h)) $ QEquiv.isInj
+          {coslice-yoneda P (\lam k => \Pi (s :⁺ \Sigma⁺ (z : \Sigma⁺ (x : X) (F x)) (P z)) -> k.1 s.1)}
+          {value F P} {\lam k s => ~>_-> (dpath \lam i => k.2 i s.1) s.2}
+          (ext \lam s => value-idd (\lam t => P (s.1.1, t)) s.1.2 s.2)
+
+    -- | {value} at the identity: transport along the identity in a sum of types.
+    \sfunc value-idd.{v} {A :⁺ \Type v} (B :⁺ A ->⁺ \Type v) (a :⁺ A) (b :⁺ B a)
+      : transport+ B (inv (~>_= (dpath \lam i => (coe+ (\lam _ => \Sigma⁺ (a' : A) (B a')) (a, b) i).1))) (coe+ (\lam _ => \Sigma⁺ (a' : A) (B a')) (a, b) dright).2
+        = coe+ (\lam _ => B a) b dright
+      => pmap+ (\lam l => transport+ B (inv (~>_= (dpath \lam i => (l.2 i).1))) l.1.2) $
+               leftFib-lift-unique universe-leftFib
+                  {\Sigma⁺ (a' : A) (B a'), \Sigma⁺ (a' : A) (B a'), idd, later (a, b)}
+                  {coe+ (\lam _ => \Sigma⁺ (a' : A) (B a')) (a, b) dright, dpath \lam i => coe+ (\lam _ => \Sigma⁺ (a' : A) (B a')) (a, b) i}
+                  {later (a, coe+ (\lam _ => B a) b dright), dpath \lam i => ((a, coe+ (\lam _ => B a) b i) : \Sigma⁺ (a' : A) (B a'))}
 
     -- | {sumSlice} is fully faithful.
     \lemma sumSlice-ff.{u} {X : \Cat u} (F : X ->⁺ \Type u) : IsFFMap (sumSlice F)
@@ -177,31 +206,6 @@
               : ((t, transport+ (\lam t' => P' (x, t')) (inv e) c.2), idp) = {\Sigma⁺ (c' : \Sigma⁺ (t' : F x) (P' (x, t'))) (t = c'.1)} (c, e) \elim e
               | idp => idp
 
-        -- | The forward map of {section-equiv} on the triangle of an arrow `k.2`, written covariantly in `k`.
-        \func value.{v} {X : \Cat v} (F : X ->⁺ \Type v) (P : \Sigma⁺ (x : X) (F x) ->⁺ \Type v)
-                        (k :⁺ \Sigma⁺ (P' : \Sigma⁺ (x : X) (F x) ->⁺ \Type v) (P ~> P')) (s :⁺ \Sigma⁺ (z : \Sigma⁺ (x : X) (F x)) (P z)) : k.1 s.1
-          => transport+ (\lam t => k.1 (s.1.1, t))
-               (inv (~>_= (dpath \lam i => coe+ (\lam j => sumProj F (k.2 i) j s.1.1) (coe+ (\lam i => sumFam F (k.2 i) s.1.1) (s.1.2, s.2) i) dright)))
-               (~>_-> (dpath \lam i => sumFam F (k.2 i) s.1.1) (s.1.2, s.2)).2
-
-        -- | {value} is {depUnivalence}.
-        \func value-yoneda.{v} {X : \Cat v} (F : X ->⁺ \Type v) (P : \Sigma⁺ (x : X) (F x) ->⁺ \Type v) {P' : \Sigma⁺ (x : X) (F x) ->⁺ \Type v} (h : P ~> P')
-          : depUnivalence h = value F P (P', h)
-          => inv $ pmap (\lam M => M (P', h)) $ QEquiv.isInj
-              {coslice-yoneda P (\lam k => \Pi (s :⁺ \Sigma⁺ (z : \Sigma⁺ (x : X) (F x)) (P z)) -> k.1 s.1)}
-              {value F P} {\lam k s => ~>_-> (dpath \lam i => k.2 i s.1) s.2}
-              (ext \lam s => value-idd (\lam t => P (s.1.1, t)) s.1.2 s.2)
-
-        -- | {value} at the identity: transport along the identity in a sum of types.
-        \sfunc value-idd.{v} {A :⁺ \Type v} (B :⁺ A ->⁺ \Type v) (a :⁺ A) (b :⁺ B a)
-          : transport+ B (inv (~>_= (dpath \lam i => (coe+ (\lam _ => \Sigma⁺ (a' : A) (B a')) (a, b) i).1))) (coe+ (\lam _ => \Sigma⁺ (a' : A) (B a')) (a, b) dright).2
-            = coe+ (\lam _ => B a) b dright
-          => pmap+ (\lam l => transport+ B (inv (~>_= (dpath \lam i => (l.2 i).1))) l.1.2) $
-                   leftFib-lift-unique universe-leftFib
-                      {\Sigma⁺ (a' : A) (B a'), \Sigma⁺ (a' : A) (B a'), idd, later (a, b)}
-                      {coe+ (\lam _ => \Sigma⁺ (a' : A) (B a')) (a, b) dright, dpath \lam i => coe+ (\lam _ => \Sigma⁺ (a' : A) (B a')) (a, b) i}
-                      {later (a, coe+ (\lam _ => B a) b dright), dpath \lam i => ((a, coe+ (\lam _ => B a) b i) : \Sigma⁺ (a' : A) (B a'))}
-
         {- | Transformations of functors on the total category of {F} are transformations of their sums over {F}
          -   together with the naturality square of {sumProj}.
          -
@@ -228,5 +232,104 @@
           : IsEquiv {P ~> P'} {\Sigma (k : sumFam F P ~> sumFam F P') (DPath (\lam i => k i ~> F) (sumProj F P) (sumProj F P'))}
                     (\lam h => (dmap (sumFam F) h, dpath \lam i => sumProj F (h i)))
           => IsEquiv.leftFactor (inP (section-equiv F P P')) $ transport IsEquiv (path \lam j h => value-yoneda F P h j) (inP depUnivalence)
+      }
+  }
+
+{- | Pullback squares into {sig} over {alpha} are paths from {pullbackSlice}.
+ -   That is, the pullback of {sig} along {alpha} is the sum of the functor of {sig} precomposed with {totalMap} {alpha}.
+ -   Composing with {totalFun-slice}, pullback squares from {sig'} to {sig} over {alpha} are paths
+ -   from the functor of {sig'} to the functor of {sig} precomposed with `totalMap alpha`.
+ -
+ -   Proof: the type of pullback squares into {sig} is contractible ({pullbackSquare.contr}), so it is enough to construct
+ -   one pullback square from {pullbackSlice} ({pullbackSquare}).
+ -}
+\lemma slice-pullback-equiv.{u} {X : \Cat u} {F' F : X ->⁺ \Type u} (alpha : F' ~> F) (sig : Slice F) (sig' : Slice F')
+  : IsEquiv {pullbackSlice alpha sig = sig'} {PullbackSquare alpha sig sig'}
+            (\lam q => transport (PullbackSquare alpha sig) q (pullbackSquare alpha sig))
+  => contr-transport-equiv (pullbackSquare.contr alpha sig) (pullbackSquare alpha sig) sig'
+  \where {
+    -- | The functor between total categories induced by an arrow {a}.
+    \func totalMap.{u} {X : \Cat u} {F' F : X ->⁺ \Type u} (a : F' ~> F) (s :⁺ \Sigma⁺ (x : X) (F' x)) : \Sigma⁺ (x : X) (F x)
+      => (s.1, fibFam.covMap a s)
+
+    -- | Pullback squares from {sig'} to {sig} over {alpha}.
+    \func PullbackSquare.{u} {X : \Cat u} {F' F : X ->⁺ \Type u} (alpha : F' ~> F) (sig : Slice F) (sig' : Slice F') : \Type (\suc u)
+      => \Sigma (k : sig'.1 ~> sig.1) (s : comp sig'.2 alpha = comp k sig.2) (IsPullback (_, sig'.2, k, s))
+
+    -- | The pullback of {sig} along {alpha}: the sum of the functor of {sig} precomposed with `totalMap alpha`.
+    \func pullbackSlice.{u} {X : \Cat u} {F' F : X ->⁺ \Type u} (alpha : F' ~> F) (sig : Slice F) : Slice F'
+      => sumSlice F' (\lam z =>⁺ fibFam sig.2 (totalMap alpha z))
+
+    {- | The pullback square from {pullbackSlice} to {sig} over {alpha}.
+     -
+     -   We may assume that `(F', alpha)` and {sig} are sums of functors `Phi` and `H` on the total category of `F` ({reduce}).
+     -   The pullback is then the sum of the product of `Phi` and `H` ({sumSlice-prod}),
+     -   and it is the sum of `H ∘ totalMap alpha` over `F'` ({prod-path}).
+     -}
+    \sfunc pullbackSquare.{u} {X : \Cat u} {F' F : X ->⁺ \Type u} (alpha : F' ~> F) (sig : Slice F) : PullbackSquare alpha sig (pullbackSlice alpha sig)
+      => reduce (fibFam alpha) (fibFam sig.2) ((totalFun-slice F).f_sec (F',alpha)) ((totalFun-slice F).f_sec sig)
+      \where {
+        -- | Pullback squares into {sig} over {alpha} form a contractible type.
+        \lemma contr.{u} {X : \Cat u} {F' F : X ->⁺ \Type u} (alpha : F' ~> F) (sig : Slice F)
+          : Contr (\Sigma (sig' : Slice F') (PullbackSquare alpha sig sig'))
+          => Contr.Contr_QEquiv (later \new QEquiv {
+               | f c => ((c.1.1, c.1.2), (c.1.3, c.1.4, c.2))
+               | ret c => ((c.1.1, c.1.2, c.2.1, c.2.2), c.2.3)
+               | ret_f c => idp
+               | f_sec c => idp
+             }) (isProp=>isContr IsPullback.unique (_, (pullbackSquare alpha sig).3))
+
+        -- | It is enough to construct the square for sums.
+        \func reduce.{u} {X : \Cat u} {F : X ->⁺ \Type u} (Phi H : \Sigma⁺ (x : X) (F x) ->⁺ \Type u) {s' sig : Slice F}
+                         (p : sumSlice F Phi = s') (q : sumSlice F H = sig) : PullbackSquare s'.2 sig (pullbackSlice s'.2 sig) \elim p, q
+          | idp, idp => transport (PullbackSquare (sumProj F Phi) (sumSlice F H)) (prod-path Phi H) (sumSlice-prod-square Phi H)
+
+        -- | The product of {Phi} and {H} in the slice.
+        \func sumSlice-prod.{u} {X : \Cat u} {F : X ->⁺ \Type u} (Phi H : \Sigma⁺ (x : X) (F x) ->⁺ \Type u)
+          : IsPullback.Cone (sumProj F Phi) (sumProj F H)
+          => (IsPullback.cone-equiv (sumProj F Phi) (sumProj F H)).ret
+               (sumSlice F (FunProd Phi H), dmap (sumSlice F) (FunProd-proj1 Phi H), dmap (sumSlice F) (FunProd-proj2 Phi H))
+
+        \lemma sumSlice-prod-isPullback.{u} {X : \Cat u} {F : X ->⁺ \Type u} (Phi H : \Sigma⁺ (x : X) (F x) ->⁺ \Type u)
+          : IsPullback (sumSlice-prod Phi H)
+          => IsPullback.fromProduct $ IsProduct.equiv-preserve (sumSlice-equiv F) (CartesianHCat.Prod-isProduct {FunctorCartesian} {Phi} {H})
+
+        \func sumSlice-prod-square.{u} {X : \Cat u} {F : X ->⁺ \Type u} (Phi H : \Sigma⁺ (x : X) (F x) ->⁺ \Type u)
+          : PullbackSquare (sumProj F Phi) (sumSlice F H) ((sumSlice-prod Phi H).1, (sumSlice-prod Phi H).2)
+          => ((sumSlice-prod Phi H).3, (sumSlice-prod Phi H).4, sumSlice-prod-isPullback Phi H)
+
+        -- | The functor on the total category of `sumFam F Phi` whose sum is the pullback.
+        \func fibFamTotal.{u} {X : \Cat u} {F : X ->⁺ \Type u} (Phi H : \Sigma⁺ (x : X) (F x) ->⁺ \Type u) (z :⁺ \Sigma⁺ (x : X) (sumFam F Phi x)) : \Type u
+          => fibFam (sumProj F H) (totalMap (sumProj F Phi) z)
+
+        -- | The sum of the product of {Phi} and {H} over `sumFam F Phi` is the sum of {fibFamTotal}.
+        \func prod-path.{u} {X : \Cat u} {F : X ->⁺ \Type u} (Phi H : \Sigma⁺ (x : X) (F x) ->⁺ \Type u)
+          : ((sumSlice-prod Phi H).1, (sumSlice-prod Phi H).2) = {Slice (sumFam F Phi)} sumSlice (sumFam F Phi) (fibFamTotal Phi H)
+          => \let q => fun-path {X} {sumFam F (FunProd Phi H)} {sumFam (sumFam F Phi) (fibFamTotal Phi H)} (prod-map Phi H) (prod-map-equiv Phi H)
+             \in sigma-ext q.1 $ transport+-slice q.1 $ prod-arrow Phi H *> pmap (comp __ (sumProj (sumFam F Phi) (fibFamTotal Phi H))) (inv q.2)
+
+        -- | The projection of the pullback to `sumFam F Phi` factors through {prod-map}.
+        \sfunc prod-arrow.{u} {X : \Cat u} {F : X ->⁺ \Type u} (Phi H : \Sigma⁺ (x : X) (F x) ->⁺ \Type u)
+          : (sumSlice-prod Phi H).2 = comp (depUnivalence.ret (prod-map Phi H)) (sumProj (sumFam F Phi) (fibFamTotal Phi H))
+          => QEquiv.isInj {depUnivalence} $ ext \lam s =>
+               sumFam-dmap F (FunProd-proj1 Phi H) {s.1} {s.2.1} {s.2.2} *> inv (~>_->_comp-fam (depUnivalence.ret (prod-map Phi H)) (sumProj (sumFam F Phi) (fibFamTotal Phi H)) s.1 s.2)
+
+        -- | The comparison map from the sum of the product of {Phi} and {H} to the sum of {fibFamTotal}.
+        \func prod-map.{u} {X : \Cat u} {F : X ->⁺ \Type u} (Phi H : \Sigma⁺ (x : X) (F x) ->⁺ \Type u)
+                           (s :⁺ \Sigma⁺ (x : X) (sumFam F (FunProd Phi H) x)) : sumFam (sumFam F Phi) (fibFamTotal Phi H) s.1
+          => ((s.2.1, s.2.2.1), Straight.toStraight ((s.2.1, s.2.2.2), idp))
+
+        \lemma prod-map-equiv.{u} {X : \Cat u} {F : X ->⁺ \Type u} (Phi H : \Sigma⁺ (x : X) (F x) ->⁺ \Type u) (x : X)
+          : IsEquiv {sumFam F (FunProd Phi H) x} {sumFam (sumFam F Phi) (fibFamTotal Phi H) x} (\lam a => prod-map Phi H (x,a))
+          => inP \new QEquiv {
+            | ret r => (r.1.1, (r.1.2, transport (\lam t => H (x,t)) (Straight.fromStraight r.2).2 (Straight.fromStraight r.2).1.2))
+            | ret_f a => idp
+            | f_sec r => path (\lam i => (r.1, (aux (Straight.fromStraight r.2).2 *> Straight.toStraight_fromStraight r.2) i))
+          }
+          \where
+            \private \func aux {t t' : F x} {h : H (x,t)} (e : t = t')
+              : Straight.toStraight {_} {fibFam.fibFamCat (sumProj F H)} {fibFam.leftFib (sumProj F H)} {fibFam.small (sumProj F H)} {x,t'} ((t', transport (\lam t => H (x,t)) e h), idp)
+                = Straight.toStraight ((t, h), e) \elim e
+              | idp => idp
       }
   }

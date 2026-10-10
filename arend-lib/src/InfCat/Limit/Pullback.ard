@@ -1,0 +1,110 @@
+{- | Pullbacks in ∞-categories.
+ -
+ -   A commutative square is a pullback if it is a product in the slice over its corner ({IsPullback}).
+ -   Cones over a cospan are cones in the slice ({IsPullback.cone-equiv}); in particular pullbacks are unique ({IsPullback.unique-contr}).
+ -}
+
+\import Equiv
+\import Equiv.Sigma
+\import Function.Meta
+\import InfCat.Basics
+\import InfCat.Limit.BaseHCat
+\import InfCat.Limit.Product
+\import InfCat.Slice
+\import InfCat.Square
+\import Logic
+\import Logic.Unique
+\import Meta
+\import Paths
+
+-- | The arrow of the slice over {z} given by an arrow {k} and a commutative triangle {e}.
+\func sliceArrow {C : \Cat} {z c d : C} {a : c ~> z} {b : d ~> z} (k : c ~> d) (e : comp k b = a) : (c,a) ~> {SliceCat z} (d,b)
+  => (IsEquiv.toQEquiv SliceCat.hom-equiv).ret (k, e *> inv comp_idd-right)
+
+-- | The underlying arrow and the commutative triangle of an arrow {h} of the slice over {z}.
+\func sliceTriangle {C : \Cat} {z c d : C} {a : c ~> z} {b : d ~> z} (h : (c,a) ~> {SliceCat z} (d,b)) : \Sigma (k : c ~> d) (comp k b = a)
+  => (dpath \lam i => (h i).1, ~>-natural {SliceCat z} (\lam (w :⁺ SliceCat z) =>⁺ w.2) {c,a} {d,b} {h} *> comp_idd-right)
+
+-- | Arrows in the slice over {z} are arrows with a commutative triangle.
+\func sliceArrow-equiv {C : \Cat} {z c d : C} {a : c ~> z} {b : d ~> z}
+  : QEquiv {\Sigma (k : c ~> d) (comp k b = a)} {(c,a) ~> {SliceCat z} (d,b)} \cowith
+  | f t => sliceArrow t.1 t.2
+  | ret => sliceTriangle
+  | ret_f => composite.ret_f
+  | f_sec => composite.f_sec
+  \where
+    \private \func composite {C : \Cat} {z c d : C} {a : c ~> z} {b : d ~> z}
+      : QEquiv {\Sigma (k : c ~> d) (comp k b = a)} {(c,a) ~> {SliceCat z} (d,b)}
+      => symQEquiv $ IsEquiv.toQEquiv SliceCat.hom-equiv `transQEquiv` sigma-right \lam k => later \new QEquiv {
+           | f e => e *> comp_idd-right
+           | ret e => e *> inv comp_idd-right
+           | ret_f e => *>-assoc *> pmap (e *>) *>_inv
+           | f_sec e => *>-assoc *> pmap (e *>) inv_*>
+         }
+
+-- | A cone over a cospan is a pullback: it is a product in the slice over {z}.
+\type IsPullback {C : \Cat} {x y z : C} {f : x ~> z} {g : y ~> z} (c : Cone f g) : \Prop
+  => IsProduct (sliceArrow c.2 idp) (sliceArrow c.3 (inv c.4))
+  \where {
+    -- | A cone over a cospan.
+    \protected \func Cone {C : \Cat} {x y z : C} (f : x ~> z) (g : y ~> z)
+      => \Sigma (p : C) (p1 : p ~> x) (p2 : p ~> y) (comp p1 f = comp p2 g)
+
+    -- | Cones over the cospan of {f} and {g} are cones over `(x,f)` and `(y,g)` in the slice over {z}.
+    \func cone-equiv {C : \Cat} {x y z : C} (f : x ~> z) (g : y ~> z)
+      : QEquiv {Cone f g} {\Sigma (w : SliceCat z) (w ~> (x,f)) (w ~> (y,g))} \cowith
+      | f c => ((c.1, comp c.2 f), sliceArrow c.2 idp, sliceArrow c.3 (inv c.4))
+      | ret t => (t.1.1, (sliceTriangle t.2).1, (sliceTriangle t.3).1, (sliceTriangle t.2).2 *> inv (sliceTriangle t.3).2)
+      | ret_f c => ret-aux (sliceArrow-equiv.ret_f (c.2, idp)) (sliceArrow-equiv.ret_f (c.3, inv c.4))
+      | f_sec t => sec-aux (sliceTriangle t.2).2 (sliceTriangle t.3).2
+                *> path \lam i => (t.1, sliceArrow-equiv.f_sec t.2 i, sliceArrow-equiv.f_sec t.3 i)
+      \where \private {
+        \func ret-aux {C : \Cat} {x y z p : C} {f : x ~> z} {g : y ~> z} {p1 : p ~> x} {p2 : p ~> y} {s : comp p1 f = comp p2 g}
+                                 {u1 : \Sigma (k : p ~> x) (comp k f = comp p1 f)} {u2 : \Sigma (k : p ~> y) (comp k g = comp p1 f)}
+                                 (q1 : u1 = (p1, idp)) (q2 : u2 = (p2, inv s))
+          : (p, u1.1, u2.1, u1.2 *> inv u2.2) = {\Sigma (p : C) (p1 : p ~> x) (p2 : p ~> y) (comp p1 f = comp p2 g)} (p, p1, p2, s) \elim q1, q2
+          | idp, idp => path (\lam i => (p, p1, p2, (idp_*> *> inv_inv) i))
+
+        \func sec-aux {C : \Cat} {x y z p : C} {d : p ~> z} {f : x ~> z} {g : y ~> z} {k1 : p ~> x} {k2 : p ~> y}
+                                 (e1 : comp k1 f = d) (e2 : comp k2 g = d)
+          : ((p, comp k1 f), sliceArrow k1 idp, sliceArrow k2 (inv (e1 *> inv e2)))
+            = {\Sigma (w : SliceCat z) (w ~> {SliceCat z} (x,f)) (w ~> {SliceCat z} (y,g))} ((p, d), sliceArrow k1 e1, sliceArrow k2 e2) \elim e1
+          | idp => path (\lam i => ((p, comp k1 f), sliceArrow k1 idp, sliceArrow k2 ((pmap inv idp_*> *> inv_inv) i)))
+      }
+
+    -- | Pullback cones are product cones in the slice.
+    \lemma pullback-product-equiv {C : \Cat} {x y z : C} (f : x ~> z) (g : y ~> z)
+      : IsEquiv {\Sigma (c : Cone f g) (IsPullback c)} {\Sigma (w : SliceCat z) (q1 : w ~> (x,f)) (q2 : w ~> (y,g)) (IsProduct q1 q2)}
+                (\lam c => ((c.1.1, comp c.1.2 f), sliceArrow c.1.2 idp, sliceArrow c.1.3 (inv c.1.4), c.2))
+      => inP $ later (\new QEquiv {
+           | f c => (c.1, c.2)
+           | ret c => (c.1, c.2)
+           | ret_f c => idp
+           | f_sec c => idp
+         }) `transQEquiv` IsEquiv.toQEquiv (subtype-equiv (inP (cone-equiv f g)) {_} {\lam t => IsProduct t.2 t.3} (\lam pb => pb) (\lam pp => pp))
+            `transQEquiv` later \new QEquiv {
+              | f c => (c.1.1, c.1.2, c.1.3, c.2)
+              | ret c => ((c.1, c.2, c.3), c.4)
+              | ret_f c => idp
+              | f_sec c => idp
+            }
+
+    -- | Pullbacks are unique: the type of pullback cones over a cospan is contractible if it is inhabited.
+    \protected \lemma unique {C : \Cat} {x y z : C} {f : x ~> z} {g : y ~> z}
+      : isProp (\Sigma (c : Cone f g) (IsPullback c))
+      => isProp.equiv (inP (IsEquiv.toQEquiv (pullback-product-equiv f g))) IsProduct.unique
+
+    -- | Product cones in the slice give pullback cones.
+    \lemma fromProduct {C : \Cat} {x y z : C} {f : x ~> z} {g : y ~> z} {w : SliceCat z}
+                       {q1 : w ~> (x,f)} {q2 : w ~> (y,g)} (pp : IsProduct q1 q2)
+      : IsPullback ((cone-equiv f g).ret (w, q1, q2))
+      => transportInv (\lam t => IsProduct t.2 t.3) ((cone-equiv f g).f_sec (w, q1, q2)) pp
+  }
+
+-- | An ∞-category with pullbacks.
+\class HCatWithPullbacks \extends BaseHCat
+  | Pullback {x y z : C} (f : x ~> z) (g : y ~> z) : C
+  | pbProj1 {x y z : C} (f : x ~> z) (g : y ~> z) : Pullback f g ~> x
+  | pbProj2 {x y z : C} (f : x ~> z) (g : y ~> z) : Pullback f g ~> y
+  | pbSquare {x y z : C} {f : x ~> z} {g : y ~> z} : comp (pbProj1 f g) f = comp (pbProj2 f g) g
+  | Pullback-isPullback {x y z : C} {f : x ~> z} {g : y ~> z} : IsPullback (Pullback f g, pbProj1 f g, pbProj2 f g, pbSquare)

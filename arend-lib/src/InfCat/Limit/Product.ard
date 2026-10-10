@@ -1,8 +1,14 @@
 \import Equiv
+\import Function.Meta
 \import InfCat.Basics
+\import InfCat.Fibration.DirectedUnivalence
+\import InfCat.Functor.Equiv
+\import InfCat.Functor.FullyFaithful
 \import InfCat.Limit.Terminal
 \import InfCat.Rezk
 \import Logic
+\import Logic.Unique
+\import Meta
 \import Paths
 \import Paths.Meta
 
@@ -35,6 +41,36 @@
                               (inv comp-assoc *> pmap (comp _ __) (pair-beta2 pp') *> pair-beta2 pp *> inv comp_idd-left),
               pair-unique pp (inv comp-assoc *> pmap (comp _ __) (pair-beta1 pp) *> pair-beta1 pp' *> inv comp_idd-left)
                              (inv comp-assoc *> pmap (comp _ __) (pair-beta2 pp) *> pair-beta2 pp' *> inv comp_idd-left))
+
+    -- | Products are unique: the type of product cones over {x} and {y} is contractible if it is inhabited.
+    \protected \lemma unique {C : \Cat} {x y : C}
+      : isProp (\Sigma (p' : C) (p1' : p' ~> x) (p2' : p' ~> y) (IsProduct p1' p2'))
+      => \lam (p,p1,p2,pp) (p',p1',p2',pp') =>
+           \have r => IsIso_= (comparison-iso pp pp')
+           \in aux r.1 (pmap (comp __ p1') r.2 *> pair-beta1 pp') (pmap (comp __ p2') r.2 *> pair-beta2 pp')
+      \where
+        \private \func aux {C : \Cat} {x y p p' : C} {p1 : p ~> x} {p2 : p ~> y} {pp : IsProduct p1 p2}
+                           {p1' : p' ~> x} {p2' : p' ~> y} {pp' : IsProduct p1' p2'}
+                           (r : p = p') (e1 : comp (=_~> r) p1' = p1) (e2 : comp (=_~> r) p2' = p2)
+          : (p, p1, p2, pp) = {\Sigma (p' : C) (p1' : p' ~> x) (p2' : p' ~> y) (IsProduct p1' p2')} (p', p1', p2', pp') \elim r
+          | idp => ext (idp, inv e1 *> comp_idd-left, inv e2 *> comp_idd-left)
+
+    -- | Equivalences of ∞-categories preserve products.
+    \lemma equiv-preserve {C D : \Cat} {f : C ->⁺ D} (e : IsHEquiv f) {x y p : C} {p1 : p ~> x} {p2 : p ~> y} (pp : IsProduct p1 p2)
+      : IsProduct (dmap f p1) (dmap f p2)
+      => \have fe => ff-surj-equiv.2 e
+         \in \lam r => \case fe.2 r \with {
+           | inP (r0, q) => transport (\lam r => IsEquiv {r ~> f p} \lam h => (comp h (dmap f p1), comp h (dmap f p2))) q $
+               propExt.dir (IsEquiv.parallelEquiv (fe.1 r0 p) (pairEquiv (fe.1 r0 x) (fe.1 r0 y)) (\lam h => ext (dmap_comp f, dmap_comp f))) (pp r0)
+         }
+      \where
+        \private \lemma pairEquiv {A B A' B' : \Cat} {f : A -> A'} {g : B -> B'} (fe : IsEquiv f) (ge : IsEquiv g)
+          : IsEquiv {\Sigma A B} {\Sigma A' B'} (\lam s => (f s.1, g s.2)) \elim fe, ge
+          | inP fq, inP gq => inP \new QEquiv {
+             | ret s => (fq.ret s.1, gq.ret s.2)
+             | ret_f s => ext (fq.ret_f s.1, gq.ret_f s.2)
+             | f_sec s => ext (fq.f_sec s.1, gq.f_sec s.2)
+           }
   }
 
 -- | An ∞-category with a terminal object and binary products.
@@ -54,3 +90,38 @@
   \func prodMap {x z z' : C} (g : z ~> z') : Prod z x ~> Prod z' x
     => pair (comp proj1 g) proj2
 }
+
+-- | The functor category `B ->⁺ \Type u` is Cartesian.
+\instance FunctorCartesian.{u} {B : \Cat u} : CartesianHCat (B ->⁺ \Type u)
+  | terminal _ => \Sigma
+  | terminal-isTerminal R => Contr.Contr_QEquiv (symQEquiv depUnivalence) (Contr.make (\lam _ =>⁺ ()) \lam _ => idp)
+  | Prod F G b => \Sigma⁺ (F b) (G b)
+  | proj1 {F} {G} => FunProd-proj1 F G
+  | proj2 {F} {G} => FunProd-proj2 F G
+  | Prod-isProduct {F} {G} R => IsEquiv.leftFactor (inP \new QEquiv {
+      | f p => (depUnivalence p.1, depUnivalence p.2)
+      | ret q => (depUnivalence.ret q.1, depUnivalence.ret q.2)
+      | ret_f p => ext (depUnivalence.ret_f p.1, depUnivalence.ret_f p.2)
+      | f_sec q => idp
+    }) $ transport IsEquiv
+          (ext \lam h => ext (ext \lam s => inv (~>_->_comp-fam h (FunProd-proj1 F G) s.1 s.2),
+                              ext \lam s => inv (~>_->_comp-fam h (FunProd-proj2 F G) s.1 s.2)))
+          (IsEquiv.trans (inP (depUnivalence {B} {R} {FunProd F G})) $ inP $ later \new QEquiv {
+            | f h => (\lam s => (h s).1, \lam s => (h s).2)
+            | ret q s => (q.1 s, q.2 s)
+            | ret_f h => idp
+            | f_sec q => idp
+          })
+  \where {
+    -- | The fiberwise product of two functors.
+    \func FunProd.{u} {B : \Cat u} (R F :⁺ B ->⁺ \Type u) (b :⁺ B) : \Type u
+      => \Sigma⁺ (R b) (F b)
+
+    -- | The first projection of {FunProd}.
+    \func FunProd-proj1.{u} {B : \Cat u} (F G : B ->⁺ \Type u) : FunProd F G ~> F
+      => depUnivalence.ret \lam (s : \Sigma⁺ (x : B) (FunProd F G x)) => s.2.1
+
+    -- | The second projection of {FunProd}.
+    \func FunProd-proj2.{u} {B : \Cat u} (F G : B ->⁺ \Type u) : FunProd F G ~> G
+      => depUnivalence.ret \lam (s : \Sigma⁺ (x : B) (FunProd F G x)) => s.2.2
+  }

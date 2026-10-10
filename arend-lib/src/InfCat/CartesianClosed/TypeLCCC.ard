@@ -14,16 +14,13 @@
 \import Paths.Meta
 \import Logic
 \import Logic.Unique
+\open FunctorCartesian
 
 {- | The exponent of functors `B ->⁺ \Type u`: the right Kan extension of `G ∘ p` along the projection `p` of the total category of {F}.
  -   Its value at `b` is the type of natural transformations `Hom(b, -) × F ~> G` ({FunExp-curry}).
  -}
 \type FunExp.{u} {B : \Cat u} (F G : B ->⁺ \Type u) (b :⁺ B) : \Type u
   => RightKanExtType {\Sigma⁺ (b : B) (F b)} {B} (\lam s => s.1) (\lam s => G s.1) b
-
--- | The fiberwise product of two functors.
-\func FunProd.{u} {B : \Cat u} (R F :⁺ B ->⁺ \Type u) (b :⁺ B) : \Type u
-  => \Sigma⁺ (R b) (F b)
 
 -- | Evaluation map of {FunExp}.
 \func FunExp-ev.{u} {B : \Cat u} {F G : B ->⁺ \Type u} {x :⁺ B} (e :⁺ FunExp F G x) (y :⁺ F x) : G x
@@ -86,36 +83,6 @@
   | CartesianClosedHCat => FunctorCartesianClosed
   | sliceCCC F => cartesianClosed-transfer (sumSlice-equiv F) (FunctorCartesianClosed {\Sigma⁺ (b : B) (F b)})
   \where {
-    -- | The first projection of {FunProd}.
-    \func FunProd-proj1.{u} {B : \Cat u} (F G : B ->⁺ \Type u) : FunProd F G ~> F
-      => depUnivalence.ret \lam (s : \Sigma⁺ (x : B) (FunProd F G x)) => s.2.1
-
-    -- | The second projection of {FunProd}.
-    \func FunProd-proj2.{u} {B : \Cat u} (F G : B ->⁺ \Type u) : FunProd F G ~> G
-      => depUnivalence.ret \lam (s : \Sigma⁺ (x : B) (FunProd F G x)) => s.2.2
-
-    -- | The functor category `B ->⁺ \Type u` is Cartesian.
-    \instance FunctorCartesian.{u} {B : \Cat u} : CartesianHCat (B ->⁺ \Type u)
-      | terminal _ => \Sigma
-      | terminal-isTerminal R => Contr.Contr_QEquiv (symQEquiv depUnivalence) (Contr.make (\lam _ =>⁺ ()) \lam _ => idp)
-      | Prod F G b => \Sigma⁺ (F b) (G b)
-      | proj1 {F} {G} => FunProd-proj1 F G
-      | proj2 {F} {G} => FunProd-proj2 F G
-      | Prod-isProduct {F} {G} R => IsEquiv.leftFactor (inP \new QEquiv {
-          | f p => (depUnivalence p.1, depUnivalence p.2)
-          | ret q => (depUnivalence.ret q.1, depUnivalence.ret q.2)
-          | ret_f p => ext (depUnivalence.ret_f p.1, depUnivalence.ret_f p.2)
-          | f_sec q => idp
-        }) $ transport IsEquiv
-              (ext \lam h => ext (ext \lam s => inv (~>_->_comp-fam h (FunProd-proj1 F G) s.1 s.2),
-                                  ext \lam s => inv (~>_->_comp-fam h (FunProd-proj2 F G) s.1 s.2)))
-              (IsEquiv.trans (inP (depUnivalence {B} {R} {FunProd F G})) $ inP $ later \new QEquiv {
-                | f h => (\lam s => (h s).1, \lam s => (h s).2)
-                | ret q s => (q.1 s, q.2 s)
-                | ret_f h => idp
-                | f_sec q => idp
-              })
-
     -- | The functor category `B ->⁺ \Type u` is Cartesian closed.
     \instance FunctorCartesianClosed.{u} {B : \Cat u} : CartesianClosedHCat (B ->⁺ \Type u)
       | CartesianHCat => FunctorCartesian
@@ -146,14 +113,15 @@
   | Prod A B => \Sigma A B
   | proj1 => ->_~> __.1
   | proj2 => ->_~> __.2
-  | Prod-isProduct X => transport IsEquiv (ext \lam h => ext (type-arrow-ext \lam x => ->_~>_-> *> inv (~>_->_comp h _ *> ->_~>_->),
-                                                           type-arrow-ext \lam x => ->_~>_-> *> inv (~>_->_comp h _ *> ->_~>_->))) $
-      IsEquiv.trans (inP dirUnivalence) $ inP $ later \new QEquiv {
+  | Prod-isProduct X => transport IsEquiv
+      (ext \lam h => ext (type-arrow-ext \lam x => ->_~>_-> *> inv (~>_->_comp h _ *> ->_~>_->),
+                          type-arrow-ext \lam x => ->_~>_-> *> inv (~>_->_comp h _ *> ->_~>_->)))
+      (IsEquiv.trans (inP dirUnivalence) $ inP $ later \new QEquiv {
         | f h => (->_~> \lam x => (h x).1, ->_~> \lam x => (h x).2)
         | ret q x => (~>_-> q.1 x, ~>_-> q.2 x)
         | ret_f h => ext \lam x => ext (->_~>_->, ->_~>_->)
         | f_sec q => ext (~>_->_~>, ~>_->_~>)
-      }
+      })
   | CHom A B => A -> B
   | CHom-eval => ->_~> \lam s => s.1 s.2
   | CHom-univ {A} {B} {Z} => transport IsEquiv (ext \lam g => type-arrow-ext \lam s =>
