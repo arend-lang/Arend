@@ -32,8 +32,8 @@ public class BinaryCacheLoader {
   private final ErrorReporter myErrorReporter;
   private final Consumer<String> myLogger;
   private final Set<ModuleLocation> myBinaryCacheLoaded = new HashSet<>();
-  // What the last load did with each module of the library, for diagnostics: "loaded", or why it was not
-  private final Map<ModuleLocation, String> myOutcomes = new LinkedHashMap<>();
+  // The modules the last load deserialized whole from their .arc, rather than kept from memory
+  private final Set<ModuleLocation> myDeserialized = new HashSet<>();
 
   /** Modules seen in an earlier pass; only first sight may load from {@code .arc}. */
   private final Set<ModuleLocation> mySeenModules = new HashSet<>();
@@ -62,9 +62,12 @@ public class BinaryCacheLoader {
     return Collections.unmodifiableSet(myBinaryCacheLoaded);
   }
 
-  /** @see #myOutcomes */
-  public Map<ModuleLocation, String> getOutcomes() {
-    return Collections.unmodifiableMap(myOutcomes);
+  /**
+   * The modules the last {@link #loadBinaryCache} deserialized whole from their .arc: those it added to
+   * {@link #getBinaryCacheLoaded} that were not kept because they already held definitions.
+   */
+  public Set<ModuleLocation> getDeserialized() {
+    return Collections.unmodifiableSet(myDeserialized);
   }
 
   /** @see #myLoadOrder */
@@ -100,6 +103,7 @@ public class BinaryCacheLoader {
   public void loadBinaryCache(@NotNull String libraryName,
                               @NotNull Function<ModuleLocation, StreamBinarySource> binarySourceProvider,
                               @NotNull ToLongFunction<ModuleLocation> rawTimestampProvider) {
+    myDeserialized.clear();
     List<PendingBinaryLoad> pending = new ArrayList<>();
     ArendLibrary serverLib = myServer.getLibrary(libraryName);
     SerializableKeyRegistryImpl keyRegistry = serverLib instanceof ArendLibraryImpl impl ? impl.getKeyRegistry() : null;
@@ -114,19 +118,12 @@ public class BinaryCacheLoader {
       boolean firstSight = mySeenModules.add(module);
 
       StreamBinarySource binarySource = binarySourceProvider.apply(module);
-      if (binarySource == null) {
-        myOutcomes.put(module, "no .arc");
-        continue;
-      }
+      if (binarySource == null) continue;
       long arcTimestamp = binarySource.getTimeStamp();
-      if (arcTimestamp <= 0) {
-        myOutcomes.put(module, "no timestamp of the .arc");
-        continue;
-      }
+      if (arcTimestamp <= 0) continue;
 
       long rawTimestamp = rawTimestampProvider.applyAsLong(module);
       if (rawTimestamp > 0 && arcTimestamp < rawTimestamp) {
-        myOutcomes.put(module, "stale: the .arc (" + arcTimestamp + ") is older than the source (" + rawTimestamp + ")");
         // Its cores, if it has any, are invalidated per definition by
         // ArendCheckerImpl.resolveModules -- not wholesale here. Clearing the whole module
         // would drop definitions the edit did not touch, and every dependent holding one of
@@ -142,7 +139,6 @@ public class BinaryCacheLoader {
       // takes linarith and equation down with it.
       ConcreteGroup memGroup = myServer.getRawGroup(module);
       if (memGroup != null && hasTypechecked(memGroup)) {
-        myOutcomes.put(module, "kept: already in memory");
         myBinaryCacheLoaded.add(module);
         continue;
       }
@@ -151,7 +147,6 @@ public class BinaryCacheLoader {
       // would put back exactly the state that was just thrown away -- and, because that replaces
       // the core without re-elaborating, never re-bind the metas that captured the old one.
       if (memGroup != null && !firstSight && hasTypecheckableDefinitions(memGroup)) {
-        myOutcomes.put(module, "invalidated since the last load");
         myBinaryCacheLoaded.remove(module);
         continue;
       }
@@ -161,12 +156,8 @@ public class BinaryCacheLoader {
         ModuleDeserialization deser = binarySource.parseProtobuf(myErrorReporter);
         if (deser != null) {
           pending.add(new PendingBinaryLoad(module, deser));
-          myOutcomes.put(module, "candidate");
-        } else {
-          myOutcomes.put(module, "unreadable .arc");
         }
       } catch (Exception e) {
-        myOutcomes.put(module, "unreadable .arc: " + e);
         reportBinaryCacheError(myErrorReporter, module, "protobuf parsing", e);
         // The .arc exists but is unreadable. Drop any in-memory state a previous pass loaded
         // from it, for the same reason as the stale-mtime branch: without this, a module that
@@ -196,7 +187,6 @@ public class BinaryCacheLoader {
         load.deserialization.readDefinitions(group);
         phase2b.add(load);
       } catch (Exception e) {
-        myOutcomes.put(load.module, "failed: definition shells: " + e);
         reportBinaryCacheError(myErrorReporter, load.module, "definition shell loading", e);
         clearTypechecked(group);
       }
@@ -208,7 +198,7 @@ public class BinaryCacheLoader {
     // that is not loaded is dropped, not its module.
     int failed = 0;
     List<PendingBinaryLoad> loadedLoads = new ArrayList<>();
-    Map<ModuleLocation, List<String>> droppedDefinitions = new HashMap<>();
+    Map<ModuleLocation, Integer> droppedDefinitions = new HashMap<>();
     DeferredBoxFixes boxFixes = new DeferredBoxFixes();
     for (PendingBinaryLoad load : phase2b) {
       ConcreteGroup group = myServer.getRawGroup(load.module);
@@ -217,12 +207,11 @@ public class BinaryCacheLoader {
         List<Pair<Definition, String>> dropped = load.deserialization.readModuleDroppingMissing(
             myServer.getModuleScopeProvider(load.module.getLibraryName(), false),
             dependencyListener(myServer));
-        for (Pair<Definition, String> pair : dropped) {
-          droppedDefinitions.computeIfAbsent(load.module, k -> new ArrayList<>()).add(pair.proj1.getName() + " (" + pair.proj2 + ")");
+        if (!dropped.isEmpty()) {
+          droppedDefinitions.merge(load.module, dropped.size(), Integer::sum);
         }
         loadedLoads.add(load);
       } catch (Exception e) {
-        myOutcomes.put(load.module, "failed: definition bodies: " + e);
         reportBinaryCacheError(myErrorReporter, load.module, "definition body loading", e);
         failed++;
         if (group != null) {
@@ -257,7 +246,7 @@ public class BinaryCacheLoader {
       if (toDrop.isEmpty()) break;
       for (Pair<PendingBinaryLoad, Definition> pair : toDrop) {
         ModuleDeserialization.dropDefinition(pair.proj2);
-        droppedDefinitions.computeIfAbsent(pair.proj1.module, k -> new ArrayList<>()).add(pair.proj2.getName() + " (refers to a definition that is not loaded)");
+        droppedDefinitions.merge(pair.proj1.module, 1, Integer::sum);
       }
     }
 
@@ -276,17 +265,15 @@ public class BinaryCacheLoader {
           if (ref.getTypechecked() != null && !ref.getTypechecked().status().needsTypeChecking()) counts[1]++;
         });
       }
-      List<String> dropped = droppedDefinitions.get(load.module);
       if (counts[1] == counts[0]) {
         loaded++;
         myBinaryCacheLoaded.add(load.module);
-        myOutcomes.put(load.module, "loaded");
+        myDeserialized.add(load.module);
       } else {
         partial++;
         myBinaryCacheLoaded.remove(load.module);
-        if (dropped != null) droppedCount += dropped.size();
-        myOutcomes.put(load.module, "loaded partially: " + counts[1] + " of " + counts[0] + " definitions"
-            + (dropped != null ? ", dropped " + String.join(", ", dropped) : ", the .arc has no others"));
+        myDeserialized.remove(load.module);
+        droppedCount += droppedDefinitions.getOrDefault(load.module, 0);
       }
     }
 

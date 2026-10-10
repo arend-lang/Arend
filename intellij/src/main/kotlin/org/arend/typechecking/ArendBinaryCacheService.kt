@@ -8,7 +8,6 @@ import com.intellij.openapi.diagnostic.logger
 import com.intellij.openapi.project.Project
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import org.arend.arc.ArcTrace
 import org.arend.ext.module.ModuleLocation
 import org.arend.ext.module.ModulePath
 import org.arend.module.config.LibraryConfig
@@ -72,23 +71,18 @@ class ArendBinaryCacheService(private val project: Project) {
             if (pending.isEmpty()) return false
 
             if (!Prelude.isInitialized()) {
-                val (_, preludeTime) = ArcTrace.timedSuspend {
-                    readAction {
-                        server.getCheckerFor(listOf(Prelude.MODULE_LOCATION))
-                            .typecheck(UnstoppableCancellationIndicator.INSTANCE, ProgressReporter.empty())
-                    }
+                readAction {
+                    server.getCheckerFor(listOf(Prelude.MODULE_LOCATION))
+                        .typecheck(UnstoppableCancellationIndicator.INSTANCE, ProgressReporter.empty())
                 }
-                ArcTrace.log("cache: typechecked Prelude in $preludeTime ms")
             }
 
             for ((libraryName, cached) in pending) {
                 val config = cached.config
                 val binariesDir = cached.binariesDir
-                val (_, resolveTime) = ArcTrace.timedSuspend {
-                    readAction {
-                        server.getCheckerFor(cached.modules.map { ModuleLocation(libraryName, ModuleLocation.LocationKind.SOURCE, it) })
-                            .resolveAll(UnstoppableCancellationIndicator.INSTANCE, ProgressReporter.empty())
-                    }
+                readAction {
+                    server.getCheckerFor(cached.modules.map { ModuleLocation(libraryName, ModuleLocation.LocationKind.SOURCE, it) })
+                        .resolveAll(UnstoppableCancellationIndicator.INSTANCE, ProgressReporter.empty())
                 }
 
                 val binarySourceProvider = Function<ModuleLocation, StreamBinarySource?> { module ->
@@ -105,13 +99,12 @@ class ArendBinaryCacheService(private val project: Project) {
                 }
 
                 val loader = BinaryCacheLoader(server, reporter) { message -> LOG.info(message) }
-                val (_, loadTime) = ArcTrace.timed { loader.loadBinaryCache(libraryName, binarySourceProvider, rawTimestampProvider) }
-                traceLoad(libraryName, cached.modules.size, resolveTime, loadTime, loader.outcomes)
+                loader.loadBinaryCache(libraryName, binarySourceProvider, rawTimestampProvider)
 
                 // Only the modules deserialized now: one that was in memory before may hold what it was typechecked to since
                 readAction {
-                    for ((module, outcome) in loader.outcomes) {
-                        if (outcome == "loaded") server.getRawGroup(module)?.let { cachedStates[module] = coreIdentities(it) }
+                    for (module in loader.deserialized) {
+                        server.getRawGroup(module)?.let { cachedStates[module] = coreIdentities(it) }
                     }
                 }
 
@@ -122,18 +115,6 @@ class ArendBinaryCacheService(private val project: Project) {
             reporter.flush()
         }
         return loadedModules.isNotEmpty()
-    }
-
-    // How many modules each outcome of the load had, and which ones were not loaded and why
-    private fun traceLoad(libraryName: String, sources: Int, resolveTime: Long, loadTime: Long, outcomes: Map<ModuleLocation, String>) {
-        val byKind = outcomes.values.groupingBy { it.substringBefore(':') }.eachCount()
-        ArcTrace.log("cache: library $libraryName, $sources sources, resolved in $resolveTime ms, binary load in $loadTime ms: " +
-            byKind.entries.sortedByDescending { it.value }.joinToString { "${it.value} ${it.key}" })
-        for ((module, outcome) in outcomes) {
-            if (outcome != "loaded" && !outcome.startsWith("kept")) {
-                ArcTrace.log("cache:   ${module.modulePath}: $outcome")
-            }
-        }
     }
 
     @TestOnly
