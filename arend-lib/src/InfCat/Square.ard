@@ -180,7 +180,7 @@
 
 \sfunc ~>-natural {C D :⁺ \Cat} {f g :⁺ C ->⁺ D} (h :⁺ \Pi (a :⁺ C) -> f a ~> g a) {a a' :⁺ C} {p :⁺ a ~> a'}
   : comp (dmap f p) (h a') = comp (h a) (dmap g p)
-  => inv $ comp-char $ dpath \lam i => dpath \lam j => square-char.forward (dpath \lam i => dpath \lam j => h (p j) i) j i
+  => comp-char $ dpath \lam i => dpath \lam j => square-char.forward {D} {f a} {f a'} {g a} {g a'} {dmap f p} {h a'} {h a} {dmap g p} (dpath \lam i => dpath \lam j => h (p i) j) j i
 
 -- | Horizontal pasting of commutative squares.
 \sfunc square-paste {C : \Cat} {a b c a' b' c' : C} {h : a ~> a'} {g : b ~> b'} {k : c ~> c'} {u : a ~> b} {u' : b ~> c} {v : a' ~> b'} {v' : b' ~> c'}

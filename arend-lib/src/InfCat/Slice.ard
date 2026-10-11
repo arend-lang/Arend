@@ -24,6 +24,5 @@
       : IsEquiv {DPath (\lam i => k i ~> X) a b} {comp k b = comp a idd}
         (\lam t => ~>-natural {SliceCat X} __.2 {c,a} {d,b} {dpath \lam i => (k i, t i)})
       => transport IsEquiv (ext \lam t => inv \peval ~>-natural {SliceCat X} __.2 {c,a} {d,b} {dpath \lam i => (k i, t i)})
-                   (inP $ flipQEquiv {C} {c} {d} {X} {X} {k} {b} {a} {idd} `transQEquiv` square-char.equiv a b
-                          `transQEquiv` flipQEquiv `transQEquiv` comp-equiv `transQEquiv` inv-equiv)
+                   (inP $ square-char.equiv k idd `transQEquiv` flipQEquiv `transQEquiv` comp-equiv)
   }
