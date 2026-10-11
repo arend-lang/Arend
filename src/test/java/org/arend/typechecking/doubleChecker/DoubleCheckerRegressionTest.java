@@ -217,4 +217,15 @@ public class DoubleCheckerRegressionTest extends TypeCheckingTestCase {
         => \\lam n => Q -> X
       """);
   }
+
+  @Test
+  public void idpInvariantSigmaPlusTest() {
+    typeCheckModule("""
+      \\func test {A : \\Type} (a : A) (t : \\Sigma+ (x : A) (x = a)) : A => \\case \\elim a, \\elim t \\with {
+        | _, (x, idp) => x
+      }
+      \\func test2 {A : \\Type} (a : A) (t : \\Sigma+ (x : A) (x = a)) : A \\elim a, t
+        | _, (x, idp) => x
+      """);
+  }
 }
