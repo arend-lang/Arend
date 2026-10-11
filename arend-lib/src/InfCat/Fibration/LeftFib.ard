@@ -154,7 +154,7 @@
 \lemma leftFib-dpath-equiv {A : \Cat} {B : A ->⁺ \Cat} (Bf : IsLeftFib B) {d : CovLiftData B} (c : CovLift B d) {b' : B d.2}
   : IsEquiv {DPath (\lam i => B (d.3 i)) d.4 b'} {c.1 = b'} (leftFib-dpath Bf c)
   => \let L => Bf d
-     \in propExt.conv (totalEquiv (\lam b' => leftFib-dpath Bf c {b'})) (inP \new QEquiv {
+     \in (totalEquiv (\lam b' => leftFib-dpath Bf c {b'})).2 (inP \new QEquiv {
        | ret _ => (L.center.1, L.center.2)
        | ret_f t => path \lam i => \let c => L.contraction (t.1,t.2) i
                                    \in (c.1,c.2)
@@ -191,8 +191,7 @@
                           (alpha : \Pi (s :⁺ \Sigma⁺ (x : C) (F x)) -> G s.1) (eq : \Pi (x : C) -> IsEquiv {F x} {G x} (\lam a => alpha (x,a)))
                           {x : C} (a : F x) (y : C)
   : IsEquiv {x ~> y} {F y} (leftFib-tr Ff __ a) <-> IsEquiv {x ~> y} {G y} (leftFib-tr Gf __ (alpha (x, a)))
-  => \let q => IsEquiv.parallelEquiv (inP idEquiv) (eq y) (\lam h => leftFib-tr-natural Ff Gf alpha h a)
-     \in (transport (\lam P => P) q, transportInv (\lam P => P) q)
+  => IsEquiv.parallelEquiv (inP idEquiv) (eq y) (\lam h => leftFib-tr-natural Ff Gf alpha h a)
 
 \func coe+-dpath.{u} {A :⁺ DI ->⁺ \Type u} {a :⁺ A dleft} {a' :⁺ A dright} (t :⁺ DPath A a a') : coe+ A a dright = a'
   => leftFib-dpath universe-leftFib {_, _, dpath A, a} (coe+ A a dright, dpath (coe+ A a)) t

@@ -40,7 +40,7 @@
 -- | The fundamental theorem of identity types: if the total space of {B} is contractible, then transporting {b0} is an equivalence.
 \lemma contr-transport-equiv {A : \Cat} {B : A -> \Cat} (c : Contr (\Sigma (a : A) (B a))) {a0 : A} (b0 : B a0) (a : A)
   : IsEquiv {a0 = a} {B a} (transport B __ b0)
-  => propExt.conv (totalEquiv {A} {a0 =} \lam a p => transport B p b0) (contr-equiv (lsigma a0) c) a
+  => (totalEquiv {A} {a0 =} \lam a p => transport B p b0).2 (contr-equiv (lsigma a0) c) a
 
 -- | A relation that is functional in both directions is the graph of an equivalence.
 \lemma contr-relation-equiv {X Y : \Cat} (R : X -> Y -> \Cat)
@@ -103,9 +103,9 @@
 
 -- | The HoTT book, Theorem 4.7.7
 \lemma totalEquiv {J : \Cat} {A B : J -> \Cat} (f : \Pi (j : J) -> A j -> B j)
-  : (\Pi (j : J) -> IsEquiv (f j)) = IsEquiv (total f)
-  => propExt (\lam e => contrFibers=>IsEquiv \lam p => Contr.Contr_QEquiv (symQEquiv (totalFiber f p.1 p.2)) (IsEquiv=>contrFibers (e p.1) p.2))
-             (\lam e j => contrFibers=>IsEquiv \lam b => Contr.Contr_QEquiv (totalFiber f j b) (IsEquiv=>contrFibers e (j,b)))
+  : (\Pi (j : J) -> IsEquiv (f j)) <-> IsEquiv (total f)
+  => (\lam e => contrFibers=>IsEquiv \lam p => Contr.Contr_QEquiv (symQEquiv (totalFiber f p.1 p.2)) (IsEquiv=>contrFibers (e p.1) p.2),
+      \lam e j => contrFibers=>IsEquiv \lam b => Contr.Contr_QEquiv (totalFiber f j b) (IsEquiv=>contrFibers e (j,b)))
   \where {
     \func total {J : \Cat} {A B : J -> \Cat} (f : \Pi (j : J) -> A j -> B j) (p : \Sigma (j : J) (A j)) : \Sigma (j : J) (B j)
       => (p.1, f p.1 p.2)
@@ -128,7 +128,7 @@
 -- | A map of total spaces over an equivalence of bases is an equivalence if and only if it is a fiberwise equivalence.
 \lemma fiberwiseEquiv {X Y : \Cat} {g : X -> Y} (ge : IsEquiv g) {P : X -> \Cat} {Q : Y -> \Cat} (h : \Pi (x : X) -> P x -> Q (g x))
                       (te : IsEquiv {\Sigma (x : X) (P x)} {\Sigma (y : Y) (Q y)} (\lam s => (g s.1, h s.1 s.2))) (x : X) : IsEquiv (h x)
-  => propExt.conv (totalEquiv h) (IsEquiv.leftFactor (inP (qsigma-left (IsEquiv.toQEquiv ge))) te) x
+  => (totalEquiv h).2 (IsEquiv.leftFactor (inP (qsigma-left (IsEquiv.toQEquiv ge))) te) x
 
 -- | Fibers of maps related by equivalences of their domains and codomains are equivalent.
 \func fib-parallel-equiv {A B C D : \Cat} {ab : A -> B} {cd : C -> D} {ac : A -> C} {bd : B -> D}

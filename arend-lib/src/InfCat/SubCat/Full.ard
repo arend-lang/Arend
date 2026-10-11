@@ -23,12 +23,12 @@
       | F _ => unob
 
     \protected \lemma family-ff {C D : \Cat} {f : C ->⁺ D} : family.IsRight f <-> IsFFMap f
-      => (\lam r => propExt.dir orth=ff (r ()), \lam ff () => propExt.conv orth=ff ff)
+      => (\lam r => orth=ff.1 (r ()), \lam ff () => orth=ff.2 ff)
       \where {
         \private \lemma orth=ff {C D : \Cat} {f : C ->⁺ D}
           : IsEquiv {DI ->⁺ C} {\Sigma (uv : \Sigma (Ob DI ->⁺ C) (DI ->⁺ D)) (\Pi (x :⁺ Ob DI) -> uv.2 (unob x) = f (uv.1 x))}
                     (\lam h => ((\lam x => h (unob x), \lam y => f (h y)), \lam x => idp))
-          = IsFFMap f
+          <-> IsFFMap f
           => IsEquiv.parallelEquiv (inP DI-equiv)
               (IsEquiv.trans
                 (IsEquiv.trans {_} {\Sigma (u : Ob DI ->⁺ C) (\Sigma (v : DI ->⁺ D) (\Pi (x :⁺ Ob DI) -> v (unob x) = f (u x)))} {_}
@@ -50,7 +50,7 @@
                   ))
                 (inP $ qsigma-left {Ob DI ->⁺ C} ObDI-equiv))
               (\lam h => idp)
-             *> inv (<->_=.1 ffMap-char)
+             `<->trans` <->sym ffMap-char
       }
 
     \func inc (d :⁺ FullSubCat P) : C

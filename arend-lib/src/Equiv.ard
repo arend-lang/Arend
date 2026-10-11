@@ -198,9 +198,9 @@
       | inP e1, inP e3 => inP (QEquiv.rightFactor e1 e3)
 
     \lemma parallelEquiv {A B C D : \Cat} {ab : A -> B} {cd : C -> D} {ac : A -> C} {bd : B -> D}
-                         (ace : IsEquiv ac) (bde : IsEquiv bd) (h : \Pi (a : A) -> bd (ab a) = cd (ac a)) : IsEquiv ab = IsEquiv cd
-      => propExt (\lam abe => rightFactor ace $ transport IsEquiv (ext h) $ trans abe bde)
-                 (\lam cde => leftFactor bde $ transportInv IsEquiv (ext h) $ trans ace cde)
+                         (ace : IsEquiv ac) (bde : IsEquiv bd) (h : \Pi (a : A) -> bd (ab a) = cd (ac a)) : IsEquiv ab <-> IsEquiv cd
+      => (\lam abe => rightFactor ace $ transport IsEquiv (ext h) $ trans abe bde,
+          \lam cde => leftFactor bde $ transportInv IsEquiv (ext h) $ trans ace cde)
   }
 
 \data Equiv (A B : \Cat)

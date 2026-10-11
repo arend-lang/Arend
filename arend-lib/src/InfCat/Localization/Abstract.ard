@@ -119,8 +119,8 @@
                   | TY => \Sigma (j : Y) (j.1.1 ~> j.2.1)
                   | rmap (G : L ->⁺ DI ->⁺ D) : \Sigma (H : C ->⁺ DI ->⁺ D) (P' H) => (\lam x => G (l x), lP' G)
              \in \lam G1 G2 => fiberwiseEquiv (pair-equiv e) (\lam j p => dmap (\lam G x =>⁺ G (l x)) {j.1} {j.2} p)
-              (transport (\lam X => X) (IsEquiv.parallelEquiv {_} {_} {_} {_} {rmap} (inP DI-fun-equiv) (inP pairs-equiv)
-                \lam G => path \lam j => (((\lam x => G (l x) dleft, prop-pi j), (\lam x => G (l x) dright, prop-pi j)), dpath \lam i x => G (l x) i)) e')
+              ((IsEquiv.parallelEquiv {_} {_} {_} {_} {rmap} (inP DI-fun-equiv) (inP pairs-equiv)
+                \lam G => path \lam j => (((\lam x => G (l x) dleft, prop-pi j), (\lam x => G (l x) dright, prop-pi j)), dpath \lam i x => G (l x) i)).1 e')
               (G1, G2)
 
         -- | A functor to the arrow category whose endpoints satisfy {P} is a morphism of the full subcategory.

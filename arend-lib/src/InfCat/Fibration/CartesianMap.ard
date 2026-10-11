@@ -57,7 +57,7 @@
     -- | {copaste-face} is an equivalence, since both sides are equivalent to the arrows into `e`.
     \lemma copaste-face-equiv {E : \Cat} {x e e' e'' : E} {u : e ~> e'} {v : e' ~> e''} (g : e ~> e'') (t0 : DPath (\lam i => u i ~> g i) idd v) (w : x ~> e'')
       : IsEquiv (copaste-face t0 {w})
-      => propExt.conv (totalEquiv (\lam w => copaste-face t0 {w})) (IsEquiv.leftFactor mid-proj dom-proj') w
+      => (totalEquiv (\lam w => copaste-face t0 {w})).2 (IsEquiv.leftFactor mid-proj dom-proj') w
       \where {
         \lemma dom-proj' : IsEquiv {\Sigma (w : x ~> e'') (CopasteDom u g w)} (\lam s => s.2.1.1)
           => IsEquiv.trans (inP (\new QEquiv {\Sigma (w : x ~> e'') (CopasteDom u g w)}
@@ -91,15 +91,15 @@
             => (cotriangle-map p (comp u v) w s.1, (dmap p s.2.1, dpath \lam i => dmap p (s.2.2 i)))
           | mid-map (w : x ~> e'') (m : CopasteMid u v w) : CopasteMid (dmap p u) (dmap p v) (dmap p w)
             => (cotriangle-map p v w m.1, cotriangle-map p u m.1.1 m.2)
-          | mid-equiv (w : x ~> e'') : IsEquiv (mid-map w) = IsEquiv (cotriangle-map p (comp u v) w)
-            => inv (IsEquiv.parallelEquiv {_} {_} {_} {_} {dom-map w} {mid-map w} (copaste-face-equiv (comp u v) t0 w)
+          | mid-equiv (w : x ~> e'') : IsEquiv (mid-map w) <-> IsEquiv (cotriangle-map p (comp u v) w)
+            => <->sym (IsEquiv.parallelEquiv {_} {_} {_} {_} {dom-map w} {mid-map w} (copaste-face-equiv (comp u v) t0 w)
                                           (copaste-face-equiv (dmap p (comp u v)) (dpath \lam i => dmap p (t0 i)) (dmap p w))
                                           (\lam s => path \lam l => ((dmap p s.2.1, inv (simplex3-face.natural p s.2.2 t0 s.1.2) l), cotriangle-map p u s.2.1 (s.1.1, s.2.2))))
-               *> IsEquiv.parallelEquiv (dom-proj u (comp u v) w) (dom-proj (dmap p u) (dmap p (comp u v)) (dmap p w)) (\lam s => idp)
-     \in (\lam uc w => propExt.dir (mid-equiv w) $
+               `<->trans` IsEquiv.parallelEquiv (dom-proj u (comp u v) w) (dom-proj (dmap p u) (dmap p (comp u v)) (dmap p w)) (\lam s => idp)
+     \in (\lam uc w => (mid-equiv w).1 $
             IsEquiv.trans (IsSigma-right {\Sigma (r : x ~> e') (DPath (\lam i => r i ~> w i) idd v)} (\lam s => cotriangle-map p u s.1) (\lam s => uc s.1))
                           (inP (qsigma-left (IsEquiv.toQEquiv (vc w)))),
           \lam gc r => fiberwiseEquiv (vc (comp r v)) (\lam s => cotriangle-map p u s.1)
-                         (propExt.conv (mid-equiv (comp r v)) (gc (comp r v)))
+                         ((mid-equiv (comp r v)).2 (gc (comp r v)))
                          (r, dpath \lam i => dpath (fill2 r v i)))
     \where \open copaste-face

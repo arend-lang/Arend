@@ -196,7 +196,7 @@
     -- | {paste-face} is an equivalence, since both sides are equivalent to the arrows out of `e''`.
     \protected \lemma isEquiv {E : \Cat} {e e' e'' x : E} {u : e ~> e'} {v : e' ~> e''} (g : e ~> e'') (t0 : DPath (\lam i => u i ~> g i) idd v) (w : e ~> x)
       : IsEquiv (paste-face t0 {w})
-      => propExt.conv (totalEquiv (\lam w => paste-face t0 {w})) (IsEquiv.leftFactor right-proj left-proj) w
+      => (totalEquiv (\lam w => paste-face t0 {w})).2 (IsEquiv.leftFactor right-proj left-proj) w
       \where {
         \lemma right-proj : IsEquiv {\Sigma (w : e ~> x) (\Sigma (z : e'' ~> x) (DPath (\lam i => g i ~> w i) idd z))} (\lam s => s.2.1)
           => IsEquiv.trans (inP (\new QEquiv {\Sigma (w : e ~> x) (\Sigma (z : e'' ~> x) (DPath (\lam i => g i ~> w i) idd z))}
@@ -227,14 +227,14 @@
   => \let | t0 => dpath \lam i => dpath (fill2 u v i)
           | mid-map {x : E} (w : e ~> x) (m : paste-face.PasteMid u v w) : paste-face.PasteMid (dmap p u) (dmap p v) (dmap p w)
             => (triangle-map p u w m.1, triangle-map p v m.1.1 m.2)
-          | mid-equiv {x : E} (w : e ~> x) : IsEquiv (mid-map w) = IsEquiv (triangle-map p (comp u v) w)
+          | mid-equiv {x : E} (w : e ~> x) : IsEquiv (mid-map w) <-> IsEquiv (triangle-map p (comp u v) w)
             => IsEquiv.parallelEquiv (paste-face.isEquiv (comp u v) t0 w) (paste-face.isEquiv (dmap p (comp u v)) (dpath \lam i => dmap p (t0 i)) (dmap p w))
                 \lam m => path \lam l => (dmap p m.2.1, inv (simplex3-face.natural p t0 m.2.2 m.1.2) l)
-     \in (\lam vc {x} w => propExt.dir (mid-equiv w) $
+     \in (\lam vc {x} w => (mid-equiv w).1 $
             IsEquiv.trans (IsSigma-right {\Sigma (r : e' ~> x) (DPath (\lam i => u i ~> w i) idd r)} (\lam s => triangle-map p v s.1) (\lam s => vc s.1))
                           (inP (qsigma-left (IsEquiv.toQEquiv (uc w)))),
           \lam gc {x} r => fiberwiseEquiv (uc (comp u r)) (\lam s => triangle-map p v s.1)
-                            (propExt.conv (mid-equiv (comp u r)) (gc (comp u r)))
+                            ((mid-equiv (comp u r)).2 (gc (comp u r)))
                             (r, dpath \lam i => dpath (fill2 u r i)))
 
 -- | Identity arrows are cocartesian: both sides of {triangle-map} are contractible.

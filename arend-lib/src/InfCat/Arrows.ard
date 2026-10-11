@@ -95,7 +95,7 @@
     -- | Postcomposition on arrows is the total map of {g} on homs.
     \lemma total-equiv {A B : \Cat} {g : A ->⁺ B} (pe : IsEquiv {DI ->⁺ A} {DI ->⁺ B} (\lam h i => g (h i)))
       : IsEquiv {\Sigma (j : \Sigma A A) (j.1 ~> j.2)} {\Sigma (j : \Sigma B B) (j.1 ~> j.2)} (\lam s => ((g s.1.1, g s.1.2), dmap g s.2))
-      => propExt.dir (IsEquiv.parallelEquiv (inP DI-equiv) (inP DI-equiv) (\lam h => idp)) pe
+      => (IsEquiv.parallelEquiv (inP DI-equiv) (inP DI-equiv) (\lam h => idp)).1 pe
   }
 
 -- | Arrows from a constant functor to {Y} are determined by their source component.

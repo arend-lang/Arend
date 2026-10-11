@@ -262,11 +262,11 @@
 -- | {k} is left orthogonal to {g} if and only if sections of every pullback of {g} extend uniquely along {k}.
 \lemma IsOrthogonal-sections {X Y E F : \Cat} {k : X ->⁺ Y} {g : E ->⁺ F}
   : IsOrthogonal k g <-> (\Pi (v : Y ->⁺ F) -> IsEquiv (restrict-sections k g v))
-  => \have p => IsEquiv.parallelEquiv {Y ->⁺ E} {\Sigma (uv : \Sigma (X ->⁺ E) (Y ->⁺ F)) (\Pi (x :⁺ X) -> uv.2 (k x) = g (uv.1 x))}
-                   {_} {_} {\lam h => ((\lam x => h (k x), \lam y => g (h y)), \lam x => idp)} {totalEquiv.total (restrict-sections k g)}
+  => \have p => IsEquiv.parallelEquiv {Y ->⁺ E} {_} {_} {_}
+                  {\lam h => ((\lam x => h (k x), \lam y => g (h y)), \lam x => idp)} {totalEquiv.total (restrict-sections k g)}
                    (inP sections-equiv) (inP squares-equiv) (\lam h => idp)
-     \in (\lam o => propExt.conv (totalEquiv (restrict-sections k g)) (propExt.dir p o),
-          \lam e => propExt.conv p (propExt.dir (totalEquiv (restrict-sections k g)) e))
+     \in (\lam o => (totalEquiv (restrict-sections k g)).2 (p.1 o),
+          \lam e => p.2 ((totalEquiv (restrict-sections k g)).1 e))
   \where {
     -- | A functor to {E} is a functor to {F} together with a section of the pullback of {g} along it.
     \func sections-equiv : QEquiv {Y ->⁺ E} {\Sigma (v : Y ->⁺ F) (\Pi (y :⁺ Y) -> \Sigma⁺ (e : E) (g e = v y))} \cowith

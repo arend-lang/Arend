@@ -65,7 +65,6 @@
 
 \lemma localEquivMap.{u} {U : ReflUniverse.{u}} {A B : \Type u} (f : A -> B) : IsLocalEquiv f = IsEquiv (lmap f)
   => \have p (C : Local) : IsEquiv {LType B -> C} {LType A -> C} (-o (lmap f)) = IsEquiv {B -> C} {A -> C} (-o f)
-            => IsEquiv.parallelEquiv ((localization B).local-univ C)
-                                     ((localization A).local-univ C)
-                                     (\lam h => path (\lam i a => h (Localization.lift-prop (inL `o` f) a @ i)))
+            => <->_=.1 (IsEquiv.parallelEquiv ((localization B).local-univ C) ((localization A).local-univ C)
+                          (\lam h => path (\lam i a => h (Localization.lift-prop (inL `o` f) a i))))
      \in path (\lam i => \Pi (C : Local) -> inv (p C) i) *> localTypesEquiv (lmap f)

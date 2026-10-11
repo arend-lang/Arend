@@ -35,7 +35,7 @@
          | f (r : t.1 ~> t'.1) (d : DPath (\lam i => p (r i) = s) t.2 t'.2)
              : DPath (\lam i => s ~> p (r i)) (fibComma p s t).2 (fibComma p s t').2
              => dpath \lam i => under-arr idd (d i)
-         | e2 : IsEquiv (totalEquiv.total f) => propExt.dir (totalEquiv f) (\lam r => dpath-equiv t.2 t'.2 (dmap p r))
+         | e2 : IsEquiv (totalEquiv.total f) => (totalEquiv f).1 (\lam r => dpath-equiv t.2 t'.2 (dmap p r))
     \in IsEquiv.trans {_} {_} {_} {\lam m => totalEquiv.total f (D1 m)} (IsEquiv.trans {_} {_} {_} {D1} (inP D1) {totalEquiv.total f} e2) {D2.ret} (inP (symQEquiv D2))
   \where
     \lemma dpath-equiv {S : \Cat} {s a b : S} (q : a = s) (q' : b = s) (g : a ~> b)
@@ -53,8 +53,8 @@
 \lemma liftComma-equiv.{u} {L S : \Cat u} (q : L ->⁺ S) {e : L} {t : S} {f : q e ~> t} (y : Fibers q t)
   : IsEquiv (liftComma q {e} {t} {f} {y})
   => \have r => IsEquiv.trans (inP (dpath-sigma-equiv (\lam i (x : L) => q x = f i) {e, idp} {y.1, y.2})) $
-                IsEquiv.trans (propExt.dir (totalEquiv (\lam (w : e ~> y.1) (om : DPath (\lam i => q (w i) = f i) idp y.2) => dpath \lam i => under-arr (conn-right f i) (om i)))
-                                           (\lam w => under-arr-equiv (conn-right f) (dmap q w) y.2)) $
+                IsEquiv.trans ((totalEquiv \lam (w : e ~> y.1) (om : DPath (\lam i => q (w i) = f i) idp y.2) => dpath \lam i => under-arr (conn-right f i) (om i)).1
+                               (\lam w => under-arr-equiv (conn-right f) (dmap q w) y.2)) $
                 inP (symQEquiv (dpath-sigma-equiv (\lam _ x => q e ~> q x) {e, idd} {y.1, under-arr f y.2}))
      \in r
   \where {
@@ -64,8 +64,8 @@
     \lemma under-arr-equiv {S : \Cat} {s t t' : S} {f : s ~> t} (adj : DPath (\lam i => s ~> f i) idd f) (h : s ~> t') (r : t' = t)
       : IsEquiv {DPath (\lam i => h i = f i) idp r} {DPath (\lam i => s ~> h i) idd (under-arr f r)}
                 (\lam om => dpath \lam i => under-arr (adj i) (om i)) \elim r
-      | idp => propExt.conv (totalEquiv (\lam (h' : s ~> t) (om : DPath (\lam i => h' i = f i) idp idp) => dpath \lam i => under-arr (adj i) (om i)))
-                            (contr-equiv (Contr.Contr_QEquiv paths-equiv (rsigma f)) (segal-contr.conn f)) h
+      | idp => (totalEquiv \lam (h' : s ~> t) (om : DPath (\lam i => h' i = f i) idp idp) => dpath \lam i => under-arr (adj i) (om i)).2
+               (contr-equiv (Contr.Contr_QEquiv paths-equiv (rsigma f)) (segal-contr.conn f)) h
       \where
         \func paths-equiv : QEquiv {\Sigma (h' : s ~> t) (h' = f)} {\Sigma (h' : s ~> t) (DPath (\lam i => h' i = f i) idp idp)} \cowith
           | f e => (e.1, dpath \lam i => path \lam m => (e.2 m) i)

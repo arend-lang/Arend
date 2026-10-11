@@ -183,7 +183,7 @@
                             ~>_-> (dpath \lam j => a' j s.1) s.2 = ~>_-> (dpath \lam j => b j s.1) (~>_-> (dpath \lam i => k i s.1) s.2)))
                      => Contr.Contr_QEquiv (symQEquiv (sigma-right \lam (a' : G ~> F) => later funExt+-equiv)) $
                           IsEquiv=>contrFibers (inP depUnivalence) \lam s => ~>_-> (dpath \lam j => b j s.1) (~>_-> (dpath \lam i => k i s.1) s.2)
-             \in propExt.conv (totalEquiv f) (contr-equiv cZ cZ') a
+             \in (totalEquiv f).2 (contr-equiv cZ cZ') a
 
         -- | Triangles over {F} between the sums of {P} and {P'} are sections of {P'} over the total category of {P}.
         \func section-equiv.{v} {X : \Cat v} (F : X ->⁺ \Type v) (P P' : \Sigma⁺ (x : X) (F x) ->⁺ \Type v)

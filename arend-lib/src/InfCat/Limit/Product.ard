@@ -61,7 +61,7 @@
       => \have fe => ff-surj-equiv.2 e
          \in \lam r => \case fe.2 r \with {
            | inP (r0, q) => transport (\lam r => IsEquiv {r ~> f p} \lam h => (comp h (dmap f p1), comp h (dmap f p2))) q $
-               propExt.dir (IsEquiv.parallelEquiv (fe.1 r0 p) (pairEquiv (fe.1 r0 x) (fe.1 r0 y)) (\lam h => ext (dmap_comp f, dmap_comp f))) (pp r0)
+               (IsEquiv.parallelEquiv (fe.1 r0 p) (pairEquiv (fe.1 r0 x) (fe.1 r0 y)) (\lam h => ext (dmap_comp f, dmap_comp f))).1 (pp r0)
          }
       \where
         \private \lemma pairEquiv {A B A' B' : \Cat} {f : A -> A'} {g : B -> B'} (fe : IsEquiv f) (ge : IsEquiv g)

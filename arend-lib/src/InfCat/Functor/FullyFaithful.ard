@@ -33,8 +33,7 @@
                       IsEquiv.isInj (ff x x) $ dmap_comp f *> pmap (comp _ __) (IsEquiv.f_ret (ff y x)) *> r.3)
 
     \lemma isObEmbedding (ff : IsFFMap f) : Embedding {C} {D} (\lam x => f x) \cowith
-      | isEmb x y => IsEquiv.toQEquiv $ propExt.conv
-          (IsEquiv.parallelEquiv =-char =-char (\lam p => ext $ inv $ dmap_=_~> f))
+      | isEmb x y => IsEquiv.toQEquiv $ (IsEquiv.parallelEquiv =-char =-char (\lam p => ext $ inv $ dmap_=_~> f)).2
           (subtype-equiv (ff x y) (dmap_IsIso f) (isConservative ff))
 
     \lemma fibProp (ff : IsFFMap f) (y : D) : isProp (\Sigma (x : C) (f x = y))
@@ -52,9 +51,9 @@
   => \let | bf => conn-right ab
           | tf => conn-right ac
           | cf => dpath \lam i => dpath \lam j => fill2 ac cd i j
-     \in propExt.conv (IsEquiv.parallelEquiv (inP (square-char.gen-equiv bf tf cf))
+     \in (IsEquiv.parallelEquiv (inP (square-char.gen-equiv bf tf cf))
             (inP (square-char.gen-equiv (dpath \lam i => dmap f (bf i)) (dpath \lam i => dmap f (tf i)) (dpath \lam i => dmap f (cf i))))
-            (\lam s => inv (square-char.forward-gen.natural f {a} {b} {c} {d} {ab} {bd} {ac} bf tf {comp ac cd} cf s)))
+            (\lam s => inv (square-char.forward-gen.natural f {a} {b} {c} {d} {ab} {bd} {ac} bf tf {comp ac cd} cf s))).2
           (triangles-at f e)
   \where {
     -- | A functor that is fully faithful on arrows from {a} to {d} induces equivalences on triangles from {a} to {d} with a fixed boundary.
@@ -66,7 +65,7 @@
 
 \lemma ffMap-char {C D : \Cat} {f : C ->⁺ D}
   : IsFFMap f <-> IsEquiv {\Sigma (j : \Sigma C C) (j.1 ~> j.2)} {\Sigma (j : \Sigma C C) (f j.1 ~> f j.2)} (\lam s => (s.1, dmap f s.2))
-  => <->trans (later (\lam ff j => ff j.1 j.2, \lam e x y => e (x,y))) $ <->_=.2 $ totalEquiv {\Sigma C C} {\lam j => j.1 ~> j.2} \lam j => dmap f
+  => <->trans (later (\lam ff j => ff j.1 j.2, \lam e x y => e (x,y))) $ totalEquiv {\Sigma C C} {\lam j => j.1 ~> j.2} \lam j => dmap f
 
 \lemma ffMap-pullback {B C D : \Cat} (g : B ->⁺ D) {f : C ->⁺ D} (ff : IsFFMap f)
   : IsFFMap {\Sigma⁺ (x : B) (\Sigma⁺ (y : C) (f y = g x))} __.1
@@ -144,13 +143,13 @@
                    {x y : A} (r : x ~> y) (u : F x) (v : F y)
   : IsEquiv {DPath (\lam i => F (r i)) u v} {DPath (\lam i => G (r i)) (H (x,u)) (H (y,v))} (\lam w => dpath \lam i => H (r i, w i))
   => fiberwiseEquiv {x ~> y} (inP idEquiv) {\lam r => DPath (\lam i => F (r i)) u v} (\lam r w => dpath \lam i => H (r i, w i))
-      (propExt.dir (IsEquiv.parallelEquiv (inP (dpath-sigma-equiv \lam _ => F)) (inP (dpath-sigma-equiv \lam _ => G)) (\lam _ => idp)) (ff (x,u) (y,v))) r
+      ((IsEquiv.parallelEquiv (inP (dpath-sigma-equiv \lam _ => F)) (inP (dpath-sigma-equiv \lam _ => G)) (\lam _ => idp)).1 (ff (x,u) (y,v))) r
   \where
     -- | Conversely, equivalences on paths over arrows of {A} give a fully faithful functor on total categories.
     \lemma conv {A : \Cat} {F G : A ->⁺ \Cat} (H : \Pi (k :⁺ \Sigma⁺ (x : A) (F x)) -> G k.1)
                 (rel : \Pi {x y : A} (r : x ~> y) (u : F x) (v : F y) ->
                   IsEquiv {DPath (\lam i => F (r i)) u v} {DPath (\lam i => G (r i)) (H (x,u)) (H (y,v))} (\lam w => dpath \lam i => H (r i, w i)))
       : IsFFMap {\Sigma⁺ (x : A) (F x)} {\Sigma⁺ (x : A) (G x)} (\lam k => (k.1, H k))
-      => \lam s t => propExt.conv (IsEquiv.parallelEquiv {_} {_} {_} {_} {dmap \lam k => later (k.1, H k)}
-                                     (inP (dpath-sigma-equiv \lam _ => F)) (inP (dpath-sigma-equiv \lam _ => G)) (\lam _ => idp))
-           (propExt.dir (totalEquiv {s.1 ~> t.1} {\lam r => DPath (\lam i => F (r i)) s.2 t.2} (\lam r w => dpath \lam i => H (r i, w i))) (rel __ s.2 t.2))
+      => \lam s t => (IsEquiv.parallelEquiv {_} {_} {_} {_} {dmap \lam k => later (k.1, H k)}
+                        (inP (dpath-sigma-equiv \lam _ => F)) (inP (dpath-sigma-equiv \lam _ => G)) (\lam _ => idp)).2
+           ((totalEquiv {s.1 ~> t.1} {\lam r => DPath (\lam i => F (r i)) s.2 t.2} (\lam r w => dpath \lam i => H (r i, w i))).1 (rel __ s.2 t.2))

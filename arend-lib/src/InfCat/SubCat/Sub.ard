@@ -44,14 +44,12 @@
         -- | {f} is right orthogonal to the fold map `X ⊔ X -> X` if and only if postcomposition with its diagonal is an equivalence on functors from {X}.
         \lemma IsOrthogonal-fold {X C D : \Cat} {f : C ->⁺ D}
           : IsOrthogonal (codiag {Empty} {X} absurd+) f <-> IsEquiv {X ->⁺ C} {X ->⁺ \Sigma⁺ (x y : C) (f x = f y)} (\lam h x => IsEmbedding.diag f (h x))
-          => \have p => IsEquiv.parallelEquiv {X ->⁺ C} {\Sigma (uv : \Sigma (CatPushout {Empty} {X} {X} absurd+ absurd+ ->⁺ C) (X ->⁺ D)) (\Pi (z :⁺ CatPushout {Empty} {X} {X} absurd+ absurd+) -> uv.2 (codiag absurd+ z) = f (uv.1 z))}
-                           {_} {_} {\lam h => ((\lam z => h (codiag absurd+ z), \lam y => f (h y)), \lam z => idp)} {\lam (h : X ->⁺ C) (x :⁺ X) => IsEmbedding.diag f (h x)}
-                           (inP idEquiv)
+          => \have p => IsEquiv.parallelEquiv (inP idEquiv)
                            (IsEquiv.trans (inP IsOrthogonal-sections.squares-equiv) $
                             IsEquiv.trans (inP (sigma-right \lam (v : X ->⁺ D) => empty-pushout-equiv {X} {X} {\lam z =>⁺ \Sigma⁺ (c : C) (f c = v (codiag absurd+ z))}))
                                           (lifts-equiv f))
                            (\lam h => idp)
-             \in (\lam o => propExt.dir p o, \lam e => propExt.conv p e)
+             \in (\lam o => p.1 o, \lam e => p.2 e)
           \where {
             -- | Two lifts of the same functor to {D} give a functor to the domain of the diagonal of {f}.
             \func lifts-map {X C D : \Cat} (f : C ->⁺ D)
