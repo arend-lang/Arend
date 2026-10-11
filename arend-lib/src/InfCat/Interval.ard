@@ -3,6 +3,12 @@
 \import Logic.Unique
 \import Paths
 
+-- | The minimum of two points of the directed interval.
+\func dmin (i j :⁺ DI) : DI => conn-right (dpath \lam k => k) i j
+
+-- | The maximum of two points of the directed interval.
+\func dmax (i j :⁺ DI) : DI => conn-left (dpath \lam k => k) i j
+
 \lemma DI-hom-ll-contr : Contr (dleft ~> dleft)
   => Contr.make idd \lam p => inv (comp-equiv.flipped.f (dpath \lam k => conn-right (dpath \lam i => i) (p k))) *> comp_idd-left
 

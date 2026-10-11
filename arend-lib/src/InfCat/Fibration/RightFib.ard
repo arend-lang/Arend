@@ -45,6 +45,15 @@
   (t : DPath (\lam i => B (p i)) b' b) : rightFib-tr Bf p b = b'
   => path \lam k => (isContr=>isProp (Bf (a', a, p, b)) (Contr.center {Bf (a', a, p, b)}) (b', t) k).1
 
+-- | Lifts in `Fibers q` ending at a point with the trivial path are arrows into it whose image is the given arrow.
+\func fibers-lift-equiv {E A : \Cat} (q : E ->⁺ A) (x : E) {a' : A} (p : a' ~> q x)
+  : QEquiv {ContLift (Fibers q) (a', q x, p, (x, idp))}
+           {\Sigma (w : \Sigma (y : E) (y ~> x)) (((q w.1, dpath \lam i => q (w.2 i)) : \Sigma (y : A) (y ~> q x)) = (a', p))} \cowith
+  | f u => ((u.1.1, dpath \lam i => (u.2 i).1), path \lam m => (u.1.2 m, dpath \lam i => (u.2 i).2 m))
+  | ret v => ((v.1.1, path \lam m => (v.2 m).1), dpath \lam i => (v.1.2 i, path \lam m => (v.2 m).2 i))
+  | ret_f u => idp
+  | f_sec v => idp
+
 {- | The full subcategory of the total category of a right fibration {Q} on a predicate {P} stable under transport
  -   is a right fibration over {A}.
  -}
@@ -84,19 +93,10 @@
                 => (v.1.1.1, dpath \lam i => (v.2 i).1) = {\Sigma (y : A) (y ~> proj P x)} (a', p)
               | ob-ff : QEquiv {\Sigma (y : FullSubCat P) (y ~> x)} {\Sigma (s : \Sigma (t : T) (P t)) (s.1 ~> FullSubCat.inc x)}
                 => sigma-equiv (IsEquiv.toQEquiv fullSub-ob-equiv) \lam y => IsEquiv.toQEquiv (FullSubCat.inc-ff y x)
-         \in fibers-equiv P x p `transQEquiv` qsigma-left ob-ff `transQEquiv` total-equiv P x p
-      \where \private {
-        -- | A path over {p} in `Fibers (proj P)` is an arrow in the full subcategory whose projection is equal to {p}.
-        \func fibers-equiv {A : \Cat} {Q : A ->⁺ \Cat} (P : \Sigma⁺ (a : A) (Q a) -> \Prop) (x : FullSubCat P) {a' : A} (p : a' ~> proj P x)
-          : QEquiv {ContLift (Fibers (proj P)) (a', proj P x, p, (x, idp))}
-                   {\Sigma (w : \Sigma (y : FullSubCat P) (y ~> x)) (((proj P w.1, dpath \lam i => proj P (w.2 i)) : \Sigma (y : A) (y ~> proj P x)) = (a', p))} \cowith
-          | f u => ((u.1.1, dpath \lam i => (u.2 i).1), path \lam m => (u.1.2 m, dpath \lam i => (u.2 i).2 m))
-          | ret v => ((v.1.1, path \lam m => (v.2 m).1), dpath \lam i => (v.1.2 i, path \lam m => (v.2 m).2 i))
-          | ret_f u => idp
-          | f_sec v => idp
-
+         \in fibers-lift-equiv (proj P) x p `transQEquiv` qsigma-left ob-ff `transQEquiv` total-equiv P x p
+      \where {
         -- | An arrow into `inc x` in the total category is an arrow in the base together with a path over it.
-        \func total-equiv {A : \Cat} {Q : A ->⁺ \Cat} (P : \Sigma⁺ (a : A) (Q a) -> \Prop) (x : FullSubCat P) {a' : A} (p : a' ~> proj P x)
+        \private \func total-equiv {A : \Cat} {Q : A ->⁺ \Cat} (P : \Sigma⁺ (a : A) (Q a) -> \Prop) (x : FullSubCat P) {a' : A} (p : a' ~> proj P x)
           : QEquiv {\Sigma (v : \Sigma (s : \Sigma (t : \Sigma⁺ (a : A) (Q a)) (P t)) (s.1 ~> FullSubCat.inc x))
                            (((v.1.1.1, dpath \lam i => (v.2 i).1) : \Sigma (y : A) (y ~> proj P x)) = (a', p))}
                    {Base P x p} \cowith

@@ -1,0 +1,121 @@
+{- | The codomain right fibration.
+ -
+ -   This is not the target projection `(DI ->⁺ C) ->⁺ C` of the whole arrow category, but its restriction to a wide subcategory.
+ -   The objects of {CartSubCat} are arrows `x ~> y` of {C}, and its morphisms are pullback squares between them
+ -   ({IsPullbackSquare.isPullback-idd} and {IsPullbackSquare.paste} make it a wide subcategory of `DI ->⁺ C`).
+ -   The functor {cod} from `Cart C` to {C} sends an arrow `G ~> F` to its target `F`.
+ -
+ -   If {C} has pullbacks, then {cod} is a right fibration ({cod-rightFib}):
+ -   a lift of an arrow `p : a' ~> cod x` is a pullback square into `x` with bottom side `p`,
+ -   and these form a contractible type since pullback squares into `x` are equivalent to the slice over `cod x` via their bottom sides
+ -   ({IsPullbackSquare.bottom-equiv}).
+ -   The fibers of {cod} are slices ({cod-fibers-equiv}), and transport along `p` is pullback along `p` ({cod-tr-product}).
+ -}
+
+\import Equiv
+\import Equiv.Fiber
+\import Equiv.Sigma
+\import Function.Meta
+\import Homotopy.Fibration
+\import InfCat.CartesianClosed.TypeLCCC
+\import InfCat.Fibration.Categorical
+\import InfCat.Fibration.RightFib
+\import InfCat.Functor.Embedding
+\import InfCat.Limit.Product
+\import InfCat.Limit.Pullback
+\import InfCat.Slice
+\import InfCat.Slice.TotalSlice
+\import InfCat.SubCat.Sub
+\import Logic
+\import Logic.Unique
+\import Meta
+\import Paths
+\open pullbackSlice-isProduct
+\open sumSlice-equiv
+\open CartSubCat
+\open IsPullbackSquare
+
+-- | The wide subcategory of the arrow category of {C} on pullback squares.
+\func CartSubCat.{u} (C : \Cat u) : \Cat u
+  => SubCat (IsPullbackSquare {C})
+  \where
+    -- | The target projection restricted to pullback squares: an arrow `G ~> F` goes to `F`.
+    \func target.{u} {C : \Cat u} (x :⁺ CartSubCat C) : C
+      => SubCat.inc x dright
+
+-- | The target projection is a right fibration.
+\lemma target-rightFib.{u} {C : \Cat u} {PB : HCatWithPullbacks C} : IsRightFib (Fibers (target {C}))
+  => \lam d => aux d.4.1 d.3 d.4.2
+  \where {
+    \private \lemma aux.{u} {C : \Cat u} {PB : HCatWithPullbacks C} {a' a : C} (x : CartSubCat C) (p : a' ~> a) (q : target x = a)
+      : Contr (ContLift (Fibers target) (a', a, p, (x, q))) \elim q
+      | idp => Contr.Contr_QEquiv (symQEquiv (fibers-lift-equiv target x p))
+                 (IsEquiv=>contrFibers (IsEquiv.trans (IsEquiv.trans (subCat-into-equiv (isPullback-idd, paste) x)
+                                                                     (bottom-equiv (SubCat.inc x)))
+                                                      (inP \new QEquiv {SliceCat (target x)} {\Sigma (y : C) (y ~> target x)} {
+                                                        | f t => (t.1, t.2)
+                                                        | ret t => (t.1, t.2)
+                                                        | ret_f t => idp
+                                                        | f_sec t => idp
+                                                      }))
+                                       (a', p))
+  }
+
+-- | An object of the fiber of {target} over {F} as an object of the slice over {F}.
+\func target-fibers.{u} {C : \Cat u} (F : C) (x : Fibers target F) : SliceCat F
+  => (SubCat.inc x.1 dleft, transport (SubCat.inc x.1 dleft ~>) x.2 (dpath (SubCat.inc x.1)))
+
+-- | The fibers of {target} are slices.
+\lemma target-fibers-equiv.{u} {C : \Cat u} (F : C) : IsEquiv (target-fibers F)
+  => inP $ later \new QEquiv {
+       | f s => (s.1, s.2)
+       | ret s => (s.1, s.2)
+       | ret_f s => idp
+       | f_sec s => idp
+     } `transQEquiv` qsigma-left (IsEquiv.toQEquiv (IsEquiv.fromEmbSurj (IsEmbedding.char.1 SubCat.inc-emb).1
+                                                                        (SubCat.inc-surj isPullback-idd)))
+       `transQEquiv` fib-slice F
+  \where {
+    -- | Functors from {DI} ending at {F} are objects of the slice over {F}.
+    \func fib-slice {E : \Cat} (F : E) : QEquiv {Fib {DI ->⁺ E} (\lam u => u dright) F} {SliceCat F} \cowith
+      | f s => (s.1 dleft, transport (s.1 dleft ~> __) s.2 (dpath s.1))
+      | ret s => (\lam i => s.2 i, idp)
+      | ret_f s => aux s.2
+      | f_sec s => idp
+      \where
+        \private \sfunc aux {E : \Cat} {u : DI ->⁺ E} {F : E} (e : u dright = F)
+          : ((\lam i => transport (u dleft ~> __) e (dpath u) i, idp) : Fib {DI ->⁺ E} (\lam u => u dright) F) = (u, e) \elim e
+          | idp => idp
+  }
+
+{- | Transport along {p} in {target} is pullback along {p}:
+ -   it underlies a product cone of `(a', p)` and {x} in the slice over {a}.
+ -}
+\sfunc target-tr-product.{u} {C : \Cat u} {PB : HCatWithPullbacks C} {a' a : C} (x : Fibers target a) (p : a' ~> a)
+  : \Sigma (c : SliceCat {SliceCat a} (a', p)) (q : c.1 ~> target-fibers a x) (IsProduct c.2 q)
+           (SliceCat.over-forget c = target-fibers a' (rightFib-tr target-rightFib p x))
+  \elim x
+  | (x,idp) => \let v => fibers-lift-equiv target x p (target-rightFib (a', target x, p, (x, idp))).center
+               \in cone v.1.2 v.2
+  \where {
+    -- | An arrow {w} into {x} in {CartSubCat} as a product cone over its image.
+    \private \sfunc cone.{u} {C : \Cat u} {x y : CartSubCat C} (w : y ~> x) {t : \Sigma (y : C) (y ~> target x)}
+                             (e : (target y, dpath \lam i => target (w i)) = {\Sigma (y : C) (y ~> target x)} t)
+      : \Sigma (c : SliceCat {SliceCat (target x)} (t.1, t.2)) (r : c.1 ~> target-fibers (target x) (x, idp)) (IsProduct c.2 r)
+               (SliceCat.over-forget c = target-fibers t.1 (y, pmap __.1 e)) \elim e
+      | idp => \let s => sliceSquare (\lam i => SubCat.inc (w i))
+               \in ((s dleft dleft, dpath (s dleft)), dpath \lam l => s l dleft, (product-char (\lam i => SubCat.inc (w i))).1 $
+                    SubCat.inc-con {_} {IsPullbackSquare {C}} (\lam {h} _ => (isPullback-idd (h dleft), isPullback-idd (h dright)), paste) {w}, idp)
+  }
+
+-- | For functors to types, transport along {alpha} in {target} is {pullbackSlice}.
+\sfunc target-tr-slice.{u} {X : \Cat u} {F' F : X ->⁺ \Type u} (alpha : F' ~> F) (x : Fibers (target {X ->⁺ \Type u}) F)
+  : target-fibers F' (rightFib-tr (target-rightFib {X ->⁺ \Type u}) alpha x) = pullbackSlice alpha (target-fibers F x)
+  => \let | a => target-tr-product x alpha
+          | b => pullbackSlice-isProduct alpha (target-fibers F x)
+     \in inv a.4 *> pmap (\lam s => SliceCat.over-forget s.1.1) (IsProduct.cones-unique ((a.1, a.2), a.3) ((b.1, b.2), b.3)) *> b.4
+
+-- | Under {totalFun-slice}, transport along {alpha} in {target} is precomposition with {totalMap} {alpha}.
+\sfunc target-tr-totalMap.{u} {X : \Cat u} {F' F : X ->⁺ \Type u} (alpha : F' ~> F) (x : Fibers (target {X ->⁺ \Type u}) F)
+  : fibFam (target-fibers F' (rightFib-tr target-rightFib alpha x)).2 = (\lam z => fibFam (target-fibers F x).2 (totalMap alpha z))
+  => pmap (\lam s => fibFam s.2) (target-tr-slice alpha x) *> (totalFun-slice F').ret_f _

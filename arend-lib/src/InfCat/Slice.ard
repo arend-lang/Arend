@@ -2,8 +2,12 @@
 \import Equiv.Sigma
 \import Function.Meta
 \import InfCat.Basics
+\import InfCat.Fibration.CartesianMap
+\import InfCat.Limit.Terminal
 \import InfCat.Square
 \import Logic
+\import Logic.Unique
+\import Meta
 \import Paths
 \import Paths.Meta
 
@@ -25,4 +29,69 @@
         (\lam t => ~>-natural {SliceCat X} __.2 {c,a} {d,b} {dpath \lam i => (k i, t i)})
       => transport IsEquiv (ext \lam t => inv \peval ~>-natural {SliceCat X} __.2 {c,a} {d,b} {dpath \lam i => (k i, t i)})
                    (inP $ square-char.equiv k idd `transQEquiv` flipQEquiv `transQEquiv` comp-equiv)
+
+    -- | Triangles over {k} ending at {b} are determined by {k} and {b}.
+    \lemma triangle-contr {C : \Cat} {x c d : C} (k : c ~> d) (b : d ~> x)
+      : Contr (\Sigma (a : c ~> x) (DPath (\lam i => k i ~> x) a b))
+      => Contr.Contr_QEquiv (symQEquiv $ sigma-right \lam a => IsEquiv.toQEquiv (triangle-equiv a b k)
+            `transQEquiv` inv-equiv
+            `transQEquiv` pathEquiv-right comp_idd-right)
+          (rsigma (comp k b))
+
+    -- | Arrows from objects over {r} to {y} are arrows from {r} to the underlying object of {y}.
+    \lemma dom-equiv {C : \Cat} {x : C} (r : C) (y : SliceCat x)
+      : IsEquiv {\Sigma (rho : r ~> x) ((r,rho) ~> {SliceCat x} y)} {r ~> y.1} (\lam a => dpath \lam i => (a.2 i).1)
+      => inP $ later \new QEquiv {
+           | f a => (dpath \lam i => (a.2 i).1, (a.1, dpath \lam i => (a.2 i).2))
+           | ret t => (t.2.1, dpath \lam i => (t.1 i, t.2.2 i))
+           | ret_f a => idp
+           | f_sec t => idp
+         } `transQEquiv` contr-right (triangle-contr __ y.2)
+
+    -- | {x} with the identity arrow is a terminal object of the slice.
+    \lemma terminal-contr {C : \Cat} {x : C} : IsTerminal {SliceCat x} (x, idd)
+      => \lam y => Contr.Contr_QEquiv (symQEquiv (dpath-sigma-equiv (\lam _ c => c ~> x))) $
+                   Contr.Contr_QEquiv (symQEquiv $ sigma-right \lam k => IsEquiv.toQEquiv (triangle-equiv y.2 idd k)
+                                                                         `transQEquiv` pathEquiv-right comp_idd-right)
+                                      (rsigma (comp y.2 idd))
+
+    -- | An object of the slice over an object {t} of the slice over {x} as an object of the slice over the underlying object of {t}.
+    \func over-forget {C : \Cat} {x : C} {t : SliceCat x} (c : SliceCat t) : SliceCat t.1
+      => (c.1.1, dpath \lam i => (c.2 i).1)
+
+    -- | The forgetful functor of a slice.
+    \func forget {C : \Cat} {X : C} (s :⁺ SliceCat X) : C
+      => s.1
+
+    {- | Every arrow of the slice is cartesian for {forget}.
+     -   Summing over the arrows into `r`, both sides of {cotriangle-map} are arrows into the source of {b}.
+     -}
+    \lemma forget-cartesian {C : \Cat} {X : C} {y z : SliceCat X} (b : y ~> z) : IsCartesianArrow forget b
+      => \lam r w => fiberwiseEquiv (dom-equiv r.1 z)
+                       (\lam a => cotriangle-map forget b a.2)
+                       (IsEquiv.leftFactor proj-equiv (IsEquiv.trans total-equiv (dom-equiv r.1 y)))
+                       (r.2, w)
+      \where {
+        \lemma proj-equiv {r : SliceCat X} : IsEquiv {\Sigma (w' : r.1 ~> z.1) (\Sigma (g : r.1 ~> y.1) (DPath (\lam i => g i ~> w' i) idd (dmap forget b)))} {r.1 ~> y.1} (\lam t => t.2.1)
+          => inP $ later (\new QEquiv {\Sigma (w' : r.1 ~> z.1) (\Sigma (g : r.1 ~> y.1) (DPath (\lam i => g i ~> w' i) idd (dmap forget b)))}
+                                      {\Sigma (g : r.1 ~> y.1) (\Sigma (w' : r.1 ~> z.1) (DPath (\lam i => g i ~> w' i) idd (dmap forget b)))} {
+               | f t => (t.2.1, (t.1, t.2.2))
+               | ret t => (t.2.1, (t.1, t.2.2))
+               | ret_f t => idp
+               | f_sec t => idp
+             }) `transQEquiv` contr-right (\lam g => segal-contr g (dmap forget b))
+
+        \lemma total-equiv {r : SliceCat X}
+          : IsEquiv {\Sigma (a : \Sigma (rho : r.1 ~> X) ((r.1,rho) ~> {SliceCat X} z))
+                            (\Sigma (k : (r.1,a.1) ~> {SliceCat X} y) (DPath (\lam i => k i ~> a.2 i) idd b))}
+                    {\Sigma (rho : r.1 ~> X) ((r.1,rho) ~> {SliceCat X} y)}
+                    (\lam s => (s.1.1, s.2.1))
+          => inP $ later (\new QEquiv {\Sigma (a : \Sigma (rho : r.1 ~> X) ((r.1,rho) ~> {SliceCat X} z)) (\Sigma (k : (r.1,a.1) ~> {SliceCat X} y) (DPath (\lam i => k i ~> a.2 i) idd b))}
+                                      {\Sigma (s : \Sigma (rho : r.1 ~> X) ((r.1,rho) ~> {SliceCat X} y)) (\Sigma (w : (r.1,s.1) ~> {SliceCat X} z) (DPath (\lam i => s.2 i ~> {SliceCat X} w i) idd b))} {
+               | f s => ((s.1.1, s.2.1), (s.1.2, s.2.2))
+               | ret t => ((t.1.1, t.2.1), (t.1.2, t.2.2))
+               | ret_f s => idp
+               | f_sec t => idp
+             }) `transQEquiv` contr-right (\lam (s : \Sigma (rho : r.1 ~> X) ((r.1,rho) ~> {SliceCat X} y)) => segal-contr {SliceCat X} {r.1,s.1} s.2 b)
+      }
   }

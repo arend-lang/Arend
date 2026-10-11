@@ -6,6 +6,7 @@
 \import InfCat.Functor.FullyFaithful
 \import InfCat.Limit.Terminal
 \import InfCat.Rezk
+\import InfCat.Slice
 \import Logic
 \import Logic.Unique
 \import Meta
@@ -54,6 +55,11 @@
                            (r : p = p') (e1 : comp (=_~> r) p1' = p1) (e2 : comp (=_~> r) p2' = p2)
           : (p, p1, p2, pp) = {\Sigma (p' : C) (p1' : p' ~> x) (p2' : p' ~> y) (IsProduct p1' p2')} (p', p1', p2', pp') \elim r
           | idp => ext (idp, inv e1 *> comp_idd-left, inv e2 *> comp_idd-left)
+
+    -- | Products are unique: a version of {unique} with the first leg viewed as an object of the slice.
+    \lemma cones-unique {C : \Cat} {x y : C} : isProp (\Sigma (b : \Sigma (c : SliceCat x) (c.1 ~> y)) (IsProduct b.1.2 b.2))
+      => \lam b b' => \have r => unique (b.1.1.1, b.1.1.2, b.1.2, b.2) (b'.1.1.1, b'.1.1.2, b'.1.2, b'.2)
+                      \in path \lam i => ((((r i).1, (r i).2), (r i).3), (r i).4)
 
     -- | Equivalences of ∞-categories preserve products.
     \lemma equiv-preserve {C D : \Cat} {f : C ->⁺ D} (e : IsHEquiv f) {x y p : C} {p1 : p ~> x} {p2 : p ~> y} (pp : IsProduct p1 p2)
