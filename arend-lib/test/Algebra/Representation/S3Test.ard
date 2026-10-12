@@ -1,7 +1,7 @@
 \import Algebra.Group.Representation
 \import Algebra.Group.Representation.CharacterFormulas
 \import Algebra.Group.Representation.Characters
-\import Algebra.Group.Representation.InterwiningMap
+\import Algebra.Group.Representation.IntertwiningMap
 \import Algebra.Group.Representation.Irreducible
 \import Algebra.Group.Representation.Orthogonality (pairing)
 \import Algebra.Group.Representation.Symmetric3

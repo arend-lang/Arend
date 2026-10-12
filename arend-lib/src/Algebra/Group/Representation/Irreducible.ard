@@ -4,7 +4,7 @@
 \import Algebra.Group.Representation
 \import Algebra.Meta
 \import Algebra.Module
-\import Algebra.Group.Representation.InterwiningMap
+\import Algebra.Group.Representation.IntertwiningMap
 \import Algebra.Group.Representation.SplitSubLRepres
 \import Algebra.Group.Representation.SubLRepres
 \import Algebra.Group.SubGroup
@@ -59,7 +59,7 @@
       | contains_** pa => pa
   }
 
-\lemma SchurLemma-strong {R : Ring} {G : Group} {A B : LinRepres R G} (p : IsStronglyIrreducible A) (q : IsStronglyIrreducible B) (f : InterwiningMap A B) : f.IsZero || IsEquiv f
+\lemma SchurLemma-strong {R : Ring} {G : Group} {A B : LinRepres R G} (p : IsStronglyIrreducible A) (q : IsStronglyIrreducible B) (f : IntertwiningMap A B) : f.IsZero || IsEquiv f
   => \case q (ImageLRepres f) \with {
     | byLeft iz => byLeft \lam x => iz $ inP (x, idp)
     | byRight if => \case p (KernelLRepres f) \with {
@@ -75,7 +75,7 @@
             (\Pi (S : SplitSubLRepres E) -> (S.dim = 0) || IsSurj S.incl)
 
 -- | Fulton--Harris Schur's lemma 1.7(1) for {IsFinIrreducible}: an intertwiner is zero or an isomorphism.
-\lemma SchurLemma {K : DiscreteField} {G : Group} {A B : LinRepres K G} (p : IsFinIrreducible A) (q : IsFinIrreducible B) (f : InterwiningMap A B)
+\lemma SchurLemma {K : DiscreteField} {G : Group} {A B : LinRepres K G} (p : IsFinIrreducible A) (q : IsFinIrreducible B) (f : IntertwiningMap A B)
   : f.IsZero || IsEquiv f
   => \case p.1, q.1 \with {
     | inP (la, _, ba), inP (lb, _, bb) =>
@@ -92,10 +92,10 @@
       }
   }
   \where {
-    \lemma kernel-invariant {R : Ring} {G : Group} {A B : LinRepres R G} {f : InterwiningMap A B} (g : G) {a : A} (fa=0 : f a = 0) : f (g ** a) = 0
+    \lemma kernel-invariant {R : Ring} {G : Group} {A B : LinRepres R G} {f : IntertwiningMap A B} (g : G) {a : A} (fa=0 : f a = 0) : f (g ** a) = 0
       => f.func-** *> pmap (g **) fa=0 *> B.**_zro
 
-    \lemma image-invariant {R : Ring} {G : Group} {A B : LinRepres R G} {f : InterwiningMap A B} (g : G) {b : B} (h : ∃ (a : A) (f a = b)) : ∃ (a : A) (f a = g ** b)
+    \lemma image-invariant {R : Ring} {G : Group} {A B : LinRepres R G} {f : IntertwiningMap A B} (g : G) {b : B} (h : ∃ (a : A) (f a = b)) : ∃ (a : A) (f a = g ** b)
       => \case h \with {
         | inP (a, fa=b) => inP (g ** a, f.func-** *> pmap (g **) fa=b)
       }

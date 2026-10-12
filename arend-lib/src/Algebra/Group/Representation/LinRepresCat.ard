@@ -1,7 +1,7 @@
 \import Algebra.Group
 \import Algebra.Group.GroupHom
 \import Algebra.Group.Representation
-\import Algebra.Group.Representation.InterwiningMap
+\import Algebra.Group.Representation.IntertwiningMap
 \import Algebra.Module
 \import Algebra.Module.Instances
 \import Algebra.Module.LinearMap
@@ -13,9 +13,9 @@
 \import Paths.Meta
 
 \instance RepresentationCat.{u} (R : Ring) (G : Group) : Cat (LinRepres.{u} R G)
-  | Hom A B => InterwiningMap A B
-  | id => InterwiningMap.id
-  | o => InterwiningMap.∘
+  | Hom A B => IntertwiningMap A B
+  | id => IntertwiningMap.id
+  | o => IntertwiningMap.∘
   | id-left => ext idp
   | id-right => ext idp
   | o-assoc => ext idp
@@ -23,34 +23,34 @@
                                         \lam _ => e.func-negative, \lam _ _ => e.func-*c,
                                         \lam _ _ => e.func-** )
 
-\instance InterwiningMapLModule {R : CRing} {G : Group} (A B : LinRepres R G) : LModule R (InterwiningMap A B) \cowith
-  | zro => zeroInterwining
-  | + => addInterwining
+\instance IntertwiningMapLModule {R : CRing} {G : Group} (A B : LinRepres R G) : LModule R (IntertwiningMap A B) \cowith
+  | zro => zeroIntertwining
+  | + => addIntertwining
   | zro-left => exts (\lam _ => B.zro-left)
   | zro-right => exts (\lam _ => B.zro-right)
   | +-assoc => exts (\lam _ => B.+-assoc)
-  | negative => negativeInterwining
+  | negative => negativeIntertwining
   | negative-left => exts (\lam _ => B.negative-left)
   | +-comm => exts (\lam _ => B.+-comm)
-  | *c => mulconstInterwining
+  | *c => mulconstIntertwining
   | *c-assoc => exts (\lam _ => B.*c-assoc)
   | *c-ldistr => exts (\lam _ => B.*c-ldistr)
   | *c-rdistr => exts (\lam _ => B.*c-rdistr)
   | ide_*c => exts (\lam _ => B.ide_*c)
   \where {
-    \func zeroInterwining : InterwiningMap A B \cowith
+    \func zeroIntertwining : IntertwiningMap A B \cowith
       | LinearMap => linearMap_zro
       | func-** => inv B.**_zro
 
-    \func addInterwining (f g : InterwiningMap A B) : InterwiningMap A B \cowith
+    \func addIntertwining (f g : IntertwiningMap A B) : IntertwiningMap A B \cowith
       | LinearMap => linearMap_+ f g
       | func-** => unfold (rewrite (f.func-**, g.func-**, B.**-ldistr) idp)
 
-    \func negativeInterwining (f : InterwiningMap A B) : InterwiningMap A B \cowith
+    \func negativeIntertwining (f : IntertwiningMap A B) : IntertwiningMap A B \cowith
       | LinearMap => linearMap_negative f
       | func-** => unfold (rewrite (f.func-**, B.**_negative) idp)
 
-    \func mulconstInterwining (c : R) (f : InterwiningMap A B) : InterwiningMap A B \cowith
+    \func mulconstIntertwining (c : R) (f : IntertwiningMap A B) : IntertwiningMap A B \cowith
       | LinearMap => c *c f
       | func-** => rewrite (B.**_*c, inv f.func-**) idp
   }

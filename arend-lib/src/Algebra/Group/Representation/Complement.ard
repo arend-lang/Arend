@@ -3,7 +3,7 @@
 \import Algebra.Group.GSet
 \import Algebra.Group.Representation
 \import Algebra.Group.Representation.Averaging
-\import Algebra.Group.Representation.InterwiningMap
+\import Algebra.Group.Representation.IntertwiningMap
 \import Algebra.Group.Representation.Irreducible
 \import Algebra.Group.Representation.Product
 \import Algebra.Group.Representation.SplitSubLRepres
@@ -37,13 +37,13 @@
 \lemma maschke-complement {K : SmithDomain} {G : FinGroup} (cardInv : Monoid.Inv (K.natCoef G.card)) {E : LinRepres K G}
   {lv : Array E} (bv : E.IsBasis lv) (S : SplitSubLRepres E)
   : ∃ (C : SplitSubLRepres E)
-      (Phi : InterwiningMap E (ProductLRepres (SplitSubLRepres.toLinRepres S) (SplitSubLRepres.toLinRepres C)))
-      (\Pi (e : E) -> ProductLRepres.coprod-map {K} {G} {SplitSubLRepres.toLinRepres S} {SplitSubLRepres.toLinRepres C} {E} (SplitSubLRepres.inclInterwining S) (SplitSubLRepres.inclInterwining C) (Phi e) = e)
+      (Phi : IntertwiningMap E (ProductLRepres (SplitSubLRepres.toLinRepres S) (SplitSubLRepres.toLinRepres C)))
+      (\Pi (e : E) -> ProductLRepres.coprod-map {K} {G} {SplitSubLRepres.toLinRepres S} {SplitSubLRepres.toLinRepres C} {E} (SplitSubLRepres.inclIntertwining S) (SplitSubLRepres.inclIntertwining C) (Phi e) = e)
       (\Pi (x : Array K S.dim) (y : Array K C.dim) -> Phi (S.incl x + C.incl y) = (x, y))
   => \let | pi => splitProjector cardInv S
           | (inP Ker) => kernel-split bv bv pi
           | C => SplitSubLRepres.fromInvariant Ker (SchurLemma.kernel-invariant {K} {G} {E} {E} {pi})
-     \in inP (C, \new InterwiningMap {
+     \in inP (C, \new IntertwiningMap {
            | func e => (S.retr (pi e), C.retr (e - pi e))
            | func-+ {e} {e'} => ext (pmap S.retr pi.func-+ *> S.retr.func-+,
                                      pmap C.retr (pmap ((e + e') -) pi.func-+ *> sub-distr e e' (pi e) (pi e')) *> C.retr.func-+)

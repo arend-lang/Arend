@@ -1,7 +1,7 @@
 \import Algebra.Group
 \import Algebra.Group.GSet
 \import Algebra.Group.Representation
-\import Algebra.Group.Representation.InterwiningMap
+\import Algebra.Group.Representation.IntertwiningMap
 \import Algebra.Linear.SplitSubLModule
 \import Algebra.Module.FinModule
 \import Algebra.Module.LinearMap
@@ -37,7 +37,7 @@
       | **-ldistr {g} {x} {y} => pmap S.retr (pmap (g **) S.incl.func-+ *> E.**-ldistr) *> S.retr.func-+
       | **_*c {g} {x} {c} => pmap S.retr (pmap (g **) S.incl.func-*c *> E.**_*c) *> S.retr.func-*c
 
-    \func inclInterwining {R : Ring} {G : Group} {E : LinRepres R G} (S : SplitSubLRepres E) : InterwiningMap (toLinRepres S) E \cowith
+    \func inclIntertwining {R : Ring} {G : Group} {E : LinRepres R G} (S : SplitSubLRepres E) : IntertwiningMap (toLinRepres S) E \cowith
       | LinearMap => S.incl
       | func-** {x} {g} => S.incl-invariant g x
 

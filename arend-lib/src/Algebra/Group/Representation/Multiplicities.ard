@@ -3,7 +3,7 @@
 \import Algebra.Group.Representation
 \import Algebra.Group.Representation.CharacterFormulas
 \import Algebra.Group.Representation.Characters
-\import Algebra.Group.Representation.InterwiningMap
+\import Algebra.Group.Representation.IntertwiningMap
 \import Algebra.Group.Representation.Irreducible
 \import Algebra.Group.Representation.Orthogonality
 \import Algebra.Linear.Matrix
@@ -55,8 +55,8 @@
 
 \lemma delta-case.{u} {K : DiscreteField.{u}} {G : FinGroup} (cardInv : Monoid.Inv (K.natCoef G.card)) {r : Nat} (V : Fin r -> FinLinRepres.{u} K G)
   (irr : \Pi (i : Fin r) -> IsFinIrreducible (V i))
-  (comm : \Pi (i : Fin r) (h : InterwiningMap (V i) (V i)) -> ∃ (c : K) (\Pi (e : V i) -> h e = c *c e))
-  (noniso : \Pi (i j : Fin r) -> i /= j -> Not (∃ (f : InterwiningMap (V i) (V j)) (IsEquiv f)))
+  (comm : \Pi (i : Fin r) (h : IntertwiningMap (V i) (V i)) -> ∃ (c : K) (\Pi (e : V i) -> h e = c *c e))
+  (noniso : \Pi (i j : Fin r) -> i /= j -> Not (∃ (f : IntertwiningMap (V i) (V j)) (IsEquiv f)))
   (x j : Fin r)
   : pairing cardInv (character (V x)) (character (V j)) = K.natCoef (\case decideEq x j \with { | yes _ => 1 | no _ => 0 })
   => cases (decideEq x j) \with {
@@ -67,8 +67,8 @@
 
 \lemma count-pairing.{u} {K : DiscreteField.{u}} {G : FinGroup} (cardInv : Monoid.Inv (K.natCoef G.card)) {r : Nat} (V : Fin r -> FinLinRepres.{u} K G)
   (irr : \Pi (i : Fin r) -> IsFinIrreducible (V i))
-  (comm : \Pi (i : Fin r) (h : InterwiningMap (V i) (V i)) -> ∃ (c : K) (\Pi (e : V i) -> h e = c *c e))
-  (noniso : \Pi (i j : Fin r) -> i /= j -> Not (∃ (f : InterwiningMap (V i) (V j)) (IsEquiv f)))
+  (comm : \Pi (i : Fin r) (h : IntertwiningMap (V i) (V i)) -> ∃ (c : K) (\Pi (e : V i) -> h e = c *c e))
+  (noniso : \Pi (i j : Fin r) -> i /= j -> Not (∃ (f : IntertwiningMap (V i) (V j)) (IsEquiv f)))
   (a : Array (Fin r)) (j : Fin r)
   : pairing cardInv (character (DSum.{u} V a)) (character (V j)) = K.natCoef (countFin j a) \elim a
   | nil => pmap (pairing cardInv __ (character (V j))) {character (ZeroFin.{u} {K} {G})} {\lam _ => 0} (ext character_zero.{u}) *> pairing-zero cardInv _ *> inv K.natCoefZero
@@ -79,10 +79,10 @@
     Restricted to characteristic $0$ (injectivity of {natCoef}) and conditional on Exercise 1.2. -}
 \lemma multiplicities.{u} {K : DiscreteField.{u}} {G : FinGroup} (cardInv : Monoid.Inv (K.natCoef G.card)) {r : Nat} (V : Fin r -> FinLinRepres.{u} K G)
   (irr : \Pi (i : Fin r) -> IsFinIrreducible (V i))
-  (comm : \Pi (i : Fin r) (h : InterwiningMap (V i) (V i)) -> ∃ (c : K) (\Pi (e : V i) -> h e = c *c e))
-  (noniso : \Pi (i j : Fin r) -> i /= j -> Not (∃ (f : InterwiningMap (V i) (V j)) (IsEquiv f)))
+  (comm : \Pi (i : Fin r) (h : IntertwiningMap (V i) (V i)) -> ∃ (c : K) (\Pi (e : V i) -> h e = c *c e))
+  (noniso : \Pi (i j : Fin r) -> i /= j -> Not (∃ (f : IntertwiningMap (V i) (V j)) (IsEquiv f)))
   (natCoef-inj : \Pi (m n : Nat) -> K.natCoef m = K.natCoef n -> m = n)
-  (a b : Array (Fin r)) (f : InterwiningMap (DSum.{u} V a) (DSum.{u} V b)) (e : IsEquiv f) (j : Fin r)
+  (a b : Array (Fin r)) (f : IntertwiningMap (DSum.{u} V a) (DSum.{u} V b)) (e : IsEquiv f) (j : Fin r)
   : countFin j a = countFin j b
   => natCoef-inj _ _ (inv (count-pairing cardInv V irr comm noniso a j) *>
        pmap (pairing cardInv __ (character (V j))) {character (DSum.{u} V a)} {character (DSum.{u} V b)} (ext (character-iso {K} {G} {DSum.{u} V a} {DSum.{u} V b} f e)) *>

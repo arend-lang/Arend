@@ -5,7 +5,7 @@
 \import Algebra.Group.Representation.CharacterFormulas
 \import Algebra.Group.Representation.Characters
 \import Algebra.Module.CoordSystem
-\import Algebra.Group.Representation.InterwiningMap
+\import Algebra.Group.Representation.IntertwiningMap
 \import Algebra.Group.Representation.Irreducible
 \import Algebra.Group.Representation.PermutationRepresentation
 \import Algebra.Group.Representation.Product
@@ -155,7 +155,7 @@
 
 {- | Fulton--Harris Schur's lemma 1.7(2) for $S_3$: every intertwiner of the standard representation is a scalar. The proof uses only cancellation,
     so it holds over every commutative ring. -}
-\lemma std-commutant {R : CRing} (phi : InterwiningMap (StdRep R) (StdRep R)) : ∃ (c : R) (\Pi (x : Array R 2) -> phi x = c *c x)
+\lemma std-commutant {R : CRing} (phi : IntertwiningMap (StdRep R) (StdRep R)) : ∃ (c : R) (\Pi (x : Array R 2) -> phi x = c *c x)
   => \let | S => StdRep R
           | a => phi e0 0
           | b => phi e0 1
@@ -198,7 +198,7 @@
         pmap (\lam z => (f 0 + (f 1 + (f 2 + 0))) - z * s) inv3.inv-right *> pmap (\lam z => z - R.ide * s) (inv (AbMonoid.FinSum=BigSum {R} {3} {f})) *> equation
 
 -- | The constant line in {Perm3}, as an intertwiner from the trivial representation.
-\func lineIncl (R : CRing) : InterwiningMap (TrivialAction (RingLModule R) S3) (Perm3 R) \cowith
+\func lineIncl (R : CRing) : IntertwiningMap (TrivialAction (RingLModule R) S3) (Perm3 R) \cowith
   | func c => \lam _ => c
   | func-+ => idp
   | func-*c => idp
@@ -206,10 +206,10 @@
 
 {- | The permutation representation of $S_3$ is the direct sum of the trivial and the standard representations,
     over every commutative ring in which $3$ is invertible. -}
-\func perm-decomp-from (R : CRing) : InterwiningMap (ProductLRepres (TrivialAction (RingLModule R) S3) (StdRep R)) (Perm3 R)
-  => ProductLRepres.coprod-map {R} {S3} {TrivialAction (RingLModule R) S3} {StdRep R} {Perm3 R} (lineIncl R) (SplitSubLRepres.inclInterwining (stdSub R))
+\func perm-decomp-from (R : CRing) : IntertwiningMap (ProductLRepres (TrivialAction (RingLModule R) S3) (StdRep R)) (Perm3 R)
+  => ProductLRepres.coprod-map {R} {S3} {TrivialAction (RingLModule R) S3} {StdRep R} {Perm3 R} (lineIncl R) (SplitSubLRepres.inclIntertwining (stdSub R))
 
-\func perm-decomp-to {R : CRing} (inv3 : Monoid.Inv (R.natCoef 3)) : InterwiningMap (Perm3 R) (ProductLRepres (TrivialAction (RingLModule R) S3) (StdRep R)) \cowith
+\func perm-decomp-to {R : CRing} (inv3 : Monoid.Inv (R.natCoef 3)) : IntertwiningMap (Perm3 R) (ProductLRepres (TrivialAction (RingLModule R) S3) (StdRep R)) \cowith
   | func f => (mean3 inv3 f, (stdSplit R).retr (\lam j => f j - mean3 inv3 f))
   | func-+ {f} {f'} => \have m+ : mean3 inv3 (\lam j => f j + f' j) = mean3 inv3 f + mean3 inv3 f' => pmap (inv3.inv *) (AbMonoid.FinSum_+ {R} {FinFin 3} {f} {f'}) *> R.ldistr
                        \in ext (m+, pmap (stdSplit R).retr {\lam j => (f j + f' j) - mean3 inv3 (\lam j => f j + f' j)} {\lam j => (f j - mean3 inv3 f) + (f' j - mean3 inv3 f')} (ext \lam j => pmap (\lam z => (f j + f' j) - z) m+ *> equation) *>

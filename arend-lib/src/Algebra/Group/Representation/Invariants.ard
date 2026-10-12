@@ -4,7 +4,7 @@
 \import Algebra.Group.Representation
 \import Algebra.Group.Representation.CharacterFormulas
 \import Algebra.Group.Representation.Characters
-\import Algebra.Group.Representation.InterwiningMap
+\import Algebra.Group.Representation.IntertwiningMap
 \import Algebra.Group.Representation.MaschkeLemma
 \import Algebra.Linear.Matrix
 \import Algebra.Linear.SplitSubLModule (SplitSubLModule, image-split)
@@ -51,7 +51,7 @@
       : invProj cardInv E v = v
       => pmap (cardInv.inv *c) (E.FinSum-ext p *> SumOverGroup.FinSumEqual-multiply v) *> inv E.*c-assoc *> pmap (`*c v) cardInv.inv-left *> E.ide_*c
 
-    \func interwining {R : CRing} {G : FinGroup} (cardInv : Monoid.Inv (R.natCoef G.card)) (E : LinRepres R G) : InterwiningMap E E \cowith
+    \func intertwining {R : CRing} {G : FinGroup} (cardInv : Monoid.Inv (R.natCoef G.card)) (E : LinRepres R G) : IntertwiningMap E E \cowith
       | LinearMap => invProj cardInv E
       | func-** {v} {h} => pmap (cardInv.inv *c) (shift h v) *> inv (invariant cardInv v h)
 

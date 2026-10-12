@@ -1,7 +1,7 @@
 \import Algebra.Group
 \import Algebra.Group.GSet
 \import Algebra.Group.Representation
-\import Algebra.Group.Representation.InterwiningMap
+\import Algebra.Group.Representation.IntertwiningMap
 \import Algebra.Group.Representation.LinRepresCat
 \import Algebra.Group.Representation.SubLRepres
 \import Algebra.Module
@@ -21,7 +21,7 @@
 \import Set.Fin
 
 \class MaschkeLemma {R : CRing} {G : FinGroup} (cardInv : Monoid.Inv (R.natCoef G.card)) {E : LinRepres R G} {S : SubLRepres R G E} {
-  \func mean_func {E W : LinRepres R G} (f : LinearMap E W) : InterwiningMap E W
+  \func mean_func {E W : LinRepres R G} (f : LinearMap E W) : IntertwiningMap E W
     => cardInv.inv *c SumOverGroup f
 
   -- | If the subrepresentation splits as a submodule, then it splits as a subrepresentation.
@@ -44,10 +44,10 @@
 }
 
 {- | It is a function that given a linear map $f : A \to B$ between two representations of a finite group $G$
-produces an interwining linear map $f'$ via the following formula
+produces an intertwining linear map $f'$ via the following formula
  $f' a := \sum_{g : G} g f (g^{ -1} a)$
  -}
-\func SumOverGroup {R : CRing} {G : FinGroup} {A B : LinRepres R G} (f : LinearMap A B) : InterwiningMap A B \cowith
+\func SumOverGroup {R : CRing} {G : FinGroup} {A B : LinRepres R G} (f : LinearMap A B) : IntertwiningMap A B \cowith
   | LinearMap => int
   | func-** {a} {h} => rewrite (bring_h_out h a, inv $ ap-rearrange h a) idp
   \where {

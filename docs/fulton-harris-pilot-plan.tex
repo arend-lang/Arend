@@ -270,7 +270,7 @@ retraction, whose image is invariant.
 
 -- the induced action on R^dim, g . x := retr (g ** incl x), makes incl an intertwiner
 \func SplitSubLRepres.toLinRepres (S : SplitSubLRepres E) : LinRepres R G
-\func SplitSubLRepres.inclInterwining (S : SplitSubLRepres E) : InterwiningMap S.toLinRepres E
+\func SplitSubLRepres.inclIntertwining (S : SplitSubLRepres E) : IntertwiningMap S.toLinRepres E
 
 -- Algebra/Group/Representation/Irreducible.ard (pilot notion; no decidable equality)
 \func IsFinIrreducible {R : NonZeroRing} {G : Group} (E : LinRepres R G) : \Prop
@@ -339,8 +339,9 @@ retraction, whose image is invariant.
   \item Finite indexed sums are iterated \code{ProductLRepres}. They are only
   needed in the $S_3$ example and in P07, both with a small fixed number of
   summands.
-  \item The \code{InterwiningMap} spelling is kept, as required by the
-  whole-book plan.
+  \item The library's misspelled \code{InterwiningMap} (and the module of that
+  name) was renamed to \code{IntertwiningMap}, overriding the whole-book plan's
+  instruction to keep the existing spelling.
 \end{itemize}
 
 \stage{D5}{Characters}
@@ -527,7 +528,7 @@ in $R$, derive \code{\Pi (P : \Prop) -> P || Not P}.
 Relation: \code{same}.
 \field{Route} The action fields of \code{HomLRepres} are pointwise, using
 \code{exts}, \code{**-assoc} and \code{inverse_*}. The pattern to follow is
-\code{InterwiningMapLModule} in \src{LinRepresCat.ard}.
+\code{IntertwiningMapLModule} in \src{LinRepresCat.ard}.
 \field{Acceptance} \code{HomLRepres} and \code{DualLRepres} check, and only the
 registered goal remains.
 \end{item-spec}
@@ -537,7 +538,7 @@ registered goal remains.
 \field{Target}
 \begin{lstlisting}
 \lemma SchurLemma {K : DiscreteField} {G : Group} {A B : BasedLinRepres K G}
-  (p : IsFinIrreducible A) (q : IsFinIrreducible B) (f : InterwiningMap A B)
+  (p : IsFinIrreducible A) (q : IsFinIrreducible B) (f : IntertwiningMap A B)
   : f.IsZero || IsEquiv f
 \end{lstlisting}
 Relation: \code{reformulated}. It uses the pilot irreducibility. As
@@ -612,7 +613,7 @@ inclusions out explicitly. Irreducibility of the standard representation is R3.
 \field{Target}
 \begin{itemize}
   \item \code{IsSplitIrreducible E}: \code{IsFinIrreducible} plus
-  ``every \code{InterwiningMap E E} is a scalar multiple of the identity''.
+  ``every \code{IntertwiningMap E E} is a scalar multiple of the identity''.
   \item A proof that one-dimensional representations are split irreducible.
   \item A proof that the standard representation of $S_3$ is split
   irreducible over any commutative \code{LocalRing} in which $6$ is invertible;
@@ -1092,7 +1093,7 @@ R8a/b & \src{test/Algebra/Representation/S3Test.ard} & Irreducibility, decomposi
 \bottomrule
 \end{longtable}}
 
-\textbf{Conditional declarations.} Through \code{invariant-interwining}, these
+\textbf{Conditional declarations.} Through \code{invariant-intertwining}, these
 depend on the hole \code{FH_L01_Ex1_2}:
 \begin{itemize}
   \item \code{orthogonality-noniso}, \code{orthogonality-self} and
