@@ -274,14 +274,17 @@ retraction, whose image is invariant.
 
 -- Algebra/Group/Representation/Irreducible.ard (pilot notion; no decidable equality)
 \func IsFinIrreducible {R : NonZeroRing} {G : Group} (E : LinRepres R G) : \Prop
-  => \Sigma (∃ (T : SplitSubLRepres E) (0 < T.dim) (IsSurj T.incl))   -- finite free, positive rank
+  => \Sigma (∃ (l : Array E) (0 < l.len) (E.IsBasis l))              -- finite free, positive rank
             (\Pi (S : SplitSubLRepres E) -> (S.dim = 0) || IsSurj S.incl)
 \end{lstlisting}
 \begin{itemize}
   \item \textbf{No decidable equality in the definition.} The first component
-  states finite freeness of positive rank. A surjective split inclusion is an
-  isomorphism $R^k\cong E$, so no \code{dimension} and no decision procedure
-  are needed.
+  is the truncated existence of a basis of positive length; no basis is
+  chosen, and no \code{dimension} or decision procedure is needed. (An earlier
+  version phrased it as a surjective split inclusion $R^k \to E$. That is
+  equivalent, since such an inclusion is an isomorphism and its invariance
+  condition is automatic, but it misleadingly looked like a statement about
+  subrepresentations.)
   \item \textbf{Nontrivial scalars are required.} Positive rank alone does not
   exclude the zero module. Over the zero ring, $R^1$ is already zero, and with
   \code{{R : Ring}} the predicate would call it irreducible. Hence
@@ -1062,7 +1065,7 @@ Paths are relative to \src{arend-lib/src/Algebra/}.
 Item & Declarations (module) & Notes \\
 \midrule
 \endhead
-D3 & \code{SplitSubLRepres}, \code{IsFinIrreducible} (\src{Group/Representation/SplitSubLRepres}, \src{Irreducible}) & Old notion renamed \code{IsStronglyIrreducible}, Schur as \code{SchurLemma-strong}. \\
+D3 & \code{SplitSubLRepres}, \code{IsFinIrreducible} (\src{Group/Representation/SplitSubLRepres}, \src{Irreducible}) & Old notion renamed \code{IsStronglyIrreducible}, Schur as \code{SchurLemma-strong}. The first component of \code{IsFinIrreducible} is stated as existence of a basis of positive length. \\
 P01 & \code{toUnitsHom}, \code{fromUnitsHom} (\src{Hom}); \code{PermRepr-not-FinIrreducible} (\src{PermutationRepresentation}) & Uses \code{InvGroup} from \src{Arith/Nat/EulerTotient}. \\
 P01b & \code{IsStronglyIrreducible.excludedMiddle} & Proved; no axiom. \\
 P02 & \code{HomLRepres}, \code{DualLRepres}, \code{invariantHom} & \code{invariantHom} is the hole \code{FH_L01_Ex1_2}. \\

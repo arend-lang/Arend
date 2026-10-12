@@ -12,6 +12,7 @@
 \import Algebra.Group.Representation.SplitSubLRepres
 \import Algebra.Group.Symmetric
 \import Algebra.Group.Symmetric.Action
+\import Algebra.Linear.Matrix (MatrixRing)
 \import Algebra.Linear.SplitSubLModule (SplitSubLModule)
 \import Algebra.Meta
 \import Algebra.Module
@@ -183,16 +184,9 @@
        | 1 => pmap2 (\lam u v => x 0 * u + x 1 * v) b=0 d=a *> equation
      })
 
-\func stdFull (R : CRing) : SplitSubLRepres (StdRep R) \cowith
-  | dim => 2
-  | incl => LinearMap.id
-  | retr => LinearMap.id
-  | retr_incl _ => idp
-  | incl-invariant _ _ => idp
-
 -- | The standard representation is irreducible over every commutative local ring in which $6$ is invertible.
 \lemma std-irreducible {R : LocalCRing} (cardInv : Monoid.Inv (R.natCoef S3.card)) : IsFinIrreducible (StdRep R)
-  => irreducible-from-commutant cardInv (stdFull R) NatOrder.zero<suc (\lam y => inP (y, idp)) std-commutant
+  => irreducible-from-commutant cardInv {StdRep R} {MatrixRing.ide} NatOrder.zero<suc ArrayFinModule.basis std-commutant
 
 \func mean3 {R : CRing} (inv3 : Monoid.Inv (R.natCoef 3)) (f : Fin 3 -> R) : R
   => inv3.inv * AbMonoid.FinSum {R} {FinFin 3} f
@@ -239,43 +233,13 @@
 \lemma ringEnd-scalar {R : CRing} (h : LinearMap (RingLModule R) (RingLModule R)) (x : R) : h x = h R.ide * x
   => pmap h (inv R.ide-right) *> h.func-*c *> R.*-comm
 
-\func trivialFull (R : CRing) (G : Group) : SplitSubLRepres (TrivialAction (RingLModule R) G) \cowith
-  | dim => 1
-  | incl => \new LinearMap {
-    | func c => c 0
-    | func-+ => idp
-    | func-*c => idp
-  }
-  | retr => \new LinearMap {
-    | func r => r :: nil
-    | func-+ => exts \lam i => \case \elim i \with { | 0 => idp }
-    | func-*c => exts \lam i => \case \elim i \with { | 0 => idp }
-  }
-  | retr_incl c => exts \lam i => \case \elim i \with { | 0 => idp }
-  | incl-invariant _ _ => idp
-
-\func signFull (R : CRing) (n : Nat) : SplitSubLRepres (SignLRepres R n) \cowith
-  | dim => 1
-  | incl => \new LinearMap {
-    | func c => c 0
-    | func-+ => idp
-    | func-*c => idp
-  }
-  | retr => \new LinearMap {
-    | func r => r :: nil
-    | func-+ => exts \lam i => \case \elim i \with { | 0 => idp }
-    | func-*c => exts \lam i => \case \elim i \with { | 0 => idp }
-  }
-  | retr_incl c => exts \lam i => \case \elim i \with { | 0 => idp }
-  | incl-invariant _ _ => idp
-
 -- | The trivial one-dimensional representation is irreducible.
 \lemma trivial-irreducible {R : LocalCRing} {G : FinGroup} (cardInv : Monoid.Inv (R.natCoef G.card)) : IsFinIrreducible (TrivialAction (RingLModule R) G)
-  => irreducible-from-commutant cardInv (trivialFull R G) NatOrder.zero<suc (\lam r => inP (r :: nil, idp)) (\lam h => inP (h R.ide, ringEnd-scalar h))
+  => irreducible-from-commutant cardInv {TrivialAction (RingLModule R) G} {R.ide :: nil} NatOrder.zero<suc RingLModule.basis (\lam h => inP (h R.ide, ringEnd-scalar h))
 
 -- | The sign representation is irreducible.
 \lemma sign-irreducible {R : LocalCRing} {n : Nat} (cardInv : Monoid.Inv (R.natCoef (SymFinGroup n).card)) : IsFinIrreducible (SignLRepres R n)
-  => irreducible-from-commutant cardInv (signFull R n) NatOrder.zero<suc (\lam r => inP (r :: nil, idp)) (\lam h => inP (h R.ide, ringEnd-scalar h))
+  => irreducible-from-commutant cardInv {SignLRepres R n} {R.ide :: nil} NatOrder.zero<suc RingLModule.basis (\lam h => inP (h R.ide, ringEnd-scalar h))
 
 -- | Fulton--Harris Cor. 1.6 for the presented input: the permutation representation of $S_3$ is the direct sum of two irreducible representations.
 \func perm3-complete-reducibility {R : LocalCRing} (cardInv : Monoid.Inv (R.natCoef S3.card)) (inv3 : Monoid.Inv (R.natCoef 3))

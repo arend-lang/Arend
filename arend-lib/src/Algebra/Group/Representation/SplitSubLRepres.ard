@@ -2,13 +2,10 @@
 \import Algebra.Group.GSet
 \import Algebra.Group.Representation
 \import Algebra.Group.Representation.InterwiningMap
-\import Algebra.Linear.Matrix
 \import Algebra.Linear.SplitSubLModule
 \import Algebra.Module.FinModule
 \import Algebra.Module.LinearMap
-\import Algebra.Module.ModuleIso
 \import Algebra.Ring
-\import Data.Array
 \import Function
 \import Logic
 \import Paths
@@ -31,9 +28,6 @@
       | retr_incl => S.retr_incl
       | incl-invariant g x => S.incl_retr (P-inv g (S.incl-in x))
 
-    \lemma incl-inj {R : Ring} {G : Group} {E : LinRepres R G} (S : SplitSubLRepres E) : IsInj S.incl
-      => \lam {x} {y} p => inv (S.retr_incl x) *> pmap S.retr p *> S.retr_incl y
-
     -- | The action of {G} on $R^{dim}$ induced by the splitting.
     \func toLinRepres {R : Ring} {G : Group} {E : LinRepres R G} (S : SplitSubLRepres E) : LinRepres R G \cowith
       | LModule => ArrayFinModule {R} S.dim
@@ -46,11 +40,6 @@
     \func inclInterwining {R : Ring} {G : Group} {E : LinRepres R G} (S : SplitSubLRepres E) : InterwiningMap (toLinRepres S) E \cowith
       | LinearMap => S.incl
       | func-** {x} {g} => S.incl-invariant g x
-
-    -- | A surjective split inclusion is an isomorphism, so it transports the standard basis of $R^{dim}$ to a basis of {E}.
-    \lemma full-basis {R : Ring} {G : Group} {E : LinRepres R G} (T : SplitSubLRepres E) (s : IsSurj T.incl)
-      : E.IsBasis (map T.incl MatrixRing.ide)
-      => iso-basis {R} {ArrayFinModule {R} T.dim} {E} ((ModuleIso.iso<->inj+surj {R} {_} {_} {T.incl}).2 (incl-inj T, s)) ArrayFinModule.basis
 
     \lemma surj-section {R : Ring} {G : Group} {E : LinRepres R G} (T : SplitSubLRepres E) (s : IsSurj T.incl) (e : E) : T.incl (T.retr e) = e
       => \case s e \with {

@@ -9,8 +9,6 @@
 \import Algebra.Group.Representation.Invariants
 \import Algebra.Group.Representation.InterwiningMap
 \import Algebra.Group.Representation.Irreducible
-\import Algebra.Group.Representation.SplitSubLRepres (SplitSubLRepres)
-\import Algebra.Linear.Matrix
 \import Algebra.Linear.SplitSubLModule (SplitSubLModule, basis-split_+, basis-split_*c)
 \import Algebra.Module
 \import Algebra.Module.CoordSystem
@@ -23,7 +21,6 @@
 \import Algebra.Pointed
 \import Algebra.Ring
 \import Arith.Nat
-\import Data.Array
 \import Equiv
 \import Logic
 \import Logic.Meta
@@ -71,10 +68,8 @@
   (irrV : IsFinIrreducible V) (comm : \Pi (h : InterwiningMap V V) -> ∃ (c : K) (\Pi (e : V) -> h e = c *c e))
   : pairing cardInv (character V) (character V) = 1
   => \let | (inP S) => invariants-split cardInv (HomFin V V)
-          | (inP (T, T>0, sT)) => irrV.1
-          | lv => map T.incl MatrixRing.ide
-          | bv : V.IsBasis lv => SplitSubLRepres.full-basis T sT
-          | j0 : Fin lv.len => toFin 0 T>0
+          | (inP (lv, lv>0, bv)) => irrV.1
+          | j0 : Fin lv.len => toFin 0 lv>0
           | lam : LinearMap (LinearMapLModule V V) (RingLModule K) => \new LinearMap {
               | func f => V.basis-split bv (f (lv j0)) j0
               | func-+ => basis-split_+ bv j0

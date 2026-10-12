@@ -10,12 +10,12 @@
 \import Algebra.Pointed
 \import Algebra.Module.FinModule
 \import Algebra.Module.LinearMap
+\import Algebra.Module.TraceCoords (coordFun)
 \import Algebra.Monoid
 \import Algebra.Monoid.MonoidHom
 \import Algebra.Ring
 \import Algebra.Ring.Local
 \import Arith.Nat
-\import Function
 \import Function.Meta
 \import Logic
 \import Logic.Meta
@@ -55,20 +55,20 @@
 -- | A finite free representation of positive rank whose intertwiners are all scalar is irreducible,
 --   over a commutative local ring in which $|G|$ is invertible. No zero test is used.
 \lemma irreducible-from-commutant {R : LocalCRing} {G : FinGroup} (cardInv : Monoid.Inv (R.natCoef G.card)) {E : LinRepres R G}
-  (T : SplitSubLRepres E) (T>0 : 0 < T.dim) (sT : IsSurj T.incl)
+  {l : Array E} (l>0 : 0 < l.len) (lb : E.IsBasis l)
   (comm : \Pi (h : InterwiningMap E E) -> ∃ (c : R) (\Pi (e : E) -> h e = c *c e))
   : IsFinIrreducible E
-  => (inP (T, T>0, sT), \lam S => \case comm (splitProjector cardInv S) \with {
+  => (inP (l, l>0, lb), \lam S => \case comm (splitProjector cardInv S) \with {
     | inP (c, hc) =>
       \let | pi => splitProjector cardInv S
-           | x0 : Array R T.dim => \lam _ => R.ide
-           | v => T.incl x0
+           | j0 : Fin l.len => toFin 0 l>0
+           | d => coordFun lb j0
+           | v => l j0
            | eq : (c * c) *c v = c *c v
                => E.*c-assoc *> pmap (c *c) (inv (hc v)) *> inv (hc (pi v)) *> pmap pi (inv (splitProjector.image cardInv S v)) *>
                   splitProjector.on-incl cardInv S _ *> splitProjector.image cardInv S v *> hc v
-           | q : (c * c) *c x0 = c *c x0
-               => inv (T.retr.func-*c *> pmap (_ *c) (T.retr_incl x0)) *> pmap T.retr eq *> T.retr.func-*c *> pmap (_ *c) (T.retr_incl x0)
-           | cc=c : c * c = c => inv ide-right *> pmap (\lam (z : Array R T.dim) => z (toFin 0 T>0)) q *> ide-right
+           | cc=c : c * c = c
+               => inv ide-right *> inv (d.func-*c *> pmap (_ *) E.basis_split_=) *> pmap d eq *> d.func-*c *> pmap (c *) E.basis_split_= *> ide-right
       \in \case R.connected c cc=c \with {
         | byLeft c=0 => byLeft $ dim=0-of-zero \lam x => inv (S.retr_incl x) *>
             pmap S.retr (inv (splitProjector.on-incl cardInv S x) *> hc _ *> pmap (`*c _) c=0 *> E.*c_zro-left) *> S.retr.func-zro

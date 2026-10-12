@@ -65,19 +65,18 @@
     }
   }
 
--- | Irreducibility of a finite free representation, tested against split invariant subspaces ({SplitSubLRepres}).
+-- | Irreducibility of a finite free representation of positive rank, tested against split invariant subspaces ({SplitSubLRepres}).
 --   This is the working notion for finite-dimensional representations; it is not a replacement for arbitrary modules.
 \func IsFinIrreducible {R : NonZeroRing} {G : Group} (E : LinRepres R G) : \Prop
-  => \Sigma (∃ (T : SplitSubLRepres E) (0 < T.dim) (IsSurj T.incl))
+  => \Sigma (∃ (l : Array E) (0 < l.len) (E.IsBasis l))
             (\Pi (S : SplitSubLRepres E) -> (S.dim = 0) || IsSurj S.incl)
 
 -- | Fulton--Harris Schur's lemma 1.7(1) for {IsFinIrreducible}: an intertwiner is zero or an isomorphism.
 \lemma SchurLemma {K : DiscreteField} {G : Group} {A B : LinRepres K G} (p : IsFinIrreducible A) (q : IsFinIrreducible B) (f : InterwiningMap A B)
   : f.IsZero || IsEquiv f
   => \case p.1, q.1 \with {
-    | inP (TA, _, sA), inP (TB, _, sB) =>
-      \case kernel-split (SplitSubLRepres.full-basis TA sA) (SplitSubLRepres.full-basis TB sB) f,
-            image-split (SplitSubLRepres.full-basis TA sA) (SplitSubLRepres.full-basis TB sB) f \with {
+    | inP (la, _, ba), inP (lb, _, bb) =>
+      \case kernel-split ba bb f, image-split ba bb f \with {
         | inP Ker, inP Im =>
           \case q.2 (SplitSubLRepres.fromInvariant Im image-invariant) \with {
             | byLeft d=0 => byLeft \lam a => SplitSubLModule.dim=0 Im d=0 (inP (a, idp))
