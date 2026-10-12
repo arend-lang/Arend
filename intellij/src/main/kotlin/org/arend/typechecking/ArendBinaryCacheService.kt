@@ -1,26 +1,34 @@
 package org.arend.typechecking
 
 import com.intellij.openapi.application.readAction
+import com.intellij.openapi.application.runReadAction
 import com.intellij.openapi.components.Service
 import com.intellij.openapi.components.service
 import com.intellij.openapi.diagnostic.logger
 import com.intellij.openapi.project.Project
-import fleet.multiplatform.shims.ConcurrentHashMap
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import org.arend.ext.module.ModuleLocation
+import org.arend.ext.module.ModulePath
+import org.arend.module.config.LibraryConfig
+import org.arend.naming.reference.TCDefReferable
 import org.arend.prelude.Prelude
 import org.arend.server.ArendServerService
 import org.arend.server.BinaryCacheLoader
 import org.arend.server.ProgressReporter
+import org.arend.term.group.ConcreteGroup
 import org.arend.source.FileBinarySource
 import org.arend.source.GZIPStreamBinarySource
 import org.arend.source.StreamBinarySource
 import org.arend.util.FileUtils
 import org.arend.typechecking.computation.UnstoppableCancellationIndicator
+import org.arend.typechecking.error.DeduplicatingErrorReporter
 import org.arend.typechecking.error.NotificationErrorReporter
 import org.arend.util.findLibrary
+import org.jetbrains.annotations.TestOnly
 import java.nio.file.Files
+import java.nio.file.Path
+import java.util.concurrent.ConcurrentHashMap
 import java.util.function.Function
 import java.util.function.ToLongFunction
 
@@ -30,61 +38,124 @@ class ArendBinaryCacheService(private val project: Project) {
 
     private val loadMutex = Mutex()
 
+    // What each module loaded from its .arc, or saved to it, held then (see coreIdentities): a module that still holds
+    // just that has nothing to save that its .arc does not have
+    private val cachedStates = ConcurrentHashMap<ModuleLocation, List<Int>>()
+
+    // The definitions that the .arc of each module loaded in part has but the load dropped: saving the module before
+    // they are typechecked again would replace its .arc with one that lacks them
+    private val droppedDefinitions = ConcurrentHashMap<ModuleLocation, Set<TCDefReferable>>()
+
+    private class CachedLibrary(val config: LibraryConfig, val binariesDir: Path, val modules: List<ModulePath>)
+
     suspend fun loadCache(library: String): Boolean {
         if (loadedLibraries.containsKey(library))
             return false
         val server = project.service<ArendServerService>().server
-        val reporter = NotificationErrorReporter(project)
-        val loadedModules = HashSet<ModuleLocation>()
-
-        if (!Prelude.isInitialized()) {
-            readAction {
-                server.getCheckerFor(listOf(Prelude.MODULE_LOCATION))
-                    .typecheck(UnstoppableCancellationIndicator.INSTANCE, ProgressReporter.empty())
-            }
-        }
+        val reporter = DeduplicatingErrorReporter(NotificationErrorReporter(project))
+        var loadedAny = false
 
         val ordered = LinkedHashSet<String>()
         collectDependencies(library, ordered)
 
         loadMutex.withLock {
+            val pending = LinkedHashMap<String, CachedLibrary>()
             for (libraryName in ordered) {
-                val alreadyLoaded = loadedLibraries[libraryName]
-                if (alreadyLoaded != null) {
+                if (loadedLibraries.containsKey(libraryName)) {
                     continue
                 }
                 val config = project.findLibrary(libraryName) ?: continue
+                val binariesDir = config.binariesDirPath
+                val modules = if (binariesDir == null) emptyList() else readAction { config.findModules(false) }
+                if (binariesDir == null || modules.none { Files.exists(FileUtils.binaryFile(binariesDir, it)) }) {
+                    loadedLibraries[libraryName] = emptySet()
+                    continue
+                }
+                pending[libraryName] = CachedLibrary(config, binariesDir, modules)
+            }
+            if (pending.isEmpty()) return false
+
+            if (!Prelude.isInitialized()) {
                 readAction {
-                    server.getCheckerFor(config.findModules(false).map { ModuleLocation(libraryName, ModuleLocation.LocationKind.SOURCE, it) })
+                    server.getCheckerFor(listOf(Prelude.MODULE_LOCATION))
+                        .typecheck(UnstoppableCancellationIndicator.INSTANCE, ProgressReporter.empty())
+                }
+            }
+
+            for ((libraryName, cached) in pending) {
+                val config = cached.config
+                val binariesDir = cached.binariesDir
+                readAction {
+                    server.getCheckerFor(cached.modules.map { ModuleLocation(libraryName, ModuleLocation.LocationKind.SOURCE, it) })
                         .resolveAll(UnstoppableCancellationIndicator.INSTANCE, ProgressReporter.empty())
                 }
 
-                val binariesDir = config.binariesDirFile?.toNioPath()
                 val binarySourceProvider = Function<ModuleLocation, StreamBinarySource?> { module ->
-                    if (binariesDir == null || !Files.exists(FileUtils.binaryFile(binariesDir, module.modulePath))) {
+                    if (!Files.exists(FileUtils.binaryFile(binariesDir, module.modulePath))) {
                         null
                     } else {
                         GZIPStreamBinarySource(FileBinarySource(binariesDir, module))
                     }
                 }
                 val rawTimestampProvider = ToLongFunction<ModuleLocation> { module ->
-                    config.findArendFile(module)?.virtualFile?.timeStamp ?: 0L
+                    runReadAction {
+                        config.findArendFile(module)?.virtualFile?.timeStamp ?: 0L
+                    }
                 }
 
                 val loader = BinaryCacheLoader(server, reporter) { message -> LOG.info(message) }
                 loader.loadBinaryCache(libraryName, binarySourceProvider, rawTimestampProvider)
 
-                val loaded = loader.binaryCacheLoaded
-                loadedLibraries[libraryName] = loaded
-                loadedModules.addAll(loaded)
+                // Only the modules deserialized now: one that was in memory before may hold what it was typechecked to since
+                readAction {
+                    for (module in loader.deserialized) {
+                        server.getRawGroup(module)?.let { saved(module, it) }
+                    }
+                    for ((module, dropped) in loader.loadedInPart) {
+                        server.getRawGroup(module)?.let { loadedInPart(module, it, dropped) }
+                    }
+                }
+
+                loadedLibraries[libraryName] = loader.binaryCacheLoaded
+                // A module loaded in part has definitions loaded too, which the editors of its dependents must see
+                loadedAny = loadedAny || loader.deserialized.isNotEmpty() || loader.loadedInPart.isNotEmpty()
             }
+            reporter.flush()
         }
-        return true
+        return loadedAny
     }
 
+    @TestOnly
+    fun isLoaded(library: String): Boolean = loadedLibraries.containsKey(library)
+
     fun invalidate(libraries: Collection<String>) {
-        for (library in libraries) loadedLibraries.remove(library)
+        for (library in libraries) {
+            loadedLibraries.remove(library)
+        }
+        cachedStates.keys.removeIf { it.libraryName in libraries }
+        droppedDefinitions.keys.removeIf { it.libraryName in libraries }
     }
+
+    // Whether the module holds just what it held when it was loaded whole from its .arc or saved to it
+    fun isUnchangedSinceCached(module: ModuleLocation, group: ConcreteGroup): Boolean =
+        cachedStates[module] == coreIdentities(group)
+
+    // The .arc of the module now has what it holds
+    fun saved(module: ModuleLocation, group: ConcreteGroup) {
+        cachedStates[module] = coreIdentities(group)
+        droppedDefinitions.remove(module)
+    }
+
+    // The module was loaded in part from its .arc, which also has the dropped definitions
+    fun loadedInPart(module: ModuleLocation, group: ConcreteGroup, dropped: Set<TCDefReferable>) {
+        cachedStates[module] = coreIdentities(group)
+        if (dropped.isEmpty()) droppedDefinitions.remove(module) else droppedDefinitions[module] = dropped
+    }
+
+    // Whether saving the module now would lose a definition its .arc has: one the load dropped and that is not
+    // typechecked again yet
+    fun losesDroppedDefinitions(module: ModuleLocation): Boolean =
+        droppedDefinitions[module]?.any { it.typechecked?.status()?.needsTypeChecking() != false } == true
 
     private fun collectDependencies(libraryName: String, result: LinkedHashSet<String>) {
         if (result.contains(libraryName)) return
