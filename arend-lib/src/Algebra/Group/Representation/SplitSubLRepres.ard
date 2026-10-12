@@ -12,7 +12,7 @@
 \import Paths.Meta
 
 {- | An invariant finite free direct summand of a representation, given by an inclusion of $R^{dim}$ with a linear retraction.
-    Unlike {SubLRepres}, membership is not an arbitrary proposition, so the strong dichotomy of {SubLRepres.IsTrivial} does not apply. -}
+    Unlike `SubLRepres`, membership is not an arbitrary proposition, so the strong dichotomy of `SubLRepres.IsTrivial` does not apply. -}
 \record SplitSubLRepres {R : Ring} {G : Group} (E : LinRepres R G)
   | dim : Nat
   | incl : LinearMap (ArrayFinModule {R} dim) E

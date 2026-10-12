@@ -18,8 +18,9 @@ Checks, all of which must pass:
   7. negative control: the axiom audit flags tools/autoformalization/controls/ClassicalControl.ard;
   8. negative control: the error detection of step 2 flags a deliberately invalid proof;
   9. doc comments in the target modules are well formed: a multi-line doc comment uses `{- | ... -}`, never a `-- |`
-     line followed by `--` continuation lines (which are not part of the documentation), and no `{-` or `-}` occurs
-     inside a block doc comment's text.
+     line followed by `--` continuation lines (which are not part of the documentation), no `{-` or `-}` occurs
+     inside a block doc comment's text, and every `{name}` link outside math resolves: to a definition of the module,
+     of an imported module (respecting import lists), or to a parameter of the documented declaration.
 Exit status 0 iff all checks pass.
 """
 import json, os, re, subprocess, sys, tempfile
@@ -125,6 +126,56 @@ def indexed(target):
                for r in data.get('results', []))
 
 
+_ss_cache = {}
+
+
+def symbol_modules(name):
+    if name not in _ss_cache:
+        out = subprocess.run(['arend', '-ss', 'glob:' + name, '--json'], cwd=ROOT, capture_output=True, text=True).stdout
+        try:
+            _ss_cache[name] = json.loads(out[out.index('{'):]).get('results', [])
+        except ValueError:
+            _ss_cache[name] = []
+    return _ss_cache[name]
+
+
+def declaration_header(rest):
+    """The signature of the declaration starting at `rest`: up to a top-level `=>`, `\\cowith`, `\\where` or `\\elim`."""
+    depth = 0
+    for i, ch in enumerate(rest):
+        if ch in '({':
+            depth += 1
+        elif ch in ')}':
+            depth -= 1
+        elif depth == 0 and (rest.startswith('=>', i) or any(rest.startswith(k, i) for k in ('\\cowith', '\\where', '\\elim'))):
+            return rest[:i]
+    return rest
+
+
+def unresolved_doc_links(path, mod):
+    text = open(path, encoding='utf-8').read()
+    imps = {}
+    for m in re.finditer(r'^\\import\s+([\w.]+)(?:\s*\(([^)]*)\))?', text, re.M):
+        imps[m.group(1)] = None if m.group(2) is None else {x.strip().split(' ')[0] for x in m.group(2).split(',')}
+    bad = []
+    for m in re.finditer(r'\{- \|.*?-\}|^[ \t]*-- \|[^\n]*', text, re.S | re.M):
+        doc = re.sub(r'\$\$.*?\$\$|\$[^$]*\$', '', m.group(0), flags=re.S)
+        rest = text[m.end():]
+        header = declaration_header(rest)
+        params = set()
+        for b in re.findall(r'[({]\s*([^(){}:]+?)\s*:', header):
+            params.update(b.split())
+        for ref in re.findall(r'\{([A-Za-z][\w.\-*]*)\}', doc):
+            parts = ref.split('.')
+            if parts[0] in params:
+                continue
+            ok = any(r['module'] == mod or (r['module'] in imps and (imps[r['module']] is None or parts[0] in imps[r['module']]))
+                     for r in symbol_modules(parts[-1]))
+            if not ok:
+                bad.append(f'{path}:{text[:m.start()].count(chr(10)) + 1}: unresolved doc link {{{ref}}}')
+    return bad
+
+
 def doc_comment_problems(path):
     problems, lines = [], open(path, encoding='utf-8').read().split('\n')
     for i, l in enumerate(lines):
@@ -221,7 +272,7 @@ def main():
         errs, _ = errors_and_goals(out)
         record('8 control: invalid proof is rejected', any('InvalidControl' in e for e in errs), errs or out[-300:])
 
-    probs = [p for mod in modules for p in doc_comment_problems(module_file(mod, [SRC]))]
+    probs = [p for mod in modules for p in doc_comment_problems(module_file(mod, [SRC])) + unresolved_doc_links(module_file(mod, [SRC]), mod)]
     record('9 doc comments well formed', not probs, probs or f'{len(modules)} modules')
 
     if '--report' in sys.argv:
