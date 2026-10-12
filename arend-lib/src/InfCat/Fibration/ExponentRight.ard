@@ -1,0 +1,177 @@
+{- | Fiberwise core of exponents of cartesian fibrations.
+ -
+ -   Let `p : E ->⁺ A` be a cartesian fibration and let `C` be a category. Suppose we can construct the exponent
+ -   from `p` to `C` over `A` and then take fiberwise core of this category over `A`.
+ -   This will be a left fibration over `A`. Applying `Op`, we get a right fibration over `Op A`.
+ -   Our aim is to construct this fibration directly.
+ -
+ -   This module does this construction in presented form.
+ -   Consider a functor `R : B ->⁺ X ->⁺ \Type u` together with a set of weak equivalences `W` on `X`.
+ -   For `b : B`, consider the category of elements `K_b = \Sigma⁺ (x : X) (R b x)` of `R b`.
+ -   The family `b ↦ K_b` is a cartesian fibration over `Op B`.
+ -   If we apply fiberwise localization to `K_b`, we still get a cartesian fibration over `Op B`.
+ -   We construct the fiberwise core of the exponent of this cartesian fibration: {exp-proj} is a right fibration
+ -   ({exp-rightFib}) with fibers equivalent to functors K_b ->⁺ C inverting ExpW W ({exp-nu-equiv}),
+ -   and transport is precomposition with {expMap} ({exp-nu-tr})."
+ -
+ -   Note that any cartesian fibration `p : E ->⁺ A` can be presented in this form.
+ -   Define `B = Op A`, `X = E`, `R a x = Op.Hom a (p x)`, and `W` as the set of cartesian arrows.
+ -   Then the family of localizations of `K_b` is equivalent to the family of fibers of `p`.
+ -   We do not need this presentation theorem, so we skip the proof.
+ -
+ -   Construction:
+ -   1. {target} from {CartSubCat} `P` to `P = \Sigma⁺ (x : X) (Op.{u} C) ->⁺ \Type u` is a right fibration whose fibers are slices
+ -      and whose transport is precomposition with {totalMap} ({target-tr-totalMap}).
+ -   2. Pull it back along {expFam} `R : B ->⁺ P` ({rightFib-pullback}).
+ -   3. Restrict to the full subcategory {ExpPred} of objects whose functor on the category of elements, curried ({expCurry}),
+ -      has representable values and inverts `ExpW W` ({IsExpFun}); it is stable under transport ({rightFib-full}).
+ -   4. Functors with representable values are functors to {C} by the Yoneda embedding ({postcomp-image-equiv}).
+ -}
+
+\import Equiv
+\import Equiv.Sigma
+\import Function.Meta
+\import InfCat.Basics
+\import InfCat.CartesianClosed.TypeLCCC
+\import InfCat.Fibration.Categorical
+\import InfCat.Fibration.CodomainRight
+\import InfCat.Fibration.RightFib
+\import InfCat.Functor.FullyFaithful
+\import InfCat.Localization.Abstract
+\import InfCat.Opposite
+\import InfCat.Slice.TotalSlice
+\import InfCat.SubCat.Full
+\import InfCat.Yoneda.YonedaLemma
+\import Logic
+\import Logic.Meta
+\import Paths
+\open CartSubCat
+\open pullbackSlice-isProduct
+\open sumSlice-equiv
+
+-- | The arrows of the category of elements of {F} whose image in {X} satisfies {W}.
+\func ExpW {X : \Cat} {F : X ->⁺ \Type} (W : (DI ->⁺ X) -> \Prop) (a : DI ->⁺ \Sigma⁺ (x : X) (F x)) : \Prop
+  => W (\lam i => (a i).1)
+
+-- | The functor between categories of elements induced by an arrow {beta} of {B}; it is the identity on the {X}-component.
+\func expMap.{u} {X B : \Cat u} (R : B ->⁺ X ->⁺ \Type u) {b' b : B} (beta : b' ~> b) (k :⁺ \Sigma⁺ (x : X) (R b' x)) : \Sigma⁺ (x : X) (R b x)
+  => totalMap (dmap R beta) k
+
+-- | {R} as a functor to functors on `X × Op C`, constant in the second variable.
+\func expFam.{u} {X B : \Cat u} (C : \Cat u) (R : B ->⁺ X ->⁺ \Type u) (b :⁺ B) (q :⁺ \Sigma⁺ (x : X) (Op C)) : \Type u
+  => R b q.1
+
+-- | Currying of a functor on the category of elements of {expFam}.
+\func expCurry.{u} {X B : \Cat u} {C : \Cat u} (R : B ->⁺ X ->⁺ \Type u) {b : B}
+                   (H : \Sigma⁺ (q : \Sigma⁺ (x : X) (Op C)) (expFam C R b q) ->⁺ \Type u)
+                   (k :⁺ \Sigma⁺ (x : X) (R b x)) (c :⁺ Op C) : \Type u
+  => H ((k.1, c), k.2)
+
+-- | A functor to presheaves on {C} with representable values that inverts `ExpW W`.
+\type IsExpFun.{u} {X : \Cat u} {F : X ->⁺ \Type u} (C : \Cat u) (W : (DI ->⁺ X) -> \Prop)
+                   (G : \Sigma⁺ (x : X) (F x) ->⁺ Op C ->⁺ \Type u) : \Prop
+  => \Sigma (\Pi (k : \Sigma⁺ (x : X) (F x)) -> ∃ (c : C) ((\lam x =>⁺ Op.Hom x c) = G k)) (InvertsW (ExpW W) G)
+
+-- | The predicate on the pullback of {target} along {expFam}.
+\func ExpPred.{u} {X B : \Cat u} (C : \Cat u) (R : B ->⁺ X ->⁺ \Type u) (W : (DI ->⁺ X) -> \Prop)
+                  (t : \Sigma⁺ (b : B) (Fibers (target {\Sigma⁺ (x : X) (Op C) ->⁺ \Type u}) (expFam C R b))) : \Prop
+  => IsExpFun C W (expCurry R (fibFam (target-fibers (expFam C R t.1) t.2).2))
+
+-- | The total category of the exponent.
+\func Exp.{u} {X B : \Cat u} (C : \Cat u) (R : B ->⁺ X ->⁺ \Type u) (W : (DI ->⁺ X) -> \Prop) : \Cat
+  => FullSubCat (ExpPred C R W)
+
+-- | The projection of the exponent to {B}.
+\func exp-proj.{u} {X B : \Cat u} (C : \Cat u) (R : B ->⁺ X ->⁺ \Type u) (W : (DI ->⁺ X) -> \Prop) (x :⁺ Exp C R W) : B
+  => rightFib-full.proj (ExpPred C R W) x
+
+\lemma exp-rightFib.{u} {X B : \Cat u} {C : \Cat u} {R : B ->⁺ X ->⁺ \Type u} {W : (DI ->⁺ X) -> \Prop}
+  : IsRightFib (Fibers (exp-proj C R W))
+  => rightFib-full (rightFib-pullback (expFam C R) target-rightFib) (ExpPred C R W) (\lam beta e h => pred-tr R beta e h)
+  \where
+    -- | {ExpPred} is stable under transport: transport is precomposition with {expMap} ({target-tr-totalMap}).
+    \lemma pred-tr.{u} {X B : \Cat u} {C : \Cat u} (R : B ->⁺ X ->⁺ \Type u) {W : (DI ->⁺ X) -> \Prop} {b' b : B} (beta : b' ~> b)
+                       (e : Fibers (target {\Sigma⁺ (x : X) (Op C) ->⁺ \Type u}) (expFam C R b)) (h : ExpPred C R W (b, e))
+      : ExpPred C R W (b', rightFib-tr (rightFib-pullback (expFam C R) target-rightFib) beta e)
+      => transport (\lam e' => ExpPred C R W (b', e')) (inv (rightFib-pullback-tr (expFam C R) target-rightFib beta e)) $
+         transport (\lam H => IsExpFun C W (expCurry R H)) (inv (target-tr-totalMap (dmap (expFam C R) beta) e))
+                   (\lam k => h.1 (expMap R beta k), \lam {a} w => h.2 {\lam i => expMap R beta (a i)} w)
+
+-- | The functor to {C} corresponding to an object of a fiber of {exp-proj}.
+\func exp-nu.{u} {X B : \Cat u} {C : \Cat u} {R : B ->⁺ X ->⁺ \Type u} {W : (DI ->⁺ X) -> \Prop} (b : B)
+                 (z : Fibers (exp-proj C R W) b) : MapW (ExpW W) C
+  => IsEquiv.ret yon-equiv (theta R b (rightFib-full-fibers (ExpPred C R W) b z))
+  \where {
+    -- | The curried functor of an object of the pullback of {target}, with its property.
+    \func theta.{u} {X B : \Cat u} {C : \Cat u} (R : B ->⁺ X ->⁺ \Type u) {W : (DI ->⁺ X) -> \Prop} (b : B)
+                    (s : \Sigma (e : Fibers (target {\Sigma⁺ (x : X) (Op.{u} C) ->⁺ \Type u}) (expFam C R b)) (ExpPred C R W (b, e)))
+      : \Sigma (G : \Sigma⁺ (x : X) (R b x) ->⁺ Op.{u} C ->⁺ \Type u) (IsExpFun C W G)
+      => (expCurry R (fibFam (target-fibers (expFam C R b) s.1).2), s.2)
+
+    \lemma theta-equiv.{u} {X B : \Cat u} {C : \Cat u} (R : B ->⁺ X ->⁺ \Type u) {W : (DI ->⁺ X) -> \Prop} (b : B)
+      : IsEquiv (theta R b)
+      => inP (qsigma-left {_} {_} {IsExpFun C W} (IsEquiv.toQEquiv base-equiv))
+      \where
+        -- | Objects of the fibers of {target} are functors on the category of elements ({target-fibers-equiv}, {totalFun-slice}).
+        \lemma base-equiv.{u} {X B : \Cat u} {C : \Cat u} {R : B ->⁺ X ->⁺ \Type u} {b : B}
+          : IsEquiv {Fibers (target {\Sigma⁺ (x : X) (Op C) ->⁺ \Type u}) (expFam C R b)}
+                    {\Sigma⁺ (x : X) (R b x) ->⁺ Op C ->⁺ \Type u}
+                    (\lam e => expCurry R (fibFam (target-fibers (expFam C R b) e).2))
+          => IsEquiv.trans (target-fibers-equiv (expFam C R b)) $
+             IsEquiv.trans (inP (symQEquiv (totalFun-slice (expFam C R b)))) $ inP \new QEquiv {
+               | f => expCurry R
+               | ret G s => G (s.1.1, s.2) s.1.2
+               | ret_f _ => idp
+               | f_sec _ => idp
+             }
+
+    -- | Functors to {C} inverting {W} are functors to presheaves on {C} with representable values inverting {W} ({yonedaEmbedding}).
+    \lemma yon-equiv.{u} {X : \Cat u} {F : X ->⁺ \Type u} {C : \Cat u} {W : (DI ->⁺ X) -> \Prop}
+      : IsEquiv {MapW (ExpW W) C} {\Sigma (G : \Sigma⁺ (x : X) (F x) ->⁺ Op C ->⁺ \Type u) (IsExpFun C W G)}
+                (\lam h => (\lam k x => Op.Hom x (h.1 k),
+                            (\lam k => inP (h.1 k, idp), invertsW-postcomp (\lam y x =>⁺ Op.Hom x y) h.2)))
+      => IsEquiv.trans (inP $ sigma-equiv {_} {_} {_} {\lam s => InvertsW (ExpW W) s.1}
+                                (IsEquiv.toQEquiv (postcomp-image-equiv yonedaEmbedding))
+                                \lam h => \new QEquiv {
+                                  | f => invertsW-postcomp (\lam y x =>⁺ Op.Hom x y)
+                                  | ret => invertsW-postcomp-ff (yonedaEmbedding {C})
+                                  | ret_f _ => prop-pi
+                                  | f_sec _ => prop-pi
+                                }) $
+           inP \new QEquiv {
+             | f s => (s.1.1, (s.1.2, s.2))
+             | ret t => ((t.1, t.2.1), t.2.2)
+             | ret_f _ => idp
+             | f_sec _ => idp
+           }
+  }
+
+\lemma exp-nu-equiv.{u} {X B : \Cat u} {C : \Cat u} {R : B ->⁺ X ->⁺ \Type u} {W : (DI ->⁺ X) -> \Prop} (b : B)
+  : IsEquiv (exp-nu b)
+  => IsEquiv.trans (inP (rightFib-full-fibers (ExpPred C R W) b)) $
+     IsEquiv.trans (exp-nu.theta-equiv R b) (IsEquiv.ret-equiv exp-nu.yon-equiv)
+
+-- | Transport along {beta} is precomposition with {expMap} {beta}.
+\sfunc exp-nu-tr.{u} {X B : \Cat u} {C : \Cat u} {R : B ->⁺ X ->⁺ \Type u} {W : (DI ->⁺ X) -> \Prop} {b' b : B} (beta : b' ~> b)
+                     (z : Fibers (exp-proj C R W) b) {k :⁺ \Sigma⁺ (x : X) (R b' x)}
+  : (exp-nu b' (rightFib-tr exp-rightFib beta z)).1 k = (exp-nu b z).1 (expMap R beta k)
+  => \let | t => rightFib-tr exp-rightFib beta z
+          | q => (IsFFMap.isObEmbedding (postcomp-ff yonedaEmbedding)).isEmb (exp-nu b' t).1 (\lam k' => (exp-nu b z).1 (expMap R beta k'))
+     \in path \lam i => q.sec (yon-path b' t *> tr-path beta z *> pmap (\lam H => \lam k' =>⁺ H (expMap R beta k')) (inv (yon-path b z))) i k
+  \where {
+    -- | Composed with the Yoneda embedding, {exp-nu} is the curried functor.
+    \sfunc yon-path.{u} {X B : \Cat u} {C : \Cat u} {R : B ->⁺ X ->⁺ \Type u} {W : (DI ->⁺ X) -> \Prop} (b : B) (z : Fibers (exp-proj C R W) b)
+      : (\lam k x =>⁺ Op.Hom x ((exp-nu b z).1 k)) = (exp-nu.theta R b (rightFib-full-fibers (ExpPred C R W) b z)).1
+      => pmap __.1 (IsEquiv.f_ret exp-nu.yon-equiv)
+
+    -- | Transport of the curried functor is precomposition with {expMap}.
+    \sfunc tr-path.{u} {X B : \Cat u} {C : \Cat u} {R : B ->⁺ X ->⁺ \Type u} {W : (DI ->⁺ X) -> \Prop} {b' b : B} (beta : b' ~> b) (z : Fibers (exp-proj C R W) b)
+      : (exp-nu.theta R b' (rightFib-full-fibers (ExpPred C R W) b' (rightFib-tr exp-rightFib beta z))).1
+        = (\lam k =>⁺ (exp-nu.theta R b (rightFib-full-fibers (ExpPred C R W) b z)).1 (expMap R beta k))
+      => \let e => (rightFib-full-fibers (ExpPred C R W) b z).1
+         \in pmap (\lam e' => expCurry R (fibFam (target-fibers (expFam C R b') e').2))
+                 (rightFib-full-tr (rightFib-pullback (expFam C R) target-rightFib) (ExpPred C R W)
+                                   (\lam beta' e' h => exp-rightFib.pred-tr R beta' e' h) beta z
+                  *> rightFib-pullback-tr (expFam C R) target-rightFib beta e)
+            *> pmap (expCurry R) (target-tr-totalMap (dmap (expFam C R) beta) e)
+  }

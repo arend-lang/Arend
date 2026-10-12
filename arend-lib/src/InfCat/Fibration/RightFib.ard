@@ -38,12 +38,17 @@
 
 -- | Transport along an arrow in a right fibration.
 \func rightFib-tr {A : \Cat} {B : A ->⁺ \Cat} (Bf : IsRightFib B) {a' a : A} (p : a' ~> a) (b : B a) : B a'
-  => (Contr.center {Bf (a', a, p, b)}).1
+  => (Bf (a', a, p, b)).center.1
 
 -- | A path over {p} ending at {b} starts at the transport of {b}.
 \func rightFib-tr-dpath {A : \Cat} {B : A ->⁺ \Cat} (Bf : IsRightFib B) {a' a : A} {p : a' ~> a} {b : B a} {b' : B a'}
   (t : DPath (\lam i => B (p i)) b' b) : rightFib-tr Bf p b = b'
-  => path \lam k => (isContr=>isProp (Bf (a', a, p, b)) (Contr.center {Bf (a', a, p, b)}) (b', t) k).1
+  => path \lam k => (isContr=>isProp (Bf (a', a, p, b)) (Bf (a', a, p, b)).center (b', t) k).1
+
+-- | Transport in the pullback of {B} along {f} is transport in {B} along the image of the arrow.
+\sfunc rightFib-pullback-tr {A' A : \Cat} (f : A' ->⁺ A) {B : A ->⁺ \Cat} (Bf : IsRightFib B) {a' a : A'} (p : a' ~> a) (b : B (f a))
+  : rightFib-tr (rightFib-pullback f Bf) p b = rightFib-tr Bf (dmap f p) b
+  => rightFib-tr-dpath (rightFib-pullback f Bf) (Bf (f a', f a, dmap f p, b)).center.2
 
 -- | Lifts in `Fibers q` ending at a point with the trivial path are arrows into it whose image is the given arrow.
 \func fibers-lift-equiv {E A : \Cat} (q : E ->⁺ A) (x : E) {a' : A} (p : a' ~> q x)

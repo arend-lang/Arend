@@ -33,6 +33,17 @@
 \func FunW {C : \Cat} (W : (DI ->⁺ C) -> \Prop) (D : \Cat) : \Cat
   => FullSubCat {C ->⁺ D} (InvertsW W)
 
+-- | If {h} inverts {W}, its postcomposition with {f} does as well.
+\lemma invertsW-postcomp {C B D : \Cat} {W : (DI ->⁺ C) -> \Prop} (f : B ->⁺ D) {h : C ->⁺ B} (hw : InvertsW W h)
+  : InvertsW W (\lam y => f (h y))
+  => \lam w => dmap_IsIso f (hw w)
+
+-- | If the composite of {h} with a fully faithful functor {f} inverts {W}, then {h} does as well.
+\lemma invertsW-postcomp-ff {C B D : \Cat} {W : (DI ->⁺ C) -> \Prop}
+                            {f : B ->⁺ D} (fc : IsFFMap f) {h : C ->⁺ B} (hw : InvertsW W (\lam y => f (h y)))
+  : InvertsW W h
+  => \lam w => IsFFMap.isConservative fc (hw w)
+
 -- | {f} sends morphisms satisfying {W} to morphisms satisfying {W'}.
 \type SendsW {C C' : \Cat} (W : (DI ->⁺ C) -> \Prop) (W' : (DI ->⁺ C') -> \Prop) (f : C ->⁺ C') : \Prop
   => \Pi {a : DI ->⁺ C} -> W a -> W' (\lam i => f (a i))

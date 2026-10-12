@@ -6,7 +6,7 @@
 \import Logic
 
 \type IsConservative {C D : \Cat} (f : C ->⁺ D) : \Prop
-  => \Pi {x y : C} (p : x ~> y) -> IsIso (dmap f p) -> IsIso p
+  => \Pi {x y : C} {p : x ~> y} -> IsIso (dmap f p) -> IsIso p
 
 -- | A natural transformation which is an isomorphism objectwise is an isomorphism.
 \lemma objectwise-iso {C D : \Cat} {f g : C ->⁺ D} {p : f ~> g} (e : \Pi (x : C) -> IsIso (dmap (\lam u => u x) p)) : IsIso p
@@ -18,7 +18,7 @@
   => (IsIso_= (objectwise-iso {C} {D} {F} {G} {dpath \lam i x => t x i} ti)).1
 
 \lemma cov-func-conservative {C D : \Cat} : IsConservative {C ->⁺ D} {C -> D} (\lam f x => f x)
-  => \lam p e => objectwise-iso \lam x => dmap_IsIso (\lam u => u x) e
+  => \lam e => objectwise-iso \lam x => dmap_IsIso (\lam u => u x) e
 
 -- | A morphism in the arrow category is an isomorphism if and only if both of its components are.
 \lemma DI-iso-char {D : \Cat} {u v : DI ->⁺ D} {p : u ~> v}

@@ -127,6 +127,54 @@
       }
   }
 
+-- | Postcomposition with a fully faithful functor is fully faithful.
+\lemma postcomp-ff {A C D : \Cat} {f : C ->⁺ D} (ff : IsFFMap f) : IsFFMap {A ->⁺ C} {A ->⁺ D} (\lam g x => f (g x))
+  => \lam g h => contrFibers=>IsEquiv \lam a => Contr.Contr_QEquiv (sections-equiv f g h a) (IsHEquiv.sections-contr (Fam-equiv ff g h a))
+  \where \private {
+    -- | Lifts of the component of {a} at {x}.
+    \func Fam {A C D : \Cat} (f : C ->⁺ D) (g h : A ->⁺ C) (a : (\lam x =>⁺ f (g x)) ~> (\lam x =>⁺ f (h x))) (x :⁺ A)
+      => \Sigma⁺ (e : g x ~> h x) (dmap f e = dpath (\lam i => a i x))
+
+    -- | Natural lifts of {a} are sections of {Fam}.
+    \func sections-equiv {A C D : \Cat} (f : C ->⁺ D) (g h : A ->⁺ C) (a : (\lam x =>⁺ f (g x)) ~> (\lam x =>⁺ f (h x)))
+      : QEquiv {\Pi (x :⁺ A) -> Fam f g h a x} {Fib (dmap (\lam g => \lam x =>⁺ f (g x)) {g} {h}) a} \cowith
+      | f s => (dpath \lam i x => (s x).1 i, path \lam j => dpath \lam i x => ((s x).2 j) i)
+      | ret u x => (dpath \lam i => u.1 i x, path \lam j => dpath \lam i => (u.2 j) i x)
+      | ret_f => idpe
+      | f_sec => idpe
+
+    \lemma Fam-equiv {A C D : \Cat} {f : C ->⁺ D} (ff : IsFFMap f) (g h : A ->⁺ C) (a : (\lam x =>⁺ f (g x)) ~> (\lam x =>⁺ f (h x)))
+      : IsHEquiv {\Sigma⁺ (x : A) (Fam f g h a x)} __.1
+      => (ff-surj-equiv {\Sigma⁺ (x : A) (Fam f g h a x)} {A} {__.1}).1
+          (\lam s t => inP $ transQEquiv (dpath-sigma-equiv \lam _ x => Fam f g h a x) $ contr-right \lam r => rel-contr ff r s.2 t.2,
+           \lam x => \let c => IsEquiv=>contrFibers (ff (g x) (h x)) (dpath \lam i => a i x)
+                     \in inP ((x, (c.center.1, c.center.2)), idp))
+      \where {
+        -- | The type of paths over {a} with fixed endpoints is contractible.
+        \lemma dpath-fiber-contr {K : DI ->⁺ \Cat} {a0 : K dleft} {a1 : K dright} (a : DPath (\lam i => K i) a0 a1)
+                                 {b0 : K dleft} {b1 : K dright} (q0 : b0 = a0) (q1 : b1 = a1)
+          : Contr (\Sigma (w : DPath (\lam i => K i) b0 b1) (DPath (\lam i => w i = a i) q0 q1)) \elim q0, q1
+          | idp, idp => Contr.Contr_QEquiv (later \new QEquiv {
+              | f u => (u.1, dpath \lam i => path \lam j => u.2 j i)
+              | ret v => (v.1, path \lam j => dpath \lam i => v.2 i j)
+              | ret_f u => idp
+              | f_sec v => idp
+            }) (rsigma a)
+
+        \lemma rel-contr {A C D : \Cat} {f : C ->⁺ D} (ff : IsFFMap f) {g h : A ->⁺ C} {a : (\lam x => f (g x)) ~> {A ->⁺ D} (\lam x => f (h x))}
+                         {x y : A} (r : x ~> y) (s : Fam f g h a x) (t : Fam f g h a y)
+          : Contr (DPath (\lam i => Fam f g h a (r i)) s t)
+          => Contr.Contr_QEquiv (symQEquiv $ later \new QEquiv {
+                                   | f u => (dpath \lam i => (u i).1, dpath \lam i => (u i).2)
+                                   | ret v => dpath \lam i => (v.1 i, v.2 i)
+                                   | ret_f u => idp
+                                   | f_sec v => idp
+                                 } `transQEquiv` qsigma-left (IsEquiv.toQEquiv (IsFFMap.squares ff (dmap g r) t.1 s.1 (dmap h r))))
+                                (dpath-fiber-contr (dpath \lam i => dpath \lam j => a j (r i)) s.2 t.2)
+      }
+  }
+
+
 -- | A fully faithful map admits a lift of any map whose values lie in its image.
 \sfunc ffMap-lift {B C : \Cat} {f : B ->⁺ C} (ff : IsFFMap f) {D : \Cat} (g : D ->⁺ C)
                   (gs : \Pi (y : D) -> ∃ (x : B) (f x = g y))
@@ -136,6 +184,13 @@
                    | inP (x,fx=gy) => inP ((y, (x,fx=gy)), idp)
                  })
      \in (\lam y =>⁺ (IsHEquiv.ret e y).2.1, \lam y => (IsHEquiv.ret e y).2.2 *> pmap+ g (IsHEquiv.f_ret e))
+
+-- | Postcomposition with a fully faithful functor is an equivalence onto the functors whose values lie in its image.
+\lemma postcomp-image-equiv {B C : \Cat} {f : B ->⁺ C} (ff : IsFFMap f) {D : \Cat}
+  : IsEquiv {D ->⁺ B} {\Sigma (g : D ->⁺ C) (\Pi (y : D) -> ∃ (x : B) (f x = g y))} (\lam h => (\lam y => f (h y), \lam y => inP (h y, idp)))
+  => IsEquiv.fromEmbSurj (leftEmbedding {_} {_} {_} {\lam (h : D ->⁺ B) => (\lam y => f (h y), \lam y => inP (h y, idp))} (Embedding.projection \lam (g : D ->⁺ C) => \Pi (y : D) -> ∃ (x : B) (f x = g y))
+                                        (IsFFMap.isObEmbedding (postcomp-ff ff)))
+       \lam s => \have l => ffMap-lift ff s.1 s.2 \in inP (l.1, ext (funExt+ l.2))
 
 -- | A functor over {A} that is fully faithful on total categories induces equivalences on paths over arrows of {A}.
 \lemma relative-ff {A : \Cat} {F G : A ->⁺ \Cat} (H : \Pi (k :⁺ \Sigma⁺ (x : A) (F x)) -> G k.1)
