@@ -124,7 +124,7 @@ public class PrettyPrintingTest extends TypeCheckingTestCase {
     def.accept(new PrettyPrintVisitor(new StringBuilder(), Concrete.Expression.PREC), null);
   }
 
-  private void testDefinition(String s) {
+  private String testDefinition(String s) {
     Concrete.Definition def = (Concrete.Definition) resolveNamesDef(s);
     assertNotNull(def);
     StringBuilder sb = new StringBuilder();
@@ -134,6 +134,7 @@ public class PrettyPrintingTest extends TypeCheckingTestCase {
     Concrete.Definition def2 = (Concrete.Definition) resolveNamesDef(s2);
     assertNotNull(def2);
     assertTrue(ConcreteCompareVisitor.compare(def, def2));
+    return s2;
   }
 
   @Test
@@ -158,6 +159,43 @@ public class PrettyPrintingTest extends TypeCheckingTestCase {
           | f1 : \\Pi {X Y : \\Type0} (x : X) (y : Y) -> x = y
         }
       """);
+  }
+
+  @Test
+  public void prettyPrintClassLevelParameters() {
+    String printed = testDefinition(
+      """
+        \\class EncodeDecode.{u} \\noclassifying
+          {C : \\Type} (e : C) (code : C -> \\Type u) (ce : code e)
+          (decode : \\Pi (s : \\Sigma (c : C) (code c)) -> e = s.1)
+          (decode_base : decode (e,ce) = idp)
+        """);
+    assertTrue(printed, printed.startsWith("\\class EncodeDecode .{u} \\noclassifying {C : \\Type} (e : C) (code : C -> \\Type u)"));
+  }
+
+  @Test
+  public void prettyPrintRecordLevelParameters() {
+    String printed = testDefinition(
+      """
+        \\record Pair.{u, v} (A : \\Type u) (B : \\Type v) {
+          | fst : A
+          | snd : B
+        }
+        """);
+    assertTrue(printed, printed.startsWith("\\record Pair .{u, v} (A : \\Type u) (B : \\Type v) {"));
+  }
+
+  @Test
+  public void prettyPrintClassExtendsWithParameters() {
+    String base = "\\class Base (A : \\Type)\n";
+    resolveNamesModule(base + "\\class Derived (B : \\Type) \\extends Base");
+    Concrete.Definition def = (Concrete.Definition) getConcrete("Derived");
+    StringBuilder sb = new StringBuilder();
+    def.accept(new PrettyPrintVisitor(sb, 0), null);
+    String printed = sb.toString();
+    assertTrue(printed, printed.startsWith("\\class Derived (B : \\Type) \\extends Base"));
+    resolveNamesModule(base + printed);
+    assertTrue(ConcreteCompareVisitor.compare(def, (Concrete.Definition) getConcrete("Derived")));
   }
 
   @Test
@@ -293,16 +331,50 @@ public class PrettyPrintingTest extends TypeCheckingTestCase {
 
   @Test
   public void letTest() {
-    String expr = "\n  \\let x => 0\n  \\in x";
-    typeCheckModule("\\func test =>" + expr);
-    assertEquals(expr, printTestExpr());
+    typeCheckModule("\\func test =>\n  \\let x => 0\n  \\in x");
+    // On one line if it fits there, as in the sources
+    assertEquals("\\let x => 0 \\in x", printTestExpr());
   }
 
   @Test
   public void letTest2() {
-    String expr = "\n  \\let (x, y) => (0, 1)\n  \\in (x, y)";
-    typeCheckModule("\\func test =>" + expr);
-    assertEquals(expr, printTestExpr());
+    typeCheckModule("\\func test =>\n  \\let (x, y) => (0, 1)\n  \\in (x, y)");
+    assertEquals("\\let (x, y) => (0, 1) \\in (x, y)", printTestExpr());
+  }
+
+  // The colon of a header is one space from the parameters and from the type: the parameters break so that the type fits after it
+  @Test
+  public void headerColonTest() {
+    StringBuilder params = new StringBuilder();
+    StringBuilder sum = new StringBuilder();
+    for (int i = 1; i <= 14; i++) {
+      params.append(" (variable").append(i).append(" : Nat)");
+      sum.append(i == 1 ? "" : " Nat.+ ").append("variable").append(i);
+    }
+    typeCheckModule("\\func test" + params + " : " + sum + " = " + sum + " => idp");
+    StringBuilder builder = new StringBuilder();
+    ToAbstractVisitor.convert(getDefinition("test"), PrettyPrinterConfig.DEFAULT).prettyPrint(builder, PrettyPrinterConfig.DEFAULT);
+    String[] lines = builder.toString().split("\n");
+    assertTrue(builder.toString(), lines.length > 1);
+    for (String line : lines) {
+      assertFalse(builder.toString(), line.stripLeading().startsWith(":") || line.stripTrailing().endsWith(":"));
+      assertTrue(builder.toString(), line.length() <= PrettyPrinterConfig.MAX_LEN);
+    }
+    // The type starts on the line of the last parameter
+    assertTrue(builder.toString(), builder.toString().contains("(variable14 : Nat) : variable1 + "));
+  }
+
+  // A \let that does not fit on one line starts where it is, with its other clauses and \in aligned with it
+  @Test
+  public void letTest3() {
+    String sum = String.join(" Nat.+ ", java.util.Collections.nCopies(20, "n"));
+    typeCheckModule("\\func test (n : Nat) => \\let | x => " + sum + " | y => " + sum + " \\in x Nat.+ y");
+    String printed = printTestExpr();
+    String[] lines = printed.split("\n");
+    assertEquals(printed, 3, lines.length);
+    assertTrue(printed, lines[0].startsWith("\\let | x => "));
+    assertTrue(printed, lines[1].startsWith("     | y => "));
+    assertTrue(printed, lines[2].startsWith("\\in "));
   }
 
   private void testRevealing(String module, Function<ConcreteGroup, Expression> moduleSelector, String expected, Function<Expression, Expression> selector) {

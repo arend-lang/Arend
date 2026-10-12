@@ -1188,6 +1188,11 @@ public class ToAbstractVisitor extends BaseExpressionVisitor<Void, Concrete.Expr
       for (ClassDefinition superClass : def.getSuperClasses()) {
         if (superClass.isImplemented(field)) return;
       }
+      // As in visitClassFieldImpls
+      if (getVerboseLevel(impl.getExpression()) == 0 && !hasFlag(PrettyPrinterFlag.SHOW_PROOFS) && field.isProperty()) {
+        elements.add(new Concrete.ClassFieldImpl(null, field.getRef(), generateHiddenGoal(null), null));
+        return;
+      }
       Variable saved = myRenamer.setCanonicalThis(impl.getBinding());
       try {
         elements.add(new Concrete.ClassFieldImpl(null, field.getRef(), convertExpr(impl.getExpression()), null));
