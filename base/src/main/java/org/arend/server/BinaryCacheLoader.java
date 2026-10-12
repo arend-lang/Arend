@@ -4,11 +4,11 @@ import org.arend.core.definition.Definition;
 import org.arend.ext.error.ErrorReporter;
 import org.arend.ext.module.ModuleLocation;
 import org.arend.ext.module.ModulePath;
+import org.arend.ext.util.Pair;
 import org.arend.extImpl.SerializableKeyRegistryImpl;
 import org.arend.module.error.BinaryCacheError;
 import org.arend.module.serialization.DeferredBoxFixes;
 import org.arend.module.serialization.ModuleDeserialization;
-import org.arend.naming.reference.InternalReferable;
 import org.arend.naming.reference.LocatedReferable;
 import org.arend.naming.reference.TCDefReferable;
 import org.arend.server.impl.ArendLibraryImpl;
@@ -23,7 +23,6 @@ import org.jetbrains.annotations.NotNull;
 import java.util.*;
 import java.util.function.Consumer;
 import java.util.function.Function;
-import java.util.function.Predicate;
 import java.util.function.ToLongFunction;
 
 public class BinaryCacheLoader {
@@ -31,6 +30,10 @@ public class BinaryCacheLoader {
   private final ErrorReporter myErrorReporter;
   private final Consumer<String> myLogger;
   private final Set<ModuleLocation> myBinaryCacheLoaded = new HashSet<>();
+  // The modules the last load deserialized whole from their .arc, rather than kept from memory
+  private final Set<ModuleLocation> myDeserialized = new HashSet<>();
+  // The modules the last load deserialized in part, each with the definitions it dropped
+  private final Map<ModuleLocation, Set<TCDefReferable>> myLoadedInPart = new HashMap<>();
 
   /** Modules seen in an earlier pass; only first sight may load from {@code .arc}. */
   private final Set<ModuleLocation> mySeenModules = new HashSet<>();
@@ -59,6 +62,23 @@ public class BinaryCacheLoader {
     return Collections.unmodifiableSet(myBinaryCacheLoaded);
   }
 
+  /**
+   * The modules the last {@link #loadBinaryCache} deserialized whole from their .arc: those it added to
+   * {@link #getBinaryCacheLoaded} that were not kept because they already held definitions.
+   */
+  public Set<ModuleLocation> getDeserialized() {
+    return Collections.unmodifiableSet(myDeserialized);
+  }
+
+  /**
+   * The modules the last {@link #loadBinaryCache} deserialized in part: some of their definitions were loaded, and
+   * the rest were dropped or are not in the .arc. Each comes with the definitions it dropped, which its .arc has but
+   * this load could not use; saving the module before they are typechecked again would lose them.
+   */
+  public Map<ModuleLocation, Set<TCDefReferable>> getLoadedInPart() {
+    return Collections.unmodifiableMap(myLoadedInPart);
+  }
+
   /** @see #myLoadOrder */
   public List<ModuleLocation> getLoadOrder() {
     return Collections.unmodifiableList(myLoadOrder);
@@ -71,10 +91,11 @@ public class BinaryCacheLoader {
    *   <li>Phase 1: For each module with a valid .arc file, parse the protobuf and fill in
    *       Definition shells on the existing (raw-loaded) group. This does not require
    *       dependency modules to be loaded.</li>
-   *   <li>Phase 1b: Drop candidates whose callees are not being loaded, since phase 2b
-   *       could not resolve their call targets.</li>
    *   <li>Phase 2: Resolve cross-module call targets and fill in definition bodies.
-   *       This requires all dependency modules to have completed phase 1.</li>
+   *       This requires all dependency modules to have completed phase 1. A definition that
+   *       refers to a definition which is not loaded (its module has no usable .arc, or its
+   *       .arc was saved without it) is dropped and left to typechecking, and so is a definition
+   *       that holds a dropped one; the rest of its module is loaded.</li>
    * </ol>
    *
    * <p>Phase 2 needs more from its dependencies than phase 1 provides. Resolving a call target
@@ -91,21 +112,12 @@ public class BinaryCacheLoader {
   public void loadBinaryCache(@NotNull String libraryName,
                               @NotNull Function<ModuleLocation, StreamBinarySource> binarySourceProvider,
                               @NotNull ToLongFunction<ModuleLocation> rawTimestampProvider) {
+    myDeserialized.clear();
+    myLoadedInPart.clear();
     List<PendingBinaryLoad> pending = new ArrayList<>();
     ArendLibrary serverLib = myServer.getLibrary(libraryName);
     SerializableKeyRegistryImpl keyRegistry = serverLib instanceof ArendLibraryImpl impl ? impl.getKeyRegistry() : null;
 
-    // Every source module of this library known to the server. A call target outside this set
-    // lives in a dependency (or in Prelude) and is loaded by a pass we do not control here.
-    Set<ModulePath> libraryModules = new HashSet<>();
-    for (ModuleLocation module : myServer.getModules()) {
-      if (module.getLibraryName().equals(libraryName) && module.getLocationKind() == ModuleLocation.LocationKind.SOURCE) {
-        libraryModules.add(module.getModulePath());
-      }
-    }
-    // Modules of this library whose definitions will be in memory by the time phase 2b resolves
-    // call targets: the ones deserialized below, plus the ones that already carry a core.
-    Set<ModulePath> willBeLoaded = new HashSet<>();
 
     // Phase 1: parse protobuf files (does NOT touch any group referables)
     for (ModuleLocation module : myServer.getModules()) {
@@ -135,10 +147,15 @@ public class BinaryCacheLoader {
       // meta's @Dependency-captured class fields are bound once, when the meta was typechecked,
       // so a freshly deserialized replacement makes ClassCallExpression.isSubClassOf fail and
       // takes linarith and equation down with it.
+      // Only a module held whole counts as loaded: one loaded in part by an earlier pass, whose dropped
+      // definitions no targeted run has reached since, keeps what it has but must still be typechecked and saved.
       ConcreteGroup memGroup = myServer.getRawGroup(module);
       if (memGroup != null && hasTypechecked(memGroup)) {
-        myBinaryCacheLoaded.add(module);
-        willBeLoaded.add(module.getModulePath());
+        if (BinaryCacheFilter.isComplete(memGroup)) {
+          myBinaryCacheLoaded.add(module);
+        } else {
+          myBinaryCacheLoaded.remove(module);
+        }
         continue;
       }
       // Seen before, still has definitions to typecheck, yet holds no core: it was invalidated
@@ -154,8 +171,7 @@ public class BinaryCacheLoader {
         binarySource.setKeyRegistry(keyRegistry);
         ModuleDeserialization deser = binarySource.parseProtobuf(myErrorReporter);
         if (deser != null) {
-          pending.add(new PendingBinaryLoad(module, deser, calleesInLibrary(deser, module.getModulePath(), libraryModules)));
-          willBeLoaded.add(module.getModulePath());
+          pending.add(new PendingBinaryLoad(module, deser));
         }
       } catch (Exception e) {
         reportBinaryCacheError(myErrorReporter, module, "protobuf parsing", e);
@@ -168,34 +184,10 @@ public class BinaryCacheLoader {
       }
     }
 
-    // Phase 1b: close the candidate set under "calls into". Phase 1 judges each module against
-    // its *own* source only, so an untouched module whose dependency was just edited stays a
-    // candidate while the dependency is dropped; phase 2b then asks for a call target that was
-    // never filled in and fails with "Definition M:d is not loaded". A .arc is usable only if
-    // every module of this library it links against is loaded in the same pass, which is not a
-    // property of any single module -- hence a fixed point rather than one sweep.
-    //
-    // Nothing needs clearing for a module dropped here: it never got past parsing, so
-    // re-typechecking it from source is all that is left to do.
+    // A .arc that calls into a definition which is not loaded in this pass (its module has no usable .arc, or its
+    // .arc was saved without it) is not dropped here as a whole: phase 2b drops just the definitions that call it,
+    // and phase 2c those that hold one of them, and the rest of the module is loaded.
     int candidates = pending.size();
-    while (true) {
-      Set<ModuleLocation> unusable = new HashSet<>();
-      for (PendingBinaryLoad load : pending) {
-        for (ModulePath callee : load.callees) {
-          if (!willBeLoaded.contains(callee)) {
-            unusable.add(load.module);
-            break;
-          }
-        }
-      }
-      if (unusable.isEmpty()) break;
-      for (ModuleLocation module : unusable) {
-        willBeLoaded.remove(module.getModulePath());
-        myBinaryCacheLoaded.remove(module);
-      }
-      pending.removeIf(load -> unusable.contains(load.module));
-    }
-    int stale = candidates - pending.size();
 
     // Process dependencies before dependents, so that phase 2b's expression building sees
     // filled-in callees wherever the import graph allows it.
@@ -218,21 +210,22 @@ public class BinaryCacheLoader {
 
     // Phase 2b: resolve cross-module call targets and fill in definition bodies.
     // Now all modules have their Definition shells from phase 2a, so scope
-    // lookups can find cross-module references.
-    int loaded = 0;
+    // lookups can find cross-module references. A definition that refers to one
+    // that is not loaded is dropped, not its module.
     int failed = 0;
-    int incomplete = 0;
     List<PendingBinaryLoad> loadedLoads = new ArrayList<>();
+    Map<ModuleLocation, Set<TCDefReferable>> droppedDefinitions = new HashMap<>();
     DeferredBoxFixes boxFixes = new DeferredBoxFixes();
     for (PendingBinaryLoad load : phase2b) {
       ConcreteGroup group = myServer.getRawGroup(load.module);
       try {
         load.deserialization.setDeferredBoxFixes(boxFixes);
-        load.deserialization.readModule(
+        List<Pair<Definition, String>> dropped = load.deserialization.readModuleDroppingMissing(
             myServer.getModuleScopeProvider(load.module.getLibraryName(), false),
             dependencyListener(myServer));
-        loaded++;
-        myBinaryCacheLoaded.add(load.module);
+        for (Pair<Definition, String> pair : dropped) {
+          droppedDefinitions.computeIfAbsent(load.module, k -> new LinkedHashSet<>()).add(pair.proj1.getRef());
+        }
         loadedLoads.add(load);
       } catch (Exception e) {
         reportBinaryCacheError(myErrorReporter, load.module, "definition body loading", e);
@@ -248,43 +241,57 @@ public class BinaryCacheLoader {
     // which inspects the loaded expressions.
     int boxFixCount = boxFixes.apply();
 
-    // Phase 2c: a module that fillInDefinition partway through leaves later
-    // definitions in NEEDS_TYPE_CHECKING state with null result type.  Modules
-    // that already captured those shell objects (via getCallTarget during their
-    // own fillInDefinition — order matters because circular imports like
-    // Algebra.StrictlyOrdered ↔ Arith.Nat prevent topological processing) keep
-    // holding them.  Likewise, when a module is later cleared, its filled
-    // definitions stay reachable through other modules' expression trees but
-    // its TCDefReferables now resolve to a freshly re-typechecked replacement,
-    // breaking object-identity invariants.
-    //
-    // Iteratively walk each loaded module's expressions and drop any whose
-    // captured Definition references are stale (a shell, or pointing at an
-    // object that no longer matches its TCDefReferable's current typechecked).
-    int promotedToIncomplete = 0;
+    // Phase 2c: a definition can hold another one that is not loaded after all: one dropped in
+    // phase 2b after it was filled (a forward reference within a module, or an import cycle such
+    // as Algebra.StrictlyOrdered <-> Arith.Nat, which prevents processing dependencies first), or
+    // one whose TCDefReferable now resolves to something else, which breaks object identity.
+    // Such a definition is dropped too, until none is left: just the definition, so that the rest
+    // of its module stays loaded.
     while (true) {
-      List<PendingBinaryLoad> toClear = new ArrayList<>();
+      List<Pair<PendingBinaryLoad, Definition>> toDrop = new ArrayList<>();
       for (PendingBinaryLoad load : loadedLoads) {
         ConcreteGroup group = myServer.getRawGroup(load.module);
-        if (group != null && hasOrphanShellReference(group)) {
-          toClear.add(load);
-        }
+        if (group == null) continue;
+        BinaryCacheFilter.forEachDefinition(group, ref -> {
+          Definition def = ref.getTypechecked();
+          if (def == null) return;
+          OrphanShellFinder finder = new OrphanShellFinder();
+          finder.scan(def);
+          if (finder.found) toDrop.add(new Pair<>(load, def));
+        });
       }
-      if (toClear.isEmpty()) break;
-      for (PendingBinaryLoad load : toClear) {
-        ConcreteGroup group = myServer.getRawGroup(load.module);
-        if (group != null) clearTypechecked(group);
-        myBinaryCacheLoaded.remove(load.module);
+      if (toDrop.isEmpty()) break;
+      for (Pair<PendingBinaryLoad, Definition> pair : toDrop) {
+        ModuleDeserialization.dropDefinition(pair.proj2);
+        droppedDefinitions.computeIfAbsent(pair.proj1.module, k -> new LinkedHashSet<>()).add(pair.proj2.getRef());
       }
-      loadedLoads.removeAll(toClear);
-      promotedToIncomplete += toClear.size();
     }
-    loaded -= promotedToIncomplete;
-    incomplete += promotedToIncomplete;
-    if ((loaded > 0 || failed > 0 || incomplete > 0 || stale > 0) && myLogger != null) {
+
+    // A module is loaded if all of its definitions are: none was dropped, and its .arc has them
+    // all, as one saved with only part of them typechecked has not. A module loaded in part keeps
+    // what it has, and is not reported as loaded, so that the rest of it is typechecked and saved.
+    int loaded = 0;
+    int partial = 0;
+    int droppedCount = 0;
+    for (PendingBinaryLoad load : loadedLoads) {
+      ConcreteGroup group = myServer.getRawGroup(load.module);
+      if (group == null || BinaryCacheFilter.isComplete(group)) {
+        loaded++;
+        myBinaryCacheLoaded.add(load.module);
+        myDeserialized.add(load.module);
+      } else {
+        partial++;
+        myBinaryCacheLoaded.remove(load.module);
+        myDeserialized.remove(load.module);
+        Set<TCDefReferable> dropped = droppedDefinitions.getOrDefault(load.module, Collections.emptySet());
+        myLoadedInPart.put(load.module, dropped);
+        droppedCount += dropped.size();
+      }
+    }
+
+    if ((loaded > 0 || partial > 0 || failed > 0) && myLogger != null) {
       myLogger.accept("Binary cache: " + loaded + " loaded"
-          + (stale > 0 ? ", " + stale + " stale" : "")
-          + (incomplete > 0 ? ", " + incomplete + " incomplete" : "")
+          + (partial > 0 ? ", " + partial + " loaded partially (" + droppedCount + " definitions dropped)" : "")
           + (failed > 0 ? ", " + failed + " failed" : "")
           + " out of " + candidates + " candidates"
           // Routinely non-zero and not a warning: ordering only sequences whole modules, so any
@@ -336,9 +343,7 @@ public class BinaryCacheLoader {
 
   /** True if any definition reachable from {@code group} already holds a typechecked core. */
   private static boolean hasTypechecked(ConcreteGroup group) {
-    boolean[] found = { false };
-    walkDefinitions(group, def -> { found[0] = true; return true; });
-    return found[0];
+    return BinaryCacheFilter.anyDefinition(group, ref -> ref.getTypechecked() != null);
   }
 
   /**
@@ -347,54 +352,7 @@ public class BinaryCacheLoader {
    * without it, a module with nothing to typecheck looks invalidated on every pass.
    */
   private static boolean hasTypecheckableDefinitions(ConcreteGroup group) {
-    if (group.referable() instanceof TCDefReferable ref && ref.getKind().isTypecheckable()) return true;
-    for (InternalReferable internalRef : group.getInternalReferables()) {
-      if (internalRef instanceof TCDefReferable ref && ref.getKind().isTypecheckable()) return true;
-    }
-    for (ConcreteStatement statement : group.statements()) {
-      if (statement.group() != null && hasTypecheckableDefinitions(statement.group())) return true;
-    }
-    for (ConcreteGroup dynamicGroup : group.dynamicGroups()) {
-      if (hasTypecheckableDefinitions(dynamicGroup)) return true;
-    }
-    return false;
-  }
-
-  /**
-   * Returns true if any typecheckable definition in the group has an expression
-   * (parameter type, result type, body) that references another {@link Definition}
-   * still stuck in {@link Definition.TypeCheckingStatus#NEEDS_TYPE_CHECKING} — i.e.
-   * an orphan shell left behind when its owning module's phase-2b failed partway
-   * through fillInDefinition.
-   */
-  private static boolean hasOrphanShellReference(ConcreteGroup group) {
-    OrphanShellFinder finder = new OrphanShellFinder();
-    walkDefinitions(group, def -> {
-      finder.scan(def);
-      return finder.found;
-    });
-    return finder.found;
-  }
-
-  /** Walks {@code group} and feeds each typecheckable {@link Definition} to {@code visit}; stops on true. */
-  private static void walkDefinitions(ConcreteGroup group, Predicate<Definition> visit) {
-    LocatedReferable ref = group.referable();
-    if (ref instanceof TCDefReferable tcRef && tcRef.getKind().isTypecheckable()) {
-      Definition def = tcRef.getTypechecked();
-      if (def != null && visit.test(def)) return;
-    }
-    for (InternalReferable internalRef : group.getInternalReferables()) {
-      if (internalRef instanceof TCDefReferable tcRef && tcRef.getKind().isTypecheckable()) {
-        Definition def = tcRef.getTypechecked();
-        if (def != null && visit.test(def)) return;
-      }
-    }
-    for (ConcreteStatement statement : group.statements()) {
-      if (statement.group() != null) walkDefinitions(statement.group(), visit);
-    }
-    for (ConcreteGroup dynGroup : group.dynamicGroups()) {
-      walkDefinitions(dynGroup, visit);
-    }
+    return BinaryCacheFilter.anyDefinition(group, ref -> true);
   }
 
   private static void clearTypechecked(ConcreteGroup group) {
@@ -429,18 +387,6 @@ public class BinaryCacheLoader {
     errorReporter.report(new BinaryCacheError(module.getModulePath(), phase, e));
   }
 
-  private record PendingBinaryLoad(ModuleLocation module, ModuleDeserialization deserialization, Set<ModulePath> callees) {}
+  private record PendingBinaryLoad(ModuleLocation module, ModuleDeserialization deserialization) {}
 
-  /**
-   * The modules of {@code libraryModules} that {@code deser}'s call targets point into, excluding
-   * {@code self}: a module's own constructors and class fields are listed as call targets too, and
-   * those are filled in along with their parent, never by another pass.
-   */
-  private static Set<ModulePath> calleesInLibrary(ModuleDeserialization deser, ModulePath self, Set<ModulePath> libraryModules) {
-    Set<ModulePath> result = new HashSet<>();
-    for (ModulePath callee : deser.getCallTargetModules()) {
-      if (!callee.equals(self) && libraryModules.contains(callee)) result.add(callee);
-    }
-    return result;
-  }
 }

@@ -62,6 +62,48 @@ during deserialization, and there is no `loadSourceGroup` requester
 method. The overlay approach exists only because the test exercises a
 scenario where source is still available.
 
+## What gets written, and what gates it
+
+`ModuleSerialization.writeGroup` writes exactly the definitions that have
+a core, whatever that amounts to (none, some, or all), and sets
+`ModuleProtos.Module#getComplete` to `false` when it left anything out --
+so a module that is not wholly checked, including one that is not checked
+at all, is written as far as it got, not skipped entirely. There is no
+per-definition filtering on top of that: what the typechecker produced is
+what the serializer writes.
+
+Both loaders tolerate that:
+
+- `StreamBinarySource.load` builds the group *out of* the file
+  (`readGroup`), so a definition the file has no core for has no core on
+  load either -- there is nothing to be tolerant of, since the file
+  always describes the whole group it was written from.
+- `BinaryCacheLoader` overlays the file on the group parsed from source
+  (`readDefinitions`), so a definition the file has no core for is simply
+  one that is not typechecked yet. Both the CLI (via `BinaryLoader`) and
+  the IDE (via `ArendBinaryCacheService`) go through this same loader.
+
+Every production writer gates on `BinaryCacheFilter.isCacheable`: the
+CLI's `TypecheckPipeline.persistLibrary` and the IDE's `BinaryFileSaver`
+both do exactly this. `isCacheable` does *not* require every definition of
+the module to hold a core, nor even one -- a targeted run typechecks only
+the requested import cone, so most transitively-loaded modules only get
+the definitions that cone actually reached, or none at all if the cone
+never touches them beyond resolving names, and refusing those would throw
+away a cache that is either usable for what little it contains or, for a
+module with no cores at all, exactly as harmless to write as to skip (the
+next load treats every definition in it as not-yet-typechecked, same as
+if there were no cache). It only requires that none of the definitions
+that *were* checked hold an error or an unfilled goal.
+
+The IDE resolves far more than it typechecks (opening a project resolves
+everything for editor features, regardless of what the user asks to
+typecheck), so this shows up there even more than in a targeted CLI run --
+but the gate is the same in both: a resolved module with no core at all is
+written as a cache-free placeholder, no differently from one with a
+partial core. `BinaryFileSaver` and `TypecheckPipeline.persistLibrary`
+both gate on `isCacheable` alone.
+
 ## The one invariant
 
 **For a deserialized `ConcreteGroup` (the result of

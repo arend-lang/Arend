@@ -58,6 +58,12 @@ final class OrphanShellFinder extends VoidExpressionVisitor<Void> {
         if (c.getBody() != null) super.visitBody(c.getBody(), null);
       }
     } else if (def instanceof ClassDefinition cls) {
+      // A superclass need not occur in any field type or implementation, yet the subclass holds it all the same, and
+      // subclassing, instance and coercion lookups compare it by identity.
+      for (ClassDefinition superClass : cls.getSuperClasses()) {
+        if (found) return;
+        check(superClass);
+      }
       for (ClassField field : cls.getPersonalFields()) {
         if (found) return;
         if (field.getType() != null) field.getType().accept(this, null);

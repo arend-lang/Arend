@@ -67,6 +67,24 @@ public class ModuleDeserialization {
   }
 
   public void readModule(ModuleScopeProvider moduleScopeProvider, DependencyListener dependencyListener) throws DeserializationException {
+    readModule(moduleScopeProvider, dependencyListener, false);
+  }
+
+  /**
+   * Like {@link #readModule(ModuleScopeProvider, DependencyListener)}, but a definition that refers to a definition
+   * that is not loaded is dropped, rather than the module: it gets no core (see {@link #dropDefinition}), so the
+   * definitions filled after it that refer to it are dropped as well, and it is left to typechecking. This lets a
+   * module whose dependency has only part of its definitions in the cache keep the definitions that do not need the
+   * rest. A definition filled before one it refers to was dropped still holds the dropped one; finding those is up to
+   * the caller.
+   *
+   * @return the dropped definitions, each with the reason
+   */
+  public List<Pair<Definition, String>> readModuleDroppingMissing(ModuleScopeProvider moduleScopeProvider, DependencyListener dependencyListener) throws DeserializationException {
+    return readModule(moduleScopeProvider, dependencyListener, true);
+  }
+
+  private List<Pair<Definition, String>> readModule(ModuleScopeProvider moduleScopeProvider, DependencyListener dependencyListener, boolean dropMissing) throws DeserializationException {
     if (myModuleProto.getVersion() != ModuleSerialization.VERSION) {
       throw new DeserializationException("Version mismatch:\nLanguage version: " + ModuleSerialization.VERSION + "\nLibrary binaries version: " + myModuleProto.getVersion());
     }
@@ -75,7 +93,7 @@ public class ModuleDeserialization {
       ModulePath module = new ModulePath(moduleCallTargets.getNameList());
       Scope scope = moduleScopeProvider.forModule(module);
       if (scope == null) {
-        throw new DeserializationException("Cannot find module: " + module);
+        throw new MissingDependencyException("Cannot find module: " + module);
       }
 
       for (ModuleProtos.CallTargetTree callTargetTree : moduleCallTargets.getCallTargetTreeList()) {
@@ -88,15 +106,43 @@ public class ModuleDeserialization {
     boolean ownBoxFixes = myDeferredBoxFixes == null;
     if (ownBoxFixes) myDeferredBoxFixes = new DeferredBoxFixes();
 
+    List<Pair<Definition, String>> dropped = new ArrayList<>();
     DefinitionDeserialization defDeserialization = new DefinitionDeserialization(myCallTargetProvider, dependencyListener, myKeyRegistry, myDefinitionListener, myDeferredBoxFixes);
     for (Pair<DefinitionProtos.Definition, Definition> pair : myDefinitions) {
-      defDeserialization.fillInDefinition(pair.proj1, pair.proj2);
+      if (!dropMissing) {
+        defDeserialization.fillInDefinition(pair.proj1, pair.proj2);
+        continue;
+      }
+      try {
+        defDeserialization.fillInDefinition(pair.proj1, pair.proj2);
+      } catch (MissingDependencyException e) {
+        dropDefinition(pair.proj2);
+        dropped.add(new Pair<>(pair.proj2, e.getMessage()));
+      }
     }
     myDefinitions.clear();
 
     if (ownBoxFixes) {
       myDeferredBoxFixes.apply();
       myDeferredBoxFixes = null;
+    }
+    return dropped;
+  }
+
+  /**
+   * Takes the core away from a definition that is not loaded after all: from its referable, and from those of its
+   * constructors and fields, which are filled together with it.
+   */
+  public static void dropDefinition(Definition definition) {
+    definition.getRef().setTypechecked(null);
+    if (definition instanceof DataDefinition data) {
+      for (Constructor constructor : data.getConstructors()) {
+        constructor.getRef().setTypechecked(null);
+      }
+    } else if (definition instanceof ClassDefinition classDef) {
+      for (ClassField field : classDef.getPersonalFields()) {
+        field.getRef().setTypechecked(null);
+      }
     }
   }
 

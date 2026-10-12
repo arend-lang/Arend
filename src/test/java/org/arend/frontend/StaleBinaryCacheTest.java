@@ -1,8 +1,11 @@
 package org.arend.frontend;
 
+import org.arend.core.definition.Definition;
 import org.arend.error.DummyErrorReporter;
 import org.arend.ext.error.GeneralError;
 import org.arend.ext.error.ListErrorReporter;
+import org.arend.ext.module.FullName;
+import org.arend.ext.module.LongName;
 import org.arend.ext.module.ModuleLocation;
 import org.arend.ext.module.ModulePath;
 import org.arend.frontend.library.BinaryLoader;
@@ -12,10 +15,13 @@ import org.arend.frontend.library.LibraryManager;
 import org.arend.frontend.library.SourceLibrary;
 import org.arend.frontend.source.PreludeResourceSource;
 import org.arend.module.error.BinaryCacheError;
+import org.arend.naming.reference.TCDefReferable;
 import org.arend.prelude.Prelude;
 import org.arend.server.ProgressReporter;
 import org.arend.server.impl.ArendServerImpl;
 import org.arend.source.PersistableBinarySource;
+import org.arend.term.group.ConcreteGroup;
+import org.arend.term.group.ConcreteStatement;
 import org.arend.typechecking.computation.UnstoppableCancellationIndicator;
 import org.junit.Rule;
 import org.junit.Test;
@@ -33,12 +39,14 @@ import java.util.List;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 
 /**
  * Tests for {@code BinaryLoader.loadBinaryCache}: that a warm {@code bin/} reloads whole,
- * that the set of caches it uses is closed under "calls into", and that phase 2 deserializes a
- * module only after everything it imports.
+ * that a definition calling into one that is not loaded is left to typechecking while the rest of
+ * its module is loaded, and that phase 2 deserializes a module only after everything it imports.
  *
  * <p>The ordering is load-bearing rather than cosmetic. Filling a definition in inspects its
  * callees, and a callee that is still a shell answers wrongly instead of failing, so a module
@@ -350,6 +358,143 @@ public class StaleBinaryCacheTest {
     assertNoErrors("reload with an import cycle");
     assertLoadedFromCache("reload with an import cycle", "CycleA");
     assertLoadedFromCache("reload with an import cycle", "CycleB");
+  }
+
+  /** Prelude, resolution and the cache load of a pass, without typechecking or saving. */
+  private void loadOnly() {
+    errors.clear();
+    server.getCheckerFor(Collections.singletonList(Prelude.MODULE_LOCATION))
+        .typecheck(UnstoppableCancellationIndicator.INSTANCE, ProgressReporter.empty());
+    List<ModuleLocation> all = new ArrayList<>();
+    for (ModulePath mp : library.findModules(false)) all.add(moduleLoc(mp.toString()));
+    server.getCheckerFor(all).resolveAll(UnstoppableCancellationIndicator.INSTANCE, ProgressReporter.empty());
+    binaryLoader.loadBinaryCache(library, server);
+  }
+
+  private Definition typechecked(String module, String name) {
+    ConcreteGroup group = server.getRawGroup(moduleLoc(module));
+    assertNotNull(module + " is not in the server", group);
+    for (ConcreteStatement statement : group.statements()) {
+      if (statement.group() != null && statement.group().referable() instanceof TCDefReferable ref && ref.getRefName().equals(name)) {
+        return ref.getTypechecked();
+      }
+    }
+    throw new AssertionError(module + " has no definition " + name);
+  }
+
+  /**
+   * A module whose dependency is not loaded keeps the definitions that do not call into the
+   * dependency: only the one that does is dropped and typechecked, not the whole module. The
+   * module is not reported as loaded, so that the pass typechecks and saves the rest of it.
+   */
+  @Test
+  public void aDefinitionCallingIntoAnUnloadedModuleIsDroppedAlone() throws IOException {
+    writeLibrary();
+    writeModule("Two", "\\func used : Nat => 0\n\\func other : Nat => 1\n");
+    writeModule("User", "\\import Two\n\\func calls : Nat => used\n\\func independent : Nat => 5\n");
+    newServer();
+    pass();
+    assertNoErrors("cold build");
+    editModule("Two", "\\func used : Nat => 0\n\\func other : Nat => 2\n");
+    newServer();
+
+    loadOnly();
+    assertNoBinaryCacheErrors("load with a stale dependency");
+    Definition independent = typechecked("User", "independent");
+    assertNotNull("User.independent does not call into Two and must be loaded from the .arc", independent);
+    assertFalse(independent.status().needsTypeChecking());
+    assertNull("User.calls calls into Two, whose .arc is stale, so it must be left to typechecking",
+        typechecked("User", "calls"));
+    assertNotLoadedFromCache("load with a stale dependency", "User");
+
+    for (ModuleLocation module : List.of(moduleLoc("Two"), moduleLoc("User"))) {
+      server.getCheckerFor(Collections.singletonList(module))
+          .typecheck(UnstoppableCancellationIndicator.INSTANCE, ProgressReporter.empty());
+    }
+    assertNoErrors("typechecking the rest");
+    assertSame("the loaded definition is kept, not typechecked again", independent, typechecked("User", "independent"));
+    assertNotNull(typechecked("User", "calls"));
+  }
+
+  /**
+   * A module loaded in part stays not loaded on the next pass of a warm server: what it holds in memory is kept, but
+   * it still has definitions to typecheck, so it must not be skipped as if it were held whole.
+   */
+  @Test
+  public void aModuleLoadedInPartIsNotLoadedOnTheNextPass() throws IOException {
+    writeLibrary();
+    writeModule("Two", "\\func used : Nat => 0\n\\func other : Nat => 1\n");
+    writeModule("User", "\\import Two\n\\func calls : Nat => used\n\\func independent : Nat => 5\n");
+    newServer();
+    pass();
+    assertNoErrors("cold build");
+    editModule("Two", "\\func used : Nat => 0\n\\func other : Nat => 2\n");
+    newServer();
+
+    loadOnly();
+    Definition independent = typechecked("User", "independent");
+    assertNotNull(independent);
+    assertNull(typechecked("User", "calls"));
+    assertNotLoadedFromCache("first pass", "User");
+
+    loadOnly();
+    assertNotLoadedFromCache("second pass of the same server", "User");
+    assertSame("what the module holds in memory is kept", independent, typechecked("User", "independent"));
+  }
+
+  /**
+   * A subclass loaded before its superclass is dropped holds the dropped superclass even when no field type or
+   * implementation of its own mentions it, so it must be dropped too: otherwise it keeps a superclass that the source
+   * typechecks again into a different object.
+   */
+  @Test
+  public void aSubclassOfADroppedClassIsDropped() throws IOException {
+    writeLibrary();
+    writeModule("Two", "\\func used : Nat => 0\n\\func other : Nat => 1\n");
+    writeModule("User", "\\import Two\n\\record Sub \\extends Base\n\\record Base (p : used = used)\n\\func independent : Nat => 5\n");
+    newServer();
+    pass();
+    assertNoErrors("cold build");
+    editModule("Two", "\\func used : Nat => 0\n\\func other : Nat => 2\n");
+    newServer();
+
+    loadOnly();
+    assertNoBinaryCacheErrors("load with a stale dependency");
+    assertNull("User.Base calls into Two, whose .arc is stale", typechecked("User", "Base"));
+    assertNull("User.Sub extends the dropped User.Base", typechecked("User", "Sub"));
+    assertNotNull("User.independent holds nothing dropped", typechecked("User", "independent"));
+  }
+
+  /**
+   * An .arc saved with only part of its module typechecked is loaded in part: what it has is kept, the module is not
+   * reported as loaded, so the pass typechecks and saves the rest, and the next load is whole.
+   */
+  @Test
+  public void anArcSavedInPartIsLoadedInPartAndCompleted() throws IOException {
+    writeLibrary();
+    writeModule("Half", "\\func one : Nat => 1\n\\func two : Nat => 2\n");
+    newServer();
+    loadOnly();
+    ModuleLocation half = moduleLoc("Half");
+    server.getCheckerFor(List.of(half)).typecheck(List.of(new FullName(half, new LongName("one"))),
+        DummyErrorReporter.INSTANCE, UnstoppableCancellationIndicator.INSTANCE, ProgressReporter.empty());
+    assertNull(typechecked("Half", "two"));
+    assertTrue(library.getBinarySource(half.getModulePath()).persist(server, DummyErrorReporter.INSTANCE));
+    newServer();
+
+    loadOnly();
+    assertNoBinaryCacheErrors("load of an .arc saved in part");
+    assertNotNull("Half.one is in the .arc", typechecked("Half", "one"));
+    assertNull("Half.two is not in the .arc", typechecked("Half", "two"));
+    assertNotLoadedFromCache("load of an .arc saved in part", "Half");
+
+    newServer();
+    pass();
+    assertNoErrors("the pass that completes Half");
+    newServer();
+    loadOnly();
+    assertLoadedFromCache("load after the pass that completed Half", "Half");
+    assertNotNull(typechecked("Half", "two"));
   }
 
   /** With no cache at all there are no candidates, so nothing may be skipped or reported. */

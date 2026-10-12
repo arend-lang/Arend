@@ -10,6 +10,7 @@ import org.arend.module.error.CorruptBinaryCacheError;
 import org.arend.module.error.ExceptionError;
 import org.arend.module.scopeprovider.ModuleScopeProvider;
 import org.arend.ext.serialization.DeserializationException;
+import org.arend.module.serialization.MissingDependencyException;
 import org.arend.module.serialization.ModuleDeserialization;
 import org.arend.module.serialization.ModuleProtos;
 import org.arend.module.serialization.ModuleSerialization;
@@ -146,10 +147,12 @@ public abstract class StreamBinarySource implements PersistableBinarySource {
    * wrong. A bare {@link IOException} says nothing of the sort: {@code EIO} on a failing disk, an
    * NFS hiccup, an {@code AccessDeniedException}, or the destination being replaced by a
    * concurrent persist all arrive the same way, and deleting on those is how a valid cache gets
-   * destroyed — on a library the size of arend-lib, minutes of work — by a transient fault.
+   * destroyed — on a library the size of arend-lib, minutes of work — by a transient fault. Nor
+   * does a {@link MissingDependencyException}: it says that a module the cache refers to is not
+   * loaded yet, which is how the .arc viewer meets a cache before the library is registered.
    */
   private static boolean provesCorruption(Exception e) {
-    return e instanceof DeserializationException
+    return e instanceof DeserializationException && !(e instanceof MissingDependencyException)
         || e instanceof InvalidProtocolBufferException
         || e instanceof ZipException
         || e instanceof EOFException;

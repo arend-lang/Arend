@@ -43,7 +43,7 @@ public class SimpleCallTargetProvider implements CallTargetProvider {
     if (def == null) {
       List<String> longName = new ArrayList<>();
       ModuleLocation location = LocatedReferable.Helper.getLocation(ref, longName);
-      throw new DeserializationException("Definition " + location.getModulePath() + ":" + new LongName(longName) + " is not loaded");
+      throw new MissingDependencyException("Definition " + location.getModulePath() + ":" + new LongName(longName) + " is not loaded");
     }
     return def;
   }
