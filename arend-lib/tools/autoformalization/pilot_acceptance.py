@@ -6,7 +6,8 @@ Run from the arend-lib directory with the rebuilt CLI on PATH as `arend`:
     python3 -I tools/autoformalization/pilot_acceptance.py [--report out.json]
 
 Checks, all of which must pass:
-  1. every formal target in docs/fulton-harris/manifest.jsonl exists;
+  1. every formal target in docs/fulton-harris/manifest.jsonl is a parsed declaration (symbol index, so a definition
+     swallowed by a stray `{-` in a comment is caught);
   2. a fresh, double-checked typecheck (`arend --no-daemon -r -c`) of all target modules, in dependency
      order, reports no errors;
   3. the reported goals are exactly the intentional exercise holes registered in the manifest;
@@ -15,7 +16,10 @@ Checks, all of which must pass:
   6. the declaration-level consumer closure of the exercise holes (via `arend -fu --json`) agrees with the
      manifest statuses: consumers are `conditional-on-exercises`, everything else is `checked`;
   7. negative control: the axiom audit flags tools/autoformalization/controls/ClassicalControl.ard;
-  8. negative control: the error detection of step 2 flags a deliberately invalid proof.
+  8. negative control: the error detection of step 2 flags a deliberately invalid proof;
+  9. doc comments in the target modules are well formed: a multi-line doc comment uses `{- | ... -}`, never a `-- |`
+     line followed by `--` continuation lines (which are not part of the documentation), and no `{-` or `-}` occurs
+     inside a block doc comment's text.
 Exit status 0 iff all checks pass.
 """
 import json, os, re, subprocess, sys, tempfile
@@ -108,6 +112,32 @@ def declared(target):
         or re.search(r'^\s*\|\s*' + re.escape(short) + r'\b', text, re.M) is not None
 
 
+def indexed(target):
+    """Is the source target `Module:decl` in the symbol index?"""
+    mod, decl = target.split(':', 1)
+    short = decl.split('.')[-1]
+    out = subprocess.run(['arend', '-ss', 'glob:' + short, '--json'], cwd=ROOT, capture_output=True, text=True).stdout
+    try:
+        data = json.loads(out[out.index('{'):])
+    except ValueError:
+        return False
+    return any(r['module'] == mod and (r['name'] == decl or r['name'].endswith('.' + short) or r['name'] == short)
+               for r in data.get('results', []))
+
+
+def doc_comment_problems(path):
+    problems, lines = [], open(path, encoding='utf-8').read().split('\n')
+    for i, l in enumerate(lines):
+        m = re.match(r'^([ \t]*)-- \|', l)
+        if m and i + 1 < len(lines) and re.match(r'^' + re.escape(m.group(1)) + r'--(?! \|)', lines[i + 1]):
+            problems.append(f'{path}:{i + 1}: multi-line doc comment written with -- |')
+    text = '\n'.join(lines)
+    for m in re.finditer(r'\{- \|(.*?)-\}', text, re.S):
+        if '{-' in m.group(1) or '-}' in m.group(1):
+            problems.append(f'{path}:{text[:m.start()].count(chr(10)) + 1}: nested comment delimiter inside a block doc comment')
+    return problems
+
+
 def consumers_closure(holes):
     """Declarations that transitively use one of the hole declarations (Module:decl), via `arend -fu --json`."""
     seen, q = set(), deque(holes)
@@ -145,7 +175,7 @@ def main():
     src_targets = [t for t in targets if not t.startswith('test:')]
     modules = sorted({t.split(':', 1)[0] for t in src_targets})
 
-    missing = [t for t in targets if not declared(t)]
+    missing = [t for t in targets if not (declared(t) if t.startswith('test:') else indexed(t))]
     record('1 targets exist', not missing, missing or f'{len(targets)} targets')
 
     order = topo_order(modules)
@@ -190,6 +220,9 @@ def main():
         code, out = run(['arend', '--no-daemon', '-L', os.path.dirname(ROOT), 'InvalidControl'], cwd=d)
         errs, _ = errors_and_goals(out)
         record('8 control: invalid proof is rejected', any('InvalidControl' in e for e in errs), errs or out[-300:])
+
+    probs = [p for mod in modules for p in doc_comment_problems(module_file(mod, [SRC]))]
+    record('9 doc comments well formed', not probs, probs or f'{len(modules)} modules')
 
     if '--report' in sys.argv:
         with open(sys.argv[sys.argv.index('--report') + 1], 'w') as f:

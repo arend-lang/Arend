@@ -54,8 +54,8 @@
   : pairing cardInv (character V) (character W) = R.natCoef S.dim
   => pmap (cardInv.inv *) (inv (R.FinSum-ext (\lam g => character_hom V W g))) *> inv (dim-invariants cardInv (HomFin V W) S)
 
--- | Fulton--Harris Thm. 2.12, non-isomorphic case: characters of non-isomorphic irreducibles are orthogonal.
---   Conditional on Exercise 1.2 through {invariant-interwining}.
+{- | Fulton--Harris Thm. 2.12, non-isomorphic case: characters of non-isomorphic irreducibles are orthogonal.
+    Conditional on Exercise 1.2 through {invariant-interwining}. -}
 \lemma orthogonality-noniso {K : DiscreteField} {G : FinGroup} (cardInv : Monoid.Inv (K.natCoef G.card)) (V W : FinLinRepres K G)
   (irrV : IsFinIrreducible V) (irrW : IsFinIrreducible W) (n : Not (∃ (f : InterwiningMap V W) (IsEquiv f)))
   : pairing cardInv (character V) (character W) = 0
@@ -74,8 +74,8 @@
   => \have bb => iso-basis {R} {ArrayFinModule {R} a} {ArrayFinModule {R} b} (\new ModuleIso f g gf fg) ArrayFinModule.basis
      \in inv (FinModule.dimension-unique {R} {ArrayFinModule {R} b} bb) *> FinModule.dimension-unique {R} {ArrayFinModule {R} b} ArrayFinModule.basis
 
--- | Fulton--Harris Thm. 2.12, self-pairing: if every intertwiner of an irreducible {V} is a scalar, then $\langle \chi_V, \chi_V \rangle = 1$.
---   Conditional on Exercise 1.2 through {invariant-interwining}.
+{- | Fulton--Harris Thm. 2.12, self-pairing: if every intertwiner of an irreducible {V} is a scalar, then $\langle \chi_V, \chi_V \rangle = 1$.
+    Conditional on Exercise 1.2 through {invariant-interwining}. -}
 \lemma orthogonality-self {K : DiscreteField} {G : FinGroup} (cardInv : Monoid.Inv (K.natCoef G.card)) (V : FinLinRepres K G)
   (irrV : IsFinIrreducible V) (comm : \Pi (h : InterwiningMap V V) -> ∃ (c : K) (\Pi (e : V) -> h e = c *c e))
   : pairing cardInv (character V) (character V) = 1

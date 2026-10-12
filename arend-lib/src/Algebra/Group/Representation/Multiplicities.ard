@@ -75,8 +75,8 @@
   | x :: a => pmap (pairing cardInv __ (character (V j))) {character (SumFin (V x) (DSum.{u} V a))} {\lam g => character (V x) g + character (DSum.{u} V a) g} (ext (character_sum (V x) (DSum.{u} V a))) *>
               pairing-+ cardInv (character (V x)) (character (DSum.{u} V a)) (character (V j)) *> pmap2 (+) (delta-case cardInv V irr comm noniso x j) (count-pairing cardInv V irr comm noniso a j) *> inv K.natCoef_+
 
--- | Fulton--Harris Prop. 1.8, constructive variant: multiplicities of pairwise non-isomorphic split irreducibles in a direct sum are determined by the isomorphism class.
---   Restricted to characteristic $0$ (injectivity of {natCoef}) and conditional on Exercise 1.2.
+{- | Fulton--Harris Prop. 1.8, constructive variant: multiplicities of pairwise non-isomorphic split irreducibles in a direct sum are determined by the isomorphism class.
+    Restricted to characteristic $0$ (injectivity of {natCoef}) and conditional on Exercise 1.2. -}
 \lemma multiplicities.{u} {K : DiscreteField.{u}} {G : FinGroup} (cardInv : Monoid.Inv (K.natCoef G.card)) {r : Nat} (V : Fin r -> FinLinRepres.{u} K G)
   (irr : \Pi (i : Fin r) -> IsFinIrreducible (V i))
   (comm : \Pi (i : Fin r) (h : InterwiningMap (V i) (V i)) -> ∃ (c : K) (\Pi (e : V i) -> h e = c *c e))

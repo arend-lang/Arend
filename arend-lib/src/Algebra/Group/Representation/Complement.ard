@@ -32,8 +32,8 @@
   : splitProjector cardInv S (e - splitProjector cardInv S e) = 0
   => (splitProjector cardInv S).func-minus *> pmap (_ - __) (splitProjector-idem cardInv S e) *> E.negative-right
 
--- | Fulton--Harris Prop. 1.5, constructive variant: over a Smith domain, a split invariant subspace of a representation with a basis has an invariant complement $C$,
---   and $E \cong S \oplus C$ as representations. The complement is the kernel of the averaged projection.
+{- | Fulton--Harris Prop. 1.5, constructive variant: over a Smith domain, a split invariant subspace of a representation with a basis has an invariant complement $C$,
+    and $E \cong S \oplus C$ as representations. The complement is the kernel of the averaged projection. -}
 \lemma maschke-complement {K : SmithDomain} {G : FinGroup} (cardInv : Monoid.Inv (K.natCoef G.card)) {E : LinRepres K G}
   {lv : Array E} (bv : E.IsBasis lv) (S : SplitSubLRepres E)
   : ∃ (C : SplitSubLRepres E)

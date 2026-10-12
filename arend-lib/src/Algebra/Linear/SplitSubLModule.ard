@@ -23,8 +23,8 @@
 \import Paths.Meta
 \import Set.Fin
 
--- | A finite free direct summand of {U} given by an inclusion of $R^{dim}$ with a linear retraction,
---   whose image consists exactly of the elements satisfying {P}.
+{- | A finite free direct summand of {U} given by an inclusion of $R^{dim}$ with a linear retraction,
+    whose image consists exactly of the elements satisfying {P}. -}
 \record SplitSubLModule {R : Ring} (U : LModule R) (P : U -> \Prop)
   | dim : Nat
   | incl : LinearMap (ArrayFinModule {R} dim) U
@@ -52,8 +52,8 @@
   => U.basis-split-unique lb (\lam j => r * U.basis-split lb x j)
       (pmap (r *c) (U.basis-split-char {_} {lb}) *> U.*c_BigSum-ldistr *> pmap U.BigSum (exts \lam j => inv U.*c-assoc)) j
 
--- | The span of an injectively indexed subfamily of a basis is a split submodule.
---   {P} must contain the span ({inSpan}) and its elements must have no coordinates outside the subfamily ({coefOut}).
+{- | The span of an injectively indexed subfamily of a basis is a split submodule.
+    {P} must contain the span ({inSpan}) and its elements must have no coordinates outside the subfamily ({coefOut}). -}
 \func selectSplit {R : Ring} {U : LModule R} {l : Array U} (lb : U.IsBasis l) {k : Nat} (idx : Array (Fin l.len) k) (inj : IsInj idx)
   (P : U -> \Prop) (inSpan : \Pi (x : Array R k) -> P (U.BigSum (\lam i => x i *c l (idx i))))
   (coefOut : \Pi {u : U} -> P u -> \Pi (j : Fin l.len) -> (\Pi (i : Fin k) -> idx i /= j) -> U.basis-split lb u j = 0)
@@ -125,8 +125,8 @@
                (R.nonZero-right (\lam dj=0 => NatSemiring.<-irreflexive (j<r <∘l transport (\lam (z : Fin lu'.len) => r <= z) jr=j ((d0 _).1 dj=0))) cd=0)
   }
 
--- | Over a discrete field the image of a linear map between based modules is a split submodule.
---   Over a general Smith domain this fails: the image $2\mathbb{Z}$ of multiplication by $2$ has a basis but no retraction from $\mathbb{Z}$.
+{- | Over a discrete field the image of a linear map between based modules is a split submodule.
+    Over a general Smith domain this fails: the image $2\mathbb{Z}$ of multiplication by $2$ has a basis but no retraction from $\mathbb{Z}$. -}
 \lemma image-split {K : DiscreteField} {U V : LModule K} {lu : Array U} (bu : U.IsBasis lu) {lv : Array V} (bv : V.IsBasis lv) (f : LinearMap U V)
   : TruncP (SplitSubLModule V (\lam v => ∃ (u : U) (f u = v)))
   => \case smith-bases bu bv f \with {
@@ -161,8 +161,8 @@
 \lemma inv-left_inv-right {M : Monoid} {a b : M} (p : a * b = 1) (I : Monoid.Inv b) : b * a = 1
   => pmap (b *) (inv ide-right *> pmap (a *) (inv I.inv-right) *> inv *-assoc *> pmap (`* I.inv) p *> ide-left) *> I.inv-right
 
--- | Over a commutative ring, a split inclusion of $R^n$ into a module isomorphic to $R^m$ with $n = m$ is surjective.
---   The matrices $M$ of $s \circ i$ and $N$ of $r \circ j$ satisfy $MN = 1$, hence $NM = 1$.
+{- | Over a commutative ring, a split inclusion of $R^n$ into a module isomorphic to $R^m$ with $n = m$ is surjective.
+    The matrices $M$ of $s \circ i$ and $N$ of $r \circ j$ satisfy $MN = 1$, hence $NM = 1$. -}
 \lemma split-full-surj {R : CRing} {E : LModule R} {n m : Nat}
   {i : LinearMap (ArrayFinModule {R} n) E} {r : LinearMap E (ArrayFinModule {R} n)} (ri : \Pi (x : Array R n) -> r (i x) = x)
   {j : LinearMap (ArrayFinModule {R} m) E} {s : LinearMap E (ArrayFinModule {R} m)} (js : \Pi (e : E) -> j (s e) = e)

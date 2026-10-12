@@ -1132,8 +1132,14 @@ on either hole.
     \code{-fu --json}, matches the manifest statuses;
     \item a negative control: the classical fixture is flagged;
     \item a negative control: a temporary module with an invalid proof is
-    rejected.
+    rejected;
+    \item doc comments are well formed: multi-line docs use
+    \code{{- | ... -}}, not a \code{-- |} line followed by \code{--}
+    continuation lines, which would fall outside the documentation. Block docs
+    must not contain \code{{-} or \code{-}}.
   \end{enumerate}
+  Check~1 queries the symbol index rather than the file text, so a definition
+  swallowed by a stray comment delimiter is caught.
   \item A third control, inside the test suite, uses \code{fails}.
   \item Run on 12 October: \code{ACCEPTED}. A mutation of the manifest
   (marking P12 as \code{checked}) is rejected.

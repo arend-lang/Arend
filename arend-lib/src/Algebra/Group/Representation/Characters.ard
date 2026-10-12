@@ -39,8 +39,8 @@
   : E.toLinearMap (g * h) = E.toLinearMap g LinearMap.∘ E.toLinearMap h
   => exts \lam _ => E.**-assoc
 
--- | Matrices of the action reverse products, since {LinearMap.toMatrix} uses the row convention.
---   So $g \mapsto$ (matrix of $g$) is an antihomomorphism.
+{- | Matrices of the action reverse products, since {LinearMap.toMatrix} uses the row convention.
+    So $g \mapsto$ (matrix of $g$) is an antihomomorphism. -}
 \lemma toMatrix-action_* {R : Ring} {G : Group} {E : LinRepres R G} {lv : Array E} (bv : E.IsBasis lv) {g h : G}
   : LinearMap.toMatrix lv bv (E.toLinearMap (g * h)) = LinearMap.toMatrix lv bv (E.toLinearMap h) MatrixRing.product LinearMap.toMatrix lv bv (E.toLinearMap g)
   => pmap (LinearMap.toMatrix lv bv) toLinearMap_* *> LinearMap.toMatrix_* (E.toLinearMap h) (E.toLinearMap g) lv bv bv

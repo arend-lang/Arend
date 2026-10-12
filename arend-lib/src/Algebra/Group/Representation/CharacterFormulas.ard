@@ -78,8 +78,8 @@
 \func FixedPointsFin {G : Group} (X : GSet G) (XF : FinSet X) (g : G) : FinSet (\Sigma (x : X) (g ** x = x))
   => SigmaFin XF (\lam x => DecFin (XF.decideEq (g ** x) x))
 
--- | Fulton--Harris Exercise 2.5 (the original fixed-point formula): the permutation character counts fixed points.
---   Intentional exercise hole; see the pilot plan, Section 2.
+{- | Fulton--Harris Exercise 2.5 (the original fixed-point formula): the permutation character counts fixed points.
+    Intentional exercise hole; see the pilot plan, Section 2. -}
 \lemma permCharacter {R : CRing} {G : Group} (X : GSet G) (XF : FinSet X) (g : G)
   : character (PermFin {R} X XF) g = R.natCoef (FixedPointsFin X XF g).card
   => {?FH_L02_Ex2_5}

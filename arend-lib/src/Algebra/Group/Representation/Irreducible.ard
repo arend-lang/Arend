@@ -23,9 +23,9 @@
 \import Paths
 \import Set
 
--- | Irreducibility tested against every predicate subrepresentation.
---   This is classical-strength: for the trivial representation on a nonzero ring it implies excluded middle,
---   since $\{x \mid P \lor x = 0\}$ is a subrepresentation for every proposition $P$. Do not use it as the default notion.
+{- | Irreducibility tested against every predicate subrepresentation.
+    This is classical-strength: for the trivial representation on a nonzero ring it implies excluded middle,
+    since $\{x \mid P \lor x = 0\}$ is a subrepresentation for every proposition $P$. Do not use it as the default notion. -}
 \func IsStronglyIrreducible {R : Ring} {G : Group} (E : LinRepres R G) : \Prop
   => \Pi (A : SubLRepres R G E) -> A.IsTrivial
   \where {
@@ -68,8 +68,8 @@
     }
   }
 
--- | Irreducibility of a finite free representation of positive rank, tested against split invariant subspaces ({SplitSubLRepres}).
---   This is the working notion for finite-dimensional representations; it is not a replacement for arbitrary modules.
+{- | Irreducibility of a finite free representation of positive rank, tested against split invariant subspaces ({SplitSubLRepres}).
+    This is the working notion for finite-dimensional representations; it is not a replacement for arbitrary modules. -}
 \func IsFinIrreducible {R : NonZeroRing} {G : Group} (E : LinRepres R G) : \Prop
   => \Sigma (∃ (l : Array E) (0 < l.len) (E.IsBasis l))
             (\Pi (S : SplitSubLRepres E) -> (S.dim = 0) || IsSurj S.incl)
@@ -105,8 +105,8 @@
   | 0 => absurd (n idp)
   | suc d => linarith
 
--- | A representation that is free of rank one is irreducible, over every nonzero commutative ring.
---   No averaging is involved, so $|G|$ need not be invertible.
+{- | A representation that is free of rank one is irreducible, over every nonzero commutative ring.
+    No averaging is involved, so $|G|$ need not be invertible. -}
 \lemma rank-one-irreducible {R : NonZeroCRing} {G : Group} {E : LinRepres R G} {l : Array E} (len=1 : l.len = 1) (lb : E.IsBasis l)
   : IsFinIrreducible E
   => (inP (l, transportInv (0 <) len=1 NatOrder.zero<suc, lb), \lam S => \case decideEq S.dim 0 \with {

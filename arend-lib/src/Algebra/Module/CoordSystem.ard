@@ -20,8 +20,8 @@
 \import Set.Fin
 \import Set.Fin.Instances
 
--- | A finite family {vec} with linear coordinate functionals {coord}, indexed by any finite set.
---   It is a basis, but it need not be indexed by an array, which makes product and pair indexings direct.
+{- | A finite family {vec} with linear coordinate functionals {coord}, indexed by any finite set.
+    It is a basis, but it need not be indexed by an array, which makes product and pair indexings direct. -}
 \record CoordSystem {R : Ring} (U : LModule R)
   | J : FinSet
   | vec : J -> U

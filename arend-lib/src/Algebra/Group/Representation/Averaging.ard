@@ -52,8 +52,8 @@
   | 0 => idp
   | suc n => absurd (R.zro/=ide (inv (pmap (\lam (z : Array R (suc n)) => z 0) (p (\lam _ => R.ide)))))
 
--- | A finite free representation of positive rank whose intertwiners are all scalar is irreducible,
---   over a commutative local ring in which $|G|$ is invertible. No zero test is used.
+{- | A finite free representation of positive rank whose intertwiners are all scalar is irreducible,
+    over a commutative local ring in which $|G|$ is invertible. No zero test is used. -}
 \lemma irreducible-from-commutant {R : LocalCRing} {G : FinGroup} (cardInv : Monoid.Inv (R.natCoef G.card)) {E : LinRepres R G}
   {l : Array E} (l>0 : 0 < l.len) (lb : E.IsBasis l)
   (comm : \Pi (h : InterwiningMap E E) -> ∃ (c : R) (\Pi (e : E) -> h e = c *c e))

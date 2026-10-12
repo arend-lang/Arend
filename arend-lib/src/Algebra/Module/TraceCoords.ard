@@ -30,8 +30,8 @@
       | ret_f _ => idp
       | f_sec _ => idp
 
--- | The trace of an endomorphism can be computed from any finite expansion $u = \sum_{j} d_j(u)\, g_j$ with linear $d_j$:
---   it equals $\sum_j d_j(T g_j)$. The family $g$ need not be indexed by an array.
+{- | The trace of an endomorphism can be computed from any finite expansion $u = \sum_{j} d_j(u)\, g_j$ with linear $d_j$:
+    it equals $\sum_j d_j(T g_j)$. The family $g$ need not be indexed by an array. -}
 \lemma Trace-coords {R : CRing} {U : LModule R} {J : FinSet} (g : J -> U) (d : J -> LinearMap U (RingLModule R))
   (dg : \Pi (u : U) -> u = U.FinSum (\lam j => d j u *c g j))
   {l : Array U} (lb : U.IsBasis l) (T : LinearMap U U)

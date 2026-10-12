@@ -98,8 +98,8 @@
   | 0 => f 0
   | 1 => negative (f 2)
 
--- | The standard representation as the split invariant subspace $\{f \mid f_0 + f_1 + f_2 = 0\}$ of {Perm3},
---   with basis $e_0 - e_1$, $e_1 - e_2$ and retraction $f \mapsto (f_0, -f_2)$.
+{- | The standard representation as the split invariant subspace $\{f \mid f_0 + f_1 + f_2 = 0\}$ of {Perm3},
+    with basis $e_0 - e_1$, $e_1 - e_2$ and retraction $f \mapsto (f_0, -f_2)$. -}
 \func stdSplit (R : CRing) : SplitSubLModule (Perm3 R) (\lam f => AbMonoid.FinSum {R} {FinFin 3} f = 0) \cowith
   | dim => 2
   | incl => \new LinearMap {
@@ -153,8 +153,8 @@
 
 \func e1 {R : CRing} : Array R 2 => R.zro :: R.ide :: nil
 
--- | Fulton--Harris Schur's lemma 1.7(2) for $S_3$: every intertwiner of the standard representation is a scalar. The proof uses only cancellation,
---   so it holds over every commutative ring.
+{- | Fulton--Harris Schur's lemma 1.7(2) for $S_3$: every intertwiner of the standard representation is a scalar. The proof uses only cancellation,
+    so it holds over every commutative ring. -}
 \lemma std-commutant {R : CRing} (phi : InterwiningMap (StdRep R) (StdRep R)) : ∃ (c : R) (\Pi (x : Array R 2) -> phi x = c *c x)
   => \let | S => StdRep R
           | a => phi e0 0
@@ -204,8 +204,8 @@
   | func-*c => idp
   | func-** => idp
 
--- | The permutation representation of $S_3$ is the direct sum of the trivial and the standard representations,
---   over every commutative ring in which $3$ is invertible.
+{- | The permutation representation of $S_3$ is the direct sum of the trivial and the standard representations,
+    over every commutative ring in which $3$ is invertible. -}
 \func perm-decomp-from (R : CRing) : InterwiningMap (ProductLRepres (TrivialAction (RingLModule R) S3) (StdRep R)) (Perm3 R)
   => ProductLRepres.coprod-map {R} {S3} {TrivialAction (RingLModule R) S3} {StdRep R} {Perm3 R} (lineIncl R) (SplitSubLRepres.inclInterwining (stdSub R))
 
