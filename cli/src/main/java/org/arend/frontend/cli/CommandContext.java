@@ -89,15 +89,16 @@ public class CommandContext {
   private int myLastProgressLength;
 
   /**
-   * Overwrites the single stderr line that says which module is being typechecked. A cold run
+   * Overwrites the single stderr line that says which module is being typechecked (or
+   * double-checked; {@code action} names the phase). A cold run
    * over a library the size of arend-lib is two minutes of silence without it, with no way to
    * tell a slow module from a hang.
    *
    * <p>It is a partial line, so anything else that writes has to call {@link #finishProgressLine}
    * first or land in the middle of it. Both error reporters here do; so must every banner.
    */
-  public void reportModuleProgress(int checked, int total, ModulePath modulePath) {
-    String line = "[" + (checked + 1) + "/" + total + "] Typechecking " + modulePath;
+  public void reportModuleProgress(String action, int checked, int total, ModulePath modulePath) {
+    String line = "[" + (checked + 1) + "/" + total + "] " + action + " " + modulePath;
     StringBuilder sb = new StringBuilder().append('\r').append(line);
     int pad = myLastProgressLength - line.length();
     if (pad > 0) {

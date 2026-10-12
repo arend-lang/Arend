@@ -141,7 +141,7 @@ public final class TypecheckPipeline {
         int totalModules = modulesToTypecheck.size();
         int checkedModules = 0;
         for (ModulePath modulePath : modulesToTypecheck) {
-          ctx.reportModuleProgress(checkedModules, totalModules, modulePath);
+          ctx.reportModuleProgress("Typechecking", checkedModules, totalModules, modulePath);
           ModuleLocation module = new ModuleLocation(library.getLibraryName(), ModuleLocation.LocationKind.SOURCE, modulePath);
           ctx.server.getCheckerFor(Collections.singletonList(module)).typecheck(ctx.cancellation, progressReporter);
           reportStoredDiagnostics(ctx, module, reported);
@@ -201,16 +201,23 @@ public final class TypecheckPipeline {
           time = System.currentTimeMillis();
 
           try {
-            CoreModuleChecker checker = new CoreModuleChecker(ctx::reportAndPrint);
+            List<ModuleLocation> modulesToCheck = new ArrayList<>();
             for (ModuleLocation module : ctx.server.getModules()) {
               if (module.getLocationKind() == ModuleLocation.LocationKind.SOURCE && module.getLibraryName().equals(library.getLibraryName())) {
-                ConcreteGroup group = ctx.server.getRawGroup(module);
-                if (group != null) {
-                  checker.checkGroup(group);
-                }
+                modulesToCheck.add(module);
+              }
+            }
+            CoreModuleChecker checker = new CoreModuleChecker(ctx::reportAndPrint);
+            for (int i = 0; i < modulesToCheck.size(); i++) {
+              ModuleLocation module = modulesToCheck.get(i);
+              ctx.reportModuleProgress("Checking", i, modulesToCheck.size(), module.getModulePath());
+              ConcreteGroup group = ctx.server.getRawGroup(module);
+              if (group != null) {
+                checker.checkGroup(group);
               }
             }
           } finally {
+            ctx.finishProgressLine();
             time = System.currentTimeMillis() - time;
             System.out.println("--- Done (" + TimedProgressReporter.timeToString(time) + ") ---");
           }
@@ -297,7 +304,7 @@ public final class TypecheckPipeline {
         int totalTestModules = testModulesToTypecheck.size();
         int checkedTestModules = 0;
         for (ModulePath modulePath : testModulesToTypecheck) {
-          ctx.reportModuleProgress(checkedTestModules, totalTestModules, modulePath);
+          ctx.reportModuleProgress("Typechecking", checkedTestModules, totalTestModules, modulePath);
           ctx.server.getCheckerFor(Collections.singletonList(new ModuleLocation(library.getLibraryName(), ModuleLocation.LocationKind.TEST, modulePath))).typecheck(ctx.cancellation, progressReporter);
           checkedTestModules++;
         }
@@ -333,16 +340,23 @@ public final class TypecheckPipeline {
           time = System.currentTimeMillis();
 
           try {
-            CoreModuleChecker checker = new CoreModuleChecker(ctx::reportAndPrint);
+            List<ModuleLocation> modulesToCheck = new ArrayList<>();
             for (ModuleLocation module : ctx.server.getModules()) {
               if (module.getLocationKind() == ModuleLocation.LocationKind.TEST && module.getLibraryName().equals(library.getLibraryName())) {
-                ConcreteGroup group = ctx.server.getRawGroup(module);
-                if (group != null) {
-                  checker.checkGroup(group);
-                }
+                modulesToCheck.add(module);
+              }
+            }
+            CoreModuleChecker checker = new CoreModuleChecker(ctx::reportAndPrint);
+            for (int i = 0; i < modulesToCheck.size(); i++) {
+              ModuleLocation module = modulesToCheck.get(i);
+              ctx.reportModuleProgress("Checking", i, modulesToCheck.size(), module.getModulePath());
+              ConcreteGroup group = ctx.server.getRawGroup(module);
+              if (group != null) {
+                checker.checkGroup(group);
               }
             }
           } finally {
+            ctx.finishProgressLine();
             time = System.currentTimeMillis() - time;
             System.out.println("--- Done (" + TimedProgressReporter.timeToString(time) + ") ---");
           }
