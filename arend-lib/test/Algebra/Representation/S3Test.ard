@@ -1,0 +1,51 @@
+\import Algebra.Group.Representation.CharacterFormulas
+\import Algebra.Group.Representation.Characters
+\import Algebra.Group.Representation.InterwiningMap
+\import Algebra.Group.Representation.Irreducible
+\import Algebra.Group.Representation.Orthogonality (pairing)
+\import Algebra.Group.Representation.Symmetric3
+\import Algebra.Group.Representation.Symmetric3Characters
+\import Algebra.Module
+\import Arith.Complex
+\import Arith.Complex.RatHom
+\import Arith.Rat
+\import Data.Array
+\import Logic
+\import Logic.Meta
+\import Paths
+
+-- R3 over the rationals (it uses the scalar commutant R7).
+\lemma std-irreducible-Q : IsFinIrreducible (StdRep RatField)
+  => std-irreducible (natCoef-Inv-Rat 5)
+
+
+-- R8a: the same statements over constructive complex numbers. The only inverse used is the image of $1/6$; no zero test.
+\lemma std-irreducible-C : IsFinIrreducible (StdRep ComplexField)
+  => std-irreducible (natCoef-Inv-Complex 5)
+
+
+-- R4 over both fields: the permutation representation splits as trivial plus standard.
+\func perm-decomp-Q (f : Fin 3 -> Rat) : perm-decomp-from RatField (perm-decomp-to (natCoef-Inv-Rat 2) f) = f
+  => perm-decomp-from-to (natCoef-Inv-Rat 2) f
+
+\func perm-decomp-C (f : Fin 3 -> Complex) : perm-decomp-from ComplexField (perm-decomp-to (natCoef-Inv-Complex 2) f) = f
+  => perm-decomp-from-to (natCoef-Inv-Complex 2) f
+
+-- R5 and R6 over the rationals, and R8b over constructive complex numbers (the only inverse used is the image of $1/6$).
+\lemma std-char-tau-C : character (StdFin ComplexField) t1 = ComplexField.negative ComplexField.ide
+  => std-char-tau
+
+\lemma sign-char-sigma-C : character (SignFin ComplexField) s1 = ComplexField.negative ComplexField.ide
+  => sign-char-sigma
+
+\lemma pairing-std-std-Q : pairing (natCoef-Inv-Rat 5) (character (StdFin RatField)) (character (StdFin RatField)) = 1
+  => pairing-std-std (natCoef-Inv-Rat 5)
+
+\lemma pairing-std-std-C : pairing (natCoef-Inv-Complex 5) (character (StdFin ComplexField)) (character (StdFin ComplexField)) = ComplexField.ide
+  => pairing-std-std (natCoef-Inv-Complex 5)
+
+\lemma pairing-sign-std-C : pairing (natCoef-Inv-Complex 5) (character (SignFin ComplexField)) (character (StdFin ComplexField)) = ComplexField.zro
+  => pairing-sign-std (natCoef-Inv-Complex 5)
+
+\lemma pairing-triv-sign-C : pairing (natCoef-Inv-Complex 5) (character (TrivialFin ComplexField S3)) (character (SignFin ComplexField)) = ComplexField.zro
+  => pairing-triv-sign (natCoef-Inv-Complex 5)

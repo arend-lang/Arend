@@ -2,6 +2,7 @@
 \import Algebra.Group.GSet
 \import Algebra.Group.Representation.Irreducible
 \import Algebra.Group.Representation
+\import Algebra.Group.Representation.SplitSubLRepres
 \import Algebra.Group.Representation.SubLRepres
 \import Algebra.Module
 \import Algebra.Module.LinearMap
@@ -9,6 +10,7 @@
 \import Algebra.Monoid
 \import Algebra.Pointed
 \import Algebra.Ring
+\import Arith.Nat
 \import Category.Functor
 \import Function.Meta
 \import Logic
@@ -63,7 +65,44 @@
         | no _, no q, x => absurd (q idp)
       }
 
-  \lemma Not-Irreducible (p : IsIrreducible {R} (PermRepr X)) : 0 = {R} 1
+  \lemma Not-Irreducible (p : IsStronglyIrreducible {R} (PermRepr X)) : 0 = {R} 1
     => SubRepr-non-trivial (p invSubRepr)
 }
 
+
+-- | The constant line in a permutation representation is a split invariant subspace of dimension 1, for every {GSet}.
+\func constLine {R : Ring} {G : Group} (X : GSet G) (x0 : X) : SplitSubLRepres (PermRepr {R} X) \cowith
+  | dim => 1
+  | incl => \new LinearMap {
+    | func c => \lam _ => c 0
+    | func-+ => idp
+    | func-*c => idp
+  }
+  | retr => \new LinearMap {
+    | func f => f x0 :: nil
+    | func-+ => exts \lam i => \case \elim i \with { | 0 => idp }
+    | func-*c => exts \lam i => \case \elim i \with { | 0 => idp }
+  }
+  | retr_incl c => exts \lam i => \case \elim i \with { | 0 => idp }
+  | incl-invariant _ _ => idp
+
+-- | Migration of {PermutationRepresReducible.Not-Irreducible} to {IsFinIrreducible}, with the same hypotheses on {X}.
+\lemma PermRepr-not-FinIrreducible {R : NonZeroRing} {G : Group} (X : GSet G) (somepoint somepoint' : X)
+  (different-points : somepoint' /= somepoint) (decideEq-somepoint : \Pi (x : X) -> Dec (x = somepoint))
+  (p : IsFinIrreducible (PermRepr {R} X)) : Empty
+  => \let | P => \new PermutationRepresReducible {R} {G} X somepoint somepoint' different-points decideEq-somepoint
+          | S => constLine {R} X somepoint
+     \in \case p.2 S \with {
+       | byLeft d=0 => suc/=0 d=0
+       | byRight s => \case s P.nonConstantVector \with {
+         | inP (c, q) =>
+           \have const : P.nonConstantVector somepoint' = P.nonConstantVector somepoint
+                 => inv (path (\lam i => (q @ i) somepoint')) *> path (\lam i => (q @ i) somepoint)
+           \in cases (P.decideEq-somepoint somepoint', P.decideEq-somepoint somepoint, unfold P.nonConstantVector in const) \with {
+             | yes e, yes _, _ => different-points e
+             | yes _, no n, _ => n idp
+             | no _, yes _, r => R.zro/=ide r
+             | no _, no n, _ => n idp
+           }
+       }
+     }

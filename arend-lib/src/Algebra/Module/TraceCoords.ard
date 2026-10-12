@@ -1,0 +1,79 @@
+\import Algebra.Linear.SplitSubLModule (basis-split_+, basis-split_*c)
+\import Algebra.Module
+\import Algebra.Module.FinModule
+\import Algebra.Module.LinearMap
+\import Algebra.Module.Trace
+\import Algebra.Monoid
+\import Algebra.Monoid.MonoidHom
+\import Algebra.Ring
+\import Equiv
+\import Logic
+\import Logic.Meta
+\import Paths
+\import Paths.Meta
+\import Set.Fin
+\import Set.Fin.Instances
+
+-- | The $k$-th coordinate with respect to a basis, as a linear functional.
+\func coordFun {R : Ring} {U : LModule R} {l : Array U} (lb : U.IsBasis l) (k : Fin l.len) : LinearMap U (RingLModule R) \cowith
+  | func u => U.basis-split lb u k
+  | func-+ => basis-split_+ lb k
+  | func-*c => basis-split_*c lb k
+
+\lemma FinSum-swap {E : AbMonoid} {A B : FinSet} {x : A -> B -> E}
+  : E.FinSum (\lam a => E.FinSum (\lam b => x a b)) = E.FinSum (\lam b => E.FinSum (\lam a => x a b))
+  => E.FinSum-double *> E.FinSum_Equiv {ProdFin B A} {ProdFin A B} swap *> inv E.FinSum-double
+  \where
+    \func swap : QEquiv {\Sigma B A} {\Sigma A B} \cowith
+      | f p => (p.2, p.1)
+      | ret p => (p.2, p.1)
+      | ret_f _ => idp
+      | f_sec _ => idp
+
+-- | The trace of an endomorphism can be computed from any finite expansion $u = \sum_{j} d_j(u)\, g_j$ with linear $d_j$:
+--   it equals $\sum_j d_j(T g_j)$. The family $g$ need not be indexed by an array.
+\lemma Trace-coords {R : CRing} {U : LModule R} {J : FinSet} (g : J -> U) (d : J -> LinearMap U (RingLModule R))
+  (dg : \Pi (u : U) -> u = U.FinSum (\lam j => d j u *c g j))
+  {l : Array U} (lb : U.IsBasis l) (T : LinearMap U U)
+  : Trace (LinearMap.toMatrix l lb T) = R.FinSum (\lam j => d j (T (g j)))
+  => \let c => coordFun lb
+     \in (idp : Trace (LinearMap.toMatrix l lb T) = R.BigSum (\lam k => c k (T (l k)))) *>
+         R.BigSum-ext {l.len} {\lam k => c k (T (l k))} {\lam k => R.FinSum (\lam j => d j (l k) * c k (T (g j)))}
+           (\lam k => pmap (\lam u => c k (T u)) (dg (l k)) *> pmap (c k) (AddMonoidHom.func-FinSum T) *>
+                      AddMonoidHom.func-FinSum (c k) *> R.FinSum-ext (\lam j => pmap (c k) T.func-*c *> (c k).func-*c)) *>
+         inv (AbMonoid.FinSum=BigSum {R} {l.len} {\lam k => R.FinSum (\lam j => d j (l k) * c k (T (g j)))}) *>
+         FinSum-swap {R} {FinFin l.len} {J} {\lam k j => d j (l k) * c k (T (g j))} *>
+         R.FinSum-ext (\lam j => AbMonoid.FinSum=BigSum {R} {l.len} {\lam k => d j (l k) * c k (T (g j))} *>
+                                 R.BigSum-ext {l.len} {\lam k => d j (l k) * c k (T (g j))} {\lam k => c k (T (g j)) * d j (l k)} (\lam k => R.*-comm) *>
+                                 inv ((d j).linearComb {\lam (k : Fin l.len) => c k (T (g j))} {\lam k => l k}) *> pmap (d j) (inv (U.basis-split-char {_} {lb})))
+
+-- | The trace of the matrix of an endomorphism does not depend on the basis.
+\lemma Trace-basis-indep {R : CRing} {U : LModule R} {l l' : Array U} (lb : U.IsBasis l) (lb' : U.IsBasis l') (T : LinearMap U U)
+  : Trace (LinearMap.toMatrix l lb T) = Trace (LinearMap.toMatrix l' lb' T)
+  => Trace-coords {R} {U} {FinFin l'.len} l' (coordFun lb') (\lam u => U.basis-split-char {_} {lb'} *> inv (AbMonoid.FinSum=BigSum {U})) lb T *>
+     AbMonoid.FinSum=BigSum {R}
+
+\lemma endoTrace-pair {R : CRing} {U : FinModule R} (T : LinearMap U U) : \Sigma (t : R) (∃ (l : Array U) (lb : U.IsBasis l) (t = Trace (LinearMap.toMatrix l lb T)))
+  \level \lam s t => ext \case s.2, t.2 \with {
+    | inP (l, lb, p), inP (l', lb', q) => p *> Trace-basis-indep lb lb' T *> inv q
+  } => \case U.isFinModule \with {
+    | inP (l, lb) => (Trace (LinearMap.toMatrix l lb T), inP (l, lb, idp))
+  }
+
+-- | The trace of an endomorphism of a finite free module.
+\func endoTrace {R : CRing} {U : FinModule R} (T : LinearMap U U) : R
+  => (endoTrace-pair T).1
+
+\lemma endoTrace-char {R : CRing} {U : FinModule R} {T : LinearMap U U} {l : Array U} (lb : U.IsBasis l)
+  : endoTrace T = Trace (LinearMap.toMatrix l lb T)
+  => \case (endoTrace-pair T).2 \with {
+    | inP (l', lb', p) => p *> Trace-basis-indep lb' lb T
+  }
+
+-- | The trace computed from a finite expansion, for a finite free module.
+\lemma endoTrace-coords {R : CRing} {U : FinModule R} {J : FinSet} (g : J -> U) (d : J -> LinearMap U (RingLModule R))
+  (dg : \Pi (u : U) -> u = U.FinSum (\lam j => d j u *c g j)) (T : LinearMap U U)
+  : endoTrace T = R.FinSum (\lam j => d j (T (g j)))
+  => \case U.isFinModule \with {
+    | inP (l, lb) => endoTrace-char lb *> Trace-coords g d dg lb T
+  }

@@ -1,0 +1,106 @@
+\import Algebra.Group
+\import Algebra.Group.GSet
+\import Algebra.Group.Representation
+\import Algebra.Group.Representation.CharacterFormulas
+\import Algebra.Group.Representation.Characters
+\import Algebra.Module
+\import Algebra.Module.BilinearMap
+\import Algebra.Module.CoordSystem
+\import Algebra.Module.LinearMap
+\import Algebra.Module.TensorProduct
+\import Algebra.Monoid
+\import Algebra.Monoid.MonoidHom
+\import Algebra.Pointed
+\import Algebra.Ring
+\import Logic
+\import Paths
+\import Paths.Meta
+\import Set
+\import Set.Fin.Instances
+
+\func actBilinear {R : CRing} {G : Group} {A B : LinRepres R G} (g : G) : BilinearMap A B (TensorProductModule A B) (\lam a b => tensor (g ** a) (g ** b)) \cowith
+  | linear-left {b} => \new LinearMap {
+    | func-+ => pmap (tensor __ _) A.**-ldistr *> tensor_+-left
+    | func-*c => pmap (tensor __ _) A.**_*c
+  }
+  | linear-right {a} => \new LinearMap {
+    | func-+ => pmap (tensor _) B.**-ldistr *> tensor_+-right
+    | func-*c => pmap (tensor _) B.**_*c *> tensor_*c-right
+  }
+
+\func tensorAct {R : CRing} {G : Group} {A B : LinRepres R G} (g : G) : LinearMap (TensorProductModule A B) (TensorProductModule A B)
+  => tensorLift (actBilinear {R} {G} {A} {B} g)
+
+-- | The tensor product of representations, $g(a \otimes b) = ga \otimes gb$.
+\func TensorLRepres {R : CRing} {G : Group} (A B : LinRepres R G) : LinRepres R G \cowith
+  | LModule => TensorProductModule A B
+  | ** g t => tensorAct {R} {G} {A} {B} g t
+  | **-assoc {m} {n} {t} => tensorLift-unique (tensorAct {R} {G} {A} {B} (m * n))
+      (LinearMap.compose {R} {TensorProductModule A B} {TensorProductModule A B} {TensorProductModule A B} (tensorAct {R} {G} {A} {B} m) (tensorAct {R} {G} {A} {B} n))
+      (\lam a b => tensorLift_tensor {R} {A} {B} {TensorProductModule A B} {actBilinear (m * n)} {a} {b} *> pmap2 tensor A.**-assoc B.**-assoc *>
+                   inv (pmap (tensorAct {R} {G} {A} {B} m) (tensorLift_tensor {R} {A} {B} {TensorProductModule A B} {actBilinear n} {a} {b}) *>
+                        tensorLift_tensor {R} {A} {B} {TensorProductModule A B} {actBilinear m} {n ** a} {n ** b}))
+  | **_ide {t} => tensorLift-unique (tensorAct {R} {G} {A} {B} ide) LinearMap.id
+      (\lam a b => tensorLift_tensor {R} {A} {B} {TensorProductModule A B} {actBilinear ide} {a} {b} *> pmap2 tensor A.**_ide B.**_ide)
+  | **-ldistr => (tensorAct {R} {G} {A} {B} _).func-+
+  | **_*c => (tensorAct {R} {G} {A} {B} _).func-*c
+
+\func coordBilinear {R : CRing} {A B : LModule R} (CA : CoordSystem A) (CB : CoordSystem B) (p : \Sigma CA.J CB.J)
+  : BilinearMap A B (RingLModule R) (\lam a b => CA.coord p.1 a * CB.coord p.2 b) \cowith
+  | linear-left {b} => \new LinearMap {
+    | func-+ => pmap (`* _) (CA.coord p.1).func-+ *> R.rdistr
+    | func-*c => pmap (`* _) (CA.coord p.1).func-*c *> R.*-assoc
+  }
+  | linear-right {a} => \new LinearMap {
+    | func-+ => pmap (_ *) (CB.coord p.2).func-+ *> R.ldistr
+    | func-*c => pmap (_ *) (CB.coord p.2).func-*c *> inv R.*-assoc *> pmap (`* _) R.*-comm *> R.*-assoc
+  }
+
+\func tensorTerms {R : CRing} {A B : LModule R} (CA : CoordSystem A) (CB : CoordSystem B) : LinearMap (TensorProductModule A B) (TensorProductModule A B) \cowith
+  | func t => AbMonoid.FinSum {TensorProductModule A B} {ProdFin CA.J CB.J} (\lam p => tensorLift (coordBilinear CA CB p) t *c tensor (CA.vec p.1) (CB.vec p.2))
+  | func-+ {x} {y} => AbMonoid.FinSum-ext {TensorProductModule A B} (\lam p => pmap (`*c tensor (CA.vec p.1) (CB.vec p.2)) ((tensorLift (coordBilinear CA CB p)).func-+ {x} {y}) *> LModule.*c-rdistr {TensorProductModule A B} {tensorLift (coordBilinear CA CB p) x} {tensorLift (coordBilinear CA CB p) y} {tensor (CA.vec p.1) (CB.vec p.2)}) *> AbMonoid.FinSum_+
+  | func-*c {r} {x} => AbMonoid.FinSum-ext {TensorProductModule A B} (\lam p => pmap (`*c tensor (CA.vec p.1) (CB.vec p.2)) ((tensorLift (coordBilinear CA CB p)).func-*c {r} {x}) *> LModule.*c-assoc {TensorProductModule A B} {r} {tensorLift (coordBilinear CA CB p) x} {tensor (CA.vec p.1) (CB.vec p.2)}) *> inv LModule.*c_FinSum-ldistr
+
+\lemma pure-term {R : CRing} {A B : LModule R} {v : A} {w : B} (r s : R) : tensor (r *c v) (s *c w) = (r * s) *c tensor v w
+  => tensor_*c-right *> pmap (s *c) ((tensor-linear-left {R} {A} {B} {w}).func-*c {r} {v}) *>
+     inv (LModule.*c-assoc {TensorProductModule A B} {s} {r} {tensor v w}) *> pmap (`*c tensor v w) R.*-comm
+
+\lemma tensor-expand-pure {R : CRing} {A B : LModule R} (CA : CoordSystem A) (CB : CoordSystem B) (a : A) (b : B)
+  : tensorTerms CA CB (tensor a b) = tensor a b
+  => AbMonoid.FinSum-ext {TensorProductModule A B} {ProdFin CA.J CB.J}
+       (\lam p => pmap (`*c tensor (CA.vec p.1) (CB.vec p.2)) (tensorLift_tensor {R} {A} {B} {RingLModule R} {coordBilinear CA CB p} {a} {b}) *>
+                  inv (pure-term (CA.coord p.1 a) (CB.coord p.2 b))) *>
+     inv (AbMonoid.FinSum-double {TensorProductModule A B} {CA.J} {CB.J} {\lam i j => tensor (CA.coord i a *c CA.vec i) (CB.coord j b *c CB.vec j)}) *>
+     inv (pmap2 tensor (CA.expand a) (CB.expand b) *> AddMonoidHom.func-FinSum (tensor-linear-left {R} {A} {B} {_}) *>
+          AbMonoid.FinSum-ext {TensorProductModule A B} (\lam i => AddMonoidHom.func-FinSum (tensor-linear-right {R} {A} {B} {CA.coord i a *c CA.vec i})))
+
+-- | Coordinates of $A \otimes B$ by pure tensors of basis vectors, indexed by pairs.
+\func tensorCS {R : CRing} {A B : LModule R} (CA : CoordSystem A) (CB : CoordSystem B) : CoordSystem (TensorProductModule A B) \cowith
+  | J => ProdFin CA.J CB.J
+  | vec p => tensor (CA.vec p.1) (CB.vec p.2)
+  | coord p => tensorLift (coordBilinear CA CB p)
+  | expand t => inv (tensorLift-unique (tensorTerms CA CB) LinearMap.id (tensor-expand-pure CA CB))
+  | coord-diag p => tensorLift_tensor {R} {A} {B} {RingLModule R} {coordBilinear CA CB p} {CA.vec p.1} {CB.vec p.2} *>
+                    pmap2 (*) (CA.coord-diag p.1) (CB.coord-diag p.2) *> R.ide-left
+  | coord-off {p} {p'} q => tensorLift_tensor {R} {A} {B} {RingLModule R} {coordBilinear CA CB p} {CA.vec p'.1} {CB.vec p'.2} *> (\case decideEq p'.1 p.1 \with {
+    | yes e => pmap (_ *) (CB.coord-off (\lam e' => q (ext (e, e')))) *> R.zro_*-right
+    | no n => pmap (`* _) (CA.coord-off n) *> R.zro_*-left
+  })
+
+\func TensorFin {R : CRing} {G : Group} (A B : FinLinRepres R G) : FinLinRepres R G \cowith
+  | LinRepres => TensorLRepres A B
+  | isFinRepres => \case A.isFinRepres, B.isFinRepres \with {
+    | inP (la, ba), inP (lb, bb) => CoordSystem.toBasis (tensorCS (basisCS ba) (basisCS bb))
+  }
+
+-- | Fulton--Harris Prop. 2.1: $\chi_{A \otimes B} = \chi_A \chi_B$.
+\lemma character_tensor {R : CRing} {G : Group} (A B : FinLinRepres R G) (g : G) : character (TensorFin A B) g = character A g * character B g
+  => \case A.isFinRepres, B.isFinRepres \with {
+    | inP (la, ba), inP (lb, bb) =>
+      \let | CA => basisCS ba
+           | CB => basisCS bb
+      \in character-coords (tensorCS CA CB) g *>
+          R.FinSum-ext {ProdFin CA.J CB.J} (\lam (p : \Sigma CA.J CB.J) => pmap (tensorLift (coordBilinear CA CB p)) (tensorLift_tensor {R} {A} {B} {TensorProductModule A B} {actBilinear g} {CA.vec p.1} {CB.vec p.2}) *>
+                                                        tensorLift_tensor {R} {A} {B} {RingLModule R} {coordBilinear CA CB p} {g ** CA.vec p.1} {g ** CB.vec p.2}) *>
+          inv R.FinSum-distr *> inv (pmap2 (*) (character-coords CA g) (character-coords CB g))
+  }

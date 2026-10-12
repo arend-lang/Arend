@@ -1,10 +1,17 @@
 \import Algebra.Group
 \import Algebra.Group.Representation
 \import Algebra.Linear.Matrix
+\import Algebra.Module.FinModule
 \import Algebra.Module.LinearMap
 \import Algebra.Module.Trace
+\import Algebra.Module.TraceCoords
+\import Algebra.Monoid
+\import Algebra.Pointed
 \import Algebra.Ring
+\import Logic
+\import Logic.Meta
 \import Meta
+\import Paths
 \import Paths.Meta
 
 \func Character {R : Ring}{G : Group}(E : LinRepres R G)
@@ -17,3 +24,50 @@
 
       \func Matrix-of-1 : LinearMap.toMatrix lv bv (E.toLinearMap G.ide) = MatrixRing.ide => rewrite (E.toLinearMap_ide, LinearMap.toMatrix_ide) idp
     }
+
+
+-- | A representation on a finite free module.
+\class FinLinRepres \extends LinRepres
+  | isFinRepres : ∃ (l : Array E) (IsBasis l)
+  \where
+    \func toFinModule {R : Ring} {G : Group} (E : FinLinRepres R G) : FinModule R \cowith
+      | LModule => E
+      | isFinModule => E.isFinRepres
+
+-- | The action is multiplicative.
+\lemma toLinearMap_* {R : Ring} {G : Group} {E : LinRepres R G} {g h : G}
+  : E.toLinearMap (g * h) = E.toLinearMap g LinearMap.∘ E.toLinearMap h
+  => exts \lam _ => E.**-assoc
+
+-- | Matrices of the action reverse products, since {LinearMap.toMatrix} uses the row convention.
+--   So $g \mapsto$ (matrix of $g$) is an antihomomorphism.
+\lemma toMatrix-action_* {R : Ring} {G : Group} {E : LinRepres R G} {lv : Array E} (bv : E.IsBasis lv) {g h : G}
+  : LinearMap.toMatrix lv bv (E.toLinearMap (g * h)) = LinearMap.toMatrix lv bv (E.toLinearMap h) MatrixRing.product LinearMap.toMatrix lv bv (E.toLinearMap g)
+  => pmap (LinearMap.toMatrix lv bv) toLinearMap_* *> LinearMap.toMatrix_* (E.toLinearMap h) (E.toLinearMap g) lv bv bv
+
+-- | Fulton--Harris §2.1: the character of a finite free representation, independent of any basis.
+\func character {R : CRing} {G : Group} (E : FinLinRepres R G) (g : G) : R
+  => endoTrace {R} {FinLinRepres.toFinModule E} (E.toLinearMap g)
+
+\lemma character-char {R : CRing} {G : Group} {E : FinLinRepres R G} {lv : Array E} (bv : E.IsBasis lv) (g : G)
+  : character E g = Character E bv g
+  => endoTrace-char bv
+
+-- | Characters are class functions.
+\lemma character_conj {R : CRing} {G : Group} {E : FinLinRepres R G} (g h : G) : character E (h * g * inverse h) = character E g
+  => \case E.isFinRepres \with {
+    | inP (lv, bv) =>
+      \let M (x : G) => LinearMap.toMatrix lv bv (E.toLinearMap x)
+      \in character-char bv _ *>
+          pmap Trace (toMatrix-action_* bv *> pmap (M (inverse h) MatrixRing.product) (toMatrix-action_* bv)) *>
+          Trace-prod (M (inverse h)) (M g MatrixRing.product M h) *>
+          pmap Trace (MatrixRing.product-assoc (M g) (M h) (M (inverse h)) *> pmap (M g MatrixRing.product) (inv (toMatrix-action_* bv) *> pmap M inverse-left *> Character.Matrix-of-1) *>
+                      ide-right {MatrixRing R lv.len} {M g}) *>
+          inv (character-char bv g)
+  }
+
+-- | $\chi_E(1) = \dim E$.
+\lemma character_ide {R : NonZeroCRing} {G : Group} {E : FinLinRepres R G} : character E ide = R.natCoef (FinModule.dimension (FinLinRepres.toFinModule E))
+  => \case E.isFinRepres \with {
+    | inP (lv, bv) => character-char bv ide *> Character.of-1 *> pmap R.natCoef (inv (FinModule.dimension-unique bv))
+  }

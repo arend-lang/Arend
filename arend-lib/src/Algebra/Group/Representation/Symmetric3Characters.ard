@@ -1,0 +1,241 @@
+\import Algebra.Group
+\import Algebra.Group.Representation.CharacterFormulas
+\import Algebra.Group.Representation.Characters
+\import Algebra.Group.Representation.Orthogonality (pairing)
+\import Algebra.Group.Representation.Symmetric3
+\import Algebra.Group.Symmetric
+\import Algebra.Meta
+\import Algebra.Module.CoordSystem
+\import Algebra.Monoid
+\import Algebra.Pointed
+\import Algebra.Ring
+\import Paths
+\import Arith.Nat
+\import Equiv
+\import Logic
+\import Set.Fin
+
+-- The character table of $S_3$ on the classes of $1$, $\sigma = (1\,2)$ and $\tau = (1\,2\,3)$, over any commutative ring.
+
+\func s1 : Sym 3 => Sym.fromEquiv sigma
+
+\func t1 : Sym 3 => Sym.fromEquiv tau
+
+\lemma std-char-ide {R : CRing} : character (StdFin R) ide = R.ide + R.ide
+  => character-coords (arrayCS 2) ide *> AbMonoid.FinSum=BigSum {R} *> equation
+
+\lemma std-char-sigma {R : CRing} : character (StdFin R) s1 = 0
+  => character-coords (arrayCS 2) s1 *> AbMonoid.FinSum=BigSum {R} *> equation
+
+\lemma std-char-tau {R : CRing} : character (StdFin R) t1 = negative R.ide
+  => character-coords (arrayCS 2) t1 *> AbMonoid.FinSum=BigSum {R} *> equation
+
+\lemma perm-char-ide {R : CRing} : character (Perm3Fin R) ide = R.ide + R.ide + R.ide
+  => character-coords (deltaCS (FinFin 3)) ide *> AbMonoid.FinSum=BigSum {R} *> equation
+
+\lemma perm-char-sigma {R : CRing} : character (Perm3Fin R) s1 = R.ide
+  => character-coords (deltaCS (FinFin 3)) s1 *> AbMonoid.FinSum=BigSum {R} *> equation
+
+\lemma perm-char-tau {R : CRing} : character (Perm3Fin R) t1 = 0
+  => character-coords (deltaCS (FinFin 3)) t1 *> AbMonoid.FinSum=BigSum {R} *> equation
+
+\lemma sign-char-sigma {R : CRing} : character (SignFin R) s1 = negative R.ide
+  => character-coords (ringCS R) s1 *> AbMonoid.FinSum=BigSum {R} *> equation
+
+\lemma sign-char-tau {R : CRing} : character (SignFin R) t1 = R.ide
+  => character-coords (ringCS R) t1 *> AbMonoid.FinSum=BigSum {R} *> equation
+
+\func swap12 (j : Fin 3) : Fin 3 \elim j
+  | 0 => 0
+  | 1 => 2
+  | 2 => 1
+
+\lemma swap12-inv (j : Fin 3) : swap12 (swap12 j) = j \elim j
+  | 0 => idp
+  | 1 => idp
+  | 2 => idp
+
+\func swap02 (j : Fin 3) : Fin 3 \elim j
+  | 0 => 2
+  | 1 => 1
+  | 2 => 0
+
+\lemma swap02-inv (j : Fin 3) : swap02 (swap02 j) = j \elim j
+  | 0 => idp
+  | 1 => idp
+  | 2 => idp
+
+\func swap12Q : QEquiv {Fin 3} {Fin 3} \cowith
+  | f => swap12
+  | ret => swap12
+  | ret_f => swap12-inv
+  | f_sec => swap12-inv
+
+\func swap02Q : QEquiv {Fin 3} {Fin 3} \cowith
+  | f => swap02
+  | ret => swap02
+  | ret_f => swap02-inv
+  | f_sec => swap02-inv
+
+\func cyc2Q : QEquiv {Fin 3} {Fin 3} \cowith
+  | f => cyc-inv
+  | ret => cyc
+  | ret_f => cyc_cyc-inv
+  | f_sec => cyc-inv_cyc
+
+-- | An explicit enumeration of the six elements of $S_3$.
+\func enumS3 (k : Fin 6) : Sym 3 \elim k
+  | 0 => Sym.fromEquiv idEquiv
+  | 1 => Sym.fromEquiv sigma
+  | 2 => Sym.fromEquiv swap12Q
+  | 3 => Sym.fromEquiv swap02Q
+  | 4 => Sym.fromEquiv tau
+  | 5 => Sym.fromEquiv cyc2Q
+
+\func cls (a b : Fin 3) : Fin 6 \elim a, b
+  | 0, 0 => 0
+  | 0, 1 => 0
+  | 0, 2 => 2
+  | 1, 0 => 1
+  | 1, 1 => 0
+  | 1, 2 => 4
+  | 2, 0 => 5
+  | 2, 1 => 3
+  | 2, 2 => 0
+
+\func classifyS3 (e : Sym 3) : Fin 6 => cls (e 0) (e 1)
+
+\lemma fin3/= {a b : Fin 3} (a/=b : a /= b) {e : QEquiv {Fin 3} {Fin 3}} (p : e a = e b) : Empty => a/=b (e.isInj p)
+
+\lemma n01 : (0 : Fin 3) /= 1 => \lam q => suc/=0 (inv (pmap (\lam (x : Fin 3) => (x : Nat)) q))
+
+\lemma n02 : (0 : Fin 3) /= 2 => \lam q => suc/=0 (inv (pmap (\lam (x : Fin 3) => (x : Nat)) q))
+
+\lemma n12 : (1 : Fin 3) /= 2 => \lam q => suc/=0 (inv (pmap (\lam (x : Fin 3) => (x : Nat) -' 1) q))
+
+\lemma classify-enum (k : Fin 6) : classifyS3 (enumS3 k) = k \elim k
+  | 0 => idp
+  | 1 => idp
+  | 2 => idp
+  | 3 => idp
+  | 4 => idp
+  | 5 => idp
+
+\lemma enum-cls (e : Sym 3) {a b c : Fin 3} (pa : e 0 = a) (pb : e 1 = b) (pc : e 2 = c) : enumS3 (cls a b) = e \elim a, b, c
+  | 0, 0, 0 => absurd (fin3/= n01 (pa *> inv pb))
+  | 0, 0, 1 => absurd (fin3/= n01 (pa *> inv pb))
+  | 0, 0, 2 => absurd (fin3/= n01 (pa *> inv pb))
+  | 0, 1, 0 => absurd (fin3/= n02 (pa *> inv pc))
+  | 0, 1, 1 => absurd (fin3/= n12 (pb *> inv pc))
+  | 0, 1, 2 => Sym.equals (\lam j => \case \elim j \with { | 0 => inv pa | 1 => inv pb | 2 => inv pc })
+  | 0, 2, 0 => absurd (fin3/= n02 (pa *> inv pc))
+  | 0, 2, 1 => Sym.equals (\lam j => \case \elim j \with { | 0 => inv pa | 1 => inv pb | 2 => inv pc })
+  | 0, 2, 2 => absurd (fin3/= n12 (pb *> inv pc))
+  | 1, 0, 0 => absurd (fin3/= n12 (pb *> inv pc))
+  | 1, 0, 1 => absurd (fin3/= n02 (pa *> inv pc))
+  | 1, 0, 2 => Sym.equals (\lam j => \case \elim j \with { | 0 => inv pa | 1 => inv pb | 2 => inv pc })
+  | 1, 1, 0 => absurd (fin3/= n01 (pa *> inv pb))
+  | 1, 1, 1 => absurd (fin3/= n01 (pa *> inv pb))
+  | 1, 1, 2 => absurd (fin3/= n01 (pa *> inv pb))
+  | 1, 2, 0 => Sym.equals (\lam j => \case \elim j \with { | 0 => inv pa | 1 => inv pb | 2 => inv pc })
+  | 1, 2, 1 => absurd (fin3/= n02 (pa *> inv pc))
+  | 1, 2, 2 => absurd (fin3/= n12 (pb *> inv pc))
+  | 2, 0, 0 => absurd (fin3/= n12 (pb *> inv pc))
+  | 2, 0, 1 => Sym.equals (\lam j => \case \elim j \with { | 0 => inv pa | 1 => inv pb | 2 => inv pc })
+  | 2, 0, 2 => absurd (fin3/= n02 (pa *> inv pc))
+  | 2, 1, 0 => Sym.equals (\lam j => \case \elim j \with { | 0 => inv pa | 1 => inv pb | 2 => inv pc })
+  | 2, 1, 1 => absurd (fin3/= n12 (pb *> inv pc))
+  | 2, 1, 2 => absurd (fin3/= n02 (pa *> inv pc))
+  | 2, 2, 0 => absurd (fin3/= n01 (pa *> inv pb))
+  | 2, 2, 1 => absurd (fin3/= n01 (pa *> inv pb))
+  | 2, 2, 2 => absurd (fin3/= n01 (pa *> inv pb))
+
+\lemma enum-classify (e : Sym 3) : enumS3 (classifyS3 e) = e
+  => enum-cls e idp idp idp
+
+\func enumS3-equiv : QEquiv {Fin 6} {Sym 3} \cowith
+  | f => enumS3
+  | ret => classifyS3
+  | ret_f => classify-enum
+  | f_sec => enum-classify
+
+-- | Sums over $S_3$ are sums over the six explicit elements.
+\lemma S3-sum {E : AbMonoid} (x : S3 -> E) : E.FinSum x = E.BigSum (\lam k => x (enumS3 k))
+  => E.FinSum_Equiv {FinFin 6} {S3} enumS3-equiv *> AbMonoid.FinSum=BigSum {E}
+
+
+\func invIdx (k : Fin 6) : Fin 6 \elim k
+  | 0 => 0
+  | 1 => 1
+  | 2 => 2
+  | 3 => 3
+  | 4 => 5
+  | 5 => 4
+
+\lemma enum-inv (k : Fin 6) : inverse (enumS3 k) = enumS3 (invIdx k) \elim k
+  | 0 => Sym.equals (\lam j => \case \elim j \with { | 0 => idp | 1 => idp | 2 => idp })
+  | 1 => Sym.equals (\lam j => \case \elim j \with { | 0 => idp | 1 => idp | 2 => idp })
+  | 2 => Sym.equals (\lam j => \case \elim j \with { | 0 => idp | 1 => idp | 2 => idp })
+  | 3 => Sym.equals (\lam j => \case \elim j \with { | 0 => idp | 1 => idp | 2 => idp })
+  | 4 => Sym.equals (\lam j => \case \elim j \with { | 0 => idp | 1 => idp | 2 => idp })
+  | 5 => Sym.equals (\lam j => \case \elim j \with { | 0 => idp | 1 => idp | 2 => idp })
+
+\lemma S3-pairing {R : CRing} (cardInv : Monoid.Inv (R.natCoef S3.card)) (chi psi : S3 -> R) {a b : Fin 6 -> R}
+  (ha : \Pi (k : Fin 6) -> chi (enumS3 k) = a k) (hb : \Pi (k : Fin 6) -> psi (enumS3 k) = b k)
+  : pairing cardInv chi psi = cardInv.inv * R.BigSum (\lam k => a (invIdx k) * b k)
+  => pmap (cardInv.inv *) (S3-sum _ *> R.BigSum-ext {6} {\lam k => chi (inverse (enumS3 k)) * psi (enumS3 k)} {\lam k => a (invIdx k) * b k} (\lam k => pmap2 (*) (pmap chi (enum-inv k) *> ha (invIdx k)) (hb k)))
+
+-- | Character tables on the six enumerated elements: $1$, three transpositions, two 3-cycles.
+\func stdTable {R : CRing} (k : Fin 6) : R \elim k
+  | 0 => R.ide + R.ide
+  | 1 => 0
+  | 2 => 0
+  | 3 => 0
+  | 4 => negative R.ide
+  | 5 => negative R.ide
+
+\func signTable {R : CRing} (k : Fin 6) : R \elim k
+  | 0 => R.ide
+  | 1 => negative R.ide
+  | 2 => negative R.ide
+  | 3 => negative R.ide
+  | 4 => R.ide
+  | 5 => R.ide
+
+\lemma std-val {R : CRing} (k : Fin 6) : character (StdFin R) (enumS3 k) = stdTable k \elim k
+  | 0 => character-coords (arrayCS 2) _ *> AbMonoid.FinSum=BigSum {R} *> equation
+  | 1 => character-coords (arrayCS 2) _ *> AbMonoid.FinSum=BigSum {R} *> equation
+  | 2 => character-coords (arrayCS 2) _ *> AbMonoid.FinSum=BigSum {R} *> equation
+  | 3 => character-coords (arrayCS 2) _ *> AbMonoid.FinSum=BigSum {R} *> equation
+  | 4 => character-coords (arrayCS 2) _ *> AbMonoid.FinSum=BigSum {R} *> equation
+  | 5 => character-coords (arrayCS 2) _ *> AbMonoid.FinSum=BigSum {R} *> equation
+
+\lemma sign-val {R : CRing} (k : Fin 6) : character (SignFin R) (enumS3 k) = signTable k \elim k
+  | 0 => character-coords (ringCS R) _ *> AbMonoid.FinSum=BigSum {R} *> equation
+  | 1 => character-coords (ringCS R) _ *> AbMonoid.FinSum=BigSum {R} *> equation
+  | 2 => character-coords (ringCS R) _ *> AbMonoid.FinSum=BigSum {R} *> equation
+  | 3 => character-coords (ringCS R) _ *> AbMonoid.FinSum=BigSum {R} *> equation
+  | 4 => character-coords (ringCS R) _ *> AbMonoid.FinSum=BigSum {R} *> equation
+  | 5 => character-coords (ringCS R) _ *> AbMonoid.FinSum=BigSum {R} *> equation
+
+\lemma triv-val {R : CRing} (k : Fin 6) : character (TrivialFin R S3) (enumS3 k) = R.ide
+  => character_trivial _
+
+-- | The orthogonality table of $S_3$ by exact arithmetic, over any commutative ring in which $6$ is invertible.
+\lemma pairing-std-std {R : CRing} (cardInv : Monoid.Inv (R.natCoef S3.card)) : pairing cardInv (character (StdFin R)) (character (StdFin R)) = 1
+  => S3-pairing cardInv (character (StdFin R)) (character (StdFin R)) std-val std-val *> pmap (cardInv.inv *) (equation : _ = R.natCoef 6) *> cardInv.inv-left
+
+\lemma pairing-sign-sign {R : CRing} (cardInv : Monoid.Inv (R.natCoef S3.card)) : pairing cardInv (character (SignFin R)) (character (SignFin R)) = 1
+  => S3-pairing cardInv (character (SignFin R)) (character (SignFin R)) sign-val sign-val *> pmap (cardInv.inv *) (equation : _ = R.natCoef 6) *> cardInv.inv-left
+
+\lemma pairing-triv-triv {R : CRing} (cardInv : Monoid.Inv (R.natCoef S3.card)) : pairing cardInv (character (TrivialFin R S3)) (character (TrivialFin R S3)) = 1
+  => S3-pairing cardInv (character (TrivialFin R S3)) (character (TrivialFin R S3)) triv-val triv-val *> pmap (cardInv.inv *) (equation : _ = R.natCoef 6) *> cardInv.inv-left
+
+\lemma pairing-triv-std {R : CRing} (cardInv : Monoid.Inv (R.natCoef S3.card)) : pairing cardInv (character (TrivialFin R S3)) (character (StdFin R)) = 0
+  => S3-pairing cardInv (character (TrivialFin R S3)) (character (StdFin R)) triv-val std-val *> pmap (cardInv.inv *) (equation : _ = 0) *> R.zro_*-right
+
+\lemma pairing-sign-std {R : CRing} (cardInv : Monoid.Inv (R.natCoef S3.card)) : pairing cardInv (character (SignFin R)) (character (StdFin R)) = 0
+  => S3-pairing cardInv (character (SignFin R)) (character (StdFin R)) sign-val std-val *> pmap (cardInv.inv *) (equation : _ = 0) *> R.zro_*-right
+
+\lemma pairing-triv-sign {R : CRing} (cardInv : Monoid.Inv (R.natCoef S3.card)) : pairing cardInv (character (TrivialFin R S3)) (character (SignFin R)) = 0
+  => S3-pairing cardInv (character (TrivialFin R S3)) (character (SignFin R)) triv-val sign-val *> pmap (cardInv.inv *) (equation : _ = 0) *> R.zro_*-right

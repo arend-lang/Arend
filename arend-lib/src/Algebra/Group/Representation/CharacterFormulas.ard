@@ -1,0 +1,85 @@
+\import Algebra.Group
+\import Algebra.Group.GSet
+\import Algebra.Group.Representation
+\import Algebra.Group.Representation.Characters
+\import Algebra.Group.Representation.Hom
+\import Algebra.Group.Representation.PermutationRepresentation
+\import Algebra.Group.Representation.Product
+\import Algebra.Module
+\import Algebra.Module.CoordSystem
+\import Algebra.Monoid
+\import Algebra.Ring
+\import Logic
+\import Paths
+\import Set.Fin
+\import Set.Fin.Instances
+
+-- | A representation together with a coordinate system is finite free.
+\func fromCS {R : Ring} {G : Group} (E : LinRepres R G) (C : CoordSystem E) : FinLinRepres R G \cowith
+  | LinRepres => E
+  | isFinRepres => CoordSystem.toBasis C
+
+-- | The character in coordinates: $\chi_E(g) = \sum_j d_j(g\, g_j)$.
+\lemma character-coords {R : CRing} {G : Group} {E : FinLinRepres R G} (C : CoordSystem E) (g : G)
+  : character E g = R.FinSum (\lam j => C.coord j (g ** C.vec j))
+  => CoordSystem.trace {R} {FinLinRepres.toFinModule E} C (E.toLinearMap g)
+
+\func SumFin {R : Ring} {G : Group} (A B : FinLinRepres R G) : FinLinRepres R G \cowith
+  | LinRepres => ProductLRepres A B
+  | isFinRepres => \case A.isFinRepres, B.isFinRepres \with {
+    | inP (la, ba), inP (lb, bb) => CoordSystem.toBasis (productCS (basisCS ba) (basisCS bb))
+  }
+
+-- | Fulton--Harris Prop. 2.1: $\chi_{A \oplus B} = \chi_A + \chi_B$.
+\lemma character_sum {R : CRing} {G : Group} (A B : FinLinRepres R G) (g : G) : character (SumFin A B) g = character A g + character B g
+  => \case A.isFinRepres, B.isFinRepres \with {
+    | inP (la, ba), inP (lb, bb) =>
+      character-coords (productCS (basisCS ba) (basisCS bb)) g *> AbMonoid.FinSum_Or *>
+      inv (pmap2 (+) (character-coords (basisCS ba) g) (character-coords (basisCS bb) g))
+  }
+
+\func HomFin {R : CRing} {G : Group} (A B : FinLinRepres R G) : FinLinRepres R G \cowith
+  | LinRepres => HomLRepres A B
+  | isFinRepres => \case A.isFinRepres, B.isFinRepres \with {
+    | inP (la, ba), inP (lb, bb) => CoordSystem.toBasis (homCS (basisCS ba) (basisCS bb))
+  }
+
+-- | Fulton--Harris Prop. 2.1: $\chi_{\mathrm{Hom}(A, B)}(g) = \chi_A(g^{-1})\, \chi_B(g)$.
+\lemma character_hom {R : CRing} {G : Group} (A B : FinLinRepres R G) (g : G)
+  : character (HomFin A B) g = character A (inverse g) * character B g
+  => \case A.isFinRepres, B.isFinRepres \with {
+    | inP (la, ba), inP (lb, bb) =>
+      \let | CA => basisCS ba
+           | CB => basisCS bb
+      \in character-coords (homCS CA CB) g *>
+          R.FinSum-ext (\lam (p : \Sigma CA.J CB.J) => pmap (CB.coord p.2) (B.**_*c {g} {CB.vec p.2} {CA.coord p.1 (inverse g ** CA.vec p.1)}) *> (CB.coord p.2).func-*c) *>
+          inv R.FinSum-distr *>
+          inv (pmap2 (*) (character-coords CA (inverse g)) (character-coords CB g))
+  }
+
+\func TrivialFin (R : CRing) (G : Group) : FinLinRepres R G
+  => fromCS (TrivialAction (RingLModule R) G) (ringCS R)
+
+\lemma character_trivial {R : CRing} {G : Group} (g : G) : character (TrivialFin R G) g = R.ide
+  => character-coords (ringCS R) g *> AbMonoid.FinSum=BigSum {R} *> R.zro-right
+
+\func DualFin {R : CRing} {G : Group} (A : FinLinRepres R G) : FinLinRepres R G
+  => HomFin A (TrivialFin R G)
+
+-- | Fulton--Harris Prop. 2.1: $\chi_{A^*}(g) = \chi_A(g^{-1})$.
+\lemma character_dual {R : CRing} {G : Group} (A : FinLinRepres R G) (g : G) : character (DualFin A) g = character A (inverse g)
+  => character_hom A (TrivialFin R G) g *> pmap (_ *) (character_trivial g) *> R.ide-right
+
+-- | The permutation representation of a finite {GSet} as a finite free representation, with the delta basis.
+\func PermFin {R : CRing} {G : Group} (X : GSet G) (XF : FinSet X) : FinLinRepres R G
+  => fromCS (PermRepr {R} X) (deltaCS XF)
+
+-- | The fixed points of $g$ form a finite set.
+\func FixedPointsFin {G : Group} (X : GSet G) (XF : FinSet X) (g : G) : FinSet (\Sigma (x : X) (g ** x = x))
+  => SigmaFin XF (\lam x => DecFin (XF.decideEq (g ** x) x))
+
+-- | Fulton--Harris Exercise 2.5 (the original fixed-point formula): the permutation character counts fixed points.
+--   Intentional exercise hole; see the pilot plan, Section 2.
+\lemma permCharacter {R : CRing} {G : Group} (X : GSet G) (XF : FinSet X) (g : G)
+  : character (PermFin {R} X XF) g = R.natCoef (FixedPointsFin X XF g).card
+  => {?FH_L02_Ex2_5}

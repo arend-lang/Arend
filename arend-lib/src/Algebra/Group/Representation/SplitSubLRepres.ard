@@ -1,0 +1,63 @@
+\import Algebra.Group
+\import Algebra.Group.GSet
+\import Algebra.Group.Representation
+\import Algebra.Group.Representation.InterwiningMap
+\import Algebra.Linear.Matrix
+\import Algebra.Linear.SplitSubLModule
+\import Algebra.Module.FinModule
+\import Algebra.Module.LinearMap
+\import Algebra.Module.ModuleIso
+\import Algebra.Ring
+\import Data.Array
+\import Function
+\import Logic
+\import Paths
+\import Paths.Meta
+
+-- | An invariant finite free direct summand of a representation, given by an inclusion of $R^{dim}$ with a linear retraction.
+--   Unlike {SubLRepres}, membership is not an arbitrary proposition, so the strong dichotomy of {SubLRepres.IsTrivial} does not apply.
+\record SplitSubLRepres {R : Ring} {G : Group} (E : LinRepres R G)
+  | dim : Nat
+  | incl : LinearMap (ArrayFinModule {R} dim) E
+  | retr : LinearMap E (ArrayFinModule {R} dim)
+  | retr_incl (x : Array R dim) : retr (incl x) = x
+  | incl-invariant (g : G) (x : Array R dim) : incl (retr (g ** incl x)) = g ** incl x
+  \where {
+    \func fromInvariant {R : Ring} {G : Group} {E : LinRepres R G} {P : E -> \Prop} (S : SplitSubLModule E P)
+                        (P-inv : \Pi (g : G) {u : E} -> P u -> P (g ** u)) : SplitSubLRepres E \cowith
+      | dim => S.dim
+      | incl => S.incl
+      | retr => S.retr
+      | retr_incl => S.retr_incl
+      | incl-invariant g x => S.incl_retr (P-inv g (S.incl-in x))
+
+    \lemma incl-inj {R : Ring} {G : Group} {E : LinRepres R G} (S : SplitSubLRepres E) : IsInj S.incl
+      => \lam {x} {y} p => inv (S.retr_incl x) *> pmap S.retr p *> S.retr_incl y
+
+    -- | The action of {G} on $R^{dim}$ induced by the splitting.
+    \func toLinRepres {R : Ring} {G : Group} {E : LinRepres R G} (S : SplitSubLRepres E) : LinRepres R G \cowith
+      | LModule => ArrayFinModule {R} S.dim
+      | ** g x => S.retr (g ** S.incl x)
+      | **-assoc {m} {n} {x} => pmap S.retr (E.**-assoc *> pmap (m **) (inv (S.incl-invariant n x)))
+      | **_ide {x} => pmap S.retr E.**_ide *> S.retr_incl x
+      | **-ldistr {g} {x} {y} => pmap S.retr (pmap (g **) S.incl.func-+ *> E.**-ldistr) *> S.retr.func-+
+      | **_*c {g} {x} {c} => pmap S.retr (pmap (g **) S.incl.func-*c *> E.**_*c) *> S.retr.func-*c
+
+    \func inclInterwining {R : Ring} {G : Group} {E : LinRepres R G} (S : SplitSubLRepres E) : InterwiningMap (toLinRepres S) E \cowith
+      | LinearMap => S.incl
+      | func-** {x} {g} => S.incl-invariant g x
+
+    -- | A surjective split inclusion is an isomorphism, so it transports the standard basis of $R^{dim}$ to a basis of {E}.
+    \lemma full-basis {R : Ring} {G : Group} {E : LinRepres R G} (T : SplitSubLRepres E) (s : IsSurj T.incl)
+      : E.IsBasis (map T.incl MatrixRing.ide)
+      => iso-basis {R} {ArrayFinModule {R} T.dim} {E} ((ModuleIso.iso<->inj+surj {R} {_} {_} {T.incl}).2 (incl-inj T, s)) ArrayFinModule.basis
+
+    \lemma surj-section {R : Ring} {G : Group} {E : LinRepres R G} (T : SplitSubLRepres E) (s : IsSurj T.incl) (e : E) : T.incl (T.retr e) = e
+      => \case s e \with {
+        | inP (x, p) => rewriteI p (pmap T.incl (T.retr_incl x))
+      }
+
+    -- | If {E} is isomorphic to $R^{T.dim}$ via {T}, then a split invariant subspace of the same dimension is everything.
+    \lemma full-dim-surj {R : CRing} {G : Group} {E : LinRepres R G} (T : SplitSubLRepres E) (sT : IsSurj T.incl) (S : SplitSubLRepres E) (p : S.dim = T.dim) : IsSurj S.incl
+      => split-full-surj S.retr_incl (surj-section T sT) p
+  }

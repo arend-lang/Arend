@@ -1,0 +1,128 @@
+\import Algebra.Field
+\import Algebra.Group
+\import Algebra.Group.GSet
+\import Algebra.Group.Representation
+\import Algebra.Group.Representation.Averaging (dim=0-of-zero)
+\import Algebra.Group.Representation.CharacterFormulas
+\import Algebra.Group.Representation.Characters
+\import Algebra.Group.Representation.Hom
+\import Algebra.Group.Representation.Invariants
+\import Algebra.Group.Representation.InterwiningMap
+\import Algebra.Group.Representation.Irreducible
+\import Algebra.Group.Representation.SplitSubLRepres (SplitSubLRepres)
+\import Algebra.Linear.Matrix
+\import Algebra.Linear.SplitSubLModule (SplitSubLModule, basis-split_+, basis-split_*c)
+\import Algebra.Module
+\import Algebra.Module.CoordSystem
+\import Algebra.Module.FinModule
+\import Algebra.Module.Instances
+\import Algebra.Module.LinearMap
+\import Algebra.Module.ModuleIso
+\import Algebra.Monoid
+\import Algebra.Monoid.MonoidHom
+\import Algebra.Pointed
+\import Algebra.Ring
+\import Arith.Nat
+\import Data.Array
+\import Equiv
+\import Logic
+\import Logic.Meta
+\import Paths
+\import Paths.Meta
+
+-- | The pairing $\langle \chi, \psi \rangle = \frac{1}{|G|} \sum_g \chi(g^{-1}) \psi(g)$.
+\func pairing {R : CRing} {G : FinGroup} (cardInv : Monoid.Inv (R.natCoef G.card)) (chi psi : G -> R) : R
+  => cardInv.inv * R.FinSum (\lam g => chi (inverse g) * psi g)
+
+-- | Exercise 1.2 (hole) turns an invariant vector of $\mathrm{Hom}(V, W)$ into an intertwiner.
+\func invariant-interwining {R : CRing} {G : Group} {V W : LinRepres R G} (f : LinearMap V W) (p : \Pi (g : G) -> HomLRepres.conj g f = f) : InterwiningMap V W \cowith
+  | LinearMap => f
+  | func-** {a} {g} => (invariantHom f).1 p g a
+
+-- | The pairing of two characters is the rank of the invariants of $\mathrm{Hom}(V, W)$.
+\lemma pairing-dim {R : CRing} {G : FinGroup} (cardInv : Monoid.Inv (R.natCoef G.card)) (V W : FinLinRepres R G)
+  (S : SplitSubLModule (HomFin V W) (\lam f => IsInvariant {R} {G} {HomFin V W} f))
+  : pairing cardInv (character V) (character W) = R.natCoef S.dim
+  => pmap (cardInv.inv *) (inv (R.FinSum-ext (\lam g => character_hom V W g))) *> inv (dim-invariants cardInv (HomFin V W) S)
+
+-- | Fulton--Harris Thm. 2.12, non-isomorphic case: characters of non-isomorphic irreducibles are orthogonal.
+--   Conditional on Exercise 1.2 through {invariant-interwining}.
+\lemma orthogonality-noniso {K : DiscreteField} {G : FinGroup} (cardInv : Monoid.Inv (K.natCoef G.card)) (V W : FinLinRepres K G)
+  (irrV : IsFinIrreducible V) (irrW : IsFinIrreducible W) (n : Not (∃ (f : InterwiningMap V W) (IsEquiv f)))
+  : pairing cardInv (character V) (character W) = 0
+  => \let | (inP S) => invariants-split cardInv (HomFin V W)
+          | f=0 {f : LinearMap V W} (p : IsInvariant {K} {G} {HomFin V W} f) : f = {LinearMap V W} 0
+              => \case SchurLemma irrV irrW (invariant-interwining f p) \with {
+                | byLeft z => exts z
+                | byRight e => absurd (n (inP (invariant-interwining f p, e)))
+              }
+          | d=0 : S.dim = 0 => dim=0-of-zero \lam x => inv (S.retr_incl x) *> pmap S.retr (f=0 (S.incl-in x)) *> S.retr.func-zro
+     \in pairing-dim cardInv V W S *> pmap K.natCoef d=0 *> K.natCoefZero
+
+-- | Mutually inverse linear maps between $R^a$ and $R^b$ force $a = b$.
+\lemma iso-dim {R : NonZeroCRing} {a b : Nat} (f : LinearMap (ArrayFinModule {R} a) (ArrayFinModule {R} b)) (g : LinearMap (ArrayFinModule {R} b) (ArrayFinModule {R} a))
+  (gf : \Pi (x : Array R a) -> g (f x) = x) (fg : \Pi (y : Array R b) -> f (g y) = y) : a = b
+  => \have bb => iso-basis {R} {ArrayFinModule {R} a} {ArrayFinModule {R} b} (\new ModuleIso f g gf fg) ArrayFinModule.basis
+     \in inv (FinModule.dimension-unique {R} {ArrayFinModule {R} b} bb) *> FinModule.dimension-unique {R} {ArrayFinModule {R} b} ArrayFinModule.basis
+
+-- | Fulton--Harris Thm. 2.12, self-pairing: if every intertwiner of an irreducible {V} is a scalar, then $\langle \chi_V, \chi_V \rangle = 1$.
+--   Conditional on Exercise 1.2 through {invariant-interwining}.
+\lemma orthogonality-self {K : DiscreteField} {G : FinGroup} (cardInv : Monoid.Inv (K.natCoef G.card)) (V : FinLinRepres K G)
+  (irrV : IsFinIrreducible V) (comm : \Pi (h : InterwiningMap V V) -> ∃ (c : K) (\Pi (e : V) -> h e = c *c e))
+  : pairing cardInv (character V) (character V) = 1
+  => \let | (inP S) => invariants-split cardInv (HomFin V V)
+          | (inP (T, T>0, sT)) => irrV.1
+          | lv => map T.incl MatrixRing.ide
+          | bv : V.IsBasis lv => SplitSubLRepres.full-basis T sT
+          | j0 : Fin lv.len => toFin 0 T>0
+          | lam : LinearMap (LinearMapLModule V V) (RingLModule K) => \new LinearMap {
+              | func f => V.basis-split bv (f (lv j0)) j0
+              | func-+ => basis-split_+ bv j0
+              | func-*c => basis-split_*c bv j0
+            }
+          | lam-id : lam LinearMap.id = 1 => V.basis_split_=
+          | scalar-inv (c : K) : IsInvariant {K} {G} {HomFin V V} (c *c LinearMap.id) => \lam g => exts \lam v => V.**_*c *> pmap (c *c) (inv V.**-assoc *> pmap (`** v) inverse-right *> V.**_ide)
+          | gamma : LinearMap (ArrayFinModule {K} 1) (ArrayFinModule {K} S.dim) => \new LinearMap {
+              | func c => S.retr (c 0 *c LinearMap.id)
+              | func-+ => pmap S.retr (exts \lam v => V.*c-rdistr) *> S.retr.func-+
+              | func-*c => pmap S.retr (exts \lam v => V.*c-assoc) *> S.retr.func-*c
+            }
+          | delta : LinearMap (ArrayFinModule {K} S.dim) (ArrayFinModule {K} 1) => \new LinearMap {
+              | func x => lam (S.incl x) :: nil
+              | func-+ => exts \lam i => \case \elim i \with { | 0 => pmap lam S.incl.func-+ *> lam.func-+ }
+              | func-*c => exts \lam i => \case \elim i \with { | 0 => pmap lam S.incl.func-*c *> lam.func-*c }
+            }
+          | dg (c : Array K 1) : delta (gamma c) = c => exts \lam i => \case \elim i \with {
+              | 0 => pmap lam (S.incl_retr (scalar-inv (c 0))) *> lam.func-*c *> pmap (c 0 *) lam-id *> K.ide-right
+            }
+          | gd (x : Array K S.dim) : gamma (delta x) = x
+              => \let | (inP (c, hc)) => comm (invariant-interwining (S.incl x) (S.incl-in x))
+                      | p : S.incl x = c *c LinearMap.id => exts hc
+                 \in pmap (\lam z => S.retr (z *c LinearMap.id)) (pmap lam p *> lam.func-*c *> pmap (c *) lam-id *> K.ide-right) *> pmap S.retr (inv p) *> S.retr_incl x
+     \in pairing-dim cardInv V V S *> pmap K.natCoef (inv (iso-dim gamma delta dg gd)) *> K.natCoefSuc 0 *> pmap (`+ 1) K.natCoefZero *> K.zro-left
+
+-- | Transport of a coordinate system along a module isomorphism.
+\func transportCS {R : Ring} {V W : LModule R} {f : LinearMap V W} (m : ModuleIso f) (C : CoordSystem V) : CoordSystem W \cowith
+  | J => C.J
+  | vec j => f (C.vec j)
+  | coord j => LinearMap.compose {R} {W} {V} {RingLModule R} (C.coord j) m.finv
+  | expand w => inv (m.f_finv w) *> pmap f (C.expand (m.finv w)) *> AddMonoidHom.func-FinSum f *> W.FinSum-ext (\lam j => f.func-*c)
+  | coord-diag j => pmap (C.coord j) (m.finv_f (C.vec j)) *> C.coord-diag j
+  | coord-off p => pmap (C.coord _) (m.finv_f _) *> C.coord-off p
+
+-- | Isomorphic representations have the same character.
+\lemma character-iso {R : CRing} {G : Group} {V W : FinLinRepres R G} (f : InterwiningMap V W) (e : IsEquiv f) (g : G)
+  : character V g = character W g
+  => \let | m : ModuleIso f => (ModuleIso.iso<->inj+surj {R} {V} {W} {f}).2 (IsEquiv.isInj e, \lam w => \case e \with { | inP q => inP (q.ret w, q.f_ret w) })
+          | (inP (l, lb)) => V.isFinRepres
+          | C => basisCS lb
+     \in character-coords C g *>
+         inv (character-coords (transportCS m C) g *> R.FinSum-ext (\lam j => pmap (C.coord j) (pmap m.finv (inv (f.func-** {C.vec j} {g})) *> m.finv_f _)))
+
+-- | Fulton--Harris Thm. 2.12, isomorphic case. Conditional on Exercise 1.2.
+\lemma orthogonality-iso {K : DiscreteField} {G : FinGroup} (cardInv : Monoid.Inv (K.natCoef G.card)) (V W : FinLinRepres K G)
+  (irrV : IsFinIrreducible V) (comm : \Pi (h : InterwiningMap V V) -> ∃ (c : K) (\Pi (e : V) -> h e = c *c e))
+  (f : InterwiningMap V W) (e : IsEquiv f)
+  : pairing cardInv (character V) (character W) = 1
+  => pmap (pairing cardInv (character V)) (ext (\lam g => inv (character-iso f e g))) *>
+     orthogonality-self cardInv V irrV comm

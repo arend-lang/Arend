@@ -1,0 +1,17 @@
+\import Algebra.Group
+\import Algebra.Group.GSet
+\import Algebra.Group.Symmetric
+\import Equiv
+
+-- | The symmetric group as a finite group.
+\instance SymFinGroup (n : Nat) : FinGroup (Sym n)
+  | Group => SymmetricGroup n
+  | FinSet => SymFin n
+
+-- | The natural action of $S_n$ on $\{0, \ldots, n-1\}$.
+--   Products in {SymmetricGroup} compose left to right, $(e e')(j) = e'(e(j))$, so the left action is $e \cdot i = e^{-1}(i)$.
+\func SymAction (n : Nat) : GSet (SymFinGroup n) \cowith
+  | E => Fin n
+  | ** e i => symQEquiv e i
+  | **_ide => idp
+  | **-assoc => idp

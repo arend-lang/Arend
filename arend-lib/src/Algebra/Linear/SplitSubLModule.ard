@@ -1,0 +1,181 @@
+\import Algebra.Field
+\import Algebra.Linear.Matrix
+\import Algebra.Linear.Matrix.Smith
+\import Algebra.Linear.VectorSpace
+\import Algebra.Meta
+\import Algebra.Module
+\import Algebra.Module.FinModule
+\import Algebra.Module.LinearMap
+\import Algebra.Monoid
+\import Algebra.Pointed
+\import Algebra.Ring
+\import Arith.Nat
+\import Data.Array
+\import Data.Or
+\import Function
+\import Logic
+\import Logic.Meta
+\import Order.Biordered
+\import Order.LinearOrder
+\import Order.PartialOrder
+\import Order.StrictOrder
+\import Paths
+\import Paths.Meta
+\import Set.Fin
+
+-- | A finite free direct summand of {U} given by an inclusion of $R^{dim}$ with a linear retraction,
+--   whose image consists exactly of the elements satisfying {P}.
+\record SplitSubLModule {R : Ring} (U : LModule R) (P : U -> \Prop)
+  | dim : Nat
+  | incl : LinearMap (ArrayFinModule {R} dim) U
+  | retr : LinearMap U (ArrayFinModule {R} dim)
+  | retr_incl (x : Array R dim) : retr (incl x) = x
+  | incl-in (x : Array R dim) : P (incl x)
+  | incl_retr {u : U} : P u -> incl (retr u) = u
+  \where {
+    \lemma dim=0 {R : Ring} {U : LModule R} {P : U -> \Prop} (S : SplitSubLModule U P) (p : S.dim = 0) {u : U} (Pu : P u) : u = 0
+      => inv (S.incl_retr Pu) *> pmap S.incl (exts \lam j => \case transport Fin p j \with {}) *> S.incl.func-zro
+
+    \lemma surj {R : Ring} {U : LModule R} {P : U -> \Prop} (S : SplitSubLModule U P) (s : IsSurj S.incl) (u : U) : P u
+      => \case s u \with {
+        | inP (x, p) => transport P p (S.incl-in x)
+      }
+  }
+
+\lemma basis-split_+ {R : Ring} {U : LModule R} {l : Array U} (lb : U.IsBasis l) {x y : U} (j : Fin l.len)
+  : U.basis-split lb (x + y) j = U.basis-split lb x j + U.basis-split lb y j
+  => U.basis-split-unique lb (\lam j => U.basis-split lb x j + U.basis-split lb y j)
+      (pmap2 (+) (U.basis-split-char {_} {lb}) (U.basis-split-char {_} {lb}) *> inv (U.BigSum_+ {_} {\lam j => U.basis-split lb x j *c l j}) *> pmap U.BigSum (exts \lam j => inv U.*c-rdistr)) j
+
+\lemma basis-split_*c {R : Ring} {U : LModule R} {l : Array U} (lb : U.IsBasis l) {r : R} {x : U} (j : Fin l.len)
+  : U.basis-split lb (r *c x) j = r * U.basis-split lb x j
+  => U.basis-split-unique lb (\lam j => r * U.basis-split lb x j)
+      (pmap (r *c) (U.basis-split-char {_} {lb}) *> U.*c_BigSum-ldistr *> pmap U.BigSum (exts \lam j => inv U.*c-assoc)) j
+
+-- | The span of an injectively indexed subfamily of a basis is a split submodule.
+--   {P} must contain the span ({inSpan}) and its elements must have no coordinates outside the subfamily ({coefOut}).
+\func selectSplit {R : Ring} {U : LModule R} {l : Array U} (lb : U.IsBasis l) {k : Nat} (idx : Array (Fin l.len) k) (inj : IsInj idx)
+  (P : U -> \Prop) (inSpan : \Pi (x : Array R k) -> P (U.BigSum (\lam i => x i *c l (idx i))))
+  (coefOut : \Pi {u : U} -> P u -> \Pi (j : Fin l.len) -> (\Pi (i : Fin k) -> idx i /= j) -> U.basis-split lb u j = 0)
+  : SplitSubLModule U P \cowith
+  | dim => k
+  | incl => inclMap
+  | retr => retrMap
+  | retr_incl x => exts \lam i => path (\lam t => retrMap.linearComb {x} {\lam i' => l (idx i')} t i) *> ArrayLModule.BigSum-index *>
+      R.BigSum-unique i (\lam i' i/=i' => pmap (x i' *) (U.basis_split_/= \lam q => i/=i' (inv (inj q))) *> R.zro_*-right) *>
+      pmap (x i *) U.basis_split_= *> ide-right
+  | incl-in => inSpan
+  | incl_retr {u} Pu => inv (AbMonoid.FinSum=BigSum {U}) *>
+      inv (U.FinSum-inj {FinFin k} {FinFin l.len} idx inj {\lam j => U.basis-split lb u j *c l j} (\lam j nj => pmap (*c _) (coefOut Pu j nj) *> U.*c_zro-left)) *>
+      AbMonoid.FinSum=BigSum {U} *> inv (U.basis-split-char {_} {lb})
+  \where {
+    \func inclMap : LinearMap (ArrayFinModule {R} k) U
+      => arrayLinearMap (\lam i => l (idx i))
+
+    \func retrMap : LinearMap U (ArrayFinModule {R} k) \cowith
+      | func u i => U.basis-split lb u (idx i)
+      | func-+ => exts \lam i => basis-split_+ lb (idx i)
+      | func-*c => exts \lam i => basis-split_*c lb (idx i)
+  }
+
+-- | Under a Smith-adapted pair of bases, $f(\sum_j c_j u_j)$ only involves the first $r$ vectors of the target basis.
+\lemma smith-prefix {R : Ring} {U V : LModule R} {n m r : Nat} {lu : Array U n} {lv : Array V m} (f : LinearMap U V) {d : Array R n}
+  (g : \Pi (j : Fin n) -> f (lu j) = d j *c fit V.zro lv j) (d0 : \Pi (j : Fin n) -> r <= j -> d j = 0)
+  (r<=n : r <= n) (r<=m : r <= m) (c : Array R n)
+  : f (U.BigSum (\lam j => c j *c lu j)) = V.BigSum (\lam (i : Fin r) => (c (fin-inc_<= r<=n i) * d (fin-inc_<= r<=n i)) *c lv (fin-inc_<= r<=m i))
+  => f.linearComb {c} {lu} *> pmap V.BigSum (exts \lam j => pmap (_ *c) (g j) *> inv V.*c-assoc) *>
+     inv (V.BigSum-subset {\lam (i : Fin r) => (c (fin-inc_<= r<=n i) * d (fin-inc_<= r<=n i)) *c lv (fin-inc_<= r<=m i)} {\lam (j : Fin n) => (c j * d j) *c fit V.zro lv j} r<=n (\lam i => pmap (_ *c) (inv (fit_< lv {fin-inc_<= r<=n i} (transportInv (`< m) toFin=id (fin_< i <∘l r<=m)) *> pmap lv (fin_nat-inj (toFin=id *> toFin=id *> inv toFin=id)))))
+                              (\lam j r<=j => pmap (\lam z => (c j * z) *c fit V.zro lv j) (d0 j r<=j) *> pmap (*c _) R.zro_*-right *> V.*c_zro-left))
+
+\func suffixIdx {n r : Nat} (r<=n : r <= n) (i : Fin (n -' r)) : Fin n
+  => toFin (r + i) (\have | e => <=_exists r<=n | q => fin_< i \in linarith)
+
+\lemma suffixIdx-inj {n r : Nat} (r<=n : r <= n) : IsInj (suffixIdx r<=n)
+  => \lam {i} {i'} p => fin_nat-inj (\have q => inv toFin=id *> pmap (\lam (x : Fin n) => (x : Nat)) p *> toFin=id \in linarith)
+
+-- | The kernel of a linear map between based modules over a Smith domain is a split submodule.
+\lemma kernel-split {R : SmithDomain} {U V : LModule R} {lu : Array U} (bu : U.IsBasis lu) {lv : Array V} (bv : V.IsBasis lv) (f : LinearMap U V)
+  : TruncP (SplitSubLModule U (\lam u => f u = 0))
+  => \case smith-bases bu bv f \with {
+    | inP (lu', bu', lv', bv', d, g, d0) =>
+      \let r => rank (LinearMap.toMatrix lu' bv' f)
+      \in inP (selectSplit bu' (suffixIdx {lu.len} {r} rank<=rows) (suffixIdx-inj {lu.len} {r} rank<=rows) (\lam u => f u = 0)
+          (\lam x => f.linearComb {x} {\lam i => lu' (suffixIdx {lu.len} {r} rank<=rows i)} *> V.BigSum_zro (\lam i => pmap (x i *c) (g _ *> pmap (*c _) ((d0 _).2 (transportInv (r <=) toFin=id (\have t : r <= r Nat.+ i => linarith \in t))) *> V.*c_zro-left) *> V.*c_zro-right))
+          (\lam {u} (fu=0 : f u = 0) (j : Fin lu.len) nj => \case LinearOrder.dec<_<= j r \with {
+            | inl j<r => kernel-coef bu' bv' f g d0 fu=0 j j<r
+            | inr r<=j => absurd (nj (toFin (j -' r) (-'_<-monotone-left (fin_< j) (\have q => fin_< j \in linarith)))
+                                     (fin_nat-inj (toFin=id *> pmap (r Nat.+) toFin=id *> <=_exists r<=j)))
+          }))
+  }
+  \where {
+    \lemma kernel-coef {R : SmithDomain} {U V : LModule R} {lu' : Array U} (bu' : U.IsBasis lu') {lv' : Array V} (bv' : V.IsBasis lv') (f : LinearMap U V)
+      {d : Array R lu'.len} (g : \Pi (j : Fin lu'.len) -> f (lu' j) = d j *c fit V.zro lv' j)
+      (d0 : \Pi (j : Fin lu'.len) -> (d j = 0) <-> rank (LinearMap.toMatrix lu' bv' f) <= j)
+      {u : U} (fu=0 : f u = 0) (j : Fin lu'.len) (j<r : j < rank (LinearMap.toMatrix lu' bv' f))
+      : U.basis-split bu' u j = 0
+      => \let | r => rank (LinearMap.toMatrix lu' bv' f)
+              | r<=n : r <= lu'.len => rank<=rows
+              | r<=m : r <= lv'.len => rank<=columns
+              | c => U.basis-split bu' u
+              | jr : Fin r => toFin j j<r
+              | jr=j : fin-inc_<= r<=n jr = j => fin_nat-inj (toFin=id *> toFin=id)
+              | cd=0 => V.independent-subset bv'.1 r<=m (\lam i => c (fin-inc_<= r<=n i) * d (fin-inc_<= r<=n i))
+                          (inv (smith-prefix {R} {U} {V} {lu'.len} {lv'.len} {r} {_} {_} f {d} g (\lam j r<=j => (d0 j).2 r<=j) r<=n r<=m c) *> pmap f (inv (U.basis-split-char {_} {bu'})) *> fu=0) jr
+         \in transport (\lam z => c z = 0) jr=j
+               (R.nonZero-right (\lam dj=0 => NatSemiring.<-irreflexive (j<r <∘l transport (\lam (z : Fin lu'.len) => r <= z) jr=j ((d0 _).1 dj=0))) cd=0)
+  }
+
+-- | Over a discrete field the image of a linear map between based modules is a split submodule.
+--   Over a general Smith domain this fails: the image $2\mathbb{Z}$ of multiplication by $2$ has a basis but no retraction from $\mathbb{Z}$.
+\lemma image-split {K : DiscreteField} {U V : LModule K} {lu : Array U} (bu : U.IsBasis lu) {lv : Array V} (bv : V.IsBasis lv) (f : LinearMap U V)
+  : TruncP (SplitSubLModule V (\lam v => ∃ (u : U) (f u = v)))
+  => \case smith-bases bu bv f \with {
+    | inP (lu', bu', lv', bv', d, g, d0) =>
+      \let | r => rank (LinearMap.toMatrix lu' bv' f)
+           | r<=n : r <= lu.len => rank<=rows
+           | r<=m : r <= lv.len => rank<=columns
+           | d/=0 (i : Fin r) : d (fin-inc_<= r<=n i) /= 0
+               => \lam di=0 => NatSemiring.<-irreflexive (fin_< i <∘l transport (r <=) toFin=id ((d0 _).1 di=0))
+      \in inP (selectSplit bv' (fin-inc_<= r<=m) (\lam p => fin_nat-inj (inv toFin=id *> pmap (\lam (x : Fin lv.len) => (x : Nat)) p *> toFin=id))
+          (\lam v => ∃ (u : U) (f u = v))
+          (\lam x => \let e : Array K lu.len => fit 0 (\lam (i : Fin r) => x i * K.finv (d (fin-inc_<= r<=n i)))
+                     \in inP (U.BigSum (\lam j => e j *c lu' j),
+                              smith-prefix {K} {U} {V} {lu.len} {lv.len} {r} {lu'} {lv'} f {d} g (\lam j r<=j => (d0 j).2 r<=j) r<=n r<=m e *>
+                              pmap V.BigSum (exts \lam i => pmap (`*c _) (pmap (`* _) (fit_< (\lam (i' : Fin r) => x i' * K.finv (d (fin-inc_<= r<=n i'))) {fin-inc_<= r<=n i} (transportInv (`< r) toFin=id (fin_< i)) *> pmap (\lam (i' : Fin r) => x i' * K.finv (d (fin-inc_<= r<=n i'))) (fin_nat-inj (toFin=id *> toFin=id))) *>
+                                                                   K.*-assoc *> pmap (x i *) (K.finv-left (d/=0 i)) *> ide-right))))
+          (\lam {v} (fv : ∃ (u : U) (f u = v)) (j : Fin lv.len) nj => \case LinearOrder.dec<_<= j r \with {
+            | inl j<r => absurd (nj (toFin j j<r) (fin_nat-inj (toFin=id *> toFin=id)))
+            | inr r<=j => \case fv \with {
+              | inP (u, fu=v) =>
+                \let | c => U.basis-split bu' u
+                     | a : Array K r => \lam i => c (fin-inc_<= r<=n i) * d (fin-inc_<= r<=n i)
+                \in V.basis-split-unique bv' (fit 0 a)
+                      (inv fu=v *> pmap f (U.basis-split-char {_} {bu'}) *> smith-prefix {K} {U} {V} {lu.len} {lv.len} {r} {lu'} {lv'} f {d} g (\lam j r<=j => (d0 j).2 r<=j) r<=n r<=m c *>
+                       V.BigSum-subset {\lam (i : Fin r) => a i *c lv' (fin-inc_<= r<=m i)} {\lam (j' : Fin lv.len) => fit 0 a j' *c lv' j'} r<=m (\lam i => pmap (`*c _) (inv (fit_< a {toFin i (fin_< i <∘l r<=m)} (transportInv (`< r) toFin=id (fin_< i)) *> pmap a (fin_nat-inj (toFin=id *> toFin=id)))))
+                                            (\lam j' r<=j' => pmap (`*c _) (fit_>= a r<=j') *> V.*c_zro-left)) j *>
+                    fit_>= a r<=j
+            }
+          }))
+  }
+
+\lemma inv-left_inv-right {M : Monoid} {a b : M} (p : a * b = 1) (I : Monoid.Inv b) : b * a = 1
+  => pmap (b *) (inv ide-right *> pmap (a *) (inv I.inv-right) *> inv *-assoc *> pmap (`* I.inv) p *> ide-left) *> I.inv-right
+
+-- | Over a commutative ring, a split inclusion of $R^n$ into a module isomorphic to $R^m$ with $n = m$ is surjective.
+--   The matrices $M$ of $s \circ i$ and $N$ of $r \circ j$ satisfy $MN = 1$, hence $NM = 1$.
+\lemma split-full-surj {R : CRing} {E : LModule R} {n m : Nat}
+  {i : LinearMap (ArrayFinModule {R} n) E} {r : LinearMap E (ArrayFinModule {R} n)} (ri : \Pi (x : Array R n) -> r (i x) = x)
+  {j : LinearMap (ArrayFinModule {R} m) E} {s : LinearMap E (ArrayFinModule {R} m)} (js : \Pi (e : E) -> j (s e) = e)
+  (p : n = m) : IsSurj i \elim p
+  | idp =>
+    \let | b : LModule.IsBasis {ArrayFinModule {R} n} MatrixRing.ide => ArrayFinModule.basis {R} {n}
+         | M => LinearMap.toMatrix MatrixRing.ide b (s LinearMap.∘ i)
+         | N => LinearMap.toMatrix MatrixRing.ide b (r LinearMap.∘ j)
+         | MN=1 : M MatrixRing.product N = 1
+             => inv (LinearMap.toMatrix_* (s LinearMap.∘ i) (r LinearMap.∘ j) MatrixRing.ide b b) *>
+                matrixExt (\lam a c => pmap (\lam z => LModule.basis-split {ArrayFinModule {R} n} b z c) (pmap r (js (i _)) *> ri _)) *>
+                LinearMap.toMatrix_ide b
+         | NM=1 : N MatrixRing.product M = 1 => inv-left_inv-right {MatrixRing R n} {M} {N} MN=1 (matirx-inv {R} {n} {M} {N} MN=1)
+         | sirj=id : (s LinearMap.∘ i) LinearMap.∘ (r LinearMap.∘ j) = LinearMap.id
+             => (LinearMap.matrix-equiv b b).isInj (LinearMap.toMatrix_* (r LinearMap.∘ j) (s LinearMap.∘ i) MatrixRing.ide b b *> NM=1 *> inv (LinearMap.toMatrix_ide b))
+    \in \lam e => inP (r e, inv (js (i (r e))) *> pmap j (pmap (\lam z => s (i (r z))) (inv (js e)) *> path (\lam t => sirj=id t (s e))) *> js e)

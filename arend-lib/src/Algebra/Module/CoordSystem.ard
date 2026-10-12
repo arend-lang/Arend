@@ -1,0 +1,171 @@
+\import Algebra.Module
+\import Algebra.Module.FinModule
+\import Algebra.Module.Instances
+\import Algebra.Module.LinearMap
+\import Algebra.Module.PowerLModule
+\import Algebra.Meta
+\import Algebra.Module.TraceCoords
+\import Algebra.Monoid
+\import Algebra.Monoid.MonoidHom
+\import Algebra.Pointed
+\import Algebra.Ring
+\import Data.Or
+\import Equiv
+\import Logic
+\import Logic.Meta
+\import Meta
+\import Paths
+\import Paths.Meta
+\import Set
+\import Set.Fin
+\import Set.Fin.Instances
+
+-- | A finite family {vec} with linear coordinate functionals {coord}, indexed by any finite set.
+--   It is a basis, but it need not be indexed by an array, which makes product and pair indexings direct.
+\record CoordSystem {R : Ring} (U : LModule R)
+  | J : FinSet
+  | vec : J -> U
+  | coord : J -> LinearMap U (RingLModule R)
+  | expand (u : U) : u = U.FinSum (\lam j => coord j u *c vec j)
+  | coord-diag (j : J) : coord j (vec j) = 1
+  | coord-off {j j' : J} : j' /= j -> coord j (vec j') = 0
+  \where {
+    \lemma toBasis {R : Ring} {U : LModule R} (C : CoordSystem U) : ∃ (l : Array U) (U.IsBasis l)
+      => \case C.J.finEq \with {
+        | inP e => inP (\lam k => C.vec (e k),
+            (\lam c p k => inv (R.BigSum-unique {\lam i => c i * C.coord (e k) (C.vec (e i))} k
+                                   (\lam i k/=i => pmap (c i *) (C.coord-off (\lam q => k/=i (inv (e.isInj q)))) *> R.zro_*-right) *>
+                                 pmap (c k *) (C.coord-diag (e k)) *> R.ide-right) *>
+                            inv ((C.coord (e k)).linearComb {c} {\lam i => C.vec (e i)}) *> pmap (C.coord (e k)) p *> (C.coord (e k)).func-zro,
+             \lam u => inP (\lam k => C.coord (e k) u, C.expand u *> AbMonoid.FinSum_char2 e)))
+      }
+
+    -- | The trace of an endomorphism in coordinates.
+    \lemma trace {R : CRing} {U : FinModule R} (C : CoordSystem U) (T : LinearMap U U) : endoTrace T = R.FinSum (\lam j => C.coord j (T (C.vec j)))
+      => endoTrace-coords C.vec C.coord C.expand T
+  }
+
+-- | The coordinate system of an array basis.
+\func basisCS {R : Ring} {U : LModule R} {l : Array U} (lb : U.IsBasis l) : CoordSystem U \cowith
+  | J => FinFin l.len
+  | vec j => l j
+  | coord => coordFun lb
+  | expand u => U.basis-split-char {_} {lb} *> inv (AbMonoid.FinSum=BigSum {U})
+  | coord-diag j => U.basis_split_=
+  | coord-off p => U.basis_split_/= p
+
+
+\func pvec {R : Ring} {A B : LModule R} (CA : CoordSystem A) (CB : CoordSystem B) (j : Or CA.J CB.J) : ProductLModule R A B \elim j
+  | inl a => (CA.vec a, 0)
+  | inr b => (0, CB.vec b)
+
+\func pcoord {R : Ring} {A B : LModule R} (CA : CoordSystem A) (CB : CoordSystem B) (j : Or CA.J CB.J) : LinearMap (ProductLModule R A B) (RingLModule R) \elim j
+  | inl a => LinearMap.compose {R} {ProductLModule R A B} {A} {RingLModule R} (CA.coord a) (ProductLModule.proj1 A B)
+  | inr b => LinearMap.compose {R} {ProductLModule R A B} {B} {RingLModule R} (CB.coord b) (ProductLModule.proj2 A B)
+
+-- | Coordinates of a direct sum, indexed by the disjoint union.
+\func productCS {R : Ring} {A B : LModule R} (CA : CoordSystem A) (CB : CoordSystem B) : CoordSystem (ProductLModule R A B) \cowith
+  | J => OrFin CA.J CB.J
+  | vec => pvec CA CB
+  | coord => pcoord CA CB
+  | expand u => inv (AbMonoid.FinSum_Or {ProductLModule R A B} {CA.J} {CB.J} *>
+      pmap2 (+) (AbMonoid.FinSum-ext {ProductLModule R A B} (\lam a => inv ((ProductLModule.in1 A B).func-*c)) *>
+                  inv (AddMonoidHom.func-FinSum (ProductLModule.in1 A B)) *> pmap (ProductLModule.in1 A B) (inv (CA.expand u.1)))
+                (AbMonoid.FinSum-ext {ProductLModule R A B} (\lam b => inv ((ProductLModule.in2 A B).func-*c)) *>
+                  inv (AddMonoidHom.func-FinSum (ProductLModule.in2 A B)) *> pmap (ProductLModule.in2 A B) (inv (CB.expand u.2))) *>
+      ext (A.zro-right, B.zro-left))
+  | coord-diag j => \case \elim j \with {
+    | inl a => CA.coord-diag a
+    | inr b => CB.coord-diag b
+  }
+  | coord-off {j} {j'} p => \case \elim j, \elim j', p \with {
+    | inl a, inl a', p => CA.coord-off (\lam q => p (pmap inl q))
+    | inl a, inr b', _ => (CA.coord a).func-zro
+    | inr b, inl a', _ => (CB.coord b).func-zro
+    | inr b, inr b', p => CB.coord-off (\lam q => p (pmap inr q))
+  }
+
+-- | Evaluation at a point is additive in the map.
+\func evalHom {R : Ring} {V W : LModule R} (v : V) : AddMonoidHom (LinearMapAbGroup V W) W \cowith
+  | func f => f v
+  | func-zro => idp
+  | func-+ => idp
+
+-- | The matrix unit $v \mapsto d_i(v)\, w_j$.
+\func unitMap {R : CRing} {V W : LModule R} (CV : CoordSystem V) (CW : CoordSystem W) (p : \Sigma CV.J CW.J) : LinearMap V W \cowith
+  | func v => CV.coord p.1 v *c CW.vec p.2
+  | func-+ => pmap (`*c _) (CV.coord p.1).func-+ *> W.*c-rdistr
+  | func-*c => pmap (`*c _) (CV.coord p.1).func-*c *> W.*c-assoc
+
+\func homCoord {R : CRing} {V W : LModule R} (CV : CoordSystem V) (CW : CoordSystem W) (p : \Sigma CV.J CW.J) : LinearMap (LinearMapLModule V W) (RingLModule R) \cowith
+  | func f => CW.coord p.2 (f (CV.vec p.1))
+  | func-+ => (CW.coord p.2).func-+
+  | func-*c => (CW.coord p.2).func-*c
+
+-- | Coordinates of $\mathrm{Hom}(V, W)$ by matrix units, indexed by pairs.
+\func homCS {R : CRing} {V W : LModule R} (CV : CoordSystem V) (CW : CoordSystem W) : CoordSystem (LinearMapLModule V W) \cowith
+  | J => ProdFin CV.J CW.J
+  | vec => unitMap CV CW
+  | coord => homCoord CV CW
+  | expand f => exts \lam v =>
+      pmap f (CV.expand v) *> AddMonoidHom.func-FinSum f *> W.FinSum-ext (\lam i => f.func-*c *> pmap (_ *c) (CW.expand (f (CV.vec i))) *> W.*c_FinSum-ldistr) *>
+      W.FinSum-ext (\lam i => W.FinSum-ext (\lam j => inv W.*c-assoc *> pmap (`*c _) R.*-comm *> W.*c-assoc)) *>
+      W.FinSum-double *> inv (AddMonoidHom.func-FinSum (evalHom v))
+  | coord-diag p => (CW.coord p.2).func-*c *> pmap2 (*) (CV.coord-diag p.1) (CW.coord-diag p.2) *> R.ide-left
+  | coord-off {p} {p'} q => (CW.coord p.2).func-*c *> (\case decideEq p'.1 p.1 \with {
+    | yes e => pmap (_ *) (CW.coord-off (\lam e' => q (ext (e, e')))) *> R.zro_*-right
+    | no n => pmap (`* _) (CV.coord-off (/=-sym n)) *> R.zro_*-left
+  })
+
+-- | The coordinate system of $R$ itself.
+\func ringCS (R : CRing) : CoordSystem (RingLModule R) \cowith
+  | J => FinFin 1
+  | vec _ => R.ide
+  | coord _ => LinearMap.id
+  | expand u => inv (AbMonoid.FinSum=BigSum {RingLModule R} *> equation)
+  | coord-diag _ => idp
+  | coord-off {j} {j'} p => absurd (p (\case \elim j, \elim j' \with { | 0, 0 => idp }))
+
+\func delta {R : Ring} {X : DecSet} (x : X) (y : X) : R
+  => \case decideEq y x \with {
+    | yes _ => R.ide
+    | no _ => R.zro
+  }
+
+\lemma delta_= {R : Ring} {X : DecSet} {x : X} : delta {R} x x = R.ide
+  => unfold delta (rewrite (decideEq=_reduce idp) idp)
+
+\lemma delta_/= {R : Ring} {X : DecSet} {x y : X} (p : y /= x) : delta {R} x y = R.zro
+  => unfold delta (rewrite (decideEq/=_reduce p) idp)
+
+\func evalAt {R : Ring} (X : \Set) (y : X) : LinearMap (PowerLModule X (RingLModule R)) (RingLModule R) \cowith
+  | func f => f y
+  | func-+ => idp
+  | func-*c => idp
+
+-- | Coordinates of the functions $X \to R$ on a finite set, by delta functions.
+\func deltaCS {R : Ring} (X : FinSet) : CoordSystem (PowerLModule X (RingLModule R)) \cowith
+  | J => X
+  | vec x => delta x
+  | coord y => evalAt X y
+  | expand f => ext \lam y => inv (AddMonoidHom.func-FinSum (evalAt X y) *>
+      R.FinSum-unique y (\lam x x/=y => pmap (f x *) (delta_/= (/=-sym x/=y)) *> R.zro_*-right) *>
+      pmap (f y *) delta_= *> R.ide-right)
+  | coord-diag x => delta_=
+  | coord-off p => delta_/= (/=-sym p)
+
+\func projMap {R : Ring} {n : Nat} (k : Fin n) : LinearMap (ArrayFinModule {R} n) (RingLModule R) \cowith
+  | func x => x k
+  | func-+ => idp
+  | func-*c => idp
+
+-- | The standard coordinate system of $R^n$, with coordinates that compute.
+\func arrayCS {R : Ring} (n : Nat) : CoordSystem (ArrayFinModule {R} n) \cowith
+  | J => FinFin n
+  | vec j => \lam k => delta j k
+  | coord => projMap
+  | expand x => exts \lam k => inv (AddMonoidHom.func-FinSum (projMap k) *>
+      R.FinSum-unique k (\lam j j/=k => pmap (x j *) (delta_/= (/=-sym j/=k)) *> R.zro_*-right) *>
+      pmap (x k *) delta_= *> R.ide-right)
+  | coord-diag j => delta_=
+  | coord-off p => delta_/= (/=-sym p)

@@ -1,0 +1,109 @@
+\import Algebra.Field
+\import Algebra.Group
+\import Algebra.Group.GSet
+\import Algebra.Group.Representation
+\import Algebra.Group.Representation.CharacterFormulas
+\import Algebra.Group.Representation.Characters
+\import Algebra.Group.Representation.InterwiningMap
+\import Algebra.Group.Representation.MaschkeLemma
+\import Algebra.Linear.Matrix
+\import Algebra.Linear.SplitSubLModule (SplitSubLModule, image-split)
+\import Algebra.Module
+\import Algebra.Module.CoordSystem
+\import Algebra.Module.FinModule
+\import Algebra.Module.LinearMap
+\import Algebra.Module.Trace
+\import Algebra.Module.TraceCoords
+\import Algebra.Monoid
+\import Algebra.Monoid.MonoidHom
+\import Algebra.Ring
+\import Equiv
+\import Logic
+\import Logic.Meta
+\import Paths
+\import Paths.Meta
+
+-- | Right translation in a group is an equivalence.
+\func right-translate {G : Group} (h : G) : QEquiv {G} {G} \cowith
+  | f g => g * h
+  | ret g => g * inverse h
+  | ret_f g => *-assoc *> pmap (g *) inverse-right *> ide-right
+  | f_sec g => *-assoc *> pmap (g *) inverse-left *> ide-right
+
+\func IsInvariant {R : Ring} {G : Group} {E : LinRepres R G} (v : E) : \Prop
+  => \Pi (g : G) -> g ** v = v
+
+-- | Fulton--Harris Prop. 2.8: the averaging projection $\varphi = \frac{1}{|G|} \sum_g g$ onto the invariant vectors.
+\func invProj {R : CRing} {G : FinGroup} (cardInv : Monoid.Inv (R.natCoef G.card)) (E : LinRepres R G) : LinearMap E E \cowith
+  | func v => cardInv.inv *c E.FinSum (\lam g => g ** v)
+  | func-+ => pmap (cardInv.inv *c) (E.FinSum-ext (\lam g => E.**-ldistr) *> E.FinSum_+) *> E.*c-ldistr
+  | func-*c {r} {x} => pmap (cardInv.inv *c) (E.FinSum-ext (\lam g => E.**_*c) *> inv E.*c_FinSum-ldistr) *> inv E.*c-assoc *> pmap (`*c _) R.*-comm *> E.*c-assoc
+  \where {
+    \lemma shift {R : CRing} {G : FinGroup} {E : LinRepres R G} (h : G) (v : E)
+      : E.FinSum (\lam g => g ** (h ** v)) = E.FinSum (\lam g => g ** v)
+      => E.FinSum-ext (\lam g => inv E.**-assoc) *> inv (E.FinSum_Equiv {G} {G} (right-translate h) {\lam g => g ** v})
+
+    \lemma invariant {R : CRing} {G : FinGroup} (cardInv : Monoid.Inv (R.natCoef G.card)) {E : LinRepres R G} (v : E) : IsInvariant (invProj cardInv E v)
+      => \lam h => E.**_*c *> pmap (cardInv.inv *c) (AddMonoidHom.func-FinSum (E.toLinearMap h) *> E.FinSum-ext (\lam g => inv E.**-assoc) *>
+                                                     inv (E.FinSum_Equiv {G} {G} (Group.translate-is-Equiv h) {\lam g => g ** v}))
+
+    \lemma on-invariant {R : CRing} {G : FinGroup} (cardInv : Monoid.Inv (R.natCoef G.card)) {E : LinRepres R G} {v : E} (p : IsInvariant v)
+      : invProj cardInv E v = v
+      => pmap (cardInv.inv *c) (E.FinSum-ext p *> SumOverGroup.FinSumEqual-multiply v) *> inv E.*c-assoc *> pmap (`*c v) cardInv.inv-left *> E.ide_*c
+
+    \func interwining {R : CRing} {G : FinGroup} (cardInv : Monoid.Inv (R.natCoef G.card)) (E : LinRepres R G) : InterwiningMap E E \cowith
+      | LinearMap => invProj cardInv E
+      | func-** {v} {h} => pmap (cardInv.inv *c) (shift h v) *> inv (invariant cardInv v h)
+
+    -- | $\mathrm{tr}\, \varphi = \frac{1}{|G|} \sum_g \chi_E(g)$.
+    \lemma trace {R : CRing} {G : FinGroup} (cardInv : Monoid.Inv (R.natCoef G.card)) (E : FinLinRepres R G)
+      : endoTrace {R} {FinLinRepres.toFinModule E} (invProj cardInv E) = cardInv.inv * R.FinSum (\lam g => character E g)
+      => \case E.isFinRepres \with {
+        | inP (l, lb) =>
+          \let C => basisCS lb
+          \in CoordSystem.trace {R} {FinLinRepres.toFinModule E} C (invProj cardInv E) *>
+              R.FinSum-ext (\lam j => (C.coord j).func-*c *> pmap (cardInv.inv *) (AddMonoidHom.func-FinSum (C.coord j) {G} {\lam g => g ** C.vec j})) *>
+              inv R.FinSum-ldistr *> pmap (cardInv.inv *) (FinSum-swap *> inv (R.FinSum-ext (\lam g => character-coords C g)))
+      }
+  }
+
+-- | The trace of an idempotent-like endomorphism whose fixed vectors form a split submodule is its rank.
+\lemma trace-split {R : CRing} {U : FinModule R} (p : LinearMap U U) {P : U -> \Prop} (S : SplitSubLModule U P)
+  (pP : \Pi (u : U) -> P (p u)) (Pp : \Pi {u : U} -> P u -> p u = u)
+  : endoTrace p = R.natCoef S.dim
+  => \case U.isFinModule \with {
+    | inP (l, lb) =>
+      \let | b : LModule.IsBasis {ArrayFinModule {R} S.dim} MatrixRing.ide => ArrayFinModule.basis
+           | q : LinearMap U (ArrayFinModule {R} S.dim) => LinearMap.compose {R} {U} {U} {ArrayFinModule {R} S.dim} S.retr p
+      \in endoTrace-char lb *>
+          pmap (\lam f => Trace (LinearMap.toMatrix l lb f)) (exts \lam u => inv (S.incl_retr (pP u))) *>
+          pmap Trace (LinearMap.toMatrix_* {R} {U} {ArrayFinModule {R} S.dim} {U} q S.incl l b lb) *>
+          Trace-prod (LinearMap.toMatrix {R} {U} {ArrayFinModule {R} S.dim} l b q) (LinearMap.toMatrix {R} {ArrayFinModule {R} S.dim} {U} MatrixRing.ide lb S.incl) *>
+          pmap Trace (inv (LinearMap.toMatrix_* {R} {ArrayFinModule {R} S.dim} {U} {ArrayFinModule {R} S.dim} S.incl q MatrixRing.ide lb b) *>
+                      matrixExt (\lam i j => pmap (\lam z => LModule.basis-split {ArrayFinModule {R} S.dim} b z j) (pmap S.retr (Pp (S.incl-in _)) *> S.retr_incl _)) *>
+                      LinearMap.toMatrix_ide b) *>
+          Trace-ide
+  }
+
+\func changePred {R : Ring} {U : LModule R} {P Q : U -> \Prop} (S : SplitSubLModule U P) (pq : \Pi (u : U) -> P u <-> Q u) : SplitSubLModule U Q \cowith
+  | dim => S.dim
+  | incl => S.incl
+  | retr => S.retr
+  | retr_incl => S.retr_incl
+  | incl-in x => (pq _).1 (S.incl-in x)
+  | incl_retr q => S.incl_retr ((pq _).2 q)
+
+-- | Fulton--Harris (2.9): the rank of any split subspace of invariant vectors is $\frac{1}{|G|} \sum_g \chi_E(g)$.
+\lemma dim-invariants {R : CRing} {G : FinGroup} (cardInv : Monoid.Inv (R.natCoef G.card)) (E : FinLinRepres R G)
+  (S : SplitSubLModule E (\lam v => IsInvariant v))
+  : R.natCoef S.dim = cardInv.inv * R.FinSum (\lam g => character E g)
+  => inv (trace-split {R} {FinLinRepres.toFinModule E} (invProj cardInv E) S (invProj.invariant cardInv) (invProj.on-invariant cardInv)) *> invProj.trace cardInv E
+
+-- | Over a discrete field such a split subspace exists.
+\lemma invariants-split {K : DiscreteField} {G : FinGroup} (cardInv : Monoid.Inv (K.natCoef G.card)) (E : FinLinRepres K G)
+  : TruncP (SplitSubLModule E (\lam v => IsInvariant v))
+  => \case E.isFinRepres \with {
+    | inP (l, lb) => TruncP.map (image-split lb lb (invProj cardInv E)) \lam S => changePred S \lam v =>
+        (\lam (h : ∃ (u : E) (invProj cardInv E u = v)) => \let | (inP (u, p)) => h \in transport IsInvariant p (invProj.invariant cardInv u),
+         \lam inv-v => inP (v, invProj.on-invariant cardInv inv-v))
+  }

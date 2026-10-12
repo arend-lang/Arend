@@ -1,0 +1,59 @@
+\import Algebra.Group
+\import Algebra.Group.GSet
+\import Algebra.Group.GroupHom
+\import Algebra.Group.Representation
+\import Algebra.Module
+\import Algebra.Module.Instances
+\import Algebra.Module.LinearMap
+\import Algebra.Monoid
+\import Algebra.Pointed
+\import Algebra.Ring
+\import Arith.Nat.EulerTotient (InvGroup)
+\import Logic
+\import Paths
+\import Paths.Meta
+
+-- | Fulton--Harris §1.1: the representation on $\mathrm{Hom}(A, B)$, $(g \cdot \varphi)(v) = g\, \varphi(g^{-1} v)$.
+\func HomLRepres {R : CRing} {G : Group} (A B : LinRepres R G) : LinRepres R G \cowith
+  | LModule => LinearMapLModule A B
+  | ** g phi => conj g phi
+  | **-assoc {m} {n} {phi} => exts \lam v => pmap (\lam z => (m * n) ** phi z) (pmap (`** v) G.inverse_* *> A.**-assoc) *> B.**-assoc
+  | **_ide {phi} => exts \lam v => pmap (\lam z => ide ** phi z) (pmap (`** v) G.inverse_ide *> A.**_ide) *> B.**_ide
+  | **-ldistr => exts \lam v => B.**-ldistr
+  | **_*c => exts \lam v => B.**_*c
+  \where
+    \func conj {R : CRing} {G : Group} {A B : LinRepres R G} (g : G) (phi : LinearMap A B) : LinearMap A B \cowith
+      | func v => g ** phi (inverse g ** v)
+      | func-+ => pmap (g **) (pmap phi A.**-ldistr *> phi.func-+) *> B.**-ldistr
+      | func-*c => pmap (g **) (pmap phi A.**_*c *> phi.func-*c) *> B.**_*c
+
+-- | The dual representation $A^* = \mathrm{Hom}(A, R)$.
+\func DualLRepres {R : CRing} {G : Group} (A : LinRepres R G) : LinRepres R G
+  => HomLRepres A (TrivialAction (RingLModule R) G)
+
+-- | Fulton--Harris Exercise 1.2: the invariant vectors of $\mathrm{Hom}(A, B)$ are exactly the $G$-linear maps.
+--   Intentional exercise hole; see the pilot plan, Section 2.
+\lemma invariantHom {R : CRing} {G : Group} {A B : LinRepres R G} (f : LinearMap A B)
+  : (\Pi (g : G) -> HomLRepres.conj g f = f) <-> (\Pi (g : G) (a : A) -> f (g ** a) = g ** f a)
+  => {?FH_L01_Ex1_2}
+
+-- | Fulton--Harris §1.1: a representation gives a homomorphism $g \mapsto \rho(g^{-1})$ into the units of {LinearMapRing}.
+--   The inverse is needed because {LinearMapRing} multiplies diagrammatically, $f * g = g \circ f$,
+--   so $g \mapsto \rho(g)$ is an antihomomorphism.
+\func toUnitsHom {R : Ring} {G : Group} (E : LinRepres R G) : GroupHom G (InvGroup (LinearMapRing E)) \cowith
+  | func g => (E.toLinearMap (inverse g), \new Monoid.Inv {
+    | inv => E.toLinearMap g
+    | inv-left => exts \lam v => inv E.**-assoc *> pmap (`** v) G.inverse-left *> E.**_ide
+    | inv-right => exts \lam v => inv E.**-assoc *> pmap (`** v) G.inverse-right *> E.**_ide
+  })
+  | func-ide => ext (exts \lam v => pmap (`** v) G.inverse_ide *> E.**_ide)
+  | func-* {x} {y} => ext (exts \lam v => pmap (`** v) G.inverse_* *> E.**-assoc)
+
+-- | The inverse construction: a homomorphism into the units of {LinearMapRing} defines a representation.
+\func fromUnitsHom {R : Ring} {G : Group} {V : LModule R} (h : GroupHom G (InvGroup (LinearMapRing V))) : LinRepres R G \cowith
+  | LModule => V
+  | ** g v => (h (inverse g)).1 v
+  | **-assoc {m} {n} {v} => path (\lam i => ((pmap h G.inverse_* *> h.func-*) @ i).1 v)
+  | **_ide {v} => path (\lam i => ((pmap h G.inverse_ide *> h.func-ide) @ i).1 v)
+  | **-ldistr => LinearMap.func-+
+  | **_*c => LinearMap.func-*c

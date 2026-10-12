@@ -1,0 +1,89 @@
+\import Algebra.Field
+\import Algebra.Group
+\import Algebra.Group.Representation
+\import Algebra.Group.Representation.CharacterFormulas
+\import Algebra.Group.Representation.Characters
+\import Algebra.Group.Representation.InterwiningMap
+\import Algebra.Group.Representation.Irreducible
+\import Algebra.Group.Representation.Orthogonality
+\import Algebra.Linear.Matrix
+\import Algebra.Module
+\import Algebra.Module.FinModule
+\import Algebra.Monoid
+\import Algebra.Pointed
+\import Algebra.Ring
+\import Algebra.Semiring
+\import Equiv
+\import Logic
+\import Logic.Meta
+\import Meta
+\import Paths
+\import Paths.Meta
+\import Set
+\import Set.Fin
+
+\func ZeroFin.{u} {R : Ring.{u}} {G : Group} : FinLinRepres.{u} R G \cowith
+  | LinRepres => TrivialAction {R} (ArrayFinModule {R} 0) G
+  | isFinRepres => inP (MatrixRing.ide, ArrayFinModule.basis {R} {0})
+
+\lemma character_zero.{u} {R : CRing.{u}} {G : Group} (g : G) : character (ZeroFin.{u} {R} {G}) g = 0
+  => character-char (ArrayFinModule.basis {R} {0}) g
+
+-- | The direct sum $V_{a_0} \oplus \cdots \oplus V_{a_{n-1}}$ of a family indexed by a list.
+\func DSum.{u} {R : Ring.{u}} {G : Group} {r : Nat} (V : Fin r -> FinLinRepres.{u} R G) (a : Array (Fin r)) : FinLinRepres.{u} R G \elim a
+  | nil => ZeroFin.{u} {R} {G}
+  | x :: a => SumFin (V x) (DSum V a)
+
+-- | The number of occurrences of $j$ in $a$.
+\func countFin {r : Nat} (j : Fin r) (a : Array (Fin r)) : Nat \elim a
+  | nil => 0
+  | x :: a => (\case decideEq x j \with {
+    | yes _ => 1
+    | no _ => 0
+  }) Nat.+ countFin j a
+
+\lemma pairing-+ {R : CRing} {G : FinGroup} (cardInv : Monoid.Inv (R.natCoef G.card)) (chi chi' psi : G -> R)
+  : pairing cardInv (\lam g => chi g + chi' g) psi = pairing cardInv chi psi + pairing cardInv chi' psi
+  => pmap (cardInv.inv *) (R.FinSum-ext (\lam g => R.rdistr) *> R.FinSum_+) *> R.ldistr
+
+\lemma pairing-zero {R : CRing} {G : FinGroup} (cardInv : Monoid.Inv (R.natCoef G.card)) (psi : G -> R)
+  : pairing cardInv (\lam _ => 0) psi = 0
+  => pmap (cardInv.inv *) (R.FinSum_zro (\lam g => R.zro_*-left)) *> R.zro_*-right
+
+\lemma natCoef1 {R : Semiring} : R.natCoef 1 = 1
+  => R.natCoefSuc 0 *> pmap (`+ 1) R.natCoefZero *> R.zro-left
+
+\lemma delta-case.{u} {K : DiscreteField.{u}} {G : FinGroup} (cardInv : Monoid.Inv (K.natCoef G.card)) {r : Nat} (V : Fin r -> FinLinRepres.{u} K G)
+  (irr : \Pi (i : Fin r) -> IsFinIrreducible (V i))
+  (comm : \Pi (i : Fin r) (h : InterwiningMap (V i) (V i)) -> ∃ (c : K) (\Pi (e : V i) -> h e = c *c e))
+  (noniso : \Pi (i j : Fin r) -> i /= j -> Not (∃ (f : InterwiningMap (V i) (V j)) (IsEquiv f)))
+  (x j : Fin r)
+  : pairing cardInv (character (V x)) (character (V j)) = K.natCoef (\case decideEq x j \with { | yes _ => 1 | no _ => 0 })
+  => cases (decideEq x j) \with {
+    | yes p => transportInv (\lam y => pairing cardInv (character (V y)) (character (V j)) = K.natCoef 1) p
+                 (orthogonality-self cardInv (V j) (irr j) (comm j) *> inv natCoef1)
+    | no n => orthogonality-noniso cardInv (V x) (V j) (irr x) (irr j) (noniso x j n) *> inv K.natCoefZero
+  }
+
+\lemma count-pairing.{u} {K : DiscreteField.{u}} {G : FinGroup} (cardInv : Monoid.Inv (K.natCoef G.card)) {r : Nat} (V : Fin r -> FinLinRepres.{u} K G)
+  (irr : \Pi (i : Fin r) -> IsFinIrreducible (V i))
+  (comm : \Pi (i : Fin r) (h : InterwiningMap (V i) (V i)) -> ∃ (c : K) (\Pi (e : V i) -> h e = c *c e))
+  (noniso : \Pi (i j : Fin r) -> i /= j -> Not (∃ (f : InterwiningMap (V i) (V j)) (IsEquiv f)))
+  (a : Array (Fin r)) (j : Fin r)
+  : pairing cardInv (character (DSum.{u} V a)) (character (V j)) = K.natCoef (countFin j a) \elim a
+  | nil => pmap (pairing cardInv __ (character (V j))) {character (ZeroFin.{u} {K} {G})} {\lam _ => 0} (ext character_zero.{u}) *> pairing-zero cardInv _ *> inv K.natCoefZero
+  | x :: a => pmap (pairing cardInv __ (character (V j))) {character (SumFin (V x) (DSum.{u} V a))} {\lam g => character (V x) g + character (DSum.{u} V a) g} (ext (character_sum (V x) (DSum.{u} V a))) *>
+              pairing-+ cardInv (character (V x)) (character (DSum.{u} V a)) (character (V j)) *> pmap2 (+) (delta-case cardInv V irr comm noniso x j) (count-pairing cardInv V irr comm noniso a j) *> inv K.natCoef_+
+
+-- | Fulton--Harris Prop. 1.8, constructive variant: multiplicities of pairwise non-isomorphic split irreducibles in a direct sum are determined by the isomorphism class.
+--   Restricted to characteristic $0$ (injectivity of {natCoef}) and conditional on Exercise 1.2.
+\lemma multiplicities.{u} {K : DiscreteField.{u}} {G : FinGroup} (cardInv : Monoid.Inv (K.natCoef G.card)) {r : Nat} (V : Fin r -> FinLinRepres.{u} K G)
+  (irr : \Pi (i : Fin r) -> IsFinIrreducible (V i))
+  (comm : \Pi (i : Fin r) (h : InterwiningMap (V i) (V i)) -> ∃ (c : K) (\Pi (e : V i) -> h e = c *c e))
+  (noniso : \Pi (i j : Fin r) -> i /= j -> Not (∃ (f : InterwiningMap (V i) (V j)) (IsEquiv f)))
+  (natCoef-inj : \Pi (m n : Nat) -> K.natCoef m = K.natCoef n -> m = n)
+  (a b : Array (Fin r)) (f : InterwiningMap (DSum.{u} V a) (DSum.{u} V b)) (e : IsEquiv f) (j : Fin r)
+  : countFin j a = countFin j b
+  => natCoef-inj _ _ (inv (count-pairing cardInv V irr comm noniso a j) *>
+       pmap (pairing cardInv __ (character (V j))) {character (DSum.{u} V a)} {character (DSum.{u} V b)} (ext (character-iso {K} {G} {DSum.{u} V a} {DSum.{u} V b} f e)) *>
+       count-pairing cardInv V irr comm noniso b j)

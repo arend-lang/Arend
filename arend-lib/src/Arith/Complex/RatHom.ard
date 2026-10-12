@@ -1,0 +1,20 @@
+\import Algebra.Monoid
+\import Algebra.Monoid.MonoidHom
+\import Algebra.Ring.RingHom
+\import Arith.Complex
+\import Arith.Nat
+\import Arith.Rat
+\import Arith.Real.Field
+\import Paths
+
+-- | Positive integers are invertible in $\mathbb{Q}$.
+\lemma natCoef-Inv-Rat (n : Nat) : Monoid.Inv (RatField.natCoef (suc n))
+  => RatField.nonZero-Inv (natRat/=0 suc/=0)
+
+-- | The embedding $\mathbb{Q} \to \mathbb{C}$ as a ring homomorphism.
+\func ratToComplex : RingHom RatField ComplexField
+  => fromRealRingHom RingHom.∘ RealField.coefHom
+
+-- | The image of an invertible natural number is invertible; no zero test on $\mathbb{C}$ is involved.
+\lemma natCoef-Inv-Complex (n : Nat) : Monoid.Inv (ComplexField.natCoef (suc n))
+  => transport (Monoid.Inv {ComplexField}) ratToComplex.func-natCoef (MonoidHom.func-Inv {ratToComplex} (natCoef-Inv-Rat n))
