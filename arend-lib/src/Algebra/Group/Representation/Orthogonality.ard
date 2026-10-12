@@ -31,6 +31,18 @@
 \func pairing {R : CRing} {G : FinGroup} (cardInv : Monoid.Inv (R.natCoef G.card)) (chi psi : G -> R) : R
   => cardInv.inv * R.FinSum (\lam g => chi (inverse g) * psi g)
 
+-- | Inversion in a group is an equivalence.
+\func inverse-QEquiv {G : Group} : QEquiv {G} {G} \cowith
+  | f => inverse
+  | ret => inverse
+  | ret_f _ => G.inverse-isInv
+  | f_sec _ => G.inverse-isInv
+
+-- | The pairing is symmetric, for arbitrary functions on the group.
+\lemma pairing-symm {R : CRing} {G : FinGroup} (cardInv : Monoid.Inv (R.natCoef G.card)) (chi psi : G -> R)
+  : pairing cardInv chi psi = pairing cardInv psi chi
+  => pmap (cardInv.inv *) (R.FinSum_Equiv {G} {G} inverse-QEquiv {\lam g => chi (inverse g) * psi g} *> R.FinSum-ext (\lam g => pmap (`* _) (pmap chi G.inverse-isInv) *> R.*-comm))
+
 -- | Exercise 1.2 (hole) turns an invariant vector of $\mathrm{Hom}(V, W)$ into an intertwiner.
 \func invariant-interwining {R : CRing} {G : Group} {V W : LinRepres R G} (f : LinearMap V W) (p : \Pi (g : G) -> HomLRepres.conj g f = f) : InterwiningMap V W \cowith
   | LinearMap => f

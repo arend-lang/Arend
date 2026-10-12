@@ -1066,7 +1066,7 @@ Item & Declarations (module) & Notes \\
 \midrule
 \endhead
 D3 & \code{SplitSubLRepres}, \code{IsFinIrreducible} (\src{Group/Representation/SplitSubLRepres}, \src{Irreducible}) & Old notion renamed \code{IsStronglyIrreducible}, Schur as \code{SchurLemma-strong}. The first component of \code{IsFinIrreducible} is stated as existence of a basis of positive length. \\
-P01 & \code{toUnitsHom}, \code{fromUnitsHom} (\src{Hom}); \code{PermRepr-not-FinIrreducible} (\src{PermutationRepresentation}) & Uses \code{InvGroup} from \src{Arith/Nat/EulerTotient}. \\
+P01 & \code{toUnitsHom}, \code{fromUnitsHom} and both round-trip laws (\src{Hom}); \code{PermRepr-not-FinIrreducible} (\src{PermutationRepresentation}); \code{rank-one-irreducible} (\src{Irreducible}) & Uses \code{InvGroup} from \src{Arith/Nat/EulerTotient}. Rank-one irreducibility holds over every \code{NonZeroCRing}, without averaging. \\
 P01b & \code{IsStronglyIrreducible.excludedMiddle} & Proved; no axiom. \\
 P02 & \code{HomLRepres}, \code{DualLRepres}, \code{invariantHom} & \code{invariantHom} is the hole \code{FH_L01_Ex1_2}. \\
 P03 & \code{SchurLemma} & Over \code{DiscreteField}; concludes \code{IsEquiv f}. \\
@@ -1082,12 +1082,12 @@ P12 & \code{orthogonality-noniso}, \code{orthogonality-self}, \code{orthogonalit
 L01--L05 & \code{toLinearMap_*}, \code{toMatrix-action_*}, \code{Trace-coords}, \code{Trace-basis-indep}, \code{endoTrace} (\src{Module/TraceCoords}) & L04 holds over any \code{CRing}, for bases of possibly different lengths, with no inverses. L03 is subsumed by \code{Trace-coords}. \\
 L06--L07, L11--L14 & \code{CoordSystem}, \code{productCS}, \code{homCS}, \code{tensorCS}, \code{deltaCS}, \code{arrayCS} (\src{Module/CoordSystem}, \src{Tensor}) & One mechanism (finite set-indexed coordinates and \code{Trace-coords}) replaces block and Kronecker matrices. \\
 L08--L09 & \code{kernel-split}, \code{image-split}, \code{split-full-surj} (\src{Linear/SplitSubLModule}) & As corrected: kernel over \code{SmithDomain}, image over \code{DiscreteField}. \\
-L10 & --- & Not needed: L21 uses \code{dim=0-of-zero} instead. \\
+L10 & \code{split-dim-<=} (\src{Linear/SplitSubLModule}) & Used for rank-one irreducibility. \\
 L15 & \code{trace-split} & Cyclicity of the trace; no kernel basis. \\
 L16, L22 & \code{natCoef-Inv-Rat}, \code{ratToComplex}, \code{natCoef-Inv-Complex} (\src{../Arith/Complex/RatHom}) & \\
 L17--L20 & \code{SymFinGroup}, \code{SymAction} (\src{Group/Symmetric/Action}), \code{FixedPointsFin}, \code{right-translate} & L20's inversion reindexing was not needed and was removed. \\
 L21 & \code{irreducible-from-commutant} (\src{Averaging}) & Uses \code{LocalRing.connected}. \\
-R1--R7 & \src{Symmetric3}, \src{Symmetric3Characters} & R1 is an explicit enumeration $\mathrm{Fin}\,6 \simeq S_3$; class sizes are not stated separately, since the sums run over all six elements. \\
+R1--R7 & \src{Symmetric3}, \src{Symmetric3Characters} & R1 is an explicit enumeration $\mathrm{Fin}\,6 \simeq S_3$; class sizes are not stated separately, since the sums run over all six elements. R6 covers all nine pairings, the reversed ones via the general lemma \code{pairing-symm}. Trivial and sign are irreducible over any \code{NonZeroCRing} (tested over $\mathbb Z$, also for $C_2 = S_2$). \\
 R8a/b & \src{test/Algebra/Representation/S3Test.ard} & Irreducibility, decomposition, character values and pairings over \code{ComplexField}, with the only inverse being the image of $1/6$. \\
 \bottomrule
 \end{longtable}}
@@ -1114,9 +1114,36 @@ on either hole.
   weakening \code{invariants-split} via a kernel splitting.
 \end{itemize}
 
+\textbf{Completion audit.}
+\begin{itemize}
+  \item The manifest is \src{arend-lib/docs/fulton-harris/manifest.jsonl}: 45
+  records with formal targets, source relation and status. This settles
+  decision~5.
+  \item \src{arend-lib/tools/autoformalization/pilot_acceptance.py} checks
+  in turn:
+  \begin{enumerate}
+    \item every target exists;
+    \item a fresh \code{--no-daemon -r -c} run, with targets in dependency
+    order, reports no errors;
+    \item the goals reported are exactly the registered holes;
+    \item the test suite passes;
+    \item the import-closure axiom audit is clean;
+    \item the declaration-level consumer closure of the holes, computed with
+    \code{-fu --json}, matches the manifest statuses;
+    \item a negative control: the classical fixture is flagged;
+    \item a negative control: a temporary module with an invalid proof is
+    rejected.
+  \end{enumerate}
+  \item A third control, inside the test suite, uses \code{fails}.
+  \item Run on 12 October: \code{ACCEPTED}. A mutation of the manifest
+  (marking P12 as \code{checked}) is rejected.
+  \item Targets are checked in dependency order because, in a multi-module
+  run, the CLI does not print the goals of a module first typechecked as a
+  dependency.
+\end{itemize}
+
 \textbf{Not yet done.}
 \begin{itemize}
-  \item The manifest file, whose location is still decision~5.
   \item The general-module design D3b.
 \end{itemize}
 

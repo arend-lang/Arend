@@ -2,12 +2,13 @@
 \import Algebra.Group
 \import Algebra.Group.GSet
 \import Algebra.Group.Representation
+\import Algebra.Meta
 \import Algebra.Module
 \import Algebra.Group.Representation.InterwiningMap
 \import Algebra.Group.Representation.SplitSubLRepres
 \import Algebra.Group.Representation.SubLRepres
 \import Algebra.Group.SubGroup
-\import Algebra.Linear.SplitSubLModule (SplitSubLModule, image-split, kernel-split)
+\import Algebra.Linear.SplitSubLModule (SplitSubLModule, coordsMap-section, image-split, kernel-split, split-dim-<=, split-full-surj)
 \import Algebra.Monoid
 \import Algebra.Pointed
 \import Algebra.Ring
@@ -17,8 +18,10 @@
 \import Function.Meta
 \import Logic
 \import Logic.Meta
+\import Order.PartialOrder
 \import Order.StrictOrder
 \import Paths
+\import Set
 
 -- | Irreducibility tested against every predicate subrepresentation.
 --   This is classical-strength: for the trivial representation on a nonzero ring it implies excluded middle,
@@ -97,3 +100,17 @@
         | inP (a, fa=b) => inP (g ** a, f.func-** *> pmap (g **) fa=b)
       }
   }
+
+\lemma pos-of-/=0 {d : Nat} (n : d /= 0) : 1 <= d \elim d
+  | 0 => absurd (n idp)
+  | suc d => linarith
+
+-- | A representation that is free of rank one is irreducible, over every nonzero commutative ring.
+--   No averaging is involved, so $|G|$ need not be invertible.
+\lemma rank-one-irreducible {R : NonZeroCRing} {G : Group} {E : LinRepres R G} {l : Array E} (len=1 : l.len = 1) (lb : E.IsBasis l)
+  : IsFinIrreducible E
+  => (inP (l, transportInv (0 <) len=1 NatOrder.zero<suc, lb), \lam S => \case decideEq S.dim 0 \with {
+    | yes p => byLeft p
+    | no n => byRight (split-full-surj S.retr_incl (coordsMap-section lb)
+        (<=-antisymmetric (split-dim-<= S.retr_incl (coordsMap-section lb)) (transportInv (`<= S.dim) len=1 (pos-of-/=0 n))))
+  })

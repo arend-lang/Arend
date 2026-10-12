@@ -1,3 +1,4 @@
+\import Algebra.Group.Representation
 \import Algebra.Group.Representation.CharacterFormulas
 \import Algebra.Group.Representation.Characters
 \import Algebra.Group.Representation.InterwiningMap
@@ -6,12 +7,15 @@
 \import Algebra.Group.Representation.Symmetric3
 \import Algebra.Group.Representation.Symmetric3Characters
 \import Algebra.Module
+\import Algebra.Group.Symmetric.Action
 \import Arith.Complex
 \import Arith.Complex.RatHom
+\import Arith.Int
 \import Arith.Rat
 \import Data.Array
 \import Logic
 \import Logic.Meta
+\import Meta
 \import Paths
 
 -- R3 over the rationals (it uses the scalar commutant R7).
@@ -49,3 +53,13 @@
 
 \lemma pairing-triv-sign-C : pairing (natCoef-Inv-Complex 5) (character (TrivialFin ComplexField S3)) (character (SignFin ComplexField)) = ComplexField.zro
   => pairing-triv-sign (natCoef-Inv-Complex 5)
+
+-- One-dimensional representations are irreducible without averaging: over $\mathbb{Z}$, where $|G|$ is not invertible.
+\lemma trivial-irreducible-Z-C2 : IsFinIrreducible (TrivialAction (RingLModule IntRing) (SymFinGroup 2))
+  => trivial-irreducible
+
+\lemma sign-irreducible-Z : IsFinIrreducible (SignLRepres IntRing 3)
+  => sign-irreducible
+
+-- Negative control: the checker must reject an invalid proof.
+\func control-invalid-proof => fails {0 = {Nat} 1} idp

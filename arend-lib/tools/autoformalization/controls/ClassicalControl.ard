@@ -1,0 +1,6 @@
+-- Negative control for the axiom audit: this module uses excluded middle and must be flagged.
+-- It is not part of the library sources.
+\import Logic
+\import Logic.Classical
+
+\func classical-control (P : \Prop) : Dec P => alem P

@@ -1,7 +1,7 @@
 \import Algebra.Group
 \import Algebra.Group.Representation.CharacterFormulas
 \import Algebra.Group.Representation.Characters
-\import Algebra.Group.Representation.Orthogonality (pairing)
+\import Algebra.Group.Representation.Orthogonality (pairing, pairing-symm)
 \import Algebra.Group.Representation.Symmetric3
 \import Algebra.Group.Symmetric
 \import Algebra.Meta
@@ -239,3 +239,12 @@
 
 \lemma pairing-triv-sign {R : CRing} (cardInv : Monoid.Inv (R.natCoef S3.card)) : pairing cardInv (character (TrivialFin R S3)) (character (SignFin R)) = 0
   => S3-pairing cardInv (character (TrivialFin R S3)) (character (SignFin R)) triv-val sign-val *> pmap (cardInv.inv *) (equation : _ = 0) *> R.zro_*-right
+
+\lemma pairing-std-triv {R : CRing} (cardInv : Monoid.Inv (R.natCoef S3.card)) : pairing cardInv (character (StdFin R)) (character (TrivialFin R S3)) = 0
+  => pairing-symm cardInv _ _ *> pairing-triv-std cardInv
+
+\lemma pairing-std-sign {R : CRing} (cardInv : Monoid.Inv (R.natCoef S3.card)) : pairing cardInv (character (StdFin R)) (character (SignFin R)) = 0
+  => pairing-symm cardInv _ _ *> pairing-sign-std cardInv
+
+\lemma pairing-sign-triv {R : CRing} (cardInv : Monoid.Inv (R.natCoef S3.card)) : pairing cardInv (character (SignFin R)) (character (TrivialFin R S3)) = 0
+  => pairing-symm cardInv _ _ *> pairing-triv-sign cardInv

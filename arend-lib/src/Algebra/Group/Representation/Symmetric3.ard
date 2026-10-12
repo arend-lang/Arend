@@ -230,23 +230,20 @@
   => \let | m=c : mean3 inv3 (perm-decomp-from R (c, x)) = c => pmap (inv3.inv *) (AbMonoid.FinSum=BigSum *> (equation : (c + x 0) + ((c + (x 1 - x 0)) + ((c + negative (x 1)) + 0)) = R.natCoef 3 * c)) *> inv *-assoc *> pmap (`* c) inv3.inv-left *> ide-left
      \in ext (m=c, pmap (stdSplit R).retr {\lam j => perm-decomp-from R (c, x) j - mean3 inv3 (perm-decomp-from R (c, x))} {\lam j => stdVec x j} (ext \lam j => pmap (perm-decomp-from R (c, x) j -) m=c *> equation) *> (stdSplit R).retr_incl x)
 
-\lemma ringEnd-scalar {R : CRing} (h : LinearMap (RingLModule R) (RingLModule R)) (x : R) : h x = h R.ide * x
-  => pmap h (inv R.ide-right) *> h.func-*c *> R.*-comm
+-- | The trivial one-dimensional representation is irreducible over every nonzero commutative ring.
+\lemma trivial-irreducible {R : NonZeroCRing} {G : Group} : IsFinIrreducible (TrivialAction (RingLModule R) G)
+  => rank-one-irreducible idp RingLModule.basis
 
--- | The trivial one-dimensional representation is irreducible.
-\lemma trivial-irreducible {R : LocalCRing} {G : FinGroup} (cardInv : Monoid.Inv (R.natCoef G.card)) : IsFinIrreducible (TrivialAction (RingLModule R) G)
-  => irreducible-from-commutant cardInv {TrivialAction (RingLModule R) G} {R.ide :: nil} NatOrder.zero<suc RingLModule.basis (\lam h => inP (h R.ide, ringEnd-scalar h))
-
--- | The sign representation is irreducible.
-\lemma sign-irreducible {R : LocalCRing} {n : Nat} (cardInv : Monoid.Inv (R.natCoef (SymFinGroup n).card)) : IsFinIrreducible (SignLRepres R n)
-  => irreducible-from-commutant cardInv {SignLRepres R n} {R.ide :: nil} NatOrder.zero<suc RingLModule.basis (\lam h => inP (h R.ide, ringEnd-scalar h))
+-- | The sign representation is irreducible over every nonzero commutative ring.
+\lemma sign-irreducible {R : NonZeroCRing} {n : Nat} : IsFinIrreducible (SignLRepres R n)
+  => rank-one-irreducible idp RingLModule.basis
 
 -- | Fulton--Harris Cor. 1.6 for the presented input: the permutation representation of $S_3$ is the direct sum of two irreducible representations.
 \func perm3-complete-reducibility {R : LocalCRing} (cardInv : Monoid.Inv (R.natCoef S3.card)) (inv3 : Monoid.Inv (R.natCoef 3))
   : \Sigma (IsFinIrreducible (TrivialAction (RingLModule R) S3)) (IsFinIrreducible (StdRep R))
            (\Pi (f : Fin 3 -> R) -> perm-decomp-from R (perm-decomp-to inv3 f) = f)
            (\Pi (c : R) (x : Array R 2) -> perm-decomp-to inv3 (perm-decomp-from R (c, x)) = (c, x))
-  => (trivial-irreducible cardInv, std-irreducible cardInv, perm-decomp-from-to inv3, perm-decomp-to-from inv3)
+  => (trivial-irreducible, std-irreducible cardInv, perm-decomp-from-to inv3, perm-decomp-to-from inv3)
 
 \func StdFin (R : CRing) : FinLinRepres R S3
   => fromCS (StdRep R) (arrayCS 2)

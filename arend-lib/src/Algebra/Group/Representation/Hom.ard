@@ -57,3 +57,13 @@
   | **_ide {v} => path (\lam i => ((pmap h G.inverse_ide *> h.func-ide) @ i).1 v)
   | **-ldistr => LinearMap.func-+
   | **_*c => LinearMap.func-*c
+
+-- | {fromUnitsHom} inverts {toUnitsHom} on actions.
+\lemma fromUnitsHom_toUnitsHom {R : Ring} {G : Group} (E : LinRepres R G) (g : G)
+  : LinRepres.toLinearMap {fromUnitsHom (toUnitsHom E)} g = {LinearMap E E} E.toLinearMap g
+  => exts \lam v => pmap (`** v) G.inverse-isInv
+
+-- | {toUnitsHom} inverts {fromUnitsHom} on homomorphisms.
+\lemma toUnitsHom_fromUnitsHom {R : Ring} {G : Group} {V : LModule R} (h : GroupHom G (InvGroup (LinearMapRing V))) (g : G)
+  : (toUnitsHom (fromUnitsHom h) g).1 = {LinearMap V V} (h g).1
+  => exts \lam v => path (\lam i => (h (G.inverse-isInv {g} @ i)).1 v)

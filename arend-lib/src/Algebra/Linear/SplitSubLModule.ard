@@ -179,3 +179,27 @@
          | sirj=id : (s LinearMap.∘ i) LinearMap.∘ (r LinearMap.∘ j) = LinearMap.id
              => (LinearMap.matrix-equiv b b).isInj (LinearMap.toMatrix_* (r LinearMap.∘ j) (s LinearMap.∘ i) MatrixRing.ide b b *> NM=1 *> inv (LinearMap.toMatrix_ide b))
     \in \lam e => inP (r e, inv (js (i (r e))) *> pmap j (pmap (\lam z => s (i (r z))) (inv (js e)) *> path (\lam t => sirj=id t (s e))) *> js e)
+
+-- | Coordinates with respect to a basis, as a linear map to $R^n$.
+\func coordsMap {R : Ring} {U : LModule R} {l : Array U} (lb : U.IsBasis l) : LinearMap U (ArrayFinModule {R} l.len) \cowith
+  | func u k => U.basis-split lb u k
+  | func-+ => exts \lam k => basis-split_+ lb k
+  | func-*c => exts \lam k => basis-split_*c lb k
+
+\lemma coordsMap-section {R : Ring} {U : LModule R} {l : Array U} (lb : U.IsBasis l) (u : U) : arrayLinearMap l (coordsMap lb u) = u
+  => inv (U.basis-split-char {_} {lb})
+
+-- | A split inclusion of $R^n$ into a module isomorphic to $R^m$ has $n \le m$, over a nonzero commutative ring.
+\lemma split-dim-<= {R : NonZeroCRing} {E : LModule R} {n m : Nat}
+  {i : LinearMap (ArrayFinModule {R} n) E} {r : LinearMap E (ArrayFinModule {R} n)} (ri : \Pi (x : Array R n) -> r (i x) = x)
+  {j : LinearMap (ArrayFinModule {R} m) E} {s : LinearMap E (ArrayFinModule {R} m)} (js : \Pi (e : E) -> j (s e) = e)
+  : n <= m
+  => \let | b : LModule.IsBasis {ArrayFinModule {R} n} MatrixRing.ide => ArrayFinModule.basis {R} {n}
+          | b' : LModule.IsBasis {ArrayFinModule {R} m} MatrixRing.ide => ArrayFinModule.basis {R} {m}
+          | M => LinearMap.toMatrix {R} {ArrayFinModule {R} n} {ArrayFinModule {R} m} (Ring.ide {MatrixRing R n}) b' (LinearMap.compose {R} {ArrayFinModule {R} n} {E} {ArrayFinModule {R} m} s i)
+          | N => LinearMap.toMatrix {R} {ArrayFinModule {R} m} {ArrayFinModule {R} n} (Ring.ide {MatrixRing R m}) b (LinearMap.compose {R} {ArrayFinModule {R} m} {E} {ArrayFinModule {R} n} r j)
+          | MN=1 : M MatrixRing.product N = 1
+              => inv (LinearMap.toMatrix_* {R} {ArrayFinModule {R} n} {ArrayFinModule {R} m} {ArrayFinModule {R} n} (LinearMap.compose {R} {ArrayFinModule {R} n} {E} {ArrayFinModule {R} m} s i) (LinearMap.compose {R} {ArrayFinModule {R} m} {E} {ArrayFinModule {R} n} r j) (Ring.ide {MatrixRing R n}) b' b) *>
+                 matrixExt (\lam a c => pmap (\lam z => LModule.basis-split {ArrayFinModule {R} n} b z c) (pmap r (js (i _)) *> ri _)) *>
+                 LinearMap.toMatrix_ide b
+     \in matrix-split_<= {R} {n} {m} {M} {N} MN=1
