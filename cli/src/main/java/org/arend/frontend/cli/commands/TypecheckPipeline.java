@@ -37,6 +37,7 @@ import org.arend.typechecking.error.local.GoalError;
 import static org.arend.ext.prettyprinting.PrettyPrinterConfig.DEFAULT;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -170,9 +171,16 @@ public final class TypecheckPipeline {
           System.out.println("Number of modules with goals: " + numWithGoals);
         }
         System.out.println("--- Done (" + TimedProgressReporter.timeToString(time) + ") ---");
+        printTimes(timedProgressReporter);
 
         if (cmdLine.hasOption(SHOW_SIZES)) {
-          showSizes(ctx, library);
+          List<ModuleLocation> modules = new ArrayList<>();
+          for (ModuleLocation module : ctx.server.getModules()) {
+            if (module.getLocationKind() == ModuleLocation.LocationKind.SOURCE && module.getLibraryName().equals(library.getLibraryName())) {
+              modules.add(module);
+            }
+          }
+          showSizes(ctx, modules);
         }
 
         if (cmdLine.hasOption(SHOW_MODULES)) {
@@ -232,6 +240,10 @@ public final class TypecheckPipeline {
           reportStoredDiagnostics(ctx, module, reported);
 
           System.out.println("--- Done (" + TimedProgressReporter.timeToString(System.currentTimeMillis() - time) + ") ---");
+          printTimes(timedProgressReporter);
+          if (cmdLine.hasOption(SHOW_SIZES)) {
+            showSizes(ctx, Collections.singletonList(module));
+          }
         } else {
           System.out.println();
           System.out.println("--- Typechecking " + module + " ---");
@@ -241,6 +253,10 @@ public final class TypecheckPipeline {
           reportStoredDiagnostics(ctx, module, reported);
 
           System.out.println("--- Done (" + TimedProgressReporter.timeToString(System.currentTimeMillis() - time) + ") ---");
+          printTimes(timedProgressReporter);
+          if (cmdLine.hasOption(SHOW_SIZES)) {
+            showSizes(ctx, Collections.singletonList(module));
+          }
 
           if (ctx.doubleCheck) {
             System.out.println();
@@ -309,6 +325,7 @@ public final class TypecheckPipeline {
 
         System.out.println("Tests completed: " + total[0] + ", Failed: " + failed[0]);
         System.out.println("--- Done (" + TimedProgressReporter.timeToString(time) + ") ---");
+        printTimes(timedProgressReporter);
 
         if (ctx.doubleCheck) {
           System.out.println();
@@ -333,22 +350,27 @@ public final class TypecheckPipeline {
       }
     }
 
-    if (timedProgressReporter != null) {
-      timedProgressReporter.print();
-    }
-
     return true;
   }
 
-  private static void showSizes(CommandContext ctx, SourceLibrary library) {
+  /**
+   * Times are printed right after the phase that collected them, not at the end of the run:
+   * whatever follows (double-check, persisting, tests) may fail or hang, and should not take
+   * the times with it.
+   */
+  private static void printTimes(TimedProgressReporter timedProgressReporter) {
+    if (timedProgressReporter != null) {
+      timedProgressReporter.print();
+    }
+  }
+
+  private static void showSizes(CommandContext ctx, Collection<ModuleLocation> modules) {
     Map<Definition, Integer> sizes = new HashMap<>();
-    for (ModuleLocation module : ctx.server.getModules()) {
-      if (module.getLocationKind() == ModuleLocation.LocationKind.SOURCE && module.getLibraryName().equals(library.getLibraryName())) {
-        for (DefinitionData definitionData : ctx.server.getResolvedDefinitions(module)) {
-          Definition definition = definitionData.definition().getData().getTypechecked();
-          if (definition != null) {
-            sizes.put(definition, SizeExpressionVisitor.getSize(definition));
-          }
+    for (ModuleLocation module : modules) {
+      for (DefinitionData definitionData : ctx.server.getResolvedDefinitions(module)) {
+        Definition definition = definitionData.definition().getData().getTypechecked();
+        if (definition != null) {
+          sizes.put(definition, SizeExpressionVisitor.getSize(definition));
         }
       }
     }

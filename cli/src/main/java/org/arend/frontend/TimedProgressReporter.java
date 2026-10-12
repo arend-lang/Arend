@@ -43,6 +43,7 @@ public class TimedProgressReporter implements ProgressReporter<List<? extends Co
     }
   }
 
+  /** Prints the times collected since the previous call, and forgets them. */
   public void print() {
     if (myTimes.isEmpty()) return;
 
@@ -55,5 +56,6 @@ public class TimedProgressReporter implements ProgressReporter<List<? extends Co
     for (Pair<TCDefReferable, Long> pair : list) {
       System.out.println(pair.proj1.getRefLongName() + ": " + timeToString(pair.proj2));
     }
+    myTimes.clear();
   }
 }
