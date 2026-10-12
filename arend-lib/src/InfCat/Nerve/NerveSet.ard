@@ -1,0 +1,164 @@
+{- | Nerves of strict set-valued functors.
+ -
+ -   A functor from a precategory {S} to sets induces a functor from its nerve to `TypeCat 1` with the same values and actions
+ -   ({setFam}), since the full subcategory of sets is 1-truncated. The same holds for functors of two variables ({setFam2}),
+ -   because functor categories into a 1-category are also 1-categories.
+ -}
+
+\import Category
+\import Category.Displayed
+\import Category.Functor
+\import Equiv
+\import Equiv.Sigma
+\import Homotopy.HLevel
+\import Function.Meta
+\import InfCat.Basics
+\import InfCat.Fibration.DirectedUnivalence
+\import InfCat.Fibration.LeftFib
+\import InfCat.Functor.Equiv
+\import InfCat.Functor.FullyFaithful
+\import InfCat.Nerve.Nerve
+\import InfCat.Nerve.NerveHom
+\import InfCat.Nerve.NerveNat
+\import InfCat.Paths
+\import InfCat.SubCat.Full
+\import InfCat.Trunc.ArrowFam
+\import InfCat.Trunc.IsCatTrunc
+\import InfCat.Trunc.TruncUniverse
+\import Logic
+\import Logic.Meta
+\import Logic.Unique
+\import Paths
+\import Paths.Meta
+\import Set.SetCategory
+\open FullSubCat (inc, inc-con)
+
+-- # Sets as objects of {TypeCat}
+
+-- | A set as an object of {TypeCat} `1`.
+\func setOb.{u} (A : \Set u) : TypeCat.{u} 1
+  => FullSubCat.make A \lam a a' => toProp \lam p q => prop-pi
+
+-- | The arrow of {TypeCat} given by a function between sets.
+\func setArr.{u} {A B : \Set u} (f : A -> B) : setOb A ~> setOb B
+  => typeArr.{u} {1} {setOb A} {setOb B} f
+
+\sfunc setArr-comp.{u} {A B C : \Set u} {f : A -> B} {g : B -> C} : comp (setArr f) (setArr g) = setArr (\lam a => g (f a))
+  => typeArr-ext {1} \lam a => pmap (~>_-> __ a) (dmap_comp inc) *> ~>_->_comp (dmap inc (setArr f)) (dmap inc (setArr g))
+      *> pmap (~>_-> (dmap inc (setArr g))) (typeArr-app {1}) *> typeArr-app {1} *> inv (typeArr-app {1})
+
+\sfunc setArr-id.{u} {A : \Set u} : setArr (\lam (a : A) => a) = idd
+  => typeArr-ext {1} \lam a => typeArr-app {1} *> inv ~>_->_idd
+
+-- # One variable
+
+-- | The functor on the nerve induced by a set-valued functor.
+\func setFam.{u} {S : Precat.{u,u}} (F : Functor S SetCat.{u}) (n :⁺ Nerve S) : TypeCat.{u} 1
+  => nerve-rec' TypeCat_IsTruncCat (\lam x => setOb (F x), \lam f => setArr (F.Func f))
+                (\lam f g => setArr-comp *> pmap setArr (inv F.Func-o)) (\lam x => pmap setArr F.Func-id *> setArr-id) n
+
+-- | Transport in {setFam} along `nerveHom f` is the action of {f}.
+\sfunc setFam-nerveHom.{u} {S : Precat.{u,u}} (F : Functor S SetCat.{u}) {x y : S} (f : Hom x y) (a : F x)
+  : ~>_-> (dmap (\lam n => inc (setFam F n)) (nerveHom f)) a = F.Func f a
+  => typeArr-app {1}
+
+-- # Two variables
+
+-- | The functor on the nerve of {S1} induced by a functor from {S1} to set-valued functors on {S2}.
+\func setFam2.{u} {S1 S2 : Precat.{u,u}} (F : Functor S1 (FunctorPrecat S2 SetCat.{u})) (b :⁺ Nerve S1) : Nerve S2 ->⁺ TypeCat.{u} 1
+  => nerve-rec' (fun-IsTruncCat TypeCat_IsTruncCat) (\lam n x => setFam (F n) x, \lam a => setFam2.edge F a) setFam2.rc setFam2.ri b
+  \where \protected {
+    -- | The natural transformation of nerve functors induced by a natural transformation.
+    \sfunc edge.{u} {S1 S2 : Precat.{u,u}} (F : Functor S1 (FunctorPrecat S2 SetCat.{u})) {n n' : S1} (a : Hom n n')
+      : (\lam x => setFam (F n) x) ~> {Nerve S2 ->⁺ TypeCat.{u} 1} (\lam x => setFam (F n') x)
+      => fun-hom-equiv.ret (nerve-nat TypeCat_IsTruncCat (\lam x => setFam (F n) x) (\lam x => setFam (F n') x)
+                                      (\lam x => setArr (F.Func a x))
+                                      (\lam f => setArr-comp *> pmap setArr (ext \lam t => path \lam i => (F.Func a).natural f i t) *> inv setArr-comp))
+
+    \sfunc edge-ob.{u} {S1 S2 : Precat.{u,u}} {F : Functor S1 (FunctorPrecat S2 SetCat.{u})} {n n' : S1} (a : Hom n n') (x : S2)
+      : fun-hom-equiv (edge F a) (nerveOb x) = setArr (F.Func a x)
+      => pmap (\lam u => fun-hom-equiv u (nerveOb x)) (\peval edge F a) *> nerve-nat.ob x
+
+    \sfunc rc.{u} {S1 S2 : Precat.{u,u}} {F : Functor S1 (FunctorPrecat S2 SetCat.{u})} {n n' n'' : S1} (a : Hom n n') (b : Hom n' n'')
+      : comp (edge F a) (edge F b) = edge F (b ∘ a)
+      => inv (fun-hom-equiv.ret_f _) *> pmap fun-hom-equiv.ret (funExt+ (nerve-arrow-ext TypeCat_IsTruncCat (fun-hom-equiv (comp (edge F a) (edge F b))) (fun-hom-equiv (edge F (b ∘ a))) \lam x =>
+               dmap_comp (\lam (h : Nerve S2 ->⁺ TypeCat.{u} 1) => h (nerveOb x)) *> pmap2 comp (edge-ob a x) (edge-ob b x) *> setArr-comp
+               *> pmap (\lam (c : NatTrans (F n) (F n'')) => setArr (c x)) (inv F.Func-o) *> inv (edge-ob (b ∘ a) x))) *> fun-hom-equiv.ret_f _
+
+    \sfunc ri.{u} {S1 S2 : Precat.{u,u}} {F : Functor S1 (FunctorPrecat S2 SetCat.{u})} (n : S1) : edge F (id {S1} {n}) = idd
+      => inv (fun-hom-equiv.ret_f _) *> pmap fun-hom-equiv.ret (funExt+ (nerve-arrow-ext TypeCat_IsTruncCat (fun-hom-equiv (edge F id)) (fun-hom-equiv idd) \lam x =>
+               edge-ob id x *> pmap (\lam (c : NatTrans (F n) (F n)) => setArr (c x)) F.Func-id *> setArr-id)) *> fun-hom-equiv.ret_f _
+  }
+
+-- # Categories of elements
+
+-- | The total category of a family of sets over a 1-category is a 1-category.
+\lemma setTotal-IsTruncCat.{u} {N : \Cat} (Nt : IsTruncCat 1 N) (G : N ->⁺ TypeCat.{u} 1) : IsTruncCat 1 (\Sigma⁺ (n : N) (inc (G n)))
+  => \lam s t => HLevel-retracts (dpath-sigma-equiv (\lam _ n => inc (G n))) {1} $ HLevels-sigma _ {1} (Nt s.1 t.1) \lam r =>
+      HLevel-retracts (IsEquiv.toQEquiv (coe+-dpath-equiv (\lam i => inc (G (r i))) s.2 t.2)) {1}
+                      (HLevel_-1_suc {_} {0} (inc-con {_} {_} {G t.1} (coe+ (\lam i => inc (G (r i))) s.2 dright) t.2))
+
+-- | Arrows of the total category of a family of sets are determined by their projections.
+\func setTotal-hom-ext.{u} {N : \Cat} {G : N ->⁺ TypeCat.{u} 1} {s t : \Sigma⁺ (n : N) (inc (G n))} {u v : s ~> t}
+                           (e : dpath (\lam i => (u i).1) = dpath (\lam i => (v i).1)) : u = v
+  => \have E => dpath-sigma-equiv (\lam _ n => inc (G n))
+     \in inv (E.ret_f u) *> pmap E.ret (sigma-prop-ext (\lam (r : s.1 ~> t.1) => isProp.equiv (coe+-dpath-equiv (\lam i => inc (G (r i))) s.2 t.2)
+                                                     (ToProp.fromProp (inc-con {_} {_} {G t.1} _ _))) {E u} {E v} e) *> E.ret_f v
+
+-- | The displayed category of elements of a set-valued functor.
+\func SetElements.{u} {S : Precat.{u,u}} (F : Functor S SetCat.{u}) : DPrecat {S} (\lam x => F x) \cowith
+  | DHom f a b => F.Func f a = b
+  | id^ a => path (\lam i => F.Func-id i a)
+  | o^ q p => path (\lam i => F.Func-o i _) *> pmap (F.Func _) p *> q
+  | id^-left => prop-pi
+  | id^-right => prop-pi
+  | o^-assoc => prop-pi
+
+-- | The strict category of elements of a set-valued functor.
+\func ElPrecat.{u} {S : Precat.{u,u}} (F : Functor S SetCat.{u}) : Precat.{u,u}
+  => totalPrecat (SetElements F)
+
+-- | The comparison from the nerve of the strict category of elements to the category of elements of {setFam}.
+\func elMap.{u} {S : Precat.{u,u}} (F : Functor S SetCat.{u}) (e :⁺ Nerve (ElPrecat F)) : \Sigma⁺ (n : Nerve S) (inc (setFam F n))
+  => nerve-rec' (setTotal-IsTruncCat nerve-isTruncCat (\lam n => setFam F n)) (\lam s => (nerveOb s.1, s.2), \lam h => edge F h) rc ri e
+  \where \protected {
+    -- | Paths over `nerveHom f` in {setFam} are equalities of the action of {f}.
+    \func dpath-equiv.{u} {S : Precat.{u,u}} (F : Functor S SetCat.{u}) {x y : S} (f : Hom x y) (a : F x) (b : F y)
+      : QEquiv {F.Func f a = b} {DPath (\lam i => inc (setFam F (nerveHom f i))) a b} \cowith
+      | f p => IsEquiv.ret (coe+-dpath-equiv (\lam i => inc (setFam F (nerveHom f i))) a b) (setFam-nerveHom F f a *> p)
+      | ret d => inv (setFam-nerveHom F f a) *> coe+-dpath d
+      | ret_f _ => prop-pi
+      | f_sec _ => isProp.equiv (coe+-dpath-equiv (\lam i => inc (setFam F (nerveHom f i))) a b) (ToProp.fromProp (inc-con {_} {_} {setFam F (nerveOb y)} _ _)) _ _
+
+    \func edge.{u} {S : Precat.{u,u}} (F : Functor S SetCat.{u}) {s t : ElPrecat F} (h : Hom {ElPrecat F} s t)
+      : (nerveOb s.1, s.2) ~> {\Sigma⁺ (n : Nerve S) (inc (setFam F n))} (nerveOb t.1, t.2)
+      => (dpath-sigma-equiv (\lam _ n => inc (setFam F n)) {nerveOb s.1, s.2} {nerveOb t.1, t.2}).ret (nerveHom h.1, dpath-equiv F h.1 s.2 t.2 h.2)
+
+    \sfunc rc.{u} {S : Precat.{u,u}} {F : Functor S SetCat.{u}} {s t r : ElPrecat F} (h : Hom {ElPrecat F} s t) (h' : Hom {ElPrecat F} t r)
+      : comp (edge F h) (edge F h') = edge F (Precat.o {ElPrecat F} h' h)
+      => setTotal-hom-ext (dmap_comp (\lam (p : \Sigma⁺ (n : Nerve S) (inc (setFam F n))) => p.1) *> nerveHom-comp)
+
+    \sfunc ri.{u} {S : Precat.{u,u}} {F : Functor S SetCat.{u}} (s : ElPrecat F) : edge F (id {ElPrecat F} {s}) = idd
+      => setTotal-hom-ext nerveHom-id
+  }
+
+-- | The nerve of the strict category of elements is the category of elements of {setFam}.
+\lemma elMap-equiv.{u} {S : Precat.{u,u}} (F : Functor S SetCat.{u}) : IsHEquiv (elMap F)
+  => (ff-surj-equiv {_} {_} {elMap F}).1
+      (\lam x y => \case nerveOb-surj x, nerveOb-surj y \with {
+        | inP (s, p), inP (t, q) => transport2 (\lam x y => IsEquiv {x ~> y} (\lam u => dmap (elMap F) u)) p q (ob-ff s t)
+      }, \lam y => \case nerveOb-surj y.1 \with {
+        | inP (x, p) => transport (\lam n => \Pi (a : inc (setFam F n)) -> ∃ (e : Nerve (ElPrecat F)) (elMap F e = (n, a))) p
+                                  (\lam a => inP (nerveOb (x, a), idp)) y.2
+      })
+  \where
+    \private \lemma ob-ff.{u} {S : Precat.{u,u}} {F : Functor S SetCat.{u}} (s t : ElPrecat F)
+      : IsEquiv {nerveOb s ~> nerveOb t} (\lam u => dmap (elMap F) u)
+      => IsEquiv.rightFactor nerveHom-equiv $ transport IsEquiv (ext \lam h => idp) $
+           IsEquiv.trans (inP (sigma-equiv (IsEquiv.toQEquiv nerveHom-equiv) \lam f => elMap.dpath-equiv F f s.2 t.2))
+                         (inP (symQEquiv (dpath-sigma-equiv (\lam _ n => inc (setFam F n)) {nerveOb s.1, s.2} {nerveOb t.1, t.2})))
+
+-- | Transport in {setFam2} along `nerveHom a` at a vertex is the action of {a}.
+\sfunc setFam2-tr.{u} {S1 S2 : Precat.{u,u}} (F : Functor S1 (FunctorPrecat S2 SetCat.{u})) {n n' : S1} (a : Hom n n') (x : S2) (e : F n x)
+  : ~>_-> (dpath \lam i => inc (setFam2 F (nerveHom a i) (nerveOb x))) e = F.Func a x e
+  => pmap (\lam p => ~>_-> (dmap inc p) e) (setFam2.edge-ob a x) *> typeArr-app {1}

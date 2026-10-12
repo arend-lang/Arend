@@ -147,7 +147,7 @@
 
     \lemma refl-isLocalization {A B : \Cat} (f : A ->⁺ B) {P : A ->⁺ \Cat} (Pc : IsCocartesianFib P) (a : A)
       : IsLocalization (SliceW f P a) (refl Pc a)
-      => reflection-isLocalization (refl-inverts f Pc a) (sect P a) (eta Pc) (eps Pc) (eps-iso Pc)
+      => ladj-isLocalization (refl-inverts f Pc a) (sect P a) (eta Pc) (eps Pc) (eps-iso Pc)
            \lam s => cocartesianFib-lift.isCocartesian {A} {P} {Pc} (s.1.1, a, s.2, s.1.2)
 
     -- | {sliceMap} into the fibers of {extProj}.

@@ -3,6 +3,7 @@
 \import Function.Meta
 \import Homotopy.Fibration
 \import Homotopy.HLevel
+\import InfCat.Arrows
 \import InfCat.Basics
 \import InfCat.Fibration.DirectedUnivalence
 \import InfCat.Fibration.Straightening
@@ -16,6 +17,9 @@
 \import InfCat.Yoneda.CovariantYoneda
 \import InfCat.Yoneda.EncodeDecode
 \import Logic
+\import Logic.Meta
+\import Logic.Unique
+\import Order.PartialOrder
 \import Paths
 \import Paths.Meta
 \open FullSubCat (inc, isMax)
@@ -165,3 +169,44 @@
 
 \sfunc nerve-point-ob.{u} {D : Cat.{u,u}} (x : D) : nerve-point (nerveOb x) = (x, idp)
   => \peval nerve-point (nerveOb x)
+
+-- # Arrows of the nerve of a precategory and their strict representatives
+
+-- | Every arrow of the nerve of a precategory is the image of a strict arrow.
+\lemma nerve-arrow-strict.{u} {P : Precat.{u,u}} (a : DI ->⁺ Nerve P)
+  : ∃ (y z : P) (h : Hom y z) ((\lam i => nerveHom h i) = {DI ->⁺ Nerve P} a)
+  => \case nerveOb-surj (a dleft), nerveOb-surj (a dright) \with {
+    | inP (y, p), inP (z, q) => inP (y, z, IsEquiv.ret nerveHom-equiv (hom-endpoints.ret (a, inv p, inv q)),
+        pmap (\lam s => \lam i =>⁺ s i) (IsEquiv.f_ret nerveHom-equiv) *> pmap __.1 (hom-endpoints.f_sec (a, inv p, inv q)))
+  }
+
+-- | Hom-types of the nerve of a preorder are propositions.
+\lemma nerve-preorder-prop.{u} {P : Preorder.{u}} (a b : Nerve P) : isProp (a ~> b)
+  => \case nerveOb-surj a, nerveOb-surj b \with {
+    | inP (x, p), inP (y, q) => transport2 (\lam a b => isProp (a ~> b)) p q
+        (isProp.equiv (IsEquiv.ret-equiv nerveHom-equiv) \lam f g => prop-pi)
+  }
+
+-- | A property of strict arrows invariant under isomorphisms of the endpoints is a property of their images in the nerve.
+\lemma nerve-strict-transfer.{u} {P : Precat.{u,u}} (Q : \Pi {x y : P} -> Hom x y -> \Prop)
+  (Qi : \Pi {x x' y y' : P} (u : Iso {P} {x'} {x}) (v : Iso {P} {y} {y'}) (h : Hom x y) -> Q h -> Q (v.f ∘ (h ∘ u.f)))
+  {x0 y0 x1 y1 : P} (h0 : Hom x0 y0) (h1 : Hom x1 y1) (e : nerveHom h0 = {DI ->⁺ Nerve P} nerveHom h1) (q : Q h0)
+  : Q h1
+  => \let | pl => pmap (__ dleft) e
+          | pr => pmap (__ dright) e
+          | u => nerveIso.ret (=_~> (inv pl), =_~>-iso (inv pl))
+          | v => nerveIso.ret (=_~> pr, =_~>-iso pr)
+          | t : nerveHom (v.f ∘ (h0 ∘ u.f)) = nerveHom h1
+              => inv nerveHom-comp *> pmap (comp __ (nerveHom v.f)) (inv nerveHom-comp) *> inv comp-assoc
+                 *> pmap2 (\lam a b => comp a (comp (nerveHom h0) b)) (IsEquiv.f_ret nerveHom-equiv) (IsEquiv.f_ret nerveHom-equiv)
+                 *> dpath-path-transport (nerveHom h0) e
+     \in transport (\lam h => Q h) (IsEquiv.isInj nerveHom-equiv t) (Qi u v h0 q)
+  \where
+    -- | An arrow equal, as a functor from {DI}, to another arrow is its transport along the endpoint paths.
+    \sfunc dpath-path-transport {Z : \Cat} {a b : Z} (f : a ~> b) {h : DI ->⁺ Z} (e : f = {DI ->⁺ Z} h)
+      : comp (=_~> (inv (pmap (__ dleft) e))) (comp f (=_~> (pmap (__ dright) e))) = dpath h \elim e
+      | idp => comp_idd-left *> comp_idd-right
+
+-- | The arrows of the nerve represented by strict arrows satisfying {Q}.
+\type NerveW {P : Precat} (Q : \Pi {x y : P} -> Hom x y -> \Prop) (a : DI ->⁺ Nerve P) : \Prop
+  => ∃ (x y : P) (h : Hom x y) (Q h) ((\lam i => nerveHom h i) = {DI ->⁺ Nerve P} a)

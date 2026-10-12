@@ -317,6 +317,11 @@
   | ret_f _ => inv_inv
   | f_sec _ => inv_inv
 
+-- | Paths over a path {e} are transports along {e}.
+\func pathOver-transport-equiv {X : \Cat} (B : X -> \Cat) {x x' : X} (e : x = x') {b : B x} {b' : B x'}
+  : QEquiv {Path (\lam k => B (e k)) b b'} {transport B e b = b'} \elim e
+  | idp => idEquiv
+
 -- # Embeddings and surjections
 
 \record Embedding \extends TypeMap {

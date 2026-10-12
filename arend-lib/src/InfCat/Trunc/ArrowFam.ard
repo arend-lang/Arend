@@ -1,0 +1,56 @@
+{- | Covariant equalities of families of arrows into a category with hom-sets.
+ -
+ -   Equalities of arrows in a 1-category are propositions, so a family of such equalities that holds pointwise
+ -   also holds covariantly ({arrow-fam-ext}). This is used to compare natural transformations built in different ways.
+ -}
+
+\import Equiv
+\import Equiv.Sigma
+\import Function.Meta
+\import InfCat.Basics
+\import InfCat.Functor.Equiv
+\import InfCat.Functor.FullyFaithful
+\import InfCat.Square
+\import InfCat.Trunc.IsCatTrunc
+\import Logic
+\import Logic.Unique
+\import Homotopy.HLevel
+\import InfCat.Paths
+\import Meta
+\import Paths
+
+-- | The projection from the total category of equalities between two families of arrows is an equivalence if they are equal pointwise.
+\lemma arrow-fam-equiv {A Z : \Cat} (Zt : IsTruncCat 1 Z) {F G : A ->⁺ Z} (s1 s2 : \Pi (a :⁺ A) -> F a ~> G a) (v : \Pi (a : A) -> s1 a = s2 a)
+  : IsHEquiv {\Sigma⁺ (a : A) (s1 a = s2 a)} __.1
+  => (ff-surj-equiv {\Sigma⁺ (a : A) (s1 a = s2 a)} {A} {__.1}).1
+       (\lam x y => inP $ transQEquiv (dpath-sigma-equiv (\lam _ a => s1 a = s2 a)) $ contr-right \lam r => arrow-fam-dpath-contr Zt s1 s2 r x.2 y.2,
+        \lam a => inP ((a, v a), idp))
+  \where {
+    {- | Directed paths of equalities between two families of arrows into a 1-category are unique:
+     -   they correspond to paths in the type of squares over {r}, which is a proposition.
+     -}
+    \lemma arrow-fam-dpath-contr {A Z : \Cat} (Zt : IsTruncCat 1 Z) {F G : A ->⁺ Z} (s1 s2 : \Pi (a :⁺ A) -> F a ~> G a)
+                                 {a a' : A} (r : a ~> a') (p : s1 a = s2 a) (p' : s1 a' = s2 a')
+      : Contr (DPath (\lam i => s1 (r i) = s2 (r i)) p p')
+      => \let | B (xy : \Sigma (F a ~> G a) (F a' ~> G a')) => DPath (\lam i => F (r i) ~> G (r i)) xy.1 xy.2
+              | Bp : isProp (B (s2 a, s2 a')) => isProp.equiv (inP (square-equiv (dmap F r) (dmap G r))) (hom-isSet Zt _ _ _ _)
+         \in Contr.Contr_QEquiv (symQEquiv (later \new QEquiv {
+                | f D => path \lam k => dpath \lam i => D i k
+                | ret Q => dpath \lam i => path \lam k => Q k i
+                | ret_f _ => idp
+                | f_sec _ => idp
+              } `transQEquiv` pathOver-transport-equiv B (path \lam k => (p k, p' k))))
+              (isProp=>PathContr _ Bp (transport B (path \lam k => (p k, p' k)) (dpath \lam i => s1 (r i))) (dpath \lam i => s2 (r i)))
+  }
+
+-- | Families of arrows into a 1-category that are equal pointwise are equal covariantly.
+\sfunc arrow-fam-ext {A Z : \Cat} (Zt : IsTruncCat 1 Z) {F G : A ->⁺ Z} (s1 s2 : \Pi (a :⁺ A) -> F a ~> G a) (v : \Pi (a : A) -> s1 a = s2 a)
+                     (a :⁺ A) : s1 a = s2 a
+  => IsHEquiv.fib-sec (arrow-fam-equiv Zt s1 s2 v) a
+
+-- | Functor categories into a 1-category have hom-sets.
+\lemma fun-IsTruncCat {A Z : \Cat} (Zt : IsTruncCat 1 Z) : IsTruncCat 1 (A ->⁺ Z)
+  => \lam F G => HLevel-retracts fun-hom-equiv {1} \lam s1 s2 => toProp \lam p q =>
+      \let | P => \Pi (a :⁺ A) -> s1 a = s2 a
+           | c : Contr P => IsHEquiv.sections-contr (arrow-fam-equiv Zt s1 s2 \lam a => path \lam j => p j a)
+      \in inv (funExt+-equiv.f_sec p) *> pmap funExt+ (isContr=>isProp c (funExt+-equiv.ret p) (funExt+-equiv.ret q)) *> funExt+-equiv.f_sec q

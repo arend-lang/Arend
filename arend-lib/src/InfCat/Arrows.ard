@@ -50,6 +50,18 @@
   | ret_f t => idp
   | f_sec s => idp
 
+-- | An arrow is a functor from {DI} together with paths identifying its endpoints.
+\func hom-endpoints {Z : \Cat} {x y : Z} : QEquiv {x ~> y} {\Sigma (h : DI ->⁺ Z) (h dleft = x) (h dright = y)} \cowith
+  | f p => (\lam i => p i, idp, idp)
+  | ret t => transport (x ~>) t.3 (transport (~> t.1 dright) t.2 (dpath t.1))
+  | ret_f p => idp
+  | f_sec t => aux t.1 t.2 t.3
+  \where
+    \private \sfunc aux {Z : \Cat} {x y : Z} (h : DI ->⁺ Z) (a : h dleft = x) (b : h dright = y)
+      : (transport (x ~>) b (transport (~> h dright) a (dpath h)), idp, idp)
+        = {\Sigma (h : DI ->⁺ Z) (h dleft = x) (h dright = y)} (h, a, b) \elim a, b
+      | idp, idp => idp
+
 -- | The diagonal map into the arrow category is fully faithful.
 \lemma diag-ff {C : \Cat} : IsFFMap {C} {DI ->⁺ C} (\lam c _ => c)
   => \lam a b => IsEquiv.leftFactor

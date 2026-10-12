@@ -262,3 +262,10 @@
 \func transport+-slice.{v} {X : \Cat v} {F G G' : X ->⁺ \Type v} (p : G = G') {a : G ~> F} {a' : G' ~> F}
                            (q : a = comp (=_~> p) a') : transport+ (~> F) p a = a' \elim p
   | idp => q *> comp_idd-left
+
+-- | Arrows between functors are covariant families of arrows.
+\func fun-hom-equiv {A Z : \Cat} {F G : A ->⁺ Z} : QEquiv {F ~> G} {\Pi (a :⁺ A) -> F a ~> G a} \cowith
+  | f u a => dpath \lam i => u i a
+  | ret s => dpath \lam i a => s a i
+  | ret_f _ => idp
+  | f_sec _ => idp
