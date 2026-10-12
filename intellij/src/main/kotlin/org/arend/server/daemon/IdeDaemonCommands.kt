@@ -20,17 +20,19 @@ import org.apache.commons.cli.ParseException
 import org.arend.cli.ArendOptions
 import org.arend.cli.LockedFlags
 import org.arend.daemon.DaemonPaths
-import org.arend.error.CountingErrorReporter
+import org.arend.daemon.server.DaemonServer
 import org.arend.error.SourcePosition
 import org.arend.ext.error.ErrorReporter
 import org.arend.ext.error.GeneralError
 import org.arend.ext.module.FullName
 import org.arend.ext.module.LongName
 import org.arend.ext.module.ModuleLocation
+import org.arend.module.config.LibraryConfig
 import org.arend.module.error.ModuleNotFoundError
 import org.arend.psi.ArendFile
 import org.arend.query.ConsoleQueryTool
 import org.arend.query.QueryConsole
+import org.arend.query.QueryLibraries
 import org.arend.query.SourcePositionUtils
 import org.arend.term.concrete.Concrete
 import org.arend.server.ArendServerRequesterImpl
@@ -39,18 +41,15 @@ import org.arend.server.ProgressReporter
 import org.arend.server.TimedProgressReporter
 import org.arend.server.TypecheckReports
 import org.arend.typechecking.computation.CancellationIndicator
-import org.arend.typechecking.computation.FlagCancellationIndicator
 import org.arend.typechecking.runner.RunnerService
+import org.arend.util.findLibrary
 import org.arend.util.FileUtils
 import org.arend.util.findInternalLibrary
-import org.arend.util.findLibrary
-import java.io.ByteArrayOutputStream
+import org.arend.error.CountingErrorReporter
 import java.io.IOException
-import java.io.OutputStream
 import java.io.PrintStream
 import java.nio.charset.StandardCharsets
 import java.nio.file.Files
-import java.util.concurrent.atomic.AtomicBoolean
 
 /**
  * Runs daemon requests on the IDE's own server, read as `arend` reads its command line. A typecheck
@@ -62,22 +61,23 @@ import java.util.concurrent.atomic.AtomicBoolean
  *
  * @param served the canonical arend.yaml or zip of every library the daemon serves, to its name
  */
-class IdeDaemonCommands(private val project: Project, private val served: () -> Map<String, String>) : IdeDaemonRunner {
+class IdeDaemonCommands(private val project: Project, private val served: () -> Map<String, String>) : DaemonServer.Runner {
     private val server
         get() = project.service<ArendServerService>().server
 
-    override fun run(args: List<String>, cwd: String?, output: IdeDaemonOutput, cancel: AtomicBoolean): Int {
-        val out = PrintStream(FrameStream(output::out), true, StandardCharsets.UTF_8)
-        val err = PrintStream(FrameStream(output::err), true, StandardCharsets.UTF_8)
+    override fun run(request: DaemonServer.Request): Int {
+        val args = request.args ?: return refresh(request.output, request.cancel)
+        val out = PrintStream(request.output.stream(true), true, StandardCharsets.UTF_8)
+        val err = PrintStream(request.output.stream(false), true, StandardCharsets.UTF_8)
         try {
-            return QueryConsole.with(out, err) { execute(args, cwd, out, err, cancel) }
+            return QueryConsole.with(out, err) { execute(args, request.cwd, out, err, request.cancel) }
         } finally {
             out.flush()
             err.flush()
         }
     }
 
-    private fun execute(args: List<String>, cwd: String?, out: PrintStream, err: PrintStream, cancel: AtomicBoolean): Int {
+    private fun execute(args: List<String>, cwd: String?, out: PrintStream, err: PrintStream, cancel: CancellationIndicator): Int {
         val cmdLine = try {
             DefaultParser().parse(ArendOptions.create(), args.toTypedArray())
         } catch (e: ParseException) {
@@ -94,12 +94,7 @@ class IdeDaemonCommands(private val project: Project, private val served: () -> 
             return 0
         }
         // As the CLI's daemon does: they shaped the daemon when it started, which here is the project.
-        for (flag in LockedFlags.ALL) {
-            if (cmdLine.hasOption(flag.name())) {
-                err.println("[WARN] ${flag.display()} passed to a daemon-served command is ignored " +
-                        "(the IDE's project is authoritative; use --no-daemon to override).")
-            }
-        }
+        LockedFlags.warnIgnored(cmdLine, "the IDE's project", err)
 
         val libraries = served()
         val scope = LinkedHashSet<String>()
@@ -127,16 +122,14 @@ class IdeDaemonCommands(private val project: Project, private val served: () -> 
         // As the CLI's stderr reporter: prints each diagnostic, and an error proper fails the request.
         val reporter = CountingErrorReporter(GeneralError.Level.ERROR) { err.println(it) }
         val exitCode = if (tool != null) SourcePositionUtils.withResolver(::position) {
-                query(tool, cmdLine, cwd, scope, out, err, FlagCancellationIndicator(cancel))
+                query(tool, cmdLine, cwd, scope, out, err, cancel)
             }
             else typecheck(cmdLine, scope, targets, out, err, reporter, cancel)
         return if (exitCode == 0 && reporter.errorsNumber == 0) 0 else 1
     }
 
     /** Why the daemon will not run [cmdLine] at all, or null when it will; as the CLI's daemon says it. */
-    private fun refusal(cmdLine: CommandLine, tool: ConsoleQueryTool?): String? = when {
-        cmdLine.hasOption("i") -> "[ERROR] -i (REPL) is not supported in daemon mode"
-        ArendOptions.DAEMON_CONTROL_FLAGS.any { cmdLine.hasOption(it) } -> "[ERROR] daemon control flags are not valid inside a daemon-served command"
+    private fun refusal(cmdLine: CommandLine, tool: ConsoleQueryTool?): String? = ArendOptions.daemonRefusal(cmdLine) ?: when {
         cmdLine.hasOption("h") && tool == null -> "[ERROR] --help is answered by `arend --help` itself, not by a daemon"
         cmdLine.hasOption("v") -> "[ERROR] -v is answered by `arend -v` itself, not by a daemon"
         else -> null
@@ -149,7 +142,13 @@ class IdeDaemonCommands(private val project: Project, private val served: () -> 
     private fun query(tool: ConsoleQueryTool, cmdLine: CommandLine, cwd: String?, scope: Collection<String>, out: PrintStream,
                       err: PrintStream, indicator: CancellationIndicator): Int {
         val runner = tool.parseArgs(cmdLine.getOptionValues(tool.shortName())) ?: return 1
-        val libraries = IdeQueryLibraries(project)
+        // Cached: finding a library may parse its arend.yaml, and the tools ask on every line they print.
+        val configs = HashMap<String, LibraryConfig?>()
+        val libraries = object : QueryLibraries {
+            override fun getLibraries() = server.libraries.toList()
+
+            override fun getLibrary(name: String) = configs.getOrPut(name) { project.findLibrary(name) }
+        }
         val json = cmdLine.hasOption("json")
         val context = ConsoleQueryTool.QueryContext(scope.mapNotNull { libraries.getLibrary(it) }, libraries, server,
             out, json, emptySet(), indicator)
@@ -176,7 +175,7 @@ class IdeDaemonCommands(private val project: Project, private val served: () -> 
      * whole library, `-p`, the tests of `-t` and `--show-times`, in that order.
      */
     private fun typecheck(cmdLine: CommandLine, scope: Collection<String>, targets: List<String>, out: PrintStream, err: PrintStream,
-                          reporter: ErrorReporter, cancel: AtomicBoolean): Int {
+                          reporter: ErrorReporter, cancel: CancellationIndicator): Int {
         val modules = LinkedHashMap<ModuleLocation, LongName?>()
         for (target in targets) {
             val (modulePath, definition) = TypecheckReports.parseFullName(target, reporter)?.let { it.proj1 to it.proj2 } ?: return 1
@@ -238,7 +237,8 @@ class IdeDaemonCommands(private val project: Project, private val served: () -> 
         return failed
     }
 
-    override fun refresh(output: IdeDaemonOutput, cancel: AtomicBoolean): Int {
+    /** Brings the server up to date with the files on disk. */
+    private fun refresh(output: DaemonServer.Output, cancel: CancellationIndicator): Int {
         val libraries = served().values
         if (!sync(libraries, cancel)) return 1
         output.out("Refreshed ${libraries.joinToString(", ")}\n")
@@ -251,7 +251,7 @@ class IdeDaemonCommands(private val project: Project, private val served: () -> 
      * a typecheck started before then checks what the files said before. A module that has not
      * changed keeps its timestamp, which the server skips. Whether [cancel] was left unset.
      */
-    private fun sync(libraries: Collection<String>, cancel: AtomicBoolean): Boolean {
+    private fun sync(libraries: Collection<String>, cancel: CancellationIndicator): Boolean {
         // The project's own libraries: the server never re-reads a library from outside the project.
         val configs = libraries.mapNotNull { project.findInternalLibrary(it) }
         val files = runReadAction {
@@ -266,7 +266,7 @@ class IdeDaemonCommands(private val project: Project, private val served: () -> 
         }, ModalityState.nonModal())
         val requester = ArendServerRequesterImpl(project)
         for (config in configs) {
-            if (cancel.get()) return false
+            if (cancel.isCanceled) return false
             requester.requestUpdate(server, config.name, true)
         }
         // Nor does the server forget a file deleted from disk, whose errors would otherwise outlive it.
@@ -291,7 +291,7 @@ class IdeDaemonCommands(private val project: Project, private val served: () -> 
      * Whether it ran to its end; why not, unless the client cancelled it, goes to [err].
      */
     private fun check(libraries: Collection<String>, modules: Map<ModuleLocation, LongName?>, tests: Boolean, reporter: ErrorReporter,
-                      listener: ProgressReporter<List<Concrete.ResolvableDefinition>>?, err: PrintStream, cancel: AtomicBoolean): Boolean {
+                      listener: ProgressReporter<List<Concrete.ResolvableDefinition>>?, err: PrintStream, cancel: CancellationIndicator): Boolean {
         val runner = project.service<RunnerService>()
         val title = if (modules.isEmpty()) libraries.joinToString(", ") else modules.keys.joinToString(", ")
         val progress = listener ?: ProgressReporter.empty()
@@ -300,9 +300,9 @@ class IdeDaemonCommands(private val project: Project, private val served: () -> 
                 withBackgroundProgress(project, "Checking $title for the Arend daemon") {
                     val scope = this
                     val indicator = object : CancellationIndicator {
-                        override fun isCanceled() = cancel.get() || !scope.isActive
+                        override fun isCanceled() = cancel.isCanceled || !scope.isActive
 
-                        override fun cancel() = cancel.set(true)
+                        override fun cancel() = cancel.cancel()
                     }
                     for (library in if (modules.isEmpty()) libraries else modules.keys.map { it.libraryName }.distinct()) {
                         runner.loadCache(library)
@@ -330,7 +330,7 @@ class IdeDaemonCommands(private val project: Project, private val served: () -> 
         }
         runner.typecheckedElsewhere()
         // Not the client's cancel, which the daemon reports itself: the IDE's.
-        if (!finished && !cancel.get()) err.println("[ERROR] the typecheck was cancelled in the IDE")
+        if (!finished && !cancel.isCanceled) err.println("[ERROR] the typecheck was cancelled in the IDE")
         return finished
     }
 
@@ -347,21 +347,5 @@ class IdeDaemonCommands(private val project: Project, private val served: () -> 
         if (offset < 0 || offset > document.textLength) return@runReadAction null
         val line = document.getLineNumber(offset)
         SourcePosition((file as? ArendFile)?.moduleLocation?.toString() ?: file.name, line + 1, offset - document.getLineStartOffset(line) + 1)
-    }
-
-
-    /** Sends what is written to it, a flush at a time, as frames of the client. */
-    private class FrameStream(private val send: (String) -> Unit) : OutputStream() {
-        private val buffer = ByteArrayOutputStream()
-
-        override fun write(b: Int) = buffer.write(b)
-
-        override fun write(b: ByteArray, off: Int, len: Int) = buffer.write(b, off, len)
-
-        override fun flush() {
-            if (buffer.size() == 0) return
-            send(buffer.toString(StandardCharsets.UTF_8))
-            buffer.reset()
-        }
     }
 }

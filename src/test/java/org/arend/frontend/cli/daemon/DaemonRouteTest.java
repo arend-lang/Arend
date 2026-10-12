@@ -66,9 +66,7 @@ public class DaemonRouteTest {
     SocketBinder.Bound bound = SocketBinder.bind(paths.socketFile, paths.libraryHash);
     listener = bound.channel();
     address = bound.address();
-    new LockFile(ProcessHandle.current().pid(), paths.libraryConfig.toString(), paths.libraryHash,
-        LockFile.PROTOCOL_VERSION, System.currentTimeMillis(),
-        address).writeAtomic(paths.lockFile);
+    new LockFile(ProcessHandle.current().pid(), paths.libraryConfig.toString(), paths.libraryHash, List.of(paths.libraryConfig.toString()), List.of(), LockFile.PROTOCOL_VERSION, System.currentTimeMillis(), address, LockFile.HOST_CLI).writeAtomic(paths.lockFile);
 
     // Answers exactly one request and records it.
     acceptor = new Thread(() -> {
@@ -152,7 +150,7 @@ public class DaemonRouteTest {
     for (Path other : others) all.add(DaemonPaths.resolve(other));
     LockFile lock = new LockFile(ProcessHandle.current().pid(), home.libraryConfig.toString(), home.libraryHash,
         all.stream().map(d -> d.libraryConfig.toString()).toList(), List.of(), LockFile.PROTOCOL_VERSION,
-        System.currentTimeMillis(), address);
+        System.currentTimeMillis(), address, LockFile.HOST_CLI);
     for (DaemonPaths d : all) {
       d.ensureArendDir();
       lock.writeAtomic(d.lockFile);
@@ -190,7 +188,7 @@ public class DaemonRouteTest {
     List<String> sharedConfigs = new ArrayList<>();
     for (Path root : shared) sharedConfigs.add(DaemonPaths.resolve(root).libraryConfig.toString());
     LockFile lock = new LockFile(pid, "/owner-" + hash + "/arend.yaml", hash, List.of("/owner-" + hash + "/arend.yaml"),
-        sharedConfigs, LockFile.PROTOCOL_VERSION, startedAt, socket);
+        sharedConfigs, LockFile.PROTOCOL_VERSION, startedAt, socket, LockFile.HOST_CLI);
     Files.createDirectories(DaemonPaths.registryDir());
     lock.writeAtomic(lock.registryFile());
     return lock.registryFile();
@@ -226,7 +224,7 @@ public class DaemonRouteTest {
     DaemonPaths home = DaemonPaths.resolve(libRoot);
     new LockFile(ProcessHandle.current().pid(), home.libraryConfig.toString(), home.libraryHash,
         List.of(home.libraryConfig.toString()), List.of(DaemonPaths.resolve(shared).libraryConfig.toString()),
-        LockFile.PROTOCOL_VERSION, 1L, address).writeAtomic(home.lockFile);
+        LockFile.PROTOCOL_VERSION, 1L, address, LockFile.HOST_CLI).writeAtomic(home.lockFile);
     rc = DaemonRpc.tryRouteCli(positional.toArray(new String[0]), positional, List.of());
     assertTrue("once the owner's daemon has it, the command must route", rc.isPresent());
   }

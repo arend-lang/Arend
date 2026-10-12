@@ -1,6 +1,7 @@
 package org.arend.server.daemon
 
 import org.arend.daemon.LockFile
+import org.arend.daemon.server.DaemonServer
 import org.arend.daemon.server.SocketBinder
 import org.arend.daemon.wire.FrameChannel
 import org.junit.After
@@ -17,15 +18,14 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
-import java.util.concurrent.atomic.AtomicBoolean
 
-/** The daemon protocol as the IDE answers it, spoken to over a real socket, with a runner that only records. */
-class IdeDaemonServerTest {
+/** The daemon protocol as the IDE serves it, spoken to over a real socket, with a runner that only records. */
+class DaemonServerTest {
     @get:Rule
     val timeout: Timeout = Timeout.seconds(30)
 
     private lateinit var dir: Path
-    private lateinit var server: IdeDaemonServer
+    private lateinit var server: DaemonServer
     private lateinit var socket: SocketChannel
     private val ran = ArrayList<List<String>>()
     private val holding = CountDownLatch(1)
@@ -36,24 +36,22 @@ class IdeDaemonServerTest {
         assumeTrue("Unix domain sockets required", !System.getProperty("os.name", "").lowercase().startsWith("windows"))
         dir = Files.createTempDirectory("ide-daemon")
         val bound = SocketBinder.bind(dir.resolve("daemon.sock"), "0123456789abcdef")
-        server = IdeDaemonServer(bound, { listOf("/lib/arend.yaml") }, object : IdeDaemonRunner {
-            override fun run(args: List<String>, cwd: String?, output: IdeDaemonOutput, cancel: AtomicBoolean): Int {
-                synchronized(ran) { ran.add(args) }
-                if ("Hold" in args) {
-                    holding.countDown()
-                    while (!cancel.get()) Thread.sleep(5)
-                    return 0
-                }
-                output.out("checked ${args.joinToString(" ")}\n")
-                output.err("a warning\n")
-                return 3
+        server = DaemonServer(bound, { listOf("/lib/arend.yaml") }, emptyMap(), LockFile.HOST_INTELLIJ, { request ->
+            val args = request.args
+            if (args == null) {
+                request.output.out("refreshed\n")
+                return@DaemonServer 0
             }
-
-            override fun refresh(output: IdeDaemonOutput, cancel: AtomicBoolean): Int {
-                output.out("refreshed\n")
-                return 0
+            synchronized(ran) { ran.add(args) }
+            if ("Hold" in args) {
+                holding.countDown()
+                while (!request.cancel.isCanceled) Thread.sleep(5)
+                return@DaemonServer 0
             }
-        }, onShutdown = { stopped.countDown() })
+            request.output.out("checked ${args.joinToString(" ")}\n")
+            request.output.err("a warning\n")
+            3
+        }, { stopped.countDown() }, { it?.joinToString(" ") ?: "refresh" }, {})
         server.start()
         socket = SocketChannel.open(UnixDomainSocketAddress.of(bound.address().removePrefix("uds:")))
     }
@@ -107,7 +105,7 @@ class IdeDaemonServerTest {
         assertEquals("refreshed\n", answer("2").first()["data"])
 
         // What the IDE shows: both answered, newest first, and nothing left running.
-        val activity = server.activity
+        val activity = server.activity()
         assertEquals("IDLE", activity.state)
         assertEquals(null, activity.current)
         assertEquals(2, activity.served)

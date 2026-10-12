@@ -6,7 +6,8 @@ import org.arend.daemon.DaemonPaths;
 import org.arend.daemon.LockFile;
 import org.arend.daemon.server.SocketBinder;
 import org.arend.frontend.cli.CommandContext;
-import org.arend.frontend.cli.daemon.server.DaemonServer;
+import org.arend.daemon.server.DaemonServer;
+import org.arend.frontend.cli.daemon.server.CliDaemonRunner;
 import org.arend.frontend.cli.daemon.server.StreamRedirector;
 import org.junit.After;
 import org.junit.Before;
@@ -92,7 +93,7 @@ public class DaemonMcpServerTest {
     DaemonPaths paths = DaemonPaths.resolve(root);
     paths.ensureArendDir();
     SocketBinder.Bound bound = SocketBinder.bind(paths.socketFile, paths.libraryHash);
-    DaemonServer daemon = new DaemonServer(bound, new CommandContext(), List.of(paths.libraryConfig.toString()),
+    DaemonServer daemon = CliDaemonRunner.server(bound, new CommandContext(), List.of(paths.libraryConfig.toString()),
         (context, args, cwd) -> {
           received.add(name + " " + String.join(" ", args));
           if (List.of(args).contains("Hold")) {
@@ -105,14 +106,14 @@ public class DaemonMcpServerTest {
           }
           System.out.println("ran on " + name);
           return 0;
-        });
+        }, () -> {});
     daemon.start();
     daemons.add(daemon);
 
     List<String> sharedConfigs = new ArrayList<>();
     for (Path library : sharedLoaded) sharedConfigs.add(config(library));
     LockFile lock = new LockFile(ProcessHandle.current().pid(), paths.libraryConfig.toString(), paths.libraryHash,
-        List.of(paths.libraryConfig.toString()), sharedConfigs, LockFile.PROTOCOL_VERSION, startedAt, bound.address());
+        List.of(paths.libraryConfig.toString()), sharedConfigs, LockFile.PROTOCOL_VERSION, startedAt, bound.address(), LockFile.HOST_CLI);
     lock.writeAtomic(paths.lockFile);
     Files.createDirectories(DaemonPaths.registryDir());
     lock.writeAtomic(lock.registryFile());

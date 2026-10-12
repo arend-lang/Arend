@@ -13,6 +13,7 @@ import com.intellij.openapi.vfs.JarFileSystem
 import com.intellij.util.Alarm
 import org.arend.daemon.DaemonPaths
 import org.arend.daemon.LockFile
+import org.arend.daemon.server.DaemonServer
 import org.arend.daemon.server.SocketBinder
 import org.arend.server.ArendServerListener
 import org.arend.server.ArendServerService
@@ -20,7 +21,6 @@ import org.arend.settings.ArendProjectSettings
 import org.arend.util.FileUtils
 import org.arend.util.findLibrary
 import java.io.IOException
-import java.nio.file.Files
 import java.nio.file.Paths
 import java.util.concurrent.CopyOnWriteArrayList
 
@@ -47,10 +47,10 @@ class ArendDaemonService(private val project: Project) : Disposable {
         /** Libraries of the project left out, to why. */
         val skipped: Map<String, String>,
         val startedAt: Long,
-        val activity: IdeDaemonServer.Activity
+        val activity: DaemonServer.Activity
     )
 
-    private class Running(val server: IdeDaemonServer, val home: DaemonPaths, val socket: String) {
+    private class Running(val server: DaemonServer, val home: DaemonPaths, val socket: String) {
         /** The canonical arend.yaml or zip of every library served, to its name. */
         @Volatile var served: Map<String, String> = emptyMap()
         @Volatile var lock: LockFile? = null
@@ -59,18 +59,7 @@ class ArendDaemonService(private val project: Project) : Disposable {
          * Removes the traces when the IDE goes without closing its projects, as it does on SIGTERM;
          * a client would find a dead PID and clean up after it, but only once it looked.
          */
-        val shutdownHook = Thread(::removeTraces, "arend-ide-daemon-cleanup")
-
-        /** Deletes every copy of the lock and the socket. */
-        fun removeTraces() {
-            lock?.deleteAllCopies()
-            if (socket.startsWith("uds:")) {
-                try {
-                    Files.deleteIfExists(Paths.get(socket.removePrefix("uds:")))
-                } catch (_: IOException) {
-                }
-            }
-        }
+        val shutdownHook = Thread({ lock?.removeTraces() }, "arend-ide-daemon-cleanup")
     }
 
     @Volatile private var running: Running? = null
@@ -134,8 +123,8 @@ class ArendDaemonService(private val project: Project) : Disposable {
             // The socket's: the other libraries get theirs with the lock, in update.
             home.ensureArendDir()
             val bound = SocketBinder.bind(home.socketFile, home.libraryHash)
-            val server = IdeDaemonServer(bound, { running?.lock?.libraries() ?: emptyList() },
-                IdeDaemonCommands(project) { running?.served ?: emptyMap() }, { stop() }, ::describe, ::activityChanged)
+            val server = DaemonServer(bound, { running?.lock?.libraries() ?: emptyList() }, emptyMap(), LockFile.HOST_INTELLIJ,
+                IdeDaemonCommands(project) { running?.served ?: emptyMap() }, ::stop, ::describe, ::activityChanged)
             daemon = Running(server, home, bound.address())
             running = daemon
             server.start()
@@ -160,7 +149,7 @@ class ArendDaemonService(private val project: Project) : Disposable {
         } catch (_: IllegalStateException) {
             // The JVM is going down already, and the hook does the same.
         }
-        daemon.removeTraces()
+        daemon.lock?.removeTraces()
         warnedAbout.clear()
         setState(null)
     }
@@ -177,7 +166,7 @@ class ArendDaemonService(private val project: Project) : Disposable {
     @Synchronized
     private fun activityChanged() {
         val daemon = running ?: return
-        state?.let { setState(it.copy(activity = daemon.server.activity)) }
+        state?.let { setState(it.copy(activity = daemon.server.activity())) }
     }
 
     private fun librariesChanged() {
@@ -226,26 +215,21 @@ class ArendDaemonService(private val project: Project) : Disposable {
         }
         owned.sortBy { if (it == daemon.home) 0 else 1 }
 
-        val lock = LockFile(ProcessHandle.current().pid(), daemon.home.libraryConfig.toString(), daemon.home.libraryHash,
-            owned.map { it.libraryConfig.toString() }, shared.map { it.libraryConfig.toString() },
-            LockFile.PROTOCOL_VERSION, daemon.server.startedAt, daemon.socket, LockFile.HOST_INTELLIJ)
+        val lock = LockFile.ofThisProcess(daemon.home, owned.map { it.libraryConfig.toString() },
+            shared.map { it.libraryConfig.toString() }, daemon.server.startedAt(), daemon.socket, LockFile.HOST_INTELLIJ)
         val previous = daemon.lock
         daemon.served = (owned + shared).associate { it.libraryConfig.toString() to libraries.getValue(it) }
         daemon.lock = lock
         try {
-            Files.createDirectories(DaemonPaths.registryDir())
-            lock.writeAtomic(lock.registryFile())
-            for (paths in owned.reversed()) {
-                paths.ensureArendDir()
-                lock.writeAtomic(paths.lockFile)
-            }
+            owned.forEach { it.ensureArendDir() }
+            lock.writeEverywhere()
         } catch (e: IOException) {
             warn("The Arend daemon could not write its lock: ${e.message}")
         }
         if (previous != null) {
             (previous.lockFiles() - lock.lockFiles().toSet()).forEach(lock::deleteIfOurs)
         }
-        setState(State(daemon.socket, lock.libraries(), lock.shared(), skipped, daemon.server.startedAt, daemon.server.activity))
+        setState(State(daemon.socket, lock.libraries(), lock.shared(), skipped, daemon.server.startedAt(), daemon.server.activity()))
     }
 
     /**

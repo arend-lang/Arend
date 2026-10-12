@@ -1,5 +1,7 @@
 package org.arend.daemon;
 
+import org.arend.util.FileUtils;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -58,16 +60,11 @@ public record LockFile(long pid, String libraryPath, String libraryHash, List<St
     if (host == null || host.isEmpty()) host = HOST_CLI;
   }
 
-  /** A lock for a daemon of its own JVM. */
-  public LockFile(long pid, String libraryPath, String libraryHash, List<String> libraries,
-                  List<String> shared, int protocolVersion, long startedAt, String socketPath) {
-    this(pid, libraryPath, libraryHash, libraries, shared, protocolVersion, startedAt, socketPath, HOST_CLI);
-  }
-
-  /** A lock for a daemon that serves the one library {@code libraryPath}. */
-  public LockFile(long pid, String libraryPath, String libraryHash,
-                  int protocolVersion, long startedAt, String socketPath) {
-    this(pid, libraryPath, libraryHash, List.of(libraryPath), List.of(), protocolVersion, startedAt, socketPath);
+  /** The lock of a daemon this process runs, whose first library is {@code home}. */
+  public static LockFile ofThisProcess(DaemonPaths home, List<String> libraries, List<String> shared, long startedAt,
+                                       String socketPath, String host) {
+    return new LockFile(ProcessHandle.current().pid(), home.libraryConfig.toString(), home.libraryHash, libraries,
+        shared, PROTOCOL_VERSION, startedAt, socketPath, host);
   }
 
   /**
@@ -90,8 +87,18 @@ public record LockFile(long pid, String libraryPath, String libraryHash, List<St
 
   /** Where each owned library's copy of this lock lives, in load order: a shared one or a zip gets none. */
   public List<Path> lockFiles() {
-    return libraries.stream().filter(library -> !shared.contains(library) && !library.endsWith(".zip"))
+    return libraries.stream().filter(library -> !shared.contains(library) && !library.endsWith(FileUtils.ZIP_EXTENSION))
         .map(library -> DaemonPaths.lockFileIn(Paths.get(library).getParent())).toList();
+  }
+
+  /**
+   * Writes every copy of this lock: the registry's first, the first library's last, so that a client
+   * finding that one can count on all the others. The libraries' {@code .arend/} must exist.
+   */
+  public void writeEverywhere() throws IOException {
+    Files.createDirectories(DaemonPaths.registryDir());
+    writeAtomic(registryFile());
+    for (Path copy : lockFiles().reversed()) writeAtomic(copy);
   }
 
   /**
@@ -105,14 +112,18 @@ public record LockFile(long pid, String libraryPath, String libraryHash, List<St
     copies.forEach(this::deleteIfOurs);
   }
 
-  /** Removes the lock at {@code lockPath} if it still names this daemon, as {@link #deleteAllCopies} does. */
-  public void deleteIfOurs(Path lockPath) {
-    if (readIfValid(lockPath).filter(this::sameDaemon).isPresent()) deleteQuietly(lockPath);
+  /** Removes every trace of the daemon: the copies of its lock that still name it, and its socket file. */
+  public void removeTraces() {
+    deleteAllCopies();
+    if (socketPath != null && socketPath.startsWith("uds:")) deleteQuietly(Paths.get(socketPath.substring("uds:".length())));
   }
 
-  /** Whether {@code other} is a copy of this daemon's lock: the same process, the same identity. */
-  public boolean sameDaemon(LockFile other) {
-    return other.pid == pid && other.libraryHash.equals(libraryHash);
+  /** Removes the lock at {@code lockPath} if it still names this daemon, as {@link #deleteAllCopies} does. */
+  public void deleteIfOurs(Path lockPath) {
+    // A copy of this daemon's lock is one of the same process with the same identity.
+    if (readIfValid(lockPath).filter(other -> other.pid == pid && other.libraryHash.equals(libraryHash)).isPresent()) {
+      deleteQuietly(lockPath);
+    }
   }
 
   /**
@@ -204,6 +215,8 @@ public record LockFile(long pid, String libraryPath, String libraryHash, List<St
       String host = props.getProperty("host", HOST_CLI);
       List<String> libraries = new ArrayList<>();
       for (int i = 1; props.getProperty("library." + i) != null; i++) libraries.add(props.getProperty("library." + i));
+      // A lock from before library.N named only the one library its daemon served.
+      if (libraries.isEmpty() && !libraryPath.isEmpty()) libraries.add(libraryPath);
       List<String> shared = new ArrayList<>();
       for (int i = 1; props.getProperty("shared." + i) != null; i++) shared.add(props.getProperty("shared." + i));
       if (libraryPath.isEmpty() || libraryHash.isEmpty()) {

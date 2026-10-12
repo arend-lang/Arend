@@ -1,5 +1,6 @@
 package org.arend.frontend.cli.daemon;
 
+import org.arend.daemon.server.DaemonServer;
 import org.arend.daemon.wire.FrameChannel;
 import org.arend.frontend.cli.daemon.server.StreamRedirector;
 import org.junit.Test;
@@ -23,7 +24,7 @@ public class StreamRedirectorTest {
     ByteArrayOutputStream sink = new ByteArrayOutputStream();
     StreamRedirector.install();
     try {
-      StreamRedirector.attach(new FrameChannel(Channels.newChannel(sink)), "req-1");
+      StreamRedirector.attach(new DaemonServer.Output(new FrameChannel(Channels.newChannel(sink)), "req-1"));
       try {
         body.run();
       } finally {

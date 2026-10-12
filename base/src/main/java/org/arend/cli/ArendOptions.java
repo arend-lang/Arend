@@ -36,6 +36,15 @@ public final class ArendOptions {
           SymbolSearchTool.INSTANCE, ProofSearchTool.INSTANCE, FindUsagesTool.INSTANCE,
           ClassHierarchyTool.INSTANCE, ScopeInfoTool.INSTANCE);
 
+  /** Why a daemon refuses {@code cmdLine} outright, as every daemon says it; null when it does not. */
+  public static String daemonRefusal(CommandLine cmdLine) {
+    if (cmdLine.hasOption("i")) return "[ERROR] -i (REPL) is not supported in daemon mode";
+    if (DAEMON_CONTROL_FLAGS.stream().anyMatch(cmdLine::hasOption)) {
+      return "[ERROR] daemon control flags are not valid inside a daemon-served command";
+    }
+    return null;
+  }
+
   /** The query tool {@code cmdLine} asks for, or null for a typecheck. */
   public static ConsoleQueryTool queryTool(CommandLine cmdLine) {
     return QUERY_TOOLS.stream().filter(tool -> cmdLine.hasOption(tool.shortName())).findFirst().orElse(null);

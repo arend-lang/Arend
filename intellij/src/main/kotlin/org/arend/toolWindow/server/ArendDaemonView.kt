@@ -12,9 +12,9 @@ import com.intellij.ui.components.JBRadioButton
 import com.intellij.util.ui.FormBuilder
 import com.intellij.util.ui.JBUI
 import com.intellij.xml.util.XmlStringUtil
+import org.arend.daemon.server.DaemonServer
 import org.arend.daemon.wire.FrameChannel
 import org.arend.server.daemon.ArendDaemonService
-import org.arend.server.daemon.IdeDaemonServer
 import java.awt.BorderLayout
 import java.awt.FlowLayout
 import java.time.Instant
@@ -114,7 +114,7 @@ class ArendDaemonView(project: Project, parent: Disposable) {
             table(recent.map { listOf(time(it.startedAt), escape(it.command), outcome(it), duration(it.durationMs)) })))
     }
 
-    private fun outcome(request: IdeDaemonServer.Finished) = when (request.exitCode) {
+    private fun outcome(request: DaemonServer.Finished) = when (request.exitCode) {
         0 -> "ok"
         FrameChannel.CANCELLED_EXIT_CODE -> "cancelled"
         else -> "exit ${request.exitCode}"

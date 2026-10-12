@@ -2,6 +2,7 @@ package org.arend.cli;
 
 import org.apache.commons.cli.CommandLine;
 
+import java.io.PrintStream;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -37,6 +38,16 @@ public final class LockedFlags {
       new Flag("serialize", Kind.BOOLEAN));
 
   private LockedFlags() {}
+
+  /** Warns to {@code err} of each locked flag {@code cmdLine} passes: {@code authority} decides it instead. */
+  public static void warnIgnored(CommandLine cmdLine, String authority, PrintStream err) {
+    for (Flag flag : ALL) {
+      if (cmdLine.hasOption(flag.name())) {
+        err.println("[WARN] " + flag.display() + " passed to a daemon-served command is ignored ("
+            + authority + " is authoritative; use --no-daemon to override).");
+      }
+    }
+  }
 
   /**
    * Decodes the daemon's parsed bootstrap command line into {flag → value}, omitting absent flags.

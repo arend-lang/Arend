@@ -21,13 +21,17 @@ import java.util.function.Consumer;
 
 /**
  * Thin "find a daemon and send one op" wrapper used by the client CLI flags
- * ({@code --daemon-ping}, {@code --daemon-status}, {@code --daemon-stop}).
+ * ({@code --daemon-ping}, {@code --daemon-status}, {@code --daemon-refresh},
+ * {@code --daemon-stop}).
  *
- * <p>Resolves the library and reads its lock file; if the lock + PID + hash all check
- * out, opens a {@link DaemonClient}, fires the op, prints any non-{@code done} frames,
- * returns the daemon's exit code. Returns {@link #NO_DAEMON} if no lock or the lock
- * points at a dead/wrong process; the caller decides how to react (e.g. {@code stop}
- * treats this as success, {@code ping} as "no daemon to talk to").
+ * <p>Resolves the library and reads its lock file; if the lock serves that library, its PID is
+ * alive and it speaks this build's protocol, opens a {@link DaemonClient}, fires the op, prints
+ * any non-{@code done} frames, returns the daemon's exit code. Returns {@link #NO_DAEMON} when
+ * there is no such daemon; the caller decides how to react ({@code ping} reports "no daemon to
+ * talk to", {@code stop} does not take it for success and goes on to the process).
+ *
+ * <p>It is also where an ordinary command finds the daemon to route to ({@link #tryRouteCli}), and
+ * where the MCP server finds the daemons it calls ({@link #daemonFor}, {@link #liveDaemons}).
  */
 public final class DaemonRpc {
   public static final int NO_DAEMON = -1;

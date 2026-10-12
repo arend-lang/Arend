@@ -1,6 +1,7 @@
 package org.arend.frontend.cli.daemon.server;
 
 import org.apache.commons.cli.CommandLine;
+import org.arend.cli.ArendOptions;
 import org.arend.cli.LockedFlags;
 import org.arend.frontend.ConsoleMain;
 import org.arend.frontend.cli.CommandContext;
@@ -20,27 +21,20 @@ public final class CliDispatcher {
 
   /** @return the exit code the client should report. */
   public static int run(CommandContext ctx, String[] args, String clientCwd) {
-    CommandLine cmdLine = ConsoleMain.parseArgs(args).cmdLine();
+    // Parsed once, here: parsing prints the help, the version or the error, which the client should see once.
+    ConsoleMain.ParsedArgs parsed = ConsoleMain.parseArgs(args);
+    CommandLine cmdLine = parsed.cmdLine();
     // A command line Dispatch will reject anyway is left to it, so that the verdict on argv is
     // reached in exactly one place.
     if (cmdLine != null) {
-      if (cmdLine.hasOption("i")) {
-        System.err.println("[ERROR] -i (REPL) is not supported in daemon mode");
+      String refusal = ArendOptions.daemonRefusal(cmdLine);
+      if (refusal != null) {
+        System.err.println(refusal);
         return 1;
       }
-      if (ConsoleMain.hasDaemonControlFlag(cmdLine)) {
-        System.err.println("[ERROR] daemon control flags are not valid inside a daemon-served command");
-        return 1;
-      }
-      for (LockedFlags.Flag flag : LockedFlags.ALL) {
-        if (cmdLine.hasOption(flag.name())) {
-          System.err.println("[WARN] " + flag.display()
-              + " passed to a daemon-served command is ignored "
-              + "(daemon bootstrap is authoritative; use --no-daemon to override).");
-        }
-      }
+      LockedFlags.warnIgnored(cmdLine, "daemon bootstrap", System.err);
     }
 
-    return Dispatch.run(ctx, args, clientCwd);
+    return Dispatch.run(ctx, parsed, clientCwd);
   }
 }

@@ -34,7 +34,7 @@ public final class DaemonPaths {
   public final Path logFile;
   public final Path socketFile;
   /**
-   * {@code <basename>.starting} — created by the parent before it spawns a child, removed once
+   * {@code daemon.starting} — created by the parent before it spawns a child, removed once
    * the child is ready or has failed. Two {@code arend -d} calls racing would otherwise both
    * see no lock and both spawn, and only one of them can bind the socket.
    */
@@ -168,7 +168,7 @@ public final class DaemonPaths {
   public static DaemonPaths resolveByName(String libName, List<Path> libDirs,
                                           boolean warnOnShadow) {
     DaemonPaths cwd = resolve(Paths.get("."));
-    if (cwd != null && libName.equals(cwdLibName(cwd.libraryConfig))) {
+    if (cwd != null && libName.equals(cwd.libraryName())) {
       if (warnOnShadow) warnIfShadowed(libName, cwd.libraryConfig, libDirs);
       return cwd;
     }
@@ -180,16 +180,6 @@ public final class DaemonPaths {
       if (d != null) return d;
     }
     return null;
-  }
-
-  /**
-   * Library name as derived by {@code FileSourceLibrary.fromConfigFile} in the CLI:
-   * the name of the directory containing {@code arend.yaml}.
-   */
-  private static String cwdLibName(Path libraryConfig) {
-    Path parent = libraryConfig.getParent();
-    Path dirName = parent == null ? null : parent.getFileName();
-    return dirName == null ? null : dirName.toString();
   }
 
   private static void warnIfShadowed(String libName, Path chosen, List<Path> libDirs) {

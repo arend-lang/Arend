@@ -2,6 +2,7 @@ package org.arend.frontend.cli.daemon.server;
 
 import org.arend.daemon.DaemonPaths;
 import org.arend.daemon.LockFile;
+import org.arend.daemon.server.DaemonServer;
 import org.arend.daemon.server.SocketBinder;
 import org.arend.frontend.ConsoleMain;
 import org.arend.frontend.cli.CommandContext;
@@ -9,12 +10,12 @@ import org.arend.frontend.cli.daemon.DaemonStart;
 import org.arend.frontend.library.SourceLibrary;
 
 import java.io.IOException;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.concurrent.CountDownLatch;
 
 /**
  * Child-side daemon entry point, reached through the internal {@code --daemon-bootstrap} flag
@@ -45,11 +46,20 @@ public final class DaemonMain {
     return shared;
   }
 
+  /**
+   * Runs the daemon until it is told to stop, then exits the JVM. A socket-side {@code shutdown}
+   * returns here without going through the JVM-exit path, so the exit, and with it the shutdown
+   * hook, has to be triggered explicitly.
+   */
   public static void run(String[] args) {
+    System.exit(serve(args));
+  }
+
+  /** @return the exit code: 1 when the daemon could not start, else 0 once it has stopped. */
+  private static int serve(String[] args) {
     if (args.length < 2) {
       System.err.println("[DAEMON] --daemon-bootstrap requires a library reference");
-      System.exit(1);
-      return;
+      return 1;
     }
     String libRef = args[1];
     String[] forwarded = Arrays.copyOfRange(args, 2, args.length);
@@ -57,8 +67,7 @@ public final class DaemonMain {
     DaemonPaths paths = DaemonPaths.resolve(Paths.get(libRef));
     if (paths == null) {
       System.err.println("[DAEMON] could not resolve library reference: " + libRef);
-      System.exit(1);
-      return;
+      return 1;
     }
 
     List<DaemonPaths> libraries = new ArrayList<>();
@@ -67,16 +76,14 @@ public final class DaemonMain {
       DaemonPaths member = DaemonPaths.resolve(Paths.get(library));
       if (member == null) {
         System.err.println("[DAEMON] could not resolve library: " + library);
-        System.exit(1);
-        return;
+        return 1;
       }
       libraries.add(member);
     }
     List<DaemonPaths> owned = libraries.stream().filter(DaemonPaths::canOwn).toList();
     if (owned.isEmpty() || !owned.getFirst().libraryConfig.equals(paths.libraryConfig)) {
       System.err.println("[DAEMON] the bootstrap argv must list " + paths.libraryConfig + " as its first owned library");
-      System.exit(1);
-      return;
+      return 1;
     }
 
     for (DaemonPaths member : owned) {
@@ -84,8 +91,7 @@ public final class DaemonMain {
         member.ensureArendDir();
       } catch (IOException e) {
         System.err.println("[DAEMON] could not create " + member.arendDir + ": " + e.getMessage());
-        System.exit(1);
-        return;
+        return 1;
       }
     }
     List<String> libraryConfigs = libraries.stream().map(member -> member.libraryConfig.toString()).toList();
@@ -97,8 +103,7 @@ public final class DaemonMain {
     CommandContext warmCtx = new ConsoleMain().runDaemonBootstrap(forwarded);
     if (warmCtx == null) {
       System.err.println("[DAEMON] bootstrap aborted (library load failed or unhandled exception); daemon will not start");
-      System.exit(1);
-      return;
+      return 1;
     }
 
     SocketBinder.Bound bound;
@@ -106,62 +111,42 @@ public final class DaemonMain {
       bound = SocketBinder.bind(paths.socketFile, paths.libraryHash);
     } catch (IOException e) {
       System.err.println("[DAEMON] could not bind daemon socket: " + e.getMessage());
-      System.exit(1);
-      return;
+      return 1;
     }
     System.out.println("[DAEMON] bound socket: " + bound.address());
 
-    DaemonServer server = new DaemonServer(bound, warmCtx, libraryConfigs);
+    CountDownLatch stopped = new CountDownLatch(1);
+    DaemonServer server = CliDaemonRunner.server(bound, warmCtx, libraryConfigs, CliDispatcher::run, stopped::countDown);
     server.start();
 
-    LockFile lock = new LockFile(
-        ProcessHandle.current().pid(),
-        paths.libraryConfig.toString(),
-        paths.libraryHash,
-        libraryConfigs,
-        sharedLibraries(warmCtx),
-        LockFile.PROTOCOL_VERSION,
-        System.currentTimeMillis(),
-        bound.address()
-    );
+    LockFile lock = LockFile.ofThisProcess(paths, libraryConfigs, sharedLibraries(warmCtx), server.startedAt(),
+        bound.address(), LockFile.HOST_CLI);
 
     // Registered before the lock is written, not after: a SIGTERM in between would otherwise
     // leave the lock behind, pointing every later client at a daemon that no longer exists.
     // Deleting a file that was never created is a no-op, so the early window costs nothing.
-    Path socketPath = paths.socketFile;
     Runtime.getRuntime().addShutdownHook(new Thread(() -> {
       server.close();
-      lock.deleteAllCopies();
-      LockFile.deleteQuietly(socketPath);
+      lock.removeTraces();
     }, "arend-daemon-shutdown"));
 
-    // The first library's own lock last: a client that finds it can count on every other copy.
-    List<Path> copies = new ArrayList<>();
-    copies.add(lock.registryFile());
-    for (DaemonPaths member : owned.reversed()) copies.add(member.lockFile);
-    for (Path copy : copies) {
-      try {
-        Files.createDirectories(copy.getParent());
-        lock.writeAtomic(copy);
-      } catch (IOException e) {
-        System.err.println("[DAEMON] could not write lock file " + copy + ": " + e.getMessage());
-        System.exit(1);
-        return;
-      }
+    try {
+      lock.writeEverywhere();
+    } catch (IOException e) {
+      System.err.println("[DAEMON] could not write the lock: " + e.getMessage());
+      return 1;
     }
 
     System.out.println("[DAEMON] READY (PID " + ProcessHandle.current().pid() + ")");
     System.out.flush();
 
-    // Until the worker pulls a shutdown sentinel or a SIGTERM trips the JVM shutdown hook, which
-    // closes the server and interrupts the worker.
+    // Until a client's shutdown has let the queue run out; a SIGTERM goes through the JVM
+    // shutdown hook instead, which closes the server.
     try {
-      server.shutdownLatch().await();
+      stopped.await();
     } catch (InterruptedException e) {
       Thread.currentThread().interrupt();
     }
-    // A socket-side `shutdown` returns control here without going through the JVM-exit path, so
-    // the hook has to be triggered explicitly.
-    System.exit(0);
+    return 0;
   }
 }

@@ -5,7 +5,6 @@ import org.arend.daemon.wire.SocketAddress;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
-import java.net.StandardProtocolFamily;
 import java.net.UnixDomainSocketAddress;
 import java.nio.channels.SocketChannel;
 import java.util.HashMap;
@@ -41,15 +40,10 @@ public final class DaemonClient implements AutoCloseable {
   }
 
   public static DaemonClient connect(SocketAddress addr) throws IOException {
-    SocketChannel ch;
-    if (addr instanceof SocketAddress.Uds uds) {
-      ch = SocketChannel.open(StandardProtocolFamily.UNIX);
-      ch.connect(UnixDomainSocketAddress.of(uds.path()));
-    } else if (addr instanceof SocketAddress.Tcp tcp) {
-      ch = SocketChannel.open(new InetSocketAddress(tcp.host(), tcp.port()));
-    } else {
-      throw new IOException("unknown address kind: " + addr);
-    }
+    SocketChannel ch = switch (addr) {
+      case SocketAddress.Uds uds -> SocketChannel.open(UnixDomainSocketAddress.of(uds.path()));
+      case SocketAddress.Tcp tcp -> SocketChannel.open(new InetSocketAddress(tcp.host(), tcp.port()));
+    };
     return new DaemonClient(ch);
   }
 
