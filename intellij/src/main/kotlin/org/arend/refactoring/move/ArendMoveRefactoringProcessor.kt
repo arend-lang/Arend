@@ -2,6 +2,7 @@ package org.arend.refactoring.move
 
 import com.intellij.ide.util.EditorHelper
 import com.intellij.openapi.components.service
+import com.intellij.openapi.components.serviceIfCreated
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.Ref
 import com.intellij.openapi.util.TextRange
@@ -17,6 +18,7 @@ import com.intellij.usageView.UsageViewDescriptor
 import com.intellij.usageView.UsageViewUtil
 import com.intellij.util.containers.MultiMap
 import com.intellij.util.containers.SortedList
+import org.arend.arc.ArcViewService
 import org.arend.codeInsight.*
 import org.arend.codeInsight.ArendCodeInsightUtils.Companion.getExternalParameters
 import org.arend.ext.module.LongName
@@ -438,6 +440,7 @@ class ArendMoveRefactoringProcessor(project: Project,
         modules.forEach { module -> myServer.removeModule(module) }
         val checker = myServer.getCheckerFor(modules.toList().reversed())
         checker.resolveModules(UnstoppableCancellationIndicator.INSTANCE, ProgressReporter.empty())
+        myProject.serviceIfCreated<ArcViewService>()?.serverChanged()
     }
 
     private fun locateChild(element: PsiElement, childPath: List<Int>): PsiElement? {

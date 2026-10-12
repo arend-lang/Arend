@@ -25,6 +25,9 @@ class ArendProjectSettings : PersistentStateComponent<ArendProjectSettingsState>
     // for show-type and show-normalized
     var popupPrintingOptionsFilterSet = EnumSet.of(PrettyPrinterFlag.SHOW_LOCAL_FIELD_INSTANCE)!!
     var replPrintingOptionsFilterSet = EnumSet.of(PrettyPrinterFlag.SHOW_LOCAL_FIELD_INSTANCE)!!
+    // The .arc views are for reading: by default they leave out what the typechecker inferred (implicit arguments,
+    // parameters of constructors, types of lambda parameters, levels, coercions) and proofs
+    var arcViewPrintingOptionsFilterSet = EnumSet.of(PrettyPrinterFlag.SHOW_LOCAL_FIELD_INSTANCE)!!
 
     var librariesRoot: String
         get() = data.librariesRoot ?: service<ArendSettings>().librariesRoot
@@ -79,6 +82,7 @@ class ArendProjectSettings : PersistentStateComponent<ArendProjectSettingsState>
         data.goalPrintingOptions = ArendPrintingOptions()
         data.tracerPrintingOptions = ArendPrintingOptions()
         data.replPrintingOptions = ArendPrintingOptions()
+        data.arcViewPrintingOptions = ArendPrintingOptions()
 
         getPrintingOptions(consolePrintingOptionsFilterSet, data.consolePrintingOptions)
         getPrintingOptions(errorPrintingOptionsFilterSet, data.errorPrintingOptions)
@@ -86,6 +90,7 @@ class ArendProjectSettings : PersistentStateComponent<ArendProjectSettingsState>
         getPrintingOptions(tracerPrintingOptionsFilterSet, data.tracerPrintingOptions)
         getPrintingOptions(popupPrintingOptionsFilterSet, data.popupPrintingOptions)
         getPrintingOptions(replPrintingOptionsFilterSet, data.replPrintingOptions)
+        getPrintingOptions(arcViewPrintingOptionsFilterSet, data.arcViewPrintingOptions)
 
         return data
     }
@@ -130,6 +135,7 @@ class ArendProjectSettings : PersistentStateComponent<ArendProjectSettingsState>
         setPrintingOptions(tracerPrintingOptionsFilterSet, state.tracerPrintingOptions)
         setPrintingOptions(popupPrintingOptionsFilterSet, state.popupPrintingOptions)
         setPrintingOptions(replPrintingOptionsFilterSet, state.replPrintingOptions)
+        setPrintingOptions(arcViewPrintingOptionsFilterSet, state.arcViewPrintingOptions)
     }
 
     private fun setPrintingOptions(filterSet: EnumSet<PrettyPrinterFlag>, printingOptions: ArendPrintingOptions) {

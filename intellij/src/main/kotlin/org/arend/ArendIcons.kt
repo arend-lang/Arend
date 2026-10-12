@@ -16,6 +16,13 @@ object ArendIcons {
     val AREND = getIcon("/icons/arend.svg")
     val AREND_MODULE = AllIcons.Nodes.AnonymousClass
     val AREND_FILE = getIcon("/icons/arend_file.svg")
+    // An .arc view; arc_dark.svg is used with a dark theme
+    val ARC_FILE = getIcon("/icons/arc.svg")
+    // A directory of .arc views, shown as the binaries directory is: excluded from the module
+    val ARC_DIRECTORY = AllIcons.Modules.ExcludeRoot
+    // An .arc view, and a directory of them, that has no .arc file or directory on disk
+    val ARC_FILE_NOT_ON_DISK = IconLoader.getTransparentIcon(ARC_FILE)
+    val ARC_DIRECTORY_NOT_ON_DISK = IconLoader.getTransparentIcon(ARC_DIRECTORY)
     val DIRECTORY = AllIcons.Nodes.Package
     val LIBRARY_ICON = AllIcons.Nodes.PpLib
     val YAML_KEY = AllIcons.Nodes.FieldPK

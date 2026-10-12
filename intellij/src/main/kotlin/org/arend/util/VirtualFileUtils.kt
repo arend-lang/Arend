@@ -3,6 +3,7 @@ package org.arend.util
 import com.intellij.openapi.vfs.JarFileSystem
 import com.intellij.openapi.vfs.VfsUtil
 import com.intellij.openapi.vfs.VirtualFile
+import com.intellij.openapi.vfs.newvfs.NewVirtualFile
 import java.nio.file.Path
 import java.nio.file.Paths
 
@@ -36,6 +37,19 @@ fun VirtualFile.getRelativeFile(path: Collection<String>, ext: String = "", crea
             }
             child ?: if (i == path.size - 1) cur.createChildData(this, eName) else cur.createChildDirectory(this, eName)
         }
+    }
+    return cur
+}
+
+/**
+ * Like [getRelativeFile], but only among the files the VFS has loaded in memory, without looking them up in its
+ * persistent storage, which is a slow operation on the EDT. Returns null if the file does not exist or is not loaded.
+ */
+fun VirtualFile.findLoadedRelativeFile(path: Collection<String>, ext: String = ""): VirtualFile? {
+    var cur = this
+    for ((i, name) in path.withIndex()) {
+        val eName = if (i == path.size - 1) name + ext else name
+        cur = (if (cur is NewVirtualFile) cur.findChildIfCached(eName) else cur.findChild(eName)) ?: return null
     }
     return cur
 }

@@ -7,11 +7,13 @@ import com.intellij.openapi.actionSystem.ActionManager
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.application.runReadAction
 import com.intellij.openapi.components.service
+import com.intellij.openapi.components.serviceIfCreated
 import com.intellij.openapi.editor.EditorFactory
 import com.intellij.openapi.module.Module
 import com.intellij.openapi.progress.ProgressIndicator
 import com.intellij.openapi.project.*
 import com.intellij.openapi.startup.ProjectActivity
+import org.arend.arc.ArcViewService
 import org.arend.educational.ArendConfigurator
 import org.arend.module.AREND_LIB
 import org.arend.module.ModuleSynchronizer
@@ -51,6 +53,7 @@ class ArendStartupActivity : ProjectActivity {
             override fun moduleRemoved(project: Project, module: Module) {
                 service.server.removeLibrary(module.name)
                 module.unregister()
+                project.serviceIfCreated<ArcViewService>()?.serverChanged()
             }
         })
 

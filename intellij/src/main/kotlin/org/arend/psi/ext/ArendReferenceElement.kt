@@ -4,6 +4,8 @@ import com.intellij.openapi.components.service
 import com.intellij.openapi.util.Key
 import com.intellij.openapi.util.TextRange
 import com.intellij.psi.PsiElement
+import org.arend.arc.ArcFile
+import org.arend.arc.ArcReferences
 import org.arend.naming.reference.*
 import org.arend.server.ArendServerService
 import org.arend.server.ProgressReporter
@@ -32,6 +34,9 @@ interface ArendReferenceElement : ArendReferenceContainer, AbstractReference {
     }
 
     fun resolve(): Referable? {
+        // The module of an .arc view is not resolved by the server: its printer knows what the names stand for
+        if (containingFile is ArcFile) return ArcReferences.resolve(this)
+
         val cached = cachedReferable
         if (cached != null) {
             return if (cached == TCDefReferable.NULL_REFERABLE) null else cached
@@ -43,7 +48,7 @@ interface ArendReferenceElement : ArendReferenceContainer, AbstractReference {
     }
 
     fun resolvePsi(): PsiElement? =
-        when (val ref = resolve()?.abstractReferable) {
+        if (containingFile is ArcFile) ArcReferences.resolvePsi(this) else when (val ref = resolve()?.abstractReferable) {
             is PsiElement -> ref
             is PsiModuleReferable -> ref.modules.firstOrNull()
             is DataModuleReferable -> ref.data as? PsiElement

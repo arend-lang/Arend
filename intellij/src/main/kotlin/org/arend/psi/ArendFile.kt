@@ -16,6 +16,7 @@ import org.arend.ArendFileTypeInstance
 import org.arend.ArendIcons
 import org.arend.ArendLanguage
 import org.arend.IArendFile
+import org.arend.arc.ArcVirtualFile
 import org.arend.educational.ArendConfigurator.Companion.getStudyLibrary
 import org.arend.ext.prettyprinting.doc.Doc
 import org.arend.ext.prettyprinting.doc.DocFactory
@@ -30,8 +31,10 @@ import org.arend.psi.ext.*
 import org.arend.psi.stubs.ArendFileStub
 import org.arend.resolving.ArendReference
 import org.arend.util.*
+import org.arend.util.FileUtils
+import org.arend.util.libraryName
 
-class ArendFile(viewProvider: FileViewProvider) : PsiFileBase(viewProvider, ArendLanguage.INSTANCE), ArendGroup, IArendFile {
+open class ArendFile(viewProvider: FileViewProvider) : PsiFileBase(viewProvider, ArendLanguage.INSTANCE), ArendGroup, IArendFile {
     var generatedModuleLocation: ModuleLocation? = null
 
     /**
@@ -74,6 +77,9 @@ class ArendFile(viewProvider: FileViewProvider) : PsiFileBase(viewProvider, Aren
     val arendLibrary: LibraryConfig?
         get() = CachedValuesManager.getCachedValue(this) {
             val virtualFile = originalFile.virtualFile ?: return@getCachedValue cachedValue(null)
+            if (virtualFile is ArcVirtualFile) {
+                return@getCachedValue cachedValue(virtualFile.config)
+            }
             val project = project
             if (!project.isOpen) {
                 return@getCachedValue cachedValue(null)
@@ -93,7 +99,7 @@ class ArendFile(viewProvider: FileViewProvider) : PsiFileBase(viewProvider, Aren
                 return@getCachedValue cachedValue(ArendModuleConfigService.getInstance(module))
             }
 
-            if (!fileIndex.isInLibrarySource(virtualFile)) {
+            if (!runReadAction { fileIndex.isInLibrarySource(virtualFile) }) {
                 return@getCachedValue cachedValue(null)
             }
 

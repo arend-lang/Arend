@@ -5,12 +5,14 @@ import com.intellij.openapi.application.EDT
 import com.intellij.openapi.application.runReadAction
 import com.intellij.openapi.components.Service
 import com.intellij.openapi.components.service
+import com.intellij.openapi.components.serviceIfCreated
 import com.intellij.openapi.project.Project
 import com.intellij.platform.ide.progress.withBackgroundProgress
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import org.arend.arc.ArcViewService
 import org.arend.module.config.LibraryConfig
 import org.arend.server.ArendServerService
 import org.arend.settings.ArendProjectSettings
@@ -78,5 +80,6 @@ class ReloadLibrariesService(private val project: Project, private val coroutine
 
       for (libraryName in configs.keys.toList()) reload(libraryName)
     }
+    project.serviceIfCreated<ArcViewService>()?.serverChanged()
   }
 }

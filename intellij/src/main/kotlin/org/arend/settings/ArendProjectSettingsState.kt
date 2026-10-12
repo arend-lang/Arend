@@ -40,6 +40,7 @@ class ArendProjectSettingsState {
     var tracerPrintingOptions = ArendPrintingOptions()
     var popupPrintingOptions = ArendPrintingOptions()
     var replPrintingOptions = ArendPrintingOptions()
+    var arcViewPrintingOptions = ArendPrintingOptions()
 
     var popupNormalize = true
     var popupFontSize = 12

@@ -48,6 +48,8 @@
         <!-- File Type -->
 
         <fileType language="Arend" implementationClass="org.arend.ArendFileType" name="Arend" extensions="ard;ars" />
+        <fileType fieldName="INSTANCE" implementationClass="org.arend.arc.ArcFileType" name="Arc" extensions="arc" />
+        <fileType fieldName="INSTANCE" implementationClass="org.arend.arc.ArcViewFileType" name="Arc view" />
         <internalFileTemplate name="Arend File"/>
         <internalFileTemplate name="Solution.ard"/>
         <internalFileTemplate name="Test.ard"/>
@@ -429,6 +431,8 @@
 
         <editorNotificationProvider implementation="org.arend.notification.FileOutsideSourcesProvider"/>
 
+        <editorNotificationProvider implementation="org.arend.arc.ArcFileNotificationProvider"/>
+
         <!-- Scratches -->
 
         <!-- TODO[2025.2.1]
@@ -476,6 +480,13 @@
         <!-- Starters -->
         <appStarter id="generateArendLib" implementation="org.arend.documentation.GenerateArendLibStarter"/>
 
+        <!--  .arc views  -->
+
+        <virtualFileSystem key="arend-arc" implementationClass="org.arend.arc.ArcFileSystem" physical="false"/>
+        <lang.fileViewProviderFactory language="Arend" implementationClass="org.arend.arc.ArcFileViewProviderFactory"/>
+        <fileIconProvider implementation="org.arend.arc.ArcFileIconProvider"/>
+        <editorFloatingToolbarProvider implementation="org.arend.arc.ArcViewFloatingToolbarProvider"/>
+
     </extensions>
 
     <extensions defaultExtensionNs="Educational">
@@ -486,6 +497,8 @@
 
     <projectListeners>
     <listener class="org.arend.module.ModuleSynchronizer" topic=" com.intellij.openapi.roots.ModuleRootListener" />
+    <listener class="org.arend.arc.ArcFileEditorListener" topic="com.intellij.openapi.fileEditor.FileEditorManagerListener" />
+    <listener class="org.arend.arc.ArcSourcesListener" topic="com.intellij.openapi.vfs.newvfs.BulkFileListener" />
     </projectListeners>
 
     <applicationListeners>
@@ -610,6 +623,11 @@
                           anchor="after"
                           relative-to-action="NewUiRunWidget"/>
         </group>
+        <group id="Arend.ArcView.FloatingToolbar"
+               class="org.arend.arc.ArcViewToolbarActionGroup"
+               text=".arc View Toolbar"
+               description="The toolbar of the editors of .arc views"
+               searchable="false"/>
         <group id="Arend.MarkRootGroup" searchable="false">
             <action id="ArendMarkSourceRootAction" class="org.arend.actions.mark.ArendMarkSourceRootAction"/>
             <action id="ArendMarkTestSourceRootAction" class="org.arend.actions.mark.ArendMarkTestSourceRootAction"/>
