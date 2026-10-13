@@ -1163,7 +1163,7 @@ on either hole.
 \textbf{Not yet done.}
 \begin{itemize}
   \item The general-module design D3b.
-  \item The two items below, needed before Lecture~3.
+  \item F2 below, needed before Lecture~3. F1 is implemented.
 \end{itemize}
 
 \subsection*{Follow-up items for Lectures 3 onward}
@@ -1208,6 +1208,27 @@ are \code{SplitSubLRepres} values directly, with $\pi$ as retraction.
   modules over a \code{LocalCRing} are free''. This would also close the gap
   between the two irreducibility notions, but it costs more.
   \item \textbf{Base.} Any \code{CRing}; no division needed.
+  \item \textbf{Implemented} (\src{Group/Representation/SplitCharacter},
+  \src{Module/TraceCoords}):
+  \begin{itemize}
+    \item \code{endoTrace-comm} and \code{endoTrace-sum}: cyclicity and
+    additivity of the basis-free trace;
+    \item \code{splitCharacter}, defined with the record's retraction, and
+    \code{splitCharacter-retr}: any other retraction gives the same value;
+    \item \code{splitCharacter-basis}: if \code{S.sub} has a basis, the value
+    is its ordinary \code{Character}. The proof expands \code{S.sub} along
+    $\mathit{retr}$ of a basis of $E$ and applies \code{Trace-coords}, so no
+    cyclicity across different modules is needed;
+    \item \code{splitCharacter-sum}: $\chi_E=\chi_S+\chi_C$ for any splitting
+    $e=\mathit{incl}_S(q\,e)+\mathit{incl}_C(q'\,e)$ with retractions $q$,
+    $q'$; and \code{maschke-character}: over a \code{SmithDomain} with
+    $|G|$ invertible, every split $S$ has a complement $C$ with
+    $\chi_E=\chi_S+\chi_C$;
+    \item test \code{std-splitCharacter-Q}: for the standard summand of the
+    $S_3$ permutation representation over $\Q$, the split character equals
+    \code{character (StdFin RatField)}.
+  \end{itemize}
+  Manifest record \code{GAP.F1}; acceptance run: \code{ACCEPTED}, 684 tests.
 \end{itemize}
 \end{item-spec}
 

@@ -4,9 +4,12 @@
 \import Algebra.Group.Representation.IntertwiningMap
 \import Algebra.Group.Representation.Irreducible
 \import Algebra.Group.Representation.Orthogonality (pairing)
+\import Algebra.Group.Representation.SplitCharacter
+\import Algebra.Group.Representation.SplitSubLRepres
 \import Algebra.Group.Representation.Symmetric3
 \import Algebra.Group.Representation.Symmetric3Characters
 \import Algebra.Module
+\import Algebra.Module.FinModule
 \import Algebra.Group.Symmetric.Action
 \import Arith.Complex
 \import Arith.Complex.RatHom
@@ -61,6 +64,12 @@
 
 \lemma sign-irreducible-Z : IsFinIrreducible (SignLRepres IntRing 3)
   => sign-irreducible (\lam _ => IntRing.isImpotent)
+
+-- The basis-free character of the standard summand of the permutation representation is its ordinary character.
+\func stdSubFin-Q => SplitSubLRepres.fromInvariant {RatField} {S3} {Perm3Fin RatField} (stdSplit RatField) std-invariant
+
+\lemma std-splitCharacter-Q (g : S3) : splitCharacter stdSubFin-Q g = character (StdFin RatField) g
+  => splitCharacter-basis stdSubFin-Q ArrayFinModule.basis g *> inv (character-char ArrayFinModule.basis g)
 
 -- Negative control: the checker must reject an invalid proof.
 \func control-invalid-proof => fails {0 = {Nat} 1} idp

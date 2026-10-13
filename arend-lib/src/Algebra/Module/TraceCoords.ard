@@ -77,3 +77,24 @@
   => \case U.isFinModule \with {
     | inP (l, lb) => endoTrace-char lb *> Trace-coords g d dg lb T
   }
+
+-- | The trace is invariant under cyclic permutation: $\mathrm{tr}(XY) = \mathrm{tr}(YX)$.
+\lemma endoTrace-comm {R : CRing} {U : FinModule R} (X Y : LinearMap U U)
+  : endoTrace (LinearMap.compose {R} {U} {U} {U} X Y) = endoTrace (LinearMap.compose {R} {U} {U} {U} Y X)
+  => \case U.isFinModule \with {
+    | inP (l, lb) => endoTrace-char lb *> pmap Trace (LinearMap.toMatrix_* {R} {U} {U} {U} Y X l lb lb) *>
+                     Trace-prod (LinearMap.toMatrix l lb Y) (LinearMap.toMatrix l lb X) *>
+                     inv (endoTrace-char lb *> pmap Trace (LinearMap.toMatrix_* {R} {U} {U} {U} X Y l lb lb))
+  }
+
+-- | The trace is additive: if $Z = X + Y$ pointwise, then $\mathrm{tr}\,Z = \mathrm{tr}\,X + \mathrm{tr}\,Y$.
+\lemma endoTrace-sum {R : CRing} {U : FinModule R} (X Y Z : LinearMap U U) (p : \Pi (u : U) -> Z u = X u + Y u)
+  : endoTrace Z = endoTrace X + endoTrace Y
+  => \case U.isFinModule \with {
+    | inP (l, lb) =>
+      \let | c => coordFun lb
+           | dg (u : U) : u = U.FinSum (\lam (j : Fin l.len) => c j u *c l j) => U.basis-split-char {_} {lb} *> inv (AbMonoid.FinSum=BigSum {U})
+      \in endoTrace-coords {R} {U} {FinFin l.len} l c dg Z *>
+          R.FinSum-ext (\lam j => pmap (c j) (p (l j)) *> (c j).func-+) *> R.FinSum_+ *>
+          inv (pmap2 (+) (endoTrace-coords {R} {U} {FinFin l.len} l c dg X) (endoTrace-coords {R} {U} {FinFin l.len} l c dg Y))
+  }

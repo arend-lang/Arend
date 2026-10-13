@@ -1,0 +1,97 @@
+\import Algebra.Linear.Matrix.Smith (SmithDomain)
+\import Algebra.Group
+\import Algebra.Group.GSet
+\import Algebra.Group.Representation
+\import Algebra.Group.Representation.Characters
+\import Algebra.Group.Representation.Complement
+\import Algebra.Group.Representation.IntertwiningMap
+\import Algebra.Group.Representation.SplitSubLRepres
+\import Algebra.Module
+\import Algebra.Module.LinearMap
+\import Algebra.Module.TraceCoords
+\import Algebra.Monoid
+\import Algebra.Monoid.MonoidHom
+\import Algebra.Pointed
+\import Algebra.Ring
+\import Logic
+\import Logic.Meta
+\import Paths
+\import Paths.Meta
+\import Set.Fin
+
+-- | The endomorphism $e \mapsto incl(g \cdot q(e))$ of {E}, for a linear map {q} into the subrepresentation.
+\func splitMap.{u} {R : Ring.{u}} {G : Group.{u}} {E : LinRepres.{u} R G} (S : SplitSubLRepres.{u} E) (q : LinearMap E S.sub) (g : G) : LinearMap E E \cowith
+  | func e => S.incl (g ** q e)
+  | func-+ => pmap S.incl (pmap (g **) q.func-+ *> S.sub.**-ldistr) *> S.incl.func-+
+  | func-*c => pmap S.incl (pmap (g **) q.func-*c *> S.sub.**_*c) *> S.incl.func-*c
+
+{- | The character of a split subrepresentation, $\chi_S(g) = \mathrm{tr}_E(incl \circ g \circ retr)$.
+    It needs no basis of {S.sub}: only {E} is finite free. -}
+\func splitCharacter.{u} {R : CRing.{u}} {G : Group.{u}} {E : FinLinRepres.{u} R G} (S : SplitSubLRepres.{u} E) (g : G) : R
+  => endoTrace {R} {FinLinRepres.toFinModule E} (splitMap S (SplitSubLRepres.retr S) g)
+
+-- | The character does not depend on the choice of retraction.
+\lemma splitCharacter-retr.{u} {R : CRing.{u}} {G : Group.{u}} {E : FinLinRepres.{u} R G} (S : SplitSubLRepres.{u} E)
+  (q : LinearMap E S.sub) (qi : \Pi (x : S.sub) -> q (S.incl x) = x) (g : G)
+  : splitCharacter S g = endoTrace {R} {FinLinRepres.toFinModule E} (splitMap S q g)
+  => \let | r => SplitSubLRepres.retr S
+          | X => splitMap S r g
+          | Y => LinearMap.compose {R} {E} {S.sub} {E} S.incl q
+          | tr => endoTrace {R} {FinLinRepres.toFinModule E}
+     \in pmap tr {X} {LinearMap.compose {R} {E} {E} {E} Y X} (exts \lam e => inv (pmap S.incl (qi (g ** r e)))) *>
+         endoTrace-comm {R} {FinLinRepres.toFinModule E} Y X *>
+         pmap tr {LinearMap.compose {R} {E} {E} {E} X Y} {splitMap S q g} (exts \lam e => pmap (\lam z => S.incl (g ** z)) (SplitSubLRepres.retr_incl S (q e)))
+
+-- | If the subrepresentation has a basis, its split character is its ordinary character.
+\lemma splitCharacter-basis.{u} {R : CRing.{u}} {G : Group.{u}} {E : FinLinRepres.{u} R G} (S : SplitSubLRepres.{u} E)
+  {lw : Array S.sub} (bw : S.sub.IsBasis lw) (g : G)
+  : splitCharacter S g = Character S.sub bw g
+  => \case E.isFinRepres \with {
+    | inP (l, lb) =>
+      \let | c => coordFun lb
+           | r => SplitSubLRepres.retr S
+           | W => S.sub
+           | d (k : Fin l.len) => LinearMap.compose {R} {W} {E} {RingLModule R} (c k) S.incl
+           | dg (x : W) : x = W.FinSum (\lam (k : Fin l.len) => d k x *c r (l k))
+               => inv (SplitSubLRepres.retr_incl S x) *> pmap r (E.basis-split-char {_} {lb} *> inv (AbMonoid.FinSum=BigSum {E})) *>
+                  AddMonoidHom.func-FinSum r *> W.FinSum-ext (\lam k => r.func-*c)
+      \in endoTrace-char {R} {FinLinRepres.toFinModule E} lb *>
+          inv (AbMonoid.FinSum=BigSum {R} {l.len} {\lam k => c k (S.incl (g ** r (l k)))}) *>
+          inv (Trace-coords {R} {W} {FinFin l.len} (\lam k => r (l k)) d dg bw (W.toLinearMap g))
+  }
+
+{- | Fulton--Harris Prop. 2.1 for a splitting: if $e = incl_S(q\,e) + incl_C(q'\,e)$, with {q} and {q'} retractions,
+    then $\chi_E = \chi_S + \chi_C$. -}
+\lemma splitCharacter-sum.{u} {R : CRing.{u}} {G : Group.{u}} {E : FinLinRepres.{u} R G} (S C : SplitSubLRepres.{u} E)
+  (q : LinearMap E S.sub) (q' : LinearMap E C.sub) (qi : \Pi (x : S.sub) -> q (S.incl x) = x) (q'i : \Pi (y : C.sub) -> q' (C.incl y) = y)
+  (decomp : \Pi (e : E) -> S.incl (q e) + C.incl (q' e) = e) (g : G)
+  : character E g = splitCharacter S g + splitCharacter C g
+  => endoTrace-sum {R} {FinLinRepres.toFinModule E} (splitMap S q g) (splitMap C q' g) (E.toLinearMap g)
+       (\lam e => pmap (g **) (inv (decomp e)) *> E.**-ldistr *> inv (pmap2 (+) S.incl.func-** C.incl.func-**)) *>
+     inv (pmap2 (+) (splitCharacter-retr S q qi g) (splitCharacter-retr C q' q'i g))
+
+{- | Fulton--Harris Prop. 1.5 with characters: over a Smith domain in which $|G|$ is invertible, every split subrepresentation {S}
+    has an invariant complement $C$ with $\chi_E = \chi_S + \chi_C$. Neither summand needs a basis. -}
+\lemma maschke-character.{u} {K : SmithDomain.{u}} {G : FinGroup.{u}} (cardInv : Monoid.Inv (K.natCoef G.card)) {E : FinLinRepres.{u} K G}
+  (S : SplitSubLRepres.{u} E)
+  : ∃ (C : SplitSubLRepres.{u} E) (\Pi (g : G) -> character E g = splitCharacter S g + splitCharacter C g)
+  => \case E.isFinRepres \with {
+    | inP (lv, bv) => \case maschke-complement cardInv bv S \with {
+      | inP (C, Phi, d1, d2) =>
+        \let | q : LinearMap E S.sub => \new LinearMap {
+                 | func e => (Phi e).1
+                 | func-+ => pmap __.1 Phi.func-+
+                 | func-*c => pmap __.1 Phi.func-*c
+               }
+             | q' : LinearMap E C.sub => \new LinearMap {
+                 | func e => (Phi e).2
+                 | func-+ => pmap __.2 Phi.func-+
+                 | func-*c => pmap __.2 Phi.func-*c
+               }
+             | qi (x : S.sub) : q (S.incl x) = x
+                 => pmap (\lam z => (Phi z).1) (inv (pmap (_ +) C.incl.func-zro *> zro-right)) *> pmap __.1 (d2 x 0)
+             | q'i (y : C.sub) : q' (C.incl y) = y
+                 => pmap (\lam z => (Phi z).2) (inv (pmap (`+ _) S.incl.func-zro *> zro-left)) *> pmap __.2 (d2 0 y)
+        \in inP (C, splitCharacter-sum S C q q' qi q'i d1)
+    }
+  }
